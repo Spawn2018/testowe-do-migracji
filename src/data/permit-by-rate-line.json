@@ -1,0 +1,375 @@
+[
+  {
+    "lp": 1,
+    "pozycja": "Słupy skrajne",
+    "element_LxWxH": "17,6 x 3,0 x 1,0",
+    "na_transport": 2,
+    "transportow": 10,
+    "waga_el_t": 11,
+    "zestaw": {
+      "L": 18.0,
+      "W": 3.0,
+      "H": 2.5,
+      "masa_max_t": 22.0
+    },
+    "cena_bazowa_EUR": 7640,
+    "warianty_ceny_uwagi": null,
+    "PL": {
+      "status": "WYMAGA ZEZWOLENIA",
+      "min_kat": "II",
+      "reason": "mieści się w II (W≤3,2; L≤23 zespół; H≤4,3); masa/naciski ≤ dopuszczalne założone",
+      "corridor_hint": "Kat. II wystarcza na drogi publiczne. Jeśli trasa idzie drogami krajowymi w reżimie GDDKiA jak typowy korytarz do portu — praktycznie często bierze się III (krajowe) lub IV; parametrów wymiarowych II nie przekraczacie.",
+      "pilot": "nie wymagany (progi: L>23 / W>3,2 / H>4,5 / masa>60)",
+      "over": [
+        "W>2.55",
+        "L>16.5 (członowy)"
+      ]
+    },
+    "SE": {
+      "path": "TSFS 2023:36 (szeroka odelbar last) — bez indywidualnej dispensy",
+      "dispens": "nie, o ile spełnione warunki TSFS (oznakowanie, varningsbil itd.) i brak przekroczenia masy/długości",
+      "notes": [
+        "Wysokość SE: brak ogólnego limitu ustawowego — skrajnia trasy / znaki.",
+        "W=3.0 m ≤ 3,50 m; tylko szerokość"
+      ]
+    }
+  },
+  {
+    "lp": 2,
+    "pozycja": "Kratownice",
+    "element_LxWxH": "19,9 x 3,5 x 0,7",
+    "na_transport": 3,
+    "transportow": 34,
+    "waga_el_t": 7.1,
+    "zestaw": {
+      "L": 20.0,
+      "W": 3.6,
+      "H": 2.5,
+      "masa_max_t": 22.0
+    },
+    "cena_bazowa_EUR": [
+      9950,
+      10860,
+      11315
+    ],
+    "warianty_ceny_uwagi": [
+      "3 auta w konwoju",
+      "2 auta w konwoju",
+      "1 auto w konwoju"
+    ],
+    "PL": {
+      "status": "WYMAGA ZEZWOLENIA",
+      "min_kat": "IV (tylko odcinki A/S dwujezdniowe) / V na pozostałych",
+      "reason": "W=3.6 m: IV dopuszcza do 4,0 m wyłącznie na drodze dwujezdniowej klasy A i S; na jednojezdniowej limit IV to 3,4 m → poza A/S potrzeba kat. V",
+      "corridor_hint": "Przy W>3,4 m: na A/S dwujezdniowej możliwa IV; każdy odcinek jednojezdniowy / poza A·S z W>3,4 → V na wyznaczonej trasie.",
+      "pilot": "1 pojazd pilotujący (W=3,6 >3,2; próg 2 pilotów to W>3,60 — przy dokładnie 3,60 m zostaje 1, o ile inne progi nie przekroczone)",
+      "over": [
+        "W>2.55",
+        "L>16.5 (członowy)"
+      ]
+    },
+    "SE": {
+      "path": "DISPENS (väghållare)",
+      "dispens": "tak — W>3,50 m",
+      "notes": [
+        "Wysokość SE: brak ogólnego limitu ustawowego — skrajnia trasy / znaki."
+      ]
+    }
+  },
+  {
+    "lp": 2,
+    "pozycja": "Kratownice",
+    "element_LxWxH": "19,9 x 3,5 x 0,7",
+    "na_transport": 4,
+    "transportow": 25,
+    "waga_el_t": 7.1,
+    "zestaw": {
+      "L": 20.0,
+      "W": 3.6,
+      "H": 2.9,
+      "masa_max_t": 29.0
+    },
+    "cena_bazowa_EUR": [
+      11380,
+      12290,
+      12745
+    ],
+    "warianty_ceny_uwagi": [
+      "3 auta w konwoju; elementy scalone, w CMR 1 element",
+      "2 auta w konwoju; elementy scalone, w CMR 1 element",
+      "1 auto w konwoju; elementy scalone, w CMR 1 element"
+    ],
+    "PL": {
+      "status": "WYMAGA ZEZWOLENIA",
+      "min_kat": "IV (tylko odcinki A/S dwujezdniowe) / V na pozostałych",
+      "reason": "W=3.6 m: IV dopuszcza do 4,0 m wyłącznie na drodze dwujezdniowej klasy A i S; na jednojezdniowej limit IV to 3,4 m → poza A/S potrzeba kat. V",
+      "corridor_hint": "Przy W>3,4 m: na A/S dwujezdniowej możliwa IV; każdy odcinek jednojezdniowy / poza A·S z W>3,4 → V na wyznaczonej trasie.",
+      "pilot": "1 pojazd pilotujący (W=3,6 >3,2; próg 2 pilotów to W>3,60 — przy dokładnie 3,60 m zostaje 1, o ile inne progi nie przekroczone)",
+      "over": [
+        "W>2.55",
+        "L>16.5 (członowy)"
+      ]
+    },
+    "SE": {
+      "path": "DISPENS (väghållare)",
+      "dispens": "tak — W>3,50 m",
+      "notes": [
+        "Wysokość SE: brak ogólnego limitu ustawowego — skrajnia trasy / znaki."
+      ]
+    }
+  },
+  {
+    "lp": 3,
+    "pozycja": "Płatwie (długie)",
+    "element_LxWxH": "14,7 x 0,2 x 0,6",
+    "na_transport": 15,
+    "transportow": 8,
+    "waga_el_t": 1.6,
+    "zestaw": {
+      "L": 15.0,
+      "W": 2.5,
+      "H": 2.9,
+      "masa_max_t": 24.0
+    },
+    "cena_bazowa_EUR": 6030,
+    "warianty_ceny_uwagi": null,
+    "PL": {
+      "status": "NORMATYWNY (jeśli naciski osi OK)",
+      "min_kat": null,
+      "corridor_hint": "Brak zezwolenia nienormatywnego, o ile naciski osi i masa w limitach zestawu/drogi.",
+      "pilot": "nie (progi pilotowania nieosiągnięte)",
+      "notes": []
+    },
+    "SE": {
+      "path": "W NORMIE SE (jeśli masa ≤ dopuszczalna dla BK drogi i pojazdu)",
+      "dispens": "nie (wymiary); masa: sprawdź BK trasy — nadwaga zawsze dispens",
+      "notes": [
+        "Wysokość SE: brak ogólnego limitu ustawowego — skrajnia trasy / znaki."
+      ]
+    }
+  },
+  {
+    "lp": 4,
+    "pozycja": "Stężenia międzysłupowe (długie)",
+    "element_LxWxH": "14,6 x 2,8 x 0,4",
+    "na_transport": 4,
+    "transportow": 2,
+    "waga_el_t": 4.2,
+    "zestaw": {
+      "L": 15.0,
+      "W": 2.8,
+      "H": 2.5,
+      "masa_max_t": 17.0
+    },
+    "cena_bazowa_EUR": 5510,
+    "warianty_ceny_uwagi": null,
+    "PL": {
+      "status": "WYMAGA ZEZWOLENIA",
+      "min_kat": "II",
+      "reason": "mieści się w II (W≤3,2; L≤23 zespół; H≤4,3); masa/naciski ≤ dopuszczalne założone",
+      "corridor_hint": "Kat. II wystarcza na drogi publiczne. Jeśli trasa idzie drogami krajowymi w reżimie GDDKiA jak typowy korytarz do portu — praktycznie często bierze się III (krajowe) lub IV; parametrów wymiarowych II nie przekraczacie.",
+      "pilot": "nie wymagany (progi: L>23 / W>3,2 / H>4,5 / masa>60)",
+      "over": [
+        "W>2.55"
+      ]
+    },
+    "SE": {
+      "path": "TSFS 2023:36 (szeroka odelbar last) — bez indywidualnej dispensy",
+      "dispens": "nie, o ile spełnione warunki TSFS (oznakowanie, varningsbil itd.) i brak przekroczenia masy/długości",
+      "notes": [
+        "Wysokość SE: brak ogólnego limitu ustawowego — skrajnia trasy / znaki.",
+        "W=2.8 m ≤ 3,50 m; tylko szerokość"
+      ]
+    }
+  },
+  {
+    "lp": 5,
+    "pozycja": "Stężenia międzysłupowe (krótkie)",
+    "element_LxWxH": "11,6 x 2,8 x 0,4",
+    "na_transport": 5,
+    "transportow": 3,
+    "waga_el_t": 3.3,
+    "zestaw": {
+      "L": 13.6,
+      "W": 2.8,
+      "H": 2.5,
+      "masa_max_t": 17.0
+    },
+    "cena_bazowa_EUR": 4960,
+    "warianty_ceny_uwagi": null,
+    "PL": {
+      "status": "WYMAGA ZEZWOLENIA",
+      "min_kat": "II",
+      "reason": "mieści się w II (W≤3,2; L≤23 zespół; H≤4,3); masa/naciski ≤ dopuszczalne założone",
+      "corridor_hint": "Kat. II wystarcza na drogi publiczne. Jeśli trasa idzie drogami krajowymi w reżimie GDDKiA jak typowy korytarz do portu — praktycznie często bierze się III (krajowe) lub IV; parametrów wymiarowych II nie przekraczacie.",
+      "pilot": "nie wymagany (progi: L>23 / W>3,2 / H>4,5 / masa>60)",
+      "over": [
+        "W>2.55"
+      ]
+    },
+    "SE": {
+      "path": "TSFS 2023:36 (szeroka odelbar last) — bez indywidualnej dispensy",
+      "dispens": "nie, o ile spełnione warunki TSFS (oznakowanie, varningsbil itd.) i brak przekroczenia masy/długości",
+      "notes": [
+        "Wysokość SE: brak ogólnego limitu ustawowego — skrajnia trasy / znaki.",
+        "W=2.8 m ≤ 3,50 m; tylko szerokość"
+      ]
+    }
+  },
+  {
+    "lp": 6,
+    "pozycja": "Belki podsuwnicowe",
+    "element_LxWxH": "16,5 x 0.45 x 1,7",
+    "na_transport": " 1-2",
+    "transportow": 13,
+    "waga_el_t": 16.55,
+    "zestaw": {
+      "L": 16.5,
+      "W": 2.5,
+      "H": 2.5,
+      "masa_max_t": 34.0
+    },
+    "cena_bazowa_EUR": 6280,
+    "warianty_ceny_uwagi": "elementy scalone, w CMR 1 element",
+    "PL": {
+      "status": "NORMATYWNY (jeśli naciski osi OK)",
+      "min_kat": null,
+      "corridor_hint": "Brak zezwolenia nienormatywnego, o ile naciski osi i masa w limitach zestawu/drogi.",
+      "pilot": "nie (progi pilotowania nieosiągnięte)",
+      "notes": []
+    },
+    "SE": {
+      "path": "W NORMIE SE (jeśli masa ≤ dopuszczalna dla BK drogi i pojazdu)",
+      "dispens": "nie (wymiary); masa: sprawdź BK trasy — nadwaga zawsze dispens",
+      "notes": [
+        "Wysokość SE: brak ogólnego limitu ustawowego — skrajnia trasy / znaki."
+      ]
+    }
+  },
+  {
+    "lp": 8,
+    "pozycja": "Belki podsuwnicowe (12m)",
+    "element_LxWxH": "12,0 x 0,5 x 1,1",
+    "na_transport": 2,
+    "transportow": 35,
+    "waga_el_t": 10.8,
+    "zestaw": {
+      "L": 13.6,
+      "W": 2.5,
+      "H": 2.5,
+      "masa_max_t": 22.0
+    },
+    "cena_bazowa_EUR": 5090,
+    "warianty_ceny_uwagi": null,
+    "PL": {
+      "status": "NORMATYWNY (jeśli naciski osi OK)",
+      "min_kat": null,
+      "corridor_hint": "Brak zezwolenia nienormatywnego, o ile naciski osi i masa w limitach zestawu/drogi.",
+      "pilot": "nie (progi pilotowania nieosiągnięte)",
+      "notes": []
+    },
+    "SE": {
+      "path": "W NORMIE SE (jeśli masa ≤ dopuszczalna dla BK drogi i pojazdu)",
+      "dispens": "nie (wymiary); masa: sprawdź BK trasy — nadwaga zawsze dispens",
+      "notes": [
+        "Wysokość SE: brak ogólnego limitu ustawowego — skrajnia trasy / znaki."
+      ]
+    }
+  },
+  {
+    "lp": 9,
+    "pozycja": "Tężnik (belka)",
+    "element_LxWxH": "14,2 x 0,4 x 0,4",
+    "na_transport": 8,
+    "transportow": 2,
+    "waga_el_t": 1.8,
+    "zestaw": {
+      "L": 15.0,
+      "W": 2.5,
+      "H": 2.5,
+      "masa_max_t": 15.0
+    },
+    "cena_bazowa_EUR": 5320,
+    "warianty_ceny_uwagi": null,
+    "PL": {
+      "status": "NORMATYWNY (jeśli naciski osi OK)",
+      "min_kat": null,
+      "corridor_hint": "Brak zezwolenia nienormatywnego, o ile naciski osi i masa w limitach zestawu/drogi.",
+      "pilot": "nie (progi pilotowania nieosiągnięte)",
+      "notes": []
+    },
+    "SE": {
+      "path": "W NORMIE SE (jeśli masa ≤ dopuszczalna dla BK drogi i pojazdu)",
+      "dispens": "nie (wymiary); masa: sprawdź BK trasy — nadwaga zawsze dispens",
+      "notes": [
+        "Wysokość SE: brak ogólnego limitu ustawowego — skrajnia trasy / znaki."
+      ]
+    }
+  },
+  {
+    "lp": 10,
+    "pozycja": "Słupy główne",
+    "element_LxWxH": "17,6 x 2,25 x 1,0",
+    "na_transport": 3,
+    "transportow": 26.67,
+    "waga_el_t": 7,
+    "zestaw": {
+      "L": 18.0,
+      "W": 2.5,
+      "H": 3.0,
+      "masa_max_t": 21.0
+    },
+    "cena_bazowa_EUR": 5600,
+    "warianty_ceny_uwagi": null,
+    "PL": {
+      "status": "WYMAGA ZEZWOLENIA",
+      "min_kat": "II",
+      "reason": "mieści się w II (W≤3,2; L≤23 zespół; H≤4,3); masa/naciski ≤ dopuszczalne założone",
+      "corridor_hint": "Kat. II wystarcza na drogi publiczne. Jeśli trasa idzie drogami krajowymi w reżimie GDDKiA jak typowy korytarz do portu — praktycznie często bierze się III (krajowe) lub IV; parametrów wymiarowych II nie przekraczacie.",
+      "pilot": "nie wymagany (progi: L>23 / W>3,2 / H>4,5 / masa>60)",
+      "over": [
+        "L>16.5 (członowy)"
+      ]
+    },
+    "SE": {
+      "path": "W NORMIE SE (jeśli masa ≤ dopuszczalna dla BK drogi i pojazdu)",
+      "dispens": "nie (wymiary); masa: sprawdź BK trasy — nadwaga zawsze dispens",
+      "notes": [
+        "Wysokość SE: brak ogólnego limitu ustawowego — skrajnia trasy / znaki."
+      ]
+    }
+  },
+  {
+    "lp": 11,
+    "pozycja": "Element referencyjny",
+    "element_LxWxH": "18,5x2,5x2,5",
+    "na_transport": 1,
+    "transportow": 60,
+    "waga_el_t": 22,
+    "zestaw": {
+      "L": 18.5,
+      "W": 2.5,
+      "H": 2.5,
+      "masa_max_t": 22.0
+    },
+    "cena_bazowa_EUR": 6900,
+    "warianty_ceny_uwagi": null,
+    "PL": {
+      "status": "WYMAGA ZEZWOLENIA",
+      "min_kat": "II",
+      "reason": "mieści się w II (W≤3,2; L≤23 zespół; H≤4,3); masa/naciski ≤ dopuszczalne założone",
+      "corridor_hint": "Kat. II wystarcza na drogi publiczne. Jeśli trasa idzie drogami krajowymi w reżimie GDDKiA jak typowy korytarz do portu — praktycznie często bierze się III (krajowe) lub IV; parametrów wymiarowych II nie przekraczacie.",
+      "pilot": "nie wymagany (progi: L>23 / W>3,2 / H>4,5 / masa>60)",
+      "over": [
+        "L>16.5 (członowy)"
+      ]
+    },
+    "SE": {
+      "path": "W NORMIE SE (jeśli masa ≤ dopuszczalna dla BK drogi i pojazdu)",
+      "dispens": "nie (wymiary); masa: sprawdź BK trasy — nadwaga zawsze dispens",
+      "notes": [
+        "Wysokość SE: brak ogólnego limitu ustawowego — skrajnia trasy / znaki."
+      ]
+    }
+  }
+]

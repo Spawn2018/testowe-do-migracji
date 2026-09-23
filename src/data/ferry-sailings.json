@@ -1,0 +1,89 @@
+{
+  "vessels": [
+    {
+      "id": "WAW",
+      "name": "M/F Wawel",
+      "short": "Wawel",
+      "mmsi": "311852000",
+      "imo": "7814462",
+      "seedPosition": { "lng": 18.85, "lat": 55.4 }
+    },
+    {
+      "id": "NS",
+      "name": "Nova Star",
+      "short": "Nova Star",
+      "mmsi": "311000787",
+      "imo": "9462067",
+      "seedPosition": { "lng": 18.55, "lat": 56.8 }
+    }
+  ],
+  "note": "Derived from Polferries cargo HTML pattern (code=gn). No booking API. Typical dep 18:00 WA → arr ~12:00+1 SE. Alternating WAW/NS. HITL for disruptions.",
+  "pattern": {
+    "depLocalHour": 18,
+    "arrLocalHourNextDay": 12,
+    "depPort": "GDN",
+    "arrPort": "NYN"
+  },
+  "sailings": [
+    {
+      "id": "sail-2026-09-20",
+      "vessel": "WAW",
+      "depPort": "GDN",
+      "arrPort": "NYN",
+      "depLocal": "2026-09-20T18:00:00+02:00",
+      "arrLocal": "2026-09-21T12:00:00+02:00",
+      "status": "ARRIVED",
+      "source": "seed"
+    },
+    {
+      "id": "sail-2026-09-21",
+      "vessel": "NS",
+      "depPort": "GDN",
+      "arrPort": "NYN",
+      "depLocal": "2026-09-21T18:00:00+02:00",
+      "arrLocal": "2026-09-22T12:00:00+02:00",
+      "status": "ARRIVED",
+      "source": "seed"
+    },
+    {
+      "id": "sail-2026-09-22",
+      "vessel": "WAW",
+      "depPort": "GDN",
+      "arrPort": "NYN",
+      "depLocal": "2026-09-22T18:00:00+02:00",
+      "arrLocal": "2026-09-23T12:00:00+02:00",
+      "status": "DEPARTED",
+      "source": "seed"
+    },
+    {
+      "id": "sail-2026-09-23",
+      "vessel": "NS",
+      "depPort": "GDN",
+      "arrPort": "NYN",
+      "depLocal": "2026-09-23T18:00:00+02:00",
+      "arrLocal": "2026-09-24T12:00:00+02:00",
+      "status": "PLANNED",
+      "source": "seed"
+    },
+    {
+      "id": "sail-2026-09-24",
+      "vessel": "WAW",
+      "depPort": "GDN",
+      "arrPort": "NYN",
+      "depLocal": "2026-09-24T18:00:00+02:00",
+      "arrLocal": "2026-09-25T12:00:00+02:00",
+      "status": "PLANNED",
+      "source": "seed"
+    },
+    {
+      "id": "sail-2026-09-25",
+      "vessel": "NS",
+      "depPort": "GDN",
+      "arrPort": "NYN",
+      "depLocal": "2026-09-25T18:00:00+02:00",
+      "arrLocal": "2026-09-26T12:00:00+02:00",
+      "status": "PLANNED",
+      "source": "seed"
+    }
+  ]
+}

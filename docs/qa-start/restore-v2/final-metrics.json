@@ -1,0 +1,404 @@
+{
+  "views": {
+    "HHL-kokpit": {
+      "topH": 52,
+      "corrH": 82.671875,
+      "stageN": "30px",
+      "phdPad": "9px 13px",
+      "phdH2": "17px",
+      "panelMargin": "12px",
+      "gridDisplay": "grid",
+      "gridH": 650.15625,
+      "panelTop": 201.515625,
+      "labels": [
+        "Przygotowanie",
+        "Załadunek",
+        "Droga PL",
+        "Gdańsk",
+        "Prom",
+        "Nynäshamn",
+        "Droga SE",
+        "Boden",
+        "Dostarczone"
+      ],
+      "gripDefaultVisible": false,
+      "mainScroll": {
+        "sh": 993,
+        "ch": 765,
+        "can": true
+      },
+      "ops": true
+    },
+    "HHL-Mapa": {
+      "topH": 52,
+      "corrH": 82.671875,
+      "stageN": "30px",
+      "phdPad": "9px 13px",
+      "phdH2": "17px",
+      "panelMargin": "12px",
+      "gridDisplay": null,
+      "gridH": null,
+      "panelTop": 146.671875,
+      "labels": [
+        "Przygotowanie",
+        "Załadunek",
+        "Droga PL",
+        "Gdańsk",
+        "Prom",
+        "Nynäshamn",
+        "Droga SE",
+        "Boden",
+        "Dostarczone"
+      ],
+      "gripDefaultVisible": false,
+      "mainScroll": {
+        "sh": 2521,
+        "ch": 765,
+        "can": true
+      },
+      "ops": true
+    },
+    "HHL-Harmonogram": {
+      "topH": 52,
+      "corrH": 82.671875,
+      "stageN": "30px",
+      "phdPad": "9px 13px",
+      "phdH2": "17px",
+      "panelMargin": "12px",
+      "gridDisplay": null,
+      "gridH": null,
+      "panelTop": 146.671875,
+      "labels": [
+        "Przygotowanie",
+        "Załadunek",
+        "Droga PL",
+        "Gdańsk",
+        "Prom",
+        "Nynäshamn",
+        "Droga SE",
+        "Boden",
+        "Dostarczone"
+      ],
+      "gripDefaultVisible": false,
+      "mainScroll": {
+        "sh": 2532,
+        "ch": 765,
+        "can": true
+      },
+      "ops": true
+    },
+    "HHL-Ryzyka": {
+      "topH": 52,
+      "corrH": 82.671875,
+      "stageN": "30px",
+      "phdPad": "9px 13px",
+      "phdH2": "17px",
+      "panelMargin": "12px",
+      "gridDisplay": null,
+      "gridH": null,
+      "panelTop": 146.671875,
+      "labels": [
+        "Przygotowanie",
+        "Załadunek",
+        "Droga PL",
+        "Gdańsk",
+        "Prom",
+        "Nynäshamn",
+        "Droga SE",
+        "Boden",
+        "Dostarczone"
+      ],
+      "gripDefaultVisible": false,
+      "mainScroll": {
+        "sh": 2709,
+        "ch": 765,
+        "can": true
+      },
+      "ops": true
+    },
+    "HHL-Dokumenty": {
+      "topH": 52,
+      "corrH": 82.671875,
+      "stageN": "30px",
+      "phdPad": "9px 13px",
+      "phdH2": "17px",
+      "panelMargin": "12px",
+      "gridDisplay": null,
+      "gridH": null,
+      "panelTop": 146.671875,
+      "labels": [
+        "Przygotowanie",
+        "Załadunek",
+        "Droga PL",
+        "Gdańsk",
+        "Prom",
+        "Nynäshamn",
+        "Droga SE",
+        "Boden",
+        "Dostarczone"
+      ],
+      "gripDefaultVisible": false,
+      "mainScroll": {
+        "sh": 2070,
+        "ch": 765,
+        "can": true
+      },
+      "ops": true
+    },
+    "HHL-Faktury": {
+      "topH": 52,
+      "corrH": 82.671875,
+      "stageN": "30px",
+      "phdPad": "9px 13px",
+      "phdH2": "17px",
+      "panelMargin": "12px",
+      "gridDisplay": null,
+      "gridH": null,
+      "panelTop": 146.671875,
+      "labels": [
+        "Przygotowanie",
+        "Załadunek",
+        "Droga PL",
+        "Gdańsk",
+        "Prom",
+        "Nynäshamn",
+        "Droga SE",
+        "Boden",
+        "Dostarczone"
+      ],
+      "gripDefaultVisible": false,
+      "mainScroll": {
+        "sh": 1339,
+        "ch": 765,
+        "can": true
+      },
+      "ops": true
+    },
+    "HHL-Automatyzacje": {
+      "topH": 52,
+      "corrH": 82.671875,
+      "stageN": "30px",
+      "phdPad": "9px 13px",
+      "phdH2": "17px",
+      "panelMargin": "12px",
+      "gridDisplay": null,
+      "gridH": null,
+      "panelTop": 146.671875,
+      "labels": [
+        "Przygotowanie",
+        "Załadunek",
+        "Droga PL",
+        "Gdańsk",
+        "Prom",
+        "Nynäshamn",
+        "Droga SE",
+        "Boden",
+        "Dostarczone"
+      ],
+      "gripDefaultVisible": false,
+      "mainScroll": {
+        "sh": 1081,
+        "ch": 765,
+        "can": true
+      },
+      "ops": true
+    },
+    "HHL-Opcje": {
+      "topH": 52,
+      "corrH": 82.671875,
+      "stageN": "30px",
+      "phdPad": "9px 13px",
+      "phdH2": "17px",
+      "panelMargin": "0px",
+      "gridDisplay": null,
+      "gridH": null,
+      "panelTop": 232.40625,
+      "labels": [
+        "Przygotowanie",
+        "Załadunek",
+        "Droga PL",
+        "Gdańsk",
+        "Prom",
+        "Nynäshamn",
+        "Droga SE",
+        "Boden",
+        "Dostarczone"
+      ],
+      "gripDefaultVisible": false,
+      "mainScroll": {
+        "sh": 2297,
+        "ch": 765,
+        "can": true
+      },
+      "ops": true
+    },
+    "HHL-Strefy": {
+      "topH": 52,
+      "corrH": 82.671875,
+      "stageN": "30px",
+      "phdPad": "9px 13px",
+      "phdH2": "17px",
+      "panelMargin": "12px",
+      "gridDisplay": null,
+      "gridH": null,
+      "panelTop": 146.671875,
+      "labels": [
+        "Przygotowanie",
+        "Załadunek",
+        "Droga PL",
+        "Gdańsk",
+        "Prom",
+        "Nynäshamn",
+        "Droga SE",
+        "Boden",
+        "Dostarczone"
+      ],
+      "gripDefaultVisible": false,
+      "mainScroll": {
+        "sh": 765,
+        "ch": 765,
+        "can": false
+      },
+      "ops": true
+    },
+    "KSH-Kokpit": {
+      "topH": 52,
+      "corrH": 82.671875,
+      "stageN": "30px",
+      "phdPad": "9px 13px",
+      "phdH2": "17px",
+      "panelMargin": "12px",
+      "gridDisplay": "grid",
+      "gridH": 650.15625,
+      "panelTop": 197.515625,
+      "labels": [
+        "Przygotowanie",
+        "Załadunek",
+        "Droga PL",
+        "Gdańsk",
+        "Prom",
+        "Nynäshamn",
+        "Droga SE",
+        "Boden",
+        "Dostarczone"
+      ],
+      "gripDefaultVisible": false,
+      "mainScroll": {
+        "sh": 989,
+        "ch": 765,
+        "can": true
+      },
+      "ops": true
+    },
+    "SCX-Kokpit": {
+      "topH": 52,
+      "corrH": 82.671875,
+      "stageN": "30px",
+      "phdPad": "9px 13px",
+      "phdH2": "17px",
+      "panelMargin": "12px",
+      "gridDisplay": "grid",
+      "gridH": 650.15625,
+      "panelTop": 197.515625,
+      "labels": [
+        "Przygotowanie",
+        "Załadunek",
+        "Droga PL",
+        "Gdańsk",
+        "Prom",
+        "Nynäshamn",
+        "Droga SE",
+        "Boden",
+        "Dostarczone"
+      ],
+      "gripDefaultVisible": false,
+      "mainScroll": {
+        "sh": 989,
+        "ch": 765,
+        "can": true
+      },
+      "ops": true
+    }
+  },
+  "compare": {
+    "claude": {
+      "topH": 52,
+      "corrH": 82.671875,
+      "stageN": "30px",
+      "phdPad": "9px 13px",
+      "phdH2": "17px",
+      "panelMargin": "12px",
+      "gridDisplay": "grid",
+      "gridH": 649.453125,
+      "panelTop": 201.515625,
+      "labels": [
+        "Przygotowanie",
+        "Załadunek",
+        "Droga PL",
+        "Gdańsk",
+        "Prom",
+        "Nynäshamn",
+        "Droga SE",
+        "Boden",
+        "Dostarczone"
+      ],
+      "gripDefaultVisible": false,
+      "mainScroll": {
+        "sh": 992,
+        "ch": 765,
+        "can": true
+      },
+      "ops": true
+    },
+    "app": {
+      "topH": 52,
+      "corrH": 82.671875,
+      "stageN": "30px",
+      "phdPad": "9px 13px",
+      "phdH2": "17px",
+      "panelMargin": "12px",
+      "gridDisplay": "grid",
+      "gridH": 650.15625,
+      "panelTop": 201.515625,
+      "labels": [
+        "Przygotowanie",
+        "Załadunek",
+        "Droga PL",
+        "Gdańsk",
+        "Prom",
+        "Nynäshamn",
+        "Droga SE",
+        "Boden",
+        "Dostarczone"
+      ],
+      "gripDefaultVisible": false,
+      "mainScroll": {
+        "sh": 993,
+        "ch": 765,
+        "can": true
+      },
+      "ops": true
+    },
+    "match": {
+      "topH": true,
+      "corrH": true,
+      "stageN": true,
+      "panelMargin": true,
+      "panelTop": true,
+      "gridDisplay": true,
+      "gridH": true,
+      "labels": true,
+      "phdPad": true,
+      "gripHiddenByDefault": true,
+      "scrollWorks": true,
+      "mapFiltersOk": true,
+      "mapResizeOk": true
+    }
+  },
+  "mapFilters": [
+    "Wszystkie · 72",
+    "Terminowe · 62",
+    "Spóźnione · 10"
+  ],
+  "mapColResize": true
+}

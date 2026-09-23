@@ -1,0 +1,64 @@
+{
+  "app": {
+    "brand": "TOWER",
+    "brandSub": "Stegra Boden · H&H Logistics",
+    "hasHamburger": false,
+    "hasLogoChip": false,
+    "stages": [
+      "Przygotowanie",
+      "Załadunek",
+      "Droga PL",
+      "Gdańsk",
+      "Prom",
+      "Nynäshamn",
+      "Droga SE",
+      "Boden",
+      "Dostarczone"
+    ],
+    "nav": [
+      "Kokpit",
+      "Mapa",
+      "Harmonogram",
+      "Ryzyka",
+      "Dokumenty",
+      "Finanse",
+      "Faktury",
+      "Automatyzacje",
+      "Strefy"
+    ],
+    "kpi": [
+      "Transporty w drodze",
+      "Wymaga decyzji",
+      "Terminowość",
+      "Marża narastająco",
+      "Komplet dokumentów",
+      "Czas wykrycia odchylenia"
+    ],
+    "panelH2": [
+      "H&H Logistics",
+      "Wymaga decyzji",
+      "Postęp dostaw",
+      "Mapa"
+    ],
+    "exSample": [
+      {
+        "t": "Brak zezwolenia PL · SG-09",
+        "m": "SCX · Wgraj zezwolenie PL"
+      },
+      {
+        "t": "SG-03 · M/F Wawel — fale powyżej progu",
+        "m": "HHL · Włącz Plan B / powiadom SCX"
+      },
+      {
+        "t": "Zezwolenie nie pasuje · SG-07",
+        "m": "SCX · Zmień zestaw albo wgraj nowe zezwolenie"
+      }
+    ],
+    "doubled": [],
+    "corridorMin": "940px",
+    "topH": 52,
+    "navW": 186,
+    "marginKpi": "Marża narastająco\n91 276 PLN\n15,0% · koszt 504 658 PLN"
+  },
+  "note": "makieta twin in identical-claude-makieta.png"
+}

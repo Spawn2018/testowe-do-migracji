@@ -1,0 +1,114 @@
+{
+  "app": {
+    "bodyFont": "Barlow, \"Helvetica Neue\", Arial, sans-serif",
+    "bodySize": "14px",
+    "bodyLh": "20.3px",
+    "brand": "TOWER",
+    "brandSize": "23px",
+    "panelBdPad": "13px",
+    "navBtnPad": "8px 14px",
+    "exqPad": "9px 13px 9px 10px",
+    "drawerW": null,
+    "drawerH3": null,
+    "drawerH3Ff": null,
+    "drawerMeta": null,
+    "dbodyPad": null,
+    "rightExists": true,
+    "plex": false,
+    "panelSubs": [
+      "23.09.2026 · projekt Stegra Boden",
+      "8",
+      "tygodnie 37–45"
+    ],
+    "panelH2": [
+      "H&H Logistics",
+      "Wymaga decyzji",
+      "Postęp dostaw",
+      "Mapa"
+    ]
+  },
+  "appDrawer": {
+    "bodyFont": "Barlow, \"Helvetica Neue\", Arial, sans-serif",
+    "bodySize": "14px",
+    "bodyLh": "20.3px",
+    "brand": "TOWER",
+    "brandSize": "23px",
+    "panelBdPad": "13px",
+    "navBtnPad": "8px 14px",
+    "exqPad": "9px 13px 9px 10px",
+    "drawerW": 560,
+    "drawerH3": "25px",
+    "drawerH3Ff": "\"Barlow Condensed\"",
+    "drawerMeta": "12.5px",
+    "dbodyPad": "13px 15px",
+    "rightExists": true,
+    "plex": false,
+    "panelSubs": [
+      "23.09.2026 · projekt Stegra Boden",
+      "8",
+      "tygodnie 37–45"
+    ],
+    "panelH2": [
+      "H&H Logistics",
+      "Wymaga decyzji",
+      "Postęp dostaw",
+      "Mapa"
+    ]
+  },
+  "claude": {
+    "bodyFont": "Barlow, \"Helvetica Neue\", Arial, sans-serif",
+    "bodySize": "14px",
+    "bodyLh": "20.3px",
+    "brand": "TOWER",
+    "brandSize": "23px",
+    "panelBdPad": "13px",
+    "navBtnPad": "8px 14px",
+    "exqPad": "9px 13px 9px 10px",
+    "drawerW": null,
+    "drawerH3": null,
+    "drawerH3Ff": null,
+    "drawerMeta": null,
+    "dbodyPad": null,
+    "rightExists": true,
+    "plex": false,
+    "panelSubs": [
+      "22.09.2026 · projekt Stegra Boden",
+      "13",
+      "tygodnie 37–45"
+    ],
+    "panelH2": [
+      "H&H Logistics",
+      "Wymaga decyzji",
+      "Postęp dostaw",
+      "Mapa"
+    ]
+  },
+  "claudeDrawer": {
+    "bodyFont": "Barlow, \"Helvetica Neue\", Arial, sans-serif",
+    "bodySize": "14px",
+    "bodyLh": "20.3px",
+    "brand": "TOWER",
+    "brandSize": "23px",
+    "panelBdPad": "13px",
+    "navBtnPad": "8px 14px",
+    "exqPad": "9px 13px 9px 10px",
+    "drawerW": 560,
+    "drawerH3": "25px",
+    "drawerH3Ff": "\"Barlow Condensed\"",
+    "drawerMeta": "12.5px",
+    "dbodyPad": "13px 15px",
+    "rightExists": true,
+    "plex": false,
+    "panelSubs": [
+      "22.09.2026 · projekt Stegra Boden",
+      "13",
+      "tygodnie 37–45"
+    ],
+    "panelH2": [
+      "H&H Logistics",
+      "Wymaga decyzji",
+      "Postęp dostaw",
+      "Mapa"
+    ]
+  }
+}

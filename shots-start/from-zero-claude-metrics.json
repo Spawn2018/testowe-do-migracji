@@ -1,0 +1,43 @@
+{
+  "hhl": {
+    "fontBody": "Barlow, \"Helvetica Neue\", Arial, sans-serif",
+    "fontSize": "14px",
+    "brandFont": "\"Barlow Condensed\"",
+    "brandSize": "23px",
+    "topbarH": 52,
+    "navW": 186,
+    "corridorPad": "9px 14px 11px",
+    "page": "#080f15",
+    "surface": "#101c25",
+    "ink": "#dce7ee",
+    "hasApp": true,
+    "hasTopbar": true,
+    "hasCorridor": true,
+    "hasBody": true,
+    "hasPanel": true,
+    "hasKpis": true,
+    "theme": "dark",
+    "wtClassLeft": []
+  },
+  "ksh": {
+    "fontBody": "Barlow, \"Helvetica Neue\", Arial, sans-serif",
+    "fontSize": "14px",
+    "brandFont": "\"Barlow Condensed\"",
+    "brandSize": "23px",
+    "topbarH": 52,
+    "navW": 186,
+    "corridorPad": "9px 14px 11px",
+    "page": "#e3e9ed",
+    "surface": "#fff",
+    "ink": "#0e1a24",
+    "hasApp": true,
+    "hasTopbar": true,
+    "hasCorridor": true,
+    "hasBody": true,
+    "hasPanel": true,
+    "hasKpis": true,
+    "theme": "light",
+    "wtClassLeft": []
+  },
+  "at": "2026-09-23T00:04:56.637Z"
+}

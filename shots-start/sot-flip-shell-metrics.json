@@ -1,0 +1,35 @@
+{
+  "app": {
+    "bodyFont": "Barlow, \"Helvetica Neue\", Arial, sans-serif",
+    "bodySize": "14px",
+    "brandFont": "\"Barlow Condensed\", Barlow, Arial, sans-serif",
+    "brandSize": "23px",
+    "topH": 52,
+    "navW": 186,
+    "spinePad": "9px 14px 11px",
+    "pageBg": "#080f15",
+    "surface": "#101c25",
+    "ink": "#dce7ee"
+  },
+  "makieta": {
+    "bodyFont": "Barlow, \"Helvetica Neue\", Arial, sans-serif",
+    "bodySize": "14px",
+    "brandFont": "\"Barlow Condensed\"",
+    "brandSize": "23px",
+    "topH": 52,
+    "navW": 186,
+    "spinePad": "9px 14px 11px",
+    "pageBg": "#080F15",
+    "surface": "#101C25",
+    "ink": "#DCE7EE"
+  },
+  "match": {
+    "bodyFontBarlow": true,
+    "brandCondensed": true,
+    "topH": true,
+    "navW": true,
+    "pageBg": true,
+    "surface": true,
+    "ink": true
+  }
+}

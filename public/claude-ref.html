@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TOWER — Stegra Boden</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --page:#E3E9ED; --surface:#FFFFFF; --surface-2:#F4F7F9; --surface-3:#EAEFF3;
+  --ink:#0E1A24; --ink-2:#3C4E5C; --ink-3:#6C7D8A;
+  --rule:#C9D5DD; --rule-2:#DEE6EB;
+  --amber:#C97E12; --amber-bg:#FBEFD9;
+  --red:#B32639; --red-bg:#F8DEE2;
+  --go:#1B6E5D; --go-bg:#DCEDE8;
+  --sea:#245C87; --sea-bg:#DCE8F1;
+  --plan:#6C7D8A; --plan-bg:#E6ECF0;
+  --focus:#1D6FB8;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page:#080F15; --surface:#101C25; --surface-2:#16242F; --surface-3:#1D2E3A;
+    --ink:#DCE7EE; --ink-2:#A4B6C2; --ink-3:#748896;
+    --rule:#263A48; --rule-2:#1C2B36;
+    --amber:#E5A544; --amber-bg:#3A2C12;
+    --red:#E8687C; --red-bg:#3B1720;
+    --go:#4FB79E; --go-bg:#0F2B27;
+    --sea:#6BA8D6; --sea-bg:#12283A;
+    --plan:#7E93A1; --plan-bg:#1A272F;
+    --focus:#5AA6E8;
+  }
+}
+:root[data-theme="dark"]{
+  --page:#080F15; --surface:#101C25; --surface-2:#16242F; --surface-3:#1D2E3A;
+  --ink:#DCE7EE; --ink-2:#A4B6C2; --ink-3:#748896;
+  --rule:#263A48; --rule-2:#1C2B36;
+  --amber:#E5A544; --amber-bg:#3A2C12;
+  --red:#E8687C; --red-bg:#3B1720;
+  --go:#4FB79E; --go-bg:#0F2B27;
+  --sea:#6BA8D6; --sea-bg:#12283A;
+  --plan:#7E93A1; --plan-bg:#1A272F;
+  --focus:#5AA6E8;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0;height:100%;background:var(--page);color:var(--ink);
+  font-family:"Barlow","Helvetica Neue",Arial,sans-serif;
+  font-size:14px;line-height:1.45;font-variant-numeric:tabular-nums;
+  -webkit-font-smoothing:antialiased;
+}
+.cond{font-family:"Barlow Condensed","Barlow",Arial,sans-serif;letter-spacing:.015em}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-rows:auto auto 1fr;height:100%;min-height:0}
+.topbar{
+  display:flex;align-items:center;gap:18px;padding:0 14px;height:52px;
+  background:var(--surface);border-bottom:1px solid var(--rule);
+}
+.brand{display:flex;align-items:baseline;gap:9px;min-width:0}
+.brand b{font-family:"Barlow Condensed";font-weight:700;font-size:23px;letter-spacing:.06em}
+.brand span{color:var(--ink-3);font-size:13px;white-space:nowrap}
+.spacer{flex:1}
+.seg{display:flex;border:1px solid var(--rule);border-radius:2px;overflow:hidden;background:var(--surface-2)}
+.seg button{padding:5px 11px;font-size:12.5px;font-weight:500;color:var(--ink-2);border-right:1px solid var(--rule)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:600}
+.roleswitch{display:flex;align-items:center;gap:8px}
+.roleswitch>span{font-size:12px;color:var(--ink-3)}
+.clock{font-family:"Barlow Condensed";font-size:14px;color:var(--ink-2);white-space:nowrap}
+.iconbtn{width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--rule);border-radius:2px;background:var(--surface-2);font-size:14px}
+
+/* ---------- corridor spine ---------- */
+.corridor{
+  background:var(--surface);border-bottom:1px solid var(--rule);
+  padding:9px 14px 11px;overflow-x:auto;
+}
+.corridor-inner{display:flex;align-items:stretch;min-width:940px}
+.stage{
+  flex:1;position:relative;text-align:left;padding:2px 10px 2px 12px;
+  border-left:1px solid var(--rule-2);
+}
+.stage:first-child{border-left:0;padding-left:2px}
+.stage .n{font-family:"Barlow Condensed";font-weight:700;font-size:26px;line-height:1;color:var(--ink)}
+.stage .n.zero{color:var(--ink-3);font-weight:500}
+.stage .l{font-size:11.5px;color:var(--ink-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stage .bar{height:3px;margin-top:6px;background:var(--rule-2)}
+.stage .bar i{display:block;height:3px;background:var(--sea)}
+.stage[aria-pressed="true"]{background:var(--surface-3)}
+.stage[aria-pressed="true"] .l{color:var(--ink)}
+.stage.sea .bar i{background:var(--sea)}
+.stage.site .bar i{background:var(--go)}
+.stage.pre .bar i{background:var(--plan)}
+
+/* ---------- body ---------- */
+.body{display:grid;grid-template-columns:186px 1fr;min-height:0}
+nav{background:var(--surface);border-right:1px solid var(--rule);padding:10px 0;overflow-y:auto}
+nav button{
+  display:flex;align-items:center;gap:9px;width:100%;padding:8px 14px;
+  font-size:14px;color:var(--ink-2);text-align:left;border-left:3px solid transparent;
+}
+nav button:hover{background:var(--surface-2)}
+nav button[aria-current="page"]{background:var(--surface-3);color:var(--ink);font-weight:600;border-left-color:var(--amber)}
+nav .glyph{width:17px;text-align:center;font-size:14px;opacity:.85}
+nav .count{margin-left:auto;font-size:11.5px;font-weight:600;padding:0 5px;border-radius:2px;background:var(--rule-2);color:var(--ink-2)}
+nav .count.hot{background:var(--red-bg);color:var(--red)}
+nav .sep{height:1px;background:var(--rule-2);margin:9px 14px}
+main{min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden}
+
+/* ---------- panels ---------- */
+.panel{background:var(--surface);border:1px solid var(--rule);margin:12px}
+.panel-hd{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--rule-2);background:var(--surface-2)}
+.panel-hd h2{margin:0;font-family:"Barlow Condensed";font-size:17px;font-weight:600;letter-spacing:.02em}
+.panel-hd .sub{font-size:12px;color:var(--ink-3)}
+.panel-bd{padding:13px}
+.panel-bd.flush{padding:0}
+.grid2{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:0}
+@media (max-width:1100px){.grid2{grid-template-columns:1fr}.body{grid-template-columns:56px 1fr}nav button span.lbl{display:none}nav .count{display:none}}
+
+/* ---------- kpi ---------- */
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--rule-2)}
+.kpi{padding:11px 13px;border-right:1px solid var(--rule-2);border-bottom:1px solid var(--rule-2)}
+.kpi:nth-child(3n){border-right:0}
+.kpi .k{font-size:11.5px;color:var(--ink-3)}
+.kpi .v{font-family:"Barlow Condensed";font-size:29px;font-weight:700;line-height:1.05;margin-top:1px}
+.kpi .d{font-size:11.5px;color:var(--ink-3);margin-top:1px}
+.kpi .v.alert{color:var(--red)}
+.kpi .v.warn{color:var(--amber)}
+.kpi .v.good{color:var(--go)}
+
+/* ---------- exception queue ---------- */
+.exq{list-style:none;margin:0;padding:0}
+.exq li{display:flex;gap:10px;padding:9px 13px 9px 10px;border-bottom:1px solid var(--rule-2);cursor:pointer;align-items:flex-start}
+.exq li:hover{background:var(--surface-2)}
+.exq .gut{width:3px;align-self:stretch;flex:0 0 3px;background:var(--plan)}
+.exq li[data-sev="CRITICAL"] .gut,.exq li[data-sev="HIGH"] .gut{background:var(--red)}
+.exq li[data-sev="MEDIUM"] .gut{background:var(--amber)}
+.exq .txt{flex:1;min-width:0}
+.exq .t{font-weight:500;line-height:1.3}
+.exq .m{font-size:12px;color:var(--ink-3);margin-top:2px}
+.exq .age{font-family:"Barlow Condensed";font-size:13px;color:var(--ink-3);white-space:nowrap;padding-top:1px}
+.code{font-family:"Barlow Condensed";font-weight:600;letter-spacing:.03em}
+
+/* ---------- table ---------- */
+.tablewrap{overflow:auto;max-height:calc(100vh - 260px)}
+table{width:100%;border-collapse:collapse;font-size:13.2px}
+thead th{
+  position:sticky;top:0;z-index:2;background:var(--surface-2);
+  font-family:"Barlow Condensed";font-weight:600;font-size:13px;color:var(--ink-2);
+  text-align:left;padding:7px 9px;border-bottom:1px solid var(--rule);white-space:nowrap;cursor:pointer;
+}
+thead th.num,td.num{text-align:right}
+thead th .ar{color:var(--ink-3);font-size:10px}
+tbody td{padding:6px 9px;border-bottom:1px solid var(--rule-2);white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--surface-2)}
+tbody tr.hl{background:var(--amber-bg)}
+tbody tr.done td{color:var(--ink-3)}
+.money{font-weight:600}
+.money.neg{color:var(--red)}
+.pill{display:inline-block;padding:1px 7px;border-radius:2px;font-size:11.5px;font-weight:600;font-family:"Barlow Condensed";letter-spacing:.02em}
+.p-plan{background:var(--plan-bg);color:var(--ink-2)}
+.p-go{background:var(--go-bg);color:var(--go)}
+.p-sea{background:var(--sea-bg);color:var(--sea)}
+.p-amber{background:var(--amber-bg);color:var(--amber)}
+.p-red{background:var(--red-bg);color:var(--red)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:baseline}
+.flagrow{display:flex;gap:3px}
+.flag{width:16px;height:16px;display:grid;place-items:center;font-size:10px;border-radius:2px;background:var(--rule-2);color:var(--ink-3)}
+.flag.ok{background:var(--go-bg);color:var(--go)}
+.flag.miss{background:var(--red-bg);color:var(--red)}
+
+/* ---------- filters ---------- */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:9px 13px;border-bottom:1px solid var(--rule-2);background:var(--surface-2)}
+.filters input,.filters select{
+  font:inherit;font-size:13px;padding:4px 7px;border:1px solid var(--rule);border-radius:2px;
+  background:var(--surface);color:var(--ink);
+}
+.filters input{min-width:180px}
+.chipbtn{padding:4px 9px;border:1px solid var(--rule);border-radius:2px;font-size:12.5px;background:var(--surface);color:var(--ink-2)}
+.chipbtn[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+
+/* ---------- map ---------- */
+.mapsplit{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);min-height:0}
+@media (max-width:1000px){.mapsplit{grid-template-columns:1fr}}
+.mapbox{position:relative;background:var(--surface-3);border-right:1px solid var(--rule);min-height:520px}
+.mapbox svg{display:block;width:100%;height:100%}
+.maplayers{position:absolute;top:9px;left:9px;background:var(--surface);border:1px solid var(--rule);padding:7px 9px;font-size:12.5px;max-width:190px}
+.maplayers label{display:flex;gap:6px;align-items:center;padding:2px 0;cursor:pointer}
+.mapkey{position:absolute;bottom:9px;left:9px;background:var(--surface);border:1px solid var(--rule);padding:7px 9px;font-size:12px;display:flex;gap:11px;flex-wrap:wrap;max-width:min(480px,calc(100% - 18px))}
+.mapkey i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.veh{cursor:pointer}
+.veh:hover circle.hit{stroke-opacity:.5}
+.mlist{overflow-y:auto;max-height:calc(100vh - 210px)}
+
+/* ---------- drawer ---------- */
+.scrim{position:fixed;inset:0;background:rgba(6,14,20,.45);z-index:40}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);z-index:41;
+  background:var(--surface);border-left:1px solid var(--rule);
+  display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.drawer-hd{padding:12px 15px;border-bottom:1px solid var(--rule)}
+.drawer-hd .r1{display:flex;align-items:center;gap:10px}
+.drawer-hd h3{margin:0;font-family:"Barlow Condensed";font-size:25px;font-weight:700;letter-spacing:.03em}
+.drawer-hd .meta{font-size:12.5px;color:var(--ink-3);margin-top:3px}
+.dtabs{display:flex;gap:0;border-bottom:1px solid var(--rule);background:var(--surface-2)}
+.dtabs button{padding:8px 13px;font-size:13.5px;color:var(--ink-2);border-bottom:2px solid transparent}
+.dtabs button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-color:var(--amber);background:var(--surface)}
+.dbody{flex:1;overflow-y:auto;padding:13px 15px}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:3px 12px;font-size:13.2px}
+.kv dt{color:var(--ink-3)}
+.kv dd{margin:0;font-weight:500}
+.hr{height:1px;background:var(--rule-2);margin:13px 0}
+h4.sec{margin:0 0 8px;font-family:"Barlow Condensed";font-size:15px;font-weight:600;letter-spacing:.02em;color:var(--ink-2)}
+
+/* timeline */
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:1px;background:var(--rule)}
+.tl li{position:relative;padding:0 0 13px 20px}
+.tl .mk{position:absolute;left:1px;top:5px;width:9px;height:9px;border-radius:50%;background:var(--sea);border:2px solid var(--surface)}
+.tl li.future .mk{background:var(--rule)}
+.tl li.future .w{color:var(--ink-3)}
+.tl .w{font-weight:500;font-size:13.2px}
+.tl .ts{font-size:12px;color:var(--ink-3)}
+
+/* money block */
+.mrow{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--rule-2);font-size:13.5px}
+.mrow.total{font-weight:700;border-bottom:0;border-top:1px solid var(--rule);margin-top:3px;padding-top:7px}
+.mrow .lbl{color:var(--ink-2)}
+.locked{padding:11px;background:var(--surface-2);border:1px dashed var(--rule);color:var(--ink-3);font-size:13px}
+
+/* chat */
+.msg{padding:8px 10px;background:var(--surface-2);border-left:2px solid var(--rule);margin-bottom:8px}
+.msg.me{border-left-color:var(--amber)}
+.msg .who{font-size:12px;color:var(--ink-3);margin-bottom:2px}
+.chatbar{display:flex;gap:7px;margin-top:10px}
+.chatbar input{flex:1;font:inherit;padding:6px 9px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink)}
+.btn{padding:6px 13px;border:1px solid var(--ink);background:var(--ink);color:var(--surface);border-radius:2px;font-weight:600;font-size:13px}
+.btn.ghost{background:var(--surface);color:var(--ink);border-color:var(--rule)}
+
+/* misc */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+@media (max-width:820px){.two{grid-template-columns:1fr}}
+.note{font-size:12.5px;color:var(--ink-3);padding:9px 13px;background:var(--surface-2);border-top:1px solid var(--rule-2)}
+.wf{display:flex;gap:11px;align-items:flex-start;padding:10px 13px;border-bottom:1px solid var(--rule-2)}
+.wf .sw{width:32px;height:18px;border-radius:9px;background:var(--rule);position:relative;flex:0 0 32px;margin-top:3px;cursor:pointer}
+.wf .sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--surface);transition:left .15s}
+.wf .sw[aria-pressed="true"]{background:var(--go)}
+.wf .sw[aria-pressed="true"]::after{left:16px}
+.wf .rule{font-size:12.5px;color:var(--ink-3);margin-top:3px}
+.wf .rule b{color:var(--ink-2);font-weight:600}
+.legendline{display:flex;gap:14px;font-size:12px;color:var(--ink-3);padding:7px 13px;flex-wrap:wrap}
+.banner{display:flex;gap:10px;padding:10px 13px;background:var(--amber-bg);border-left:3px solid var(--amber);font-size:13px;margin:12px 12px 0}
+.banner.red{background:var(--red-bg);border-left-color:var(--red)}
+.banner b{font-weight:600}
+.mono{font-family:"Barlow Condensed";font-weight:600}
+.sronly{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><b>TOWER</b><span id="brandSub">Stegra Boden · H&amp;H Logistics</span></div>
+    <div class="spacer"></div>
+    <div class="roleswitch">
+      <span id="roleLbl">Widok</span>
+      <div class="seg" id="roleSeg">
+        <button data-role="HHL" aria-pressed="true">H&amp;H Logistics</button>
+        <button data-role="KSH" aria-pressed="false">KSH</button>
+        <button data-role="SCX" aria-pressed="false">Scandinavian Express</button>
+      </div>
+    </div>
+    <div class="seg" id="langSeg">
+      <button data-lang="pl" aria-pressed="true">PL</button>
+      <button data-lang="en" aria-pressed="false">EN</button>
+      <button data-lang="sv" aria-pressed="false">SV</button>
+    </div>
+    <button class="iconbtn" id="themeBtn" title="Jasny / ciemny">◐</button>
+    <div class="clock" id="clock">wt 22.09.2026 · 14:32</div>
+  </header>
+
+  <div class="corridor"><div class="corridor-inner" id="corridor"></div></div>
+
+  <div class="body">
+    <nav id="nav"></nav>
+    <main id="main"></main>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   TOWER — makieta prezentacyjna
+   Dane są wygenerowane deterministycznie i służą wyłącznie do pokazania
+   układu i przepływu pracy. Żadne z nich nie pochodzą z systemów stron.
+   ===================================================================== */
+
+/* ---------- 1. Języki ---------- */
+const I18N = {
+ pl:{
+  view:"Widok", nav_dash:"Kokpit", nav_map:"Mapa", nav_sched:"Harmonogram", nav_risk:"Ryzyka",
+  nav_docs:"Dokumenty", nav_fin:"Finanse", nav_inv:"Faktury", nav_wf:"Automatyzacje", nav_geo:"Strefy",
+  nav_fin_ksh:"Rozliczenia", nav_fin_scx:"Moje stawki", nav_tasks:"Moje zadania",
+  st_PRE:"Przygotowanie", st_ZAL:"Załadunek", st_PL:"Droga PL", st_GDA:"Gdańsk",
+  st_SEA:"Prom", st_NYN:"Nynäshamn", st_SE:"Droga SE", st_SITE:"Boden", st_DONE:"Dostarczone",
+  s_PLANNED:"Planowany", s_RESOURCES_PENDING:"Brak auta", s_DOCS_PENDING:"Brak dokumentów",
+  s_READY:"Gotowy", s_AT_LOADING:"Załadunek", s_IN_TRANSIT_PL:"W drodze PL",
+  s_AT_PORT_GDANSK:"Port Gdańsk", s_FERRY:"Na promie", s_AT_PORT_NYNASHAMN:"Nynäshamn",
+  s_IN_TRANSIT_SE:"W drodze SE", s_AT_SITE:"Na placu", s_UNLOADED:"Rozładowany", s_DELIVERED:"Dostarczony",
+  c_code:"Wysyłka", c_type:"Typ", c_dims:"Wymiary L×W×H", c_weight:"Masa", c_load:"Załadunek",
+  c_deliv:"Dostawa", c_status:"Status", c_driver:"Kierowca", c_plate:"Nr rej.", c_eta:"ETA Boden",
+  c_docs:"Dok.", c_cost:"Koszt", c_rev:"Przychód", c_margin:"Marża", c_myprice:"Moja stawka",
+  c_yourprice:"Twoja cena", c_order:"Nr zlecenia", c_seq:"Montaż",
+  k_active:"Transporty w drodze", k_exc:"Wymaga decyzji", k_otif:"Terminowość", k_margin:"Marża narastająco",
+  k_docs:"Komplet dokumentów", k_ferry:"Ryzyko promowe", k_delivered:"Elementy dostarczone",
+  k_tonnage:"Tonaż na placu", k_next:"Najbliższa dostawa", k_toaction:"Do uzupełnienia",
+  k_week:"Przychód tygodnia", k_lag:"Czas wykrycia odchylenia",
+  q_title:"Wymaga decyzji", q_none:"Nic nie wymaga reakcji. Wszystkie transporty idą zgodnie z planem.",
+  d_over:"Przegląd", d_tl:"Przebieg", d_docs:"Dokumenty", d_money:"Ceny", d_chat:"Ustalenia",
+  b_filter:"Filtruj", b_all:"Wszystkie", b_late:"Opóźnione", b_nodocs:"Bez dokumentów", b_active:"W drodze",
+  search:"Szukaj kodu, kierowcy, nr rej.",
+  locked:"Ta cena nie jest widoczna w Twojej roli.",
+  progress:"Postęp dostaw", planline:"Plan", actualline:"Wykonanie",
+  send:"Wyślij", msgph:"Napisz do pozostałych stron…"
+ },
+ en:{
+  view:"View", nav_dash:"Overview", nav_map:"Map", nav_sched:"Schedule", nav_risk:"Risks",
+  nav_docs:"Documents", nav_fin:"Finance", nav_inv:"Invoices", nav_wf:"Automations", nav_geo:"Zones",
+  nav_fin_ksh:"Charges", nav_fin_scx:"My rates", nav_tasks:"My tasks",
+  st_PRE:"Preparing", st_ZAL:"Loading", st_PL:"Road PL", st_GDA:"Gdańsk",
+  st_SEA:"Ferry", st_NYN:"Nynäshamn", st_SE:"Road SE", st_SITE:"Boden", st_DONE:"Delivered",
+  s_PLANNED:"Planned", s_RESOURCES_PENDING:"No vehicle", s_DOCS_PENDING:"Docs missing",
+  s_READY:"Ready", s_AT_LOADING:"Loading", s_IN_TRANSIT_PL:"In transit PL",
+  s_AT_PORT_GDANSK:"Port Gdańsk", s_FERRY:"On ferry", s_AT_PORT_NYNASHAMN:"Nynäshamn",
+  s_IN_TRANSIT_SE:"In transit SE", s_AT_SITE:"On site", s_UNLOADED:"Unloaded", s_DELIVERED:"Delivered",
+  c_code:"Shipment", c_type:"Type", c_dims:"Dims L×W×H", c_weight:"Weight", c_load:"Pickup",
+  c_deliv:"Delivery", c_status:"Status", c_driver:"Driver", c_plate:"Plate", c_eta:"ETA Boden",
+  c_docs:"Docs", c_cost:"Cost", c_rev:"Revenue", c_margin:"Margin", c_myprice:"My rate",
+  c_yourprice:"Your price", c_order:"Order no.", c_seq:"Assembly",
+  k_active:"Loads in transit", k_exc:"Needs a decision", k_otif:"On time", k_margin:"Margin to date",
+  k_docs:"Document set complete", k_ferry:"Ferry risk", k_delivered:"Items delivered",
+  k_tonnage:"Tonnage on site", k_next:"Next delivery", k_toaction:"To complete",
+  k_week:"Revenue this week", k_lag:"Exception detection lag",
+  q_title:"Needs a decision", q_none:"Nothing needs attention. Every load is on plan.",
+  d_over:"Overview", d_tl:"Progress", d_docs:"Documents", d_money:"Pricing", d_chat:"Notes",
+  b_filter:"Filter", b_all:"All", b_late:"Late", b_nodocs:"Missing docs", b_active:"In transit",
+  search:"Search code, driver, plate",
+  locked:"This price is not visible in your role.",
+  progress:"Delivery progress", planline:"Plan", actualline:"Actual",
+  send:"Send", msgph:"Message the other parties…"
+ },
+ sv:{
+  view:"Vy", nav_dash:"Översikt", nav_map:"Karta", nav_sched:"Tidplan", nav_risk:"Risker",
+  nav_docs:"Dokument", nav_fin:"Ekonomi", nav_inv:"Fakturor", nav_wf:"Automatiseringar", nav_geo:"Zoner",
+  nav_fin_ksh:"Kostnader", nav_fin_scx:"Mina priser", nav_tasks:"Mina uppgifter",
+  st_PRE:"Förbereds", st_ZAL:"Lastning", st_PL:"Väg PL", st_GDA:"Gdańsk",
+  st_SEA:"Färja", st_NYN:"Nynäshamn", st_SE:"Väg SE", st_SITE:"Boden", st_DONE:"Levererat",
+  s_PLANNED:"Planerad", s_RESOURCES_PENDING:"Saknar fordon", s_DOCS_PENDING:"Saknar dokument",
+  s_READY:"Klar", s_AT_LOADING:"Lastas", s_IN_TRANSIT_PL:"På väg PL",
+  s_AT_PORT_GDANSK:"Hamn Gdańsk", s_FERRY:"På färjan", s_AT_PORT_NYNASHAMN:"Nynäshamn",
+  s_IN_TRANSIT_SE:"På väg SE", s_AT_SITE:"På plats", s_UNLOADED:"Lossad", s_DELIVERED:"Levererad",
+  c_code:"Sändning", c_type:"Typ", c_dims:"Mått L×B×H", c_weight:"Vikt", c_load:"Lastning",
+  c_deliv:"Leverans", c_status:"Status", c_driver:"Förare", c_plate:"Reg.nr", c_eta:"ETA Boden",
+  c_docs:"Dok.", c_cost:"Kostnad", c_rev:"Intäkt", c_margin:"Marginal", c_myprice:"Mitt pris",
+  c_yourprice:"Ditt pris", c_order:"Ordernr", c_seq:"Montage",
+  k_active:"Transporter på väg", k_exc:"Kräver beslut", k_otif:"I tid", k_margin:"Marginal hittills",
+  k_docs:"Fullständiga dokument", k_ferry:"Färjerisk", k_delivered:"Levererade element",
+  k_tonnage:"Tonnage på plats", k_next:"Nästa leverans", k_toaction:"Att komplettera",
+  k_week:"Veckans intäkt", k_lag:"Tid till upptäckt avvikelse",
+  q_title:"Kräver beslut", q_none:"Inget kräver åtgärd. Alla transporter följer planen.",
+  d_over:"Översikt", d_tl:"Förlopp", d_docs:"Dokument", d_money:"Priser", d_chat:"Noteringar",
+  b_filter:"Filtrera", b_all:"Alla", b_late:"Försenade", b_nodocs:"Saknar dokument", b_active:"På väg",
+  search:"Sök kod, förare, reg.nr",
+  locked:"Detta pris visas inte i din roll.",
+  progress:"Leveransförlopp", planline:"Plan", actualline:"Utfall",
+  send:"Skicka", msgph:"Skriv till övriga parter…"
+ }
+};
+const T = k => I18N[S.lang][k] ?? k;
+
+/* ---------- 2. Dane źródłowe ---------- */
+const TODAY = new Date('2026-09-22T14:32:00Z');
+
+const TYPES = {
+  SG:{name:{pl:"Segment główny",en:"Main segment",sv:"Huvudsegment"}, L:18.21,W:2.45,H:2.45,u:2.96,q:7},
+  T :{name:{pl:"Trawers",en:"Traverse",sv:"Travers"},                L:14.62,W:2.45,H:2.45,u:2.88,q:7},
+  K :{name:{pl:"Słup kratowy",en:"Lattice column",sv:"Fackverkspelare"},L:12.40,W:2.20,H:2.20,u:2.10,q:9},
+  R :{name:{pl:"Rygiel dachowy",en:"Roof beam",sv:"Takbalk"},         L:16.80,W:2.45,H:2.10,u:2.45,q:8},
+  P :{name:{pl:"Podest technologiczny",en:"Access platform",sv:"Plattform"},L:11.90,W:3.20,H:1.80,u:1.95,q:10},
+  D :{name:{pl:"Dźwigar główny",en:"Main girder",sv:"Huvudbalk"},     L:21.50,W:2.45,H:2.60,u:4.60,q:4}
+};
+
+const LOADPOINTS = [
+  {n:"Zakład KSH Malbork",  lon:19.03, lat:54.04},
+  {n:"Zakład KSH Grudziądz",lon:18.76, lat:53.49},
+  {n:"Kooperant Elbląg",    lon:19.41, lat:54.16}
+];
+const PORT_GDA = {n:"Terminal Polferries Gdańsk", lon:18.68, lat:54.40};
+const PORT_NYN = {n:"Terminal Nynäshamn",         lon:17.95, lat:58.93};
+const SITE     = {n:"Plac budowy Stegra, Boden",  lon:21.69, lat:65.83};
+
+const FERRY_PATH = [[18.68,54.40],[18.32,55.70],[18.05,56.90],[17.92,57.95],[17.95,58.93]];
+const SE_ROAD = [[17.95,58.93],[17.63,59.20],[17.64,59.86],[17.15,60.67],[17.06,61.30],
+                 [17.31,62.39],[18.72,63.29],[20.26,63.83],[20.95,64.75],[21.48,65.32],
+                 [22.15,65.58],[21.69,65.83]];
+
+const GEOFENCES = [
+  {n:"Zakład KSH Malbork",   k:"LOADING",     lon:19.03,lat:54.04,r:3},
+  {n:"Zakład KSH Grudziądz", k:"LOADING",     lon:18.76,lat:53.49,r:3},
+  {n:"Kooperant Elbląg",     k:"LOADING",     lon:19.41,lat:54.16,r:3},
+  {n:"Bufor 20 km · Gdańsk", k:"PRE_PORT",    lon:18.68,lat:54.40,r:20},
+  {n:"Terminal Gdańsk",      k:"PORT_OUT",    lon:18.68,lat:54.40,r:2},
+  {n:"Terminal Nynäshamn",   k:"PORT_IN",     lon:17.95,lat:58.93,r:2},
+  {n:"Kontrola E4 · Gävle",  k:"CHECKPOINT",  lon:17.15,lat:60.67,r:9},
+  {n:"Kontrola E4 · Sundsvall",k:"CHECKPOINT",lon:17.31,lat:62.39,r:9},
+  {n:"Kontrola E4 · Umeå",   k:"CHECKPOINT",  lon:20.26,lat:63.83,r:9},
+  {n:"Kontrola E4 · Luleå",  k:"CHECKPOINT",  lon:22.15,lat:65.58,r:9},
+  {n:"Bufor 50 km · Boden",  k:"PRE_ARRIVAL", lon:21.69,lat:65.83,r:50},
+  {n:"Plac Stegra Boden",    k:"SITE",        lon:21.69,lat:65.83,r:2.5}
+];
+
+const DRIVERS = [
+  ["Mariusz Kowalczyk","+48 601 214 880"],["Tomas Petraitis","+370 612 44 019"],
+  ["Anders Lindqvist","+46 70 412 66 08"],["Krzysztof Bednarz","+48 604 771 230"],
+  ["Rimantas Jankus","+370 686 90 552"],["Paweł Sikorski","+48 603 118 447"],
+  ["Erik Nyström","+46 73 220 14 95"],["Dariusz Wrona","+48 602 550 361"],
+  ["Gintaras Šimkus","+370 674 12 806"],["Marek Lipiński","+48 605 903 224"],
+  ["Johan Hagberg","+46 76 118 40 23"],["Arkadiusz Nowak","+48 608 447 015"],
+  ["Vytautas Baranauskas","+370 699 31 745"],["Sebastian Król","+48 601 880 512"]
+];
+const TRACTORS = ["ABX 27C","GDA 5T21","LTU 418","ABX 31F","GD 9014K","LTU 552","ABX 44H",
+  "GA 7712M","LTU 083","ABX 19D","GD 6650P","LTU 361","ABX 58K","GDA 2X77"];
+const TRAILERS = ["UGM 601","GD 44LT","LTP 210","UGM 615","GD 71NX","LTP 337","UGM 628",
+  "GA 08WR","LTP 495","UGM 644","GD 15QC","LTP 508","UGM 659","GDA 9P40"];
+
+/* cennik: przedziały długości i szerokości -> stawka kosztowa i przychodowa (PLN) */
+const RATE_MATRIX = [
+  {lmax:13.60,wmax:2.55,cost:7400, rev:9600},
+  {lmax:16.50,wmax:2.55,cost:8200, rev:10700},
+  {lmax:20.00,wmax:2.55,cost:9100, rev:11900},
+  {lmax:99.00,wmax:2.55,cost:11800,rev:15400},
+  {lmax:13.60,wmax:3.30,cost:8900, rev:11600},
+  {lmax:20.00,wmax:3.30,cost:10400,rev:13700}
+];
+const BAF = {pct:0.124, index:"EU Weekly Oil Bulletin · PL ON", base:4180, current:4720,
+             baseDate:"05.01.2026", valueDate:"18.09.2026", share:0.28};
+
+function rateFor(t){
+  const c = RATE_MATRIX.find(r => t.L<=r.lmax && t.W<=r.wmax);
+  return c || RATE_MATRIX[3];
+}
+
+/* deterministyczny PRNG — makieta ma wyglądać tak samo przy każdym otwarciu */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+const rnd = mulberry32(20260922);
+
+const STATUS_PLAN = [
+  ...Array(14).fill("DELIVERED"), "UNLOADED","AT_SITE","AT_SITE",
+  ...Array(5).fill("IN_TRANSIT_SE"), "AT_PORT_NYNASHAMN","AT_PORT_NYNASHAMN",
+  ...Array(3).fill("FERRY"), "AT_PORT_GDANSK","AT_PORT_GDANSK",
+  ...Array(3).fill("IN_TRANSIT_PL"), "AT_LOADING","AT_LOADING",
+  "READY","READY","READY",
+  ...Array(4).fill("DOCS_PENDING"), ...Array(4).fill("RESOURCES_PENDING"),
+  ...Array(5).fill("PLANNED")
+];
+const STAGE_OF = {
+  PLANNED:"PRE",RESOURCES_PENDING:"PRE",DOCS_PENDING:"PRE",READY:"PRE",
+  AT_LOADING:"ZAL",IN_TRANSIT_PL:"PL",AT_PORT_GDANSK:"GDA",FERRY:"SEA",
+  AT_PORT_NYNASHAMN:"NYN",IN_TRANSIT_SE:"SE",AT_SITE:"SITE",UNLOADED:"SITE",DELIVERED:"DONE"
+};
+const PROGRESS_OF = {AT_LOADING:.03,IN_TRANSIT_PL:.09,AT_PORT_GDANSK:.16,FERRY:.30,
+  AT_PORT_NYNASHAMN:.43,IN_TRANSIT_SE:.72,AT_SITE:.99,UNLOADED:1,DELIVERED:1};
+
+function dstr(d){const p=n=>String(n).padStart(2,'0');return `${p(d.getUTCDate())}.${p(d.getUTCMonth()+1)}.${d.getUTCFullYear()}`;}
+function tstr(d){const p=n=>String(n).padStart(2,'0');return `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;}
+function addDays(d,n){const x=new Date(d);x.setUTCDate(x.getUTCDate()+n);return x;}
+
+const LOADS = (function build(){
+  const mix = [["SG",16],["T",10],["K",8],["R",7],["P",5],["D",4]];
+  const codes=[]; mix.forEach(([k,n])=>{for(let i=1;i<=n;i++)codes.push(`${k}-${String(i).padStart(2,'0')}`);});
+  // przeplot, żeby typy nie szły blokami
+  const order=[]; let i=0;
+  while(order.length<codes.length){ mix.forEach(([k])=>{ const c=codes.find(c=>c.startsWith(k+"-")&&!order.includes(c)); if(c)order.push(c); }); i++; if(i>60)break; }
+  codes.forEach(c=>{if(!order.includes(c))order.push(c);});
+
+  const start = new Date('2026-09-08T00:00:00Z');
+  return order.map((code,idx)=>{
+    const tk = code.split("-")[0], t = TYPES[tk];
+    const status = STATUS_PLAN[idx] || "PLANNED";
+    const loadDate = addDays(start, Math.floor(idx*1.18));
+    const transit = 5 + (rnd()<.25?1:0);
+    const delivDate = addDays(loadDate, transit);
+    const qty = t.q + (rnd()<.3 ? (rnd()<.5?-1:1) : 0);
+    const weight = +(qty*t.u).toFixed(2);
+    const r = rateFor(t);
+    const escort = t.L>20 ? 2 : (t.L>16.5?1:0);
+    const extrasCost = escort? (escort===2?3550:1450) : 0;
+    const extrasRev  = escort? (escort===2?4600:1900) : 0;
+    const baseCost=r.cost, baseRev=r.rev;
+    const bafC=Math.round(baseCost*BAF.pct), bafR=Math.round(baseRev*BAF.pct);
+    const totCost=baseCost+bafC+extrasCost, totRev=baseRev+bafR+extrasRev;
+    const done = status==="DELIVERED";
+    const late = [7,19,26,33].includes(idx);
+    const delayMin = late ? [185,340,95,510][[7,19,26,33].indexOf(idx)] : 0;
+    const lp = LOADPOINTS[idx%3];
+    const di = idx % DRIVERS.length;
+    const hasRes = !["PLANNED","RESOURCES_PENDING"].includes(status);
+    const permit = !["PLANNED","RESOURCES_PENDING","DOCS_PENDING"].includes(status);
+    const pod = ["DELIVERED","UNLOADED"].includes(status);
+    const cmr = PROGRESS_OF[status]!==undefined && PROGRESS_OF[status]>=.03;
+    const prog = PROGRESS_OF[status] ?? 0;
+    const eta = addDays(delivDate, late?1:0);
+    eta.setUTCHours(7 + (idx%5), (idx*13)%60);
+    const del = addDays(delivDate,0); del.setUTCHours(7+(idx%5), (idx*7)%60);
+    const lod = new Date(loadDate); lod.setUTCHours(6+(idx%4), (idx*11)%60);
+    return {
+      id:idx, code, type:tk, typeName:t.name,
+      L:t.L, W:t.W, H:t.H, qty, weight, unit:t.u,
+      status, stage:STAGE_OF[status], progress:prog,
+      orderNo:`HHL/2026/${String(1240+idx)}`,
+      assemblySeq: idx<14 ? idx+1 : (idx + (rnd()<.12 ? 3 : 0) + 1),
+      loadPoint:lp,
+      planLoad:lod, planDeliv:del, eta,
+      delayMin, delayCode: late ? ["D_FERRY","B_CARRIER","E_FORCE","A_CLIENT"][[7,19,26,33].indexOf(idx)] : null,
+      driver: hasRes?DRIVERS[di][0]:null, phone: hasRes?DRIVERS[di][1]:null,
+      tractor: hasRes?TRACTORS[di]:null, trailer: hasRes?TRAILERS[di]:null,
+      ferry: idx%2? "M/F Nova Star":"M/F Wawel",
+      ferryRef: hasRes? `PF-${262000+idx*7}` : null,
+      comboLen:+(t.L+1.9).toFixed(2), comboW:t.W, comboH:+(t.H+1.15).toFixed(2),
+      escort,
+      docs:{permit, cmr:cmr&&!!hasRes, pod, lash: cmr&&!!hasRes, ins:true},
+      price:{baseCost,bafC,extrasCost,totCost,baseRev,bafR,extrasRev,totRev,
+             margin:totRev-totCost, marginPct:(totRev-totCost)/totRev},
+      done
+    };
+  });
+})();
+
+/* ---------- ryzyka ---------- */
+const RISKS = (()=>{
+  const R=[];
+  const add=(kind,sev,load,title,meta,age)=>R.push({kind,sev,load,title,meta,age});
+  LOADS.filter(l=>l.status==="DOCS_PENDING").slice(0,3).forEach((l,i)=>
+    add("PERMIT", i===0?"CRITICAL":"HIGH", l,
+      {pl:`Brak zezwolenia — załadunek za ${18+i*14} h`,en:`No permit — pickup in ${18+i*14} h`,sv:`Saknar dispens — lastning om ${18+i*14} h`},
+      {pl:"Odpowiada: Scandinavian Express",en:"Owner: Scandinavian Express",sv:"Ansvarig: Scandinavian Express"}, `${2+i}h`));
+  LOADS.filter(l=>l.status==="RESOURCES_PENDING").slice(0,2).forEach((l,i)=>
+    add("RESOURCE","MEDIUM", l,
+      {pl:"Brak kierowcy i numerów rejestracyjnych",en:"Driver and plates missing",sv:"Förare och reg.nr saknas"},
+      {pl:"Termin uzupełnienia minął 4 h temu",en:"Deadline passed 4 h ago",sv:"Tidsfristen gick ut för 4 h sedan"}, "4h"));
+  const silent = LOADS.find(l=>l.status==="IN_TRANSIT_SE");
+  add("SILENT","HIGH", silent,
+    {pl:"Brak pozycji od 2 h 14 min",en:"No position for 2 h 14 min",sv:"Ingen position på 2 h 14 min"},
+    {pl:"Ostatni sygnał: E4 na północ od Umeå",en:"Last fix: E4 north of Umeå",sv:"Senaste position: E4 norr om Umeå"}, "2h");
+  const lateOnes = LOADS.filter(l=>l.delayMin>0);
+  lateOnes.slice(0,2).forEach(l=> add("ETA", l.delayMin>300?"HIGH":"MEDIUM", l,
+    {pl:`Prognoza przyjazdu poza oknem o ${Math.floor(l.delayMin/60)} h ${l.delayMin%60} min`,
+     en:`Arrival forecast outside window by ${Math.floor(l.delayMin/60)} h ${l.delayMin%60} min`,
+     sv:`Ankomst utanför fönstret med ${Math.floor(l.delayMin/60)} h ${l.delayMin%60} min`},
+    {pl:"Ekipa montażowa powiadomiona automatycznie",en:"Assembly crew notified automatically",sv:"Montagelaget meddelat automatiskt"}, "1h"));
+  add("FERRY","HIGH", null,
+    {pl:"Rejs 24.09 · prognoza fali 2,9 m, porywy 19 m/s",en:"Sailing 24 Sep · forecast wave 2.9 m, gusts 19 m/s",sv:"Avgång 24 sep · våghöjd 2,9 m, byar 19 m/s"},
+    {pl:"3 transporty na tym rejsie. Alternatywa: Gdynia–Karlskrona",en:"3 loads on this sailing. Alternative: Gdynia–Karlskrona",sv:"3 transporter på denna avgång. Alternativ: Gdynia–Karlskrona"}, "40m");
+  add("ROAD","MEDIUM", null,
+    {pl:"E4 na północ od Luleå — jazda w kolumnie za pługiem",en:"E4 north of Luleå — convoy driving behind plough",sv:"E4 norr om Luleå — kolonnkörning"},
+    {pl:"Źródło: Trafikverket, aktualizacja 12 min temu",en:"Source: Trafikverket, updated 12 min ago",sv:"Källa: Trafikverket, uppdaterad för 12 min sedan"}, "12m");
+  const seqA = LOADS[31], seqB = LOADS[27];
+  add("SEQUENCE","HIGH", seqA,
+    {pl:`Rozjazd kolejności montażu: ${seqA.code} przyjedzie po ${seqB.code}`,
+     en:`Assembly sequence conflict: ${seqA.code} arrives after ${seqB.code}`,
+     sv:`Montageordning i konflikt: ${seqA.code} kommer efter ${seqB.code}`},
+    {pl:"Pozycja montażowa wymaga odwrotnej kolejności",en:"Assembly positions require the reverse order",sv:"Montagepositionerna kräver omvänd ordning"}, "3h");
+  add("INSURANCE","MEDIUM", null,
+    {pl:"Polisa OCP Scandinavian Express wygasa za 11 dni",en:"Carrier liability policy expires in 11 days",sv:"Transportöransvarsförsäkring går ut om 11 dagar"},
+    {pl:"Wymagany nowy certyfikat przed 03.10",en:"New certificate required before 3 Oct",sv:"Nytt intyg krävs före 3 okt"}, "1d");
+  add("INVOICE","MEDIUM", null,
+    {pl:"Faktura zbiorcza tydzień 38 — rozbieżność 1 840 PLN",en:"Weekly invoice W38 — variance PLN 1,840",sv:"Samlingsfaktura v.38 — avvikelse 1 840 PLN"},
+    {pl:"2 pozycje rozliczone poza cennikiem",en:"2 lines billed outside the rate card",sv:"2 rader utanför prislistan"}, "6h");
+  return R;
+})();
+
+const CHAT = [
+  {who:"KSH · Anna Rudnicka", t:"10:04", me:false, pl:"Dźwig na placu dostępny 26.09 od 07:00 do 15:00. Po 15:00 nie ma odbioru.", en:"Crane available on site 26 Sep, 07:00–15:00. No unloading after 15:00.", sv:"Kran på plats 26 sep, 07:00–15:00. Ingen lossning efter 15:00."},
+  {who:"Scandinavian Express · Lars Ohlsson", t:"10:22", me:false, pl:"Przyjmuję. Awizacja ustawiona na 26.09 11:30, zapas 3 h na kolumnę pod Luleå.", en:"Noted. Slot set for 26 Sep 11:30, 3 h buffer for convoy driving near Luleå.", sv:"Noterat. Tid satt till 26 sep 11:30, 3 h buffert för kolonnkörning vid Luleå."},
+  {who:"H&H Logistics · Ty", t:"10:31", me:true, pl:"Potwierdzam. Zezwolenie szwedzkie wgrane, ważne do 30.11. Pilotaż jeden pojazd.", en:"Confirmed. Swedish permit uploaded, valid to 30 Nov. One escort vehicle.", sv:"Bekräftat. Svensk dispens uppladdad, giltig t.o.m. 30 nov. Ett eskortfordon."}
+];
+
+const WORKFLOWS = [
+  {on:true, name:{pl:"Powiadomienie 40 min przed placem",en:"40-minute arrival warning",sv:"Varning 40 min före ankomst"},
+   rule:{pl:"Wjazd w strefę <b>Bufor 50 km · Boden</b> → e-mail do KSH i Scandinavian Express, status <b>Dojazd na plac</b>",
+        en:"Enter zone <b>50 km buffer · Boden</b> → email KSH and Scandinavian Express, set status <b>Approaching site</b>",
+        sv:"Inträde i zon <b>50 km buffert · Boden</b> → mejl till KSH och Scandinavian Express, status <b>Ankommer</b>"}, runs:38},
+  {on:true, name:{pl:"Brak zezwolenia na 48 h przed",en:"No permit 48 h before pickup",sv:"Dispens saknas 48 h före"},
+   rule:{pl:"Codziennie 06:00 → jeśli brak zezwolenia, e-mail do przewoźnika; po 12 h bez reakcji eskalacja do Ciebie",
+        en:"Daily 06:00 → if permit missing, email carrier; escalate to you after 12 h without action",
+        sv:"Dagligen 06:00 → om dispens saknas, mejl till transportör; eskalering efter 12 h"}, runs:11},
+  {on:true, name:{pl:"Cichy pojazd",en:"Silent vehicle",sv:"Tyst fordon"},
+   rule:{pl:"Brak pozycji &gt; 90 min w godz. 06–22 → ryzyko i e-mail do dyspozytora, eskalacja po 60 min",
+        en:"No position &gt; 90 min between 06:00–22:00 → raise risk, email dispatcher, escalate after 60 min",
+        sv:"Ingen position &gt; 90 min 06–22 → risk och mejl till trafikledare, eskalering efter 60 min"}, runs:6},
+  {on:true, name:{pl:"Ryzyko promowe",en:"Ferry risk",sv:"Färjerisk"},
+   rule:{pl:"Poziom czerwony na rejsie w ciągu 24 h → e-mail do trzech stron, panel alternatyw, zadanie „potwierdź plan B”",
+        en:"Red level on a sailing within 24 h → email all three parties, show alternatives, task “confirm plan B”",
+        sv:"Röd nivå på avgång inom 24 h → mejl till tre parter, alternativ, uppgift ”bekräfta plan B”"}, runs:4},
+  {on:true, name:{pl:"Zmiana daty na transporcie awizowanym",en:"Date change on a booked load",sv:"Datumändring på bokad transport"},
+   rule:{pl:"Import harmonogramu zmienia datę dostawy → e-mail do przewoźnika z porównaniem przed/po, wymagane potwierdzenie",
+        en:"Schedule import changes delivery date → email carrier with before/after diff, confirmation required",
+        sv:"Tidplansimport ändrar leveransdatum → mejl med före/efter, bekräftelse krävs"}, runs:9},
+  {on:true, name:{pl:"Potwierdzenie dostawy",en:"Proof of delivery",sv:"Leveransbevis"},
+   rule:{pl:"Rozładunek → zadanie dla przewoźnika: wgraj POD w 24 h, przypomnienie po 18 h",
+        en:"Unloaded → task for carrier: upload POD within 24 h, reminder after 18 h",
+        sv:"Lossad → uppgift: ladda upp POD inom 24 h, påminnelse efter 18 h"}, runs:17},
+  {on:false, name:{pl:"Otwarcie fakturowania",en:"Open weekly invoicing",sv:"Öppna veckofakturering"},
+   rule:{pl:"Piątek 14:00 → e-mail do przewoźnika z listą transportów gotowych do faktury zbiorczej",
+        en:"Friday 14:00 → email carrier the list of loads ready for the weekly invoice",
+        sv:"Fredag 14:00 → mejl med transporter klara för samlingsfaktura"}, runs:2}
+];
+
+/* ---------- 3. Stan ---------- */
+const S = {
+  role:"HHL", lang:"pl", view:"dash",
+  stageFilter:null, quick:"all", search:"", sort:{k:"planDeliv",dir:1},
+  open:null, dtab:"over", hover:null,
+  layers:{veh:true, fence:true, route:true, risk:true, trail:true}
+};
+const ROLE_META = {
+  HHL:{org:"H&H Logistics", kind:"FORWARDER", sub:"Stegra Boden · H&amp;H Logistics"},
+  KSH:{org:"KSH",           kind:"CLIENT",    sub:"Stegra Boden · KSH"},
+  SCX:{org:"Scandinavian Express", kind:"CARRIER", sub:"Stegra Boden · Scandinavian Express"}
+};
+const seeCost = ()=> S.role==="HHL"||S.role==="SCX";
+const seeRev  = ()=> S.role==="HHL"||S.role==="KSH";
+const seeMargin=()=> S.role==="HHL";
+
+/* ---------- 4. Pomocnicze ---------- */
+const fmt = n => n.toLocaleString('pl-PL');
+const pct = n => (n*100).toFixed(1).replace('.',',')+"%";
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const loc = o => typeof o==="string"? o : (o?.[S.lang] ?? o?.pl ?? "");
+const STATUS_CLASS = {
+  PLANNED:"p-plan",RESOURCES_PENDING:"p-amber",DOCS_PENDING:"p-red",READY:"p-go",
+  AT_LOADING:"p-amber",IN_TRANSIT_PL:"p-sea",AT_PORT_GDANSK:"p-sea",FERRY:"p-sea",
+  AT_PORT_NYNASHAMN:"p-sea",IN_TRANSIT_SE:"p-sea",AT_SITE:"p-go",UNLOADED:"p-go",DELIVERED:"p-plan"
+};
+const STAGES = ["PRE","ZAL","PL","GDA","SEA","NYN","SE","SITE","DONE"];
+
+function visibleLoads(){
+  let L = LOADS.slice();
+  if(S.stageFilter) L = L.filter(l=>l.stage===S.stageFilter);
+  if(S.quick==="late")   L = L.filter(l=>l.delayMin>0);
+  if(S.quick==="nodocs") L = L.filter(l=>!l.docs.permit);
+  if(S.quick==="active") L = L.filter(l=>["ZAL","PL","GDA","SEA","NYN","SE"].includes(l.stage));
+  if(S.search.trim()){
+    const q=S.search.toLowerCase();
+    L = L.filter(l=>[l.code,l.driver,l.tractor,l.trailer,l.orderNo].filter(Boolean)
+      .some(v=>String(v).toLowerCase().includes(q)));
+  }
+  const k=S.sort.k, d=S.sort.dir;
+  L.sort((a,b)=>{
+    let x=a[k],y=b[k];
+    if(k==="price"){x=a.price.margin;y=b.price.margin;}
+    if(x instanceof Date) {x=+x;y=+y;}
+    if(typeof x==="string") return x.localeCompare(y)*d;
+    return ((x??0)-(y??0))*d;
+  });
+  return L;
+}
+const riskLoads = ()=> RISKS.filter(r=>r.sev==="CRITICAL"||r.sev==="HIGH"||r.sev==="MEDIUM");
+
+/* ---------- 5. Projekcja mapy ---------- */
+const MB = {lon0:9, lon1:29, lat0:53, lat1:67, W:1000, squash:0.72};
+const mercY = lat => Math.log(Math.tan(Math.PI/4 + lat*Math.PI/360));
+const MY0 = mercY(MB.lat0), MY1 = mercY(MB.lat1);
+const MH = Math.round(MB.W * ((MY1-MY0)/((MB.lon1-MB.lon0)*Math.PI/180)) * MB.squash);
+const px = (lon,lat)=>[
+  (lon-MB.lon0)/(MB.lon1-MB.lon0)*MB.W,
+  (MY1-mercY(lat))/(MY1-MY0)*MH
+];
+const kmPx = (lat,km)=>{ const a=px(0,lat)[1], b=px(0,lat+km/111)[1]; return Math.abs(a-b); };
+const path = pts => pts.map((p,i)=>{const[x,y]=px(p[0],p[1]);return (i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1);}).join(" ");
+
+/* uproszczone kontury lądu — schemat operacyjny, nie mapa nawigacyjna */
+const LAND = {
+ SE:[[12.9,55.4],[14.3,55.4],[14.8,56.0],[16.4,56.6],[16.7,57.8],[17.0,58.8],[17.9,58.9],[18.3,59.4],
+     [17.5,60.7],[17.4,61.7],[17.5,62.5],[18.8,63.3],[20.3,63.8],[21.5,65.3],[22.3,65.6],[24.15,65.85],
+     [23.7,67.5],[23.0,68.4],[20.5,69.0],[18.0,68.5],[17.5,68.0],[16.5,67.3],[15.5,66.5],[14.5,66.2],
+     [14.5,65.3],[13.5,64.0],[12.2,63.0],[12.0,61.5],[12.5,61.0],[12.5,60.0],[11.8,59.3],[11.4,58.9],
+     [11.2,58.4],[12.0,57.7],[12.3,56.9],[12.8,56.2]],
+ PL:[[14.2,53.9],[16.2,54.4],[18.4,54.8],[19.6,54.45],[22.8,54.4],[23.5,53.9],[23.9,52.7],[23.2,52.2],
+     [23.6,51.5],[24.1,50.8],[22.6,49.5],[21.0,49.4],[19.8,49.2],[18.6,49.5],[17.7,50.3],[16.5,50.1],
+     [15.0,50.9],[14.8,51.0],[14.7,52.1],[14.1,52.8],[14.4,53.3]],
+ BAL:[[21.0,55.3],[21.1,56.0],[21.0,56.5],[21.4,57.3],[23.5,57.1],[24.3,57.3],[24.4,58.0],[23.5,58.6],
+      [24.5,59.5],[28.0,59.4],[28.2,56.5],[26.6,55.7],[24.9,54.9],[23.5,54.3],[22.8,54.4]],
+ FI:[[21.5,60.4],[24.9,60.15],[27.8,60.5],[29.0,61.5],[29.5,62.5],[29.0,63.5],[29.5,64.5],[30.0,65.5],
+     [29.0,66.5],[29.5,67.5],[28.5,68.5],[26.0,69.9],[24.0,68.6],[23.0,68.3],[23.7,67.4],[24.15,65.85],
+     [25.4,64.9],[23.5,63.8],[21.5,63.0],[21.4,62.3],[21.3,61.3]],
+ DK:[[8.1,56.7],[10.5,57.7],[10.8,57.0],[10.2,56.0],[10.9,55.5],[12.6,55.6],[12.6,55.0],[11.0,54.8],
+     [9.4,54.8],[8.1,55.5]],
+ DE:[[9.0,54.5],[11.0,54.4],[13.0,54.6],[14.2,53.9],[14.4,53.3],[13.0,53.3],[10.0,53.5],[9.0,53.6]]
+};
+
+function vehiclePoint(l){
+  const p = l.progress;
+  if(p<=0) return px(l.loadPoint.lon, l.loadPoint.lat);
+  if(p<0.14){ const f=p/0.14;
+    return px(l.loadPoint.lon+(PORT_GDA.lon-l.loadPoint.lon)*f, l.loadPoint.lat+(PORT_GDA.lat-l.loadPoint.lat)*f); }
+  if(p<0.20) return px(PORT_GDA.lon, PORT_GDA.lat);
+  if(p<0.42){ return along(FERRY_PATH,(p-0.20)/0.22); }
+  if(p<0.46) return px(PORT_NYN.lon, PORT_NYN.lat);
+  return along(SE_ROAD,(p-0.46)/0.54);
+}
+function along(pts,f){
+  f=Math.max(0,Math.min(1,f));
+  const segs=[]; let total=0;
+  for(let i=1;i<pts.length;i++){
+    const a=px(pts[i-1][0],pts[i-1][1]), b=px(pts[i][0],pts[i][1]);
+    const d=Math.hypot(b[0]-a[0],b[1]-a[1]); segs.push({a,b,d}); total+=d;
+  }
+  let want=total*f;
+  for(const s of segs){ if(want<=s.d){const t=s.d?want/s.d:0;return [s.a[0]+(s.b[0]-s.a[0])*t, s.a[1]+(s.b[1]-s.a[1])*t];} want-=s.d; }
+  const last=segs[segs.length-1]; return last.b;
+}
+const VEH_FILL = {AT_LOADING:"var(--amber)",IN_TRANSIT_PL:"var(--sea)",AT_PORT_GDANSK:"var(--sea)",
+  FERRY:"var(--sea)",AT_PORT_NYNASHAMN:"var(--sea)",IN_TRANSIT_SE:"var(--sea)",
+  AT_SITE:"var(--go)",UNLOADED:"var(--go)"};
+
+function renderMapSVG(){
+  const active = LOADS.filter(l=>l.progress>0 && l.progress<1);
+  const lateIds = new Set(LOADS.filter(l=>l.delayMin>0).map(l=>l.id));
+  const silentId = RISKS.find(r=>r.kind==="SILENT")?.load?.id;
+
+  const land = Object.entries(LAND).map(([k,pts])=>
+    `<path d="${path(pts)} Z" fill="var(--surface)" stroke="var(--rule)" stroke-width="1"/>`).join("");
+
+  const fences = S.layers.fence ? GEOFENCES.map(g=>{
+    const [x,y]=px(g.lon,g.lat), r=Math.max(2.5,kmPx(g.lat,g.r));
+    const col = g.k==="SITE"?"var(--go)": g.k==="LOADING"?"var(--amber)":"var(--sea)";
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${col}" fill-opacity=".07" stroke="${col}" stroke-opacity=".5" stroke-dasharray="4 3" stroke-width="1.2"/>`;
+  }).join("") : "";
+
+  const route = S.layers.route ? `
+    <path d="${path([[19.03,54.04],[18.68,54.40]])}" stroke="var(--ink-3)" stroke-width="1.6" fill="none" stroke-dasharray="3 3"/>
+    <path d="${path([[18.76,53.49],[18.68,54.40]])}" stroke="var(--ink-3)" stroke-width="1.6" fill="none" stroke-dasharray="3 3"/>
+    <path d="${path([[19.41,54.16],[18.68,54.40]])}" stroke="var(--ink-3)" stroke-width="1.6" fill="none" stroke-dasharray="3 3"/>
+    <path d="${path(FERRY_PATH)}" stroke="var(--sea)" stroke-width="2" fill="none" stroke-dasharray="7 5"/>
+    <path d="${path(SE_ROAD)}" stroke="var(--ink-2)" stroke-width="2.4" fill="none" stroke-linejoin="round"/>` : "";
+
+  const roadEvent = S.layers.risk ? (()=>{ const [x,y]=px(22.1,65.95);
+    return `<g><path d="M ${x-7} ${y+6} L ${x} ${y-7} L ${x+7} ${y+6} Z" fill="var(--amber)" stroke="var(--surface)" stroke-width="1.2"/>
+      <text x="${x+11}" y="${y+4}" font-size="12" fill="var(--ink-2)" font-family="Barlow Condensed">E4 kolumna</text></g>`;})() : "";
+
+  const storm = S.layers.risk ? (()=>{ const [x,y]=px(18.1,56.8);
+    return `<g opacity=".95"><circle cx="${x}" cy="${y}" r="26" fill="var(--amber)" fill-opacity=".14"/>
+      <circle cx="${x}" cy="${y}" r="16" fill="var(--amber)" fill-opacity=".2"/>
+      <text x="${x}" y="${y+4}" text-anchor="middle" font-size="12" font-family="Barlow Condensed" font-weight="600" fill="var(--amber)">2,9 m</text></g>`;})() : "";
+
+  const labels = [
+    [PORT_GDA.lon,PORT_GDA.lat,"Gdańsk",8,4],
+    [PORT_NYN.lon,PORT_NYN.lat,"Nynäshamn",9,-6],
+    [SITE.lon,SITE.lat,"Boden · Stegra",10,4],
+    [17.31,62.39,"Sundsvall",8,4],[20.26,63.83,"Umeå",8,4],[22.15,65.58,"Luleå",-10,-7],
+    [17.15,60.67,"Gävle",8,4],[18.07,59.33,"Sztokholm",8,-6],[19.03,54.04,"Malbork",7,-5]
+  ].map(([lo,la,t,dx,dy])=>{const [x,y]=px(lo,la);
+    return `<text x="${(x+dx).toFixed(1)}" y="${(y+dy).toFixed(1)}" font-size="12.5" font-family="Barlow Condensed" font-weight="600" fill="var(--ink-2)" ${dx<0?'text-anchor="end"':''}>${t}</text>`;}).join("");
+
+  const nodes = [PORT_GDA,PORT_NYN,SITE].map(p=>{const[x,y]=px(p.lon,p.lat);
+    return `<rect x="${(x-3.5).toFixed(1)}" y="${(y-3.5).toFixed(1)}" width="7" height="7" fill="var(--ink)"/>`;}).join("");
+
+  const veh = S.layers.veh ? active.map(l=>{
+    const [x,y]=vehiclePoint(l);
+    const late = lateIds.has(l.id), silent = l.id===silentId;
+    const fill = silent? "var(--ink-3)" : late? "var(--red)" : (VEH_FILL[l.status]||"var(--sea)");
+    const hl = S.hover===l.id;
+    const trail = (S.layers.trail && l.progress>0.5)
+      ? `<path d="${path(SE_ROAD)}" stroke="${fill}" stroke-opacity=".18" stroke-width="5" fill="none"/>` : "";
+    return `<g class="veh" data-load="${l.id}">
+      ${hl?trail:""}
+      <circle class="hit" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${hl?13:10}" fill="${fill}" fill-opacity="${hl?.28:.14}" stroke="${fill}" stroke-opacity="${hl?.5:0}"/>
+      <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${fill}" stroke="var(--surface)" stroke-width="1.6"/>
+      ${silent?`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="9" fill="none" stroke="${fill}" stroke-width="1.2" stroke-dasharray="2 2"/>`:""}
+      <text x="${(x+9).toFixed(1)}" y="${(y-7).toFixed(1)}" font-size="12" font-family="Barlow Condensed" font-weight="700" fill="var(--ink)">${l.code}</text>
+    </g>`;}).join("") : "";
+
+  return `<svg viewBox="0 0 ${MB.W} ${MH}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Mapa korytarza">
+    <rect width="${MB.W}" height="${MH}" fill="var(--surface-3)"/>
+    ${land}${fences}${route}${storm}${roadEvent}${nodes}${labels}${veh}
+  </svg>`;
+}
+
+/* ---------- 6. Widoki ---------- */
+function corridorHTML(){
+  const counts = {}; STAGES.forEach(s=>counts[s]=0);
+  LOADS.forEach(l=>counts[l.stage]++);
+  const max = Math.max(...Object.values(counts),1);
+  return STAGES.map(s=>{
+    const c=counts[s], cls = s==="SEA"?"sea": s==="SITE"||s==="DONE"?"site": s==="PRE"?"pre":"";
+    return `<button class="stage ${cls}" data-stage="${s}" aria-pressed="${S.stageFilter===s}">
+      <div class="n ${c?'':'zero'}">${c}</div>
+      <div class="l">${T("st_"+s)}</div>
+      <div class="bar"><i style="width:${Math.round(c/max*100)}%"></i></div>
+    </button>`;
+  }).join("");
+}
+
+function navHTML(){
+  const items = [
+    ["dash","▣",T("nav_dash"),null],
+    ["map","◎",T("nav_map"),null],
+    ["sched","▤",T("nav_sched"),LOADS.length],
+    ["risk","▲",T("nav_risk"),RISKS.length],
+    ["docs","▢",T("nav_docs"),null]
+  ];
+  const sep = ["sep"];
+  const money = S.role==="HHL" ? [["fin","₽",T("nav_fin"),null],["inv","▦",T("nav_inv"),1]]
+             : S.role==="KSH" ? [["fin","₽",T("nav_fin_ksh"),null]]
+             : [["fin","₽",T("nav_fin_scx"),null],["inv","▦",T("nav_inv"),1]];
+  const admin = S.role==="HHL" ? [["wf","⚙",T("nav_wf"),WORKFLOWS.filter(w=>w.on).length],
+                                  ["geo","⬡",T("nav_geo"),GEOFENCES.length]] : [];
+  const tasks = S.role==="SCX" ? [["tasks","✎",T("nav_tasks"),7]] : [];
+  const all=[...items,...tasks,sep,...money,...(admin.length?[sep]:[]),...admin];
+  return all.map(it=>{
+    if(it[0]==="sep") return `<div class="sep"></div>`;
+    const [k,g,l,c]=it;
+    const hot = (k==="risk"&&c) || (k==="tasks");
+    return `<button data-view="${k}" aria-current="${S.view===k?'page':'false'}">
+      <span class="glyph">${g}</span><span class="lbl">${l}</span>
+      ${c?`<span class="count ${hot?'hot':''}">${c}</span>`:""}</button>`;
+  }).join("");
+}
+
+function kpiHTML(){
+  const inTransit = LOADS.filter(l=>["ZAL","PL","GDA","SEA","NYN","SE"].includes(l.stage)).length;
+  const delivered = LOADS.filter(l=>l.done).length;
+  const tonnage = LOADS.filter(l=>l.done).reduce((s,l)=>s+l.weight,0);
+  const totalT = LOADS.reduce((s,l)=>s+l.weight,0);
+  const late = LOADS.filter(l=>l.delayMin>0).length;
+  const otif = ((delivered-late)/Math.max(delivered,1));
+  const margin = LOADS.filter(l=>l.done).reduce((s,l)=>s+l.price.margin,0);
+  const revenue = LOADS.filter(l=>l.done).reduce((s,l)=>s+l.price.totRev,0);
+  const cost = LOADS.filter(l=>l.done).reduce((s,l)=>s+l.price.totCost,0);
+  const docsOk = LOADS.filter(l=>l.docs.permit).length;
+  const next = LOADS.filter(l=>!l.done).sort((a,b)=>a.eta-b.eta)[0];
+  const K=(k,v,d,cls="")=>`<div class="kpi"><div class="k">${k}</div><div class="v ${cls}">${v}</div><div class="d">${d}</div></div>`;
+
+  if(S.role==="KSH") return `<div class="kpis">
+    ${K(T("k_delivered"),`${delivered} / ${LOADS.length}`,`${Math.round(delivered/LOADS.length*100)}% zakresu`)}
+    ${K(T("k_tonnage"),`${tonnage.toFixed(0)} t`,`z ${totalT.toFixed(0)} t`)}
+    ${K(T("k_next"),next?dstr(next.eta)+" "+tstr(next.eta):"—",next?`${next.code} · ${loc(next.typeName)}`:"")}
+    ${K(T("k_active"),inTransit,"w drodze do Boden")}
+    ${K(T("k_otif"),pct(otif),`${late} dostaw poza oknem`,otif<.9?"warn":"good")}
+    ${K(T("k_exc"),RISKS.filter(r=>!r.load||true).length,"sygnałów w Twoich dostawach",RISKS.length>6?"alert":"warn")}
+  </div>`;
+
+  if(S.role==="SCX"){
+    const open = 7;
+    const weekCost = LOADS.filter(l=>l.done).slice(-6).reduce((s,l)=>s+l.price.totCost,0);
+    return `<div class="kpis">
+      ${K(T("k_toaction"),open,"pól bez uzupełnienia",open?"alert":"good")}
+      ${K(T("k_active"),inTransit,"moich transportów w drodze")}
+      ${K(T("k_otif"),pct(otif),`${late} poza oknem awizacji`,otif<.9?"warn":"good")}
+      ${K(T("k_week"),fmt(weekCost)+" PLN","tydzień 38, do zafakturowania")}
+      ${K(T("k_ferry"),"2,9 m","rejs 24.09 · podwyższone","warn")}
+      ${K(T("k_docs"),`${docsOk} / ${LOADS.length}`,"transportów z zezwoleniem")}
+    </div>`;
+  }
+  const lag = "8 min";
+  return `<div class="kpis">
+    ${K(T("k_active"),inTransit,`${delivered} dostarczonych, ${LOADS.length-delivered-inTransit} w przygotowaniu`)}
+    ${K(T("k_exc"),RISKS.length,"w kolejce wyjątków",RISKS.some(r=>r.sev==="CRITICAL")?"alert":"warn")}
+    ${K(T("k_otif"),pct(otif),`${late} dostaw poza oknem`,otif<.9?"warn":"good")}
+    ${K(T("k_margin"),fmt(margin)+" PLN",`${pct(margin/revenue)} · koszt ${fmt(cost)} PLN`,"good")}
+    ${K(T("k_docs"),`${docsOk} / ${LOADS.length}`,"komplet przed załadunkiem")}
+    ${K(T("k_lag"),lag,"mediana, ostatnie 30 dni","good")}
+  </div>`;
+}
+
+function scurveHTML(){
+  const weeks=[]; const start=new Date('2026-09-07T00:00:00Z');
+  for(let w=0;w<9;w++){
+    const from=addDays(start,w*7), to=addDays(start,w*7+7);
+    const plan=LOADS.filter(l=>l.planDeliv<to).reduce((s,l)=>s+l.weight,0);
+    const act =LOADS.filter(l=>l.done&&l.planDeliv<to).reduce((s,l)=>s+l.weight,0);
+    weeks.push({w:w+37,plan,act,future:from>TODAY});
+  }
+  const maxV=Math.max(...weeks.map(x=>x.plan))||1;
+  const W=560,H=150,pad=26;
+  const X=i=>pad+i*(W-pad*2)/(weeks.length-1), Y=v=>H-18-(v/maxV)*(H-34);
+  const pl=weeks.map((d,i)=>`${i?"L":"M"}${X(i).toFixed(1)} ${Y(d.plan).toFixed(1)}`).join(" ");
+  const ac=weeks.filter(d=>!d.future).map((d,i)=>`${i?"L":"M"}${X(i).toFixed(1)} ${Y(d.act).toFixed(1)}`).join(" ");
+  const nowX=X(weeks.findIndex(d=>d.future)-0.15);
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" role="img" aria-label="${T("progress")}">
+    <line x1="${pad}" y1="${H-18}" x2="${W-pad}" y2="${H-18}" stroke="var(--rule)"/>
+    <line x1="${nowX}" y1="10" x2="${nowX}" y2="${H-18}" stroke="var(--amber)" stroke-dasharray="3 3"/>
+    <path d="${pl}" fill="none" stroke="var(--ink-3)" stroke-width="1.6" stroke-dasharray="5 4"/>
+    <path d="${ac}" fill="none" stroke="var(--go)" stroke-width="2.4"/>
+    ${weeks.map((d,i)=>`<text x="${X(i).toFixed(1)}" y="${H-5}" font-size="10.5" text-anchor="middle" fill="var(--ink-3)" font-family="Barlow Condensed">t${d.w}</text>`).join("")}
+    <text x="${pad}" y="13" font-size="11" fill="var(--ink-3)" font-family="Barlow Condensed">tony narastająco · max ${maxV.toFixed(0)} t</text>
+  </svg>
+  <div class="legendline"><span><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="var(--ink-3)" stroke-width="1.6" stroke-dasharray="5 4"/></svg> ${T("planline")}</span>
+  <span><svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="var(--go)" stroke-width="2.4"/></svg> ${T("actualline")}</span>
+  <span style="color:var(--amber)">▏dziś 22.09</span></div>`;
+}
+
+function exqHTML(limit){
+  const list = RISKS.slice(0,limit||RISKS.length);
+  if(!list.length) return `<div class="panel-bd" style="color:var(--ink-3)">${T("q_none")}</div>`;
+  return `<ul class="exq">${list.map((r,i)=>`
+    <li data-risk="${i}" data-sev="${r.sev}">
+      <span class="gut"></span>
+      <span class="txt">
+        <span class="t">${r.load?`<span class="code">${r.load.code}</span> · `:""}${loc(r.title)}</span>
+        <span class="m">${loc(r.meta)}</span>
+      </span>
+      <span class="age">${r.age}</span>
+    </li>`).join("")}</ul>`;
+}
+
+function viewDash(){
+  const banner = S.role==="HHL"
+    ? `<div class="banner red"><b>Rejs 24.09 zagrożony.</b> Prognoza fali 2,9 m i porywy 19 m/s w oknie odejścia. Trzy transporty przypięte do tego rejsu. Panel alternatyw w zakładce Ryzyka.</div>`
+    : S.role==="KSH"
+    ? `<div class="banner"><b>Dostawa 26.09 o 11:30.</b> Dźwig i ekipa potrzebne przez 3 h. Transport R-03 przekracza okno o 1 h 35 min — nowa propozycja godziny czeka na potwierdzenie.</div>`
+    : `<div class="banner"><b>7 pól bez uzupełnienia.</b> Trzy transporty z załadunkiem w ciągu 48 h nie mają zezwolenia. Lista w zakładce Moje zadania.</div>`;
+  return `${banner}
+  <div class="panel"><div class="panel-hd"><h2>${ROLE_META[S.role].org}</h2>
+    <span class="sub">${dstr(TODAY)} · projekt Stegra Boden</span></div>
+    ${kpiHTML()}</div>
+  <div class="panel grid2" style="padding:0">
+    <div style="border-right:1px solid var(--rule-2);min-width:0">
+      <div class="panel-hd"><h2>${T("q_title")}</h2><span class="sub">${RISKS.length}</span>
+        <div class="spacer"></div><button class="chipbtn" data-view="risk">${T("nav_risk")}</button></div>
+      ${exqHTML(7)}
+    </div>
+    <div style="min-width:0">
+      <div class="panel-hd"><h2>${T("progress")}</h2><span class="sub">tygodnie 37–45</span></div>
+      <div class="panel-bd">${scurveHTML()}</div>
+      <div class="panel-hd" style="border-top:1px solid var(--rule-2)"><h2>${T("nav_map")}</h2>
+        <div class="spacer"></div><button class="chipbtn" data-view="map">${T("nav_map")}</button></div>
+      <div style="height:230px;overflow:hidden;background:var(--surface-3)">${renderMapSVG()}</div>
+    </div>
+  </div>`;
+}
+
+function tableHTML(){
+  const L = visibleLoads();
+  const cols = [
+    ["code",T("c_code"),""],["type",T("c_type"),""],["dims",T("c_dims"),""],
+    ["weight",T("c_weight"),"num"],["planLoad",T("c_load"),""],["planDeliv",T("c_deliv"),""],
+    ["status",T("c_status"),""],["driver",T("c_driver"),""],["tractor",T("c_plate"),""],
+    ["eta",T("c_eta"),""],["docs",T("c_docs"),""]
+  ];
+  if(seeCost()) cols.push(["cost", S.role==="SCX"?T("c_myprice"):T("c_cost"),"num"]);
+  if(seeRev())  cols.push(["rev",  S.role==="KSH"?T("c_yourprice"):T("c_rev"),"num"]);
+  if(seeMargin())cols.push(["price",T("c_margin"),"num"]);
+
+  const head = cols.map(([k,l,c])=>`<th class="${c}" data-sort="${k}">${l}${S.sort.k===k?` <span class="ar">${S.sort.dir>0?"▲":"▼"}</span>`:""}</th>`).join("");
+  const rows = L.map(l=>{
+    const d=l.docs;
+    const flags = `<span class="flagrow">
+      <span class="flag ${d.permit?'ok':'miss'}" title="Zezwolenie">Z</span>
+      <span class="flag ${d.cmr?'ok':''}" title="CMR">C</span>
+      <span class="flag ${d.pod?'ok':''}" title="POD">P</span>
+      <span class="flag ${d.lash?'ok':''}" title="Mocowanie">M</span></span>`;
+    let cells = `
+      <td><span class="code">${l.code}</span></td>
+      <td>${loc(l.typeName)}</td>
+      <td>${l.L.toFixed(2).replace('.',',')} × ${l.W.toFixed(2).replace('.',',')} × ${l.H.toFixed(2).replace('.',',')}</td>
+      <td class="num">${l.weight.toFixed(2).replace('.',',')} t</td>
+      <td>${dstr(l.planLoad)} ${tstr(l.planLoad)}</td>
+      <td>${dstr(l.planDeliv)} ${tstr(l.planDeliv)}</td>
+      <td><span class="pill ${STATUS_CLASS[l.status]}">${T("s_"+l.status)}</span>${l.delayMin?` <span class="pill p-red">+${Math.floor(l.delayMin/60)}h${String(l.delayMin%60).padStart(2,'0')}</span>`:""}</td>
+      <td>${l.driver?esc(l.driver):`<span style="color:var(--red)">— brak —</span>`}</td>
+      <td>${l.tractor?`<span class="mono">${l.tractor}</span>`:"—"}</td>
+      <td>${dstr(l.eta)} ${tstr(l.eta)}</td>
+      <td>${flags}</td>`;
+    if(seeCost()) cells += `<td class="num money">${fmt(l.price.totCost)}</td>`;
+    if(seeRev())  cells += `<td class="num money">${fmt(l.price.totRev)}</td>`;
+    if(seeMargin())cells+= `<td class="num money ${l.price.marginPct<0.18?'neg':''}">${fmt(l.price.margin)} <span style="font-weight:400;color:var(--ink-3)">${pct(l.price.marginPct)}</span></td>`;
+    return `<tr data-load="${l.id}" class="${l.done?'done':''} ${S.hover===l.id?'hl':''}">${cells}</tr>`;
+  }).join("");
+
+  return `<div class="filters">
+    <input id="q" type="search" placeholder="${T("search")}" value="${esc(S.search)}">
+    ${[["all",T("b_all")],["active",T("b_active")],["late",T("b_late")],["nodocs",T("b_nodocs")]]
+      .map(([k,l])=>`<button class="chipbtn" data-quick="${k}" aria-pressed="${S.quick===k}">${l}</button>`).join("")}
+    <div class="spacer"></div>
+    <span style="font-size:12.5px;color:var(--ink-3)">${L.length} / ${LOADS.length}${S.stageFilter?` · ${T("st_"+S.stageFilter)}`:""}</span>
+  </div>
+  <div class="tablewrap"><table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>
+  ${seeMargin()?`<div class="note">Kwoty w PLN, po przeliczeniu kursem NBP tabela A z dnia poprzedzającego wykonanie usługi. Marża poniżej 18% jest oznaczona na czerwono.</div>`
+   :`<div class="note">${S.role==="KSH"?"Widzisz swoją cenę. Stawki przewoźnika i marża spedytora nie są dostępne w tej roli — ograniczenie działa na poziomie bazy danych, nie interfejsu."
+   :"Widzisz swoją stawkę. Cena płacona przez klienta i marża spedytora nie są dostępne w tej roli — ograniczenie działa na poziomie bazy danych, nie interfejsu."}</div>`}`;
+}
+
+function viewSched(){
+  return `<div class="panel" style="margin:12px"><div class="panel-hd">
+    <h2>${T("nav_sched")}</h2><span class="sub">import z SharePoint KSH · wersja 7 z 21.09.2026 14:08</span>
+    <div class="spacer"></div>
+    ${S.role==="KSH"?`<button class="chipbtn">Wgraj aktualizację</button>`:""}
+    <button class="chipbtn">Eksport XLSX</button></div>
+    <div class="panel-bd flush">${tableHTML()}</div></div>`;
+}
+
+function viewMap(){
+  const L = visibleLoads().filter(l=>l.progress>0&&l.progress<1);
+  const list = L.length? L.map(l=>`
+    <li data-load="${l.id}" class="exq-row" style="display:flex;gap:10px;padding:9px 13px;border-bottom:1px solid var(--rule-2);cursor:pointer;${S.hover===l.id?'background:var(--amber-bg)':''}">
+      <span style="width:3px;align-self:stretch;background:${l.delayMin?'var(--red)':'var(--sea)'}"></span>
+      <span style="flex:1;min-width:0">
+        <span style="font-weight:600"><span class="code">${l.code}</span> · ${loc(l.typeName)}</span>
+        <span style="display:block;font-size:12px;color:var(--ink-3)">${l.driver||"—"} · ${l.tractor||"—"} · ${T("s_"+l.status)}</span>
+      </span>
+      <span style="text-align:right;white-space:nowrap">
+        <span class="mono" style="font-size:13px">${dstr(l.eta)} ${tstr(l.eta)}</span>
+        <span style="display:block;font-size:11.5px;color:${l.delayMin?'var(--red)':'var(--ink-3)'}">${l.delayMin?`+${Math.floor(l.delayMin/60)} h ${l.delayMin%60} min`:"w oknie"}</span>
+      </span></li>`).join("") : `<li style="padding:13px;color:var(--ink-3)">Brak transportów w ruchu dla wybranego filtra.</li>`;
+
+  return `<div class="panel" style="margin:12px"><div class="panel-hd">
+    <h2>${T("nav_map")}</h2><span class="sub">${L.length} pojazdów w ruchu · pozycje co 5 min</span>
+    <div class="spacer"></div>
+    <button class="chipbtn" data-view="geo">${T("nav_geo")}</button></div>
+    <div class="mapsplit">
+      <div class="mapbox">
+        ${renderMapSVG()}
+        <div class="maplayers">
+          ${[["veh","Pojazdy"],["fence","Strefy"],["route","Trasa"],["risk","Ryzyka"],["trail","Ślad"]]
+            .map(([k,l])=>`<label><input type="checkbox" data-layer="${k}" ${S.layers[k]?"checked":""}> ${l}</label>`).join("")}
+        </div>
+        <div class="mapkey">
+          <span><i style="background:var(--sea)"></i>w drodze</span>
+          <span><i style="background:var(--amber)"></i>załadunek</span>
+          <span><i style="background:var(--red)"></i>opóźniony</span>
+          <span><i style="background:var(--go)"></i>na placu</span>
+          <span><i style="background:var(--ink-3)"></i>brak sygnału</span>
+        </div>
+      </div>
+      <div class="mlist"><ul style="list-style:none;margin:0;padding:0">${list}</ul></div>
+    </div>
+    <div class="note">Schemat korytarza, nie mapa nawigacyjna. Trasa lądowa w Szwecji odwzorowuje przebieg z zezwolenia, nie wynik routera.</div>
+  </div>`;
+}
+
+function viewGeo(){
+  const rows = GEOFENCES.map(g=>`<tr>
+    <td><span style="font-weight:600">${g.n}</span></td>
+    <td><span class="pill ${g.k==="SITE"?"p-go":g.k==="LOADING"?"p-amber":"p-sea"}">${g.k}</span></td>
+    <td class="num">${g.r} km</td>
+    <td class="num">${g.k==="PORT_OUT"||g.k==="PORT_IN"||g.k==="SITE"?"15 min":"—"}</td>
+    <td class="num">${g.k==="PRE_ARRIVAL"||g.k==="SITE"?"1000 m":"200 m"}</td>
+    <td class="num">2</td>
+    <td>${g.k==="PRE_ARRIVAL"?"KSH, SCX, H&amp;H":g.k==="LOADING"?"H&amp;H":"KSH, H&amp;H"}</td>
+  </tr>`).join("");
+  return `<div class="panel" style="margin:12px"><div class="panel-hd"><h2>${T("nav_geo")}</h2>
+    <span class="sub">12 stref · rysowane na mapie</span><div class="spacer"></div>
+    <button class="chipbtn">Nowa strefa</button></div>
+    <div class="panel-bd flush"><div class="tablewrap"><table>
+    <thead><tr><th>Nazwa</th><th>Typ</th><th class="num">Promień</th><th class="num">Postój</th>
+    <th class="num">Histereza</th><th class="num">Próbki</th><th>Powiadamia</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    <div class="note">Histereza chroni przed parą wjazd/wyjazd, gdy auto stoi na granicy strefy. Próbki to liczba kolejnych pozycji wewnątrz, zanim wjazd zostanie uznany — filtr na błędny odczyt GPS. Postój to czas, po którym strefa liczy się jako osiągnięta, żeby przejazd obok bramy nie był przyjazdem.</div>
+    </div></div>`;
+}
+
+function viewRisk(){
+  const ferry = `<div class="panel-bd">
+    <div class="two">
+      <div>
+        <h4 class="sec">Rejs Gdańsk → Nynäshamn</h4>
+        <table style="width:100%;font-size:13px">
+          <tbody>
+          ${[["23.09","M/F Wawel","1,4 m","11 m/s","p-go","niskie"],
+             ["24.09","M/F Nova Star","2,9 m","19 m/s","p-amber","podwyższone"],
+             ["25.09","M/F Wawel","3,4 m","22 m/s","p-red","wysokie"],
+             ["26.09","M/F Nova Star","1,8 m","13 m/s","p-go","niskie"]]
+            .map(([d,v,w,g,c,t])=>`<tr><td><span class="mono">${d}</span></td><td>${v}</td>
+              <td class="num">${w}</td><td class="num">${g}</td>
+              <td style="text-align:right"><span class="pill ${c}">${t}</span></td></tr>`).join("")}
+          </tbody></table>
+        <div style="font-size:12px;color:var(--ink-3);margin-top:8px">
+          Prognoza falowania i wiatru z modelu meteorologicznego, próbkowana w pięciu punktach kursu.
+          Progi są ustawiane przez Ciebie. System nie przewiduje decyzji armatora — sygnalizuje warunki
+          i porównuje je z komunikatem o kursowaniu promów.</div>
+      </div>
+      <div>
+        <h4 class="sec">Alternatywy dla rejsu 25.09</h4>
+        <table style="width:100%;font-size:13px"><tbody>
+          ${[["Gdańsk–Karlshamn","+310 km do Boden","Polferries"],
+             ["Gdynia–Karlskrona","+265 km do Boden","Stena Line"],
+             ["Świnoujście–Trelleborg","+520 km do Boden","TT-Line"],
+             ["Świnoujście–Ystad","+495 km do Boden","Unity Line"]]
+            .map(([r,k,o])=>`<tr><td style="font-weight:600">${r}</td><td>${o}</td>
+              <td class="num" style="color:var(--ink-3)">${k}</td>
+              <td style="text-align:right"><button class="chipbtn">Przelicz</button></td></tr>`).join("")}
+        </tbody></table>
+        <h4 class="sec" style="margin-top:15px">Transporty na rejsie 25.09</h4>
+        ${LOADS.filter(l=>l.stage==="GDA"||l.stage==="SEA").slice(0,3).map(l=>
+          `<div class="mrow"><span class="lbl"><span class="code">${l.code}</span> ${loc(l.typeName)}</span><span>${l.ferryRef||"—"}</span></div>`).join("")}
+      </div>
+    </div></div>`;
+  return `<div class="panel" style="margin:12px"><div class="panel-hd"><h2>${T("q_title")}</h2>
+    <span class="sub">${RISKS.length} otwartych · sortowanie: waga × czas do skutku</span></div>
+    ${exqHTML()}</div>
+    <div class="panel" style="margin:12px"><div class="panel-hd"><h2>Prom i Bałtyk</h2>
+      <span class="sub">jedno odejście dziennie · spóźnienie kosztuje dobę</span></div>${ferry}</div>`;
+}
+
+function viewDocs(){
+  const cats = [
+    ["Zezwolenie PL","Scandinavian Express","przed załadunkiem", LOADS.filter(l=>l.docs.permit).length],
+    ["Zezwolenie SE (dispens)","Scandinavian Express","przed wjazdem do Szwecji", LOADS.filter(l=>l.docs.permit).length-3],
+    ["CMR / list przewozowy","Scandinavian Express","przy załadunku", LOADS.filter(l=>l.docs.cmr).length],
+    ["Potwierdzenie dostawy (POD)","Scandinavian Express","do 24 h po rozładunku", LOADS.filter(l=>l.docs.pod).length],
+    ["Zdjęcia mocowania","Scandinavian Express","przy załadunku", LOADS.filter(l=>l.docs.lash).length],
+    ["Polisa OCP","Scandinavian Express","stała, ważna do 03.10.2026", LOADS.length],
+    ["Rysunek elementu","KSH","przy imporcie harmonogramu", LOADS.length]
+  ];
+  return `<div class="panel" style="margin:12px"><div class="panel-hd"><h2>${T("nav_docs")}</h2>
+    <span class="sub">kategorie z terminami i widocznością</span><div class="spacer"></div>
+    <button class="chipbtn">Pobierz paczkę tygodnia</button></div>
+    <div class="panel-bd flush"><div class="tablewrap"><table>
+      <thead><tr><th>Kategoria</th><th>Kto wgrywa</th><th>Wymagalność</th>
+        <th class="num">Kompletność</th><th>Stan</th></tr></thead>
+      <tbody>${cats.map(([c,w,r,n])=>{
+        const p=n/LOADS.length;
+        return `<tr><td style="font-weight:600">${c}</td><td>${w}</td><td style="color:var(--ink-3)">${r}</td>
+        <td class="num">${n} / ${LOADS.length}</td>
+        <td><span class="pill ${p>=1?"p-go":p>.8?"p-amber":"p-red"}">${Math.round(p*100)}%</span></td></tr>`;}).join("")}</tbody>
+    </table></div>
+    <div class="note">Polisa OCP Scandinavian Express wygasa 03.10.2026. Przypomnienie wychodzi 14 dni przed terminem, automatycznie.</div>
+    </div></div>`;
+}
+
+function viewFin(){
+  const done = LOADS.filter(l=>l.done);
+  const rev=done.reduce((s,l)=>s+l.price.totRev,0), cost=done.reduce((s,l)=>s+l.price.totCost,0);
+  const baseR=done.reduce((s,l)=>s+l.price.baseRev,0), bafR=done.reduce((s,l)=>s+l.price.bafR,0);
+  const exR=done.reduce((s,l)=>s+l.price.extrasRev,0);
+
+  const bafCard = `<div class="panel-bd">
+    <div class="kv">
+      <dt>Indeks</dt><dd>${BAF.index}</dd>
+      <dt>Wartość bazowa</dt><dd>${fmt(BAF.base)} PLN/m³ · ${BAF.baseDate}</dd>
+      <dt>Notowanie bieżące</dt><dd>${fmt(BAF.current)} PLN/m³ · ${BAF.valueDate}</dd>
+      <dt>Udział paliwa</dt><dd>${pct(BAF.share)}</dd>
+      <dt>Formuła</dt><dd>((4 720 − 4 180) / 4 180) × 28% = <b>12,4%</b></dd>
+      <dt>Próg wyzwolenia</dt><dd>1,5 pp · zaokrąglenie do 0,5 pp</dd>
+      <dt>Cykl rewizji</dt><dd>tygodniowy, piątek</dd>
+    </div>
+    <div style="font-size:12px;color:var(--ink-3);margin-top:9px">
+      Każde notowanie zapisuje się z adresem źródła i datą pobrania. Przy sporze pokazujesz dowód, nie pamięć.</div></div>`;
+
+  if(S.role==="SCX"){
+    const bc=done.reduce((s,l)=>s+l.price.baseCost,0), bfc=done.reduce((s,l)=>s+l.price.bafC,0),
+          exc=done.reduce((s,l)=>s+l.price.extrasCost,0);
+    return `<div class="panel" style="margin:12px"><div class="panel-hd"><h2>${T("nav_fin_scx")}</h2>
+      <span class="sub">${done.length} zrealizowanych transportów</span></div>
+      <div class="panel-bd"><div class="two">
+        <div><h4 class="sec">Należność narastająco</h4>
+          <div class="mrow"><span class="lbl">Stawka bazowa</span><span>${fmt(bc)} PLN</span></div>
+          <div class="mrow"><span class="lbl">Dodatek paliwowy 12,4%</span><span>${fmt(bfc)} PLN</span></div>
+          <div class="mrow"><span class="lbl">Pilotaż i dodatki</span><span>${fmt(exc)} PLN</span></div>
+          <div class="mrow total"><span>Razem</span><span>${fmt(cost)} PLN</span></div>
+          <div class="locked" style="margin-top:13px">${T("locked")} Cena płacona przez KSH i marża spedytora nie są dostępne w roli przewoźnika.</div>
+        </div>
+        <div><h4 class="sec">Dodatek paliwowy</h4>${bafCard}</div>
+      </div></div></div>`;
+  }
+  if(S.role==="KSH"){
+    return `<div class="panel" style="margin:12px"><div class="panel-hd"><h2>${T("nav_fin_ksh")}</h2>
+      <span class="sub">${done.length} zrealizowanych dostaw</span></div>
+      <div class="panel-bd"><div class="two">
+        <div><h4 class="sec">Do zapłaty narastająco</h4>
+          <div class="mrow"><span class="lbl">Fracht — stawka bazowa</span><span>${fmt(baseR)} PLN</span></div>
+          <div class="mrow"><span class="lbl">Dodatek paliwowy 12,4%</span><span>${fmt(bafR)} PLN</span></div>
+          <div class="mrow"><span class="lbl">Pilotaż i dodatki</span><span>${fmt(exR)} PLN</span></div>
+          <div class="mrow total"><span>Razem</span><span>${fmt(rev)} PLN</span></div>
+          <div class="locked" style="margin-top:13px">${T("locked")} Stawki przewoźnika i marża spedytora nie są dostępne w roli klienta.</div>
+        </div>
+        <div><h4 class="sec">Dodatek paliwowy</h4>${bafCard}</div>
+      </div></div></div>`;
+  }
+
+  const byType = Object.keys(TYPES).map(k=>{
+    const g=LOADS.filter(l=>l.type===k);
+    const r=g.reduce((s,l)=>s+l.price.totRev,0), c=g.reduce((s,l)=>s+l.price.totCost,0);
+    return {k,n:g.length,r,c,m:r-c,p:(r-c)/r};
+  });
+  const maxAbs = Math.max(...byType.map(t=>t.r));
+  return `<div class="panel" style="margin:12px"><div class="panel-hd"><h2>${T("nav_fin")}</h2>
+    <span class="sub">${done.length} zrealizowanych · kurs NBP tabela A</span></div>
+    <div class="panel-bd"><div class="two">
+      <div><h4 class="sec">Od przychodu do marży</h4>
+        <div class="mrow"><span class="lbl">Przychód od KSH — stawka bazowa</span><span>${fmt(baseR)} PLN</span></div>
+        <div class="mrow"><span class="lbl">Przychód — dodatek paliwowy</span><span>${fmt(bafR)} PLN</span></div>
+        <div class="mrow"><span class="lbl">Przychód — pilotaż i dodatki</span><span>${fmt(exR)} PLN</span></div>
+        <div class="mrow"><span class="lbl">Koszt Scandinavian Express</span><span style="color:var(--red)">− ${fmt(cost)} PLN</span></div>
+        <div class="mrow total"><span>Marża</span><span style="color:var(--go)">${fmt(rev-cost)} PLN · ${pct((rev-cost)/rev)}</span></div>
+      </div>
+      <div><h4 class="sec">Dodatek paliwowy</h4>${bafCard}</div>
+    </div>
+    <div class="hr"></div>
+    <h4 class="sec">Marża według typu elementu</h4>
+    <table style="width:100%;font-size:13px"><thead><tr>
+      <th style="text-align:left">Typ</th><th class="num">Szt.</th><th class="num">Przychód</th>
+      <th class="num">Koszt</th><th class="num">Marża</th><th style="width:140px"></th></tr></thead>
+      <tbody>${byType.map(t=>`<tr>
+        <td><span class="code">${t.k}</span> ${loc(TYPES[t.k].name)}</td>
+        <td class="num">${t.n}</td><td class="num">${fmt(t.r)}</td><td class="num">${fmt(t.c)}</td>
+        <td class="num money ${t.p<0.18?'neg':''}">${fmt(t.m)} · ${pct(t.p)}</td>
+        <td><svg width="130" height="12"><rect width="${(t.r/maxAbs*130).toFixed(0)}" height="12" fill="var(--rule)"/>
+          <rect width="${(t.c/maxAbs*130).toFixed(0)}" height="12" fill="var(--sea)" fill-opacity=".55"/></svg></td>
+      </tr>`).join("")}</tbody></table>
+    <div class="note" style="margin:11px -13px -13px">Transport, który nie trafia w żaden przedział cennika, nie dostaje stawki zero — trafia na listę wyjątków. Cicha zerowa stawka to najprostszy sposób na fikcyjną marżę.</div>
+    </div></div>`;
+}
+
+function viewInv(){
+  const week = LOADS.filter(l=>l.done).slice(-6);
+  const expected = week.reduce((s,l)=>s+l.price.totCost,0);
+  const invoiced = expected + 1840;
+  const rows = week.map((l,i)=>{
+    const inv = l.price.totCost + (i===2?1240:i===4?600:0);
+    const diff = inv-l.price.totCost;
+    return `<tr><td><span class="code">${l.code}</span></td><td>${loc(l.typeName)}</td>
+      <td>${dstr(l.planDeliv)}</td>
+      <td class="num">${fmt(l.price.totCost)}</td><td class="num">${fmt(inv)}</td>
+      <td class="num ${diff?'money neg':''}">${diff?`+${fmt(diff)}`:"—"}</td>
+      <td>${diff?`<span class="pill p-red">poza cennikiem</span>`:`<span class="pill p-go">zgodna</span>`}</td></tr>`;
+  }).join("");
+  return `<div class="panel" style="margin:12px"><div class="panel-hd">
+    <h2>${T("nav_inv")}</h2><span class="sub">tydzień 38 · 14–20.09.2026 · Scandinavian Express</span>
+    <div class="spacer"></div>
+    ${S.role==="SCX"?`<button class="btn">Złóż fakturę</button>`:`<button class="chipbtn">Zgłoś spór</button><button class="btn">Zatwierdź</button>`}</div>
+    <div class="panel-bd flush">
+      <div class="filters"><span>Kwota z cennika <b class="mono">${fmt(expected)} PLN</b></span>
+        <span>Kwota z faktury <b class="mono">${fmt(invoiced)} PLN</b></span>
+        <span>Rozbieżność <b class="mono" style="color:var(--red)">+${fmt(invoiced-expected)} PLN</b></span>
+        <div class="spacer"></div><span class="pill p-red">Do wyjaśnienia</span></div>
+      <div class="tablewrap"><table><thead><tr><th>Wysyłka</th><th>Typ</th><th>Dostawa</th>
+        <th class="num">Wg cennika</th><th class="num">Zafakturowano</th><th class="num">Różnica</th><th>Ocena</th>
+        </tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="note">Porównanie trójstronne: transporty zaznaczone przez przewoźnika ↔ transporty faktycznie zrealizowane ↔ kwota wynikająca z cennika. Dwie pozycje rozliczone poza macierzą — pilotaż drugiego pojazdu nie był awizowany.</div>
+    </div></div>`;
+}
+
+function viewWf(){
+  return `<div class="panel" style="margin:12px"><div class="panel-hd"><h2>${T("nav_wf")}</h2>
+    <span class="sub">${WORKFLOWS.filter(w=>w.on).length} aktywnych</span><div class="spacer"></div>
+    <button class="chipbtn">Nowa reguła</button></div>
+    <div class="panel-bd flush">
+    ${WORKFLOWS.map((w,i)=>`<div class="wf">
+      <span class="sw" data-wf="${i}" aria-pressed="${w.on}" role="button" tabindex="0" aria-label="Włącz lub wyłącz"></span>
+      <span style="flex:1"><span style="font-weight:600">${loc(w.name)}</span>
+        <span class="rule">${loc(w.rule)}</span></span>
+      <span style="text-align:right;white-space:nowrap;color:var(--ink-3);font-size:12.5px">${w.runs}× w tym miesiącu</span>
+    </div>`).join("")}
+    <div class="note">Reguła to wyzwalacz, warunek i lista akcji. Bez płótna do rysowania — formularz w trzech polach buduje się w minutę, a płótno to osobny projekt na tygodnie.</div>
+    </div></div>`;
+}
+
+function viewTasks(){
+  const need = LOADS.filter(l=>["RESOURCES_PENDING","DOCS_PENDING","READY"].includes(l.status)).slice(0,9);
+  return `<div class="panel" style="margin:12px"><div class="panel-hd"><h2>${T("nav_tasks")}</h2>
+    <span class="sub">uzupełnij przed terminem — po nim wychodzi eskalacja</span></div>
+    <div class="panel-bd flush"><div class="tablewrap"><table>
+      <thead><tr><th>Wysyłka</th><th>Czego brakuje</th><th>Załadunek</th><th>Termin</th><th>Stan</th><th></th></tr></thead>
+      <tbody>${need.map((l,i)=>{
+        const what = l.status==="RESOURCES_PENDING"?"Kierowca, telefon, nr rejestracyjne"
+          : l.status==="DOCS_PENDING"?"Zezwolenie PL i dispens SE" : "Awizacja godziny podjęcia";
+        const hrs = 18+i*9;
+        return `<tr data-load="${l.id}"><td><span class="code">${l.code}</span></td>
+          <td>${what}</td><td>${dstr(l.planLoad)} ${tstr(l.planLoad)}</td>
+          <td class="mono">za ${hrs} h</td>
+          <td><span class="pill ${hrs<24?"p-red":hrs<48?"p-amber":"p-plan"}">${hrs<24?"pilne":hrs<48?"wkrótce":"w terminie"}</span></td>
+          <td style="text-align:right"><button class="chipbtn">Uzupełnij</button></td></tr>`;}).join("")}
+      </tbody></table></div></div></div>`;
+}
+
+/* ---------- 7. Szuflada transportu ---------- */
+function drawerHTML(l){
+  const tabs=[["over",T("d_over")],["tl",T("d_tl")],["docs",T("d_docs")],["money",T("d_money")],["chat",T("d_chat")]];
+  let body="";
+  if(S.dtab==="over"){
+    body = `<dl class="kv">
+      <dt>${T("c_type")}</dt><dd>${loc(l.typeName)} · ${l.qty} szt.</dd>
+      <dt>${T("c_dims")}</dt><dd>${l.L.toFixed(2).replace('.',',')} × ${l.W.toFixed(2).replace('.',',')} × ${l.H.toFixed(2).replace('.',',')} m</dd>
+      <dt>Wymiary zestawu</dt><dd>${l.comboLen.toFixed(2).replace('.',',')} × ${l.comboW.toFixed(2).replace('.',',')} × ${l.comboH.toFixed(2).replace('.',',')} m</dd>
+      <dt>${T("c_weight")}</dt><dd>${l.weight.toFixed(2).replace('.',',')} t (${l.qty} × ${l.unit.toFixed(2).replace('.',',')} t)</dd>
+      <dt>${T("c_order")}</dt><dd>${l.orderNo}</dd>
+      <dt>${T("c_seq")}</dt><dd>pozycja ${l.assemblySeq}</dd>
+      <dt>Miejsce załadunku</dt><dd>${l.loadPoint.n}</dd>
+      <dt>${T("c_load")}</dt><dd>${dstr(l.planLoad)} · okno ${tstr(l.planLoad)}–${tstr(addDays(l.planLoad,0))}</dd>
+      <dt>${T("c_deliv")}</dt><dd>${dstr(l.planDeliv)} ${tstr(l.planDeliv)}</dd>
+      <dt>${T("c_eta")}</dt><dd>${dstr(l.eta)} ${tstr(l.eta)} ${l.delayMin?`<span class="pill p-red">+${Math.floor(l.delayMin/60)} h ${l.delayMin%60} min</span>`:`<span class="pill p-go">w oknie</span>`}</dd>
+      ${l.delayCode?`<dt>Kod przyczyny</dt><dd><span class="pill p-amber">${l.delayCode}</span></dd>`:""}
+      <dt>Kierowca</dt><dd>${l.driver?`${esc(l.driver)} · ${l.phone}`:'<span style="color:var(--red)">nie uzupełniono</span>'}</dd>
+      <dt>Ciągnik / naczepa</dt><dd>${l.tractor?`<span class="mono">${l.tractor}</span> / <span class="mono">${l.trailer}</span>`:"—"}</dd>
+      <dt>Pilotaż</dt><dd>${l.escort?`${l.escort} pojazd${l.escort>1?"y":""}`:"nie wymagany"}</dd>
+      <dt>Prom</dt><dd>${l.ferryRef?`${l.ferry} · ${l.ferryRef}`:"brak rezerwacji"}</dd>
+    </dl>
+    ${!l.docs.permit?`<div class="banner red" style="margin:13px 0 0">
+      <b>Brak zezwolenia.</b> Zestaw ma ${l.comboLen.toFixed(2).replace('.',',')} m długości — transport nie może ruszyć bez dokumentu obejmującego ten wymiar.</div>`:
+     `<div class="banner" style="margin:13px 0 0;background:var(--go-bg);border-left-color:var(--go)">
+      <b>Zezwolenie zgodne.</b> Wymiary zestawu mieszczą się w limitach dokumentu PL/2026/${1400+l.id} ważnego do 30.11.2026.</div>`}`;
+  }
+  if(S.dtab==="tl"){
+    const steps=[
+      ["Harmonogram zaimportowany", dstr(addDays(l.planLoad,-9))+" 09:14", true],
+      ["Transport przypisany do przewoźnika", dstr(addDays(l.planLoad,-7))+" 11:02", true],
+      ["Zasoby uzupełnione", l.driver?dstr(addDays(l.planLoad,-2))+" 15:40":"oczekuje", !!l.driver],
+      ["Zezwolenie załączone i zweryfikowane", l.docs.permit?dstr(addDays(l.planLoad,-2))+" 16:05":"oczekuje", l.docs.permit],
+      ["Wjazd w strefę załadunku", l.progress>=.03?dstr(l.planLoad)+" "+tstr(l.planLoad):"—", l.progress>=.03],
+      ["Wyjazd z załadunku", l.progress>=.09?dstr(l.planLoad)+" 11:22":"—", l.progress>=.09],
+      ["Odprawa w terminalu Gdańsk", l.progress>=.16?dstr(addDays(l.planLoad,1))+" 17:50":"—", l.progress>=.16],
+      ["Prom odbił od nabrzeża", l.progress>=.30?dstr(addDays(l.planLoad,1))+" 21:10":"—", l.progress>=.30],
+      ["Zjazd z promu w Nynäshamn", l.progress>=.43?dstr(addDays(l.planLoad,2))+" 12:35":"—", l.progress>=.43],
+      ["Kontrola E4 · Sundsvall", l.progress>=.62?dstr(addDays(l.planLoad,3))+" 08:12":"—", l.progress>=.62],
+      ["Kontrola E4 · Luleå", l.progress>=.90?dstr(addDays(l.planLoad,4))+" 06:44":"—", l.progress>=.90],
+      ["Wjazd w bufor 50 km · powiadomienie ekipy", l.progress>=.95?dstr(l.planDeliv)+" 07:02":"—", l.progress>=.95],
+      ["Przyjazd na plac Stegra", l.progress>=.99?dstr(l.planDeliv)+" "+tstr(l.planDeliv):"—", l.progress>=.99],
+      ["Rozładunek zakończony", l.done?dstr(l.planDeliv)+" 13:26":"—", l.done],
+      ["POD wgrany", l.docs.pod?dstr(l.planDeliv)+" 15:08":"—", l.docs.pod]
+    ];
+    body = `<ul class="tl">${steps.map(([w,t,ok])=>`<li class="${ok?"":"future"}">
+      <span class="mk"></span><div class="w">${w}</div><div class="ts">${t}</div></li>`).join("")}</ul>`;
+  }
+  if(S.dtab==="docs"){
+    const d=[["Zezwolenie PL",l.docs.permit,"PL/2026/"+(1400+l.id)+".pdf"],
+             ["Dispens SE",l.docs.permit,"TRV-2026-"+(88100+l.id)+".pdf"],
+             ["CMR",l.docs.cmr,"CMR_"+l.code+".pdf"],
+             ["Zdjęcia mocowania",l.docs.lash,l.code+"_mocowanie_04.jpg"],
+             ["POD",l.docs.pod,"POD_"+l.code+"_podpisany.pdf"],
+             ["Polisa OCP",true,"OCP_SCX_2026.pdf"]];
+    body = d.map(([n,ok,f])=>`<div class="mrow">
+      <span class="lbl">${n}</span>
+      <span>${ok?`<span style="color:var(--go)">✓</span> <span style="font-size:12.5px">${f}</span>`
+        :`<span style="color:var(--red)">brak</span>`}</span></div>`).join("")
+      + `<div style="margin-top:13px"><button class="btn ghost">Pobierz paczkę ZIP</button>
+         ${S.role!=="KSH"?`<button class="btn" style="margin-left:7px">Wgraj dokument</button>`:""}</div>`;
+  }
+  if(S.dtab==="money"){
+    const p=l.price;
+    const cost = `<h4 class="sec">${S.role==="SCX"?T("c_myprice"):T("c_cost")} — Scandinavian Express</h4>
+      <div class="mrow"><span class="lbl">Stawka bazowa (${l.L.toFixed(2).replace('.',',')} m / ${l.weight.toFixed(1).replace('.',',')} t)</span><span>${fmt(p.baseCost)} PLN</span></div>
+      <div class="mrow"><span class="lbl">Dodatek paliwowy 12,4%</span><span>${fmt(p.bafC)} PLN</span></div>
+      ${p.extrasCost?`<div class="mrow"><span class="lbl">Pilotaż ${l.escort} poj.</span><span>${fmt(p.extrasCost)} PLN</span></div>`:""}
+      <div class="mrow total"><span>Razem</span><span>${fmt(p.totCost)} PLN</span></div>`;
+    const rev = `<h4 class="sec" style="margin-top:15px">${S.role==="KSH"?T("c_yourprice"):T("c_rev")} — KSH</h4>
+      <div class="mrow"><span class="lbl">Stawka bazowa</span><span>${fmt(p.baseRev)} PLN</span></div>
+      <div class="mrow"><span class="lbl">Dodatek paliwowy 12,4%</span><span>${fmt(p.bafR)} PLN</span></div>
+      ${p.extrasRev?`<div class="mrow"><span class="lbl">Pilotaż ${l.escort} poj.</span><span>${fmt(p.extrasRev)} PLN</span></div>`:""}
+      <div class="mrow total"><span>Razem</span><span>${fmt(p.totRev)} PLN</span></div>`;
+    const marg = `<div class="mrow total" style="margin-top:15px;border-top:2px solid var(--ink)">
+      <span>${T("c_margin")}</span><span style="color:${p.marginPct<0.18?'var(--red)':'var(--go)'}">${fmt(p.margin)} PLN · ${pct(p.marginPct)}</span></div>`;
+    body = (seeCost()?cost:`<div class="locked">${T("locked")}</div>`)
+         + (seeRev()?rev:`<div class="locked" style="margin-top:13px">${T("locked")}</div>`)
+         + (seeMargin()?marg:"");
+  }
+  if(S.dtab==="chat"){
+    body = CHAT.map(m=>`<div class="msg ${m.me?"me":""}">
+      <div class="who">${m.who} · ${m.t}</div><div>${esc(loc(m))}</div></div>`).join("")
+      + `<div class="chatbar"><input placeholder="${T("msgph")}"><button class="btn">${T("send")}</button></div>`;
+  }
+
+  return `<div class="scrim" data-close="1"></div>
+  <aside class="drawer" role="dialog" aria-label="${l.code}">
+    <div class="drawer-hd">
+      <div class="r1">
+        <h3>${l.code}</h3>
+        <span class="pill ${STATUS_CLASS[l.status]}">${T("s_"+l.status)}</span>
+        ${l.delayMin?`<span class="pill p-red">+${Math.floor(l.delayMin/60)} h ${l.delayMin%60} min</span>`:""}
+        <div class="spacer"></div>
+        <button class="iconbtn" data-close="1" aria-label="Zamknij">✕</button>
+      </div>
+      <div class="meta">${loc(l.typeName)} · ${l.orderNo} · ${l.loadPoint.n} → Boden</div>
+    </div>
+    <div class="dtabs">${tabs.map(([k,t])=>`<button data-dtab="${k}" aria-selected="${S.dtab===k}">${t}</button>`).join("")}</div>
+    <div class="dbody">${body}</div>
+  </aside>`;
+}
+
+/* ---------- 8. Render ---------- */
+const VIEWS = {dash:viewDash,map:viewMap,sched:viewSched,risk:viewRisk,docs:viewDocs,
+               fin:viewFin,inv:viewInv,wf:viewWf,geo:viewGeo,tasks:viewTasks};
+
+function render(){
+  document.getElementById('brandSub').innerHTML = ROLE_META[S.role].sub;
+  document.getElementById('roleLbl').textContent = T("view");
+  document.getElementById('corridor').innerHTML = corridorHTML();
+  document.getElementById('nav').innerHTML = navHTML();
+  const fn = VIEWS[S.view] || viewDash;
+  document.getElementById('main').innerHTML = fn();
+  document.querySelectorAll('#roleSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.role===S.role));
+  document.querySelectorAll('#langSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lang===S.lang));
+  const old=document.querySelector('.scrim'), oldD=document.querySelector('.drawer');
+  old&&old.remove(); oldD&&oldD.remove();
+  if(S.open!=null){
+    const l=LOADS.find(x=>x.id===S.open);
+    if(l) document.body.insertAdjacentHTML('beforeend', drawerHTML(l));
+  }
+}
+
+/* ---------- 9. Zdarzenia ---------- */
+document.addEventListener('click', e=>{
+  const t = e.target;
+  const closest = s => t.closest(s);
+
+  if(closest('[data-close]')){ S.open=null; render(); return; }
+  const roleB = closest('#roleSeg button');
+  if(roleB){ S.role=roleB.dataset.role;
+    if(S.view==="wf"||S.view==="geo"){ if(S.role!=="HHL") S.view="dash"; }
+    if(S.view==="tasks" && S.role!=="SCX") S.view="dash";
+    if(S.view==="inv" && S.role==="KSH") S.view="fin";
+    render(); return; }
+  const langB = closest('#langSeg button');
+  if(langB){ S.lang=langB.dataset.lang; render(); return; }
+  if(closest('#themeBtn')){
+    const cur=document.documentElement.getAttribute('data-theme');
+    document.documentElement.setAttribute('data-theme', cur==="dark"?"light":"dark"); return; }
+
+  const stage = closest('.stage');
+  if(stage){ const s=stage.dataset.stage; S.stageFilter = S.stageFilter===s?null:s;
+    if(S.view==="dash") S.view="sched"; render(); return; }
+
+  const nav = closest('[data-view]');
+  if(nav){ S.view=nav.dataset.view; S.open=null; render(); return; }
+
+  const quick = closest('[data-quick]');
+  if(quick){ S.quick=quick.dataset.quick; render(); return; }
+
+  const th = closest('th[data-sort]');
+  if(th){ const k=th.dataset.sort;
+    S.sort = S.sort.k===k ? {k,dir:-S.sort.dir} : {k,dir:1}; render(); return; }
+
+  const layer = closest('[data-layer]');
+  if(layer){ S.layers[layer.dataset.layer]=layer.checked; render(); return; }
+
+  const wf = closest('[data-wf]');
+  if(wf){ const i=+wf.dataset.wf; WORKFLOWS[i].on=!WORKFLOWS[i].on; render(); return; }
+
+  const dtab = closest('[data-dtab]');
+  if(dtab){ S.dtab=dtab.dataset.dtab; render(); return; }
+
+  const risk = closest('[data-risk]');
+  if(risk){ const r=RISKS[+risk.dataset.risk];
+    if(r.load){ S.open=r.load.id; S.dtab="over"; render(); }
+    else { S.view="risk"; render(); } return; }
+
+  const row = closest('[data-load]');
+  if(row){ S.open=+row.dataset.load; S.dtab="over"; render(); return; }
+});
+
+document.addEventListener('input', e=>{
+  if(e.target.id==='q'){ S.search=e.target.value;
+    const pos=e.target.selectionStart; render();
+    const q=document.getElementById('q'); if(q){q.focus(); q.setSelectionRange(pos,pos);} }
+});
+
+document.addEventListener('mouseover', e=>{
+  const el=e.target.closest('[data-load]');
+  const id = el? +el.dataset.load : null;
+  if(id!==S.hover && (S.view==="map")){ S.hover=id; render(); }
+});
+
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'&&S.open!=null){S.open=null;render();} });
+
+render();
+</script>
+</body>
+</html>

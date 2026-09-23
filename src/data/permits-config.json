@@ -1,0 +1,42 @@
+{
+  "pl": {
+    "normative": {
+      "widthM": 2.55,
+      "widthFridgeM": 2.6,
+      "heightM": 4.0,
+      "lengthArticM": 16.5,
+      "lengthTruckTrailerM": 18.75,
+      "lengthMotorM": 12.0
+    },
+    "pilots": {
+      "one": { "lengthM": 23.0, "widthM": 3.2, "heightM": 4.5, "massT": 60 },
+      "two": { "lengthM": 30.0, "widthM": 3.6, "heightM": 4.7, "massT": 80 }
+    },
+    "sources": [
+      "GDDKiA przejazdy nienormatywne",
+      "Dz.U. 2024 poz. 502",
+      "Dz.U. 2024 poz. 126",
+      "Dz.U. 2023 poz. 2487"
+    ],
+    "urls": {
+      "gddkia": "https://www.gov.pl/web/gddkia/przejazdy-nienormatywne3"
+    }
+  },
+  "se": {
+    "base": { "widthM": 2.6, "lengthM": 24.0, "lengthEmsM": 25.25 },
+    "tsfs": {
+      "wideOnlyMaxM": 3.5,
+      "longOnlyMaxM": 30.0,
+      "wideLightM": 3.1
+    },
+    "sources": [
+      "trafikförordningen (1998:1276) 4 kap.",
+      "TSFS 2023:36",
+      "TSFS 2023:37",
+      "Transportstyrelsen odelbar last"
+    ],
+    "urls": {
+      "transportstyrelsen": "https://www.transportstyrelsen.se/sv/vagtrafik/yrkestrafik/gods-och-buss/matt-och-vikt/odelbar-last-och-fordon-som-overskrider-vikt--och-dimensionsbestammelser/"
+    }
+  }
+}

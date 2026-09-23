@@ -1,0 +1,122 @@
+{
+  "when": "2026-09-22T23:43:23.246Z",
+  "preview": "http://127.0.0.1:4177/",
+  "cockpit": {
+    "theme": "dark",
+    "bodyFont": "Barlow, \"Helvetica Neue\", Arial, sans-serif",
+    "brandFont": "\"Barlow Condensed\", Barlow, Arial, sans-serif",
+    "brandSize": "23px",
+    "topH": 52,
+    "navW": 186,
+    "spineN": "26px",
+    "kpiV": "29px",
+    "page": "#080f15",
+    "surface": "#101c25",
+    "ink": "#dce7ee",
+    "stages": [
+      "Przygotowanie",
+      "Załadunek",
+      "Droga PL",
+      "Prom",
+      "Droga SE",
+      "Nynäshamn",
+      "Boden",
+      "Dostarczone"
+    ],
+    "navLabels": [
+      "Kokpit",
+      "Mapa",
+      "Harmonogram",
+      "Ryzyka",
+      "Dokumenty",
+      "Finanse",
+      "Faktury",
+      "Automatyzacje",
+      "Strefy"
+    ],
+    "leaflet": true,
+    "tileImgs": 8
+  },
+  "map": {
+    "theme": "dark",
+    "bodyFont": "Barlow, \"Helvetica Neue\", Arial, sans-serif",
+    "brandFont": "\"Barlow Condensed\", Barlow, Arial, sans-serif",
+    "brandSize": "23px",
+    "topH": 52,
+    "navW": 186,
+    "spineN": "26px",
+    "kpiV": null,
+    "page": "#080f15",
+    "surface": "#101c25",
+    "ink": "#dce7ee",
+    "stages": [
+      "Przygotowanie",
+      "Załadunek",
+      "Droga PL",
+      "Prom",
+      "Droga SE",
+      "Nynäshamn",
+      "Boden",
+      "Dostarczone"
+    ],
+    "navLabels": [
+      "Kokpit",
+      "Mapa",
+      "Harmonogram",
+      "Ryzyka",
+      "Dokumenty",
+      "Finanse",
+      "Faktury",
+      "Automatyzacje",
+      "Strefy"
+    ],
+    "leaflet": true,
+    "tileImgs": 16
+  },
+  "ksh": {
+    "theme": "light",
+    "bodyFont": "Barlow, \"Helvetica Neue\", Arial, sans-serif",
+    "brandFont": "\"Barlow Condensed\", Barlow, Arial, sans-serif",
+    "brandSize": "23px",
+    "topH": 52,
+    "navW": 186,
+    "spineN": "26px",
+    "kpiV": "29px",
+    "page": "#e3e9ed",
+    "surface": "#fff",
+    "ink": "#0e1a24",
+    "stages": [
+      "Przygotowanie",
+      "Załadunek",
+      "Droga PL",
+      "Prom",
+      "Droga SE",
+      "Nynäshamn",
+      "Boden",
+      "Dostarczone"
+    ],
+    "navLabels": [
+      "Kokpit",
+      "Mapa",
+      "Harmonogram",
+      "Ryzyka",
+      "Dokumenty",
+      "Rozliczenia"
+    ],
+    "leaflet": true,
+    "tileImgs": 8
+  },
+  "checks": {
+    "barlow": true,
+    "condensed": true,
+    "top52": true,
+    "nav186": true,
+    "spine26": true,
+    "kpi29": true,
+    "hhlDark": true,
+    "kshLight": true,
+    "leaflet": true,
+    "tiles": true,
+    "spineClaudeVoice": true
+  }
+}
