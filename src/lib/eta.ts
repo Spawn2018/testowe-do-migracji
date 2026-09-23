@@ -4,6 +4,7 @@
  * Recalc on status / load_event / ferry change.
  */
 import type { EtaConfidence, EtaSegment, FerryBooking, LoadStatus } from '../types';
+import { getNowIso } from './frozenNow';
 
 export const ETA_METHOD_LABEL = 'Szacunek z czasów odcinków (prom + drogi)';
 
@@ -143,7 +144,7 @@ export function computeEta(opts: {
   nowIso?: string;
 }): EtaSnapshot {
   const status = opts.delayed && opts.status !== 'DELIVERED' ? 'DELAYED' : opts.status;
-  const now = opts.nowIso ?? new Date().toISOString();
+  const now = opts.nowIso ?? getNowIso();
   const segments: EtaSegment[] = BASE_SEGMENTS.map((base) => {
     const raw = BASE_HOURS[base.kind] * remainingFactor(status, base.kind);
     // Ferry booking slip expands wait

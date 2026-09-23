@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { t } from '../../i18n/messages';
 import type { Severity } from '../../types';
+import { getNowMs } from '../../lib/frozenNow';
 
 function gut(s: Severity) {
   if (s === 'CRITICAL' || s === 'HIGH') return 'var(--red)';
@@ -10,7 +11,7 @@ function gut(s: Severity) {
 }
 
 function relTime(iso: string) {
-  const ms = Date.now() - Date.parse(iso);
+  const ms = getNowMs() - Date.parse(iso);
   const h = ms / 3600000;
   if (h < 1) return `${Math.max(1, Math.round(h * 60))}m`;
   if (h < 48) return `${h.toFixed(1)}h`;

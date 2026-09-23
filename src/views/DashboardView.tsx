@@ -6,6 +6,7 @@ import { DeliveryProgress } from '../components/chart/DeliveryProgress';
 import { CorridorMap } from '../components/map/CorridorMap';
 import { t } from '../i18n/messages';
 import { canSeeMargin, ROLE_META } from '../lib/permissions';
+import { getNow } from '../lib/frozenNow';
 
 export function DashboardView() {
   const role = useTowerStore((s) => s.role);
@@ -81,7 +82,7 @@ export function DashboardView() {
               day: '2-digit',
               month: '2-digit',
               year: 'numeric',
-            }).format(new Date())}{' '}
+            }).format(getNow())}{' '}
             · projekt Stegra Boden
           </span>
         </header>

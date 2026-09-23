@@ -1,5 +1,6 @@
 /** Polferries GDN↔NYN — seed timetable + rolling generated sailings. No booking API. */
 import raw from '../data/ferry-sailings.json';
+import { getNow, getNowMs } from './frozenNow';
 
 export type FerryVesselId = 'WAW' | 'NS';
 export type FerrySailingStatus =
@@ -86,7 +87,7 @@ function vesselForDay(dayIndex: number): FerryVesselId {
 }
 
 /** Rolling ±14 days around `now`, both directions. Seed rows win on same id. */
-export function buildSchedule(now = new Date()): FerrySailing[] {
+export function buildSchedule(now = getNow()): FerrySailing[] {
   const byId = new Map<string, FerrySailing>();
   for (const s of SEED) byId.set(s.id, { ...s });
 
@@ -157,7 +158,7 @@ function effectiveStatus(s: FerrySailing, nowMs: number): FerrySailingStatus {
 }
 
 /** Next departing (or currently boarding) sailing from live clock. */
-export function nextLiveSailing(now = new Date()): FerrySailing {
+export function nextLiveSailing(now = getNow()): FerrySailing {
   const nowMs = now.getTime();
   const all = buildSchedule(now).map((s) => ({ ...s, status: effectiveStatus(s, nowMs) }));
 
@@ -177,7 +178,7 @@ export function nextLiveSailing(now = new Date()): FerrySailing {
 }
 
 /** @deprecated use nextLiveSailing — kept for RisksView call sites */
-export function activeOrNextSailing(now = new Date()): FerrySailing {
+export function activeOrNextSailing(now = getNow()): FerrySailing {
   return nextLiveSailing(now);
 }
 
@@ -189,7 +190,7 @@ export function ferryLabel(s: FerrySailing): string {
 
 export function ferryWidgetLabel(s: FerrySailing): { cd: string; line: string; wave: string } {
   const v = vesselById(s.vessel);
-  const now = Date.now();
+  const now = getNowMs();
   const depMs = Date.parse(s.depLocal);
   const mins = Math.max(0, Math.round((depMs - now) / 60_000));
   const cd = `${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')} min`;

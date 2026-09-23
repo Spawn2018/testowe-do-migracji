@@ -7,6 +7,7 @@ import { NotificationBell } from './NotificationBell';
 import { ClaudeIcon } from './ClaudeIcon';
 import { KeyboardHelp } from './KeyboardHelp';
 import { ferryWidgetLabel, nextLiveSailing } from '../../lib/ferry';
+import { getNow } from '../../lib/frozenNow';
 
 const ROLES: RoleId[] = ['HHL', 'KSH', 'SCX'];
 const LANGS: Locale[] = ['pl', 'en', 'sv'];
@@ -46,7 +47,7 @@ export function Topbar() {
 
   useEffect(() => {
     const tick = () => {
-      const now = new Date();
+      const now = getNow();
       const parts = new Intl.DateTimeFormat('en-GB', {
         timeZone: 'Europe/Warsaw',
         day: '2-digit',

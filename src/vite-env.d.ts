@@ -4,6 +4,8 @@ interface ImportMetaEnv {
   readonly VITE_MAPTILER_KEY?: string;
   readonly VITE_TRAFIKVERKET_API_KEY?: string;
   readonly VITE_AIS_WS_URL?: string;
+  /** ISO timestamp to freeze UI clocks (screenshots). */
+  readonly VITE_FROZEN_NOW?: string;
 }
 
 interface ImportMeta {
