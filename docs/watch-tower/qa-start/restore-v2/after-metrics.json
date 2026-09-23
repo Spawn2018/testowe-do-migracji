@@ -1,0 +1,92 @@
+{
+  "app": {
+    "gridDisplay": "grid",
+    "gridCols": "705.438px 522.562px",
+    "gridH": 650.15625,
+    "panels": [
+      {
+        "cls": "panel section-card",
+        "margin": "12px",
+        "display": "block",
+        "h": 251.859375,
+        "top": 201.515625
+      },
+      {
+        "cls": "panel grid2",
+        "margin": "12px",
+        "display": "grid",
+        "h": 650.15625,
+        "top": 465.375
+      }
+    ],
+    "gripsOnDash": 1,
+    "corrH": 82.671875,
+    "stageN": "30px",
+    "labels": [
+      "Przygotowanie",
+      "Załadunek",
+      "Droga PL",
+      "Gdańsk",
+      "Prom",
+      "Nynäshamn",
+      "Droga SE",
+      "Boden",
+      "Dostarczone"
+    ],
+    "mainOverflow": "auto",
+    "pageSecPad": "0px",
+    "scroll": {
+      "canScroll": true,
+      "scrollHeight": 993,
+      "clientHeight": 765
+    },
+    "mapFilters": [
+      "Wszystkie · 72",
+      "Terminowe · 62",
+      "Spóźnione · 10"
+    ]
+  },
+  "claude": {
+    "gridDisplay": "grid",
+    "gridCols": "705.438px 522.562px",
+    "gridH": 649.453125,
+    "panels": [
+      {
+        "cls": "panel",
+        "margin": "12px",
+        "display": "block",
+        "h": 251.859375,
+        "top": 201.515625
+      },
+      {
+        "cls": "panel grid2",
+        "margin": "12px",
+        "display": "grid",
+        "h": 649.453125,
+        "top": 465.375
+      }
+    ],
+    "gripsOnDash": 0,
+    "corrH": 82.671875,
+    "stageN": "30px",
+    "labels": [
+      "Przygotowanie",
+      "Załadunek",
+      "Droga PL",
+      "Gdańsk",
+      "Prom",
+      "Nynäshamn",
+      "Droga SE",
+      "Boden",
+      "Dostarczone"
+    ],
+    "mainOverflow": "auto",
+    "pageSecPad": "0px",
+    "scroll": {
+      "canScroll": true,
+      "scrollHeight": 992,
+      "clientHeight": 765
+    },
+    "mapFilters": []
+  }
+}

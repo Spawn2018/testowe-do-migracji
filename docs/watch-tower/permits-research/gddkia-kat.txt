@@ -1,0 +1,77 @@
+                                            Tabela kategorii zezwoleń i opłat oraz organy wydające
+
+Lp.   Kategoria                                                                                                   Drogi                      Termin        Opłaty
+      zezwolenia               Parametry pojazdu nienormatywnego                                                  po których mogą            ważności      w zł.
+      i kto wydaje                                                                                                się poruszać               (miesiące)
+      I                        o długości, wysokości, naciskach osi oraz rzeczywistej masie całkowitej nie                                        12                100,00
+1.    starosta                 większych od dopuszczalnych,                                                       publiczne, z wyjątkiem
+                               o szerokości nieprzekraczającej 3,5 m;                                             ekspresowych i autostrad
+                               o naciskach osi i rzeczywistej masie całkowitej nie większych od dopuszczalnych,                                    1                200,00
+2.    II                       o szerokości nieprzekraczającej 3,2 m,
+      starosta                 o długości nieprzekraczającej:                                                                                      6                400,00
+      i naczelnik              15 m dla pojedynczego pojazdu,                                                     publiczne
+      urzędu celno-            23 m dla zespołu pojazdów;                                                                                         12              1 200,00
+      skarbowego               o wysokości nieprzekraczającej 4,3 m;
+                                                                                                                                                  24              2 000,00
+
+                               o rzeczywistej masie całkowitej oraz naciskach osi nie większych od                                                 1                500,00
+3.    III                      dopuszczalnych,
+      Generalny Dyrektor       o szerokości nieprzekraczającej 3,4 m,                                                                              6              1 000,00
+      Dróg Krajowych           o długości nieprzekraczającej:
+      i Autostrad              15 m dla pojedynczego pojazdu,                                                     krajowe
+      i naczelnik              23 m dla zespołu pojazdów,                                                                                         12              2 000,00
+      urzędu celno-            30 m dla zespołu pojazdów o skrętnych osiach,
+      skarbowego               o wysokości nieprzekraczającej 4,3 m;                                                                              24              3 000,00
+
+
+                               o szerokości nieprzekraczającej:                                                                                    1                800,00
+4.    IV                       3,4 m dla drogi jednojezdniowej,
+      Generalny Dyrektor       4 m dla drogi dwujezdniowej klasy A i S,
+      Dróg Krajowych           o długości nieprzekraczającej:                                                                                      6              1 600,00
+      i Autostrad              15 m dla pojedynczego pojazdu,
+                               23 m dla zespołu pojazdów,                                                         publiczne
+                               30 m dla zespołu pojazdów o skrętnych osiach,                                                                      12              3 200,00
+                               o wysokości nieprzekraczającej 4,3 m,
+                               o rzeczywistej masie całkowitej nieprzekraczającej 60 t,
+                                                                                                                                                  24              4 800,00
+                               o naciskach osi nie większych od dopuszczalnych;
+
+                                                                                                                                             14 dni - na           500,00
+      V                                                                                                                                      jednokrotny   na jednokrotny
+5.    Generalny Dyrektor                                                                                                                     przejazd      przejazd
+      Dróg Krajowych                                                                                                                                       pojazdu,
+      i Autostrad                                                                                                                            30 dni - na   którego
+                               o wymiarach oraz rzeczywistej masie całkowitej większych od wymienionych w                                    wielokrotny   wymiary
+                                                                                                                  wyznaczona trasa
+      (prezydent miasta –      kategoriach I – IV,                                                                                           przejazd      przekraczają
+      jeżeli trasa przejazdu                                                                                      wskazana w zezwoleniu
+                               o naciskach osi przekraczających wielkości dopuszczalne;                                                                    wielkości
+      przebiega w granicach
+                                                                                                                                                           ustalone dla
+      adm. miasta na
+      prawach powiatu i nie
+                                                                                                                                                           kategorii II i III
+      przebiega autostradą                                                                                                                                 i którego
+      lub drogą ekspresową)                                                                                                                                naciski osi i
+                                                                                                                                                           masa nie są
+                                                                                                                                                           większe od
+                                                                                                         dopuszczalnych
+
+
+
+
+                                                                                                               1 600,00
+                                                                                                         na jednokrotny
+                                                                                                         przejazd
+                                                                                                         pojazdu w
+                                                                                                         pozostałych
+                                                                                                         przypadkach
+
+W przypadku na wielokrotny przejazd opłatę ustala się wg wzoru:
+                                                                          On = pj + (n – 1) x 0,7 x pj
+
+      w którym poszczególne symbole oznaczają:
+– On – wysokość opłaty za wydanie zezwolenia,
+– n – liczbę przejazdów pojazdu nienormatywnego,
+– pj – stawkę opłaty za wydanie zezwolenia na jednokrotny przejazd pojazdu nienormatywnego.
+

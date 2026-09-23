@@ -25,9 +25,12 @@ Oryginały poza drzewem app: **istnieją** — `/workspace/watch-tower/claude-v2
 
 ## Remote / gh
 
-- `gh auth status`: **not logged in** (`You are not logged into any GitHub hosts`)
-- `git remote`: **brak**
-- Sebastian musi utworzyć prywatne repo i podać URL — bez logowania/inventowania.
+- **origin:** `https://github.com/Spawn2018/testowe-do-migracji.git` (private)
+- **main na GitHub:** commit `af3ea61` — `baseline: wersja wdrożona 23.09.2026, wygląd zamrożony`
+- **tag na origin:** `baseline-2026-09-23` → `af3ea61c8a6db225964a6dc71385c18b63260fb7`
+- Lokalny box: branch `master` @ `305da3e` (ten sam komunikat baseline; SHA inne bo push przez Cloud Agent z archiwum drzewa). `git remote` = origin jak wyżej.
+- `gh` na boxie: nadal **not logged in** (push poszedł przez Cloud Agent / Cursor GitHub).
+- Seed (rodzic baseline na remote): `44d2a22` `chore: seed empty repo`
 
 ## .gitignore
 

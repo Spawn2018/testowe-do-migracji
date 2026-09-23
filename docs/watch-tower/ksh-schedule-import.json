@@ -1,0 +1,762 @@
+{
+  "meta": {
+    "source": "KSH_HARMONOGRAM.xlsx",
+    "importedAt": "2026-09-22T22:28:14.678081Z",
+    "rowCount": 50,
+    "warnings": [
+      "SG-01: waga elementu „-” — wyliczona 2.963 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-02: waga elementu „-” — wyliczona 2.963 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-01: waga elementu „-” — wyliczona 0.367 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-01: podejrzana ilość elementów=55 przy L=14.62 — możliwy błąd kolumn w źródle KSH",
+      "SG-03: waga elementu „-” — wyliczona 2.729 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-04: waga elementu „-” — wyliczona 2.729 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-02: waga elementu „-” — wyliczona 0.656 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-02: podejrzana ilość elementów=30 przy L=14.62 — możliwy błąd kolumn w źródle KSH",
+      "SG-05: waga elementu „-” — wyliczona 2.92 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-06: waga elementu „-” — wyliczona 2.726 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-03: waga elementu „-” — wyliczona 0.771 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-07: waga elementu „-” — wyliczona 2.729 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-08: waga elementu „-” — wyliczona 2.729 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-04: waga elementu „-” — wyliczona 0.767 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-09: waga elementu „-” — wyliczona 2.919 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-10: waga elementu „-” — wyliczona 2.729 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-05: waga elementu „-” — wyliczona 0.767 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-11: waga elementu „-” — wyliczona 2.963 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-12: waga elementu „-” — wyliczona 2.963 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-06: waga elementu „-” — wyliczona 0.367 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-06: podejrzana ilość elementów=55 przy L=14.62 — możliwy błąd kolumn w źródle KSH",
+      "SG-13: waga elementu „-” — wyliczona 2.729 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-14: waga elementu „-” — wyliczona 2.729 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-07: waga elementu „-” — wyliczona 0.656 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-07: podejrzana ilość elementów=30 przy L=14.62 — możliwy błąd kolumn w źródle KSH",
+      "SG-15: waga elementu „-” — wyliczona 2.92 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-16: waga elementu „-” — wyliczona 2.726 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-08: waga elementu „-” — wyliczona 0.771 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-17: waga elementu „-” — wyliczona 2.729 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-18: waga elementu „-” — wyliczona 2.729 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-19: waga elementu „-” — wyliczona 2.919 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-20: waga elementu „-” — wyliczona 2.729 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-09: waga elementu „-” — wyliczona 0.767 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-21: waga elementu „-” — wyliczona 2.963 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-22: waga elementu „-” — wyliczona 2.963 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-10: waga elementu „-” — wyliczona 0.767 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-11: waga elementu „-” — wyliczona 0.367 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-11: podejrzana ilość elementów=55 przy L=14.62 — możliwy błąd kolumn w źródle KSH",
+      "SG-23: waga elementu „-” — wyliczona 2.729 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-24: waga elementu „-” — wyliczona 2.729 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-12: waga elementu „-” — wyliczona 0.656 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-12: podejrzana ilość elementów=30 przy L=14.62 — możliwy błąd kolumn w źródle KSH",
+      "SG-25: waga elementu „-” — wyliczona 2.92 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-26: waga elementu „-” — wyliczona 2.726 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-13: waga elementu „-” — wyliczona 0.771 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-27: waga elementu „-” — wyliczona 2.729 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-28: waga elementu „-” — wyliczona 2.729 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-29: waga elementu „-” — wyliczona 2.919 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "SG-30: waga elementu „-” — wyliczona 2.729 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-14: waga elementu „-” — wyliczona 0.767 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)",
+      "T-15: waga elementu „-” — wyliczona 0.767 t z waga_transport/ilość (do weryfikacji; kolumny mogą być przesunięte jak T z qty=55)"
+    ]
+  },
+  "items": [
+    {
+      "code": "SG-01",
+      "loadId": "load-001",
+      "lp": 1,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.74
+      },
+      "qty": 7,
+      "loadDate": "2026-09-30",
+      "deliverDate": "2026-10-05"
+    },
+    {
+      "code": "SG-02",
+      "loadId": "load-002",
+      "lp": 2,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.74
+      },
+      "qty": 7,
+      "loadDate": "2026-09-30",
+      "deliverDate": "2026-10-05"
+    },
+    {
+      "code": "T-01",
+      "loadId": "load-003",
+      "lp": 31,
+      "dims": {
+        "lengthM": 14.62,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.17
+      },
+      "qty": 55,
+      "loadDate": "2026-09-30",
+      "deliverDate": "2026-10-05"
+    },
+    {
+      "code": "SG-03",
+      "loadId": "load-004",
+      "lp": 3,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.1
+      },
+      "qty": 7,
+      "loadDate": "2026-10-01",
+      "deliverDate": "2026-10-06"
+    },
+    {
+      "code": "SG-04",
+      "loadId": "load-005",
+      "lp": 4,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.1
+      },
+      "qty": 7,
+      "loadDate": "2026-10-01",
+      "deliverDate": "2026-10-06"
+    },
+    {
+      "code": "T-02",
+      "loadId": "load-006",
+      "lp": 32,
+      "dims": {
+        "lengthM": 14.62,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.68
+      },
+      "qty": 30,
+      "loadDate": "2026-10-01",
+      "deliverDate": "2026-10-06"
+    },
+    {
+      "code": "SG-05",
+      "loadId": "load-007",
+      "lp": 5,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.44
+      },
+      "qty": 7,
+      "loadDate": "2026-10-02",
+      "deliverDate": "2026-10-07"
+    },
+    {
+      "code": "SG-06",
+      "loadId": "load-008",
+      "lp": 6,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.08
+      },
+      "qty": 7,
+      "loadDate": "2026-10-02",
+      "deliverDate": "2026-10-07"
+    },
+    {
+      "code": "T-03",
+      "loadId": "load-009",
+      "lp": 33,
+      "dims": {
+        "lengthM": 13.6,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.81
+      },
+      "qty": 27,
+      "loadDate": "2026-10-02",
+      "deliverDate": "2026-10-07"
+    },
+    {
+      "code": "SG-07",
+      "loadId": "load-010",
+      "lp": 7,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.1
+      },
+      "qty": 7,
+      "loadDate": "2026-10-03",
+      "deliverDate": "2026-10-08"
+    },
+    {
+      "code": "SG-08",
+      "loadId": "load-011",
+      "lp": 8,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.1
+      },
+      "qty": 7,
+      "loadDate": "2026-10-03",
+      "deliverDate": "2026-10-08"
+    },
+    {
+      "code": "T-04",
+      "loadId": "load-012",
+      "lp": 34,
+      "dims": {
+        "lengthM": 13.6,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 15.34
+      },
+      "qty": 20,
+      "loadDate": "2026-10-03",
+      "deliverDate": "2026-10-08"
+    },
+    {
+      "code": "SG-09",
+      "loadId": "load-013",
+      "lp": 9,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.43
+      },
+      "qty": 7,
+      "loadDate": "2026-10-05",
+      "deliverDate": "2026-10-09"
+    },
+    {
+      "code": "SG-10",
+      "loadId": "load-014",
+      "lp": 10,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.1
+      },
+      "qty": 7,
+      "loadDate": "2026-10-05",
+      "deliverDate": "2026-10-09"
+    },
+    {
+      "code": "T-05",
+      "loadId": "load-015",
+      "lp": 35,
+      "dims": {
+        "lengthM": 13.6,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 15.34
+      },
+      "qty": 20,
+      "loadDate": "2026-10-05",
+      "deliverDate": "2026-10-09"
+    },
+    {
+      "code": "SG-11",
+      "loadId": "load-016",
+      "lp": 11,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.74
+      },
+      "qty": 7,
+      "loadDate": "2026-10-07",
+      "deliverDate": "2026-10-12"
+    },
+    {
+      "code": "SG-12",
+      "loadId": "load-017",
+      "lp": 12,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.74
+      },
+      "qty": 7,
+      "loadDate": "2026-10-07",
+      "deliverDate": "2026-10-12"
+    },
+    {
+      "code": "T-06",
+      "loadId": "load-018",
+      "lp": 36,
+      "dims": {
+        "lengthM": 14.62,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.17
+      },
+      "qty": 55,
+      "loadDate": "2026-10-07",
+      "deliverDate": "2026-10-12"
+    },
+    {
+      "code": "SG-13",
+      "loadId": "load-019",
+      "lp": 13,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.1
+      },
+      "qty": 7,
+      "loadDate": "2026-10-08",
+      "deliverDate": "2026-10-13"
+    },
+    {
+      "code": "SG-14",
+      "loadId": "load-020",
+      "lp": 14,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.1
+      },
+      "qty": 7,
+      "loadDate": "2026-10-08",
+      "deliverDate": "2026-10-13"
+    },
+    {
+      "code": "T-07",
+      "loadId": "load-021",
+      "lp": 37,
+      "dims": {
+        "lengthM": 14.62,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.68
+      },
+      "qty": 30,
+      "loadDate": "2026-10-08",
+      "deliverDate": "2026-10-13"
+    },
+    {
+      "code": "SG-15",
+      "loadId": "load-022",
+      "lp": 15,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.44
+      },
+      "qty": 7,
+      "loadDate": "2026-10-09",
+      "deliverDate": "2026-10-14"
+    },
+    {
+      "code": "SG-16",
+      "loadId": "load-023",
+      "lp": 16,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.08
+      },
+      "qty": 7,
+      "loadDate": "2026-10-09",
+      "deliverDate": "2026-10-14"
+    },
+    {
+      "code": "T-08",
+      "loadId": "load-024",
+      "lp": 38,
+      "dims": {
+        "lengthM": 13.6,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.81
+      },
+      "qty": 27,
+      "loadDate": "2026-10-09",
+      "deliverDate": "2026-10-14"
+    },
+    {
+      "code": "SG-17",
+      "loadId": "load-025",
+      "lp": 17,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.1
+      },
+      "qty": 7,
+      "loadDate": "2026-10-16",
+      "deliverDate": "2026-10-21"
+    },
+    {
+      "code": "SG-18",
+      "loadId": "load-026",
+      "lp": 18,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.1
+      },
+      "qty": 7,
+      "loadDate": "2026-10-16",
+      "deliverDate": "2026-10-21"
+    },
+    {
+      "code": "SG-19",
+      "loadId": "load-027",
+      "lp": 19,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.43
+      },
+      "qty": 7,
+      "loadDate": "2026-10-17",
+      "deliverDate": "2026-10-22"
+    },
+    {
+      "code": "SG-20",
+      "loadId": "load-028",
+      "lp": 20,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.1
+      },
+      "qty": 7,
+      "loadDate": "2026-10-17",
+      "deliverDate": "2026-10-22"
+    },
+    {
+      "code": "T-09",
+      "loadId": "load-029",
+      "lp": 39,
+      "dims": {
+        "lengthM": 13.6,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 15.34
+      },
+      "qty": 20,
+      "loadDate": "2026-10-17",
+      "deliverDate": "2026-10-22"
+    },
+    {
+      "code": "SG-21",
+      "loadId": "load-030",
+      "lp": 21,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.74
+      },
+      "qty": 7,
+      "loadDate": "2026-10-19",
+      "deliverDate": "2026-10-23"
+    },
+    {
+      "code": "SG-22",
+      "loadId": "load-031",
+      "lp": 22,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.74
+      },
+      "qty": 7,
+      "loadDate": "2026-10-19",
+      "deliverDate": "2026-10-23"
+    },
+    {
+      "code": "T-10",
+      "loadId": "load-032",
+      "lp": 40,
+      "dims": {
+        "lengthM": 13.6,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 15.34
+      },
+      "qty": 20,
+      "loadDate": "2026-10-19",
+      "deliverDate": "2026-10-23"
+    },
+    {
+      "code": "T-11",
+      "loadId": "load-033",
+      "lp": 41,
+      "dims": {
+        "lengthM": 14.62,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.17
+      },
+      "qty": 55,
+      "loadDate": "2026-10-19",
+      "deliverDate": "2026-10-24"
+    },
+    {
+      "code": "SG-23",
+      "loadId": "load-034",
+      "lp": 23,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.1
+      },
+      "qty": 7,
+      "loadDate": "2026-10-21",
+      "deliverDate": "2026-10-26"
+    },
+    {
+      "code": "SG-24",
+      "loadId": "load-035",
+      "lp": 24,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.1
+      },
+      "qty": 7,
+      "loadDate": "2026-10-21",
+      "deliverDate": "2026-10-26"
+    },
+    {
+      "code": "T-12",
+      "loadId": "load-036",
+      "lp": 42,
+      "dims": {
+        "lengthM": 14.62,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.68
+      },
+      "qty": 30,
+      "loadDate": "2026-10-21",
+      "deliverDate": "2026-10-26"
+    },
+    {
+      "code": "SG-25",
+      "loadId": "load-037",
+      "lp": 25,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.44
+      },
+      "qty": 7,
+      "loadDate": "2026-10-22",
+      "deliverDate": "2026-10-27"
+    },
+    {
+      "code": "SG-26",
+      "loadId": "load-038",
+      "lp": 26,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.08
+      },
+      "qty": 7,
+      "loadDate": "2026-10-22",
+      "deliverDate": "2026-10-27"
+    },
+    {
+      "code": "T-13",
+      "loadId": "load-039",
+      "lp": 43,
+      "dims": {
+        "lengthM": 13.6,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.81
+      },
+      "qty": 27,
+      "loadDate": "2026-10-22",
+      "deliverDate": "2026-10-27"
+    },
+    {
+      "code": "SG-27",
+      "loadId": "load-040",
+      "lp": 27,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.1
+      },
+      "qty": 7,
+      "loadDate": "2026-10-23",
+      "deliverDate": "2026-10-28"
+    },
+    {
+      "code": "SG-28",
+      "loadId": "load-041",
+      "lp": 28,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.1
+      },
+      "qty": 7,
+      "loadDate": "2026-10-23",
+      "deliverDate": "2026-10-28"
+    },
+    {
+      "code": "SG-29",
+      "loadId": "load-042",
+      "lp": 29,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 20.43
+      },
+      "qty": 7,
+      "loadDate": "2026-10-24",
+      "deliverDate": "2026-10-29"
+    },
+    {
+      "code": "SG-30",
+      "loadId": "load-043",
+      "lp": 30,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 19.1
+      },
+      "qty": 7,
+      "loadDate": "2026-10-24",
+      "deliverDate": "2026-10-29"
+    },
+    {
+      "code": "T-14",
+      "loadId": "load-044",
+      "lp": 44,
+      "dims": {
+        "lengthM": 13.6,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 15.34
+      },
+      "qty": 20,
+      "loadDate": "2026-10-24",
+      "deliverDate": "2026-10-29"
+    },
+    {
+      "code": "T-15",
+      "loadId": "load-045",
+      "lp": 45,
+      "dims": {
+        "lengthM": 13.6,
+        "widthM": 2.45,
+        "heightM": 2.45,
+        "weightT": 15.34
+      },
+      "qty": 20,
+      "loadDate": "2026-10-29",
+      "deliverDate": "2026-11-03"
+    },
+    {
+      "code": "SS-01",
+      "loadId": "load-046",
+      "lp": 46,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 3.0,
+        "heightM": 2.5,
+        "weightT": 21.22
+      },
+      "qty": 2,
+      "loadDate": "2026-10-29",
+      "deliverDate": "2026-11-03"
+    },
+    {
+      "code": "SS-02",
+      "loadId": "load-047",
+      "lp": 47,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 3.0,
+        "heightM": 2.5,
+        "weightT": 20.9
+      },
+      "qty": 2,
+      "loadDate": "2026-11-01",
+      "deliverDate": "2026-11-06"
+    },
+    {
+      "code": "SS-03",
+      "loadId": "load-048",
+      "lp": 48,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 3.0,
+        "heightM": 2.5,
+        "weightT": 20.91
+      },
+      "qty": 2,
+      "loadDate": "2026-11-02",
+      "deliverDate": "2026-11-09"
+    },
+    {
+      "code": "SS-04",
+      "loadId": "load-049",
+      "lp": 49,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 3.0,
+        "heightM": 2.5,
+        "weightT": 20.9
+      },
+      "qty": 2,
+      "loadDate": "2026-11-07",
+      "deliverDate": "2026-11-12"
+    },
+    {
+      "code": "SS-05",
+      "loadId": "load-050",
+      "lp": 50,
+      "dims": {
+        "lengthM": 18.21,
+        "widthM": 3.0,
+        "heightM": 2.5,
+        "weightT": 20.91
+      },
+      "qty": 2,
+      "loadDate": "2026-11-14",
+      "deliverDate": "2026-11-19"
+    }
+  ]
+}

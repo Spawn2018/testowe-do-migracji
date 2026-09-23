@@ -1,0 +1,18 @@
+{
+  "title": "TOWER — Stegra Boden",
+  "brand": "TOWER",
+  "stages": [
+    "0Przygotowanie",
+    "0Załadunek",
+    "0Droga PL",
+    "0Gdańsk",
+    "0Prom",
+    "0Nynäshamn",
+    "0Droga SE",
+    "0Boden",
+    "0Dostarczone"
+  ],
+  "scriptSrc": [
+    "http://127.0.0.1:4177/assets/index-Dy3BsA9-.js"
+  ]
+}

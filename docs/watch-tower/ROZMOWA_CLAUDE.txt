@@ -1,0 +1,1052 @@
+Projekt systemu: architektura i moduły
+https://claude.ai/chat/64145151-a7ef-4fde-9bad-99703c01dd40
+Date: September 22, 2026 at 11:48 PM
+Exported: September 22, 2026 at 11:56 PM
+Size: 72,355 characters  ·  10,823 words  ·  5 messages
+
+========================================
+
+[HUMAN]  (Sep 22, 2026, 11:14 PM):
+
+
+[CLAUDE]  (Sep 22, 2026, 11:24 PM):
+Poniżej pełny projekt systemu. Bez owijania: najpierw mówię, co jest w Twoim opisie niespójne i co trzeba domknąć, potem architektura, moduły, mapa, dashboardy, workflow, integracje (tylko zweryfikowane), plan na 5 dni i prompt do Cursora.
+
+0. Co od razu wymaga decyzji (zanim cokolwiek zbudujemy)
+
+Błędy/niespójności w Twojej tabeli źródłowej — realne ryzyko przy imporcie:
+
+| Problem | Dowód z Twojej próbki | Co robimy |
+|---|---|---|
+| Kolumny Waga elementu / Ilość elementów / Waga transport [t] są przesunięte | SG-01: waga elementu pusta, „ilość" = 7,00, waga transportu 20,74 t → 20,74/7 = 2,96 t/szt. T-01: „ilość" = 55,00 przy 14,62 m i 20,17 t łącznie — fizycznie niemożliwe | Wymuszamy walidator: waga_transportu ≈ ilość × waga_elementu ± 5%. Import blokuje wiersz i pokazuje konflikt, zamiast go cicho przyjąć |
+| Lp. nie jest kluczem | Przy każdej aktualizacji harmonogramu KSH przenumeruje wiersze i zrobisz duplikaty | Kluczem naturalnym jest Wysyłka (SG-01, T-01…) — unikalny ID elementu. Lp. ignorujemy |
+| Jeden wiersz ≠ jeden transport | SG-01 i SG-02 mają tę samą datę i te same wymiary — mogą jechać osobno albo razem | Model dwupoziomowy: Element (shipment_item) N:1 Transport (load). Grupowanie po Nr zlecenia |
+| Brak kolumny statusu, kolejności montażowej, nr rejestracyjnych | W Twojej próbce ich nie ma, a w opisie ich wymagasz | System dokłada je po swojej stronie; Excel pozostaje tylko źródłem planu, nie stanem |
+| Przecinek dziesiętny + wymiary jako tekst | „18,21 x 2,45 x 2,45" | Parser: regex → L/W/H jako numeric(6,2), locale PL |
+
+Zasada nadrzędna: Excel jest źródłem PLANU. Aplikacja jest źródłem STANU. Jeśli to pomieszasz, po tygodniu będziesz miał dwa sprzeczne obrazy projektu.
+
+Drugie pytanie do domknięcia: co dokładnie daje Scandinavian Express? „API z telematyki lub link udostępniający pozycję" to dwie zupełnie różne ścieżki kosztowo i technicznie. Rozwiązanie poniżej zakłada trzy poziomy fallbacku, żeby brak API nie zablokował projektu.
+
+1. Czym to jest — definicja produktu
+
+Nazwa robocza: TOWER — Multi-party Control Tower dla projektu Stegra Boden.
+
+Jednoekranowe centrum operacyjne dla jednego, konkretnego korytarza: PL (załadunek) → Gdańsk → prom → Nynäshamn → E4 północ → Boden Industrial Park, dla ~N elementów konstrukcji stalowej ponadnormatywnej, trzy strony, 12–15 użytkowników.
+
+To nie jest TMS i nie ma nim być. To warstwa widoczności + koordynacji + rozliczenia nałożona na jeden projekt. Zakres świadomie wąski — dlatego da się to zbudować w 5 dni.
+
+Cztery rzeczy, które system robi i których dziś nie masz:
+1. Jeden wspólny, wersjonowany harmonogram zamiast Excela krążącego mailem.
+2. Pozycja pojazdu + geofencing → automatyczne powiadomienia zamiast telefonów „gdzie jest auto".
+3. Repozytorium dokumentów przypięte do transportu zamiast szukania zezwolenia w skrzynce.
+4. Cennik z rozdzieleniem widoczności kosztu/przychodu → marża w czasie rzeczywistym, tylko dla Ciebie.
+
+Wzorzec projektowy, który kopiujemy od liderów (project44, FourKites, Shippeo, Transporeon Visibility, Everstream): management by exception. Ekran główny nie pokazuje wszystkiego. Pokazuje to, co odbiega od planu. Transporty idące zgodnie z harmonogramem są zwinięte do jednej linii licznika. To jedyna rzecz, która sprawia, że control tower nadaje się do użytku przy 100+ transportach.
+
+2. Model danych (fundament — tu nie ma miejsca na improwizację)
+
+```
+organizations        (HHL | KSH | SCANDINAVIAN_EXPRESS | STEGRA_SITE)
+users                → org_id, role, locale (pl/en/sv)
+projects             (Stegra Boden – jeden, ale schemat wielo-projektowy)
+
+schedule_imports     ← surowy snapshot XLSX + hash + kto + kiedy + diff
+shipment_items       ← ELEMENT: kod (SG-01), typ, L/W/H, waga, sekwencja montażu,
+                       status, load_id (nullable)
+loads                ← TRANSPORT: nr zlecenia, carrier_id, status,
+                       plan_load_date/time, plan_delivery_date/time,
+                       actual_* , tractor_plate, trailer_plate,
+                       driver_name, driver_phone (RODO!), pilot_vehicles,
+                       ferry_booking_ref, ferry_voyage_id
+load_events          ← STRUMIEŃ ZDARZEŃ (append-only, nigdy UPDATE)
+                       typ, timestamp, źródło (TELEMATICS|USER|SYSTEM|IMPORT),
+                       geo_point, actor_id, payload jsonb
+
+positions            ← ping GPS: load_id, ts, geom(Point,4326), speed, heading,
+                       source, ignition
+geofences            ← nazwa, typ, geom(Polygon/Circle,4326), buffer_m,
+                       dwell_seconds, notify_on (ENTER|EXIT|DWELL)
+geofence_states      ← (load_id, geofence_id) → state, entered_at, last_eval
+                       ← maszyna stanów, chroni przed "trzepotaniem" na granicy
+
+documents            ← load_id|project_id, kategoria, plik, wersja, ważność_do,
+                       widoczność (bitmask per rola), uploaded_by
+permits              ← nr, organ, kraj, max_L/W/H/masa, trasa, valid_from/to,
+                       wymagany pilotaż, plik
+insurance_policies   ← przewoźnik/spedytor, suma gwarancyjna, zakres, valid_to
+
+rate_cards           ← wersjonowany cennik
+rate_rules           ← przedziały: L_from/L_to, W_from/W_to, H_from/H_to,
+                       masa_from/masa_to → stawka_bazowa, waluta
+rate_cost            ← stawka kosztowa (SCX) — RLS: HHL + SCX
+rate_revenue         ← stawka przychodowa (KSH) — RLS: HHL + KSH
+baf_definitions      ← indeks, data bazowa, wartość bazowa, udział paliwa %,
+                       próg wyzwolenia, zaokrąglenie, cykl rewizji, floor/cap
+baf_index_values     ← historia notowań (data, indeks, wartość, źródło, URL)
+load_pricing         ← wyliczona cena kosztowa, przychodowa, BAF, marża (snapshot)
+
+invoices             ← przewoźnik, okres (tydzień), pozycje = loads[],
+                       kwota, status, plik, wynik 3-way match
+risk_signals         ← typ (FERRY|WEATHER|ROAD|PERMIT|SILENT|ETA|DOC),
+                       severity, load_id?, ważny_do, payload, źródło
+workflows            ← nazwa, trigger (event type), warunek (JSONLogic),
+                       akcje[], aktywny, właściciel
+workflow_runs        ← audyt wykonania
+notifications        ← kanał, odbiorca, szablon, status, dedup_key
+audit_log            ← kto/co/kiedy/z jakiego IP — wszystko
+```
+
+Dlaczego load_events jako append-only strumień: to jest dokładnie to, co robią platformy visibility klasy enterprise. Stan transportu to projekcja ze strumienia zdarzeń, nie pole w tabeli. Dzięki temu masz darmowo: pełny audyt, odtwarzalność („jak wyglądała sytuacja we wtorek o 14:00"), i spory z przewoźnikiem rozstrzygasz danymi, nie pamięcią.
+
+Katalog zdarzeń (zamknięty, wersjonowany):
+SCHEDULE_IMPORTED · LOAD_CREATED · RESOURCES_ASSIGNED · PERMIT_ATTACHED · AWIZACJA_SET · AWIZACJA_CHANGED · DEPARTED_ORIGIN · GEOFENCE_ENTER · GEOFENCE_EXIT · PORT_CHECKIN · FERRY_LOADED · FERRY_DEPARTED · FERRY_ARRIVED · BORDER_CLEARED · REST_START/END · SITE_ARRIVAL · UNLOADED · POD_UPLOADED · DOC_MISSING · ETA_UPDATED · DELAY_DETECTED · SILENT_VEHICLE · RISK_RAISED/CLEARED · INVOICE_SUBMITTED · INVOICE_MATCHED/DISPUTED
+
+3. Role i macierz uprawnień
+
+| Uprawnienie | HHL Admin (Ty) | HHL Ops | KSH Admin | KSH User | SCX Dispatch | SCX User | Stegra (read-only, opcja) |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| Podgląd całego harmonogramu | ✅ | ✅ | ✅ | ✅ | ✅ (swoje) | ✅ (swoje) | ✅ (tylko dostawy) |
+| Import/aktualizacja harmonogramu | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Wpis kierowca / nr rej. / telefon | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ |
+| Awizacja godzin podjęcia/dostawy | ✅ | ✅ | 🟡 propozycja | ❌ | ✅ | ✅ | ❌ |
+| Upload dokumentów transportu | ✅ | ✅ | 🟡 (spec., rysunki) | ❌ | ✅ | ✅ | ❌ |
+| Upload polisy | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Pobieranie dokumentów | ✅ | ✅ | ✅ | ✅ | ✅ (swoje) | ✅ (swoje) | 🟡 tylko POD |
+| Pozycja pojazdu na mapie | ✅ | ✅ | ✅ | ✅ | ✅ (swoje) | ✅ (swoje) | 🟡 tylko ETA |
+| Definiowanie geofence | ✅ | 🟡 | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Definiowanie workflow | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Widzi koszt (stawka SCX) | ✅ | ✅ | ❌ | ❌ | ✅ (swoją) | ❌ | ❌ |
+| Widzi przychód (stawka KSH) | ✅ | ✅ | ✅ | 🟡 | ❌ | ❌ | ❌ |
+| Widzi marżę | ✅ | 🟡 konfig. | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Faktura zbiorcza — wystawienie | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Faktura — akceptacja/spór | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Audit log | ✅ | 🟡 | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+Krytyczne: rozdzielenie widoczności cen musi być egzekwowane w bazie (RLS na osobnych tabelach rate_cost / rate_revenue), nie w UI. Ukrycie kolumny w Reakcie to nie zabezpieczenie — dane i tak lecą w API. To jest ten jeden błąd, który może Cię kosztować relację z klientem albo przewoźnikiem.
+
+4. Moduły — co dokładnie robi każdy
+
+M1. Harmonogram — import i wersjonowanie
+
+Ścieżka A (MVP, dzień 1–2): Upload XLSX w aplikacji.
+1. KSH wrzuca plik (drag&drop).
+2. Kreator mapowania kolumn — raz definiujesz mapowanie, zapisuje się jako szablon. Kolejne importy idą automatem.
+3. Dry-run diff — ekran pokazuje: +12 nowych elementów, ~7 zmienionych (data dostawy), −2 usunięte, ⚠ 3 wiersze odrzucone (walidacja). Nic się nie zapisuje, dopóki nie klikniesz „Zatwierdź".
+4. Commit → nowa wersja harmonogramu + SCHEDULE_IMPORTED + automatyczne powiadomienia o zmianach dat na już awizowanych transportach.
+5. Surowy plik trafia do archiwum (audyt: kto co wgrał).
+
+Ścieżka B (faza 1.5): SharePoint przez Microsoft Graph.
+- Rejestracja aplikacji w Entra ID (po stronie KSH), uprawnienie Sites.Selected — najmniejsze możliwe, admin KSH przyznaje dostęp do jednej konkretnej witryny, a nie do całego tenanta. To argument, który przechodzi przez IT klienta.
+- Polling co 10 min przez /drives/{id}/items/{id} z porównaniem eTag, albo subskrypcja webhook na zmiany w bibliotece.
+- Alternatywnie Graph Excel API (/workbook/worksheets/{id}/usedRange) — czyta komórki bez pobierania pliku.
+- Uwaga praktyczna: Ścieżka B wymaga zgody IT KSH, co potrafi trwać tygodnie. Dlatego A jest MVP, a B dokładamy, gdy dostaniesz dostęp. Nie blokuj projektu na tym.
+
+Walidacje przy imporcie (blokujące):
+- waga_transportu ≈ ilość × waga_elementu ±5%
+- wymiary parsowalne, L>0, W>0, H>0
+- data_dostawy > data_załadunku
+- kod Wysyłka unikalny w obrębie projektu
+- automatyczna klasyfikacja ponadnormatywności: element 18,21 m → zestaw przekracza limity PL → flaga WYMAGA_ZEZWOLENIA + sugerowana kategoria; limity per kraj trzymane w tabeli konfiguracyjnej (PL i SE osobno), do potwierdzenia przez Ciebie przy seedowaniu — nie zaszywamy ich na sztywno w kodzie
+
+M2. Zasoby i awizacja (SCX)
+
+Ekran przewoźnika = lista jego transportów z widocznymi brakami:
+- Kierowca (imię, nazwisko, telefon) — pole telefonu z walidacją E.164
+- Ciągnik / naczepa (nr rej., typ naczepy: niskopodwoziowa / teleskopowa / poszerzana)
+- Pojazdy pilotujące (liczba, nr rej.) — istotne przy 18,21 m
+- Awizacja podjęcia / dostawy (data + okno godzinowe, nie punkt)
+- Rezerwacja promu (nr, rejs, data)
+- Link do pozycji / ID pojazdu w telematyce
+
+Każde pole ma deadline: np. „dane kierowcy na 24 h przed załadunkiem". Po przekroczeniu — eskalacja do Ciebie i do dispatchera SCX.
+
+M3. Dokumenty
+
+Kategorie ze zdefiniowanymi regułami:
+
+| Kategoria | Kto wgrywa | Widzi | Wymagalność | Alert |
+|---|---|---|---|---|
+| Zezwolenie PL (kat. I–VII) | SCX, HHL | wszyscy | przed załadunkiem | −48 h brak = 🔴 |
+| Dispens / zezwolenie SE | SCX, HHL | wszyscy | przed wjazdem do SE | −24 h |
+| Polisa OCP/OCS | SCX, HHL | HHL, KSH | stała, z datą ważności | −14 dni do wygaśnięcia |
+| CMR / list przewozowy | SCX | wszyscy | przy załadunku | brak po 4 h od załadunku |
+| POD (potwierdzenie dostawy) | SCX | wszyscy | po rozładunku | brak po 24 h |
+| Zdjęcia mocowania | SCX | HHL, KSH | przy załadunku | opcjonalne, mocno zalecane |
+| Rysunek/specyfikacja elementu | KSH | wszyscy | przy imporcie | — |
+| Faktura zbiorcza | SCX | HHL | cykl tygodniowy | — |
+
+Każdy dokument: wersjonowany, z podglądem inline (PDF/JPG), sygnowanym URL-em z krótkim TTL, pełnym audytem pobrań. Masowe pobranie paczki ZIP per transport / per tydzień.
+
+M4. Cennik, BAF, marża
+
+Struktura stawki:
+```
+Cena = Stawka_bazowa(wymiary, masa, relacja) 
+     - BAF 
+     - Dodatki (pilotaż, postojowe, prom-ponadnormatywny, przestój)
+```
+
+Cennik jako macierz przedziałów. Przykład konfiguracji:
+
+| L od | L do | W od | W do | Masa od | Masa do | Stawka koszt | Stawka przychód |
+|---|---|---|---|---|---|---|---|
+| 0 | 13,60 | 0 | 2,55 | 0 | 24 | X | Y |
+| 13,61 | 16,50 | 0 | 2,55 | 0 | 24 | X | Y |
+| 16,51 | 20,00 | 0 | 2,55 | 0 | 24 | X | Y |
+| 16,51 | 20,00 | 2,56 | 3,00 | 0 | 24 | X | Y |
+
+Kalkulator sprawdza element/transport przeciw macierzy i zwraca dopasowanie + flaguje, gdy transport nie mieści się w żadnym przedziale (zamiast cicho wstawić zero).
+
+Mechanizm BAF — parametryzowany, nie zaszyty:
+
+```
+BAF% = ((Indeks_bieżący − Indeks_bazowy) / Indeks_bazowy) × Udział_paliwa
+BAF_kwota = Stawka_bazowa × BAF%
+```
+
+Konfigurujesz: źródło indeksu, wartość bazową, datę bazową, udział paliwa w koszcie (typowo 25–30 % w transporcie drogowym — Twoja decyzja), próg wyzwolenia (np. zmiana <1,5 % → BAF się nie zmienia), zaokrąglenie, cykl rewizji (tygodniowy/miesięczny), floor i cap.
+
+Źródła indeksu (wszystkie realne i darmowe):
+- Weekly Oil Bulletin Komisji Europejskiej — oficjalne, tygodniowe ceny ON w PL i SE, format tabelaryczny, stabilny od lat. Najbezpieczniejszy prawnie indeks do umowy, bo obie strony mogą go zweryfikować niezależnie.
+- Ceny hurtowe Orlen — dzienne, brak oficjalnego API, do scrapowania (kruche, traktuj jako drugorzędne).
+- Drivkraft Sverige — dla leg-u szwedzkiego, jeśli chcesz BAF dwuwalutowy.
+
+Każde odczytane notowanie zapisujemy do baf_index_values z URL-em źródła i timestampem — gdy przewoźnik zakwestionuje BAF, pokazujesz dowód w 5 sekund.
+
+Osobna pozycja: dodatek paliwowo-ekologiczny promu. Polferries doliczają go do swoich stawek (w materiałach przewoźnika opisany jako narzut procentowy zawarty w cenie). To niezależny mechanizm od Twojego BAF drogowego — trzymaj go jako osobny komponent kosztu, inaczej będziesz indeksował indeksowane.
+
+Widoczność (ponownie: RLS, nie UI):
+- SCX widzi: stawka_bazowa_koszt + BAF_koszt + dodatki = jego przychód / Twój koszt
+- KSH widzi: stawka_bazowa_przychód + BAF_przychód + dodatki = Twój przychód
+- Ty widzisz: oba + marża absolutna + marża % + marża narastająco per tydzień / per typ elementu / per przedział wymiarowy
+
+M5. Faktury zbiorcze (cykl tygodniowy)
+
+1. SCX w piątek otwiera „Nowa faktura", widzi listę swoich zrealizowanych transportów z danego tygodnia (checkboxy, domyślnie zaznaczone te ze statusem UNLOADED + POD).
+2. System wylicza sumę wg cennika kosztowego → kwota oczekiwana.
+3. SCX wgrywa PDF faktury i wpisuje kwotę fakturowaną.
+4. 3-way match: transporty zaznaczone ↔ transporty zrealizowane ↔ kwota z cennika. Rozbieżność > próg → status DISPUTED + automatyczny mail do Ciebie z zestawieniem różnic linia po linii.
+5. Ty: Akceptuj / Zgłoś spór z komentarzem.
+
+Efekt: kończysz z ręcznym sprawdzaniem faktur przewoźnika. To jedna z najbardziej niedocenianych oszczędności czasu w spedycji.
+
+(KSeF — od 2026 obowiązkowy w PL — świadomie poza MVP. Faktura tu jest dokumentem kontrolnym, nie systemem księgowym. Integracja KSeF w fazie 3, jeśli uznasz, że warto.)
+
+5. Mapa i geofencing — dokładnie jak to wygląda i działa
+
+5.1 Warstwy mapy
+
+Silnik: MapLibre GL JS + react-map-gl. Open source, WebGL, płynny przy setkach obiektów, brak lock-inu na Mapbox.
+
+Kafelki: MapTiler (hojny free tier, styl „Streets"/„Dataviz") albo OpenFreeMap / Protomaps (darmowe, można hostować własny plik .pmtiles — zero kosztu i zero limitów; przy 15 użytkownikach to realna opcja).
+
+Warstwy (przełączalne, stan zapisany per użytkownik):
+
+| Warstwa | Zawartość | Renderowanie |
+|---|---|---|
+| Pojazdy | Aktualna pozycja, strzałka kierunku, kolor = status | Symbol layer + clustering przy oddaleniu |
+| Ślad (breadcrumb) | Trasa przebyta w ostatnich 24 h / całym transporcie | Line layer, gradient wg czasu |
+| Trasa planowana | Korytarz z routingu ciężarowego | Line layer, przerywana, półprzezroczysta |
+| Geofence | Strefy (poligony i okręgi) | Fill + outline, kolor wg typu strefy |
+| Prom | Pozycja M/F Wawel / M/F Nova Star z AIS | Ikona statku + linia kursu |
+| Pogoda morska | Wysokość fali na trasie Gdańsk–Nynäshamn | Heatmap / izolinie w oknie promowym |
+| Zdarzenia drogowe SE | Wypadki, roboty, zamknięcia, kolumny zimowe | Marker layer z ikonami |
+| Terminale i POI | Port Gdańsk (Westerplatte), Nynäshamn, plac Stegra, parkingi dla ponadnormatywnych | Statyczne piny |
+
+Kolorystyka statusu pojazdu (jedna, spójna w całej aplikacji):
+- 🟢 zielony — zgodnie z planem
+- 🟡 żółty — ryzyko (ETA > awizacja, brak pingu 30–90 min, brak dokumentu)
+- 🔴 czerwony — opóźnienie potwierdzone / brak zezwolenia / cichy pojazd >90 min
+- ⚫ szary — transport nierozpoczęty
+- 🔵 niebieski — na promie (pozycja z AIS promu, nie z pojazdu)
+- ✅ zielony obrys — dostarczony
+
+5.2 Interakcja
+
+Layout: split view 60/40. Lewa strona mapa, prawa lista transportów. Hover na wierszu → podświetla pojazd i przybliża. Klik na pojazd → otwiera panel transportu z timeline'em zdarzeń. Filtry działają jednocześnie na mapę i listę.
+
+Focus mode: wybierasz jeden transport → mapa pokazuje tylko jego, trasę planowaną vs faktyczną, wszystkie geofence po drodze z timestampami wejścia, prognozę pogody w punkcie promowym w godzinie rejsu.
+
+Replay (scrubber czasu): suwak od daty startu do teraz. Przewijasz i widzisz, gdzie były wszystkie auta w danym momencie. To jest narzędzie do rozstrzygania sporów — „o 14:00 we wtorek auto stało 3 h pod bramą, oto dowód". Realizacja: deck.gl TripsLayer albo prostsze — zapytanie do positions z filtrem czasowym.
+
+5.3 Geofencing — jak to działa naprawdę
+
+Definiowanie (tylko Ty): narzędzie rysowania na mapie — Terra Draw (MIT, działa z MapLibre) albo mapbox-gl-draw. Rysujesz poligon lub stawiasz okrąg z promieniem. Formularz strefy:
+
+```
+Nazwa:           "Terminal Polferries Gdańsk"
+Typ:             PORT
+Geometria:       Polygon | Circle(r = 800 m)
+Bufor histerezy: 200 m
+Dwell time:      15 min   (wejście liczy się dopiero po 15 min w strefie)
+Wyzwalacz:       ENTER | EXIT | DWELL_EXCEEDED
+Powiadom:        [x] KSH  [x] SCX  [x] HHL
+Szablon:         "Pojazd {rej} wjechał do {strefa} o {czas}. ETA Boden: {eta}"
+Aktywna:         tak / harmonogram czasowy
+```
+
+Implementacja techniczna — to jest miejsce, gdzie amatorskie systemy się sypią:
+
+1. PostGIS w Postgresie. Zapytanie: ST_Contains(geofence.geom, position.geom) — indeks GiST, milisekundy.
+2. Maszyna stanów, nie proste sprawdzenie. Tabela geofence_states(load_id, geofence_id, state, entered_at). Zdarzenie GEOFENCE_ENTER emitujemy tylko przy przejściu OUTSIDE→INSIDE, nie przy każdym pingu w środku. Bez tego wyślesz 40 maili z jednego postoju.
+3. Histereza. Wejście: punkt w poligonie. Wyjście: punkt dalej niż bufor_m poza poligonem (ST_DWithin z buforem ujemnym/dodatnim). Auto stojące na granicy strefy przestaje generować pary enter/exit.
+4. Dwell time. Przy strefach typu port/plac budowy: wejście potwierdzone dopiero po X minutach w środku. Przejazd obok bramy nie generuje alertu.
+5. Deduplikacja powiadomień. dedup_key = hash(load_id, geofence_id, event_type, data) + unikalny indeks. Retry crona nie zduplikuje maila.
+6. Idempotentność. Każdy ping ma ID; przetwarzanie odporne na powtórzenie. Cron na Vercelu jest „best-effort", więc handler musi to wytrzymać.
+
+Zestaw geofence do zaseedowania dla tego korytarza:
+
+| # | Strefa | Typ | Cel |
+|---|---|---|---|
+| 1 | Zakłady KSH (każda lokalizacja załadunku) | LOADING | Potwierdzenie rozpoczęcia załadunku, pomiar czasu na załadunku |
+| 2 | Terminal Polferries Gdańsk, ul. Mjr. Sucharskiego 70 | PORT_OUT | Check-in, punkt no-return dla rezerwacji promu |
+| 3 | Bufor 20 km przed portem Gdańsk | PRE_PORT | Alert „auto zdąży / nie zdąży na rejs" |
+| 4 | Terminal Nynäshamn, Skyttens Hälls Väg 10 | PORT_IN | Potwierdzenie zjazdu z promu, start leg-u szwedzkiego |
+| 5–9 | Punkty kontrolne E4: Södertälje, Gävle, Sundsvall, Umeå, Luleå | CHECKPOINT | Aktualizacja ETA, wykrycie postoju |
+| 10 | Bufor 50 km przed Boden | PRE_ARRIVAL | Automatyczne powiadomienie KSH i placu budowy — ok. 40 min przed przyjazdem |
+| 11 | Boden Industrial Park (~65,805 N, 21,759 E) | SITE | Przyjazd na plac, start okna rozładunku |
+| 12+ | Zatwierdzone parkingi dla ponadnormatywnych | REST | Zgodność z wyznaczonymi miejscami postoju |
+
+Strefa #10 to ta, która najbardziej zmieni życie KSH — dźwig i ekipa montażowa dostają uprzedzenie automatem, nie telefonem.
+
+5.4 Skąd bierze się pozycja — trzy poziomy
+
+Poziom 1 (najlepszy): API telematyki SCX. Pytasz ich, czego używają. Jeśli to flota fabryczna, najpewniejsza droga to rFMS (remote Fleet Management System) — standaryzowane REST API dostępu do danych pojazdu bez dokładania sprzętu, wspólne dla producentów europejskich. Standard FMS powstał w 2002 r. jako wspólna inicjatywa Mercedes-Benz, MAN, Scania, Volvo (z Renault), DAF i Iveco, żeby umożliwić aplikacje telematyczne niezależne od marki. Specyfikacja rFMS 5.0.0 (lipiec 2025) dodała obok metody pull także metodę push — serwer sam wysyła dane po subskrypcji, zamiast czekać na odpytanie. Push = zero pollingu, zero problemu z cronem.
+
+Jeśli mają aftermarket (Webfleet, GBox, Navifleet, Trimble, Framelogic, Transics) — każdy z nich ma REST API. Potrzebujesz od nich: endpoint, klucz, mapowanie nr_rejestracyjny → vehicle_id.
+
+Poziom 2: link udostępniający pozycję. Traktuj z ostrożnością — to zwykle strona HTML, nie API. Scrapowanie jest kruche i zepsuje się bez ostrzeżenia. Dopuszczalne jako tymczasowe, z wyraźnym oznaczeniem w UI „źródło niepewne".
+
+Poziom 3 (fallback, buduj go zawsze): PWA dla kierowcy. Link tokenowy per transport, SMS-em do kierowcy. Otwiera stronę w 3 językach (PL/EN/SV) z:
+- Przyciskiem „Udostępniaj pozycję" (Geolocation API, watchPosition)
+- Czterema wielkimi przyciskami statusu: ZAŁADOWANY / NA PROMIE / ROZŁADOWANY / PROBLEM
+- Aparatem: zdjęcie mocowania, skan CMR, POD
+- Numerem do Ciebie, jednym kliknięciem
+
+Ograniczenie, które trzeba znać: przeglądarka mobilna przy zablokowanym ekranie przestaje raportować pozycję. Dlatego PWA to potwierdzenia milestone'ów + pozycja okazjonalna, nie zamiennik telematyki. Ale ratuje projekt, gdy SCX nie da API w 5 dni — a to bardzo prawdopodobny scenariusz.
+
+5.5 Trasa i ETA
+
+Routing ciężarowy z uwzględnieniem wymiarów:
+- Valhalla (open source, MIT) — profil truck z parametrami height, width, length, weight, axle_load. Self-host albo przez Mapbox/Stadia.
+- openrouteservice — profil driving-hgv z restrykcjami wymiarowymi, darmowe API z limitami, do self-hostowania.
+- Uwaga: żaden publiczny router nie zna dopuszczeń dla 18-metrowego elementu na konkretnej drodze w Norrbotten. Trasa z routera to korytarz orientacyjny. Trasa faktyczna wynika z zezwolenia i ją wpisuje się ręcznie jako geometrię referencyjną. Nie udawaj, że system to wyliczy — to byłby dokładnie ten typ wydmuszki, którego nie chcesz.
+
+ETA — model segmentowy, nie jeden model end-to-end. To nie jest moja improwizacja, to wniosek z badań. Balster i in. wykazali, że w intermodalnych sieciach transportowych wiarygodne ETA uzyskuje się, budując osobny model uczenia maszynowego dla każdego odcinka (leg) i trenując go na danych historycznych tego odcinka plus danych zewnętrznych — predykcja obejmuje wtedy zarówno czasy przejazdu, jak i czasy obsługi w węzłach (Business & Information Systems Engineering 62, s. 403–416, DOI 10.1007/s12599-020-00653-0). W ich podejściu sprawdziły się Random Forest i Gradient Boosting; niezależnie Servos i in. testowali ExtraTrees, AdaBoost i SVR na relacji multimodalnej, z najlepszym wynikiem dla SVR (Logistics 4(1), 1).
+
+Twoja relacja ma dokładnie tę strukturę: odcinek drogowy PL (nieplanowy) → prom (planowy, rozkładowy) → odcinek drogowy SE (nieplanowy). Więc:
+
+```
+ETA_Boden = t_pozostały_do_Gdańska (z prędkości + historii)
+          - t_oczekiwania_na_rejs (z rozkładu promu — deterministyczne)
+          - t_rejsu (rozkładowy, korygowany prognozą falowania)
+          - t_odprawy_Nynäshamn (z historii)
+          - t_Nynäshamn→Boden (~900 km, z historii + pory roku + Trafikverket)
+```
+
+MVP (dzień 3): model deterministyczny — prędkości referencyjne per segment + obowiązkowe przerwy kierowcy (561/2006: 4,5 h jazdy → 45 min; 9 h dziennie) + rozkład promu + bufor. Zero ML.
+
+Faza 2: gdy uzbierasz 50–100 zrealizowanych transportów na tej relacji, dokładasz model na segment (gradient boosting na tabelarycznych cechach: dzień tygodnia, godzina, miesiąc, wymiary, pilotaż, pogoda, historia kierowcy). Wtedy ETA zyskuje przedział ufności, a nie jedną liczbę — i to jest to, co odróżnia poważny control tower od licznika kilometrów.
+
+6. Moduł ryzyka — sztorm, prom, droga, zezwolenia
+
+To jest część, która odróżni Cię od „mapki z kropkami". Cztery niezależne źródła sygnałów, jeden wspólny model risk_signals.
+
+6.1 Ryzyko promowe Gdańsk–Nynäshamn
+
+Fakty o relacji: obsługują ją M/F Wawel oraz M/F Nova Star, obecnie pod grupą POLSCA Baltic Ferries; ładunek ponadnormatywny trzeba zgłosić już przy składaniu zamówienia na prom, a rejsy odchodzą raz dziennie w każdą stronę. Jedno odejście dziennie oznacza, że spóźnienie na rejs kosztuje pełną dobę. To jest najdroższy pojedynczy punkt awarii w całym łańcuchu — i dlatego zasługuje na własny moduł.
+
+Trzy sygnały, które łączymy w jeden wskaźnik:
+
+a) Prognoza falowania i wiatru. Open-Meteo Marine API — wysokość, okres i kierunek fali z globalnych i regionalnych modeli falowych, odświeżane co 6 godzin, z bezpłatnym dostępem dla zastosowań niekomercyjnych. Uwaga prawna, którą musisz znać: to wdrożenie jest komercyjne, więc albo wykupujesz plan komercyjny Open-Meteo, albo używasz SMHI Open Data (szwedzki instytut meteorologiczny) i MET Norway Locationforecast/Oceanforecast — oba na licencji CC BY 4.0, która dopuszcza użycie komercyjne pod warunkiem podania źródła. Rekomendacja: MET Norway + SMHI jako podstawa, Open-Meteo jako wygodny prototyp na dzień 1.
+
+Próbkujemy 5–7 punktów wzdłuż kursu, w oknie ±6 h wokół godziny odejścia. Wskaźnik ryzyka z konfigurowalnych progów (wysokość fali znaczącej + porywy wiatru). Progów nie zaszywamy na sztywno i nie twierdzimy, że wiemy, przy jakiej fali Polferries odwołują rejs — decyzja należy do kapitana i armatora. Dajemy skalę: zielony / żółty (podwyższone ryzyko) / czerwony (warunki historycznie związane z zakłóceniami), z możliwością kalibracji po kilku tygodniach.
+
+b) Faktyczny status rejsu — i to jest najlepsze odkrycie w tym module. Polferries prowadzą publiczną stronę komunikatów o kursowaniu promów, gdzie dla każdej jednostki i daty pokazują planowaną i rzeczywistą godzinę wyjazdu i przyjazdu wraz ze statusem — np. „2026-09-22 M/F Polonia, 11:00 wyjazd, 17:15 przyjazd, Planowo". To gotowy, darmowy feed stanu rejsu. Parsujemy co 30 min → jeśli status zmieni się z „Planowo" na opóźnienie/odwołanie, wszystkie transporty przypięte do tego rejsu dostają automatyczny alert.
+
+c) AIS — weryfikacja niezależna. Śledzenie M/F Wawel i M/F Nova Star po MMSI przez AISStream.io (darmowy WebSocket z kluczem API). Prom odbił od nabrzeża = fakt, nie deklaracja. Alternatywy: AISHub (wymiana danych), komercyjnie MarineTraffic/Spire.
+
+Plan B wbudowany w system: gdy ryzyko czerwone, panel proponuje alternatywy z czasem dojazdu i szacunkiem kosztu:
+- Gdańsk–Karlshamn (Polferries)
+- Gdynia–Karlskrona (Stena Line)
+- Świnoujście–Ystad / Świnoujście–Trelleborg (Unity Line, TT-Line, Polferries)
+- Przejazd lądem przez Danię (Öresund) — długo i drogo, ale przy 18-metrowym elemencie czasem jedyna opcja
+
+Każda alternatywa z automatycznie przeliczonym dodatkowym dystansem do Boden.
+
+6.2 Ryzyko drogowe w Szwecji
+
+Trafikverket Open API — darmowe, klucz z portalu Trafikverket lub Trafiklab. Endpoint https://api.trafikinfo.trafikverket.se/v2/data.json, zapytania POST w formacie XML, odpowiedzi JSON lub XML. Dostępne obiekty obejmują m.in. Situation (zdarzenia i zakłócenia — informacje ważne, roboty drogowe, wypadki, zatory, zmienione godziny promów, jazda w kolumnie za pługiem), RoadCondition (stan nawierzchni) i WeatherStation (przydrożne stacje pogodowe). Dane geograficzne publikowane są w SWEREF 99 TM i WGS 84.
+
+To jest wyjątkowo dopasowane do Twojego przypadku:
+- Trasa Nynäshamn → Boden to ~900 km, z czego większość przez Norrland
+- Od października do kwietnia kolonnkörning (jazda w kolumnie za pługiem) na E4 potrafi dodać kilka godzin
+- Situation wychwytuje zamknięcia i ograniczenia, które przy 18,21 m i szerokim zestawie oznaczają objazd, a nie spowolnienie
+- WeatherStation daje temperaturę nawierzchni — oblodzenie przy ładunku ponadnormatywnym to decyzja o postoju
+
+Odpytujemy zdarzenia w buforze 30 km wokół planowanej trasy, co 15–30 min, i przypinamy do transportów, które jeszcze nie minęły danego punktu.
+
+Dla strony polskiej: brak równie dobrego otwartego API — powiedzmy to wprost. Realnie: ręczne wpisy + ewentualnie RSS/komunikaty GDDKiA. Nie obiecuję symetrii, bo jej nie ma.
+
+6.3 Ryzyko dokumentowe i zasobowe
+
+Reguły wykrywane automatem:
+- PERMIT_MISSING — brak zezwolenia na 48 h przed załadunkiem
+- PERMIT_MISMATCH — wymiary transportu przekraczają wymiary z załączonego zezwolenia. To jest funkcja, która realnie ratuje przed zawróceniem auta na granicy — system porównuje L/W/H/masę elementu z limitami wpisanymi w rekordzie zezwolenia
+- PERMIT_EXPIRING — zezwolenie wygasa przed planowaną datą dostawy
+- INSURANCE_EXPIRING — polisa OCP kończy się w ciągu 14 dni
+- RESOURCES_MISSING — brak kierowcy/pojazdu na 24 h przed
+- NO_FERRY_BOOKING — brak rezerwacji promu na 48 h przed
+- SILENT_VEHICLE — brak pozycji > 90 min w godzinach pracy
+- ETA_BREACH — prognozowany przyjazd poza oknem awizacji + tolerancja
+- POD_MISSING — 24 h po rozładunku brak potwierdzenia
+- SEQUENCE_RISK — element potrzebny wcześniej w montażu ma późniejszą datę dostawy niż element potrzebny później. To jest ryzyko specyficzne dla konstrukcji stalowej i nikt Ci go w gotowym TMS-ie nie pokaże
+
+7. Workflow engine — Twoje customowe automatyzacje
+
+Model: Trigger → Warunek → Akcje. Konfigurowany z UI, bez kodu.
+
+```
+TRIGGER   (zdarzenie z katalogu load_events)
+   ↓
+WARUNEK   (wyrażenie JSONLogic na kontekście zdarzenia)
+   ↓
+AKCJE[]   (lista, wykonywana sekwencyjnie, z opóźnieniami)
+```
+
+Dostępne akcje:
+SEND_EMAIL(szablon, odbiorcy) · SEND_SMS · IN_APP_NOTIFY · SET_STATUS · CREATE_TASK(przypisz_do, deadline) · RAISE_RISK(typ, severity) · WEBHOOK(url, payload) · ADD_COMMENT · LOCK_FIELD · ESCALATE_AFTER(czas, do_kogo) · POST_TO_TEAMS/SLACK
+
+Siedem workflow do zaseedowania od pierwszego dnia:
+
+| # | Trigger | Warunek | Akcje |
+|---|---|---|---|
+| 1 | GEOFENCE_ENTER | strefa = PRE_ARRIVAL Boden | Mail do KSH + SCX: „ETA 40 min", in-app, status → APPROACHING_SITE |
+| 2 | cron daily 06:00 | transporty z załadunkiem za 48 h bez zezwolenia | Mail do SCX, eskalacja do Ciebie po 12 h bez reakcji |
+| 3 | POSITION_STALE | brak pingu > 90 min, godz. 06–22 | Ryzyko SILENT, mail do dispatchera SCX, po 60 min eskalacja do Ciebie |
+| 4 | FERRY_RISK_RAISED | poziom = czerwony, rejs w ciągu 24 h | Mail do wszystkich 3 stron + panel alternatyw + zadanie „potwierdź plan B" |
+| 5 | SCHEDULE_IMPORTED | zmieniona data dostawy na transporcie już awizowanym | Mail do SCX z diffem przed/po, wymagane potwierdzenie przyjęcia |
+| 6 | UNLOADED | — | Zadanie dla SCX: wgraj POD (deadline 24 h), mail przypominający po 18 h |
+| 7 | cron Fri 14:00 | — | Mail do SCX: „otwórz fakturowanie za tydzień", lista transportów gotowych |
+
+Silnik wykonawczy: Inngest (durable functions, darmowy tier, natywnie z Next.js na Vercelu — retry, kroki, sleep bez trzymania funkcji przy życiu) albo Trigger.dev. Warunki użytkownika: json-rules-engine lub json-logic-js.
+
+8. Dashboardy — co widzi każda rola
+
+Zasada wspólna: maksymalnie 6 kafelków KPI w górze + jeden panel wyjątków + jeden panel akcji. Reszta pod kliknięciem. Dashboard, który pokazuje wszystko, nie pokazuje niczego.
+
+8.1 Dashboard HHL — Ty (pełny)
+
+Pasek KPI:
+1. Transporty aktywne (w drodze / na promie / na placu) — kliknięcie filtruje mapę
+2. Ryzyka otwarte — 🔴 x | 🟡 y, posortowane wg severity i czasu do skutku
+3. OTIF — % dostaw w oknie awizacji, ostatnie 30 dni + trend
+4. Marża narastająco — kwota + %, sparkline tygodniowy
+5. Kompletność dokumentów — % transportów z pełnym kompletem przed startem
+6. Ryzyko promowe — status najbliższych 3 rejsów (zielony/żółty/czerwony)
+
+Panele:
+- Kolejka wyjątków — jedyne miejsce, gdzie patrzysz rano. Lista: co, który transport, od kiedy, kto odpowiada, przycisk akcji. Sortowanie: severity × czas_do_skutku
+- Mapa live (split z listą)
+- Marża — analityka: waterfall przychód → koszt bazowy → BAF → dodatki → marża. Rozbicie per typ elementu (SG/T/…), per przedział wymiarowy, per tydzień. Wykrywanie transportów poniżej progu marży — czerwona flaga na pozycji, nie w raporcie miesięcznym
+- Postęp projektu: S-curve — elementy dostarczone vs plan, skumulowany tonaż, linia planu i linia faktycznej realizacji, prognoza zakończenia przy obecnym tempie
+- Wydajność SCX: OTIF przewoźnika, średnie odchylenie od awizacji w minutach, czas załadunku, czas rozładunku, % POD w terminie. To jest Twoja amunicja negocjacyjna przy następnym kontrakcie
+- Audit feed — ostatnie 50 akcji wszystkich użytkowników
+
+8.2 Dashboard KSH — Klient
+
+Pasek KPI:
+1. Elementy dostarczone / wszystkie (np. 47/312) + tonaż
+2. W drodze teraz — liczba + najbliższy przyjazd (odliczanie)
+3. Dostawy w tym tygodniu — plan vs potwierdzone
+4. Opóźnienia — liczba i sumaryczny czas
+5. Ryzyka dotyczące moich dostaw — bez szczegółów operacyjnych przewoźnika
+6. Koszt narastająco (ich cena — Twój przychód) — tylko dla KSH Admin
+
+Panele:
+- Harmonogram z sygnalizacją świetlną — ich Excel, ale żywy: każdy wiersz ma status, ETA i ikonę dokumentów
+- Mapa — gdzie są ich elementy teraz
+- Timeline montażowy — kluczowy dla nich: elementy uszeregowane wg sekwencji montażu z datami dostawy i flagą, gdy kolejność się rozjeżdża. Dźwig, ekipa i plac planują się z tego, nie z tabelki
+- Kalendarz przyjazdów — widok tygodniowy z oknami rozładunku, do planowania obsady placu
+- Dokumenty do pobrania — POD, CMR, zdjęcia mocowania, per element
+- Nadchodzące 72 h — lista transportów z ETA i statusem gotowości
+
+8.3 Dashboard Scandinavian Express — Podwykonawca
+
+Pasek KPI:
+1. Moje transporty aktywne
+2. Wymagane ode mnie działania — liczba (brak danych kierowcy, brak POD, brak zezwolenia)
+3. Załadunki w ciągu 48 h
+4. Przychód bieżącego tygodnia (ich cena — Twój koszt)
+5. Status fakturowania — wysłana / w weryfikacji / zaakceptowana / sporna
+6. Mój OTIF — świadomie pokazany: widoczna ocena zmienia zachowanie
+
+Panele:
+- Lista zadań — najważniejszy panel dla nich. „Transport SG-14: brak nr rej. naczepy, deadline za 6 h" z przyciskiem uzupełnienia inline
+- Moje transporty z mapą
+- Rejsy promowe — najbliższe odejścia, ich rezerwacje, status rejsu i ryzyko pogodowe
+- Fakturowanie — kreator faktury zbiorczej z podglądem kwoty oczekiwanej wg cennika
+- Pogoda i drogi — prognoza dla ich aut na trasie, zdarzenia z Trafikverket
+
+8.4 Dashboard Stegra / plac budowy (opcjonalny, read-only)
+
+Minimalny: „co i kiedy przyjedzie w ciągu 72 h" + POD. Link publiczny z tokenem, bez logowania, bez danych finansowych, bez danych kierowców. Do rozważenia jako argument sprzedażowy wobec KSH.
+
+9. Co to daje każdej stronie — konkretnie
+
+Tobie (HHL):
+- Marża widoczna w czasie rzeczywistym, per transport, zanim faktura przyjdzie — a nie po zamknięciu miesiąca
+- Koniec z ręczną weryfikacją faktur zbiorczych: 3-way match robi to automatem
+- Dowody w sporach — strumień zdarzeń z timestampami i pozycjami, nie wspomnienia
+- Mniej telefonów „gdzie jest auto": geofence odpowiada zanim ktokolwiek zapyta
+- Dane do następnego kontraktu: rzeczywisty OTIF przewoźnika, rzeczywiste czasy na załadunku, rzeczywisty rozkład opóźnień
+- Produkt. Jeśli to zadziała na Stegrze, to jest szablon do sprzedaży przy każdym kolejnym projekcie ponadnormatywnym
+
+KSH (Klient):
+- Plan placu budowy oparty na ETA, nie na dacie z Excela sprzed tygodnia
+- Powiadomienie 40 min przed przyjazdem — dźwig i ekipa gotowe, zero przestoju
+- Widzi ryzyka zanim się zmaterializują (sztorm w oknie rejsu = przesunięcie montażu, a nie kryzys w czwartek rano)
+- Jedno miejsce z POD i dokumentacją zamiast archeologii mailowej
+- Wykrywanie rozjazdu kolejności montażowej — problem, którego dziś nie widzą, dopóki element nie jest potrzebny i go nie ma
+
+Scandinavian Express (Podwykonawca):
+- Jasna lista „co ode mnie potrzeba i do kiedy" zamiast rozproszonych maili
+- Fakturowanie w kreatorze z podglądem kwoty oczekiwanej — mniej sporów, szybsza płatność
+- Widzi ryzyko promowe i drogowe, zanim auto stanie pod bramą
+- Mniej telefonów od Ciebie i od KSH
+- Widoczny OTIF = konkretny argument przy przedłużeniu kontraktu
+
+Wspólnie:
+- Jedna wersja prawdy. Największy koszt w takiej konfiguracji to nie transport, tylko rozjazd informacyjny — trzy Excele, cztery wątki mailowe, dwa WhatsAppy
+- Czas reakcji na odchylenie skraca się z godzin do minut
+- Historia projektu jako aktywo: po zakończeniu Stegry macie dane do wyceny i planowania kolejnych projektów
+
+10. Workflow pracy w systemie
+
+Cykl transportu — koniec końców
+
+```
+[KSH] wgrywa/aktualizuje harmonogram
+   → diff + walidacja + wersja
+   → auto-tworzenie transportów, klasyfikacja ponadnormatywności
+   → powiadomienie HHL + SCX
+
+[HHL] przypisuje transport do SCX, ustala cennik
+   → wyliczenie koszt/przychód/marża (snapshot)
+
+[SCX] uzupełnia: kierowca, telefon, ciągnik, naczepa, pilotaż
+   → wgrywa zezwolenie
+   → system waliduje zezwolenie vs wymiary  ← blokada, jeśli mismatch
+   → ustawia awizację podjęcia i dostawy
+   → rezerwuje prom, wpisuje nr rejsu
+
+[SYSTEM] T-48 h: sprawdza komplet → braki = alert
+[SYSTEM] T-24 h: potwierdzenie awizacji, prognoza pogody dla rejsu
+
+[POJAZD] wjazd do strefy LOADING → status ZAŁADUNEK
+[SCX]    zdjęcia mocowania + CMR
+[POJAZD] wyjazd ze strefy → DEPARTED_ORIGIN, start liczenia ETA
+
+[SYSTEM] monitoring ciągły: pozycja, ETA, geofence, ryzyka
+[POJAZD] strefa PRE_PORT → „zdąży/nie zdąży na rejs"
+[POJAZD] strefa PORT_OUT → FERRY_CHECKIN
+[SYSTEM] AIS + komunikat Polferries → FERRY_DEPARTED / ryzyko
+
+[POJAZD] strefa PORT_IN Nynäshamn → start leg-u SE, przeliczenie ETA
+[SYSTEM] Trafikverket: zdarzenia na E4 przed pojazdem
+[POJAZD] checkpointy E4 → korekta ETA
+[POJAZD] strefa PRE_ARRIVAL → powiadomienie KSH i placu (40 min)
+[POJAZD] strefa SITE → SITE_ARRIVAL, start okna rozładunku
+
+[SCX] POD + potwierdzenie rozładunku → UNLOADED
+[SYSTEM] aktualizacja S-curve, tonażu, KPI, marży
+```
+
+Rytm tygodniowy
+
+| Kiedy | Kto | Co |
+|---|---|---|
+| Pn 07:00 | system → wszyscy | Mail podsumowujący: transporty tygodnia, ryzyka, braki |
+| Codziennie 06:30 | system → Ty | Kolejka wyjątków na dziś |
+| Codziennie | SCX | Uzupełnianie zadań z listy |
+| Śr | KSH | Aktualizacja harmonogramu (jeśli zmiany) |
+| Pt 14:00 | system → SCX | Otwarcie fakturowania |
+| Pt–Pn | SCX | Faktura zbiorcza z kreatora |
+| Pn | Ty | 3-way match, akceptacja/spór |
+| Pt 16:00 | system → Ty | Raport tygodniowy: OTIF, marża, odchylenia, S-curve |
+
+Codzienna rutyna (Twoja, ~10 min)
+
+1. Otwierasz kolejkę wyjątków. Nie mapę, nie listę transportów.
+2. Górne 3–5 pozycji: klik → akcja (mail, telefon, eskalacja) → zamknięcie.
+3. Rzut oka na ryzyko promowe najbliższych rejsów.
+4. Jeśli 🟢 — zamykasz. Jeśli 🔴 — panel alternatyw.
+
+11. Stack techniczny — konkretne wybory i uzasadnienia
+
+| Warstwa | Wybór | Dlaczego |
+|---|---|---|
+| Framework | Next.js 15 (App Router) + TypeScript | Server Actions = mniej API boilerplate, natywny deploy na Vercel |
+| UI | Tailwind + shadcn/ui | Komponenty do wklejenia, nie zależność; Cursor generuje to bardzo dobrze |
+| Baza | Supabase (Postgres 16 + PostGIS) | Auth + Storage + Realtime + RLS + geoprzestrzenne w jednym; darmowy tier wystarcza na 15 użytkowników |
+| Auth | Supabase Auth — magic link + OTP | Zero haseł do resetowania u 15 osób z trzech firm |
+| Autoryzacja | RLS na poziomie wiersza i osobne tabele cen | Jedyny sposób, żeby rozdzielenie koszt/przychód było prawdziwe |
+| Mapa | MapLibre GL JS + react-map-gl | Open source, WebGL, bez lock-inu |
+| Kafelki | MapTiler (start) → Protomaps/pmtiles (docelowo) | Darmowy start, potem zero kosztu i zero limitów |
+| Geometria | Turf.js (klient) + PostGIS (serwer) | Turf do podglądu w UI, PostGIS jako źródło prawdy |
+| Rysowanie stref | Terra Draw | MIT, działa z MapLibre, aktywnie rozwijany |
+| Routing | Valhalla lub openrouteservice (profil HGV) | Jedyne open-source'owe z parametrami wymiarowymi |
+| Tabele | TanStack Table v8 | Wirtualizacja, sortowanie, filtry, grupowanie — 300+ wierszy bez zacięć |
+| Stan serwera | TanStack Query + Supabase Realtime | Optymistyczne aktualizacje + push zmian do innych użytkowników |
+| Wykresy | Recharts (proste) / Apache ECharts (S-curve, waterfall) | |
+| Excel | ExcelJS (MIT) | Import i eksport; SheetJS CE też, ale wersja z npm jest przestarzała — trzeba brać z ich CDN |
+| Walidacja | Zod | Wspólne schematy klient/serwer |
+| Mail | Resend + React Email | Szablony jako komponenty React, świetna integracja z Vercel |
+| SMS | SMSAPI.pl (PL) lub Twilio | Tylko alerty krytyczne + link do PWA kierowcy |
+| Workflow | Inngest | Durable steps, retry, step.sleep — bez tego workflow na serverless są kruche |
+| Reguły | json-rules-engine lub json-logic-js | Warunki definiowane z UI, serializowane do JSON |
+| Cron | Vercel Cron (Pro) + Upstash QStash jako backup | ⚠ patrz niżej |
+| i18n | next-intl | PL / EN / SV — nienegocjowalne. SCX to przewoźnik skandynawski, plac budowy szwedzki |
+| Pliki | Supabase Storage | Signed URL z krótkim TTL, polityki dostępu per bucket |
+| PDF | pdf-lib / @react-pdf/renderer | Pakiety dokumentów, raporty tygodniowe |
+| Monitoring | Sentry + Vercel Analytics | |
+| Testy | Vitest + Playwright (tylko ścieżki krytyczne) | Import harmonogramu i geofence muszą mieć testy |
+
+⚠ Pułapka Vercela, o której musisz wiedzieć przed startem
+
+Na planie Hobby Vercel dopuszcza wyłącznie crony uruchamiane raz dziennie — wyrażenie typu 0 * * *  czy /30 * * * * wywali deploy z błędem „Hobby accounts are limited to daily cron jobs". Dodatkowo Vercel nie gwarantuje punktualności: zadanie ustawione na 0 1 * * * odpali się gdzieś między 1:00 a 1:59. Dopiero plan Pro (20 USD/mies./użytkownik) daje kadencję i precyzję minutową, do 100 zadań na projekt; harmonogramy są zawsze w UTC.
+
+Konsekwencja: polling telematyki co 5–10 min, scrapowanie statusu promu co 30 min i sprawdzanie Trafikverket co 15 min są niemożliwe na Hobby. Dwie drogi:
+- Vercel Pro — 20 USD/mies., najprostsze, rekomendowane
+- Zewnętrzny scheduler — Upstash QStash, cron-job.org, GitHub Actions albo pg_cron w Supabase uderzający w Twoje endpointy. Darmowe, ale jeden element więcej do utrzymania
+
+Crony są „best-effort", więc każdy handler musi być idempotentny — to nie opcja, to warunek poprawności.
+
+Deployment i domena
+
+- Repo GitHub → Vercel (preview per PR, production z main)
+- Domena własna: tower.hhlogistics.pl (albo wskazana przez Ciebie) — rekord CNAME na Vercel, SSL automatycznie
+- Przekierowanie ze wskazanej strony: redirects w next.config.js albo rekord DNS
+- Sekrety: Vercel Environment Variables, nigdy w repo
+- Preview deployments za hasłem (Vercel Password Protection) — dane klienta nie mogą wisieć na publicznym URL-u preview
+
+12. Integracje — zweryfikowane, z oceną realności
+
+| Integracja | Źródło | Koszt | Realność w 5 dni | Wartość |
+|---|---|---|---|---|
+| Telematyka SCX | ich API / rFMS 5.0 | zależy od nich | 🟡 zależy od SCX | 🔥🔥🔥 |
+| PWA kierowcy (fallback) | własne | 0 | ✅ | 🔥🔥🔥 |
+| Trafikverket Open API | api.trafikinfo.trafikverket.se/v2 | darmowe, klucz | ✅ | 🔥🔥🔥 |
+| Status rejsów Polferries | strona komunikatów (parsing) | 0 | ✅ | 🔥🔥🔥 |
+| Pogoda morska | MET Norway + SMHI (CC BY 4.0) | 0 | ✅ | 🔥🔥 |
+| Pogoda morska (prototyp) | Open-Meteo Marine | 0 niekom. / płatne kom. | ✅ | 🔥🔥 |
+| AIS promów | AISStream.io | darmowe z kluczem | 🟡 | 🔥 |
+| SharePoint / Excel | Microsoft Graph, Sites.Selected | 0 (licencja M365) | ❌ zgoda IT KSH | 🔥🔥 |
+| Routing HGV | Valhalla / openrouteservice | 0 self-host | ✅ | 🔥 |
+| Indeks paliwowy | EC Weekly Oil Bulletin | 0 | ✅ | 🔥🔥 |
+| Mail | Resend | free tier wystarcza | ✅ | 🔥🔥🔥 |
+| SMS | SMSAPI.pl | ~0,10 zł/szt. | ✅ | 🔥 |
+| Teams/Slack | webhook | 0 | ✅ | 🔥 |
+| Kalendarz (ICS) | własny feed | 0 | ✅ | 🔥🔥 |
+| KSeF | API MF | 0 | ❌ faza 3 | 🔥 |
+| E-podpis POD | Documenso (open source) | 0 self-host | ❌ faza 3 | 🔥 |
+
+Feed ICS to niedoceniana funkcja: generujesz subskrybowalny kalendarz per rola. KSH dodaje go do Outlooka i ma wszystkie okna dostaw w swoim kalendarzu, automatycznie aktualizowane. Koszt implementacji: ~50 linii kodu. Efekt wow: duży.
+
+Repozytoria GitHub warte obejrzenia
+
+```
+maplibre/maplibre-gl-js          – silnik mapy
+visgl/react-map-gl               – wrapper React
+JamesLMilner/terra-draw          – rysowanie geofence (MIT)
+Turfjs/turf                      – geometria po stronie klienta
+valhalla/valhalla                – routing ciężarowy z wymiarami
+GIScience/openrouteservice       – alternatywa, profil driving-hgv
+protomaps/PMTiles                – kafelki w jednym pliku, self-host
+supabase/supabase                – backend
+inngest/inngest                  – durable workflows
+CacheControl/json-rules-engine   – silnik reguł
+resend/react-email               – szablony maili
+TanStack/table, TanStack/query   – tabele i stan serwera
+exceljs/exceljs                  – XLSX
+shadcn-ui/ui                     – komponenty
+apache/echarts                   – S-curve, waterfall
+novuhq/novu                      – infrastruktura powiadomień wielokanałowych (faza 2)
+documenso/documenso              – e-podpis (faza 3)
+visgl/deck.gl                    – TripsLayer do replaya (faza 2)
+```
+
+13. RODO i bezpieczeństwo — nie pomiń tego
+
+Przechowujesz imię, nazwisko i numer telefonu kierowców — to dane osobowe, a Ty jesteś administratorem albo współadministratorem.
+
+Minimum do wdrożenia:
+- Umowy powierzenia między HHL ↔ KSH ↔ SCX (kto jest administratorem danych kierowców — najpewniej SCX, Ty procesorem)
+- Retencja: dane kierowcy usuwane/anonimizowane X dni po zakończeniu transportu. Cron, nie dobre chęci
+- Minimalizacja: KSH widzi imię i pierwszą literę nazwiska + telefon tylko w oknie ±24 h wokół dostawy. Nie przez cały projekt
+- Pozycja GPS to dana osobowa w kontekście zidentyfikowanego kierowcy — retencja pingów: pełna rozdzielczość 30 dni, potem agregacja do zdarzeń
+- Audit log każdego dostępu do danych osobowych
+- Signed URL-e do plików z TTL 15 min, nigdy publiczne bucket-y
+- MFA dla kont administracyjnych
+- Rate limiting na endpointach publicznych (PWA kierowcy)
+
+14. Plan na 5 dni
+
+Dzień 1 — fundament
+Repo, Next.js + Supabase + PostGIS, schemat bazy, RLS, Auth (magic link), role, szkielet layoutu, i18n PL/EN/SV, deploy na Vercel z domeną. Seed: użytkownicy, projekt, geofence.
+
+Dzień 2 — harmonogram
+Import XLSX z kreatorem mapowania, walidacje, dry-run diff, wersjonowanie, model element↔transport, lista transportów (TanStack Table) z filtrami, panel szczegółów transportu z timeline'em zdarzeń.
+
+Dzień 3 — mapa, pozycje, geofence
+MapLibre, warstwy, ingest pozycji (API SCX lub PWA fallback), maszyna stanów geofence z histerezą i dwell, edytor stref (Terra Draw), ETA deterministyczne, split view mapa+lista.
+
+Dzień 4 — dokumenty, cennik, powiadomienia
+Upload z kategoriami i widocznością, walidacja zezwolenie↔wymiary, cennik koszt/przychód z RLS, BAF z konfiguracją i pobieraniem indeksu, kalkulacja marży, Resend + szablony, 7 startowych workflow na Inngest.
+
+Dzień 5 — dashboardy, ryzyka, fakturowanie
+Trzy dashboardy, kolejka wyjątków, moduł promowy (pogoda + komunikaty Polferries), Trafikverket, kreator faktury zbiorczej z 3-way match, S-curve, feed ICS, testy ścieżek krytycznych, onboarding użytkowników.
+
+Świadomie poza 5 dniami: ML dla ETA, SharePoint Graph, AIS, KSeF, replay, e-podpis, aplikacja natywna.
+
+15. Trzy rzeczy, które mogą zabić ten projekt
+
+1. SCX nie da API telematyki. Prawdopodobieństwo: wysokie. Dlatego PWA kierowcy budujesz w dniu 3, nie „później". Zapytaj ich dziś, jakiego systemu używają — to jedno pytanie decyduje o połowie architektury.
+2. KSH nie zmieni sposobu pracy. Jeśli dalej będą edytować Excela na SharePoincie i nie wgrywać go do systemu, masz dwa źródła prawdy i gorzej niż przedtem. Wymuś jedną zasadę: aktualizacja harmonogramu = upload do TOWER. Ścieżka Graph rozwiązuje to docelowo, ale nie w tym tygodniu.
+3. Przeskalowanie zakresu. Twój opis zawiera funkcje na 3 miesiące pracy. W 5 dni zbudujesz solidny rdzeń. Wszystko, co dodasz ponad to, zostanie kosztem jakości rdzenia. Kolejka wyjątków + mapa + geofence + dokumenty + cennik — to jest rdzeń. Reszta iteracyjnie.
+
+16. PROMPT DO CURSORA (tryb planowania)
+
+Wklej poniższe do Cursora w Plan Mode. Zanim wykonasz: uzupełnij [...].
+
+````
+ZADANIE: Zaplanuj implementację multi-party Control Tower "TOWER"
+
+Jesteś starszym architektem full-stack. NIE pisz jeszcze kodu. Twoim zadaniem jest
+stworzyć szczegółowy plan implementacji w pliku PLAN.md oraz schemat bazy w
+supabase/migrations/0001_init.sql. Dopiero po mojej akceptacji przejdziemy do kodu.
+
+KONTEKST BIZNESOWY
+Jestem spedytorem w H&H Logistics (HHL). Organizuję transport konstrukcji stalowych
+ponadnormatywnych z Polski do Boden w Szwecji dla projektu Stegra.
+- Klient: KSH (zamawiający, właściciel harmonogramu i konstrukcji)
+- Podwykonawca: Scandinavian Express / SCX (przewoźnik)
+- Trasa: załadunek PL -> port Gdańsk -> prom Gdańsk-Nynäshamn (Polferries/POLSCA,
+  M/F Wawel i M/F Nova Star, JEDNO odejście dziennie) -> E4 na północ ~900 km -> Boden
+  Industrial Park (~65.8054 N, 21.7591 E)
+- Ładunki: elementy o wymiarach typu 18,21 x 2,45 x 2,45 m, masa jednostkowa ~3 t,
+  masa transportu ~20 t. Wymagane zezwolenia w PL i SE, często pilotaż.
+- 12-15 użytkowników, 3 organizacje.
+- CZAS: kilka dni na MVP. Prostota > kompletność.
+
+STACK (nie zmieniaj bez uzasadnienia)
+Next.js 15 App Router + TypeScript + Tailwind + shadcn/ui
+Supabase (Postgres 16 + PostGIS + Auth magic-link + Storage + Realtime + RLS)
+MapLibre GL JS + react-map-gl + Terra Draw + Turf.js, kafelki MapTiler
+TanStack Table v8 + TanStack Query, Recharts + ECharts
+ExcelJS, Zod, Resend + React Email, Inngest, json-rules-engine
+next-intl (PL/EN/SV), Sentry, Vitest + Playwright
+Deploy: Vercel (zakładam plan Pro — crony częstsze niż raz dziennie), domena własna
+
+ZASADY ARCHITEKTONICZNE (bezwzględne)
+1. Excel = źródło PLANU. Aplikacja = źródło STANU. Nigdy odwrotnie.
+2. Stan transportu to projekcja ze strumienia zdarzeń load_events (append-only).
+   Nigdy UPDATE na historii.
+3. Rozdzielenie widoczności cen egzekwowane w BAZIE (RLS + osobne tabele
+   rate_cost / rate_revenue), nie w UI. SCX widzi tylko swoją stawkę (mój koszt),
+   KSH tylko swoją (mój przychód), HHL widzi oba + marżę.
+4. Klucz naturalny elementu to kolumna Wysyłka (np. SG-01), NIE Lp. — Lp. jest
+   niestabilne przy re-importach.
+5. Model dwupoziomowy: shipment_item (element) N:1 load (transport).
+6. Geofence jako maszyna stanów z histerezą i dwell time. Zdarzenie ENTER emitowane
+   tylko przy przejściu OUTSIDE->INSIDE. Deduplikacja powiadomień przez dedup_key.
+7. Wszystkie handlery cron/webhook idempotentne. Vercel Cron jest best-effort.
+8. Management by exception — ekran główny pokazuje odchylenia, nie wszystko.
+9. Dane kierowcy (imię, nazwisko, telefon, pozycja GPS) = dane osobowe. Retencja,
+   minimalizacja zakresu widoczności, audit log.
+
+MODUŁY MVP (priorytet malejąco)
+M1 Import harmonogramu XLSX: kreator mapowania kolumn (szablon zapisywalny),
+   parser wymiarów "18,21 x 2,45 x 2,45" (przecinek dziesiętny, locale PL),
+   walidacje blokujące (m.in. waga_transportu ~= ilosc * waga_elementu +/-5%,
+   data_dostawy > data_zaladunku, unikalność kodu Wysyłka),
+   DRY-RUN DIFF przed zapisem (nowe / zmienione / usunięte / odrzucone),
+   wersjonowanie + archiwum surowego pliku.
+M2 Lista i panel transportu: TanStack Table z filtrami i wirtualizacją,
+   timeline zdarzeń, uzupełnianie zasobów przez SCX (kierowca, telefon E.164,
+   ciągnik, naczepa, pilotaż), awizacja jako OKNO czasowe (nie punkt).
+M3 Mapa: warstwy (pojazdy, ślad, trasa planowana, geofence, prom, zdarzenia drogowe,
+   POI), split view 60/40 mapa+lista z dwukierunkowym hoverem, focus mode,
+   clustering, kolory statusu.
+M4 Geofence: PostGIS ST_Contains + ST_DWithin, tabela geofence_states,
+   histereza (bufor_m), dwell_seconds, edytor rysowania na mapie (Terra Draw),
+   konfigurowalni odbiorcy i szablony powiadomień per strefa.
+M5 Pozycje: adapter-interface z 3 implementacjami — (a) API telematyki SCX,
+   (b) rFMS 5.0 (pull i push), (c) PWA kierowcy z tokenem (Geolocation API +
+   4 przyciski milestone: ZAŁADOWANY / NA PROMIE / ROZŁADOWANY / PROBLEM + aparat).
+   ZBUDUJ (c) JAKO PIERWSZE — nie wiem jeszcze, czy dostanę API.
+M6 Dokumenty: kategorie z regułami wymagalności i deadline'ami, wersjonowanie,
+   widoczność per rola (bitmask), signed URL TTL 15 min, ZIP per transport/tydzień.
+   WALIDACJA: wymiary transportu vs limity z załączonego zezwolenia -> blokada przy
+   przekroczeniu.
+M7 Cennik i BAF: macierz przedziałów (L/W/H/masa -> stawka), osobne tabele
+   kosztowa/przychodowa z RLS, BAF parametryzowany
+   (BAF% = ((Ibieżący - Ibazowy)/Ibazowy) * udział_paliwa), konfigurowalne:
+   źródło indeksu, wartość i data bazowa, udział paliwa, próg wyzwolenia,
+   zaokrąglenie, cykl rewizji, floor/cap. Historia notowań z URL źródła.
+   Snapshot ceny na transporcie w momencie przypisania.
+M8 Dashboardy: HHL (6 KPI + kolejka wyjątków + marża waterfall + S-curve +
+   wydajność SCX), KSH (postęp elementów, timeline montażowy z flagą rozjazdu
+   kolejności, kalendarz przyjazdów, dokumenty), SCX (lista zadań z deadline'ami,
+   moje transporty, rejsy, fakturowanie, mój OTIF).
+M9 Workflow engine: trigger (typ zdarzenia) -> warunek (JSONLogic) -> akcje[].
+   Akcje: SEND_EMAIL, IN_APP_NOTIFY, SET_STATUS, CREATE_TASK, RAISE_RISK,
+   WEBHOOK, ESCALATE_AFTER. Wykonanie na Inngest. Seed 7 workflow (opiszę osobno).
+M10 Moduł ryzyka: FERRY (pogoda morska + parsing statusu rejsów Polferries + opcj.
+   AIS), ROAD_SE (Trafikverket Open API: Situation, RoadCondition, WeatherStation
+   w buforze 30 km wokół trasy), DOC (braki, mismatch, wygasanie),
+   OPERATIONS (silent vehicle >90 min, ETA breach, brak awizacji).
+M11 Faktura zbiorcza SCX: kreator wyboru transportów z tygodnia, kwota oczekiwana
+   wg cennika, upload PDF, 3-way match, statusy MATCHED/DISPUTED z rozbiciem różnic.
+M12 ETA: MVP deterministyczne per segment (PL road -> ferry schedule -> SE road)
+   z uwzględnieniem przerw kierowcy (561/2006). Architektura ma dopuszczać podmianę
+   na model ML per segment bez przepisywania reszty.
+
+POZA MVP (zaprojektuj miejsce, nie implementuj)
+SharePoint przez Microsoft Graph (Sites.Selected), ML dla ETA, AIS, replay
+(deck.gl TripsLayer), KSeF, e-podpis POD, aplikacja natywna.
+
+CZEGO OCZEKUJĘ W PLAN.md
+1. Struktura katalogów z komentarzem, co gdzie idzie
+2. Pełny schemat bazy: tabele, kolumny, typy, indeksy (w tym GiST na geometriach),
+   FK, polityki RLS wypisane jawnie per tabela i per rola
+3. Zamknięty katalog typów zdarzeń load_events + maszyna stanów transportu
+   (diagram w Mermaid)
+4. Kontrakty API / Server Actions per moduł (sygnatury + schematy Zod)
+5. Interface adaptera pozycji + 3 implementacje (stubs)
+6. Algorytm geofence krok po kroku w pseudokodzie: ingest -> ewaluacja ->
+   przejście stanu -> emisja zdarzenia -> dedup -> powiadomienie
+7. Algorytm importu XLSX: parsing -> walidacja -> diff -> commit, z obsługą błędów
+8. Model cennika i BAF z przykładowym wyliczeniem na liczbach
+9. Specyfikacja każdego dashboardu: lista widgetów, źródło danych, zapytanie
+10. Lista cronów: ścieżka, częstotliwość, co robi, jak jest idempotentny
+11. Plan dzień-po-dniu (5 dni) z konkretnymi zadaniami i kryteriami akceptacji
+12. Lista zmiennych środowiskowych
+13. Lista ryzyk technicznych z mitygacją
+14. Seed data: 12 geofence dla tego korytarza, 7 workflow, 3 role x 5 użytkowników,
+    przykładowy cennik, przykładowy harmonogram 20 elementów
+
+ZASADY PRACY
+- Jeśli czegoś nie wiesz, ZAPYTAJ MNIE zamiast zakładać. Szczególnie: dokładne
+  lokalizacje załadunku, struktura cennika, progi ryzyka, limity wymiarowe per kraj.
+- Nie wymyślaj API, których nie zweryfikowałeś. Jeśli nie masz pewności co do
+  endpointu lub licencji — oznacz [DO WERYFIKACJI] i napisz, jak to sprawdzić.
+- Nie proponuj bibliotek płatnych ani z licencją zakazującą użycia komercyjnego
+  bez wyraźnego oznaczenia.
+- Preferuj prostsze rozwiązanie, które dowiozę w 5 dni, nad eleganckie na 3 tygodnie.
+- Kod docelowo: TypeScript strict, bez any, Zod na każdej granicy, komentarze PL.
+- UI trójjęzyczne od początku (PL/EN/SV) — nie dorabiaj i18n później.
+
+Zacznij od zadania mi pytań, na które musisz znać odpowiedź, zanim napiszesz plan.
+````
+
+Jedna rzecz do zrobienia dzisiaj, zanim ruszysz z kodem: zapytaj Scandinavian Express, jakiego systemu telematycznego używają i czy mają REST API lub wsparcie rFMS. Odpowiedź na to pytanie przesądza o połowie architektury, a czekanie na nią do dnia 3 kosztuje dzień pracy.
+
+Chcesz, żebym rozpisał osobno któryś moduł do poziomu schematu SQL i sygnatur funkcji — najsensowniej zacząć od importu harmonogramu albo od geofence?
+
+[HUMAN]  (Sep 22, 2026, 11:33 PM):
+mam wyniki od gemini i deep seek zrób z tego pozytek i ponownie daj mi outpoot oraz koda dla cursor. W outpoot napisz mi o co musze zapytac się przewoźnika. juto mam z nim spotkanie
+
+[CLAUDE]  (Sep 22, 2026, 11:44 PM):
+Przeczytałem oba dokumenty. Są w nich dobre pomysły i kilka błędów, które przy wdrożeniu zrobiłyby realną szkodę. Najpierw audyt, potem pytania na jutro, potem kod.
+
+1. Audyt obu dokumentów — co biorę, co wyrzucam
+
+Błędy, które trzeba naprawić, zanim to trafi do Cursora
+
+| # | Skąd | Problem | Dlaczego to groźne |
+|---|---|---|---|
+| 1 | Gemini | RLS w ich SQL nie chroni cen. Polityka client_read_access daje KSH SELECT na całą tabelę transports — razem z base_cost_pln, margin_pln, margin_percent. Komentarz mówi „ukrywamy kolumny przez widoki", ale kodu widoków nie ma, a polityka jest permisywna | RLS w Postgresie jest wierszowy, nie kolumnowy. KSH przez PostgREST (/rest/v1/transports?select=*) zobaczy Twoją marżę. To nie jest hipotetyczne — to działa dokładnie tak |
+| 2 | Gemini | Polityka robi SELECT role FROM users WHERE id = auth.uid() na tabeli, która sama ma mieć RLS | Nieskończona rekurencja przy pierwszym zapytaniu. Klasyczny błąd Supabase |
+| 3 | Gemini | „T-01: 55.00t → mnożnik 2.10 + ekspertyza mostowa" | Halucynacja z przesuniętej kolumny. W Twojej tabeli Waga transport [t] = 20,17. 55,00 to komórka „Ilość elementów", która i tak jest błędna. Gemini zbudowało na tym cały poziom cennika |
+| 4 | Gemini | Bidirectional sync z Excelem na SharePoint (zapis wstecz do komórek) | Plik edytowany równolegle przez ludzi, bez blokad wierszowych. Konflikty nie do rozwiązania automatem. Klasyczny sposób na zniszczenie harmonogramu klienta |
+| 5 | Gemini | Headless Chromium na Vercel Serverless do scrapowania linku telematyki | Limity rozmiaru funkcji, zimne starty, kruche, prawdopodobnie sprzeczne z ToS dostawcy. W 5 dni — samobójstwo |
+| 6 | Gemini | Progi sztormowe podane jako fakt: „>3,2 m lub >38 w. → wysokie ryzyko odwołania" | Nikt tego nie publikuje. Decyzja należy do kapitana i armatora. Jako domyślne, konfigurowalne progi — OK. Jako fakt w dokumentacji dla klienta — kompromitacja |
+| 7 | Gemini | Tesseract.js OCR dla CMR/POD + React Flow jako wizualny builder workflow | Dwie funkcje na 2–3 tygodnie każda. W 5-dniowym MVP zabiją rdzeń |
+| 8 | DeepSeek | Turso (libSQL) + PostGIS | Turso to SQLite. PostGIS w nim nie istnieje. Ich własny tekst przyznaje „PostGIS przez Neon lub Supabase" — czyli dwie bazy, dwa źródła prawdy, synchronizacja między nimi. Dla 15 użytkowników to absurd |
+| 9 | DeepSeek | H3 prefilter „redukuje obciążenie bazy o 80–90%" | Przy ~15 pojazdach i ~20 strefach indeks GiST w PostGIS odpowiada w mikrosekundach. H3 to rozwiązanie problemu, którego nie masz |
+| 10 | DeepSeek | Motive i Samsara jako pierwsi dostawcy telematyki | To rynek północnoamerykański (Motive to w praktyce US/ELD). Skandynawski przewoźnik ma raczej Scania FMS, Volvo Connect, Webfleet, Transics/ZF, Mapon, Ruptela, Framelogic albo Wialon. Pytanie do niego jutro — nie zgadywanie |
+| 11 | DeepSeek | „Badania Locus 2026", „Gartner: 22%", „McKinsey: 20–50%", „FarEye: WISMO −60%", „ETA accuracy 85–92% wg badań" | Żadnej z tych liczb nie zweryfikowałem. Część to marketing dostawców podany jako badania. „85–92% accuracy" bez podanego okna tolerancji nie znaczy nic. Nie wkładaj tego do materiałów dla KSH |
+| 12 | DeepSeek | Stack SaaS za ~$195–245/mies. (Turso $29 + Clerk $25 + Axiom $25 + Sentry $26…) | Vercel Pro $20 + Supabase Pro $25 + Resend free = ~$45/mies. Reszta to koszt bez funkcji dla 15 użytkowników |
+| 13 | DeepSeek | Stripe Invoicing do faktur przewoźnika | Zły instrument. W PL faktura idzie przez księgowość i docelowo KSeF, nie przez Stripe |
+| 14 | DeepSeek | Lista repo: modern-logistics-tms, Mandala, TransitFlow-AI, Supply Chain Pulse, eCMR-MCP | Nie zweryfikowałem istnienia ani jakości żadnego z nich. Nie buduj na repo, którego nie otworzyłeś |
+| 15 | Oba | Jedna tabela transports z shipment_code UNIQUE | Zakłada 1 element = 1 transport. Padnie przy pierwszym aucie wiozącym SG-01 i SG-02 razem |
+
+Co z tych dokumentów jest dobre i wchodzi do projektu
+
+| Pomysł | Skąd | Dlaczego wchodzi |
+|---|---|---|
+| Kody przyczyn opóźnień A–F | DeepSeek | Każde opóźnienie dostaje kod przypisany wspólnie z przewoźnikiem. To jest fundament carrier scorecard i podstawa rozliczania postojowego. Tani do zbudowania, ogromna wartość |
+| Exception detection lag jako KPI | DeepSeek | Mierzy to, co naprawdę decyduje: ile czasu mija od zdarzenia do tego, aż ktoś wie. Lepsze niż OTIF, bo OTIF mierzy przeszłość |
+| Priorytet webhook > polling | DeepSeek | Zgodne z rFMS 5.0, które od lipca 2025 ma metodę push obok pull. Mniej crona, mniej kosztu, mniejsze opóźnienie |
+| Pipeline trajektorii: normalizuj → filtruj → segmentuj → wzbogać → dopasuj → publikuj | DeepSeek | Poprawna kolejność. Wchodzi w uproszczonej formie |
+| „Nigdy nie nadpisuj surowego GPS współrzędnymi po snapowaniu" | DeepSeek | Słuszna zasada, wpisana do schematu jako dwie kolumny |
+| Carrier scorecard | DeepSeek | Twoja amunicja przy następnym kontrakcie |
+| Czat per transport | DeepSeek | Tani, zabija wątki mailowe. Wchodzi do MVP |
+| NBP API dla kursów | Gemini | Najlepszy pojedynczy dodatek z obu dokumentów. Darmowe, oficjalne, stabilne. Opłaty drogowe w Szwecji są w SEK, prom bywa w EUR, rozliczenie w PLN. Bez tego marża jest zgadywana |
+| Konsola finansowa jako jeden widok przychód / koszt / marża | Gemini | Dobry układ UI, biorę |
+| Debounce geofence przez N kolejnych próbek | DeepSeek | Uzupełnia histerezę, której użyłem wcześniej. Razem: solidna ochrona przed fałszywymi alertami |
+| e-CMR | DeepSeek | Realny koncept, ale faza 2 i zależy od tego, czy SCX już czegoś używa — pytanie na jutro |
+| Ślad węglowy per przesyłka | DeepSeek | Z jednym zastrzeżeniem, które oni przeoczyli: Twój klient końcowy buduje hutę zielonej stali. Raport CO₂ transportu to dla Stegry i KSH narracja, nie ozdoba. Liczone wg ISO 14083:2023 (norma kwantyfikacji emisji GHG w łańcuchach transportowych), nie „szacunkami" |
+
+Jedna rzecz, którą oba dokumenty przeoczyły, a którą wpisałem do schematu: ryzyko rozjazdu kolejności montażowej. Wieziecie konstrukcję, którą się składa. Element potrzebny w tygodniu 3 przyjeżdżający po elemencie z tygodnia 5 to problem, którego nie widać w żadnym OTIF.
+
+2. Pytania do Scandinavian Express — jutro
+
+⚠ Pięć pytań, bez których nie ruszasz z budową
+
+Jeśli z całego spotkania wyciągniesz tylko to — wystarczy.
+
+1. Jakiego systemu telematycznego używacie — pełna nazwa dostawcy?
+2. Czy macie dostęp do API tego systemu i kto u Was ma konto administratora?
+3. Czy podzlecacie te transporty dalej, czy jedzie wyłącznie Wasza flota? (przy ponadnormatywnych to reguła, nie wyjątek — a podwykonawca podwykonawcy nie ma Waszej telematyki)
+4. Czy kierowcy mają smartfony z transmisją danych i czy zgodzicie się, żeby klikali status w linku wysłanym SMS-em? (to jest mój fallback, jeśli API nie będzie)
+5. Kto rezerwuje prom i jaki jest Wasz lead time rezerwacji dla ponadgabarytu?
+
+A. Telematyka i dane pozycyjne — najważniejszy blok
+
+| # | Pytanie | Po co pytasz |
+|---|---|---|
+| A1 | Nazwa systemu i wersja (Webfleet / Transics / Mapon / Ruptela / Wialon / Framelogic / Scania FMS / Volvo Connect / inne) | Decyduje o adapterze. Nie zgaduj |
+| A2 | Czy jest REST API? Dokumentacja? Kto wystawia klucz? | Bez tego cała warstwa live pada |
+| A3 | Czy API daje webhooki/push, czy tylko odpytywanie? | Push = brak crona, mniejsze opóźnienie, mniejszy koszt |
+| A4 | Czy pojazdy są fabrycznie „connected" (Scania, Volvo, MAN, DAF, Mercedes, Iveco) i czy możecie włączyć rFMS? Kto płaci za subskrypcję? | rFMS to standardowy interfejs producentów europejskich, wspólny dla marek — jeden adapter obsłuży mieszaną flotę. Wersja 5.0 ma push |
+| A5 | Jaka jest częstotliwość zapisu pozycji — w ruchu i na postoju? | 15 s czy 10 min to różnica między geofencingiem a zgadywaniem |
+| A6 | Jak identyfikujecie pojazd w API — numerem rejestracyjnym czy wewnętrznym ID? Dostanę mapowanie? | Bez mapowania rej. → ID nie podepnę transportu do pojazdu |
+| A7 | Są limity zapytań (rate limit) albo opłata za wywołanie? | Determinuje częstotliwość pollingu |
+| A8 | Macie u siebie geofencing? Możecie wysyłać nam zdarzenia wjazd/wyjazd? | Jeśli tak, przerzucamy im robotę |
+| A9 | RODO: kto jest administratorem danych kierowców? Czy kierowcy są poinformowani o udostępnianiu pozycji podmiotowi trzeciemu? Podpiszemy umowę powierzenia? | Przechowuję imię, telefon i pozycję GPS kierowcy. To dane osobowe i musi być to uregulowane przed startem |
+| A10 | Jeśli API nie będzie — PWA dla kierowcy: link SMS-em, cztery przyciski (ZAŁADOWANY / NA PROMIE / ROZŁADOWANY / PROBLEM) + aparat. Zgoda? | To mój plan B i muszę go znać dziś, nie w dniu 3 |
+| A11 | Jakim językiem mówią kierowcy — PL, EN, SV, LT, UA? | Interfejs kierowcy musi być w ich języku, inaczej nikt go nie użyje |
+| A12 | Pojazd pilotujący ma własną telematykę? | Czasem pilot jest jedynym źródłem pozycji |
+
+B. Flota, zasoby, wymiary
+
+| # | Pytanie | Po co |
+|---|---|---|
+| B1 | Jakie naczepy: teleskopowe, niskopodwoziowe, ile osi, jaka nośność? | Wpływa na wysokość całkowitą i kategorię zezwolenia |
+| B2 | Jaka jest długość całkowita zestawu z elementem 18,21 m? Jaka wysokość całkowita? Szerokość? | To są liczby, które wchodzą do cennika i do walidatora zezwoleń. Wymiar elementu ≠ wymiar zestawu |
+| B3 | Ile zestawów zadedykujecie do projektu? Czy stałe, czy rotacja? | Determinuje, ilu pojazdów szukam w telematyce |
+| B4 | Czy jeden zestaw weźmie dwa elementy (SG-01 + SG-02 razem)? | Przesądza model danych element↔transport |
+| B5 | Ilu kierowców, jedno- czy dwuosobowa obsada na trasie 1250 km? | Wpływa na ETA i przerwy 561/2006 |
+
+C. Zezwolenia i pilotaż
+
+| # | Pytanie | Po co |
+|---|---|---|
+| C1 | Kto występuje o zezwolenia w PL — Wy czy my? Jaki lead time? | Kto ma deadline w systemie |
+| C2 | Kto o szwedzki dispens (Trafikverket)? Lead time? | Osobny proces, osobny zegar |
+| C3 | Zezwolenia jednorazowe na transport czy okresowe na trasę? | Decyduje, czy system pilnuje N dokumentów czy jednego |
+| C4 | Prześlecie wzór zezwolenia, żebym zmapował pola (max L/W/H/masa, trasa, ważność)? | Bez tego nie zbuduję automatycznej walidacji „wymiary vs zezwolenie" |
+| C5 | Pilotaż: ile pojazdów w PL, ile w SE? Kto zapewnia? Wliczone w stawkę? | Pozycja kosztowa, musi być w cenniku |
+| C6 | Ograniczenia jazdy: godziny nocne, weekendy, święta — w PL i w SE? | Wchodzi do kalkulatora ETA |
+| C7 | Czy trasa w zezwoleniu jest sztywna? Prześlecie ją jako przebieg dróg? | To jest moja „trasa planowana" na mapie — z routera jej nie wyliczę |
+
+D. Prom
+
+| # | Pytanie | Po co |
+|---|---|---|
+| D1 | Kto rezerwuje — Wy czy my? | Kto ma zadanie w systemie |
+| D2 | Macie kontrakt z POLSCA/Polferries? Warunki dla ponadgabarytu? | Trasę Gdańsk–Nynäshamn obsługują M/F Wawel i M/F Nova Star, z jednym odejściem dziennie w każdą stronę — spóźnienie kosztuje dobę |
+| D3 | Lead time rezerwacji miejsca dla ponadnormatywnego? | Deadline w systemie |
+| D4 | Kto ponosi koszt przy odwołanym rejsie / braku miejsca? | Musi być w umowie i w kodach opóźnień |
+| D5 | Macie w zapasie alternatywy: Gdańsk–Karlshamn, Gdynia–Karlskrona, Świnoujście–Ystad/Trelleborg? | Mój panel planu B będzie proponował konkretne opcje, muszę wiedzieć które są realne |
+| D6 | Prześlecie nr rezerwacji i nazwę promu do systemu? | Bez tego nie powiążę transportu z rejsem i nie ostrzegę o pogodzie |
+
+E. Dokumenty i proces
+
+| # | Pytanie | Po co |
+|---|---|---|
+| E1 | W jakiej formie POD — skan, zdjęcie z telefonu, e-CMR? | Determinuje moduł dokumentów |
+| E2 | Używacie e-CMR? Jakiego dostawcy? | Jeśli tak — integracja w fazie 2 i oszczędność. Jeśli nie — zostaje PDF/zdjęcie |
+| E3 | Ile czasu od rozładunku do dostarczenia dokumentów? | Ustawiam deadline i alert |
+| E4 | Kto podpisuje POD na placu Stegra w Boden? | Musi być ktoś konkretny, inaczej dokumenty będą wisieć |
+| E5 | Kto robi i podpisuje dokumentację mocowania ładunku? | Odpowiedzialność przy szkodzie |
+
+F. Fakturowanie, stawki, BAF
+
+| # | Pytanie | Po co |
+|---|---|---|
+| F1 | Waluta rozliczenia — PLN, EUR czy SEK? | Podpinam NBP API do przeliczeń |
+| F2 | Jeśli obca waluta: kurs z jakiego dnia i jakiej tabeli? (NBP tabela A z dnia poprzedzającego / z dnia wystawienia / średnia miesięczna) | Bez ustalenia tego marża jest fikcją |
+| F3 | Co jest w stawce, a co poza: prom, opłaty drogowe SE, pilotaż, zezwolenia, postojowe? | Struktura cennika |
+| F4 | Akceptujecie BAF wg indeksu? Który — EU Weekly Oil Bulletin, Orlen hurt, e-petrol? | Muszę mieć jedno, weryfikowalne przez obie strony źródło |
+| F5 | Jaki udział paliwa przyjmujemy w strukturze kosztu? | Parametr formuły BAF |
+| F6 | Wartość i data bazowa indeksu? Cykl rewizji — tygodniowy? Próg wyzwolenia? | Cała reszta formuły |
+| F7 | Cykl faktury — tydzień kalendarzowy (pn–nd) czy inny? Termin płatności? | Konfiguracja modułu faktur |
+| F8 | Stawka postojowa: od której godziny liczona, ile za godzinę i za dobę? | Pozycja kosztowa i spór numer jeden w praktyce |
+| F9 | Co przy odwołaniu transportu przez klienta / pustym przebiegu? | Musi być w cenniku |
+| F10 | Zgadzacie się, żeby fakturę zbiorczą składać przez system (checklista transportów + PDF), a system porównywał kwotę z cennikiem? | To jest zmiana procesu po ich stronie — lepiej ustalić teraz |
+
+G. Ubezpieczenia
+
+| # | Pytanie | Po co |
+|---|---|---|
+| G1 | Suma gwarancyjna OCP i czy obejmuje ładunki ponadnormatywne oraz Szwecję | Wpisuję do systemu z datą ważności i alertem na 14 dni przed |
+| G2 | Odrębne ubezpieczenie cargo dla konstrukcji stalowych? Franszyza? | Ryzyko KSH |
+| G3 | Prześlecie polisę do systemu i będziecie ją aktualizować przy odnowieniu? | Automatyczny alert wygaśnięcia |
+
+H. Ludzie, dostęp, proces pracy
+
+| # | Pytanie | Po co |
+|---|---|---|
+| H1 | Ile osób u Was ma mieć konto? Imiona, maile, role (dyspozytor / administracja / księgowość)? | Zakładam konta przed startem |
+| H2 | Język interfejsu: PL, EN czy SV? | System jest trójjęzyczny, ale ustawiam im domyślny |
+| H3 | Godziny pracy dyspozytorni. Kto dyżuruje w weekend? Numer alarmowy? | Konfiguracja eskalacji w workflow |
+| H4 | Czy zgadzacie się wpisywać dane kierowcy, pojazdu i awizacji do systemu zamiast wysyłać mailem? | To jest najważniejsze pytanie procesowe całego spotkania. Jeśli odpowiedź brzmi „będziemy wysyłać mailem jak zawsze", system nie ma sensu i trzeba to rozwiązać kontraktowo, nie technicznie |
+| H5 | Zgadzacie się na wspólną taksonomię kodów przyczyn opóźnień A–F, przypisywanych wspólnie? | Podstawa rozliczeń i scorecardu |
+| H6 | Wiecie, że system będzie pokazywał Waszą terminowość i kompletność danych — również Wam? | Powiedz to wprost. Ukryte mierzenie zatruwa relację; jawne poprawia wyniki |
+
+Jak prowadzić to spotkanie
+
+Nie czytaj listy po kolei — zacznij od tych pięciu na górze, resztę przejdź blokami. Poproś o jedną rzecz na piśmie w ciągu 48 h: dokumentację API telematyki albo jasne „nie mamy API". Od tej odpowiedzi zależy połowa architektury, a mam ją zaplanowaną tak, żeby brak API nie zablokował projektu — ale muszę wiedzieć dziś, a nie w dniu 3.
+
+Drugie: poproś o wzór zezwolenia i o wymiary całkowite zestawu. Bez nich walidator „wymiary vs zezwolenie" — funkcja, która realnie ratuje przed zawróceniem auta na granicy — nie zadziała.
+
+3. Zmiany w architekturze względem wersji z rana
+
+| Obszar | Poprzednio | Teraz | Powód |
+|---|---|---|---|
+| Bezpieczeństwo cen | RLS + osobne tabele | RLS + osobne tabele + REVOKE na tabelach bazowych + widoki security_invoker + GRANT kolumnowy na UPDATE | Dziura z dokumentu Gemini pokazała, że sama RLS nie wystarczy |
+| Funkcja roli | — | SECURITY DEFINER, STABLE, search_path ustawiony | Ochrona przed rekurencją RLS |
+| Geofence | Histereza + dwell | Histereza + dwell + debounce N próbek | Z DeepSeeka, uzupełnia lukę |
+| Pozycje | jedna kolumna geom | geom_raw + geom_snapped | Zasada „nie nadpisuj surowego GPS" |
+| Waluty | — | NBP API (tabela A), kolumny currency + fx_rate + fx_date na każdej pozycji finansowej | Z Gemini. Bez tego marża przy kosztach w SEK/EUR jest zgadywana |
+| Opóźnienia | flaga | delay_code A–F + delay_owner | Z DeepSeeka, podstawa scorecardu |
+| KPI | OTIF, marża | + exception_detection_lag, carrier scorecard | Z DeepSeeka |
+| Komunikacja | mail + in-app | + czat per transport | Tani, zabija wątki mailowe |
+| CO₂ | poza zakresem | co2_kg wg ISO 14083, faza 2 | Klient buduje hutę zielonej stali — to nie ozdoba |
+| Baza | Supabase Postgres + PostGIS | bez zmian — odrzucam Turso | Turso nie ma PostGIS |
+| Workflow builder | formularz trigger→warunek→akcja | bez zmian — odrzucam React Flow w MVP | Canvas no-code to osobny projekt |
+| OCR | — | odrzucone | Tesseract.js na skanach CMR to strata dnia |
+
+4. Kod
+
+Wygenerowałem gotowe pliki do wrzucenia do repo. Migracje SQL są napisane tak, żeby błąd z dokumentu Gemini był niemożliwy — KSH fizycznie nie ma uprawnienia SELECT na tabeli z kosztami.
+Co jest w plikach:
+
+- PYTANIA_SCANDINAVIAN_EXPRESS.md — checklista na jutro, do wydruku, z miejscem na odpowiedzi i tabelą „co zrobić z odpowiedzią". Weź to na spotkanie.
+- CURSOR_PROMPT.md — prompt v2. Zawiera listę odrzuconych technologii z uzasadnieniem, żeby Cursor nie zaproponował Ci z powrotem Turso z PostGIS ani React Flow.
+- 0001_core.sql — schemat + model bezpieczeństwa. Klient fizycznie nie ma uprawnienia SELECT na tabeli z kosztami; przewoźnik ma GRANT UPDATE tylko na wymienionych kolumnach. Funkcje ról są SECURITY DEFINER, więc nie ma rekurencji RLS.
+- 0002_geofence_engine.sql — maszyna stanów z histerezą, dwell i debounce, plus detect_silent_vehicles(), detect_sequence_risk() i kpi_exception_detection_lag().
+- lib/schedule/parse.ts — parser Twojej tabeli z walidatorem, który wyłapuje przesunięte kolumny. Wiersz T-01 z „55 sztuk" zostanie odrzucony z konkretnym komunikatem, zamiast wjechać do cennika.
+- lib/pricing/engine.ts — BAF, NBP, marża, 3-way match faktury. matchRate() przy braku dopasowania rzuca wyjątek zamiast wstawić zero.
+- lib/telematics/adapter.ts — jeden interfejs, rFMS + generyczny REST + PWA kierowcy. PROVIDER_TEMPLATES na dole to puste szablony do wypełnienia dokładnie tym, co jutro usłyszysz.
+
+Dwie rzeczy, o które warto poprosić na piśmie przed wyjściem ze spotkania: dokumentację API telematyki (albo jasne „nie mamy") i wzór zezwolenia z polami. Pierwsze odblokowuje warstwę live, drugie — walidator, który nie pozwoli wysłać auta bez pokrycia w zezwoleniu.
+
+Jeśli chcesz, przed spotkaniem mogę rozpisać 7 startowych workflow jako gotowe rekordy JSON do wrzucenia do tabeli workflows — to ostatni brakujący kawałek seedu.
+
+[HUMAN]  (Sep 22, 2026, 11:48 PM):
+pokaż mi makiete html jak bedzie to wygladalo. Plik ma byc klikalny i wstępnie wypełniony 50 różnymi transportami. Chcę zobaczyć jak zaprojektowałeś i pokazać na spotkaniu

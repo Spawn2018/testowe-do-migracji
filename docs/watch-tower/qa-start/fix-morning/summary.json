@@ -1,0 +1,63 @@
+{
+  "risk": {
+    "hasRiskPage": true,
+    "panelCount": 3,
+    "panelsOverlap": false,
+    "exq": 28
+  },
+  "schedule": {
+    "schedBase": {
+      "n": 72,
+      "chips": [
+        "Wszystkie",
+        "W drodze",
+        "Opóźnione",
+        "Bez dokumentów",
+        "Dostarczone"
+      ],
+      "counter": "/ 72 / 72"
+    },
+    "schedAfter": {
+      "n": 72,
+      "counter": "/ 72 / 72",
+      "stagePressed": true,
+      "showsSpineInCounter": false
+    },
+    "independent": true,
+    "noSpineLabel": true,
+    "delivered": {
+      "ok": true,
+      "n": 7,
+      "allDone": true,
+      "codes": [
+        "SG-01",
+        "SG-04",
+        "T-03",
+        "SG-12",
+        "T-06"
+      ]
+    }
+  },
+  "map": {
+    "mapSize": {
+      "w": 681,
+      "h": 655
+    },
+    "paths": 87,
+    "circles": 0,
+    "svgW": "817px",
+    "pathBox": {
+      "w": 58,
+      "h": 308,
+      "t": 344,
+      "l": 523
+    },
+    "listCount": 72
+  },
+  "pass": {
+    "risks": true,
+    "scheduleIndependent": true,
+    "deliveredChip": true,
+    "mapMarkers": true
+  }
+}
