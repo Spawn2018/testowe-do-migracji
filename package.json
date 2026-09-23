@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "test": "vitest run",
+    "test:unit": "vitest run",
     "preview": "vite preview",
     "ais-proxy": "bash scripts/start-ais-proxy.sh"
   },
@@ -40,7 +42,8 @@
     "puppeteer-core": "^25.11.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
-    "vite": "^8.3.0"
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
   },
   "description": "WATCH TOWER interactive makieta — PL→SE oversized corridor (HHL/KSH/SCX)"
 }
