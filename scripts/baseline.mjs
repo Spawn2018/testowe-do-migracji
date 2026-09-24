@@ -38,7 +38,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 
 /** Bump when nav/role selectors or matrix semantics change. */
-const SCRIPT_VERSION = '2026-09-23-data-view'
+const SCRIPT_VERSION = '2026-09-24-f2.1-risk-scroll'
 
 const chrome = existsSync('/usr/bin/google-chrome-stable')
   ? '/usr/bin/google-chrome-stable'
@@ -269,6 +269,26 @@ async function navTo(dataView) {
   await page.evaluate(async () => {
     if (document.fonts?.ready) await document.fonts.ready
   })
+  // F2.1: Risks exceptions queue filled the 1080 viewport — Prom (D4) + SE demo (D3)
+  // lived below the fold, so Fala2 GATE reported 0 ryzyka diffs despite real UI changes.
+  if (dataView === 'risk') {
+    await page.evaluate(() => {
+      const main = document.querySelector('main')
+      const ferry = document.querySelector('[data-panel="ferry"]')
+      if (!main || !ferry) throw new Error('F2.1: risk ferry panel missing')
+      const mainRect = main.getBoundingClientRect()
+      const ferryTop = ferry.getBoundingClientRect().top
+      main.scrollTop += ferryTop - mainRect.top - 4
+      // Prefer keeping SE demo header in frame when Prom is short enough
+      const se = document.querySelector('[data-panel="road-se"]')
+      if (se) {
+        const seBottom = se.getBoundingClientRect().bottom
+        const overflow = seBottom - mainRect.bottom
+        if (overflow > 0 && overflow < 220) main.scrollTop += overflow + 4
+      }
+    })
+    await sleep(300)
+  }
   await sleep(200)
 }
 

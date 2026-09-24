@@ -22,7 +22,7 @@ Aktualizacja: **2026-09-24** Europe/Warsaw · Etap 0 zamknięty · Etap 1 nie ro
 
 | ID | pozycja | status | commit | testy (liczby) | uwagi |
 |---|---|---|---|---|---|
-| F2.1 | Ryzyka: 0 zmienionych ujęć — wyjaśnij/napraw | OPEN | — | — | pending |
+| F2.1 | Ryzyka: 0 zmienionych ujęć — wyjaśnij/napraw | **DONE** | `9b6bcb0` | unit **41/41** · pw **4/4** · visual **90/720** tylko ryzyka | Hipoteza **(1)** (historyczna): `SAIL_ROWS` w RisksView — naprawione w D4 (`voyage.ts`). **(2)** false — DemoMark jest na panelu SE w Risks. **(3)** false — 90 ujęć `ryzyka` w matrycy. 0 diffów na GATE: `fullPage:false` + długa kolejka wyjątków → Prom/SE poniżej folda. Fix: `data-panel` + scroll Prom w `baseline.mjs`. Porównanie: wyłącznie ryzyka → tag `baseline-fala-2b-2026-09-24` |
 | F2.2 | Próg testu wizualnego (`maxDiffPixelRatio`) | OPEN | — | — | pending |
 | F2.3 | Stylelint zielony (nowy `.stylelintrc`) | OPEN | — | — | pending |
 | F2.4 | Weryfikacja mechanizmu paliwowego (bez kodu) | OPEN | — | — | pending; niezgodności → nowe wiersze |

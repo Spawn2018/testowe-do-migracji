@@ -116,7 +116,7 @@ export function RisksView() {
         </ul>
       </div>
 
-      <div className="panel section-card" style={{ margin: 12 }}>
+      <div className="panel section-card" style={{ margin: 12 }} data-panel="ferry">
         <header className="panel-hd">
           <h2>Prom i Bałtyk</h2>
           <span className="sub">jedno odejście dziennie · spóźnienie kosztuje dobę</span>
@@ -201,7 +201,12 @@ export function RisksView() {
         </div>
       </div>
 
-      <div className="panel section-card" style={{ margin: 12 }} data-demo={isDemoSourceMode(seMode) ? 'trafikverket' : undefined}>
+      <div
+        className="panel section-card"
+        style={{ margin: 12 }}
+        data-panel="road-se"
+        data-demo={isDemoSourceMode(seMode) ? 'trafikverket' : undefined}
+      >
         <header className="panel-hd">
           <h2>Warunki drogowe SE · E4</h2>
           <span className="sub">

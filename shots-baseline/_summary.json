@@ -2,9 +2,13 @@
   "ok": 720,
   "fail": 0,
   "total": 720,
-  "scriptVersion": "2026-09-23-data-view",
+  "scriptVersion": "2026-09-24-f2.1-risk-scroll",
   "frozenNow": "2026-09-23T14:32:00Z",
-  "appChecksum": "0d60194403c47d6349833c2fb8dbf3f6b39a8ccaa39dc0d3191d6e17d6920af9",
+  "appChecksum": "3e43a9b85d10a4fe69fbf078dc47e03097dcfe3f1f6cef159041bbca94dd2f7b",
   "url": "http://127.0.0.1:4177/#/?now=2026-09-23T14%3A32%3A00Z",
-  "errors": []
+  "errors": [],
+  "f21": {
+    "ryzykaRegen": 90,
+    "reason": "viewport scroll to ferry+SE panels"
+  }
 }
