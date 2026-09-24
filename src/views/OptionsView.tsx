@@ -112,7 +112,7 @@ export function OptionsView() {
           </div>
         </section>
 
-        <section className="panel option-panel option-wide fuel-panel">
+        <section className="panel option-panel option-wide fuel-panel" data-deur-exempt="fuel-index" title="D-EUR-T: indeks paliwowy (wyjątek)">
           <header className="panel-hd"><h2>{t(locale, "opt_fuel_h2")}</h2><span className="sub">{t(locale, 'opt_fuel_sub')}</span><span className="panel-mark">{t(locale, "opt_fuel_mark")}</span><DemoMark /></header>
           <div className="panel-bd">
             <div className="fuel-grid">
@@ -128,7 +128,7 @@ export function OptionsView() {
           <div className="panel-bd"><dl className="kv options-kv">
             <dt>{t(locale, 'opt_demo_marks')}</dt><dd><label className="switchline"><input type="checkbox" checked={showDemoMarks} onChange={(e) => { setShowDemoMarks(e.target.checked); saveMark('demo'); }} /><span>{showDemoMarks ? t(locale, 'on') : t(locale, 'off')}</span></label><div className="muted" style={{ marginTop: 4 }}>{t(locale, 'opt_demo_marks_sub')}</div></dd>
             <dt>{t(locale, 'opt_lang')}</dt><dd><select className="input" value={locale} onChange={(e) => { setLocale(e.target.value as 'pl' | 'en' | 'sv'); saveMark('język'); }}><option value="pl">Polski</option><option value="en">English</option><option value="sv">Svenska</option></select></dd>
-            <dt>{t(locale, 'opt_currency')}</dt><dd><select className="input" value={displayCurrency} onChange={(e) => { setDisplayCurrency(e.target.value as 'EUR' | 'PLN'); saveMark('waluta'); }}><option value="PLN">PLN</option><option value="EUR">EUR</option></select></dd>
+            <dt>{t(locale, 'opt_currency')}</dt><dd data-deur-exempt="currency-pref" title="D-EUR-T: wybór waluty (wyjątek)"><select className="input" value={displayCurrency} onChange={(e) => { setDisplayCurrency(e.target.value as 'EUR' | 'PLN'); saveMark('waluta'); }}><option value="PLN">PLN</option><option value="EUR">EUR</option></select></dd>
             <dt>{t(locale, "opt_theme")}</dt><dd><select className="input" value={theme} onChange={(e) => { setTheme(e.target.value as 'dark' | 'light'); saveMark('motyw'); }}><option value="dark">{t(locale, "opt_theme_dark")}</option><option value="light">{t(locale, "opt_theme_light")}</option></select></dd>
             <dt>{t(locale, 'opt_theme_default')}</dt><dd className="muted">{defaultThemeForRole('HHL') === 'dark' ? t(locale, 'opt_theme_dark_hhl') : t(locale, 'opt_theme_light')}</dd>
           </dl><div className="note option-note">{t(locale, 'opt_theme_note')}</div></div>

@@ -7,6 +7,7 @@ import type { DisplayCurrency, NbpRate } from './engine';
 import { eurToPln, formatForUser, formatMoney } from './engine';
 
 export const DEMO_FX: NbpRate = {
+  table: 'A',
   no: '186/A/NBP/2026',
   effectiveDate: '2026-09-24',
   mid: 4.39,

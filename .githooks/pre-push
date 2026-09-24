@@ -1,6 +1,6 @@
 #!/bin/sh
 # Brama lokalna: LFS + unit + visual smoke + stylelint. Ominięcie: --no-verify.
-# D19-T w pre-push (hits→0 po D19).
+# D19-T + D-EUR-T w pre-push (Etap 2 / G2).
 set -e
 cd "$(git rev-parse --show-toplevel)"
 
@@ -19,6 +19,9 @@ npm run test:visual
 
 echo "[pre-push] npm run test:d19"
 npm run test:d19
+
+echo "[pre-push] npm run test:deur"
+npm run test:deur
 
 echo "[pre-push] npm run lint:css"
 npm run lint:css

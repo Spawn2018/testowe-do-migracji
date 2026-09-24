@@ -64,7 +64,7 @@ export function FinanceView() {
   const below = loads.filter((l) => l.pricing.belowThreshold);
 
   const bafCard = (
-    <div>
+    <div data-deur-exempt="fuel-index" title="D-EUR-T: indeks paliwowy (wyjątek)">
       <dl className="kv">
         <dt>Indeks</dt>
         <dd>

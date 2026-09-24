@@ -656,7 +656,7 @@ export function ScheduleView() {
         </div>
         <div className="note">
           {showMargin
-            ? t(locale, 'sched_money_note')
+            ? t(locale, 'sched_money_note').replace('{cur}', currency)
             : role === 'KSH'
               ? t(locale, 'sched_role_ksh')
               : t(locale, 'sched_role_scx')}
