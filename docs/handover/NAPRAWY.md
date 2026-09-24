@@ -15,7 +15,8 @@
 
 Pełny dosłowny tekst D1–D17 jest w transkrypcie **t110u** (PROMPT FINALNY). Poniżej skrót zsynchronizowany z fasadą C1 i notatkami t111u, żeby lista nie zginęła na dysku. Przy konflikcie brzmienia **wygrywa t110u**.
 
-**D1.** Alternatywy trasy SE ×4 „Wybierz” — dziś tylko toast; mają mutować load/risk (`RisksView`).
+**D1-legacy-route-alts.** Alternatywy trasy SE ×4 „Wybierz” — dziś tylko toast; mają mutować load/risk (`RisksView`).  
+> **Uwaga numeracji (Sebastian 2026-09-24):** to **NIE** jest Fala-1-D1. Fala-1-D1 = usunięcie Tailwind (najpierw inventory).
 
 **D2.** Pill opóźnienia w drawerze (`+1h 35 min`) — liczyć z `delayMinutes`, nie stały napis (`LoadDrawer`).
 
@@ -97,7 +98,8 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 - **D21** — DONE — usuń martwy MapLibre.
 - **D9** (Fala 1) — DONE — cienie / promienie ≤2px / sprzątanie `!important`. **≠** D9-legacy-JSONLogic.
 - **D16** (Fala 1) — DONE — motyw per rola (KSH light, HHL/SCX dark) + `data-theme` only (bez Tailwind `dark`). **≠** D16-legacy-force-majeure.
-- **Następne (NIE START):** D1 / D2.
+- **D1 inventory (D1a)** — DONE — [`D1_TAILWIND_INVENTORY.md`](./D1_TAILWIND_INVENTORY.md). **Removal jeszcze NIE.**
+- **Następne (NIE START):** D1 removal (strip TW) / D2.
 
 #### Fala-1-D9 — szczegóły
 - Soft `box-shadow` → `none`: `.docpreview`, `.wf-creator`, `.sched-col-menu` (toasty już `none`).
@@ -119,9 +121,10 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 | D21 | `58a509a8341cf455f1dbab60d41c1dc2107af2a5` | `package.json`, `package-lock.json`, `src/lib/corridor.ts`, `src/index.css`, −`src/components/map/CorridorMap.leaflet.tsx`, −`public/map-styles/` | **8/8** | **4/4** | smoke **4/4** (720 deferred) | 2073585 → **2073339** (−246); sha256 `d91ce4c3…` → `7cd831c2…` (`index-CAL_24W1.js`) | 65554 → **65461** (−93); sha256 `320c485d…` → `7bcd6d50…` (`index-Db6djQzs.css`) |
 | **D9** (Fala 1 — chrome wizualny; ≠ D9-legacy-JSONLogic) | `cb41781d5a17eb58342c99d246a2f9c100ffe6f1` | `src/index.css`, `Toasts.tsx`, `DriverPwa.tsx` | **8/8** | **4/4** | smoke **4/4** (720 deferred) | n/a (CSS/chrome only) | n/a |
 | **D16** (Fala 1 — motyw/rola; ≠ D16-legacy-force-majeure) | `230e876e3998916fa92275569660540e8af2f2ca` | `src/lib/theme.ts`, `useTowerStore.ts`, `tests/theme-role.test.ts`, `tests/setup.ts` | **13/13** | **4/4** | smoke **4/4** (720 deferred) | n/a (behaviour) | n/a |
+| **D1a** inventory (≠ D1-legacy-route-alts; removal = next) | `docs(D1)` (sha → po push) | `docs/handover/D1_TAILWIND_INVENTORY.md` (+ NAPRAWY) | **13/13** | **4/4** | smoke **4/4** (720 deferred) | n/a (docs-only) | n/a |
 
 ### Fala 1–2 (pozostałe)
-- Kolejność pozostała jak niżej; D1/D2 **nie rozpoczęte**.
+- Kolejność pozostała jak niżej; **D1 removal** / D2 **nie rozpoczęte** (inventory D1a DONE).
 
 ### Fala 3 — import UX + skala + visual CI
 - **D26** — poniżej
@@ -146,4 +149,4 @@ Wybrana droga (Sebastian 2026-09-24): **2 — usunięcia za wyraźną zgodą**. 
 
 ---
 
-*Koniec zakresu. D24 zamknięte. Fala 1: D21+D9+D16 DONE. Nie startować D1/D2 / D26 / legacy D9/D16 bez osobnego START.*
+*Koniec zakresu. D24 zamknięte. Fala 1: D21+D9+D16+D1a DONE. Nie startować D1 removal / D2 / D26 / legacy bez osobnego START.*
