@@ -13,6 +13,7 @@ import {
   voyageSeaTableRows,
 } from '../lib/voyage';
 import { isDemoSourceMode, trafikverketSourceNote } from '../lib/demoLabel';
+import { severityLabel } from '../lib/enumLabels';
 
 const ALT = [
   ['Gdańsk–Karlshamn', '+310 km do Boden', 'Polferries'],
@@ -242,7 +243,7 @@ export function RisksView() {
                       <td className="num">+{s.delayMin} min</td>
                       <td style={{ textAlign: 'right' }}>
                         <span className={`pill ${sevPill(s.severity)}`}>
-                          {kindLabel(s.kind)} · {s.severity}
+                          {kindLabel(s.kind)} · {severityLabel(s.severity)}
                         </span>
                       </td>
                     </tr>
@@ -251,7 +252,7 @@ export function RisksView() {
               </table>
             </div>
             <div>
-              <h4 className="sec">Ryzyka ROAD_SE / siła wyższa</h4>
+              <h4 className="sec">Ryzyka drogi SE / siła wyższa</h4>
               {[...roadSeRisks, ...fmRisks].map((r) => (
                 <div
                   key={r.id}
@@ -277,7 +278,7 @@ export function RisksView() {
               <div className="alt-row">
                 <div>
                   <b>E4 → E18 via Västerås / Uppsala</b>
-                  <span>Omija roboty E4 Gävle–Söderhamn · +45–70 min · zalecane przy HIGH</span>
+                  <span>Omija roboty E4 Gävle–Söderhamn · +45–70 min · zalecane przy wysokim ryzyku</span>
                 </div>
                 <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().pushToast('Alternatywa SE: E4→E18', 'MEDIUM')}>Wybierz</button>
               </div>
@@ -291,7 +292,7 @@ export function RisksView() {
               <div className="alt-row">
                 <div>
                   <b>Kolej + ostatnia mila (Boden rail terminal)</b>
-                  <span>Gdy FORCE_MAJEURE na E4 północ · przeładunek SE · +1–2 doby</span>
+                  <span>Gdy siła wyższa na E4 północ · przeładunek SE · +1–2 doby</span>
                 </div>
                 <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().pushToast('Alternatywa SE: kolej Boden', 'MEDIUM')}>Wybierz</button>
               </div>

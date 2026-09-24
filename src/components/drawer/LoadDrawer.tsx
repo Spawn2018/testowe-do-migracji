@@ -21,6 +21,12 @@ import {
   wallLocalToIso,
 } from '../../lib/time';
 import { formatMoney } from '../../lib/money/engine';
+import {
+  etaConfidenceLabel,
+  eventTypeLabel,
+  ferryStatusLabel,
+  readyGateReasonLabel,
+} from '../../lib/enumLabels';
 
 type Tab = 'overview' | 'timeline' | 'docs' | 'pricing' | 'chat';
 
@@ -196,7 +202,7 @@ export function LoadDrawer() {
                           : 'p-amber'
                     }`}
                   >
-                    {load.etaConfidence}
+                    {etaConfidenceLabel(load.etaConfidence)}
                   </span>
                   <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 4, fontWeight: 400 }}>
                     pasmo {load.etaEarliestHours.toFixed(1)}–{load.etaLatestHours.toFixed(1)} h · heurystyka
@@ -272,7 +278,7 @@ export function LoadDrawer() {
                   <li key={e.id}>
                     <span className="mk" />
                     <div className="w">
-                      {e.type}
+                      {eventTypeLabel(e.type)}
                       {e.note ? ` · ${e.note}` : ''}
                     </div>
                     <div className="ts">
@@ -473,7 +479,7 @@ export function LoadDrawer() {
                     <dt>Rezerwacja</dt>
                     <dd>{load.ferry.bookingRef ?? '—'}</dd>
                     <dt>Status promu</dt>
-                    <dd>{load.ferry.status}</dd>
+                    <dd>{ferryStatusLabel(load.ferry.status)}</dd>
                     <dt>Wyjazd / Przyjazd</dt>
                     <dd>
                       {load.ferry.departureAt ?? '—'} / {load.ferry.arrivalAt ?? '—'}
@@ -640,8 +646,8 @@ export function LoadDrawer() {
                       <dt>Status promu</dt>
                       <dd>
                         <select name="status" className="input" defaultValue={load.ferry.status}>
-                          {['NONE', 'BOOKED', 'CHECKED_IN', 'ONBOARD', 'LANDED', 'DELAYED', 'CANCELLED'].map((s) => (
-                            <option key={s}>{s}</option>
+                          {(['NONE', 'BOOKED', 'CHECKED_IN', 'ONBOARD', 'LANDED', 'DELAYED', 'CANCELLED'] as const).map((s) => (
+                            <option key={s} value={s}>{ferryStatusLabel(s)}</option>
                           ))}
                         </select>
                       </dd>
@@ -693,19 +699,19 @@ export function LoadDrawer() {
                   type="button"
                   className="btn"
                   disabled={readyUiBlocked}
-                  title={permitBlock ? readyGate.reason : undefined}
+                  title={permitBlock ? readyGateReasonLabel(readyGate.reason) : undefined}
                   onClick={() => {
                     if (readyUiBlocked) return;
-                    setLoadStatus(load.id, 'READY', role, 'Ręczne READY');
+                    setLoadStatus(load.id, 'READY', role, 'Ręcznie oznaczono jako gotowy');
                   }}
                 >
-                  Ustaw READY
+                  Oznacz jako gotowy
                 </button>
                 <button
                   type="button"
                   className="btn ghost"
                   disabled={readyUiBlocked}
-                  title={permitBlock ? readyGate.reason : undefined}
+                  title={permitBlock ? readyGateReasonLabel(readyGate.reason) : undefined}
                   onClick={() => {
                     if (readyUiBlocked) return;
                     setLoadStatus(load.id, 'IN_TRANSIT_PL', role);

@@ -13,6 +13,7 @@ import { subscribeAis, type AisPosition } from '../../lib/ais';
 import type { Load } from '../../types';
 import { truckDivIcon, ferryDivIcon } from '../../lib/mapMarkers';
 import { nextLiveSailing } from '../../lib/ferry';
+import { severityLabel } from '../../lib/enumLabels';
 
 /** Requested Carto public URLs — CDN now watermarks without key (2026-09). */
 export const CARTO_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
@@ -335,7 +336,7 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
           fillOpacity: 1,
         });
         const delay = s.delayMin != null ? ` · +${s.delayMin} min` : '';
-        m.bindTooltip(`${s.title} (${s.severity})${delay}`, { direction: 'top' });
+        m.bindTooltip(`${s.title} (${severityLabel(s.severity)})${delay}`, { direction: 'top' });
         m.on('click', (e) => {
           L.DomEvent.stopPropagation(e);
           const was = mapFocusKeyRef.current === sitKey;

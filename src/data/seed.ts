@@ -130,9 +130,9 @@ export const WORKFLOWS: WorkflowRule[] = [
   },
   {
     id: 'wf-8',
-    name: 'Zdążenie na rejs · PRE_PORT',
+    name: 'Zdążenie na rejs · przed portem',
     description:
-      'Wjazd w Bufor 20 km · przed portem Gdańsk + ETA > boarding_close → ryzyko FERRY HIGH, toast Plan B, zadanie potwierdź rejs',
+      'Wjazd w Bufor 20 km · przed portem Gdańsk + ETA po zamknięciu boarding → ryzyko promowe wysokie, toast Plan B, zadanie potwierdź rejs',
     trigger: 'GEOFENCE_ENTER',
     condition: '{"and":[{"==":[{"var":"geofence.type"},"PRE_PORT"]},{"==":[{"var":"at_risk_ferry_cutoff"},true]}]}',
     actions: ['open_risk_ferry', 'toast_plan_b', 'task_confirm_sailing'],
@@ -143,7 +143,7 @@ export const WORKFLOWS: WorkflowRule[] = [
     id: 'wf-9',
     name: 'Sytuacja Trafikverket E4',
     description:
-      'Situation HIGH/CRITICAL na E4 przy load w SE_ROAD → ROAD_SE lub FORCE_MAJEURE, pin na mapie, e-mail HHL+SCX, opóźnienie ładunku',
+      'Sytuacja wysoka/krytyczna na E4 przy transporcie na drodze SE → ryzyko drogi SE lub siła wyższa, pin na mapie, e-mail HHL+SCX, opóźnienie ładunku',
     trigger: 'TRAFIKVERKET_SITUATION',
     condition: '{"and":[{"in":[{"var":"situation.severity"},["HIGH","CRITICAL"]]},{"==":[{"var":"stage"},"SE_ROAD"]}]}',
     actions: ['open_risk_road_se_or_fm', 'map_pin', 'mark_load_delayed', 'notify_hhl', 'notify_scx'],
@@ -948,7 +948,7 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
       detail: 'Armator anulował odejście; 1 transport bez potwierdzonego slotu na Nynäshamn.',
       loadCode: 'SG-32',
       owner: 'HHL',
-      meta: 'Odpowiada: H&H Logistics · status armatora: CANCELLED',
+      meta: 'Odpowiada: H&H Logistics · status armatora: anulowany',
       nextAction: 'Przenieś na Wawel / potwierdź Plan B',
       ageHours: 1.2,
       ferryPlanB: ['Wawel 25.09 20:00', 'Gdynia–Karlskrona', 'Hold w Gdańsku +24 h'],
@@ -988,7 +988,7 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
       detail: 'Dokument TRIP nie obejmuje zestawu 21,8 × 3,6 × 4,55 m; READY nie może wyjechać.',
       loadCode: 'SG-34',
       owner: 'SCX',
-      meta: 'Odpowiada: Scandinavian Express · permitFits=false',
+      meta: 'Odpowiada: Scandinavian Express · zezwolenie nie pasuje do wymiarów',
       nextAction: 'Wgraj nowe zezwolenie albo zmień zestaw',
       ageHours: 5.5,
     }),

@@ -6,6 +6,7 @@ import { downloadDocumentsZip } from '../lib/zipDocs';
 import { readFileAsDataUrl } from '../lib/docsIo';
 import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
+import { docCategoryLabel } from '../lib/enumLabels';
 
 const CATS: { key: DocCategory | 'DRAWING'; label: string; who: string; when: string }[] = [
   { key: 'PERMIT_PL', label: 'Zezwolenie PL', who: 'Scandinavian Express', when: 'przed załadunkiem' },
@@ -139,7 +140,7 @@ export function DocsView() {
           </button>
           {filterCat !== 'ALL' ? (
             <button type="button" className="chipbtn" aria-pressed="true" onClick={() => setFilterCat('ALL')}>
-              {filterCat}
+              {docCategoryLabel(filterCat)}
             </button>
           ) : null}
         </div>
@@ -156,7 +157,7 @@ export function DocsView() {
                 <DocFileRow
                   key={d.id}
                   doc={d}
-                  label={`${code} · ${d.category}`}
+                  label={`${code} · ${docCategoryLabel(d.category)}`}
                   onPreview={setPreviewDoc}
                 />
               );
@@ -169,7 +170,7 @@ export function DocsView() {
             Vault kierowcy (wgrane z aplikacji):
             <div style={{ marginTop: 6 }}>
               {driverVault.map((d) => (
-                <DocFileRow key={d.id} doc={d} label={`${d.category}`} onPreview={setPreviewDoc} />
+                <DocFileRow key={d.id} doc={d} label={docCategoryLabel(d.category)} onPreview={setPreviewDoc} />
               ))}
             </div>
           </div>

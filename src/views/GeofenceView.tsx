@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { geofenceTypeLabel } from '../lib/enumLabels';
 import { useTowerStore } from '../store/useTowerStore';
 import { canEditGeofence } from '../lib/permissions';
 import type { Geofence, GeofenceType } from '../types';
@@ -90,7 +91,7 @@ export function GeofenceView() {
                   >
                     <td style={{ fontWeight: 600 }}>{g.name}</td>
                     <td>
-                      <span className={`pill ${TYPE_PILL[g.type] ?? 'p-plan'}`}>{g.type}</span>
+                      <span className={`pill ${TYPE_PILL[g.type] ?? 'p-plan'}`}>{geofenceTypeLabel(g.type)}</span>
                     </td>
                     <td className="num">{(g.radiusM / 1000).toFixed(g.radiusM >= 1000 ? 0 : 1)} km</td>
                     <td className="num">{dwell}</td>
@@ -148,7 +149,7 @@ export function GeofenceView() {
                       'REST',
                     ] as GeofenceType[]
                   ).map((tp) => (
-                    <option key={tp}>{tp}</option>
+                    <option key={tp} value={tp}>{geofenceTypeLabel(tp)}</option>
                   ))}
                 </select>
               </dd>

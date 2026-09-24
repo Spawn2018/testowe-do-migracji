@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 
+
 const TRIGGERS = [
   ['GEOFENCE_ENTER', 'Wjazd w strefę'],
   ['POSITION_STALE', 'Brak pozycji'],
@@ -10,6 +11,8 @@ const TRIGGERS = [
   ['UNLOADED', 'Rozładunek'],
   ['CRON_DAILY_06', 'Codziennie · 06:00'],
 ] as const;
+
+const triggerLabel = (code: string) => TRIGGERS.find(([v]) => v === code)?.[1] ?? code;
 
 const emptyDraft = { name: '', trigger: 'GEOFENCE_ENTER', condition: '', actions: '', enabled: true };
 
@@ -30,7 +33,7 @@ export function WorkflowsView() {
     if (!name) return;
     createWorkflow({
       name,
-      description: `${draft.trigger} → ${draft.actions.split(/[\n,]/).map((a) => a.trim()).filter(Boolean).join(', ') || 'bez akcji'}`,
+      description: `${triggerLabel(draft.trigger)} → ${draft.actions.split(/[\n,]/).map((a) => a.trim()).filter(Boolean).join(', ') || 'bez akcji'}`,
       trigger: draft.trigger,
       condition: draft.condition.trim() || 'true',
       actions: draft.actions.split(/[\n,]/).map((a) => a.trim()).filter(Boolean),
@@ -51,7 +54,7 @@ export function WorkflowsView() {
         {workflows.map((w) => (
           <div key={w.id} className="wf">
             <button type="button" className="sw" aria-pressed={w.enabled} aria-label={`${w.enabled ? 'Wyłącz' : 'Włącz'} regułę ${w.name}`} onClick={() => toggleWorkflow(w.id)} />
-            <div className="wf-copy"><b>{w.name}</b><span className="rule">{w.description || `${w.trigger} → ${w.actions.join(', ')}`}</span><span className="wf-meta">{w.trigger} · warunek: {w.condition}</span></div>
+            <div className="wf-copy"><b>{w.name}</b><span className="rule">{w.description || `${triggerLabel(w.trigger)} → ${w.actions.join(', ')}`}</span><span className="wf-meta">{triggerLabel(w.trigger)} · warunek: {w.condition}</span></div>
             <span className="wf-count">{w.runCount}× w tym miesiącu</span>
             <button type="button" className="chipbtn wf-run" onClick={() => runWorkflowNow(w.id)}>Uruchom</button>
           </div>
@@ -64,7 +67,7 @@ export function WorkflowsView() {
           <header className="panel-hd"><div><h2 id="wf-create-title">Nowa reguła</h2><span className="sub">Automatyzacja · formularz</span></div><div className="spacer" /><button type="button" className="iconbtn" aria-label="Zamknij" onClick={() => setCreating(false)}>×</button></header>
           <form className="panel-bd" onSubmit={save}>
             <label className="form-field"><span>Nazwa reguły</span><input autoFocus required className="input" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="np. Brak potwierdzenia awizacji" /></label>
-            <label className="form-field"><span>Wyzwalacz</span><select className="input" value={draft.trigger} onChange={(e) => setDraft({ ...draft, trigger: e.target.value })}>{TRIGGERS.map(([value, label]) => <option key={value} value={value}>{label} · {value}</option>)}</select></label>
+            <label className="form-field"><span>Wyzwalacz</span><select className="input" value={draft.trigger} onChange={(e) => setDraft({ ...draft, trigger: e.target.value })}>{TRIGGERS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             <label className="form-field"><span>Warunek <small>tekst / JSONLogic</small></span><textarea className="input" value={draft.condition} onChange={(e) => setDraft({ ...draft, condition: e.target.value })} placeholder={'np. {">=":[{"var":"hours_to_load"},48]'} /></label>
             <label className="form-field"><span>Akcje <small>po przecinku lub każda w nowej linii</small></span><textarea className="input" value={draft.actions} onChange={(e) => setDraft({ ...draft, actions: e.target.value })} placeholder="notify_hhl, create_task" /></label>
             <label className="switchline creator-enabled"><input type="checkbox" checked={draft.enabled} onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })} /><span>Reguła aktywna po zapisaniu</span></label>

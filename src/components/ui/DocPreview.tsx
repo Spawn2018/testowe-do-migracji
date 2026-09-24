@@ -6,6 +6,7 @@ import {
   isImageMime,
   objectUrlFromDoc,
 } from '../../lib/docsIo';
+import { docCategoryLabel } from '../../lib/enumLabels';
 
 type Props = {
   doc: Document | null;
@@ -58,7 +59,7 @@ export function DocPreview({ doc, onClose }: Props) {
         <header className="panel-hd">
           <h2 style={{ fontSize: 18 }}>{doc.name}</h2>
           <span className="sub">
-            {doc.category}
+            {docCategoryLabel(doc.category)}
             {hasRealBytes ? '' : ' · metadane'}
           </span>
           <div className="spacer" />

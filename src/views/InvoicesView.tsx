@@ -17,6 +17,7 @@ import {
 import { formatOpsDateTime, formatTableDay, refYearInOps } from '../lib/time';
 import { getNow } from '../lib/frozenNow';
 import { formatMoney } from '../lib/money/engine';
+import { docCategoryLabel, payoutStatusLabel } from '../lib/enumLabels';
 
 export function InvoicesView() {
   const role = useTowerStore((s) => s.role);
@@ -357,7 +358,7 @@ export function InvoicesView() {
                     {i.weekLabel} · <span className="pill p-amber">{t(locale, 'factoring_badge')}</span>
                   </span>
                   <span>
-                    net {money(i.factoring!.netPayout)} · {i.payoutStatus ?? 'NONE'}
+                    net {money(i.factoring!.netPayout)} · {payoutStatusLabel(i.payoutStatus)}
                     {i.factoring?.payoutAt ? ` · ${formatOpsDateTime(i.factoring.payoutAt)}` : ''}
                   </span>
                 </div>
@@ -413,7 +414,7 @@ export function InvoicesView() {
                 <DocFileRow
                   key={d.id}
                   doc={d}
-                  label={`${l.code} · ${d.category}`}
+                  label={`${l.code} · ${docCategoryLabel(d.category)}`}
                   onPreview={setPreviewDoc}
                   showUpload={role === 'SCX' || role === 'HHL'}
                   onUploadClick={() => {

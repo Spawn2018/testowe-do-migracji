@@ -97,17 +97,17 @@ function bandFor(kind: EtaSegment['kind'], hours: number, status: LoadStatus): {
   }
 
   if (status === 'SILENT') {
-    reasons.push('silent >90 min');
+    reasons.push('brak sygnału >90 min');
     confidence = 'LOW';
     hi *= 1.35;
   }
   if (status === 'DELAYED') {
-    reasons.push('DELAYED flag');
+    reasons.push('transport oznaczony jako opóźniony');
     confidence = 'LOW';
     hi *= 1.25;
   }
   if (kind === 'SE_ROAD' && ['IN_TRANSIT_SE', 'APPROACHING_SITE'].includes(status)) {
-    reasons.push('GPS en-route');
+    reasons.push('GPS w trasie');
   }
 
   return {

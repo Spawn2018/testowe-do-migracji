@@ -499,8 +499,8 @@ export function evaluateLoadCover(load: Load, docs: Document[]): { covered: bool
 
 /** READY blocked when cover gap / mismatch / permitFits false / docMissing. */
 export function isReadyBlocked(load: Load, docs: Document[]): { blocked: boolean; reason: string } {
-  if (load.docMissing) return { blocked: true, reason: 'docMissing flag' };
-  if (load.permitFits === false) return { blocked: true, reason: 'permitFits=false' };
+  if (load.docMissing) return { blocked: true, reason: 'Brak wymaganych dokumentów' };
+  if (load.permitFits === false) return { blocked: true, reason: 'Zezwolenie nie pasuje do wymiarów zestawu' };
   const mismatch = docs.find(
     (d) =>
       d.loadId === load.id &&
@@ -509,7 +509,7 @@ export function isReadyBlocked(load: Load, docs: Document[]): { blocked: boolean
   if (mismatch) {
     return {
       blocked: true,
-      reason: mismatch.status === 'MISMATCH' ? 'MISMATCH document' : 'permitFits=false',
+      reason: mismatch.status === 'MISMATCH' ? 'Dokument zezwolenia niezgodny z zestawem' : 'Zezwolenie nie pasuje do wymiarów zestawu',
     };
   }
   const cov = evaluateLoadCover(load, docs);

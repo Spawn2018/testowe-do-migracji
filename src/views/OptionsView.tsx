@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { defaultThemeForRole } from '../lib/permissions';
 import type { BafParams, FactoringOffer, RateRule } from '../types';
+import { geofenceTypeLabel } from '../lib/enumLabels';
 
 const bafFields: Array<{ key: keyof BafParams; label: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
   { key: 'indexSource', label: 'Źródło indeksu', type: 'text' },
@@ -139,7 +140,7 @@ export function OptionsView() {
 
         <section className="panel option-panel">
           <header className="panel-hd"><h2>Strefy geograficzne</h2><span className="sub">{geofences.filter((g) => g.active).length}/{geofences.length} aktywnych</span></header>
-          <div className="panel-bd flush"><div className="settings-list">{geofences.map((g) => <div className="settings-row" key={g.id}><div><b>{g.name}</b><span>{g.type} · {g.radiusM >= 1000 ? `${Math.round(g.radiusM / 1000)} km` : `${g.radiusM} m`}</span></div><button type="button" className={`mini-toggle${g.active ? ' is-on' : ''}`} aria-pressed={g.active} onClick={() => { saveGeofence({ ...g, active: !g.active }); saveMark('strefa'); }}><i />{g.active ? 'WŁ.' : 'WYŁ.'}</button></div>)}</div></div>
+          <div className="panel-bd flush"><div className="settings-list">{geofences.map((g) => <div className="settings-row" key={g.id}><div><b>{g.name}</b><span>{geofenceTypeLabel(g.type)} · {g.radiusM >= 1000 ? `${Math.round(g.radiusM / 1000)} km` : `${g.radiusM} m`}</span></div><button type="button" className={`mini-toggle${g.active ? ' is-on' : ''}`} aria-pressed={g.active} onClick={() => { saveGeofence({ ...g, active: !g.active }); saveMark('strefa'); }}><i />{g.active ? 'WŁ.' : 'WYŁ.'}</button></div>)}</div></div>
         </section>
 
         <section className="panel option-panel">

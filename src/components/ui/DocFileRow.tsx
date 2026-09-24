@@ -1,6 +1,7 @@
 /** Punkt 5 — wiersz pliku w stylu .mrow + .iconbtn ↓ (Claude v2: zwykły tekst ✓ nazwa). */
 import type { Document } from '../../types';
 import { downloadDocumentFile } from '../../lib/docsIo';
+import { docCategoryLabel } from '../../lib/enumLabels';
 
 type Props = {
   doc: Document;
@@ -16,7 +17,7 @@ export function DocFileRow({ doc, label, onPreview, onUploadClick, showUpload }:
 
   return (
     <div className="mrow">
-      <span className="lbl">{label ?? doc.category}</span>
+      <span className="lbl">{label ?? docCategoryLabel(doc.category)}</span>
       <span className="docrow-actions">
         {uploaded ? (
           <>
