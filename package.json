@@ -26,7 +26,6 @@
     "date-fns": "^4.4.0",
     "exceljs": "^4.4.0",
     "leaflet": "^1.9.4",
-    "maplibre-gl": "^6.11.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.4",

@@ -55,28 +55,4 @@ export function positionAlongCorridor(progress: number): {
 
 export const CORRIDOR_GEOJSON = corridorFc as unknown as GeoJSON.FeatureCollection;
 
-/**
- * Style cascade (SHIP):
- * 1) Local OSM.de raster (public/map-styles) — key-free, visible geography
- * 2) MapLibre demotiles — vector fallback
- * 3) OpenFreeMap — optional when reachable
- * MapTiler overrides when VITE_MAPTILER_KEY set.
- */
-export const MAP_STYLE = {
-  dark: '/map-styles/dark.json',
-  light: '/map-styles/light.json',
-  demotiles: 'https://demotiles.maplibre.org/style.json',
-  openFreeDark: 'https://tiles.openfreemap.org/styles/dark',
-  openFreeLight: 'https://tiles.openfreemap.org/styles/liberty',
-} as const;
-
-export function mapStyleForTheme(theme: 'dark' | 'light', maptilerKey?: string): string {
-  if (maptilerKey) {
-    return theme === 'dark'
-      ? `https://api.maptiler.com/maps/dataviz-dark/style.json?key=${maptilerKey}`
-      : `https://api.maptiler.com/maps/streets-v2/style.json?key=${maptilerKey}`;
-  }
-  return theme === 'dark' ? MAP_STYLE.dark : MAP_STYLE.light;
-}
-
-export const MAP_STYLE_FALLBACK = MAP_STYLE.demotiles;
+/** Live map engine = Leaflet (`CorridorMap.tsx`). MapLibre styles/deps removed (D21). */

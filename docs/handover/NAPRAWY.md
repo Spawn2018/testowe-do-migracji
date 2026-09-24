@@ -62,7 +62,8 @@ Z C3. Najpoważniejsze znalezisko etapu — wersja szwedzka jest w dużej częś
 Z C1. Rozbieżność (m.in. rząd 1 840 PLN / delty +1240/+600) zaszyta → dopasowanie trójstronne jest **fasadą** — moduł pokazuje wynik, którego nie policzył. Ma liczyć naprawdę: transporty zaznaczone wobec zrealizowanych wobec kwoty z cennika, z rozbiciem różnic linia po linii.
 
 **D21. Usuń martwy MapLibre.**  
-Z C1 i przekazania QA. Leży w drzewie obok żywego Leaflet, powiększa paczkę i myli przy utrzymaniu. Powiązane z D15.
+Z C1 i przekazania QA. Leży w drzewie obok żywego Leaflet, powiększa paczkę i myli przy utrzymaniu. Powiązane z D15.  
+**DONE 2026-09-24** — żywy silnik = Leaflet (`CorridorMap.tsx`); usunięto dep `maplibre-gl`, duplikat `CorridorMap.leaflet.tsx`, `public/map-styles/`, kaskadę `MAP_STYLE`/`demotiles` w `corridor.ts`, selektory `.maplibregl-*` w `index.css`.
 
 **D22. Wersjonowanie i migracja magazynu trwałego.**  
 Z pliku 07. Klucz `watch-tower-ui-v6-ready-gate` bez wersjonowania schematu. Na produkcji użytkownik po aktualizacji czyta stan w starym kształcie i nie wie o tym. Numer wersji w magazynie, sprawdzenie przy starcie, migracja albo czyste wyczyszczenie z komunikatem.
@@ -89,8 +90,18 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 - **D23** — unit testy importu (PR #1 na `main`)
 - **D24** — pełny przebieg 14 prób — **DONE** → [`D24_14_CLICK.md`](../qa-start/D24_14_CLICK.md) (SHIP 14/14)
 
-### Fala 1–2
-- Bez zmian względem D1–D22 powyżej; kolejność jak niżej.
+### Fala 1 — sprzątanie mapy (START 2026-09-24)
+- **D21** — DONE (ten commit) — patrz tabela postępu poniżej.
+- **Następne (NIE START):** D9 / D16 / D1 / D2.
+
+### Postęp Fala 1
+
+| Item | Commit | Pliki | test:unit | playwright | visual | Bundle JS (bytes) | Bundle CSS (bytes) |
+|---|---|---|---|---|---|---|---|
+| D21 | `fix(D21): usuń martwy MapLibre` (sha → po push / `git log -1 --grep D21`) | `package.json`, `package-lock.json`, `src/lib/corridor.ts`, `src/index.css`, −`src/components/map/CorridorMap.leaflet.tsx`, −`public/map-styles/` | **8/8** | **4/4** | smoke **4/4** (720 deferred) | 2073585 → **2073339** (−246); sha256 `d91ce4c3…` → `7cd831c2…` (`index-CAL_24W1.js`) | 65554 → **65461** (−93); sha256 `320c485d…` → `7bcd6d50…` (`index-Db6djQzs.css`) |
+
+### Fala 1–2 (pozostałe)
+- Kolejność pozostała jak niżej; D9/D16/D1/D2 **nie rozpoczęte**.
 
 ### Fala 3 — import UX + skala + visual CI
 - **D26** — poniżej
@@ -115,4 +126,4 @@ Wybrana droga (Sebastian 2026-09-24): **2 — usunięcia za wyraźną zgodą**. 
 
 ---
 
-*Koniec zakresu. D24 zamknięte raportem. Realizacja D26 / Fala 1 = osobny START.*
+*Koniec zakresu. D24 zamknięte. D21 (Fala 1) DONE. Nie startować D9/D16/D1/D2 / D26 bez osobnego START.*

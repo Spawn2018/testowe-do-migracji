@@ -346,7 +346,7 @@ kbd{font-family:"Barlow Condensed";font-weight:600;font-size:11.5px;padding:0 5p
 .ops .lb{color:var(--ink-3);font-size:11px;line-height:1.2}
 @media (max-width:1240px){.ops .lb,.ops .sep{display:none}}
 
-/* ===== SPA extras — MapLibre/Leaflet/collapse/forms/toast; not a second skin ===== */
+/* ===== SPA extras — Leaflet/collapse/forms/toast; not a second skin ===== */
 #root{height:100%}
 .app.nav-collapsed .body{grid-template-columns:56px 1fr}
 .app.nav-collapsed nav button span.lbl{display:none}
@@ -391,7 +391,7 @@ textarea.input{min-height:64px;width:100%}
 .toast.err{border-left-color:var(--red)}
 
 /* map engines fill Claude .mapbox */
-.mapbox .maplibregl-map,.mapbox .leaflet-container{position:absolute;inset:0;width:100%;height:100%}
+.mapbox .leaflet-container{position:absolute;inset:0;width:100%;height:100%}
 .mapbox > svg:not(.leaflet-zoom-animated){display:block;width:100%;height:100%}
 /* Leaflet attribution flag must stay 12×8 — never inherit mapbox svg stretch */
 .leaflet-attribution-flag{width:12px!important;height:8px!important;display:inline-block;vertical-align:middle}
@@ -399,12 +399,12 @@ textarea.input{min-height:64px;width:100%}
 .leaflet-control-attribution a{color:var(--ink-2)!important}
 .maplayers{z-index:600}
 .mapkey{z-index:600}
-.maplibregl-popup-content,.leaflet-popup-content-wrapper{
+.leaflet-popup-content-wrapper{
   background:var(--surface)!important;color:var(--ink)!important;
   border:1px solid var(--rule);border-radius:2px!important;box-shadow:none!important;
   font-family:"Barlow",Arial,sans-serif;font-size:12px;
 }
-.maplibregl-ctrl-group,.leaflet-bar{
+.leaflet-bar{
   background:var(--surface)!important;border:1px solid var(--rule)!important;border-radius:2px!important;box-shadow:none!important;
 }
 .leaflet-container{background:var(--surface-3);font:12px "Barlow",Arial,sans-serif}
