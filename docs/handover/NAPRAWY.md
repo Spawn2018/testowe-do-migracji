@@ -102,7 +102,8 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 - **D1 inventory (D1a)** — DONE — [`D1_TAILWIND_INVENTORY.md`](./D1_TAILWIND_INVENTORY.md).
 - **D1 removal** — DONE — Tailwind out; role CSS + preflight compensation. **≠** D1-legacy-route-alts.
 - **D2** (Fala 1) — DONE — fonty tylko Barlow (+ Claude fallbacks). **≠** D2-legacy-delay-pill.
-- **Następne (NIE START):** Fala 1 gate (visual 720) — koordynator.
+- **Fala 1 GATE** — DONE — visual **720/720** vs `shots-baseline/` (bez regen). Preflight: `* { margin:0;padding:0;border:0 solid }` (brakowało po D1).
+- **Następne (NIE START):** Fala 2 / D26.
 
 #### Fala-1-D9 — szczegóły
 - Soft `box-shadow` → `none`: `.docpreview`, `.wf-creator`, `.sched-col-menu` (toasty już `none`).
@@ -135,6 +136,14 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 - `index.html`: Google Fonts Barlow / Barlow Condensed — OK.
 - Testy: `test:unit` **13/13**; playwright smoke **4/4** (bez regen baseline). Visual 720 = następny gate.
 
+#### Fala-1-GATE — closeout
+- Metoda: `OUT=shots-fala1-gate node scripts/baseline.mjs` (720 capture) → pixelmatch vs `shots-baseline/` (`threshold=0.2`, `maxDiffPixelRatio=0.001`, `includeAA`). **Nie** nadpisano `shots-baseline/` (aggregate sha przed/po zgodny).
+- Pierwszy przebieg: **346/720** (fail 374; 100% przy 390+768) — brakowało TW `*{margin:0;padding:0}` w kompensacji preflight po D1.
+- Fix gate: dopisano uniwersalny reset margin/padding/border jak TW base; re-capture → **720/720**.
+- Bundle cumulative (pre-D21 → gate): JS **2073585 → 2073396** (−189); CSS **65554 → 53315** (−12239). Assets: `index-CxYOQKJJ.js`, `index-DFAr9NoX.css`.
+- Tag: `baseline-fala-1-2026-09-24` = marker zamknięcia fali (ten sam baseline, bez regen PNG).
+- Testy gate: `test:unit` **13/13**; playwright smoke **4/4**; visual **720/720**.
+
 ### Postęp Fala 1
 
 | Item | Commit | Pliki | test:unit | playwright | visual | Bundle JS (bytes) | Bundle CSS (bytes) |
@@ -145,9 +154,10 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 | **D1a** inventory (≠ D1-legacy-route-alts; removal = next) | `de851b80cee33f31c129e1bbfddb337808c41e60` | `docs/handover/D1_TAILWIND_INVENTORY.md` (+ NAPRAWY) | **13/13** | **4/4** | smoke **4/4** (720 deferred) | n/a (docs-only) | n/a |
 | **D1** removal (≠ D1-legacy-route-alts; ≠ D1a) | `0dcea24c63e7526992b1eac9747efcef926affd3` | `DriverPwa.tsx`, `NotificationBell.tsx`, `src/index.css`, `vite.config.ts`, `package.json`, `package-lock.json`, NAPRAWY | **13/13** | **4/4** | smoke **4/4** (720 deferred; **no** baseline regen) | 2073571 → **2073376** (−195); `index-C0NcMovv.js` sha256 `fe6374e2eb14…` | 65267 → **53190** (−12077); `index-BJwYPbrW.css` sha256 `0febf525b07a…` |
 | **D2** (Fala 1 — fonty Barlow; ≠ D2-legacy-delay-pill) | `e586ea07c925e1ea463d795825a009cb08845f3f` | `main.tsx`, `CorridorMap.tsx`, `src/index.css`, `DeliveryProgress.tsx`, NAPRAWY | **13/13** | **4/4** | smoke **4/4** (720 = next gate) | n/a (font cascade) | n/a |
+| **Fala 1 GATE** | _(sha)_ | `src/index.css` (preflight `* margin/padding`), NAPRAWY, `.gitignore` | **13/13** | **4/4** | **720/720** (pixelmatch; no baseline regen) | 2073585 → **2073396** (−189) | 65554 → **53315** (−12239) |
 
 ### Fala 1–2 (pozostałe)
-- Kolejność pozostała jak niżej; **Fala 1 gate (720)** **nie rozpoczęte** (D2 DONE).
+- **Fala 1 CLOSED.** Fala 2 / D26 nie rozpoczęte.
 
 ### Fala 3 — import UX + skala + visual CI
 - **D26** — poniżej
@@ -172,4 +182,4 @@ Wybrana droga (Sebastian 2026-09-24): **2 — usunięcia za wyraźną zgodą**. 
 
 ---
 
-*Koniec zakresu. D24 zamknięte. Fala 1: D21+D9+D16+D1a+D1-removal+D2 DONE. Nie startować gate 720 / D26 / legacy bez osobnego START.*
+*Koniec zakresu. D24 zamknięte. **Fala 1 CLOSED** (D21+D9+D16+D1a+D1+D2+GATE 720/720). Nie startować Fala 2 / D26 / legacy bez osobnego START.*
