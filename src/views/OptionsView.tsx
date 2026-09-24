@@ -26,19 +26,21 @@ function RateEditor({
   rules,
   onChange,
   onSave,
+  currency,
 }: {
   side: 'COST' | 'REVENUE';
   rules: RateRule[];
   onChange: (id: string, value: number) => void;
   onSave: () => void;
+  currency: 'EUR' | 'PLN';
 }) {
   return (
     <div className="options-page page-sections" data-page="options">
-      <div className="rate-editor-head"><b>{side === 'COST' ? 'Koszt SCX' : 'Przychód HHL'}</b><span>PLN · baza bez SEFS</span></div>
+      <div className="rate-editor-head"><b>{side === 'COST' ? 'Koszt SCX' : 'Przychód HHL'}</b><span>{currency} · baza bez SEFS</span></div>
       {rules.map((rule, index) => (
         <div className="rate-line" key={rule.id}>
           <div className="rate-copy"><b>Linia {index + 1}</b><span>{formatRate(rule)}</span></div>
-          <label className="rate-value"><input aria-label={`${side === 'COST' ? 'Koszt' : 'Przychód'} linia ${index + 1}`} className="input rate-input" type="number" min="0" step="1" value={rule.baseRate} onChange={(e) => onChange(rule.id, Number(e.target.value) || 0)} onBlur={onSave} /><span>PLN</span></label>
+          <label className="rate-value"><input aria-label={`${side === 'COST' ? 'Koszt' : 'Przychód'} linia ${index + 1}`} className="input rate-input" type="number" min="0" step="1" value={rule.baseRate} onChange={(e) => onChange(rule.id, Number(e.target.value) || 0)} onBlur={onSave} /><span>{currency}</span></label>
         </div>
       ))}
     </div>
@@ -49,7 +51,9 @@ export function OptionsView() {
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
   const theme = useTowerStore((s) => s.theme);
+  const displayCurrency = useTowerStore((s) => s.displayCurrency);
   const setLocale = useTowerStore((s) => s.setLocale);
+  const setDisplayCurrency = useTowerStore((s) => s.setDisplayCurrency);
   const setTheme = useTowerStore((s) => s.setTheme);
   const factoringOffer = useTowerStore((s) => s.factoringOffer);
   const updateFactoringOffer = useTowerStore((s) => s.updateFactoringOffer);
@@ -90,11 +94,11 @@ export function OptionsView() {
 
       <div className="options-grid">
         <section className="panel option-panel option-wide pricing-panel">
-          <header className="panel-hd"><h2>SCX · cennik bazowy</h2><span className="sub">szybka edycja linii bazowych · PLN</span><span className="panel-mark">CENNIK</span></header>
+          <header className="panel-hd"><h2>SCX · cennik bazowy</h2><span className="sub">{`szybka edycja linii bazowych · ${displayCurrency}`}</span><span className="panel-mark">CENNIK</span></header>
           <div className="panel-bd">
             <div className="rate-grid">
-              <RateEditor side="COST" rules={rateCost} onChange={(id, value) => updateRate('COST', id, value)} onSave={() => saveMark('cennik')} />
-              <RateEditor side="REVENUE" rules={rateRev} onChange={(id, value) => updateRate('REVENUE', id, value)} onSave={() => saveMark('cennik')} />
+              <RateEditor side="COST" rules={rateCost} currency={displayCurrency} onChange={(id, value) => updateRate('COST', id, value)} onSave={() => saveMark('cennik')} />
+              <RateEditor side="REVENUE" rules={rateRev} currency={displayCurrency} onChange={(id, value) => updateRate('REVENUE', id, value)} onSave={() => saveMark('cennik')} />
             </div>
             <div className="note option-note">Kwoty bazowe przed doliczeniem SEFS. Zapis następuje od razu w profilu HHL.</div>
           </div>
@@ -115,6 +119,7 @@ export function OptionsView() {
           <header className="panel-hd"><h2>Preferencje interfejsu</h2><span className="sub">domyślne dla HHL</span></header>
           <div className="panel-bd"><dl className="kv options-kv">
             <dt>Język aplikacji</dt><dd><select className="input" value={locale} onChange={(e) => { setLocale(e.target.value as 'pl' | 'en' | 'sv'); saveMark('język'); }}><option value="pl">Polski</option><option value="en">English</option><option value="sv">Svenska</option></select></dd>
+            <dt>Waluta wyświetlania</dt><dd><select className="input" value={displayCurrency} onChange={(e) => { setDisplayCurrency(e.target.value as 'EUR' | 'PLN'); saveMark('waluta'); }}><option value="PLN">PLN</option><option value="EUR">EUR</option></select></dd>
             <dt>Motyw</dt><dd><select className="input" value={theme} onChange={(e) => { setTheme(e.target.value as 'dark' | 'light'); saveMark('motyw'); }}><option value="dark">Ciemny · HHL</option><option value="light">Jasny</option></select></dd>
             <dt>Domyślny motyw</dt><dd className="muted">{defaultThemeForRole('HHL') === 'dark' ? 'Ciemny (HHL)' : 'Jasny'}</dd>
           </dl><div className="note option-note">Zmiana motywu jest zapisywana lokalnie dla bieżącego profilu.</div></div>

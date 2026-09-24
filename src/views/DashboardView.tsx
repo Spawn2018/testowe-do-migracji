@@ -10,10 +10,12 @@ import { getNow } from '../lib/frozenNow';
 import { formatEtaBodenCompact } from '../lib/time';
 import { computeCorridorKpis } from '../lib/corridorKpis';
 import { cockpitFerryBanner, focusVoyage, seaForSailing } from '../lib/voyage';
+import { formatMoney } from '../lib/money/engine';
 
 export function DashboardView() {
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
+  const currency = useTowerStore((s) => s.displayCurrency);
   const loads = useTowerStore((s) => s.loads);
   const exceptions = useTowerStore((s) => s.exceptions);
   const risks = useTowerStore((s) => s.risks);
@@ -157,12 +159,14 @@ export function DashboardView() {
               />
               <KpiTile
                 label="Przychód tygodnia"
-                value={`${Math.round(
+                value={formatMoney(
                   loads
                     .filter((l) => l.stage === 'DELIVERED')
                     .slice(-6)
                     .reduce((a, l) => a + l.pricing.costTotal, 0),
-                ).toLocaleString('pl-PL')} PLN`}
+                  locale,
+                  currency,
+                )}
                 delta="tydzień 38, do zafakturowania"
                 onClick={() => navigateTo({ view: 'inv' })}
               />
@@ -207,12 +211,16 @@ export function DashboardView() {
               {canSeeMargin(role) ? (
                 <KpiTile
                   label="Marża narastająco"
-                  value={`${Math.round(
+                  value={formatMoney(
                     loads.reduce((a, l) => a + l.pricing.margin, 0),
-                  ).toLocaleString('pl-PL')} PLN`}
-                  delta={`${(marginAvg * 100).toFixed(1).replace('.', ',')}% · koszt ${Math.round(
+                    locale,
+                    currency,
+                  )}
+                  delta={`${(marginAvg * 100).toFixed(1).replace('.', ',')}% · koszt ${formatMoney(
                     loads.reduce((a, l) => a + l.pricing.costTotal, 0),
-                  ).toLocaleString('pl-PL')} PLN`}
+                    locale,
+                    currency,
+                  )}`}
                   tone={marginAvg < 0.12 ? 'warn' : 'good'}
                   onClick={() => navigateTo({ view: 'fin' })}
                 />

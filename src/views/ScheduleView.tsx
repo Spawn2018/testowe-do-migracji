@@ -21,6 +21,7 @@ import {
   type SchedColId,
   type SchedColPrefs,
 } from '../lib/scheduleColumns';
+import { formatMoney } from '../lib/money/engine';
 
 type ImportStep = null | 'upload' | 'map' | 'diff' | 'done';
 type Quick =
@@ -49,6 +50,7 @@ export function ScheduleView() {
   const documents = useTowerStore((s) => s.documents);
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
+  const currency = useTowerStore((s) => s.displayCurrency);
   const search = useTowerStore((s) => s.search);
   const setSearch = useTowerStore((s) => s.setSearch);
   const selectLoad = useTowerStore((s) => s.selectLoad);
@@ -619,19 +621,19 @@ export function ScheduleView() {
                         case 'cost':
                           return (
                             <td key={id} data-col={id} className={`num money${stick ? ' stick' : ''}`}>
-                              {l.pricing.costTotal.toLocaleString('pl-PL')}
+                              {formatMoney(l.pricing.costTotal, locale, currency)}
                             </td>
                           );
                         case 'rev':
                           return (
                             <td key={id} data-col={id} className={`num money${stick ? ' stick' : ''}`}>
-                              {l.pricing.revTotal.toLocaleString('pl-PL')}
+                              {formatMoney(l.pricing.revTotal, locale, currency)}
                             </td>
                           );
                         case 'margin':
                           return (
                             <td key={id} data-col={id} className={`num money stick ${l.pricing.marginPct < 0.18 ? 'neg' : ''}`}>
-                              {l.pricing.margin.toLocaleString('pl-PL')}{' '}
+                              {formatMoney(l.pricing.margin, locale, currency)}{' '}
                               <span style={{ fontWeight: 400, color: 'var(--ink-3)', fontSize: 11.5, marginLeft: 5 }}>
                                 {(l.pricing.marginPct * 100).toFixed(1).replace('.', ',')}%
                               </span>

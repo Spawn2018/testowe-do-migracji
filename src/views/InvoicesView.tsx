@@ -15,14 +15,13 @@ import {
   threeWayVerdictPill,
 } from '../lib/invoiceMatch';
 import { formatOpsDateTime } from '../lib/time';
-
-function fmt(n: number) {
-  return Math.round(n).toLocaleString('pl-PL');
-}
+import { formatMoney } from '../lib/money/engine';
 
 export function InvoicesView() {
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
+  const currency = useTowerStore((s) => s.displayCurrency);
+  const money = (n: number) => formatMoney(n, locale, currency);
   const loads = useTowerStore((s) => s.loads);
   const invoices = useTowerStore((s) => s.invoices);
   const factoringOffer = useTowerStore((s) => s.factoringOffer);
@@ -134,10 +133,10 @@ export function InvoicesView() {
         <div className="panel-bd flush">
           <div className="filters">
             <span>
-              Kwota z cennika <b className="mono">{fmt(expected)} PLN</b>
+              Kwota z cennika <b className="mono">{money(expected)}</b>
             </span>
             <span>
-              Kwota z faktury <b className="mono">{fmt(invoiced)} PLN</b>
+              Kwota z faktury <b className="mono">{money(invoiced)}</b>
             </span>
             <span>
               Rozbieżność{' '}
@@ -146,7 +145,7 @@ export function InvoicesView() {
                 style={{ color: match.diffTotal === 0 ? 'var(--go)' : 'var(--red)' }}
               >
                 {match.diffTotal > 0 ? '+' : ''}
-                {fmt(match.diffTotal)} PLN
+                {money(match.diffTotal)}
               </b>
             </span>
             <div className="spacer" />
@@ -179,10 +178,10 @@ export function InvoicesView() {
                     </td>
                     <td data-content>{row.itemType}</td>
                     <td>{row.deliverDate}</td>
-                    <td className="num">{fmt(row.expected)}</td>
-                    <td className="num">{row.selected ? fmt(row.billed) : '—'}</td>
+                    <td className="num">{money(row.expected)}</td>
+                    <td className="num">{row.selected ? money(row.billed) : '—'}</td>
                     <td className={`num ${row.diff ? 'money neg' : ''}`}>
-                      {row.diff ? `${row.diff > 0 ? '+' : ''}${fmt(row.diff)}` : '—'}
+                      {row.diff ? `${row.diff > 0 ? '+' : ''}${money(row.diff)}` : '—'}
                     </td>
                     <td>
                       <span className={`pill ${threeWayVerdictPill(row.verdict)}`}>
@@ -197,7 +196,7 @@ export function InvoicesView() {
           <div className="note">
             Porównanie trójstronne (liczone): zaznaczone na fakturze ↔ zrealizowane (dostarczone/rozładunek) ↔ kwota z
             cennika (<span className="code">pricing.costTotal</span>). Różnice linia po linii · próg ±
-            {match.threshold} PLN · otwarte: {match.openCount}.
+            {money(match.threshold)} · otwarte: {match.openCount}.
           </div>
         </div>
       </div>
@@ -323,17 +322,17 @@ export function InvoicesView() {
               <>
                 <div className="mrow">
                   <span className="lbl">{t(locale, 'factoring_gross')}</span>
-                  <span>{fmt(invoiced)} PLN</span>
+                  <span>{money(invoiced)}</span>
                 </div>
                 <div className="mrow">
                   <span className="lbl">{t(locale, 'factoring_fee')}</span>
                   <span>
-                    −{fmt(feePreview)} PLN ({factoringOffer.feePercent}%)
+                    −{money(feePreview)} ({factoringOffer.feePercent}%)
                   </span>
                 </div>
                 <div className="mrow total">
                   <span>{t(locale, 'factoring_net')}</span>
-                  <span>{fmt(netPreview)} PLN</span>
+                  <span>{money(netPreview)}</span>
                 </div>
               </>
             ) : null}
@@ -356,7 +355,7 @@ export function InvoicesView() {
                     {i.weekLabel} · <span className="pill p-amber">{t(locale, 'factoring_badge')}</span>
                   </span>
                   <span>
-                    net {fmt(i.factoring!.netPayout)} · {i.payoutStatus ?? 'NONE'}
+                    net {money(i.factoring!.netPayout)} · {i.payoutStatus ?? 'NONE'}
                     {i.factoring?.payoutAt ? ` · ${formatOpsDateTime(i.factoring.payoutAt)}` : ''}
                   </span>
                 </div>

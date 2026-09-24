@@ -20,6 +20,7 @@ import {
   isoToDatetimeLocalValue,
   wallLocalToIso,
 } from '../../lib/time';
+import { formatMoney } from '../../lib/money/engine';
 
 type Tab = 'overview' | 'timeline' | 'docs' | 'pricing' | 'chat';
 
@@ -35,6 +36,7 @@ export function LoadDrawer() {
   const documents = useTowerStore((s) => s.documents);
   const messages = useTowerStore((s) => s.messages);
   const locale = useTowerStore((s) => s.locale);
+  const currency = useTowerStore((s) => s.displayCurrency);
   const role = useTowerStore((s) => s.role);
   const updateResources = useTowerStore((s) => s.updateResources);
   const updateAwizacja = useTowerStore((s) => s.updateAwizacja);
@@ -361,19 +363,19 @@ export function LoadDrawer() {
                   <h4 className="sec">{t(locale, 'cost')} — Scandinavian Express</h4>
                   <div className="mrow">
                     <span className="lbl">Stawka bazowa</span>
-                    <span>{load.pricing.costBase.toLocaleString('pl-PL')} PLN</span>
+                    <span>{formatMoney(load.pricing.costBase, locale, currency)}</span>
                   </div>
                   <div className="mrow">
                     <span className="lbl">Dodatek paliwowy</span>
-                    <span>{load.pricing.costSefs.toLocaleString('pl-PL')} PLN</span>
+                    <span>{formatMoney(load.pricing.costSefs, locale, currency)}</span>
                   </div>
                   <div className="mrow">
                     <span className="lbl">Dodatki</span>
-                    <span>{load.pricing.costExtras.toLocaleString('pl-PL')} PLN</span>
+                    <span>{formatMoney(load.pricing.costExtras, locale, currency)}</span>
                   </div>
                   <div className="mrow total">
                     <span>Razem</span>
-                    <span>{load.pricing.costTotal.toLocaleString('pl-PL')} PLN</span>
+                    <span>{formatMoney(load.pricing.costTotal, locale, currency)}</span>
                   </div>
                 </>
               ) : (
@@ -386,15 +388,15 @@ export function LoadDrawer() {
                   </h4>
                   <div className="mrow">
                     <span className="lbl">Stawka bazowa</span>
-                    <span>{load.pricing.revBase.toLocaleString('pl-PL')} PLN</span>
+                    <span>{formatMoney(load.pricing.revBase, locale, currency)}</span>
                   </div>
                   <div className="mrow">
                     <span className="lbl">Dodatek paliwowy</span>
-                    <span>{load.pricing.revSefs.toLocaleString('pl-PL')} PLN</span>
+                    <span>{formatMoney(load.pricing.revSefs, locale, currency)}</span>
                   </div>
                   <div className="mrow total">
                     <span>Razem</span>
-                    <span>{load.pricing.revTotal.toLocaleString('pl-PL')} PLN</span>
+                    <span>{formatMoney(load.pricing.revTotal, locale, currency)}</span>
                   </div>
                 </>
               ) : (
@@ -406,7 +408,7 @@ export function LoadDrawer() {
                 <div className="mrow total" style={{ marginTop: 15, borderTop: '2px solid var(--ink)' }}>
                   <span>{t(locale, 'margin')}</span>
                   <span style={{ color: load.pricing.marginPct < 0.18 ? 'var(--red)' : 'var(--go)' }}>
-                    {load.pricing.margin.toLocaleString('pl-PL')} PLN · {(load.pricing.marginPct * 100).toFixed(1)}%
+                    {formatMoney(load.pricing.margin, locale, currency)} · {(load.pricing.marginPct * 100).toFixed(1)}%
                   </span>
                 </div>
               ) : null}

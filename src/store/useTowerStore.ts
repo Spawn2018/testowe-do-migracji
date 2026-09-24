@@ -38,6 +38,7 @@ import {
   createVersionedJSONStorage,
   migrateTowerPersistForZustand,
 } from '../lib/storePersist';
+import type { DisplayCurrency } from '../lib/money/engine';
 import {
   BAF_PARAMS,
   DRIVER_TOKENS,
@@ -162,6 +163,7 @@ export function buildFactoringSnapshot(
 interface TowerState {
   role: RoleId;
   locale: Locale;
+  displayCurrency: DisplayCurrency;
   theme: Theme;
   themeManual: boolean; // session: user toggled theme manually
   view: ViewKey;
@@ -214,6 +216,7 @@ interface TowerState {
   openNotification: (id: string) => void;
   /** @deprecated use setRole */
   setLocale: (locale: Locale) => void;
+  setDisplayCurrency: (currency: DisplayCurrency) => void;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
   setView: (view: ViewKey) => void;
@@ -303,6 +306,7 @@ export const useTowerStore = create<TowerState>()(
     (set, get) => ({
       role: 'HHL',
       locale: 'pl',
+      displayCurrency: 'PLN',
       theme: 'dark',
       themeManual: false,
       // v4 premium: expanded labels (186) desktop default; session remembers collapse.
@@ -366,6 +370,8 @@ export const useTowerStore = create<TowerState>()(
       },
 
       setLocale: (locale) => set({ locale }),
+
+      setDisplayCurrency: (displayCurrency) => set({ displayCurrency }),
 
       toggleTheme: () => {
         const next = get().theme === 'dark' ? 'light' : 'dark';
@@ -1405,6 +1411,7 @@ export const useTowerStore = create<TowerState>()(
       partialize: (s) => ({
         role: s.role,
         locale: s.locale,
+        displayCurrency: s.displayCurrency,
         theme: s.theme,
         themeManual: s.themeManual,
         factoringOffer: s.factoringOffer,

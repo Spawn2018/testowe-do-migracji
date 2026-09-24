@@ -3,10 +3,8 @@ import { useTowerStore } from '../store/useTowerStore';
 import { canSeeCost, canSeeMargin, canSeeRevenue } from '../lib/permissions';
 import { t } from '../i18n/messages';
 import { SEFS_WEEKLY, SEFS_SOURCES, computeSefs } from '../lib/sefs';
+import { formatMoney } from '../lib/money/engine';
 
-function fmt(n: number) {
-  return Math.round(n).toLocaleString('pl-PL');
-}
 function pct(n: number) {
   return `${(n * 100).toFixed(1).replace('.', ',')}%`;
 }
@@ -15,6 +13,8 @@ export function FinanceView() {
   const role = useTowerStore((s) => s.role);
   const loads = useTowerStore((s) => s.loads);
   const locale = useTowerStore((s) => s.locale);
+  const currency = useTowerStore((s) => s.displayCurrency);
+  const money = (n: number) => formatMoney(n, locale, currency);
 
   const showCost = canSeeCost(role);
   const showRev = canSeeRevenue(role);
@@ -71,11 +71,11 @@ export function FinanceView() {
         </dd>
         <dt>Wartość bazowa</dt>
         <dd>
-          {SEFS_SOURCES.baseSek.toFixed(2)} SEK · {SEFS_SOURCES.basePln.toFixed(2)} PLN
+          {formatMoney(SEFS_SOURCES.baseSek, locale, 'SEK')} · {formatMoney(SEFS_SOURCES.basePln, locale, 'PLN')}
         </dd>
         <dt>Notowanie</dt>
         <dd>
-          {week.priceSek.toFixed(2)} SEK · {week.pricePln.toFixed(2)} PLN · {week.weekLabel}
+          {formatMoney(week.priceSek, locale, 'SEK')} · {formatMoney(week.pricePln, locale, 'PLN')} · {week.weekLabel}
         </dd>
         <dt>Udział paliwa</dt>
         <dd>min(mult_SEK, mult_PLN) na fracht drogowy</dd>
@@ -117,19 +117,19 @@ export function FinanceView() {
                 <h4 className="sec">Należność narastająco</h4>
                 <div className="mrow">
                   <span className="lbl">Stawka bazowa</span>
-                  <span>{fmt(baseC)} PLN</span>
+                  <span>{money(baseC)}</span>
                 </div>
                 <div className="mrow">
                   <span className="lbl">{`Dodatek paliwowy ${appliedPct}%`}</span>
-                  <span>{fmt(bafC)} PLN</span>
+                  <span>{money(bafC)}</span>
                 </div>
                 <div className="mrow">
                   <span className="lbl">Pilotaż i dodatki</span>
-                  <span>{fmt(exC)} PLN</span>
+                  <span>{money(exC)}</span>
                 </div>
                 <div className="mrow total">
                   <span>Razem</span>
-                  <span>{fmt(cost)} PLN</span>
+                  <span>{money(cost)}</span>
                 </div>
                 <div className="locked" style={{ marginTop: 13 }}>
                   Cena płacona przez KSH i marża spedytora nie są dostępne w roli przewoźnika.
@@ -141,19 +141,19 @@ export function FinanceView() {
                 <h4 className="sec">Do zapłaty narastająco</h4>
                 <div className="mrow">
                   <span className="lbl">Fracht — stawka bazowa</span>
-                  <span>{fmt(baseR)} PLN</span>
+                  <span>{money(baseR)}</span>
                 </div>
                 <div className="mrow">
                   <span className="lbl">{`Dodatek paliwowy ${appliedPct}%`}</span>
-                  <span>{fmt(bafR)} PLN</span>
+                  <span>{money(bafR)}</span>
                 </div>
                 <div className="mrow">
                   <span className="lbl">Pilotaż i dodatki</span>
-                  <span>{fmt(exR)} PLN</span>
+                  <span>{money(exR)}</span>
                 </div>
                 <div className="mrow total">
                   <span>Razem</span>
-                  <span>{fmt(rev)} PLN</span>
+                  <span>{money(rev)}</span>
                 </div>
                 <div className="locked" style={{ marginTop: 13 }}>
                   Stawki przewoźnika i marża spedytora nie są dostępne w roli klienta.
@@ -165,24 +165,24 @@ export function FinanceView() {
                 <h4 className="sec">Od przychodu do marży</h4>
                 <div className="mrow">
                   <span className="lbl">Przychód od KSH — stawka bazowa</span>
-                  <span>{fmt(baseR)} PLN</span>
+                  <span>{money(baseR)}</span>
                 </div>
                 <div className="mrow">
                   <span className="lbl">Przychód — dodatek paliwowy</span>
-                  <span>{fmt(bafR)} PLN</span>
+                  <span>{money(bafR)}</span>
                 </div>
                 <div className="mrow">
                   <span className="lbl">Przychód — pilotaż i dodatki</span>
-                  <span>{fmt(exR)} PLN</span>
+                  <span>{money(exR)}</span>
                 </div>
                 <div className="mrow">
                   <span className="lbl">Koszt Scandinavian Express</span>
-                  <span style={{ color: 'var(--red)' }}>− {fmt(cost)} PLN</span>
+                  <span style={{ color: 'var(--red)' }}>− {money(cost)}</span>
                 </div>
                 <div className="mrow total">
                   <span>Marża</span>
                   <span style={{ color: 'var(--go)' }}>
-                    {fmt(rev - cost)} PLN · {pct(rev ? (rev - cost) / rev : 0)}
+                    {money(rev - cost)} · {pct(rev ? (rev - cost) / rev : 0)}
                   </span>
                 </div>
               </>
@@ -216,10 +216,10 @@ export function FinanceView() {
                       <span className="code">{row.k.slice(0, 8)}</span> {row.k}
                     </td>
                     <td className="num">{row.n}</td>
-                    <td className="num">{fmt(row.r)}</td>
-                    <td className="num">{fmt(row.c)}</td>
+                    <td className="num">{money(row.r)}</td>
+                    <td className="num">{money(row.c)}</td>
                     <td className={`num money ${row.p < 0.18 ? 'neg' : ''}`}>
-                      {fmt(row.m)} · {pct(row.p)}
+                      {money(row.m)} · {pct(row.p)}
                     </td>
                     <td>
                       <svg width="130" height="12">
@@ -244,7 +244,7 @@ export function FinanceView() {
                       <span className="code" data-content>{l.code}</span> <span data-content>{l.itemType}</span>
                     </span>
                     <span style={{ color: 'var(--red)' }}>
-                      {(l.pricing.marginPct * 100).toFixed(1)}% · {fmt(l.pricing.margin)} PLN
+                      {(l.pricing.marginPct * 100).toFixed(1)}% · {money(l.pricing.margin)}
                     </span>
                   </div>
                 ))}
