@@ -144,7 +144,7 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 | **D16** (Fala 1 — motyw/rola; ≠ D16-legacy-force-majeure) | `230e876e3998916fa92275569660540e8af2f2ca` | `src/lib/theme.ts`, `useTowerStore.ts`, `tests/theme-role.test.ts`, `tests/setup.ts` | **13/13** | **4/4** | smoke **4/4** (720 deferred) | n/a (behaviour) | n/a |
 | **D1a** inventory (≠ D1-legacy-route-alts; removal = next) | `de851b80cee33f31c129e1bbfddb337808c41e60` | `docs/handover/D1_TAILWIND_INVENTORY.md` (+ NAPRAWY) | **13/13** | **4/4** | smoke **4/4** (720 deferred) | n/a (docs-only) | n/a |
 | **D1** removal (≠ D1-legacy-route-alts; ≠ D1a) | `0dcea24c63e7526992b1eac9747efcef926affd3` | `DriverPwa.tsx`, `NotificationBell.tsx`, `src/index.css`, `vite.config.ts`, `package.json`, `package-lock.json`, NAPRAWY | **13/13** | **4/4** | smoke **4/4** (720 deferred; **no** baseline regen) | 2073571 → **2073376** (−195); `index-C0NcMovv.js` sha256 `fe6374e2eb14…` | 65267 → **53190** (−12077); `index-BJwYPbrW.css` sha256 `0febf525b07a…` |
-| **D2** (Fala 1 — fonty Barlow; ≠ D2-legacy-delay-pill) | _(sha)_ | `main.tsx`, `CorridorMap.tsx`, `src/index.css`, `DeliveryProgress.tsx`, NAPRAWY | **13/13** | **4/4** | smoke **4/4** (720 = next gate) | n/a (font cascade) | n/a |
+| **D2** (Fala 1 — fonty Barlow; ≠ D2-legacy-delay-pill) |  | `main.tsx`, `CorridorMap.tsx`, `src/index.css`, `DeliveryProgress.tsx`, NAPRAWY | **13/13** | **4/4** | smoke **4/4** (720 = next gate) | n/a (font cascade) | n/a |
 
 ### Fala 1–2 (pozostałe)
 - Kolejność pozostała jak niżej; **Fala 1 gate (720)** **nie rozpoczęte** (D2 DONE).
