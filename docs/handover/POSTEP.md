@@ -16,7 +16,7 @@ Aktualizacja: **2026-09-24** Europe/Warsaw · Etap 0 zamknięty · Etap 1 nie ro
 |---|---|---|---|---|---|
 | P0.1 | Zapisz zlecenie → `ZLECENIE_FINAL.md` | **DONE** | `10ac61e` | unit **41/41** · pw **4/4** | 465 linii, identyczne z `ZLECENIE_DLA_GROKA.md` z pakietu |
 | P0.2 | Rozpakuj pakiet final wg tabeli | **DONE** | `ad5fcc9` | unit **41/41** · pw **4/4** | Źródło: chat attachment → `/workspace/tower-pakiet-final-extract/` (nie zip na Domowy Downloads/Desktop — False/False). `money.test.ts` import → `src/lib/money/engine`; **wykluczony** z `test:unit` do M1 (`vitest.config.ts` exclude) — suite pozostaje 41/41. `tower-makieta.html` nie kopiowany |
-| P0.3 | Założ `POSTEP.md` rejestr 51 | **DONE** | `54b9f47` | unit **41/41** · pw **4/4** | 51 wierszy ID z §12; L* po F2.5 |
+| P0.3 | Założ `POSTEP.md` rejestr 51 | **DONE** | `992a5e6` | unit **41/41** · pw **4/4** | 51 wierszy ID z §12; L* po F2.5 |
 
 ## Etap 1 — korekty po Fala 2 GATE
 
