@@ -14,7 +14,7 @@ export function Toasts() {
           type="button"
           className="toast"
           style={{
-            borderRadius: 3,
+            borderRadius: 2,
             background: t.severity === 'CRITICAL' || t.severity === 'HIGH' ? 'var(--wt-banner-crit-bg)' : 'var(--wt-banner-bg)',
             borderColor:
               t.severity === 'CRITICAL' || t.severity === 'HIGH'

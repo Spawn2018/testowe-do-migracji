@@ -142,7 +142,7 @@ export function DriverPwa() {
           }}
         />
         {lastFile && (
-          <div className="p-3 bg-[var(--wt-surface-2)] text-[13px]" style={{ borderRadius: 3 }}>
+          <div className="p-3 bg-[var(--wt-surface-2)] text-[13px]" style={{ borderRadius: 2 }}>
             Załączono · {lastFile}
           </div>
         )}

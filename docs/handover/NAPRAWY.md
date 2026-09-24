@@ -31,7 +31,9 @@ Pełny dosłowny tekst D1–D17 jest w transkrypcie **t110u** (PROMPT FINALNY). 
 
 **D8.** Kolumna „Próbki” w geofence — z modelu, nie zawsze `2` (`GeofenceView`).
 
-**D9.** JSONLogic / akcje workflow w runtime — realna semantyka, nie atrapa UI.
+**D9 (legacy NAPRAWY — JSONLogic / workflow runtime).**  
+JSONLogic / akcje workflow w runtime — realna semantyka, nie atrapa UI.  
+> **Uwaga numeracji (Sebastian 2026-09-24):** to **NIE** jest Fala-1-D9. Fala-1-D9 = cienie/promienie/`!important` (chrome wizualny). Ten punkt JSONLogic zostaje na późniejsze fale (tu: „D9-legacy-JSONLogic”).
 
 **D10.** Pozostałe ATRAPA / CZĘŚCIOWO z `02_FASADA.md` poza D1–D9 — domknięcie wierszy fasady (priorytet ATRAPA → CZĘŚCIOWO).
 
@@ -90,18 +92,26 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 - **D23** — unit testy importu (PR #1 na `main`)
 - **D24** — pełny przebieg 14 prób — **DONE** → [`D24_14_CLICK.md`](../qa-start/D24_14_CLICK.md) (SHIP 14/14)
 
-### Fala 1 — sprzątanie mapy (START 2026-09-24)
-- **D21** — DONE (ten commit) — patrz tabela postępu poniżej.
-- **Następne (NIE START):** D9 / D16 / D1 / D2.
+### Fala 1 — sprzątanie mapy + chrome (START 2026-09-24)
+- **D21** — DONE — usuń martwy MapLibre.
+- **D9** (Fala 1) — DONE — cienie / promienie ≤2px / sprzątanie `!important`. **≠** D9-legacy-JSONLogic.
+- **Następne (NIE START):** D16 / D1 / D2.
+
+#### Fala-1-D9 — szczegóły
+- Soft `box-shadow` → `none`: `.docpreview`, `.wf-creator`, `.sched-col-menu` (toasty już `none`).
+- Radius: inline toast/driver `3→2`; kontrole CSS już `2px`; **kept** `.wf .sw` `border-radius:9px` (= Claude SoT switch track); `50%` dots OK.
+- `!important` usunięte gdzie da się specificity; **kept** (Leaflet/a11y): reduced-motion, leaflet popup/attribution/bar, grid2-map leaflet fill, `.wt-marker` transparent.
+- 1px rule shadows kept: `th.stick` (−1px rule), `.wt-dot` ring `0 0 0 1px`.
 
 ### Postęp Fala 1
 
 | Item | Commit | Pliki | test:unit | playwright | visual | Bundle JS (bytes) | Bundle CSS (bytes) |
 |---|---|---|---|---|---|---|---|
 | D21 | `58a509a8341cf455f1dbab60d41c1dc2107af2a5` | `package.json`, `package-lock.json`, `src/lib/corridor.ts`, `src/index.css`, −`src/components/map/CorridorMap.leaflet.tsx`, −`public/map-styles/` | **8/8** | **4/4** | smoke **4/4** (720 deferred) | 2073585 → **2073339** (−246); sha256 `d91ce4c3…` → `7cd831c2…` (`index-CAL_24W1.js`) | 65554 → **65461** (−93); sha256 `320c485d…` → `7bcd6d50…` (`index-Db6djQzs.css`) |
+| **D9** (Fala 1 — chrome wizualny; ≠ D9-legacy-JSONLogic) | `fix(D9)` (sha → po push) | `src/index.css`, `Toasts.tsx`, `DriverPwa.tsx` | **8/8** | **4/4** | smoke **4/4** (720 deferred) | n/a (CSS/chrome only) | n/a |
 
 ### Fala 1–2 (pozostałe)
-- Kolejność pozostała jak niżej; D9/D16/D1/D2 **nie rozpoczęte**.
+- Kolejność pozostała jak niżej; D16/D1/D2 **nie rozpoczęte**.
 
 ### Fala 3 — import UX + skala + visual CI
 - **D26** — poniżej
@@ -126,4 +136,4 @@ Wybrana droga (Sebastian 2026-09-24): **2 — usunięcia za wyraźną zgodą**. 
 
 ---
 
-*Koniec zakresu. D24 zamknięte. D21 (Fala 1) DONE. Nie startować D9/D16/D1/D2 / D26 bez osobnego START.*
+*Koniec zakresu. D24 zamknięte. Fala 1: D21+D9 DONE. Nie startować D16/D1/D2 / D26 / D9-legacy-JSONLogic bez osobnego START.*
