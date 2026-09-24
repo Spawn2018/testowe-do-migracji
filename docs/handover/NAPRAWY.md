@@ -47,7 +47,8 @@ JSONLogic / akcje workflow w runtime — realna semantyka, nie atrapa UI.
 
 **D15.** Usunąć lub izolować porzucony MapLibre / `CorridorMap.leaflet.tsx` (żywy silnik = Leaflet). Powiązane z **D21**.
 
-**D16.** Force-majeure / opóźnienia — mechanizm ryzyk bez atrap (rozszerzenie po SE road).
+**D16-legacy-force-majeure.** Force-majeure / opóźnienia — mechanizm ryzyk bez atrap (rozszerzenie po SE road).  
+> **Uwaga numeracji (Sebastian 2026-09-24):** to **NIE** jest Fala-1-D16. Fala-1-D16 = motyw per rola + `data-theme` bez klasy `dark`.
 
 **D17.** Domknięcie luk fasady CZĘŚCIOWO z C1 (seed vs live, brakujące mutacje) według tabeli `02_FASADA.md`.
 
@@ -95,7 +96,8 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 ### Fala 1 — sprzątanie mapy + chrome (START 2026-09-24)
 - **D21** — DONE — usuń martwy MapLibre.
 - **D9** (Fala 1) — DONE — cienie / promienie ≤2px / sprzątanie `!important`. **≠** D9-legacy-JSONLogic.
-- **Następne (NIE START):** D16 / D1 / D2.
+- **D16** (Fala 1) — DONE — motyw per rola (KSH light, HHL/SCX dark) + `data-theme` only (bez Tailwind `dark`). **≠** D16-legacy-force-majeure.
+- **Następne (NIE START):** D1 / D2.
 
 #### Fala-1-D9 — szczegóły
 - Soft `box-shadow` → `none`: `.docpreview`, `.wf-creator`, `.sched-col-menu` (toasty już `none`).
@@ -103,15 +105,23 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 - `!important` usunięte gdzie da się specificity; **kept** (Leaflet/a11y): reduced-motion, leaflet popup/attribution/bar, grid2-map leaflet fill, `.wt-marker` transparent.
 - 1px rule shadows kept: `th.stick` (−1px rule), `.wt-dot` ring `0 0 0 1px`.
 
+#### Fala-1-D16 — szczegóły
+- `applyThemeToDom`: tylko `data-theme` na `<html>`; `classList.remove('dark')` (bez Tailwind toggle).
+- `defaultThemeForRole`: KSH → light; HHL/SCX → dark (bez zmian).
+- `setRole` / `initTheme` / `onRehydrateStorage`: gdy `!themeManual`, wymuszają motyw roli (stale persist nie trzyma dark na KSH).
+- Manual `setTheme` / `toggleTheme` → `themeManual=true` (bez zmian).
+- Unit: `tests/theme-role.test.ts` (5). `index.html` boot `data-theme="dark"` (HHL-first).
+
 ### Postęp Fala 1
 
 | Item | Commit | Pliki | test:unit | playwright | visual | Bundle JS (bytes) | Bundle CSS (bytes) |
 |---|---|---|---|---|---|---|---|
 | D21 | `58a509a8341cf455f1dbab60d41c1dc2107af2a5` | `package.json`, `package-lock.json`, `src/lib/corridor.ts`, `src/index.css`, −`src/components/map/CorridorMap.leaflet.tsx`, −`public/map-styles/` | **8/8** | **4/4** | smoke **4/4** (720 deferred) | 2073585 → **2073339** (−246); sha256 `d91ce4c3…` → `7cd831c2…` (`index-CAL_24W1.js`) | 65554 → **65461** (−93); sha256 `320c485d…` → `7bcd6d50…` (`index-Db6djQzs.css`) |
 | **D9** (Fala 1 — chrome wizualny; ≠ D9-legacy-JSONLogic) | `cb41781d5a17eb58342c99d246a2f9c100ffe6f1` | `src/index.css`, `Toasts.tsx`, `DriverPwa.tsx` | **8/8** | **4/4** | smoke **4/4** (720 deferred) | n/a (CSS/chrome only) | n/a |
+| **D16** (Fala 1 — motyw/rola; ≠ D16-legacy-force-majeure) | `fix(D16)` (sha → po push) | `src/lib/theme.ts`, `useTowerStore.ts`, `tests/theme-role.test.ts`, `tests/setup.ts` | **13/13** | **4/4** | smoke **4/4** (720 deferred) | n/a (behaviour) | n/a |
 
 ### Fala 1–2 (pozostałe)
-- Kolejność pozostała jak niżej; D16/D1/D2 **nie rozpoczęte**.
+- Kolejność pozostała jak niżej; D1/D2 **nie rozpoczęte**.
 
 ### Fala 3 — import UX + skala + visual CI
 - **D26** — poniżej
@@ -136,4 +146,4 @@ Wybrana droga (Sebastian 2026-09-24): **2 — usunięcia za wyraźną zgodą**. 
 
 ---
 
-*Koniec zakresu. D24 zamknięte. Fala 1: D21+D9 DONE. Nie startować D16/D1/D2 / D26 / D9-legacy-JSONLogic bez osobnego START.*
+*Koniec zakresu. D24 zamknięte. Fala 1: D21+D9+D16 DONE. Nie startować D1/D2 / D26 / legacy D9/D16 bez osobnego START.*

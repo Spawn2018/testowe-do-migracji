@@ -28,6 +28,8 @@ import type {
 } from '../types';
 import type { NavKey as NK } from '../lib/permissions';
 import { defaultThemeForRole } from '../lib/permissions';
+import { applyThemeToDom, type Theme } from '../lib/theme';
+export type { Theme };
 import {
   BAF_PARAMS,
   DRIVER_TOKENS,
@@ -51,7 +53,6 @@ import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
 import { applyEtaToLoad } from '../lib/eta';
 import { isReadyBlocked } from '../lib/permits';
 
-export type Theme = 'dark' | 'light';
 export type ViewKey = NK;
 
 export interface NotificationPrefs {
@@ -62,11 +63,6 @@ export interface NotificationPrefs {
 
 const seedLoads = buildSeedLoads();
 const seedRisks = buildSeedRisks(seedLoads);
-
-function applyThemeToDom(theme: Theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  document.documentElement.classList.toggle('dark', theme === 'dark');
-}
 
 function uid(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -344,8 +340,11 @@ export const useTowerStore = create<TowerState>()(
       toasts: [],
 
       initTheme: () => {
-        const { theme } = get();
-        applyThemeToDom(theme);
+        const { theme, themeManual, role } = get();
+        // Fala-1-D16: role default wins until user toggles (themeManual).
+        const next = themeManual ? theme : defaultThemeForRole(role);
+        if (!themeManual && next !== theme) set({ theme: next });
+        applyThemeToDom(next);
       },
 
       setRole: (role) => {
@@ -1415,6 +1414,17 @@ export const useTowerStore = create<TowerState>()(
         risks: s.risks,
         exceptions: s.exceptions,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        // After persist merge: stale theme must not stick when user never toggled manually.
+        const theme = state.themeManual
+          ? state.theme
+          : defaultThemeForRole(state.role);
+        if (!state.themeManual && theme !== state.theme) {
+          useTowerStore.setState({ theme });
+        }
+        applyThemeToDom(theme);
+      },
     },
   ),
 );
