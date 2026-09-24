@@ -1,185 +1,239 @@
-# NAPRAWY — zakres Etapu D (jeszcze nie rozpoczęty)
+# NAPRAWY — Etap D (kanon Sebastian D1–D26 + L* legacy)
 
 | Pole | Wartość |
 |---|---|
 | Data zapisu | **2026-09-24** Europe/Warsaw |
-| Status | **STOP przed Etapem D** — tylko lista zakresu |
-| Źródła | Prompt finalny t110u (D1–D17) · t111u (D18) · t120u (D19–D24) · Sebastian 2026-09-24 (D26) · `02_FASADA.md` · `07_ZNANE_BLEDY.md` · C3 |
-| Kod produktu | **bez zmian** w tym pliku |
-
-> D1–D18 **obowiązują bez zmian**. D19–D24 **dochodzą** z Etapu C. D26 dopisane 2026-09-24. D24 zamknięte raportem D24_14_CLICK.md (SHIP 14/14). Nie zaczynać Fala 1 / D26 tutaj.
+| Status | **Fala 1 ACCEPTED** · trzy domknięcia (D21/D9/D16 + D1/D2/GATE) · **GO Fala 2 po odpowiedzi D7** (ta odpowiedź jest poniżej; bez startu kodu Fali 2 poza dokumentacją D7) |
+| Repo | `Spawn2018/testowe-do-migracji` · branch `main` |
+| Kod produktu | Fala 2 **nie** startuje tu (poza closeout D9/stylelint + proof D2) |
 
 ---
 
-## D1–D18 (z t110u / t111u — bez zmian)
+## Tabela translacji (stary numer → nowy)
 
-Pełny dosłowny tekst D1–D17 jest w transkrypcie **t110u** (PROMPT FINALNY). Poniżej skrót zsynchronizowany z fasadą C1 i notatkami t111u, żeby lista nie zginęła na dysku. Przy konflikcie brzmienia **wygrywa t110u**.
+Stary zakres NAPRAWY mieszł etykiety Sebastiana (Fala 1/2). **D1–D26 = wyłącznie kanon Sebastiana.** Kolidujące stare punkty dostają prefix **L** (nie „D9-legacy”).
 
-**D1-legacy-route-alts.** Alternatywy trasy SE ×4 „Wybierz” — dziś tylko toast; mają mutować load/risk (`RisksView`).  
-> **Uwaga numeracji (Sebastian 2026-09-24):** to **NIE** jest Fala-1-D1. Fala-1-D1 = usunięcie Tailwind (najpierw inventory).
-
-**D2-legacy-delay-pill.** Pill opóźnienia w drawerze (`+1h 35 min`) — liczyć z `delayMinutes`, nie stały napis (`LoadDrawer`).
-> **Uwaga numeracji (Sebastian 2026-09-24):** to **NIE** jest Fala-1-D2. Fala-1-D2 = weryfikacja fontów Barlow po usunięciu Tailwind.
-
-**D3.** Warunki drogowe SE na korytarzu — endpoint na żywo **albo** jawna etykieta demo (ten sam wzorzec co D18); spójnie z panelem ryzyk.
-
-**D4.** Terminy zadań — z `plannedLoadDate` / danych load, nie `18+i*9` (`TasksView`).
-
-**D5.** Preferencje powiadomień w Opcjach — zapis **i** filtracja przy `push` (`OptionsView` + store).
-
-**D6.** Pogoda / fale `SAIL_ROWS` — źródło prawdziwe lub oznaczenie demo (`RisksView`).
-
-**D7.** Wskaźnik kompletności DRAWING — nie hardcode 100% (`DocsView`).
-
-**D8.** Kolumna „Próbki” w geofence — z modelu, nie zawsze `2` (`GeofenceView`).
-
-**D9 (legacy NAPRAWY — JSONLogic / workflow runtime).**  
-JSONLogic / akcje workflow w runtime — realna semantyka, nie atrapa UI.  
-> **Uwaga numeracji (Sebastian 2026-09-24):** to **NIE** jest Fala-1-D9. Fala-1-D9 = cienie/promienie/`!important` (chrome wizualny). Ten punkt JSONLogic zostaje na późniejsze fale (tu: „D9-legacy-JSONLogic”).
-
-**D10.** Pozostałe ATRAPA / CZĘŚCIOWO z `02_FASADA.md` poza D1–D9 — domknięcie wierszy fasady (priorytet ATRAPA → CZĘŚCIOWO).
-
-**D11.** Hardcoded toasty / copy PL w store i widokach kolidujące z i18n (nakłada się z D19; tu: ścieżki wskazane w C1 przed pełnym audytem C3).
-
-**D12.** Sub faktur „tydzień 38 · 14–20.09.2026” — z daty seedu / zegara zamrożonego, nie literał (`InvoicesView`).
-
-**D13.** Adapter telematyki SCX / integracje PORZUCONE spoza SPA — decyzja: podpiąć makietę albo wyciąć z UI obietnic.
-
-**D14.** Martwy / podwójny silnik mapy — porządek Leaflet vs pozostałości (szczegół MapLibre → D15 / D21).
-
-**D15.** Usunąć lub izolować porzucony MapLibre / `CorridorMap.leaflet.tsx` (żywy silnik = Leaflet). Powiązane z **D21**.
-
-**D16-legacy-force-majeure.** Force-majeure / opóźnienia — mechanizm ryzyk bez atrap (rozszerzenie po SE road).  
-> **Uwaga numeracji (Sebastian 2026-09-24):** to **NIE** jest Fala-1-D16. Fala-1-D16 = motyw per rola + `data-theme` bez klasy `dark`.
-
-**D17.** Domknięcie luk fasady CZĘŚCIOWO z C1 (seed vs live, brakujące mutacje) według tabeli `02_FASADA.md`.
-
-**D18.** Stawki w Opcjach (koszt 16500/19200/22800, przychód 20500/23800/27900 + parametry BAF) są **tylko demo** (negocjacje z przewoźnikami trwają). Jawnie oznaczyć „demo” w Opcjach, kolumnach finansowych Harmonogramu i Fakturach; jeden przełącznik wyłączający oznaczenie, gdy stawki będą potwierdzone. Ten sam wzorzec etykiety dla panelu warunków drogowych, jeśli D3 wybierze label zamiast żywego endpointu.
+| Stary | Nowy | Merge z D1–D26? | Status |
+|---|---|---|---|
+| D1 route-alts (SE ×4 Wybierz) | **L1** | nie (≠ D1 Tailwind) | OPEN |
+| D2 delay-pill (`+1h 35 min`) | **L2** | nie (≠ D2 fonty) | OPEN |
+| D3 warunki drogowe SE | **D3** | tak — Trafikverket live **lub** label demo | OPEN (Fala 2) |
+| D4 terminy zadań (`18+i*9`) | **L4** | nie (≠ D4 voyage SoT) | OPEN |
+| D5 preferencje powiadomień | **L5** | nie (≠ D5 KPI vs corridor) | OPEN |
+| D6 pogoda / fale SAIL_ROWS | **D6** | zachowane (nie w skrócie fal, unikalne) | OPEN |
+| D7 DRAWING % hardcode | **L7** | nie (≠ D7 BAF/SEFS) | OPEN |
+| D8 geofence „Próbki”=2 | **L8** | nie (≠ D8 timezones) | OPEN |
+| D9 JSONLogic / workflow runtime | **L9** | nie (≠ D9 chrome) | OPEN |
+| D10–D15, D17–D19 | **D10–D15, D17–D19** | bez kolizji z falami F1 | OPEN (wg opisu) |
+| D16 force-majeure | **L16** | nie (≠ D16 theme/rola) | OPEN |
+| D18 stawki demo label | **D18** | tak | OPEN |
+| D20 faktury trójstronne | **D20** | tak | OPEN (Fala 2) |
+| D21 MapLibre | **D21** | tak | **DONE** Fala 1 |
+| D22 store versioning | **D22** | tak | OPEN (Fala 2) |
+| D23 import regression | **D23** | tak | PARTIAL Fala 0 |
+| D24 14-click | **D24** | tak | **DONE** Fala 0 |
+| D26 import removals + UI consent | **D26** | tak | PLAN only (Fala 3) |
+| *(brak w starym)* voyage SoT | **D4** | nowy kanon Sebastian | OPEN (Fala 2) |
+| *(brak w starym)* KPI vs corridor | **D5** | nowy kanon Sebastian | OPEN (Fala 2) |
+| *(brak w starym)* BAF/SEFS formula | **D7** | nowy kanon Sebastian | **ANSWERED** (poniżej; fix = Fala 2) |
+| *(brak w starym)* timezones last | **D8** | nowy kanon Sebastian | OPEN (Fala 2) |
+| D1 Tailwind / D2 fonty / D9 chrome / D16 theme | **D1 / D2 / D9 / D16** | kanon Fala 1 | **DONE** (+ D9 stylelint closeout 2026-09-24) |
 
 ---
 
-## D19–D24 (dopisane w t120u — znaleziska Etapu C)
+## Kanon Sebastian — D1–D26
 
-**D19. Sto cztery napisy wpisane na stałe w komponentach.**  
-Z C3. Najpoważniejsze znalezisko etapu — wersja szwedzka jest w dużej części **pozorna** (użyje jej Scandinavian Express). Te napisy nie zmieniają się między językami, więc zrzuty PL/EN/SV będą w tych miejscach identyczne i regresja wizualna niczego nie wykryje. Każdy napis do słownika, w trzech językach.
+### D1 — Tailwind remove
+**DONE Fala 1** — usunięto Tailwind; role CSS + preflight compensation. ≠ L1.
+- Removal SHA: `0dcea24c63e7526992b1eac9747efcef926affd3`
+- Inventory: [`D1_TAILWIND_INVENTORY.md`](./D1_TAILWIND_INVENTORY.md) `de851b80…`
+- Testy: `test:unit` **13/13**; playwright **4/4**
 
-**D20. Różnice na fakturach wpisane na stałe.**  
-Z C1. Rozbieżność (m.in. rząd 1 840 PLN / delty +1240/+600) zaszyta → dopasowanie trójstronne jest **fasadą** — moduł pokazuje wynik, którego nie policzył. Ma liczyć naprawdę: transporty zaznaczone wobec zrealizowanych wobec kwoty z cennika, z rozbiciem różnic linia po linii.
+### D2 — fonts / `--tw-` w built CSS
+**DONE Fala 1** + **proof closeout 2026-09-24**. ≠ L2.
+- Fix kaskady Leaflet→Barlow: `e586ea07…`
+- **Proof (`npm run build` → greps):**
+  - `grep -c -- '--tw-' dist/assets/*.css` → **0**
+  - `font-family` unique w built CSS:
+    - `Barlow Condensed`
+    - `Barlow Condensed,Barlow,Arial,sans-serif`
+    - `Barlow,Arial,sans-serif`
+    - `Barlow,Helvetica Neue,Arial,sans-serif` (Claude SoT fallbacks)
+    - `var(--font-cond)` / `var(--font-mono)` (= Barlow Condensed stacks w `:root`)
+    - **Uwaga:** nadal występuje vendor `Helvetica Neue,Arial,Helvetica,sans-serif` z `leaflet/dist/leaflet.css` w bundle — **nadpisywany** późniejszym `.leaflet-container{font:12px "Barlow",…}` w `src/index.css`. Runtime = Barlow. Nie regenerowano baseline.
+- Testy Fala-1-D2: `test:unit` **13/13**; playwright **4/4**
 
-**D21. Usuń martwy MapLibre.**  
-Z C1 i przekazania QA. Leży w drzewie obok żywego Leaflet, powiększa paczkę i myli przy utrzymaniu. Powiązane z D15.  
-**DONE 2026-09-24** — żywy silnik = Leaflet (`CorridorMap.tsx`); usunięto dep `maplibre-gl`, duplikat `CorridorMap.leaflet.tsx`, `public/map-styles/`, kaskadę `MAP_STYLE`/`demotiles` w `corridor.ts`, selektory `.maplibregl-*` w `index.css`.
+### D3 — Trafikverket live OR demo label
+OPEN (Fala 2). Warunki drogowe SE — endpoint na żywo **albo** jawna etykieta demo (wzorzec jak D18).
 
-**D22. Wersjonowanie i migracja magazynu trwałego.**  
-Z pliku 07. Klucz `watch-tower-ui-v6-ready-gate` bez wersjonowania schematu. Na produkcji użytkownik po aktualizacji czyta stan w starym kształcie i nie wie o tym. Numer wersji w magazynie, sprawdzenie przy starcie, migracja albo czyste wyczyszczenie z komunikatem.
+### D4 — single voyage source of truth
+OPEN (Fala 2). Jedno źródło prawdy rejsu/ładunku (≠ L4 terminy zadań UI).
 
-**D23. Testy regresji importu harmonogramu.**  
-Z pliku 07: naprawione pod P9, bez testów automatycznych. Przy awarii funkcja **kasuje harmonogram klienta**. Minimum pięć wariantów pliku: poprawny, pusty, z inną kolejnością kolumn, ze zmienionymi nagłówkami, z wierszami niespełniającymi walidacji. Każdy sprawdza, że istniejące dane przetrwały.  
-*(PR #1 — unit testy `tests/schedule-import.test.ts` — squash-merge na `main` 2026-09-24; to nie zamyka pełnego D23 na skali produkcyjnej — patrz Fala 3.)*
+### D5 — KPI vs corridor
+OPEN (Fala 2). Spójność KPI z korytarzem (≠ L5 preferencje notyfikacji).
 
-**D24. Pełny przebieg czternastu prób.**  
-Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej paczce, z sumą kontrolną paczki w raporcie.  
-**DONE 2026-09-24** — raport [`docs/qa-start/D24_14_CLICK.md`](../qa-start/D24_14_CLICK.md): **SHIP 14/14**; appChecksum `d91ce4c3786451f20adf3ec8fead38c8d39dc8ed5a464ebb67c84a24762474fa` (`index-BqvbHwzw.js`); HEAD `86050d10`.
+### D6 — pogoda / fale `SAIL_ROWS`
+OPEN. Źródło prawdziwe lub oznaczenie demo (`RisksView`).
+
+### D7 — surcharge / BAF / SEFS formula — **ANSWER FIRST**
+**ODPOWIEDŹ (bez zmiany kodu produktu):**
+
+| Pole | Wartość |
+|---|---|
+| Plik | `src/lib/sefs.ts` |
+| Funkcja | `computeSefs` |
+| Linie | **50–59** (rdzeń); apply: `62–63`; pricing: `src/lib/pricing.ts` **53–54** |
+| Model | **hybrid_min** |
+| Formuła | `appliedMult = Math.min(multSek, multPln)` gdzie `multSek = lookupMult(priceSek, SEFS_SEK)`, `multPln = lookupMult(pricePln, SEFS_PLN)` |
+| Apply do stawki | `applySefsToRoadRate`: `round2(roadBaseRate * appliedMult)` — **tylko** road freight; ferry eco / demurrage / extras poza SEFS (`pricing.ts` 37–39, 55–58) |
+| Dowód biznesowy | `docs/handover/03_PARAMETRY_BIZNESOWE.md` §2 |
+
+Fix produktowy (jeśli rozjazd vs kontrakt) = **Fala 2** — nie w tym closeout.
+
+### D8 — timezones last
+OPEN (Fala 2). Strefy czasowe na końcu (≠ L8 geofence samples).
+
+### D9 — chrome shadows / radii / `!important` + stylelint
+**DONE Fala 1** + **stylelint closeout 2026-09-24**. ≠ L9.
+
+#### Closeout 2026-09-24 (pomiar → fix → greps)
+**Przed:** box-shadow≠none **2** · radius>2px **1** · !important **28** (13 linii).
+
+**Zmiany (bez psucia Claude SoT):**
+- `th.stick,td.stick`: `box-shadow:-1px 0 0 var(--rule)` → `border-left:1px solid var(--rule)`
+- `.wt-dot`: `box-shadow:0 0 0 1px rgba(0,0,0,.25)` → `outline:1px solid rgba(0,0,0,.25)`
+- `.wf .sw`: `border-radius:9px` → `50%` (tor 32×18 nadal pill/elipsa)
+- Usunięto `!important` z popup/bar/attribution kolorów, `.grid2-map-body .leaflet-container`, `.wt-marker` (kaskada po `leaflet.css`)
+
+**FINAL greps (`src/index.css` only, bez bak):**
+- box-shadow≠none: **0**
+- border-radius>2px: **0**
+- !important token count: **11** (6 linii)
+
+**Leftover `!important` — uzasadnienie (NIE `stylelint-disable`):**
+
+| Miejsce | Dlaczego zostaje |
+|---|---|
+| L55 `@media (prefers-reduced-motion:reduce) *` ×2 | a11y: musi przebić dowolne `transition`/`animation` |
+| L210 `.leaflet-container …-pane svg` ×3 | Leaflet sam ustawia `max-width/height:none !important` |
+| L392 `.leaflet-attribution-flag` ×2 | pin 12×8 vs stretch SVG / reguły Leaflet `!important` |
+| L841 `[hidden]:where(…)` ×1 | preflight: `display:none` musi wygrywać z utility/display |
+| L843–844 tile/marker `img` ×3 | pin vs `img{max-width:100%}` + Leaflet `!important` na tiles |
+
+**Tooling:**
+- `.stylelintrc.json` — dokładnie wersja Sebastiana (ignore `tower.css` / `node_modules` / `dist` / `shots-baseline`)
+- `npm i -D stylelint stylelint-config-standard stylelint-declaration-strict-value`
+- script `lint:css`: `stylelint "src/**/*.css"`
+- **stylelint one-line:** `492 problems (492 errors, 0 warnings)` — z czego triad: `declaration-no-important` **11** (= justified above); `declaration-property-value-allowed-list` dla shadow/radius: **0**. Reszta = flood `declaration-block-single-line-max-declarations` (264), `rule-empty-line-before` (49), `no-duplicate-selectors` (40), odd-px `declaration-property-value-disallowed-list` (38), font-family generic (30), itd. **Poza zakresem tego closeout** (nie przepisujemy całego design systemu / formatowania 1-linijkowego CSS).
+
+Commit D9+stylelint: patrz tabela postępu.
+
+### D10 — pozostałe ATRAPA / CZĘŚCIOWO z `02_FASADA.md`
+OPEN (poza D1–D9 Fala 1).
+
+### D11 — hardcoded toasty / copy PL vs i18n
+OPEN (nakłada się z D19).
+
+### D12 — sub faktur „tydzień 38…” z seedu/zegara
+OPEN.
+
+### D13 — adapter telematyki SCX / PORZUCONE
+OPEN.
+
+### D14 — martwy / podwójny silnik mapy
+OPEN (żywy = Leaflet; resztki → D15/D21 DONE częściowo).
+
+### D15 — izolacja porzuconego MapLibre / duplikatów
+OPEN / w większości pokryte przez **D21 DONE**.
+
+### D16 — theme per role (`data-theme`, bez `dark` class)
+**DONE Fala 1**. ≠ L16. SHA `230e876e…`. Unit theme **5** w `tests/theme-role.test.ts`. `test:unit` **13/13**; playwright **4/4**.
+
+### D17 — luk fasady CZĘŚCIOWO (C1)
+OPEN.
+
+### D18 — stawki demo label (+ przełącznik)
+OPEN. Ten sam wzorzec etykiety co D3 gdy label zamiast live.
+
+### D19 — 104 hardcode stringi i18n (C3)
+OPEN.
+
+### D20 — three-way invoice match
+OPEN (Fala 2). Policzyć naprawdę: zaznaczone vs zrealizowane vs cennik.
+
+### D21 — MapLibre remove
+**DONE Fala 1**. SHA `58a509a8…`. `test:unit` **8/8** (wówczas); playwright **4/4**.
+
+### D22 — store versioning / migracja
+OPEN (Fala 2).
+
+### D23 — import regression tests
+PARTIAL Fala 0 — `tests/schedule-import.test.ts` na `main`; pełna skala produkcyjna = Fala 3.
+
+### D24 — 14-click
+**DONE** — [`docs/qa-start/D24_14_CLICK.md`](../qa-start/D24_14_CLICK.md) SHIP **14/14**; HEAD wówczas `86050d10`.
+
+### D25 — *(rezerwa — brak osobnego kanonu w falach; nie używać bez START)*
+
+### D26 — import removals z UI consent
+PLAN only (Fala 3) — opcja 2 Sebastian: checkbox zgody, `allowRemovals` z UI.
+
+---
+
+## L* — stare punkty bez merge (OPEN)
+
+**L1.** Alternatywy trasy SE ×4 „Wybierz” — dziś toast; mają mutować load/risk (`RisksView`).
+
+**L2.** Pill opóźnienia w drawerze — liczyć z `delayMinutes`, nie stały napis (`LoadDrawer`).
+
+**L4.** Terminy zadań — z `plannedLoadDate` / danych load, nie `18+i*9` (`TasksView`).
+
+**L5.** Preferencje powiadomień w Opcjach — zapis **i** filtracja przy `push`.
+
+**L7.** Wskaźnik kompletności DRAWING — nie hardcode 100% (`DocsView`).
+
+**L8.** Kolumna „Próbki” w geofence — z modelu, nie zawsze `2` (`GeofenceView`).
+
+**L9.** JSONLogic / akcje workflow w runtime — realna semantyka, nie atrapa UI.
+
+**L16.** Force-majeure / opóźnienia — mechanizm ryzyk bez atrap (rozszerzenie po SE road).
 
 ---
 
 ## Brama CI / lokalna (2026-09-24)
 
-- **Wybór:** hak `pre-push` (opcja 2) — `.githooks/pre-push` uruchamia `git lfs pre-push`, `npm run test:unit`, `npx playwright test`. `core.hooksPath=.githooks`.
-- Billing Actions nadal leży → workflow nie biegnie na GitHub; `unit.yml` ma już `actions/checkout@v4` z `lfs: true` na przyszłość.
-- Do czasu działającego CI: po **każdym** commicie Fali 1 wpisywać liczby (nie „zielone”): `test:unit N/N`, `playwright N/N`, `visual 720/720` (bez regeneracji wzorca).
+- Hak `pre-push`: `.githooks/pre-push` → `git lfs pre-push`, `npm run test:unit`, `npx playwright test`. `core.hooksPath=.githooks`.
+- Nie pushować `.github/workflows`. Nie regenerować `shots-baseline`. Nie deploy Vercel.
 
-## Fale (plan Sebastiana 2026-09-24)
+## Fale
 
-### Fala 0 — testy / bezpieczeństwo regresji
-- **D23** — unit testy importu (PR #1 na `main`)
-- **D24** — pełny przebieg 14 prób — **DONE** → [`D24_14_CLICK.md`](../qa-start/D24_14_CLICK.md) (SHIP 14/14)
+### Fala 0 — DONE / partial
+- D23 unit import — partial · D24 14-click — **DONE** 14/14
 
-### Fala 1 — sprzątanie mapy + chrome (START 2026-09-24)
-- **D21** — DONE — usuń martwy MapLibre.
-- **D9** (Fala 1) — DONE — cienie / promienie ≤2px / sprzątanie `!important`. **≠** D9-legacy-JSONLogic.
-- **D16** (Fala 1) — DONE — motyw per rola (KSH light, HHL/SCX dark) + `data-theme` only (bez Tailwind `dark`). **≠** D16-legacy-force-majeure.
-- **D1 inventory (D1a)** — DONE — [`D1_TAILWIND_INVENTORY.md`](./D1_TAILWIND_INVENTORY.md).
-- **D1 removal** — DONE — Tailwind out; role CSS + preflight compensation. **≠** D1-legacy-route-alts.
-- **D2** (Fala 1) — DONE — fonty tylko Barlow (+ Claude fallbacks). **≠** D2-legacy-delay-pill.
-- **Fala 1 GATE** — DONE — visual **720/720** vs `shots-baseline/` (bez regen). Preflight: `* { margin:0;padding:0;border:0 solid }` (brakowało po D1).
-- **Następne (NIE START):** Fala 2 / D26.
+### Fala 1 — **ACCEPTED / CLOSED**
+- D21 · D9 (+ stylelint closeout) · D16 · D1 · D2 (+ proof) · GATE visual **720/720**
+- Tag: `baseline-fala-1-2026-09-24` (bez regen PNG)
 
-#### Fala-1-D9 — szczegóły
-- Soft `box-shadow` → `none`: `.docpreview`, `.wf-creator`, `.sched-col-menu` (toasty już `none`).
-- Radius: inline toast/driver `3→2`; kontrole CSS już `2px`; **kept** `.wf .sw` `border-radius:9px` (= Claude SoT switch track); `50%` dots OK.
-- `!important` usunięte gdzie da się specificity; **kept** (Leaflet/a11y): reduced-motion, leaflet popup/attribution/bar, grid2-map leaflet fill, `.wt-marker` transparent.
-- 1px rule shadows kept: `th.stick` (−1px rule), `.wt-dot` ring `0 0 0 1px`.
+#### Postęp Fala 1 (zachowane liczby)
 
-#### Fala-1-D16 — szczegóły
-- `applyThemeToDom`: tylko `data-theme` na `<html>`; `classList.remove('dark')` (bez Tailwind toggle).
-- `defaultThemeForRole`: KSH → light; HHL/SCX → dark (bez zmian).
-- `setRole` / `initTheme` / `onRehydrateStorage`: gdy `!themeManual`, wymuszają motyw roli (stale persist nie trzyma dark na KSH).
-- Manual `setTheme` / `toggleTheme` → `themeManual=true` (bez zmian).
-- Unit: `tests/theme-role.test.ts` (5). `index.html` boot `data-theme="dark"` (HHL-first).
+| Item | Commit | test:unit | playwright | visual |
+|---|---|---|---|---|
+| D21 | `58a509a8341cf455f1dbab60d41c1dc2107af2a5` | **8/8** | **4/4** | smoke 4/4 |
+| D9 chrome | `cb41781d5a17eb58342c99d246a2f9c100ffe6f1` | **8/8** | **4/4** | smoke 4/4 |
+| D16 | `230e876e3998916fa92275569660540e8af2f2ca` | **13/13** | **4/4** | smoke 4/4 |
+| D1a inventory | `de851b80cee33f31c129e1bbfddb337808c41e60` | **13/13** | **4/4** | smoke 4/4 |
+| D1 removal | `0dcea24c63e7526992b1eac9747efcef926affd3` | **13/13** | **4/4** | smoke 4/4 |
+| D2 fonts | `e586ea07c925e1ea463d795825a009cb08845f3f` | **13/13** | **4/4** | smoke 4/4 |
+| Fala 1 GATE | `2aac0a97e186485cb50c78b9808e1f0023f9ac80` | **13/13** | **4/4** | **720/720** |
+| D9 stylelint closeout | `2415e11b21878cb2060c6576be02b098a0ae20f4` | **13/13** | **4/4** | no regen |
+| NAPRAWY renumber + D2 proof + D7 answer | see `git log -1 -- docs/handover/NAPRAWY.md` | **13/13** | **4/4** | — |
 
-#### Fala-1-D1 removal — szczegóły
-- **≠** D1-legacy-route-alts (alternatywy trasy SE).
-- Usunięto `@import "tailwindcss"`, `@theme {…}`, `.panel.p-*{padding:unset}`, deps `tailwindcss` + `@tailwindcss/vite`, plugin Vite.
-- Role CSS: `.driver-pwa*`, `.driver-meta`, `.driver-btn-*`, `.driver-file-input`, `.driver-attach-note`, `.driver-back-link`, `.bell-wrap` / `.bell-trigger` / `.bell-badge`; `--font-*` w `:root`; `.cond,.font-cond`.
-- **Preflight compensation** (smoke map bez regen baseline): TW-like `border-width:0;border-style:solid` na `*`, `img,svg,…{display:block}`, `img,video{max-width:100%;height:auto}`, form/heading/list resets, plus pin `.leaflet-container img.leaflet-tile` (256×256, max-width/height none) — bez tego mapa kokpit/minimap psuła smoke (~map body only).
-- Bundle (vite build assets): JS **2073571 → 2073376** (−195); CSS **65267 → 53190** (−12077).
-- Testy: `test:unit` **13/13**; playwright smoke **4/4** (bez update snapshot / bez regen `shots-baseline`). Visual 720 deferred.
+### Fala 2 — GO po D7 answer
+D3, D4 (voyage), D5 (KPI), D7 fix (jeśli potrzeba po answer), D8 timezones, D20, D22. **Nie startować w tym closeout.**
 
-#### Fala-1-D2 — szczegóły
-- **≠** D2-legacy-delay-pill (pill `+1h 35 min` w drawerze).
-- Skan `src/**/*`, `index.html`, built CSS: **brak** `system-ui` / `-apple-system` / `BlinkMacSystemFont` / `Segoe UI` / `Roboto` / `ui-sans` w SPA.
-- Claude SoT stacks kept: `"Barlow","Helvetica Neue",Arial,sans-serif` + condensed `"Barlow Condensed","Barlow",Arial,sans-serif` (`:root` `--font-*`, `body`, `.cond`/`.font-cond`).
-- **Fix:** `leaflet/dist/leaflet.css` ładował się *po* `index.css` (import w `CorridorMap`) i nadpisywał `.leaflet-container` na `Helvetica Neue, Arial, Helvetica`. Przeniesiono import Leaflet CSS do `main.tsx` **przed** `index.css`; dopięto close-button bez Tahoma/Verdana.
-- Chart SVG `DeliveryProgress`: dopisano `Arial` do stosu condensed (pixel-intent align).
-- Out of scope (archiwum, nie SPA): `public/*makieta*.html` banner deprecacji z `system-ui` — oznaczone NIEAKTUALNE SoT.
-- `index.html`: Google Fonts Barlow / Barlow Condensed — OK.
-- Testy: `test:unit` **13/13**; playwright smoke **4/4** (bez regen baseline). Visual 720 = następny gate.
-
-#### Fala-1-GATE — closeout
-- Metoda: `OUT=shots-fala1-gate node scripts/baseline.mjs` (720 capture) → pixelmatch vs `shots-baseline/` (`threshold=0.2`, `maxDiffPixelRatio=0.001`, `includeAA`). **Nie** nadpisano `shots-baseline/` (aggregate sha przed/po zgodny).
-- Pierwszy przebieg: **346/720** (fail 374; 100% przy 390+768) — brakowało TW `*{margin:0;padding:0}` w kompensacji preflight po D1.
-- Fix gate: dopisano uniwersalny reset margin/padding/border jak TW base; re-capture → **720/720**.
-- Bundle cumulative (pre-D21 → gate): JS **2073585 → 2073396** (−189); CSS **65554 → 53315** (−12239). Assets: `index-CxYOQKJJ.js`, `index-DFAr9NoX.css`.
-- Tag: `baseline-fala-1-2026-09-24` = marker zamknięcia fali (ten sam baseline, bez regen PNG).
-- Testy gate: `test:unit` **13/13**; playwright smoke **4/4**; visual **720/720**.
-
-### Postęp Fala 1
-
-| Item | Commit | Pliki | test:unit | playwright | visual | Bundle JS (bytes) | Bundle CSS (bytes) |
-|---|---|---|---|---|---|---|---|
-| D21 | `58a509a8341cf455f1dbab60d41c1dc2107af2a5` | `package.json`, `package-lock.json`, `src/lib/corridor.ts`, `src/index.css`, −`src/components/map/CorridorMap.leaflet.tsx`, −`public/map-styles/` | **8/8** | **4/4** | smoke **4/4** (720 deferred) | 2073585 → **2073339** (−246); sha256 `d91ce4c3…` → `7cd831c2…` (`index-CAL_24W1.js`) | 65554 → **65461** (−93); sha256 `320c485d…` → `7bcd6d50…` (`index-Db6djQzs.css`) |
-| **D9** (Fala 1 — chrome wizualny; ≠ D9-legacy-JSONLogic) | `cb41781d5a17eb58342c99d246a2f9c100ffe6f1` | `src/index.css`, `Toasts.tsx`, `DriverPwa.tsx` | **8/8** | **4/4** | smoke **4/4** (720 deferred) | n/a (CSS/chrome only) | n/a |
-| **D16** (Fala 1 — motyw/rola; ≠ D16-legacy-force-majeure) | `230e876e3998916fa92275569660540e8af2f2ca` | `src/lib/theme.ts`, `useTowerStore.ts`, `tests/theme-role.test.ts`, `tests/setup.ts` | **13/13** | **4/4** | smoke **4/4** (720 deferred) | n/a (behaviour) | n/a |
-| **D1a** inventory (≠ D1-legacy-route-alts; removal = next) | `de851b80cee33f31c129e1bbfddb337808c41e60` | `docs/handover/D1_TAILWIND_INVENTORY.md` (+ NAPRAWY) | **13/13** | **4/4** | smoke **4/4** (720 deferred) | n/a (docs-only) | n/a |
-| **D1** removal (≠ D1-legacy-route-alts; ≠ D1a) | `0dcea24c63e7526992b1eac9747efcef926affd3` | `DriverPwa.tsx`, `NotificationBell.tsx`, `src/index.css`, `vite.config.ts`, `package.json`, `package-lock.json`, NAPRAWY | **13/13** | **4/4** | smoke **4/4** (720 deferred; **no** baseline regen) | 2073571 → **2073376** (−195); `index-C0NcMovv.js` sha256 `fe6374e2eb14…` | 65267 → **53190** (−12077); `index-BJwYPbrW.css` sha256 `0febf525b07a…` |
-| **D2** (Fala 1 — fonty Barlow; ≠ D2-legacy-delay-pill) | `e586ea07c925e1ea463d795825a009cb08845f3f` | `main.tsx`, `CorridorMap.tsx`, `src/index.css`, `DeliveryProgress.tsx`, NAPRAWY | **13/13** | **4/4** | smoke **4/4** (720 = next gate) | n/a (font cascade) | n/a |
-| **Fala 1 GATE** | `2aac0a97e186485cb50c78b9808e1f0023f9ac80` | `src/index.css` (preflight `* margin/padding`), NAPRAWY, `.gitignore` | **13/13** | **4/4** | **720/720** (pixelmatch; no baseline regen) | 2073585 → **2073396** (−189) | 65554 → **53315** (−12239) |
-
-### Fala 1–2 (pozostałe)
-- **Fala 1 CLOSED.** Fala 2 / D26 nie rozpoczęte.
-
-### Fala 3 — import UX + skala + visual CI
-- **D26** — poniżej
-- Później w tej samej fali (notatka, nie status „done”): wariant testu na skali ~70+ wierszy; visual CI + te same browsery co lokalnie.
+### Fala 3
+D26 (plan) + skala importu + visual CI.
 
 ---
 
-### D26 — podgląd importu kłamie o usunięciach
-Problem: `diffSchedule` pokazuje brakujące kody jako removed, a `dryRunFromXlsx(...).removedIds` jest zawsze `[]`; `commitImport` bez `allowRemovals` nic nie usuwa. KSH widzi „N usunięte”, klika Zatwierdź, nic nie znika.
-
-Wybrana droga (Sebastian 2026-09-24): **2 — usunięcia za wyraźną zgodą**. Osobne pole wyboru w oknie podglądu, domyślnie odznaczone, z liczbą i listą kodów; `allowRemovals` musi dojść z UI, nie tylko istnieć w kodzie.
-
----
-
-## Kolejność (gdy Sebastian da START na D)
-
-1. Nie mieszać z C2.3 / baseline.  
-2. **Fala 0:** D23 (unit) ✓ → D24 (14 prób) ✓ — raport D24_14_CLICK.md.  
-3. Najpierw bezpieczne tooling/i18n (D19, D22), potem atrapy funkcji (D20, D1–D9), potem sprzątanie (D15/D21).  
-4. **Fala 3:** D26 (zgoda na usunięcia w UI) + skala ~70+ + visual CI.  
-5. D18 (oznaczenie demo) można zrobić wcześnie — zero zmiany logiki stawek.
-
----
-
-*Koniec zakresu. D24 zamknięte. **Fala 1 CLOSED** (D21+D9+D16+D1a+D1+D2+GATE 720/720). Nie startować Fala 2 / D26 / legacy bez osobnego START.*
+*Koniec. Fala 1 accepted. D7 answered (hybrid_min). L1/L2/L4/L5/L7/L8/L9/L16 OPEN. Fala 2 czeka na osobny START kodu.*
