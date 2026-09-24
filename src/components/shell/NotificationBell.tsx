@@ -43,10 +43,10 @@ export function NotificationBell() {
   }, []);
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="bell-wrap" ref={ref}>
       <button
         type="button"
-        className="iconbtn relative" aria-haspopup="dialog"
+        className="iconbtn bell-trigger" aria-haspopup="dialog"
         aria-label={t(locale, 'notifications')}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
@@ -58,7 +58,7 @@ export function NotificationBell() {
         </svg>
         {unread > 0 ? (
           <span
-            className="absolute cond tabular"
+            className="bell-badge cond tabular"
             style={{
               top: -4,
               right: -4,

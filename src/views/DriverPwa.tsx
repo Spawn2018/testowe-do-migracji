@@ -28,15 +28,15 @@ export function DriverPwa() {
     : [];
 
   return (
-    <div className="min-h-full bg-[var(--wt-bg)] text-[var(--wt-ink)] flex flex-col max-w-md mx-auto">
-      <header className="p-3 border-b border-[var(--wt-border)] bg-[var(--wt-surface)]">
+    <div className="driver-pwa">
+      <header className="driver-pwa-hd">
         <div className="font-cond" style={{ fontSize: 20, fontWeight: 700 }}>
           WATCH TOWER · Kierowca
         </div>
-        <div className="text-[12px] text-[var(--wt-ink-faint)]">
+        <div className="driver-meta">
           {load?.code ?? loadId} · token {token}
         </div>
-        <div className="flex gap-1 mt-2">
+        <div className="driver-pwa-tabs">
           {(['pl', 'en', 'sv'] as Locale[]).map((l) => (
             <button key={l} type="button" className="btn" aria-pressed={locale === l} onClick={() => setLocale(l)}>
               {l.toUpperCase()}
@@ -44,15 +44,15 @@ export function DriverPwa() {
           ))}
         </div>
       </header>
-      <main className="p-3 flex flex-col gap-3 flex-1">
+      <main className="driver-pwa-main">
         {!loadId && (
-          <div className="p-3 bg-[var(--wt-crit-bg)] text-[var(--wt-crit)] text-[13px]">
+          <div className="driver-alert">
             Nieznany token kierowcy — użyj #/driver/demo-active lub demo-sg14
           </div>
         )}
         <button
           type="button"
-          className="btn btn w-full"
+          className="btn driver-btn-block"
           style={{ height: 48, fontSize: 15 }}
           onClick={() => driverSharePosition(token)}
         >
@@ -69,7 +69,7 @@ export function DriverPwa() {
           <button
             key={m}
             type="button"
-            className="btn w-full"
+            className="btn driver-btn-block"
             style={{
               height: 56,
               fontSize: 18,
@@ -83,12 +83,12 @@ export function DriverPwa() {
             {t(locale, key)}
           </button>
         ))}
-        <div className="flex gap-1">
+        <div className="driver-btn-row">
           {(['CMR', 'POD'] as const).map((c) => (
             <button
               key={c}
               type="button"
-              className="btn flex-1"
+              className="btn driver-btn-grow"
               aria-pressed={cat === c}
               onClick={() => setCat(c)}
             >
@@ -98,7 +98,7 @@ export function DriverPwa() {
         </div>
         <button
           type="button"
-          className="btn w-full"
+          className="btn driver-btn-block"
           disabled={!loadId || busy}
           title={!loadId ? 'Brak przypisanego transportu — nie można załączyć CMR/POD' : undefined}
           onClick={() => camRef.current?.click()}
@@ -110,7 +110,7 @@ export function DriverPwa() {
           type="file"
           accept="image/*,application/pdf"
           capture="environment"
-          className="hidden"
+          className="driver-file-input"
           onChange={(e) => {
             const f = e.target.files?.[0];
             e.target.value = '';
@@ -142,7 +142,7 @@ export function DriverPwa() {
           }}
         />
         {lastFile && (
-          <div className="p-3 bg-[var(--wt-surface-2)] text-[13px]" style={{ borderRadius: 2 }}>
+          <div className="driver-attach-note" style={{ borderRadius: 2 }}>
             Załączono · {lastFile}
           </div>
         )}
@@ -161,8 +161,8 @@ export function DriverPwa() {
         )}
         <DocPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
       </main>
-      <footer className="p-3 text-[12px] text-[var(--wt-ink-faint)]">
-        <Link to="/" className="underline">
+      <footer className="driver-pwa-ft">
+        <Link to="/" className="driver-back-link">
           ← Wróć do wieży
         </Link>
       </footer>

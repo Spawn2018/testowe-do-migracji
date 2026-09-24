@@ -1,14 +1,9 @@
-@import "tailwindcss";
+/* Claude makieta v2.0 CSS 1:1 (extracted from tower-makieta.html) — Fala-1-D1: no Tailwind */
 
-@theme {
+:root{
   --font-sans: "Barlow", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "Barlow Condensed", "Barlow", Arial, sans-serif;
   --font-cond: "Barlow Condensed", "Barlow", Arial, sans-serif;
-}
-
-/* Claude makieta v2.0 CSS 1:1 (extracted from tower-makieta.html) */
-
-:root{
   --page:#E3E9ED; --surface:#FFFFFF; --surface-2:#F4F7F9; --surface-3:#EAEFF3;
   --ink:#0E1A24; --ink-2:#3C4E5C; --ink-3:#6C7D8A;
   --rule:#C9D5DD; --rule-2:#DEE6EB;
@@ -54,7 +49,7 @@ body{
   font-size:14px;line-height:1.45;font-variant-numeric:tabular-nums;
   -webkit-font-smoothing:antialiased;
 }
-.cond{font-family:"Barlow Condensed","Barlow",Arial,sans-serif;letter-spacing:.015em}
+.cond,.font-cond{font-family:var(--font-cond);letter-spacing:.015em}
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 :focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -474,9 +469,6 @@ table.data-table tbody tr:hover{background:var(--surface-2)}
 .grid2-map-body .leaflet-control-attribution{display:none}
 .grid2-map-body .leaflet-container{background:var(--surface-3)}
 
-/* kill Tailwind spacing on Claude chrome regions (utilities must not fight SoT) */
-.panel.p-0,.panel.p-2,.panel.p-3,.panel.p-4{padding:unset}
-/* drawer-hd / dbody padding already set above (no TW on those nodes) */
 .panel-bd{padding:13px}
 .panel-bd.flush{padding:0}
 .panel-hd{padding:9px 13px}
@@ -783,3 +775,69 @@ nav button{padding:8px 14px}
 .stage.site .bar i{background:var(--go)}
 .stage.pre .bar i{background:var(--plan)}
 .topbar{flex-shrink:0;height:52px}
+
+/* ===== Fala-1-D1: role classes replacing Tailwind utilities (Driver PWA + bell) ===== */
+.driver-pwa{
+  min-height:100%;display:flex;flex-direction:column;
+  max-width:28rem;margin:0 auto;
+  background:var(--wt-bg);color:var(--wt-ink);
+}
+.driver-pwa-hd{
+  padding:12px;border-bottom:1px solid var(--wt-border);background:var(--wt-surface);
+}
+.driver-meta{font-size:12px;color:var(--wt-ink-faint)}
+.driver-pwa-tabs{display:flex;gap:4px;margin-top:8px}
+.driver-pwa-main{padding:12px;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
+.driver-alert{padding:12px;background:var(--wt-crit-bg);color:var(--wt-crit);font-size:13px}
+.driver-btn-block{width:100%}
+.driver-btn-grow{flex:1}
+.driver-btn-row{display:flex;gap:4px}
+.driver-file-input{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
+}
+.driver-attach-note{padding:12px;background:var(--wt-surface-2);font-size:13px;border-radius:2px}
+.driver-pwa-ft{padding:12px;font-size:12px;color:var(--wt-ink-faint)}
+.driver-back-link{text-decoration:underline;color:inherit}
+
+.bell-wrap{position:relative}
+.bell-trigger{position:relative}
+.bell-badge{position:absolute}
+
+/* D1: Tailwind v4 preflight compensation (pixel-intent vs TW baseline) */
+*,*::before,*::after{border-width:0;border-style:solid}
+hr{height:0;color:inherit;border-top-width:1px}
+abbr:where([title]){text-decoration:underline dotted}
+h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}
+a{color:inherit;text-decoration:inherit}
+b,strong{font-weight:bolder}
+code,kbd,samp,pre{font-family:var(--font-mono);font-size:1em}
+small{font-size:80%}
+sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}
+sub{bottom:-0.25em}sup{top:-0.5em}
+table{text-indent:0;border-color:inherit;border-collapse:collapse}
+button,input,optgroup,select,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:transparent;border-radius:0}
+button,select{text-transform:none}
+button,input:where([type=button],[type=reset],[type=submit]){-webkit-appearance:button;background-image:none}
+:-moz-focusring{outline:auto}
+:-moz-ui-invalid{box-shadow:none}
+progress{vertical-align:baseline}
+::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}
+[type=search]{-webkit-appearance:textfield;outline-offset:-2px}
+::-webkit-search-decoration{-webkit-appearance:none}
+::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}
+summary{display:list-item}
+ol,ul,menu{list-style:none;margin:0;padding:0}
+blockquote,dl,dd,h1,h2,h3,h4,h5,h6,hr,figure,p,pre{margin:0}
+fieldset{margin:0;padding:0}
+legend{padding:0}
+dialog{padding:0}
+textarea{resize:vertical}
+button,[role=button]{cursor:pointer}
+:disabled{cursor:default}
+img,svg,video,canvas,audio,iframe,embed,object{display:block;vertical-align:middle}
+img,video{max-width:100%;height:auto}
+[hidden]:where(:not([hidden=until-found])){display:none!important}
+/* pin Leaflet against img{max-width/height:auto} (mirrors TW+leaflet.css coexistence) */
+.leaflet-container img.leaflet-tile{max-width:none!important;max-height:none!important;width:256px;height:256px}
+.leaflet-container img.leaflet-marker-icon,.leaflet-container img.leaflet-marker-shadow{max-width:none!important;height:auto}

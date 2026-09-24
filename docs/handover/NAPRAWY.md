@@ -98,8 +98,9 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 - **D21** — DONE — usuń martwy MapLibre.
 - **D9** (Fala 1) — DONE — cienie / promienie ≤2px / sprzątanie `!important`. **≠** D9-legacy-JSONLogic.
 - **D16** (Fala 1) — DONE — motyw per rola (KSH light, HHL/SCX dark) + `data-theme` only (bez Tailwind `dark`). **≠** D16-legacy-force-majeure.
-- **D1 inventory (D1a)** — DONE — [`D1_TAILWIND_INVENTORY.md`](./D1_TAILWIND_INVENTORY.md). **Removal jeszcze NIE.**
-- **Następne (NIE START):** D1 removal (strip TW) / D2.
+- **D1 inventory (D1a)** — DONE — [`D1_TAILWIND_INVENTORY.md`](./D1_TAILWIND_INVENTORY.md).
+- **D1 removal** — DONE — Tailwind out; role CSS + preflight compensation. **≠** D1-legacy-route-alts.
+- **Następne (NIE START):** D2 (system fonts verify).
 
 #### Fala-1-D9 — szczegóły
 - Soft `box-shadow` → `none`: `.docpreview`, `.wf-creator`, `.sched-col-menu` (toasty już `none`).
@@ -114,6 +115,14 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 - Manual `setTheme` / `toggleTheme` → `themeManual=true` (bez zmian).
 - Unit: `tests/theme-role.test.ts` (5). `index.html` boot `data-theme="dark"` (HHL-first).
 
+#### Fala-1-D1 removal — szczegóły
+- **≠** D1-legacy-route-alts (alternatywy trasy SE).
+- Usunięto `@import "tailwindcss"`, `@theme {…}`, `.panel.p-*{padding:unset}`, deps `tailwindcss` + `@tailwindcss/vite`, plugin Vite.
+- Role CSS: `.driver-pwa*`, `.driver-meta`, `.driver-btn-*`, `.driver-file-input`, `.driver-attach-note`, `.driver-back-link`, `.bell-wrap` / `.bell-trigger` / `.bell-badge`; `--font-*` w `:root`; `.cond,.font-cond`.
+- **Preflight compensation** (smoke map bez regen baseline): TW-like `border-width:0;border-style:solid` na `*`, `img,svg,…{display:block}`, `img,video{max-width:100%;height:auto}`, form/heading/list resets, plus pin `.leaflet-container img.leaflet-tile` (256×256, max-width/height none) — bez tego mapa kokpit/minimap psuła smoke (~map body only).
+- Bundle (vite build assets): JS **2073571 → 2073376** (−195); CSS **65267 → 53190** (−12077).
+- Testy: `test:unit` **13/13**; playwright smoke **4/4** (bez update snapshot / bez regen `shots-baseline`). Visual 720 deferred.
+
 ### Postęp Fala 1
 
 | Item | Commit | Pliki | test:unit | playwright | visual | Bundle JS (bytes) | Bundle CSS (bytes) |
@@ -122,9 +131,10 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 | **D9** (Fala 1 — chrome wizualny; ≠ D9-legacy-JSONLogic) | `cb41781d5a17eb58342c99d246a2f9c100ffe6f1` | `src/index.css`, `Toasts.tsx`, `DriverPwa.tsx` | **8/8** | **4/4** | smoke **4/4** (720 deferred) | n/a (CSS/chrome only) | n/a |
 | **D16** (Fala 1 — motyw/rola; ≠ D16-legacy-force-majeure) | `230e876e3998916fa92275569660540e8af2f2ca` | `src/lib/theme.ts`, `useTowerStore.ts`, `tests/theme-role.test.ts`, `tests/setup.ts` | **13/13** | **4/4** | smoke **4/4** (720 deferred) | n/a (behaviour) | n/a |
 | **D1a** inventory (≠ D1-legacy-route-alts; removal = next) | `de851b80cee33f31c129e1bbfddb337808c41e60` | `docs/handover/D1_TAILWIND_INVENTORY.md` (+ NAPRAWY) | **13/13** | **4/4** | smoke **4/4** (720 deferred) | n/a (docs-only) | n/a |
+| **D1** removal (≠ D1-legacy-route-alts; ≠ D1a) |  | `DriverPwa.tsx`, `NotificationBell.tsx`, `src/index.css`, `vite.config.ts`, `package.json`, `package-lock.json`, NAPRAWY | **13/13** | **4/4** | smoke **4/4** (720 deferred; **no** baseline regen) | 2073571 → **2073376** (−195); `index-C0NcMovv.js` sha256 `fe6374e2eb14…` | 65267 → **53190** (−12077); `index-BJwYPbrW.css` sha256 `0febf525b07a…` |
 
 ### Fala 1–2 (pozostałe)
-- Kolejność pozostała jak niżej; **D1 removal** / D2 **nie rozpoczęte** (inventory D1a DONE).
+- Kolejność pozostała jak niżej; **D2** **nie rozpoczęte** (D1 removal DONE).
 
 ### Fala 3 — import UX + skala + visual CI
 - **D26** — poniżej
@@ -149,4 +159,4 @@ Wybrana droga (Sebastian 2026-09-24): **2 — usunięcia za wyraźną zgodą**. 
 
 ---
 
-*Koniec zakresu. D24 zamknięte. Fala 1: D21+D9+D16+D1a DONE. Nie startować D1 removal / D2 / D26 / legacy bez osobnego START.*
+*Koniec zakresu. D24 zamknięte. Fala 1: D21+D9+D16+D1a+D1-removal DONE. Nie startować D2 / D26 / legacy bez osobnego START.*

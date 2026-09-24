@@ -1,5 +1,4 @@
 import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
 import { defineConfig, type Plugin } from 'vite'
 
 /** Dev/preview: POST /api/trafikverket → Trafikverket v2 (key server-side) or seed demo JSON */
@@ -59,7 +58,7 @@ function trafikverketApi(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), trafikverketApi()],
+  plugins: [react(), trafikverketApi()],
   server: {
     proxy: {
       // Tile proxy — browser hits same-origin; box fetches Carto (demotiles often egress-blocked)
