@@ -1,5 +1,6 @@
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
+import { formatLoadPl } from '../lib/time';
 
 export function TasksView() {
   const loads = useTowerStore((s) => s.loads);
@@ -48,7 +49,7 @@ export function TasksView() {
                       <span className="code">{l.code}</span>
                     </td>
                     <td>{what}</td>
-                    <td>{l.plannedLoadDate}</td>
+                    <td>{formatLoadPl(l.plannedLoadDate)}</td>
                     <td className="mono">za {hrs} h</td>
                     <td>
                       <span className={`pill ${pill}`}>{lab}</span>

@@ -7,6 +7,7 @@ import { CorridorMap } from '../components/map/CorridorMap';
 import { t } from '../i18n/messages';
 import { canSeeMargin, ROLE_META } from '../lib/permissions';
 import { getNow } from '../lib/frozenNow';
+import { formatEtaBodenCompact } from '../lib/time';
 import { computeCorridorKpis } from '../lib/corridorKpis';
 import { cockpitFerryBanner, focusVoyage, seaForSailing } from '../lib/voyage';
 
@@ -103,7 +104,7 @@ export function DashboardView() {
               />
               <KpiTile
                 label="Najbliższa dostawa"
-                value={arrivals72[0]?.etaBoden?.slice(5, 16) ?? '—'}
+                value={arrivals72[0] ? formatEtaBodenCompact(arrivals72[0].etaBoden) : '—'}
                 delta={arrivals72[0] ? `${arrivals72[0].code}` : 'brak w 72h'}
                 onClick={() =>
                   arrivals72[0] ? selectLoad(arrivals72[0].id) : navigateTo({ view: 'sched' })

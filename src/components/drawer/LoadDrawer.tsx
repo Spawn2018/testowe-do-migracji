@@ -10,60 +10,22 @@ import { downloadDocumentsZip } from '../../lib/zipDocs';
 import { readFileAsDataUrl } from '../../lib/docsIo';
 import { DocPreview } from '../ui/DocPreview';
 import { DocFileRow } from '../ui/DocFileRow';
+import {
+  TZ_LOAD_PL,
+  TZ_OPS,
+  TZ_UNLOAD_SE,
+  formatEtaBoden,
+  formatLoadPl,
+  formatUnloadSe,
+  isoToDatetimeLocalValue,
+  wallLocalToIso,
+} from '../../lib/time';
 
 type Tab = 'overview' | 'timeline' | 'docs' | 'pricing' | 'chat';
 
 function fmtDim(n: number): string {
   return n.toFixed(2).replace('.', ',');
 }
-
-function fmtWhen(iso: string | null | undefined): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso.slice(0, 16).replace('T', ' ');
-  return new Intl.DateTimeFormat('pl-PL', {
-    timeZone: 'Europe/Warsaw',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(d);
-}
-
-
-/** ISO / Z → datetime-local value in Europe/Warsaw (YYYY-MM-DDTHH:mm). */
-function isoToDatetimeLocal(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) {
-    // already local-ish
-    return iso.slice(0, 16);
-  }
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Europe/Warsaw',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(d);
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
-}
-
-/** datetime-local → ISO with Warsaw +02:00 (makieta CEST). */
-function datetimeLocalToIso(local: string | null | undefined): string | null {
-  if (!local) return null;
-  const v = String(local).trim();
-  if (!v) return null;
-  if (v.includes('+') || v.endsWith('Z')) return v;
-  // Ensure seconds
-  const base = v.length === 16 ? `${v}:00` : v;
-  return `${base}+02:00`;
-}
-
 
 export function LoadDrawer() {
   const id = useTowerStore((s) => s.selectedLoadId);
@@ -211,12 +173,12 @@ export function LoadDrawer() {
                 <dt>Miejsce załadunku</dt>
                 <dd>{SITES.loading.name}</dd>
                 <dt>Załadunek</dt>
-                <dd className="cond">{fmtWhen(load.plannedLoadDate)}</dd>
+                <dd className="cond">{formatLoadPl(load.plannedLoadDate)}</dd>
                 <dt>Dostawa</dt>
-                <dd className="cond">{fmtWhen(load.plannedDeliverDate)}</dd>
+                <dd className="cond">{formatUnloadSe(load.plannedDeliverDate)}</dd>
                 <dt>{t(locale, 'eta')}</dt>
                 <dd className="cond">
-                  {fmtWhen(load.etaBoden)}{' '}
+                  {formatEtaBoden(load.etaBoden)}{' '}
                   {load.delayed ? (
                     <span className="pill p-red">+1h 35 min</span>
                   ) : (
@@ -502,7 +464,7 @@ export function LoadDrawer() {
                   <dl className="kv">
                     <dt>Okno załad.</dt>
                     <dd>
-                      {fmtWhen(load.awizacja.loadWindowStart)} – {fmtWhen(load.awizacja.loadWindowEnd)}
+                      {formatLoadPl(load.awizacja.loadWindowStart)} – {formatLoadPl(load.awizacja.loadWindowEnd)}
                     </dd>
                     <dt>Prom</dt>
                     <dd>{load.ferry.vessel ?? 'brak rezerwacji'}</dd>
@@ -622,16 +584,16 @@ export function LoadDrawer() {
                       e.preventDefault();
                       const fd = new FormData(e.currentTarget);
                       updateAwizacja(load.id, {
-                        loadWindowStart: datetimeLocalToIso(String(fd.get('loadWindowStart') || '')),
-                        loadWindowEnd: datetimeLocalToIso(String(fd.get('loadWindowEnd') || '')),
-                        unloadWindowStart: datetimeLocalToIso(String(fd.get('unloadWindowStart') || '')),
-                        unloadWindowEnd: datetimeLocalToIso(String(fd.get('unloadWindowEnd') || '')),
+                        loadWindowStart: wallLocalToIso(String(fd.get('loadWindowStart') || ''), TZ_LOAD_PL),
+                        loadWindowEnd: wallLocalToIso(String(fd.get('loadWindowEnd') || ''), TZ_LOAD_PL),
+                        unloadWindowStart: wallLocalToIso(String(fd.get('unloadWindowStart') || ''), TZ_UNLOAD_SE),
+                        unloadWindowEnd: wallLocalToIso(String(fd.get('unloadWindowEnd') || ''), TZ_UNLOAD_SE),
                         confirmed: fd.get('confirmed') === 'on',
                       });
                       updateFerry(load.id, {
                         vessel: (String(fd.get('vessel') || '') as 'Wawel' | 'Nova Star') || null,
-                        departureAt: datetimeLocalToIso(String(fd.get('departureAt') || '')),
-                        arrivalAt: datetimeLocalToIso(String(fd.get('arrivalAt') || '')),
+                        departureAt: wallLocalToIso(String(fd.get('departureAt') || ''), TZ_OPS),
+                        arrivalAt: wallLocalToIso(String(fd.get('arrivalAt') || ''), TZ_UNLOAD_SE),
                         bookingRef: String(fd.get('bookingRef') || '') || null,
                         status: String(fd.get('status') || 'BOOKED') as typeof load.ferry.status,
                       });
@@ -645,7 +607,7 @@ export function LoadDrawer() {
                           type="datetime-local"
                           className="input"
                           style={{ width: '48%' }}
-                          defaultValue={isoToDatetimeLocal(load.awizacja.loadWindowStart)}
+                          defaultValue={isoToDatetimeLocalValue(load.awizacja.loadWindowStart, TZ_LOAD_PL)}
                           required
                         />{' '}
                         <input
@@ -653,7 +615,7 @@ export function LoadDrawer() {
                           type="datetime-local"
                           className="input"
                           style={{ width: '48%' }}
-                          defaultValue={isoToDatetimeLocal(load.awizacja.loadWindowEnd)}
+                          defaultValue={isoToDatetimeLocalValue(load.awizacja.loadWindowEnd, TZ_LOAD_PL)}
                           required
                         />
                       </dd>
@@ -688,14 +650,14 @@ export function LoadDrawer() {
                           type="datetime-local"
                           className="input"
                           style={{ width: '48%' }}
-                          defaultValue={isoToDatetimeLocal(load.ferry.departureAt)}
+                          defaultValue={isoToDatetimeLocalValue(load.ferry.departureAt, TZ_OPS)}
                         />{' '}
                         <input
                           name="arrivalAt"
                           type="datetime-local"
                           className="input"
                           style={{ width: '48%' }}
-                          defaultValue={isoToDatetimeLocal(load.ferry.arrivalAt)}
+                          defaultValue={isoToDatetimeLocalValue(load.ferry.arrivalAt, TZ_UNLOAD_SE)}
                         />
                       </dd>
                       <dt>Potwierdzona</dt>
@@ -704,8 +666,8 @@ export function LoadDrawer() {
                           <input name="confirmed" type="checkbox" defaultChecked={load.awizacja.confirmed} /> tak
                         </label>
                       </dd>
-                      <input type="hidden" name="unloadWindowStart" defaultValue={isoToDatetimeLocal(load.awizacja.unloadWindowStart)} />
-                      <input type="hidden" name="unloadWindowEnd" defaultValue={isoToDatetimeLocal(load.awizacja.unloadWindowEnd)} />
+                      <input type="hidden" name="unloadWindowStart" defaultValue={isoToDatetimeLocalValue(load.awizacja.unloadWindowStart, TZ_UNLOAD_SE)} />
+                      <input type="hidden" name="unloadWindowEnd" defaultValue={isoToDatetimeLocalValue(load.awizacja.unloadWindowEnd, TZ_UNLOAD_SE)} />
                     </dl>
                     <button type="submit" className="btn ghost" style={{ marginTop: 8 }}>
                       Zapisz awizację

@@ -5,6 +5,12 @@ import { StatusPill, formatDelayPill } from '../components/ui/StatusPill';
 import { canImportSchedule, canSeeCost, canSeeMargin, canSeeRevenue } from '../lib/permissions';
 import { exportLoadsXlsx } from '../lib/xlsxExport';
 import { t } from '../i18n/messages';
+import {
+  delayMinutesVsPlan,
+  formatEtaBoden,
+  formatLoadPl,
+  formatUnloadSe,
+} from '../lib/time';
 import { dryRunFromXlsx, type ImportDiff } from '../lib/scheduleDryRun';
 import { COLUMN_MAP_DEFAULT } from '../lib/scheduleParse';
 import type { CorridorStage, DocCategory, Load } from '../types';
@@ -35,33 +41,7 @@ function orderNo(l: Load): string {
 
 function delayMinutes(l: Load): number | null {
   if (!l.delayed) return null;
-  const eta = l.etaBoden ? Date.parse(l.etaBoden) : NaN;
-  const plan = Date.parse(l.plannedDeliverDate);
-  if (!Number.isNaN(eta) && !Number.isNaN(plan) && eta > plan) {
-    return Math.max(1, Math.round((eta - plan) / 60000));
-  }
-  return 95;
-}
-
-function fmtWhen(iso: string | null | undefined): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) {
-    // planned dates may be YYYY-MM-DD
-    if (/^\d{4}-\d{2}-\d{2}/.test(iso)) {
-      const [y, m, day] = iso.slice(0, 10).split('-');
-      return `${day}.${m}.${y}`;
-    }
-    return iso;
-  }
-  return new Intl.DateTimeFormat('pl-PL', {
-    timeZone: 'Europe/Warsaw',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(d);
+  return delayMinutesVsPlan(l.etaBoden, l.plannedDeliverDate) ?? 95;
 }
 
 export function ScheduleView() {
@@ -577,9 +557,9 @@ export function ScheduleView() {
                             </td>
                           );
                         case 'load':
-                          return <td key={id} data-col={id}>{fmtWhen(l.plannedLoadDate)}</td>;
+                          return <td key={id} data-col={id}>{formatLoadPl(l.plannedLoadDate)}</td>;
                         case 'deliver':
-                          return <td key={id} data-col={id}>{fmtWhen(l.plannedDeliverDate)}</td>;
+                          return <td key={id} data-col={id}>{formatUnloadSe(l.plannedDeliverDate)}</td>;
                         case 'status':
                           return (
                             <td key={id} data-col={id}>
@@ -624,7 +604,7 @@ export function ScheduleView() {
                             </td>
                           );
                         case 'eta':
-                          return <td key={id} data-col={id}>{fmtWhen(l.etaBoden)}</td>;
+                          return <td key={id} data-col={id}>{formatEtaBoden(l.etaBoden)}</td>;
                         case 'docs':
                           return (
                             <td key={id} data-col={id}>

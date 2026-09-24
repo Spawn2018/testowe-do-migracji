@@ -6,6 +6,7 @@ import { CorridorMap } from '../components/map/CorridorMap';
 import { t } from '../i18n/messages';
 import { fetchSituations } from '../lib/trafikverket';
 import { trafikverketShortLabel } from '../lib/demoLabel';
+import { formatEtaBodenCompact } from '../lib/time';
 import { subscribeAis, type AisMode } from '../lib/ais';
 
 /** Claude maplayers — exactly 5. */
@@ -253,7 +254,7 @@ export function MapView() {
                         </span>
                       </td>
                       <td>
-                        <span className="cell-clip mono">{l.etaBoden?.slice(5, 16) ?? '—'}</span>
+                        <span className="cell-clip mono">{formatEtaBodenCompact(l.etaBoden)}</span>
                       </td>
                       <td>
                         <span

@@ -14,6 +14,7 @@ import {
   threeWayVerdictLabel,
   threeWayVerdictPill,
 } from '../lib/invoiceMatch';
+import { formatOpsDateTime } from '../lib/time';
 
 function fmt(n: number) {
   return Math.round(n).toLocaleString('pl-PL');
@@ -356,7 +357,7 @@ export function InvoicesView() {
                   </span>
                   <span>
                     net {fmt(i.factoring!.netPayout)} · {i.payoutStatus ?? 'NONE'}
-                    {i.factoring?.payoutAt ? ` · ${i.factoring.payoutAt.slice(0, 16)}` : ''}
+                    {i.factoring?.payoutAt ? ` · ${formatOpsDateTime(i.factoring.payoutAt)}` : ''}
                   </span>
                 </div>
               ))}

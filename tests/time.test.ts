@@ -1,0 +1,65 @@
+import { describe, expect, it } from 'vitest';
+import {
+  TZ_LOAD_PL,
+  TZ_UNLOAD_SE,
+  calendarDayNoonMs,
+  delayMinutesVsPlan,
+  formatCalendarDay,
+  formatCompactInZone,
+  formatEtaBoden,
+  formatEtaBodenCompact,
+  formatLoadPl,
+  formatUnloadSe,
+  isoToDatetimeLocalValue,
+  parseInstant,
+  wallLocalToIso,
+  zoneOffsetIso,
+} from '../src/lib/time';
+
+describe('D8 timezone policy', () => {
+  it('calendar YYYY-MM-DD formats without UTC midnight shift', () => {
+    expect(formatCalendarDay('2026-09-26')).toBe('26.09.2026');
+    expect(formatLoadPl('2026-09-23')).toBe('23.09.2026');
+    expect(formatUnloadSe('2026-09-26')).toBe('26.09.2026');
+    expect(parseInstant('2026-09-26')).toBeNull();
+  });
+
+  it('does not use ISO slice semantics — Z and +02:00 compact to same Warsaw/Stockholm wall in CEST', () => {
+    const z = '2026-09-23T12:32:00.000Z'; // 14:32 CEST
+    const off = '2026-09-23T14:32:00+02:00';
+    expect(formatEtaBodenCompact(z)).toBe('23.09 14:32');
+    expect(formatEtaBodenCompact(off)).toBe('23.09 14:32');
+    // old bug: z.slice(5,16) => '09-23T12:32' (UTC) vs off.slice => '09-23T14:32'
+    expect(z.slice(5, 16)).not.toBe(off.slice(5, 16));
+  });
+
+  it('wallLocalToIso tags PL load and SE unload with zone offset (not hardcoded +02 forever)', () => {
+    const pl = wallLocalToIso('2026-09-23T06:00', TZ_LOAD_PL);
+    const se = wallLocalToIso('2026-09-26T07:00', TZ_UNLOAD_SE);
+    expect(pl).toMatch(/^2026-09-23T06:00:00/);
+    expect(se).toMatch(/^2026-09-26T07:00:00/);
+    // September → CEST +02 for both Warsaw and Stockholm
+    expect(pl?.endsWith('+02:00') || pl?.endsWith('+02')).toBe(true);
+    expect(se?.endsWith('+02:00') || se?.endsWith('+02')).toBe(true);
+    const round = isoToDatetimeLocalValue(pl, TZ_LOAD_PL);
+    expect(round).toBe('2026-09-23T06:00');
+  });
+
+  it('delayMinutesVsPlan uses Boden noon civil day, not Date.parse(date-only)', () => {
+    const eta = '2026-09-26T18:00:00+02:00';
+    const mins = delayMinutesVsPlan(eta, '2026-09-26');
+    expect(mins).toBe(6 * 60); // 12:00 → 18:00
+    // naive Date.parse('2026-09-26') is UTC midnight — would skew on some hosts
+    const naive = Date.parse('2026-09-26');
+    const noon = calendarDayNoonMs('2026-09-26', TZ_UNLOAD_SE)!;
+    expect(noon).not.toBe(naive);
+  });
+
+  it('formatEtaBoden / formatLoadPl use site zones', () => {
+    const iso = '2026-09-24T10:00:00Z';
+    expect(formatEtaBoden(iso)).toMatch(/24\.09\.2026/);
+    expect(formatLoadPl(iso)).toMatch(/24\.09\.2026/);
+    expect(formatCompactInZone(iso, TZ_UNLOAD_SE)).toMatch(/^24\.09 /);
+    expect(zoneOffsetIso(new Date('2026-09-24T10:00:00Z'), TZ_LOAD_PL)).toMatch(/\+02/);
+  });
+});

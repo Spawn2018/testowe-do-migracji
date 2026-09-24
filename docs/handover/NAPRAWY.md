@@ -3,7 +3,7 @@
 | Pole | Wartość |
 |---|---|
 | Data zapisu | **2026-09-24** Europe/Warsaw |
-| Status | **Fala 1 ACCEPTED** · **Fala 2 w toku** · D7 answered · **D22/D5/D4/D3/D20 DONE** · pozostałe F2: D8 |
+| Status | **Fala 1 ACCEPTED** · **Fala 2 CLOSED (code)** · D7 answered · **D22/D5/D4/D3/D20/D8 DONE** · next: Fala 2 GATE (baseline regen only at GATE) |
 | Repo | `Spawn2018/testowe-do-migracji` · branch `main` |
 | Kod produktu | Fala 2 **nie** startuje tu (poza closeout D9/stylelint + proof D2) |
 
@@ -36,7 +36,7 @@ Stary zakres NAPRAWY mieszł etykiety Sebastiana (Fala 1/2). **D1–D26 = wyłą
 | *(brak w starym)* voyage SoT | **D4** | nowy kanon Sebastian | **DONE** Fala 2 |
 | *(brak w starym)* KPI vs corridor | **D5** | nowy kanon Sebastian | **DONE** Fala 2 |
 | *(brak w starym)* BAF/SEFS formula | **D7** | nowy kanon Sebastian | **ANSWERED** (poniżej; fix = Fala 2) |
-| *(brak w starym)* timezones last | **D8** | nowy kanon Sebastian | OPEN (Fala 2) |
+| *(brak w starym)* timezones last | **D8** | nowy kanon Sebastian | **DONE** Fala 2 |
 | D1 Tailwind / D2 fonty / D9 chrome / D16 theme | **D1 / D2 / D9 / D16** | kanon Fala 1 | **DONE** (+ D9 stylelint closeout 2026-09-24) |
 
 ---
@@ -118,7 +118,16 @@ OPEN. Źródło prawdziwe lub oznaczenie demo (`RisksView`).
 Fix produktowy (jeśli rozjazd vs kontrakt) = **Fala 2** — nie w tym closeout.
 
 ### D8 — timezones last
-OPEN (Fala 2). Strefy czasowe na końcu (≠ L8 geofence samples).
+**DONE Fala 2 (2026-09-24).** ≠ L8.
+
+| Pole | Wartość |
+|---|---|
+| Problem | Mieszanka `+02:00` hardcode, `toISOString()` (Z) i `iso.slice(5,16)` — ETA Boden / map / kokpit pokazywały UTC ściankę; `Date.parse('YYYY-MM-DD')` = UTC midnight |
+| Polityka | Storage = ISO z offsetem/Z · UI ops = `Europe/Warsaw` · załadunek Śrem = Warsaw · rozładunek/ETA Boden = `Europe/Stockholm` · `src/lib/time.ts` |
+| Visual | **400+** ujęć może się zmienić (daty w harmonogramie/mapie/drawer/kokpicie) — **NIE regen `shots-baseline` tutaj**; regen tylko na Fala 2 GATE |
+| Testy | `tests/time.test.ts` (5) |
+
+test:unit **41/41** · playwright **4/4**.
 
 ### D9 — chrome shadows / radii / `!important` + stylelint
 **DONE Fala 1** + **stylelint closeout 2026-09-24**. ≠ L9.
@@ -282,7 +291,8 @@ PLAN only (Fala 3) — opcja 2 Sebastian: checkbox zgody, `allowRemovals` z UI.
 - **D4** DONE (voyage SoT; ~180 kokpit+ryzyka shots expected drift — no baseline regen).
 - **D3** DONE (SE road DEMO LABEL — no TV key; DemoMark reusable for D18).
 - **D20** DONE (three-way invoice match; ~60 faktury shots — no baseline regen).
-- Pozostałe: D7 fix (jeśli potrzeba), D8 timezones (last).
+- **D8** DONE (timezone policy; 400+ shots expected — **no baseline regen in this commit**; GATE next).
+- Fala 2 product code complete. D7 fix only if needed after business review.
 
 ### Fala 3
 D26 (plan) + skala importu + visual CI.
