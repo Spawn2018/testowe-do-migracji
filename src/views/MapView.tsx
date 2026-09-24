@@ -63,6 +63,7 @@ export function MapView() {
   const mapLayers = useTowerStore((s) => s.mapLayers);
   const toggleLayer = useTowerStore((s) => s.toggleLayer);
   const locale = useTowerStore((s) => s.locale);
+  const showDemoMarks = useTowerStore((s) => s.showDemoMarks);
   const setView = useTowerStore((s) => s.setView);
   const [tvMode, setTvMode] = useState<'live' | 'seed'>('seed');
   const [aisMode, setAisMode] = useState<AisMode>('seed');
@@ -275,7 +276,7 @@ export function MapView() {
 
       <div className="note">
         {t(locale, 'map_note')} Trafikverket E4:{' '}
-        <b>{trafikverketShortLabel(tvMode)}</b>
+        <b>{trafikverketShortLabel(tvMode, showDemoMarks)}</b>
         {' · '}
         AIS:{' '}
         <b>{aisMode === 'live' ? t(locale, 'map_ais_live') : 'seed'}</b>

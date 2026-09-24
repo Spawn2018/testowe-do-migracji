@@ -6,7 +6,7 @@ Kolumny: `ID | pozycja | status | commit | testy (liczby) | uwagi`.
 Po F2.5 dodać wiersze **L*** (L1/L2/L4/L5/L7/L8/L9/L16) — na razie brak (notatka: po F2.5).  
 Niezgodności z F2.4: **F2.4-a / F2.4-b / F2.4-c** (poniżej, po G1).
 
-Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · D6 · D13 DONE) · następny: D18.
+Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · D13 · D18 DONE) · następny: P6.
 
 ---
 
@@ -64,7 +64,7 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · D6 · D1
 | D12 | Dane startowe prawdopodobne | **DONE** | `d8114a7` | unit **98 passed / 1 skipped** · pw **4/4** · D19-T **0/0** · lint:css **0** | `loads.json` + `seedIdentity.ts` + extras w `seed.ts`: nazwiska PL/LT/SE, E.164 (+48/+46/+370), tablice PL/SE/LT, zlecenia `KSH/2026/####`, `HHL/2026/####`, `SCX-26-####`. Brak Driver N / +48 600 000 000 / PSE 1000. data-content na kierowca/tablica (Schedule/Map/Drawer). Smoke mapa odświeżony (tekst danych). Pełny baseline = G2. |
 | D6 | Telefon kierowcy → szuflada; KSH ±24 h | **DONE** | `a071261` | unit **103 passed / 1 skipped** · pw **4/4** · D19-T **0/0** · lint:css **0** | `canSeeDriverPhone` / `visibleDriverPhone` w `permissions.ts`: HHL+SCX zawsze; KSH tylko ±24 h od dostawy (unload→ETA→noon SE). Schedule + LoadDrawer (osobne pole Telefon) z tej samej funkcji. Test: `tests/permissions-phone.test.ts` (+5). |
 | D13 | Wzorce wizualne / `section-card-hd--drag` | **DONE** | `6cc701a` | unit **103 passed / 1 skipped** · pw **4/4** · D19-T **0/0** · lint:css **0** (z `selector-class-pattern`) | `section-card-hd--drag` → `.is-draggable` (jak `is-dragging`/`is-drag-over`). Katalog + §5.1 kebab/`is-*` w `DESIGN_SYSTEM.md`. Stylelint `selector-class-pattern` włączony. |
-| D18 | Oznaczenie danych demonstracyjnych | OPEN | — | — | pending |
+| D18 | Oznaczenie danych demonstracyjnych | **DONE** | TBD | unit **105 passed / 1 skipped** · pw **4/4** · D19-T **0/0** · lint:css **0** | `showDemoMarks` (domyślnie ON) + przełącznik w Opcje → Preferencje. `DemoMark` na: cennik SCX, BAF/SEFS (Opcje), dodatek paliwowy (Finanse), panel SE (Ryzyka). i18n `demo_mark*`. Test: store toggle + soft footnotes. |
 | P6 | Stawki demo PLN→EUR tabelą 186/A/NBP/2026 | OPEN | — | — | pending |
 | D-EUR-T | Test waluty EUR/PLN w UI | OPEN | — | — | pending |
 | D25 | Atrapy/porzucone z fasady — decyzja | OPEN | — | — | pending |

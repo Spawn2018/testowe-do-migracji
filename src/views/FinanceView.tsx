@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { canSeeCost, canSeeMargin, canSeeRevenue } from '../lib/permissions';
 import { t } from '../i18n/messages';
+import { DemoMark } from '../components/ui/DemoMark';
 import { SEFS_WEEKLY, SEFS_SOURCES, computeSefs } from '../lib/sefs';
 import { formatMoney } from '../lib/money/engine';
 
@@ -189,7 +190,10 @@ export function FinanceView() {
             )}
           </div>
           <div>
-            <h4 className="sec">Dodatek paliwowy</h4>
+            <h4 className="sec" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {t(locale, 'fin_fuel_addon')}
+              <DemoMark />
+            </h4>
             {bafCard}
           </div>
         </div>

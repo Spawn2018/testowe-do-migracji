@@ -4,6 +4,7 @@ import { defaultThemeForRole } from '../lib/permissions';
 import type { BafParams, FactoringOffer, RateRule } from '../types';
 import { geofenceTypeLabel } from '../lib/enumLabels';
 import { t } from '../i18n/messages';
+import { DemoMark } from '../components/ui/DemoMark';
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
   { key: 'indexSource', labelKey: 'baf_index', type: 'text' },
@@ -59,6 +60,8 @@ export function OptionsView() {
   const setLocale = useTowerStore((s) => s.setLocale);
   const setDisplayCurrency = useTowerStore((s) => s.setDisplayCurrency);
   const setTheme = useTowerStore((s) => s.setTheme);
+  const showDemoMarks = useTowerStore((s) => s.showDemoMarks);
+  const setShowDemoMarks = useTowerStore((s) => s.setShowDemoMarks);
   const factoringOffer = useTowerStore((s) => s.factoringOffer);
   const updateFactoringOffer = useTowerStore((s) => s.updateFactoringOffer);
   const baf = useTowerStore((s) => s.baf);
@@ -98,7 +101,7 @@ export function OptionsView() {
 
       <div className="options-grid">
         <section className="panel option-panel option-wide pricing-panel">
-          <header className="panel-hd"><h2>{t(locale, "opt_rates_h2")}</h2><span className="sub">{`${t(locale, "opt_rates_sub")} · ${displayCurrency}`}</span><span className="panel-mark">{t(locale, "opt_rates_mark")}</span></header>
+          <header className="panel-hd"><h2>{t(locale, "opt_rates_h2")}</h2><span className="sub">{`${t(locale, "opt_rates_sub")} · ${displayCurrency}`}</span><span className="panel-mark">{t(locale, "opt_rates_mark")}</span><DemoMark /></header>
           <div className="panel-bd">
             <div className="rate-grid">
               <RateEditor side="COST" rules={rateCost} currency={displayCurrency} locale={locale} onChange={(id, value) => updateRate('COST', id, value)} onSave={() => saveMark('cennik')} />
@@ -109,7 +112,7 @@ export function OptionsView() {
         </section>
 
         <section className="panel option-panel option-wide fuel-panel">
-          <header className="panel-hd"><h2>{t(locale, "opt_fuel_h2")}</h2><span className="sub">{t(locale, 'opt_fuel_sub')}</span><span className="panel-mark">{t(locale, "opt_fuel_mark")}</span></header>
+          <header className="panel-hd"><h2>{t(locale, "opt_fuel_h2")}</h2><span className="sub">{t(locale, 'opt_fuel_sub')}</span><span className="panel-mark">{t(locale, "opt_fuel_mark")}</span><DemoMark /></header>
           <div className="panel-bd">
             <div className="fuel-grid">
               <div><h4 className="sec">{t(locale, "opt_index_read")}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(0, 6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{field.suffix}</span> : null}</div></dd></div>)}</dl></div>
@@ -122,6 +125,7 @@ export function OptionsView() {
         <section className="panel option-panel">
           <header className="panel-hd"><h2>{t(locale, "opt_ui_prefs")}</h2><span className="sub">{t(locale, 'opt_defaults')}</span></header>
           <div className="panel-bd"><dl className="kv options-kv">
+            <dt>{t(locale, 'opt_demo_marks')}</dt><dd><label className="switchline"><input type="checkbox" checked={showDemoMarks} onChange={(e) => { setShowDemoMarks(e.target.checked); saveMark('demo'); }} /><span>{showDemoMarks ? t(locale, 'on') : t(locale, 'off')}</span></label><div className="muted" style={{ marginTop: 4 }}>{t(locale, 'opt_demo_marks_sub')}</div></dd>
             <dt>{t(locale, 'opt_lang')}</dt><dd><select className="input" value={locale} onChange={(e) => { setLocale(e.target.value as 'pl' | 'en' | 'sv'); saveMark('język'); }}><option value="pl">Polski</option><option value="en">English</option><option value="sv">Svenska</option></select></dd>
             <dt>{t(locale, 'opt_currency')}</dt><dd><select className="input" value={displayCurrency} onChange={(e) => { setDisplayCurrency(e.target.value as 'EUR' | 'PLN'); saveMark('waluta'); }}><option value="PLN">PLN</option><option value="EUR">EUR</option></select></dd>
             <dt>{t(locale, "opt_theme")}</dt><dd><select className="input" value={theme} onChange={(e) => { setTheme(e.target.value as 'dark' | 'light'); saveMark('motyw'); }}><option value="dark">{t(locale, "opt_theme_dark")}</option><option value="light">{t(locale, "opt_theme_light")}</option></select></dd>

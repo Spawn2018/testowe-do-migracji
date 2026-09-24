@@ -166,6 +166,8 @@ interface TowerState {
   displayCurrency: DisplayCurrency;
   theme: Theme;
   themeManual: boolean; // session: user toggled theme manually
+  /** D18 — show DEMONSTRACYJNE marks on rates / BAF / SE road */
+  showDemoMarks: boolean;
   view: ViewKey;
   stageFilter: CorridorStage | null;
   search: string;
@@ -217,6 +219,7 @@ interface TowerState {
   /** @deprecated use setRole */
   setLocale: (locale: Locale) => void;
   setDisplayCurrency: (currency: DisplayCurrency) => void;
+  setShowDemoMarks: (v: boolean) => void;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
   setView: (view: ViewKey) => void;
@@ -309,6 +312,7 @@ export const useTowerStore = create<TowerState>()(
       displayCurrency: 'PLN',
       theme: 'dark',
       themeManual: false,
+      showDemoMarks: true,
       // v4 premium: expanded labels (186) desktop default; session remembers collapse.
       navCollapsed:
         typeof sessionStorage !== 'undefined' && sessionStorage.getItem('wtNavCollapsed') === '1',
@@ -372,6 +376,8 @@ export const useTowerStore = create<TowerState>()(
       setLocale: (locale) => set({ locale }),
 
       setDisplayCurrency: (displayCurrency) => set({ displayCurrency }),
+
+      setShowDemoMarks: (showDemoMarks) => set({ showDemoMarks }),
 
       toggleTheme: () => {
         const next = get().theme === 'dark' ? 'light' : 'dark';
@@ -1414,6 +1420,7 @@ export const useTowerStore = create<TowerState>()(
         displayCurrency: s.displayCurrency,
         theme: s.theme,
         themeManual: s.themeManual,
+        showDemoMarks: s.showDemoMarks,
         factoringOffer: s.factoringOffer,
         loads: s.loads,
         events: s.events,

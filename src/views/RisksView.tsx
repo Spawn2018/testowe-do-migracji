@@ -31,6 +31,7 @@ export function RisksView() {
   const role = useTowerStore((s) => s.role);
   const riskFilter = useTowerStore((s) => s.riskFilter);
   const locale = useTowerStore((s) => s.locale);
+  const showDemoMarks = useTowerStore((s) => s.showDemoMarks);
   const [picked, setPicked] = useState(0);
   const [seSituations, setSeSituations] = useState<RoadSituation[]>([]);
   const [seMode, setSeMode] = useState<'live' | 'seed'>('seed');
@@ -208,12 +209,12 @@ export function RisksView() {
         <header className="panel-hd">
           <h2>{t(locale, 'risk_road_se_title')}</h2>
           <span className="sub">
-            Nynashamn→Boden · {trafikverketSourceNote(seMode)} · {seSituations.length} {t(locale, 'risk_situations')}
+            Nynashamn→Boden · {trafikverketSourceNote(seMode, showDemoMarks)} · {seSituations.length} {t(locale, 'risk_situations')}
           </span>
           {isDemoSourceMode(seMode) ? <DemoMark /> : null}
         </header>
         <div className="panel-bd">
-          {isDemoSourceMode(seMode) ? (
+          {isDemoSourceMode(seMode) && showDemoMarks ? (
             <div className="note" style={{ marginBottom: 12 }} data-content>
               Warunki drogowe SE są <b>demonstracyjne</b> (seed makiety). To nie jest żywy feed
               Trafikverket — brak klucza API. Ten sam wzorzec oznaczenia co stawki demo (D18).

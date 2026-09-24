@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
   DEMO_MARK_PL,
   isDemoSourceMode,
   trafikverketShortLabel,
   trafikverketSourceNote,
 } from '../src/lib/demoLabel';
+import { useTowerStore } from '../src/store/useTowerStore';
 
 describe('D3 demo label (Trafikverket / D18 pattern)', () => {
   it('seed mode is explicit Polish demo — not live API wording', () => {
@@ -20,5 +21,25 @@ describe('D3 demo label (Trafikverket / D18 pattern)', () => {
   it('live mode keeps live wording for when a key exists later', () => {
     expect(trafikverketSourceNote('live')).toBe('Trafikverket live');
     expect(trafikverketShortLabel('live')).toBe('live');
+  });
+
+  it('D18 toggle off softens seed footnotes (marks hidden)', () => {
+    expect(trafikverketSourceNote('seed', false)).toBe('Trafikverket seed');
+    expect(trafikverketShortLabel('seed', false)).toBe('seed');
+    expect(trafikverketSourceNote('live', false)).toBe('Trafikverket live');
+  });
+});
+
+describe('D18 showDemoMarks store switch', () => {
+  beforeEach(() => {
+    useTowerStore.setState({ showDemoMarks: true });
+  });
+
+  it('defaults on and toggles off', () => {
+    expect(useTowerStore.getState().showDemoMarks).toBe(true);
+    useTowerStore.getState().setShowDemoMarks(false);
+    expect(useTowerStore.getState().showDemoMarks).toBe(false);
+    useTowerStore.getState().setShowDemoMarks(true);
+    expect(useTowerStore.getState().showDemoMarks).toBe(true);
   });
 });
