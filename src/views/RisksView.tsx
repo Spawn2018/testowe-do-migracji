@@ -191,7 +191,7 @@ export function RisksView() {
                   onClick={() => selectLoad(l.id)}
                 >
                   <span className="lbl">
-                    <span className="code">{l.code}</span> {l.itemType}
+                    <span className="code" data-content>{l.code}</span> <span data-content>{l.itemType}</span>
                   </span>
                   <span>{l.ferry.bookingRef || '—'}</span>
                 </div>
@@ -262,7 +262,7 @@ export function RisksView() {
                   }}
                 >
                   <span className="lbl">
-                    <span className="code">{r.type === 'FORCE_MAJEURE' ? 'FM' : 'SE'}</span>{' '}
+                    <span className="code" data-content>{r.type === 'FORCE_MAJEURE' ? 'FM' : 'SE'}</span>{' '}
                     {r.title}
                   </span>
                   <span>{r.delayImpactHours != null ? `+${r.delayImpactHours} h` : r.meta}</span>

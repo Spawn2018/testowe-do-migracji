@@ -94,7 +94,7 @@ export function LoadDrawer() {
       <aside className="drawer" role="dialog" aria-label={load.code}>
         <div className="drawer-hd">
           <div className="r1">
-            <span className="wb-code">{load.code}</span>
+            <span className="wb-code" data-content>{load.code}</span>
             <StatusPill status={load.status} stage={load.stage} />
             {load.delayed ? <span className="pill p-red">+1h 35 min</span> : null}
             <div className="spacer" />
@@ -148,7 +148,7 @@ export function LoadDrawer() {
               <dl className="kv">
                 <dt>Typ</dt>
                 <dd>
-                  {load.itemType} · {load.qty} szt.
+                  <span data-content>{load.itemType}</span> · {load.qty} szt.
                 </dd>
                 <dt>Wymiary L×W×H</dt>
                 <dd>

@@ -241,7 +241,7 @@ export function FinanceView() {
                 {below.map((l) => (
                   <div key={l.id} className="mrow">
                     <span className="lbl">
-                      <span className="code">{l.code}</span> {l.itemType}
+                      <span className="code" data-content>{l.code}</span> <span data-content>{l.itemType}</span>
                     </span>
                     <span style={{ color: 'var(--red)' }}>
                       {(l.pricing.marginPct * 100).toFixed(1)}% · {fmt(l.pricing.margin)} PLN

@@ -39,7 +39,7 @@ export function ExceptionRow({
         <span className="t">
           {ref && !titleHasCode ? (
             <>
-              <span className="code">{ref}</span>
+              <span className="code" data-content>{ref}</span>
               {' · '}
             </>
           ) : null}

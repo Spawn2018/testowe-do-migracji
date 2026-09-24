@@ -12,9 +12,10 @@
     "preview": "vite preview",
     "ais-proxy": "bash scripts/start-ais-proxy.sh",
     "baseline": "node scripts/baseline.mjs",
-    "test:visual": "playwright test",
-    "test:visual:update": "playwright test --update-snapshots",
-    "lint:css": "stylelint \"src/**/*.css\""
+    "test:visual": "playwright test tests/visual.spec.ts",
+    "test:visual:update": "playwright test tests/visual.spec.ts --update-snapshots",
+    "lint:css": "stylelint \"src/**/*.css\"",
+    "test:d19": "playwright test tests/d19-i18n.spec.ts"
   },
   "dependencies": {
     "@turf/along": "^7.4.0",

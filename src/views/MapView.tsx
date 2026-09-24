@@ -236,11 +236,11 @@ export function MapView() {
                     >
                       <td>
                         <span className="cell-clip">
-                          <span className="code">{l.code}</span>
+                          <span className="code" data-content>{l.code}</span>
                         </span>
                       </td>
                       <td>
-                        <span className="cell-clip">{l.itemType}</span>
+                        <span className="cell-clip" data-content>{l.itemType}</span>
                       </td>
                       <td>
                         <span className="cell-clip">{l.resources.driverName || '—'}</span>

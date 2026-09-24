@@ -46,7 +46,7 @@ export function TasksView() {
                 return (
                   <tr key={l.id} data-load={l.id} style={{ cursor: 'pointer' }} onClick={() => selectLoad(l.id)}>
                     <td>
-                      <span className="code">{l.code}</span>
+                      <span className="code" data-content>{l.code}</span>
                     </td>
                     <td>{what}</td>
                     <td>{formatLoadPl(l.plannedLoadDate)}</td>

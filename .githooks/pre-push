@@ -1,5 +1,6 @@
 #!/bin/sh
-# Brama lokalna: LFS + unit + playwright + stylelint. Ominięcie: --no-verify.
+# Brama lokalna: LFS + unit + visual smoke + stylelint. Ominięcie: --no-verify.
+# D19-T: npm run test:d19 — wejdzie do pre-push po D19 (hits→0). Patrz POSTEP.
 set -e
 cd "$(git rev-parse --show-toplevel)"
 
@@ -13,8 +14,8 @@ fi
 echo "[pre-push] npm run test:unit"
 npm run test:unit
 
-echo "[pre-push] npx playwright test"
-npx playwright test
+echo "[pre-push] npm run test:visual"
+npm run test:visual
 
 echo "[pre-push] npm run lint:css"
 npm run lint:css

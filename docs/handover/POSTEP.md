@@ -6,7 +6,7 @@ Kolumny: `ID | pozycja | status | commit | testy (liczby) | uwagi`.
 Po F2.5 dodać wiersze **L*** (L1/L2/L4/L5/L7/L8/L9/L16) — na razie brak (notatka: po F2.5).  
 Niezgodności z F2.4: **F2.4-a / F2.4-b / F2.4-c** (poniżej, po G1).
 
-Aktualizacja: **2026-09-24** Europe/Warsaw · **Etap 1 ZAMKNIĘTY (G1)** · następny: Etap 2.
+Aktualizacja: **2026-09-24** Europe/Warsaw · **Etap 2 w toku** (D19-T DONE) · następny: D10.
 
 ---
 
@@ -55,7 +55,7 @@ Aktualizacja: **2026-09-24** Europe/Warsaw · **Etap 1 ZAMKNIĘTY (G1)** · nast
 
 | ID | pozycja | status | commit | testy (liczby) | uwagi |
 |---|---|---|---|---|---|
-| D19-T | Test PL-znaków poza EN/SV UI | OPEN | — | — | pending |
+| D19-T | Test PL-znaków poza EN/SV UI | **DONE** | `17373d6` | `npm run test:d19` → **fail** (oczekiwane): **en=191 / sv=191** (Σ382) | Harness: `tests/d19-i18n.spec.ts`; TreeWalker + `[data-content]` exclude; raport `test-results/d19-hits.json`. **pre-push:** odroczony — `test:visual` = tylko `visual.spec.ts` (4 smoke); `test:d19` osobno do D19 (hits→0), potem wraca do pre-push. data-content: code/itemType (Schedule/Map/Risks/Tasks/Invoices/Finance/ExceptionRow/LoadDrawer). |
 | D10 | Jedna funkcja `formatMoney` | OPEN | — | — | pending |
 | D17 | Format daty w tabeli bez powtarzanego roku | OPEN | — | — | pending |
 | M1 | Silnik money + testy (49 zielonych, 1 skip) | OPEN | — | — | wtedy zdjąć exclude vitest |

@@ -175,9 +175,9 @@ export function InvoicesView() {
                     onClick={() => selectLoad(row.loadId)}
                   >
                     <td>
-                      <span className="code">{row.code}</span>
+                      <span className="code" data-content>{row.code}</span>
                     </td>
-                    <td>{row.itemType}</td>
+                    <td data-content>{row.itemType}</td>
                     <td>{row.deliverDate}</td>
                     <td className="num">{fmt(row.expected)}</td>
                     <td className="num">{row.selected ? fmt(row.billed) : '—'}</td>

@@ -530,11 +530,11 @@ export function ScheduleView() {
                         case 'code':
                           return (
                             <td key={id} data-col={id}>
-                              <span className="code">{l.code}</span>
+                              <span className="code" data-content>{l.code}</span>
                             </td>
                           );
                         case 'type':
-                          return <td key={id} data-col={id}>{l.itemType}</td>;
+                          return <td key={id} data-col={id} data-content>{l.itemType}</td>;
                         case 'dims':
                           return (
                             <td
