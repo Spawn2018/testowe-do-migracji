@@ -26,7 +26,7 @@ Aktualizacja: **2026-09-24** Europe/Warsaw · Etap 0 zamknięty · Etap 1 w toku
 | F2.2 | Próg testu wizualnego (`maxDiffPixelRatio`) | **DONE** | `14261fc` | unit **41/41** · pw **4/4** · visual compare **720/720** | `maxDiffPixelRatio:0.001` → `fullPage:true, maxDiffPixels:60, threshold:0.28`. Przy 0.15: 716/720 — 4× kokpit AA fringe (~18×16 px, 107 px); podniesiono **threshold** do 0.28 (nie maxDiffPixels). Wzorca shots-baseline **nie** regenerowano. Smoke `__screenshots__` odświeżone pod fullPage |
 | F2.3 | Stylelint zielony (nowy `.stylelintrc`) | **DONE** | `6f77f7e` | unit **41/41** · pw **4/4** · stylelint **0** | Top5 przed: single-line-max-decl 265, rule-empty-line 49, no-duplicate-selectors 40, font-family-generic 30, declaration-no-important 11. Wyłączono formatowanie (+ no-duplicate-selectors: warstwowy CSS Claude; alpha-value-notation). Token/radius/shadow/font-allowed/!important **ON**. CSS: 11× !important usunięte (Leaflet specificity, reduced-motion target, [hidden]); font→var(--font-*); letter-spacing em; clip→clip-path. pre-push: lint:css |
 | F2.4 | Weryfikacja mechanizmu paliwowego (bez kodu) | **DONE** | `8f74961` | unit **41/41** · pw **4/4** (bez zmian logiki) | SoT: `docs/watch-tower/BAF_SEFS.md`. Tabela zgodności w `03_PARAMETRY_BIZNESOWE.md` §2.2: **9 tak / 1 częściowo / fasada Opcji**. Naprawy: F2.4-a, F2.4-b, F2.4-c. Opcje BAF → D25 |
-| F2.5 | Pozycje L1–L2/L4–L5/L7–L9/L16 — przydział | OPEN | — | — | po DONE: dodać wiersze L* |
+| F2.5 | Pozycje L1–L2/L4–L5/L7–L9/L16 — przydział | **DONE** | `F25_SHA` | — (docs) | 8× L* dopisane do POSTEP z etapem 2/4/5 — bez etapu nie wejdą do robót |
 | F2.6 | Trzy wyjaśnienia (kokpit 54, mapa 18, overlap) | OPEN | — | — | pending |
 | G1 | Brama etapu 1 | OPEN | — | — | pending |
 
@@ -37,6 +37,19 @@ Aktualizacja: **2026-09-24** Europe/Warsaw · Etap 0 zamknięty · Etap 1 w toku
 | F2.4-a | Konflikt daty SEFS: załadunek (`BAF_SEFS`) vs rozładunek (`MECHANIZM`) vs kod `loadDate` | OPEN | — | — | Uzgodnić SoT daty; `sefsForLoadDate` dziś jak załadunek. Etap: **2** (albo 4 przy pieniądzach) |
 | F2.4-b | Brak wyliczania średniej z poprzedniego tygodnia (live/seed pipeline) | OPEN | — | — | `BAF_SEFS` §3; kod ma tylko `SEFS_WEEKLY` demo. Etap: **4** (M3/M8) lub **2** jeśli demo pipeline |
 | F2.4-c | Opcje BAF/SEFS: wszystkie pola `bafFields` + nota UI nie zasilają `computeSefs` → D25 | OPEN | — | — | Lista pól w `03_PARAMETRY` §2.4. Etap: **2** (D25) |
+
+### Pozycje L* (F2.5) — przydział etapów
+
+| ID | pozycja | status | commit | testy (liczby) | uwagi |
+|---|---|---|---|---|---|
+| L1 | Alternatywy trasy SE ×4 „Wybierz” mają mutować load/risk (dziś toast) | OPEN | — | — | Etap **2** (fasada/D25 · `RisksView`) |
+| L2 | Pill opóźnienia w drawerze z `delayMinutes`, nie stały napis | OPEN | — | — | Etap **2** (`LoadDrawer` treść) |
+| L4 | Terminy zadań z `plannedLoadDate` / danych load, nie `18+i*9` | OPEN | — | — | Etap **2** (`TasksView` dane) |
+| L5 | Preferencje powiadomień w Opcjach: zapis **i** filtracja przy push | OPEN | — | — | Etap **4** (centrum powiadomień / M7·BK ścieżka push) |
+| L7 | Wskaźnik kompletności DRAWING z modelu, nie hardcode 100% | OPEN | — | — | Etap **2** (`DocsView` · D25-ish) |
+| L8 | Kolumna „Próbki” geofence z modelu, nie zawsze `2` | OPEN | — | — | Etap **2** (`GeofenceView`) |
+| L9 | JSONLogic / akcje workflow w runtime — realna semantyka, nie atrapa UI | OPEN | — | — | Etap **4** (silnik reguł przy backendzie/pieniądzach) |
+| L16 | Force-majeure / opóźnienia — mechanizm ryzyk bez atrap (po SE road) | OPEN | — | — | Etap **4** (rozszerzenie ryzyk / opóźnień) |
 
 ## Etap 2 — Fala 3A: treść, język, formaty, silnik
 
