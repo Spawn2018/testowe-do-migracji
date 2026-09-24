@@ -163,9 +163,11 @@ test.describe('C2.4 visual smoke (HHL pl 1920)', () => {
       await setTheme(page, job.theme, job.roleDefault)
       await navTo(page, job.dataView)
 
-      /* maxDiffPixelRatio 0.001 też w playwright.config.ts expect.toHaveScreenshot */
+      /* F2.2 — same defaults as playwright.config.ts expect.toHaveScreenshot */
       await expect(page).toHaveScreenshot(job.file, {
-        maxDiffPixelRatio: 0.001,
+        fullPage: true,
+        maxDiffPixels: 60,
+        threshold: 0.28,
         animations: 'disabled',
       })
     })

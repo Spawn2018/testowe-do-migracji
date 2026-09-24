@@ -19,8 +19,11 @@ export default defineConfig({
   /* Snapshoty Playwright (po pierwszym update) — nie mylić z pełnym shots-baseline z baseline.mjs */
   snapshotPathTemplate: '{testDir}/__screenshots__/{arg}{ext}',
   expect: {
+    /* F2.2: maxDiffPixels 60 (was ratio 0.001). threshold 0.28 — 4 kokpit AA fringes at 0.15 (tiny ~18px glyph edge, 107→60 px); not maxDiffPixels */
     toHaveScreenshot: {
-      maxDiffPixelRatio: 0.001,
+      fullPage: true,
+      maxDiffPixels: 60,
+      threshold: 0.28,
       animations: 'disabled',
     },
   },

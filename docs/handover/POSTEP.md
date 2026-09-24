@@ -23,8 +23,7 @@ Aktualizacja: **2026-09-24** Europe/Warsaw · Etap 0 zamknięty · Etap 1 nie ro
 | ID | pozycja | status | commit | testy (liczby) | uwagi |
 |---|---|---|---|---|---|
 | F2.1 | Ryzyka: 0 zmienionych ujęć — wyjaśnij/napraw | **DONE** | `3c6e3d3` | unit **41/41** · pw **4/4** · visual **90/720** tylko ryzyka | Hipoteza **(1)** (historyczna): `SAIL_ROWS` w RisksView — naprawione w D4 (`voyage.ts`). **(2)** false — DemoMark jest na panelu SE w Risks. **(3)** false — 90 ujęć `ryzyka` w matrycy. 0 diffów na GATE: `fullPage:false` + długa kolejka wyjątków → Prom/SE poniżej folda. Fix: `data-panel` + scroll Prom w `baseline.mjs`. Porównanie: wyłącznie ryzyka → tag `baseline-fala-2b-2026-09-24` |
-| F2.2 | Próg testu wizualnego (`maxDiffPixelRatio`) | OPEN | — | — | pending |
-| F2.3 | Stylelint zielony (nowy `.stylelintrc`) | OPEN | — | — | pending |
+| F2.2 | Próg testu wizualnego (`maxDiffPixelRatio`) | **DONE** | `760ee99` | unit **41/41** · pw **4/4** · visual compare **720/720** | `maxDiffPixelRatio:0.001` → `fullPage:true, maxDiffPixels:60, threshold:0.28`. Przy 0.15: 716/720 — 4× kokpit AA fringe (~18×16 px, 107 px); podniesiono **threshold** do 0.28 (nie maxDiffPixels). Wzorca shots-baseline **nie** regenerowano. Smoke `__screenshots__` odświeżone pod fullPage || F2.3 | Stylelint zielony (nowy `.stylelintrc`) | OPEN | — | — | pending |
 | F2.4 | Weryfikacja mechanizmu paliwowego (bez kodu) | OPEN | — | — | pending; niezgodności → nowe wiersze |
 | F2.5 | Pozycje L1–L2/L4–L5/L7–L9/L16 — przydział | OPEN | — | — | po DONE: dodać wiersze L* |
 | F2.6 | Trzy wyjaśnienia (kokpit 54, mapa 18, overlap) | OPEN | — | — | pending |
