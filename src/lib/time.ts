@@ -122,6 +122,55 @@ export function formatEtaBoden(iso: string | null | undefined): string {
   return formatUnloadSe(iso);
 }
 
+/**
+ * D17 — table dates: omit year when it matches the ops reference year
+ * (context / current corridor year). Detail panels keep full `dd.MM.yyyy`
+ * via formatCalendarDay / formatLoadPl / formatUnloadSe.
+ */
+export function refYearInOps(at: Date = new Date()): number {
+  return partsInZone(at, TZ_OPS).y;
+}
+
+/** Calendar `YYYY-MM-DD` → `dd.MM` when year === refYear, else `dd.MM.yyyy`. */
+export function formatTableDay(
+  day: string | null | undefined,
+  refYear: number,
+): string {
+  if (!day) return '—';
+  const m = String(day).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return String(day);
+  const y = Number(m[1]);
+  const core = `${m[3]}.${m[2]}`;
+  return y === refYear ? core : `${core}.${m[1]}`;
+}
+
+/**
+ * Instant or calendar day for table cells — same year rule as formatTableDay.
+ * Default withTime=true for ISO instants; date-only never shows time.
+ */
+export function formatTableInZone(
+  iso: string | null | undefined,
+  timeZone: CorridorZone,
+  refYear: number,
+  opts?: { withTime?: boolean },
+): string {
+  if (!iso) return '—';
+  const raw = String(iso).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return formatTableDay(raw, refYear);
+
+  const d = parseInstant(raw);
+  if (!d) {
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return formatTableDay(raw.slice(0, 10), refYear);
+    return raw;
+  }
+  const p = partsInZone(d, timeZone);
+  const dayPart =
+    p.y === refYear ? `${pad(p.d)}.${pad(p.mo)}` : `${pad(p.d)}.${pad(p.mo)}.${p.y}`;
+  const withTime = opts?.withTime !== false;
+  if (!withTime) return dayPart;
+  return `${dayPart} ${pad(p.h)}:${pad(p.mi)}`;
+}
+
 /** Compact `dd.MM HH:mm` in zone — replaces unsafe `.slice(5,16)`. */
 export function formatCompactInZone(
   iso: string | null | undefined,

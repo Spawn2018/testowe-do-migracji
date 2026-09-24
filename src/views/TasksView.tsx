@@ -1,11 +1,13 @@
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
-import { formatLoadPl } from '../lib/time';
+import { formatTableDay, refYearInOps } from '../lib/time';
+import { getNow } from '../lib/frozenNow';
 
 export function TasksView() {
   const loads = useTowerStore((s) => s.loads);
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const locale = useTowerStore((s) => s.locale);
+  const refYear = refYearInOps(getNow());
 
   const need = loads
     .filter((l) => ['RESOURCES_PENDING', 'DOC_MISSING', 'READY'].includes(l.status))
@@ -49,7 +51,7 @@ export function TasksView() {
                       <span className="code" data-content>{l.code}</span>
                     </td>
                     <td>{what}</td>
-                    <td>{formatLoadPl(l.plannedLoadDate)}</td>
+                    <td>{formatTableDay(l.plannedLoadDate, refYear)}</td>
                     <td className="mono">za {hrs} h</td>
                     <td>
                       <span className={`pill ${pill}`}>{lab}</span>

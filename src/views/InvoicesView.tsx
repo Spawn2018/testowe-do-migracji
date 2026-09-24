@@ -14,12 +14,14 @@ import {
   threeWayVerdictLabel,
   threeWayVerdictPill,
 } from '../lib/invoiceMatch';
-import { formatOpsDateTime } from '../lib/time';
+import { formatOpsDateTime, formatTableDay, refYearInOps } from '../lib/time';
+import { getNow } from '../lib/frozenNow';
 import { formatMoney } from '../lib/money/engine';
 
 export function InvoicesView() {
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
+  const refYear = refYearInOps(getNow());
   const currency = useTowerStore((s) => s.displayCurrency);
   const money = (n: number) => formatMoney(n, locale, currency);
   const loads = useTowerStore((s) => s.loads);
@@ -177,7 +179,7 @@ export function InvoicesView() {
                       <span className="code" data-content>{row.code}</span>
                     </td>
                     <td data-content>{row.itemType}</td>
-                    <td>{row.deliverDate}</td>
+                    <td>{formatTableDay(row.deliverDate === '—' ? null : row.deliverDate, refYear)}</td>
                     <td className="num">{money(row.expected)}</td>
                     <td className="num">{row.selected ? money(row.billed) : '—'}</td>
                     <td className={`num ${row.diff ? 'money neg' : ''}`}>

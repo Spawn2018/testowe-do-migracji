@@ -7,10 +7,12 @@ import { exportLoadsXlsx } from '../lib/xlsxExport';
 import { t } from '../i18n/messages';
 import {
   delayMinutesVsPlan,
-  formatEtaBoden,
-  formatLoadPl,
-  formatUnloadSe,
+  formatTableDay,
+  formatTableInZone,
+  refYearInOps,
+  TZ_UNLOAD_SE,
 } from '../lib/time';
+import { getNow } from '../lib/frozenNow';
 import { dryRunFromXlsx, type ImportDiff } from '../lib/scheduleDryRun';
 import { COLUMN_MAP_DEFAULT } from '../lib/scheduleParse';
 import type { CorridorStage, DocCategory, Load } from '../types';
@@ -51,6 +53,7 @@ export function ScheduleView() {
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
   const currency = useTowerStore((s) => s.displayCurrency);
+  const refYear = refYearInOps(getNow());
   const search = useTowerStore((s) => s.search);
   const setSearch = useTowerStore((s) => s.setSearch);
   const selectLoad = useTowerStore((s) => s.selectLoad);
@@ -559,9 +562,9 @@ export function ScheduleView() {
                             </td>
                           );
                         case 'load':
-                          return <td key={id} data-col={id}>{formatLoadPl(l.plannedLoadDate)}</td>;
+                          return <td key={id} data-col={id}>{formatTableDay(l.plannedLoadDate, refYear)}</td>;
                         case 'deliver':
-                          return <td key={id} data-col={id}>{formatUnloadSe(l.plannedDeliverDate)}</td>;
+                          return <td key={id} data-col={id}>{formatTableDay(l.plannedDeliverDate, refYear)}</td>;
                         case 'status':
                           return (
                             <td key={id} data-col={id}>
@@ -606,7 +609,7 @@ export function ScheduleView() {
                             </td>
                           );
                         case 'eta':
-                          return <td key={id} data-col={id}>{formatEtaBoden(l.etaBoden)}</td>;
+                          return <td key={id} data-col={id}>{formatTableInZone(l.etaBoden, TZ_UNLOAD_SE, refYear)}</td>;
                         case 'docs':
                           return (
                             <td key={id} data-col={id}>

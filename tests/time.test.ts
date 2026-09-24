@@ -5,6 +5,9 @@ import {
   calendarDayNoonMs,
   delayMinutesVsPlan,
   formatCalendarDay,
+  refYearInOps,
+  formatTableInZone,
+  formatTableDay,
   formatCompactInZone,
   formatEtaBoden,
   formatEtaBodenCompact,
@@ -61,5 +64,31 @@ describe('D8 timezone policy', () => {
     expect(formatLoadPl(iso)).toMatch(/24\.09\.2026/);
     expect(formatCompactInZone(iso, TZ_UNLOAD_SE)).toMatch(/^24\.09 /);
     expect(zoneOffsetIso(new Date('2026-09-24T10:00:00Z'), TZ_LOAD_PL)).toMatch(/\+02/);
+  });
+});
+
+describe('D17 table date format — omit redundant year', () => {
+  it('formatTableDay drops year when it matches refYear', () => {
+    expect(formatTableDay('2026-09-26', 2026)).toBe('26.09');
+    expect(formatTableDay('2026-01-05', 2026)).toBe('05.01');
+  });
+
+  it('formatTableDay keeps year when it differs from refYear', () => {
+    expect(formatTableDay('2025-12-31', 2026)).toBe('31.12.2025');
+    expect(formatTableDay('2027-01-02', 2026)).toBe('02.01.2027');
+  });
+
+  it('formatTableInZone omits year for same-year instants, keeps zone wall clock', () => {
+    // 12:32Z → 14:32 CEST Warsaw/Stockholm
+    expect(formatTableInZone('2026-09-23T12:32:00.000Z', TZ_UNLOAD_SE, 2026)).toBe('23.09 14:32');
+    expect(formatTableInZone('2025-12-31T12:00:00+01:00', TZ_UNLOAD_SE, 2026)).toMatch(/^31\.12\.2025 /);
+  });
+
+  it('formatTableInZone date-only delegates to formatTableDay', () => {
+    expect(formatTableInZone('2026-09-28', TZ_UNLOAD_SE, 2026)).toBe('28.09');
+  });
+
+  it('refYearInOps uses Europe/Warsaw civil year', () => {
+    expect(refYearInOps(new Date('2026-09-23T14:32:00Z'))).toBe(2026);
   });
 });
