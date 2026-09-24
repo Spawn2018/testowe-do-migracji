@@ -6,7 +6,7 @@ Kolumny: `ID | pozycja | status | commit | testy (liczby) | uwagi`.
 Po F2.5 dodać wiersze **L*** (L1/L2/L4/L5/L7/L8/L9/L16) — na razie brak (notatka: po F2.5).  
 Niezgodności z F2.4: **F2.4-a / F2.4-b / F2.4-c** (poniżej, po G1).
 
-Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · D-EUR-T · D25 DONE) · następny: G2.
+Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 ZAMKNIĘTY** (G2 DONE) · następny: Etap 3 · BK0 (STOP — sekrety).
 
 ---
 
@@ -51,7 +51,7 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · D-EUR-T 
 | L9 | JSONLogic / akcje workflow w runtime — realna semantyka, nie atrapa UI | OPEN | — | — | Etap **4** (silnik reguł przy backendzie/pieniądzach) |
 | L16 | Force-majeure / opóźnienia — mechanizm ryzyk bez atrap (po SE road) | OPEN | — | — | Etap **4** (rozszerzenie ryzyk / opóźnień) |
 
-## Etap 2 — Fala 3A: treść, język, formaty, silnik
+## Etap 2 — Fala 3A: treść, język, formaty, silnik · **ZAMKNIĘTY (G2)**
 
 | ID | pozycja | status | commit | testy (liczby) | uwagi |
 |---|---|---|---|---|---|
@@ -68,7 +68,7 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · D-EUR-T 
 | P6 | Stawki demo PLN→EUR tabelą 186/A/NBP/2026 | **DONE** | `5a4c1c0` | unit **110 passed / 1 skipped** · pw **4/4** · D19-T **0/0** · lint:css **0** | `DEMO_FX`/`DEMO_FX_META` w `src/lib/money/demoFx.ts` (186/A/NBP/2026 · 2026-09-24 · mid 4,3900). `RATE_*` + extras seed + store draft → EUR (`plnToEurDemo`). UI: `formatAppMoney` (Dashboard/Schedule/Finance/Invoices/LoadDrawer); SEFS → `formatSourceMoney`. Opcje cennik: edycja w EUR + nota FX. Test: `tests/demo-fx.test.ts` (+5). D18 DemoMark zostaje. Bez D-EUR-T / regen baseline. |
 | D-EUR-T | Test waluty EUR/PLN w UI | **DONE** | `d9d4967` | `npm run test:deur` → **EUR=0 / PLN=0** · unit **110/1 skip** · pw **4/4** · D19-T **0/0** · lint:css **0** | Spec `tests/d-eur-t.spec.ts`: dwa tryby preferencji; zakazy z ZLECENIE; wyjątki data-deur-exempt (indeks paliwowy, wybór waluty). Money cells = kod trybu; nota FX 4,3900. test:deur w pre-push. sched_money_note {cur}. Smoke kokpit odświeżony (FX P6). Bez D25 / regen baseline. |
 | D25 | Atrapy/porzucone z fasady — decyzja | **DONE** | `3ab44c1` | unit **110/1 skip** · pw **4/4** · D19-T **0/0** · D-EUR-T **0/0** · lint:css **0** | ATRAPA→implement (L1/L2/L4/L7/L8, prefs filter, invoice week/deltas); SAIL via voyage+DemoMark; PORZUCONE: MapLibre public usunięte, leaflet duplikat już brak, BAF Options fasada (F2.4-c). Decyzje w `02_FASADA.md` §D25. L9/F2.4-a/b poza Etap 2. Bez G2. |
-| G2 | Brama etapu 2 + baseline Fala 3a | OPEN | — | — | pending |
+| G2 | Brama etapu 2 + baseline Fala 3a | **DONE** | `7510dab` | unit **110/1 skip** · pw **4/4** · D19-T **0/0** · D-EUR-T **0/0** · lint:css **0** · visual capture **720/720** · compare **711/720** zmienionych → REGEN | Capture `baseline.mjs` → candidate 720/720. Compare vs fala-2: **711 changed / 9 identical** (grupy: docs/mapa/ryzyka 90, harmonogram 89, kokpit 87, faktury 60, …). Uzasadnione Etap 2 (D19/D12/P6/D18/D25…). REGEN `shots-baseline` + tag `baseline-fala-3a-2026-09-25`. Raport: `docs/handover/G2_BASELINE_FALA3A.md`. Etap 2 CLOSED. |
 
 ## Etap 3 — backend
 
