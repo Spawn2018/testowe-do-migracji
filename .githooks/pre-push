@@ -1,5 +1,5 @@
 #!/bin/sh
-# Brama lokalna (Fala 1): LFS + unit + playwright. Ominięcie: --no-verify.
+# Brama lokalna: LFS + unit + playwright + stylelint. Ominięcie: --no-verify.
 set -e
 cd "$(git rev-parse --show-toplevel)"
 
@@ -15,5 +15,8 @@ npm run test:unit
 
 echo "[pre-push] npx playwright test"
 npx playwright test
+
+echo "[pre-push] npm run lint:css"
+npm run lint:css
 
 echo "[pre-push] OK"

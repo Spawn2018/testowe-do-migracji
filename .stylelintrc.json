@@ -74,12 +74,26 @@
       "conic-gradient"
     ],
     "no-descending-specificity": null,
-    "color-hex-length": "long",
-    "alpha-value-notation": "number",
-    "color-function-notation": "modern",
     "comment-empty-line-before": null,
     "declaration-empty-line-before": null,
     "custom-property-empty-line-before": null,
-    "no-empty-source": null
+    "no-empty-source": null,
+    "declaration-block-single-line-max-declarations": null,
+    "rule-empty-line-before": null,
+    "at-rule-empty-line-before": null,
+    "length-zero-no-unit": null,
+    "selector-attribute-quotes": null,
+    "value-keyword-case": null,
+    "font-family-name-quotes": null,
+    "media-feature-range-notation": null,
+    "declaration-block-no-redundant-longhand-properties": null,
+    "color-function-alias-notation": null,
+    "color-function-notation": null,
+    "color-hex-length": null,
+    "shorthand-property-no-redundant-values": null,
+    "property-no-vendor-prefix": null,
+    "selector-class-pattern": null,
+    "no-duplicate-selectors": null,
+    "alpha-value-notation": null
   }
 }
