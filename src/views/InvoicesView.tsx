@@ -17,6 +17,25 @@ import {
 import { formatOpsDateTime, formatTableDay, refYearInOps } from '../lib/time';
 import { getNow } from '../lib/frozenNow';
 import { formatAppMoney } from '../lib/money/demoFx';
+
+/** D25 — week label from invoice / ISO week, not hard-coded copy. */
+function weekSubtitle(weekLabel: string | null | undefined, locale: 'pl' | 'en' | 'sv'): string {
+  const m = (weekLabel ?? '').match(/(\d{4})-W(\d{1,2})/i);
+  if (!m) return weekLabel || '';
+  const year = Number(m[1]);
+  const week = Number(m[2]);
+  // ISO week: Thursday of week determines dates — approximate Mon–Sun via UTC Thursday
+  const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
+  const dow = simple.getUTCDay();
+  const mon = new Date(simple);
+  mon.setUTCDate(simple.getUTCDate() - ((dow + 6) % 7));
+  const sun = new Date(mon);
+  sun.setUTCDate(mon.getUTCDate() + 6);
+  const fmt = (d: Date) =>
+    `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  const word = locale === 'en' ? 'week' : locale === 'sv' ? 'vecka' : 'tydzień';
+  return `${word} ${week} · ${fmt(mon)}–${fmt(sun)}.${year} · Scandinavian Express`;
+}
 import { docCategoryLabel, payoutStatusLabel } from '../lib/enumLabels';
 
 export function InvoicesView() {
@@ -95,7 +114,7 @@ export function InvoicesView() {
       <div className="panel section-card" style={{ margin: 12 }}>
         <header className="panel-hd">
           <h2>{t(locale, 'nav_inv')}</h2>
-          <span className="sub">{t(locale, 'inv_week_sub')}</span>
+          <span className="sub">{weekSubtitle(focusInvoice?.weekLabel ?? disputed?.weekLabel ?? '2026-W38', locale)}</span>
           <div className="spacer" />
           {role === 'SCX' && canSubmitInvoice(role) ? (
             <button

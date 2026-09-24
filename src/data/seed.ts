@@ -39,19 +39,19 @@ export const USERS: DemoUser[] = [
 ];
 
 export const GEOFENCES: Geofence[] = [
-  { id: 'gf-01', name: 'KSH Śrem · Grunwaldzka 27C', type: 'LOADING', shape: 'circle', lat: 52.07391, lng: 17.0246, radiusM: 600, hysteresisM: 120, dwellMin: 10, notifyHhl: true, notifyKsh: true, notifyScx: true, active: true, trigger: 'ENTER' },
-  { id: 'gf-02', name: 'Polferries Gdańsk · Sucharskiego 70', type: 'PORT_OUT', shape: 'circle', lat: 54.382, lng: 18.715, radiusM: 800, hysteresisM: 200, dwellMin: 15, notifyHhl: true, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
-  { id: 'gf-03', name: 'Bufor 20 km · przed portem Gdańsk', type: 'PRE_PORT', shape: 'circle', lat: 54.3, lng: 18.55, radiusM: 20000, hysteresisM: 500, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
-  { id: 'gf-04', name: 'Terminal Nynäshamn', type: 'PORT_IN', shape: 'circle', lat: 58.903, lng: 17.948, radiusM: 900, hysteresisM: 200, dwellMin: 10, notifyHhl: true, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
-  { id: 'gf-05', name: 'E4 checkpoint · Södertälje', type: 'CHECKPOINT', shape: 'circle', lat: 59.195, lng: 17.625, radiusM: 1500, hysteresisM: 300, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },
-  { id: 'gf-06', name: 'E4 checkpoint · Gävle', type: 'CHECKPOINT', shape: 'circle', lat: 60.674, lng: 17.141, radiusM: 1500, hysteresisM: 300, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },
-  { id: 'gf-07', name: 'E4 checkpoint · Sundsvall', type: 'CHECKPOINT', shape: 'circle', lat: 62.39, lng: 17.306, radiusM: 1500, hysteresisM: 300, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },
-  { id: 'gf-08', name: 'E4 checkpoint · Umeå', type: 'CHECKPOINT', shape: 'circle', lat: 63.825, lng: 20.263, radiusM: 1500, hysteresisM: 300, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },
-  { id: 'gf-09', name: 'E4 checkpoint · Luleå', type: 'CHECKPOINT', shape: 'circle', lat: 65.584, lng: 22.154, radiusM: 1500, hysteresisM: 300, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },
-  { id: 'gf-10', name: 'Bufor 50 km · przed Boden (Stalverket 20)', type: 'PRE_ARRIVAL', shape: 'circle', lat: 65.70, lng: 21.90, radiusM: 50000, hysteresisM: 800, dwellMin: 0, notifyHhl: true, notifyKsh: true, notifyScx: true, active: true, trigger: 'ENTER' },
-  { id: 'gf-11', name: 'Stegra · Stalverket 20, Boden', type: 'SITE', shape: 'circle', lat: 65.80539, lng: 21.75914, radiusM: 1200, hysteresisM: 200, dwellMin: 15, notifyHhl: true, notifyKsh: true, notifyScx: true, active: true, trigger: 'DWELL_EXCEEDED' },
-  { id: 'gf-12', name: 'Parking REST · ponadgab. · Gävle N', type: 'REST', shape: 'circle', lat: 60.82, lng: 17.2, radiusM: 400, hysteresisM: 100, dwellMin: 20, notifyHhl: false, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
-  { id: 'gf-13', name: 'Parking REST · ponadgab. · Umeå S', type: 'REST', shape: 'circle', lat: 63.7, lng: 20.1, radiusM: 400, hysteresisM: 100, dwellMin: 20, notifyHhl: false, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
+  { id: 'gf-01', name: 'KSH Śrem · Grunwaldzka 27C', type: 'LOADING', shape: 'circle', lat: 52.07391, lng: 17.0246, radiusM: 600, hysteresisM: 120, samplesRequired: 2, dwellMin: 10, notifyHhl: true, notifyKsh: true, notifyScx: true, active: true, trigger: 'ENTER' },
+  { id: 'gf-02', name: 'Polferries Gdańsk · Sucharskiego 70', type: 'PORT_OUT', shape: 'circle', lat: 54.382, lng: 18.715, radiusM: 800, hysteresisM: 200, samplesRequired: 2, dwellMin: 15, notifyHhl: true, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
+  { id: 'gf-03', name: 'Bufor 20 km · przed portem Gdańsk', type: 'PRE_PORT', shape: 'circle', lat: 54.3, lng: 18.55, radiusM: 20000, hysteresisM: 500, samplesRequired: 1, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
+  { id: 'gf-04', name: 'Terminal Nynäshamn', type: 'PORT_IN', shape: 'circle', lat: 58.903, lng: 17.948, radiusM: 900, hysteresisM: 200, samplesRequired: 2, dwellMin: 10, notifyHhl: true, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
+  { id: 'gf-05', name: 'E4 checkpoint · Södertälje', type: 'CHECKPOINT', shape: 'circle', lat: 59.195, lng: 17.625, radiusM: 1500, hysteresisM: 300, samplesRequired: 1, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },
+  { id: 'gf-06', name: 'E4 checkpoint · Gävle', type: 'CHECKPOINT', shape: 'circle', lat: 60.674, lng: 17.141, radiusM: 1500, hysteresisM: 300, samplesRequired: 1, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },
+  { id: 'gf-07', name: 'E4 checkpoint · Sundsvall', type: 'CHECKPOINT', shape: 'circle', lat: 62.39, lng: 17.306, radiusM: 1500, hysteresisM: 300, samplesRequired: 1, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },
+  { id: 'gf-08', name: 'E4 checkpoint · Umeå', type: 'CHECKPOINT', shape: 'circle', lat: 63.825, lng: 20.263, radiusM: 1500, hysteresisM: 300, samplesRequired: 1, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },
+  { id: 'gf-09', name: 'E4 checkpoint · Luleå', type: 'CHECKPOINT', shape: 'circle', lat: 65.584, lng: 22.154, radiusM: 1500, hysteresisM: 300, samplesRequired: 1, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },
+  { id: 'gf-10', name: 'Bufor 50 km · przed Boden (Stalverket 20)', type: 'PRE_ARRIVAL', shape: 'circle', lat: 65.70, lng: 21.90, radiusM: 50000, hysteresisM: 800, samplesRequired: 2, dwellMin: 0, notifyHhl: true, notifyKsh: true, notifyScx: true, active: true, trigger: 'ENTER' },
+  { id: 'gf-11', name: 'Stegra · Stalverket 20, Boden', type: 'SITE', shape: 'circle', lat: 65.80539, lng: 21.75914, radiusM: 1200, hysteresisM: 200, samplesRequired: 3, dwellMin: 15, notifyHhl: true, notifyKsh: true, notifyScx: true, active: true, trigger: 'DWELL_EXCEEDED' },
+  { id: 'gf-12', name: 'Parking REST · ponadgab. · Gävle N', type: 'REST', shape: 'circle', lat: 60.82, lng: 17.2, radiusM: 400, hysteresisM: 100, samplesRequired: 2, dwellMin: 20, notifyHhl: false, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
+  { id: 'gf-13', name: 'Parking REST · ponadgab. · Umeå S', type: 'REST', shape: 'circle', lat: 63.7, lng: 20.1, radiusM: 400, hysteresisM: 100, samplesRequired: 2, dwellMin: 20, notifyHhl: false, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
 ];
 
 export const WORKFLOWS: WorkflowRule[] = [
@@ -201,7 +201,7 @@ export const RATE_REV: RateRule[] = [
   { id: 'rr3', side: 'REVENUE', lengthFrom: 17, lengthTo: 22, widthFrom: 0, widthTo: 3.2, heightFrom: 0, heightTo: 3.5, weightFrom: 0, weightTo: 30, baseRate: 6355.35 },
 ];
 
-/** Legacy stub — real fuel logic is SEFS (lib/sefs.ts). Kept so older UI refs compile. */
+/** D25/F2.4-c — PORZUCONE/FASADA: legacy BAF_PARAMS UI only. Real fuel = SEFS (`lib/sefs.ts` / SEFS_WEEKLY). Does not feed computeSefs. */
 export const BAF_PARAMS: BafParams = {
   indexSource: 'SEFS_HYBRID_OKQ8_ORLEN',
   baseValue: 19.47,
@@ -603,6 +603,7 @@ export function buildSeedDocuments(loads: Load[]): Document[] {
     { cat: 'CMR' as const },
     { cat: 'POD' as const },
     { cat: 'LASHING_PHOTOS' as const },
+    { cat: 'DRAWING' as const },
   ];
   for (const l of loads) {
     for (const c of cats) {
@@ -649,6 +650,12 @@ export function buildSeedDocuments(loads: Load[]): Document[] {
       ) {
         status = 'UPLOADED';
         uploaded = `${l.plannedLoadDate}T08:45:00+02:00`;
+      } else if (c.cat === 'DRAWING') {
+        /* L7 — from model: most loads have KSH drawing; not always 100% */
+        if (!l.docMissing && l.status !== 'RESOURCES_PENDING' && !['SG-07', 'SG-34', 'R-03'].includes(l.code)) {
+          status = 'UPLOADED';
+          uploaded = '2026-09-10T11:00:00+02:00';
+        }
       }
       docs.push({
         id: `doc-${++n}`,

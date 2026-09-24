@@ -40,6 +40,7 @@ const DOC_CATEGORY: Record<DocCategory, string> = {
   CMR: 'CMR',
   POD: 'POD',
   LASHING_PHOTOS: 'docs_lashing',
+  DRAWING: 'doc_cat_drawing',
   INVOICE: 'Faktura',
 };
 
@@ -50,6 +51,7 @@ const DOC_CATEGORY_EN: Record<DocCategory, string> = {
   CMR: 'CMR',
   POD: 'POD',
   LASHING_PHOTOS: 'docs_lashing',
+  DRAWING: 'doc_cat_drawing',
   INVOICE: 'Invoice',
 };
 

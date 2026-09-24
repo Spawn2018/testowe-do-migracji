@@ -21,6 +21,8 @@ import {
   wallLocalToIso,
 } from '../../lib/time';
 import { formatAppMoney } from '../../lib/money/demoFx';
+import { formatDelayPill } from '../ui/StatusPill';
+import { delayMinutesVsPlan } from '../../lib/time';
 import {
   etaConfidenceLabel,
   eventTypeLabel,
@@ -105,7 +107,7 @@ export function LoadDrawer() {
           <div className="r1">
             <span className="wb-code" data-content>{load.code}</span>
             <StatusPill status={load.status} stage={load.stage} />
-            {load.delayed ? <span className="pill p-red">+1h 35 min</span> : null}
+            {load.delayed ? <span className="pill p-red">{formatDelayPill(delayMinutesVsPlan(load.etaBoden, load.plannedDeliverDate) ?? 95)}</span> : null}
             <div className="spacer" />
             <button type="button" className="iconbtn" aria-label={t(locale, 'close')} onClick={() => selectLoad(null)}>
               ✕
@@ -189,7 +191,7 @@ export function LoadDrawer() {
                 <dd className="cond">
                   {formatEtaBoden(load.etaBoden)}{' '}
                   {load.delayed ? (
-                    <span className="pill p-red">+1h 35 min</span>
+                    <span className="pill p-red">{formatDelayPill(delayMinutesVsPlan(load.etaBoden, load.plannedDeliverDate) ?? 95)}</span>
                   ) : (
                     <span className="pill p-go">w oknie</span>
                   )}

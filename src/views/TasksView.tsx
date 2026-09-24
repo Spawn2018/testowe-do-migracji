@@ -3,6 +3,12 @@ import { t } from '../i18n/messages';
 import { formatTableDay, refYearInOps } from '../lib/time';
 import { getNow } from '../lib/frozenNow';
 
+function hoursUntilLoad(plannedLoadDate: string): number {
+  const target = Date.parse(`${plannedLoadDate}T06:00:00+02:00`);
+  if (!Number.isFinite(target)) return 0;
+  return Math.max(0, Math.round((target - getNow().getTime()) / 3_600_000));
+}
+
 export function TasksView() {
   const loads = useTowerStore((s) => s.loads);
   const selectLoad = useTowerStore((s) => s.selectLoad);
@@ -33,7 +39,7 @@ export function TasksView() {
               </tr>
             </thead>
             <tbody>
-              {need.map((l, i) => {
+              {need.map((l) => {
                 const what =
                   l.status === 'RESOURCES_PENDING'
                     ? 'Kierowca, telefon, nr rejestracyjne'
@@ -42,7 +48,7 @@ export function TasksView() {
                       : l.awizacja.confirmed && l.awizacja.loadWindowStart
                         ? 'Gotowe do startu — awizacja potwierdzona'
                         : 'Awizacja godziny podjęcia';
-                const hrs = 18 + i * 9;
+                const hrs = hoursUntilLoad(l.plannedLoadDate);
                 const pill = hrs < 24 ? 'p-red' : hrs < 48 ? 'p-amber' : 'p-plan';
                 const lab = hrs < 24 ? 'pilne' : hrs < 48 ? 'wkrótce' : 'w terminie';
                 return (

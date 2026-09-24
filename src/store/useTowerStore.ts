@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
 import type {
   AppToast,
   Awizacja,
@@ -245,6 +246,8 @@ interface TowerState {
     },
   ) => void;
   applyPlanB: (riskId: string, optionIndex?: number) => void;
+  /** D25/L1 — choose SE road alternative; mutates risk + load. */
+  applySeRouteAlt: (altIndex: number) => void;
   ensureRiskFromSituation: (situation: import('../lib/trafikverket').RoadSituation, loadId?: string) => string;
 
   updateResources: (loadId: string, patch: Partial<LoadResources>) => void;
@@ -492,6 +495,27 @@ export const useTowerStore = create<TowerState>()(
       dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
       pushNotification: (n) => {
+        const prefs = get().notificationPrefs ?? {
+          workflowAlerts: true,
+          geofenceAlerts: true,
+          riskAlerts: true,
+        };
+        const view = n.href?.view ?? '';
+        const blob = `${n.title ?? ''} ${n.body ?? ''}`.toLowerCase();
+        let allowed = true;
+        if (view === 'wf' || /workflow|regu[lł]a|automatyz/.test(blob)) {
+          allowed = prefs.workflowAlerts !== false;
+        } else if (view === 'geo' || /geofence|stref/.test(blob)) {
+          allowed = prefs.geofenceAlerts !== false;
+        } else if (
+          view === 'risk' ||
+          n.severity === 'CRITICAL' ||
+          n.severity === 'HIGH' ||
+          /ryzyk|ferry|plan b|alternatywa se|force.?majeure/.test(blob)
+        ) {
+          allowed = prefs.riskAlerts !== false;
+        }
+        if (!allowed) return;
         const note: Notification = {
           id: n.id ?? uid('n'),
           at: n.at ?? nowIso(),
@@ -1408,6 +1432,68 @@ export const useTowerStore = create<TowerState>()(
           href: { view: 'risk', entityId: risk.id, loadId },
         });
         get().pushToast(`Plan B: ${option}`, 'HIGH', loadId);
+      },
+
+      applySeRouteAlt: (altIndex) => {
+        const idx = Math.max(0, Math.min(altIndex, SE_ROUTE_ALTS.length - 1));
+        const alt = SE_ROUTE_ALTS[idx];
+        const roadRisk =
+          get().risks.find((r) => r.type === 'ROAD_SE' && r.severity !== 'LOW') ??
+          get().risks.find((r) => r.type === 'ROAD_SE');
+        const loadId =
+          roadRisk?.loadId ??
+          get().loads.find((l) => l.status === 'IN_TRANSIT_SE' || l.status === 'APPROACHING_SITE')?.id ??
+          get().loads.find((l) => l.stage === 'SE_ROAD')?.id;
+        if (!loadId) {
+          get().pushToast('Brak transportu SE do przypisania alternatywy', 'HIGH');
+          return;
+        }
+        const at = nowIso();
+        const delayH = Math.round((alt.delayMin / 60) * 10) / 10;
+        set((s) => ({
+          loads: s.loads.map((l) => {
+            if (l.id !== loadId) return l;
+            const eta = l.etaBoden ? new Date(Date.parse(l.etaBoden) + alt.delayMin * 60_000).toISOString() : l.etaBoden;
+            return applyEtaToLoad(
+              {
+                ...l,
+                delayed: true,
+                etaBoden: eta,
+              },
+              at,
+            );
+          }),
+          risks: s.risks.map((r) => {
+            if (roadRisk && r.id === roadRisk.id) {
+              return {
+                ...r,
+                severity: 'MEDIUM' as const,
+                meta: `Alternatywa SE: ${alt.title}`,
+                nextAction: `Trasa: ${alt.title}`,
+                detail: `${r.detail} · Wybrano: ${alt.title}`,
+                delayImpactHours: delayH,
+              };
+            }
+            return r;
+          }),
+        }));
+        get().appendEvent({
+          loadId,
+          type: 'NOTE',
+          at,
+          actor: get().role,
+          note: `Alternatywa SE: ${alt.title}`,
+          payload: { altId: alt.id, altIndex: idx, delayMin: alt.delayMin },
+        });
+        get().pushNotification({
+          title: 'Alternatywa SE',
+          body: `${alt.title} · +${alt.delayMin} min`,
+          severity: 'MEDIUM',
+          loadId,
+          roleScope: ['SCX', 'HHL'],
+          href: { view: 'risk', loadId },
+        });
+        get().pushToast(`Alternatywa SE: ${alt.title}`, 'MEDIUM', loadId);
       },
     }),
     {

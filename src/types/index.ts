@@ -38,6 +38,7 @@ export type DocCategory =
   | 'CMR'
   | 'POD'
   | 'LASHING_PHOTOS'
+  | 'DRAWING'
   | 'INVOICE';
 
 export type GeofenceType =
@@ -257,6 +258,8 @@ export interface Geofence {
   radiusM: number;
   hysteresisM: number;
   dwellMin: number;
+  /** GPS samples required to confirm enter/dwell (L8). */
+  samplesRequired: number;
   notifyHhl: boolean;
   notifyKsh: boolean;
   notifyScx: boolean;

@@ -13,6 +13,45 @@
 
 ---
 
+## D25 — decyzje (2026-09-25 Europe/Warsaw)
+
+Każda pozycja ATRAPA / PORZUCONE ma decyzję: **ZAIMPLEMENTOWANE** · **USUNIĘTE** · **OZNAKOWANE** (nieaktywne / fasada).
+
+### ATRAPA (8)
+
+| Pozycja | Decyzja | Dowód |
+|---|---|---|
+| Alternatywy SE ×4 „Wybierz” (L1) | **ZAIMPLEMENTOWANE** | `applySeRouteAlt` · `seRouteAlts.ts` · mutacja risk+load+event |
+| Pill opóźnienia `+1h 35 min` (L2) | **ZAIMPLEMENTOWANE** | `formatDelayPill(delayMinutesVsPlan(…))` w `LoadDrawer` |
+| Delty faktury +1240/+600 | **ZAIMPLEMENTOWANE** | delty z `buildSeedInvoices` / match (P6); brak hardcode UI |
+| Sub „tydzień 38 · …” | **ZAIMPLEMENTOWANE** | `weekSubtitle(weekLabel)` w `InvoicesView` |
+| Tasks deadline `18+i*9` (L4) | **ZAIMPLEMENTOWANE** | `hoursUntilLoad(plannedLoadDate)` |
+| Prefs powiadomień | **ZAIMPLEMENTOWANE** | `pushNotification` filtruje wg `notificationPrefs` |
+| SAIL_ROWS / pogoda prom | **OZNAKOWANE** | SoT `voyageSeaTableRows` (D4) + `DemoMark` — demo, nie live API |
+| DRAWING 100% (L7) | **ZAIMPLEMENTOWANE** | kategoria `DRAWING` w vault; licznik z UPLOADED |
+| Geofence „Próbki”=2 (L8) | **ZAIMPLEMENTOWANE** | pole `samplesRequired` w modelu + UI |
+
+### PORZUCONE (6)
+
+| Pozycja | Decyzja | Dowód |
+|---|---|---|
+| `CorridorMap.leaflet.tsx` | **USUNIĘTE** | brak pliku; aktywny `CorridorMap.tsx` (Leaflet) |
+| MapLibre `public/maplibre-*` | **USUNIĘTE** | usunięte assety leftover (D25) |
+| Legacy `BAF_PARAMS` / Opcje BAF (F2.4-c) | **OZNAKOWANE** | pola `readOnly` + nota fasady; `computeSefs` ← tylko `SEFS_WEEKLY` |
+| Stegra jako rola UI | **USUNIĘTE** (wcześniej) | świadomie poza makietą |
+| React Flow builder WF | **OZNAKOWANE** / poza scope | makieta = lista+formularz; nota L9 |
+| Telematyka SCX adapter | **OZNAKOWANE** / poza SPA | drift mapy demo; adapter poza app |
+
+### F2.4-c
+Wszystkie `bafFields` w Opcjach: **fasada** (disabled) — nie zasilają `computeSefs`.
+
+### Poza D25 (Etap 4+)
+- L9 JSONLogic runtime — nota w `wf_note`; silnik później  
+- F2.4-a / F2.4-b — otwarte  
+- L5 pełne centrum powiadomień — filtr push zrobiony w D25; UI centrum → Etap 4  
+
+---
+
 ## 1. Tabela główna
 
 | Element | Plik : linia | Stan | Dowód | Uwaga |
@@ -63,7 +102,7 @@
 | Zakładki 5× (Przegląd…Ustalenia) | `LoadDrawer.tsx:122–126,177` | DZIAŁA | FN3 Ustalenia · Claude SoT | `chat` = Ustalenia |
 | Zamknij / scrim | `LoadDrawer.tsx:131,139` | DZIAŁA | static src | |
 | Przegląd — dane load + ETA bands | `LoadDrawer.tsx:184–241` · `eta.ts` | DZIAŁA | FUNCTIONAL_REQA_STATIC #9 | pasmo earliest–latest z modelu |
-| Przegląd — pill opóźnienia `+1h 35 min` | `LoadDrawer.tsx:137,221` | ATRAPA | static src · StatusPill ma `formatDelayPill` nieużyty tu | **stały napis**, nie z `delayMinutes` |
+| Przegląd — pill opóźnienia | `LoadDrawer` · `formatDelayPill` | **DZIAŁA** (D25/L2) | `delayMinutesVsPlan` | z ETA vs plan |
 | Przebieg (timeline) | `LoadDrawer.tsx:298+` | DZIAŁA | FINAL_SHIP driver timeline | eventy ze store |
 | Docs — Podgląd / Wgraj / ZIP | `LoadDrawer.tsx:323–390` · `zipDocs.ts` · `uploadDocument` | DZIAŁA | FINAL_FN4 ZIP 86 250 B · FN3 camera | KSH bez Wgraj |
 | Ceny — cost/rev/margin wg roli | `LoadDrawer.tsx:395–420` · `permissions.ts` | DZIAŁA | FUNCTIONAL_REQA_STATIC_FN2 #13 | locked copy gdy brak uprawnień |
@@ -77,7 +116,7 @@
 | Lista wyjątków / filtr roli | `RisksView.tsx:35–49,110` | DZIAŁA | static src | |
 | Plan B ferry — Przelicz → `applyPlanB` | `RisksView.tsx:166–176` · store `:1308–1390` | DZIAŁA | FINAL_SHIP · FN3 #6 · FUNCTIONAL_REQA_STATIC #4 | mutuje ferry + `PLAN_B_ACTIVATED` |
 | Tabela fal / wiatru `SAIL_ROWS` | `RisksView.tsx:16–21,133` | ATRAPA | static src | **4 wiersze hardcode**, nie API pogody |
-| Alternatywy trasy SE — Wybierz ×4 | `RisksView.tsx:269,276,283,290` | ATRAPA | static src (sample onClick) | **tylko `pushToast`** — zero mutacji load/risk |
+| Alternatywy trasy SE — Wybierz ×4 | `RisksView` · `applySeRouteAlt` | **DZIAŁA** (D25) | store mutacja | wybrane: risk+load+event |
 | Sytuacje E4 (TV) klik | `RisksView.tsx:220–224` | CZĘŚCIOWO | CHAT_GAP · FN2 #9 | seed\|live; link do load gdy `situationId` |
 | **DOKUMENTY** | | | | |
 | Tabela kompletności kategorii | `DocsView.tsx:32–41,102–123` | CZĘŚCIOWO | FINAL_SHIP | liczone z vault; **DRAWING = zawsze nLoads** (100% fake) |
@@ -94,8 +133,8 @@
 | Zgłoś spór / Zatwierdź (HHL) | `InvoicesView.tsx:83–96` | DZIAŁA | FN2 #7 | `resolveInvoice` |
 | Factoring HHL configure | `InvoicesView.tsx:174–223` · Options | DZIAŁA | FN2 #7 · FN3 factoring | |
 | Factoring SCX choose (checkbox) | `InvoicesView.tsx:24,75` | DZIAŁA | FN2 | |
-| Różnice faktury `+1240` / `+600` | `InvoicesView.tsx:37,73` | ATRAPA | static src | **wymyślone delty** pod demo sporu (i===2 / i===4) |
-| Sub „tydzień 38 · 14–20.09.2026” | `InvoicesView.tsx:62` | ATRAPA | static src | copy zaszyty, nie z daty seedu |
+| Różnice faktury | `buildSeedInvoices` / match | **DZIAŁA** (D25) | seed diffs | nie hardcode UI |
+| Sub tygodnia faktury | `InvoicesView` · `weekSubtitle` | **DZIAŁA** (D25) | `weekLabel` | z faktury |
 | Załącz CMR/POD do faktury | `InvoicesView.tsx:332,395` | DZIAŁA | static src | `uploadDocument` |
 | **AUTOMATYZACJE** | | | | |
 | Toggle reguły ON/OFF | `WorkflowsView.tsx:53` · `toggleWorkflow` | DZIAŁA | FN2 #8 | |
@@ -104,7 +143,7 @@
 | 12 seed workflows | `seed.ts` wf-1…12 | DZIAŁA | FUNCTIONAL_REQA_STATIC #8 | |
 | **STREFY** | | | | |
 | Nowa strefa / edycja / Zapisz | `GeofenceView.tsx:33–56,117–172` · `saveGeofence` | DZIAŁA | FUNCTIONAL_REQA_STATIC_FN2 #7 | HHL only |
-| Kolumna „Próbki” = zawsze `2` | `GeofenceView.tsx:98` | ATRAPA | static src | nie z modelu |
+| Kolumna „Próbki” | `GeofenceView` · `samplesRequired` | **DZIAŁA** (D25/L8) | model | z geofence |
 | Postój/histereza częściowo hardcode UI | `GeofenceView.tsx:81–84` | CZĘŚCIOWO | static src | override wizualny vs `g.hysteresisM` |
 | Options — mini-toggle aktywna strefa | `OptionsView.tsx:137` | DZIAŁA | CHAT_GAP Strefy scroll | |
 | **OPCJE** | | | | |
@@ -112,12 +151,12 @@
 | BAF pola | `OptionsView.tsx:107–108` · `updateBaf` | DZIAŁA | static src | blur → toast „zapisano” |
 | Język / motyw | `OptionsView.tsx:117–118` | DZIAŁA | static src | |
 | Factoring offer | `OptionsView.tsx:126–130` | DZIAŁA | FN2 | |
-| Prefs powiadomień (3 checkboxy) | `OptionsView.tsx:143` · store `:964–965` | ATRAPA | static src | **zapis w store, zero filtracji** przy `push` notyfikacji |
+| Prefs powiadomień (3 checkboxy) | `OptionsView` · `pushNotification` | **DZIAŁA** (D25) | store filter | filtruje push |
 | Oznacz wszystkie jako przeczytane | `OptionsView.tsx:144` | DZIAŁA | static src | hardcode role `'HHL'` |
 | Skrót → Automatyzacje | `OptionsView.tsx:148–149` | DZIAŁA | static src | |
 | **ZADANIA (SCX)** | | | | |
 | Lista + otwórz drawer | `TasksView.tsx:46,60` | DZIAŁA | static src | |
-| Termin `18 + i*9` h / pill pilne·wkrótce | `TasksView.tsx:42–44` | ATRAPA | FUNCTIONAL_REQA_STATIC_FN2 keyword note | **wymyślony deadline**, nie z `plannedLoadDate` |
+| Termin zadań / pill | `TasksView` · `hoursUntilLoad` | **DZIAŁA** (D25/L4) | `plannedLoadDate` | do załadunku |
 | **DRIVER PWA** | | | | |
 | Udostępnij pozycję GPS | `DriverPwa.tsx:57` · store `driverSharePosition` | DZIAŁA | HOLLOW_FIX · HOLLOW_VERIFY #4 · FINAL_SHIP residual | real `getCurrentPosition`; **one-shot** (nie watch) |
 | Kamera → vault `documents[]` | `DriverPwa.tsx:104–137` · `driverAttachDoc` | DZIAŁA | HOLLOW_FIX · FN3 #2 · FINAL_SHIP | |

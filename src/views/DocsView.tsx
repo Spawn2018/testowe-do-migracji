@@ -8,7 +8,7 @@ import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
 import { docCategoryLabel } from '../lib/enumLabels';
 
-const CATS: { key: DocCategory | 'DRAWING'; labelKey: string; who: string; whenKey: string }[] = [
+const CATS: { key: DocCategory; labelKey: string; who: string; whenKey: string }[] = [
   { key: 'PERMIT_PL', labelKey: 'doc_cat_permit_pl', who: 'Scandinavian Express', whenKey: 'docs_before_load' },
   { key: 'PERMIT_SE', labelKey: 'doc_cat_permit_se', who: 'Scandinavian Express', whenKey: 'docs_before_se' },
   { key: 'CMR', labelKey: 'doc_cat_cmr', who: 'Scandinavian Express', whenKey: 'docs_at_load' },
@@ -32,15 +32,12 @@ export function DocsView() {
 
   const rows = useMemo(() => {
     return CATS.map((c) => {
-      if (c.key === 'DRAWING') {
-        return { ...c, n: nLoads };
-      }
       const ok = loads.filter((l) =>
         documents.some((d) => d.loadId === l.id && d.category === c.key && d.status === 'UPLOADED'),
       ).length;
       return { ...c, n: ok };
     });
-  }, [documents, loads, nLoads]);
+  }, [documents, loads]);
 
   const fileRows = useMemo(() => {
     const list = documents.filter((d) => d.status === 'UPLOADED' || d.status === 'MISMATCH');
@@ -106,9 +103,9 @@ export function DocsView() {
                 return (
                   <tr
                     key={r.labelKey}
-                    style={{ cursor: r.key === 'DRAWING' ? 'default' : 'pointer' }}
+                    style={{ cursor: 'pointer' }}
                     onClick={() => {
-                      if (r.key !== 'DRAWING') setFilterCat(r.key);
+                      setFilterCat(r.key);
                     }}
                   >
                     <td style={{ fontWeight: 600 }}>{t(locale, r.labelKey)}</td>

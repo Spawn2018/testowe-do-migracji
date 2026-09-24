@@ -113,13 +113,13 @@ export function OptionsView() {
         </section>
 
         <section className="panel option-panel option-wide fuel-panel" data-deur-exempt="fuel-index" title="D-EUR-T: indeks paliwowy (wyjątek)">
-          <header className="panel-hd"><h2>{t(locale, "opt_fuel_h2")}</h2><span className="sub">{t(locale, 'opt_fuel_sub')}</span><span className="panel-mark">{t(locale, "opt_fuel_mark")}</span><DemoMark /></header>
+          <header className="panel-hd"><h2>{t(locale, "opt_fuel_h2")}</h2><span className="sub">{t(locale, 'opt_fuel_sub')} · {t(locale, 'opt_baf_facade_mark')}</span><span className="panel-mark">{t(locale, "opt_fuel_mark")}</span><DemoMark /></header>
           <div className="panel-bd">
             <div className="fuel-grid">
-              <div><h4 className="sec">{t(locale, "opt_index_read")}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(0, 6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{field.suffix}</span> : null}</div></dd></div>)}</dl></div>
-              <div><h4 className="sec">{t(locale, "opt_billing_rules")}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{field.suffix}</span> : null}</div></dd></div>)}</dl></div>
+              <div><h4 className="sec">{t(locale, "opt_index_read")}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(0, 6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} readOnly disabled title={t(locale, 'opt_baf_facade_title')} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{field.suffix}</span> : null}</div></dd></div>)}</dl></div>
+              <div><h4 className="sec">{t(locale, "opt_billing_rules")}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} readOnly disabled title={t(locale, 'opt_baf_facade_title')} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{field.suffix}</span> : null}</div></dd></div>)}</dl></div>
             </div>
-            <div className="note option-note">{t(locale, 'opt_baf_note_1')} <span className="code">baf</span> {t(locale, 'opt_baf_note_2')}</div>
+            <div className="note option-note" data-facade="baf-options">{t(locale, 'opt_baf_facade_note')}</div>
           </div>
         </section>
 
@@ -155,7 +155,7 @@ export function OptionsView() {
           <header className="panel-hd"><h2>{t(locale, "opt_notif_h2")}</h2><span className="sub">{notifications.filter((n) => !n.read).length} {t(locale, "opt_unread")}</span></header>
           <div className="panel-bd"><div className="pref-list">
             {([['workflowAlerts', t(locale, 'opt_wf_rules')], ['geofenceAlerts', t(locale, 'opt_geo_alerts')], ['riskAlerts', t(locale, 'opt_risk_alerts')]] as const).map(([key, label]) => <label key={key} className="switchline"><input type="checkbox" checked={notificationPrefs?.[key] ?? true} onChange={(e) => { updateNotificationPrefs({ [key]: e.target.checked }); saveMark('powiadomienia'); }} /><span>{label}</span></label>)}
-          </div><button type="button" className="chipbtn" onClick={() => useTowerStore.getState().markAllNotificationsRead('HHL')}>{t(locale, "opt_mark_read")}</button></div>
+          </div><div className="note option-note">{t(locale, 'opt_notif_filter_note')}</div><button type="button" className="chipbtn" onClick={() => useTowerStore.getState().markAllNotificationsRead('HHL')}>{t(locale, "opt_mark_read")}</button></div>
         </section>
 
         <section className="panel option-panel option-wide">

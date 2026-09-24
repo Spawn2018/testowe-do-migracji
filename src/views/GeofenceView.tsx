@@ -44,6 +44,7 @@ export function GeofenceView() {
                 lng: 18,
                 radiusM: 1000,
                 hysteresisM: 200,
+                samplesRequired: 1,
                 dwellMin: 5,
                 notifyHhl: true,
                 notifyKsh: false,
@@ -79,10 +80,8 @@ export function GeofenceView() {
                     : g.type === 'LOADING'
                       ? 'H&H'
                       : 'KSH, H&H';
-                const dwell =
-                  g.type === 'PORT_OUT' || g.type === 'PORT_IN' || g.type === 'SITE' ? '15 min' : '—';
-                const hyst =
-                  g.type === 'PRE_ARRIVAL' || g.type === 'SITE' ? '1000 m' : `${g.hysteresisM} m`;
+                const dwell = g.dwellMin > 0 ? `${g.dwellMin} min` : '—';
+                const hyst = `${g.hysteresisM} m`;
                 return (
                   <tr
                     key={g.id}
@@ -96,7 +95,7 @@ export function GeofenceView() {
                     <td className="num">{(g.radiusM / 1000).toFixed(g.radiusM >= 1000 ? 0 : 1)} km</td>
                     <td className="num">{dwell}</td>
                     <td className="num">{hyst}</td>
-                    <td className="num">2</td>
+                    <td className="num">{g.samplesRequired ?? 1}</td>
                     <td>{who}</td>
                   </tr>
                 );
@@ -123,6 +122,7 @@ export function GeofenceView() {
                 radiusM: Number(fd.get('radiusM')) || edit.radiusM,
                 hysteresisM: Number(fd.get('hysteresisM')) || edit.hysteresisM,
                 dwellMin: Number(fd.get('dwellMin')) || edit.dwellMin,
+                samplesRequired: Number(fd.get('samplesRequired')) || edit.samplesRequired || 1,
               });
               setEdit(null);
             }}
@@ -162,6 +162,10 @@ export function GeofenceView() {
               <dt>{t(locale, 'geo_dwell')} (min)</dt>
               <dd>
                 <input name="dwellMin" type="number" className="input" defaultValue={edit.dwellMin} />
+              </dd>
+              <dt>{t(locale, 'geo_samples')}</dt>
+              <dd>
+                <input name="samplesRequired" type="number" className="input" min={1} defaultValue={edit.samplesRequired ?? 1} />
               </dd>
             </dl>
             <div style={{ marginTop: 10, display: 'flex', gap: 7 }}>

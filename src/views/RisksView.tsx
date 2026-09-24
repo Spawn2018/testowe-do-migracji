@@ -15,6 +15,7 @@ import {
 import { isDemoSourceMode, trafikverketSourceNote } from '../lib/demoLabel';
 import { severityLabel } from '../lib/enumLabels';
 import { formatSeaRiskLabel } from '../lib/voyageSea';
+import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
 
 const ALT = [
   ['Gdańsk–Karlshamn', '+310 km do Boden', 'Polferries'],
@@ -28,6 +29,7 @@ export function RisksView() {
   const loads = useTowerStore((s) => s.loads);
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const applyPlanB = useTowerStore((s) => s.applyPlanB);
+  const applySeRouteAlt = useTowerStore((s) => s.applySeRouteAlt);
   const role = useTowerStore((s) => s.role);
   const riskFilter = useTowerStore((s) => s.riskFilter);
   const locale = useTowerStore((s) => s.locale);
@@ -273,34 +275,17 @@ export function RisksView() {
           <div style={{ marginTop: 14, borderTop: '1px solid var(--rule-2)', paddingTop: 10 }}>
             <h4 className="sec">{t(locale, 'risk_alt_se')}</h4>
             <div className="alt-list">
-              <div className="alt-row">
-                <div>
-                  <b>E4 → E18 via Västerås / Uppsala</b>
-                  <span data-content>Omija roboty E4 Gävle–Söderhamn · +45–70 min · zalecane przy wysokim ryzyku</span>
+              {SE_ROUTE_ALTS.map((alt, i) => (
+                <div className="alt-row" key={alt.id}>
+                  <div>
+                    <b data-content>{alt.title}</b>
+                    <span data-content>{alt.detail}</span>
+                  </div>
+                  <button type="button" className="chipbtn" onClick={() => applySeRouteAlt(i)}>
+                    {t(locale, 'risk_choose')}
+                  </button>
                 </div>
-                <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().pushToast('Alternatywa SE: E4→E18', 'MEDIUM')}>{t(locale, 'risk_choose')}</button>
-              </div>
-              <div className="alt-row">
-                <div>
-                  <b>E4 → Rv 83 / Rv 84 (Ljusdal – Ånge)</b>
-                  <span data-content>Objazd śnieżycy środkowego Norrland · +90–120 min · zima</span>
-                </div>
-                <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().pushToast('Alternatywa SE: Rv83/84', 'MEDIUM')}>{t(locale, 'risk_choose')}</button>
-              </div>
-              <div className="alt-row">
-                <div>
-                  <b>Kolej + ostatnia mila (Boden rail terminal)</b>
-                  <span data-content>Gdy siła wyższa na E4 północ · przeładunek SE · +1–2 doby</span>
-                </div>
-                <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().pushToast('Alternatywa SE: kolej Boden', 'MEDIUM')}>{t(locale, 'risk_choose')}</button>
-              </div>
-              <div className="alt-row">
-                <div>
-                  <b>Pauza w Gävle / Sundsvall + nowy slot Boden</b>
-                  <span data-content>Gdy okno Stegra nie dotrzymane · unikaj nocnego podejścia placu</span>
-                </div>
-                <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().pushToast('Alternatywa SE: pauza + slot', 'MEDIUM')}>{t(locale, 'risk_choose')}</button>
-              </div>
+              ))}
             </div>
           </div>
 
