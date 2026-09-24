@@ -21,6 +21,12 @@
  *   OUT=shots-baseline FROZEN_NOW=2026-09-23T14:32:00Z node scripts/baseline.mjs
  *
  * Do NOT run the full matrix here (C2.3 later). Prefer DRY_RUN, ONLY=1, or FILTER.
+ *
+ * Seed contract (D22 / visual safety):
+ *   gotoFrozen CLEARS persist keys (watch-tower-ui-v6-ready-gate + /watch|tower|wt/i)
+ *   then reloads → app boots from in-code seed defaults (data/seed.ts), NOT leftover
+ *   localStorage from a prior run. A store migration wipe therefore cannot empty the
+ *   720-shot matrix: baseline never depends on migrated user state.
  */
 import puppeteer from 'puppeteer-core'
 import { createHash } from 'crypto'
@@ -194,6 +200,7 @@ async function gotoFrozen(width) {
   await page.evaluate((key) => {
     try {
       sessionStorage.setItem('wtNavCollapsed', '0')
+      sessionStorage.removeItem('wt-persist-wipe-notice')
     } catch {}
     try {
       localStorage.removeItem(key)

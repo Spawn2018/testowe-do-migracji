@@ -70,6 +70,7 @@ async function gotoFrozen(page: Page, width: number) {
   await page.evaluate((key) => {
     try {
       sessionStorage.setItem('wtNavCollapsed', '0')
+      sessionStorage.removeItem('wt-persist-wipe-notice')
     } catch {
       /* ignore */
     }
