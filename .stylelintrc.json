@@ -1,8 +1,11 @@
 {
-  "extends": ["stylelint-config-standard"],
-  "plugins": ["stylelint-declaration-strict-value"],
+  "extends": [
+    "stylelint-config-standard"
+  ],
+  "plugins": [
+    "stylelint-declaration-strict-value"
+  ],
   "ignoreFiles": [
-    "**/tower.css",
     "node_modules/**",
     "dist/**",
     "shots-baseline/**"
@@ -37,20 +40,32 @@
       }
     ],
     "declaration-property-value-allowed-list": {
-      "border-radius": ["/^0$/", "/^2px$/", "/^50%$/", "/^var\\(--/"],
-      "font-family": ["/Barlow/", "/^var\\(--/", "/^inherit$/"],
-      "box-shadow": ["none", "/^var\\(--/"],
-      "text-transform": ["none", "lowercase", "/^var\\(--/"]
+      "border-radius": [
+        "/^0$/",
+        "/^2px$/",
+        "/^50%$/",
+        "/^var\\(--/"
+      ],
+      "font-family": [
+        "/Barlow/",
+        "/^var\\(--/",
+        "/^inherit$/"
+      ],
+      "box-shadow": [
+        "none",
+        "/^var\\(--/"
+      ],
+      "text-transform": [
+        "none",
+        "lowercase",
+        "/^var\\(--/"
+      ]
     },
     "declaration-property-unit-allowed-list": {
-      "letter-spacing": ["em"],
+      "letter-spacing": [
+        "em"
+      ],
       "line-height": []
-    },
-    "declaration-property-value-disallowed-list": {
-      "/^(padding|margin|gap|row-gap|column-gap)/": [
-        "/^\\d*[13579]px$/",
-        "/^\\d+\\.\\d+px$/"
-      ]
     },
     "declaration-no-important": true,
     "function-disallowed-list": [

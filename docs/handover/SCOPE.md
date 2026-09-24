@@ -1,0 +1,917 @@
+# SCOPE.md — rejestr zakresu
+
+**Zasada nadrzędna: z tego pliku nic nie znika.**
+
+Pozycja może zmienić status na `ODŁOŻONA` z podanym powodem i datą.
+Nie może zostać skasowana, scalona po cichu ani „uproszczona".
+Jeżeli przy przeglądzie czegoś tu nie ma, a powinno — dopisujemy,
+nie dyskutujemy.
+
+Ten plik jest odpowiedzią na warunek: *zakres nie może zostać zawężony,
+nic pominięte, nic zapomniane*.
+
+## Statusy
+
+| Status | Znaczenie |
+|---|---|
+| `DO ZROBIENIA` | w zakresie, jeszcze nietknięte |
+| `W TOKU` | robione w bieżącej sesji |
+| `GOTOWE` | zrobione, przetestowane, przyjęte |
+| `ODŁOŻONA` | świadomie przesunięta — **wymaga powodu i daty** |
+| `ZABLOKOWANA` | czeka na decyzję lub dostęp — **wymaga wskazania, na co** |
+| `DO POTWIERDZENIA` | zrobione według założenia, które musi potwierdzić człowiek |
+
+## Legenda kolumny „dowód"
+
+Czym udowadniamy, że pozycja jest `GOTOWE`. Bez dowodu status się nie zmienia.
+
+---
+
+## 0. Wierność wizualna
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 0.1 | Arkusz stylów przeniesiony dosłownie z mockupu | | porównanie sum kontrolnych | |
+| 0.2 | Zrzuty wzorcowe: widok × rola × język × 5 szerokości × 2 tryby | | katalog wzorców w repo | |
+| 0.3 | Test regresji wizualnej w CI, próg 0,1% | | zielony przebieg | |
+| 0.4 | Konfiguracja blokująca wartości spoza systemu | | zielony przebieg | |
+| 0.5 | Zakaz Tailwinda i motywów bibliotek w komponentach | | przegląd kodu | |
+| 0.6 | Katalog komponentów jako kontrakt nazw klas | | `DESIGN_SYSTEM.md` | |
+| 0.7 | Procedura dodania nowej klasy (3 warunki) | | zapisana i stosowana | |
+| 0.8 | Stany: spoczynek, najechanie, fokus, wciśnięty, zablokowany | | zrzuty | |
+| 0.9 | Stany: ładowanie, pusty, błąd, błąd walidacji | | zrzuty | |
+| 0.10 | Tryb jasny, ciemny i honorowanie ustawienia systemu | | zrzuty | |
+
+## 1. Fundament
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 1.1 | Repozytorium, CI, środowiska testowe i produkcyjne | | | |
+| 1.2 | Szkielet aplikacji, trasowanie, układ | | | |
+| 1.3 | Trzy języki: polski, angielski, szwedzki | | | |
+| 1.4 | Logowanie bez hasła, dwuskładnikowe dla administratorów | | | |
+| 1.5 | Wdrożenie na wskazanej domenie | | | |
+| 1.6 | Podgląd wdrożeń zabezpieczony hasłem | | | dane klienta |
+| 1.7 | Monitoring błędów i logi | | | |
+| 1.8 | Kopie zapasowe bazy i procedura odtworzenia | | | |
+
+## 2. Dane i dostęp
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 2.1 | Schemat: organizacje, użytkownicy, role | | | **schema z mockupu ma zostać** |
+| 2.2 | Projekt, elementy, transporty (model dwupoziomowy) | | | |
+| 2.3 | Strumień zdarzeń, niezmienny | | | |
+| 2.4 | Rozdzielenie kosztu i przychodu na poziomie bazy | | test dostępu | |
+| 2.5 | Widoki rolowe | | | |
+| 2.6 | Dziennik audytu | | | |
+| 2.7 | Retencja danych osobowych | | | czeka na decyzję: ile dni |
+| 2.8 | Umowy powierzenia między trzema stronami | | | poza kodem, ale w zakresie |
+
+## 3. Harmonogram
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 3.1 | Wgrywanie pliku arkusza | | | |
+| 3.2 | Kreator mapowania kolumn z zapisem szablonu | | | |
+| 3.3 | Parser wymiarów, dat, godzin, telefonów | | testy jednostkowe | |
+| 3.4 | Walidacja blokująca, w tym przesunięte kolumny | | testy | |
+| 3.5 | Podgląd różnic przed zapisem | | | |
+| 3.6 | Wersjonowanie i archiwum pliku źródłowego | | | |
+| 3.7 | Powiadomienie o zmianie daty na transporcie awizowanym | | | |
+| 3.8 | Klasyfikacja ponadnormatywności per kraj | | | limity do potwierdzenia |
+| 3.9 | Kolejność montażowa i wykrywanie rozjazdu | | | |
+| 3.10 | Integracja z SharePoint | | | zależna od zgody IT klienta |
+
+## 4. Zasoby i awizacja
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 4.1 | Formularz zasobów dla przewoźnika | | | |
+| 4.2 | Awizacja jako okno czasowe | | | |
+| 4.3 | Terminy uzupełnienia i eskalacje | | | |
+| 4.4 | Wymiary zestawu odrębnie od wymiarów elementu | | | |
+| 4.5 | Pojazdy pilotujące | | | |
+| 4.6 | Rezerwacja promu | | | |
+
+## 5. Pozycje i mapa
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 5.1 | Adapter telematyki: interfejs | | | |
+| 5.2 | Adapter: standard producentów pojazdów | | | |
+| 5.3 | Adapter: system przewoźnika | | | **czeka na odpowiedź przewoźnika** |
+| 5.4 | Aplikacja dla kierowcy z tokenem | | | fallback, budowany zawsze |
+| 5.5 | Odbiór zdarzeń wypychanych i odpytywanie | | | |
+| 5.6 | Idempotentność przetwarzania pozycji | | testy | |
+| 5.7 | Surowy odczyt nigdy nienadpisywany | | | |
+| 5.8 | Geofencing: histereza, postój, tłumienie drgań | | testy | |
+| 5.9 | Edytor stref na mapie | | | |
+| 5.10 | Mapa: warstwy, tryb skupienia, unikanie kolizji etykiet | | | |
+| 5.11 | Wykrywanie cichego pojazdu | | | |
+| 5.12 | Przewidywany czas przyjazdu, model segmentowy | | | |
+| 5.13 | Odtwarzanie przebiegu w czasie | | | |
+| 5.14 | Podmiana schematu mapy na warstwę kartograficzną | | | |
+
+## 6. Dokumenty
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 6.1 | Kategorie z wymagalnością i terminami | | | |
+| 6.2 | Wersjonowanie i widoczność per organizacja | | | |
+| 6.3 | Odnośniki z krótkim czasem ważności | | | |
+| 6.4 | Zezwolenia: pola, ważność, trasa, pilotaż | | | wzór do zmapowania |
+| 6.5 | Walidator wymiarów zestawu wobec zezwolenia | | testy | blokuje transport |
+| 6.6 | Polisy z alertem wygaśnięcia | | | |
+| 6.7 | Potwierdzenie dostawy i zdjęcia mocowania | | | |
+| 6.8 | Pobieranie paczki per transport i per tydzień | | | |
+| 6.9 | Elektroniczny list przewozowy | | | faza późniejsza |
+
+## 7. Pieniądze
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 7.1 | Macierz cennika, wersjonowana | | | czeka na stawki |
+| 7.2 | Dopasowanie stawki; brak dopasowania nie daje zera | | testy | |
+| 7.3 | Indeksacja paliwowa, pełna parametryzacja | | testy | czeka na parametry |
+| 7.4 | Pobieranie notowań z zapisem źródła | | | |
+| 7.5 | Kursy walut i konwencja | | | czeka na ustalenie |
+| 7.6 | Marża, próg ostrzegawczy | | | |
+| 7.7 | Dodatki: pilotaż, postojowe, prom, zezwolenia | | | |
+| 7.8 | Faktura zbiorcza, kreator dla przewoźnika | | | |
+| 7.9 | Dopasowanie trójstronne z rozbiciem różnic | | testy | |
+| 7.10 | Ścieżka sporu i akceptacji | | | |
+| 7.11 | Krajowy system e-faktur | | | faza późniejsza |
+
+## 8. Ryzyko
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 8.1 | Pogoda morska na trasie promowej | | | licencja źródła do potwierdzenia |
+| 8.2 | Odczyt komunikatów armatora | | | |
+| 8.3 | Śledzenie jednostek | | | |
+| 8.4 | Panel alternatywnych przepraw z przeliczeniem | | | |
+| 8.5 | Zdarzenia drogowe w Szwecji | | | |
+| 8.6 | Zdarzenia drogowe w Polsce | | | brak dobrego źródła — do rozstrzygnięcia |
+| 8.7 | Ryzyka dokumentowe i zasobowe | | | |
+| 8.8 | Ryzyko kolejności montażowej | | | |
+| 8.9 | Kolejka wyjątków z wagą i czasem do skutku | | | |
+| 8.10 | Kody przyczyn opóźnień | | | czeka na uzgodnienie z przewoźnikiem |
+
+## 9. Automatyzacje i powiadomienia
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 9.1 | Silnik: wyzwalacz, warunek, akcje | | | |
+| 9.2 | Wykonanie trwałe, z ponawianiem | | | |
+| 9.3 | Siedem reguł startowych | | | |
+| 9.4 | Kreator reguł dla administratora | | | |
+| 9.5 | Poczta z szablonami w trzech językach | | | |
+| 9.6 | Wiadomości tekstowe | | | |
+| 9.7 | Powiadomienia w aplikacji | | | |
+| 9.8 | Odsiewanie duplikatów | | testy | |
+| 9.9 | Kanał zespołowy | | | |
+| 9.10 | Kalendarz do subskrypcji | | | |
+| 9.11 | Czat przy transporcie | | | |
+
+## 10. Pulpity
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 10.1 | Pulpit spedytora | | | |
+| 10.2 | Pulpit klienta | | | |
+| 10.3 | Pulpit przewoźnika | | | |
+| 10.4 | Widok placu budowy, tylko do odczytu | | | opcjonalny |
+| 10.5 | Krzywa postępu dostaw | | | |
+| 10.6 | Ocena przewoźnika | | | |
+| 10.7 | Czas wykrycia odchylenia | | | |
+| 10.8 | Eksport do arkusza i pliku przenośnego | | | |
+| 10.9 | Raport śladu węglowego | | | faza późniejsza |
+
+## 11. Jakość
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 11.1 | Testy jednostkowe logiki: cennik, indeksacja, parser, strefy | | | |
+| 11.2 | Testy integracyjne bazy i uprawnień | | | |
+| 11.3 | Testy ścieżek użytkownika | | | |
+| 11.4 | Testy regresji wizualnej | | | patrz 0.3 |
+| 11.5 | Dostępność: klawiatura, kontrast, czytniki ekranu | | | |
+| 11.6 | Wydajność przy pełnym zakresie projektu | | | |
+| 11.7 | Skróty klawiszowe z widocznymi podpowiedziami | | | |
+| 11.8 | Dokumentacja wdrożeniowa i instrukcja dla trzech stron | | | |
+
+---
+
+## Dziennik odłożeń
+
+Każda pozycja przeniesiona na `ODŁOŻONA` trafia tutaj. Pusta tabela oznacza,
+że zakres nie został zawężony.
+
+| Data | Pozycja | Powód | Kto zdecydował | Kiedy wraca |
+|---|---|---|---|---|
+| | | | | |
+
+## Dziennik blokad
+
+| Data | Pozycja | Na co czeka | Kto odblokowuje |
+|---|---|---|---|
+| | | | |
+
+---
+
+## 12. Funkcje znalezione we wdrożeniu na Vercel (23.09.2026)
+
+Wykryte przez inspekcję `watch-tower-makieta.vercel.app`. Nie były w moim
+projekcie — wchodzą do rejestru, żeby nie zginęły przy przejęciu.
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 12.1 | Mapa Leaflet z kafelkami zamiast schematu SVG | | | markery `wt-marker`, `wt-marker-ferry`, `wt-dot`, `wt-arrow` |
+| 12.2 | Ekran Opcje (administracja HHL) | | | 7 paneli |
+| 12.3 | Cennik edytowalny z interfejsu, 3 linie wymiarowe | | | koszt 16500/19200/22800, przychód 20500/23800/27900 PLN |
+| 12.4 | BAF/SEFS: indeks `SEFS_HYBRID_OKQ8_ORLEN`, SEK/l | | | baza 19,47 · bieżąca 19,68 · źródło okq8.se |
+| 12.5 | Moduł factoringu: oferta, zapis stawek, widoczność dla SCX | | | |
+| 12.6 | Załączniki CMR/POD przy fakturze | | | |
+| 12.7 | Panel „Warunki drogowe SE · E4" | | | zasila go `/api/trafikverket` |
+| 12.8 | Dzwonek powiadomień z licznikiem | | | |
+| 12.9 | Zwijana nawigacja boczna | | | |
+| 12.10 | Przeciągane karty sekcji na kokpicie | | | `section-card`, `section-grip` |
+| 12.11 | Preferencje interfejsu per profil | | | język, domyślne ustawienia |
+| 12.12 | Tabela pojazdów w widoku Mapy z własnym zestawem kolumn | | | Kod, Ładunek, Kierowca, Rejestracja, Status, ETA, Okno |
+| 12.13 | Zbiór danych rozszerzony do 72 transportów i 28 ryzyk | | | |
+| 12.14 | Kody przyczyn w kolejce ryzyk (siła wyższa, graniczne, pogoda) | | | |
+
+## 13. Defekty wdrożenia do naprawy przed przejęciem
+
+| # | Defekt | Waga | Dowód | Status |
+|---|---|---|---|---|
+| 13.1 | Tailwind v4 w bundlu — zmienne `--tw-*`, klasy `.flex .grid .absolute .p-2` | wysoka | `app.css` | |
+| 13.2 | Systemowy stack czcionek z preflight Tailwinda obok Barlow | wysoka | `--default-font-family` | |
+| 13.3 | `box-shadow` użyty 10×, `border-radius` > 2 px w 5 miejscach, `!important` 1× | średnia | `app.css` | |
+| 13.4 | `POST /api/trafikverket` zwraca 405 — endpoint niewdrożony | wysoka | 4 żądania przy wejściu | |
+| 13.5 | Trzy sprzeczne stany rejsu 24.09 na jednym ekranie | wysoka | nagłówek vs baner vs kolejka ryzyk | |
+| 13.6 | KPI nie zgadza się z korytarzem (21+44 vs 21/39/5/7) | wysoka | kokpit | |
+| 13.7 | Niespójne formatowanie kwot: „8739" obok „10 402,18" | średnia | harmonogram | |
+| 13.8 | Godzina załadunku 02:00 w każdym wierszu — podejrzenie konwersji stref | wysoka | harmonogram | |
+| 13.9 | Format daty odszedł od projektu: „30.09.2026, 02:00" zamiast „30.09 06:00" | niska | harmonogram | |
+| 13.10 | Dane zastępcze: „Driver 1", „+48 600 000 000", „PSE 1000" | średnia | wszystkie role | osłabia demonstrację |
+| 13.11 | Ciągi debugowe w interfejsie: `permitFits=false`, `CANCELLED`, `E4 CLOSED` | średnia | kolejka ryzyk | także język angielski w polskim UI |
+| 13.12 | Telefon kierowcy w tabeli dla wszystkich ról, w tym klienta | wysoka | harmonogram | dane osobowe, RODO |
+| 13.13 | `data-theme="dark"` zaszyte w `<html>` — ustawienie systemu ignorowane | niska | źródło strony | regresja naprawiona w makiecie |
+| 13.14 | Udział paliwa = 0% — przy tym wzorze BAF zawsze wyjdzie zero | wysoka | Opcje | do potwierdzenia: wzór czy niewypełnione pole |
+| 13.15 | Nowe wzorce wizualne poza katalogiem komponentów | średnia | eyebrow wersalikami, tytuł strony, etykieta w nagłówku panelu, karty przeciągane | przyjąć do systemu albo usunąć |
+| 13.16 | Bundle 2,0 MB JS | średnia | `app.js` | ładowanie na telefonie w terenie |
+
+---
+
+## 14. Ustalenia z etapu 0 przekazania (23.09.2026)
+
+Odpowiedzi Grok Bota na sprawdzenie dostępu. Zmieniają plan przejęcia.
+
+| # | Ustalenie | Waga | Konsekwencja |
+|---|---|---|---|
+| 14.1 | **Brak repozytorium Git.** Kod żyje wyłącznie w `/workspace/watch-tower-app`, bez `.git`, bez remote | KRYTYCZNA | Zero historii, zero możliwości przeglądu zmian, jedno nadpisanie i praca przepada. Etap D („każda naprawa osobnym commitem") jest bez tego niewykonalny |
+| 14.2 | **Katalog `api/` nie istnieje** — potwierdzenie przyczyny 405 na `/api/trafikverket` | wysoka | Panel warunków drogowych nie ma i nigdy nie miał źródła danych |
+| 14.3 | **Istnieją inne boty z wiedzą o projekcie:** WT — UX, Visual, Research, QA | wysoka | Część intencji, decyzji i odrzuconych pomysłów leży poza sesją Groka. Bez eksportu ta wiedza ginie |
+| 14.4 | **Dokumenty QA w `/workspace/watch-tower/qa-start/`** oraz pliki `*.md` w katalogu aplikacji | średnia | Istniejąca dokumentacja, dotąd nieuwzględniona w zakresie |
+| 14.5 | Wizualne źródło prawdy: `/workspace/watch-tower/claude-v2.0/` | — | Makieta użyta zgodnie z założeniem |
+| 14.6 | Plik blokady wersji prawdopodobnie nie istnieje | wysoka | Budowanie nieodtwarzalne; odtworzony lockfile nie jest oryginałem i musi być tak oznaczony |
+| 14.7 | Brak CI, brak monitoringu, brak pomiarów wydajności, brak matrycy przeglądarek | średnia | Do zbudowania od zera |
+| 14.8 | Brak mechanizmu zamrożenia zegara | wysoka | Blokuje powtarzalne zrzuty, więc blokuje test regresji wizualnej |
+| 14.9 | Brak kluczy do integracji na żywo (Trafikverket, AIS i pozostałe) | średnia | Weryfikacja integracji dopiero po stronie właściciela |
+| 14.10 | Stawki w ekranie Opcje: nieustalone, czy prawdziwe czy demonstracyjne | wysoka | Do czasu potwierdzenia muszą być widocznie oznaczone jako demonstracyjne — inaczej klient lub przewoźnik zobaczy liczby, które nie są ustaleniem |
+| 14.11 | Konto Vercel: `sebastianbozekq-7781s`, projekt `watch-tower-makieta` | — | |
+
+## 15. Etap 0.5 — zamrożenie w Git (blokujące, przed etapem A)
+
+| # | Pozycja | Status | Notatka |
+|---|---|---|---|
+| 15.1 | `git init` w katalogu aplikacji | | |
+| 15.2 | `.gitignore`: `node_modules`, `dist`, `.env*`, `.vercel` | | |
+| 15.3 | Kopia makiety do `design/claude-v2.0/` (kopiować, nie przenosić) | | |
+| 15.4 | Kopia dokumentów QA do `docs/qa-start/` | | |
+| 15.5 | Commit bazowy + tag `baseline-2026-09-23` | | wersja poddana analizie |
+| 15.6 | Repozytorium zdalne, prywatne | | |
+| 15.7 | Odtworzenie pliku blokady wersji, oznaczone jako odtworzone | | |
+
+---
+
+## 16. Wiedza od agentów WT (przekazanie 23.09.2026)
+
+Cztery role: UX, Visual, Research, QA. Artefakty rozrzucone po ~60 plikach
+w trzech katalogach, dwa równoległe tory w `research-2026/`, część
+dokumentów nieaktualna.
+
+### 16.1 Gdzie co leży
+
+| Katalog | Właściciel | Zawartość |
+|---|---|---|
+| `/workspace/watch-tower/UX_MAP.md` | WT — UX | role, moduły M1–M12, ścieżki §6/§6.5, dane startowe, kryteria akceptacji #1–21 |
+| `VISUAL_BRIEF.md`, `VISUAL_ALIGN_CLAUDE.md` | WT — Visual | tokeny, Barlow, przepisy powłoki, bramy FAIL |
+| `claude-visual-ref/`, `claude-makieta.html`, `claude-v2.0/` | — | trzy referencje wizualne, **konflikt kanoniczności** |
+| `research-2026/` (deep-dive) | WT — Research | 01-competitors, 02-corridor-pl-se-apis, 03-eta-predictions, 04-ux-ops-trends |
+| `research-2026/` (pack) | koordynator | 00_EXEC_SUMMARY … 07_TEAM_ORDERS |
+| `research-2026/visual-gate-*` | WT — Visual | FULL_1TO1_SURFACE_CHECKLIST, START/RE/FINAL_SQUINT |
+| `START_API_NOTES.md` | WT — Research | P0 dla buildera, MMSI, Plan B Stena |
+| `qa-start/` | WT — QA | ~20 raportów SHIP/NO_SHIP + zrzuty |
+| `QA_ELITE_UPGRADE_CHECKLIST.md` | WT — QA | bramy S1–S6, backlog elite D1–D8 |
+
+### 16.2 Ustalenia produktowe, których nie miałem
+
+| # | Ustalenie | Źródło | Uwaga |
+|---|---|---|---|
+| 16.1 | Stegra **nie jest rolą** — to punkt zainteresowania i strefa | UX_MAP §4 | mój „widok placu, tylko do odczytu" był opcjonalny — tu rozstrzygnięte |
+| 16.2 | Motyw pierwszego malowania per rola: HHL i SCX ciemny, KSH jasny | akceptacja #12 | **koliduje z D16** — patrz 17.9 |
+| 16.3 | Import XLSX **tylko u KSH**, eksport **tylko u HHL** | Visual | uprawnienie, którego nie miałem wprost |
+| 16.4 | Ceny ukrywane **usunięciem z DOM per rola**, nie rozmyciem ani kropkami | UX_MAP | zgodne z zasadą „nie ukrywaj w interfejsie" |
+| 16.5 | Moduły M1–M12 i ścieżki E1–E4 (audyt, zezwolenia, faktoring HHL, ufność ETA) | UX_MAP §6.5 | pełna lista do wciągnięcia do rejestru |
+| 16.6 | Brama wizualna działa **na oko**, nie na różnicy pikseli | Visual | patrz 17.8 |
+| 16.7 | FINAL_SQUINT PASS 96/0/6, powłoka zamrożona | Visual | stan na ~02:49 |
+| 16.8 | MMSI: Wawel 311852000, Nova Star 311000787 | Research | |
+
+### 16.3 Sprostowania faktograficzne od Research
+
+| Twierdzenie | Sprostowanie |
+|---|---|
+| Trafikverket `FerryAnnouncement` jako status promu bałtyckiego | To **promy drogowe** (vägfärjor), nie Bałtyk. Do statusu Gdańsk–Nynäshamn nieprzydatne |
+| FourKites jako lider kwadrantu Gartnera | Wyszli z kwadrantu 24.02.2025 |
+| Publiczne API rezerwacyjne Polferries / Unity / TT | Nie istnieje. Nie wymyślać |
+| Odczyt strony Polferries jako główne źródło | Ryzyko regulaminowe. Stanowisko Research: dane startowe + człowiek w pętli dla MVP. **Decyzja do podjęcia** |
+
+## 17. Ryzyka wykryte przez agentów — nowe pozycje zakresu
+
+| # | Ryzyko | Waga | Źródło | Konsekwencja |
+|---|---|---|---|---|
+| 17.1 | **Import XLSX historycznie kasował tabelę (72→1)**. Naprawione pod P9 (łączenie 72→73), ale wrażliwe na dane wejściowe — regresja łatwa | KRYTYCZNA | QA | Utrata harmonogramu klienta. Wymaga testu regresji na kilku wariantach pliku, nie na jednym |
+| 17.2 | **Magazyn trwały bez wersjonowania i migracji** (v5→v6-ready-gate). Bez wyczyszczenia pamięci przeglądarki czyta fałszywy stan | KRYTYCZNA | QA | Użytkownik po aktualizacji widzi dane sprzed zmiany schematu |
+| 17.3 | **Trzy referencje wizualne na dysku**, dokumentacja UX wskazuje `claude-makieta.html`, koordynator `claude-v2.0/` | wysoka | UX vs koordynator | Nie wiadomo, wobec czego mierzyć wierność |
+| 17.4 | **Brak pełnego przebiegu 14 prób po P9** — tylko skupione sprawdzenia | wysoka | QA | Nie wiadomo, czy naprawa importu nie zepsuła czegoś innego |
+| 17.5 | Skarbiec kierowcy w pamięci przeglądarki — limit przy zdjęciach | średnia | QA | Utrata dokumentacji mocowania |
+| 17.6 | Pozycja GPS jednorazowa, nie ciągła | średnia | QA | Śledzenie nie działa tak, jak sugeruje interfejs |
+| 17.7 | Martwy MapLibre w drzewie obok żywego Leaflet | średnia | QA | Rozmiar paczki, mylące przy utrzymaniu |
+| 17.8 | Brama wizualna „na oko" zamiast różnicy pikseli | wysoka | Visual | Dryf poniżej progu oka przechodzi. Potrzebne oba mechanizmy |
+| 17.9 | Motyw per rola (akceptacja #12) wobec naprawy D16 | średnia | UX vs moja lista | **Rozstrzygnięcie: rola ustala motyw domyślny w kodzie, nie atrybut zaszyty w dokumencie. Użytkownik może nadpisać, wybór zapamiętany** |
+| 17.10 | Dokumenty anti-slop nadal wskazują IBM Plex | średnia | Visual, UX | Builder może przeczytać nieaktualne i cofnąć krój |
+| 17.11 | `corridor_ref.geojson` obiecany, nigdy niewytworzony | średnia | Research | Brak geometrii referencyjnej trasy z zezwolenia |
+| 17.12 | Trafikverket: wersja schematu 1.5 wobec 1.6, filtr obszaru — do weryfikacji | średnia | Research | |
+| 17.13 | Współrzędne terminali Gdańsk i Nynäshamn orientacyjne | średnia | Research | Strefy portowe mogą nie trafiać |
+| 17.14 | Parametry operacyjne niezebrane: cutoff promu, progi fal, prędkość planowana ponadgabarytu | wysoka | Research | Wejdą z listy pytań do przewoźnika |
+| 17.15 | Dwa równoległe tory plików w `research-2026/` | średnia | Research | Łatwo o sprzeczność; reguła rozstrzygania w README |
+| 17.16 | Dowody FINAL w `/tmp/` — efemeryczne | niska | Visual | Do przeniesienia do repozytorium |
+
+## 18. Status na 23.09.2026, 21:30
+
+- 14.6 **zamknięte** — lockfile oryginalny istniał, regeneracja niepotrzebna
+- 15.5 **zamknięte** — commit bazowy `af3ea61`, tag `baseline-2026-09-23`
+- 15.6 **zamknięte** — zdalne `Spawn2018/testowe-do-migracji` (prywatne)
+- **nowe 15.8** — weryfikacja kompletności wypchnięcia (trzy paczki przez agenta)
+- **nowe 15.9** — kanon projektu poza repozytorium: `/workspace/watch-tower/`
+  z UX_MAP, VISUAL_BRIEF, research-2026, bramami wizualnymi, START_API_NOTES,
+  referencjami HTML i canonem wejściowym. Do wciągnięcia jako `docs/watch-tower/`
+  z zachowaniem struktury
+- **nowe 15.10** — dowody `/tmp/wt-*.png` do `docs/evidence/`, póki istnieją
+- Repozytorium prywatne, bez uwierzytelnienia nieczytelne z zewnątrz —
+  odczyt kodu przez archiwum albo lokalnie
+
+## 19. Kolizja instrukcji 23.09.2026 ~21:35
+
+- Instrukcje 0.5a i 0.5b trafiły do wykonawcy **w trakcie etapu C**.
+  Etapy A i B zamknięte wcześniej, nie są powtarzane.
+- **Poprawka metody weryfikacji:** porównanie sum plików w drzewie roboczym
+  było błędne — w trakcie etapu C drzewo jest brudne. Porównujemy sumy
+  **drzew commitów** (`git rev-parse <commit>^{tree}`). Równe drzewa
+  oznaczają identyczną zawartość co do bajtu.
+- Sumy commitów różnią się z definicji: `305da3e` lokalnie wobec `af3ea61`
+  zdalnie, bo commit zasiewający zmienił rodzica. To nie jest usterka.
+- **Nowa 15.11 — do potwierdzenia:** czy tag `baseline-2026-09-23` obejmuje
+  także dokumenty przekazania (`00_KONTEKST.md`, `08_MANIFEST.md`), czy
+  wyłącznie stan wdrożony. Na build nie wpływa, ale znaczenie tagu musi
+  być jednoznaczne.
+
+## 20. Etap C — wyniki i zamknięcia (23.09.2026, 22:06)
+
+### Zamknięte
+- **0.5a** — `305da3e^{tree}` = `af3ea61^{tree}` = `3c6c2af0…`, wypchnięcie kompletne
+- **15.11** — baseline **nie zawiera** dokumentów przekazania; znaczenie tagu czyste
+- **0.5b** — `0ad97ba`, +326 ścieżek, tag `baseline-docs-2026-09-23`; kanon w repozytorium
+- **17.3** — kanon wizualny rozstrzygnięty: `claude-v2.0`. Wszystkie trzy cechy v2
+  potwierdzone w aplikacji (cyfry na pasku etapów, nagłówek listu przewozowego
+  z perforacją, ukośne pasy banera)
+- **17.16** — dowody z `/tmp` **utracone**, odnotowane w `UTRACONE.md`, nieodtwarzane
+- **C2.4** — test różnicy pikseli działa, próg 0,001, cztery próby dymne zielone
+
+### Nowe znaleziska z etapu C
+
+| # | Znalezisko | Waga | Źródło | Pozycja D |
+|---|---|---|---|---|
+| 20.1 | **104 napisy wpisane na stałe w komponentach** — wersja szwedzka w dużej części pozorna | KRYTYCZNA | C3 | D19 |
+| 20.2 | **Różnice na fakturach zaszyte na stałe** — dopasowanie trójstronne jest fasadą | KRYTYCZNA | C1 | D20 |
+| 20.3 | Tabela fasady: 98 pozycji — 73 działa, 11 częściowo, 8 atrap, 6 porzuconych | — | C1 | — |
+| 20.4 | Atrapa: wybór przewoźnika „Wybierz" | średnia | C1 | D |
+| 20.5 | Porzucone: MapLibre i warstwa telematyki | średnia | C1 | D21 |
+| 20.6 | Słownik: 124 klucze, 47 nieużywanych | niska | C3 | — |
+| 20.7 | Magazyn trwały: klucz v6 bez wersjonowania schematu | wysoka | plik 07 | D22 |
+| 20.8 | Import harmonogramu bez testów automatycznych | KRYTYCZNA | plik 07 | D23 |
+| 20.9 | Pełny przebieg 14 prób po P9 nie wykonany | wysoka | plik 07 | D24 |
+| 20.10 | Skrypt zrzutów nawiguje po etykietach zależnych od języka — klasa błędu, nie pojedyncza usterka | średnia | C2.3 | narzędzie |
+
+### Decyzja metodyczna
+Wzorzec zrzutów pochodzi **z jednego przebiegu jednej wersji skryptu**.
+Dogrywanie nieudanych ujęć poprawioną wersją jest zakazane — baseline
+złożony z dwóch wersji nie pozwala odróżnić dryfu aplikacji od artefaktu
+narzędzia.
+
+### Jedyna dozwolona zmiana kodu przed etapem D
+Atrybuty `data-view` na przyciskach nawigacji i `data-role` na przełączniku
+roli. Narzędzie testowe, nie naprawa: zero wpływu na wygląd i zachowanie.
+
+## 21. Etap C zamknięty (23.09.2026, 22:49)
+
+- **C2.3** — 720/720, zero nieudanych, jeden przebieg, skrypt
+  `2026-09-23-data-view`, suma paczki `138c2120e19b51fee3bf7cd452a7bc9387e8eeb943566e89a20648a7583112a2`
+- Nawigacja w skrypcie po `data-view` / `data-role` / `data-lang`,
+  bez wyrażeń na etykietach — klasa błędu 20.10 zamknięta u źródła
+- `NAPRAWY.md` z D1–D24, podział 47 nieużywanych kluczy w `C3_JEZYKI.md`
+- Dziesięć plików `00`–`09` w repozytorium
+
+**Baseline wizualny istnieje.** Od tej chwili każda zmiana wyglądu jest
+albo zamierzona i udokumentowana, albo jest usterką.
+
+## 22. Etap D — struktura
+
+Cztery fale, brama po każdej. **D25 nowe:** zamknięcie ośmiu atrap
+i sześciu porzuconych z `02_FASADA.md` — zaimplementować, usunąć albo
+widocznie oznaczyć jako nieaktywne.
+
+| Fala | Zakres | Brama |
+|---|---|---|
+| 0 — siatka bezpieczeństwa | D23, D24 | testy zielone, raport 14 prób |
+| 1 — fundament wizualny | D1, D2, D9, D21, D16 | **test zielony bez regeneracji wzorca** |
+| 2 — prawda danych | D7 (odpowiedź przed naprawą), D22, D3, D4, D5, D8, D20 | przebieg 720, tag `baseline-fala-2` |
+| 3 — treść i język | D19, D11, D12, D6, D10, D17, D13, D18, D25 | przebieg 720, tag `baseline-fala-3` |
+| 4 — infrastruktura | D14, D15 | test zielony, raport rozmiaru paczki |
+
+**Protokół regeneracji wzorca:** nigdy częściowo, nigdy po pojedynczej
+naprawie. Pełny przebieg jednym skryptem na końcu fali, raport ile z 720
+ujęć się zmieniło i dlaczego, commit plus tag. Więcej zmienionych ujęć,
+niż da się uzasadnić, oznacza zatrzymanie, nie regenerację.
+
+**Uzasadnienie kolejności:** D23 przed wszystkim, bo naprawy dotykają kodu,
+który potrafi skasować harmonogram klienta, a testu wyłapującego to nie ma.
+Fala 1 to wyłącznie usuwanie — czerwony test oznacza tam usterkę, nie zmianę.
+
+## 23. Etap D, fala 0 — D23 zamknięte (23.09.2026, 23:02)
+
+- 8/8 testów zielonych (Vitest), commit `ce9cafa`, PR #1, gałąź
+  `cursor/d23-schedule-import-tests-27c2`
+- Pięć wariantów pliku plus przypadki `allowRemovals`; każdy startuje
+  z niepustej bazy i sprawdza, że istniejące ładunki przetrwały
+- **Ustalenie:** logika ochronna **już była w kodzie** — `dryRunFromXlsx`
+  zawsze zwraca `removedIds: []`, `commitImport` ignoruje usuwanie bez
+  `allowRemovals` i przy `accepted === 0` nie rusza bazy. Testy nie naprawiają,
+  tylko zamykają. Pozycja 17.1 i 20.8 **zamknięte**
+- Wzorzec wizualny nietknięty
+
+### 23.1 Ryzyko krytyczne ujawnione przy okazji
+
+**Cały dorobek etapu C leży poza repozytorium**, na jednym komputerze:
+atrybuty `data-view` / `data-role` / `data-lang`, `scripts/baseline.mjs`,
+720 ujęć wzorcowych, `tests/visual.spec.ts`, konfiguracja Playwrighta,
+pliki przekazania `01`–`09`, `NAPRAWY.md`, `C3_JEZYKI.md`, `C2_4_PIXEL.md`.
+
+Dowody: w opisie PR — „`docs/handover/NAPRAWY.md` nie ma na main",
+„`test:visual` w tym repozytorium nie istnieje"; w pytaniu koordynatora —
+„lokalny box ma niezacommitowane data-view / handover".
+
+Skutek uboczny: **dwa rozjeżdżające się światy**. Gałąź agenta chmurowego
+wyszła z `main`, który nie zna `data-view`. Oba zmieniają `package.json`.
+
+**Kolejność naprawcza:** scalić PR #1 → `pull --rebase` na boxie
+i rozwiązać konflikt w `package.json` zachowując oba zestawy skryptów →
+zmierzyć `shots-baseline` i zdecydować o Git LFS → wypchnąć całość
+z tagiem `etap-c-2026-09-23` → weryfikacja drzew → dopiero D24.
+
+| # | Pozycja | Status |
+|---|---|---|
+| 23.2 | Scalenie PR #1 | |
+| 23.3 | Synchronizacja boxa, konflikt `package.json` | |
+| 23.4 | Decyzja o Git LFS dla 720 ujęć (próg 100 MB) | |
+| 23.5 | Wypchnięcie dorobku etapu C, tag `etap-c-2026-09-23` | |
+| 23.6 | Weryfikacja drzew box wobec zdalnego | |
+
+## 24. D26 — podgląd importu pokazuje usunięcia, których nie wykona
+
+Z opisu PR #1: `diffSchedule` widzi brakujące kody jako `removed`,
+a `dryRunFromXlsx(...).removedIds` jest `[]`.
+
+Klient widzi w podglądzie „2 usunięte", zatwierdza, nic nie zostaje usunięte.
+Podgląd kłamie — w bezpieczną stronę, ale kłamie.
+
+Dwie dopuszczalne drogi: podgląd przestaje pokazywać usunięcia i zastępuje
+je informacją, że brakujące kody zostaną zachowane; albo usunięcia stają się
+możliwe za wyraźną zgodą — pole wyboru w oknie podglądu, domyślnie odznaczone,
+z listą kodów. Druga lepsza operacyjnie, wymaga przekazania `allowRemovals`
+z interfejsu. **Fala 3.**
+
+## 25. Drobne do fali 3
+
+- **25.1** Testy importu startują z sześciu ładunków; usterka historyczna
+  dotyczyła siedemdziesięciu dwóch. Dodać jeden wariant na realnej skali
+- **25.2** Gdy test wizualny trafi do CI — te same przeglądarki co lokalnie,
+  inaczej różnice w renderowaniu czcionek dadzą fałszywe czerwone
+
+## 26. Fala 0 zamknięta (23.09.2026)
+
+| Pozycja | Wynik |
+|---|---|
+| D23 | 8/8 Vitest, PR #1 scalony squashem → `3f140a7` |
+| D24 | **14/14 PASS (SHIP)**, paczka `index-BqvbHwzw.js`, suma `d91ce4c3786…474fa`, raport `docs/qa-start/D24_14_CLICK.md` (`71da774`) |
+| Synchronizacja | box = zdalne, drzewo `d305c245…`, tag `etap-c-2026-09-23`, HEAD `86050d1` |
+| Wzorzec wizualny | `shots-baseline` 100 MB → **Git LFS**, 720/720 |
+| Testy | `test:unit` 8/8, Playwright 4/4 |
+| D26 | dopisane do fali 3, wybrana **droga 2**: usunięcia za wyraźną zgodą |
+
+Zamknięte przy okazji: 23.2–23.6, 20.8, 17.1.
+
+### 26.1 Otwarte, blokujące bramę fali 1
+
+| # | Pozycja | Waga | Uwaga |
+|---|---|---|---|
+| 26.2 | **CI nie działa** — runner Actions nie startuje z powodu rozliczeń | KRYTYCZNA | Testy są w repozytorium, ale nikt ich nie uruchamia. Brama fali 1 („test musi zostać zielony") jest bez tego pozorna. Trzy drogi: włączyć rozliczenia, hak `pre-push`, własny runner. Do czasu rozstrzygnięcia — uruchamianie ręczne po każdym commicie, z liczbami w `NAPRAWY.md` |
+| 26.3 | **LFS w kroku pobierania kodu w CI** | wysoka | Bez `lfs: true` test wizualny porówna zrzut ze wskaźnikiem LFS i wywali się tak, jakby wygląd się rozjechał |
+| 26.4 | Potwierdzenie, że tag `etap-c-2026-09-23` wskazuje commit z drzewem `d305c245…`, a `71da774` jest po nim | niska | porządek w rejestrze |
+
+## 27. Fala 1 — kolejność i korekta reguły bramy
+
+Kolejność wykonania **zmieniona** względem `ETAP_D.md`: od izolowanych
+do najgroźniejszego.
+
+```
+D21 → D9 → D16 → D1 → D2
+```
+
+Gdy największa zmiana ląduje na końcu, każde pęknięcie po niej pochodzi
+od niej. D1 poprzedzony inwentarzem: każda używana klasa użytkowa z plikiem
+i linią. D2 jest konsekwencją D1, nie osobną pracą.
+
+### 27.1 Korekta reguły bramy — istotna
+
+Preflight Tailwinda wykonuje realną pracę: zeruje marginesy nagłówków,
+punktory list, obramowania tabel, style kontrolek, ustawia `box-sizing`.
+Usunięcie go **może przesunąć układ i zapalić test na czerwono**.
+To jest sytuacja przewidziana.
+
+**Jedyna dopuszczalna reakcja: dopisać brakujące zerowanie do arkusza
+projektowego, aż test wróci do zieleni. Nigdy nie regenerować wzorca.**
+
+Regeneracja w fali 1 zamroziłaby przesunięty układ jako nowy wzorzec.
+Od tej chwili aplikacja różniłaby się od zatwierdzonej makiety, a test
+byłby zielony i nikt by o tym nie wiedział. **Tak właśnie projekty tracą
+wierność wizualną — nie jednym błędem, tylko serią zielonych testów
+na przesuniętym wzorcu.**
+
+Jeżeli po dopisaniu zerowania zieleń nie wraca — zatrzymanie i zgłoszenie,
+które ujęcia i czym się różnią.
+
+## 28. Fala 1 zamknięta (24.09.2026)
+
+| Pozycja | Commit | Wynik |
+|---|---|---|
+| D21 martwy MapLibre | `58a509a` | usunięty `maplibre-gl`, `CorridorMap.leaflet.tsx`, style i selektory; paczka −246 B (zależność była poza grafem importów) |
+| D9 cienie, promienie | `cb41781` | **częściowo** — cienie w 3 miejscach, promień 3→2, „część" `!important` |
+| D16 motyw per rola | `230e876` | HHL i SCX ciemny, KSH jasny, bez klasy na dokumencie; testy 8→13 |
+| D1a inwentarz | `de851b8` | 26 klas użytkowych w 42 miejscach, tylko `DriverPwa` i `NotificationBell` |
+| D1 + D2 | — | Tailwind usunięty według inwentarza |
+
+**Brama: `unit 13/13`, `playwright 4/4`, `visual 720/720 bez regeneracji
+wzorca`.** Paczka: CSS −12 KB, JS −189 B. Tip `757f1e4`,
+tag `baseline-fala-1-2026-09-24`.
+
+Wynik 720/720 bez regeneracji dowodzi, że preflight Tailwinda nie wykonywał
+w tej aplikacji pracy, na której ktoś polegał. Korekta reguły z 27.1 okazała
+się niepotrzebna — ale słusznie była na stole.
+
+### 28.1 Otwarte po fali 1
+
+| # | Pozycja | Waga |
+|---|---|---|
+| 28.2 | **Kolizja numeracji w `NAPRAWY.md`** — dwa systemy D nakładają się; wychwycone przy D9 („D9-legacy" = JSONLogic). Ujednolicić: `D1–D26` z mojej listy, wcześniejsze z przedrostkiem `L`, tabela przekładu na górze pliku | wysoka |
+| 28.3 | **D9 zamknięte częściowo** — inspekcja zewnętrzna wykazała 10 cieni, 5 promieni > 2 px, 1 `!important`; zgłoszono 3 cienie i „część". Weryfikacja przez `.stylelintrc.json` z paczki, z liczbami i uzasadnieniem dla każdego wyjątku | średnia |
+| 28.4 | **D2 bez dowodu** — brak potwierdzenia zera `--tw-` i braku czcionek systemowych w zbudowanym arkuszu | niska |
+| 28.5 | **`unit.yml` z `lfs: true` niewypchnięty** — brak uprawnienia `workflow` w tokenie. Hak `pre-push` (`947da02`) pokrywa unit i Playwrighta, **nie pokrywa 720 ujęć** | wysoka — zadanie właściciela |
+
+## 29. Fala 2 — kolejność i szacunki
+
+```
+D7 (odpowiedź) → D22 → D5 → D4 → D3 → D20 → D8
+```
+
+D8 ostatnie, bo dotyka wszystkich dat i zmieni najwięcej ujęć — wcześniej
+zatopiłoby w szumie różnice z pozostałych napraw.
+
+Szacunek zmian we wzorcu, do weryfikacji przy bramie:
+
+| Pozycja | Szacunek ujęć |
+|---|---|
+| D22 | 0, o ile migracja zachowa stan |
+| D5 | ~90 |
+| D4 | ~180 |
+| D3 | ~90 |
+| D20 | ~60 |
+| D8 | 400+ |
+
+### 29.1 Pułapka D22
+Podbicie wersji magazynu z migracją **kasującą** stan da pustą aplikację
+we wszystkich 720 ujęciach. Dwa warunki: migracja przenosi, nie kasuje;
+`baseline.mjs` startuje z jawnie zaszczepionego stanu, nie z pozostałości
+po poprzednim przebiegu. Drugi warunek sprawdzić **przed** D22.
+
+## 30. Sprostowania po mojej stronie (24.09.2026)
+
+**30.1 Liczby D9 były mierzone przed D1.** „10 cieni, 5 promieni > 2 px,
+1 `!important`" pochodzi ze zbudowanego arkusza wdrożenia **z Tailwindem
+w środku**. Część mogła należeć do Tailwinda i zniknąć razem z nim.
+Zgłoszone przez wykonawcę trzy miejsca mogą być kompletnym wynikiem
+dla obecnego stanu. **Zarzut zawieszony do pomiaru na obecnej paczce.**
+
+**30.2 Błąd w `.stylelintrc.json` z paczki.** Komentarze zapisane jako klucze
+wewnątrz sekcji `rules` (`"//odstepy"`, `"//gradienty"`, `"//jednostki"`,
+`"//styl-w-komponentach"`) — stylelint waliduje nazwy reguł i wywala się
+na nich z „Unknown rule". Dodatkowo zbędne nadpisanie dla `.tsx` przez
+`postcss-styled-syntax`. **Plik poprawiony i przycięty; obowiązuje nowa wersja.**
+
+Świadomie pominięte w nowej wersji: `selector-class-pattern` (zgłaszałaby
+`section-card-hd--drag`, czyli D13 — dołożyć po fali 3) oraz sprawdzanie
+plików `.tsx` (po D1 nie ma tam stylowania).
+
+**30.3 Kolejność dla D9:** najpierw pomiar przez `grep` na obecnym źródle —
+trzy liczby i lista miejsc, dziesięć sekund. Stylelint jest narzędziem
+pilnowania, nie warunkiem zamknięcia. Nie blokować D9 na jego konfiguracji.
+
+## 31. Fala 2 zamknięta — z trzema zastrzeżeniami (24.09.2026)
+
+| Pozycja | Commit | Wynik |
+|---|---|---|
+| D9 dokończone | — | cienie 0, promienie > 2 px 0, `!important` 28→11 (reduced-motion, Leaflet, `[hidden]`); zamiany: `border-left`, `outline`, `50%` |
+| Stylelint | `2415e11` | podpięty; triada czysta; **492 błędy poza triadą** |
+| D2 | — | `--tw-` 0; Barlow + zastępcze; `Helvetica Neue` z `leaflet.css` nadpisana w czasie działania |
+| Numeracja | `fb197e4` | tabela przekładu; otwarte L1, L2, L4, L5, L7, L8, L9, L16 |
+| D7 | — | odpowiedź udzielona, **wzór inny niż zakładany** |
+| D22 | `107bb35` | `STORE_SCHEMA_VERSION = 1`, migracja v0→v1; unit 23 |
+| D5 | `cc31d93` | przyczyna: whitelist pomijał `DELAYED`/`SILENT`; `corridorKpis.ts` |
+| D4 | `d26f8cd` | przyczyna: `SAIL_ROWS` z odwróconymi statkami; SoT `voyage.ts` |
+| D3 | — | etykieta demonstracyjna, brak klucza |
+| D20 | `bfb23d5` | `buildThreeWayMatch` zamiast zaszytych +1240/+600/+1840 |
+| D8 | `1690153` | Warsaw dla interfejsu, Stockholm dla ETA Boden, `Intl` |
+| Brama | `27fe0dd` | unit 41/41, pw 4/4, **249/720 zmienionych**, tag `baseline-fala-2-2026-09-24` |
+
+### 31.1 Zastrzeżenie krytyczne: widok Ryzyka — 0 zmian
+D3 (etykieta demo) i D4 (źródło rejsów) zmieniają ten widok widocznie.
+Zero zmienionych ujęć jest niemożliwe. Trzy hipotezy: trzecia kopia danych
+rejsów w tabeli promowej Ryzyk; etykieta D3 w innym miejscu; widok poza
+matrycą. **Wzorzec już zregenerowany — mógł zamrozić usterkę.**
+Fala 3 wstrzymana do wyjaśnienia.
+
+### 31.2 Próg wizualny za luźny dla treści
+`maxDiffPixelRatio: 0.001` przepuszcza zmienioną cyfrę w komórce
+i **luzuje się wraz z długością strony** — najsłabiej chroniony jest
+harmonogram. Zmiana na `maxDiffPixels` bezwzględne z `threshold`
+na wygładzanie. Uznana granica: test pikselowy pilnuje wyglądu,
+poprawność treści pilnują asercje.
+
+### 31.3 Stylelint — błędy po mojej stronie
+- reguła zakazu nieparzystych pikseli **sprzeczna z kanonem** (`9px 13px`,
+  `7px 9px` w makiecie wszędzie) — **usunięta**
+- wzorzec `**/tower.css` nie trafiał w nic, arkusz to `src/index.css` —
+  **usunięty**; arkusz zostaje w lincie, reguły formatowania do świadomego
+  wyłączenia na podstawie pięciu najczęstszych z wyniku
+
+### 31.4 D7 — decyzja biznesowa, nie naprawa
+Wzór: `appliedMult = Math.min(multSek, multPln)` z tablic SEFS_SEK/SEFS_PLN,
+tylko na stawkę drogową (`src/lib/sefs.ts` L50–63, `src/lib/pricing.ts` L53–54).
+**Nie ma mnożnika udziału paliwa.** Pola w ekranie Opcje mogą być fasadą.
+
+**Do decyzji właściciela:**
+- czy `hybrid_min` jest zamierzony — przy stosowaniu tylko po stronie kosztu
+  chroni marżę HHL; przy stosowaniu po obu stronach klient zawsze płaci
+  niższą dopłatę
+- po której stronie ma działać: koszt, przychód, obie
+- skąd prawdziwe wartości tablic SEFS — z uzgodnienia z przewoźnikiem
+
+### 31.5 Nowe narzędzie: D19-T
+Test polskich znaków diakrytycznych w interfejsie EN i SV, z wyłączeniem
+komórek z danymi. Licznik D19 spadający do zera zamiast ręcznego szukania
+stu czterech napisów.
+
+## 32. D7 — decyzja właściciela (24.09.2026)
+
+**DECYZJA:** dla każdej ze stron stosowany jest dokładnie ten sam mechanizm
+opłaty paliwowej. Zasada, źródło cen hurtowych i mechanizm opisane w plikach
+projektu. `hybrid_min` (`Math.min(multSek, multPln)`, tylko stawka drogowa)
+jest zamierzony i działa identycznie po stronie kosztu i przychodu.
+
+Pozycja 31.4 **zamknięta jako pytanie biznesowe**. D7 przechodzi
+w weryfikację zgodności kodu z dokumentem.
+
+| # | Pozycja | Status | Uwaga |
+|---|---|---|---|
+| 32.1 | Ścieżki dokumentów opisujących mechanizm | | jeden obowiązujący |
+| 32.2 | Tabela zgodności reguła–kod w `03_PARAMETRY_BIZNESOWE.md` | | każda niezgodność = osobna naprawa |
+| 32.3 | **Data pobrania mnożnika** — ta sama dla obu stron, migawka przy transporcie | | główne ryzyko praktyczne: cykl faktur przewoźnika tygodniowy, klienta może być inny |
+| 32.4 | Test niezmiennika: mnożnik kosztu = mnożnik przychodu, identyczny przyrost % stawki drogowej | | chroni przed przyszłymi wyjątkami |
+| 32.5 | Pola Opcje niezasilające `computeSefs` → D25 | | fasada szczególnie groźna: zapis bez skutku |
+
+**Zapis do dokumentacji:** marża procentowa całego transportu **nie jest**
+stała przy zmianie cen paliwa, bo mnożnik obejmuje tylko stawkę drogową,
+a prom i pilotaż nie. Niezmiennikiem jest równość mnożników po obu
+stronach, nie stałość marży całkowitej.
+
+D7 nie blokuje już startu fali 3.
+
+## 33. D7 — reguła czasu (decyzja właściciela, 24.09.2026)
+
+**DECYZJA:** faktura obejmuje transporty zrealizowane w danym tygodniu.
+Realizacja usługi = dostarczenie towaru. Mnożnik opłaty paliwowej:
+
+| Poziom | Stan transportu | Data dla mnożnika |
+|---|---|---|
+| PROGNOZA | niedostarczony | planowana data dostawy z harmonogramu |
+| REALIZACJA | dostarczony | rzeczywista data dostawy (migawka) |
+| FAKTURA | zafakturowany | nadrzędna, nadpisuje powyższe |
+
+Ta sama data po obu stronach → ten sam mnożnik. **Pozycja 32.3 zamknięta.**
+
+| # | Pozycja | Waga | Uwaga |
+|---|---|---|---|
+| 33.1 | Trzy wartości przy transporcie ze źródłem i migawką mnożnika | wysoka | zmiana schematu → `STORE_SCHEMA_VERSION` 2 z migracją |
+| 33.2 | **„Faktura nadpisuje" nie może kasować wartości wyliczonej** | KRYTYCZNA | inaczej D20 porównuje fakturę samą ze sobą; obie wartości zapisane, marża z faktury, różnica flagowana |
+| 33.3 | **Tydzień liczony w czasie lokalnym, nie w UTC** | wysoka | dostawa pon. 00:30 lokalnie = nd. 22:30 UTC latem → zła faktura; usterka sezonowa |
+| 33.4 | Który odczyt indeksu obowiązuje w danej dacie — z dokumentacji | średnia | jeżeli dokumentacja milczy: zgłosić, nie zakładać |
+| 33.5 | Testy: prognoza, realizacja, faktura, granica tygodnia lato/zima, przesunięcie planu | wysoka | |
+| 33.6 | Propozycja: marża rozbita na zafakturowaną, zrealizowaną, prognozowaną w widoku Finanse | — | **do zgody właściciela**, w istniejącym wzorcu `.mrow` |
+
+Kolejność: fala 3, po D10 i D17.
+
+## 34. Mechanizm pieniędzy — decyzje W1–W6 i realizacja (24.09.2026)
+
+**DECYZJE WŁAŚCICIELA:**
+- **W1** wszystkie ceny w EUR; nigdzie PLN ani SEK
+- **W2** wyjątek: kokpit przeliczany na PLN
+- **W3** kurs przewoźnika na fakturze: NBP, tabela A, kurs średni z dnia
+  roboczego poprzedzającego dzień rozładunku
+- W4–W6 jak w sekcjach 32–33 (ten sam mechanizm paliwowy, tydzień
+  realizacji, trzy poziomy, faktura nadrzędna)
+
+Jedyne źródło prawdy: **`MECHANIZM_PIENIEDZY.md`**. Zastępuje
+`D7_DECYZJA.md` i `D7_CZAS.md` tam, gdzie się pokrywają.
+
+### 34.1 Zweryfikowane na żywym API NBP
+- endpoint i kształt odpowiedzi potwierdzone
+- pojedynczy dzień bez publikacji → 404; zawsze przedział
+- **24–28.12.2025 bez tabel** (Wigilia wolna od 2025); rozładunek 29.12.2025
+  → tabela 248/A/NBP/2025 z 23.12
+- ostatnia tabela na 24.09.2026: 186/A/NBP/2026, 4,3900
+- **pułapka UTC udowodniona liczbowo:** rozładunek 29.12.2025 23:30 UTC
+  = 30.12 00:30 lokalnie → poprawnie 249/A, w UTC błędnie 248/A
+
+### 34.2 Pliki referencyjne przygotowane i przetestowane
+| Plik | Wynik |
+|---|---|
+| `lib/pricing/engine.ts` (przepisany) | typy `--strict` OK |
+| `tests/money.test.ts` | **34 zielone, 1 pominięty celowo** (żywe API za `NBP_LIVE=1`) |
+| `tests/fixtures/nbp-eur-2025-12.json` | 15 prawdziwych tabel A |
+| `supabase/migrations/0001_core.sql` | waluta EUR z `CHECK`, kolumny poziomu i migawek; **parser Postgresa: 130 instrukcji bez błędów** |
+
+Silnik **nie reimplementuje** mechanizmu SEFS — przyjmuje stawkę drogową
+przed i po `applySefsToRoadRate`. Stary wzór z udziałem paliwa usunięty
+z silnika i oznaczony jako niestosowany w migracji i w `CURSOR_PROMPT.md`.
+
+### 34.3 Uzgodnione z decyzją
+- `DESIGN_SYSTEM.md` — reguła kwot; „PLN" w makiecie to treść sprzed
+  decyzji, nie forma
+- `PYTANIA_SCANDINAVIAN_EXPRESS.md` — F1, F2, F4, F5, F6 rozstrzygnięte
+  albo nie dotyczą
+
+### 34.4 Zakres realizacji w aplikacji — fala 3, M1–M6
+Pełna lista miejsc w `MECHANIZM_PIENIEDZY.md` sekcja 5: magazyn v2,
+generator danych, cennik, dodatki, faktoring, harmonogram, szuflada,
+kokpit trzech ról, finanse, rozliczenia, moje stawki, faktury, opcje,
+kolejka ryzyk, powiadomienia, eksport XLSX, szablony automatyzacji,
+dopasowanie trójstronne (+ sprawdzenie tabeli i kursu NBP), słownik i18n.
+
+**Nowy test D-EUR-T:** zero PLN/zł/SEK/kr w interfejsie poza jawnymi
+wyjątkami (kokpit, dane indeksu paliwowego, kurs na fakturze, suma polisy).
+
+### 34.5 Pytania do właściciela — blokują M2
+
+| # | Pytanie | Propozycja domyślna |
+|---|---|---|
+| P1 | Które zdarzenie jest realizacją: rozładunek czy dostarczenie dokumentów | zakończenie rozładunku |
+| P2 | Faktura HHL→KSH: ta sama reguła kursowa? **Luka: brak miejsca na fakturę HHL→KSH w aplikacji** | tak; wprowadzanie ręczne lub import |
+| P3 | Kokpit w PLN dla wszystkich ról czy tylko HHL | wszystkie trzy |
+| P4 | Dane wejściowe indeksu paliwowego (SEK/l, PLN/l) | wyjątek od W1 — przeliczenie byłoby metodologicznie błędne |
+| P5 | Symbol czy kod waluty; format liczby wg języka | kod (`EUR`, `PLN`), format wg języka |
+| P6 | Stawki demonstracyjne w PLN | przeliczyć raz tabelą 186/A/NBP/2026 (4,3900), zostawić oznaczenie D18 |
+| P7 | Kurs i numer tabeli na widoku faktury | pokazywać, bez kwot w PLN |
+| P8 | Suma gwarancyjna polisy OCP | w walucie polisy — to atrybut dokumentu, nie cena |
+
+### 34.6 Poza aplikacją
+- W3 do warunków zlecenia albo umowy z przewoźnikiem — dla podmiotu
+  niebędącego polskim podatnikiem to warunek umowny, nie ustawowy
+- zastosowanie reguły do tego rodzaju usługi potwierdza księgowość
+
+## 35. Faktury trzech stron, zlecenia, terminy, waluta per użytkownik (24.09.2026)
+
+### 35.1 Decyzje właściciela
+- **W1 zmienione:** EUR wszędzie; **każdy użytkownik przełącza walutę
+  wyświetlania na PLN w swoich ustawieniach** — przeliczenie wszędzie.
+  „PLN tylko na kokpicie" **zastąpione**
+- **P1–P8 rozstrzygnięte:** realizacja = rozładunek; faktura HHL→KSH tak;
+  indeks paliwowy w walutach bazowych; kod waluty i format wg języka;
+  stawki demo przeliczone 4,3900; kurs + tabela + **data kursu** na fakturze;
+  suma polisy w walucie polisy
+- **W7** faktura HHL widoczna dla HHL i KSH; faktura SCX dla HHL i SCX;
+  HHL widzi wszystkie
+- **W8** HHL i SCX wybierają walutę faktury: EUR albo PLN
+- **W9** faktury z systemów zewnętrznych, rejestrowane z plikiem
+- **W10** system liczy termin każdej faktury i wysyła przypomnienia
+- **W11** „Opłacona" — ręcznie, wyłącznie HHL, koszt i przychód
+- **W12** numery zleceń HHL i SCX obowiązkowe, widoczne w Harmonogramie
+- **W13** moduł Faktury dla KSH: faktury HHL + CMR i POD, nic więcej
+
+### 35.2 Zrealizowane i sprawdzone po mojej stronie
+| Element | Wynik |
+|---|---|
+| `lib/pricing/engine.ts` | waluta per użytkownik, faktury EUR/PLN z **kursem per pozycja**, kontrole tygodnia, podwójnego fakturowania, termin, stan płatności, przypomnienia, widoczność; typy `--strict` OK |
+| `tests/money.test.ts` | **49 zielonych**, 1 pominięty celowo |
+| **Test wykrył błąd w samym teście**: numer tabeli z 2.01.2026 wpisany z pamięci jako 002/A — według NBP to **001/A** (pierwsza tabela roku). Silnik miał rację | poprawione |
+| `0003_faktury_zlecenia_ustawienia.sql` | nowa migracja |
+| **Migracje wykonane na prawdziwym Postgres 16 + PostGIS**, od czystej bazy | 3/3 OK |
+| `tests/db/run.sh` — podszywanie się pod HHL, KSH, SCX | **32/32** |
+
+### 35.3 Usterki znalezione wykonaniem, niewidoczne dla parsera SQL
+| # | Usterka | Od kiedy | Naprawa |
+|---|---|---|---|
+| 35.3.1 | **Brak rozszerzenia `citext`** — migracja 0001 wywróciłaby się przy pierwszym wdrożeniu | od pierwszego dnia | `create extension citext` |
+| 35.3.2 | **Dziennik audytu nieczytelny dla administratora HHL** — `revoke all` odebrał też odczyt | od pierwszego dnia | `grant select`, zapis nadal tylko funkcjami |
+| 35.3.3 | **Funkcja terminów wywoływalna przez użytkowników** — z datą z przyszłości dałoby się oznaczyć wszystkie faktury jako przeterminowane | 0003 | zadanie wyłącznie systemowe, `revoke execute` |
+| 35.3.4 | **Przywileje kolumnowe nie odróżniają wystawcy od odbiorcy** — KSH mógłby zmienić kwotę faktury HHL | 0003 | wyzwalacz strażnika |
+| 35.3.5 | Ograniczenie `currency = 'EUR'` na fakturach sprzeczne z W8 | poprzednia tura | dopuszczone EUR i PLN |
+
+### 35.4 Pytania otwarte — `MECHANIZM_PIENIEDZY.md` sekcja 9
+Q1–Q14. **Blokują:** Q1 (czy SCX widzi własną fakturę), **Q2 (kurs per
+pozycja na fakturze tygodniowej PLN — czy systemy fakturowe to potrafią)**,
+Q3 (termin od wystawienia czy doręczenia), Q12 (ustawienia użytkownika
+w nawigacji KSH i SCX).
+
+### 35.5 Do przewoźnika
+`PYTANIA_SCANDINAVIAN_EXPRESS.md`: F7 (termin — dni i podstawa), F11
+(kurs per pozycja w ich systemie fakturowym), F12 (waluta domyślna),
+F13 (ich numer zlecenia).
+
+## 36. Zlecenie końcowe dla Groka (24.09.2026)
+
+### 36.1 Rozstrzygnięcia właściciela
+Q1 tak · **Q2 każdy zrealizowany transport ma indywidualny kurs** ·
+Q3 od wystawienia · **Q4 KSH 30 dni, HHL wobec SCX 35 dni** · Q12 zgoda ·
+Q5–Q11, Q13, Q14 — „tak do wszystkich".
+
+### 36.2 Wprowadzone do bazy i sprawdzone
+- **Q7:** spór bez uzasadnienia odrzucany przez bazę
+- **Q14:** HHL nie zmieni statusu weryfikacji na fakturze, której jest
+  wystawcą; fakturę kosztową od SCX weryfikuje normalnie
+- `supabase/seed/stegra.sql` — organizacje, projekt, warunki płatności
+  30 i 35 dni od wystawienia; wykonanie wielokrotne bezpieczne
+- **test bezpieczeństwa: 39/39** od czystej bazy; silnik: 49/49
+
+### 36.3 Stan przekazania
+Właściciel **nie przekazał** Grokowi: `FALA2_PRZEGLAD.md`, `D7_DECYZJA.md`,
+`D7_CZAS.md`, `MECHANIZM_PIENIEDZY.md`. Ich treść jest w
+**`ZLECENIE_DLA_GROKA.md`** albo w pakiecie, do którego zlecenie odsyła.
+
+### 36.4 Najważniejsze ustalenie architektoniczne
+**Obecna aplikacja nie ma wspólnej bazy** — Vite + Zustand w `localStorage`,
+każda przeglądarka z własną kopią, przełącznik ról jako pokaz. Decyzje
+W7–W13 (faktury trzech stron, przypomnienia, płatności) i rozdzielenie
+cen są **niewykonalne bez backendu**. Zlecenie obejmuje backend Supabase
+(etap 3) — migracje `0001`–`0003` są jego sprawdzonym kontraktem.
+**Do zamknięcia etapu 3 aplikacja nie jest udostępniana stronom
+z prawdziwymi danymi.**
+
+### 36.5 Struktura zlecenia
+Etapy 0–6, **51 pozycji**, spójność listy kontrolnej z treścią sprawdzona
+programowo w obie strony. Mechanizm przeciw utracie kontekstu: zapis
+zlecenia w repozytorium, `POSTEP.md` jako pamięć zewnętrzna, lista
+kontrolna jako suma kontrolna przeczytania. STOP wyłącznie w pięciu
+określonych sytuacjach.
+
+### 36.6 Poza zakresem, zapisane jako otwarte
+adapter telematyki · parametry operacyjne od przewoźnika · geometria trasy
+z zezwolenia · klucz Trafikverket · **źródło statusu promów Polferries
+(decyzja właściciela)** · rozbicie marży na trzy poziomy (zgoda) ·
+rozliczenia GitHub Actions i `unit.yml` (właściciel).
+
+### 36.7 Do przygotowania przez właściciela przed etapem 3
+Projekt Supabase w regionie UE, konto Resend ze zweryfikowaną domeną
+nadawcy, środowisko testowe (Docker albo drugi projekt Supabase).
