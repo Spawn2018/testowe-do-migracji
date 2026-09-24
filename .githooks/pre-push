@@ -1,0 +1,19 @@
+#!/bin/sh
+# Brama lokalna (Fala 1): LFS + unit + playwright. Ominięcie: --no-verify.
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+if command -v git-lfs >/dev/null 2>&1; then
+  git lfs pre-push "$@"
+else
+  printf >&2 '\nGit LFS required (shots-baseline). Install git-lfs or fix PATH.\n\n'
+  exit 2
+fi
+
+echo "[pre-push] npm run test:unit"
+npm run test:unit
+
+echo "[pre-push] npx playwright test"
+npx playwright test
+
+echo "[pre-push] OK"

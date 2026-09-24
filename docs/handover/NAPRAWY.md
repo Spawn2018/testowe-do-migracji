@@ -77,6 +77,12 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 
 ---
 
+## Brama CI / lokalna (2026-09-24)
+
+- **Wybór:** hak `pre-push` (opcja 2) — `.githooks/pre-push` uruchamia `git lfs pre-push`, `npm run test:unit`, `npx playwright test`. `core.hooksPath=.githooks`.
+- Billing Actions nadal leży → workflow nie biegnie na GitHub; `unit.yml` ma już `actions/checkout@v4` z `lfs: true` na przyszłość.
+- Do czasu działającego CI: po **każdym** commicie Fali 1 wpisywać liczby (nie „zielone”): `test:unit N/N`, `playwright N/N`, `visual 720/720` (bez regeneracji wzorca).
+
 ## Fale (plan Sebastiana 2026-09-24)
 
 ### Fala 0 — testy / bezpieczeństwo regresji
