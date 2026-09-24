@@ -6,6 +6,14 @@ import { t } from '../i18n/messages';
 import type { Document, FactoringOffer } from '../types';
 import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
+import {
+  billedMapFromInvoiceLines,
+  buildThreeWayMatch,
+  isLoadCompleted,
+  rateCardExpected,
+  threeWayVerdictLabel,
+  threeWayVerdictPill,
+} from '../lib/invoiceMatch';
 
 function fmt(n: number) {
   return Math.round(n).toLocaleString('pl-PL');
@@ -28,17 +36,42 @@ export function InvoicesView() {
   const attachRef = useRef<HTMLInputElement>(null);
   const [attachLoadId, setAttachLoadId] = useState<string | null>(null);
 
-  const week = useMemo(
-    () => loads.filter((l) => l.status === 'DELIVERED' || l.status === 'UNLOADING').slice(-6),
-    [loads],
-  );
-  const expected = week.reduce((s, l) => s + l.pricing.costTotal, 0);
-  const rows = week.map((l, i) => {
-    const inv = l.pricing.costTotal + (i === 2 ? 1240 : i === 4 ? 600 : 0);
-    const diff = inv - l.pricing.costTotal;
-    return { l, inv, diff };
-  });
-  const invoiced = rows.reduce((s, r) => s + r.inv, 0);
+  const completed = useMemo(() => loads.filter(isLoadCompleted), [loads]);
+  /** Prefer open W38 dispute / submit as billed SoT; else last completed as draft selection. */
+  const focusInvoice = useMemo(() => {
+    return (
+      invoices.find((i) => i.weekLabel === '2026-W38' && (i.status === 'DISPUTED' || i.status === 'SUBMITTED')) ??
+      invoices.find((i) => i.status === 'DISPUTED') ??
+      invoices.find((i) => i.status === 'SUBMITTED') ??
+      null
+    );
+  }, [invoices]);
+
+  const week = useMemo(() => {
+    if (focusInvoice?.lines.length) {
+      const ids = new Set(focusInvoice.lines.map((ln) => ln.loadId));
+      const fromInv = loads.filter((l) => ids.has(l.id));
+      const extras = completed.filter((l) => !ids.has(l.id)).slice(-4);
+      return [...fromInv, ...extras];
+    }
+    return completed.slice(-6);
+  }, [focusInvoice, loads, completed]);
+
+  const match = useMemo(() => {
+    const selectedIds = focusInvoice?.lines.map((ln) => ln.loadId) ?? week.map((l) => l.id);
+    const billedByLoadId = focusInvoice
+      ? billedMapFromInvoiceLines(focusInvoice.lines)
+      : Object.fromEntries(week.map((l) => [l.id, rateCardExpected(l)]));
+    return buildThreeWayMatch({
+      loads: week,
+      selectedIds,
+      billedByLoadId,
+    });
+  }, [focusInvoice, week]);
+
+  const expected = match.expectedTotal;
+  const invoiced = match.billedTotal;
+  const rows = match.lines;
 
   if (!canSeeCost(role) && role !== 'HHL') {
     return (
@@ -50,7 +83,7 @@ export function InvoicesView() {
     );
   }
 
-  const disputed = invoices.find((i) => i.status === 'DISPUTED') ?? invoices[0];
+  const disputed = focusInvoice ?? invoices.find((i) => i.status === 'DISPUTED') ?? invoices[0];
   const feePreview = Math.round((invoiced * factoringOffer.feePercent) / 100);
   const netPreview = invoiced - feePreview;
 
@@ -68,9 +101,9 @@ export function InvoicesView() {
               onClick={() =>
                 submitInvoice(
                   '2026-W38',
-                  week.map((l) => l.id),
+                  week.filter(isLoadCompleted).map((l) => l.id),
                   Object.fromEntries(
-                    week.map((l, i) => [l.id, l.pricing.costTotal + (i === 2 ? 1240 : i === 4 ? 600 : 0)]),
+                    week.filter(isLoadCompleted).map((l) => [l.id, rateCardExpected(l)]),
                   ),
                   useFactoring && factoringOffer.enabled,
                 )
@@ -107,12 +140,18 @@ export function InvoicesView() {
             </span>
             <span>
               Rozbieżność{' '}
-              <b className="mono" style={{ color: 'var(--red)' }}>
-                +{fmt(invoiced - expected)} PLN
+              <b
+                className="mono"
+                style={{ color: match.diffTotal === 0 ? 'var(--go)' : 'var(--red)' }}
+              >
+                {match.diffTotal > 0 ? '+' : ''}
+                {fmt(match.diffTotal)} PLN
               </b>
             </span>
             <div className="spacer" />
-            <span className="pill p-red">Do wyjaśnienia</span>
+            <span className={`pill ${match.openCount ? 'p-red' : 'p-go'}`}>
+              {match.openCount ? `Do wyjaśnienia · ${match.openCount}` : 'Zgodność OK'}
+            </span>
           </div>
           <div className="tablewrap">
             <table>
@@ -128,22 +167,26 @@ export function InvoicesView() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map(({ l, inv, diff }) => (
-                  <tr key={l.id} style={{ cursor: 'pointer' }} onClick={() => selectLoad(l.id)}>
+                {rows.map((row) => (
+                  <tr
+                    key={row.loadId}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => selectLoad(row.loadId)}
+                  >
                     <td>
-                      <span className="code">{l.code}</span>
+                      <span className="code">{row.code}</span>
                     </td>
-                    <td>{l.itemType}</td>
-                    <td>{l.plannedDeliverDate}</td>
-                    <td className="num">{fmt(l.pricing.costTotal)}</td>
-                    <td className="num">{fmt(inv)}</td>
-                    <td className={`num ${diff ? 'money neg' : ''}`}>{diff ? `+${fmt(diff)}` : '—'}</td>
+                    <td>{row.itemType}</td>
+                    <td>{row.deliverDate}</td>
+                    <td className="num">{fmt(row.expected)}</td>
+                    <td className="num">{row.selected ? fmt(row.billed) : '—'}</td>
+                    <td className={`num ${row.diff ? 'money neg' : ''}`}>
+                      {row.diff ? `${row.diff > 0 ? '+' : ''}${fmt(row.diff)}` : '—'}
+                    </td>
                     <td>
-                      {diff ? (
-                        <span className="pill p-red">poza cennikiem</span>
-                      ) : (
-                        <span className="pill p-go">zgodna</span>
-                      )}
+                      <span className={`pill ${threeWayVerdictPill(row.verdict)}`}>
+                        {threeWayVerdictLabel(row.verdict)}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -151,8 +194,9 @@ export function InvoicesView() {
             </table>
           </div>
           <div className="note">
-            Porównanie trójstronne: transporty zaznaczone przez przewoźnika ↔ transporty faktycznie zrealizowane ↔ kwota
-            wynikająca z cennika. Dwie pozycje rozliczone poza macierzą — pilotaż drugiego pojazdu nie był awizowany.
+            Porównanie trójstronne (liczone): zaznaczone na fakturze ↔ zrealizowane (dostarczone/rozładunek) ↔ kwota z
+            cennika (<span className="code">pricing.costTotal</span>). Różnice linia po linii · próg ±
+            {match.threshold} PLN · otwarte: {match.openCount}.
           </div>
         </div>
       </div>

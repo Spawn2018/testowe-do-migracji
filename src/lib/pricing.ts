@@ -74,6 +74,7 @@ export function buildPricing(
   };
 }
 
+/** @deprecated prefer INVOICE_MATCH_THRESHOLD_PLN from invoiceMatch — kept for callers */
 export function matchInvoice(expected: number, billed: number, threshold = 50) {
   const diff = billed - expected;
   if (Math.abs(diff) <= threshold) return { status: 'MATCHED' as const, diff };

@@ -3,7 +3,7 @@
 | Pole | Wartość |
 |---|---|
 | Data zapisu | **2026-09-24** Europe/Warsaw |
-| Status | **Fala 1 ACCEPTED** · **Fala 2 w toku** · D7 answered · **D22/D5/D4/D3 DONE** · pozostałe F2: D8/D20 |
+| Status | **Fala 1 ACCEPTED** · **Fala 2 w toku** · D7 answered · **D22/D5/D4/D3/D20 DONE** · pozostałe F2: D8 |
 | Repo | `Spawn2018/testowe-do-migracji` · branch `main` |
 | Kod produktu | Fala 2 **nie** startuje tu (poza closeout D9/stylelint + proof D2) |
 
@@ -27,7 +27,7 @@ Stary zakres NAPRAWY mieszł etykiety Sebastiana (Fala 1/2). **D1–D26 = wyłą
 | D10–D15, D17–D19 | **D10–D15, D17–D19** | bez kolizji z falami F1 | OPEN (wg opisu) |
 | D16 force-majeure | **L16** | nie (≠ D16 theme/rola) | OPEN |
 | D18 stawki demo label | **D18** | tak | OPEN |
-| D20 faktury trójstronne | **D20** | tak | OPEN (Fala 2) |
+| D20 faktury trójstronne | **D20** | tak | **DONE** Fala 2 |
 | D21 MapLibre | **D21** | tak | **DONE** Fala 1 |
 | D22 store versioning | **D22** | tak | **DONE** Fala 2 |
 | D23 import regression | **D23** | tak | PARTIAL Fala 0 |
@@ -186,7 +186,16 @@ OPEN. Wzorzec etykiety gotowy w D3: `DemoMark` / `demoLabel.ts` — podpiąć po
 OPEN.
 
 ### D20 — three-way invoice match
-OPEN (Fala 2). Policzyć naprawdę: zaznaczone vs zrealizowane vs cennik.
+**DONE Fala 2 (2026-09-24).**
+
+| Pole | Wartość |
+|---|---|
+| Problem | UI hardcode `i===2 → +1240`, `i===4 → +600` (suma +1840) — fasada dopasowania |
+| Fix | `src/lib/invoiceMatch.ts` `buildThreeWayMatch`: selected ↔ completed ↔ `pricing.costTotal`; werdykty PL; InvoicesView bez index bonusów; SCX submit = cennik |
+| Visual | **~60** ujęć faktur (HHL/SCX) może się zmienić — **nie** regen baseline |
+| Testy | `tests/invoice-match.test.ts` (4) |
+
+test:unit **36/36** · playwright **4/4**.
 
 ### D21 — MapLibre remove
 **DONE Fala 1**. SHA `58a509a8…`. `test:unit` **8/8** (wówczas); playwright **4/4**.
@@ -272,7 +281,8 @@ PLAN only (Fala 3) — opcja 2 Sebastian: checkbox zgody, `allowRemovals` z UI.
 - **D5** DONE (KPI ↔ corridor stage SoT; ~90 kokpit shots expected drift — no baseline regen).
 - **D4** DONE (voyage SoT; ~180 kokpit+ryzyka shots expected drift — no baseline regen).
 - **D3** DONE (SE road DEMO LABEL — no TV key; DemoMark reusable for D18).
-- Pozostałe: D7 fix (jeśli potrzeba), D8 timezones, D20.
+- **D20** DONE (three-way invoice match; ~60 faktury shots — no baseline regen).
+- Pozostałe: D7 fix (jeśli potrzeba), D8 timezones (last).
 
 ### Fala 3
 D26 (plan) + skala importu + visual CI.

@@ -1069,9 +1069,11 @@ export function buildSeedInvoices(loads: Load[]): Invoice[] {
     billed: l.pricing.costTotal,
     diff: 0,
   }));
+  // Historical submitted bills with real variances (carrier billed ≠ rate card) — diffs computed, not UI-hardcoded.
   const linesDisputed = delivered.slice(4, 8).map((l, i) => {
-    const billed = l.pricing.costTotal + (i === 0 ? 850 : i === 1 ? -200 : 120);
-    return { loadId: l.id, code: l.code, expected: l.pricing.costTotal, billed, diff: billed - l.pricing.costTotal };
+    const expected = l.pricing.costTotal;
+    const billed = expected + (i === 0 ? 850 : i === 1 ? -200 : 120);
+    return { loadId: l.id, code: l.code, expected, billed, diff: billed - expected };
   });
   const sum = (xs: { expected: number; billed: number }[]) => ({
     e: xs.reduce((a, x) => a + x.expected, 0),
