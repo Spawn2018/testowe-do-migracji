@@ -6,7 +6,7 @@ Kolumny: `ID | pozycja | status | commit | testy (liczby) | uwagi`.
 Po F2.5 dodać wiersze **L*** (L1/L2/L4/L5/L7/L8/L9/L16) — na razie brak (notatka: po F2.5).  
 Niezgodności z F2.4: **F2.4-a / F2.4-b / F2.4-c** (poniżej, po G1).
 
-Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · D18 · P6 DONE) · następny: D-EUR-T.
+Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · P6 · D-EUR-T DONE) · następny: D25.
 
 ---
 
@@ -66,7 +66,7 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · D18 · P
 | D13 | Wzorce wizualne / `section-card-hd--drag` | **DONE** | `6cc701a` | unit **103 passed / 1 skipped** · pw **4/4** · D19-T **0/0** · lint:css **0** (z `selector-class-pattern`) | `section-card-hd--drag` → `.is-draggable` (jak `is-dragging`/`is-drag-over`). Katalog + §5.1 kebab/`is-*` w `DESIGN_SYSTEM.md`. Stylelint `selector-class-pattern` włączony. |
 | D18 | Oznaczenie danych demonstracyjnych | **DONE** | `9a9d9cd` | unit **105 passed / 1 skipped** · pw **4/4** · D19-T **0/0** · lint:css **0** | `showDemoMarks` (domyślnie ON) + przełącznik w Opcje → Preferencje. `DemoMark` na: cennik SCX, BAF/SEFS (Opcje), dodatek paliwowy (Finanse), panel SE (Ryzyka). i18n `demo_mark*`. Test: store toggle + soft footnotes. |
 | P6 | Stawki demo PLN→EUR tabelą 186/A/NBP/2026 | **DONE** | `5a4c1c0` | unit **110 passed / 1 skipped** · pw **4/4** · D19-T **0/0** · lint:css **0** | `DEMO_FX`/`DEMO_FX_META` w `src/lib/money/demoFx.ts` (186/A/NBP/2026 · 2026-09-24 · mid 4,3900). `RATE_*` + extras seed + store draft → EUR (`plnToEurDemo`). UI: `formatAppMoney` (Dashboard/Schedule/Finance/Invoices/LoadDrawer); SEFS → `formatSourceMoney`. Opcje cennik: edycja w EUR + nota FX. Test: `tests/demo-fx.test.ts` (+5). D18 DemoMark zostaje. Bez D-EUR-T / regen baseline. |
-| D-EUR-T | Test waluty EUR/PLN w UI | OPEN | — | — | pending |
+| D-EUR-T | Test waluty EUR/PLN w UI | **DONE** | `d9d4967` | `npm run test:deur` → **EUR=0 / PLN=0** · unit **110/1 skip** · pw **4/4** · D19-T **0/0** · lint:css **0** | Spec `tests/d-eur-t.spec.ts`: dwa tryby preferencji; zakazy z ZLECENIE; wyjątki data-deur-exempt (indeks paliwowy, wybór waluty). Money cells = kod trybu; nota FX 4,3900. test:deur w pre-push. sched_money_note {cur}. Smoke kokpit odświeżony (FX P6). Bez D25 / regen baseline. |
 | D25 | Atrapy/porzucone z fasady — decyzja | OPEN | — | — | pending |
 | G2 | Brama etapu 2 + baseline Fala 3a | OPEN | — | — | pending |
 
