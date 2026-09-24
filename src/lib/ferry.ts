@@ -1,6 +1,7 @@
 /** Polferries GDN↔NYN — seed timetable + rolling generated sailings. No booking API. */
 import raw from '../data/ferry-sailings.json';
 import { getNow, getNowMs } from './frozenNow';
+import { voyageWaveLabelForDay } from './voyageSea';
 
 export type FerryVesselId = 'WAW' | 'NS';
 export type FerrySailingStatus =
@@ -208,7 +209,7 @@ export function ferryWidgetLabel(s: FerrySailing): { cd: string; line: string; w
   return {
     cd,
     line: `${v.short || v.name} · ${when} · ${dir}`,
-    wave: 'fala 1,1 m',
+    wave: voyageWaveLabelForDay(s.depLocal.slice(0, 10)),
   };
 }
 

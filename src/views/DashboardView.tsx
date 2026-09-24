@@ -8,6 +8,7 @@ import { t } from '../i18n/messages';
 import { canSeeMargin, ROLE_META } from '../lib/permissions';
 import { getNow } from '../lib/frozenNow';
 import { computeCorridorKpis } from '../lib/corridorKpis';
+import { cockpitFerryBanner, focusVoyage, seaForSailing } from '../lib/voyage';
 
 export function DashboardView() {
   const role = useTowerStore((s) => s.role);
@@ -20,6 +21,7 @@ export function DashboardView() {
   const setView = useTowerStore((s) => s.setView);
 
   const kpis = useMemo(() => computeCorridorKpis(loads, risks), [loads, risks]);
+  const ferryBanner = useMemo(() => cockpitFerryBanner(loads), [loads]);
   const {
     delivered,
     delayedN,
@@ -49,8 +51,7 @@ export function DashboardView() {
       {role === 'HHL' ? (
         <div className="banner red" role="button" tabIndex={0} onClick={() => setView('risk')} onKeyDown={(e) => e.key === 'Enter' && setView('risk')}>
           <span>
-            <b>Rejs 24.09 zagrożony.</b> Prognoza fali 2,9 m i porywy 19 m/s w oknie odejścia.
-            Trzy transporty przypięte do tego rejsu. Panel alternatyw w zakładce Ryzyka.
+            <b>{ferryBanner.title}</b> {ferryBanner.body}
           </span>
         </div>
       ) : role === 'KSH' ? (
@@ -167,7 +168,7 @@ export function DashboardView() {
               <KpiTile
                 label="Ryzyko promowe"
                 value={ferryHot || '—'}
-                delta="rejs · podwyższone"
+                delta={`rejs · ${seaForSailing(focusVoyage()).risk}`}
                 tone={ferryHot ? 'warn' : 'default'}
                 onClick={() => navigateTo({ view: 'risk', riskFilter: 'FERRY' })}
               />

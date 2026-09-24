@@ -3,21 +3,20 @@ import { useTowerStore } from '../store/useTowerStore';
 import type { RiskType } from '../types';
 import { ExceptionRow } from '../components/ui/ExceptionRow';
 import { t } from '../i18n/messages';
-import { activeOrNextSailing, ferryLabel, vesselById } from '../lib/ferry';
+import { ferryLabel, vesselById } from '../lib/ferry';
 import { fetchSituations, type RoadSituation } from '../lib/trafikverket';
+import {
+  focusVoyage,
+  formatVoyageDayLabel,
+  loadsOnVoyage,
+  voyageSeaTableRows,
+} from '../lib/voyage';
 
 const ALT = [
   ['Gdańsk–Karlshamn', '+310 km do Boden', 'Polferries'],
   ['Gdynia–Karlskrona', '+265 km do Boden', 'Stena Line'],
   ['Świnoujście–Trelleborg', '+520 km do Boden', 'TT-Line'],
   ['Świnoujście–Ystad', '+495 km do Boden', 'Unity Line'],
-] as const;
-
-const SAIL_ROWS = [
-  ['23.09', 'M/F Wawel', '1,4 m', '11 m/s', 'p-go', 'niskie'],
-  ['24.09', 'M/F Nova Star', '2,9 m', '19 m/s', 'p-amber', 'podwyższone'],
-  ['25.09', 'M/F Wawel', '3,4 m', '22 m/s', 'p-red', 'wysokie'],
-  ['26.09', 'M/F Nova Star', '1,8 m', '13 m/s', 'p-go', 'niskie'],
 ] as const;
 
 export function RisksView() {
@@ -50,11 +49,11 @@ export function RisksView() {
   }, [risks, role, riskFilter]);
 
   const ferryRisk = risks.find((r) => r.type === 'FERRY' && r.ferryPlanB);
-  const sailing = activeOrNextSailing();
+  const sailing = focusVoyage();
   const vessel = vesselById(sailing.vessel);
-  const ferryLoads = loads
-    .filter((l) => ['AT_PORT', 'ON_FERRY', 'IN_TRANSIT_PL'].includes(l.status))
-    .slice(0, 3);
+  const sailRows = voyageSeaTableRows();
+  const focusDayLabel = formatVoyageDayLabel(sailing.depLocal);
+  const ferryLoads = loadsOnVoyage(loads, sailing).slice(0, 8);
 
   useEffect(() => {
     let cancelled = false;
@@ -130,16 +129,16 @@ export function RisksView() {
               <h4 className="sec">Rejs Gdańsk → Nynäshamn</h4>
               <table style={{ width: '100%', fontSize: 13 }}>
                 <tbody>
-                  {SAIL_ROWS.map(([d, v, w, g, c, lab]) => (
-                    <tr key={d}>
+                  {sailRows.map((row) => (
+                    <tr key={row.sailing.id} style={row.focused ? { background: 'var(--surface-2)' } : undefined}>
                       <td>
-                        <span className="mono">{d}</span>
+                        <span className="mono">{row.dayLabel}</span>
                       </td>
-                      <td>{v}</td>
-                      <td className="num">{w}</td>
-                      <td className="num">{g}</td>
+                      <td>{row.vesselName}</td>
+                      <td className="num">{row.wave}</td>
+                      <td className="num">{row.wind}</td>
                       <td style={{ textAlign: 'right' }}>
-                        <span className={`pill ${c}`}>{lab}</span>
+                        <span className={`pill ${row.pillClass}`}>{row.riskLabel}</span>
                       </td>
                     </tr>
                   ))}
@@ -152,7 +151,7 @@ export function RisksView() {
               </div>
             </div>
             <div>
-              <h4 className="sec">Alternatywy dla rejsu 25.09</h4>
+              <h4 className="sec">Alternatywy dla rejsu {focusDayLabel}</h4>
               <table style={{ width: '100%', fontSize: 13 }}>
                 <tbody>
                   {ALT.map(([r, k, o], i) => (
@@ -180,7 +179,7 @@ export function RisksView() {
                 </tbody>
               </table>
               <h4 className="sec" style={{ marginTop: 15 }}>
-                Transporty na rejsie 25.09
+                Transporty na rejsie {focusDayLabel}
               </h4>
               {ferryLoads.map((l) => (
                 <div
