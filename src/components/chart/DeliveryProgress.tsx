@@ -71,7 +71,7 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
             fontSize={10.5}
             textAnchor="middle"
             fill="var(--ink-3)"
-            fontFamily="Barlow Condensed, Barlow, sans-serif"
+            fontFamily="Barlow Condensed, Barlow, Arial, sans-serif"
           >
             t{d.w}
           </text>
@@ -81,7 +81,7 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
           y={13}
           fontSize={11}
           fill="var(--ink-3)"
-          fontFamily="Barlow Condensed, Barlow, sans-serif"
+          fontFamily="Barlow Condensed, Barlow, Arial, sans-serif"
         >
           tony narastająco · max {maxV.toFixed(0)} t
         </text>

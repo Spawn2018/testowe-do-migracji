@@ -18,7 +18,8 @@ Pełny dosłowny tekst D1–D17 jest w transkrypcie **t110u** (PROMPT FINALNY). 
 **D1-legacy-route-alts.** Alternatywy trasy SE ×4 „Wybierz” — dziś tylko toast; mają mutować load/risk (`RisksView`).  
 > **Uwaga numeracji (Sebastian 2026-09-24):** to **NIE** jest Fala-1-D1. Fala-1-D1 = usunięcie Tailwind (najpierw inventory).
 
-**D2.** Pill opóźnienia w drawerze (`+1h 35 min`) — liczyć z `delayMinutes`, nie stały napis (`LoadDrawer`).
+**D2-legacy-delay-pill.** Pill opóźnienia w drawerze (`+1h 35 min`) — liczyć z `delayMinutes`, nie stały napis (`LoadDrawer`).
+> **Uwaga numeracji (Sebastian 2026-09-24):** to **NIE** jest Fala-1-D2. Fala-1-D2 = weryfikacja fontów Barlow po usunięciu Tailwind.
 
 **D3.** Warunki drogowe SE na korytarzu — endpoint na żywo **albo** jawna etykieta demo (ten sam wzorzec co D18); spójnie z panelem ryzyk.
 
@@ -100,7 +101,8 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 - **D16** (Fala 1) — DONE — motyw per rola (KSH light, HHL/SCX dark) + `data-theme` only (bez Tailwind `dark`). **≠** D16-legacy-force-majeure.
 - **D1 inventory (D1a)** — DONE — [`D1_TAILWIND_INVENTORY.md`](./D1_TAILWIND_INVENTORY.md).
 - **D1 removal** — DONE — Tailwind out; role CSS + preflight compensation. **≠** D1-legacy-route-alts.
-- **Następne (NIE START):** D2 (system fonts verify).
+- **D2** (Fala 1) — DONE — fonty tylko Barlow (+ Claude fallbacks). **≠** D2-legacy-delay-pill.
+- **Następne (NIE START):** Fala 1 gate (visual 720) — koordynator.
 
 #### Fala-1-D9 — szczegóły
 - Soft `box-shadow` → `none`: `.docpreview`, `.wf-creator`, `.sched-col-menu` (toasty już `none`).
@@ -123,6 +125,16 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 - Bundle (vite build assets): JS **2073571 → 2073376** (−195); CSS **65267 → 53190** (−12077).
 - Testy: `test:unit` **13/13**; playwright smoke **4/4** (bez update snapshot / bez regen `shots-baseline`). Visual 720 deferred.
 
+#### Fala-1-D2 — szczegóły
+- **≠** D2-legacy-delay-pill (pill `+1h 35 min` w drawerze).
+- Skan `src/**/*`, `index.html`, built CSS: **brak** `system-ui` / `-apple-system` / `BlinkMacSystemFont` / `Segoe UI` / `Roboto` / `ui-sans` w SPA.
+- Claude SoT stacks kept: `"Barlow","Helvetica Neue",Arial,sans-serif` + condensed `"Barlow Condensed","Barlow",Arial,sans-serif` (`:root` `--font-*`, `body`, `.cond`/`.font-cond`).
+- **Fix:** `leaflet/dist/leaflet.css` ładował się *po* `index.css` (import w `CorridorMap`) i nadpisywał `.leaflet-container` na `Helvetica Neue, Arial, Helvetica`. Przeniesiono import Leaflet CSS do `main.tsx` **przed** `index.css`; dopięto close-button bez Tahoma/Verdana.
+- Chart SVG `DeliveryProgress`: dopisano `Arial` do stosu condensed (pixel-intent align).
+- Out of scope (archiwum, nie SPA): `public/*makieta*.html` banner deprecacji z `system-ui` — oznaczone NIEAKTUALNE SoT.
+- `index.html`: Google Fonts Barlow / Barlow Condensed — OK.
+- Testy: `test:unit` **13/13**; playwright smoke **4/4** (bez regen baseline). Visual 720 = następny gate.
+
 ### Postęp Fala 1
 
 | Item | Commit | Pliki | test:unit | playwright | visual | Bundle JS (bytes) | Bundle CSS (bytes) |
@@ -132,9 +144,10 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 | **D16** (Fala 1 — motyw/rola; ≠ D16-legacy-force-majeure) | `230e876e3998916fa92275569660540e8af2f2ca` | `src/lib/theme.ts`, `useTowerStore.ts`, `tests/theme-role.test.ts`, `tests/setup.ts` | **13/13** | **4/4** | smoke **4/4** (720 deferred) | n/a (behaviour) | n/a |
 | **D1a** inventory (≠ D1-legacy-route-alts; removal = next) | `de851b80cee33f31c129e1bbfddb337808c41e60` | `docs/handover/D1_TAILWIND_INVENTORY.md` (+ NAPRAWY) | **13/13** | **4/4** | smoke **4/4** (720 deferred) | n/a (docs-only) | n/a |
 | **D1** removal (≠ D1-legacy-route-alts; ≠ D1a) | `0dcea24c63e7526992b1eac9747efcef926affd3` | `DriverPwa.tsx`, `NotificationBell.tsx`, `src/index.css`, `vite.config.ts`, `package.json`, `package-lock.json`, NAPRAWY | **13/13** | **4/4** | smoke **4/4** (720 deferred; **no** baseline regen) | 2073571 → **2073376** (−195); `index-C0NcMovv.js` sha256 `fe6374e2eb14…` | 65267 → **53190** (−12077); `index-BJwYPbrW.css` sha256 `0febf525b07a…` |
+| **D2** (Fala 1 — fonty Barlow; ≠ D2-legacy-delay-pill) | _(sha)_ | `main.tsx`, `CorridorMap.tsx`, `src/index.css`, `DeliveryProgress.tsx`, NAPRAWY | **13/13** | **4/4** | smoke **4/4** (720 = next gate) | n/a (font cascade) | n/a |
 
 ### Fala 1–2 (pozostałe)
-- Kolejność pozostała jak niżej; **D2** **nie rozpoczęte** (D1 removal DONE).
+- Kolejność pozostała jak niżej; **Fala 1 gate (720)** **nie rozpoczęte** (D2 DONE).
 
 ### Fala 3 — import UX + skala + visual CI
 - **D26** — poniżej
@@ -159,4 +172,4 @@ Wybrana droga (Sebastian 2026-09-24): **2 — usunięcia za wyraźną zgodą**. 
 
 ---
 
-*Koniec zakresu. D24 zamknięte. Fala 1: D21+D9+D16+D1a+D1-removal DONE. Nie startować D2 / D26 / legacy bez osobnego START.*
+*Koniec zakresu. D24 zamknięte. Fala 1: D21+D9+D16+D1a+D1-removal+D2 DONE. Nie startować gate 720 / D26 / legacy bez osobnego START.*
