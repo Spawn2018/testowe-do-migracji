@@ -154,7 +154,7 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 | **D1a** inventory (≠ D1-legacy-route-alts; removal = next) | `de851b80cee33f31c129e1bbfddb337808c41e60` | `docs/handover/D1_TAILWIND_INVENTORY.md` (+ NAPRAWY) | **13/13** | **4/4** | smoke **4/4** (720 deferred) | n/a (docs-only) | n/a |
 | **D1** removal (≠ D1-legacy-route-alts; ≠ D1a) | `0dcea24c63e7526992b1eac9747efcef926affd3` | `DriverPwa.tsx`, `NotificationBell.tsx`, `src/index.css`, `vite.config.ts`, `package.json`, `package-lock.json`, NAPRAWY | **13/13** | **4/4** | smoke **4/4** (720 deferred; **no** baseline regen) | 2073571 → **2073376** (−195); `index-C0NcMovv.js` sha256 `fe6374e2eb14…` | 65267 → **53190** (−12077); `index-BJwYPbrW.css` sha256 `0febf525b07a…` |
 | **D2** (Fala 1 — fonty Barlow; ≠ D2-legacy-delay-pill) | `e586ea07c925e1ea463d795825a009cb08845f3f` | `main.tsx`, `CorridorMap.tsx`, `src/index.css`, `DeliveryProgress.tsx`, NAPRAWY | **13/13** | **4/4** | smoke **4/4** (720 = next gate) | n/a (font cascade) | n/a |
-| **Fala 1 GATE** |  | `src/index.css` (preflight `* margin/padding`), NAPRAWY, `.gitignore` | **13/13** | **4/4** | **720/720** (pixelmatch; no baseline regen) | 2073585 → **2073396** (−189) | 65554 → **53315** (−12239) |
+| **Fala 1 GATE** | `2aac0a97e186485cb50c78b9808e1f0023f9ac80` | `src/index.css` (preflight `* margin/padding`), NAPRAWY, `.gitignore` | **13/13** | **4/4** | **720/720** (pixelmatch; no baseline regen) | 2073585 → **2073396** (−189) | 65554 → **53315** (−12239) |
 
 ### Fala 1–2 (pozostałe)
 - **Fala 1 CLOSED.** Fala 2 / D26 nie rozpoczęte.
