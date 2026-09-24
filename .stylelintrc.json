@@ -1,0 +1,70 @@
+{
+  "extends": ["stylelint-config-standard"],
+  "plugins": ["stylelint-declaration-strict-value"],
+  "ignoreFiles": [
+    "**/tower.css",
+    "node_modules/**",
+    "dist/**",
+    "shots-baseline/**"
+  ],
+  "rules": {
+    "scale-unlimited/declaration-strict-value": [
+      [
+        "color",
+        "background-color",
+        "background",
+        "border-color",
+        "border-top-color",
+        "border-right-color",
+        "border-bottom-color",
+        "border-left-color",
+        "outline-color",
+        "fill",
+        "stroke"
+      ],
+      {
+        "ignoreValues": [
+          "transparent",
+          "inherit",
+          "currentColor",
+          "none",
+          "initial",
+          "unset",
+          "revert",
+          "auto"
+        ],
+        "disableFix": true
+      }
+    ],
+    "declaration-property-value-allowed-list": {
+      "border-radius": ["/^0$/", "/^2px$/", "/^50%$/", "/^var\\(--/"],
+      "font-family": ["/Barlow/", "/^var\\(--/", "/^inherit$/"],
+      "box-shadow": ["none", "/^var\\(--/"],
+      "text-transform": ["none", "lowercase", "/^var\\(--/"]
+    },
+    "declaration-property-unit-allowed-list": {
+      "letter-spacing": ["em"],
+      "line-height": []
+    },
+    "declaration-property-value-disallowed-list": {
+      "/^(padding|margin|gap|row-gap|column-gap)/": [
+        "/^\\d*[13579]px$/",
+        "/^\\d+\\.\\d+px$/"
+      ]
+    },
+    "declaration-no-important": true,
+    "function-disallowed-list": [
+      "linear-gradient",
+      "radial-gradient",
+      "conic-gradient"
+    ],
+    "no-descending-specificity": null,
+    "color-hex-length": "long",
+    "alpha-value-notation": "number",
+    "color-function-notation": "modern",
+    "comment-empty-line-before": null,
+    "declaration-empty-line-before": null,
+    "custom-property-empty-line-before": null,
+    "no-empty-source": null
+  }
+}
