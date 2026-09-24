@@ -31,6 +31,14 @@ import { defaultThemeForRole } from '../lib/permissions';
 import { applyThemeToDom, type Theme } from '../lib/theme';
 export type { Theme };
 import {
+  STORE_PERSIST_KEY,
+  STORE_SCHEMA_VERSION,
+  STORE_WIPE_MESSAGE_PL,
+  consumePersistWipeNotice,
+  createVersionedJSONStorage,
+  migrateTowerPersistForZustand,
+} from '../lib/storePersist';
+import {
   BAF_PARAMS,
   DRIVER_TOKENS,
   GEOFENCES,
@@ -1390,7 +1398,10 @@ export const useTowerStore = create<TowerState>()(
       },
     }),
     {
-      name: 'watch-tower-ui-v6-ready-gate',
+      name: STORE_PERSIST_KEY,
+      version: STORE_SCHEMA_VERSION,
+      storage: createVersionedJSONStorage(),
+      migrate: migrateTowerPersistForZustand,
       partialize: (s) => ({
         role: s.role,
         locale: s.locale,
@@ -1414,7 +1425,16 @@ export const useTowerStore = create<TowerState>()(
         risks: s.risks,
         exceptions: s.exceptions,
       }),
-      onRehydrateStorage: () => (state) => {
+      onRehydrateStorage: () => (state, error) => {
+        if (error || consumePersistWipeNotice()) {
+          queueMicrotask(() => {
+            try {
+              useTowerStore.getState().pushToast(STORE_WIPE_MESSAGE_PL, 'HIGH');
+            } catch {
+              /* store may be mid-init in tests */
+            }
+          });
+        }
         if (!state) return;
         // After persist merge: stale theme must not stick when user never toggled manually.
         const theme = state.themeManual

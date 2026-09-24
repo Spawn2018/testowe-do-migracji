@@ -3,7 +3,7 @@
 | Pole | Wartość |
 |---|---|
 | Data zapisu | **2026-09-24** Europe/Warsaw |
-| Status | **Fala 1 ACCEPTED** · trzy domknięcia (D21/D9/D16 + D1/D2/GATE) · **GO Fala 2 po odpowiedzi D7** (ta odpowiedź jest poniżej; bez startu kodu Fali 2 poza dokumentacją D7) |
+| Status | **Fala 1 ACCEPTED** · **Fala 2 w toku** · D7 answered · **D22 DONE** · pozostałe F2: D3/D4/D5/D8/D20 |
 | Repo | `Spawn2018/testowe-do-migracji` · branch `main` |
 | Kod produktu | Fala 2 **nie** startuje tu (poza closeout D9/stylelint + proof D2) |
 
@@ -29,7 +29,7 @@ Stary zakres NAPRAWY mieszł etykiety Sebastiana (Fala 1/2). **D1–D26 = wyłą
 | D18 stawki demo label | **D18** | tak | OPEN |
 | D20 faktury trójstronne | **D20** | tak | OPEN (Fala 2) |
 | D21 MapLibre | **D21** | tak | **DONE** Fala 1 |
-| D22 store versioning | **D22** | tak | OPEN (Fala 2) |
+| D22 store versioning | **D22** | tak | **DONE** Fala 2 |
 | D23 import regression | **D23** | tak | PARTIAL Fala 0 |
 | D24 14-click | **D24** | tak | **DONE** Fala 0 |
 | D26 import removals + UI consent | **D26** | tak | PLAN only (Fala 3) |
@@ -165,7 +165,19 @@ OPEN (Fala 2). Policzyć naprawdę: zaznaczone vs zrealizowane vs cennik.
 **DONE Fala 1**. SHA `58a509a8…`. `test:unit` **8/8** (wówczas); playwright **4/4**.
 
 ### D22 — store versioning / migracja
-OPEN (Fala 2).
+**DONE Fala 2 (2026-09-24).**
+
+| Pole | Wartość |
+|---|---|
+| Persist key | `watch-tower-ui-v6-ready-gate` (bez zmiany nazwy — migracja in-place) |
+| Schema version | `STORE_SCHEMA_VERSION = 1` (`src/lib/storePersist.ts`) |
+| Migracja | `migrateTowerPersist`: **v0→v1 zachowuje** pola z `partialize` (loads, role, theme, …) |
+| Wipe | tylko corrupt / zły typ / przyszła niekompatybilna wersja → `{}` + toast PL: *„Zapisany stan aplikacji był uszkodzony lub niekompatybilny. Przywrócono dane startowe.”* |
+| Storage | `createVersionedJSONStorage` — brak `version` w JSON ⇒ 0 (wymusza migrate) |
+| Baseline | **Step 0:** `scripts/baseline.mjs` `gotoFrozen` czyści localStorage + reload → seed z kodu (`data/seed.ts`), **nie** leftover. Szacunek visual: **0** zmienionych ujęć (migracja zachowuje; baseline i tak wipe→seed; brak chrome). |
+| Testy | `tests/store-persist.test.ts` — pure + rehydrate (v0→v1, already-new, corrupt, missing) |
+
+test:unit **23/23** · playwright **4/4** (po push).
 
 ### D23 — import regression tests
 PARTIAL Fala 0 — `tests/schedule-import.test.ts` na `main`; pełna skala produkcyjna = Fala 3.
@@ -228,8 +240,9 @@ PLAN only (Fala 3) — opcja 2 Sebastian: checkbox zgody, `allowRemovals` z UI.
 | D9 stylelint closeout | `2415e11b21878cb2060c6576be02b098a0ae20f4` | **13/13** | **4/4** | no regen |
 | NAPRAWY renumber + D2 proof + D7 answer | see `git log -1 -- docs/handover/NAPRAWY.md` | **13/13** | **4/4** | — |
 
-### Fala 2 — GO po D7 answer
-D3, D4 (voyage), D5 (KPI), D7 fix (jeśli potrzeba po answer), D8 timezones, D20, D22. **Nie startować w tym closeout.**
+### Fala 2 — w toku
+- **D22** DONE (store versioning + migrate; Step 0 baseline seed = wipe→code seed).
+- Pozostałe: D3, D4 (voyage), D5 (KPI), D7 fix (jeśli potrzeba), D8 timezones, D20.
 
 ### Fala 3
 D26 (plan) + skala importu + visual CI.
