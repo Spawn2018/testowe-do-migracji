@@ -530,6 +530,7 @@ nav button{padding:8px 14px}
 .inline-input .input{width:92px}
 .settings-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px}
 .panel-mark{margin-left:auto;color:var(--ink-3);font-family:"Barlow Condensed";font-size:10px;font-weight:700;letter-spacing:.11em}
+.panel-mark.demo-mark{color:var(--amber);border:1px solid var(--amber);padding:1px 6px;letter-spacing:.08em}
 .rate-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px}
 .rate-editor{border-top:1px solid var(--rule)}
 .rate-editor-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:5px 0 6px;border-bottom:1px solid var(--rule-2);font-size:13px}

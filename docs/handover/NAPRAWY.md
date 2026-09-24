@@ -3,7 +3,7 @@
 | Pole | Wartość |
 |---|---|
 | Data zapisu | **2026-09-24** Europe/Warsaw |
-| Status | **Fala 1 ACCEPTED** · **Fala 2 w toku** · D7 answered · **D22/D5/D4 DONE** · pozostałe F2: D3/D8/D20 |
+| Status | **Fala 1 ACCEPTED** · **Fala 2 w toku** · D7 answered · **D22/D5/D4/D3 DONE** · pozostałe F2: D8/D20 |
 | Repo | `Spawn2018/testowe-do-migracji` · branch `main` |
 | Kod produktu | Fala 2 **nie** startuje tu (poza closeout D9/stylelint + proof D2) |
 
@@ -17,7 +17,7 @@ Stary zakres NAPRAWY mieszł etykiety Sebastiana (Fala 1/2). **D1–D26 = wyłą
 |---|---|---|---|
 | D1 route-alts (SE ×4 Wybierz) | **L1** | nie (≠ D1 Tailwind) | OPEN |
 | D2 delay-pill (`+1h 35 min`) | **L2** | nie (≠ D2 fonty) | OPEN |
-| D3 warunki drogowe SE | **D3** | tak — Trafikverket live **lub** label demo | OPEN (Fala 2) |
+| D3 warunki drogowe SE | **D3** | tak — **DEMO LABEL** (brak klucza) | **DONE** Fala 2 |
 | D4 terminy zadań (`18+i*9`) | **L4** | nie (≠ D4 voyage SoT) | OPEN |
 | D5 preferencje powiadomień | **L5** | nie (≠ D5 KPI vs corridor) | OPEN |
 | D6 pogoda / fale SAIL_ROWS | **D6** | zachowane (nie w skrócie fal, unikalne) | OPEN |
@@ -64,7 +64,16 @@ Stary zakres NAPRAWY mieszł etykiety Sebastiana (Fala 1/2). **D1–D26 = wyłą
 - Testy Fala-1-D2: `test:unit` **13/13**; playwright **4/4**
 
 ### D3 — Trafikverket live OR demo label
-OPEN (Fala 2). Warunki drogowe SE — endpoint na żywo **albo** jawna etykieta demo (wzorzec jak D18).
+**DONE Fala 2 (2026-09-24).** Decyzja Sebastiana/koordynatora: **DEMO LABEL** (nie live endpoint) — brak klucza Trafikverket; nie udajemy live API.
+
+| Pole | Wartość |
+|---|---|
+| Oznaczenie | Panel „Warunki drogowe SE · E4” w `RisksView`: badge `DEMONSTRACYJNE` + note PL + sub `dane demonstracyjne · brak klucza Trafikverket` |
+| Mapa | Footnote Trafikverket: `demonstracyjne` zamiast en `seed` |
+| Wzorzec | `DemoMark` + `demoLabel.ts` — do ponownego użycia przy **D18** (stawki demo) |
+| Visual | **~90** ujęć ryzyka (+ footnote mapy) może się zmienić — **nie** regen baseline |
+
+test:unit **32/32** · playwright **4/4**.
 
 ### D4 — single voyage source of truth
 **DONE Fala 2 (2026-09-24).** ≠ L4.
@@ -171,7 +180,7 @@ OPEN / w większości pokryte przez **D21 DONE**.
 OPEN.
 
 ### D18 — stawki demo label (+ przełącznik)
-OPEN. Ten sam wzorzec etykiety co D3 gdy label zamiast live.
+OPEN. Wzorzec etykiety gotowy w D3: `DemoMark` / `demoLabel.ts` — podpiąć pod cennik/BAF + przełącznik wyłączenia.
 
 ### D19 — 104 hardcode stringi i18n (C3)
 OPEN.
@@ -262,7 +271,8 @@ PLAN only (Fala 3) — opcja 2 Sebastian: checkbox zgody, `allowRemovals` z UI.
 - **D22** DONE (store versioning + migrate; Step 0 baseline seed = wipe→code seed).
 - **D5** DONE (KPI ↔ corridor stage SoT; ~90 kokpit shots expected drift — no baseline regen).
 - **D4** DONE (voyage SoT; ~180 kokpit+ryzyka shots expected drift — no baseline regen).
-- Pozostałe: D3, D7 fix (jeśli potrzeba), D8 timezones, D20.
+- **D3** DONE (SE road DEMO LABEL — no TV key; DemoMark reusable for D18).
+- Pozostałe: D7 fix (jeśli potrzeba), D8 timezones, D20.
 
 ### Fala 3
 D26 (plan) + skala importu + visual CI.

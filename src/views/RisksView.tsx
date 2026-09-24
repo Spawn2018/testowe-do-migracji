@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import type { RiskType } from '../types';
 import { ExceptionRow } from '../components/ui/ExceptionRow';
+import { DemoMark } from '../components/ui/DemoMark';
 import { t } from '../i18n/messages';
 import { ferryLabel, vesselById } from '../lib/ferry';
 import { fetchSituations, type RoadSituation } from '../lib/trafikverket';
@@ -11,6 +12,7 @@ import {
   loadsOnVoyage,
   voyageSeaTableRows,
 } from '../lib/voyage';
+import { isDemoSourceMode, trafikverketSourceNote } from '../lib/demoLabel';
 
 const ALT = [
   ['Gdańsk–Karlshamn', '+310 km do Boden', 'Polferries'],
@@ -199,14 +201,21 @@ export function RisksView() {
         </div>
       </div>
 
-      <div className="panel section-card" style={{ margin: 12 }}>
+      <div className="panel section-card" style={{ margin: 12 }} data-demo={isDemoSourceMode(seMode) ? 'trafikverket' : undefined}>
         <header className="panel-hd">
           <h2>Warunki drogowe SE · E4</h2>
           <span className="sub">
-            Nynäshamn→Boden · Trafikverket {seMode} · {seSituations.length} sytuacji
+            Nynäshamn→Boden · {trafikverketSourceNote(seMode)} · {seSituations.length} sytuacji
           </span>
+          {isDemoSourceMode(seMode) ? <DemoMark /> : null}
         </header>
         <div className="panel-bd">
+          {isDemoSourceMode(seMode) ? (
+            <div className="note" style={{ marginBottom: 12 }}>
+              Warunki drogowe SE są <b>demonstracyjne</b> (seed makiety). To nie jest żywy feed
+              Trafikverket — brak klucza API. Ten sam wzorzec oznaczenia co stawki demo (D18).
+            </div>
+          ) : null}
           <div className="two">
             <div>
               <h4 className="sec">Sytuacje na korytarzu</h4>

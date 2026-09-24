@@ -5,6 +5,7 @@ import { StatusPill } from '../components/ui/StatusPill';
 import { CorridorMap } from '../components/map/CorridorMap';
 import { t } from '../i18n/messages';
 import { fetchSituations } from '../lib/trafikverket';
+import { trafikverketShortLabel } from '../lib/demoLabel';
 import { subscribeAis, type AisMode } from '../lib/ais';
 
 /** Claude maplayers — exactly 5. */
@@ -274,7 +275,7 @@ export function MapView() {
       <div className="note">
         Schemat korytarza, nie mapa nawigacyjna. Trasa lądowa w Szwecji odwzorowuje przebieg z
         zezwolenia, nie wynik routera. Trafikverket E4:{' '}
-        <b>{tvMode === 'live' ? 'live' : 'seed'}</b>
+        <b>{trafikverketShortLabel(tvMode)}</b>
         {' · '}
         AIS:{' '}
         <b>{aisMode === 'live' ? t(locale, 'map_ais_live') : 'seed'}</b>
