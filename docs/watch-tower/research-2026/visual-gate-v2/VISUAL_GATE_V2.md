@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez research-2026/visual-gate-from-zero/FINAL_SQUINT_GATE_RESULT.md**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # Visual gate — visual-v2 (2026-09-23 ~01:05 Europe/Warsaw)
 
 **Owner:** WT — Visual  

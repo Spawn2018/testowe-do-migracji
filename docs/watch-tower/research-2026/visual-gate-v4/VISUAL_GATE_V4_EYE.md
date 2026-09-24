@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez claude-v2.0 + FINAL_SQUINT (v4 nie jest SoT)**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # Visual gate v4 — EYE vs VISUAL_V4_HANDOFF (2026-09-23 ~01:22)
 
 **Shots:** `watch-tower-app/shots-start/visual-v4-{cockpit,map,ksh-light}.png` (+ dark/ksh aliases)  

@@ -97,6 +97,7 @@ export function Topbar() {
             <button
               key={r}
               type="button"
+              data-role={r}
               aria-pressed={role === r}
               onClick={() => setRole(r)}
               title={ROLE_META[r].name}
@@ -108,7 +109,13 @@ export function Topbar() {
       </div>
       <div className="seg" role="group" aria-label="Język" id="langSeg">
         {LANGS.map((l) => (
-          <button key={l} type="button" aria-pressed={locale === l} onClick={() => setLocale(l)}>
+          <button
+            key={l}
+            type="button"
+            data-lang={l}
+            aria-pressed={locale === l}
+            onClick={() => setLocale(l)}
+          >
             {l.toUpperCase()}
           </button>
         ))}

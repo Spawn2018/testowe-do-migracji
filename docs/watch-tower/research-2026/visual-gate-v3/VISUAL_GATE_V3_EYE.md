@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez claude-v2.0 + FINAL_SQUINT (v3 FAIL eye)**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # Visual gate v3 — EYE-LEVEL — **FAIL** (Sebastian 2026-09-23 ~01:16)
 
 **Shots:** `watch-tower-app/shots-start/visual-v3-*.png`  

@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez CURSOR_PROMPT.md (root) / docs/handover/CURSOR_PROMPT_ZRODLOWY.md**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # PROMPT DO CURSORA — TOWER v2 (tryb planowania)
 
 > Wklej całość do Cursora w Plan Mode. Uzupełnij `[...]` przed wysłaniem.

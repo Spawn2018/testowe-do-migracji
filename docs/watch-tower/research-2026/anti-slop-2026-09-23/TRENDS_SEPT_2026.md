@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez VISUAL_BRIEF.md — trendy jako evidence OK, ale nie jako tożsamość wizualna (Plex/v4 VOID)**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # Trendy UI — wrzesień 2026 (Watch Tower)
 
 **Cel Sebastiana:** trendy, modnie, aktualnie na wrzesień 2026 + wygląd ludzki (nie AI) + craft widziany okiem.

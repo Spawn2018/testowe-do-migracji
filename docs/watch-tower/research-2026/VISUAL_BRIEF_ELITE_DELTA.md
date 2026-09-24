@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez VISUAL_BRIEF.md (merge Plex/anti-Barlow nie stosować)**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # VISUAL_BRIEF_ELITE_DELTA — merge proposals
 
 Patch targets for `/workspace/watch-tower/VISUAL_BRIEF.md`. Apply in standby (docs only).

@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez VISUAL_BRIEF.md + claude-v2.0 (tożsamość Plex / „Claude = bar” VOID)**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # Anti-slop refs — real product UI screenshots (2026-09-23)
 **P0 HARD.** Sebastian: SPA smelled AI. Claude = quality bar only (not clone). IBM Plex + solid steel stay.
 Image URLs below were live-checked / harvested 2026-09-23.

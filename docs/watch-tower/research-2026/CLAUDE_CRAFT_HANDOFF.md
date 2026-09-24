@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez SOT_FLIP_CLAUDE_SHELL_2026-09-23.md + START_UI_SPEC.md**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # CLAUDE CRAFT HANDOFF — Visual → Builder (2026-09-23)
 
 **Motto:** Match / exceed Claude craft — **inspired, not cloned.**  

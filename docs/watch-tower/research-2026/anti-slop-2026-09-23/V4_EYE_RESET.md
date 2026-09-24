@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez claude-v2.0 + VISUAL_BRIEF.md (skóra v4 odrzucona)**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # V4 EYE RESET — 2026-09-23 ~01:22 Europe/Warsaw
 
 **Verdict target:** Sebastian glance-test prefers v4 over tragic v3.  

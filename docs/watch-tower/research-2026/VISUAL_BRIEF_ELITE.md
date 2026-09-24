@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez VISUAL_BRIEF_ELITE.md (root pointer) + UX_MAP.md §6.5; elita research z erą Plex VOID dla shell**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # WATCH TOWER — VISUAL_BRIEF_ELITE
 
 **Status:** STANDBY (przed komendą START Sebastiana)  

@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez claude-v2.0/CLAUDE_V2_SOT.md + README.txt**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # TOWER — paczka projektowa
 
 Control tower dla projektu **KSH / Stegra Boden** — transport konstrukcji

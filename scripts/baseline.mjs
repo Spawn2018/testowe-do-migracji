@@ -6,9 +6,8 @@
  *   (acceptance #12: HHL+SCX default dark, KSH default light)
  *
  * HashRouter reality: only `/driver/:token` and `/*` exist. In-app screens are
- * Zustand `view` NavKeys under TowerShell — navigate via role/lang/theme controls
- * + nav buttons (same pattern as wt-full-shots.mjs / qa-reship-frozen.mjs).
- * Do not invent paths like `#/finanse`.
+ * Zustand `view` NavKeys under TowerShell — navigate via data-role / data-view
+ * (stable; no translated labels).
  *
  * Clock freeze (C2.1): hash query `now` (default 2026-09-23T14:32:00Z)
  *   → http://host/#/?now=2026-09-23T14:32:00Z
@@ -18,17 +17,22 @@
  *   BASE_URL=http://127.0.0.1:4177/ node scripts/baseline.mjs
  *   DRY_RUN=1 node scripts/baseline.mjs     # list planned files, no browser
  *   ONLY=1 node scripts/baseline.mjs        # one smoke shot
+ *   FILTER=kokpit__ksh__en node scripts/baseline.mjs  # filename substring
  *   OUT=shots-baseline FROZEN_NOW=2026-09-23T14:32:00Z node scripts/baseline.mjs
  *
- * Do NOT run the full matrix here (C2.3 later). Prefer DRY_RUN or ONLY=1.
+ * Do NOT run the full matrix here (C2.3 later). Prefer DRY_RUN, ONLY=1, or FILTER.
  */
 import puppeteer from 'puppeteer-core'
-import { existsSync, mkdirSync, writeFileSync } from 'fs'
-import { join, dirname } from 'path'
+import { createHash } from 'crypto'
+import { existsSync, mkdirSync, writeFileSync, readdirSync, readFileSync, statSync } from 'fs'
+import { join, dirname, relative } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
+
+/** Bump when nav/role selectors or matrix semantics change. */
+const SCRIPT_VERSION = '2026-09-23-data-view'
 
 const chrome = existsSync('/usr/bin/google-chrome-stable')
   ? '/usr/bin/google-chrome-stable'
@@ -41,43 +45,42 @@ const OUT = join(ROOT, process.env.OUT || 'shots-baseline')
 const FROZEN_NOW = process.env.FROZEN_NOW || '2026-09-23T14:32:00Z'
 const DRY_RUN = process.env.DRY_RUN === '1' || process.env.DRY_RUN === 'true'
 const ONLY = process.env.ONLY === '1' || process.env.ONLY === 'true'
+const FILTER = (process.env.FILTER || '').trim()
 const HEIGHT = Number(process.env.HEIGHT || 1080)
 const PERSIST_KEY = 'watch-tower-ui-v6-ready-gate'
 
 mkdirSync(OUT, { recursive: true })
 
 /**
- * Requested Polish names → real NavKey (store view).
- * SKIPPED: none — all 13 map to NavKeys. Finanse / Moje stawki / Rozliczenia
- * share NavKey `fin` (role-specific nav label). No per-view HashRouter routes.
+ * Requested Polish names → real NavKey (store view via data-view).
+ * Finanse / Moje stawki / Rozliczenia share NavKey `fin` (role-specific label).
  */
 const VIEWS = [
-  { name: 'Kokpit', file: 'kokpit', labelRe: 'Kokpit|Dashboard|Översikt' },
-  { name: 'Mapa', file: 'mapa', labelRe: 'Mapa|Map|Karta' },
-  { name: 'Harmonogram', file: 'harmonogram', labelRe: 'Harmonogram|Schedule|Schema' },
-  { name: 'Ryzyka', file: 'ryzyka', labelRe: 'Ryzyka|Risks|Risker' },
-  { name: 'Dokumenty', file: 'dokumenty', labelRe: 'Dokumenty|Documents|Dokument' },
-  { name: 'Finanse', file: 'finanse', labelRe: 'Finanse|Finance|Ekonomi', roles: ['HHL'] },
-  { name: 'Faktury', file: 'faktury', labelRe: 'Faktury|Invoices|Fakturor', roles: ['HHL', 'SCX'] },
-  { name: 'Automatyzacje', file: 'automatyzacje', labelRe: 'Automatyzacje|Workflows|Automatiseringar', roles: ['HHL'] },
-  { name: 'Strefy', file: 'strefy', labelRe: 'Strefy|Geofences|Zoner|Strefy geograficzne', roles: ['HHL'] },
-  { name: 'Opcje', file: 'opcje', labelRe: 'Opcje|Options|Alternativ', roles: ['HHL'] },
-  { name: 'Moje zadania', file: 'moje-zadania', labelRe: 'Moje zadania|Tasks|Uppgifter', roles: ['SCX'] },
-  { name: 'Moje stawki', file: 'moje-stawki', labelRe: 'Moje stawki|My rates|Mina priser', roles: ['SCX'] },
-  { name: 'Rozliczenia', file: 'rozliczenia', labelRe: 'Rozliczenia|Charges|Kostnader', roles: ['KSH'] },
+  { name: 'Kokpit', file: 'kokpit', dataView: 'dash' },
+  { name: 'Mapa', file: 'mapa', dataView: 'map' },
+  { name: 'Harmonogram', file: 'harmonogram', dataView: 'sched' },
+  { name: 'Ryzyka', file: 'ryzyka', dataView: 'risk' },
+  { name: 'Dokumenty', file: 'dokumenty', dataView: 'docs' },
+  { name: 'Finanse', file: 'finanse', dataView: 'fin', roles: ['HHL'] },
+  { name: 'Faktury', file: 'faktury', dataView: 'inv', roles: ['HHL', 'SCX'] },
+  { name: 'Automatyzacje', file: 'automatyzacje', dataView: 'wf', roles: ['HHL'] },
+  { name: 'Strefy', file: 'strefy', dataView: 'geo', roles: ['HHL'] },
+  { name: 'Opcje', file: 'opcje', dataView: 'options', roles: ['HHL'] },
+  { name: 'Moje zadania', file: 'moje-zadania', dataView: 'tasks', roles: ['SCX'] },
+  { name: 'Moje stawki', file: 'moje-stawki', dataView: 'fin', roles: ['SCX'] },
+  { name: 'Rozliczenia', file: 'rozliczenia', dataView: 'fin', roles: ['KSH'] },
 ]
 
 const ROLES = [
-  // Topbar buttons render ROLE_META[r].name
-  { id: 'HHL', re: 'H&H|HHL', defaultTheme: 'dark' },
-  { id: 'KSH', re: '^KSH$', defaultTheme: 'light' },
-  { id: 'SCX', re: 'Scandinavian|SCX', defaultTheme: 'dark' },
+  { id: 'HHL', defaultTheme: 'dark' },
+  { id: 'KSH', defaultTheme: 'light' },
+  { id: 'SCX', defaultTheme: 'dark' },
 ]
 
 const LANGS = [
-  { id: 'pl', label: 'PL' },
-  { id: 'en', label: 'EN' },
-  { id: 'sv', label: 'SV' },
+  { id: 'pl', label: 'PL', dataLang: 'pl' },
+  { id: 'en', label: 'EN', dataLang: 'en' },
+  { id: 'sv', label: 'SV', dataLang: 'sv' },
 ]
 
 const WIDTHS = [1920, 1440, 1280, 768, 390]
@@ -120,20 +123,61 @@ function* plan() {
   }
 }
 
+/** sha256 of package.json + package-lock.json + all files under src/ (sorted paths). */
+function computeAppChecksum() {
+  try {
+    const hash = createHash('sha256')
+    const files = []
+    for (const name of ['package.json', 'package-lock.json']) {
+      const p = join(ROOT, name)
+      if (existsSync(p)) files.push(p)
+    }
+    const walk = (dir) => {
+      for (const ent of readdirSync(dir, { withFileTypes: true })) {
+        const p = join(dir, ent.name)
+        if (ent.isDirectory()) walk(p)
+        else if (ent.isFile()) files.push(p)
+      }
+    }
+    const src = join(ROOT, 'src')
+    if (existsSync(src)) walk(src)
+    files.sort()
+    for (const p of files) {
+      hash.update(relative(ROOT, p).replace(/\\/g, '/'))
+      hash.update('\0')
+      hash.update(readFileSync(p))
+      hash.update('\0')
+    }
+    return hash.digest('hex')
+  } catch {
+    return null
+  }
+}
+
 const planned = [...plan()]
 console.log(`baseline: ${planned.length} shots planned → ${OUT}`)
+console.log(`scriptVersion=${SCRIPT_VERSION}`)
 console.log(`freeze URL: ${frozenUrl()}`)
-console.log(`DRY_RUN=${DRY_RUN} ONLY=${ONLY}`)
+console.log(`DRY_RUN=${DRY_RUN} ONLY=${ONLY} FILTER=${FILTER || '(none)'}`)
 
 if (DRY_RUN) {
-  const sample = ONLY ? planned.slice(0, 1) : planned
+  let sample = planned
+  if (FILTER) sample = sample.filter((p) => p.file.includes(FILTER))
+  if (ONLY) sample = sample.slice(0, 1)
   writeFileSync(join(OUT, '_plan.txt'), sample.map((p) => p.file).join('\n') + '\n')
   console.log(sample.slice(0, 25).map((p) => p.file).join('\n'))
   if (sample.length > 25) console.log(`… +${sample.length - 25} more (see _plan.txt)`)
   process.exit(0)
 }
 
-const jobs = ONLY ? planned.slice(0, 1) : planned
+let jobs = planned
+if (FILTER) jobs = jobs.filter((p) => p.file.includes(FILTER))
+if (ONLY) jobs = jobs.slice(0, 1)
+
+if (!jobs.length) {
+  console.error('baseline: no jobs after FILTER/ONLY')
+  process.exit(1)
+}
 
 const browser = await puppeteer.launch({
   executablePath: chrome,
@@ -167,26 +211,21 @@ async function gotoFrozen(width) {
   await sleep(400)
 }
 
-async function setRole(nameRe) {
-  await page.evaluate((re) => {
-    const rx = new RegExp(re)
-    const btn = [...document.querySelectorAll('#roleSeg button, .roleswitch .seg button, .roleswitch button')].find(
-      (b) => rx.test(b.textContent || ''),
-    )
-    if (!btn) throw new Error('role btn not found: ' + re)
+async function setRole(roleId) {
+  await page.evaluate((id) => {
+    const btn = document.querySelector(`#roleSeg button[data-role="${id}"]`)
+    if (!btn) throw new Error('role btn not found: data-role=' + id)
     btn.click()
-  }, nameRe)
+  }, roleId)
   await sleep(500)
 }
 
-async function setLocale(label) {
-  await page.evaluate((lab) => {
-    const btn = [...document.querySelectorAll('#langSeg button')].find(
-      (b) => (b.textContent || '').trim().toUpperCase() === lab,
-    )
-    if (!btn) throw new Error('lang btn not found: ' + lab)
+async function setLocale(lang) {
+  await page.evaluate((dataLang) => {
+    const btn = document.querySelector(`#langSeg button[data-lang="${dataLang}"]`)
+    if (!btn) throw new Error('lang btn not found: data-lang=' + dataLang)
     btn.click()
-  }, label)
+  }, lang.dataLang)
   await sleep(300)
 }
 
@@ -195,11 +234,7 @@ async function setTheme(theme, roleDefault) {
   const current = await page.evaluate(() => {
     return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'
   })
-  // Role switch resets to roleDefault when themeManual is false (fresh storage).
-  // After first toggle, themeManual sticks — so prefer: ensure we start from default,
-  // then toggle only when needed.
   if (current === theme) return
-  // If we're not on roleDefault, toggle back first (themeManual path after prior job).
   if (current !== roleDefault) {
     await page.click('#themeBtn')
     await sleep(300)
@@ -217,15 +252,12 @@ async function setTheme(theme, roleDefault) {
   if (final !== theme) throw new Error(`theme want=${theme} got=${final}`)
 }
 
-async function navTo(labelRe) {
-  await page.evaluate((re) => {
-    const rx = new RegExp(re, 'i')
-    const btn = [...document.querySelectorAll('nav button')].find((b) =>
-      rx.test(b.getAttribute('aria-label') || b.textContent || ''),
-    )
-    if (!btn) throw new Error('nav not found: ' + re)
+async function navTo(dataView) {
+  await page.evaluate((key) => {
+    const btn = document.querySelector(`nav button[data-view="${key}"]`)
+    if (!btn) throw new Error('nav not found: data-view=' + key)
     btn.click()
-  }, labelRe)
+  }, dataView)
   await sleep(600)
   await page.evaluate(async () => {
     if (document.fonts?.ready) await document.fonts.ready
@@ -253,10 +285,10 @@ for (const job of jobs) {
       await gotoFrozen(job.width)
       lastWidth = job.width
     }
-    await setRole(job.role.re)
-    await setLocale(job.lang.label)
+    await setRole(job.role.id)
+    await setLocale(job.lang)
     await setTheme(job.theme, job.role.defaultTheme)
-    await navTo(job.view.labelRe)
+    await navTo(job.view.dataView)
     await shoot(job.file)
     ok++
     console.log('OK', job.file)
@@ -276,9 +308,24 @@ for (const job of jobs) {
 
 await browser.close()
 
+const appChecksum = computeAppChecksum()
+
 writeFileSync(
   join(OUT, '_summary.json'),
-  JSON.stringify({ ok, fail, total: jobs.length, frozenNow: FROZEN_NOW, url: frozenUrl(), errors }, null, 2),
+  JSON.stringify(
+    {
+      ok,
+      fail,
+      total: jobs.length,
+      scriptVersion: SCRIPT_VERSION,
+      frozenNow: FROZEN_NOW,
+      appChecksum,
+      url: frozenUrl(),
+      errors,
+    },
+    null,
+    2,
+  ),
 )
-console.log(`baseline done: ok=${ok} fail=${fail} / ${jobs.length}`)
+console.log(`baseline done: ok=${ok} fail=${fail} / ${jobs.length} scriptVersion=${SCRIPT_VERSION}`)
 if (fail) process.exitCode = 1

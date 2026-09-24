@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez visual-gate-from-zero/* (gate Claude)**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # Visual gate v2 must-fix — done
 
 - Role/language controls use unified ink-invert `.wt-seg` pressed state (ink fill, surface text).

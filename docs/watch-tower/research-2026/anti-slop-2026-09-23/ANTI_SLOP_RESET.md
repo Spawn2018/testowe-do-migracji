@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez VISUAL_BRIEF.md + SOT_FLIP_CLAUDE_SHELL_2026-09-23.md**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # ANTI_SLOP_RESET — v3 hard reset (2026-09-23 WA)
 
 **Verdict target:** freight ops instrument (Sept 2026: calm / tactile flat / typo-as-UI / editorial density / warm near-black / one accent). Not AI SaaS card soup. Not brutalist toy.

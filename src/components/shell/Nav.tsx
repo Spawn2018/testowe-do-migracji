@@ -124,6 +124,7 @@ export function Nav() {
           <button
             key={key}
             type="button"
+            data-view={key}
             aria-current={current ? 'page' : 'false'}
             aria-label={label}
             title={navCollapsed ? label : undefined}

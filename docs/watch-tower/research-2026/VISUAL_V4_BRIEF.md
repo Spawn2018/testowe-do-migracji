@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez VISUAL_BRIEF.md + claude-v2.0 (v4 skóra odrzucona eye Sebastiana / SoT flip)**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # VISUAL v4 BRIEF — human premium Sept 2026 (not empty brutalist)
 
 **Owner:** WT — Visual · **For:** Builder · **Date:** 2026-09-23 ~01:16  

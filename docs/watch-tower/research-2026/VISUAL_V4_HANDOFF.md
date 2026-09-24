@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez FROM_ZERO_CLAUDE_HANDOFF.md + VISUAL_BRIEF.md**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # v4 handoff — Visual → Builder
 
 **v3 FAIL** (Sebastian eye). Do not polish v3.

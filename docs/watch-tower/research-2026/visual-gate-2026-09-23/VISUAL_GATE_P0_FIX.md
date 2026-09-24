@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez CLAUDE_SHELL_GATE.md + FINAL_SQUINT**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # Visual gate — P0 FIX (2026-09-23 ~01:00 Europe/Warsaw)
 
 **Owner:** WT — Visual  

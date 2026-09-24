@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez VISUAL_BRIEF.md solid-first + SPACING_FONT_FIX.md**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # FIX_P0_GLASS_PATHS — Visual (2026-09-23)
 
 Dense glass SoT + CSS only. Builder still owns spine / xlsx / hollow CTA.

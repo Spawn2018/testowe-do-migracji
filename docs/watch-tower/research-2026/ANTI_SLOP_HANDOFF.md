@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez research-2026/SOT_FLIP_CLAUDE_SHELL_2026-09-23.md + VISUAL_BRIEF.md**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # ANTI-SLOP HANDOFF — builder (2026-09-23)
 
 **Owner:** WT—Visual (SoT) · **Implement:** SPA builder · **No SPA React coding in this handoff.**

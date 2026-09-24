@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez UX_MAP.md + VISUAL_BRIEF.md (align „IBM Plex” w nagłówku VOID)**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # WATCH TOWER — UX / product design trends: logistics control towers & dense ops UIs (2025–2026)
 
 **Dokument:** `research-2026/04-ux-ops-trends-2026.md`  

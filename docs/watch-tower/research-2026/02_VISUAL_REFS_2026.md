@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez VISUAL_BRIEF.md + claude-v2.0**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # WATCH TOWER — Visual refs & craft (Sept 2026)
 
 **Owner:** WT — Visual  

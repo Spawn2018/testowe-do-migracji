@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez VISUAL_BRIEF.md + design/claude-v2.0/ (tokeny Claude / Barlow)**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # ANTI-SLOP CSS TOKENS — copy-paste for builder (2026-09-23)
 
 **SoT:** [`../VISUAL_BRIEF.md`](../VISUAL_BRIEF.md) §0–§6 · **FAIL gate:** [`ANTI_SLOP_CHECKLIST.md`](./ANTI_SLOP_CHECKLIST.md)  

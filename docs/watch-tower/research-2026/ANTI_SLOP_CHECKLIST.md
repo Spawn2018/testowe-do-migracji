@@ -1,3 +1,7 @@
+> **NIEAKTUALNE — zastąpione przez VISUAL_BRIEF.md §0 + research-2026/CLAUDE_SHELL_GATE.md (Barlow / Claude 1:1; Plex-as-primary VOID)**
+>
+> Indeks: `docs/handover/09_INDEKS_WIEDZY.md` · Etap C4 · 2026-09-23. Pliku nie usuwać.
+
 # ANTI-SLOP CHECKLIST — 30s FAIL gate (2026-09-23)
 
 **HARD P0.** Any FAIL = do not ship. No “almost” / no polish pass.
