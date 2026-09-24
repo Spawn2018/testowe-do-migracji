@@ -6,7 +6,7 @@ Kolumny: `ID | pozycja | status | commit | testy (liczby) | uwagi`.
 Po F2.5 dodać wiersze **L*** (L1/L2/L4/L5/L7/L8/L9/L16) — na razie brak (notatka: po F2.5).  
 Niezgodności z F2.4: **F2.4-a / F2.4-b / F2.4-c** (poniżej, po G1).
 
-Aktualizacja: **2026-09-24** Europe/Warsaw · Etap 0 zamknięty · Etap 1 w toku (F2.1–F2.4 DONE).
+Aktualizacja: **2026-09-24** Europe/Warsaw · **Etap 1 ZAMKNIĘTY (G1)** · następny: Etap 2.
 
 ---
 
@@ -28,7 +28,7 @@ Aktualizacja: **2026-09-24** Europe/Warsaw · Etap 0 zamknięty · Etap 1 w toku
 | F2.4 | Weryfikacja mechanizmu paliwowego (bez kodu) | **DONE** | `8f74961` | unit **41/41** · pw **4/4** (bez zmian logiki) | SoT: `docs/watch-tower/BAF_SEFS.md`. Tabela zgodności w `03_PARAMETRY_BIZNESOWE.md` §2.2: **9 tak / 1 częściowo / fasada Opcji**. Naprawy: F2.4-a, F2.4-b, F2.4-c. Opcje BAF → D25 |
 | F2.5 | Pozycje L1–L2/L4–L5/L7–L9/L16 — przydział | **DONE** | `48bb076` | — (docs) | 8× L* dopisane do POSTEP z etapem 2/4/5 — bez etapu nie wejdą do robót |
 | F2.6 | Trzy wyjaśnienia (kokpit 54, mapa 18, TZ) | **DONE** | `454ba4a` | — (docs) | 1) Kokpit **54**/90: zmiana D5 KPI była wyraźna głównie u HHL (+ część KSH); ujęcia SCX i część KSH@768 zostały ≤ progu 0.001 (inne KPI / mniejszy obszar cyfr). 2) Mapa **18**/90 tylko @1920: podpis demo / etykiety rejsu dopiero przy pełnej szerokości przekroczyły budżet pikseli — węższe viewporty trzymały ratio. 3) `Europe/Warsaw` i `Europe/Stockholm` mają to samo przesunięcie i te same reguły DST — rozróżnienie w kodzie to zapis intencji operacyjnej, liczbowo offset się nie różni. |
-| G1 | Brama etapu 1 | OPEN | — | — | pending |
+| G1 | Brama etapu 1 | **DONE** | `G1_SHA` | unit **41/41** · pw **4/4** · stylelint **0** · visual **720/720** (thr=0.28, maxDiffPixels=60) | `03_PARAMETRY` §2.2 tabela zgodności OK; L1–L16 przydzielone (F2.5); F2.1–F2.6 DONE. Bez regen baseline. STOP przed Etapem 2 |
 
 ### Naprawy z F2.4 (poza listą 51 — dopiski)
 
