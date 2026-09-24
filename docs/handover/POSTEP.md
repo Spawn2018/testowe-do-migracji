@@ -6,7 +6,7 @@ Kolumny: `ID | pozycja | status | commit | testy (liczby) | uwagi`.
 Po F2.5 dodać wiersze **L*** (L1/L2/L4/L5/L7/L8/L9/L16) — na razie brak (notatka: po F2.5).  
 Niezgodności z F2.4: **F2.4-a / F2.4-b / F2.4-c** (poniżej, po G1).
 
-Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · P6 · D-EUR-T DONE) · następny: D25.
+Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · D-EUR-T · D25 DONE) · następny: G2.
 
 ---
 
@@ -36,18 +36,18 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · P6 · D-
 |---|---|---|---|---|---|
 | F2.4-a | Konflikt daty SEFS: załadunek (`BAF_SEFS`) vs rozładunek (`MECHANIZM`) vs kod `loadDate` | OPEN | — | — | Uzgodnić SoT daty; `sefsForLoadDate` dziś jak załadunek. Etap: **2** (albo 4 przy pieniądzach) |
 | F2.4-b | Brak wyliczania średniej z poprzedniego tygodnia (live/seed pipeline) | OPEN | — | — | `BAF_SEFS` §3; kod ma tylko `SEFS_WEEKLY` demo. Etap: **4** (M3/M8) lub **2** jeśli demo pipeline |
-| F2.4-c | Opcje BAF/SEFS: wszystkie pola `bafFields` + nota UI nie zasilają `computeSefs` → D25 | OPEN | — | — | Lista pól w `03_PARAMETRY` §2.4. Etap: **2** (D25) |
+| F2.4-c | Opcje BAF/SEFS: wszystkie pola `bafFields` + nota UI nie zasilają `computeSefs` → D25 | **DONE** | `3ab44c1` | (w D25) | Pola `readOnly` + nota fasady; `computeSefs` ← tylko SEFS_WEEKLY. |
 
 ### Pozycje L* (F2.5) — przydział etapów
 
 | ID | pozycja | status | commit | testy (liczby) | uwagi |
 |---|---|---|---|---|---|
-| L1 | Alternatywy trasy SE ×4 „Wybierz” mają mutować load/risk (dziś toast) | OPEN | — | — | Etap **2** (fasada/D25 · `RisksView`) |
-| L2 | Pill opóźnienia w drawerze z `delayMinutes`, nie stały napis | OPEN | — | — | Etap **2** (`LoadDrawer` treść) |
-| L4 | Terminy zadań z `plannedLoadDate` / danych load, nie `18+i*9` | OPEN | — | — | Etap **2** (`TasksView` dane) |
+| L1 | Alternatywy trasy SE ×4 „Wybierz” mają mutować load/risk (dziś toast) | **DONE** | `3ab44c1` | (D25) | `applySeRouteAlt` + `seRouteAlts.ts` — mutacja risk/load/event. |
+| L2 | Pill opóźnienia w drawerze z `delayMinutes`, nie stały napis | **DONE** | `3ab44c1` | (D25) | `formatDelayPill(delayMinutesVsPlan)` w LoadDrawer. |
+| L4 | Terminy zadań z `plannedLoadDate` / danych load, nie `18+i*9` | **DONE** | `3ab44c1` | (D25) | `hoursUntilLoad(plannedLoadDate)`. |
 | L5 | Preferencje powiadomień w Opcjach: zapis **i** filtracja przy push | OPEN | — | — | Etap **4** (centrum powiadomień / M7·BK ścieżka push) |
-| L7 | Wskaźnik kompletności DRAWING z modelu, nie hardcode 100% | OPEN | — | — | Etap **2** (`DocsView` · D25-ish) |
-| L8 | Kolumna „Próbki” geofence z modelu, nie zawsze `2` | OPEN | — | — | Etap **2** (`GeofenceView`) |
+| L7 | Wskaźnik kompletności DRAWING z modelu, nie hardcode 100% | **DONE** | `3ab44c1` | (D25) | Kategoria DRAWING w vault; licznik z UPLOADED. |
+| L8 | Kolumna „Próbki” geofence z modelu, nie zawsze `2` | **DONE** | `3ab44c1` | (D25) | `samplesRequired` w Geofence + UI. |
 | L9 | JSONLogic / akcje workflow w runtime — realna semantyka, nie atrapa UI | OPEN | — | — | Etap **4** (silnik reguł przy backendzie/pieniądzach) |
 | L16 | Force-majeure / opóźnienia — mechanizm ryzyk bez atrap (po SE road) | OPEN | — | — | Etap **4** (rozszerzenie ryzyk / opóźnień) |
 
@@ -67,7 +67,7 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · P6 · D-
 | D18 | Oznaczenie danych demonstracyjnych | **DONE** | `9a9d9cd` | unit **105 passed / 1 skipped** · pw **4/4** · D19-T **0/0** · lint:css **0** | `showDemoMarks` (domyślnie ON) + przełącznik w Opcje → Preferencje. `DemoMark` na: cennik SCX, BAF/SEFS (Opcje), dodatek paliwowy (Finanse), panel SE (Ryzyka). i18n `demo_mark*`. Test: store toggle + soft footnotes. |
 | P6 | Stawki demo PLN→EUR tabelą 186/A/NBP/2026 | **DONE** | `5a4c1c0` | unit **110 passed / 1 skipped** · pw **4/4** · D19-T **0/0** · lint:css **0** | `DEMO_FX`/`DEMO_FX_META` w `src/lib/money/demoFx.ts` (186/A/NBP/2026 · 2026-09-24 · mid 4,3900). `RATE_*` + extras seed + store draft → EUR (`plnToEurDemo`). UI: `formatAppMoney` (Dashboard/Schedule/Finance/Invoices/LoadDrawer); SEFS → `formatSourceMoney`. Opcje cennik: edycja w EUR + nota FX. Test: `tests/demo-fx.test.ts` (+5). D18 DemoMark zostaje. Bez D-EUR-T / regen baseline. |
 | D-EUR-T | Test waluty EUR/PLN w UI | **DONE** | `d9d4967` | `npm run test:deur` → **EUR=0 / PLN=0** · unit **110/1 skip** · pw **4/4** · D19-T **0/0** · lint:css **0** | Spec `tests/d-eur-t.spec.ts`: dwa tryby preferencji; zakazy z ZLECENIE; wyjątki data-deur-exempt (indeks paliwowy, wybór waluty). Money cells = kod trybu; nota FX 4,3900. test:deur w pre-push. sched_money_note {cur}. Smoke kokpit odświeżony (FX P6). Bez D25 / regen baseline. |
-| D25 | Atrapy/porzucone z fasady — decyzja | OPEN | — | — | pending |
+| D25 | Atrapy/porzucone z fasady — decyzja | **DONE** | `3ab44c1` | unit **110/1 skip** · pw **4/4** · D19-T **0/0** · D-EUR-T **0/0** · lint:css **0** | ATRAPA→implement (L1/L2/L4/L7/L8, prefs filter, invoice week/deltas); SAIL via voyage+DemoMark; PORZUCONE: MapLibre public usunięte, leaflet duplikat już brak, BAF Options fasada (F2.4-c). Decyzje w `02_FASADA.md` §D25. L9/F2.4-a/b poza Etap 2. Bez G2. |
 | G2 | Brama etapu 2 + baseline Fala 3a | OPEN | — | — | pending |
 
 ## Etap 3 — backend
