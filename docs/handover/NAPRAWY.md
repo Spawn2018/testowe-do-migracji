@@ -3,7 +3,7 @@
 | Pole | Wartość |
 |---|---|
 | Data zapisu | **2026-09-24** Europe/Warsaw |
-| Status | **Fala 1 ACCEPTED** · **Fala 2 CLOSED (code)** · D7 answered · **D22/D5/D4/D3/D20/D8 DONE** · next: Fala 2 GATE (baseline regen only at GATE) |
+| Status | **Fala 1 ACCEPTED** · **Fala 2 GATE DONE** · D7 answered · **D22/D5/D4/D3/D20/D8 DONE** · baseline `baseline-fala-2-2026-09-24` · **STOP before Fala 3** |
 | Repo | `Spawn2018/testowe-do-migracji` · branch `main` |
 | Kod produktu | Fala 2 **nie** startuje tu (poza closeout D9/stylelint + proof D2) |
 
@@ -260,7 +260,8 @@ PLAN only (Fala 3) — opcja 2 Sebastian: checkbox zgody, `allowRemovals` z UI.
 ## Brama CI / lokalna (2026-09-24)
 
 - Hak `pre-push`: `.githooks/pre-push` → `git lfs pre-push`, `npm run test:unit`, `npx playwright test`. `core.hooksPath=.githooks`.
-- Nie pushować `.github/workflows`. Nie regenerować `shots-baseline`. Nie deploy Vercel.
+- Nie pushować `.github/workflows`. Nie deploy Vercel.
+- `shots-baseline` regen **tylko** na GATE (Fala 2 GATE done → tag `baseline-fala-2-2026-09-24`). Kolejny regen dopiero przy Fala 3 GATE / osobnej decyzji.
 
 ## Fale
 
@@ -285,18 +286,29 @@ PLAN only (Fala 3) — opcja 2 Sebastian: checkbox zgody, `allowRemovals` z UI.
 | D9 stylelint closeout | `2415e11b21878cb2060c6576be02b098a0ae20f4` | **13/13** | **4/4** | no regen |
 | NAPRAWY renumber + D2 proof + D7 answer | see `git log -1 -- docs/handover/NAPRAWY.md` | **13/13** | **4/4** | — |
 
-### Fala 2 — w toku
-- **D22** DONE (store versioning + migrate; Step 0 baseline seed = wipe→code seed).
-- **D5** DONE (KPI ↔ corridor stage SoT; ~90 kokpit shots expected drift — no baseline regen).
-- **D4** DONE (voyage SoT; ~180 kokpit+ryzyka shots expected drift — no baseline regen).
-- **D3** DONE (SE road DEMO LABEL — no TV key; DemoMark reusable for D18).
-- **D20** DONE (three-way invoice match; ~60 faktury shots — no baseline regen).
-- **D8** DONE (timezone policy; 400+ shots expected — **no baseline regen in this commit**; GATE next).
-- Fala 2 product code complete. D7 fix only if needed after business review.
+### Fala 2 — **GATE DONE / CLOSED** (2026-09-24 Europe/Warsaw)
+- Product: **D22 · D5 · D4 · D3 · D20 · D8** DONE (HEAD product `1690153…` before GATE commit).
+- GATE numbers: `test:unit` **41/41** · playwright **4/4** · visual capture **720/720** (one `scripts/baseline.mjs` → compare vs old baseline).
+- Diff vs old baseline (pixelmatch thr=0.2, maxDiffPixelRatio=0.001): **249/720** changed · **471** identical · 0 size/missing.
+- Groups (overlap — total ≠ sum of Dx estimates):
+
+| group | ~count | why (Dx) | vs estimate |
+|---|---:|---|---|
+| faktury | 60 | D20 three-way match (all faktury shots) | = D20 ~60 |
+| harmonogram | 87 | D8 TZ + D4 voyage times | ⊂ D8 400+ / D4 ~180 |
+| kokpit | 54 | D5 KPI stage counts (+ light D8) | ⊂ D5 ~90 (SCX under threshold) |
+| moje-zadania | 30 | D8 task datetime TZ (SCX only) | ⊂ D8 400+ |
+| mapa | 18 | D4/D3/D8 visible mainly at 1920 | ⊂ D4 ~180 / D3 ~90 (under est) |
+| ryzyka / docs / fin / … | 0 | unchanged | D22 est 0 ✓ |
+
+- Overlap: same shots hit by multiple fixes; D8 est 400+ alone, but many predicted diffs stayed ≤0.001 ratio → unique changed **249** ≪ sum(~820).
+- Decision: **REGEN+TAG** (justified; no unexplained views).
+- Tag: `baseline-fala-2-2026-09-24` · shots-baseline LFS regen + smoke `__screenshots__` updated.
+- **STOP before Fala 3** — do not start D26 / import scale / visual CI here.
 
 ### Fala 3
-D26 (plan) + skala importu + visual CI.
+D26 (plan) + skala importu + visual CI. **Not started.**
 
 ---
 
-*Koniec. Fala 1 accepted. D7 answered (hybrid_min). L1/L2/L4/L5/L7/L8/L9/L16 OPEN. Fala 2 czeka na osobny START kodu.*
+*Koniec. Fala 1 accepted. Fala 2 GATE done — STOP before Fala 3. D7 answered (hybrid_min). L1/L2/L4/L5/L7/L8/L9/L16 OPEN.*
