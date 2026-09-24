@@ -7,7 +7,7 @@
 | Źródła | Prompt finalny t110u (D1–D17) · t111u (D18) · t120u (D19–D24) · Sebastian 2026-09-24 (D26) · `02_FASADA.md` · `07_ZNANE_BLEDY.md` · C3 |
 | Kod produktu | **bez zmian** w tym pliku |
 
-> D1–D18 **obowiązują bez zmian**. D19–D24 **dochodzą** z Etapu C. D26 dopisane 2026-09-24. Nie zaczynać realizacji D24 tutaj.
+> D1–D18 **obowiązują bez zmian**. D19–D24 **dochodzą** z Etapu C. D26 dopisane 2026-09-24. D24 zamknięte raportem D24_14_CLICK.md (SHIP 14/14). Nie zaczynać Fala 1 / D26 tutaj.
 
 ---
 
@@ -72,7 +72,8 @@ Z pliku 07: naprawione pod P9, bez testów automatycznych. Przy awarii funkcja *
 *(PR #1 — unit testy `tests/schedule-import.test.ts` — squash-merge na `main` 2026-09-24; to nie zamyka pełnego D23 na skali produkcyjnej — patrz Fala 3.)*
 
 **D24. Pełny przebieg czternastu prób.**  
-Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej paczce, z sumą kontrolną paczki w raporcie. **NIE START** w tej sesji.
+Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej paczce, z sumą kontrolną paczki w raporcie.  
+**DONE 2026-09-24** — raport [`docs/qa-start/D24_14_CLICK.md`](../qa-start/D24_14_CLICK.md): **SHIP 14/14**; appChecksum `d91ce4c3786451f20adf3ec8fead38c8d39dc8ed5a464ebb67c84a24762474fa` (`index-BqvbHwzw.js`); HEAD `86050d10`.
 
 ---
 
@@ -80,7 +81,7 @@ Z pliku 07: po P9 wykonano tylko sprawdzenia skupione. Do wykonania na aktualnej
 
 ### Fala 0 — testy / bezpieczeństwo regresji
 - **D23** — unit testy importu (PR #1 na `main`)
-- **D24** — pełny przebieg 14 prób (**nie rozpoczęty**)
+- **D24** — pełny przebieg 14 prób — **DONE** → [`D24_14_CLICK.md`](../qa-start/D24_14_CLICK.md) (SHIP 14/14)
 
 ### Fala 1–2
 - Bez zmian względem D1–D22 powyżej; kolejność jak niżej.
@@ -101,11 +102,11 @@ Wybrana droga (Sebastian 2026-09-24): **2 — usunięcia za wyraźną zgodą**. 
 ## Kolejność (gdy Sebastian da START na D)
 
 1. Nie mieszać z C2.3 / baseline.  
-2. **Fala 0:** D23 (unit) → D24 (14 prób) — D24 dopiero na osobny START.  
+2. **Fala 0:** D23 (unit) ✓ → D24 (14 prób) ✓ — raport D24_14_CLICK.md.  
 3. Najpierw bezpieczne tooling/i18n (D19, D22), potem atrapy funkcji (D20, D1–D9), potem sprzątanie (D15/D21).  
 4. **Fala 3:** D26 (zgoda na usunięcia w UI) + skala ~70+ + visual CI.  
 5. D18 (oznaczenie demo) można zrobić wcześnie — zero zmiany logiki stawek.
 
 ---
 
-*Koniec zakresu. Realizacja D24/D26 = osobny START — nie w tej sesji Etapu C.*
+*Koniec zakresu. D24 zamknięte raportem. Realizacja D26 / Fala 1 = osobny START.*

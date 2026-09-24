@@ -1,0 +1,112 @@
+{
+  "when": "2026-09-24T00:27:31.438Z",
+  "whenWarsaw": "2026-09-24 02:27 CEST",
+  "url": "http://127.0.0.1:4177/#/?now=2026-09-23T14%3A32%3A00Z",
+  "head": "86050d10fbc0bf2ba05f9f1e447411489715a322",
+  "tree": "d305c2453055ee15961ec576bff5c98ee254d83a",
+  "tag": "etap-c-2026-09-23",
+  "appChecksum": "d91ce4c3786451f20adf3ec8fead38c8d39dc8ed5a464ebb67c84a24762474fa",
+  "cssChecksum": "320c485d3e0db9beceab44ed2e8e85d61c83be34ab07f345e4f11d7f079733b1",
+  "jsFile": "/assets/index-BqvbHwzw.js",
+  "cssFile": "/assets/index-KIdUC5RD.css",
+  "results": [
+    {
+      "id": 1,
+      "verdict": "PASS",
+      "detail": "mutations: exportXlsx size=14656; resources tractor=D24-TR-KI3Y on SG-34; map nav→leaflet; wf run notifs 13→14",
+      "shot": "docs/qa-start/d24/01-mutations.png"
+    },
+    {
+      "id": 2,
+      "verdict": "PASS",
+      "detail": "blocked=K-03 disabled=true status=RESOURCES_PENDING title=docMissing flag; shot=docs/qa-start/d24/02-ready-blocked.png; cover READY on P-02",
+      "shot": "docs/qa-start/d24/02-ready.png"
+    },
+    {
+      "id": 3,
+      "verdict": "PASS",
+      "detail": "HHL/SCX: Eksport XLSX yes, Wgraj no; KSH: Wgraj yes; export blob ~14.6KB; dry-run p9r-merge-plus1-valid.xlsx → +1/~72/−0/⚠0; Zatwierdź → loads 72→73 with QA-RECLICK-923; SG-01 preserved",
+      "shot": "docs/qa-start/d24/03-commit.png",
+      "shots": [
+        "docs/qa-start/d24/03-ksh-wgraj.png",
+        "docs/qa-start/d24/03-dry-run.png",
+        "docs/qa-start/d24/03-commit.png"
+      ]
+    },
+    {
+      "id": 4,
+      "verdict": "PASS",
+      "detail": "persist on SG-02: tractor/pilot=D24-PIL-KW09; booking=D24-AW-KW09; wrote={\"res\":true,\"awiz\":true,\"ferry\":false,\"reasons\":[]}",
+      "shot": "docs/qa-start/d24/04-ustalenia.png"
+    },
+    {
+      "id": 5,
+      "verdict": "PASS",
+      "detail": "clicked=Przelicz; PLAN_B events 0→1; notifs 14→15; ferryPresent=true",
+      "shot": "docs/qa-start/d24/05-planb.png"
+    },
+    {
+      "id": 6,
+      "verdict": "PASS",
+      "detail": "docs 432→432; hit=doc-muesl003-holsq; uiHasAttach=true",
+      "shot": "docs/qa-start/d24/06-driver.png"
+    },
+    {
+      "id": 7,
+      "verdict": "PASS",
+      "detail": "geo rows=13; leaflet=true; ais=true; fleet=true; tv=true",
+      "shot": "docs/qa-start/d24/07-map-layers.png"
+    },
+    {
+      "id": 8,
+      "verdict": "PASS",
+      "detail": "Trafikverket=seed; AIS=seed; lines=[\"Schemat korytarza, nie mapa nawigacyjna. Trasa lądowa w Szwecji odwzorowuje przebieg z zezwolenia, nie wynik routera. Trafikverket E4: seed · AIS: seed · GPS fleet tick co 1,5 s. Kolumny tabeli: przeciągnij krawędź nagłówka (jak Harmonogram).\",\"pasmo 2.4–3.5 h · heurystyka · prom Nova Star · E4 + Trafikverket seed · przerwy 561/2006\"]",
+      "shot": "docs/qa-start/d24/08-trafikverket.png"
+    },
+    {
+      "id": 9,
+      "verdict": "PASS",
+      "detail": "HHL feeEdit=true fee=3.7; SCX={\"ok\":true,\"label\":\"Płatność standardowa\"}; offer={\"enabled\":true,\"feePercent\":3.7,\"payoutDelayValue\":48,\"payoutDelayUnit\":\"hours\",\"label\":\"SCX Factoring\",\"notes\":\"\"}",
+      "shot": "docs/qa-start/d24/09-factoring-scx.png"
+    },
+    {
+      "id": 10,
+      "verdict": "PASS",
+      "detail": "SEFS/BAF render: ORLEN=true OKQ8=true; pct=15,0%,1,0%,15,3%,13,2%,15,1%,20,5%,16,0%,16,0%; PLN=5.70 PLN,5.74 PLN",
+      "shot": "docs/qa-start/d24/10-sefs.png"
+    },
+    {
+      "id": 11,
+      "verdict": "PASS",
+      "detail": "bell unread 16→0; spine 121Przygotowanie cleared=true; KPI→Powiadomienia",
+      "shot": "docs/qa-start/d24/11-kpi.png"
+    },
+    {
+      "id": 12,
+      "verdict": "PASS",
+      "detail": "band=HIGH; range=true; lines=[\"ETA Boden\",\"05.10.2026, 14:00 w oknie HIGH\",\"pasmo 0.0–0.0 h · heurystyka · prom Wawel\"]",
+      "shot": "docs/qa-start/d24/12-eta.png"
+    },
+    {
+      "id": 13,
+      "verdict": "PASS",
+      "detail": "HHL table headers Przychód/Koszt/Marża + values; KSH lock: \"Stawki przewoźnika i marża spedytora nie są dostępne w roli klienta.\"; SCX lock: \"Cena płacona przez KSH i marża spedytora nie są dostępne w roli przewoźnika.\"",
+      "shot": "docs/qa-start/d24/13-reprobe-hhl.png",
+      "shots": [
+        "docs/qa-start/d24/13-reprobe-hhl.png",
+        "docs/qa-start/d24/13-reprobe-ksh.png",
+        "docs/qa-start/d24/13-reprobe-scx.png"
+      ]
+    },
+    {
+      "id": 14,
+      "verdict": "PASS",
+      "detail": "Grunwaldzka 27C + Stalverket 20 visible ({\"srem\":true,\"boden\":true,\"sremLoose\":true,\"bodenLoose\":true})",
+      "shot": "docs/qa-start/d24/14-addresses.png"
+    }
+  ],
+  "score": "14/14",
+  "verdict": "SHIP",
+  "failList": [],
+  "gateShot": "docs/qa-start/d24/00-gate.png"
+}
