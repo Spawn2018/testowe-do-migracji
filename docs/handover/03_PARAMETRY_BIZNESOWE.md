@@ -2,7 +2,7 @@
 
 | Pole | Wartość |
 |---|---|
-| Data | **2026-09-23** Europe/Warsaw |
+| Data | **2026-09-24** Europe/Warsaw (F2.4) |
 | Zasada | Każdy wiersz: **USTALONE** (z umowy / SoT / kodu reguł) vs **DEMONSTRACYJNE** (seed / UI demo) + dowód `src`/`docs` |
 | Bez commit · bez zmian kodu |
 
@@ -26,15 +26,82 @@ Legenda: **USTALONE** = reguła produktowa lub wartość z załącznika/cennika 
 
 ## 2. BAF / SEFS (dopłata paliwowa)
 
+### 2.0 Ścieżki dokumentacji — **jeden obowiązek**
+
+| Plik | Rola |
+|---|---|
+| **`docs/watch-tower/BAF_SEFS.md`** | **Obowiązujący SoT mechanizmu SEFS** (załącznik umowy / `BAF_SPEC.docx`) — zasady 1–8, źródła URL, tabele SEK/PLN |
+| `src/data/sefs-tables.json` (= kopia `docs/watch-tower/sefs-tables.json`) | Maszynowa postać tabel + `base` + `sources` + `rule: hybrid_min` — musi być zgodna z `BAF_SEFS.md` |
+| `src/lib/sefs.ts` | Implementacja: `lookupMult`, `computeSefs`, `SEFS_WEEKLY`, `sefsForLoadDate`, `applySefsToRoadRate` |
+| `docs/handover/MECHANIZM_PIENIEDZY.md` | SoT **pieniędzy/faktur/kursu NBP**; dla paliwa tylko odsyła do SEFS hybrid_min — **nie zastępuje** `BAF_SEFS.md` w budowie tablic |
+| `docs/claude/archiwum/D7_*.md` | Historia decyzji D7 (hybrid_min) — archiwum, nie SoT |
+
+**Obowiązujący dokument mechanizmu SEFS:** `docs/watch-tower/BAF_SEFS.md`.
+
+### 2.1 Parametry (skrót)
+
 | Parametr | Wartość | Status | Dowód |
 |---|---|---|---|
-| Model | **hybrid_min**: `appliedMult = min(mult_sek, mult_pln)` | **USTALONE** | `sefs-tables.json` `rule`; `sefs.ts` `computeSefs`; `BAF_SEFS.md` |
+| Model | **hybrid_min**: `appliedMult = min(mult_sek, mult_pln)` | **USTALONE** | `sefs-tables.json` `rule`; `sefs.ts` `computeSefs`; `BAF_SEFS.md` §2 |
 | Zakres SEFS | **tylko stawka drogowa**; nie ferry eco / demurrage / extras | **USTALONE** | `sefs.ts` nagłówek; `pricing.ts:37–39` |
-| Baza kontraktowa | SEK **19.47** · PLN **5.698** | **USTALONE** | `sefs-tables.json` `base` |
-| Źródła indeksu | OKQ8 GoEasy Diesel B2B · ORLEN Ekodiesel hurt | **USTALONE** (URL) | `SEFS_SOURCES` · `sefs-tables.json` `sources.urls` |
+| Baza kontraktowa | SEK **19.47** · PLN **5.698** | **USTALONE** | `sefs-tables.json` `base`; `BAF_SEFS.md` §4 |
+| Źródła indeksu | OKQ8 GoEasy Diesel B2B · ORLEN Ekodiesel hurt | **USTALONE** (URL) | `BAF_SEFS.md` §Źródła · `SEFS_SOURCES` |
 | Snapshoty tygodniowe w kodzie | W36–W38 2026 (ceny 19.12–19.68 SEK / 5.62–5.74 PLN) | **DEMONSTRACYJNE** (wartości) / **USTALONE** (mechanizm) | `sefs.ts` `SEFS_WEEKLY` — nie live scrape |
-| `BAF_PARAMS` UI | `indexSource: SEFS_HYBRID_…`, `baseValue: 19.47`, `currentValue: 19.68`, `capPct: 2`, … | **DEMONSTRACYJNE** pola legacy UI | `seed.ts` `BAF_PARAMS`; realna wycena idzie przez `SEFS_WEEKLY` |
-| Live ORLEN/OKQ8 | brak fetch w SPA | — | atrapa indeksu = seed (patrz `02_FASADA`) |
+| `BAF_PARAMS` UI (Opcje) | legacy pola — **nie zasilają** `computeSefs` | **DEMONSTRACYJNE / FASADA** | `OptionsView` · `seed.ts` `BAF_PARAMS` → D25 / F2.4-c |
+| Live ORLEN/OKQ8 | brak fetch w SPA | — | atrapa indeksu = seed |
+
+### 2.2 Tabela zgodności F2.4 (doc ↔ kod)
+
+Kolumny: `reguła z dokumentu | cytat, plik, sekcja | kod: plik, linia | zgodne?`
+
+| # | reguła z dokumentu | cytat, plik, sekcja | kod: plik, linia | zgodne? |
+|---|---|---|---|---|
+| 1 | Źródło hurt SE (SEK) | „OKQ8 GoEasy Diesel (listowa B2B)” + URL okq8.se — `BAF_SEFS.md` §Źródła | `sefs-tables.json` `sources.sek` / `urls.okq8`; `sefs.ts` `SEFS_SOURCES` 25–32 | **tak** |
+| 2 | Źródło hurt PL (PLN) | „ORLEN Ekodiesel” + URL orlen.pl hurt — `BAF_SEFS.md` §Źródła | `sources.pln` / `urls.orlen`; `SEFS_SOURCES.orlen` | **tak** |
+| 3 | Częstotliwość odczytu | „Cotygodniowa korekta” — `BAF_SEFS.md` §1 pkt 1 | Brak live scrape; snapshoty `SEFS_WEEKLY` W36–W38 (`sefs.ts` 81–85) — tygodniowy rytm demonstracyjny | **częściowo** (mechanizm tygodniowy tak; automatyczny odczyt **nie**) → **F2.4-b** |
+| 4 | Budowa tablicy `SEFS_SEK` | Tabela SEK „cena do (włącznie) → mnożnik” — `BAF_SEFS.md` §Tabela SEK | `sefs-tables.json` `sek[]` → `SEFS_SEK` (`sefs.ts` 34); `lookupMult` 38–45 (`lte` włącznie) | **tak** (treść 1:1 z md) |
+| 5 | Budowa tablicy `SEFS_PLN` | Tabela PLN — `BAF_SEFS.md` §Tabela PLN | `sefs-tables.json` `pln[]` → `SEFS_PLN` (`sefs.ts` 35) | **tak** |
+| 6 | Hybrid = niższy mnożnik | „do rozliczenia **niższy z dwóch mnożników**” — `BAF_SEFS.md` §2 | `computeSefs` → `Math.min(multSek, multPln)` (`sefs.ts` 50–59) | **tak** |
+| 7 | Zakres tylko stawka drogowa | „tylko stawka transportu drogowego — nie anulowanie… ani przestoje” — `BAF_SEFS.md` §6 | `applySefsToRoadRate` + `pricing.ts` 37–54 (ferryEco/extras poza SEFS) | **tak** |
+| 8 | Zaokrąglenie ceny indeksu | „zaokrąglenie 2 miejsca” — `BAF_SEFS.md` §3 | `round2` przed lookup (`sefs.ts` 47–48, 56–57); wynik drogi `Math.round(…*100)/100` (`sefs.ts` 62–64) | **tak** |
+| 9 | Progi „do X” / poza tabelą | „do X” = ≤ X; poniżej pierwszego → pierwszy; powyżej ostatniego → ostatni — `BAF_SEFS.md` §7 | `lookupMult` (`sefs.ts` 38–45) | **tak** |
+| 10 | Minimum / maksimum mnożnika | Brzegi tabel (SEK 0.92…1.50, PLN 0.93…1.41) — `BAF_SEFS.md` tabele; **brak** floor%/cap% w załączniku | Kod: brzegi z tablic. UI Opcje `floorPct`/`capPct` **nie** wchodzą do `computeSefs` | **tak** (kontrakt); UI % = fasada → F2.4-c |
+| 11 | Baza kontraktowa 1,00 | OKQ8 **19,47** SEK/l · ORLEN **5,698** PLN/l — `BAF_SEFS.md` §4 | `sefs-tables.json` `base.sek/pln`; tier PLN `lte:5.7 → 1.0` (5.698 po `round2` → 5.70) | **tak** |
+
+**Podsumowanie tabeli:** **9 zgodne** · **1 częściowo (F2.4-b)** · **0 sprzecznych w samym `computeSefs`** · fasada Opcji osobno (F2.4-c). Konflikt daty SEFS: F2.4-a.
+
+### 2.3 Który odczyt indeksu obowiązuje w danej dacie
+
+| Źródło | Reguła | Cytat |
+|---|---|---|
+| **`BAF_SEFS.md` (obowiązujący)** | Cena = **średnia arytmetyczna** cen ON z **poprzedniego** tygodnia kalendarzowego (pon–niedz), 2 dp. Mnożnik stosuje się do zleceń z **datą załadunku** w tygodniu zastosowania. | §3–§5: „średnia… z poprzedniego tygodnia”; „datą załadunku w danym tygodniu” |
+| Kod (`sefs.ts`) | **Nie liczy** średniej z dziennych odczytów. Bierze gotowe `priceSek`/`pricePln` z `SEFS_WEEKLY` dla okna `weekStart…weekEnd` zawierającego `loadDate`, inaczej ostatni snapshot. | `sefsForLoadDate` 87–90; `SEFS_WEEKLY` 81–85 (note: „Mean Mon–Sun…”) |
+| `MECHANIZM_PIENIEDZY.md` | Opłata paliwowa wg **dnia rozładunku** (migawka) — inna kotwica daty niż `BAF_SEFS` / kod. | „opłata paliwowa bierze **dzień rozładunku**” |
+
+**Wniosek:** dokument SoT SEFS **nie milczy** — reguła to **średnia z poprzedniego tygodnia**, nie „ostatni odczyt przed datą” ani „z tego samego dnia”. Kod **nie implementuje** tej średniej (demo snapshoty) → **F2.4-b**. Kotwica daty zlecenia: SoT SEFS = **załadunek**; MECHANIZM = **rozładunek**; kod = **loadDate** jak SoT SEFS → konflikt MECHANIZM↔BAF_SEFS = **F2.4-a**.
+
+### 2.4 Opcje UI → `computeSefs`
+
+`computeSefs(priceSek, pricePln)` (`sefs.ts` 50–59) przyjmuje **wyłącznie dwie ceny**. Wycena: `sefsForLoadDate` → `SEFS_WEEKLY` (`pricing.ts` 50–54). Store `baf` / `updateBaf` **nigdzie** nie jest czytany w `sefs.ts` / `pricing.ts` / `scxRates.ts`.
+
+| Pole Opcje (`bafFields`) | Zapis do `store.baf`? | Zasila `computeSefs`? | Uwaga |
+|---|---|---|---|
+| `indexSource` | tak | **nie** | fasada |
+| `baseValue` (UI: SEK/l) | tak | **nie** | baza kontraktowa jest w JSON, nie z UI |
+| `baseDate` | tak | **nie** | fasada |
+| `currentValue` (UI: SEK/l) | tak | **nie** | nie podaje PLN; nie woła `computeSefs` |
+| `valueDate` | tak | **nie** | fasada |
+| `fuelShare` | tak | **nie** | brak w `BAF_SEFS.md` |
+| `triggerThreshold` | tak | **nie** | brak w SoT |
+| `roundingStep` | tak | **nie** | kod ma stałe `round2` |
+| `floorPct` | tak | **nie** | brak w SoT |
+| `capPct` | tak | **nie** | brak w SoT |
+| `sourceUrl` | tak | **nie** | URL-e z JSON |
+
+Nota UI (`OptionsView` ~110): „Parametry są zapisywane do `baf` i **używane przy kolejnych snapshotach wyceny**” — **fałsz** względem kodu → D25 / F2.4-c.
+
+**Lista D25 (pola Opcje BAF/SEFS bez zasilania `computeSefs`):**  
+`indexSource`, `baseValue`, `baseDate`, `currentValue`, `valueDate`, `fuelShare`, `triggerThreshold`, `roundingStep`, `floorPct`, `capPct`, `sourceUrl` (+ myląca nota panelu).
 
 ---
 
