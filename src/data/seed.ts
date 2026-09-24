@@ -19,6 +19,8 @@ import type {
 } from '../types';
 import { positionAlong, PROGRESS_OF, STATUS_TO_STAGE } from '../lib/status';
 import rawLoads from './loads.json';
+import { DEMO_FX_META, plnToEurDemo } from '../lib/money/demoFx';
+export { DEMO_FX_META } from '../lib/money/demoFx';
 import { seedOrders, seedResourcesForIndex } from './seedIdentity';
 
 export const ORGS: Organization[] = [
@@ -186,16 +188,17 @@ export const WORKFLOWS: WorkflowRule[] = [
   },
 ];
 
+/** P6 — baseRate EUR (PLN ÷ 4,3900 · tabela 186/A/NBP/2026 · 2026-09-24). Metadane: DEMO_FX_META. */
 export const RATE_COST: RateRule[] = [
-  { id: 'rc1', side: 'COST', lengthFrom: 0, lengthTo: 14, widthFrom: 0, widthTo: 2.6, heightFrom: 0, heightTo: 3.0, weightFrom: 0, weightTo: 22, baseRate: 16500 },
-  { id: 'rc2', side: 'COST', lengthFrom: 14, lengthTo: 17, widthFrom: 0, widthTo: 2.7, heightFrom: 0, heightTo: 3.2, weightFrom: 0, weightTo: 24, baseRate: 19200 },
-  { id: 'rc3', side: 'COST', lengthFrom: 17, lengthTo: 22, widthFrom: 0, widthTo: 3.2, heightFrom: 0, heightTo: 3.5, weightFrom: 0, weightTo: 30, baseRate: 22800 },
+  { id: 'rc1', side: 'COST', lengthFrom: 0, lengthTo: 14, widthFrom: 0, widthTo: 2.6, heightFrom: 0, heightTo: 3.0, weightFrom: 0, weightTo: 22, baseRate: 3758.54 },
+  { id: 'rc2', side: 'COST', lengthFrom: 14, lengthTo: 17, widthFrom: 0, widthTo: 2.7, heightFrom: 0, heightTo: 3.2, weightFrom: 0, weightTo: 24, baseRate: 4373.58 },
+  { id: 'rc3', side: 'COST', lengthFrom: 17, lengthTo: 22, widthFrom: 0, widthTo: 3.2, heightFrom: 0, heightTo: 3.5, weightFrom: 0, weightTo: 30, baseRate: 5193.62 },
 ];
 
 export const RATE_REV: RateRule[] = [
-  { id: 'rr1', side: 'REVENUE', lengthFrom: 0, lengthTo: 14, widthFrom: 0, widthTo: 2.6, heightFrom: 0, heightTo: 3.0, weightFrom: 0, weightTo: 22, baseRate: 20500 },
-  { id: 'rr2', side: 'REVENUE', lengthFrom: 14, lengthTo: 17, widthFrom: 0, widthTo: 2.7, heightFrom: 0, heightTo: 3.2, weightFrom: 0, weightTo: 24, baseRate: 23800 },
-  { id: 'rr3', side: 'REVENUE', lengthFrom: 17, lengthTo: 22, widthFrom: 0, widthTo: 3.2, heightFrom: 0, heightTo: 3.5, weightFrom: 0, weightTo: 30, baseRate: 27900 },
+  { id: 'rr1', side: 'REVENUE', lengthFrom: 0, lengthTo: 14, widthFrom: 0, widthTo: 2.6, heightFrom: 0, heightTo: 3.0, weightFrom: 0, weightTo: 22, baseRate: 4669.7 },
+  { id: 'rr2', side: 'REVENUE', lengthFrom: 14, lengthTo: 17, widthFrom: 0, widthTo: 2.7, heightFrom: 0, heightTo: 3.2, weightFrom: 0, weightTo: 24, baseRate: 5421.41 },
+  { id: 'rr3', side: 'REVENUE', lengthFrom: 17, lengthTo: 22, widthFrom: 0, widthTo: 3.2, heightFrom: 0, heightTo: 3.5, weightFrom: 0, weightTo: 30, baseRate: 6355.35 },
 ];
 
 /** Legacy stub — real fuel logic is SEFS (lib/sefs.ts). Kept so older UI refs compile. */
@@ -342,10 +345,13 @@ function buildExtraLoads(): Load[] {
   return EXTRA_LOAD_SPECS.map((spec, index) => {
     const progress = PROGRESS_OF[spec.status] ?? 0;
     const pos = positionAlong(progress);
-    const costBase = 18200 + index * 430;
-    const revBase = 22400 + index * 520;
-    const costTotal = costBase + 1250;
-    const revTotal = revBase + 1950;
+    /* P6 — PLN→EUR via DEMO_FX (186/A/NBP/2026 @ 4,3900) */
+    const costBase = plnToEurDemo(18200 + index * 430);
+    const revBase = plnToEurDemo(22400 + index * 520);
+    const costExtras = plnToEurDemo(1250);
+    const revExtras = plnToEurDemo(1950);
+    const costTotal = costBase + costExtras;
+    const revTotal = revBase + revExtras;
     const margin = revTotal - costTotal;
     return {
       ...template,
@@ -388,14 +394,14 @@ function buildExtraLoads(): Load[] {
         revSefs: Math.round(revBase * 0.01),
         costBaf: Math.round(costBase * 0.01),
         revBaf: Math.round(revBase * 0.01),
-        costExtras: 1250,
-        revExtras: 1950,
+        costExtras,
+        revExtras,
         costTotal,
         revTotal,
         margin,
         marginPct: margin / revTotal,
         belowThreshold: false,
-        currency: 'PLN',
+        currency: 'EUR',
       },
       etaSegments: [],
       etaBoden: null,
@@ -1078,7 +1084,7 @@ export function buildSeedInvoices(loads: Load[]): Invoice[] {
   // Historical submitted bills with real variances (carrier billed ≠ rate card) — diffs computed, not UI-hardcoded.
   const linesDisputed = delivered.slice(4, 8).map((l, i) => {
     const expected = l.pricing.costTotal;
-    const billed = expected + (i === 0 ? 850 : i === 1 ? -200 : 120);
+    const billed = expected + (i === 0 ? plnToEurDemo(850) : i === 1 ? -plnToEurDemo(200) : plnToEurDemo(120));
     return { loadId: l.id, code: l.code, expected, billed, diff: billed - expected };
   });
   const sum = (xs: { expected: number; billed: number }[]) => ({

@@ -23,7 +23,7 @@ import {
   type SchedColId,
   type SchedColPrefs,
 } from '../lib/scheduleColumns';
-import { formatMoney } from '../lib/money/engine';
+import { formatAppMoney } from '../lib/money/demoFx';
 
 type ImportStep = null | 'upload' | 'map' | 'diff' | 'done';
 type Quick =
@@ -626,19 +626,19 @@ export function ScheduleView() {
                         case 'cost':
                           return (
                             <td key={id} data-col={id} className={`num money${stick ? ' stick' : ''}`}>
-                              {formatMoney(l.pricing.costTotal, locale, currency)}
+                              {formatAppMoney(l.pricing.costTotal, locale, currency)}
                             </td>
                           );
                         case 'rev':
                           return (
                             <td key={id} data-col={id} className={`num money${stick ? ' stick' : ''}`}>
-                              {formatMoney(l.pricing.revTotal, locale, currency)}
+                              {formatAppMoney(l.pricing.revTotal, locale, currency)}
                             </td>
                           );
                         case 'margin':
                           return (
                             <td key={id} data-col={id} className={`num money stick ${l.pricing.marginPct < 0.18 ? 'neg' : ''}`}>
-                              {formatMoney(l.pricing.margin, locale, currency)}{' '}
+                              {formatAppMoney(l.pricing.margin, locale, currency)}{' '}
                               <span style={{ fontWeight: 400, color: 'var(--ink-3)', fontSize: 11.5, marginLeft: 5 }}>
                                 {(l.pricing.marginPct * 100).toFixed(1).replace('.', ',')}%
                               </span>

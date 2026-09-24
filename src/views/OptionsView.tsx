@@ -5,6 +5,7 @@ import type { BafParams, FactoringOffer, RateRule } from '../types';
 import { geofenceTypeLabel } from '../lib/enumLabels';
 import { t } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
+import { DEMO_FX_META } from '../lib/money/demoFx';
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
   { key: 'indexSource', labelKey: 'baf_index', type: 'text' },
@@ -45,7 +46,7 @@ function RateEditor({
       {rules.map((rule, index) => (
         <div className="rate-line" key={rule.id}>
           <div className="rate-copy"><b>{t(locale, 'opt_line')} {index + 1}</b><span>{formatRate(rule)}</span></div>
-          <label className="rate-value"><input aria-label={`${side === 'COST' ? t(locale, 'opt_cost') : t(locale, 'opt_rev')} ${t(locale, 'opt_line')} ${index + 1}`} className="input rate-input" type="number" min="0" step="1" value={rule.baseRate} onChange={(e) => onChange(rule.id, Number(e.target.value) || 0)} onBlur={onSave} /><span>{currency}</span></label>
+          <label className="rate-value"><input aria-label={`${side === 'COST' ? t(locale, 'opt_cost') : t(locale, 'opt_rev')} ${t(locale, 'opt_line')} ${index + 1}`} className="input rate-input" type="number" min="0" step="0.01" value={rule.baseRate} onChange={(e) => onChange(rule.id, Number(e.target.value) || 0)} onBlur={onSave} /><span>{currency}</span></label>
         </div>
       ))}
     </div>
@@ -101,13 +102,13 @@ export function OptionsView() {
 
       <div className="options-grid">
         <section className="panel option-panel option-wide pricing-panel">
-          <header className="panel-hd"><h2>{t(locale, "opt_rates_h2")}</h2><span className="sub">{`${t(locale, "opt_rates_sub")} · ${displayCurrency}`}</span><span className="panel-mark">{t(locale, "opt_rates_mark")}</span><DemoMark /></header>
+          <header className="panel-hd"><h2>{t(locale, "opt_rates_h2")}</h2><span className="sub">{`${t(locale, "opt_rates_sub")} · EUR`}</span><span className="panel-mark">{t(locale, "opt_rates_mark")}</span><DemoMark /></header>
           <div className="panel-bd">
             <div className="rate-grid">
-              <RateEditor side="COST" rules={rateCost} currency={displayCurrency} locale={locale} onChange={(id, value) => updateRate('COST', id, value)} onSave={() => saveMark('cennik')} />
-              <RateEditor side="REVENUE" rules={rateRev} currency={displayCurrency} locale={locale} onChange={(id, value) => updateRate('REVENUE', id, value)} onSave={() => saveMark('cennik')} />
+              <RateEditor side="COST" rules={rateCost} currency="EUR" locale={locale} onChange={(id, value) => updateRate('COST', id, value)} onSave={() => saveMark('cennik')} />
+              <RateEditor side="REVENUE" rules={rateRev} currency="EUR" locale={locale} onChange={(id, value) => updateRate('REVENUE', id, value)} onSave={() => saveMark('cennik')} />
             </div>
-            <div className="note option-note">{t(locale, 'opt_rates_note')}</div>
+            <div className="note option-note">{t(locale, 'opt_rates_note')} {` · ${t(locale, 'opt_fx_demo')} ${DEMO_FX_META.tableLabel} · ${DEMO_FX_META.effectiveDate} · ${DEMO_FX_META.mid.toFixed(4).replace('.', ',')}.`}</div>
           </div>
         </section>
 

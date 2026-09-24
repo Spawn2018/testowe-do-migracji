@@ -4,7 +4,7 @@ import { canSeeCost, canSeeMargin, canSeeRevenue } from '../lib/permissions';
 import { t } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
 import { SEFS_WEEKLY, SEFS_SOURCES, computeSefs } from '../lib/sefs';
-import { formatMoney } from '../lib/money/engine';
+import { formatAppMoney, formatSourceMoney } from '../lib/money/demoFx';
 
 function pct(n: number) {
   return `${(n * 100).toFixed(1).replace('.', ',')}%`;
@@ -15,7 +15,7 @@ export function FinanceView() {
   const loads = useTowerStore((s) => s.loads);
   const locale = useTowerStore((s) => s.locale);
   const currency = useTowerStore((s) => s.displayCurrency);
-  const money = (n: number) => formatMoney(n, locale, currency);
+  const money = (n: number) => formatAppMoney(n, locale, currency);
 
   const showCost = canSeeCost(role);
   const showRev = canSeeRevenue(role);
@@ -72,11 +72,11 @@ export function FinanceView() {
         </dd>
         <dt>{t(locale, 'fin_base_val')}</dt>
         <dd>
-          {formatMoney(SEFS_SOURCES.baseSek, locale, 'SEK')} · {formatMoney(SEFS_SOURCES.basePln, locale, 'PLN')}
+          {formatSourceMoney(SEFS_SOURCES.baseSek, locale, 'SEK')} · {formatSourceMoney(SEFS_SOURCES.basePln, locale, 'PLN')}
         </dd>
         <dt>Notowanie</dt>
         <dd>
-          {formatMoney(week.priceSek, locale, 'SEK')} · {formatMoney(week.pricePln, locale, 'PLN')} · {week.weekLabel}
+          {formatSourceMoney(week.priceSek, locale, 'SEK')} · {formatSourceMoney(week.pricePln, locale, 'PLN')} · {week.weekLabel}
         </dd>
         <dt>{t(locale, 'fin_fuel_share')}</dt>
         <dd>min(mult_SEK, mult_PLN) na fracht drogowy</dd>

@@ -16,7 +16,7 @@ import {
 } from '../lib/invoiceMatch';
 import { formatOpsDateTime, formatTableDay, refYearInOps } from '../lib/time';
 import { getNow } from '../lib/frozenNow';
-import { formatMoney } from '../lib/money/engine';
+import { formatAppMoney } from '../lib/money/demoFx';
 import { docCategoryLabel, payoutStatusLabel } from '../lib/enumLabels';
 
 export function InvoicesView() {
@@ -24,7 +24,7 @@ export function InvoicesView() {
   const locale = useTowerStore((s) => s.locale);
   const refYear = refYearInOps(getNow());
   const currency = useTowerStore((s) => s.displayCurrency);
-  const money = (n: number) => formatMoney(n, locale, currency);
+  const money = (n: number) => formatAppMoney(n, locale, currency);
   const loads = useTowerStore((s) => s.loads);
   const invoices = useTowerStore((s) => s.invoices);
   const factoringOffer = useTowerStore((s) => s.factoringOffer);

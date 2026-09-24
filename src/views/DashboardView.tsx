@@ -11,7 +11,7 @@ import { formatEtaBodenCompact } from '../lib/time';
 import { computeCorridorKpis } from '../lib/corridorKpis';
 import { cockpitFerryBanner, focusVoyage, seaForSailing } from '../lib/voyage';
 import { formatSeaRiskLabel } from '../lib/voyageSea';
-import { formatMoney } from '../lib/money/engine';
+import { formatAppMoney } from '../lib/money/demoFx';
 
 export function DashboardView() {
   const role = useTowerStore((s) => s.role);
@@ -160,7 +160,7 @@ export function DashboardView() {
               />
               <KpiTile
                 label={t(locale, 'kpi_week_rev')}
-                value={formatMoney(
+                value={formatAppMoney(
                   loads
                     .filter((l) => l.stage === 'DELIVERED')
                     .slice(-6)
@@ -212,12 +212,12 @@ export function DashboardView() {
               {canSeeMargin(role) ? (
                 <KpiTile
                   label={t(locale, 'kpi_margin_cum')}
-                  value={formatMoney(
+                  value={formatAppMoney(
                     loads.reduce((a, l) => a + l.pricing.margin, 0),
                     locale,
                     currency,
                   )}
-                  delta={`${(marginAvg * 100).toFixed(1).replace('.', ',')}% · koszt ${formatMoney(
+                  delta={`${(marginAvg * 100).toFixed(1).replace('.', ',')}% · koszt ${formatAppMoney(
                     loads.reduce((a, l) => a + l.pricing.costTotal, 0),
                     locale,
                     currency,

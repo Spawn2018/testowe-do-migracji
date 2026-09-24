@@ -20,7 +20,7 @@ import {
   isoToDatetimeLocalValue,
   wallLocalToIso,
 } from '../../lib/time';
-import { formatMoney } from '../../lib/money/engine';
+import { formatAppMoney } from '../../lib/money/demoFx';
 import {
   etaConfidenceLabel,
   eventTypeLabel,
@@ -377,19 +377,19 @@ export function LoadDrawer() {
                   <h4 className="sec">{t(locale, 'cost')} — Scandinavian Express</h4>
                   <div className="mrow">
                     <span className="lbl">Stawka bazowa</span>
-                    <span>{formatMoney(load.pricing.costBase, locale, currency)}</span>
+                    <span>{formatAppMoney(load.pricing.costBase, locale, currency)}</span>
                   </div>
                   <div className="mrow">
                     <span className="lbl">Dodatek paliwowy</span>
-                    <span>{formatMoney(load.pricing.costSefs, locale, currency)}</span>
+                    <span>{formatAppMoney(load.pricing.costSefs, locale, currency)}</span>
                   </div>
                   <div className="mrow">
                     <span className="lbl">Dodatki</span>
-                    <span>{formatMoney(load.pricing.costExtras, locale, currency)}</span>
+                    <span>{formatAppMoney(load.pricing.costExtras, locale, currency)}</span>
                   </div>
                   <div className="mrow total">
                     <span>Razem</span>
-                    <span>{formatMoney(load.pricing.costTotal, locale, currency)}</span>
+                    <span>{formatAppMoney(load.pricing.costTotal, locale, currency)}</span>
                   </div>
                 </>
               ) : (
@@ -402,15 +402,15 @@ export function LoadDrawer() {
                   </h4>
                   <div className="mrow">
                     <span className="lbl">Stawka bazowa</span>
-                    <span>{formatMoney(load.pricing.revBase, locale, currency)}</span>
+                    <span>{formatAppMoney(load.pricing.revBase, locale, currency)}</span>
                   </div>
                   <div className="mrow">
                     <span className="lbl">Dodatek paliwowy</span>
-                    <span>{formatMoney(load.pricing.revSefs, locale, currency)}</span>
+                    <span>{formatAppMoney(load.pricing.revSefs, locale, currency)}</span>
                   </div>
                   <div className="mrow total">
                     <span>Razem</span>
-                    <span>{formatMoney(load.pricing.revTotal, locale, currency)}</span>
+                    <span>{formatAppMoney(load.pricing.revTotal, locale, currency)}</span>
                   </div>
                 </>
               ) : (
@@ -422,7 +422,7 @@ export function LoadDrawer() {
                 <div className="mrow total" style={{ marginTop: 15, borderTop: '2px solid var(--ink)' }}>
                   <span>{t(locale, 'margin')}</span>
                   <span style={{ color: load.pricing.marginPct < 0.18 ? 'var(--red)' : 'var(--go)' }}>
-                    {formatMoney(load.pricing.margin, locale, currency)} · {(load.pricing.marginPct * 100).toFixed(1)}%
+                    {formatAppMoney(load.pricing.margin, locale, currency)} · {(load.pricing.marginPct * 100).toFixed(1)}%
                   </span>
                 </div>
               ) : null}

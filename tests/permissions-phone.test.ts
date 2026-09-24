@@ -53,7 +53,7 @@ function stubLoad(partial: Partial<Load> & Pick<Load, 'plannedDeliverDate'>): Lo
       margin: 0,
       marginPct: 0,
       belowThreshold: false,
-      currency: 'PLN',
+      currency: 'EUR',
       baf_multiplier: 1,
       baf_source_week: '2026-W39',
       price_sek: 0,
