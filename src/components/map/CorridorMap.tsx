@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 
 import { useTowerStore } from '../../store/useTowerStore';
+import { t } from '../../i18n/messages';
 import {
   CORRIDOR_REF_COORDS,
   FERRY_LEG_COORDS,
@@ -113,6 +114,7 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
   const mapRef = useRef<L.Map | null>(null);
   const layersRef = useRef<LayerBag | null>(null);
   const theme = useTowerStore((s) => s.theme);
+  const locale = useTowerStore((s) => s.locale);
   const mapLayers = useTowerStore((s) => s.mapLayers);
   const geofences = useTowerStore((s) => s.geofences);
   const selectLoad = useTowerStore((s) => s.selectLoad);
@@ -336,7 +338,7 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
           fillOpacity: 1,
         });
         const delay = s.delayMin != null ? ` · +${s.delayMin} min` : '';
-        m.bindTooltip(`${s.title} (${severityLabel(s.severity)})${delay}`, { direction: 'top' });
+        m.bindTooltip(`${s.title} (${severityLabel(s.severity, useTowerStore.getState().locale)})${delay}`, { direction: 'top' });
         m.on('click', (e) => {
           L.DomEvent.stopPropagation(e);
           const was = mapFocusKeyRef.current === sitKey;
@@ -385,26 +387,26 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 0 }}
       />
       {!embedded ? (
-        <div className="mapkey" aria-label="Legenda statusów" style={{ zIndex: 500 }}>
+        <div className="mapkey" aria-label={t(locale, 'map_legend')} style={{ zIndex: 500 }}>
           <span>
             <i className="mk-transit" style={{ background: 'var(--sea)' }} />
-            w drodze
+            {t(locale, 'kpi_on_road').toLowerCase()}
           </span>
           <span>
             <i className="mk-load" style={{ background: 'var(--amber)' }} />
-            załadunek
+            {t(locale, 'map_load')}
           </span>
           <span>
             <i className="mk-delay" style={{ background: 'var(--red)' }} />
-            opóźniony
+            {t(locale, 'map_delayed')}
           </span>
           <span>
             <i className="mk-site" style={{ background: 'var(--go)' }} />
-            na placu
+            {t(locale, 's_on_site').toLowerCase()}
           </span>
           <span>
             <i className="mk-silent" style={{ background: 'var(--ink-3)' }} />
-            brak sygnału
+            {t(locale, 'map_silent')}
           </span>
         </div>
       ) : null}

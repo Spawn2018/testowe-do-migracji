@@ -10,6 +10,7 @@ import { getNow } from '../lib/frozenNow';
 import { formatEtaBodenCompact } from '../lib/time';
 import { computeCorridorKpis } from '../lib/corridorKpis';
 import { cockpitFerryBanner, focusVoyage, seaForSailing } from '../lib/voyage';
+import { formatSeaRiskLabel } from '../lib/voyageSea';
 import { formatMoney } from '../lib/money/engine';
 
 export function DashboardView() {
@@ -54,21 +55,21 @@ export function DashboardView() {
       {role === 'HHL' ? (
         <div className="banner red" role="button" tabIndex={0} onClick={() => setView('risk')} onKeyDown={(e) => e.key === 'Enter' && setView('risk')}>
           <span>
-            <b>{ferryBanner.title}</b> {ferryBanner.body}
+            <span data-content><b>{ferryBanner.title}</b> {ferryBanner.body}</span>
           </span>
         </div>
       ) : role === 'KSH' ? (
         <div className="banner">
-          <span>
-            <b>Dostawa 26.09 o 11:30.</b> Dźwig i ekipa potrzebne przez 3 h. Transport R-03
+          <span data-content>
+            <b>Dostawa 26.09 o 11:30.</b> Dzwig i ekipa potrzebne przez 3 h. Transport R-03
             przekracza okno o 1 h 35 min — nowa propozycja godziny czeka na potwierdzenie.
           </span>
         </div>
       ) : (
         <div className="banner">
-          <span>
-            <b>7 pól bez uzupełnienia.</b> Trzy transporty z załadunkiem w ciągu 48 h nie mają
-            zezwolenia. Lista w zakładce Moje zadania.
+          <span data-content>
+            <b>7 pol bez uzupelnienia.</b> Trzy transporty z zaladunkiem w ciagu 48 h nie maja
+            zezwolenia. Lista w zakladce Moje zadania.
           </span>
         </div>
       )}
@@ -96,7 +97,7 @@ export function DashboardView() {
                 onClick={() => navigateTo({ view: 'sched' })}
               />
               <KpiTile
-                label="Tonaż na placu"
+                label={t(locale, "dash_tonnage")}
                 value={`${loads
                   .filter((l) => l.stage === 'DELIVERED')
                   .reduce((a, l) => a + l.dims.weightT, 0)
@@ -105,7 +106,7 @@ export function DashboardView() {
                 onClick={() => navigateTo({ view: 'map' })}
               />
               <KpiTile
-                label="Najbliższa dostawa"
+                label={t(locale, "dash_next_delivery")}
                 value={arrivals72[0] ? formatEtaBodenCompact(arrivals72[0].etaBoden) : '—'}
                 delta={arrivals72[0] ? `${arrivals72[0].code}` : 'brak w 72h'}
                 onClick={() =>
@@ -113,13 +114,13 @@ export function DashboardView() {
                 }
               />
               <KpiTile
-                label="Transporty w drodze"
+                label={t(locale, 'kpi_in_transit')}
                 value={inTransit}
                 delta="w drodze do Boden"
                 onClick={() => navigateTo({ view: 'map' })}
               />
               <KpiTile
-                label="Terminowość"
+                label={t(locale, 'kpi_otif')}
                 value={`${otif}%`}
                 delta={`${delayedN} poza oknem`}
                 tone={otif < 90 ? 'warn' : 'good'}
@@ -128,7 +129,7 @@ export function DashboardView() {
               <KpiTile
                 label={t(locale, 'exceptions')}
                 value={sortedEx.length}
-                delta="sygnałów w Twoich dostawach"
+                delta={t(locale, "dash_signals")}
                 tone={sortedEx.length > 6 ? 'alert' : 'warn'}
                 onClick={() => setView('risk')}
               />
@@ -136,29 +137,29 @@ export function DashboardView() {
           ) : role === 'SCX' ? (
             <>
               <KpiTile
-                label="Do uzupełnienia"
+                label={t(locale, "dash_to_complete")}
                 value={loads.filter((l) =>
                   ['RESOURCES_PENDING', 'DOC_MISSING'].includes(l.status),
                 ).length}
-                delta="pól bez uzupełnienia"
+                delta={t(locale, "dash_fields_missing")}
                 tone="alert"
                 onClick={() => setView('tasks')}
               />
               <KpiTile
-                label="Transporty w drodze"
+                label={t(locale, 'kpi_in_transit')}
                 value={inTransit}
-                delta="moich transportów w drodze"
+                delta={t(locale, "dash_my_transit")}
                 onClick={() => navigateTo({ view: 'map' })}
               />
               <KpiTile
-                label="Terminowość"
+                label={t(locale, 'kpi_otif')}
                 value={`${otif}%`}
                 delta={`${delayedN} poza oknem awizacji`}
                 tone={otif < 90 ? 'warn' : 'good'}
                 onClick={() => navigateTo({ view: 'sched' })}
               />
               <KpiTile
-                label="Przychód tygodnia"
+                label={t(locale, 'kpi_week_rev')}
                 value={formatMoney(
                   loads
                     .filter((l) => l.stage === 'DELIVERED')
@@ -167,20 +168,20 @@ export function DashboardView() {
                   locale,
                   currency,
                 )}
-                delta="tydzień 38, do zafakturowania"
+                delta={t(locale, "dash_week_invoice")}
                 onClick={() => navigateTo({ view: 'inv' })}
               />
               <KpiTile
-                label="Ryzyko promowe"
+                label={t(locale, 'kpi_ferry_risk')}
                 value={ferryHot || '—'}
-                delta={`rejs · ${seaForSailing(focusVoyage()).risk}`}
+                delta={`sailing · ${formatSeaRiskLabel(seaForSailing(focusVoyage()).risk, locale)}`}
                 tone={ferryHot ? 'warn' : 'default'}
                 onClick={() => navigateTo({ view: 'risk', riskFilter: 'FERRY' })}
               />
               <KpiTile
-                label="Komplet dokumentów"
+                label={t(locale, 'kpi_docs_complete')}
                 value={`${docsOk} / ${loads.length}`}
-                delta="transportów z zezwoleniem"
+                delta={t(locale, "dash_with_permit")}
                 onClick={() =>
                   navigateTo({ view: 'docs', docsFilter: docsMissing ? 'missing' : null })
                 }
@@ -189,7 +190,7 @@ export function DashboardView() {
           ) : (
             <>
               <KpiTile
-                label="Transporty w drodze"
+                label={t(locale, 'kpi_in_transit')}
                 value={inTransit}
                 delta={`${delivered} dostarczonych, ${notInTransit} w przygotowaniu`}
                 onClick={() => navigateTo({ view: 'map' })}
@@ -197,12 +198,12 @@ export function DashboardView() {
               <KpiTile
                 label={t(locale, 'exceptions')}
                 value={sortedEx.length}
-                delta="w kolejce wyjątków"
+                delta={t(locale, 'kpi_ex_queue')}
                 tone={critEx.length ? 'alert' : 'warn'}
                 onClick={() => setView('risk')}
               />
               <KpiTile
-                label="Terminowość"
+                label={t(locale, 'kpi_otif')}
                 value={`${otif}%`}
                 delta={`${delayedN} dostaw poza oknem`}
                 tone={otif < 90 ? 'warn' : 'good'}
@@ -210,7 +211,7 @@ export function DashboardView() {
               />
               {canSeeMargin(role) ? (
                 <KpiTile
-                  label="Marża narastająco"
+                  label={t(locale, 'kpi_margin_cum')}
                   value={formatMoney(
                     loads.reduce((a, l) => a + l.pricing.margin, 0),
                     locale,
@@ -226,16 +227,16 @@ export function DashboardView() {
                 />
               ) : (
                 <KpiTile
-                  label="W drodze"
+                  label={t(locale, 'kpi_on_road')}
                   value={inTransit}
                   delta="aktywne"
                   onClick={() => navigateTo({ view: 'map' })}
                 />
               )}
               <KpiTile
-                label="Komplet dokumentów"
+                label={t(locale, 'kpi_docs_complete')}
                 value={`${docsOk} / ${loads.length}`}
-                delta="komplet przed załadunkiem"
+                delta={t(locale, 'kpi_docs_delta')}
                 onClick={() =>
                   navigateTo({ view: 'docs', docsFilter: docsMissing ? 'missing' : null })
                 }

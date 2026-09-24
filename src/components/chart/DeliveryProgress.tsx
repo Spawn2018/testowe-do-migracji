@@ -83,7 +83,7 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
           fill="var(--ink-3)"
           fontFamily="Barlow Condensed, Barlow, Arial, sans-serif"
         >
-          tony narastająco · max {maxV.toFixed(0)} t
+          {t(locale, 'chart_tons_cum')} · max {maxV.toFixed(0)} t
         </text>
       </svg>
       <div className="legendline">

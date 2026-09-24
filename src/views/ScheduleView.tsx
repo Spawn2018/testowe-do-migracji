@@ -156,19 +156,19 @@ export function ScheduleView() {
     }
   }
 
-  const chips: { id: Quick; label: string }[] = [
-    { id: 'all', label: 'Wszystkie' },
-    { id: 'active', label: 'W drodze' },
-    { id: 'late', label: 'Opóźnione' },
-    { id: 'nodocs', label: 'Bez dokumentów' },
-    { id: 'delivered', label: 'Dostarczone' },
-    { id: 'LOADING', label: 'Załadunek' },
-    { id: 'TO_PORT', label: 'Droga PL' },
-    { id: 'GDANSK', label: 'Gdańsk' },
-    { id: 'FERRY', label: 'Prom' },
-    { id: 'APPROACH', label: 'Nynäshamn' },
-    { id: 'SE_ROAD', label: 'Droga SE' },
-    { id: 'SITE', label: 'Boden' },
+  const chips: { id: Quick; labelKey: string }[] = [
+    { id: 'all', labelKey: 'sched_all' },
+    { id: 'active', labelKey: 'kpi_on_road' },
+    { id: 'late', labelKey: 'sched_late' },
+    { id: 'nodocs', labelKey: 'sched_nodocs' },
+    { id: 'delivered', labelKey: 'stage_DELIVERED' },
+    { id: 'LOADING', labelKey: 's_loading' },
+    { id: 'TO_PORT', labelKey: 'stage_TO_PORT' },
+    { id: 'GDANSK', labelKey: 'stage_GDANSK' },
+    { id: 'FERRY', labelKey: 'stage_FERRY' },
+    { id: 'APPROACH', labelKey: 'stage_APPROACH' },
+    { id: 'SE_ROAD', labelKey: 'stage_SE_ROAD' },
+    { id: 'SITE', labelKey: 'stage_SITE' },
   ];
 
   const visibleCols = colPrefs.order.filter((id) => {
@@ -191,7 +191,7 @@ export function ScheduleView() {
     // measure longest text in column approximately via DOM
     const th = document.querySelector(`th[data-col="${id}"]`) as HTMLElement | null;
     const cells = Array.from(document.querySelectorAll(`td[data-col="${id}"]`)) as HTMLElement[];
-    let w = def.label.length * 8 + 24;
+    let w = t(locale, def.labelKey).length * 8 + 24;
     for (const c of cells.slice(0, 40)) w = Math.max(w, Math.ceil(c.scrollWidth) + 16);
     if (th) w = Math.max(w, Math.ceil(th.scrollWidth) + 16);
     persistCols({ ...colPrefs, widths: { ...colPrefs.widths, [id]: Math.min(360, Math.max(0, w)) } });
@@ -207,7 +207,7 @@ export function ScheduleView() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>
           {canImportSchedule(role) ? (
             <button type="button" className="chipbtn" onClick={() => setStep('upload')} disabled={parsing}>
-              Wgraj aktualizację
+              {t(locale, 'sched_upload')}
             </button>
           ) : null}
           <button
@@ -245,7 +245,7 @@ export function ScheduleView() {
                           persistCols({ ...colPrefs, hidden });
                         }}
                       />
-                      {c.label}
+                      {t(locale, c.labelKey)}
                     </label>
                   );
                 })}
@@ -312,7 +312,7 @@ export function ScheduleView() {
       {canImportSchedule(role) && step && step !== 'upload' && (
         <div className="note" style={{ margin: '0 12px' }}>
           <div style={{ fontWeight: 600, marginBottom: 6 }}>
-            Wgraj aktualizację · {filename}
+            {t(locale, 'sched_upload')} · {filename}
             {dryRun ? (
               <span style={{ fontWeight: 400, color: 'var(--ink-3)', marginLeft: 8 }}>
                 {dryRun.accepted}/{dryRun.total} OK · ⚠{dryRun.warnings}
@@ -433,7 +433,7 @@ export function ScheduleView() {
               aria-pressed={quick === c.id}
               onClick={() => setQuick(c.id)}
             >
-              {c.label}
+              {t(locale, c.labelKey)}
             </button>
           ))}
           <div className="spacer" />
@@ -452,7 +452,7 @@ export function ScheduleView() {
               <tr>
                 {visibleCols.map((id) => {
                   const def = SCHED_COLS.find((c) => c.id === id)!;
-                  let label = def.label;
+                  let label = t(locale, def.labelKey);
                   if (id === 'cost' && role === 'SCX') label = 'Moja stawka';
                   if (id === 'rev' && role === 'KSH') label = 'Twoja cena';
                   const stick =
@@ -654,10 +654,10 @@ export function ScheduleView() {
         </div>
         <div className="note">
           {showMargin
-            ? 'Kwoty w PLN, po przeliczeniu kursem NBP tabela A z dnia poprzedzającego wykonanie usługi. Marża poniżej 18% jest oznaczona na czerwono.'
+            ? t(locale, 'sched_money_note')
             : role === 'KSH'
-              ? 'Widzisz swoją cenę. Stawki przewoźnika i marża spedytora nie są dostępne w tej roli — ograniczenie działa na poziomie bazy danych, nie interfejsu.'
-              : 'Widzisz swoją stawkę. Cena płacona przez klienta i marża spedytora nie są dostępne w tej roli — ograniczenie działa na poziomie bazy danych, nie interfejsu.'}
+              ? t(locale, 'sched_role_ksh')
+              : t(locale, 'sched_role_scx')}
         </div>
       </div>
     </div>

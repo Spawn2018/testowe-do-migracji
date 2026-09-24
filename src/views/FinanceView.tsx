@@ -69,7 +69,7 @@ export function FinanceView() {
         <dd>
           SEFS hybrid · {SEFS_SOURCES.labelSek} / {SEFS_SOURCES.labelPln}
         </dd>
-        <dt>Wartość bazowa</dt>
+        <dt>{t(locale, 'fin_base_val')}</dt>
         <dd>
           {formatMoney(SEFS_SOURCES.baseSek, locale, 'SEK')} · {formatMoney(SEFS_SOURCES.basePln, locale, 'PLN')}
         </dd>
@@ -77,20 +77,20 @@ export function FinanceView() {
         <dd>
           {formatMoney(week.priceSek, locale, 'SEK')} · {formatMoney(week.pricePln, locale, 'PLN')} · {week.weekLabel}
         </dd>
-        <dt>Udział paliwa</dt>
+        <dt>{t(locale, 'fin_fuel_share')}</dt>
         <dd>min(mult_SEK, mult_PLN) na fracht drogowy</dd>
-        <dt>Formuła</dt>
+        <dt>{t(locale, 'fin_formula')}</dt>
         <dd>
           min({live.multSek.toFixed(3)}, {live.multPln.toFixed(3)}) = <b>{live.appliedMult.toFixed(3)}</b> (−
           {appliedPct}% vs 1,0)
         </dd>
-        <dt>Próg</dt>
-        <dd>marża &lt; 12% · flaga poniżej progu</dd>
+        <dt>{t(locale, 'fin_threshold')}</dt>
+        <dd>{t(locale, 'fin_margin_flag')}</dd>
         <dt>Cykl</dt>
-        <dd>tygodniowy, piątek · {week.sourceNote}</dd>
+        <dd>{t(locale, 'fin_weekly')} · {week.sourceNote}</dd>
       </dl>
       <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 9 }}>
-        Źródła:{' '}
+        {t(locale, 'fin_sources')}{' '}
         <a href={SEFS_SOURCES.orlen} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>
           ORLEN
         </a>
@@ -98,7 +98,7 @@ export function FinanceView() {
         <a href={SEFS_SOURCES.okq8} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>
           OKQ8
         </a>
-        . Każde notowanie z datą — przy sporze dowód, nie pamięć.
+        <span data-content>. Każde notowanie z datą — przy sporze dowód, nie pamięć.</span>
       </div>
     </div>
   );
@@ -162,17 +162,17 @@ export function FinanceView() {
             )}
             {role === 'HHL' && showMargin && (
               <>
-                <h4 className="sec">Od przychodu do marży</h4>
+                <h4 className="sec">{t(locale, 'fin_from_rev')}</h4>
                 <div className="mrow">
-                  <span className="lbl">Przychód od KSH — stawka bazowa</span>
+                  <span className="lbl">{t(locale, 'fin_rev_base')}</span>
                   <span>{money(baseR)}</span>
                 </div>
                 <div className="mrow">
-                  <span className="lbl">Przychód — dodatek paliwowy</span>
+                  <span className="lbl">{t(locale, 'fin_rev_fuel')}</span>
                   <span>{money(bafR)}</span>
                 </div>
                 <div className="mrow">
-                  <span className="lbl">Przychód — pilotaż i dodatki</span>
+                  <span className="lbl">{t(locale, 'fin_rev_extra')}</span>
                   <span>{money(exR)}</span>
                 </div>
                 <div className="mrow">
@@ -180,7 +180,7 @@ export function FinanceView() {
                   <span style={{ color: 'var(--red)' }}>− {money(cost)}</span>
                 </div>
                 <div className="mrow total">
-                  <span>Marża</span>
+                  <span>{t(locale, 'sched_col_margin')}</span>
                   <span style={{ color: 'var(--go)' }}>
                     {money(rev - cost)} · {pct(rev ? (rev - cost) / rev : 0)}
                   </span>
@@ -197,15 +197,15 @@ export function FinanceView() {
         {role === 'HHL' && showMargin && (
           <>
             <div className="hr" />
-            <h4 className="sec">Marża według typu elementu</h4>
+            <h4 className="sec">{t(locale, 'fin_margin_by_type')}</h4>
             <table style={{ width: '100%', fontSize: 13 }}>
               <thead>
                 <tr>
                   <th style={{ textAlign: 'left' }}>Typ</th>
                   <th className="num">Szt.</th>
-                  <th className="num">Przychód</th>
+                  <th className="num">{t(locale, 'sched_col_rev')}</th>
                   <th className="num">Koszt</th>
-                  <th className="num">Marża</th>
+                  <th className="num">{t(locale, 'sched_col_margin')}</th>
                   <th style={{ width: 140 }} />
                 </tr>
               </thead>
@@ -213,7 +213,7 @@ export function FinanceView() {
                 {byType.map((row) => (
                   <tr key={row.k}>
                     <td>
-                      <span className="code">{row.k.slice(0, 8)}</span> {row.k}
+                      <span className="code" data-content>{row.k.slice(0, 8)}</span> <span data-content>{row.k}</span>
                     </td>
                     <td className="num">{row.n}</td>
                     <td className="num">{money(row.r)}</td>
@@ -232,12 +232,12 @@ export function FinanceView() {
               </tbody>
             </table>
             <div className="note" style={{ margin: '11px -13px -13px' }}>
-              Transport, który nie trafia w żaden przedział cennika, nie dostaje stawki zero — trafia na listę wyjątków.
+              <span data-content>Transport, który nie trafia w żaden przedział cennika, nie dostaje stawki zero — trafia na listę wyjątków.</span>
             </div>
             {below.length > 0 ? (
               <>
                 <div className="hr" />
-                <h4 className="sec">Poniżej progu marży (&lt;12%)</h4>
+                <h4 className="sec">{t(locale, 'fin_below_margin')}</h4>
                 {below.map((l) => (
                   <div key={l.id} className="mrow">
                     <span className="lbl">

@@ -19,28 +19,28 @@ export type SchedColId =
 
 export type SchedColDef = {
   id: SchedColId;
-  label: string;
+  labelKey: string;
   defaultWidth: number;
   optional?: boolean;
   role?: 'cost' | 'rev' | 'margin';
 };
 
 export const SCHED_COLS: SchedColDef[] = [
-  { id: 'code', label: 'Wysyłka', defaultWidth: 90 },
-  { id: 'type', label: 'Typ', defaultWidth: 70 },
-  { id: 'dims', label: 'Wymiary L×W×H', defaultWidth: 150 },
-  { id: 'weight', label: 'Masa', defaultWidth: 70 },
-  { id: 'load', label: 'Załadunek', defaultWidth: 110 },
-  { id: 'deliver', label: 'Dostawa', defaultWidth: 110 },
-  { id: 'status', label: 'Status', defaultWidth: 140 },
-  { id: 'driver', label: 'Kierowca', defaultWidth: 120 },
-  { id: 'phone', label: 'Telefon', defaultWidth: 120 },
-  { id: 'plate', label: 'Nr rej.', defaultWidth: 100 },
-  { id: 'eta', label: 'ETA Boden', defaultWidth: 120 },
-  { id: 'docs', label: 'Dok.', defaultWidth: 90 },
-  { id: 'cost', label: 'Koszt', defaultWidth: 90, role: 'cost' },
-  { id: 'rev', label: 'Przychód', defaultWidth: 90, role: 'rev' },
-  { id: 'margin', label: 'Marża', defaultWidth: 100, role: 'margin' },
+  { id: 'code', labelKey: 'sched_col_code', defaultWidth: 90 },
+  { id: 'type', labelKey: 'sched_col_type', defaultWidth: 70 },
+  { id: 'dims', labelKey: 'sched_col_dims', defaultWidth: 150 },
+  { id: 'weight', labelKey: 'sched_col_weight', defaultWidth: 70 },
+  { id: 'load', labelKey: 's_loading', defaultWidth: 110 },
+  { id: 'deliver', labelKey: 'sched_col_deliver', defaultWidth: 110 },
+  { id: 'status', labelKey: 'status', defaultWidth: 140 },
+  { id: 'driver', labelKey: 'driver', defaultWidth: 120 },
+  { id: 'phone', labelKey: 'sched_col_phone', defaultWidth: 120 },
+  { id: 'plate', labelKey: 'plate', defaultWidth: 100 },
+  { id: 'eta', labelKey: 'eta', defaultWidth: 120 },
+  { id: 'docs', labelKey: 'sched_col_docs', defaultWidth: 90 },
+  { id: 'cost', labelKey: 'cost', defaultWidth: 90, role: 'cost' },
+  { id: 'rev', labelKey: 'sched_col_rev', defaultWidth: 90, role: 'rev' },
+  { id: 'margin', labelKey: 'sched_col_margin', defaultWidth: 100, role: 'margin' },
 ];
 
 export type SchedColPrefs = {

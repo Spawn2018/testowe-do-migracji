@@ -95,7 +95,7 @@ export function InvoicesView() {
       <div className="panel section-card" style={{ margin: 12 }}>
         <header className="panel-hd">
           <h2>{t(locale, 'nav_inv')}</h2>
-          <span className="sub">tydzień 38 · 14–20.09.2026 · Scandinavian Express</span>
+          <span className="sub">{t(locale, 'inv_week_sub')}</span>
           <div className="spacer" />
           {role === 'SCX' && canSubmitInvoice(role) ? (
             <button
@@ -112,7 +112,7 @@ export function InvoicesView() {
                 )
               }
             >
-              Złóż fakturę
+              {t(locale, 'inv_submit')}
             </button>
           ) : canMatchInvoice(role) ? (
             <>
@@ -121,14 +121,14 @@ export function InvoicesView() {
                 className="chipbtn"
                 onClick={() => disputed && resolveInvoice(disputed.id, 'DISPUTED')}
               >
-                Zgłoś spór
+                {t(locale, 'btn_dispute')}
               </button>
               <button
                 type="button"
                 className="btn"
                 onClick={() => disputed && resolveInvoice(disputed.id, 'MATCHED')}
               >
-                Zatwierdź
+                {t(locale, 'btn_approve')}
               </button>
             </>
           ) : null}
@@ -142,7 +142,7 @@ export function InvoicesView() {
               Kwota z faktury <b className="mono">{money(invoiced)}</b>
             </span>
             <span>
-              Rozbieżność{' '}
+              {t(locale, 'inv_diff')}{' '}
               <b
                 className="mono"
                 style={{ color: match.diffTotal === 0 ? 'var(--go)' : 'var(--red)' }}
@@ -153,19 +153,19 @@ export function InvoicesView() {
             </span>
             <div className="spacer" />
             <span className={`pill ${match.openCount ? 'p-red' : 'p-go'}`}>
-              {match.openCount ? `Do wyjaśnienia · ${match.openCount}` : 'Zgodność OK'}
+              {match.openCount ? `${t(locale, 'inv_to_clarify')} · ${match.openCount}` : t(locale, 'inv_match_ok')}
             </span>
           </div>
           <div className="tablewrap">
             <table>
               <thead>
                 <tr>
-                  <th>Wysyłka</th>
-                  <th>Typ</th>
-                  <th>Dostawa</th>
+                  <th>{t(locale, 'sched_col_code')}</th>
+                  <th>{t(locale, 'inv_type')}</th>
+                  <th>{t(locale, 'inv_delivery')}</th>
                   <th className="num">Wg cennika</th>
                   <th className="num">Zafakturowano</th>
-                  <th className="num">Różnica</th>
+                  <th className="num">{t(locale, 'inv_diff_col')}</th>
                   <th>Ocena</th>
                 </tr>
               </thead>
@@ -197,8 +197,8 @@ export function InvoicesView() {
             </table>
           </div>
           <div className="note">
-            Porównanie trójstronne (liczone): zaznaczone na fakturze ↔ zrealizowane (dostarczone/rozładunek) ↔ kwota z
-            cennika (<span className="code">pricing.costTotal</span>). Różnice linia po linii · próg ±
+            {t(locale, 'inv_three_way')}
+            {' '}(<span className="code">pricing.costTotal</span>). {t(locale, 'inv_threshold_note')} ±
             {money(match.threshold)} · otwarte: {match.openCount}.
           </div>
         </div>
@@ -358,7 +358,7 @@ export function InvoicesView() {
                     {i.weekLabel} · <span className="pill p-amber">{t(locale, 'factoring_badge')}</span>
                   </span>
                   <span>
-                    net {money(i.factoring!.netPayout)} · {payoutStatusLabel(i.payoutStatus)}
+                    net {money(i.factoring!.netPayout)} · {payoutStatusLabel(i.payoutStatus, locale)}
                     {i.factoring?.payoutAt ? ` · ${formatOpsDateTime(i.factoring.payoutAt)}` : ''}
                   </span>
                 </div>
@@ -369,8 +369,8 @@ export function InvoicesView() {
 
       <div className="panel section-card" style={{ margin: 12 }}>
         <header className="panel-hd">
-          <h2>Załączniki CMR / POD</h2>
-          <span className="sub">dokumenty do faktury tygodnia · podgląd i pobieranie</span>
+          <h2>{t(locale, 'inv_attachments')}</h2>
+          <span className="sub">{t(locale, 'inv_docs_sub')}</span>
           <div className="spacer" />
           {role === 'SCX' || role === 'HHL' ? (
             <button
@@ -383,14 +383,14 @@ export function InvoicesView() {
                 attachRef.current?.click();
               }}
             >
-              Wgraj załącznik
+              {t(locale, 'btn_attach')}
             </button>
           ) : null}
         </header>
         <div className="panel-bd">
           {week.length === 0 ? (
             <div className="note" style={{ border: 0, padding: 0 }}>
-              Brak transportów w rozliczeniu.
+              {t(locale, 'inv_empty')}
             </div>
           ) : (
             week.flatMap((l) => {
@@ -414,7 +414,7 @@ export function InvoicesView() {
                 <DocFileRow
                   key={d.id}
                   doc={d}
-                  label={`${l.code} · ${docCategoryLabel(d.category)}`}
+                  label={`${l.code} · ${docCategoryLabel(d.category, locale)}`}
                   onPreview={setPreviewDoc}
                   showUpload={role === 'SCX' || role === 'HHL'}
                   onUploadClick={() => {

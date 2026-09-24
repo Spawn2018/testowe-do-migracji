@@ -202,7 +202,7 @@ export function LoadDrawer() {
                           : 'p-amber'
                     }`}
                   >
-                    {etaConfidenceLabel(load.etaConfidence)}
+                    {etaConfidenceLabel(load.etaConfidence, locale)}
                   </span>
                   <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 4, fontWeight: 400 }}>
                     pasmo {load.etaEarliestHours.toFixed(1)}–{load.etaLatestHours.toFixed(1)} h · heurystyka
@@ -278,7 +278,7 @@ export function LoadDrawer() {
                   <li key={e.id}>
                     <span className="mk" />
                     <div className="w">
-                      {eventTypeLabel(e.type)}
+                      {eventTypeLabel(e.type, locale)}
                       {e.note ? ` · ${e.note}` : ''}
                     </div>
                     <div className="ts">
@@ -479,7 +479,7 @@ export function LoadDrawer() {
                     <dt>Rezerwacja</dt>
                     <dd>{load.ferry.bookingRef ?? '—'}</dd>
                     <dt>Status promu</dt>
-                    <dd>{ferryStatusLabel(load.ferry.status)}</dd>
+                    <dd>{ferryStatusLabel(load.ferry.status, locale)}</dd>
                     <dt>Wyjazd / Przyjazd</dt>
                     <dd>
                       {load.ferry.departureAt ?? '—'} / {load.ferry.arrivalAt ?? '—'}
@@ -647,7 +647,7 @@ export function LoadDrawer() {
                       <dd>
                         <select name="status" className="input" defaultValue={load.ferry.status}>
                           {(['NONE', 'BOOKED', 'CHECKED_IN', 'ONBOARD', 'LANDED', 'DELAYED', 'CANCELLED'] as const).map((s) => (
-                            <option key={s} value={s}>{ferryStatusLabel(s)}</option>
+                            <option key={s} value={s}>{ferryStatusLabel(s, locale)}</option>
                           ))}
                         </select>
                       </dd>
@@ -699,7 +699,7 @@ export function LoadDrawer() {
                   type="button"
                   className="btn"
                   disabled={readyUiBlocked}
-                  title={permitBlock ? readyGateReasonLabel(readyGate.reason) : undefined}
+                  title={permitBlock ? readyGateReasonLabel(readyGate.reason, locale) : undefined}
                   onClick={() => {
                     if (readyUiBlocked) return;
                     setLoadStatus(load.id, 'READY', role, 'Ręcznie oznaczono jako gotowy');
@@ -711,7 +711,7 @@ export function LoadDrawer() {
                   type="button"
                   className="btn ghost"
                   disabled={readyUiBlocked}
-                  title={permitBlock ? readyGateReasonLabel(readyGate.reason) : undefined}
+                  title={permitBlock ? readyGateReasonLabel(readyGate.reason, locale) : undefined}
                   onClick={() => {
                     if (readyUiBlocked) return;
                     setLoadStatus(load.id, 'IN_TRANSIT_PL', role);

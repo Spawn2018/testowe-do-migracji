@@ -64,10 +64,10 @@ export function GeofenceView() {
               <tr>
                 <th>Nazwa</th>
                 <th>Typ</th>
-                <th className="num">Promień</th>
-                <th className="num">Postój</th>
+                <th className="num">{t(locale, 'geo_radius')}</th>
+                <th className="num">{t(locale, 'geo_dwell')}</th>
                 <th className="num">Histereza</th>
-                <th className="num">Próbki</th>
+                <th className="num">{t(locale, 'geo_samples')}</th>
                 <th>Powiadamia</th>
               </tr>
             </thead>
@@ -89,9 +89,9 @@ export function GeofenceView() {
                     style={{ cursor: canEdit ? 'pointer' : undefined }}
                     onClick={() => canEdit && setEdit(g)}
                   >
-                    <td style={{ fontWeight: 600 }}>{g.name}</td>
+                    <td style={{ fontWeight: 600 }} data-content>{g.name}</td>
                     <td>
-                      <span className={`pill ${TYPE_PILL[g.type] ?? 'p-plan'}`}>{geofenceTypeLabel(g.type)}</span>
+                      <span className={`pill ${TYPE_PILL[g.type] ?? 'p-plan'}`}>{geofenceTypeLabel(g.type, locale)}</span>
                     </td>
                     <td className="num">{(g.radiusM / 1000).toFixed(g.radiusM >= 1000 ? 0 : 1)} km</td>
                     <td className="num">{dwell}</td>
@@ -105,9 +105,7 @@ export function GeofenceView() {
           </table>
         </div>
         <div className="note">
-          Histereza chroni przed parą wjazd/wyjazd, gdy auto stoi na granicy strefy. Próbki to liczba kolejnych pozycji
-          wewnątrz, zanim wjazd zostanie uznany — filtr na błędny odczyt GPS. Postój to czas, po którym strefa liczy się
-          jako osiągnięta, żeby przejazd obok bramy nie był przyjazdem.
+          {t(locale, 'geo_note')}
         </div>
       </div>
 
@@ -149,11 +147,11 @@ export function GeofenceView() {
                       'REST',
                     ] as GeofenceType[]
                   ).map((tp) => (
-                    <option key={tp} value={tp}>{geofenceTypeLabel(tp)}</option>
+                    <option key={tp} value={tp}>{geofenceTypeLabel(tp, locale)}</option>
                   ))}
                 </select>
               </dd>
-              <dt>Promień (m)</dt>
+              <dt>{t(locale, 'geo_radius')} (m)</dt>
               <dd>
                 <input name="radiusM" type="number" className="input" defaultValue={edit.radiusM} />
               </dd>
@@ -161,7 +159,7 @@ export function GeofenceView() {
               <dd>
                 <input name="hysteresisM" type="number" className="input" defaultValue={edit.hysteresisM} />
               </dd>
-              <dt>Postój (min)</dt>
+              <dt>{t(locale, 'geo_dwell')} (min)</dt>
               <dd>
                 <input name="dwellMin" type="number" className="input" defaultValue={edit.dwellMin} />
               </dd>

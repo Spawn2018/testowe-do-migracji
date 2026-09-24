@@ -43,9 +43,9 @@ export function ExceptionRow({
               {' · '}
             </>
           ) : null}
-          {item.title}
+          <span data-content>{item.title}</span>
         </span>
-        <span className="m">{meta}</span>
+        <span className="m" data-content>{meta}</span>
       </span>
       <span className="age">{formatExqAge(item.ageHours)}</span>
     </li>

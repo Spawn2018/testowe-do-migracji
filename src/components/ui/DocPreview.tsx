@@ -7,6 +7,7 @@ import {
   objectUrlFromDoc,
 } from '../../lib/docsIo';
 import { docCategoryLabel } from '../../lib/enumLabels';
+import { useTowerStore } from '../../store/useTowerStore';
 
 type Props = {
   doc: Document | null;
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export function DocPreview({ doc, onClose }: Props) {
+  const locale = useTowerStore((s) => s.locale);
   const handle = useMemo(() => (doc ? objectUrlFromDoc(doc) : null), [doc]);
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export function DocPreview({ doc, onClose }: Props) {
         <header className="panel-hd">
           <h2 style={{ fontSize: 18 }}>{doc.name}</h2>
           <span className="sub">
-            {docCategoryLabel(doc.category)}
+            {docCategoryLabel(doc.category, locale)}
             {hasRealBytes ? '' : ' · metadane'}
           </span>
           <div className="spacer" />

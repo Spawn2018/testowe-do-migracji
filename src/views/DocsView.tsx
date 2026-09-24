@@ -8,14 +8,14 @@ import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
 import { docCategoryLabel } from '../lib/enumLabels';
 
-const CATS: { key: DocCategory | 'DRAWING'; label: string; who: string; when: string }[] = [
-  { key: 'PERMIT_PL', label: 'Zezwolenie PL', who: 'Scandinavian Express', when: 'przed załadunkiem' },
-  { key: 'PERMIT_SE', label: 'Zezwolenie SE (dispens)', who: 'Scandinavian Express', when: 'przed wjazdem do Szwecji' },
-  { key: 'CMR', label: 'CMR / list przewozowy', who: 'Scandinavian Express', when: 'przy załadunku' },
-  { key: 'POD', label: 'Potwierdzenie dostawy (POD)', who: 'Scandinavian Express', when: 'do 24 h po rozładunku' },
-  { key: 'LASHING_PHOTOS', label: 'Zdjęcia mocowania', who: 'Scandinavian Express', when: 'przy załadunku' },
-  { key: 'INSURANCE', label: 'Polisa OCP', who: 'Scandinavian Express', when: 'stała, ważna do 03.10.2026' },
-  { key: 'DRAWING', label: 'Rysunek elementu', who: 'KSH', when: 'przy imporcie harmonogramu' },
+const CATS: { key: DocCategory | 'DRAWING'; labelKey: string; who: string; whenKey: string }[] = [
+  { key: 'PERMIT_PL', labelKey: 'doc_cat_permit_pl', who: 'Scandinavian Express', whenKey: 'docs_before_load' },
+  { key: 'PERMIT_SE', labelKey: 'doc_cat_permit_se', who: 'Scandinavian Express', whenKey: 'docs_before_se' },
+  { key: 'CMR', labelKey: 'doc_cat_cmr', who: 'Scandinavian Express', whenKey: 'docs_at_load' },
+  { key: 'POD', labelKey: 'doc_cat_pod', who: 'Scandinavian Express', whenKey: 'docs_after_unload' },
+  { key: 'LASHING_PHOTOS', labelKey: 'docs_lashing', who: 'Scandinavian Express', whenKey: 'docs_at_load' },
+  { key: 'INSURANCE', labelKey: 'doc_cat_insurance', who: 'Scandinavian Express', whenKey: 'docs_insurance_when' },
+  { key: 'DRAWING', labelKey: 'doc_cat_drawing', who: 'KSH', whenKey: 'docs_drawing_when' },
 ];
 
 export function DocsView() {
@@ -60,7 +60,7 @@ export function DocsView() {
     <div className="panel section-card page-sections" data-page="docs" style={{ margin: 12 }}>
       <header className="panel-hd">
         <h2>{t(locale, 'nav_docs')}</h2>
-        <span className="sub">kategorie z terminami i widocznością</span>
+        <span className="sub">{t(locale, 'docs_cats_sub')}</span>
         <div className="spacer" />
         {role !== 'KSH' ? (
           <button
@@ -84,7 +84,7 @@ export function DocsView() {
             });
           }}
         >
-          Pobierz paczkę tygodnia
+          {t(locale, 'docs_week_pack')}
         </button>
       </header>
       <div className="panel-bd flush">
@@ -94,8 +94,8 @@ export function DocsView() {
               <tr>
                 <th>Kategoria</th>
                 <th>Kto wgrywa</th>
-                <th>Wymagalność</th>
-                <th className="num">Kompletność</th>
+                <th>{t(locale, 'docs_requirement')}</th>
+                <th className="num">{t(locale, 'docs_completeness')}</th>
                 <th>Stan</th>
               </tr>
             </thead>
@@ -105,15 +105,15 @@ export function DocsView() {
                 const pill = pct >= 1 ? 'p-go' : pct > 0.8 ? 'p-amber' : 'p-red';
                 return (
                   <tr
-                    key={r.label}
+                    key={r.labelKey}
                     style={{ cursor: r.key === 'DRAWING' ? 'default' : 'pointer' }}
                     onClick={() => {
                       if (r.key !== 'DRAWING') setFilterCat(r.key);
                     }}
                   >
-                    <td style={{ fontWeight: 600 }}>{r.label}</td>
+                    <td style={{ fontWeight: 600 }}>{t(locale, r.labelKey)}</td>
                     <td>{r.who}</td>
-                    <td style={{ color: 'var(--ink-3)' }}>{r.when}</td>
+                    <td style={{ color: 'var(--ink-3)' }}>{t(locale, r.whenKey)}</td>
                     <td className="num">
                       {r.n} / {nLoads}
                     </td>
@@ -140,7 +140,7 @@ export function DocsView() {
           </button>
           {filterCat !== 'ALL' ? (
             <button type="button" className="chipbtn" aria-pressed="true" onClick={() => setFilterCat('ALL')}>
-              {docCategoryLabel(filterCat)}
+              {docCategoryLabel(filterCat, locale)}
             </button>
           ) : null}
         </div>
@@ -148,7 +148,7 @@ export function DocsView() {
         <div style={{ padding: '0 13px 9px' }}>
           {fileRows.length === 0 ? (
             <div className="note" style={{ border: 0 }}>
-              Brak wgranych plików w tej kategorii.
+              {t(locale, 'docs_empty_cat')}
             </div>
           ) : (
             fileRows.map((d) => {
@@ -157,7 +157,7 @@ export function DocsView() {
                 <DocFileRow
                   key={d.id}
                   doc={d}
-                  label={`${code} · ${docCategoryLabel(d.category)}`}
+                  label={`${code} · ${docCategoryLabel(d.category, locale)}`}
                   onPreview={setPreviewDoc}
                 />
               );
@@ -170,7 +170,7 @@ export function DocsView() {
             Vault kierowcy (wgrane z aplikacji):
             <div style={{ marginTop: 6 }}>
               {driverVault.map((d) => (
-                <DocFileRow key={d.id} doc={d} label={docCategoryLabel(d.category)} onPreview={setPreviewDoc} />
+                <DocFileRow key={d.id} doc={d} label={docCategoryLabel(d.category, locale)} onPreview={setPreviewDoc} />
               ))}
             </div>
           </div>

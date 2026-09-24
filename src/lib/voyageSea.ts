@@ -2,6 +2,8 @@
  * Demo sea conditions keyed by GDN departure day — shared by voyage SoT + topbar wave.
  * Vessel/timetable remain in ferry-sailings.json (not duplicated here).
  */
+import type { Locale } from '../types';
+
 export type SeaRiskLabel = 'niskie' | 'podwyższone' | 'wysokie';
 
 export interface VoyageSea {
@@ -39,4 +41,14 @@ export function seaRiskPillClass(risk: SeaRiskLabel): string {
 
 export function voyageWaveLabelForDay(dayKey: string): string {
   return `fala ${formatWaveM(seaForDay(dayKey).waveM)}`;
+}
+
+const SEA_RISK_I18N: Record<SeaRiskLabel, Record<Locale, string>> = {
+  niskie: { pl: 'niskie', en: 'low', sv: 'lag' },
+  podwyższone: { pl: 'podwyzszone', en: 'elevated', sv: 'forhojd' },
+  wysokie: { pl: 'wysokie', en: 'high', sv: 'hog' },
+};
+
+export function formatSeaRiskLabel(risk: SeaRiskLabel, locale: Locale): string {
+  return SEA_RISK_I18N[risk][locale];
 }

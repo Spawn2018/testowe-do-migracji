@@ -6,7 +6,7 @@ Kolumny: `ID | pozycja | status | commit | testy (liczby) | uwagi`.
 Po F2.5 dodać wiersze **L*** (L1/L2/L4/L5/L7/L8/L9/L16) — na razie brak (notatka: po F2.5).  
 Niezgodności z F2.4: **F2.4-a / F2.4-b / F2.4-c** (poniżej, po G1).
 
-Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · M1 · D11 DONE) · następny: D19.
+Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · D11 · D19 DONE) · następny: D12.
 
 ---
 
@@ -55,12 +55,12 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · M1 · D1
 
 | ID | pozycja | status | commit | testy (liczby) | uwagi |
 |---|---|---|---|---|---|
-| D19-T | Test PL-znaków poza EN/SV UI | **DONE** | `fd30c94` | `npm run test:d19` → **fail** (oczekiwane): **en=191 / sv=191** (Σ382) | Harness: `tests/d19-i18n.spec.ts`; TreeWalker + `[data-content]` exclude; raport `test-results/d19-hits.json`. **pre-push:** odroczony — `test:visual` = tylko `visual.spec.ts` (4 smoke); `test:d19` osobno do D19 (hits→0), potem wraca do pre-push. data-content: code/itemType (Schedule/Map/Risks/Tasks/Invoices/Finance/ExceptionRow/LoadDrawer). |
+| D19-T | Test PL-znaków poza EN/SV UI | **DONE** | `fd30c94` (+ D19 zielony) | `npm run test:d19` → **en=0 / sv=0** | Harness bez zmian. Po D19: hits→0; **`test:d19` w `.githooks/pre-push`**. |
 | D10 | Jedna funkcja `formatMoney` | **DONE** | `20ba91c` | unit **44/44** (+3 `format-money.test.ts`) · pw **4/4** | Silnik: `formatMoney(amount, lang, currency)` w `src/lib/money/engine.ts` (code, locale). Store: `displayCurrency` (domyślnie PLN) + Opcje. Migracja: Dashboard, Schedule, Finance, Invoices, LoadDrawer; SEFS indeksy SEK/PLN też. Local `fmt`/toLocaleString+PLN usunięte. `money.test.ts` włączony w M1. EUR w Opcjach = etykieta bez FX (M1/M4 `formatForUser`). |
 | D17 | Format daty w tabeli bez powtarzanego roku | **DONE** | `2e590db` | unit **49/49** (+5 D17 w `time.test.ts`) · pw **4/4** | `formatTableDay` / `formatTableInZone` / `refYearInOps` w `time.ts`: rok pomijany gdy = rok ops (Warsaw). Tabele: Schedule (załadunek/dostawa/ETA), Tasks, Invoices. Drawer nadal pełny `dd.MM.yyyy` (D8). |
 | M1 | Silnik money + testy (49 zielonych, 1 skip) | **DONE** | `d113779` | money **49 passed / 1 skipped** (`NBP_LIVE`); unit **98 passed / 1 skipped** (money 49+1 skip + reszta 49) | Zdjęto `exclude` `money.test.ts` z `vitest.config.ts` — suite w `test:unit`/pre-push. Silnik bez zmian reguły FX/niezmiennika. **Fit:** app wycena demo nadal PLN w `pricing.*` (fasada); `formatMoney` (D10) już z silnika; pełne `formatForUser`/marża/poziomy → M2–M4/M8. Brak potrzeby przepisywania reguł. |
 | D11 | Debug/EN enumy out z UI | **DONE** | `8a8569c` | unit **98 passed / 1 skipped** · pw **4/4** | `src/lib/enumLabels.ts` + seed/permits/eta PL. Ukryto: ferry status, geofence type, event type, doc category, severity, etaConfidence, payoutStatus, workflow trigger, READY/permitFits/CANCELLED w copy. Nie D19. |
-| D19 | 104 napisy → słownik PL/EN/SV | OPEN | — | — | pending |
+| D19 | 104 napisy → słownik PL/EN/SV | **DONE** | TBD | unit **98 passed / 1 skipped** · pw **4/4** · D19-T **en=0/sv=0** · lint:css **0** | Chrome → `t()` via `src/i18n/messages.ts` + `src/i18n/d19Extra.ts` (PL/EN/SV). Seed/demo narrative → `data-content`. StatusPill/enumLabels locale-aware. Smoke mapa PL odświeżony (legenda i18n) — pełny baseline G2. Gaps: LoadDrawer/DriverPwa/Tasks/KeyboardHelp częściowo PL (poza matrycą HHL D19-T); creator WF PL gdy otwarty. |
 | D12 | Dane startowe prawdopodobne | OPEN | — | — | pending |
 | D6 | Telefon kierowcy → szuflada; KSH ±24 h | OPEN | — | — | pending |
 | D13 | Wzorce wizualne / `section-card-hd--drag` | OPEN | — | — | pending |

@@ -3,16 +3,14 @@ import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 
 
-const TRIGGERS = [
-  ['GEOFENCE_ENTER', 'Wjazd w strefę'],
-  ['POSITION_STALE', 'Brak pozycji'],
-  ['FERRY_STATUS', 'Zmiana statusu promu'],
-  ['SCHEDULE_IMPORTED', 'Import harmonogramu'],
-  ['UNLOADED', 'Rozładunek'],
-  ['CRON_DAILY_06', 'Codziennie · 06:00'],
+const TRIGGER_KEYS = [
+  ['GEOFENCE_ENTER', 'wf_enter'],
+  ['POSITION_STALE', 'wf_stale'],
+  ['FERRY_STATUS', 'wf_ferry'],
+  ['SCHEDULE_IMPORTED', 'wf_import'],
+  ['UNLOADED', 'wf_unload'],
+  ['CRON_DAILY_06', 'wf_cron'],
 ] as const;
-
-const triggerLabel = (code: string) => TRIGGERS.find(([v]) => v === code)?.[1] ?? code;
 
 const emptyDraft = { name: '', trigger: 'GEOFENCE_ENTER', condition: '', actions: '', enabled: true };
 
@@ -23,6 +21,10 @@ export function WorkflowsView() {
   const createWorkflow = useTowerStore((s) => s.createWorkflow);
   const locale = useTowerStore((s) => s.locale);
   const active = workflows.filter((w) => w.enabled).length;
+  const triggerLabel = (code: string) => {
+    const key = TRIGGER_KEYS.find(([v]) => v === code)?.[1];
+    return key ? t(locale, key) : code;
+  };
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState(emptyDraft);
 
@@ -46,28 +48,28 @@ export function WorkflowsView() {
     <div className="panel workflow-page page-sections" data-page="workflows" style={{ margin: 12 }}>
       <header className="panel-hd">
         <h2>{t(locale, 'nav_wf')}</h2>
-        <span className="sub">{active} aktywnych · {workflows.length} reguł</span>
+        <span className="sub">{active} {t(locale, 'wf_active_n')} · {workflows.length} {t(locale, 'wf_rules_n')}</span>
         <div className="spacer" />
-        <button type="button" className="btn" onClick={openCreator}>Nowa reguła</button>
+        <button type="button" className="btn" onClick={openCreator}>{t(locale, 'wf_new')}</button>
       </header>
       <div className="panel-bd flush">
         {workflows.map((w) => (
           <div key={w.id} className="wf">
             <button type="button" className="sw" aria-pressed={w.enabled} aria-label={`${w.enabled ? 'Wyłącz' : 'Włącz'} regułę ${w.name}`} onClick={() => toggleWorkflow(w.id)} />
-            <div className="wf-copy"><b>{w.name}</b><span className="rule">{w.description || `${triggerLabel(w.trigger)} → ${w.actions.join(', ')}`}</span><span className="wf-meta">{triggerLabel(w.trigger)} · warunek: {w.condition}</span></div>
-            <span className="wf-count">{w.runCount}× w tym miesiącu</span>
+            <div className="wf-copy"><b data-content>{w.name}</b><span className="rule" data-content>{w.description || `${triggerLabel(w.trigger)} → ${w.actions.join(', ')}`}</span><span className="wf-meta" data-content>{triggerLabel(w.trigger)} · warunek: {w.condition}</span></div>
+            <span className="wf-count">{w.runCount}× {t(locale, 'wf_runs')}</span>
             <button type="button" className="chipbtn wf-run" onClick={() => runWorkflowNow(w.id)}>Uruchom</button>
           </div>
         ))}
-        <div className="note">Reguła to wyzwalacz, warunek i lista akcji. Formularz zapisuje ją bezpośrednio w store — można od razu uruchomić test.</div>
+        <div className="note">{t(locale, 'wf_note')}</div>
       </div>
 
       {creating ? <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && setCreating(false)}>
         <section className="panel wf-creator" role="dialog" aria-modal="true" aria-labelledby="wf-create-title">
-          <header className="panel-hd"><div><h2 id="wf-create-title">Nowa reguła</h2><span className="sub">Automatyzacja · formularz</span></div><div className="spacer" /><button type="button" className="iconbtn" aria-label="Zamknij" onClick={() => setCreating(false)}>×</button></header>
+          <header className="panel-hd"><div><h2 id="wf-create-title">{t(locale, 'wf_new')}</h2><span className="sub">Automatyzacja · formularz</span></div><div className="spacer" /><button type="button" className="iconbtn" aria-label="Zamknij" onClick={() => setCreating(false)}>×</button></header>
           <form className="panel-bd" onSubmit={save}>
             <label className="form-field"><span>Nazwa reguły</span><input autoFocus required className="input" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="np. Brak potwierdzenia awizacji" /></label>
-            <label className="form-field"><span>Wyzwalacz</span><select className="input" value={draft.trigger} onChange={(e) => setDraft({ ...draft, trigger: e.target.value })}>{TRIGGERS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+            <label className="form-field"><span>Wyzwalacz</span><select className="input" value={draft.trigger} onChange={(e) => setDraft({ ...draft, trigger: e.target.value })}>{TRIGGER_KEYS.map(([value, labelKey]) => <option key={value} value={value}>{t(locale, labelKey)}</option>)}</select></label>
             <label className="form-field"><span>Warunek <small>tekst / JSONLogic</small></span><textarea className="input" value={draft.condition} onChange={(e) => setDraft({ ...draft, condition: e.target.value })} placeholder={'np. {">=":[{"var":"hours_to_load"},48]'} /></label>
             <label className="form-field"><span>Akcje <small>po przecinku lub każda w nowej linii</small></span><textarea className="input" value={draft.actions} onChange={(e) => setDraft({ ...draft, actions: e.target.value })} placeholder="notify_hhl, create_task" /></label>
             <label className="switchline creator-enabled"><input type="checkbox" checked={draft.enabled} onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })} /><span>Reguła aktywna po zapisaniu</span></label>

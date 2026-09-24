@@ -9,25 +9,25 @@ import { trafikverketShortLabel } from '../lib/demoLabel';
 import { formatEtaBodenCompact } from '../lib/time';
 import { subscribeAis, type AisMode } from '../lib/ais';
 
-/** Claude maplayers — exactly 5. */
-const LAYER_ORDER: { key: string; label: string }[] = [
-  { key: 'vehicles', label: 'Pojazdy' },
-  { key: 'geofence', label: 'Strefy' },
-  { key: 'route', label: 'Trasa' },
-  { key: 'seEvents', label: 'Ryzyka' },
-  { key: 'trail', label: 'Ślad' },
+/** Claude maplayers — exactly 5. Labels via i18n. */
+const LAYER_ORDER: { key: string; labelKey: string }[] = [
+  { key: 'vehicles', labelKey: 'map_layer_vehicles' },
+  { key: 'geofence', labelKey: 'nav_geo' },
+  { key: 'route', labelKey: 'map_layer_route' },
+  { key: 'seEvents', labelKey: 'nav_risk' },
+  { key: 'trail', labelKey: 'map_trail' },
 ];
 
 type MapColId = 'code' | 'cargo' | 'driver' | 'plate' | 'status' | 'eta' | 'window';
 
-const MAP_COLS: { id: MapColId; label: string; defaultWidth: number }[] = [
-  { id: 'code', label: 'Kod', defaultWidth: 88 },
-  { id: 'cargo', label: 'Ładunek', defaultWidth: 120 },
-  { id: 'driver', label: 'Kierowca', defaultWidth: 120 },
-  { id: 'plate', label: 'Rejestracja', defaultWidth: 100 },
-  { id: 'status', label: 'Status', defaultWidth: 110 },
-  { id: 'eta', label: 'ETA Boden', defaultWidth: 110 },
-  { id: 'window', label: 'Okno', defaultWidth: 88 },
+const MAP_COLS: { id: MapColId; labelKey: string; defaultWidth: number }[] = [
+  { id: 'code', labelKey: 'map_col_code', defaultWidth: 88 },
+  { id: 'cargo', labelKey: 'map_cargo', defaultWidth: 120 },
+  { id: 'driver', labelKey: 'driver', defaultWidth: 120 },
+  { id: 'plate', labelKey: 'plate', defaultWidth: 100 },
+  { id: 'status', labelKey: 'status', defaultWidth: 110 },
+  { id: 'eta', labelKey: 'eta', defaultWidth: 110 },
+  { id: 'window', labelKey: 'map_col_window', defaultWidth: 88 },
 ];
 
 const MAP_COLS_KEY = 'watch-tower-map-cols-v1';
@@ -132,7 +132,7 @@ export function MapView() {
       <header className="panel-hd">
         <h2>{t(locale, 'nav_map')}</h2>
         <span className="sub">
-          {inMotion || list.length} pojazdów w ruchu · pozycje co 5 min
+          {inMotion || list.length} {t(locale, 'map_vehicles_sub')}
         </span>
         <div className="spacer" />
         <button type="button" className="chipbtn" onClick={() => setView('geo')}>
@@ -143,14 +143,14 @@ export function MapView() {
       <div className="mapsplit" style={{ flex: '1 1 auto', minHeight: 420 }}>
         <div className="mapbox" style={{ minHeight: 420 }}>
           <div className="maplayers">
-            {LAYER_ORDER.map(({ key, label }) => (
+            {LAYER_ORDER.map(({ key, labelKey }) => (
               <label key={key}>
                 <input
                   type="checkbox"
                   checked={!!mapLayers[key]}
                   onChange={() => toggleLayer(key)}
                 />{' '}
-                {label}
+                {t(locale, labelKey)}
               </label>
             ))}
           </div>
@@ -189,7 +189,7 @@ export function MapView() {
               onClick={() => setTiming(timing === 'late' ? 'all' : 'late')}
               title="Dostawy po wymaganym oknie dzień/godzina"
             >
-              Spóźnione · {lateCount}
+              {t(locale, 'map_late')} · {lateCount}
             </button>
           </div>
 
@@ -204,7 +204,7 @@ export function MapView() {
                 <tr>
                   {MAP_COLS.map((c) => (
                     <th key={c.id} style={{ width: widths[c.id] }}>
-                      {c.label}
+                      {t(locale, c.labelKey)}
                       <span
                         className="col-resize"
                         onMouseDown={(e) => {
@@ -221,7 +221,7 @@ export function MapView() {
                 {list.length === 0 ? (
                   <tr>
                     <td colSpan={MAP_COLS.length} style={{ padding: 13, color: 'var(--ink-3)' }}>
-                      Brak transportów dla wybranego filtra.
+                      {t(locale, 'map_empty')}
                     </td>
                   </tr>
                 ) : (
@@ -240,7 +240,7 @@ export function MapView() {
                         </span>
                       </td>
                       <td>
-                        <span className="cell-clip" data-content>{l.itemType}</span>
+                        <span className="cell-clip" data-content><span data-content>{l.itemType}</span></span>
                       </td>
                       <td>
                         <span className="cell-clip">{l.resources.driverName || '—'}</span>
@@ -261,7 +261,7 @@ export function MapView() {
                           className="cell-clip"
                           style={{ color: l.delayed ? 'var(--red)' : 'var(--ink-3)' }}
                         >
-                          {l.delayed ? 'Spóźnione' : 'Terminowe'}
+                          {l.delayed ? t(locale, 'map_late') : t(locale, 'map_on_time')}
                         </span>
                       </td>
                     </tr>
@@ -274,15 +274,13 @@ export function MapView() {
       </div>
 
       <div className="note">
-        Schemat korytarza, nie mapa nawigacyjna. Trasa lądowa w Szwecji odwzorowuje przebieg z
-        zezwolenia, nie wynik routera. Trafikverket E4:{' '}
+        {t(locale, 'map_note')} Trafikverket E4:{' '}
         <b>{trafikverketShortLabel(tvMode)}</b>
         {' · '}
         AIS:{' '}
         <b>{aisMode === 'live' ? t(locale, 'map_ais_live') : 'seed'}</b>
         {' · '}
-        GPS fleet tick co 1,5 s. Kolumny tabeli: przeciągnij krawędź nagłówka (jak Harmonogram).
-      </div>
+        {t(locale, 'map_gps_note')}</div>
     </div>
   );
 }

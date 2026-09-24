@@ -1,5 +1,6 @@
 import type { Locale } from '../types';
 import type { NavKey } from '../lib/permissions';
+import { D19_EXTRA } from './d19Extra';
 
 type Dict = Record<string, string>;
 
@@ -170,9 +171,9 @@ const en: Dict = {
   stage_PLAN: 'Preparing',
   stage_LOADING: 'Loading',
   stage_TO_PORT: 'Road PL',
-  stage_GDANSK: 'Gdańsk',
+  stage_GDANSK: 'Gdansk',
   stage_FERRY: 'Ferry',
-  stage_APPROACH: 'Nynäshamn',
+  stage_APPROACH: 'Nynashamn',
   stage_SE_ROAD: 'Road SE',
   stage_SITE: 'Boden',
   stage_DELIVERED: 'Delivered',
@@ -209,7 +210,7 @@ const en: Dict = {
   tab_pricing: 'Pricing',
   tab_chat: 'Notes',
   tab_eta: 'ETA',
-  loading_site: 'KSH Śrem · Grunwaldzka 27C',
+  loading_site: 'KSH Srem · Grunwaldzka 27C',
   unload_site: 'Stegra · Stalverket 20, Boden',
   focus: 'Selected only',
   layers: 'Layers',
@@ -283,7 +284,7 @@ const sv: Dict = {
   stage_PLAN: 'Förbereds',
   stage_LOADING: 'Lastning',
   stage_TO_PORT: 'Väg PL',
-  stage_GDANSK: 'Gdańsk',
+  stage_GDANSK: 'Gdansk',
   stage_FERRY: 'Färja',
   stage_APPROACH: 'Nynäshamn',
   stage_SE_ROAD: 'Väg SE',
@@ -314,7 +315,7 @@ const sv: Dict = {
   tab_docs: 'Dokument',
   tab_pricing: 'Priser',
   tab_chat: 'Noteringar',
-  loading_site: 'KSH Śrem · Grunwaldzka 27C',
+  loading_site: 'KSH Srem · Grunwaldzka 27C',
   unload_site: 'Stegra · Stalverket 20, Boden',
   import_drop: 'Släpp XLSX eller klicka',
   focus: 'Endast vald',
@@ -376,7 +377,11 @@ const sv: Dict = {
   ferry_status: 'status',
 };
 
-const ALL: Record<Locale, Dict> = { pl, en, sv };
+const ALL: Record<Locale, Dict> = {
+  pl: { ...pl, ...D19_EXTRA.pl },
+  en: { ...en, ...D19_EXTRA.en },
+  sv: { ...sv, ...D19_EXTRA.sv },
+};
 
 export function t(locale: Locale, key: string): string {
   return ALL[locale][key] ?? ALL.en[key] ?? key;

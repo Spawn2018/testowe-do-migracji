@@ -14,6 +14,7 @@ import {
 } from '../lib/voyage';
 import { isDemoSourceMode, trafikverketSourceNote } from '../lib/demoLabel';
 import { severityLabel } from '../lib/enumLabels';
+import { formatSeaRiskLabel } from '../lib/voyageSea';
 
 const ALT = [
   ['Gdańsk–Karlshamn', '+310 km do Boden', 'Polferries'],
@@ -80,7 +81,7 @@ export function RisksView() {
     (
       ({
         roadworks: 'roboty',
-        weather: 'pogoda/lód',
+        weather: t(locale, 'weather_ice'),
         accident: 'wypadek',
         restriction: 'ograniczenie',
         other: 'inne',
@@ -119,8 +120,8 @@ export function RisksView() {
 
       <div className="panel section-card" style={{ margin: 12 }} data-panel="ferry">
         <header className="panel-hd">
-          <h2>Prom i Bałtyk</h2>
-          <span className="sub">jedno odejście dziennie · spóźnienie kosztuje dobę</span>
+          <h2>{t(locale, 'risk_ferry_baltic')}</h2>
+          <span className="sub">{t(locale, 'risk_ferry_sub')}</span>
           <div className="spacer" />
           <span className="sub" style={{ color: 'var(--sea)' }}>
             {ferryLabel(sailing)} · MMSI {vessel.mmsi}
@@ -129,7 +130,7 @@ export function RisksView() {
         <div className="panel-bd">
           <div className="two">
             <div>
-              <h4 className="sec">Rejs Gdańsk → Nynäshamn</h4>
+              <h4 className="sec">{t(locale, 'risk_voyage_gdn_nyn')}</h4>
               <table style={{ width: '100%', fontSize: 13 }}>
                 <tbody>
                   {sailRows.map((row) => (
@@ -141,27 +142,23 @@ export function RisksView() {
                       <td className="num">{row.wave}</td>
                       <td className="num">{row.wind}</td>
                       <td style={{ textAlign: 'right' }}>
-                        <span className={`pill ${row.pillClass}`}>{row.riskLabel}</span>
+                        <span className={`pill ${row.pillClass}`}>{formatSeaRiskLabel(row.riskLabel, locale)}</span>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 8 }}>
-                Prognoza falowania i wiatru z modelu meteorologicznego, próbkowana w pięciu punktach kursu.
-                Progi są ustawiane przez Ciebie. System nie przewiduje decyzji armatora — sygnalizuje warunki
-                i porównuje je z komunikatem o kursowaniu promów.
-              </div>
+              <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 8 }}>{t(locale, 'risk_sea_forecast')}</div>
             </div>
             <div>
-              <h4 className="sec">Alternatywy dla rejsu {focusDayLabel}</h4>
+              <h4 className="sec">{t(locale, 'risk_alt_for_day')} {focusDayLabel}</h4>
               <table style={{ width: '100%', fontSize: 13 }}>
                 <tbody>
                   {ALT.map(([r, k, o], i) => (
                     <tr key={r}>
-                      <td style={{ fontWeight: 600 }}>{r}</td>
-                      <td>{o}</td>
-                      <td className="num" style={{ color: 'var(--ink-3)' }}>
+                      <td style={{ fontWeight: 600 }} data-content>{r}</td>
+                      <td data-content>{o}</td>
+                      <td className="num" style={{ color: 'var(--ink-3)' }} data-content>
                         {k}
                       </td>
                       <td style={{ textAlign: 'right' }}>
@@ -209,22 +206,22 @@ export function RisksView() {
         data-demo={isDemoSourceMode(seMode) ? 'trafikverket' : undefined}
       >
         <header className="panel-hd">
-          <h2>Warunki drogowe SE · E4</h2>
+          <h2>{t(locale, 'risk_road_se_title')}</h2>
           <span className="sub">
-            Nynäshamn→Boden · {trafikverketSourceNote(seMode)} · {seSituations.length} sytuacji
+            Nynashamn→Boden · {trafikverketSourceNote(seMode)} · {seSituations.length} {t(locale, 'risk_situations')}
           </span>
           {isDemoSourceMode(seMode) ? <DemoMark /> : null}
         </header>
         <div className="panel-bd">
           {isDemoSourceMode(seMode) ? (
-            <div className="note" style={{ marginBottom: 12 }}>
+            <div className="note" style={{ marginBottom: 12 }} data-content>
               Warunki drogowe SE są <b>demonstracyjne</b> (seed makiety). To nie jest żywy feed
               Trafikverket — brak klucza API. Ten sam wzorzec oznaczenia co stawki demo (D18).
             </div>
           ) : null}
           <div className="two">
             <div>
-              <h4 className="sec">Sytuacje na korytarzu</h4>
+              <h4 className="sec">{t(locale, 'risk_situations_title')}</h4>
               <table style={{ width: '100%', fontSize: 13 }}>
                 <tbody>
                   {seSituations.map((s) => (
@@ -238,12 +235,12 @@ export function RisksView() {
                         if (linked?.loadId) selectLoad(linked.loadId);
                       }}
                     >
-                      <td style={{ fontWeight: 600 }}>{s.road}</td>
-                      <td>{s.title.replace(/^E4\s*/, '')}</td>
+                      <td style={{ fontWeight: 600 }} data-content>{s.road}</td>
+                      <td data-content>{s.title.replace(/^E4\s*/, '')}</td>
                       <td className="num">+{s.delayMin} min</td>
                       <td style={{ textAlign: 'right' }}>
                         <span className={`pill ${sevPill(s.severity)}`}>
-                          {kindLabel(s.kind)} · {severityLabel(s.severity)}
+                          {kindLabel(s.kind)} · {severityLabel(s.severity, locale)}
                         </span>
                       </td>
                     </tr>
@@ -252,7 +249,7 @@ export function RisksView() {
               </table>
             </div>
             <div>
-              <h4 className="sec">Ryzyka drogi SE / siła wyższa</h4>
+              <h4 className="sec">{t(locale, 'risk_se_fm')}</h4>
               {[...roadSeRisks, ...fmRisks].map((r) => (
                 <div
                   key={r.id}
@@ -264,7 +261,7 @@ export function RisksView() {
                 >
                   <span className="lbl">
                     <span className="code" data-content>{r.type === 'FORCE_MAJEURE' ? 'FM' : 'SE'}</span>{' '}
-                    {r.title}
+                    <span data-content>{r.title}</span>
                   </span>
                   <span>{r.delayImpactHours != null ? `+${r.delayImpactHours} h` : r.meta}</span>
                 </div>
@@ -273,35 +270,35 @@ export function RisksView() {
           </div>
 
           <div style={{ marginTop: 14, borderTop: '1px solid var(--rule-2)', paddingTop: 10 }}>
-            <h4 className="sec">Alternatywy trasy SE (zagrożenia drogowe)</h4>
+            <h4 className="sec">{t(locale, 'risk_alt_se')}</h4>
             <div className="alt-list">
               <div className="alt-row">
                 <div>
                   <b>E4 → E18 via Västerås / Uppsala</b>
-                  <span>Omija roboty E4 Gävle–Söderhamn · +45–70 min · zalecane przy wysokim ryzyku</span>
+                  <span data-content>Omija roboty E4 Gävle–Söderhamn · +45–70 min · zalecane przy wysokim ryzyku</span>
                 </div>
-                <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().pushToast('Alternatywa SE: E4→E18', 'MEDIUM')}>Wybierz</button>
+                <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().pushToast('Alternatywa SE: E4→E18', 'MEDIUM')}>{t(locale, 'risk_choose')}</button>
               </div>
               <div className="alt-row">
                 <div>
                   <b>E4 → Rv 83 / Rv 84 (Ljusdal – Ånge)</b>
-                  <span>Objazd śnieżycy środkowego Norrland · +90–120 min · zima</span>
+                  <span data-content>Objazd śnieżycy środkowego Norrland · +90–120 min · zima</span>
                 </div>
-                <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().pushToast('Alternatywa SE: Rv83/84', 'MEDIUM')}>Wybierz</button>
+                <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().pushToast('Alternatywa SE: Rv83/84', 'MEDIUM')}>{t(locale, 'risk_choose')}</button>
               </div>
               <div className="alt-row">
                 <div>
                   <b>Kolej + ostatnia mila (Boden rail terminal)</b>
-                  <span>Gdy siła wyższa na E4 północ · przeładunek SE · +1–2 doby</span>
+                  <span data-content>Gdy siła wyższa na E4 północ · przeładunek SE · +1–2 doby</span>
                 </div>
-                <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().pushToast('Alternatywa SE: kolej Boden', 'MEDIUM')}>Wybierz</button>
+                <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().pushToast('Alternatywa SE: kolej Boden', 'MEDIUM')}>{t(locale, 'risk_choose')}</button>
               </div>
               <div className="alt-row">
                 <div>
                   <b>Pauza w Gävle / Sundsvall + nowy slot Boden</b>
-                  <span>Gdy okno Stegra nie dotrzymane · unikaj nocnego podejścia placu</span>
+                  <span data-content>Gdy okno Stegra nie dotrzymane · unikaj nocnego podejścia placu</span>
                 </div>
-                <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().pushToast('Alternatywa SE: pauza + slot', 'MEDIUM')}>Wybierz</button>
+                <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().pushToast('Alternatywa SE: pauza + slot', 'MEDIUM')}>{t(locale, 'risk_choose')}</button>
               </div>
             </div>
           </div>

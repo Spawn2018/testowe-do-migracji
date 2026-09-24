@@ -1,35 +1,36 @@
-import type { CorridorStage, LoadStatus } from '../../types';
+import type { CorridorStage, LoadStatus, Locale } from '../../types';
 import { statusTone } from '../../lib/status';
+import { t } from '../../i18n/messages';
+import { useTowerStore } from '../../store/useTowerStore';
 
 /**
- * Claude makieta I18N s_* only — no Opóźniony / Cichy as status labels.
- * DELAYED / SILENT fall back to stage-based Claude wording.
+ * Status / stage labels via dictionary (D19). DELAYED / SILENT fall back to stage.
  */
-const BY_STATUS: Partial<Record<LoadStatus, string>> = {
-  PLANNED: 'Planowany',
-  RESOURCES_PENDING: 'Brak auta',
-  DOC_MISSING: 'Brak dokumentów',
-  READY: 'Gotowy',
-  LOADING: 'Załadunek',
-  IN_TRANSIT_PL: 'W drodze PL',
-  AT_PORT: 'Port Gdańsk',
-  ON_FERRY: 'Na promie',
-  IN_TRANSIT_SE: 'W drodze SE',
-  APPROACHING_SITE: 'Na placu',
-  UNLOADING: 'Rozładowany',
-  DELIVERED: 'Dostarczony',
+const STATUS_KEYS: Partial<Record<LoadStatus, string>> = {
+  PLANNED: 's_planned',
+  RESOURCES_PENDING: 's_no_vehicle',
+  DOC_MISSING: 's_no_docs',
+  READY: 's_ready',
+  LOADING: 's_loading',
+  IN_TRANSIT_PL: 's_road_pl',
+  AT_PORT: 's_port_gdn',
+  ON_FERRY: 's_on_ferry',
+  IN_TRANSIT_SE: 's_road_se',
+  APPROACHING_SITE: 's_on_site',
+  UNLOADING: 's_unloaded',
+  DELIVERED: 's_delivered',
 };
 
-const BY_STAGE: Record<CorridorStage, string> = {
-  PLAN: 'Planowany',
-  LOADING: 'Załadunek',
-  TO_PORT: 'W drodze PL',
-  GDANSK: 'Port Gdańsk',
-  FERRY: 'Na promie',
-  APPROACH: 'Nynäshamn',
-  SE_ROAD: 'W drodze SE',
-  SITE: 'Na placu',
-  DELIVERED: 'Dostarczony',
+const STAGE_KEYS: Record<CorridorStage, string> = {
+  PLAN: 's_planned',
+  LOADING: 's_loading',
+  TO_PORT: 's_road_pl',
+  GDANSK: 's_port_gdn',
+  FERRY: 's_on_ferry',
+  APPROACH: 's_nynashamn',
+  SE_ROAD: 's_road_se',
+  SITE: 's_on_site',
+  DELIVERED: 's_delivered',
 };
 
 const TONE_PILL: Record<ReturnType<typeof statusTone>, string> = {
@@ -41,11 +42,13 @@ const TONE_PILL: Record<ReturnType<typeof statusTone>, string> = {
   done: 'p-go',
 };
 
-export function statusLabel(status: LoadStatus, stage?: CorridorStage): string {
+export function statusLabel(status: LoadStatus, stage?: CorridorStage, locale: Locale = 'pl'): string {
   if (status === 'DELAYED' || status === 'SILENT') {
-    return stage ? BY_STAGE[stage] : 'W drodze PL';
+    return stage ? t(locale, STAGE_KEYS[stage]) : t(locale, 's_road_pl');
   }
-  return BY_STATUS[status] ?? (stage ? BY_STAGE[stage] : status);
+  const key = STATUS_KEYS[status];
+  if (key) return t(locale, key);
+  return stage ? t(locale, STAGE_KEYS[stage]) : status;
 }
 
 /** Claude table delay pill: +1h35 */
@@ -62,9 +65,10 @@ export function StatusPill({
   status: LoadStatus;
   stage?: CorridorStage;
 }) {
+  const locale = useTowerStore((s) => s.locale);
   const tone =
     status === 'DELAYED' || status === 'SILENT'
       ? 'warn'
       : statusTone(status);
-  return <span className={`pill ${TONE_PILL[tone]}`}>{statusLabel(status, stage)}</span>;
+  return <span className={`pill ${TONE_PILL[tone]}`}>{statusLabel(status, stage, locale)}</span>;
 }

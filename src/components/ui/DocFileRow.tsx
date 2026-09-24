@@ -2,6 +2,7 @@
 import type { Document } from '../../types';
 import { downloadDocumentFile } from '../../lib/docsIo';
 import { docCategoryLabel } from '../../lib/enumLabels';
+import { useTowerStore } from '../../store/useTowerStore';
 
 type Props = {
   doc: Document;
@@ -12,12 +13,13 @@ type Props = {
 };
 
 export function DocFileRow({ doc, label, onPreview, onUploadClick, showUpload }: Props) {
+  const locale = useTowerStore((s) => s.locale);
   const uploaded = doc.status === 'UPLOADED' || doc.status === 'MISMATCH' || doc.status === 'EXPIRED';
   const okColor = doc.status === 'MISMATCH' ? 'var(--amber)' : 'var(--go)';
 
   return (
     <div className="mrow">
-      <span className="lbl">{label ?? docCategoryLabel(doc.category)}</span>
+      <span className="lbl">{label ?? docCategoryLabel(doc.category, locale)}</span>
       <span className="docrow-actions">
         {uploaded ? (
           <>
