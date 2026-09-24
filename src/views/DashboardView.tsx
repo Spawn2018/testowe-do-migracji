@@ -7,6 +7,7 @@ import { CorridorMap } from '../components/map/CorridorMap';
 import { t } from '../i18n/messages';
 import { canSeeMargin, ROLE_META } from '../lib/permissions';
 import { getNow } from '../lib/frozenNow';
+import { computeCorridorKpis } from '../lib/corridorKpis';
 
 export function DashboardView() {
   const role = useTowerStore((s) => s.role);
@@ -18,24 +19,19 @@ export function DashboardView() {
   const navigateTo = useTowerStore((s) => s.navigateTo);
   const setView = useTowerStore((s) => s.setView);
 
-  const delivered = loads.filter((l) => l.status === 'DELIVERED').length;
-  const delayedN = loads.filter((l) => l.delayed).length;
-  const docsOk = loads.filter((l) => !l.docMissing).length;
-  const docsMissing = loads.filter((l) => l.docMissing).length;
-  const otif = Math.round((delivered / Math.max(1, delivered + delayedN)) * 100);
-  const marginAvg =
-    loads.reduce((a, l) => a + l.pricing.marginPct, 0) / Math.max(1, loads.length);
-  const inTransit = loads.filter((l) =>
-    ['IN_TRANSIT_PL', 'AT_PORT', 'ON_FERRY', 'IN_TRANSIT_SE', 'APPROACHING_SITE'].includes(
-      l.status,
-    ),
-  ).length;
-  const arrivals72 = loads.filter((l) =>
-    ['APPROACHING_SITE', 'UNLOADING', 'IN_TRANSIT_SE'].includes(l.status),
-  );
-  const ferryHot = risks.filter(
-    (r) => r.type === 'FERRY' && (r.severity === 'CRITICAL' || r.severity === 'HIGH'),
-  ).length;
+  const kpis = useMemo(() => computeCorridorKpis(loads, risks), [loads, risks]);
+  const {
+    delivered,
+    delayedN,
+    docsOk,
+    docsMissing,
+    otifPct: otif,
+    marginAvg,
+    inTransit,
+    notInTransit,
+    arrivals: arrivals72,
+    ferryHot,
+  } = kpis;
 
   const sortedEx = useMemo(
     () =>
@@ -98,7 +94,7 @@ export function DashboardView() {
               <KpiTile
                 label="Tonaż na placu"
                 value={`${loads
-                  .filter((l) => l.status === 'DELIVERED')
+                  .filter((l) => l.stage === 'DELIVERED')
                   .reduce((a, l) => a + l.dims.weightT, 0)
                   .toFixed(0)} t`}
                 delta={`z ${loads.reduce((a, l) => a + l.dims.weightT, 0).toFixed(0)} t`}
@@ -161,7 +157,7 @@ export function DashboardView() {
                 label="Przychód tygodnia"
                 value={`${Math.round(
                   loads
-                    .filter((l) => l.status === 'DELIVERED')
+                    .filter((l) => l.stage === 'DELIVERED')
                     .slice(-6)
                     .reduce((a, l) => a + l.pricing.costTotal, 0),
                 ).toLocaleString('pl-PL')} PLN`}
@@ -189,7 +185,7 @@ export function DashboardView() {
               <KpiTile
                 label="Transporty w drodze"
                 value={inTransit}
-                delta={`${delivered} dostarczonych, ${loads.length - delivered - inTransit} w przygotowaniu`}
+                delta={`${delivered} dostarczonych, ${notInTransit} w przygotowaniu`}
                 onClick={() => navigateTo({ view: 'map' })}
               />
               <KpiTile

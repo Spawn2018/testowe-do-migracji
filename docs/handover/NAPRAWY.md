@@ -3,7 +3,7 @@
 | Pole | Wartość |
 |---|---|
 | Data zapisu | **2026-09-24** Europe/Warsaw |
-| Status | **Fala 1 ACCEPTED** · **Fala 2 w toku** · D7 answered · **D22 DONE** · pozostałe F2: D3/D4/D5/D8/D20 |
+| Status | **Fala 1 ACCEPTED** · **Fala 2 w toku** · D7 answered · **D22 DONE** · **D5 DONE** · pozostałe F2: D3/D4/D8/D20 |
 | Repo | `Spawn2018/testowe-do-migracji` · branch `main` |
 | Kod produktu | Fala 2 **nie** startuje tu (poza closeout D9/stylelint + proof D2) |
 
@@ -34,7 +34,7 @@ Stary zakres NAPRAWY mieszł etykiety Sebastiana (Fala 1/2). **D1–D26 = wyłą
 | D24 14-click | **D24** | tak | **DONE** Fala 0 |
 | D26 import removals + UI consent | **D26** | tak | PLAN only (Fala 3) |
 | *(brak w starym)* voyage SoT | **D4** | nowy kanon Sebastian | OPEN (Fala 2) |
-| *(brak w starym)* KPI vs corridor | **D5** | nowy kanon Sebastian | OPEN (Fala 2) |
+| *(brak w starym)* KPI vs corridor | **D5** | nowy kanon Sebastian | **DONE** Fala 2 |
 | *(brak w starym)* BAF/SEFS formula | **D7** | nowy kanon Sebastian | **ANSWERED** (poniżej; fix = Fala 2) |
 | *(brak w starym)* timezones last | **D8** | nowy kanon Sebastian | OPEN (Fala 2) |
 | D1 Tailwind / D2 fonty / D9 chrome / D16 theme | **D1 / D2 / D9 / D16** | kanon Fala 1 | **DONE** (+ D9 stylelint closeout 2026-09-24) |
@@ -70,7 +70,16 @@ OPEN (Fala 2). Warunki drogowe SE — endpoint na żywo **albo** jawna etykieta 
 OPEN (Fala 2). Jedno źródło prawdy rejsu/ładunku (≠ L4 terminy zadań UI).
 
 ### D5 — KPI vs corridor
-OPEN (Fala 2). Spójność KPI z korytarzem (≠ L5 preferencje notyfikacji).
+**DONE Fala 2 (2026-09-24).**
+
+| Pole | Wartość |
+|---|---|
+| Problem | KPI „Transporty w drodze” liczyło **whitelistę statusów** (`IN_TRANSIT_PL`…`APPROACHING_SITE`) i **pomijało** `DELAYED`/`SILENT`, podczas gdy spine korytarza liczy po **`load.stage`** (te statusy → `SE_ROAD`). Na seedzie: KPI **21** vs etapy korytarza **36**. Delta HHL „w przygotowaniu” też była zła. |
+| Fix | Jedna funkcja `computeCorridorKpis` / `countLoadsByStage` w `src/lib/corridorKpis.ts`; Dashboard + CorridorSpine z tego samego SoT. `inTransit` = suma `TO_PORT+GDANSK+FERRY+SE_ROAD+APPROACH`. |
+| Visual | **~90** ujęć kokpitu może się zmienić (liczby KPI na `.kpis`) — **nie** regenerować `shots-baseline` w tej fali. |
+| Testy | `tests/corridor-kpis.test.ts` (3) |
+
+test:unit **26/26** · playwright **4/4**.
 
 ### D6 — pogoda / fale `SAIL_ROWS`
 OPEN. Źródło prawdziwe lub oznaczenie demo (`RisksView`).
@@ -242,7 +251,8 @@ PLAN only (Fala 3) — opcja 2 Sebastian: checkbox zgody, `allowRemovals` z UI.
 
 ### Fala 2 — w toku
 - **D22** DONE (store versioning + migrate; Step 0 baseline seed = wipe→code seed).
-- Pozostałe: D3, D4 (voyage), D5 (KPI), D7 fix (jeśli potrzeba), D8 timezones, D20.
+- **D5** DONE (KPI ↔ corridor stage SoT; ~90 kokpit shots expected drift — no baseline regen).
+- Pozostałe: D3, D4 (voyage), D7 fix (jeśli potrzeba), D8 timezones, D20.
 
 ### Fala 3
 D26 (plan) + skala importu + visual CI.

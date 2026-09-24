@@ -1,5 +1,6 @@
 import { useTowerStore } from '../../store/useTowerStore';
 import { STAGE_ORDER } from '../../lib/status';
+import { countLoadsByStage } from '../../lib/corridorKpis';
 import { t } from '../../i18n/messages';
 import type { CorridorStage } from '../../types';
 
@@ -18,13 +19,7 @@ export function CorridorSpine() {
   const setStageFilter = useTowerStore((s) => s.setStageFilter);
   const locale = useTowerStore((s) => s.locale);
 
-  const counts = STAGE_ORDER.reduce(
-    (acc, st) => {
-      acc[st] = loads.filter((l) => l.stage === st).length;
-      return acc;
-    },
-    {} as Record<CorridorStage, number>,
-  );
+  const counts = countLoadsByStage(loads);
 
   const max = Math.max(1, ...STAGE_ORDER.map((s) => counts[s]));
 
