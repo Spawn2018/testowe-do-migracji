@@ -174,6 +174,18 @@ Klasy są **stabilnym kontraktem**. Zmiana nazwy klasy = zmiana w `tower.css`.
 | `.empty` | stan pusty | nagłówek, zdanie wyjaśnienia, przycisk wyjścia z filtra |
 | `kbd` / `.kbdhint` / `.kbdpanel` | skróty klawiszowe | podpowiedzi widoczne w interfejsie, pełna lista pod `?` |
 | `.minimap` | podgląd mapy na kokpicie | 360 px wysokości, `place-items:center`, svg `height:100%` |
+| `.section-card` / `.section-card-hd` / `.section-card-bd` | panel sekcji strony (kompozycja `.panel` + `.panel-hd` + `.panel-bd`) | układ strony z przeciąganiem sekcji; **nie** nowy wygląd — te same tokeny i gęstość co `.panel` |
+| `.section-grip` | uchwyt DnD w nagłówku sekcji | widoczny przy `:hover` / `:focus-within` nagłówka `.is-draggable` |
+| `.is-draggable` / `.is-dragging` / `.is-drag-over` | stan przeciągania nagłówka | kursor grab/grabbing; opacity / outline amber — spójne z `aria`/`is-*`, **bez** modyfikatora BEM `--drag` |
+
+### 5.1 Konwencja nazw klas
+
+- **kebab-case** wyłącznie: `panel-hd`, `chipbtn`, `map-split` — egzekwowane stylelintem `selector-class-pattern` (włączone od D13).
+- **Stan / interakcja** → prefiks `is-`: `is-draggable`, `is-dragging`, `is-drag-over`, `is-active` (nie `foo--bar`).
+- **Sygnał pigułki** → `.pill` + `.p-*` (`p-go`, `p-red`, …) jak w katalogu.
+- Nowy wzorzec wizualny spoza tabeli powyżej: albo wpis do katalogu w tym pliku, albo usunięcie z CSS/JSX. Zakaz „cichego” trzeciego systemu klas.
+
+Wcześniejszy wyjątek `section-card-hd--drag` (podwójny myślnik BEM) został ujednolicony do `.is-draggable` na `.panel-hd` / `.section-card-hd`.
 
 ---
 

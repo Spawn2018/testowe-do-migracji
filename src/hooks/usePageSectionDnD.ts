@@ -43,7 +43,7 @@ export function usePageSectionDnD(pageAttr = 'data-page') {
         if (!c.classList.contains('section-card')) return;
         const hd = c.querySelector<HTMLElement>(':scope > .panel-hd');
         if (!hd) return;
-        hd.classList.add('section-card-hd--drag');
+        hd.classList.add('is-draggable');
         hd.draggable = true;
         if (!hd.querySelector('.section-grip')) {
           const g = document.createElement('span');
@@ -58,7 +58,7 @@ export function usePageSectionDnD(pageAttr = 'data-page') {
       const onDragStart = (e: DragEvent) => {
         const hd = e.target as HTMLElement;
         const card = hd.closest<HTMLElement>('.section-card, .panel');
-        if (!card || !hd.classList.contains('section-card-hd--drag') && !hd.closest('.section-card-hd--drag')) return;
+        if (!card || !hd.classList.contains('is-draggable') && !hd.closest('.is-draggable')) return;
         const id = card.getAttribute('data-section');
         if (!id) return;
         e.dataTransfer?.setData('text/wt-section', id);

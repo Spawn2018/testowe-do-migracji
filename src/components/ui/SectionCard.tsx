@@ -67,7 +67,7 @@ export function SectionCard({
       style={style}
     >
       <header
-        className={`panel-hd section-card-hd${draggableSection ? ' section-card-hd--drag' : ''}`}
+        className={`panel-hd section-card-hd${draggableSection ? ' is-draggable' : ''}`}
         draggable={draggableSection}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}

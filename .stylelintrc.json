@@ -92,7 +92,12 @@
     "color-hex-length": null,
     "shorthand-property-no-redundant-values": null,
     "property-no-vendor-prefix": null,
-    "selector-class-pattern": null,
+    "selector-class-pattern": [
+      "^[a-z]([a-z0-9]*(-[a-z0-9]+)*)?$",
+      {
+        "message": "Expected class selector to be kebab-case (state: is-*)"
+      }
+    ],
     "no-duplicate-selectors": null,
     "alpha-value-notation": null
   }

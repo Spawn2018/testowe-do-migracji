@@ -563,8 +563,8 @@ nav button{padding:8px 14px}
 /* ===== Watch Tower UI batch: sections / map arrows / schedule cols ===== */
 /* SectionCard = Claude .panel chrome; do NOT reinvent spacing. */
 .section-card{min-width:0}
-.section-card-hd--drag{cursor:grab;user-select:none}
-.section-card-hd--drag:active{cursor:grabbing}
+.is-draggable{cursor:grab;user-select:none}
+.is-draggable:active{cursor:grabbing}
 .section-card-hd.is-dragging,.panel-hd.is-dragging{opacity:.55}
 .section-card-hd.is-drag-over,.panel-hd.is-drag-over{outline:2px dashed var(--amber);outline-offset:-2px}
 .section-grip{
@@ -572,9 +572,9 @@ nav button{padding:8px 14px}
   color:var(--ink-3);font-size:11px;letter-spacing:-.09em;cursor:grab;
   vertical-align:middle;transition:opacity .12s ease,width .12s ease,margin .12s ease;
 }
-.panel-hd.section-card-hd--drag:hover .section-grip,
-.panel-hd.section-card-hd--drag:focus-within .section-grip,
-.panel-hd.section-card-hd--drag.is-dragging .section-grip{
+.panel-hd.is-draggable:hover .section-grip,
+.panel-hd.is-draggable:focus-within .section-grip,
+.panel-hd.is-draggable.is-dragging .section-grip{
   width:auto;margin-right:6px;opacity:.85;overflow:visible;
 }
 
