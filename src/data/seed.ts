@@ -19,6 +19,7 @@ import type {
 } from '../types';
 import { positionAlong, PROGRESS_OF, STATUS_TO_STAGE } from '../lib/status';
 import rawLoads from './loads.json';
+import { seedOrders, seedResourcesForIndex } from './seedIdentity';
 
 export const ORGS: Organization[] = [
   { id: 'org-hhl', kind: 'HHL', name: 'H&H Logistics' },
@@ -32,7 +33,7 @@ export const USERS: DemoUser[] = [
   { id: 'u-ksh-1', orgId: 'org-ksh', name: 'Marek KSH', email: 'marek@ksh.pl', roleLabel: 'KSH Admin' },
   { id: 'u-ksh-2', orgId: 'org-ksh', name: 'Ewa Planner', email: 'ewa@ksh.pl', roleLabel: 'KSH User' },
   { id: 'u-scx-1', orgId: 'org-scx', name: 'Erik Dispatch', email: 'erik@scx.se', roleLabel: 'SCX Dispatch' },
-  { id: 'u-scx-2', orgId: 'org-scx', name: 'Johan Driver Coord', email: 'johan@scx.se', roleLabel: 'SCX User' },
+  { id: 'u-scx-2', orgId: 'org-scx', name: 'Johan Lindqvist', email: 'johan@scx.se', roleLabel: 'SCX User' },
 ];
 
 export const GEOFENCES: Geofence[] = [
@@ -360,15 +361,16 @@ function buildExtraLoads(): Load[] {
       plannedDeliverDate: spec.plannedDeliverDate,
       resources: {
         ...template.resources,
-        driverName: spec.status === 'RESOURCES_PENDING' ? null : `Driver ${63 + index}`,
-        driverPhone: spec.status === 'RESOURCES_PENDING' ? null : `+48 600 00${String(630 + index).slice(-3)}`,
-        tractorPlate: spec.status === 'RESOURCES_PENDING' ? null : `PSE ${1300 + index}`,
-        trailerPlate: spec.status === 'RESOURCES_PENDING' ? null : `UGM ${400 + index}`,
+        ...seedResourcesForIndex(62 + index, {
+          pending: spec.status === 'RESOURCES_PENDING',
+          escort: Boolean(template.resources.escort),
+        }),
         setLengthM: spec.dims.lengthM,
         setWidthM: spec.dims.widthM,
         setHeightM: spec.dims.heightM,
         setWeightT: spec.dims.weightT,
       },
+      ...seedOrders(spec.sequenceOrder),
       awizacja: {
         ...template.awizacja,
         loadWindowStart: `${spec.plannedLoadDate}T06:00:00+02:00`,
@@ -461,8 +463,12 @@ export function buildSeedLoads(): Load[] {
 
     const permitFits =
       l.code === 'SG-07' || l.code === 'SG-34' ? false : l.docMissing || docMissing ? null : true;
+    const orders = seedOrders(l.sequenceOrder);
     const base = {
       ...l,
+      orderNo: l.orderNo ?? orders.orderNo,
+      hhlOrderNo: l.hhlOrderNo ?? orders.hhlOrderNo,
+      carrierOrderNo: l.carrierOrderNo ?? orders.carrierOrderNo,
       status,
       docMissing,
       permitFits,

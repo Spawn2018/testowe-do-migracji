@@ -155,7 +155,7 @@ describe('schedule XLSX import regression (P9 / D23)', () => {
     const sg01 = after.find((load) => load.code === 'SG-01');
     expect(sg01?.id).toBe('load-001');
     expect(sg01?.plannedDeliverDate).toBe('2026-10-06');
-    expect(sg01?.resources.driverName).toBe('Driver 1');
+    expect(sg01?.resources.driverName).toBe('Marek Kowalski');
     expect(sg01?.dims.weightT).toBe(20.74);
     expect(after.some((load) => load.code === 'QA-D23-ADD')).toBe(true);
     for (const code of ['SG-02', 'T-01', 'SG-03', 'SG-04', 'T-02']) {
@@ -336,7 +336,7 @@ describe('schedule XLSX import regression (P9 / D23)', () => {
     assertExistingSurvive(before, after);
     expect(after).toHaveLength(before.length + 1);
     expect(after.find((load) => load.id === 'load-001')?.plannedDeliverDate).toBe('2026-10-08');
-    expect(after.find((load) => load.id === 'load-001')?.resources.driverName).toBe('Driver 1');
+    expect(after.find((load) => load.id === 'load-001')?.resources.driverName).toBe('Marek Kowalski');
     expect(after.some((load) => load.code === 'QA-D23-OK')).toBe(true);
     for (const code of ['QA-D23-DIM', 'QA-D23-WGT', 'QA-D23-DATE']) {
       expect(after.some((load) => load.code === code)).toBe(false);

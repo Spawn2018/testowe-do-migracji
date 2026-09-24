@@ -243,10 +243,10 @@ export function MapView() {
                         <span className="cell-clip" data-content><span data-content>{l.itemType}</span></span>
                       </td>
                       <td>
-                        <span className="cell-clip">{l.resources.driverName || '—'}</span>
+                        <span className="cell-clip" data-content>{l.resources.driverName || '—'}</span>
                       </td>
                       <td>
-                        <span className="cell-clip">{l.resources.tractorPlate || '—'}</span>
+                        <span className="cell-clip" data-content>{l.resources.tractorPlate || '—'}</span>
                       </td>
                       <td>
                         <span className="cell-clip">

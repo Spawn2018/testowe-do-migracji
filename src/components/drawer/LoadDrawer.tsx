@@ -212,10 +212,10 @@ export function LoadDrawer() {
                 <dt>Kierowca</dt>
                 <dd>
                   {load.resources.driverName ? (
-                    <>
+                    <span data-content>
                       {load.resources.driverName}
                       {load.resources.driverPhone ? ` · ${load.resources.driverPhone}` : ''}
-                    </>
+                    </span>
                   ) : (
                     <span style={{ color: 'var(--red)' }}>nie uzupełniono</span>
                   )}
@@ -440,12 +440,12 @@ export function LoadDrawer() {
                   <h4 className="sec">Zasoby</h4>
                   <dl className="kv">
                     <dt>Kierowca</dt>
-                    <dd>{load.resources.driverName ?? '—'}</dd>
+                    <dd data-content>{load.resources.driverName ?? '—'}</dd>
                     <dt>Telefon</dt>
-                    <dd>{load.resources.driverPhone ?? '—'}</dd>
+                    <dd data-content>{load.resources.driverPhone ?? '—'}</dd>
                     <dt>Ciągnik</dt>
                     <dd>
-                      <span className="mono">{load.resources.tractorPlate ?? '—'}</span>
+                      <span className="mono" data-content>{load.resources.tractorPlate ?? '—'}</span>
                     </dd>
                     <dt>Naczepa</dt>
                     <dd>

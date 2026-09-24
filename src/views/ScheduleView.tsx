@@ -39,7 +39,7 @@ function fmtDim(n: number): string {
 }
 
 function orderNo(l: Load): string {
-  return l.permit?.pozycja || `HHL/2026/${1240 + l.sequenceOrder}`;
+  return l.hhlOrderNo || l.orderNo || l.carrierOrderNo || `HHL/2026/${1240 + l.sequenceOrder}`;
 }
 
 function delayMinutes(l: Load): number | null {
@@ -580,7 +580,7 @@ export function ScheduleView() {
                           return (
                             <td key={id} data-col={id}>
                               {l.resources.driverName ? (
-                                l.resources.driverName
+                                <span data-content>{l.resources.driverName}</span>
                               ) : (
                                 <span style={{ color: 'var(--red)' }}>— brak —</span>
                               )}
@@ -590,7 +590,7 @@ export function ScheduleView() {
                           return (
                             <td key={id} data-col={id}>
                               {l.resources.driverPhone ? (
-                                <a href={`tel:${l.resources.driverPhone}`} className="mono" onClick={(e) => e.stopPropagation()}>
+                                <a href={`tel:${l.resources.driverPhone}`} className="mono" data-content onClick={(e) => e.stopPropagation()}>
                                   {l.resources.driverPhone}
                                 </a>
                               ) : (
@@ -602,7 +602,7 @@ export function ScheduleView() {
                           return (
                             <td key={id} data-col={id}>
                               {l.resources.tractorPlate ? (
-                                <span className="mono">{l.resources.tractorPlate}</span>
+                                <span className="mono" data-content>{l.resources.tractorPlate}</span>
                               ) : (
                                 '—'
                               )}

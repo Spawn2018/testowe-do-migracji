@@ -239,6 +239,12 @@ export interface Load {
   docMissing: boolean;
   permitFits: boolean | null;
   permit?: LoadPermit;
+  /** KSH order no from schedule import ("Nr zlecenia") */
+  orderNo?: string | null;
+  /** HHL internal order number */
+  hhlOrderNo?: string | null;
+  /** SCX / carrier order number */
+  carrierOrderNo?: string | null;
 }
 
 export interface Geofence {
