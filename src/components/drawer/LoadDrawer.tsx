@@ -2,7 +2,7 @@ import { Fragment, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { StatusPill } from '../ui/StatusPill';
 import { t } from '../../i18n/messages';
-import { canEditResources, canSeeCost, canSeeMargin, canSeeRevenue } from '../../lib/permissions';
+import { canEditResources, canSeeCost, canSeeMargin, canSeeRevenue, visibleDriverPhone } from '../../lib/permissions';
 import { SITES } from '../../lib/status';
 import { SEFS_SOURCES } from '../../lib/sefs';
 import { isReadyBlocked, evaluateLoadCover } from '../../lib/permits';
@@ -75,6 +75,7 @@ export function LoadDrawer() {
   );
 
   if (!load) return null;
+  const driverPhone = visibleDriverPhone(role, load);
 
   const showCost = canSeeCost(role);
   const showRev = canSeeRevenue(role);
@@ -212,12 +213,19 @@ export function LoadDrawer() {
                 <dt>Kierowca</dt>
                 <dd>
                   {load.resources.driverName ? (
-                    <span data-content>
-                      {load.resources.driverName}
-                      {load.resources.driverPhone ? ` · ${load.resources.driverPhone}` : ''}
-                    </span>
+                    <span data-content>{load.resources.driverName}</span>
                   ) : (
                     <span style={{ color: 'var(--red)' }}>nie uzupełniono</span>
+                  )}
+                </dd>
+                <dt>Telefon</dt>
+                <dd>
+                  {driverPhone ? (
+                    <a href={`tel:${driverPhone}`} className="mono" data-content>
+                      {driverPhone}
+                    </a>
+                  ) : (
+                    '—'
                   )}
                 </dd>
                 <dt>Ciągnik / naczepa</dt>
@@ -442,7 +450,15 @@ export function LoadDrawer() {
                     <dt>Kierowca</dt>
                     <dd data-content>{load.resources.driverName ?? '—'}</dd>
                     <dt>Telefon</dt>
-                    <dd data-content>{load.resources.driverPhone ?? '—'}</dd>
+                    <dd>
+                      {driverPhone ? (
+                        <a href={`tel:${driverPhone}`} className="mono" data-content>
+                          {driverPhone}
+                        </a>
+                      ) : (
+                        '—'
+                      )}
+                    </dd>
                     <dt>Ciągnik</dt>
                     <dd>
                       <span className="mono" data-content>{load.resources.tractorPlate ?? '—'}</span>
@@ -517,7 +533,7 @@ export function LoadDrawer() {
                       {(
                         [
                           ['driverName', 'Kierowca', load.resources.driverName],
-                          ['driverPhone', 'Telefon', load.resources.driverPhone],
+                          ['driverPhone', 'Telefon', driverPhone],
                           ['tractorPlate', 'Ciągnik', load.resources.tractorPlate],
                           ['trailerPlate', 'Naczepa', load.resources.trailerPlate],
                         ] as const

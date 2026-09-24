@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { filterLoads } from '../lib/selectors';
 import { StatusPill, formatDelayPill } from '../components/ui/StatusPill';
-import { canImportSchedule, canSeeCost, canSeeMargin, canSeeRevenue } from '../lib/permissions';
+import { canImportSchedule, canSeeCost, canSeeMargin, canSeeRevenue, visibleDriverPhone } from '../lib/permissions';
 import { exportLoadsXlsx } from '../lib/xlsxExport';
 import { t } from '../i18n/messages';
 import {
@@ -586,18 +586,20 @@ export function ScheduleView() {
                               )}
                             </td>
                           );
-                        case 'phone':
+                        case 'phone': {
+                          const phone = visibleDriverPhone(role, l);
                           return (
                             <td key={id} data-col={id}>
-                              {l.resources.driverPhone ? (
-                                <a href={`tel:${l.resources.driverPhone}`} className="mono" data-content onClick={(e) => e.stopPropagation()}>
-                                  {l.resources.driverPhone}
+                              {phone ? (
+                                <a href={`tel:${phone}`} className="mono" data-content onClick={(e) => e.stopPropagation()}>
+                                  {phone}
                                 </a>
                               ) : (
                                 '—'
                               )}
                             </td>
                           );
+                        }
                         case 'plate':
                           return (
                             <td key={id} data-col={id}>

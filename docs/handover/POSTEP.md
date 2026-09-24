@@ -6,7 +6,7 @@ Kolumny: `ID | pozycja | status | commit | testy (liczby) | uwagi`.
 Po F2.5 dodać wiersze **L*** (L1/L2/L4/L5/L7/L8/L9/L16) — na razie brak (notatka: po F2.5).  
 Niezgodności z F2.4: **F2.4-a / F2.4-b / F2.4-c** (poniżej, po G1).
 
-Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · D19 · D12 DONE) · następny: D6.
+Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · D12 · D6 DONE) · następny: D13.
 
 ---
 
@@ -62,7 +62,7 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 w toku** (… · D19 · D
 | D11 | Debug/EN enumy out z UI | **DONE** | `8a8569c` | unit **98 passed / 1 skipped** · pw **4/4** | `src/lib/enumLabels.ts` + seed/permits/eta PL. Ukryto: ferry status, geofence type, event type, doc category, severity, etaConfidence, payoutStatus, workflow trigger, READY/permitFits/CANCELLED w copy. Nie D19. |
 | D19 | 104 napisy → słownik PL/EN/SV | **DONE** | `d1d10b1` | unit **98 passed / 1 skipped** · pw **4/4** · D19-T **en=0/sv=0** · lint:css **0** | Chrome → `t()` via `src/i18n/messages.ts` + `src/i18n/d19Extra.ts` (PL/EN/SV). Seed/demo narrative → `data-content`. StatusPill/enumLabels locale-aware. Smoke mapa PL odświeżony (legenda i18n) — pełny baseline G2. Gaps: LoadDrawer/DriverPwa/Tasks/KeyboardHelp częściowo PL (poza matrycą HHL D19-T); creator WF PL gdy otwarty. |
 | D12 | Dane startowe prawdopodobne | **DONE** | `d8114a7` | unit **98 passed / 1 skipped** · pw **4/4** · D19-T **0/0** · lint:css **0** | `loads.json` + `seedIdentity.ts` + extras w `seed.ts`: nazwiska PL/LT/SE, E.164 (+48/+46/+370), tablice PL/SE/LT, zlecenia `KSH/2026/####`, `HHL/2026/####`, `SCX-26-####`. Brak Driver N / +48 600 000 000 / PSE 1000. data-content na kierowca/tablica (Schedule/Map/Drawer). Smoke mapa odświeżony (tekst danych). Pełny baseline = G2. |
-| D6 | Telefon kierowcy → szuflada; KSH ±24 h | OPEN | — | — | pending |
+| D6 | Telefon kierowcy → szuflada; KSH ±24 h | **DONE** | TBD | unit **103 passed / 1 skipped** · pw **4/4** · D19-T **0/0** · lint:css **0** | `canSeeDriverPhone` / `visibleDriverPhone` w `permissions.ts`: HHL+SCX zawsze; KSH tylko ±24 h od dostawy (unload→ETA→noon SE). Schedule + LoadDrawer (osobne pole Telefon) z tej samej funkcji. Test: `tests/permissions-phone.test.ts` (+5). |
 | D13 | Wzorce wizualne / `section-card-hd--drag` | OPEN | — | — | pending |
 | D18 | Oznaczenie danych demonstracyjnych | OPEN | — | — | pending |
 | P6 | Stawki demo PLN→EUR tabelą 186/A/NBP/2026 | OPEN | — | — | pending |
