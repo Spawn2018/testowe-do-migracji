@@ -1,0 +1,119 @@
+# POSTEP — rejestr zlecenia końcowego
+
+Źródło ID: `docs/handover/ZLECENIE_FINAL.md` §12 (**51 pozycji**).  
+Kolumny: `ID | pozycja | status | commit | testy (liczby) | uwagi`.
+
+Po F2.5 dodać wiersze **L*** (L1/L2/L4/L5/L7/L8/L9/L16) — na razie brak (notatka: po F2.5).  
+Niezgodności z F2.4 — dodać po odkryciu.
+
+Aktualizacja: **2026-09-24** Europe/Warsaw · Etap 0 zamknięty · Etap 1 nie rozpoczęty.
+
+---
+
+## Etap 0 — przygotowanie
+
+| ID | pozycja | status | commit | testy (liczby) | uwagi |
+|---|---|---|---|---|---|
+| P0.1 | Zapisz zlecenie → `ZLECENIE_FINAL.md` | **DONE** | `10ac61e` | unit **41/41** · pw **4/4** | 465 linii, identyczne z `ZLECENIE_DLA_GROKA.md` z pakietu |
+| P0.2 | Rozpakuj pakiet final wg tabeli | **DONE** | `ad5fcc9` | unit **41/41** · pw **4/4** | Źródło: chat attachment → `/workspace/tower-pakiet-final-extract/` (nie zip na Domowy Downloads/Desktop — False/False). `money.test.ts` import → `src/lib/money/engine`; **wykluczony** z `test:unit` do M1 (`vitest.config.ts` exclude) — suite pozostaje 41/41. `tower-makieta.html` nie kopiowany |
+| P0.3 | Założ `POSTEP.md` rejestr 51 | **DONE** | `54b9f47` | unit **41/41** · pw **4/4** | 51 wierszy ID z §12; L* po F2.5 |
+
+## Etap 1 — korekty po Fala 2 GATE
+
+| ID | pozycja | status | commit | testy (liczby) | uwagi |
+|---|---|---|---|---|---|
+| F2.1 | Ryzyka: 0 zmienionych ujęć — wyjaśnij/napraw | OPEN | — | — | pending |
+| F2.2 | Próg testu wizualnego (`maxDiffPixelRatio`) | OPEN | — | — | pending |
+| F2.3 | Stylelint zielony (nowy `.stylelintrc`) | OPEN | — | — | pending |
+| F2.4 | Weryfikacja mechanizmu paliwowego (bez kodu) | OPEN | — | — | pending; niezgodności → nowe wiersze |
+| F2.5 | Pozycje L1–L2/L4–L5/L7–L9/L16 — przydział | OPEN | — | — | po DONE: dodać wiersze L* |
+| F2.6 | Trzy wyjaśnienia (kokpit 54, mapa 18, overlap) | OPEN | — | — | pending |
+| G1 | Brama etapu 1 | OPEN | — | — | pending |
+
+## Etap 2 — Fala 3A: treść, język, formaty, silnik
+
+| ID | pozycja | status | commit | testy (liczby) | uwagi |
+|---|---|---|---|---|---|
+| D19-T | Test PL-znaków poza EN/SV UI | OPEN | — | — | pending |
+| D10 | Jedna funkcja `formatMoney` | OPEN | — | — | pending |
+| D17 | Format daty w tabeli bez powtarzanego roku | OPEN | — | — | pending |
+| M1 | Silnik money + testy (49 zielonych, 1 skip) | OPEN | — | — | wtedy zdjąć exclude vitest |
+| D11 | Debug/EN enumy out z UI | OPEN | — | — | pending |
+| D19 | 104 napisy → słownik PL/EN/SV | OPEN | — | — | pending |
+| D12 | Dane startowe prawdopodobne | OPEN | — | — | pending |
+| D6 | Telefon kierowcy → szuflada; KSH ±24 h | OPEN | — | — | pending |
+| D13 | Wzorce wizualne / `section-card-hd--drag` | OPEN | — | — | pending |
+| D18 | Oznaczenie danych demonstracyjnych | OPEN | — | — | pending |
+| P6 | Stawki demo PLN→EUR tabelą 186/A/NBP/2026 | OPEN | — | — | pending |
+| D-EUR-T | Test waluty EUR/PLN w UI | OPEN | — | — | pending |
+| D25 | Atrapy/porzucone z fasady — decyzja | OPEN | — | — | pending |
+| G2 | Brama etapu 2 + baseline Fala 3a | OPEN | — | — | pending |
+
+## Etap 3 — backend
+
+| ID | pozycja | status | commit | testy (liczby) | uwagi |
+|---|---|---|---|---|---|
+| BK0 | STOP — dane dostępowe od właściciela | OPEN | — | — | pending |
+| BK1 | Migracje + seed stegra + cron | OPEN | — | — | pending |
+| BK2 | Auth (magic link) + 3 org | OPEN | — | — | pending |
+| BK3 | `DemoProvider` / `SupabaseProvider` | OPEN | — | — | pending |
+| BK4 | Storage plików (PDF/CMR/POD/zdjęcia) | OPEN | — | — | pending |
+| BK5 | Test widoczności na poziomie API | OPEN | — | — | pending |
+| BK6 | CI db/money/unit/pw | OPEN | — | — | pending |
+| G3 | Brama etapu 3 | OPEN | — | — | pending |
+
+## Etap 4 — Fala 3B: pieniądze, faktury, zlecenia
+
+| ID | pozycja | status | commit | testy (liczby) | uwagi |
+|---|---|---|---|---|---|
+| M2 | Dane v2: EUR, poziomy, migawki | OPEN | — | — | pending |
+| M3 | Kurs NBP na żywo + `fx_rates` | OPEN | — | — | pending |
+| M4 | Ustawienia użytkownika (język/waluta/motyw) | OPEN | — | — | pending |
+| M5 | Numery zleceń KSH/HHL/SCX w harmonogramie | OPEN | — | — | pending |
+| M6 | Faktury — model 3 stron | OPEN | — | — | pending |
+| M7 | Terminy i płatności + przypomnienia | OPEN | — | — | pending |
+| M8 | Niezmiennik / poziomy w wycenie | OPEN | — | — | pending |
+| M9 | Aplikacja kierowcy: watchPosition + zgoda | OPEN | — | — | pending |
+| D26 | Import — usunięcia za zgodą | OPEN | — | — | pending |
+| D23-S | Import test na skali ~72 wierszy | OPEN | — | — | pending |
+| G4 | Brama etapu 4 + baseline Fala 3b | OPEN | — | — | pending |
+
+## Etap 5 — Fala 4: infrastruktura
+
+| ID | pozycja | status | commit | testy (liczby) | uwagi |
+|---|---|---|---|---|---|
+| D14 | Trasy adresowalne | OPEN | — | — | pending |
+| D15 | Podział paczki / lazy mapa &lt;400 kB | OPEN | — | — | pending |
+| G5 | Brama etapu 5 | OPEN | — | — | pending |
+
+## Etap 6 — odbiór końcowy
+
+| ID | pozycja | status | commit | testy (liczby) | uwagi |
+|---|---|---|---|---|---|
+| O1 | Pełny komplet testów + D24 ×14 | OPEN | — | — | pending |
+| O2 | Deploy produkcyjny Vercel + Supabase | OPEN | — | — | pending |
+| O3 | Test dymny na produkcji | OPEN | — | — | pending |
+| O4 | Oznaczenie demo zostaje do potwierdzenia | OPEN | — | — | pending |
+| O5 | `RAPORT_KONCOWY.md` + tag `release-1.0` | OPEN | — | — | pending |
+
+---
+
+## Poza zakresem (otwarte — nie pomijać)
+
+| temat | status | uwagi |
+|---|---|---|
+| Adapter telematyki SCX | OPEN | czeka na nazwę systemu + API |
+| Parametry operacyjne od przewoźnika | OPEN | cutoff promu, progi fal, prędkość HHL |
+| Geometria trasy z zezwolenia | OPEN | czeka na zezwolenia z trasą |
+| Klucz Trafikverket | OPEN | SE road demo do czasu klucza |
+| Źródło statusu promów Polferries | OPEN | decyzja właściciela |
+| Rozbicie marży na 3 poziomy | OPEN | czeka na zgodę |
+| GitHub Actions rozliczenia + `unit.yml` | OPEN | właściciel |
+
+---
+
+## Licznik wierszy ID
+
+- Wymagane §12: **51**
+- W tabelach etapów powyżej: **51** (P0×3 + F2/G1×7 + Etap2×14 + BK/G3×8 + Etap4×11 + Etap5×3 + Etap6×5)
+- L* po F2.5: **0** na razie (dopisać po F2.5)
