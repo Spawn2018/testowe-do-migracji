@@ -4,11 +4,7 @@
   "total": 720,
   "scriptVersion": "2026-09-24-f2.1-risk-scroll",
   "frozenNow": "2026-09-23T14:32:00Z",
-  "appChecksum": "3e43a9b85d10a4fe69fbf078dc47e03097dcfe3f1f6cef159041bbca94dd2f7b",
+  "appChecksum": "2d78b0be01f445d2a8505e131e00ed65f93fa60781e40d3c7290288a35596e0b",
   "url": "http://127.0.0.1:4177/#/?now=2026-09-23T14%3A32%3A00Z",
-  "errors": [],
-  "f21": {
-    "ryzykaRegen": 90,
-    "reason": "viewport scroll to ferry+SE panels"
-  }
+  "errors": []
 }

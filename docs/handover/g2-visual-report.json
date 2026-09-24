@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-09-24T23:34:59.953Z",
+  "note": "Compare candidate (Fala 3a capture) vs pre-G2 shots-baseline; then baseline regenerated.",
+  "candidate": "shots-g2-candidate",
+  "baseline": "shots-baseline (pre-regen)",
+  "colorThr": 0.28,
+  "maxDiffPixels": 60,
+  "ratioThr": 0.001,
+  "totals": {
+    "candidatePng": 720,
+    "baselinePng": 720,
+    "compared": 720,
+    "identical": 9,
+    "changed": 711,
+    "failMaxDiffPx": 711,
+    "sizeMismatch": 0,
+    "missingInCandidate": 0,
+    "missingInBaseline": 0
+  },
+  "byView": {
+    "dokumenty": 90,
+    "mapa": 90,
+    "ryzyka": 90,
+    "harmonogram": 89,
+    "kokpit": 87,
+    "faktury": 60,
+    "automatyzacje": 30,
+    "finanse": 30,
+    "moje-zadania": 30,
+    "opcje": 30,
+    "strefy": 30,
+    "rozliczenia": 29,
+    "moje-stawki": 26
+  },
+  "decision": "REGEN+TAG baseline-fala-3a-2026-09-25",
+  "postRegenSanity": {
+    "identical": 720,
+    "changed": 0
+  }
+}
