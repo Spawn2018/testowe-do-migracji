@@ -1,12 +1,12 @@
 # POSTEP — rejestr zlecenia końcowego
 
-Źródło ID: `docs/handover/ZLECENIE_FINAL.md` §12 (**51 pozycji**) + Aneks 1 (AN1 · M10 · M11) = **54 pozycje**.  
+Źródło ID: `docs/handover/ZLECENIE_FINAL.md` §12 (**51 pozycji**) + Aneks 1 (AN1 · M10 · M11) + Aneks 2 (AN2 · M12) = **56 pozycji**.  
 Kolumny: `ID | pozycja | status | commit | testy (liczby) | uwagi`.
 
 Po F2.5 dodać wiersze **L*** (L1/L2/L4/L5/L7/L8/L9/L16) — na razie brak (notatka: po F2.5).  
 Niezgodności z F2.4: **F2.4-a / F2.4-b / F2.4-c** (poniżej, po G1).
 
-Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 3 w toku** (BK0–BK3 DONE · AN1 DONE) · następny: BK4 · kroki właściciela: W-BK2-1…4 (niżej).
+Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 3 w toku** (BK0–BK3 DONE · AN1 DONE · AN2 DONE) · następny: BK4 · kroki właściciela: W-BK2-1…4 (niżej).
 
 ---
 
@@ -81,7 +81,7 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 3 w toku** (BK0–BK3 DONE 
 | BK4 | Storage plików (PDF/CMR/POD/zdjęcia) | OPEN | — | — | pending |
 | BK5 | Test widoczności na poziomie API | OPEN | — | — | pending · **AN1:** test rozszerzony — przewoźnik zmieniający przez API numer zlecenia HHL albo KSH dostaje błąd, nie sukces (wyzwalacz `guard_load_update` z 0004) |
 | BK6 | CI db/money/unit/pw | OPEN | — | — | pending |
-| G3 | Brama etapu 3 | OPEN | — | — | pending · **AN1:** zamiast `tests/db/run.sh` 39/39 → **security 50/50 + status 44/44** |
+| G3 | Brama etapu 3 | OPEN | — | — | pending · **AN1:** zamiast `tests/db/run.sh` 39/39 → **security 50/50 + status 44/44** · **AN2:** **security 52/52 + status 44/44 + `tests/ferry.test.ts` 17/17** |
 
 ### Kroki właściciela po BK2 (panel Supabase — nie da się ich wykonać kluczem service role)
 
@@ -105,6 +105,7 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 3 w toku** (BK0–BK3 DONE 
 | ID | pozycja | status | commit | testy (liczby) | uwagi |
 |---|---|---|---|---|---|
 | AN1 | Aneks 1 — statusy automatyczne, poprawki silnika stref, rejsy, reguły zmian transportu | **DONE** | `cd1c56d` (tekst) · `a33a2a5` (docs) · `e06542b` (migracje/testy db) · `6567ce7` (aplikacja) | `tests/db/run.sh` **security 50/50 · status 44/44** (czysty lokalny Postgres 17 + PostGIS, migracje 0001–0007) · unit **127 / 9 skip** · live **8/8** · BK2 verify **21/21** · BK2 e2e **20/20** · BK3 e2e **9/9** · pw **4/4** · d19 **0** · deur **0** · lint **0** | **Pliki:** `AGENTS.md`, `.cursor/rules/tower.mdc`, `STATUSY_AUTOMATYCZNE.md`, `MECHANIZM_PIENIEDZY.md` v2.2, `SCOPE.md`, `0002_geofence_engine.sql` (G1–G3: m.in. promień okręgu w `geography` — wcześniej Mercator, strefy 40–60% mniejsze), `0004_statusy_automatyczne.sql`, seed, `tests/db/{run,security,status}.sh`. **Przenumerowanie:** nasze `0004_cron`/`0005_auth`/`0006_data_layer` → `0005_cron` (sprzątanie duplikatów cron — 0004 aneksu jest nadrzędna) / `0006_auth` (wyzwalacz na `auth.users` warunkowy — stub testowy nie ma schematu auth) / `0007_data_layer`. **Uzgodnienie zdalne (bez resetu, bez usuwania kont):** stan zastany: historia 0001…0006 (stare nazwy), brak `sailings`/`vessels`/`trg_loads_guard`, `loads.ferry_vessel` obecne, 4 zadania `tower_*`, 0 stref, 2 transporty, 3 konta. Kroki: 0002 ponownie wgrana `psql -1` (same `create or replace`; okrąg 800 m mierzy 800 m) → `supabase migration repair` (0004/0005/0006 reverted; 0006/0007 applied — treść auth/data_layer już była) → `db push --include-all` (0004 aneksu + 0005 cron) → seed 2× idempotentny. Stan po: historia 0001–0007, `sailings`/`vessels`/`sailing_id`/`trg_loads_guard` są, `ferry_vessel`/`ferry_departure` usunięte, cron = dokładnie 6 zadań aneksu, wrapper usunięty, 5 stref, 2 statki, dane i konta nietknięte. **Aplikacja:** prom czytany z `sailings` przez `loads.sailing_id` (embed `sailings(…,vessels(name))`; czasy `coalesce(delayed_*, *)`; status ODWOLANY→CANCELLED, OPOZNIONY→DELAYED, inaczej BOOKED); zapis promu = `ferry_booking_ref` + `sailing_id` tylko gdy rejs (statek + rozkładowe odejście) istnieje w `sailings` — pełne przypisanie rejsu w M10. Tryb demo bez zmian (pw 4/4, paczka demo bez kodu Supabase). **Uruchomienie testów db (ręcznie, poza pre-push — wymaga lokalnego Postgres + PostGIS):** `PGADMIN=postgres://postgres@localhost:<port>/postgres bash tests/db/run.sh` (przy kilku klastrach Debiana ustaw `PGCLUSTER`, inaczej ostrzeżenie wrappera psql psuje porównania). GitHub Actions odłożone — bramą zostaje pre-push. |
+| AN2 | Aneks 2 — źródła danych zewnętrznych, okna planowe poza przewoźnikiem | **DONE** | `b7056c8` (tekst) · `61731ff` (pliki/migracje/testy) | `tests/db/run.sh` **security 52/52 · status 44/44** (migracje 0001–0008) · `tests/ferry.test.ts` **17/17** · unit **144 / 9 skip** · live **8/8** · BK2 verify **21/21** · BK2 e2e **20/20** · BK3 e2e **9/9** · pw **4/4** · d19 **0** · deur **0** · lint **0** | **Decyzje właściciela:** przewoźnik **nie zmienia okien planowych** (plan z harmonogramu KSH; wymusza baza — `guard_load_update`, +2 testy security); źródła zewnętrzne wyłącznie darmowe (`ZRODLA_DANYCH.md`). **Pliki:** `docs/handover/ZRODLA_DANYCH.md` (nowy), `STATUSY_AUTOMATYCZNE.md`, `SCOPE.md` (§38), `AGENTS.md`, `.cursor/rules/tower.mdc`, `0004_statusy_automatyczne.sql` (zastąpiona), seed `stegra.sql` (operator POLSCA Baltic Ferries; Nova Star MMSI 311000787 / IMO 9462067; Wawel MMSI do potwierdzenia), `tests/db/security.sh` (52), `src/lib/ferry/polferries.ts` + `digitraffic.ts` (z `lib/ferry/` pakietu; import w teście poprawiony na `../src/lib/ferry/`), `tests/ferry.test.ts`, fixtures z 25.09.2026. **Baza hostowana — delta, bez resetu:** 0004 była już zastosowana (AN1), a nie jest idempotentna (create type/table, cron) → zmiany Aneksu 2 wniesione nową migracją **`0008_an2_okna_planowe_statki.sql`** (idempotentna: `add column if not exists mmsi/imo`, `create or replace guard_load_update()` 1:1 z nowej 0004, uzupełnienie operatora/MMSI/IMO statków — seed ma `on conflict do nothing`); na świeżej bazie 0008 = no-op (run.sh 52/44 z 0008). `db push` → historia 0001–0008; seed ponownie (idempotentny); stan: 2 statki z nowym operatorem, Nova Star z MMSI/IMO, 5 stref, 6 zadań cron, 2 transporty, 3 konta — nietknięte. **Znana luka (M5/M10):** szuflada nadal pokazuje przewoźnikowi okna załadunku jako edytowalne (formularz „Awizacja / Prom”) — baza odrzuci faktyczną zmianę; ukrycie/readonly w M5/M10 (zmiana UI dotyka matrycy wizualnej, nie trywialna teraz). |
 
 ## Etap 4 — Fala 3B: pieniądze, faktury, zlecenia
 
@@ -113,16 +114,17 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 3 w toku** (BK0–BK3 DONE 
 | M2 | Dane v2: EUR, poziomy, migawki | OPEN | — | — | pending |
 | M3 | Kurs NBP na żywo + `fx_rates` | OPEN | — | — | pending |
 | M4 | Ustawienia użytkownika (język/waluta/motyw) | OPEN | — | — | pending |
-| M5 | Numery zleceń KSH/HHL/SCX w harmonogramie | OPEN | — | — | pending · **AN1:** przewoźnik zmienia wyłącznie swój numer, HHL wyłącznie swój; **HHL nie może zmienić numeru zlecenia przewoźnika** (W12, wymusza baza — `guard_load_update`) |
+| M5 | Numery zleceń KSH/HHL/SCX w harmonogramie | OPEN | — | — | pending · **AN1:** przewoźnik zmienia wyłącznie swój numer, HHL wyłącznie swój; **HHL nie może zmienić numeru zlecenia przewoźnika** (W12, wymusza baza — `guard_load_update`) · **AN2:** w szufladzie i formularzach przewoźnik **nie widzi pól okien planowych jako edytowalnych** (baza i tak odrzuci; interfejs nie może proponować zmiany) |
 | M6 | Faktury — model 3 stron | OPEN | — | — | pending · **AN1:** po umieszczeniu transportu na fakturze **data rozładunku zamrożona** dla wszystkich poza HHL (Z4) |
 | M7 | Terminy i płatności + przypomnienia | OPEN | — | — | pending |
 | M8 | Niezmiennik / poziomy w wycenie | OPEN | — | — | pending |
 | M9 | Aplikacja kierowcy: watchPosition + zgoda | OPEN | — | — | pending · **AN1:** zdarzenia wg `STATUSY_AUTOMATYCZNE.md` §6 — „Załadowany” → `MILESTONE_LOADED`; „Rozładowany” → UNLOADED **razem z datą rozładunku** (baza odrzuca UNLOADED bez daty); pozycje przez `process_position()`; strefy załadunku z `docs/watch-tower/ADDRESSES.md` (współrzędne terminali zweryfikować z mapą) |
-| M10 | Rejsy i automat statusów w aplikacji (po M6) | OPEN | — | — | pending · AN1: HHL zarządza rozkładem (dodanie, opóźnienie, odwołanie; źródło Polferries = decyzja właściciela, do tego czasu ręcznie); przypisanie rejsu w szufladzie (HHL + przewoźnik; po wypłynięciu tylko HHL); oś zdarzeń z `STATUS_AUTO` i powodem; ryzyka AUTO_STATUS / LOADING_UNCONFIRMED / rejs przegapiony / odwołany / PROM po czasie (PL/EN/SV); zrozumiałe błędy bazy. Kryterium: ścieżka transportu port → PROM → plac na 3 kontach testowych |
+| M10 | Rejsy i automat statusów w aplikacji (po M6) | OPEN | — | — | pending · AN1: HHL zarządza rozkładem (dodanie, opóźnienie, odwołanie; źródło Polferries = decyzja właściciela, do tego czasu ręcznie); przypisanie rejsu w szufladzie (HHL + przewoźnik; po wypłynięciu tylko HHL); oś zdarzeń z `STATUS_AUTO` i powodem; ryzyka AUTO_STATUS / LOADING_UNCONFIRMED / rejs przegapiony / odwołany / PROM po czasie (PL/EN/SV); zrozumiałe błędy bazy. Kryterium: ścieżka transportu port → PROM → plac na 3 kontach testowych · **AN2:** w szufladzie i formularzach przewoźnik **nie widzi pól okien planowych jako edytowalnych** (baza i tak odrzuci; interfejs nie może proponować zmiany) |
 | M11 | Rozbicie marży w Finansach (po M2) | OPEN | — | — | pending · AN1 (rozbicie zatwierdzone): 3 wiersze `.mrow` w „Od przychodu do marży” — zafakturowana / zrealizowana niezafakturowana / prognozowana; sumy z `totalsByTier` w walucie użytkownika. Kryterium: suma 3 = marża łączna, test jednostkowy |
+| M12 | Integracje danych zewnętrznych (po M10) | OPEN | — | — | pending · AN2, wg `ZRODLA_DANYCH.md`; funkcje Edge z pg_cron: `ferry-schedule` (rozkład cargo → `sailings`, co tydzień + ręcznie HHL), `ferry-status` (`parsePolferriesStatus`, **co 15 min, nie częściej**), `ferry-ais` (`fetchVesselFix`, co 10 min, rejsy w toku), `road-se` (Trafikverket, klucz), `road-pl` (KPD GDDKiA DATEX II, rejestracja + certyfikat), `traffic-flow` (TomTom, klucz). Zasady: pierwszeństwo `RECZNIE` > `POLFERRIES` > `DANE_STARTOWE`; NIEZNANY → bez zmiany rejsu, ryzyko HHL; awaria źródła → ryzyko „źródło niedostępne”, nigdy cicha pustka; ryzyka drogowe w `ROAD_SE`/`ROAD_PL`; atrybucje (Digitraffic CC BY 4.0 obowiązkowo); bez klucza panel = dane demonstracyjne (D18); klucze tylko w sekretach funkcji. Kryterium: `ferry-status` zapisuje rejsy z prawdziwej strony do bazy testowej; test jednostkowy każdej funkcji na zapisanych danych, bez sieci |
 | D26 | Import — usunięcia za zgodą | OPEN | — | — | pending |
 | D23-S | Import test na skali ~72 wierszy | OPEN | — | — | pending |
-| G4 | Brama etapu 4 + baseline Fala 3b | OPEN | — | — | pending · **AN1:** `tests/db/run.sh` **security 50/50 + status 44/44** |
+| G4 | Brama etapu 4 + baseline Fala 3b | OPEN | — | — | pending · **AN1:** `tests/db/run.sh` **security 50/50 + status 44/44** · **AN2:** **security 52/52 + status 44/44 + `tests/ferry.test.ts` 17/17** |
 
 ## Etap 5 — Fala 4: infrastruktura
 
@@ -151,8 +153,8 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 3 w toku** (BK0–BK3 DONE 
 | Adapter telematyki SCX | OPEN | czeka na nazwę systemu + API |
 | Parametry operacyjne od przewoźnika | OPEN | cutoff promu, progi fal, prędkość HHL |
 | Geometria trasy z zezwolenia | OPEN | czeka na zezwolenia z trasą |
-| Klucz Trafikverket | OPEN | SE road demo do czasu klucza |
-| Źródło statusu promów Polferries | OPEN | decyzja właściciela |
+| Klucz Trafikverket | OPEN | SE road demo do czasu klucza · **AN2 (D3):** panel warunków drogowych SE przechodzi na Trafikverket (M12 `road-se`), **gdy właściciel założy klucz** — do tego czasu bez zmian |
+| Źródło statusu promów Polferries | ROZSTRZYGNIĘTE (AN2) | komunikaty armatora (`src/lib/ferry/polferries.ts`) + AIS Digitraffic — `ZRODLA_DANYCH.md`; wdrożenie w M12 |
 | Rozbicie marży na 3 poziomy | **ZAMKNIĘTE (AN1)** | zgoda w Aneksie 1 → pozycja **M11** |
 | GitHub Actions rozliczenia + `unit.yml` | ODŁOŻONE (AN1) | bramą zostaje `.githooks/pre-push`; `tests/db/run.sh` ręcznie |
 
@@ -160,6 +162,6 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 3 w toku** (BK0–BK3 DONE 
 
 ## Licznik wierszy ID
 
-- Wymagane §12: **51** + Aneks 1 (AN1, M10, M11) = **54**
-- W tabelach etapów powyżej: **54** (P0×3 + F2/G1×7 + Etap2×14 + BK/G3×8 + Aneksy×1 + Etap4×13 + Etap5×3 + Etap6×5)
+- Wymagane §12: **51** + Aneks 1 (AN1, M10, M11) + Aneks 2 (AN2, M12) = **56**
+- W tabelach etapów powyżej: **56** (P0×3 + F2/G1×7 + Etap2×14 + BK/G3×8 + Aneksy×2 + Etap4×14 + Etap5×3 + Etap6×5)
 - L* po F2.5: **0** na razie (dopisać po F2.5)
