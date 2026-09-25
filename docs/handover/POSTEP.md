@@ -6,7 +6,7 @@ Kolumny: `ID | pozycja | status | commit | testy (liczby) | uwagi`.
 Po F2.5 dodać wiersze **L*** (L1/L2/L4/L5/L7/L8/L9/L16) — na razie brak (notatka: po F2.5).  
 Niezgodności z F2.4: **F2.4-a / F2.4-b / F2.4-c** (poniżej, po G1).
 
-Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 3 w toku** (BK0 DONE) · następny: BK1.
+Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 3 w toku** (BK0, BK1 DONE) · następny: BK2.
 
 ---
 
@@ -74,8 +74,8 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 3 w toku** (BK0 DONE) · na
 
 | ID | pozycja | status | commit | testy (liczby) | uwagi |
 |---|---|---|---|---|---|
-| BK0 | STOP — dane dostępowe od właściciela | **DONE** | (docs) | — | Sześć zmiennych w `.env.local` (gitignored `*.local` / `.env.*`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`, `RESEND_API_KEY`, `MAIL_FROM` — obecne, niepuste. Wartości **tylko** lokalnie; nie w commitach / Vercel (O2 później). Brak Dockera na boxie → BK1 na hostowanym Supabase właściciela (idealnie później osobny `tower-test`). |
-| BK1 | Migracje + seed stegra + cron | OPEN | — | — | pending |
+| BK0 | STOP — dane dostępowe od właściciela | **DONE** | `62919b8` (docs) | — | Sześć zmiennych w `.env.local` (gitignored `*.local` / `.env.*`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`, `RESEND_API_KEY`, `MAIL_FROM` — obecne, niepuste. Wartości **tylko** lokalnie; nie w commitach / Vercel (O2 później). Brak Dockera na boxie → BK1 na hostowanym Supabase właściciela (idealnie później osobny `tower-test`). |
+| BK1 | Migracje + seed stegra + cron | **DONE** | `e70e378` | — | `npx supabase` CLI 2.117 (`supabase init` → `config.toml`). `supabase db push` na hostowany projekt (Postgres 17.6, pusta baza): `0001`–`0003` OK + nowa `0004_cron.sql`; historia `supabase_migrations` = 0001…0004; 38 tabel w `public`; rozszerzenia postgis/btree_gist/citext/pgcrypto aktywne. Seed `supabase/seed/stegra.sql` uruchomiony 2× (idempotentny): org HHL/KSH/SCX (3), projekt STEGRA_BODEN (1), payment_terms 30 d (KSH) i 35 d (HHL→SCX). pg_cron włączony (`0004_cron.sql`, UTC, nazwane zadania = idempotentne): `tower_refresh_payment_status` 02:15 codz., `tower_purge_personal_data` 02:30 codz., `tower_detect_silent_vehicles` `*/15`, `tower_detect_sequence_risk` 02:45 codz. (wrapper `detect_sequence_risk_all()` po wszystkich projektach, bez grantów dla anon/authenticated); wszystkie 4 aktywne, funkcje wywołane ręcznie bez błędów. Połączenie: host bezpośredni `db.<ref>.supabase.co` tylko IPv6 (nieosiągalny z boxa) → session pooler IPv4 `aws-1-eu-west-1` :5432, te same poświadczenia (URL tylko w pamięci/tmp, nigdy w logach/commitach). `tests/db/supabase_stub.sql` **nie** uruchamiany na Supabase. Brak zmian UI. |
 | BK2 | Auth (magic link) + 3 org | OPEN | — | — | pending |
 | BK3 | `DemoProvider` / `SupabaseProvider` | OPEN | — | — | pending |
 | BK4 | Storage plików (PDF/CMR/POD/zdjęcia) | OPEN | — | — | pending |
