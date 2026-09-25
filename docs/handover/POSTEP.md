@@ -6,7 +6,7 @@ Kolumny: `ID | pozycja | status | commit | testy (liczby) | uwagi`.
 Po F2.5 dodać wiersze **L*** (L1/L2/L4/L5/L7/L8/L9/L16) — na razie brak (notatka: po F2.5).  
 Niezgodności z F2.4: **F2.4-a / F2.4-b / F2.4-c** (poniżej, po G1).
 
-Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 3 w toku** (BK0, BK1 DONE) · następny: BK2.
+Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 3 w toku** (BK0, BK1, BK2 DONE) · następny: BK3 · kroki właściciela: W-BK2-1…4 (niżej).
 
 ---
 
@@ -75,13 +75,30 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 3 w toku** (BK0, BK1 DONE) 
 | ID | pozycja | status | commit | testy (liczby) | uwagi |
 |---|---|---|---|---|---|
 | BK0 | STOP — dane dostępowe od właściciela | **DONE** | `62919b8` (docs) | — | Sześć zmiennych w `.env.local` (gitignored `*.local` / `.env.*`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`, `RESEND_API_KEY`, `MAIL_FROM` — obecne, niepuste. Wartości **tylko** lokalnie; nie w commitach / Vercel (O2 później). Brak Dockera na boxie → BK1 na hostowanym Supabase właściciela (idealnie później osobny `tower-test`). |
-| BK1 | Migracje + seed stegra + cron | **DONE** | `e70e378` | — | `npx supabase` CLI 2.117 (`supabase init` → `config.toml`). `supabase db push` na hostowany projekt (Postgres 17.6, pusta baza): `0001`–`0003` OK + nowa `0004_cron.sql`; historia `supabase_migrations` = 0001…0004; 38 tabel w `public`; rozszerzenia postgis/btree_gist/citext/pgcrypto aktywne. Seed `supabase/seed/stegra.sql` uruchomiony 2× (idempotentny): org HHL/KSH/SCX (3), projekt STEGRA_BODEN (1), payment_terms 30 d (KSH) i 35 d (HHL→SCX). pg_cron włączony (`0004_cron.sql`, UTC, nazwane zadania = idempotentne): `tower_refresh_payment_status` 02:15 codz., `tower_purge_personal_data` 02:30 codz., `tower_detect_silent_vehicles` `*/15`, `tower_detect_sequence_risk` 02:45 codz. (wrapper `detect_sequence_risk_all()` po wszystkich projektach, bez grantów dla anon/authenticated); wszystkie 4 aktywne, funkcje wywołane ręcznie bez błędów. Połączenie: host bezpośredni `db.<ref>.supabase.co` tylko IPv6 (nieosiągalny z boxa) → session pooler IPv4 `aws-1-eu-west-1` :5432, te same poświadczenia (URL tylko w pamięci/tmp, nigdy w logach/commitach). `tests/db/supabase_stub.sql` **nie** uruchamiany na Supabase. Brak zmian UI. |
-| BK2 | Auth (magic link) + 3 org | OPEN | — | — | pending |
+| BK1 | Migracje + seed stegra + cron | **DONE** | `e70e378` | — | `npx supabase` CLI 2.117 (`supabase init` → `config.toml`). `supabase db push` na hostowany projekt (Postgres 17.6, pusta baza): `0001`–`0003` OK + nowa `0004_cron.sql`; historia `supabase_migrations` = 0001…0004; 38 tabel w `public`; rozszerzenia postgis/btree_gist/citext/pgcrypto aktywne. Seed `supabase/seed/stegra.sql` uruchomiony 2× (idempotentny): org HHL/KSH/SCX (3), projekt STEGRA_BODEN (1), payment_terms 30 d (KSH) i 35 d (HHL→SCX). pg_cron włączony (`0004_cron.sql`, UTC, nazwane zadania = idempotentne): `tower_refresh_payment_status` 02:15 codz., `tower_purge_personal_data` 02:30 codz., `tower_detect_silent_vehicles` `*/15`, `tower_detect_sequence_risk` 02:45 codz. (wrapper `detect_sequence_risk_all()` po wszystkich projektach, bez grantów dla anon/authenticated); wszystkie 4 aktywne, funkcje wywołane ręcznie bez błędów. Połączenie: host bezpośredni `db.<ref>.supabase.co` tylko IPv6 (nieosiągalny z boxa) → session pooler IPv4 `aws-1-eu-west-1` :5432, te same poświadczenia (od BK2: `SUPABASE_DB_POOLER_URL` w `.env.local`, nigdy w logach/commitach). `tests/db/supabase_stub.sql` **nie** uruchamiany na Supabase. Brak zmian UI. |
+| BK2 | Auth (magic link) + 3 org | **DONE** | `1fd0e82` | verify 21/21 · e2e 20/20 · unit 114/1 skip | Migracja `0005_auth.sql` (push OK): konta **tylko na zaproszenie** — `user_invites` + wyzwalacz na `auth.users` (tworzy `app_users` z zaproszenia; adres bez zaproszenia odrzucony `TOWER_NO_INVITE`); funkcje HHL_ADMIN `admin_invite_user` / `admin_revoke_invite` / `admin_set_user_role` / `admin_set_user_active` + `my_profile()`; zgodność roli z firmą (`role_matches_org`, role z `0001`); brak zapisu `app_users`/`user_invites` z API; wszystko w `audit_log`; admin nie odbierze sobie roli ani nie dezaktywuje siebie. UI (`src/auth/`, ładowane leniwie): ekran logowania PL w chrome Claude (e-mail → link), bramka + blokada roli widoku wg firmy konta, pasek sesji z „Wyloguj”, panel **Opcje → Użytkownicy i role** (tylko HHL_ADMIN: zaproś, zmień rolę, dezaktywuj, cofnij zaproszenie). Tryb Supabase **tylko** gdy `VITE_AUTH_MODE=supabase` + URL + klucz anon — bez flagi DemoProvider jak dotąd (baseline/pw/D19/D-EUR bez zmian; build demo nie zawiera URL/klucza ani kodu Supabase — sprawdzone). Przepływ `implicit` (link z zaproszenia działa w przeglądarce zaproszonego). Konta testowe: 3 (HHL_ADMIN / KSH CLIENT_ADMIN / SCX CARRIER_DISPATCH), adresy plus na domenie `MAIL_FROM`, e-mail potwierdzony, **żaden e-mail nie wysłany**; adresy tylko w `.env.local` (`TEST_USER_*_EMAIL`). Skrypty: `scripts/auth/seed-test-users.mjs` (idempotentny), `verify.mjs` (magic link przez `generate_link` bez wysyłki → sesja → RLS/RPC dla 3 firm), `e2e-browser.mjs` (build z flagą, logowanie/wylogowanie, blokada roli, panel admina). SMTP Resend i adresy przekierowań = **kroki właściciela** (brak tokenu Management API; klucz service role go nie daje) — do tego czasu domyślny mailer Supabase wysyła tylko do członków zespołu projektu. |
 | BK3 | `DemoProvider` / `SupabaseProvider` | OPEN | — | — | pending |
 | BK4 | Storage plików (PDF/CMR/POD/zdjęcia) | OPEN | — | — | pending |
 | BK5 | Test widoczności na poziomie API | OPEN | — | — | pending |
 | BK6 | CI db/money/unit/pw | OPEN | — | — | pending |
 | G3 | Brama etapu 3 | OPEN | — | — | pending |
+
+### Kroki właściciela po BK2 (panel Supabase — nie da się ich wykonać kluczem service role)
+
+**W-BK2-1 · SMTP przez Resend** (bez tego zaproszenia nie wychodzą do osób spoza zespołu projektu Supabase)
+1. Resend → *Domains*: upewnij się, że domena adresu z `MAIL_FROM` ma status **Verified**.
+2. Supabase → projekt → *Authentication* → *Emails* → zakładka *SMTP Settings* → włącz **Enable Custom SMTP**.
+3. Wpisz: *Sender email* = adres z `MAIL_FROM`; *Sender name* = `Tower · H&H Logistics`; *Host* = `smtp.resend.com`; *Port* = `465`; *Username* = `resend`; *Password* = klucz API Resend (ten sam co `RESEND_API_KEY`).
+4. *Save*. Następnie *Authentication* → *Rate Limits* → „Rate limit for sending emails” podnieś np. do 60/h.
+
+**W-BK2-2 · Adresy przekierowań** (link z e-maila musi wracać do aplikacji)
+1. *Authentication* → *URL Configuration* → *Site URL* = adres produkcyjny Vercel (np. `https://<projekt>.vercel.app`).
+2. *Redirect URLs* → dodaj: `https://<projekt>.vercel.app/**`, `http://localhost:5173/**`, `http://127.0.0.1:4177/**`.
+3. *Authentication* → *Sign In / Providers* → *Email*: zostaw **włączone** „Allow new users to sign up” — konta i tak powstają wyłącznie z zaproszenia (wyzwalacz odrzuca inne adresy).
+
+**W-BK2-3 · Szablon e-maila (opcjonalnie, po polsku)** — *Authentication* → *Emails* → *Templates* → *Magic Link*: temat `Twój link do logowania — Tower`, treść z `{{ .ConfirmationURL }}` (link ważny 1 h).
+
+**W-BK2-4 · Własne konto administratora** — po W-BK2-1/2: zaloguj się kontem testowym HHL (adres w `.env.local`, `TEST_USER_HHL_EMAIL`) lub poproś wykonawcę o skrypt, i w *Opcje → Użytkownicy i role* zaproś swój adres jako **Administrator HHL**. Zmienne Vercel (`VITE_AUTH_MODE=supabase`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) — dopiero w O2; do zamknięcia etapu 3 aplikacja nie jest udostępniana z prawdziwymi danymi.
 
 ## Etap 4 — Fala 3B: pieniądze, faktury, zlecenia
 
