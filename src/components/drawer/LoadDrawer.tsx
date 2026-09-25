@@ -8,6 +8,7 @@ import { SEFS_SOURCES } from '../../lib/sefs';
 import { isReadyBlocked, evaluateLoadCover } from '../../lib/permits';
 import { downloadDocumentsZip } from '../../lib/zipDocs';
 import { attachDocumentFile } from '../../lib/docFiles';
+import { awizacjaChanges } from '../../lib/awizacjaPatch';
 import { DocPreview } from '../ui/DocPreview';
 import { DocFileRow } from '../ui/DocFileRow';
 import {
@@ -599,13 +600,15 @@ export function LoadDrawer() {
                     onSubmit={(e) => {
                       e.preventDefault();
                       const fd = new FormData(e.currentTarget);
-                      updateAwizacja(load.id, {
+                      // BK5: tylko zmienione pola — niezmienione okna planowe nie idą do zapisu (AN2).
+                      const awiPatch = awizacjaChanges(load.awizacja, {
                         loadWindowStart: wallLocalToIso(String(fd.get('loadWindowStart') || ''), TZ_LOAD_PL),
                         loadWindowEnd: wallLocalToIso(String(fd.get('loadWindowEnd') || ''), TZ_LOAD_PL),
                         unloadWindowStart: wallLocalToIso(String(fd.get('unloadWindowStart') || ''), TZ_UNLOAD_SE),
                         unloadWindowEnd: wallLocalToIso(String(fd.get('unloadWindowEnd') || ''), TZ_UNLOAD_SE),
                         confirmed: fd.get('confirmed') === 'on',
                       });
+                      updateAwizacja(load.id, awiPatch);
                       updateFerry(load.id, {
                         vessel: (String(fd.get('vessel') || '') as 'Wawel' | 'Nova Star') || null,
                         departureAt: wallLocalToIso(String(fd.get('departureAt') || ''), TZ_OPS),
