@@ -1,6 +1,9 @@
 #!/bin/sh
 # Brama lokalna: LFS + unit + visual smoke + stylelint. Ominięcie: --no-verify.
 # D19-T + D-EUR-T w pre-push (Etap 2 / G2).
+# BK6: CI lokalne (GitHub Actions odłożone — AN1). test:unit obejmuje money.test.ts i ferry.test.ts;
+# baza: tests/db/gate.sh (security 52 + status 44 + storage 33) na lokalnym Postgres+PostGIS,
+# gdy osiągalny (PGADMIN, domyślnie :5433). TOWER_REQUIRE_DB=1 → brak bazy = błąd.
 set -e
 cd "$(git rev-parse --show-toplevel)"
 
@@ -25,5 +28,16 @@ npm run test:deur
 
 echo "[pre-push] npm run lint:css"
 npm run lint:css
+
+PGADMIN=${PGADMIN:-postgres://postgres@localhost:5433/postgres}
+if command -v psql >/dev/null 2>&1 && psql "$PGADMIN" -Atqc "select 1" >/dev/null 2>&1; then
+  echo "[pre-push] tests/db/gate.sh"
+  PGADMIN="$PGADMIN" bash tests/db/gate.sh
+elif [ "${TOWER_REQUIRE_DB:-0}" = "1" ]; then
+  printf >&2 '\n[pre-push] Brak lokalnego Postgres pod PGADMIN — tests/db wymagane (TOWER_REQUIRE_DB=1).\n\n'
+  exit 3
+else
+  printf >&2 '\n[pre-push] UWAGA: lokalny Postgres niedostępny — tests/db POMINIĘTE (uruchom: bash tests/db/gate.sh).\n\n'
+fi
 
 echo "[pre-push] OK"
