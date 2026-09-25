@@ -5,7 +5,7 @@
  * Ładowany leniwie z bramki logowania → paczka demo go nie zawiera.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { DataMutation, DataProvider, DataSnapshot } from './provider';
+import type { DataMutation, DataProvider, DataSnapshot, UserPrefsPatch } from './provider';
 import { emptySnapshot } from './provider';
 import type { FerryBooking } from '../types';
 import { isServerId } from './registry';
@@ -96,6 +96,35 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     return rows[0]?.id; // brak rejsu w `sailings` → nie zmieniaj przypisania (M10)
   }
 
+  // M4 — user_preferences (RLS: wyłącznie własny wiersz)
+  let appUserId: string | null = null;
+  async function myUserId(): Promise<string> {
+    if (appUserId) return appUserId;
+    const r = await sb.rpc('current_app_user_id');
+    if (r.error || !r.data) throw new Error(`current_app_user_id: ${r.error?.message ?? 'brak'}`);
+    appUserId = r.data as string;
+    return appUserId;
+  }
+  async function loadPreferences(): Promise<UserPrefsPatch | null> {
+    const r = await sb.from('user_preferences').select('display_currency,locale,theme').maybeSingle();
+    if (r.error) throw new Error(`user_preferences: ${r.error.message}`);
+    if (!r.data) return null;
+    const d = r.data as { display_currency: string; locale: string; theme: string | null };
+    return {
+      displayCurrency: d.display_currency === 'PLN' ? 'PLN' : 'EUR',
+      locale: (['pl', 'en', 'sv'].includes(d.locale) ? d.locale : 'pl') as UserPrefsPatch['locale'],
+      theme: d.theme === 'light' || d.theme === 'dark' ? d.theme : null,
+    };
+  }
+  async function savePreferences(p: UserPrefsPatch): Promise<void> {
+    const row: Record<string, unknown> = { user_id: await myUserId(), updated_at: new Date().toISOString() };
+    if (p.displayCurrency) row.display_currency = p.displayCurrency;
+    if (p.locale) row.locale = p.locale;
+    if ('theme' in p) row.theme = p.theme ?? null;
+    const r = await sb.from('user_preferences').upsert(row, { onConflict: 'user_id' }).select('user_id');
+    if (r.error) throw new Error(`user_preferences: ${r.error.message}`);
+  }
+
   async function apply(m: DataMutation): Promise<{ id?: string } | void> {
     switch (m.type) {
       case 'load.status': {
@@ -114,6 +143,9 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         const res = await sb.from('load_messages').insert({ load_id: m.loadId, body: m.text }).select('id').single();
         return { id: String((must(res, 'wiadomość') as { id: number }).id) };
       }
+      case 'prefs.save':
+        await savePreferences(m.prefs);
+        return;
       case 'geofence.save': {
         await ensureContext();
         if (!projectId) throw new Error('strefa: brak projektu');
@@ -124,5 +156,5 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     }
   }
 
-  return { kind: 'supabase', loadSnapshot, apply, context: () => ({ orgs, projectId }) };
+  return { kind: 'supabase', loadSnapshot, apply, loadPreferences, context: () => ({ orgs, projectId }) };
 }

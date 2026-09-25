@@ -22,6 +22,13 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
   active = createSupabaseProvider(sb);
   registerFileSink(createStorageSink(sb)); // BK4: pliki → prywatne koszyki Storage
   await refreshFromServer();
+  // M4: ustawienia użytkownika z serwera (język, waluta, motyw) — bez ponownego zapisu
+  try {
+    const prefs = active.loadPreferences ? await active.loadPreferences() : null;
+    if (prefs) useTowerStore.getState().applyUserPrefs(prefs);
+  } catch (e) {
+    useTowerStore.getState().pushToast(`Nie wczytano ustawień: ${e instanceof Error ? e.message : String(e)}`, 'MEDIUM');
+  }
   // Kolejka: zapisy wykonywane po kolei (status przed zdarzeniem itd.).
   let chain: Promise<unknown> = Promise.resolve();
   registerRemoteSink((m: DataMutation) => {

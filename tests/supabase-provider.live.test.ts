@@ -131,6 +131,23 @@ describe.runIf(LIVE)('BK3 SupabaseProvider (live, RLS)', () => {
     }
   });
 
+  it('M4: ustawienia użytkownika przez provider (user_preferences) — zapis i odczyt własnych', async () => {
+    const before = await P.KSH.loadPreferences!();
+    try {
+      await P.KSH.apply({ type: 'prefs.save', prefs: { displayCurrency: 'PLN' } });
+      await P.KSH.apply({ type: 'prefs.save', prefs: { locale: 'sv', theme: 'dark' } });
+      expect(await P.KSH.loadPreferences!()).toEqual({ displayCurrency: 'PLN', locale: 'sv', theme: 'dark' });
+      const scx = await P.SCX.loadPreferences!();
+      expect(scx?.locale).not.toBe('sv'); // cudze ustawienia niewidoczne
+    } finally {
+      if (before) await P.KSH.apply({ type: 'prefs.save', prefs: before });
+      else {
+        const { data: u } = await admin.from('app_users').select('id').ilike('email', env.TEST_USER_KSH_EMAIL).single();
+        await admin.from('user_preferences').delete().eq('user_id', u!.id);
+      }
+    }
+  });
+
   it('anon (bez sesji) nie czyta transportów', async () => {
     const anon = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false } });
     const { data } = await anon.from('loads').select('id');

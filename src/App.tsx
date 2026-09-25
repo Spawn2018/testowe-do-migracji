@@ -18,6 +18,7 @@ import { WorkflowsView } from './views/WorkflowsView';
 import { GeofenceView } from './views/GeofenceView';
 import { DriverPwa } from './views/DriverPwa';
 import { OptionsView } from './views/OptionsView';
+import { SettingsView } from './views/SettingsView';
 import { navForRole } from './lib/permissions';
 import { usePageSectionDnD } from './hooks/usePageSectionDnD';
 import { SUPABASE_AUTH_ENABLED } from './auth/config';
@@ -121,6 +122,9 @@ function TowerShell() {
       break;
     case 'options':
       body = <OptionsView />;
+      break;
+    case 'settings':
+      body = <SettingsView />;
       break;
     default:
       body = <DashboardView />;

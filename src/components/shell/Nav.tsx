@@ -17,11 +17,12 @@ const ICON: Record<NavKey, IconKey> = {
   wf: 'wf',
   geo: 'geo',
   options: 'options',
+  settings: 'options',
 }
 
 const COMMON: NavKey[] = ['dash', 'map', 'sched', 'risk', 'docs']
 const MONEY: NavKey[] = ['fin', 'inv']
-const ADMIN: NavKey[] = ['wf', 'geo', 'options']
+const ADMIN: NavKey[] = ['wf', 'geo', 'options', 'settings']
 const TASKS: NavKey[] = ['tasks']
 
 type NavRow = { kind: 'item'; key: NavKey } | { kind: 'sep' }

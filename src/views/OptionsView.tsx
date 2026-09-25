@@ -1,12 +1,12 @@
 import { lazy, Suspense, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
-import { defaultThemeForRole } from '../lib/permissions';
 import type { BafParams, FactoringOffer, RateRule } from '../types';
 import { geofenceTypeLabel } from '../lib/enumLabels';
 import { t } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
 import { DEMO_FX_META } from '../lib/money/demoFx';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
+import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
 
 // BK2: panel użytkowników HHL_ADMIN — tylko w trybie Supabase.
 const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/UsersAdmin')) : null;
@@ -60,13 +60,6 @@ function RateEditor({
 export function OptionsView() {
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
-  const theme = useTowerStore((s) => s.theme);
-  const displayCurrency = useTowerStore((s) => s.displayCurrency);
-  const setLocale = useTowerStore((s) => s.setLocale);
-  const setDisplayCurrency = useTowerStore((s) => s.setDisplayCurrency);
-  const setTheme = useTowerStore((s) => s.setTheme);
-  const showDemoMarks = useTowerStore((s) => s.showDemoMarks);
-  const setShowDemoMarks = useTowerStore((s) => s.setShowDemoMarks);
   const factoringOffer = useTowerStore((s) => s.factoringOffer);
   const updateFactoringOffer = useTowerStore((s) => s.updateFactoringOffer);
   const baf = useTowerStore((s) => s.baf);
@@ -105,7 +98,7 @@ export function OptionsView() {
       </header>
 
       <div className="options-grid">
-        <section className="panel option-panel option-wide pricing-panel">
+        <section className="panel option-panel option-wide pricing-panel" data-deur-exempt="rate-card-source" title="D-EUR-T: cennik źródłowy w EUR (wyjątek, M4)">
           <header className="panel-hd"><h2>{t(locale, "opt_rates_h2")}</h2><span className="sub">{`${t(locale, "opt_rates_sub")} · EUR`}</span><span className="panel-mark">{t(locale, "opt_rates_mark")}</span><DemoMark /></header>
           <div className="panel-bd">
             <div className="rate-grid">
@@ -127,16 +120,7 @@ export function OptionsView() {
           </div>
         </section>
 
-        <section className="panel option-panel">
-          <header className="panel-hd"><h2>{t(locale, "opt_ui_prefs")}</h2><span className="sub">{t(locale, 'opt_defaults')}</span></header>
-          <div className="panel-bd"><dl className="kv options-kv">
-            <dt>{t(locale, 'opt_demo_marks')}</dt><dd><label className="switchline"><input type="checkbox" checked={showDemoMarks} onChange={(e) => { setShowDemoMarks(e.target.checked); saveMark('demo'); }} /><span>{showDemoMarks ? t(locale, 'on') : t(locale, 'off')}</span></label><div className="muted" style={{ marginTop: 4 }}>{t(locale, 'opt_demo_marks_sub')}</div></dd>
-            <dt>{t(locale, 'opt_lang')}</dt><dd><select className="input" value={locale} onChange={(e) => { setLocale(e.target.value as 'pl' | 'en' | 'sv'); saveMark('język'); }}><option value="pl">Polski</option><option value="en">English</option><option value="sv">Svenska</option></select></dd>
-            <dt>{t(locale, 'opt_currency')}</dt><dd data-deur-exempt="currency-pref" title="D-EUR-T: wybór waluty (wyjątek)"><select className="input" value={displayCurrency} onChange={(e) => { setDisplayCurrency(e.target.value as 'EUR' | 'PLN'); saveMark('waluta'); }}><option value="PLN">PLN</option><option value="EUR">EUR</option></select></dd>
-            <dt>{t(locale, "opt_theme")}</dt><dd><select className="input" value={theme} onChange={(e) => { setTheme(e.target.value as 'dark' | 'light'); saveMark('motyw'); }}><option value="dark">{t(locale, "opt_theme_dark")}</option><option value="light">{t(locale, "opt_theme_light")}</option></select></dd>
-            <dt>{t(locale, 'opt_theme_default')}</dt><dd className="muted">{defaultThemeForRole('HHL') === 'dark' ? t(locale, 'opt_theme_dark_hhl') : t(locale, 'opt_theme_light')}</dd>
-          </dl><div className="note option-note">{t(locale, 'opt_theme_note')}</div></div>
-        </section>
+        <UiPrefsPanel onSaved={saveMark} showDemoMarks />
 
         <section className="panel option-panel">
           <header className="panel-hd"><h2>{t(locale, "opt_factoring_h2")}</h2><span className="sub">{t(locale, "opt_factoring_sub")}</span></header>

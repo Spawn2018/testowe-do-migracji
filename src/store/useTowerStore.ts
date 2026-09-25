@@ -221,6 +221,8 @@ interface TowerState {
   setShowDemoMarks: (v: boolean) => void;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
+  /** M4 — ustawienia z serwera (bez write-through). */
+  applyUserPrefs: (p: import('../data/provider').UserPrefsPatch) => void;
   setView: (view: ViewKey) => void;
   setStageFilter: (stage: CorridorStage | null) => void;
   setSearch: (q: string) => void;
@@ -371,9 +373,15 @@ export const useTowerStore = create<TowerState>()(
         set({ role, theme: nextTheme, view: defaultView as ViewKey });
       },
 
-      setLocale: (locale) => set({ locale }),
+      setLocale: (locale) => {
+        set({ locale });
+        writeThrough({ type: 'prefs.save', prefs: { locale } });
+      },
 
-      setDisplayCurrency: (displayCurrency) => set({ displayCurrency }),
+      setDisplayCurrency: (displayCurrency) => {
+        set({ displayCurrency });
+        writeThrough({ type: 'prefs.save', prefs: { displayCurrency } });
+      },
 
       setShowDemoMarks: (showDemoMarks) => set({ showDemoMarks }),
 
@@ -386,6 +394,19 @@ export const useTowerStore = create<TowerState>()(
       setTheme: (theme) => {
         applyThemeToDom(theme);
         set({ theme, themeManual: true });
+        writeThrough({ type: 'prefs.save', prefs: { theme } });
+      },
+
+      applyUserPrefs: (p) => {
+        const patch: Partial<TowerState> = {};
+        if (p.locale) patch.locale = p.locale;
+        if (p.displayCurrency) patch.displayCurrency = p.displayCurrency;
+        if (p.theme) {
+          applyThemeToDom(p.theme);
+          patch.theme = p.theme;
+          patch.themeManual = true;
+        }
+        set(patch);
       },
 
       setNavCollapsed: (navCollapsed, opts) => {

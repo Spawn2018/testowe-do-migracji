@@ -1,6 +1,7 @@
 import type { Locale } from '../types';
 import type { NavKey } from '../lib/permissions';
 import { D19_EXTRA } from './d19Extra';
+import { ETAP4 } from './etap4';
 
 type Dict = Record<string, string>;
 
@@ -378,9 +379,9 @@ const sv: Dict = {
 };
 
 const ALL: Record<Locale, Dict> = {
-  pl: { ...pl, ...D19_EXTRA.pl },
-  en: { ...en, ...D19_EXTRA.en },
-  sv: { ...sv, ...D19_EXTRA.sv },
+  pl: { ...pl, ...D19_EXTRA.pl, ...ETAP4.pl },
+  en: { ...en, ...D19_EXTRA.en, ...ETAP4.en },
+  sv: { ...sv, ...D19_EXTRA.sv, ...ETAP4.sv },
 };
 
 export function t(locale: Locale, key: string): string {

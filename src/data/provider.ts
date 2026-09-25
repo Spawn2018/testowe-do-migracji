@@ -48,7 +48,15 @@ export type DataMutation =
   | { type: 'load.ferry'; loadId: string; patch: Partial<FerryBooking> }
   | { type: 'event.append'; event: Omit<LoadEvent, 'id'> }
   | { type: 'message.send'; loadId: string; text: string }
-  | { type: 'geofence.save'; geofence: Geofence };
+  | { type: 'geofence.save'; geofence: Geofence }
+  | { type: 'prefs.save'; prefs: UserPrefsPatch };
+
+/** M4 — ustawienia użytkownika (`user_preferences`); motyw null = domyślny dla roli. */
+export interface UserPrefsPatch {
+  locale?: 'pl' | 'en' | 'sv';
+  displayCurrency?: 'EUR' | 'PLN';
+  theme?: 'light' | 'dark' | null;
+}
 
 export interface DataProvider {
   readonly kind: ProviderKind;
@@ -56,4 +64,6 @@ export interface DataProvider {
   loadSnapshot(): Promise<DataSnapshot>;
   /** Zapis; demo = no-op (store jest lokalnym źródłem). Zwraca nowe id dla wstawień. */
   apply(m: DataMutation): Promise<{ id?: string } | void>;
+  /** M4 — zapisane ustawienia bieżącego użytkownika (null = brak wiersza / demo). */
+  loadPreferences?(): Promise<UserPrefsPatch | null>;
 }

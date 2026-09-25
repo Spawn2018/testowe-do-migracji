@@ -26,8 +26,14 @@ const VIEWS = ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'wf', 'geo'
 /** EUR mode — banned tokens (word-ish). */
 const EUR_BANNED =
   /\bPLN\b|\bzł\b|\bSEK\b|\bkr\b|\bkronor\b|\bzłotych\b|\bzlotych\b/i
-/** PLN mode — banned tokens. */
-const PLN_BANNED = /\bSEK\b|\bkr\b|\bkronor\b/i
+/** PLN mode — banned tokens (M4: po przełączeniu na PLN żadna kwota nie zostaje w EUR). */
+const PLN_BANNED = /\bSEK\b|\bkr\b|\bkronor\b|\bEUR\b|€/i
+
+/** M4 — widoki KSH i SCX (waluta ustawiana w „Ustawienia”). */
+const ROLE_VIEWS = {
+  KSH: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'settings'],
+  SCX: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'tasks', 'settings'],
+} as const
 
 type Hit = { mode: string; view: string; text: string; path: string }
 
@@ -60,11 +66,15 @@ async function gotoFrozen(page: Page) {
 }
 
 async function setRoleHhl(page: Page) {
-  await page.evaluate(() => {
-    const btn = document.querySelector('#roleSeg button[data-role="HHL"]') as HTMLButtonElement | null
-    if (!btn) throw new Error('HHL role missing')
+  await setRole(page, 'HHL')
+}
+
+async function setRole(page: Page, role: 'HHL' | 'KSH' | 'SCX') {
+  await page.evaluate((r) => {
+    const btn = document.querySelector(`#roleSeg button[data-role="${r}"]`) as HTMLButtonElement | null
+    if (!btn) throw new Error(r + ' role missing')
     btn.click()
-  })
+  }, role)
   await page.waitForTimeout(400)
 }
 
@@ -86,8 +96,8 @@ async function navTo(page: Page, dataView: string) {
 }
 
 /** Set display currency via Options preference (HHL). */
-async function setDisplayCurrency(page: Page, currency: 'EUR' | 'PLN') {
-  await navTo(page, 'options')
+async function setDisplayCurrency(page: Page, currency: 'EUR' | 'PLN', prefsView = 'options') {
+  await navTo(page, prefsView)
   await page.evaluate((cur) => {
     const select = document.querySelector(
       '[data-deur-exempt="currency-pref"] select, dd[data-deur-exempt="currency-pref"] select',
@@ -229,5 +239,30 @@ test.describe('D-EUR-T display currency EUR vs PLN', () => {
 
     expect(byMode.EUR, `EUR mode hits: ${JSON.stringify(all.filter((h) => h.mode === 'EUR').slice(0, 20))}`).toBe(0)
     expect(byMode.PLN, `PLN mode hits: ${JSON.stringify(all.filter((h) => h.mode === 'PLN').slice(0, 20))}`).toBe(0)
+  })
+
+  test('M4: KSH i SCX — waluta z „Ustawienia”, EUR i PLN we wszystkich widokach roli', async ({ page }) => {
+    test.setTimeout(360_000)
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await gotoFrozen(page)
+    await setLocalePl(page)
+    const all: Hit[] = []
+    for (const role of ['KSH', 'SCX'] as const) {
+      await setRole(page, role)
+      for (const mode of ['EUR', 'PLN'] as const) {
+        await setDisplayCurrency(page, mode, 'settings')
+        await assertMoneyCode(page, mode)
+        const banned = mode === 'EUR' ? EUR_BANNED : PLN_BANNED
+        for (const view of ROLE_VIEWS[role]) {
+          await navTo(page, view)
+          all.push(...(await collectHits(page, `${role}:${mode}`, view, banned.source)))
+        }
+      }
+    }
+    mkdirSync(join(__dirname, '../test-results'), { recursive: true })
+    writeFileSync(join(__dirname, '../test-results/d-eur-hits-roles.json'), JSON.stringify({ total: all.length, sample: all.slice(0, 80) }, null, 2))
+    // eslint-disable-next-line no-console
+    console.log(`D-EUR-T roles counter: total=${all.length}`)
+    expect(all.length, JSON.stringify(all.slice(0, 20))).toBe(0)
   })
 })

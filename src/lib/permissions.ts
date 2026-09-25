@@ -13,12 +13,13 @@ export type NavKey =
   | 'tasks'
   | 'wf'
   | 'geo'
-  | 'options';
+  | 'options'
+  | 'settings';
 
 const NAV_BY_ROLE: Record<RoleId, NavKey[]> = {
   HHL: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'wf', 'geo', 'options'],
-  KSH: ['dash', 'map', 'sched', 'risk', 'docs', 'fin'],
-  SCX: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'tasks'],
+  KSH: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'settings'],
+  SCX: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'tasks', 'settings'],
 };
 
 export function navForRole(role: RoleId): NavKey[] {
