@@ -463,3 +463,169 @@ po przydziale w F2.5 i niezgodności znalezione w F2.4.
 **Łącznie: 51 pozycji.**
 
 Zacznij od P0.1.
+
+
+---
+
+# ANEKS 1
+
+> Dopisano 25.09.2026 (AN1.1) — pełna treść aneksu właściciela `ANEKS_1_DLA_GROKA.md`, bez zmian. Od teraz część zlecenia.
+
+# ANEKS 1 DO ZLECENIA KOŃCOWEGO
+
+> Nowe decyzje właściciela i poprawki kontraktu bazy. **Nie przerywaj
+> bieżącej pozycji** — dokończ ją, zrób commit, potem wykonaj AN1.
+
+---
+
+# AN1 — ZASTOSUJ ANEKS (przed następną pozycją zlecenia)
+
+**AN1.1 — Zapisz aneks.** Cała treść na końcu `docs/handover/ZLECENIE_FINAL.md`
+jako sekcja „ANEKS 1". Commit: `docs: aneks 1`. Od teraz aneks jest częścią
+zlecenia — czytasz go z pliku, jak resztę.
+
+**AN1.2 — Pliki z pakietu.** Właściciel umieścił `TOWER-pakiet-aneks1.zip`
+w `~/Downloads`. Nie znajdziesz — STOP, poproś.
+
+| Z pakietu | Do repozytorium | Co się zmieniło |
+|---|---|---|
+| `STATUSY_AUTOMATYCZNE.md` | `docs/handover/` | **nowy** — jedyne źródło prawdy o statusach, rejsach, strefach |
+| `MECHANIZM_PIENIEDZY.md` | `docs/handover/` | wersja 2.2: rozbicie marży zatwierdzone, zasada Z4 |
+| `AGENTS.md` | korzeń repozytorium | **nowy** — zasady dla Cursora i każdego agenta |
+| `.cursor/rules/tower.mdc` | `.cursor/rules/` | **nowy** — reguła zawsze aktywna w Cursorze |
+| `supabase/migrations/0002_geofence_engine.sql` | zastępuje | **trzy usterki naprawione** — patrz niżej |
+| `supabase/migrations/0004_statusy_automatyczne.sql` | **nowy** | rejsy, automat statusów, PROM, ochrona kolumn transportu, harmonogram zadań |
+| `supabase/seed/stegra.sql` | zastępuje | + pięć stref korytarza, + dwa statki |
+| `tests/db/*` | zastępuje | `security.sh` 50 przypadków, **nowy `status.sh` 44**, `run.sh` uruchamia oba |
+| `SCOPE.md` | `docs/handover/` | sekcja 37 |
+
+**AN1.3 — Uruchom `bash tests/db/run.sh`.** Oczekiwane: **security 50/50,
+status 44/44.** Inny wynik — STOP.
+
+**AN1.4 — Dopisz do `POSTEP.md`** pozycje AN1, M10, M11 i zmiany zakresu
+pozycji M5, M6, M9, BK1, BK5 opisane niżej.
+
+---
+
+# 1. NOWE DECYZJE WŁAŚCICIELA
+
+| # | Decyzja |
+|---|---|
+| S1 | **Statusy zmieniają się na podstawie pozycji** |
+| S2 | **Port PL i port SE mają swoje strefy** — wjazd auta = automatyczna zmiana statusu |
+| S3 | **PROM:** auto w strefie portu Gdańsk + nadchodzi **czas wypłynięcia wg rozkładu armatora** dla **rejsu przypisanego do auta** → system **sam przełącza na PROM** |
+| — | **Rozbicie marży w Finansach — zatwierdzone** |
+| — | **GitHub Actions — odłożone.** Pozostaje hak `pre-push` |
+| — | **Po Twojej pracy budowę dokończy Cursor** — patrz sekcja 4 |
+
+Szczegóły: `docs/handover/STATUSY_AUTOMATYCZNE.md`.
+
+---
+
+# 2. CO WYKRYŁ TEST BAZY — MUSISZ TO WIEDZIEĆ
+
+**Silnik stref z migracji 0002 nigdy nie działał.** Trzy błędy czasu
+wykonania, niewidoczne dla parsera:
+
+- **G1** nazwy kolumn wyniku funkcji takie same jak kolumny tabel —
+  każda pozycja w pobliżu strefy kończyła się błędem i **przepadała**
+- **G2** zapis zdarzenia bez warunku indeksu częściowego — **żaden wjazd
+  ani wyjazd nie mógł powstać**
+- **G3** promień strefy w odwzorowaniu Mercatora — strefy **40–60% mniejsze**,
+  im dalej na północ, tym gorzej: port Gdańsk 463 m zamiast 800, plac
+  Stegra 613 m zamiast 1 500
+
+**Dziura bezpieczeństwa od migracji 0001:** Supabase nadaje rolom prawo
+zmiany całej tabeli, więc lista kolumn przewoźnika niczego nie ograniczała.
+**Przewoźnik mógł zmienić numer zlecenia HHL i KSH we własnym transporcie.**
+Naprawione wyzwalaczem w 0004. Wcześniejszy test 39/39 tego nie złapał,
+bo sprawdzał, co przewoźnikowi wolno, a nie czego mu nie wolno.
+
+**Wniosek dla Ciebie:** jeżeli gdziekolwiek w kodzie aplikacji użyłeś
+pól `ferry_vessel` albo `ferry_departure` — **usunięto je**. Dane o rejsie
+czytasz z `sailings` przez `loads.sailing_id`.
+
+---
+
+# 3. ZMIANY ZAKRESU
+
+## Nowe pozycje
+
+**M10 — Rejsy i automat statusów w aplikacji** (etap 4, po M6):
+- **HHL zarządza rozkładem rejsów:** dodawanie, opóźnienie (nowy czas
+  odejścia i przypłynięcia), odwołanie. Źródło statusu Polferries pozostaje
+  decyzją otwartą właściciela — do tego czasu ręcznie
+- **przypisanie rejsu do transportu** w szufladzie: HHL i przewoźnik;
+  po wypłynięciu wyłącznie HHL
+- oś zdarzeń w szufladzie pokazuje **zmiany automatyczne** (`STATUS_AUTO`)
+  z powodem — wjazd w strefę, odejście rejsu
+- kolejka ryzyk: nowe rodzaje — **AUTO_STATUS** (zmiana zablokowana,
+  z przyczyną), **LOADING_UNCONFIRMED**, rejs przegapiony, rejs odwołany,
+  PROM po czasie — teksty w PL, EN, SV
+- błędy bazy pokazywane zrozumiale: „Data rozładunku zamrożona —
+  transport jest na fakturze", „Status nie może się cofnąć", „Numer
+  zlecenia przewoźnika wpisuje wyłącznie przewoźnik"
+- *kryterium:* ścieżka jednego transportu od wjazdu do portu przez PROM
+  do placu budowy widoczna w aplikacji na trzech kontach testowych
+
+**M11 — Rozbicie marży w Finansach** (etap 4, po M2):
+- trzy wiersze w istniejącym bloku „Od przychodu do marży", wzorzec `.mrow`:
+  zafakturowana, zrealizowana niezafakturowana, prognozowana
+- sumy z `totalsByTier`, w walucie wyświetlania użytkownika
+- *kryterium:* suma trzech wierszy = marża łączna; test jednostkowy
+
+## Zmienione pozycje
+
+**BK1** — migracje 0001–**0004**; **przed migracją włącz rozszerzenie
+`pg_cron`** w panelu Supabase — 0004 sama zaplanuje zadania: PROM co minutę,
+PROM po czasie co 10 minut, cisza GPS co 15 minut, terminy płatności,
+RODO, kolejność montażowa. Seed `stegra.sql` zakłada strefy i statki.
+
+**BK5** — test API rozszerzony: przewoźnik próbujący zmienić numer
+zlecenia HHL albo KSH przez API dostaje błąd, nie sukces.
+
+**M5** — przewoźnik zmienia wyłącznie swój numer, HHL wyłącznie swój.
+**HHL nie może zmienić numeru zlecenia przewoźnika** — decyzja W12,
+wymusza baza.
+
+**M6** — faktura: po umieszczeniu transportu na fakturze **data rozładunku
+jest zamrożona** dla wszystkich poza HHL (zasada Z4).
+
+**M9** — aplikacja kierowcy wysyła zdarzenia zgodnie z
+`STATUSY_AUTOMATYCZNE.md` sekcja 6:
+- przycisk „Załadowany" → zdarzenie `MILESTONE_LOADED`
+- przycisk „Rozładowany" → status UNLOADED **razem z datą rozładunku**
+  w jednej zmianie — baza odrzuca UNLOADED bez daty
+- pozycje przez `process_position()`
+- **strefy załadunku** z `docs/watch-tower/ADDRESSES.md` do danych
+  startowych — bez zgadywania współrzędnych; **współrzędne terminali
+  zweryfikuj z mapą**
+
+## Brama etapu 3 i etapu 4
+
+Zamiast `tests/db/run.sh 39/39` — **security 50/50 i status 44/44**.
+
+## Lista kontrolna
+
+Dochodzą: **AN1 · M10 · M11**. **Łącznie 54 pozycje.**
+
+---
+
+# 4. PRZEKAZANIE CURSOROWI
+
+Budowę po Tobie dokończy Cursor. Dlatego:
+
+1. `AGENTS.md` i `.cursor/rules/tower.mdc` **commitujesz w AN1** — Cursor
+   czyta je sam przy każdej zmianie
+2. `POSTEP.md` musi być **aktualny po każdej pozycji** — Cursor zacznie
+   od niego
+3. Jeżeli nie zamkniesz całego zlecenia — **raport końcowy O5 piszesz
+   i tak**, w `docs/handover/RAPORT_KONCOWY.md`: co zamknięte (z commitami
+   i liczbami testów), co otwarte, **na czym dokładnie stanąłeś** (plik,
+   gałąź, ostatni zielony commit), co wymaga decyzji właściciela. To jest
+   dokument startowy dla Cursora
+4. Zostawiasz repozytorium **zielone**: wszystkie testy przechodzą na
+   ostatnim commicie gałęzi `main`, albo w raporcie jest dokładnie
+   opisane, który test jest czerwony i dlaczego
+
+Wróć do bieżącej pozycji zlecenia.
