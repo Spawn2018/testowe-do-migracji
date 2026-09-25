@@ -6,7 +6,7 @@ Kolumny: `ID | pozycja | status | commit | testy (liczby) | uwagi`.
 Po F2.5 dodać wiersze **L*** (L1/L2/L4/L5/L7/L8/L9/L16) — na razie brak (notatka: po F2.5).  
 Niezgodności z F2.4: **F2.4-a / F2.4-b / F2.4-c** (poniżej, po G1).
 
-Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 ZAMKNIĘTY** (G2 DONE) · następny: Etap 3 · BK0 (STOP — sekrety).
+Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 3 w toku** (BK0 DONE) · następny: BK1.
 
 ---
 
@@ -74,7 +74,7 @@ Aktualizacja: **2026-09-25** Europe/Warsaw · **Etap 2 ZAMKNIĘTY** (G2 DONE) ·
 
 | ID | pozycja | status | commit | testy (liczby) | uwagi |
 |---|---|---|---|---|---|
-| BK0 | STOP — dane dostępowe od właściciela | OPEN | — | — | pending |
+| BK0 | STOP — dane dostępowe od właściciela | **DONE** | (docs) | — | Sześć zmiennych w `.env.local` (gitignored `*.local` / `.env.*`): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`, `RESEND_API_KEY`, `MAIL_FROM` — obecne, niepuste. Wartości **tylko** lokalnie; nie w commitach / Vercel (O2 później). Brak Dockera na boxie → BK1 na hostowanym Supabase właściciela (idealnie później osobny `tower-test`). |
 | BK1 | Migracje + seed stegra + cron | OPEN | — | — | pending |
 | BK2 | Auth (magic link) + 3 org | OPEN | — | — | pending |
 | BK3 | `DemoProvider` / `SupabaseProvider` | OPEN | — | — | pending |
