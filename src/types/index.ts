@@ -132,6 +132,8 @@ export interface LoadPricing {
   scxUwagi?: string | null;
   scxPcsPerLoad?: number | string;
   scxTransportsScenario?: number;
+  /** M2 — dane v2: poziom, obie wartości (wyliczona/fakturowana), migawki mnożnika i kursu */
+  money?: import('../lib/money/loadMoney').LoadMoneyV2;
 }
 
 export type EtaConfidence = 'LOW' | 'MED' | 'HIGH';
@@ -248,6 +250,8 @@ export interface Load {
   hhlOrderNo?: string | null;
   /** SCX / carrier order number */
   carrierOrderNo?: string | null;
+  /** M2 — rzeczywisty rozładunek (UTC ISO); realizacja = rozładunek (W5) */
+  unloadedAt?: string | null;
 }
 
 export interface Geofence {

@@ -8,10 +8,19 @@
  * payloads; then flag a Polish toast via sessionStorage (consumed after rehydrate).
  */
 
+import type { Invoice, Load } from '../types';
+import { attachMoneyV2 } from './money/loadMoney';
+import { localDateOf } from './money/engine';
+import { getNowIso } from './frozenNow';
+
+function todayLocalForMigration(): string {
+  try { return localDateOf(getNowIso()); } catch { return new Date().toISOString().slice(0, 10); }
+}
+
 export const STORE_PERSIST_KEY = 'watch-tower-ui-v6-ready-gate';
 
 /** Bump when persisted shape breaks backward compatibility. */
-export const STORE_SCHEMA_VERSION = 1;
+export const STORE_SCHEMA_VERSION = 2;
 
 /** sessionStorage flag → toast after rehydrate (baseline/visual clear this). */
 export const STORE_WIPE_FLAG_KEY = 'wt-persist-wipe-notice';
@@ -164,7 +173,12 @@ export function migrateTowerPersist(
   const picked = pickPersistSlice(persistedState as Record<string, unknown>);
 
   // v0 (unversioned / zustand default) → v1: keep useful fields as-is.
-  // Future bumps: add field renames / transforms here; still prefer migrate.
+  // v1 → v2 (M2): transporty dostają dane v2 pieniędzy (poziom, obie wartości,
+  // migawki mnożnika i kursu) — wyliczone z zapisanych składników, bez utraty danych.
+  if (fromVersion < 2 && Array.isArray(picked.loads)) {
+    const invoices = Array.isArray(picked.invoices) ? (picked.invoices as Invoice[]) : [];
+    picked.loads = attachMoneyV2(picked.loads as Load[], invoices, todayLocalForMigration());
+  }
   if (fromVersion <= 0 || fromVersion < STORE_SCHEMA_VERSION) {
     return { state: picked, wiped: false };
   }

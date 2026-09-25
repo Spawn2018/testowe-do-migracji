@@ -11,6 +11,7 @@ import type { FerryBooking } from '../types';
 import { isServerId } from './registry';
 import {
   awizacjaPatchToDb, documentFromRow, eventFromRow, eventToRow, ferryPatchToDb, geofenceFromRow, geofenceToRpc,
+  PRICE_VIEW_COLUMNS, applyPriceViews, type PriceViewRow,
   loadFromRow, messageFromRow, resourcesPatchToDb, riskFromRow, statusToDb, vesselToDb,
   type DocumentRow, type EventRow, type GeofenceRow, type LoadRow, type MessageRow, type OrgRow, type RiskRow,
 } from './mappers';
@@ -19,7 +20,7 @@ export const PROJECT_CODE = 'STEGRA_BODEN';
 const LOAD_COLUMNS =
   'id,order_no,carrier_org_id,status,plan_load_date,plan_load_from,plan_load_to,plan_delivery_date,plan_delivery_from,' +
   'plan_delivery_to,tractor_plate,trailer_plate,driver_name,driver_phone,escort_vehicles,ferry_booking_ref,sailing_id,' +
-  'combo_length_m,combo_width_m,combo_height_m,combo_weight_t,delay_minutes,eta_site,hhl_order_no,carrier_order_no,' +
+  'combo_length_m,combo_width_m,combo_height_m,combo_weight_t,delay_minutes,eta_site,hhl_order_no,carrier_order_no,actual_delivery_at,' +
   'shipment_items(shipment_code,item_type,length_m,width_m,height_m,total_weight_t,unit_weight_t,qty,assembly_seq),' +
   'sailings(departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,status,vessels(name))';
 
@@ -53,17 +54,22 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
   async function loadSnapshot(): Promise<DataSnapshot> {
     await ensureContext();
     const at = now();
-    const [loads, events, messages, geos, risks, docs] = await Promise.all([
+    const [loads, events, messages, geos, risks, docs, costV, revV] = await Promise.all([
       sb.from('loads').select(LOAD_COLUMNS).order('plan_load_date', { ascending: true, nullsFirst: false }),
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
       sb.from('v_geofences_circle').select('*').order('sort_order'),
       sb.from('risk_signals').select('id,load_id,kind,severity,title,detail,detected_at').is('resolved_at', null).order('detected_at', { ascending: false }),
       sb.from('documents').select('id,load_id,category,file_name,mime_type,size_bytes,valid_until,visible_to,uploaded_at,storage_path'),
+      // M2: ceny wyłącznie z widoków rolowych v2 (0010) — koszt: HHL + przewoźnik, przychód: HHL + klient
+      sb.from('v_load_price_carrier').select(PRICE_VIEW_COLUMNS),
+      sb.from('v_load_price_client').select(PRICE_VIEW_COLUMNS),
     ]);
+    const costBy = new Map((must(costV, 'v_load_price_carrier') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
+    const revBy = new Map((must(revV, 'v_load_price_client') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
     return {
       ...emptySnapshot(), // faktury / automatyzacje / powiadomienia: Etap 4 — puste, nie demo
-      loads: (must(loads, 'loads') as unknown as LoadRow[]).map((r, i) => loadFromRow(r, orgs, i, at)),
+      loads: (must(loads, 'loads') as unknown as LoadRow[]).map((r, i) => applyPriceViews(loadFromRow(r, orgs, i, at), costBy.get(r.id), revBy.get(r.id))),
       events: (must(events, 'load_events') as EventRow[]).map(eventFromRow),
       messages: (must(messages, 'load_messages') as MessageRow[]).map(messageFromRow),
       geofences: (must(geos, 'v_geofences_circle') as GeofenceRow[]).map((g) => geofenceFromRow(g, orgs)),

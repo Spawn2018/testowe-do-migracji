@@ -5,6 +5,15 @@
  */
 import type { DisplayCurrency, NbpRate } from './engine';
 import { eurToPln, formatForUser, formatMoney } from './engine';
+import { NBP_EUR_DEMO } from '../../data/nbpEurDemo';
+
+/**
+ * M2/M3 — prawdziwe tabele A NBP (EUR) 2026-08-03…2026-09-25, pobrane z api.nbp.pl
+ * (przedział, nigdy pojedynczy dzień). Dane demo dla reguły W3; w trybie Supabase — `fx_rates`.
+ */
+export const DEMO_NBP_RATES: NbpRate[] = NBP_EUR_DEMO.map((r) => ({
+  table: 'A' as const, no: r.no, effectiveDate: r.effectiveDate, mid: r.mid,
+}));
 
 export const DEMO_FX: NbpRate = {
   table: 'A',

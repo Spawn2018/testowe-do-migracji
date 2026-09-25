@@ -19,16 +19,23 @@ import {
   buildSeedRisks,
 } from './seed';
 import { applyEtaToLoad } from '../lib/eta';
+import { attachMoneyV2 } from '../lib/money/loadMoney';
+
+/** Dzień „dziś” danych startowych (zegar zamrożony baseline: 2026-09-23). */
+export const DEMO_TODAY_LOCAL = '2026-09-23';
 import type { DataProvider, DataSnapshot } from './provider';
 
 /** Deterministyczny zrzut demo — kolejność wywołań jak w dawnym init store (baseline). */
 export function buildDemoSnapshot(): DataSnapshot {
   const seedLoads = buildSeedLoads();
   const seedRisks = buildSeedRisks(seedLoads);
-  const loads = applyForceMajeureDelays(
+  const loadsV1 = applyForceMajeureDelays(
     seedLoads.map((l) => applyEtaToLoad(l, '2026-09-23T01:00:00+02:00')),
     seedRisks,
   );
+  const invoices = buildSeedInvoices(loadsV1);
+  /* M2 — dane v2 (poziom, obie wartości, migawki mnożnika i kursu) */
+  const loads = attachMoneyV2(loadsV1, invoices, DEMO_TODAY_LOCAL);
   return {
     loads,
     events: buildSeedEvents(loads),
@@ -40,7 +47,7 @@ export function buildDemoSnapshot(): DataSnapshot {
     workflows: WORKFLOWS,
     workflowRuns: INITIAL_WORKFLOW_RUNS,
     notifications: INITIAL_NOTIFICATIONS,
-    invoices: buildSeedInvoices(loads),
+    invoices,
     scheduleVersions: SCHEDULE_VERSIONS,
   };
 }

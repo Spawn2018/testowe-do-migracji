@@ -1,0 +1,48 @@
+/**
+ * Prawdziwe tabele A NBP (EUR) 2026-08-03…2026-09-25 — pobrane 2026-09-26 z
+ * https://api.nbp.pl/api/exchangerates/rates/a/eur/2026-08-01/2026-09-25/?format=json
+ * (przedział, nigdy pojedynczy dzień). Dane demo reguły W3; w trybie Supabase — `fx_rates` (M3).
+ * Moduł TS (nie JSON), bo importują go także testy Playwright (ESM Node bez atrybutów importu).
+ */
+export const NBP_EUR_DEMO: ReadonlyArray<{ no: string; effectiveDate: string; mid: number }> = [
+  { no: '148/A/NBP/2026', effectiveDate: '2026-08-03', mid: 4.3013 },
+  { no: '149/A/NBP/2026', effectiveDate: '2026-08-04', mid: 4.3118 },
+  { no: '150/A/NBP/2026', effectiveDate: '2026-08-05', mid: 4.305 },
+  { no: '151/A/NBP/2026', effectiveDate: '2026-08-06', mid: 4.2982 },
+  { no: '152/A/NBP/2026', effectiveDate: '2026-08-07', mid: 4.301 },
+  { no: '153/A/NBP/2026', effectiveDate: '2026-08-10', mid: 4.3037 },
+  { no: '154/A/NBP/2026', effectiveDate: '2026-08-11', mid: 4.2996 },
+  { no: '155/A/NBP/2026', effectiveDate: '2026-08-12', mid: 4.3033 },
+  { no: '156/A/NBP/2026', effectiveDate: '2026-08-13', mid: 4.3058 },
+  { no: '157/A/NBP/2026', effectiveDate: '2026-08-14', mid: 4.31 },
+  { no: '158/A/NBP/2026', effectiveDate: '2026-08-17', mid: 4.3075 },
+  { no: '159/A/NBP/2026', effectiveDate: '2026-08-18', mid: 4.3189 },
+  { no: '160/A/NBP/2026', effectiveDate: '2026-08-19', mid: 4.3267 },
+  { no: '161/A/NBP/2026', effectiveDate: '2026-08-20', mid: 4.3165 },
+  { no: '162/A/NBP/2026', effectiveDate: '2026-08-21', mid: 4.3122 },
+  { no: '163/A/NBP/2026', effectiveDate: '2026-08-24', mid: 4.3124 },
+  { no: '164/A/NBP/2026', effectiveDate: '2026-08-25', mid: 4.3046 },
+  { no: '165/A/NBP/2026', effectiveDate: '2026-08-26', mid: 4.3014 },
+  { no: '166/A/NBP/2026', effectiveDate: '2026-08-27', mid: 4.3274 },
+  { no: '167/A/NBP/2026', effectiveDate: '2026-08-28', mid: 4.3328 },
+  { no: '168/A/NBP/2026', effectiveDate: '2026-08-31', mid: 4.3264 },
+  { no: '169/A/NBP/2026', effectiveDate: '2026-09-01', mid: 4.3328 },
+  { no: '170/A/NBP/2026', effectiveDate: '2026-09-02', mid: 4.3311 },
+  { no: '171/A/NBP/2026', effectiveDate: '2026-09-03', mid: 4.3211 },
+  { no: '172/A/NBP/2026', effectiveDate: '2026-09-04', mid: 4.3179 },
+  { no: '173/A/NBP/2026', effectiveDate: '2026-09-07', mid: 4.31 },
+  { no: '174/A/NBP/2026', effectiveDate: '2026-09-08', mid: 4.3155 },
+  { no: '175/A/NBP/2026', effectiveDate: '2026-09-09', mid: 4.3171 },
+  { no: '176/A/NBP/2026', effectiveDate: '2026-09-10', mid: 4.318 },
+  { no: '177/A/NBP/2026', effectiveDate: '2026-09-11', mid: 4.3228 },
+  { no: '178/A/NBP/2026', effectiveDate: '2026-09-14', mid: 4.3391 },
+  { no: '179/A/NBP/2026', effectiveDate: '2026-09-15', mid: 4.3445 },
+  { no: '180/A/NBP/2026', effectiveDate: '2026-09-16', mid: 4.3435 },
+  { no: '181/A/NBP/2026', effectiveDate: '2026-09-17', mid: 4.3632 },
+  { no: '182/A/NBP/2026', effectiveDate: '2026-09-18', mid: 4.3633 },
+  { no: '183/A/NBP/2026', effectiveDate: '2026-09-21', mid: 4.3545 },
+  { no: '184/A/NBP/2026', effectiveDate: '2026-09-22', mid: 4.3463 },
+  { no: '185/A/NBP/2026', effectiveDate: '2026-09-23', mid: 4.3588 },
+  { no: '186/A/NBP/2026', effectiveDate: '2026-09-24', mid: 4.39 },
+  { no: '187/A/NBP/2026', effectiveDate: '2026-09-25', mid: 4.375 },
+];

@@ -2,6 +2,7 @@
  * BK3 — mapowanie wierszy Supabase (schemat 0001/0006) ↔ typy aplikacji.
  * Czyste funkcje (bez klienta Supabase) — testowane jednostkowo.
  */
+import type { MoneySideV2 } from '../lib/money/loadMoney';
 import type {
   Awizacja, CorridorStage, DocCategory, Document, FerryBooking, Geofence, GeofenceType, Load,
   LoadEvent, LoadMessage, LoadResources, LoadStatus, OrgKind, Risk, RiskType, Severity,
@@ -82,6 +83,7 @@ export interface LoadRow {
   combo_length_m: number | string | null; combo_width_m: number | string | null; combo_height_m: number | string | null;
   combo_weight_t: number | string | null; delay_minutes: number | null; eta_site: string | null;
   hhl_order_no?: string | null; carrier_order_no?: string | null;
+  actual_delivery_at?: string | null;
   shipment_items?: ShipmentItemRow[];
 }
 
@@ -171,6 +173,7 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
     orderNo: row.order_no,
     hhlOrderNo: row.hhl_order_no ?? null,
     carrierOrderNo: row.carrier_order_no ?? null,
+    unloadedAt: row.actual_delivery_at ?? null,
   };
   return applyEtaToLoad(base, nowIso);
 }
@@ -310,5 +313,69 @@ export function documentFromRow(r: DocumentRow): Document | null {
     visibleTo: (r.visible_to ?? []).map(orgKindToApp).filter((k): k is OrgKind => k !== null),
     dataUrl: null, mimeType: r.mime_type, bytes: r.size_bytes, source: 'tower',
     storagePath: r.storage_path && r.storage_path !== '-' ? r.storage_path : null,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* M2 — ceny z widoków rolowych v2 (0010). Tabele load_cost/load_revenue */
+/* są zamknięte; każdy widok zwraca wyłącznie wiersze dozwolone roli.    */
+/* ------------------------------------------------------------------ */
+export interface PriceViewRow {
+  load_id: string; pricing_tier: string | null;
+  base_amount: number | string | null; baf_amount: number | string | null; extras_amount: number | string | null;
+  computed_total_eur: number | string | null; invoiced_total_eur: number | string | null; effective_total_eur: number | string | null;
+  fuel_ref_date: string | null; fuel_mult_sek: number | string | null; fuel_mult_pln: number | string | null; fuel_applied_mult: number | string | null;
+  fx_table_no: string | null; fx_effective_date: string | null; fx_rate_pln: number | string | null; fx_provisional: boolean | null;
+}
+
+export const PRICE_VIEW_COLUMNS =
+  'load_id,pricing_tier,base_amount,baf_amount,extras_amount,computed_total_eur,invoiced_total_eur,effective_total_eur,' +
+  'fuel_ref_date,fuel_mult_sek,fuel_mult_pln,fuel_applied_mult,fx_table_no,fx_effective_date,fx_rate_pln,fx_provisional';
+
+const TIERS = ['PROGNOZA', 'REALIZACJA', 'FAKTURA'] as const;
+type Tier = (typeof TIERS)[number];
+const tierOf = (t: string | null): Tier => (TIERS as readonly string[]).includes(t ?? '') ? (t as Tier) : 'PROGNOZA';
+
+function sideFromView(r: PriceViewRow): MoneySideV2 {
+  const computed = num(r.computed_total_eur) ?? num(r.effective_total_eur) ?? 0;
+  return {
+    tier: tierOf(r.pricing_tier),
+    computedEur: computed,
+    invoicedEur: num(r.invoiced_total_eur),
+    fuel: {
+      refDate: r.fuel_ref_date ?? '',
+      multSek: num(r.fuel_mult_sek) ?? 1, multPln: num(r.fuel_mult_pln) ?? 1, applied: num(r.fuel_applied_mult) ?? 1,
+    },
+    fx: { tableNo: r.fx_table_no ?? '', mid: num(r.fx_rate_pln) ?? 0, date: r.fx_effective_date ?? '', provisional: Boolean(r.fx_provisional) },
+  };
+}
+
+/** Strona niewidoczna dla roli = zero (nie dane demo) — marża tylko, gdy widać obie strony. */
+export function applyPriceViews(load: Load, cost?: PriceViewRow, rev?: PriceViewRow): Load {
+  if (!cost && !rev) return load;
+  const eff = (r?: PriceViewRow) => (r ? num(r.effective_total_eur) ?? 0 : 0);
+  const costTotal = eff(cost);
+  const revTotal = eff(rev);
+  const both = Boolean(cost && rev);
+  const margin = both ? Math.round((revTotal - costTotal) * 100) / 100 : 0;
+  const empty: MoneySideV2 = { tier: 'PROGNOZA', computedEur: 0, invoicedEur: null, fuel: { refDate: '', multSek: 1, multPln: 1, applied: 1 }, fx: { tableNo: '', mid: 0, date: '', provisional: true } };
+  const c = cost ? sideFromView(cost) : empty;
+  const r = rev ? sideFromView(rev) : empty;
+  const tier: Tier = both ? TIERS[Math.min(TIERS.indexOf(c.tier), TIERS.indexOf(r.tier))] : (cost ? c.tier : r.tier);
+  return {
+    ...load,
+    pricing: {
+      ...load.pricing,
+      costBase: cost ? num(cost.base_amount) ?? 0 : 0, revBase: rev ? num(rev.base_amount) ?? 0 : 0,
+      costSefs: cost ? num(cost.baf_amount) ?? 0 : 0, revSefs: rev ? num(rev.baf_amount) ?? 0 : 0,
+      costBaf: cost ? num(cost.baf_amount) ?? 0 : 0, revBaf: rev ? num(rev.baf_amount) ?? 0 : 0,
+      costExtras: cost ? num(cost.extras_amount) ?? 0 : 0, revExtras: rev ? num(rev.extras_amount) ?? 0 : 0,
+      costTotal, revTotal, margin,
+      marginPct: both && revTotal > 0 ? margin / revTotal : 0,
+      belowThreshold: both && revTotal > 0 ? margin / revTotal < 0.12 : false,
+      currency: 'EUR',
+      baf_multiplier: c.fuel.applied, mult_sek: c.fuel.multSek, mult_pln: c.fuel.multPln,
+      money: { v: 2, tier, cost: c, rev: r },
+    },
   };
 }
