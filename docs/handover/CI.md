@@ -9,7 +9,8 @@ Do czasu włączenia bramą jest hak `pre-push` (`git config core.hooksPath .git
 |---|---|---|
 | LFS | `git lfs pre-push` | wzorzec `shots-baseline` |
 | unit (+ `money.test.ts`, `ferry.test.ts`, `storage-files.test.ts`) | `npm run test:unit` | wszystkie zielone; pominięte tylko testy żywe (`NBP_LIVE`, `SUPABASE_LIVE`) |
-| Playwright smoke | `npm run test:visual` | 4/4 (preview na :4177) |
+| świeży build HEAD | `bash scripts/ci/fresh-smoke.sh` | `git archive HEAD` → `/tmp/wt-fresh-*`, `vite build` (demo, **0** wystąpień `supabase` w paczce), `vite preview` na **:4179** (`FRESH_PORT`), `PW_BASE_URL` → poniższe 3 kroki; sprzątanie przy wyjściu |
+| Playwright smoke | `npm run test:visual` | 4/4 (świeży build :4179) |
 | D19-T | `npm run test:d19` | en=0 / sv=0 |
 | D-EUR-T | `npm run test:deur` | EUR=0 / PLN=0 |
 | stylelint | `npm run lint:css` | 0 błędów |
@@ -18,6 +19,12 @@ Do czasu włączenia bramą jest hak `pre-push` (`git config core.hooksPath .git
 Krok bazy działa, gdy lokalny Postgres (z PostGIS) odpowiada pod `PGADMIN`
 (domyślnie `postgres://postgres@localhost:5433/postgres`). Brak bazy = ostrzeżenie
 i pominięcie; `TOWER_REQUIRE_DB=1 git push` zamienia brak bazy w błąd.
+
+Podgląd **:4177** (i jego tunel, `dist/` repo) nie jest używany przez bramę — ręcznie
+`npm run test:visual` nadal celuje w :4177, chyba że ustawisz `PW_BASE_URL`.
+
+Pełna matryca wizualna (bramy etapów): `OUT=shots-gX-candidate BASE_URL=http://127.0.0.1:<port>/ node scripts/baseline.mjs`
+→ `CANDIDATE=shots-gX-candidate node scripts/compare-baseline.mjs` (`pngjs` + `pixelmatch` w devDependencies).
 
 ## Testy bazy ręcznie
 

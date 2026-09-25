@@ -1,6 +1,7 @@
 #!/bin/sh
 # Brama lokalna: LFS + unit + visual smoke + stylelint. Ominięcie: --no-verify.
 # D19-T + D-EUR-T w pre-push (Etap 2 / G2).
+# chore(BK6): visual/d19/deur na świeżym buildzie HEAD (scripts/ci/fresh-smoke.sh, port 4179) — nie na dist/ podglądu :4177.
 # BK6: CI lokalne (GitHub Actions odłożone — AN1). test:unit obejmuje money.test.ts i ferry.test.ts;
 # baza: tests/db/gate.sh (security 52 + status 44 + storage 33) na lokalnym Postgres+PostGIS,
 # gdy osiągalny (PGADMIN, domyślnie :5433). TOWER_REQUIRE_DB=1 → brak bazy = błąd.
@@ -17,14 +18,8 @@ fi
 echo "[pre-push] npm run test:unit"
 npm run test:unit
 
-echo "[pre-push] npm run test:visual"
-npm run test:visual
-
-echo "[pre-push] npm run test:d19"
-npm run test:d19
-
-echo "[pre-push] npm run test:deur"
-npm run test:deur
+echo "[pre-push] scripts/ci/fresh-smoke.sh (świeży build HEAD → :${FRESH_PORT:-4179}: visual + d19 + deur)"
+bash scripts/ci/fresh-smoke.sh
 
 echo "[pre-push] npm run lint:css"
 npm run lint:css

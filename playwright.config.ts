@@ -5,7 +5,8 @@ import { defineConfig, devices } from '@playwright/test'
  * HashRouter + zamrożony zegar: #/?now=2026-09-23T14:32:00Z
  */
 const FROZEN_NOW = '2026-09-23T14:32:00Z'
-const BASE_ORIGIN = 'http://127.0.0.1:4177'
+/* chore(BK6): PW_BASE_URL ustawia scripts/ci/fresh-smoke.sh (świeży build HEAD, :4179). Domyślnie :4177 (ręcznie). */
+const BASE_ORIGIN = (process.env.PW_BASE_URL || 'http://127.0.0.1:4177').replace(/\/$/, '')
 
 export default defineConfig({
   testDir: './tests',
