@@ -629,3 +629,107 @@ Budowę po Tobie dokończy Cursor. Dlatego:
    opisane, który test jest czerwony i dlaczego
 
 Wróć do bieżącej pozycji zlecenia.
+
+
+---
+
+# ANEKS 2
+
+> Dopisano 25.09.2026 (AN2.1) — pełna treść aneksu właściciela `ANEKS_2_DLA_GROKA.md`, bez zmian. Od teraz część zlecenia.
+
+# ANEKS 2 DO ZLECENIA KOŃCOWEGO
+
+> **Nie przerywaj bieżącej pozycji.** Dokończ ją, commit, potem AN2.
+
+---
+
+# AN2 — ZASTOSUJ ANEKS
+
+**AN2.1 — Zapisz aneks** na końcu `docs/handover/ZLECENIE_FINAL.md` jako
+sekcja „ANEKS 2". Commit: `docs: aneks 2`.
+
+**AN2.2 — Pliki z pakietu** `TOWER-pakiet-aneks2.zip` w `~/Downloads`
+(nie znajdziesz — STOP, poproś):
+
+| Z pakietu | Do repozytorium | Zmiana |
+|---|---|---|
+| `ZRODLA_DANYCH.md` | `docs/handover/` | **nowy** — jedyne źródło prawdy o danych zewnętrznych |
+| `STATUSY_AUTOMATYCZNE.md` | `docs/handover/` | przewoźnik nie zmienia okien planowych |
+| `AGENTS.md`, `.cursor/rules/tower.mdc` | korzeń, `.cursor/rules/` | dopisany `ZRODLA_DANYCH.md` |
+| `supabase/migrations/0004_statusy_automatyczne.sql` | zastępuje | okna planowe poza listą przewoźnika; `vessels.mmsi`, `vessels.imo` |
+| `supabase/seed/stegra.sql` | zastępuje | operator POLSCA Baltic Ferries; MMSI i IMO promu Nova Star |
+| `tests/db/security.sh` | zastępuje | **52 przypadki** (+2: okna planowe) |
+| `lib/ferry/polferries.ts`, `lib/ferry/digitraffic.ts` | `src/lib/ferry/` | **nowe** — parser komunikatów armatora, klient AIS |
+| `tests/ferry.test.ts` | `tests/` | **nowy — 17 testów** |
+| `tests/fixtures/polferries-komunikaty-2026-09-25.html`, `digitraffic-nova-star-2026-09-25.json` | `tests/fixtures/` | prawdziwe dane z 25.09.2026 |
+| `SCOPE.md` | `docs/handover/` | sekcja 38 |
+
+**AN2.3 — Testy:** `bash tests/db/run.sh` → **security 52/52, status 44/44**;
+`npx vitest run tests/ferry.test.ts` → **17/17**. Inny wynik — STOP.
+
+**AN2.4 — `POSTEP.md`:** dopisz AN2 i M12, zaktualizuj opis D3, M5, M10.
+
+---
+
+# 1. DECYZJE WŁAŚCICIELA
+
+| # | Decyzja |
+|---|---|
+| — | **Przewoźnik nie może zmieniać okien planowych** załadunku i dostawy. Plan pochodzi z harmonogramu KSH. **Wymusza baza** (0004), sprawdzone testem |
+| — | Źródła danych zewnętrznych muszą być **darmowe** — wybrane i zweryfikowane w `ZRODLA_DANYCH.md` |
+
+---
+
+# 2. ZMIANY ZAKRESU
+
+## Nowa pozycja
+
+**M12 — Integracje danych zewnętrznych** (etap 4, po M10). Wszystko wg
+`docs/handover/ZRODLA_DANYCH.md`. Funkcje Edge wywoływane z pg_cron:
+
+| Funkcja | Co | Częstotliwość | Wymaga |
+|---|---|---|---|
+| `ferry-schedule` | import rozkładu cargo armatora do `sailings` | raz w tygodniu + ręcznie przez HHL | — |
+| `ferry-status` | `parsePolferriesStatus` → opóźnienie, odwołanie, NIEZNANY | **co 15 min, nie częściej** | — |
+| `ferry-ais` | `fetchVesselFix` dla statków z rejsem w toku | co 10 min | — |
+| `road-se` | Trafikverket: Situation, RoadCondition, WeatherStation przez GetBuffer wzdłuż E4 | co 10 min | klucz |
+| `road-pl` | KPD GDDKiA, DATEX II | wg warunków KPD | rejestracja, certyfikat |
+| `traffic-flow` | TomTom: prędkość bieżąca wobec swobodnej przy aktywnych autach | co 15 min na auto | klucz |
+
+**Zasady, bez wyjątków:**
+- **pierwszeństwo źródeł rejsu: `RECZNIE` > `POLFERRIES` > `DANE_STARTOWE`** —
+  zmiany ręcznej HHL odczyt automatyczny nie nadpisuje
+- status NIEZNANY z komunikatów → **bez zmiany rejsu**, ryzyko dla HHL
+- każda awaria źródła albo zmiana struktury strony → ryzyko „źródło
+  niedostępne" widoczne w kolejce, **nigdy cicha pustka**
+- ryzyka drogowe w istniejących rodzajach `ROAD_SE` i `ROAD_PL`
+- **atrybucje z sekcji 4 `ZRODLA_DANYCH.md` w interfejsie** — Digitraffic
+  obowiązkowo (CC BY 4.0)
+- funkcja bez klucza (brak `TRAFIKVERKET_API_KEY`, `TOMTOM_API_KEY`) —
+  panel zostaje oznaczony jako dane demonstracyjne (D18), funkcja nie działa
+  na niby
+- klucze wyłącznie w sekretach funkcji
+
+*Kryterium odbioru:* `ferry-status` zapisuje rejsy z prawdziwej strony
+do bazy testowej; przy braku kluczy panele drogowe mają oznaczenie
+demonstracyjne; test jednostkowy każdej funkcji na zapisanych danych,
+bez sieci.
+
+## Zmienione pozycje
+
+**D3** — panel warunków drogowych SE przechodzi z danych demonstracyjnych
+na Trafikverket, **gdy właściciel założy klucz**. Do tego czasu bez zmian.
+
+**M5, M10** — w szufladzie i formularzach **przewoźnik nie widzi pól
+okien planowych jako edytowalnych**. Baza i tak odrzuci zmianę; interfejs
+nie może jej proponować.
+
+## Brama etapu 3 i 4
+
+`tests/db/run.sh`: **security 52/52, status 44/44**; `tests/ferry.test.ts`: **17/17**.
+
+## Lista kontrolna
+
+Dochodzą: **AN2 · M12**. **Łącznie 56 pozycji.**
+
+Wróć do bieżącej pozycji zlecenia.
