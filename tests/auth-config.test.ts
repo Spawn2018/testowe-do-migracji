@@ -21,7 +21,7 @@ describe('BK2 auth config', () => {
     expect(ROLES_FOR_ORG.HHL).toEqual(['HHL_ADMIN', 'HHL_OPS']);
     expect(ROLES_FOR_ORG.KSH).toEqual(['CLIENT_ADMIN', 'CLIENT_USER']);
     expect(ROLES_FOR_ORG.SCX).toEqual(['CARRIER_DISPATCH', 'CARRIER_USER']);
-    const sql = readFileSync('supabase/migrations/0005_auth.sql', 'utf8');
+    const sql = readFileSync('supabase/migrations/0006_auth.sql', 'utf8');
     expect(sql).toMatch(/after insert on auth\.users/);
     expect(sql).toMatch(/TOWER_NO_INVITE/);
   });

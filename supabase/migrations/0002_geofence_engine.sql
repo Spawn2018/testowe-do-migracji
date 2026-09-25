@@ -20,11 +20,15 @@
 create or replace function make_circle_fence(p_lat float8, p_lon float8, p_radius_m float8)
 returns geometry(Polygon, 4326)
 language sql immutable as $$
-  select st_transform(
-           st_buffer(
-             st_transform(st_setsrid(st_makepoint(p_lon, p_lat), 4326), 3857),
-             p_radius_m
-           ), 4326
+  -- POPRAWKA 24.09.2026: bufor w geography = prawdziwe metry na powierzchni Ziemi.
+  -- Poprzednio bufor liczony był w EPSG:3857 (Web Mercator), gdzie „metr" to
+  -- metr tylko na równiku: skala 1/cos(szerokości). Zmierzone rzeczywiste
+  -- promienie: port Gdańsk 463 m zamiast 800, Nynäshamn 411 m, plac Stegra
+  -- 613 m zamiast 1500, bufor Boden 20,4 km zamiast 50 km — błąd rósł
+  -- dokładnie wzdłuż trasy na północ.
+  select st_buffer(
+           st_setsrid(st_makepoint(p_lon, p_lat), 4326)::geography,
+           p_radius_m, 'quad_segs=16'
          )::geometry(Polygon, 4326);
 $$;
 
@@ -47,6 +51,12 @@ create or replace function process_position(
   p_raw      jsonb default '{}'::jsonb
 ) returns table (event_type text, geofence_id uuid, geofence_name text)
 language plpgsql security definer set search_path = public as $$
+-- POPRAWKA 24.09.2026: kolumny wyniku (event_type, geofence_id) mają te same
+-- nazwy co kolumny tabel geofence_states i load_events. Bez tej dyrektywy
+-- każde wywołanie ze strefą w zasięgu kończyło się błędem „column reference
+-- is ambiguous", a cała transakcja — razem z pozycją — była wycofywana.
+-- Funkcja w tej postaci nigdy nie przetworzyła punktu w strefie.
+#variable_conflict use_column
 declare
   v_pt        geometry(Point, 4326);
   v_project   uuid;
@@ -177,7 +187,10 @@ begin
         ),
         v_dedup
       )
-      on conflict (dedup_key) do nothing;
+      -- POPRAWKA 24.09.2026: indeks unikalny na dedup_key jest częściowy
+      -- (where dedup_key is not null) — bez tego warunku Postgres odrzucał
+      -- zapis i żadne zdarzenie wjazdu ani wyjazdu nie mogło powstać.
+      on conflict (dedup_key) where dedup_key is not null do nothing;
 
       event_type    := v_emit;
       geofence_id   := v_fence.id;

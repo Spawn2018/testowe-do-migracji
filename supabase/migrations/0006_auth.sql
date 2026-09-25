@@ -1,4 +1,4 @@
--- 0005_auth.sql — BK2 Uwierzytelnianie (ZLECENIE_FINAL §7 Etap 3).
+-- 0006_auth.sql (w BK2: 0005_auth.sql; przenumerowano w AN1) — BK2 Uwierzytelnianie (ZLECENIE_FINAL §7 Etap 3).
 -- Logowanie linkiem e-mail (Supabase magic link). Konta WYŁĄCZNIE na zaproszenie:
 -- HHL_ADMIN zaprasza (email + organizacja + rola z 0001), a przy pierwszym
 -- logowaniu wyzwalacz na auth.users tworzy wiersz app_users. Adres bez
@@ -60,10 +60,19 @@ begin
   return new;
 end $$;
 
-drop trigger if exists tower_on_auth_user_created on auth.users;
-create trigger tower_on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_auth_user();
+-- Warunkowo: na Supabase auth.users istnieje zawsze; w lokalnym teście
+-- (tests/db/supabase_stub.sql z pakietu) tabeli nie ma — wtedy pomijamy.
+do $trg$
+begin
+  if to_regclass('auth.users') is not null then
+    drop trigger if exists tower_on_auth_user_created on auth.users;
+    create trigger tower_on_auth_user_created
+      after insert on auth.users
+      for each row execute function public.handle_new_auth_user();
+  else
+    raise notice 'auth.users brak (środowisko testowe) — wyzwalacz pominięty';
+  end if;
+end $trg$;
 
 -- 4. Funkcje administratora HHL -----------------------------------------
 create or replace function admin_invite_user(

@@ -1,4 +1,4 @@
--- 0006_data_layer.sql — BK3 Warstwa danych (SupabaseProvider).
+-- 0007_data_layer.sql (w BK3: 0006_data_layer.sql; przenumerowano w AN1) — BK3 Warstwa danych (SupabaseProvider).
 -- 1) Geofence jako okrąg dla interfejsu: widok z centrum/promieniem + funkcja zapisu.
 --    Obie SECURITY INVOKER → obowiązuje RLS geofences (zapis tylko HHL_ADMIN).
 -- 2) Autor wiadomości / zdarzenia ustawiany po stronie serwera (koniec podszywania:
