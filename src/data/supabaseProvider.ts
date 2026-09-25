@@ -7,19 +7,21 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { DataMutation, DataProvider, DataSnapshot } from './provider';
 import { emptySnapshot } from './provider';
+import type { FerryBooking } from '../types';
 import { isServerId } from './registry';
 import {
   awizacjaPatchToDb, documentFromRow, eventFromRow, eventToRow, ferryPatchToDb, geofenceFromRow, geofenceToRpc,
-  loadFromRow, messageFromRow, resourcesPatchToDb, riskFromRow, statusToDb,
+  loadFromRow, messageFromRow, resourcesPatchToDb, riskFromRow, statusToDb, vesselToDb,
   type DocumentRow, type EventRow, type GeofenceRow, type LoadRow, type MessageRow, type OrgRow, type RiskRow,
 } from './mappers';
 
 export const PROJECT_CODE = 'STEGRA_BODEN';
 const LOAD_COLUMNS =
   'id,order_no,carrier_org_id,status,plan_load_date,plan_load_from,plan_load_to,plan_delivery_date,plan_delivery_from,' +
-  'plan_delivery_to,tractor_plate,trailer_plate,driver_name,driver_phone,escort_vehicles,ferry_booking_ref,ferry_vessel,' +
-  'ferry_departure,combo_length_m,combo_width_m,combo_height_m,combo_weight_t,delay_minutes,eta_site,hhl_order_no,carrier_order_no,' +
-  'shipment_items(shipment_code,item_type,length_m,width_m,height_m,total_weight_t,unit_weight_t,qty,assembly_seq)';
+  'plan_delivery_to,tractor_plate,trailer_plate,driver_name,driver_phone,escort_vehicles,ferry_booking_ref,sailing_id,' +
+  'combo_length_m,combo_width_m,combo_height_m,combo_weight_t,delay_minutes,eta_site,hhl_order_no,carrier_order_no,' +
+  'shipment_items(shipment_code,item_type,length_m,width_m,height_m,total_weight_t,unit_weight_t,qty,assembly_seq),' +
+  'sailings(departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,status,vessels(name))';
 
 function must<T>(res: { data: T | null; error: { message: string } | null }, what: string): T {
   if (res.error) throw new Error(`${what}: ${res.error.message}`);
@@ -77,6 +79,17 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     if (!rows.length) throw new Error(`${what}: brak uprawnień lub transport niewidoczny`);
   }
 
+  /** Rejs po (statek, rozkładowa godzina odejścia) — `undefined` = nie ruszaj `sailing_id`. */
+  async function resolveSailing(p: Partial<FerryBooking>): Promise<string | null | undefined> {
+    if (!('vessel' in p) && !('departureAt' in p)) return undefined;
+    const name = vesselToDb(p.vessel ?? null);
+    if (!name || !p.departureAt) return p.vessel === null ? null : undefined;
+    const res = await sb.from('sailings').select('id,vessels!inner(name)')
+      .eq('vessels.name', name).eq('departure_at', p.departureAt).limit(1);
+    const rows = must(res, 'rejs') as { id: string }[];
+    return rows[0]?.id; // brak rejsu w `sailings` → nie zmieniaj przypisania (M10)
+  }
+
   async function apply(m: DataMutation): Promise<{ id?: string } | void> {
     switch (m.type) {
       case 'load.status': {
@@ -86,7 +99,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       }
       case 'load.resources': return updateLoad(m.loadId, resourcesPatchToDb(m.patch), 'zasoby');
       case 'load.awizacja': return updateLoad(m.loadId, awizacjaPatchToDb(m.patch), 'awizacja');
-      case 'load.ferry': return updateLoad(m.loadId, ferryPatchToDb(m.patch), 'prom');
+      case 'load.ferry': return updateLoad(m.loadId, ferryPatchToDb(m.patch, await resolveSailing(m.patch)), 'prom');
       case 'event.append': {
         const res = await sb.from('load_events').insert(eventToRow(m.event)).select('id').single();
         return { id: String((must(res, 'zdarzenie') as { id: number }).id) };

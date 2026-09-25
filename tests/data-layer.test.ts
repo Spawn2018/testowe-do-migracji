@@ -5,7 +5,7 @@ import { DATA_SNAPSHOT_KEYS, emptySnapshot } from '../src/data/provider';
 import { hasRemoteSink, isServerId, registerRemoteSink, writeThrough } from '../src/data/registry';
 import {
   awizacjaPatchToDb, eventFromRow, eventToRow, geofenceFromRow, geofenceToRpc, loadFromRow, resourcesPatchToDb,
-  statusFromDb, statusToDb, type LoadRow, type OrgRow,
+  statusFromDb, statusToDb, ferryFromRow, ferryPatchToDb, vesselToDb, type LoadRow, type OrgRow,
 } from '../src/data/mappers';
 import { useTowerStore } from '../src/store/useTowerStore';
 import type { DataMutation } from '../src/data/provider';
@@ -80,7 +80,8 @@ describe('BK3 mappers', () => {
       plan_load_date: '2026-10-01', plan_load_from: '2026-10-01T06:00:00Z', plan_load_to: '2026-10-01T14:00:00Z',
       plan_delivery_date: '2026-10-04', plan_delivery_from: null, plan_delivery_to: null,
       tractor_plate: 'PO 1', trailer_plate: null, driver_name: null, driver_phone: null, escort_vehicles: 1,
-      ferry_booking_ref: 'B-1', ferry_vessel: 'WAWEL', ferry_departure: '2026-10-02T17:00:00Z',
+      ferry_booking_ref: 'B-1', sailing_id: 'sail-1',
+      sailings: { departure_at: '2026-10-02T17:00:00Z', arrival_at: '2026-10-03T11:00:00Z', delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY', vessels: { name: 'M/F Wawel' } },
       combo_length_m: '21.5', combo_width_m: null, combo_height_m: null, combo_weight_t: null, delay_minutes: 0, eta_site: null,
       shipment_items: [
         { shipment_code: 'SG-02', item_type: 'Belka', length_m: '18', width_m: '3', height_m: '3.2', total_weight_t: '20', unit_weight_t: null, qty: 1, assembly_seq: 2 },
@@ -91,7 +92,7 @@ describe('BK3 mappers', () => {
     expect(l.code).toBe('SG-01');
     expect(l.status).toBe('ON_FERRY');
     expect(l.carrierId).toBe('org-scx');
-    expect(l.ferry).toMatchObject({ vessel: 'Wawel', bookingRef: 'B-1', status: 'BOOKED' });
+    expect(l.ferry).toMatchObject({ vessel: 'Wawel', bookingRef: 'B-1', status: 'BOOKED', departureAt: '2026-10-02T17:00:00Z', arrivalAt: '2026-10-03T11:00:00Z' });
     expect(l.resources.escort).toBe(true);
     expect(l.resources.setLengthM).toBe(21.5);
     expect(l.awizacja.confirmed).toBe(true);
@@ -102,7 +103,16 @@ describe('BK3 mappers', () => {
     expect(resourcesPatchToDb({ driverName: 'A', escort: false, setWeightT: 40 })).toEqual({ driver_name: 'A', escort_vehicles: 0, combo_weight_t: 40 });
     expect(awizacjaPatchToDb({ confirmed: true, loadWindowStart: 'x' })).toEqual({ plan_load_from: 'x' });
     const granted = readFileSync('supabase/migrations/0001_core.sql', 'utf8');
-    for (const col of ['driver_name', 'escort_vehicles', 'combo_weight_t', 'plan_load_from', 'status', 'ferry_vessel']) expect(granted).toContain(col);
+    for (const col of ['driver_name', 'escort_vehicles', 'combo_weight_t', 'plan_load_from', 'status', 'ferry_booking_ref']) expect(granted).toContain(col);
+  });
+  it('ferry comes from sailings (AN1): delayed times win, status mapped, writes only booking ref / sailing_id', () => {
+    const s = { departure_at: '2026-10-02T17:00:00Z', arrival_at: '2026-10-03T11:00:00Z', delayed_departure_at: '2026-10-02T19:00:00Z', delayed_arrival_at: null, status: 'OPOZNIONY', vessels: { name: 'M/F Nova Star' } };
+    expect(ferryFromRow({ ferry_booking_ref: null, sailings: s })).toMatchObject({ vessel: 'Nova Star', departureAt: '2026-10-02T19:00:00Z', arrivalAt: '2026-10-03T11:00:00Z', status: 'DELAYED' });
+    expect(ferryFromRow({ ferry_booking_ref: 'X', sailings: { ...s, status: 'ODWOLANY' } }).status).toBe('CANCELLED');
+    expect(ferryFromRow({ ferry_booking_ref: null, sailings: null })).toMatchObject({ vessel: null, status: 'NONE' });
+    expect(ferryPatchToDb({ vessel: 'Wawel', departureAt: 'x', bookingRef: 'B' })).toEqual({ ferry_booking_ref: 'B' });
+    expect(ferryPatchToDb({ vessel: 'Wawel' }, 'sail-9')).toEqual({ sailing_id: 'sail-9' });
+    expect(vesselToDb('Nova Star')).toBe('M/F Nova Star');
   });
   it('events keep actor/note in payload', () => {
     const row = eventToRow({ loadId: LOAD_ID, type: 'NOTE', at: '2026-01-01T00:00:00Z', actor: 'SCX', note: 'n', payload: { a: 1 } });

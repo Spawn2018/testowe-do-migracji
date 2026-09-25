@@ -76,7 +76,9 @@ export interface LoadRow {
   plan_load_date: string | null; plan_load_from: string | null; plan_load_to: string | null;
   plan_delivery_date: string | null; plan_delivery_from: string | null; plan_delivery_to: string | null;
   tractor_plate: string | null; trailer_plate: string | null; driver_name: string | null; driver_phone: string | null;
-  escort_vehicles: number | null; ferry_booking_ref: string | null; ferry_vessel: string | null; ferry_departure: string | null;
+  escort_vehicles: number | null; ferry_booking_ref: string | null; sailing_id?: string | null;
+  /** Rejs (AN1): jedno źródło prawdy — `sailings` przez `loads.sailing_id` (embed PostgREST). */
+  sailings?: SailingRow | null;
   combo_length_m: number | string | null; combo_width_m: number | string | null; combo_height_m: number | string | null;
   combo_weight_t: number | string | null; delay_minutes: number | null; eta_site: string | null;
   hhl_order_no?: string | null; carrier_order_no?: string | null;
@@ -86,9 +88,34 @@ export interface LoadRow {
 const num = (v: number | string | null | undefined): number | null =>
   v === null || v === undefined || v === '' ? null : Number(v);
 
-const VESSEL_FROM_DB: Record<string, FerryBooking['vessel']> = { WAWEL: 'Wawel', NOVA_STAR: 'Nova Star' };
+export interface SailingRow {
+  departure_at: string; arrival_at: string;
+  delayed_departure_at: string | null; delayed_arrival_at: string | null;
+  status: 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY' | string;
+  vessels?: { name: string } | null;
+}
+
+/** `vessels.name` (np. „M/F Wawel”) → nazwa w UI. */
+export function vesselFromDb(name: string | null | undefined): FerryBooking['vessel'] {
+  if (!name) return null;
+  const n = name.replace(/^M\/F\s+/i, '').trim().toLowerCase();
+  return n === 'wawel' ? 'Wawel' : n === 'nova star' ? 'Nova Star' : null;
+}
+/** Nazwa w UI → `vessels.name` (seed `stegra.sql`). */
 export const vesselToDb = (v: FerryBooking['vessel']): string | null =>
-  v === 'Wawel' ? 'WAWEL' : v === 'Nova Star' ? 'NOVA_STAR' : null;
+  v === 'Wawel' ? 'M/F Wawel' : v === 'Nova Star' ? 'M/F Nova Star' : null;
+
+export function ferryFromRow(row: Pick<LoadRow, 'ferry_booking_ref' | 'sailings'>): FerryBooking {
+  const s = row.sailings ?? null;
+  if (!s) return { vessel: null, departureAt: null, arrivalAt: null, bookingRef: row.ferry_booking_ref, status: row.ferry_booking_ref ? 'BOOKED' : 'NONE' };
+  return {
+    vessel: vesselFromDb(s.vessels?.name),
+    departureAt: s.delayed_departure_at ?? s.departure_at,
+    arrivalAt: s.delayed_arrival_at ?? s.arrival_at,
+    bookingRef: row.ferry_booking_ref,
+    status: s.status === 'ODWOLANY' ? 'CANCELLED' : s.status === 'OPOZNIONY' ? 'DELAYED' : 'BOOKED',
+  };
+}
 
 export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso: string): Load {
   const item = [...(row.shipment_items ?? [])].sort((a, b) => (a.assembly_seq ?? 1e9) - (b.assembly_seq ?? 1e9))[0];
@@ -114,11 +141,7 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
     unloadWindowStart: row.plan_delivery_from, unloadWindowEnd: row.plan_delivery_to,
     confirmed: Boolean(row.plan_load_from && row.plan_load_to),
   };
-  const vessel = row.ferry_vessel ? VESSEL_FROM_DB[row.ferry_vessel] ?? null : null;
-  const ferry: FerryBooking = {
-    vessel, departureAt: row.ferry_departure, arrivalAt: null, bookingRef: row.ferry_booking_ref,
-    status: row.ferry_booking_ref ? 'BOOKED' : 'NONE',
-  };
+  const ferry = ferryFromRow(row);
   const base: Load = {
     id: row.id,
     code: item?.shipment_code ?? row.order_no ?? row.id.slice(0, 8),
@@ -176,11 +199,14 @@ export function awizacjaPatchToDb(p: Partial<Awizacja>): Record<string, unknown>
   return out; // `confirmed` nie ma kolumny — zostaje w zdarzeniu AWIZACJA_UPDATED
 }
 
-export function ferryPatchToDb(p: Partial<FerryBooking>): Record<string, unknown> {
+/**
+ * AN1: statek/godzina nie są już kolumnami `loads` — zapisujemy tylko numer rezerwacji
+ * i (gdy provider rozwiązał rejs) `sailing_id`. Pełne przypisanie rejsu: M10.
+ */
+export function ferryPatchToDb(p: Partial<FerryBooking>, sailingId?: string | null): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  if ('vessel' in p) out.ferry_vessel = vesselToDb(p.vessel ?? null);
-  if ('departureAt' in p) out.ferry_departure = p.departureAt;
   if ('bookingRef' in p) out.ferry_booking_ref = p.bookingRef;
+  if (sailingId !== undefined) out.sailing_id = sailingId;
   return out;
 }
 
