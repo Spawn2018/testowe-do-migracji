@@ -79,6 +79,35 @@ try {
     const r0 = hz.data?.[0] ?? {};
     check('M2 Z1: obie wartości zostają, marża z fakturowanej', Number(r0.cost_computed_eur) === 2000 && Number(r0.cost_invoiced_eur) === 2100 && Number(r0.margin_eur) === 400 && r0.cost_tier === 'FAKTURA');
   }
+
+  // ---------- M3: kurs NBP (fx_rates, reguła W3, migawka przy rozładunku) ----------
+  const fr = await sb.KSH.rpc('fx_rate_before', { p_local_date: '2025-12-29' });
+  check('M3 KSH: fx_rate_before(29.12.2025) = 248/A z 23.12 (tabele z API NBP w bazie)', !fr.error && fr.data?.[0]?.table_no === '248/A/NBP/2025' && fr.data?.[0]?.rate_date === '2025-12-23', fr.error?.message);
+  const fn = await sb.KSH.rpc('fx_rate_before', { p_local_date: '2020-01-01' });
+  check('M3: brak tabeli → błąd, nie zgadywanie', Boolean(fn.error) && /Brak tabeli/.test(fn.error.message));
+  const fs = await sb.KSH.rpc('fx_sync_nbp', {});
+  check('M3 KSH: pobieranie kursów niedostępne dla użytkownika', Boolean(fs.error));
+  const fi = await sb.SCX.from('fx_rates').insert({ currency: 'EUR', rate_date: '2020-01-01', rate_pln: 9.99 });
+  check('M3 SCX: zapis do fx_rates odrzucony', Boolean(fi.error));
+  const latest = await sb.SCX.from('fx_rates').select('table_no,rate_date').order('rate_date', { ascending: false }).limit(1);
+  check('M3: fx_rates czytelne i świeże (tabela z ostatnich 7 dni)', !latest.error && (Date.now() - Date.parse(latest.data?.[0]?.rate_date ?? '2000-01-01')) < 7 * 86400e3, latest.data?.[0]?.rate_date);
+  if (created.cost && created.rev) {
+    await admin.from('load_cost').update({ invoiced_total_eur: null }).eq('load_id', A.id).then(() => null, () => null);
+    const prev = (await admin.from('loads').select('actual_delivery_at,plan_delivery_from').eq('id', A.id).single()).data ?? {};
+    const before = prev.actual_delivery_at ?? null;
+    // świeży wiersz kosztu (bez faktury) do migawki: usuń i wstaw ponownie własny wiersz testowy
+    await admin.from('load_cost').delete().eq('load_id', A.id);
+    await admin.from('load_cost').insert({ load_id: A.id, base_amount: 1900, computed_total_eur: 2000 });
+    const u = await admin.from('loads').update({ actual_delivery_at: '2025-12-29T23:30:00Z' }).eq('id', A.id).select('id');
+    const hv = await q('HHL', 'v_load_financials_hhl', 'cost_fx_table_no,rev_fx_table_no,fuel_ref_date,pricing_tier');
+    const v0 = hv.data?.[0] ?? {};
+    check('M3 migawka przy rozładunku (pułapka UTC → 249/A, dzień lokalny 30.12, obie strony)', !u.error && v0.cost_fx_table_no === '249/A/NBP/2025' && v0.rev_fx_table_no === '249/A/NBP/2025' && v0.fuel_ref_date === '2025-12-30', u.error?.message ?? JSON.stringify(v0));
+    await admin.from('loads').update({ plan_delivery_from: '2026-10-09T08:00:00Z' }).eq('id', A.id);
+    const hv2 = await q('HHL', 'v_load_financials_hhl', 'cost_fx_table_no');
+    check('M3 migawka niezmienna po zmianie planu', hv2.data?.[0]?.cost_fx_table_no === '249/A/NBP/2025');
+    const r = await admin.from('loads').update({ actual_delivery_at: before, plan_delivery_from: prev.plan_delivery_from ?? null }).eq('id', A.id).select('id');
+    check('M3 przywrócono actual_delivery_at i plan_delivery_from fixture', !r.error, r.error?.message);
+  }
   //@@NEXT@@
 } finally {
   await cleanup();

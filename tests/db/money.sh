@@ -51,6 +51,31 @@ val "po fakturze: poziom strony = FAKTURA"         $HHL "select cost_tier from v
 out=$($PSQL -c "update load_cost set computed_total_eur=2100 where load_id='$L1'" 2>&1)
 if echo "$out" | grep -q "Z1"; then ok=$((ok+1)); echo "  OK    wyliczenie po zafakturowaniu niezmienne (wyzwalacz Z1)"; else fail=$((fail+1)); echo "  FAIL  Z1 → $out"; fi
 
+
+echo; echo "[M3] Kurs NBP: fx_rates, reguła W3, migawka przy rozładunku"
+FIX=$(python3 -c "import json;print(json.dumps(json.load(open('tests/fixtures/nbp-eur-2025-12.json'))))")
+val "parser zapisuje tabele z odpowiedzi API (przedział)" $HHL "set local role postgres; select fx_ingest_nbp('$FIX'::jsonb, 'fixture') > 5" t commit
+val "29.12.2025 → 248/A z 23.12 (5 dni bez tabel)"   $KSH "select table_no||' '||rate_date from fx_rate_before('2025-12-29')" "248/A/NBP/2025 2025-12-23"
+val "2.01.2026 → tabela z 31.12 (dzień roboczy przed)" $KSH "select rate_date from fx_rate_before('2026-01-02')" "2025-12-31"
+err "brak tabeli w przedziale → błąd, nie zgadywanie" $KSH "select * from fx_rate_before('2025-11-01')" "Brak tabeli A NBP"
+val "zalogowany odczyta fx_rates (dane publiczne)"   $SCX "select count(*) > 0 from fx_rates" t
+err "SCX nie zapisze kursu"                          $SCX "insert into fx_rates (currency, rate_date, rate_pln) values ('EUR','2025-12-27',9.99)" "permission denied"
+err "SCX nie wywoła parsera"                         $SCX "select fx_ingest_nbp('{}'::jsonb)" "permission denied"
+err "KSH nie wywoła pobierania"                      $KSH "select fx_sync_nbp()" "permission denied"
+sys "insert into load_cost (load_id, base_amount, computed_total_eur) values ('$L2', 1000, 1000); insert into load_revenue (load_id, base_amount, computed_total_eur) values ('$L2', 1300, 1300)"
+sys "update loads set actual_delivery_at='2025-12-29T23:30:00Z' where id='$L2'"
+val "migawka: pułapka UTC — 29.12 23:30Z = 30.12 lokalnie → 249/A z 29.12" $HHL "select cost_fx_table_no||' '||cost_fx_date||' '||fuel_ref_date from v_load_financials_hhl where load_id='$L2'" "249/A/NBP/2025 2025-12-29 2025-12-30"
+val "migawka po obu stronach ta sama, poziom REALIZACJA" $HHL "select (cost_fx_table_no = rev_fx_table_no and pricing_tier='REALIZACJA' and not cost_fx_provisional)::text from v_load_financials_hhl where load_id='$L2'" true
+sys "update loads set plan_delivery_from='2026-01-15T08:00:00Z', plan_delivery_to='2026-01-15T16:00:00Z' where id='$L2'"
+sys "insert into fx_rates (currency, rate_date, rate_pln, table_no) values ('EUR','2025-12-30',9.9999,'999/A/TEST') on conflict do nothing"
+val "migawka niezmienna po zmianie planu i nowych tabelach" $HHL "select cost_fx_table_no||' '||cost_fx_mid from v_load_financials_hhl where load_id='$L2'" "249/A/NBP/2025 4.227400"
+sys "delete from fx_rates where table_no='999/A/TEST'"
+sys "update loads set actual_delivery_at='2026-03-10T10:00:00Z' where id='$L2'"
+val "brak tabeli przed rozładunkiem → migawka prowizoryczna (nie zgadywana)" $HHL "select cost_fx_provisional::text||' '||fuel_ref_date from v_load_financials_hhl where load_id='$L2'" "true 2026-03-10"
+sys "insert into fx_rates (currency, rate_date, rate_pln, table_no) values ('EUR','2026-03-09',4.3000,'047/A/NBP/2026')"
+val "fx_apply_pending uzupełnia migawkę po pobraniu tabeli" $HHL "set local role postgres; select fx_apply_pending()" 1 commit
+val "po uzupełnieniu: tabela z dnia roboczego przed rozładunkiem" $HHL "select cost_fx_table_no||' '||cost_fx_provisional from v_load_financials_hhl where load_id='$L2'" "047/A/NBP/2026 false"
+
 #@@NEXT@@
 
 echo
