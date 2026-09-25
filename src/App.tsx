@@ -20,10 +20,10 @@ import { DriverPwa } from './views/DriverPwa';
 import { OptionsView } from './views/OptionsView';
 import { navForRole } from './lib/permissions';
 import { usePageSectionDnD } from './hooks/usePageSectionDnD';
-import { isSupabaseAuth } from './auth/config';
+import { SUPABASE_AUTH_ENABLED } from './auth/config';
 
 // BK2: bramka logowania tylko w trybie Supabase (VITE_AUTH_MODE=supabase); demo bez zmian.
-const AuthGate = isSupabaseAuth() ? lazy(() => import('./auth/AuthGate')) : null;
+const AuthGate = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./auth/AuthGate')) : null;
 
 function TowerShell() {
   const view = useTowerStore((s) => s.view);

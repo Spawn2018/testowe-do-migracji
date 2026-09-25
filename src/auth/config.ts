@@ -21,8 +21,9 @@ const BUILD_SUPABASE = import.meta.env.VITE_AUTH_MODE === 'supabase';
 export const SUPABASE_URL: string = BUILD_SUPABASE ? (import.meta.env.VITE_SUPABASE_URL ?? '') : '';
 export const SUPABASE_ANON_KEY: string = BUILD_SUPABASE ? (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '') : '';
 
-export const isSupabaseAuth = (): boolean =>
-  authMode({ VITE_AUTH_MODE: import.meta.env.VITE_AUTH_MODE, VITE_SUPABASE_URL: SUPABASE_URL, VITE_SUPABASE_ANON_KEY: SUPABASE_ANON_KEY }) === 'supabase';
+/** Stała czasu budowania — w buildzie demo `false`, więc bundler usuwa kod Supabase. */
+export const SUPABASE_AUTH_ENABLED: boolean = BUILD_SUPABASE && SUPABASE_URL !== '' && SUPABASE_ANON_KEY !== '';
+export const isSupabaseAuth = (): boolean => SUPABASE_AUTH_ENABLED;
 
 /** Role z migracji 0001 (enum user_role). */
 export const USER_ROLES = [

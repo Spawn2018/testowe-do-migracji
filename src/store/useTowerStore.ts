@@ -43,22 +43,15 @@ import type { DisplayCurrency } from '../lib/money/engine';
 import {
   BAF_PARAMS,
   DRIVER_TOKENS,
-  GEOFENCES,
-  INITIAL_NOTIFICATIONS,
-  INITIAL_WORKFLOW_RUNS,
   RATE_COST,
   RATE_REV,
-  SCHEDULE_VERSIONS,
-  WORKFLOWS,
-  buildSeedDocuments,
-  buildSeedEvents,
-  buildSeedExceptions,
-  buildSeedInvoices,
-  buildSeedLoads,
-  buildSeedMessages,
-  buildSeedRisks,
   applyForceMajeureDelays,
+  buildSeedExceptions,
 } from '../data/seed';
+import { buildDemoSnapshot } from '../data/demoProvider';
+import { emptySnapshot } from '../data/provider';
+import { writeThrough } from '../data/registry';
+import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
 import { applyEtaToLoad } from '../lib/eta';
 import { isReadyBlocked } from '../lib/permits';
@@ -71,8 +64,12 @@ export interface NotificationPrefs {
   riskAlerts: boolean;
 }
 
-const seedLoads = buildSeedLoads();
-const seedRisks = buildSeedRisks(seedLoads);
+/**
+ * BK3: w trybie Supabase store startuje PUSTY (dane przychodzą z serwera po
+ * zalogowaniu) i nie czyta/zapisuje danych demo z localStorage v2.
+ */
+const SUPABASE_MODE = SUPABASE_AUTH_ENABLED;
+const initialData = SUPABASE_MODE ? emptySnapshot() : buildDemoSnapshot();
 
 function uid(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -302,11 +299,6 @@ interface TowerState {
   initTheme: () => void;
 }
 
-const initialLoads = applyForceMajeureDelays(
-  seedLoads.map((l) => applyEtaToLoad(l, '2026-09-23T01:00:00+02:00')),
-  seedRisks,
-);
-
 export const useTowerStore = create<TowerState>()(
   persist(
     (set, get) => ({
@@ -339,20 +331,20 @@ export const useTowerStore = create<TowerState>()(
         poi: true,
       },
 
-      loads: initialLoads,
-      events: buildSeedEvents(initialLoads),
-      documents: buildSeedDocuments(initialLoads),
-      messages: buildSeedMessages(initialLoads),
-      risks: seedRisks,
-      exceptions: buildSeedExceptions(initialLoads, seedRisks),
-      geofences: GEOFENCES,
-      workflows: WORKFLOWS,
-      workflowRuns: INITIAL_WORKFLOW_RUNS,
-      notifications: INITIAL_NOTIFICATIONS,
+      loads: initialData.loads,
+      events: initialData.events,
+      documents: initialData.documents,
+      messages: initialData.messages,
+      risks: initialData.risks,
+      exceptions: initialData.exceptions,
+      geofences: initialData.geofences,
+      workflows: initialData.workflows,
+      workflowRuns: initialData.workflowRuns,
+      notifications: initialData.notifications,
       notificationPrefs: { workflowAlerts: true, geofenceAlerts: true, riskAlerts: true },
-      invoices: buildSeedInvoices(initialLoads),
+      invoices: initialData.invoices,
       factoringOffer: { ...DEFAULT_FACTORING_OFFER },
-      scheduleVersions: SCHEDULE_VERSIONS,
+      scheduleVersions: initialData.scheduleVersions,
       rateCost: RATE_COST,
       rateRev: RATE_REV,
       baf: BAF_PARAMS,
@@ -610,6 +602,7 @@ export const useTowerStore = create<TowerState>()(
       appendEvent: (ev) => {
         const full: LoadEvent = { ...ev, id: uid('ev') };
         set((s) => ({ events: [full, ...s.events] }));
+        writeThrough({ type: 'event.append', event: ev });
       },
 
       setLoadStatus: (loadId, status, actor = 'system', note) => {
@@ -651,6 +644,7 @@ export const useTowerStore = create<TowerState>()(
             return applyEtaToLoad(next, at);
           }),
         }));
+        writeThrough({ type: 'load.status', loadId, status });
         get().appendEvent({ loadId, type: `STATUS_${status}`, at, actor, note });
         if (status === 'UNLOADING' || note?.includes('UNLOADED')) {
           get().pushNotification({
@@ -677,6 +671,7 @@ export const useTowerStore = create<TowerState>()(
           const exceptions = exceptionsFromRisks(risks, loads);
           return { loads, risks, exceptions };
         });
+        writeThrough({ type: 'load.resources', loadId, patch });
         get().appendEvent({
           loadId,
           type: 'RESOURCES_UPDATED',
@@ -722,6 +717,7 @@ export const useTowerStore = create<TowerState>()(
             l.id === loadId ? { ...l, awizacja: { ...l.awizacja, ...patch } } : l,
           ),
         }));
+        writeThrough({ type: 'load.awizacja', loadId, patch });
         get().appendEvent({
           loadId,
           type: 'AWIZACJA_UPDATED',
@@ -769,6 +765,7 @@ export const useTowerStore = create<TowerState>()(
             return applyEtaToLoad({ ...l, ferry: { ...l.ferry, ...patch } }, at);
           }),
         }));
+        writeThrough({ type: 'load.ferry', loadId, patch });
         get().appendEvent({ loadId, type: 'FERRY_UPDATED', at, actor: get().role });
       },
 
@@ -782,6 +779,7 @@ export const useTowerStore = create<TowerState>()(
           text,
         };
         set((s) => ({ messages: [...s.messages, msg] }));
+        writeThrough({ type: 'message.send', loadId, text });
       },
 
       uploadDocument: (loadId, category, name, opts) => {
@@ -833,6 +831,7 @@ export const useTowerStore = create<TowerState>()(
             geofences: exists ? s.geofences.map((x) => (x.id === g.id ? g : x)) : [...s.geofences, g],
           };
         });
+        writeThrough({ type: 'geofence.save', geofence: g });
         get().pushToast(`Strefa zapisana: ${g.name}`, 'MEDIUM');
         const roles: RoleId[] = [];
         if (g.notifyHhl) roles.push('HHL');
@@ -1497,11 +1496,20 @@ export const useTowerStore = create<TowerState>()(
       },
     }),
     {
-      name: STORE_PERSIST_KEY,
+      // BK3: tryb Supabase = osobny klucz; lokalny magazyn v2 (dane demo) nie jest czytany ani przenoszony.
+      name: SUPABASE_MODE ? `${STORE_PERSIST_KEY}-supabase` : STORE_PERSIST_KEY,
       version: STORE_SCHEMA_VERSION,
       storage: createVersionedJSONStorage(),
       migrate: migrateTowerPersistForZustand,
-      partialize: (s) => ({
+      partialize: (s) => SUPABASE_MODE ? ({
+        // BK3: w trybie Supabase tylko preferencje UI — dane są na serwerze (store = cache).
+        locale: s.locale,
+        displayCurrency: s.displayCurrency,
+        theme: s.theme,
+        themeManual: s.themeManual,
+        showDemoMarks: s.showDemoMarks,
+        notificationPrefs: s.notificationPrefs,
+      }) : ({
         role: s.role,
         locale: s.locale,
         displayCurrency: s.displayCurrency,

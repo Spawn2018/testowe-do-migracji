@@ -76,7 +76,12 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     let alive = true;
     let unsub: (() => void) | undefined;
     const load = async (session: Session | null) => {
-      if (!session) { setAuthProfile(null); if (alive) setState({ kind: 'anon' }); return; }
+      if (!session) {
+        setAuthProfile(null);
+        void import('../data/supabaseBridge').then((b) => b.disconnectSupabaseData());
+        if (alive) setState({ kind: 'anon' });
+        return;
+      }
       const sb = await getSupabase();
       const { data, error } = await sb.rpc('my_profile');
       const p = (Array.isArray(data) ? data[0] : null) as AuthProfile | null;
@@ -88,7 +93,16 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       setAuthProfile(p);
       const st = useTowerStore.getState();
       if (st.role !== viewRole) st.setRole(viewRole);
-      setState({ kind: 'ready', session, profile: p });
+      // BK3: dane z serwera (RLS) zastępują store przed pokazaniem aplikacji.
+      if (alive) setState({ kind: 'loading' });
+      try {
+        const bridge = await import('../data/supabaseBridge');
+        await bridge.connectSupabaseData(sb);
+      } catch (e) {
+        if (alive) setState({ kind: 'noaccess', reason: `Nie udało się pobrać danych z serwera: ${e instanceof Error ? e.message : String(e)}` });
+        return;
+      }
+      if (alive) setState({ kind: 'ready', session, profile: p });
     };
     void getSupabase().then(async (sb) => {
       const { data } = await sb.auth.getSession();
@@ -110,7 +124,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     });
   }, [state]);
 
-  if (state.kind === 'loading') return <div className="auth-screen" data-auth="loading"><div className="auth-msg">Ładowanie…</div></div>;
+  if (state.kind === 'loading') return <div className="auth-screen" data-auth="loading"><div className="auth-msg">Ładowanie danych…</div></div>;
   if (state.kind === 'anon') return <LoginScreen />;
   if (state.kind === 'noaccess') return <NoAccess reason={state.reason} />;
   return (

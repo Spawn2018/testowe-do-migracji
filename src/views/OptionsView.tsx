@@ -6,10 +6,10 @@ import { geofenceTypeLabel } from '../lib/enumLabels';
 import { t } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
 import { DEMO_FX_META } from '../lib/money/demoFx';
-import { isSupabaseAuth } from '../auth/config';
+import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 
 // BK2: panel użytkowników HHL_ADMIN — tylko w trybie Supabase.
-const UsersAdmin = isSupabaseAuth() ? lazy(() => import('../auth/UsersAdmin')) : null;
+const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/UsersAdmin')) : null;
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
   { key: 'indexSource', labelKey: 'baf_index', type: 'text' },
