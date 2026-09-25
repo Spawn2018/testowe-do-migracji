@@ -150,7 +150,7 @@ wyzwalaczem w 0004, sprawdzone testem.
 | Kto | Może | Nie może |
 |---|---|---|
 | **HHL** | wszystko | zmienić numeru zlecenia przewoźnika |
-| **Przewoźnik** (własne transporty) | dane pojazdu i kierowcy, telematyka, rejs i rezerwacja, własny numer zlecenia, wymiary zestawu, okna planowe, daty faktyczne, status — **tylko do przodu** | numery zleceń HHL i KSH, projekt, klient; anulować; cofnąć statusu; zmienić rejsu po wypłynięciu; **zmienić daty rozładunku transportu, który jest na fakturze** |
+| **Przewoźnik** (własne transporty) | dane pojazdu i kierowcy, telematyka, rejs i rezerwacja, własny numer zlecenia, wymiary zestawu, daty faktyczne, status — **tylko do przodu** | numery zleceń HHL i KSH, projekt, klient, **okna planowe załadunku i dostawy** (plan pochodzi z harmonogramu KSH); anulować; cofnąć statusu; zmienić rejsu po wypłynięciu; **zmienić daty rozładunku transportu, który jest na fakturze** |
 | **KSH** | nic w transporcie | |
 
 **Data rozładunku** — każda zmiana w dzienniku audytu. Po zafakturowaniu

@@ -972,3 +972,48 @@ zakazy, nie tylko pozwolenia.**
   (decyzja z 0001) — czy przewoźnik ma je zmieniać, skoro plan pochodzi
   z harmonogramu KSH? Do potwierdzenia przez właściciela
 - **prompt dla Cursora** — po raporcie końcowym Groka
+
+## 38. Źródła danych zewnętrznych, okna planowe (25.09.2026)
+
+### 38.1 Decyzje właściciela
+- **przewoźnik nie zmienia okien planowych** załadunku i dostawy —
+  wymuszone w 0004, `security.sh` 52/52 (+2 przypadki)
+- źródła danych zewnętrznych — **wyłącznie darmowe**
+
+Jedyne źródło prawdy: **`ZRODLA_DANYCH.md`**.
+
+### 38.2 Zweryfikowane na żywo
+| Źródło | Wynik |
+|---|---|
+| Polferries — komunikaty | HTML serwerowy, bez API; `robots.txt` dopuszcza; rejsy Gdańsk–Nynäshamn w obu kierunkach ok. tydzień naprzód; dziś wyłącznie „Planowo" |
+| Polferries — rozkład cargo | miesiące naprzód, statki NS/WAW |
+| **operator** | od 30.03.2026 w ramach **POLSCA Baltic Ferries** |
+| Digitraffic AIS | Zatoka Gdańska **0 statków**; Nynäshamn — tak; **Nova Star MMSI 311000787, IMO 9462067** potwierdzony; Wawel nieobecny w rejestrze |
+| Urząd Morski Gdynia — ruch statków | **promów linii regularnej nie ma** — odrzucone |
+| AISStream | zasięg zależny od wolontariuszy, licencja komercyjna niejasna — nie jako źródło krytyczne |
+| Trafikverket | darmowy klucz, CC0, zdarzenia, stan dróg, pogoda, GetBuffer wzdłuż trasy; prędkości tylko w dużych miastach |
+| KPD GDDKiA | darmowe, DATEX II, certyfikat klienta; utrudnienia, ograniczenia dla pojazdów, pomiary natężenia, prędkości i czasu przejazdu |
+| TomTom Freemium | 2 500 zapytań + 50 000 kafelków dziennie, użycie komercyjne dozwolone, przekroczenie blokowane, nie naliczane |
+
+### 38.3 Zrealizowane
+- `lib/ferry/polferries.ts` — parser komunikatów; nieznany status →
+  NIEZNANY + ostrzeżenie; zmiana struktury → ostrzeżenie; czas lokalny →
+  UTC poprawnie przy zmianie czasu
+- `lib/ferry/digitraffic.ts` — pozycja promu, interpretacja, atrybucja CC BY 4.0
+- **`tests/ferry.test.ts` 17/17** na prawdziwej stronie i prawdziwej
+  odpowiedzi AIS z 25.09.2026; zestaw jednostkowy łącznie **66 zielonych**
+- `vessels.mmsi`, `vessels.imo`; seed z nazwą operatora i MMSI Nova Star
+- `ANEKS_2_DLA_GROKA.md` — pozycje AN2, M12; łącznie **56**
+
+### 38.4 Błąd w moim teście, wykryty przy uruchomieniu
+Podmieniałem pierwszy status „Planowo" na stronie — a pierwszy należy do
+linii Świnoujście–Ystad, którą parser słusznie pomija. Poprawione: test
+celuje w rejs Gdańsk–Nynäshamn i sprawdza, że pozostałe są nietknięte.
+
+### 38.5 Otwarte — działania właściciela, wszystkie bezpłatne
+- klucz Trafikverket (od ręki) — przełącza D3 na dane żywe
+- konto TomTom Freemium (od ręki)
+- **rejestracja w KPD GDDKiA z certyfikatem klienta — najdłuższa droga**
+- pismo do działu cargo POLSCA Baltic Ferries: zgoda na odczyt
+  komunikatów albo oficjalne powiadomienia; **MMSI promu Wawel**
+- opcjonalnie: Sjöfartsverket AAA, klucz AISStream do testu zasięgu

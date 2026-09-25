@@ -31,7 +31,9 @@ create type sailing_status as enum ('ZAPLANOWANY', 'OPOZNIONY', 'ODWOLANY');
 create table vessels (
   id        uuid primary key default gen_random_uuid(),
   name      text not null unique,
-  operator  text not null
+  operator  text not null,
+  mmsi      bigint unique,      -- do zapytań AIS (Digitraffic); ZRODLA_DANYCH.md
+  imo       int unique
 );
 
 create table sailings (
@@ -306,8 +308,9 @@ declare
     'escort_vehicles','telematics_vehicle_id','telematics_provider',
     'ferry_booking_ref','sailing_id','carrier_order_no',
     'combo_length_m','combo_width_m','combo_height_m','combo_weight_t',
-    'plan_load_from','plan_load_to','plan_delivery_from','plan_delivery_to',
     'actual_load_at','actual_delivery_at','status','updated_at'];
+  -- Okna planowe (plan_load_*, plan_delivery_*) — decyzja właściciela
+  -- 24.09.2026: przewoźnik ich NIE zmienia. Plan pochodzi z harmonogramu KSH.
 begin
   -- Realizacja = rozładunek: status UNLOADED bez daty rozładunku jest niemożliwy
   if new.status = 'UNLOADED' and new.actual_delivery_at is null then

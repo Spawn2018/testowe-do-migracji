@@ -48,9 +48,11 @@ select p.id, z.name, z.kind::geofence_kind, make_circle_fence(z.lat, z.lon, z.r)
  where p.code = 'STEGRA_BODEN'
    and not exists (select 1 from geofences g where g.project_id = p.id and g.name = z.name);
 
--- Statki linii Gdańsk – Nynäshamn. Rejsy wprowadza HHL albo import
--- z ferry-sailings.json aplikacji.
-insert into vessels (name, operator) values
-  ('M/F Wawel',     'Polferries'),
-  ('M/F Nova Star', 'Polferries')
+-- Statki linii Gdańsk – Nynäshamn. Operator od 30.03.2026 działa w ramach
+-- POLSCA Baltic Ferries. Nova Star: MMSI i IMO potwierdzone w rejestrze
+-- Digitraffic 25.09.2026. Wawel: nieobecny w rejestrze — MMSI do potwierdzenia.
+-- Rejsy: import z rozkładu cargo armatora (ZRODLA_DANYCH.md, sekcja 1).
+insert into vessels (name, operator, mmsi, imo) values
+  ('M/F Wawel',     'POLSCA Baltic Ferries (Polferries)', null,      null),
+  ('M/F Nova Star', 'POLSCA Baltic Ferries (Polferries)', 311000787, 9462067)
 on conflict (name) do nothing;

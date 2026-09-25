@@ -20,10 +20,11 @@ Auth, Storage, Edge Functions, pg_cron).
 |---|---|---|
 | 1 | `docs/handover/MECHANIZM_PIENIEDZY.md` | waluta, kurs NBP, opłata paliwowa, poziomy wyceny, faktury trzech stron, numery zleceń, terminy, przypomnienia |
 | 2 | `docs/handover/STATUSY_AUTOMATYCZNE.md` | statusy z pozycji, rejsy, PROM, strefy, kto zmienia co w transporcie |
-| 3 | `supabase/migrations/` + `tests/db/` | kontrakt bazy i bezpieczeństwa |
-| 4 | `design/claude-v2.0/` + `docs/handover/DESIGN_SYSTEM.md` | wygląd |
-| 5 | `docs/handover/ZLECENIE_FINAL.md` + `POSTEP.md` | zakres i postęp |
-| 6 | `docs/handover/SCOPE.md` | rejestr zakresu — nic z niego nie może zniknąć |
+| 3 | `docs/handover/ZRODLA_DANYCH.md` | dane zewnętrzne: status promu, AIS, ruch drogowy PL i SE, licencje, atrybucje |
+| 4 | `supabase/migrations/` + `tests/db/` | kontrakt bazy i bezpieczeństwa |
+| 5 | `design/claude-v2.0/` + `docs/handover/DESIGN_SYSTEM.md` | wygląd |
+| 6 | `docs/handover/ZLECENIE_FINAL.md` + `POSTEP.md` | zakres i postęp |
+| 7 | `docs/handover/SCOPE.md` | rejestr zakresu — nic z niego nie może zniknąć |
 
 `docs/claude/archiwum/` — historia decyzji. **Nie wykonuj.**
 
@@ -59,6 +60,10 @@ niż umiesz uzasadnić — zatrzymaj się.
 **Nie zgaduj.** Sprzeczność wymagająca decyzji biznesowej — zatrzymaj się
 i zapytaj właściciela.
 
+**Dane zewnętrzne.** Tylko źródła z `ZRODLA_DANYCH.md`. Ręczna zmiana HHL
+ma pierwszeństwo przed odczytem automatycznym. Awaria źródła — ryzyko
+w kolejce, nigdy cicha pustka. Atrybucje w interfejsie obowiązkowe.
+
 **Sekrety** wyłącznie w zmiennych środowiskowych. Nigdy w repozytorium
 ani w rozmowie.
 
@@ -74,7 +79,8 @@ ani w rozmowie.
 ```
 npm run test:unit                  # testy jednostkowe
 npx vitest run tests/money.test.ts # mechanizm pieniędzy
-bash tests/db/run.sh               # baza: bezpieczeństwo + automatyka statusów
+npx vitest run tests/ferry.test.ts # źródła statusu promu
+bash tests/db/run.sh               # baza: bezpieczeństwo (52) + automatyka statusów (44)
 npx playwright test                # interfejs, D19-T, D-EUR-T
 npx stylelint "src/**/*.css"       # system projektowy
 node scripts/baseline.mjs          # wzorzec wizualny — tylko na końcu etapu

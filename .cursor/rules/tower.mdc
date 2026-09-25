@@ -6,13 +6,14 @@ alwaysApply: true
 Przed pracą przeczytaj `AGENTS.md` w korzeniu repozytorium i
 `docs/handover/POSTEP.md`. Źródła prawdy: `docs/handover/MECHANIZM_PIENIEDZY.md`
 (pieniądze, faktury), `docs/handover/STATUSY_AUTOMATYCZNE.md` (statusy, rejsy,
-strefy), `supabase/migrations/` (kontrakt bazy), `design/claude-v2.0/` (wygląd).
+strefy), `docs/handover/ZRODLA_DANYCH.md` (dane zewnętrzne, licencje), `supabase/migrations/` (kontrakt bazy), `design/claude-v2.0/` (wygląd).
 `docs/claude/archiwum/` — nie wykonuj.
 
 - Bezpieczeństwo egzekwuje baza (RLS, wyzwalacze), nie interfejs
 - Źródłem kwot jest EUR; PLN tylko jako wyświetlanie albo waluta faktury
 - Kurs NBP A z dnia roboczego przed rozładunkiem; dzień lokalnie, nigdy UTC
 - Statusy tylko do przodu; rozładunek nigdy automatycznie
+- Dane zewnętrzne tylko z ZRODLA_DANYCH.md; ręczna zmiana HHL wygrywa; awaria źródła = ryzyko
 - Wygląd: tylko istniejące komponenty, tokeny var(--…), Barlow, bez Tailwinda
 - Każdy napis w słowniku PL, EN, SV
 - Wzorca wizualnego nie regeneruj poza końcem etapu
