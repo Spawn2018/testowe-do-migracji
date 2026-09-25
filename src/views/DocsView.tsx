@@ -3,7 +3,7 @@ import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 import type { DocCategory, Document } from '../types';
 import { downloadDocumentsZip } from '../lib/zipDocs';
-import { readFileAsDataUrl } from '../lib/docsIo';
+import { attachDocumentFile } from '../lib/docFiles';
 import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
 import { docCategoryLabel } from '../lib/enumLabels';
@@ -23,7 +23,6 @@ export function DocsView() {
   const loads = useTowerStore((s) => s.loads);
   const locale = useTowerStore((s) => s.locale);
   const role = useTowerStore((s) => s.role);
-  const uploadDocument = useTowerStore((s) => s.uploadDocument);
   const nLoads = loads.length;
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [filterCat, setFilterCat] = useState<DocCategory | 'ALL'>('ALL');
@@ -187,17 +186,8 @@ export function DocsView() {
           const f = e.target.files?.[0];
           e.target.value = '';
           if (!f || !uploadTarget) return;
-          void readFileAsDataUrl(f)
-            .then((r) => {
-              uploadDocument(uploadTarget.loadId, uploadTarget.category, r.name, {
-                dataUrl: r.dataUrl,
-                mimeType: r.mimeType,
-                bytes: r.bytes,
-              });
-            })
-            .catch(() => {
-              useTowerStore.getState().pushToast('Nie udało się odczytać pliku', 'HIGH');
-            });
+          // BK4: tryb Supabase → Storage; demo → pamięć sesji.
+          void attachDocumentFile(f, uploadTarget.loadId, uploadTarget.category);
         }}
       />
       <DocPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />

@@ -59,7 +59,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
       sb.from('v_geofences_circle').select('*').order('sort_order'),
       sb.from('risk_signals').select('id,load_id,kind,severity,title,detail,detected_at').is('resolved_at', null).order('detected_at', { ascending: false }),
-      sb.from('documents').select('id,load_id,category,file_name,mime_type,size_bytes,valid_until,visible_to,uploaded_at'),
+      sb.from('documents').select('id,load_id,category,file_name,mime_type,size_bytes,valid_until,visible_to,uploaded_at,storage_path'),
     ]);
     return {
       ...emptySnapshot(), // faktury / automatyzacje / powiadomienia: Etap 4 — puste, nie demo

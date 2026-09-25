@@ -1,6 +1,8 @@
 /** Punkt 5 — wiersz pliku w stylu .mrow + .iconbtn ↓ (Claude v2: zwykły tekst ✓ nazwa). */
 import type { Document } from '../../types';
 import { downloadDocumentFile } from '../../lib/docsIo';
+import { downloadStoredDocument } from '../../lib/docFiles';
+import { isStoredDoc } from '../../data/registry';
 import { docCategoryLabel } from '../../lib/enumLabels';
 import { useTowerStore } from '../../store/useTowerStore';
 
@@ -39,7 +41,8 @@ export function DocFileRow({ doc, label, onPreview, onUploadClick, showUpload }:
               aria-label={`Pobierz ${doc.name}`}
               onClick={(e) => {
                 e.stopPropagation();
-                downloadDocumentFile(doc);
+                if (isStoredDoc(doc)) void downloadStoredDocument(doc);
+                else downloadDocumentFile(doc);
               }}
             >
               ↓

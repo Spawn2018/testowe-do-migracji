@@ -4,6 +4,12 @@ import type { Locale } from '../types';
 type Dict = Record<string, string>;
 
 export const d19Pl: Dict = {
+  bk4_file_saved: 'Plik zapisany w magazynie · {name}',
+  bk4_file_uploading: 'Wysyłam plik do magazynu…',
+  bk4_file_failed: 'Nie zapisano pliku: {msg}',
+  bk4_link_failed: 'Nie udało się otworzyć pliku: {msg}',
+  bk4_link_ttl: 'link ważny 15 min',
+  bk4_link_loading: 'Pobieram link…',
   baf_base: 'Cena bazowa',
   baf_base_date: 'Okres bazowy',
   baf_cap: 'Maksimum doplaty',
@@ -252,6 +258,12 @@ export const d19Pl: Dict = {
 };
 
 export const d19En: Dict = {
+  bk4_file_saved: 'File saved to storage · {name}',
+  bk4_file_uploading: 'Uploading file to storage…',
+  bk4_file_failed: 'File not saved: {msg}',
+  bk4_link_failed: 'Could not open file: {msg}',
+  bk4_link_ttl: 'link valid 15 min',
+  bk4_link_loading: 'Fetching link…',
   baf_base: 'Base price',
   baf_base_date: 'Base period',
   baf_cap: 'Maximum surcharge',
@@ -500,6 +512,12 @@ export const d19En: Dict = {
 };
 
 export const d19Sv: Dict = {
+  bk4_file_saved: 'Filen sparad i lagringen · {name}',
+  bk4_file_uploading: 'Laddar upp filen till lagringen…',
+  bk4_file_failed: 'Filen sparades inte: {msg}',
+  bk4_link_failed: 'Kunde inte öppna filen: {msg}',
+  bk4_link_ttl: 'länk giltig 15 min',
+  bk4_link_loading: 'Hämtar länk…',
   baf_base: 'Baspris',
   baf_base_date: 'Basperiod',
   baf_cap: 'Max tillagg',

@@ -1,6 +1,7 @@
 /** Build a real ZIP of document vault entries (JSZip) and trigger download. */
 import JSZip from 'jszip';
 import type { Document } from '../types';
+import { getFileSink, isStoredDoc } from '../data/registry';
 
 function dataUrlToUint8(dataUrl: string): Uint8Array | null {
   const m = /^data:([^;]+);base64,(.+)$/s.exec(dataUrl);
@@ -39,6 +40,20 @@ export async function downloadDocumentsZip(
     const safeCat = d.category.replace(/[^\w.-]+/g, '_');
     const safeName = (d.name || `${safeCat}.bin`).replace(/[^\w.\-]+/g, '_');
     const path = `${d.loadId || 'unknown'}/${safeCat}_${safeName}`;
+    // BK4: plik w Storage — pobranie linkiem podpisanym (15 min), RLS decyduje o dostępie.
+    const sink = getFileSink();
+    if (sink && isStoredDoc(d)) {
+      try {
+        const res = await fetch(await sink.signedUrl(d));
+        if (res.ok) {
+          folder.file(path, new Uint8Array(await res.arrayBuffer()));
+          count += 1;
+          continue;
+        }
+      } catch {
+        /* brak dostępu / sieć → stub poniżej */
+      }
+    }
     if (d.dataUrl) {
       const bytes = dataUrlToUint8(d.dataUrl);
       if (bytes) {

@@ -7,7 +7,7 @@ import { SITES } from '../../lib/status';
 import { SEFS_SOURCES } from '../../lib/sefs';
 import { isReadyBlocked, evaluateLoadCover } from '../../lib/permits';
 import { downloadDocumentsZip } from '../../lib/zipDocs';
-import { readFileAsDataUrl } from '../../lib/docsIo';
+import { attachDocumentFile } from '../../lib/docFiles';
 import { DocPreview } from '../ui/DocPreview';
 import { DocFileRow } from '../ui/DocFileRow';
 import {
@@ -53,7 +53,6 @@ export function LoadDrawer() {
   const assignScx = useTowerStore((s) => s.assignScx);
   const triggerGeofence = useTowerStore((s) => s.triggerGeofence);
   const geofences = useTowerStore((s) => s.geofences);
-  const uploadDocument = useTowerStore((s) => s.uploadDocument);
   const sendMessage = useTowerStore((s) => s.sendMessage);
 
   const [tab, setTab] = useState<Tab>('overview');
@@ -355,17 +354,8 @@ export function LoadDrawer() {
                     e.target.value = '';
                     if (!f) return;
                     const cat = uploadCat ?? loadDocs.find((d) => d.status === 'MISSING')?.category ?? 'CMR';
-                    void readFileAsDataUrl(f)
-                      .then((r) => {
-                        uploadDocument(load.id, cat, r.name || `${cat}_${load.code}.pdf`, {
-                          dataUrl: r.dataUrl,
-                          mimeType: r.mimeType,
-                          bytes: r.bytes,
-                        });
-                      })
-                      .catch(() => {
-                        useTowerStore.getState().pushToast('Nie udało się odczytać pliku', 'HIGH', load.id);
-                      });
+                    // BK4: tryb Supabase → Storage; demo → pamięć sesji.
+                    void attachDocumentFile(f, load.id, cat, { fallbackName: `${cat}_${load.code}.pdf` });
                   }}
                 />
               </div>

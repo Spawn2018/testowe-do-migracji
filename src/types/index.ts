@@ -182,6 +182,8 @@ export interface Document {
   mimeType?: string | null;
   bytes?: number | null;
   source?: 'driver' | 'tower' | 'seed';
+  /** BK4: `<koszyk>/<ścieżka>` w Supabase Storage — plik pobierany linkiem podpisanym (15 min). */
+  storagePath?: string | null;
 }
 
 

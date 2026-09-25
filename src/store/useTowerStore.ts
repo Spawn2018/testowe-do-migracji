@@ -51,6 +51,7 @@ import {
 import { buildDemoSnapshot } from '../data/demoProvider';
 import { emptySnapshot } from '../data/provider';
 import { writeThrough } from '../data/registry';
+import { t } from '../i18n/messages';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
 import { applyEtaToLoad } from '../lib/eta';
@@ -259,6 +260,8 @@ interface TowerState {
     name: string,
     opts?: { dataUrl?: string; mimeType?: string; bytes?: number },
   ) => void;
+  /** BK4: dokument już zapisany w Supabase Storage (bajty nie trafiają do przeglądarki). */
+  addStoredDocument: (doc: Document, actor?: string) => void;
 
   saveGeofence: (g: Geofence) => void;
   assignScx: (loadId: string, rateNote?: string) => void;
@@ -822,6 +825,23 @@ export const useTowerStore = create<TowerState>()(
         } else {
           get().pushToast(dataUrl ? `Dokument wgrany · ${name}` : 'Dokument dodany', 'MEDIUM', loadId);
         }
+      },
+
+      addStoredDocument: (doc, actor) => {
+        const { loadId, category } = doc;
+        set((s) => ({
+          documents: [doc, ...s.documents.filter((d) => !(d.loadId === loadId && d.category === category))],
+          loads: s.loads.map((l) => (l.id === loadId && category === 'CMR' ? { ...l, docMissing: false } : l)),
+        }));
+        get().appendEvent({
+          loadId,
+          type: 'DOC_UPLOADED',
+          at: doc.uploadedAt ?? nowIso(),
+          actor: actor ?? get().role,
+          note: `${doc.name} (${doc.bytes ?? 0} B)`,
+          payload: { category, documentId: doc.id, stored: true },
+        });
+        get().pushToast(t(get().locale, 'bk4_file_saved').replace('{name}', doc.name), 'MEDIUM', loadId);
       },
 
       saveGeofence: (g) => {
@@ -1519,7 +1539,8 @@ export const useTowerStore = create<TowerState>()(
         factoringOffer: s.factoringOffer,
         loads: s.loads,
         events: s.events,
-        documents: s.documents,
+        // BK4: bajty plików (zdjęcia kierowcy, skany) nie trafiają do localStorage — tylko metadane.
+        documents: s.documents.map((d) => (d.dataUrl ? { ...d, dataUrl: null } : d)),
         messages: s.messages,
         notifications: s.notifications,
         notificationPrefs: s.notificationPrefs,

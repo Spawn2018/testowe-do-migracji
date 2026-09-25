@@ -6,12 +6,12 @@ import { t } from '../i18n/messages';
 import type { Document } from '../types';
 import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
+import { attachDocumentFile } from '../lib/docFiles';
 
 export function DriverPwa() {
   const { token = 'demo-active' } = useParams();
   const driverMilestone = useTowerStore((s) => s.driverMilestone);
   const driverSharePosition = useTowerStore((s) => s.driverSharePosition);
-  const driverAttachDoc = useTowerStore((s) => s.driverAttachDoc);
   const loads = useTowerStore((s) => s.loads);
   const documents = useTowerStore((s) => s.documents);
   const [locale, setLocale] = useState<Locale>('pl');
@@ -116,29 +116,11 @@ export function DriverPwa() {
             e.target.value = '';
             if (!f || !loadId) return;
             setBusy(true);
-            const reader = new FileReader();
-            reader.onerror = () => {
+            // BK4: tryb Supabase → prywatny koszyk Storage; demo → pamięć sesji (bez localStorage).
+            void attachDocumentFile(f, loadId, cat, { driverToken: token }).then((ok) => {
+              setLastFile(ok ? `${cat} · ${f.name} (${f.size} B)` : `Błąd odczytu: ${f.name}`);
               setBusy(false);
-              setLastFile(`Błąd odczytu: ${f.name}`);
-            };
-            reader.onload = () => {
-              const dataUrl = typeof reader.result === 'string' ? reader.result : '';
-              if (!dataUrl) {
-                setBusy(false);
-                setLastFile(`Pusty odczyt: ${f.name}`);
-                return;
-              }
-              driverAttachDoc(token, {
-                filename: f.name,
-                bytes: f.size,
-                dataUrl,
-                mimeType: f.type || 'application/octet-stream',
-                category: cat,
-              });
-              setLastFile(`${cat} · ${f.name} (${f.size} B)`);
-              setBusy(false);
-            };
-            reader.readAsDataURL(f);
+            });
           }}
         />
         {lastFile && (

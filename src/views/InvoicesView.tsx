@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
-import { readFileAsDataUrl } from '../lib/docsIo';
+import { attachDocumentFile } from '../lib/docFiles';
 import { canMatchInvoice, canSubmitInvoice, canSeeCost } from '../lib/permissions';
 import { t } from '../i18n/messages';
 import type { Document, FactoringOffer } from '../types';
@@ -54,7 +54,6 @@ export function InvoicesView() {
   const [useFactoring, setUseFactoring] = useState(true);
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const documents = useTowerStore((s) => s.documents);
-  const uploadDocument = useTowerStore((s) => s.uploadDocument);
   const attachRef = useRef<HTMLInputElement>(null);
   const [attachLoadId, setAttachLoadId] = useState<string | null>(null);
 
@@ -455,18 +454,8 @@ export function InvoicesView() {
             const f = e.target.files?.[0];
             e.target.value = '';
             if (!f || !attachLoadId) return;
-            void readFileAsDataUrl(f)
-              .then((r) => {
-                const cat = /pod/i.test(r.name) ? 'POD' : 'CMR';
-                uploadDocument(attachLoadId, cat as 'CMR' | 'POD', r.name, {
-                  dataUrl: r.dataUrl,
-                  mimeType: r.mimeType,
-                  bytes: r.bytes,
-                });
-              })
-              .catch(() => {
-                useTowerStore.getState().pushToast('Nie udało się odczytać pliku', 'HIGH');
-              });
+            // BK4: tryb Supabase → Storage; demo → pamięć sesji.
+            void attachDocumentFile(f, attachLoadId, /pod/i.test(f.name) ? 'POD' : 'CMR');
           }}
         />
       </div>

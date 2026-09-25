@@ -7,7 +7,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { useTowerStore } from '../store/useTowerStore';
 import { createSupabaseProvider } from './supabaseProvider';
 import { emptySnapshot, type DataMutation } from './provider';
-import { registerRemoteSink } from './registry';
+import { registerFileSink, registerRemoteSink } from './registry';
+import { createStorageSink } from './storageFiles';
 
 let active: ReturnType<typeof createSupabaseProvider> | null = null;
 
@@ -19,6 +20,7 @@ export async function refreshFromServer(): Promise<void> {
 
 export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
   active = createSupabaseProvider(sb);
+  registerFileSink(createStorageSink(sb)); // BK4: pliki → prywatne koszyki Storage
   await refreshFromServer();
   // Kolejka: zapisy wykonywane po kolei (status przed zdarzeniem itd.).
   let chain: Promise<unknown> = Promise.resolve();
@@ -42,6 +44,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
 
 export function disconnectSupabaseData(): void {
   registerRemoteSink(null);
+  registerFileSink(null);
   active = null;
   useTowerStore.setState({ ...emptySnapshot(), selectedLoadId: null });
 }

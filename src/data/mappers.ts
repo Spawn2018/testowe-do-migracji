@@ -289,12 +289,18 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
 export interface DocumentRow {
   id: string; load_id: string | null; category: string; file_name: string; mime_type: string | null;
   size_bytes: number | null; valid_until: string | null; visible_to: string[] | null; uploaded_at: string;
+  storage_path?: string | null;
 }
 const DOC_CAT: Record<string, DocCategory> = {
   PERMIT_PL: 'PERMIT_PL', PERMIT_SE: 'PERMIT_SE', INSURANCE: 'INSURANCE', CMR: 'CMR', POD: 'POD',
   LASHING_PHOTO: 'LASHING_PHOTOS', SPEC: 'DRAWING', INVOICE: 'INVOICE',
 };
-/** Metadane dokumentu (pliki: BK4 Storage). Kategorie bez odpowiednika w UI → pominięte (null). */
+/** Kategoria aplikacji → `doc_category` bazy (BK4: rejestracja pliku). */
+export const DOC_CAT_TO_DB: Record<DocCategory, string> = {
+  PERMIT_PL: 'PERMIT_PL', PERMIT_SE: 'PERMIT_SE', INSURANCE: 'INSURANCE', CMR: 'CMR', POD: 'POD',
+  LASHING_PHOTOS: 'LASHING_PHOTO', DRAWING: 'SPEC', INVOICE: 'INVOICE',
+};
+/** Metadane dokumentu; plik w Storage (BK4) pod `storage_path`. Kategorie bez odpowiednika w UI → pominięte (null). */
 export function documentFromRow(r: DocumentRow): Document | null {
   const category = DOC_CAT[r.category];
   if (!category || !r.load_id) return null;
@@ -303,5 +309,6 @@ export function documentFromRow(r: DocumentRow): Document | null {
     deadline: r.valid_until, status: 'UPLOADED', permitFits: null,
     visibleTo: (r.visible_to ?? []).map(orgKindToApp).filter((k): k is OrgKind => k !== null),
     dataUrl: null, mimeType: r.mime_type, bytes: r.size_bytes, source: 'tower',
+    storagePath: r.storage_path && r.storage_path !== '-' ? r.storage_path : null,
   };
 }

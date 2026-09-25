@@ -4,6 +4,7 @@
  * SupabaseProvider rejestruje odbiorcę po zalogowaniu (chunk ładowany leniwie).
  */
 import type { DataMutation } from './provider';
+import type { DocCategory, Document } from '../types';
 
 type Sink = (m: DataMutation) => void;
 let sink: Sink | null = null;
@@ -33,3 +34,31 @@ export function writeThrough(m: DataMutation): void {
   if (id !== null && !isServerId(id)) return;
   sink(m);
 }
+
+// ---- BK4: pliki (Supabase Storage) -----------------------------------------
+
+/** Ważność linku podpisanego do pliku: 15 minut (ZLECENIE BK4). */
+export const SIGNED_URL_TTL_S = 900;
+
+export interface FileUploadInput {
+  loadId: string;
+  category: DocCategory;
+  file: Blob;
+  name: string;
+  mimeType: string;
+}
+
+/** Odbiorca plików — rejestrowany wyłącznie w trybie Supabase (chunk leniwy). */
+export interface FileSink {
+  upload(input: FileUploadInput): Promise<Document>;
+  /** Link podpisany (15 min); `download` = nazwa pliku do pobrania. */
+  signedUrl(doc: Document, opts?: { download?: string }): Promise<string>;
+}
+
+let fileSink: FileSink | null = null;
+export function registerFileSink(s: FileSink | null): void {
+  fileSink = s;
+}
+export const getFileSink = (): FileSink | null => fileSink;
+/** Dokument z pliku w Storage (bajty nie w przeglądarce — tylko link podpisany). */
+export const isStoredDoc = (d: Pick<Document, 'storagePath'>): boolean => Boolean(d.storagePath);
