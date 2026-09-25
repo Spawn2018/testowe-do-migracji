@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { useTowerStore } from './store/useTowerStore';
 import { Topbar } from './components/shell/Topbar';
@@ -20,6 +20,10 @@ import { DriverPwa } from './views/DriverPwa';
 import { OptionsView } from './views/OptionsView';
 import { navForRole } from './lib/permissions';
 import { usePageSectionDnD } from './hooks/usePageSectionDnD';
+import { isSupabaseAuth } from './auth/config';
+
+// BK2: bramka logowania tylko w trybie Supabase (VITE_AUTH_MODE=supabase); demo bez zmian.
+const AuthGate = isSupabaseAuth() ? lazy(() => import('./auth/AuthGate')) : null;
 
 function TowerShell() {
   const view = useTowerStore((s) => s.view);
@@ -141,7 +145,10 @@ export default function App() {
     <HashRouter>
       <Routes>
         <Route path="/driver/:token" element={<DriverPwa />} />
-        <Route path="/*" element={<TowerShell />} />
+        <Route
+          path="/*"
+          element={AuthGate ? <Suspense fallback={null}><AuthGate><TowerShell /></AuthGate></Suspense> : <TowerShell />}
+        />
       </Routes>
     </HashRouter>
   );

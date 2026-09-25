@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { defaultThemeForRole } from '../lib/permissions';
 import type { BafParams, FactoringOffer, RateRule } from '../types';
@@ -6,6 +6,10 @@ import { geofenceTypeLabel } from '../lib/enumLabels';
 import { t } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
 import { DEMO_FX_META } from '../lib/money/demoFx';
+import { isSupabaseAuth } from '../auth/config';
+
+// BK2: panel użytkowników HHL_ADMIN — tylko w trybie Supabase.
+const UsersAdmin = isSupabaseAuth() ? lazy(() => import('../auth/UsersAdmin')) : null;
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
   { key: 'indexSource', labelKey: 'baf_index', type: 'text' },
@@ -162,6 +166,7 @@ export function OptionsView() {
           <header className="panel-hd"><h2>{t(locale, "opt_auto_h2")}</h2><span className="sub">{workflows.filter((w) => w.enabled).length} {t(locale, "opt_active_of")} {workflows.length}</span><div className="spacer" /><button type="button" className="chipbtn" onClick={() => setView('wf')}>{t(locale, 'opt_open_wf')}</button></header>
           <div className="panel-bd"><div className="workflow-summary">{workflows.map((w) => <button type="button" className="workflow-summary-row" key={w.id} onClick={() => setView('wf')}><span className={`status-dot${w.enabled ? ' on' : ''}`} /><span data-content>{w.name}</span><small>{w.enabled ? t(locale, 'on') : t(locale, 'off')}</small></button>)}</div></div>
         </section>
+        {UsersAdmin && <Suspense fallback={null}><UsersAdmin /></Suspense>}
       </div>
     </div>
   );

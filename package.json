@@ -19,6 +19,7 @@
     "test:deur": "playwright test tests/d-eur-t.spec.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.1",
     "@turf/along": "^7.4.0",
     "@turf/bearing": "^7.4.0",
     "@turf/helpers": "^7.4.0",
