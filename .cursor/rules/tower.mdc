@@ -1,0 +1,21 @@
+---
+description: Zasady projektu TOWER — obowiązują w każdej zmianie
+globs:
+alwaysApply: true
+---
+Przed pracą przeczytaj `AGENTS.md` w korzeniu repozytorium i
+`docs/handover/POSTEP.md`. Źródła prawdy: `docs/handover/MECHANIZM_PIENIEDZY.md`
+(pieniądze, faktury), `docs/handover/STATUSY_AUTOMATYCZNE.md` (statusy, rejsy,
+strefy), `supabase/migrations/` (kontrakt bazy), `design/claude-v2.0/` (wygląd).
+`docs/claude/archiwum/` — nie wykonuj.
+
+- Bezpieczeństwo egzekwuje baza (RLS, wyzwalacze), nie interfejs
+- Źródłem kwot jest EUR; PLN tylko jako wyświetlanie albo waluta faktury
+- Kurs NBP A z dnia roboczego przed rozładunkiem; dzień lokalnie, nigdy UTC
+- Statusy tylko do przodu; rozładunek nigdy automatycznie
+- Wygląd: tylko istniejące komponenty, tokeny var(--…), Barlow, bez Tailwinda
+- Każdy napis w słowniku PL, EN, SV
+- Wzorca wizualnego nie regeneruj poza końcem etapu
+- Jedna pozycja, jeden commit; wiersz w POSTEP.md z liczbami testów
+- Nie zgaduj decyzji biznesowych — pytaj właściciela
+- Sekrety tylko w zmiennych środowiskowych

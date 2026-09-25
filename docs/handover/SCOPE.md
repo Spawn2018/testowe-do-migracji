@@ -915,3 +915,60 @@ rozliczenia GitHub Actions i `unit.yml` (właściciel).
 ### 36.7 Do przygotowania przez właściciela przed etapem 3
 Projekt Supabase w regionie UE, konto Resend ze zweryfikowaną domeną
 nadawcy, środowisko testowe (Docker albo drugi projekt Supabase).
+
+## 37. Statusy z pozycji, PROM, naprawy silnika stref (24.09.2026)
+
+### 37.1 Decyzje właściciela
+- **S1** statusy zmieniają się na podstawie pozycji
+- **S2** port PL i port SE mają strefy; wjazd = automatyczna zmiana statusu
+- **S3** PROM: auto w strefie portu Gdańsk + czas wypłynięcia przypisanego
+  rejsu wg rozkładu armatora → system sam przełącza na PROM
+- **rozbicie marży w Finansach — zatwierdzone** (dotąd wstrzymane)
+- **GitHub Actions — odłożone**; hak `pre-push` pozostaje
+- **po pracy Groka budowę dokończy Cursor**
+
+Jedyne źródło prawdy: **`STATUSY_AUTOMATYCZNE.md`**.
+
+### 37.2 Sprostowania moich wcześniejszych opisów
+| Twierdziłem | Stan faktyczny |
+|---|---|
+| „12 zaseedowanych stref korytarza" | **5 stref w zakomentowanym szablonie**; po migracjach baza nie miała żadnej. Punktów kontrolnych E4 i stref załadunku nie było wcale |
+| silnik stref z trzema warstwami ochrony — gotowy | **nigdy nie przetworzył punktu w strefie** — patrz 37.3 |
+| automatyczna zmiana statusu ze stref | **nie istniała** — silnik zapisywał zdarzenia, statusu nie zmieniał |
+
+### 37.3 Usterki wykryte wykonaniem na Postgres 16
+| # | Miejsce | Usterka | Skutek |
+|---|---|---|---|
+| G1 | 0002 `process_position` | kolumny wyniku o nazwach kolumn tabel | każda pozycja przy strefie — błąd, **pozycja przepadała** |
+| G2 | 0002 zapis zdarzenia | brak warunku indeksu częściowego | **żaden wjazd ani wyjazd nie mógł powstać** |
+| G3 | 0002 `make_circle_fence` | bufor w EPSG:3857 | strefy **40–60% za małe**, błąd rośnie na północ |
+| **B1** | 0001 transport | prawo zmiany całej tabeli niweczyło listę kolumn przewoźnika | **przewoźnik zmieniał numery zleceń HHL i KSH** |
+| B2 | 0001 transport | statek i godzina odejścia jako wolny tekst obok tabeli rejsów | dwa źródła prawdy o rejsie — usterka klasy D4 |
+| B3 | 0001 transport | data rozładunku edytowalna po zafakturowaniu | cofnięcie o dzień zmienia kurs NBP na korzyść wystawcy |
+| — | test 39/39 | sprawdzał, co wolno, nie czego nie wolno | B1 niewidoczna dla testu |
+
+Wszystkie naprawione. **Wniosek metodyczny: test uprawnień musi sprawdzać
+zakazy, nie tylko pozwolenia.**
+
+### 37.4 Zrealizowane
+- `0004_statusy_automatyczne.sql`: rejsy, statki, przypisanie rejsu,
+  automat statusów ze stref, PROM w chwili odejścia (stan strefy na moment
+  odejścia, nie „teraz"), opóźnienia i odwołania, PROM po czasie, przejście
+  awaryjne przy zgubionym porcie SE, strażnik kolumn transportu, UNLOADED
+  wymaga daty, zamrożenie daty rozładunku po fakturze z audytem,
+  harmonogram pg_cron warunkowo
+- seed: 5 stref z krajem, 2 statki
+- **`tests/db/security.sh` 50/50** (+11 zakazów), **`tests/db/status.sh`
+  44/44** — symulacja jedenastu ciężarówek pozycjami GPS
+- `AGENTS.md`, `.cursor/rules/tower.mdc` — zasady w repozytorium dla Cursora
+- `MECHANIZM_PIENIEDZY.md` 2.2 — rozbicie marży, zasada Z4
+- `ANEKS_1_DLA_GROKA.md` — pozycje AN1, M10, M11; łącznie 54
+
+### 37.5 Otwarte
+- strefy załadunku z `ADDRESSES.md` — wykonawca
+- weryfikacja współrzędnych terminali z mapą — wykonawca
+- **źródło statusu promów Polferries** — decyzja właściciela
+- lista kolumn przewoźnika zawiera **okna planowe załadunku i dostawy**
+  (decyzja z 0001) — czy przewoźnik ma je zmieniać, skoro plan pochodzi
+  z harmonogramu KSH? Do potwierdzenia przez właściciela
+- **prompt dla Cursora** — po raporcie końcowym Groka

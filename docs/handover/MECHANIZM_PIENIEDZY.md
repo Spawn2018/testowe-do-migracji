@@ -1,4 +1,4 @@
-# MECHANIZM PIENIĘDZY — wersja 2.1 — jedyne źródło prawdy
+# MECHANIZM PIENIĘDZY — wersja 2.2 — jedyne źródło prawdy
 
 > **Zastępuje w całości wersję 1** oraz `D7_DECYZJA.md` i `D7_CZAS.md`.
 > Obejmuje: walutę, kurs, opłatę paliwową, poziomy wyceny, faktury trzech
@@ -121,6 +121,12 @@ w obliczeniach dnia rozładunku i tygodnia faktury.
 
 **Z3. PLN nigdy nie jest źródłem.** Wyłącznie przeliczenie wyświetlania
 albo waluta dokumentu faktury.
+
+**Z4. Data rozładunku zamrożona po zafakturowaniu.** Od niej zależy kurs
+NBP, opłata paliwowa i tydzień faktury — cofnięcie jej o dzień zmienia
+kurs na korzyść wystawcy. Po umieszczeniu transportu na fakturze zmienia
+ją wyłącznie HHL; każda zmiana, także przed fakturą, trafia do dziennika
+audytu. Wymuszone w bazie (migracja 0004), sprawdzone testem.
 
 ---
 
@@ -287,9 +293,12 @@ dopasowanie z dokumentem wystawcy.
 | Q13 | Powiadomienie KSH o nowej fakturze HHL | **tak** |
 | Q14 | HHL zmienia status sporu KSH na własnej fakturze | **nie** — wymuszone w bazie |
 
-**Nierozstrzygnięte, bo nie było na liście:** rozbicie marży w widoku
-Finanse na zafakturowaną, zrealizowaną i prognozowaną. **Nie wdrażać
-bez zgody właściciela.** Sumy per poziom są w silniku (`totalsByTier`).
+**Rozbicie marży — ZATWIERDZONE (24.09.2026).** W widoku Finanse marża
+w trzech wierszach: **zafakturowana** (pewna), **zrealizowana,
+niezafakturowana** (ustalona, czeka na fakturę), **prognozowana** (zmienia
+się z harmonogramem). Istniejący wzorzec `.mrow` w bloku „Od przychodu
+do marży", bez nowych komponentów. Sumy: `totalsByTier` z silnika,
+w walucie wyświetlania użytkownika.
 
 ---
 
