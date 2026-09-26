@@ -35,3 +35,20 @@ waluta wyświetlania PLN ustawiona w Opcjach (HHL) / Ustawieniach (KSH, SCX). 6/
 
 ## Migawki smoke Playwright
 `tests/__screenshots__/kokpit-hhl-pl-1920-{light,dark-default}.png` zaktualizowane (ta sama przyczyna co kokpit powyżej); `mapa-*` bez zmian.
+
+## Bisect 26.09.2026 — 13 ujęć kokpitu różnych od wzorca (159–298 px w compare.mjs)
+Ujęcia wykonane dla 15 commitów od `3153a78` (wzorzec) do `8755c82`, porównanie dokładne (piksele różne) i pixelmatch 0,28.
+Wzorca **nie** aktualizowano.
+
+| Commit | Ujęcia | Obszar | Różnica | Ocena |
+|---|---|---|---|---|
+| `ecb0632` feat(D15) | KSH EN 1280/1440/1920 dark, KSH SV 1280/1440/1920 dark (6) | znacznik ciężarówki na mapie kokpitu, przesunięcie ok. 2 px | 211–220 px (pixelmatch 8) | **zamierzone** — D15 wyłączył tick animacji (setInterval 1,5 s) przy zamrożonym czasie; wzorzec złapał pozycję po kilku tickach |
+| `40eca8a` feat(PL-T) | KSH PL 390 dark/light, KSH PL 768 dark/light, SCX PL 390 light/dark-default (6) | polskie znaki w tekstach kokpitu („Najbliższa”, „sygnałów”, „transportów”) | 160–298 px (pixelmatch 1–50) | **zamierzone** — poprawka polskich znaków |
+| — (już przy `3153a78`) | KSH SV 1280 light-default | znacznik ciężarówki (ten sam tick co D15) | 211 px | **zamierzone/niedeterminizm wzorca** — różni się od wzorca już na commicie wzorca |
+
+SCX PL 390 dark-default różni się od wzorca także na `3153a78` (w środowisku bisectu, motyw systemowy);
+zmiana wniesiona przez kod to tylko +40 px przy `40eca8a` (PL-T). Regresji: **0**.
+
+Dlaczego przeszło: `compare.mjs` (próg koloru 0,28; zmiana liczona dopiero przy > 60 px albo ratio > 0,001)
+nie liczył tych drobnych różnic, a hak pre-push robi 4 ujęcia. Od teraz: pełny przebieg 840 przed każdym tagiem
+wzorca, wynik w opisie tagu (AGENTS.md, `.cursor/rules/tower.mdc`).
