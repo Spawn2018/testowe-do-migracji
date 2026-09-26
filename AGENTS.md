@@ -50,6 +50,13 @@ realizacji usługi. Jedno źródło prawdy o rejsie: `sailings` przez
 cieni, bez gradientów, bez Tailwinda. Nowy wzorzec wizualny — tylko za
 zgodą właściciela. Pilnuje `stylelint`.
 
+**Tag wzorca = pełny przebieg 840.** Przed każdym tagiem wzorca wizualnego
+uruchom pełną matrycę 840 ujęć (`OUT=shots-kandydat node scripts/baseline.mjs`,
+potem `CANDIDATE=shots-kandydat node scripts/compare-baseline.mjs`; nie 4 ujęcia
+z haka pre-push) i wpisz wynik liczbami w opis tagu:
+ujęcia bez zmian / zmienione (z px) / nowe. Każda zmiana poza zakresem etapu = STOP
+(bisect jak w `docs/handover/G4_WZORZEC.md`, sekcja „Bisect 26.09.2026”).
+
 **Języki.** Każdy napis interfejsu w słowniku, w trzech językach: PL, EN,
 SV. Pilnuje test D19-T.
 
