@@ -33,13 +33,31 @@ describe('M9 próg wysyłki pozycji', () => {
     expect(shouldSendFix(null, fix({}))).toBe(true);
     expect(shouldSendFix(null, fix({ accuracy: MAX_ACCURACY_M + 1 }))).toBe(false);
   });
-  it('co minutę albo po 150 m (nie częściej niż co 10 s)', () => {
+  it('PR5: w ruchu co 2 min, na postoju (< 5 km/h) co 15 min', () => {
     const a = fix({});
-    expect(shouldSendFix(a, fix({ at: '2026-09-26T10:00:30Z' }))).toBe(false); // 30 s, bez ruchu
-    expect(shouldSendFix(a, fix({ at: '2026-09-26T10:01:00Z' }))).toBe(true); // 60 s
-    expect(shouldSendFix(a, fix({ at: '2026-09-26T10:00:20Z', lat: 54.40572 }))).toBe(true); // ~220 m
-    expect(shouldSendFix(a, fix({ at: '2026-09-26T10:00:05Z', lat: 54.40572 }))).toBe(false); // < 10 s
+    expect(shouldSendFix(a, fix({ at: '2026-09-26T10:01:59Z' }))).toBe(false); // 119 s w ruchu
+    expect(shouldSendFix(a, fix({ at: '2026-09-26T10:02:00Z' }))).toBe(true); // 2 min w ruchu
+    expect(shouldSendFix(a, fix({ at: '2026-09-26T10:02:00Z', speedKmh: 3 }))).toBe(false); // postój
+    expect(shouldSendFix(a, fix({ at: '2026-09-26T10:14:59Z', speedKmh: 0 }))).toBe(false);
+    expect(shouldSendFix(a, fix({ at: '2026-09-26T10:15:00Z', speedKmh: 0 }))).toBe(true); // 15 min postoju
     expect(shouldSendFix(a, fix({ at: '2026-09-26T09:59:00Z' }))).toBe(false); // czas wstecz
+  });
+  it('PR5: bez prędkości z GPS — z przesunięcia (4 km w 2 min = ruch; 20 m = postój)', () => {
+    const a = fix({ speedKmh: null });
+    expect(shouldSendFix(a, fix({ at: '2026-09-26T10:02:00Z', speedKmh: null, lat: 54.44 }))).toBe(true);
+    expect(shouldSendFix(a, fix({ at: '2026-09-26T10:02:00Z', speedKmh: null, lat: 54.4039 }))).toBe(false);
+  });
+  it('PR5: budżet — doba jazdy ≤ 720 punktów, doba postoju ≤ 96', () => {
+    const count = (speed: number) => {
+      let prev: DriverFix | null = null, n = 0;
+      for (let s = 0; s < 86400; s += 15) {
+        const f = fix({ at: new Date(Date.parse('2026-09-26T00:00:00Z') + s * 1000).toISOString(), speedKmh: speed });
+        if (shouldSendFix(prev, f)) { prev = f; n++; }
+      }
+      return n;
+    };
+    expect(count(70)).toBe(720);
+    expect(count(0)).toBe(96);
   });
   it('odległość w metrach (haversine)', () => {
     expect(Math.round(distanceM({ lat: 54.40372, lng: 18.6813 }, { lat: 54.40372 + 0.001, lng: 18.6813 }))).toBe(111);

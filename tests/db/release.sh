@@ -217,4 +217,30 @@ val "przewoźnik nie czyta historii"                      $SCX "select count(*) 
 ROLE=service_role val "usage_measure: rozmiar bazy > 0"  "" "select (usage_measure()->>'db_bytes')::bigint > 0" t
 err "anon nie wywoła usage_measure"                      "" "set local role anon; select usage_measure()" "permission denied"
 
+echo; echo "[PR5] Pozycje GPS — limit 60 s w process_position, retencja 30 dni po rozładunku, bajty na 1000"
+L8=33333333-0000-0000-0000-000000000008; L9=33333333-0000-0000-0000-000000000009; L10=33333333-0000-0000-0000-00000000000a
+for x in $L8 $L9 $L10; do sys "insert into loads (id, project_id, carrier_org_id, order_no) values ('$x','$P','00000000-0000-0000-0000-00000000a003','KSH/${x: -2}')"; done
+T0="2026-09-20 10:00:00+00"
+ROLE=service_role val "pierwszy punkt zapisany"          "" "select count(*) from process_position('$L8', 53.0, 18.0, '$T0'); select count(*) from positions where load_id='$L8'" 1 commit
+ROLE=service_role val "punkt po 30 s pominięty (bez zapisu)" "" "select count(*) from process_position('$L8', 53.001, 18.0, timestamptz '$T0' + interval '30 seconds'); select count(*) from positions where load_id='$L8'" 1 commit
+ROLE=service_role val "punkt po 59 s pominięty"          "" "select count(*) from process_position('$L8', 53.001, 18.0, timestamptz '$T0' + interval '59 seconds'); select count(*) from positions where load_id='$L8'" 1 commit
+ROLE=service_role val "punkt po 60 s zapisany"           "" "select count(*) from process_position('$L8', 53.002, 18.0, timestamptz '$T0' + interval '60 seconds'); select count(*) from positions where load_id='$L8'" 2 commit
+ROLE=service_role val "inny transport w tej samej sekundzie — niezależny" "" "select count(*) from process_position('$L9', 53.0, 18.0, timestamptz '$T0' + interval '30 seconds'); select count(*) from positions where load_id='$L9'" 1 commit
+ROLE=service_role val "powtórka tego samego punktu (retry) — bez duplikatu" "" "select count(*) from process_position('$L8', 53.002, 18.0, timestamptz '$T0' + interval '60 seconds'); select count(*) from positions where load_id='$L8'" 2 commit
+sys "set session_replication_role = replica; update loads set status='UNLOADED', actual_delivery_at = now() - interval '31 days' where id='$L8'"
+sys "set session_replication_role = replica; update loads set status='UNLOADED', actual_delivery_at = now() - interval '29 days' where id='$L9'"
+sys "insert into positions (load_id, ts, geom_raw, source) values ('$L10', now() - interval '200 days', st_setsrid(st_makepoint(18,53),4326), 'TELEMATICS_API')"
+err "HHL nie wywoła purge_personal_data (usterka: domyślne EXECUTE)" $HHL "select purge_personal_data(0)" "permission denied"
+err "anon nie wywoła purge_personal_data"               "" "set local role anon; select purge_personal_data(0)" "permission denied"
+sys "select purge_personal_data()"
+chk "rozładowany 31 dni temu: pozycje skasowane"         "$(Q "select count(*) from positions where load_id='$L8'")" 0
+chk "rozładowany 29 dni temu: pozycje zostają"           "$(Q "select count(*) from positions where load_id='$L9'")" 1
+chk "transport w drodze: stare pozycje zostają"          "$(Q "select count(*) from positions where load_id='$L10'")" 1
+B0=$(Q "select pg_total_relation_size('positions')")
+sys "insert into positions (load_id, ts, geom_raw, speed_kmh, heading_deg, ignition, source, raw) select '$L10', now() - interval '100 days' + g * interval '2 minutes', st_setsrid(st_makepoint(18 + g*0.001, 53 + g*0.0005),4326), 72.5, 180, true, 'DRIVER_PWA', jsonb_build_object('accuracy', 12, 'via', 'driver_token') from generate_series(1,10000) g"
+sys "vacuum analyze positions"
+B1=$(Q "select pg_total_relation_size('positions')")
+PB=$(( (B1 - B0) / 10 )); echo "    bajty na 1000 pozycji (tabela + 4 indeksy, pomiar na 10 000): $PB"; echo "$PB" > /tmp/pr5_bytes_per_1000
+chk "1000 pozycji z indeksami < 500 kB"                  "$([ "$PB" -gt 0 ] && [ "$PB" -lt 512000 ] && echo t || echo f)" t
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

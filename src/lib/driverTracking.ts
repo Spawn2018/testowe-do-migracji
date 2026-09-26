@@ -37,20 +37,32 @@ export function distanceM(a: { lat: number; lng: number }, b: { lat: number; lng
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-/** Próg wysyłki: co najmniej co minutę albo po 150 m ruchu (nie częściej niż co 10 s) — oszczędza baterię, a strefa 800 m dostaje ≥ 2 fixy. */
-export const SEND_EVERY_MS = 60_000;
-export const SEND_EVERY_M = 150;
-export const SEND_MIN_GAP_MS = 10_000;
+/**
+ * ANEKS 4 PR5 — budżet bazy 500 MB: pozycja co 2 min w ruchu, co 15 min na postoju (prędkość < 5 km/h).
+ * Silnik stref potrzebuje dwóch kolejnych punktów — przy 2 min wjazd w strefę wykrywany w kilka minut.
+ * Prędkość z GPS; bez niej — z przesunięcia względem poprzedniego wysłanego punktu.
+ */
+export const SEND_MOVING_MS = 120_000;
+export const SEND_STOPPED_MS = 900_000;
+export const STOPPED_BELOW_KMH = 5;
 /** Fix słabszy niż 250 m nie otwiera ani nie zamyka stref (baza odrzuca go tak samo — report_position). */
 export const MAX_ACCURACY_M = 250;
+
+export function fixSpeedKmh(prev: DriverFix | null, next: DriverFix): number | null {
+  if (next.speedKmh != null) return next.speedKmh;
+  if (!prev) return null;
+  const dt = (Date.parse(next.at) - Date.parse(prev.at)) / 1000;
+  return dt > 0 ? (distanceM(prev, next) / dt) * 3.6 : null;
+}
 
 export function shouldSendFix(prev: DriverFix | null, next: DriverFix): boolean {
   if (next.accuracy != null && next.accuracy > MAX_ACCURACY_M) return false;
   if (!prev) return true;
   const dt = Date.parse(next.at) - Date.parse(prev.at);
   if (!(dt > 0)) return false;
-  if (dt >= SEND_EVERY_MS) return true;
-  return dt >= SEND_MIN_GAP_MS && distanceM(prev, next) >= SEND_EVERY_M;
+  const v = fixSpeedKmh(prev, next);
+  const moving = v != null && v >= STOPPED_BELOW_KMH;
+  return dt >= (moving ? SEND_MOVING_MS : SEND_STOPPED_MS);
 }
 
 export function fixFromPosition(p: GeolocationPosition, at: string): DriverFix {
