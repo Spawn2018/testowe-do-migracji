@@ -50,9 +50,9 @@ select p.id, z.name, z.kind::geofence_kind, make_circle_fence(z.lat, z.lon, z.r)
 
 -- Statki linii Gdańsk – Nynäshamn. Operator od 30.03.2026 działa w ramach
 -- POLSCA Baltic Ferries. Nova Star: MMSI i IMO potwierdzone w rejestrze
--- Digitraffic 25.09.2026. Wawel: nieobecny w rejestrze — MMSI do potwierdzenia.
+-- Digitraffic 25.09.2026. Wawel: MMSI 311852000, IMO 7814462 (zatwierdzone 26.09.2026, migracja 0033).
 -- Rejsy: import z rozkładu cargo armatora (ZRODLA_DANYCH.md, sekcja 1).
 insert into vessels (name, operator, mmsi, imo) values
-  ('M/F Wawel',     'POLSCA Baltic Ferries (Polferries)', null,      null),
+  ('M/F Wawel',     'POLSCA Baltic Ferries (Polferries)', 311852000, 7814462),
   ('M/F Nova Star', 'POLSCA Baltic Ferries (Polferries)', 311000787, 9462067)
 on conflict (name) do nothing;
