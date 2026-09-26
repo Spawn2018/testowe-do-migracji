@@ -1,0 +1,102 @@
+{
+  "when": "2026-09-26T04:26:13.225Z",
+  "whenWarsaw": "2026-09-26 06:26 CEST",
+  "url": "http://127.0.0.1:4181/#/?now=2026-09-23T14%3A32%3A00Z",
+  "head": "576715647ead7c3cea2818237843f6566b4238b4",
+  "tree": "f673393e9684d60821f934a82864db694345659b",
+  "tag": "etap-c-2026-09-23",
+  "appChecksum": "5e4f847b578e777e25cf60b1d1b92b53a6177d834a9448887291d128c7262b17",
+  "cssChecksum": "755b5ef07c9d1d33304adc2cee04765b24e4c27cf4b812ceef42977ac0ed2143",
+  "jsFile": "/assets/index-7A_5LP4I.js",
+  "cssFile": "/assets/index-IskPGQ1V.css",
+  "results": [
+    {
+      "id": 1,
+      "verdict": "PASS",
+      "detail": "mutations: exportXlsx size=15179; resources tractor=D24-TR-Z20B on SG-34; map nav→leaflet; wf run notifs 13→14",
+      "shot": "docs/qa-start/d24-o1/01-mutations.png"
+    },
+    {
+      "id": 2,
+      "verdict": "PASS",
+      "detail": "blocked=K-03 disabled=true status=RESOURCES_PENDING title=Brak wymaganych dokumentów; shot=docs/qa-start/d24-o1/02-ready-blocked.png; cover READY on P-02",
+      "shot": "docs/qa-start/d24-o1/02-ready.png"
+    },
+    {
+      "id": 3,
+      "verdict": "PASS",
+      "detail": "HHL eksport=true/wgraj=false; SCX eksport=true/wgraj=false; KSH wgraj=true; xlsxBlob=15202; dryPath=true",
+      "shot": "docs/qa-start/d24-o1/03-ksh-wgraj.png"
+    },
+    {
+      "id": 4,
+      "verdict": "PASS",
+      "detail": "persist on SG-02: tractor/pilot=D24-PIL-ZFX1; booking=PF-SG-02; wrote={\"res\":true,\"awiz\":true,\"ferry\":false,\"reasons\":[]}",
+      "shot": "docs/qa-start/d24-o1/04-ustalenia.png"
+    },
+    {
+      "id": 5,
+      "verdict": "PASS",
+      "detail": "clicked=Przelicz; PLAN_B events 0→1; notifs 14→15; ferryPresent=true",
+      "shot": "docs/qa-start/d24-o1/05-planb.png"
+    },
+    {
+      "id": 6,
+      "verdict": "PASS",
+      "detail": "docs 504→504; hit=doc-muhvzjys-ihkbj; uiHasAttach=true",
+      "shot": "docs/qa-start/d24-o1/06-driver.png"
+    },
+    {
+      "id": 7,
+      "verdict": "PASS",
+      "detail": "geo rows=13; leaflet=true; ais=true; fleet=true; tv=true",
+      "shot": "docs/qa-start/d24-o1/07-map-layers.png"
+    },
+    {
+      "id": 8,
+      "verdict": "PASS",
+      "detail": "Trafikverket=seed; AIS=seed; lines=[\"Schemat korytarza, nie mapa nawigacyjna. Trasa lądowa w Szwecji odwzorowuje przebieg z zezwolenia, nie wynik routera. Trafikverket E4: demonstracyjne · AIS: seed · GPS fleet tick co 1,5 s. Kolumny tabeli: przeciągnij krawędź nagłówka (jak Harmonogram).\",\"pasmo 2.4–3.5 h · heurystyka · prom Nova Star · E4 + Trafikverket seed · przerwy 561/2006\"]",
+      "shot": "docs/qa-start/d24-o1/08-trafikverket.png"
+    },
+    {
+      "id": 9,
+      "verdict": "PASS",
+      "detail": "HHL feeEdit=true fee=3.7; SCX={\"ok\":true,\"label\":\"Płatność standardowa\"}; offer={\"enabled\":true,\"feePercent\":3.7,\"payoutDelayValue\":48,\"payoutDelayUnit\":\"hours\",\"label\":\"SCX Factoring\",\"notes\":\"\"}",
+      "shot": "docs/qa-start/d24-o1/09-factoring-scx.png"
+    },
+    {
+      "id": 10,
+      "verdict": "PASS",
+      "detail": "SEFS/BAF render: ORLEN=true OKQ8=true; pct=15,0%,1,0%,15,3%,13,2%,15,1%,20,5%,16,0%,16,0%; PLN=229 603,15 PLN,2296,06 PLN,33 364,00 PLN,225 376,89 PLN,39 886,31 PLN,0\n0,00 PLN",
+      "shot": "docs/qa-start/d24-o1/10-sefs.png"
+    },
+    {
+      "id": 11,
+      "verdict": "PASS",
+      "detail": "bell unread 16→0; spine 121Przygotowanie cleared=true; KPI→Powiadomienia",
+      "shot": "docs/qa-start/d24-o1/11-kpi.png"
+    },
+    {
+      "id": 12,
+      "verdict": "PASS",
+      "detail": "band=Wysoka; range=true; lines=[\"ETA Boden\",\"pasmo 0.0–0.0 h · heurystyka · prom Wawel\"]",
+      "shot": "docs/qa-start/d24-o1/12-eta.png"
+    },
+    {
+      "id": 13,
+      "verdict": "PASS",
+      "detail": "HHL={\"cols\":{\"Przychod\":true,\"Koszt\":true,\"Marza\":true},\"lockKsh\":false,\"lockScx\":false} KSH={\"cols\":{\"Przychod\":false,\"Koszt\":false,\"Marza\":false},\"lockKsh\":true,\"lockScx\":false} SCX={\"cols\":{\"Przychod\":false,\"Koszt\":false,\"Marza\":false},\"lockKsh\":false,\"lockScx\":true} · regex(HHL={\"hasCostValue\":false,\"hasRevValue\":false,\"hasMarginValue\":true})",
+      "shot": "docs/qa-start/d24-o1/13-fin-scx.png"
+    },
+    {
+      "id": 14,
+      "verdict": "PASS",
+      "detail": "Grunwaldzka 27C + Stalverket 20 visible ({\"srem\":true,\"boden\":true,\"sremLoose\":true,\"bodenLoose\":true})",
+      "shot": "docs/qa-start/d24-o1/14-addresses.png"
+    }
+  ],
+  "score": "14/14",
+  "verdict": "SHIP",
+  "failList": [],
+  "gateShot": "docs/qa-start/d24-o1/00-gate.png"
+}

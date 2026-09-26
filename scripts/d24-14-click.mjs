@@ -16,10 +16,12 @@ import { createHash } from 'crypto'
 import { join } from 'path'
 import { execSync } from 'child_process'
 
-const BASE = 'http://127.0.0.1:4177'
+// O1: parametry (domyślnie jak przebieg Fali 0): BASE_URL, DIST (paczka do sumy kontrolnej), OUT.
+const BASE = (process.env.BASE_URL || 'http://127.0.0.1:4177').replace(/\/$/, '')
 const FROZEN = '2026-09-23T14:32:00Z'
 const URL = `${BASE}/#/?now=${encodeURIComponent(FROZEN)}`
-const OUT = '/workspace/watch-tower-app/docs/qa-start/d24'
+const OUT = process.env.OUT || '/workspace/watch-tower-app/docs/qa-start/d24'
+const DIST = process.env.DIST || 'dist'
 const DL = '/tmp/wt-d24-dl'
 const PERSIST = 'watch-tower-ui-v6-ready-gate'
 
@@ -33,10 +35,10 @@ for (const f of readdirSync(DL)) {
 
 const HEAD = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim()
 const TREE = execSync('git rev-parse HEAD^{tree}', { encoding: 'utf8' }).trim()
-const jsFile = readdirSync('dist/assets').find((f) => /^index-.*\.js$/.test(f))
-const cssFile = readdirSync('dist/assets').find((f) => /^index-.*\.css$/.test(f))
-const jsHash = createHash('sha256').update(readFileSync(join('dist/assets', jsFile))).digest('hex')
-const cssHash = createHash('sha256').update(readFileSync(join('dist/assets', cssFile))).digest('hex')
+const jsFile = readdirSync(join(DIST, 'assets')).find((f) => /^index-.*\.js$/.test(f))
+const cssFile = readdirSync(join(DIST, 'assets')).find((f) => /^index-.*\.css$/.test(f))
+const jsHash = createHash('sha256').update(readFileSync(join(DIST, 'assets', jsFile))).digest('hex')
+const cssHash = createHash('sha256').update(readFileSync(join(DIST, 'assets', cssFile))).digest('hex')
 
 const results = []
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -65,7 +67,7 @@ const page = await context.newPage()
 async function shot(name) {
   const p = join(OUT, name)
   await page.screenshot({ path: p, fullPage: false })
-  return `docs/qa-start/d24/${name}`
+  return p.replace(/^.*watch-tower-app\//, "")
 }
 
 async function clearStorage() {
@@ -291,7 +293,7 @@ try {
     await clickDrawerTab('Ustalenia')
     const readyInfo = await page.evaluate(() => {
       const btn = [...document.querySelectorAll('.drawer button')].find((b) =>
-        /Ustaw READY/i.test(b.textContent || ''),
+        /Ustaw READY|Oznacz jako gotowy/i.test(b.textContent || ''),
       )
       return {
         disabled: btn ? !!btn.disabled : null,
@@ -306,7 +308,7 @@ try {
     // Attempt click even if disabled
     await page.evaluate(() => {
       const btn = [...document.querySelectorAll('.drawer button')].find((b) =>
-        /Ustaw READY/i.test(b.textContent || ''),
+        /Ustaw READY|Oznacz jako gotowy/i.test(b.textContent || ''),
       )
       btn?.click()
     })
@@ -333,14 +335,14 @@ try {
     await clickDrawerTab('Ustalenia')
     const info = await page.evaluate(() => {
       const btn = [...document.querySelectorAll('.drawer button')].find((b) =>
-        /Ustaw READY/i.test(b.textContent || ''),
+        /Ustaw READY|Oznacz jako gotowy/i.test(b.textContent || ''),
       )
       return { disabled: btn ? !!btn.disabled : null, present: !!btn }
     })
     if (info.present && info.disabled === false) {
       await page.evaluate(() => {
         const btn = [...document.querySelectorAll('.drawer button')].find((b) =>
-          /Ustaw READY/i.test(b.textContent || ''),
+          /Ustaw READY|Oznacz jako gotowy/i.test(b.textContent || ''),
         )
         btn?.click()
       })
@@ -1019,34 +1021,46 @@ try {
     }
   })
 
-  // PASS if HHL sees more than KSH/SCX appropriately
-  const roleGateOk =
-    hhlDetail.hasCostValue &&
-    hhlDetail.hasRevValue &&
-    (!kshDetail.hasCostValue || kshDetail.hasRevValue) &&
-    (!scxDetail.hasRevValue || scxDetail.hasCostValue) &&
-    differs
-
-  // Stricter prefer-FAIL: require KSH without cost OR SCX without rev
-  const strict =
-    hhlDetail.hasCostValue &&
-    hhlDetail.hasRevValue &&
-    !kshDetail.hasCostValue &&
-    !scxDetail.hasRevValue
-
-  if (strict || (roleGateOk && ( !kshDetail.hasCostValue || !scxDetail.hasRevValue))) {
-    pass(
-      13,
-      `HHL=${JSON.stringify(hhlDetail)} KSH=${JSON.stringify(kshDetail)} SCX=${JSON.stringify(scxDetail)}`,
-      s13,
-    )
-  } else {
-    fail(
-      13,
-      `role gate weak/missing: HHL=${JSON.stringify(hhlDetail)} KSH=${JSON.stringify(kshDetail)} SCX=${JSON.stringify(scxDetail)}`,
-      s13,
-    )
+  // O1: sonda strukturalna — kolumny tabel Finansów z wartościami liczbowymi + komunikat blokady roli
+  // (pierwsza wersja dopasowywała „Koszt … cyfra” w jednej linii tekstu — po D11/M8/M11 etykieta i kwota
+  // leżą w osobnych komórkach, więc sonda dawała fałszywy FAIL; w Fali 0 rozstrzygał to reprobe).
+  async function finColumns() {
+    await nav('fin')
+    await sleep(400)
+    return page.evaluate(() => {
+      // nagłówki porównywane bez znaków diakrytycznych (w tabeli Finansów stoi „Przychod”/„Marza” — luka D19)
+      const fold = (x) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l').replace(/ż|ź/g, 'z')
+      const cols = { Przychod: false, Koszt: false, Marza: false }
+      for (const table of document.querySelectorAll('main table')) {
+        const ths = [...table.querySelectorAll('thead th')].map((th) => fold((th.textContent || '').trim()))
+        for (const key of Object.keys(cols)) {
+          const idx = ths.findIndex((h) => h.startsWith(key))
+          if (idx < 0) continue
+          const hasNum = [...table.querySelectorAll('tbody tr')].some((tr) => /\d/.test(tr.children[idx]?.textContent || ''))
+          if (hasNum) cols[key] = true
+        }
+      }
+      const t = document.body.innerText || ''
+      return {
+        cols,
+        lockKsh: /Stawki przewoźnika i marża spedytora nie są dostępne w roli klienta/.test(t),
+        lockScx: /Cena płacona przez KSH i marża spedytora nie są dostępne w roli przewoźnika/.test(t),
+      }
+    })
   }
+  await setRole('HHL')
+  const hhlS = await finColumns()
+  await setRole('KSH')
+  const kshS = await finColumns()
+  await setRole('SCX')
+  const scxS = await finColumns()
+  const strictS =
+    hhlS.cols.Przychod && hhlS.cols.Koszt && hhlS.cols.Marza &&
+    !kshS.cols.Koszt && !kshS.cols.Marza && kshS.lockKsh &&
+    !scxS.cols.Przychod && !scxS.cols.Marza && scxS.lockScx
+  const det = `HHL=${JSON.stringify(hhlS)} KSH=${JSON.stringify(kshS)} SCX=${JSON.stringify(scxS)} · regex(HHL=${JSON.stringify(hhlDetail)})`
+  if (strictS) pass(13, det, s13)
+  else fail(13, `role gate weak/missing: ${det}`, s13)
 } catch (e) {
   fail(13, String(e.message || e), await shot('13-roles-err.png'))
 }
