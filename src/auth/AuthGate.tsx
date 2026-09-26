@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { getSupabase } from './client';
-import { authErrorPl, viewRoleForOrg, ROLE_LABEL_PL } from './config';
+import { authErrorPl, viewRoleForOrg } from './config';
+import { t } from '../i18n/messages';
 import { setAuthProfile, type AuthProfile } from './profile';
 import { useTowerStore } from '../store/useTowerStore';
 import { markManualLogout, rememberLogin, sessionEndReason, SESSION_END_MSG, type SessionEnd } from './sessionYear';
@@ -35,7 +36,7 @@ function LoginScreen({ ended }: { ended?: SessionEnd }) {
     setBusy(false);
     setMsg(error
       ? { ok: false, text: authErrorPl(error.message) }
-      : { ok: true, text: 'Link do logowania został wysłany. Sprawdź skrzynkę i otwórz go w tej przeglądarce.' });
+      : { ok: true, text: t(locale, 'a6_auth_link_sent') });
   };
 
   return (
@@ -45,12 +46,12 @@ function LoginScreen({ ended }: { ended?: SessionEnd }) {
         <div className="panel-bd">
           <form className="auth-form" onSubmit={submit}>
             {ended && <div className="auth-msg err" role="alert" data-auth="session-ended">{SESSION_END_MSG[ended][locale]}</div>}
-            <label>Adres e-mail
+            <label>{t(locale, 'a6_auth_email')}
               <input className="input full" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             </label>
-            <button className="btn" type="submit" disabled={busy || !email.trim()}>{busy ? 'Wysyłanie…' : 'Wyślij link do logowania'}</button>
+            <button className="btn" type="submit" disabled={busy || !email.trim()}>{t(locale, busy ? 'a6_auth_sending' : 'a6_auth_send')}</button>
             {msg && <div className={`auth-msg ${msg.ok ? 'ok' : 'err'}`} role="status">{msg.text}</div>}
-            <div className="auth-msg">Dostęp wyłącznie na zaproszenie administratora HHL.</div>
+            <div className="auth-msg">{t(locale, 'a6_auth_invite_only')}</div>
           </form>
         </div>
       </section>
@@ -59,13 +60,14 @@ function LoginScreen({ ended }: { ended?: SessionEnd }) {
 }
 
 function NoAccess({ reason }: { reason: string }) {
+  const locale = useTowerStore((s) => s.locale);
   return (
     <div className="auth-screen" data-auth="noaccess">
       <section className="panel auth-card">
         <header className="panel-hd"><Brand /></header>
         <div className="panel-bd auth-form">
           <div className="auth-msg err">{reason}</div>
-          <button className="btn ghost" type="button" onClick={() => { markManualLogout(); void getSupabase().then((sb) => sb.auth.signOut()); }}>Wyloguj</button>
+          <button className="btn ghost" type="button" onClick={() => { markManualLogout(); void getSupabase().then((sb) => sb.auth.signOut()); }}>{t(locale, 'a6_auth_logout')}</button>
         </div>
       </section>
     </div>
@@ -73,6 +75,7 @@ function NoAccess({ reason }: { reason: string }) {
 }
 
 export default function AuthGate({ children }: { children: ReactNode }) {
+  const locale = useTowerStore((s) => s.locale);
   const [state, setState] = useState<State>({ kind: 'loading' });
 
   useEffect(() => {
@@ -92,10 +95,10 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       const { data, error } = await sb.rpc('my_profile');
       const p = (Array.isArray(data) ? data[0] : null) as AuthProfile | null;
       if (!alive) return;
-      if (error || !p) { setAuthProfile(null); setState({ kind: 'noaccess', reason: 'Konto nie jest przypisane do żadnej organizacji. Skontaktuj się z administratorem HHL.' }); return; }
-      if (!p.active) { setAuthProfile(null); setState({ kind: 'noaccess', reason: 'Konto zostało dezaktywowane przez administratora HHL.' }); return; }
+      if (error || !p) { setAuthProfile(null); setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_no_org') }); return; }
+      if (!p.active) { setAuthProfile(null); setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_deactivated') }); return; }
       const viewRole = viewRoleForOrg(p.org_code);
-      if (!viewRole) { setAuthProfile(null); setState({ kind: 'noaccess', reason: `Organizacja ${p.org_code} nie ma jeszcze widoku w aplikacji.` }); return; }
+      if (!viewRole) { setAuthProfile(null); setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_no_view').replace('{org}', p.org_code) }); return; }
       setAuthProfile(p);
       const st = useTowerStore.getState();
       if (st.role !== viewRole) st.setRole(viewRole);
@@ -105,7 +108,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         const bridge = await import('../data/supabaseBridge');
         await bridge.connectSupabaseData(sb);
       } catch (e) {
-        if (alive) setState({ kind: 'noaccess', reason: `Nie udało się pobrać danych z serwera: ${e instanceof Error ? e.message : String(e)}` });
+        if (alive) setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_fetch_fail').replace('{err}', e instanceof Error ? e.message : String(e)) });
         return;
       }
       if (alive) setState({ kind: 'ready', session, profile: p });
@@ -130,15 +133,15 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     });
   }, [state]);
 
-  if (state.kind === 'loading') return <div className="auth-screen" data-auth="loading"><div className="auth-msg">Ładowanie danych…</div></div>;
+  if (state.kind === 'loading') return <div className="auth-screen" data-auth="loading"><div className="auth-msg">{t(locale, 'a6_auth_loading')}</div></div>;
   if (state.kind === 'anon') return <LoginScreen ended={state.ended} />;
   if (state.kind === 'noaccess') return <NoAccess reason={state.reason} />;
   return (
     <>
       {children}
       <div className="auth-session" data-auth="session">
-        <b>{state.profile.email}</b><span>{ROLE_LABEL_PL[state.profile.role]}</span>
-        <button className="chipbtn" type="button" onClick={() => { markManualLogout(); void getSupabase().then((sb) => sb.auth.signOut()); }}>Wyloguj</button>
+        <b>{state.profile.email}</b><span>{t(locale, `a6_role_${state.profile.role}`)}</span>
+        <button className="chipbtn" type="button" onClick={() => { markManualLogout(); void getSupabase().then((sb) => sb.auth.signOut()); }}>{t(locale, 'a6_auth_logout')}</button>
       </div>
     </>
   );

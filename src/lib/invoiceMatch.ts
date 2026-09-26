@@ -5,6 +5,7 @@
  */
 import type { InvoiceLine, Load, LoadStatus } from '../types';
 import { matchInvoice } from './pricing';
+import { dictEntry } from '../i18n/messages';
 
 export const INVOICE_MATCH_THRESHOLD_PLN = 50;
 
@@ -150,10 +151,10 @@ export function invoiceLinesFromThreeWay(match: ThreeWayMatchResult): InvoiceLin
 }
 
 const THREE_WAY_LABEL: Record<ThreeWayVerdict, Record<'pl' | 'en' | 'sv', string>> = {
-  zgodna: { pl: 'zgodna', en: 'matched', sv: 'stämmer' },
-  poza_cennikiem: { pl: 'poza cennikiem', en: 'outside rate card', sv: 'utanför prislistan' },
-  nie_zrealizowano: { pl: 'nie zrealizowano', en: 'not delivered', sv: 'ej utfört' },
-  brak_na_fakturze: { pl: 'brak na fakturze', en: 'missing on invoice', sv: 'saknas på fakturan' },
+  zgodna: dictEntry('a6_three_way_label_zgodna'),
+  poza_cennikiem: dictEntry('a6_three_way_label_poza_cennikiem'),
+  nie_zrealizowano: dictEntry('a6_three_way_label_nie_zrealizowano'),
+  brak_na_fakturze: dictEntry('a6_three_way_label_brak_na_fakturze'),
 };
 
 export function threeWayVerdictLabel(v: ThreeWayVerdict, locale: 'pl' | 'en' | 'sv' = 'pl'): string {

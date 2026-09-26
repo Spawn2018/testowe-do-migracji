@@ -4,7 +4,7 @@ import { ExceptionRow } from '../components/ui/ExceptionRow';
 import { KpiTile } from '../components/ui/KpiTile';
 import { DeliveryProgress } from '../components/chart/DeliveryProgress';
 import { CorridorMap } from '../components/map/LazyCorridorMap';
-import { riskText, t, tp } from '../i18n/messages';
+import { fmtPct, INTL_LOCALE, pctText, riskText, t, tp } from '../i18n/messages';
 import { canSeeMargin, ROLE_META } from '../lib/permissions';
 import { getNow } from '../lib/frozenNow';
 import { formatEtaBodenCompact } from '../lib/time';
@@ -96,22 +96,22 @@ export function DashboardView() {
         <header className="panel-hd">
           <h2>{ROLE_META[role].name}</h2>
           <span className="sub">
-            {new Intl.DateTimeFormat('pl-PL', {
+            {new Intl.DateTimeFormat(INTL_LOCALE[locale], {
               timeZone: 'Europe/Warsaw',
               day: '2-digit',
               month: '2-digit',
               year: 'numeric',
             }).format(getNow())}{' '}
-            · projekt Stegra Boden
+            {t(locale, 'a6_dash_project')}
           </span>
         </header>
         <div className="kpis">
           {role === 'KSH' ? (
             <>
               <KpiTile
-                label="Elementy dostarczone"
+                label={t(locale, 'a6_dash_delivered_items')}
                 value={`${delivered} / ${loads.length}`}
-                delta={`${Math.round((delivered / Math.max(1, loads.length)) * 100)}% zakresu`}
+                delta={tp(locale, 'a6_dash_of_scope', { pct: fmtPct(locale, Math.round((delivered / Math.max(1, loads.length)) * 100) / 100, 0) })}
                 onClick={() => navigateTo({ view: 'sched' })}
               />
               <KpiTile
@@ -120,13 +120,13 @@ export function DashboardView() {
                   .filter((l) => l.stage === 'DELIVERED')
                   .reduce((a, l) => a + l.dims.weightT, 0)
                   .toFixed(0)} t`}
-                delta={`z ${loads.reduce((a, l) => a + l.dims.weightT, 0).toFixed(0)} t`}
+                delta={tp(locale, 'a6_dash_of_total', { n: loads.reduce((a, l) => a + l.dims.weightT, 0).toFixed(0) })}
                 onClick={() => navigateTo({ view: 'map' })}
               />
               <KpiTile
                 label={t(locale, "dash_next_delivery")}
                 value={arrivals72[0] ? formatEtaBodenCompact(arrivals72[0].etaBoden) : '—'}
-                delta={arrivals72[0] ? `${arrivals72[0].code}` : 'brak w 72h'}
+                delta={arrivals72[0] ? `${arrivals72[0].code}` : t(locale, 'a6_dash_none_72h')}
                 onClick={() =>
                   arrivals72[0] ? selectLoad(arrivals72[0].id) : navigateTo({ view: 'sched' })
                 }
@@ -134,13 +134,13 @@ export function DashboardView() {
               <KpiTile
                 label={t(locale, 'kpi_in_transit')}
                 value={inTransit}
-                delta="w drodze do Boden"
+                delta={t(locale, 'a6_dash_to_boden')}
                 onClick={() => navigateTo({ view: 'map' })}
               />
               <KpiTile
                 label={t(locale, 'kpi_otif')}
-                value={`${otif}%`}
-                delta={`${delayedN} poza oknem`}
+                value={fmtPct(locale, otif / 100, 0)}
+                delta={tp(locale, 'a6_dash_late_n', { n: String(delayedN) })}
                 tone={otif < 90 ? 'warn' : 'good'}
                 onClick={() => navigateTo({ view: 'sched' })}
               />
@@ -171,8 +171,8 @@ export function DashboardView() {
               />
               <KpiTile
                 label={t(locale, 'kpi_otif')}
-                value={`${otif}%`}
-                delta={`${delayedN} poza oknem awizacji`}
+                value={fmtPct(locale, otif / 100, 0)}
+                delta={tp(locale, 'a6_dash_late_awi_n', { n: String(delayedN) })}
                 tone={otif < 90 ? 'warn' : 'good'}
                 onClick={() => navigateTo({ view: 'sched' })}
               />
@@ -190,7 +190,7 @@ export function DashboardView() {
               <KpiTile
                 label={t(locale, 'kpi_ferry_risk')}
                 value={ferryHot || '—'}
-                delta={`sailing · ${formatSeaRiskLabel(seaForSailing(focusVoyage()).risk, locale)}`}
+                delta={tp(locale, 'a6_dash_sailing', { risk: formatSeaRiskLabel(seaForSailing(focusVoyage()).risk, locale) })}
                 tone={ferryHot ? 'warn' : 'default'}
                 onClick={() => navigateTo({ view: 'risk', riskFilter: 'FERRY' })}
               />
@@ -208,7 +208,7 @@ export function DashboardView() {
               <KpiTile
                 label={t(locale, 'kpi_in_transit')}
                 value={inTransit}
-                delta={`${delivered} dostarczonych, ${notInTransit} w przygotowaniu`}
+                delta={tp(locale, 'a6_dash_delivered_prep', { d: String(delivered), p: String(notInTransit) })}
                 onClick={() => navigateTo({ view: 'map' })}
               />
               <KpiTile
@@ -220,8 +220,8 @@ export function DashboardView() {
               />
               <KpiTile
                 label={t(locale, 'kpi_otif')}
-                value={`${otif}%`}
-                delta={`${delayedN} dostaw poza oknem`}
+                value={fmtPct(locale, otif / 100, 0)}
+                delta={tp(locale, 'a6_dash_late_deliveries', { n: String(delayedN) })}
                 tone={otif < 90 ? 'warn' : 'good'}
                 onClick={() => navigateTo({ view: 'sched' })}
               />
@@ -233,11 +233,10 @@ export function DashboardView() {
                     locale,
                     currency,
                   )}
-                  delta={`${(marginAvg * 100).toFixed(1).replace('.', ',')}% · koszt ${formatAppMoney(
-                    loads.reduce((a, l) => a + l.pricing.costTotal, 0),
-                    locale,
-                    currency,
-                  )}`}
+                  delta={tp(locale, 'a6_dash_margin_cost', {
+                    pct: pctText(locale, marginAvg, 1, `${(marginAvg * 100).toFixed(1).replace('.', ',')}%`),
+                    cost: formatAppMoney(loads.reduce((a, l) => a + l.pricing.costTotal, 0), locale, currency),
+                  })}
                   tone={marginAvg < 0.12 ? 'warn' : 'good'}
                   tags={tierTags(loads)}
                   onClick={() => navigateTo({ view: 'fin' })}
@@ -246,7 +245,7 @@ export function DashboardView() {
                 <KpiTile
                   label={t(locale, 'kpi_on_road')}
                   value={inTransit}
-                  delta="aktywne"
+                  delta={t(locale, 'a6_dash_active')}
                   onClick={() => navigateTo({ view: 'map' })}
                 />
               )}
@@ -259,9 +258,9 @@ export function DashboardView() {
                 }
               />
               <KpiTile
-                label="Czas wykrycia odchylenia"
+                label={t(locale, 'a6_dash_detect_time')}
                 value="8 min"
-                delta="mediana, ostatnie 30 dni"
+                delta={t(locale, 'a6_dash_median')}
                 tone="good"
                 onClick={() => setView('risk')}
               />

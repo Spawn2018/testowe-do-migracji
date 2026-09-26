@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { StatusPill } from '../ui/StatusPill';
-import { t } from '../../i18n/messages';
+import { fmtNum, fmtNumKeepPl, fmtPct, t, tp } from '../../i18n/messages';
 import { canEditResources, canSeeCost, canSeeMargin, canSeeRevenue, visibleDriverPhone } from '../../lib/permissions';
 import { SITES } from '../../lib/status';
 import { SEFS_SOURCES } from '../../lib/sefs';
@@ -64,15 +64,17 @@ function MoneySideMeta({ side, locale, which }: { side: MoneySideV2; locale: Loc
 
 type Tab = 'overview' | 'timeline' | 'docs' | 'pricing' | 'chat';
 
-function fmtDim(n: number): string {
-  return n.toFixed(2).replace('.', ',');
+/** A6-T3 — wymiary/masa w języku interfejsu (PL bez zmian: 16,50). */
+function fmtDim(n: number, locale: Locale = 'pl'): string {
+  return fmtNum(locale, n, 2);
 }
 
 /** M5 — numer zlecenia: pole edycji tylko dla strony, która go nadaje; pozostali widzą tekst. */
 function OrderNoField({ value, editable, onSave }: { value?: string | null; editable: boolean; onSave: (v: string | null) => void }) {
   const [draft, setDraft] = useState(value ?? '');
+  const locale = useTowerStore((s) => s.locale);
   if (!editable) {
-    return value ? <span className="mono">{value}</span> : <span style={{ color: 'var(--red)' }}>nie uzupełniono</span>;
+    return value ? <span className="mono">{value}</span> : <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_dr_not_filled')}</span>;
   }
   return (
     <form
@@ -82,8 +84,8 @@ function OrderNoField({ value, editable, onSave }: { value?: string | null; edit
         if ((draft.trim() || null) !== (value ?? null)) onSave(draft.trim() || null);
       }}
     >
-      <input className="input mono" style={{ width: '60%' }} value={draft} placeholder="nie uzupełniono" onChange={(e) => setDraft(e.target.value)} aria-label="Numer zlecenia" />
-      <button type="submit" className="btn ghost">Zapisz</button>
+      <input className="input mono" style={{ width: '60%' }} value={draft} placeholder={t(locale, 'a6_dr_not_filled')} onChange={(e) => setDraft(e.target.value)} aria-label={t(locale, 'a6_dr_order_no')} />
+      <button type="submit" className="btn ghost">{t(locale, 'a6_dr_save')}</button>
     </form>
   );
 }
@@ -166,7 +168,7 @@ export function LoadDrawer() {
 
   return (
     <>
-      <button type="button" className="scrim" aria-label="Zamknij" onClick={() => selectLoad(null)} />
+      <button type="button" className="scrim" aria-label={t(locale, 'a6_dr_close')} onClick={() => selectLoad(null)} />
       <aside className="drawer" role="dialog" aria-label={load.code}>
         <div className="drawer-hd">
           <div className="r1">
@@ -180,22 +182,21 @@ export function LoadDrawer() {
           </div>
           <div className="wb-fields">
             <span>
-              <b>Zlecenie</b>
+              <b>{t(locale, 'a6_dr_order')}</b>
               <em>{load.permit?.pozycja || `HHL/2026/${1240 + load.sequenceOrder}`}</em>
             </span>
             <span>
-              <b>Nadawca</b>
+              <b>{t(locale, 'a6_dr_sender')}</b>
               <em>{SITES.loading.name}</em>
             </span>
             <span>
-              <b>Odbiorca</b>
-              <em>Stegra, Boden</em>
+              <b>{t(locale, 'a6_dr_consignee')}</b>
+              <em>{t(locale, 'a6_dr_consignee_val')}</em>
             </span>
             <span>
-              <b>Tydzień dostawy</b>
+              <b>{t(locale, 'a6_dr_week')}</b>
               <em>
-                t
-                {(() => {
+                {tp(locale, 'a6_dr_week_val', { n: String((() => {
                   const d = new Date(load.plannedDeliverDate);
                   if (Number.isNaN(d.getTime())) return '—';
                   const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -203,7 +204,7 @@ export function LoadDrawer() {
                   tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
                   const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
                   return Math.ceil(((tmp.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-                })()}
+                })()) })}
               </em>
             </span>
           </div>
@@ -222,44 +223,44 @@ export function LoadDrawer() {
           {tab === 'overview' && (
             <>
               <dl className="kv">
-                <dt>Typ</dt>
+                <dt>{t(locale, 'a6_dr_type')}</dt>
                 <dd>
-                  <span data-content>{load.itemType}</span> · {load.qty} szt.
+                  <span data-content>{load.itemType}</span>{tp(locale, 'a6_dr_qty', { n: String(load.qty) })}
                 </dd>
-                <dt>Wymiary L×W×H</dt>
+                <dt>{t(locale, 'a6_dr_dims')}</dt>
                 <dd>
-                  {fmtDim(load.dims.lengthM)} × {fmtDim(load.dims.widthM)} × {fmtDim(load.dims.heightM)} m
+                  {fmtDim(load.dims.lengthM, locale)} × {fmtDim(load.dims.widthM, locale)} × {fmtDim(load.dims.heightM, locale)} m
                 </dd>
-                <dt>Wymiary zestawu</dt>
+                <dt>{t(locale, 'a6_dr_combo_dims')}</dt>
                 <dd>
                   {comboL > 16.5 || comboW > 2.55 ? (
-                    <span className="board" title="Ładunek ponadnormatywny" />
+                    <span className="board" title={t(locale, 'a6_dr_oversize')} />
                   ) : null}
-                  {fmtDim(comboL)} × {fmtDim(comboW)} × {fmtDim(comboH)} m
+                  {fmtDim(comboL, locale)} × {fmtDim(comboW, locale)} × {fmtDim(comboH, locale)} m
                 </dd>
-                <dt>Masa</dt>
+                <dt>{t(locale, 'a6_dr_mass')}</dt>
                 <dd>
-                  {fmtDim(load.dims.weightT)} t ({load.qty} ×{' '}
-                  {fmtDim(load.dims.weightT / Math.max(1, load.qty))} t)
+                  {fmtDim(load.dims.weightT, locale)} t ({load.qty} ×{' '}
+                  {fmtDim(load.dims.weightT / Math.max(1, load.qty), locale)} t)
                 </dd>
                 {/* M5 — trzy numery zleceń (W12): KSH z importu, HHL i przewoźnik — każda strona edytuje wyłącznie swój */}
-                <dt>Nr zlecenia KSH</dt>
+                <dt>{t(locale, 'a6_dr_ord_ksh')}</dt>
                 <dd className="mono" data-order="ksh">{load.orderNo || '—'}</dd>
-                <dt>Nr zlecenia HHL</dt>
+                <dt>{t(locale, 'a6_dr_ord_hhl')}</dt>
                 <dd data-order="hhl">
                   <OrderNoField key={`hhl-${load.id}`} value={load.hhlOrderNo} editable={orderSide === 'HHL'} onSave={(v) => setOrderNo(load.id, 'HHL', v)} />
                 </dd>
-                <dt>Nr zlecenia SCX</dt>
+                <dt>{t(locale, 'a6_dr_ord_scx')}</dt>
                 <dd data-order="scx">
                   <OrderNoField key={`scx-${load.id}`} value={load.carrierOrderNo} editable={orderSide === 'CARRIER'} onSave={(v) => setOrderNo(load.id, 'CARRIER', v)} />
                 </dd>
-                <dt>Montaż</dt>
-                <dd>pozycja {load.sequenceOrder}</dd>
-                <dt>Miejsce załadunku</dt>
+                <dt>{t(locale, 'a6_dr_assembly')}</dt>
+                <dd>{tp(locale, 'a6_dr_assembly_pos', { n: String(load.sequenceOrder) })}</dd>
+                <dt>{t(locale, 'a6_dr_load_place')}</dt>
                 <dd>{SITES.loading.name}</dd>
-                <dt>Załadunek</dt>
+                <dt>{t(locale, 'a6_dr_loading')}</dt>
                 <dd className="cond">{formatLoadPl(load.plannedLoadDate)}</dd>
-                <dt>Dostawa</dt>
+                <dt>{t(locale, 'a6_dr_delivery')}</dt>
                 <dd className="cond">{formatUnloadSe(load.plannedDeliverDate)}</dd>
                 <dt>{t(locale, 'eta')}</dt>
                 <dd className="cond">
@@ -267,7 +268,7 @@ export function LoadDrawer() {
                   {load.delayed ? (
                     <span className="pill p-red">{formatDelayPill(delayMinutesVsPlan(load.etaBoden, load.plannedDeliverDate) ?? 95)}</span>
                   ) : (
-                    <span className="pill p-go">w oknie</span>
+                    <span className="pill p-go">{t(locale, 'a6_dr_in_window')}</span>
                   )}
                   {' '}
                   <span
@@ -282,19 +283,19 @@ export function LoadDrawer() {
                     {etaConfidenceLabel(load.etaConfidence, locale)}
                   </span>
                   <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 4, fontWeight: 400 }}>
-                    pasmo {load.etaEarliestHours.toFixed(1)}–{load.etaLatestHours.toFixed(1)} h · heurystyka
+                    {tp(locale, 'a6_dr_band', { a: fmtNumKeepPl(locale, load.etaEarliestHours, 1, load.etaEarliestHours.toFixed(1)), b: fmtNumKeepPl(locale, load.etaLatestHours, 1, load.etaLatestHours.toFixed(1)) })}
                     {load.etaReasons?.length ? ` · ${load.etaReasons.slice(0, 3).join(' · ')}` : ''}
                   </div>
                 </dd>
-                <dt>Kierowca</dt>
+                <dt>{t(locale, 'a6_dr_driver')}</dt>
                 <dd>
                   {load.resources.driverName ? (
                     <span data-content>{load.resources.driverName}</span>
                   ) : (
-                    <span style={{ color: 'var(--red)' }}>nie uzupełniono</span>
+                    <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_dr_not_filled')}</span>
                   )}
                 </dd>
-                <dt>Telefon</dt>
+                <dt>{t(locale, 'a6_dr_phone')}</dt>
                 <dd>
                   {driverPhone ? (
                     <a href={`tel:${driverPhone}`} className="mono" data-content>
@@ -304,7 +305,7 @@ export function LoadDrawer() {
                     '—'
                   )}
                 </dd>
-                <dt>Ciągnik / naczepa</dt>
+                <dt>{t(locale, 'a6_dr_tractor_trailer')}</dt>
                 <dd>
                   {load.resources.tractorPlate ? (
                     <>
@@ -316,34 +317,32 @@ export function LoadDrawer() {
                     '—'
                   )}
                 </dd>
-                <dt>Pilotaż</dt>
+                <dt>{t(locale, 'a6_dr_escort')}</dt>
                 <dd>
                   {load.resources.escort
                     ? load.resources.escortPlate
-                      ? `1 pojazd · ${load.resources.escortPlate}`
-                      : '1 pojazd'
-                    : 'nie wymagany'}
+                      ? tp(locale, 'a6_dr_escort_one_plate', { plate: load.resources.escortPlate })
+                      : t(locale, 'a6_dr_escort_one')
+                    : t(locale, 'a6_dr_escort_none')}
                 </dd>
-                <dt>Prom</dt>
+                <dt>{t(locale, 'a6_dr_ferry')}</dt>
                 <dd>
                   {load.ferry.vessel
                     ? `${load.ferry.vessel}${load.ferry.bookingRef ? ` · ${load.ferry.bookingRef}` : ''}`
-                    : 'brak rezerwacji'}
+                    : t(locale, 'a6_dr_no_booking')}
                 </dd>
               </dl>
 
               {readyUiBlocked ? (
                 <div className="banner red" style={{ margin: '13px 0 0' }}>
-                  <b>Brak zezwolenia.</b> Zestaw ma {fmtDim(comboL)} m długości — transport nie może ruszyć bez
-                  dokumentu obejmującego ten wymiar.
+                  <b>{t(locale, 'a6_dr_permit_missing_b')}</b> {tp(locale, 'a6_dr_permit_missing', { l: fmtDim(comboL, locale) })}
                 </div>
               ) : (
                 <div
                   className="banner"
                   style={{ margin: '13px 0 0', background: 'var(--go-bg)', borderLeftColor: 'var(--go)' }}
                 >
-                  <b>Zezwolenie zgodne.</b> Wymiary zestawu mieszczą się w limitach dokumentu PL/2026/
-                  {1400 + load.sequenceOrder} ważnego do 30.11.2026.
+                  <b>{t(locale, 'a6_dr_permit_ok_b')}</b> {tp(locale, 'a6_dr_permit_ok', { n: String(1400 + load.sequenceOrder) })}
                 </div>
               )}
             </>
@@ -354,7 +353,7 @@ export function LoadDrawer() {
               {loadEvents.length === 0 ? (
                 <li className="future">
                   <span className="mk" />
-                  <div className="w">Brak zdarzeń</div>
+                  <div className="w">{t(locale, 'a6_dr_no_events')}</div>
                   <div className="ts">—</div>
                 </li>
               ) : (
@@ -403,14 +402,14 @@ export function LoadDrawer() {
                   onClick={() => {
                     void downloadDocumentsZip(loadDocs, `${load.code}_dokumenty.zip`).then((r) => {
                       useTowerStore.getState().pushToast(
-                        `ZIP ${load.code}: ${r.count} plików`,
+                        tp(locale, 'a6_dr_zip_toast', { code: load.code, n: String(r.count) }),
                         'MEDIUM',
                         load.id,
                       );
                     });
                   }}
                 >
-                  Pobierz paczkę ZIP
+                  {t(locale, 'a6_dr_zip_btn')}
                 </button>
                 {role !== 'KSH' ? (
                   <button
@@ -423,7 +422,7 @@ export function LoadDrawer() {
                       fileRef.current?.click();
                     }}
                   >
-                    Wgraj dokument
+                    {t(locale, 'a6_dr_upload')}
                   </button>
                 ) : null}
                 <input
@@ -431,7 +430,7 @@ export function LoadDrawer() {
                   type="file"
                   accept="image/*,application/pdf"
                   className="sronly"
-                  aria-label="Wybierz plik dokumentu"
+                  aria-label={t(locale, 'a6_dr_pick_file')}
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     e.target.value = '';
@@ -456,19 +455,19 @@ export function LoadDrawer() {
                 <>
                   <h4 className="sec">{t(locale, 'cost')} — Scandinavian Express</h4>
                   <div className="mrow">
-                    <span className="lbl">Stawka bazowa</span>
+                    <span className="lbl">{t(locale, 'a6_dr_base_rate')}</span>
                     <span>{formatAppMoney(load.pricing.costBase, locale, currency)}</span>
                   </div>
                   <div className="mrow">
-                    <span className="lbl">Dodatek paliwowy</span>
+                    <span className="lbl">{t(locale, 'a6_dr_fuel')}</span>
                     <span>{formatAppMoney(load.pricing.costSefs, locale, currency)}</span>
                   </div>
                   <div className="mrow">
-                    <span className="lbl">Dodatki</span>
+                    <span className="lbl">{t(locale, 'a6_dr_extras')}</span>
                     <span>{formatAppMoney(load.pricing.costExtras, locale, currency)}</span>
                   </div>
                   <div className="mrow total">
-                    <span>Razem</span>
+                    <span>{t(locale, 'a6_dr_total')}</span>
                     <span>{formatAppMoney(load.pricing.costTotal, locale, currency)}</span>
                   </div>
                   {load.pricing.money ? <MoneySideMeta side={load.pricing.money.cost} locale={locale} which="cost" /> : null}
@@ -482,15 +481,15 @@ export function LoadDrawer() {
                     {t(locale, 'revenue')} — KSH
                   </h4>
                   <div className="mrow">
-                    <span className="lbl">Stawka bazowa</span>
+                    <span className="lbl">{t(locale, 'a6_dr_base_rate')}</span>
                     <span>{formatAppMoney(load.pricing.revBase, locale, currency)}</span>
                   </div>
                   <div className="mrow">
-                    <span className="lbl">Dodatek paliwowy</span>
+                    <span className="lbl">{t(locale, 'a6_dr_fuel')}</span>
                     <span>{formatAppMoney(load.pricing.revSefs, locale, currency)}</span>
                   </div>
                   <div className="mrow total">
-                    <span>Razem</span>
+                    <span>{t(locale, 'a6_dr_total')}</span>
                     <span>{formatAppMoney(load.pricing.revTotal, locale, currency)}</span>
                   </div>
                   {load.pricing.money ? <MoneySideMeta side={load.pricing.money.rev} locale={locale} which="rev" /> : null}
@@ -504,7 +503,7 @@ export function LoadDrawer() {
                 <div className="mrow total" style={{ marginTop: 15, borderTop: '2px solid var(--ink)' }}>
                   <span>{t(locale, 'margin')}</span>
                   <span style={{ color: load.pricing.marginPct < 0.18 ? 'var(--red)' : 'var(--go)' }}>
-                    {formatAppMoney(load.pricing.margin, locale, currency)} · {(load.pricing.marginPct * 100).toFixed(1)}%
+                    {formatAppMoney(load.pricing.margin, locale, currency)} · {locale === 'pl' ? `${(load.pricing.marginPct * 100).toFixed(1)}%` : fmtPct(locale, load.pricing.marginPct)}
                   </span>
                 </div>
               ) : null}
@@ -525,13 +524,13 @@ export function LoadDrawer() {
               {!canEdit && (
                 <>
                   <div className="note" style={{ margin: '0 0 12px' }}>
-                    «Edycja zasobów i awizacji: Scandinavian Express / H&H Logistics»
+                    {t(locale, 'a6_dr_edit_note')}
                   </div>
-                  <h4 className="sec">Zasoby</h4>
+                  <h4 className="sec">{t(locale, 'a6_dr_resources')}</h4>
                   <dl className="kv">
-                    <dt>Kierowca</dt>
+                    <dt>{t(locale, 'a6_dr_driver')}</dt>
                     <dd data-content>{load.resources.driverName ?? '—'}</dd>
-                    <dt>Telefon</dt>
+                    <dt>{t(locale, 'a6_dr_phone')}</dt>
                     <dd>
                       {driverPhone ? (
                         <a href={`tel:${driverPhone}`} className="mono" data-content>
@@ -541,34 +540,34 @@ export function LoadDrawer() {
                         '—'
                       )}
                     </dd>
-                    <dt>Ciągnik</dt>
+                    <dt>{t(locale, 'a6_dr_tractor')}</dt>
                     <dd>
                       <span className="mono" data-content>{load.resources.tractorPlate ?? '—'}</span>
                     </dd>
-                    <dt>Naczepa</dt>
+                    <dt>{t(locale, 'a6_dr_trailer')}</dt>
                     <dd>
                       <span className="mono">{load.resources.trailerPlate ?? '—'}</span>
                     </dd>
-                    <dt>Pilotaż</dt>
+                    <dt>{t(locale, 'a6_dr_escort')}</dt>
                     <dd>
                       {load.resources.escort
                         ? load.resources.escortPlate
-                          ? `1 pojazd · ${load.resources.escortPlate}`
-                          : '1 pojazd'
-                        : 'nie wymagany'}
+                          ? tp(locale, 'a6_dr_escort_one_plate', { plate: load.resources.escortPlate })
+                          : t(locale, 'a6_dr_escort_one')
+                        : t(locale, 'a6_dr_escort_none')}
                     </dd>
-                    <dt>Zestaw L×W×H</dt>
+                    <dt>{t(locale, 'a6_dr_combo')}</dt>
                     <dd>
-                      {fmtDim(comboL)} × {fmtDim(comboW)} × {fmtDim(comboH)} m
+                      {fmtDim(comboL, locale)} × {fmtDim(comboW, locale)} × {fmtDim(comboH, locale)} m
                     </dd>
-                    <dt>Masa zestawu</dt>
-                    <dd>{fmtDim(load.resources.setWeightT ?? load.dims.weightT)} t</dd>
+                    <dt>{t(locale, 'a6_dr_combo_mass')}</dt>
+                    <dd>{fmtDim(load.resources.setWeightT ?? load.dims.weightT, locale)} t</dd>
                   </dl>
                   <h4 className="sec" style={{ marginTop: 18 }}>
-                    Awizacja / Prom
+                    {t(locale, 'a6_dr_awi_ferry')}
                   </h4>
                   <dl className="kv">
-                    <dt>Okno załad.</dt>
+                    <dt>{t(locale, 'a6_dr_load_window')}</dt>
                     <dd>
                       {formatLoadPl(load.awizacja.loadWindowStart)} – {formatLoadPl(load.awizacja.loadWindowEnd)}
                     </dd>
@@ -576,17 +575,17 @@ export function LoadDrawer() {
                     <dd data-sailing-ro>{sailingText}</dd>
                     <dt>{t(locale, 'sail_booking')}</dt>
                     <dd>{load.ferry.bookingRef ?? '—'}</dd>
-                    <dt>Status promu</dt>
+                    <dt>{t(locale, 'a6_dr_ferry_status')}</dt>
                     <dd>{ferryStatusLabel(load.ferry.status, locale)}</dd>
-                    <dt>Potwierdzona</dt>
-                    <dd>{load.awizacja.confirmed ? 'tak' : 'nie'}</dd>
+                    <dt>{t(locale, 'a6_dr_confirmed')}</dt>
+                    <dd>{load.awizacja.confirmed ? t(locale, 'a6_dr_yes') : t(locale, 'a6_dr_no')}</dd>
                   </dl>
                 </>
               )}
               {canEdit && (
                 <>
                   <h4 className="sec" style={{ marginTop: 18 }}>
-                    Zasoby
+                    {t(locale, 'a6_dr_resources')}
                   </h4>
                   <form
                     key={`res-${load.id}`}
@@ -610,34 +609,34 @@ export function LoadDrawer() {
                     <dl className="kv">
                       {(
                         [
-                          ['driverName', 'Kierowca', load.resources.driverName],
-                          ['driverPhone', 'Telefon', driverPhone],
-                          ['tractorPlate', 'Ciągnik', load.resources.tractorPlate],
-                          ['trailerPlate', 'Naczepa', load.resources.trailerPlate],
+                          ['driverName', 'a6_dr_driver', load.resources.driverName],
+                          ['driverPhone', 'a6_dr_phone', driverPhone],
+                          ['tractorPlate', 'a6_dr_tractor', load.resources.tractorPlate],
+                          ['trailerPlate', 'a6_dr_trailer', load.resources.trailerPlate],
                         ] as const
                       ).map(([name, label, val]) => (
                         <Fragment key={name}>
-                          <dt>{label}</dt>
+                          <dt>{t(locale, label)}</dt>
                           <dd>
                             <input name={name} className="input" style={{ width: '100%' }} defaultValue={val ?? ''} />
                           </dd>
                         </Fragment>
                       ))}
-                      <dt>Pilotaż</dt>
+                      <dt>{t(locale, 'a6_dr_escort')}</dt>
                       <dd>
                         <label>
-                          <input name="escort" type="checkbox" defaultChecked={load.resources.escort} /> włączony
+                          <input name="escort" type="checkbox" defaultChecked={load.resources.escort} /> {t(locale, 'a6_dr_escort_on')}
                         </label>
                         {' · '}
                         <input
                           name="escortPlate"
                           className="input"
-                          placeholder="Nr rej. pilotażu"
+                          placeholder={t(locale, 'a6_dr_escort_plate')}
                           style={{ width: '55%' }}
                           defaultValue={load.resources.escortPlate ?? ''}
                         />
                       </dd>
-                      <dt>Zestaw L×W×H</dt>
+                      <dt>{t(locale, 'a6_dr_combo')}</dt>
                       <dd>
                         <input
                           name="setLengthM"
@@ -661,7 +660,7 @@ export function LoadDrawer() {
                           placeholder="H"
                         />
                       </dd>
-                      <dt>Masa zestawu</dt>
+                      <dt>{t(locale, 'a6_dr_combo_mass')}</dt>
                       <dd>
                         <input
                           name="setWeightT"
@@ -673,12 +672,12 @@ export function LoadDrawer() {
                       </dd>
                     </dl>
                     <button type="submit" className="btn ghost" style={{ marginTop: 8 }}>
-                      Zapisz zasoby
+                      {t(locale, 'a6_dr_save_res')}
                     </button>
                   </form>
 
                   <h4 className="sec" style={{ marginTop: 18 }}>
-                    Awizacja
+                    {t(locale, 'a6_dr_awi')}
                   </h4>
                   <form
                     key={`awi-${load.id}`}
@@ -697,9 +696,9 @@ export function LoadDrawer() {
                     }}
                   >
                     <dl className="kv">
-                      <dt>Okno załad. (od–do)</dt>
+                      <dt>{t(locale, 'a6_dr_load_window_range')}</dt>
                       {!planEditable ? (
-                        <dd className="cond" data-plan-readonly title="Okna planowe zmienia wyłącznie HHL (plan z harmonogramu KSH)">
+                        <dd className="cond" data-plan-readonly title={t(locale, 'a6_dr_plan_ro')}>
                           {load.awizacja.loadWindowStart ? formatLoadPl(load.awizacja.loadWindowStart) : '—'}
                           {' – '}
                           {load.awizacja.loadWindowEnd ? formatLoadPl(load.awizacja.loadWindowEnd) : '—'}
@@ -724,10 +723,10 @@ export function LoadDrawer() {
                         />
                       </dd>
                       )}
-                      <dt>Potwierdzona</dt>
+                      <dt>{t(locale, 'a6_dr_confirmed')}</dt>
                       <dd>
                         <label>
-                          <input name="confirmed" type="checkbox" defaultChecked={load.awizacja.confirmed} /> tak
+                          <input name="confirmed" type="checkbox" defaultChecked={load.awizacja.confirmed} /> {t(locale, 'a6_dr_yes')}
                         </label>
                       </dd>
                       {planEditable ? (
@@ -738,7 +737,7 @@ export function LoadDrawer() {
                       ) : null}
                     </dl>
                     <button type="submit" className="btn ghost" style={{ marginTop: 8 }}>
-                      Zapisz awizację
+                      {t(locale, 'a6_dr_save_awi')}
                     </button>
                   </form>
 
@@ -800,7 +799,7 @@ export function LoadDrawer() {
                     className="btn"
                     onClick={() => assignScx(load.id, load.pricing.scxPozycja ?? 'cennik SCX')}
                   >
-                    Przypisz SCX
+                    {t(locale, 'a6_dr_assign_scx')}
                   </button>
                 )}
                 <button
@@ -810,10 +809,10 @@ export function LoadDrawer() {
                   title={permitBlock ? readyGateReasonLabel(readyGate.reason, locale) : undefined}
                   onClick={() => {
                     if (readyUiBlocked) return;
-                    setLoadStatus(load.id, 'READY', role, 'Ręcznie oznaczono jako gotowy');
+                    setLoadStatus(load.id, 'READY', role, t(locale, 'a6_dr_ready_note'));
                   }}
                 >
-                  Oznacz jako gotowy
+                  {t(locale, 'a6_dr_mark_ready')}
                 </button>
                 <button
                   type="button"
@@ -825,7 +824,7 @@ export function LoadDrawer() {
                     setLoadStatus(load.id, 'IN_TRANSIT_PL', role);
                   }}
                 >
-                  Wyjazd
+                  {t(locale, 'a6_dr_depart')}
                 </button>
                 {/* W2: zdarzenia stref tworzy wyłącznie system (process_position) — symulacja tylko w trybie demo */}
                 {!SUPABASE_AUTH_ENABLED && (
@@ -837,15 +836,15 @@ export function LoadDrawer() {
                       if (gf) triggerGeofence(load.id, gf.id);
                     }}
                   >
-                    Zdarzenie strefy
+                    {t(locale, 'a6_dr_geo_event')}
                   </button>
                 )}
                 <button
                   type="button"
                   className="btn ghost"
-                  onClick={() => setLoadStatus(load.id, 'UNLOADING', role, 'Rozładowano → POD')}
+                  onClick={() => setLoadStatus(load.id, 'UNLOADING', role, t(locale, 'a6_dr_unloaded_note'))}
                 >
-                  Oznacz rozładowany
+                  {t(locale, 'a6_dr_mark_unloaded')}
                 </button>
               </div>
 
@@ -866,9 +865,9 @@ export function LoadDrawer() {
                   setChat('');
                 }}
               >
-                <input value={chat} onChange={(e) => setChat(e.target.value)} placeholder="Napisz do pozostałych stron…" />
+                <input value={chat} onChange={(e) => setChat(e.target.value)} placeholder={t(locale, 'a6_dr_chat_ph')} />
                 <button type="submit" className="btn">
-                  Wyślij
+                  {t(locale, 'a6_dr_send')}
                 </button>
               </form>
             </>

@@ -1,17 +1,19 @@
 /** Claude v2.0 kbdpanel — chrome only (not Opcje / rate editor). */
 import { useEffect } from 'react';
+import { t } from '../../i18n/messages';
+import { useTowerStore } from '../../store/useTowerStore';
 
 const ROWS: [string, string][] = [
-  ['Kokpit', 'K'],
-  ['Mapa', 'M'],
-  ['Harmonogram', 'H'],
-  ['Ryzyka', 'R'],
-  ['Dokumenty', 'D'],
-  ['Finanse', 'F'],
-  ['Zmień rolę', 'Shift + R'],
-  ['Jasny / ciemny', 'T'],
-  ['Zamknij szufladę, wyczyść filtr', 'Esc'],
-  ['Ta lista', '?'],
+  ['a6_kbd_dash', 'K'],
+  ['a6_kbd_map', 'M'],
+  ['a6_kbd_sched', 'H'],
+  ['a6_kbd_risk', 'R'],
+  ['a6_kbd_docs', 'D'],
+  ['a6_kbd_fin', 'F'],
+  ['a6_kbd_role', 'Shift + R'],
+  ['a6_kbd_theme', 'T'],
+  ['a6_kbd_esc', 'Esc'],
+  ['a6_kbd_list', '?'],
 ];
 
 export function KeyboardHelp({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -24,13 +26,14 @@ export function KeyboardHelp({ open, onClose }: { open: boolean; onClose: () => 
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
+  const locale = useTowerStore((s) => s.locale);
   if (!open) return null;
   return (
-    <div className="kbdpanel" id="kbdPanel" role="dialog" aria-label="Skróty">
-      <h4>Skróty</h4>
+    <div className="kbdpanel" id="kbdPanel" role="dialog" aria-label={t(locale, 'a6_kbd_title')}>
+      <h4>{t(locale, 'a6_kbd_title')}</h4>
       {ROWS.map(([l, k]) => (
         <div key={l}>
-          <span>{l}</span>
+          <span>{t(locale, l)}</span>
           <kbd>{k}</kbd>
         </div>
       ))}

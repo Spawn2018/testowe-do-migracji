@@ -15,6 +15,7 @@ export function addDaysIso(dateIso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 import { fxForDate, unloadedAtOf } from './money/loadMoney';
+import { dictEntry } from '../i18n/messages';
 
 export const BILL_TERM_DAYS: Record<BillDirection, number> = { PRZYCHOD: 30, KOSZT: 35 };
 /** Tolerancja kwoty — jak `matchInvoice` i `register_invoice`: > 1 i > 0,2 %. */
@@ -197,27 +198,27 @@ export function lineInvoicedEur(line: BillLine, currency: 'EUR' | 'PLN'): number
 }
 
 export const BILL_FLAG_LABEL: Record<BillFlag | 'BRAK_NA_FAKTURZE', Record<'pl' | 'en' | 'sv', string>> = {
-  ZLY_TYDZIEN: { pl: 'zły tydzień', en: 'wrong week', sv: 'fel vecka' },
-  NIEZREALIZOWANY: { pl: 'niezrealizowany', en: 'not delivered', sv: 'ej levererad' },
-  BRAK_NA_FAKTURZE: { pl: 'pominięty z tygodnia', en: 'missing from week', sv: 'saknas från veckan' },
-  KWOTA: { pl: 'kwota', en: 'amount', sv: 'belopp' },
-  OPLATA_PALIWOWA: { pl: 'opłata paliwowa', en: 'fuel surcharge', sv: 'bränsletillägg' },
-  TABELA_NBP: { pl: 'tabela NBP', en: 'NBP table', sv: 'NBP-tabell' },
-  KURS_NBP: { pl: 'kurs', en: 'rate', sv: 'kurs' },
-  DATA_KURSU: { pl: 'data kursu', en: 'rate date', sv: 'kursdatum' },
-  BRAK_KURSU: { pl: 'brak kursu', en: 'no rate', sv: 'kurs saknas' },
+  ZLY_TYDZIEN: dictEntry('a6_bill_flag_label_zly_tydzien'),
+  NIEZREALIZOWANY: dictEntry('a6_bill_flag_label_niezrealizowany'),
+  BRAK_NA_FAKTURZE: dictEntry('a6_bill_flag_label_brak_na_fakturze'),
+  KWOTA: dictEntry('a6_bill_flag_label_kwota'),
+  OPLATA_PALIWOWA: dictEntry('a6_bill_flag_label_oplata_paliwowa'),
+  TABELA_NBP: dictEntry('a6_bill_flag_label_tabela_nbp'),
+  KURS_NBP: dictEntry('a6_bill_flag_label_kurs_nbp'),
+  DATA_KURSU: dictEntry('a6_bill_flag_label_data_kursu'),
+  BRAK_KURSU: dictEntry('a6_bill_flag_label_brak_kursu'),
 };
 
 export const VERIFICATION_LABEL: Record<BillVerification, Record<'pl' | 'en' | 'sv', string>> = {
-  DO_WERYFIKACJI: { pl: 'do weryfikacji', en: 'to verify', sv: 'att granska' },
-  ZGODNA: { pl: 'zgodna', en: 'matched', sv: 'stämmer' },
-  SPORNA: { pl: 'sporna', en: 'disputed', sv: 'bestridd' },
-  ZAAKCEPTOWANA: { pl: 'zaakceptowana', en: 'accepted', sv: 'godkänd' },
+  DO_WERYFIKACJI: dictEntry('a6_verification_label_do_weryfikacji'),
+  ZGODNA: dictEntry('a6_verification_label_zgodna'),
+  SPORNA: dictEntry('a6_verification_label_sporna'),
+  ZAAKCEPTOWANA: dictEntry('a6_verification_label_zaakceptowana'),
 };
 export const PAYMENT_LABEL: Record<BillPayment, Record<'pl' | 'en' | 'sv', string>> = {
-  NIEOPLACONA: { pl: 'nieopłacona', en: 'unpaid', sv: 'obetald' },
-  PO_TERMINIE: { pl: 'po terminie', en: 'overdue', sv: 'förfallen' },
-  OPLACONA: { pl: 'opłacona', en: 'paid', sv: 'betald' },
+  NIEOPLACONA: dictEntry('a6_payment_label_nieoplacona'),
+  PO_TERMINIE: dictEntry('a6_payment_label_po_terminie'),
+  OPLACONA: dictEntry('a6_payment_label_oplacona'),
 };
 export const verificationPill = (v: BillVerification): string =>
   v === 'SPORNA' ? 'p-red' : v === 'ZAAKCEPTOWANA' || v === 'ZGODNA' ? 'p-go' : 'p-amber';

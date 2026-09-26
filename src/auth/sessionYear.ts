@@ -4,6 +4,7 @@
  * JWT zostaje 3600 s — rok żyje w sesji serwera, którą da się usunąć.
  */
 import type { Locale } from '../types';
+import { dictEntry } from '../i18n/messages';
 
 export const SESSION_DAYS = 365;
 export const LOGIN_AT_KEY = 'wt-login-at';
@@ -48,16 +49,8 @@ export function sessionEndReason(now: number, s: KV | null = store()): SessionEn
 }
 
 export const SESSION_END_MSG: Record<'YEAR' | 'REVOKED', Record<Locale, string>> = {
-  YEAR: {
-    pl: 'Minął rok od logowania na tym urządzeniu — zaloguj się ponownie linkiem z e-maila',
-    en: 'A year has passed since you signed in on this device — sign in again with the link from your e-mail',
-    sv: 'Det har gått ett år sedan du loggade in på den här enheten — logga in igen med länken i e-postmeddelandet',
-  },
-  REVOKED: {
-    pl: 'Sesja na tym urządzeniu została zakończona — zaloguj się ponownie linkiem z e-maila',
-    en: 'The session on this device has been ended — sign in again with the link from your e-mail',
-    sv: 'Sessionen på den här enheten har avslutats — logga in igen med länken i e-postmeddelandet',
-  },
+  YEAR: dictEntry('a6_session_end_msg_year'),
+  REVOKED: dictEntry('a6_session_end_msg_revoked'),
 };
 
 /** Przeglądarka i system z nagłówka User-Agent — do listy „Moje urządzenia”. */

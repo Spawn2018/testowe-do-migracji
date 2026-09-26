@@ -5,6 +5,7 @@ import { downloadStoredDocument } from '../../lib/docFiles';
 import { isStoredDoc } from '../../data/registry';
 import { docCategoryLabel } from '../../lib/enumLabels';
 import { useTowerStore } from '../../store/useTowerStore';
+import { t, tp } from '../../i18n/messages';
 
 type Props = {
   doc: Document;
@@ -28,7 +29,7 @@ export function DocFileRow({ doc, label, onPreview, onUploadClick, showUpload }:
             <button
               type="button"
               className="docrow-name"
-              title="Podgląd"
+              title={t(locale, 'a6_doc_preview')}
               style={{ color: okColor }}
               onClick={() => onPreview(doc)}
             >
@@ -37,8 +38,8 @@ export function DocFileRow({ doc, label, onPreview, onUploadClick, showUpload }:
             <button
               type="button"
               className="iconbtn"
-              title="Pobierz"
-              aria-label={`Pobierz ${doc.name}`}
+              title={t(locale, 'a6_doc_download')}
+              aria-label={tp(locale, 'a6_doc_download_name', { name: doc.name })}
               onClick={(e) => {
                 e.stopPropagation();
                 if (isStoredDoc(doc)) void downloadStoredDocument(doc);
@@ -50,10 +51,10 @@ export function DocFileRow({ doc, label, onPreview, onUploadClick, showUpload }:
           </>
         ) : (
           <>
-            <span style={{ color: 'var(--red)' }}>brak</span>
+            <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_doc_missing')}</span>
             {showUpload && onUploadClick ? (
               <button type="button" className="btn ghost" style={{ marginLeft: 7 }} onClick={onUploadClick}>
-                Wgraj
+                {t(locale, 'a6_doc_upload')}
               </button>
             ) : null}
           </>

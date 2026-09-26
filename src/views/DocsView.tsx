@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
-import { t } from '../i18n/messages';
+import { pctText, t } from '../i18n/messages';
 import type { DocCategory, Document } from '../types';
 import { downloadDocumentsZip } from '../lib/zipDocs';
 import { attachDocumentFile } from '../lib/docFiles';
@@ -68,7 +68,7 @@ export function DocsView() {
               fileRef.current?.click();
             }}
           >
-            Wgraj dokument
+            {t(locale, 'a6_docs_upload')}
           </button>
         ) : null}
         <button
@@ -76,7 +76,7 @@ export function DocsView() {
           className="chipbtn"
           onClick={() => {
             void downloadDocumentsZip(documents, 'WATCH_TOWER_dokumenty_tydzien.zip').then((r) => {
-              useTowerStore.getState().pushToast(`Paczka ZIP · ${r.count} plików`, 'MEDIUM');
+              useTowerStore.getState().pushToast(t(locale, 'a6_docs_zip_toast').replace('{n}', String(r.count)), 'MEDIUM');
             });
           }}
         >
@@ -88,11 +88,11 @@ export function DocsView() {
           <table>
             <thead>
               <tr>
-                <th>Kategoria</th>
-                <th>Kto wgrywa</th>
+                <th>{t(locale, 'a6_docs_th_cat')}</th>
+                <th>{t(locale, 'a6_docs_th_who')}</th>
                 <th>{t(locale, 'docs_requirement')}</th>
                 <th className="num">{t(locale, 'docs_completeness')}</th>
-                <th>Stan</th>
+                <th>{t(locale, 'a6_docs_th_state')}</th>
               </tr>
             </thead>
             <tbody>
@@ -114,7 +114,7 @@ export function DocsView() {
                       {r.n} / {nLoads}
                     </td>
                     <td>
-                      <span className={`pill ${pill}`}>{Math.round(pct * 100)}%</span>
+                      <span className={`pill ${pill}`}>{pctText(locale, pct, 0, `${Math.round(pct * 100)}%`)}</span>
                     </td>
                   </tr>
                 );
@@ -124,7 +124,7 @@ export function DocsView() {
         </div>
 
         <div className="filters" style={{ padding: '9px 13px' }}>
-          <span className="sub">Pliki w vault</span>
+          <span className="sub">{t(locale, 'a6_docs_vault')}</span>
           <div className="spacer" />
           <button
             type="button"
@@ -163,7 +163,7 @@ export function DocsView() {
 
         {driverVault.length > 0 ? (
           <div className="note" data-vault="driver">
-            Vault kierowcy (wgrane z aplikacji):
+            {t(locale, 'a6_docs_driver_vault')}
             <div style={{ marginTop: 6 }}>
               {driverVault.map((d) => (
                 <DocFileRow key={d.id} doc={d} label={docCategoryLabel(d.category, locale)} onPreview={setPreviewDoc} />
@@ -172,8 +172,7 @@ export function DocsView() {
           </div>
         ) : null}
         <div className="note">
-          Polisa OCP Scandinavian Express wygasa 03.10.2026. Przypomnienie wychodzi 14 dni przed terminem,
-          automatycznie.
+          {t(locale, 'a6_docs_ocp_note')}
         </div>
       </div>
       <input
@@ -181,7 +180,7 @@ export function DocsView() {
         type="file"
         accept="image/*,application/pdf"
         className="sronly"
-        aria-label="Wybierz plik dokumentu"
+        aria-label={t(locale, 'a6_docs_pick')}
         onChange={(e) => {
           const f = e.target.files?.[0];
           e.target.value = '';

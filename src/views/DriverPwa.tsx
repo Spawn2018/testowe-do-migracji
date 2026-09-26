@@ -230,10 +230,10 @@ export function DriverPwa() {
           type="button"
           className="btn driver-btn-block"
           disabled={!loadId || busy}
-          title={!loadId ? 'Brak przypisanego transportu — nie można załączyć CMR/POD' : undefined}
+          title={!loadId ? t(locale, 'a6_drv_no_load') : undefined}
           onClick={() => camRef.current?.click()}
         >
-          {busy ? 'Zapisuję dokument…' : `Aparat / plik → ${cat}`}
+          {busy ? t(locale, 'a6_drv_saving') : t(locale, 'a6_drv_cam').replace('{cat}', cat)}
         </button>
         <input
           ref={camRef}
@@ -250,34 +250,34 @@ export function DriverPwa() {
               // ANEKS 3 §2.3: kierowca bez sesji → funkcja Edge driver-photo (token sprawdza baza)
               // PR7: PDF ≤ 10 MB, zdjęcie kompresowane w przeglądarce (1600 px, JPEG 0,75).
               if (isPdfTooBig(f)) {
-                setLastFile(`Błąd: ${t(locale, 'pr7_pdf_too_big').replace('{mb}', (f.size / 1048576).toFixed(1))}`);
+                setLastFile(t(locale, 'a6_drv_err').replace('{msg}', t(locale, 'pr7_pdf_too_big').replace('{mb}', (f.size / 1048576).toFixed(1))));
                 setBusy(false);
                 return;
               }
               void compressImage(f)
                 .then((c) => uploadDriverFile(SUPABASE_URL, SUPABASE_ANON_KEY, token, loadId, cat, c, c.name).then(() => c))
                 .then((c) => setLastFile(`${cat} · ${c.name} (${c.size} B)`))
-                .catch((err: unknown) => setLastFile(`Błąd: ${err instanceof Error ? err.message : String(err)}`))
+                .catch((err: unknown) => setLastFile(t(locale, 'a6_drv_err').replace('{msg}', err instanceof Error ? err.message : String(err))))
                 .finally(() => setBusy(false));
               return;
             }
             // BK4: tryb Supabase → prywatny koszyk Storage; demo → pamięć sesji (bez localStorage).
             void attachDocumentFile(f, loadId, cat, { driverToken: token }).then((ok) => {
-              setLastFile(ok ? `${cat} · ${f.name} (${f.size} B)` : `Błąd odczytu: ${f.name}`);
+              setLastFile(ok ? `${cat} · ${f.name} (${f.size} B)` : t(locale, 'a6_drv_read_err').replace('{name}', f.name));
               setBusy(false);
             });
           }}
         />
         {lastFile && (
           <div className="driver-attach-note" style={{ borderRadius: 2 }}>
-            Załączono · {lastFile}
+            {t(locale, 'a6_drv_attached').replace('{file}', lastFile)}
           </div>
         )}
         {vaultDocs.length > 0 && (
           <div className="panel" style={{ margin: 0 }}>
             <header className="panel-hd">
-              <h2 style={{ fontSize: 16 }}>Dokumenty · {load?.code}</h2>
-              <span className="sub">vault kierowcy — podgląd / pobierz</span>
+              <h2 style={{ fontSize: 16 }}>{t(locale, 'a6_drv_docs').replace('{code}', load?.code ?? '')}</h2>
+              <span className="sub">{t(locale, 'a6_drv_vault')}</span>
             </header>
             <div className="panel-bd">
               {vaultDocs.map((d) => (

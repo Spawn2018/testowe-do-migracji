@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useTowerStore } from '../../store/useTowerStore'
 import { navForRole, type NavKey } from '../../lib/permissions'
-import { navLabel } from '../../i18n/messages'
+import { navLabel, t } from '../../i18n/messages'
 import { ClaudeIcon, type IconKey } from './ClaudeIcon'
 
 /** Claude v2.0 SVG icons 1:1 */
@@ -118,7 +118,7 @@ export function Nav() {
   }
 
   return (
-    <nav aria-label="Menu główne" aria-expanded={!navCollapsed}>
+    <nav aria-label={t(locale, 'a6_nav_menu')} aria-expanded={!navCollapsed}>
       {rows.map((row, i) => {
         if (row.kind === 'sep') {
           return navCollapsed ? null : <div key={`sep-${i}`} className="sep" />
@@ -151,7 +151,7 @@ export function Nav() {
         style={{ margin: '0 auto 8px' }}
         onClick={() => setNavCollapsed(!navCollapsed)}
         aria-expanded={!navCollapsed}
-        title={navCollapsed ? 'Rozwiń' : 'Zwiń'}
+        title={navCollapsed ? t(locale, 'a6_nav_expand') : t(locale, 'a6_nav_collapse')}
       >
         {navCollapsed ? '»' : '«'}
       </button>

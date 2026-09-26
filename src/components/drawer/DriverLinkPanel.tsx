@@ -5,11 +5,14 @@
  */
 import { useState } from 'react';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
+import { useTowerStore } from '../../store/useTowerStore';
+import { t } from '../../i18n/messages';
 
 export function DriverLinkPanel({ loadId }: { loadId: string }) {
   const [link, setLink] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const locale = useTowerStore((s) => s.locale);
   const rpc = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED
     ? async (fn: 'issue_driver_token' | 'revoke_driver_token') => {
         const { getSupabase } = await import('../../auth/client');
@@ -18,7 +21,7 @@ export function DriverLinkPanel({ loadId }: { loadId: string }) {
         if (r.error) throw new Error(r.error.message);
         return r.data as unknown;
       }
-    : async (): Promise<unknown> => { throw new Error('Tryb demo — brak bazy'); };
+    : async (): Promise<unknown> => { throw new Error(t(locale, 'a6_dl_demo')); };
   const run = (fn: 'issue_driver_token' | 'revoke_driver_token') => {
     setBusy(true);
     setNote(null);
@@ -27,10 +30,10 @@ export function DriverLinkPanel({ loadId }: { loadId: string }) {
         if (fn === 'issue_driver_token') {
           const url = `${window.location.origin}${window.location.pathname}#/driver/${String(data)}`;
           setLink(url);
-          setNote('Nowy link — poprzedni przestał działać. Ważny do 24 h po rozładunku, najwyżej 14 dni.');
+          setNote(t(locale, 'a6_dl_new'));
         } else {
           setLink(null);
-          setNote(`Odwołano linków: ${String(data)}`);
+          setNote(t(locale, 'a6_dl_revoked').replace('{n}', String(data)));
         }
       })
       .catch((e: unknown) => setNote(e instanceof Error ? e.message : String(e)))
@@ -38,13 +41,13 @@ export function DriverLinkPanel({ loadId }: { loadId: string }) {
   };
   return (
     <div data-driver-link>
-      <h4 className="sec" style={{ marginTop: 18 }}>Link dla kierowcy</h4>
+      <h4 className="sec" style={{ marginTop: 18 }}>{t(locale, 'a6_dl_h')}</h4>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
         <button type="button" className="btn" disabled={busy} onClick={() => run('issue_driver_token')}>
-          Wygeneruj nowy link
+          {t(locale, 'a6_dl_gen')}
         </button>
         <button type="button" className="btn ghost" disabled={busy} onClick={() => run('revoke_driver_token')}>
-          Odwołaj link
+          {t(locale, 'a6_dl_revoke')}
         </button>
       </div>
       {link && (

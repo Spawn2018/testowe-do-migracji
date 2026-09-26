@@ -3,7 +3,7 @@ import { useTowerStore } from '../store/useTowerStore';
 import { filterLoads } from '../lib/selectors';
 import { StatusPill } from '../components/ui/StatusPill';
 import { CorridorMap } from '../components/map/LazyCorridorMap';
-import { t } from '../i18n/messages';
+import { t, tp } from '../i18n/messages';
 import { fetchSituations } from '../lib/trafikverket';
 import { trafikverketShortLabel } from '../lib/demoLabel';
 import { formatEtaBodenCompact } from '../lib/time';
@@ -172,23 +172,23 @@ export function MapView() {
               aria-pressed={timing === 'all'}
               onClick={() => setTiming('all')}
             >
-              Wszystkie · {baseList.length}
+              {tp(locale, 'a6_map_all', { n: String(baseList.length) })}
             </button>
             <button
               type="button"
               className="chipbtn"
               aria-pressed={timing === 'ontime'}
               onClick={() => setTiming(timing === 'ontime' ? 'all' : 'ontime')}
-              title="Dostawy w wymaganym oknie dzień/godzina"
+              title={t(locale, 'a6_map_ontime_title')}
             >
-              Terminowe · {ontimeCount}
+              {tp(locale, 'a6_map_ontime', { n: String(ontimeCount) })}
             </button>
             <button
               type="button"
               className="chipbtn"
               aria-pressed={timing === 'late'}
               onClick={() => setTiming(timing === 'late' ? 'all' : 'late')}
-              title="Dostawy po wymaganym oknie dzień/godzina"
+              title={t(locale, 'a6_map_late_title')}
             >
               {t(locale, 'map_late')} · {lateCount}
             </button>
@@ -275,11 +275,11 @@ export function MapView() {
       </div>
 
       <div className="note">
-        {t(locale, 'map_note')} Trafikverket E4:{' '}
-        <b>{trafikverketShortLabel(tvMode, showDemoMarks)}</b>
+        {t(locale, 'map_note')} {t(locale, 'a6_map_tv')}{' '}
+        <b>{trafikverketShortLabel(tvMode, showDemoMarks, locale)}</b>
         {' · '}
-        AIS:{' '}
-        <b>{aisMode === 'live' ? t(locale, 'map_ais_live') : 'seed'}</b>
+        {t(locale, 'a6_map_ais')}{' '}
+        <b>{aisMode === 'live' ? t(locale, 'map_ais_live') : t(locale, 'a6_demo_seed')}</b>
         {' · '}
         {t(locale, 'map_gps_note')}</div>
     </div>

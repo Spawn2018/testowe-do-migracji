@@ -1,8 +1,14 @@
 import { lazy, Suspense, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
-import type { BafParams, FactoringOffer, RateRule } from '../types';
+import type { BafParams, FactoringOffer, Locale, RateRule } from '../types';
 import { geofenceDisplayName, geofenceTypeLabel, workflowDisplayName } from '../lib/enumLabels';
-import { t } from '../i18n/messages';
+import { hasKey, t } from '../i18n/messages';
+
+/** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */
+function savedText(locale: Locale, code: string): string {
+  const k = `a6_saved_${code.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l')}`;
+  return hasKey(locale, k) ? t(locale, k) : code;
+}
 import { DemoMark } from '../components/ui/DemoMark';
 import { DEMO_FX_META } from '../lib/money/demoFx';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
@@ -15,9 +21,9 @@ const MyDevices = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
   { key: 'indexSource', labelKey: 'baf_index', type: 'text' },
-  { key: 'baseValue', labelKey: 'baf_base', type: 'number', step: '0.01', suffix: 'SEK/l' },
+  { key: 'baseValue', labelKey: 'baf_base', type: 'number', step: '0.01', suffix: 'a6_unit_sek_l' },
   { key: 'baseDate', labelKey: 'baf_base_date', type: 'text' },
-  { key: 'currentValue', labelKey: 'baf_current', type: 'number', step: '0.01', suffix: 'SEK/l' },
+  { key: 'currentValue', labelKey: 'baf_current', type: 'number', step: '0.01', suffix: 'a6_unit_sek_l' },
   { key: 'valueDate', labelKey: 'baf_value_date', type: 'text' },
   { key: 'fuelShare', labelKey: 'fin_fuel_share', type: 'number', step: '0.01', suffix: '%' },
   { key: 'triggerThreshold', labelKey: 'baf_trigger', type: 'number', step: '0.01', suffix: '%' },
@@ -95,13 +101,13 @@ export function OptionsView() {
   return (
     <div className="options-page">
       <header className="options-title">
-        <div><div className="eyebrow">HHL · ADMIN</div><h1>{t(locale, "opt_title")}</h1><p>{t(locale, 'opt_subtitle')}</p></div>
-        {saved ? <span className="pill p-go">{t(locale, "opt_saved")} · {saved}</span> : null}
+        <div><div className="eyebrow">{t(locale, 'a6_opt_eyebrow')}</div><h1>{t(locale, "opt_title")}</h1><p>{t(locale, 'opt_subtitle')}</p></div>
+        {saved ? <span className="pill p-go">{t(locale, "opt_saved")} · {savedText(locale, saved)}</span> : null}
       </header>
 
       <div className="options-grid">
-        <section className="panel option-panel option-wide pricing-panel" data-deur-exempt="rate-card-source" title="D-EUR-T: cennik źródłowy w EUR (wyjątek, M4)">
-          <header className="panel-hd"><h2>{t(locale, "opt_rates_h2")}</h2><span className="sub">{`${t(locale, "opt_rates_sub")} · EUR`}</span><span className="panel-mark">{t(locale, "opt_rates_mark")}</span><DemoMark /></header>
+        <section className="panel option-panel option-wide pricing-panel" data-deur-exempt="rate-card-source" title={t(locale, 'a6_opt_deur_rates')}>
+          <header className="panel-hd"><h2>{t(locale, "opt_rates_h2")}</h2><span className="sub">{`${t(locale, "opt_rates_sub")} · ${t(locale, 'a6_cur_eur')}`}</span><span className="panel-mark">{t(locale, "opt_rates_mark")}</span><DemoMark /></header>
           <div className="panel-bd">
             <div className="rate-grid">
               <RateEditor side="COST" rules={rateCost} currency="EUR" locale={locale} onChange={(id, value) => updateRate('COST', id, value)} onSave={() => saveMark('cennik')} />
@@ -111,12 +117,12 @@ export function OptionsView() {
           </div>
         </section>
 
-        <section className="panel option-panel option-wide fuel-panel" data-deur-exempt="fuel-index" title="D-EUR-T: indeks paliwowy (wyjątek)">
+        <section className="panel option-panel option-wide fuel-panel" data-deur-exempt="fuel-index" title={t(locale, 'a6_opt_deur_fuel')}>
           <header className="panel-hd"><h2>{t(locale, "opt_fuel_h2")}</h2><span className="sub">{t(locale, 'opt_fuel_sub')} · {t(locale, 'opt_baf_facade_mark')}</span><span className="panel-mark">{t(locale, "opt_fuel_mark")}</span><DemoMark /></header>
           <div className="panel-bd">
             <div className="fuel-grid">
-              <div><h4 className="sec">{t(locale, "opt_index_read")}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(0, 6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} readOnly disabled title={t(locale, 'opt_baf_facade_title')} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{field.suffix}</span> : null}</div></dd></div>)}</dl></div>
-              <div><h4 className="sec">{t(locale, "opt_billing_rules")}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} readOnly disabled title={t(locale, 'opt_baf_facade_title')} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{field.suffix}</span> : null}</div></dd></div>)}</dl></div>
+              <div><h4 className="sec">{t(locale, "opt_index_read")}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(0, 6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} readOnly disabled title={t(locale, 'opt_baf_facade_title')} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{t(locale, field.suffix)}</span> : null}</div></dd></div>)}</dl></div>
+              <div><h4 className="sec">{t(locale, "opt_billing_rules")}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} readOnly disabled title={t(locale, 'opt_baf_facade_title')} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{t(locale, field.suffix)}</span> : null}</div></dd></div>)}</dl></div>
             </div>
             <div className="note option-note" data-facade="baf-options">{t(locale, 'opt_baf_facade_note')}</div>
           </div>

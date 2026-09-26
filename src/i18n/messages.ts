@@ -3,6 +3,7 @@ import type { NavKey } from '../lib/permissions';
 import { D19_EXTRA } from './d19Extra';
 import { ETAP4 } from './etap4';
 import { RISK_I18N } from './risks';
+import { UI6_I18N } from './ui6';
 
 type Dict = Record<string, string>;
 
@@ -381,13 +382,42 @@ const sv: Dict = {
 
 /** PL-T (ANEKS 3 §3) — pełne słowniki do testu pisowni. */
 export const I18N_ALL: Record<Locale, Dict> = {
-  pl: { ...pl, ...D19_EXTRA.pl, ...ETAP4.pl, ...RISK_I18N.pl },
-  en: { ...en, ...D19_EXTRA.en, ...ETAP4.en, ...RISK_I18N.en },
-  sv: { ...sv, ...D19_EXTRA.sv, ...ETAP4.sv, ...RISK_I18N.sv },
+  pl: { ...pl, ...D19_EXTRA.pl, ...ETAP4.pl, ...RISK_I18N.pl, ...UI6_I18N.pl },
+  en: { ...en, ...D19_EXTRA.en, ...ETAP4.en, ...RISK_I18N.en, ...UI6_I18N.en },
+  sv: { ...sv, ...D19_EXTRA.sv, ...ETAP4.sv, ...RISK_I18N.sv, ...UI6_I18N.sv },
 };
 
+/**
+ * A6-T2 — pseudo-lokalizacja (test): build z VITE_PSEUDO=1 i adres z `pseudo=1` → każda wartość słownika w ⟦…⟧.
+ * Tekst widoczny bez znaczników = napis poza słownikiem (scripts/pseudo-l10n.mjs). W zwykłym buildzie wyłączone.
+ */
+const PSEUDO: boolean = (() => {
+  try {
+    return import.meta.env?.VITE_PSEUDO === '1' && typeof window !== 'undefined'
+      && /[?&]pseudo=1(?:&|$)/.test(window.location.hash + window.location.search);
+  } catch { return false; }
+})();
+
 export function t(locale: Locale, key: string): string {
+  const v = I18N_ALL[locale][key] ?? I18N_ALL.en[key] ?? key;
+  return PSEUDO && v && hasKey(locale, key) ? `⟦${v}⟧` : v;
+}
+
+/** Wartość słownika bez znaczników pseudo-lokalizacji (porównania, klucze danych). */
+export function tRaw(locale: Locale, key: string): string {
   return I18N_ALL[locale][key] ?? I18N_ALL.en[key] ?? key;
+}
+
+/**
+ * A6-T2 — wpis słownika jako Record<Locale, string> (dawne mapy { pl, en, sv } w kodzie).
+ * Gettery wołają t(), więc tekst pochodzi ze słownika (i dostaje znaczniki w teście pseudo-lokalizacji).
+ */
+export function dictEntry(key: string): Record<Locale, string> {
+  return {
+    get pl() { return t('pl', key); },
+    get en() { return t('en', key); },
+    get sv() { return t('sv', key); },
+  };
 }
 
 /** Intl dla aktywnego języka (A6-T3). */
@@ -398,6 +428,31 @@ export function hasKey(locale: Locale, key: string): boolean {
 }
 
 export type TParams = Record<string, unknown>;
+
+/** A6-T3 — liczba w aktywnym języku (Intl), stała liczba miejsc po przecinku. */
+export function fmtNum(locale: Locale, n: number, fd = 1): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], { minimumFractionDigits: fd, maximumFractionDigits: fd }).format(n);
+}
+
+/** A6-T3 — jak fmtNum, ale PL zostaje w dotychczasowej postaci (wzorzec 840: PL 0 zmian). */
+export function fmtNumKeepPl(locale: Locale, n: number, fd: number, plLegacy: string): string {
+  return locale === 'pl' ? plLegacy : fmtNum(locale, n, fd);
+}
+
+/**
+ * A6-T3 — procent z zaokrągleniem jak dotąd (toFixed na ratio×100), zapis wg języka: EN 15.7%, PL 15,7%, SV 15,7 %.
+ * `plLegacy` — dotychczasowy tekst PL (gdy inny niż Intl), żeby PL został bez zmian.
+ */
+export function pctText(locale: Locale, ratio: number, fd = 1, plLegacy?: string): string {
+  const v = Number((ratio * 100).toFixed(fd));
+  if (locale === 'pl') return plLegacy ?? `${v.toFixed(fd).replace('.', ',')}%`;
+  return new Intl.NumberFormat(INTL_LOCALE[locale], { style: 'percent', minimumFractionDigits: fd, maximumFractionDigits: fd }).format(v / 100);
+}
+
+/** A6-T3 — procent w aktywnym języku: EN 15.7%, PL 15,7%, SV 15,7 %. */
+export function fmtPct(locale: Locale, ratio: number, fd = 1): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], { style: 'percent', minimumFractionDigits: fd, maximumFractionDigits: fd }).format(ratio);
+}
 
 /**
  * A6-T1 — tekst ze słownika z parametrami: `{nazwa}`; `{nazwa:1}` = liczba z tyloma miejscami po przecinku;

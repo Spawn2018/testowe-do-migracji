@@ -6,6 +6,7 @@
  * po stronie aplikacji (tryb demo + natychmiastowy komunikat) oraz tłumaczenie błędów bazy.
  */
 import type { Load, LoadStatus, Locale, Notification, Risk, RoleId } from '../types';
+import { dictEntry } from '../i18n/messages';
 
 export type OrderSide = 'HHL' | 'CARRIER';
 
@@ -41,56 +42,16 @@ export function orderNumberGate(load: Pick<Load, 'hhlOrderNo' | 'carrierOrderNo'
 
 type Msg = Record<Locale, string>;
 const MSG = {
-  NO_HHL_ORDER: {
-    pl: 'Nie można oznaczyć jako gotowy — brak numeru zlecenia HHL. Numer wpisuje HHL w szufladzie transportu.',
-    en: 'Cannot mark as ready — the HHL order number is missing. HHL enters it in the load drawer.',
-    sv: 'Kan inte markeras som klar — HHL:s ordernummer saknas. HHL anger det i transportens panel.',
-  },
-  NO_CARRIER_ORDER: {
-    pl: 'Załadunek niemożliwy — brak numeru zlecenia przewoźnika. Numer wpisuje przewoźnik w szufladzie transportu.',
-    en: 'Loading not possible — the carrier order number is missing. The carrier enters it in the load drawer.',
-    sv: 'Lastning inte möjlig — transportörens ordernummer saknas. Transportören anger det i transportens panel.',
-  },
-  CARRIER_ONLY: {
-    pl: 'Numer zlecenia przewoźnika wpisuje wyłącznie przewoźnik.',
-    en: 'Only the carrier can enter the carrier order number.',
-    sv: 'Endast transportören kan ange transportörens ordernummer.',
-  },
-  HHL_ONLY: {
-    pl: 'Numer zlecenia HHL wpisuje wyłącznie HHL.',
-    en: 'Only HHL can enter the HHL order number.',
-    sv: 'Endast HHL kan ange HHL:s ordernummer.',
-  },
-  PLAN_WINDOWS: {
-    pl: 'Okna planowe załadunku i dostawy zmienia wyłącznie HHL — plan pochodzi z harmonogramu KSH.',
-    en: 'Only HHL can change the planned loading and delivery windows — the plan comes from the KSH schedule.',
-    sv: 'Endast HHL kan ändra planerade lastnings- och leveransfönster — planen kommer från KSH:s schema.',
-  },
-  DELIVERY_FROZEN: {
-    pl: 'Data rozładunku zamrożona — transport jest na fakturze.',
-    en: 'Unloading date frozen — the load is on an invoice.',
-    sv: 'Lossningsdatum låst — transporten finns på en faktura.',
-  },
-  NO_BACKWARD: {
-    pl: 'Status nie może się cofnąć.',
-    en: 'The status cannot move backwards.',
-    sv: 'Statusen kan inte gå bakåt.',
-  },
-  UNLOADED_NEEDS_DATE: {
-    pl: 'Rozładunek wymaga daty rozładunku — to data realizacji usługi.',
-    en: 'Unloading requires the unloading date — it is the service date.',
-    sv: 'Lossning kräver lossningsdatum — det är tjänstens datum.',
-  },
-  SAILING_LOCKED: {
-    pl: 'Rejs po wypłynięciu może zmienić wyłącznie HHL.',
-    en: 'After departure only HHL can change the sailing.',
-    sv: 'Efter avgång kan endast HHL ändra avgången.',
-  },
-  DUPLICATE: {
-    pl: 'Ten numer zlecenia jest już użyty w innym transporcie.',
-    en: 'This order number is already used on another load.',
-    sv: 'Detta ordernummer används redan på en annan transport.',
-  },
+  NO_HHL_ORDER: dictEntry('a6_msg_no_hhl_order'),
+  NO_CARRIER_ORDER: dictEntry('a6_msg_no_carrier_order'),
+  CARRIER_ONLY: dictEntry('a6_msg_carrier_only'),
+  HHL_ONLY: dictEntry('a6_msg_hhl_only'),
+  PLAN_WINDOWS: dictEntry('a6_msg_plan_windows'),
+  DELIVERY_FROZEN: dictEntry('a6_msg_delivery_frozen'),
+  NO_BACKWARD: dictEntry('a6_msg_no_backward'),
+  UNLOADED_NEEDS_DATE: dictEntry('a6_msg_unloaded_needs_date'),
+  SAILING_LOCKED: dictEntry('a6_msg_sailing_locked'),
+  DUPLICATE: dictEntry('a6_msg_duplicate'),
 } satisfies Record<string, Msg>;
 
 export function orderGateMessage(reason: OrderGateReason, locale: Locale): string {

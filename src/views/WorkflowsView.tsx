@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
-import { t } from '../i18n/messages';
+import { t, tp } from '../i18n/messages';
 import { workflowDisplayName } from '../lib/enumLabels';
 
 
@@ -36,7 +36,7 @@ export function WorkflowsView() {
     if (!name) return;
     createWorkflow({
       name,
-      description: `${triggerLabel(draft.trigger)} → ${draft.actions.split(/[\n,]/).map((a) => a.trim()).filter(Boolean).join(', ') || 'bez akcji'}`,
+      description: `${triggerLabel(draft.trigger)} → ${draft.actions.split(/[\n,]/).map((a) => a.trim()).filter(Boolean).join(', ') || t(locale, 'a6_wf_no_actions')}`,
       trigger: draft.trigger,
       condition: draft.condition.trim() || 'true',
       actions: draft.actions.split(/[\n,]/).map((a) => a.trim()).filter(Boolean),
@@ -56,10 +56,10 @@ export function WorkflowsView() {
       <div className="panel-bd flush">
         {workflows.map((w) => (
           <div key={w.id} className="wf">
-            <button type="button" className="sw" aria-pressed={w.enabled} aria-label={`${w.enabled ? 'Wyłącz' : 'Włącz'} regułę ${w.name}`} onClick={() => toggleWorkflow(w.id)} />
-            <div className="wf-copy"><b data-content>{workflowDisplayName(w, locale)}</b><span className="rule" data-content>{w.description || `${triggerLabel(w.trigger)} → ${w.actions.join(', ')}`}</span><span className="wf-meta" data-content>{triggerLabel(w.trigger)} · warunek: {w.condition}</span></div>
+            <button type="button" className="sw" aria-pressed={w.enabled} aria-label={tp(locale, w.enabled ? 'a6_wf_toggle_off' : 'a6_wf_toggle_on', { name: workflowDisplayName(w, locale) })} onClick={() => toggleWorkflow(w.id)} />
+            <div className="wf-copy"><b data-content>{workflowDisplayName(w, locale)}</b><span className="rule" data-content>{w.description || `${triggerLabel(w.trigger)} → ${w.actions.join(', ')}`}</span><span className="wf-meta" data-content>{triggerLabel(w.trigger)}{tp(locale, 'a6_wf_cond', { c: w.condition })}</span></div>
             <span className="wf-count">{w.runCount}× {t(locale, 'wf_runs')}</span>
-            <button type="button" className="chipbtn wf-run" onClick={() => runWorkflowNow(w.id)}>Uruchom</button>
+            <button type="button" className="chipbtn wf-run" onClick={() => runWorkflowNow(w.id)}>{t(locale, 'a6_wf_run')}</button>
           </div>
         ))}
         <div className="note">{t(locale, 'wf_note')}</div>
@@ -67,14 +67,14 @@ export function WorkflowsView() {
 
       {creating ? <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && setCreating(false)}>
         <section className="panel wf-creator" role="dialog" aria-modal="true" aria-labelledby="wf-create-title">
-          <header className="panel-hd"><div><h2 id="wf-create-title">{t(locale, 'wf_new')}</h2><span className="sub">Automatyzacja · formularz</span></div><div className="spacer" /><button type="button" className="iconbtn" aria-label="Zamknij" onClick={() => setCreating(false)}>×</button></header>
+          <header className="panel-hd"><div><h2 id="wf-create-title">{t(locale, 'wf_new')}</h2><span className="sub">{t(locale, 'a6_wf_form_sub')}</span></div><div className="spacer" /><button type="button" className="iconbtn" aria-label={t(locale, 'a6_wf_close')} onClick={() => setCreating(false)}>×</button></header>
           <form className="panel-bd" onSubmit={save}>
-            <label className="form-field"><span>Nazwa reguły</span><input autoFocus required className="input" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="np. Brak potwierdzenia awizacji" /></label>
-            <label className="form-field"><span>Wyzwalacz</span><select className="input" value={draft.trigger} onChange={(e) => setDraft({ ...draft, trigger: e.target.value })}>{TRIGGER_KEYS.map(([value, labelKey]) => <option key={value} value={value}>{t(locale, labelKey)}</option>)}</select></label>
-            <label className="form-field"><span>Warunek <small>tekst / JSONLogic</small></span><textarea className="input" value={draft.condition} onChange={(e) => setDraft({ ...draft, condition: e.target.value })} placeholder={'np. {">=":[{"var":"hours_to_load"},48]'} /></label>
-            <label className="form-field"><span>Akcje <small>po przecinku lub każda w nowej linii</small></span><textarea className="input" value={draft.actions} onChange={(e) => setDraft({ ...draft, actions: e.target.value })} placeholder="notify_hhl, create_task" /></label>
-            <label className="switchline creator-enabled"><input type="checkbox" checked={draft.enabled} onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })} /><span>Reguła aktywna po zapisaniu</span></label>
-            <div className="creator-actions"><button type="submit" className="btn">Zapisz regułę</button><button type="button" className="btn ghost" onClick={() => setCreating(false)}>Anuluj</button></div>
+            <label className="form-field"><span>{t(locale, 'a6_wf_name')}</span><input autoFocus required className="input" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder={t(locale, 'a6_wf_name_ph')} /></label>
+            <label className="form-field"><span>{t(locale, 'a6_wf_trigger')}</span><select className="input" value={draft.trigger} onChange={(e) => setDraft({ ...draft, trigger: e.target.value })}>{TRIGGER_KEYS.map(([value, labelKey]) => <option key={value} value={value}>{t(locale, labelKey)}</option>)}</select></label>
+            <label className="form-field"><span>{t(locale, 'a6_wf_condition')} <small>{t(locale, 'a6_wf_condition_hint')}</small></span><textarea className="input" value={draft.condition} onChange={(e) => setDraft({ ...draft, condition: e.target.value })} placeholder={t(locale, 'a6_wf_condition_ph')} /></label>
+            <label className="form-field"><span>{t(locale, 'a6_wf_actions')} <small>{t(locale, 'a6_wf_actions_hint')}</small></span><textarea className="input" value={draft.actions} onChange={(e) => setDraft({ ...draft, actions: e.target.value })} placeholder="notify_hhl, create_task" /></label>
+            <label className="switchline creator-enabled"><input type="checkbox" checked={draft.enabled} onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })} /><span>{t(locale, 'a6_wf_enabled')}</span></label>
+            <div className="creator-actions"><button type="submit" className="btn">{t(locale, 'a6_wf_save')}</button><button type="button" className="btn ghost" onClick={() => setCreating(false)}>{t(locale, 'a6_wf_cancel')}</button></div>
           </form>
         </section>
       </div> : null}

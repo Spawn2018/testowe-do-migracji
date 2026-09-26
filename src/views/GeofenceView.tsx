@@ -3,7 +3,7 @@ import { geofenceDisplayName, geofenceTypeLabel } from '../lib/enumLabels';
 import { useTowerStore } from '../store/useTowerStore';
 import { canEditGeofence } from '../lib/permissions';
 import type { Geofence, GeofenceType } from '../types';
-import { t } from '../i18n/messages';
+import { t, tp } from '../i18n/messages';
 
 const TYPE_PILL: Record<string, string> = {
   SITE: 'p-go',
@@ -28,7 +28,7 @@ export function GeofenceView() {
     <div className="panel section-card page-sections" data-page="geofence" style={{ margin: 12 }}>
       <header className="panel-hd">
         <h2>{t(locale, 'nav_geo')}</h2>
-        <span className="sub">{geofences.length} stref · rysowane na mapie</span>
+        <span className="sub">{tp(locale, 'a6_geo_sub', { n: String(geofences.length) })}</span>
         <div className="spacer" />
         {canEdit ? (
           <button
@@ -37,7 +37,7 @@ export function GeofenceView() {
             onClick={() =>
               setEdit({
                 id: `gf-new-${Date.now()}`,
-                name: 'Nowa strefa',
+                name: t(locale, 'a6_geo_new'),
                 type: 'CHECKPOINT',
                 shape: 'circle',
                 lat: 60,
@@ -54,7 +54,7 @@ export function GeofenceView() {
               })
             }
           >
-            Nowa strefa
+            {t(locale, 'a6_geo_new')}
           </button>
         ) : null}
       </header>
@@ -63,13 +63,13 @@ export function GeofenceView() {
           <table>
             <thead>
               <tr>
-                <th>Nazwa</th>
+                <th>{t(locale, 'a6_geo_name')}</th>
                 <th>{t(locale, 'sched_col_type')}</th>
                 <th className="num">{t(locale, 'geo_radius')}</th>
                 <th className="num">{t(locale, 'geo_dwell')}</th>
-                <th className="num">Histereza</th>
+                <th className="num">{t(locale, 'a6_geo_hyst')}</th>
                 <th className="num">{t(locale, 'geo_samples')}</th>
-                <th>Powiadamia</th>
+                <th>{t(locale, 'a6_geo_notifies')}</th>
               </tr>
             </thead>
             <tbody>
@@ -128,11 +128,11 @@ export function GeofenceView() {
             }}
           >
             <dl className="kv">
-              <dt>Nazwa</dt>
+              <dt>{t(locale, 'a6_geo_name')}</dt>
               <dd>
                 <input name="name" className="input" defaultValue={edit.name} style={{ width: '100%' }} />
               </dd>
-              <dt>Typ</dt>
+              <dt>{t(locale, 'a6_geo_type')}</dt>
               <dd>
                 <select name="type" className="input" defaultValue={edit.type}>
                   {(
@@ -155,7 +155,7 @@ export function GeofenceView() {
               <dd>
                 <input name="radiusM" type="number" className="input" defaultValue={edit.radiusM} />
               </dd>
-              <dt>Histereza (m)</dt>
+              <dt>{t(locale, 'a6_geo_hyst_m')}</dt>
               <dd>
                 <input name="hysteresisM" type="number" className="input" defaultValue={edit.hysteresisM} />
               </dd>

@@ -57,7 +57,7 @@ import { writeThrough } from '../data/registry';
 import { invoicedLoadIds, removalBlock } from '../lib/importRemoval';
 import { getNowIso } from '../lib/frozenNow';
 import { orderEditDeniedMessage, orderGateMessage, orderNoReminders, orderNoRisks, orderNumberGate, type OrderSide } from '../lib/orderNumbers';
-import { t } from '../i18n/messages';
+import { t, tp } from '../i18n/messages';
 import { localDateOf } from '../lib/money/engine';
 import { withMoneyV2 } from '../lib/money/loadMoney';
 import { milestoneAction, type DriverFix } from '../lib/driverTracking';
@@ -591,13 +591,13 @@ export const useTowerStore = create<TowerState>()(
       driverAttachDoc: (token, payload) => {
         const loadId = DRIVER_TOKENS[token];
         if (!loadId) {
-          get().pushToast(`Nieznany token kierowcy: ${token}`, 'HIGH');
+          get().pushToast(tp(get().locale, 'a6_ts_bad_token', { token }), 'HIGH');
           return;
         }
         const load = get().loads.find((l) => l.id === loadId);
         if (!load) {
           get().pushToast(
-            `Token OK (${token}) ale brak ładunku ${loadId} w bazie — import mógł usunąć transport`,
+            tp(get().locale, 'a6_ts_token_noload', { token, loadId }),
             'CRITICAL',
           );
           return;
@@ -611,7 +611,7 @@ export const useTowerStore = create<TowerState>()(
             ? 'POD'
             : 'CMR');
         if (!payload.dataUrl || !String(payload.dataUrl).startsWith('data:')) {
-          get().pushToast('Brak danych pliku — aparat nie zapisał zawartości', 'HIGH', loadId);
+          get().pushToast(t(get().locale, 'a6_ts_no_file'), 'HIGH', loadId);
           return;
         }
         const at = nowIso();
@@ -654,7 +654,7 @@ export const useTowerStore = create<TowerState>()(
             hasDataUrl: true,
           },
         });
-        get().pushToast(`Dokument: ${category} · ${payload.filename}`, 'MEDIUM', loadId);
+        get().pushToast(tp(get().locale, 'a6_ts_doc', { category, file: payload.filename }), 'MEDIUM', loadId);
         get().pushNotification({
           title: `Kierowca · ${category}`,
           body: `${load?.code ?? loadId}: ${payload.filename}`,
@@ -689,7 +689,7 @@ export const useTowerStore = create<TowerState>()(
             const gate = isReadyBlocked(load, get().documents);
             if (gate.blocked) {
               const label = status === 'READY' ? 'READY' : 'Wyjazd';
-              get().pushToast(`${label} zablokowane: ${gate.reason}`, 'CRITICAL', loadId);
+              get().pushToast(tp(get().locale, 'a6_ts_blocked', { label: status === 'READY' ? 'READY' : t(get().locale, 'a6_ts_departure'), reason: gate.reason }), 'CRITICAL', loadId);
               get().appendEvent({
                 loadId,
                 type: 'READY_BLOCKED',
@@ -768,7 +768,7 @@ export const useTowerStore = create<TowerState>()(
           loadId, type: 'ORDER_NO_UPDATED', at: nowIso(), actor: role,
           note: `${side === 'HHL' ? 'Nr zlecenia HHL' : 'Nr zlecenia przewoźnika'}: ${v ?? '—'}`,
         });
-        get().pushToast(v ? `Numer zlecenia zapisany: ${v}` : 'Numer zlecenia usunięty', 'MEDIUM', loadId);
+        get().pushToast(v ? tp(get().locale, 'a6_ts_order_saved', { v }) : t(get().locale, 'a6_ts_order_removed'), 'MEDIUM', loadId);
         return true;
       },
 
@@ -793,7 +793,7 @@ export const useTowerStore = create<TowerState>()(
           actor: role,
           payload: patch as Record<string, unknown>,
         });
-        get().pushToast('Zasoby zapisane', 'MEDIUM', loadId);
+        get().pushToast(t(get().locale, 'a6_ts_res_saved'), 'MEDIUM', loadId);
 
         // Status: RESOURCES_PENDING / Brak auta → DOC_MISSING or READY by permit cover
         const load = get().loads.find((l) => l.id === loadId);
@@ -839,7 +839,7 @@ export const useTowerStore = create<TowerState>()(
           actor: role,
           payload: patch as Record<string, unknown>,
         });
-        get().pushToast('Awizacja zapisana', 'MEDIUM', loadId);
+        get().pushToast(t(get().locale, 'a6_ts_awiz_saved'), 'MEDIUM', loadId);
 
         const load = get().loads.find((l) => l.id === loadId);
         if (!load) return;
@@ -932,9 +932,9 @@ export const useTowerStore = create<TowerState>()(
           payload: { category, hasDataUrl: !!dataUrl, documentId: doc.id },
         });
         if (mismatch) {
-          get().pushToast('Zezwolenie nie pasuje do wymiarów — READY zablokowane', 'CRITICAL', loadId);
+          get().pushToast(t(get().locale, 'a6_ts_permit_mismatch'), 'CRITICAL', loadId);
         } else {
-          get().pushToast(dataUrl ? `Dokument wgrany · ${name}` : 'Dokument dodany', 'MEDIUM', loadId);
+          get().pushToast(dataUrl ? tp(get().locale, 'a6_ts_doc_uploaded', { name }) : t(get().locale, 'a6_ts_doc_added'), 'MEDIUM', loadId);
         }
       },
 
@@ -963,7 +963,7 @@ export const useTowerStore = create<TowerState>()(
           };
         });
         writeThrough({ type: 'geofence.save', geofence: g });
-        get().pushToast(`Strefa zapisana: ${g.name}`, 'MEDIUM');
+        get().pushToast(tp(get().locale, 'a6_ts_zone_saved', { name: g.name }), 'MEDIUM');
         const roles: RoleId[] = [];
         if (g.notifyHhl) roles.push('HHL');
         if (g.notifyKsh) roles.push('KSH');
@@ -1005,7 +1005,7 @@ export const useTowerStore = create<TowerState>()(
           note: rateNote ?? 'SCX + cennik',
           payload: { carrierId: 'org-scx', rateNote: rateNote ?? null },
         });
-        get().pushToast('Przypisano SCX i cennik', 'MEDIUM', loadId);
+        get().pushToast(t(get().locale, 'a6_ts_scx_assigned'), 'MEDIUM', loadId);
         get().pushNotification({
           title: 'Przypisano SCX',
           body: rateNote ?? 'HHL przypisał SCX',
@@ -1066,7 +1066,7 @@ export const useTowerStore = create<TowerState>()(
           const wf = get().workflows.find((w) => w.id === 'wf-1' && w.enabled);
           if (wf) get().runWorkflowNow(wf.id);
         }
-        get().pushToast(`Strefa ${g.type}: ${g.name}`, 'MEDIUM', loadId);
+        get().pushToast(tp(get().locale, 'a6_ts_zone_event', { type: g.type, name: g.name }), 'MEDIUM', loadId);
       },
 
       toggleWorkflow: (id) => {
@@ -1079,7 +1079,7 @@ export const useTowerStore = create<TowerState>()(
         const id = uid('wf');
         const workflow: WorkflowRule = { ...rule, id, runCount: 0 };
         set((s) => ({ workflows: [workflow, ...s.workflows] }));
-        get().pushToast(`Dodano regułę: ${workflow.name}`, 'MEDIUM');
+        get().pushToast(tp(get().locale, 'a6_ts_rule_added', { name: workflow.name }), 'MEDIUM');
         return id;
       },
 
@@ -1087,7 +1087,7 @@ export const useTowerStore = create<TowerState>()(
         set((s) => ({
           workflows: s.workflows.map((w) => (w.id === id ? { ...w, ...patch } : w)),
         }));
-        get().pushToast('Workflow zaktualizowany', 'MEDIUM');
+        get().pushToast(t(get().locale, 'a6_ts_wf_updated'), 'MEDIUM');
       },
 
       runWorkflowNow: (id) => {
@@ -1115,7 +1115,7 @@ export const useTowerStore = create<TowerState>()(
           notifications: [note, ...s.notifications],
           workflows: s.workflows.map((w) => (w.id === id ? { ...w, runCount: w.runCount + 1 } : w)),
         }));
-        get().pushToast(`Uruchomiono: ${wf.name}`, 'HIGH', run.loadId);
+        get().pushToast(tp(get().locale, 'a6_ts_wf_run', { name: wf.name }), 'HIGH', run.loadId);
         if (id === 'wf-9') {
           const { SEED_SITUATIONS } = require('../lib/trafikverket') as typeof import('../lib/trafikverket');
           const sit =
@@ -1151,18 +1151,18 @@ export const useTowerStore = create<TowerState>()(
         });
         const blockedCount = requested.length - effectiveRemovedIds.length;
         if (blockedCount > 0) {
-          get().pushToast(`Import: ${blockedCount} pozycji nie do anulowania (od załadunku albo na fakturze)`, 'HIGH');
+          get().pushToast(tp(get().locale, 'a6_ts_imp_blocked', { n: blockedCount }), 'HIGH');
         }
         if (removedIds.length > 0 && !allowRemovals) {
           get().pushToast(
-            `Import: pominięto usuwanie ${removedIds.length} pozycji (tryb dopisywania)`,
+            tp(get().locale, 'a6_ts_imp_skip', { n: removedIds.length }),
             'MEDIUM',
           );
         }
         // CRITICAL integrity: never mutate when dry-run accepted === 0
         if (accepted === 0) {
           get().pushToast(
-            'Import odrzucony — brak poprawnych wierszy, baza nietknięta',
+            t(get().locale, 'a6_ts_imp_rejected'),
             'CRITICAL',
           );
           return;
@@ -1175,7 +1175,7 @@ export const useTowerStore = create<TowerState>()(
           removedIds.length > 0
         ) {
           get().pushToast(
-            'Import odrzucony — brak poprawnych wierszy, baza nietknięta',
+            t(get().locale, 'a6_ts_imp_rejected'),
             'CRITICAL',
           );
           return;
@@ -1287,7 +1287,7 @@ export const useTowerStore = create<TowerState>()(
             actor: 'import',
             note: 'Zmiana krytycznej daty na awizowanym — powiadom SCX',
           });
-          get().pushToast('Krytyczna data → powiadomienie SCX', 'HIGH', ch.id);
+          get().pushToast(t(get().locale, 'a6_ts_crit_date'), 'HIGH', ch.id);
         }
         get().appendEvent({
           loadId: get().loads[0]?.id ?? 'load-001',
@@ -1296,12 +1296,12 @@ export const useTowerStore = create<TowerState>()(
           actor: 'KSH',
           note: filename,
         });
-        get().pushToast(`Import harmonogramu · ${filename}`, 'MEDIUM');
+        get().pushToast(tp(get().locale, 'a6_ts_imp_sched', { filename }), 'MEDIUM');
       },
 
       updateFactoringOffer: (patch) => {
         set((s) => ({ factoringOffer: { ...s.factoringOffer, ...patch } }));
-        get().pushToast('Oferta factoringu zaktualizowana', 'MEDIUM');
+        get().pushToast(t(get().locale, 'a6_ts_fact_updated'), 'MEDIUM');
       },
 
       submitInvoice: (weekLabel, loadIds, billedAdjust, factoringSelected = false) => {
@@ -1335,8 +1335,8 @@ export const useTowerStore = create<TowerState>()(
         set((s) => ({ invoices: [inv, ...s.invoices] }));
         get().pushToast(
           useFactoring
-            ? `Faktura ${weekLabel} wysłana (factoring · net ${factoring!.netPayout})`
-            : `Faktura ${weekLabel} wysłana`,
+            ? tp(get().locale, 'a6_ts_inv_sent_f', { week: weekLabel, net: factoring!.netPayout })
+            : tp(get().locale, 'a6_ts_inv_sent', { week: weekLabel }),
           'MEDIUM',
         );
       },
@@ -1362,7 +1362,7 @@ export const useTowerStore = create<TowerState>()(
             return { ...inv, status: action };
           }),
         }));
-        get().pushToast(action === 'DISPUTED' ? 'Faktura w sporze' : 'Faktura zaakceptowana', action === 'DISPUTED' ? 'HIGH' : 'MEDIUM');
+        get().pushToast(t(get().locale, action === 'DISPUTED' ? 'a6_ts_inv_disputed' : 'a6_ts_inv_accepted'), action === 'DISPUTED' ? 'HIGH' : 'MEDIUM');
       },
 
       addSailing: (d) => {
@@ -1511,7 +1511,7 @@ export const useTowerStore = create<TowerState>()(
       driverMilestone: (token, milestone) => {
         const loadId = DRIVER_TOKENS[token];
         if (!loadId) {
-          get().pushToast(`Nieznany token kierowcy: ${token}`, 'HIGH');
+          get().pushToast(tp(get().locale, 'a6_ts_bad_token', { token }), 'HIGH');
           return;
         }
         /* M9 — STATUSY_AUTOMATYCZNE §6: „Załadowany” = MILESTONE_LOADED (bez zmiany statusu),
@@ -1519,7 +1519,7 @@ export const useTowerStore = create<TowerState>()(
         const act = milestoneAction(milestone);
         if (act.event) get().appendEvent({ loadId, type: act.event, at: nowIso(), actor: 'driver-pwa', note: `Kierowca: ${milestone}` });
         if (act.status) get().setLoadStatus(loadId, act.status, 'driver-pwa', `Milestone ${milestone}`);
-        get().pushToast(`Kierowca: ${milestone} → ${loadId}`, 'MEDIUM', loadId);
+        get().pushToast(tp(get().locale, 'a6_ts_driver_ms', { milestone, loadId }), 'MEDIUM', loadId);
       },
 
       driverReportFix: (token, fix) => {
@@ -1538,12 +1538,12 @@ export const useTowerStore = create<TowerState>()(
       driverSharePosition: (token) => {
         const loadId = DRIVER_TOKENS[token];
         if (!loadId) {
-          get().pushToast(`Nieznany token kierowcy: ${token}`, 'HIGH');
+          get().pushToast(tp(get().locale, 'a6_ts_bad_token', { token }), 'HIGH');
           return;
         }
         if (typeof navigator === 'undefined' || !navigator.geolocation) {
           get().appendEvent({ loadId, type: 'POSITION_SHARE_DENIED', at: nowIso(), actor: 'driver-pwa', note: 'navigator.geolocation niedostępne' });
-          get().pushToast('Geolokalizacja niedostępna w tej przeglądarce', 'HIGH', loadId);
+          get().pushToast(t(get().locale, 'a6_ts_geo_na'), 'HIGH', loadId);
           return;
         }
         navigator.geolocation.getCurrentPosition(
@@ -1555,7 +1555,7 @@ export const useTowerStore = create<TowerState>()(
               speedKmh: c.speed != null ? Math.round(c.speed * 3.6) : null,
               heading: c.heading != null && Number.isFinite(c.heading) ? Math.round(c.heading) : null,
             });
-            get().pushToast(`Pozycja: ${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)}`, 'MEDIUM', loadId);
+            get().pushToast(tp(get().locale, 'a6_ts_pos', { lat: c.latitude.toFixed(4), lng: c.longitude.toFixed(4) }), 'MEDIUM', loadId);
           },
           (err) => {
             const msg =
@@ -1564,7 +1564,7 @@ export const useTowerStore = create<TowerState>()(
                   : err.code === 3 ? 'Timeout geolokalizacji'
                     : err.message || 'Błąd geolokalizacji';
             get().appendEvent({ loadId, type: 'POSITION_SHARE_DENIED', at: nowIso(), actor: 'driver-pwa', note: msg, payload: { code: err.code, message: err.message } });
-            get().pushToast(msg, 'HIGH', loadId);
+            get().pushToast(err.code >= 1 && err.code <= 3 ? t(get().locale, err.code === 1 ? 'a6_ts_geo_denied' : err.code === 2 ? 'a6_ts_geo_unavail' : 'a6_ts_geo_timeout') : msg, 'HIGH', loadId);
           },
           { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
         );
@@ -1615,7 +1615,7 @@ export const useTowerStore = create<TowerState>()(
       applyPlanB: (riskId, optionIndex = 0) => {
         const risk = get().risks.find((r) => r.id === riskId);
         if (!risk?.ferryPlanB?.length) {
-          get().pushToast('Brak opcji Plan B dla tego ryzyka', 'HIGH');
+          get().pushToast(t(get().locale, 'a6_ts_no_planb'), 'HIGH');
           return;
         }
         const idx = Math.max(0, Math.min(optionIndex, risk.ferryPlanB.length - 1));
@@ -1625,7 +1625,7 @@ export const useTowerStore = create<TowerState>()(
           get().loads.find((l) => l.status === 'ON_FERRY' || l.status === 'AT_PORT')?.id ??
           get().loads.find((l) => l.ferry?.status === 'BOOKED' || l.ferry?.vessel)?.id;
         if (!loadId) {
-          get().pushToast('Plan B: brak transportu do przypisania', 'CRITICAL');
+          get().pushToast(t(get().locale, 'a6_ts_planb_noload'), 'CRITICAL');
           return;
         }
         const at = nowIso();
@@ -1696,7 +1696,7 @@ export const useTowerStore = create<TowerState>()(
           roleScope: ['SCX', 'HHL'],
           href: { view: 'risk', entityId: risk.id, loadId },
         });
-        get().pushToast(`Plan B: ${option}`, 'HIGH', loadId);
+        get().pushToast(tp(get().locale, 'a6_ts_planb', { option }), 'HIGH', loadId);
       },
 
       applySeRouteAlt: (altIndex) => {
@@ -1710,7 +1710,7 @@ export const useTowerStore = create<TowerState>()(
           get().loads.find((l) => l.status === 'IN_TRANSIT_SE' || l.status === 'APPROACHING_SITE')?.id ??
           get().loads.find((l) => l.stage === 'SE_ROAD')?.id;
         if (!loadId) {
-          get().pushToast('Brak transportu SE do przypisania alternatywy', 'HIGH');
+          get().pushToast(t(get().locale, 'a6_ts_alt_noload'), 'HIGH');
           return;
         }
         const at = nowIso();
@@ -1760,7 +1760,7 @@ export const useTowerStore = create<TowerState>()(
           roleScope: ['SCX', 'HHL'],
           href: { view: 'risk', loadId },
         });
-        get().pushToast(`Alternatywa SE: ${alt.title}`, 'MEDIUM', loadId);
+        get().pushToast(tp(get().locale, 'a6_ts_alt', { title: alt.title }), 'MEDIUM', loadId);
       },
     }),
     {

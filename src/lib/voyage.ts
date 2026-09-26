@@ -5,7 +5,7 @@
  * Sea demo (wave/wind): `voyageSea.ts` keyed by GDN day — NOT a parallel vessel table.
  * Loads on a voyage: `ferry.departureAt` day match, else vessel + ferry-adjacent stage.
  */
-import type { Load } from '../types';
+import type { Load, Locale } from '../types';
 import {
   buildSchedule,
   nextLiveSailing,
@@ -84,15 +84,15 @@ export interface VoyageTableRow {
   focused: boolean;
 }
 
-export function voyageSeaTableRows(now = getNow(), focus = focusVoyage(now)): VoyageTableRow[] {
+export function voyageSeaTableRows(now = getNow(), focus = focusVoyage(now), locale: Locale = 'pl'): VoyageTableRow[] {
   return upcomingGdnSailings(now, 4).map((s) => {
     const sea = seaForSailing(s);
     const v = vesselById(s.vessel);
     return {
       dayLabel: formatVoyageDayLabel(s.depLocal),
       vesselName: v.name.startsWith('M/F') ? v.name : `M/F ${v.name}`,
-      wave: formatWaveM(sea.waveM),
-      wind: formatWindMs(sea.windMs),
+      wave: formatWaveM(sea.waveM, locale),
+      wind: formatWindMs(sea.windMs, locale),
       pillClass: seaRiskPillClass(sea.risk),
       riskLabel: sea.risk,
       sailing: s,

@@ -38,8 +38,8 @@ export function CorridorSpine() {
               aria-pressed={pressed}
               title={
                 pressed
-                  ? 'Kliknij ponownie, aby wyczyścić filtr'
-                  : `Filtruj: ${t(locale, `stage_${stage}`)}`
+                  ? t(locale, 'a6_spine_clear')
+                  : t(locale, 'a6_spine_filter').replace('{stage}', t(locale, `stage_${stage}`))
               }
               onClick={() => {
                 if (stageFilter === stage) {

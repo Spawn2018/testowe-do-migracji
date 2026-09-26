@@ -1,5 +1,5 @@
 import { useTowerStore } from '../store/useTowerStore';
-import { t } from '../i18n/messages';
+import { t, tp } from '../i18n/messages';
 import { formatTableDay, refYearInOps } from '../lib/time';
 import { getNow } from '../lib/frozenNow';
 
@@ -23,7 +23,7 @@ export function TasksView() {
     <div className="panel section-card page-sections" data-page="tasks" style={{ margin: 12 }}>
       <header className="panel-hd">
         <h2>{t(locale, 'nav_tasks')}</h2>
-        <span className="sub">uzupełnij przed terminem — po nim wychodzi eskalacja</span>
+        <span className="sub">{t(locale, 'a6_task_sub')}</span>
       </header>
       <div className="panel-bd flush">
         <div className="tablewrap">
@@ -31,10 +31,10 @@ export function TasksView() {
             <thead>
               <tr>
                 <th>{t(locale, 'sched_col_code')}</th>
-                <th>Czego brakuje</th>
+                <th>{t(locale, 'a6_task_what')}</th>
                 <th>{t(locale, 's_loading')}</th>
                 <th>{t(locale, 'bill_col_due')}</th>
-                <th>Stan</th>
+                <th>{t(locale, 'a6_task_state')}</th>
                 <th />
               </tr>
             </thead>
@@ -42,15 +42,15 @@ export function TasksView() {
               {need.map((l) => {
                 const what =
                   l.status === 'RESOURCES_PENDING'
-                    ? 'Kierowca, telefon, nr rejestracyjne'
+                    ? t(locale, 'a6_task_need_res')
                     : l.status === 'DOC_MISSING'
-                      ? 'Zezwolenie PL i dispens SE'
+                      ? t(locale, 'a6_task_need_permit')
                       : l.awizacja.confirmed && l.awizacja.loadWindowStart
-                        ? 'Gotowe do startu — awizacja potwierdzona'
-                        : 'Awizacja godziny podjęcia';
+                        ? t(locale, 'a6_task_ready')
+                        : t(locale, 'a6_task_need_awi');
                 const hrs = hoursUntilLoad(l.plannedLoadDate);
                 const pill = hrs < 24 ? 'p-red' : hrs < 48 ? 'p-amber' : 'p-plan';
-                const lab = hrs < 24 ? 'pilne' : hrs < 48 ? 'wkrótce' : 'w terminie';
+                const lab = hrs < 24 ? t(locale, 'a6_task_urgent') : hrs < 48 ? t(locale, 'a6_task_soon') : t(locale, 'a6_task_on_time');
                 return (
                   <tr key={l.id} data-load={l.id} style={{ cursor: 'pointer' }} onClick={() => selectLoad(l.id)}>
                     <td>
@@ -58,7 +58,7 @@ export function TasksView() {
                     </td>
                     <td>{what}</td>
                     <td>{formatTableDay(l.plannedLoadDate, refYear)}</td>
-                    <td className="mono">za {hrs} h</td>
+                    <td className="mono">{tp(locale, 'a6_task_in_h', { h: String(hrs) })}</td>
                     <td>
                       <span className={`pill ${pill}`}>{lab}</span>
                     </td>
@@ -71,7 +71,7 @@ export function TasksView() {
                           selectLoad(l.id);
                         }}
                       >
-                        Uzupełnij
+                        {t(locale, 'a6_task_fill')}
                       </button>
                     </td>
                   </tr>

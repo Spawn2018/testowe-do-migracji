@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getSupabase } from './client';
 import { getAuthProfile } from './profile';
-import { authErrorPl, ROLE_LABEL_PL, ROLES_FOR_ORG, type UserRole } from './config';
+import { authErrorPl, ROLES_FOR_ORG, type UserRole } from './config';
+import { useTowerStore } from '../store/useTowerStore';
+import { t } from '../i18n/messages';
 import './auth.css';
 
 interface Row { id: string; email: string | null; full_name: string | null; role: UserRole; active: boolean; org_id: string; auth_id: string }
@@ -11,6 +13,7 @@ interface Org { id: string; code: string }
 /** BK2 — HHL_ADMIN: zapraszanie użytkowników i nadawanie ról (RLS/RPC z 0005). */
 export default function UsersAdmin() {
   const me = getAuthProfile();
+  const locale = useTowerStore((s) => s.locale);
   const [users, setUsers] = useState<Row[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [orgs, setOrgs] = useState<Org[]>([]);
@@ -49,22 +52,22 @@ export default function UsersAdmin() {
     e.preventDefault();
     const sb = await getSupabase();
     const addr = email.trim().toLowerCase();
-    const done = await run(() => sb.rpc('admin_invite_user', { p_email: addr, p_org_code: org, p_role: role }), 'Zaproszenie zapisane.');
+    const done = await run(() => sb.rpc('admin_invite_user', { p_email: addr, p_org_code: org, p_role: role }), t(locale, 'a6_ua_saved'));
     if (!done) return;
     // Wysyłka linku (magic link): GoTrue tworzy niepotwierdzone konto od razu; przyjęcie zaproszenia = pierwsze logowanie (0039).
     const { error } = await sb.auth.signInWithOtp({ email: addr, options: { shouldCreateUser: true, emailRedirectTo: window.location.origin + window.location.pathname } });
-    setMsg(error ? { ok: false, text: `Zaproszenie zapisane, ale e-mail nie wyszedł: ${authErrorPl(error.message)}` } : { ok: true, text: `Zaproszenie wysłane na ${addr}.` });
+    setMsg(error ? { ok: false, text: t(locale, 'a6_ua_mail_fail').replace('{err}', authErrorPl(error.message)) } : { ok: true, text: t(locale, 'a6_ua_sent').replace('{addr}', addr) });
     setEmail('');
   };
 
   return (
     <section className="panel option-panel option-wide" data-auth="users-admin">
-      <header className="panel-hd"><h2>Użytkownicy i role</h2><span className="sub">{users.length} kont · {invites.length} oczekujących zaproszeń</span></header>
+      <header className="panel-hd"><h2>{t(locale, 'a6_ua_h')}</h2><span className="sub">{t(locale, 'a6_ua_sub').replace('{u}', String(users.length)).replace('{i}', String(invites.length))}</span></header>
       <form className="auth-admin-form" onSubmit={invite}>
-        <label>E-mail<input className="input full" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-        <label>Firma<select className="input" value={org} onChange={(e) => { setOrg(e.target.value); setRole(ROLES_FOR_ORG[e.target.value][0]); }}>{Object.keys(ROLES_FOR_ORG).map((c) => <option key={c} value={c}>{c}</option>)}</select></label>
-        <label>Rola<select className="input" value={role} onChange={(e) => setRole(e.target.value as UserRole)}>{ROLES_FOR_ORG[org].map((r) => <option key={r} value={r}>{ROLE_LABEL_PL[r]}</option>)}</select></label>
-        <button className="btn" type="submit" disabled={busy || !email.trim()}>Zaproś</button>
+        <label>{t(locale, 'a6_ua_email')}<input className="input full" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+        <label>{t(locale, 'a6_ua_org')}<select className="input" value={org} onChange={(e) => { setOrg(e.target.value); setRole(ROLES_FOR_ORG[e.target.value][0]); }}>{Object.keys(ROLES_FOR_ORG).map((c) => <option key={c} value={c}>{c}</option>)}</select></label>
+        <label>{t(locale, 'a6_ua_role')}<select className="input" value={role} onChange={(e) => setRole(e.target.value as UserRole)}>{ROLES_FOR_ORG[org].map((r) => <option key={r} value={r}>{t(locale, `a6_role_${r}`)}</option>)}</select></label>
+        <button className="btn" type="submit" disabled={busy || !email.trim()}>{t(locale, 'a6_ua_invite')}</button>
       </form>
       {msg && <div className={`auth-msg ${msg.ok ? 'ok' : 'err'} auth-admin-row`} role="status">{msg.text}</div>}
       <div className="panel-bd flush">
@@ -74,18 +77,18 @@ export default function UsersAdmin() {
           return (
             <div className={`auth-admin-row${u.active ? '' : ' inactive'}`} key={u.id}>
               <span className="grow"><b>{u.email}</b> <small>{code}</small></span>
-              <select className="input" aria-label={`Rola ${u.email}`} value={u.role} disabled={busy || self} onChange={(e) => void getSupabase().then((sb) => run(() => sb.rpc('admin_set_user_role', { p_user: u.id, p_role: e.target.value }), 'Rola zmieniona.'))}>
-                {(ROLES_FOR_ORG[code] ?? [u.role]).map((r) => <option key={r} value={r}>{ROLE_LABEL_PL[r]}</option>)}
+              <select className="input" aria-label={t(locale, 'a6_ua_role_of').replace('{email}', u.email ?? '')} value={u.role} disabled={busy || self} onChange={(e) => void getSupabase().then((sb) => run(() => sb.rpc('admin_set_user_role', { p_user: u.id, p_role: e.target.value }), t(locale, 'a6_ua_role_changed')))}>
+                {(ROLES_FOR_ORG[code] ?? [u.role]).map((r) => <option key={r} value={r}>{t(locale, `a6_role_${r}`)}</option>)}
               </select>
-              <button className="chipbtn" type="button" disabled={busy || self} onClick={() => void getSupabase().then((sb) => run(() => sb.rpc('admin_set_user_active', { p_user: u.id, p_active: !u.active }), u.active ? 'Konto dezaktywowane.' : 'Konto aktywowane.'))}>{u.active ? 'Dezaktywuj' : 'Aktywuj'}</button>
-              <button className="chipbtn" type="button" disabled={busy || self || !u.active} title="Zgubiony laptop, odejście pracownika" onClick={() => void getSupabase().then((sb) => run(() => sb.rpc('revoke_user_sessions', { p_user: u.id }), `Wylogowano ${u.email ?? ''} ze wszystkich urządzeń.`))}>Wyloguj wszędzie</button>
+              <button className="chipbtn" type="button" disabled={busy || self} onClick={() => void getSupabase().then((sb) => run(() => sb.rpc('admin_set_user_active', { p_user: u.id, p_active: !u.active }), t(locale, u.active ? 'a6_ua_deact_done' : 'a6_ua_act_done')))}>{t(locale, u.active ? 'a6_ua_deact' : 'a6_ua_act')}</button>
+              <button className="chipbtn" type="button" disabled={busy || self || !u.active} title={t(locale, 'a6_ua_lost')} onClick={() => void getSupabase().then((sb) => run(() => sb.rpc('revoke_user_sessions', { p_user: u.id }), t(locale, 'a6_ua_logged_out').replace('{email}', u.email ?? '')))}>{t(locale, 'a6_ua_logout_all')}</button>
             </div>
           );
         })}
         {invites.map((i) => (
           <div className="auth-admin-row" key={i.id}>
-            <span className="grow">{i.email} <small>{orgCode(i.org_id)} · {ROLE_LABEL_PL[i.role]} · zaproszenie oczekuje</small></span>
-            <button className="chipbtn" type="button" disabled={busy} onClick={() => void getSupabase().then((sb) => run(() => sb.rpc('admin_revoke_invite', { p_invite: i.id }), 'Zaproszenie cofnięte.'))}>Cofnij</button>
+            <span className="grow">{i.email} <small>{orgCode(i.org_id)} · {t(locale, `a6_role_${i.role}`)} · {t(locale, 'a6_ua_pending')}</small></span>
+            <button className="chipbtn" type="button" disabled={busy} onClick={() => void getSupabase().then((sb) => run(() => sb.rpc('admin_revoke_invite', { p_invite: i.id }), t(locale, 'a6_ua_revoked')))}>{t(locale, 'a6_ua_revoke')}</button>
           </div>
         ))}
       </div>

@@ -4,7 +4,8 @@ import { useTowerStore } from '../store/useTowerStore';
 import { filterLoads } from '../lib/selectors';
 import { StatusPill, formatDelayPill } from '../components/ui/StatusPill';
 import { canImportSchedule, canSeeCost, canSeeMargin, canSeeRevenue, visibleDriverPhone } from '../lib/permissions';
-import { t } from '../i18n/messages';
+import { fmtNum, pctText, t, tp } from '../i18n/messages';
+import { docCategoryLabel } from '../lib/enumLabels';
 import {
   delayMinutesVsPlan,
   formatTableDay,
@@ -16,7 +17,7 @@ import { getNow } from '../lib/frozenNow';
 // D15: ExcelJS (~1 MB) tylko przy imporcie/eksporcie — dynamiczny import.
 import type { ImportDiff } from '../lib/scheduleDryRun';
 import { COLUMN_MAP_DEFAULT } from '../lib/importColumnMap';
-import type { CorridorStage, DocCategory, Load } from '../types';
+import type { CorridorStage, DocCategory, Load, Locale } from '../types';
 import {
   SCHED_COLS,
   loadSchedPrefs,
@@ -36,8 +37,9 @@ type Quick =
   | 'delivered'
   | CorridorStage;
 
-function fmtDim(n: number): string {
-  return n.toFixed(2).replace('.', ',');
+/** A6-T3 — wymiary w języku interfejsu (PL bez zmian). */
+function fmtDim(n: number, locale: Locale = 'pl'): string {
+  return fmtNum(locale, n, 2);
 }
 
 function delayMinutes(l: Load): number | null {
@@ -116,8 +118,8 @@ export function ScheduleView() {
   const showMargin = canSeeMargin(role);
   const ver = scheduleVersions[0];
   const verLine = ver
-    ? `import z SharePoint KSH · wersja 7 z 21.09.2026 14:08`
-    : 'import z SharePoint KSH · wersja 7 z 21.09.2026 14:08';
+    ? t(locale, 'a6_sch_ver_line')
+    : t(locale, 'a6_sch_ver_line');
 
   const mapKeys = Object.entries(COLUMN_MAP_DEFAULT);
 
@@ -128,7 +130,7 @@ export function ScheduleView() {
     // Permit miss is red; other missing stay neutral like Claude
     const cls = ok ? 'ok' : cat === 'PERMIT_PL' && miss ? 'miss' : '';
     return (
-      <span key={letter} className={`flag ${cls}`} title={cat}>
+      <span key={letter} className={`flag ${cls}`} title={locale === 'pl' ? cat : docCategoryLabel(cat, locale)}>
         {letter}
       </span>
     );
@@ -155,7 +157,7 @@ export function ScheduleView() {
     } catch (e) {
       setParseError(e instanceof Error ? e.message : String(e));
       setStep('upload');
-      pushToast('Nie udało się odczytać XLSX', 'CRITICAL');
+      pushToast(t(locale, 'a6_sch_xlsx_fail'), 'CRITICAL');
     } finally {
       setParsing(false);
     }
@@ -246,14 +248,14 @@ export function ScheduleView() {
               saveSchedPrefs(colPrefs);
               setSavedFlash(true);
               window.setTimeout(() => setSavedFlash(false), 1600);
-              pushToast('Widok kolumn zapisany', 'MEDIUM');
+              pushToast(t(locale, 'a6_sch_view_saved'), 'MEDIUM');
             }}
           >
-            {savedFlash ? 'Zapisano' : 'Zapisz widok'}
+            {savedFlash ? t(locale, 'a6_sch_saved') : t(locale, 'a6_sch_save_view')}
           </button>
           <div className="sched-col-picker">
             <button type="button" className="chipbtn" aria-expanded={colMenu} onClick={() => setColMenu((v) => !v)}>
-              Kolumny
+              {t(locale, 'a6_sch_columns')}
             </button>
             {colMenu ? (
               <div className="sched-col-menu" role="menu">
@@ -290,15 +292,15 @@ export function ScheduleView() {
                 try {
                   const { exportLoadsXlsx } = await import('../lib/xlsxExport');
                   const result = await exportLoadsXlsx(loads, `WATCH_TOWER_${role}_harmonogram.xlsx`);
-                  pushToast(`Eksport XLSX · ${result.rows} wierszy · ${result.bytes} B`, 'MEDIUM');
+                  pushToast(tp(locale, 'a6_sch_export_ok', { rows: String(result.rows), bytes: String(result.bytes) }), 'MEDIUM');
                 } catch (err: unknown) {
                   const msg = err instanceof Error ? err.message : String(err);
-                  pushToast(`Eksport XLSX nieudany: ${msg}`, 'CRITICAL');
+                  pushToast(tp(locale, 'a6_sch_export_fail', { msg }), 'CRITICAL');
                 }
               })();
             }}
           >
-            Eksport XLSX
+            {t(locale, 'a6_sch_export')}
           </button>
         </div>
       </div>
@@ -421,13 +423,13 @@ export function ScheduleView() {
                 disabled={dryRun.accepted === 0}
                 title={
                   dryRun.accepted === 0
-                    ? 'Brak poprawnych wierszy — commit zablokowany (baza nietknięta)'
+                    ? t(locale, 'a6_sch_no_rows_title')
                     : undefined
                 }
                 onClick={() => {
                   if (dryRun.accepted === 0) {
                     pushToast(
-                      'Import odrzucony — brak poprawnych wierszy, baza nietknięta',
+                      t(locale, 'a6_sch_no_rows_toast'),
                       'CRITICAL',
                     );
                     return;
@@ -460,7 +462,7 @@ export function ScheduleView() {
           )}
           {step === 'done' && (
             <>
-              <span style={{ color: 'var(--go)' }}>Import zatwierdzony</span>{' '}
+              <span style={{ color: 'var(--go)' }}>{t(locale, 'a6_sch_import_ok')}</span>{' '}
               <button
                 type="button"
                 className="btn ghost"
@@ -515,8 +517,8 @@ export function ScheduleView() {
                 {visibleCols.map((id) => {
                   const def = SCHED_COLS.find((c) => c.id === id)!;
                   let label = t(locale, def.labelKey);
-                  if (id === 'cost' && role === 'SCX') label = 'Moja stawka';
-                  if (id === 'rev' && role === 'KSH') label = 'Twoja cena';
+                  if (id === 'cost' && role === 'SCX') label = t(locale, 'a6_sch_my_rate');
+                  if (id === 'rev' && role === 'KSH') label = t(locale, 'a6_sch_your_price');
                   const stick =
                     id === 'margin' ||
                     (id === 'cost' && !showRev && !showMargin) ||
@@ -545,7 +547,7 @@ export function ScheduleView() {
                         dragCol.current = null;
                       }}
                       onDoubleClick={() => autoFitCol(id)}
-                      title="Przeciągnij = kolejność · dwuklik = dopasuj szerokość"
+                      title={t(locale, 'a6_sch_drag')}
                     >
                       {label}
                       <span
@@ -606,7 +608,7 @@ export function ScheduleView() {
                           const v = id === 'ord_ksh' ? l.orderNo : id === 'ord_hhl' ? l.hhlOrderNo : l.carrierOrderNo;
                           return (
                             <td key={id} data-col={id}>
-                              {v ? <span className="mono">{v}</span> : id === 'ord_ksh' ? '—' : <span style={{ color: 'var(--red)' }}>— brak —</span>}
+                              {v ? <span className="mono">{v}</span> : id === 'ord_ksh' ? '—' : <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_sch_none')}</span>}
                             </td>
                           );
                         }
@@ -620,17 +622,17 @@ export function ScheduleView() {
                               className={l.dims.lengthM > 16.5 || l.dims.widthM > 2.55 ? 'over' : undefined}
                               title={
                                 l.dims.lengthM > 16.5 || l.dims.widthM > 2.55
-                                  ? 'Ładunek ponadnormatywny'
+                                  ? t(locale, 'a6_sch_oversize')
                                   : undefined
                               }
                             >
-                              {fmtDim(l.dims.lengthM)} × {fmtDim(l.dims.widthM)} × {fmtDim(l.dims.heightM)}
+                              {fmtDim(l.dims.lengthM, locale)} × {fmtDim(l.dims.widthM, locale)} × {fmtDim(l.dims.heightM, locale)}
                             </td>
                           );
                         case 'weight':
                           return (
                             <td key={id} data-col={id} className="num">
-                              {fmtDim(l.dims.weightT)} t
+                              {fmtDim(l.dims.weightT, locale)} t
                             </td>
                           );
                         case 'load':
@@ -654,7 +656,7 @@ export function ScheduleView() {
                               {l.resources.driverName ? (
                                 <span data-content>{l.resources.driverName}</span>
                               ) : (
-                                <span style={{ color: 'var(--red)' }}>— brak —</span>
+                                <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_sch_none')}</span>
                               )}
                             </td>
                           );
@@ -712,7 +714,7 @@ export function ScheduleView() {
                             <td key={id} data-col={id} className={`num money stick ${l.pricing.marginPct < 0.18 ? 'neg' : ''}`}>
                               {formatAppMoney(l.pricing.margin, locale, currency)}{' '}
                               <span style={{ fontWeight: 400, color: 'var(--ink-3)', fontSize: 11.5, marginLeft: 5 }}>
-                                {(l.pricing.marginPct * 100).toFixed(1).replace('.', ',')}%
+                                {pctText(locale, l.pricing.marginPct, 1, `${(l.pricing.marginPct * 100).toFixed(1).replace('.', ',')}%`)}
                               </span>
                             </td>
                           );

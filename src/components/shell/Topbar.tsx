@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
-import { t } from '../../i18n/messages';
+import { INTL_LOCALE, t, tp } from '../../i18n/messages';
 import { ROLE_META } from '../../lib/permissions';
 import type { Locale, RoleId } from '../../types';
 import { NotificationBell } from './NotificationBell';
@@ -59,7 +59,7 @@ export function Topbar() {
       }).formatToParts(now);
       const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
       const sailing = nextLiveSailing(now);
-      const fw = ferryWidgetLabel(sailing);
+      const fw = ferryWidgetLabel(sailing, locale);
       const y = Number(get('year'));
       const m = Number(get('month'));
       const day = Number(get('day'));
@@ -70,7 +70,8 @@ export function Topbar() {
         ferryLine: fw.line,
         wave: fw.wave,
         clock: `${get('hour')}:${get('minute')}`,
-        date: `${get('day')}.${get('month')}.${get('year')}`,
+        /* A6-T3 — data w języku interfejsu (PL bez zmian: DD.MM.RRRR) */
+        date: new Intl.DateTimeFormat(INTL_LOCALE[locale], { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', year: 'numeric' }).format(now),
       });
     };
     tick();
@@ -81,7 +82,7 @@ export function Topbar() {
       clearInterval(id);
       clearInterval(id2);
     };
-  }, []);
+  }, [locale]);
 
   return (
     <header className="topbar">
@@ -107,7 +108,7 @@ export function Topbar() {
           ))}
         </div>
       </div>
-      <div className="seg" role="group" aria-label="Język" id="langSeg">
+      <div className="seg" role="group" aria-label={t(locale, 'a6_top_lang')} id="langSeg">
         {LANGS.map((l) => (
           <button
             key={l}
@@ -125,7 +126,7 @@ export function Topbar() {
         className="iconbtn"
         id="themeBtn"
         onClick={toggleTheme}
-        title="Jasny / ciemny"
+        title={t(locale, 'a6_top_theme')}
         aria-label={t(locale, 'theme')}
       >
         <ClaudeIcon name="theme" />
@@ -134,8 +135,8 @@ export function Topbar() {
         type="button"
         className="iconbtn"
         id="helpBtn"
-        title="Skróty klawiszowe"
-        aria-label="Skróty klawiszowe"
+        title={t(locale, 'a6_top_shortcuts')}
+        aria-label={t(locale, 'a6_top_shortcuts')}
         style={{ fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 15 }}
         onClick={() => setHelp((h) => !h)}
         aria-pressed={help}
@@ -143,8 +144,8 @@ export function Topbar() {
         ?
       </button>
       <NotificationBell />
-      <div className="ops" id="ops" title="Następny odjazd promu (rozklad Polferries GDN↔NYN)">
-        <span className="wk">t{ops.wk}</span>
+      <div className="ops" id="ops" title={t(locale, 'a6_top_ferry_title')}>
+        <span className="wk">{tp(locale, 'a6_top_wk', { n: String(ops.wk) })}</span>
         <span className="sep" />
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--sea)' }}>
           <ClaudeIcon name="ferry" />

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { canSeeCost, canSeeMargin, canSeeRevenue } from '../lib/permissions';
-import { t } from '../i18n/messages';
+import { t, tp } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
 import { SEFS_WEEKLY, SEFS_SOURCES, computeSefs } from '../lib/sefs';
 import { formatAppMoney, formatSourceMoney } from '../lib/money/demoFx';
@@ -57,14 +57,14 @@ export function FinanceView() {
     role === 'SCX' ? t(locale, 'nav_fin_scx') : role === 'KSH' ? t(locale, 'nav_fin_ksh') : t(locale, 'nav_fin');
   const sub =
     role === 'SCX'
-      ? `${done.length} zrealizowanych transportów`
+      ? tp(locale, 'a6_fin_sub_scx', { n: String(done.length) })
       : role === 'KSH'
-        ? `${done.length} zrealizowanych dostaw`
-        : `${done.length} zrealizowanych · kurs NBP tabela A`;
+        ? tp(locale, 'a6_fin_sub_ksh', { n: String(done.length) })
+        : tp(locale, 'a6_fin_sub_hhl', { n: String(done.length) });
 
   const week = SEFS_WEEKLY[SEFS_WEEKLY.length - 1];
   const live = computeSefs(week.priceSek, week.pricePln);
-  const appliedPct = ((live.appliedMult - 1) * 100).toFixed(1).replace('.', ',');
+  const appliedNum = Number(((live.appliedMult - 1) * 100).toFixed(1));
   const below = loads.filter((l) => l.pricing.belowThreshold);
   const tiers = useMemo(() => tierSummary(loads, role), [loads, role]);
   const split = useMemo(() => marginSplit(loads), [loads]);
@@ -73,9 +73,9 @@ export function FinanceView() {
     currency === 'PLN' ? formatSourceMoney(x.marginPln, locale, 'PLN') : formatSourceMoney(x.marginEur, locale, 'EUR');
 
   const bafCard = (
-    <div data-deur-exempt="fuel-index" title="D-EUR-T: indeks paliwowy (wyjątek)">
+    <div data-deur-exempt="fuel-index" title={t(locale, 'a6_fin_deur_fuel')}>
       <dl className="kv">
-        <dt>Indeks</dt>
+        <dt>{t(locale, 'a6_fin_index')}</dt>
         <dd>
           SEFS hybrid · {SEFS_SOURCES.labelSek} / {SEFS_SOURCES.labelPln}
         </dd>
@@ -83,20 +83,20 @@ export function FinanceView() {
         <dd>
           {formatSourceMoney(SEFS_SOURCES.baseSek, locale, 'SEK')} · {formatSourceMoney(SEFS_SOURCES.basePln, locale, 'PLN')}
         </dd>
-        <dt>Notowanie</dt>
+        <dt>{t(locale, 'a6_fin_quote')}</dt>
         <dd>
           {formatSourceMoney(week.priceSek, locale, 'SEK')} · {formatSourceMoney(week.pricePln, locale, 'PLN')} · {week.weekLabel}
         </dd>
         <dt>{t(locale, 'fin_fuel_share')}</dt>
-        <dd>min(mult_SEK, mult_PLN) na fracht drogowy</dd>
+        <dd>{t(locale, 'a6_fin_fuel_rule')}</dd>
         <dt>{t(locale, 'fin_formula')}</dt>
         <dd>
           min({live.multSek.toFixed(3)}, {live.multPln.toFixed(3)}) = <b>{live.appliedMult.toFixed(3)}</b> (−
-          {appliedPct}% vs 1,0)
+          {tp(locale, 'a6_fin_vs_one', { pct: appliedNum })}
         </dd>
         <dt>{t(locale, 'fin_threshold')}</dt>
         <dd>{t(locale, 'fin_margin_flag')}</dd>
-        <dt>Cykl</dt>
+        <dt>{t(locale, 'a6_fin_cycle')}</dt>
         <dd>{t(locale, 'fin_weekly')} · {week.sourceNote}</dd>
       </dl>
       <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 9 }}>
@@ -108,7 +108,7 @@ export function FinanceView() {
         <a href={SEFS_SOURCES.okq8} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>
           OKQ8
         </a>
-        <span data-content>. Każde notowanie z datą — przy sporze dowód, nie pamięć.</span>
+        <span data-content>{t(locale, 'a6_fin_quote_note')}</span>
       </div>
     </div>
   );
@@ -124,49 +124,49 @@ export function FinanceView() {
           <div>
             {role === 'SCX' && showCost && (
               <>
-                <h4 className="sec">Należność narastająco</h4>
+                <h4 className="sec">{t(locale, 'a6_fin_due_scx')}</h4>
                 <div className="mrow">
-                  <span className="lbl">Stawka bazowa</span>
+                  <span className="lbl">{t(locale, 'a6_fin_base_rate')}</span>
                   <span>{money(baseC)}</span>
                 </div>
                 <div className="mrow">
-                  <span className="lbl">{`Dodatek paliwowy ${appliedPct}%`}</span>
+                  <span className="lbl">{tp(locale, 'a6_fin_fuel_pct', { pct: appliedNum })}</span>
                   <span>{money(bafC)}</span>
                 </div>
                 <div className="mrow">
-                  <span className="lbl">Pilotaż i dodatki</span>
+                  <span className="lbl">{t(locale, 'a6_fin_pilot')}</span>
                   <span>{money(exC)}</span>
                 </div>
                 <div className="mrow total">
-                  <span>Razem</span>
+                  <span>{t(locale, 'a6_fin_total')}</span>
                   <span>{money(cost)}</span>
                 </div>
                 <div className="locked" style={{ marginTop: 13 }}>
-                  Cena płacona przez KSH i marża spedytora nie są dostępne w roli przewoźnika.
+                  {t(locale, 'a6_fin_locked_scx')}
                 </div>
               </>
             )}
             {role === 'KSH' && showRev && (
               <>
-                <h4 className="sec">Do zapłaty narastająco</h4>
+                <h4 className="sec">{t(locale, 'a6_fin_due_ksh')}</h4>
                 <div className="mrow">
-                  <span className="lbl">Fracht — stawka bazowa</span>
+                  <span className="lbl">{t(locale, 'a6_fin_freight_base')}</span>
                   <span>{money(baseR)}</span>
                 </div>
                 <div className="mrow">
-                  <span className="lbl">{`Dodatek paliwowy ${appliedPct}%`}</span>
+                  <span className="lbl">{tp(locale, 'a6_fin_fuel_pct', { pct: appliedNum })}</span>
                   <span>{money(bafR)}</span>
                 </div>
                 <div className="mrow">
-                  <span className="lbl">Pilotaż i dodatki</span>
+                  <span className="lbl">{t(locale, 'a6_fin_pilot')}</span>
                   <span>{money(exR)}</span>
                 </div>
                 <div className="mrow total">
-                  <span>Razem</span>
+                  <span>{t(locale, 'a6_fin_total')}</span>
                   <span>{money(rev)}</span>
                 </div>
                 <div className="locked" style={{ marginTop: 13 }}>
-                  Stawki przewoźnika i marża spedytora nie są dostępne w roli klienta.
+                  {t(locale, 'a6_fin_locked_ksh')}
                 </div>
               </>
             )}
@@ -186,7 +186,7 @@ export function FinanceView() {
                   <span>{money(exR)}</span>
                 </div>
                 <div className="mrow">
-                  <span className="lbl">Koszt Scandinavian Express</span>
+                  <span className="lbl">{t(locale, 'a6_fin_cost_scx')}</span>
                   <span style={{ color: 'var(--red)' }}>− {money(cost)}</span>
                 </div>
                 <div className="mrow total">
@@ -254,7 +254,7 @@ export function FinanceView() {
               <thead>
                 <tr>
                   <th style={{ textAlign: 'left' }}>{t(locale, 'inv_type')}</th>
-                  <th className="num">Szt.</th>
+                  <th className="num">{t(locale, 'a6_fin_qty')}</th>
                   <th className="num">{t(locale, 'sched_col_rev')}</th>
                   <th className="num">{t(locale, 'cost')}</th>
                   <th className="num">{t(locale, 'sched_col_margin')}</th>
@@ -284,7 +284,7 @@ export function FinanceView() {
               </tbody>
             </table>
             <div className="note" style={{ margin: '11px -13px -13px' }}>
-              <span data-content>Transport, który nie trafia w żaden przedział cennika, nie dostaje stawki zero — trafia na listę wyjątków.</span>
+              <span data-content>{t(locale, 'a6_fin_no_zero')}</span>
             </div>
             {below.length > 0 ? (
               <>

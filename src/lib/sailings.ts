@@ -5,6 +5,7 @@
  * do tego czasu dane startowe + ręcznie.
  */
 import type { FerryBooking, Load, LoadStatus, Locale, OrgKind, Risk, Sailing, SailingStatus } from '../types';
+import { dictEntry } from '../i18n/messages';
 
 export const effDeparture = (s: Sailing): string => s.delayedDepartureAt ?? s.departureAt;
 export const effArrival = (s: Sailing): string => s.delayedArrivalAt ?? s.arrivalAt;
@@ -111,14 +112,14 @@ export function autoRiskCode(kind: string, dedupKey: string | null | undefined):
 }
 
 const RISK_LABEL: Record<AutoRiskCode, Record<Locale, string>> = {
-  AUTO_STATUS: { pl: 'Zmiana automatyczna zablokowana', en: 'Automatic change blocked', sv: 'Automatisk ändring blockerad' },
-  LOADING_UNCONFIRMED: { pl: 'Załadunek niepotwierdzony', en: 'Loading unconfirmed', sv: 'Lastning obekräftad' },
-  MISSED_SAILING: { pl: 'Rejs przegapiony', en: 'Sailing missed', sv: 'Missad avgång' },
-  SAILING_CANCELLED: { pl: 'Rejs odwołany', en: 'Sailing cancelled', sv: 'Avgång inställd' },
-  FERRY_OVERDUE: { pl: 'PROM po czasie', en: 'FERRY overdue', sv: 'FÄRJA försenad' },
-  SOURCE_DOWN: { pl: 'Źródło niedostępne', en: 'Source unavailable', sv: 'Källa otillgänglig' },
-  FERRY_UNKNOWN: { pl: 'Status rejsu nieznany', en: 'Sailing status unknown', sv: 'Okänd avgångsstatus' },
-  AIS_NYN: { pl: 'AIS: statek w Nynäshamn', en: 'AIS: vessel at Nynäshamn', sv: 'AIS: fartyg i Nynäshamn' },
+  AUTO_STATUS: dictEntry('a6_risk_label_auto_status'),
+  LOADING_UNCONFIRMED: dictEntry('a6_risk_label_loading_unconfirmed'),
+  MISSED_SAILING: dictEntry('a6_risk_label_missed_sailing'),
+  SAILING_CANCELLED: dictEntry('a6_risk_label_sailing_cancelled'),
+  FERRY_OVERDUE: dictEntry('a6_risk_label_ferry_overdue'),
+  SOURCE_DOWN: dictEntry('a6_risk_label_source_down'),
+  FERRY_UNKNOWN: dictEntry('a6_risk_label_ferry_unknown'),
+  AIS_NYN: dictEntry('a6_risk_label_ais_nyn'),
 };
 export const autoRiskLabel = (c: AutoRiskCode, locale: Locale): string => RISK_LABEL[c][locale];
 
@@ -136,9 +137,9 @@ export function cancelledSailingRisks(s: Sailing, loads: Load[]): Risk[] {
 }
 
 const SAILING_STATUS_LABEL: Record<SailingStatus, Record<Locale, string>> = {
-  ZAPLANOWANY: { pl: 'Zaplanowany', en: 'Scheduled', sv: 'Planerad' },
-  OPOZNIONY: { pl: 'Opóźniony', en: 'Delayed', sv: 'Försenad' },
-  ODWOLANY: { pl: 'Odwołany', en: 'Cancelled', sv: 'Inställd' },
+  ZAPLANOWANY: dictEntry('a6_sailing_status_label_zaplanowany'),
+  OPOZNIONY: dictEntry('a6_sailing_status_label_opozniony'),
+  ODWOLANY: dictEntry('a6_sailing_status_label_odwolany'),
 };
 export const sailingStatusLabel = (s: SailingStatus, locale: Locale): string => SAILING_STATUS_LABEL[s][locale];
 export const sailingStatusPill = (s: SailingStatus): string => (s === 'ODWOLANY' ? 'p-red' : s === 'OPOZNIONY' ? 'p-amber' : 'p-sea');

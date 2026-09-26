@@ -3,7 +3,7 @@ import { useTowerStore } from '../store/useTowerStore';
 import type { RiskType } from '../types';
 import { ExceptionRow } from '../components/ui/ExceptionRow';
 import { DemoMark } from '../components/ui/DemoMark';
-import { riskText, t } from '../i18n/messages';
+import { riskText, t, tp } from '../i18n/messages';
 import { ferryLabel, vesselById } from '../lib/ferry';
 import { fetchSituations, type RoadSituation } from '../lib/trafikverket';
 import {
@@ -19,10 +19,10 @@ import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
 import { AUTO_RISK_CODES, autoRiskLabel, type AutoRiskCode } from '../lib/sailings';
 
 const ALT = [
-  ['Gdańsk–Karlshamn', '+310 km do Boden', 'Polferries'],
-  ['Gdynia–Karlskrona', '+265 km do Boden', 'Stena Line'],
-  ['Świnoujście–Trelleborg', '+520 km do Boden', 'TT-Line'],
-  ['Świnoujście–Ystad', '+495 km do Boden', 'Unity Line'],
+  ['Gdańsk–Karlshamn', 310, 'Polferries'],
+  ['Gdynia–Karlskrona', 265, 'Stena Line'],
+  ['Świnoujście–Trelleborg', 520, 'TT-Line'],
+  ['Świnoujście–Ystad', 495, 'Unity Line'],
 ] as const;
 
 export function RisksView() {
@@ -59,7 +59,7 @@ export function RisksView() {
   const ferryRisk = risks.find((r) => r.type === 'FERRY' && r.ferryPlanB);
   const sailing = focusVoyage();
   const vessel = vesselById(sailing.vessel);
-  const sailRows = voyageSeaTableRows();
+  const sailRows = voyageSeaTableRows(undefined, undefined, locale);
   const focusDayLabel = formatVoyageDayLabel(sailing.depLocal);
   const ferryLoads = loadsOnVoyage(loads, sailing).slice(0, 8);
 
@@ -84,11 +84,11 @@ export function RisksView() {
   const kindLabel = (k: string) =>
     (
       ({
-        roadworks: 'roboty',
+        roadworks: t(locale, 'a6_kind_roadworks'),
         weather: t(locale, 'weather_ice'),
-        accident: 'wypadek',
-        restriction: 'ograniczenie',
-        other: 'inne',
+        accident: t(locale, 'a6_kind_accident'),
+        restriction: t(locale, 'a6_kind_restriction'),
+        other: t(locale, 'a6_kind_other'),
       }) as Record<string, string>
     )[k] ?? k;
 
@@ -97,7 +97,7 @@ export function RisksView() {
       <div className="panel section-card" style={{ margin: 12 }}>
         <header className="panel-hd">
           <h2>{t(locale, 'exceptions')}</h2>
-          <span className="sub">{list.length} otwartych · sortowanie: waga × czas do skutku</span>
+          <span className="sub">{tp(locale, 'a6_risk_open_sort', { n: String(list.length) })}</span>
         </header>
         <ul className="exq">
           {list.map((r) => (
@@ -133,7 +133,7 @@ export function RisksView() {
           <span className="sub">{t(locale, 'risk_ferry_sub')}</span>
           <div className="spacer" />
           <span className="sub" style={{ color: 'var(--sea)' }}>
-            {ferryLabel(sailing)} · MMSI {vessel.mmsi}
+            {ferryLabel(sailing)} · {tp(locale, 'a6_risk_mmsi', { mmsi: String(vessel.mmsi) })}
           </span>
         </header>
         <div className="panel-bd">
@@ -168,7 +168,7 @@ export function RisksView() {
                       <td style={{ fontWeight: 600 }} data-content>{r}</td>
                       <td data-content>{o}</td>
                       <td className="num" style={{ color: 'var(--ink-3)' }} data-content>
-                        {k}
+                        {tp(locale, 'a6_risk_alt_km', { km: String(k) })}
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <button
@@ -217,15 +217,14 @@ export function RisksView() {
         <header className="panel-hd">
           <h2>{t(locale, 'risk_road_se_title')}</h2>
           <span className="sub">
-            Nynashamn→Boden · {trafikverketSourceNote(seMode, showDemoMarks)} · {seSituations.length} {t(locale, 'risk_situations')}
+            {t(locale, 'a6_risk_route_se')} · {trafikverketSourceNote(seMode, showDemoMarks, locale)} · {seSituations.length} {t(locale, 'risk_situations')}
           </span>
           {isDemoSourceMode(seMode) ? <DemoMark /> : null}
         </header>
         <div className="panel-bd">
           {isDemoSourceMode(seMode) && showDemoMarks ? (
             <div className="note" style={{ marginBottom: 12 }} data-content>
-              Warunki drogowe SE są <b>demonstracyjne</b> (seed makiety). To nie jest żywy feed
-              Trafikverket — brak klucza API. Ten sam wzorzec oznaczenia co stawki demo (D18).
+              {t(locale, 'a6_risk_demo_a')} <b>{t(locale, 'a6_risk_demo_b')}</b> {t(locale, 'a6_risk_demo_c')}
             </div>
           ) : null}
           <div className="two">
@@ -284,8 +283,8 @@ export function RisksView() {
               {SE_ROUTE_ALTS.map((alt, i) => (
                 <div className="alt-row" key={alt.id}>
                   <div>
-                    <b data-content>{alt.title}</b>
-                    <span data-content>{alt.detail}</span>
+                    <b data-content>{t(locale, `a6_alt_${alt.id}_title`)}</b>
+                    <span data-content>{t(locale, `a6_alt_${alt.id}_detail`)}</span>
                   </div>
                   <button type="button" className="chipbtn" onClick={() => applySeRouteAlt(i)}>
                     {t(locale, 'risk_choose')}

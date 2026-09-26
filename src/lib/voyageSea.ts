@@ -3,6 +3,7 @@
  * Vessel/timetable remain in ferry-sailings.json (not duplicated here).
  */
 import type { Locale } from '../types';
+import { dictEntry, INTL_LOCALE, tp } from '../i18n/messages';
 
 export type SeaRiskLabel = 'niskie' | 'podwyższone' | 'wysokie';
 
@@ -25,12 +26,13 @@ export function seaForDay(dayKey: string): VoyageSea {
   return VOYAGE_SEA_BY_DAY[dayKey] ?? DEFAULT_SEA;
 }
 
-export function formatWaveM(waveM: number): string {
-  return `${String(waveM).replace('.', ',')} m`;
+/** A6-T3 — liczba wg języka (PL bez zmian: 2,9 m). */
+export function formatWaveM(waveM: number, locale: Locale = 'pl'): string {
+  return `${new Intl.NumberFormat(INTL_LOCALE[locale], { maximumFractionDigits: 2 }).format(waveM)} m`;
 }
 
-export function formatWindMs(windMs: number): string {
-  return `${windMs} m/s`;
+export function formatWindMs(windMs: number, locale: Locale = 'pl'): string {
+  return `${new Intl.NumberFormat(INTL_LOCALE[locale], { maximumFractionDigits: 1 }).format(windMs)} m/s`;
 }
 
 export function seaRiskPillClass(risk: SeaRiskLabel): string {
@@ -39,14 +41,14 @@ export function seaRiskPillClass(risk: SeaRiskLabel): string {
   return 'p-go';
 }
 
-export function voyageWaveLabelForDay(dayKey: string): string {
-  return `fala ${formatWaveM(seaForDay(dayKey).waveM)}`;
+export function voyageWaveLabelForDay(dayKey: string, locale: Locale = 'pl'): string {
+  return tp(locale, 'a6_sea_wave', { wave: formatWaveM(seaForDay(dayKey).waveM, locale) });
 }
 
 const SEA_RISK_I18N: Record<SeaRiskLabel, Record<Locale, string>> = {
-  niskie: { pl: 'niskie', en: 'low', sv: 'lag' },
-  podwyższone: { pl: 'podwyzszone', en: 'elevated', sv: 'forhojd' },
-  wysokie: { pl: 'wysokie', en: 'high', sv: 'hog' },
+  niskie: dictEntry('a6_sea_risk_i18n_niskie'),
+  podwyższone: dictEntry('a6_sea_risk_i18n_podwyzszone'),
+  wysokie: dictEntry('a6_sea_risk_i18n_wysokie'),
 };
 
 export function formatSeaRiskLabel(risk: SeaRiskLabel, locale: Locale): string {

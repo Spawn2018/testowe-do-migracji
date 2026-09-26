@@ -68,27 +68,27 @@ export function DocPreview({ doc, onClose }: Props) {
         type="button"
         className="scrim"
         style={{ zIndex: 50 }}
-        aria-label="Zamknij podgląd"
+        aria-label={t(locale, 'a6_dp_close_preview')}
         onClick={onClose}
       />
       <div
         className="panel docpreview"
         role="dialog"
         aria-modal="true"
-        aria-label={`Podgląd · ${doc.name}`}
+        aria-label={t(locale, 'a6_dp_preview').replace('{name}', doc.name)}
       >
         <header className="panel-hd">
           <h2 style={{ fontSize: 18 }}>{doc.name}</h2>
           <span className="sub">
             {docCategoryLabel(doc.category, locale)}
-            {stored ? ` · ${t(locale, 'bk4_link_ttl')}` : hasRealBytes ? '' : ' · metadane'}
+            {stored ? ` · ${t(locale, 'bk4_link_ttl')}` : hasRealBytes ? '' : t(locale, 'a6_dp_meta')}
           </span>
           <div className="spacer" />
           <button
             type="button"
             className="iconbtn"
-            title="Pobierz"
-            aria-label="Pobierz"
+            title={t(locale, 'a6_dp_download')}
+            aria-label={t(locale, 'a6_dp_download')}
             onClick={() => {
               if (stored) void downloadStoredDocument(doc);
               else downloadDocumentFile(doc);
@@ -96,7 +96,7 @@ export function DocPreview({ doc, onClose }: Props) {
           >
             ↓
           </button>
-          <button type="button" className="iconbtn" title="Zamknij" aria-label="Zamknij" onClick={onClose}>
+          <button type="button" className="iconbtn" title={t(locale, 'a6_dp_close')} aria-label={t(locale, 'a6_dp_close')} onClick={onClose}>
             ✕
           </button>
         </header>
@@ -114,7 +114,7 @@ export function DocPreview({ doc, onClose }: Props) {
           )}
           {!hasRealBytes ? (
             <div className="note" style={{ borderTop: '1px solid var(--rule-2)', marginTop: 8 }}>
-              Brak bajtów w vault — pokazano stub metadanych. Wgraj plik, aby zobaczyć obraz lub PDF.
+              {t(locale, 'a6_dp_stub')}
             </div>
           ) : null}
         </div>

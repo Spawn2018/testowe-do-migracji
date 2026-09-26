@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { attachDocumentFile } from '../lib/docFiles';
 import { canMatchInvoice, canSubmitInvoice, canSeeCost } from '../lib/permissions';
-import { t } from '../i18n/messages';
+import { t, tp } from '../i18n/messages';
 import type { Document, FactoringOffer } from '../types';
 import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
@@ -34,7 +34,7 @@ function weekSubtitle(weekLabel: string | null | undefined, locale: 'pl' | 'en' 
   sun.setUTCDate(mon.getUTCDate() + 6);
   const fmt = (d: Date) =>
     `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-  const word = locale === 'en' ? 'week' : locale === 'sv' ? 'vecka' : 'tydzień';
+  const word = t(locale, 'a6_inv_week_word');
   return `${word} ${week} · ${fmt(mon)}–${fmt(sun)}.${year} · Scandinavian Express`;
 }
 import { docCategoryLabel, payoutStatusLabel } from '../lib/enumLabels';
@@ -164,10 +164,10 @@ export function InvoicesView() {
         <div className="panel-bd flush">
           <div className="filters">
             <span>
-              Kwota z cennika <b className="mono">{money(expected)}</b>
+              {t(locale, 'a6_inv_amount_rate')} <b className="mono">{money(expected)}</b>
             </span>
             <span>
-              Kwota z faktury <b className="mono">{money(invoiced)}</b>
+              {t(locale, 'a6_inv_amount_inv')} <b className="mono">{money(invoiced)}</b>
             </span>
             <span>
               {t(locale, 'inv_diff')}{' '}
@@ -191,10 +191,10 @@ export function InvoicesView() {
                   <th>{t(locale, 'sched_col_code')}</th>
                   <th>{t(locale, 'inv_type')}</th>
                   <th>{t(locale, 'inv_delivery')}</th>
-                  <th className="num">Wg cennika</th>
-                  <th className="num">Zafakturowano</th>
+                  <th className="num">{t(locale, 'a6_inv_by_rate')}</th>
+                  <th className="num">{t(locale, 'a6_inv_invoiced')}</th>
                   <th className="num">{t(locale, 'inv_diff_col')}</th>
-                  <th>Ocena</th>
+                  <th>{t(locale, 'a6_inv_verdict')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -227,7 +227,7 @@ export function InvoicesView() {
           <div className="note">
             {t(locale, 'inv_three_way')}
             {' '}(<span className="code">pricing.costTotal</span>). {t(locale, 'inv_threshold_note')} ±
-            {money(match.threshold)} · otwarte: {match.openCount}.
+            {money(match.threshold)}{tp(locale, 'a6_inv_open_n', { n: String(match.openCount) })}
           </div>
         </div>
       </div>
@@ -250,7 +250,7 @@ export function InvoicesView() {
                     checked={factoringOffer.enabled}
                     onChange={(e) => updateFactoringOffer({ enabled: e.target.checked })}
                   />{' '}
-                  {factoringOffer.enabled ? 'tak' : 'nie'}
+                  {t(locale, factoringOffer.enabled ? 'a6_yes' : 'a6_no')}
                 </label>
               </dd>
               <dt>{t(locale, 'factoring_fee_pct')}</dt>
@@ -436,7 +436,7 @@ export function InvoicesView() {
                     <span className="lbl">
                       <span className="code">{l.code}</span> · CMR
                     </span>
-                    <span style={{ color: 'var(--red)' }}>brak</span>
+                    <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_inv_missing')}</span>
                   </div>,
                 ];
               }
@@ -461,7 +461,7 @@ export function InvoicesView() {
           type="file"
           accept="image/*,application/pdf"
           className="sronly"
-          aria-label="Wybierz załącznik CMR lub POD"
+          aria-label={t(locale, 'a6_inv_pick_att')}
           onChange={(e) => {
             const f = e.target.files?.[0];
             e.target.value = '';

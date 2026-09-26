@@ -1,4 +1,5 @@
 /** Polferries GDN↔NYN — seed timetable + rolling generated sailings. No booking API. */
+import type { Locale } from '../types';
 import raw from '../data/ferry-sailings.json';
 import { getNow, getNowMs } from './frozenNow';
 import { voyageWaveLabelForDay } from './voyageSea';
@@ -189,7 +190,7 @@ export function ferryLabel(s: FerrySailing): string {
   return `${v.name} · dep ${dep} ${s.depPort}→${s.arrPort}`;
 }
 
-export function ferryWidgetLabel(s: FerrySailing): { cd: string; line: string; wave: string } {
+export function ferryWidgetLabel(s: FerrySailing, locale: Locale = 'pl'): { cd: string; line: string; wave: string } {
   const v = vesselById(s.vessel);
   const now = getNowMs();
   const depMs = Date.parse(s.depLocal);
@@ -209,7 +210,7 @@ export function ferryWidgetLabel(s: FerrySailing): { cd: string; line: string; w
   return {
     cd,
     line: `${v.short || v.name} · ${when} · ${dir}`,
-    wave: voyageWaveLabelForDay(s.depLocal.slice(0, 10)),
+    wave: voyageWaveLabelForDay(s.depLocal.slice(0, 10), locale),
   };
 }
 

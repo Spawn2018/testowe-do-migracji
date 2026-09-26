@@ -1,4 +1,6 @@
 import { type ReactNode, type DragEvent, type CSSProperties } from 'react';
+import { useTowerStore } from '../../store/useTowerStore';
+import { t } from '../../i18n/messages';
 
 type Props = {
   id: string;
@@ -34,6 +36,7 @@ export function SectionCard({
   onSectionDrop,
   style,
 }: Props) {
+  const locale = useTowerStore((s) => s.locale);
   const onDragStart = (e: DragEvent) => {
     if (!draggableSection) return;
     e.dataTransfer.setData('text/wt-section', id);
@@ -74,7 +77,7 @@ export function SectionCard({
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
-        title={draggableSection ? 'Przeciągnij, aby zmienić kolejność sekcji' : undefined}
+        title={draggableSection ? t(locale, 'a6_sc_drag') : undefined}
       >
         {draggableSection ? (
           <span className="section-grip" aria-hidden>

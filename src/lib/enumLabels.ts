@@ -8,7 +8,7 @@ import type {
   Locale,
   Severity,
 } from '../types';
-import { t } from '../i18n/messages';
+import { dictEntry, hasKey, t, tRaw } from '../i18n/messages';
 
 type FerryStatus = 'NONE' | 'BOOKED' | 'CHECKED_IN' | 'ONBOARD' | 'LANDED' | 'CANCELLED' | 'DELAYED';
 
@@ -33,28 +33,6 @@ const GEOFENCE_KEY: Record<GeofenceType, string> = {
   REST: 'gf_rest',
 };
 
-const DOC_CATEGORY: Record<DocCategory, string> = {
-  PERMIT_PL: 'Zezwolenie PL',
-  PERMIT_SE: 'Zezwolenie SE',
-  INSURANCE: 'Polisa OCP',
-  CMR: 'CMR',
-  POD: 'POD',
-  LASHING_PHOTOS: 'docs_lashing',
-  DRAWING: 'doc_cat_drawing',
-  INVOICE: 'Faktura',
-};
-
-const DOC_CATEGORY_EN: Record<DocCategory, string> = {
-  PERMIT_PL: 'PL permit',
-  PERMIT_SE: 'SE permit',
-  INSURANCE: 'Cargo insurance',
-  CMR: 'CMR',
-  POD: 'POD',
-  LASHING_PHOTOS: 'docs_lashing',
-  DRAWING: 'doc_cat_drawing',
-  INVOICE: 'Invoice',
-};
-
 const ETA_KEY: Record<string, string> = {
   HIGH: 'eta_high',
   MED: 'eta_med',
@@ -70,20 +48,20 @@ const PAY_KEY: Record<InvoicePayoutStatus, string> = {
 };
 
 const EVENT_TYPE: Record<string, Record<Locale, string>> = {
-  SCHEDULE_IMPORTED: { pl: 'Import harmonogramu', en: 'Schedule import', sv: 'Schemaimport' },
-  RESOURCES_ASSIGNED: { pl: 'Przypisano zasoby', en: 'Resources assigned', sv: 'Resurser tilldelade' },
-  LOADED: { pl: 'Zaladowano', en: 'Loaded', sv: 'Lastad' },
-  DEPARTED: { pl: 'Wyjazd', en: 'Departed', sv: 'Avrest' },
-  AT_PORT: { pl: 'W porcie', en: 'At port', sv: 'I hamn' },
-  ON_FERRY: { pl: 'Na promie', en: 'On ferry', sv: 'Pa farja' },
-  OFF_FERRY: { pl: 'Z promu', en: 'Off ferry', sv: 'Av farja' },
-  APPROACHING: { pl: 'Dojezdza', en: 'Approaching', sv: 'Narmar' },
-  UNLOADED: { pl: 'Rozladowano', en: 'Unloaded', sv: 'Lossad' },
-  DELIVERED: { pl: 'Dostarczono', en: 'Delivered', sv: 'Levererad' },
-  DOC_UPLOADED: { pl: 'Wgrano dokument', en: 'Document uploaded', sv: 'Dokument uppladdat' },
-  STATUS_CHANGED: { pl: 'Zmiana statusu', en: 'Status change', sv: 'Statusandring' },
-  GEOFENCE: { pl: 'Strefa geograficzna', en: 'Geofence', sv: 'Geozon' },
-  NOTE: { pl: 'Notatka', en: 'Note', sv: 'Anteckning' },
+  SCHEDULE_IMPORTED: dictEntry('a6_event_type_schedule_imported'),
+  RESOURCES_ASSIGNED: dictEntry('a6_event_type_resources_assigned'),
+  LOADED: dictEntry('a6_event_type_loaded'),
+  DEPARTED: dictEntry('a6_event_type_departed'),
+  AT_PORT: dictEntry('a6_event_type_at_port'),
+  ON_FERRY: dictEntry('a6_event_type_on_ferry'),
+  OFF_FERRY: dictEntry('a6_event_type_off_ferry'),
+  APPROACHING: dictEntry('a6_event_type_approaching'),
+  UNLOADED: dictEntry('a6_event_type_unloaded'),
+  DELIVERED: dictEntry('a6_event_type_delivered'),
+  DOC_UPLOADED: dictEntry('a6_event_type_doc_uploaded'),
+  STATUS_CHANGED: dictEntry('a6_event_type_status_changed'),
+  GEOFENCE: dictEntry('a6_event_type_geofence'),
+  NOTE: dictEntry('a6_event_type_note'),
 };
 
 export function ferryStatusLabel(status: string, locale: Locale = 'pl'): string {
@@ -98,19 +76,9 @@ export function geofenceTypeLabel(type: string, locale: Locale = 'pl'): string {
 
 export function docCategoryLabel(cat: string, locale: Locale = 'pl'): string {
   if (cat === 'LASHING_PHOTOS') return t(locale, 'docs_lashing');
-  const map = locale === 'pl' ? DOC_CATEGORY : DOC_CATEGORY_EN;
-  if (locale === 'sv') {
-    const sv: Record<string, string> = {
-      PERMIT_PL: 'PL-tillstand',
-      PERMIT_SE: 'SE-tillstand',
-      INSURANCE: 'Godsfordakring',
-      CMR: 'CMR',
-      POD: 'POD',
-      INVOICE: 'Faktura',
-    };
-    if (cat in sv) return sv[cat];
-  }
-  return map[cat as DocCategory] ?? cat;
+  /* A6-T2: PL pokazuje dotąd identyfikator (błąd sprzed ANEKS 6) — PL bez zmian (840), EN/SV ze słownika. */
+  if (cat === 'DRAWING') return locale === 'pl' ? 'doc_cat_drawing' : t(locale, 'doc_cat_drawing');
+  return hasKey(locale, `a6_doccat_${cat}`) ? t(locale, `a6_doccat_${cat}`) : cat;
 }
 
 export function severityLabel(sev: string, locale: Locale = 'pl'): string {
@@ -134,57 +102,25 @@ export function eventTypeLabel(type: string, locale: Locale = 'pl'): string {
 
 export function riskTypeLabel(type: string, locale: Locale = 'pl'): string {
   const map: Record<string, Record<Locale, string>> = {
-    FERRY: { pl: 'Prom', en: 'Ferry', sv: 'Farja' },
-    ROAD_SE: { pl: 'Droga SE', en: 'SE road', sv: 'SE-vag' },
-    DOC: { pl: 'Dokumenty', en: 'Documents', sv: 'Dokument' },
-    OPS: { pl: 'Operacje', en: 'Operations', sv: 'Drift' },
-    FORCE_MAJEURE: { pl: 'Sila wyzsza', en: 'Force majeure', sv: 'Force majeure' },
+    FERRY: dictEntry('a6_map_ferry'),
+    ROAD_SE: dictEntry('a6_map_road_se'),
+    DOC: dictEntry('a6_map_doc'),
+    OPS: dictEntry('a6_map_ops'),
+    FORCE_MAJEURE: dictEntry('a6_map_force_majeure'),
   };
   return map[type]?.[locale] ?? type;
 }
 
 export function readyGateReasonLabel(reason: string, locale: Locale = 'pl'): string {
   const map: Record<string, Record<Locale, string>> = {
-    'Brak wymaganych dokumentow': {
-      pl: 'Brak wymaganych dokumentow',
-      en: 'Required documents missing',
-      sv: 'Nodvandiga dokument saknas',
-    },
-    'Brak wymaganych dokumentów': {
-      pl: 'Brak wymaganych dokumentów',
-      en: 'Required documents missing',
-      sv: 'Nodvandiga dokument saknas',
-    },
-    'Zezwolenie nie pasuje do wymiarow zestawu': {
-      pl: 'Zezwolenie nie pasuje do wymiarow zestawu',
-      en: 'Permit does not fit vehicle dimensions',
-      sv: 'Tillstandet passar inte fordonsmatt',
-    },
-    'Zezwolenie nie pasuje do wymiarów zestawu': {
-      pl: 'Zezwolenie nie pasuje do wymiarów zestawu',
-      en: 'Permit does not fit vehicle dimensions',
-      sv: 'Tillstandet passar inte fordonsmatt',
-    },
-    'Dokument zezwolenia niezgodny z zestawem': {
-      pl: 'Dokument zezwolenia niezgodny z zestawem',
-      en: 'Permit document does not match the set',
-      sv: 'Tillstands dokument matchar inte ekipaget',
-    },
-    'permitFits=false': {
-      pl: 'Zezwolenie nie pasuje do wymiarów zestawu',
-      en: 'Permit does not fit vehicle dimensions',
-      sv: 'Tillstandet passar inte fordonsmatt',
-    },
-    'MISMATCH document': {
-      pl: 'Dokument zezwolenia niezgodny z zestawem',
-      en: 'Permit document mismatch',
-      sv: 'Tillstands dokument stammer inte',
-    },
-    'docMissing flag': {
-      pl: 'Brak wymaganych dokumentów',
-      en: 'Required documents missing',
-      sv: 'Nodvandiga dokument saknas',
-    },
+    'Brak wymaganych dokumentow': dictEntry('a6_map_brak_wymaganych_dokumentow'),
+    'Brak wymaganych dokumentów': dictEntry('a6_map_brak_wymaganych_dokument_w'),
+    'Zezwolenie nie pasuje do wymiarow zestawu': dictEntry('a6_map_zezwolenie_nie_pasuje_do_wymiarow_zestawu'),
+    'Zezwolenie nie pasuje do wymiarów zestawu': dictEntry('a6_map_zezwolenie_nie_pasuje_do_wymiar_w_zestawu'),
+    'Dokument zezwolenia niezgodny z zestawem': dictEntry('a6_map_dokument_zezwolenia_niezgodny_z_zestawem'),
+    'permitFits=false': dictEntry('a6_map_permitfits_false'),
+    'MISMATCH document': dictEntry('a6_map_mismatch_document'),
+    'docMissing flag': dictEntry('a6_map_docmissing_flag'),
   };
   return map[reason]?.[locale] ?? reason;
 }
@@ -194,8 +130,8 @@ export function readyGateReasonLabel(reason: string, locale: Locale = 'pl'): str
 const SEED_WORKFLOW_KEY: Record<string, string> = { 'wf-4': 'kpi_ferry_risk', 'wf-12': 'fin_margin_below' };
 export function workflowDisplayName(w: { id: string; name: string }, locale: Locale = 'pl'): string {
   const key = SEED_WORKFLOW_KEY[w.id];
-  return key && w.name === t('pl', key) ? t(locale, key) : w.name;
+  return key && w.name === tRaw('pl', key) ? t(locale, key) : w.name;
 }
 export function geofenceDisplayName(name: string, locale: Locale = 'pl'): string {
-  return name === t('pl', 'loading_site') ? t(locale, 'loading_site') : name;
+  return name === tRaw('pl', 'loading_site') ? t(locale, 'loading_site') : name;
 }
