@@ -60,3 +60,28 @@ nowy wpis w `auth.users` bez niezaakceptowanego zaproszenia (`TOWER_NO_INVITE`) 
 link dla adresu bez zaproszenia → HTTP 500, 0 nowych kont. Ustawienie Auth „Allow new users to sign up” jest
 WŁĄCZONE, bo zaproszenie działa przez `signInWithOtp(shouldCreateUser: true)` po wpisie w `user_invites`
 (`UsersAdmin`); wyłączenie go zablokowałoby zapraszanie. Zob. `KOPIE_ZAPASOWE.md` / POSTEP 3.2a.
+
+## 6. Zdarzenia transportu (`load_events`) — lista dozwolonych typów (W2, migracja 0032)
+Zdarzenia stref zmieniają status (`apply_geofence_status`), więc typy systemowe **nie mogą** przyjść przez API.
+Reguła `events_insert` to **lista dozwolonych** (nowy typ = domyślnie zamknięty), `CHECK load_events_event_type_known`
+wymienia wszystkie znane typy (dotyczy też `postgres` i funkcji systemowych). Nowy typ = nowa migracja z wpisem tutaj.
+
+| Typ | Tworzy (kod) | Przez API (rola `authenticated`, transport widoczny) |
+|---|---|---|
+| `NOTE` | notatka w szufladzie — HHL, KSH, przewoźnik | tak |
+| `MILESTONE_LOADED` | przewoźnik swojego transportu, HHL; kierowca przez `driver_post_event` (token) | tak — tylko HHL i przewoźnik transportu |
+| `DOC_UPLOADED`, `PERMIT_MISMATCH` | wgranie dokumentu (`attachDocumentFile`, `addStoredDocument`) — każda rola z dostępem do dokumentów | tak |
+| `AWIZACJA_UPDATED` | `updateAwizacja` w szufladzie (HHL, przewoźnik) — zapis danych chroni `loads_update` | tak (dziennik) |
+| `RESOURCES_UPDATED`, `ORDER_NO_UPDATED`, `FERRY_UPDATED`, `SAILING_ASSIGNED` | szuflada: zasoby, numer zlecenia, prom/rejs — HHL, przewoźnik | tak (dziennik) |
+| `SCX_ASSIGNED`, `PLAN_B_ACTIVATED`, `READY_BLOCKED`, `SCHEDULE_IMPORTED`, `SCHEDULE_DATE_CRITICAL` | przypisanie przewoźnika, plan B, blokada GOTOWY, import harmonogramu (HHL, KSH) | tak (dziennik) |
+| `STATUS_<status>` (statusy UI i bazy, 24 wartości; bez `STATUS_AUTO`) | ręczna zmiana statusu (`setLoadStatus`) — sam status chroni `loads_update` | tak (dziennik) |
+| `GEOFENCE_ENTER`, `GEOFENCE_EXIT`, `GEOFENCE_DWELL` | tylko `process_position` (definer) | **nigdy** |
+| `STATUS_AUTO` | tylko `auto_set_status` (definer) | **nigdy** |
+| `MILESTONE_UNLOADED`, `DRIVER_ON_FERRY`, `DRIVER_PROBLEM` | tylko `driver_post_event` (token kierowcy, definer) | **nigdy** |
+| `POSITION_SHARED`, `POSITION_SHARE_DENIED` | tylko tryb demo (PWA bez serwera; w trybie serwera pozycje idą przez RPC) | **nigdy** |
+| `DELAY_DETECTED`, `RISK_RAISED`, `SILENT_VEHICLE` | zarezerwowane (czyta je `kpi_exception_detection_lag`) | **nigdy** |
+
+`apply_geofence_status()` bierze rodzaj i kraj strefy **wyłącznie z `geofences` po `payload->>'geofence_id'`**;
+`geofence_kind` z treści jest ignorowany, nieznana strefa lub zły identyfikator → brak zmiany statusu.
+Przycisk „Zdarzenie strefy” w szufladzie jest tylko w trybie demo. Produkcja 26.09.2026: 40 istniejących zdarzeń
+(NOTE 22, STATUS_AUTO 5, GEOFENCE_ENTER 5, DOC_UPLOADED 3, GEOFENCE_EXIT 3, AWIZACJA_UPDATED 2) — 0 niezgodnych z CHECK.

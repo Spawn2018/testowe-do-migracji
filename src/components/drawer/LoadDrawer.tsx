@@ -827,16 +827,19 @@ export function LoadDrawer() {
                 >
                   Wyjazd
                 </button>
-                <button
-                  type="button"
-                  className="btn ghost"
-                  onClick={() => {
-                    const gf = geofences.find((g) => g.type === 'PRE_ARRIVAL') ?? geofences[0];
-                    if (gf) triggerGeofence(load.id, gf.id);
-                  }}
-                >
-                  Zdarzenie strefy
-                </button>
+                {/* W2: zdarzenia stref tworzy wyłącznie system (process_position) — symulacja tylko w trybie demo */}
+                {!SUPABASE_AUTH_ENABLED && (
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    onClick={() => {
+                      const gf = geofences.find((g) => g.type === 'PRE_ARRIVAL') ?? geofences[0];
+                      if (gf) triggerGeofence(load.id, gf.id);
+                    }}
+                  >
+                    Zdarzenie strefy
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn ghost"

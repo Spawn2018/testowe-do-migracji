@@ -126,5 +126,25 @@ err "authenticated: UPDATE/INSERT/TRUNCATE → 42501"               $HHL "update
 chk6 "postgres: DELETE (0 wierszy) przechodzi"                    "$(psql "$PGURL" -Atq -c "begin; delete from public.spatial_ref_sys where srid = -1; rollback;" 2>&1 | tr -d '\n')" "" 
 chk6 "odczyt spatial_ref_sys dla authenticated działa (PostGIS)"  "$(psql "$PGURL" -Atq -c "begin; set local role authenticated; select count(*) > 0 from public.spatial_ref_sys where srid = 4326; rollback;" 2>&1 | grep -vE '^(BEGIN|SET|ROLLBACK)$')" t
 
+echo; echo "[W2] Zdarzenia: lista dozwolonych typów dla ról API, CHECK, strefa z tabeli (0032)"
+err "KSH: GEOFENCE_ENTER do swojego transportu — odrzucone"       $KSH "insert into load_events (load_id,event_type,occurred_at) values ('$L1','GEOFENCE_ENTER',now())" "row-level security"
+err "przewoźnik: GEOFENCE_ENTER do swojego transportu — odrzucone" $SCX "insert into load_events (load_id,event_type,occurred_at) values ('$L1','GEOFENCE_ENTER',now())" "row-level security"
+err "przewoźnik: STATUS_AUTO — odrzucone"                         $SCX "insert into load_events (load_id,event_type,occurred_at) values ('$L1','STATUS_AUTO',now())" "row-level security"
+err "przewoźnik: MILESTONE_UNLOADED — odrzucone"                  $SCX "insert into load_events (load_id,event_type,occurred_at) values ('$L1','MILESTONE_UNLOADED',now())" "row-level security"
+val "przewoźnik: NOTE nadal dozwolone"                            $SCX "with i as (insert into load_events (load_id,event_type,occurred_at) values ('$L1','NOTE',now()) returning 1) select count(*) from i" 1
+val "KSH: DOC_UPLOADED nadal dozwolone"                           $KSH "with i as (insert into load_events (load_id,event_type,occurred_at) values ('$L1','DOC_UPLOADED',now()) returning 1) select count(*) from i" 1
+out=$(sys "begin; insert into load_events (load_id,event_type,occurred_at) values ('$L1','COKOLWIEK',now()); rollback;"); echo "$out" | grep -q "load_events_event_type_known" && { ok=$((ok+1)); echo "  OK    nieznany typ odrzucony przez CHECK (także dla postgres)"; } || { fail=$((fail+1)); echo "  FAIL  nieznany typ: $out"; }
+GW="insert into geofences (id,project_id,name,kind,geom,hysteresis_m,dwell_seconds,debounce_fixes,country) values
+ ('99999999-0000-0000-0000-0000000000a1','22222222-0000-0000-0000-000000000001','W2 załadunek','LOADING',make_circle_fence(52.09,17.02,800),200,0,2,'PL'),
+ ('99999999-0000-0000-0000-0000000000a2','22222222-0000-0000-0000-000000000001','W2 plac','SITE',make_circle_fence(65.80,21.75,1500),300,0,2,'SE');
+ insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status) values
+ ('99999999-0000-0000-0000-0000000000b1','22222222-0000-0000-0000-000000000001','00000000-0000-0000-0000-00000000a003','KSH/W2','HHL/W2','SCX/W2','READY');"
+out=$(sys "begin; $GW insert into load_events (load_id,event_type,occurred_at,payload) values ('99999999-0000-0000-0000-0000000000b1','GEOFENCE_ENTER',now(),
+ '{\"geofence_id\":\"99999999-0000-0000-0000-0000000000a1\",\"geofence_kind\":\"SITE\"}'); select status from loads where id='99999999-0000-0000-0000-0000000000b1'; rollback;" | grep -vE '^(BEGIN|ROLLBACK|INSERT.*)$' | tail -1)
+[ "$out" = "AT_LOADING" ] && { ok=$((ok+1)); echo "  OK    strefa LOADING z treścią SITE → AT_LOADING (wg tabeli)"; } || { fail=$((fail+1)); echo "  FAIL  niezgodny geofence_kind (1): $out"; }
+out=$(sys "begin; $GW insert into load_events (load_id,event_type,occurred_at,payload) values ('99999999-0000-0000-0000-0000000000b1','GEOFENCE_ENTER',now(),
+ '{\"geofence_id\":\"99999999-0000-0000-0000-0000000000a2\",\"geofence_kind\":\"LOADING\"}'); select status from loads where id='99999999-0000-0000-0000-0000000000b1'; rollback;" | grep -vE '^(BEGIN|ROLLBACK|INSERT.*)$' | tail -1)
+[ "$out" = "READY" ] && { ok=$((ok+1)); echo "  OK    strefa SITE z treścią LOADING → status bez zmian (wg tabeli)"; } || { fail=$((fail+1)); echo "  FAIL  niezgodny geofence_kind (2): $out"; }
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
