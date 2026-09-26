@@ -32,5 +32,5 @@ check session 27
 check archive 18
 check watchdog 27
 check invite 28
-check risks 17
+check risks 23
 [ $ok -eq 1 ]

@@ -56,7 +56,16 @@ Q "select raise_integration_risk('$P', null, 'FERRY', 'HIGH', 'Źródło niedost
 chk "raise_integration_risk (Edge) → klucz z detail.title_key" "$(key "dedup_key='SOURCE_DOWN:A6'")" rk_source_down
 
 chk "wyzwalacz: brak klucza → rk_generic z params.title" "$($PSQL -c "insert into risk_signals (project_id, kind, severity, title, detail) values ('$P','FERRY','LOW','Stary tekst','{}') returning title_key||'|'||(detail->'params'->>'title')" 2>/dev/null | head -1)" "rk_generic|Stary tekst"
-chk "wszystkie ryzyka funkcji: 0 bez klucza, 0 generycznych" "$(Q "select count(*) from risk_signals where (title_key is null or title_key='rk_generic') and title <> 'Stary tekst'")" 0
+echo; echo "[0043] strażnik rk_generic → ryzyko HHL + e-mail ALERT_EMAIL_TO"
+chk "strażnik: 1 ryzyko rk_key_guard (JOB_FAILURE, HIGH, audience HHL)" "$(Q "select count(*)||'/'||string_agg(kind::text||','||severity::text||','||audience::text, ';') from risk_signals where title_key='rk_key_guard'")" "1/JOB_FAILURE,HIGH,HHL"
+chk "strażnik: params kind/title, job risk-key-guard" "$(Q "select (detail->'params'->>'kind')||'|'||(detail->'params'->>'title')||'|'||(detail->>'job') from risk_signals where title_key='rk_key_guard'")" "FERRY|Stary tekst|risk-key-guard"
+chk "strażnik: e-mail — bez sekretów Vault lokalnie → BRAK_SEKRETOW" "$(Q "select detail->>'mail' from risk_signals where title_key='rk_key_guard'")" BRAK_SEKRETOW
+$PSQL -c "insert into risk_signals (project_id, kind, severity, title, detail) values ('$P','FERRY','LOW','Drugi stary','{}')" >/dev/null 2>&1
+chk "strażnik: drugie rk_generic tego samego rodzaju → bez duplikatu (i bez drugiego e-maila)" "$(Q "select count(*) from risk_signals where title_key='rk_key_guard'")" 1
+chk "strażnik: zapis pierwotnego ryzyka nie jest blokowany" "$(Q "select count(*) from risk_signals where title_key='rk_generic'")" 2
+$PSQL -c "insert into risk_signals (project_id, kind, severity, title, detail) values ('$P','ROAD_SE','LOW','Inny rodzaj','{}')" >/dev/null 2>&1
+chk "strażnik: inny rodzaj → drugie ryzyko strażnika" "$(Q "select count(*) from risk_signals where title_key='rk_key_guard'")" 2
+chk "wszystkie ryzyka funkcji: 0 bez klucza, 0 generycznych" "$(Q "select count(*) from risk_signals where (title_key is null or title_key='rk_generic') and title not in ('Stary tekst','Drugi stary','Inny rodzaj')")" 0
 
 ST="${ADMIN%/*}/tower_test_status"
 if psql "$ST" -Atqc "select 1" >/dev/null 2>&1; then

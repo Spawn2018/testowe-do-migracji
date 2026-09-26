@@ -9,6 +9,9 @@ import type { Locale } from '../types';
 type Dict = Record<string, string>;
 
 const pl: Dict = {
+  rk_key_guard: 'Ryzyko bez klucza tłumaczenia: {kind} — {title}',
+  rk_key_guard_text: 'Funkcja zapisała ryzyko bez klucza tłumaczenia — tekst w aplikacji i e-mailach tylko po polsku.',
+  rk_key_guard_next: 'Dodaj klucz tłumaczenia w funkcji źródłowej i zamknij to ryzyko.',
   rk_generic: '{title}',
   rk_seed_sail_cancel: '{code}: rejs {vessel} {dep} odwołany — transport wymaga nowego rejsu',
   rk_seed_tv_fm: 'Siła wyższa — {title} · +{h} h',
@@ -123,6 +126,9 @@ const pl: Dict = {
 };
 
 const en: Dict = {
+  rk_key_guard: 'Risk without a translation key: {kind} — {title}',
+  rk_key_guard_text: 'A function saved a risk without a translation key — app and e-mail text in Polish only.',
+  rk_key_guard_next: 'Add a translation key in the source function and close this risk.',
   rk_generic: '{title}',
   rk_seed_sail_cancel: '{code}: sailing {vessel} {dep} cancelled — the load needs a new sailing',
   rk_seed_tv_fm: 'Force majeure — {title} · +{h} h',
@@ -233,6 +239,9 @@ const en: Dict = {
 };
 
 const sv: Dict = {
+  rk_key_guard: 'Risk utan översättningsnyckel: {kind} — {title}',
+  rk_key_guard_text: 'En funktion sparade en risk utan översättningsnyckel — text i appen och e-post endast på polska.',
+  rk_key_guard_next: 'Lägg till en översättningsnyckel i källfunktionen och stäng denna risk.',
   rk_generic: '{title}',
   rk_seed_sail_cancel: '{code}: avgång {vessel} {dep} inställd — transporten behöver en ny avgång',
   rk_seed_tv_fm: 'Force majeure — {title} · +{h} h',
