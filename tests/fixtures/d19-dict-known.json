@@ -1,0 +1,269 @@
+{
+ "_opis": "D19-T słownik — znane trafienia poza banerem (26.09.2026), do decyzji właściciela. Nowe trafienie spoza listy = test czerwony.",
+ "hits": [
+  {
+   "locale": "en",
+   "role": "HHL",
+   "view": "docs",
+   "text": "Wszystkie"
+  },
+  {
+   "locale": "en",
+   "role": "HHL",
+   "view": "fin",
+   "text": "Koszt"
+  },
+  {
+   "locale": "en",
+   "role": "HHL",
+   "view": "fin",
+   "text": "Typ"
+  },
+  {
+   "locale": "en",
+   "role": "HHL",
+   "view": "geo",
+   "text": "KSH Śrem · Grunwaldzka 27C"
+  },
+  {
+   "locale": "en",
+   "role": "HHL",
+   "view": "geo",
+   "text": "Typ"
+  },
+  {
+   "locale": "en",
+   "role": "HHL",
+   "view": "inv",
+   "text": "zgodna"
+  },
+  {
+   "locale": "en",
+   "role": "HHL",
+   "view": "options",
+   "text": "KSH Śrem · Grunwaldzka 27C"
+  },
+  {
+   "locale": "en",
+   "role": "HHL",
+   "view": "options",
+   "text": "Marża poniżej progu"
+  },
+  {
+   "locale": "en",
+   "role": "HHL",
+   "view": "options",
+   "text": "Ryzyko promowe"
+  },
+  {
+   "locale": "en",
+   "role": "HHL",
+   "view": "risk",
+   "text": "Przelicz"
+  },
+  {
+   "locale": "en",
+   "role": "HHL",
+   "view": "risk",
+   "text": "Transporty na rejsie"
+  },
+  {
+   "locale": "en",
+   "role": "HHL",
+   "view": "wf",
+   "text": "Marża poniżej progu"
+  },
+  {
+   "locale": "en",
+   "role": "HHL",
+   "view": "wf",
+   "text": "Ryzyko promowe"
+  },
+  {
+   "locale": "en",
+   "role": "KSH",
+   "view": "docs",
+   "text": "Wszystkie"
+  },
+  {
+   "locale": "en",
+   "role": "KSH",
+   "view": "risk",
+   "text": "Przelicz"
+  },
+  {
+   "locale": "en",
+   "role": "KSH",
+   "view": "risk",
+   "text": "Transporty na rejsie"
+  },
+  {
+   "locale": "en",
+   "role": "SCX",
+   "view": "docs",
+   "text": "Wszystkie"
+  },
+  {
+   "locale": "en",
+   "role": "SCX",
+   "view": "inv",
+   "text": "zgodna"
+  },
+  {
+   "locale": "en",
+   "role": "SCX",
+   "view": "risk",
+   "text": "Przelicz"
+  },
+  {
+   "locale": "en",
+   "role": "SCX",
+   "view": "risk",
+   "text": "Transporty na rejsie"
+  },
+  {
+   "locale": "en",
+   "role": "SCX",
+   "view": "tasks",
+   "text": "Termin"
+  },
+  {
+   "locale": "en",
+   "role": "SCX",
+   "view": "tasks",
+   "text": "Wysyłka"
+  },
+  {
+   "locale": "en",
+   "role": "SCX",
+   "view": "tasks",
+   "text": "Załadunek"
+  },
+  {
+   "locale": "sv",
+   "role": "HHL",
+   "view": "docs",
+   "text": "Wszystkie"
+  },
+  {
+   "locale": "sv",
+   "role": "HHL",
+   "view": "fin",
+   "text": "Koszt"
+  },
+  {
+   "locale": "sv",
+   "role": "HHL",
+   "view": "geo",
+   "text": "KSH Śrem · Grunwaldzka 27C"
+  },
+  {
+   "locale": "sv",
+   "role": "HHL",
+   "view": "inv",
+   "text": "zgodna"
+  },
+  {
+   "locale": "sv",
+   "role": "HHL",
+   "view": "options",
+   "text": "KSH Śrem · Grunwaldzka 27C"
+  },
+  {
+   "locale": "sv",
+   "role": "HHL",
+   "view": "options",
+   "text": "Marża poniżej progu"
+  },
+  {
+   "locale": "sv",
+   "role": "HHL",
+   "view": "options",
+   "text": "Ryzyko promowe"
+  },
+  {
+   "locale": "sv",
+   "role": "HHL",
+   "view": "risk",
+   "text": "Przelicz"
+  },
+  {
+   "locale": "sv",
+   "role": "HHL",
+   "view": "risk",
+   "text": "Transporty na rejsie"
+  },
+  {
+   "locale": "sv",
+   "role": "HHL",
+   "view": "wf",
+   "text": "Marża poniżej progu"
+  },
+  {
+   "locale": "sv",
+   "role": "HHL",
+   "view": "wf",
+   "text": "Ryzyko promowe"
+  },
+  {
+   "locale": "sv",
+   "role": "KSH",
+   "view": "docs",
+   "text": "Wszystkie"
+  },
+  {
+   "locale": "sv",
+   "role": "KSH",
+   "view": "risk",
+   "text": "Przelicz"
+  },
+  {
+   "locale": "sv",
+   "role": "KSH",
+   "view": "risk",
+   "text": "Transporty na rejsie"
+  },
+  {
+   "locale": "sv",
+   "role": "SCX",
+   "view": "docs",
+   "text": "Wszystkie"
+  },
+  {
+   "locale": "sv",
+   "role": "SCX",
+   "view": "inv",
+   "text": "zgodna"
+  },
+  {
+   "locale": "sv",
+   "role": "SCX",
+   "view": "risk",
+   "text": "Przelicz"
+  },
+  {
+   "locale": "sv",
+   "role": "SCX",
+   "view": "risk",
+   "text": "Transporty na rejsie"
+  },
+  {
+   "locale": "sv",
+   "role": "SCX",
+   "view": "tasks",
+   "text": "Termin"
+  },
+  {
+   "locale": "sv",
+   "role": "SCX",
+   "view": "tasks",
+   "text": "Wysyłka"
+  },
+  {
+   "locale": "sv",
+   "role": "SCX",
+   "view": "tasks",
+   "text": "Załadunek"
+  }
+ ]
+}

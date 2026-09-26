@@ -8,6 +8,8 @@ import { test, expect, type Page } from '@playwright/test'
 import { writeFileSync, mkdirSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { I18N_ALL } from '../src/i18n/messages'
+import KNOWN from './fixtures/d19-dict-known.json' with { type: 'json' }
 
 const FROZEN_NOW = '2026-09-23T14:32:00Z'
 const FROZEN_URL = `/#/?now=${encodeURIComponent(FROZEN_NOW)}`
@@ -155,5 +157,66 @@ test.describe('D19-T EN/SV no Polish diacritics in UI chrome', () => {
 
     // Hard gate for D19: expect 0. Until then run via npm run test:d19 (not pre-push).
     expect(all.length, `D19-T fail: ${byLocale.en} EN + ${byLocale.sv} SV diacritic hits in UI. See ${REPORT_PATH}`).toBe(0)
+  })
+})
+
+/**
+ * D19-T (odp. właściciela §5) — napisy na sztywno niezależnie od polskich liter:
+ * w EN i SV żaden tekst (także w [data-content]) nie może być równy wartości ze słownika PL,
+ * chyba że ta sama wartość jest w słowniku EN/SV (kody, nazwy własne). Wszystkie role, wszystkie widoki.
+ */
+function forbiddenFor(locale: 'en' | 'sv'): Set<string> {
+  const pl = I18N_ALL.pl, loc = I18N_ALL[locale]
+  const allowed = new Set(Object.values(loc).map((v) => v.trim()))
+  const out = new Set<string>()
+  for (const [k, v] of Object.entries(pl)) {
+    const val = v.trim()
+    if (val.length < 3 || /\{[a-z_]+\}/i.test(val) || !/[a-ząćęłńóśźż]{3}/i.test(val)) continue
+    if (loc[k]?.trim() === val || allowed.has(val)) continue
+    out.add(val)
+  }
+  return out
+}
+
+test.describe('D19-T słownik: EN/SV bez wartości PL', () => {
+  test('wszystkie role i widoki: zero tekstów równych wartości PL', async ({ page }) => {
+    test.setTimeout(600_000)
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await gotoFrozen(page)
+    const hits: { locale: string; role: string; view: string; text: string }[] = []
+    for (const role of ['HHL', 'KSH', 'SCX'] as const) {
+      await page.evaluate((r) => (document.querySelector(`#roleSeg button[data-role="${r}"]`) as HTMLButtonElement | null)?.click(), role)
+      await page.waitForTimeout(400)
+      for (const locale of ['en', 'sv'] as const) {
+        await setLocale(page, locale)
+        const forbidden = [...forbiddenFor(locale)]
+        const views = await page.evaluate(() => [...document.querySelectorAll('nav button[data-view]')].map((b) => (b as HTMLElement).dataset.view!))
+        for (const view of views) {
+          await navTo(page, view)
+          const found = await page.evaluate((list) => {
+            const set = new Set(list)
+            const res = new Set<string>()
+            const walker = document.createTreeWalker(document.querySelector('.app') ?? document.body, NodeFilter.SHOW_TEXT)
+            for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+              const text = (n.textContent || '').replace(/\s+/g, ' ').trim()
+              const el = n.parentElement
+              if (!text || !el || !set.has(text)) continue
+              const st = getComputedStyle(el)
+              if (st.display === 'none' || st.visibility === 'hidden') continue
+              res.add(text)
+            }
+            return [...res]
+          }, forbidden)
+          for (const text of found) hits.push({ locale, role, view, text: text.slice(0, 160) })
+        }
+      }
+    }
+    mkdirSync(join(__dirname, '../test-results'), { recursive: true })
+    writeFileSync(join(__dirname, '../test-results/d19-dict-hits.json'), JSON.stringify({ total: hits.length, hits }, null, 2))
+    const key = (h: { locale: string; role: string; view: string; text: string }) => `${h.locale}|${h.role}|${h.view}|${h.text}`
+    const known = new Set((KNOWN.hits as { locale: string; role: string; view: string; text: string }[]).map(key))
+    const fresh = hits.filter((h) => !known.has(key(h)))
+    console.log(`D19-T słownik: trafień=${hits.length} (znane poza banerem: ${hits.length - fresh.length}, nowe: ${fresh.length})`)
+    expect(fresh, `D19-T słownik: ${fresh.length} nowych tekstów PL w EN/SV — test-results/d19-dict-hits.json`).toEqual([])
   })
 })
