@@ -4,18 +4,21 @@
  * Token pokazywany jeden raz — w bazie wyłącznie skrót.
  */
 import { useState } from 'react';
+import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 
 export function DriverLinkPanel({ loadId }: { loadId: string }) {
   const [link, setLink] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const rpc = async (fn: 'issue_driver_token' | 'revoke_driver_token') => {
-    const { getSupabase } = await import('../../auth/client');
-    const sb = await getSupabase();
-    const r = await sb.rpc(fn, { p_load_id: loadId });
-    if (r.error) throw new Error(r.error.message);
-    return r.data as unknown;
-  };
+  const rpc = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED
+    ? async (fn: 'issue_driver_token' | 'revoke_driver_token') => {
+        const { getSupabase } = await import('../../auth/client');
+        const sb = await getSupabase();
+        const r = await sb.rpc(fn, { p_load_id: loadId });
+        if (r.error) throw new Error(r.error.message);
+        return r.data as unknown;
+      }
+    : async (): Promise<unknown> => { throw new Error('Tryb demo — brak bazy'); };
   const run = (fn: 'issue_driver_token' | 'revoke_driver_token') => {
     setBusy(true);
     setNote(null);

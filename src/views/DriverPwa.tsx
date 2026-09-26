@@ -17,7 +17,9 @@ import { createDriverApi, isServerDriverToken, uploadDriverFile, type DriverInst
 import type { DriverMilestone } from '../lib/driverTracking';
 
 /* ANEKS 3 §2.3 — link z tokenem z bazy (tylko build Supabase; w demo stała false → kod usuwany) */
-const driverApi = () => import('../auth/client').then(({ getSupabase }) => getSupabase()).then((sb) => createDriverApi(sb));
+const driverApi = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED
+  ? () => import('../auth/client').then(({ getSupabase }) => getSupabase()).then((sb) => createDriverApi(sb))
+  : () => Promise.reject(new Error('Tryb demo — brak bazy'));
 
 export function DriverPwa() {
   const { token = 'demo-active' } = useParams();

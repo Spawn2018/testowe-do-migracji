@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { invoicedLoadIds } from '../lib/importRemoval';
 import { useTowerStore } from '../store/useTowerStore';
 import { filterLoads } from '../lib/selectors';
 import { StatusPill, formatDelayPill } from '../components/ui/StatusPill';
@@ -146,10 +147,7 @@ export function ScheduleView() {
     setParsing(true);
     try {
       const buf = await f.arrayBuffer();
-      const [{ dryRunFromXlsx }, { invoicedLoadIds }] = await Promise.all([
-        import('../lib/scheduleDryRun'),
-        import('../lib/importRemoval'),
-      ]);
+      const { dryRunFromXlsx } = await import('../lib/scheduleDryRun');
       const st = useTowerStore.getState();
       const diff = await dryRunFromXlsx(buf, f.name, st.loads, undefined, invoicedLoadIds(st.bills, st.invoices));
       setDryRun(diff);

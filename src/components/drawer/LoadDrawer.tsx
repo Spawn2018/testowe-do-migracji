@@ -790,7 +790,7 @@ export function LoadDrawer() {
                   )}
                 </>
               )}
-              {SUPABASE_AUTH_ENABLED && canEdit && isServerId(load.id) && <DriverLinkPanel loadId={load.id} />}
+              {import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED && canEdit && isServerId(load.id) && <DriverLinkPanel loadId={load.id} />}
 
               <div className="hr" />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
