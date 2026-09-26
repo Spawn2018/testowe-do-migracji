@@ -65,4 +65,54 @@ err "DELETE loads: wyzwalacz blokuje nawet po nadaniu uprawnienia" $HHL "set loc
 sys "revoke delete on loads from service_role"
 chk "wiersze transportów zostały (3)"                    "$(Q "select count(*) from loads")" 3
 
+echo; echo "[2.2] Widoczność ryzyk — zamknięte drzwi (audience + RLS)"
+CRX=11111111-0000-0000-0000-000000000004; OCRX=00000000-0000-0000-0000-00000000a004; OSCX=00000000-0000-0000-0000-00000000a003
+L4=33333333-0000-0000-0000-000000000004
+sys "insert into organizations (id, code, name, kind) values ('$OCRX','CRX','Inny przewoźnik','CARRIER')"
+sys "insert into app_users (auth_id, org_id, email, role) values ('$CRX','$OCRX','crx@test','CARRIER_DISPATCH')"
+sys "insert into loads (id, project_id, carrier_org_id, order_no) values ('$L4','$P','$OCRX','KSH/4')"
+sys "alter type risk_kind add value if not exists 'TEST_NOWY'"
+R() { sys "insert into risk_signals (project_id, load_id, kind, severity, title, detail) values ('$P', $1, '$2', 'HIGH', 'test', '$3'::jsonb)"; }
+R "'$L1'" INVOICE_MISMATCH "{\"t\":\"cost\",\"invoice_id\":\"$INVK\"}"
+R "'$L1'" INVOICE_MISMATCH "{\"t\":\"rev\",\"invoice_id\":\"$INVP\"}"
+R "'$L1'" INVOICE_MISMATCH "{\"t\":\"revdir\",\"direction\":\"PRZYCHOD\"}"
+R "'$L1'" INVOICE_MISMATCH "{\"t\":\"nodir\"}"
+R "'$L1'" SEQUENCE '{"t":"seq"}'
+R null FERRY '{"t":"ferry"}'
+R "'$L1'" SILENT_VEHICLE '{"t":"silent1"}'
+R "'$L4'" SILENT_VEHICLE '{"t":"silent4"}'
+R "'$L4'" FERRY '{"t":"ferry4"}'
+R null PERMIT "{\"t\":\"permcrx\",\"carrier_org_id\":\"$OCRX\"}"
+R "'$L1'" TEST_NOWY '{"t":"nowy"}'
+A() { Q "select audience from risk_signals where detail->>'t'='$1'"; }
+chk "odbiorcy: faktura kosztowa → HHL_PRZEWOZNIK"       "$(A cost)" HHL_PRZEWOZNIK
+chk "odbiorcy: faktura przychodowa → HHL_KLIENT"        "$(A rev)" HHL_KLIENT
+chk "odbiorcy: kierunek w szczegółach PRZYCHOD → HHL_KLIENT" "$(A revdir)" HHL_KLIENT
+chk "odbiorcy: rozbieżność bez kierunku → HHL"          "$(A nodir)" HHL
+chk "odbiorcy: SEQUENCE → HHL_KLIENT"                   "$(A seq)" HHL_KLIENT
+chk "odbiorcy: FERRY → WSZYSCY"                         "$(A ferry)" WSZYSCY
+chk "odbiorcy: SILENT_VEHICLE → HHL_PRZEWOZNIK"         "$(A silent1)" HHL_PRZEWOZNIK
+chk "odbiorcy: nowy, nieprzypisany rodzaj → HHL"        "$(A nowy)" HHL
+C() { echo "select count(*) from risk_signals where detail->>'t'='$1'"; }
+val "KSH nie widzi ryzyka faktury kosztowej"            $KSH "$(C cost)" 0
+val "KSH widzi ryzyko faktury przychodowej"             $KSH "$(C rev)" 1
+val "KSH widzi kolejność montażu"                        $KSH "$(C seq)" 1
+val "KSH nie widzi ryzyka przewoźnika (cichy pojazd)"   $KSH "$(C silent1)" 0
+val "SCX widzi ryzyko swojej faktury kosztowej"         $SCX "$(C cost)" 1
+val "SCX nie widzi ryzyka faktury przychodowej"         $SCX "$(C rev)" 0
+val "SCX nie widzi kolejności montażu"                  $SCX "$(C seq)" 0
+val "SCX widzi cichy pojazd swojego transportu"         $SCX "$(C silent1)" 1
+val "SCX nie widzi ryzyk transportu innego przewoźnika (cichy)" $SCX "$(C silent4)" 0
+val "SCX nie widzi ryzyk transportu innego przewoźnika (prom)"  $SCX "$(C ferry4)" 0
+val "SCX nie widzi ryzyka bez transportu innej firmy"   $SCX "$(C permcrx)" 0
+val "CRX widzi ryzyko bez transportu swojej firmy"      $CRX "$(C permcrx)" 1
+val "CRX widzi cichy pojazd swojego transportu"         $CRX "$(C silent4)" 1
+val "SCX widzi ryzyko korytarza bez transportu"         $SCX "$(C ferry)" 1
+val "KSH widzi ryzyko korytarza"                         $KSH "$(C ferry)" 1
+val "nowy rodzaj: HHL widzi"                             $HHL "$(C nowy)" 1
+val "nowy rodzaj: KSH nie widzi"                         $KSH "$(C nowy)" 0
+val "nowy rodzaj: SCX nie widzi"                         $SCX "$(C nowy)" 0
+val "HHL nie nadpisze odbiorców (SEQUENCE z WSZYSCY → HHL_KLIENT)" $HHL "insert into risk_signals (project_id, load_id, kind, severity, title, detail, audience) values ('$P','$L1','SEQUENCE','LOW','x','{\"t\":\"ovr\"}','WSZYSCY'); select audience from risk_signals where detail->>'t'='ovr'" HHL_KLIENT
+err "anon nie czyta ryzyk"                               $HHL "set local role anon; select count(*) from risk_signals" "permission denied|0"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
