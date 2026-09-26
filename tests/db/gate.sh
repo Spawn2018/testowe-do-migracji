@@ -22,7 +22,7 @@ check() { # suite, expected
   local line; line=$(echo "$out" | awk -v s="=== $1" '$0==s{f=1;next} f&&/WYNIK/{print;exit}')
   if [ "$line" = "WYNIK: $2 OK, 0 FAIL" ]; then echo "[db] $1 $2/$2 OK"; else echo "[db] $1: oczekiwano $2/$2, jest: ${line:-brak}"; ok=0; fi
 }
-check security 56
+check security 67
 check status 44
 check storage 33
 check money 130
