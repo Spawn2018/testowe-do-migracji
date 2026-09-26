@@ -12,12 +12,14 @@ Deno.serve(async (req) => {
   const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   if (!service || !(await isServiceRequest(req, { url: Deno.env.get('SUPABASE_URL') ?? '', service }))) return new Response('forbidden', { status: 403 });
   const sb = createClient(Deno.env.get('SUPABASE_URL')!, service, { auth: { persistSession: false } });
+  /* 0035 — strażnik zadań: każdy przebieg zapisuje wynik w integration_runs (job = usage-check) */
+  const log = (ok: boolean, result: Record<string, unknown>) => sb.from('integration_runs').insert({ job: 'usage-check', ok, result });
   const { data: m, error } = await sb.rpc('usage_measure');
-  if (error) return new Response(error.message, { status: 500 });
+  if (error) { await log(false, { error: error.message }); return new Response(error.message, { status: 500 }); }
   const results = [];
   for (const x of measurements(m as Measure)) {
     const { data, error: e } = await sb.rpc('record_usage', { p_metric: x.metric, p_used: x.used, p_quota: x.quota });
-    if (e) return new Response(e.message, { status: 500 });
+    if (e) { await log(false, { error: e.message, metric: x.metric }); return new Response(e.message, { status: 500 }); }
     results.push({ ...x, ...(data as { pct: number; level: string; email: boolean; title?: string }) });
   }
   const toMail = results.filter((r) => r.email);
@@ -31,5 +33,6 @@ Deno.serve(async (req) => {
     });
     mailed = res.ok;
   }
+  await log(true, { metrics: results.length, mailed, mail_needed: toMail.length > 0 });
   return Response.json({ ok: true, results, mailed, mail_needed: toMail.length > 0 });
 });

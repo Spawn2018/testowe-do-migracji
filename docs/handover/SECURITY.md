@@ -85,3 +85,13 @@ wymienia wszystkie znane typy (dotyczy też `postgres` i funkcji systemowych). N
 `geofence_kind` z treści jest ignorowany, nieznana strefa lub zły identyfikator → brak zmiany statusu.
 Przycisk „Zdarzenie strefy” w szufladzie jest tylko w trybie demo. Produkcja 26.09.2026: 40 istniejących zdarzeń
 (NOTE 22, STATUS_AUTO 5, GEOFENCE_ENTER 5, DOC_UPLOADED 3, GEOFENCE_EXIT 3, AWIZACJA_UPDATED 2) — 0 niezgodnych z CHECK.
+
+## 7. Strażnik wyniku zadań (migracja 0035)
+`cron.job_run_details` = „succeeded” oznacza tylko wysłanie zapytania pg_net (ferry-ais z 403 był „succeeded”).
+Źródło prawdy: `integration_runs.ok` (ferry-*, road-*, traffic-flow, **usage-check** — zapisuje od 26.09) i
+`backup_runs.status='OK'`. Zadanie cron `tower-straznik-zadan` (co godzinę, :07) → `job_watchdog()`:
+ferry-ais 30 min, usage-check 26 h (uzbrojony od 27.09 06:00 PL), kopia 26 h — **uzbrajana po pierwszej udanej
+kopii** (R2 nieskonfigurowane → brak fałszywych alarmów; po włączeniu R2 i pierwszej kopii pilnuje sam).
+Alarm: ryzyko `JOB_FAILURE` HIGH (widzi tylko HHL), jeden na incydent, zamykane po powrocie udanych przebiegów;
+e-mail przez pg_net → Resend (Vault: `resend_api_key`, `mail_from`, `alert_email_to`) — niezależny od funkcji Edge.
+Funkcje bez EXECUTE dla ról API. Test: `tests/db/watchdog.sh` (19), produkcja — transakcja wycofana.
