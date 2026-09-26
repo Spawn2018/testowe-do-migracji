@@ -149,17 +149,15 @@ export function invoiceLinesFromThreeWay(match: ThreeWayMatchResult): InvoiceLin
     }));
 }
 
-export function threeWayVerdictLabel(v: ThreeWayVerdict): string {
-  switch (v) {
-    case 'zgodna':
-      return 'zgodna';
-    case 'poza_cennikiem':
-      return 'poza cennikiem';
-    case 'nie_zrealizowano':
-      return 'nie zrealizowano';
-    case 'brak_na_fakturze':
-      return 'brak na fakturze';
-  }
+const THREE_WAY_LABEL: Record<ThreeWayVerdict, Record<'pl' | 'en' | 'sv', string>> = {
+  zgodna: { pl: 'zgodna', en: 'matched', sv: 'stämmer' },
+  poza_cennikiem: { pl: 'poza cennikiem', en: 'outside rate card', sv: 'utanför prislistan' },
+  nie_zrealizowano: { pl: 'nie zrealizowano', en: 'not delivered', sv: 'ej utfört' },
+  brak_na_fakturze: { pl: 'brak na fakturze', en: 'missing on invoice', sv: 'saknas på fakturan' },
+};
+
+export function threeWayVerdictLabel(v: ThreeWayVerdict, locale: 'pl' | 'en' | 'sv' = 'pl'): string {
+  return THREE_WAY_LABEL[v][locale];
 }
 
 export function threeWayVerdictPill(v: ThreeWayVerdict): string {

@@ -132,7 +132,7 @@ export function DocsView() {
             aria-pressed={filterCat === 'ALL'}
             onClick={() => setFilterCat('ALL')}
           >
-            Wszystkie
+            {t(locale, 'sched_all')}
           </button>
           {filterCat !== 'ALL' ? (
             <button type="button" className="chipbtn" aria-pressed="true" onClick={() => setFilterCat('ALL')}>

@@ -176,7 +176,7 @@ export function RisksView() {
                             if (ferryRisk) applyPlanB(ferryRisk.id, i);
                           }}
                         >
-                          Przelicz
+                          {t(locale, 'risk_recalc')}
                         </button>
                       </td>
                     </tr>
@@ -184,7 +184,7 @@ export function RisksView() {
                 </tbody>
               </table>
               <h4 className="sec" style={{ marginTop: 15 }}>
-                Transporty na rejsie {focusDayLabel}
+                {t(locale, 'risk_loads_on_voyage')} {focusDayLabel}
               </h4>
               {ferryLoads.map((l) => (
                 <div

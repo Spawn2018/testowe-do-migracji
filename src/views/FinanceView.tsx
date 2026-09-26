@@ -253,10 +253,10 @@ export function FinanceView() {
             <table style={{ width: '100%', fontSize: 13 }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left' }}>Typ</th>
+                  <th style={{ textAlign: 'left' }}>{t(locale, 'inv_type')}</th>
                   <th className="num">Szt.</th>
                   <th className="num">{t(locale, 'sched_col_rev')}</th>
-                  <th className="num">Koszt</th>
+                  <th className="num">{t(locale, 'cost')}</th>
                   <th className="num">{t(locale, 'sched_col_margin')}</th>
                   <th style={{ width: 140 }} />
                 </tr>

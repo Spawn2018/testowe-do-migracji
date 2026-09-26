@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import type { BafParams, FactoringOffer, RateRule } from '../types';
-import { geofenceTypeLabel } from '../lib/enumLabels';
+import { geofenceDisplayName, geofenceTypeLabel, workflowDisplayName } from '../lib/enumLabels';
 import { t } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
 import { DEMO_FX_META } from '../lib/money/demoFx';
@@ -138,7 +138,7 @@ export function OptionsView() {
 
         <section className="panel option-panel">
           <header className="panel-hd"><h2>{t(locale, "opt_geo_h2")}</h2><span className="sub">{geofences.filter((g) => g.active).length}/{geofences.length} {t(locale, "opt_active_n")}</span></header>
-          <div className="panel-bd flush"><div className="settings-list">{geofences.map((g) => <div className="settings-row" key={g.id}><div><b data-content>{g.name}</b><span>{geofenceTypeLabel(g.type, locale)} · {g.radiusM >= 1000 ? `${Math.round(g.radiusM / 1000)} km` : `${g.radiusM} m`}</span></div><button type="button" className={`mini-toggle${g.active ? ' is-on' : ''}`} aria-pressed={g.active} onClick={() => { saveGeofence({ ...g, active: !g.active }); saveMark('strefa'); }}><i />{g.active ? t(locale, 'on') : t(locale, 'off')}</button></div>)}</div></div>
+          <div className="panel-bd flush"><div className="settings-list">{geofences.map((g) => <div className="settings-row" key={g.id}><div><b data-content>{geofenceDisplayName(g.name, locale)}</b><span>{geofenceTypeLabel(g.type, locale)} · {g.radiusM >= 1000 ? `${Math.round(g.radiusM / 1000)} km` : `${g.radiusM} m`}</span></div><button type="button" className={`mini-toggle${g.active ? ' is-on' : ''}`} aria-pressed={g.active} onClick={() => { saveGeofence({ ...g, active: !g.active }); saveMark('strefa'); }}><i />{g.active ? t(locale, 'on') : t(locale, 'off')}</button></div>)}</div></div>
         </section>
 
         <section className="panel option-panel">
@@ -150,7 +150,7 @@ export function OptionsView() {
 
         <section className="panel option-panel option-wide">
           <header className="panel-hd"><h2>{t(locale, "opt_auto_h2")}</h2><span className="sub">{workflows.filter((w) => w.enabled).length} {t(locale, "opt_active_of")} {workflows.length}</span><div className="spacer" /><button type="button" className="chipbtn" onClick={() => setView('wf')}>{t(locale, 'opt_open_wf')}</button></header>
-          <div className="panel-bd"><div className="workflow-summary">{workflows.map((w) => <button type="button" className="workflow-summary-row" key={w.id} onClick={() => setView('wf')}><span className={`status-dot${w.enabled ? ' on' : ''}`} /><span data-content>{w.name}</span><small>{w.enabled ? t(locale, 'on') : t(locale, 'off')}</small></button>)}</div></div>
+          <div className="panel-bd"><div className="workflow-summary">{workflows.map((w) => <button type="button" className="workflow-summary-row" key={w.id} onClick={() => setView('wf')}><span className={`status-dot${w.enabled ? ' on' : ''}`} /><span data-content>{workflowDisplayName(w, locale)}</span><small>{w.enabled ? t(locale, 'on') : t(locale, 'off')}</small></button>)}</div></div>
         </section>
         {MyDevices && <Suspense fallback={null}><MyDevices /></Suspense>}
         {UsersAdmin && <Suspense fallback={null}><UsersAdmin /></Suspense>}

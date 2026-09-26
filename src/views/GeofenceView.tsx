@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { geofenceTypeLabel } from '../lib/enumLabels';
+import { geofenceDisplayName, geofenceTypeLabel } from '../lib/enumLabels';
 import { useTowerStore } from '../store/useTowerStore';
 import { canEditGeofence } from '../lib/permissions';
 import type { Geofence, GeofenceType } from '../types';
@@ -64,7 +64,7 @@ export function GeofenceView() {
             <thead>
               <tr>
                 <th>Nazwa</th>
-                <th>Typ</th>
+                <th>{t(locale, 'sched_col_type')}</th>
                 <th className="num">{t(locale, 'geo_radius')}</th>
                 <th className="num">{t(locale, 'geo_dwell')}</th>
                 <th className="num">Histereza</th>
@@ -88,7 +88,7 @@ export function GeofenceView() {
                     style={{ cursor: canEdit ? 'pointer' : undefined }}
                     onClick={() => canEdit && setEdit(g)}
                   >
-                    <td style={{ fontWeight: 600 }} data-content>{g.name}</td>
+                    <td style={{ fontWeight: 600 }} data-content>{geofenceDisplayName(g.name, locale)}</td>
                     <td>
                       <span className={`pill ${TYPE_PILL[g.type] ?? 'p-plan'}`}>{geofenceTypeLabel(g.type, locale)}</span>
                     </td>

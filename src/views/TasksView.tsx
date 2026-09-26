@@ -30,10 +30,10 @@ export function TasksView() {
           <table>
             <thead>
               <tr>
-                <th>Wysyłka</th>
+                <th>{t(locale, 'sched_col_code')}</th>
                 <th>Czego brakuje</th>
-                <th>Załadunek</th>
-                <th>Termin</th>
+                <th>{t(locale, 's_loading')}</th>
+                <th>{t(locale, 'bill_col_due')}</th>
                 <th>Stan</th>
                 <th />
               </tr>

@@ -216,7 +216,7 @@ export function InvoicesView() {
                     </td>
                     <td>
                       <span className={`pill ${threeWayVerdictPill(row.verdict)}`}>
-                        {threeWayVerdictLabel(row.verdict)}
+                        {threeWayVerdictLabel(row.verdict, locale)}
                       </span>
                     </td>
                   </tr>

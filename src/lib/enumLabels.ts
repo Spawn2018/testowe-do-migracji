@@ -188,3 +188,14 @@ export function readyGateReasonLabel(reason: string, locale: Locale = 'pl'): str
   };
   return map[reason]?.[locale] ?? reason;
 }
+
+/* D19 (26.09.2026) — nazwy danych startowych, które mają odpowiednik w słowniku: wyświetlane w języku użytkownika.
+   Nazwa zmieniona przez użytkownika (inna niż wartość PL ze słownika) zostaje bez zmian. */
+const SEED_WORKFLOW_KEY: Record<string, string> = { 'wf-4': 'kpi_ferry_risk', 'wf-12': 'fin_margin_below' };
+export function workflowDisplayName(w: { id: string; name: string }, locale: Locale = 'pl'): string {
+  const key = SEED_WORKFLOW_KEY[w.id];
+  return key && w.name === t('pl', key) ? t(locale, key) : w.name;
+}
+export function geofenceDisplayName(name: string, locale: Locale = 'pl'): string {
+  return name === t('pl', 'loading_site') ? t(locale, 'loading_site') : name;
+}

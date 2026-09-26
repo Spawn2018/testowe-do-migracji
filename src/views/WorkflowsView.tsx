@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
+import { workflowDisplayName } from '../lib/enumLabels';
 
 
 const TRIGGER_KEYS = [
@@ -56,7 +57,7 @@ export function WorkflowsView() {
         {workflows.map((w) => (
           <div key={w.id} className="wf">
             <button type="button" className="sw" aria-pressed={w.enabled} aria-label={`${w.enabled ? 'Wyłącz' : 'Włącz'} regułę ${w.name}`} onClick={() => toggleWorkflow(w.id)} />
-            <div className="wf-copy"><b data-content>{w.name}</b><span className="rule" data-content>{w.description || `${triggerLabel(w.trigger)} → ${w.actions.join(', ')}`}</span><span className="wf-meta" data-content>{triggerLabel(w.trigger)} · warunek: {w.condition}</span></div>
+            <div className="wf-copy"><b data-content>{workflowDisplayName(w, locale)}</b><span className="rule" data-content>{w.description || `${triggerLabel(w.trigger)} → ${w.actions.join(', ')}`}</span><span className="wf-meta" data-content>{triggerLabel(w.trigger)} · warunek: {w.condition}</span></div>
             <span className="wf-count">{w.runCount}× {t(locale, 'wf_runs')}</span>
             <button type="button" className="chipbtn wf-run" onClick={() => runWorkflowNow(w.id)}>Uruchom</button>
           </div>
