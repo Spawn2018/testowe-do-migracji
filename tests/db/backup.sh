@@ -3,7 +3,8 @@
 # baza źródłowa (migracje + seed) → potok funkcji Edge (COPY → gzip → age X25519, tests/backup-export.harness.test.ts)
 # → scripts/restore.sh: (a) schemat restore_* w tej samej bazie, (b) --into-public do świeżej bazy po migracjach.
 # Użycie: PGADMIN=postgres://postgres@localhost:5433/postgres bash tests/db/backup.sh
-# Na projekcie TESTOWYM: BACKUP_HOSTED=1 (eksport z SUPABASE_DB_POOLER_URL, odtworzenie do schematu restore_check, usuwany).
+# ANEKS 5 §2.2: hostowany projekt = PRODUKCJA. BACKUP_HOSTED=1 — wyłącznie ODCZYT z produkcji (COPY … to stdout),
+# odtworzenie do LOKALNEGO Postgresa z migracjami (schemat restore_check). Na produkcji nic nie jest zapisywane.
 set -u
 cd "$(git rev-parse --show-toplevel)"
 ADMIN=${PGADMIN:-postgres://postgres@localhost:5433/postgres}
@@ -54,12 +55,13 @@ age-keygen -o "$TMP/zly.txt" >/dev/null 2>&1
 chk "zły klucz prywatny → odtworzenie niemożliwe"       "$(AGE_IDENTITY="$TMP/zly.txt" RESTORE_DB_URL="$DST" bash scripts/restore.sh "$TMP/kopia" >/dev/null 2>&1; echo $?)" 1
 
 if [ "${BACKUP_HOSTED:-0}" = 1 ]; then
-  echo; echo "[PR2] Kopia i odtworzenie — projekt TESTOWY (schemat restore_check, usuwany)"
+  echo; echo "[PR2] Kopia produkcji (tylko odczyt) → odtworzenie do lokalnego Postgresa"
   set -a; . ./.env.local; set +a
   BACKUP_SRC_DB_URL="$SUPABASE_DB_POOLER_URL" BACKUP_OUT="$TMP/hosted" BACKUP_AGE_RECIPIENT="$REC" npx vitest run tests/backup-export.harness.test.ts >/dev/null 2>&1
-  chk "TESTOWY: eksport tabel"                            "$(ls "$TMP/hosted"/*.csv.gz.age 2>/dev/null | wc -l | tr -d ' ')" "$(ls "$TMP/kopia"/*.csv.gz.age | wc -l | tr -d ' ')"
-  chk "TESTOWY: odtworzenie do restore_check, liczby = manifest" \
-    "$(AGE_IDENTITY="$TMP/klucz.txt" RESTORE_DB_URL="$SUPABASE_DB_POOLER_URL" bash scripts/restore.sh "$TMP/hosted" --schema restore_check --drop-after 2>&1 | tail -1 | cut -d' ' -f1-2)" "RESTORE OK"
-  echo "    $(sed -n '1,$p' "$TMP/hosted/counts.txt" | awk '{s+=$2} END {print "wierszy w kopii TESTOWEGO: " s}')"
+  chk "produkcja: eksport tabel (odczyt)"                            "$(ls "$TMP/hosted"/*.csv.gz.age 2>/dev/null | wc -l | tr -d ' ')" "$(ls "$TMP/kopia"/*.csv.gz.age | wc -l | tr -d ' ')"
+  DST=$(mkdb tower_test_backup_prod 0)
+  chk "odtworzenie do lokalnego Postgresa, liczby = manifest" \
+    "$(AGE_IDENTITY="$TMP/klucz.txt" RESTORE_DB_URL="$DST" bash scripts/restore.sh "$TMP/hosted" --schema restore_check --drop-after 2>&1 | tail -1 | cut -d' ' -f1-2)" "RESTORE OK"
+  echo "    $(sed -n '1,$p' "$TMP/hosted/counts.txt" | awk '{s+=$2} END {print "wierszy w kopii produkcji: " s}')"
 fi
 echo; echo "WYNIK: $ok OK, $fail FAIL"
