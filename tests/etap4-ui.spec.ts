@@ -6,11 +6,14 @@
  * M6: faktury v2 — moduł KSH (tylko HHL → KSH, spór z uzasadnieniem), kreator przychodowy HHL, SCX bez „Opłacona”.
  * M8: szuflada „Ceny” — poziom, mnożnik z datą, kurs (tymczasowy); Finanse — zestawienie poziomów.
  * M9: aplikacja kierowcy — zgoda na lokalizację (język telefonu), bez zgody tylko przyciski etapów.
+ * D26: import harmonogramu — usunięcia wyłącznie za zgodą (pole domyślnie odznaczone, liczba i kody).
  * M11: Finanse — marża w trzech wierszach (zafakturowana / zrealizowana niezafakturowana / prognozowana) = łączna.
  * M10: rozkład rejsów (HHL: dodanie / opóźnienie / odwołanie), przypisanie rejsu (SCX przed wypłynięciem), KSH odczyt.
  * Run: `npm run test:etap4`.
  */
 import { test, expect, type Page } from '@playwright/test'
+import ExcelJS from 'exceljs'
+import { COLUMN_MAP_DEFAULT } from '../src/lib/scheduleParse'
 
 const FROZEN_URL = `/#/?now=${encodeURIComponent('2026-09-23T14:32:00Z')}`
 
@@ -370,5 +373,42 @@ test.describe('M10 — rejsy i automat statusów', () => {
     await page.locator('[data-sched-tab="sailings"]').click()
     await expect(page.locator('[data-sail-new]')).toHaveCount(0)
     await expect(page.locator('[data-sail-delay]')).toHaveCount(0)
+  })
+})
+
+test.describe('D26 — import: usunięcia za zgodą', () => {
+  test('KSH: podgląd pokazuje −0 i odznaczone pole z liczbą i kodami; zaznaczenie zmienia licznik; zatwierdzenie bez zgody niczego nie usuwa', async ({ page }) => {
+    const fields = Object.keys(COLUMN_MAP_DEFAULT) as (keyof typeof COLUMN_MAP_DEFAULT)[]
+    const row = (code: string, delivery: string): Record<string, string> => ({
+      shipmentCode: code, itemType: 'SG', dimensions: '12,00 x 2,40 x 2,40', unitWeight: '18,00', qty: '1',
+      totalWeight: '18,00', loadDate: '01.10.2026', deliveryDate: delivery,
+    })
+    const wb = new ExcelJS.Workbook()
+    const sh = wb.addWorksheet('Harmonogram')
+    sh.addRow(fields.map((f) => COLUMN_MAP_DEFAULT[f]))
+    for (const r of [row('SG-01', '06.10.2026'), row('QA-D26-E2E', '03.10.2026')]) sh.addRow(fields.map((f) => (r as Record<string, string>)[f] ?? null))
+    const buffer = Buffer.from(await wb.xlsx.writeBuffer())
+
+    await boot(page)
+    await role(page, 'KSH')
+    await nav(page, 'sched')
+    const before = await page.locator('tr[data-load]').count()
+    await page.locator('button.chipbtn', { hasText: 'Wgraj aktualizacje' }).click()
+    await page.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({ name: 'd26.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer })
+    await page.getByRole('button', { name: 'Podgląd zmian' }).click()
+    const box = page.locator('[data-import-removals]')
+    await expect(box).toBeVisible()
+    await expect(page.locator('[data-import-removed-count]')).toHaveText('−0')
+    const cb = page.locator('[data-import-allow-removals]')
+    await expect(cb).not.toBeChecked()
+    const n = (await page.locator('[data-import-removal-codes]').innerText()).split(', ').length
+    expect(n).toBe(71)
+    await expect(box).toContainText(`Usuń ${n} pozycji`)
+    await cb.check()
+    await expect(page.locator('[data-import-removed-count]')).toHaveText(`−${n}`)
+    await cb.uncheck()
+    await expect(page.locator('[data-import-removed-count]')).toHaveText('−0')
+    await page.getByRole('button', { name: 'Zatwierdź' }).click()
+    await expect(page.locator('tr[data-load]')).toHaveCount(before + 1)
   })
 })

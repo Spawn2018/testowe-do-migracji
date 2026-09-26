@@ -69,6 +69,8 @@ export function ScheduleView() {
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [dryRun, setDryRun] = useState<ImportDiff | null>(null);
+  /* D26 — usunięcia wyłącznie za wyraźną zgodą (domyślnie odznaczone, reset przy każdym pliku) */
+  const [allowRemovals, setAllowRemovals] = useState(false);
   const [quick, setQuick] = useState<Quick>('all');
   const fileRef = useRef<HTMLInputElement>(null);
   const [colPrefs, setColPrefs] = useState<SchedColPrefs>(() => loadSchedPrefs());
@@ -140,6 +142,7 @@ export function ScheduleView() {
     setFilename(f.name);
     setParseError(null);
     setDryRun(null);
+    setAllowRemovals(false);
     setParsing(true);
     try {
       const buf = await f.arrayBuffer();
@@ -373,10 +376,29 @@ export function ScheduleView() {
                 {' · '}
                 <span style={{ color: 'var(--amber)' }}>~{dryRun.changed.length}</span>
                 {' · '}
-                <span style={{ color: 'var(--ink-3)' }}>−{dryRun.removedIds.length}</span>
+                <span style={{ color: 'var(--ink-3)' }} data-import-removed-count>−{allowRemovals ? dryRun.removalCandidates.length : 0}</span>
                 {' · '}
                 <span style={{ color: 'var(--red)' }}>⚠{dryRun.rejected}</span>
               </div>
+              {dryRun.removalCandidates.length > 0 ? (
+                <div data-import-removals style={{ fontSize: 12, margin: '0 0 8px' }}>
+                  <label className="switchline">
+                    <input
+                      type="checkbox"
+                      checked={allowRemovals}
+                      data-import-allow-removals
+                      onChange={(e) => setAllowRemovals(e.target.checked)}
+                    />
+                    <span>{t(locale, 'd26_allow').replace('{n}', String(dryRun.removalCandidates.length))}</span>
+                  </label>
+                  <div className="mono" style={{ color: 'var(--ink-3)', marginTop: 4 }} data-import-removal-codes>
+                    {dryRun.removalCandidates.map((c) => c.code).join(', ')}
+                  </div>
+                  <div style={{ color: allowRemovals ? 'var(--red)' : 'var(--ink-3)', marginTop: 4 }}>
+                    {t(locale, allowRemovals ? 'd26_on' : 'd26_off')}
+                  </div>
+                </div>
+              ) : null}
               <button
                 type="button"
                 className="btn"
@@ -397,10 +419,11 @@ export function ScheduleView() {
                   commitImport({
                     added: dryRun.added,
                     changed: dryRun.changed,
-                    removedIds: dryRun.removedIds,
+                    removedIds: allowRemovals ? dryRun.removalCandidates.map((c) => c.id) : [],
                     rejected: dryRun.rejected,
                     filename: dryRun.filename,
                     accepted: dryRun.accepted,
+                    allowRemovals,
                   });
                   setStep('done');
                 }}

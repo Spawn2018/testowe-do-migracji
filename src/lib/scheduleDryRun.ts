@@ -12,6 +12,11 @@ export type ImportDiff = {
   added: Partial<Load>[];
   changed: { id: string; patch: Partial<Load>; criticalDate?: boolean }[];
   removedIds: string[];
+  /**
+   * D26 — pozycje obecne w harmonogramie, a nieobecne w pliku. NIE są usuwane domyślnie (pliki bywają
+   * częściowe); usunięcie wyłącznie po zaznaczeniu zgody w podglądzie (`allowRemovals`), z liczbą i kodami.
+   */
+  removalCandidates: { id: string; code: string }[];
   rejected: number;
   warnings: number;
   filename: string;
@@ -105,12 +110,18 @@ export async function dryRunFromXlsx(
     })
     .filter(Boolean) as ImportDiff['changed'];
 
-  // Schedule files are partial updates. Never infer deletion from a missing row;
-  // removals require an explicit destructive operation outside this dry-run.
+  // Schedule files are partial updates. Never infer deletion from a missing row:
+  // removedIds stays empty; missing rows are only *candidates* (D26) — removed solely with explicit consent.
+  // No accepted rows (empty / broken file) → no candidates at all (P9: 72→1 wipe).
+  const removalCandidates = parsed.stats.accepted === 0 ? [] : diff.removed
+    .map((code) => byCode.get(code))
+    .filter((l): l is Load => !!l)
+    .map((l) => ({ id: l.id, code: l.code }));
   return {
     added: parsed.stats.accepted === 0 ? [] : diff.added.map(rowToPartialLoad),
     changed: parsed.stats.accepted === 0 ? [] : changed,
     removedIds: [],
+    removalCandidates,
     rejected: parsed.stats.rejected,
     warnings: parsed.stats.warnings,
     filename,

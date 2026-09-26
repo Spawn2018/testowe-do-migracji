@@ -415,3 +415,50 @@ describe('schedule XLSX import regression (P9 / D23)', () => {
     expect(useTowerStore.getState().loads.map((load) => load.code)).toEqual([...KNOWN_CODES]);
   });
 });
+
+describe('D26 — usunięcia wyłącznie za wyraźną zgodą', () => {
+  beforeEach(() => {
+    installLoads(knownLoads());
+  });
+
+  it('podgląd: pozycje spoza pliku to kandydaci (liczba + kody), removedIds puste — bez zgody nic nie znika', async () => {
+    const before = useTowerStore.getState().loads;
+    const diff = await dryRunFromXlsx(await buildScheduleXlsx([sg01Row('06.10.2026'), freshRow('QA-D26-ADD')]), 'd26.xlsx', before);
+    expect(diff.removedIds).toEqual([]);
+    expect(diff.removalCandidates.map((c) => c.code)).toEqual(['SG-02', 'T-01', 'SG-03', 'SG-04', 'T-02']);
+    // ScheduleView bez zaznaczenia: removedIds [] i allowRemovals false
+    useTowerStore.getState().commitImport({ added: diff.added, changed: diff.changed, removedIds: [], rejected: diff.rejected, filename: diff.filename, accepted: diff.accepted, allowRemovals: false });
+    const after = useTowerStore.getState().loads;
+    assertExistingSurvive(before, after);
+    expect(useTowerStore.getState().scheduleVersions[0].removed).toBe(0);
+    expect(useTowerStore.getState().toasts.some((t) => /pominięto usuwanie/.test(t.message))).toBe(false);
+  });
+
+  it('zgoda zaznaczona: usuwa dokładnie kandydatów z podglądu (i nic więcej), wersja harmonogramu liczy usunięcia', async () => {
+    const before = useTowerStore.getState().loads;
+    const diff = await dryRunFromXlsx(await buildScheduleXlsx([sg01Row('06.10.2026'), freshRow('QA-D26-ADD')]), 'd26-allow.xlsx', before);
+    const ids = diff.removalCandidates.map((c) => c.id);
+    useTowerStore.getState().commitImport({ added: diff.added, changed: diff.changed, removedIds: ids, rejected: diff.rejected, filename: diff.filename, accepted: diff.accepted, allowRemovals: true });
+    const after = useTowerStore.getState().loads;
+    expect(after.map((l) => l.code).sort()).toEqual(['QA-D26-ADD', 'SG-01']);
+    expect(after.find((l) => l.code === 'SG-01')?.plannedDeliverDate).toBe('2026-10-06');
+    expect(useTowerStore.getState().scheduleVersions[0].removed).toBe(5);
+  });
+
+  it('pusty albo nieczytelny plik → zero kandydatów do usunięcia (P9: 72→1)', async () => {
+    const before = useTowerStore.getState().loads;
+    for (const buf of [await buildScheduleXlsx([]), await buildSheetWithoutRows(),
+      await buildScheduleXlsx([{ shipmentCode: 'QA-D26-BAD', dimensions: 'nope', qty: '1', totalWeight: '1' }])]) {
+      const diff = await dryRunFromXlsx(buf, 'bad.xlsx', before);
+      expect(diff.accepted).toBe(0);
+      expect(diff.removalCandidates).toEqual([]);
+    }
+  });
+
+  it('pełny plik (wszystkie kody) → brak kandydatów, pola zgody w podglądzie nie ma', async () => {
+    const before = useTowerStore.getState().loads;
+    const rows = before.map((l) => ({ ...freshRow(l.code), itemType: l.itemType }));
+    const diff = await dryRunFromXlsx(await buildScheduleXlsx(rows), 'full.xlsx', before);
+    expect(diff.removalCandidates).toEqual([]);
+  });
+});
