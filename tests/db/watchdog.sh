@@ -21,13 +21,14 @@ T="2026-10-01 12:00+02"
 
 echo; echo "[0035] Strażnik wyniku zadań"
 chk "okres startowy usage-check (przed 27.09 06:00 + 26 h, brak przebiegów)" "$(Q "select e->>'stan' from jsonb_array_elements(job_watchdog('2026-09-27 10:00+02')) e where e->>'job'='usage-check'")" OKRES_STARTOWY
-chk "brak jakichkolwiek przebiegów: ferry-ais i usage-check ALARM, kopia nieuzbrojona (bez R2)" "$(st "$T")" "backup=NIEUZBROJONY (brak pierwszej udanej kopii),ferry-ais=ALARM,usage-check=ALARM"
-chk "2 ryzyka JOB_FAILURE (1 projekt × 2 zadania)"                  "$(open)" 2
+chk "brak jakichkolwiek przebiegów: ferry-ais, send-notifications i usage-check ALARM, kopia nieuzbrojona (bez R2)" "$(st "$T")" "backup=NIEUZBROJONY (brak pierwszej udanej kopii),ferry-ais=ALARM,send-notifications=ALARM,usage-check=ALARM"
+chk "3 ryzyka JOB_FAILURE (1 projekt × 3 zadania)"                  "$(open)" 3
 chk "ponowne wywołanie przy trwającym alarmie: bez drugiego e-maila"  "$(Q "select e->>'email' from jsonb_array_elements(job_watchdog('$T')) e where e->>'job'='ferry-ais'")" BEZ_ZMIAN
-chk "ponowne wywołanie: bez duplikatów"                              "$(open)" 2
+chk "ponowne wywołanie: bez duplikatów"                              "$(open)" 3
+chk "send-notifications: okres startowy do 26.09 17:30 PL"           "$(Q "select e->>'stan' from jsonb_array_elements(job_watchdog('2026-09-26 17:20+02')) e where e->>'job'='send-notifications'")" OKRES_STARTOWY
 chk "ryzyko widzi tylko HHL (audience)"                              "$(Q "select string_agg(distinct audience::text, ',') from risk_signals where kind='JOB_FAILURE'")" HHL
 chk "KSH nie widzi ryzyka zadania"                                   "$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$KSH'; select count(*) from risk_signals where kind='JOB_FAILURE'; rollback;" 2>&1 | grep -E '^[0-9]+$')" 0
-chk "HHL widzi ryzyka zadań"                                         "$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select count(*) from risk_signals where kind='JOB_FAILURE'; rollback;" 2>&1 | grep -E '^[0-9]+$')" 2
+chk "HHL widzi ryzyka zadań"                                         "$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select count(*) from risk_signals where kind='JOB_FAILURE'; rollback;" 2>&1 | grep -E '^[0-9]+$')" 3
 Q "insert into integration_runs (job, ran_at, ok) values ('ferry-ais', timestamptz '$T' - interval '10 minutes', true)" >/dev/null
 chk "udany przebieg ferry-ais → OK, ryzyko zamknięte"                "$(st "$T" | tr ',' '\n' | grep ferry)" "ferry-ais=OK"
 chk "otwarte ryzyka ferry-ais: 0"                                    "$(open ferry-ais)" 0

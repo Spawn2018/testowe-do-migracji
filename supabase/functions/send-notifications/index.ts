@@ -12,13 +12,15 @@ Deno.serve(async (req) => {
   const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   if (!service || !(await isServiceRequest(req, { url: Deno.env.get('SUPABASE_URL') ?? '', service }))) return new Response('forbidden', { status: 403 });
   const sb = createClient(Deno.env.get('SUPABASE_URL')!, service, { auth: { persistSession: false } });
+  /* 0036 — strażnik zadań: każdy przebieg zapisuje wynik w integration_runs (job = send-notifications) */
+  const log = (ok: boolean, result: Record<string, unknown>) => sb.from('integration_runs').insert({ job: 'send-notifications', ok, result });
   const key = Deno.env.get('RESEND_API_KEY');
   const from = Deno.env.get('MAIL_FROM');
-  if (!key || !from) return new Response('missing RESEND_API_KEY / MAIL_FROM', { status: 500 });
+  if (!key || !from) { await log(false, { error: 'missing RESEND_API_KEY / MAIL_FROM' }); return new Response('missing RESEND_API_KEY / MAIL_FROM', { status: 500 }); }
   const { data: rows, error } = await sb.from('notifications')
     .select('id,recipient,template,payload').eq('channel', 'EMAIL').eq('status', 'PENDING')
     .order('created_at', { ascending: true }).limit(50);
-  if (error) return new Response(error.message, { status: 500 });
+  if (error) { await log(false, { error: error.message }); return new Response(error.message, { status: 500 }); }
   let sent = 0, failed = 0;
   for (const r of rows ?? []) {
     // ponowne sprawdzenie tuż przed wysyłką: anulowane (opłacona) w międzyczasie → pomiń
@@ -38,5 +40,6 @@ Deno.serve(async (req) => {
       await sb.from('notifications').update({ status: 'ERROR', error: `Resend ${res.status}: ${(await res.text()).slice(0, 300)}` }).eq('id', r.id);
     }
   }
+  await log(failed === 0, { pending: rows?.length ?? 0, sent, failed });
   return Response.json({ sent, failed });
 });

@@ -30,5 +30,5 @@ check release 145
 check backup 10
 check session 27
 check archive 18
-check watchdog 19
+check watchdog 20
 [ $ok -eq 1 ]
