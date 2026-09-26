@@ -47,6 +47,8 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
         /* M9 — zdarzenie strefy mogło zmienić status; rozładunek zapisał migawkę ceny */
         if (m.type === 'position.report' && res && res.id && res.id !== '0') await refreshFromServer();
         if (m.type === 'load.status' && m.status === 'UNLOADING') await refreshFromServer();
+        /* M10 — nowy rejs dostaje id z serwera; rezerwacja transportu z rejsu (jedno źródło prawdy) */
+        if (m.type === 'sailing.save' || m.type === 'load.sailing') await refreshFromServer();
       } catch (e) {
         useTowerStore.getState().pushToast(`Nie zapisano na serwerze: ${friendlyDbError(e instanceof Error ? e.message : String(e), useTowerStore.getState().locale)}`, 'HIGH');
         await refreshFromServer().catch(() => undefined);

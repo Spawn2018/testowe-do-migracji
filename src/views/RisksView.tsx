@@ -16,6 +16,7 @@ import { isDemoSourceMode, trafikverketSourceNote } from '../lib/demoLabel';
 import { severityLabel } from '../lib/enumLabels';
 import { formatSeaRiskLabel } from '../lib/voyageSea';
 import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
+import { AUTO_RISK_CODES, autoRiskLabel, type AutoRiskCode } from '../lib/sailings';
 
 const ALT = [
   ['Gdańsk–Karlshamn', '+310 km do Boden', 'Polferries'],
@@ -112,6 +113,7 @@ export function RisksView() {
                 ageHours: r.ageHours,
                 loadId: r.loadId,
                 code: r.loadId ? loads.find((l) => l.id === r.loadId)?.code : undefined,
+                tag: r.code && (AUTO_RISK_CODES as string[]).includes(r.code) ? autoRiskLabel(r.code as AutoRiskCode, locale) : undefined,
               }}
               onClick={() => {
                 if (r.loadId) selectLoad(r.loadId);

@@ -37,6 +37,11 @@ export function ExceptionRow({
       <span className="gut" />
       <span className="txt">
         <span className="t">
+          {item.tag ? (
+            <>
+              <span className="pill p-amber" data-risk-tag>{item.tag}</span>{' '}
+            </>
+          ) : null}
           {ref && !titleHasCode ? (
             <>
               <span className="code" data-content>{ref}</span>

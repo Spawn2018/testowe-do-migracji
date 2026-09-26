@@ -7,7 +7,7 @@
  */
 import type {
   Bill, BillVerification, Document, ExceptionItem, Geofence, Invoice, Load, LoadEvent, LoadMessage, LoadStatus,
-  LoadResources, Awizacja, FerryBooking, Notification, Risk, ScheduleVersion, WorkflowRule, WorkflowRun,
+  LoadResources, Awizacja, FerryBooking, Notification, Risk, Sailing, ScheduleVersion, WorkflowRule, WorkflowRun,
 } from '../types';
 
 export type ProviderKind = 'demo' | 'supabase';
@@ -27,6 +27,8 @@ export interface DataSnapshot {
   invoices: Invoice[];
   /** M6 — faktury v2 (MECHANIZM_PIENIEDZY §6). */
   bills: Bill[];
+  /** M10 — rozkład rejsów */
+  sailings: Sailing[];
   scheduleVersions: ScheduleVersion[];
 }
 
@@ -38,7 +40,7 @@ export const DATA_SNAPSHOT_KEYS = [
 export function emptySnapshot(): DataSnapshot {
   return {
     loads: [], events: [], documents: [], messages: [], risks: [], exceptions: [], geofences: [],
-    workflows: [], workflowRuns: [], notifications: [], invoices: [], bills: [], scheduleVersions: [],
+    workflows: [], workflowRuns: [], notifications: [], invoices: [], bills: [], sailings: [], scheduleVersions: [],
   };
 }
 
@@ -63,7 +65,11 @@ export type DataMutation =
   | { type: 'bill.paid'; billId: string; paidAt: string }
   | { type: 'bill.unpaid'; billId: string; reason: string }
   /** M7 — centrum powiadomień: przeczytane (własne wiersze IN_APP; id serwera bez prefiksu `srv-`) */
-  | { type: 'notifications.read'; ids: number[] };
+  | { type: 'notifications.read'; ids: number[] }
+  /** M10 — rozkład rejsów (wyłącznie HHL): dodanie / opóźnienie / odwołanie */
+  | { type: 'sailing.save'; sailing: Sailing; isNew: boolean }
+  /** M10 — przypisanie rejsu do transportu (HHL i przewoźnik; po wypłynięciu wyłącznie HHL) */
+  | { type: 'load.sailing'; loadId: string; sailingId: string | null; bookingRef: string | null };
 
 /** M4 — ustawienia użytkownika (`user_preferences`); motyw null = domyślny dla roli. */
 export interface UserPrefsPatch {

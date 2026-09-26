@@ -14,7 +14,6 @@ import { DocPreview } from '../ui/DocPreview';
 import { DocFileRow } from '../ui/DocFileRow';
 import {
   TZ_LOAD_PL,
-  TZ_OPS,
   TZ_UNLOAD_SE,
   formatEtaBoden,
   formatLoadPl,
@@ -33,6 +32,8 @@ import {
 } from '../../lib/enumLabels';
 
 import { TIER_PILL, type MoneySideV2 } from '../../lib/money/loadMoney';
+import { autoStatusText, effArrival, effDeparture, fmtLocal, sailingAssignDenied, sailingStatusLabel, selectableSailings } from '../../lib/sailings';
+import { getNowIso } from '../../lib/frozenNow';
 import type { Locale } from '../../types';
 
 /** M8 — poziom, mnożnik paliwowy z datą i kurs strony wyceny. */
@@ -96,13 +97,15 @@ export function LoadDrawer() {
   const role = useTowerStore((s) => s.role);
   const updateResources = useTowerStore((s) => s.updateResources);
   const updateAwizacja = useTowerStore((s) => s.updateAwizacja);
-  const updateFerry = useTowerStore((s) => s.updateFerry);
+  const assignSailing = useTowerStore((s) => s.assignSailing);
+  const sailings = useTowerStore((s) => s.sailings);
   const setLoadStatus = useTowerStore((s) => s.setLoadStatus);
   const assignScx = useTowerStore((s) => s.assignScx);
   const triggerGeofence = useTowerStore((s) => s.triggerGeofence);
   const geofences = useTowerStore((s) => s.geofences);
   const sendMessage = useTowerStore((s) => s.sendMessage);
   const setOrderNo = useTowerStore((s) => s.setOrderNo);
+  const pushToast = useTowerStore((s) => s.pushToast);
 
   const [tab, setTab] = useState<Tab>('overview');
   const [chat, setChat] = useState('');
@@ -134,6 +137,14 @@ export function LoadDrawer() {
   const orderSide = editableOrderSide(role);
   /* AN2 — okna planowe zmienia wyłącznie HHL (plan z harmonogramu KSH); przewoźnik widzi je jako tekst */
   const planEditable = role === 'HHL';
+  /* M10 — rejs z rozkładu; przewoźnik po wypłynięciu nie zmienia (lustro wyzwalacza 0008) */
+  const nowIso = getNowIso();
+  const curSailing = sailings.find((x) => x.id === load.sailingId);
+  const sailingLock = sailingAssignDenied(role, load, curSailing, null, nowIso);
+  const sailingOptions = selectableSailings(sailings, nowIso, load.sailingId);
+  const sailingText = curSailing
+    ? `${curSailing.vessel} · ${fmtLocal(effDeparture(curSailing))} → ${fmtLocal(effArrival(curSailing))}${curSailing.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(curSailing.status, locale)}` : ''}`
+    : `${load.ferry.vessel ? `${load.ferry.vessel} · ` : ''}${t(locale, 'sail_unassigned')}`;
   const readyGate = isReadyBlocked(load, loadDocs);
   const permitBlock = readyGate.blocked;
   const coverInfo = evaluateLoadCover(load, loadDocs);
@@ -348,8 +359,16 @@ export function LoadDrawer() {
                   <li key={e.id}>
                     <span className="mk" />
                     <div className="w">
-                      {eventTypeLabel(e.type, locale)}
-                      {e.note ? ` · ${e.note}` : ''}
+                      {e.type === 'STATUS_AUTO' ? (
+                        <span data-tl-auto>
+                          <span className="pill p-sea">{t(locale, 'tl_auto')}</span> {autoStatusText(e.payload) ?? ''}
+                        </span>
+                      ) : (
+                        <>
+                          {eventTypeLabel(e.type, locale)}
+                          {e.note ? ` · ${e.note}` : ''}
+                        </>
+                      )}
                     </div>
                     <div className="ts">
                       {e.actor} · {e.at}
@@ -550,16 +569,12 @@ export function LoadDrawer() {
                     <dd>
                       {formatLoadPl(load.awizacja.loadWindowStart)} – {formatLoadPl(load.awizacja.loadWindowEnd)}
                     </dd>
-                    <dt>Prom</dt>
-                    <dd>{load.ferry.vessel ?? 'brak rezerwacji'}</dd>
-                    <dt>Rezerwacja</dt>
+                    <dt>{t(locale, 'sail_label')}</dt>
+                    <dd data-sailing-ro>{sailingText}</dd>
+                    <dt>{t(locale, 'sail_booking')}</dt>
                     <dd>{load.ferry.bookingRef ?? '—'}</dd>
                     <dt>Status promu</dt>
                     <dd>{ferryStatusLabel(load.ferry.status, locale)}</dd>
-                    <dt>Wyjazd / Przyjazd</dt>
-                    <dd>
-                      {load.ferry.departureAt ?? '—'} / {load.ferry.arrivalAt ?? '—'}
-                    </dd>
                     <dt>Potwierdzona</dt>
                     <dd>{load.awizacja.confirmed ? 'tak' : 'nie'}</dd>
                   </dl>
@@ -660,7 +675,7 @@ export function LoadDrawer() {
                   </form>
 
                   <h4 className="sec" style={{ marginTop: 18 }}>
-                    Awizacja / Prom
+                    Awizacja
                   </h4>
                   <form
                     key={`awi-${load.id}`}
@@ -676,13 +691,6 @@ export function LoadDrawer() {
                         confirmed: fd.get('confirmed') === 'on',
                       } : { ...load.awizacja, confirmed: fd.get('confirmed') === 'on' });
                       updateAwizacja(load.id, awiPatch);
-                      updateFerry(load.id, {
-                        vessel: (String(fd.get('vessel') || '') as 'Wawel' | 'Nova Star') || null,
-                        departureAt: wallLocalToIso(String(fd.get('departureAt') || ''), TZ_OPS),
-                        arrivalAt: wallLocalToIso(String(fd.get('arrivalAt') || ''), TZ_UNLOAD_SE),
-                        bookingRef: String(fd.get('bookingRef') || '') || null,
-                        status: String(fd.get('status') || 'BOOKED') as typeof load.ferry.status,
-                      });
                     }}
                   >
                     <dl className="kv">
@@ -713,47 +721,6 @@ export function LoadDrawer() {
                         />
                       </dd>
                       )}
-                      <dt>Prom</dt>
-                      <dd>
-                        <select name="vessel" className="input" defaultValue={load.ferry.vessel ?? 'Wawel'}>
-                          <option>Wawel</option>
-                          <option>Nova Star</option>
-                        </select>
-                      </dd>
-                      <dt>Rezerwacja</dt>
-                      <dd>
-                        <input
-                          name="bookingRef"
-                          className="input"
-                          style={{ width: '100%' }}
-                          defaultValue={load.ferry.bookingRef ?? ''}
-                        />
-                      </dd>
-                      <dt>Status promu</dt>
-                      <dd>
-                        <select name="status" className="input" defaultValue={load.ferry.status}>
-                          {(['NONE', 'BOOKED', 'CHECKED_IN', 'ONBOARD', 'LANDED', 'DELAYED', 'CANCELLED'] as const).map((s) => (
-                            <option key={s} value={s}>{ferryStatusLabel(s, locale)}</option>
-                          ))}
-                        </select>
-                      </dd>
-                      <dt>Wyjazd / Przyjazd</dt>
-                      <dd>
-                        <input
-                          name="departureAt"
-                          type="datetime-local"
-                          className="input"
-                          style={{ width: '48%' }}
-                          defaultValue={isoToDatetimeLocalValue(load.ferry.departureAt, TZ_OPS)}
-                        />{' '}
-                        <input
-                          name="arrivalAt"
-                          type="datetime-local"
-                          className="input"
-                          style={{ width: '48%' }}
-                          defaultValue={isoToDatetimeLocalValue(load.ferry.arrivalAt, TZ_UNLOAD_SE)}
-                        />
-                      </dd>
                       <dt>Potwierdzona</dt>
                       <dd>
                         <label>
@@ -771,6 +738,53 @@ export function LoadDrawer() {
                       Zapisz awizację
                     </button>
                   </form>
+
+                  {/* M10 — przypisanie rejsu (jedno źródło prawdy: rozkład); po wypłynięciu wyłącznie HHL */}
+                  <h4 className="sec" style={{ marginTop: 18 }}>{t(locale, 'sail_label')}</h4>
+                  {sailingLock ? (
+                    <>
+                      <dl className="kv">
+                        <dt>{t(locale, 'sail_label')}</dt>
+                        <dd data-sailing-locked>{sailingText}</dd>
+                        <dt>{t(locale, 'sail_booking')}</dt>
+                        <dd className="mono">{load.ferry.bookingRef ?? '—'}</dd>
+                      </dl>
+                      <div className="note" style={{ margin: '8px 0 0' }}>{t(locale, `sail_deny_${sailingLock}`)}</div>
+                    </>
+                  ) : (
+                    <form
+                      key={`sail-${load.id}-${load.sailingId ?? 'none'}`}
+                      data-sailing-form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const fd = new FormData(e.currentTarget);
+                        const sid = String(fd.get('sailingId') || '') || null;
+                        const denied = assignSailing(load.id, sid, String(fd.get('bookingRef') || '') || null);
+                        pushToast(denied ? t(locale, `sail_deny_${denied}`) : t(locale, 'sail_assigned'), denied ? 'HIGH' : 'MEDIUM', load.id);
+                      }}
+                    >
+                      <dl className="kv">
+                        <dt>{t(locale, 'sail_label')}</dt>
+                        <dd>
+                          <select name="sailingId" className="input" style={{ width: '100%' }} defaultValue={load.sailingId ?? ''}>
+                            <option value="">{t(locale, 'sail_none')}</option>
+                            {sailingOptions.map((o) => (
+                              <option key={o.id} value={o.id}>
+                                {o.vessel} · {fmtLocal(effDeparture(o))} → {fmtLocal(effArrival(o))}{o.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(o.status, locale)}` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </dd>
+                        <dt>{t(locale, 'sail_booking')}</dt>
+                        <dd>
+                          <input name="bookingRef" className="input" style={{ width: '100%' }} defaultValue={load.ferry.bookingRef ?? ''} />
+                        </dd>
+                      </dl>
+                      <button type="submit" className="btn ghost" style={{ marginTop: 8 }} data-sailing-submit>
+                        {t(locale, 'sail_assign')}
+                      </button>
+                    </form>
+                  )}
                 </>
               )}
 

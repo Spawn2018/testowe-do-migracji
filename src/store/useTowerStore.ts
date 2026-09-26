@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
 import type {
+  Sailing,
   AppToast,
   Awizacja,
   Bill,
@@ -59,6 +60,7 @@ import { t } from '../i18n/messages';
 import { localDateOf } from '../lib/money/engine';
 import { withMoneyV2 } from '../lib/money/loadMoney';
 import { milestoneAction, type DriverFix } from '../lib/driverTracking';
+import { fmtLocal, cancelledSailingRisks, checkSailingDraft, ferryFromSailing, sailingAssignDenied, type SailingDraft, type SailingDraftError, type SailingDenied } from '../lib/sailings';
 import { billDueDate, billParties, billPaymentToday, canMarkPaid, canRegisterBill, canVerifyBill, checkBill, verifyError, type BillDraft } from '../lib/invoices3';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
@@ -197,6 +199,8 @@ interface TowerState {
   invoices: Invoice[];
   /** M6 — faktury v2 (koszt SCX→HHL, przychód HHL→KSH). */
   bills: Bill[];
+  /** M10 — rozkład rejsów */
+  sailings: Sailing[];
   factoringOffer: FactoringOffer;
   scheduleVersions: ScheduleVersion[];
   rateCost: RateRule[];
@@ -310,6 +314,12 @@ interface TowerState {
   ) => void;
   resolveInvoice: (invoiceId: string, action: 'MATCHED' | 'DISPUTED') => void;
   /** M6 — rejestracja faktury przez wystawcę (kontrole jak w `register_invoice`). */
+  /** M10 — rozkład (wyłącznie HHL) */
+  addSailing: (d: SailingDraft) => { ok: true; id: string } | { ok: false; error: SailingDraftError | 'ROLE' };
+  delaySailing: (id: string, departureAt: string, arrivalAt: string) => boolean;
+  cancelSailing: (id: string) => boolean;
+  /** M10 — przypisanie rejsu (HHL i przewoźnik; po wypłynięciu wyłącznie HHL) */
+  assignSailing: (loadId: string, sailingId: string | null, bookingRef: string | null) => SailingDenied;
   registerBill: (draft: BillDraft, file?: Blob | null) => { ok: true; id: string } | { ok: false; errors: string[] };
   /** M6 — weryfikacja przez odbiorcę; SPORNA wymaga uzasadnienia. */
   verifyBill: (billId: string, next: BillVerification, note?: string | null) => boolean;
@@ -370,6 +380,7 @@ export const useTowerStore = create<TowerState>()(
       notificationPrefs: { workflowAlerts: true, geofenceAlerts: true, riskAlerts: true },
       invoices: initialData.invoices,
       bills: initialData.bills,
+      sailings: initialData.sailings,
       factoringOffer: { ...DEFAULT_FACTORING_OFFER },
       scheduleVersions: initialData.scheduleVersions,
       rateCost: RATE_COST,
@@ -1334,6 +1345,69 @@ export const useTowerStore = create<TowerState>()(
         get().pushToast(action === 'DISPUTED' ? 'Faktura w sporze' : 'Faktura zaakceptowana', action === 'DISPUTED' ? 'HIGH' : 'MEDIUM');
       },
 
+      addSailing: (d) => {
+        if (get().role !== 'HHL') return { ok: false, error: 'ROLE' };
+        const error = checkSailingDraft(d, get().sailings);
+        if (error) return { ok: false, error };
+        const sailing: Sailing = {
+          id: uid('sail'), vessel: d.vessel.trim(), route: d.route,
+          departureAt: new Date(d.departureAt).toISOString(), arrivalAt: new Date(d.arrivalAt).toISOString(),
+          delayedDepartureAt: null, delayedArrivalAt: null, status: 'ZAPLANOWANY', source: 'RECZNIE',
+        };
+        set((st) => ({ sailings: [...st.sailings, sailing] }));
+        writeThrough({ type: 'sailing.save', sailing, isNew: true });
+        return { ok: true, id: sailing.id };
+      },
+
+      delaySailing: (id, departureAt, arrivalAt) => {
+        const cur = get().sailings.find((x) => x.id === id);
+        if (get().role !== 'HHL' || !cur || cur.status === 'ODWOLANY') return false;
+        const dep = Date.parse(departureAt); const arr = Date.parse(arrivalAt);
+        if (!Number.isFinite(dep) || !Number.isFinite(arr) || arr <= dep) return false;
+        const next: Sailing = { ...cur, status: 'OPOZNIONY', delayedDepartureAt: new Date(dep).toISOString(), delayedArrivalAt: new Date(arr).toISOString() };
+        set((st) => ({
+          sailings: st.sailings.map((x) => (x.id === id ? next : x)),
+          loads: st.loads.map((l) => (l.sailingId === id ? { ...l, ferry: ferryFromSailing(next, l.ferry.bookingRef, l.ferry) } : l)),
+        }));
+        writeThrough({ type: 'sailing.save', sailing: next, isNew: false });
+        return true;
+      },
+
+      cancelSailing: (id) => {
+        const cur = get().sailings.find((x) => x.id === id);
+        if (get().role !== 'HHL' || !cur || cur.status === 'ODWOLANY') return false;
+        const next: Sailing = { ...cur, status: 'ODWOLANY' };
+        /* demo: ryzyko „rejs odwołany” od razu; w bazie — zadanie systemowe promote_ferry_departures */
+        const risks = SUPABASE_AUTH_ENABLED ? [] : cancelledSailingRisks(next, get().loads);
+        set((st) => ({
+          sailings: st.sailings.map((x) => (x.id === id ? next : x)),
+          loads: st.loads.map((l) => (l.sailingId === id ? { ...l, ferry: ferryFromSailing(next, l.ferry.bookingRef, l.ferry) } : l)),
+          risks: [...risks.filter((r) => !st.risks.some((x) => x.id === r.id)), ...st.risks],
+        }));
+        writeThrough({ type: 'sailing.save', sailing: next, isNew: false });
+        return true;
+      },
+
+      assignSailing: (loadId, sailingId, bookingRef) => {
+        const st = get();
+        const load = st.loads.find((l) => l.id === loadId);
+        if (!load) return 'ROLE';
+        const current = st.sailings.find((x) => x.id === load.sailingId);
+        const target = sailingId ? st.sailings.find((x) => x.id === sailingId) ?? null : null;
+        const denied = sailingAssignDenied(st.role, load, current, target, getNowIso());
+        if (denied) return denied;
+        const ref = bookingRef?.trim() || null;
+        set((s2) => ({
+          loads: s2.loads.map((l) => (l.id === loadId ? { ...l, sailingId: target?.id ?? null, ferry: ferryFromSailing(target ?? undefined, ref, l.ferry) } : l)),
+        }));
+        writeThrough({ type: 'load.sailing', loadId, sailingId: target?.id ?? null, bookingRef: ref });
+        get().appendEvent({
+          loadId, type: 'SAILING_ASSIGNED', at: nowIso(), actor: st.role,
+          note: target ? `${target.vessel} · ${fmtLocal(target.departureAt)}${ref ? ` · ${ref}` : ''}` : 'rejs usunięty',
+        });
+        return null;
+      },
+
       registerBill: (draft, file) => {
         const s = get();
         const today = localDateOf(getNowIso());
@@ -1701,6 +1775,7 @@ export const useTowerStore = create<TowerState>()(
         notificationPrefs: s.notificationPrefs,
         invoices: s.invoices,
         bills: s.bills,
+        sailings: s.sailings,
         geofences: s.geofences,
         workflows: s.workflows,
         workflowRuns: s.workflowRuns,

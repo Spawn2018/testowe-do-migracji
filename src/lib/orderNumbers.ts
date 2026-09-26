@@ -81,6 +81,11 @@ const MSG = {
     en: 'Unloading requires the unloading date — it is the service date.',
     sv: 'Lossning kräver lossningsdatum — det är tjänstens datum.',
   },
+  SAILING_LOCKED: {
+    pl: 'Rejs po wypłynięciu może zmienić wyłącznie HHL.',
+    en: 'After departure only HHL can change the sailing.',
+    sv: 'Efter avgång kan endast HHL ändra avgången.',
+  },
   DUPLICATE: {
     pl: 'Ten numer zlecenia jest już użyty w innym transporcie.',
     en: 'This order number is already used on another load.',
@@ -109,6 +114,7 @@ export function friendlyDbError(raw: string, locale: Locale = 'pl'): string {
   if (/Data roz\S+ .*zamro/i.test(raw)) return m('DELIVERY_FROZEN');
   if (/Status nie mo\S* si\S* cofn/i.test(raw)) return m('NO_BACKWARD');
   if (/UNLOADED wymaga daty/i.test(raw)) return m('UNLOADED_NEEDS_DATE');
+  if (/Zmiana rejsu po wyp\S+/i.test(raw)) return m('SAILING_LOCKED');
   if (/loads_(hhl|carrier)_order_no_uq/i.test(raw)) return m('DUPLICATE');
   return raw;
 }

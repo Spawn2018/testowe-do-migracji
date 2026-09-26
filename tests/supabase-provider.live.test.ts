@@ -248,6 +248,29 @@ describe.runIf(LIVE)('BK3 SupabaseProvider (live, RLS)', () => {
     }
   }, 60_000);
 
+  it('M10: ścieżka TEST-M10 port Gdańsk → PROM → plac (scripts/ferry/path-scenario.sql) widoczna na 3 kontach; rejs po odejściu zablokowany dla SCX', async () => {
+    const snaps = { HHL: await P.HHL.loadSnapshot(), KSH: await P.KSH.loadSnapshot(), SCX: await P.SCX.loadSnapshot() };
+    let loadId = '';
+    for (const o of ['HHL', 'KSH', 'SCX'] as Org[]) {
+      const s = snaps[o];
+      const l = s.loads.find((x) => x.code === 'TEST-M10');
+      expect(l, `${o} widzi TEST-M10 (uruchom path-scenario.sql)`).toBeTruthy();
+      expect(l!.status).toBe('APPROACHING_SITE');
+      const sail = s.sailings.find((x) => x.id === l!.sailingId);
+      expect(sail?.vessel).toContain('Wawel');
+      const auto = s.events.filter((e) => e.loadId === l!.id && e.type === 'STATUS_AUTO');
+      // PRE_ARRIVAL (SE) i SITE przy tym samym fiksie mają ten sam occurred_at — kolejność wg ścieżki statusów.
+      const RANK = ['AT_PORT_GDANSK', 'FERRY', 'AT_PORT_NYNASHAMN', 'IN_TRANSIT_SE', 'AT_SITE'];
+      const to = (e: (typeof auto)[number]) => String((e.payload as Record<string, unknown>).to);
+      auto.sort((a, b) => a.at.localeCompare(b.at) || RANK.indexOf(to(a)) - RANK.indexOf(to(b)));
+      expect(auto.map((e) => (e.payload as Record<string, unknown>).to)).toEqual(['AT_PORT_GDANSK', 'FERRY', 'AT_PORT_NYNASHAMN', 'IN_TRANSIT_SE', 'AT_SITE']);
+      expect(auto.every((e) => typeof (e.payload as Record<string, unknown>).powod === 'string')).toBe(true);
+      loadId = l!.id;
+    }
+    const err = await P.SCX.apply({ type: 'load.sailing', loadId, sailingId: null, bookingRef: null }).then(() => '', (e: Error) => e.message);
+    expect(friendlyDbError(err)).toBe('Rejs po wypłynięciu może zmienić wyłącznie HHL.');
+  });
+
   it('anon (bez sesji) nie czyta transportów', async () => {
     const anon = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false } });
     const { data } = await anon.from('loads').select('id');

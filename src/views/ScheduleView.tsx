@@ -24,6 +24,7 @@ import {
   type SchedColPrefs,
 } from '../lib/scheduleColumns';
 import { formatAppMoney } from '../lib/money/demoFx';
+import { SailingsPanel } from './SailingsPanel';
 
 type ImportStep = null | 'upload' | 'map' | 'diff' | 'done';
 type Quick =
@@ -44,6 +45,8 @@ function delayMinutes(l: Load): number | null {
 }
 
 export function ScheduleView() {
+  /* M10 — rozkład rejsów jako druga zakładka harmonogramu (seg) */
+  const [schedTab, setSchedTab] = useState<'loads' | 'sailings'>('loads');
   const loads = useTowerStore((s) => s.loads);
   const documents = useTowerStore((s) => s.documents);
   const role = useTowerStore((s) => s.role);
@@ -194,12 +197,36 @@ export function ScheduleView() {
   }
 
 
+  const schedTabs = (
+    <div className="seg" role="group" aria-label={t(locale, 'nav_sched')} data-sched-tabs>
+      {(['loads', 'sailings'] as const).map((k) => (
+        <button key={k} type="button" data-sched-tab={k} aria-pressed={schedTab === k} onClick={() => setSchedTab(k)}>
+          {t(locale, k === 'loads' ? 'sched_tab_loads' : 'sched_tab_sailings')}
+        </button>
+      ))}
+    </div>
+  );
+  if (schedTab === 'sailings') {
+    return (
+      <div className="panel section-card page-sections" data-page="schedule" style={{ margin: 12 }}>
+        <div className="panel-hd" style={{ flexWrap: 'wrap' }}>
+          <h2>{t(locale, 'nav_sched')}</h2>
+          <span className="sub">{t(locale, 'sail_sub')}</span>
+          <div className="spacer" />
+          {schedTabs}
+        </div>
+        <SailingsPanel />
+      </div>
+    );
+  }
+
   return (
     <div className="panel section-card page-sections" data-page="schedule" style={{ margin: 12, display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
       <div className="panel-hd" style={{ flexWrap: 'wrap' }}>
         <h2>{t(locale, 'nav_sched')}</h2>
         <span className="sub">{verLine}</span>
         <div className="spacer" />
+        {schedTabs}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>
           {canImportSchedule(role) ? (
             <button type="button" className="chipbtn" onClick={() => setStep('upload')} disabled={parsing}>

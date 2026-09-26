@@ -6,6 +6,7 @@
  * M6: faktury v2 — moduł KSH (tylko HHL → KSH, spór z uzasadnieniem), kreator przychodowy HHL, SCX bez „Opłacona”.
  * M8: szuflada „Ceny” — poziom, mnożnik z datą, kurs (tymczasowy); Finanse — zestawienie poziomów.
  * M9: aplikacja kierowcy — zgoda na lokalizację (język telefonu), bez zgody tylko przyciski etapów.
+ * M10: rozkład rejsów (HHL: dodanie / opóźnienie / odwołanie), przypisanie rejsu (SCX przed wypłynięciem), KSH odczyt.
  * Run: `npm run test:etap4`.
  */
 import { test, expect, type Page } from '@playwright/test'
@@ -281,5 +282,65 @@ test.describe('M9 — aplikacja kierowcy', () => {
     await expect(page.locator('[data-tracking="on"]')).toBeVisible()
     await page.locator('[data-consent="withdraw"]').click()
     await expect(page.locator('[data-tracking="off"]')).toBeVisible()
+  })
+})
+
+test.describe('M10 — rejsy i automat statusów', () => {
+  test('HHL: rozkład (dodanie, opóźnienie, odwołanie → ryzyko); SCX przypisuje rejs, po wypłynięciu blokada; KSH tylko odczyt', async ({ page }) => {
+    await boot(page)
+    await role(page, 'HHL')
+    await nav(page, 'sched')
+    await page.locator('[data-sched-tab="sailings"]').click()
+    const table = page.locator('[data-sailings]')
+    await expect(table.locator('tr[data-sailing]').first()).toBeVisible()
+    // dodanie
+    await page.locator('[data-sail-new]').click()
+    const form = page.locator('[data-sail-form]')
+    await form.locator('input[name="dep"]').fill('2026-10-20T18:00')
+    await form.locator('input[name="arr"]').fill('2026-10-20T17:00')
+    await form.locator('[data-sail-submit]').click()
+    await expect(page.locator('[data-sail-error]')).toContainText('po odejściu')
+    await form.locator('input[name="arr"]').fill('2026-10-21T12:00')
+    await form.locator('[data-sail-submit]').click()
+    await expect(page.locator('[data-sail-form]')).toHaveCount(0)
+    // opóźnienie pierwszego przyszłego rejsu
+    const first = table.locator('tr[data-sail-status="ZAPLANOWANY"]', { has: page.locator('[data-sail-delay]') }).first()
+    const sid = await first.getAttribute('data-sailing')
+    await first.locator('[data-sail-delay]').click()
+    await page.locator('[data-sail-delay-form] [data-sail-delay-submit]').click()
+    await expect(table.locator(`tr[data-sailing="${sid}"]`)).toHaveAttribute('data-sail-status', 'OPOZNIONY')
+    // odwołanie
+    await table.locator(`tr[data-sailing="${sid}"] [data-sail-cancel]`).click()
+    await expect(table.locator(`tr[data-sailing="${sid}"]`)).toHaveAttribute('data-sail-status', 'ODWOLANY')
+    await expect(table.locator(`tr[data-sailing="${sid}"] [data-sail-cancel]`)).toHaveCount(0)
+
+    // SCX: przypisanie rejsu w szufladzie (transport przed promem)
+    await role(page, 'SCX')
+    await nav(page, 'sched')
+    await page.locator('[data-sched-tab="loads"]').click()
+    await openLoad(page, 'SG-34')
+    await actionsTab(page)
+    const sf = page.locator('.drawer [data-sailing-form]')
+    await expect(sf).toBeVisible()
+    const opt = await sf.locator('select[name="sailingId"] option').nth(1).getAttribute('value')
+    await sf.locator('select[name="sailingId"]').selectOption(opt!)
+    await sf.locator('input[name="bookingRef"]').fill('PF-TEST-1')
+    await sf.locator('[data-sailing-submit]').click()
+    await actionsTab(page)
+    await expect(page.locator('.drawer [data-sailing-form] select[name="sailingId"]')).toHaveValue(opt!)
+    await closeDrawer(page)
+    // SCX: transport na promie — rejs tylko do odczytu
+    const onFerry = 'SG-06' // status PROM w danych demo
+    await openLoad(page, onFerry)
+    await actionsTab(page)
+    await expect(page.locator('.drawer [data-sailing-locked]')).toBeVisible()
+    await expect(page.locator('.drawer [data-sailing-form]')).toHaveCount(0)
+    await closeDrawer(page)
+    // KSH: rozkład bez przycisków, szuflada bez formularza rejsu
+    await role(page, 'KSH')
+    await nav(page, 'sched')
+    await page.locator('[data-sched-tab="sailings"]').click()
+    await expect(page.locator('[data-sail-new]')).toHaveCount(0)
+    await expect(page.locator('[data-sail-delay]')).toHaveCount(0)
   })
 })

@@ -15,6 +15,7 @@ import {
   BILL_COLUMNS, billFromRow, billToRpc, type BillRow, notificationFromRow, type NotificationRow,
   loadFromRow, messageFromRow, resourcesPatchToDb, riskFromRow, statusToDb, vesselToDb,
   type DocumentRow, type EventRow, type GeofenceRow, type LoadRow, type MessageRow, type OrgRow, type RiskRow,
+  SAILING_COLUMNS, sailingFromRow, sailingToRow, type SailingDbRow,
 } from './mappers';
 
 export const PROJECT_CODE = 'STEGRA_BODEN';
@@ -55,12 +56,12 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
   async function loadSnapshot(): Promise<DataSnapshot> {
     await ensureContext();
     const at = now();
-    const [loads, events, messages, geos, risks, docs, costV, revV, billsQ, notesQ] = await Promise.all([
+    const [loads, events, messages, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ] = await Promise.all([
       sb.from('loads').select(LOAD_COLUMNS).order('plan_load_date', { ascending: true, nullsFirst: false }),
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
       sb.from('v_geofences_circle').select('*').order('sort_order'),
-      sb.from('risk_signals').select('id,load_id,kind,severity,title,detail,detected_at').is('resolved_at', null).order('detected_at', { ascending: false }),
+      sb.from('risk_signals').select('id,load_id,kind,severity,title,detail,detected_at,dedup_key').is('resolved_at', null).order('detected_at', { ascending: false }),
       sb.from('documents').select('id,load_id,category,file_name,mime_type,size_bytes,valid_until,visible_to,uploaded_at,storage_path'),
       // M2: ceny wyłącznie z widoków rolowych v2 (0010) — koszt: HHL + przewoźnik, przychód: HHL + klient
       sb.from('v_load_price_carrier').select(PRICE_VIEW_COLUMNS),
@@ -69,6 +70,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.from('invoices').select(BILL_COLUMNS).not('direction', 'is', null).order('issue_date', { ascending: false }),
       // M7: centrum powiadomień — własne wiersze IN_APP (RLS notifications_read_own), treść w języku odbiorcy
       sb.from('notifications').select('id,template,payload,load_id,created_at,read_at').eq('channel', 'IN_APP').order('created_at', { ascending: false }).limit(200),
+      // M10: rozkład rejsów — widzą wszyscy (sailings_read), zmienia HHL
+      sb.from('sailings').select(SAILING_COLUMNS).order('departure_at', { ascending: true }),
     ]);
     const docRows = must(docs, 'documents') as DocumentRow[];
     const costBy = new Map((must(costV, 'v_load_price_carrier') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
@@ -83,6 +86,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       documents: docRows.map(documentFromRow).filter((d) => d !== null),
       notifications: (must(notesQ, 'notifications') as NotificationRow[]).map((r) => notificationFromRow(r)),
       bills: (must(billsQ, 'invoices') as unknown as BillRow[]).map((r) => billFromRow(r, orgs, docRows)).filter((b) => b !== null),
+      sailings: (must(sailQ, 'sailings') as unknown as SailingDbRow[]).map(sailingFromRow),
     };
   }
 
@@ -145,6 +149,24 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         await updateLoad(m.loadId, patch, 'status');
         return;
       }
+      case 'sailing.save': {
+        await ensureContext();
+        if (!projectId) throw new Error('rejs: brak projektu');
+        const row = sailingToRow(m.sailing);
+        if (m.isNew) {
+          const vName = vesselToDb(m.sailing.vessel === 'Wawel' || m.sailing.vessel === 'Nova Star' ? m.sailing.vessel : null) ?? m.sailing.vessel;
+          const v = await sb.from('vessels').select('id').eq('name', vName).maybeSingle();
+          const vessel = must(v, 'statek') as { id: string } | null;
+          if (!vessel) throw new Error(`rejs: nieznany statek ${m.sailing.vessel}`);
+          const res = await sb.from('sailings').insert({ ...row, project_id: projectId, vessel_id: vessel.id }).select('id').single();
+          return { id: (must(res, 'rejs') as { id: string }).id };
+        }
+        const res = await sb.from('sailings').update({ ...row, updated_at: new Date().toISOString() }).eq('id', m.sailing.id).select('id');
+        if (!(must(res, 'rejs') as { id: string }[]).length) throw new Error('rejs: rozkład zmienia wyłącznie HHL');
+        return;
+      }
+      case 'load.sailing':
+        return updateLoad(m.loadId, { sailing_id: m.sailingId, ferry_booking_ref: m.bookingRef }, 'rejs');
       case 'position.report': {
         const r = await sb.rpc('report_position', {
           p_load_id: m.loadId, p_lat: m.lat, p_lon: m.lng, p_ts: m.at,

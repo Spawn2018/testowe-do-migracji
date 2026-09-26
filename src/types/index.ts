@@ -93,6 +93,20 @@ export interface Awizacja {
   confirmed: boolean;
 }
 
+/** M10 — rejs z rozkładu (`sailings`); jedno źródło prawdy o statku i godzinach. */
+export type SailingStatus = 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY';
+export interface Sailing {
+  id: string;
+  vessel: string;
+  route: 'GDN-NYN' | 'NYN-GDN';
+  departureAt: string;
+  arrivalAt: string;
+  delayedDepartureAt: string | null;
+  delayedArrivalAt: string | null;
+  status: SailingStatus;
+  source: 'DANE_STARTOWE' | 'RECZNIE' | 'POLFERRIES';
+}
+
 export interface FerryBooking {
   vessel: 'Wawel' | 'Nova Star' | null;
   departureAt: string | null;
@@ -254,6 +268,8 @@ export interface Load {
   carrierOrderNo?: string | null;
   /** M2 — rzeczywisty rozładunek (UTC ISO); realizacja = rozładunek (W5) */
   unloadedAt?: string | null;
+  /** M10 — przypisany rejs (`loads.sailing_id`) */
+  sailingId?: string | null;
 }
 
 export interface Geofence {
@@ -334,6 +350,8 @@ export interface Risk {
   situationId?: string;
   /** Cause category for FM / road, e.g. weather | strike | border | industrial. */
   causeCategory?: string;
+  /** M10 — rodzaj ryzyka automatu / rejsu (AUTO_STATUS, LOADING_UNCONFIRMED, MISSED_SAILING, SAILING_CANCELLED, FERRY_OVERDUE). */
+  code?: string;
 }
 
 export interface RateRule {
@@ -499,6 +517,8 @@ export interface ExceptionItem {
   loadId?: string;
   /** Operator-facing load code (SG-07), never raw load-010 */
   code?: string;
+  /** M10 — etykieta rodzaju ryzyka automatu / rejsu (PL/EN/SV) */
+  tag?: string;
 }
 
 export interface AppToast {

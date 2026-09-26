@@ -10,6 +10,8 @@ import type {
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
 import { renderNotice, asLocale } from '../../supabase/functions/_shared/notifyTemplates';
 import { applyEtaToLoad } from '../lib/eta';
+import { autoRiskCode } from '../lib/sailings';
+import type { Sailing } from '../types';
 
 // ---- status ---------------------------------------------------------------
 export type DbLoadStatus =
@@ -175,6 +177,7 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
     hhlOrderNo: row.hhl_order_no ?? null,
     carrierOrderNo: row.carrier_order_no ?? null,
     unloadedAt: row.actual_delivery_at ?? null,
+    sailingId: row.sailing_id ?? null,
   };
   return applyEtaToLoad(base, nowIso);
 }
@@ -273,10 +276,11 @@ export function geofenceToRpc(g: Geofence, projectId: string, orgs: OrgRow[], se
 }
 
 // ---- ryzyka / dokumenty -----------------------------------------------------
-export interface RiskRow { id: string; load_id: string | null; kind: string; severity: string; title: string; detail: Record<string, unknown> | null; detected_at: string }
+export interface RiskRow { id: string; load_id: string | null; kind: string; severity: string; title: string; detail: Record<string, unknown> | null; detected_at: string; dedup_key?: string | null }
 const RISK_TYPE: Record<string, RiskType> = {
   FERRY: 'FERRY', WEATHER: 'FORCE_MAJEURE', ROAD_SE: 'ROAD_SE', ROAD_PL: 'OPS', PERMIT: 'DOC', INSURANCE: 'DOC',
   DOC_MISSING: 'DOC', SILENT_VEHICLE: 'OPS', ETA_BREACH: 'OPS', RESOURCE_MISSING: 'OPS', SEQUENCE: 'OPS', INVOICE_MISMATCH: 'OPS',
+  AUTO_STATUS: 'OPS', LOADING_UNCONFIRMED: 'OPS',
 };
 const SEVERITY: Record<string, Severity> = { INFO: 'LOW', LOW: 'LOW', MEDIUM: 'MEDIUM', HIGH: 'HIGH', CRITICAL: 'CRITICAL' };
 export function riskFromRow(r: RiskRow, nowIso: string): Risk {
@@ -288,6 +292,33 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
     detail: str(d.text) || str(d.detail), loadId: r.load_id ?? undefined, owner,
     meta: str(d.meta), nextAction: str(d.next_action),
     ageHours: Math.max(0, Math.round((Date.parse(nowIso) - Date.parse(r.detected_at)) / 36e5)),
+    /* M10 — rodzaj ryzyka automatu / rejsu z klucza deduplikacji (0004) */
+    code: autoRiskCode(r.kind, r.dedup_key),
+  };
+}
+
+// ---- rejsy (M10) --------------------------------------------------------------
+export interface SailingDbRow {
+  id: string; route: string; departure_at: string; arrival_at: string;
+  delayed_departure_at: string | null; delayed_arrival_at: string | null; status: string; source: string;
+  vessels?: { name: string } | null;
+}
+export const SAILING_COLUMNS = 'id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,status,source,vessels(name)';
+export function sailingFromRow(r: SailingDbRow): Sailing {
+  const name = r.vessels?.name ?? '';
+  return {
+    id: r.id, vessel: vesselFromDb(name) ?? name.replace(/^M\/F\s+/i, ''),
+    route: r.route === 'NYN-GDN' ? 'NYN-GDN' : 'GDN-NYN',
+    departureAt: r.departure_at, arrivalAt: r.arrival_at,
+    delayedDepartureAt: r.delayed_departure_at, delayedArrivalAt: r.delayed_arrival_at,
+    status: r.status === 'ODWOLANY' ? 'ODWOLANY' : r.status === 'OPOZNIONY' ? 'OPOZNIONY' : 'ZAPLANOWANY',
+    source: r.source === 'POLFERRIES' ? 'POLFERRIES' : r.source === 'DANE_STARTOWE' ? 'DANE_STARTOWE' : 'RECZNIE',
+  };
+}
+export function sailingToRow(s: Sailing): Record<string, unknown> {
+  return {
+    route: s.route, departure_at: s.departureAt, arrival_at: s.arrivalAt,
+    delayed_departure_at: s.delayedDepartureAt, delayed_arrival_at: s.delayedArrivalAt, status: s.status, source: s.source,
   };
 }
 
