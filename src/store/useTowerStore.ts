@@ -455,6 +455,8 @@ export const useTowerStore = create<TowerState>()(
             n.id === id ? { ...n, read: true } : n,
           ),
         }));
+        /* M7 — powiadomienia z serwera: przeczytanie zapisywane (mark_notifications_read) */
+        if (id.startsWith('srv-')) writeThrough({ type: 'notifications.read', ids: [Number(id.slice(4))] });
       },
 
       markAllNotificationsRead: (role) => {
@@ -468,6 +470,8 @@ export const useTowerStore = create<TowerState>()(
             return scoped ? { ...n, read: true } : n;
           }),
         }));
+        const ids = get().notifications.filter((n) => n.id.startsWith('srv-')).map((n) => Number(n.id.slice(4)));
+        if (ids.length) writeThrough({ type: 'notifications.read', ids });
       },
 
       openNotification: (id) => {

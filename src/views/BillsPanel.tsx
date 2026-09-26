@@ -16,7 +16,7 @@ import { unloadedAtOf } from '../lib/money/loadMoney';
 import {
   BILL_FLAG_LABEL, PAYMENT_LABEL, VERIFICATION_LABEL, billCandidates, billPaymentToday, billVisibleTo,
   canMarkPaid, canRegisterBill, computedEurFor, canVerifyBill, checkBill, expectedNetFor, invoicedLoadIds, isoWeekMonday,
-  addDaysIso, paymentPill, suggestLineFx, verificationPill, type BillDraft,
+  addDaysIso, paymentPill, reminderPlan, reminderRecipients, suggestLineFx, verificationPill, type BillDraft,
 } from '../lib/invoices3';
 import { DocFileRow } from '../components/ui/DocFileRow';
 import { DocPreview } from '../components/ui/DocPreview';
@@ -193,6 +193,17 @@ function BillDetail({ bill }: { bill: Bill }) {
         <dd>{pdf ? <DocFileRow doc={pdf} onPreview={setPreview} /> : <span data-content>{bill.pdfName ?? '—'}</span>}</dd>
         <dt>{t(locale, 'bill_col_due')}</dt>
         <dd>{fmtDay(bill.dueDate)} · {t(locale, bill.dueFromDocument ? 'bill_due_doc' : 'bill_due_terms')}</dd>
+        <dt>{t(locale, 'bill_reminders')}</dt>
+        <dd data-reminders>
+          {reminderPlan(bill, localDateOf(getNowIso())).map((r) => (
+            <span key={r.offset} className={`pill ${r.state === 'WYSLANE' ? 'p-go' : r.state === 'WSTRZYMANE' ? '' : 'p-amber'}`} data-reminder={r.state} style={{ marginRight: 4 }} title={t(locale, `bill_rem_${r.state}`)}>
+              {fmtDay(r.date)} · {r.offset > 0 ? `+${r.offset}` : r.offset}
+            </span>
+          ))}
+          <span style={{ color: 'var(--ink-3)' }}>
+            {' '}{t(locale, 'bill_rem_to')} {reminderRecipients(bill).payer} ({t(locale, 'bill_rem_payer')}) · {reminderRecipients(bill).payee} ({t(locale, 'bill_rem_payee')}){bill.payment === 'OPLACONA' ? ` · ${t(locale, 'bill_rem_WSTRZYMANE')}` : ''}
+          </span>
+        </dd>
         {bill.disputeNote ? (<><dt>{t(locale, 'bill_dispute_note')}</dt><dd data-content>{bill.disputeNote}</dd></>) : null}
         {bill.paidAt ? (<><dt>{t(locale, 'bill_paid_at')}</dt><dd>{fmtDay(bill.paidAt)}</dd></>) : null}
       </dl>

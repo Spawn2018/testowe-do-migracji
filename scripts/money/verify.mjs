@@ -40,7 +40,8 @@ const m6 = { inv: [], docs: [], paths: [], notes: [] };
 const cleanup = async () => {
   // M6: własne faktury TEST (kaskada: pozycje, dokumenty faktury), powiadomienia, pliki PDF
   if (m6.inv.length) await admin.from('invoices').delete().in('id', m6.inv);
-  if (m6.notes.length) await admin.from('notifications').delete().in('id', m6.notes);
+  if (m6.notes.length) await admin.from('notifications').delete().in('id', [...new Set(m6.notes)]);
+  for (const inv of m6.inv) await admin.from('notifications').delete().contains('payload', { invoice_id: inv });
   for (const [b, pth] of m6.paths) await admin.storage.from(b).remove([pth]);
   if (m6.docs.length) await admin.from('documents').delete().in('id', m6.docs);
   if (created.cost) await admin.from('load_cost').delete().eq('load_id', A.id);
@@ -240,6 +241,49 @@ try {
       check('M6 KSH (odbiorca) weryfikuje fakturę HHL', !kv.error && kv.data?.[0]?.verification_status === 'ZGODNA', kv.error?.message);
       const kp = await sb.KSH.rpc('mark_invoice_paid', { p_invoice: id, p_paid_at: '2026-09-25' });
       check('M6 KSH nie oznaczy „Opłacona”', Boolean(kp.error));
+    }
+  }
+  // ---------- M7: przypomnienia (send_payment_reminders) — tylko płatnik i wierzyciel, opłacona → cisza ----------
+  {
+    if (m6.inv.length) await admin.from('invoices').delete().in('id', m6.inv); // faktury M6 zwalniają transport fixture
+    const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw' }).format(new Date());
+    const plus = (d, n) => { const x = new Date(`${d}T00:00:00Z`); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+    const due = plus(today, 3);
+    const pdf = new Blob([new TextEncoder().encode('%PDF-1.4\n%TEST-M7\n')], { type: 'application/pdf' });
+    const c = await sb.SCX.rpc('create_document', { p_load_id: null, p_category: 'INVOICE', p_file_name: 'TEST-M7.pdf', p_mime: 'application/pdf', p_size: pdf.size, p_project_id: A.project_id });
+    const row = Array.isArray(c.data) ? c.data[0] : c.data;
+    if (row) { m6.docs.push(row.id); m6.paths.push([row.bucket, row.object_path]); await sb.SCX.storage.from(row.bucket).upload(row.object_path, pdf, { contentType: 'application/pdf' }); }
+    const r = await sb.SCX.rpc('register_invoice', { p: { direction: 'KOSZT', currency: 'PLN', invoice_number: `TEST-M7-${Date.now()}`, issue_date: today, week_key: '2026-W38', net_total: 100, vat_total: 23, gross_total: 123, due_date: due, document_id: row?.id, lines: [{ load_id: A.id, invoiced_net: 100, fx_table_no: '185/A/NBP/2026', fx_mid: 4.3588, fx_effective_date: '2026-09-23' }] } });
+    const id = r.data;
+    if (id) m6.inv.push(id);
+    check('M7 fixture: faktura TEST z terminem z dokumentu (dziś + 3)', !r.error && Boolean(id), r.error?.message);
+    const deny = await sb.HHL.rpc('send_payment_reminders', { p_today: today });
+    check('M7 użytkownik nie uruchomi przypomnień (zadanie systemowe)', Boolean(deny.error));
+    if (id) {
+      const run = await admin.rpc('send_payment_reminders', { p_today: today });
+      check('M7 zadanie systemowe (service role) — przypomnienia −3 utworzone', !run.error && Number(run.data) >= 2, run.error?.message ?? String(run.data));
+      const rows = (await admin.from('notifications').select('id,user_id,channel,status,payload').eq('template', 'PAYMENT_REMINDER').contains('payload', { invoice_id: id })).data ?? [];
+      m6.notes.push(...rows.map((x) => x.id));
+      const users = (await admin.from('app_users').select('id,org_id,organizations(kind)')).data ?? [];
+      const kindOf = (uid) => users.find((u) => u.id === uid)?.organizations?.kind;
+      check('M7 odbiorcy wyłącznie płatnik (HHL) i wierzyciel (SCX)', rows.length > 0 && rows.every((x) => ['FORWARDER', 'CARRIER'].includes(kindOf(x.user_id))) && rows.some((x) => x.payload.party === 'PAYER') && rows.some((x) => x.payload.party === 'PAYEE'), JSON.stringify(rows.map((x) => [kindOf(x.user_id), x.payload.party, x.channel])));
+      check('M7 dwa kanały: IN_APP i EMAIL (kolejka PENDING), kwota w walucie faktury', rows.some((x) => x.channel === 'IN_APP') && rows.some((x) => x.channel === 'EMAIL' && x.status === 'PENDING') && rows.every((x) => x.payload.currency === 'PLN' && Number(x.payload.gross) === 123 && x.payload.offset === -3));
+      const ks = await sb.KSH.from('notifications').select('id').eq('template', 'PAYMENT_REMINDER').contains('payload', { invoice_id: id });
+      check('M7 KSH nie dostaje przypomnień o fakturze SCX', !ks.error && ks.data.length === 0, ks.error?.message);
+      const ss = await sb.SCX.from('notifications').select('id').eq('template', 'PAYMENT_REMINDER').eq('channel', 'IN_APP').contains('payload', { invoice_id: id });
+      check('M7 SCX (wierzyciel) widzi przypomnienie w centrum powiadomień', !ss.error && ss.data.length === 1, ss.error?.message);
+      const rd = await sb.SCX.rpc('mark_notifications_read', { p_ids: ss.data?.map((x) => x.id) ?? [] });
+      check('M7 SCX oznacza przeczytane własne powiadomienie', !rd.error && rd.data === 1, rd.error?.message);
+      const again = await admin.rpc('send_payment_reminders', { p_today: today });
+      const cnt2 = (await admin.from('notifications').select('id').eq('template', 'PAYMENT_REMINDER').contains('payload', { invoice_id: id })).data?.length;
+      check('M7 ponowne uruchomienie tego dnia — bez duplikatów', !again.error && cnt2 === rows.length, `${cnt2} vs ${rows.length}`);
+      await sb.HHL.rpc('mark_invoice_paid', { p_invoice: id, p_paid_at: today });
+      const em = (await admin.from('notifications').select('status').eq('template', 'PAYMENT_REMINDER').eq('channel', 'EMAIL').contains('payload', { invoice_id: id })).data ?? [];
+      check('M7 opłacona → niewysłane e-maile anulowane (cisza)', em.length > 0 && em.every((x) => x.status === 'CANCELLED'), JSON.stringify(em));
+      await admin.rpc('send_payment_reminders', { p_today: due });
+      const after = (await admin.from('notifications').select('id').eq('template', 'PAYMENT_REMINDER').contains('payload', { invoice_id: id })).data ?? [];
+      m6.notes.push(...after.map((x) => x.id));
+      check('M7 opłacona → w dniu terminu przypomnienie nie wychodzi', after.length === rows.length, `${after.length} vs ${rows.length}`);
     }
   }
   //@@NEXT@@

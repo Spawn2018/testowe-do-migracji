@@ -4,6 +4,13 @@ import type { Locale } from '../types';
 type Dict = Record<string, string>;
 
 const pl: Dict = {
+  bill_reminders: 'Przypomnienia',
+  bill_rem_WYSLANE: 'wysłane',
+  bill_rem_ZAPLANOWANE: 'zaplanowane',
+  bill_rem_WSTRZYMANE: 'wstrzymane — opłacona',
+  bill_rem_to: 'e-mail i powiadomienie do:',
+  bill_rem_payer: 'płatnik',
+  bill_rem_payee: 'wierzyciel',
   bill_notifyNew: 'Nowa faktura do weryfikacji',
   bill_registered: 'Faktura zarejestrowana',
   bill_verifyDenied: 'Weryfikuje wyłącznie odbiorca faktury',
@@ -76,6 +83,13 @@ const pl: Dict = {
   settings_prefs_note: 'Waluta wyświetlania przelicza wszystkie kwoty (źródłem jest zawsze EUR). Kwoty na fakturach pokazywane są w walucie faktury.',
 };
 const en: Dict = {
+  bill_reminders: 'Reminders',
+  bill_rem_WYSLANE: 'sent',
+  bill_rem_ZAPLANOWANE: 'scheduled',
+  bill_rem_WSTRZYMANE: 'stopped — paid',
+  bill_rem_to: 'e-mail and notification to:',
+  bill_rem_payer: 'payer',
+  bill_rem_payee: 'payee',
   bill_notifyNew: 'New invoice to verify',
   bill_registered: 'Invoice registered',
   bill_verifyDenied: 'Only the invoice recipient can verify',
@@ -148,6 +162,13 @@ const en: Dict = {
   settings_prefs_note: 'Display currency converts all amounts (the source is always EUR). Invoice amounts are shown in the invoice currency.',
 };
 const sv: Dict = {
+  bill_reminders: 'Påminnelser',
+  bill_rem_WYSLANE: 'skickad',
+  bill_rem_ZAPLANOWANE: 'planerad',
+  bill_rem_WSTRZYMANE: 'stoppad — betald',
+  bill_rem_to: 'e-post och avisering till:',
+  bill_rem_payer: 'betalare',
+  bill_rem_payee: 'betalningsmottagare',
   bill_notifyNew: 'Ny faktura att granska',
   bill_registered: 'Faktura registrerad',
   bill_verifyDenied: 'Endast fakturans mottagare kan granska',

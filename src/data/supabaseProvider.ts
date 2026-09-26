@@ -12,7 +12,7 @@ import { isServerId } from './registry';
 import {
   awizacjaPatchToDb, documentFromRow, eventFromRow, eventToRow, ferryPatchToDb, geofenceFromRow, geofenceToRpc,
   PRICE_VIEW_COLUMNS, applyPriceViews, type PriceViewRow,
-  BILL_COLUMNS, billFromRow, billToRpc, type BillRow,
+  BILL_COLUMNS, billFromRow, billToRpc, type BillRow, notificationFromRow, type NotificationRow,
   loadFromRow, messageFromRow, resourcesPatchToDb, riskFromRow, statusToDb, vesselToDb,
   type DocumentRow, type EventRow, type GeofenceRow, type LoadRow, type MessageRow, type OrgRow, type RiskRow,
 } from './mappers';
@@ -55,7 +55,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
   async function loadSnapshot(): Promise<DataSnapshot> {
     await ensureContext();
     const at = now();
-    const [loads, events, messages, geos, risks, docs, costV, revV, billsQ] = await Promise.all([
+    const [loads, events, messages, geos, risks, docs, costV, revV, billsQ, notesQ] = await Promise.all([
       sb.from('loads').select(LOAD_COLUMNS).order('plan_load_date', { ascending: true, nullsFirst: false }),
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
@@ -67,18 +67,21 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.from('v_load_price_client').select(PRICE_VIEW_COLUMNS),
       // M6: faktury v2 (RLS invoices_read: strony faktury; HHL wszystko)
       sb.from('invoices').select(BILL_COLUMNS).not('direction', 'is', null).order('issue_date', { ascending: false }),
+      // M7: centrum powiadomień — własne wiersze IN_APP (RLS notifications_read_own), treść w języku odbiorcy
+      sb.from('notifications').select('id,template,payload,load_id,created_at,read_at').eq('channel', 'IN_APP').order('created_at', { ascending: false }).limit(200),
     ]);
     const docRows = must(docs, 'documents') as DocumentRow[];
     const costBy = new Map((must(costV, 'v_load_price_carrier') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
     const revBy = new Map((must(revV, 'v_load_price_client') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
     return {
-      ...emptySnapshot(), // automatyzacje / powiadomienia: Etap 4 — puste, nie demo
+      ...emptySnapshot(), // automatyzacje: Etap 4 — puste, nie demo
       loads: (must(loads, 'loads') as unknown as LoadRow[]).map((r, i) => applyPriceViews(loadFromRow(r, orgs, i, at), costBy.get(r.id), revBy.get(r.id))),
       events: (must(events, 'load_events') as EventRow[]).map(eventFromRow),
       messages: (must(messages, 'load_messages') as MessageRow[]).map(messageFromRow),
       geofences: (must(geos, 'v_geofences_circle') as GeofenceRow[]).map((g) => geofenceFromRow(g, orgs)),
       risks: (must(risks, 'risk_signals') as RiskRow[]).map((r) => riskFromRow(r, at)),
       documents: docRows.map(documentFromRow).filter((d) => d !== null),
+      notifications: (must(notesQ, 'notifications') as NotificationRow[]).map((r) => notificationFromRow(r)),
       bills: (must(billsQ, 'invoices') as unknown as BillRow[]).map((r) => billFromRow(r, orgs, docRows)).filter((b) => b !== null),
     };
   }
@@ -171,6 +174,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         }
         const res = await sb.rpc('register_invoice', { p: billToRpc(m.bill, row.id) });
         if (res.error) {
+          // odrzucona rejestracja: najpierw plik (discard_document wymaga braku obiektu), potem wiersz
+          await sb.storage.from(row.bucket).remove([row.object_path]);
           await sb.rpc('discard_document', { p_id: row.id });
           throw new Error(res.error.message);
         }
@@ -186,6 +191,12 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       }
       case 'bill.paid': {
         const res = await sb.rpc('mark_invoice_paid', { p_invoice: m.billId, p_paid_at: m.paidAt });
+        if (res.error) throw new Error(res.error.message);
+        return;
+      }
+      case 'notifications.read': {
+        if (!m.ids.length) return;
+        const res = await sb.rpc('mark_notifications_read', { p_ids: m.ids });
         if (res.error) throw new Error(res.error.message);
         return;
       }

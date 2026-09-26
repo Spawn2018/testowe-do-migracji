@@ -1,0 +1,42 @@
+/**
+ * M7 — wysyłka kolejki e-mail (`notifications` channel=EMAIL, status=PENDING) przez Resend.
+ * Wywołanie: harmonogram (Supabase Scheduled Functions / pg_net) co kilka minut, z kluczem service role.
+ * Sekrety funkcji: RESEND_API_KEY, MAIL_FROM, APP_URL (opcjonalnie). SUPABASE_URL i
+ * SUPABASE_SERVICE_ROLE_KEY dostarcza platforma. Opłacona faktura → wiersze CANCELLED (baza) — nie wychodzą.
+ */
+import { createClient } from 'npm:@supabase/supabase-js@2';
+import { renderEmail } from '../_shared/notifyTemplates.ts';
+
+Deno.serve(async (req) => {
+  const auth = req.headers.get('Authorization') ?? '';
+  const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  if (!service || auth !== `Bearer ${service}`) return new Response('forbidden', { status: 403 });
+  const sb = createClient(Deno.env.get('SUPABASE_URL')!, service, { auth: { persistSession: false } });
+  const key = Deno.env.get('RESEND_API_KEY');
+  const from = Deno.env.get('MAIL_FROM');
+  if (!key || !from) return new Response('missing RESEND_API_KEY / MAIL_FROM', { status: 500 });
+  const { data: rows, error } = await sb.from('notifications')
+    .select('id,recipient,template,payload').eq('channel', 'EMAIL').eq('status', 'PENDING')
+    .order('created_at', { ascending: true }).limit(50);
+  if (error) return new Response(error.message, { status: 500 });
+  let sent = 0, failed = 0;
+  for (const r of rows ?? []) {
+    // ponowne sprawdzenie tuż przed wysyłką: anulowane (opłacona) w międzyczasie → pomiń
+    const { data: fresh } = await sb.from('notifications').select('status').eq('id', r.id).single();
+    if (fresh?.status !== 'PENDING') continue;
+    const mail = renderEmail({ template: r.template, payload: r.payload ?? {} }, Deno.env.get('APP_URL') ?? '');
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'Idempotency-Key': `tower-notif-${r.id}` },
+      body: JSON.stringify({ from, to: [r.recipient], subject: mail.subject, text: mail.text, html: mail.html }),
+    });
+    if (res.ok) {
+      sent++;
+      await sb.from('notifications').update({ status: 'SENT', sent_at: new Date().toISOString(), error: null }).eq('id', r.id).eq('status', 'PENDING');
+    } else {
+      failed++;
+      await sb.from('notifications').update({ status: 'ERROR', error: `Resend ${res.status}: ${(await res.text()).slice(0, 300)}` }).eq('id', r.id);
+    }
+  }
+  return Response.json({ sent, failed });
+});

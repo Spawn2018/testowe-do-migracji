@@ -200,7 +200,7 @@ describe.runIf(LIVE)('BK3 SupabaseProvider (live, RLS)', () => {
     } finally {
       const { data: docs } = await admin.from('invoices').select('document_id').in('id', made);
       await admin.from('invoices').delete().in('id', made);
-      await admin.from('notifications').delete().in('payload->>invoice_id', made);
+      for (const m of made) await admin.from('notifications').delete().contains('payload', { invoice_id: m });
       const ids = (docs ?? []).map((d) => d.document_id).filter(Boolean) as string[];
       const { data: rows } = await admin.from('documents').select('id,storage_path').in('id', ids);
       for (const r of rows ?? []) { const i = r.storage_path.indexOf('/'); await admin.storage.from(r.storage_path.slice(0, i)).remove([r.storage_path.slice(i + 1)]); }
@@ -209,7 +209,44 @@ describe.runIf(LIVE)('BK3 SupabaseProvider (live, RLS)', () => {
       await admin.from('load_cost').update({ invoiced_total_eur: null }).eq('load_id', loadA);
       await admin.from('load_revenue').update({ invoiced_total_eur: null }).eq('load_id', loadA);
     }
-  });
+  }, 60_000);
+
+  it('M7: przypomnienie o płatności w centrum powiadomień (płatnik i wierzyciel, nie KSH); przeczytane zapisywane', async () => {
+    const pdf = new Blob([new TextEncoder().encode('%PDF-1.4\n%TEST-M7-LIVE\n')], { type: 'application/pdf' });
+    const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Warsaw' }).format(new Date());
+    const x = new Date(`${today}T00:00:00Z`); x.setUTCDate(x.getUTCDate() + 3);
+    const due = x.toISOString().slice(0, 10);
+    const number = `TEST-M7-L-${tag}`;
+    let id = '';
+    try {
+      const r = await P.SCX.apply({ type: 'bill.register', file: pdf, bill: {
+        id: 'local', direction: 'KOSZT', issuer: 'SCX', recipient: 'HHL', number, issueDate: today, weekKey: '2026-W38', currency: 'EUR',
+        net: 10, vat: 0, gross: 10, dueDate: due, dueFromDocument: true, verification: 'DO_WERYFIKACJI', payment: 'NIEOPLACONA',
+        pdfName: `${number}.pdf`, lines: [{ loadId: loadA, invoicedNet: 10, flags: [] }], headerFlags: [], missingLoadIds: [], createdAt: '',
+      } });
+      id = (r as { id: string }).id;
+      const run = await admin.rpc('send_payment_reminders', { p_today: today });
+      expect(run.error).toBeNull();
+      const mine = (await P.SCX.loadSnapshot()).notifications.filter((n) => n.href?.entityId === id);
+      expect(mine).toHaveLength(1);
+      expect(mine[0].id).toMatch(/^srv-\d+$/);
+      expect(mine[0].title).toContain(number);
+      expect(mine[0].read).toBe(false);
+      expect((await P.HHL.loadSnapshot()).notifications.filter((n) => n.href?.entityId === id)).toHaveLength(1);
+      expect((await P.KSH.loadSnapshot()).notifications.filter((n) => n.href?.entityId === id)).toHaveLength(0);
+      await P.SCX.apply({ type: 'notifications.read', ids: [Number(mine[0].id.slice(4))] });
+      expect((await P.SCX.loadSnapshot()).notifications.find((n) => n.id === mine[0].id)?.read).toBe(true);
+    } finally {
+      if (id) {
+        const { data: inv } = await admin.from('invoices').select('document_id').eq('id', id).single();
+        await admin.from('invoices').delete().eq('id', id);
+        await admin.from('notifications').delete().contains('payload', { invoice_id: id });
+        const { data: doc } = await admin.from('documents').select('id,storage_path').eq('id', inv?.document_id ?? '').maybeSingle();
+        if (doc) { const i = doc.storage_path.indexOf('/'); await admin.storage.from(doc.storage_path.slice(0, i)).remove([doc.storage_path.slice(i + 1)]); await admin.from('documents').delete().eq('id', doc.id); }
+        await admin.from('load_cost').update({ invoiced_total_eur: null }).eq('load_id', loadA);
+      }
+    }
+  }, 60_000);
 
   it('anon (bez sesji) nie czyta transportów', async () => {
     const anon = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false } });

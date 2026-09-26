@@ -284,3 +284,28 @@ export function isoWeekMonday(weekKey: string): string {
   mon.setUTCDate(jan4.getUTCDate() - ((jan4.getUTCDay() + 6) % 7) + (w - 1) * 7);
   return mon.toISOString().slice(0, 10);
 }
+
+/* ---------- M7 — przypomnienia o płatności (lustro send_payment_reminders) ---------- */
+export const REMINDER_CADENCE = [-3, 0, 1, 7, 14] as const;
+export type ReminderState = 'WYSLANE' | 'ZAPLANOWANE' | 'WSTRZYMANE';
+export interface ReminderStep { date: string; offset: number; state: ReminderState }
+
+/** Płatnik = odbiorca faktury, wierzyciel = wystawca; nigdy trzecia strona. */
+export function reminderRecipients(b: Pick<Bill, 'issuer' | 'recipient'>): { payer: OrgKind; payee: OrgKind } {
+  return { payer: b.recipient, payee: b.issuer };
+}
+
+/** Plan przypomnień faktury na dziś: wysłane (dzień minął), zaplanowane, wstrzymane (opłacona → cisza). */
+export function reminderPlan(b: Pick<Bill, 'dueDate' | 'paidAt' | 'payment'>, todayLocal: string, cadence: readonly number[] = REMINDER_CADENCE): ReminderStep[] {
+  const paid = b.payment === 'OPLACONA' || Boolean(b.paidAt);
+  return cadence.map((offset) => {
+    const date = addDaysIso(b.dueDate, offset);
+    const sentBeforePaid = date <= todayLocal && (!b.paidAt || date < b.paidAt);
+    const state: ReminderState = sentBeforePaid ? 'WYSLANE' : paid ? 'WSTRZYMANE' : 'ZAPLANOWANE';
+    return { date, offset, state };
+  });
+}
+
+/** Kto dostaje przypomnienie o tej fakturze (rola widoku) — KSH nigdy o kosztowej, SCX nigdy o przychodowej. */
+export const receivesReminders = (role: RoleId, b: Pick<Bill, 'issuer' | 'recipient'>): boolean =>
+  role === b.issuer || role === b.recipient;

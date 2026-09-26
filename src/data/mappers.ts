@@ -5,9 +5,10 @@
 import type { MoneySideV2 } from '../lib/money/loadMoney';
 import type {
   Awizacja, Bill, BillFlag, BillPayment, BillVerification, CorridorStage, DocCategory, Document, FerryBooking, Geofence, GeofenceType, Load,
-  LoadEvent, LoadMessage, LoadResources, LoadStatus, OrgKind, Risk, RiskType, Severity,
+  LoadEvent, LoadMessage, LoadResources, LoadStatus, Notification, OrgKind, Risk, RiskType, Severity,
 } from '../types';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
+import { renderNotice, asLocale } from '../../supabase/functions/_shared/notifyTemplates';
 import { applyEtaToLoad } from '../lib/eta';
 
 // ---- status ---------------------------------------------------------------
@@ -437,5 +438,21 @@ export function billToRpc(b: Bill, documentId: string): Record<string, unknown> 
       fx_table_no: l.fx?.tableNo ?? null, fx_mid: l.fx?.mid ?? null, fx_effective_date: l.fx?.effectiveDate ?? null,
       flags: l.flags.filter((f) => f === 'OPLATA_PALIWOWA'),
     })),
+  };
+}
+
+/* M7 — centrum powiadomień: wiersze IN_APP bieżącego użytkownika (RLS) w jego języku */
+export interface NotificationRow {
+  id: number; template: string; payload: Record<string, unknown> | null; load_id: string | null;
+  created_at: string; read_at: string | null;
+}
+export const NOTIFICATION_PREFIX = 'srv-';
+export function notificationFromRow(r: NotificationRow, locale?: string): Notification {
+  const n = renderNotice({ template: r.template, payload: r.payload ?? {} }, locale ? asLocale(locale) : undefined);
+  const inv = (r.payload ?? {}).invoice_id;
+  return {
+    id: `${NOTIFICATION_PREFIX}${r.id}`, at: r.created_at, title: n.subject, body: n.body, severity: n.severity,
+    loadId: r.load_id ?? undefined, read: Boolean(r.read_at),
+    href: n.view ? { view: n.view, entityId: typeof inv === 'string' ? inv : undefined, loadId: r.load_id ?? undefined } : undefined,
   };
 }

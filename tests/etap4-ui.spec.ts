@@ -2,6 +2,7 @@
  * Etap 4 — ścieżki interfejsu na DemoProvider (świeży build HEAD w pre-push: scripts/ci/fresh-smoke.sh).
  * M5: numery zleceń — trzy kolumny, „każda strona swój”, GOTOWY bez numeru HHL → zrozumiały komunikat,
  *     przewoźnik nie widzi okien planowych jako edytowalnych (AN2).
+ * M7: plan przypomnień w szczegółach faktury (płatnik i wierzyciel, opłacona → wstrzymane).
  * M6: faktury v2 — moduł KSH (tylko HHL → KSH, spór z uzasadnieniem), kreator przychodowy HHL, SCX bez „Opłacona”.
  * Run: `npm run test:etap4`.
  */
@@ -178,8 +179,13 @@ test.describe('M6 — faktury v2', () => {
     const detail = page.locator(`[data-bill-detail="${id}"]`)
     await expect(detail).toBeVisible()
     await expect(detail.locator('[data-verify]')).toHaveCount(0) // wystawca nie weryfikuje
+    // M7: plan przypomnień −3/0/+1/+7/+14 do płatnika i wierzyciela; po „Opłacona” — wstrzymane
+    await expect(detail.locator('[data-reminders] [data-reminder]')).toHaveCount(5)
+    await expect(detail.locator('[data-reminders]')).toContainText('KSH (płatnik) · HHL (wierzyciel)')
     await detail.locator('[data-paid]').click()
     await expect(row.locator('[data-pay="OPLACONA"]')).toHaveCount(1)
+    await expect(detail.locator('[data-reminder="ZAPLANOWANE"]')).toHaveCount(0)
+    await expect(detail.locator('[data-reminder="WSTRZYMANE"]')).toHaveCount(5)
     // KSH widzi nową fakturę i powiadomienie
     await role(page, 'KSH')
     await nav(page, 'inv')

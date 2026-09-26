@@ -26,6 +26,7 @@ function targetId(m: DataMutation): string | null {
     case 'prefs.save': return null; // ustawienia bieżącego użytkownika (bez id encji)
     case 'bill.register': return m.bill.lines[0]?.loadId ?? ''; // pozycje = transporty z serwera
     case 'bill.verify': case 'bill.paid': case 'bill.unpaid': return m.billId;
+    case 'notifications.read': return null; // własne powiadomienia (id liczbowe z serwera)
     default: return m.loadId;
   }
 }

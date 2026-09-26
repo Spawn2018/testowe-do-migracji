@@ -58,7 +58,9 @@ export type DataMutation =
   | { type: 'bill.register'; bill: Bill; file: Blob | null }
   | { type: 'bill.verify'; billId: string; verification: BillVerification; note: string | null }
   | { type: 'bill.paid'; billId: string; paidAt: string }
-  | { type: 'bill.unpaid'; billId: string; reason: string };
+  | { type: 'bill.unpaid'; billId: string; reason: string }
+  /** M7 — centrum powiadomień: przeczytane (własne wiersze IN_APP; id serwera bez prefiksu `srv-`) */
+  | { type: 'notifications.read'; ids: number[] };
 
 /** M4 — ustawienia użytkownika (`user_preferences`); motyw null = domyślny dla roli. */
 export interface UserPrefsPatch {

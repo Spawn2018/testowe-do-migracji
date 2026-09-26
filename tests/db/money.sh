@@ -150,7 +150,30 @@ err "cofnięcie „Opłacona” bez powodu — odrzucone"                 $HHL "
 err "Z4: przewoźnik nie zmieni daty rozładunku zafakturowanego"   $SCX "update loads set actual_delivery_at='2026-09-23T10:00:00Z' where id='$L5'" "zamro"
 L8=33333333-0000-0000-0000-000000000008
 sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no) values ('$L8','$P','$CAR','KSH/8','HHL/8','SCX/8')"
-val "0015: pierwsza pozycja bez migawki i bez rozładunku (reguła nieustalona) — rejestracja działa, flaga NIEZREALIZOWANY" $SCX "select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','SCX/FV/39/8','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',10,'vat_total',0,'gross_total',10,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L8','invoiced_net',10)))) is not null; select array_to_string(flags,'+') from invoice_lines where load_id='$L8'" NIEZREALIZOWANY
+val "0015: pierwsza pozycja bez migawki i bez rozładunku (reguła nieustalona) — rejestracja działa, flaga NIEZREALIZOWANY" $SCX "select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','SCX/FV/39/8','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',10,'vat_total',0,'gross_total',10,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L8','invoiced_net',10)))) is not null; select array_to_string(flags,'+') from invoice_lines where load_id='$L8'" NIEZREALIZOWANY commit
+
+echo; echo "[M7] Terminy i przypomnienia: kadencja −3/0/+1/+7/+14, tylko płatnik i wierzyciel, opłacona → cisza"
+Q() { $PSQL -c "$1" 2>&1 | tail -1; }
+chk() { if [ "$2" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $2, oczekiwano: $3)"; fi; }
+sys "update app_users set locale='sv' where email='scx@test'"
+val "HHL: SCX/FV/39/1 „Opłacona” (utrwalone dla M7)"                 $HHL "select mark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '2026-10-01'); select payment_status from invoices where invoice_number='SCX/FV/39/1'" OPLACONA commit
+NPR="from notifications n join app_users u on u.id=n.user_id where n.template='PAYMENT_REMINDER'"
+INV8="(select id::text from invoices where invoice_number='SCX/FV/39/8')"
+chk "−3 dni (27.10, termin 30.10): przypomnienia utworzone"         "$(Q "select send_payment_reminders('2026-10-27') > 0")" t
+chk "KSH nie dostaje przypomnień o fakturze SCX"                     "$(Q "select count(*) $NPR and u.email='ksh@test' and n.payload->>'invoice_id'=$INV8")" 0
+chk "płatnik HHL + wierzyciel SCX, IN_APP i EMAIL (4 wiersze)"       "$(Q "select string_agg(u.email||':'||(n.payload->>'party')||':'||n.channel, ',' order by u.email, n.channel) $NPR and n.payload->>'invoice_id'=$INV8")" "hhl@test:PAYER:EMAIL,hhl@test:PAYER:IN_APP,scx@test:PAYEE:EMAIL,scx@test:PAYEE:IN_APP"
+chk "język odbiorcy i kwota w walucie faktury w treści"              "$(Q "select (n.payload->>'locale')||' '||(n.payload->>'currency')||' '||(n.payload->>'offset') $NPR and u.email='scx@test' and n.channel='EMAIL' and n.payload->>'invoice_id'=$INV8")" "sv EUR -3"
+chk "opłacona (SCX/FV/39/1, ten sam termin) → brak przypomnień"      "$(Q "select count(*) $NPR and n.payload->>'invoice_id'=(select id::text from invoices where invoice_number='SCX/FV/39/1')")" 0
+chk "ponowne uruchomienie tego dnia — bez duplikatów"                "$(Q "select send_payment_reminders('2026-10-27')")" 0
+chk "dzień spoza kadencji (28.10) — nic"                             "$(Q "select count(*) from (select send_payment_reminders('2026-10-28')) x; select count(*) $NPR and (n.payload->>'offset')::int=-2")" 0
+val "HHL oznacza SCX/FV/39/8 „Opłacona”"                             $HHL "select mark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/8'), '2026-10-28'); select payment_status from invoices where invoice_number='SCX/FV/39/8'" OPLACONA commit
+chk "opłacona → niewysłane e-maile przypomnień anulowane"            "$(Q "select string_agg(distinct n.status, ',') $NPR and n.channel='EMAIL' and n.payload->>'invoice_id'=$INV8")" CANCELLED
+chk "opłacona → w dniu terminu (30.10) przypomnienie nie wychodzi"   "$(Q "select count(*) from (select send_payment_reminders('2026-10-30')) x; select count(*) $NPR and n.payload->>'invoice_id'=$INV8 and (n.payload->>'offset')::int=0")" 0
+chk "przychodowa +1 dzień (26.10 dla terminu 25.10): KSH płatnik, HHL wierzyciel, SCX nic" "$(Q "select count(*) from (select send_payment_reminders('2026-10-26')) x; select string_agg(distinct u.email||':'||(n.payload->>'party'), ',' order by u.email||':'||(n.payload->>'party')) $NPR and n.payload->>'invoice_id'=(select id::text from invoices where invoice_number='HHL/FV/39/1')")" "hhl@test:PAYEE,ksh@test:PAYER"
+chk "refresh w obie strony: po terminie → PO_TERMINIE"                "$(Q "select payment_status from invoices where invoice_number='HHL/FV/39/1'")" PO_TERMINIE
+err "użytkownik nie uruchomi przypomnień (zadanie systemowe)"         $HHL "select send_payment_reminders('2027-01-01')" "permission denied"
+val "KSH oznacza przeczytane własne powiadomienia (IN_APP)"           $KSH "select mark_notifications_read(array(select id from notifications where template='PAYMENT_REMINDER')) = (select count(*) from notifications where template='PAYMENT_REMINDER' and channel='IN_APP')::int" t
+val "KSH nie oznaczy cudzych (HHL) powiadomień"                        $KSH "select mark_notifications_read(array(select id from notifications where user_id=(select id from app_users where email='hhl@test')))" 0
 
 #@@NEXT@@
 
