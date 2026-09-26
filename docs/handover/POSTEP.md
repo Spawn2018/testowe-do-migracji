@@ -138,6 +138,12 @@ Po wdrożeniu: e-maile przypomnień i „nowa faktura” wychodzą w języku odb
 | PR6 | `driver_post_position(token, …)` w SQL (warunki 2.3, limit zapytań); zdjęcia przez Edge | DONE (Edge driver-photo niewdrożona) | 1595e8b, 9b404ba | driver-api 5/5; db release: token 2.3 (pozycje/zdarzenia/instrukcje/zdjęcia) | pozycje i zdarzenia przez SQL driver_post_position/driver_post_event (API bazy, bez limitu Edge); zdjęcia przez Edge driver-photo — wdrożenie wymaga tokenu Supabase (właściciel nr 6); budżet ~71 000/500 000 wywołań — pomiar po miesiącu |
 | PR7 | Pliki: kompresja zdjęć w przeglądarce (1600 px, JPEG 0,75), PDF ≤ 10 MB, archiwizacja od 70% | OPEN | — | — | pending |
 | PR8 | Hosting: Vercel darmowy + zapas Cloudflare Pages, domena u właściciela, `PRZELACZENIE_HOSTINGU.md`, test przełączenia | OPEN | — | — | pending · wdrożenie po działaniach właściciela (§10) |
+| AN5 | Aneks 5 v2 — tekst w `ZLECENIE_FINAL.md` | **DONE** | (ten commit `docs(AN5)`) | — | obecny projekt Supabase = **PRODUKCJA** (jedyny); od teraz żadnych testów zapisujących na hostowanym; kolejność wg sekcji 6 ANEKSU 5 (zastępuje kolejność PR z ANEKSU 4) |
+| A5-SPRZATANIE | Sprzątanie danych testowych: kopia → lista tabela po tabeli do zatwierdzenia → usunięcie → liczby | OPEN | — | — | STOP przed usunięciem — akceptacja właściciela; zostają migracje, `stegra.sql`, 147 rejsów |
+| A5-BK5-LOKALNIE | BK5 (test API) na lokalnym Supabase (CLI + Docker) | BLOCKED | — | — | na boxie brak Dockera — BK5 nie uruchamiany na produkcji |
+| A5-PODGLADY | Podglądy Vercel w `DemoProvider`, build produkcyjny tylko z `main` | OPEN | — | — | pending |
+| A5-SESJA-ROK | Sesja użytkownika 365 dni (pg_cron czyści `auth.sessions`), JWT 3600 s, link ≤ 1 h, odwoływanie, Moje urządzenia + testy §4.5 | OPEN | — | — | kierowca bez zmian (24 h po rozładunku, max 14 dni) — rocznej autoryzacji kierowcy nie zaczęto |
+| A5-KLUCZ | Para kluczy age poza repo; publiczny → sekret `backup-export`; prywatny → właściciel offline, potem usunięcie z dysku | OPEN | — | — | pending |
 | release-1.0 | Tag `release-1.0` na commicie działającym na produkcji | OPEN | — | — | **dopiero po O3 na produkcji** (AN3 §5 pkt 12) |
 
 ## Etap 4 — Fala 3B: pieniądze, faktury, zlecenia · **ZAMKNIĘTY (G4)**
