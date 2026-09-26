@@ -154,6 +154,7 @@ Po wdrożeniu: e-maile przypomnień i „nowa faktura” wychodzą w języku odb
 | 3.2d | Higiena funkcji (0030) | **DONE** (produkcja) | a64465b | 0 funkcji bez search_path (było 22); funkcje poza allowlistą 0 | spatial_ref_sys: REVOKE nie działa → W1 |
 | 3.2e | Widoki v_load_* | **DONE** (bez zmian — sprawdzone) | — | widoki nieaktualizowalne, właściciel postgres | nadmiarowe prawa zapisu authenticated z domyślnych uprawnień nieskuteczne; widoki cenowe definer celowo (SECURITY.md §1) |
 | 3.2f | 8 tabel z RLS bez polityk | **DONE** (celowe, opisane) | 4ecf337 | security +3 [3.2f] | 6 bez GRANT; permits/insurance_policies 0 wierszy przez RLS; HHL widzi je jako dokumenty (SECURITY.md §2) |
+| W1 | spatial_ref_sys tylko do odczytu dla anon/authenticated (0031) | **DONE** (produkcja 26.09 ~15:45 PL) | 4ecf337 | security **67/67** (było 62); produkcja: DELETE srid=-1 anon/authenticated → 42501, TRUNCATE authenticated → 42501, postgres → DELETE 0; 8500 wierszy bez zmian | wyzwalacz instrukcji `spatial_ref_sys_readonly`; funkcja bez EXECUTE dla ról API |
 | release-1.0 | Tag `release-1.0` na commicie działającym na produkcji | OPEN | — | — | **dopiero po O3 na produkcji** (AN3 §5 pkt 12) |
 
 ## Etap 4 — Fala 3B: pieniądze, faktury, zlecenia · **ZAMKNIĘTY (G4)**
