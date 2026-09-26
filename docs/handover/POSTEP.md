@@ -152,6 +152,7 @@ Po wdrożeniu: e-maile przypomnień i „nowa faktura” wychodzą w języku odb
 | 3.2b | Cron ferry-ais co 10 min na produkcji | **DONE** (zadanie działa, funkcja odpowiada 403 — patrz F-KLUCZ) | f78744e | cron.job_run_details: 15:40 succeeded; net: 403 | 12 zadań cron; ferry-ais zawsze LIVE; Wawel bez MMSI (prawdziwe 311852000 — do wpisania przez właściciela) |
 | 3.2c | Typy plików: sygnatura w driver-photo + limit | **DONE** (wdrożone na produkcję) | f0ff35e | unit file-signature 7/7; produkcja: HTML jako JPEG → **415**, 0 obiektów, 0 dokumentów | reszta typów pokryta listami MIME zasobników |
 | 3.2d | Higiena funkcji (0030) | **DONE** (produkcja) | a64465b | 0 funkcji bez search_path (było 22); funkcje poza allowlistą 0 | spatial_ref_sys: REVOKE nie działa → W1 |
+| 3.2e | Widoki v_load_* | **DONE** (bez zmian — sprawdzone) | — | widoki nieaktualizowalne, właściciel postgres | nadmiarowe prawa zapisu authenticated z domyślnych uprawnień nieskuteczne; widoki cenowe definer celowo (SECURITY.md §1) |
 | release-1.0 | Tag `release-1.0` na commicie działającym na produkcji | OPEN | — | — | **dopiero po O3 na produkcji** (AN3 §5 pkt 12) |
 
 ## Etap 4 — Fala 3B: pieniądze, faktury, zlecenia · **ZAMKNIĘTY (G4)**
