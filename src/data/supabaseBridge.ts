@@ -9,6 +9,7 @@ import { createSupabaseProvider } from './supabaseProvider';
 import { emptySnapshot, type DataMutation } from './provider';
 import { registerFileSink, registerRemoteSink } from './registry';
 import { createStorageSink } from './storageFiles';
+import { friendlyDbError } from '../lib/orderNumbers';
 
 let active: ReturnType<typeof createSupabaseProvider> | null = null;
 
@@ -42,7 +43,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
           useTowerStore.setState((s) => ({ geofences: s.geofences.map((g) => (g.id === localId ? { ...g, id: res.id! } : g)) }));
         }
       } catch (e) {
-        useTowerStore.getState().pushToast(`Nie zapisano na serwerze: ${e instanceof Error ? e.message : String(e)}`, 'HIGH');
+        useTowerStore.getState().pushToast(`Nie zapisano na serwerze: ${friendlyDbError(e instanceof Error ? e.message : String(e), useTowerStore.getState().locale)}`, 'HIGH');
         await refreshFromServer().catch(() => undefined);
       }
     });

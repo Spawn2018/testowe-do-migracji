@@ -11,6 +11,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { createClient as createClientRaw, type SupabaseClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import { createSupabaseProvider } from '../src/data/supabaseProvider';
+import { friendlyDbError, orderGateMessage } from '../src/lib/orderNumbers';
 
 const LIVE = process.env.SUPABASE_LIVE === '1';
 // Node < 22 nie ma natywnego WebSocket — realtime nieużywany, ale klient go inicjuje.
@@ -88,6 +89,19 @@ describe.runIf(LIVE)('BK3 SupabaseProvider (live, RLS)', () => {
 
   it('reguła serwera (0003): READY bez numeru zlecenia HHL odrzucone — błąd trafia do UI', async () => {
     await expect(P.HHL.apply({ type: 'load.status', loadId: loadB, status: 'READY' })).rejects.toThrow(/numeru zlecenia HHL/);
+  });
+
+  it('M5: numery zleceń przez provider — każda strona swój; błąd bazy → komunikat zrozumiały', async () => {
+    const err = await P.HHL.apply({ type: 'load.status', loadId: loadB, status: 'READY' }).catch((e: Error) => e.message);
+    expect(friendlyDbError(String(err), 'pl')).toBe(orderGateMessage('NO_HHL_ORDER', 'pl'));
+    const cross = await P.HHL.apply({ type: 'load.orderNo', loadId: loadA, side: 'CARRIER', value: 'TEST-X' }).catch((e: Error) => e.message);
+    expect(friendlyDbError(String(cross), 'pl')).toMatch(/wpisuje wyłącznie przewoźnik/);
+    const cross2 = await P.SCX.apply({ type: 'load.orderNo', loadId: loadA, side: 'HHL', value: 'TEST-X' }).catch((e: Error) => e.message);
+    expect(friendlyDbError(String(cross2), 'pl')).toMatch(/Numer zlecenia HHL wpisuje wyłącznie HHL/);
+    await P.SCX.apply({ type: 'load.orderNo', loadId: loadA, side: 'CARRIER', value: 'TEST-BK3-A-SCX' });
+    const snap = await P.HHL.loadSnapshot();
+    expect(snap.loads.find((l) => l.id === loadA)?.carrierOrderNo).toBe('TEST-BK3-A-SCX');
+    await P.SCX.apply({ type: 'load.orderNo', loadId: loadA, side: 'CARRIER', value: null });
   });
 
   it('KSH nie zmienia statusu (brak polityki update dla klienta)', async () => {

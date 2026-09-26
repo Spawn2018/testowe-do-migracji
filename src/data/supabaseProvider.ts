@@ -143,6 +143,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         const res = await sb.from('load_messages').insert({ load_id: m.loadId, body: m.text }).select('id').single();
         return { id: String((must(res, 'wiadomość') as { id: number }).id) };
       }
+      case 'load.orderNo':
+        return updateLoad(m.loadId, m.side === 'HHL' ? { hhl_order_no: m.value } : { carrier_order_no: m.value }, 'numer zlecenia');
       case 'prefs.save':
         await savePreferences(m.prefs);
         return;

@@ -9,12 +9,13 @@ Do czasu włączenia bramą jest hak `pre-push` (`git config core.hooksPath .git
 |---|---|---|
 | LFS | `git lfs pre-push` | wzorzec `shots-baseline` |
 | unit (+ `money.test.ts`, `ferry.test.ts`, `storage-files.test.ts`) | `npm run test:unit` | wszystkie zielone; pominięte tylko testy żywe (`NBP_LIVE`, `SUPABASE_LIVE`) |
-| świeży build HEAD | `bash scripts/ci/fresh-smoke.sh` | `git archive HEAD` → `/tmp/wt-fresh-*`, `vite build` (demo, **0** wystąpień `supabase` w paczce), `vite preview` na **:4179** (`FRESH_PORT`), `PW_BASE_URL` → poniższe 3 kroki; sprzątanie przy wyjściu |
+| świeży build HEAD | `bash scripts/ci/fresh-smoke.sh` | `git archive HEAD` → `/tmp/wt-fresh-*`, `vite build` (demo, **0** wystąpień `supabase` w paczce), `vite preview` na **:4179** (`FRESH_PORT`), `PW_BASE_URL` → poniższe 4 kroki; sprzątanie przy wyjściu |
 | Playwright smoke | `npm run test:visual` | 4/4 (świeży build :4179) |
 | D19-T | `npm run test:d19` | en=0 / sv=0 |
 | D-EUR-T | `npm run test:deur` | EUR=0 / PLN=0 |
+| Etap 4 UI | `npm run test:etap4` | ścieżki interfejsu Etapu 4 na DemoProvider (M5: 3/3) |
 | stylelint | `npm run lint:css` | 0 błędów |
-| baza | `bash tests/db/gate.sh` | security **52/52** · status **44/44** · storage **33/33** |
+| baza | `bash tests/db/gate.sh` | security **52/52** · status **44/44** · storage **33/33** · money **50/50** (Etap 4) |
 
 Krok bazy działa, gdy lokalny Postgres (z PostGIS) odpowiada pod `PGADMIN`
 (domyślnie `postgres://postgres@localhost:5433/postgres`). Brak bazy = ostrzeżenie

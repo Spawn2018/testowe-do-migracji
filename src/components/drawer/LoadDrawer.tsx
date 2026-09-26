@@ -9,6 +9,7 @@ import { isReadyBlocked, evaluateLoadCover } from '../../lib/permits';
 import { downloadDocumentsZip } from '../../lib/zipDocs';
 import { attachDocumentFile } from '../../lib/docFiles';
 import { awizacjaChanges } from '../../lib/awizacjaPatch';
+import { editableOrderSide } from '../../lib/orderNumbers';
 import { DocPreview } from '../ui/DocPreview';
 import { DocFileRow } from '../ui/DocFileRow';
 import {
@@ -37,6 +38,26 @@ function fmtDim(n: number): string {
   return n.toFixed(2).replace('.', ',');
 }
 
+/** M5 — numer zlecenia: pole edycji tylko dla strony, która go nadaje; pozostali widzą tekst. */
+function OrderNoField({ value, editable, onSave }: { value?: string | null; editable: boolean; onSave: (v: string | null) => void }) {
+  const [draft, setDraft] = useState(value ?? '');
+  if (!editable) {
+    return value ? <span className="mono">{value}</span> : <span style={{ color: 'var(--red)' }}>nie uzupełniono</span>;
+  }
+  return (
+    <form
+      style={{ display: 'flex', gap: 6 }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if ((draft.trim() || null) !== (value ?? null)) onSave(draft.trim() || null);
+      }}
+    >
+      <input className="input mono" style={{ width: '60%' }} value={draft} placeholder="nie uzupełniono" onChange={(e) => setDraft(e.target.value)} aria-label="Numer zlecenia" />
+      <button type="submit" className="btn ghost">Zapisz</button>
+    </form>
+  );
+}
+
 export function LoadDrawer() {
   const id = useTowerStore((s) => s.selectedLoadId);
   const selectLoad = useTowerStore((s) => s.selectLoad);
@@ -55,6 +76,7 @@ export function LoadDrawer() {
   const triggerGeofence = useTowerStore((s) => s.triggerGeofence);
   const geofences = useTowerStore((s) => s.geofences);
   const sendMessage = useTowerStore((s) => s.sendMessage);
+  const setOrderNo = useTowerStore((s) => s.setOrderNo);
 
   const [tab, setTab] = useState<Tab>('overview');
   const [chat, setChat] = useState('');
@@ -83,6 +105,9 @@ export function LoadDrawer() {
   const showRev = canSeeRevenue(role);
   const showMargin = canSeeMargin(role);
   const canEdit = canEditResources(role);
+  const orderSide = editableOrderSide(role);
+  /* AN2 — okna planowe zmienia wyłącznie HHL (plan z harmonogramu KSH); przewoźnik widzi je jako tekst */
+  const planEditable = role === 'HHL';
   const readyGate = isReadyBlocked(load, loadDocs);
   const permitBlock = readyGate.blocked;
   const coverInfo = evaluateLoadCover(load, loadDocs);
@@ -177,8 +202,17 @@ export function LoadDrawer() {
                   {fmtDim(load.dims.weightT)} t ({load.qty} ×{' '}
                   {fmtDim(load.dims.weightT / Math.max(1, load.qty))} t)
                 </dd>
-                <dt>Nr zlecenia</dt>
-                <dd>{load.permit?.pozycja || `HHL/2026/${1240 + load.sequenceOrder}`}</dd>
+                {/* M5 — trzy numery zleceń (W12): KSH z importu, HHL i przewoźnik — każda strona edytuje wyłącznie swój */}
+                <dt>Nr zlecenia KSH</dt>
+                <dd className="mono" data-order="ksh">{load.orderNo || '—'}</dd>
+                <dt>Nr zlecenia HHL</dt>
+                <dd data-order="hhl">
+                  <OrderNoField key={`hhl-${load.id}`} value={load.hhlOrderNo} editable={orderSide === 'HHL'} onSave={(v) => setOrderNo(load.id, 'HHL', v)} />
+                </dd>
+                <dt>Nr zlecenia SCX</dt>
+                <dd data-order="scx">
+                  <OrderNoField key={`scx-${load.id}`} value={load.carrierOrderNo} editable={orderSide === 'CARRIER'} onSave={(v) => setOrderNo(load.id, 'CARRIER', v)} />
+                </dd>
                 <dt>Montaż</dt>
                 <dd>pozycja {load.sequenceOrder}</dd>
                 <dt>Miejsce załadunku</dt>
@@ -601,13 +635,13 @@ export function LoadDrawer() {
                       e.preventDefault();
                       const fd = new FormData(e.currentTarget);
                       // BK5: tylko zmienione pola — niezmienione okna planowe nie idą do zapisu (AN2).
-                      const awiPatch = awizacjaChanges(load.awizacja, {
+                      const awiPatch = awizacjaChanges(load.awizacja, planEditable ? {
                         loadWindowStart: wallLocalToIso(String(fd.get('loadWindowStart') || ''), TZ_LOAD_PL),
                         loadWindowEnd: wallLocalToIso(String(fd.get('loadWindowEnd') || ''), TZ_LOAD_PL),
                         unloadWindowStart: wallLocalToIso(String(fd.get('unloadWindowStart') || ''), TZ_UNLOAD_SE),
                         unloadWindowEnd: wallLocalToIso(String(fd.get('unloadWindowEnd') || ''), TZ_UNLOAD_SE),
                         confirmed: fd.get('confirmed') === 'on',
-                      });
+                      } : { ...load.awizacja, confirmed: fd.get('confirmed') === 'on' });
                       updateAwizacja(load.id, awiPatch);
                       updateFerry(load.id, {
                         vessel: (String(fd.get('vessel') || '') as 'Wawel' | 'Nova Star') || null,
@@ -620,6 +654,13 @@ export function LoadDrawer() {
                   >
                     <dl className="kv">
                       <dt>Okno załad. (od–do)</dt>
+                      {!planEditable ? (
+                        <dd className="cond" data-plan-readonly title="Okna planowe zmienia wyłącznie HHL (plan z harmonogramu KSH)">
+                          {load.awizacja.loadWindowStart ? formatLoadPl(load.awizacja.loadWindowStart) : '—'}
+                          {' – '}
+                          {load.awizacja.loadWindowEnd ? formatLoadPl(load.awizacja.loadWindowEnd) : '—'}
+                        </dd>
+                      ) : (
                       <dd>
                         <input
                           name="loadWindowStart"
@@ -638,6 +679,7 @@ export function LoadDrawer() {
                           required
                         />
                       </dd>
+                      )}
                       <dt>Prom</dt>
                       <dd>
                         <select name="vessel" className="input" defaultValue={load.ferry.vessel ?? 'Wawel'}>
@@ -685,8 +727,12 @@ export function LoadDrawer() {
                           <input name="confirmed" type="checkbox" defaultChecked={load.awizacja.confirmed} /> tak
                         </label>
                       </dd>
-                      <input type="hidden" name="unloadWindowStart" defaultValue={isoToDatetimeLocalValue(load.awizacja.unloadWindowStart, TZ_UNLOAD_SE)} />
-                      <input type="hidden" name="unloadWindowEnd" defaultValue={isoToDatetimeLocalValue(load.awizacja.unloadWindowEnd, TZ_UNLOAD_SE)} />
+                      {planEditable ? (
+                        <>
+                          <input type="hidden" name="unloadWindowStart" defaultValue={isoToDatetimeLocalValue(load.awizacja.unloadWindowStart, TZ_UNLOAD_SE)} />
+                          <input type="hidden" name="unloadWindowEnd" defaultValue={isoToDatetimeLocalValue(load.awizacja.unloadWindowEnd, TZ_UNLOAD_SE)} />
+                        </>
+                      ) : null}
                     </dl>
                     <button type="submit" className="btn ghost" style={{ marginTop: 8 }}>
                       Zapisz awizację

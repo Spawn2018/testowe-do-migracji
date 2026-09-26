@@ -76,6 +76,29 @@ sys "insert into fx_rates (currency, rate_date, rate_pln, table_no) values ('EUR
 val "fx_apply_pending uzupełnia migawkę po pobraniu tabeli" $HHL "set local role postgres; select fx_apply_pending()" 1 commit
 val "po uzupełnieniu: tabela z dnia roboczego przed rozładunkiem" $HHL "select cost_fx_table_no||' '||cost_fx_provisional from v_load_financials_hhl where load_id='$L2'" "047/A/NBP/2026 false"
 
+echo; echo "[M5] Numery zleceń: wymuszenie z bazy, każda strona swój, brak przed terminem → ryzyko + przypomnienie"
+L3=33333333-0000-0000-0000-000000000003; L4=33333333-0000-0000-0000-000000000004
+err "GOTOWY bez numeru HHL → zrozumiały komunikat bazy"    $HHL "update loads set status='READY' where id='$L1'" "bez numeru zlecenia HHL"
+val "HHL wpisuje swój numer"                               $HHL "update loads set hhl_order_no='HHL/T/1' where id='$L1' returning hhl_order_no" "HHL/T/1"
+err "HHL nie zmieni numeru przewoźnika (W12)"              $HHL "update loads set carrier_order_no='X' where id='$L1'" "wpisuje wy..cznie przewo"
+err "przewoźnik nie zmieni numeru HHL"                     $SCX "update loads set hhl_order_no='X' where id='$L1'" "nie mo.e zmienia.: hhl_order_no"
+err "przewoźnik nie zmieni numeru KSH"                     $SCX "update loads set order_no='X' where id='$L1'" "nie mo.e zmienia.: order_no"
+val "przewoźnik wpisuje swój numer"                        $SCX "update loads set carrier_order_no='SCX/T/1' where id='$L1' returning carrier_order_no" "SCX/T/1"
+err "przewoźnik nie zmieni okna planowego (AN2)"           $SCX "update loads set plan_load_from=now() where id='$L1'" "plan_load_from"
+err "załadunek bez numeru przewoźnika → błąd"              $HHL "update loads set hhl_order_no='HHL/T/2', status='AT_LOADING' where id='$L2'" "bez numeru zlecenia przewo"
+sys "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date) values ('$L3','$P','00000000-0000-0000-0000-00000000a003','KSH/3', current_date + 1), ('$L4','$P','00000000-0000-0000-0000-00000000a003','KSH/4', current_date + 5)"
+err "wykrywanie: zwykły użytkownik nie wywoła"             $HHL "select detect_missing_order_numbers()" "permission denied"
+val "wykrywanie: 2 ryzyka (HHL + przewoźnik) tylko dla terminu < 48 h" $HHL "set local role postgres; select detect_missing_order_numbers()" 2 commit
+val "ponowne wykrywanie nie dubluje"                       $HHL "set local role postgres; select detect_missing_order_numbers()" 0 commit
+val "ryzyka w kolejce (L3: HHL + przewoźnik)"              $HHL "select string_agg(detail->>'side', ',' order by detail->>'side') from risk_signals where load_id='$L3' and resolved_at is null" "CARRIER,HHL"
+val "L4 (termin za 5 dni) bez ryzyka"                      $HHL "select count(*) from risk_signals where load_id='$L4'" 0
+val "przypomnienie dla HHL: tylko HHL-owe"                 $HHL "select string_agg(payload->>'side', ',') from notifications where template='ORDER_NO_MISSING'" "HHL"
+val "przypomnienie dla przewoźnika: tylko przewoźnika"     $SCX "select string_agg(payload->>'side', ',') from notifications where template='ORDER_NO_MISSING'" "CARRIER"
+val "KSH nie dostaje przypomnień o numerach"               $KSH "select count(*) from notifications" 0
+err "zalogowany nie wstawi powiadomienia"                  $SCX "insert into notifications (channel, recipient, template) values ('IN_APP','x','X')" "permission denied"
+val "uzupełnienie numeru HHL zamyka ryzyko HHL"            $HHL "update loads set hhl_order_no='HHL/T/3' where id='$L3'; select string_agg(detail->>'side', ',') from risk_signals where load_id='$L3' and resolved_at is null" "CARRIER" commit
+val "uzupełnienie numeru przewoźnika zamyka ryzyko"        $SCX "update loads set carrier_order_no='SCX/T/3' where id='$L3'; select count(*) from risk_signals where load_id='$L3' and resolved_at is null" 0 commit
+
 #@@NEXT@@
 
 echo

@@ -2,6 +2,9 @@
 
 export type SchedColId =
   | 'code'
+  | 'ord_ksh'
+  | 'ord_hhl'
+  | 'ord_scx'
   | 'type'
   | 'dims'
   | 'weight'
@@ -27,6 +30,10 @@ export type SchedColDef = {
 
 export const SCHED_COLS: SchedColDef[] = [
   { id: 'code', labelKey: 'sched_col_code', defaultWidth: 90 },
+  /* M5 — trzy numery zleceń obok kodu wysyłki (W12, Q9: widoczne dla wszystkich ról) */
+  { id: 'ord_ksh', labelKey: 'sched_col_ord_ksh', defaultWidth: 104 },
+  { id: 'ord_hhl', labelKey: 'sched_col_ord_hhl', defaultWidth: 100 },
+  { id: 'ord_scx', labelKey: 'sched_col_ord_scx', defaultWidth: 100 },
   { id: 'type', labelKey: 'sched_col_type', defaultWidth: 70 },
   { id: 'dims', labelKey: 'sched_col_dims', defaultWidth: 150 },
   { id: 'weight', labelKey: 'sched_col_weight', defaultWidth: 70 },
@@ -70,7 +77,12 @@ export function loadSchedPrefs(): SchedColPrefs {
     const parsed = JSON.parse(raw) as Partial<SchedColPrefs>;
     const known = new Set(SCHED_COLS.map((c) => c.id));
     const order = (parsed.order ?? base.order).filter((id) => known.has(id));
-    for (const id of base.order) if (!order.includes(id)) order.push(id);
+    // nowe kolumny (np. M5 numery zleceń) wstaw za poprzednikiem z kolejności domyślnej, nie na koniec
+    base.order.forEach((id, i) => {
+      if (order.includes(id)) return;
+      const prev = i > 0 ? order.indexOf(base.order[i - 1]) : -1;
+      order.splice(prev + 1, 0, id);
+    });
     return {
       order,
       hidden: (parsed.hidden ?? []).filter((id) => known.has(id)),

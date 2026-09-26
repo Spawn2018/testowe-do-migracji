@@ -124,6 +124,35 @@ try {
   }
   const foreign = await sb.KSH.from('user_preferences').upsert({ user_id: (await sb.SCX.rpc('current_app_user_id')).data, display_currency: 'PLN' }, { onConflict: 'user_id' }).select('user_id');
   check('M4 KSH: nie zapisze ustawień innego użytkownika', Boolean(foreign.error));
+  // ---------- M5: numery zleceń (W12) — wymuszenie z bazy, każda strona swój, powiadomienia z RLS ----------
+  {
+    const orig = (await admin.from('loads').select('hhl_order_no,carrier_order_no,status').eq('id', A.id).single()).data;
+    const e1 = await sb.HHL.from('loads').update({ hhl_order_no: null, status: 'READY' }).eq('id', A.id).select('id');
+    check('M5 GOTOWY bez numeru HHL → błąd bazy (komunikat mapowany w aplikacji)', /bez numeru zlecenia HHL/.test(e1.error?.message ?? ''), e1.error?.message ?? 'brak błędu');
+    const e2 = await sb.HHL.from('loads').update({ carrier_order_no: 'TEST-M5-X' }).eq('id', A.id).select('id');
+    check('M5 HHL nie zmieni numeru przewoźnika (W12)', /wpisuje wy\S*cznie przewo/.test(e2.error?.message ?? ''), e2.error?.message ?? 'brak błędu');
+    const e3 = await sb.SCX.from('loads').update({ hhl_order_no: 'TEST-M5-X' }).eq('id', A.id).select('id');
+    check('M5 przewoźnik nie zmieni numeru HHL', /hhl_order_no/.test(e3.error?.message ?? ''), e3.error?.message ?? 'brak błędu');
+    const e4 = await sb.SCX.from('loads').update({ plan_load_from: '2026-10-01T06:00:00Z' }).eq('id', A.id).select('id');
+    check('M5/AN2 przewoźnik nie zmieni okna planowego', /plan_load_from/.test(e4.error?.message ?? ''), e4.error?.message ?? 'brak błędu');
+    const s1 = await sb.SCX.from('loads').update({ carrier_order_no: 'TEST-M5-SCX' }).eq('id', A.id).select('carrier_order_no');
+    check('M5 przewoźnik wpisuje swój numer', !s1.error && s1.data?.[0]?.carrier_order_no === 'TEST-M5-SCX', s1.error?.message);
+    const s2 = await sb.HHL.from('loads').update({ hhl_order_no: 'TEST-M5-HHL' }).eq('id', A.id).select('hhl_order_no');
+    check('M5 HHL wpisuje swój numer', !s2.error && s2.data?.[0]?.hhl_order_no === 'TEST-M5-HHL', s2.error?.message);
+    await sb.SCX.from('loads').update({ carrier_order_no: orig?.carrier_order_no ?? null }).eq('id', A.id);
+    await sb.HHL.from('loads').update({ hhl_order_no: orig?.hhl_order_no ?? null }).eq('id', A.id);
+    const back = (await admin.from('loads').select('hhl_order_no,carrier_order_no,status').eq('id', A.id).single()).data;
+    check('M5 przywrócono numery fixture', JSON.stringify(back) === JSON.stringify(orig), JSON.stringify(back));
+    const d = await sb.HHL.rpc('detect_missing_order_numbers');
+    check('M5 wykrywanie braków niedostępne dla użytkownika (tylko cron)', Boolean(d.error));
+    const na = await anon.from('notifications').select('id');
+    check('M5 anon nie czyta powiadomień', Boolean(na.error) || na.data.length === 0);
+    const ni = await sb.SCX.from('notifications').insert({ channel: 'IN_APP', recipient: 'x', template: 'X' }).select('id');
+    check('M5 zalogowany nie wstawi powiadomienia', Boolean(ni.error));
+    const uidK = (await sb.KSH.rpc('current_app_user_id')).data;
+    const nk = await sb.KSH.from('notifications').select('user_id');
+    check('M5 KSH widzi wyłącznie własne powiadomienia', !nk.error && nk.data.every((r) => r.user_id === uidK), nk.error?.message);
+  }
   //@@NEXT@@
 } finally {
   await cleanup();

@@ -15,7 +15,9 @@ export function filterLoads(
       (l) =>
         l.code.toLowerCase().includes(q) ||
         (l.resources.driverName ?? '').toLowerCase().includes(q) ||
-        (l.resources.tractorPlate ?? '').toLowerCase().includes(q),
+        (l.resources.tractorPlate ?? '').toLowerCase().includes(q) ||
+        /* M5 — wyszukiwanie po numerach zleceń KSH / HHL / SCX */
+        [l.orderNo, l.hhlOrderNo, l.carrierOrderNo].some((n) => (n ?? '').toLowerCase().includes(q)),
     );
   }
   return list;

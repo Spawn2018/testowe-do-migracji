@@ -24,5 +24,5 @@ check() { # suite, expected
 check security 52
 check status 44
 check storage 33
-check money 31
+check money 50
 [ $ok -eq 1 ]

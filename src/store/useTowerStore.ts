@@ -51,6 +51,8 @@ import {
 import { buildDemoSnapshot } from '../data/demoProvider';
 import { emptySnapshot } from '../data/provider';
 import { writeThrough } from '../data/registry';
+import { getNowIso } from '../lib/frozenNow';
+import { orderEditDeniedMessage, orderGateMessage, orderNoReminders, orderNoRisks, orderNumberGate, type OrderSide } from '../lib/orderNumbers';
 import { t } from '../i18n/messages';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
@@ -254,6 +256,8 @@ interface TowerState {
   updateAwizacja: (loadId: string, patch: Partial<Awizacja>) => void;
   updateFerry: (loadId: string, patch: Partial<FerryBooking>) => void;
   setLoadStatus: (loadId: string, status: LoadStatus, actor?: string, note?: string) => void;
+  /** M5 — numer zlecenia: HHL wpisuje swój, przewoźnik swój (W12; wymusza baza). */
+  setOrderNo: (loadId: string, side: OrderSide, value: string | null) => boolean;
   appendEvent: (ev: Omit<LoadEvent, 'id'>) => void;
   sendMessage: (loadId: string, text: string) => void;
   uploadDocument: (
@@ -630,6 +634,17 @@ export const useTowerStore = create<TowerState>()(
       },
 
       setLoadStatus: (loadId, status, actor = 'system', note) => {
+        {
+          /* M5 — lustro enforce_order_numbers(): bez numeru HHL nie ma GOTOWY, bez numeru przewoźnika nie ma załadunku */
+          const load = get().loads.find((l) => l.id === loadId);
+          const reason = load ? orderNumberGate(load, status) : null;
+          if (reason) {
+            const msg = orderGateMessage(reason, get().locale);
+            get().pushToast(msg, 'CRITICAL', loadId);
+            get().appendEvent({ loadId, type: 'READY_BLOCKED', at: nowIso(), actor, note: msg });
+            return;
+          }
+        }
         if (status === 'READY' || status === 'IN_TRANSIT_PL' || status === 'LOADING') {
           const load = get().loads.find((l) => l.id === loadId);
           if (load) {
@@ -680,6 +695,38 @@ export const useTowerStore = create<TowerState>()(
             href: { view: 'tasks', loadId },
           });
         }
+      },
+
+      setOrderNo: (loadId, side, value) => {
+        const role = get().role;
+        const locale = get().locale;
+        const allowed = (side === 'HHL' && role === 'HHL') || (side === 'CARRIER' && role === 'SCX');
+        if (!allowed) {
+          get().pushToast(orderEditDeniedMessage(side, locale), 'HIGH', loadId);
+          return false;
+        }
+        const v = value && value.trim() ? value.trim() : null;
+        const field = side === 'HHL' ? 'hhlOrderNo' : 'carrierOrderNo';
+        const riskId = `risk-orderno-${side === 'HHL' ? 'hhl' : 'scx'}-${loadId}`;
+        let raised: Risk | undefined;
+        set((s) => {
+          const loads = s.loads.map((l) => (l.id === loadId ? { ...l, [field]: v } : l));
+          let risks = s.risks.filter((r) => r.id !== riskId);
+          if (!v) {
+            /* brak numeru przed terminem → ryzyko (lustro detect_missing_order_numbers) */
+            raised = orderNoRisks(loads.filter((l) => l.id === loadId), getNowIso()).find((r) => r.id === riskId);
+            if (raised) risks = [raised, ...risks];
+          }
+          return { loads, risks, exceptions: exceptionsFromRisks(risks, loads) };
+        });
+        if (raised) for (const n of orderNoReminders([raised], getNowIso())) get().pushNotification(n);
+        writeThrough({ type: 'load.orderNo', loadId, side, value: v });
+        get().appendEvent({
+          loadId, type: 'ORDER_NO_UPDATED', at: nowIso(), actor: role,
+          note: `${side === 'HHL' ? 'Nr zlecenia HHL' : 'Nr zlecenia przewoźnika'}: ${v ?? '—'}`,
+        });
+        get().pushToast(v ? `Numer zlecenia zapisany: ${v}` : 'Numer zlecenia usunięty', 'MEDIUM', loadId);
+        return true;
       },
 
       updateResources: (loadId, patch) => {

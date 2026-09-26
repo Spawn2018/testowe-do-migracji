@@ -44,4 +44,5 @@ echo "[fresh] PW_BASE_URL=$PW_BASE_URL"
 npm run test:visual
 npm run test:d19
 npm run test:deur
+npm run test:etap4
 echo "[fresh] OK"

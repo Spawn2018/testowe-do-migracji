@@ -38,10 +38,6 @@ function fmtDim(n: number): string {
   return n.toFixed(2).replace('.', ',');
 }
 
-function orderNo(l: Load): string {
-  return l.hhlOrderNo || l.orderNo || l.carrierOrderNo || `HHL/2026/${1240 + l.sequenceOrder}`;
-}
-
 function delayMinutes(l: Load): number | null {
   if (!l.delayed) return null;
   return delayMinutesVsPlan(l.etaBoden, l.plannedDeliverDate) ?? 95;
@@ -538,6 +534,16 @@ export function ScheduleView() {
                               <span className="code" data-content>{l.code}</span>
                             </td>
                           );
+                        case 'ord_ksh':
+                        case 'ord_hhl':
+                        case 'ord_scx': {
+                          const v = id === 'ord_ksh' ? l.orderNo : id === 'ord_hhl' ? l.hhlOrderNo : l.carrierOrderNo;
+                          return (
+                            <td key={id} data-col={id}>
+                              {v ? <span className="mono">{v}</span> : id === 'ord_ksh' ? '—' : <span style={{ color: 'var(--red)' }}>— brak —</span>}
+                            </td>
+                          );
+                        }
                         case 'type':
                           return <td key={id} data-col={id} data-content>{l.itemType}</td>;
                         case 'dims':

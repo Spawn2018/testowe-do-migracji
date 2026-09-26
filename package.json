@@ -16,7 +16,8 @@
     "test:visual:update": "playwright test tests/visual.spec.ts --update-snapshots",
     "lint:css": "stylelint \"src/**/*.css\"",
     "test:d19": "playwright test tests/d19-i18n.spec.ts",
-    "test:deur": "playwright test tests/d-eur-t.spec.ts"
+    "test:deur": "playwright test tests/d-eur-t.spec.ts",
+    "test:etap4": "playwright test tests/etap4-ui.spec.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.1",
