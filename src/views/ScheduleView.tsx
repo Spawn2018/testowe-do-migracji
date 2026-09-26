@@ -130,7 +130,7 @@ export function ScheduleView() {
     // Permit miss is red; other missing stay neutral like Claude
     const cls = ok ? 'ok' : cat === 'PERMIT_PL' && miss ? 'miss' : '';
     return (
-      <span key={letter} className={`flag ${cls}`} title={locale === 'pl' ? cat : docCategoryLabel(cat, locale)}>
+      <span key={letter} className={`flag ${cls}`} title={docCategoryLabel(cat, locale)}>
         {letter}
       </span>
     );

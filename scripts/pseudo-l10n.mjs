@@ -7,7 +7,9 @@
  * Wynik: liczba napisów spoza słownika; kod wyjścia 1, gdy > 0.
  */
 import puppeteer from 'puppeteer-core'
-import { existsSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs'
+import { dirname, join } from 'path'
+import { fileURLToPath } from 'url'
 
 const chrome = ['/usr/bin/google-chrome-stable', '/usr/bin/google-chrome', '/usr/bin/chromium'].find(existsSync)
 const BASE = (process.env.BASE_URL || 'http://127.0.0.1:4187/').replace(/\/?$/, '/')
@@ -33,6 +35,26 @@ const DATA = [
 const PROPER = new Set((process.env.PROPER_EXTRA || '').split('|').filter(Boolean))
 const isData = (s) => DATA.some((re) => re.test(s)) || PROPER.has(s)
 
+/**
+ * A6 (27.09) — reguła twarda, niezależna od DATA/PROPER: widoczny tekst (albo jego segment między „·”, „|”, „→”)
+ * równy kluczowi słownika albo w postaci klucza (^[a-z]+(_[a-z0-9]+)+$) = test czerwony.
+ */
+const I18N_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'i18n')
+const KEYS = new Set()
+for (const f of readdirSync(I18N_DIR).filter((x) => x.endsWith('.ts'))) {
+  for (const m of readFileSync(join(I18N_DIR, f), 'utf8').matchAll(/^\s+'?([A-Za-z_]\w*)'?\s*:/gm)) KEYS.add(m[1])
+}
+const KEY_SHAPE = /^[a-z]+(_[a-z0-9]+)+$/
+const keyLeaks = new Map() // segment → Set(where)
+function checkKeyLeak(text, where) {
+  const segs = [text.trim(), ...text.split(/\s*[·|→←]\s*|\s{2,}|\n/).map((x) => x.trim())]
+  for (const seg of segs) {
+    if (!seg || !(KEYS.has(seg) || KEY_SHAPE.test(seg))) continue
+    if (!keyLeaks.has(seg)) keyLeaks.set(seg, new Set())
+    keyLeaks.get(seg).add(where)
+  }
+}
+
 const browser = await puppeteer.launch({ executablePath: chrome, headless: 'new', args: ['--no-sandbox', '--disable-dev-shm-usage'] })
 const page = await browser.newPage()
 await page.setViewport({ width: 1440, height: 1000 })
@@ -55,6 +77,7 @@ async function collect(where) {
     let s = raw
     // zdejmij ⟦…⟧ (także zagnieżdżone)
     for (let i = 0; i < 6 && /⟦[^⟦⟧]*⟧/.test(s); i++) s = s.replace(/⟦[^⟦⟧]*⟧/g, ' ')
+    checkKeyLeak(s.replace(/[⟦⟧]/g, ''), where)
     for (const frag of s.split(/\s{2,}|\n/)) {
       const f = frag.replace(/[⟦⟧]/g, '').trim()
       if (!f || isData(f)) continue
@@ -103,7 +126,9 @@ for (const lang of LANGS) {
 }
 await browser.close()
 const list = [...found.entries()].map(([text, w]) => ({ text, where: [...w].slice(0, 6), n: w.size })).sort((a, b) => a.text.localeCompare(b.text))
-if (REPORT) writeFileSync(REPORT, JSON.stringify({ count: list.length, items: list }, null, 1))
-console.log(`pseudo-l10n: ${list.length} napisów spoza słownika`)
+const leaks = [...keyLeaks.entries()].map(([text, w]) => ({ text, where: [...w].slice(0, 6), n: w.size }))
+if (REPORT) writeFileSync(REPORT, JSON.stringify({ count: list.length, keyLeaks: leaks, items: list }, null, 1))
+console.log(`pseudo-l10n: ${list.length} napisów spoza słownika; klucze/identyfikatory widoczne: ${leaks.length} (reguła twarda)`)
+for (const l of leaks) console.log(`  KLUCZ ${JSON.stringify(l.text)}  ← ${l.where.join(', ')}`)
 for (const i of list.slice(0, Number(process.env.SHOW || 60))) console.log(`  ${JSON.stringify(i.text)}  ← ${i.where.join(', ')}`)
-process.exit(list.length ? 1 : 0)
+process.exit(leaks.length || list.length ? 1 : 0)

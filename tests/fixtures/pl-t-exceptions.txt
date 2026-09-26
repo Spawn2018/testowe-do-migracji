@@ -43,7 +43,7 @@ export
 majeure
 Permit
 mismatch
-# A6-T2: istniejące teksty PL przeniesione 1:1 do słownika (bez zmian w PL; bez polskich znaków = do poprawy osobno)
+# A6-T2: istniejące teksty PL przeniesione 1:1 do słownika (bez zmian w PL)
 Söderhamn
 Västerås
 rail
@@ -55,17 +55,7 @@ Vault
 vault
 stub
 załad
-Dojezdza
-Zaladowano
-Rozladowano
 mult
-dokumentow
-Sila
-wyzsza
-wymiarow
-Nynashamn
 commit
 SharePoint
-podwyzszone
-rozklad
 Timeout

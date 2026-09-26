@@ -76,8 +76,7 @@ export function geofenceTypeLabel(type: string, locale: Locale = 'pl'): string {
 
 export function docCategoryLabel(cat: string, locale: Locale = 'pl'): string {
   if (cat === 'LASHING_PHOTOS') return t(locale, 'docs_lashing');
-  /* A6-T2: PL pokazuje dotąd identyfikator (błąd sprzed ANEKS 6) — PL bez zmian (840), EN/SV ze słownika. */
-  if (cat === 'DRAWING') return locale === 'pl' ? 'doc_cat_drawing' : t(locale, 'doc_cat_drawing');
+  if (cat === 'DRAWING') return t(locale, 'doc_cat_drawing');
   return hasKey(locale, `a6_doccat_${cat}`) ? t(locale, `a6_doccat_${cat}`) : cat;
 }
 
