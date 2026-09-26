@@ -15,7 +15,7 @@ if [ -z "${PGCLUSTER:-}" ] && command -v pg_lsclusters >/dev/null 2>&1; then
   PGCLUSTER=$(pg_lsclusters -h 2>/dev/null | awk -v p="$port" '$3==p {print $1"/"$2; exit}')
   [ -n "$PGCLUSTER" ] && export PGCLUSTER
 fi
-out=$(bash tests/db/run.sh 2>/dev/null; bash tests/db/storage.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === storage'; bash tests/db/money.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === money'; bash tests/db/release.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === release'; BACKUP_HOSTED= bash tests/db/backup.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === backup'; bash tests/db/session.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === session'; bash tests/db/archive.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === archive'; bash tests/db/watchdog.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === watchdog')
+out=$(bash tests/db/run.sh 2>/dev/null; bash tests/db/storage.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === storage'; bash tests/db/money.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === money'; bash tests/db/release.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === release'; BACKUP_HOSTED= bash tests/db/backup.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === backup'; bash tests/db/session.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === session'; bash tests/db/archive.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === archive'; bash tests/db/watchdog.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === watchdog'; bash tests/db/invite.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === invite')
 echo "$out" | grep -E "===|WYNIK|FAIL"
 ok=1
 check() { # suite, expected
@@ -31,4 +31,5 @@ check backup 10
 check session 27
 check archive 18
 check watchdog 20
+check invite 28
 [ $ok -eq 1 ]

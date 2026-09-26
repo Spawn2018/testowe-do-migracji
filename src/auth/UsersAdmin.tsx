@@ -51,7 +51,7 @@ export default function UsersAdmin() {
     const addr = email.trim().toLowerCase();
     const done = await run(() => sb.rpc('admin_invite_user', { p_email: addr, p_org_code: org, p_role: role }), 'Zaproszenie zapisane.');
     if (!done) return;
-    // Wysyłka linku (magic link) do zaproszonego — konto powstaje przy pierwszym logowaniu.
+    // Wysyłka linku (magic link): GoTrue tworzy niepotwierdzone konto od razu; przyjęcie zaproszenia = pierwsze logowanie (0039).
     const { error } = await sb.auth.signInWithOtp({ email: addr, options: { shouldCreateUser: true, emailRedirectTo: window.location.origin + window.location.pathname } });
     setMsg(error ? { ok: false, text: `Zaproszenie zapisane, ale e-mail nie wyszedł: ${authErrorPl(error.message)}` } : { ok: true, text: `Zaproszenie wysłane na ${addr}.` });
     setEmail('');
