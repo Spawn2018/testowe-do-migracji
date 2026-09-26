@@ -194,4 +194,27 @@ ROLE=anon val "drugie wywołanie w 60 s: odpowiedź ok, bez zapisu" "" "select k
 err "anon nie czyta tabeli znacznika wprost"             "" "set local role anon; select * from system_heartbeat" "permission denied"
 err "anon nie zmienia tabeli znacznika wprost"           "" "set local role anon; update system_heartbeat set beats = 0" "permission denied"
 
+echo; echo "[PR4] usage-check — historia i progi 70% / 85%"
+NP=$(Q "select count(*) from projects")
+err "anon nie zapisze pomiaru"                           "" "set local role anon; select record_usage('DB_BYTES', 1, 10)" "permission denied"
+err "zalogowany (HHL) nie zapisze pomiaru wprost"        $HHL "select record_usage('DB_BYTES', 1, 10)" "permission denied"
+ROLE=service_role val "69,99% → OK, bez ryzyka"          "" "select record_usage('DB_BYTES', 6999, 10000)->>'level'" OK commit
+chk "69,99%: 0 ryzyk USAGE_LIMIT"                        "$(Q "select count(*) from risk_signals where kind='USAGE_LIMIT'")" 0
+ROLE=service_role val "72% → WARN, bez e-maila"          "" "select (record_usage('DB_BYTES', 360000000, 500000000)->>'level')||':'||(record_usage('DB_BYTES', 360000000, 500000000)->>'email')" WARN:false commit
+chk "72%: ryzyko MEDIUM na każdy projekt, odbiorca HHL"  "$(Q "select count(*)||':'||min(severity::text)||':'||min(audience::text) from risk_signals where kind='USAGE_LIMIT' and resolved_at is null")" "$NP:MEDIUM:HHL"
+val "KSH nie widzi ryzyka limitu (tylko HHL)"            $KSH "select count(*) from risk_signals where kind='USAGE_LIMIT'" 0
+val "HHL widzi ryzyko limitu"                            $HHL "select count(*) > 0 from risk_signals where kind='USAGE_LIMIT'" t
+ROLE=service_role val "86% → HIGH i e-mail"              "" "select (r->>'level')||':'||(r->>'email') from record_usage('DB_BYTES', 430000000, 500000000) r" HIGH:true commit
+chk "86%: to samo ryzyko podniesione do HIGH (bez duplikatów)" "$(Q "select count(*)||':'||min(severity::text) from risk_signals where kind='USAGE_LIMIT' and resolved_at is null")" "$NP:HIGH"
+chk "tytuł po polsku z procentem"                        "$(Q "select min(title) from risk_signals where kind='USAGE_LIMIT' and resolved_at is null")" "Limit planu darmowego: baza danych 86,0% — przekroczone 85%"
+ROLE=service_role val "następny dzień 87%: e-mail nie powtarza się" "" "select record_usage('DB_BYTES', 435000000, 500000000)->>'email'" false commit
+ROLE=service_role val "inna metryka (pliki) 90%: własny e-mail" "" "select record_usage('STORAGE_BYTES', 900000000, 1000000000)->>'email'" true commit
+ROLE=service_role val "spadek do 50% → OK"               "" "select record_usage('DB_BYTES', 250000000, 500000000)->>'level'" OK commit
+chk "50%: ryzyko bazy zamknięte, ryzyko plików otwarte"  "$(Q "select count(*) filter (where detail->>'metric'='DB_BYTES')||':'||count(*) filter (where detail->>'metric'='STORAGE_BYTES') from risk_signals where kind='USAGE_LIMIT' and resolved_at is null")" "0:$NP"
+chk "historia: 7 pomiarów z procentem (trend)"          "$(Q "select count(*)||':'||max(pct) from usage_history")" "7:90.00"
+val "HHL czyta historię"                                 $HHL "select count(*) from usage_history" 7
+val "przewoźnik nie czyta historii"                      $SCX "select count(*) from usage_history" 0
+ROLE=service_role val "usage_measure: rozmiar bazy > 0"  "" "select (usage_measure()->>'db_bytes')::bigint > 0" t
+err "anon nie wywoła usage_measure"                      "" "set local role anon; select usage_measure()" "permission denied"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

@@ -11,7 +11,7 @@ export const BACKUP_TABLES = [
   'permits', 'insurance_policies', 'documents', 'invoices', 'invoice_lines', 'invoice_documents',
   'payment_terms', 'rate_cards', 'rate_rules', 'baf_definitions', 'baf_index_values', 'fx_rates',
   'geofences', 'geofence_states', 'risk_signals', 'notifications', 'workflows', 'workflow_runs',
-  'schedule_imports', 'integration_runs', 'audit_log', 'system_heartbeat', 'backup_runs',
+  'schedule_imports', 'integration_runs', 'audit_log', 'system_heartbeat', 'backup_runs', 'usage_history',
 ] as const;
 export const EXCLUDED_TABLES = ['positions', 'driver_tokens', 'spatial_ref_sys'] as const;
 
