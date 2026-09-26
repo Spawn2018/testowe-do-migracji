@@ -4,6 +4,7 @@
  *     przewoźnik nie widzi okien planowych jako edytowalnych (AN2).
  * M7: plan przypomnień w szczegółach faktury (płatnik i wierzyciel, opłacona → wstrzymane).
  * M6: faktury v2 — moduł KSH (tylko HHL → KSH, spór z uzasadnieniem), kreator przychodowy HHL, SCX bez „Opłacona”.
+ * M8: szuflada „Ceny” — poziom, mnożnik z datą, kurs (tymczasowy); Finanse — zestawienie poziomów.
  * Run: `npm run test:etap4`.
  */
 import { test, expect, type Page } from '@playwright/test'
@@ -213,5 +214,41 @@ test.describe('M6 — faktury v2', () => {
     const detail = page.locator(`[data-bill-detail="${await row.getAttribute('data-bill')}"]`)
     await expect(detail).toBeVisible()
     await expect(detail.locator('[data-paid], [data-unpaid], [data-verify]')).toHaveCount(0)
+  })
+})
+
+test.describe('M8 — poziom wyceny i kurs tymczasowy', () => {
+  test('szuflada „Ceny”: poziom, mnożnik z datą, kurs; KSH bez strony kosztu; Finanse — zestawienie poziomów', async ({ page }) => {
+    await boot(page)
+    await role(page, 'HHL')
+    await nav(page, 'sched')
+    await openLoad(page, 'SG-34')
+    await page.locator('.drawer button[aria-selected]').nth(3).click()
+    const cost = page.locator('.drawer [data-money-side="cost"]')
+    const rev = page.locator('.drawer [data-money-side="rev"]')
+    await expect(cost.locator('[data-tier]')).toHaveCount(1)
+    await expect(rev.locator('[data-tier]')).toHaveCount(1)
+    const refC = await cost.locator('[data-fuel-ref]').getAttribute('data-fuel-ref')
+    expect(refC).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(await rev.locator('[data-fuel-ref]').getAttribute('data-fuel-ref')).toBe(refC)
+    await expect(page.locator('.drawer [data-money-error]')).toHaveCount(0)
+    await closeDrawer(page)
+
+    await role(page, 'KSH')
+    await nav(page, 'sched')
+    await openLoad(page, 'SG-34')
+    await page.locator('.drawer button[aria-selected]').nth(3).click()
+    await expect(page.locator('.drawer [data-money-side="cost"]')).toHaveCount(0)
+    await expect(page.locator('.drawer [data-money-side="rev"] [data-tier]')).toHaveCount(1)
+    await closeDrawer(page)
+
+    await role(page, 'HHL')
+    await nav(page, 'fin')
+    const sum = page.locator('[data-tier-summary]')
+    await expect(sum).toBeVisible()
+    let total = 0
+    for (const k of ['PROGNOZA', 'REALIZACJA', 'FAKTURA']) total += Number(await sum.locator(`[data-tier-count="${k}"]`).innerText())
+    expect(total).toBeGreaterThan(0)
+    await expect(page.locator('[data-money-ok]')).toBeVisible()
   })
 })

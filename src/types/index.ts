@@ -134,6 +134,8 @@ export interface LoadPricing {
   scxTransportsScenario?: number;
   /** M2 — dane v2: poziom, obie wartości (wyliczona/fakturowana), migawki mnożnika i kursu */
   money?: import('../lib/money/loadMoney').LoadMoneyV2;
+  /** M8 — wyliczenie przerwane (niezmiennik „ten sam mechanizm” albo brak danych) — komunikat zamiast cichej wartości */
+  moneyError?: string | null;
 }
 
 export type EtaConfidence = 'LOW' | 'MED' | 'HIGH';

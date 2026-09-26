@@ -32,6 +32,32 @@ import {
   readyGateReasonLabel,
 } from '../../lib/enumLabels';
 
+import { TIER_PILL, type MoneySideV2 } from '../../lib/money/loadMoney';
+import type { Locale } from '../../types';
+
+/** M8 — poziom, mnożnik paliwowy z datą i kurs strony wyceny. */
+function MoneySideMeta({ side, locale, which }: { side: MoneySideV2; locale: Locale; which: 'cost' | 'rev' }) {
+  return (
+    <div data-money-side={which}>
+      <div className="mrow">
+        <span className="lbl">{t(locale, 'tier_label')}</span>
+        <span><span className={`pill ${TIER_PILL[side.tier]}`} data-tier={side.tier}>{t(locale, `tier_${side.tier}`)}</span></span>
+      </div>
+      <div className="mrow">
+        <span className="lbl">{t(locale, 'fuel_mult')}</span>
+        <span className="mono" data-fuel-ref={side.fuel.refDate}>×{side.fuel.applied.toFixed(4)} · {t(locale, 'fuel_ref')} {side.fuel.refDate}</span>
+      </div>
+      <div className="mrow">
+        <span className="lbl">{t(locale, 'fx_table')}</span>
+        <span className="mono">
+          {side.fx.tableNo} · {side.fx.mid.toFixed(4)} · {side.fx.date}
+          {side.fx.provisional ? <> <span className="pill p-amber" data-fx-provisional>{t(locale, 'fx_provisional')}</span></> : null}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 type Tab = 'overview' | 'timeline' | 'docs' | 'pricing' | 'chat';
 
 function fmtDim(n: number): string {
@@ -399,6 +425,11 @@ export function LoadDrawer() {
 
           {tab === 'pricing' && (
             <>
+              {load.pricing.moneyError ? (
+                <div className="note" data-money-error style={{ margin: '0 0 12px', color: 'var(--red)' }}>
+                  {t(locale, 'money_error')}: {load.pricing.moneyError}
+                </div>
+              ) : null}
               {showCost ? (
                 <>
                   <h4 className="sec">{t(locale, 'cost')} — Scandinavian Express</h4>
@@ -418,6 +449,7 @@ export function LoadDrawer() {
                     <span>Razem</span>
                     <span>{formatAppMoney(load.pricing.costTotal, locale, currency)}</span>
                   </div>
+                  {load.pricing.money ? <MoneySideMeta side={load.pricing.money.cost} locale={locale} which="cost" /> : null}
                 </>
               ) : (
                 <div className="locked">{t(locale, 'no_price')}</div>
@@ -439,6 +471,7 @@ export function LoadDrawer() {
                     <span>Razem</span>
                     <span>{formatAppMoney(load.pricing.revTotal, locale, currency)}</span>
                   </div>
+                  {load.pricing.money ? <MoneySideMeta side={load.pricing.money.rev} locale={locale} which="rev" /> : null}
                 </>
               ) : (
                 <div className="locked" style={{ marginTop: 13 }}>

@@ -2,7 +2,7 @@
  * BK3 — mapowanie wierszy Supabase (schemat 0001/0006) ↔ typy aplikacji.
  * Czyste funkcje (bez klienta Supabase) — testowane jednostkowo.
  */
-import type { MoneySideV2 } from '../lib/money/loadMoney';
+import { mechanismIssue, type MoneySideV2 } from '../lib/money/loadMoney';
 import type {
   Awizacja, Bill, BillFlag, BillPayment, BillVerification, CorridorStage, DocCategory, Document, FerryBooking, Geofence, GeofenceType, Load,
   LoadEvent, LoadMessage, LoadResources, LoadStatus, Notification, OrgKind, Risk, RiskType, Severity,
@@ -377,6 +377,8 @@ export function applyPriceViews(load: Load, cost?: PriceViewRow, rev?: PriceView
       currency: 'EUR',
       baf_multiplier: c.fuel.applied, mult_sek: c.fuel.multSek, mult_pln: c.fuel.multPln,
       money: { v: 2, tier, cost: c, rev: r },
+      /* M8 — niezmiennik także na migawkach z bazy (HHL widzi obie strony) */
+      moneyError: both ? mechanismIssue({ v: 2, tier, cost: c, rev: r }) : null,
     },
   };
 }

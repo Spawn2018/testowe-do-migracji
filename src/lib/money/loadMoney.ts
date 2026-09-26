@@ -37,6 +37,9 @@ export interface LoadMoneyV2 {
   rev: MoneySideV2;
 }
 
+/** M8 — kolor pigułki poziomu wyceny (wzorzec .pill z makiety). */
+export const TIER_PILL: Record<PricingTier, string> = { PROGNOZA: 'p-plan', REALIZACJA: 'p-sea', FAKTURA: 'p-go' };
+
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const TIER_ORDER: PricingTier[] = ['PROGNOZA', 'REALIZACJA', 'FAKTURA'];
 export const leastTier = (a: PricingTier, b: PricingTier): PricingTier =>
@@ -147,18 +150,54 @@ export function invoicedCostByLoad(invoices: Invoice[]): Map<string, number> {
   return out;
 }
 
+/**
+ * M8 — wylicza dane v2 transportu z niezmiennikiem; rozjazd mechanizmu (albo brak danych)
+ * PRZERYWA wyliczenie: transport bez v2 + komunikat `moneyError` (lista wyjątków), nigdy cicha wartość.
+ */
+export function withMoneyV2(l: Load, todayLocal: string, invoicedCostEur?: number | null): Load {
+  if (!l.pricing) return l; // niepełny rekord (stary zapis) — bez wyliczenia, nie zero
+  try {
+    /* kwoty z faktur (Z1) zostają przy ponownym wyliczeniu */
+    const money = buildLoadMoney(l, {
+      todayLocal,
+      invoicedCostEur: invoicedCostEur ?? l.pricing.money?.cost.invoicedEur ?? null,
+      invoicedRevEur: l.pricing.money?.rev.invoicedEur ?? null,
+    });
+    return { ...l, pricing: { ...l.pricing, money, moneyError: null } };
+  } catch (e) {
+    const { money: _drop, ...rest } = l.pricing;
+    void _drop;
+    return { ...l, pricing: { ...rest, moneyError: e instanceof Error ? e.message : String(e) } };
+  }
+}
+
 /** Dołącza dane v2 do każdego transportu (seed, migracja v1→v2). */
 export function attachMoneyV2(loads: Load[], invoices: Invoice[], todayLocal: string): Load[] {
   const inv = invoicedCostByLoad(invoices);
-  return loads.map((l) => {
-    if (l.pricing?.money?.v === 2) return l;
-    try {
-      const money = buildLoadMoney(l, { todayLocal, invoicedCostEur: inv.get(l.id) ?? null });
-      return { ...l, pricing: { ...l.pricing, money } };
-    } catch {
-      return l; // brak danych do wyliczenia → transport bez v2 (lista wyjątków), nie zero
-    }
-  });
+  return loads.map((l) => (l.pricing?.money?.v === 2 ? l : withMoneyV2(l, todayLocal, inv.get(l.id) ?? null)));
+}
+
+/**
+ * M8 — niezmiennik na danych z serwera (migawki obu stron): ta sama data i mnożnik paliwowy,
+ * przed fakturą ta sama tabela kursu. Zwraca opis rozjazdu albo null.
+ */
+export function mechanismIssue(m: LoadMoneyV2): string | null {
+  const c = m.cost; const r = m.rev;
+  if (!c.fuel.refDate || !r.fuel.refDate) return null; // jedna strona niewidoczna dla roli — nie ma czego porównać
+  if (c.fuel.refDate !== r.fuel.refDate) return `Różne daty opłaty paliwowej: koszt ${c.fuel.refDate}, przychód ${r.fuel.refDate}`;
+  if (c.fuel.applied !== r.fuel.applied) return `Różne mnożniki paliwowe: koszt ${c.fuel.applied}, przychód ${r.fuel.applied}`;
+  if (c.tier !== 'FAKTURA' && r.tier !== 'FAKTURA' && c.fx.tableNo && r.fx.tableNo && c.fx.tableNo !== r.fx.tableNo) {
+    return `Różne tabele kursowe przed fakturą: koszt ${c.fx.tableNo}, przychód ${r.fx.tableNo}`;
+  }
+  return null;
+}
+
+/** M8 — strona wyceny widoczna dla roli: HHL = transport (mniej pewna strona), SCX = koszt, KSH = przychód. */
+export function moneyViewFor(role: 'HHL' | 'KSH' | 'SCX', m: LoadMoneyV2): { tier: PricingTier; side: MoneySideV2 } {
+  if (role === 'SCX') return { tier: m.cost.tier, side: m.cost };
+  if (role === 'KSH') return { tier: m.rev.tier, side: m.rev };
+  const side = m.cost.fx.provisional || !m.rev.fx.tableNo ? m.cost : m.rev;
+  return { tier: m.tier, side };
 }
 
 /** Marża transportu z danych v2 — z wartości efektywnych (faktura nadrzędna). */
@@ -166,4 +205,20 @@ export function marginV2(m: LoadMoneyV2) {
   const revenueEur = sideEffectiveEur(m.rev);
   const costEur = sideEffectiveEur(m.cost);
   return { tier: m.tier, revenueEur, costEur, marginEur: round2(revenueEur - costEur) };
+}
+
+/** M8 — zestawienie poziomów wyceny dla roli (liczba na poziom, kurs tymczasowy, wyliczenia przerwane). */
+export interface TierSummary { counts: Record<PricingTier, number>; provisional: number; errors: string[] }
+export function tierSummary(loads: Load[], role: 'HHL' | 'KSH' | 'SCX'): TierSummary {
+  const out: TierSummary = { counts: { PROGNOZA: 0, REALIZACJA: 0, FAKTURA: 0 }, provisional: 0, errors: [] };
+  for (const l of loads) {
+    if (!l.pricing) continue;
+    if (l.pricing.moneyError) { out.errors.push(l.code); continue; }
+    const m = l.pricing.money;
+    if (m?.v !== 2) continue;
+    const v = moneyViewFor(role, m);
+    out.counts[v.tier] += 1;
+    if (v.side.fx.provisional) out.provisional += 1;
+  }
+  return out;
 }

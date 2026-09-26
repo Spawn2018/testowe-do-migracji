@@ -57,6 +57,7 @@ import { getNowIso } from '../lib/frozenNow';
 import { orderEditDeniedMessage, orderGateMessage, orderNoReminders, orderNoRisks, orderNumberGate, type OrderSide } from '../lib/orderNumbers';
 import { t } from '../i18n/messages';
 import { localDateOf } from '../lib/money/engine';
+import { withMoneyV2 } from '../lib/money/loadMoney';
 import { billDueDate, billParties, billPaymentToday, canMarkPaid, canRegisterBill, canVerifyBill, checkBill, verifyError, type BillDraft } from '../lib/invoices3';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
@@ -1219,7 +1220,10 @@ export const useTowerStore = create<TowerState>()(
               ...a,
             } as Load;
           });
-          loads = [...loads, ...newLoads.map((l) => applyEtaToLoad(l, nowIso()))];
+          /* M8 — każde wyliczenie przez niezmiennik (buildLoadMoney → assertSameMechanism); rozjazd przerywa */
+          const today = localDateOf(getNowIso());
+          loads = loads.map((l) => (changed.some((ch) => ch.id === l.id) ? withMoneyV2(l, today) : l));
+          loads = [...loads, ...newLoads.map((l) => withMoneyV2(applyEtaToLoad(l, nowIso()), today))];
           const ver: ScheduleVersion = {
             id: uid('sv'),
             at: nowIso(),

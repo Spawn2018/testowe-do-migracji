@@ -5,6 +5,10 @@ import { t } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
 import { SEFS_WEEKLY, SEFS_SOURCES, computeSefs } from '../lib/sefs';
 import { formatAppMoney, formatSourceMoney } from '../lib/money/demoFx';
+import { TIER_PILL, moneyViewFor, tierSummary } from '../lib/money/loadMoney';
+import type { PricingTier } from '../lib/money/engine';
+
+const TIERS: PricingTier[] = ['PROGNOZA', 'REALIZACJA', 'FAKTURA'];
 
 function pct(n: number) {
   return `${(n * 100).toFixed(1).replace('.', ',')}%`;
@@ -62,6 +66,7 @@ export function FinanceView() {
   const live = computeSefs(week.priceSek, week.pricePln);
   const appliedPct = ((live.appliedMult - 1) * 100).toFixed(1).replace('.', ',');
   const below = loads.filter((l) => l.pricing.belowThreshold);
+  const tiers = useMemo(() => tierSummary(loads, role), [loads, role]);
 
   const bafCard = (
     <div data-deur-exempt="fuel-index" title="D-EUR-T: indeks paliwowy (wyjątek)">
@@ -198,6 +203,28 @@ export function FinanceView() {
           </div>
         </div>
 
+        <div className="hr" />
+        <h4 className="sec">{t(locale, 'fin_tiers')}</h4>
+        <div data-tier-summary>
+          {TIERS.map((k) => (
+            <div key={k} className="mrow">
+              <span className="lbl"><span className={`pill ${TIER_PILL[k]}`}>{t(locale, `tier_${k}`)}</span></span>
+              <span data-tier-count={k}>{tiers.counts[k]}</span>
+            </div>
+          ))}
+          <div className="mrow">
+            <span className="lbl"><span className="pill p-amber">{t(locale, 'fx_provisional')}</span></span>
+            <span data-tier-provisional>{tiers.provisional}</span>
+          </div>
+        </div>
+        {tiers.errors.length > 0 ? (
+          <div className="note" data-money-errors style={{ margin: '11px 0 0', color: 'var(--red)' }}>
+            {t(locale, 'fin_tiers_err')}: {tiers.errors.length} · <span className="mono">{tiers.errors.join(', ')}</span>
+          </div>
+        ) : (
+          <div className="note" data-money-ok style={{ margin: '11px 0 0' }}>{t(locale, 'fin_tiers_ok')}</div>
+        )}
+
         {role === 'HHL' && showMargin && (
           <>
             <div className="hr" />
@@ -248,6 +275,9 @@ export function FinanceView() {
                       <span className="code" data-content>{l.code}</span> <span data-content>{l.itemType}</span>
                     </span>
                     <span style={{ color: 'var(--red)' }}>
+                      {l.pricing.money?.v === 2 ? (
+                        <><span className={`pill ${TIER_PILL[moneyViewFor('HHL', l.pricing.money).tier]}`} data-tier={l.pricing.money.tier}>{t(locale, `tier_${l.pricing.money.tier}`)}</span>{' '}</>
+                      ) : null}
                       {(l.pricing.marginPct * 100).toFixed(1)}% · {money(l.pricing.margin)}
                     </span>
                   </div>
