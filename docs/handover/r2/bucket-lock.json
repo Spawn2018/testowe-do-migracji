@@ -1,0 +1,7 @@
+{
+  "_opis": "TOWER 3b — reguły blokady kubełka R2 (Bucket Locks). Zastosować: wrangler r2 bucket lock set <kubelek> --file docs/handover/r2/bucket-lock.json (lub API PUT /accounts/{id}/r2/buckets/{kubelek}/lock). Blokada < retencji w kodzie, żeby backup-export mógł usuwać stare kopie.",
+  "rules": [
+    { "id": "tower-daily-30d", "enabled": true, "prefix": "daily/", "condition": { "type": "Age", "maxAgeSeconds": 2592000 } },
+    { "id": "tower-monthly-360d", "enabled": true, "prefix": "monthly/", "condition": { "type": "Age", "maxAgeSeconds": 31104000 } }
+  ]
+}

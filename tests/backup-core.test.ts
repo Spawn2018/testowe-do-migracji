@@ -31,6 +31,24 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
     expect(del).toEqual(['daily/2026-08-26/loads.csv.gz.age', 'monthly/2025-09/loads.csv.gz.age']);
   });
 
+  it('3b: retencja nigdy nie kasuje obiektu pod blokadą R2 (docs/handover/r2/bucket-lock.json)', async () => {
+    const { readFileSync } = await import('node:fs');
+    const lock = JSON.parse(readFileSync('docs/handover/r2/bucket-lock.json', 'utf8')) as { rules: { prefix: string; condition: { maxAgeSeconds: number } }[] };
+    const lockMs = (k: string) => (lock.rules.find((r) => k.startsWith(r.prefix))?.condition.maxAgeSeconds ?? 0) * 1000;
+    const created = new Map<string, number>();
+    let checked = 0;
+    for (let t = Date.UTC(2026, 0, 1, 2, 30); t < Date.UTC(2028, 6, 1); t += 86_400_000) {
+      const now = new Date(t);
+      created.set(`daily/${now.toISOString().slice(0, 10)}/m.age`, t);
+      if (now.getUTCDate() === 1) created.set(`monthly/${now.toISOString().slice(0, 7)}/m.age`, t);
+      for (const k of retentionDeletes([...created.keys()], now)) {
+        expect(t - created.get(k)!, k).toBeGreaterThanOrEqual(lockMs(k));
+        created.delete(k); checked++;
+      }
+    }
+    expect(checked).toBeGreaterThan(800);
+  });
+
   it.skipIf(!hasAge)('format zgodny z restore.sh: JS gzip + age (X25519) → `age -d | gunzip`; zły klucz odrzucony', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'wt-age-'));
     try {
