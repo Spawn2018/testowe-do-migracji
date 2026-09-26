@@ -146,5 +146,17 @@ out=$(sys "begin; $GW insert into load_events (load_id,event_type,occurred_at,pa
  '{\"geofence_id\":\"99999999-0000-0000-0000-0000000000a2\",\"geofence_kind\":\"LOADING\"}'); select status from loads where id='99999999-0000-0000-0000-0000000000b1'; rollback;" | grep -vE '^(BEGIN|ROLLBACK|INSERT.*)$' | tail -1)
 [ "$out" = "READY" ] && { ok=$((ok+1)); echo "  OK    strefa SITE z treścią LOADING → status bez zmian (wg tabeli)"; } || { fail=$((fail+1)); echo "  FAIL  niezgodny geofence_kind (2): $out"; }
 
+echo; echo "[0034] Zaproszenie ważne 7 dni (wyzwalacz nowego konta; atrapa auth.users w transakcji)"
+AU="create table if not exists auth.users (id uuid primary key default gen_random_uuid(), email text);
+ drop trigger if exists tower_on_auth_user_created on auth.users;
+ create trigger tower_on_auth_user_created after insert on auth.users for each row execute function public.handle_new_auth_user();"
+INV="insert into user_invites (email, org_id, role, created_at) values ('nowy@test', '00000000-0000-0000-0000-00000000a001', 'HHL_OPS', now() - interval"
+out=$(sys "begin; $AU $INV '8 days'); insert into auth.users (email) values ('nowy@test'); rollback;")
+echo "$out" | grep -q "TOWER_INVITE_EXPIRED" && { ok=$((ok+1)); echo "  OK    zaproszenie sprzed 8 dni → odrzucone (TOWER_INVITE_EXPIRED)"; } || { fail=$((fail+1)); echo "  FAIL  wygasłe zaproszenie: $out"; }
+out=$(sys "begin; $AU $INV '6 days 23 hours'); insert into auth.users (email) values ('nowy@test'); select role from app_users where email='nowy@test'; rollback;" | grep -vE '^(BEGIN|ROLLBACK|INSERT.*|CREATE.*|DROP.*)$' | tail -1)
+[ "$out" = "HHL_OPS" ] && { ok=$((ok+1)); echo "  OK    zaproszenie sprzed 6 dni 23 h → konto z rolą z zaproszenia"; } || { fail=$((fail+1)); echo "  FAIL  ważne zaproszenie: $out"; }
+out=$(sys "begin; $AU insert into auth.users (email) values ('obcy@test'); rollback;")
+echo "$out" | grep -q "TOWER_NO_INVITE" && { ok=$((ok+1)); echo "  OK    bez zaproszenia → odrzucone (TOWER_NO_INVITE)"; } || { fail=$((fail+1)); echo "  FAIL  bez zaproszenia: $out"; }
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
