@@ -31,6 +31,8 @@ echo; echo "[1] Koszyki"
 val "trzy koszyki prywatne"                        $HHL "select count(*) from storage.buckets where id in ('dokumenty','zdjecia','faktury') and not public" 3
 val "W4: limit zdjecia 2 MB"                         $HHL "select file_size_limit from storage.buckets where id='zdjecia'" 2097152
 val "W4: limit dokumenty 10 MB"                      $HHL "select file_size_limit from storage.buckets where id='dokumenty'" 10485760
+val "0040: limit faktury 10 MB (jak wszystkie PDF)"  $HHL "select file_size_limit from storage.buckets where id='faktury'" 10485760
+err "0040: PDF faktury 10 MB + 1 B odrzucony"        $SCX "select * from create_document(null,'INVOICE','f.pdf','application/pdf',10485761,'$P')" "za duży"
 
 echo; echo "[2] Rejestracja dokumentu i ścieżka nadawana przez serwer"
 val "SCX rejestruje CMR swojego transportu → koszyk dokumenty" $SCX "select bucket from create_document('$L1','CMR','cmr ąę.pdf','application/pdf',1000)" dokumenty

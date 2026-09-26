@@ -91,6 +91,12 @@ describe('M6 — kontrole przy rejestracji (lustro register_invoice)', () => {
     const c = checkBill(draftFor('KOSZT', 'EUR', { number: ' ', net: null, pdfName: null, lines: [] }), snap.loads, snap.bills, DEMO_TODAY_LOCAL);
     expect(c.errors).toEqual(expect.arrayContaining(['NUMBER', 'AMOUNTS', 'PDF', 'NO_LINES']));
   });
+  it('PDF faktury ≤ 10 MB (aneks 4): 10 MB przechodzi, 10 MB + 1 B → PDF_SIZE', () => {
+    const ok = checkBill(draftFor('KOSZT', 'EUR', { pdfSize: 10 * 1024 * 1024 }), snap.loads, snap.bills, DEMO_TODAY_LOCAL);
+    expect(ok.errors).not.toContain('PDF_SIZE');
+    const big = checkBill(draftFor('KOSZT', 'EUR', { pdfSize: 10 * 1024 * 1024 + 1 }), snap.loads, snap.bills, DEMO_TODAY_LOCAL);
+    expect(big.errors).toContain('PDF_SIZE');
+  });
   it('KWOTA poza tolerancją (> 1 i > 0,2 %), w tolerancji — bez flagi', () => {
     const d = draftFor('KOSZT', 'EUR');
     const bumped = { ...d, lines: d.lines.map((l, i) => (i === 0 ? { ...l, invoicedNet: l.invoicedNet + 50 } : l)) };

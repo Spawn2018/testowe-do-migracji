@@ -280,7 +280,7 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
 
   const draft: BillDraft = {
     direction, number, issueDate, weekKey: week, currency, net: num(net), vat: num(vat), gross: num(gross),
-    dueDateFromDocument: dueDoc || null, pdfName: file?.name ?? null,
+    dueDateFromDocument: dueDoc || null, pdfName: file?.name ?? null, pdfSize: file?.size ?? null,
     lines: candidates.filter((l) => lineOf(l.id).on).map((l) => {
       const st = lineOf(l.id);
       return { loadId: l.id, invoicedNet: num(st.net) ?? 0, invoicedFuel: num(st.fuel), fx: currency === 'PLN' && st.fxConfirmed ? st.fx : null };

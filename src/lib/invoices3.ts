@@ -90,6 +90,8 @@ export interface BillDraft {
   gross: number | null;
   dueDateFromDocument?: string | null;
   pdfName?: string | null;
+  /** Rozmiar PDF w bajtach (limit 10 MB jak wszystkie PDF — aneks 4). */
+  pdfSize?: number | null;
   lines: BillLineDraft[];
 }
 
@@ -111,11 +113,14 @@ export function billCandidates(loads: Load[], bills: Bill[], direction: BillDire
   });
 }
 
+/** PDF faktury ≤ 10 MB — ten sam limit co zasobnik `faktury` i `create_document` (0029/0039). */
+export const INVOICE_PDF_MAX_BYTES = 10 * 1024 * 1024;
+
 export interface BillCheck {
   lines: BillLine[];
   headerFlags: string[];
   missingLoadIds: string[];
-  /** Błędy blokujące rejestrację (jak w bazie) — kody: NUMBER, ISSUE_DATE, WEEK, AMOUNTS, PDF, NO_LINES, DOUBLE:<kod>, ROLE. */
+  /** Błędy blokujące rejestrację (jak w bazie) — kody: NUMBER, ISSUE_DATE, WEEK, AMOUNTS, PDF, PDF_SIZE, NO_LINES, DOUBLE:<kod>, ROLE. */
   errors: string[];
   expectedTotal: number;
   invoicedTotal: number;
@@ -131,6 +136,7 @@ export function checkBill(draft: BillDraft, loads: Load[], bills: Bill[], todayL
   if (!/^\d{4}-W\d{2}$/.test(draft.weekKey)) errors.push('WEEK');
   if (draft.net == null || draft.vat == null || draft.gross == null) errors.push('AMOUNTS');
   if (!draft.pdfName) errors.push('PDF');
+  else if (draft.pdfSize != null && draft.pdfSize > INVOICE_PDF_MAX_BYTES) errors.push('PDF_SIZE');
   if (draft.lines.length === 0) errors.push('NO_LINES');
   const lines: BillLine[] = draft.lines.map((d) => {
     const l = byId.get(d.loadId);
