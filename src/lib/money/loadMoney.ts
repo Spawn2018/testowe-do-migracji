@@ -11,8 +11,8 @@
 import type { Invoice, Load } from '../../types';
 import { sefsForLoadDate } from '../sefs';
 import {
-  buildPriceSide, assertSameMechanism, localDateOf, nbpRateBefore, resolveTier,
-  type NbpRate, type PriceSide, type PricingTier,
+  buildPriceSide, assertSameMechanism, localDateOf, nbpRateBefore, resolveTier, totalsByTier,
+  type LoadMargin, type NbpRate, type PriceSide, type PricingTier,
 } from './engine';
 import { DEMO_NBP_RATES } from './demoFx';
 
@@ -221,4 +221,38 @@ export function tierSummary(loads: Load[], role: 'HHL' | 'KSH' | 'SCX'): TierSum
     if (v.side.fx.provisional) out.provisional += 1;
   }
   return out;
+}
+
+/** M11 — marża transportu jako LoadMargin silnika (wartości efektywne; PLN per transport, każda strona swoim kursem). */
+export function loadMarginV2(m: LoadMoneyV2): LoadMargin {
+  const revenueEur = round2(sideEffectiveEur(m.rev));
+  const costEur = round2(sideEffectiveEur(m.cost));
+  const marginEur = round2(revenueEur - costEur);
+  const revenue = round2(revenueEur * m.rev.fx.mid);
+  const cost = round2(costEur * m.cost.fx.mid);
+  return {
+    tier: m.tier, revenueEur, costEur, marginEur,
+    marginPct: revenueEur === 0 ? null : Math.round((marginEur / revenueEur) * 1e4) / 1e4,
+    pln: { revenue, cost, margin: round2(revenue - cost), provisional: m.rev.fx.provisional || m.cost.fx.provisional },
+  };
+}
+
+/**
+ * M11 — rozbicie marży na trzy poziomy pewności (MECHANIZM_PIENIEDZY §9, AN1): zafakturowana,
+ * zrealizowana niezafakturowana, prognozowana. Sumy z `totalsByTier`; `total` liczony niezależnie
+ * (suma marż transportów) — kryterium: FAKTURA + REALIZACJA + PROGNOZA = total, w obu walutach.
+ * Transporty bez danych v2 albo z przerwanym wyliczeniem (moneyError) są pomijane i liczone w `skipped`.
+ */
+export function marginSplit(loads: Load[]) {
+  const margins: LoadMargin[] = [];
+  let skipped = 0;
+  for (const l of loads) {
+    const m = l.pricing?.money;
+    if (!l.pricing || l.pricing.moneyError || m?.v !== 2) { skipped += 1; continue; }
+    margins.push(loadMarginV2(m));
+  }
+  const tiers = totalsByTier(margins);
+  let eur = 0; let pln = 0;
+  for (const x of margins) { eur += x.marginEur; pln += x.pln.margin; }
+  return { tiers, total: { count: margins.length, marginEur: round2(eur), marginPln: round2(pln) }, skipped };
 }

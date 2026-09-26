@@ -5,7 +5,7 @@ import { t } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
 import { SEFS_WEEKLY, SEFS_SOURCES, computeSefs } from '../lib/sefs';
 import { formatAppMoney, formatSourceMoney } from '../lib/money/demoFx';
-import { TIER_PILL, moneyViewFor, tierSummary } from '../lib/money/loadMoney';
+import { TIER_PILL, marginSplit, moneyViewFor, tierSummary } from '../lib/money/loadMoney';
 import type { PricingTier } from '../lib/money/engine';
 
 const TIERS: PricingTier[] = ['PROGNOZA', 'REALIZACJA', 'FAKTURA'];
@@ -67,6 +67,10 @@ export function FinanceView() {
   const appliedPct = ((live.appliedMult - 1) * 100).toFixed(1).replace('.', ',');
   const below = loads.filter((l) => l.pricing.belowThreshold);
   const tiers = useMemo(() => tierSummary(loads, role), [loads, role]);
+  const split = useMemo(() => marginSplit(loads), [loads]);
+  /* M11 — sumy z totalsByTier: EUR źródłowo, PLN per transport kursem NBP (nie kursem demo). */
+  const splitMoney = (x: { marginEur: number; marginPln: number }) =>
+    currency === 'PLN' ? formatSourceMoney(x.marginPln, locale, 'PLN') : formatSourceMoney(x.marginEur, locale, 'EUR');
 
   const bafCard = (
     <div data-deur-exempt="fuel-index" title="D-EUR-T: indeks paliwowy (wyjątek)">
@@ -190,6 +194,23 @@ export function FinanceView() {
                   <span style={{ color: 'var(--go)' }}>
                     {money(rev - cost)} · {pct(rev ? (rev - cost) / rev : 0)}
                   </span>
+                </div>
+                <div data-margin-split>
+                  {(['FAKTURA', 'REALIZACJA', 'PROGNOZA'] as const).map((k) => (
+                    <div key={k} className="mrow" data-margin-tier={k} data-count={split.tiers[k].count}>
+                      <span className="lbl">
+                        <span className={`pill ${TIER_PILL[k]}`}>{t(locale, `tier_${k}`)}</span> {t(locale, `m11_${k}`)} · {split.tiers[k].count}
+                      </span>
+                      <span>{splitMoney(split.tiers[k])}</span>
+                    </div>
+                  ))}
+                  <div className="mrow total" data-margin-total data-count={split.total.count}>
+                    <span>
+                      {t(locale, 'm11_total')} · {split.total.count}
+                      {split.skipped ? ` · ${t(locale, 'm11_skipped')}: ${split.skipped}` : ''}
+                    </span>
+                    <span style={{ color: 'var(--go)' }}>{splitMoney(split.total)}</span>
+                  </div>
                 </div>
               </>
             )}
