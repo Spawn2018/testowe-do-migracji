@@ -733,3 +733,228 @@ nie może jej proponować.
 Dochodzą: **AN2 · M12**. **Łącznie 56 pozycji.**
 
 Wróć do bieżącej pozycji zlecenia.
+
+
+---
+
+# ANEKS 3
+
+> Dopisano 26.09.2026 — pełna treść dokumentu właściciela `DECYZJE_WYDANIE_1_0.md`, bez zmian. Od teraz część zlecenia.
+
+# DECYZJE DO WYDANIA 1.0
+
+> Odpowiedź na oba Twoje pytania — z zamknięcia etapu 4 i z etapu 6.
+> Zapisz na końcu `docs/handover/ZLECENIE_FINAL.md` jako „ANEKS 3",
+> dopisz pozycje do `POSTEP.md`, potem realizuj w kolejności z sekcji 5.
+
+---
+
+# 1. TERAZ — WYPCHNIJ
+
+**Tak, wypchnij 7 commitów natychmiast**, zanim zrobisz cokolwiek innego.
+Praca tylko na dysku to jedna kopia — ten sam problem, który zamykaliśmy
+w etapie 0.5. Potem weryfikacja drzew jak w 0.5a: suma drzewa lokalnie
+równa sumie zdalnej, wynik jedną linią.
+
+**Uzupełnij raport liczbami.** „Testy na serwerze Supabase też przechodzą"
+to nie jest liczba. Podaj każdy zestaw osobno: unit, money, ferry,
+security, status, BK5, D19-T, D-EUR-T, stylelint, visual, 14 prób.
+
+**O2 i O3 nie są zamknięte.** O2 to wdrożenie produkcyjne, O3 test dymny
+na produkcji — żadne z nich jeszcze się nie odbyło. Oznacz w `POSTEP.md`
+jako otwarte.
+
+---
+
+# 2. DECYZJE Z ETAPU 4
+
+## 2.1 Import usuwający transporty w drodze — BLOKUJEMY
+
+Transport od wjazdu na załadunek istnieje fizycznie: ciężarówka ze stalą,
+pozycje GPS, zdarzenia, być może faktura. Import harmonogramu nie może
+tego skasować.
+
+- **usunięcie przez import = anulowanie** (status CANCELLED), **nigdy
+  fizyczne skasowanie wiersza** — historia, pozycje i dziennik zostają
+- dozwolone **wyłącznie** dla statusów PLANNED, RESOURCES_PENDING,
+  DOCS_PENDING, READY — **od AT_LOADING zablokowane**
+- **transport na jakiejkolwiek fakturze — zablokowany** niezależnie od statusu
+- transport w drodze, który naprawdę trzeba wycofać — anuluje HHL ręcznie,
+  z powodem, w dzienniku audytu
+- **wymusza baza:** zakaz `DELETE` na `loads` dla ról API; przejście
+  do CANCELLED z importu tylko przy spełnieniu warunków
+- podgląd importu pokazuje transporty, których usunąć nie można, z powodem
+
+*Testy bazy:* import nie anuluje transportu w AT_LOADING i dalej; nie
+anuluje zafakturowanego; `DELETE` odrzucony dla każdej roli API; anulowanie
+w READY działa i zostawia wiersz.
+
+## 2.2 Ryzyka widoczne dla wszystkich — NIE
+
+To ten sam rodzaj wycieku co koszt i przychód. Ryzyko rozbieżności
+na fakturze przewoźnika zawiera kwoty kosztu HHL — KSH nie może go zobaczyć.
+Ryzyko kolejności montażu to informacja klienta — przewoźnik nie musi.
+
+- nowa kolumna `risk_signals.audience`: `HHL` · `HHL_PRZEWOZNIK` ·
+  `HHL_KLIENT` · `WSZYSCY`
+- **domyślnie `HHL` — zasada zamkniętych drzwi.** Rodzaj nieprzypisany
+  niżej widzi wyłącznie HHL
+- przypisanie:
+
+| Rodzaj | Odbiorcy |
+|---|---|
+| FERRY, ROAD_SE, ROAD_PL, WEATHER, ETA_BREACH | `WSZYSCY` |
+| SILENT_VEHICLE, AUTO_STATUS, LOADING_UNCONFIRMED, RESOURCE_MISSING, DOC_MISSING, PERMIT, INSURANCE | `HHL_PRZEWOZNIK` |
+| SEQUENCE | `HHL_KLIENT` |
+| INVOICE_MISMATCH — faktura kosztowa | `HHL_PRZEWOZNIK` |
+| INVOICE_MISMATCH — faktura przychodowa | `HHL_KLIENT` |
+
+- przewoźnik widzi ryzyka **wyłącznie swoich transportów** i ryzyka
+  korytarza bez przypisanego transportu; klient — swojego projektu
+- **wymusza baza, polityka RLS**, nie interfejs
+
+*Testy bazy:* KSH nie widzi ryzyka faktury kosztowej; SCX nie widzi ryzyka
+faktury przychodowej ani kolejności montażu; SCX nie widzi ryzyk transportów
+innego przewoźnika; ryzyko nowego, nieprzypisanego rodzaju widzi tylko HHL.
+
+## 2.3 Kierowca bez logowania — TAK, zostaje, pod warunkami
+
+Kierowcy są pracownikami przewoźnika i często się zmieniają; konto dla
+każdego to przeszkoda, nie zabezpieczenie. Link z tokenem zostaje, jeżeli:
+
+- token losowy co najmniej 128 bitów, przechowywany jako skrót, nie jawnie
+- **jeden token = jeden transport**; nie da się nim zapisać niczego
+  w innym transporcie
+- token wyłącznie zapisuje pozycje, zdarzenia etapów i zdjęcia; odczytuje
+  tylko instrukcje dla kierowcy — **żadnych cen, żadnych innych transportów**
+- ważność: do 24 h po rozładunku, maksymalnie 14 dni; odwoływalny przez
+  przewoźnika i HHL; nowy token unieważnia poprzedni
+- pozycje i zdarzenia etapów przez funkcję SQL ze sprawdzeniem skrótu
+  tokenu i limitem zapytań (budżet planu darmowego — ANEKS 4, PR6);
+  zdjęcia przez funkcję Edge
+
+*Testy:* token transportu A odrzucony przy zapisie do B; token wygasły
+i odwołany — odrzucony; odpowiedź nie zawiera żadnego pola cenowego.
+
+## 2.4 Numer zlecenia 48 godzin wcześniej — TYLKO OSTRZEŻENIE
+
+Blokady zostają tam, gdzie są (decyzja Q10): numer HHL przed GOTOWY,
+numer przewoźnika przed załadunkiem. **48 godzin przed planowanym
+załadunkiem brak numeru = ryzyko i przypomnienie**, nie blokada:
+- brak numeru przewoźnika → ryzyko z odbiorcami `HHL_PRZEWOZNIK`,
+  przypomnienie do przewoźnika
+- brak numeru HHL → ryzyko `HHL`, przypomnienie do HHL
+
+---
+
+# 3. POLSKIE ZNAKI — POPRAW PRZED WYDANIEM
+
+Tak. „Marza" i „Zalaczniki" w wersji 1.0 to błąd widoczny dla klienta.
+
+**Trzy warunki:**
+
+1. **Zmieniasz wyłącznie napisy wyświetlane.** Identyfikatory w bazie —
+   `OPLACONA`, `ODWOLANY`, `PO_TERMINIE`, `ZLY_TYDZIEN` i pozostałe —
+   **zostają ASCII**: to kontrakt migracji i testów. Jeżeli któryś
+   z 25 napisów to surowa wartość z bazy pokazana w interfejsie —
+   to regresja D11: mapowanie przez słownik, nie zmiana wartości w bazie
+2. **Test, żeby nie wróciło.** D19-T łapie polskie znaki w EN i SV — nic
+   nie łapie ich braku w PL. Nowy test **PL-T**: słownik języka polskiego
+   (hunspell `pl_PL`) na wszystkich wartościach słownika PL, z listą
+   wyjątków dla kodów i skrótów. Czerwony przy „Marza", zielony po poprawce
+3. **Kontrola wzorca:** jeden przebieg 840 po poprawce. **Mogą się zmienić
+   wyłącznie ujęcia w języku polskim. Ujęcia EN i SV: dokładnie 0 zmian.**
+   Jakakolwiek zmiana w EN albo SV — STOP, to znaczy, że dotknąłeś czegoś
+   poza napisami. Raport i tag `baseline-1.0-<data>`
+
+---
+
+# 4. O2 — PRODUKCJA
+
+## 4.1 Obecny projekt Supabase = TESTOWY
+
+Ma konta testowe, dane z testów i konta BK5. Zostaje środowiskiem testowym.
+Testy dalej chodzą na nim, nie na produkcji.
+
+## 4.2 Produkcja = nowy projekt, plan darmowy
+
+**Decyzja właściciela: wszystko na planach darmowych.** Szczegóły,
+zabezpieczenia i budżety: **`ANEKS_4_PRODUKCJA_ZA_DARMO.md`** — pozycje PR1–PR8.
+
+Ty na produkcji:
+- migracje wszystkie, w kolejności; `pg_cron` włączony przed migracjami
+- **wyłącznie** `supabase/seed/stegra.sql` — **nigdy `tests/db/seed.sql`
+  ani `supabase_stub.sql`**
+- funkcja `ferry-schedule` pobiera prawdziwe rejsy od nowa
+- sekrety funkcji: te same nazwy, wartości produkcyjne
+- konta: tylko prawdziwi użytkownicy; kont testowych nie ma
+
+## 4.3 Vercel — plan darmowy, z zapasowym hostingiem
+
+**Decyzja właściciela: Vercel na planie darmowym. Planu Pro nie będzie.**
+
+Regulamin planu darmowego dopuszcza wyłącznie użytek osobisty,
+niekomercyjny. Ryzyko to wstrzymanie projektu przez Vercel — aplikacja
+przestaje wtedy działać dla wszystkich trzech firm. Dlatego wstrzymanie
+ma trwać minuty, nie dni:
+
+**a) Aplikacja nie zależy od niczego, co ma tylko Vercel.** To statyczna
+strona; całe zaplecze działa w Supabase. Żadnych funkcji serwerowych
+Vercel, żadnych zmiennych, bez których build nie działa gdzie indziej.
+Sprawdź i napisz jedną linią, że tak jest.
+
+**b) Zapasowy hosting w gotowości.** Ten sam build wdrożony równolegle
+na **Cloudflare Pages, plan darmowy** — statyczne pliki są tam bezpłatne
+i bez limitu, a regulamin nie zawiera zakazu użycia komercyjnego, jaki ma
+Vercel i GitHub Pages. Wdrażany przy każdym wydaniu, tak jak Vercel.
+
+**c) Domena pod kontrolą właściciela, nie Vercel.** Serwery nazw domeny
+u rejestratora albo w Cloudflare — nie przeniesione do Vercel. Przełączenie
+na zapas = zmiana jednego rekordu DNS.
+
+**d) Procedura przełączenia** w `docs/handover/PRZELACZENIE_HOSTINGU.md`:
+kroki, kto, ile trwa. **Przetestowana raz**, z wynikiem w `POSTEP.md`.
+
+**e) Ustawienia planu darmowego:**
+- w ustawieniach zespołu Vercel **wyłącz zgodę na użycie treści
+  do trenowania modeli** — na planie darmowym jest domyślnie włączona
+- wdrożenia podglądowe są na planie darmowym **publiczne** — wskazują
+  wyłącznie na **testowy** Supabase; klucza `service_role` nie ma
+  w żadnym buildzie, nigdzie
+
+Środowisko produkcyjne wskazuje na produkcyjny projekt Supabase. Oznaczenie
+danych demonstracyjnych zostaje do potwierdzenia stawek (O4).
+
+## 4.4 Token Supabase
+
+Nowy token dostępu zakłada właściciel i umieszcza **w pliku środowiskowym
+na Twojej maszynie** (`SUPABASE_ACCESS_TOKEN`), nigdy w rozmowie.
+Po zakończeniu wdrożenia — **właściciel go odwołuje**. Zanim włączysz
+funkcje i integracje — napisz, na którym projekcie: testowym czy
+produkcyjnym.
+
+---
+
+# 5. KOLEJNOŚĆ
+
+```
+1   wypchnięcie 7 commitów + weryfikacja drzew
+2   raport liczbami, O2 i O3 jako otwarte
+3   2.1 import: anulowanie zamiast kasowania, blokada od AT_LOADING   ← z testami bazy
+4   2.2 widoczność ryzyk, zamknięte drzwi                            ← z testami bazy
+5   2.3 warunki tokenu kierowcy                                      ← z testami
+6   2.4 ostrzeżenie 48 h
+7   3   polskie znaki + PL-T + wzorzec: EN i SV = 0 zmian
+    PR1–PR8 z ANEKSU 4 — produkcja za darmo
+    ── czekasz na właściciela: działania z sekcji 10 ANEKSU 4 ──
+8   4.2 produkcja: migracje, seed stegra, rejsy, sekrety
+9   4.3 wdrożenie produkcyjne: Vercel + zapas Cloudflare Pages + test przełączenia
+10  O3 test dymny NA PRODUKCJI
+11  O5 raport końcowy
+12  tag release-1.0 — na commicie, który działa na produkcji
+```
+
+**Tag `release-1.0` dopiero po O3 na produkcji.** Wersja wydana to wersja,
+która działa u użytkowników — nie ta, która przeszła testy lokalnie.
+
+Punkty 2.1–2.4 są przed wydaniem, bo dwa z nich to bezpieczeństwo danych.
