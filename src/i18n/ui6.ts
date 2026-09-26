@@ -798,7 +798,7 @@ const en: Dict = {
   a6_sea_risk_i18n_niskie: 'low',
   a6_sea_risk_i18n_podwyzszone: 'elevated',
   a6_sea_risk_i18n_wysokie: 'high',
-  a6_sea_wave: 'waves {wave}',
+  a6_sea_wave: 'wave {wave}',
   a6_session_end_msg_revoked: 'The session on this device has been ended — sign in again with the link from your e-mail',
   a6_session_end_msg_year: 'A year has passed since you signed in on this device — sign in again with the link from your e-mail',
   a6_spine_clear: 'Click again to clear the filter',
