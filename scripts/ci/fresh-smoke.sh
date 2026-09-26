@@ -4,7 +4,7 @@
 # 2) vite build (tryb demo, VITE_AUTH_MODE=demo) → <tmp>/dist; paczka musi być bez kodu Supabase,
 # 3) vite preview na dedykowanym porcie (domyślnie 4179, --strictPort),
 # 3b) budżet pierwszego wczytania: scripts/bundle-size.mjs (≤ 400 kB gzip, D15),
-# 4) PW_BASE_URL=http://127.0.0.1:<port> → test:visual, test:d19, test:deur, test:etap4, test:etap5,
+# 4) PW_BASE_URL=http://127.0.0.1:<port> → test:visual, test:d19, test:deur, test:etap4, test:etap5, test:etap6,
 # 5) sprzątanie (kill podglądu, rm tmp) przy każdym wyjściu.
 # Nigdy nie dotyka dist/ repo ani podglądu :4177.
 # Użycie: bash scripts/ci/fresh-smoke.sh   (PORT=4179 domyślnie; KEEP=1 zostawia tmp)
@@ -49,4 +49,5 @@ npm run test:d19
 npm run test:deur
 npm run test:etap4
 npm run test:etap5
+npm run test:etap6
 echo "[fresh] OK"

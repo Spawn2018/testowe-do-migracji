@@ -19,7 +19,8 @@
     "test:deur": "playwright test tests/d-eur-t.spec.ts",
     "test:etap4": "playwright test tests/etap4-ui.spec.ts",
     "test:etap5": "playwright test tests/etap5-ui.spec.ts",
-    "size": "node scripts/bundle-size.mjs dist"
+    "size": "node scripts/bundle-size.mjs dist",
+    "test:etap6": "playwright test tests/etap6-ui.spec.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.1",
