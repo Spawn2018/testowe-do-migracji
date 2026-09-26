@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     // pliki: przyrostowo od ostatniej udanej kopii
     const [last] = await sql`select max(started_at) as at from backup_runs where status = 'OK'`;
     const docs = await sql`select id, storage_path from documents
-                           where storage_path not in ('', '-')
+                           where storage_path not in ('', '-') and archived_at is null   -- PR7: plik już w archiwum R2
                              and uploaded_at > coalesce(${last?.at ?? null}::timestamptz, 'epoch')`;
     const files: { key: string; document_id: string; bytes: number }[] = [];
     for (const d of docs) {

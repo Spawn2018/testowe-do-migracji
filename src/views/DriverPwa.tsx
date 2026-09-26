@@ -7,6 +7,7 @@ import type { Document } from '../types';
 import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
 import { attachDocumentFile } from '../lib/docFiles';
+import { compressImage, isPdfTooBig } from '../lib/imageCompress';
 import {
   driverLocaleFrom, fixFromPosition, readDriverConsent, shouldSendFix, watchDriverPosition, writeDriverConsent,
   type DriverConsent, type DriverFix,
@@ -247,8 +248,15 @@ export function DriverPwa() {
             setBusy(true);
             if (serverMode) {
               // ANEKS 3 §2.3: kierowca bez sesji → funkcja Edge driver-photo (token sprawdza baza)
-              void uploadDriverFile(SUPABASE_URL, SUPABASE_ANON_KEY, token, loadId, cat, f, f.name)
-                .then(() => setLastFile(`${cat} · ${f.name} (${f.size} B)`))
+              // PR7: PDF ≤ 10 MB, zdjęcie kompresowane w przeglądarce (1600 px, JPEG 0,75).
+              if (isPdfTooBig(f)) {
+                setLastFile(`Błąd: ${t(locale, 'pr7_pdf_too_big').replace('{mb}', (f.size / 1048576).toFixed(1))}`);
+                setBusy(false);
+                return;
+              }
+              void compressImage(f)
+                .then((c) => uploadDriverFile(SUPABASE_URL, SUPABASE_ANON_KEY, token, loadId, cat, c, c.name).then(() => c))
+                .then((c) => setLastFile(`${cat} · ${c.name} (${c.size} B)`))
                 .catch((err: unknown) => setLastFile(`Błąd: ${err instanceof Error ? err.message : String(err)}`))
                 .finally(() => setBusy(false));
               return;
