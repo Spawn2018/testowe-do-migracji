@@ -29,6 +29,8 @@ sys "insert into loads (id, project_id, order_no) values ('$L3','$P','KSH/3')"
 
 echo; echo "[1] Koszyki"
 val "trzy koszyki prywatne"                        $HHL "select count(*) from storage.buckets where id in ('dokumenty','zdjecia','faktury') and not public" 3
+val "W4: limit zdjecia 2 MB"                         $HHL "select file_size_limit from storage.buckets where id='zdjecia'" 2097152
+val "W4: limit dokumenty 10 MB"                      $HHL "select file_size_limit from storage.buckets where id='dokumenty'" 10485760
 
 echo; echo "[2] Rejestracja dokumentu i ścieżka nadawana przez serwer"
 val "SCX rejestruje CMR swojego transportu → koszyk dokumenty" $SCX "select bucket from create_document('$L1','CMR','cmr ąę.pdf','application/pdf',1000)" dokumenty

@@ -95,3 +95,9 @@ kopii** (R2 nieskonfigurowane → brak fałszywych alarmów; po włączeniu R2 i
 Alarm: ryzyko `JOB_FAILURE` HIGH (widzi tylko HHL), jeden na incydent, zamykane po powrocie udanych przebiegów;
 e-mail przez pg_net → Resend (Vault: `resend_api_key`, `mail_from`, `alert_email_to`) — niezależny od funkcji Edge.
 Funkcje bez EXECUTE dla ról API. Test: `tests/db/watchdog.sh` (19), produkcja — transakcja wycofana.
+
+## 8. Widoczność wiadomości i pozycji harmonogramu (W3, 0037) oraz limity zasobników (W4, 0038)
+`msgs_read`: HHL albo (rodzaj firmy w `visible_to` **i** transport widoczny przez RLS `loads`).
+`items_read`: HHL; klient — pozycje projektów, których jest klientem (także bez transportu); przewoźnik — tylko pozycje
+na swoich transportach (pozycji bez transportu nie widzi). Zasobniki: `zdjecia` 2 MB, `dokumenty` 10 MB, `faktury` 20 MB
+(bez zmian — do decyzji właściciela, reguła PDF 10 MB dotyczy też faktur).
