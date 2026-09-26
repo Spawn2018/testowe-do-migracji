@@ -1,6 +1,16 @@
 # Przełączenie hostingu — Vercel ↔ Cloudflare Pages (ANEKS 4 PR8)
 
-**Stan:** przygotowane, niewdrożone (Vercel i Cloudflare czekają na właściciela; bez wdrożeń w tej pracy).
+**Stan (27.09.2026):** Worker `tower-keep-alive` wdrożony (Cloudflare, cron co 6 h). Cloudflare Pages **czeka na jedno działanie właściciela**: autoryzację aplikacji GitHub „Cloudflare Workers and Pages” dla repo `Spawn2018/testowe-do-migracji` (integracji Git nie da się podłączyć z wiersza poleceń; projekt „direct upload” nie daje się potem przepiąć na Git, więc nie został założony).
+
+### Kroki właściciela — Cloudflare Pages z integracją Git (ok. 5 min)
+1. https://dash.cloudflare.com → konto właściciela → **Workers & Pages** → **Create** → zakładka **Pages** → **Import an existing Git repository** → **Get started**.
+2. **Connect GitHub** → na stronie GitHub: **Only select repositories** → wybrać `Spawn2018/testowe-do-migracji` → **Install & Authorize**.
+3. Z powrotem w Cloudflare: wybrać repo → **Begin setup**:
+   - Project name: `tower-hhl` · Production branch: `main` · Framework preset: `None`
+   - Build command: `npm run build` · Build output directory: `dist`
+   - Environment variables (Production): `NODE_VERSION=22`, `VITE_AUTH_MODE=supabase`, `VITE_SUPABASE_URL=https://nglnnrmzmhusvxslousq.supabase.co`, `VITE_SUPABASE_ANON_KEY=<klucz anon>` — **nic więcej, nigdy klucza serwisowego**.
+4. **Save and Deploy**. Od tej chwili każdy push do `main` buduje nową wersję; gałęzie inne niż `main` (podglądy) budują się zawsze w trybie demo (`build/authMode.ts`, `CF_PAGES_BRANCH`).
+5. Supabase → Authentication → URL Configuration → Redirect URLs: dodać `https://tower-hhl.pages.dev/**`.
 
 ## Dlaczego przełączenie jest proste (4.3a)
 - Aplikacja to **build statyczny** (`dist/`): HTML + JS + CSS. Brak funkcji Vercel, brak `api/`, `functions/`, middleware (test `tests/hosting-switch.test.ts`).

@@ -16,4 +16,8 @@ describe('A5-PODGLADY: tryb logowania w buildzie Vercel', () => {
     expect(resolveAuthMode({ VITE_AUTH_MODE: 'supabase' })).toBe('supabase')
     expect(resolveAuthMode({})).toBeUndefined()
   })
+  it('PR8: Cloudflare Pages — podgląd (gałąź ≠ main) → demo, main → tryb z konfiguracji', () => {
+    expect(resolveAuthMode({ CF_PAGES: '1', CF_PAGES_BRANCH: 'feature/x', VITE_AUTH_MODE: 'supabase' })).toBe('demo')
+    expect(resolveAuthMode({ CF_PAGES: '1', CF_PAGES_BRANCH: 'main', VITE_AUTH_MODE: 'supabase' })).toBe('supabase')
+  })
 })
