@@ -153,6 +153,13 @@ try {
     const nk = await sb.KSH.from('notifications').select('user_id');
     check('M5 KSH widzi wyłącznie własne powiadomienia', !nk.error && nk.data.every((r) => r.user_id === uidK), nk.error?.message);
   }
+  // ---------- 0013: luki RLS od 0001 ----------
+  for (const t of ['geofence_states', 'load_permits', 'schedule_imports', 'workflow_runs']) {
+    const r = await anon.from(t).select('*').limit(1);
+    check(`RLS 0013: anon nie czyta ${t}`, Boolean(r.error), r.error ? '' : `rows=${r.data?.length}`);
+  }
+  const si = await sb.SCX.from('schedule_imports').select('id');
+  check('RLS 0013: SCX nie widzi historii importów', !si.error && si.data.length === 0, si.error?.message);
   //@@NEXT@@
 } finally {
   await cleanup();

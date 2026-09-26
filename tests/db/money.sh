@@ -99,6 +99,17 @@ err "zalogowany nie wstawi powiadomienia"                  $SCX "insert into not
 val "uzupełnienie numeru HHL zamyka ryzyko HHL"            $HHL "update loads set hhl_order_no='HHL/T/3' where id='$L3'; select string_agg(detail->>'side', ',') from risk_signals where load_id='$L3' and resolved_at is null" "CARRIER" commit
 val "uzupełnienie numeru przewoźnika zamyka ryzyko"        $SCX "update loads set carrier_order_no='SCX/T/3' where id='$L3'; select count(*) from risk_signals where load_id='$L3' and resolved_at is null" 0 commit
 
+echo; echo "[RLS 0013] Luki od 0001: geofence_states, load_permits, schedule_imports, workflow_runs"
+sys "insert into schedule_imports (project_id, version, source, column_map, stats) values ('$P', 999, 'UPLOAD', '{}'::jsonb, '{}'::jsonb)"
+for t in geofence_states load_permits schedule_imports workflow_runs; do
+  ROLE=anon err "anon nie czyta $t" $SCX "select count(*) from $t" "permission denied"
+done
+val "SCX nie widzi historii importów"                 $SCX "select count(*) from schedule_imports" 0
+val "HHL widzi historię importów"                     $HHL "select count(*) > 0 from schedule_imports" t
+err "SCX nie wstawi przebiegu reguły"                 $SCX "insert into workflow_runs (workflow_id, status) values (gen_random_uuid(), 'OK')" "permission denied|row-level security"
+err "SCX nie zmieni stanu strefy"                     $SCX "update geofence_states set consec_fixes = 99" "permission denied"
+err "KSH nie powiąże zezwolenia"                      $KSH "insert into load_permits (load_id, permit_id) values ('$L1', gen_random_uuid())" "row-level security|permission denied|violates"
+
 #@@NEXT@@
 
 echo

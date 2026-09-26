@@ -15,7 +15,7 @@ Do czasu włączenia bramą jest hak `pre-push` (`git config core.hooksPath .git
 | D-EUR-T | `npm run test:deur` | EUR=0 / PLN=0 |
 | Etap 4 UI | `npm run test:etap4` | ścieżki interfejsu Etapu 4 na DemoProvider (M5: 3/3) |
 | stylelint | `npm run lint:css` | 0 błędów |
-| baza | `bash tests/db/gate.sh` | security **52/52** · status **44/44** · storage **33/33** · money **50/50** (Etap 4) |
+| baza | `bash tests/db/gate.sh` | security **52/52** · status **44/44** · storage **33/33** · money **59/59** (Etap 4) |
 
 Krok bazy działa, gdy lokalny Postgres (z PostGIS) odpowiada pod `PGADMIN`
 (domyślnie `postgres://postgres@localhost:5433/postgres`). Brak bazy = ostrzeżenie
