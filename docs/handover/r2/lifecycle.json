@@ -1,0 +1,10 @@
+{
+  "rules": [
+    { "id": "Default Multipart Abort Rule", "enabled": true, "conditions": { "prefix": "" },
+      "abortMultipartUploadsTransition": { "condition": { "type": "Age", "maxAge": 604800 } } },
+    { "id": "tower-daily-expire-31d", "enabled": true, "conditions": { "prefix": "daily/" },
+      "deleteObjectsTransition": { "condition": { "type": "Age", "maxAge": 2678400 } } },
+    { "id": "tower-monthly-expire-361d", "enabled": true, "conditions": { "prefix": "monthly/" },
+      "deleteObjectsTransition": { "condition": { "type": "Age", "maxAge": 31190400 } } }
+  ]
+}

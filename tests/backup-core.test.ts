@@ -69,3 +69,20 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
     }
   });
 });
+
+describe('PR2 — zapis przez Worker (tylko dopisywanie)', async () => {
+  const { writerClient, rerunPrefix } = await import('../supabase/functions/_shared/backup/core');
+  const calls: { url: string; init: RequestInit }[] = [];
+  const fake = (status: number) => (async (url: string, init: RequestInit) => { calls.push({ url, init }); return new Response('', { status }); }) as unknown as typeof fetch;
+  it('PUT z nagłówkiem sekretu; 201 → CREATED, 409 → EXISTS, inny → błąd', async () => {
+    expect(await writerClient('https://w.example/', 's3cret', fake(201))('daily/2026-09-27/a b.csv.gz.age', new Uint8Array([1]))).toBe('CREATED');
+    expect(calls[0].url).toBe('https://w.example/daily/2026-09-27/a%20b.csv.gz.age');
+    expect(calls[0].init.method).toBe('PUT');
+    expect((calls[0].init.headers as Record<string, string>)['x-backup-secret']).toBe('s3cret');
+    expect(await writerClient('https://w.example', 's', fake(409))('daily/x', new Uint8Array())).toBe('EXISTS');
+    await expect(writerClient('https://w.example', 's', fake(401))('daily/x', new Uint8Array())).rejects.toThrow(/401/);
+  });
+  it('ponowny przebieg → katalog z godziną UTC', () => {
+    expect(rerunPrefix('daily/2026-09-27/', new Date('2026-09-27T01:02:03Z'))).toBe('daily/2026-09-27-010203/');
+  });
+});

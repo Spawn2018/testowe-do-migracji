@@ -1,0 +1,11 @@
+# TOWER PR2 — Worker tylko do dopisywania kopii do R2 (wiązanie, bez klucza R2 i bez S3).
+name = "tower-backup-writer"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "tower-backup"
+
+# Sekret: BACKUP_WRITER_SECRET (wrangler secret put) — ten sam w sekretach funkcji Supabase backup-export.

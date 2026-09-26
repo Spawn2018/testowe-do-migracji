@@ -76,3 +76,23 @@ export function manifest(prefix: string, recipient: string, tables: Record<strin
     note: 'CSV (nagłówek) → gzip → age X25519. Odtworzenie: scripts/restore.sh. Utrata danych w najgorszym razie: do 24 h.',
   };
 }
+
+/**
+ * PR2 (27.09) — zapis przez Worker tower-backup-writer (wiązanie R2, tylko dopisywanie): PUT + X-Backup-Secret.
+ * 201 → CREATED, 409 → EXISTS (nadpisanie zabronione), inne → błąd. Bez klucza R2, bez S3, bez LIST/DELETE.
+ */
+export type WriterPut = (key: string, body: Uint8Array) => Promise<'CREATED' | 'EXISTS'>;
+export function writerClient(url: string, secret: string, fetchFn: typeof fetch = fetch): WriterPut {
+  const base = url.replace(/\/+$/, '');
+  return async (key, body) => {
+    const res = await fetchFn(`${base}/${key.split('/').map(encodeURIComponent).join('/')}`, {
+      method: 'PUT', body, headers: { 'x-backup-secret': secret, 'content-type': 'application/octet-stream' },
+    });
+    if (res.status === 201) return 'CREATED';
+    if (res.status === 409) return 'EXISTS';
+    throw new Error(`Worker PUT ${key}: ${res.status} ${(await res.text()).slice(0, 200)}`);
+  };
+}
+
+/** Drugi przebieg tego samego dnia/miesiąca (klucze już są, nadpisanie zabronione) → osobny katalog z godziną UTC. */
+export const rerunPrefix = (prefix: string, d: Date) => `${prefix.replace(/\/$/, '')}-${d.toISOString().slice(11, 19).replace(/:/g, '')}/`;

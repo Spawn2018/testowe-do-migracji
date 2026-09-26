@@ -1,7 +1,23 @@
 {
-  "_opis": "TOWER 3b — reguły blokady kubełka R2 (Bucket Locks). Zastosować: wrangler r2 bucket lock set <kubelek> --file docs/handover/r2/bucket-lock.json (lub API PUT /accounts/{id}/r2/buckets/{kubelek}/lock). Blokada < retencji w kodzie, żeby backup-export mógł usuwać stare kopie.",
+  "_opis": "TOWER PR2 — blokada usuwania (Bucket Locks) zasobnika tower-backup: daily/ 30 dni, monthly/ 360 dni od zapisu. Zastosowano 27.09.2026: wrangler r2 bucket lock set tower-backup --file docs/handover/r2/bucket-lock.json. Usuwanie po retencji wyłącznie regułami cyklu życia R2 (docs/handover/r2/lifecycle.json: daily 31 dni, monthly 361 dni) — backup-export ma tylko dopisywanie przez Worker (bez DELETE/LIST).",
   "rules": [
-    { "id": "tower-daily-30d", "enabled": true, "prefix": "daily/", "condition": { "type": "Age", "maxAgeSeconds": 2592000 } },
-    { "id": "tower-monthly-360d", "enabled": true, "prefix": "monthly/", "condition": { "type": "Age", "maxAgeSeconds": 31104000 } }
+    {
+      "id": "tower-daily-30d",
+      "enabled": true,
+      "prefix": "daily/",
+      "condition": {
+        "type": "Age",
+        "maxAgeSeconds": 2592000
+      }
+    },
+    {
+      "id": "tower-monthly-360d",
+      "enabled": true,
+      "prefix": "monthly/",
+      "condition": {
+        "type": "Age",
+        "maxAgeSeconds": 31104000
+      }
+    }
   ]
 }
