@@ -75,15 +75,13 @@ export function DashboardView() {
       ) : role === 'KSH' ? (
         <div className="banner">
           <span data-content>
-            <b>Dostawa 26.09 o 11:30.</b> Dzwig i ekipa potrzebne przez 3 h. Transport R-03
-            przekracza okno o 1 h 35 min — nowa propozycja godziny czeka na potwierdzenie.
+            <b>{t(locale, 'an5_banner_ksh_title')}</b> {t(locale, 'an5_banner_ksh_body')}
           </span>
         </div>
       ) : (
         <div className="banner">
           <span data-content>
-            <b>7 pol bez uzupelnienia.</b> Trzy transporty z zaladunkiem w ciagu 48 h nie maja
-            zezwolenia. Lista w zakladce Moje zadania.
+            <b>{t(locale, 'an5_banner_scx_title')}</b> {t(locale, 'an5_banner_scx_body')}
           </span>
         </div>
       )}
