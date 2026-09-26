@@ -9,6 +9,7 @@ import {
 import { dryRunFromXlsx, type ImportDiff } from '../src/lib/scheduleDryRun';
 import { readXlsxRows } from '../src/lib/xlsxRead';
 import { useTowerStore } from '../src/store/useTowerStore';
+import { buildDemoSnapshot } from '../src/data/demoProvider';
 import type { Load } from '../src/types';
 
 /** Known non-empty schedule. SG-01 and neighbours — the P9 wipe was 72→1. */
@@ -460,5 +461,78 @@ describe('D26 — usunięcia wyłącznie za wyraźną zgodą', () => {
     const rows = before.map((l) => ({ ...freshRow(l.code), itemType: l.itemType }));
     const diff = await dryRunFromXlsx(await buildScheduleXlsx(rows), 'full.xlsx', before);
     expect(diff.removalCandidates).toEqual([]);
+  });
+});
+
+describe('D23-S — import na realnej skali (72 transporty, jak w usterce historycznej 72→1)', () => {
+  /* 72 transporty demo (loads.json ma 62 + seed) — ta sama skala co usterka historyczna */
+  const all = () => structuredClone(buildDemoSnapshot().loads);
+  const pl = (n: number) => String(n).replace('.', ',');
+  const dmy = (iso: string) => { const [y, m, d] = iso.slice(0, 10).split('-'); return `${d}.${m}.${y}`; };
+  const rowOf = (l: Load, patch: Partial<ScheduleCells> = {}): ScheduleCells => ({
+    shipmentCode: l.code, itemType: l.itemType,
+    dimensions: `${pl(l.dims.lengthM)} x ${pl(l.dims.widthM)} x ${pl(l.dims.heightM)}`,
+    qty: String(l.qty), totalWeight: pl(l.dims.weightT),
+    loadDate: dmy(l.plannedLoadDate), deliveryDate: dmy(l.plannedDeliverDate), ...patch,
+  });
+
+  beforeEach(() => { installLoads(all()); });
+
+  it('ten sam harmonogram 72 wierszy: 0 dodanych, 0 zmian, 0 kandydatów do usunięcia, nic nie znika', async () => {
+    const before = useTowerStore.getState().loads;
+    expect(before).toHaveLength(72);
+    const diff = await dryRunFromXlsx(await buildScheduleXlsx(before.map((l) => rowOf(l))), 'full-72.xlsx', before);
+    expect(diff.total).toBe(72);
+    expect(diff.accepted).toBe(72);
+    expect(diff.added).toHaveLength(0);
+    expect(diff.changed).toHaveLength(0);
+    expect(diff.removalCandidates).toHaveLength(0);
+    commitDryRun(diff);
+    assertExistingSurvive(before, useTowerStore.getState().loads);
+    expect(useTowerStore.getState().loads).toHaveLength(72);
+  });
+
+  it('74 wiersze (72 + 2 nowe, 3 zmiany dat, 1 wiersz błędny): +2, ~3, odrzucony 1, 74 transporty po imporcie', async () => {
+    const before = useTowerStore.getState().loads;
+    const rows = before.map((l, i) => (i < 3 ? rowOf(l, { deliveryDate: '28.10.2026' }) : rowOf(l)));
+    rows.push(freshRow('QA-D23S-01'), freshRow('QA-D23S-02'), { shipmentCode: 'QA-D23S-BAD', dimensions: 'nope', qty: '1', totalWeight: '1' });
+    const diff = await dryRunFromXlsx(await buildScheduleXlsx(rows), 'scale-75.xlsx', before);
+    expect(diff.total).toBe(75);
+    expect(diff.rejected).toBe(1);
+    expect(diff.added.map((a) => a.code)).toEqual(['QA-D23S-01', 'QA-D23S-02']);
+    expect(diff.changed).toHaveLength(3);
+    expect(diff.removalCandidates).toHaveLength(0);
+    commitDryRun(diff);
+    const after = useTowerStore.getState().loads;
+    assertExistingSurvive(before, after);
+    expect(after).toHaveLength(74);
+    for (const l of before.slice(0, 3)) expect(after.find((x) => x.id === l.id)?.plannedDeliverDate).toBe('2026-10-28');
+    expect(useTowerStore.getState().scheduleVersions[0]).toMatchObject({ added: 2, changed: 3, removed: 0, rejected: 1 });
+  });
+
+  it('71 z 72 wierszy: 1 kandydat do usunięcia; bez zgody zostaje 72, ze zgodą znika wyłącznie ten jeden', async () => {
+    const before = useTowerStore.getState().loads;
+    const gone = before[40];
+    const diff = await dryRunFromXlsx(await buildScheduleXlsx(before.filter((l) => l.id !== gone.id).map((l) => rowOf(l))), 'scale-71.xlsx', before);
+    expect(diff.removalCandidates).toEqual([{ id: gone.id, code: gone.code }]);
+    expect(diff.removedIds).toEqual([]);
+    commitDryRun(diff);
+    expect(useTowerStore.getState().loads).toHaveLength(72);
+    installLoads(all());
+    const again = useTowerStore.getState().loads;
+    const d2 = await dryRunFromXlsx(await buildScheduleXlsx(again.filter((l) => l.id !== gone.id).map((l) => rowOf(l))), 'scale-71-allow.xlsx', again);
+    commitDryRun(d2, { removedIds: d2.removalCandidates.map((c) => c.id), allowRemovals: true });
+    const after = useTowerStore.getState().loads;
+    expect(after).toHaveLength(71);
+    expect(after.some((l) => l.id === gone.id)).toBe(false);
+  });
+
+  it('72 wiersze, wszystkie błędne (zła kolumna wymiarów): 0 zaakceptowanych → baza nietknięta, 0 kandydatów', async () => {
+    const before = useTowerStore.getState().loads;
+    const diff = await dryRunFromXlsx(await buildScheduleXlsx(before.map((l) => rowOf(l, { dimensions: 'brak' }))), 'scale-bad.xlsx', before);
+    expect(diff.accepted).toBe(0);
+    expect(diff.removalCandidates).toEqual([]);
+    commitDryRun(diff, { removedIds: before.map((l) => l.id), allowRemovals: true });
+    expect(useTowerStore.getState().loads).toBe(before);
   });
 });
