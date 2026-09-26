@@ -1320,3 +1320,103 @@ u właściciela.
 
 Lista kontrolna: dochodzą **A5-SPRZATANIE · A5-BK5-LOKALNIE · A5-PODGLADY ·
 A5-SESJA-ROK · A5-KLUCZ**.
+
+---
+
+# ANEKS 6
+
+> Polecenie właściciela z 26.09.2026 21:09 — pełny tekst, zapisany dosłownie.
+
+# ANEKS 6 — TŁUMACZENIA — CZEGO D19-T NIE WIDZI
+
+> A, B, faktury, retencja i wzorzec — przyjęte. Koordynator sprawdził
+> na produkcji zadania `tower-wygasanie-zaproszen` (04:40) i
+> `tower-retencja-przebiegow` (04:50). Wyjaśnienie hasła (B) — przyjęte.
+> Odstępstwo w commicie `docs(ZAPR-LOGIN)` — przyjęte; **historii nie
+> przepisuj, nic nie wypychaj z `--force`**.
+
+Zrzut, który przysłałeś — **nowy wzorzec, widok HHL, język EN** — ma
+na ekranie kilkanaście tekstów po polsku. Są trzy różne przyczyny.
+
+---
+
+## T1 — WYSOKA: baza tworzy ryzyka po polsku
+
+Sprawdzone na produkcji: `risk_signals` ma tylko `title text` — gotowy
+tekst, bez klucza tłumaczenia. Funkcje wpisują tam po polsku:
+- `detect_silent_vehicles`: „Brak pozycji pojazdu %s od %s min"
+- `detect_sequence_risk`: „Rozjazd kolejności montażu: %s (poz. %s)…"
+- `detect_missing_order_numbers`: „…brak numeru zlecenia HHL"
+- `job_watchdog` i pozostałe
+
+Ryzyko ciszy GPS ma odbiorców `HHL_PRZEWOZNIK`. **Szwedzki dyspozytor
+Scandinavian Express w widoku SV dostanie je po polsku** — a to komunikat,
+na który ma zareagować.
+
+**Poprawka:**
+- `risk_signals`: nowa kolumna `title_key text`; parametry w
+  `detail->'params'`
+- **każda** funkcja tworząca ryzyko — w bazie i w funkcjach Edge — zapisuje
+  klucz i parametry; `title` zostaje jako tekst polski dla dziennika
+- interfejs wyświetla `title_key` ze słownika PL/EN/SV z podstawieniem
+  parametrów
+- **to samo dla e-maili** z `send-notifications`: język według
+  `app_users.locale` odbiorcy, nie według nadawcy
+- **baner promowy** na kokpicie („Rejs 24.09 zagrożony…") — ten sam
+  mechanizm
+- **dane demonstracyjne** — ryzyka też z kluczami, żeby wzorzec EN/SV
+  pokazywał tłumaczenia
+
+**Testy:**
+- statyczny: każdy klucz użyty w migracjach i funkcjach Edge istnieje
+  w słownikach PL, EN i SV
+- bazy: każda funkcja tworząca ryzyko zapisuje niepusty `title_key`
+- przewoźnik w SV widzi ryzyko ciszy GPS po szwedzku
+
+**Przed zaproszeniem przewoźnika** — to jego pierwszy kontakt z systemem.
+
+---
+
+## T2 — ŚREDNIA: napisy wpisane na sztywno, których nie ma w słowniku
+
+Na tym samym zrzucie, w widoku EN:
+„Czas wykrycia odchylenia", „mediana, ostatnie 30 dni",
+„7 dostarczonych, 29 w przygotowaniu", „10 dostaw poza oknem",
+„projekt Stegra Boden", „Odpowiada:", „przyczyna:", „źródło:", „koszt".
+
+**Dlaczego D19-T ich nie złapał — dwie ślepe plamki naraz:**
+1. rozszerzony D19-T porównuje z **wartościami słownika PL** — napis,
+   którego nigdy nie dodano do słownika, przechodzi
+2. żaden z nich nie ma polskiej litery — test polskich znaków też przechodzi
+
+**Poprawka testu — pseudo-lokalizacja:** język testowy, w którym każda
+wartość słownika jest opakowana znacznikami, np. `⟦Loads in transit⟧`.
+Test renderuje wszystkie widoki w tym języku; **każdy widoczny tekst
+bez znaczników = napis poza słownikiem = test czerwony.** Lista wyjątków
+tylko dla danych: identyfikatory (SG-32), nazwy statków, liczby, daty.
+To łapie napisy na sztywno niezależnie od słownika i od liter.
+
+Podaj, ile znalazł; przenieś wszystkie do słownika.
+
+---
+
+## T3 — NISKA: format liczb według języka
+
+Widok EN: „15,7% · koszt PLN 2,429,297.29" — procent z polskim przecinkiem
+obok kwoty w formacie angielskim. Wszystkie liczby, procenty i daty przez
+`Intl.NumberFormat` / `Intl.DateTimeFormat` z **aktywnym językiem** —
+EN: 15.7%, PL: 15,7%, SV: 15,7 %.
+
+---
+
+## Wzorzec po T1–T3
+
+Jeden przebieg 840. **Kryterium:**
+- EN i SV: zmiany tylko w miejscach tekstów z T1–T3
+- **PL: 0 zmian.** Klucze w PL muszą dać dokładnie ten sam tekst co dziś.
+  Każda zmiana w PL — STOP
+
+---
+
+Kolejność: **T1 przed zaproszeniem przewoźnika**, T2 i T3 przed
+wydaniem 1.0. R2 i przekazanie klucza — bez zmian, czekają na właściciela.
