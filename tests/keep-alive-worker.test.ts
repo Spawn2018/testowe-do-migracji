@@ -36,3 +36,15 @@ describe('ANEKS 4 PR1 — Worker podtrzymania', () => {
     expect(r2.detail).toContain('nieświeży');
   });
 });
+
+describe('odp. właściciela §3c — klucz service_role nigdy poza Supabase', () => {
+  it('Worker, aplikacja (src) i konfiguracja hostingu nie odwołują się do service_role', async () => {
+    const { readdirSync, readFileSync, statSync, existsSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const walk = (d: string): string[] => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
+    const files = [...walk('workers'), ...walk('src'), ...['vercel.json', 'wrangler.toml'].filter((f) => existsSync(f))];
+    const hits = files.filter((f) => /service[_-]?role/i.test(readFileSync(f, 'utf8')));
+    expect(hits).toEqual([]);
+    expect(readFileSync('workers/keep-alive/src/core.ts', 'utf8')).toContain('SUPABASE_ANON_KEY');
+  });
+});
