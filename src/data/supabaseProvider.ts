@@ -137,8 +137,22 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     switch (m.type) {
       case 'load.status': {
         const db = statusToDb(m.status);
-        if (db) await updateLoad(m.loadId, { status: db }, 'status');
+        if (!db) return;
+        // STATUSY_AUTOMATYCZNE §3.3 — UNLOADED wyłącznie razem z datą rozładunku (jedna zmiana)
+        const patch: Record<string, unknown> = db === 'UNLOADED'
+          ? { status: db, actual_delivery_at: m.unloadedAt ?? new Date().toISOString() }
+          : { status: db };
+        await updateLoad(m.loadId, patch, 'status');
         return;
+      }
+      case 'position.report': {
+        const r = await sb.rpc('report_position', {
+          p_load_id: m.loadId, p_lat: m.lat, p_lon: m.lng, p_ts: m.at,
+          p_accuracy: m.accuracy, p_speed: m.speedKmh, p_heading: m.heading,
+        });
+        if (r.error) throw new Error(`pozycja: ${r.error.message}`);
+        // liczba zdarzeń stref — >0 oznacza możliwą zmianę statusu (most odświeża dane)
+        return { id: String(Array.isArray(r.data) ? r.data.length : 0) };
       }
       case 'load.resources': return updateLoad(m.loadId, resourcesPatchToDb(m.patch), 'zasoby');
       case 'load.awizacja': return updateLoad(m.loadId, awizacjaPatchToDb(m.patch), 'awizacja');

@@ -58,6 +58,7 @@ import { orderEditDeniedMessage, orderGateMessage, orderNoReminders, orderNoRisk
 import { t } from '../i18n/messages';
 import { localDateOf } from '../lib/money/engine';
 import { withMoneyV2 } from '../lib/money/loadMoney';
+import { milestoneAction, type DriverFix } from '../lib/driverTracking';
 import { billDueDate, billParties, billPaymentToday, canMarkPaid, canRegisterBill, canVerifyBill, checkBill, verifyError, type BillDraft } from '../lib/invoices3';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
@@ -318,6 +319,8 @@ interface TowerState {
 
   driverMilestone: (token: string, milestone: 'LOADED' | 'ON_FERRY' | 'UNLOADED' | 'PROBLEM') => void;
   driverSharePosition: (token: string) => void;
+  /** M9 — pozycja ciągła (watchPosition, za zgodą) → report_position() */
+  driverReportFix: (token: string, fix: DriverFix) => void;
 
   initTheme: () => void;
 }
@@ -685,6 +688,7 @@ export const useTowerStore = create<TowerState>()(
         const progress = PROGRESS_OF[status];
         const pos = positionAlong(progress);
         const at = nowIso();
+        const unloading = status === 'UNLOADING';
         set((s) => ({
           loads: s.loads.map((l) => {
             if (l.id !== loadId) return l;
@@ -698,11 +702,15 @@ export const useTowerStore = create<TowerState>()(
               heading: pos.heading,
               delayed: status === 'DELAYED',
               silentMinutes: status === 'SILENT' ? l.silentMinutes ?? 100 : l.silentMinutes,
+              /* M9 — rozładunek zawsze z datą (data realizacji usługi: paliwo, kurs NBP, tydzień faktury) */
+              ...(unloading ? { unloadedAt: at } : {}),
             };
-            return applyEtaToLoad(next, at);
+            const withEta = applyEtaToLoad(next, at);
+            /* demo: poziom REALIZACJA i kurs z dnia rozładunku od razu; Supabase — migawka liczona w bazie */
+            return unloading && !SUPABASE_AUTH_ENABLED ? withMoneyV2(withEta, localDateOf(at)) : withEta;
           }),
         }));
-        writeThrough({ type: 'load.status', loadId, status });
+        writeThrough(unloading ? { type: 'load.status', loadId, status, unloadedAt: at } : { type: 'load.status', loadId, status });
         get().appendEvent({ loadId, type: `STATUS_${status}`, at, actor, note });
         if (status === 'UNLOADING' || note?.includes('UNLOADED')) {
           get().pushNotification({
@@ -1411,15 +1419,25 @@ export const useTowerStore = create<TowerState>()(
           get().pushToast(`Nieznany token kierowcy: ${token}`, 'HIGH');
           return;
         }
-        const map: Record<typeof milestone, LoadStatus> = {
-          LOADED: 'LOADING',
-          ON_FERRY: 'ON_FERRY',
-          UNLOADED: 'UNLOADING',
-          PROBLEM: 'DELAYED',
-        };
-        const status = map[milestone];
-        get().setLoadStatus(loadId, status, 'driver-pwa', `Milestone ${milestone}`);
+        /* M9 — STATUSY_AUTOMATYCZNE §6: „Załadowany” = MILESTONE_LOADED (bez zmiany statusu),
+           „Rozładowany” = UNLOADED razem z datą; PROM ustawia wyłącznie zadanie systemowe rejsu */
+        const act = milestoneAction(milestone);
+        if (act.event) get().appendEvent({ loadId, type: act.event, at: nowIso(), actor: 'driver-pwa', note: `Kierowca: ${milestone}` });
+        if (act.status) get().setLoadStatus(loadId, act.status, 'driver-pwa', `Milestone ${milestone}`);
         get().pushToast(`Kierowca: ${milestone} → ${loadId}`, 'MEDIUM', loadId);
+      },
+
+      driverReportFix: (token, fix) => {
+        const loadId = DRIVER_TOKENS[token];
+        if (!loadId) return;
+        const first = !get().events.some((e) => e.loadId === loadId && e.type === 'POSITION_SHARED' && e.actor === 'driver-pwa');
+        set((s) => ({ loads: s.loads.map((l) => (l.id === loadId ? { ...l, lat: fix.lat, lng: fix.lng, silentMinutes: 0 } : l)) }));
+        writeThrough({ type: 'position.report', loadId, lat: fix.lat, lng: fix.lng, at: fix.at, accuracy: fix.accuracy, speedKmh: fix.speedKmh, heading: fix.heading });
+        /* oś czasu: pierwsza pozycja z aplikacji (kolejne zasilają strefy, nie zaśmiecają historii) */
+        if (first) {
+          const ev = { loadId, type: 'POSITION_SHARED', at: fix.at, actor: 'driver-pwa', note: `GPS ${fix.lat.toFixed(5)}, ${fix.lng.toFixed(5)}`, payload: { lat: fix.lat, lng: fix.lng, accuracy: fix.accuracy, source: 'navigator.geolocation' } };
+          set((s) => ({ events: [{ ...ev, id: uid('ev') }, ...s.events] }));
+        }
       },
 
       driverSharePosition: (token) => {
@@ -1429,60 +1447,28 @@ export const useTowerStore = create<TowerState>()(
           return;
         }
         if (typeof navigator === 'undefined' || !navigator.geolocation) {
-          get().appendEvent({
-            loadId,
-            type: 'POSITION_SHARE_DENIED',
-            at: nowIso(),
-            actor: 'driver-pwa',
-            note: 'navigator.geolocation niedostępne',
-          });
+          get().appendEvent({ loadId, type: 'POSITION_SHARE_DENIED', at: nowIso(), actor: 'driver-pwa', note: 'navigator.geolocation niedostępne' });
           get().pushToast('Geolokalizacja niedostępna w tej przeglądarce', 'HIGH', loadId);
           return;
         }
         navigator.geolocation.getCurrentPosition(
           (pos) => {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            const at = nowIso();
-            set((s) => ({
-              loads: s.loads.map((l) => (l.id === loadId ? { ...l, lat, lng } : l)),
-            }));
-            get().appendEvent({
-              loadId,
-              type: 'POSITION_SHARED',
-              at,
-              actor: 'driver-pwa',
-              note: `GPS ${lat.toFixed(5)}, ${lng.toFixed(5)}`,
-              payload: {
-                lat,
-                lng,
-                accuracy: pos.coords.accuracy,
-                source: 'navigator.geolocation',
-              },
+            const c = pos.coords;
+            get().driverReportFix(token, {
+              lat: c.latitude, lng: c.longitude, at: nowIso(),
+              accuracy: Number.isFinite(c.accuracy) ? Math.round(c.accuracy) : null,
+              speedKmh: c.speed != null ? Math.round(c.speed * 3.6) : null,
+              heading: c.heading != null && Number.isFinite(c.heading) ? Math.round(c.heading) : null,
             });
-            get().pushToast(
-              `Pozycja: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-              'MEDIUM',
-              loadId,
-            );
+            get().pushToast(`Pozycja: ${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)}`, 'MEDIUM', loadId);
           },
           (err) => {
             const msg =
-              err.code === 1
-                ? 'Odmowa dostępu do lokalizacji'
-                : err.code === 2
-                  ? 'Pozycja niedostępna'
-                  : err.code === 3
-                    ? 'Timeout geolokalizacji'
+              err.code === 1 ? 'Odmowa dostępu do lokalizacji'
+                : err.code === 2 ? 'Pozycja niedostępna'
+                  : err.code === 3 ? 'Timeout geolokalizacji'
                     : err.message || 'Błąd geolokalizacji';
-            get().appendEvent({
-              loadId,
-              type: 'POSITION_SHARE_DENIED',
-              at: nowIso(),
-              actor: 'driver-pwa',
-              note: msg,
-              payload: { code: err.code, message: err.message },
-            });
+            get().appendEvent({ loadId, type: 'POSITION_SHARE_DENIED', at: nowIso(), actor: 'driver-pwa', note: msg, payload: { code: err.code, message: err.message } });
             get().pushToast(msg, 'HIGH', loadId);
           },
           { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },

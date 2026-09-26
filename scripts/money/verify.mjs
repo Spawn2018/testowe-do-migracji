@@ -286,6 +286,27 @@ try {
       check('M7 opłacona → w dniu terminu przypomnienie nie wychodzi', after.length === rows.length, `${after.length} vs ${rows.length}`);
     }
   }
+  // ---------- M9: pozycje z aplikacji kierowcy (report_position), process_position zamknięty, strefy ----------
+  {
+    const now = new Date().toISOString();
+    const pp = { p_load_id: A.id, p_lat: 52.07391, p_lon: 17.0246, p_ts: now };
+    const a1 = await anon.rpc('process_position', pp);
+    check('M9 anon nie wywoła process_position (usterka domyślnego EXECUTE zamknięta)', Boolean(a1.error), a1.error ? '' : 'wywołanie przeszło');
+    const a2 = await sb.SCX.rpc('process_position', pp);
+    check('M9 zalogowany nie wywoła process_position wprost', Boolean(a2.error), a2.error ? '' : 'wywołanie przeszło');
+    const a3 = await anon.rpc('report_position', pp);
+    check('M9 anon nie wywoła report_position', Boolean(a3.error));
+    const k = await sb.KSH.rpc('report_position', pp);
+    check('M9 KSH nie zgłosi pozycji transportu', Boolean(k.error) && /przewoźnik/.test(k.error.message), k.error?.message);
+    const fut = await sb.SCX.rpc('report_position', { ...pp, p_ts: new Date(Date.now() + 3600e3).toISOString() });
+    check('M9 czas pozycji z przyszłości odrzucony', Boolean(fut.error) && /przyszłości/.test(fut.error.message), fut.error?.message);
+    const weak = await sb.SCX.rpc('report_position', { ...pp, p_accuracy: 400 });
+    check('M9 słaby fix (400 m) — przyjęty bez zapisu i bez stref', !weak.error && Array.isArray(weak.data) && weak.data.length === 0, weak.error?.message);
+    const ev = await sb.KSH.from('load_events').insert({ load_id: A.id, event_type: 'MILESTONE_LOADED', occurred_at: now });
+    check('M9 KSH nie zapisze MILESTONE_LOADED', Boolean(ev.error), ev.error ? '' : 'zapis przeszedł');
+    const gf = (await admin.from('geofences').select('name,kind')).data ?? [];
+    check('M9 strefa załadunku KSH Śrem (LOADING) w danych', gf.some((g) => g.kind === 'LOADING' && g.name === 'KSH Śrem · Grunwaldzka 27C'), JSON.stringify(gf.map((g) => g.kind)));
+  }
   //@@NEXT@@
 } finally {
   await cleanup();

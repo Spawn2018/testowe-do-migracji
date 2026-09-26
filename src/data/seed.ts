@@ -40,7 +40,7 @@ export const USERS: DemoUser[] = [
 
 export const GEOFENCES: Geofence[] = [
   { id: 'gf-01', name: 'KSH Śrem · Grunwaldzka 27C', type: 'LOADING', shape: 'circle', lat: 52.07391, lng: 17.0246, radiusM: 600, hysteresisM: 120, samplesRequired: 2, dwellMin: 10, notifyHhl: true, notifyKsh: true, notifyScx: true, active: true, trigger: 'ENTER' },
-  { id: 'gf-02', name: 'Polferries Gdańsk · Sucharskiego 70', type: 'PORT_OUT', shape: 'circle', lat: 54.382, lng: 18.715, radiusM: 800, hysteresisM: 200, samplesRequired: 2, dwellMin: 15, notifyHhl: true, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
+  { id: 'gf-02', name: 'Polferries Gdańsk · Sucharskiego 70', type: 'PORT_OUT', shape: 'circle', lat: 54.40372, lng: 18.6813, radiusM: 800, hysteresisM: 200, samplesRequired: 2, dwellMin: 15, notifyHhl: true, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
   { id: 'gf-03', name: 'Bufor 20 km · przed portem Gdańsk', type: 'PRE_PORT', shape: 'circle', lat: 54.3, lng: 18.55, radiusM: 20000, hysteresisM: 500, samplesRequired: 1, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
   { id: 'gf-04', name: 'Terminal Nynäshamn', type: 'PORT_IN', shape: 'circle', lat: 58.903, lng: 17.948, radiusM: 900, hysteresisM: 200, samplesRequired: 2, dwellMin: 10, notifyHhl: true, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
   { id: 'gf-05', name: 'E4 checkpoint · Södertälje', type: 'CHECKPOINT', shape: 'circle', lat: 59.195, lng: 17.625, radiusM: 1500, hysteresisM: 300, samplesRequired: 1, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },

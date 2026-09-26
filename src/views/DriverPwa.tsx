@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTowerStore, DRIVER_TOKENS } from '../store/useTowerStore';
 import type { Locale } from '../types';
 import { t } from '../i18n/messages';
@@ -7,6 +7,11 @@ import type { Document } from '../types';
 import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
 import { attachDocumentFile } from '../lib/docFiles';
+import {
+  driverLocaleFrom, fixFromPosition, readDriverConsent, shouldSendFix, watchDriverPosition, writeDriverConsent,
+  type DriverConsent, type DriverFix,
+} from '../lib/driverTracking';
+import { getNowIso } from '../lib/frozenNow';
 
 export function DriverPwa() {
   const { token = 'demo-active' } = useParams();
@@ -14,7 +19,13 @@ export function DriverPwa() {
   const driverSharePosition = useTowerStore((s) => s.driverSharePosition);
   const loads = useTowerStore((s) => s.loads);
   const documents = useTowerStore((s) => s.documents);
-  const [locale, setLocale] = useState<Locale>('pl');
+  const driverReportFix = useTowerStore((s) => s.driverReportFix);
+  /* M9 — język kierowcy z telefonu; zgoda przy pierwszym uruchomieniu na urządzeniu */
+  const [locale, setLocale] = useState<Locale>(() => driverLocaleFrom(typeof navigator === 'undefined' ? null : navigator.language));
+  const [consent, setConsent] = useState<DriverConsent>(() => readDriverConsent());
+  const [lastFix, setLastFix] = useState<DriverFix | null>(null);
+  const [geoError, setGeoError] = useState(false);
+  const sentRef = useRef<DriverFix | null>(null);
   const [lastFile, setLastFile] = useState<string | null>(null);
   const [cat, setCat] = useState<'CMR' | 'POD'>('CMR');
   const [busy, setBusy] = useState(false);
@@ -22,6 +33,30 @@ export function DriverPwa() {
   const camRef = useRef<HTMLInputElement>(null);
 
   const loadId = DRIVER_TOKENS[token];
+
+  /* pozycja ciągła wyłącznie za zgodą i dla przypisanego transportu */
+  useEffect(() => {
+    if (consent !== 'granted' || !loadId) return;
+    return watchDriverPosition(
+      (p) => {
+        const fix = fixFromPosition(p, getNowIso());
+        setLastFix(fix);
+        setGeoError(false);
+        if (shouldSendFix(sentRef.current, fix)) {
+          sentRef.current = fix;
+          driverReportFix(token, fix);
+        }
+      },
+      () => setGeoError(true),
+    );
+  }, [consent, loadId, token, driverReportFix]);
+
+  const decide = (v: 'granted' | 'denied') => {
+    writeDriverConsent(v);
+    setConsent(v);
+    setGeoError(false);
+    if (v === 'denied') setLastFix(null);
+  };
   const load = loadId ? loads.find((l) => l.id === loadId) : undefined;
   const vaultDocs = loadId
     ? documents.filter((d) => d.loadId === loadId && (d.category === 'CMR' || d.category === 'POD') && d.status === 'UPLOADED')
@@ -31,7 +66,7 @@ export function DriverPwa() {
     <div className="driver-pwa">
       <header className="driver-pwa-hd">
         <div className="font-cond" style={{ fontSize: 20, fontWeight: 700 }}>
-          WATCH TOWER · Kierowca
+          WATCH TOWER · {t(locale, 'drv_title')}
         </div>
         <div className="driver-meta">
           {load?.code ?? loadId} · token {token}
@@ -50,14 +85,65 @@ export function DriverPwa() {
             Nieznany token kierowcy — użyj #/driver/demo-active lub demo-sg14
           </div>
         )}
-        <button
-          type="button"
-          className="btn driver-btn-block"
-          style={{ height: 48, fontSize: 15 }}
-          onClick={() => driverSharePosition(token)}
-        >
-          {t(locale, 'share_pos')}
-        </button>
+        {consent === null && loadId ? (
+          <div className="panel" data-driver-consent style={{ margin: 0 }}>
+            <header className="panel-hd">
+              <h2 style={{ fontSize: 16 }}>{t(locale, 'drv_consent_title')}</h2>
+            </header>
+            <div className="panel-bd">
+              <p style={{ margin: '0 0 12px', fontSize: 14, lineHeight: 1.45 }}>{t(locale, 'drv_consent_body')}</p>
+              <div className="driver-btn-row">
+                <button type="button" className="btn driver-btn-grow" data-consent="allow" onClick={() => decide('granted')}>
+                  {t(locale, 'drv_consent_allow')}
+                </button>
+                <button type="button" className="btn ghost driver-btn-grow" data-consent="deny" onClick={() => decide('denied')}>
+                  {t(locale, 'drv_consent_deny')}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+        {consent === 'granted' && loadId ? (
+          <div className="driver-attach-note" data-tracking="on">
+            <b>{t(locale, 'drv_tracking_on')}</b>
+            {' · '}
+            {geoError ? (
+              <span style={{ color: 'var(--wt-crit)' }}>{t(locale, 'drv_tracking_err')}</span>
+            ) : lastFix ? (
+              <span className="mono" data-last-fix>
+                {t(locale, 'drv_tracking_last')} {new Date(lastFix.at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })} · {lastFix.lat.toFixed(4)}, {lastFix.lng.toFixed(4)}
+                {lastFix.accuracy != null ? ` · ${t(locale, 'drv_accuracy')} ${lastFix.accuracy} m` : ''}
+              </span>
+            ) : (
+              <span>{t(locale, 'drv_tracking_waiting')}</span>
+            )}
+            <div style={{ marginTop: 8 }}>
+              <button type="button" className="btn ghost" data-consent="withdraw" onClick={() => decide('denied')}>
+                {t(locale, 'drv_tracking_stop')}
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {consent === 'denied' && loadId ? (
+          <div className="driver-attach-note" data-tracking="off">
+            {t(locale, 'drv_consent_denied')}
+            <div style={{ marginTop: 8 }}>
+              <button type="button" className="btn" data-consent="allow" onClick={() => decide('granted')}>
+                {t(locale, 'drv_consent_change')}
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {consent === 'granted' ? (
+          <button
+            type="button"
+            className="btn driver-btn-block"
+            style={{ height: 48, fontSize: 15 }}
+            onClick={() => driverSharePosition(token)}
+          >
+            {t(locale, 'share_pos')}
+          </button>
+        ) : null}
         {(
           [
             ['LOADED', 'milestone_loaded'],

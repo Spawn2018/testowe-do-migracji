@@ -44,6 +44,9 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
         }
         // M6: faktury — serwer liczy kontrole, termin, Z1; odśwież zrzut (id, flagi, poziom FAKTURA)
         if (m.type.startsWith('bill.')) await refreshFromServer();
+        /* M9 — zdarzenie strefy mogło zmienić status; rozładunek zapisał migawkę ceny */
+        if (m.type === 'position.report' && res && res.id && res.id !== '0') await refreshFromServer();
+        if (m.type === 'load.status' && m.status === 'UNLOADING') await refreshFromServer();
       } catch (e) {
         useTowerStore.getState().pushToast(`Nie zapisano na serwerze: ${friendlyDbError(e instanceof Error ? e.message : String(e), useTowerStore.getState().locale)}`, 'HIGH');
         await refreshFromServer().catch(() => undefined);

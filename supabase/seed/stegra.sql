@@ -29,19 +29,19 @@ on conflict do nothing;
 -- ---------------------------------------------------------------------
 -- STREFY KORYTARZA — decyzja: porty PL i SE mają swoje strefy,
 -- wjazd = automatyczna zmiana statusu (migracja 0004).
--- WSPÓŁRZĘDNE DO WERYFIKACJI Z MAPĄ PRZED PRODUKCJĄ (pozycja M9 zlecenia) —
--- Research zgłosił terminale jako przybliżone.
--- Strefy ZAŁADUNKU: z adresów w docs/watch-tower/ADDRESSES.md — dopisuje
--- wykonawca, nie zgadujemy współrzędnych.
+-- M9 (26.09.2026): współrzędne terminali zweryfikowane z mapą (OSM/Nominatim):
+-- Gdańsk — Terminal Westerplatte, Sucharskiego 70; Nynäshamn — Färjeterminal (kaj 2).
+-- Strefa ZAŁADUNKU z docs/watch-tower/ADDRESSES.md (Nominatim) — patrz migracja 0017.
 -- ---------------------------------------------------------------------
 insert into geofences (project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes, notify_enter, country)
 select p.id, z.name, z.kind::geofence_kind, make_circle_fence(z.lat, z.lon, z.r),
        z.hyst, z.dwell, 2, true, z.country
   from projects p,
        (values
-         ('Bufor 20 km przed Gdańskiem', 'PRE_PORT',    54.4030, 18.6800, 20000,  500,   0, 'PL'),
-         ('Terminal Polferries Gdańsk',  'PORT_OUT',    54.4030, 18.6800,   800,  200, 900, 'PL'),
-         ('Terminal Nynäshamn',          'PORT_IN',     58.9350, 17.9500,   800,  200, 600, 'SE'),
+         ('KSH Śrem · Grunwaldzka 27C',  'LOADING',     52.07391, 17.02460,  600,  150, 300, 'PL'),
+         ('Bufor 20 km przed Gdańskiem', 'PRE_PORT',    54.40372, 18.68130, 20000,  500,   0, 'PL'),
+         ('Terminal Polferries Gdańsk',  'PORT_OUT',    54.40372, 18.68130,   800,  200, 900, 'PL'),
+         ('Terminal Nynäshamn',          'PORT_IN',     58.90453, 17.95621,   800,  200, 600, 'SE'),
          ('Bufor 50 km przed Boden',     'PRE_ARRIVAL', 65.8054, 21.7591, 50000, 1000,   0, 'SE'),
          ('Plac budowy Stegra Boden',    'SITE',        65.8054, 21.7591,  1500,  300, 600, 'SE')
        ) as z(name, kind, lat, lon, r, hyst, dwell, country)

@@ -229,6 +229,7 @@ export function eventFromRow(r: EventRow): LoadEvent {
 export function eventToRow(e: Omit<LoadEvent, 'id'>): Record<string, unknown> {
   return {
     load_id: e.loadId, event_type: e.type, occurred_at: e.at,
+    ...(e.actor === 'driver-pwa' ? { source: 'DRIVER_PWA' } : {}),
     payload: { ...(e.payload ?? {}), actor: e.actor, ...(e.note ? { note: e.note } : {}) },
   };
 }

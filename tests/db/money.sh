@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TOWER — test pieniędzy (Etap 4: M2+): widoki finansowe v2, Z1, kurs, faktury, terminy.
+# TOWER — test pieniędzy (Etap 4: M2+): widoki finansowe v2, Z1, kurs, faktury, terminy; M9: pozycje kierowcy.
 # Własna, czysta baza: atrapa Supabase → migracje → seed testowy.
 # Użycie: PGADMIN=postgres://postgres@localhost:5433/postgres bash tests/db/money.sh
 # UWAGA: supabase_stub.sql NIGDY nie uruchamiaj na Supabase.
@@ -174,6 +174,26 @@ chk "refresh w obie strony: po terminie → PO_TERMINIE"                "$(Q "se
 err "użytkownik nie uruchomi przypomnień (zadanie systemowe)"         $HHL "select send_payment_reminders('2027-01-01')" "permission denied"
 val "KSH oznacza przeczytane własne powiadomienia (IN_APP)"           $KSH "select mark_notifications_read(array(select id from notifications where template='PAYMENT_REMINDER')) = (select count(*) from notifications where template='PAYMENT_REMINDER' and channel='IN_APP')::int" t
 val "KSH nie oznaczy cudzych (HHL) powiadomień"                        $KSH "select mark_notifications_read(array(select id from notifications where user_id=(select id from app_users where email='hhl@test')))" 0
+
+echo; echo "[M9] Aplikacja kierowcy: report_position (przewoźnik/HHL), process_position zamknięty, MILESTONE_LOADED, strefy"
+L9=33333333-0000-0000-0000-000000000009
+sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status) values ('$L9','$P','$CAR','KSH/9','HHL/9','SCX/9','READY')"
+sys "insert into geofences (project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes, country) values ('$P','KSH Śrem · Grunwaldzka 27C','LOADING',make_circle_fence(52.07391,17.02460,600),150,0,2,'PL')"
+NOW="now() - interval '1 minute'"
+err "anon nie wywoła process_position (usterka: domyślne EXECUTE)"   $KSH "set local role anon; select * from process_position('$L9',52.07391,17.0246,now())" "permission denied"
+err "zalogowany nie wywoła process_position wprost"                    $SCX "select * from process_position('$L9',52.07391,17.0246,now())" "permission denied"
+err "anon nie wywoła report_position"                                  $KSH "set local role anon; select * from report_position('$L9',52.07391,17.0246,now())" "permission denied"
+err "KSH nie zgłosi pozycji transportu"                                $KSH "select * from report_position('$L9',52.07391,17.0246,now())" "wyłącznie jego przewoźnik"
+err "czas pozycji z przyszłości odrzucony"                             $SCX "select * from report_position('$L9',52.07391,17.0246,now() + interval '1 hour')" "z przyszłości"
+val "słaby fix (dokładność 400 m) nie zapisuje pozycji ani stref"      $SCX "select count(*) from report_position('$L9',52.07391,17.0246,$NOW,400); select count(*) from positions where load_id='$L9'" 0
+val "SCX: dwa fixy w strefie załadunku → AT_LOADING (źródło DRIVER_PWA)" $SCX "select count(*) from report_position('$L9',52.07391,17.0246,now() - interval '2 minutes',15); select count(*) from report_position('$L9',52.07395,17.0247,$NOW,15); select status||' '||(select string_agg(distinct source::text, ',') from positions where load_id='$L9') from loads where id='$L9'" "AT_LOADING DRIVER_PWA" commit
+err "KSH nie zapisze MILESTONE_LOADED (warunek wyjazdu z załadunku)"   $KSH "insert into load_events (load_id, event_type, occurred_at) values ('$L9','MILESTONE_LOADED',now())" "row-level security"
+val "SCX (przewoźnik transportu) zapisuje MILESTONE_LOADED"            $SCX "insert into load_events (load_id, event_type, occurred_at, source) values ('$L9','MILESTONE_LOADED',now(),'DRIVER_PWA'); select count(*) from load_events where load_id='$L9' and event_type='MILESTONE_LOADED'" 1 commit
+err "„Rozładowany” bez daty rozładunku odrzucony"                      $SCX "update loads set status='UNLOADED' where id='$L9'" "wymaga daty rozładunku"
+val "„Rozładowany” razem z datą w jednej zmianie"                     $SCX "update loads set status='UNLOADED', actual_delivery_at=now() where id='$L9'; select status from loads where id='$L9'" UNLOADED
+sys "insert into geofences (project_id, name, kind, geom, country) values ('$P','Terminal Nynäshamn','PORT_IN',make_circle_fence(58.9350,17.9500,800),'SE')"
+psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0017_driver_positions.sql >/dev/null 2>&1 && psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0017_driver_positions.sql >/dev/null 2>&1
+chk "0017 ponownie (2×): terminal Nynäshamn przesunięty na zweryfikowane współrzędne" "$(Q "select round(st_y(st_centroid(geom))::numeric,3)||' '||round(st_x(st_centroid(geom))::numeric,3) from geofences where name='Terminal Nynäshamn' and project_id='$P'")" "58.905 17.956"
 
 #@@NEXT@@
 

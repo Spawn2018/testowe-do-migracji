@@ -5,6 +5,7 @@
  * M7: plan przypomnień w szczegółach faktury (płatnik i wierzyciel, opłacona → wstrzymane).
  * M6: faktury v2 — moduł KSH (tylko HHL → KSH, spór z uzasadnieniem), kreator przychodowy HHL, SCX bez „Opłacona”.
  * M8: szuflada „Ceny” — poziom, mnożnik z datą, kurs (tymczasowy); Finanse — zestawienie poziomów.
+ * M9: aplikacja kierowcy — zgoda na lokalizację (język telefonu), bez zgody tylko przyciski etapów.
  * Run: `npm run test:etap4`.
  */
 import { test, expect, type Page } from '@playwright/test'
@@ -250,5 +251,35 @@ test.describe('M8 — poziom wyceny i kurs tymczasowy', () => {
     for (const k of ['PROGNOZA', 'REALIZACJA', 'FAKTURA']) total += Number(await sum.locator(`[data-tier-count="${k}"]`).innerText())
     expect(total).toBeGreaterThan(0)
     await expect(page.locator('[data-money-ok]')).toBeVisible()
+  })
+})
+
+test.describe('M9 — aplikacja kierowcy', () => {
+  test('zgoda w języku telefonu; bez zgody tylko przyciski etapów; ze zgodą pozycja ciągła', async ({ page, context }) => {
+    await page.setViewportSize({ width: 412, height: 915 })
+    await page.goto(`/#/driver/demo-active`, { waitUntil: 'networkidle', timeout: 120_000 })
+    await page.evaluate(() => localStorage.removeItem('wt-driver-geo-consent'))
+    await page.reload({ waitUntil: 'networkidle' })
+    const lang = await page.evaluate(() => navigator.language.slice(0, 2))
+    const consent = page.locator('[data-driver-consent]')
+    await expect(consent).toBeVisible()
+    if (lang === 'en') await expect(consent.locator('h2')).toHaveText('Location consent')
+    // odmowa: panel znika, przyciski etapów działają, brak pozycji
+    await consent.locator('[data-consent="deny"]').click()
+    await expect(page.locator('[data-tracking="off"]')).toBeVisible()
+    await expect(page.locator('[data-tracking="on"]')).toHaveCount(0)
+    const stage = page.locator('main button.driver-btn-block').first()
+    await expect(stage).toBeEnabled()
+    // zgoda: pozycja z telefonu (atrapa GPS) → „ostatnia pozycja”
+    await context.grantPermissions(['geolocation'])
+    await context.setGeolocation({ latitude: 54.40372, longitude: 18.6813, accuracy: 12 })
+    await page.locator('[data-tracking="off"] [data-consent="allow"]').click()
+    await expect(page.locator('[data-tracking="on"] [data-last-fix]')).toContainText('54.4037, 18.6813')
+    // zgoda zapamiętana — bez ponownego pytania
+    await page.reload({ waitUntil: 'networkidle' })
+    await expect(page.locator('[data-driver-consent]')).toHaveCount(0)
+    await expect(page.locator('[data-tracking="on"]')).toBeVisible()
+    await page.locator('[data-consent="withdraw"]').click()
+    await expect(page.locator('[data-tracking="off"]')).toBeVisible()
   })
 })
