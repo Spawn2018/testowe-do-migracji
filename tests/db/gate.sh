@@ -28,5 +28,5 @@ check storage 33
 check money 130
 check release 145
 check backup 10
-check session 25
+check session 27
 [ $ok -eq 1 ]

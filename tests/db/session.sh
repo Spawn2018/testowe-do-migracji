@@ -59,6 +59,13 @@ chk "wylogowania w dzienniku audytu (2)"                 "$(Q "select count(*) f
 echo; echo "[A5-SESJA-ROK] Dezaktywacja odcina dane natychmiast"
 $PSQL -c "insert into app_users (auth_id, org_id, email, role) values ('$DRV','00000000-0000-0000-0000-00000000a003','dysp2@test','CARRIER_DISPATCH');
   insert into auth.sessions (user_id, user_agent) values ('$DRV','A'),('$DRV','B')" >/dev/null
+# Tabele słownikowe (dawniej polityka `true`) i preferencje — muszą mieć wiersze, by test coś sprawdzał.
+$PSQL -c "insert into vessels (name, operator) values ('Test Ferry','Test');
+  insert into fx_rates (currency, rate_date, rate_pln) values ('EUR', current_date, 4.3) on conflict do nothing;
+  insert into sailings (project_id, vessel_id, departure_at, arrival_at)
+    select (select id from projects limit 1), (select id from vessels limit 1), now(), now() + interval '8 hours';
+  insert into user_preferences (user_id) select id from app_users where auth_id='$DRV' on conflict do nothing" >/dev/null
+val "przed dezaktywacją: widzi słownik (statki, rejsy, kursy) i swoje preferencje" $DRV "select (select count(*) from vessels)>0 and (select count(*) from sailings)>0 and (select count(*) from fx_rates)>0 and (select count(*) from user_preferences)>0" t
 $PSQL -c "create or replace function public.t_visible_rows() returns bigint language plpgsql as \$f\$
   declare t record; n bigint := 0; c bigint;
   begin for t in select c2.relname from pg_class c2 join pg_namespace ns on ns.oid=c2.relnamespace
@@ -70,6 +77,7 @@ val "przed dezaktywacją: dyspozytor widzi dane (> 0 wierszy)" $DRV "select t_vi
 $PSQL -c "update app_users set active = false where auth_id='$DRV'" >/dev/null
 chk "dezaktywacja: sesje usunięte od razu"               "$(Q "select count(*) from auth.sessions where user_id='$DRV'")" 0
 val "zdezaktywowany z ważnym tokenem: 0 wierszy we wszystkich tabelach" $DRV "select t_visible_rows()" 0
+val "zdezaktywowany: 0 statków, rejsów, kursów, stref, preferencji" $DRV "select (select count(*) from vessels)+(select count(*) from sailings)+(select count(*) from fx_rates)+(select count(*) from geofences)+(select count(*) from user_preferences)" 0
 val "zdezaktywowany: Moje urządzenia puste"              $DRV "select count(*) from my_sessions()" 0
 err "zdezaktywowany nie wywoła wylogowania"              $DRV "select revoke_user_sessions()" "Brak aktywnego konta"
 echo; echo "WYNIK: $ok OK, $fail FAIL"
