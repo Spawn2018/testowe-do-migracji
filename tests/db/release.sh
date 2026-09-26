@@ -186,4 +186,12 @@ ROLE=service_role err "zdjęcie: kategoria spoza listy (faktura) odrzucona" "" "
 ROLE=service_role err "zdjęcie: PDF > 10 MB odrzucony"  "" "select * from driver_create_document('$TP', '$L6', 'POD', 'a.pdf', 'application/pdf', 10485761)" "10 MB"
 ROLE=service_role val "zdjęcie: rejestracja z tokenem (koszyk zdjęć)" "" "select bucket from driver_create_document('$TP', '$L6', 'LASHING_PHOTO', 'mocowanie.jpg', 'image/jpeg', 350000)" zdjecia
 
+echo; echo "[PR1] keep_alive() — znacznik w system_heartbeat"
+sys "update system_heartbeat set beat_at = now() - interval '7 hours', beats = 0"
+ROLE=anon val "anon (Worker, klucz publiczny) wywołuje keep_alive()" "" "select keep_alive('worker')->>'ok'" true commit
+chk "znacznik odświeżony (≤ 5 s temu), licznik 1"        "$(Q "select (beat_at > now() - interval '5 seconds')||':'||beats||':'||source from system_heartbeat")" "true:1:worker"
+ROLE=anon val "drugie wywołanie w 60 s: odpowiedź ok, bez zapisu" "" "select keep_alive('worker')->>'beats'" 1 commit
+err "anon nie czyta tabeli znacznika wprost"             "" "set local role anon; select * from system_heartbeat" "permission denied"
+err "anon nie zmienia tabeli znacznika wprost"           "" "set local role anon; update system_heartbeat set beats = 0" "permission denied"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

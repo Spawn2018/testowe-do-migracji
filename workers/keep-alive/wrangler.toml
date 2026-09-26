@@ -1,0 +1,17 @@
+# ANEKS 4 PR1 — Cloudflare Worker podtrzymania bazy produkcyjnej (plan darmowy).
+# Wdrożenie (właściciel po założeniu konta Cloudflare — sekcja 10 ANEKSU 4):
+#   npx wrangler deploy
+#   npx wrangler secret put SUPABASE_ANON_KEY   # klucz publiczny projektu PRODUKCYJNEGO
+#   npx wrangler secret put RESEND_API_KEY
+# Test symulowanego błędu: ustaw tymczasowo SUPABASE_URL na zły adres i wywołaj GET /?check=1.
+name = "tower-keep-alive"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+[triggers]
+crons = ["0 */6 * * *"]
+
+[vars]
+SUPABASE_URL = "https://<projekt-produkcyjny>.supabase.co"
+ALERT_EMAIL = "<administrator-hhl@domena>"
+MAIL_FROM = "TOWER <tower@domena>"
