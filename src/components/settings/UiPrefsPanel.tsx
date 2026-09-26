@@ -27,7 +27,7 @@ export function UiPrefsPanel({ onSaved, showDemoMarks: showDemoToggle, subKey = 
         <dt>{t(locale, 'opt_currency')}</dt><dd data-deur-exempt="currency-pref" title="D-EUR-T: wybór waluty (wyjątek)"><select className="input" value={displayCurrency} onChange={(e) => { setDisplayCurrency(e.target.value as 'EUR' | 'PLN'); onSaved('waluta'); }}><option value="PLN">PLN</option><option value="EUR">EUR</option></select></dd>
         <dt>{t(locale, 'opt_theme')}</dt><dd><select className="input" value={theme} onChange={(e) => { setTheme(e.target.value as 'dark' | 'light'); onSaved('motyw'); }}><option value="dark">{t(locale, 'opt_theme_dark')}</option><option value="light">{t(locale, 'opt_theme_light')}</option></select></dd>
         <dt>{t(locale, 'opt_theme_default')}</dt><dd className="muted">{roleDefaultDark ? t(locale, 'opt_theme_dark_hhl') : t(locale, 'opt_theme_light')}</dd>
-      </dl><div className="note option-note">{t(locale, noteKey)}</div></div>
+      </dl><div className="note option-note" data-deur-exempt="currency-pref" title="D-EUR-T: opis wyboru waluty (wyjątek)">{t(locale, noteKey)}</div></div>
     </section>
   );
 }
