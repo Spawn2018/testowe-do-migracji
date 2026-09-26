@@ -4,7 +4,7 @@ import { ExceptionRow } from '../components/ui/ExceptionRow';
 import { KpiTile } from '../components/ui/KpiTile';
 import { DeliveryProgress } from '../components/chart/DeliveryProgress';
 import { CorridorMap } from '../components/map/LazyCorridorMap';
-import { t } from '../i18n/messages';
+import { riskText, t, tp } from '../i18n/messages';
 import { canSeeMargin, ROLE_META } from '../lib/permissions';
 import { getNow } from '../lib/frozenNow';
 import { formatEtaBodenCompact } from '../lib/time';
@@ -27,6 +27,12 @@ export function DashboardView() {
 
   const kpis = useMemo(() => computeCorridorKpis(loads, risks), [loads, risks]);
   const ferryBanner = useMemo(() => cockpitFerryBanner(loads), [loads]);
+  /* A6-T1 — liczba transportów: odmiana ze słownika, potem wstawiona do treści banera */
+  const bannerBody = riskText(locale, ferryBanner.body, ferryBanner.bodyKey, {
+    ...ferryBanner.bodyParams,
+    loads: tp(locale, String(ferryBanner.bodyParams.loads_key), { n: ferryBanner.loadCount }),
+    loads_key: undefined,
+  });
   const {
     delivered,
     delayedN,
@@ -69,7 +75,7 @@ export function DashboardView() {
       {role === 'HHL' ? (
         <div className="banner red" role="button" tabIndex={0} onClick={() => setView('risk')} onKeyDown={(e) => e.key === 'Enter' && setView('risk')}>
           <span>
-            <span data-content><b>{ferryBanner.title}</b> {ferryBanner.body}</span>
+            <span data-content><b>{riskText(locale, ferryBanner.title, ferryBanner.titleKey, ferryBanner.titleParams)}</b> {bannerBody}</span>
           </span>
         </div>
       ) : role === 'KSH' ? (

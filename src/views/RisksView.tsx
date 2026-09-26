@@ -3,7 +3,7 @@ import { useTowerStore } from '../store/useTowerStore';
 import type { RiskType } from '../types';
 import { ExceptionRow } from '../components/ui/ExceptionRow';
 import { DemoMark } from '../components/ui/DemoMark';
-import { t } from '../i18n/messages';
+import { riskText, t } from '../i18n/messages';
 import { ferryLabel, vesselById } from '../lib/ferry';
 import { fetchSituations, type RoadSituation } from '../lib/trafikverket';
 import {
@@ -113,6 +113,10 @@ export function RisksView() {
                 ageHours: r.ageHours,
                 loadId: r.loadId,
                 code: r.loadId ? loads.find((l) => l.id === r.loadId)?.code : undefined,
+                titleKey: r.titleKey,
+                titleParams: r.titleParams,
+                metaKey: r.metaKey,
+                metaParams: r.metaParams,
                 tag: r.code && (AUTO_RISK_CODES as string[]).includes(r.code) ? autoRiskLabel(r.code as AutoRiskCode, locale) : undefined,
               }}
               onClick={() => {
@@ -266,9 +270,9 @@ export function RisksView() {
                 >
                   <span className="lbl">
                     <span className="code" data-content>{r.type === 'FORCE_MAJEURE' ? 'FM' : 'SE'}</span>{' '}
-                    <span data-content>{r.title}</span>
+                    <span data-content>{riskText(locale, r.title, r.titleKey, r.titleParams)}</span>
                   </span>
-                  <span>{r.delayImpactHours != null ? `+${r.delayImpactHours} h` : r.meta}</span>
+                  <span>{r.delayImpactHours != null ? `+${r.delayImpactHours} h` : riskText(locale, r.meta, r.metaKey, r.metaParams)}</span>
                 </div>
               ))}
             </div>

@@ -106,6 +106,8 @@ export function roadRisk(country: 'SE' | 'PL', e: RoadEvent, sourceUrl: string):
   return {
     kind: country === 'SE' ? 'ROAD_SE' : 'ROAD_PL', severity: e.severity,
     title: `${country === 'SE' ? 'E4' : 'Trasa PL'}${e.road && country === 'PL' ? ` ${e.road}` : ''}: ${e.title}`,
+    titleKey: country === 'SE' ? 'rk_road_se' : e.road ? 'rk_road_pl_road' : 'rk_road_pl',
+    params: { event: e.title, ...(country === 'PL' && e.road ? { road: e.road } : {}) },
     detail: { opis: e.detail, rodzaj: e.kind, lat: e.lat, lon: e.lon, od: e.start, do: e.end, zrodlo: country === 'SE' ? 'Trafikverket (CC0)' : 'KPD GDDKiA' },
     dedup: `${country === 'SE' ? 'ROAD_SE' : 'ROAD_PL'}:${e.id}`, sourceUrl, validUntil: e.end,
   };
@@ -131,6 +133,8 @@ export function flowRisk(loadId: string, code: string, lat: number, lon: number,
   return {
     loadId, kind: se ? 'ROAD_SE' : 'ROAD_PL', severity: r.closed ? 'HIGH' : 'MEDIUM',
     title: `${code}: ${r.closed ? 'droga zamknięta' : `ruch ${r.currentKmh} km/h wobec ${r.freeKmh} km/h swobodnie`} przy pozycji auta`,
+    titleKey: r.closed ? 'rk_flow_closed' : 'rk_flow_slow',
+    params: r.closed ? { code } : { code, kmh: r.currentKmh, free: r.freeKmh },
     detail: { lat, lon, predkosc: r.currentKmh, swobodna: r.freeKmh, stosunek: r.ratio, zrodlo: 'TomTom' },
     dedup: `TRAFFIC_FLOW:${loadId}:${nowIso.slice(0, 13)}`,
   };

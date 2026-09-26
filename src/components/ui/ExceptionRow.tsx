@@ -1,5 +1,7 @@
 import type { ExceptionItem } from '../../types';
 import { ROLE_META } from '../../lib/permissions';
+import { useTowerStore } from '../../store/useTowerStore';
+import { riskText, tp } from '../../i18n/messages';
 
 /** Format age like Claude: 40m / 2h / 1d */
 export function formatExqAge(ageHours: number): string {
@@ -20,11 +22,14 @@ export function ExceptionRow({
   item: ExceptionItem;
   onClick?: () => void;
 }) {
+  const locale = useTowerStore((s) => s.locale);
   const ref = item.code ?? null;
-  const titleHasCode = ref ? item.title.includes(ref) : false;
+  /* A6-T1 — tytuł i opis w aktywnym języku (klucz słownika + parametry), bez klucza tekst zapisany */
+  const title = riskText(locale, item.title, item.titleKey, item.titleParams);
+  const titleHasCode = ref ? title.includes(ref) : false;
   const meta =
-    item.meta ||
-    `Odpowiada: ${ROLE_META[item.owner]?.name ?? item.owner}`;
+    riskText(locale, item.meta, item.metaKey, item.metaParams) ||
+    tp(locale, 'risk_meta_owner', { name: ROLE_META[item.owner]?.name ?? item.owner });
 
   return (
     <li
@@ -48,7 +53,7 @@ export function ExceptionRow({
               {' · '}
             </>
           ) : null}
-          <span data-content>{item.title}</span>
+          <span data-content>{title}</span>
         </span>
         <span className="m" data-content>{meta}</span>
       </span>

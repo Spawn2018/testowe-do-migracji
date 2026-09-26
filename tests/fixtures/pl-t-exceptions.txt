@@ -21,3 +21,25 @@ pushNotification
 computeSefs
 JSONLogic
 sefs
+# A6-T1 — teksty ryzyk PL = dokładnie dotychczasowe napisy w bazie i danych demo (nazwy własne, nazwy zadań/tabel)
+Trafikverket
+Supabase
+Digitraffic
+TomTom
+Umeå
+Gävle
+Sundsvall
+usage
+history
+Edge
+integration
+runs
+response
+ferry
+check
+send
+notifications
+export
+majeure
+Permit
+mismatch

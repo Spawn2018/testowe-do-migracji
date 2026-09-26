@@ -352,6 +352,11 @@ export interface Risk {
   causeCategory?: string;
   /** M10 — rodzaj ryzyka automatu / rejsu (AUTO_STATUS, LOADING_UNCONFIRMED, MISSED_SAILING, SAILING_CANCELLED, FERRY_OVERDUE). */
   code?: string;
+  /** A6-T1 — klucz słownika tytułu + parametry (baza: risk_signals.title_key, detail.params); title = PL (dziennik). */
+  titleKey?: string;
+  titleParams?: Record<string, unknown>;
+  metaKey?: string;
+  metaParams?: Record<string, unknown>;
 }
 
 export interface RateRule {
@@ -519,6 +524,11 @@ export interface ExceptionItem {
   code?: string;
   /** M10 — etykieta rodzaju ryzyka automatu / rejsu (PL/EN/SV) */
   tag?: string;
+  /** A6-T1 — klucze słownika (jak Risk) */
+  titleKey?: string;
+  titleParams?: Record<string, unknown>;
+  metaKey?: string;
+  metaParams?: Record<string, unknown>;
 }
 
 export interface AppToast {

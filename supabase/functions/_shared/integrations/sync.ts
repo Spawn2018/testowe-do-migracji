@@ -31,6 +31,8 @@ export type RiskKind = 'FERRY' | 'ROAD_SE' | 'ROAD_PL';
 export type RiskSeverity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export interface RiskInput {
   kind: RiskKind; severity: RiskSeverity; title: string; detail: Record<string, unknown>;
+  /** A6-T1 — klucz słownika PL/EN/SV (src/i18n/risks.ts) i parametry; title zostaje po polsku dla dziennika. */
+  titleKey: string; params: Record<string, string | number>;
   dedup: string; sourceUrl?: string | null; validUntil?: string | null;
 }
 
@@ -107,6 +109,7 @@ export function unknownStatusRisk(s: IncomingSailing, raw: string): RiskInput {
   return {
     kind: 'FERRY', severity: 'MEDIUM',
     title: `Nieznany status rejsu ${s.vessel} ${warsaw(s.departureUtc)} — bez zmiany, do weryfikacji HHL`,
+    titleKey: 'rk_ferry_status_unknown', params: { vessel: s.vessel, dep: warsaw(s.departureUtc) },
     detail: { zrodlo: 'POLFERRIES', statek: s.vessel, odejscie: s.departureUtc, surowy_status: raw },
     dedup: `FERRY_UNKNOWN:${s.vessel}:${new Date(s.departureUtc).toISOString()}`,
   };
@@ -127,6 +130,7 @@ export function sourceDownRisk(src: SourceId, warnings: string[], nowIso: string
   return {
     kind: SOURCE_KIND[src], severity: src.startsWith('POLFERRIES') ? 'HIGH' : 'MEDIUM',
     title: `Źródło niedostępne: ${SOURCE_LABEL[src]} — HHL weryfikuje ręcznie`,
+    titleKey: 'rk_source_down', params: { source: SOURCE_LABEL[src], source_key: `rk_src_${src}` },
     detail: { zrodlo: src, ostrzezenia: warnings.slice(0, 10), czas: nowIso },
     dedup: `SOURCE_DOWN:${src}:${nowIso.slice(0, 10)}`, sourceUrl: url ?? null,
   };

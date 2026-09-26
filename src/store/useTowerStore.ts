@@ -112,6 +112,10 @@ function exceptionsFromRisks(risks: Risk[], loads: Load[]) {
     ageHours: r.ageHours,
     loadId: r.loadId,
     code: r.loadId ? loads.find((l) => l.id === r.loadId)?.code : undefined,
+    titleKey: r.titleKey,
+    titleParams: r.titleParams,
+    metaKey: r.metaKey,
+    metaParams: r.metaParams,
   }));
 }
 
@@ -1589,6 +1593,10 @@ export const useTowerStore = create<TowerState>()(
           loadId: targetLoadId,
           owner: 'HHL' as const,
           meta: `Odpowiada: H&H Logistics · Trafikverket · ${situation.kind}`,
+          titleKey: type === 'FORCE_MAJEURE' ? 'rk_seed_tv_fm' : 'rk_seed_tv',
+          titleParams: type === 'FORCE_MAJEURE' ? { title: situation.title, h: hours } : { title: situation.title, min: situation.delayMin },
+          metaKey: 'rk_seed_tv_meta',
+          metaParams: { kind: situation.kind },
           nextAction: type === 'FORCE_MAJEURE' ? 'Wymaga decyzji — hold / objazd' : 'Śledź checkpoint',
           ageHours: 0.1,
           delayImpactHours: hours,
@@ -1598,17 +1606,7 @@ export const useTowerStore = create<TowerState>()(
         set((s) => {
           const risks = [risk, ...s.risks.filter((r) => r.id !== id)];
           const loads = applyForceMajeureDelays(s.loads, risks);
-          const exceptions = risks.map((r) => ({
-            id: `ex-${r.id}`,
-            severity: r.severity,
-            title: r.title,
-            owner: r.owner,
-            meta: r.meta,
-            nextAction: r.nextAction,
-            ageHours: r.ageHours,
-            loadId: r.loadId,
-            code: r.loadId ? loads.find((l) => l.id === r.loadId)?.code : undefined,
-          }));
+          const exceptions = exceptionsFromRisks(risks, loads);
           return { risks, loads, exceptions };
         });
         get().pushToast(risk.title, situation.severity === 'CRITICAL' ? 'CRITICAL' : 'HIGH', targetLoadId);
@@ -1666,6 +1664,8 @@ export const useTowerStore = create<TowerState>()(
                     ...r,
                     severity: 'MEDIUM' as const,
                     meta: `Plan B aktywny: ${option}`,
+                    metaKey: 'rk_planb_meta',
+                    metaParams: { option },
                     nextAction: `Plan B aktywny: ${option}`,
                     detail: `${r.detail} · Zastosowano: ${option}`,
                   }
@@ -1734,6 +1734,8 @@ export const useTowerStore = create<TowerState>()(
                 ...r,
                 severity: 'MEDIUM' as const,
                 meta: `Alternatywa SE: ${alt.title}`,
+                metaKey: 'rk_alt_se_meta',
+                metaParams: { title: alt.title },
                 nextAction: `Trasa: ${alt.title}`,
                 detail: `${r.detail} · Wybrano: ${alt.title}`,
                 delayImpactHours: delayH,

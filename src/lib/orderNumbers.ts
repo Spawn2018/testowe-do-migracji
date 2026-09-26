@@ -136,6 +136,7 @@ export function orderNoRisks(loads: Load[], nowIso: string): Risk[] {
         id: `risk-orderno-hhl-${l.id}`, type: 'OPS', severity: due <= now ? 'CRITICAL' : 'HIGH', loadId: l.id, owner: 'HHL',
         title: `${l.code}: brak numeru zlecenia HHL`,
         detail: 'Numer zlecenia HHL jest obowiązkowy przed statusem GOTOWY (W12).',
+        titleKey: 'rk_order_no_hhl', titleParams: { code: l.code }, metaKey: 'risk_meta_hhl',
         meta: 'Odpowiada: HHL', nextAction: 'Wpisz numer zlecenia HHL w szufladzie transportu', ageHours,
       });
     }
@@ -144,6 +145,7 @@ export function orderNoRisks(loads: Load[], nowIso: string): Risk[] {
         id: `risk-orderno-scx-${l.id}`, type: 'OPS', severity: due <= now ? 'CRITICAL' : 'HIGH', loadId: l.id, owner: 'SCX',
         title: `${l.code}: brak numeru zlecenia przewoźnika`,
         detail: 'Numer zlecenia przewoźnika jest obowiązkowy przed załadunkiem (W12).',
+        titleKey: 'rk_order_no_carrier', titleParams: { code: l.code }, metaKey: 'risk_meta_owner', metaParams: { name: 'Scandinavian Express' },
         meta: 'Odpowiada: Scandinavian Express', nextAction: 'Wpisz numer zlecenia przewoźnika w szufladzie transportu', ageHours,
       });
     }

@@ -36,7 +36,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
     async raiseRisk(r: RiskInput & { loadId?: string }) {
       const res = await sb.rpc('raise_integration_risk', {
         p_project: await projectId(), p_load: r.loadId ?? null, p_kind: r.kind, p_sev: r.severity, p_title: r.title,
-        p_detail: r.detail, p_dedup: r.dedup, p_source_url: r.sourceUrl ?? null, p_valid_until: r.validUntil ?? null,
+        p_detail: { ...r.detail, title_key: r.titleKey, params: r.params }, p_dedup: r.dedup, p_source_url: r.sourceUrl ?? null, p_valid_until: r.validUntil ?? null,
       });
       return must(res, 'raise_integration_risk') === true;
     },

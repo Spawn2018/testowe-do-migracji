@@ -84,8 +84,21 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
 }
 
 /** Treść e-maila (tekst + prosty HTML) — bez zewnętrznych zasobów. */
-export function renderEmail(row: NotifyRow, appUrl: string): { subject: string; text: string; html: string } {
-  const n = renderNotice(row);
+/**
+ * A6-T1 — język e-maila = `app_users.locale` odbiorcy (po user_id, zapasowo po adresie e-mail);
+ * brak konta → `payload.locale` (renderNotice), dalej PL.
+ */
+export function recipientLocale(
+  row: { user_id?: string | null; recipient?: string | null },
+  users: { id: string; email?: string | null; locale?: string | null }[],
+): NotifyLocale | undefined {
+  const u = (row.user_id ? users.find((x) => x.id === row.user_id) : undefined)
+    ?? users.find((x) => !!row.recipient && (x.email ?? '').toLowerCase() === row.recipient.toLowerCase());
+  return u?.locale === 'pl' || u?.locale === 'en' || u?.locale === 'sv' ? u.locale : undefined;
+}
+
+export function renderEmail(row: NotifyRow, appUrl: string, localeOverride?: NotifyLocale): { subject: string; text: string; html: string } {
+  const n = renderNotice(row, localeOverride);
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const link = appUrl ? `${appUrl.replace(/\/$/, '')}/#/` : '';
   const text = `${n.body}${link ? `\n\n${link}` : ''}\n\n— Tower · H&H Logistics`;

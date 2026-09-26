@@ -5,7 +5,7 @@
  * SUPABASE_SERVICE_ROLE_KEY dostarcza platforma. Opłacona faktura → wiersze CANCELLED (baza) — nie wychodzą.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { renderEmail } from '../_shared/notifyTemplates.ts';
+import { recipientLocale, renderEmail } from '../_shared/notifyTemplates.ts';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
 
 Deno.serve(async (req) => {
@@ -18,15 +18,21 @@ Deno.serve(async (req) => {
   const from = Deno.env.get('MAIL_FROM');
   if (!key || !from) { await log(false, { error: 'missing RESEND_API_KEY / MAIL_FROM' }); return new Response('missing RESEND_API_KEY / MAIL_FROM', { status: 500 }); }
   const { data: rows, error } = await sb.from('notifications')
-    .select('id,recipient,template,payload').eq('channel', 'EMAIL').eq('status', 'PENDING')
+    .select('id,recipient,user_id,template,payload').eq('channel', 'EMAIL').eq('status', 'PENDING')
     .order('created_at', { ascending: true }).limit(50);
   if (error) { await log(false, { error: error.message }); return new Response(error.message, { status: 500 }); }
+  /* A6-T1 — język odbiorcy z app_users.locale */
+  const ids = [...new Set((rows ?? []).map((r) => r.user_id).filter(Boolean))];
+  const mails = [...new Set((rows ?? []).map((r) => String(r.recipient ?? '').toLowerCase()).filter(Boolean))];
+  const users: { id: string; email: string | null; locale: string | null }[] = [];
+  if (ids.length) users.push(...((await sb.from('app_users').select('id,email,locale').in('id', ids)).data ?? []));
+  if (mails.length) users.push(...((await sb.from('app_users').select('id,email,locale').in('email', mails)).data ?? []));
   let sent = 0, failed = 0;
   for (const r of rows ?? []) {
     // ponowne sprawdzenie tuż przed wysyłką: anulowane (opłacona) w międzyczasie → pomiń
     const { data: fresh } = await sb.from('notifications').select('status').eq('id', r.id).single();
     if (fresh?.status !== 'PENDING') continue;
-    const mail = renderEmail({ template: r.template, payload: r.payload ?? {} }, Deno.env.get('APP_URL') ?? '');
+    const mail = renderEmail({ template: r.template, payload: r.payload ?? {} }, Deno.env.get('APP_URL') ?? '', recipientLocale(r, users));
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'Idempotency-Key': `tower-notif-${r.id}` },

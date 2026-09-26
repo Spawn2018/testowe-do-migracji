@@ -276,7 +276,7 @@ export function geofenceToRpc(g: Geofence, projectId: string, orgs: OrgRow[], se
 }
 
 // ---- ryzyka / dokumenty -----------------------------------------------------
-export interface RiskRow { id: string; load_id: string | null; kind: string; severity: string; title: string; detail: Record<string, unknown> | null; detected_at: string; dedup_key?: string | null }
+export interface RiskRow { id: string; load_id: string | null; kind: string; severity: string; title: string; title_key?: string | null; detail: Record<string, unknown> | null; detected_at: string; dedup_key?: string | null }
 const RISK_TYPE: Record<string, RiskType> = {
   FERRY: 'FERRY', WEATHER: 'FORCE_MAJEURE', ROAD_SE: 'ROAD_SE', ROAD_PL: 'OPS', PERMIT: 'DOC', INSURANCE: 'DOC',
   DOC_MISSING: 'DOC', SILENT_VEHICLE: 'OPS', ETA_BREACH: 'OPS', RESOURCE_MISSING: 'OPS', SEQUENCE: 'OPS', INVOICE_MISMATCH: 'OPS',
@@ -287,6 +287,7 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
   const d = (r.detail ?? {}) as Record<string, unknown>;
   const owner = (['HHL', 'KSH', 'SCX'].includes(String(d.owner)) ? d.owner : 'HHL') as OrgKind;
   const str = (v: unknown) => (typeof v === 'string' ? v : '');
+  const params = (d.params && typeof d.params === 'object' ? d.params : {}) as Record<string, unknown>;
   return {
     id: r.id, type: RISK_TYPE[r.kind] ?? 'OPS', severity: SEVERITY[r.severity] ?? 'LOW', title: r.title,
     /* M12 — ryzyka z funkcji Edge: opis / ostrzeżenia źródła i atrybucja (Digitraffic CC BY 4.0) */
@@ -296,6 +297,11 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
     ageHours: Math.max(0, Math.round((Date.parse(nowIso) - Date.parse(r.detected_at)) / 36e5)),
     /* M10 — rodzaj ryzyka automatu / rejsu z klucza deduplikacji (0004) */
     code: autoRiskCode(r.kind, r.dedup_key),
+    /* A6-T1 — tekst w języku odbiorcy: klucz + parametry (0042) */
+    titleKey: r.title_key ?? undefined,
+    titleParams: params,
+    metaKey: str(d.meta_key) || undefined,
+    metaParams: params,
   };
 }
 

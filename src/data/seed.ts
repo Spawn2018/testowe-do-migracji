@@ -22,6 +22,7 @@ import rawLoads from './loads.json';
 import { DEMO_FX_META, plnToEurDemo } from '../lib/money/demoFx';
 export { DEMO_FX_META } from '../lib/money/demoFx';
 import { seedOrders, seedResourcesForIndex } from './seedIdentity';
+import { RISK_I18N } from '../i18n/risks';
 
 export const ORGS: Organization[] = [
   { id: 'org-hhl', kind: 'HHL', name: 'H&H Logistics' },
@@ -1062,7 +1063,38 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
     }),
   );
 
-  return R;
+  return R.map(withSeedRiskKeys);
+}
+
+/** A6-T1: klucze słownika (src/i18n/risks.ts) dla ryzyk demo; PL z klucza == dotychczasowy `title`/`meta`. */
+function withSeedRiskKeys(r: Risk): Risk {
+  const PL = RISK_I18N.pl;
+  const owner = (m: string | undefined) => {
+    const hit = /^Odpowiada: ([^·]+)$/.exec(m ?? '');
+    return hit ? { metaKey: 'risk_meta_owner', metaParams: { name: hit[1] } } : {};
+  };
+  let k: Partial<Risk> = {};
+  const n = (re: RegExp) => re.exec(r.title) ?? [];
+  if (r.id.startsWith('risk-permit-') && !r.id.startsWith('risk-permit-mismatch')) {
+    k = { titleKey: 'rk_seed_permit', titleParams: { h: Number(n(/za (\d+) h/)[1]) }, ...owner(r.meta) };
+  } else if (r.id.startsWith('risk-eta-')) {
+    const m = n(/o (\d+) h (\d+) min/);
+    k = { titleKey: 'rk_seed_eta', titleParams: { h: Number(m[1]), m: Number(m[2]) } };
+  } else if (r.id === 'risk-ferry') {
+    k = { titleKey: 'rk_seed_ferry', titleParams: { wave: 2.9, gust: 19 } };
+  } else if (r.id === 'risk-seq') {
+    const m = n(/: (\S+) przyjedzie po (\S+)$/);
+    k = { titleKey: 'rk_seed_seq', titleParams: { a: m[1], b: m[2] } };
+  } else {
+    const slug = r.id.replace(/^risk-/, '').replace(/-\d+$/, (x) => (/^risk-(permit|res|eta)-\d+$/.test(r.id) ? '' : x)).replace(/-/g, '_');
+    if (PL[`rk_seed_${slug}`] !== undefined) k = { titleKey: `rk_seed_${slug}` };
+  }
+  if (!k.metaKey && r.meta) {
+    const slug = (k.titleKey ?? '').replace(/^rk_seed_/, '');
+    if (slug && PL[`rk_seed_${slug}_meta`] !== undefined) k.metaKey = `rk_seed_${slug}_meta`;
+    else Object.assign(k, owner(r.meta));
+  }
+  return { ...r, ...k };
 }
 
 export function buildSeedExceptions(loads: Load[], risks: Risk[]): ExceptionItem[] {
@@ -1076,6 +1108,10 @@ export function buildSeedExceptions(loads: Load[], risks: Risk[]): ExceptionItem
     ageHours: r.ageHours,
     loadId: r.loadId,
     code: r.loadId ? loads.find((l) => l.id === r.loadId)?.code : undefined,
+    titleKey: r.titleKey,
+    titleParams: r.titleParams,
+    metaKey: r.metaKey,
+    metaParams: r.metaParams,
   }));
 }
 

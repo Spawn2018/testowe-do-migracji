@@ -128,6 +128,8 @@ export function cancelledSailingRisks(s: Sailing, loads: Load[]): Risk[] {
     id: `risk-sail-cancel-${s.id}-${l.id}`, type: 'FERRY' as const, severity: 'HIGH' as const, loadId: l.id, owner: 'HHL' as const,
     title: `${l.code}: rejs ${s.vessel} ${fmtLocal(effDeparture(s))} odwołany — transport wymaga nowego rejsu`,
     detail: 'Rejs odwołany w rozkładzie (HHL). Przypisz transport do innego rejsu.',
+    titleKey: 'rk_seed_sail_cancel', titleParams: { code: l.code, vessel: s.vessel, dep: fmtLocal(effDeparture(s)) },
+    metaKey: 'risk_meta_owner', metaParams: { name: 'H&H Logistics' },
     meta: 'Odpowiada: H&H Logistics', nextAction: 'Przypisz nowy rejs w szufladzie transportu', ageHours: 0,
     code: 'SAILING_CANCELLED' as const,
   }));

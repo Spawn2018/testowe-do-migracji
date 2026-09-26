@@ -139,7 +139,11 @@ export function voyageWaveWidgetLabel(sailing: FerrySailing): string {
 export function cockpitFerryBanner(
   loads: readonly Load[],
   now = getNow(),
-): { title: string; body: string; voyage: FerrySailing; loadCount: number } {
+): {
+  title: string; body: string; voyage: FerrySailing; loadCount: number;
+  /** A6-T1 — te same teksty ze słownika (rk_banner_*) */
+  titleKey: string; titleParams: Record<string, unknown>; bodyKey: string; bodyParams: Record<string, unknown>;
+} {
   const voyage = focusVoyage(now);
   const sea = seaForSailing(voyage);
   const day = formatVoyageDayLabel(voyage.depLocal);
@@ -153,5 +157,12 @@ export function cockpitFerryBanner(
     body: `Prognoza fali ${formatWaveM(sea.waveM)} i porywy ${formatWindMs(sea.windMs)} w oknie odejścia (${vessel.name}). ${transporty} do tego rejsu. Panel alternatyw w zakładce Ryzyka.`,
     voyage,
     loadCount: n,
+    titleKey: 'rk_banner_title',
+    titleParams: { day },
+    bodyKey: 'rk_banner_body',
+    bodyParams: {
+      wave: sea.waveM, wind: sea.windMs, vessel: vessel.name,
+      loads: n, loads_key: n === 1 ? 'rk_banner_loads_one' : n < 5 ? 'rk_banner_loads_few' : 'rk_banner_loads_many',
+    },
   };
 }

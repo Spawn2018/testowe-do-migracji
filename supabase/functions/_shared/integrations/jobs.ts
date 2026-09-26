@@ -136,6 +136,7 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
     if (obs === 'W_PORCIE_NYNASHAMN' && s.route === 'GDN-NYN') {
       const ok = await deps.store.raiseRisk({
         kind: 'FERRY', severity: 'INFO', title: `AIS: ${v.name} w porcie Nynäshamn — potwierdzenie przypłynięcia (informacja)`,
+        titleKey: 'rk_ais_arrived', params: { vessel: v.name },
         detail: { sailing_id: s.id, statek: v.name, pozycja: [fix.lat, fix.lon], sygnal: fix.timestampUtc, atrybucja: DIGITRAFFIC_ATTRIBUTION },
         dedup: `AIS_NYN:${s.id}`, sourceUrl: 'https://www.digitraffic.fi/en/marine-traffic/',
       });

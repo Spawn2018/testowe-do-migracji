@@ -2,6 +2,7 @@ import type { Locale } from '../types';
 import type { NavKey } from '../lib/permissions';
 import { D19_EXTRA } from './d19Extra';
 import { ETAP4 } from './etap4';
+import { RISK_I18N } from './risks';
 
 type Dict = Record<string, string>;
 
@@ -380,13 +381,46 @@ const sv: Dict = {
 
 /** PL-T (ANEKS 3 §3) — pełne słowniki do testu pisowni. */
 export const I18N_ALL: Record<Locale, Dict> = {
-  pl: { ...pl, ...D19_EXTRA.pl, ...ETAP4.pl },
-  en: { ...en, ...D19_EXTRA.en, ...ETAP4.en },
-  sv: { ...sv, ...D19_EXTRA.sv, ...ETAP4.sv },
+  pl: { ...pl, ...D19_EXTRA.pl, ...ETAP4.pl, ...RISK_I18N.pl },
+  en: { ...en, ...D19_EXTRA.en, ...ETAP4.en, ...RISK_I18N.en },
+  sv: { ...sv, ...D19_EXTRA.sv, ...ETAP4.sv, ...RISK_I18N.sv },
 };
 
 export function t(locale: Locale, key: string): string {
   return I18N_ALL[locale][key] ?? I18N_ALL.en[key] ?? key;
+}
+
+/** Intl dla aktywnego języka (A6-T3). */
+export const INTL_LOCALE: Record<Locale, string> = { pl: 'pl-PL', en: 'en-GB', sv: 'sv-SE' };
+
+export function hasKey(locale: Locale, key: string): boolean {
+  return key in I18N_ALL[locale] || key in I18N_ALL.en;
+}
+
+export type TParams = Record<string, unknown>;
+
+/**
+ * A6-T1 — tekst ze słownika z parametrami: `{nazwa}`; `{nazwa:1}` = liczba z tyloma miejscami po przecinku;
+ * liczby formatowane Intl w aktywnym języku; parametr `nazwa_key` (klucz słownika) ma pierwszeństwo przed `nazwa`.
+ */
+export function tp(locale: Locale, key: string, params: TParams = {}): string {
+  return t(locale, key).replace(/\{(\w+)(?::(\d))?\}/g, (m, name: string, fd?: string) => {
+    const k = params[`${name}_key`];
+    if (typeof k === 'string' && hasKey(locale, k)) return t(locale, k);
+    const v = params[name];
+    if (v === undefined || v === null) return m;
+    const n = typeof v === 'number' ? v : typeof v === 'string' && fd != null && v.trim() !== '' && !Number.isNaN(Number(v)) ? Number(v) : null;
+    if (n != null) {
+      const o = fd != null ? { minimumFractionDigits: Number(fd), maximumFractionDigits: Number(fd) } : { maximumFractionDigits: 3 };
+      return new Intl.NumberFormat(INTL_LOCALE[locale], o).format(n);
+    }
+    return String(v);
+  });
+}
+
+/** Tytuł / opis ryzyka: klucz słownika z parametrami, a bez klucza — tekst zapisany (dziennik, PL). */
+export function riskText(locale: Locale, text: string, key?: string, params?: TParams): string {
+  return key && hasKey(locale, key) ? tp(locale, key, params ?? {}) : text;
 }
 
 export function navLabel(locale: Locale, key: NavKey, role?: import('../types').RoleId): string {
