@@ -30,6 +30,6 @@ check release 145
 check backup 10
 check session 27
 check archive 18
-check watchdog 20
+check watchdog 27
 check invite 28
 [ $ok -eq 1 ]

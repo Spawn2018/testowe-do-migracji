@@ -46,4 +46,21 @@ Q "insert into backup_runs (started_at, finished_at, status) values (timestamptz
 chk "udana kopia → OK, ryzyko zamknięte"                              "$(st "$T" | tr ',' '\n' | grep backup)-$(open backup)" "backup=OK-0"
 chk "authenticated nie wywoła strażnika"                              "$($PSQL -c "begin; set local role authenticated; select job_watchdog(); rollback;" 2>&1 | grep -oE 'permission denied' | head -1)" "permission denied"
 chk "anon nie wywoła strażnika"                                       "$($PSQL -c "begin; set local role anon; select job_watchdog(); rollback;" 2>&1 | grep -oE 'permission denied' | head -1)" "permission denied"
+
+echo; echo "[0041] Retencja integration_runs (ok 30 dni, błędy 180 dni, ostatni sukces zadania zostaje)"
+R="2027-06-01 12:00+02"
+Q "delete from integration_runs" >/dev/null
+Q "insert into integration_runs (job, ran_at, ok) values
+  ('ret-a', timestamptz '$R' - interval '40 days', true),  ('ret-a', timestamptz '$R' - interval '31 days', true),
+  ('ret-a', timestamptz '$R' - interval '29 days', true),
+  ('ret-a', timestamptz '$R' - interval '100 days', false), ('ret-a', timestamptz '$R' - interval '181 days', false),
+  ('ret-b', timestamptz '$R' - interval '200 days', true),  ('ret-b', timestamptz '$R' - interval '90 days', true),
+  ('ret-b', timestamptz '$R' - interval '1 day', false),    ('ret-c', timestamptz '$R' - interval '400 days', false)" >/dev/null
+chk "zadanie usuwa 5 wierszy (ok > 30 d: 2 ret-a + 1 ret-b; błąd > 180 d: 1 ret-a + 1 ret-c)" "$(Q "select purge_integration_runs('$R')")" 5
+chk "ret-a: zostaje ok 29 d i błąd 100 d"                             "$(Q "select string_agg(round(extract(epoch from timestamptz '$R' - ran_at)/86400)::int||':'||ok, ',' order by ran_at) from integration_runs where job='ret-a'")" "100:false,29:true"
+chk "ret-b: ostatni sukces (90 d) zostaje mimo > 30 d"               "$(Q "select count(*) from integration_runs where job='ret-b' and ok")" 1
+chk "strażnik nadal widzi ostatni sukces ret-b"                      "$(Q "select job_last_success('ret-b') = timestamptz '$R' - interval '90 days'")" t
+chk "ret-c (tylko błąd 400 d) usunięty"                               "$(Q "select count(*) from integration_runs where job='ret-c'")" 0
+chk "ponowne uruchomienie: 0 (idempotentne)"                          "$(Q "select purge_integration_runs('$R')")" 0
+chk "authenticated nie wywoła retencji"                               "$($PSQL -c "begin; set local role authenticated; select purge_integration_runs(); rollback;" 2>&1 | grep -oE 'permission denied' | head -1)" "permission denied"
 echo; echo "WYNIK: $ok OK, $fail FAIL"
