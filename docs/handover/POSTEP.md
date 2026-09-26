@@ -120,7 +120,7 @@ Po wdrożeniu: e-maile przypomnień i „nowa faktura” wychodzą w języku odb
 |---|---|---|---|---|---|
 | AN3 | Aneks 3 — tekst w `ZLECENIE_FINAL.md` | **DONE** | (ten commit `docs(AN3)`) | — | wypchnięcie 7 commitów `5767156..79ff7d5` przez pre-push; drzewo lokalnie = zdalnie `571b92c3…` |
 | 2.1 | Import: anulowanie zamiast kasowania, blokada od AT_LOADING i przy fakturze; zakaz DELETE na `loads` | DONE | 8445485 | release 30/30 (db), unit 278, schedule-import 19, etap4 D26 e2e | 0019: zakaz DELETE loads (uprawnienie + wyzwalacz), import_cancel_loads/import_removal_check/cancel_load z audit_log; hosted TESTOWY zastosowane; podgląd pokazuje zablokowane z powodem; snapshot Supabase pomija CANCELLED · testy bazy wg AN3 §2.1 |
-| 2.2 | `risk_signals.audience` — zamknięte drzwi (RLS) | OPEN | — | — | pending · testy bazy wg AN3 §2.2 |
+| 2.2 | `risk_signals.audience` — zamknięte drzwi (RLS) | DONE | 8d4198a | release 58/58 (db; 28 nowych 2.2, czerwone 22 FAIL przed 0020) | 0020: audience HHL/HHL_PRZEWOZNIK/HHL_KLIENT/WSZYSCY z wyzwalacza (klient API nie nadpisze), risks_read: przewoźnik tylko swoje transporty + korytarz, klient swój projekt; hosted TESTOWY zastosowane; live provider 14/14, auth 21/21 · testy bazy wg AN3 §2.2 |
 | 2.3 | Token kierowcy: ≥128 bitów, skrót, jeden transport, ważność, odwołanie | OPEN | — | — | pending · razem z PR6 (`driver_post_position`) |
 | 2.4 | Numer zlecenia 48 h — ryzyko + przypomnienie, bez blokady | OPEN | — | — | pending |
 | PL-T | Polskie znaki w napisach PL + test PL-T (hunspell pl_PL) + przebieg 840 (EN/SV = 0 zmian) | OPEN | — | — | pending · tag `baseline-1.0-<data>` |
