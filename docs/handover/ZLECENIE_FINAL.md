@@ -1420,3 +1420,17 @@ Jeden przebieg 840. **Kryterium:**
 
 Kolejność: **T1 przed zaproszeniem przewoźnika**, T2 i T3 przed
 wydaniem 1.0. R2 i przekazanie klucza — bez zmian, czekają na właściciela.
+
+## Zmiana PR2 (decyzja właściciela, 26.09 21:15)
+
+Kopie zapasowe **bez klucza R2 i bez S3**. `backup-export` wysyła kopie przez Worker Cloudflare
+z wiązaniem R2 (binding):
+
+- Worker obsługuje wyłącznie `PUT` nowego obiektu z nagłówkiem sekretu współdzielonego z `backup-export`;
+- `GET`, `LIST`, `DELETE` → 405; nadpisanie istniejącego klucza → 409; `PUT` bez sekretu → 401;
+- blokada retencji jak w `bucket-lock.json`;
+- `scripts/restore.sh` pobiera kopie osobnym tokenem tylko do odczytu, tworzonym na czas testu
+  odtworzenia i odwoływanym po nim.
+
+Realizacja dopiero po ANEKS 6 T1–T3 i po dostarczeniu tokena Cloudflare
+(`CLOUDFLARE_API_TOKEN` w środowisku / `.env.local`).
