@@ -8,6 +8,7 @@
  * M9: aplikacja kierowcy — zgoda na lokalizację (język telefonu), bez zgody tylko przyciski etapów.
  * D26: import harmonogramu — usunięcia wyłącznie za zgodą (pole domyślnie odznaczone, liczba i kody).
  * M11: Finanse — marża w trzech wierszach (zafakturowana / zrealizowana niezafakturowana / prognozowana) = łączna.
+ * G4: kokpit — pill poziomu pewności i kursu tymczasowego przy kwotach (odłożone z M8).
  * M10: rozkład rejsów (HHL: dodanie / opóźnienie / odwołanie), przypisanie rejsu (SCX przed wypłynięciem), KSH odczyt.
  * Run: `npm run test:etap4`.
  */
@@ -410,5 +411,23 @@ test.describe('D26 — import: usunięcia za zgodą', () => {
     await expect(page.locator('[data-import-removed-count]')).toHaveText('−0')
     await page.getByRole('button', { name: 'Zatwierdź' }).click()
     await expect(page.locator('tr[data-load]')).toHaveCount(before + 1)
+  })
+})
+
+test.describe('G4 — kokpit: poziom i kurs tymczasowy (z M8)', () => {
+  test('HHL marża i SCX tydzień: pill poziomu + pill kursu tymczasowego; KSH bez kwot w kokpicie', async ({ page }) => {
+    await boot(page)
+    for (const r of ['HHL', 'SCX'] as const) {
+      await role(page, r)
+      await nav(page, 'dash')
+      const tag = page.locator('.kpi [data-kpi-tier]')
+      await expect(tag).toHaveCount(1)
+      await expect(tag.locator('.pill').first()).toHaveText(/Prognoza|Realizacja|Faktura/)
+      const prov = Number(await tag.getAttribute('data-kpi-provisional'))
+      await expect(tag.locator('.pill.p-amber')).toHaveCount(prov > 0 ? 1 : 0)
+    }
+    await role(page, 'KSH')
+    await nav(page, 'dash')
+    await expect(page.locator('.kpi [data-kpi-tier]')).toHaveCount(0)
   })
 })

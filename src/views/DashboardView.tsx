@@ -12,6 +12,7 @@ import { computeCorridorKpis } from '../lib/corridorKpis';
 import { cockpitFerryBanner, focusVoyage, seaForSailing } from '../lib/voyage';
 import { formatSeaRiskLabel } from '../lib/voyageSea';
 import { formatAppMoney } from '../lib/money/demoFx';
+import { TIER_PILL, aggregateTier } from '../lib/money/loadMoney';
 
 export function DashboardView() {
   const role = useTowerStore((s) => s.role);
@@ -49,6 +50,19 @@ export function DashboardView() {
   );
 
   const critEx = sortedEx.filter((e) => e.severity === 'CRITICAL');
+
+  // G4 (z M8): poziom pewności i kurs tymczasowy przy kwotach kokpitu.
+  const weekLoads = useMemo(() => loads.filter((l) => l.stage === 'DELIVERED').slice(-6), [loads]);
+  const tierTags = (subset: typeof loads) => {
+    const agg = aggregateTier(subset, role);
+    if (!agg.tier) return null;
+    return (
+      <span data-kpi-tier={agg.tier} data-kpi-provisional={agg.provisional}>
+        <span className={`pill ${TIER_PILL[agg.tier]}`}>{t(locale, `tier_${agg.tier}`)}</span>
+        {agg.provisional > 0 ? <> <span className="pill p-amber">{t(locale, 'fx_provisional')} · {agg.provisional}</span></> : null}
+      </span>
+    );
+  };
 
   return (
     <div className="page-sections" data-page="dash">
@@ -161,14 +175,12 @@ export function DashboardView() {
               <KpiTile
                 label={t(locale, 'kpi_week_rev')}
                 value={formatAppMoney(
-                  loads
-                    .filter((l) => l.stage === 'DELIVERED')
-                    .slice(-6)
-                    .reduce((a, l) => a + l.pricing.costTotal, 0),
+                  weekLoads.reduce((a, l) => a + l.pricing.costTotal, 0),
                   locale,
                   currency,
                 )}
                 delta={t(locale, "dash_week_invoice")}
+                tags={tierTags(weekLoads)}
                 onClick={() => navigateTo({ view: 'inv' })}
               />
               <KpiTile
@@ -223,6 +235,7 @@ export function DashboardView() {
                     currency,
                   )}`}
                   tone={marginAvg < 0.12 ? 'warn' : 'good'}
+                  tags={tierTags(loads)}
                   onClick={() => navigateTo({ view: 'fin' })}
                 />
               ) : (

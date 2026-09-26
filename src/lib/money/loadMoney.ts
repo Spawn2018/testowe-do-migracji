@@ -223,6 +223,25 @@ export function tierSummary(loads: Load[], role: 'HHL' | 'KSH' | 'SCX'): TierSum
   return out;
 }
 
+/**
+ * G4 (odłożone z M8) — oznaczenie sumy w kokpicie: poziom sumy = najmniej pewny poziom składników
+ * (ta sama reguła co „mniej pewna strona”), plus liczba składników z kursem tymczasowym.
+ */
+export function aggregateTier(loads: Load[], role: 'HHL' | 'KSH' | 'SCX'): { tier: PricingTier | null; provisional: number; count: number } {
+  let tier: PricingTier | null = null;
+  let provisional = 0;
+  let count = 0;
+  for (const l of loads) {
+    const m = l.pricing?.money;
+    if (!m || m.v !== 2 || l.pricing.moneyError) continue;
+    const v = moneyViewFor(role, m);
+    tier = tier ? leastTier(tier, v.tier) : v.tier;
+    if (v.side.fx.provisional) provisional += 1;
+    count += 1;
+  }
+  return { tier, provisional, count };
+}
+
 /** M11 — marża transportu jako LoadMargin silnika (wartości efektywne; PLN per transport, każda strona swoim kursem). */
 export function loadMarginV2(m: LoadMoneyV2): LoadMargin {
   const revenueEur = round2(sideEffectiveEur(m.rev));

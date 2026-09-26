@@ -1,10 +1,10 @@
 {
-  "ok": 720,
+  "ok": 840,
   "fail": 0,
-  "total": 720,
-  "scriptVersion": "2026-09-24-f2.1-risk-scroll",
+  "total": 840,
+  "scriptVersion": "2026-09-26-g4-fala3b-views",
   "frozenNow": "2026-09-23T14:32:00Z",
-  "appChecksum": "2d78b0be01f445d2a8505e131e00ed65f93fa60781e40d3c7290288a35596e0b",
-  "url": "http://127.0.0.1:4177/#/?now=2026-09-23T14%3A32%3A00Z",
+  "appChecksum": "5c9d735cd43ba8c7af0e09ca1aad36b9bd91ea40d4d8f0e02c59fc58e60e70d9",
+  "url": "http://127.0.0.1:4181/#/?now=2026-09-23T14%3A32%3A00Z",
   "errors": []
 }

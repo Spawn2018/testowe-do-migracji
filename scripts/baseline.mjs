@@ -26,7 +26,7 @@
  *   gotoFrozen CLEARS persist keys (watch-tower-ui-v6-ready-gate + /watch|tower|wt/i)
  *   then reloads → app boots from in-code seed defaults (data/seed.ts), NOT leftover
  *   localStorage from a prior run. A store migration wipe therefore cannot empty the
- *   720-shot matrix: baseline never depends on migrated user state.
+ *   840-shot matrix (G4; 720 do Fali 3A): baseline never depends on migrated user state.
  */
 import puppeteer from 'puppeteer-core'
 import { createHash } from 'crypto'
@@ -38,7 +38,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 
 /** Bump when nav/role selectors or matrix semantics change. */
-const SCRIPT_VERSION = '2026-09-24-f2.1-risk-scroll'
+const SCRIPT_VERSION = '2026-09-26-g4-fala3b-views'
 
 const chrome = existsSync('/usr/bin/google-chrome-stable')
   ? '/usr/bin/google-chrome-stable'
@@ -54,6 +54,11 @@ const ONLY = process.env.ONLY === '1' || process.env.ONLY === 'true'
 const FILTER = (process.env.FILTER || '').trim()
 const HEIGHT = Number(process.env.HEIGHT || 1080)
 const PERSIST_KEY = 'watch-tower-ui-v6-ready-gate'
+/**
+ * G4 zestaw kontrolny PLN (SET=pln): kokpit i harmonogram, każda rola, 1440, motyw domyślny roli,
+ * waluta wyświetlania PLN ustawiona przez Opcje/Ustawienia. Pliki z sufiksem `__pln`.
+ */
+const SET = (process.env.SET || '').trim()
 
 mkdirSync(OUT, { recursive: true })
 
@@ -68,13 +73,18 @@ const VIEWS = [
   { name: 'Ryzyka', file: 'ryzyka', dataView: 'risk' },
   { name: 'Dokumenty', file: 'dokumenty', dataView: 'docs' },
   { name: 'Finanse', file: 'finanse', dataView: 'fin', roles: ['HHL'] },
-  { name: 'Faktury', file: 'faktury', dataView: 'inv', roles: ['HHL', 'SCX'] },
+  // G4 (Fala 3B): Faktury także dla KSH (moduł faktur HHL → KSH).
+  { name: 'Faktury', file: 'faktury', dataView: 'inv', roles: ['HHL', 'KSH', 'SCX'] },
+  // G4: faktury przychodowe HHL leżą pod sekcją kosztową — osobne ujęcie przewinięte do sekcji.
+  { name: 'Faktury przychodowe', file: 'faktury-przychodowe', dataView: 'inv', roles: ['HHL'], scrollTo: '[data-bill-section="PRZYCHOD"]' },
   { name: 'Automatyzacje', file: 'automatyzacje', dataView: 'wf', roles: ['HHL'] },
   { name: 'Strefy', file: 'strefy', dataView: 'geo', roles: ['HHL'] },
   { name: 'Opcje', file: 'opcje', dataView: 'options', roles: ['HHL'] },
   { name: 'Moje zadania', file: 'moje-zadania', dataView: 'tasks', roles: ['SCX'] },
   { name: 'Moje stawki', file: 'moje-stawki', dataView: 'fin', roles: ['SCX'] },
   { name: 'Rozliczenia', file: 'rozliczenia', dataView: 'fin', roles: ['KSH'] },
+  // G4: Ustawienia (waluta wyświetlania itd.) dla KSH i SCX.
+  { name: 'Ustawienia', file: 'ustawienia', dataView: 'settings', roles: ['KSH', 'SCX'] },
 ]
 
 const ROLES = [
@@ -160,7 +170,19 @@ function computeAppChecksum() {
   }
 }
 
-const planned = [...plan()]
+function* planPln() {
+  const views = VIEWS.filter((v) => v.file === 'kokpit' || v.file === 'harmonogram')
+  for (const view of views) {
+    for (const role of ROLES) {
+      yield {
+        view, role, lang: LANGS[0], width: 1440, theme: role.defaultTheme, currency: 'PLN',
+        file: shotName(view.file, role.id, 'pl', 1440, role.defaultTheme, role.defaultTheme).replace(/\.png$/, '__pln.png'),
+      }
+    }
+  }
+}
+
+const planned = SET === 'pln' ? [...planPln()] : [...plan()]
 console.log(`baseline: ${planned.length} shots planned → ${OUT}`)
 console.log(`scriptVersion=${SCRIPT_VERSION}`)
 console.log(`freeze URL: ${frozenUrl()}`)
@@ -259,7 +281,7 @@ async function setTheme(theme, roleDefault) {
   if (final !== theme) throw new Error(`theme want=${theme} got=${final}`)
 }
 
-async function navTo(dataView) {
+async function navTo(dataView, scrollTo) {
   await page.evaluate((key) => {
     const btn = document.querySelector(`nav button[data-view="${key}"]`)
     if (!btn) throw new Error('nav not found: data-view=' + key)
@@ -289,7 +311,26 @@ async function navTo(dataView) {
     })
     await sleep(300)
   }
+  if (scrollTo) {
+    await page.evaluate((sel) => {
+      const main = document.querySelector('main')
+      const el = document.querySelector(sel)
+      if (!main || !el) throw new Error('G4: scroll target missing: ' + sel)
+      main.scrollTop += el.getBoundingClientRect().top - main.getBoundingClientRect().top - 4
+    }, scrollTo)
+    await sleep(300)
+  }
   await sleep(200)
+}
+
+async function setCurrency(roleId, currency) {
+  await navTo(roleId === 'HHL' ? 'options' : 'settings')
+  const sel = '[data-deur-exempt="currency-pref"] select'
+  await page.waitForSelector(sel, { timeout: 10_000 })
+  await page.select(sel, currency)
+  await sleep(300)
+  const v = await page.$eval(sel, (el) => el.value)
+  if (v !== currency) throw new Error(`currency want=${currency} got=${v}`)
 }
 
 async function shoot(file) {
@@ -315,7 +356,8 @@ for (const job of jobs) {
     await setRole(job.role.id)
     await setLocale(job.lang)
     await setTheme(job.theme, job.role.defaultTheme)
-    await navTo(job.view.dataView)
+    if (job.currency) await setCurrency(job.role.id, job.currency)
+    await navTo(job.view.dataView, job.view.scrollTo)
     await shoot(job.file)
     ok++
     console.log('OK', job.file)
