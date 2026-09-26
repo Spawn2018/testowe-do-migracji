@@ -125,6 +125,21 @@ Po wdrożeniu: e-maile przypomnień i „nowa faktura” wychodzą w języku odb
 | 2.4 | Numer zlecenia 48 h — ryzyko + przypomnienie, bez blokady | OPEN | — | — | pending |
 | PL-T | Polskie znaki w napisach PL + test PL-T (hunspell pl_PL) + przebieg 840 (EN/SV = 0 zmian) | OPEN | — | — | pending · tag `baseline-1.0-<data>` |
 
+## Aneks 4 — produkcja w całości za darmo (`ANEKS_4_PRODUKCJA_ZA_DARMO.md`)
+
+| ID | pozycja | status | commit | testy (liczby) | uwagi |
+|---|---|---|---|---|---|
+| AN4 | Aneks 4 — tekst w `ZLECENIE_FINAL.md` | **DONE** | (ten commit `docs(AN4)`) | — | obecny projekt Supabase = **testowy** (AN3 §4.1); produkcja = nowy projekt UE, plan darmowy |
+| PR1 | Podtrzymanie: `keep_alive()` + `system_heartbeat`, Cloudflare Worker co 6 h, e-mail przy błędzie | OPEN | — | — | pending · Worker wdraża właściciel (konto Cloudflare) |
+| PR2 | Kopie: `backup-export` 02:30 (CSV+gzip, age X25519, R2), `scripts/restore.sh`, test odtworzenia | OPEN | — | — | pending · R2 i klucz age — właściciel |
+| PR3 | Poczta: Resend jako SMTP Supabase Auth, domena zweryfikowana | OPEN | — | — | pending · blokuje produkcję; konto/DNS — właściciel |
+| PR4 | `usage-check` codziennie: 70% → ryzyko, 85% → ryzyko wysokie + e-mail, historia | OPEN | — | — | pending |
+| PR5 | GPS: 2 min w ruchu / 15 min na postoju, limit 60 s w `process_position()`, retencja 30 dni, pomiar bajtów | OPEN | — | — | pending |
+| PR6 | `driver_post_position(token, …)` w SQL (warunki 2.3, limit zapytań); zdjęcia przez Edge | OPEN | — | — | pending |
+| PR7 | Pliki: kompresja zdjęć w przeglądarce (1600 px, JPEG 0,75), PDF ≤ 10 MB, archiwizacja od 70% | OPEN | — | — | pending |
+| PR8 | Hosting: Vercel darmowy + zapas Cloudflare Pages, domena u właściciela, `PRZELACZENIE_HOSTINGU.md`, test przełączenia | OPEN | — | — | pending · wdrożenie po działaniach właściciela (§10) |
+| release-1.0 | Tag `release-1.0` na commicie działającym na produkcji | OPEN | — | — | **dopiero po O3 na produkcji** (AN3 §5 pkt 12) |
+
 ## Etap 4 — Fala 3B: pieniądze, faktury, zlecenia · **ZAMKNIĘTY (G4)**
 
 | ID | pozycja | status | commit | testy (liczby) | uwagi |
@@ -180,6 +195,6 @@ Po wdrożeniu: e-maile przypomnień i „nowa faktura” wychodzą w języku odb
 
 ## Licznik wierszy ID
 
-- Wymagane §12: **51** + Aneks 1 (AN1, M10, M11) + Aneks 2 (AN2, M12) = **56**
+- Wymagane §12: **51** + Aneks 1 (AN1, M10, M11) + Aneks 2 (AN2, M12) = **56**; Aneks 3 (AN3, 2.1–2.4, PL-T) + Aneks 4 (AN4, PR1–PR8, release-1.0) = **+16 → 72**
 - W tabelach etapów powyżej: **56** (P0×3 + F2/G1×7 + Etap2×14 + BK/G3×8 + Aneksy×2 + Etap4×14 + Etap5×3 + Etap6×5)
 - L* po F2.5: **0** na razie (dopisać po F2.5)
