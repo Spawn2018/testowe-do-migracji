@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Encrypter } from 'age-encryption';
@@ -33,6 +33,7 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
 
   it.skipIf(!hasAge)('format zgodny z restore.sh: JS gzip + age (X25519) → `age -d | gunzip`; zły klucz odrzucony', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'wt-age-'));
+    try {
     execFileSync('age-keygen', ['-o', join(dir, 'k.txt')], { stdio: 'ignore' });
     const recipient = execFileSync('age-keygen', ['-y', join(dir, 'k.txt')]).toString().trim();
     expect(recipient).toMatch(/^age1[0-9a-z]+$/);
@@ -45,5 +46,8 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
     execFileSync('age-keygen', ['-o', join(dir, 'zly.txt')], { stdio: 'ignore' });
     expect(() => execFileSync('age', ['-d', '-i', join(dir, 'zly.txt'), join(dir, 't.csv.gz.age')], { stdio: 'pipe' })).toThrow();
     expect((await gzip(new Uint8Array(10_000))).byteLength).toBeLessThan(200);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });   // klucze testowe nie zostają na dysku
+    }
   });
 });
