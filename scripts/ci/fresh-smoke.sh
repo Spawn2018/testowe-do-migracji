@@ -3,6 +3,7 @@
 # 1) git archive HEAD → katalog tymczasowy (+ symlink node_modules),
 # 2) vite build (tryb demo, VITE_AUTH_MODE=demo) → <tmp>/dist; paczka musi być bez kodu Supabase,
 # 3) vite preview na dedykowanym porcie (domyślnie 4179, --strictPort),
+# 3b) budżet pierwszego wczytania: scripts/bundle-size.mjs (≤ 400 kB gzip, D15),
 # 4) PW_BASE_URL=http://127.0.0.1:<port> → test:visual, test:d19, test:deur, test:etap4, test:etap5,
 # 5) sprzątanie (kill podglądu, rm tmp) przy każdym wyjściu.
 # Nigdy nie dotyka dist/ repo ani podglądu :4177.
@@ -31,6 +32,8 @@ ln -s "$ROOT/node_modules" "$TMP/node_modules"
 if grep -l -i "supabase" "$TMP"/dist/assets/*.js >/dev/null 2>&1; then
   echo "[fresh] BŁĄD: paczka demo zawiera kod Supabase" >&2; exit 4
 fi
+# D15: budżet pierwszego wczytania (gzip) — 400 kB
+node "$ROOT/scripts/bundle-size.mjs" "$TMP/dist" --budget-kb=400 || { echo "[fresh] BŁĄD: pierwsze wczytanie ponad budżet" >&2; exit 6; }
 ( cd "$TMP" && exec "$ROOT/node_modules/.bin/vite" preview --outDir "$TMP/dist" --host 127.0.0.1 --port "$PORT" --strictPort >"$TMP/preview.log" 2>&1 ) &
 PREVIEW_PID=$!
 for _ in $(seq 1 60); do

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { useTowerStore } from './store/useTowerStore';
 import { Topbar } from './components/shell/Topbar';
@@ -36,6 +36,12 @@ function TowerShell() {
 
   usePageSectionDnD();
   useRouteSync();
+
+  // D14: nowy widok zaczyna się od góry (przewinięcie poprzedniego widoku nie przechodzi dalej).
+  const mainRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+  }, [view]);
 
   useEffect(() => {
     initTheme();
@@ -138,7 +144,7 @@ function TowerShell() {
       <CorridorSpine />
       <div className="body">
         <Nav />
-        <main>{body}</main>
+        <main ref={mainRef}>{body}</main>
       </div>
       <LoadDrawer />
       <Toasts />

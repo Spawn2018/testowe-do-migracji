@@ -1,5 +1,4 @@
 /** Build a real ZIP of document vault entries (JSZip) and trigger download. */
-import JSZip from 'jszip';
 import type { Document } from '../types';
 import { getFileSink, isStoredDoc } from '../data/registry';
 
@@ -28,6 +27,8 @@ export async function downloadDocumentsZip(
   docs: Document[],
   filename: string,
 ): Promise<{ count: number; skipped: number }> {
+  // D15: JSZip ładowany dopiero przy pobieraniu paczki.
+  const { default: JSZip } = await import('jszip');
   const zip = new JSZip();
   let count = 0;
   let skipped = 0;

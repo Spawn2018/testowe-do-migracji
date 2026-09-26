@@ -87,23 +87,9 @@ export function normalizePhone(v: unknown, defaultCc = '+48'): string | null {
 /* Mapowanie kolumn — szablon zapisywany po pierwszym imporcie      */
 /* --------------------------------------------------------------- */
 
-export const COLUMN_MAP_DEFAULT = {
-  shipmentCode: 'Wysyłka',
-  itemType: 'Typ',
-  dimensions: 'Rozmiar L x W x H',
-  unitWeight: 'Waga elementu',
-  qty: 'Ilość elementów',
-  totalWeight: 'Waga transport [t]',
-  loadDate: 'Data załadunku',
-  loadTime: 'Godzina (załadunek)',
-  driverName: 'Imię i nazwisko kierowcy',
-  driverPhone: 'Nr tel. kierowcy',
-  orderNo: 'Nr zlecenia',
-  deliveryDate: 'Data dostawy na budowę',
-  deliveryTime: 'Godzina (rozładunek)',
-  // pola, których KSH dziś nie ma — dodane po naszej stronie
-  assemblySeq: 'Kolejność montażu',
-} as const;
+// D15: stała w lekkim module (widok harmonogramu nie ładuje zod przy starcie).
+import { COLUMN_MAP_DEFAULT } from './importColumnMap';
+export { COLUMN_MAP_DEFAULT };
 
 export type ColumnMap = Record<keyof typeof COLUMN_MAP_DEFAULT, string>;
 

@@ -15,6 +15,7 @@ import type { Load } from '../../types';
 import { truckDivIcon, ferryDivIcon } from '../../lib/mapMarkers';
 import { nextLiveSailing } from '../../lib/ferry';
 import { severityLabel } from '../../lib/enumLabels';
+import { isFrozenNow } from '../../lib/frozenNow';
 
 /** Requested Carto public URLs — CDN now watermarks without key (2026-09). */
 export const CARTO_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
@@ -163,6 +164,9 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
   }, []);
 
   useEffect(() => {
+    // D15/G5: przy zamrożonym czasie (?now=, VITE_FROZEN_NOW) bez dryfu pozycji — ujęcia deterministyczne
+    // niezależnie od chwili zamontowania mapy (leniwy kawałek).
+    if (isFrozenNow()) return;
     const id = window.setInterval(() => setTick((t) => t + 1), 1500);
     return () => clearInterval(id);
   }, []);

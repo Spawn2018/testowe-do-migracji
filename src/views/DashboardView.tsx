@@ -3,7 +3,7 @@ import { useTowerStore } from '../store/useTowerStore';
 import { ExceptionRow } from '../components/ui/ExceptionRow';
 import { KpiTile } from '../components/ui/KpiTile';
 import { DeliveryProgress } from '../components/chart/DeliveryProgress';
-import { CorridorMap } from '../components/map/CorridorMap';
+import { CorridorMap } from '../components/map/LazyCorridorMap';
 import { t } from '../i18n/messages';
 import { canSeeMargin, ROLE_META } from '../lib/permissions';
 import { getNow } from '../lib/frozenNow';

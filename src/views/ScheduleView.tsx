@@ -3,7 +3,6 @@ import { useTowerStore } from '../store/useTowerStore';
 import { filterLoads } from '../lib/selectors';
 import { StatusPill, formatDelayPill } from '../components/ui/StatusPill';
 import { canImportSchedule, canSeeCost, canSeeMargin, canSeeRevenue, visibleDriverPhone } from '../lib/permissions';
-import { exportLoadsXlsx } from '../lib/xlsxExport';
 import { t } from '../i18n/messages';
 import {
   delayMinutesVsPlan,
@@ -13,8 +12,9 @@ import {
   TZ_UNLOAD_SE,
 } from '../lib/time';
 import { getNow } from '../lib/frozenNow';
-import { dryRunFromXlsx, type ImportDiff } from '../lib/scheduleDryRun';
-import { COLUMN_MAP_DEFAULT } from '../lib/scheduleParse';
+// D15: ExcelJS (~1 MB) tylko przy imporcie/eksporcie — dynamiczny import.
+import type { ImportDiff } from '../lib/scheduleDryRun';
+import { COLUMN_MAP_DEFAULT } from '../lib/importColumnMap';
 import type { CorridorStage, DocCategory, Load } from '../types';
 import {
   SCHED_COLS,
@@ -146,6 +146,7 @@ export function ScheduleView() {
     setParsing(true);
     try {
       const buf = await f.arrayBuffer();
+      const { dryRunFromXlsx } = await import('../lib/scheduleDryRun');
       const diff = await dryRunFromXlsx(buf, f.name, useTowerStore.getState().loads);
       setDryRun(diff);
       setStep('map');
@@ -285,6 +286,7 @@ export function ScheduleView() {
             onClick={() => {
               void (async () => {
                 try {
+                  const { exportLoadsXlsx } = await import('../lib/xlsxExport');
                   const result = await exportLoadsXlsx(loads, `WATCH_TOWER_${role}_harmonogram.xlsx`);
                   pushToast(`Eksport XLSX · ${result.rows} wierszy · ${result.bytes} B`, 'MEDIUM');
                 } catch (err: unknown) {

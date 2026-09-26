@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { filterLoads } from '../lib/selectors';
 import { StatusPill } from '../components/ui/StatusPill';
-import { CorridorMap } from '../components/map/CorridorMap';
+import { CorridorMap } from '../components/map/LazyCorridorMap';
 import { t } from '../i18n/messages';
 import { fetchSituations } from '../lib/trafikverket';
 import { trafikverketShortLabel } from '../lib/demoLabel';

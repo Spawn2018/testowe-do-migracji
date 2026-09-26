@@ -3,6 +3,7 @@
  * D14: trasy adresowalne (HashRouter) — link do transportu otwiera szufladę; widok ↔ adres w obie strony;
  *      wstecz zamyka szufladę; rola i język w trwałym ustawieniu; widok spoza roli → zastąpiony dozwolonym;
  *      query `?now=` zachowane.
+ * D15: kawałki leniwe działają — mapa (kokpit, Mapa), eksport XLSX (ExcelJS), paczka ZIP dokumentów (JSZip).
  */
 import { expect, test, type Page } from '@playwright/test'
 
@@ -72,5 +73,21 @@ test.describe('D14 — trasy adresowalne', () => {
     await page.goto(url('/transport/XX-99'), { waitUntil: 'networkidle' })
     await expect(page.locator('.drawer')).toHaveCount(0)
     await expect.poll(() => hashPath(page)).toBe('/kokpit')
+  })
+})
+
+test.describe('D15 — kawałki ładowane leniwie', () => {
+  test('mapa w kokpicie i widoku Mapa; eksport XLSX i paczka ZIP pobierają pliki', async ({ page }) => {
+    await fresh(page)
+    await expect(page.locator('.corridor-map-el.leaflet-container')).toHaveCount(1)
+    await page.locator('nav button[data-view="map"]').click()
+    await expect(page.locator('.corridor-map-el.leaflet-container')).toHaveCount(1)
+    await expect(page.locator('.mapkey')).toBeVisible()
+    await page.locator('nav button[data-view="sched"]').click()
+    const [xlsx] = await Promise.all([page.waitForEvent('download'), page.locator('[data-action="export-xlsx"]').click()])
+    expect(xlsx.suggestedFilename()).toMatch(/\.xlsx$/)
+    await page.locator('nav button[data-view="docs"]').click()
+    const [zip] = await Promise.all([page.waitForEvent('download'), page.locator('button.chipbtn', { hasText: /ZIP|paczk/i }).first().click()])
+    expect(zip.suggestedFilename()).toMatch(/\.zip$/)
   })
 })
