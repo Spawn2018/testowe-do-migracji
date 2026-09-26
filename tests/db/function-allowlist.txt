@@ -1,16 +1,10 @@
 # ANEKS 5 odp. §6.1 — jawna lista funkcji schematu public, które anon / authenticated mogą wywołać.
 # Test (tests/db/security.sh) porównuje ją z katalogiem: funkcja spoza listy = test czerwony.
 # Format: <rola> <nazwa funkcji>  (wszystkie przeciążenia). Zmiana listy = świadoma decyzja w przeglądzie.
-# --- anon: API tokenu kierowcy (2.3), podtrzymanie bazy (PR1), pomocnicze RLS (zwracają pusto bez konta)
-anon can_see_margin
-anon current_app_role
-anon current_app_user_id
-anon current_org_id
-anon current_org_kind
+# --- anon: API tokenu kierowcy (2.3), podtrzymanie bazy (PR1). Od 0030 (3.2d) bez pomocniczych RLS.
 anon driver_get_instructions
 anon driver_post_event
 anon driver_post_position
-anon is_hhl
 anon keep_alive
 # --- authenticated: pomocnicze RLS / widoki / funkcje wywoływane przez funkcje security invoker
 authenticated can_see_margin
@@ -22,7 +16,6 @@ authenticated is_hhl
 authenticated doc_bucket
 authenticated doc_safe_name
 authenticated invoice_week_local
-authenticated loaded_confirmed
 authenticated make_circle_fence
 authenticated money_effective_eur
 authenticated money_least_tier
