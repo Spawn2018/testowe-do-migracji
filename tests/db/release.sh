@@ -115,4 +115,19 @@ val "nowy rodzaj: SCX nie widzi"                         $SCX "$(C nowy)" 0
 val "HHL nie nadpisze odbiorców (SEQUENCE z WSZYSCY → HHL_KLIENT)" $HHL "insert into risk_signals (project_id, load_id, kind, severity, title, detail, audience) values ('$P','$L1','SEQUENCE','LOW','x','{\"t\":\"ovr\"}','WSZYSCY'); select audience from risk_signals where detail->>'t'='ovr'" HHL_KLIENT
 err "anon nie czyta ryzyk"                               $HHL "set local role anon; select count(*) from risk_signals" "permission denied|0"
 
+echo; echo "[2.4] Numer zlecenia 48 h przed załadunkiem — ostrzeżenie, bez blokady"
+L5=33333333-0000-0000-0000-000000000005
+sys "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_from) values ('$L5','$P','$OSCX','KSH/5', now() + interval '47 hours')"
+chk "detect_missing_order_numbers: 2 ryzyka (HHL + przewoźnik)" "$(Q "select detect_missing_order_numbers()")" 2
+chk "brak numeru HHL → odbiorcy HHL"                     "$(Q "select audience from risk_signals where load_id='$L5' and detail->>'side'='HHL'")" HHL
+chk "brak numeru przewoźnika → odbiorcy HHL_PRZEWOZNIK"  "$(Q "select audience from risk_signals where load_id='$L5' and detail->>'side'='CARRIER'")" HHL_PRZEWOZNIK
+val "SCX widzi ryzyko swojego numeru"                    $SCX "select count(*) from risk_signals where load_id='$L5' and detail->>'side'='CARRIER'" 1
+val "SCX nie widzi ryzyka numeru HHL"                    $SCX "select count(*) from risk_signals where load_id='$L5' and detail->>'side'='HHL'" 0
+val "KSH nie widzi żadnego z nich"                       $KSH "select count(*) from risk_signals where load_id='$L5'" 0
+chk "przypomnienie do przewoźnika (SCX)"                 "$(Q "select count(*) from notifications where load_id='$L5' and template='ORDER_NO_MISSING' and payload->>'side'='CARRIER' and user_id=(select id from app_users where auth_id='$SCX')")" 1
+chk "przypomnienie do HHL"                               "$(Q "select count(*) from notifications where load_id='$L5' and template='ORDER_NO_MISSING' and payload->>'side'='HHL' and user_id=(select id from app_users where auth_id='$HHL')")" 1
+chk "przewoźnik bez przypomnienia o numerze HHL"         "$(Q "select count(*) from notifications where load_id='$L5' and payload->>'side'='HHL' and user_id=(select id from app_users where auth_id='$SCX')")" 0
+val "brak blokady: HHL przestawia na RESOURCES_PENDING bez numerów (47 h)" $HHL "update loads set status='RESOURCES_PENDING' where id='$L5' returning status" RESOURCES_PENDING
+err "blokady Q10 zostają: READY bez numeru HHL odrzucone" $HHL "update loads set status='READY' where id='$L5'" "numeru zlecenia"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

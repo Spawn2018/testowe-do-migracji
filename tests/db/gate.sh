@@ -26,5 +26,5 @@ check security 52
 check status 44
 check storage 33
 check money 130
-check release 58
+check release 69
 [ $ok -eq 1 ]
