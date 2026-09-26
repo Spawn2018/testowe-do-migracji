@@ -61,6 +61,20 @@ link dla adresu bez zaproszenia → HTTP 500, 0 nowych kont. Ustawienie Auth „
 WŁĄCZONE, bo zaproszenie działa przez `signInWithOtp(shouldCreateUser: true)` po wpisie w `user_invites`
 (`UsersAdmin`); wyłączenie go zablokowałoby zapraszanie. Zob. `KOPIE_ZAPASOWE.md` / POSTEP 3.2a.
 
+**Hasło kont „tylko link” (B, 26.09):** konto powstaje w chwili wysłania linku (`POST /auth/v1/otp`, `create_user`),
+a GoTrue zakłada je ze swoim losowym hasłem tymczasowym (`internal/api/magic_link.go`: nowy lub niepotwierdzony
+użytkownik → `crypto.GeneratePassword(..., 33)` → `Signup`, hasło nigdzie nie zwracane, zapis jako bcrypt `$2a$`).
+My hasła nie ustawiamy (brak `admin/users` z hasłem w kodzie i skryptach); `invited_at` = NULL potwierdza, że to nie
+`inviteUserByEmail`/`generateLink(invite)`. Hasło nie jest używane — logowanie wyłącznie linkiem.
+
+**Przyjęcie i wygasanie zaproszeń (0039):** przyjęcie (`user_invites.accepted_at`, audyt `USER_ACCEPTED_INVITE`) =
+pierwsze logowanie (`auth.users.last_sign_in_at` NULL → wartość, wyzwalacz `tower_on_auth_user_first_sign_in`), nie
+utworzenie konta. Zadanie `tower-wygasanie-zaproszen` (02:40 UTC) wyłącza (`active = false`, audyt
+`USER_INVITE_EXPIRED`) konta bez logowania starsze niż 7 dni od ostatniego zaproszenia — nieaktywne konto widzi 0
+wierszy. Ponowne zaproszenie (`admin_invite_user`) reaktywuje takie konto i odnawia termin (audyt `USER_REINVITED`);
+konta, które się już logowały, nie da się „zaprosić ponownie”. Wygasłe konto logujące się starym linkiem nie zostaje
+przyjęte i nadal nic nie widzi.
+
 ## 6. Zdarzenia transportu (`load_events`) — lista dozwolonych typów (W2, migracja 0032)
 Zdarzenia stref zmieniają status (`apply_geofence_status`), więc typy systemowe **nie mogą** przyjść przez API.
 Reguła `events_insert` to **lista dozwolonych** (nowy typ = domyślnie zamknięty), `CHECK load_events_event_type_known`
@@ -99,5 +113,10 @@ Funkcje bez EXECUTE dla ról API. Test: `tests/db/watchdog.sh` (19), produkcja �
 ## 8. Widoczność wiadomości i pozycji harmonogramu (W3, 0037) oraz limity zasobników (W4, 0038)
 `msgs_read`: HHL albo (rodzaj firmy w `visible_to` **i** transport widoczny przez RLS `loads`).
 `items_read`: HHL; klient — pozycje projektów, których jest klientem (także bez transportu); przewoźnik — tylko pozycje
-na swoich transportach (pozycji bez transportu nie widzi). Zasobniki: `zdjecia` 2 MB, `dokumenty` 10 MB, `faktury` 20 MB
-(bez zmian — do decyzji właściciela, reguła PDF 10 MB dotyczy też faktur).
+na swoich transportach (pozycji bez transportu nie widzi). Zasobniki: `zdjecia` 2 MB, `dokumenty` 10 MB, `faktury` 10 MB
+(0040, decyzja właściciela 26.09: jak wszystkie PDF; `create_document` i kreator faktury — błąd `PDF_SIZE` — też 10 MB).
+
+## 9. Retencja dziennika przebiegów (0041)
+`tower-retencja-przebiegow` (02:50 UTC, `purge_integration_runs`): `integration_runs` udane > 30 dni i nieudane > 180 dni
+są usuwane; ostatni udany przebieg każdego zadania zostaje zawsze (strażnik 0035 liczy od niego okno). Funkcja tylko
+dla zadań systemowych (bez EXECUTE dla anon/authenticated).
