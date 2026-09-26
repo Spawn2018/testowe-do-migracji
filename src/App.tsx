@@ -21,6 +21,7 @@ import { OptionsView } from './views/OptionsView';
 import { SettingsView } from './views/SettingsView';
 import { navForRole } from './lib/permissions';
 import { usePageSectionDnD } from './hooks/usePageSectionDnD';
+import { useRouteSync } from './hooks/useRouteSync';
 import { SUPABASE_AUTH_ENABLED } from './auth/config';
 
 // BK2: bramka logowania tylko w trybie Supabase (VITE_AUTH_MODE=supabase); demo bez zmian.
@@ -34,6 +35,7 @@ function TowerShell() {
   const navCollapsed = useTowerStore((s) => s.navCollapsed);
 
   usePageSectionDnD();
+  useRouteSync();
 
   useEffect(() => {
     initTheme();
