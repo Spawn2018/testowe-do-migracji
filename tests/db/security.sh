@@ -158,5 +158,24 @@ out=$(sys "begin; $AU $INV '6 days 23 hours'); insert into auth.users (email) va
 out=$(sys "begin; $AU insert into auth.users (email) values ('obcy@test'); rollback;")
 echo "$out" | grep -q "TOWER_NO_INVITE" && { ok=$((ok+1)); echo "  OK    bez zaproszenia → odrzucone (TOWER_NO_INVITE)"; } || { fail=$((fail+1)); echo "  FAIL  bez zaproszenia: $out"; }
 
+echo; echo "[W3] Wiadomości i pozycje wg transportu/projektu (0037)"
+W3="reset role;
+ insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a004','CAR2','Drugi przewoźnik','CARRIER'),
+   ('00000000-0000-0000-0000-00000000a005','KL2','Drugi klient','CLIENT');
+ insert into projects (id, code, name, client_org_id) values ('22222222-0000-0000-0000-000000000009','P2','Projekt 2','00000000-0000-0000-0000-00000000a005');
+ insert into loads (id, project_id, carrier_org_id, order_no) values ('33333333-0000-0000-0000-000000000009','22222222-0000-0000-0000-000000000001','00000000-0000-0000-0000-00000000a004','KSH/W3');
+ insert into load_messages (load_id, author_id, body) select '33333333-0000-0000-0000-000000000009', id, 'obcy' from app_users where email='hhl@test';
+ insert into load_messages (load_id, author_id, body) select '$L1', id, 'swoj' from app_users where email='hhl@test';
+ insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m) values
+   ('22222222-0000-0000-0000-000000000001','$L1','W3-SWOJ',1,1,1),
+   ('22222222-0000-0000-0000-000000000001','33333333-0000-0000-0000-000000000009','W3-OBCY',1,1,1),
+   ('22222222-0000-0000-0000-000000000001',null,'W3-BEZ',1,1,1),
+   ('22222222-0000-0000-0000-000000000009',null,'W3-P2',1,1,1);
+ set local role authenticated;"
+val "przewoźnik: wiadomości tylko swoich transportów"           $SCX "$W3 select string_agg(body, ',' order by body) from load_messages where body in ('obcy','swoj')" swoj
+val "przewoźnik: pozycje tylko na swoich transportach"          $SCX "$W3 select string_agg(shipment_code, ',' order by shipment_code) from shipment_items where shipment_code like 'W3-%'" W3-SWOJ
+val "klient: pozycje tylko swojego projektu (także bez transportu)" $KSH "$W3 select string_agg(shipment_code, ',' order by shipment_code) from shipment_items where shipment_code like 'W3-%'" "W3-BEZ,W3-OBCY,W3-SWOJ"
+val "HHL: wszystkie pozycje i wiadomości"                        $HHL "$W3 select (select count(*) from shipment_items where shipment_code like 'W3-%') || '/' || (select count(*) from load_messages where body in ('obcy','swoj'))" 4/2
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
