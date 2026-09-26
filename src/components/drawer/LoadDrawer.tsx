@@ -34,6 +34,9 @@ import {
 import { TIER_PILL, type MoneySideV2 } from '../../lib/money/loadMoney';
 import { autoStatusText, effArrival, effDeparture, fmtLocal, sailingAssignDenied, sailingStatusLabel, selectableSailings } from '../../lib/sailings';
 import { getNowIso } from '../../lib/frozenNow';
+import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
+import { isServerId } from '../../data/registry';
+import { DriverLinkPanel } from './DriverLinkPanel';
 import type { Locale } from '../../types';
 
 /** M8 — poziom, mnożnik paliwowy z datą i kurs strony wyceny. */
@@ -787,6 +790,7 @@ export function LoadDrawer() {
                   )}
                 </>
               )}
+              {SUPABASE_AUTH_ENABLED && canEdit && isServerId(load.id) && <DriverLinkPanel loadId={load.id} />}
 
               <div className="hr" />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>

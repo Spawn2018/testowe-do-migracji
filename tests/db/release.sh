@@ -130,4 +130,60 @@ chk "przewoźnik bez przypomnienia o numerze HHL"         "$(Q "select count(*) 
 val "brak blokady: HHL przestawia na RESOURCES_PENDING bez numerów (47 h)" $HHL "update loads set status='RESOURCES_PENDING' where id='$L5' returning status" RESOURCES_PENDING
 err "blokady Q10 zostają: READY bez numeru HHL odrzucone" $HHL "update loads set status='READY' where id='$L5'" "numeru zlecenia"
 
+echo; echo "[2.3] Token kierowcy — skrót, jeden transport, ważność, odwołanie, limit, bez cen"
+L6=33333333-0000-0000-0000-000000000006; L7=33333333-0000-0000-0000-000000000007
+for x in 6 7; do sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no) values ('33333333-0000-0000-0000-00000000000$x','$P','$OSCX','KSH/$x','HHL/$x','SCX/$x')"; done
+sys "update loads set status='IN_TRANSIT_PL' where id in ('$L6','$L7')"
+sys "insert into load_cost (load_id, base_amount) values ('$L6', 3000)"
+tok() { $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; select issue_driver_token('$2'); commit;" 2>&1 | grep '^wt_'; }
+err "anon nie wyda tokenu"                               "" "set local role anon; select issue_driver_token('$L6')" "permission denied"
+err "KSH nie wyda tokenu"                                $KSH "select issue_driver_token('$L6')" "wyłącznie przewoźnik"
+err "inny przewoźnik (CRX) nie wyda tokenu dla SCX"      $CRX "select issue_driver_token('$L6')" "wyłącznie przewoźnik"
+TA=$(tok $SCX $L6); TB=$(tok $HHL $L7)
+chk "token: 244 bity losowe (wt_ + 64 znaki hex)"        "$(echo -n "$TA" | grep -cE '^wt_[0-9a-f]{64}$')" 1
+chk "w bazie wyłącznie skrót SHA-256, nie token"         "$(Q "select count(*) from driver_tokens where token_hash = sha256(convert_to('$TA','UTF8')) and position('${TA#wt_}' in encode(token_hash,'hex')) = 0")" 1
+chk "ważność ≤ 14 dni od wydania"                        "$(Q "select bool_and(expires_at <= issued_at + interval '14 days') from driver_tokens")" t
+err "anon nie czyta tabeli tokenów"                      "" "set local role anon; select count(*) from driver_tokens" "permission denied"
+err "anon nie wywoła sprawdzenia tokenu wprost"          "" "set local role anon; select driver_token_load('$TA')" "permission denied"
+ROLE=anon val "kierowca: pozycja do własnego transportu (anon, API bazy)" "" "select count(*) >= 0 from driver_post_position('$TA', '$L6', 54.0, 18.5, now() - interval '1 minute', 10, 60, 90)" t commit
+chk "pozycja zapisana (DRIVER_PWA, via driver_token)"    "$(Q "select count(*) from positions where load_id='$L6' and source='DRIVER_PWA'")" 1
+ROLE=anon err "token transportu A odrzucony przy pozycji do B" "" "select * from driver_post_position('$TA', '$L7', 54.0, 18.5, now(), 10, 60, 90)" "nie dotyczy tego transportu"
+ROLE=anon err "token transportu A odrzucony przy zdarzeniu w B" "" "select driver_post_event('$TA', '$L7', 'MILESTONE_LOADED')" "nie dotyczy tego transportu"
+ROLE=anon err "zdarzenie spoza listy odrzucone"         "" "select driver_post_event('$TA', '$L6', 'GEOFENCE_ENTER')" "Niedozwolone"
+ROLE=anon val "kierowca: zdarzenie etapu (Załadowany)"  "" "select driver_post_event('$TA', '$L6', 'MILESTONE_LOADED')" MILESTONE_LOADED commit
+chk "zdarzenie zapisane w load_events"                   "$(Q "select count(*) from load_events where load_id='$L6' and event_type='MILESTONE_LOADED'")" 1
+ROLE=anon val "instrukcje: własny transport"            "" "select driver_get_instructions('$TA')->>'order_no'" KSH/6
+ROLE=anon val "instrukcje: żadnego pola cenowego"       "" "select count(*) from jsonb_object_keys(driver_get_instructions('$TA')) k where k ~* '(cost|price|revenue|margin|amount|eur|pln|rate|baf|fuel|total|invoice|kwot|cen)'" 0
+ROLE=anon val "instrukcje: żadnej kwoty w wartościach"  "" "select position('3000' in driver_get_instructions('$TA')::text)" 0
+ROLE=anon err "losowy token odrzucony"                  "" "select driver_get_instructions('wt_00ff')" "nieważny"
+TA2=$(tok $SCX $L6)
+ROLE=anon err "nowy token unieważnia poprzedni"         "" "select driver_get_instructions('$TA')" "odwołany"
+ROLE=anon val "nowy token działa"                        "" "select driver_get_instructions('$TA2')->>'order_no'" KSH/6
+val "przewoźnik odwołuje token swojego transportu"       $SCX "select revoke_driver_token('$L6')" 1 commit
+ROLE=anon err "token odwołany odrzucony"                "" "select * from driver_post_position('$TA2', '$L6', 54.0, 18.5, now(), 10, 60, 90)" "odwołany"
+err "inny przewoźnik nie odwoła"                         $CRX "select revoke_driver_token('$L7')" "wyłącznie przewoźnik"
+TA3=$(tok $SCX $L6)
+val "HHL odwołuje token"                                 $HHL "select revoke_driver_token('$L6')" 1 commit
+ROLE=anon err "token odwołany przez HHL odrzucony"      "" "select driver_get_instructions('$TA3')" "odwołany"
+sys "update driver_tokens set expires_at = now() - interval '1 second' where token_hash = sha256(convert_to('$TB','UTF8'))"
+ROLE=anon err "token wygasły odrzucony"                 "" "select driver_get_instructions('$TB')" "wygasł"
+TB2=$(tok $HHL $L7)
+sys "update loads set status='UNLOADED', actual_delivery_at = now() - interval '25 hours' where id='$L7'"
+ROLE=anon err "token ponad 24 h po rozładunku odrzucony" "" "select driver_get_instructions('$TB2')" "24 h po rozładunku"
+err "wydanie ponad 24 h po rozładunku odrzucone"         $HHL "select issue_driver_token('$L7')" "24 h po rozładunku"
+TA4=$(tok $SCX $L6)
+sys "update driver_tokens set window_count = 120, window_start = now() where token_hash = sha256(convert_to('$TA4','UTF8'))"
+ROLE=anon err "limit zapytań: 121. wywołanie w godzinie odrzucone" "" "select driver_get_instructions('$TA4')" "Limit zapytań"
+sys "update driver_tokens set window_start = now() - interval '61 minutes' where token_hash = sha256(convert_to('$TA4','UTF8'))"
+ROLE=anon val "limit zapytań: nowe okno po godzinie"    "" "select driver_get_instructions('$TA4')->>'order_no'" KSH/6
+ROLE=anon val "Rozładowany: zdarzenie przyjęte"         "" "select driver_post_event('$TA4', '$L6', 'MILESTONE_UNLOADED', now() - interval '5 minutes')" MILESTONE_UNLOADED commit
+chk "Rozładowany: status UNLOADED z datą rozładunku"     "$(Q "select status||':'||(actual_delivery_at is not null) from loads where id='$L6'")" "UNLOADED:true"
+chk "wydanie i odwołanie w dzienniku audytu"             "$(Q "select count(*) >= 2 from audit_log where action in ('DRIVER_TOKEN_ISSUE','DRIVER_TOKEN_REVOKE')")" t
+TP=$(tok $SCX $L6)
+err "zdjęcie: anon nie zarejestruje dokumentu wprost"    "" "set local role anon; select * from driver_create_document('$TP', '$L6', 'CMR', 'a.jpg', 'image/jpeg', 1000)" "permission denied"
+ROLE=service_role err "zdjęcie: token A odrzucony dla B" "" "select * from driver_create_document('$TP', '$L7', 'CMR', 'a.jpg', 'image/jpeg', 1000)" "nie dotyczy tego transportu"
+ROLE=service_role err "zdjęcie: kategoria spoza listy (faktura) odrzucona" "" "select * from driver_create_document('$TP', '$L6', 'INVOICE', 'a.pdf', 'application/pdf', 1000)" "wyłącznie CMR"
+ROLE=service_role err "zdjęcie: PDF > 10 MB odrzucony"  "" "select * from driver_create_document('$TP', '$L6', 'POD', 'a.pdf', 'application/pdf', 10485761)" "10 MB"
+ROLE=service_role val "zdjęcie: rejestracja z tokenem (koszyk zdjęć)" "" "select bucket from driver_create_document('$TP', '$L6', 'LASHING_PHOTO', 'mocowanie.jpg', 'image/jpeg', 350000)" zdjecia
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

@@ -12,6 +12,12 @@ import {
   type DriverConsent, type DriverFix,
 } from '../lib/driverTracking';
 import { getNowIso } from '../lib/frozenNow';
+import { SUPABASE_ANON_KEY, SUPABASE_AUTH_ENABLED, SUPABASE_URL } from '../auth/config';
+import { createDriverApi, isServerDriverToken, uploadDriverFile, type DriverInstructions } from '../data/driverApi';
+import type { DriverMilestone } from '../lib/driverTracking';
+
+/* ANEKS 3 §2.3 — link z tokenem z bazy (tylko build Supabase; w demo stała false → kod usuwany) */
+const driverApi = () => import('../auth/client').then(({ getSupabase }) => getSupabase()).then((sb) => createDriverApi(sb));
 
 export function DriverPwa() {
   const { token = 'demo-active' } = useParams();
@@ -32,7 +38,33 @@ export function DriverPwa() {
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const camRef = useRef<HTMLInputElement>(null);
 
-  const loadId = DRIVER_TOKENS[token];
+  const serverMode = SUPABASE_AUTH_ENABLED && isServerDriverToken(token);
+  const [srv, setSrv] = useState<DriverInstructions | null>(null);
+  const [srvErr, setSrvErr] = useState<string | null>(null);
+  const [srvNote, setSrvNote] = useState<string | null>(null);
+  useEffect(() => {
+    if (!serverMode) return;
+    let alive = true;
+    driverApi()
+      .then((api) => api.instructions(token))
+      .then((i) => { if (alive) { setSrv(i); setSrvErr(null); } })
+      .catch((e: unknown) => { if (alive) setSrvErr(e instanceof Error ? e.message : String(e)); });
+    return () => { alive = false; };
+  }, [serverMode, token]);
+  const loadId = serverMode ? srv?.load_id : DRIVER_TOKENS[token];
+  const sendFix = (fix: DriverFix) => {
+    if (!serverMode) { driverReportFix(token, fix); return; }
+    if (!loadId) return;
+    void driverApi().then((api) => api.position(token, loadId, fix)).catch((e: unknown) => setSrvNote(e instanceof Error ? e.message : String(e)));
+  };
+  const sendMilestone = (m: DriverMilestone) => {
+    if (!serverMode) { driverMilestone(token, m); return; }
+    if (!loadId) return;
+    void driverApi()
+      .then((api) => api.milestone(token, loadId, m, getNowIso()))
+      .then(() => setSrvNote(`${t(locale, m === 'LOADED' ? 'milestone_loaded' : m === 'ON_FERRY' ? 'milestone_ferry' : m === 'UNLOADED' ? 'milestone_unloaded' : 'milestone_problem')} ✓`))
+      .catch((e: unknown) => setSrvNote(e instanceof Error ? e.message : String(e)));
+  };
 
   /* pozycja ciągła wyłącznie za zgodą i dla przypisanego transportu */
   useEffect(() => {
@@ -44,11 +76,12 @@ export function DriverPwa() {
         setGeoError(false);
         if (shouldSendFix(sentRef.current, fix)) {
           sentRef.current = fix;
-          driverReportFix(token, fix);
+          sendFix(fix);
         }
       },
       () => setGeoError(true),
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sendFix zależy od tokenu i transportu (już w zależnościach)
   }, [consent, loadId, token, driverReportFix]);
 
   const decide = (v: 'granted' | 'denied') => {
@@ -69,7 +102,7 @@ export function DriverPwa() {
           WATCH TOWER · {t(locale, 'drv_title')}
         </div>
         <div className="driver-meta">
-          {load?.code ?? loadId} · token {token}
+          {load?.code ?? srv?.order_no ?? loadId} · token {serverMode ? `${token.slice(0, 7)}…` : token}
         </div>
         <div className="driver-pwa-tabs">
           {(['pl', 'en', 'sv'] as Locale[]).map((l) => (
@@ -80,10 +113,18 @@ export function DriverPwa() {
         </div>
       </header>
       <main className="driver-pwa-main">
-        {!loadId && (
+        {!loadId && !serverMode && (
           <div className="driver-alert">
             Nieznany token kierowcy — użyj #/driver/demo-active lub demo-sg14
           </div>
+        )}
+        {serverMode && srvErr && (
+          <div className="driver-alert" data-driver-token-error>
+            Link kierowcy nieważny — {srvErr}. Poproś dyspozytora o nowy link.
+          </div>
+        )}
+        {serverMode && srvNote && (
+          <div className="driver-attach-note" data-driver-note>{srvNote}</div>
         )}
         {consent === null && loadId ? (
           <div className="panel" data-driver-consent style={{ margin: 0 }}>
@@ -139,7 +180,7 @@ export function DriverPwa() {
             type="button"
             className="btn driver-btn-block"
             style={{ height: 48, fontSize: 15 }}
-            onClick={() => driverSharePosition(token)}
+            onClick={() => (serverMode ? lastFix && sendFix(lastFix) : driverSharePosition(token))}
           >
             {t(locale, 'share_pos')}
           </button>
@@ -164,7 +205,7 @@ export function DriverPwa() {
               borderColor: m === 'PROBLEM' ? 'var(--wt-crit)' : 'var(--wt-border)',
               color: m === 'PROBLEM' ? 'var(--wt-crit)' : undefined,
             }}
-            onClick={() => driverMilestone(token, m)}
+            onClick={() => sendMilestone(m)}
           >
             {t(locale, key)}
           </button>
@@ -202,6 +243,14 @@ export function DriverPwa() {
             e.target.value = '';
             if (!f || !loadId) return;
             setBusy(true);
+            if (serverMode) {
+              // ANEKS 3 §2.3: kierowca bez sesji → funkcja Edge driver-photo (token sprawdza baza)
+              void uploadDriverFile(SUPABASE_URL, SUPABASE_ANON_KEY, token, loadId, cat, f, f.name)
+                .then(() => setLastFile(`${cat} · ${f.name} (${f.size} B)`))
+                .catch((err: unknown) => setLastFile(`Błąd: ${err instanceof Error ? err.message : String(err)}`))
+                .finally(() => setBusy(false));
+              return;
+            }
             // BK4: tryb Supabase → prywatny koszyk Storage; demo → pamięć sesji (bez localStorage).
             void attachDocumentFile(f, loadId, cat, { driverToken: token }).then((ok) => {
               setLastFile(ok ? `${cat} · ${f.name} (${f.size} B)` : `Błąd odczytu: ${f.name}`);
