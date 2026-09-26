@@ -91,7 +91,9 @@ export function linkSeedSailings(loads: Load[], sailings: Sailing[]): Load[] {
 }
 
 /* ---------- ryzyka rejsów i automatu (M10) — kod z dedup_key bazy ---------- */
-export type AutoRiskCode = 'AUTO_STATUS' | 'LOADING_UNCONFIRMED' | 'MISSED_SAILING' | 'SAILING_CANCELLED' | 'FERRY_OVERDUE';
+export type AutoRiskCode = 'AUTO_STATUS' | 'LOADING_UNCONFIRMED' | 'MISSED_SAILING' | 'SAILING_CANCELLED' | 'FERRY_OVERDUE'
+  /* M12 — integracje (funkcje Edge) */
+  | 'SOURCE_DOWN' | 'FERRY_UNKNOWN' | 'AIS_NYN';
 export const AUTO_RISK_CODES: AutoRiskCode[] = ['AUTO_STATUS', 'LOADING_UNCONFIRMED', 'MISSED_SAILING', 'SAILING_CANCELLED', 'FERRY_OVERDUE'];
 
 /** Kod ryzyka z rodzaju i klucza deduplikacji `risk_signals` (0004). */
@@ -102,6 +104,9 @@ export function autoRiskCode(kind: string, dedupKey: string | null | undefined):
   if (k.startsWith('MISSED_SAILING:')) return 'MISSED_SAILING';
   if (k.startsWith('SAILING_CANCELLED:')) return 'SAILING_CANCELLED';
   if (k.startsWith('FERRY_OVERDUE:')) return 'FERRY_OVERDUE';
+  if (k.startsWith('SOURCE_DOWN:')) return 'SOURCE_DOWN';
+  if (k.startsWith('FERRY_UNKNOWN:')) return 'FERRY_UNKNOWN';
+  if (k.startsWith('AIS_NYN:')) return 'AIS_NYN';
   return undefined;
 }
 
@@ -111,6 +116,9 @@ const RISK_LABEL: Record<AutoRiskCode, Record<Locale, string>> = {
   MISSED_SAILING: { pl: 'Rejs przegapiony', en: 'Sailing missed', sv: 'Missad avgång' },
   SAILING_CANCELLED: { pl: 'Rejs odwołany', en: 'Sailing cancelled', sv: 'Avgång inställd' },
   FERRY_OVERDUE: { pl: 'PROM po czasie', en: 'FERRY overdue', sv: 'FÄRJA försenad' },
+  SOURCE_DOWN: { pl: 'Źródło niedostępne', en: 'Source unavailable', sv: 'Källa otillgänglig' },
+  FERRY_UNKNOWN: { pl: 'Status rejsu nieznany', en: 'Sailing status unknown', sv: 'Okänd avgångsstatus' },
+  AIS_NYN: { pl: 'AIS: statek w Nynäshamn', en: 'AIS: vessel at Nynäshamn', sv: 'AIS: fartyg i Nynäshamn' },
 };
 export const autoRiskLabel = (c: AutoRiskCode, locale: Locale): string => RISK_LABEL[c][locale];
 

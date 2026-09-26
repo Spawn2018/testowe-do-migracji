@@ -1,0 +1,13 @@
+{
+  "_zrodlo": "Przykład w formacie TomTom Traffic Flow Segment Data v4 (absolute/10/json) wg dokumentacji — NIE odczyt na żywo (brak TOMTOM_API_KEY).",
+  "flowSegmentData": {
+    "frc": "FRC0",
+    "currentSpeed": 31,
+    "freeFlowSpeed": 90,
+    "currentTravelTime": 348,
+    "freeFlowTravelTime": 120,
+    "confidence": 0.97,
+    "roadClosure": false,
+    "coordinates": { "coordinate": [ { "latitude": 53.1235, "longitude": 18.0084 } ] }
+  }
+}

@@ -289,7 +289,9 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
   const str = (v: unknown) => (typeof v === 'string' ? v : '');
   return {
     id: r.id, type: RISK_TYPE[r.kind] ?? 'OPS', severity: SEVERITY[r.severity] ?? 'LOW', title: r.title,
-    detail: str(d.text) || str(d.detail), loadId: r.load_id ?? undefined, owner,
+    /* M12 — ryzyka z funkcji Edge: opis / ostrzeżenia źródła i atrybucja (Digitraffic CC BY 4.0) */
+    detail: [str(d.text) || str(d.detail) || str(d.opis) || (Array.isArray(d.ostrzezenia) ? d.ostrzezenia.map(String).join(' · ') : ''), str(d.atrybucja)].filter(Boolean).join(' · '),
+    loadId: r.load_id ?? undefined, owner,
     meta: str(d.meta), nextAction: str(d.next_action),
     ageHours: Math.max(0, Math.round((Date.parse(nowIso) - Date.parse(r.detected_at)) / 36e5)),
     /* M10 — rodzaj ryzyka automatu / rejsu z klucza deduplikacji (0004) */

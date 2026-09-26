@@ -1364,7 +1364,8 @@ export const useTowerStore = create<TowerState>()(
         if (get().role !== 'HHL' || !cur || cur.status === 'ODWOLANY') return false;
         const dep = Date.parse(departureAt); const arr = Date.parse(arrivalAt);
         if (!Number.isFinite(dep) || !Number.isFinite(arr) || arr <= dep) return false;
-        const next: Sailing = { ...cur, status: 'OPOZNIONY', delayedDepartureAt: new Date(dep).toISOString(), delayedArrivalAt: new Date(arr).toISOString() };
+        /* M12: zmiana ręczna HHL → źródło RECZNIE (odczyt automatyczny jej nie nadpisze) */
+        const next: Sailing = { ...cur, source: 'RECZNIE', status: 'OPOZNIONY', delayedDepartureAt: new Date(dep).toISOString(), delayedArrivalAt: new Date(arr).toISOString() };
         set((st) => ({
           sailings: st.sailings.map((x) => (x.id === id ? next : x)),
           loads: st.loads.map((l) => (l.sailingId === id ? { ...l, ferry: ferryFromSailing(next, l.ferry.bookingRef, l.ferry) } : l)),
@@ -1376,7 +1377,7 @@ export const useTowerStore = create<TowerState>()(
       cancelSailing: (id) => {
         const cur = get().sailings.find((x) => x.id === id);
         if (get().role !== 'HHL' || !cur || cur.status === 'ODWOLANY') return false;
-        const next: Sailing = { ...cur, status: 'ODWOLANY' };
+        const next: Sailing = { ...cur, source: 'RECZNIE', status: 'ODWOLANY' };
         /* demo: ryzyko „rejs odwołany” od razu; w bazie — zadanie systemowe promote_ferry_departures */
         const risks = SUPABASE_AUTH_ENABLED ? [] : cancelledSailingRisks(next, get().loads);
         set((st) => ({

@@ -1,0 +1,54 @@
+{
+  "_zrodlo": "Przykład w formacie odpowiedzi Trafikverket Open API v2 (data.json, obiekt Situation/Deviation) wg dokumentacji dostawcy — NIE odczyt na żywo (brak klucza TRAFIKVERKET_API_KEY). Zweryfikować przy rejestracji klucza.",
+  "RESPONSE": {
+    "RESULT": [
+      {
+        "Situation": [
+          {
+            "Deviation": [
+              {
+                "Id": "SE_STA_TRISSID_1_1234567",
+                "Header": "Vägarbete",
+                "Message": "E4 norr om Sundsvall: ett körfält avstängt, kö kan uppstå.",
+                "MessageType": "Vägarbete",
+                "SeverityCode": 4,
+                "RoadNumber": "E4",
+                "StartTime": "2026-09-25T06:00:00.000+02:00",
+                "EndTime": "2026-10-10T18:00:00.000+02:00",
+                "Geometry": { "WGS84": "POINT (17.3312 62.4521)" }
+              },
+              {
+                "Id": "SE_STA_TRISSID_1_7654321",
+                "Header": "Olycka",
+                "Message": "Trafikolycka, vägen avstängd i södergående riktning.",
+                "MessageType": "Olycka",
+                "SeverityCode": 5,
+                "RoadNumber": "E4",
+                "StartTime": "2026-09-26T03:10:00.000+02:00",
+                "Geometry": { "WGS84": "POINT (20.2598 63.8301)" }
+              },
+              {
+                "Id": "SE_STA_TRISSID_1_1111111",
+                "Header": "Vägarbete",
+                "Message": "Väg 45 i Östersund — utanför korridoren E4.",
+                "MessageType": "Vägarbete",
+                "SeverityCode": 4,
+                "RoadNumber": "45",
+                "Geometry": { "WGS84": "POINT (14.6357 63.1792)" }
+              },
+              {
+                "Id": "SE_STA_TRISSID_1_2222222",
+                "Header": "Information",
+                "Message": "Ingen påverkan på trafiken.",
+                "MessageType": "Viktig trafikinformation",
+                "SeverityCode": 1,
+                "RoadNumber": "E4",
+                "Geometry": { "WGS84": "POINT (17.6389 59.8586)" }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

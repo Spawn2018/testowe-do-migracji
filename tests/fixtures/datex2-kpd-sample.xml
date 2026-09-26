@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Przykład w formacie DATEX II v3 (SituationPublication) wg specyfikacji — NIE odczyt z KPD GDDKiA
+     (dostęp po rejestracji i certyfikacie klienta). Zweryfikować po rejestracji. -->
+<d2:payload xmlns:d2="http://levelC/schema/3/d2Payload" xmlns:sit="http://levelC/schema/3/situation"
+            xmlns:com="http://levelC/schema/3/common" xmlns:loc="http://levelC/schema/3/locationReferencing"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="sit:SituationPublication">
+  <sit:situation id="PL-GDDKIA-S-1001">
+    <sit:situationRecord xsi:type="sit:MaintenanceWorks" id="PL-GDDKIA-R-1001" version="1">
+      <sit:validity><com:validityTimeSpecification><com:overallStartTime>2026-09-20T06:00:00+02:00</com:overallStartTime><com:overallEndTime>2026-10-15T20:00:00+02:00</com:overallEndTime></com:validityTimeSpecification></sit:validity>
+      <sit:severity>high</sit:severity>
+      <sit:generalPublicComment><sit:comment><com:values><com:value lang="pl">S5 węzeł Bydgoszcz Południe: zwężenie do jednego pasa, ograniczenie szerokości 3,5 m.</com:value></com:values></sit:comment></sit:generalPublicComment>
+      <sit:locationReference><loc:pointByCoordinates><loc:pointCoordinates><loc:latitude>53.0912</loc:latitude><loc:longitude>18.0321</loc:longitude></loc:pointCoordinates></loc:pointByCoordinates><loc:roadNumber>S5</loc:roadNumber></sit:locationReference>
+    </sit:situationRecord>
+  </sit:situation>
+  <sit:situation id="PL-GDDKIA-S-1002">
+    <sit:situationRecord xsi:type="sit:Accident" id="PL-GDDKIA-R-1002" version="1">
+      <sit:severity>medium</sit:severity>
+      <sit:generalPublicComment><sit:comment><com:values><com:value lang="pl">A4 Opole — poza trasą.</com:value></com:values></sit:comment></sit:generalPublicComment>
+      <sit:locationReference><loc:pointByCoordinates><loc:pointCoordinates><loc:latitude>50.6751</loc:latitude><loc:longitude>17.9213</loc:longitude></loc:pointCoordinates></loc:pointByCoordinates></sit:locationReference>
+    </sit:situationRecord>
+  </sit:situation>
+</d2:payload>

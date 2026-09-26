@@ -11,6 +11,7 @@ import { getNowIso } from '../lib/frozenNow';
 import { effArrival, effDeparture, fmtLocal, hasDeparted, sailingStatusLabel, sailingStatusPill } from '../lib/sailings';
 import { TZ_OPS, isoToDatetimeLocalValue, wallLocalToIso } from '../lib/time';
 import type { Sailing } from '../types';
+import { POLFERRIES_ATTRIBUTION } from '../lib/ferry/polferries';
 
 const VESSELS = ['Wawel', 'Nova Star'] as const;
 
@@ -140,6 +141,7 @@ export function SailingsPanel() {
               <th>{t(locale, 'sail_col_dep')}</th>
               <th>{t(locale, 'sail_col_arr')}</th>
               <th>{t(locale, 'sail_col_status')}</th>
+              <th>{t(locale, 'sail_col_source')}</th>
               <th className="num">{t(locale, 'sail_col_loads')}</th>
               {isHhl ? <th /> : null}
             </tr>
@@ -162,6 +164,7 @@ export function SailingsPanel() {
                     <span className={`pill ${sailingStatusPill(s.status)}`}>{sailingStatusLabel(s.status, locale)}</span>
                     {gone && s.status !== 'ODWOLANY' ? <> <span className="pill p-plan">{t(locale, 'sail_departed')}</span></> : null}
                   </td>
+                  <td data-sail-source={s.source} style={{ color: 'var(--ink-3)' }}>{t(locale, `sail_src_${s.source}`)}</td>
                   <td className="num">{countFor(s)}</td>
                   {isHhl ? (
                     <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
@@ -187,7 +190,10 @@ export function SailingsPanel() {
         </table>
       </div>
 
-      <div className="note">{t(locale, isHhl ? 'sail_note_hhl' : 'sail_note_ro')}</div>
+      <div className="note">
+        {t(locale, isHhl ? 'sail_note_hhl' : 'sail_note_ro')}
+        {sailings.some((s) => s.source === 'POLFERRIES') ? <span data-attribution="polferries"> · {POLFERRIES_ATTRIBUTION}</span> : null}
+      </div>
     </div>
   );
 }

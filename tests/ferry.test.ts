@@ -109,7 +109,8 @@ describe('Digitraffic — prawdziwa odpowiedź dla Nova Star', () => {
     expect(interpretFix(fix, now)).toBe('BRAK_SWIEZEGO_SYGNALU');
   });
   it('postój w Nynäshamn → W_PORCIE_NYNASHAMN', () => {
-    const inPort = { ...fix, lat: 58.9352, lon: 17.9510, sogKn: 0.2 };
+    // Färjeterminal Nynäshamn — współrzędne zweryfikowane z mapą w M9 (0017); wcześniej punkt ~3,4 km na północ
+    const inPort = { ...fix, lat: 58.9046, lon: 17.9563, sogKn: 0.2 };
     const now = new Date(Date.parse(fix.timestampUtc) + 5 * 60000).toISOString();
     expect(interpretFix(inPort, now)).toBe('W_PORCIE_NYNASHAMN');
   });

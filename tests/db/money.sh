@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TOWER — test pieniędzy (Etap 4: M2+): widoki finansowe v2, Z1, kurs, faktury, terminy; M9: pozycje kierowcy.
+# TOWER — test pieniędzy (Etap 4: M2+): widoki finansowe v2, Z1, kurs, faktury, terminy; M9: pozycje kierowcy; M12: integracje.
 # Własna, czysta baza: atrapa Supabase → migracje → seed testowy.
 # Użycie: PGADMIN=postgres://postgres@localhost:5433/postgres bash tests/db/money.sh
 # UWAGA: supabase_stub.sql NIGDY nie uruchamiaj na Supabase.
@@ -194,6 +194,28 @@ val "„Rozładowany” razem z datą w jednej zmianie"                     $SCX
 sys "insert into geofences (project_id, name, kind, geom, country) values ('$P','Terminal Nynäshamn','PORT_IN',make_circle_fence(58.9350,17.9500,800),'SE')"
 psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0017_driver_positions.sql >/dev/null 2>&1 && psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0017_driver_positions.sql >/dev/null 2>&1
 chk "0017 ponownie (2×): terminal Nynäshamn przesunięty na zweryfikowane współrzędne" "$(Q "select round(st_y(st_centroid(geom))::numeric,3)||' '||round(st_x(st_centroid(geom))::numeric,3) from geofences where name='Terminal Nynäshamn' and project_id='$P'")" "58.905 17.956"
+
+echo; echo "[M12] Integracje: ryzyka z funkcji Edge, pozycje dla TomTom, pierwszeństwo źródeł rejsu"
+sys "insert into vessels (name, operator) values ('M/F Test M12','test') on conflict (name) do nothing"
+V12=$(Q "select id from vessels where name='M/F Test M12'")
+sys "insert into sailings (project_id, vessel_id, route, departure_at, arrival_at, source) values ('$P','$V12','GDN-NYN','2026-10-01 16:00+00','2026-10-02 10:00+00','POLFERRIES')"
+S12=$(Q "select id from sailings where vessel_id='$V12'")
+err "zalogowany nie wywoła raise_integration_risk (tylko service_role)"  $HHL "select raise_integration_risk('$P',null,'FERRY','HIGH','x','{}','T12:1')" "permission denied"
+err "anon nie wywoła latest_vehicle_positions"                          $KSH "set local role anon; select * from latest_vehicle_positions(30)" "permission denied"
+err "zalogowany nie wywoła latest_vehicle_positions"                    $SCX "select * from latest_vehicle_positions(30)" "permission denied"
+chk "system: ryzyko projektowe (bez transportu) zapisane"               "$(Q "select raise_integration_risk('$P',null,'FERRY','HIGH','Źródło niedostępne','{}','SOURCE_DOWN:T12:2026-09-26')")" t
+chk "system: ten sam klucz → bez duplikatu (false)"                     "$(Q "select raise_integration_risk('$P',null,'FERRY','HIGH','Źródło niedostępne','{}','SOURCE_DOWN:T12:2026-09-26')")" f
+chk "system: ryzyko transportu bierze projekt z transportu"             "$(Q "select raise_integration_risk(null,'$L1','ROAD_PL','MEDIUM','ruch','{}','TRAFFIC_FLOW:T12'); select (project_id='$P')::text||' '||kind from risk_signals where dedup_key='TRAFFIC_FLOW:T12'")" "true ROAD_PL"
+chk "system (bez sesji): zapis rejsu zostaje POLFERRIES"                "$(Q "update sailings set status='OPOZNIONY' where id='$S12'; select source from sailings where id='$S12'")" POLFERRIES
+val "HHL: zmiana rejsu w aplikacji → źródło RECZNIE (baza)"             $HHL "update sailings set status='ODWOLANY', source='POLFERRIES' where id='$S12'; select source||' '||status from sailings where id='$S12'" "RECZNIE ODWOLANY" commit
+chk "HHL: autor zmiany rejsu zapisany przez serwer"                     "$(Q "select (updated_by = (select id from app_users where auth_id='$HHL'))::text from sailings where id='$S12'")" true
+val "HHL: nowy rejs zawsze RECZNIE, nawet gdy podano inne źródło"      $HHL "insert into sailings (project_id, vessel_id, route, departure_at, arrival_at, source) values ('$P','$V12','GDN-NYN','2026-10-03 16:00+00','2026-10-04 10:00+00','POLFERRIES'); select source from sailings where vessel_id='$V12' and departure_at='2026-10-03 16:00+00'" RECZNIE
+sys "insert into integration_runs (job, ok, result) values ('ferry-status', true, '{}')"
+val "HHL widzi dziennik przebiegów integracji"                          $HHL "select count(*) from integration_runs" 1
+val "KSH nie widzi dziennika (0 wierszy)"                               $KSH "select count(*) from integration_runs" 0
+err "zalogowany nie zapisze dziennika"                                  $HHL "insert into integration_runs (job, ok) values ('x', true)" "row-level security"
+psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0018_integrations.sql >/dev/null 2>&1 && psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0018_integrations.sql >/dev/null 2>&1
+chk "0018 ponownie (2×): bez błędu, dziennik zachowany"                 "$(Q "select count(*) from integration_runs")" 1
 
 #@@NEXT@@
 

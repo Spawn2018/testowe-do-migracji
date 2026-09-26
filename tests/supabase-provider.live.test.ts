@@ -271,6 +271,21 @@ describe.runIf(LIVE)('BK3 SupabaseProvider (live, RLS)', () => {
     expect(friendlyDbError(err)).toBe('Rejs po wypłynięciu może zmienić wyłącznie HHL.');
   });
 
+  it('M12: rejsy z odczytu Polferries (ferry-status/ferry-schedule, scripts/ferry/run-job.ts) widoczne na 3 kontach; dziennik przebiegów tylko HHL', async () => {
+    for (const o of ['HHL', 'KSH', 'SCX'] as Org[]) {
+      const s = await P[o].loadSnapshot();
+      const pf = s.sailings.filter((x) => x.source === 'POLFERRIES');
+      expect(pf.length, `${o} widzi rejsy POLFERRIES`).toBeGreaterThan(0);
+      expect(pf.every((x) => x.vessel === 'Wawel' || x.vessel === 'Nova Star')).toBe(true);
+    }
+    const runs = async (o: Org) => (await users[o].from('integration_runs').select('job')).data ?? [];
+    expect((await runs('HHL')).some((r) => r.job === 'ferry-status')).toBe(true);
+    expect(await runs('KSH')).toEqual([]);
+    expect(await runs('SCX')).toEqual([]);
+    const { error } = await users.HHL.rpc('raise_integration_risk', { p_project: null, p_load: null, p_kind: 'FERRY', p_sev: 'HIGH', p_title: 'x', p_detail: {}, p_dedup: 'T' });
+    expect(error?.message ?? '').toMatch(/permission denied/);
+  });
+
   it('anon (bez sesji) nie czyta transportów', async () => {
     const anon = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false } });
     const { data } = await anon.from('loads').select('id');

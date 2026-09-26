@@ -12,9 +12,9 @@
 
 | # | Warstwa | Źródło | Co daje | Koszt, licencja | Stan w kodzie |
 |---|---|---|---|---|---|
-| 1 | **Rozkład** | rozkład cargo armatora `polferries.pl/cargo/rozklad.html?code=gn` | rejsy na miesiące naprzód, oznaczenie statku (NS — Nova Star, WAW — Wawel) | strona publiczna | import do `sailings` — do napisania |
-| 2 | **Status rejsu** | strona komunikatów armatora `polferries.pl/faq/komunikaty-kursowania-promow.html` | każdy rejs ok. tydzień naprzód: statek, godzina planowa, status, godzina oczekiwana | strona publiczna, **bez API** | **`lib/ferry/polferries.ts` — gotowe, 9 testów na prawdziwej stronie** |
-| 3 | **Fizyczny ruch statku — strona szwedzka** | Digitraffic, Fintraffic (Finlandia) | pozycja, prędkość, kurs promu przy Nynäshamn | **bez klucza, CC BY 4.0** | **`lib/ferry/digitraffic.ts` — gotowe, 4 testy na prawdziwej odpowiedzi** |
+| 1 | **Rozkład** | rozkład cargo armatora `polferries.pl/cargo/rozklad.html?code=gn` | rejsy na miesiące naprzód, oznaczenie statku (NS — Nova Star, WAW — Wawel) | strona publiczna | **M12: funkcja `ferry-schedule`** (`parsePolferriesSchedule`, test na prawdziwej stronie z 26.09.2026) |
+| 2 | **Status rejsu** | strona komunikatów armatora `polferries.pl/faq/komunikaty-kursowania-promow.html` | każdy rejs ok. tydzień naprzód: statek, godzina planowa, status, godzina oczekiwana | strona publiczna, **bez API** | **`lib/ferry/polferries.ts` — gotowe, 9 testów na prawdziwej stronie; M12: funkcja `ferry-status`** |
+| 3 | **Fizyczny ruch statku — strona szwedzka** | Digitraffic, Fintraffic (Finlandia) | pozycja, prędkość, kurs promu przy Nynäshamn | **bez klucza, CC BY 4.0** | **`lib/ferry/digitraffic.ts` — gotowe, 4 testy na prawdziwej odpowiedzi; M12: funkcja `ferry-ais`** |
 | 4 | **Nasze auta** | GPS w strefie portu | auto fizycznie w porcie | własne | **migracja 0004 — gotowe, 44 testy** |
 
 ## 1.1 Warstwa 2 — komunikaty armatora
@@ -95,6 +95,17 @@ składa tam zgłoszenia — do sprawdzenia.**
 Rejsu zmienionego ręcznie przez HHL odczyt automatyczny **nie nadpisuje**.
 
 ---
+
+## 1.6 Stan wdrożenia (M12, 26.09.2026)
+
+- kod wspólny: `supabase/functions/_shared/ferry/*` (parsery) i `_shared/integrations/*` (zadania, magazyn, reguły);
+  funkcje Edge: `ferry-schedule`, `ferry-status`, `ferry-ais`, `road-se`, `road-pl`, `traffic-flow`
+- baza (0018): `raise_integration_risk()`, `latest_vehicle_positions()` (tylko service_role), dziennik
+  `integration_runs` (odczyt HHL), wyzwalacz: zapis rejsu przez użytkownika = źródło `RECZNIE`
+- test offline: `tests/integrations.test.ts` (Polferries — prawdziwe strony; Trafikverket / TomTom / DATEX II —
+  przykłady w formacie z dokumentacji, do weryfikacji przy rejestracji kluczy)
+- ręczne uruchomienie do czasu wdrożenia funkcji: `npx tsx scripts/ferry/run-job.ts ferry-status`
+- **krok właściciela W-M12-1:** wdrożenie funkcji + pg_net + Vault + harmonogram (`scripts/ferry/cron-edge.sql`)
 
 # 2. RUCH DROGOWY
 
