@@ -78,6 +78,7 @@ export default function UsersAdmin() {
                 {(ROLES_FOR_ORG[code] ?? [u.role]).map((r) => <option key={r} value={r}>{ROLE_LABEL_PL[r]}</option>)}
               </select>
               <button className="chipbtn" type="button" disabled={busy || self} onClick={() => void getSupabase().then((sb) => run(() => sb.rpc('admin_set_user_active', { p_user: u.id, p_active: !u.active }), u.active ? 'Konto dezaktywowane.' : 'Konto aktywowane.'))}>{u.active ? 'Dezaktywuj' : 'Aktywuj'}</button>
+              <button className="chipbtn" type="button" disabled={busy || self || !u.active} title="Zgubiony laptop, odejście pracownika" onClick={() => void getSupabase().then((sb) => run(() => sb.rpc('revoke_user_sessions', { p_user: u.id }), `Wylogowano ${u.email ?? ''} ze wszystkich urządzeń.`))}>Wyloguj wszędzie</button>
             </div>
           );
         })}

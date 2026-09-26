@@ -4,11 +4,12 @@ import { getSupabase } from './client';
 import { authErrorPl, viewRoleForOrg, ROLE_LABEL_PL } from './config';
 import { setAuthProfile, type AuthProfile } from './profile';
 import { useTowerStore } from '../store/useTowerStore';
+import { markManualLogout, rememberLogin, sessionEndReason, SESSION_END_MSG, type SessionEnd } from './sessionYear';
 import './auth.css';
 
 type State =
   | { kind: 'loading' }
-  | { kind: 'anon' }
+  | { kind: 'anon'; ended?: SessionEnd }
   | { kind: 'noaccess'; reason: string }
   | { kind: 'ready'; session: Session; profile: AuthProfile };
 
@@ -16,7 +17,8 @@ function Brand() {
   return <div className="brand"><b>TOWER</b><span>Stegra Boden · H&amp;H Logistics</span></div>;
 }
 
-function LoginScreen() {
+function LoginScreen({ ended }: { ended?: SessionEnd }) {
+  const locale = useTowerStore((s) => s.locale);
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -42,6 +44,7 @@ function LoginScreen() {
         <header className="panel-hd"><Brand /></header>
         <div className="panel-bd">
           <form className="auth-form" onSubmit={submit}>
+            {ended && <div className="auth-msg err" role="alert" data-auth="session-ended">{SESSION_END_MSG[ended][locale]}</div>}
             <label>Adres e-mail
               <input className="input full" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             </label>
@@ -62,7 +65,7 @@ function NoAccess({ reason }: { reason: string }) {
         <header className="panel-hd"><Brand /></header>
         <div className="panel-bd auth-form">
           <div className="auth-msg err">{reason}</div>
-          <button className="btn ghost" type="button" onClick={() => void getSupabase().then((sb) => sb.auth.signOut())}>Wyloguj</button>
+          <button className="btn ghost" type="button" onClick={() => { markManualLogout(); void getSupabase().then((sb) => sb.auth.signOut()); }}>Wyloguj</button>
         </div>
       </section>
     </div>
@@ -79,9 +82,12 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       if (!session) {
         setAuthProfile(null);
         void import('../data/supabaseBridge').then((b) => b.disconnectSupabaseData());
-        if (alive) setState({ kind: 'anon' });
+        // ANEKS 5 §4: sesja usunięta na serwerze (rok, wyloguj wszędzie, HHL) → komunikat na ekranie logowania
+        const ended = sessionEndReason(Date.now());   // brak znaczników (pierwsze wejście, ręczne wylogowanie) → null
+        if (alive) setState({ kind: 'anon', ended });
         return;
       }
+      rememberLogin(session.access_token);
       const sb = await getSupabase();
       const { data, error } = await sb.rpc('my_profile');
       const p = (Array.isArray(data) ? data[0] : null) as AuthProfile | null;
@@ -125,14 +131,14 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   }, [state]);
 
   if (state.kind === 'loading') return <div className="auth-screen" data-auth="loading"><div className="auth-msg">Ładowanie danych…</div></div>;
-  if (state.kind === 'anon') return <LoginScreen />;
+  if (state.kind === 'anon') return <LoginScreen ended={state.ended} />;
   if (state.kind === 'noaccess') return <NoAccess reason={state.reason} />;
   return (
     <>
       {children}
       <div className="auth-session" data-auth="session">
         <b>{state.profile.email}</b><span>{ROLE_LABEL_PL[state.profile.role]}</span>
-        <button className="chipbtn" type="button" onClick={() => void getSupabase().then((sb) => sb.auth.signOut())}>Wyloguj</button>
+        <button className="chipbtn" type="button" onClick={() => { markManualLogout(); void getSupabase().then((sb) => sb.auth.signOut()); }}>Wyloguj</button>
       </div>
     </>
   );

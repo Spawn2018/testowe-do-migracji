@@ -10,6 +10,8 @@ import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
 
 // BK2: panel użytkowników HHL_ADMIN — tylko w trybie Supabase.
 const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/UsersAdmin')) : null;
+/* ANEKS 5 §4.4 — Moje urządzenia / Wyloguj ze wszystkich urządzeń (tylko Supabase) */
+const MyDevices = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/MyDevices')) : null;
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
   { key: 'indexSource', labelKey: 'baf_index', type: 'text' },
@@ -150,6 +152,7 @@ export function OptionsView() {
           <header className="panel-hd"><h2>{t(locale, "opt_auto_h2")}</h2><span className="sub">{workflows.filter((w) => w.enabled).length} {t(locale, "opt_active_of")} {workflows.length}</span><div className="spacer" /><button type="button" className="chipbtn" onClick={() => setView('wf')}>{t(locale, 'opt_open_wf')}</button></header>
           <div className="panel-bd"><div className="workflow-summary">{workflows.map((w) => <button type="button" className="workflow-summary-row" key={w.id} onClick={() => setView('wf')}><span className={`status-dot${w.enabled ? ' on' : ''}`} /><span data-content>{w.name}</span><small>{w.enabled ? t(locale, 'on') : t(locale, 'off')}</small></button>)}</div></div>
         </section>
+        {MyDevices && <Suspense fallback={null}><MyDevices /></Suspense>}
         {UsersAdmin && <Suspense fallback={null}><UsersAdmin /></Suspense>}
       </div>
     </div>
