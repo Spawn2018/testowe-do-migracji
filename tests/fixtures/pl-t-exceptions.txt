@@ -1,0 +1,23 @@
+# PL-T — wyjątki: nazwy własne, marki, terminy techniczne pozostawione celowo (bez zmian treści).
+Stegra
+Boden
+Logistics
+Nynäshamn
+Stalverket
+Scandinavian
+Polferries
+LxWxH
+# termin szwedzki (zezwolenie na transport ponadnormatywny)
+dispens
+# terminy techniczne w notatkach makiety
+Check
+feed
+fleet
+tick
+store
+snapshotach
+workflow
+pushNotification
+computeSefs
+JSONLogic
+sefs

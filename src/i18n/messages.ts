@@ -378,14 +378,15 @@ const sv: Dict = {
   ferry_status: 'status',
 };
 
-const ALL: Record<Locale, Dict> = {
+/** PL-T (ANEKS 3 §3) — pełne słowniki do testu pisowni. */
+export const I18N_ALL: Record<Locale, Dict> = {
   pl: { ...pl, ...D19_EXTRA.pl, ...ETAP4.pl },
   en: { ...en, ...D19_EXTRA.en, ...ETAP4.en },
   sv: { ...sv, ...D19_EXTRA.sv, ...ETAP4.sv },
 };
 
 export function t(locale: Locale, key: string): string {
-  return ALL[locale][key] ?? ALL.en[key] ?? key;
+  return I18N_ALL[locale][key] ?? I18N_ALL.en[key] ?? key;
 }
 
 export function navLabel(locale: Locale, key: NavKey, role?: import('../types').RoleId): string {
