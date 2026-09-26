@@ -8,6 +8,7 @@ import {
 } from '../src/lib/scheduleParse';
 import { dryRunFromXlsx, type ImportDiff } from '../src/lib/scheduleDryRun';
 import { readXlsxRows } from '../src/lib/xlsxRead';
+import { invoicedLoadIds, removalBlock } from '../src/lib/importRemoval';
 import { useTowerStore } from '../src/store/useTowerStore';
 import { buildDemoSnapshot } from '../src/data/demoProvider';
 import type { Load } from '../src/types';
@@ -89,6 +90,12 @@ function freshRow(code: string): ScheduleCells {
     loadDate: '01.10.2026',
     deliveryDate: '03.10.2026',
   };
+}
+
+/** ANEKS 3 §2.1 — import anuluje wyłącznie transporty sprzed załadunku i spoza faktur. */
+function cancellable(loads: Load[]): Load[] {
+  useTowerStore.setState({ bills: [], invoices: [] });
+  return loads.map((l) => ({ ...l, status: 'PLANNED' as const }));
 }
 
 function installLoads(loads: Load[]): Load[] {
@@ -385,7 +392,7 @@ describe('schedule XLSX import regression (P9 / D23)', () => {
     expect(kept.some((load) => load.code === 'QA-D23-ADD')).toBe(true);
     expect(kept).toHaveLength(before.length + 1);
 
-    installLoads(knownLoads());
+    installLoads(cancellable(knownLoads()));
     const again = useTowerStore.getState().loads;
     const victim = again.find((load) => load.code === 'T-02');
     expect(victim).toBeTruthy();
@@ -419,7 +426,7 @@ describe('schedule XLSX import regression (P9 / D23)', () => {
 
 describe('D26 — usunięcia wyłącznie za wyraźną zgodą', () => {
   beforeEach(() => {
-    installLoads(knownLoads());
+    installLoads(cancellable(knownLoads()));
   });
 
   it('podgląd: pozycje spoza pliku to kandydaci (liczba + kody), removedIds puste — bez zgody nic nie znika', async () => {
@@ -511,14 +518,14 @@ describe('D23-S — import na realnej skali (72 transporty, jak w usterce histor
   });
 
   it('71 z 72 wierszy: 1 kandydat do usunięcia; bez zgody zostaje 72, ze zgodą znika wyłącznie ten jeden', async () => {
-    const before = useTowerStore.getState().loads;
+    const before = installLoads(cancellable(all()));
     const gone = before[40];
     const diff = await dryRunFromXlsx(await buildScheduleXlsx(before.filter((l) => l.id !== gone.id).map((l) => rowOf(l))), 'scale-71.xlsx', before);
     expect(diff.removalCandidates).toEqual([{ id: gone.id, code: gone.code }]);
     expect(diff.removedIds).toEqual([]);
     commitDryRun(diff);
     expect(useTowerStore.getState().loads).toHaveLength(72);
-    installLoads(all());
+    installLoads(cancellable(all()));
     const again = useTowerStore.getState().loads;
     const d2 = await dryRunFromXlsx(await buildScheduleXlsx(again.filter((l) => l.id !== gone.id).map((l) => rowOf(l))), 'scale-71-allow.xlsx', again);
     commitDryRun(d2, { removedIds: d2.removalCandidates.map((c) => c.id), allowRemovals: true });
@@ -534,5 +541,43 @@ describe('D23-S — import na realnej skali (72 transporty, jak w usterce histor
     expect(diff.removalCandidates).toEqual([]);
     commitDryRun(diff, { removedIds: before.map((l) => l.id), allowRemovals: true });
     expect(useTowerStore.getState().loads).toBe(before);
+  });
+});
+
+describe('ANEKS 3 §2.1 — import anuluje, nie kasuje; od załadunku i na fakturze zablokowany', () => {
+  it('podgląd: w drodze i zafakturowany → removalBlocked z powodem, nie kandydaci', async () => {
+    const loads = knownLoads().map((l, i) => ({ ...l, status: (i === 0 ? 'IN_TRANSIT_PL' : i === 1 ? 'READY' : i === 2 ? 'DOC_MISSING' : 'PLANNED') as Load['status'] }));
+    useTowerStore.setState({ bills: [], invoices: [] });
+    const before = installLoads(loads);
+    const [transit, ready, docs, ...rest] = before;
+    const invoiced = new Set([rest[0].id]);
+    const diff = await dryRunFromXlsx(await buildScheduleXlsx([freshRow('QA-AN3-ADD')]), 'an3.xlsx', before, undefined, invoiced);
+    expect(diff.removalBlocked).toEqual(expect.arrayContaining([
+      { id: transit.id, code: transit.code, reason: 'STATUS' },
+      { id: rest[0].id, code: rest[0].code, reason: 'INVOICED' },
+    ]));
+    expect(diff.removalBlocked).toHaveLength(2);
+    expect(diff.removalCandidates.map((c) => c.id)).toEqual(expect.arrayContaining([ready.id, docs.id]));
+    expect(diff.removalCandidates.some((c) => c.id === transit.id || c.id === rest[0].id)).toBe(false);
+  });
+
+  it('zatwierdzenie ze zgodą: zablokowane zostają nawet gdy przekazane w removedIds; komunikat z liczbą', async () => {
+    useTowerStore.setState({ bills: [], invoices: [] });
+    const before = installLoads(knownLoads().map((l, i) => ({ ...l, status: (i === 0 ? 'LOADING' : 'PLANNED') as Load['status'] })));
+    const diff = await dryRunFromXlsx(await buildScheduleXlsx([freshRow('QA-AN3-ADD2')]), 'an3b.xlsx', before);
+    commitDryRun(diff, { removedIds: before.map((l) => l.id), allowRemovals: true });
+    const after = useTowerStore.getState().loads;
+    expect(after.some((l) => l.id === before[0].id)).toBe(true);
+    expect(after.filter((l) => l.code !== 'QA-AN3-ADD2')).toHaveLength(1);
+    expect(useTowerStore.getState().toasts.some((t) => /1 pozycji nie do anulowania/.test(t.message))).toBe(true);
+  });
+
+  it('removalBlock: flagi DELAYED/SILENT (status w bazie nieznany) → blokada; faktura ma pierwszeństwo', () => {
+    const l = knownLoads()[0];
+    expect(removalBlock({ ...l, status: 'DELAYED' }, new Set())).toBe('STATUS');
+    expect(removalBlock({ ...l, status: 'SILENT' }, new Set())).toBe('STATUS');
+    expect(removalBlock({ ...l, status: 'READY' }, new Set([l.id]))).toBe('INVOICED');
+    expect(removalBlock({ ...l, status: 'RESOURCES_PENDING' }, new Set())).toBeNull();
+    expect(invoicedLoadIds([{ lines: [{ loadId: 'a' }] }], [{ lines: [{ loadId: 'b' }] }])).toEqual(new Set(['a', 'b']));
   });
 });

@@ -54,6 +54,7 @@ import {
 import { buildDemoSnapshot } from '../data/demoProvider';
 import { emptySnapshot } from '../data/provider';
 import { writeThrough } from '../data/registry';
+import { invoicedLoadIds, removalBlock } from '../lib/importRemoval';
 import { getNowIso } from '../lib/frozenNow';
 import { orderEditDeniedMessage, orderGateMessage, orderNoReminders, orderNoRisks, orderNumberGate, type OrderSide } from '../lib/orderNumbers';
 import { t } from '../i18n/messages';
@@ -1135,7 +1136,19 @@ export const useTowerStore = create<TowerState>()(
       commitImport: ({ added, changed, removedIds, rejected, filename, accepted, allowRemovals }) => {
         // Normal schedule imports are additive. Ignore any legacy/provided removals unless
         // a caller explicitly opts into the destructive path.
-        const effectiveRemovedIds = allowRemovals ? removedIds : [];
+        // ANEKS 3 §2.1: usunięcie przez import = anulowanie, wyłącznie sprzed załadunku i spoza faktur
+        // (ten sam werdykt co import_removal_check() w bazie); zablokowane zostają nietknięte.
+        const invoiced = invoicedLoadIds(get().bills, get().invoices);
+        const byId = new Map(get().loads.map((l) => [l.id, l]));
+        const requested = allowRemovals ? removedIds : [];
+        const effectiveRemovedIds = requested.filter((id) => {
+          const l = byId.get(id);
+          return !!l && removalBlock(l, invoiced) === null;
+        });
+        const blockedCount = requested.length - effectiveRemovedIds.length;
+        if (blockedCount > 0) {
+          get().pushToast(`Import: ${blockedCount} pozycji nie do anulowania (od załadunku albo na fakturze)`, 'HIGH');
+        }
         if (removedIds.length > 0 && !allowRemovals) {
           get().pushToast(
             `Import: pominięto usuwanie ${removedIds.length} pozycji (tryb dopisywania)`,
@@ -1258,6 +1271,9 @@ export const useTowerStore = create<TowerState>()(
             scheduleVersions: [ver, ...s.scheduleVersions],
           };
         });
+        if (effectiveRemovedIds.length > 0) {
+          writeThrough({ type: 'loads.importCancel', loadIds: effectiveRemovedIds, reason: `Usunięty z harmonogramu (${filename})` });
+        }
         const critical = changed.filter((c) => c.criticalDate);
         for (const ch of critical) {
           get().appendEvent({

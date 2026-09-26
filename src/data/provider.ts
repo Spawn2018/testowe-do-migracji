@@ -69,7 +69,9 @@ export type DataMutation =
   /** M10 — rozkład rejsów (wyłącznie HHL): dodanie / opóźnienie / odwołanie */
   | { type: 'sailing.save'; sailing: Sailing; isNew: boolean }
   /** M10 — przypisanie rejsu do transportu (HHL i przewoźnik; po wypłynięciu wyłącznie HHL) */
-  | { type: 'load.sailing'; loadId: string; sailingId: string | null; bookingRef: string | null };
+  | { type: 'load.sailing'; loadId: string; sailingId: string | null; bookingRef: string | null }
+  /** ANEKS 3 §2.1 — import: anulowanie (nigdy DELETE) → import_cancel_loads(); baza sprawdza status i faktury */
+  | { type: 'loads.importCancel'; loadIds: string[]; reason: string };
 
 /** M4 — ustawienia użytkownika (`user_preferences`); motyw null = domyślny dla roli. */
 export interface UserPrefsPatch {

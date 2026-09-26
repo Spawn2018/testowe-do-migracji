@@ -28,6 +28,7 @@ function targetId(m: DataMutation): string | null {
     case 'bill.verify': case 'bill.paid': case 'bill.unpaid': return m.billId;
     case 'notifications.read': return null; // własne powiadomienia (id liczbowe z serwera)
     case 'sailing.save': return m.isNew ? null : m.sailing.id; // nowy rejs = wstawienie; zmiana tylko rejsu z serwera
+    case 'loads.importCancel': return m.loadIds.every(isServerId) ? m.loadIds[0] ?? '' : ''; // tylko transporty z serwera
     default: return m.loadId;
   }
 }

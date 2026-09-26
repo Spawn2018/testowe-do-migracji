@@ -377,7 +377,7 @@ test.describe('M10 — rejsy i automat statusów', () => {
   })
 })
 
-test.describe('D26 — import: usunięcia za zgodą', () => {
+test.describe('D26 — import: anulowania za zgodą (ANEKS 3 §2.1)', () => {
   test('KSH: podgląd pokazuje −0 i odznaczone pole z liczbą i kodami; zaznaczenie zmienia licznik; zatwierdzenie bez zgody niczego nie usuwa', async ({ page }) => {
     const fields = Object.keys(COLUMN_MAP_DEFAULT) as (keyof typeof COLUMN_MAP_DEFAULT)[]
     const row = (code: string, delivery: string): Record<string, string> => ({
@@ -403,8 +403,13 @@ test.describe('D26 — import: usunięcia za zgodą', () => {
     const cb = page.locator('[data-import-allow-removals]')
     await expect(cb).not.toBeChecked()
     const n = (await page.locator('[data-import-removal-codes]').innerText()).split(', ').length
-    expect(n).toBe(71)
-    await expect(box).toContainText(`Usuń ${n} pozycji`)
+    // ANEKS 3 §2.1: 71 nieobecnych = do anulowania + zablokowane (od załadunku / na fakturze), z powodem
+    const blocked = (await page.locator('[data-import-blocked-codes]').innerText()).split(' · ')
+    expect(n + blocked.length).toBe(71)
+    expect(blocked.length).toBeGreaterThan(0)
+    expect(blocked.every((b) => /\((od załadunku — anuluje HHL ręcznie, z powodem|na fakturze)\)$/.test(b))).toBe(true)
+    await expect(page.locator('[data-import-blocked]')).toContainText(`Nie do anulowania przez import (${blocked.length}):`)
+    await expect(box).toContainText(`Anuluj ${n} pozycji`)
     await cb.check()
     await expect(page.locator('[data-import-removed-count]')).toHaveText(`−${n}`)
     await cb.uncheck()

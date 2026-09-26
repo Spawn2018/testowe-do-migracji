@@ -57,7 +57,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     await ensureContext();
     const at = now();
     const [loads, events, messages, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ] = await Promise.all([
-      sb.from('loads').select(LOAD_COLUMNS).order('plan_load_date', { ascending: true, nullsFirst: false }),
+      sb.from('loads').select(LOAD_COLUMNS).neq('status', 'CANCELLED').order('plan_load_date', { ascending: true, nullsFirst: false }),
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
       sb.from('v_geofences_circle').select('*').order('sort_order'),
@@ -240,6 +240,12 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         const res = await sb.rpc('unmark_invoice_paid', { p_invoice: m.billId, p_reason: m.reason });
         if (res.error) throw new Error(res.error.message);
         return;
+      }
+      case 'loads.importCancel': {
+        const res = await sb.rpc('import_cancel_loads', { p_load_ids: m.loadIds, p_reason: m.reason });
+        if (res.error) throw new Error(`import: ${res.error.message}`);
+        const rows = (res.data ?? []) as { verdict: string }[];
+        return { id: String(rows.filter((r) => r.verdict === 'CANCELLED').length) };
       }
       case 'geofence.save': {
         await ensureContext();

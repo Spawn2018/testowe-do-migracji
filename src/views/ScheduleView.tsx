@@ -146,8 +146,12 @@ export function ScheduleView() {
     setParsing(true);
     try {
       const buf = await f.arrayBuffer();
-      const { dryRunFromXlsx } = await import('../lib/scheduleDryRun');
-      const diff = await dryRunFromXlsx(buf, f.name, useTowerStore.getState().loads);
+      const [{ dryRunFromXlsx }, { invoicedLoadIds }] = await Promise.all([
+        import('../lib/scheduleDryRun'),
+        import('../lib/importRemoval'),
+      ]);
+      const st = useTowerStore.getState();
+      const diff = await dryRunFromXlsx(buf, f.name, st.loads, undefined, invoicedLoadIds(st.bills, st.invoices));
       setDryRun(diff);
       setStep('map');
     } catch (e) {
@@ -398,6 +402,18 @@ export function ScheduleView() {
                   </div>
                   <div style={{ color: allowRemovals ? 'var(--red)' : 'var(--ink-3)', marginTop: 4 }}>
                     {t(locale, allowRemovals ? 'd26_on' : 'd26_off')}
+                  </div>
+                </div>
+              ) : null}
+              {dryRun.removalBlocked.length > 0 ? (
+                <div data-import-blocked style={{ fontSize: 12, margin: '0 0 8px' }}>
+                  <div style={{ color: 'var(--amber)' }}>
+                    {t(locale, 'an3_blocked').replace('{n}', String(dryRun.removalBlocked.length))}
+                  </div>
+                  <div className="mono" style={{ color: 'var(--ink-3)', marginTop: 4 }} data-import-blocked-codes>
+                    {dryRun.removalBlocked
+                      .map((c) => `${c.code} (${t(locale, c.reason === 'INVOICED' ? 'an3_why_invoiced' : 'an3_why_status')})`)
+                      .join(' · ')}
                   </div>
                 </div>
               ) : null}

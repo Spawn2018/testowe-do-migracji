@@ -7,6 +7,7 @@ import {
   type ParsedRow,
 } from './scheduleParse';
 import { readXlsxRows } from './xlsxRead';
+import { splitRemovals, type RemovalBlocked } from './importRemoval';
 
 export type ImportDiff = {
   added: Partial<Load>[];
@@ -17,6 +18,8 @@ export type ImportDiff = {
    * częściowe); usunięcie wyłącznie po zaznaczeniu zgody w podglądzie (`allowRemovals`), z liczbą i kodami.
    */
   removalCandidates: { id: string; code: string }[];
+  /** ANEKS 3 §2.1 — nieobecne w pliku, ale nie do anulowania przez import (powód). */
+  removalBlocked: RemovalBlocked[];
   rejected: number;
   warnings: number;
   filename: string;
@@ -75,6 +78,7 @@ export async function dryRunFromXlsx(
   filename: string,
   loads: Load[],
   map: ColumnMap = COLUMN_MAP_DEFAULT as unknown as ColumnMap,
+  invoiced: ReadonlySet<string> = new Set(),
 ): Promise<ImportDiff> {
   const raw = await readXlsxRows(buf);
   const parsed = parseSchedule(raw, map);
@@ -113,15 +117,18 @@ export async function dryRunFromXlsx(
   // Schedule files are partial updates. Never infer deletion from a missing row:
   // removedIds stays empty; missing rows are only *candidates* (D26) — removed solely with explicit consent.
   // No accepted rows (empty / broken file) → no candidates at all (P9: 72→1 wipe).
-  const removalCandidates = parsed.stats.accepted === 0 ? [] : diff.removed
+  // ANEKS 3 §2.1: kandydaci = wyłącznie transporty, które import może anulować (sprzed załadunku,
+  // spoza faktur); pozostałe trafiają do `removalBlocked` z powodem — podgląd je pokazuje.
+  const missing = parsed.stats.accepted === 0 ? [] : diff.removed
     .map((code) => byCode.get(code))
-    .filter((l): l is Load => !!l)
-    .map((l) => ({ id: l.id, code: l.code }));
+    .filter((l): l is Load => !!l);
+  const { cancellable: removalCandidates, blocked: removalBlocked } = splitRemovals(missing, invoiced);
   return {
     added: parsed.stats.accepted === 0 ? [] : diff.added.map(rowToPartialLoad),
     changed: parsed.stats.accepted === 0 ? [] : changed,
     removedIds: [],
     removalCandidates,
+    removalBlocked,
     rejected: parsed.stats.rejected,
     warnings: parsed.stats.warnings,
     filename,
