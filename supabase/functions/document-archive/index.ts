@@ -12,6 +12,7 @@
 import postgres from 'npm:postgres@3';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { AwsClient } from 'npm:aws4fetch@1';
+import { isServiceRequest } from '../_shared/serviceAuth.ts';
 
 const env = (k: string, fallback?: string) => {
   const v = Deno.env.get(k) ?? fallback;
@@ -21,7 +22,7 @@ const env = (k: string, fallback?: string) => {
 
 Deno.serve(async (req) => {
   const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  if (!service || req.headers.get('Authorization') !== `Bearer ${service}`) return new Response('forbidden', { status: 403 });
+  if (!service || !(await isServiceRequest(req, { url: Deno.env.get('SUPABASE_URL') ?? '', service }))) return new Response('forbidden', { status: 403 });
   const opts = (await req.json().catch(() => ({}))) as { limit_bytes?: number; max?: number; dry_run?: boolean };
   const sql = postgres(env('SUPABASE_DB_URL'), { max: 1, prepare: false });
   const sb = createClient(env('SUPABASE_URL'), service, { auth: { persistSession: false } });

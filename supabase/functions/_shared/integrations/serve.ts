@@ -7,6 +7,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { runJob, type JobName } from './jobs.ts';
 import { supabaseStore } from './store.ts';
+import { isServiceRequest } from '../serviceAuth.ts';
 
 export function serveJob(name: JobName, opts: { allowHhl?: boolean } = {}) {
   Deno.serve(async (req: Request) => {
@@ -14,7 +15,7 @@ export function serveJob(name: JobName, opts: { allowHhl?: boolean } = {}) {
     const url = Deno.env.get('SUPABASE_URL') ?? '';
     const auth = req.headers.get('Authorization') ?? '';
     const sb = createClient(url, service, { auth: { persistSession: false } });
-    let allowed = !!service && auth === `Bearer ${service}`;
+    let allowed = !!service && (await isServiceRequest(req, { url, service }));
     if (!allowed && opts.allowHhl && auth.startsWith('Bearer ')) {
       const { data } = await sb.auth.getUser(auth.slice(7));
       if (data?.user) {

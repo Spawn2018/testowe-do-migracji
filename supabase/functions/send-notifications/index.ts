@@ -6,11 +6,11 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { renderEmail } from '../_shared/notifyTemplates.ts';
+import { isServiceRequest } from '../_shared/serviceAuth.ts';
 
 Deno.serve(async (req) => {
-  const auth = req.headers.get('Authorization') ?? '';
   const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  if (!service || auth !== `Bearer ${service}`) return new Response('forbidden', { status: 403 });
+  if (!service || !(await isServiceRequest(req, { url: Deno.env.get('SUPABASE_URL') ?? '', service }))) return new Response('forbidden', { status: 403 });
   const sb = createClient(Deno.env.get('SUPABASE_URL')!, service, { auth: { persistSession: false } });
   const key = Deno.env.get('RESEND_API_KEY');
   const from = Deno.env.get('MAIL_FROM');

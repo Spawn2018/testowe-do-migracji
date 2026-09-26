@@ -17,6 +17,7 @@ import { Encrypter } from 'npm:age-encryption@0.3';
 import {
   BACKUP_TABLES, csvRowCount, dailyPrefix, manifest, monthlyPrefix, retentionDeletes, sealTable,
 } from '../_shared/backup/core.ts';
+import { isServiceRequest } from '../_shared/serviceAuth.ts';
 
 const env = (k: string) => {
   const v = Deno.env.get(k);
@@ -26,7 +27,7 @@ const env = (k: string) => {
 
 Deno.serve(async (req) => {
   const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  if (!service || req.headers.get('Authorization') !== `Bearer ${service}`) return new Response('forbidden', { status: 403 });
+  if (!service || !(await isServiceRequest(req, { url: Deno.env.get('SUPABASE_URL') ?? '', service }))) return new Response('forbidden', { status: 403 });
   const sql = postgres(env('SUPABASE_DB_URL'), { max: 1, prepare: false });
   const sb = createClient(env('SUPABASE_URL'), service, { auth: { persistSession: false } });
   const [run] = await sql`insert into backup_runs (status) values ('RUNNING') returning id`;

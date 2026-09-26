@@ -6,10 +6,11 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { alertEmail, measurements, type Measure } from '../_shared/usage/core.ts';
+import { isServiceRequest } from '../_shared/serviceAuth.ts';
 
 Deno.serve(async (req) => {
   const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  if (!service || req.headers.get('Authorization') !== `Bearer ${service}`) return new Response('forbidden', { status: 403 });
+  if (!service || !(await isServiceRequest(req, { url: Deno.env.get('SUPABASE_URL') ?? '', service }))) return new Response('forbidden', { status: 403 });
   const sb = createClient(Deno.env.get('SUPABASE_URL')!, service, { auth: { persistSession: false } });
   const { data: m, error } = await sb.rpc('usage_measure');
   if (error) return new Response(error.message, { status: 500 });
