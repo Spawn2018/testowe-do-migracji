@@ -137,7 +137,7 @@ Po wdrożeniu: e-maile przypomnień i „nowa faktura” wychodzą w języku odb
 
 | ID | pozycja | status | commit | testy (liczby) | uwagi |
 |---|---|---|---|---|---|
-| D14 | Trasy adresowalne | OPEN | — | — | pending |
+| D14 | Trasy adresowalne | **DONE** | f384740 | unit **275 / 20 skip** (+routes 4) · etap5 **4/4** (nowy `npm run test:etap5`, w fresh-smoke) · etap4 **12/12** · pw visual **4/4** · d19 **0** · deur **2/2** · wygląd bez zmian (migawki smoke identyczne) | `src/lib/routes.ts` (mapa widok ↔ ścieżka: /kokpit /mapa /harmonogram /ryzyka /dokumenty /finanse /faktury /zadania /automatyzacje /strefy /opcje /ustawienia + /transport/<kod>) i `src/hooks/useRouteSync.ts` w TowerShell: URL → sklep przy zmianie ścieżki (widok, jeśli rola go ma; szuflada po kodzie; link sprzed wczytania danych Supabase czeka na transporty), sklep → URL z wpisem historii (wstecz zamyka szufladę), query `?now=` zachowane; ścieżka spoza roli / nieznany kod → zastąpione dozwolonym widokiem; nieznane ścieżki (fragment powrotu z logowania) nieprzepisywane. **HashRouter zostaje** (adresy `#/harmonogram`, `#/transport/SG-32`): hosting statyczny bez przepisań, linki kierowcy `#/driver/<token>`, kontrakt `#/…?now=` baseline/testów. Rola i język już w trwałym ustawieniu (persist demo; Supabase: rola z konta, język `user_preferences` M4) — potwierdzone testem przeładowania. Luka: link magiczny logowania wraca na `origin+pathname` (bez ścieżki hash) — głęboki link przetrwa logowanie hasłem, nie linkiem e-mail. |
 | D15 | Podział paczki / lazy mapa &lt;400 kB | OPEN | — | — | pending |
 | G5 | Brama etapu 5 | OPEN | — | — | pending |
 
