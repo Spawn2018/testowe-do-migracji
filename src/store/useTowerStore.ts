@@ -4,6 +4,8 @@ import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
 import type {
   AppToast,
   Awizacja,
+  Bill,
+  BillVerification,
   BafParams,
   CorridorStage,
   Document,
@@ -54,6 +56,8 @@ import { writeThrough } from '../data/registry';
 import { getNowIso } from '../lib/frozenNow';
 import { orderEditDeniedMessage, orderGateMessage, orderNoReminders, orderNoRisks, orderNumberGate, type OrderSide } from '../lib/orderNumbers';
 import { t } from '../i18n/messages';
+import { localDateOf } from '../lib/money/engine';
+import { billDueDate, billParties, billPaymentToday, canMarkPaid, canRegisterBill, canVerifyBill, checkBill, verifyError, type BillDraft } from '../lib/invoices3';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
 import { applyEtaToLoad } from '../lib/eta';
@@ -189,6 +193,8 @@ interface TowerState {
   notifications: Notification[];
   notificationPrefs: NotificationPrefs;
   invoices: Invoice[];
+  /** M6 — faktury v2 (koszt SCX→HHL, przychód HHL→KSH). */
+  bills: Bill[];
   factoringOffer: FactoringOffer;
   scheduleVersions: ScheduleVersion[];
   rateCost: RateRule[];
@@ -301,6 +307,13 @@ interface TowerState {
     factoringSelected?: boolean,
   ) => void;
   resolveInvoice: (invoiceId: string, action: 'MATCHED' | 'DISPUTED') => void;
+  /** M6 — rejestracja faktury przez wystawcę (kontrole jak w `register_invoice`). */
+  registerBill: (draft: BillDraft, file?: Blob | null) => { ok: true; id: string } | { ok: false; errors: string[] };
+  /** M6 — weryfikacja przez odbiorcę; SPORNA wymaga uzasadnienia. */
+  verifyBill: (billId: string, next: BillVerification, note?: string | null) => boolean;
+  /** M6 — „Opłacona” z datą (wyłącznie HHL) i cofnięcie z powodem. */
+  markBillPaid: (billId: string, paidAt: string) => boolean;
+  unmarkBillPaid: (billId: string, reason: string) => boolean;
 
   driverMilestone: (token: string, milestone: 'LOADED' | 'ON_FERRY' | 'UNLOADED' | 'PROBLEM') => void;
   driverSharePosition: (token: string) => void;
@@ -352,6 +365,7 @@ export const useTowerStore = create<TowerState>()(
       notifications: initialData.notifications,
       notificationPrefs: { workflowAlerts: true, geofenceAlerts: true, riskAlerts: true },
       invoices: initialData.invoices,
+      bills: initialData.bills,
       factoringOffer: { ...DEFAULT_FACTORING_OFFER },
       scheduleVersions: initialData.scheduleVersions,
       rateCost: RATE_COST,
@@ -1304,6 +1318,85 @@ export const useTowerStore = create<TowerState>()(
         get().pushToast(action === 'DISPUTED' ? 'Faktura w sporze' : 'Faktura zaakceptowana', action === 'DISPUTED' ? 'HIGH' : 'MEDIUM');
       },
 
+      registerBill: (draft, file) => {
+        const s = get();
+        const today = localDateOf(getNowIso());
+        if (!canRegisterBill(s.role, draft.direction)) {
+          return { ok: false as const, errors: ['ROLE'] };
+        }
+        const chk = checkBill(draft, s.loads, s.bills, today);
+        if (chk.errors.length) return { ok: false as const, errors: chk.errors };
+        const { issuer, recipient } = billParties(draft.direction);
+        const bill: Bill = {
+          id: uid('bill'), direction: draft.direction, issuer, recipient, number: draft.number.trim(),
+          issueDate: draft.issueDate, receiptDate: draft.receiptDate ?? null, weekKey: draft.weekKey, currency: draft.currency,
+          net: draft.net!, vat: draft.vat!, gross: draft.gross!,
+          dueDate: billDueDate(draft.direction, draft.issueDate, draft.dueDateFromDocument),
+          dueFromDocument: Boolean(draft.dueDateFromDocument),
+          verification: 'DO_WERYFIKACJI', disputeNote: null, payment: 'NIEOPLACONA', paidAt: null,
+          pdfDocId: null, pdfName: draft.pdfName ?? null, lines: chk.lines,
+          headerFlags: chk.headerFlags, missingLoadIds: chk.missingLoadIds, createdAt: nowIso(),
+        };
+        bill.payment = billPaymentToday(bill, today);
+        set((st) => ({ bills: [bill, ...st.bills] }));
+        /* Q13 — nowa faktura: powiadomienie odbiorcy (w bazie: notifications INVOICE_NEW) */
+        get().pushNotification({
+          title: t(s.locale, 'bill_notifyNew'),
+          body: `${bill.number} · ${bill.weekKey} · ${bill.gross.toFixed(2)} ${bill.currency}`,
+          severity: 'MEDIUM', roleScope: [recipient], href: { view: 'inv', entityId: bill.id },
+        });
+        writeThrough({ type: 'bill.register', bill, file: file ?? null });
+        get().pushToast(`${t(s.locale, 'bill_registered')}: ${bill.number}`, 'MEDIUM');
+        return { ok: true as const, id: bill.id };
+      },
+
+      verifyBill: (billId, next, note) => {
+        const s = get();
+        const b = s.bills.find((x) => x.id === billId);
+        if (!b || !canVerifyBill(s.role, b)) {
+          get().pushToast(t(s.locale, 'bill_verifyDenied'), 'HIGH');
+          return false;
+        }
+        const err = verifyError(next, note);
+        if (err) {
+          get().pushToast(t(s.locale, 'bill_disputeNeedsNote'), 'HIGH');
+          return false;
+        }
+        const disputeNote = next === 'SPORNA' ? (note ?? '').trim() : b.disputeNote ?? null;
+        set((st) => ({ bills: st.bills.map((x) => (x.id === billId ? { ...x, verification: next, disputeNote } : x)) }));
+        writeThrough({ type: 'bill.verify', billId, verification: next, note: disputeNote });
+        return true;
+      },
+
+      markBillPaid: (billId, paidAt) => {
+        const s = get();
+        if (!canMarkPaid(s.role)) {
+          get().pushToast(t(s.locale, 'bill_paidDenied'), 'HIGH');
+          return false;
+        }
+        set((st) => ({ bills: st.bills.map((x) => (x.id === billId ? { ...x, payment: 'OPLACONA' as const, paidAt } : x)) }));
+        writeThrough({ type: 'bill.paid', billId, paidAt });
+        return true;
+      },
+
+      unmarkBillPaid: (billId, reason) => {
+        const s = get();
+        if (!canMarkPaid(s.role)) {
+          get().pushToast(t(s.locale, 'bill_paidDenied'), 'HIGH');
+          return false;
+        }
+        if (!reason.trim()) {
+          get().pushToast(t(s.locale, 'bill_unpaidNeedsReason'), 'HIGH');
+          return false;
+        }
+        const today = localDateOf(getNowIso());
+        set((st) => ({
+          bills: st.bills.map((x) => (x.id === billId ? { ...x, paidAt: null, payment: billPaymentToday({ ...x, paidAt: null, payment: 'NIEOPLACONA' }, today) } : x)),
+        }));
+        writeThrough({ type: 'bill.unpaid', billId, reason: reason.trim() });
+        return true;
+      },
+
       driverMilestone: (token, milestone) => {
         const loadId = DRIVER_TOKENS[token];
         if (!loadId) {
@@ -1613,6 +1706,7 @@ export const useTowerStore = create<TowerState>()(
         notifications: s.notifications,
         notificationPrefs: s.notificationPrefs,
         invoices: s.invoices,
+        bills: s.bills,
         geofences: s.geofences,
         workflows: s.workflows,
         workflowRuns: s.workflowRuns,

@@ -6,7 +6,7 @@
  * logowaniu, a zapisy idą przez `writeThrough` do serwera.
  */
 import type {
-  Document, ExceptionItem, Geofence, Invoice, Load, LoadEvent, LoadMessage, LoadStatus,
+  Bill, BillVerification, Document, ExceptionItem, Geofence, Invoice, Load, LoadEvent, LoadMessage, LoadStatus,
   LoadResources, Awizacja, FerryBooking, Notification, Risk, ScheduleVersion, WorkflowRule, WorkflowRun,
 } from '../types';
 
@@ -25,18 +25,20 @@ export interface DataSnapshot {
   workflowRuns: WorkflowRun[];
   notifications: Notification[];
   invoices: Invoice[];
+  /** M6 — faktury v2 (MECHANIZM_PIENIEDZY §6). */
+  bills: Bill[];
   scheduleVersions: ScheduleVersion[];
 }
 
 export const DATA_SNAPSHOT_KEYS = [
   'loads', 'events', 'documents', 'messages', 'risks', 'exceptions', 'geofences',
-  'workflows', 'workflowRuns', 'notifications', 'invoices', 'scheduleVersions',
+  'workflows', 'workflowRuns', 'notifications', 'invoices', 'bills', 'scheduleVersions',
 ] as const satisfies readonly (keyof DataSnapshot)[];
 
 export function emptySnapshot(): DataSnapshot {
   return {
     loads: [], events: [], documents: [], messages: [], risks: [], exceptions: [], geofences: [],
-    workflows: [], workflowRuns: [], notifications: [], invoices: [], scheduleVersions: [],
+    workflows: [], workflowRuns: [], notifications: [], invoices: [], bills: [], scheduleVersions: [],
   };
 }
 
@@ -51,7 +53,12 @@ export type DataMutation =
   | { type: 'geofence.save'; geofence: Geofence }
   | { type: 'prefs.save'; prefs: UserPrefsPatch }
   /** M5 — numer zlecenia własnej strony (HHL → hhl_order_no, przewoźnik → carrier_order_no) */
-  | { type: 'load.orderNo'; loadId: string; side: 'HHL' | 'CARRIER'; value: string | null };
+  | { type: 'load.orderNo'; loadId: string; side: 'HHL' | 'CARRIER'; value: string | null }
+  /** M6 — faktury v2: rejestracja (PDF → Storage, potem RPC register_invoice), weryfikacja, płatność */
+  | { type: 'bill.register'; bill: Bill; file: Blob | null }
+  | { type: 'bill.verify'; billId: string; verification: BillVerification; note: string | null }
+  | { type: 'bill.paid'; billId: string; paidAt: string }
+  | { type: 'bill.unpaid'; billId: string; reason: string };
 
 /** M4 — ustawienia użytkownika (`user_preferences`); motyw null = domyślny dla roli. */
 export interface UserPrefsPatch {

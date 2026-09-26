@@ -4,7 +4,7 @@
  */
 import type { MoneySideV2 } from '../lib/money/loadMoney';
 import type {
-  Awizacja, CorridorStage, DocCategory, Document, FerryBooking, Geofence, GeofenceType, Load,
+  Awizacja, Bill, BillFlag, BillPayment, BillVerification, CorridorStage, DocCategory, Document, FerryBooking, Geofence, GeofenceType, Load,
   LoadEvent, LoadMessage, LoadResources, LoadStatus, OrgKind, Risk, RiskType, Severity,
 } from '../types';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
@@ -377,5 +377,65 @@ export function applyPriceViews(load: Load, cost?: PriceViewRow, rev?: PriceView
       baf_multiplier: c.fuel.applied, mult_sek: c.fuel.multSek, mult_pln: c.fuel.multPln,
       money: { v: 2, tier, cost: c, rev: r },
     },
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* M6 — faktury v2 (invoices z kierunkiem + invoice_lines; 0003/0014)   */
+/* ------------------------------------------------------------------ */
+export interface BillLineRow {
+  load_id: string; invoiced_net: number | string | null; invoiced_fuel: number | string | null;
+  fx_table_no: string | null; fx_mid: number | string | null; fx_effective_date: string | null;
+  expected_amount: number | string | null; flags: string[] | null;
+}
+export interface BillRow {
+  id: string; direction: string; issuer_org_id: string | null; recipient_org_id: string | null;
+  invoice_number: string | null; issue_date: string | null; receipt_date: string | null; week_key: string | null;
+  currency: string | null; net_total: number | string | null; vat_total: number | string | null; gross_total: number | string | null;
+  due_date: string | null; due_date_from_document: boolean | null; verification_status: string; dispute_note: string | null;
+  payment_status: string; paid_at: string | null; document_id: string | null; check_flags: string[] | null;
+  missing_load_ids: string[] | null; submitted_at: string | null; invoice_lines: BillLineRow[] | null;
+}
+export const BILL_COLUMNS =
+  'id,direction,issuer_org_id,recipient_org_id,invoice_number,issue_date,receipt_date,week_key,currency,net_total,vat_total,' +
+  'gross_total,due_date,due_date_from_document,verification_status,dispute_note,payment_status,paid_at,document_id,check_flags,' +
+  'missing_load_ids,submitted_at,invoice_lines(load_id,invoiced_net,invoiced_fuel,fx_table_no,fx_mid,fx_effective_date,expected_amount,flags)';
+
+const numOrNull = (v: number | string | null | undefined): number | null => (v == null || v === '' ? null : Number(v));
+const orgKindById = (orgs: OrgRow[], id: string | null): OrgKind => orgKindToApp(orgs.find((o) => o.id === id)?.kind ?? '') ?? 'HHL';
+
+export function billFromRow(r: BillRow, orgs: OrgRow[], docs: { id: string; file_name: string; storage_path?: string | null }[]): Bill | null {
+  if (r.direction !== 'KOSZT' && r.direction !== 'PRZYCHOD') return null;
+  const pdf = r.document_id ? docs.find((d) => d.id === r.document_id) : undefined;
+  return {
+    id: r.id, direction: r.direction, issuer: orgKindById(orgs, r.issuer_org_id), recipient: orgKindById(orgs, r.recipient_org_id),
+    number: r.invoice_number ?? '', issueDate: r.issue_date ?? '', receiptDate: r.receipt_date, weekKey: r.week_key ?? '',
+    currency: r.currency === 'PLN' ? 'PLN' : 'EUR',
+    net: numOrNull(r.net_total) ?? 0, vat: numOrNull(r.vat_total) ?? 0, gross: numOrNull(r.gross_total) ?? 0,
+    dueDate: r.due_date ?? '', dueFromDocument: Boolean(r.due_date_from_document),
+    verification: r.verification_status as BillVerification, disputeNote: r.dispute_note,
+    payment: r.payment_status as BillPayment, paidAt: r.paid_at,
+    pdfDocId: r.document_id, pdfName: pdf?.file_name ?? null,
+    pdfStoragePath: pdf?.storage_path && pdf.storage_path !== '-' ? pdf.storage_path : null,
+    lines: (r.invoice_lines ?? []).map((l) => ({
+      loadId: l.load_id, invoicedNet: numOrNull(l.invoiced_net) ?? 0, invoicedFuel: numOrNull(l.invoiced_fuel),
+      fx: l.fx_mid != null && l.fx_table_no ? { tableNo: l.fx_table_no, mid: Number(l.fx_mid), effectiveDate: l.fx_effective_date ?? '' } : null,
+      expectedNet: numOrNull(l.expected_amount), flags: (l.flags ?? []) as BillFlag[],
+    })),
+    headerFlags: r.check_flags ?? [], missingLoadIds: r.missing_load_ids ?? [], createdAt: r.submitted_at ?? '',
+  };
+}
+
+/** Payload RPC `register_invoice` (kontrole liczy baza; OPLATA_PALIWOWA z kontroli aplikacji). */
+export function billToRpc(b: Bill, documentId: string): Record<string, unknown> {
+  return {
+    direction: b.direction, currency: b.currency, invoice_number: b.number, issue_date: b.issueDate,
+    receipt_date: b.receiptDate ?? null, week_key: b.weekKey, net_total: b.net, vat_total: b.vat, gross_total: b.gross,
+    due_date: b.dueFromDocument ? b.dueDate : null, document_id: documentId,
+    lines: b.lines.map((l) => ({
+      load_id: l.loadId, invoiced_net: l.invoicedNet, invoiced_fuel: l.invoicedFuel ?? null,
+      fx_table_no: l.fx?.tableNo ?? null, fx_mid: l.fx?.mid ?? null, fx_effective_date: l.fx?.effectiveDate ?? null,
+      flags: l.flags.filter((f) => f === 'OPLATA_PALIWOWA'),
+    })),
   };
 }

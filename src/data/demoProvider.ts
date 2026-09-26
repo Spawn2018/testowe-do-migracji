@@ -21,6 +21,7 @@ import {
 import { applyEtaToLoad } from '../lib/eta';
 import { attachMoneyV2 } from '../lib/money/loadMoney';
 import { orderNoReminders, orderNoRisks } from '../lib/orderNumbers';
+import { buildSeedBills } from '../lib/invoices3';
 import type { Load } from '../types';
 
 /** Dzień „dziś” danych startowych (zegar zamrożony baseline: 2026-09-23). */
@@ -62,6 +63,8 @@ export function buildDemoSnapshot(): DataSnapshot {
     workflowRuns: INITIAL_WORKFLOW_RUNS,
     notifications: [...orderNoReminders(risks, '2026-09-23T00:30:00+02:00'), ...INITIAL_NOTIFICATIONS],
     invoices,
+    /* M6 — faktury v2 (osobny wycinek; nie zmienia poziomu/marży transportów do G4) */
+    bills: buildSeedBills(loads, DEMO_TODAY_LOCAL),
     scheduleVersions: SCHEDULE_VERSIONS,
   };
 }

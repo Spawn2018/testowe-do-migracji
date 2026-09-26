@@ -424,6 +424,56 @@ export interface Invoice {
   payoutStatus?: InvoicePayoutStatus;
 }
 
+/* ---------- M6 — faktury, model trzech stron (MECHANIZM_PIENIEDZY §6) ---------- */
+export type BillDirection = 'KOSZT' | 'PRZYCHOD';
+export type BillVerification = 'DO_WERYFIKACJI' | 'ZGODNA' | 'SPORNA' | 'ZAAKCEPTOWANA';
+export type BillPayment = 'NIEOPLACONA' | 'PO_TERMINIE' | 'OPLACONA';
+export type BillFlag =
+  | 'ZLY_TYDZIEN' | 'NIEZREALIZOWANY' | 'KWOTA' | 'OPLATA_PALIWOWA'
+  | 'TABELA_NBP' | 'KURS_NBP' | 'DATA_KURSU' | 'BRAK_KURSU';
+export interface BillLineFx { tableNo: string; mid: number; effectiveDate: string }
+export interface BillLine {
+  loadId: string;
+  /** Netto pozycji w walucie faktury (przepisane z dokumentu). */
+  invoicedNet: number;
+  invoicedFuel?: number | null;
+  /** Kurs pozycji (faktura PLN) — podpowiedź W3, potwierdzona / poprawiona przez wystawcę. */
+  fx?: BillLineFx | null;
+  /** Oczekiwana kwota w walucie faktury (wyliczenie × kurs reguły). */
+  expectedNet?: number | null;
+  flags: BillFlag[];
+}
+export interface Bill {
+  id: string;
+  direction: BillDirection;
+  issuer: OrgKind;
+  recipient: OrgKind;
+  number: string;
+  issueDate: string;
+  receiptDate?: string | null;
+  weekKey: string;
+  currency: 'EUR' | 'PLN';
+  /** Netto / VAT / brutto przepisane z dokumentu — system nie liczy VAT. */
+  net: number;
+  vat: number;
+  gross: number;
+  dueDate: string;
+  dueFromDocument: boolean;
+  verification: BillVerification;
+  disputeNote?: string | null;
+  payment: BillPayment;
+  paidAt?: string | null;
+  pdfDocId?: string | null;
+  pdfName?: string | null;
+  /** Tryb Supabase: ścieżka pliku PDF w Storage (link podpisany 15 min). */
+  pdfStoragePath?: string | null;
+  lines: BillLine[];
+  /** Kontrole nagłówka: BRAK_NA_FAKTURZE + pominięte transporty tygodnia. */
+  headerFlags: string[];
+  missingLoadIds: string[];
+  createdAt: string;
+}
+
 export interface ScheduleVersion {
   id: string;
   at: string;

@@ -42,6 +42,8 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
           const localId = m.geofence.id;
           useTowerStore.setState((s) => ({ geofences: s.geofences.map((g) => (g.id === localId ? { ...g, id: res.id! } : g)) }));
         }
+        // M6: faktury — serwer liczy kontrole, termin, Z1; odśwież zrzut (id, flagi, poziom FAKTURA)
+        if (m.type.startsWith('bill.')) await refreshFromServer();
       } catch (e) {
         useTowerStore.getState().pushToast(`Nie zapisano na serwerze: ${friendlyDbError(e instanceof Error ? e.message : String(e), useTowerStore.getState().locale)}`, 'HIGH');
         await refreshFromServer().catch(() => undefined);

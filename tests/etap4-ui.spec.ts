@@ -2,6 +2,7 @@
  * Etap 4 — ścieżki interfejsu na DemoProvider (świeży build HEAD w pre-push: scripts/ci/fresh-smoke.sh).
  * M5: numery zleceń — trzy kolumny, „każda strona swój”, GOTOWY bez numeru HHL → zrozumiały komunikat,
  *     przewoźnik nie widzi okien planowych jako edytowalnych (AN2).
+ * M6: faktury v2 — moduł KSH (tylko HHL → KSH, spór z uzasadnieniem), kreator przychodowy HHL, SCX bez „Opłacona”.
  * Run: `npm run test:etap4`.
  */
 import { test, expect, type Page } from '@playwright/test'
@@ -110,5 +111,101 @@ test.describe('M5 — numery zleceń', () => {
     await nav(page, 'sched')
     await openLoad(page, 'SG-11')
     await expect(page.locator('.drawer [data-order] input')).toHaveCount(0)
+  })
+})
+
+const PDF = { name: 'faktura.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%test\n') }
+
+test.describe('M6 — faktury v2', () => {
+  test('KSH: moduł faktur — wyłącznie HHL → KSH; SPORNA wymaga uzasadnienia; ZAAKCEPTOWANA', async ({ page }) => {
+    await boot(page)
+    await role(page, 'KSH')
+    await nav(page, 'inv')
+    await expect(page.locator('[data-bill-section="PRZYCHOD"]')).toHaveCount(1)
+    await expect(page.locator('[data-bill-section="KOSZT"]')).toHaveCount(0)
+    await expect(page.locator('[data-bill-new]')).toHaveCount(0)
+    const rows = page.locator('[data-bill-section="PRZYCHOD"] tr[data-bill]')
+    expect(await rows.count()).toBeGreaterThan(0)
+    await expect(page.locator('tr[data-bill] span.code', { hasText: /^SCX\// })).toHaveCount(0)
+    const target = page.locator('tr[data-bill]', { has: page.locator('[data-verif="DO_WERYFIKACJI"]') }).first()
+    const id = await target.getAttribute('data-bill')
+    await target.click()
+    const detail = page.locator(`[data-bill-detail="${id}"]`)
+    await expect(detail.locator('th', { hasText: 'Wg cen KSH' })).toHaveCount(1)
+    await expect(detail.locator('[data-paid], [data-unpaid]')).toHaveCount(0)
+    await detail.locator('[data-verify="SPORNA"]').click()
+    await expect(page.locator(`tr[data-bill="${id}"] [data-verif="DO_WERYFIKACJI"]`)).toHaveCount(1)
+    await detail.locator('input[aria-label="Uzasadnienie sporu"]').fill('Stawka niezgodna z cennikiem KSH')
+    await detail.locator('[data-verify="SPORNA"]').click()
+    await expect(page.locator(`tr[data-bill="${id}"] [data-verif="SPORNA"]`)).toHaveCount(1)
+    await expect(detail).toContainText('Stawka niezgodna z cennikiem KSH')
+    await detail.locator('[data-verify="ZAAKCEPTOWANA"]').click()
+    await expect(page.locator(`tr[data-bill="${id}"] [data-verif="ZAAKCEPTOWANA"]`)).toHaveCount(1)
+  })
+
+  test('HHL: kreator faktury przychodowej (PLN, kurs per pozycja) → lista; „Opłacona” z datą', async ({ page }) => {
+    await boot(page)
+    await role(page, 'HHL')
+    await nav(page, 'inv')
+    await expect(page.locator('[data-bill-section="KOSZT"]')).toHaveCount(1)
+    await expect(page.locator('[data-bill-section="PRZYCHOD"]')).toHaveCount(1)
+    await expect(page.locator('[data-bill-new="KOSZT"]')).toHaveCount(0)
+    const before = await page.locator('[data-bill-section="PRZYCHOD"] tr[data-bill]').count()
+    await page.locator('[data-bill-new="PRZYCHOD"]').click()
+    const wz = page.locator('[data-bill-wizard="PRZYCHOD"]')
+    await expect(wz.locator('tr[data-w-line]').first()).toBeVisible()
+    await wz.locator('[data-cur="PLN"]').click()
+    const line = wz.locator('tr[data-w-line]').first()
+    await expect(line.locator('[data-flag="BRAK_KURSU"]')).toHaveCount(1)
+    await line.locator('[data-fx-confirm]').check()
+    await expect(line.locator('[data-flag="BRAK_KURSU"]')).toHaveCount(0)
+    // bez numeru / kwot / PDF → komunikaty, brak zapisu
+    await wz.locator('[data-w="submit"]').click()
+    await expect(wz.locator('[data-w-errors]')).toContainText('Numer faktury jest wymagany')
+    await expect(wz.locator('[data-w-errors]')).toContainText('system nie liczy VAT')
+    await wz.locator('[data-w="number"]').fill('HHL/FV/2026/0950')
+    await wz.locator('[data-w="net"]').fill('10000')
+    await wz.locator('[data-w="vat"]').fill('0')
+    await wz.locator('[data-w="gross"]').fill('10000')
+    await wz.locator('[data-w="pdf"]').setInputFiles(PDF)
+    await wz.locator('[data-w="submit"]').click()
+    await expect(wz).toHaveCount(0)
+    await expect(page.locator('[data-bill-section="PRZYCHOD"] tr[data-bill]')).toHaveCount(before + 1)
+    const row = page.locator('tr[data-bill]', { has: page.locator('span.code', { hasText: 'HHL/FV/2026/0950' }) })
+    await expect(row.locator('[data-verif="DO_WERYFIKACJI"]')).toHaveCount(1)
+    await expect(row.locator('[data-pay="NIEOPLACONA"]')).toHaveCount(1)
+    const id = await row.getAttribute('data-bill')
+    const detail = page.locator(`[data-bill-detail="${id}"]`)
+    await expect(detail).toBeVisible()
+    await expect(detail.locator('[data-verify]')).toHaveCount(0) // wystawca nie weryfikuje
+    await detail.locator('[data-paid]').click()
+    await expect(row.locator('[data-pay="OPLACONA"]')).toHaveCount(1)
+    // KSH widzi nową fakturę i powiadomienie
+    await role(page, 'KSH')
+    await nav(page, 'inv')
+    await expect(page.locator('tr[data-bill] span.code', { hasText: 'HHL/FV/2026/0950' })).toHaveCount(1)
+  })
+
+  test('SCX: rejestruje fakturę kosztową, widzi status i termin, bez „Opłacona”; nie widzi przychodowych', async ({ page }) => {
+    await boot(page)
+    await role(page, 'SCX')
+    await nav(page, 'inv')
+    await expect(page.locator('[data-bill-section="KOSZT"]')).toHaveCount(1)
+    await expect(page.locator('[data-bill-section="PRZYCHOD"]')).toHaveCount(0)
+    await expect(page.locator('tr[data-bill] span.code', { hasText: /^HHL\// })).toHaveCount(0)
+    await page.locator('[data-bill-new="KOSZT"]').click()
+    const wz = page.locator('[data-bill-wizard="KOSZT"]')
+    await wz.locator('[data-w="number"]').fill('SCX/FV/2026/77')
+    await wz.locator('[data-w="net"]').fill('1')
+    await wz.locator('[data-w="vat"]').fill('0')
+    await wz.locator('[data-w="gross"]').fill('1')
+    await wz.locator('[data-w="pdf"]').setInputFiles(PDF)
+    await wz.locator('[data-w="submit"]').click()
+    const row = page.locator('tr[data-bill]', { has: page.locator('span.code', { hasText: 'SCX/FV/2026/77' }) })
+    await expect(row).toHaveCount(1)
+    // po rejestracji szczegóły faktury są otwarte
+    const detail = page.locator(`[data-bill-detail="${await row.getAttribute('data-bill')}"]`)
+    await expect(detail).toBeVisible()
+    await expect(detail.locator('[data-paid], [data-unpaid], [data-verify]')).toHaveCount(0)
   })
 })

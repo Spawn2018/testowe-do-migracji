@@ -55,6 +55,7 @@ export function Nav() {
   const locale = useTowerStore((s) => s.locale)
   const risks = useTowerStore((s) => s.risks)
   const invoices = useTowerStore((s) => s.invoices)
+  const bills = useTowerStore((s) => s.bills)
   const workflows = useTowerStore((s) => s.workflows)
   const loads = useTowerStore((s) => s.loads)
   const geofences = useTowerStore((s) => s.geofences)
@@ -95,6 +96,11 @@ export function Nav() {
       return n ? { n, hot: true } : null
     }
     if (key === 'inv') {
+      if (role === 'KSH') {
+        /* M6 — KSH: faktury HHL do weryfikacji */
+        const k = bills.filter((b) => b.recipient === 'KSH' && b.verification === 'DO_WERYFIKACJI').length
+        return k ? { n: k } : null
+      }
       const n = invoices.filter((i) => i.status === 'DISPUTED' || i.status === 'SUBMITTED').length
       return n ? { n } : { n: 1 }
     }

@@ -6,6 +6,7 @@ import { t } from '../i18n/messages';
 import type { Document, FactoringOffer } from '../types';
 import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
+import { BillsPanel } from './BillsPanel';
 import {
   billedMapFromInvoiceLines,
   buildThreeWayMatch,
@@ -93,6 +94,15 @@ export function InvoicesView() {
   const expected = match.expectedTotal;
   const invoiced = match.billedTotal;
   const rows = match.lines;
+
+  if (role === 'KSH') {
+    /* M6 — moduł faktur KSH: wyłącznie faktury HHL → KSH (nigdy koszt) */
+    return (
+      <div className="invoices-page page-sections" data-page="invoices">
+        <BillsPanel />
+      </div>
+    );
+  }
 
   if (!canSeeCost(role) && role !== 'HHL') {
     return (
@@ -221,6 +231,8 @@ export function InvoicesView() {
           </div>
         </div>
       </div>
+
+      <BillsPanel />
 
       {role === 'HHL' ? (
         <div className="panel section-card" style={{ margin: 12 }}>

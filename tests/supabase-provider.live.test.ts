@@ -162,6 +162,55 @@ describe.runIf(LIVE)('BK3 SupabaseProvider (live, RLS)', () => {
     }
   });
 
+  it('M6: faktury przez provider — SCX rejestruje → HHL weryfikuje i oznacza „Opłacona”; HHL → KSH weryfikuje', async () => {
+    const pdf = new Blob([new TextEncoder().encode('%PDF-1.4\n%TEST-M6-LIVE\n')], { type: 'application/pdf' });
+    const base = (direction: 'KOSZT' | 'PRZYCHOD', number: string, net: number) => ({
+      id: 'local', direction, issuer: direction === 'KOSZT' ? 'SCX' : 'HHL', recipient: direction === 'KOSZT' ? 'HHL' : 'KSH',
+      number, issueDate: '2026-09-20', weekKey: '2026-W38', currency: 'EUR', net, vat: 0, gross: net,
+      dueDate: '', dueFromDocument: false, verification: 'DO_WERYFIKACJI', payment: 'NIEOPLACONA', pdfName: `${number}.pdf`,
+      lines: [{ loadId: loadA, invoicedNet: net, flags: [] }], headerFlags: [], missingLoadIds: [], createdAt: '',
+    } as const);
+    const made: string[] = [];
+    try {
+      const k = await P.SCX.apply({ type: 'bill.register', bill: { ...base('KOSZT', `TEST-M6-L-K-${tag}`, 2000), lines: [{ loadId: loadA, invoicedNet: 2000, flags: [] }] }, file: pdf });
+      const kid = (k as { id: string }).id;
+      made.push(kid);
+      const hs = await P.HHL.loadSnapshot();
+      const kb = hs.bills.find((b) => b.id === kid)!;
+      expect(kb.issuer).toBe('SCX');
+      expect(kb.pdfStoragePath).toBeTruthy();
+      expect((await P.KSH.loadSnapshot()).bills.find((b) => b.id === kid)).toBeUndefined();
+      await expect(P.SCX.apply({ type: 'bill.verify', billId: kid, verification: 'ZAAKCEPTOWANA', note: null })).rejects.toThrow();
+      await expect(P.SCX.apply({ type: 'bill.paid', billId: kid, paidAt: '2026-09-25' })).rejects.toThrow();
+      await P.HHL.apply({ type: 'bill.verify', billId: kid, verification: 'ZAAKCEPTOWANA', note: null });
+      await P.HHL.apply({ type: 'bill.paid', billId: kid, paidAt: '2026-09-25' });
+      const sb = (await P.SCX.loadSnapshot()).bills.find((b) => b.id === kid)!;
+      expect(sb.verification).toBe('ZAAKCEPTOWANA');
+      expect(sb.payment).toBe('OPLACONA');
+      const p = await P.HHL.apply({ type: 'bill.register', bill: base('PRZYCHOD', `TEST-M6-L-P-${tag}`, 2500), file: pdf });
+      const pid = (p as { id: string }).id;
+      made.push(pid);
+      expect((await P.SCX.loadSnapshot()).bills.find((b) => b.id === pid)).toBeUndefined();
+      await expect(P.KSH.apply({ type: 'bill.verify', billId: pid, verification: 'SPORNA', note: null })).rejects.toThrow();
+      await P.KSH.apply({ type: 'bill.verify', billId: pid, verification: 'SPORNA', note: 'TEST-M6 stawka' });
+      const kb2 = (await P.KSH.loadSnapshot()).bills.find((b) => b.id === pid)!;
+      expect(kb2.verification).toBe('SPORNA');
+      expect(kb2.disputeNote).toBe('TEST-M6 stawka');
+      expect(kb2.dueDate).toBe('2026-10-20');
+    } finally {
+      const { data: docs } = await admin.from('invoices').select('document_id').in('id', made);
+      await admin.from('invoices').delete().in('id', made);
+      await admin.from('notifications').delete().in('payload->>invoice_id', made);
+      const ids = (docs ?? []).map((d) => d.document_id).filter(Boolean) as string[];
+      const { data: rows } = await admin.from('documents').select('id,storage_path').in('id', ids);
+      for (const r of rows ?? []) { const i = r.storage_path.indexOf('/'); await admin.storage.from(r.storage_path.slice(0, i)).remove([r.storage_path.slice(i + 1)]); }
+      await admin.from('documents').delete().in('id', ids);
+      // Z1 z rejestracji: poziom FAKTURA na wierszach testowych — wiersze usuwa fixture M2 (verify.mjs); tu tylko kwota
+      await admin.from('load_cost').update({ invoiced_total_eur: null }).eq('load_id', loadA);
+      await admin.from('load_revenue').update({ invoiced_total_eur: null }).eq('load_id', loadA);
+    }
+  });
+
   it('anon (bez sesji) nie czyta transportów', async () => {
     const anon = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false } });
     const { data } = await anon.from('loads').select('id');

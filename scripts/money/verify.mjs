@@ -36,7 +36,13 @@ const A = loads?.find((l) => code(l) === 'TEST-BK3-A');
 check('fixture TEST-BK3-A widoczny dla HHL', Boolean(A));
 
 const created = { cost: false, rev: false };
+const m6 = { inv: [], docs: [], paths: [], notes: [] };
 const cleanup = async () => {
+  // M6: własne faktury TEST (kaskada: pozycje, dokumenty faktury), powiadomienia, pliki PDF
+  if (m6.inv.length) await admin.from('invoices').delete().in('id', m6.inv);
+  if (m6.notes.length) await admin.from('notifications').delete().in('id', m6.notes);
+  for (const [b, pth] of m6.paths) await admin.storage.from(b).remove([pth]);
+  if (m6.docs.length) await admin.from('documents').delete().in('id', m6.docs);
   if (created.cost) await admin.from('load_cost').delete().eq('load_id', A.id);
   if (created.rev) await admin.from('load_revenue').delete().eq('load_id', A.id);
 };
@@ -160,11 +166,89 @@ try {
   }
   const si = await sb.SCX.from('schedule_imports').select('id');
   check('RLS 0013: SCX nie widzi historii importów', !si.error && si.data.length === 0, si.error?.message);
+  // ---------- M6: faktury v2 (register_invoice, strony, weryfikacja, płatność) — własne wiersze TEST, sprzątane ----------
+  {
+    const pdf = new Blob([new TextEncoder().encode('%PDF-1.4\n%TEST-M6\n')], { type: 'application/pdf' });
+    const upPdf = async (org) => {
+      const c = await sb[org].rpc('create_document', { p_load_id: null, p_category: 'INVOICE', p_file_name: `TEST-M6-${org}.pdf`, p_mime: 'application/pdf', p_size: pdf.size, p_project_id: A.project_id });
+      const row = Array.isArray(c.data) ? c.data[0] : c.data;
+      if (c.error || !row) return { error: c.error?.message ?? 'brak' };
+      m6.docs.push(row.id); m6.paths.push([row.bucket, row.object_path]);
+      const u = await sb[org].storage.from(row.bucket).upload(row.object_path, pdf, { contentType: 'application/pdf' });
+      return { id: row.id, error: u.error?.message };
+    };
+    const reg = (org, p) => sb[org].rpc('register_invoice', { p });
+    const hdr = (dir, num, doc) => ({ direction: dir, currency: 'EUR', invoice_number: num, issue_date: '2026-09-20', week_key: '2026-W38', net_total: 2000, vat_total: 0, gross_total: 2000, document_id: doc, lines: [{ load_id: A.id, invoiced_net: 2000 }] });
+    const d1 = await upPdf('SCX');
+    check('M6 SCX: PDF faktury w Storage (dokument bez transportu)', !d1.error, d1.error);
+    const r1 = await reg('SCX', hdr('KOSZT', `TEST-M6-K-${Date.now()}`, d1.id));
+    if (r1.data) m6.inv.push(r1.data);
+    check('M6 SCX rejestruje fakturę kosztową (RPC)', !r1.error && Boolean(r1.data), r1.error?.message);
+    const nopdf = await reg('SCX', { ...hdr('KOSZT', 'TEST-M6-NOPDF', null) });
+    check('M6 bez PDF → odrzucona', /PDF/.test(nopdf.error?.message ?? ''), nopdf.error?.message);
+    const vatless = await reg('SCX', { ...hdr('KOSZT', 'TEST-M6-NOVAT', d1.id), vat_total: null });
+    check('M6 bez VAT z dokumentu → odrzucona (system nie liczy VAT)', /VAT/.test(vatless.error?.message ?? ''), vatless.error?.message);
+    const hhlCost = await reg('HHL', hdr('KOSZT', 'TEST-M6-HHLK', d1.id));
+    check('M6 HHL nie rejestruje kosztowej (wystawca = przewoźnik)', Boolean(hhlCost.error));
+    if (r1.data) {
+      const id = r1.data;
+      const v = await Promise.all(['HHL', 'SCX', 'KSH'].map((o) => sb[o].from('invoices').select('id,due_date,verification_status,invoice_lines(flags,expected_amount)').eq('id', id)));
+      check('M6 kosztowa: widzą HHL i SCX, KSH nie', v[0].data?.length === 1 && v[1].data?.length === 1 && v[2].data?.length === 0, JSON.stringify(v.map((x) => x.data?.length)));
+      check('M6 termin 35 dni od wystawienia (relacja HHL←SCX)', v[0].data?.[0]?.due_date === '2026-10-25', v[0].data?.[0]?.due_date);
+      check('M6 kontrole pozycji liczone w bazie (flagi, oczekiwana kwota)', Array.isArray(v[0].data?.[0]?.invoice_lines?.[0]?.flags) && Number(v[0].data?.[0]?.invoice_lines?.[0]?.expected_amount) === 2000, JSON.stringify(v[0].data?.[0]?.invoice_lines));
+      const dbl = await reg('SCX', hdr('KOSZT', 'TEST-M6-K-DBL', d1.id));
+      check('M6 podwójne fakturowanie → zrozumiały błąd', /podw\S*jne fakturowanie/i.test(dbl.error?.message ?? ''), dbl.error?.message);
+      const z1 = await sb.HHL.from('v_load_financials_hhl').select('cost_computed_eur,cost_invoiced_eur,cost_tier').eq('load_id', A.id);
+      check('M6 Z1: kwota z faktury obok wyliczenia, poziom FAKTURA', Number(z1.data?.[0]?.cost_computed_eur) === 2000 && Number(z1.data?.[0]?.cost_invoiced_eur) === 2000 && z1.data?.[0]?.cost_tier === 'FAKTURA', JSON.stringify(z1.data));
+      const sv = await sb.SCX.from('invoices').update({ verification_status: 'ZAAKCEPTOWANA' }).eq('id', id).select('id');
+      check('M6 wystawca nie weryfikuje własnej (Q14)', Boolean(sv.error) || (sv.data ?? []).length === 0, sv.error?.message);
+      const sp = await sb.SCX.rpc('mark_invoice_paid', { p_invoice: id, p_paid_at: '2026-09-25' });
+      check('M6 SCX nie oznaczy „Opłacona”', Boolean(sp.error));
+      const hn = await sb.HHL.from('invoices').update({ verification_status: 'SPORNA' }).eq('id', id).select('id');
+      check('M6 SPORNA bez uzasadnienia → odrzucona', Boolean(hn.error), hn.error ? '' : 'zapisano');
+      const hs = await sb.HHL.from('invoices').update({ verification_status: 'SPORNA', dispute_note: 'TEST-M6 stawka', decided_at: new Date().toISOString() }).eq('id', id).select('verification_status');
+      check('M6 HHL (odbiorca) SPORNA z uzasadnieniem', !hs.error && hs.data?.[0]?.verification_status === 'SPORNA', hs.error?.message);
+      const ha = await sb.HHL.from('invoices').update({ verification_status: 'ZAAKCEPTOWANA' }).eq('id', id).select('verification_status');
+      check('M6 HHL ZAAKCEPTOWANA', !ha.error && ha.data?.[0]?.verification_status === 'ZAAKCEPTOWANA', ha.error?.message);
+      const hp = await sb.HHL.rpc('mark_invoice_paid', { p_invoice: id, p_paid_at: '2026-09-25' });
+      const ps = await sb.SCX.from('invoices').select('payment_status,paid_at').eq('id', id);
+      check('M6 HHL „Opłacona” z datą — SCX widzi status', !hp.error && ps.data?.[0]?.payment_status === 'OPLACONA' && ps.data?.[0]?.paid_at === '2026-09-25', hp.error?.message ?? JSON.stringify(ps.data));
+      const un0 = await sb.HHL.rpc('unmark_invoice_paid', { p_invoice: id, p_reason: '' });
+      check('M6 cofnięcie bez powodu → odrzucone', Boolean(un0.error));
+      const un = await sb.HHL.rpc('unmark_invoice_paid', { p_invoice: id, p_reason: 'TEST-M6 cofnięcie' });
+      check('M6 cofnięcie z powodem', !un.error, un.error?.message);
+    }
+    // przychodowa HHL → KSH
+    const d2 = await upPdf('HHL');
+    const r2 = await reg('HHL', { ...hdr('PRZYCHOD', `TEST-M6-P-${Date.now()}`, d2.id), net_total: 2500, gross_total: 2500, lines: [{ load_id: A.id, invoiced_net: 2500 }] });
+    if (r2.data) m6.inv.push(r2.data);
+    check('M6 HHL rejestruje fakturę przychodową', !r2.error && Boolean(r2.data), r2.error?.message);
+    const scxRev = await reg('SCX', hdr('PRZYCHOD', 'TEST-M6-SCXP', d1.id));
+    check('M6 SCX nie rejestruje przychodowej', Boolean(scxRev.error));
+    if (r2.data) {
+      const id = r2.data;
+      const v = await Promise.all(['HHL', 'SCX', 'KSH'].map((o) => sb[o].from('invoices').select('id,due_date').eq('id', id)));
+      check('M6 przychodowa: widzą HHL i KSH, SCX nie', v[0].data?.length === 1 && v[1].data?.length === 0 && v[2].data?.length === 1, JSON.stringify(v.map((x) => x.data?.length)));
+      check('M6 termin 30 dni (relacja KSH←HHL)', v[0].data?.[0]?.due_date === '2026-10-20', v[0].data?.[0]?.due_date);
+      const uidK = (await sb.KSH.rpc('current_app_user_id')).data;
+      const nk = await admin.from('notifications').select('id,template').eq('user_id', uidK).contains('payload', { invoice_id: id });
+      m6.notes.push(...(nk.data ?? []).map((n) => n.id));
+      check('M6 Q13: KSH dostaje powiadomienie o nowej fakturze HHL', (nk.data ?? []).length > 0, nk.error?.message);
+      const kd = await sb.KSH.from('invoice_documents').select('role').eq('invoice_id', id);
+      check('M6 KSH widzi dokumenty faktury wyłącznie PDF/CMR/POD', !kd.error && kd.data.length > 0 && kd.data.every((r) => ['FAKTURA_PDF', 'CMR', 'POD'].includes(r.role)), kd.error?.message ?? JSON.stringify(kd.data));
+      const kv = await sb.KSH.from('invoices').update({ verification_status: 'ZGODNA', decided_at: new Date().toISOString() }).eq('id', id).select('verification_status');
+      check('M6 KSH (odbiorca) weryfikuje fakturę HHL', !kv.error && kv.data?.[0]?.verification_status === 'ZGODNA', kv.error?.message);
+      const kp = await sb.KSH.rpc('mark_invoice_paid', { p_invoice: id, p_paid_at: '2026-09-25' });
+      check('M6 KSH nie oznaczy „Opłacona”', Boolean(kp.error));
+    }
+  }
   //@@NEXT@@
 } finally {
   await cleanup();
   const left = [(await admin.from('load_cost').select('load_id').eq('load_id', A.id)).data?.length ?? 0, (await admin.from('load_revenue').select('load_id').eq('load_id', A.id)).data?.length ?? 0];
   check('sprzątanie: brak własnych resztek load_cost/load_revenue na TEST-BK3-A', left[0] === 0 && left[1] === 0, JSON.stringify(left));
+  const leftInv = m6.inv.length ? ((await admin.from('invoices').select('id').in('id', m6.inv)).data?.length ?? 0) : 0;
+  check('sprzątanie M6: brak faktur TEST', leftInv === 0, String(leftInv));
 }
 console.log(`\nEtap 4 money verify: ${pass} PASS / ${fail} FAIL`);
 process.exit(fail ? 1 : 0);

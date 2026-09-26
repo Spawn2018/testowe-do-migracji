@@ -12,6 +12,7 @@ import { isServerId } from './registry';
 import {
   awizacjaPatchToDb, documentFromRow, eventFromRow, eventToRow, ferryPatchToDb, geofenceFromRow, geofenceToRpc,
   PRICE_VIEW_COLUMNS, applyPriceViews, type PriceViewRow,
+  BILL_COLUMNS, billFromRow, billToRpc, type BillRow,
   loadFromRow, messageFromRow, resourcesPatchToDb, riskFromRow, statusToDb, vesselToDb,
   type DocumentRow, type EventRow, type GeofenceRow, type LoadRow, type MessageRow, type OrgRow, type RiskRow,
 } from './mappers';
@@ -54,7 +55,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
   async function loadSnapshot(): Promise<DataSnapshot> {
     await ensureContext();
     const at = now();
-    const [loads, events, messages, geos, risks, docs, costV, revV] = await Promise.all([
+    const [loads, events, messages, geos, risks, docs, costV, revV, billsQ] = await Promise.all([
       sb.from('loads').select(LOAD_COLUMNS).order('plan_load_date', { ascending: true, nullsFirst: false }),
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
@@ -64,17 +65,21 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       // M2: ceny wyłącznie z widoków rolowych v2 (0010) — koszt: HHL + przewoźnik, przychód: HHL + klient
       sb.from('v_load_price_carrier').select(PRICE_VIEW_COLUMNS),
       sb.from('v_load_price_client').select(PRICE_VIEW_COLUMNS),
+      // M6: faktury v2 (RLS invoices_read: strony faktury; HHL wszystko)
+      sb.from('invoices').select(BILL_COLUMNS).not('direction', 'is', null).order('issue_date', { ascending: false }),
     ]);
+    const docRows = must(docs, 'documents') as DocumentRow[];
     const costBy = new Map((must(costV, 'v_load_price_carrier') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
     const revBy = new Map((must(revV, 'v_load_price_client') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
     return {
-      ...emptySnapshot(), // faktury / automatyzacje / powiadomienia: Etap 4 — puste, nie demo
+      ...emptySnapshot(), // automatyzacje / powiadomienia: Etap 4 — puste, nie demo
       loads: (must(loads, 'loads') as unknown as LoadRow[]).map((r, i) => applyPriceViews(loadFromRow(r, orgs, i, at), costBy.get(r.id), revBy.get(r.id))),
       events: (must(events, 'load_events') as EventRow[]).map(eventFromRow),
       messages: (must(messages, 'load_messages') as MessageRow[]).map(messageFromRow),
       geofences: (must(geos, 'v_geofences_circle') as GeofenceRow[]).map((g) => geofenceFromRow(g, orgs)),
       risks: (must(risks, 'risk_signals') as RiskRow[]).map((r) => riskFromRow(r, at)),
-      documents: (must(docs, 'documents') as DocumentRow[]).map(documentFromRow).filter((d) => d !== null),
+      documents: docRows.map(documentFromRow).filter((d) => d !== null),
+      bills: (must(billsQ, 'invoices') as unknown as BillRow[]).map((r) => billFromRow(r, orgs, docRows)).filter((b) => b !== null),
     };
   }
 
@@ -148,6 +153,47 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       case 'prefs.save':
         await savePreferences(m.prefs);
         return;
+      case 'bill.register': {
+        // PDF → Storage (dokument bez transportu, projekt faktury), potem RPC: kontrole i zapis w jednej transakcji
+        await ensureContext();
+        if (!projectId) throw new Error('faktura: brak projektu');
+        if (!m.file) throw new Error('Plik PDF faktury jest wymagany');
+        const created = await sb.rpc('create_document', {
+          p_load_id: null, p_category: 'INVOICE', p_file_name: m.bill.pdfName ?? 'faktura.pdf',
+          p_mime: 'application/pdf', p_size: m.file.size, p_project_id: projectId,
+        });
+        const row = (Array.isArray(created.data) ? created.data[0] : created.data) as { id: string; bucket: string; object_path: string } | null;
+        if (created.error || !row) throw new Error(`faktura PDF: ${created.error?.message ?? 'brak rejestracji'}`);
+        const up = await sb.storage.from(row.bucket).upload(row.object_path, m.file, { contentType: 'application/pdf', upsert: false });
+        if (up.error) {
+          await sb.rpc('discard_document', { p_id: row.id });
+          throw new Error(`faktura PDF: ${up.error.message}`);
+        }
+        const res = await sb.rpc('register_invoice', { p: billToRpc(m.bill, row.id) });
+        if (res.error) {
+          await sb.rpc('discard_document', { p_id: row.id });
+          throw new Error(res.error.message);
+        }
+        return { id: String(res.data) };
+      }
+      case 'bill.verify': {
+        const res = await sb.from('invoices').update({
+          verification_status: m.verification, dispute_note: m.note, decided_at: now(),
+        }).eq('id', m.billId).select('id');
+        const rows = must(res, 'weryfikacja faktury') as { id: string }[];
+        if (!rows.length) throw new Error('weryfikacja faktury: brak uprawnień (weryfikuje odbiorca)');
+        return;
+      }
+      case 'bill.paid': {
+        const res = await sb.rpc('mark_invoice_paid', { p_invoice: m.billId, p_paid_at: m.paidAt });
+        if (res.error) throw new Error(res.error.message);
+        return;
+      }
+      case 'bill.unpaid': {
+        const res = await sb.rpc('unmark_invoice_paid', { p_invoice: m.billId, p_reason: m.reason });
+        if (res.error) throw new Error(res.error.message);
+        return;
+      }
       case 'geofence.save': {
         await ensureContext();
         if (!projectId) throw new Error('strefa: brak projektu');

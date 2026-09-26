@@ -18,7 +18,7 @@ export type NavKey =
 
 const NAV_BY_ROLE: Record<RoleId, NavKey[]> = {
   HHL: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'wf', 'geo', 'options'],
-  KSH: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'settings'],
+  KSH: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'settings'],
   SCX: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'tasks', 'settings'],
 };
 
