@@ -131,7 +131,7 @@ Po wdrożeniu: e-maile przypomnień i „nowa faktura” wychodzą w języku odb
 |---|---|---|---|---|---|
 | AN4 | Aneks 4 — tekst w `ZLECENIE_FINAL.md` | **DONE** | (ten commit `docs(AN4)`) | — | obecny projekt Supabase = **testowy** (AN3 §4.1); produkcja = nowy projekt UE, plan darmowy |
 | PR1 | Podtrzymanie: `keep_alive()` + `system_heartbeat`, Cloudflare Worker co 6 h, e-mail przy błędzie | DONE (kod) · czeka na właściciela | d188716 | release 113/113 (db; 5 nowych PR1), unit worker 3, live keep_alive 1/1 (TESTOWY) | 0022 system_heartbeat + keep_alive() (anon, zapis ≤1/60 s); workers/keep-alive: cron co 6 h, e-mail Resend przy błędzie; wdrożenie Workera i sekrety — konto Cloudflare właściciela (sekcja 10 p.2) · Worker wdraża właściciel (konto Cloudflare) |
-| PR2 | Kopie: `backup-export` 02:30 (CSV+gzip, age X25519, R2), `scripts/restore.sh`, test odtworzenia | OPEN | — | — | pending · R2 i klucz age — właściciel |
+| PR2 | Kopie: `backup-export` 02:30 (CSV+gzip, age X25519, R2), `scripts/restore.sh`, test odtworzenia | DONE (R2 czeka na właściciela) | bd4d59b | backup-core 4/4; db backup 10/10 lokalnie + 2/2 TESTOWY (405 wierszy); gate 52/44/33/130/113/10 | 0023 na TESTOWYM; utrata danych do 24 h; wdrożenie Edge + R2 + klucz age — właściciel (docs/handover/KOPIE_ZAPASOWE.md) · R2 i klucz age — właściciel |
 | PR3 | Poczta: Resend jako SMTP Supabase Auth, domena zweryfikowana | OPEN | — | — | pending · blokuje produkcję; konto/DNS — właściciel |
 | PR4 | `usage-check` codziennie: 70% → ryzyko, 85% → ryzyko wysokie + e-mail, historia | OPEN | — | — | pending |
 | PR5 | GPS: 2 min w ruchu / 15 min na postoju, limit 60 s w `process_position()`, retencja 30 dni, pomiar bajtów | OPEN | — | — | pending |
