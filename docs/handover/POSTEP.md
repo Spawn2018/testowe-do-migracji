@@ -143,7 +143,7 @@ Po wdrożeniu: e-maile przypomnień i „nowa faktura” wychodzą w języku odb
 | A5-BK5-LOKALNIE | BK5 (test API) na lokalnym Supabase (CLI + Docker) | BLOCKED | — | — | na boxie brak Dockera — BK5 nie uruchamiany na produkcji |
 | A5-PODGLADY | Podglądy Vercel w `DemoProvider`, build produkcyjny tylko z `main` | OPEN | — | — | pending |
 | A5-SESJA-ROK | Sesja użytkownika 365 dni (pg_cron czyści `auth.sessions`), JWT 3600 s, link ≤ 1 h, odwoływanie, Moje urządzenia + testy §4.5 | OPEN | — | — | kierowca bez zmian (24 h po rozładunku, max 14 dni) — rocznej autoryzacji kierowcy nie zaczęto |
-| A5-KLUCZ | Para kluczy age poza repo; publiczny → sekret `backup-export`; prywatny → właściciel offline, potem usunięcie z dysku | OPEN | — | — | pending |
+| A5-KLUCZ | Para kluczy age poza repo; publiczny → sekret `backup-export`; prywatny → właściciel offline, potem usunięcie z dysku | W TOKU (czeka na przekazanie) | — | — | para age wygenerowana 26.09 10:58 poza repo (/workspace/secure, prywatny chmod 600, nie w repo/logach/raportach); publiczny w pliku obok — do sekretu backup-export po uzyskaniu tokenu; prywatny: przekazanie właścicielowi → usunięcie z dysku i potwierdzenie |
 | release-1.0 | Tag `release-1.0` na commicie działającym na produkcji | OPEN | — | — | **dopiero po O3 na produkcji** (AN3 §5 pkt 12) |
 
 ## Etap 4 — Fala 3B: pieniądze, faktury, zlecenia · **ZAMKNIĘTY (G4)**
