@@ -5,18 +5,25 @@
 ## Co jest w repo
 | Element | Plik |
 |---|---|
-| Logika (lista tabel, gzip, szyfrowanie age, retencja 7 dziennych / 3 miesięczne, manifest) | `supabase/functions/_shared/backup/core.ts` |
+| Logika (lista tabel, gzip, szyfrowanie age, retencja: dzienne 30 dni / miesięczne 12 miesięcy, manifest) | `supabase/functions/_shared/backup/core.ts` |
 | Funkcja Edge (COPY każdej tabeli → gzip → age → R2; pliki Storage przyrostowo; retencja; wpis `backup_runs`) | `supabase/functions/backup-export/index.ts` |
 | Tabela przebiegów | `supabase/migrations/0023_backup_runs.sql` (zastosowana na hostowanym) |
 | Harmonogram 02:30 (pg_cron + pg_net + Vault) | `supabase/sql/cron_backup.sql` — uruchomić NA PRODUKCJI |
 | Odtworzenie | `scripts/restore.sh` (domyślnie do schematu `restore_*`, niedestrukcyjne; `--into-public` tylko z `RESTORE_CONFIRM=TAK`) |
-| Testy | `tests/backup-core.test.ts` (4), `tests/db/backup.sh` (10 lokalnie; `BACKUP_HOSTED=1` +2: odczyt produkcji → odtworzenie lokalnie), w bramce `gate.sh` jako `backup 10` |
+| Testy | `tests/backup-core.test.ts` (5), `tests/db/backup.sh` (10 lokalnie; `BACKUP_HOSTED=1` +2: odczyt produkcji → odtworzenie lokalnie), w bramce `gate.sh` jako `backup 10` |
 
 Poza kopią: `positions` (dane osobowe, retencja 30 dni), `driver_tokens` (skróty tokenów), `spatial_ref_sys` (PostGIS). Test pokrycia w `backup.sh` pilnuje, że każda tabela `public` jest w kopii albo na liście wyłączeń.
 
 ## Wynik testu (2026-09-26)
 - przed ANEKSEM 5: eksport z hostowanego → odtworzenie do schematu `restore_check` na hostowanym (usunięty po teście): 405 wierszy = manifest.
 - po ANEKSIE 5: eksport z produkcji (tylko odczyt) → odtworzenie do lokalnego Postgresa: 405 wierszy = manifest, 12/12. Na produkcji brak schematów `restore_*`. Zły klucz → odtworzenie niemożliwe.
+
+## Blokada kubełka R2 (3b) — ochrona przed skasowaniem/zaszyfrowaniem kopii
+- Cloudflare R2 Bucket Locks: reguły wieku (Age) albo bezterminowe na prefiks; w dokumentacji brak ograniczenia do planu płatnego. Ustawiane przez API lub `wrangler r2 bucket lock`.
+- Reguły: `docs/handover/r2/bucket-lock.json` — `daily/` **30 dni**, `monthly/` **360 dni** (krócej niż retencja 30 dni / 12 mies., żeby `backup-export` mógł kasować stare kopie).
+- `backup-export` nie przerywa przebiegu, gdy R2 odrzuci DELETE zablokowanego obiektu (wynik DELETE nie jest sprawdzany; spróbuje następnej nocy). Test: `retentionDeletes` nigdy nie wskazuje obiektu młodszego niż blokada.
+- Limity darmowego R2: 10 GB, 1 mln operacji klasy A i 10 mln klasy B miesięcznie.
+- Czeka na: token Cloudflare z dostępem do R2 (właściciel).
 
 ## Ryzyko
 Kopia raz na dobę: **utrata danych do 24 h** w razie awarii między kopiami (akceptowane w ANEKSIE 4).
