@@ -1,5 +1,10 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
+import { resolveAuthMode } from './build/authMode.ts'
+
+// A5-PODGLADY: podglądy Vercel zawsze w trybie demo; produkcja tylko z main.
+const authMode = resolveAuthMode(process.env)
+if (authMode !== undefined) process.env.VITE_AUTH_MODE = authMode
 
 /** Dev/preview: POST /api/trafikverket → Trafikverket v2 (key server-side) or seed demo JSON */
 function trafikverketApi(): Plugin {
