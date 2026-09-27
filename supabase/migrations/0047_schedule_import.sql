@@ -1,0 +1,307 @@
+-- =====================================================================
+-- TOWER — Migracja 0047: I-1 — import harmonogramu w trybie produkcyjnym
+--
+--   import_schedule(project, rows, cancel_codes, file, dry_run) — jedna funkcja,
+--   jedna transakcja, SECURITY DEFINER, wyłącznie HHL (is_hhl()).
+--     dry_run = true  → podgląd różnic (nowe / zmienione / do anulowania / zablokowane),
+--                       bez żadnego zapisu.
+--     dry_run = false → zapis: loads + shipment_items (klucz naturalny = „Wysyłka”),
+--                       wersja w schedule_imports (plik źródłowy: ścieżka + skrót),
+--                       zdarzenia dopisywane do load_events, anulowanie = status CANCELLED
+--                       (te same warunki co import_cancel_loads, ANEKS 3 §2.1; bez DELETE),
+--                       zmiana daty na transporcie awizowanym → SCHEDULE_DATE_CRITICAL
+--                       + powiadomienie w aplikacji dla przewoźnika i HHL (SCOPE 3.7).
+--     Ten sam plik drugi raz → 0 zmian, 0 zapisów (bez nowej wersji).
+--   ANEKS 2: okna awizacji (plan_*_from/_to) nie są ruszane przez import — import zmienia
+--   wyłącznie daty planu z harmonogramu KSH (plan_load_date, plan_delivery_date).
+--   Koszyk Storage „harmonogramy” (prywatny, XLSX, 10 MB): zapis i odczyt wyłącznie HHL.
+--   Idempotentna, niedestrukcyjna (ADD COLUMN IF NOT EXISTS, CREATE OR REPLACE).
+-- =====================================================================
+
+alter table shipment_items add column if not exists schedule_row jsonb;
+comment on column shipment_items.schedule_row is
+  'I-1: ostatni zaimportowany wiersz harmonogramu (postać kanoniczna) — podstawa porównania przy kolejnym imporcie';
+alter table schedule_imports add column if not exists file_name text;
+
+-- Postać kanoniczna wiersza (porównanie niezależne od formatu liczb).
+create or replace function schedule_row_canon(r jsonb) returns jsonb
+language sql immutable set search_path = public as $$
+  select jsonb_build_object(
+    'item_type',      nullif(btrim(r->>'item_type'), ''),
+    'length_m',       round((r->>'length_m')::numeric, 2),
+    'width_m',        round((r->>'width_m')::numeric, 2),
+    'height_m',       round((r->>'height_m')::numeric, 2),
+    'unit_weight_t',  round((nullif(r->>'unit_weight_t', ''))::numeric, 3),
+    'qty',            coalesce((nullif(r->>'qty', ''))::int, 1),
+    'total_weight_t', round((nullif(r->>'total_weight_t', ''))::numeric, 3),
+    'load_date',      (nullif(r->>'load_date', ''))::date,
+    'load_time',      nullif(r->>'load_time', ''),
+    'delivery_date',  (nullif(r->>'delivery_date', ''))::date,
+    'delivery_time',  nullif(r->>'delivery_time', ''),
+    'order_no',       nullif(btrim(r->>'order_no'), ''),
+    'assembly_seq',   (nullif(r->>'assembly_seq', ''))::int)
+$$;
+
+create or replace function import_schedule(
+  p_project      uuid,
+  p_rows         jsonb,
+  p_cancel_codes text[]  default '{}',
+  p_file         jsonb   default '{}'::jsonb,
+  p_dry_run      boolean default true
+) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  t0          timestamptz := clock_timestamp();
+  v_user      uuid;
+  v_carrier   uuid;
+  v_carrier_n text;
+  v_import    uuid;
+  v_version   int;
+  v_n         int;
+  r           record;
+  c           record;
+  v_load      uuid;
+  v_fields    text[];
+  v_crit      text[];
+  v_added     jsonb := '[]';
+  v_changed   jsonb := '[]';
+  v_unchanged int := 0;
+  v_cands     jsonb := '[]';
+  v_blocked   jsonb := '[]';
+  v_cancelled jsonb := '[]';
+  v_critical  jsonb := '[]';
+  v_fnames    text[] := array['item_type','length_m','width_m','height_m','unit_weight_t','qty','total_weight_t',
+                              'load_date','load_time','delivery_date','delivery_time','order_no','assembly_seq'];
+begin
+  if not is_hhl() then raise exception 'Import harmonogramu wyłącznie HHL'; end if;
+  if not exists (select 1 from projects where id = p_project) then raise exception 'Nieznany projekt'; end if;
+  if p_rows is null or jsonb_typeof(p_rows) <> 'array' then raise exception 'Wiersze importu: oczekiwana tablica'; end if;
+  perform pg_advisory_xact_lock(hashtext('import_schedule:' || p_project::text));
+  select id into v_user from app_users where auth_id = auth.uid();
+
+  -- przewoźnik nowych transportów: jedyny przewoźnik w systemie (inaczej HHL przypisuje ręcznie)
+  select case when count(*) = 1 then min(id::text)::uuid end, case when count(*) = 1 then min(name) end
+    into v_carrier, v_carrier_n from organizations where kind = 'CARRIER';
+
+  -- walidacja wejścia (druga linia za parserem w przeglądarce): błąd = cała transakcja wycofana
+  create temp table if not exists _imp (code text primary key, row jsonb not null) on commit drop;
+  truncate _imp;
+  for r in select value as v, ordinality as i from jsonb_array_elements(p_rows) with ordinality loop
+    if coalesce(btrim(r.v->>'code'), '') = '' then raise exception 'Wiersz %: brak kodu „Wysyłka”', r.i; end if;
+    begin
+      c := null;
+      select schedule_row_canon(r.v) as canon into c;
+    exception when others then
+      raise exception 'Wiersz % (%): nieprawidłowa wartość — %', r.i, r.v->>'code', sqlerrm;
+    end;
+    if (c.canon->>'length_m')::numeric <= 0 or (c.canon->>'width_m')::numeric <= 0 or (c.canon->>'height_m')::numeric <= 0 then
+      raise exception 'Wiersz % (%): wymiary muszą być dodatnie', r.i, r.v->>'code';
+    end if;
+    if (c.canon->>'qty')::int <= 0 then raise exception 'Wiersz % (%): ilość musi być dodatnia', r.i, r.v->>'code'; end if;
+    if (c.canon->>'delivery_date')::date < (c.canon->>'load_date')::date then
+      raise exception 'Wiersz % (%): data dostawy przed datą załadunku', r.i, r.v->>'code';
+    end if;
+    begin
+      insert into _imp values (btrim(r.v->>'code'), c.canon);
+    exception when unique_violation then
+      raise exception 'Kod % występuje w pliku więcej niż raz', btrim(r.v->>'code');
+    end;
+  end loop;
+
+  -- wersja (tylko przy zapisie; nadawana dopiero, gdy są zmiany)
+  if not p_dry_run then
+    select coalesce(max(version), 0) + 1 into v_version from schedule_imports where project_id = p_project;
+  end if;
+
+  -- nowe i zmienione
+  for r in
+    select i.code, i.row as inc, si.id as item_id, si.load_id, l.status, l.carrier_org_id,
+           (l.plan_load_from is not null or l.plan_load_to is not null
+            or l.plan_delivery_from is not null or l.plan_delivery_to is not null
+            or l.status in ('READY','AT_LOADING','IN_TRANSIT_PL','AT_PORT_GDANSK','FERRY','AT_PORT_NYNASHAMN','IN_TRANSIT_SE','AT_SITE')) as awizowany,
+           coalesce(si.schedule_row, case when si.id is not null then jsonb_build_object(
+             'item_type', si.item_type, 'length_m', round(si.length_m, 2), 'width_m', round(si.width_m, 2),
+             'height_m', round(si.height_m, 2), 'unit_weight_t', round(si.unit_weight_t, 3), 'qty', si.qty,
+             'total_weight_t', round(si.total_weight_t, 3), 'load_date', l.plan_load_date, 'load_time', null,
+             'delivery_date', l.plan_delivery_date, 'delivery_time', null, 'order_no', l.order_no,
+             'assembly_seq', si.assembly_seq) end) as prev
+      from _imp i
+      left join shipment_items si on si.project_id = p_project and si.shipment_code = i.code
+      left join loads l on l.id = si.load_id
+     order by i.code
+  loop
+    if r.item_id is null or r.load_id is null then
+      v_added := v_added || jsonb_build_object('code', r.code);
+      if not p_dry_run then
+        if v_import is null then
+          insert into schedule_imports (project_id, version, source, file_path, file_hash, file_name, column_map, stats, imported_by)
+          values (p_project, v_version, 'UPLOAD', p_file->>'path', p_file->>'hash', p_file->>'name',
+                  coalesce(p_file->'column_map', '{}'::jsonb), '{}'::jsonb, v_user)
+          returning id into v_import;
+        end if;
+        insert into loads (project_id, order_no, carrier_org_id, status, plan_load_date, plan_delivery_date)
+        values (p_project, r.inc->>'order_no', v_carrier, 'PLANNED',
+                (r.inc->>'load_date')::date, (r.inc->>'delivery_date')::date)
+        returning id into v_load;
+        if r.item_id is null then
+          insert into shipment_items (project_id, load_id, shipment_code, item_type, length_m, width_m, height_m,
+                                      unit_weight_t, qty, total_weight_t, assembly_seq, schedule_row,
+                                      first_seen_import, last_seen_import)
+          values (p_project, v_load, r.code, r.inc->>'item_type', (r.inc->>'length_m')::numeric, (r.inc->>'width_m')::numeric,
+                  (r.inc->>'height_m')::numeric, (r.inc->>'unit_weight_t')::numeric, (r.inc->>'qty')::int,
+                  (r.inc->>'total_weight_t')::numeric, (r.inc->>'assembly_seq')::int, r.inc, v_import, v_import);
+        else
+          update shipment_items set load_id = v_load, schedule_row = r.inc, last_seen_import = v_import, updated_at = now()
+           where id = r.item_id;
+        end if;
+        insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
+        values (v_load, 'SCHEDULE_IMPORTED', now(), v_user,
+                jsonb_build_object('action', 'ADDED', 'code', r.code, 'version', v_version, 'file', p_file->>'name'));
+      end if;
+      continue;
+    end if;
+
+    select coalesce(array_agg(f order by f), '{}') into v_fields
+      from unnest(v_fnames) f where (r.inc -> f) is distinct from (r.prev -> f);
+    if cardinality(v_fields) = 0 then v_unchanged := v_unchanged + 1; continue; end if;
+
+    if r.status = 'CANCELLED' then
+      v_blocked := v_blocked || jsonb_build_object('code', r.code, 'load_id', r.load_id, 'reason', 'CANCELLED',
+                     'message', 'Transport anulowany — przywrócenie wyłącznie ręcznie przez HHL');
+      continue;
+    end if;
+
+    v_crit := case when r.awizowany then
+      array(select f from unnest(v_fields) f where f in ('load_date','load_time','delivery_date','delivery_time')) else '{}' end;
+    v_changed := v_changed || jsonb_build_object('code', r.code, 'load_id', r.load_id, 'fields', to_jsonb(v_fields),
+                   'before', (select jsonb_object_agg(f, r.prev -> f) from unnest(v_fields) f),
+                   'after',  (select jsonb_object_agg(f, r.inc -> f) from unnest(v_fields) f),
+                   'critical', cardinality(v_crit) > 0);
+    if cardinality(v_crit) > 0 then v_critical := v_critical || jsonb_build_object('code', r.code, 'fields', to_jsonb(v_crit)); end if;
+
+    if not p_dry_run then
+      if v_import is null then
+        insert into schedule_imports (project_id, version, source, file_path, file_hash, file_name, column_map, stats, imported_by)
+        values (p_project, v_version, 'UPLOAD', p_file->>'path', p_file->>'hash', p_file->>'name',
+                coalesce(p_file->'column_map', '{}'::jsonb), '{}'::jsonb, v_user)
+        returning id into v_import;
+      end if;
+      update shipment_items set
+        item_type = r.inc->>'item_type', length_m = (r.inc->>'length_m')::numeric, width_m = (r.inc->>'width_m')::numeric,
+        height_m = (r.inc->>'height_m')::numeric, unit_weight_t = (r.inc->>'unit_weight_t')::numeric,
+        qty = (r.inc->>'qty')::int, total_weight_t = (r.inc->>'total_weight_t')::numeric,
+        assembly_seq = (r.inc->>'assembly_seq')::int, schedule_row = r.inc, last_seen_import = v_import, updated_at = now()
+       where id = r.item_id;
+      if 'load_date' = any (v_fields) or 'delivery_date' = any (v_fields) or 'order_no' = any (v_fields) then
+        update loads set plan_load_date = (r.inc->>'load_date')::date, plan_delivery_date = (r.inc->>'delivery_date')::date,
+                         order_no = r.inc->>'order_no', updated_at = now()
+         where id = r.load_id;
+      end if;
+      insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
+      values (r.load_id, 'SCHEDULE_IMPORTED', now(), v_user,
+              jsonb_build_object('action', 'CHANGED', 'code', r.code, 'version', v_version, 'fields', to_jsonb(v_fields),
+                                 'before', (select jsonb_object_agg(f, r.prev -> f) from unnest(v_fields) f),
+                                 'after',  (select jsonb_object_agg(f, r.inc -> f) from unnest(v_fields) f)));
+      if cardinality(v_crit) > 0 then
+        insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
+        values (r.load_id, 'SCHEDULE_DATE_CRITICAL', now(), v_user,
+                jsonb_build_object('code', r.code, 'version', v_version, 'fields', to_jsonb(v_crit),
+                                   'before', (select jsonb_object_agg(f, r.prev -> f) from unnest(v_crit) f),
+                                   'after',  (select jsonb_object_agg(f, r.inc -> f) from unnest(v_crit) f)));
+        insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key)
+        select 'IN_APP', coalesce(u.email::text, u.id::text), u.id, r.load_id, 'SCHEDULE_DATE_CRITICAL',
+               jsonb_build_object('code', r.code, 'fields', to_jsonb(v_crit),
+                                  'load_date', r.inc->>'load_date', 'delivery_date', r.inc->>'delivery_date',
+                                  'locale', u.locale),
+               'SCHED_CRIT:' || r.load_id || ':' || v_version || ':' || u.id
+          from app_users u join organizations o on o.id = u.org_id
+         where u.active and (o.kind = 'FORWARDER' or (r.carrier_org_id is not null and u.org_id = r.carrier_org_id))
+        on conflict (dedup_key) where dedup_key is not null do nothing;
+      end if;
+    end if;
+  end loop;
+
+  -- nieobecne w pliku: kandydaci do anulowania (tylko gdy plik ma przyjęte wiersze)
+  if jsonb_array_length(p_rows) > 0 then
+    for c in
+      select si.shipment_code as code, l.id as load_id, l.status,
+             exists (select 1 from invoice_lines il where il.load_id = l.id) as invoiced
+        from shipment_items si join loads l on l.id = si.load_id
+       where si.project_id = p_project and l.status <> 'CANCELLED'
+         and not exists (select 1 from _imp i where i.code = si.shipment_code)
+       order by si.shipment_code
+    loop
+      if c.invoiced then
+        v_blocked := v_blocked || jsonb_build_object('code', c.code, 'load_id', c.load_id, 'reason', 'INVOICED',
+                       'message', 'Transport jest na fakturze');
+      elsif c.status not in ('PLANNED','RESOURCES_PENDING','DOCS_PENDING','READY') then
+        v_blocked := v_blocked || jsonb_build_object('code', c.code, 'load_id', c.load_id, 'reason', 'STATUS',
+                       'message', 'Transport od wjazdu na załadunek — anuluje wyłącznie HHL ręcznie, z powodem');
+      else
+        v_cands := v_cands || jsonb_build_object('code', c.code, 'load_id', c.load_id);
+        if not p_dry_run and c.code = any (coalesce(p_cancel_codes, '{}')) then
+          if v_import is null then
+            insert into schedule_imports (project_id, version, source, file_path, file_hash, file_name, column_map, stats, imported_by)
+            values (p_project, v_version, 'UPLOAD', p_file->>'path', p_file->>'hash', p_file->>'name',
+                    coalesce(p_file->'column_map', '{}'::jsonb), '{}'::jsonb, v_user)
+            returning id into v_import;
+          end if;
+          perform set_config('tower.cancel_ctx', 'IMPORT', true);
+          update loads set status = 'CANCELLED', updated_at = now() where id = c.load_id;
+          perform set_config('tower.cancel_ctx', '', true);
+          insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
+          values (v_user, 'LOAD_CANCEL_IMPORT', 'loads', c.load_id::text, jsonb_build_object('status', c.status),
+                  jsonb_build_object('status', 'CANCELLED', 'reason', 'Usunięty z harmonogramu (' || coalesce(p_file->>'name', 'import') || ')',
+                                     'version', v_version));
+          insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
+          values (c.load_id, 'STATUS_CANCELLED', now(), v_user,
+                  jsonb_build_object('code', c.code, 'version', v_version, 'reason', 'Usunięty z harmonogramu', 'file', p_file->>'name'));
+          v_cancelled := v_cancelled || jsonb_build_object('code', c.code, 'load_id', c.load_id);
+        end if;
+      end if;
+    end loop;
+  end if;
+
+  if v_import is not null then
+    update schedule_imports set stats = jsonb_build_object(
+        'added', jsonb_array_length(v_added), 'changed', jsonb_array_length(v_changed),
+        'unchanged', v_unchanged, 'cancelled', jsonb_array_length(v_cancelled),
+        'blocked', jsonb_array_length(v_blocked), 'critical', jsonb_array_length(v_critical),
+        'rows', jsonb_array_length(p_rows), 'rejected', coalesce((p_file->>'rejected')::int, 0))
+     where id = v_import;
+  end if;
+
+  return jsonb_build_object(
+    'dry_run', p_dry_run,
+    'version', case when v_import is not null then v_version end,
+    'import_id', v_import,
+    'rows', jsonb_array_length(p_rows),
+    'added', v_added, 'changed', v_changed, 'unchanged', v_unchanged,
+    'cancel_candidates', v_cands, 'blocked', v_blocked, 'cancelled', v_cancelled, 'critical', v_critical,
+    'carrier', v_carrier_n,
+    'ms', round(extract(epoch from clock_timestamp() - t0) * 1000));
+end $$;
+
+revoke execute on function schedule_row_canon(jsonb) from public, anon, authenticated;
+revoke execute on function import_schedule(uuid, jsonb, text[], jsonb, boolean) from public, anon;
+grant execute on function import_schedule(uuid, jsonb, text[], jsonb, boolean) to authenticated;
+
+-- Koszyk archiwum plików harmonogramu (tylko gdy schemat storage istnieje)
+do $st$
+begin
+  if to_regclass('storage.objects') is null or to_regclass('storage.buckets') is null then
+    raise notice 'storage brak (środowisko testowe) — koszyk harmonogramy pominięty';
+    return;
+  end if;
+  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values
+    ('harmonogramy', 'harmonogramy', false, 10485760,
+     array['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/octet-stream'])
+  on conflict (id) do update set public = false,
+    file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+  execute 'drop policy if exists tower_schedule_read on storage.objects';
+  execute $p$create policy tower_schedule_read on storage.objects for select to authenticated using (
+    bucket_id = 'harmonogramy' and public.is_hhl())$p$;
+  execute 'drop policy if exists tower_schedule_insert on storage.objects';
+  execute $p$create policy tower_schedule_insert on storage.objects for insert to authenticated with check (
+    bucket_id = 'harmonogramy' and public.is_hhl())$p$;
+end $st$;

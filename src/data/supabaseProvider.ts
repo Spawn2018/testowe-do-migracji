@@ -56,7 +56,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
   async function loadSnapshot(): Promise<DataSnapshot> {
     await ensureContext();
     const at = now();
-    const [loads, events, messages, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ] = await Promise.all([
+    const [loads, events, messages, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ] = await Promise.all([
       sb.from('loads').select(LOAD_COLUMNS).neq('status', 'CANCELLED').order('plan_load_date', { ascending: true, nullsFirst: false }),
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
@@ -72,6 +72,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.from('notifications').select('id,template,payload,load_id,created_at,read_at').eq('channel', 'IN_APP').order('created_at', { ascending: false }).limit(200),
       // M10: rozkład rejsów — widzą wszyscy (sailings_read), zmienia HHL
       sb.from('sailings').select(SAILING_COLUMNS).order('departure_at', { ascending: true }),
+      // I-1: wersje importu harmonogramu (RLS schedule_imports_hhl — tylko HHL; pozostali: 0 wierszy)
+      sb.from('schedule_imports').select('id,version,file_name,stats,imported_at').order('version', { ascending: false }).limit(20),
     ]);
     const docRows = must(docs, 'documents') as DocumentRow[];
     const costBy = new Map((must(costV, 'v_load_price_carrier') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
@@ -87,6 +89,12 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       notifications: (must(notesQ, 'notifications') as NotificationRow[]).map((r) => notificationFromRow(r)),
       bills: (must(billsQ, 'invoices') as unknown as BillRow[]).map((r) => billFromRow(r, orgs, docRows)).filter((b) => b !== null),
       sailings: (must(sailQ, 'sailings') as unknown as SailingDbRow[]).map(sailingFromRow),
+      scheduleVersions: ((schedQ.error ? [] : schedQ.data ?? []) as { id: string; version: number; file_name: string | null; stats: Record<string, number> | null; imported_at: string }[])
+        .map((r) => ({
+          id: r.id, at: r.imported_at, by: `v${r.version}`, filename: r.file_name ?? '',
+          added: Number(r.stats?.added ?? 0), changed: Number(r.stats?.changed ?? 0),
+          removed: Number(r.stats?.cancelled ?? 0), rejected: Number(r.stats?.rejected ?? 0),
+        })),
     };
   }
 

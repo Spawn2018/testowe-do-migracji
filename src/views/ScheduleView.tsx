@@ -27,6 +27,11 @@ import {
 } from '../lib/scheduleColumns';
 import { formatAppMoney } from '../lib/money/demoFx';
 import { SailingsPanel } from './SailingsPanel';
+import { SUPABASE_AUTH_ENABLED } from '../auth/config';
+import type { ServerImportDraft } from '../data/scheduleImportServer';
+
+/** I-1: import w produkcji przez import_schedule() w bazie (podgląd i zapis w jednej transakcji). */
+const SERVER_IMPORT = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED;
 
 type ImportStep = null | 'upload' | 'map' | 'diff' | 'done';
 type Quick =
@@ -74,6 +79,9 @@ export function ScheduleView() {
   const [dryRun, setDryRun] = useState<ImportDiff | null>(null);
   /* D26 — usunięcia wyłącznie za wyraźną zgodą (domyślnie odznaczone, reset przy każdym pliku) */
   const [allowRemovals, setAllowRemovals] = useState(false);
+  const serverDraft = useRef<ServerImportDraft | null>(null);
+  const [serverNote, setServerNote] = useState<string | null>(null);
+  const [committing, setCommitting] = useState(false);
   const [quick, setQuick] = useState<Quick>('all');
   const fileRef = useRef<HTMLInputElement>(null);
   const [colPrefs, setColPrefs] = useState<SchedColPrefs>(() => loadSchedPrefs());
@@ -117,8 +125,10 @@ export function ScheduleView() {
   const showRev = canSeeRevenue(role);
   const showMargin = canSeeMargin(role);
   const ver = scheduleVersions[0];
-  const verLine = ver
-    ? t(locale, 'a6_sch_ver_line')
+  const verLine = SERVER_IMPORT
+    ? ver
+      ? tp(locale, 'i1_ver_line', { v: ver.by.replace(/^v/, ''), at: formatTableInZone(ver.at, 'Europe/Warsaw', refYear), file: ver.filename })
+      : t(locale, 'i1_ver_none')
     : t(locale, 'a6_sch_ver_line');
 
   const mapKeys = Object.entries(COLUMN_MAP_DEFAULT);
@@ -147,8 +157,19 @@ export function ScheduleView() {
     setDryRun(null);
     setAllowRemovals(false);
     setParsing(true);
+    serverDraft.current = null;
+    setServerNote(null);
     try {
       const buf = await f.arrayBuffer();
+      if (SERVER_IMPORT) {
+        const { serverDryRun } = await import('../data/scheduleImportServer');
+        const draft = await serverDryRun(buf, f.name);
+        serverDraft.current = draft;
+        setServerNote(tp(locale, 'i1_preview', { ms: String(draft.preview.ms), carrier: draft.preview.carrier ?? '—', same: String(draft.preview.unchanged) }));
+        setDryRun(draft.diff);
+        setStep('map');
+        return;
+      }
       const { dryRunFromXlsx } = await import('../lib/scheduleDryRun');
       const st = useTowerStore.getState();
       const diff = await dryRunFromXlsx(buf, f.name, st.loads, undefined, invoicedLoadIds(st.bills, st.invoices));
@@ -351,6 +372,7 @@ export function ScheduleView() {
               </span>
             ) : null}
           </div>
+          {serverNote ? <div data-import-server style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 6 }}>{serverNote}</div> : null}
           {step === 'map' && (
             <>
               <ul style={{ fontSize: 12, columns: 2, color: 'var(--ink-3)', margin: '0 0 8px' }}>
@@ -412,7 +434,7 @@ export function ScheduleView() {
                   </div>
                   <div className="mono" style={{ color: 'var(--ink-3)', marginTop: 4 }} data-import-blocked-codes>
                     {dryRun.removalBlocked
-                      .map((c) => `${c.code} (${t(locale, c.reason === 'INVOICED' ? 'an3_why_invoiced' : 'an3_why_status')})`)
+                      .map((c) => `${c.code} (${t(locale, c.reason === 'INVOICED' ? 'an3_why_invoiced' : c.reason === 'CANCELLED' ? 'i1_why_cancelled' : 'an3_why_status')})`)
                       .join(' · ')}
                   </div>
                 </div>
@@ -420,7 +442,7 @@ export function ScheduleView() {
               <button
                 type="button"
                 className="btn"
-                disabled={dryRun.accepted === 0}
+                disabled={dryRun.accepted === 0 || committing}
                 title={
                   dryRun.accepted === 0
                     ? t(locale, 'a6_sch_no_rows_title')
@@ -432,6 +454,31 @@ export function ScheduleView() {
                       t(locale, 'a6_sch_no_rows_toast'),
                       'CRITICAL',
                     );
+                    return;
+                  }
+                  if (SERVER_IMPORT) {
+                    const draft = serverDraft.current;
+                    if (!draft || committing) return;
+                    setCommitting(true);
+                    void (async () => {
+                      try {
+                        const { serverCommit } = await import('../data/scheduleImportServer');
+                        const res = await serverCommit(draft, allowRemovals ? dryRun.removalCandidates.map((c) => c.code) : []);
+                        setServerNote(
+                          res.version == null
+                            ? t(locale, 'i1_nochange')
+                            : tp(locale, 'i1_saved', { v: String(res.version), a: String(res.added.length), c: String(res.changed.length), x: String(res.cancelled.length), ms: String(res.ms) }) +
+                              (res.critical.length ? ' · ' + tp(locale, 'i1_crit', { codes: res.critical.map((k) => k.code).join(', ') }) : ''),
+                        );
+                        const { refreshFromServer } = await import('../data/supabaseBridge');
+                        await refreshFromServer();
+                        setStep('done');
+                      } catch (e) {
+                        pushToast(tp(locale, 'i1_err', { msg: e instanceof Error ? e.message : String(e) }), 'CRITICAL');
+                      } finally {
+                        setCommitting(false);
+                      }
+                    })();
                     return;
                   }
                   commitImport({

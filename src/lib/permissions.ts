@@ -46,8 +46,12 @@ export function canEditWorkflow(role: RoleId): boolean {
   return role === 'HHL';
 }
 
-export function canImportSchedule(role: RoleId): boolean {
-  return role === 'KSH';
+/**
+ * I-1: w produkcji (VITE_AUTH_MODE=supabase) import wyłącznie HHL — tak samo jak baza (import_schedule: is_hhl()).
+ * Demo bez zmian (KSH), żeby wzorzec wizualny się nie zmienił.
+ */
+export function canImportSchedule(role: RoleId, prod: boolean = import.meta.env.VITE_AUTH_MODE === 'supabase'): boolean {
+  return prod ? role === 'HHL' : role === 'KSH';
 }
 
 export function canSubmitInvoice(role: RoleId): boolean {

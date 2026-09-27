@@ -78,6 +78,17 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
         : locale === 'sv' ? `Ange ordernumret före ${formatDay(p.due)}.` : `Uzupełnij numer zlecenia przed ${formatDay(p.due)}.`;
       return { subject, body, severity: 'HIGH', view: 'risk' };
     }
+    case 'SCHEDULE_DATE_CRITICAL': {
+      const code = String(p.code ?? '');
+      const ld = formatDay(p.load_date), dd = formatDay(p.delivery_date);
+      const subject = locale === 'en'
+        ? `${code}: schedule date changed on an advised transport`
+        : locale === 'sv' ? `${code}: datum ändrat i schemat för aviserad transport` : `${code}: zmiana daty w harmonogramie na awizowanym transporcie`;
+      const body = locale === 'en'
+        ? `New plan: loading ${ld}, delivery ${dd}. Check the advice window.`
+        : locale === 'sv' ? `Ny plan: lastning ${ld}, leverans ${dd}. Kontrollera aviseringsfönstret.` : `Nowy plan: załadunek ${ld}, dostawa ${dd}. Sprawdź okno awizacji.`;
+      return { subject, body, severity: 'HIGH', view: null };
+    }
     default:
       return { subject: row.template, body: '', severity: 'LOW', view: null };
   }

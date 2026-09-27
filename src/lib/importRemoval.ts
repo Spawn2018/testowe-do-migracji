@@ -9,7 +9,8 @@ import { statusToDb, type DbLoadStatus } from '../data/mappers';
 
 export const IMPORT_CANCELLABLE: readonly DbLoadStatus[] = ['PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING', 'READY'];
 
-export type RemovalBlock = 'INVOICED' | 'STATUS';
+/** I-1: CANCELLED — kod wraca w pliku, a transport jest anulowany (przywraca wyłącznie HHL ręcznie). */
+export type RemovalBlock = 'INVOICED' | 'STATUS' | 'CANCELLED';
 export interface RemovalCandidate { id: string; code: string }
 export interface RemovalBlocked extends RemovalCandidate { reason: RemovalBlock }
 

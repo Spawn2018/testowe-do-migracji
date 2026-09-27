@@ -36,6 +36,7 @@ authenticated driver_post_position
 authenticated fx_rate_before
 authenticated import_cancel_loads
 authenticated import_removal_check
+authenticated import_schedule
 authenticated issue_driver_token
 authenticated keep_alive
 authenticated mark_invoice_paid
