@@ -336,6 +336,25 @@ export function ScheduleView() {
           >
             {t(locale, 'a6_sch_export')}
           </button>
+          <button
+            type="button"
+            className="chipbtn"
+            data-action="export-pdf"
+            onClick={() => {
+              void (async () => {
+                try {
+                  const { exportLoadsPdf } = await import('../lib/pdfExport');
+                  const result = await exportLoadsPdf(loads, `WATCH_TOWER_${role}_harmonogram.pdf`, `TOWER — harmonogram (${loads.length})`);
+                  pushToast(tp(locale, 'i24_sch_pdf_ok', { rows: String(result.rows), bytes: String(result.bytes) }), 'MEDIUM');
+                } catch (err: unknown) {
+                  const msg = err instanceof Error ? err.message : String(err);
+                  pushToast(tp(locale, 'i24_sch_pdf_fail', { msg }), 'CRITICAL');
+                }
+              })();
+            }}
+          >
+            {t(locale, 'i24_sch_pdf')}
+          </button>
         </div>
       </div>
 
