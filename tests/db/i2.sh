@@ -168,4 +168,29 @@ $PSQL -c "insert into notifications (channel, recipient, user_id, template, payl
 chk "inne szablony IN_APP bez e-maila z tego wyzwalacza" "$(Q "select count(*) from notifications where dedup_key='EMAIL:T-I10-3'")" 0
 chk "funkcja wyzwalacza bez EXECUTE dla API" "$(Q "select has_function_privilege('authenticated','notify_schedule_critical_email()','execute')::text")" false
 
+echo; echo "[I-5] 2FA TOTP wymagane dla HHL_ADMIN (aal2, 0057)"
+A2="set local request.jwt.claim.aal='aal2'"
+OPS=11111111-0000-0000-0000-0000000000b5
+$PSQL -c "insert into app_users (auth_id, org_id, email, role) values ('$OPS','00000000-0000-0000-0000-00000000a001','ops@test','HHL_OPS') on conflict do nothing" >/dev/null
+chk "przełącznik po migracji w środowisku bez auth.mfa_factors: wyłączony" "$(Q "select enabled from security_flags where key='MFA_HHL_ADMIN'")" f
+chk "API bez dostępu do security_flags, current_aal, mfa_satisfied" "$(Q "select has_table_privilege('authenticated','security_flags','select')::text||has_function_privilege('authenticated','mfa_satisfied(user_role)','execute')::text||has_function_privilege('authenticated','current_aal()','execute')::text")" "falsefalsefalse"
+val "wymaganie wyłączone: HHL_ADMIN przy aal1 = HHL" $HHL "select is_hhl()" t
+$PSQL -c "update security_flags set enabled=true where key='MFA_HHL_ADMIN'" >/dev/null
+val "wymaganie włączone: HHL_ADMIN bez drugiego składnika (aal1) — is_hhl() false" $HHL "select is_hhl()::text||'/'||coalesce(current_app_role()::text,'∅')" "false/∅"
+val "HHL_ADMIN aal1: 0 transportów (RLS)" $HHL "select count(*) from loads" 0
+err "HHL_ADMIN aal1: admin_invite_user odrzucone" $HHL "select admin_invite_user('x@test.pl','KSH','CLIENT_USER')" "wyłącznie administrator HHL"
+err "HHL_ADMIN aal1: cancel_load odrzucone" $HHL "select cancel_load('$L2','x')" "wyłącznie HHL"
+val "HHL_ADMIN aal1: my_profile nadal zwraca konto (ekran TOTP)" $HHL "select role from my_profile()" HHL_ADMIN
+val "HHL_ADMIN aal1: my_mfa_status wymagane, niespełnione" $HHL "select (my_mfa_status()->>'required')||'/'||(my_mfa_status()->>'satisfied')||'/'||(my_mfa_status()->>'aal')" "true/false/aal1"
+val "HHL_ADMIN aal2: pełny dostęp" $HHL "$A2; select is_hhl()::text||'/'||can_see_margin()::text||'/'||(select count(*) from loads)" "true/true/$(Q "select count(*) from loads")"
+val "HHL_ADMIN aal2: my_mfa_status spełnione" $HHL "$A2; select my_mfa_status()->>'satisfied'" true
+val "HHL_OPS przy aal1 bez zmian (wymaganie tylko dla HHL_ADMIN)" $OPS "select is_hhl()" t
+val "KSH przy aal1 bez zmian" $KSH "select current_app_role()" CLIENT_ADMIN
+err "przełącznik: HHL_ADMIN aal1 odrzucony" $HHL "select admin_set_mfa_enforcement(false)" "wyłącznie administrator HHL"
+err "przełącznik: HHL_OPS aal2 odrzucony" $OPS "$A2; select admin_set_mfa_enforcement(false)" "wyłącznie administrator HHL"
+val "przełącznik: HHL_ADMIN aal2 wyłącza + audyt" $HHL "$A2; select admin_set_mfa_enforcement(false)" f commit
+chk "stan i audyt MFA_ENFORCEMENT_SET" "$(Q "select enabled from security_flags where key='MFA_HHL_ADMIN'")/$(Q "select count(*) from audit_log where action='MFA_ENFORCEMENT_SET'")" "f/1"
+err "włączenie przy aal1 niemożliwe nawet po wyłączeniu (wymaga aal2)" $HHL "select admin_set_mfa_enforcement(true)" "aal2"
+chk "anon bez EXECUTE my_mfa_status / admin_set_mfa_enforcement" "$(Q "select has_function_privilege('anon','my_mfa_status()','execute')::text||has_function_privilege('anon','admin_set_mfa_enforcement(boolean)','execute')::text")" "falsefalse"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

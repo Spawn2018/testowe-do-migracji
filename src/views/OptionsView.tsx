@@ -16,6 +16,7 @@ import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
 
 // BK2: panel użytkowników HHL_ADMIN — tylko w trybie Supabase.
+const MyMfa = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/Mfa')) : null;
 const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/UsersAdmin')) : null;
 /* ANEKS 5 §4.4 — Moje urządzenia / Wyloguj ze wszystkich urządzeń (tylko Supabase) */
 /* I-2f — prawdziwy formularz BAF/SEFS (0052) zamiast fasady — tylko Supabase */
@@ -172,6 +173,7 @@ export function OptionsView() {
           <header className="panel-hd"><h2>{t(locale, "opt_auto_h2")}</h2><span className="sub">{workflows.filter((w) => w.enabled).length} {t(locale, "opt_active_of")} {workflows.length}</span><div className="spacer" /><button type="button" className="chipbtn" onClick={() => setView('wf')}>{t(locale, 'opt_open_wf')}</button></header>
           <div className="panel-bd"><div className="workflow-summary">{workflows.map((w) => <button type="button" className="workflow-summary-row" key={w.id} onClick={() => setView('wf')}><span className={`status-dot${w.enabled ? ' on' : ''}`} /><span data-content>{workflowDisplayName(w, locale)}</span><small>{w.enabled ? t(locale, 'on') : t(locale, 'off')}</small></button>)}</div></div>
         </section> : null}
+        {MyMfa && <Suspense fallback={null}><MyMfa /></Suspense>}
         {MyDevices && <Suspense fallback={null}><MyDevices /></Suspense>}
         {UsersAdmin && <Suspense fallback={null}><UsersAdmin /></Suspense>}
       </div>

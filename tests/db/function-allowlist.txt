@@ -55,3 +55,6 @@ authenticated fuel_add_reading
 authenticated sefs_save_parameters
 # I-2l (0055): mediana czasu wykrycia — SECURITY INVOKER, zakres = RLS risk_signals (null-guard-calls EMPTY)
 authenticated kpi_detection_lag
+# I-5 (0057): 2FA HHL_ADMIN — stan dla UI (działa przy aal1) i przełącznik wymagania (HHL_ADMIN + aal2)
+authenticated my_mfa_status
+authenticated admin_set_mfa_enforcement

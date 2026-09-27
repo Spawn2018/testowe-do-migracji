@@ -6,6 +6,7 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
+import { createHmac } from 'node:crypto';
 
 const APP = process.env.I2_UI_BASE ?? '';
 const URL_ = process.env.VITE_SUPABASE_URL ?? '';
@@ -125,4 +126,54 @@ test('HHL: formularz BAF/SEFS — wersja parametrów, odczyt, korekta, dziennik'
   await expect(f.locator('[data-baf="log"]')).toContainText('korekta odczytu');
   expect(psql(`select count(*)||'/'||(select count(*) from fuel_index_readings)||'/'||(select count(*) from fuel_index_readings where corrects_id is not null) from sefs_parameters`)).toBe('1/3/1');
   psql(`set session_replication_role = replica; delete from fuel_index_readings; delete from sefs_parameters; delete from audit_log where action in ('SEFS_PARAMS_VERSION','FUEL_READING_ADD','FUEL_READING_CORRECT');`);
+});
+
+// ── I-5: 2FA (TOTP) dla HHL_ADMIN ────────────────────────────────────────────
+function totp(secret: string, at = Date.now()): string {
+  const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+  for (const ch of secret.replace(/=+$/, '').toUpperCase()) bits += alpha.indexOf(ch).toString(2).padStart(5, '0');
+  const key = Buffer.from((bits.match(/.{8}/g) ?? []).map((b) => parseInt(b, 2)));
+  const ctr = Buffer.alloc(8); ctr.writeBigUInt64BE(BigInt(Math.floor(at / 30000)));
+  const h = createHmac('sha1', key).update(ctr).digest();
+  const o = h[h.length - 1] & 15;
+  return String((h.readUInt32BE(o) & 0x7fffffff) % 1e6).padStart(6, '0');
+}
+const mfaReset = () => psql(`delete from auth.mfa_factors where user_id = (select id from auth.users where email='hhl@bk5.local'); update security_flags set enabled=false where key='MFA_HHL_ADMIN'`);
+
+test('I-5 HHL: zapis TOTP w Opcjach, włączenie wymagania, ponowne logowanie wymaga kodu', async ({ page }) => {
+  test.setTimeout(150000);
+  mfaReset();
+  try {
+    await login(page, 'hhl@bk5.local');
+    await page.locator('nav [data-view="options"]').first().click();
+    const box = page.locator('[data-auth="my-mfa"]');
+    await expect(box.locator('.sub')).toHaveText('wyłączona');
+    await box.getByRole('button', { name: 'Skonfiguruj aplikację' }).click();
+    await box.locator('[data-mfa="setup"] button').click();
+    const secret = (await box.locator('[data-mfa-secret]').textContent())!.trim();
+    await box.locator('[data-mfa="setup-code"] input').fill(totp(secret));
+    await box.locator('[data-mfa="setup-code"] button[type=submit]').click();
+    await expect(box.locator('.sub')).toHaveText('włączona', { timeout: 15000 });
+    await expect(box.locator('[data-mfa-enforced]')).toHaveAttribute('data-mfa-enforced', 'false');
+    await box.locator('[data-mfa-enforced] button').click();
+    await expect(box.locator('[data-mfa-enforced]')).toHaveAttribute('data-mfa-enforced', 'true');
+    expect(psql(`select count(*) from audit_log where action='MFA_ENFORCEMENT_SET' and created_at > now() - interval '5 minutes'`)).not.toBe('0');
+    // nowa sesja (aal1) → ekran kodu, bez danych
+    await page.context().clearCookies();
+    await page.evaluate(() => localStorage.clear());
+    await page.goto('about:blank');
+    const r = await fetch(`${URL_}/auth/v1/admin/generate_link`, { method: 'POST', headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'magiclink', email: 'hhl@bk5.local' }) });
+    const g = await r.json() as { action_link?: string; properties?: { action_link?: string } };
+    const hop = await fetch((g.action_link ?? g.properties?.action_link)!, { redirect: 'manual' });
+    const loc = hop.headers.get('location') ?? '';
+    await page.goto(APP + loc.slice(loc.indexOf('#')));
+    await page.waitForSelector('[data-auth="mfa"] [data-mfa="verify"]', { timeout: 30000 });
+    await expect(page.locator('[data-auth="session"]')).toHaveCount(0);
+    // kolejne okno 30 s, żeby kod nie był powtórką
+    await page.waitForTimeout(30000 - (Date.now() % 30000) + 500);
+    await page.locator('[data-mfa="verify"] input').fill(totp(secret));
+    await page.locator('[data-mfa="verify"] button[type=submit]').click();
+    await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
+  } finally { mfaReset(); }
 });

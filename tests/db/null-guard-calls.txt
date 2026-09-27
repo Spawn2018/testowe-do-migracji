@@ -43,6 +43,8 @@ my_sessions | EMPTY | select count(*) from my_sessions() | 0
 permit_fits | EMPTY | select ok from permit_fits('$L1', '$PERMIT') | f
 storage_upload_allowed | EMPTY | select storage_upload_allowed('dokumenty', '$DOCOBJ') | f
 kpi_detection_lag | EMPTY | select samples from kpi_detection_lag('$P') | 0
+my_mfa_status | EMPTY | select my_mfa_status()->>'satisfied' | false
+admin_set_mfa_enforcement | GUARD | select admin_set_mfa_enforcement(true) | wyłącznie administrator HHL
 doc_bucket | PURE | select doc_bucket('CMR') | -
 doc_safe_name | PURE | select doc_safe_name('a b.pdf') | -
 invoice_week_local | PURE | select invoice_week_local(now()) | -

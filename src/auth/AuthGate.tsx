@@ -6,12 +6,14 @@ import { t } from '../i18n/messages';
 import { setAuthProfile, type AuthProfile } from './profile';
 import { useTowerStore } from '../store/useTowerStore';
 import { markManualLogout, rememberLogin, sessionEndReason, SESSION_END_MSG, type SessionEnd } from './sessionYear';
+import { MfaSetup, MfaVerify, mfaStep, readMfaStatus } from './Mfa';
 import './auth.css';
 
 type State =
   | { kind: 'loading' }
   | { kind: 'anon'; ended?: SessionEnd }
   | { kind: 'noaccess'; reason: string }
+  | { kind: 'mfa'; step: 'verify' | 'setup' }
   | { kind: 'ready'; session: Session; profile: AuthProfile };
 
 function Brand() {
@@ -59,6 +61,23 @@ function LoginScreen({ ended }: { ended?: SessionEnd }) {
   );
 }
 
+/** I-5 — drugi składnik: kod z aplikacji (aal1 → aal2) albo obowiązkowy zapis TOTP (HHL_ADMIN przy włączonym wymaganiu). */
+function MfaScreen({ step }: { step: 'verify' | 'setup' }) {
+  const locale = useTowerStore((s) => s.locale);
+  return (
+    <div className="auth-screen" data-auth="mfa">
+      <section className="panel auth-card">
+        <header className="panel-hd"><Brand /></header>
+        <div className="panel-bd auth-form">
+          <b>{t(locale, 'i5_h')}</b>
+          {step === 'verify' ? <MfaVerify /> : <MfaSetup />}
+          <button className="btn ghost" type="button" onClick={() => { markManualLogout(); void getSupabase().then((sb) => sb.auth.signOut()); }}>{t(locale, 'a6_auth_logout')}</button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function NoAccess({ reason }: { reason: string }) {
   const locale = useTowerStore((s) => s.locale);
   return (
@@ -99,6 +118,11 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       if (!p.active) { setAuthProfile(null); setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_deactivated') }); return; }
       const viewRole = viewRoleForOrg(p.org_code);
       if (!viewRole) { setAuthProfile(null); setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_no_view').replace('{org}', p.org_code) }); return; }
+      // I-5: drugi składnik przed danymi (baza i tak odmówi HHL_ADMIN bez aal2 przy włączonym wymaganiu)
+      const level = (await sb.auth.mfa.getAuthenticatorAssuranceLevel()).data ?? null;
+      const step = mfaStep(level, await readMfaStatus(sb));
+      if (!alive) return;
+      if (step !== 'none') { setAuthProfile(null); setState({ kind: 'mfa', step }); return; }
       setAuthProfile(p);
       const st = useTowerStore.getState();
       if (st.role !== viewRole) st.setRole(viewRole);
@@ -117,7 +141,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       const { data } = await sb.auth.getSession();
       await load(data.session);
       const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') void load(session);
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED' || event === 'MFA_CHALLENGE_VERIFIED') void load(session);
       });
       unsub = () => sub.subscription.unsubscribe();
     }).catch((e: unknown) => alive && setState({ kind: 'noaccess', reason: authErrorPl(String(e)) }));
@@ -138,6 +162,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   if (state.kind === 'loading') return <div className="auth-screen" data-auth="loading"><div className="auth-msg">{t(locale, 'a6_auth_loading')}</div></div>;
   if (state.kind === 'anon') return <LoginScreen ended={state.ended} />;
   if (state.kind === 'noaccess') return <NoAccess reason={state.reason} />;
+  if (state.kind === 'mfa') return <MfaScreen step={state.step} />;
   return (
     <>
       {children}
