@@ -24,8 +24,10 @@ describe('O2: build produkcyjny bez makiety', () => {
       expect(existsSync(join(out, 'download'))).toBe(false)
       expect(existsSync(join(out, 'tower-makieta.html'))).toBe(false)
       for (const p of PROD_STRIPPED) expect(existsSync(join(out, p)), p).toBe(false)
-      const headers = join(out, '_headers')
-      if (existsSync(headers)) expect(readFileSync(headers, 'utf8')).not.toMatch(/download|tower-makieta/)
+      // I-0: _headers bez załącznika, z Cache-Control: no-store dla dawnych ścieżek makiety
+      const headers = readFileSync(join(out, '_headers'), 'utf8')
+      expect(headers).not.toMatch(/Content-Disposition|attachment/)
+      for (const p of ['/tower-makieta', '/download/*', '/claude-*', '/KSH_HARMONOGRAM.xlsx']) expect(headers).toContain(`${p}\n  Cache-Control: no-store`)
       expect(readFileSync(join(out, '404.html'), 'utf8')).toMatch(/nie znaleziono/)
     } finally {
       rmSync(out, { recursive: true, force: true })

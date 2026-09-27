@@ -30,6 +30,24 @@ export function isProdAuthMode(mode: string | undefined): boolean {
   return mode === 'supabase'
 }
 
+/**
+ * I-0: Cloudflare Pages trzymał w pamięci podręcznej CDN (s-maxage 7 dni) odpowiedzi dla adresów bez `.html`
+ * (`/tower-makieta`, `/claude-*`, …). Pliku już nie ma (404), a dla tych ścieżek wymuszamy `no-store`,
+ * żeby ewentualna odpowiedź nigdy nie trafiła do cache. (`_redirects` na Pages nie obsługuje kodu 404.)
+ */
+export const PROD_NO_STORE_PATHS = [
+  '/tower-makieta',
+  '/tower-makieta.html',
+  '/download/*',
+  '/claude-*',
+  '/KSH_HARMONOGRAM.xlsx',
+  '/*.xlsx',
+] as const
+
+export function noStoreHeaders(): string {
+  return PROD_NO_STORE_PATHS.map((p) => `${p}\n  Cache-Control: no-store`).join('\n')
+}
+
 /** Usuwa z `_headers` blok `/download/*`; zwraca nową treść (pustą, gdy nic nie zostało). */
 export function stripDownloadHeaders(src: string): string {
   const blocks = src.split(/\n(?=\S)/)
@@ -48,9 +66,10 @@ export function stripProdDist(outDir: string): string[] {
   const headers = join(outDir, '_headers')
   if (existsSync(headers)) {
     const rest = stripDownloadHeaders(readFileSync(headers, 'utf8'))
-    if (rest) writeFileSync(headers, rest + '\n')
-    else rmSync(headers)
+    writeFileSync(headers, [rest, noStoreHeaders()].filter(Boolean).join('\n') + '\n')
     removed.push('_headers:/download/*')
+  } else {
+    writeFileSync(headers, noStoreHeaders() + '\n')
   }
   writeFileSync(join(outDir, '404.html'), PROD_404_HTML)
   return removed
