@@ -24,6 +24,9 @@ bash scripts/ci/fresh-smoke.sh
 echo "[pre-push] npm run lint:css"
 npm run lint:css
 
+echo "[pre-push] tests/db/null-guard-static.mjs (I-2A: strażnik „if not …” bez „is not true” = błąd)"
+node tests/db/null-guard-static.mjs
+
 PGADMIN=${PGADMIN:-postgres://postgres@localhost:5433/postgres}
 if command -v psql >/dev/null 2>&1 && psql "$PGADMIN" -Atqc "select 1" >/dev/null 2>&1; then
   echo "[pre-push] tests/db/gate.sh"

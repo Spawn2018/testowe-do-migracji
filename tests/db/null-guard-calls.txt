@@ -1,0 +1,47 @@
+# I-2A (0049) — wywołanie KAŻDEJ funkcji public z EXECUTE dla authenticated przez konto bez aktywnego wiersza app_users.
+# Format: nazwa | rodzaj | wywołanie SQL (zwraca 1 wartość) | oczekiwanie (regex odmowy albo wartość)
+#   GUARD  — wyjątek z komunikatem odmowy (regex); kontrola pozytywna: aktywny HHL NIE dostaje tego komunikatu
+#   TOKEN  — API kierowcy: uprawnieniem jest token, nie konto; zły token → wyjątek (regex)
+#   EMPTY  — brak danych/skutku: wynik musi być równy wartości (0, f, NULL=∅); kontrola pozytywna: HHL dostaje inną wartość
+#   PURE   — czysta funkcja obliczeniowa (tylko argumenty, bez odczytu tabel) — nie ma czego odmawiać; liczona osobno
+admin_invite_user | GUARD | select admin_invite_user('nowy@test.pl','KSH','CLIENT_USER') | wyłącznie administrator HHL
+admin_revoke_invite | GUARD | select admin_revoke_invite(gen_random_uuid()) | Wyłącznie administrator HHL
+admin_set_user_active | GUARD | select admin_set_user_active('$KSHID', true) | Wyłącznie administrator HHL
+admin_set_user_role | GUARD | select admin_set_user_role('$KSHID', 'CLIENT_USER') | Role nadaje wyłącznie
+cancel_load | GUARD | select cancel_load('$L2', 'test strażnika') | wyłącznie HHL
+create_document | GUARD | select id from create_document('$L2', 'CMR', 'a.pdf', 'application/pdf', 100) | niewidoczny dla konta
+fx_rate_before | GUARD | select rate_pln from fx_rate_before(current_date) | Brak aktywnego konta
+import_cancel_loads | GUARD | select count(*) from import_cancel_loads(array['$L2']::uuid[], 'test') | wyłącznie HHL
+import_removal_check | GUARD | select count(*) from import_removal_check(array['$L2']::uuid[]) | wyłącznie HHL
+import_schedule | GUARD | select import_schedule('$P', '[]'::jsonb, '{}', '{}', true) | wyłącznie HHL
+issue_driver_token | GUARD | select issue_driver_token('$L2') | wyłącznie przewoźnik transportu albo HHL
+keep_alive | GUARD | select keep_alive('test') | Brak aktywnego konta
+mark_invoice_paid | GUARD | select mark_invoice_paid('$INV', current_date) | wyłącznie HHL
+register_invoice | GUARD | select register_invoice('{"direction":"PRZYCHOD"}'::jsonb) | Brak konta organizacji
+report_position | GUARD | select count(*) from report_position('$L2', 59.3, 18.0, now()) | albo HHL|wyłącznie
+revoke_driver_token | GUARD | select revoke_driver_token('$L2') | albo HHL|wyłącznie
+revoke_user_sessions | GUARD | select revoke_user_sessions(null) | Brak aktywnego konta
+risk_audience_for | GUARD | select risk_audience_for('FERRY', '{}') | Brak aktywnego konta
+unmark_invoice_paid | GUARD | select unmark_invoice_paid('$INV', 'test') | wyłącznie HHL
+upsert_geofence_circle | GUARD | select upsert_geofence_circle(null, '$P', 'x', 'CUSTOM', 59.3, 18.0, 100, 50, 60, 2, true, true, true, null, true) | row-level security|Brak uprawnień
+driver_get_instructions | TOKEN | select driver_get_instructions('wt_zly') | oken
+driver_post_event | TOKEN | select driver_post_event('wt_zly', '$L1', 'ARRIVED') | oken
+driver_post_position | TOKEN | select count(*) from driver_post_position('wt_zly', '$L1', 59.3, 18.0, now()) | oken
+is_hhl | EMPTY | select is_hhl() | f
+can_see_margin | EMPTY | select can_see_margin() | f
+current_app_role | EMPTY | select coalesce(current_app_role()::text, '∅') | ∅
+current_app_user_id | EMPTY | select coalesce(current_app_user_id()::text, '∅') | ∅
+current_org_id | EMPTY | select coalesce(current_org_id()::text, '∅') | ∅
+current_org_kind | EMPTY | select coalesce(current_org_kind()::text, '∅') | ∅
+discard_document | EMPTY | select discard_document('$DOC') | f
+mark_notifications_read | EMPTY | select mark_notifications_read(array[$NOTIF]::bigint[]) | 0
+my_profile | EMPTY | select count(*) filter (where active) from my_profile() | 0
+my_sessions | EMPTY | select count(*) from my_sessions() | 0
+permit_fits | EMPTY | select ok from permit_fits('$L1', '$PERMIT') | f
+storage_upload_allowed | EMPTY | select storage_upload_allowed('dokumenty', '$DOCOBJ') | f
+doc_bucket | PURE | select doc_bucket('CMR') | -
+doc_safe_name | PURE | select doc_safe_name('a b.pdf') | -
+invoice_week_local | PURE | select invoice_week_local(now()) | -
+make_circle_fence | PURE | select st_npoints(make_circle_fence(59.3, 18.0, 100)) | -
+money_effective_eur | PURE | select money_effective_eur(1, 2, 3) | -
+money_least_tier | PURE | select money_least_tier('A', 'B') | -
