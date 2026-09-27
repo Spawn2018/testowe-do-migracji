@@ -3,18 +3,51 @@
  * Bez importów zależnych od środowiska — szyfrowanie wstrzykiwane (age X25519, klucz publiczny).
  */
 
-/** Tabele biznesowe w kopii. Surowe pozycje GPS pomijane (dane osobowe, retencja 30 dni) —
- *  zdarzenia biznesowe są w load_events. Tokeny kierowców (skróty, ważne ≤ 14 dni) pomijane. */
-export const BACKUP_TABLES = [
-  'organizations', 'app_users', 'user_preferences', 'user_invites', 'projects', 'vessels', 'sailings',
-  'loads', 'shipment_items', 'load_cost', 'load_revenue', 'load_events', 'load_messages', 'load_permits',
-  'permits', 'insurance_policies', 'documents', 'invoices', 'invoice_lines', 'invoice_documents',
-  'payment_terms', 'rate_cards', 'rate_rules', 'baf_definitions', 'baf_index_values', 'fx_rates',
-  'geofences', 'geofence_states', 'risk_signals', 'notifications', 'workflows', 'workflow_runs',
-  'schedule_imports', 'integration_runs', 'audit_log', 'system_heartbeat', 'backup_runs', 'usage_history',
+/**
+ * I-2B — tabele w kopii wyliczane z KATALOGU bazy (schemat public, tabele zwykłe i partycjonowane,
+ * bez obiektów rozszerzeń) minus jawna lista wyłączeń. Nowa tabela trafia do kopii automatycznie;
+ * pominięcie wymaga świadomego wpisu w EXCLUDED_TABLES z uzasadnieniem.
+ */
+export const CATALOG_TABLES_SQL = `select c.relname::text as name from pg_class c join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname = 'public' and c.relkind in ('r', 'p') and not c.relispartition
+    and not exists (select 1 from pg_depend d where d.classid = 'pg_class'::regclass and d.objid = c.oid and d.deptype = 'e')
+  order by 1`;
+
+/** Wyłączenia (jawne, z powodem). */
+export const EXCLUSION_REASONS = {
+  positions: 'surowe pozycje GPS — dane osobowe, retencja 30 dni; zdarzenia biznesowe są w load_events',
+  driver_tokens: 'skróty tokenów kierowców, ważne ≤ 14 dni — po odtworzeniu wydaje się nowe',
+  spatial_ref_sys: 'tabela PostGIS (rozszerzenie)',
+  account_relink_pending: 'stan przejściowy po odtworzeniu do nowego projektu (0045)',
+} as const;
+export const EXCLUDED_TABLES = Object.keys(EXCLUSION_REASONS) as readonly (keyof typeof EXCLUSION_REASONS)[];
+
+/** Tabele, bez których kopia jest bezwartościowa — brak w katalogu = błąd przebiegu (np. zła baza). */
+export const REQUIRED_TABLES = [
+  'organizations', 'app_users', 'projects', 'loads', 'shipment_items', 'load_events', 'documents',
+  'invoices', 'invoice_lines', 'schedule_imports', 'audit_log',
 ] as const;
-// account_relink_pending (0045): stan przejściowy po odtworzeniu do nowego projektu — nie należy do kopii.
-export const EXCLUDED_TABLES = ['positions', 'driver_tokens', 'spatial_ref_sys', 'account_relink_pending'] as const;
+
+/** Lista tabel do kopii: katalog − wyłączenia (posortowana, bez duplikatów, tylko bezpieczne nazwy). */
+export function backupTables(catalog: readonly string[]): string[] {
+  const excluded = new Set<string>(EXCLUDED_TABLES);
+  const bad = catalog.filter((t) => !/^[a-z_][a-z0-9_]*$/.test(t));
+  if (bad.length) throw new Error(`kopia: niedozwolone nazwy tabel w katalogu: ${bad.join(', ')}`);
+  const tables = [...new Set(catalog)].filter((t) => !excluded.has(t)).sort();
+  const missing = REQUIRED_TABLES.filter((t) => !tables.includes(t));
+  if (missing.length) throw new Error(`kopia: brak wymaganych tabel w katalogu: ${missing.join(', ')}`);
+  return tables;
+}
+
+/**
+ * I-2B — kubełki Storage kopiowane W CAŁOŚCI (przyrostowo, po created_at obiektu), niezależnie od tabeli documents.
+ * harmonogramy: archiwum plików źródłowych importu (I-1, SCOPE 3.6) — ścieżki w schedule_imports.file_path.
+ * Dokumenty (dokumenty/zdjecia/faktury) nadal przez tabelę documents (pomijane zarchiwizowane — PR7).
+ */
+export const BACKUP_BUCKETS = ['harmonogramy'] as const;
+export const BUCKET_OBJECTS_SQL = `select o.id::text as id, o.bucket_id || '/' || o.name as storage_path from storage.objects o
+  where o.bucket_id = any($1::text[]) and o.name not like '%/.emptyFolderPlaceholder'
+    and o.created_at > coalesce($2::timestamptz, 'epoch') order by o.created_at`;
 
 export type Encrypt = (plain: Uint8Array) => Promise<Uint8Array>;
 
@@ -67,14 +100,15 @@ export interface Manifest {
   recipient: string;
   tables: Record<string, number>;
   /** bytes = rozmiar zaszyfrowanego obiektu; size i sha256 = plik PRZED szyfrowaniem (kontrola po odtworzeniu). */
-  files: { key: string; document_id: string; bytes: number; size?: number; sha256?: string }[];
+  files: { key: string; document_id?: string; object_id?: string; bytes: number; size?: number; sha256?: string }[];
   excluded: readonly string[];
+  buckets?: readonly string[];
   note: string;
 }
 
 export function manifest(prefix: string, recipient: string, tables: Record<string, number>, files: Manifest['files'], at = new Date()): Manifest {
   return {
-    created_at: at.toISOString(), prefix, recipient, tables, files, excluded: EXCLUDED_TABLES,
+    created_at: at.toISOString(), prefix, recipient, tables, files, excluded: EXCLUDED_TABLES, buckets: BACKUP_BUCKETS,
     note: 'CSV (nagłówek) → gzip → age X25519. Odtworzenie: scripts/restore.sh. Utrata danych w najgorszym razie: do 24 h.',
   };
 }

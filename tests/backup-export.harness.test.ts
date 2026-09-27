@@ -8,7 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Encrypter } from 'age-encryption';
-import { BACKUP_TABLES, csvRowCount, dailyPrefix, manifest, sealTable } from '../supabase/functions/_shared/backup/core';
+import { CATALOG_TABLES_SQL, backupTables, csvRowCount, dailyPrefix, manifest, sealTable } from '../supabase/functions/_shared/backup/core';
 
 const SRC = process.env.BACKUP_SRC_DB_URL;
 const OUT = process.env.BACKUP_OUT;
@@ -19,7 +19,10 @@ describe.skipIf(!SRC || !OUT || !RECIPIENT)('PR2 — eksport kopii (potok funkcj
     mkdirSync(OUT!, { recursive: true });
     const encrypt = async (plain: Uint8Array) => { const e = new Encrypter(); e.addRecipient(RECIPIENT!); return await e.encrypt(plain); };
     const counts: Record<string, number> = {};
-    for (const t of BACKUP_TABLES) {
+    // I-2B: ta sama lista co funkcja Edge — katalog bazy minus wyłączenia
+    const catalog = execFileSync('psql', [SRC!, '-Atq', '-c', CATALOG_TABLES_SQL.replace(/\s+/g, ' ')], { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+    const TABLES = backupTables(catalog);
+    for (const t of TABLES) {
       const csv = execFileSync('psql', [SRC!, '-v', 'ON_ERROR_STOP=1', '-Atq', '-c', `\\copy public.${t} to stdout with (format csv, header true)`], { maxBuffer: 1 << 28 });
       counts[t] = csvRowCount(csv.toString('utf8'));
       writeFileSync(join(OUT!, `${t}.csv.gz.age`), await sealTable(new Uint8Array(csv), encrypt));
@@ -27,6 +30,6 @@ describe.skipIf(!SRC || !OUT || !RECIPIENT)('PR2 — eksport kopii (potok funkcj
     const man = manifest(dailyPrefix(new Date()), RECIPIENT!, counts, []);
     writeFileSync(join(OUT!, 'manifest.json.age'), await encrypt(new TextEncoder().encode(JSON.stringify(man, null, 2))));
     writeFileSync(join(OUT!, 'counts.txt'), Object.entries(counts).map(([k, v]) => `${k} ${v}`).join('\n') + '\n');
-    expect(Object.keys(counts)).toHaveLength(BACKUP_TABLES.length);
+    expect(Object.keys(counts)).toHaveLength(TABLES.length);
   }, 300_000);
 });

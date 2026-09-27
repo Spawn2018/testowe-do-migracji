@@ -4,16 +4,32 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Encrypter } from 'age-encryption';
-import { BACKUP_TABLES, EXCLUDED_TABLES, csvRowCount, gzip, retentionDeletes, sealTable, sha256Hex } from '../supabase/functions/_shared/backup/core';
+import { BACKUP_BUCKETS, EXCLUDED_TABLES, EXCLUSION_REASONS, REQUIRED_TABLES, backupTables, csvRowCount, gzip, retentionDeletes, sealTable, sha256Hex } from '../supabase/functions/_shared/backup/core';
 
 const hasAge = (() => { try { execFileSync('age', ['--version']); return true; } catch { return false; } })();
 
 describe('ANEKS 4 PR2 — logika kopii', () => {
+  const CAT = ['positions', 'driver_tokens', 'account_relink_pending', 'load_events', 'loads', 'schedule_imports', ...REQUIRED_TABLES];
   it('surowe pozycje GPS i tokeny poza kopią; load_events (zdarzenia biznesowe) w kopii', () => {
-    expect(BACKUP_TABLES).not.toContain('positions' as never);
+    const t = backupTables(CAT);
+    expect(t).not.toContain('positions');
     expect(EXCLUDED_TABLES).toContain('positions');
-    expect(BACKUP_TABLES).toContain('load_events');
-    expect(new Set(BACKUP_TABLES).size).toBe(BACKUP_TABLES.length);
+    expect(t).toContain('load_events');
+    expect(new Set(t).size).toBe(t.length);
+  });
+  it('I-2B: tabele z katalogu — nowa tabela trafia do kopii bez zmiany kodu; schedule_imports w kopii', () => {
+    const t = backupTables([...CAT, 't_nowa_tabela']);
+    expect(t).toContain('t_nowa_tabela');
+    expect(t).toContain('schedule_imports');
+    expect(t).toEqual([...t].sort());
+  });
+  it('I-2B: każde wyłączenie ma powód; brak wymaganej tabeli albo zła nazwa = błąd przebiegu', () => {
+    for (const k of EXCLUDED_TABLES) expect(EXCLUSION_REASONS[k].length).toBeGreaterThan(10);
+    expect(() => backupTables(CAT.filter((x) => x !== 'loads'))).toThrow(/loads/);
+    expect(() => backupTables([...CAT, 'x; drop table loads'])).toThrow(/niedozwolone/);
+  });
+  it('I-2B: kubełek harmonogramy w kopii', () => {
+    expect(BACKUP_BUCKETS).toContain('harmonogramy');
   });
 
   it('liczba wierszy CSV z nagłówkiem, także z nową linią w polu', () => {

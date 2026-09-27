@@ -1,11 +1,12 @@
 /**
  * ANEKS 4 PR2 — codzienna kopia zapasowa (02:30, pg_cron → pg_net → ta funkcja, klucz service role).
- *  1. COPY każdej tabeli biznesowej do CSV (bez surowych pozycji GPS), gzip, szyfrowanie age X25519
+ *  1. COPY każdej tabeli schematu public z katalogu minus jawne wyłączenia (I-2B; bez surowych pozycji GPS) do CSV, gzip, szyfrowanie age X25519
  *     KLUCZEM PUBLICZNYM (BACKUP_AGE_RECIPIENT); klucz prywatny wyłącznie u właściciela, offline.
  *  2. Zapis do Cloudflare R2 przez Worker tower-backup-writer (wiązanie R2, tylko PUT nowego obiektu,
  *     nagłówek X-Backup-Secret; bez klucza R2 i bez S3): daily/RRRR-MM-DD/<tabela>.csv.gz.age + manifest.json.age;
  *     pierwszego dnia miesiąca kopia także do monthly/RRRR-MM/. Ponowny przebieg tego samego dnia → katalog z godziną.
- *  3. Pliki (Storage): przyrostowo — tylko dokumenty wgrane od ostatniej udanej kopii → files/<ścieżka>.age.
+ *  3. Pliki (Storage): przyrostowo — dokumenty wgrane od ostatniej udanej kopii oraz obiekty kubełków BACKUP_BUCKETS
+ *     (I-2B: harmonogramy) → files/<kubeł>/<ścieżka>.age.
  *  0. Blokada współbieżności: backup_run_begin() (0044) — równoległy start kończy się wpisem SKIPPED.
  *  4. Retencja: blokada usuwania R2 (daily 30 dni, monthly 360 dni) + reguły cyklu życia R2 (31 / 361 dni);
  *     funkcja niczego nie usuwa ani nie listuje. Przebieg w backup_runs (historia, błędy).
@@ -16,7 +17,7 @@
 import postgres from 'npm:postgres@3';
 import { Encrypter } from 'npm:age-encryption@0.3';
 import {
-  BACKUP_TABLES, csvRowCount, dailyPrefix, manifest, monthlyPrefix, rerunPrefix, sealTable, sha256Hex, writerClient,
+  BACKUP_BUCKETS, BUCKET_OBJECTS_SQL, CATALOG_TABLES_SQL, backupTables, csvRowCount, dailyPrefix, manifest, monthlyPrefix, rerunPrefix, sealTable, sha256Hex, writerClient,
 } from '../_shared/backup/core.ts';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
 
@@ -53,7 +54,9 @@ Deno.serve(async (req) => {
     for (const p of prefixes) if (/-\d{6}\/$/.test(p)) await put(`${p}_run.json`, probe);
     const counts: Record<string, number> = {};
     let bytes = 0;
-    for (const t of BACKUP_TABLES) {
+    const catalog = (await sql.unsafe(CATALOG_TABLES_SQL)).map((r) => String(r.name));
+    const tables = backupTables(catalog);
+    for (const t of tables) {
       const chunks: Uint8Array[] = [];
       const stream = await sql.unsafe(`copy public.${t} to stdout with (format csv, header true)`).readable();
       // zdarzenia zamiast `for await`: w Edge Runtime iterator strumienia COPY zawieszał się na tabelach > ~16 kB (PR2, 27.09)
@@ -74,18 +77,25 @@ Deno.serve(async (req) => {
     const docs = await sql`select id, storage_path from documents
                            where storage_path not in ('', '-') and archived_at is null   -- PR7: plik już w archiwum R2
                              and uploaded_at > coalesce(${last?.at ?? null}::timestamptz, 'epoch')`;
-    const files: { key: string; document_id: string; bytes: number; size: number; sha256: string }[] = [];
+    // kubełki: WSZYSTKIE obiekty przy każdym przebiegu (od = null) — obiekt sprzed wdrożenia I-2B też trafi do kopii;
+    // już skopiowane pomija Worker (409 EXISTS, klucz = ścieżka). Harmonogramy są małe (≤ 10 MB, kilka na tydzień).
+    const objs = await sql.unsafe(BUCKET_OBJECTS_SQL, [BACKUP_BUCKETS as unknown as string[], null]);
+    const items = [
+      ...docs.map((d) => ({ path: String(d.storage_path), ref: { document_id: String(d.id) } })),
+      ...objs.map((o) => ({ path: String(o.storage_path), ref: { object_id: String(o.id) } })),
+    ];
+    const files: { key: string; document_id?: string; object_id?: string; bytes: number; size: number; sha256: string }[] = [];
     // supabase-js ładowany tylko, gdy są pliki do skopiowania (mniej pracy przy starcie funkcji)
-    const sb = docs.length ? (await import('npm:@supabase/supabase-js@2')).createClient(env('SUPABASE_URL'), service, { auth: { persistSession: false } }) : null;
-    for (const d of docs) {
-      const [bucket, ...rest] = String(d.storage_path).split('/');
+    const sb = items.length ? (await import('npm:@supabase/supabase-js@2')).createClient(env('SUPABASE_URL'), service, { auth: { persistSession: false } }) : null;
+    for (const d of items) {
+      const [bucket, ...rest] = d.path.split('/');
       const dl = await sb!.storage.from(bucket).download(rest.join('/'));
       if (dl.error || !dl.data) continue;                 // brak obiektu (np. wycofana rejestracja)
       const plain = new Uint8Array(await dl.data.arrayBuffer());
       const sealed = await encrypt(plain);
-      const key = `files/${d.storage_path}.age`;
+      const key = `files/${d.path}.age`;
       if ((await writer(key, sealed)) === 'EXISTS') continue;   // plik już w kopii (klucz = ścieżka dokumentu)
-      files.push({ key, document_id: d.id, bytes: sealed.byteLength, size: plain.byteLength, sha256: await sha256Hex(plain) });
+      files.push({ key, ...d.ref, bytes: sealed.byteLength, size: plain.byteLength, sha256: await sha256Hex(plain) });
       bytes += sealed.byteLength;
     }
     const man = new TextEncoder().encode(JSON.stringify(manifest(prefixes[0], recipient, counts, files, now), null, 2));
