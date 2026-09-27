@@ -160,7 +160,7 @@ export function Topbar() {
         <span>
           <span className="cd">{ops.cd}</span>
           <span className="lb" style={{ display: 'block' }}>
-            {ops.wave ? `${ops.ferryLine} · ${ops.wave}` : ops.ferryLine}
+            {ops.ferryLine}{ops.wave ? ' · ' : null}{ops.wave || null}
           </span>
         </span>
         <span className="sep" />
