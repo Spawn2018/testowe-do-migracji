@@ -61,6 +61,7 @@ const pl: Dict = {
   job_label_ferry_ais: 'AIS promów (ferry-ais)',
   job_label_usage_check: 'kontrola limitów (usage-check)',
   job_label_send_notifications: 'wysyłka powiadomień e-mail (send-notifications)',
+  job_label_sms_gateway: 'bramka SMS (telefon z aplikacją TOWER SMS)',
   job_label_backup: 'kopia zapasowa (backup-export)',
   // --- funkcje Edge (integracje)
   rk_ferry_status_unknown: 'Nieznany status rejsu {vessel} {dep} — bez zmiany, do weryfikacji HHL',
@@ -171,6 +172,7 @@ const en: Dict = {
   job_label_ferry_ais: 'ferry AIS (ferry-ais)',
   job_label_usage_check: 'limit check (usage-check)',
   job_label_send_notifications: 'e-mail notifications (send-notifications)',
+  job_label_sms_gateway: 'SMS gateway (phone with the TOWER SMS app)',
   job_label_backup: 'backup (backup-export)',
   rk_ferry_status_unknown: 'Unknown sailing status {vessel} {dep} — unchanged, HHL to verify',
   rk_source_down: 'Source unavailable: {source} — HHL checks manually',
@@ -278,6 +280,7 @@ const sv: Dict = {
   job_label_ferry_ais: 'färje-AIS (ferry-ais)',
   job_label_usage_check: 'gränskontroll (usage-check)',
   job_label_send_notifications: 'e-postaviseringar (send-notifications)',
+  job_label_sms_gateway: 'SMS-gateway (telefon med appen TOWER SMS)',
   job_label_backup: 'säkerhetskopia (backup-export)',
   rk_ferry_status_unknown: 'Okänd avgångsstatus {vessel} {dep} — oförändrad, HHL kontrollerar',
   rk_source_down: 'Källan är otillgänglig: {source} — HHL kontrollerar manuellt',

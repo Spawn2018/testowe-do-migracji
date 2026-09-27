@@ -105,6 +105,31 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
         : `Załadunek ${bl} → ${ld}, dostawa ${bd} → ${dd}.` + (reconfirm ? ' KSH musi ponownie potwierdzić daty.' : ''));
       return { subject, body, severity: 'HIGH', view: null };
     }
+    case 'SMS_FALLBACK': {
+      // I-3 (0067): SMS niewysłany w 10 min albo FAILED — treść do przekazania kierowcy telefonicznie/komunikatorem
+      const code = String(p.code ?? '');
+      const tail = String(p.to_tail ?? '');
+      const text = String(p.text ?? '');
+      const subject = locale === 'en'
+        ? `${code}: SMS to driver not sent (…${tail}) — pass it on`
+        : locale === 'sv' ? `${code}: SMS till föraren ej skickat (…${tail}) — vidarebefordra` : `${code}: SMS do kierowcy niewysłany (…${tail}) — przekaż treść`;
+      const body = (locale === 'en'
+        ? `The SMS gateway did not send this message within 10 minutes. Call the driver or forward the text:\n\n${text}`
+        : locale === 'sv' ? `SMS-gatewayen skickade inte meddelandet inom 10 minuter. Ring föraren eller vidarebefordra texten:\n\n${text}`
+        : `Bramka SMS nie wysłała tej wiadomości w ciągu 10 minut. Zadzwoń do kierowcy albo przekaż treść:\n\n${text}`);
+      return { subject, body, severity: 'HIGH', view: null };
+    }
+    case 'SMS_GATEWAY_SILENT': {
+      // I-3 (0067): telefon-bramka bez sygnału > 15 min
+      const since = String(p.since ?? '—');
+      const q = String(p.queued ?? 0);
+      const subject = locale === 'en' ? 'SMS gateway silent' : locale === 'sv' ? 'SMS-gatewayen är tyst' : 'Bramka SMS milczy';
+      const body = locale === 'en'
+        ? `No signal from the gateway phone since ${since} (threshold 15 min). SMS in queue: ${q}. Check power, Wi-Fi and the TOWER SMS app.`
+        : locale === 'sv' ? `Ingen signal från gateway-telefonen sedan ${since} (gräns 15 min). SMS i kö: ${q}. Kontrollera ström, Wi-Fi och appen TOWER SMS.`
+        : `Brak sygnału telefonu-bramki od ${since} (próg 15 min). SMS w kolejce: ${q}. Sprawdź zasilanie, Wi-Fi i aplikację TOWER SMS.`;
+      return { subject, body, severity: 'HIGH', view: 'risk' };
+    }
     default:
       return { subject: row.template, body: '', severity: 'LOW', view: null };
   }

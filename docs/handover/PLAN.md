@@ -78,7 +78,7 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 | I-2k | paczka dokumentów „tydzień” — tylko dokumenty transportów z wybranego tygodnia ISO — z I-2i (6.8) | test: paczka zawiera wyłącznie dokumenty tygodnia | DONE e4b393d |
 | I-2l | czas wykrycia odchylenia liczony z `risk_signals` (wykrycie − zdarzenie) zamiast „8 min” — z I-2i (10.7) | kafelek z bazy albo „—” | DONE 825da20 |
 | I-10 | e-mail o zmianie daty awizowanego transportu | dostarczenie na adres z plusem | DONE a0d21bc (SENT 21:20) |
-| I-3 | bramka SMS według `PROPOZYCJA_SMS.md` + decyzje z `ZLECENIE_ETAP_I.md` | testy z propozycji; 24 h pracy telefonu | CZEKA NA: telefon i SIM (część bazowa i aplikacja — DO ZROBIENIA) |
+| I-3 | bramka SMS według `PROPOZYCJA_SMS.md` + decyzje z `ZLECENIE_ETAP_I.md` | testy z propozycji; 24 h pracy telefonu | CZĘŚĆ BAZOWA DONE (ten commit, 0067: kolejka `sms_outbox`, telefon PULL `sms_pull`/`sms_report`/`sms_heartbeat` z tokenem urządzenia, urządzenia HHL, `issue_driver_token_sms`, wyzwalacze SMS 2–5, strażnik co minutę: cisza 15 min → ryzyko + e-mail, e-mail zastępczy po 10 min). DO ZROBIENIA: aplikacja Android, przycisk „Wyślij link SMS-em” i lista urządzeń w UI, SMS 8/9. CZEKA NA: telefon i SIM (D-4) |
 | I-5 | 2FA TOTP, wymagane dla HHL_ADMIN (`aal2`) | administrator bez drugiego składnika = odmowa | DONE a548eba (wymaganie wyłączone do D-11) |
 | I-4 | instrukcje: kierowca PL/EN/SV, KSH, przewoźnik | dostępne w aplikacji | DONE 3dac401 |
 | I-6 | monitoring błędów przeglądarki do własnej tabeli, alarm | błąd testowy widoczny w tabeli | DONE 642d68f |

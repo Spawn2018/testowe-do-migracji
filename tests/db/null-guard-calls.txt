@@ -56,3 +56,7 @@ ksh_confirm_dates | GUARD | select ksh_confirm_dates(null) | Brak aktywnego kont
 rate_match | GUARD | select rate_match(null, null) | wyłącznie HHL
 rate_card_save | GUARD | select rate_card_save(null, null, null, null) | wyłącznie HHL
 rate_card_change_log | GUARD | select count(*) from rate_card_change_log(null) | wyłącznie HHL
+issue_driver_token_sms | GUARD | select issue_driver_token_sms('$L1') | Brak aktywnego konta
+sms_issue_device | GUARD | select sms_issue_device(null) | wyłącznie HHL
+sms_revoke_device | GUARD | select sms_revoke_device(null) | wyłącznie HHL
+sms_set_paused | GUARD | select sms_set_paused(null, null) | wyłącznie HHL
