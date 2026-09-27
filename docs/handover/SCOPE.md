@@ -72,12 +72,12 @@ Czym udowadniamy, że pozycja jest `GOTOWE`. Bez dowodu status się nie zmienia.
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 3.1 | Wgrywanie pliku arkusza | GOTOWE (poza wymiarem „Standard”) | D23 `3f140a7`, D26 `dc364d7`, D23-S `4c52455`; I-1 `9bf80d7`, `f8b6355` (0047, 0048) | produkcja: `import_schedule()` zapisuje `loads` + `shipment_items` w jednej transakcji (tylko HHL); pełny plik lokalnie 41/50 wysyłek; 9 z wymiarem „Standard” odrzucanych — do decyzji |
+| 3.1 | Wgrywanie pliku arkusza | GOTOWE | D23 `3f140a7`, D26 `dc364d7`, D23-S `4c52455`; I-1 `9bf80d7`, `f8b6355` (0047, 0048); I-2C `0c247b3` (0050) | produkcja: `import_schedule()` zapisuje `loads` + `shipment_items` w jednej transakcji (tylko HHL); pełny plik lokalnie 50/50 wysyłek (41 z wymiarami + 9 klasy STANDARD, wymiary NULL) |
 | 3.2 | Kreator mapowania kolumn z zapisem szablonu | DO ZROBIENIA (częściowo) | `src/lib/importColumnMap.ts` COLUMN_MAP_DEFAULT; kolumna `schedule_imports.column_map` | stały szablon, brak kreatora mapowania i zapisu szablonu przez aplikację |
 | 3.3 | Parser wymiarów, dat, godzin, telefonów | GOTOWE | `src/lib/scheduleParse.ts`; schedule-import.test.ts | część testów parsera w schedule-import (unit 353 passed) |
 | 3.4 | Walidacja blokująca, w tym przesunięte kolumny | GOTOWE | `scheduleDryRun.ts` (72 błędne → baza nietknięta, D23-S `4c52455`) |  |
 | 3.5 | Podgląd różnic przed zapisem | GOTOWE | `diffSchedule` + podgląd w ScheduleView; D26 `dc364d7` |  |
-| 3.6 | Wersjonowanie i archiwum pliku źródłowego | GOTOWE | I-1 `9bf80d7`: `schedule_imports` (wersja, sha, file_name), koszyk Storage `harmonogramy` | backup nie obejmuje koszyka `harmonogramy` |
+| 3.6 | Wersjonowanie i archiwum pliku źródłowego | GOTOWE | I-1 `9bf80d7`: `schedule_imports` (wersja, sha, file_name), koszyk Storage `harmonogramy`; I-2B `d2a8219`: kubełek i tabela w kopii zapasowej | kopia: tabele z katalogu minus jawne wyłączenia, kubełek `harmonogramy` w `files/` |
 | 3.7 | Powiadomienie o zmianie daty na transporcie awizowanym | GOTOWE (IN_APP) | I-1 `9bf80d7`: SCHEDULE_DATE_CRITICAL + `notifications` IN_APP dla HHL i przewoźnika | e-mail wymaga wdrożenia Edge `send-notifications` (template gotowy) |
 | 3.8 | Klasyfikacja ponadnormatywności per kraj | DO POTWIERDZENIA | `src/lib/permits.ts` (PL kategorie I–V, SE TSFS); PL-T `40eca8a`; pl-t.test.ts | limity do potwierdzenia; limity do potwierdzenia |
 | 3.9 | Kolejność montażowa i wykrywanie rozjazdu | GOTOWE | cron tower-kolejnosc `detect_sequence_risk`; gate risks 23 | kolejność montażu z kolumny dodanej po naszej stronie |
