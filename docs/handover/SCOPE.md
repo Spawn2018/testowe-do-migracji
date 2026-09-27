@@ -31,175 +31,175 @@ Czym udowadniamy, że pozycja jest `GOTOWE`. Bez dowodu status się nie zmienia.
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 0.1 | Arkusz stylów przeniesiony dosłownie z mockupu | DO ZROBIENIA (częściowo) | `src/index.css` nagłówek „CSS 1:1 z tower-makieta.html” (Fala-1-D1) | porównania sum kontrolnych arkusza brak; arkusz rozbudowany o klasy ról |
-| 0.2 | Zrzuty wzorcowe: widok × rola × język × 5 szerokości × 2 tryby | GOTOWE | `shots-baseline/` 840 ujęć, tag `baseline-fala-3e-2026-09-27`; WZORZEC-3C `cede8bd`, A6-WZORZEC2 `ce094ad` |  |
-| 0.3 | Test regresji wizualnej w CI, próg 0,1% | DO ZROBIENIA (częściowo) | F2.2 `14261fc` (720/720); `.githooks/pre-push` → `scripts/ci/fresh-smoke.sh` (smoke 4 ujęć) | próg zmieniony na `maxDiffPixels:60, threshold:0.28` zamiast 0,1%; pełne 840 porównywane ręcznie; GitHub `unit.yml` uruchamia tylko testy jednostkowe |
-| 0.4 | Konfiguracja blokująca wartości spoza systemu | GOTOWE | F2.3 `6f77f7e` stylelint `declaration-strict-value`; `npm run lint:css` w pre-push |  |
-| 0.5 | Zakaz Tailwinda i motywów bibliotek w komponentach | GOTOWE | `package.json` bez Tailwind/MUI/Chakra; `src/index.css` „no Tailwind” (Fala-1-D1) | przegląd grep 27.09 |
-| 0.6 | Katalog komponentów jako kontrakt nazw klas | GOTOWE | `docs/handover/DESIGN_SYSTEM.md` |  |
-| 0.7 | Procedura dodania nowej klasy (3 warunki) | DO ZROBIENIA (nie zrobione) | nie zrobione | w DESIGN_SYSTEM.md brak zapisanej procedury 3 warunków |
-| 0.8 | Stany: spoczynek, najechanie, fokus, wciśnięty, zablokowany | DO ZROBIENIA (częściowo) | tokeny `--surface-2` (hover), `--focus` w DESIGN_SYSTEM.md | brak zrzutów stanów najechanie/fokus/wciśnięty/zablokowany |
-| 0.9 | Stany: ładowanie, pusty, błąd, błąd walidacji | DO ZROBIENIA (częściowo) | klasa `.empty` (DESIGN_SYSTEM.md:174) | brak zrzutów stanów ładowanie/błąd/błąd walidacji |
-| 0.10 | Tryb jasny, ciemny i honorowanie ustawienia systemu | DO ZROBIENIA (częściowo) | 840 ujęć × 2 tryby; `@media (prefers-color-scheme: dark)` `src/index.css:20` | brak zrzutu trybu „systemowy” |
+| 0.1 | Arkusz stylów przeniesiony dosłownie z mockupu | | porównanie sum kontrolnych | |
+| 0.2 | Zrzuty wzorcowe: widok × rola × język × 5 szerokości × 2 tryby | | katalog wzorców w repo | |
+| 0.3 | Test regresji wizualnej w CI, próg 0,1% | | zielony przebieg | |
+| 0.4 | Konfiguracja blokująca wartości spoza systemu | | zielony przebieg | |
+| 0.5 | Zakaz Tailwinda i motywów bibliotek w komponentach | | przegląd kodu | |
+| 0.6 | Katalog komponentów jako kontrakt nazw klas | | `DESIGN_SYSTEM.md` | |
+| 0.7 | Procedura dodania nowej klasy (3 warunki) | | zapisana i stosowana | |
+| 0.8 | Stany: spoczynek, najechanie, fokus, wciśnięty, zablokowany | | zrzuty | |
+| 0.9 | Stany: ładowanie, pusty, błąd, błąd walidacji | | zrzuty | |
+| 0.10 | Tryb jasny, ciemny i honorowanie ustawienia systemu | | zrzuty | |
 
 ## 1. Fundament
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 1.1 | Repozytorium, CI, środowiska testowe i produkcyjne | DO ZROBIENIA (częściowo) | repo GitHub; CI lokalne `.githooks/pre-push` (BK6 `7c5c63a`); produkcja Supabase `nglnnrmzmhusvxslousq` | GitHub Actions tylko unit; brak osobnego środowiska testowego Supabase (BK0) — testy db na lokalnym Postgres |
-| 1.2 | Szkielet aplikacji, trasowanie, układ | GOTOWE | `src/App.tsx`, `src/components/shell/*`, D10 `20ba91c` | routes.test.ts |
-| 1.3 | Trzy języki: polski, angielski, szwedzki | GOTOWE | D19 `d1d10b1`; `tests/d19-i18n.spec.ts` (0 braków) |  |
-| 1.4 | Logowanie bez hasła, dwuskładnikowe dla administratorów | DO ZROBIENIA (częściowo) | BK2 `1fd0e82` magic link; ZAPR-LOGIN `0f1ff4d` | 2FA: produkcja `auth.mfa_factors` = 0, nic nie wymusza aal2 (audyt B7) |
-| 1.5 | Wdrożenie na wskazanej domenie | DO ZROBIENIA (częściowo) | DOMENA-TOWER `3307c05` (CNAME, Site URL, `scripts/check-domain.sh`) | O2 OPEN: Vercel serwuje build demo sprzed 3 dni |
-| 1.6 | Podgląd wdrożeń zabezpieczony hasłem | DO POTWIERDZENIA | A5-PODGLADY `e87c24f` (podglądy w trybie demo) | dane klienta; zamiennik zamiast hasła — do zatwierdzenia przez właściciela jako zamknięte |
-| 1.7 | Monitoring błędów i logi | DO ZROBIENIA (częściowo) | STRAZNIK `ea201ee` (`job_watchdog`, cron tower-straznik-zadan) | monitoringu błędów przeglądarek i logów aplikacji brak (audyt D1) |
-| 1.8 | Kopie zapasowe bazy i procedura odtworzenia | GOTOWE | PR2-B `5c62f6c`, PR2-C `74a7ca0`, PR2-B-R2LOCK; gate backup 20/20; `scripts/restore-files.sh` | cron tower-backup-export 00:30 |
+| 1.1 | Repozytorium, CI, środowiska testowe i produkcyjne | | | |
+| 1.2 | Szkielet aplikacji, trasowanie, układ | | | |
+| 1.3 | Trzy języki: polski, angielski, szwedzki | | | |
+| 1.4 | Logowanie bez hasła, dwuskładnikowe dla administratorów | | | |
+| 1.5 | Wdrożenie na wskazanej domenie | | | |
+| 1.6 | Podgląd wdrożeń zabezpieczony hasłem | | | dane klienta |
+| 1.7 | Monitoring błędów i logi | | | |
+| 1.8 | Kopie zapasowe bazy i procedura odtworzenia | | | |
 
 ## 2. Dane i dostęp
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 2.1 | Schemat: organizacje, użytkownicy, role | GOTOWE | `0001_core.sql` (organizations, app_users, role); BK1 `e70e378`; gate security 83 | **schema z mockupu ma zostać** |
-| 2.2 | Projekt, elementy, transporty (model dwupoziomowy) | GOTOWE | `0001_core.sql` loads + shipment_items | schemat; produkcja loads = 0 wierszy |
-| 2.3 | Strumień zdarzeń, niezmienny | GOTOWE | wyzwalacz `trg_load_events_immutable` (prod), polityki tylko SELECT/INSERT; gate status 44 |  |
-| 2.4 | Rozdzielenie kosztu i przychodu na poziomie bazy | GOTOWE | load_cost/load_revenue RLS; BK5 `17e6beb` 8/8; gate money 130 |  |
-| 2.5 | Widoki rolowe | GOTOWE | widoki prod `v_load_price_client`, `v_load_price_carrier`, `v_load_financials_hhl`; 2.2 `8d4198a` |  |
-| 2.6 | Dziennik audytu | DO ZROBIENIA (częściowo) | `audit_log` (prod 3 wiersze) zapisywany w 0008, 0026, 0034, 0039, 0045 | tylko wybrane operacje (zaproszenia, sesje, relink, okna); brak ogólnego wyzwalacza audytu |
-| 2.7 | Retencja danych osobowych | DO POTWIERDZENIA | `purge_personal_data(p_days=90)` + cron tower-rodo; GPS 30 dni po rozładunku (0025) | czeka na decyzję: ile dni; liczba dni do decyzji; zdjęcia i CMR poza retencją (audyt D13) |
-| 2.8 | Umowy powierzenia między trzema stronami | ZABLOKOWANA | nie zrobione | poza kodem, ale w zakresie; umowy powierzenia — właściciel/prawnik (audyt B3) |
+| 2.1 | Schemat: organizacje, użytkownicy, role | | | **schema z mockupu ma zostać** |
+| 2.2 | Projekt, elementy, transporty (model dwupoziomowy) | | | |
+| 2.3 | Strumień zdarzeń, niezmienny | | | |
+| 2.4 | Rozdzielenie kosztu i przychodu na poziomie bazy | | test dostępu | |
+| 2.5 | Widoki rolowe | | | |
+| 2.6 | Dziennik audytu | | | |
+| 2.7 | Retencja danych osobowych | | | czeka na decyzję: ile dni |
+| 2.8 | Umowy powierzenia między trzema stronami | | | poza kodem, ale w zakresie |
 
 ## 3. Harmonogram
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 3.1 | Wgrywanie pliku arkusza | GOTOWE | D23 `3f140a7`, D26 `dc364d7`, D23-S `4c52455`; I-1 `9bf80d7`, `f8b6355` (0047, 0048); I-2C `0c247b3` (0050) | produkcja: `import_schedule()` zapisuje `loads` + `shipment_items` w jednej transakcji (tylko HHL); pełny plik lokalnie 50/50 wysyłek (41 z wymiarami + 9 klasy STANDARD, wymiary NULL) |
-| 3.2 | Kreator mapowania kolumn z zapisem szablonu | DO ZROBIENIA (częściowo) | `src/lib/importColumnMap.ts` COLUMN_MAP_DEFAULT; kolumna `schedule_imports.column_map` | stały szablon, brak kreatora mapowania i zapisu szablonu przez aplikację |
-| 3.3 | Parser wymiarów, dat, godzin, telefonów | GOTOWE | `src/lib/scheduleParse.ts`; schedule-import.test.ts | część testów parsera w schedule-import (unit 353 passed) |
-| 3.4 | Walidacja blokująca, w tym przesunięte kolumny | GOTOWE | `scheduleDryRun.ts` (72 błędne → baza nietknięta, D23-S `4c52455`) |  |
-| 3.5 | Podgląd różnic przed zapisem | GOTOWE | `diffSchedule` + podgląd w ScheduleView; D26 `dc364d7` |  |
-| 3.6 | Wersjonowanie i archiwum pliku źródłowego | GOTOWE | I-1 `9bf80d7`: `schedule_imports` (wersja, sha, file_name), koszyk Storage `harmonogramy`; I-2B `d2a8219`: kubełek i tabela w kopii zapasowej | kopia: tabele z katalogu minus jawne wyłączenia, kubełek `harmonogramy` w `files/` |
-| 3.7 | Powiadomienie o zmianie daty na transporcie awizowanym | GOTOWE (IN_APP) | I-1 `9bf80d7`: SCHEDULE_DATE_CRITICAL + `notifications` IN_APP dla HHL i przewoźnika | e-mail wymaga wdrożenia Edge `send-notifications` (template gotowy) |
-| 3.8 | Klasyfikacja ponadnormatywności per kraj | DO POTWIERDZENIA | `src/lib/permits.ts` (PL kategorie I–V, SE TSFS); PL-T `40eca8a`; pl-t.test.ts | limity do potwierdzenia; limity do potwierdzenia |
-| 3.9 | Kolejność montażowa i wykrywanie rozjazdu | GOTOWE | cron tower-kolejnosc `detect_sequence_risk`; gate risks 23 | kolejność montażu z kolumny dodanej po naszej stronie |
-| 3.10 | Integracja z SharePoint | ODŁOŻONA | nie zrobione | zależna od zgody IT klienta; zob. Dziennik odłożeń |
+| 3.1 | Wgrywanie pliku arkusza | | | |
+| 3.2 | Kreator mapowania kolumn z zapisem szablonu | | | |
+| 3.3 | Parser wymiarów, dat, godzin, telefonów | | testy jednostkowe | |
+| 3.4 | Walidacja blokująca, w tym przesunięte kolumny | | testy | |
+| 3.5 | Podgląd różnic przed zapisem | | | |
+| 3.6 | Wersjonowanie i archiwum pliku źródłowego | | | |
+| 3.7 | Powiadomienie o zmianie daty na transporcie awizowanym | | | |
+| 3.8 | Klasyfikacja ponadnormatywności per kraj | | | limity do potwierdzenia |
+| 3.9 | Kolejność montażowa i wykrywanie rozjazdu | | | |
+| 3.10 | Integracja z SharePoint | | | zależna od zgody IT klienta |
 
 ## 4. Zasoby i awizacja
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 4.1 | Formularz zasobów dla przewoźnika | GOTOWE | `load.resources` → update loads (SupabaseProvider:179); awizacja-patch.test.ts |  |
-| 4.2 | Awizacja jako okno czasowe | GOTOWE | kolumny `plan_load_from/to`, `plan_delivery_from/to` (0001); `load.awizacja` (SupabaseProvider:180) |  |
-| 4.3 | Terminy uzupełnienia i eskalacje | DO ZROBIENIA (nie zrobione) | nie zrobione | terminy uzupełnienia zasobów i eskalacje w bazie brak (tower-terminy dotyczy płatności, M7) |
-| 4.4 | Wymiary zestawu odrębnie od wymiarów elementu | GOTOWE | kolumny `combo_*` (0001) odrębne od `shipment_items`; `src/lib/permits.ts` SetDims |  |
-| 4.5 | Pojazdy pilotujące | DO ZROBIENIA (częściowo) | kolumna `escort_vehicles`; dodatek pilotażu w `money/engine.ts` | brak osobnej obsługi pojazdów pilotujących (dane, awizacja) |
-| 4.6 | Rezerwacja promu | GOTOWE | `ferry_booking_ref`, `load.ferry` (SupabaseProvider:181), sailings prod 147 |  |
+| 4.1 | Formularz zasobów dla przewoźnika | | | |
+| 4.2 | Awizacja jako okno czasowe | | | |
+| 4.3 | Terminy uzupełnienia i eskalacje | | | |
+| 4.4 | Wymiary zestawu odrębnie od wymiarów elementu | | | |
+| 4.5 | Pojazdy pilotujące | | | |
+| 4.6 | Rezerwacja promu | | | |
 
 ## 5. Pozycje i mapa
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 5.1 | Adapter telematyki: interfejs | ZABLOKOWANA | nie zrobione | interfejsu adaptera w kodzie brak — czeka na nazwę systemu SCX i API |
-| 5.2 | Adapter: standard producentów pojazdów | ZABLOKOWANA | nie zrobione | rFMS tylko wzmianka w 0001 — zależy od spotkania z SCX |
-| 5.3 | Adapter: system przewoźnika | ZABLOKOWANA | nie zrobione | **czeka na odpowiedź przewoźnika**; czeka na odpowiedź przewoźnika |
-| 5.4 | Aplikacja dla kierowcy z tokenem | GOTOWE | M9 `3f73c7a`, 2.3 `1595e8b`, PR5 `816970f`; driver-api.test.ts, driver-tracking.test.ts | fallback, budowany zawsze |
-| 5.5 | Odbiór zdarzeń wypychanych i odpytywanie | DO ZROBIENIA (częściowo) | RPC `report_position` (odpytywanie przez PWA) | odbioru zdarzeń wypychanych (webhook telematyki) brak — zależy od 5.1 |
-| 5.6 | Idempotentność przetwarzania pozycji | GOTOWE | PR5 `816970f`; gate watchdog/status |  |
-| 5.7 | Surowy odczyt nigdy nienadpisywany | GOTOWE | `positions`: tylko polityka SELECT, zapis wyłącznie przez RPC, brak UPDATE |  |
-| 5.8 | Geofencing: histereza, postój, tłumienie drgań | GOTOWE | `0002_geofence_engine.sql` (hysteresis, dwell, debounce); gate status 44 |  |
-| 5.9 | Edytor stref na mapie | GOTOWE | GeofenceView + RPC `upsert_geofence_circle` (`geofence.save`) | tylko okręgi |
-| 5.10 | Mapa: warstwy, tryb skupienia, unikanie kolizji etykiet | DO ZROBIENIA (częściowo) | D14 `f384740` (Leaflet, warstwy), tryb skupienia CorridorMap | unikanie kolizji etykiet nie zweryfikowane; markery floty w demo mają sztuczny dryf (02_FASADA) |
-| 5.11 | Wykrywanie cichego pojazdu | GOTOWE | cron tower-cisza-gps `detect_silent_vehicles` */15 |  |
-| 5.12 | Przewidywany czas przyjazdu, model segmentowy | DO ZROBIENIA (częściowo) | `src/lib/eta.ts computeEta` (M12 `380e0ac`) | heurystyka statusowa po stronie klienta; `eta_site` nie wyliczane w bazie (audyt C2) |
-| 5.13 | Odtwarzanie przebiegu w czasie | DO ZROBIENIA (nie zrobione) | nie zrobione | brak odtwarzania przebiegu |
-| 5.14 | Podmiana schematu mapy na warstwę kartograficzną | GOTOWE | D14 `f384740` CorridorMap (Leaflet) |  |
+| 5.1 | Adapter telematyki: interfejs | | | |
+| 5.2 | Adapter: standard producentów pojazdów | | | |
+| 5.3 | Adapter: system przewoźnika | | | **czeka na odpowiedź przewoźnika** |
+| 5.4 | Aplikacja dla kierowcy z tokenem | | | fallback, budowany zawsze |
+| 5.5 | Odbiór zdarzeń wypychanych i odpytywanie | | | |
+| 5.6 | Idempotentność przetwarzania pozycji | | testy | |
+| 5.7 | Surowy odczyt nigdy nienadpisywany | | | |
+| 5.8 | Geofencing: histereza, postój, tłumienie drgań | | testy | |
+| 5.9 | Edytor stref na mapie | | | |
+| 5.10 | Mapa: warstwy, tryb skupienia, unikanie kolizji etykiet | | | |
+| 5.11 | Wykrywanie cichego pojazdu | | | |
+| 5.12 | Przewidywany czas przyjazdu, model segmentowy | | | |
+| 5.13 | Odtwarzanie przebiegu w czasie | | | |
+| 5.14 | Podmiana schematu mapy na warstwę kartograficzną | | | |
 
 ## 6. Dokumenty
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 6.1 | Kategorie z wymagalnością i terminami | DO ZROBIENIA (częściowo) | typy dokumentów + KPI kompletności (DashboardView) | wymagalność i terminy per kategoria — brak reguł w bazie |
-| 6.2 | Wersjonowanie i widoczność per organizacja | DO ZROBIENIA (częściowo) | `documents` + polityka `docs_read`, `create_document`/`discard_document`; BK4 `80e870b` | widoczność per organizacja jest; wersjonowania dokumentu brak |
-| 6.3 | Odnośniki z krótkim czasem ważności | GOTOWE | BK4 `80e870b` signed URL; storage-files.test.ts; gate storage 37 |  |
-| 6.4 | Zezwolenia: pola, ważność, trasa, pilotaż | DO ZROBIENIA (częściowo) | tabele `permits`, `load_permits` (0001) | wzór do zmapowania; RLS bez polityk, aplikacja nie czyta; zezwolenia tylko jako `documents` (audyt C4) |
-| 6.5 | Walidator wymiarów zestawu wobec zezwolenia | DO ZROBIENIA (częściowo) | `permit_fits()` (SECURITY INVOKER), `src/lib/permits.ts` | blokuje transport; na produkcji nie blokuje transportu — 0 zezwoleń, tabela nieczytelna (audyt C4) |
-| 6.6 | Polisy z alertem wygaśnięcia | DO ZROBIENIA (częściowo) | tabela `insurance_policies`; typ ryzyka INSURANCE (0020) | brak alertu wygaśnięcia — tabela nieczytelna, brak zadania (audyt C4) |
-| 6.7 | Potwierdzenie dostawy i zdjęcia mocowania | GOTOWE | PR6 `1595e8b`/`9b404ba` Edge driver-photo; PR7 `b93f0a3` kompresja; pr7-compress.spec.ts |  |
-| 6.8 | Pobieranie paczki per transport i per tydzień | DO ZROBIENIA (częściowo) | `src/lib/zipDocs.ts`: paczka per transport (LoadDrawer:403) i „tydzień” (DocsView:78) | paczka „tygodniowa” pakuje całą listę, bez filtra tygodnia |
-| 6.9 | Elektroniczny list przewozowy | ODŁOŻONA | nie zrobione | faza późniejsza; zob. Dziennik odłożeń |
+| 6.1 | Kategorie z wymagalnością i terminami | | | |
+| 6.2 | Wersjonowanie i widoczność per organizacja | | | |
+| 6.3 | Odnośniki z krótkim czasem ważności | | | |
+| 6.4 | Zezwolenia: pola, ważność, trasa, pilotaż | | | wzór do zmapowania |
+| 6.5 | Walidator wymiarów zestawu wobec zezwolenia | | testy | blokuje transport |
+| 6.6 | Polisy z alertem wygaśnięcia | | | |
+| 6.7 | Potwierdzenie dostawy i zdjęcia mocowania | | | |
+| 6.8 | Pobieranie paczki per transport i per tydzień | | | |
+| 6.9 | Elektroniczny list przewozowy | | | faza późniejsza |
 
 ## 7. Pieniądze
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 7.1 | Macierz cennika, wersjonowana | ZABLOKOWANA | M1 `d113779` silnik; produkcja `rate_cards` 0, `rate_rules` 0 | czeka na stawki; czeka na stawki (audyt B1) |
-| 7.2 | Dopasowanie stawki; brak dopasowania nie daje zera | GOTOWE | M1 `d113779`, M2 `45e8d10`; money.test.ts; gate money 130 |  |
-| 7.3 | Indeksacja paliwowa, pełna parametryzacja | ZABLOKOWANA | M4 `500e405`, `src/lib/sefs.ts`; produkcja `baf_definitions` 0, `baf_index_values` 0 | czeka na parametry; czeka na parametry SEFS (audyt B2); F2.4-a, F2.4-b OPEN |
-| 7.4 | Pobieranie notowań z zapisem źródła | DO ZROBIENIA (częściowo) | M3 `ce3ff43` NBP (cron tower-kurs-nbp, fx_rates 17) | kursy tak; notowań paliwa (OKQ8/Orlen) brak zadania (audyt B2) |
-| 7.5 | Kursy walut i konwencja | DO POTWIERDZENIA | M3 `ce3ff43`, W3 `7318abd` | czeka na ustalenie; konwencja kursu do potwierdzenia przez księgowość (audyt H) |
-| 7.6 | Marża, próg ostrzegawczy | GOTOWE | M11 `fd94928`; money-m11.test.ts |  |
-| 7.7 | Dodatki: pilotaż, postojowe, prom, zezwolenia | DO ZROBIENIA (częściowo) | `money/engine.ts` dodatki; money-v2.test.ts | bez stawek na produkcji nic nie wylicza (7.1) |
-| 7.8 | Faktura zbiorcza, kreator dla przewoźnika | GOTOWE | M6 `2b4ff4a`, RPC `register_invoice`; invoices3.test.ts |  |
-| 7.9 | Dopasowanie trójstronne z rozbiciem różnic | GOTOWE | `src/lib/invoiceMatch.ts`; invoice-match.test.ts |  |
-| 7.10 | Ścieżka sporu i akceptacji | DO ZROBIENIA (częściowo) | `bill.verify` (dispute_note, SupabaseProvider:220), BillsPanel | akceptacja/spór jako weryfikacja faktury; brak pełnej ścieżki sporu |
-| 7.11 | Krajowy system e-faktur | ODŁOŻONA | nie zrobione | faza późniejsza; zob. Dziennik odłożeń |
+| 7.1 | Macierz cennika, wersjonowana | | | czeka na stawki |
+| 7.2 | Dopasowanie stawki; brak dopasowania nie daje zera | | testy | |
+| 7.3 | Indeksacja paliwowa, pełna parametryzacja | | testy | czeka na parametry |
+| 7.4 | Pobieranie notowań z zapisem źródła | | | |
+| 7.5 | Kursy walut i konwencja | | | czeka na ustalenie |
+| 7.6 | Marża, próg ostrzegawczy | | | |
+| 7.7 | Dodatki: pilotaż, postojowe, prom, zezwolenia | | | |
+| 7.8 | Faktura zbiorcza, kreator dla przewoźnika | | | |
+| 7.9 | Dopasowanie trójstronne z rozbiciem różnic | | testy | |
+| 7.10 | Ścieżka sporu i akceptacji | | | |
+| 7.11 | Krajowy system e-faktur | | | faza późniejsza |
 
 ## 8. Ryzyko
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 8.1 | Pogoda morska na trasie promowej | DO ZROBIENIA (nie zrobione) | nie zrobione | licencja źródła do potwierdzenia; brak źródła i zadania; baner fali tylko w demo (audyt C3) |
-| 8.2 | Odczyt komunikatów armatora | ZABLOKOWANA | `src/lib/ferry/polferries.ts`, Edge ferry-status | brak zadania cron — czeka na zgodę armatora (audyt C7) |
-| 8.3 | Śledzenie jednostek | GOTOWE | cron tower-ferry-ais */10 (Digitraffic); WAWEL-AIS `4569a7b` |  |
-| 8.4 | Panel alternatywnych przepraw z przeliczeniem | DO ZROBIENIA (częściowo) | RisksView `ALT` (4 przeprawy), `seRouteAlts.ts` (D25) | dane statyczne, bez przeliczenia na żywo (audyt C5) |
-| 8.5 | Zdarzenia drogowe w Szwecji | ZABLOKOWANA | M12 `380e0ac` Edge road-se | brak klucza Trafikverket, brak cron; w UI oznaczenie demo |
-| 8.6 | Zdarzenia drogowe w Polsce | ZABLOKOWANA | Edge road-pl | brak dobrego źródła — do rozstrzygnięcia; brak źródła/klucza, brak cron |
-| 8.7 | Ryzyka dokumentowe i zasobowe | GOTOWE | risk_signals typy DOC_MISSING/PERMIT/INSURANCE (0020); gate risks 23 |  |
-| 8.8 | Ryzyko kolejności montażowej | GOTOWE | cron tower-kolejnosc; gate risks 23 |  |
-| 8.9 | Kolejka wyjątków z wagą i czasem do skutku | GOTOWE | kolejka wyjątków (RisksView/DashboardView); risk-keys.test.ts |  |
-| 8.10 | Kody przyczyn opóźnień | ZABLOKOWANA | enum `delay_code` A_CLIENT…F_ADMIN (0001) | czeka na uzgodnienie z przewoźnikiem; nieuzgodnione z przewoźnikiem; UI nie używa (audyt C8) |
+| 8.1 | Pogoda morska na trasie promowej | | | licencja źródła do potwierdzenia |
+| 8.2 | Odczyt komunikatów armatora | | | |
+| 8.3 | Śledzenie jednostek | | | |
+| 8.4 | Panel alternatywnych przepraw z przeliczeniem | | | |
+| 8.5 | Zdarzenia drogowe w Szwecji | | | |
+| 8.6 | Zdarzenia drogowe w Polsce | | | brak dobrego źródła — do rozstrzygnięcia |
+| 8.7 | Ryzyka dokumentowe i zasobowe | | | |
+| 8.8 | Ryzyko kolejności montażowej | | | |
+| 8.9 | Kolejka wyjątków z wagą i czasem do skutku | | | |
+| 8.10 | Kody przyczyn opóźnień | | | czeka na uzgodnienie z przewoźnikiem |
 
 ## 9. Automatyzacje i powiadomienia
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 9.1 | Silnik: wyzwalacz, warunek, akcje | DO ZROBIENIA (nie zrobione) | nie zrobione | na produkcji brak silnika reguł (audyt C1); L9 OPEN |
-| 9.2 | Wykonanie trwałe, z ponawianiem | DO ZROBIENIA (nie zrobione) | nie zrobione | zależy od 9.1 |
-| 9.3 | Siedem reguł startowych | DO ZROBIENIA (częściowo) | 12 reguł wf-1…12 tylko w `src/data/seed.ts` (demo) | produkcja `workflows` 0; automatyzacje jako zaszyte funkcje SQL + cron |
-| 9.4 | Kreator reguł dla administratora | DO ZROBIENIA (częściowo) | WorkflowsView (demo, `runWorkflowNow` bez ewaluacji) | fasada — brak zapisu i wykonania |
-| 9.5 | Poczta z szablonami w trzech językach | GOTOWE | M7 `c907fe9`; `supabase/functions/_shared/notifyTemplates.ts` pl/en/sv; cron tower-send-notifications |  |
-| 9.6 | Wiadomości tekstowe | ODŁOŻONA | nie zrobione | zob. Dziennik odłożeń |
-| 9.7 | Powiadomienia w aplikacji | GOTOWE | `notifications` + RPC `mark_notifications_read` |  |
-| 9.8 | Odsiewanie duplikatów | DO ZROBIENIA (częściowo) | unikalny indeks `notifications(dedup_key)`, `risk_signals(dedup_key)` (0001) | brak dedykowanego testu |
-| 9.9 | Kanał zespołowy | ODŁOŻONA | nie zrobione | zob. Dziennik odłożeń |
-| 9.10 | Kalendarz do subskrypcji | ODŁOŻONA | nie zrobione | zob. Dziennik odłożeń |
-| 9.11 | Czat przy transporcie | GOTOWE | `load_messages` + `message.send` (SupabaseProvider:186); data-layer.test.ts |  |
+| 9.1 | Silnik: wyzwalacz, warunek, akcje | | | |
+| 9.2 | Wykonanie trwałe, z ponawianiem | | | |
+| 9.3 | Siedem reguł startowych | | | |
+| 9.4 | Kreator reguł dla administratora | | | |
+| 9.5 | Poczta z szablonami w trzech językach | | | |
+| 9.6 | Wiadomości tekstowe | | | |
+| 9.7 | Powiadomienia w aplikacji | | | |
+| 9.8 | Odsiewanie duplikatów | | testy | |
+| 9.9 | Kanał zespołowy | | | |
+| 9.10 | Kalendarz do subskrypcji | | | |
+| 9.11 | Czat przy transporcie | | | |
 
 ## 10. Pulpity
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 10.1 | Pulpit spedytora | GOTOWE | DashboardView (HHL); etap4/5/6-ui.spec.ts |  |
-| 10.2 | Pulpit klienta | GOTOWE | DashboardView (KSH); BK5 8/8 |  |
-| 10.3 | Pulpit przewoźnika | GOTOWE | DashboardView (SCX); BK5 8/8 |  |
-| 10.4 | Widok placu budowy, tylko do odczytu | DO ZROBIENIA (nie zrobione) | nie zrobione | opcjonalny; opcjonalny |
-| 10.5 | Krzywa postępu dostaw | GOTOWE | `src/components/chart/DeliveryProgress.tsx` |  |
-| 10.6 | Ocena przewoźnika | DO ZROBIENIA (nie zrobione) | nie zrobione | brak oceny przewoźnika |
-| 10.7 | Czas wykrycia odchylenia | DO ZROBIENIA (częściowo) | kafelek `a6_dash_detect_time` (DashboardView:261) | wartość wpisana na sztywno „8 min” — atrapa |
-| 10.8 | Eksport do arkusza i pliku przenośnego | DO ZROBIENIA (częściowo) | `src/lib/xlsxExport.ts` (ScheduleView) | XLSX tak, PDF brak |
-| 10.9 | Raport śladu węglowego | ODŁOŻONA | nie zrobione | faza późniejsza; zob. Dziennik odłożeń |
+| 10.1 | Pulpit spedytora | | | |
+| 10.2 | Pulpit klienta | | | |
+| 10.3 | Pulpit przewoźnika | | | |
+| 10.4 | Widok placu budowy, tylko do odczytu | | | opcjonalny |
+| 10.5 | Krzywa postępu dostaw | | | |
+| 10.6 | Ocena przewoźnika | | | |
+| 10.7 | Czas wykrycia odchylenia | | | |
+| 10.8 | Eksport do arkusza i pliku przenośnego | | | |
+| 10.9 | Raport śladu węglowego | | | faza późniejsza |
 
 ## 11. Jakość
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 11.1 | Testy jednostkowe logiki: cennik, indeksacja, parser, strefy | GOTOWE | unit 353 passed / 28 skipped (money, sefs, schedule-import, routes, …) |  |
-| 11.2 | Testy integracyjne bazy i uprawnień | GOTOWE | `tests/db/gate.sh`: security 83, status 44, storage 37, money 130, release 145, backup 20, session 27, archive 18, watchdog 27, invite 48, risks 23 |  |
-| 11.3 | Testy ścieżek użytkownika | DO ZROBIENIA (częściowo) | etap4/5/6-ui.spec.ts, bk5-api.live.spec.ts | na produkcji niewykonane (O3a/O3b) |
-| 11.4 | Testy regresji wizualnej | DO ZROBIENIA (częściowo) | zob. 0.3 | patrz 0.3 |
-| 11.5 | Dostępność: klawiatura, kontrast, czytniki ekranu | DO ZROBIENIA (nie zrobione) | nie zrobione | nigdy niesprawdzana (audyt D2); są tylko atrybuty aria |
-| 11.6 | Wydajność przy pełnym zakresie projektu | DO ZROBIENIA (częściowo) | D15 `ecb0632` (pierwsze wczytanie 224 kB gz) | bazy z 72 transportami i pełnym GPS nie testowano (audyt D3) |
-| 11.7 | Skróty klawiszowe z widocznymi podpowiedziami | GOTOWE | `src/components/shell/KeyboardHelp.tsx` |  |
-| 11.8 | Dokumentacja wdrożeniowa i instrukcja dla trzech stron | DO ZROBIENIA (częściowo) | `docs/handover/*` (wdrożeniowe, PRZELACZENIE_HOSTINGU.md) | instrukcji dla trzech stron brak (audyt B6) |
+| 11.1 | Testy jednostkowe logiki: cennik, indeksacja, parser, strefy | | | |
+| 11.2 | Testy integracyjne bazy i uprawnień | | | |
+| 11.3 | Testy ścieżek użytkownika | | | |
+| 11.4 | Testy regresji wizualnej | | | patrz 0.3 |
+| 11.5 | Dostępność: klawiatura, kontrast, czytniki ekranu | | | |
+| 11.6 | Wydajność przy pełnym zakresie projektu | | | |
+| 11.7 | Skróty klawiszowe z widocznymi podpowiedziami | | | |
+| 11.8 | Dokumentacja wdrożeniowa i instrukcja dla trzech stron | | | |
 
 ---
 
@@ -1031,7 +1031,692 @@ celuje w rejs Gdańsk–Nynäshamn i sprawdza, że pozostałe są nietknięte.
   komunikatów albo oficjalne powiadomienia; **MMSI promu Wawel**
 - opcjonalnie: Sjöfartsverket AAA, klucz AISStream do testu zasięgu
 
-## 39. Audyt statusów (27.09.2026)
+## 39. Wydanie 1.0 — stan i decyzje (26.09.2026)
+
+### 39.1 Stan zgłoszony przez wykonawcę
+- **etap 4 zamknięty:** M2–M12, D26, D23-S, G4; `153839c`; tag
+  `baseline-fala-3b-2026-09-26`; unit 271, security 52/52, visual 840/840
+  (+120 ujęć: Faktury KSH, faktury przychodowe HHL, Ustawienia);
+  147 prawdziwych rejsów na serwerze testowym
+- **etap 5 zamknięty:** trasy adresowalne, pierwsze wczytanie 222 kB
+  zamiast 585 kB, 0 z 840 ujęć zmienionych
+- **etap 6:** 14/14 prób; 7 commitów niewypchniętych
+
+### 39.2 Zastrzeżenia
+- 7 commitów tylko na dysku — jedna kopia
+- „testy na serwerze Supabase przechodzą" bez liczb
+- **O2 i O3 zgłoszone jako zrobione, a wdrożenia produkcyjnego nie było**
+
+### 39.3 Decyzje (rekomendacje do potwierdzenia przez właściciela)
+| # | Sprawa | Rekomendacja |
+|---|---|---|
+| 39.3.1 | import usuwa transporty w drodze | **anulowanie zamiast kasowania; blokada od AT_LOADING i dla zafakturowanych; zakaz DELETE w bazie** |
+| 39.3.2 | ryzyka widoczne dla wszystkich | **nie — kolumna odbiorców, domyślnie tylko HHL**; wyciek klasy koszt/przychód |
+| 39.3.3 | kierowca bez logowania | **tak, pod warunkami tokenu**: jeden transport, bez cen, wygasa, odwoływalny, przez funkcję Edge |
+| 39.3.4 | numer zlecenia 48 h wcześniej | **ostrzeżenie, nie blokada**; blokady bez zmian (Q10) |
+| 39.3.5 | ~25 napisów bez polskich znaków | poprawić; identyfikatory w bazie zostają ASCII; nowy test PL-T; wzorzec: EN i SV = 0 zmian |
+| 39.3.6 | obecny Supabase | **testowy** |
+| 39.3.7 | produkcja | **nowy projekt Supabase Pro, region UE** |
+| 39.3.8 | Vercel | **plan Pro** — darmowy wyłącznie niekomercyjny |
+| 39.3.9 | tag `release-1.0` | **dopiero po O3 na produkcji** |
+
+### 39.4 Koszty — zweryfikowane 26.09.2026
+- Vercel: Hobby wyłącznie do użytku osobistego, niekomercyjnego; Pro 20 USD/mies.
+- Supabase Free: użycie komercyjne dozwolone, ale usypianie po 7 dniach
+  bez aktywności i brak kopii do pobrania; Pro 25 USD/mies. — bez usypiania,
+  7 dni kopii
+- **razem ok. 45 USD/mies.**; źródła danych zewnętrznych bez zmian — darmowe
+
+### 39.5 Działania właściciela
+projekt Supabase Pro (UE) z `pg_cron` · Vercel Pro · domena · token
+Supabase do pliku środowiskowego i odwołanie po wdrożeniu · klucze
+Trafikverket i TomTom · rejestracja KPD · POLSCA Baltic Ferries: zgoda
+i MMSI Wawel
+
+## 40. Hosting — decyzja właściciela (26.09.2026)
+
+**Vercel na planie darmowym. Planu Pro nie będzie — nigdy.**
+
+Ryzyko zapisane: regulamin planu darmowego Vercel dopuszcza wyłącznie
+użytek osobisty, niekomercyjny; możliwe wstrzymanie projektu.
+
+Zabezpieczenie (sekcja 4.3 `DECYZJE_WYDANIE_1_0.md`):
+- aplikacja bez zależności od funkcji Vercel — statyczna, zaplecze w Supabase
+- **zapas: Cloudflare Pages, plan darmowy** — statyczne pliki bezpłatne
+  i bez limitu; regulamin bez zakazu użycia komercyjnego (brak znalezionego
+  wprost potwierdzenia od Cloudflare — do sprawdzenia przy zakładaniu konta)
+- domena pod kontrolą właściciela; przełączenie = jeden rekord DNS
+- procedura przełączenia udokumentowana i przetestowana raz
+- wyłączona zgoda na trenowanie modeli; podglądy tylko na testowy Supabase
+
+**Otwarte:** plan Supabase dla produkcji — decyzja właściciela.
+
+## 41. Produkcja za darmo — decyzja właściciela (26.09.2026)
+
+**Wszystko na planach darmowych: Supabase, Vercel, integracje. Nigdy płatne.**
+Realizacja: **`ANEKS_4_PRODUKCJA_ZA_DARMO.md`**, pozycje PR1–PR8.
+
+### 41.1 Zweryfikowane 26.09.2026
+- Supabase Free: dwa aktywne projekty; usypianie przy niskiej aktywności
+  użytkowników w ciągu 7 dni; kopie niedostępne do pobrania; 500 MB bazy,
+  1 GB plików, 500 000 wywołań funkcji Edge, 5 GB transferu
+- **domyślna poczta Supabase: wyłącznie do adresów z zespołu projektu,
+  tylko do testów** — bez własnego SMTP użytkownicy nie dostaną linków
+  logowania. **Blokuje produkcję**
+- Cloudflare R2 Free: 10 GB, zero opłat za transfer, bez wygasania
+- Cloudflare Workers Free: 100 000 zapytań dziennie, wyzwalacze czasowe
+
+### 41.2 Zabezpieczenia zamiast planu płatnego
+| # | Problem planu darmowego | Rozwiązanie |
+|---|---|---|
+| PR1 | usypianie | Worker co 6 h z prawdziwym zapytaniem; e-mail przy braku odpowiedzi; skrzynka na ostrzeżenia Supabase |
+| PR2 | brak kopii do pobrania | codzienny zrzut, szyfrowanie age (klucz prywatny offline), R2, retencja 30 dni + 12 miesięcy, **test odtworzenia co miesiąc**; RPO 24 h |
+| PR3 | poczta tylko testowa | Resend jako SMTP, zweryfikowana domena |
+| PR4 | limity | codzienna kontrola, ryzyko przy 70%, alarm przy 85% |
+| PR5 | 500 MB bazy | GPS co 2 min w ruchu / 15 min na postoju; retencja 30 dni po rozładunku; pomiar |
+| PR6 | 500 000 wywołań Edge | pozycje kierowcy przez funkcję SQL, nie Edge; budżet ~71 000/mies. |
+| PR7 | 1 GB plików | kompresja zdjęć w przeglądarce; limit PDF; archiwizacja do R2 od 70% |
+| PR8 | Vercel niekomercyjny | zapas Cloudflare Pages, przełączenie DNS |
+
+### 41.3 Do sprawdzenia przy zakładaniu kont
+- czy aktywacja R2 wymaga karty
+- dzienny limit wysyłek darmowego planu Resend wobec budżetu logowań i przypomnień
+
+## 42. Jeden projekt, roczna autoryzacja urządzenia (26.09.2026)
+
+### 42.1 Decyzje właściciela
+- **jeden projekt Supabase — obecny — jest produkcją**; drugiego nie ma
+- wykonawca realizuje wszystkie kroki właściciela przez API
+- **Resend: konto, domena i DNS zweryfikowane**
+- skrzynka konta Supabase czytana
+- **autoryzacja urządzenia kierowcy z linku — ważna rok**
+
+Realizacja: **`ANEKS_5_JEDEN_PROJEKT.md`**.
+
+### 42.2 Skutki obsłużone
+| Skutek jednego projektu | Rozwiązanie |
+|---|---|
+| dane i konta testowe w produkcji | sprzątanie: kopia → lista do zatwierdzenia → usunięcie; zostają migracje, seed, 147 rejsów |
+| testy zapisujące na produkcji | zakaz; BK5 na lokalny Supabase (Docker); test odtworzenia do lokalnego Postgresa |
+| publiczne podglądy Vercel na produkcyjnej bazie | podglądy w trybie `DemoProvider`, bez Supabase |
+
+### 42.3 Sesja użytkownika rok — poprawka właściciela
+**Rok dotyczy użytkowników programu (HHL, KSH, przewoźnik), nie kierowców.**
+Kierowca bez zmian: link do 24 h po rozładunku, maksymalnie 14 dni.
+
+- plan darmowy Supabase **nie ma limitu czasu sesji** (tylko Pro); sesje
+  domyślnie bez końca → zadanie dzienne usuwa sesje starsze niż 365 dni
+- **token dostępu zostaje 3 600 s** — rok w sesji, którą da się usunąć,
+  nie w tokenie, którego nie da się odwołać
+- link z e-maila jednorazowy, najwyżej godzina
+- wyloguj wszędzie (użytkownik), wyloguj dowolnego (HHL), dezaktywacja
+  odcina dane natychmiast przez funkcje RLS, lista urządzeń
+- 7 przypadków testowych
+
+### 42.4 Jedyny krok wyłącznie w rękach właściciela
+**Klucz prywatny do kopii** — wykonawca generuje parę poza repozytorium,
+przekazuje prywatny właścicielowi do zapisu offline (dwa egzemplarze),
+usuwa z dysku. Bez niego kopie są nie do odtworzenia.
+
+### 42.5 Otwarte
+Brak — interpretacja potwierdzona przez właściciela.
+
+## 43. Stan po raporcie z aneksu 5 (26.09.2026)
+
+### 43.1 Zgłoszone
+- HEAD `f25cdc5` = origin/main, drzewo `fa0c8af6…`; tag `baseline-1.0-2026-09-26`
+- unit 299 (+22 pominięte) · money 49+1 · ferry 17 · security 52/52 ·
+  status 44/44 · storage 33/33 · db release 145/145 · kopia 10/10 lokalnie,
+  12/12 odczyt z produkcji · D19-T 1/1 · D-EUR-T 2/2 · **PL-T 4/4
+  (czerwony przed poprawką: 112 słów)** · stylelint 0 · 14 prób 14/14 ·
+  pierwsze wczytanie 222 kB gzip
+- **wzorzec 840: 169 zmian, wszystkie PL; EN i SV: 0** — kryterium spełnione
+- migracje 0019–0025 na produkcji, niedestrukcyjne
+- PR5: 387 B na pozycję z indeksami; najgorszy przypadek 20 aut ≈ 190 MB = 38% limitu
+- BK5 8/8 sprzed aneksu 5; brak Dockera
+
+### 43.2 Luka bezpieczeństwa — trzecia w tej samej klasie
+`purge_personal_data(0)` wywoływalna przez każdego zalogowanego — kasowała
+dane kierowców. Naprawiona. Poprzednio: funkcja terminów w 0003.
+**Przyczyna: domyślne prawo wywołania dla `PUBLIC`.** Zlecone: odebranie
+domyślnych praw + test listy dozwolonych funkcji.
+
+### 43.3 Baner kokpitu
+Poprawka zmienia EN i SV → napis na sztywno, bez tłumaczenia. D19-T nie
+złapał, bo szuka polskich liter. Zlecone: słownik + rozszerzenie D19-T
+o porównanie z wartościami słownika PL.
+
+### 43.4 Poświadczenia Cloudflare
+Dwa osobne, zawężone: token API do konfiguracji (do odwołania) i klucz R2
+ograniczony do zasobnika kopii. Worker podtrzymujący — klucz `anon`.
+**`service_role` nigdy poza Supabase.**
+
+### 43.5 Otwarte
+- sprzątanie danych testowych — lista do zatwierdzenia
+- podglądy w `DemoProvider` — niezgłoszone
+- sesja użytkownika rok — niezgłoszone
+
+## 44. Niezależna weryfikacja produkcji (26.09.2026)
+
+Łączniki Supabase i Cloudflare podłączone po stronie koordynatora — odczyt.
+
+### 44.1 Supabase — `nglnnrmzmhusvxslousq`, UE (Irlandia), 24 MB
+- migracje 0001–0029; 11 funkcji Edge (10 z wymogiem logowania)
+- **potwierdzone:** widoki cenowe filtrują; funkcje admin/finanse sprawdzają
+  rolę; `purge_personal_data` i `purge_expired_sessions` niedostępne dla
+  API; domyślne prawa do funkcji odebrane; brak prawa CREATE w `public`;
+  11 zadań harmonogramu; `driver-photo` weryfikuje token w bazie
+- **do zrobienia:** 3 konta testowe z hasłami i 174 sesje → sprzątanie;
+  rejestracja publiczna wyłączona; `ferry-ais` do zaplanowania (bez klucza);
+  typ i rozmiar pliku w `driver-photo` po stronie serwera; `search_path`
+  na 22 funkcjach; odebranie `anon` z 4 funkcji pomocniczych;
+  `loaded_confirmed`; `spatial_ref_sys`; opis fałszywego alarmu widoków
+  w `SECURITY.md`; potwierdzenie 8 tabel bez polityk
+
+### 44.2 Cloudflare
+- **R2 niewłączone** („enable R2 through the Dashboard"); 0 Workerów
+
+### 44.3 Wzorzec
+Grok najpierw uznał różnice poza banerem za szum, potem sam wykazał
+powtarzalną różnicę 13 ujęć kokpitu (159–298 px) z wcześniejszego commitu.
+**Wzorzec wstrzymany do znalezienia commitu.** Przyczyna: hak uruchamia
+4 ujęcia, nie 840 → pełny przebieg przed każdym tagiem.
+
+### 44.4 Decyzje (rekomendacje do potwierdzenia)
+próbny link na `Sebastian@log-mar.pl` · przypomnienia po sprzątaniu ·
+token Supabase do końca aneksu 5
+
+## 45. Weryfikacja produkcji — część 2 (26.09.2026)
+
+Symulacja ról na produkcji (odczyt, w transakcji): anonim, KSH, przewoźnik.
+
+### 45.1 Potwierdzone
+- anonim: 0 wierszy w 18 tabelach
+- `load_cost`, `load_revenue`: brak dostępu API; tylko filtrujące widoki
+- KSH: 0 w widoku marż i kosztu; filtr odbiorców ryzyk działa
+- przewoźnik: 2 z 3 transportów; pozycje i zdarzenia dziedziczą widoczność
+- `documents.docs_scope` RESTRICTIVE — dokumenty i faktury poprawnie
+- zapis tabel referencyjnych tylko HHL; 3 zasobniki prywatne z limitami i typami
+- **brak cen w bazie — rozdział potwierdzony ze struktury, nie z danych**
+
+### 45.2 Usterki
+| # | Waga | Usterka | Poprawka |
+|---|---|---|---|
+| W1 | **wysoka** | `spatial_ref_sys` zapisywalna i usuwalna przez `anon` — wyłączenie silnika stref jednym zapytaniem; REVOKE niemożliwy (nadał `supabase_admin`) | wyzwalacz instrukcyjny — `postgres` ma prawo TRIGGER |
+| W2 | **wysoka** | zdarzenia `GEOFENCE_*`, `STATUS_AUTO` dopisywalne przez API (także klient); `apply_geofence_status` bierze rodzaj strefy i czas z treści zdarzenia → sfałszowana zmiana statusu | lista dozwolonych typów dla ról API; CHECK na typie; rodzaj strefy z tabeli |
+| W3 | średnia | `load_messages`, `shipment_items` — odczyt po rodzaju firmy, nie po transporcie/projekcie; bez skutków przy jednym kliencie i przewoźniku | warunek widoczności transportu/projektu |
+| W4 | niska | limity zasobników 15/20 MB | 2 MB zdjęcia, 10 MB dokumenty |
+
+Rozładunek niepodatny — datę ustawia wyłącznie `driver_post_event` z tokenem.
+
+### 45.3 Warunek przed pierwszym użytkownikiem
+W1, W2, sprzątanie; transport testowy z kosztem i przychodem → symulacja
+trzech ról → liczby → usunięcie.
+
+## 46. W1, W2 wdrożone — sprawdzone niezależnie (26.09.2026, 13:59 UTC)
+
+- **W1:** wyzwalacz `spatial_ref_sys_readonly` włączony; test własny jako
+  `anon` (usunięcie 0 wierszy) → 42501; 8 500 wierszy
+- **W2:** `CHECK load_events_event_type_known`; `apply_geofence_status`
+  czyta strefę z tabeli, treść zdarzenia ignorowana; blokada niezmienności
+  włączona
+- **rejestracja:** `handle_new_auth_user` odrzuca konto bez otwartego
+  zaproszenia → `disable_signup=false` bezpieczne. **Luka: zaproszenie
+  nie wygasa**
+- **harmonogram:** `tower-ferry-ais` 13:40 → 403, 13:50 → 200. **Oba
+  zapisane w `cron.job_run_details` jako „succeeded"** — pg_cron melduje
+  sukces po wysłaniu zapytania, nie po odpowiedzi. Bez strażnika wyniku
+  niedziałające kopie wyglądałyby na działające
+- **Wawel:** MMSI 311852000, IMO 7814462, C6TY9 — potwierdzone w pięciu
+  źródłach (Wikipedia, MarineTraffic, VesselFinder, ShipSpotting, MagicPort);
+  FleetMon podaje odmienny IMO — w mniejszości
+
+### Decyzje (rekomendacje)
+sprzątanie zatwierdzone w jednej transakcji · dziennik testowy usunięty
+z jednym wpisem opisującym sprzątanie · zaproszenie `Sebastian@log-mar.pl`
+jako HHL_ADMIN po sprzątaniu = ostateczny test PR3 · MMSI Wawela ·
+`disable_signup=false` + wygasanie zaproszeń · strażnik wyniku zadań
+
+## 47. Stan produkcji po sprzątaniu — sprawdzone niezależnie (26.09.2026)
+
+### 47.1 Potwierdzone
+- **dane testowe: 0** we wszystkich tabelach operacyjnych; **żaden wyzwalacz
+  w schemacie `public` nie jest wyłączony**
+- referencyjne: 3 organizacje, 1 projekt, 6 stref, 2 statki, 147 rejsów,
+  17 kursów NBP, 2 warunki płatności
+- `audit_log`: CLEANUP_TEST_DATA → USER_INVITED → USER_ACCEPTED_INVITE
+- konto `sebastian@log-mar.pl`: HHL_ADMIN, aktywne; 1 sesja (Android),
+  26.09.2026 14:06 UTC → wygasa 26.09.2027
+- zasobniki: faktury 20 MB, zdjęcia 2 MB, dokumenty 10 MB, wszystkie prywatne
+- W3: `msgs_read` z widocznością transportu; `items_read` po projekcie klienta
+- harmonogram 14 zadań, strażnik co godzinę; HTTP: 30×200 od poprawki
+- Wawel MMSI 311852000 / IMO 7814462; Nova Star 311000787 / 9462067
+- `invite_valid_days()` = 7; `integration_runs` ≈ 430/dobę
+  (send-notifications 288 + ferry-ais 144)
+
+### 47.2 Nowe ustalenia
+- **wygasanie zaproszeń bez skutku:** konto auth powstaje w chwili
+  zaproszenia (USER_INVITED 14:03:29 → konto 14:03:30), więc sprawdzenie
+  7 dni zawsze przechodzi; „przyjęcie" zapisywane przed kliknięciem
+  (kliknięcie 14:06). Nieodebrane zaproszenie = aktywne konto bez limitu
+- **konto administratora ma hash hasła** (bcrypt) — prawdopodobnie losowe
+  hasło nadawane przez Supabase przy tworzeniu konta linkiem; do
+  potwierdzenia przez wykonawcę
+
+### 47.3 Decyzje (rekomendacje)
+PL-T i D15 do wzorca (para przed/po znacznika do obejrzenia) · faktury 10 MB
+(zgodnie z aneksem 4) · retencja `integration_runs` 30 dni udane, 180 błędy ·
+**R2 = jedyna blokada przed zaproszeniem KSH i przewoźnika**
+
+## 48. Tłumaczenia — ślepe plamki D19-T (26.09.2026)
+
+### 48.1 Przyjęte i sprawdzone
+- A (wygasanie zaproszeń od pierwszego logowania): `tower-wygasanie-zaproszen`
+  02:40 UTC; B (hash hasła): losowe hasło Supabase przy `signInWithOtp`
+- faktury 10 MB; retencja `tower-retencja-przebiegow` 02:50 UTC
+- wzorzec `baseline-fala-3c-2026-09-26`, 840/840; znacznik D15 = przesunięcie
+  o piksel, wizualnie bez różnicy
+
+### 48.2 Znalezione na zrzucie nowego wzorca (HHL, EN)
+| # | Waga | Usterka |
+|---|---|---|
+| T1 | **wysoka** | ryzyka generowane w bazie po polsku (`title` bez klucza) — przewoźnik w SV dostanie „Brak pozycji pojazdu…"; też e-maile, baner promowy |
+| T2 | średnia | napisy poza słownikiem bez polskich liter — D19-T ślepy podwójnie; pseudo-lokalizacja |
+| T3 | niska | „15,7%" w EN — formatowanie liczb niezależne od języka |
+
+Kryterium wzorca po poprawkach: **PL — 0 zmian**.
+T1 przed zaproszeniem przewoźnika.
+
+## 49. T1–T3 wdrożone — sprawdzone (26.09.2026)
+
+- tag `baseline-fala-3d-2026-09-26`, HEAD `ad6bf40`; 840/840, PL 0 zmian
+- produkcja: `risk_signals.title_key` jest; przebiegi 24 h: send-notifications
+  89/0, ferry-ais 46/0
+- **`raise_risk`, `raise_integration_risk` nie ustawiają klucza** — robi to
+  wyzwalacz `risk_signals_title_key`; **przy braku klucza podstawia
+  `rk_generic` z polskim tytułem w parametrach i tylko `raise warning`** →
+  ryzyko bez prawdziwego klucza pokaże się po polsku w SV, bez sygnału
+- 3 „stare usterki PL" (kod `doc_cat_drawing`, kod kategorii w dymku,
+  „podwyzszone"/„Zaladowano") — kod klucza na ekranie powinien był
+  złapać test pseudo-lokalizacji → prawdopodobnie na liście 583 „danych"
+- **Cloudflare: R2 nadal niewłączone** (10042); token nie dociera do
+  środowiska wykonawcy — aktualizacja komputera Grok bota
+
+## 50. Audyt zakresu (27.09.2026)
+
+Pełny wynik: **`AUDYT_ZAKRESU.md`**. Najważniejsze:
+- **sekcje 0–11 (ok. 110 pozycji) nigdy nie dostały statusów**; dziennik
+  odłożeń pusty mimo faktycznych odłożeń
+- blokuje pierwszego użytkownika lub fakturę: stawki (0), parametry i odczyty
+  SEFS (0, brak źródła), umowy RODO, spotkanie z SCX (68 pytań), strefy
+  załadunku (1), instrukcje, 2FA administratorów (0)
+- **fasada na produkcji:** Workflows (0 reguł, brak silnika w bazie),
+  ETA (nic nie wylicza), pogoda morska (brak źródła), **zezwolenia i polisy
+  nieczytelne dla wszystkich ról** (RLS bez reguł odczytu)
+- zgłoszone jako zrobione bez widocznych wyników: F2.1, F2.2, F2.4, F2.5, F2.6, 25.1
+
+## 51. Decyzje właściciela do audytu — sekcja E (27.09.2026)
+
+| Pozycja | Decyzja |
+|---|---|
+| 9.6 SMS | **zostaje** — bramka SMS na telefonie z Androidem, stale zasilanym, na Wi-Fi, z aplikacją |
+| 3.10 SharePoint | **później**; plik harmonogramu KSH na tenancie `hyzykspzoo.sharepoint.com` — **tylko odczyt, nic nie zmieniać** (bieżąca praca zespołów) |
+| 7.11 KSeF | **poza TOWER na stałe** — faktury wystawiane w systemach stron, TOWER rejestruje PDF |
+| 9.9, 9.10, 6.9, 10.9 | bez decyzji — domyślnie rekomendacje koordynatora: kanał zespołowy rezygnacja w 1.0; kalendarz, e-CMR, ślad węglowy po 1.0 |
+
+### 51.1 Bramka SMS — architektura (rekomendacja)
+**Model pobierania:** kolejka `sms_outbox` w Supabase, telefon sam pobiera
+wiadomości i melduje status. Bez serwera pośredniego, bez otwartego portu
+w sieci domowej, bez zewnętrznego przekaźnika z numerami kierowców.
+Gotowe aplikacje: tryb chmurowy przechodzi przez serwer dostawcy; tryb
+prywatny wymaga własnego serwera, którego nie mamy.
+
+### 51.2 SharePoint — dostęp
+Automatyczny odczyt zablokowany (robots), logowanie wymaga kodu na skrzynkę
+właściciela. Na teraz: kopia pliku przesłana przez właściciela. Docelowo:
+rejestracja aplikacji w tenancie KSH z odczytem jednej witryny — zgoda IT KSH.
+
+## 52. Odpowiedzi do audytu i etap I (27.09.2026)
+
+### 52.1 Z odpowiedzi wykonawcy (`88c92cc`), sprawdzone przez koordynatora
+- 114 pozycji sekcji 0–11: 47 gotowe, 37 częściowo, 9 nie, 10 zablokowane,
+  7 odłożone, 4 do potwierdzenia
+- **BLOKER: import w trybie produkcyjnym nie zapisuje transportów do `loads`**
+- C1 brak silnika Workflows („Uruchom" bez warunku i akcji); C2 ETA
+  w przeglądarce z samego statusu; C3 brak pogody; C4 zezwolenia i polisy
+  jako dokumenty — zamierzone; C5 dane statyczne; C8 kody w bazie, UI ich
+  nie używa; F2.4: Opcje BAF to fasada
+- B5 pasuje: harmonogram bez kolumny adresu załadunku, jedyny załadunek
+  KSH Śrem, 0,33 m od środka strefy
+- O2, O3a DONE — potwierdzone: 3 konta testowe nieaktywne, 0 sesji
+- **wyciek:** `KSH_HARMONOGRAM.xlsx` i 4 kopie makiety były publiczne w paczce
+  produkcyjnej; na `tower.log-mar.pl` i Vercel dziś 404; **na Pages
+  `/tower-makieta` nadal 200**; stare wdrożenia Pages publiczne bez ochrony
+- usterki demo w produkcji: przełącznik ról u KSH i SCX, baner R-03,
+  „dziś 23.09"
+
+### 52.2 Etap I — definicja
+**`ZLECENIE_ETAP_I.md`**: I-0 wyciek, I-1 import, I-2 zero fasady,
+I-3 SMS, I-4 instrukcje, I-5 2FA, I-6 monitoring błędów, I-7 retencja,
+I-8 wydajność, I-9 synchronizacja rejestru.
+**Wydanie 1.0 = etap I + O3b.**
+
+## 53. Wyciek plików — ocena zamknięta (27.09.2026)
+
+- `KSH_HARMONOGRAM.xlsx`: 1 arkusz, 123 wiersze (50 z wysyłką), 16 kolumn;
+  kolumny kierowcy (imię i nazwisko, telefon) **puste — brak danych
+  osobowych**; wyciekły dane biznesowe KSH: wysyłki, wymiary, wagi, daty
+- ekspozycja: Vercel `watch-tower-makieta.vercel.app` **23.09 13:20 –
+  27.09 12:11**; Pages od 27.09 11:06; brak logów pobrań
+- makieta w pamięci podręcznej Pages `/tower-makieta` do ok. 04.10:
+  sprawdzona przez koordynatora — bez wymiarów i wag, nazwy firm i projektu,
+  10 numerów z danych demo
+- dane demo: 30 „realistycznych" numerów w `seedIdentity.ts` (pule
+  operatorów) → zamiana na pulę PTS (SE) i numery nieprzydzielalne (PL, LT),
+  w I-2
+- RODO nie dotyczy (brak danych osobowych); **decyzja właściciela:
+  informacja dla KSH** — rekomendacja: poinformować, sprawdzić klauzulę
+  poufności w umowie z KSH
+- **27.09.2026: KSH poinformowany przez właściciela, odpowiedź: w porządku.
+  Incydent zamknięty.**
+
+## 54. I-1 import i luka „nieznane" w strażnikach (27.09.2026)
+
+- **I-1 zrobione:** import w produkcji zapisuje transporty i pozycje w jednej
+  transakcji, z podglądem; lokalnie 41 transportów / 30 ms, powtórka 0 zmian,
+  zmieniony plik 1 nowy / 4 zmienione / 2 anulowane; tylko HHL; archiwum wersji;
+  0047, 0048 na produkcji, 0 transportów na produkcji
+- **9 transportów z wymiarem „Standard"** (T-03…05, T-08…10, T-13…15)
+  odrzucanych przez import — rekomendacja: przyjąć jako klasę STANDARD
+  (ładunek normatywny), wymiary puste jawnie, nie domyślne
+- **luka NULL w strażnikach plpgsql** — sprawdzona przez koordynatora:
+  `current_app_role()` zwraca NULL dla nieaktywnych → `is_hhl()` NULL →
+  `if not is_hhl() then raise` NIE odmawia. Dotyczy: cancel_load,
+  import_cancel_loads, import_removal_check, register_invoice,
+  mark_invoice_paid, unmark_invoice_paid (naprawia poprawka `is_hhl()`) oraz
+  **issue_driver_token, revoke_driver_token, report_position** (wyrażenie
+  `is_hhl() or (current_org_kind() = 'CARRIER' …)` — poprawka `is_hhl()`
+  NIE wystarcza); guard_load_update i guard_invoice_update do przeglądu.
+  Okno: do 1 h ważności tokenu po dezaktywacji. `import_schedule` poprawny
+  (`coalesce`)
+- kopia zapasowa nie obejmuje nowej tabeli archiwum → lista tabel kopii
+  do wyliczania z katalogu + test
+
+## 55. Tryb pracy ciągłej (27.09.2026)
+
+**Decyzja właściciela:** zmiany są wyłącznie dopisywane do planu, który
+wykonawca realizuje w sposób ciągły. Wymiana między koordynatorem
+a wykonawcą nie może zatrzymywać realizacji.
+
+- jedyna lista pracy: **`PLAN.md`** (w repo `docs/handover/PLAN.md`)
+- wykonawca: kolejka od góry, bez pytania o kontynuację; pytania do sekcji
+  „Decyzje oczekujące" i dalej; STOP tylko w 5 zdefiniowanych sytuacjach
+- koordynator: wyłącznie bloki `DOPISZ` z priorytetem P0/P1/P2;
+  weryfikacja asynchroniczna, znaleziska jako nowe pozycje
+- właściciel: przekazuje raporty w dogodnym momencie, rozstrzyga decyzje D-*
+
+## 56. Statusy wykonawcy i mapa kolejki (I-9, I-11 — 27.09.2026)
+
+W `PLAN.md` ta sekcja figuruje jako „§53”; numery 53–55 zajął w międzyczasie koordynator, więc jest to §56.
+Nic nie zniknęło: sekcje 0–55 powyżej są kopią pliku koordynatora (27.09.2026, 19:45) bez zmian,
+z trzema dopiskami wykonawcy: 16.3 „ZASTĄPIONA PRZEZ I-18” (decyzja właściciela 27.09) oraz wiersze
+dziennika odłożeń i blokad z audytu 27.09. Poprzedni `SCOPE.md` z repo (tabele 0–11 ze statusami
+i dowodami, dawny §39 „Audyt statusów”) jest przeniesiony w całości niżej (56.2, 56.3).
+Statusy aktualne po etapie I — tabela 56.1 (ona obowiązuje, gdy różni się od 56.2).
+
+### 56.1 Pozycje sekcji 0–11 inne niż GOTOWE w audycie → status po etapie I i miejsce w kolejce (I-11, zasada 7)
+
+Każda z 65 pozycji ma miejsce w `PLAN.md` albo w dzienniku odłożeń / blokad. Po etapie I:
+DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, ODŁOŻONA 7, ZABLOKOWANA 10. Nowe pozycje dopisane do `PLAN.md` przy tej okazji: I-20…I-24, III-2…III-9, D-13…D-15.
+
+| # | Status po etapie I | Gdzie / dowód |
+|---|---|---|
+| 0.1 | DO ZROBIENIA (częściowo) | PLAN III-2 |
+| 0.3 | DO ZROBIENIA (częściowo) | PLAN III-2 |
+| 0.7 | DO ZROBIENIA | PLAN III-2 |
+| 0.8 | DO ZROBIENIA (częściowo) | PLAN III-2 |
+| 0.9 | DO ZROBIENIA (częściowo) | PLAN III-2 |
+| 0.10 | DO ZROBIENIA (częściowo) | PLAN III-2 |
+| 1.1 | DO ZROBIENIA (częściowo) | PLAN III-3 |
+| 1.4 | DO POTWIERDZENIA | I-5 `a548eba` + I-17 `642d68f`: 2FA działa, dwa urządzenia; wymaganie aal2 włącza właściciel — D-11 |
+| 1.5 | GOTOWE | produkcyjny build na tower.log-mar.pl — Vercel `a14a2ac` (POSTEP O-V3), 0 × service_role |
+| 1.6 | DO POTWIERDZENIA | PLAN D-13 (zamiennik hasła do zatwierdzenia) |
+| 1.7 | GOTOWE | I-6 `642d68f`: `client_errors` + alarm co 15 min (test produkcyjny: ryzyko + e-mail 200) |
+| 2.6 | DO ZROBIENIA (częściowo) | PLAN I-20 |
+| 2.7 | DO POTWIERDZENIA | I-7 `642d68f`: dane kierowcy 90 dni; zdjęcia, CMR, POD — D-3 |
+| 2.8 | ZABLOKOWANA | D-5 (umowy RODO), Dziennik blokad |
+| 3.2 | DO ZROBIENIA (częściowo) | PLAN I-22 |
+| 3.7 | GOTOWE | I-10 `a0d21bc`: e-mail wysłany (SENT 21:20); I-18: także zmiana daty potwierdzonej |
+| 3.8 | DO POTWIERDZENIA | PLAN D-15 (limity ponadnormatywności per kraj) |
+| 3.10 | ODŁOŻONA | Dziennik odłożeń; Etap III (SharePoint) |
+| 4.3 | DO ZROBIENIA | PLAN I-21 |
+| 4.5 | DO ZROBIENIA (częściowo) | PLAN III-4 |
+| 5.1 | ZABLOKOWANA | PLAN II-4, D-6; Dziennik blokad |
+| 5.2 | ZABLOKOWANA | PLAN II-4, D-6; Dziennik blokad |
+| 5.3 | ZABLOKOWANA | PLAN II-4, D-6; Dziennik blokad |
+| 5.5 | DO ZROBIENIA (częściowo) | PLAN II-4 (po adapterze 5.1) |
+| 5.10 | DO ZROBIENIA (częściowo) | promy z AIS — I-2j (GOTOWE); kolizje etykiet — PLAN III-5 |
+| 5.12 | GOTOWE | ETA v1 w bazie: I-2d (0051), D-9 (0054), I-15 pasmo RSS (0062), I-16 walidacja 50 transportów; kalibracja — PLAN III-1 |
+| 5.13 | DO ZROBIENIA | PLAN III-5 |
+| 6.1 | DO ZROBIENIA (częściowo) | PLAN III-6 |
+| 6.2 | DO ZROBIENIA (częściowo) | PLAN III-6 |
+| 6.4 | DO ZROBIENIA (częściowo) | PLAN Etap III „walidator zezwoleń i wymiarów” |
+| 6.5 | DO ZROBIENIA (częściowo) | PLAN Etap III „walidator zezwoleń i wymiarów” |
+| 6.6 | DO ZROBIENIA (częściowo) | PLAN Etap III „walidator zezwoleń i wymiarów” (polisy — C4) |
+| 6.8 | GOTOWE | I-2k `e4b393d`: paczka tygodnia tylko z dokumentów tygodnia ISO |
+| 6.9 | ODŁOŻONA | Dziennik odłożeń; Etap III (e-CMR) |
+| 7.1 | ZABLOKOWANA | D-1 (kwoty); formularz cennika — PLAN I-19; pozycja STANDARD — I-12 (0064) |
+| 7.3 | ZABLOKOWANA | D-2 / PLAN II-1 (wartości); formularz SEFS I-2f (0052), zakres I-13 (0063) |
+| 7.4 | DO ZROBIENIA (częściowo) | PLAN II-1 (zadanie notowań po D-2) |
+| 7.5 | DO POTWIERDZENIA | PLAN D-14 (konwencja kursu — księgowość) |
+| 7.7 | DO ZROBIENIA (częściowo) | PLAN I-19 (dodatki w cenniku) + D-1 |
+| 7.10 | DO ZROBIENIA (częściowo) | PLAN III-7 |
+| 7.11 | ODŁOŻONA | Dziennik odłożeń |
+| 8.1 | DO ZROBIENIA | PLAN Etap III „źródło pogody morskiej” |
+| 8.2 | ZABLOKOWANA | PLAN II-5; Dziennik blokad |
+| 8.4 | DO ZROBIENIA (częściowo) | PLAN II-6 |
+| 8.5 | ZABLOKOWANA | PLAN II-6; Dziennik blokad |
+| 8.6 | ZABLOKOWANA | PLAN II-6; Dziennik blokad |
+| 8.10 | ZABLOKOWANA | PLAN II-2; Dziennik blokad |
+| 9.1 | DO ZROBIENIA | PLAN Etap III „Silnik Workflows” |
+| 9.2 | DO ZROBIENIA | PLAN Etap III „Silnik Workflows” |
+| 9.3 | DO ZROBIENIA (częściowo) | PLAN Etap III „Silnik Workflows” |
+| 9.4 | DO ZROBIENIA (częściowo) | PLAN Etap III „Silnik Workflows” (w produkcji moduł ukryty — I-2) |
+| 9.6 | ODŁOŻONA | Dziennik odłożeń; bramka SMS — I-3 (D-4) |
+| 9.8 | DO ZROBIENIA (częściowo) | PLAN I-23 |
+| 9.9 | ODŁOŻONA | Dziennik odłożeń |
+| 9.10 | ODŁOŻONA | Dziennik odłożeń; Etap III (kalendarz) |
+| 10.4 | DO ZROBIENIA | PLAN III-9 (opcjonalny) |
+| 10.6 | DO ZROBIENIA | PLAN III-9 |
+| 10.7 | GOTOWE | I-2l `825da20`: czas wykrycia z `risk_signals` |
+| 10.8 | DO ZROBIENIA (częściowo) | PLAN I-24 (PDF) |
+| 10.9 | ODŁOŻONA | Dziennik odłożeń; Etap III (ślad węglowy) |
+| 11.3 | DO ZROBIENIA (częściowo) | PLAN R-3 (O3b) |
+| 11.4 | DO ZROBIENIA (częściowo) | PLAN III-2 |
+| 11.5 | DO ZROBIENIA | PLAN Etap III „audyt dostępności” |
+| 11.6 | GOTOWE | I-8 `642d68f`: 350 transportów, 112 496 pozycji — liczby w POSTEP |
+| 11.8 | GOTOWE | I-4 `3dac401`: instrukcje w aplikacji dla kierowcy (PL/EN/SV), HHL, KSH, przewoźnika |
+
+### 56.2 Tabele statusów sekcji 0–11 (stan audytu 27.09.2026, przeniesione z poprzedniego `SCOPE.md` repo)
+
+#### 56.2.0 Wierność wizualna
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 0.1 | Arkusz stylów przeniesiony dosłownie z mockupu | DO ZROBIENIA (częściowo) | `src/index.css` nagłówek „CSS 1:1 z tower-makieta.html” (Fala-1-D1) | porównania sum kontrolnych arkusza brak; arkusz rozbudowany o klasy ról |
+| 0.2 | Zrzuty wzorcowe: widok × rola × język × 5 szerokości × 2 tryby | GOTOWE | `shots-baseline/` 840 ujęć, tag `baseline-fala-3e-2026-09-27`; WZORZEC-3C `cede8bd`, A6-WZORZEC2 `ce094ad` |  |
+| 0.3 | Test regresji wizualnej w CI, próg 0,1% | DO ZROBIENIA (częściowo) | F2.2 `14261fc` (720/720); `.githooks/pre-push` → `scripts/ci/fresh-smoke.sh` (smoke 4 ujęć) | próg zmieniony na `maxDiffPixels:60, threshold:0.28` zamiast 0,1%; pełne 840 porównywane ręcznie; GitHub `unit.yml` uruchamia tylko testy jednostkowe |
+| 0.4 | Konfiguracja blokująca wartości spoza systemu | GOTOWE | F2.3 `6f77f7e` stylelint `declaration-strict-value`; `npm run lint:css` w pre-push |  |
+| 0.5 | Zakaz Tailwinda i motywów bibliotek w komponentach | GOTOWE | `package.json` bez Tailwind/MUI/Chakra; `src/index.css` „no Tailwind” (Fala-1-D1) | przegląd grep 27.09 |
+| 0.6 | Katalog komponentów jako kontrakt nazw klas | GOTOWE | `docs/handover/DESIGN_SYSTEM.md` |  |
+| 0.7 | Procedura dodania nowej klasy (3 warunki) | DO ZROBIENIA (nie zrobione) | nie zrobione | w DESIGN_SYSTEM.md brak zapisanej procedury 3 warunków |
+| 0.8 | Stany: spoczynek, najechanie, fokus, wciśnięty, zablokowany | DO ZROBIENIA (częściowo) | tokeny `--surface-2` (hover), `--focus` w DESIGN_SYSTEM.md | brak zrzutów stanów najechanie/fokus/wciśnięty/zablokowany |
+| 0.9 | Stany: ładowanie, pusty, błąd, błąd walidacji | DO ZROBIENIA (częściowo) | klasa `.empty` (DESIGN_SYSTEM.md:174) | brak zrzutów stanów ładowanie/błąd/błąd walidacji |
+| 0.10 | Tryb jasny, ciemny i honorowanie ustawienia systemu | DO ZROBIENIA (częściowo) | 840 ujęć × 2 tryby; `@media (prefers-color-scheme: dark)` `src/index.css:20` | brak zrzutu trybu „systemowy” |
+
+#### 56.2.1 Fundament
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 1.1 | Repozytorium, CI, środowiska testowe i produkcyjne | DO ZROBIENIA (częściowo) | repo GitHub; CI lokalne `.githooks/pre-push` (BK6 `7c5c63a`); produkcja Supabase `nglnnrmzmhusvxslousq` | GitHub Actions tylko unit; brak osobnego środowiska testowego Supabase (BK0) — testy db na lokalnym Postgres |
+| 1.2 | Szkielet aplikacji, trasowanie, układ | GOTOWE | `src/App.tsx`, `src/components/shell/*`, D10 `20ba91c` | routes.test.ts |
+| 1.3 | Trzy języki: polski, angielski, szwedzki | GOTOWE | D19 `d1d10b1`; `tests/d19-i18n.spec.ts` (0 braków) |  |
+| 1.4 | Logowanie bez hasła, dwuskładnikowe dla administratorów | DO ZROBIENIA (częściowo) | BK2 `1fd0e82` magic link; ZAPR-LOGIN `0f1ff4d` | 2FA: produkcja `auth.mfa_factors` = 0, nic nie wymusza aal2 (audyt B7) |
+| 1.5 | Wdrożenie na wskazanej domenie | DO ZROBIENIA (częściowo) | DOMENA-TOWER `3307c05` (CNAME, Site URL, `scripts/check-domain.sh`) | O2 OPEN: Vercel serwuje build demo sprzed 3 dni |
+| 1.6 | Podgląd wdrożeń zabezpieczony hasłem | DO POTWIERDZENIA | A5-PODGLADY `e87c24f` (podglądy w trybie demo) | dane klienta; zamiennik zamiast hasła — do zatwierdzenia przez właściciela jako zamknięte |
+| 1.7 | Monitoring błędów i logi | DO ZROBIENIA (częściowo) | STRAZNIK `ea201ee` (`job_watchdog`, cron tower-straznik-zadan) | monitoringu błędów przeglądarek i logów aplikacji brak (audyt D1) |
+| 1.8 | Kopie zapasowe bazy i procedura odtworzenia | GOTOWE | PR2-B `5c62f6c`, PR2-C `74a7ca0`, PR2-B-R2LOCK; gate backup 20/20; `scripts/restore-files.sh` | cron tower-backup-export 00:30 |
+
+#### 56.2.2 Dane i dostęp
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 2.1 | Schemat: organizacje, użytkownicy, role | GOTOWE | `0001_core.sql` (organizations, app_users, role); BK1 `e70e378`; gate security 83 | **schema z mockupu ma zostać** |
+| 2.2 | Projekt, elementy, transporty (model dwupoziomowy) | GOTOWE | `0001_core.sql` loads + shipment_items | schemat; produkcja loads = 0 wierszy |
+| 2.3 | Strumień zdarzeń, niezmienny | GOTOWE | wyzwalacz `trg_load_events_immutable` (prod), polityki tylko SELECT/INSERT; gate status 44 |  |
+| 2.4 | Rozdzielenie kosztu i przychodu na poziomie bazy | GOTOWE | load_cost/load_revenue RLS; BK5 `17e6beb` 8/8; gate money 130 |  |
+| 2.5 | Widoki rolowe | GOTOWE | widoki prod `v_load_price_client`, `v_load_price_carrier`, `v_load_financials_hhl`; 2.2 `8d4198a` |  |
+| 2.6 | Dziennik audytu | DO ZROBIENIA (częściowo) | `audit_log` (prod 3 wiersze) zapisywany w 0008, 0026, 0034, 0039, 0045 | tylko wybrane operacje (zaproszenia, sesje, relink, okna); brak ogólnego wyzwalacza audytu |
+| 2.7 | Retencja danych osobowych | DO POTWIERDZENIA | `purge_personal_data(p_days=90)` + cron tower-rodo; GPS 30 dni po rozładunku (0025) | czeka na decyzję: ile dni; liczba dni do decyzji; zdjęcia i CMR poza retencją (audyt D13) |
+| 2.8 | Umowy powierzenia między trzema stronami | ZABLOKOWANA | nie zrobione | poza kodem, ale w zakresie; umowy powierzenia — właściciel/prawnik (audyt B3) |
+
+#### 56.2.3 Harmonogram
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 3.1 | Wgrywanie pliku arkusza | GOTOWE | D23 `3f140a7`, D26 `dc364d7`, D23-S `4c52455`; I-1 `9bf80d7`, `f8b6355` (0047, 0048); I-2C `0c247b3` (0050) | produkcja: `import_schedule()` zapisuje `loads` + `shipment_items` w jednej transakcji (tylko HHL); pełny plik lokalnie 50/50 wysyłek (41 z wymiarami + 9 klasy STANDARD, wymiary NULL) |
+| 3.2 | Kreator mapowania kolumn z zapisem szablonu | DO ZROBIENIA (częściowo) | `src/lib/importColumnMap.ts` COLUMN_MAP_DEFAULT; kolumna `schedule_imports.column_map` | stały szablon, brak kreatora mapowania i zapisu szablonu przez aplikację |
+| 3.3 | Parser wymiarów, dat, godzin, telefonów | GOTOWE | `src/lib/scheduleParse.ts`; schedule-import.test.ts | część testów parsera w schedule-import (unit 353 passed) |
+| 3.4 | Walidacja blokująca, w tym przesunięte kolumny | GOTOWE | `scheduleDryRun.ts` (72 błędne → baza nietknięta, D23-S `4c52455`) |  |
+| 3.5 | Podgląd różnic przed zapisem | GOTOWE | `diffSchedule` + podgląd w ScheduleView; D26 `dc364d7` |  |
+| 3.6 | Wersjonowanie i archiwum pliku źródłowego | GOTOWE | I-1 `9bf80d7`: `schedule_imports` (wersja, sha, file_name), koszyk Storage `harmonogramy`; I-2B `d2a8219`: kubełek i tabela w kopii zapasowej | kopia: tabele z katalogu minus jawne wyłączenia, kubełek `harmonogramy` w `files/` |
+| 3.7 | Powiadomienie o zmianie daty na transporcie awizowanym | GOTOWE (IN_APP) | I-1 `9bf80d7`: SCHEDULE_DATE_CRITICAL + `notifications` IN_APP dla HHL i przewoźnika | e-mail wymaga wdrożenia Edge `send-notifications` (template gotowy) |
+| 3.8 | Klasyfikacja ponadnormatywności per kraj | DO POTWIERDZENIA | `src/lib/permits.ts` (PL kategorie I–V, SE TSFS); PL-T `40eca8a`; pl-t.test.ts | limity do potwierdzenia; limity do potwierdzenia |
+| 3.9 | Kolejność montażowa i wykrywanie rozjazdu | GOTOWE | cron tower-kolejnosc `detect_sequence_risk`; gate risks 23 | kolejność montażu z kolumny dodanej po naszej stronie |
+| 3.10 | Integracja z SharePoint | ODŁOŻONA | nie zrobione | zależna od zgody IT klienta; zob. Dziennik odłożeń |
+
+#### 56.2.4 Zasoby i awizacja
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 4.1 | Formularz zasobów dla przewoźnika | GOTOWE | `load.resources` → update loads (SupabaseProvider:179); awizacja-patch.test.ts |  |
+| 4.2 | Awizacja jako okno czasowe | GOTOWE | kolumny `plan_load_from/to`, `plan_delivery_from/to` (0001); `load.awizacja` (SupabaseProvider:180) |  |
+| 4.3 | Terminy uzupełnienia i eskalacje | DO ZROBIENIA (nie zrobione) | nie zrobione | terminy uzupełnienia zasobów i eskalacje w bazie brak (tower-terminy dotyczy płatności, M7) |
+| 4.4 | Wymiary zestawu odrębnie od wymiarów elementu | GOTOWE | kolumny `combo_*` (0001) odrębne od `shipment_items`; `src/lib/permits.ts` SetDims |  |
+| 4.5 | Pojazdy pilotujące | DO ZROBIENIA (częściowo) | kolumna `escort_vehicles`; dodatek pilotażu w `money/engine.ts` | brak osobnej obsługi pojazdów pilotujących (dane, awizacja) |
+| 4.6 | Rezerwacja promu | GOTOWE | `ferry_booking_ref`, `load.ferry` (SupabaseProvider:181), sailings prod 147 |  |
+
+#### 56.2.5 Pozycje i mapa
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 5.1 | Adapter telematyki: interfejs | ZABLOKOWANA | nie zrobione | interfejsu adaptera w kodzie brak — czeka na nazwę systemu SCX i API |
+| 5.2 | Adapter: standard producentów pojazdów | ZABLOKOWANA | nie zrobione | rFMS tylko wzmianka w 0001 — zależy od spotkania z SCX |
+| 5.3 | Adapter: system przewoźnika | ZABLOKOWANA | nie zrobione | **czeka na odpowiedź przewoźnika**; czeka na odpowiedź przewoźnika |
+| 5.4 | Aplikacja dla kierowcy z tokenem | GOTOWE | M9 `3f73c7a`, 2.3 `1595e8b`, PR5 `816970f`; driver-api.test.ts, driver-tracking.test.ts | fallback, budowany zawsze |
+| 5.5 | Odbiór zdarzeń wypychanych i odpytywanie | DO ZROBIENIA (częściowo) | RPC `report_position` (odpytywanie przez PWA) | odbioru zdarzeń wypychanych (webhook telematyki) brak — zależy od 5.1 |
+| 5.6 | Idempotentność przetwarzania pozycji | GOTOWE | PR5 `816970f`; gate watchdog/status |  |
+| 5.7 | Surowy odczyt nigdy nienadpisywany | GOTOWE | `positions`: tylko polityka SELECT, zapis wyłącznie przez RPC, brak UPDATE |  |
+| 5.8 | Geofencing: histereza, postój, tłumienie drgań | GOTOWE | `0002_geofence_engine.sql` (hysteresis, dwell, debounce); gate status 44 |  |
+| 5.9 | Edytor stref na mapie | GOTOWE | GeofenceView + RPC `upsert_geofence_circle` (`geofence.save`) | tylko okręgi |
+| 5.10 | Mapa: warstwy, tryb skupienia, unikanie kolizji etykiet | DO ZROBIENIA (częściowo) | D14 `f384740` (Leaflet, warstwy), tryb skupienia CorridorMap | unikanie kolizji etykiet nie zweryfikowane; markery floty w demo mają sztuczny dryf (02_FASADA) |
+| 5.11 | Wykrywanie cichego pojazdu | GOTOWE | cron tower-cisza-gps `detect_silent_vehicles` */15 |  |
+| 5.12 | Przewidywany czas przyjazdu, model segmentowy | DO ZROBIENIA (częściowo) | `src/lib/eta.ts computeEta` (M12 `380e0ac`) | heurystyka statusowa po stronie klienta; `eta_site` nie wyliczane w bazie (audyt C2) |
+| 5.13 | Odtwarzanie przebiegu w czasie | DO ZROBIENIA (nie zrobione) | nie zrobione | brak odtwarzania przebiegu |
+| 5.14 | Podmiana schematu mapy na warstwę kartograficzną | GOTOWE | D14 `f384740` CorridorMap (Leaflet) |  |
+
+#### 56.2.6 Dokumenty
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 6.1 | Kategorie z wymagalnością i terminami | DO ZROBIENIA (częściowo) | typy dokumentów + KPI kompletności (DashboardView) | wymagalność i terminy per kategoria — brak reguł w bazie |
+| 6.2 | Wersjonowanie i widoczność per organizacja | DO ZROBIENIA (częściowo) | `documents` + polityka `docs_read`, `create_document`/`discard_document`; BK4 `80e870b` | widoczność per organizacja jest; wersjonowania dokumentu brak |
+| 6.3 | Odnośniki z krótkim czasem ważności | GOTOWE | BK4 `80e870b` signed URL; storage-files.test.ts; gate storage 37 |  |
+| 6.4 | Zezwolenia: pola, ważność, trasa, pilotaż | DO ZROBIENIA (częściowo) | tabele `permits`, `load_permits` (0001) | wzór do zmapowania; RLS bez polityk, aplikacja nie czyta; zezwolenia tylko jako `documents` (audyt C4) |
+| 6.5 | Walidator wymiarów zestawu wobec zezwolenia | DO ZROBIENIA (częściowo) | `permit_fits()` (SECURITY INVOKER), `src/lib/permits.ts` | blokuje transport; na produkcji nie blokuje transportu — 0 zezwoleń, tabela nieczytelna (audyt C4) |
+| 6.6 | Polisy z alertem wygaśnięcia | DO ZROBIENIA (częściowo) | tabela `insurance_policies`; typ ryzyka INSURANCE (0020) | brak alertu wygaśnięcia — tabela nieczytelna, brak zadania (audyt C4) |
+| 6.7 | Potwierdzenie dostawy i zdjęcia mocowania | GOTOWE | PR6 `1595e8b`/`9b404ba` Edge driver-photo; PR7 `b93f0a3` kompresja; pr7-compress.spec.ts |  |
+| 6.8 | Pobieranie paczki per transport i per tydzień | DO ZROBIENIA (częściowo) | `src/lib/zipDocs.ts`: paczka per transport (LoadDrawer:403) i „tydzień” (DocsView:78) | paczka „tygodniowa” pakuje całą listę, bez filtra tygodnia |
+| 6.9 | Elektroniczny list przewozowy | ODŁOŻONA | nie zrobione | faza późniejsza; zob. Dziennik odłożeń |
+
+#### 56.2.7 Pieniądze
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 7.1 | Macierz cennika, wersjonowana | ZABLOKOWANA | M1 `d113779` silnik; produkcja `rate_cards` 0, `rate_rules` 0 | czeka na stawki; czeka na stawki (audyt B1) |
+| 7.2 | Dopasowanie stawki; brak dopasowania nie daje zera | GOTOWE | M1 `d113779`, M2 `45e8d10`; money.test.ts; gate money 130 |  |
+| 7.3 | Indeksacja paliwowa, pełna parametryzacja | ZABLOKOWANA | M4 `500e405`, `src/lib/sefs.ts`; produkcja `baf_definitions` 0, `baf_index_values` 0 | czeka na parametry; czeka na parametry SEFS (audyt B2); F2.4-a, F2.4-b OPEN |
+| 7.4 | Pobieranie notowań z zapisem źródła | DO ZROBIENIA (częściowo) | M3 `ce3ff43` NBP (cron tower-kurs-nbp, fx_rates 17) | kursy tak; notowań paliwa (OKQ8/Orlen) brak zadania (audyt B2) |
+| 7.5 | Kursy walut i konwencja | DO POTWIERDZENIA | M3 `ce3ff43`, W3 `7318abd` | czeka na ustalenie; konwencja kursu do potwierdzenia przez księgowość (audyt H) |
+| 7.6 | Marża, próg ostrzegawczy | GOTOWE | M11 `fd94928`; money-m11.test.ts |  |
+| 7.7 | Dodatki: pilotaż, postojowe, prom, zezwolenia | DO ZROBIENIA (częściowo) | `money/engine.ts` dodatki; money-v2.test.ts | bez stawek na produkcji nic nie wylicza (7.1) |
+| 7.8 | Faktura zbiorcza, kreator dla przewoźnika | GOTOWE | M6 `2b4ff4a`, RPC `register_invoice`; invoices3.test.ts |  |
+| 7.9 | Dopasowanie trójstronne z rozbiciem różnic | GOTOWE | `src/lib/invoiceMatch.ts`; invoice-match.test.ts |  |
+| 7.10 | Ścieżka sporu i akceptacji | DO ZROBIENIA (częściowo) | `bill.verify` (dispute_note, SupabaseProvider:220), BillsPanel | akceptacja/spór jako weryfikacja faktury; brak pełnej ścieżki sporu |
+| 7.11 | Krajowy system e-faktur | ODŁOŻONA | nie zrobione | faza późniejsza; zob. Dziennik odłożeń |
+
+#### 56.2.8 Ryzyko
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 8.1 | Pogoda morska na trasie promowej | DO ZROBIENIA (nie zrobione) | nie zrobione | licencja źródła do potwierdzenia; brak źródła i zadania; baner fali tylko w demo (audyt C3) |
+| 8.2 | Odczyt komunikatów armatora | ZABLOKOWANA | `src/lib/ferry/polferries.ts`, Edge ferry-status | brak zadania cron — czeka na zgodę armatora (audyt C7) |
+| 8.3 | Śledzenie jednostek | GOTOWE | cron tower-ferry-ais */10 (Digitraffic); WAWEL-AIS `4569a7b` |  |
+| 8.4 | Panel alternatywnych przepraw z przeliczeniem | DO ZROBIENIA (częściowo) | RisksView `ALT` (4 przeprawy), `seRouteAlts.ts` (D25) | dane statyczne, bez przeliczenia na żywo (audyt C5) |
+| 8.5 | Zdarzenia drogowe w Szwecji | ZABLOKOWANA | M12 `380e0ac` Edge road-se | brak klucza Trafikverket, brak cron; w UI oznaczenie demo |
+| 8.6 | Zdarzenia drogowe w Polsce | ZABLOKOWANA | Edge road-pl | brak dobrego źródła — do rozstrzygnięcia; brak źródła/klucza, brak cron |
+| 8.7 | Ryzyka dokumentowe i zasobowe | GOTOWE | risk_signals typy DOC_MISSING/PERMIT/INSURANCE (0020); gate risks 23 |  |
+| 8.8 | Ryzyko kolejności montażowej | GOTOWE | cron tower-kolejnosc; gate risks 23 |  |
+| 8.9 | Kolejka wyjątków z wagą i czasem do skutku | GOTOWE | kolejka wyjątków (RisksView/DashboardView); risk-keys.test.ts |  |
+| 8.10 | Kody przyczyn opóźnień | ZABLOKOWANA | enum `delay_code` A_CLIENT…F_ADMIN (0001) | czeka na uzgodnienie z przewoźnikiem; nieuzgodnione z przewoźnikiem; UI nie używa (audyt C8) |
+
+#### 56.2.9 Automatyzacje i powiadomienia
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 9.1 | Silnik: wyzwalacz, warunek, akcje | DO ZROBIENIA (nie zrobione) | nie zrobione | na produkcji brak silnika reguł (audyt C1); L9 OPEN |
+| 9.2 | Wykonanie trwałe, z ponawianiem | DO ZROBIENIA (nie zrobione) | nie zrobione | zależy od 9.1 |
+| 9.3 | Siedem reguł startowych | DO ZROBIENIA (częściowo) | 12 reguł wf-1…12 tylko w `src/data/seed.ts` (demo) | produkcja `workflows` 0; automatyzacje jako zaszyte funkcje SQL + cron |
+| 9.4 | Kreator reguł dla administratora | DO ZROBIENIA (częściowo) | WorkflowsView (demo, `runWorkflowNow` bez ewaluacji) | fasada — brak zapisu i wykonania |
+| 9.5 | Poczta z szablonami w trzech językach | GOTOWE | M7 `c907fe9`; `supabase/functions/_shared/notifyTemplates.ts` pl/en/sv; cron tower-send-notifications |  |
+| 9.6 | Wiadomości tekstowe | ODŁOŻONA | nie zrobione | zob. Dziennik odłożeń |
+| 9.7 | Powiadomienia w aplikacji | GOTOWE | `notifications` + RPC `mark_notifications_read` |  |
+| 9.8 | Odsiewanie duplikatów | DO ZROBIENIA (częściowo) | unikalny indeks `notifications(dedup_key)`, `risk_signals(dedup_key)` (0001) | brak dedykowanego testu |
+| 9.9 | Kanał zespołowy | ODŁOŻONA | nie zrobione | zob. Dziennik odłożeń |
+| 9.10 | Kalendarz do subskrypcji | ODŁOŻONA | nie zrobione | zob. Dziennik odłożeń |
+| 9.11 | Czat przy transporcie | GOTOWE | `load_messages` + `message.send` (SupabaseProvider:186); data-layer.test.ts |  |
+
+#### 56.2.10 Pulpity
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 10.1 | Pulpit spedytora | GOTOWE | DashboardView (HHL); etap4/5/6-ui.spec.ts |  |
+| 10.2 | Pulpit klienta | GOTOWE | DashboardView (KSH); BK5 8/8 |  |
+| 10.3 | Pulpit przewoźnika | GOTOWE | DashboardView (SCX); BK5 8/8 |  |
+| 10.4 | Widok placu budowy, tylko do odczytu | DO ZROBIENIA (nie zrobione) | nie zrobione | opcjonalny; opcjonalny |
+| 10.5 | Krzywa postępu dostaw | GOTOWE | `src/components/chart/DeliveryProgress.tsx` |  |
+| 10.6 | Ocena przewoźnika | DO ZROBIENIA (nie zrobione) | nie zrobione | brak oceny przewoźnika |
+| 10.7 | Czas wykrycia odchylenia | DO ZROBIENIA (częściowo) | kafelek `a6_dash_detect_time` (DashboardView:261) | wartość wpisana na sztywno „8 min” — atrapa |
+| 10.8 | Eksport do arkusza i pliku przenośnego | DO ZROBIENIA (częściowo) | `src/lib/xlsxExport.ts` (ScheduleView) | XLSX tak, PDF brak |
+| 10.9 | Raport śladu węglowego | ODŁOŻONA | nie zrobione | faza późniejsza; zob. Dziennik odłożeń |
+
+#### 56.2.11 Jakość
+
+| # | Pozycja | Status | Dowód | Notatka |
+|---|---|---|---|---|
+| 11.1 | Testy jednostkowe logiki: cennik, indeksacja, parser, strefy | GOTOWE | unit 353 passed / 28 skipped (money, sefs, schedule-import, routes, …) |  |
+| 11.2 | Testy integracyjne bazy i uprawnień | GOTOWE | `tests/db/gate.sh`: security 83, status 44, storage 37, money 130, release 145, backup 20, session 27, archive 18, watchdog 27, invite 48, risks 23 |  |
+| 11.3 | Testy ścieżek użytkownika | DO ZROBIENIA (częściowo) | etap4/5/6-ui.spec.ts, bk5-api.live.spec.ts | na produkcji niewykonane (O3a/O3b) |
+| 11.4 | Testy regresji wizualnej | DO ZROBIENIA (częściowo) | zob. 0.3 | patrz 0.3 |
+| 11.5 | Dostępność: klawiatura, kontrast, czytniki ekranu | DO ZROBIENIA (nie zrobione) | nie zrobione | nigdy niesprawdzana (audyt D2); są tylko atrybuty aria |
+| 11.6 | Wydajność przy pełnym zakresie projektu | DO ZROBIENIA (częściowo) | D15 `ecb0632` (pierwsze wczytanie 224 kB gz) | bazy z 72 transportami i pełnym GPS nie testowano (audyt D3) |
+| 11.7 | Skróty klawiszowe z widocznymi podpowiedziami | GOTOWE | `src/components/shell/KeyboardHelp.tsx` |  |
+| 11.8 | Dokumentacja wdrożeniowa i instrukcja dla trzech stron | DO ZROBIENIA (częściowo) | `docs/handover/*` (wdrożeniowe, PRZELACZENIE_HOSTINGU.md) | instrukcji dla trzech stron brak (audyt B6) |
+
+---
+
+### 56.3 Audyt statusów (dawny §39 `SCOPE.md` repo, 27.09.2026)
+
 
 Źródło: `docs/handover/AUDYT_ZAKRESU.md` (audyt właściciela, 27.09.2026). Sekcje 0–11 dostały
 statusy i dowody (114 pozycji). Produkcja sprawdzona wyłącznie odczytem (SELECT). Nic nie naprawiano.
@@ -1043,7 +1728,7 @@ ODŁOŻONA 7 · DO POTWIERDZENIA 4 (razem 114).
 transportów z importu harmonogramu (brak `insert` do `loads`; jest tylko `import_cancel_loads`).
 Na produkcji import nie utworzy transportu — dotyczy 3.1 i O3b.
 
-### Odpowiedzi na sekcję C
+#### Odpowiedzi na sekcję C
 
 | # | Odpowiedź | Dowód |
 |---|---|---|
@@ -1056,7 +1741,7 @@ Na produkcji import nie utworzy transportu — dotyczy 3.1 i O3b.
 | C7 | Potwierdzam: parser i Edge ferry-status są, zadania cron brak | cron.job bez ferry-status; `src/lib/ferry/polferries.ts` |
 | C8 | W bazie enum `delay_code` A_CLIENT…F_ADMIN; interfejs z niego nie korzysta; nieuzgodnione | `0001_core.sql` (`delay_code`); rg w `src/` 0 użyć |
 
-### B5 — strefy załadunku według audytu
+#### B5 — strefy załadunku według audytu
 
 Harmonogram (`public/KSH_HARMONOGRAM.xlsx`, `src/data/ksh-schedule.json`, 50 pozycji) nie ma
 kolumny adresu załadunku; `loads` na produkcji nie ma kolumn adresu (0 wierszy). Jedyne miejsce
@@ -1069,14 +1754,14 @@ załadunku = siedziba KSH.
 Pozostałe strefy produkcji: PRE_PORT, PORT_OUT Gdańsk, PORT_IN Nynäshamn, PRE_ARRIVAL, SITE Boden.
 Jeśli KSH zacznie ładować gdzie indziej — potrzebna kolumna adresu w harmonogramie i nowa strefa.
 
-### O3 podzielone, warunek release-1.0
+#### O3 podzielone, warunek release-1.0
 
 - **O3a** — logowanie trzech ról (HHL, KSH, SCX) na produkcji.
 - **O3b** — pełny transport (import → awizacja → prom → SE → rozładunek) przy pierwszym prawdziwym
   transporcie w pilotażu. Warunek wstępny: zapis importu do `loads` (ustalenie wyżej).
 - **release-1.0** — dopiero po etapie I z audytu i po O3b.
 
-### Etap I (przyjęto: sekcja B audytu — blokery pierwszego użytkownika i faktury)
+#### Etap I (przyjęto: sekcja B audytu — blokery pierwszego użytkownika i faktury)
 
 | # | Stan 27.09.2026 |
 |---|---|
@@ -1088,6 +1773,7 @@ Jeśli KSH zacznie ładować gdzie indziej — potrzebna kolumna adresu w harmon
 | B6 Instrukcje | nie zrobione |
 | B7 2FA administratorów | nie zrobione — `auth.mfa_factors` 0 |
 
-### I-2i — pozycje „częściowo” działające tylko w demo (27.09.2026)
+#### I-2i — pozycje „częściowo” działające tylko w demo (27.09.2026)
 
 Tabela: `docs/handover/POSTEP.md` § I-2i (11 pozycji: 8 ukrytych/zastąpionych w I-2a–h, nowe I-2j, I-2k, I-2l w `PLAN.md`). Statusy przeniesie I-9.
+

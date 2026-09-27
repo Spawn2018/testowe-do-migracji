@@ -84,16 +84,22 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 | I-6 | monitoring błędów przeglądarki do własnej tabeli, alarm | błąd testowy widoczny w tabeli | DONE 642d68f |
 | I-7 | retencja: dane kierowcy 90 dni | test | DONE 642d68f; dokumenty — decyzja D-3 |
 | I-8 | wydajność: cały harmonogram + GPS według PR5, trzy role | czasy liczbami | DONE 642d68f |
-| I-9 | `SCOPE.md` koordynatora w repo; Twoje statusy jako §53 | jeden rejestr | DO ZROBIENIA |
-| I-11 | każda pozycja SCOPE 0–11 inna niż DONE ma miejsce w tej kolejce albo w dzienniku odłożeń | zasada 7 spełniona | DO ZROBIENIA |
-| I-12 | (P1, D-8, blok właściciela 27.09) cennik — pozycja STANDARD: stała stawka, koszt i przychód osobno, ten sam mechanizm paliwa i kursu; `cargo_class = STANDARD` → pozycja STANDARD; brak stawki = wyraźne ostrzeżenie, nie zero; kwot nie wymyślamy (D-1) | brak stawki → ostrzeżenie; test mechanizmu na stawce testowej | DONE (ten commit) — 0064; kwoty STANDARD czekają na D-1 |
-| I-13 | (P1, kolejność P1: 5.; obejmuje D-10) `sefs_parameters.applies_to` (COST / REVENUE / BOTH, domyślnie BOTH); RLS: przewoźnik COST+BOTH, KSH REVENUE+BOTH, HHL wszystko | test bazy: przewoźnik nie widzi wiersza REVENUE, KSH nie widzi wiersza COST | DONE (ten commit) — 0063; D-10 zrealizowane tutaj |
+| I-9 | `SCOPE.md` koordynatora w repo; Twoje statusy jako §53 | jeden rejestr | DONE (ten commit) — SCOPE = plik koordynatora §0–55 bez zmian + §56 (statusy wykonawcy; §53–55 zajęte przez koordynatora) |
+| I-11 | każda pozycja SCOPE 0–11 inna niż DONE ma miejsce w tej kolejce albo w dzienniku odłożeń | zasada 7 spełniona | DONE (ten commit) — SCOPE §56.1: 65 pozycji → miejsce w PLAN albo dzienniku; nowe I-20…I-24, III-2…III-9, D-13…D-15 |
+| I-19 | (P1, właściciel 27.09 — luka z I-12) formularz cennika dla HHL w aplikacji: stawki koszt (przewoźnik) i przychód (KSH), przedziały wymiarów i pozycja STANDARD, wersjonowanie (nowa wersja zamiast nadpisania) z dziennikiem zmian, interfejs po polsku; dziś cennik da się zapisać tylko SQL, a od niego zależy R-1. Kwot nie wpisujemy (D-1) | HHL zapisuje wersję cennika w aplikacji, dziennik pokazuje kto/co; KSH i przewoźnik nie zapisują; test bazy + e2e | DO ZROBIENIA |
+| I-12 | (P1, D-8, blok właściciela 27.09) cennik — pozycja STANDARD: stała stawka, koszt i przychód osobno, ten sam mechanizm paliwa i kursu; `cargo_class = STANDARD` → pozycja STANDARD; brak stawki = wyraźne ostrzeżenie, nie zero; kwot nie wymyślamy (D-1) | brak stawki → ostrzeżenie; test mechanizmu na stawce testowej | DONE a14a2ac — 0064; kwoty STANDARD czekają na D-1 |
+| I-13 | (P1, kolejność P1: 5.; obejmuje D-10) `sefs_parameters.applies_to` (COST / REVENUE / BOTH, domyślnie BOTH); RLS: przewoźnik COST+BOTH, KSH REVENUE+BOTH, HHL wszystko | test bazy: przewoźnik nie widzi wiersza REVENUE, KSH nie widzi wiersza COST | DONE 1d05ea4 — 0063; D-10 zrealizowane tutaj |
 | I-15 (stara, D-10) | (P1, decyzja D-10) przewoźnik widzi parametry SEFS tylko do odczytu, wyłącznie wersje `agreed_with_carrier = true` | RLS + test bazy | ZASTĄPIONA PRZEZ I-13 (właściciel 27.09: D-10 w I-13; ID I-15 przejęte przez pasmo ETA niżej) |
 | I-17 | (P1, kolejność P1: 1.) 2FA: drugie urządzenie uwierzytelniające w „Weryfikacja dwuetapowa” | dwa składniki, każdy działa niezależnie | DONE 642d68f |
-| I-18 | (P1, kolejność P1: 2.; D-12) status daty planu: WSTĘPNA \| POTWIERDZONA (autor, czas). KSH: „Potwierdź daty” na transporcie, z możliwością zmiany; zmiana daty potwierdzonej = zdarzenie + powiadomienie HHL i przewoźnika. Import HHL nie nadpisuje daty potwierdzonej bez osobnego ostrzeżenia i zgody. Ryzyko: brak potwierdzenia N dni przed załadunkiem (N w tabeli parametrów, domyślnie 5). Interfejs odróżnia datę wstępną od potwierdzonej. ANEKS 2 bez zmian (przewoźnik nadal nie zmienia okien KSH) | test bazy + widoki trzech ról | DONE (ten commit) — 0061; SCOPE 16.3 ZASTĄPIONA PRZEZ I-18 |
-| I-16 | (P1, kolejność P1: 3.) walidacja ETA na 50 prawdziwych transportach: zapas w godzinach względem planu 5 dni (min, mediana, maks.) + rozbicie transportu testowego D-9 (planowany załadunek, planowana dostawa, rejs, ETA na odcinek); ujemny zapas = najpierw sprawdzić model i rejs | liczby min/mediana/maks. + rozbicie | DONE (ten commit) — 30 / 54 / 55 h, 0 ujemnych |
-| I-15 | (P1, kolejność P1: 4.) pasmo ETA: odpoczynek dobowy 11 h jako osobny odcinek ±0%, przerwy 2 h ±50%; łączenie niepewności pierwiastkiem z sumy kwadratów zamiast sumy | pasmo przed i po | DONE (ten commit) — 0062; rejs założony 1013 → 433 min |
+| I-18 | (P1, kolejność P1: 2.; D-12) status daty planu: WSTĘPNA \| POTWIERDZONA (autor, czas). KSH: „Potwierdź daty” na transporcie, z możliwością zmiany; zmiana daty potwierdzonej = zdarzenie + powiadomienie HHL i przewoźnika. Import HHL nie nadpisuje daty potwierdzonej bez osobnego ostrzeżenia i zgody. Ryzyko: brak potwierdzenia N dni przed załadunkiem (N w tabeli parametrów, domyślnie 5). Interfejs odróżnia datę wstępną od potwierdzonej. ANEKS 2 bez zmian (przewoźnik nadal nie zmienia okien KSH) | test bazy + widoki trzech ról | DONE cdbb696 — 0061; SCOPE 16.3 ZASTĄPIONA PRZEZ I-18 |
+| I-16 | (P1, kolejność P1: 3.) walidacja ETA na 50 prawdziwych transportach: zapas w godzinach względem planu 5 dni (min, mediana, maks.) + rozbicie transportu testowego D-9 (planowany załadunek, planowana dostawa, rejs, ETA na odcinek); ujemny zapas = najpierw sprawdzić model i rejs | liczby min/mediana/maks. + rozbicie | DONE 4e40ca5 — 30 / 54 / 55 h, 0 ujemnych |
+| I-15 | (P1, kolejność P1: 4.) pasmo ETA: odpoczynek dobowy 11 h jako osobny odcinek ±0%, przerwy 2 h ±50%; łączenie niepewności pierwiastkiem z sumy kwadratów zamiast sumy | pasmo przed i po | DONE bfbc974 — 0062; rejs założony 1013 → 433 min |
 | I-14 | (P2) `baf_definitions` + `baf_index_values` (0 wierszy) obok `sefs_parameters`/`fuel_index_readings` = dwa źródła prawdy dopłaty paliwowej — wybrać jedno, drugie usunąć (tylko przy 0 wierszy na produkcji) albo opisać | jedno miejsce na parametry, jedno na odczyty | DO ZROBIENIA |
+| I-20 | (P2, z I-11: SCOPE 2.6) ogólny dziennik audytu: wyzwalacz na tabelach biznesowych (loads, shipment_items, invoices, rate_*, sefs_*) — kto, kiedy, stara/nowa wartość | test bazy: zmiana każdej tabeli = wiersz w audit_log | DO ZROBIENIA |
+| I-21 | (P2, z I-11: SCOPE 4.3) terminy uzupełnienia zasobów (kierowca, pojazd, dokumenty) przed załadunkiem i eskalacja (ryzyko + powiadomienie) | test bazy: brak zasobów N h przed załadunkiem → ryzyko | DO ZROBIENIA |
+| I-22 | (P2, z I-11: SCOPE 3.2) kreator mapowania kolumn importu z zapisem szablonu w bazie (HHL) | nowy układ pliku zmapowany i zapamiętany; import 50/50 | DO ZROBIENIA |
+| I-23 | (P2, z I-11: SCOPE 9.8) test odsiewania duplikatów powiadomień (dedup_key) dla wszystkich szablonów | test bazy | DO ZROBIENIA |
+| I-24 | (P2, z I-11: SCOPE 10.8) eksport raportów do PDF (obok XLSX) | plik PDF z harmonogramu | DO ZROBIENIA |
 
 ## PILOTAŻ I WYDANIE
 
@@ -118,6 +124,14 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 ## ETAP III — po pilotażu
 
 **III-1** (P2) kalibracja czasów odcinków ETA po 5 transportach — mediana i rozrzut każdego odcinka z wjazdów/wyjazdów stref; PROPOZYCJA zmian do zatwierdzenia przez HHL, nigdy cicha zmiana (odbiór: raport odcinków z liczbami i propozycją) — DO ZROBIENIA ·
+**III-2** (P2, z I-11: SCOPE 0.1, 0.3, 0.7–0.10, 11.4) domknięcie wierności wizualnej: suma kontrolna arkusza wobec makiety, próg 0,1% i pełne 840 ujęć w CI, procedura nowej klasy (3 warunki) w `DESIGN_SYSTEM.md`, zrzuty stanów (najechanie, fokus, wciśnięty, zablokowany, ładowanie, błąd, walidacja) i trybu „systemowy” — DO ZROBIENIA ·
+**III-3** (P2, z I-11: SCOPE 1.1) osobne środowisko testowe Supabase i testy bazy w GitHub Actions (dziś tylko lokalny hook) — DO ZROBIENIA ·
+**III-4** (P2, z I-11: SCOPE 4.5) pojazdy pilotujące: dane i awizacja — DO ZROBIENIA ·
+**III-5** (P2, z I-11: SCOPE 5.10, 5.13) mapa: unikanie kolizji etykiet, odtwarzanie przebiegu w czasie — DO ZROBIENIA ·
+**III-6** (P2, z I-11: SCOPE 6.1, 6.2) dokumenty: wymagalność i terminy per kategoria w bazie, wersjonowanie dokumentu — DO ZROBIENIA ·
+**III-7** (P2, z I-11: SCOPE 7.10) pełna ścieżka sporu i akceptacji faktury — DO ZROBIENIA ·
+**III-8** — (numer zarezerwowany, nieużyty) ·
+**III-9** (P2, z I-11: SCOPE 10.4, 10.6) widok placu budowy tylko do odczytu (opcjonalny), ocena przewoźnika — DO ZROBIENIA ·
 Silnik Workflows · źródło pogody morskiej · walidator zezwoleń i wymiarów ·
 pozycje D4–D12 audytu · integracja SharePoint (zgoda IT KSH) · kalendarz ·
 e-CMR · ślad węglowy · SMS 6, 7, 10, 11 · retencja `files/` w R2 ·
@@ -143,3 +157,6 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | D-10 | ~~widoczność SEFS dla przewoźnika~~ — **ROZSTRZYGNIĘTE 27.09:** przewoźnik widzi parametry tylko do odczytu, wyłącznie wersje uzgodnione (`agreed_with_carrier = true`) → **I-13** (właściciel 27.09; pierwotnie I-15) | I-13 |
 | D-11 | **ROZSTRZYGNIĘTE 27.09:** właściciel włącza wymaganie dopiero po I-17 (drugie urządzenie). 2FA (I-5): właściciel zapisuje TOTP (Opcje → „Weryfikacja dwuetapowa” → kod QR → kod) i klika „Włącz wymaganie”; do tego czasu egzekwowanie `aal2` dla HHL_ADMIN jest wyłączone (`security_flags.MFA_HHL_ADMIN = false`) | I-5 |
 | D-12 | **ROZSTRZYGNIĘTE 27.09:** ostateczne daty załadunku i rozładunku podaje KSH (→ I-18). Termin potwierdzenia N — do uzgodnienia, domyślnie 5 dni. INFO: plan KSH = 5 dni od odbioru do dostawy | I-18 |
+| D-13 | (z I-11: SCOPE 1.6) podglądy wdrożeń: zamiast hasła podglądy działają w trybie demo (A5-PODGLADY `e87c24f`) — zatwierdzić jako zamknięte albo wymagać hasła | SCOPE 1.6 |
+| D-14 | (z I-11: SCOPE 7.5) konwencja kursu NBP (tabela A z dnia roboczego przed rozładunkiem) — potwierdzenie przez księgowość | SCOPE 7.5 |
+| D-15 | (z I-11: SCOPE 3.8) limity ponadnormatywności per kraj (PL, SE) do potwierdzenia | SCOPE 3.8 |
