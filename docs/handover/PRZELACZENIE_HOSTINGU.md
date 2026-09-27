@@ -1,6 +1,6 @@
 # Przełączenie hostingu — Vercel ↔ Cloudflare Pages (ANEKS 4 PR8)
 
-**Stan (27.09.2026):** Worker `tower-keep-alive` wdrożony (Cloudflare, cron co 6 h). Cloudflare Pages **czeka na jedno działanie właściciela**: autoryzację aplikacji GitHub „Cloudflare Workers and Pages” dla repo `Spawn2018/testowe-do-migracji` (integracji Git nie da się podłączyć z wiersza poleceń; projekt „direct upload” nie daje się potem przepiąć na Git, więc nie został założony).
+**Stan (27.09.2026 11:30):** Pages `tower-hhl.pages.dev` założone przez właściciela (integracja Git, build z `main`, Preview branches = None, Redirect URL w Supabase). Test przełączenia: 200, 37/37 plików identycznych z buildem lokalnym tego samego commitu, `/download/…` z `Content-Disposition: attachment`. Worker `tower-keep-alive` wdrożony (cron co 6 h). Historycznie Pages czekało na jedno działanie właściciela: autoryzację aplikacji GitHub „Cloudflare Workers and Pages” dla repo `Spawn2018/testowe-do-migracji` (integracji Git nie da się podłączyć z wiersza poleceń; projekt „direct upload” nie daje się potem przepiąć na Git, więc nie został założony).
 
 ### Kroki właściciela — Cloudflare Pages z integracją Git (ok. 5 min)
 1. https://dash.cloudflare.com → konto właściciela → **Workers & Pages** → **Create** → zakładka **Pages** → **Import an existing Git repository** → **Get started**.
