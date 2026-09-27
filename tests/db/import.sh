@@ -33,6 +33,10 @@ IMP() { echo "select import_schedule('$P', '$1'::jsonb, ${3:-'{}'}::text[], '{\"
 echo; echo "[I-1] uprawnienia"
 err "KSH nie importuje"                    $KSH "$(IMP "$R3" false)" "wyłącznie HHL"
 err "SCX nie importuje"                    $SCX "$(IMP "$R3" true)"  "wyłącznie HHL"
+err "konto bez wiersza app_users (is_hhl() = NULL) nie importuje" 99999999-0000-0000-0000-000000000009 "$(IMP "$R3" true)" "wyłącznie HHL"
+$PSQL -c "update app_users set active=false where auth_id='$HHL'" >/dev/null
+err "HHL nieaktywny (is_hhl() = NULL) nie importuje" $HHL "$(IMP "$R3" true)" "wyłącznie HHL"
+$PSQL -c "update app_users set active=true where auth_id='$HHL'" >/dev/null
 chk "anon: brak EXECUTE import_schedule"   "$(Q "select has_function_privilege('anon','import_schedule(uuid,jsonb,text[],jsonb,boolean)','execute')")" f
 chk "authenticated: brak EXECUTE schedule_row_canon" "$(Q "select has_function_privilege('authenticated','schedule_row_canon(jsonb)','execute')")" f
 chk "funkcja SECURITY DEFINER z search_path" "$(Q "select prosecdef||':'||array_to_string(proconfig,',') from pg_proc where proname='import_schedule'")" "true:search_path=public"

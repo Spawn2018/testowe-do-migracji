@@ -64,8 +64,8 @@ describe.skipIf(!LOCAL)('I-1 import harmonogramu — lokalny Supabase, pełny pl
     const body = readFileSync('public/KSH_HARMONOGRAM.xlsx');
     const put = (jwt: string, name: string) => fetch(`${URL_}/storage/v1/object/harmonogramy/${P}/${name}`, {
       method: 'POST', headers: { apikey: ANON, Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }, body });
-    expect((await put(HHL, 'i1-test.xlsx')).status).toBe(200);
-    expect((await put(KSH, 'i1-ksh.xlsx')).status).toBeGreaterThanOrEqual(400);
+    expect((await put(HHL, `i1-test-${Date.now()}.xlsx`)).status).toBe(200);
+    expect((await put(KSH, `i1-ksh-${Date.now()}.xlsx`)).status).toBeGreaterThanOrEqual(400);
   });
 
   it('pełny harmonogram: podgląd, zapis, liczby i czas', async () => {

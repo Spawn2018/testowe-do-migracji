@@ -33,5 +33,5 @@ check archive 18
 check watchdog 27
 check invite 48
 check risks 23
-check import 35
+check import 37
 [ $ok -eq 1 ]
