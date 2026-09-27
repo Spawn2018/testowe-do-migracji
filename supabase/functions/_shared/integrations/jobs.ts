@@ -6,7 +6,7 @@
 import {
   POLFERRIES_SCHEDULE_URL, POLFERRIES_STATUS_URL, parsePolferriesSchedule, parsePolferriesStatus,
 } from '../ferry/polferries.ts';
-import { DIGITRAFFIC_ATTRIBUTION, interpretFix, parseDigitrafficLocations } from '../ferry/digitraffic.ts';
+import { DIGITRAFFIC_ATTRIBUTION, interpretFix, parseDigitrafficLocations, type VesselFix } from '../ferry/digitraffic.ts';
 import {
   flowRisk, integrationMode, parseDatexSituations, parseTomTomFlow, parseTrafikverketSituations, roadRisk,
   tomtomFlowUrl, trafikverketSituationQuery, TRAFIKVERKET_URL,
@@ -34,6 +34,8 @@ export interface SyncStore {
   /** zamyka otwarte ryzyka o kluczu z prefiksem (np. źródło znów działa) — zwraca liczbę */
   resolveRisks(dedupPrefix: string): Promise<number>;
   recordRun(job: string, ok: boolean, result: JobResult): Promise<void>;
+  /** I-2j: pozycja promu z AIS do `vessel_positions` (powtórka tego samego sygnału = bez zmian) */
+  saveVesselPosition(vesselId: string, fix: VesselFix): Promise<void>;
 }
 export interface JobDeps {
   store: SyncStore;
@@ -122,6 +124,7 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
   const observations: Record<string, string> = {};
   const warnings: string[] = [];
   let risks = 0;
+  const polled = new Set<string>();
   for (const s of inProgress) {
     const v = vessels.find((x) => x.id === s.vessel_id);
     if (!v) continue;
@@ -131,6 +134,8 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
     let fix = null;
     try { fix = parseDigitrafficLocations(JSON.parse(r.text), v.mmsi); } catch { warnings.push('Digitraffic: nieczytelna odpowiedź (zmiana formatu?)'); continue; }
     if (!fix) { observations[v.name] = 'BRAK_SWIEZEGO_SYGNALU'; continue; }
+    await deps.store.saveVesselPosition(v.id, fix);
+    polled.add(v.id);
     const obs = interpretFix(fix, now);
     observations[v.name] = obs;
     if (obs === 'W_PORCIE_NYNASHAMN' && s.route === 'GDN-NYN') {
@@ -142,6 +147,15 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
       });
       if (ok) risks++;
     }
+  }
+  // I-2j: pozycja na mapę także dla statków bez rejsu w toku (bez wniosków o rejsie — tylko zapis pozycji z czasem sygnału)
+  for (const v of vessels) {
+    if (!v.mmsi || polled.has(v.id) || inProgress.some((s) => s.vessel_id === v.id)) continue;
+    const r = await readText(deps, `https://meri.digitraffic.fi/api/ais/v1/locations?mmsi=${v.mmsi}`, { headers: { 'Accept-Encoding': 'gzip', 'Digitraffic-User': DIGITRAFFIC_USER } });
+    if (!r.ok) { warnings.push(r.warning); continue; }
+    let fix = null;
+    try { fix = parseDigitrafficLocations(JSON.parse(r.text), v.mmsi); } catch { warnings.push('Digitraffic: nieczytelna odpowiedź (zmiana formatu?)'); continue; }
+    if (fix) await deps.store.saveVesselPosition(v.id, fix);
   }
   if (warnings.length && inProgress.some((s) => vessels.find((x) => x.id === s.vessel_id)?.mmsi)) {
     await deps.store.raiseRisk(sourceDownRisk('DIGITRAFFIC', warnings, now, 'https://meri.digitraffic.fi'));

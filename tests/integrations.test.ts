@@ -49,6 +49,11 @@ class MemStore implements SyncStore {
   async latestPositions() { return this.positions; }
   async lastRun(job: string) { return this.runs.filter((r) => r.job === job).at(-1)?.at ?? null; }
   async recordRun(job: string, ok: boolean, result: JobResult) { this.runs.push({ job, at: NOW.toISOString(), ok, result }); }
+  vesselPositions: { vesselId: string; lat: number; lon: number; observedAt: string }[] = [];
+  async saveVesselPosition(vesselId: string, fix: { lat: number; lon: number; timestampUtc: string }) {
+    if (this.vesselPositions.some((p) => p.vesselId === vesselId && p.observedAt === fix.timestampUtc)) return;
+    this.vesselPositions.push({ vesselId, lat: fix.lat, lon: fix.lon, observedAt: fix.timestampUtc });
+  }
 }
 
 function deps(store: MemStore, pages: Record<string, string | number>, env: Record<string, string> = {}, now = NOW) {
@@ -198,6 +203,34 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
     const r = await runFerryAis(deps(st2, { 'digitraffic.fi': inPort }, {}, new Date('2026-09-25T09:00:00Z')).d);
     expect(r.observations?.['M/F Nova Star']).toBe('BRAK_SWIEZEGO_SYGNALU');
     expect(st2.risks).toHaveLength(0);
+  });
+});
+
+describe('I-2j — ferry-ais zapisuje pozycje promów do bazy (vessel_positions)', () => {
+  const sail = (vessel: string, dep: string, arr: string): DbSailing => ({ id: `ais-${vessel}`, vessel_id: vessel, route: 'GDN-NYN', departure_at: dep, arrival_at: arr, delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY', source: 'POLFERRIES' });
+  it('rejs w toku: pozycja z czasem sygnału AIS; powtórka tego samego sygnału = 0 nowych wierszy', async () => {
+    const st = new MemStore();
+    st.sailings.push(sail(NS, '2026-09-24T16:00:00.000Z', '2026-09-25T10:00:00.000Z'));
+    await runFerryAis(deps(st, { 'digitraffic.fi': AIS }, {}, new Date('2026-09-24T19:40:00Z')).d);
+    expect(st.vesselPositions).toHaveLength(1);
+    expect(st.vesselPositions[0]).toMatchObject({ vesselId: NS, lat: 57.980348, lon: 17.850695 });
+    expect(st.vesselPositions[0].observedAt).toMatch(/^2026-09-2\dT/);
+    await runFerryAis(deps(st, { 'digitraffic.fi': AIS }, {}, new Date('2026-09-24T19:50:00Z')).d);
+    expect(st.vesselPositions).toHaveLength(1);
+  });
+  it('bez rejsu w toku: pozycja zapisana (mapa), bez obserwacji i bez ryzyka; statek bez MMSI — bez zapytania', async () => {
+    const st = new MemStore();
+    const { d, calls } = deps(st, { 'digitraffic.fi': AIS }, {}, new Date('2026-09-24T19:40:00Z'));
+    const r = await runFerryAis(d);
+    expect(calls).toHaveLength(1);
+    expect(st.vesselPositions.map((p) => p.vesselId)).toEqual([NS]);
+    expect(r.observations).toEqual({});
+    expect(st.risks).toHaveLength(0);
+  });
+  it('brak statku w odpowiedzi Digitraffic → 0 pozycji (nie zmyślamy)', async () => {
+    const st = new MemStore();
+    await runFerryAis(deps(st, { 'digitraffic.fi': '{"type":"FeatureCollection","features":[]}' }, {}, new Date('2026-09-24T19:40:00Z')).d);
+    expect(st.vesselPositions).toHaveLength(0);
   });
 });
 

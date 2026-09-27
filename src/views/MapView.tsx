@@ -6,9 +6,10 @@ import { CorridorMap } from '../components/map/LazyCorridorMap';
 import { t, tp } from '../i18n/messages';
 import { fetchSituations } from '../lib/trafikverket';
 import { trafikverketShortLabel } from '../lib/demoLabel';
-import { shows } from '../lib/prodFacade';
+import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { formatEtaBodenCompact } from '../lib/time';
-import { subscribeAis, type AisMode } from '../lib/ais';
+import { latestReadAt, subscribeFerryPositions, type AisMode } from '../lib/ais';
+import { formatOpsDateTime } from '../lib/time';
 
 /** Claude maplayers — exactly 5. Labels via i18n. */
 const LAYER_ORDER: { key: string; labelKey: string }[] = [
@@ -67,7 +68,8 @@ export function MapView() {
   const showDemoMarks = useTowerStore((s) => s.showDemoMarks);
   const setView = useTowerStore((s) => s.setView);
   const [tvMode, setTvMode] = useState<'live' | 'seed'>('seed');
-  const [aisMode, setAisMode] = useState<AisMode>('seed');
+  const [aisMode, setAisMode] = useState<AisMode>(PROD_BUILD ? 'none' : 'seed');
+  const [aisReadAt, setAisReadAt] = useState<string | null>(null);
   const [timing, setTiming] = useState<TimingFilter>('all');
   const [widths, setWidths] = useState<Record<MapColId, number>>(() => loadMapWidths());
   const widthsRef = useRef(widths);
@@ -85,8 +87,9 @@ export function MapView() {
   }, []);
 
   useEffect(() => {
-    return subscribeAis({
-      onUpdate: (_pos, mode) => setAisMode(mode),
+    return subscribeFerryPositions({
+      prod: PROD_BUILD,
+      onUpdate: (pos, mode) => { setAisMode(mode); setAisReadAt(mode === 'db' ? latestReadAt(pos) : null); },
     });
   }, []);
 
@@ -281,7 +284,8 @@ export function MapView() {
         <b>{shows('roadSituationsSe') ? trafikverketShortLabel(tvMode, showDemoMarks, locale) : t(locale, 'i2_no_source')}</b>
         {' · '}
         {t(locale, 'a6_map_ais')}{' '}
-        <b>{aisMode === 'live' ? t(locale, 'map_ais_live') : shows('aisSeedPositions') ? t(locale, 'a6_demo_seed') : t(locale, 'i2_no_source')}</b>
+        <b data-ais={aisMode}>{aisMode === 'live' ? t(locale, 'map_ais_live') : aisMode === 'db' ? t(locale, 'i2_ais_db').replace('{d}', formatOpsDateTime(aisReadAt)) : shows('aisSeedPositions') ? t(locale, 'a6_demo_seed') : t(locale, 'i2_no_source')}</b>
+        {aisMode === 'db' ? <> ({t(locale, 'i2_ais_attr')})</> : null}
         {' · '}
         {t(locale, 'map_gps_note')}</div>
     </div>

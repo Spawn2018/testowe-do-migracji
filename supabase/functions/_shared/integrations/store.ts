@@ -3,6 +3,7 @@
  * Typ klienta minimalny, żeby ten sam kod działał w Deno (npm:@supabase/supabase-js) i w Node.
  */
 import type { SyncStore, VehiclePos } from './jobs.ts';
+import type { VesselFix } from '../ferry/digitraffic.ts';
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch, VesselRow } from './sync.ts';
 
 // deno-lint-ignore no-explicit-any
@@ -51,6 +52,12 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
     },
     async recordRun(job: string, ok: boolean, result: unknown) {
       must(await sb.from('integration_runs').insert({ job, ok, result }), 'integration_runs insert');
+    },
+    async saveVesselPosition(vesselId: string, fix: VesselFix) {
+      must(await sb.from('vessel_positions').upsert({
+        vessel_id: vesselId, lat: fix.lat, lon: fix.lon, sog_kn: fix.sogKn, cog: fix.cog, nav_stat: fix.navStat,
+        observed_at: fix.timestampUtc, source: 'DIGITRAFFIC',
+      }, { onConflict: 'vessel_id,observed_at', ignoreDuplicates: true }), 'vessel_positions insert');
     },
     async latestPositions(maxAgeMin: number) {
       return must(await sb.rpc('latest_vehicle_positions', { p_max_age_min: maxAgeMin }), 'latest_vehicle_positions') as VehiclePos[];

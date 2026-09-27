@@ -10,8 +10,9 @@ import {
 } from '../../lib/corridor';
 import { SITES } from '../../lib/status';
 import { fetchSituations, type RoadSituation } from '../../lib/trafikverket';
-import { shows } from '../../lib/prodFacade';
-import { subscribeAis, type AisPosition } from '../../lib/ais';
+import { PROD_BUILD, shows } from '../../lib/prodFacade';
+import { subscribeFerryPositions, type AisPosition } from '../../lib/ais';
+import { formatOpsDateTime } from '../../lib/time';
 import type { Load } from '../../types';
 import { truckDivIcon, ferryDivIcon } from '../../lib/mapMarkers';
 import { nextLiveSailing } from '../../lib/ferry';
@@ -158,10 +159,11 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
   }, []);
 
   useEffect(() => {
-    return subscribeAis({
+    return subscribeFerryPositions({
+      prod: PROD_BUILD,
       onUpdate: (pos, mode) => {
-        // I-2e: produkcja — pozycje przykładowe promów (seed) nie trafiają na mapę; tylko odczyt na żywo
-        if (mode !== 'live' && !shows('aisSeedPositions')) { setAisPositions([]); return; }
+        // I-2e/I-2j: produkcja — nigdy pozycje przykładowe (seed); tylko pozycje z bazy (vessel_positions) z czasem sygnału
+        if (mode === 'seed' && !shows('aisSeedPositions')) { setAisPositions([]); return; }
         setAisPositions(pos);
       },
     });
@@ -378,7 +380,7 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
           icon: ferryDivIcon('#6BA8D6', heading),
           keyboard: false,
         })
-          .bindTooltip(p.name || p.mmsi, { direction: 'top', offset: [0, -10] })
+          .bindTooltip(p.source === 'db' ? `${p.name || p.mmsi} · ${t(useTowerStore.getState().locale, 'i2_ais_read_at').replace('{d}', formatOpsDateTime(p.ts))}` : (p.name || p.mmsi), { direction: 'top', offset: [0, -10] })
           .addTo(layers.ais);
       }
     }

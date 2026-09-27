@@ -6,6 +6,9 @@ type Dict = Record<string, string>;
 const pl: Dict = {
   i2_no_sailing: 'brak rejsu w rozkładzie',
   i2_no_source: 'brak źródła danych',
+  i2_ais_read_at: 'odczyt AIS {d}',
+  i2_ais_db: 'z bazy, ostatni odczyt {d}',
+  i2_ais_attr: 'Dane AIS: Fintraffic / digitraffic.fi, licencja CC BY 4.0',
   i2_banner_more: '+{n} ryzyk',
   i2_sea_no_source: 'Pogoda i stan morza: brak źródła danych.',
   i2_progress_weeks: 'tygodnie {r}',
@@ -76,6 +79,9 @@ const pl: Dict = {
 const en: Dict = {
   i2_no_sailing: 'no sailing in the schedule',
   i2_no_source: 'no data source',
+  i2_ais_read_at: 'AIS fix {d}',
+  i2_ais_db: 'from database, last fix {d}',
+  i2_ais_attr: 'AIS data: Fintraffic / digitraffic.fi, licence CC BY 4.0',
   i2_banner_more: '+{n} risks',
   i2_sea_no_source: 'Weather and sea state: no data source.',
   i2_progress_weeks: 'weeks {r}',
@@ -146,6 +152,9 @@ const en: Dict = {
 const sv: Dict = {
   i2_no_sailing: 'ingen avgång i tidtabellen',
   i2_no_source: 'ingen datakälla',
+  i2_ais_read_at: 'AIS-position {d}',
+  i2_ais_db: 'från databasen, senaste position {d}',
+  i2_ais_attr: 'AIS-data: Fintraffic / digitraffic.fi, licens CC BY 4.0',
   i2_banner_more: '+{n} risker',
   i2_sea_no_source: 'Väder och sjöläge: ingen datakälla.',
   i2_progress_weeks: 'veckor {r}',

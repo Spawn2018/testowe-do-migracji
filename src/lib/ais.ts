@@ -10,7 +10,7 @@ export interface AisPosition {
   sog?: number;
   cog?: number;
   ts: string;
-  source: 'live' | 'seed';
+  source: 'live' | 'seed' | 'db';
 }
 
 const MMSI_TO_ID: Record<string, FerryVesselId> = {
@@ -32,7 +32,7 @@ export function seedAisPositions(): AisPosition[] {
   }));
 }
 
-export type AisMode = 'live' | 'seed';
+export type AisMode = 'live' | 'seed' | 'db' | 'none';
 
 /**
  * Connect to local AIS proxy (`ws://host:4175/ais` or Vite-proxied `/ais-ws`).
@@ -115,4 +115,30 @@ export function subscribeAis(opts: {
     closed = true;
     ws?.close();
   };
+}
+
+/**
+ * I-2j — jedno wejście dla mapy: produkcja → pozycje z bazy (`vessel_positions`, tryb 'db' albo 'none'),
+ * demo → proxy AISStream / pozycje przykładowe (bez zmian). Moduł bazy ładowany leniwie tylko w produkcji.
+ */
+export function subscribeFerryPositions(opts: {
+  prod: boolean;
+  onUpdate: (positions: AisPosition[], mode: AisMode) => void;
+}): () => void {
+  if (!opts.prod) return subscribeAis({ onUpdate: opts.onUpdate });
+  let stop: (() => void) | null = null;
+  let cancelled = false;
+  opts.onUpdate([], 'none');
+  void import('./aisDb').then(({ subscribeAisDb }) => {
+    if (cancelled) return;
+    stop = subscribeAisDb((pos) => opts.onUpdate(pos, pos.length ? 'db' : 'none'));
+  });
+  return () => { cancelled = true; stop?.(); };
+}
+
+/** Najnowszy czas sygnału spośród pozycji (null = brak). */
+export function latestReadAt(pos: readonly AisPosition[]): string | null {
+  let best: string | null = null;
+  for (const p of pos) if (!best || Date.parse(p.ts) > Date.parse(best)) best = p.ts;
+  return best;
 }

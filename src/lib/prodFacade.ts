@@ -17,7 +17,7 @@ export const HIDDEN_IN_PROD = {
   ferryAlternatives: 'Przeprawy alternatywne (8.4): lista statyczna, bez przeliczenia',
   roadSituationsSe: 'Zdarzenia drogowe SE (8.5): brak klucza Trafikverket — w produkcji nie pokazujemy danych przykładowych',
   seRouteAlternatives: 'Objazdy SE (8.4/D25): warianty statyczne',
-  aisSeedPositions: 'Pozycje promów na mapie (8.3): w przeglądarce tylko pozycje przykładowe — AIS z bazy nie jest udostępniany mapie',
+  aisSeedPositions: 'Pozycje przykładowe promów na mapie (8.3): w produkcji tylko pozycje z bazy (vessel_positions, I-2j) z czasem sygnału albo „brak źródła danych”',
   delayCodes: 'Kody przyczyn opóźnień (8.10): nieuzgodnione z przewoźnikiem',
   detectTimeKpi: 'Kafelek „czas wykrycia odchylenia” (10.7): wartość wpisana na sztywno',
   factoringOffer: 'Oferta factoringu: zapis wyłącznie w przeglądarce, bez tabeli w bazie',

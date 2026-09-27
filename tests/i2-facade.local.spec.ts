@@ -54,6 +54,22 @@ test('HHL: przełącznik jest; brak Workflows; ryzyka „brak źródła danych�
   await expect(page.locator('.drawer')).not.toContainText(/PL\/2026\/14\d\d|HHL\/2026\/12\d\d/);
 });
 
+test('I-2j KSH: mapa — pozycja promu z bazy z czasem odczytu albo „brak źródła danych”', async ({ page }) => {
+  psql(`delete from vessel_positions`);
+  await login(page, 'ksh@bk5.local');
+  await page.locator('nav [data-view="map"]').first().click();
+  await expect(page.locator('[data-ais="none"]')).toHaveText('brak źródła danych');
+  const before = await page.locator('.wt-marker-ferry').count();
+  psql(`insert into vessel_positions (vessel_id, lat, lon, sog_kn, cog, observed_at) select id, 58.2, 18.1, 16.5, 12, '2026-09-27T18:10:00Z' from vessels where mmsi = 311000787`);
+  await page.reload();
+  await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
+  await page.locator('nav [data-view="map"]').first().click();
+  await expect(page.locator('[data-ais="db"]')).toContainText(/z bazy, ostatni odczyt 27\.09\.2026,? 20:10/);
+  await expect(page.locator('.wt-marker-ferry')).toHaveCount(before + 1);
+  await expect(page.locator('.note')).toContainText('Dane AIS: Fintraffic / digitraffic.fi, licencja CC BY 4.0');
+  psql(`delete from vessel_positions`);
+});
+
 test('HHL: formularz BAF/SEFS — wersja parametrów, odczyt, korekta, dziennik', async ({ page }) => {
   test.setTimeout(90_000);
   psql(`set session_replication_role = replica; delete from fuel_index_readings; delete from sefs_parameters; delete from audit_log where action in ('SEFS_PARAMS_VERSION','FUEL_READING_ADD','FUEL_READING_CORRECT');`);

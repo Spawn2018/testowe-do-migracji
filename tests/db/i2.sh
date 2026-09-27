@@ -119,4 +119,19 @@ val "dziennik: kto i co (e-mail, stara/nowa baza)" $HHL "select actor||' '||(old
 val "dziennik korekty: stara i nowa wartość" $HHL "select (old_value->>'value')||'→'||(new_value->>'value')||' '||(new_value->>'correction_reason') from baf_change_log('$P') where action='FUEL_READING_CORRECT'" "19.6800→19.7100 literówka w cenie"
 chk "migracja nie wstawia wartości (poza testem): baf_definitions 0" "$(Q "select count(*) from baf_definitions")" 0
 
+echo; echo "[I-2j] pozycje promów z AIS (vessel_positions, 0053)"
+V=55555555-0000-0000-0000-000000000001
+NOAPP=99999999-0000-0000-0000-0000000000aa
+chk "tabela z RLS; anon bez SELECT; authenticated bez INSERT/UPDATE/DELETE" "$(Q "select (select relrowsecurity from pg_class where oid='public.vessel_positions'::regclass)::text||has_table_privilege('anon','vessel_positions','select')::text||has_table_privilege('authenticated','vessel_positions','insert')::text||has_table_privilege('authenticated','vessel_positions','update')::text||has_table_privilege('authenticated','vessel_positions','delete')::text")" "truefalsefalsefalsefalse"
+$PSQL -c "insert into vessel_positions (vessel_id, lat, lon, sog_kn, cog, observed_at) values ('$V',57.98,17.85,17.1,8, now()-interval '40 days'), ('$V',58.5,17.9,16.0,10, now()-interval '35 days'), ('$V',58.90,17.95,0.2,180, now()-interval '5 minutes')" >/dev/null
+err "zapis przez API odrzucony (HHL)" $HHL "insert into vessel_positions (vessel_id, lat, lon, observed_at) values ('$V',1,1,now())" "permission denied"
+val "KSH czyta ostatnią pozycję z czasem sygnału" $KSH "select lat||'/'||lon||'/'||(observed_at > now()-interval '10 minutes') from vessel_positions order by observed_at desc limit 1" "58.9/17.95/true"
+val "SCX czyta pozycje (3)" $SCX "select count(*) from vessel_positions" 3
+val "konto bez app_users widzi 0" $NOAPP "select count(*) from vessel_positions" 0
+chk "powtórka tego samego sygnału odrzucona (unikalność statek+czas)" "$($PSQL -c "insert into vessel_positions (vessel_id, lat, lon, observed_at) select vessel_id, lat, lon, observed_at from vessel_positions limit 1" 2>&1 | grep -c 'duplicate key')" 1
+chk "retencja: authenticated bez EXECUTE purge_vessel_positions" "$(Q "select has_function_privilege('authenticated','purge_vessel_positions(timestamptz)','execute')::text")" false
+chk "retencja 30 dni: usuwa 2 starsze, zostaje świeża" "$(Q "select purge_vessel_positions()")/$(Q "select count(*) from vessel_positions")" "2/1"
+$PSQL -c "update vessel_positions set observed_at = now()-interval '60 days'" >/dev/null
+chk "retencja: ostatnia pozycja statku zostaje zawsze (także starsza niż 30 dni)" "$(Q "select purge_vessel_positions()")/$(Q "select count(*) from vessel_positions")" "0/1"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
