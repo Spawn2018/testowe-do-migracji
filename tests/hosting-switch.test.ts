@@ -5,16 +5,18 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 describe('PR8: przełączenie hostingu Vercel ↔ Cloudflare Pages', () => {
   const vercel = JSON.parse(readFileSync('vercel.json', 'utf8')) as { headers: { source: string; headers: { key: string; value: string }[] }[]; [k: string]: unknown }
 
-  it('vercel.json: tylko nagłówki /download (bez funkcji, przepisań, cronów)', () => {
+  // O2: Vercel dokleja nagłówki z vercel.json także do odpowiedzi 404 — reguła /download/(.*) dawała
+  // „404 jako załącznik”. Build produkcyjny nie ma /download/, więc vercel.json nie ma już nagłówków.
+  it('vercel.json: bez nagłówków /download, funkcji, przepisań, cronów (O2)', () => {
     expect(Object.keys(vercel)).toEqual(['headers'])
-    expect(vercel.headers.map((h) => h.source)).toEqual(['/download/(.*)'])
+    expect(vercel.headers).toEqual([])
   })
 
-  it('public/_headers (Cloudflare Pages) = nagłówki z vercel.json', () => {
+  it('public/_headers (Cloudflare Pages, tylko tryb demo): /download/* jako załącznik; w buildzie produkcyjnym usuwany', () => {
     const lines = readFileSync('public/_headers', 'utf8').trim().split('\n')
     expect(lines[0]).toBe('/download/*')
-    const cf = Object.fromEntries(lines.slice(1).map((l) => { const i = l.indexOf(':'); return [l.slice(0, i).trim(), l.slice(i + 1).trim()] }))
-    expect(cf).toEqual(Object.fromEntries(vercel.headers[0].headers.map((h) => [h.key, h.value])))
+    expect(lines.join('\n')).toMatch(/Content-Disposition: attachment/)
+    expect(readFileSync('build/prodStrip.ts', 'utf8')).toMatch(/stripDownloadHeaders/)
   })
 
   it('brak kodu serwerowego Vercel/Pages (api/, functions/, middleware)', () => {

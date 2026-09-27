@@ -1,11 +1,3 @@
 {
-  "headers": [
-    {
-      "source": "/download/(.*)",
-      "headers": [
-        { "key": "Content-Disposition", "value": "attachment; filename=\"tower-makieta.html\"" },
-        { "key": "Content-Type", "value": "text/html; charset=utf-8" }
-      ]
-    }
-  ]
+  "headers": []
 }

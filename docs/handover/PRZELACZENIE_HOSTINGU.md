@@ -14,7 +14,7 @@
 
 ## Dlaczego przełączenie jest proste (4.3a)
 - Aplikacja to **build statyczny** (`dist/`): HTML + JS + CSS. Brak funkcji Vercel, brak `api/`, `functions/`, middleware (test `tests/hosting-switch.test.ts`).
-- `vercel.json` zawiera **tylko nagłówki** dla `/download/*` (używane tylko w trybie demo — build produkcyjny nie ma `/download/`, O2). Ten sam zestaw dla Cloudflare Pages: `public/_headers` (test pilnuje zgodności).
+- `vercel.json` ma pustą listę nagłówków (O2: Vercel doklejał `Content-Disposition: attachment` także do odpowiedzi 404 dla `/download/*`). `public/_headers` (Cloudflare Pages) zostaje dla trybu demo; build produkcyjny usuwa z niego blok `/download/*` (`build/prodStrip.ts`).
 - Routing w adresie po `#` (HashRouter) — żaden host nie potrzebuje przepisań na `index.html`. (`public/vercel.json` z przepisaniem ląduje w `dist/`, host go nie czyta — nieszkodliwy.)
 - `/api/trafikverket` działa tylko w serwerze dev/podglądu Vite; na hostingu statycznym aplikacja sama przechodzi na dane przykładowe (Trafikverket na produkcji — przez Supabase Edge `road-se`).
 - Dane, logowanie, pliki, zadania: Supabase (niezależne od hostingu). Keep-alive: Cloudflare Worker `workers/keep-alive`.
