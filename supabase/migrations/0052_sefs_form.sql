@@ -58,7 +58,7 @@ create unique index if not exists fuel_index_readings_one_correction on fuel_ind
 
 -- tylko dopisywanie
 create or replace function forbid_baf_mutation() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = public as $$
 begin raise exception '% jest append-only — zmiana = nowa wersja / korekta', tg_table_name; end $$;
 drop trigger if exists trg_sefs_parameters_immutable on sefs_parameters;
 create trigger trg_sefs_parameters_immutable before update or delete on sefs_parameters
