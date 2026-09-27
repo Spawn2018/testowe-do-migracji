@@ -193,4 +193,67 @@ chk "stan i audyt MFA_ENFORCEMENT_SET" "$(Q "select enabled from security_flags 
 err "włączenie przy aal1 niemożliwe nawet po wyłączeniu (wymaga aal2)" $HHL "select admin_set_mfa_enforcement(true)" "aal2"
 chk "anon bez EXECUTE my_mfa_status / admin_set_mfa_enforcement" "$(Q "select has_function_privilege('anon','my_mfa_status()','execute')::text||has_function_privilege('anon','admin_set_mfa_enforcement(boolean)','execute')::text")" "falsefalse"
 
+echo; echo "[I-6] błędy przeglądarki → client_errors + alarm (0058)"
+AN() { $PSQL -c "begin; set local role anon; $1; commit;" 2>&1 | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1; }
+TOK="wt_$(printf 'ab%.0s' $(seq 32))"
+chk "anon (PWA kierowcy): zgłoszenie przyjęte" "$(AN "select report_client_error('error', 'TypeError: x is undefined $TOK', E'TypeError\n    at f (index-abc.js:1:2)', '/#/driver/$TOK', 'abc', 'UA')")" "t"
+chk "token kierowcy wycięty z komunikatu i ścieżki; anon bez konta i roli" "$(Q "select (message like '%wt_…%' and message not like '%abab%')::text||'/'||path||'/'||coalesce(user_id::text,'∅')||'/'||coalesce(app_role,'∅') from client_errors")" "true//#/driver/wt_…/∅/∅"
+AN "select report_client_error('error', 'TypeError: x is undefined $TOK', E'TypeError\n    at f (index-abc.js:1:2)', '/', 'abc', 'UA')" >/dev/null
+chk "ten sam błąd w 10 min: 1 wiersz, hits 2" "$(Q "select count(*)||'/'||max(hits) from client_errors")" "1/2"
+val "zalogowany HHL: zgłoszenie z rolą i kontem" $HHL "select report_client_error('rejection', 'Error: fetch failed')" t commit
+chk "wiersz HHL: rola HHL_ADMIN, konto ustawione" "$(Q "select app_role||'/'||(user_id is not null)::text from client_errors where kind='rejection'")" "HHL_ADMIN/true"
+err "zalogowany bez aktywnego konta: odmowa" 11111111-0000-0000-0000-0000000000ee "select report_client_error('error', 'x')" "Brak aktywnego konta"
+err "nieznany rodzaj: odmowa" $HHL "select report_client_error('warn', 'x')" "Nieznany rodzaj"
+err "pusty komunikat / NULL: odmowa" $HHL "select report_client_error('error', null)" "Pusty komunikat"
+chk "JWT i token w zapytaniu wycięte" "$(Q "select client_error_scrub('a eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abcdefghijklmnop b ?access_token=SEKRET&x=1')")" "a jwt… b ?access_token=…&x=1"
+val "odczyt: HHL_ADMIN widzi 2" $HHL "select count(*) from client_errors" 2
+val "odczyt: KSH 0 (RLS)" $KSH "select count(*) from client_errors" 0
+val "odczyt: SCX 0 (RLS)" $SCX "select count(*) from client_errors" 0
+chk "anon bez odczytu i zapisu tabeli; bez EXECUTE watch/scrub" "$(Q "select has_table_privilege('anon','client_errors','select')::text||has_table_privilege('authenticated','client_errors','insert')::text||has_function_privilege('anon','client_error_watch(timestamptz)','execute')::text||has_function_privilege('authenticated','client_error_scrub(text)','execute')::text")" "falsefalsefalsefalse"
+chk "alarm: błędy w 15 min → ryzyko HHL rk_client_errors" "$(Q "select client_error_watch()->>'stan'")/$(Q "select count(*)||'/'||max(title_key)||'/'||max(audience::text) from risk_signals where detail->>'job'='client-errors' and resolved_at is null")" "ALARM/1/rk_client_errors/HHL"
+chk "alarm drugi raz: bez nowego ryzyka (jeden na incydent)" "$(Q "select client_error_watch()->>'nowe_ryzyka'")" "0"
+val "ryzyko alarmu niewidoczne dla KSH" $KSH "select count(*) from risk_signals where detail->>'job'='client-errors'" 0
+$PSQL -c "update client_errors set last_seen_at = now() - interval '25 hours', first_seen_at = now() - interval '25 hours'" >/dev/null
+chk "24 h bez błędów → alarm zamknięty" "$(Q "select client_error_watch()->>'stan'")/$(Q "select count(*) from risk_signals where detail->>'job'='client-errors' and resolved_at is null")" "OK/0"
+$PSQL -c "insert into client_errors (fingerprint, kind, message) select 'f'||g, 'error', 'zalew '||g from generate_series(1,60) g" >/dev/null
+chk "zalew: 60 nowych / min → kolejny nowy błąd odrzucony cicho" "$(AN "select report_client_error('error', 'nowy po zalewie')")/$(Q "select count(*) from client_errors where message='nowy po zalewie'")" "f/0"
+
+echo; echo "[I-7] retencja danych kierowcy 90 dni (0059)"
+R() { echo "33333333-0000-0000-0000-0000000007$1"; }
+SYS() { $PSQL -c "set session_replication_role = replica; $1" >/dev/null; }
+# a: rozładowany 91 dni temu · b: rozładowany 89 dni · c: anulowany 91 dni · d: anulowany 10 dni · e: w drodze, plan 200 dni temu
+for x in a1 b1 c1 d1 e1; do SYS "insert into loads (id, project_id, carrier_org_id, order_no, driver_name, driver_phone) values ('$(R $x)','$P','00000000-0000-0000-0000-00000000a003','KSH/R$x','Jan Kowalski','+48600100200')"; done
+SYS "update loads set status='UNLOADED', actual_delivery_at = now() - interval '91 days' where id='$(R a1)'"
+SYS "update loads set status='UNLOADED', actual_delivery_at = now() - interval '89 days' where id='$(R b1)'"
+SYS "update loads set status='CANCELLED', updated_at = now() - interval '91 days' where id='$(R c1)'"
+SYS "update loads set status='CANCELLED', updated_at = now() - interval '10 days' where id='$(R d1)'"
+SYS "update loads set status='IN_TRANSIT_PL', plan_delivery_date = current_date - 200, updated_at = now() - interval '200 days' where id='$(R e1)'"
+for x in c1 d1 e1; do SYS "insert into positions (load_id, ts, geom_raw, source) values ('$(R $x)', now() - interval '150 days', st_setsrid(st_makepoint(18,53),4326), 'DRIVER_PWA')"; done
+SYS "insert into driver_tokens (load_id, token_hash, expires_at) values ('$(R e1)', 'stary1', now() - interval '91 days'), ('$(R e1)', 'swiezy', now() - interval '89 days')"
+SYS "insert into driver_tokens (load_id, token_hash, expires_at, revoked_at) values ('$(R e1)', 'odwolany', now() + interval '1 day', now() - interval '100 days')"
+chk "przebieg: anonimizacja 2 (rozładowany 91 d + anulowany 91 d)" "$(Q "select purge_personal_data()")" "2"
+chk "rozładowany 91 d: imię i telefon usunięte" "$(Q "select coalesce(driver_name,'∅')||'/'||coalesce(driver_phone,'∅') from loads where id='$(R a1)'")" "∅/∅"
+chk "rozładowany 89 d: dane zostają" "$(Q "select driver_name from loads where id='$(R b1)'")" "Jan Kowalski"
+chk "anulowany 91 d: dane i pozycje usunięte (NOWE)" "$(Q "select coalesce(driver_phone,'∅') from loads where id='$(R c1)'")/$(Q "select count(*) from positions where load_id='$(R c1)'")" "∅/0"
+chk "anulowany 10 d: dane i pozycje zostają" "$(Q "select driver_phone from loads where id='$(R d1)'")/$(Q "select count(*) from positions where load_id='$(R d1)'")" "+48600100200/1"
+chk "w drodze po terminie planu: nic nie czyszczone" "$(Q "select driver_name from loads where id='$(R e1)'")/$(Q "select count(*) from positions where load_id='$(R e1)'")" "Jan Kowalski/1"
+chk "linki kierowcy: wygasły 91 d i odwołany 100 d usunięte, wygasły 89 d zostaje" "$(Q "select string_agg(convert_from(token_hash,'UTF8'), ',') from driver_tokens where load_id='$(R e1)'")" "swiezy"
+chk "przebieg zapisany w integration_runs (job rodo) z liczbami" "$(Q "select result->>'kierowcy_rozladowane'||'/'||(result->>'kierowcy_anulowane')||'/'||(result->>'pozycje_anulowane')||'/'||(result->>'linki_kierowcy') from integration_runs where job='rodo' order by ran_at desc limit 1")" "1/1/1/2"
+chk "drugi przebieg: 0 (idempotentny)" "$(Q "select purge_personal_data()")" "0"
+chk "p_days NULL/ujemne: odmowa" "$($PSQL -c "select purge_personal_data(-1)" 2>&1 | grep -c 'p_days musi')" "1"
+chk "purge_personal_data bez EXECUTE dla anon i authenticated" "$(Q "select has_function_privilege('anon','purge_personal_data(int)','execute')::text||has_function_privilege('authenticated','purge_personal_data(int)','execute')::text")" "falsefalse"
+
+echo; echo "[I-17] drugie urządzenie 2FA (0060)"
+$PSQL -c "create table if not exists auth.mfa_factors (id uuid primary key default gen_random_uuid(), user_id uuid, factor_type text, status text)" >/dev/null
+val "brak składników: factors 0" $HHL "$A2; select my_mfa_status()->>'factors'" 0
+$PSQL -c "insert into auth.mfa_factors (user_id, factor_type, status) values ('$HHL','totp','verified'), ('$HHL','totp','unverified'), ('$KSH','totp','verified')" >/dev/null
+val "jedno urządzenie (niezweryfikowane i cudze nie liczą się): factors 1" $HHL "$A2; select my_mfa_status()->>'factors'" 1
+err "włączenie wymagania z jednym urządzeniem: odmowa" $HHL "$A2; select admin_set_mfa_enforcement(true)" "drugie urządzenie"
+$PSQL -c "insert into auth.mfa_factors (user_id, factor_type, status) values ('$HHL','totp','verified')" >/dev/null
+val "dwa urządzenia: factors 2" $HHL "$A2; select my_mfa_status()->>'factors'" 2
+val "dwa urządzenia + aal2: włączenie wymagania" $HHL "$A2; select admin_set_mfa_enforcement(true)" t
+val "wyłączenie zawsze możliwe (aal2)" $HHL "$A2; select admin_set_mfa_enforcement(false)" f
+chk "mfa_factor_count bez EXECUTE dla API" "$(Q "select has_function_privilege('authenticated','mfa_factor_count()','execute')::text||has_function_privilege('anon','mfa_factor_count()','execute')::text")" "falsefalse"
+$PSQL -c "drop table auth.mfa_factors" >/dev/null
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

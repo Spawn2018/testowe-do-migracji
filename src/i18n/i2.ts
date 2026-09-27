@@ -4,6 +4,13 @@ import type { Locale } from '../types';
 type Dict = Record<string, string>;
 
 const pl: Dict = {
+  // I-17 — drugie urządzenie 2FA
+  i17_second_intro: "Zapisz konto TOWER w drugiej aplikacji uwierzytelniającej (np. na zapasowym telefonie). Każde urządzenie ma własny kod i działa niezależnie.",
+  i17_add: "Dodaj drugie urządzenie",
+  i17_second_hint: "Zapisane jedno urządzenie. Dodaj drugie (zapasowe) — utrata telefonu nie odetnie wtedy dostępu.",
+  i17_remove: "Usuń",
+  i17_device: "Urządzenie",
+  i17_enforce_needs_two: "Wymaganie można włączyć po zapisaniu drugiego urządzenia.",
   // I-4 — instrukcje w aplikacji
   i4_h: "Instrukcja",
   i4_sub_drv: "kierowca",
@@ -133,6 +140,13 @@ const pl: Dict = {
 };
 
 const en: Dict = {
+  // I-17 — drugie urządzenie 2FA
+  i17_second_intro: "Enroll the TOWER account in a second authenticator app (e.g. on a backup phone). Each device has its own code and works independently.",
+  i17_add: "Add a second device",
+  i17_second_hint: "One device enrolled. Add a second (backup) one so that losing a phone does not lock you out.",
+  i17_remove: "Remove",
+  i17_device: "Device",
+  i17_enforce_needs_two: "The requirement can be enabled after enrolling a second device.",
   // I-4 — instrukcje w aplikacji
   i4_h: "Guide",
   i4_sub_drv: "driver",
@@ -262,6 +276,13 @@ const en: Dict = {
 };
 
 const sv: Dict = {
+  // I-17 — drugie urządzenie 2FA
+  i17_second_intro: "Registrera TOWER-kontot i en andra autentiseringsapp (t.ex. på en reservtelefon). Varje enhet har egen kod och fungerar oberoende.",
+  i17_add: "Lägg till en andra enhet",
+  i17_second_hint: "En enhet registrerad. Lägg till en andra (reserv) så att en förlorad telefon inte stänger ute dig.",
+  i17_remove: "Ta bort",
+  i17_device: "Enhet",
+  i17_enforce_needs_two: "Kravet kan aktiveras när en andra enhet är registrerad.",
   // I-4 — instrukcje w aplikacji
   i4_h: "Instruktion",
   i4_sub_drv: "förare",

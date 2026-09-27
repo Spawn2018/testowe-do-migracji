@@ -13,7 +13,15 @@ import { t } from '../i18n/messages';
 import { useTowerStore } from '../store/useTowerStore';
 import './auth.css';
 
-export interface MfaStatus { role: string | null; aal: string; enforced: boolean; required: boolean; satisfied: boolean }
+export interface MfaStatus { role: string | null; aal: string; enforced: boolean; required: boolean; satisfied: boolean; factors?: number }
+
+/** I-17: nazwa nowego urządzenia — unikalna na koncie (Supabase wymaga różnych friendlyName). */
+export function deviceName(existing: string[], now = new Date()): string {
+  const base = `TOWER ${existing.length + 1} · ${now.toISOString().slice(0, 16).replace('T', ' ')}`;
+  let name = base; let i = 2;
+  while (existing.includes(name)) name = `${base} (${i++})`;
+  return name;
+}
 
 export async function readMfaStatus(sb: SupabaseClient): Promise<MfaStatus | null> {
   const { data, error } = await sb.rpc('my_mfa_status');
@@ -30,7 +38,7 @@ export function mfaStep(level: { currentLevel: string | null; nextLevel: string 
 
 const cleanCode = (s: string) => s.replace(/\D/g, '').slice(0, 6);
 
-export function MfaSetup({ onDone }: { onDone?: () => void }) {
+export function MfaSetup({ onDone, second = false }: { onDone?: () => void; second?: boolean }) {
   const locale = useTowerStore((s) => s.locale);
   const [factor, setFactor] = useState<{ id: string; qr: string; secret: string } | null>(null);
   const [code, setCode] = useState('');
@@ -43,7 +51,8 @@ export function MfaSetup({ onDone }: { onDone?: () => void }) {
     // porzucone, niepotwierdzone zapisy blokują nowy — usuwamy tylko niezweryfikowane
     const list = await sb.auth.mfa.listFactors();
     for (const f of list.data?.all ?? []) if (f.factor_type === 'totp' && f.status !== 'verified') await sb.auth.mfa.unenroll({ factorId: f.id });
-    const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: `TOWER ${new Date().toISOString().slice(0, 10)}` });
+    const names = (list.data?.totp ?? []).filter((f) => f.status === 'verified').map((f) => f.friendly_name ?? '');
+    const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: deviceName(names) });
     setBusy(false);
     if (error || !data) { setMsg({ ok: false, text: authErrorPl(error?.message ?? '') }); return; }
     setFactor({ id: data.id, qr: data.totp.qr_code, secret: data.totp.secret });
@@ -63,8 +72,8 @@ export function MfaSetup({ onDone }: { onDone?: () => void }) {
   if (!factor) {
     return (
       <div className="auth-form" data-mfa="setup">
-        <div className="auth-msg">{t(locale, 'i5_setup_intro')}</div>
-        <button className="btn" type="button" disabled={busy} onClick={() => void start()}>{t(locale, 'i5_setup_start')}</button>
+        <div className="auth-msg">{t(locale, second ? 'i17_second_intro' : 'i5_setup_intro')}</div>
+        <button className="btn" type="button" disabled={busy} onClick={() => void start()}>{t(locale, second ? 'i17_add' : 'i5_setup_start')}</button>
         {msg && <div className={`auth-msg ${msg.ok ? 'ok' : 'err'}`} role="status">{msg.text}</div>}
       </div>
     );
@@ -88,12 +97,21 @@ export function MfaVerify() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [devices, setDevices] = useState<{ id: string; name: string }[]>([]);
+  const [pick, setPick] = useState('');
+  useEffect(() => {
+    void getSupabase().then((sb) => sb.auth.mfa.listFactors()).then((list) => {
+      const d = (list.data?.totp ?? []).filter((x) => x.status === 'verified').map((x) => ({ id: x.id, name: x.friendly_name ?? x.id.slice(0, 8) }));
+      setDevices(d); setPick((p) => p || d[0]?.id || '');
+    });
+  }, []);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true); setErr(null);
     const sb = await getSupabase();
     const list = await sb.auth.mfa.listFactors();
-    const f = list.data?.totp?.find((x) => x.status === 'verified');
+    const all = (list.data?.totp ?? []).filter((x) => x.status === 'verified');
+    const f = all.find((x) => x.id === pick) ?? all[0];
     if (!f) { setBusy(false); setErr(t(locale, 'i5_no_factor')); return; }
     const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: f.id, code });
     setBusy(false);
@@ -102,6 +120,13 @@ export function MfaVerify() {
   return (
     <form className="auth-form" data-mfa="verify" onSubmit={submit}>
       <div className="auth-msg">{t(locale, 'i5_verify_intro')}</div>
+      {devices.length > 1 && (
+        <label>{t(locale, 'i17_device')}
+          <select className="input full" data-mfa-device value={pick} onChange={(e) => setPick(e.target.value)}>
+            {devices.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+        </label>
+      )}
       <label>{t(locale, 'i5_code')}
         <input className="input full" inputMode="numeric" autoComplete="one-time-code" required autoFocus value={code} onChange={(e) => setCode(cleanCode(e.target.value))} />
       </label>
@@ -115,18 +140,26 @@ export function MfaVerify() {
 export default function MyMfa() {
   const locale = useTowerStore((s) => s.locale);
   const [status, setStatus] = useState<MfaStatus | null>(null);
-  const [hasTotp, setHasTotp] = useState<boolean | null>(null);
+  const [devices, setDevices] = useState<{ id: string; name: string; at: string }[]>([]);
+  const hasTotp = devices.length > 0;
   const [setup, setSetup] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const refresh = useCallback(async () => {
     const sb = await getSupabase();
     setStatus(await readMfaStatus(sb));
     const list = await sb.auth.mfa.listFactors();
-    setHasTotp(!!list.data?.totp?.some((f) => f.status === 'verified'));
+    setDevices((list.data?.totp ?? []).filter((f) => f.status === 'verified').map((f) => ({ id: f.id, name: f.friendly_name ?? f.id.slice(0, 8), at: f.created_at })));
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
   if (!status) return null;
   const admin = status.role === 'HHL_ADMIN';
+  const remove = async (id: string) => {
+    setMsg(null);
+    const sb = await getSupabase();
+    const { error } = await sb.auth.mfa.unenroll({ factorId: id });
+    if (error) setMsg(authErrorPl(error.message));
+    await refresh();
+  };
   const toggle = async () => {
     setMsg(null);
     const sb = await getSupabase();
@@ -143,11 +176,29 @@ export default function MyMfa() {
             <button className="btn" type="button" onClick={() => setSetup(true)}>{t(locale, 'i5_setup_start')}</button></div>
         )}
         {setup && !hasTotp && <div className="auth-admin-row"><MfaSetup onDone={() => { setSetup(false); void refresh(); }} /></div>}
+        {devices.map((d) => (
+          <div className="auth-admin-row" key={d.id} data-mfa-device-row>
+            <span className="grow">{d.name}</span>
+            <small>{new Date(d.at).toLocaleDateString(locale)}</small>
+            {devices.length > 1 && status.aal === 'aal2'
+              ? <button className="btn ghost" type="button" data-mfa-remove onClick={() => void remove(d.id)}>{t(locale, 'i17_remove')}</button>
+              : null}
+          </div>
+        ))}
+        {hasTotp && devices.length < 2 && !setup && (
+          <div className="auth-admin-row" data-mfa-second><span className="grow">{t(locale, 'i17_second_hint')}</span>
+            {status.aal === 'aal2'
+              ? <button className="btn" type="button" onClick={() => setSetup(true)}>{t(locale, 'i17_add')}</button>
+              : <small>{t(locale, 'i5_enforce_needs_aal2')}</small>}</div>
+        )}
+        {setup && hasTotp && <div className="auth-admin-row"><MfaSetup second onDone={() => { setSetup(false); void refresh(); }} /></div>}
         {admin && (
           <div className="auth-admin-row" data-mfa-enforced={String(status.enforced)}>
             <span className="grow">{t(locale, status.enforced ? 'i5_enforced_on' : 'i5_enforced_off')}</span>
             {status.aal === 'aal2'
-              ? <button className="btn ghost" type="button" onClick={() => void toggle()}>{t(locale, status.enforced ? 'i5_enforce_disable' : 'i5_enforce_enable')}</button>
+              ? (!status.enforced && devices.length < 2
+                  ? <small data-mfa-needs-second>{t(locale, 'i17_enforce_needs_two')}</small>
+                  : <button className="btn ghost" type="button" onClick={() => void toggle()}>{t(locale, status.enforced ? 'i5_enforce_disable' : 'i5_enforce_enable')}</button>)
               : <small>{t(locale, 'i5_enforce_needs_aal2')}</small>}
           </div>
         )}

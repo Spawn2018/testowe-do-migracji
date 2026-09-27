@@ -336,7 +336,7 @@ dokumentów nieaktualna.
 |---|---|---|---|
 | 16.1 | Stegra **nie jest rolą** — to punkt zainteresowania i strefa | UX_MAP §4 | mój „widok placu, tylko do odczytu" był opcjonalny — tu rozstrzygnięte |
 | 16.2 | Motyw pierwszego malowania per rola: HHL i SCX ciemny, KSH jasny | akceptacja #12 | **koliduje z D16** — patrz 17.9 |
-| 16.3 | Import XLSX **tylko u KSH**, eksport **tylko u HHL** | Visual | uprawnienie, którego nie miałem wprost |
+| 16.3 | ~~Import XLSX **tylko u KSH**, eksport **tylko u HHL**~~ **ZASTĄPIONA PRZEZ I-18** (właściciel 27.09: import u KSH zastąpiony potwierdzaniem dat przez KSH) | Visual | uprawnienie, którego nie miałem wprost |
 | 16.4 | Ceny ukrywane **usunięciem z DOM per rola**, nie rozmyciem ani kropkami | UX_MAP | zgodne z zasadą „nie ukrywaj w interfejsie" |
 | 16.5 | Moduły M1–M12 i ścieżki E1–E4 (audyt, zezwolenia, faktoring HHL, ufność ETA) | UX_MAP §6.5 | pełna lista do wciągnięcia do rejestru |
 | 16.6 | Brama wizualna działa **na oko**, nie na różnicy pikseli | Visual | patrz 17.8 |

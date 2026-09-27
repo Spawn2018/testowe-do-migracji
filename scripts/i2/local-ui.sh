@@ -14,4 +14,4 @@ setsid npx vite preview --outDir "$OUT" --host 127.0.0.1 --port "$PORT" --strict
 PREV=$!
 trap 'kill -- -$PREV 2>/dev/null || kill $PREV 2>/dev/null || true' EXIT
 for i in $(seq 1 30); do curl -sf "http://127.0.0.1:$PORT/" >/dev/null && break; sleep 1; done
-I2_UI_BASE="http://127.0.0.1:$PORT/" npx playwright test tests/i2-facade.local.spec.ts --reporter=line
+I2_UI_BASE="http://127.0.0.1:$PORT/" npx playwright test ${SPEC:-tests/i2-facade.local.spec.ts} --reporter=line

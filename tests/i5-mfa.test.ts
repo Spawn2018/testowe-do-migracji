@@ -30,3 +30,23 @@ describe('I-5 statycznie', () => {
     expect(sql).toMatch(/current_aal\(\) = 'aal2'/);
   });
 });
+
+import { deviceName } from '../src/auth/Mfa';
+describe('I-17 drugie urządzenie', () => {
+  const now = new Date('2026-09-27T20:00:00Z');
+  it('nazwa urządzenia: numer kolejny + czas, unikalna', () => {
+    expect(deviceName([], now)).toBe('TOWER 1 · 2026-09-27 20:00');
+    expect(deviceName(['TOWER 1 · 2026-09-27 20:00'], now)).toBe('TOWER 2 · 2026-09-27 20:00');
+    expect(deviceName(['x', 'TOWER 3 · 2026-09-27 20:00'].slice(0, 2), now)).not.toBe('x');
+  });
+  it('panel: dodanie drugiego urządzenia, lista urządzeń, wymaganie dopiero przy dwóch', () => {
+    const src = readFileSync('src/auth/Mfa.tsx', 'utf8');
+    expect(src).toMatch(/data-mfa-second/);
+    expect(src).toMatch(/data-mfa-device-row/);
+    expect(src).toMatch(/!status\.enforced && devices\.length < 2/);
+    expect(src).toMatch(/data-mfa-device /);
+  });
+  it('0060: włączenie wymagania wymaga ≥ 2 urządzeń', () => {
+    expect(readFileSync('supabase/migrations/0060_mfa_second_device.sql', 'utf8')).toMatch(/p_enabled and \(public\.mfa_factor_count\(\) >= 2\) is not true/);
+  });
+});

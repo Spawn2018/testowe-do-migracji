@@ -141,8 +141,20 @@ function totp(secret: string, at = Date.now()): string {
 }
 const mfaReset = () => psql(`delete from auth.mfa_factors where user_id = (select id from auth.users where email='hhl@bk5.local'); update security_flags set enabled=false where key='MFA_HHL_ADMIN'`);
 
-test('I-5 HHL: zapis TOTP w Opcjach, włączenie wymagania, ponowne logowanie wymaga kodu', async ({ page }) => {
-  test.setTimeout(150000);
+async function magic(page: Page, email: string) {
+  await page.context().clearCookies();
+  await page.evaluate(() => localStorage.clear()).catch(() => undefined);
+  await page.goto('about:blank');
+  const r = await fetch(`${URL_}/auth/v1/admin/generate_link`, { method: 'POST', headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'magiclink', email }) });
+  const g = await r.json() as { action_link?: string; properties?: { action_link?: string } };
+  const hop = await fetch((g.action_link ?? g.properties?.action_link)!, { redirect: 'manual' });
+  const loc = hop.headers.get('location') ?? '';
+  await page.goto(APP + loc.slice(loc.indexOf('#')));
+}
+const nextWindow = (page: Page) => page.waitForTimeout(30000 - (Date.now() % 30000) + 500);
+
+test('I-5 + I-17 HHL: dwa urządzenia TOTP, wymaganie dopiero przy dwóch, każde urządzenie działa niezależnie', async ({ page }) => {
+  test.setTimeout(240000);
   mfaReset();
   try {
     await login(page, 'hhl@bk5.local');
@@ -151,28 +163,48 @@ test('I-5 HHL: zapis TOTP w Opcjach, włączenie wymagania, ponowne logowanie wy
     await expect(box.locator('.sub')).toHaveText('wyłączona');
     await box.getByRole('button', { name: 'Skonfiguruj aplikację' }).click();
     await box.locator('[data-mfa="setup"] button').click();
-    const secret = (await box.locator('[data-mfa-secret]').textContent())!.trim();
-    await box.locator('[data-mfa="setup-code"] input').fill(totp(secret));
+    const s1 = (await box.locator('[data-mfa-secret]').textContent())!.trim();
+    await box.locator('[data-mfa="setup-code"] input').fill(totp(s1));
     await box.locator('[data-mfa="setup-code"] button[type=submit]').click();
     await expect(box.locator('.sub')).toHaveText('włączona', { timeout: 15000 });
-    await expect(box.locator('[data-mfa-enforced]')).toHaveAttribute('data-mfa-enforced', 'false');
+    await expect(box.locator('[data-mfa-device-row]')).toHaveCount(1);
+    // jedno urządzenie: wymaganie zablokowane (UI i baza)
+    await expect(box.locator('[data-mfa-needs-second]')).toBeVisible();
+    // I-17: drugie urządzenie
+    await box.locator('[data-mfa-second] button').click();
+    await box.locator('[data-mfa="setup"] button').click();
+    const s2 = (await box.locator('[data-mfa-secret]').textContent())!.trim();
+    expect(s2).not.toBe(s1);
+    await nextWindow(page);
+    await box.locator('[data-mfa="setup-code"] input').fill(totp(s2));
+    await box.locator('[data-mfa="setup-code"] button[type=submit]').click();
+    await expect(box.locator('[data-mfa-device-row]')).toHaveCount(2, { timeout: 15000 });
     await box.locator('[data-mfa-enforced] button').click();
     await expect(box.locator('[data-mfa-enforced]')).toHaveAttribute('data-mfa-enforced', 'true');
     expect(psql(`select count(*) from audit_log where action='MFA_ENFORCEMENT_SET' and created_at > now() - interval '5 minutes'`)).not.toBe('0');
-    // nowa sesja (aal1) → ekran kodu, bez danych
-    await page.context().clearCookies();
-    await page.evaluate(() => localStorage.clear());
-    await page.goto('about:blank');
-    const r = await fetch(`${URL_}/auth/v1/admin/generate_link`, { method: 'POST', headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'magiclink', email: 'hhl@bk5.local' }) });
-    const g = await r.json() as { action_link?: string; properties?: { action_link?: string } };
-    const hop = await fetch((g.action_link ?? g.properties?.action_link)!, { redirect: 'manual' });
-    const loc = hop.headers.get('location') ?? '';
-    await page.goto(APP + loc.slice(loc.indexOf('#')));
+    // sesja A: urządzenie 2 (wybór z listy)
+    await magic(page, 'hhl@bk5.local');
     await page.waitForSelector('[data-auth="mfa"] [data-mfa="verify"]', { timeout: 30000 });
     await expect(page.locator('[data-auth="session"]')).toHaveCount(0);
-    // kolejne okno 30 s, żeby kod nie był powtórką
-    await page.waitForTimeout(30000 - (Date.now() % 30000) + 500);
-    await page.locator('[data-mfa="verify"] input').fill(totp(secret));
+    const opts = page.locator('[data-mfa-device] option');
+    await expect(opts).toHaveCount(2);
+    await page.locator('[data-mfa-device]').selectOption({ index: 1 });
+    await nextWindow(page);
+    await page.locator('[data-mfa="verify"] input').fill(totp(s2));
+    await page.locator('[data-mfa="verify"] button[type=submit]').click();
+    await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
+    // sesja B: urządzenie 1 — niezależnie; kod urządzenia 2 dla urządzenia 1 odrzucony
+    await magic(page, 'hhl@bk5.local');
+    await page.waitForSelector('[data-auth="mfa"] [data-mfa="verify"]', { timeout: 30000 });
+    await page.locator('[data-mfa-device]').selectOption({ index: 0 });
+    await nextWindow(page);
+    const c1 = totp(s1), c2 = totp(s2);
+    if (c1 !== c2) {
+      await page.locator('[data-mfa="verify"] input').fill(c2);
+      await page.locator('[data-mfa="verify"] button[type=submit]').click();
+      await expect(page.locator('[data-mfa="verify"] [role="alert"]')).toBeVisible();
+    }
+    await page.locator('[data-mfa="verify"] input').fill(c1);
     await page.locator('[data-mfa="verify"] button[type=submit]').click();
     await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
   } finally { mfaReset(); }
@@ -203,4 +235,16 @@ test('I-4 kierowca: PWA z linkiem serwerowym — instrukcja otwarta przed zgodą
     await page.locator('.driver-pwa-tabs button', { hasText: 'EN' }).click();
     await expect(g.locator('ol > li').first()).toContainText('Open the link from the dispatcher');
   } finally { psql(`delete from driver_tokens where token_hash = driver_token_hash('${tok}')`); }
+});
+
+// ── I-6: błędy przeglądarki do bazy ──────────────────────────────────────────
+test('I-6: błąd JS i odrzucona obietnica w buildzie produkcyjnym trafiają do client_errors (z rolą, bez tokenów)', async ({ page }) => {
+  psql(`delete from client_errors where message like '%E2E-I6%'`);
+  await login(page, 'ksh@bk5.local');
+  await page.waitForTimeout(1500);                       // reporter ładowany leniwie
+  await page.evaluate(() => { setTimeout(() => { throw new Error('E2E-I6 wyjątek'); }, 0); void Promise.reject(new Error('E2E-I6 obietnica')); });
+  await expect.poll(() => psql(`select string_agg(kind||'/'||coalesce(app_role,'∅')||'/'||(build is not null)::text, ',' order by kind) from client_errors where message like '%E2E-I6%'`), { timeout: 15000 })
+    .toBe('error/CLIENT_ADMIN/true,rejection/CLIENT_ADMIN/true');
+  expect(psql(`select count(*) from client_errors where message like '%E2E-I6%' and (path like '%access_token%' or path like '%?%')`)).toBe('0');
+  psql(`delete from client_errors where message like '%E2E-I6%'`);
 });
