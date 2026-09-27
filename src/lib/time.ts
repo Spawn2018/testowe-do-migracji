@@ -249,13 +249,25 @@ export function calendarDayNoonMs(day: string, timeZone: CorridorZone): number |
   return Number.isFinite(t) ? t : null;
 }
 
+/** Koniec dnia kalendarzowego w strefie (północ następnego dnia) → epoch ms. SCOPE §57: opóźnienie od końca dnia dostawy. */
+export function calendarDayEndMs(day: string, timeZone: CorridorZone): number | null {
+  const m = String(day).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const next = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + 1));
+  const iso = wallLocalToIso(`${next.toISOString().slice(0, 10)}T00:00:00`, timeZone);
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? t : null;
+}
+
+/** Minuty opóźnienia ETA względem KOŃCA dnia dostawy w Europe/Stockholm (SCOPE §57; jak loads.delay_minutes w bazie, 0070). */
 export function delayMinutesVsPlan(
   etaIso: string | null | undefined,
   plannedDeliverDay: string | null | undefined,
 ): number | null {
   if (!etaIso || !plannedDeliverDay) return null;
   const eta = parseInstant(etaIso);
-  const plan = calendarDayNoonMs(plannedDeliverDay, TZ_UNLOAD_SE);
+  const plan = calendarDayEndMs(plannedDeliverDay, TZ_UNLOAD_SE);
   if (!eta || plan == null) return null;
   if (eta.getTime() <= plan) return null;
   return Math.max(1, Math.round((eta.getTime() - plan) / 60_000));

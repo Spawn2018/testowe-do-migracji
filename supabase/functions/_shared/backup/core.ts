@@ -19,6 +19,7 @@ export const EXCLUSION_REASONS = {
   driver_tokens: 'skróty tokenów kierowców, ważne ≤ 14 dni — po odtworzeniu wydaje się nowe',
   spatial_ref_sys: 'tabela PostGIS (rozszerzenie)',
   account_relink_pending: 'stan przejściowy po odtworzeniu do nowego projektu (0045)',
+  sms_outbox_secret: 'treść SMS z linkiem kierowcy (token) — tylko do chwili wysłania, potem kasowana (0069); w kopii sms_outbox.body bez linku',
 } as const;
 export const EXCLUDED_TABLES = Object.keys(EXCLUSION_REASONS) as readonly (keyof typeof EXCLUSION_REASONS)[];
 

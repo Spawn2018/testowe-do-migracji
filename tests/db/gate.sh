@@ -27,7 +27,7 @@ check status 44
 check storage 37
 check money 130
 check release 145
-check backup 22
+check backup 23
 check session 27
 check archive 18
 check watchdog 27
@@ -35,5 +35,5 @@ check invite 48
 check risks 23
 check import 48
 check nullguard 269
-check i2 279
+check i2 293
 [ $ok -eq 1 ]

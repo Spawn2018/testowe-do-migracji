@@ -4,6 +4,7 @@ import {
   TZ_UNLOAD_SE,
   calendarDayNoonMs,
   delayMinutesVsPlan,
+  calendarDayEndMs,
   formatCalendarDay,
   refYearInOps,
   formatTableInZone,
@@ -48,10 +49,12 @@ describe('D8 timezone policy', () => {
     expect(round).toBe('2026-09-23T06:00');
   });
 
-  it('delayMinutesVsPlan uses Boden noon civil day, not Date.parse(date-only)', () => {
-    const eta = '2026-09-26T18:00:00+02:00';
-    const mins = delayMinutesVsPlan(eta, '2026-09-26');
-    expect(mins).toBe(6 * 60); // 12:00 → 18:00
+  it('delayMinutesVsPlan: od końca dnia dostawy w Europe/Stockholm (SCOPE §57), nie od południa ani Date.parse', () => {
+    expect(delayMinutesVsPlan('2026-09-26T18:00:00+02:00', '2026-09-26')).toBeNull(); // ten sam dzień — brak opóźnienia
+    expect(delayMinutesVsPlan('2026-09-26T23:59:00+02:00', '2026-09-26')).toBeNull();
+    expect(delayMinutesVsPlan('2026-09-27T02:00:00+02:00', '2026-09-26')).toBe(120); // północ Sztokholm → 02:00
+    expect(delayMinutesVsPlan('2026-12-27T01:00:00+01:00', '2026-12-26')).toBe(60); // zima (CET)
+    expect(calendarDayEndMs('2026-09-30', TZ_UNLOAD_SE)).toBe(Date.parse('2026-09-30T22:00:00Z'));
     // naive Date.parse('2026-09-26') is UTC midnight — would skew on some hosts
     const naive = Date.parse('2026-09-26');
     const noon = calendarDayNoonMs('2026-09-26', TZ_UNLOAD_SE)!;

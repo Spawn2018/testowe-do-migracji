@@ -44,6 +44,7 @@ chk "nowa tabela public (t_nowa_tabela) w kopii bez zmiany kodu" "$(ls "$TMP/kop
 chk "tabela na liście wyłączeń, której nie ma w katalogu (nieaktualne wyłączenie)" "$(comm -13 <(echo "$TABLES_DB" | sort) <(echo "$EXCL" | grep -v spatial_ref_sys | sort) | tr '\n' ' ' | sed 's/ $//')" ""
 chk "eksport: pliki tabel + manifest"                  "$(ls "$TMP/kopia"/*.age 2>/dev/null | wc -l)" "$(( $(comm -23 <(echo "$TABLES_DB" | sort) <(echo "$EXCL" | sort) | wc -l) + 1 ))"
 chk "surowe pozycje GPS pominięte (brak positions.*)"  "$(ls "$TMP/kopia" | grep -c '^positions')" 0
+chk "treść SMS z tokenem pominięta (brak sms_outbox_secret.*), sms_outbox w kopii" "$(ls "$TMP/kopia" | grep -c '^sms_outbox_secret')/$(ls "$TMP/kopia" | grep -c '^sms_outbox.csv')" "0/1"
 chk "pliki zaszyfrowane (brak jawnego „KSH/1”)"        "$(grep -l 'KSH/1' "$TMP/kopia"/*.age 2>/dev/null | wc -l)" 0
 chk "odtworzenie do schematu restore_* (liczby wierszy = manifest)" \
   "$(AGE_IDENTITY="$TMP/klucz.txt" RESTORE_DB_URL="$SRC" bash scripts/restore.sh "$TMP/kopia" --schema restore_test --drop-after 2>&1 | tail -1 | cut -d' ' -f1-2)" "RESTORE OK"
