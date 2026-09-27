@@ -157,4 +157,15 @@ val "konto bez app_users: 0 próbek" $NOAPP "select samples from kpi_detection_l
 $PSQL -c "update risk_signals set detected_at = now()-interval '40 days' where dedup_key='T-I2L-J'" >/dev/null
 val "okno 30 dni: próbka sprzed 40 dni pominięta → 2 próbki" $HHL "select samples from kpi_detection_lag('$P', 30)" 2
 
+echo; echo "[I-10] e-mail o zmianie daty awizowanego (0056)"
+$PSQL -c "insert into notifications (channel, recipient, user_id, template, payload, dedup_key) select 'IN_APP', email, id, 'SCHEDULE_DATE_CRITICAL', '{\"code\":\"T-X\"}', 'T-I10-1' from app_users where auth_id='$SCX'" >/dev/null
+chk "IN_APP SCHEDULE_DATE_CRITICAL → 1 e-mail na adres konta" "$(Q "select count(*)||'/'||min(recipient) from notifications where dedup_key='EMAIL:T-I10-1'")" "1/$(Q "select email from app_users where auth_id='$SCX'")"
+$PSQL -c "insert into notifications (channel, recipient, user_id, template, payload, dedup_key) select 'IN_APP', email, id, 'SCHEDULE_DATE_CRITICAL', '{}', 'T-I10-1' from app_users where auth_id='$SCX' on conflict do nothing" >/dev/null
+chk "powtórka (ten sam klucz) → nadal 1 e-mail" "$(Q "select count(*) from notifications where dedup_key like 'EMAIL:T-I10-%'")" 1
+$PSQL -c "update app_users set active=false where auth_id='$KSH'; insert into notifications (channel, recipient, user_id, template, payload, dedup_key) select 'IN_APP', email, id, 'SCHEDULE_DATE_CRITICAL', '{}', 'T-I10-2' from app_users where auth_id='$KSH'; update app_users set active=true where auth_id='$KSH'" >/dev/null
+chk "konto nieaktywne → bez e-maila" "$(Q "select count(*) from notifications where dedup_key='EMAIL:T-I10-2'")" 0
+$PSQL -c "insert into notifications (channel, recipient, user_id, template, payload, dedup_key) select 'IN_APP', email, id, 'INVOICE_NEW', '{}', 'T-I10-3' from app_users where auth_id='$SCX'" >/dev/null
+chk "inne szablony IN_APP bez e-maila z tego wyzwalacza" "$(Q "select count(*) from notifications where dedup_key='EMAIL:T-I10-3'")" 0
+chk "funkcja wyzwalacza bez EXECUTE dla API" "$(Q "select has_function_privilege('authenticated','notify_schedule_critical_email()','execute')::text")" false
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
