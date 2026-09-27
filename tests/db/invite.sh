@@ -93,4 +93,25 @@ chk "wiersz nieosierocony (stare auth_id istnieje) → bez przejęcia" "$($PSQL 
 chk "ponowne restore_mark_relink() — idempotentne (ksh połączony)" "$(Q "select restore_mark_relink()"):$(Q "select count(*) from account_relink_pending where email='ksh@test'")" "2:0"
 chk "anon/authenticated: brak dostępu do listy i funkcji"        "$(Q "select has_table_privilege('authenticated','account_relink_pending','select') or has_table_privilege('anon','account_relink_pending','select') or has_function_privilege('authenticated','restore_mark_relink()','execute')")" f
 
+echo; echo "[PR2-C / 0046] Konto nieaktywne w kopii; ważność listy (30 dni)"
+IN1=aaaaaaaa-1111-0000-0000-00000000000a; OLDA=bbbbbbbb-2222-0000-0000-00000000000a
+EXP3=aaaaaaaa-1111-0000-0000-00000000000b; OLDB=bbbbbbbb-2222-0000-0000-00000000000b
+KSHORG=$(Q "select org_id from app_users where email='ksh@test'")
+$PSQL -c "insert into app_users (auth_id, org_id, email, full_name, role, active) values
+  ('$OLDA','$KSHORG','nieaktywny@firma.pl','Nieaktywny','CLIENT_USER', false),
+  ('$OLDB','$KSHORG','spozniony@firma.pl','Spóźniony','CLIENT_USER', true)" >/dev/null
+chk "restore_mark_relink(): +2 wpisy (nieaktywny, spóźniony)"   "$(Q "select restore_mark_relink()")" 4
+$PSQL -c "insert into auth.users (id, email) values ('$IN1','nieaktywny@firma.pl')" >/dev/null 2>&1
+chk "nieaktywny: połączony, ale active = false"                 "$(Q "select active from app_users where auth_id='$IN1'")" f
+chk "nieaktywny po połączeniu i zalogowaniu widzi 0 wierszy"   "$($PSQL -c "update auth.users set last_sign_in_at = now() where id='$IN1'" >/dev/null; sees $IN1)" 0
+chk "nieaktywny: rola aplikacji pusta (current_app_role)"       "$(as $IN1 "select coalesce(current_app_role()::text,'brak')")" brak
+chk "relink_valid_days() = 30"                                  "$(Q "select relink_valid_days()")" 30
+$PSQL -c "update account_relink_pending set marked_at = now() - interval '31 days' where email='spozniony@firma.pl'" >/dev/null
+chk "wpis starszy niż 30 dni: brak połączenia → TOWER_NO_INVITE" "$($PSQL -c "insert into auth.users (id, email) values ('$EXP3','spozniony@firma.pl')" 2>&1 | grep -c TOWER_NO_INVITE):$(Q "select count(*) from app_users where email='spozniony@firma.pl' and auth_id='$OLDB'")" "1:1"
+$PSQL -c "update account_relink_pending set marked_at = now() - interval '29 days' where email='hhl@test'" >/dev/null
+chk "expire_relink_pending(): usuwa tylko > 30 dni (1), 29-dniowy zostaje" "$(Q "select expire_relink_pending()"):$(Q "select count(*) from account_relink_pending where email='hhl@test'"):$(Q "select count(*) from account_relink_pending where email='spozniony@firma.pl'")" "1:1:0"
+chk "audit RELINK_PENDING_EXPIRED (usuniete=1)"                 "$(Q "select new_value->>'usuniete' from audit_log where action='RELINK_PENDING_EXPIRED' order by id desc limit 1")" 1
+chk "expire_relink_pending() ponownie → 0 (idempotentne)"       "$(Q "select expire_relink_pending()")" 0
+chk "anon/authenticated bez EXECUTE expire_relink_pending"      "$(Q "select has_function_privilege('authenticated','expire_relink_pending(timestamptz)','execute') or has_function_privilege('anon','expire_relink_pending(timestamptz)','execute')")" f
+
 echo "WYNIK: $ok OK, $fail FAIL"

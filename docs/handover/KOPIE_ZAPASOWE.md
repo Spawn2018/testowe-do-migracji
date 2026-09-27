@@ -10,10 +10,10 @@
 | Worker tylko do dopisywania (PUT nowego obiektu, `x-backup-secret`; GET/DELETE/LIST 405, nadpisanie 409) | `workers/backup-writer/`, test na żywo `scripts/r2/test-writer.sh` |
 | Blokada usuwania i cykl życia R2 | `docs/handover/r2/bucket-lock.json` (daily/ 30 d, monthly/ 360 d), `docs/handover/r2/lifecycle.json` (31 / 361 d) |
 | Tabela przebiegów, blokada współbieżności | `0023_backup_runs.sql`, `0044_backup_run_lock.sql` |
-| Konta po odtworzeniu do nowego projektu | `0045_restore_relink_accounts.sql` |
+| Konta po odtworzeniu do nowego projektu | `0045_restore_relink_accounts.sql`, ważność listy 30 dni `0046_relink_expiry.sql` |
 | Harmonogram | `supabase/sql/cron_backup.sql` (zastosowany na produkcji) |
 | Odtworzenie tabel / plików | `scripts/restore.sh`, `scripts/restore-files.sh` |
-| Testy | `tests/backup-core.test.ts`, `tests/db/backup.sh` (bramka `backup 20`), `tests/db/invite.sh` (bramka `invite 38`) |
+| Testy | `tests/backup-core.test.ts`, `tests/db/backup.sh` (bramka `backup 20`), `tests/db/invite.sh` (bramka `invite 48`) |
 
 Poza kopią: `positions` (dane osobowe, 30 dni), `driver_tokens` (skróty tokenów), `spatial_ref_sys` (PostGIS), `account_relink_pending` (stan przejściowy odtworzenia). Test pokrycia w `backup.sh` pilnuje, że każda tabela `public` jest w kopii albo na liście wyłączeń.
 
@@ -42,7 +42,9 @@ Token R2 tylko do odczytu zastąpi krok 1 dopiero wtedy, gdy zacznie działać p
    - `restore.sh --into-public` wpisuje takie konta do `account_relink_pending` i wypisuje `konta_do_polaczenia=N`;
    - użytkownik loguje się jak zwykle (link z e-maila na stronie logowania). Nowe konto logowania z adresem z listy zostaje **połączone po adresie e-mail** z dotychczasowym wierszem `app_users`: rola, organizacja, aktywność, historia bez zmian; audit `USER_RELINKED_AFTER_RESTORE`; adres znika z listy;
    - bezpieczeństwo: łączony jest tylko adres z listy i tylko wiersz, którego stare konto nie istnieje; zalogować się może wyłącznie właściciel skrzynki (link z e-maila). Adres spoza listy — zasady zaproszeń bez zmian;
-   - administrator HHL loguje się pierwszy tą samą drogą; nie trzeba nikogo zapraszać ponownie. Konta, które się nie zalogują, zostają na liście (bez skutków).
+   - połączenie nie zmienia `active`: konto **nieaktywne w kopii zostaje nieaktywne** (loguje się, ale widzi 0 wierszy — RLS); przywrócić je może tylko HHL (ponowne zaproszenie / zmiana w panelu);
+   - **ważność listy: 30 dni** od odtworzenia (`relink_valid_days()`, 0046). Starszy wpis jest pomijany (zasady zaproszeń jak dla obcego adresu), a zadanie dzienne `tower-wygasanie-listy-kont` (02:45 UTC) usuwa go z audytem `RELINK_PENDING_EXPIRED`. Kto nie zaloguje się w 30 dni, dostaje od HHL zwykłe ponowne zaproszenie. 30 dni = okno uruchomienia nowego projektu po awarii; dłuższa lista to niepotrzebnie długo otwarta ścieżka przejęcia konta po adresie;
+   - administrator HHL loguje się pierwszy tą samą drogą; nie trzeba nikogo zapraszać ponownie.
    - Supabase → Authentication → URL Configuration: Site URL i Redirect URLs nowego adresu aplikacji (inaczej link nie wróci do aplikacji).
 3. **Pliki:** `scripts/restore-files.sh` z `RESTORE_STORAGE_URL` i `RESTORE_SERVICE_KEY` nowego projektu (zmienne środowiska na komputerze właściciela; klucz nie trafia do repo ani czatu) wgrywa pliki do tych samych kubełków i ścieżek (bez nadpisywania) i sprawdza SHA-256.
 4. `restore.sh` oznacza przebieg `backup_runs` zapisany w trakcie kopii (RUNNING) jako `ERROR`, żeby nie blokował nowych kopii.
@@ -52,6 +54,7 @@ Token R2 tylko do odczytu zastąpi krok 1 dopiero wtedy, gdy zacznie działać p
 - 26.09: eksport z produkcji (odczyt) → lokalny Postgres: 405 wierszy = manifest. Zły klucz → odtworzenie niemożliwe.
 - 27.09 (produkcja → R2 → lokalnie): `RESTORE OK tabel=38 wierszy=362`.
 - 27.09 PR2-B, lokalny Supabase w Dockerze + lokalny R2 (`wrangler dev --local`, ten sam Worker i kontrakt; test-writer 8/8): 2 dokumenty wgrane do Storage (250 016 B PDF + 40 006 B JPG) → kopia z `files/` (2 pliki) → pliki usunięte z Storage → `FILES OK plikow=2 bajtow=290022 sha256_zgodne=2/2 wgrane=2` → pobrane ze Storage: SHA-256 przed = po (2/2). Kolejny przebieg przyrostowy: 1 nowy plik, 2 pominięte (już w `files/`), SHA-256 w manifeście zgodne. Dwa równoległe wywołania: 1 OK + 1 `SKIPPED`. Odtworzenie `--into-public` → `konta_do_polaczenia=3`; logowanie linkiem (GoTrue) jednego z nich → konto połączone, widzi swoje dane (RLS); obcy adres → odmowa.
+- 27.09 PR2-C, lokalny Supabase (GoTrue): konto nieaktywne w kopii → połączone, sesja wydana, widzi projekty 0 / app_users 0 / loads 0; wpis listy starszy niż 30 dni → logowanie odrzucone; kontrolnie aktywne konto → projekty 1, loads 2. `expire_relink_pending()` usunęło 1 przeterminowany wpis.
 
 ## Ryzyko
 Kopia raz na dobę: **utrata danych do 24 h** (akceptowane w ANEKSIE 4). Limity darmowego R2: 10 GB, 1 mln operacji A / 10 mln B miesięcznie.
