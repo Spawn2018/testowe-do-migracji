@@ -8,6 +8,7 @@ import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
 import { docCategoryLabel } from '../lib/enumLabels';
 import { shows } from '../lib/prodFacade';
+import { defaultDocWeek, docsForWeek, weeksWithLoads } from '../lib/docWeek';
 
 const CATS: { key: DocCategory; labelKey: string; who: string; whenKey: string }[] = [
   { key: 'PERMIT_PL', labelKey: 'doc_cat_permit_pl', who: 'Scandinavian Express', whenKey: 'docs_before_load' },
@@ -52,6 +53,10 @@ export function DocsView() {
   );
 
   const defaultLoadId = loads[0]?.id;
+  // I-2k: paczka tygodnia — tylko dokumenty transportów z wybranego tygodnia ISO
+  const weeks = useMemo(() => weeksWithLoads(loads), [loads]);
+  const [packWeek, setPackWeek] = useState('');
+  const week = weeks.includes(packWeek) ? packWeek : defaultDocWeek(weeks);
 
   return (
     <div className="panel section-card page-sections" data-page="docs" style={{ margin: 12 }}>
@@ -72,11 +77,19 @@ export function DocsView() {
             {t(locale, 'a6_docs_upload')}
           </button>
         ) : null}
+        {weeks.length ? (
+          <select className="input" value={week} data-docs-week="" aria-label={t(locale, 'bill_col_week')} onChange={(e) => setPackWeek(e.target.value)}>
+            {weeks.map((w) => <option key={w} value={w}>{w}</option>)}
+          </select>
+        ) : null}
         <button
           type="button"
           className="chipbtn"
+          data-docs-pack=""
+          disabled={!week}
           onClick={() => {
-            void downloadDocumentsZip(documents, 'WATCH_TOWER_dokumenty_tydzien.zip').then((r) => {
+            if (!week) return;
+            void downloadDocumentsZip(docsForWeek(documents, loads, week), `WATCH_TOWER_dokumenty_${week}.zip`).then((r) => {
               useTowerStore.getState().pushToast(t(locale, 'a6_docs_zip_toast').replace('{n}', String(r.count)), 'MEDIUM');
             });
           }}
