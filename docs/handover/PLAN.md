@@ -1,0 +1,127 @@
+# PLAN CIĄGŁY — TOWER
+
+> Zapisz jako `docs/handover/PLAN.md`. **Od teraz to jedyna lista pracy.**
+> `POSTEP.md` zostaje dziennikiem wykonanego. `SCOPE.md` — rejestrem zakresu.
+
+---
+
+# 1. ZASADY PRACY CIĄGŁEJ
+
+1. **Realizujesz kolejkę z sekcji 3 od góry, bez przerw.** Po zakończeniu
+   pozycji: wpis w `POSTEP.md` z liczbami, status w tym pliku, **od razu
+   następna pozycja**. Nie pytasz, czy iść dalej. Nie czekasz na akceptację.
+2. **Zmiany tylko dopisujemy.** Koordynator przysyła bloki `DOPISZ` (sekcja 2).
+   Istniejących pozycji nie przepisujemy — najwyżej oznaczamy
+   `ZASTĄPIONA PRZEZ <ID>`.
+3. **Pytanie do właściciela nie zatrzymuje kolejki.** Wpisujesz je do
+   sekcji 4 (Decyzje oczekujące) i **przechodzisz do następnej pozycji,
+   która od niego nie zależy**. Kolejka nigdy nie stoi przez jedno pytanie.
+4. **STOP — wyłącznie w tych sytuacjach:**
+   - usunięcie albo zmiana prawdziwych danych na produkcji
+   - wydanie pieniędzy albo zmiana planu usług
+   - wysłanie czegokolwiek do prawdziwych użytkowników z zewnątrz
+   - wzorzec zrzutów zmienia się poza zakresem przewidzianym w pozycji
+   - dane, które może dać tylko właściciel (stawki, umowy)
+5. **Znaleziona luka bezpieczeństwa wysokiej wagi:** naprawiasz od razu,
+   jako następną pozycję, bez pytania — i zgłaszasz w raporcie.
+6. **Raport:** jeden krótki po każdej zakończonej pozycji (ID, wynik
+   liczbami, commit). Właściciel przekazuje raporty koordynatorowi
+   w dogodnym momencie — nie po każdym.
+7. **Nic nie ginie:** każda pozycja z `SCOPE.md` o statusie innym niż
+   DONE musi mieć swoje miejsce w kolejce albo w dzienniku odłożeń.
+
+---
+
+# 2. PROTOKÓŁ DOPISYWANIA
+
+Koordynator przysyła wyłącznie bloki w tej formie:
+
+```
+DOPISZ
+ID: <etap>-<numer>
+Priorytet: P0 | P1 | P2
+Opis: …
+Kryterium odbioru: …
+```
+
+- **P0** — bezpieczeństwo albo bloker: wchodzi jako następna pozycja
+  po bieżącej; bieżącej nie przerywasz
+- **P1** — bieżący etap, na koniec jego listy
+- **P2** — etap późniejszy, na koniec tamtego etapu
+
+---
+
+# 3. KOLEJKA
+
+Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
+
+## ETAP I — przed pilotażem (w tej kolejności)
+
+| ID | Opis | Kryterium | Status |
+|---|---|---|---|
+| I-0 | wyciek plików | stare wdrożenia usunięte, ocena ekspozycji | DONE |
+| I-0b | usunięcie poprzednich wdrożeń Pages przy najbliższym logowaniu | lista wdrożeń = 1 | DO ZROBIENIA (przy okazji) |
+| I-1 | import w produkcji zapisuje transporty | 41/41 lokalnie, powtórka 0 zmian | DONE |
+| I-SEC | strażniki odporne na NULL (`is not true`), `is_hhl()`/`can_see_margin()` tylko true/false | nieaktywne konto każdej roli × każda funkcja z listy dozwolonych = odmowa; test statyczny migracji | W TOKU |
+| I-BK | kopia zapasowa: tabele wyliczane z katalogu, jawne wykluczenia | tabela spoza kopii i spoza wykluczeń = test czerwony | W TOKU |
+| I-1b | klasa STANDARD dla 9 transportów | import 50/50 | W TOKU |
+| I-2a | przełącznik ról tylko dla HHL | KSH i SCX go nie widzą | DO ZROBIENIA |
+| I-2c | moduł Workflows ukryty w produkcji | niewidoczny poza trybem demo | DO ZROBIENIA |
+| I-2d | ETA v1 w bazie: odcinek + czasy odcinków + rejs z `sailings`, przeliczana przy zdarzeniu | test na symulacji 11 transportów ze `status.sh` | DO ZROBIENIA |
+| I-2e | pogoda, przeprawy alternatywne, objazdy SE — ukryte albo „brak źródła danych" | zero danych statycznych w produkcji | DO ZROBIENIA |
+| I-2f | Opcje BAF — prawdziwy formularz parametrów SEFS i odczytów indeksu, ze źródłem, datą i dziennikiem | zapis i odczyt w produkcji | DO ZROBIENIA |
+| I-2g | kody opóźnień ukryte do uzgodnienia z przewoźnikiem | — | DO ZROBIENIA |
+| I-2h | telefony demo: pula PTS (SE), nieprzydzielalne (PL, LT); SMS i e-mail nigdy w trybie demo | test | DO ZROBIENIA |
+| I-2i | przegląd 37 pozycji „częściowo" — każda działająca tylko w demo trafia tu jako nowa pozycja I-2* | lista w raporcie | DO ZROBIENIA |
+| I-10 | e-mail o zmianie daty awizowanego transportu | dostarczenie na adres z plusem | DO ZROBIENIA |
+| I-3 | bramka SMS według `PROPOZYCJA_SMS.md` + decyzje z `ZLECENIE_ETAP_I.md` | testy z propozycji; 24 h pracy telefonu | CZEKA NA: telefon i SIM (część bazowa i aplikacja — DO ZROBIENIA) |
+| I-5 | 2FA TOTP, wymagane dla HHL_ADMIN (`aal2`) | administrator bez drugiego składnika = odmowa | DO ZROBIENIA |
+| I-4 | instrukcje: kierowca PL/EN/SV, KSH, przewoźnik | dostępne w aplikacji | DO ZROBIENIA |
+| I-6 | monitoring błędów przeglądarki do własnej tabeli, alarm | błąd testowy widoczny w tabeli | DO ZROBIENIA |
+| I-7 | retencja: dane kierowcy 90 dni | test | DO ZROBIENIA; dokumenty — decyzja D-3 |
+| I-8 | wydajność: cały harmonogram + GPS według PR5, trzy role | czasy liczbami | DO ZROBIENIA |
+| I-9 | `SCOPE.md` koordynatora w repo; Twoje statusy jako §53 | jeden rejestr | DO ZROBIENIA |
+| I-11 | każda pozycja SCOPE 0–11 inna niż DONE ma miejsce w tej kolejce albo w dzienniku odłożeń | zasada 7 spełniona | DO ZROBIENIA |
+
+## PILOTAŻ I WYDANIE
+
+| ID | Opis | Status |
+|---|---|---|
+| R-1 | import prawdziwego harmonogramu na produkcję | CZEKA NA: I-1b, stawki (D-1) |
+| R-2 | zaproszenie pracowników HHL, potem KSH, potem przewoźnika | CZEKA NA: etap I |
+| R-3 | O3b — pierwszy prawdziwy transport od importu do faktury | CZEKA NA: R-2 |
+| R-4 | raport końcowy, tag `release-1.0` | CZEKA NA: R-3 |
+
+## ETAP II — po spotkaniu z przewoźnikiem
+
+| ID | Opis | Status |
+|---|---|---|
+| II-1 | wartości SEFS i ich wprowadzenie | CZEKA NA: D-2 |
+| II-2 | kody opóźnień uzgodnione — włączenie w interfejsie | CZEKA NA: spotkanie |
+| II-3 | parametry operacyjne: cutoff promu, progi fal, prędkość | CZEKA NA: spotkanie |
+| II-4 | adapter telematyki przewoźnika | CZEKA NA: spotkanie |
+| II-5 | komunikaty armatora w harmonogramie | CZEKA NA: zgoda armatora |
+| II-6 | Trafikverket, TomTom, KPD — zadania i klucze | CZEKA NA: klucze (każdy osobno — rusza, gdy jego klucz dotrze) |
+
+## ETAP III — po pilotażu
+
+Silnik Workflows · źródło pogody morskiej · walidator zezwoleń i wymiarów ·
+pozycje D4–D12 audytu · integracja SharePoint (zgoda IT KSH) · kalendarz ·
+e-CMR · ślad węglowy · SMS 6, 7, 10, 11 · retencja `files/` w R2 ·
+audyt dostępności · przekazanie Cursorowi.
+
+---
+
+# 4. DECYZJE OCZEKUJĄCE — WŁAŚCICIEL
+
+Wpisujesz tu każde pytanie i idziesz dalej.
+
+| ID | Sprawa | Blokuje |
+|---|---|---|
+| D-1 | stawki — koszt przewoźnika, przychód od KSH | R-1, faktury |
+| D-2 | parametry SEFS — po spotkaniu z przewoźnikiem | II-1 |
+| D-3 | retencja zdjęć, CMR, POD | część I-7 |
+| D-4 | telefon z Androidem i firmowa karta SIM z SMS na +46 | test I-3 |
+| D-5 | umowy RODO z KSH i przewoźnikiem | R-2 |
+| D-6 | spotkanie ze Scandinavian Express | etap II |
+| D-7 | Vercel: wyłączenie trenowania modeli (panel) | — |
