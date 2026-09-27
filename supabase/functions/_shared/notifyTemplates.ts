@@ -78,6 +78,21 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
         : locale === 'sv' ? `Ange ordernumret före ${formatDay(p.due)}.` : `Uzupełnij numer zlecenia przed ${formatDay(p.due)}.`;
       return { subject, body, severity: 'HIGH', view: 'risk' };
     }
+    case 'RESOURCE_DEADLINE': {
+      // I-21 (0073): brak zasobu przed załadunkiem (kierowca / pojazd / dokumenty)
+      const code = String(p.code ?? '');
+      const res = String(p.resource ?? '');
+      const what = locale === 'en'
+        ? (res === 'DRIVER' ? 'driver details' : res === 'VEHICLE' ? 'tractor or trailer plates' : 'documents')
+        : locale === 'sv'
+          ? (res === 'DRIVER' ? 'föraruppgifter' : res === 'VEHICLE' ? 'registreringsnummer för dragbil eller trailer' : 'dokument')
+          : (res === 'DRIVER' ? 'dane kierowcy' : res === 'VEHICLE' ? 'tablice ciągnika lub naczepy' : 'dokumenty');
+      const subject = locale === 'en' ? `${code}: missing ${what}` : locale === 'sv' ? `${code}: ${what} saknas` : `${code}: brak — ${what}`;
+      const body = locale === 'en'
+        ? `Complete before loading on ${formatDay(p.due)}.`
+        : locale === 'sv' ? `Komplettera före lastning ${formatDay(p.due)}.` : `Uzupełnij przed załadunkiem ${formatDay(p.due)}.`;
+      return { subject, body, severity: p.severity === 'CRITICAL' ? 'CRITICAL' : 'HIGH', view: 'risk' };
+    }
     case 'SCHEDULE_DATE_CRITICAL': {
       const code = String(p.code ?? '');
       const ld = formatDay(p.load_date), dd = formatDay(p.delivery_date);

@@ -13,8 +13,9 @@ klasy bärighet BK1–BK4, obiekty inżynierskie) oraz zezwolenia na każdy tran
 | Długość — pojazd członowy (ciągnik + naczepa) | 16,50 m | tamże, **§ 2 ust. 1 pkt 4** |
 | Długość — zespół pojazd silnikowy + przyczepa | 18,75 m | tamże, **§ 2 ust. 1 pkt 5** |
 | Długość — pojedynczy pojazd samochodowy / przyczepa | 12,00 m | tamże, **§ 2 ust. 1 pkt 1 i 3** |
-| Masa całkowita zespołu (5 i więcej osi) | 40 t (w przewozie kombinowanym kontenera 40′ — 44 t) | tamże, **§ 3 ust. 1** (do sprawdzenia aktualnego brzmienia punktów) |
-| Nacisk osi napędowej | 11,5 t na drogach publicznych (poza drogami oznakowanymi niżej) | ustawa z 21.03.1985 r. o drogach publicznych, **art. 41** ust. 2; rozporządzenie j.w. **§ 3 ust. 1 pkt 2** |
+| Masa całkowita zespołu (co najmniej 5 osi, ciągnik = pojazd samochodowy) | 40 t; intermodalny zestaw 5–6 osi z kontenerem/nadwoziem wymiennym do 45′: 42 t (ciągnik 2-osiowy + naczepa 3-osiowa) albo 44 t (ciągnik 3-osiowy + naczepa 2–3-osiowa) | tamże, **§ 3 ust. 1 pkt 2** lit. a–d (brzmienie sprawdzone 28.09 w t.j. Dz.U. 2024 poz. 502) |
+| Masa całkowita — zestaw członowy 4-osiowy | 36 t (38 t przy rozstawie osi naczepy > 1,8 m, koła bliźniacze i zawieszenie pneumatyczne na osi napędowej) | tamże, **§ 3 ust. 1 pkt 6** |
+| Nacisk osi | nienapędowa 10 t, napędowa 11,5 t | tamże, **§ 5 ust. 1 pkt 1 i 5**; na drogach o obniżonej nośności mniej (ustawa o drogach publicznych, **art. 41**) — do sprawdzenia trasy |
 | Wystawanie ładunku | ładunek nie może wystawać z boku poza obrys pojazdu; z tyłu do 2,0 m od tylnej krawędzi (warunki oznakowania) | ustawa z 20.06.1997 r. Prawo o ruchu drogowym (PoRD), **art. 61 ust. 4–5** |
 
 **Kiedy potrzebne zezwolenie.** Przekroczenie którejkolwiek wartości powyżej = pojazd nienormatywny: przejazd tylko na
