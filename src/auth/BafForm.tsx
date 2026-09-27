@@ -17,6 +17,8 @@ interface Params {
   version: number; valid_from: string; base_sek: number; base_pln: number; index_sek: string; index_pln: string;
   source_url_sek: string; source_url_pln: string; cycle: 'WEEKLY' | 'MONTHLY'; tiers_sek: SefsTier[]; tiers_pln: SefsTier[];
   agreed_with_carrier: boolean; agreement_ref: string | null; note: string | null; created_at: string;
+  /** I-13 (0063): COST — koszt (przewoźnik), REVENUE — przychód (KSH), BOTH */
+  applies_to?: 'COST' | 'REVENUE' | 'BOTH';
 }
 interface Reading {
   id: number; index_code: 'SEK' | 'PLN'; period: string; reading_date: string; value: number; source_url: string;
@@ -46,7 +48,7 @@ export function currentReadings(rows: readonly Reading[]): Reading[] {
   return rows.filter((r) => !corrected.has(r.id));
 }
 
-const EMPTY_P = { valid_from: '', base_sek: '', base_pln: '', index_sek: 'OKQ8 Diesel', index_pln: 'ORLEN ON', source_url_sek: '', source_url_pln: '', cycle: 'MONTHLY', tiers_sek: '', tiers_pln: '', agreed: false, agreement_ref: '', note: '' };
+const EMPTY_P = { valid_from: '', base_sek: '', base_pln: '', index_sek: 'OKQ8 Diesel', index_pln: 'ORLEN ON', source_url_sek: '', source_url_pln: '', cycle: 'MONTHLY', tiers_sek: '', tiers_pln: '', agreed: false, agreement_ref: '', note: '', applies_to: 'BOTH' };
 const EMPTY_R = { index_code: 'SEK', period: '', reading_date: '', value: '', source_url: '', note: '', corrects: '', reason: '' };
 
 export default function BafForm() {
@@ -78,7 +80,7 @@ export default function BafForm() {
     if (cur) {
       setPf({ valid_from: cur.valid_from, base_sek: String(cur.base_sek), base_pln: String(cur.base_pln), index_sek: cur.index_sek, index_pln: cur.index_pln,
         source_url_sek: cur.source_url_sek, source_url_pln: cur.source_url_pln, cycle: cur.cycle, tiers_sek: tiersText(cur.tiers_sek), tiers_pln: tiersText(cur.tiers_pln),
-        agreed: cur.agreed_with_carrier, agreement_ref: cur.agreement_ref ?? '', note: cur.note ?? '' });
+        agreed: cur.agreed_with_carrier, agreement_ref: cur.agreement_ref ?? '', note: cur.note ?? '', applies_to: cur.applies_to ?? 'BOTH' });
     }
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
@@ -111,7 +113,7 @@ export default function BafForm() {
     await run(() => sb.rpc('sefs_save_parameters', { p_project: projectId, p: {
       valid_from: pf.valid_from, base_sek: Number(pf.base_sek.replace(',', '.')), base_pln: Number(pf.base_pln.replace(',', '.')),
       index_sek: pf.index_sek, index_pln: pf.index_pln, source_url_sek: pf.source_url_sek.trim(), source_url_pln: pf.source_url_pln.trim(),
-      cycle: pf.cycle, tiers_sek: ts, tiers_pln: tpn, agreed_with_carrier: pf.agreed, agreement_ref: pf.agreement_ref, note: pf.note,
+      cycle: pf.cycle, tiers_sek: ts, tiers_pln: tpn, agreed_with_carrier: pf.agreed, agreement_ref: pf.agreement_ref, note: pf.note, applies_to: pf.applies_to,
     } }), t(locale, 'i2_baf_params_saved'));
   };
 
@@ -159,6 +161,8 @@ export default function BafForm() {
           <label>{t(locale, 'i2_baf_url_pln')}<input className="input" type="url" required value={pf.source_url_pln} onChange={(e) => P('source_url_pln', e.target.value)} /></label>
           <label className="wide">{t(locale, 'i2_baf_tiers_sek')}<textarea className="input" rows={5} required placeholder="18.50;1.00" value={pf.tiers_sek} onChange={(e) => P('tiers_sek', e.target.value)} /></label>
           <label className="wide">{t(locale, 'i2_baf_tiers_pln')}<textarea className="input" rows={5} required placeholder="5.90;1.00" value={pf.tiers_pln} onChange={(e) => P('tiers_pln', e.target.value)} /></label>
+          <label>{t(locale, 'i13_applies')}<select className="input" data-baf-applies value={pf.applies_to} onChange={(e) => P('applies_to', e.target.value)}>
+            <option value="BOTH">{t(locale, 'i13_BOTH')}</option><option value="COST">{t(locale, 'i13_COST')}</option><option value="REVENUE">{t(locale, 'i13_REVENUE')}</option></select></label>
           <label className="check"><input type="checkbox" checked={pf.agreed} onChange={(e) => P('agreed', e.target.checked)} />{t(locale, 'i2_baf_agreed')}</label>
           <label>{t(locale, 'i2_baf_agreement_ref')}<input className="input" value={pf.agreement_ref} onChange={(e) => P('agreement_ref', e.target.value)} /></label>
           <label className="wide">{t(locale, 'i2_baf_change_note')}<input className="input full" value={pf.note} onChange={(e) => P('note', e.target.value)} /></label>

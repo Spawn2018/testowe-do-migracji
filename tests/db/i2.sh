@@ -125,6 +125,24 @@ val "dziennik: kto i co (e-mail, stara/nowa baza)" $HHL "select actor||' '||(old
 val "dziennik korekty: stara i nowa wartość" $HHL "select (old_value->>'value')||'→'||(new_value->>'value')||' '||(new_value->>'correction_reason') from baf_change_log('$P') where action='FUEL_READING_CORRECT'" "19.6800→19.7100 literówka w cenie"
 chk "migracja nie wstawia wartości (poza testem): baf_definitions 0" "$(Q "select count(*) from baf_definitions")" 0
 
+echo; echo "[I-13] SEFS applies_to COST|REVENUE|BOTH — kto widzi które wersje (0063, D-10)"
+chk "istniejące wersje po migracji: BOTH (domyślnie)" "$(Q "select string_agg(version||':'||applies_to, ',' order by version) from sefs_parameters")" "1:BOTH,2:BOTH"
+val "HHL: v3 COST uzgodniona z przewoźnikiem" $HHL "select sefs_save_parameters('$P', '$PAR'::jsonb || '{\"applies_to\":\"COST\",\"agreed_with_carrier\":true,\"agreement_ref\":\"ANEKS 2\"}')" 3 commit
+val "HHL: v4 REVENUE" $HHL "select sefs_save_parameters('$P', '$PAR'::jsonb || '{\"applies_to\":\"REVENUE\"}')" 4 commit
+val "HHL: v5 COST NIEuzgodniona" $HHL "select sefs_save_parameters('$P', '$PAR'::jsonb || '{\"applies_to\":\"COST\"}')" 5 commit
+val "HHL: v6 BOTH uzgodniona (brak applies_to = BOTH)" $HHL "select sefs_save_parameters('$P', '$PAR'::jsonb || '{\"agreed_with_carrier\":true}')" 6 commit
+err "nieznany zakres odrzucony" $HHL "select sefs_save_parameters('$P', '$PAR'::jsonb || '{\"applies_to\":\"ALL\"}')" "Zakres wersji"
+val "HHL widzi wszystkie wersje" $HHL "select string_agg(version::text, ',' order by version) from sefs_parameters" "1,2,3,4,5,6"
+val "przewoźnik: COST i BOTH, tylko uzgodnione (v3, v6)" $SCX "select string_agg(version||':'||applies_to, ',' order by version) from sefs_parameters" "3:COST,6:BOTH"
+val "KSH: REVENUE i BOTH (v1, v2, v4, v6), bez COST" $KSH "select string_agg(version||':'||applies_to, ',' order by version) from sefs_parameters" "1:BOTH,2:BOTH,4:REVENUE,6:BOTH"
+err "przewoźnik: tylko odczyt (INSERT)" $SCX "insert into sefs_parameters (project_id, version, valid_from, base_sek, base_pln, index_sek, index_pln, source_url_sek, source_url_pln, tiers_sek, tiers_pln) values ('$P',99,current_date,1,1,'a','b','https://a','https://b','[]','[]')" "permission denied"
+err "przewoźnik: tylko odczyt (UPDATE)" $SCX "update sefs_parameters set agreed_with_carrier=true where version=5" "permission denied"
+err "przewoźnik: zapis przez RPC odrzucony" $SCX "select sefs_save_parameters('$P', '$PAR'::jsonb)" "wyłącznie HHL"
+val "konto bez app_users: 0 wersji" 11111111-0000-0000-0000-0000000000ee "select count(*) from sefs_parameters" 0
+SCXL=$(Q "select string_agg(quote_literal(id), ',') from loads where carrier_org_id='00000000-0000-0000-0000-00000000a003' and project_id='$P'")
+chk "przewoźnik bez transportu w projekcie: 0 wersji" "$($PSQL -c "set session_replication_role=replica; update loads set carrier_org_id=null where id in ($SCXL)" >/dev/null; run $SCX "select count(*) from sefs_parameters" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1)" 0
+$PSQL -c "set session_replication_role=replica; update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003' where id in ($SCXL)" >/dev/null
+
 echo; echo "[I-2j] pozycje promów z AIS (vessel_positions, 0053)"
 V=55555555-0000-0000-0000-000000000001
 NOAPP=99999999-0000-0000-0000-0000000000aa
