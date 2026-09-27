@@ -177,3 +177,30 @@ test('I-5 HHL: zapis TOTP w Opcjach, włączenie wymagania, ponowne logowanie wy
     await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
   } finally { mfaReset(); }
 });
+
+// ── I-4: instrukcje w aplikacji ──────────────────────────────────────────────
+for (const [who, view, role, n] of [['hhl', 'options', 'hhl', 7], ['ksh', 'settings', 'ksh', 6], ['scx', 'settings', 'scx', 6]] as const) {
+  test(`I-4 ${who.toUpperCase()}: instrukcja w ${view === 'options' ? 'Opcjach' : 'Ustawieniach'} — ${n} kroków`, async ({ page }) => {
+    await login(page, `${who}@bk5.local`);
+    await page.locator(`nav [data-view="${view}"]`).first().click();
+    const g = page.locator(`[data-guide="${role}"]`);
+    await expect(g.locator('summary h2')).toHaveText('Instrukcja');
+    await g.locator('summary').click();
+    await expect(g.locator('ol > li')).toHaveCount(n);
+  });
+}
+
+test('I-4 kierowca: PWA z linkiem serwerowym — instrukcja otwarta przed zgodą, 8 kroków, PL/EN/SV', async ({ page }) => {
+  const tok = 'wt_' + 'e4'.repeat(32);
+  psql(`delete from driver_tokens where token_hash = driver_token_hash('${tok}'); insert into driver_tokens (load_id, token_hash, expires_at) select id, driver_token_hash('${tok}'), now() + interval '1 day' from loads where status not in ('CANCELLED','DELIVERED','UNLOADED') order by id limit 1`);
+  try {
+    await page.goto(`${APP}/#/driver/${tok}`);
+    const g = page.locator('[data-guide="drv"]');
+    await expect(g).toHaveAttribute('open', '');
+    await expect(g.locator('ol > li')).toHaveCount(8);
+    await page.locator('.driver-pwa-tabs button', { hasText: 'SV' }).click();
+    await expect(g.locator('summary h2')).toHaveText('Instruktion');
+    await page.locator('.driver-pwa-tabs button', { hasText: 'EN' }).click();
+    await expect(g.locator('ol > li').first()).toContainText('Open the link from the dispatcher');
+  } finally { psql(`delete from driver_tokens where token_hash = driver_token_hash('${tok}')`); }
+});

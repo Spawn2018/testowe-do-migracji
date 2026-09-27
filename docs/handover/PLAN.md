@@ -79,8 +79,8 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 | I-2l | czas wykrycia odchylenia liczony z `risk_signals` (wykrycie − zdarzenie) zamiast „8 min” — z I-2i (10.7) | kafelek z bazy albo „—” | DONE 825da20 |
 | I-10 | e-mail o zmianie daty awizowanego transportu | dostarczenie na adres z plusem | DONE a0d21bc (SENT 21:20) |
 | I-3 | bramka SMS według `PROPOZYCJA_SMS.md` + decyzje z `ZLECENIE_ETAP_I.md` | testy z propozycji; 24 h pracy telefonu | CZEKA NA: telefon i SIM (część bazowa i aplikacja — DO ZROBIENIA) |
-| I-5 | 2FA TOTP, wymagane dla HHL_ADMIN (`aal2`) | administrator bez drugiego składnika = odmowa | DONE (ten commit; wymaganie wyłączone do D-11) |
-| I-4 | instrukcje: kierowca PL/EN/SV, KSH, przewoźnik | dostępne w aplikacji | DO ZROBIENIA |
+| I-5 | 2FA TOTP, wymagane dla HHL_ADMIN (`aal2`) | administrator bez drugiego składnika = odmowa | DONE a548eba (wymaganie wyłączone do D-11) |
+| I-4 | instrukcje: kierowca PL/EN/SV, KSH, przewoźnik | dostępne w aplikacji | DONE (ten commit) |
 | I-6 | monitoring błędów przeglądarki do własnej tabeli, alarm | błąd testowy widoczny w tabeli | DO ZROBIENIA |
 | I-7 | retencja: dane kierowcy 90 dni | test | DO ZROBIENIA; dokumenty — decyzja D-3 |
 | I-8 | wydajność: cały harmonogram + GPS według PR5, trzy role | czasy liczbami | DO ZROBIENIA |
@@ -106,7 +106,7 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 |---|---|---|
 | II-1 | wartości SEFS i ich wprowadzenie | CZEKA NA: D-2 |
 | II-2 | kody opóźnień uzgodnione — włączenie w interfejsie | CZEKA NA: spotkanie |
-| II-3 | parametry operacyjne: cutoff promu, progi fal, prędkość; potwierdzenie z SCX czasów odcinków D-9 (PL 7,5 h, check-in 3 h, SE 17 h — „szacunek koordynatora”); odpoczynek na promie NIE jest do potwierdzenia — zamknięty decyzją właściciela (D-9) | CZEKA NA: spotkanie |
+| II-3 | parametry operacyjne: cutoff promu, progi fal, prędkość; potwierdzenie z SCX czasów odcinków D-9 (PL 7,5 h, check-in 3 h, SE 17 h — „szacunek koordynatora”) oraz najpóźniejszej godziny końca załadunku (model: 07:30 dla rejsu 18:00 — POSTEP I-D9-a); odpoczynek na promie NIE jest do potwierdzenia — zamknięty decyzją właściciela (D-9) | CZEKA NA: spotkanie |
 | II-4 | adapter telematyki przewoźnika | CZEKA NA: spotkanie |
 | II-5 | komunikaty armatora w harmonogramie | CZEKA NA: zgoda armatora |
 | II-6 | Trafikverket, TomTom, KPD — zadania i klucze | CZEKA NA: klucze (każdy osobno — rusza, gdy jego klucz dotrze) |

@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useTowerStore, DRIVER_TOKENS } from '../store/useTowerStore';
 import type { Locale } from '../types';
 import { t } from '../i18n/messages';
@@ -21,6 +21,8 @@ import type { DriverMilestone } from '../lib/driverTracking';
 const driverApi = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED
   ? () => import('../auth/client').then(({ getSupabase }) => getSupabase()).then((sb) => createDriverApi(sb))
   : () => Promise.reject(new Error('Tryb demo — brak bazy'));
+
+const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../components/guide/Guide')) : null;
 
 export function DriverPwa() {
   const { token = 'demo-active' } = useParams();
@@ -286,6 +288,7 @@ export function DriverPwa() {
             </div>
           </div>
         )}
+        {Guide && <Suspense fallback={null}><Guide locale={locale} role="drv" open={consent === null} /></Suspense>}
         <DocPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
       </main>
       <footer className="driver-pwa-ft">

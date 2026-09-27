@@ -2,10 +2,13 @@
  * M4 — „Ustawienia” (KSH, SCX): ten sam panel „Preferencje interfejsu” co w Opcjach HHL.
  * Bez nowego komponentu wizualnego — układ `options-page` / `options-grid`.
  */
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
+import { SUPABASE_AUTH_ENABLED } from '../auth/config';
+
+const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../components/guide/Guide')) : null;
 
 export function SettingsView() {
   const role = useTowerStore((s) => s.role);
@@ -23,6 +26,7 @@ export function SettingsView() {
       </header>
       <div className="options-grid">
         <UiPrefsPanel onSaved={saveMark} subKey="settings_prefs_sub" noteKey="settings_prefs_note" />
+        {Guide && <Suspense fallback={null}><Guide locale={locale} role={role === 'KSH' ? 'ksh' : role === 'SCX' ? 'scx' : 'hhl'} /></Suspense>}
       </div>
     </div>
   );
