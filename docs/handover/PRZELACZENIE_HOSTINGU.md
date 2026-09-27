@@ -45,3 +45,27 @@ Nigdy nie wpisywać klucza `service_role` w zmienne hostingu (test `3c`).
 
 ## Działania właściciela
 Konto Vercel (plan darmowy) i/lub Cloudflare Pages, domena i DNS, Redirect URLs w Supabase.
+
+## Adres produkcyjny tower.log-mar.pl (27.09.2026)
+- DNS domeny `log-mar.pl`: serwery `dns1.ct8.pl` / `dns2.ct8.pl` (panel CT8), serwery nazw **nie** przeniesione do Vercel (4.3c). Brak rekordu CAA. Rekord wieloznaczny `*.log-mar.pl` wskazuje serwer CT8 — jawny rekord `tower` go nadpisuje.
+- Vercel: `tower.log-mar.pl` dodany do projektu `watch-tower-makieta` (zespół `sebastianbozekq-7781s-projects`), własność domeny potwierdzona (`verified: true`, bez rekordu TXT).
+- **Rekord u właściciela (CT8):** `tower  CNAME  c8ddf203a73a39c2.vercel-dns-017.com.` (wartość z `vercel domains verify`; zapasowo Vercel podaje `cname.vercel-dns.com.` albo `A 76.76.21.21`).
+- Supabase (Authentication → URL Configuration, przez Management API): Site URL `https://tower.log-mar.pl`; Redirect URLs: `https://watch-tower-makieta.vercel.app/**`, `http://localhost:5173/**`, `https://tower-hhl.pages.dev/**`, `https://tower.log-mar.pl/**`.
+- **Uwaga:** produkcja Vercel serwuje dziś build demonstracyjny sprzed 3 dni (makieta bez logowania, 0 odwołań do Supabase w pakiecie). Po dodaniu CNAME `tower.log-mar.pl` pokaże tę makietę, dopóki właściciel nie zgodzi się na wdrożenie wersji produkcyjnej na Vercel (O2). Pages `tower-hhl.pages.dev` serwuje już build produkcyjny.
+- Sprawdzenie po propagacji: `bash scripts/check-domain.sh` (DNS, certyfikat: wystawca/daty/SAN, 200, tytuł, http→https, `/download/…`); logowanie linkiem wyłącznie na konto właściciela: `SEND_LOGIN=1 LOGIN_EMAIL=Sebastian@log-mar.pl bash scripts/check-domain.sh`, po kliknięciu `CHECK_LOGIN_SINCE='<czas z wyjścia>' LOGIN_EMAIL=Sebastian@log-mar.pl bash scripts/check-domain.sh` (odczyt `auth.users.last_sign_in_at`).
+
+## Awaria Vercel → tower.log-mar.pl na Cloudflare Pages
+Warunek: Pages `tower-hhl` buduje `main` przy każdym pushu (jest), więc zapas ma zawsze bieżącą wersję.
+
+| # | Kto | Krok | Czas |
+|---|---|---|---|
+| 0 | właściciel (zawczasu, raz) | W CT8 obniżyć TTL rekordu `tower` do **300 s** (i zostawić tak na stałe) | — |
+| 1 | my | Krótkie logowanie Cloudflare (`npx -y -p node@22 -p wrangler@latest -- wrangler login`, kliknięcie „Allow” przez właściciela) albo panel: Workers & Pages → `tower-hhl` → **Custom domains** → **Set up a custom domain** → `tower.log-mar.pl` → dalej. (Wrangler nie ma polecenia domen Pages — w panelu albo przez API `POST /accounts/{id}/pages/projects/tower-hhl/domains` z `{"name":"tower.log-mar.pl"}`.) | 2–5 min |
+| 2 | właściciel | W CT8 zmienić wartość `tower` CNAME z `c8ddf203a73a39c2.vercel-dns-017.com.` na **`tower-hhl.pages.dev.`** (TTL 300) | 2 min |
+| 3 | Cloudflare | Weryfikacja domeny (po CNAME) i wystawienie certyfikatu przez Pages | zwykle kilka do kilkunastu minut |
+| 4 | — | Propagacja: stary wpis wygasa w cache resolwerów po TTL | do 300 s (5 min) |
+| 5 | my | Supabase: nic nie trzeba zmieniać — Site URL `https://tower.log-mar.pl` i Redirect `https://tower.log-mar.pl/**` są niezależne od hostingu. (Gdyby na czas awarii używać adresu `tower-hhl.pages.dev`, jest już w Redirect URLs.) | — |
+| 6 | my | `bash scripts/check-domain.sh` z `EXPECT_CNAME=tower-hhl.pages.dev` (certyfikat, 200, tytuł) i logowanie linkiem na konto właściciela | 5 min |
+| 7 | my | `wrangler logout`, potem `wrangler whoami` → w raporcie dosłownie „You are not authenticated…” | 1 min |
+
+**Razem: ok. 15–30 min** od decyzji (najdłużej trwa certyfikat Pages). Powrót na Vercel: CNAME z powrotem na `c8ddf203a73a39c2.vercel-dns-017.com.` (domena zostaje przypięta w Vercel), po 5 min. Domenę w Pages można zostawić przypiętą — nie przeszkadza.
