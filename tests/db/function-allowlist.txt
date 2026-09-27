@@ -76,3 +76,8 @@ authenticated issue_driver_token_sms
 authenticated sms_issue_device
 authenticated sms_revoke_device
 authenticated sms_set_paused
+# 0068: blokada wiadomości zewnętrznych przed R-2
+authenticated sms_add_test_number
+authenticated sms_send_test
+authenticated admin_set_external_messaging
+authenticated sms_external_messaging_state

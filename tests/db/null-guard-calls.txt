@@ -60,3 +60,7 @@ issue_driver_token_sms | GUARD | select issue_driver_token_sms('$L1') | Brak akt
 sms_issue_device | GUARD | select sms_issue_device(null) | wyłącznie HHL
 sms_revoke_device | GUARD | select sms_revoke_device(null) | wyłącznie HHL
 sms_set_paused | GUARD | select sms_set_paused(null, null) | wyłącznie HHL
+sms_add_test_number | GUARD | select sms_add_test_number(null, null) | wyłącznie HHL
+sms_send_test | GUARD | select sms_send_test(null) | wyłącznie HHL
+admin_set_external_messaging | GUARD | select admin_set_external_messaging(null) | wyłącznie administrator HHL
+sms_external_messaging_state | GUARD | select sms_external_messaging_state() | wyłącznie HHL

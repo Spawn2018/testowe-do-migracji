@@ -24,6 +24,8 @@ const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUT
 const BafForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/BafForm')) : null;
 /* I-19 — formularz cennika HHL (0065) — tylko Supabase */
 const RateCardForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/RateCardForm')) : null;
+/* I-3 — bramka SMS (0067/0068) — tylko Supabase */
+const SmsGateway = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/SmsGateway')) : null;
 const MyDevices = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/MyDevices')) : null;
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
@@ -145,6 +147,7 @@ export function OptionsView() {
           </>
         )}
         {BafForm && <Suspense fallback={null}><BafForm /></Suspense>}
+        {SmsGateway && <Suspense fallback={null}><SmsGateway /></Suspense>}
 
         <UiPrefsPanel onSaved={saveMark} showDemoMarks={shows('demoMarksToggle')} />
 

@@ -385,6 +385,8 @@ err "po wjeździe na załadunek KSH nie zmienia dat" $KSH "select ksh_confirm_da
 chk "anon bez EXECUTE ksh_confirm_dates / detect_unconfirmed_dates" "$(Q "select has_function_privilege('anon','ksh_confirm_dates(uuid,date,date,timestamptz,timestamptz,timestamptz,timestamptz)','execute')::text||has_function_privilege('authenticated','detect_unconfirmed_dates(timestamptz)','execute')::text")" "falsefalse"
 
 echo; echo "[I-3] bramka SMS — część bazowa (0067; bez telefonu, D-4)"
+chk "EXTERNAL_MESSAGING domyślnie wyłączone (R-2, 0068)" "$(Q "select enabled from security_flags where key='EXTERNAL_MESSAGING'")" f
+$PSQL -c "update security_flags set enabled=true where key='EXTERNAL_MESSAGING'" >/dev/null   # testy funkcjonalne I-3 jak po R-2
 SL=33333333-0000-0000-0000-000000000001
 AN() { local o; o=$($PSQL -v ON_ERROR_STOP=1 -c "begin; set local role anon; $1; commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$'); if echo "$o" | grep -q ERROR; then echo "$o" | grep ERROR; else echo "$o" | tail -1; fi; }
 chk "sms_*: RLS na 3 tabelach, anon bez SELECT" "$(Q "select (select count(*) from pg_class where relname in ('sms_devices','sms_heartbeats','sms_outbox') and relrowsecurity)::text || bool_or(has_table_privilege('anon', 'public.'||t, 'select'))::text from unnest(array['sms_devices','sms_heartbeats','sms_outbox']) t")" "3false"
@@ -441,5 +443,24 @@ DID=$(Q "select id from sms_devices where revoked_at is null")
 val "HHL: odwołanie urządzenia" $HHL "select sms_revoke_device('$DID')::text" true commit
 chk "odwołane urządzenie: pobranie odrzucone" "$(AN "select count(*) from sms_pull('$DEVTOK')" | grep -c 'odwołane urządzenie')" 1
 $PSQL -c "delete from notifications where template in ('SMS_FALLBACK','SMS_GATEWAY_SILENT'); delete from risk_signals where dedup_key like 'sms-gateway:%'; delete from sms_outbox; delete from sms_heartbeats; delete from sms_devices; set session_replication_role=replica; update loads set status='PLANNED', driver_phone=null, sailing_id=null where id='$SL'; delete from driver_tokens where load_id='$SL'; delete from sailings where id='$SA'" >/dev/null
+
+echo; echo "[R-2] blokada wiadomości do osób zewnętrznych przed umowami RODO (0068)"
+$PSQL -c "update security_flags set enabled=false where key='EXTERNAL_MESSAGING'" >/dev/null
+DEV2=$(run $HHL "select sms_issue_device('Pixel R2 test')" commit | grep '^sd_')
+$PSQL -c "insert into sms_outbox (kind, to_e164, locale, body, priority) values ('WINDOW_CHANGE','+46701234567','sv','TOWER X: test R2', 100)" >/dev/null
+err "SMS testowy na numer spoza listy odrzucony" $HHL "select sms_send_test('+48600000001')" "listy numerów testowych"
+err "KSH: numer testowy odrzucony" $KSH "select sms_add_test_number('+48600000001','x')" "wyłącznie HHL"
+val "HHL: numer testowy dodany" $HHL "select sms_add_test_number('+48600000001','telefon HHL')::text" true commit
+val "HHL: SMS testowy zakolejkowany" $HHL "select (sms_send_test('+48600000001') is not null)::text" true commit
+chk "przed R-2 telefon dostaje tylko SMS testowy (SMS do kierowcy zostaje w kolejce)" "$(AN "select string_agg(body, ',') from sms_pull('$DEV2', 5)")/$(Q "select status from sms_outbox where body='TOWER X: test R2'")" "TOWER: SMS testowy bramki./QUEUED"
+chk "e-mail na adres zewnętrzny: BLOCKED_R2 (nie wychodzi)" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','dispo@scx.example','SMS_FALLBACK') returning status")" BLOCKED_R2
+chk "e-mail na log-mar.pl: PENDING" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','ops@log-mar.pl','SMS_FALLBACK') returning status")" PENDING
+chk "próba odblokowania (UPDATE na PENDING) nadal BLOCKED_R2" "$(Q "update notifications set status='PENDING' where recipient='dispo@scx.example' returning status")" BLOCKED_R2
+chk "centrum powiadomień (IN_APP) bez zmian" "$(Q "insert into notifications (channel, recipient, template) values ('IN_APP','dispo@scx.example','TEST') returning status")" PENDING
+err "KSH: włączenie wiadomości zewnętrznych odrzucone" $KSH "select admin_set_external_messaging(true)" "wyłącznie administrator HHL"
+val "HHL_ADMIN: włączenie (po R-2) z wpisem w dzienniku" $HHL "select admin_set_external_messaging(true)::text" true commit
+chk "po włączeniu: e-mail zewnętrzny PENDING, SMS do kierowcy wydawany" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','dispo2@scx.example','SMS_FALLBACK') returning status")/$(AN "select count(*) from sms_pull('$DEV2', 5)")/$(Q "select count(*) from audit_log where action='EXTERNAL_MESSAGING_SET'")" "PENDING/1/1"
+$PSQL -c "update security_flags set enabled=false where key='EXTERNAL_MESSAGING'; delete from notifications where recipient in ('dispo@scx.example','dispo2@scx.example','ops@log-mar.pl'); delete from sms_outbox; delete from sms_test_numbers; delete from sms_devices; delete from audit_log where action='EXTERNAL_MESSAGING_SET'" >/dev/null
+chk "stan końcowy: wiadomości zewnętrzne wyłączone" "$(Q "select enabled from security_flags where key='EXTERNAL_MESSAGING'")" f
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
