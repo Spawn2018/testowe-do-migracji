@@ -23,6 +23,7 @@ import { navForRole } from './lib/permissions';
 import { usePageSectionDnD } from './hooks/usePageSectionDnD';
 import { useRouteSync } from './hooks/useRouteSync';
 import { SUPABASE_AUTH_ENABLED } from './auth/config';
+import { canSwitchView } from './lib/prodFacade';
 
 // BK2: bramka logowania tylko w trybie Supabase (VITE_AUTH_MODE=supabase); demo bez zmian.
 const AuthGate = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./auth/AuthGate')) : null;
@@ -70,7 +71,7 @@ function TowerShell() {
         if (!e.metaKey && !e.ctrlKey) store.toggleTheme();
         return;
       }
-      if (e.shiftKey && (e.key === 'R' || e.key === 'r')) {
+      if (e.shiftKey && (e.key === 'R' || e.key === 'r') && canSwitchView()) {
         const order: Array<'HHL' | 'KSH' | 'SCX'> = ['HHL', 'KSH', 'SCX'];
         const i = order.indexOf(store.role);
         store.setRole(order[(i + 1) % order.length]);

@@ -24,6 +24,9 @@ revoke_user_sessions | GUARD | select revoke_user_sessions(null) | Brak aktywneg
 risk_audience_for | GUARD | select risk_audience_for('FERRY', '{}') | Brak aktywnego konta
 unmark_invoice_paid | GUARD | select unmark_invoice_paid('$INV', 'test') | wyłącznie HHL
 upsert_geofence_circle | GUARD | select upsert_geofence_circle(null, '$P', 'x', 'CUSTOM', 59.3, 18.0, 100, 50, 60, 2, true, true, true, null, true) | row-level security|Brak uprawnień
+sefs_save_parameters | GUARD | select sefs_save_parameters('$P', '{}'::jsonb) | wyłącznie HHL
+fuel_add_reading | GUARD | select fuel_add_reading('$P', 'SEK', '2026-09', current_date, 19.5, 'https://www.okq8.se/foretag/priser/') | wyłącznie HHL
+baf_change_log | GUARD | select count(*) from baf_change_log('$P') | wyłącznie HHL
 driver_get_instructions | TOKEN | select driver_get_instructions('wt_zly') | oken
 driver_post_event | TOKEN | select driver_post_event('wt_zly', '$L1', 'ARRIVED') | oken
 driver_post_position | TOKEN | select count(*) from driver_post_position('wt_zly', '$L1', 59.3, 18.0, now()) | oken

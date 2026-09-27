@@ -18,7 +18,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Marek Kowalski",
-      "driverPhone": "+48601234821",
+      "driverPhone": "+48000000001",
       "tractorPlate": "PO 3K821",
       "trailerPlate": "PO 8T201",
       "escort": true,
@@ -161,7 +161,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Piotr Wiśniewski",
-      "driverPhone": "+48502341756",
+      "driverPhone": "+48000000002",
       "tractorPlate": "PO 5S147",
       "trailerPlate": "PO 9T312",
       "escort": true,
@@ -304,7 +304,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Tomasz Wójcik",
-      "driverPhone": "+48603458219",
+      "driverPhone": "+48000000003",
       "tractorPlate": "GS 4821A",
       "trailerPlate": "GS 1N423",
       "escort": false,
@@ -445,7 +445,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Andrzej Kamiński",
-      "driverPhone": "+48504569320",
+      "driverPhone": "+48000000004",
       "tractorPlate": "GS 5912B",
       "trailerPlate": "GS 2N534",
       "escort": true,
@@ -588,7 +588,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Paweł Lewandowski",
-      "driverPhone": "+48605671432",
+      "driverPhone": "+48000000005",
       "tractorPlate": "WZ 2341C",
       "trailerPlate": "WZ 3N645",
       "escort": true,
@@ -731,7 +731,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Krzysztof Zieliński",
-      "driverPhone": "+48506782543",
+      "driverPhone": "+48000000006",
       "tractorPlate": "WZ 3482D",
       "trailerPlate": "WZ 4N756",
       "escort": false,
@@ -872,7 +872,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Marcin Szymański",
-      "driverPhone": "+48607893654",
+      "driverPhone": "+48000000007",
       "tractorPlate": "KR 7A291",
       "trailerPlate": "KR 5N867",
       "escort": true,
@@ -1015,7 +1015,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Łukasz Woźniak",
-      "driverPhone": "+48508914765",
+      "driverPhone": "+48000000008",
       "tractorPlate": "KR 8B302",
       "trailerPlate": "KR 6N978",
       "escort": true,
@@ -1158,7 +1158,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Jakub Kozłowski",
-      "driverPhone": "+48609025876",
+      "driverPhone": "+48000000009",
       "tractorPlate": "DW 1C413",
       "trailerPlate": "DW 7N189",
       "escort": false,
@@ -1299,7 +1299,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Adam Jankowski",
-      "driverPhone": "+48500136987",
+      "driverPhone": "+48000000010",
       "tractorPlate": "DW 2D524",
       "trailerPlate": "DW 8N290",
       "escort": true,
@@ -1442,7 +1442,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Michał Mazur",
-      "driverPhone": "+48601247098",
+      "driverPhone": "+48000000011",
       "tractorPlate": "LU 3E635",
       "trailerPlate": "LU 9N301",
       "escort": true,
@@ -1585,7 +1585,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Rafał Krawczyk",
-      "driverPhone": "+48502358109",
+      "driverPhone": "+48000000012",
       "tractorPlate": "LU 4F746",
       "trailerPlate": "LU 1N412",
       "escort": false,
@@ -1726,7 +1726,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Sebastian Piotrowski",
-      "driverPhone": "+48603469210",
+      "driverPhone": "+48000000013",
       "tractorPlate": "CT 5G857",
       "trailerPlate": "KNB 67T",
       "escort": true,
@@ -1869,7 +1869,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Bartosz Grabowski",
-      "driverPhone": "+48504570321",
+      "driverPhone": "+48000000014",
       "tractorPlate": "CT 6H968",
       "trailerPlate": "PJD 78T",
       "escort": true,
@@ -2012,7 +2012,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Dawid Nowak",
-      "driverPhone": "+48605681432",
+      "driverPhone": "+48000000015",
       "tractorPlate": "NE 7J179",
       "trailerPlate": "WRT 89T",
       "escort": false,
@@ -2153,7 +2153,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Jonas Petrauskas",
-      "driverPhone": "+37061234567",
+      "driverPhone": "+37000000001",
       "tractorPlate": "NE 8K280",
       "trailerPlate": "XFA 90T",
       "escort": true,
@@ -2296,7 +2296,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Andrius Kazlauskas",
-      "driverPhone": "+37062345678",
+      "driverPhone": "+37000000002",
       "tractorPlate": "KNB 12C",
       "trailerPlate": "YBG 12U",
       "escort": true,
@@ -2439,7 +2439,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Mantas Jankauskas",
-      "driverPhone": "+37063456789",
+      "driverPhone": "+37000000003",
       "tractorPlate": "PJD 34E",
       "trailerPlate": "ZCK 23U",
       "escort": false,
@@ -2580,7 +2580,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Tomas Stankevičius",
-      "driverPhone": "+37064567890",
+      "driverPhone": "+37000000004",
       "tractorPlate": "WRT 56G",
       "trailerPlate": "JNA 201",
       "escort": true,
@@ -2723,7 +2723,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Vytautas Paulauskas",
-      "driverPhone": "+37065678901",
+      "driverPhone": "+37000000005",
       "tractorPlate": "XFA 78H",
       "trailerPlate": "KOB 312",
       "escort": true,
@@ -2866,7 +2866,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Erik Andersson",
-      "driverPhone": "+46701234567",
+      "driverPhone": "+46701740605",
       "tractorPlate": "YBG 90J",
       "trailerPlate": "LPD 423",
       "escort": false,
@@ -3007,7 +3007,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Lars Johansson",
-      "driverPhone": "+46702345678",
+      "driverPhone": "+46701740606",
       "tractorPlate": "ZCK 11K",
       "trailerPlate": "MRE 534",
       "escort": true,
@@ -3150,7 +3150,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Johan Nilsson",
-      "driverPhone": "+46703456789",
+      "driverPhone": "+46701740607",
       "tractorPlate": "MHL 22L",
       "trailerPlate": "NSF 645",
       "escort": true,
@@ -3293,7 +3293,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Anders Eriksson",
-      "driverPhone": "+46704567890",
+      "driverPhone": "+46701740608",
       "tractorPlate": "NJT 33M",
       "trailerPlate": "OTG 756",
       "escort": false,
@@ -3434,7 +3434,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Per Svensson",
-      "driverPhone": "+46705678901",
+      "driverPhone": "+46701740609",
       "tractorPlate": "RKP 44N",
       "trailerPlate": "CT 2P867",
       "escort": true,
@@ -3577,7 +3577,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Karl Gustafsson",
-      "driverPhone": "+46706789012",
+      "driverPhone": "+46701740610",
       "tractorPlate": "SLV 55P",
       "trailerPlate": "CT 3P978",
       "escort": true,
@@ -3863,7 +3863,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Oskar Lindberg",
-      "driverPhone": "+46708901234",
+      "driverPhone": "+46701740612",
       "tractorPlate": "KOB 591",
       "trailerPlate": "NE 5P290",
       "escort": true,
@@ -4006,7 +4006,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Nils Holm",
-      "driverPhone": "+46709012345",
+      "driverPhone": "+46701740613",
       "tractorPlate": "LPD 603",
       "trailerPlate": "PO 6P301",
       "escort": false,
@@ -4147,7 +4147,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Fredrik Berg",
-      "driverPhone": "+46700123456",
+      "driverPhone": "+46701740614",
       "tractorPlate": "MRE 714",
       "trailerPlate": "GS 7P412",
       "escort": true,
@@ -4290,7 +4290,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Marek Kowalski",
-      "driverPhone": "+48601234821",
+      "driverPhone": "+48000000001",
       "tractorPlate": "NSF 825",
       "trailerPlate": "PO 8T201",
       "escort": true,
@@ -4433,7 +4433,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Piotr Wiśniewski",
-      "driverPhone": "+48502341756",
+      "driverPhone": "+48000000002",
       "tractorPlate": "OTG 936",
       "trailerPlate": "PO 9T312",
       "escort": false,
@@ -4574,7 +4574,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Tomasz Wójcik",
-      "driverPhone": "+48603458219",
+      "driverPhone": "+48000000003",
       "tractorPlate": "PO 3K821",
       "trailerPlate": "GS 1N423",
       "escort": false,
@@ -4715,7 +4715,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Andrzej Kamiński",
-      "driverPhone": "+48504569320",
+      "driverPhone": "+48000000004",
       "tractorPlate": "PO 5S147",
       "trailerPlate": "GS 2N534",
       "escort": true,
@@ -4858,7 +4858,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Paweł Lewandowski",
-      "driverPhone": "+48605671432",
+      "driverPhone": "+48000000005",
       "tractorPlate": "GS 4821A",
       "trailerPlate": "WZ 3N645",
       "escort": true,
@@ -5001,7 +5001,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Krzysztof Zieliński",
-      "driverPhone": "+48506782543",
+      "driverPhone": "+48000000006",
       "tractorPlate": "GS 5912B",
       "trailerPlate": "WZ 4N756",
       "escort": false,
@@ -5142,7 +5142,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Marcin Szymański",
-      "driverPhone": "+48607893654",
+      "driverPhone": "+48000000007",
       "tractorPlate": "WZ 2341C",
       "trailerPlate": "KR 5N867",
       "escort": true,
@@ -5285,7 +5285,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Łukasz Woźniak",
-      "driverPhone": "+48508914765",
+      "driverPhone": "+48000000008",
       "tractorPlate": "WZ 3482D",
       "trailerPlate": "KR 6N978",
       "escort": true,
@@ -5428,7 +5428,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Jakub Kozłowski",
-      "driverPhone": "+48609025876",
+      "driverPhone": "+48000000009",
       "tractorPlate": "KR 7A291",
       "trailerPlate": "DW 7N189",
       "escort": false,
@@ -5569,7 +5569,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Adam Jankowski",
-      "driverPhone": "+48500136987",
+      "driverPhone": "+48000000010",
       "tractorPlate": "KR 8B302",
       "trailerPlate": "DW 8N290",
       "escort": true,
@@ -5712,7 +5712,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Michał Mazur",
-      "driverPhone": "+48601247098",
+      "driverPhone": "+48000000011",
       "tractorPlate": "DW 1C413",
       "trailerPlate": "LU 9N301",
       "escort": true,
@@ -5855,7 +5855,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Rafał Krawczyk",
-      "driverPhone": "+48502358109",
+      "driverPhone": "+48000000012",
       "tractorPlate": "DW 2D524",
       "trailerPlate": "LU 1N412",
       "escort": true,
@@ -6141,7 +6141,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Bartosz Grabowski",
-      "driverPhone": "+48504570321",
+      "driverPhone": "+48000000014",
       "tractorPlate": "LU 4F746",
       "trailerPlate": "PJD 78T",
       "escort": false,
@@ -6282,7 +6282,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Dawid Nowak",
-      "driverPhone": "+48605681432",
+      "driverPhone": "+48000000015",
       "tractorPlate": "CT 5G857",
       "trailerPlate": "WRT 89T",
       "escort": false,
@@ -6423,7 +6423,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Jonas Petrauskas",
-      "driverPhone": "+37061234567",
+      "driverPhone": "+37000000001",
       "tractorPlate": "CT 6H968",
       "trailerPlate": "XFA 90T",
       "escort": true,
@@ -6567,7 +6567,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Andrius Kazlauskas",
-      "driverPhone": "+37062345678",
+      "driverPhone": "+37000000002",
       "tractorPlate": "NE 7J179",
       "trailerPlate": "YBG 12U",
       "escort": true,
@@ -6711,7 +6711,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Mantas Jankauskas",
-      "driverPhone": "+37063456789",
+      "driverPhone": "+37000000003",
       "tractorPlate": "NE 8K280",
       "trailerPlate": "ZCK 23U",
       "escort": true,
@@ -6855,7 +6855,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Tomas Stankevičius",
-      "driverPhone": "+37064567890",
+      "driverPhone": "+37000000004",
       "tractorPlate": "KNB 12C",
       "trailerPlate": "JNA 201",
       "escort": true,
@@ -7143,7 +7143,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Erik Andersson",
-      "driverPhone": "+46701234567",
+      "driverPhone": "+46701740605",
       "tractorPlate": "WRT 56G",
       "trailerPlate": "LPD 423",
       "escort": true,
@@ -7286,7 +7286,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Lars Johansson",
-      "driverPhone": "+46702345678",
+      "driverPhone": "+46701740606",
       "tractorPlate": "XFA 78H",
       "trailerPlate": "MRE 534",
       "escort": true,
@@ -7572,7 +7572,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Anders Eriksson",
-      "driverPhone": "+46704567890",
+      "driverPhone": "+46701740608",
       "tractorPlate": "ZCK 11K",
       "trailerPlate": "OTG 756",
       "escort": false,
@@ -7713,7 +7713,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Per Svensson",
-      "driverPhone": "+46705678901",
+      "driverPhone": "+46701740609",
       "tractorPlate": "MHL 22L",
       "trailerPlate": "CT 2P867",
       "escort": false,
@@ -7854,7 +7854,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Karl Gustafsson",
-      "driverPhone": "+46706789012",
+      "driverPhone": "+46701740610",
       "tractorPlate": "NJT 33M",
       "trailerPlate": "CT 3P978",
       "escort": false,
@@ -7993,7 +7993,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Mikael Persson",
-      "driverPhone": "+46707890123",
+      "driverPhone": "+46701740611",
       "tractorPlate": "RKP 44N",
       "trailerPlate": "NE 4P189",
       "escort": false,
@@ -8132,7 +8132,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Oskar Lindberg",
-      "driverPhone": "+46708901234",
+      "driverPhone": "+46701740612",
       "tractorPlate": "SLV 55P",
       "trailerPlate": "NE 5P290",
       "escort": false,
@@ -8273,7 +8273,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Nils Holm",
-      "driverPhone": "+46709012345",
+      "driverPhone": "+46701740613",
       "tractorPlate": "JNA 482",
       "trailerPlate": "PO 6P301",
       "escort": false,
@@ -8414,7 +8414,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Fredrik Berg",
-      "driverPhone": "+46700123456",
+      "driverPhone": "+46701740614",
       "tractorPlate": "KOB 591",
       "trailerPlate": "GS 7P412",
       "escort": false,
@@ -8553,7 +8553,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Marek Kowalski",
-      "driverPhone": "+48601234821",
+      "driverPhone": "+48000000001",
       "tractorPlate": "LPD 603",
       "trailerPlate": "PO 8T201",
       "escort": false,
@@ -8692,7 +8692,7 @@
     "carrierId": "org-scx",
     "resources": {
       "driverName": "Piotr Wiśniewski",
-      "driverPhone": "+48502341756",
+      "driverPhone": "+48000000002",
       "tractorPlate": "MRE 714",
       "trailerPlate": "PO 9T312",
       "escort": false,

@@ -10,6 +10,7 @@ import {
 } from '../../lib/corridor';
 import { SITES } from '../../lib/status';
 import { fetchSituations, type RoadSituation } from '../../lib/trafikverket';
+import { shows } from '../../lib/prodFacade';
 import { subscribeAis, type AisPosition } from '../../lib/ais';
 import type { Load } from '../../types';
 import { truckDivIcon, ferryDivIcon } from '../../lib/mapMarkers';
@@ -144,6 +145,7 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
   mapFocusKeyRef.current = mapFocusKey;
 
   useEffect(() => {
+    if (!shows('roadSituationsSe')) return; // I-2e: produkcja — bez źródła nie rysujemy zdarzeń przykładowych
     let cancelled = false;
     fetchSituations().then((r) => {
       if (!cancelled) {
@@ -157,7 +159,9 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
 
   useEffect(() => {
     return subscribeAis({
-      onUpdate: (pos) => {
+      onUpdate: (pos, mode) => {
+        // I-2e: produkcja — pozycje przykładowe promów (seed) nie trafiają na mapę; tylko odczyt na żywo
+        if (mode !== 'live' && !shows('aisSeedPositions')) { setAisPositions([]); return; }
         setAisPositions(pos);
       },
     });

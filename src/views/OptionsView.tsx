@@ -13,10 +13,13 @@ import { DemoMark } from '../components/ui/DemoMark';
 import { DEMO_FX_META } from '../lib/money/demoFx';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
+import { PROD_BUILD, shows } from '../lib/prodFacade';
 
 // BK2: panel użytkowników HHL_ADMIN — tylko w trybie Supabase.
 const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/UsersAdmin')) : null;
 /* ANEKS 5 §4.4 — Moje urządzenia / Wyloguj ze wszystkich urządzeń (tylko Supabase) */
+/* I-2f — prawdziwy formularz BAF/SEFS (0052) zamiast fasady — tylko Supabase */
+const BafForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/BafForm')) : null;
 const MyDevices = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/MyDevices')) : null;
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
@@ -106,6 +109,13 @@ export function OptionsView() {
       </header>
 
       <div className="options-grid">
+        {PROD_BUILD ? (
+          <section className="panel option-panel option-wide pricing-panel" data-no-source="rate-card">
+            <header className="panel-hd"><h2>{t(locale, "opt_rates_h2")}</h2></header>
+            <div className="panel-bd"><div className="note option-note">{t(locale, 'i2_rates_no_source')}</div></div>
+          </section>
+        ) : (
+          <>
         <section className="panel option-panel option-wide pricing-panel" data-deur-exempt="rate-card-source" title={t(locale, 'a6_opt_deur_rates')}>
           <header className="panel-hd"><h2>{t(locale, "opt_rates_h2")}</h2><span className="sub">{`${t(locale, "opt_rates_sub")} · ${t(locale, 'a6_cur_eur')}`}</span><span className="panel-mark">{t(locale, "opt_rates_mark")}</span><DemoMark /></header>
           <div className="panel-bd">
@@ -117,7 +127,7 @@ export function OptionsView() {
           </div>
         </section>
 
-        <section className="panel option-panel option-wide fuel-panel" data-deur-exempt="fuel-index" title={t(locale, 'a6_opt_deur_fuel')}>
+          <section className="panel option-panel option-wide fuel-panel" data-deur-exempt="fuel-index" title={t(locale, 'a6_opt_deur_fuel')}>
           <header className="panel-hd"><h2>{t(locale, "opt_fuel_h2")}</h2><span className="sub">{t(locale, 'opt_fuel_sub')} · {t(locale, 'opt_baf_facade_mark')}</span><span className="panel-mark">{t(locale, "opt_fuel_mark")}</span><DemoMark /></header>
           <div className="panel-bd">
             <div className="fuel-grid">
@@ -128,9 +138,13 @@ export function OptionsView() {
           </div>
         </section>
 
-        <UiPrefsPanel onSaved={saveMark} showDemoMarks />
+          </>
+        )}
+        {BafForm && <Suspense fallback={null}><BafForm /></Suspense>}
 
-        <section className="panel option-panel">
+        <UiPrefsPanel onSaved={saveMark} showDemoMarks={shows('demoMarksToggle')} />
+
+        {shows('factoringOffer') ? <section className="panel option-panel">
           <header className="panel-hd"><h2>{t(locale, "opt_factoring_h2")}</h2><span className="sub">{t(locale, "opt_factoring_sub")}</span></header>
           <div className="panel-bd"><dl className="kv options-kv">
             <dt>{t(locale, "opt_active")}</dt><dd><label className="switchline"><input type="checkbox" checked={factoringOffer.enabled} onChange={(e) => { updateFactoring('enabled', e.target.checked); saveMark('factoring'); }} /><span>{factoringOffer.enabled ? t(locale, 'yes') : t(locale, 'no')}</span></label></dd>
@@ -139,7 +153,7 @@ export function OptionsView() {
             <dt>{t(locale, 'opt_payout_after')}</dt><dd><div className="inline-input"><input className="input" type="number" min="1" value={factoringOffer.payoutDelayValue} onChange={(e) => updateFactoring('payoutDelayValue', Number(e.target.value) || 1)} onBlur={() => saveMark('termin')} /><select className="input" value={factoringOffer.payoutDelayUnit} onChange={(e) => { updateFactoring('payoutDelayUnit', e.target.value as 'hours' | 'days'); saveMark('termin'); }}><option value="hours">{t(locale, "opt_hours")}</option><option value="days">{t(locale, "opt_days")}</option></select></div></dd>
             <dt>{t(locale, "opt_note")}</dt><dd><input className="input full" value={factoringOffer.notes ?? ''} onChange={(e) => updateFactoring('notes', e.target.value)} onBlur={() => saveMark('notatka')} /></dd>
           </dl></div>
-        </section>
+        </section> : null}
 
 
         <section className="panel option-panel">
@@ -150,14 +164,14 @@ export function OptionsView() {
         <section className="panel option-panel">
           <header className="panel-hd"><h2>{t(locale, "opt_notif_h2")}</h2><span className="sub">{notifications.filter((n) => !n.read).length} {t(locale, "opt_unread")}</span></header>
           <div className="panel-bd"><div className="pref-list">
-            {([['workflowAlerts', t(locale, 'opt_wf_rules')], ['geofenceAlerts', t(locale, 'opt_geo_alerts')], ['riskAlerts', t(locale, 'opt_risk_alerts')]] as const).map(([key, label]) => <label key={key} className="switchline"><input type="checkbox" checked={notificationPrefs?.[key] ?? true} onChange={(e) => { updateNotificationPrefs({ [key]: e.target.checked }); saveMark('powiadomienia'); }} /><span>{label}</span></label>)}
+            {([['workflowAlerts', t(locale, 'opt_wf_rules')], ['geofenceAlerts', t(locale, 'opt_geo_alerts')], ['riskAlerts', t(locale, 'opt_risk_alerts')]] as const).filter(([key]) => key !== 'workflowAlerts' || shows('workflows')).map(([key, label]) => <label key={key} className="switchline"><input type="checkbox" checked={notificationPrefs?.[key] ?? true} onChange={(e) => { updateNotificationPrefs({ [key]: e.target.checked }); saveMark('powiadomienia'); }} /><span>{label}</span></label>)}
           </div><div className="note option-note">{t(locale, 'opt_notif_filter_note')}</div><button type="button" className="chipbtn" onClick={() => useTowerStore.getState().markAllNotificationsRead('HHL')}>{t(locale, "opt_mark_read")}</button></div>
         </section>
 
-        <section className="panel option-panel option-wide">
+        {shows('workflows') ? <section className="panel option-panel option-wide">
           <header className="panel-hd"><h2>{t(locale, "opt_auto_h2")}</h2><span className="sub">{workflows.filter((w) => w.enabled).length} {t(locale, "opt_active_of")} {workflows.length}</span><div className="spacer" /><button type="button" className="chipbtn" onClick={() => setView('wf')}>{t(locale, 'opt_open_wf')}</button></header>
           <div className="panel-bd"><div className="workflow-summary">{workflows.map((w) => <button type="button" className="workflow-summary-row" key={w.id} onClick={() => setView('wf')}><span className={`status-dot${w.enabled ? ' on' : ''}`} /><span data-content>{workflowDisplayName(w, locale)}</span><small>{w.enabled ? t(locale, 'on') : t(locale, 'off')}</small></button>)}</div></div>
-        </section>
+        </section> : null}
         {MyDevices && <Suspense fallback={null}><MyDevices /></Suspense>}
         {UsersAdmin && <Suspense fallback={null}><UsersAdmin /></Suspense>}
       </div>

@@ -6,6 +6,7 @@ import { CorridorMap } from '../components/map/LazyCorridorMap';
 import { t, tp } from '../i18n/messages';
 import { fetchSituations } from '../lib/trafikverket';
 import { trafikverketShortLabel } from '../lib/demoLabel';
+import { shows } from '../lib/prodFacade';
 import { formatEtaBodenCompact } from '../lib/time';
 import { subscribeAis, type AisMode } from '../lib/ais';
 
@@ -73,6 +74,7 @@ export function MapView() {
   widthsRef.current = widths;
 
   useEffect(() => {
+    if (!shows('roadSituationsSe')) return;
     let cancelled = false;
     fetchSituations().then((r) => {
       if (!cancelled) setTvMode(r.mode ?? (r.items?.[0]?.source === 'live' ? 'live' : 'seed'));
@@ -276,10 +278,10 @@ export function MapView() {
 
       <div className="note">
         {t(locale, 'map_note')} {t(locale, 'a6_map_tv')}{' '}
-        <b>{trafikverketShortLabel(tvMode, showDemoMarks, locale)}</b>
+        <b>{shows('roadSituationsSe') ? trafikverketShortLabel(tvMode, showDemoMarks, locale) : t(locale, 'i2_no_source')}</b>
         {' · '}
         {t(locale, 'a6_map_ais')}{' '}
-        <b>{aisMode === 'live' ? t(locale, 'map_ais_live') : t(locale, 'a6_demo_seed')}</b>
+        <b>{aisMode === 'live' ? t(locale, 'map_ais_live') : shows('aisSeedPositions') ? t(locale, 'a6_demo_seed') : t(locale, 'i2_no_source')}</b>
         {' · '}
         {t(locale, 'map_gps_note')}</div>
     </div>

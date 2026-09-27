@@ -13,12 +13,54 @@ function ddmm(d: Date): string {
   return `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
+type WeekPoint = { w: number; plan: number; act: number; future: boolean };
+
+/** Poniedziałek tygodnia ISO (UTC) i numer tygodnia ISO. */
+function isoMonday(d: Date): Date {
+  const x = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  x.setUTCDate(x.getUTCDate() - ((x.getUTCDay() || 7) - 1));
+  return x;
+}
+function isoWeekNo(d: Date): number {
+  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+  return Math.ceil(((t.getTime() - Date.UTC(t.getUTCFullYear(), 0, 1)) / 86400000 + 1) / 7);
+}
+
+/**
+ * I-2b — oś postępu w produkcji z danych z bazy: tygodnie od pierwszej do ostatniej planowanej dostawy
+ * (maks. 26), plan = narastająco tony wg `plan_delivery_date`, wykonanie = narastająco tony wg faktycznej
+ * daty rozładunku (`actual_delivery_at`), „dziś” = bieżąca data. Bez transportów → brak osi.
+ */
+export function progressWeeksFromDb(loads: readonly Load[], today: Date): WeekPoint[] {
+  const dates = loads.map((l) => Date.parse(l.plannedDeliverDate)).filter((n) => !Number.isNaN(n));
+  if (!dates.length) return [];
+  const first = isoMonday(new Date(Math.min(...dates)));
+  const last = isoMonday(new Date(Math.max(...dates)));
+  const n = Math.min(26, Math.round((last.getTime() - first.getTime()) / (7 * 86400000)) + 1);
+  const out: WeekPoint[] = [];
+  for (let w = 0; w < n; w++) {
+    const from = new Date(first.getTime() + w * 7 * 86400000);
+    const to = new Date(from.getTime() + 7 * 86400000);
+    const plan = loads.filter((l) => Date.parse(l.plannedDeliverDate) < to.getTime()).reduce((a, l) => a + (l.dims.weightT || 0), 0);
+    const act = loads.filter((l) => l.unloadedAt && Date.parse(l.unloadedAt) < to.getTime()).reduce((a, l) => a + (l.dims.weightT || 0), 0);
+    out.push({ w: isoWeekNo(from), plan, act, future: from > today });
+  }
+  return out;
+}
+
+/** Zakres tygodni osi (nagłówek panelu): „tygodnie 40–47”; pusty harmonogram → null. */
+export function progressWeeksLabel(weeks: readonly WeekPoint[]): string | null {
+  return weeks.length ? `${weeks[0].w}–${weeks[weeks.length - 1].w}` : null;
+}
+
 /** Claude scurveHTML twin — cumulative tonnes Plan/Actual weeks 37–45. */
 export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Locale }) {
   const weeks = useMemo(() => {
+    if (PROD_BUILD) return progressWeeksFromDb(loads, prodToday());
     const start = new Date('2026-09-07T00:00:00Z');
-    const today = PROD_BUILD ? prodToday() : new Date('2026-09-23T00:00:00Z');
-    const out: { w: number; plan: number; act: number; future: boolean }[] = [];
+    const today = new Date('2026-09-23T00:00:00Z');
+    const out: WeekPoint[] = [];
     for (let w = 0; w < 9; w++) {
       const from = new Date(start);
       from.setUTCDate(from.getUTCDate() + w * 7);
@@ -39,6 +81,8 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
     return out;
   }, [loads]);
 
+  if (!weeks.length) return <div className="note" data-progress="empty" style={{ border: 0 }}>{t(locale, 'i2_progress_empty')}</div>;
+
   const maxV = Math.max(1, ...weeks.map((x) => x.plan));
   const W = 560;
   const H = 150;
@@ -53,7 +97,8 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
     .map((d, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(d.act).toFixed(1)}`)
     .join(' ');
   const futureIdx = weeks.findIndex((d) => d.future);
-  const nowX = X(Math.max(0, futureIdx - 0.15));
+  // I-2b: „dziś” po ostatnim tygodniu osi → linia na końcu (wcześniej lądowała na początku)
+  const nowX = futureIdx < 0 ? X(weeks.length - 1) : X(Math.max(0, futureIdx - 0.15));
 
   return (
     <div>

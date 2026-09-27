@@ -124,10 +124,12 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     return () => { alive = false; unsub?.(); };
   }, []);
 
-  // Rola widoku wynika z konta — przełącznik demo nie może jej zmienić.
+  // Rola widoku wynika z konta — przełącznik nie może jej zmienić. I-2a: wyjątek HHL (podgląd widoku KSH/SCX
+  // na danych dostępnych dla HHL; przełącznik widzi wyłącznie HHL — lib/prodFacade canSwitchView).
   useEffect(() => {
     if (state.kind !== 'ready') return;
     const locked = viewRoleForOrg(state.profile.org_code);
+    if (locked === 'HHL') return;
     return useTowerStore.subscribe((s) => {
       if (locked && s.role !== locked) useTowerStore.getState().setRole(locked);
     });

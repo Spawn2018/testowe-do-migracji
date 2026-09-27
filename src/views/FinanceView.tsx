@@ -3,6 +3,7 @@ import { useTowerStore } from '../store/useTowerStore';
 import { canSeeCost, canSeeMargin, canSeeRevenue } from '../lib/permissions';
 import { t, tp } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
+import { PROD_BUILD } from '../lib/prodFacade';
 import { SEFS_WEEKLY, SEFS_SOURCES, computeSefs } from '../lib/sefs';
 import { formatAppMoney, formatSourceMoney } from '../lib/money/demoFx';
 import { TIER_PILL, marginSplit, moneyViewFor, tierSummary } from '../lib/money/loadMoney';
@@ -130,7 +131,7 @@ export function FinanceView() {
                   <span>{money(baseC)}</span>
                 </div>
                 <div className="mrow">
-                  <span className="lbl">{tp(locale, 'a6_fin_fuel_pct', { pct: appliedNum })}</span>
+                  <span className="lbl">{PROD_BUILD ? t(locale, 'fin_rev_fuel') : tp(locale, 'a6_fin_fuel_pct', { pct: appliedNum })}</span>
                   <span>{money(bafC)}</span>
                 </div>
                 <div className="mrow">
@@ -154,7 +155,7 @@ export function FinanceView() {
                   <span>{money(baseR)}</span>
                 </div>
                 <div className="mrow">
-                  <span className="lbl">{tp(locale, 'a6_fin_fuel_pct', { pct: appliedNum })}</span>
+                  <span className="lbl">{PROD_BUILD ? t(locale, 'fin_rev_fuel') : tp(locale, 'a6_fin_fuel_pct', { pct: appliedNum })}</span>
                   <span>{money(bafR)}</span>
                 </div>
                 <div className="mrow">
@@ -218,9 +219,9 @@ export function FinanceView() {
           <div>
             <h4 className="sec" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {t(locale, 'fin_fuel_addon')}
-              <DemoMark />
+              {PROD_BUILD ? null : <DemoMark />}
             </h4>
-            {bafCard}
+            {PROD_BUILD ? <div className="note" data-no-source="fuel-finance">{t(locale, 'i2_fin_fuel_prod')}</div> : bafCard}
           </div>
         </div>
 

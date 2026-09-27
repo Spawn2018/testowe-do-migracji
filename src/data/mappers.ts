@@ -10,6 +10,7 @@ import type {
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
 import { renderNotice, asLocale } from '../../supabase/functions/_shared/notifyTemplates';
 import { applyEtaToLoad } from '../lib/eta';
+import { shows } from '../lib/prodFacade';
 import { autoRiskCode } from '../lib/sailings';
 import type { Sailing } from '../types';
 
@@ -85,6 +86,8 @@ export interface LoadRow {
   sailings?: SailingRow | null;
   combo_length_m: number | string | null; combo_width_m: number | string | null; combo_height_m: number | string | null;
   combo_weight_t: number | string | null; delay_minutes: number | null; eta_site: string | null;
+  /** I-2d (0051): ETA v1 liczone w bazie. */
+  eta_confidence_min?: number | null; eta_basis?: EtaBasis | null; eta_computed_at?: string | null;
   hhl_order_no?: string | null; carrier_order_no?: string | null;
   actual_delivery_at?: string | null;
   shipment_items?: ShipmentItemRow[];
@@ -92,6 +95,19 @@ export interface LoadRow {
 
 const num = (v: number | string | null | undefined): number | null =>
   v === null || v === undefined || v === '' ? null : Number(v);
+
+export interface EtaBasis {
+  method?: string; segment?: string; flags?: string[]; sailing?: string | null;
+  segments?: Array<Record<string, unknown>>; computed_at?: string;
+}
+
+/** I-2d: pasmo ufności (minuty) → poziom. ≤60 min WYSOKA, ≤240 ŚREDNIA, inaczej NISKA. */
+export function etaConfidenceFromMinutes(min: number | null | undefined): 'HIGH' | 'MED' | 'LOW' {
+  if (min === null || min === undefined) return 'LOW';
+  if (min <= 60) return 'HIGH';
+  if (min <= 240) return 'MED';
+  return 'LOW';
+}
 
 export interface SailingRow {
   departure_at: string; arrival_at: string;
@@ -172,6 +188,7 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
     sequenceOrder: item?.assembly_seq ?? index + 1,
     sequenceRisk: false,
     delayed: (row.delay_minutes ?? 0) > 0,
+    delayMinutesDb: row.delay_minutes ?? null,
     docMissing: row.status === 'DOCS_PENDING',
     permitFits: null,
     orderNo: row.order_no,
@@ -180,6 +197,23 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
     unloadedAt: row.actual_delivery_at ?? null,
     sailingId: row.sailing_id ?? null,
   };
+  // I-2d: ETA v1 z bazy (0051) — klient niczego nie dolicza (zero fasady).
+  if (row.eta_basis || !shows('clientEta')) {
+    const nowMs = Date.parse(nowIso);
+    const etaMs = row.eta_site ? Date.parse(row.eta_site) : NaN;
+    const conf = row.eta_confidence_min ?? null;
+    const h = (ms: number) => Math.round((ms / 3600000) * 10) / 10;
+    return {
+      ...base,
+      etaConfidence: etaConfidenceFromMinutes(conf),
+      etaConfMin: conf,
+      etaEarliestHours: Number.isFinite(etaMs) ? Math.max(0, h(etaMs - (conf ?? 0) * 60000 - nowMs)) : 0,
+      etaLatestHours: Number.isFinite(etaMs) ? Math.max(0, h(etaMs + (conf ?? 0) * 60000 - nowMs)) : 0,
+      etaReasons: row.eta_basis?.flags ?? [],
+      etaMethod: row.eta_basis?.method ?? 'ETA v1 (baza)',
+      etaUpdatedAt: row.eta_computed_at ?? nowIso,
+    };
+  }
   return applyEtaToLoad(base, nowIso);
 }
 

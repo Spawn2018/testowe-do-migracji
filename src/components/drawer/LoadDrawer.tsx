@@ -38,6 +38,8 @@ import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { isServerId } from '../../data/registry';
 import { DriverLinkPanel } from './DriverLinkPanel';
 import type { Locale } from '../../types';
+import { PROD_BUILD, shows } from '../../lib/prodFacade';
+import { delayPillMinutes, permitBannerState } from '../../lib/prodDash';
 
 /** M8 — poziom, mnożnik paliwowy z datą i kurs strony wyceny. */
 function MoneySideMeta({ side, locale, which }: { side: MoneySideV2; locale: Locale; which: 'cost' | 'rev' }) {
@@ -154,6 +156,9 @@ export function LoadDrawer() {
   const permitBlock = readyGate.blocked;
   const coverInfo = evaluateLoadCover(load, loadDocs);
   const readyUiBlocked = permitBlock || !coverInfo.covered || load.docMissing || load.permitFits === false;
+  const delayMin = delayPillMinutes(load, delayMinutesVsPlan(load.etaBoden, load.plannedDeliverDate), PROD_BUILD);
+  const delayPillText = delayMin === null ? t(locale, 'i2_delay_pill') : formatDelayPill(delayMin);
+  const permitState = !shows('permitNumber') ? permitBannerState(load, loadDocs) : null;
   const comboL = load.resources.setLengthM ?? load.dims.lengthM;
   const comboW = load.resources.setWidthM ?? load.dims.widthM;
   const comboH = load.resources.setHeightM ?? load.dims.heightM;
@@ -174,7 +179,7 @@ export function LoadDrawer() {
           <div className="r1">
             <span className="wb-code" data-content>{load.code}</span>
             <StatusPill status={load.status} stage={load.stage} />
-            {load.delayed ? <span className="pill p-red">{formatDelayPill(delayMinutesVsPlan(load.etaBoden, load.plannedDeliverDate) ?? 95)}</span> : null}
+            {load.delayed ? <span className="pill p-red">{delayPillText}</span> : null}
             <div className="spacer" />
             <button type="button" className="iconbtn" aria-label={t(locale, 'close')} onClick={() => selectLoad(null)}>
               ✕
@@ -183,7 +188,7 @@ export function LoadDrawer() {
           <div className="wb-fields">
             <span>
               <b>{t(locale, 'a6_dr_order')}</b>
-              <em>{load.permit?.pozycja || `HHL/2026/${1240 + load.sequenceOrder}`}</em>
+              <em>{!shows('permitNumber') ? (load.hhlOrderNo ?? '—') : (load.permit?.pozycja || `HHL/2026/${1240 + load.sequenceOrder}`)}</em>
             </span>
             <span>
               <b>{t(locale, 'a6_dr_sender')}</b>
@@ -270,7 +275,7 @@ export function LoadDrawer() {
                 <dd className="cond">
                   {formatEtaBoden(load.etaBoden)}{' '}
                   {load.delayed ? (
-                    <span className="pill p-red">{formatDelayPill(delayMinutesVsPlan(load.etaBoden, load.plannedDeliverDate) ?? 95)}</span>
+                    <span className="pill p-red">{delayPillText}</span>
                   ) : (
                     <span className="pill p-go">{t(locale, 'a6_dr_in_window')}</span>
                   )}
@@ -287,7 +292,9 @@ export function LoadDrawer() {
                     {etaConfidenceLabel(load.etaConfidence, locale)}
                   </span>
                   <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 4, fontWeight: 400 }}>
-                    {tp(locale, 'a6_dr_band', { a: fmtNumKeepPl(locale, load.etaEarliestHours, 1, load.etaEarliestHours.toFixed(1)), b: fmtNumKeepPl(locale, load.etaLatestHours, 1, load.etaLatestHours.toFixed(1)) })}
+                    {load.etaConfMin !== undefined && load.etaConfMin !== null
+                      ? <span data-eta="db">{tp(locale, 'i2_eta_band_db', { m: String(load.etaConfMin) })}</span>
+                      : tp(locale, 'a6_dr_band', { a: fmtNumKeepPl(locale, load.etaEarliestHours, 1, load.etaEarliestHours.toFixed(1)), b: fmtNumKeepPl(locale, load.etaLatestHours, 1, load.etaLatestHours.toFixed(1)) })}
                     {load.etaReasons?.length ? ` · ${load.etaReasons.slice(0, 3).join(' · ')}` : ''}
                   </div>
                 </dd>
@@ -337,7 +344,19 @@ export function LoadDrawer() {
                 </dd>
               </dl>
 
-              {readyUiBlocked ? (
+              {permitState ? (
+                permitState.kind === 'not_required' ? (
+                  <div className="banner" data-permit="not_required" style={{ margin: '13px 0 0' }}>{t(locale, 'i2_permit_not_required')}</div>
+                ) : permitState.kind === 'uploaded_unchecked' ? (
+                  <div className="banner amber" data-permit="uploaded_unchecked" style={{ margin: '13px 0 0' }}>
+                    <b>{t(locale, 'i2_permit_uploaded_b')}</b> {tp(locale, 'i2_permit_uploaded', { f: permitState.fileName })}
+                  </div>
+                ) : (
+                  <div className="banner red" data-permit="missing" style={{ margin: '13px 0 0' }}>
+                    <b>{t(locale, 'a6_dr_permit_missing_b')}</b> {tp(locale, 'a6_dr_permit_missing', { l: fmtDim(comboL, locale) })}
+                  </div>
+                )
+              ) : readyUiBlocked ? (
                 <div className="banner red" style={{ margin: '13px 0 0' }}>
                   <b>{t(locale, 'a6_dr_permit_missing_b')}</b> {tp(locale, 'a6_dr_permit_missing', { l: fmtDim(comboL, locale) })}
                 </div>

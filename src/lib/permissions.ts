@@ -1,6 +1,7 @@
 import type { Load, RoleId } from '../types';
 import { getNowMs } from './frozenNow';
 import { TZ_UNLOAD_SE, calendarDayNoonMs, parseInstant } from './time';
+import { shows } from './prodFacade';
 
 export type NavKey =
   | 'dash'
@@ -22,8 +23,10 @@ const NAV_BY_ROLE: Record<RoleId, NavKey[]> = {
   SCX: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'tasks', 'settings'],
 };
 
-export function navForRole(role: RoleId): NavKey[] {
-  return NAV_BY_ROLE[role];
+/** I-2c: moduł Automatyzacje (wf) ukryty w produkcji 1.0 — silnik reguł po 1.0 (lib/prodFacade). */
+export function navForRole(role: RoleId, prod?: boolean): NavKey[] {
+  const nav = NAV_BY_ROLE[role];
+  return shows('workflows', prod) ? nav : nav.filter((k) => k !== 'wf');
 }
 
 export function canSeeCost(role: RoleId): boolean {
@@ -47,11 +50,11 @@ export function canEditWorkflow(role: RoleId): boolean {
 }
 
 /**
- * I-1: w produkcji (VITE_AUTH_MODE=supabase) import wyłącznie HHL — tak samo jak baza (import_schedule: is_hhl()).
- * Demo bez zmian (KSH), żeby wzorzec wizualny się nie zmienił.
+ * I-1 / I-2a: import harmonogramu wyłącznie HHL — tak samo jak baza (import_schedule: is_hhl()).
+ * I-2a: także w demo (wcześniej demo pokazywało import KSH — niezgodnie z produkcją).
  */
-export function canImportSchedule(role: RoleId, prod: boolean = import.meta.env.VITE_AUTH_MODE === 'supabase'): boolean {
-  return prod ? role === 'HHL' : role === 'KSH';
+export function canImportSchedule(role: RoleId, _prod?: boolean): boolean {
+  return role === 'HHL';
 }
 
 export function canSubmitInvoice(role: RoleId): boolean {

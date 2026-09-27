@@ -16,7 +16,9 @@ import { isDemoSourceMode, trafikverketSourceNote } from '../lib/demoLabel';
 import { severityLabel } from '../lib/enumLabels';
 import { formatSeaRiskLabel } from '../lib/voyageSea';
 import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
-import { AUTO_RISK_CODES, autoRiskLabel, type AutoRiskCode } from '../lib/sailings';
+import { AUTO_RISK_CODES, autoRiskLabel, effDeparture, fmtLocal, sailingStatusLabel, sailingStatusPill, type AutoRiskCode } from '../lib/sailings';
+import { PROD_BUILD, shows } from '../lib/prodFacade';
+import { getNowMs } from '../lib/frozenNow';
 
 const ALT = [
   ['Gdańsk–Karlshamn', 310, 'Polferries'],
@@ -35,6 +37,7 @@ export function RisksView() {
   const riskFilter = useTowerStore((s) => s.riskFilter);
   const locale = useTowerStore((s) => s.locale);
   const showDemoMarks = useTowerStore((s) => s.showDemoMarks);
+  const sailings = useTowerStore((s) => s.sailings);
   const [picked, setPicked] = useState(0);
   const [seSituations, setSeSituations] = useState<RoadSituation[]>([]);
   const [seMode, setSeMode] = useState<'live' | 'seed'>('seed');
@@ -62,8 +65,15 @@ export function RisksView() {
   const sailRows = voyageSeaTableRows(undefined, undefined, locale);
   const focusDayLabel = formatVoyageDayLabel(sailing.depLocal);
   const ferryLoads = loadsOnVoyage(loads, sailing).slice(0, 8);
+  const dbSailings = useMemo(() => {
+    const now = getNowMs() - 3 * 3600_000;
+    return sailings.filter((x) => x.route === 'GDN-NYN' && Date.parse(effDeparture(x)) >= now)
+      .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b))).slice(0, 6);
+  }, [sailings]);
 
   useEffect(() => {
+    // I-2e: produkcja — bez klucza Trafikverket nie ma źródła; danych przykładowych nie pokazujemy
+    if (!shows('roadSituationsSe')) return;
     let cancelled = false;
     fetchSituations().then((r) => {
       if (cancelled) return;
@@ -127,6 +137,43 @@ export function RisksView() {
         </ul>
       </div>
 
+      {!shows('seaWeather') || !shows('ferryAlternatives') ? (
+        /* I-2e: produkcja — rozkład z tabeli `sailings`; pogoda morska i przeprawy alternatywne: brak źródła danych */
+        <div className="panel section-card" style={{ margin: 12 }} data-panel="ferry" data-source="db">
+          <header className="panel-hd">
+            <h2>{t(locale, 'risk_ferry_baltic')}</h2>
+            <span className="sub">{t(locale, 'i2_ferry_db_sub')}</span>
+          </header>
+          <div className="panel-bd">
+            <div className="two">
+              <div>
+                <h4 className="sec">{t(locale, 'risk_voyage_gdn_nyn')}</h4>
+                {dbSailings.length === 0 ? (
+                  <div className="note" style={{ border: 0 }}>{t(locale, 'i2_no_sailing')}</div>
+                ) : (
+                  <table style={{ width: '100%', fontSize: 13 }}>
+                    <tbody>
+                      {dbSailings.map((x) => (
+                        <tr key={x.id}>
+                          <td><span className="mono">{fmtLocal(effDeparture(x))}</span></td>
+                          <td>{x.vessel}</td>
+                          <td className="num">{loads.filter((l) => l.sailingId === x.id).length}</td>
+                          <td style={{ textAlign: 'right' }}><span className={`pill ${sailingStatusPill(x.status)}`}>{sailingStatusLabel(x.status, locale)}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                <div className="note" data-no-source="sea" style={{ marginTop: 8 }}>{t(locale, 'i2_sea_no_source')}</div>
+              </div>
+              <div>
+                <h4 className="sec">{t(locale, 'risk_alt_for_day').replace(/\s*$/, '')}</h4>
+                <div className="note" data-no-source="ferry-alt">{t(locale, 'i2_alt_no_source')}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="panel section-card" style={{ margin: 12 }} data-panel="ferry">
         <header className="panel-hd">
           <h2>{t(locale, 'risk_ferry_baltic')}</h2>
@@ -207,22 +254,25 @@ export function RisksView() {
           </div>
         </div>
       </div>
+      )}
 
       <div
         className="panel section-card"
         style={{ margin: 12 }}
         data-panel="road-se"
-        data-demo={isDemoSourceMode(seMode) ? 'trafikverket' : undefined}
+        data-demo={shows('roadSituationsSe') && isDemoSourceMode(seMode) ? 'trafikverket' : undefined}
       >
         <header className="panel-hd">
           <h2>{t(locale, 'risk_road_se_title')}</h2>
           <span className="sub">
-            {t(locale, 'a6_risk_route_se')} · {trafikverketSourceNote(seMode, showDemoMarks, locale)} · {seSituations.length} {t(locale, 'risk_situations')}
+            {shows('roadSituationsSe')
+              ? <>{t(locale, 'a6_risk_route_se')} · {trafikverketSourceNote(seMode, showDemoMarks, locale)} · {seSituations.length} {t(locale, 'risk_situations')}</>
+              : <>{t(locale, 'a6_risk_route_se')} · {t(locale, 'i2_no_source')}</>}
           </span>
-          {isDemoSourceMode(seMode) ? <DemoMark /> : null}
+          {shows('roadSituationsSe') && isDemoSourceMode(seMode) ? <DemoMark /> : null}
         </header>
         <div className="panel-bd">
-          {isDemoSourceMode(seMode) && showDemoMarks ? (
+          {shows('roadSituationsSe') && isDemoSourceMode(seMode) && showDemoMarks ? (
             <div className="note" style={{ marginBottom: 12 }} data-content>
               {t(locale, 'a6_risk_demo_a')} <b>{t(locale, 'a6_risk_demo_b')}</b> {t(locale, 'a6_risk_demo_c')}
             </div>
@@ -230,6 +280,7 @@ export function RisksView() {
           <div className="two">
             <div>
               <h4 className="sec">{t(locale, 'risk_situations_title')}</h4>
+              {!shows('roadSituationsSe') ? <div className="note" data-no-source="road-se">{t(locale, 'i2_road_se_no_source')}</div> : null}
               <table style={{ width: '100%', fontSize: 13 }}>
                 <tbody>
                   {seSituations.map((s) => (
@@ -277,6 +328,7 @@ export function RisksView() {
             </div>
           </div>
 
+          {shows('seRouteAlternatives') ? (
           <div style={{ marginTop: 14, borderTop: '1px solid var(--rule-2)', paddingTop: 10 }}>
             <h4 className="sec">{t(locale, 'risk_alt_se')}</h4>
             <div className="alt-list">
@@ -293,6 +345,7 @@ export function RisksView() {
               ))}
             </div>
           </div>
+          ) : null}
 
         </div>
       </div>

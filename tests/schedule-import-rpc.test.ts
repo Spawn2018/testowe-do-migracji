@@ -48,9 +48,9 @@ describe('I-1 import harmonogramu — tryb produkcyjny', () => {
     expect(d.removalBlocked.map((b) => b.reason)).toEqual(['INVOICED', 'CANCELLED']);
     expect(rpcToDiff(res, { filename: 'h.xlsx', accepted: 0, total: 3, rejected: 3, warnings: 0, issues: [] }).removalCandidates).toEqual([]);
   });
-  it('uprawnienie: produkcja — tylko HHL; demo — KSH (bez zmian wzorca)', () => {
+  it('uprawnienie: tylko HHL — produkcja i demo (I-2a)', () => {
     expect(['HHL', 'KSH', 'SCX'].map((r) => canImportSchedule(r as 'HHL', true))).toEqual([true, false, false]);
-    expect(['HHL', 'KSH', 'SCX'].map((r) => canImportSchedule(r as 'HHL', false))).toEqual([false, true, false]);
+    expect(['HHL', 'KSH', 'SCX'].map((r) => canImportSchedule(r as 'HHL', false))).toEqual([true, false, false]); // I-2a: demo jak produkcja
   });
 });
 

@@ -20,7 +20,7 @@ function stubLoad(partial: Partial<Load> & Pick<Load, 'plannedDeliverDate'>): Lo
     carrierId: 'org-scx',
     resources: {
       driverName: 'Marek Kowalski',
-      driverPhone: '+48601234821',
+      driverPhone: '+48000000001',
       tractorPlate: 'PO 3K821',
       trailerPlate: 'PO 8T201',
       escort: false,
@@ -81,7 +81,7 @@ function stubLoad(partial: Partial<Load> & Pick<Load, 'plannedDeliverDate'>): Lo
     ...partial,
     resources: {
       driverName: 'Marek Kowalski',
-      driverPhone: '+48601234821',
+      driverPhone: '+48000000001',
       tractorPlate: 'PO 3K821',
       trailerPlate: 'PO 8T201',
       escort: false,
@@ -125,7 +125,7 @@ describe('D6 driver phone permissions', () => {
     const far = deliverMs + 10 * 24 * 60 * 60 * 1000;
     expect(canSeeDriverPhone('HHL', load, far)).toBe(true);
     expect(canSeeDriverPhone('SCX', load, far)).toBe(true);
-    expect(visibleDriverPhone('HHL', load, far)).toBe('+48601234821');
+    expect(visibleDriverPhone('HHL', load, far)).toBe('+48000000001');
   });
 
   it('KSH sees phone only within ±24 h of delivery', () => {

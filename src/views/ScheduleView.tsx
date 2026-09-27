@@ -1,3 +1,5 @@
+import { PROD_BUILD } from '../lib/prodFacade';
+import { delayPillMinutes } from '../lib/prodDash';
 import { useMemo, useRef, useState } from 'react';
 import { invoicedLoadIds } from '../lib/importRemoval';
 import { useTowerStore } from '../store/useTowerStore';
@@ -48,8 +50,7 @@ function fmtDim(n: number, locale: Locale = 'pl'): string {
 }
 
 function delayMinutes(l: Load): number | null {
-  if (!l.delayed) return null;
-  return delayMinutesVsPlan(l.etaBoden, l.plannedDeliverDate) ?? 95;
+  return delayPillMinutes(l, delayMinutesVsPlan(l.etaBoden, l.plannedDeliverDate), PROD_BUILD);
 }
 
 export function ScheduleView() {

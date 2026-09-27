@@ -8,6 +8,8 @@ import { ClaudeIcon } from './ClaudeIcon';
 import { KeyboardHelp } from './KeyboardHelp';
 import { ferryWidgetLabel, nextLiveSailing } from '../../lib/ferry';
 import { getNow } from '../../lib/frozenNow';
+import { canSwitchView, PROD_BUILD } from '../../lib/prodFacade';
+import { dbFerryWidget, nextDbSailing } from '../../lib/sailings';
 
 const ROLES: RoleId[] = ['HHL', 'KSH', 'SCX'];
 const LANGS: Locale[] = ['pl', 'en', 'sv'];
@@ -27,6 +29,7 @@ export function Topbar() {
   const setRole = useTowerStore((s) => s.setRole);
   const setLocale = useTowerStore((s) => s.setLocale);
   const toggleTheme = useTowerStore((s) => s.toggleTheme);
+  const sailings = useTowerStore((s) => s.sailings);
   const [help, setHelp] = useState(false);
   const [ops, setOps] = useState({
     wk: 0,
@@ -58,8 +61,11 @@ export function Topbar() {
         hour12: false,
       }).formatToParts(now);
       const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
-      const sailing = nextLiveSailing(now);
-      const fw = ferryWidgetLabel(sailing, locale);
+      /* I-2e: produkcja — najbliższy rejs z tabeli `sailings`, bez fali (brak źródła danych); demo — rozkład statyczny */
+      const dbw = PROD_BUILD ? dbFerryWidget(nextDbSailing(sailings, now.getTime()), now.getTime()) : null;
+      const fw = PROD_BUILD
+        ? { cd: dbw?.cd ?? '—', line: dbw?.line ?? t(locale, 'i2_no_sailing'), wave: '' }
+        : ferryWidgetLabel(nextLiveSailing(now), locale);
       const y = Number(get('year'));
       const m = Number(get('month'));
       const day = Number(get('day'));
@@ -82,7 +88,7 @@ export function Topbar() {
       clearInterval(id);
       clearInterval(id2);
     };
-  }, [locale]);
+  }, [locale, sailings]);
 
   return (
     <header className="topbar">
@@ -91,7 +97,8 @@ export function Topbar() {
         <span id="brandSub">{`Stegra Boden · ${ROLE_META[role].name}`}</span>
       </div>
       <div className="spacer" />
-      <div className="roleswitch">
+      {/* I-2a: przełącznik widoku tylko dla HHL (w produkcji — konto organizacji HHL) */}
+      {canSwitchView() ? <div className="roleswitch">
         <span id="roleLbl">{t(locale, 'role')}</span>
         <div className="seg" role="group" aria-label={t(locale, 'role')} id="roleSeg">
           {ROLES.map((r) => (
@@ -107,7 +114,7 @@ export function Topbar() {
             </button>
           ))}
         </div>
-      </div>
+      </div> : null}
       <div className="seg" role="group" aria-label={t(locale, 'a6_top_lang')} id="langSeg">
         {LANGS.map((l) => (
           <button
@@ -153,7 +160,7 @@ export function Topbar() {
         <span>
           <span className="cd">{ops.cd}</span>
           <span className="lb" style={{ display: 'block' }}>
-            {ops.ferryLine} · {ops.wave}
+            {ops.wave ? `${ops.ferryLine} · ${ops.wave}` : ops.ferryLine}
           </span>
         </span>
         <span className="sep" />

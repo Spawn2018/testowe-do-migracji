@@ -4,6 +4,7 @@ import { D19_EXTRA } from './d19Extra';
 import { ETAP4 } from './etap4';
 import { RISK_I18N } from './risks';
 import { UI6_I18N } from './ui6';
+import { I2_I18N } from './i2';
 
 type Dict = Record<string, string>;
 
@@ -382,9 +383,9 @@ const sv: Dict = {
 
 /** PL-T (ANEKS 3 §3) — pełne słowniki do testu pisowni. */
 export const I18N_ALL: Record<Locale, Dict> = {
-  pl: { ...pl, ...D19_EXTRA.pl, ...ETAP4.pl, ...RISK_I18N.pl, ...UI6_I18N.pl },
-  en: { ...en, ...D19_EXTRA.en, ...ETAP4.en, ...RISK_I18N.en, ...UI6_I18N.en },
-  sv: { ...sv, ...D19_EXTRA.sv, ...ETAP4.sv, ...RISK_I18N.sv, ...UI6_I18N.sv },
+  pl: { ...pl, ...D19_EXTRA.pl, ...ETAP4.pl, ...RISK_I18N.pl, ...UI6_I18N.pl, ...I2_I18N.pl },
+  en: { ...en, ...D19_EXTRA.en, ...ETAP4.en, ...RISK_I18N.en, ...UI6_I18N.en, ...I2_I18N.en },
+  sv: { ...sv, ...D19_EXTRA.sv, ...ETAP4.sv, ...RISK_I18N.sv, ...UI6_I18N.sv, ...I2_I18N.sv },
 };
 
 /**

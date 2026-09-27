@@ -7,6 +7,7 @@ import { attachDocumentFile } from '../lib/docFiles';
 import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
 import { docCategoryLabel } from '../lib/enumLabels';
+import { shows } from '../lib/prodFacade';
 
 const CATS: { key: DocCategory; labelKey: string; who: string; whenKey: string }[] = [
   { key: 'PERMIT_PL', labelKey: 'doc_cat_permit_pl', who: 'Scandinavian Express', whenKey: 'docs_before_load' },
@@ -109,7 +110,7 @@ export function DocsView() {
                   >
                     <td style={{ fontWeight: 600 }}>{t(locale, r.labelKey)}</td>
                     <td>{r.who}</td>
-                    <td style={{ color: 'var(--ink-3)' }}>{t(locale, r.whenKey)}</td>
+                    <td style={{ color: 'var(--ink-3)' }}>{t(locale, r.key === 'INSURANCE' && !shows('policyExpiryNote') ? 'i2_docs_insurance_when' : r.whenKey)}</td>
                     <td className="num">
                       {r.n} / {nLoads}
                     </td>
@@ -171,9 +172,12 @@ export function DocsView() {
             </div>
           </div>
         ) : null}
-        <div className="note">
-          {t(locale, 'a6_docs_ocp_note')}
-        </div>
+        {/* I-2: przypomnienie o polisie — w produkcji brak odczytu polis i zadania (6.6) → ukryte */}
+        {shows('policyExpiryNote') ? (
+          <div className="note">
+            {t(locale, 'a6_docs_ocp_note')}
+          </div>
+        ) : null}
       </div>
       <input
         ref={fileRef}

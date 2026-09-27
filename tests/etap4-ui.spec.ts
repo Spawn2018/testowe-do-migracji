@@ -378,7 +378,7 @@ test.describe('M10 — rejsy i automat statusów', () => {
 })
 
 test.describe('D26 — import: anulowania za zgodą (ANEKS 3 §2.1)', () => {
-  test('KSH: podgląd pokazuje −0 i odznaczone pole z liczbą i kodami; zaznaczenie zmienia licznik; zatwierdzenie bez zgody niczego nie usuwa', async ({ page }) => {
+  test('HHL (I-2a: import tylko HHL, także w demo): podgląd pokazuje −0 i odznaczone pole z liczbą i kodami; zaznaczenie zmienia licznik; zatwierdzenie bez zgody niczego nie usuwa', async ({ page }) => {
     const fields = Object.keys(COLUMN_MAP_DEFAULT) as (keyof typeof COLUMN_MAP_DEFAULT)[]
     const row = (code: string, delivery: string): Record<string, string> => ({
       shipmentCode: code, itemType: 'SG', dimensions: '12,00 x 2,40 x 2,40', unitWeight: '18,00', qty: '1',
@@ -391,7 +391,7 @@ test.describe('D26 — import: anulowania za zgodą (ANEKS 3 §2.1)', () => {
     const buffer = Buffer.from(await wb.xlsx.writeBuffer())
 
     await boot(page)
-    await role(page, 'KSH')
+    await role(page, 'HHL')
     await nav(page, 'sched')
     const before = await page.locator('tr[data-load]').count()
     await page.locator('button.chipbtn', { hasText: 'Wgraj aktualizacje' }).click()

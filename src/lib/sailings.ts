@@ -162,3 +162,21 @@ export function autoStatusText(payload: Record<string, unknown> | undefined): st
   if (!from && !to && !why) return null;
   return `${from ?? '?'} → ${to ?? '?'}${why ? ` · ${why}` : ''}`;
 }
+
+/**
+ * I-2e — pasek górny w produkcji: najbliższy rejs z tabeli `sailings` (rozkład armatora w bazie),
+ * bez prognozy fali (brak źródła danych). Odwołane rejsy pomijane; opóźnienie → czas po opóźnieniu.
+ */
+export function nextDbSailing(all: readonly Sailing[], nowMs: number): Sailing | null {
+  return [...all]
+    .filter((s) => s.status !== 'ODWOLANY' && Date.parse(effDeparture(s)) >= nowMs)
+    .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b)))[0] ?? null;
+}
+
+export function dbFerryWidget(s: Sailing | null, nowMs: number): { cd: string; line: string } | null {
+  if (!s) return null;
+  const depMs = Date.parse(effDeparture(s));
+  const mins = Math.max(0, Math.round((depMs - nowMs) / 60_000));
+  const dir = s.route === 'GDN-NYN' ? 'GDN→NYN' : 'NYN→GDN';
+  return { cd: `${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')} min`, line: `${s.vessel} · ${fmtLocal(effDeparture(s))} · ${dir}` };
+}

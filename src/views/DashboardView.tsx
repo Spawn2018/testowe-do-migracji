@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { ExceptionRow } from '../components/ui/ExceptionRow';
 import { KpiTile } from '../components/ui/KpiTile';
-import { DeliveryProgress } from '../components/chart/DeliveryProgress';
+import { DeliveryProgress, progressWeeksFromDb, progressWeeksLabel } from '../components/chart/DeliveryProgress';
 import { CorridorMap } from '../components/map/LazyCorridorMap';
 import { fmtPct, INTL_LOCALE, pctText, riskText, t, tp } from '../i18n/messages';
 import { canSeeMargin, ROLE_META } from '../lib/permissions';
@@ -13,6 +13,8 @@ import { cockpitFerryBanner, focusVoyage, seaForSailing } from '../lib/voyage';
 import { formatSeaRiskLabel } from '../lib/voyageSea';
 import { formatAppMoney } from '../lib/money/demoFx';
 import { TIER_PILL, aggregateTier } from '../lib/money/loadMoney';
+import { PROD_BUILD, shows } from '../lib/prodFacade';
+import { docsCompleteBeforeLoad, otifShown, prodBannerRisk, riskAsException, sortExceptions } from '../lib/prodDash';
 
 export function DashboardView() {
   const role = useTowerStore((s) => s.role);
@@ -21,6 +23,7 @@ export function DashboardView() {
   const loads = useTowerStore((s) => s.loads);
   const exceptions = useTowerStore((s) => s.exceptions);
   const risks = useTowerStore((s) => s.risks);
+  const documents = useTowerStore((s) => s.documents);
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const navigateTo = useTowerStore((s) => s.navigateTo);
   const setView = useTowerStore((s) => s.setView);
@@ -46,14 +49,15 @@ export function DashboardView() {
     ferryHot,
   } = kpis;
 
+  // I-2b: produkcja — kolejka z otwartych ryzyk w bazie (risk_signals); demo — kolejka wyjątków z danych demo
   const sortedEx = useMemo(
-    () =>
-      [...exceptions].sort((a, b) => {
-        const sev = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 } as const;
-        return sev[a.severity] - sev[b.severity] || b.ageHours - a.ageHours;
-      }),
-    [exceptions],
+    () => sortExceptions(PROD_BUILD ? risks.map((r) => riskAsException(r, loads)) : exceptions),
+    [exceptions, risks, loads],
   );
+  const prodBanner = useMemo(() => (PROD_BUILD ? prodBannerRisk(risks) : null), [risks]);
+  const docsOkShown = PROD_BUILD ? docsCompleteBeforeLoad(loads, documents) : docsOk;
+  const prodWeeks = useMemo(() => (PROD_BUILD ? progressWeeksLabel(progressWeeksFromDb(loads, getNow())) : null), [loads]);
+  const otifText = otifShown(delivered) ? fmtPct(locale, otif / 100, 0) : '—';
 
   const critEx = sortedEx.filter((e) => e.severity === 'CRITICAL');
 
@@ -72,13 +76,23 @@ export function DashboardView() {
 
   return (
     <div className="page-sections" data-page="dash">
-      {role === 'HHL' ? (
+      {PROD_BUILD ? (
+        /* I-2b: baner z bazy — najpoważniejsze otwarte ryzyko; brak → brak banera (bez treści demo „R-03”, bez prognozy fali) */
+        prodBanner ? (
+          <div className="banner red" data-banner="db" role="button" tabIndex={0} onClick={() => setView('risk')} onKeyDown={(e) => e.key === 'Enter' && setView('risk')}>
+            <span data-content>
+              <b>{riskText(locale, prodBanner.top.title, prodBanner.top.titleKey, prodBanner.top.titleParams)}</b>{' '}
+              {tp(locale, 'i2_banner_more', { n: String(prodBanner.count) })}
+            </span>
+          </div>
+        ) : null
+      ) : role === 'HHL' ? (
         <div className="banner red" role="button" tabIndex={0} onClick={() => setView('risk')} onKeyDown={(e) => e.key === 'Enter' && setView('risk')}>
           <span>
             <span data-content><b>{riskText(locale, ferryBanner.title, ferryBanner.titleKey, ferryBanner.titleParams)}</b> {bannerBody}</span>
           </span>
         </div>
-      ) : import.meta.env.VITE_AUTH_MODE === 'supabase' ? null /* I-0: statyczne banery KSH/SCX to dane demo — nie w produkcji */ : role === 'KSH' ? (
+      ) : role === 'KSH' ? (
         <div className="banner">
           <span data-content>
             <b>{t(locale, 'an5_banner_ksh_title')}</b> {t(locale, 'an5_banner_ksh_body')}
@@ -139,7 +153,7 @@ export function DashboardView() {
               />
               <KpiTile
                 label={t(locale, 'kpi_otif')}
-                value={fmtPct(locale, otif / 100, 0)}
+                value={otifText}
                 delta={tp(locale, 'a6_dash_late_n', { n: String(delayedN) })}
                 tone={otif < 90 ? 'warn' : 'good'}
                 onClick={() => navigateTo({ view: 'sched' })}
@@ -171,7 +185,7 @@ export function DashboardView() {
               />
               <KpiTile
                 label={t(locale, 'kpi_otif')}
-                value={fmtPct(locale, otif / 100, 0)}
+                value={otifText}
                 delta={tp(locale, 'a6_dash_late_awi_n', { n: String(delayedN) })}
                 tone={otif < 90 ? 'warn' : 'good'}
                 onClick={() => navigateTo({ view: 'sched' })}
@@ -190,13 +204,13 @@ export function DashboardView() {
               <KpiTile
                 label={t(locale, 'kpi_ferry_risk')}
                 value={ferryHot || '—'}
-                delta={tp(locale, 'a6_dash_sailing', { risk: formatSeaRiskLabel(seaForSailing(focusVoyage()).risk, locale) })}
+                delta={shows('seaWeather') ? tp(locale, 'a6_dash_sailing', { risk: formatSeaRiskLabel(seaForSailing(focusVoyage()).risk, locale) }) : t(locale, 'i2_sea_no_source')}
                 tone={ferryHot ? 'warn' : 'default'}
                 onClick={() => navigateTo({ view: 'risk', riskFilter: 'FERRY' })}
               />
               <KpiTile
                 label={t(locale, 'kpi_docs_complete')}
-                value={`${docsOk} / ${loads.length}`}
+                value={`${docsOkShown} / ${loads.length}`}
                 delta={t(locale, "dash_with_permit")}
                 onClick={() =>
                   navigateTo({ view: 'docs', docsFilter: docsMissing ? 'missing' : null })
@@ -220,7 +234,7 @@ export function DashboardView() {
               />
               <KpiTile
                 label={t(locale, 'kpi_otif')}
-                value={fmtPct(locale, otif / 100, 0)}
+                value={otifText}
                 delta={tp(locale, 'a6_dash_late_deliveries', { n: String(delayedN) })}
                 tone={otif < 90 ? 'warn' : 'good'}
                 onClick={() => navigateTo({ view: 'sched' })}
@@ -251,19 +265,21 @@ export function DashboardView() {
               )}
               <KpiTile
                 label={t(locale, 'kpi_docs_complete')}
-                value={`${docsOk} / ${loads.length}`}
+                value={`${docsOkShown} / ${loads.length}`}
                 delta={t(locale, 'kpi_docs_delta')}
                 onClick={() =>
                   navigateTo({ view: 'docs', docsFilter: docsMissing ? 'missing' : null })
                 }
               />
-              <KpiTile
-                label={t(locale, 'a6_dash_detect_time')}
-                value="8 min"
-                delta={t(locale, 'a6_dash_median')}
-                tone="good"
-                onClick={() => setView('risk')}
-              />
+              {shows('detectTimeKpi') ? (
+                <KpiTile
+                  label={t(locale, 'a6_dash_detect_time')}
+                  value="8 min"
+                  delta={t(locale, 'a6_dash_median')}
+                  tone="good"
+                  onClick={() => setView('risk')}
+                />
+              ) : null}
             </>
           )}
         </div>
@@ -302,7 +318,7 @@ export function DashboardView() {
         <div style={{ minWidth: 0 }}>
           <header className="panel-hd">
             <h2>{t(locale, 'progress')}</h2>
-            <span className="sub">{t(locale, 'progress_weeks')}</span>
+            <span className="sub">{PROD_BUILD ? (prodWeeks ? tp(locale, 'i2_progress_weeks', { r: prodWeeks }) : '') : t(locale, 'progress_weeks')}</span>
           </header>
           <div className="panel-bd">
             <DeliveryProgress loads={loads} locale={locale} />
