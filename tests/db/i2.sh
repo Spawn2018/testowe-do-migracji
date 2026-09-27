@@ -38,29 +38,33 @@ chk "parametry odcinków: 6, każdy ze źródłem" "$(Q "select count(*) filter 
 err "KSH nie zmienia parametrów odcinków" $KSH "update eta_segment_params set hours=1 where code='SE_ROAD'" "permission denied"
 val "KSH czyta parametry odcinków" $KSH "select count(*) from eta_segment_params" 6
 
+echo; echo "[D-9] parametry odcinków (0054)"
+chk "wartości D-9: PL 7,5±25, check-in 3, przeprawa 18, SE 17±20, przerwy SE 13±30" "$(Q "select string_agg(code||'='||hours::float||'/'||spread_pct::float, ',' order by code) from eta_segment_params where code<>'GPS_FRESH_MIN'")" "CROSSING_DEFAULT=18/15,PL_ROAD=7.5/25,PORT_CHECKIN=3/0,SE_BREAKS=13/30,SE_ROAD=17/20"
+chk "źródła D-9 (koordynator ×3, właściciel ×1)" "$(Q "select count(*) filter (where source='szacunek koordynatora 27.09 — do potwierdzenia z SCX (II-3)')||'/'||count(*) filter (where source='właściciel 27.09: obsada jednoosobowa, odpoczynek na promie') from eta_segment_params")" "3/1"
+
 echo; echo "[I-2d] bez rozkładu: przeprawa z założenia, szerokie pasmo"
 chk "ETA wyliczona przy wstawieniu (seed): basis + pasmo" "$(Q "select (eta_site is not null)::text||'/'||(eta_confidence_min>=720)::text||'/'||(eta_basis->'flags'->>0) from loads where id='$L2'")" "true/true/brak rejsu w rozkładzie — przeprawa z założenia"
-chk "ETA = teraz + 4,5 (PL) + 2 (check-in) + 18 (przeprawa) + 18,5 (SE) = 43 h" "$(H $L2 "eta_computed_at")" "43.0"
+chk "ETA = teraz + 7,5 (PL) + 3 (check-in) + 18 (przeprawa) + 17+13 (SE, D-9) = 58,5 h" "$(H $L2 "eta_computed_at")" "58.5"
 
 echo; echo "[I-2d] rozkład w sailings: bez przypisania — najbliższy rejs jako założenie"
 $PSQL -c "insert into sailings (id, project_id, vessel_id, departure_at, arrival_at, source) values
  ('66666666-0000-0000-0000-000000000001','$P','55555555-0000-0000-0000-000000000001', now()+interval '30 hours', now()+interval '48 hours','RECZNIE'),
  ('66666666-0000-0000-0000-000000000002','$P','55555555-0000-0000-0000-000000000001', now()+interval '54 hours', now()+interval '72 hours','RECZNIE')" >/dev/null
 $PSQL -c "insert into load_events (load_id, event_type, occurred_at) values ('$L2','NOTE',now())" >/dev/null
-chk "zdarzenie → przeliczenie: rejs założony (najbliższy po dojeździe), ETA = przypłynięcie + 18,5 h" "$(Q "select eta_basis->>'sailing' from loads where id='$L2'")/$(H $L2 "(now()+interval '48 hours')")" "założony (najbliższy w rozkładzie)/18.5"
-chk "pasmo: rejs założony +6 h" "$(Q "select eta_confidence_min from loads where id='$L2'")" "747"
+chk "zdarzenie → przeliczenie: rejs założony (najbliższy po dojeździe), ETA = przypłynięcie + 30 h (D-9)" "$(Q "select eta_basis->>'sailing' from loads where id='$L2'")/$(H $L2 "(now()+interval '48 hours')")" "założony (najbliższy w rozkładzie)/30.0"
+chk "pasmo: rejs założony 360 + PL 25% (112,5) + SE 30% z 30 h (540) = 1013 min (D-9; było 747)" "$(Q "select eta_confidence_min from loads where id='$L2'")" "1013"
 
 echo; echo "[I-2d] przypisanie rejsu (HHL) → ETA z przypisanego rejsu"
 val "HHL przypisuje rejs 2" $HHL "update loads set sailing_id='66666666-0000-0000-0000-000000000002' where id='$L2' returning 1" 1 commit
-chk "źródło: przypisany; ETA = przypłynięcie rejsu 2 + 18,5 h" "$(Q "select eta_basis->>'sailing' from loads where id='$L2'")/$(H $L2 "(now()+interval '72 hours')")" "przypisany/18.5"
-chk "pasmo = rozkład ±30 + SE 30% (333) + PL 20% (54) = 417 min" "$(Q "select eta_confidence_min from loads where id='$L2'")" 417
+chk "źródło: przypisany; ETA = przypłynięcie rejsu 2 + 30 h" "$(Q "select eta_basis->>'sailing' from loads where id='$L2'")/$(H $L2 "(now()+interval '72 hours')")" "przypisany/30.0"
+chk "pasmo = rozkład ±30 + SE 30% (540) + PL 25% (112,5) = 683 min" "$(Q "select eta_confidence_min from loads where id='$L2'")" 683
 $PSQL -c "update sailings set delayed_departure_at=departure_at+interval '3 hours', delayed_arrival_at=arrival_at+interval '3 hours', status='OPOZNIONY' where id='66666666-0000-0000-0000-000000000002'" >/dev/null
-chk "opóźnienie rejsu w rozkładzie → ETA +3 h, pasmo +60 min (bez zdarzenia transportu)" "$(H $L2 "(now()+interval '72 hours')")/$(Q "select eta_confidence_min from loads where id='$L2'")" "21.5/477"
+chk "opóźnienie rejsu w rozkładzie → ETA +3 h, pasmo +60 min (bez zdarzenia transportu)" "$(H $L2 "(now()+interval '72 hours')")/$(Q "select eta_confidence_min from loads where id='$L2'")" "33.0/743"
 
 $PSQL -c "set session_replication_role=replica; update loads set hhl_order_no='HHL/2026/1', carrier_order_no='SCX/1', plan_delivery_date=current_date-1, plan_delivery_to=null where id='$L2'; set session_replication_role=origin;" >/dev/null
 echo; echo "[I-2d] przewoźnik zmienia status (strażnik nie blokuje przeliczenia), prom"
 val "SCX: status FERRY" $SCX "update loads set status='FERRY' where id='$L2' returning status" FERRY commit
-chk "FERRY: segment FERRY, ETA = przypłynięcie po opóźnieniu + 18,5 h, pasmo 30+60+333" "$(Q "select eta_basis->>'segment' from loads where id='$L2'")/$(H $L2 "(now()+interval '75 hours')")/$(Q "select eta_confidence_min from loads where id='$L2'")" "FERRY/18.5/423"
+chk "FERRY: segment FERRY, ETA = przypłynięcie po opóźnieniu + 30 h, pasmo 30+60+540" "$(Q "select eta_basis->>'segment' from loads where id='$L2'")/$(H $L2 "(now()+interval '75 hours')")/$(Q "select eta_confidence_min from loads where id='$L2'")" "FERRY/30.0/630"
 
 echo; echo "[I-2d] odcinek SE: pozycja GPS"
 $PSQL -c "set session_replication_role=replica; update loads set status='IN_TRANSIT_SE' where id='$L2'; set session_replication_role=origin;" >/dev/null
