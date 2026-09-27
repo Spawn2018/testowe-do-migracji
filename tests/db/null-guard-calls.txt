@@ -53,3 +53,4 @@ money_effective_eur | PURE | select money_effective_eur(1, 2, 3) | -
 money_least_tier | PURE | select money_least_tier('A', 'B') | -
 report_client_error | GUARD | select report_client_error('error', 'x') | Brak aktywnego konta
 ksh_confirm_dates | GUARD | select ksh_confirm_dates(null) | Brak aktywnego konta
+rate_match | GUARD | select rate_match(null, null) | wyłącznie HHL

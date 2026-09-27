@@ -63,3 +63,5 @@ anon report_client_error
 authenticated report_client_error
 # I-18 (0061): KSH potwierdza / zmienia daty planu
 authenticated ksh_confirm_dates
+# I-12 (0064): dobór stawki z cennika (HHL)
+authenticated rate_match

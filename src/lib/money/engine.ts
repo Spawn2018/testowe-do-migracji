@@ -203,6 +203,8 @@ export interface RateRule {
   heightFrom: number; heightTo: number;
   weightFrom: number; weightTo: number;
   roadRateEur: number;
+  /** I-12 (D-8): pozycja STANDARD = stała stawka bez przedziałów wymiarów; brak = DIMENSIONED */
+  cargoClass?: 'DIMENSIONED' | 'STANDARD';
 }
 
 export type RateMatchResult =
@@ -222,6 +224,39 @@ export function matchRate(dims: Dimensions, rules: RateRule[]): RateMatchResult 
   if (hits.length === 0) return { matched: false, reason: 'NO_BRACKET', dims };
   if (hits.length > 1)  return { matched: false, reason: 'AMBIGUOUS', candidates: hits };
   return { matched: true, rule: hits[0], roadRateEur: hits[0].roadRateEur };
+}
+
+/* =====================================================================
+ * 5a. I-12 (D-8) — ładunek STANDARD: osobna stała stawka z cennika
+ *
+ * cargo_class = STANDARD → pozycja STANDARD (jedna na cennik i stronę).
+ * Brak pozycji STANDARD NIE daje zera — wynik `NO_STANDARD_RATE` (ostrzeżenie, lista wyjątków).
+ * Pozycja STANDARD nie bierze udziału w dopasowaniu po wymiarach. Paliwo i kurs — ten sam mechanizm
+ * co dla stawki drogowej (buildPriceSide / assertSameMechanism). Kwot nie wymyślamy (D-1).
+ * ===================================================================== */
+
+export type CargoClass = 'DIMENSIONED' | 'STANDARD';
+
+export type RateForCargoResult =
+  | RateMatchResult
+  | { matched: false; reason: 'NO_STANDARD_RATE' }
+  | { matched: false; reason: 'NO_DIMENSIONS' };
+
+export function matchRateForCargo(cargo: { cargoClass: CargoClass; dims: Dimensions | null }, rules: RateRule[]): RateForCargoResult {
+  if (cargo.cargoClass === 'STANDARD') {
+    const std = rules.filter((r) => r.cargoClass === 'STANDARD');
+    if (std.length === 0) return { matched: false, reason: 'NO_STANDARD_RATE' };
+    if (std.length > 1) return { matched: false, reason: 'AMBIGUOUS', candidates: std };
+    return { matched: true, rule: std[0], roadRateEur: std[0].roadRateEur };
+  }
+  if (!cargo.dims) return { matched: false, reason: 'NO_DIMENSIONS' };
+  return matchRate(cargo.dims, rules.filter((r) => r.cargoClass !== 'STANDARD'));
+}
+
+/** Klucz komunikatu ostrzeżenia (i18n `i12_warn_*`) albo null, gdy stawka jest. */
+export function rateWarningKey(r: RateForCargoResult): string | null {
+  if (r.matched) return null;
+  return `i12_warn_${r.reason}`;
 }
 
 /* =====================================================================

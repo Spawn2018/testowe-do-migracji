@@ -143,6 +143,31 @@ SCXL=$(Q "select string_agg(quote_literal(id), ',') from loads where carrier_org
 chk "przewoźnik bez transportu w projekcie: 0 wersji" "$($PSQL -c "set session_replication_role=replica; update loads set carrier_org_id=null where id in ($SCXL)" >/dev/null; run $SCX "select count(*) from sefs_parameters" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1)" 0
 $PSQL -c "set session_replication_role=replica; update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003' where id in ($SCXL)" >/dev/null
 
+echo; echo "[I-12] cennik — pozycja STANDARD (0064, D-8; stawki TESTOWE, D-1)"
+RC=77777777-0000-0000-0000-00000000c001; RR=77777777-0000-0000-0000-00000000c002
+LS=77777777-0000-0000-0000-0000000000a1; LDM=77777777-0000-0000-0000-0000000000a2; LMX=77777777-0000-0000-0000-0000000000a3
+$PSQL -c "insert into rate_cards (id, project_id, side, org_id, valid_from) values ('$RC','$P','COST','00000000-0000-0000-0000-00000000a003',current_date), ('$RR','$P','REVENUE','00000000-0000-0000-0000-00000000a002',current_date);
+  insert into rate_rules (rate_card_id, length_from, length_to, width_from, width_to, height_from, height_to, weight_from, weight_to, base_rate, note) values
+    ('$RC',0,30,0,5,0,5,0,60,2000,'TEST'), ('$RR',0,30,0,5,0,5,0,60,2600,'TEST');
+  insert into loads (id, project_id, order_no) values ('$LS','$P','I12-S'), ('$LDM','$P','I12-D'), ('$LMX','$P','I12-M');
+  set session_replication_role=replica; update loads set combo_length_m=18, combo_width_m=2.4, combo_height_m=2.4, combo_weight_t=20 where id='$LDM'; set session_replication_role=origin;
+  insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m) values ('$P','$LS','I12-S1','STANDARD',null,null,null), ('$P','$LS','I12-S2','STANDARD',null,null,null),
+    ('$P','$LDM','I12-D1','DIMENSIONED',18,2.4,2.4), ('$P','$LMX','I12-M1','STANDARD',null,null,null), ('$P','$LMX','I12-M2','DIMENSIONED',12,2.4,2.4)" >/dev/null
+chk "istniejące pozycje cennika: DIMENSIONED (domyślnie)" "$(Q "select string_agg(distinct cargo_class, ',') from rate_rules")" "DIMENSIONED"
+val "STANDARD bez pozycji STANDARD: ostrzeżenie, base_rate NULL (nie zero)" $HHL "select (r->>'matched')||'/'||(r->>'reason')||'/'||coalesce(r->>'base_rate','∅')||'/'||(r->>'message' like 'Brak stawki STANDARD w cenniku (koszt)%')::text from (select rate_match('$RC','$LS') r) x" "false/NO_STANDARD_RATE/∅/true"
+val "STANDARD nie trafia w przedział wymiarów 0–9999 (osobna pozycja)" $HHL "select rate_match('$RR','$LS')->>'reason'" NO_STANDARD_RATE
+$PSQL -c "insert into rate_rules (rate_card_id, cargo_class, base_rate, note) values ('$RC','STANDARD',1000,'TEST'), ('$RR','STANDARD',1300,'TEST')" >/dev/null
+val "STANDARD: koszt — stała stawka testowa 1000" $HHL "select (r->>'matched')||'/'||(r->>'cargo_class')||'/'||(r->>'base_rate') from (select rate_match('$RC','$LS') r) x" "true/STANDARD/1000.00"
+val "STANDARD: przychód osobno — 1300" $HHL "select rate_match('$RR','$LS')->>'base_rate'" "1300.00"
+val "wymiarowy: przedział wymiarów (pozycja STANDARD pominięta)" $HHL "select (r->>'cargo_class')||'/'||(r->>'base_rate') from (select rate_match('$RC','$LDM') r) x" "DIMENSIONED/2000.00"
+val "mieszany STANDARD + wymiarowy: MIXED_CARGO" $HHL "select rate_match('$RC','$LMX')->>'reason'" MIXED_CARGO
+chk "unikalność: jedna pozycja STANDARD na cennik" "$($PSQL -c "insert into rate_rules (rate_card_id, cargo_class, base_rate) values ('$RC','STANDARD',5)" 2>&1 | grep -c rate_rules_one_standard)" 1
+chk "nieznana klasa odrzucona (CHECK)" "$($PSQL -c "insert into rate_rules (rate_card_id, cargo_class, base_rate) values ('$RR','XXL',5)" 2>&1 | grep -c rate_rules_cargo_class_check)" 1
+err "KSH: dobór stawki odrzucony" $KSH "select rate_match('$RR','$LS')" "wyłącznie HHL"
+err "przewoźnik: dobór stawki odrzucony" $SCX "select rate_match('$RC','$LS')" "wyłącznie HHL"
+err "KSH nie czyta cennika (brak uprawnień)" $KSH "select count(*) from rate_rules" "permission denied"
+$PSQL -c "delete from shipment_items where shipment_code like 'I12-%'; delete from loads where id in ('$LS','$LDM','$LMX'); delete from rate_cards where id in ('$RC','$RR')" >/dev/null
+
 echo; echo "[I-2j] pozycje promów z AIS (vessel_positions, 0053)"
 V=55555555-0000-0000-0000-000000000001
 NOAPP=99999999-0000-0000-0000-0000000000aa
