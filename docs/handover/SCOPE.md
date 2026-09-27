@@ -1087,3 +1087,7 @@ Jeśli KSH zacznie ładować gdzie indziej — potrzebna kolumna adresu w harmon
 | B5 Strefy załadunku | sprawdzone — pasuje (tabela wyżej) |
 | B6 Instrukcje | nie zrobione |
 | B7 2FA administratorów | nie zrobione — `auth.mfa_factors` 0 |
+
+### I-2i — pozycje „częściowo” działające tylko w demo (27.09.2026)
+
+Tabela: `docs/handover/POSTEP.md` § I-2i (11 pozycji: 8 ukrytych/zastąpionych w I-2a–h, nowe I-2j, I-2k, I-2l w `PLAN.md`). Statusy przeniesie I-9.

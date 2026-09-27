@@ -62,17 +62,20 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 | I-0 | wyciek plików | stare wdrożenia usunięte, ocena ekspozycji | DONE |
 | I-0b | usunięcie poprzednich wdrożeń Pages przy najbliższym logowaniu | lista wdrożeń = 1 | DO ZROBIENIA (przy okazji) |
 | I-1 | import w produkcji zapisuje transporty | 41/41 lokalnie, powtórka 0 zmian | DONE |
-| I-SEC | strażniki odporne na NULL (`is not true`), `is_hhl()`/`can_see_margin()` tylko true/false | nieaktywne konto każdej roli × każda funkcja z listy dozwolonych = odmowa; test statyczny migracji | W TOKU |
-| I-BK | kopia zapasowa: tabele wyliczane z katalogu, jawne wykluczenia | tabela spoza kopii i spoza wykluczeń = test czerwony | W TOKU |
-| I-1b | klasa STANDARD dla 9 transportów | import 50/50 | W TOKU |
-| I-2a | przełącznik ról tylko dla HHL | KSH i SCX go nie widzą | DO ZROBIENIA |
-| I-2c | moduł Workflows ukryty w produkcji | niewidoczny poza trybem demo | DO ZROBIENIA |
-| I-2d | ETA v1 w bazie: odcinek + czasy odcinków + rejs z `sailings`, przeliczana przy zdarzeniu | test na symulacji 11 transportów ze `status.sh` | DO ZROBIENIA |
-| I-2e | pogoda, przeprawy alternatywne, objazdy SE — ukryte albo „brak źródła danych" | zero danych statycznych w produkcji | DO ZROBIENIA |
-| I-2f | Opcje BAF — prawdziwy formularz parametrów SEFS i odczytów indeksu, ze źródłem, datą i dziennikiem | zapis i odczyt w produkcji | DO ZROBIENIA |
-| I-2g | kody opóźnień ukryte do uzgodnienia z przewoźnikiem | — | DO ZROBIENIA |
-| I-2h | telefony demo: pula PTS (SE), nieprzydzielalne (PL, LT); SMS i e-mail nigdy w trybie demo | test | DO ZROBIENIA |
-| I-2i | przegląd 37 pozycji „częściowo" — każda działająca tylko w demo trafia tu jako nowa pozycja I-2* | lista w raporcie | DO ZROBIENIA |
+| I-SEC | strażniki odporne na NULL (`is not true`), `is_hhl()`/`can_see_margin()` tylko true/false | nieaktywne konto każdej roli × każda funkcja z listy dozwolonych = odmowa; test statyczny migracji | DONE 5d375f5 |
+| I-BK | kopia zapasowa: tabele wyliczane z katalogu, jawne wykluczenia | tabela spoza kopii i spoza wykluczeń = test czerwony | DONE d2a8219 |
+| I-1b | klasa STANDARD dla 9 transportów | import 50/50 | DONE 0c247b3 |
+| I-2a | przełącznik ról tylko dla HHL | KSH i SCX go nie widzą | DONE 16638cb |
+| I-2c | moduł Workflows ukryty w produkcji | niewidoczny poza trybem demo | DONE 16638cb |
+| I-2d | ETA v1 w bazie: odcinek + czasy odcinków + rejs z `sailings`, przeliczana przy zdarzeniu | test na symulacji 11 transportów ze `status.sh` | DONE 16638cb (tests/db/i2.sh 51/51) |
+| I-2e | pogoda, przeprawy alternatywne, objazdy SE — ukryte albo „brak źródła danych" | zero danych statycznych w produkcji | DONE a4ff639 |
+| I-2f | Opcje BAF — prawdziwy formularz parametrów SEFS i odczytów indeksu, ze źródłem, datą i dziennikiem | zapis i odczyt w produkcji | DONE d912df7 (0052 na produkcji, weryfikacja w wycofanej transakcji) |
+| I-2g | kody opóźnień ukryte do uzgodnienia z przewoźnikiem | — | DONE 16638cb |
+| I-2h | telefony demo: pula PTS (SE), nieprzydzielalne (PL, LT); SMS i e-mail nigdy w trybie demo | test | DONE 16638cb |
+| I-2i | przegląd 37 pozycji „częściowo" — każda działająca tylko w demo trafia tu jako nowa pozycja I-2* | lista w raporcie | DONE (POSTEP § I-2i) |
+| I-2j | pozycje promów z bazy (AIS z `ferry-ais`) na mapie zamiast pozycji przykładowych — z I-2i (5.10) | mapa w produkcji pokazuje pozycję z bazy z czasem odczytu albo „brak źródła danych” | DO ZROBIENIA |
+| I-2k | paczka dokumentów „tydzień” — tylko dokumenty transportów z wybranego tygodnia ISO — z I-2i (6.8) | test: paczka zawiera wyłącznie dokumenty tygodnia | DO ZROBIENIA |
+| I-2l | czas wykrycia odchylenia liczony z `risk_signals` (wykrycie − zdarzenie) zamiast „8 min” — z I-2i (10.7) | kafelek z bazy albo „—” | DO ZROBIENIA |
 | I-10 | e-mail o zmianie daty awizowanego transportu | dostarczenie na adres z plusem | DO ZROBIENIA |
 | I-3 | bramka SMS według `PROPOZYCJA_SMS.md` + decyzje z `ZLECENIE_ETAP_I.md` | testy z propozycji; 24 h pracy telefonu | CZEKA NA: telefon i SIM (część bazowa i aplikacja — DO ZROBIENIA) |
 | I-5 | 2FA TOTP, wymagane dla HHL_ADMIN (`aal2`) | administrator bez drugiego składnika = odmowa | DO ZROBIENIA |
@@ -125,3 +128,6 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | D-5 | umowy RODO z KSH i przewoźnikiem | R-2 |
 | D-6 | spotkanie ze Scandinavian Express | etap II |
 | D-7 | Vercel: wyłączenie trenowania modeli (panel) | — |
+| D-8 | wycena ładunków STANDARD (cennik wymaga wymiarów) — w aplikacji bez zmian | R-1 (9 transportów STANDARD), faktury |
+| D-9 | parametry odcinków ETA v1 (czasy i rozrzut PL, odprawa, przeprawa, SE, przerwy — dziś założenia M12, tabela `eta_segment_params`) | dokładność ETA; II-3 |
+| D-10 | czy przewoźnik ma widzieć parametry i odczyty SEFS (dziś tylko HHL) | II-1 |
