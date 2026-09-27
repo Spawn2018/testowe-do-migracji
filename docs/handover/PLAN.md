@@ -73,7 +73,8 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 | I-2g | kody opóźnień ukryte do uzgodnienia z przewoźnikiem | — | DONE 16638cb |
 | I-2h | telefony demo: pula PTS (SE), nieprzydzielalne (PL, LT); SMS i e-mail nigdy w trybie demo | test | DONE 16638cb |
 | I-2i | przegląd 37 pozycji „częściowo" — każda działająca tylko w demo trafia tu jako nowa pozycja I-2* | lista w raporcie | DONE (POSTEP § I-2i) |
-| I-2j | pozycje promów z bazy (AIS z `ferry-ais`) na mapie zamiast pozycji przykładowych — z I-2i (5.10) | mapa w produkcji pokazuje pozycję z bazy z czasem odczytu albo „brak źródła danych” | DO ZROBIENIA |
+| I-2j | pozycje promów z bazy (AIS z `ferry-ais`) na mapie zamiast pozycji przykładowych — z I-2i (5.10) | mapa w produkcji pokazuje pozycję z bazy z czasem odczytu albo „brak źródła danych” | DONE 5ed7dd0 |
+| I-D9 | (P0, decyzja D-9) nowe wartości `eta_segment_params`: PL 7,5 h ±25%, check-in 3 h, SE 17 h ±20%, przerwy SE 13 h ±30%, przeprawa 18 h bez zmian; odpoczynek dobowy na promie | pasmo i opóźnienie transportu wzorcowego przed/po (transakcja wycofana) | DONE 8d69a40 (±747 → ±1013 min, opóźnienie 390 → 1080 min) |
 | I-2k | paczka dokumentów „tydzień” — tylko dokumenty transportów z wybranego tygodnia ISO — z I-2i (6.8) | test: paczka zawiera wyłącznie dokumenty tygodnia | DO ZROBIENIA |
 | I-2l | czas wykrycia odchylenia liczony z `risk_signals` (wykrycie − zdarzenie) zamiast „8 min” — z I-2i (10.7) | kafelek z bazy albo „—” | DO ZROBIENIA |
 | I-10 | e-mail o zmianie daty awizowanego transportu | dostarczenie na adres z plusem | DO ZROBIENIA |
@@ -85,6 +86,10 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 | I-8 | wydajność: cały harmonogram + GPS według PR5, trzy role | czasy liczbami | DO ZROBIENIA |
 | I-9 | `SCOPE.md` koordynatora w repo; Twoje statusy jako §53 | jeden rejestr | DO ZROBIENIA |
 | I-11 | każda pozycja SCOPE 0–11 inna niż DONE ma miejsce w tej kolejce albo w dzienniku odłożeń | zasada 7 spełniona | DO ZROBIENIA |
+| I-12 | osobna stała stawka dla klasy STANDARD (D-8, wariant A), kwoty w D-1 | — | CZEKA NA: treść bloku I-12 + kwoty D-1 |
+| I-13 | (P1) `sefs_parameters.applies_to` (COST / REVENUE / BOTH, domyślnie BOTH); RLS: przewoźnik COST+BOTH, KSH REVENUE+BOTH, HHL wszystko | test bazy: przewoźnik nie widzi wiersza REVENUE, KSH nie widzi wiersza COST | DO ZROBIENIA |
+| I-15 | (P1, decyzja D-10) przewoźnik widzi parametry SEFS tylko do odczytu, wyłącznie wersje `agreed_with_carrier = true` | RLS + test bazy | DO ZROBIENIA (razem z I-13 — ta sama polityka) |
+| I-14 | (P2) `baf_definitions` + `baf_index_values` (0 wierszy) obok `sefs_parameters`/`fuel_index_readings` = dwa źródła prawdy dopłaty paliwowej — wybrać jedno, drugie usunąć (tylko przy 0 wierszy na produkcji) albo opisać | jedno miejsce na parametry, jedno na odczyty | DO ZROBIENIA |
 
 ## PILOTAŻ I WYDANIE
 
@@ -101,13 +106,14 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 |---|---|---|
 | II-1 | wartości SEFS i ich wprowadzenie | CZEKA NA: D-2 |
 | II-2 | kody opóźnień uzgodnione — włączenie w interfejsie | CZEKA NA: spotkanie |
-| II-3 | parametry operacyjne: cutoff promu, progi fal, prędkość | CZEKA NA: spotkanie |
+| II-3 | parametry operacyjne: cutoff promu, progi fal, prędkość; potwierdzenie z SCX czasów odcinków D-9 (PL 7,5 h, check-in 3 h, SE 17 h — „szacunek koordynatora”) | CZEKA NA: spotkanie |
 | II-4 | adapter telematyki przewoźnika | CZEKA NA: spotkanie |
 | II-5 | komunikaty armatora w harmonogramie | CZEKA NA: zgoda armatora |
 | II-6 | Trafikverket, TomTom, KPD — zadania i klucze | CZEKA NA: klucze (każdy osobno — rusza, gdy jego klucz dotrze) |
 
 ## ETAP III — po pilotażu
 
+**III-1** (P2) kalibracja czasów odcinków ETA po 5 transportach — mediana i rozrzut każdego odcinka z wjazdów/wyjazdów stref; PROPOZYCJA zmian do zatwierdzenia przez HHL, nigdy cicha zmiana (odbiór: raport odcinków z liczbami i propozycją) — DO ZROBIENIA ·
 Silnik Workflows · źródło pogody morskiej · walidator zezwoleń i wymiarów ·
 pozycje D4–D12 audytu · integracja SharePoint (zgoda IT KSH) · kalendarz ·
 e-CMR · ślad węglowy · SMS 6, 7, 10, 11 · retencja `files/` w R2 ·
@@ -128,6 +134,6 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | D-5 | umowy RODO z KSH i przewoźnikiem | R-2 |
 | D-6 | spotkanie ze Scandinavian Express | etap II |
 | D-7 | Vercel: wyłączenie trenowania modeli (panel) | — |
-| D-8 | wycena ładunków STANDARD (cennik wymaga wymiarów) — w aplikacji bez zmian | R-1 (9 transportów STANDARD), faktury |
-| D-9 | parametry odcinków ETA v1 (czasy i rozrzut PL, odprawa, przeprawa, SE, przerwy — dziś założenia M12, tabela `eta_segment_params`) | dokładność ETA; II-3 |
-| D-10 | czy przewoźnik ma widzieć parametry i odczyty SEFS (dziś tylko HHL) | II-1 |
+| D-8 | ~~wycena ładunków STANDARD~~ — **ROZSTRZYGNIĘTE 27.09:** wariant A, osobna stała stawka → I-12 (kwoty w D-1) | I-12 |
+| D-9 | ~~parametry odcinków ETA v1~~ — **ROZSTRZYGNIĘTE 27.09:** wartości wpisane (I-D9, 0054); obsada jednoosobowa, przeprawa = dobowy odpoczynek na promie (potwierdzone przez właściciela, bez postoju w Nynäshamn); czasy PL/check-in/SE do potwierdzenia z SCX w II-3 | — |
+| D-10 | ~~widoczność SEFS dla przewoźnika~~ — **ROZSTRZYGNIĘTE 27.09:** przewoźnik widzi parametry tylko do odczytu, wyłącznie wersje uzgodnione (`agreed_with_carrier = true`) → I-15 | I-15 |
