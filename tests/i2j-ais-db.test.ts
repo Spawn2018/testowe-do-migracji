@@ -26,6 +26,7 @@ describe('I-2j — pozycje promów z bazy', () => {
   it('produkcja: bez połączenia WebSocket i bez pozycji przykładowych — najpierw tryb „none”', () => {
     const WS = vi.fn();
     vi.stubGlobal('WebSocket', WS);
+    vi.stubEnv('VITE_AUTH_MODE', 'supabase');
     const calls: [number, string][] = [];
     const stop = subscribeFerryPositions({ prod: true, onUpdate: (pos, mode) => calls.push([pos.length, mode]) });
     stop();
@@ -33,6 +34,7 @@ describe('I-2j — pozycje promów z bazy', () => {
     expect(calls[0]).toEqual([0, 'none']);
     expect(calls.some(([, m]) => m === 'seed')).toBe(false);
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
   it('mapa i widok mapy korzystają z jednego wejścia (subscribeFerryPositions z PROD_BUILD)', () => {
     for (const f of ['src/components/map/CorridorMap.tsx', 'src/views/MapView.tsx']) {

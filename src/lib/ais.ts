@@ -125,15 +125,18 @@ export function subscribeFerryPositions(opts: {
   prod: boolean;
   onUpdate: (positions: AisPosition[], mode: AisMode) => void;
 }): () => void {
-  if (!opts.prod) return subscribeAis({ onUpdate: opts.onUpdate });
-  let stop: (() => void) | null = null;
-  let cancelled = false;
-  opts.onUpdate([], 'none');
-  void import('./aisDb').then(({ subscribeAisDb }) => {
-    if (cancelled) return;
-    stop = subscribeAisDb((pos) => opts.onUpdate(pos, pos.length ? 'db' : 'none'));
-  });
-  return () => { cancelled = true; stop?.(); };
+  // warunek kompilacji (VITE_AUTH_MODE) — paczka demo nie zawiera modułu bazy ani klienta Supabase
+  if (import.meta.env.VITE_AUTH_MODE === 'supabase' && opts.prod) {
+    let stop: (() => void) | null = null;
+    let cancelled = false;
+    opts.onUpdate([], 'none');
+    void import('./aisDb').then(({ subscribeAisDb }) => {
+      if (cancelled) return;
+      stop = subscribeAisDb((pos) => opts.onUpdate(pos, pos.length ? 'db' : 'none'));
+    });
+    return () => { cancelled = true; stop?.(); };
+  }
+  return subscribeAis({ onUpdate: opts.onUpdate });
 }
 
 /** Najnowszy czas sygnału spośród pozycji (null = brak). */
