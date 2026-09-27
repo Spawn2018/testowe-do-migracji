@@ -71,8 +71,8 @@ export const appOrgId = (orgs: OrgRow[], id: string | null): string => {
 
 // ---- transport ------------------------------------------------------------
 export interface ShipmentItemRow {
-  shipment_code: string; item_type: string | null; length_m: number | string; width_m: number | string;
-  height_m: number | string; total_weight_t: number | string | null; unit_weight_t: number | string | null;
+  shipment_code: string; item_type: string | null; length_m: number | string | null; width_m: number | string | null;
+  height_m: number | string | null; cargo_class?: string | null; total_weight_t: number | string | null; unit_weight_t: number | string | null;
   qty: number; assembly_seq: number | null;
 }
 export interface LoadRow {
@@ -133,6 +133,7 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
     widthM: num(item?.width_m) ?? num(row.combo_width_m) ?? 0,
     heightM: num(item?.height_m) ?? num(row.combo_height_m) ?? 0,
     weightT: num(item?.total_weight_t) ?? num(item?.unit_weight_t) ?? num(row.combo_weight_t) ?? 0,
+    ...(item?.cargo_class === 'STANDARD' ? { cargoClass: 'STANDARD' as const } : {}),
   };
   const resources: LoadResources = {
     driverName: row.driver_name, driverPhone: row.driver_phone,

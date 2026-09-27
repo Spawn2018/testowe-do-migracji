@@ -10,9 +10,11 @@ import type { RemovalBlock } from './importRemoval';
 export interface RpcRow {
   code: string;
   item_type: string | null;
-  length_m: number;
-  width_m: number;
-  height_m: number;
+  /** I-2C: tylko dla ładunku normatywnego („Standard”) — wtedy wymiary null */
+  cargo_class?: 'STANDARD';
+  length_m: number | null;
+  width_m: number | null;
+  height_m: number | null;
   unit_weight_t: number | null;
   qty: number;
   total_weight_t: number | null;
@@ -28,6 +30,7 @@ export function toRpcRows(rows: readonly ParsedRow[]): RpcRow[] {
   return rows.map((r) => ({
     code: r.shipmentCode,
     item_type: r.itemType == null ? null : String(r.itemType).trim() || null,
+    ...(r.cargoClass === 'STANDARD' ? { cargo_class: 'STANDARD' as const } : {}),
     length_m: r.lengthM,
     width_m: r.widthM,
     height_m: r.heightM,

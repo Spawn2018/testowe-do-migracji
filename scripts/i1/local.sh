@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # I-1 — import harmonogramu na realnej skali, WYŁĄCZNIE lokalny Supabase (CLI + Docker). Nigdy na produkcji.
-# Wymaga: npx supabase start --workdir /tmp/sblocal (kopia supabase/ z migracjami do 0048).
+# Wymaga: npx supabase start --workdir /tmp/sblocal (kopia supabase/ z migracjami do 0050).
 # Użycie: SB_WORKDIR=/tmp/sblocal bash scripts/i1/local.sh
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"

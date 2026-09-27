@@ -70,6 +70,8 @@ export interface Dimensions {
   widthM: number;
   heightM: number;
   weightT: number;
+  /** I-2C: STANDARD = ładunek normatywny bez wymiarów w harmonogramie (w bazie wymiary NULL; tu 0 — nie wyświetlać). */
+  cargoClass?: 'STANDARD' | 'DIMENSIONED';
 }
 
 export interface LoadResources {

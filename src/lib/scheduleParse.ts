@@ -97,12 +97,20 @@ export type ColumnMap = Record<keyof typeof COLUMN_MAP_DEFAULT, string>;
 /* Wiersz po walidacji                                              */
 /* --------------------------------------------------------------- */
 
+/** I-2C: klasa ładunku. STANDARD = ładunek normatywny („Standard” w kolumnie wymiarów), bez zezwolenia —
+ *  wymiary celowo NULL. DIMENSIONED = wymiary L × W × H wymagane (także ponadnormatywne). */
+export const CARGO_CLASSES = ['STANDARD', 'DIMENSIONED'] as const;
+export type CargoClass = (typeof CARGO_CLASSES)[number];
+/** "Standard" (dowolna wielkość liter, spacje) w kolumnie wymiarów. */
+export const isStandardDims = (v: unknown): boolean => typeof v === 'string' && /^\s*standard\s*$/i.test(v);
+
 export const ParsedRow = z.object({
   shipmentCode: z.string().min(1),
   itemType: z.string().nullable(),
-  lengthM: z.number().positive(),
-  widthM: z.number().positive(),
-  heightM: z.number().positive(),
+  cargoClass: z.enum(CARGO_CLASSES),
+  lengthM: z.number().positive().nullable(),
+  widthM: z.number().positive().nullable(),
+  heightM: z.number().positive().nullable(),
   unitWeightT: z.number().positive().nullable(),
   qty: z.number().int().positive(),
   totalWeightT: z.number().positive().nullable(),
@@ -114,6 +122,14 @@ export const ParsedRow = z.object({
   driverName: z.string().nullable(),
   driverPhone: z.string().nullable(),
   assemblySeq: z.number().int().nullable(),
+}).superRefine((r, ctx) => {
+  const dims = [r.lengthM, r.widthM, r.heightM];
+  if (r.cargoClass === 'STANDARD' && dims.some((d) => d != null)) {
+    ctx.addIssue({ code: 'custom', path: ['lengthM'], message: 'klasa STANDARD: wymiary muszą być puste' });
+  }
+  if (r.cargoClass !== 'STANDARD' && dims.some((d) => d == null)) {
+    ctx.addIssue({ code: 'custom', path: ['lengthM'], message: 'wymiary L × W × H wymagane (klasa inna niż STANDARD)' });
+  }
 });
 export type ParsedRow = z.infer<typeof ParsedRow>;
 
@@ -198,8 +214,9 @@ export function parseSchedule(
       return;
     }
 
-    const dims = parseDimensions(r[map.dimensions]);
-    if (!dims) {
+    const standard = isStandardDims(r[map.dimensions]);
+    const dims = standard ? null : parseDimensions(r[map.dimensions]);
+    if (!standard && !dims) {
       issues.push({ rowIndex, shipmentCode: code, severity: 'ERROR',
         code: 'BAD_DIMENSIONS',
         message: 'Nie da się sparsować wymiarów (oczekiwany format "L x W x H")',
@@ -227,7 +244,7 @@ export function parseSchedule(
     }
 
     // Gęstość absurdalna => prawie na pewno zła kolumna.
-    if (totalWeightT != null && qty > 3 && totalWeightT / qty < 0.5 && dims.lengthM > 5) {
+    if (dims && totalWeightT != null && qty > 3 && totalWeightT / qty < 0.5 && dims.lengthM > 5) {
       // Known KSH sheet quirk (T-* qty vs transport weight). WARN, do not drop row —
       // otherwise dry-run would falsely mark them as removals.
       issues.push({ rowIndex, shipmentCode: code, severity: 'WARN',
@@ -251,7 +268,8 @@ export function parseSchedule(
       return;
     }
 
-    const flags = classifyOversize({ ...dims, weightT: totalWeightT ?? 0 });
+    // I-2C: STANDARD = ładunek normatywny — walidator wymiarów / zezwoleń go pomija
+    const flags = dims ? classifyOversize({ ...dims, weightT: totalWeightT ?? 0 }) : [];
     if (flags.length > 0) {
       issues.push({ rowIndex, shipmentCode: code, severity: 'WARN',
         code: 'OVERSIZE',
@@ -262,7 +280,8 @@ export function parseSchedule(
     const parsed = ParsedRow.safeParse({
       shipmentCode: code,
       itemType: (r[map.itemType] as string) ?? null,
-      lengthM: dims.lengthM, widthM: dims.widthM, heightM: dims.heightM,
+      cargoClass: standard ? 'STANDARD' : 'DIMENSIONED',
+      lengthM: dims?.lengthM ?? null, widthM: dims?.widthM ?? null, heightM: dims?.heightM ?? null,
       unitWeightT, qty, totalWeightT,
       loadDate, loadTime: parseTime(r[map.loadTime]),
       deliveryDate, deliveryTime: parseTime(r[map.deliveryTime]),
@@ -309,7 +328,7 @@ export interface DiffResult {
 }
 
 const COMPARED: (keyof ParsedRow)[] = [
-  'itemType', 'lengthM', 'widthM', 'heightM', 'unitWeightT', 'qty', 'totalWeightT',
+  'itemType', 'cargoClass', 'lengthM', 'widthM', 'heightM', 'unitWeightT', 'qty', 'totalWeightT',
   'loadDate', 'loadTime', 'deliveryDate', 'deliveryTime', 'orderNo', 'assemblySeq',
 ];
 

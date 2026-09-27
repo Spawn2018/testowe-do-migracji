@@ -662,6 +662,13 @@ export function ScheduleView() {
                         case 'type':
                           return <td key={id} data-col={id} data-content>{l.itemType}</td>;
                         case 'dims':
+                          if (l.dims.cargoClass === 'STANDARD') {
+                            return (
+                              <td key={id} data-col={id} data-cargo="STANDARD" title={t(locale, 'i2_std_title')}>
+                                {t(locale, 'i2_std')}
+                              </td>
+                            );
+                          }
                           return (
                             <td
                               key={id}

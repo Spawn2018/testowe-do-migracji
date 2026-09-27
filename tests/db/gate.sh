@@ -33,6 +33,6 @@ check archive 18
 check watchdog 27
 check invite 48
 check risks 23
-check import 37
+check import 46
 check nullguard 175
 [ $ok -eq 1 ]

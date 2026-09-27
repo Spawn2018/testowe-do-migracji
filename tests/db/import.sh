@@ -85,4 +85,17 @@ err "data dostawy przed załadunkiem" $HHL "$(IMP '[{"code":"X","length_m":1,"wi
 err "wymiar nieliczbowy"     $HHL "$(IMP '[{"code":"X","length_m":"Standard","width_m":1,"height_m":1}]' false)" "nieprawidłowa"
 chk "po błędach: bez nowych transportów" "$(Q "select count(*) from shipment_items where shipment_code='X'")" 0
 val "pusty plik: 0 kandydatów do anulowania" $HHL "select jsonb_array_length(r->'cancel_candidates') from ($(IMP '[]' true)) s(r)" 0
+
+echo; echo "[I-2C] klasa STANDARD (ładunek normatywny, wymiary NULL)"
+RS='[{"code":"T-03","cargo_class":"STANDARD","length_m":null,"width_m":null,"height_m":null,"qty":27,"total_weight_t":20.81,"load_date":"2026-10-02","delivery_date":"2026-10-07"}]'
+val "STANDARD bez wymiarów: przyjęty (+1)" $HHL "select jsonb_array_length(r->'added') from ($(IMP "$RS" false)) s(r)" 1 commit
+chk "pozycja T-03: klasa STANDARD, wymiary NULL" "$(Q "select cargo_class||':'||coalesce(length_m::text,'∅')||':'||coalesce(width_m::text,'∅')||':'||coalesce(height_m::text,'∅') from shipment_items where shipment_code='T-03'")" "STANDARD:∅:∅:∅"
+val "ten sam STANDARD ponownie: bez zmian" $HHL "select jsonb_array_length(r->'added')||'/'||jsonb_array_length(r->'changed') from ($(IMP "$RS" true)) s(r)" "0/0"
+err "STANDARD z wymiarami — odrzucony" $HHL "$(IMP '[{"code":"X","cargo_class":"STANDARD","length_m":10,"width_m":2,"height_m":2}]' false)" "muszą być puste"
+err "bez klasy i bez wymiarów — odrzucony (NULL nie przechodzi)" $HHL "$(IMP '[{"code":"X","qty":1}]' false)" "wymagane dla klasy innej niż STANDARD"
+err "nieznana klasa — odrzucona" $HHL "$(IMP '[{"code":"X","cargo_class":"XXL","length_m":1,"width_m":1,"height_m":1}]' false)" "nieznana klasa"
+chk "baza: DIMENSIONED bez wymiarów łamie ograniczenie" "$($PSQL -c "insert into shipment_items (project_id, shipment_code, cargo_class, length_m, width_m, height_m) values ('$P','Z1','DIMENSIONED',null,null,null)" 2>&1 | grep -c shipment_items_dims_by_class)" 1
+chk "baza: STANDARD z wymiarem łamie ograniczenie" "$($PSQL -c "insert into shipment_items (project_id, shipment_code, cargo_class, length_m, width_m, height_m) values ('$P','Z2','STANDARD',1,null,null)" 2>&1 | grep -c shipment_items_dims_by_class)" 1
+$PSQL -c "update shipment_items set schedule_row = schedule_row - 'cargo_class' where shipment_code in ('SG-02','SG-03')" >/dev/null
+val "schedule_row sprzed 0050 (bez klucza cargo_class): brak fałszywych zmian" $HHL "select jsonb_array_length(r->'changed') from ($(IMP "$(echo "$R2" | tr -d '\n')" true)) s(r)" 0
 echo; echo "WYNIK: $ok OK, $fail FAIL"
