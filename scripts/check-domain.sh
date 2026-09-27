@@ -36,7 +36,10 @@ echo "[3] HTTP"
 chk "https://$HOST/ kod" "$(curl -s -o /tmp/check-domain.html -w '%{http_code}' "https://$HOST/")" 200
 chk "tytuł" "$(grep -o '<title>[^<]*' /tmp/check-domain.html | sed 's/<title>//')" "TOWER — Stegra Boden"
 chk "http:// → https:// (kod 301/308)" "$(curl -s -o /dev/null -w '%{http_code}' "http://$HOST/" | grep -cE '^(301|308)$')" 1
-chk "/download/tower-makieta.html: Content-Disposition attachment" "$(curl -sIL "https://$HOST/download/tower-makieta.html" | grep -ci '^content-disposition: attachment' | awk '{print ($1>0)?"t":"f"}')" t
+# O2: build produkcyjny nie zawiera makiety — /download/… ma dać 404 bez załącznika.
+DL=$(curl -s -o /dev/null -D - -w 'KOD:%{http_code}' "https://$HOST/download/tower-makieta.html")
+chk "/download/tower-makieta.html: kod (makieta usunięta z produkcji)" "$(echo "$DL" | sed -n 's/.*KOD://p')" 404
+chk "/download/tower-makieta.html: brak Content-Disposition attachment" "$(echo "$DL" | grep -ci '^content-disposition: attachment')" 0
 
 if [ "${SEND_LOGIN:-0}" = 1 ] || [ -n "${CHECK_LOGIN_SINCE:-}" ]; then
   E=$(echo "${LOGIN_EMAIL:-}" | tr '[:upper:]' '[:lower:]')

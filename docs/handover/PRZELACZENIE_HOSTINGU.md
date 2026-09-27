@@ -14,7 +14,7 @@
 
 ## Dlaczego przełączenie jest proste (4.3a)
 - Aplikacja to **build statyczny** (`dist/`): HTML + JS + CSS. Brak funkcji Vercel, brak `api/`, `functions/`, middleware (test `tests/hosting-switch.test.ts`).
-- `vercel.json` zawiera **tylko nagłówki** dla `/download/*`. Ten sam zestaw dla Cloudflare Pages: `public/_headers` (test pilnuje zgodności).
+- `vercel.json` zawiera **tylko nagłówki** dla `/download/*` (używane tylko w trybie demo — build produkcyjny nie ma `/download/`, O2). Ten sam zestaw dla Cloudflare Pages: `public/_headers` (test pilnuje zgodności).
 - Routing w adresie po `#` (HashRouter) — żaden host nie potrzebuje przepisań na `index.html`. (`public/vercel.json` z przepisaniem ląduje w `dist/`, host go nie czyta — nieszkodliwy.)
 - `/api/trafikverket` działa tylko w serwerze dev/podglądu Vite; na hostingu statycznym aplikacja sama przechodzi na dane przykładowe (Trafikverket na produkcji — przez Supabase Edge `road-se`).
 - Dane, logowanie, pliki, zadania: Supabase (niezależne od hostingu). Keep-alive: Cloudflare Worker `workers/keep-alive`.
@@ -40,7 +40,7 @@ Nigdy nie wpisywać klucza `service_role` w zmienne hostingu (test `3c`).
 
 ## Test przełączenia (do wykonania przy wdrożeniu)
 - ten sam commit na obu hostach → identyczne pliki `dist/` (porównać `sha256sum` `index.html` i `assets/*`);
-- `curl -I https://<host>/download/tower-makieta.html` → `Content-Disposition: attachment` na obu;
+- `curl -I https://<host>/download/tower-makieta.html` → **404 bez `Content-Disposition`** na obu (O2: build produkcyjny `VITE_AUTH_MODE=supabase` nie zawiera makiety ani `/download/`, `build/prodStrip.ts`, test `tests/o2-prod-strip.test.ts`; w trybie demo makieta zostaje);
 - logowanie linkiem z e-maila z nowego adresu (po kroku 2).
 
 ## Działania właściciela

@@ -1,10 +1,28 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
 import { resolveAuthMode } from './build/authMode.ts'
+import { isProdAuthMode, stripProdDist } from './build/prodStrip.ts'
 
 // A5-PODGLADY: podglądy Vercel zawsze w trybie demo; produkcja tylko z main.
 const authMode = resolveAuthMode(process.env)
 if (authMode !== undefined) process.env.VITE_AUTH_MODE = authMode
+
+/** O2: build produkcyjny bez makiet/danych demo w dist/ (build/prodStrip.ts). */
+function prodStripMockups(): Plugin {
+  let outDir = 'dist'
+  return {
+    name: 'o2-prod-strip-mockups',
+    apply: 'build',
+    configResolved(c) {
+      outDir = c.build.outDir.startsWith('/') ? c.build.outDir : `${c.root}/${c.build.outDir}`
+    },
+    closeBundle() {
+      if (!isProdAuthMode(process.env.VITE_AUTH_MODE)) return
+      const removed = stripProdDist(outDir)
+      console.log(`[o2] build produkcyjny: usunięto z dist: ${removed.join(', ') || '—'}; dodano 404.html`)
+    },
+  }
+}
 
 /** Dev/preview: POST /api/trafikverket → Trafikverket v2 (key server-side) or seed demo JSON */
 function trafikverketApi(): Plugin {
@@ -63,7 +81,7 @@ function trafikverketApi(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), trafikverketApi()],
+  plugins: [react(), trafikverketApi(), prodStripMockups()],
   server: {
     proxy: {
       // Tile proxy — browser hits same-origin; box fetches Carto (demotiles often egress-blocked)
