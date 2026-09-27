@@ -22,6 +22,8 @@ const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUT
 /* ANEKS 5 §4.4 — Moje urządzenia / Wyloguj ze wszystkich urządzeń (tylko Supabase) */
 /* I-2f — prawdziwy formularz BAF/SEFS (0052) zamiast fasady — tylko Supabase */
 const BafForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/BafForm')) : null;
+/* I-19 — formularz cennika HHL (0065) — tylko Supabase */
+const RateCardForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/RateCardForm')) : null;
 const MyDevices = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/MyDevices')) : null;
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
@@ -111,7 +113,7 @@ export function OptionsView() {
       </header>
 
       <div className="options-grid">
-        {PROD_BUILD ? (
+        {PROD_BUILD ? (RateCardForm ? <Suspense fallback={null}><RateCardForm /></Suspense> :
           <section className="panel option-panel option-wide pricing-panel" data-no-source="rate-card">
             <header className="panel-hd"><h2>{t(locale, "opt_rates_h2")}</h2></header>
             <div className="panel-bd"><div className="note option-note">{t(locale, 'i2_rates_no_source')}</div></div>

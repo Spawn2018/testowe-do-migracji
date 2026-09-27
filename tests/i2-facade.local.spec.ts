@@ -93,7 +93,7 @@ test('HHL: formularz BAF/SEFS — wersja parametrów, odczyt, korekta, dziennik'
   await page.locator('nav [data-view="options"]').first().click();
   const f = page.locator('[data-baf-form]');
   await expect(f).toContainText('brak zapisanych parametrów');
-  await expect(page.locator('[data-no-source="rate-card"]')).toBeVisible();
+  await expect(page.locator('[data-rate-card-form]')).toBeVisible();
   const p = f.locator('[data-baf="params"]');
   await p.getByLabel('Obowiązuje od').fill('2026-10-01');
   await p.getByLabel('Baza SEK/l').fill('18,50');

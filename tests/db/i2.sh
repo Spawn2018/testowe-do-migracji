@@ -165,8 +165,46 @@ chk "unikalność: jedna pozycja STANDARD na cennik" "$($PSQL -c "insert into ra
 chk "nieznana klasa odrzucona (CHECK)" "$($PSQL -c "insert into rate_rules (rate_card_id, cargo_class, base_rate) values ('$RR','XXL',5)" 2>&1 | grep -c rate_rules_cargo_class_check)" 1
 err "KSH: dobór stawki odrzucony" $KSH "select rate_match('$RR','$LS')" "wyłącznie HHL"
 err "przewoźnik: dobór stawki odrzucony" $SCX "select rate_match('$RC','$LS')" "wyłącznie HHL"
-err "KSH nie czyta cennika (brak uprawnień)" $KSH "select count(*) from rate_rules" "permission denied"
-$PSQL -c "delete from shipment_items where shipment_code like 'I12-%'; delete from loads where id in ('$LS','$LDM','$LMX'); delete from rate_cards where id in ('$RC','$RR')" >/dev/null
+val "KSH nie widzi cennika (RLS, 0065)" $KSH "select count(*) from rate_rules" 0
+$PSQL -c "delete from shipment_items where shipment_code like 'I12-%'; delete from loads where id in ('$LS','$LDM','$LMX'); select set_config('tower.rate_purge','on',true); delete from rate_cards where id in ('$RC','$RR')" >/dev/null
+
+echo; echo "[I-19] formularz cennika HHL — wersje, walidacja, dziennik (0065; stawki TESTOWE, D-1)"
+CAR=00000000-0000-0000-0000-00000000a003; CLI=00000000-0000-0000-0000-00000000a002
+R1='{"valid_from":"2026-10-01","rules":[{"length_from":0,"length_to":20,"width_from":0,"width_to":3,"height_from":0,"height_to":3,"weight_from":0,"weight_to":40,"base_rate":111},{"length_from":20.01,"length_to":40,"width_from":0,"width_to":3,"height_from":0,"height_to":3,"weight_from":0,"weight_to":40,"base_rate":222},{"cargo_class":"STANDARD","base_rate":99}]}'
+chk "rate_cards/rate_rules: RLS + polityka tylko HHL" "$(Q "select string_agg(policyname||'='||(qual like '%is_hhl()%')::text, ',' order by policyname) from pg_policies where tablename in ('rate_cards','rate_rules')")" "rate_cards_read=true,rate_rules_read=true"
+err "KSH: zapis cennika odrzucony" $KSH "select rate_card_save('$P','REVENUE','$CLI','$R1'::jsonb)" "wyłącznie HHL"
+err "przewoźnik: zapis cennika odrzucony" $SCX "select rate_card_save('$P','COST','$CAR','$R1'::jsonb)" "wyłącznie HHL"
+err "KSH: brak INSERT do rate_cards" $KSH "insert into rate_cards (project_id, side, org_id, valid_from) values ('$P','COST','$CAR',current_date)" "permission denied"
+err "strona COST z organizacją klienta odrzucona" $HHL "select rate_card_save('$P','COST','$CLI','$R1'::jsonb)" "dotyczy przewoźnika"
+err "nieznana strona odrzucona" $HHL "select rate_card_save('$P','XXX','$CAR','$R1'::jsonb)" "Strona cennika"
+err "brak daty obowiązywania odrzucony" $HHL "select rate_card_save('$P','COST','$CAR','{\"rules\":[{\"cargo_class\":\"STANDARD\",\"base_rate\":1}]}'::jsonb)" "datę obowiązywania"
+err "pusty cennik odrzucony" $HHL "select rate_card_save('$P','COST','$CAR','{\"valid_from\":\"2026-10-01\",\"rules\":[]}'::jsonb)" "od 1 do 200"
+err "dwie pozycje STANDARD odrzucone" $HHL "select rate_card_save('$P','COST','$CAR','{\"valid_from\":\"2026-10-01\",\"rules\":[{\"cargo_class\":\"STANDARD\",\"base_rate\":1},{\"cargo_class\":\"STANDARD\",\"base_rate\":2}]}'::jsonb)" "jedna pozycja STANDARD"
+err "ujemna stawka odrzucona" $HHL "select rate_card_save('$P','COST','$CAR','{\"valid_from\":\"2026-10-01\",\"rules\":[{\"cargo_class\":\"STANDARD\",\"base_rate\":-1}]}'::jsonb)" "nieujemną"
+err "stawka jako tekst odrzucona" $HHL "select rate_card_save('$P','COST','$CAR','{\"valid_from\":\"2026-10-01\",\"rules\":[{\"cargo_class\":\"STANDARD\",\"base_rate\":\"1\"}]}'::jsonb)" "nieujemną"
+err "przedział od > do odrzucony" $HHL "select rate_card_save('$P','COST','$CAR','{\"valid_from\":\"2026-10-01\",\"rules\":[{\"length_from\":30,\"length_to\":20,\"width_from\":0,\"width_to\":3,\"height_from\":0,\"height_to\":3,\"weight_from\":0,\"weight_to\":40,\"base_rate\":1}]}'::jsonb)" "niepoprawny przedział \\(length\\)"
+err "brak pola przedziału odrzucony" $HHL "select rate_card_save('$P','COST','$CAR','{\"valid_from\":\"2026-10-01\",\"rules\":[{\"length_from\":0,\"length_to\":20,\"width_from\":0,\"height_from\":0,\"height_to\":3,\"weight_from\":0,\"weight_to\":40,\"base_rate\":1}]}'::jsonb)" "niepoprawny przedział \\(width\\)"
+err "przedziały stykające się granicą (włącznie) odrzucone" $HHL "select rate_card_save('$P','COST','$CAR','{\"valid_from\":\"2026-10-01\",\"rules\":[{\"length_from\":0,\"length_to\":20,\"width_from\":0,\"width_to\":3,\"height_from\":0,\"height_to\":3,\"weight_from\":0,\"weight_to\":40,\"base_rate\":1},{\"length_from\":20,\"length_to\":40,\"width_from\":0,\"width_to\":3,\"height_from\":0,\"height_to\":3,\"weight_from\":0,\"weight_to\":40,\"base_rate\":2}]}'::jsonb)" "Pozycje 1 i 2 nakładają się"
+val "HHL: wersja 1 kosztu (przewoźnik)" $HHL "select rate_card_save('$P','COST','$CAR','$R1'::jsonb)" 1 commit
+val "HHL: przychód (klient) numerowany osobno — wersja 1" $HHL "select rate_card_save('$P','REVENUE','$CLI','$R1'::jsonb)" 1 commit
+chk "wersja 1: 3 pozycje, STANDARD z przedziałem 0–9999" "$(Q "select count(*)||'/'||max(r.length_to) filter (where r.cargo_class='STANDARD') from rate_rules r join rate_cards c on c.id=r.rate_card_id where c.project_id='$P' and c.side='COST' and c.org_id='$CAR' and c.version=1")" "3/9999.00"
+err "wersja 2 bez powodu zmiany odrzucona" $HHL "select rate_card_save('$P','COST','$CAR','$R1'::jsonb)" "wymaga powodu"
+R2=$(echo "$R1" | sed 's/"base_rate":99}/"base_rate":98}/; s/{"valid_from"/{"note":"TEST korekta STANDARD","valid_from"/')
+val "HHL: wersja 2 kosztu z powodem" $HHL "select rate_card_save('$P','COST','$CAR','$R2'::jsonb)" 2 commit
+chk "wersja 1 bez zmian (STANDARD 99), wersja 2 = 98" "$(Q "select string_agg(c.version||':'||r.base_rate, ',' order by c.version) from rate_rules r join rate_cards c on c.id=r.rate_card_id where c.project_id='$P' and c.side='COST' and c.org_id='$CAR' and r.cargo_class='STANDARD'")" "1:99.00,2:98.00"
+chk "UPDATE rate_rules zablokowany (tylko dopisywanie)" "$($PSQL -c "update rate_rules set base_rate=1" 2>&1 | grep -c 'tylko do dopisywania')" 1
+chk "DELETE rate_cards zablokowany bez tower.rate_purge" "$($PSQL -c "delete from rate_cards where project_id='$P'" 2>&1 | grep -c 'tylko do dopisywania')" 1
+val "HHL czyta wersje cennika" $HHL "select count(*) from rate_cards where project_id='$P'" 3
+val "przewoźnik nie widzi cennika (RLS)" $SCX "select count(*) from rate_cards" 0
+val "dziennik: 3 wpisy RATE_CARD_VERSION" $HHL "select count(*) from rate_card_change_log('$P')" 3
+val "dziennik v2: stara i nowa wersja z pozycjami + powód" $HHL "select jsonb_array_length(old_value->'rules')||'/'||jsonb_array_length(new_value->'rules')||'/'||(new_value->>'note') from rate_card_change_log('$P') where entity_id like '%:COST:%:v2'" "3/3/TEST korekta STANDARD"
+chk "autor wpisu w dzienniku = konto HHL" "$(Q "select count(*) from audit_log a join app_users u on u.id=a.user_id where a.action='RATE_CARD_VERSION' and u.auth_id='$HHL'")" 3
+err "KSH: dziennik cennika odrzucony" $KSH "select count(*) from rate_card_change_log('$P')" "wyłącznie HHL"
+LI19=77777777-0000-0000-0000-0000000000b1
+$PSQL -c "insert into loads (id, project_id, order_no) values ('$LI19','$P','I19-S'); insert into shipment_items (project_id, load_id, shipment_code, cargo_class) values ('$P','$LI19','I19-S1','STANDARD')" >/dev/null
+val "rate_match na wersji z formularza: STANDARD 98" $HHL "select rate_match((select id from rate_cards where project_id='$P' and side='COST' and org_id='$CAR' and version=2), '$LI19')->>'base_rate'" "98.00"
+$PSQL -c "delete from shipment_items where shipment_code like 'I19-%'; delete from loads where id='$LI19'; delete from audit_log where action='RATE_CARD_VERSION'; select set_config('tower.rate_purge','on',true); delete from rate_cards where project_id='$P'" >/dev/null
+chk "sprzątanie testu (tower.rate_purge): 0 cenników" "$(Q "select count(*) from rate_cards")" 0
 
 echo; echo "[I-2j] pozycje promów z AIS (vessel_positions, 0053)"
 V=55555555-0000-0000-0000-000000000001

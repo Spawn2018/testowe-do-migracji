@@ -117,7 +117,7 @@ psql "$PGURL" -q -c "insert into documents (project_id, load_id, category, stora
   ('22222222-0000-0000-0000-000000000001',null,'INSURANCE','dokumenty/t/i.pdf','polisa.pdf')" >/dev/null 2>&1
 val "HHL widzi zezwolenie i polisę (documents)"          $HHL "select count(*) from documents where category in ('PERMIT_PL','INSURANCE')" 2
 val "permits i insurance_policies: 0 wierszy dla HHL (RLS bez polityk — dane strukturalne poza interfejsem)" $HHL "select (select count(*) from permits)+(select count(*) from insurance_policies)" 0
-chk6 "rate_cards, rate_rules, baf_*, driver_tokens, system_heartbeat: brak SELECT dla anon/authenticated" "$(psql "$PGURL" -Atq -c "select bool_or(has_table_privilege(r, 'public.'||t, 'select')) from unnest(array['rate_cards','rate_rules','baf_definitions','baf_index_values','driver_tokens','system_heartbeat']) t cross join unnest(array['anon','authenticated']) r")" f
+chk6 "baf_*, driver_tokens, system_heartbeat: brak SELECT dla anon/authenticated; rate_cards, rate_rules: brak SELECT dla anon (I-19/0065: authenticated czyta, RLS tylko HHL)" "$(psql "$PGURL" -Atq -c "select bool_or(has_table_privilege(r, 'public.'||t, 'select')) or (select bool_or(has_table_privilege('anon', 'public.'||t, 'select')) from unnest(array['rate_cards','rate_rules']) t) from unnest(array['baf_definitions','baf_index_values','driver_tokens','system_heartbeat']) t cross join unnest(array['anon','authenticated']) r")" f
 
 echo; echo "[W1] spatial_ref_sys tylko do odczytu dla ról API (0031) — test bez dotykania danych"
 err "anon: DELETE spatial_ref_sys (0 wierszy) → 42501"          "" "set local role anon; delete from public.spatial_ref_sys where srid = -1" "tylko do odczytu"
