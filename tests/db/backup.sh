@@ -54,6 +54,38 @@ chk "treść 7 kluczowych tabel identyczna (md5 wierszy)"  "$same" 1
 age-keygen -o "$TMP/zly.txt" >/dev/null 2>&1
 chk "zły klucz prywatny → odtworzenie niemożliwe"       "$(AGE_IDENTITY="$TMP/zly.txt" RESTORE_DB_URL="$DST" bash scripts/restore.sh "$TMP/kopia" >/dev/null 2>&1; echo $?)" 1
 
+echo; echo "[PR2-B] Blokada współbieżności backup_run_begin() (0044)"
+B() { psql "$SRC" -Atq -c "select run_status from backup_run_begin()"; }
+psql "$SRC" -q -c "delete from backup_runs" >/dev/null
+chk "pierwszy start → RUNNING"                          "$(B)" RUNNING
+chk "drugi start w trakcie przebiegu → SKIPPED"         "$(B)" SKIPPED
+chk "wpis SKIPPED z powodem"                            "$(psql "$SRC" -Atq -c "select count(*) from backup_runs where status='SKIPPED' and error like 'trwa przebieg id=%'")" 1
+psql "$SRC" -q -c "update backup_runs set started_at = now() - interval '31 minutes' where status='RUNNING'" >/dev/null
+chk "przebieg bez zakończenia > 30 min → ERROR, nowy start RUNNING" "$(B):$(psql "$SRC" -Atq -c "select count(*) from backup_runs where status='ERROR' and error like 'przerwany:%'")" "RUNNING:1"
+psql "$SRC" -q -c "update backup_runs set status='OK', finished_at=now() where status='RUNNING'" >/dev/null
+( psql "$SRC" -Atq -c "begin; select run_status from backup_run_begin(); select pg_sleep(2); commit;" > "$TMP/lockA" 2>&1 & )
+sleep 0.7
+chk "równoległy start (blokada zajęta) → SKIPPED od razu" "$(B)" SKIPPED
+sleep 2
+chk "…z wpisem „blokada zajęta”; pierwszy przebieg RUNNING" "$(psql "$SRC" -Atq -c "select count(*) from backup_runs where error like 'równoległy start%'"):$(grep -c RUNNING "$TMP/lockA")" "1:1"
+chk "anon/authenticated bez EXECUTE backup_run_begin"  "$(psql "$SRC" -Atq -c "select has_function_privilege('anon','backup_run_begin(interval)','execute') or has_function_privilege('authenticated','backup_run_begin(interval)','execute')")" f
+
+echo; echo "[PR2-B] Odtworzenie plików (restore-files.sh): SHA-256 przed i po"
+mkdir -p "$TMP/files/dokumenty/p1" "$TMP/pliki"
+head -c 200000 /dev/urandom > "$TMP/pliki/a.pdf"; printf 'Zażółć gęślą jaźń\n' > "$TMP/pliki/b.txt"
+age -r "$REC" -o "$TMP/files/dokumenty/p1/a.pdf.age" "$TMP/pliki/a.pdf"; age -r "$REC" -o "$TMP/files/dokumenty/p1/b.txt.age" "$TMP/pliki/b.txt"
+python3 - "$TMP" <<'PY' | age -r "$REC" -o "$TMP/manifest.json.age"
+import hashlib,json,os,sys
+t=sys.argv[1]; f=lambda n: {"key": f"files/dokumenty/p1/{n}.age", "document_id": n, "bytes": 0,
+  "size": os.path.getsize(f"{t}/pliki/{n}"), "sha256": hashlib.sha256(open(f"{t}/pliki/{n}","rb").read()).hexdigest()}
+print(json.dumps({"files": [f("a.pdf"), f("b.txt")]}))
+PY
+chk "2 pliki odszyfrowane, sumy SHA-256 zgodne z manifestem" \
+  "$(AGE_IDENTITY="$TMP/klucz.txt" bash scripts/restore-files.sh "$TMP/files" "$TMP/odtw" "$TMP/manifest.json.age" 2>&1 | tail -1)" "FILES OK plikow=2 bajtow=$(( 200000 + $(stat -c %s "$TMP/pliki/b.txt") )) sha256_zgodne=2/2"
+chk "treść identyczna (cmp)"                            "$(cmp -s "$TMP/pliki/a.pdf" "$TMP/odtw/dokumenty/p1/a.pdf" && cmp -s "$TMP/pliki/b.txt" "$TMP/odtw/dokumenty/p1/b.txt" && echo t)" t
+printf 'podmieniony\n' > "$TMP/pliki/b.txt"; age -r "$REC" -o "$TMP/files/dokumenty/p1/b.txt.age" "$TMP/pliki/b.txt"
+chk "podmieniony plik → FILES FAIL"                     "$(AGE_IDENTITY="$TMP/klucz.txt" bash scripts/restore-files.sh "$TMP/files" "$TMP/odtw2" "$TMP/manifest.json.age" 2>&1 | tail -1 | cut -d: -f1)" "FILES FAIL"
+
 if [ "${BACKUP_HOSTED:-0}" = 1 ]; then
   echo; echo "[PR2] Kopia produkcji (tylko odczyt) → odtworzenie do lokalnego Postgresa"
   set -a; . ./.env.local; set +a

@@ -1,39 +1,60 @@
-# Kopie zapasowe — ANEKS 4 PR2
+# Kopie zapasowe — ANEKS 4 PR2 (+ PR2-R2, PR2-B)
 
-**Stan:** kod gotowy, przetestowany bez R2. **ANEKS 5:** hostowany projekt = PRODUKCJA — test odtworzenia wyłącznie do lokalnego Postgresa z migracjami; na produkcji tylko odczyt. Wdrożenie czeka na: konto/klucze Cloudflare R2, `SUPABASE_ACCESS_TOKEN`, klucz age (A5-KLUCZ).
+**Stan (27.09.2026):** wdrożone na produkcji. Codziennie 02:30 czasu PL (`30 0 * * *` UTC) pg_cron → `backup-export` → Worker `tower-backup-writer` → Cloudflare R2 `tower-backup`. Pierwsza kopia OK 27.09 01:43 (38 tabel, 362 wiersze), test odtworzenia OK (`RESTORE OK tabel=38 wierszy=362`), przyjęty przez właściciela.
 
 ## Co jest w repo
 | Element | Plik |
 |---|---|
-| Logika (lista tabel, gzip, szyfrowanie age, retencja: dzienne 30 dni / miesięczne 12 miesięcy, manifest) | `supabase/functions/_shared/backup/core.ts` |
-| Funkcja Edge (COPY każdej tabeli → gzip → age → R2; pliki Storage przyrostowo; retencja; wpis `backup_runs`) | `supabase/functions/backup-export/index.ts` |
-| Tabela przebiegów | `supabase/migrations/0023_backup_runs.sql` (zastosowana na hostowanym) |
-| Harmonogram 02:30 (pg_cron + pg_net + Vault) | `supabase/sql/cron_backup.sql` — uruchomić NA PRODUKCJI |
-| Odtworzenie | `scripts/restore.sh` (domyślnie do schematu `restore_*`, niedestrukcyjne; `--into-public` tylko z `RESTORE_CONFIRM=TAK`) |
-| Testy | `tests/backup-core.test.ts` (5), `tests/db/backup.sh` (10 lokalnie; `BACKUP_HOSTED=1` +2: odczyt produkcji → odtworzenie lokalnie), w bramce `gate.sh` jako `backup 10` |
+| Logika (lista tabel i wyłączeń, gzip, age, manifest z SHA-256 plików, klient Workera) | `supabase/functions/_shared/backup/core.ts` |
+| Funkcja Edge (COPY → gzip → age → Worker; pliki Storage przyrostowo; wpis `backup_runs`) | `supabase/functions/backup-export/index.ts` |
+| Worker tylko do dopisywania (PUT nowego obiektu, `x-backup-secret`; GET/DELETE/LIST 405, nadpisanie 409) | `workers/backup-writer/`, test na żywo `scripts/r2/test-writer.sh` |
+| Blokada usuwania i cykl życia R2 | `docs/handover/r2/bucket-lock.json` (daily/ 30 d, monthly/ 360 d), `docs/handover/r2/lifecycle.json` (31 / 361 d) |
+| Tabela przebiegów, blokada współbieżności | `0023_backup_runs.sql`, `0044_backup_run_lock.sql` |
+| Konta po odtworzeniu do nowego projektu | `0045_restore_relink_accounts.sql` |
+| Harmonogram | `supabase/sql/cron_backup.sql` (zastosowany na produkcji) |
+| Odtworzenie tabel / plików | `scripts/restore.sh`, `scripts/restore-files.sh` |
+| Testy | `tests/backup-core.test.ts`, `tests/db/backup.sh` (bramka `backup 20`), `tests/db/invite.sh` (bramka `invite 38`) |
 
-Poza kopią: `positions` (dane osobowe, retencja 30 dni), `driver_tokens` (skróty tokenów), `spatial_ref_sys` (PostGIS). Test pokrycia w `backup.sh` pilnuje, że każda tabela `public` jest w kopii albo na liście wyłączeń.
+Poza kopią: `positions` (dane osobowe, 30 dni), `driver_tokens` (skróty tokenów), `spatial_ref_sys` (PostGIS), `account_relink_pending` (stan przejściowy odtworzenia). Test pokrycia w `backup.sh` pilnuje, że każda tabela `public` jest w kopii albo na liście wyłączeń.
 
-## Wynik testu (2026-09-26)
-- przed ANEKSEM 5: eksport z hostowanego → odtworzenie do schematu `restore_check` na hostowanym (usunięty po teście): 405 wierszy = manifest.
-- po ANEKSIE 5: eksport z produkcji (tylko odczyt) → odtworzenie do lokalnego Postgresa: 405 wierszy = manifest, 12/12. Na produkcji brak schematów `restore_*`. Zły klucz → odtworzenie niemożliwe.
+## Układ w R2
+- `daily/RRRR-MM-DD/<tabela>.csv.gz.age` + `manifest.json.age` + `_run.json`; ponowny przebieg tego samego dnia → `daily/RRRR-MM-DD-HHMMSS/`. Pierwszego dnia miesiąca także `monthly/RRRR-MM/`.
+- `files/<kubeł>/<ścieżka>.age` — pliki Storage, przyrostowo (dokumenty wgrane od ostatniej udanej kopii). Klucz = ścieżka dokumentu, więc ten sam plik nie jest zapisywany drugi raz. SHA-256 i rozmiar pliku sprzed szyfrowania są w manifeście przebiegu, który go zapisał.
+- **Uwaga:** blokada usuwania obejmuje dziś tylko `daily/` i `monthly/`. Reguła dla `files/` (360 dni) — przy najbliższym logowaniu do Cloudflare (POSTEP, PR2-B).
 
-## Blokada kubełka R2 (3b) — ochrona przed skasowaniem/zaszyfrowaniem kopii
-- Cloudflare R2 Bucket Locks: reguły wieku (Age) albo bezterminowe na prefiks; w dokumentacji brak ograniczenia do planu płatnego. Ustawiane przez API lub `wrangler r2 bucket lock`.
-- Reguły: `docs/handover/r2/bucket-lock.json` — `daily/` **30 dni**, `monthly/` **360 dni** (krócej niż retencja 30 dni / 12 mies., żeby `backup-export` mógł kasować stare kopie).
-- `backup-export` nie przerywa przebiegu, gdy R2 odrzuci DELETE zablokowanego obiektu (wynik DELETE nie jest sprawdzany; spróbuje następnej nocy). Test: `retentionDeletes` nigdy nie wskazuje obiektu młodszego niż blokada.
-- Limity darmowego R2: 10 GB, 1 mln operacji klasy A i 10 mln klasy B miesięcznie.
-- Czeka na: token Cloudflare z dostępem do R2 (właściciel).
+## Blokada współbieżności (0044)
+`backup-export` zaczyna od `backup_run_begin()`: `pg_try_advisory_xact_lock` + sprawdzenie trwającego przebiegu w jednej transakcji. Drugi start (w tej samej chwili albo w trakcie przebiegu) kończy się od razu wpisem `SKIPPED` w `backup_runs`. Blokada transakcyjna zamiast sesyjnej, bo połączenie funkcji Edge może iść przez pooler w trybie transakcji. Przebieg przerwany przez platformę (np. 546) bez zakończenia przez 30 min → `ERROR`, następny start normalny.
+
+## Comiesięczny test odtworzenia (procedura przyjęta 27.09.2026)
+Wykonuje Grok na boksie, do **lokalnego** Postgresa z migracjami; na produkcji nic nie jest zapisywane.
+1. **Krótkie logowanie:** `npx wrangler login` (OAuth konta właściciela, tylko na czas testu).
+2. **Pobranie** ostatniego pełnego katalogu kopii: `wrangler r2 object get tower-backup/daily/<katalog>/<tabela>.csv.gz.age --remote --file …` dla każdej tabeli z listy `BACKUP_TABLES` + `manifest.json.age`.
+3. **Odtworzenie:** `AGE_IDENTITY=<klucz prywatny> RESTORE_DB_URL=<lokalna baza po migracjach> scripts/restore.sh <katalog> --drop-after` → `RESTORE OK tabel=N wierszy=M`.
+4. **Pliki** (gdy manifest ma `files`): pobrać `files/<ścieżka>.age` dla ścieżek z manifestu i `scripts/restore-files.sh <katalog-files> <wyjście> <manifest.json.age…>` → `FILES OK plikow=N bajtow=B sha256_zgodne=N/N`.
+5. **Wylogowanie:** `npx wrangler logout`, potem `npx wrangler whoami` — w raporcie dosłownie wynik „You are not authenticated…”.
+6. Wynik (tabele, wiersze, pliki, sumy, whoami) → wiersz w `POSTEP.md`.
+
+Token R2 tylko do odczytu zastąpi krok 1 dopiero wtedy, gdy zacznie działać przekazywanie sekretów (token ma trafić do `.env.local` bez przechodzenia przez czat).
+
+## Odtworzenie awaryjne do NOWEGO projektu Supabase
+1. Nowy projekt → migracje (`supabase db push`) → `RESTORE_CONFIRM=TAK … scripts/restore.sh <katalog> --into-public`.
+2. **Konta.** Kopia obejmuje schemat `public` bez `auth.users` (hasła/sesje/konta logowania są w schemacie `auth` platformy, nie w kopii). Po odtworzeniu `app_users` wskazuje identyfikatory kont, których w nowym projekcie nie ma, a zaproszenia są przyjęte — bez dodatkowego kroku logowanie kończyłoby się „konto tylko na zaproszenie”. Dlatego:
+   - `restore.sh --into-public` wpisuje takie konta do `account_relink_pending` i wypisuje `konta_do_polaczenia=N`;
+   - użytkownik loguje się jak zwykle (link z e-maila na stronie logowania). Nowe konto logowania z adresem z listy zostaje **połączone po adresie e-mail** z dotychczasowym wierszem `app_users`: rola, organizacja, aktywność, historia bez zmian; audit `USER_RELINKED_AFTER_RESTORE`; adres znika z listy;
+   - bezpieczeństwo: łączony jest tylko adres z listy i tylko wiersz, którego stare konto nie istnieje; zalogować się może wyłącznie właściciel skrzynki (link z e-maila). Adres spoza listy — zasady zaproszeń bez zmian;
+   - administrator HHL loguje się pierwszy tą samą drogą; nie trzeba nikogo zapraszać ponownie. Konta, które się nie zalogują, zostają na liście (bez skutków).
+   - Supabase → Authentication → URL Configuration: Site URL i Redirect URLs nowego adresu aplikacji (inaczej link nie wróci do aplikacji).
+3. **Pliki:** `scripts/restore-files.sh` z `RESTORE_STORAGE_URL` i `RESTORE_SERVICE_KEY` nowego projektu (zmienne środowiska na komputerze właściciela; klucz nie trafia do repo ani czatu) wgrywa pliki do tych samych kubełków i ścieżek (bez nadpisywania) i sprawdza SHA-256.
+4. `restore.sh` oznacza przebieg `backup_runs` zapisany w trakcie kopii (RUNNING) jako `ERROR`, żeby nie blokował nowych kopii.
+5. Na nowym projekcie: sekrety funkcji (`BACKUP_AGE_RECIPIENT`, `BACKUP_WRITER_URL`, `BACKUP_WRITER_SECRET`), Vault i `supabase/sql/cron_*.sql`.
+
+## Wyniki testów
+- 26.09: eksport z produkcji (odczyt) → lokalny Postgres: 405 wierszy = manifest. Zły klucz → odtworzenie niemożliwe.
+- 27.09 (produkcja → R2 → lokalnie): `RESTORE OK tabel=38 wierszy=362`.
+- 27.09 PR2-B, lokalny Supabase w Dockerze + lokalny R2 (`wrangler dev --local`, ten sam Worker i kontrakt; test-writer 8/8): 2 dokumenty wgrane do Storage (250 016 B PDF + 40 006 B JPG) → kopia z `files/` (2 pliki) → pliki usunięte z Storage → `FILES OK plikow=2 bajtow=290022 sha256_zgodne=2/2 wgrane=2` → pobrane ze Storage: SHA-256 przed = po (2/2). Kolejny przebieg przyrostowy: 1 nowy plik, 2 pominięte (już w `files/`), SHA-256 w manifeście zgodne. Dwa równoległe wywołania: 1 OK + 1 `SKIPPED`. Odtworzenie `--into-public` → `konta_do_polaczenia=3`; logowanie linkiem (GoTrue) jednego z nich → konto połączone, widzi swoje dane (RLS); obcy adres → odmowa.
 
 ## Ryzyko
-Kopia raz na dobę: **utrata danych do 24 h** w razie awarii między kopiami (akceptowane w ANEKSIE 4).
+Kopia raz na dobę: **utrata danych do 24 h** (akceptowane w ANEKSIE 4). Limity darmowego R2: 10 GB, 1 mln operacji A / 10 mln B miesięcznie.
 
-## Sekrety funkcji (ustawia właściciel/Grok: `supabase secrets set …`)
-`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `BACKUP_AGE_RECIPIENT` (tylko **publiczny** klucz `age1…`). Klucz prywatny zostaje offline u właściciela.
-
-## Działania właściciela
-1. Cloudflare R2: kubełek + klucz API z dostępem tylko do niego.
-2. `age-keygen -o klucz.txt` na własnym komputerze; do Groka tylko linia `public key: age1…`.
-3. `SUPABASE_ACCESS_TOKEN` w pliku env → `supabase functions deploy backup-export` + sekrety.
-4. Na produkcji: pg_cron, pg_net, Vault (`project_url`, `service_role_key`) → `supabase/sql/cron_backup.sql`.
-5. Raz w miesiącu: pobrać kopię z R2 i `scripts/restore.sh` do LOKALNEGO Postgresa z migracjami (klucz prywatny udostępniony przez właściciela na czas testu, potem usunięty) → wynik w POSTEP.md.
+## Sekrety
+Funkcja Supabase: `BACKUP_AGE_RECIPIENT` (tylko publiczny `age1…`), `BACKUP_WRITER_URL`, `BACKUP_WRITER_SECRET`. Worker: `BACKUP_WRITER_SECRET`. Klucz service_role nie opuszcza Supabase; klucz prywatny age offline u właściciela.

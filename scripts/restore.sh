@@ -14,7 +14,9 @@
 #   --drop-after  (tylko z --schema) usuwa schemat po udanym porównaniu (test automatyczny).
 #
 # Wyjście: jedna linia „RESTORE OK tabel=N wierszy=M” albo „RESTORE FAIL …” (kod ≠ 0).
-# Pliki (files/…age) odszyfrowuje się tym samym kluczem: age -d -i klucz plik.age > plik.
+# Konta (tylko --into-public): kopia nie zawiera auth.users. Skrypt wpisuje konta z app_users do
+#   account_relink_pending (0045); pierwsze logowanie linkiem z e-maila łączy konto po adresie (bez zaproszenia).
+# Pliki (files/…age): scripts/restore-files.sh (odszyfrowanie, sumy SHA-256 z manifestu, opcjonalnie wgranie do Storage).
 set -euo pipefail
 DIR=${1:?katalog kopii}; shift || true
 MODE=schema; SCHEMA=""; DROP_AFTER=0
@@ -64,4 +66,13 @@ for t in $TABLES; do
 done
 if [ -n "$bad" ]; then echo "RESTORE FAIL: liczba wierszy:$bad"; exit 1; fi
 if [ "$MODE" = schema ] && [ $DROP_AFTER -eq 1 ]; then "${PSQL[@]}" -c "drop schema $SCHEMA cascade"; fi
-echo "RESTORE OK tabel=$n wierszy=$rows tryb=$MODE${SCHEMA:+ schemat=$SCHEMA}"
+RELINK=""
+if [ "$MODE" = public ]; then
+  # kopia zawiera własny przebieg backup_runs w stanie RUNNING (zapisany w trakcie) — inaczej blokowałby kopie (0044)
+  "${PSQL[@]}" -c "update public.backup_runs set status = 'ERROR', finished_at = coalesce(finished_at, now()), error = 'przebieg w toku w chwili kopii (odtworzenie)' where status = 'RUNNING'"
+  # PR2-B (0045): konta z kopii bez auth.users w nowym projekcie → lista do połączenia po e-mailu przy pierwszym logowaniu
+  if [ "$("${PSQL[@]}" -c "select to_regprocedure('public.restore_mark_relink()') is not null")" = t ]; then
+    RELINK=" konta_do_polaczenia=$("${PSQL[@]}" -c "select public.restore_mark_relink()")"
+  fi
+fi
+echo "RESTORE OK tabel=$n wierszy=$rows tryb=$MODE${SCHEMA:+ schemat=$SCHEMA}$RELINK"

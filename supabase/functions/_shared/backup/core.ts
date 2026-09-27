@@ -13,7 +13,8 @@ export const BACKUP_TABLES = [
   'geofences', 'geofence_states', 'risk_signals', 'notifications', 'workflows', 'workflow_runs',
   'schedule_imports', 'integration_runs', 'audit_log', 'system_heartbeat', 'backup_runs', 'usage_history',
 ] as const;
-export const EXCLUDED_TABLES = ['positions', 'driver_tokens', 'spatial_ref_sys'] as const;
+// account_relink_pending (0045): stan przejściowy po odtworzeniu do nowego projektu — nie należy do kopii.
+export const EXCLUDED_TABLES = ['positions', 'driver_tokens', 'spatial_ref_sys', 'account_relink_pending'] as const;
 
 export type Encrypt = (plain: Uint8Array) => Promise<Uint8Array>;
 
@@ -65,7 +66,8 @@ export interface Manifest {
   prefix: string;
   recipient: string;
   tables: Record<string, number>;
-  files: { key: string; document_id: string; bytes: number }[];
+  /** bytes = rozmiar zaszyfrowanego obiektu; size i sha256 = plik PRZED szyfrowaniem (kontrola po odtworzeniu). */
+  files: { key: string; document_id: string; bytes: number; size?: number; sha256?: string }[];
   excluded: readonly string[];
   note: string;
 }
@@ -96,3 +98,9 @@ export function writerClient(url: string, secret: string, fetchFn: typeof fetch 
 
 /** Drugi przebieg tego samego dnia/miesiąca (klucze już są, nadpisanie zabronione) → osobny katalog z godziną UTC. */
 export const rerunPrefix = (prefix: string, d: Date) => `${prefix.replace(/\/$/, '')}-${d.toISOString().slice(11, 19).replace(/:/g, '')}/`;
+
+/** PR2-B — SHA-256 (hex) pliku przed szyfrowaniem; restore-files.sh porównuje po odszyfrowaniu. */
+export async function sha256Hex(data: Uint8Array): Promise<string> {
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(data)));
+  return Array.from(d, (b) => b.toString(16).padStart(2, '0')).join('');
+}

@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Encrypter } from 'age-encryption';
-import { BACKUP_TABLES, EXCLUDED_TABLES, csvRowCount, gzip, retentionDeletes, sealTable } from '../supabase/functions/_shared/backup/core';
+import { BACKUP_TABLES, EXCLUDED_TABLES, csvRowCount, gzip, retentionDeletes, sealTable, sha256Hex } from '../supabase/functions/_shared/backup/core';
 
 const hasAge = (() => { try { execFileSync('age', ['--version']); return true; } catch { return false; } })();
 
@@ -84,5 +84,14 @@ describe('PR2 — zapis przez Worker (tylko dopisywanie)', async () => {
   });
   it('ponowny przebieg → katalog z godziną UTC', () => {
     expect(rerunPrefix('daily/2026-09-27/', new Date('2026-09-27T01:02:03Z'))).toBe('daily/2026-09-27-010203/');
+  });
+});
+
+describe('PR2-B: suma SHA-256 plików w manifeście', () => {
+  it('sha256Hex = wzorcowa suma (hex, 64 znaki)', async () => {
+    expect(await sha256Hex(new TextEncoder().encode('abc'))).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+  });
+  it('lista wyłączeń obejmuje stan przejściowy odtworzenia (account_relink_pending)', () => {
+    expect(EXCLUDED_TABLES).toContain('account_relink_pending');
   });
 });
