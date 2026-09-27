@@ -20,7 +20,13 @@ Poza kopią: `positions` (dane osobowe, 30 dni), `driver_tokens` (skróty token�
 ## Układ w R2
 - `daily/RRRR-MM-DD/<tabela>.csv.gz.age` + `manifest.json.age` + `_run.json`; ponowny przebieg tego samego dnia → `daily/RRRR-MM-DD-HHMMSS/`. Pierwszego dnia miesiąca także `monthly/RRRR-MM/`.
 - `files/<kubeł>/<ścieżka>.age` — pliki Storage, przyrostowo (dokumenty wgrane od ostatniej udanej kopii). Klucz = ścieżka dokumentu, więc ten sam plik nie jest zapisywany drugi raz. SHA-256 i rozmiar pliku sprzed szyfrowania są w manifeście przebiegu, który go zapisał.
-- **Uwaga:** blokada usuwania obejmuje dziś tylko `daily/` i `monthly/`. Reguła dla `files/` (360 dni) — przy najbliższym logowaniu do Cloudflare (POSTEP, PR2-B).
+- Blokady usuwania (stan 27.09.2026 ok. 11:38, `wrangler r2 bucket lock list tower-backup`):
+  ```
+  name: tower-daily-30d / enabled: Yes / prefix: daily/ / condition: after 30 days
+  name: tower-files-360d / enabled: Yes / prefix: files/ / condition: after 360 days
+  name: tower-monthly-360d / enabled: Yes / prefix: monthly/ / condition: after 360 days
+  ```
+- Cykl życia: `daily/` 31 dni, `monthly/` 361 dni. **`files/` nie ma reguły cyklu życia** — kopie plików dokumentów zostają bezterminowo (po 360 dniach tylko przestaje ich chronić blokada). Informacja, bez zmian.
 
 ## Blokada współbieżności (0044)
 `backup-export` zaczyna od `backup_run_begin()`: `pg_try_advisory_xact_lock` + sprawdzenie trwającego przebiegu w jednej transakcji. Drugi start (w tej samej chwili albo w trakcie przebiegu) kończy się od razu wpisem `SKIPPED` w `backup_runs`. Blokada transakcyjna zamiast sesyjnej, bo połączenie funkcji Edge może iść przez pooler w trybie transakcji. Przebieg przerwany przez platformę (np. 546) bez zakończenia przez 30 min → `ERROR`, następny start normalny.
