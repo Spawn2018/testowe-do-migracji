@@ -5,6 +5,7 @@
  * EN/SV bez polskich znaków. Test statyczny: tests/risk-keys.test.ts.
  */
 import type { Locale } from '../types';
+import { DEMO_ONLY_I18N } from './demoOnly';
 
 type Dict = Record<string, string>;
 
@@ -111,18 +112,6 @@ const pl: Dict = {
   rk_seed_ferry_cancel_meta: 'Odpowiada: H&H Logistics · status armatora: anulowany',
   rk_seed_e4_closure: 'E4 zamknięta — Luleå północ · objazd +120 min',
   rk_seed_e4_closure_meta: 'Odpowiada: Scandinavian Express · E4 CLOSED · źródło: Trafikverket',
-  rk_seed_gps_silent_33: 'Cichy GPS — SG-33 bez pingu od 3 h 14 min',
-  rk_seed_gps_silent_33_meta: 'Odpowiada: Scandinavian Express · ostatni ping: E4 Umeå',
-  rk_seed_permit_mismatch_34: 'Permit mismatch — SG-34 przekracza wysokość i szerokość',
-  rk_seed_permit_mismatch_34_meta: 'Odpowiada: Scandinavian Express · zezwolenie nie pasuje do wymiarów',
-  rk_seed_sequence_18_35: 'Sekwencja montażu — T-18 przed SG-35',
-  rk_seed_sequence_18_35_meta: 'Odpowiada: H&H Logistics · sekwencja montażu: 35 → 18',
-  rk_seed_weather_wind_35: 'Okno pogodowe — wiatr boczny 17 m/s dla SG-35',
-  rk_seed_weather_wind_35_meta: 'Odpowiada: Scandinavian Express · pogoda: wiatr 17 m/s',
-  rk_seed_doc_missing_36: 'Brak zezwolenia SE — SG-36 T-48',
-  rk_seed_doc_missing_36_meta: 'Odpowiada: Scandinavian Express · dokument PERMIT_SE missing',
-  rk_seed_escort_03: 'Brak eskorty — R-03 niekompletne zasoby',
-  rk_seed_escort_03_meta: 'Termin uzupełnienia: 24.09 · wymagany pilot',
 };
 
 const en: Dict = {
@@ -224,18 +213,6 @@ const en: Dict = {
   rk_seed_ferry_cancel_meta: 'Owner: H&H Logistics · operator status: cancelled',
   rk_seed_e4_closure: 'E4 closed — Luleå north · detour +120 min',
   rk_seed_e4_closure_meta: 'Owner: Scandinavian Express · E4 CLOSED · source: Trafikverket',
-  rk_seed_gps_silent_33: 'Silent GPS — SG-33 no ping for 3 h 14 min',
-  rk_seed_gps_silent_33_meta: 'Owner: Scandinavian Express · last ping: E4 Umeå',
-  rk_seed_permit_mismatch_34: 'Permit mismatch — SG-34 exceeds height and width',
-  rk_seed_permit_mismatch_34_meta: 'Owner: Scandinavian Express · permit does not match dimensions',
-  rk_seed_sequence_18_35: 'Assembly sequence — T-18 before SG-35',
-  rk_seed_sequence_18_35_meta: 'Owner: H&H Logistics · assembly sequence: 35 → 18',
-  rk_seed_weather_wind_35: 'Weather window — crosswind 17 m/s for SG-35',
-  rk_seed_weather_wind_35_meta: 'Owner: Scandinavian Express · weather: wind 17 m/s',
-  rk_seed_doc_missing_36: 'Missing SE permit — SG-36 T-48',
-  rk_seed_doc_missing_36_meta: 'Owner: Scandinavian Express · document PERMIT_SE missing',
-  rk_seed_escort_03: 'Missing escort — R-03 incomplete resources',
-  rk_seed_escort_03_meta: 'Completion deadline: 24.09 · pilot required',
 };
 
 const sv: Dict = {
@@ -337,18 +314,12 @@ const sv: Dict = {
   rk_seed_ferry_cancel_meta: 'Ansvarig: H&H Logistics · rederiets status: inställd',
   rk_seed_e4_closure: 'E4 avstängd — Luleå norr · omledning +120 min',
   rk_seed_e4_closure_meta: 'Ansvarig: Scandinavian Express · E4 CLOSED · källa: Trafikverket',
-  rk_seed_gps_silent_33: 'Tyst GPS — SG-33 utan ping på 3 h 14 min',
-  rk_seed_gps_silent_33_meta: 'Ansvarig: Scandinavian Express · senaste ping: E4 Umeå',
-  rk_seed_permit_mismatch_34: 'Tillstånd matchar inte — SG-34 överskrider höjd och bredd',
-  rk_seed_permit_mismatch_34_meta: 'Ansvarig: Scandinavian Express · tillståndet matchar inte måtten',
-  rk_seed_sequence_18_35: 'Monteringsordning — T-18 före SG-35',
-  rk_seed_sequence_18_35_meta: 'Ansvarig: H&H Logistics · monteringsordning: 35 → 18',
-  rk_seed_weather_wind_35: 'Väderfönster — sidvind 17 m/s för SG-35',
-  rk_seed_weather_wind_35_meta: 'Ansvarig: Scandinavian Express · väder: vind 17 m/s',
-  rk_seed_doc_missing_36: 'SE-tillstånd saknas — SG-36 T-48',
-  rk_seed_doc_missing_36_meta: 'Ansvarig: Scandinavian Express · dokument PERMIT_SE saknas',
-  rk_seed_escort_03: 'Eskort saknas — R-03 ofullständiga resurser',
-  rk_seed_escort_03_meta: 'Tidsfrist för komplettering: 24.09 · pilot krävs',
 };
 
-export const RISK_I18N: Record<Locale, Dict> = { pl, en, sv };
+// I-0: teksty tylko dla danych demo (identyfikatory transportów demo, statyczne banery) — w demoOnly.ts,
+// w buildzie produkcyjnym podmienionym na pusty moduł (demoOnly.prod.ts).
+export const RISK_I18N: Record<Locale, Dict> = {
+  pl: { ...pl, ...DEMO_ONLY_I18N.RISK.pl },
+  en: { ...en, ...DEMO_ONLY_I18N.RISK.en },
+  sv: { ...sv, ...DEMO_ONLY_I18N.RISK.sv },
+};

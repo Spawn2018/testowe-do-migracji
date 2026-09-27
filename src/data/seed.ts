@@ -23,6 +23,8 @@ import { DEMO_FX_META, plnToEurDemo } from '../lib/money/demoFx';
 export { DEMO_FX_META } from '../lib/money/demoFx';
 import { seedOrders, seedResourcesForIndex } from './seedIdentity';
 import { RISK_I18N } from '../i18n/risks';
+/** I-0: logika bez danych demo — w lib/seedLogic.ts (używana też w buildzie produkcyjnym bez seed.ts). */
+export { applyForceMajeureDelays, buildSeedExceptions } from '../lib/seedLogic';
 
 export const ORGS: Organization[] = [
   { id: 'org-hhl', kind: 'HHL', name: 'H&H Logistics' },
@@ -1097,24 +1099,6 @@ function withSeedRiskKeys(r: Risk): Risk {
   return { ...r, ...k };
 }
 
-export function buildSeedExceptions(loads: Load[], risks: Risk[]): ExceptionItem[] {
-  return risks.map((r) => ({
-    id: `ex-${r.id}`,
-    severity: r.severity,
-    title: r.title,
-    owner: r.owner,
-    meta: r.meta,
-    nextAction: r.nextAction,
-    ageHours: r.ageHours,
-    loadId: r.loadId,
-    code: r.loadId ? loads.find((l) => l.id === r.loadId)?.code : undefined,
-    titleKey: r.titleKey,
-    titleParams: r.titleParams,
-    metaKey: r.metaKey,
-    metaParams: r.metaParams,
-  }));
-}
-
 export function buildSeedInvoices(loads: Load[]): Invoice[] {
   const delivered = loads.filter((l) => l.status === 'DELIVERED' || l.status === 'UNLOADING').slice(0, 8);
   const linesMatched = delivered.slice(0, 4).map((l) => ({
@@ -1415,40 +1399,3 @@ export const DRIVER_TOKENS: Record<string, string> = {
   'demo-active': 'load-020',
   'demo-k01': 'load-051',
 };
-
-
-/** Mark loads linked to active FORCE_MAJEURE as delayed and bump ETA by impact hours. */
-export function applyForceMajeureDelays(loads: Load[], risks: Risk[]): Load[] {
-  const fm = risks.filter(
-    (r) =>
-      r.type === 'FORCE_MAJEURE' &&
-      (r.severity === 'CRITICAL' || r.severity === 'HIGH') &&
-      r.loadId,
-  );
-  if (!fm.length) return loads;
-  const byLoad = new Map<string, number>();
-  for (const r of fm) {
-    if (!r.loadId) continue;
-    const h = r.delayImpactHours ?? (r.severity === 'CRITICAL' ? 4 : 2);
-    byLoad.set(r.loadId, Math.max(byLoad.get(r.loadId) ?? 0, h));
-  }
-  return loads.map((l) => {
-    const hours = byLoad.get(l.id);
-    if (!hours) return l;
-    let etaBoden = l.etaBoden;
-    if (etaBoden) {
-      const t0 = Date.parse(etaBoden);
-      if (!Number.isNaN(t0)) {
-        etaBoden = new Date(t0 + hours * 3600 * 1000).toISOString();
-      }
-    }
-    return {
-      ...l,
-      delayed: true,
-      status: l.status === 'DELIVERED' ? l.status : l.status === 'SILENT' ? l.status : 'DELAYED',
-      etaBoden,
-      etaLatestHours: (l.etaLatestHours ?? 0) + hours,
-      etaReasons: [...(l.etaReasons ?? []), `Siła wyższa · +${hours} h`].slice(-6),
-    };
-  });
-}

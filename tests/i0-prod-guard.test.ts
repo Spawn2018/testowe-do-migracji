@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
+import { PROD_DEMO_SWAP } from '../build/prodStrip'
 
 // I-0 (strażnik wycieku): paczka produkcyjna (VITE_AUTH_MODE=supabase) nie może zawierać plików klienta
 // ani makiet (*.xlsx, *makieta*, claude-*) ani danych demonstracyjnych w JS/HTML.
@@ -59,11 +60,23 @@ describe('I-0: strażnik paczki produkcyjnej', () => {
     expect(bad).toEqual([])
   })
 
-  // I-2 (ZERO FASADY): dziś paczka produkcyjna zawiera cały zestaw danych demo (src/data/loads.json + seed.ts:
-  // 72 identyfikatory transportów, baner „R-03”, oś „23.09”) — DemoProvider/seed są wciągane statycznie.
-  // Oczekiwany czerwony wynik; `it.fails`, żeby nie blokować pre-push. Po naprawie w I-2 zmienić na `it`.
-  it.fails('brak danych demonstracyjnych w JS/HTML dist (identyfikatory transportów demo, „23.09”, „R-03”) — do naprawy w I-2', () => {
+  // I-0 (27.09.2026): dane demo wycięte z paczki produkcyjnej — wtyczka Vite `i0-demo-swap` podmienia
+  // src/data/seed.ts, src/data/demoProvider.ts, src/i18n/demoOnly.ts na puste *.prod.ts (build/prodStrip.ts).
+  it('brak danych demonstracyjnych w JS/HTML dist (identyfikatory transportów demo, „23.09”, „R-03”, numery +48/+46)', () => {
     const hits = findDemoData(out, demoTransportCodes(), ['23.09', 'R-03'])
+    for (const f of walk(out).filter((p) => /\.(js|html)$/.test(p))) {
+      const phones = new Set(readFileSync(f, 'utf8').match(/\+4[68][ 0-9]{8,12}/g) ?? [])
+      if (phones.size) hits.push(`${relative(out, f)}: numery +48/+46 ×${phones.size}`)
+    }
     expect(hits, hits.slice(0, 20).join('\n')).toEqual([])
+  })
+
+  it('moduły *.prod.ts mają te same eksporty co moduły demo (build produkcyjny się nie rozjedzie)', () => {
+    const names = (f: string) => new Set([...readFileSync(f, 'utf8').matchAll(/^export (?:const|function|let) (\w+)|^export \{ ([^}]+) \}/gm)]
+      .flatMap((m) => (m[1] ? [m[1]] : m[2].split(',').map((x) => x.trim().split(' as ').pop()!.trim()))))
+    for (const [demo, prod] of Object.entries(PROD_DEMO_SWAP)) {
+      const missing = [...names(demo)].filter((n) => !names(prod).has(n))
+      expect(missing, `${prod} brakuje: ${missing.join(', ')}`).toEqual([])
+    }
   })
 })

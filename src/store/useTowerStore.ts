@@ -899,6 +899,8 @@ export const useTowerStore = create<TowerState>()(
       uploadDocument: (loadId, category, name, opts) => {
         const load = get().loads.find((l) => l.id === loadId);
         const mismatch =
+          // I-0: niezgodność zezwolenia symulowana tylko dla transportów demo — nie w buildzie produkcyjnym
+          import.meta.env.VITE_AUTH_MODE !== 'supabase' &&
           (category === 'PERMIT_PL' || category === 'PERMIT_SE') &&
           ['SG-07', 'SG-34'].includes(load?.code ?? '');
         const dataUrl = opts?.dataUrl && String(opts.dataUrl).startsWith('data:') ? opts.dataUrl : null;

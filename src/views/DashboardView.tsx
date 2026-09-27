@@ -78,7 +78,7 @@ export function DashboardView() {
             <span data-content><b>{riskText(locale, ferryBanner.title, ferryBanner.titleKey, ferryBanner.titleParams)}</b> {bannerBody}</span>
           </span>
         </div>
-      ) : role === 'KSH' ? (
+      ) : import.meta.env.VITE_AUTH_MODE === 'supabase' ? null /* I-0: statyczne banery KSH/SCX to dane demo — nie w produkcji */ : role === 'KSH' ? (
         <div className="banner">
           <span data-content>
             <b>{t(locale, 'an5_banner_ksh_title')}</b> {t(locale, 'an5_banner_ksh_body')}

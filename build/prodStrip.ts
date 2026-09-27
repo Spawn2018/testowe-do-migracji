@@ -74,3 +74,13 @@ export function stripProdDist(outDir: string): string[] {
   writeFileSync(join(outDir, '404.html'), PROD_404_HTML)
   return removed
 }
+
+/**
+ * I-0 — moduły z danymi demo podmieniane w buildzie produkcyjnym (VITE_AUTH_MODE=supabase) na puste
+ * odpowiedniki. Ścieżki względem katalogu głównego repo. Tryb demo — bez zmian.
+ */
+export const PROD_DEMO_SWAP: Record<string, string> = {
+  'src/data/seed.ts': 'src/data/seed.prod.ts',
+  'src/data/demoProvider.ts': 'src/data/demoProvider.prod.ts',
+  'src/i18n/demoOnly.ts': 'src/i18n/demoOnly.prod.ts',
+}

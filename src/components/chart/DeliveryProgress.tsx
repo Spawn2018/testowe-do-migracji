@@ -1,12 +1,23 @@
 import { useMemo } from 'react';
 import type { Load, Locale } from '../../types';
 import { t } from '../../i18n/messages';
+import { getNow } from '../../lib/frozenNow';
+
+/** I-0: w buildzie produkcyjnym „dziś” = bieżąca data (bez zamrożonej daty danych demo 23.09). */
+const PROD_BUILD = import.meta.env.VITE_AUTH_MODE === 'supabase';
+function prodToday(): Date {
+  const n = getNow();
+  return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()));
+}
+function ddmm(d: Date): string {
+  return `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
 
 /** Claude scurveHTML twin — cumulative tonnes Plan/Actual weeks 37–45. */
 export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Locale }) {
   const weeks = useMemo(() => {
     const start = new Date('2026-09-07T00:00:00Z');
-    const today = new Date('2026-09-23T00:00:00Z');
+    const today = PROD_BUILD ? prodToday() : new Date('2026-09-23T00:00:00Z');
     const out: { w: number; plan: number; act: number; future: boolean }[] = [];
     for (let w = 0; w < 9; w++) {
       const from = new Date(start);
@@ -107,7 +118,7 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
           </svg>{' '}
           {t(locale, 'actualline')}
         </span>
-        <span style={{ color: 'var(--amber)' }}>▏{t(locale, 'today_mark')} 23.09</span>
+        <span style={{ color: 'var(--amber)' }}>▏{t(locale, 'today_mark')} {PROD_BUILD ? ddmm(prodToday()) : '23.09'}</span>
       </div>
     </div>
   );

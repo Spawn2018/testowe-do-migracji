@@ -1,5 +1,6 @@
 /** Etap 4 — klucze interfejsu (PL źródłowo; EN; SV). */
 import type { Locale } from '../types';
+import { DEMO_ONLY_I18N } from './demoOnly';
 
 type Dict = Record<string, string>;
 
@@ -165,10 +166,6 @@ const pl: Dict = {
   sched_col_ord_scx: 'Zlec. SCX',
   settings_prefs_note: 'Waluta wyświetlania przelicza wszystkie kwoty (źródłem jest zawsze EUR). Kwoty na fakturach pokazywane są w walucie faktury.',
   // odp. właściciela §5 — banery kokpitu (dotąd na sztywno po polsku we wszystkich językach)
-  an5_banner_scx_title: '7 pól bez uzupełnienia.',
-  an5_banner_scx_body: 'Trzy transporty z załadunkiem w ciągu 48 h nie mają zezwolenia. Lista w zakładce Moje zadania.',
-  an5_banner_ksh_title: 'Dostawa 26.09 o 11:30.',
-  an5_banner_ksh_body: 'Dźwig i ekipa potrzebne przez 3 h. Transport R-03 przekracza okno o 1 h 35 min — nowa propozycja godziny czeka na potwierdzenie.',
 };
 const en: Dict = {
   sched_tab_loads: 'Transports',
@@ -332,10 +329,6 @@ const en: Dict = {
   sched_col_ord_scx: 'SCX order',
   settings_prefs_note: 'Display currency converts all amounts (the source is always EUR). Invoice amounts are shown in the invoice currency.',
   // odp. właściciela §5 — banery kokpitu (dotąd na sztywno po polsku we wszystkich językach)
-  an5_banner_scx_title: '7 fields not filled in.',
-  an5_banner_scx_body: 'Three loads loading within 48 h have no permit. List in the Tasks tab.',
-  an5_banner_ksh_title: 'Delivery 26.09 at 11:30.',
-  an5_banner_ksh_body: 'Crane and crew needed for 3 h. Load R-03 exceeds the window by 1 h 35 min — a new time proposal awaits confirmation.',
 };
 const sv: Dict = {
   sched_tab_loads: 'Transporter',
@@ -499,10 +492,12 @@ const sv: Dict = {
   sched_col_ord_scx: 'SCX-order',
   settings_prefs_note: 'Visningsvalutan räknar om alla belopp (källan är alltid EUR). Fakturabelopp visas i fakturans valuta.',
   // odp. właściciela §5 — banery kokpitu (dotąd na sztywno po polsku we wszystkich językach)
-  an5_banner_scx_title: '7 fält inte ifyllda.',
-  an5_banner_scx_body: 'Tre transporter med lastning inom 48 h saknar tillstånd. Lista under fliken Uppgifter.',
-  an5_banner_ksh_title: 'Leverans 26.09 kl. 11:30.',
-  an5_banner_ksh_body: 'Kran och personal behövs i 3 h. Transport R-03 överskrider fönstret med 1 h 35 min — ett nytt tidsförslag väntar på bekräftelse.',
 };
 
-export const ETAP4: Record<Locale, Dict> = { pl, en, sv };
+// I-0: teksty tylko dla danych demo (identyfikatory transportów demo, statyczne banery) — w demoOnly.ts,
+// w buildzie produkcyjnym podmienionym na pusty moduł (demoOnly.prod.ts).
+export const ETAP4: Record<Locale, Dict> = {
+  pl: { ...pl, ...DEMO_ONLY_I18N.ETAP4.pl },
+  en: { ...en, ...DEMO_ONLY_I18N.ETAP4.en },
+  sv: { ...sv, ...DEMO_ONLY_I18N.ETAP4.sv },
+};
