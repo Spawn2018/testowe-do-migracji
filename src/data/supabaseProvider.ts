@@ -22,6 +22,7 @@ export const PROJECT_CODE = 'STEGRA_BODEN';
 const LOAD_COLUMNS =
   'id,order_no,carrier_org_id,status,plan_load_date,plan_load_from,plan_load_to,plan_delivery_date,plan_delivery_from,' +
   'plan_delivery_to,tractor_plate,trailer_plate,driver_name,driver_phone,escort_vehicles,ferry_booking_ref,sailing_id,' +
+  'plan_dates_status,plan_dates_confirmed_at,' +
   'combo_length_m,combo_width_m,combo_height_m,combo_weight_t,delay_minutes,eta_site,eta_confidence_min,eta_basis,eta_computed_at,hhl_order_no,carrier_order_no,actual_delivery_at,' +
   'shipment_items(shipment_code,item_type,cargo_class,length_m,width_m,height_m,total_weight_t,unit_weight_t,qty,assembly_seq),' +
   'sailings(departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,status,vessels(name))';

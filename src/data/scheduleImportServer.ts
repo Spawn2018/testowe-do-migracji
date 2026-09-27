@@ -54,7 +54,8 @@ export async function serverDryRun(buf: ArrayBuffer, filename: string): Promise<
   return { diff: rpcToDiff(preview, meta), preview, rows, meta, hash, buf, projectId: pid };
 }
 
-export async function serverCommit(d: ServerImportDraft, cancelCodes: string[]): Promise<ImportRpcResult> {
+/** overwriteCodes — I-18: kody, dla których HHL świadomie nadpisuje daty potwierdzone przez KSH (osobna zgoda). */
+export async function serverCommit(d: ServerImportDraft, cancelCodes: string[], overwriteCodes: string[] = []): Promise<ImportRpcResult> {
   if (d.meta.accepted === 0) throw new Error('Plik bez poprawnych wierszy — nic nie zapisano');
   const sb = await getSupabase();
   const path = `${d.projectId}/${d.hash}.xlsx`;
@@ -63,5 +64,6 @@ export async function serverCommit(d: ServerImportDraft, cancelCodes: string[]):
   return call(d.projectId, d.rows, cancelCodes, {
     name: d.meta.filename, hash: d.hash, path: `harmonogramy/${path}`,
     column_map: COLUMN_MAP_DEFAULT, rejected: d.meta.rejected,
+    ...(overwriteCodes.length ? { overwrite_confirmed: overwriteCodes } : {}),
   }, false);
 }

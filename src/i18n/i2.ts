@@ -4,6 +4,21 @@ import type { Locale } from '../types';
 type Dict = Record<string, string>;
 
 const pl: Dict = {
+  // I-18 — status dat planu
+  i18_h: "Daty planu (KSH)",
+  i18_confirmed: "data potwierdzona przez KSH",
+  i18_provisional: "data wstępna",
+  i18_prov_short: "wstępna",
+  i18_by_ksh: "potwierdził KSH · {at}",
+  i18_waiting: "czeka na potwierdzenie KSH",
+  i18_load: "Załadunek",
+  i18_delivery: "Dostawa",
+  i18_confirm_btn: "Potwierdź daty",
+  i18_saved: "Daty potwierdzone.",
+  i18_saved_changed: "Daty zmienione i potwierdzone — HHL i przewoźnik dostaną powiadomienie.",
+  i18_carrier_note: "Okna załadunku i dostawy ustala KSH — przewoźnik ich nie zmienia.",
+  i18_imp_warn: "Import zmienia daty POTWIERDZONE przez KSH ({n}). Bez zgody te daty zostaną bez zmian.",
+  i18_imp_consent: "Nadpisz potwierdzone daty (KSH dostanie powiadomienie i potwierdzi ponownie)",
   // I-17 — drugie urządzenie 2FA
   i17_second_intro: "Zapisz konto TOWER w drugiej aplikacji uwierzytelniającej (np. na zapasowym telefonie). Każde urządzenie ma własny kod i działa niezależnie.",
   i17_add: "Dodaj drugie urządzenie",
@@ -140,6 +155,21 @@ const pl: Dict = {
 };
 
 const en: Dict = {
+  // I-18 — status dat planu
+  i18_h: "Plan dates (KSH)",
+  i18_confirmed: "date confirmed by KSH",
+  i18_provisional: "provisional date",
+  i18_prov_short: "prov.",
+  i18_by_ksh: "confirmed by KSH · {at}",
+  i18_waiting: "awaiting KSH confirmation",
+  i18_load: "Loading",
+  i18_delivery: "Delivery",
+  i18_confirm_btn: "Confirm dates",
+  i18_saved: "Dates confirmed.",
+  i18_saved_changed: "Dates changed and confirmed — HHL and the carrier will be notified.",
+  i18_carrier_note: "Loading and delivery windows are set by KSH — the carrier does not change them.",
+  i18_imp_warn: "The import changes dates CONFIRMED by KSH ({n}). Without consent these dates stay unchanged.",
+  i18_imp_consent: "Overwrite confirmed dates (KSH is notified and confirms again)",
   // I-17 — drugie urządzenie 2FA
   i17_second_intro: "Enroll the TOWER account in a second authenticator app (e.g. on a backup phone). Each device has its own code and works independently.",
   i17_add: "Add a second device",
@@ -276,6 +306,21 @@ const en: Dict = {
 };
 
 const sv: Dict = {
+  // I-18 — status dat planu
+  i18_h: "Planerade datum (KSH)",
+  i18_confirmed: "datum bekräftat av KSH",
+  i18_provisional: "preliminärt datum",
+  i18_prov_short: "prel.",
+  i18_by_ksh: "bekräftat av KSH · {at}",
+  i18_waiting: "väntar på bekräftelse från KSH",
+  i18_load: "Lastning",
+  i18_delivery: "Leverans",
+  i18_confirm_btn: "Bekräfta datum",
+  i18_saved: "Datum bekräftade.",
+  i18_saved_changed: "Datum ändrade och bekräftade — HHL och transportören meddelas.",
+  i18_carrier_note: "Lastnings- och leveransfönster sätts av KSH — transportören ändrar dem inte.",
+  i18_imp_warn: "Importen ändrar datum som KSH BEKRÄFTAT ({n}). Utan samtycke lämnas dessa datum oförändrade.",
+  i18_imp_consent: "Skriv över bekräftade datum (KSH meddelas och bekräftar igen)",
   // I-17 — drugie urządzenie 2FA
   i17_second_intro: "Registrera TOWER-kontot i en andra autentiseringsapp (t.ex. på en reservtelefon). Varje enhet har egen kod och fungerar oberoende.",
   i17_add: "Lägg till en andra enhet",

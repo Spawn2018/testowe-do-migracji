@@ -256,4 +256,49 @@ val "wyłączenie zawsze możliwe (aal2)" $HHL "$A2; select admin_set_mfa_enforc
 chk "mfa_factor_count bez EXECUTE dla API" "$(Q "select has_function_privilege('authenticated','mfa_factor_count()','execute')::text||has_function_privilege('anon','mfa_factor_count()','execute')::text")" "falsefalse"
 $PSQL -c "drop table auth.mfa_factors" >/dev/null
 
+echo; echo "[I-18] status dat planu WSTĘPNA | POTWIERDZONA (0061)"
+D1=$(date -d '+20 days' +%F); D2=$(date -d '+25 days' +%F); D3=$(date -d '+21 days' +%F); D4=$(date -d '+26 days' +%F); D5=$(date -d '+22 days' +%F); D6=$(date -d '+27 days' +%F)
+ROW() { echo "[{\"code\":\"D18-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"delivery_date\":\"$2\"}]"; }
+IMP18() { echo "select import_schedule('$P', '$(ROW $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"d18.xlsx\"$3}'::jsonb, $4)"; }
+val "import HHL: nowy transport D18-1" $HHL "select jsonb_array_length(r->'added') from ($(IMP18 $D1 $D2 '' false)) s(r)" 1 commit
+LD=$(Q "select load_id from shipment_items where shipment_code='D18-1'")
+$PSQL -c "update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003' where id='$LD'" >/dev/null
+chk "nowy transport: data WSTĘPNA, bez autora" "$(Q "select plan_dates_status||'/'||coalesce(plan_dates_confirmed_by::text,'∅') from loads where id='$LD'")" "WSTEPNA/∅"
+err "SCX nie potwierdza dat" $SCX "select ksh_confirm_dates('$LD')" "wyłącznie KSH"
+err "HHL nie potwierdza dat (D-12: daty podaje KSH)" $HHL "select ksh_confirm_dates('$LD')" "wyłącznie KSH"
+err "konto bez app_users: odmowa" 11111111-0000-0000-0000-0000000000ee "select ksh_confirm_dates('$LD')" "Brak aktywnego konta"
+err "KSH: dostawa przed załadunkiem — odmowa" $KSH "select ksh_confirm_dates('$LD', '$D2'::date, '$D1'::date)" "przed datą załadunku"
+err "HHL nie ustawi statusu ręcznie (PATCH)" $HHL "update loads set plan_dates_status='POTWIERDZONA' where id='$LD'" "wyłącznie potwierdzenie KSH"
+err "ANEKS 2: przewoźnik nadal nie zmienia okien KSH" $SCX "update loads set plan_load_date='$D3' where id='$LD'" "Przewoźnik nie może zmieniać"
+err "przewoźnik nie ustawi statusu dat" $SCX "update loads set plan_dates_status='POTWIERDZONA' where id='$LD'" "Status dat planu|Przewoźnik nie może"
+val "KSH: potwierdzenie bez zmiany" $KSH "select ksh_confirm_dates('$LD')->>'changed'" false commit
+chk "POTWIERDZONA, autor = konto KSH, czas, zdarzenie PLAN_DATES_CONFIRMED" "$(Q "select l.plan_dates_status||'/'||(u.email)||'/'||(l.plan_dates_confirmed_at is not null)::text from loads l join app_users u on u.id=l.plan_dates_confirmed_by where l.id='$LD'")/$(Q "select count(*) from load_events where load_id='$LD' and event_type='PLAN_DATES_CONFIRMED'")" "POTWIERDZONA/ksh@test/true/1"
+chk "pierwsze potwierdzenie bez zmiany: bez powiadomień" "$(Q "select count(*) from notifications where template='PLAN_DATES_CHANGED'")" 0
+val "KSH: zmiana daty potwierdzonej" $KSH "select ksh_confirm_dates('$LD', '$D3'::date, '$D4'::date)->>'changed'" true commit
+chk "po zmianie przez KSH: nadal POTWIERDZONA, nowe daty" "$(Q "select plan_dates_status||'/'||plan_load_date||'/'||plan_delivery_date from loads where id='$LD'")" "POTWIERDZONA/$D3/$D4"
+chk "zdarzenie PLAN_DATES_CHANGED (by KSH, przed/po)" "$(Q "select payload->>'by'||'/'||(payload->>'before_load_date')||'/'||(payload->>'load_date') from load_events where load_id='$LD' and event_type='PLAN_DATES_CHANGED'")" "KSH/$D1/$D3"
+chk "powiadomienia w aplikacji: HHL i przewoźnik, bez autora (KSH)" "$(Q "select string_agg(distinct o.code, ',' order by o.code) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.template='PLAN_DATES_CHANGED' and n.channel='IN_APP'")" "HHL,SCX"
+chk "bliźniaczy e-mail dla każdego powiadomienia (I-10)" "$(Q "select count(*) filter (where channel='EMAIL')||'/'||count(*) filter (where channel='IN_APP') from notifications where template='PLAN_DATES_CHANGED'")" "$(Q "select count(*) from notifications where template='PLAN_DATES_CHANGED' and channel='IN_APP'")/$(Q "select count(*) from notifications where template='PLAN_DATES_CHANGED' and channel='IN_APP'")"
+val "import z inną datą, bez zgody: podgląd pokazuje konflikt" $HHL "select jsonb_array_length(r->'confirmed')||'/'||(r->'confirmed'->0->>'overwrite') from ($(IMP18 $D5 $D6 '' true)) s(r)" "1/false"
+val "import bez zgody: data potwierdzona NIE nadpisana" $HHL "select (r->'confirmed'->0->>'overwrite') from ($(IMP18 $D5 $D6 '' false)) s(r)" false commit
+chk "po imporcie bez zgody: daty i status bez zmian, bez SCHEDULE_DATE_CRITICAL" "$(Q "select plan_dates_status||'/'||plan_load_date from loads where id='$LD'")/$(Q "select count(*) from load_events where load_id='$LD' and event_type='SCHEDULE_DATE_CRITICAL'")" "POTWIERDZONA/$D3/0"
+val "import ZA ZGODĄ (overwrite_confirmed): nadpisuje" $HHL "select (r->'confirmed'->0->>'overwrite') from ($(IMP18 $D5 $D6 ',"overwrite_confirmed":["D18-1"]' false)) s(r)" true commit
+chk "po nadpisaniu przez HHL: WSTĘPNA (KSH potwierdza ponownie), nowe daty" "$(Q "select plan_dates_status||'/'||plan_load_date||'/'||coalesce(plan_dates_confirmed_by::text,'∅') from loads where id='$LD'")" "WSTEPNA/$D5/∅"
+chk "zmiana przez HHL: powiadomienie także dla KSH (by HHL)" "$(Q "select count(*) from notifications n join app_users u on u.id=n.user_id where n.template='PLAN_DATES_CHANGED' and n.channel='IN_APP' and u.auth_id='$KSH' and n.payload->>'by'='HHL'")" 1
+val "KSH widzi status dat (RLS)" $KSH "select plan_dates_status from loads where id='$LD'" WSTEPNA
+chk "parametr N (DATE_CONFIRM_DAYS) = 5, źródło D-12" "$(Q "select value::int||'/'||(source like 'D-12%')::text from app_parameters where key='DATE_CONFIRM_DAYS'")" "5/true"
+val "parametry czytelne dla zalogowanych, nie dla konta bez app_users" $KSH "select count(*) from app_parameters" 1
+val "app_parameters: konto bez app_users 0" 11111111-0000-0000-0000-0000000000ee "select count(*) from app_parameters" 0
+chk "ryzyko: załadunek za 20 dni > N — brak ryzyka" "$(Q "select detect_unconfirmed_dates()")" 0
+$PSQL -c "set session_replication_role = replica; update loads set plan_load_date = current_date + 3 where id='$LD'" >/dev/null
+chk "ryzyko: WSTĘPNA, załadunek za 3 dni ≤ 5 → DATES_UNCONFIRMED (HHL+KSH, MEDIUM)" "$(Q "select detect_unconfirmed_dates()")/$(Q "select audience::text||'/'||severity::text||'/'||title_key from risk_signals where kind='DATES_UNCONFIRMED' and load_id='$LD' and resolved_at is null")" "1/HHL_KLIENT/MEDIUM/rk_dates_unconfirmed"
+val "KSH widzi ryzyko" $KSH "select count(*) from risk_signals where kind='DATES_UNCONFIRMED'" 1
+val "SCX nie widzi ryzyka (sprawa HHL–KSH)" $SCX "select count(*) from risk_signals where kind='DATES_UNCONFIRMED'" 0
+chk "drugi przebieg: bez duplikatu" "$(Q "select detect_unconfirmed_dates()")" 0
+val "KSH potwierdza → ryzyko zamknięte" $KSH "select ksh_confirm_dates('$LD')->>'status'" POTWIERDZONA commit
+chk "ryzyko zamknięte po potwierdzeniu" "$(Q "select count(*) from risk_signals where kind='DATES_UNCONFIRMED' and resolved_at is null")" 0
+$PSQL -c "set session_replication_role = replica; update loads set status='AT_LOADING' where id='$LD'" >/dev/null
+err "po wjeździe na załadunek KSH nie zmienia dat" $KSH "select ksh_confirm_dates('$LD', '$D3'::date)" "wyłącznie HHL"
+chk "anon bez EXECUTE ksh_confirm_dates / detect_unconfirmed_dates" "$(Q "select has_function_privilege('anon','ksh_confirm_dates(uuid,date,date,timestamptz,timestamptz,timestamptz,timestamptz)','execute')::text||has_function_privilege('authenticated','detect_unconfirmed_dates(timestamptz)','execute')::text")" "falsefalse"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

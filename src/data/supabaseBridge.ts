@@ -13,10 +13,13 @@ import { friendlyDbError } from '../lib/orderNumbers';
 
 let active: ReturnType<typeof createSupabaseProvider> | null = null;
 
-export async function refreshFromServer(): Promise<void> {
+/** keepSelection — I-18: szuflada zostaje otwarta na tym samym transporcie (o ile nadal jest widoczny). */
+export async function refreshFromServer(opts: { keepSelection?: boolean } = {}): Promise<void> {
   if (!active) return;
   const snap = await active.loadSnapshot();
-  useTowerStore.setState({ ...snap, selectedLoadId: null });
+  const sel = useTowerStore.getState().selectedLoadId;
+  const keep = opts.keepSelection && sel != null && snap.loads.some((l) => l.id === sel) ? sel : null;
+  useTowerStore.setState({ ...snap, selectedLoadId: keep });
 }
 
 export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {

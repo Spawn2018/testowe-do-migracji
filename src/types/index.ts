@@ -237,6 +237,8 @@ export interface Load {
   stage: CorridorStage;
   progress: number; // 0..1 along corridor
   plannedLoadDate: string;
+  /** I-18 (0061): status dat planu — tylko produkcja (demo: brak pola). */
+  planDates?: { status: 'WSTEPNA' | 'POTWIERDZONA'; confirmedAt: string | null; loadFrom: string | null; loadTo: string | null; deliveryFrom: string | null; deliveryTo: string | null; preLoading: boolean };
   plannedDeliverDate: string;
   carrierId: string;
   resources: LoadResources;

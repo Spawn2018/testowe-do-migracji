@@ -59,6 +59,10 @@ export interface ImportRpcResult {
   blocked: { code: string; load_id: string; reason: 'INVOICED' | 'STATUS' | 'CANCELLED'; message: string }[];
   cancelled: { code: string; load_id: string }[];
   critical: { code: string; fields: string[] }[];
+  /** I-18 (0061): zmiany dat POTWIERDZONYCH przez KSH; overwrite=false → data zostaje bez zmian */
+  confirmed?: { code: string; load_id: string; overwrite: boolean;
+    before: { load_date: string | null; delivery_date: string | null };
+    after: { load_date: string | null; delivery_date: string | null } }[];
   carrier: string | null;
   ms: number;
 }

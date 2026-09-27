@@ -61,3 +61,5 @@ authenticated admin_set_mfa_enforcement
 # I-6 (0058): błędy przeglądarki — zapis przez RPC (anon: PWA kierowcy i ekran logowania; zalogowany tylko z aktywnym kontem)
 anon report_client_error
 authenticated report_client_error
+# I-18 (0061): KSH potwierdza / zmienia daty planu
+authenticated ksh_confirm_dates

@@ -52,3 +52,4 @@ make_circle_fence | PURE | select st_npoints(make_circle_fence(59.3, 18.0, 100))
 money_effective_eur | PURE | select money_effective_eur(1, 2, 3) | -
 money_least_tier | PURE | select money_least_tier('A', 'B') | -
 report_client_error | GUARD | select report_client_error('error', 'x') | Brak aktywnego konta
+ksh_confirm_dates | GUARD | select ksh_confirm_dates(null) | Brak aktywnego konta

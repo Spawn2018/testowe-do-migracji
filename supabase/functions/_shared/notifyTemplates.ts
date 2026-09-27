@@ -89,6 +89,22 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
         : locale === 'sv' ? `Ny plan: lastning ${ld}, leverans ${dd}. Kontrollera aviseringsfönstret.` : `Nowy plan: załadunek ${ld}, dostawa ${dd}. Sprawdź okno awizacji.`;
       return { subject, body, severity: 'HIGH', view: null };
     }
+    case 'PLAN_DATES_CHANGED': {
+      // I-18 (0061): zmiana daty POTWIERDZONEJ przez KSH — HHL, przewoźnik i KSH (bez autora)
+      const code = String(p.code ?? '');
+      const ld = formatDay(p.load_date), dd = formatDay(p.delivery_date);
+      const bl = formatDay(p.before_load_date), bd = formatDay(p.before_delivery_date);
+      const by = String(p.by ?? '');
+      const reconfirm = p.status === 'WSTEPNA';
+      const subject = locale === 'en'
+        ? `${code}: confirmed plan dates changed (${by})`
+        : locale === 'sv' ? `${code}: bekräftade plandatum ändrade (${by})` : `${code}: zmiana potwierdzonych dat planu (${by})`;
+      const body = (locale === 'en'
+        ? `Loading ${bl} → ${ld}, delivery ${bd} → ${dd}.` + (reconfirm ? ' KSH must confirm the dates again.' : '')
+        : locale === 'sv' ? `Lastning ${bl} → ${ld}, leverans ${bd} → ${dd}.` + (reconfirm ? ' KSH måste bekräfta datumen igen.' : '')
+        : `Załadunek ${bl} → ${ld}, dostawa ${bd} → ${dd}.` + (reconfirm ? ' KSH musi ponownie potwierdzić daty.' : ''));
+      return { subject, body, severity: 'HIGH', view: null };
+    }
     default:
       return { subject: row.template, body: '', severity: 'LOW', view: null };
   }

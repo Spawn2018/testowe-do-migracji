@@ -80,6 +80,8 @@ export interface LoadRow {
   id: string; order_no: string | null; carrier_org_id: string | null; status: string;
   plan_load_date: string | null; plan_load_from: string | null; plan_load_to: string | null;
   plan_delivery_date: string | null; plan_delivery_from: string | null; plan_delivery_to: string | null;
+  /** I-18 (0061) */
+  plan_dates_status?: string | null; plan_dates_confirmed_at?: string | null;
   tractor_plate: string | null; trailer_plate: string | null; driver_name: string | null; driver_phone: string | null;
   escort_vehicles: number | null; ferry_booking_ref: string | null; sailing_id?: string | null;
   /** Rejs (AN1): jedno źródło prawdy — `sailings` przez `loads.sailing_id` (embed PostgREST). */
@@ -173,6 +175,10 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
     status, stage, progress,
     plannedLoadDate: row.plan_load_date ?? '',
     plannedDeliverDate: row.plan_delivery_date ?? '',
+    ...(row.plan_dates_status ? { planDates: {
+      status: row.plan_dates_status === 'POTWIERDZONA' ? 'POTWIERDZONA' as const : 'WSTEPNA' as const, confirmedAt: row.plan_dates_confirmed_at ?? null,
+      loadFrom: row.plan_load_from, loadTo: row.plan_load_to, deliveryFrom: row.plan_delivery_from, deliveryTo: row.plan_delivery_to,
+      preLoading: ['PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING', 'READY'].includes(row.status) } } : {}),
     carrierId: appOrgId(orgs, row.carrier_org_id),
     resources, awizacja, ferry,
     // Ceny: wyłącznie widoki rolowe (Etap 4 / M-*) — tu zera, nie dane demo.
@@ -315,7 +321,7 @@ export interface RiskRow { id: string; load_id: string | null; kind: string; sev
 const RISK_TYPE: Record<string, RiskType> = {
   FERRY: 'FERRY', WEATHER: 'FORCE_MAJEURE', ROAD_SE: 'ROAD_SE', ROAD_PL: 'OPS', PERMIT: 'DOC', INSURANCE: 'DOC',
   DOC_MISSING: 'DOC', SILENT_VEHICLE: 'OPS', ETA_BREACH: 'OPS', RESOURCE_MISSING: 'OPS', SEQUENCE: 'OPS', INVOICE_MISMATCH: 'OPS',
-  AUTO_STATUS: 'OPS', LOADING_UNCONFIRMED: 'OPS', USAGE_LIMIT: 'OPS', JOB_FAILURE: 'OPS',
+  AUTO_STATUS: 'OPS', LOADING_UNCONFIRMED: 'OPS', USAGE_LIMIT: 'OPS', JOB_FAILURE: 'OPS', DATES_UNCONFIRMED: 'OPS',
 };
 const SEVERITY: Record<string, Severity> = { INFO: 'LOW', LOW: 'LOW', MEDIUM: 'MEDIUM', HIGH: 'HIGH', CRITICAL: 'CRITICAL' };
 export function riskFromRow(r: RiskRow, nowIso: string): Risk {

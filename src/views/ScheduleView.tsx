@@ -53,6 +53,13 @@ function delayMinutes(l: Load): number | null {
   return delayPillMinutes(l, delayMinutesVsPlan(l.etaBoden, l.plannedDeliverDate), PROD_BUILD);
 }
 
+/** I-18: data wstępna vs potwierdzona przez KSH (tylko produkcja — w demo pola brak). */
+function DateStatusMark({ s, locale }: { s: 'WSTEPNA' | 'POTWIERDZONA'; locale: Locale }) {
+  return s === 'POTWIERDZONA'
+    ? <span className="pill p-go" data-date-status="POTWIERDZONA" title={t(locale, 'i18_confirmed')} style={{ marginLeft: 4, padding: '0 4px' }}>✓</span>
+    : <span className="pill" data-date-status="WSTEPNA" title={t(locale, 'i18_provisional')} style={{ marginLeft: 4, padding: '0 4px' }}>{t(locale, 'i18_prov_short')}</span>;
+}
+
 export function ScheduleView() {
   /* M10 — rozkład rejsów jako druga zakładka harmonogramu (seg) */
   const [schedTab, setSchedTab] = useState<'loads' | 'sailings'>('loads');
@@ -80,6 +87,8 @@ export function ScheduleView() {
   const [dryRun, setDryRun] = useState<ImportDiff | null>(null);
   /* D26 — usunięcia wyłącznie za wyraźną zgodą (domyślnie odznaczone, reset przy każdym pliku) */
   const [allowRemovals, setAllowRemovals] = useState(false);
+  const [overwriteConfirmed, setOverwriteConfirmed] = useState(false);
+  const [confirmedRows, setConfirmedRows] = useState<NonNullable<ServerImportDraft['preview']['confirmed']>>([]);
   const serverDraft = useRef<ServerImportDraft | null>(null);
   const [serverNote, setServerNote] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
@@ -157,6 +166,8 @@ export function ScheduleView() {
     setParseError(null);
     setDryRun(null);
     setAllowRemovals(false);
+    setOverwriteConfirmed(false);
+    setConfirmedRows([]);
     setParsing(true);
     serverDraft.current = null;
     setServerNote(null);
@@ -166,6 +177,7 @@ export function ScheduleView() {
         const { serverDryRun } = await import('../data/scheduleImportServer');
         const draft = await serverDryRun(buf, f.name);
         serverDraft.current = draft;
+        setConfirmedRows(draft.preview.confirmed ?? []);
         setServerNote(tp(locale, 'i1_preview', { ms: String(draft.preview.ms), carrier: draft.preview.carrier ?? '—', same: String(draft.preview.unchanged) }));
         setDryRun(draft.diff);
         setStep('map');
@@ -428,6 +440,27 @@ export function ScheduleView() {
                   </div>
                 </div>
               ) : null}
+              {SERVER_IMPORT && confirmedRows.length > 0 ? (
+                <div data-import-confirmed style={{ fontSize: 12, margin: '0 0 8px' }}>
+                  <div style={{ color: 'var(--amber)' }}>
+                    {t(locale, 'i18_imp_warn').replace('{n}', String(confirmedRows.length))}
+                  </div>
+                  <div className="mono" style={{ color: 'var(--ink-3)', marginTop: 4 }} data-import-confirmed-codes>
+                    {confirmedRows
+                      .map((c) => `${c.code}: ${c.before.load_date ?? '—'} → ${c.after.load_date ?? '—'} / ${c.before.delivery_date ?? '—'} → ${c.after.delivery_date ?? '—'}`)
+                      .join(' · ')}
+                  </div>
+                  <label className="switchline" style={{ marginTop: 4 }}>
+                    <input
+                      type="checkbox"
+                      checked={overwriteConfirmed}
+                      data-import-overwrite-confirmed
+                      onChange={(e) => setOverwriteConfirmed(e.target.checked)}
+                    />
+                    <span>{t(locale, 'i18_imp_consent')}</span>
+                  </label>
+                </div>
+              ) : null}
               {dryRun.removalBlocked.length > 0 ? (
                 <div data-import-blocked style={{ fontSize: 12, margin: '0 0 8px' }}>
                   <div style={{ color: 'var(--amber)' }}>
@@ -464,7 +497,11 @@ export function ScheduleView() {
                     void (async () => {
                       try {
                         const { serverCommit } = await import('../data/scheduleImportServer');
-                        const res = await serverCommit(draft, allowRemovals ? dryRun.removalCandidates.map((c) => c.code) : []);
+                        const res = await serverCommit(
+                          draft,
+                          allowRemovals ? dryRun.removalCandidates.map((c) => c.code) : [],
+                          overwriteConfirmed ? (draft.preview.confirmed ?? []).map((c) => c.code) : [],
+                        );
                         setServerNote(
                           res.version == null
                             ? t(locale, 'i1_nochange')
@@ -691,9 +728,9 @@ export function ScheduleView() {
                             </td>
                           );
                         case 'load':
-                          return <td key={id} data-col={id}>{formatTableDay(l.plannedLoadDate, refYear)}</td>;
+                          return <td key={id} data-col={id}>{formatTableDay(l.plannedLoadDate, refYear)}{l.planDates ? <DateStatusMark s={l.planDates.status} locale={locale} /> : null}</td>;
                         case 'deliver':
-                          return <td key={id} data-col={id}>{formatTableDay(l.plannedDeliverDate, refYear)}</td>;
+                          return <td key={id} data-col={id}>{formatTableDay(l.plannedDeliverDate, refYear)}{l.planDates ? <DateStatusMark s={l.planDates.status} locale={locale} /> : null}</td>;
                         case 'status':
                           return (
                             <td key={id} data-col={id}>

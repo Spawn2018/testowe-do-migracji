@@ -37,6 +37,7 @@ import { getNowIso } from '../../lib/frozenNow';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { isServerId } from '../../data/registry';
 import { DriverLinkPanel } from './DriverLinkPanel';
+import { PlanDatesPanel } from './PlanDatesPanel';
 import type { Locale } from '../../types';
 import { PROD_BUILD, shows } from '../../lib/prodFacade';
 import { delayPillMinutes, permitBannerState } from '../../lib/prodDash';
@@ -368,6 +369,8 @@ export function LoadDrawer() {
                   <b>{t(locale, 'a6_dr_permit_ok_b')}</b> {tp(locale, 'a6_dr_permit_ok', { n: String(1400 + load.sequenceOrder) })}
                 </div>
               )}
+              {/* I-18: status dat planu — na zakładce przeglądu (widoczny dla trzech ról bez przełączania) */}
+              {import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED && load.planDates && isServerId(load.id) && <PlanDatesPanel load={load} />}
             </>
           )}
 
