@@ -84,7 +84,8 @@ values ('00000000-0000-0000-0000-0000000d0009', (select id from projects where c
 \echo '== D-9: odcinki (czas PL)'
 with e as (select * from compute_load_eta('00000000-0000-0000-0000-0000000d0009')),
      p as (select (select hours from eta_segment_params where code='PL_ROAD') pl, (select hours from eta_segment_params where code='PORT_CHECKIN') ci,
-                  (select hours from eta_segment_params where code='SE_ROAD') se, (select hours from eta_segment_params where code='SE_BREAKS') br),
+                  (select hours from eta_segment_params where code='SE_ROAD') se, (select hours from eta_segment_params where code='SE_BREAKS') br,
+                  coalesce((select hours from eta_segment_params where code='SE_DAILY_REST'), 0) rs),
      t as (select ((date '2026-09-28' + time '12:00') at time zone 'Europe/Warsaw') as start,
                   (e.basis->'segments'->1->>'departure')::timestamptz dep, (e.basis->'segments'->1->>'arrival')::timestamptz arr,
                   e.basis->'segments'->1->>'source' src, e.eta, e.conf_min from e)
@@ -95,10 +96,11 @@ select x.* from t, p, lateral (values
   ('4 rejs: odpłynięcie (' || t.src || ')', to_char(t.dep at time zone 'Europe/Warsaw','Dy DD.MM HH24:MI'), round(extract(epoch from t.dep - t.start)/3600,1)::text),
   ('5 rejs: przypłynięcie (odpoczynek dobowy na promie)', to_char(t.arr at time zone 'Europe/Warsaw','Dy DD.MM HH24:MI'), round(extract(epoch from t.arr - t.start)/3600,1)::text),
   ('6 koniec SE_ROAD (' || p.se || ' h)', to_char((t.arr + make_interval(secs => (p.se*3600)::int)) at time zone 'Europe/Warsaw','Dy DD.MM HH24:MI'), round(extract(epoch from t.arr - t.start)/3600 + p.se,1)::text),
-  ('7 koniec SE_BREAKS (' || p.br || ' h) = ETA', to_char(t.eta at time zone 'Europe/Warsaw','Dy DD.MM HH24:MI'), round(extract(epoch from t.eta - t.start)/3600,1)::text),
-  ('8 pasmo ±', t.conf_min || ' min', '—'),
-  ('9 termin z planu dostawy (koniec 30.09, Sztokholm)', to_char(((date '2026-10-01')::timestamp at time zone 'Europe/Stockholm') at time zone 'Europe/Warsaw','Dy DD.MM HH24:MI'),
+  ('7 koniec SE_DAILY_REST (' || p.rs || ' h; 0 = przed I-15 w SE_BREAKS)', to_char((t.arr + make_interval(secs => ((p.se+p.rs)*3600)::int)) at time zone 'Europe/Warsaw','Dy DD.MM HH24:MI'), round(extract(epoch from t.arr - t.start)/3600 + p.se + p.rs,1)::text),
+  ('8 koniec SE_BREAKS (' || p.br || ' h) = ETA', to_char(t.eta at time zone 'Europe/Warsaw','Dy DD.MM HH24:MI'), round(extract(epoch from t.eta - t.start)/3600,1)::text),
+  ('9 pasmo ±', t.conf_min || ' min', '—'),
+  ('10 termin z planu dostawy (koniec 30.09, Sztokholm)', to_char(((date '2026-10-01')::timestamp at time zone 'Europe/Stockholm') at time zone 'Europe/Warsaw','Dy DD.MM HH24:MI'),
      'zapas ' || round(extract(epoch from (((date '2026-10-01')::timestamp at time zone 'Europe/Stockholm') - t.eta))/3600,1) || ' h'),
-  ('10 termin planu KSH 5 dni (koniec 03.10)', to_char(((date '2026-10-04')::timestamp at time zone 'Europe/Stockholm') at time zone 'Europe/Warsaw','Dy DD.MM HH24:MI'),
+  ('11 termin planu KSH 5 dni (koniec 03.10)', to_char(((date '2026-10-04')::timestamp at time zone 'Europe/Stockholm') at time zone 'Europe/Warsaw','Dy DD.MM HH24:MI'),
      'zapas ' || round(extract(epoch from (((date '2026-10-04')::timestamp at time zone 'Europe/Stockholm') - t.eta))/3600,1) || ' h')
 ) x(krok, czas_pl, h_od_startu);
