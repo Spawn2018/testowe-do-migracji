@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { ExceptionRow } from '../components/ui/ExceptionRow';
 import { KpiTile } from '../components/ui/KpiTile';
@@ -17,6 +17,18 @@ import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { docsCompleteBeforeLoad, otifShown, prodBannerRisk, riskAsException, sortExceptions } from '../lib/prodDash';
 
 export function DashboardView() {
+  // I-2l: czas wykrycia odchylenia z bazy (kpi_detection_lag) — wyłącznie build produkcyjny, moduł leniwy
+  const [detectLag, setDetectLag] = useState<{ samples: number; medianMin: number | null } | null>(null);
+  useEffect(() => {
+    if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
+      let cancelled = false;
+      void import('../lib/detectLag')
+        .then((m) => m.fetchDetectionLag())
+        .then((r) => { if (!cancelled) setDetectLag(r); }, () => { if (!cancelled) setDetectLag({ samples: 0, medianMin: null }); });
+      return () => { cancelled = true; };
+    }
+    return undefined;
+  }, []);
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
   const currency = useTowerStore((s) => s.displayCurrency);
@@ -279,7 +291,14 @@ export function DashboardView() {
                   tone="good"
                   onClick={() => setView('risk')}
                 />
-              ) : null}
+              ) : (
+                <KpiTile
+                  label={t(locale, 'a6_dash_detect_time')}
+                  value={detectLag && detectLag.medianMin != null ? `${detectLag.medianMin} min` : '—'}
+                  delta={detectLag && detectLag.samples > 0 ? t(locale, 'i2_detect_samples').replace('{n}', String(detectLag.samples)) : t(locale, 'i2_detect_none')}
+                  onClick={() => setView('risk')}
+                />
+              )}
             </>
           )}
         </div>

@@ -19,7 +19,7 @@ export const HIDDEN_IN_PROD = {
   seRouteAlternatives: 'Objazdy SE (8.4/D25): warianty statyczne',
   aisSeedPositions: 'Pozycje przykładowe promów na mapie (8.3): w produkcji tylko pozycje z bazy (vessel_positions, I-2j) z czasem sygnału albo „brak źródła danych”',
   delayCodes: 'Kody przyczyn opóźnień (8.10): nieuzgodnione z przewoźnikiem',
-  detectTimeKpi: 'Kafelek „czas wykrycia odchylenia” (10.7): wartość wpisana na sztywno',
+  detectTimeKpi: 'Kafelek „czas wykrycia odchylenia” (10.7): w demo wartość przykładowa „8 min”; w produkcji mediana z risk_signals (kpi_detection_lag, I-2l) albo „—”',
   factoringOffer: 'Oferta factoringu: zapis wyłącznie w przeglądarce, bez tabeli w bazie',
   demoMarksToggle: 'Przełącznik oznaczeń demonstracyjnych: w produkcji nie ma danych demonstracyjnych',
   policyExpiryNote: 'Przypomnienie o polisie OCP (6.6): brak odczytu polis i zadania przypomnień',

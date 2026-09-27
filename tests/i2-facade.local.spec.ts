@@ -70,6 +70,21 @@ test('I-2j KSH: mapa — pozycja promu z bazy z czasem odczytu albo „brak źr�
   psql(`delete from vessel_positions`);
 });
 
+test('I-2l HHL: kafelek „czas wykrycia odchylenia” — „—” bez danych, potem mediana z risk_signals', async ({ page }) => {
+  psql(`delete from risk_signals where dedup_key like 'E2E-I2L-%'`);
+  const base = Number(psql(`select count(*) from risk_signals where load_id is not null and occurred_at is not null and detected_at > now() - interval '30 days'`));
+  test.skip(base > 0, 'baza lokalna ma już ryzyka z czasem zdarzenia');
+  await login(page, 'hhl@bk5.local');
+  const tile = page.locator('.kpi', { hasText: 'Czas wykrycia odchylenia' });
+  await expect(tile.locator('.v')).toHaveText('—');
+  psql(`insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key) select project_id, id, 'AUTO_STATUS', 'LOW', 'e2e', 'rk_generic', jsonb_build_object('occurred_at', now() - interval '12 minutes'), 'E2E-I2L-1' from loads order by id limit 1`);
+  await page.reload();
+  await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
+  await expect(tile.locator('.v')).toHaveText('12 min');
+  await expect(tile.locator('.d')).toHaveText('mediana · n = 1 (30 dni)');
+  psql(`delete from risk_signals where dedup_key like 'E2E-I2L-%'`);
+});
+
 test('HHL: formularz BAF/SEFS — wersja parametrów, odczyt, korekta, dziennik', async ({ page }) => {
   test.setTimeout(90_000);
   psql(`set session_replication_role = replica; delete from fuel_index_readings; delete from sefs_parameters; delete from audit_log where action in ('SEFS_PARAMS_VERSION','FUEL_READING_ADD','FUEL_READING_CORRECT');`);

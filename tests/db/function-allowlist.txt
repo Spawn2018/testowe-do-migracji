@@ -53,3 +53,5 @@ authenticated upsert_geofence_circle
 authenticated baf_change_log
 authenticated fuel_add_reading
 authenticated sefs_save_parameters
+# I-2l (0055): mediana czasu wykrycia — SECURITY INVOKER, zakres = RLS risk_signals (null-guard-calls EMPTY)
+authenticated kpi_detection_lag

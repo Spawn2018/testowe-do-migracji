@@ -34,6 +34,6 @@ check watchdog 27
 check invite 48
 check risks 23
 check import 46
-check nullguard 190
-check i2 62
+check nullguard 194
+check i2 72
 [ $ok -eq 1 ]

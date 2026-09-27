@@ -138,4 +138,23 @@ chk "retencja 30 dni: usuwa 2 starsze, zostaje świeża" "$(Q "select purge_vess
 $PSQL -c "update vessel_positions set observed_at = now()-interval '60 days'" >/dev/null
 chk "retencja: ostatnia pozycja statku zostaje zawsze (także starsza niż 30 dni)" "$(Q "select purge_vessel_positions()")/$(Q "select count(*) from vessel_positions")" "0/1"
 
+echo; echo "[I-2l] czas wykrycia odchylenia z risk_signals (0055)"
+L7=33333333-0000-0000-0000-000000000077
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status, tractor_plate) values ('$L7','$P','00000000-0000-0000-0000-00000000a003','KSH/77','HHL/2026/77','SCX/77','IN_TRANSIT_PL','GD 7777')" >/dev/null
+$PSQL -c "insert into positions (load_id, ts, geom_raw, source) select '$L7', now()-interval '3 hours', st_setsrid(st_makepoint(18.0, 53.0),4326), source from positions limit 1" >/dev/null
+chk "anon bez EXECUTE kpi_detection_lag; funkcja SECURITY INVOKER" "$(Q "select has_function_privilege('anon','kpi_detection_lag(uuid,integer)','execute')::text||'/'||(select prosecdef::text from pg_proc where proname='kpi_detection_lag')")" "false/false"
+val "brak ryzyk z czasem zdarzenia → 0 próbek, mediana NULL (kafelek „—”)" $HHL "select samples||'/'||coalesce(median_min::text,'∅') from kpi_detection_lag('$P')" "0/∅"
+chk "cichy pojazd: occurred_at = ostatnia pozycja + 90 min → wykrycie po 90 min" "$(Q "select detect_silent_vehicles(90) >= 1")/$(Q "select round(extract(epoch from detected_at-occurred_at)/60) from risk_signals where load_id='$L7' and kind='SILENT_VEHICLE'")" "t/90"
+$PSQL -c "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L7','GEOFENCE_ENTER', now()-interval '7 minutes', '{\"geofence_id\":\"g-test\"}')" >/dev/null
+$PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, detail, dedup_key) values ('$P','$L7','LOADING_UNCONFIRMED','MEDIUM','test strefy','{\"geofence_id\":\"g-test\",\"zdarzenie\":\"GEOFENCE_ENTER\"}','T-I2L-G')" >/dev/null 2>&1
+chk "ryzyko strefy: occurred_at = czas zdarzenia strefy z load_events (7 min)" "$(Q "select round(extract(epoch from detected_at-occurred_at)/60) from risk_signals where dedup_key='T-I2L-G'")" 7
+$PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, detail, dedup_key) values ('$P','$L7','AUTO_STATUS','HIGH','test jawny',jsonb_build_object('occurred_at', now()-interval '20 minutes'),'T-I2L-J'), ('$P','$L7','AUTO_STATUS','LOW','bez czasu','{}','T-I2L-N'), ('$P','$L7','AUTO_STATUS','LOW','zły czas','{\"occurred_at\":\"jutro\"}','T-I2L-Z')" >/dev/null 2>&1
+chk "jawny detail.occurred_at przyjęty; brak/nieczytelny czas → NULL (nie zgadujemy)" "$(Q "select string_agg(dedup_key||'='||coalesce(round(extract(epoch from detected_at-occurred_at)/60)::text,'∅'), ',' order by dedup_key) from risk_signals where dedup_key like 'T-I2L-%' and dedup_key<>'T-I2L-G'")" "T-I2L-J=20,T-I2L-N=∅,T-I2L-Z=∅"
+val "HHL: mediana z 3 próbek (7, 20, 90) = 20 min" $HHL "select samples||'/'||median_min from kpi_detection_lag('$P')" "3/20"
+val "KSH: tylko ryzyka widoczne dla KSH (RLS: odbiorca HHL) → 0 próbek" $KSH "select samples from kpi_detection_lag('$P')" 0
+val "SCX: ryzyka swojego transportu widoczne dla przewoźnika (7, 20, 90) → 3/20" $SCX "select samples||'/'||median_min from kpi_detection_lag('$P')" "3/20"
+val "konto bez app_users: 0 próbek" $NOAPP "select samples from kpi_detection_lag('$P')" 0
+$PSQL -c "update risk_signals set detected_at = now()-interval '40 days' where dedup_key='T-I2L-J'" >/dev/null
+val "okno 30 dni: próbka sprzed 40 dni pominięta → 2 próbki" $HHL "select samples from kpi_detection_lag('$P', 30)" 2
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
