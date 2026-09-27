@@ -123,7 +123,7 @@ echo; echo "[I-2f] dziennik zmian"
 val "HHL: dziennik — 2 wersje parametrów, 2 odczyty, 1 korekta" $HHL "select string_agg(action||'×'||n, ',' order by action) from (select action, count(*) n from baf_change_log('$P') group by action) x" "FUEL_READING_ADD×2,FUEL_READING_CORRECT×1,SEFS_PARAMS_VERSION×2"
 val "dziennik: kto i co (e-mail, stara/nowa baza)" $HHL "select actor||' '||(old_value->>'base_sek')||'→'||(new_value->>'base_sek') from baf_change_log('$P') where action='SEFS_PARAMS_VERSION' order by at desc limit 1" "hhl@test 19.4700→19.9000"
 val "dziennik korekty: stara i nowa wartość" $HHL "select (old_value->>'value')||'→'||(new_value->>'value')||' '||(new_value->>'correction_reason') from baf_change_log('$P') where action='FUEL_READING_CORRECT'" "19.6800→19.7100 literówka w cenie"
-chk "migracja nie wstawia wartości (poza testem): baf_definitions 0" "$(Q "select count(*) from baf_definitions")" 0
+chk "I-14 (0066): jedno źródło dopłaty — baf_definitions, baf_index_values i rate_cards.baf_id usunięte" "$(Q "select (to_regclass('public.baf_definitions') is null and to_regclass('public.baf_index_values') is null and not exists (select 1 from information_schema.columns where table_name='rate_cards' and column_name='baf_id'))::text")" true
 
 echo; echo "[I-13] SEFS applies_to COST|REVENUE|BOTH — kto widzi które wersje (0063, D-10)"
 chk "istniejące wersje po migracji: BOTH (domyślnie)" "$(Q "select string_agg(version||':'||applies_to, ',' order by version) from sefs_parameters")" "1:BOTH,2:BOTH"
