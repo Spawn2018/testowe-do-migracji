@@ -87,7 +87,7 @@ export default function EscortPanel({ loadId }: { loadId: string }) {
                 {SCOPES.map((s) => <option key={s} value={s}>{t(locale, `e34_scope_${s}`)}</option>)}
               </select></label>
               <label>{t(locale, 'd22_driver')}<input className="input" name={`driver${i}`} maxLength={120} autoComplete="off" value={r.driver_name ?? ''} onChange={(e) => set(i, 'driver_name', e.target.value)} /></label>
-              <label>{t(locale, 'd22_phone')}<input className="input mono" name={`phone${i}`} type="tel" maxLength={20} placeholder="+48 600 100 200" autoComplete="off" value={r.driver_phone ?? ''} onChange={(e) => set(i, 'driver_phone', e.target.value)} /></label>
+              <label>{t(locale, 'd22_phone')}<input className="input mono" name={`phone${i}`} type="tel" maxLength={20} placeholder="+…" autoComplete="off" value={r.driver_phone ?? ''} onChange={(e) => set(i, 'driver_phone', e.target.value)} /></label>
               <label className="wide"><button type="button" className="btn ghost" data-escort-remove={i + 1} onClick={() => { setRows(rows.filter((_, j) => j !== i)); setDirty(true); }}>{t(locale, 'e34_remove')}</button></label>
             </div>
           ))}
