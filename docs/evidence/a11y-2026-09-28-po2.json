@@ -1,0 +1,1202 @@
+{
+  "at": "2026-09-28T08:54:20.898Z",
+  "base": "http://127.0.0.1:4189",
+  "results": [
+    {
+      "role": "HHL",
+      "theme": "dark",
+      "view": "dash",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 4,
+          "sample": [
+            ".bell-badge",
+            ".is-draggable > .sub",
+            "div:nth-child(1) > .panel-hd > .sub"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "dark",
+      "view": "map",
+      "axe": [],
+      "keyboard": {
+        "count": 7,
+        "sample": [
+          "th"
+        ]
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "dark",
+      "view": "sched",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 4,
+          "sample": [
+            ".bell-badge",
+            ".sub",
+            "span:nth-child(16)"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "dark",
+      "view": "risk",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 6,
+          "sample": [
+            ".bell-badge",
+            ".panel.section-card:nth-child(1) > .panel-hd > .sub",
+            "div[data-panel=\"ferry\"] > .panel-hd > .sub:nth-child(2)"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 17,
+        "sample": [
+          "tr",
+          "div.mrow"
+        ]
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "dark",
+      "view": "docs",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 4,
+          "sample": [
+            ".bell-badge",
+            ".panel-hd > .sub",
+            "div[data-docreq-proposal=\"\"]"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 7,
+        "sample": [
+          "th",
+          "th.num"
+        ]
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "dark",
+      "view": "fin",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 4,
+          "sample": [
+            ".bell-badge",
+            ".sub",
+            "div[data-money-ok=\"true\"]"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 23,
+        "sample": [
+          "th",
+          "th.num",
+          "tr"
+        ]
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "dark",
+      "view": "inv",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 8,
+          "sample": [
+            ".bell-badge",
+            ".invoices-page > .panel.section-card:nth-child(1) > .panel-hd > .sub",
+            ".note"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 27,
+        "sample": [
+          "th",
+          "th.num"
+        ]
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "dark",
+      "view": "wf",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 3,
+          "sample": [
+            ".bell-badge",
+            ".sub",
+            ".note"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "dark",
+      "view": "geo",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 3,
+          "sample": [
+            ".bell-badge",
+            ".sub",
+            ".note"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 7,
+        "sample": [
+          "th",
+          "th.num"
+        ]
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "dark",
+      "view": "options",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 14,
+          "sample": [
+            ".bell-badge",
+            ".pricing-panel > .panel-hd > .sub",
+            ".pricing-panel > .panel-hd > .panel-mark:nth-child(3)"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "light",
+      "view": "dash",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 43,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "light",
+      "view": "map",
+      "axe": [],
+      "keyboard": {
+        "count": 7,
+        "sample": [
+          "th"
+        ]
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "light",
+      "view": "sched",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 175,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "light",
+      "view": "risk",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 87,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 17,
+        "sample": [
+          "tr",
+          "div.mrow"
+        ]
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "light",
+      "view": "docs",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 27,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 7,
+        "sample": [
+          "th",
+          "th.num"
+        ]
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "light",
+      "view": "fin",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 29,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 23,
+        "sample": [
+          "th",
+          "th.num",
+          "tr"
+        ]
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "light",
+      "view": "inv",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 36,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 27,
+        "sample": [
+          "th",
+          "th.num"
+        ]
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "light",
+      "view": "wf",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 51,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "light",
+      "view": "geo",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 16,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 7,
+        "sample": [
+          "th",
+          "th.num"
+        ]
+      }
+    },
+    {
+      "role": "HHL",
+      "theme": "light",
+      "view": "options",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 87,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "dark",
+      "view": "dash",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 3,
+          "sample": [
+            ".is-draggable > .sub",
+            "div:nth-child(1) > .panel-hd > .sub",
+            "div:nth-child(2) > .panel-hd:nth-child(1) > .sub"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "dark",
+      "view": "map",
+      "axe": [],
+      "keyboard": {
+        "count": 7,
+        "sample": [
+          "th"
+        ]
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "dark",
+      "view": "sched",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 3,
+          "sample": [
+            ".sub",
+            "span:nth-child(16)",
+            ".note"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "dark",
+      "view": "risk",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 5,
+          "sample": [
+            ".panel.section-card:nth-child(1) > .panel-hd > .sub",
+            "div[data-panel=\"ferry\"] > .panel-hd > .sub:nth-child(2)",
+            "div[data-panel=\"road-se\"] > .panel-hd > .sub"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 17,
+        "sample": [
+          "tr",
+          "div.mrow"
+        ]
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "dark",
+      "view": "docs",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 3,
+          "sample": [
+            ".panel-hd > .sub",
+            "div[data-docreq-proposal=\"\"]",
+            ".note:nth-child(5)"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 6,
+        "sample": [
+          "th",
+          "th.num"
+        ]
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "dark",
+      "view": "fin",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 3,
+          "sample": [
+            ".sub",
+            ".locked",
+            ".note"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "dark",
+      "view": "inv",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 1,
+          "sample": [
+            ".sub"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 10,
+        "sample": [
+          "th",
+          "th.num"
+        ]
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "dark",
+      "view": "settings",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 2,
+          "sample": [
+            ".sub",
+            ".note"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "light",
+      "view": "dash",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 42,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "light",
+      "view": "map",
+      "axe": [],
+      "keyboard": {
+        "count": 7,
+        "sample": [
+          "th"
+        ]
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "light",
+      "view": "sched",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 110,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "light",
+      "view": "risk",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 73,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 17,
+        "sample": [
+          "tr",
+          "div.mrow"
+        ]
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "light",
+      "view": "docs",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 27,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 6,
+        "sample": [
+          "th",
+          "th.num"
+        ]
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "light",
+      "view": "fin",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 29,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "light",
+      "view": "inv",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 16,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 10,
+        "sample": [
+          "th",
+          "th.num"
+        ]
+      }
+    },
+    {
+      "role": "KSH",
+      "theme": "light",
+      "view": "settings",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 22,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "dark",
+      "view": "dash",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 4,
+          "sample": [
+            ".bell-badge",
+            "section > .panel-hd > .sub",
+            "div:nth-child(1) > .panel-hd > .sub"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "dark",
+      "view": "map",
+      "axe": [],
+      "keyboard": {
+        "count": 7,
+        "sample": [
+          "th"
+        ]
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "dark",
+      "view": "sched",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 4,
+          "sample": [
+            ".bell-badge",
+            ".sub",
+            "span:nth-child(16)"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "dark",
+      "view": "risk",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 6,
+          "sample": [
+            ".bell-badge",
+            ".panel.section-card:nth-child(1) > .panel-hd > .sub",
+            "div[data-panel=\"ferry\"] > .panel-hd > .sub:nth-child(2)"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 17,
+        "sample": [
+          "tr",
+          "div.mrow"
+        ]
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "dark",
+      "view": "docs",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 4,
+          "sample": [
+            ".bell-badge",
+            ".panel-hd > .sub",
+            "div[data-docreq-proposal=\"\"]"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 6,
+        "sample": [
+          "th",
+          "th.num"
+        ]
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "dark",
+      "view": "tasks",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 2,
+          "sample": [
+            ".bell-badge",
+            ".sub"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 6,
+        "sample": [
+          "th"
+        ]
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "dark",
+      "view": "fin",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 4,
+          "sample": [
+            ".bell-badge",
+            ".sub",
+            ".locked"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "dark",
+      "view": "inv",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 7,
+          "sample": [
+            ".bell-badge",
+            ".invoices-page > .panel.section-card:nth-child(1) > .panel-hd > .sub",
+            ".note"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 17,
+        "sample": [
+          "th",
+          "th.num"
+        ]
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "dark",
+      "view": "settings",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 3,
+          "sample": [
+            ".bell-badge",
+            ".sub",
+            ".note"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "light",
+      "view": "dash",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 43,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "light",
+      "view": "map",
+      "axe": [],
+      "keyboard": {
+        "count": 7,
+        "sample": [
+          "th"
+        ]
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "light",
+      "view": "sched",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 110,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "light",
+      "view": "risk",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 77,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 17,
+        "sample": [
+          "tr",
+          "div.mrow"
+        ]
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "light",
+      "view": "docs",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 27,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 6,
+        "sample": [
+          "th",
+          "th.num"
+        ]
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "light",
+      "view": "tasks",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 14,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 6,
+        "sample": [
+          "th"
+        ]
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "light",
+      "view": "fin",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 29,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "light",
+      "view": "inv",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 31,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 17,
+        "sample": [
+          "th",
+          "th.num"
+        ]
+      }
+    },
+    {
+      "role": "SCX",
+      "theme": "light",
+      "view": "settings",
+      "axe": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 22,
+          "sample": [
+            "#brandSub",
+            "#roleLbl",
+            "span:nth-child(4) > .lb"
+          ]
+        }
+      ],
+      "keyboard": {
+        "count": 0,
+        "sample": []
+      }
+    }
+  ]
+}

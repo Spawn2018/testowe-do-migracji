@@ -4,6 +4,7 @@
  * Użycie: A11Y_URL=http://127.0.0.1:4189 node scripts/a11y/audit.mjs [plik-wyniku.json]
  * Dla każdej roli (HHL, KSH, SCX) × motyw (jasny, ciemny) × każdy widok z menu: axe-core (reguły WCAG 2.0/2.1 A i AA)
  * + test klawiatury: elementy klikalne (cursor:pointer / onclick) nieosiągalne klawiszem Tab i bez roli.
+ * A11Y_STRICT=1 — kod 1 przy naruszeniach innych niż kontrast (D-27).
  * Zamrożony zegar jak w bramie wizualnej. Tylko odczyt — nic nie zmienia w aplikacji.
  */
 import { chromium } from '@playwright/test';
@@ -64,3 +65,7 @@ for (const role of ROLES) {
 await browser.close();
 writeFileSync(OUT, JSON.stringify({ at: new Date().toISOString(), base: BASE, results }, null, 2));
 console.log(`zapisano ${OUT}`);
+/* A11Y_STRICT=1 — błąd, jeśli pojawi się cokolwiek poza kontrastem (kontrast czeka na D-27) */
+const bad = results.flatMap((r) => r.axe.filter((v) => v.id !== 'color-contrast').map((v) => `${r.role} ${r.theme} ${r.view}: ${v.id} (${v.nodes})`));
+if (bad.length) console.log('naruszenia poza kontrastem:\n' + bad.join('\n')); else console.log('naruszenia poza kontrastem: 0');
+if (process.env.A11Y_STRICT === '1' && bad.length) process.exit(1);

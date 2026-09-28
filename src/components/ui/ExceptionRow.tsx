@@ -2,6 +2,7 @@ import type { ExceptionItem } from '../../types';
 import { ROLE_META } from '../../lib/permissions';
 import { useTowerStore } from '../../store/useTowerStore';
 import { riskText, tp } from '../../i18n/messages';
+import { clickableRow } from '../../lib/clickableRow';
 
 /** Format age like Claude: 40m / 2h / 1d */
 export function formatExqAge(ageHours: number): string {
@@ -34,10 +35,8 @@ export function ExceptionRow({
   return (
     <li
       data-sev={item.severity}
-      onClick={onClick}
-      onKeyDown={(e) => e.key === 'Enter' && onClick?.()}
-      role="button"
-      tabIndex={0}
+      /* III-12: bez role="button" — <ul> zawiera wyłącznie pozycje listy (WCAG 1.3.1); klawiatura: Tab + Enter/Spacja */
+      {...clickableRow(() => onClick?.())}
     >
       <span className="gut" />
       <span className="txt">

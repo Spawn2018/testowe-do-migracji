@@ -14,7 +14,7 @@ Czytnik ekranu: sprawdzony pośrednio przez reguły axe (nazwy dostępne, role, 
 | `select-name` — lista wyboru bez nazwy (krytyczne) | 22 (Opcje/Ustawienia: język, waluta, motyw; jednostka terminu) | **0** | jw. |
 | `scrollable-region-focusable` — przewijana tabela bez klawiatury | 8 (Mapa, Harmonogram) | **0** | naprawione razem z wierszami (niżej) |
 | Klawiatura: klikalne wiersze tabel nieosiągalne Tab-em | 1402 elementy | **362** | wiersze otwierające szufladę/edycję (Mapa, Harmonogram, Zadania, Rachunki ×2, Faktury, Drogi SE, Dokumenty, Strefy) mają teraz `tabIndex=0` + Enter/Spacja (`src/lib/clickableRow.ts`); obrys tylko przy `:focus-visible` (kliknięcie myszą wygląda jak dotąd) |
-| `list` — `<ul class="exq">` z `<li role="button">` | 12 | 12 | pozycje są już obsługiwane klawiaturą (Tab + Enter); zmiana struktury ruszyłaby style makiety — zostawione |
+| `list` — `<ul class="exq">` z `<li role="button">` | 12 | **0** (28.09, druga poprawka) | `ExceptionRow`: bez `role="button"`, `clickableRow` (Tab + Enter/Spacja); DOM i klasy bez zmian — wygląd bez zmian |
 | `color-contrast` — kontrast tekstu < 4,5 : 1 | ciemny 104 · jasny 1223 węzły | bez zmian | **wymaga decyzji — D-27** (zmiana tokenów = zmiana wyglądu makiety) |
 
 Pozostałe 362 z testu klawiatury to elementy z „rączką” **bez żadnej akcji**: nagłówki tabel (`thead th{cursor:pointer}` w makiecie —
@@ -31,3 +31,6 @@ kursor, nie brak dostępu — do rozstrzygnięcia razem z D-27 (usunięcie kurso
 | `.bell-badge` biały na `--red` `#E8687C` | ciemny | | 3,13 (10 px) | licznik dzwonka | tekst ciemny `#0E1A24` albo czerwień ciemniejsza |
 
 Test po zmianie: `npm run audit:a11y` + `npm run gate:visual` (zmienią się praktycznie wszystkie ujęcia — nowy wzorzec do zatwierdzenia).
+
+## Druga poprawka (28.09, pozycja (1) planu)
+`list` 12 → 0; `A11Y_STRICT=1 npm run audit:a11y` kończy się kodem 1 przy każdym naruszeniu poza kontrastem — stan: **0 naruszeń poza kontrastem** w 54 widokach (`docs/evidence/a11y-2026-09-28-po2.json`). Pozostaje: kontrast 1327 węzłów i kursor bez akcji (362) — D-27.
