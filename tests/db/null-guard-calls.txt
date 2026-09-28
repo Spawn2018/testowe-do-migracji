@@ -69,3 +69,4 @@ import_template_save | GUARD | select import_template_save('22222222-0000-0000-0
 doc_requirement_set | GUARD | select doc_requirement_set('$P', 'CMR', true, 'CARRIER', 'AT_LOAD', 2)::text | wyłącznie HHL
 doc_requirements_status | EMPTY | select count(*) from doc_requirements_status('$P') | 0
 document_supersede | GUARD | select document_supersede(gen_random_uuid(), gen_random_uuid()) | Brak aktywnego konta
+invoice_dispute_reply | GUARD | select invoice_dispute_reply('$INV', 'x') | Brak aktywnego konta

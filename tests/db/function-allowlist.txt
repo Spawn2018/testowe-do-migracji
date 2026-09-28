@@ -86,3 +86,4 @@ authenticated import_template_save
 authenticated doc_requirement_set
 authenticated doc_requirements_status
 authenticated document_supersede
+authenticated invoice_dispute_reply

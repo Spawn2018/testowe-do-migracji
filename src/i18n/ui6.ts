@@ -490,6 +490,17 @@ const pl: Dict = {
   iii6_ver: 'wersja {n}',
   iii6_newver: 'Zapisano nową wersję dokumentu (v{n})',
   iii6_newver_fail: 'Plik zapisany, ale nie oznaczono go jako nowej wersji: {msg}',
+  iii7_thread: 'Historia sporu',
+  iii7_k_OPENED: 'zgłoszenie sporu',
+  iii7_k_REPLY: 'odpowiedź wystawcy',
+  iii7_k_CORRECTION: 'korekta wystawcy',
+  iii7_k_RESOLVED: 'rozstrzygnięcie',
+  iii7_k_WITHDRAWN: 'powrót do weryfikacji',
+  iii7_reply: 'Odpowiedz',
+  iii7_reply_ph: 'Odpowiedź na spór (np. wyjaśnienie, zapowiedź korekty)',
+  iii7_reply_empty: 'Wpisz treść odpowiedzi',
+  iii7_reply_sent: 'Odpowiedź wysłana odbiorcy faktury',
+  iii7_pay_blocked: 'Faktura w sporze — zapłata wstrzymana do rozstrzygnięcia',
 };
 
 const en: Dict = {
@@ -976,6 +987,17 @@ const en: Dict = {
   iii6_ver: 'version {n}',
   iii6_newver: 'New document version saved (v{n})',
   iii6_newver_fail: 'File saved but not marked as a new version: {msg}',
+  iii7_thread: 'Dispute history',
+  iii7_k_OPENED: 'dispute raised',
+  iii7_k_REPLY: 'issuer reply',
+  iii7_k_CORRECTION: 'issuer correction',
+  iii7_k_RESOLVED: 'resolution',
+  iii7_k_WITHDRAWN: 'back to verification',
+  iii7_reply: 'Reply',
+  iii7_reply_ph: 'Reply to the dispute (e.g. explanation, correction to follow)',
+  iii7_reply_empty: 'Enter a reply',
+  iii7_reply_sent: 'Reply sent to the invoice recipient',
+  iii7_pay_blocked: 'Invoice disputed — payment on hold until resolved',
 };
 
 const sv: Dict = {
@@ -1462,6 +1484,17 @@ const sv: Dict = {
   iii6_ver: 'version {n}',
   iii6_newver: 'Ny dokumentversion sparad (v{n})',
   iii6_newver_fail: 'Filen sparades men markerades inte som ny version: {msg}',
+  iii7_thread: 'Tvisthistorik',
+  iii7_k_OPENED: 'tvist öppnad',
+  iii7_k_REPLY: 'utfärdarens svar',
+  iii7_k_CORRECTION: 'utfärdarens korrigering',
+  iii7_k_RESOLVED: 'avgörande',
+  iii7_k_WITHDRAWN: 'tillbaka till granskning',
+  iii7_reply: 'Svara',
+  iii7_reply_ph: 'Svar på tvisten (t.ex. förklaring, kommande korrigering)',
+  iii7_reply_empty: 'Skriv ett svar',
+  iii7_reply_sent: 'Svaret skickat till fakturamottagaren',
+  iii7_pay_blocked: 'Faktura bestridd — betalning pausad tills tvisten är avgjord',
 };
 
 export const UI6_I18N: Record<Locale, Dict> = { pl, en, sv };

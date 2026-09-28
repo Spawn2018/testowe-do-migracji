@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { paymentBlockedByDispute } from '../lib/invoiceDispute';
 import { persist } from 'zustand/middleware';
 import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
 import type {
@@ -1487,6 +1488,11 @@ export const useTowerStore = create<TowerState>()(
         const s = get();
         if (!canMarkPaid(s.role)) {
           get().pushToast(t(s.locale, 'bill_paidDenied'), 'HIGH');
+          return false;
+        }
+        const bill = s.bills.find((x) => x.id === billId);
+        if (bill && paymentBlockedByDispute(bill)) {
+          get().pushToast(t(s.locale, 'iii7_pay_blocked'), 'HIGH');
           return false;
         }
         set((st) => ({ bills: st.bills.map((x) => (x.id === billId ? { ...x, payment: 'OPLACONA' as const, paidAt } : x)) }));

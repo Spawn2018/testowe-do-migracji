@@ -6,7 +6,7 @@
  *         ZGODNA / SPORNA (z uzasadnieniem) / ZAAKCEPTOWANA, termin i status płatności.
  * Kwoty w walucie faktury → `data-deur-exempt="invoice-currency"`.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 import type { Bill, BillDirection, BillLineFx, BillVerification, Document, Locale } from '../types';
@@ -20,6 +20,76 @@ import {
 } from '../lib/invoices3';
 import { DocFileRow } from '../components/ui/DocFileRow';
 import { DocPreview } from '../components/ui/DocPreview';
+import { canReplyDispute, disputeActorSide, paymentBlockedByDispute, type DisputeEvent } from '../lib/invoiceDispute';
+
+/** III-7 — historia sporu (zgłoszenie → odpowiedź / korekta wystawcy → rozstrzygnięcie) i odpowiedź wystawcy. */
+function DisputeThread({ bill }: { bill: Bill }) {
+  const role = useTowerStore((s) => s.role);
+  const locale = useTowerStore((s) => s.locale);
+  const [events, setEvents] = useState<DisputeEvent[] | null>(null);
+  const [reply, setReply] = useState('');
+  const [tick, setTick] = useState(0);
+  const server = import.meta.env.VITE_AUTH_MODE === 'supabase';
+  useEffect(() => {
+    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return;
+    let alive = true;
+    const load = () => void import('../data/invoiceDisputeServer')
+      .then((m) => m.loadDisputeEvents(bill.id))
+      .then((ev) => { if (alive) setEvents(ev); })
+      .catch(() => { if (alive) setEvents([]); });
+    load();
+    // zmiana statusu zapisuje się w tle (write-through) — drugi odczyt po chwili dociąga wpis z wyzwalacza
+    const again = setTimeout(load, 1500);
+    return () => { alive = false; clearTimeout(again); };
+  }, [bill.id, bill.verification, tick]);
+  // demo: zgłoszenie z uzasadnienia faktury + odpowiedzi z bieżącej sesji
+  const [demoReplies, setDemoReplies] = useState<DisputeEvent[]>([]);
+  const list: DisputeEvent[] = server
+    ? events ?? []
+    : [
+        ...(bill.disputeNote ? [{ id: 'd0', kind: 'OPENED' as const, statusTo: 'SPORNA', note: bill.disputeNote, at: bill.createdAt ?? '' }] : []),
+        ...demoReplies,
+      ];
+  const send = async () => {
+    const st = useTowerStore.getState();
+    const text = reply.trim();
+    if (!text) { st.pushToast(t(locale, 'iii7_reply_empty'), 'HIGH'); return; }
+    try {
+      if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
+        await (await import('../data/invoiceDisputeServer')).replyDispute(bill.id, text);
+        setTick((x) => x + 1);
+      } else {
+        setDemoReplies((xs) => [...xs, { id: `r${xs.length + 1}`, kind: 'REPLY', statusTo: 'SPORNA', note: text, at: getNowIso() }]);
+      }
+      setReply('');
+      st.pushToast(t(locale, 'iii7_reply_sent'), 'MEDIUM');
+    } catch (e) {
+      st.pushToast(t(locale, 'iii6_err').replace('{msg}', e instanceof Error ? e.message : String(e)), 'HIGH');
+    }
+  };
+  if (!list.length && !canReplyDispute(role, bill)) return null;
+  return (
+    <div className="note" data-dispute-thread={bill.id}>
+      <div style={{ fontWeight: 600, marginBottom: 4 }}>{t(locale, 'iii7_thread')}</div>
+      {list.map((e) => (
+        <div key={e.id} className="mrow" data-dispute-event={e.kind}>
+          <span className="lbl">
+            {fmtDay(e.at ? e.at.slice(0, 10) : null)} · {disputeActorSide(e.kind) === 'issuer' ? bill.issuer : bill.recipient} · {t(locale, `iii7_k_${e.kind}`)}
+            {e.kind === 'RESOLVED' && e.statusTo ? ` (${VERIFICATION_LABEL[e.statusTo as BillVerification]?.[locale] ?? e.statusTo})` : ''}
+          </span>
+          <span data-content>{e.note ?? ''}</span>
+        </div>
+      ))}
+      {canReplyDispute(role, bill) ? (
+        <div className="filters" data-bill-actions="dispute-reply">
+          <input className="input" style={{ flex: 1, minWidth: 220 }} placeholder={t(locale, 'iii7_reply_ph')} value={reply}
+            onChange={(e) => setReply(e.target.value)} aria-label={t(locale, 'iii7_reply_ph')} data-dispute-reply="" />
+          <button type="button" className="btn" data-action="dispute-reply" onClick={() => void send()}>{t(locale, 'iii7_reply')}</button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 const fmtCur = (n: number | null | undefined, cur: string, locale: Locale) =>
   n == null ? '—' : new Intl.NumberFormat(locale === 'sv' ? 'sv-SE' : locale === 'en' ? 'en-GB' : 'pl-PL', { style: 'currency', currency: cur, minimumFractionDigits: 2 }).format(n);
@@ -210,6 +280,7 @@ function BillDetail({ bill }: { bill: Bill }) {
       {docs.length ? docs.map((d) => (
         <DocFileRow key={d.id} doc={d} label={`${byId.get(d.loadId!)?.code ?? ''} · ${d.category}`} onPreview={setPreview} />
       )) : null}
+      <DisputeThread bill={bill} />
       {canVerifyBill(role, bill) ? (
         <div className="filters" data-bill-actions="verify">
           <input className="input" style={{ flex: 1, minWidth: 220 }} placeholder={t(locale, 'bill_dispute_ph')} value={note} onChange={(e) => setNote(e.target.value)} aria-label={t(locale, 'bill_dispute_note')} />
@@ -229,7 +300,8 @@ function BillDetail({ bill }: { bill: Bill }) {
             <>
               <span>{t(locale, 'bill_paid_at')}</span>
               <input className="input" type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} aria-label={t(locale, 'bill_paid_at')} />
-              <button type="button" className="btn" data-paid onClick={() => markBillPaid(bill.id, paidAt)}>{t(locale, 'bill_mark_paid')}</button>
+              <button type="button" className="btn" data-paid disabled={paymentBlockedByDispute(bill)} onClick={() => markBillPaid(bill.id, paidAt)}>{t(locale, 'bill_mark_paid')}</button>
+              {paymentBlockedByDispute(bill) ? <span className="pill p-red" data-pay-blocked="">{t(locale, 'iii7_pay_blocked')}</span> : null}
             </>
           )}
         </div>

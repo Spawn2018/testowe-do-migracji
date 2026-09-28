@@ -67,6 +67,23 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
         : locale === 'sv' ? `Faktura ${num} (${String(p.week ?? '')}), ${amount}, förfallodag ${due}.` : `Faktura ${num} (${String(p.week ?? '')}), ${amount}, termin ${due}.`;
       return { subject, body, severity: 'MEDIUM', view: 'inv' };
     }
+    case 'INVOICE_DISPUTED':
+    case 'INVOICE_DISPUTE_REPLY':
+    case 'INVOICE_DISPUTE_RESOLVED': {
+      // III-7 (0079): ścieżka sporu faktury — druga strona dostaje zgłoszenie, odpowiedź wystawcy i rozstrzygnięcie
+      const note = String(p.note ?? '').trim();
+      const T = {
+        INVOICE_DISPUTED: { pl: `Faktura ${num} w sporze`, en: `Invoice ${num} disputed`, sv: `Faktura ${num} bestridd` },
+        INVOICE_DISPUTE_REPLY: { pl: `Odpowiedź wystawcy w sporze o fakturę ${num}`, en: `Issuer replied to the dispute on invoice ${num}`, sv: `Utfärdaren svarade på tvisten om faktura ${num}` },
+        INVOICE_DISPUTE_RESOLVED: { pl: `Spór o fakturę ${num} zamknięty`, en: `Dispute on invoice ${num} closed`, sv: `Tvisten om faktura ${num} avslutad` },
+      }[row.template as 'INVOICE_DISPUTED' | 'INVOICE_DISPUTE_REPLY' | 'INVOICE_DISPUTE_RESOLVED'];
+      const lead = row.template === 'INVOICE_DISPUTE_RESOLVED'
+        ? { pl: 'Odbiorca rozstrzygnął spór.', en: 'The recipient resolved the dispute.', sv: 'Mottagaren avgjorde tvisten.' }[locale]
+        : row.template === 'INVOICE_DISPUTED'
+          ? { pl: 'Uzasadnienie odbiorcy:', en: "Recipient's reason:", sv: 'Mottagarens motivering:' }[locale]
+          : { pl: 'Treść odpowiedzi:', en: 'Reply:', sv: 'Svar:' }[locale];
+      return { subject: T[locale], body: note ? `${lead} ${note}` : lead, severity: row.template === 'INVOICE_DISPUTED' ? 'HIGH' : 'MEDIUM', view: 'inv' };
+    }
     case 'ORDER_NO_MISSING': {
       const code = String(p.code ?? '');
       const hhl = p.side === 'HHL';

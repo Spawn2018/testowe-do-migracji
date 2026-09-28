@@ -579,4 +579,27 @@ val "SCX nie widzi polisy innego przewoźnika (dokument bez transportu)" $SCX "s
 val "KSH widzi polisę przewoźnika (visible_to: CLIENT)" $KSH "select count(*) from documents where file_name='polisa-cx2.pdf'" 1
 val "drugi przewoźnik widzi własną polisę" 11111111-0000-0000-0000-000000000009 "select count(*) from documents where file_name='polisa-cx2.pdf'" 1
 $PSQL -c "delete from documents where load_id='$L9' or file_name='polisa-cx2.pdf'; update loads set status='CANCELLED' where id='$L9'; delete from app_users where email='cx2@test'; delete from organizations where code='CX2'" >/dev/null
+echo; echo "[III-7] ścieżka sporu i akceptacji faktury (0079)"
+IC=44444444-0000-0000-0000-00000000000c; IR=44444444-0000-0000-0000-0000000000ee
+$PSQL -c "update invoices set verification_status='DO_WERYFIKACJI', dispute_note=null, payment_status='NIEOPLACONA', paid_at=null where id in ('$IC','$IR')" >/dev/null 2>&1
+N0=$(Q "select count(*) from invoice_dispute_events")
+val "KSH: spór faktury HHL z uzasadnieniem" $KSH "update invoices set verification_status='SPORNA', dispute_note='stawka poz. 1' where id='$IR' returning verification_status" SPORNA commit
+chk "wpis OPENED z uzasadnieniem + powiadomienie HHL (INVOICE_DISPUTED)" "$(Q "select (select kind||'/'||note from invoice_dispute_events where invoice_id='$IR' order by id desc limit 1)||'/'||(select count(*)>0 from notifications where template='INVOICE_DISPUTED' and payload->>'invoice_id'='$IR')")" "OPENED/stawka poz. 1/true"
+err "KSH (odbiorca) nie odpowiada jako wystawca" $KSH "select invoice_dispute_reply('$IR','x')" "wyłącznie wystawca"
+err "SCX (obca faktura) nie odpowiada" $SCX "select invoice_dispute_reply('$IR','x')" "wyłącznie wystawca"
+err "HHL: pusta odpowiedź odrzucona" $HHL "select invoice_dispute_reply('$IR','  ')" "wymaga treści"
+val "HHL (wystawca): odpowiedź na spór" $HHL "select (invoice_dispute_reply('$IR','stawka wg aneksu 2') > 0)::text" true commit
+chk "wpis REPLY + powiadomienie KSH (INVOICE_DISPUTE_REPLY) + audit_log" "$(Q "select (select kind from invoice_dispute_events where invoice_id='$IR' order by id desc limit 1)||'/'||(select count(*)>0 from notifications n join app_users u on u.id=n.user_id where n.template='INVOICE_DISPUTE_REPLY' and u.auth_id='$KSH')||'/'||(select count(*)>0 from audit_log where action='INVOICE_DISPUTE_REPLY' and entity_id='$IR')")" "REPLY/true/true"
+val "KSH widzi historię sporu (2 wpisy)" $KSH "select count(*) from invoice_dispute_events where invoice_id='$IR'" 2
+val "SCX nie widzi historii sporu cudzej faktury" $SCX "select count(*) from invoice_dispute_events where invoice_id='$IR'" 0
+err "bezpośredni INSERT do historii odrzucony" $KSH "insert into invoice_dispute_events (invoice_id, kind) values ('$IR','RESOLVED')" "permission denied"
+val "KSH: akceptacja po odpowiedzi → RESOLVED" $KSH "update invoices set verification_status='ZAAKCEPTOWANA' where id='$IR' returning verification_status" ZAAKCEPTOWANA commit
+chk "wpis RESOLVED (ZAAKCEPTOWANA) + powiadomienie HHL" "$(Q "select (select kind||'/'||status_to from invoice_dispute_events where invoice_id='$IR' order by id desc limit 1)||'/'||(select count(*)>0 from notifications where template='INVOICE_DISPUTE_RESOLVED' and payload->>'invoice_id'='$IR')")" "RESOLVED/ZAAKCEPTOWANA/true"
+err "odpowiedź po rozstrzygnięciu odrzucona" $HHL "select invoice_dispute_reply('$IR','x')" "nie jest w sporze"
+val "HHL: spór faktury kosztowej SCX" $HHL "update invoices set verification_status='SPORNA', dispute_note='brak CMR' where id='$IC' returning verification_status" SPORNA commit
+err "HHL: zapłata faktury kosztowej w sporze wstrzymana" $HHL "select mark_invoice_paid('$IC', current_date)" "zapłata wstrzymana"
+val "SCX (wystawca) odpowiada na spór" $SCX "select (invoice_dispute_reply('$IC','CMR dosłany') > 0)::text" true commit
+val "HHL: ZGODNA → zapłata możliwa" $HHL "update invoices set verification_status='ZGODNA' where id='$IC'; select mark_invoice_paid('$IC', current_date); select payment_status from invoices where id='$IC'" OPLACONA commit
+chk "liczba wpisów historii: 3 (HHL/KSH) + 3 (SCX)" "$(( $(Q "select count(*) from invoice_dispute_events") - N0 ))" "6"
+$PSQL -c "update invoices set payment_status='NIEOPLACONA', paid_at=null, verification_status='DO_WERYFIKACJI', dispute_note=null where id in ('$IC','$IR')" >/dev/null 2>&1
 echo; echo "WYNIK: $ok OK, $fail FAIL"

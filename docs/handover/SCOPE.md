@@ -140,7 +140,7 @@ Czym udowadniamy, że pozycja jest `GOTOWE`. Bez dowodu status się nie zmienia.
 | 7.7 | Dodatki: pilotaż, postojowe, prom, zezwolenia | | | |
 | 7.8 | Faktura zbiorcza, kreator dla przewoźnika | | | |
 | 7.9 | Dopasowanie trójstronne z rozbiciem różnic | | testy | |
-| 7.10 | Ścieżka sporu i akceptacji | | | |
+| 7.10 | Ścieżka sporu i akceptacji | ZROBIONE 28.09 (III-7) | 0079 `invoice_dispute_events`, `invoice_dispute_reply`, wstrzymanie zapłaty w sporze; i2 [III-7]; `tests/invoice-dispute.test.ts`; e2e `tests/iii7-dispute.local.spec.ts` | korekta z dokumentem faktury — w bazie (CORRECTION), w UI na razie odpowiedź tekstowa |
 | 7.11 | Krajowy system e-faktur | | | faza późniejsza |
 
 ## 8. Ryzyko

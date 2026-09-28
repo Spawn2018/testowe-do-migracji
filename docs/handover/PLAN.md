@@ -129,7 +129,7 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 **III-4** (P2, z I-11: SCOPE 4.5) pojazdy pilotujące: dane i awizacja — DO ZROBIENIA ·
 **III-5** (P2, z I-11: SCOPE 5.10, 5.13) mapa: unikanie kolizji etykiet, odtwarzanie przebiegu w czasie — DO ZROBIENIA ·
 **III-6** (P2, z I-11: SCOPE 6.1, 6.2) dokumenty: wymagalność i terminy per kategoria w bazie, wersjonowanie dokumentu — DONE 28.09 (0078; terminy startowe = PROPOZYCJA do potwierdzenia z SCX/KSH) ·
-**III-7** (P2, z I-11: SCOPE 7.10) pełna ścieżka sporu i akceptacji faktury — DO ZROBIENIA ·
+**III-7** (P2, z I-11: SCOPE 7.10) pełna ścieżka sporu i akceptacji faktury — DONE 28.09 (0079) ·
 **III-8** — (numer zarezerwowany, nieużyty) ·
 **III-9** (P2, z I-11: SCOPE 10.4, 10.6) widok placu budowy tylko do odczytu (opcjonalny), ocena przewoźnika — DO ZROBIENIA ·
 Silnik Workflows · źródło pogody morskiej · walidator zezwoleń i wymiarów ·
