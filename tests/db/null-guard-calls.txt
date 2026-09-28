@@ -64,6 +64,8 @@ sms_add_test_number | GUARD | select sms_add_test_number(null, null) | wyłączn
 sms_send_test | GUARD | select sms_send_test(null) | wyłącznie HHL
 admin_set_external_messaging | GUARD | select admin_set_external_messaging(null) | wyłącznie administrator HHL
 sms_external_messaging_state | GUARD | select sms_external_messaging_state() | wyłącznie HHL
+admin_set_permit_requirement | GUARD | select admin_set_permit_requirement(null) | wyłącznie administrator HHL
+permit_requirement_state | GUARD | select permit_requirement_state() | wyłącznie HHL
 load_driver_contacts | EMPTY | select count(*) from load_driver_contacts() | 0
 import_template_save | GUARD | select import_template_save('22222222-0000-0000-0000-000000000001','x','{"shipmentCode":"A","qty":"B"}','sig-ng')::text | wyłącznie HHL
 doc_requirement_set | GUARD | select doc_requirement_set('$P', 'CMR', true, 'CARRIER', 'AT_LOAD', 2)::text | wyłącznie HHL

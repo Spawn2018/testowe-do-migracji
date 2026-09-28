@@ -81,6 +81,8 @@ authenticated sms_add_test_number
 authenticated sms_send_test
 authenticated admin_set_external_messaging
 authenticated sms_external_messaging_state
+authenticated admin_set_permit_requirement
+authenticated permit_requirement_state
 authenticated load_driver_contacts
 authenticated import_template_save
 authenticated doc_requirement_set

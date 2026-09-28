@@ -649,4 +649,31 @@ $PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-000
 val "inny przewoźnik nie widzi zezwolenia cudzego transportu" 11111111-0000-0000-0000-00000000000b "select count(*) from permits where id='$PM'" 0
 err "inny przewoźnik nie łączy z cudzym transportem" 11111111-0000-0000-0000-00000000000b "select load_permit_link('$LP','$PM')" "przewoźnik transportu"
 $PSQL -c "delete from load_permits where load_id='$LP'; update loads set status='CANCELLED' where id='$LP'; delete from app_users where email='cx3@test'; delete from organizations where code='CX3'" >/dev/null
+chk "I-28: load_delivery_day_end usunięta (0085), load_delivery_deadline zostaje" "$(Q "select (to_regprocedure('load_delivery_day_end(date,timestamptz)') is null)::text||'/'||(to_regprocedure('load_delivery_deadline(date,timestamptz)') is not null)::text")" "true/true"
+echo; echo "[I-27] brak zezwolenia blokuje Gotowy dla klasy ≠ STANDARD (0084, przełącznik)"
+LD=33333333-0000-0000-0000-0000000027d1; LS=33333333-0000-0000-0000-0000000027a1
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status) values ('$LD','$P','00000000-0000-0000-0000-00000000a003','KSH/I27D','DOCS_PENDING'), ('$LS','$P','00000000-0000-0000-0000-00000000a003','KSH/I27S','DOCS_PENDING');
+  update loads set plan_load_date=current_date+3, hhl_order_no='HHL/'||order_no, carrier_order_no='SCX/'||order_no where id in ('$LD','$LS');
+  insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, cargo_class) values ('$P','$LD','I27-D',30,4,4,'DIMENSIONED'), ('$P','$LS','I27-S',null,null,null,'STANDARD')" >/dev/null
+chk "przełącznik istnieje, domyślnie wyłączony" "$(Q "select enabled::text from security_flags where key='PERMIT_REQUIRED_NON_STANDARD'")" false
+val "wyłączony: DIMENSIONED bez zezwolenia → READY przechodzi (stan przed włączeniem)" $HHL "update loads set status='READY' where id='$LD' returning status" READY
+err "KSH nie włącza wymogu" $KSH "select admin_set_permit_requirement(true)" "wyłącznie administrator HHL"
+err "SCX nie włącza wymogu" $SCX "select admin_set_permit_requirement(true)" "wyłącznie administrator HHL"
+err "KSH nie widzi stanu wymogu" $KSH "select permit_requirement_state()" "wyłącznie HHL"
+val "HHL_ADMIN włącza wymóg (audit_log)" $HHL "select admin_set_permit_requirement(true)::text" true commit
+chk "flaga włączona + wpis PERMIT_REQUIREMENT_SET" "$(Q "select (select enabled from security_flags where key='PERMIT_REQUIRED_NON_STANDARD')::text||'/'||(select count(*)>0 from audit_log where action='PERMIT_REQUIREMENT_SET')::text")" "true/true"
+err "włączony: DIMENSIONED bez zezwolenia NIE osiąga READY" $HHL "update loads set status='READY' where id='$LD'" "Brak zezwolenia \\(PL, SE\\)"
+err "włączony: przewoźnik też nie przestawi na READY" $SCX "update loads set status='READY' where id='$LD'" "Brak zezwolenia"
+val "włączony: STANDARD bez zezwolenia → READY przechodzi" $SCX "update loads set status='READY' where id='$LS' returning status" READY
+$PSQL -c "update loads set combo_length_m=29, combo_width_m=3.9, combo_height_m=4.4, combo_weight_t=58 where id='$LD'" >/dev/null
+val "SCX: zezwolenie PL powiązane" $SCX "select load_permit_link('$LD', permit_save('$P','PL','PL/I27',current_date,current_date+30,30,4,4.5,60))::text" true commit
+err "tylko PL: nadal brak SE" $HHL "update loads set status='READY' where id='$LD'" "Brak zezwolenia \\(SE\\)"
+val "SCX: zezwolenie SE powiązane" $SCX "select load_permit_link('$LD', permit_save('$P','SE','SE/I27',current_date,current_date+30,30,4,4.5,60))::text" true commit
+val "PL + SE zgodne: DIMENSIONED → READY przechodzi" $HHL "update loads set status='READY' where id='$LD' returning status" READY commit
+$PSQL -c "update loads set status='DOCS_PENDING' where id='$LD'" >/dev/null 2>&1
+$PSQL -c "delete from shipment_items where load_id='$LD'" >/dev/null
+$PSQL -c "delete from load_permits where load_id='$LD'" >/dev/null
+err "transport bez pozycji (klasa nieznana) traktowany jak ponadnormatywny" $HHL "update loads set status='READY' where id='$LD'" "Brak zezwolenia"
+val "HHL_ADMIN wyłącza wymóg" $HHL "select admin_set_permit_requirement(false)::text" false commit
+$PSQL -c "delete from shipment_items where load_id in ('$LD','$LS'); update loads set status='CANCELLED' where id in ('$LD','$LS')" >/dev/null 2>&1
 echo; echo "WYNIK: $ok OK, $fail FAIL"
