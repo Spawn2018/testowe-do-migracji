@@ -508,7 +508,7 @@ $PSQL -c "update loads set ferry_booking_ref=null where id='$L1'; set session_re
 echo; echo "[I-21] terminy uzupełnienia zasobów przed załadunkiem i eskalacja (0073)"
 SCXORG=$(Q "select org_id from app_users where auth_id='$SCX'")
 $PSQL -c "set session_replication_role=replica; update loads set carrier_org_id='$SCXORG', status='PLANNED', plan_load_from=now() + interval '30 hours', driver_name=null, driver_phone=null, tractor_plate=null, trailer_plate=null where id='$L2'" >/dev/null
-chk "terminy startowe: DRIVER 48/12, VEHICLE 48/12, DOCS 24/6 h, źródło „do potwierdzenia z SCX (II-3)”" "$(Q "select string_agg(kind||lead_h||'/'||critical_h, ',' order by kind)||'|'||bool_and(source like '%do potwierdzenia z SCX (II-3)%') from resource_deadlines")" "DOCS24/6,DRIVER48/12,VEHICLE48/12|true"
+chk "terminy startowe: DRIVER 48/12, VEHICLE 48/12, DOCS 24/6 h, ESCORT 48/12 (III-4), źródło „do potwierdzenia z SCX (II-3)”" "$(Q "select string_agg(kind||lead_h||'/'||critical_h, ',' order by kind)||'|'||bool_and(source like '%do potwierdzenia z SCX (II-3)%') from resource_deadlines")" "DOCS24/6,DRIVER48/12,ESCORT48/12,VEHICLE48/12|true"
 chk "załadunek za 54 h (poza oknem 48 h): bez ryzyka" "$(Q "select detect_resource_deadlines(now() - interval '24 hours')")" 0
 chk "załadunek za 30 h: brak kierowcy i pojazdu → 2 ryzyka HIGH (RESOURCE_MISSING, HHL + przewoźnik)" "$(Q "select detect_resource_deadlines()")/$(Q "select string_agg(detail->>'resource'||':'||severity||':'||audience, ',' order by detail->>'resource') from risk_signals where dedup_key like 'RES:%:$L2' and resolved_at is null")" "2/DRIVER:HIGH:HHL_PRZEWOZNIK,VEHICLE:HIGH:HHL_PRZEWOZNIK"
 chk "powiadomienia IN_APP: przewoźnik tak, HHL jeszcze nie (HIGH)" "$(Q "select (count(*) filter (where u.org_id='$SCXORG') > 0)::text||'/'||count(*) filter (where u.role in ('HHL_ADMIN','HHL_OPS')) from notifications n join app_users u on u.id=n.user_id where n.template='RESOURCE_DEADLINE' and n.load_id='$L2'")" "true/0"
@@ -676,6 +676,33 @@ err "permit_save: przewoźnik bez transportu w projekcie → odmowa" 11111111-00
 $PSQL -c "update loads set status='CANCELLED' where id='$LF'" >/dev/null 2>&1
 err "transport anulowany → zapis zezwolenia odrzucony" $HHL "select load_permit_save('$LF','PL','PL/F2',current_date,current_date+30,30,4,4.5,60)" "anulowany"
 $PSQL -c "delete from app_users where email='cx3@test'; delete from organizations where code='CX3'" >/dev/null
+echo; echo "[III-4] pojazdy pilotujące: dane i awizacja (0087)"
+LE=33333333-0000-0000-0000-0000000034e1
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status) values ('$LE','$P','00000000-0000-0000-0000-00000000a003','KSH/E34','PLANNED')" >/dev/null
+$PSQL -c "update loads set plan_load_date=current_date+1, driver_name='Jan Test', driver_phone='+48500000000', tractor_plate='PO1', trailer_plate='PO2' where id='$LE'" >/dev/null
+chk "load_escorts: anon 0 uprawnień, authenticated tylko SELECT" "$(Q "select has_table_privilege('anon','load_escorts','select')::text||'/'||has_table_privilege('authenticated','load_escorts','insert')::text||'/'||has_table_privilege('authenticated','load_escorts','select')::text")" "false/false/true"
+err "SCX nie wstawia bezpośrednio do load_escorts" $SCX "insert into load_escorts (load_id, seq, company, plate) values ('$LE',1,'X','AB1')" "permission denied"
+val "SCX: zezwolenie z 2 pilotami powiązane" $SCX "select (load_permit_save('$LE','PL','PL/E34',current_date,current_date+30,null,null,null,null,2) is not null)::text" true commit
+val "stan: wymagane 2, awizowane 0, brak 2" $KSH "select required||'/'||assigned||'/'||missing from load_escort_status() where load_id='$LE'" "2/0/2"
+chk "awizacja: brak pilotów 24 h przed załadunkiem → RESOURCE_MISSING ESCORT (rk_res_escort)" "$(Q "select detect_resource_deadlines() >= 1")/$(Q "select severity||':'||title_key from risk_signals where dedup_key='RES:ESCORT:$LE' and resolved_at is null")" "t/HIGH:rk_res_escort"
+err "KSH nie awizuje pilotów" $KSH "select load_escorts_set('$LE','[]')" "HHL albo przewoźnik transportu"
+$PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER') on conflict do nothing; insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH') on conflict do nothing" >/dev/null
+err "inny przewoźnik nie awizuje pilotów cudzego transportu" 11111111-0000-0000-0000-00000000000b "select load_escorts_set('$LE','[]')" "HHL albo przewoźnik transportu"
+val "inny przewoźnik nie widzi pilotów cudzego transportu" 11111111-0000-0000-0000-00000000000b "select count(*) from load_escorts where load_id='$LE'" 0
+err "zła tablica → odmowa" $SCX "select load_escorts_set('$LE','[{\"company\":\"Pilot\",\"plate\":\"!!\"}]')" "Nieprawidłowa tablica"
+err "brak firmy → odmowa" $SCX "select load_escorts_set('$LE','[{\"company\":\" \",\"plate\":\"PO 123\"}]')" "Brak firmy"
+err "zły zakres → odmowa" $SCX "select load_escorts_set('$LE','[{\"company\":\"Pilot\",\"plate\":\"PO123\",\"scope\":\"DE\"}]')" "Zakres pilotażu"
+err "więcej niż 5 → odmowa" $SCX "select load_escorts_set('$LE',(select jsonb_agg(jsonb_build_object('company','P','plate','PO'||g)) from generate_series(1,6) g))" "maks. 5"
+val "SCX awizuje 2 pilotów (tablica wielkimi literami, kolejność 1–2)" $SCX "select load_escorts_set('$LE','[{\"company\":\"Pilot-Trans\",\"plate\":\"po 12345\",\"scope\":\"PL\"},{\"company\":\"Följebil AB\",\"plate\":\"ABC 123\",\"scope\":\"SE\"}]')" 2 commit
+chk "zapis: 2 wiersze, loads.escort_vehicles = 2, audit_log ESCORTS_SET" "$(Q "select string_agg(seq||':'||plate||':'||scope, ',' order by seq) from load_escorts where load_id='$LE'")/$(Q "select escort_vehicles from loads where id='$LE'")/$(Q "select count(*) from audit_log where action='ESCORTS_SET' and entity_id='$LE'")" "1:PO 12345:PL,2:ABC 123:SE/2/1"
+val "KSH widzi pilotów transportu (tylko odczyt)" $KSH "select count(*) from load_escorts where load_id='$LE'" 2
+val "stan: wymagane 2, awizowane 2, brak 0" $SCX "select required||'/'||assigned||'/'||missing from load_escort_status() where load_id='$LE'" "2/2/0"
+chk "awizacja kompletna → ryzyko ESCORT zamknięte automatycznie" "$(Q "select detect_resource_deadlines()")/$(Q "select count(*) from risk_signals where dedup_key='RES:ESCORT:$LE' and resolved_at is null")" "0/0"
+val "HHL zmienia listę na 1 pilota (zastąpienie, audit_log ze starą listą)" $HHL "select load_escorts_set('$LE','[{\"company\":\"Pilot-Trans\",\"plate\":\"PO 12345\"}]')" 1 commit
+chk "po zmianie: 1 wiersz, escort_vehicles 1, stara lista w audit_log (2 pozycje)" "$(Q "select count(*) from load_escorts where load_id='$LE'")/$(Q "select escort_vehicles from loads where id='$LE'")/$(Q "select jsonb_array_length(old_value) from audit_log where action='ESCORTS_SET' and entity_id='$LE' order by id desc limit 1")" "1/1/2"
+$PSQL -c "update loads set status='CANCELLED' where id='$LE'" >/dev/null 2>&1
+err "transport anulowany → awizacja zamknięta" $HHL "select load_escorts_set('$LE','[]')" "zakończony albo anulowany"
+$PSQL -c "delete from app_users where email='cx3@test'; delete from organizations where code='CX3'; update risk_signals set resolved_at=now() where dedup_key like 'RES:%:$LE' and resolved_at is null" >/dev/null
 chk "I-28: load_delivery_day_end usunięta (0085), load_delivery_deadline zostaje" "$(Q "select (to_regprocedure('load_delivery_day_end(date,timestamptz)') is null)::text||'/'||(to_regprocedure('load_delivery_deadline(date,timestamptz)') is not null)::text")" "true/true"
 echo; echo "[I-27] brak zezwolenia blokuje Gotowy dla klasy ≠ STANDARD (0084, przełącznik)"
 LD=33333333-0000-0000-0000-0000000027d1; LS=33333333-0000-0000-0000-0000000027a1

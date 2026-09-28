@@ -51,6 +51,7 @@ test('SCX: nowe zezwolenie → zapis + powiązanie, „niezgodne”, baner; odł
   await login(page, 'scx@bk5.local');
   await openDocs(page);
   await page.locator('[data-permit-add]').click();
+  if (process.env.SHOT) await page.locator('[data-permit-form]').screenshot({ path: '/tmp/perm.png' });
   const f = page.locator('[data-permit="form"]');
   await f.locator('[name="permit_no"]').fill(NO);
   await f.locator('[name="authority"]').fill('GDDKiA Gdańsk');

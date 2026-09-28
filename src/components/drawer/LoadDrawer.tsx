@@ -43,6 +43,8 @@ import { PROD_BUILD, shows } from '../../lib/prodFacade';
 import { delayPillMinutes, permitBannerState } from '../../lib/prodDash';
 /* SCOPE 6.4 — formularz zezwoleń: tylko build Supabase, chunk leniwy (paczka demo bez niego) */
 const PermitForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/PermitForm')) : null;
+/* III-4 — pojazdy pilotujące z bazy (load_escorts): tylko build Supabase; demo zostaje przy polu „Pilot” formularza zasobów */
+const EscortPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/EscortPanel')) : null;
 
 /** M8 — poziom, mnożnik paliwowy z datą i kurs strony wyceny. */
 function MoneySideMeta({ side, locale, which }: { side: MoneySideV2; locale: Locale; which: 'cost' | 'rev' }) {
@@ -581,6 +583,7 @@ export function LoadDrawer() {
                     <dd>
                       <span className="mono">{load.resources.trailerPlate ?? '—'}</span>
                     </dd>
+                    {!(EscortPanel && isServerId(load.id)) && (<>
                     <dt>{t(locale, 'a6_dr_escort')}</dt>
                     <dd>
                       {load.resources.escort
@@ -589,6 +592,7 @@ export function LoadDrawer() {
                           : t(locale, 'a6_dr_escort_one')
                         : t(locale, 'a6_dr_escort_none')}
                     </dd>
+                    </>)}
                     <dt>{t(locale, 'a6_dr_combo')}</dt>
                     <dd>
                       {fmtDim(comboL, locale)} × {fmtDim(comboW, locale)} × {fmtDim(comboH, locale)} m
@@ -596,6 +600,7 @@ export function LoadDrawer() {
                     <dt>{t(locale, 'a6_dr_combo_mass')}</dt>
                     <dd>{fmtDim(load.resources.setWeightT ?? load.dims.weightT, locale)} t</dd>
                   </dl>
+                  {EscortPanel && isServerId(load.id) && <Suspense fallback={null}><EscortPanel key={load.id} loadId={load.id} /></Suspense>}
                   <h4 className="sec" style={{ marginTop: 18 }}>
                     {t(locale, 'a6_dr_awi_ferry')}
                   </h4>
@@ -630,8 +635,10 @@ export function LoadDrawer() {
                         driverPhone: String(fd.get('driverPhone') || '') || null,
                         tractorPlate: String(fd.get('tractorPlate') || '') || null,
                         trailerPlate: String(fd.get('trailerPlate') || '') || null,
-                        escort: fd.get('escort') === 'on',
-                        escortPlate: String(fd.get('escortPlate') || '') || null,
+                        ...(EscortPanel && isServerId(load.id) ? {} : {
+                          escort: fd.get('escort') === 'on',
+                          escortPlate: String(fd.get('escortPlate') || '') || null,
+                        }),
                         setLengthM: Number(fd.get('setLengthM')) || null,
                         setWidthM: Number(fd.get('setWidthM')) || null,
                         setHeightM: Number(fd.get('setHeightM')) || null,
@@ -655,6 +662,7 @@ export function LoadDrawer() {
                           </dd>
                         </Fragment>
                       ))}
+                      {!(EscortPanel && isServerId(load.id)) && (<>
                       <dt>{t(locale, 'a6_dr_escort')}</dt>
                       <dd>
                         <label>
@@ -669,6 +677,7 @@ export function LoadDrawer() {
                           defaultValue={load.resources.escortPlate ?? ''}
                         />
                       </dd>
+                      </>)}
                       <dt>{t(locale, 'a6_dr_combo')}</dt>
                       <dd>
                         <input
@@ -708,6 +717,7 @@ export function LoadDrawer() {
                       {t(locale, 'a6_dr_save_res')}
                     </button>
                   </form>
+                  {EscortPanel && isServerId(load.id) && <Suspense fallback={null}><EscortPanel key={load.id} loadId={load.id} /></Suspense>}
 
                   <h4 className="sec" style={{ marginTop: 18 }}>
                     {t(locale, 'a6_dr_awi')}

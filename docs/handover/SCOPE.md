@@ -1490,7 +1490,7 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 3.8 | DO POTWIERDZENIA | PLAN D-15 (limity ponadnormatywności per kraj) |
 | 3.10 | ODŁOŻONA | Dziennik odłożeń; Etap III (SharePoint) |
 | 4.3 | DO ZROBIENIA | PLAN I-21 |
-| 4.5 | DO ZROBIENIA (częściowo) | PLAN III-4 |
+| 4.5 | DO ZROBIENIA (częściowo) → **GOTOWE 28.09 (0087)** | PLAN III-4 — dane pilotów (firma, tablica, zakres), wymóg z zezwolenia, awizacja z terminem ESCORT; dane osobowe pilota — D-22 |
 | 5.1 | ZABLOKOWANA | PLAN II-4, D-6; Dziennik blokad |
 | 5.2 | ZABLOKOWANA | PLAN II-4, D-6; Dziennik blokad |
 | 5.3 | ZABLOKOWANA | PLAN II-4, D-6; Dziennik blokad |

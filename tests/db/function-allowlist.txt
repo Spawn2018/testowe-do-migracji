@@ -94,3 +94,5 @@ authenticated load_permit_status
 authenticated permit_save
 authenticated load_permit_save
 authenticated load_permit_unlink
+authenticated load_escorts_set
+authenticated load_escort_status

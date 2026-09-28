@@ -100,10 +100,10 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
       const code = String(p.code ?? '');
       const res = String(p.resource ?? '');
       const what = locale === 'en'
-        ? (res === 'DRIVER' ? 'driver details' : res === 'VEHICLE' ? 'tractor or trailer plates' : 'documents')
+        ? (res === 'DRIVER' ? 'driver details' : res === 'VEHICLE' ? 'tractor or trailer plates' : res === 'ESCORT' ? 'escort vehicles required by the permit' : 'documents')
         : locale === 'sv'
-          ? (res === 'DRIVER' ? 'föraruppgifter' : res === 'VEHICLE' ? 'registreringsnummer för dragbil eller trailer' : 'dokument')
-          : (res === 'DRIVER' ? 'dane kierowcy' : res === 'VEHICLE' ? 'tablice ciągnika lub naczepy' : 'dokumenty');
+          ? (res === 'DRIVER' ? 'föraruppgifter' : res === 'VEHICLE' ? 'registreringsnummer för dragbil eller trailer' : res === 'ESCORT' ? 'följebilar enligt tillståndet' : 'dokument')
+          : (res === 'DRIVER' ? 'dane kierowcy' : res === 'VEHICLE' ? 'tablice ciągnika lub naczepy' : res === 'ESCORT' ? 'pojazdy pilotujące wymagane zezwoleniem' : 'dokumenty');
       const subject = locale === 'en' ? `${code}: missing ${what}` : locale === 'sv' ? `${code}: ${what} saknas` : `${code}: brak — ${what}`;
       const body = locale === 'en'
         ? `Complete before loading on ${formatDay(p.due)}.`
