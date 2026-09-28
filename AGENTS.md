@@ -8,6 +8,7 @@ Auth, Storage, Edge Functions, pg_cron).
 
 ## Zanim cokolwiek zrobisz
 
+0. Przeczytaj `docs/handover/PRZEKAZANIE_CURSOR.md` — punkt wejścia (stan 28.09): zasady, procedury, otwarte pozycje
 1. Przeczytaj `docs/handover/POSTEP.md` — co zrobione, co otwarte
 2. Przeczytaj sekcję 1 `docs/handover/ZLECENIE_FINAL.md` — zasady pracy
 3. Przeczytaj dokument źródłowy dziedziny, której dotyczy zadanie (niżej)

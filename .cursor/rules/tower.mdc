@@ -1,13 +1,30 @@
 ---
-description: Twarde zasady projektu TOWER (Watch Tower) — obowiązują w każdej zmianie
+description: Zasady projektu TOWER — obowiązują w każdej zmianie
+globs:
 alwaysApply: true
 ---
-- Najpierw przeczytaj `docs/handover/PRZEKAZANIE_CURSOR.md`, potem `docs/handover/PLAN.md` (§4 decyzje właściciela) i `docs/handover/POSTEP.md`.
-- UI po polsku, 1:1 z makietą. Każda zmiana wyglądu = STOP i pytanie do właściciela.
-- Produkcja Supabase: tylko migracje idempotentne i nieniszczące (`supabase/migrations/NNNN_*.sql`), zero zapisów testowych, weryfikacja w transakcji z `rollback`.
-- SQL: strażniki `if (…) is not true then raise`; `SECURITY DEFINER` zawsze z `set search_path = public`; `anon` bez uprawnień.
-- Nowe przypadki testów bazy → podbij liczby w `tests/db/gate.sh`. Nowa funkcja dla `authenticated` → `tests/db/function-allowlist.txt` i `tests/db/null-guard-calls.txt`.
-- Git: bez `--force` i `--no-verify`; push przez pełną bramę pre-push (`PGCLUSTER=17/main TOWER_REQUIRE_DB=1 git push`).
-- Po każdej pozycji: wiersz w `docs/handover/POSTEP.md`, commit, push. Zmiana kodu aplikacji → wdrożenie Vercel i skan JS (0× service_role).
-- Sekrety tylko w `.env.local`; nigdy ich nie wypisuj. Bez nowych płatnych usług. Nie loguj się do Cloudflare.
-- `security_flags.EXTERNAL_MESSAGING` zostaje wyłączone do R-2.
+Przed pracą przeczytaj `AGENTS.md` w korzeniu repozytorium, `docs/handover/PRZEKAZANIE_CURSOR.md` (punkt wejścia, stan 28.09) i
+`docs/handover/POSTEP.md`. Źródła prawdy: `docs/handover/MECHANIZM_PIENIEDZY.md`
+(pieniądze, faktury), `docs/handover/STATUSY_AUTOMATYCZNE.md` (statusy, rejsy,
+strefy), `docs/handover/ZRODLA_DANYCH.md` (dane zewnętrzne, licencje), `supabase/migrations/` (kontrakt bazy), `design/claude-v2.0/` (wygląd).
+`docs/claude/archiwum/` — nie wykonuj.
+
+- Bezpieczeństwo egzekwuje baza (RLS, wyzwalacze), nie interfejs
+- Źródłem kwot jest EUR; PLN tylko jako wyświetlanie albo waluta faktury
+- Kurs NBP A z dnia roboczego przed rozładunkiem; dzień lokalnie, nigdy UTC
+- Statusy tylko do przodu; rozładunek nigdy automatycznie
+- Dane zewnętrzne tylko z ZRODLA_DANYCH.md; ręczna zmiana HHL wygrywa; awaria źródła = ryzyko
+- Wygląd: tylko istniejące komponenty, tokeny var(--…), Barlow, bez Tailwinda
+- Każdy napis w słowniku PL, EN, SV
+- Wzorca wizualnego nie regeneruj poza końcem etapu
+- Przed każdym tagiem wzorca pełny przebieg 840 ujęć; wynik liczbami w opisie tagu (inaczej STOP)
+- Jedna pozycja, jeden commit; wiersz w POSTEP.md z liczbami testów
+- Nie zgaduj decyzji biznesowych — pytaj właściciela
+- Sekrety tylko w zmiennych środowiskowych
+- UI po polsku, 1:1 z makietą; każda zmiana wyglądu = STOP i pytanie do właściciela (PLAN.md §4)
+- Produkcja Supabase: tylko migracje idempotentne i nieniszczące, zero zapisów testowych, weryfikacja w transakcji z `rollback`
+- SQL: strażniki `if (…) is not true then raise`; `SECURITY DEFINER` zawsze z `set search_path = public`; `anon` bez uprawnień
+- Nowe przypadki testów bazy → podbij liczby w `tests/db/gate.sh`; nowa funkcja dla `authenticated` → `function-allowlist.txt` i `null-guard-calls.txt`
+- Git: bez `--force` i `--no-verify`; push przez pełną bramę pre-push (`PGCLUSTER=17/main TOWER_REQUIRE_DB=1 git push`)
+- Zmiana kodu aplikacji → wdrożenie Vercel i skan JS (0× service_role)
+- Bez nowych płatnych usług; nie loguj się do Cloudflare; `EXTERNAL_MESSAGING` wyłączone do R-2
