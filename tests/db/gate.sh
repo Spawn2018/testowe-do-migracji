@@ -8,6 +8,7 @@
 set -u
 cd "$(git rev-parse --show-toplevel)"
 ADMIN=${PGADMIN:-postgres://postgres@localhost:5433/postgres}
+. "$(git rev-parse --show-toplevel)/tests/db/local-only.sh"
 export PGADMIN="$ADMIN"
 # Debian z kilkoma klastrami: bez PGCLUSTER wrapper psql wypisuje ostrzeżenie i psuje porównania.
 if [ -z "${PGCLUSTER:-}" ] && command -v pg_lsclusters >/dev/null 2>&1; then
@@ -34,6 +35,6 @@ check watchdog 27
 check invite 48
 check risks 23
 check import 48
-check nullguard 279
+check nullguard 280
 check i2 333
 [ $ok -eq 1 ]

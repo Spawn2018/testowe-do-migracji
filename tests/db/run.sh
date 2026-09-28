@@ -6,6 +6,7 @@
 # UWAGA: supabase_stub.sql NIGDY nie uruchamiaj na prawdziwym Supabase.
 set -e
 ADMIN=${PGADMIN:-postgres://postgres@localhost:5433/postgres}
+. "$(git rev-parse --show-toplevel)/tests/db/local-only.sh"
 suma=0
 for t in security status; do
   DB="tower_test_$t"; URL="${ADMIN%/*}/$DB"

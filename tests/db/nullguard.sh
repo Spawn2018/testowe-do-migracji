@@ -8,6 +8,7 @@
 set -e
 cd "$(git rev-parse --show-toplevel)"
 ADMIN=${PGADMIN:-postgres://postgres@localhost:5433/postgres}
+. "$(git rev-parse --show-toplevel)/tests/db/local-only.sh"
 DB=tower_test_nullguard; URL="${ADMIN%/*}/$DB"
 psql "$ADMIN" -q -c "drop database if exists $DB" -c "create database $DB"
 psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/supabase_stub.sql
@@ -29,6 +30,8 @@ ok=0; fail=0; denied=0; total=0; pure=0; posok=0; posna=0
 say() { echo "  $1"; }
 call() { $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; $2; rollback;" 2>&1 | grep -vE '^(BEGIN|SET|ROLLBACK)$' | tr '\n' ' ' | sed 's/ *$//'; }
 
+SNAPQ="select (select count(*) from audit_log)||'/'||(select count(*) from import_column_templates)||'/'||(select count(*) from loads)||'/'||(select count(*) from invoices)||'/'||(select count(*) from notifications)"
+SNAP0=$($PSQL -c "$SNAPQ")
 echo; echo "[I-2A] kompletność listy wywołań"
 CAT=$($PSQL -c "select distinct p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prokind='f' and not exists (select 1 from pg_depend d where d.objid=p.oid and d.deptype='e') and has_function_privilege('authenticated', p.oid, 'execute') order by 1")
 LIST=$(grep -vE '^\s*(#|$)' tests/db/null-guard-calls.txt | awk -F' \\| ' '{print $1}' | sort -u)
@@ -68,6 +71,8 @@ while IFS='|' read -r name kind sql exp; do
   fi
 done < <(grep -vE '^\s*(#|$)' tests/db/null-guard-calls.txt)
 say "kontrola pozytywna: $posok zgodnych, $posna n/d"
+SNAP1=$($PSQL -c "$SNAPQ")
+if [ "$SNAP0" = "$SNAP1" ]; then ok=$((ok+1)); say "OK    wywołania wycofane (rollback): audit_log/szablony/loads/faktury/powiadomienia bez zmian ($SNAP1)"; else fail=$((fail+1)); say "FAIL  wywołania zmieniły dane: $SNAP0 → $SNAP1"; fi
 
 echo; echo "[I-2A] helpery logiczne ściśle true/false"
 chk() { if [ "$2" = "$3" ]; then ok=$((ok+1)); say "OK    $1"; else fail=$((fail+1)); say "FAIL  $1 (otrzymano: $2, oczekiwano: $3)"; fi; }

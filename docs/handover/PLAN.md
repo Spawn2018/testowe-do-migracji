@@ -125,7 +125,7 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 
 **III-1** (P2) kalibracja czasów odcinków ETA po 5 transportach — mediana i rozrzut każdego odcinka z wjazdów/wyjazdów stref; PROPOZYCJA zmian do zatwierdzenia przez HHL, nigdy cicha zmiana (odbiór: raport odcinków z liczbami i propozycją) — SZKIELET GOTOWY (ten commit): `scripts/iii1/calibration.sql` (tylko odczyt, produkcja: n = 0), samotest `scripts/iii1/selftest.sql`, szablon `RAPORT_KALIBRACJI_ETA.md`; dane — po 5 transportach ·
 **III-2** (P2, z I-11: SCOPE 0.1, 0.3, 0.7–0.10, 11.4) domknięcie wierności wizualnej: suma kontrolna arkusza wobec makiety, próg 0,1% i pełne 840 ujęć w CI, procedura nowej klasy (3 warunki) w `DESIGN_SYSTEM.md`, zrzuty stanów (najechanie, fokus, wciśnięty, zablokowany, ładowanie, błąd, walidacja) i trybu „systemowy” — DO ZROBIENIA ·
-**III-3** (P2, z I-11: SCOPE 1.1) osobne środowisko testowe Supabase i testy bazy w GitHub Actions (dziś tylko lokalny hook) — DO ZROBIENIA ·
+**III-3** (P2, z I-11: SCOPE 1.1) osobne środowisko testowe Supabase i testy bazy w GitHub Actions (dziś tylko lokalny hook) — CZĘŚCIOWO 28.09: workflow gotowy w `docs/ci/db.yml` (PostgreSQL 17 + PostGIS na maszynie CI, pełne `tests/db/gate.sh`, bez sekretów); **CZEKA NA właściciela:** przeniesienie do `.github/workflows/` (token agenta bez uprawnienia `workflow`), rozliczenia Actions (SCOPE 26.2), osobny projekt Supabase (koszt) ·
 **III-4** (P2, z I-11: SCOPE 4.5) pojazdy pilotujące: dane i awizacja — DO ZROBIENIA ·
 **III-5** (P2, z I-11: SCOPE 5.10, 5.13) mapa: unikanie kolizji etykiet, odtwarzanie przebiegu w czasie — DO ZROBIENIA ·
 **III-6** (P2, z I-11: SCOPE 6.1, 6.2) dokumenty: wymagalność i terminy per kategoria w bazie, wersjonowanie dokumentu — DO ZROBIENIA ·

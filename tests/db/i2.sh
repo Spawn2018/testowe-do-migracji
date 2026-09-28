@@ -5,6 +5,7 @@
 set -e
 cd "$(git rev-parse --show-toplevel)"
 ADMIN=${PGADMIN:-postgres://postgres@localhost:5433/postgres}
+. "$(git rev-parse --show-toplevel)/tests/db/local-only.sh"
 DB=tower_test_i2; URL="${ADMIN%/*}/$DB"
 psql "$ADMIN" -q -c "drop database if exists $DB" -c "create database $DB"
 psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/supabase_stub.sql
