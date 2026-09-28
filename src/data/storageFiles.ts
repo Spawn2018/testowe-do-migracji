@@ -36,7 +36,15 @@ export function createStorageSink(sb: SupabaseClient, now: () => string = () => 
       await sb.rpc('discard_document', { p_id: row.id });
       throw new Error(up.error.message);
     }
+    let version = 1;
+    let versionError: string | undefined;
+    if (input.supersedes) {
+      const v = await sb.rpc('document_supersede', { p_new: row.id, p_old: input.supersedes });
+      if (v.error) versionError = v.error.message;
+      else version = Number(v.data) || 1;
+    }
     return {
+      version, ...(versionError ? { versionError } : {}),
       id: row.id, loadId: input.loadId, category: input.category, name: input.name, uploadedAt: now(),
       deadline: null, status: 'UPLOADED', permitFits: null, visibleTo: ['HHL', 'KSH', 'SCX'],
       dataUrl: null, mimeType: input.mimeType, bytes: input.file.size, source: 'tower',

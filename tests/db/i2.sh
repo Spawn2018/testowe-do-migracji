@@ -550,4 +550,33 @@ chk "jeden szablon na układ, nazwa zaktualizowana, wpis w audit_log" "$(Q "sele
 val "KSH: szablony niewidoczne (RLS)" $KSH "select count(*) from import_column_templates" 0
 err "HHL: bezpośredni INSERT odrzucony (tylko RPC)" $HHL "insert into import_column_templates (project_id, name, column_map, header_signature) values ('$P','x','{}','z')" "permission denied"
 $PSQL -c "delete from import_column_templates where header_signature='qty|shipment id'" >/dev/null
+echo; echo "[III-6] wymagalność i terminy dokumentów, wersje, widoczność per organizacja (0078)"
+chk "projekt ma 7 wymagań startowych (seed przez wyzwalacz projektu)" "$(Q "select count(*) from doc_requirements where project_id='$P'")" "7"
+err "KSH: zmiana wymagalności odrzucona" $KSH "select doc_requirement_set('$P','CMR',true,'CARRIER','AT_LOAD',4)" "wyłącznie HHL"
+err "HHL: nieznane zdarzenie odniesienia odrzucone" $HHL "select doc_requirement_set('$P','CMR',true,'CARRIER','KIEDYS',4)" "Nieznane zdarzenie"
+val "HHL: CMR do 4 h po załadunku zapisane" $HHL "select (doc_requirement_set('$P','CMR',true,'CARRIER','AT_LOAD',4) is not null)::text" true commit
+chk "wartość zmieniona + audit_log DOC_REQUIREMENT_SET ze starą wartością" "$(Q "select r.offset_hours||'/'||(select (old_value->>'offset_hours') from audit_log where action='DOC_REQUIREMENT_SET' order by id desc limit 1) from doc_requirements r where project_id='$P' and category='CMR'")" "4/2"
+val "KSH i SCX czytają wymagania (konfiguracja)" $SCX "select count(*) from doc_requirements where project_id='$P'" 7
+L9=33333333-0000-0000-0000-0000000006c9
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date, plan_delivery_date) values ('$L9','$P','00000000-0000-0000-0000-00000000a003','KSH/9', current_date-3, current_date+2)" >/dev/null
+$PSQL -c "update loads set plan_load_date=current_date-3, plan_delivery_date=current_date+2 where id='$L9'" >/dev/null
+val "SCX: zezwolenie PL transportu z załadunkiem 3 dni temu = OVERDUE" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='PERMIT_PL'" OVERDUE
+val "SCX: POD przed dostawą = MISSING (termin nie minął)" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='POD'" MISSING
+val "stan tylko dla kategorii wymaganych per transport (bez polisy): 6 na transport" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 6
+val "SCX: po wgraniu CMR (create_document) stan OK" $SCX "select count(*) from create_document('$L9','CMR','cmr1.pdf','application/pdf',100)" 1 commit
+val "…CMR = OK" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" OK
+val "SCX: druga rejestracja CMR" $SCX "select count(*) from create_document('$L9','CMR','cmr2.pdf','application/pdf',100)" 1 commit
+D1=$(Q "select id from documents where load_id='$L9' and file_name='cmr1.pdf'"); D2=$(Q "select id from documents where load_id='$L9' and file_name='cmr2.pdf'")
+err "KSH: oznaczenie cudzego pliku jako nowej wersji odrzucone" $KSH "select document_supersede('$D2','$D1')" "tylko autor"
+val "SCX: cmr2 = nowa wersja cmr1 → wersja 2" $SCX "select document_supersede('$D2','$D1')" 2 commit
+chk "cmr1 zastąpiony, cmr2 wskazuje poprzednika, wpis audit_log" "$(Q "select (select superseded_at is not null from documents where id='$D1')::text||'/'||(select supersedes='$D1' from documents where id='$D2')::text||'/'||(select count(*)>0 from audit_log where action='DOCUMENT_NEW_VERSION' and entity_id='$D2')::text")" "true/true/true"
+err "ponowne zastąpienie tej samej wersji odrzucone" $SCX "select document_supersede('$D2','$D1')" "już"
+err "wersja innej kategorii odrzucona" $SCX "select document_supersede((select id from create_document('$L9','POD','pod.pdf','application/pdf',100)),'$D2')" "tego samego transportu i kategorii"
+$PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a009','CX2','Inny przewoźnik','CARRIER') on conflict do nothing;
+  insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-000000000009','00000000-0000-0000-0000-00000000a009','cx2@test','CARRIER_DISPATCH') on conflict do nothing;
+  insert into documents (project_id, category, storage_path, file_name, uploaded_by) values ('$P','INSURANCE','-','polisa-cx2.pdf',(select id from app_users where email='cx2@test'))" >/dev/null
+val "SCX nie widzi polisy innego przewoźnika (dokument bez transportu)" $SCX "select count(*) from documents where file_name='polisa-cx2.pdf'" 0
+val "KSH widzi polisę przewoźnika (visible_to: CLIENT)" $KSH "select count(*) from documents where file_name='polisa-cx2.pdf'" 1
+val "drugi przewoźnik widzi własną polisę" 11111111-0000-0000-0000-000000000009 "select count(*) from documents where file_name='polisa-cx2.pdf'" 1
+$PSQL -c "delete from documents where load_id='$L9' or file_name='polisa-cx2.pdf'; update loads set status='CANCELLED' where id='$L9'; delete from app_users where email='cx2@test'; delete from organizations where code='CX2'" >/dev/null
 echo; echo "WYNIK: $ok OK, $fail FAIL"

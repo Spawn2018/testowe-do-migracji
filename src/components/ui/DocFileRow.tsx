@@ -35,6 +35,9 @@ export function DocFileRow({ doc, label, onPreview, onUploadClick, showUpload }:
             >
               ✓ {doc.name}
             </button>
+            {(doc.version ?? 1) > 1 ? (
+              <span className="pill" data-doc-version={doc.version}>{t(locale, 'iii6_ver').replace('{n}', String(doc.version))}</span>
+            ) : null}
             <button
               type="button"
               className="iconbtn"

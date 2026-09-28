@@ -117,8 +117,8 @@ Czym udowadniamy, że pozycja jest `GOTOWE`. Bez dowodu status się nie zmienia.
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 6.1 | Kategorie z wymagalnością i terminami | | | |
-| 6.2 | Wersjonowanie i widoczność per organizacja | | | |
+| 6.1 | Kategorie z wymagalnością i terminami | ZROBIONE 28.09 (III-6) | 0078 `doc_requirements` + `doc_requirements_status()`; i2 [III-6]; `tests/doc-requirements.test.ts`; e2e `tests/iii6-docs.local.spec.ts` | terminy startowe — propozycja do potwierdzenia z SCX/KSH |
+| 6.2 | Wersjonowanie i widoczność per organizacja | ZROBIONE 28.09 (III-6) | 0078 `document_supersede`, `docs_scope` (dokument organizacyjny przewoźnika niewidoczny dla innego przewoźnika); i2 [III-6]; `tests/doc-versions.test.ts` | |
 | 6.3 | Odnośniki z krótkim czasem ważności | | | |
 | 6.4 | Zezwolenia: pola, ważność, trasa, pilotaż | | | wzór do zmapowania |
 | 6.5 | Walidator wymiarów zestawu wobec zezwolenia | | testy | blokuje transport |

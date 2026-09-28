@@ -204,6 +204,11 @@ export interface Document {
   source?: 'driver' | 'tower' | 'seed';
   /** BK4: `<koszyk>/<ścieżka>` w Supabase Storage — plik pobierany linkiem podpisanym (15 min). */
   storagePath?: string | null;
+  /** III-6 (0078): numer wersji; `superseded` = zastąpiony nowszą wersją (poza sejfem). */
+  version?: number;
+  superseded?: boolean;
+  /** III-6: plik zapisany, ale oznaczenie wersji odrzucone (komunikat serwera). */
+  versionError?: string;
 }
 
 

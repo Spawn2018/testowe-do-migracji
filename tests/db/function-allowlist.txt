@@ -83,3 +83,6 @@ authenticated admin_set_external_messaging
 authenticated sms_external_messaging_state
 authenticated load_driver_contacts
 authenticated import_template_save
+authenticated doc_requirement_set
+authenticated doc_requirements_status
+authenticated document_supersede

@@ -38,9 +38,15 @@ export async function attachDocumentFile(
   const sink = getFileSink();
   if (sink && isServerId(loadId)) {
     try {
+      // III-6: nowy plik tej samej kategorii transportu = nowa wersja (zdjęcia mocowania — wiele plików, bez wersji)
+      const prev = category === 'LASHING_PHOTOS' ? undefined
+        : st.documents.find((d) => d.loadId === loadId && d.category === category && isStoredDoc(d) && !d.superseded);
       const doc = await sink.upload({
         loadId, category, file, name, mimeType: file.type || 'application/octet-stream',
+        ...(prev ? { supersedes: prev.id } : {}),
       });
+      if (prev && doc.versionError) st.pushToast(t(st.locale, 'iii6_newver_fail').replace('{msg}', doc.versionError), 'HIGH', loadId);
+      else if (prev && (doc.version ?? 1) > 1) st.pushToast(t(st.locale, 'iii6_newver').replace('{n}', String(doc.version)), 'MEDIUM', loadId);
       st.addStoredDocument(opts.driverToken ? { ...doc, source: 'driver' } : doc, opts.driverToken ? 'DRIVER' : undefined);
       return true;
     } catch (e) {

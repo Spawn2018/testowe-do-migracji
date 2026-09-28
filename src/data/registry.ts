@@ -52,6 +52,8 @@ export interface FileUploadInput {
   file: Blob;
   name: string;
   mimeType: string;
+  /** III-6: id poprzedniej wersji (ten sam transport i kategoria) → document_supersede po wgraniu. */
+  supersedes?: string;
 }
 
 /** Odbiorca plików — rejestrowany wyłącznie w trybie Supabase (chunk leniwy). */

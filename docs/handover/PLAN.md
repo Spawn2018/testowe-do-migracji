@@ -128,7 +128,7 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 **III-3** (P2, z I-11: SCOPE 1.1) osobne środowisko testowe Supabase i testy bazy w GitHub Actions (dziś tylko lokalny hook) — CZĘŚCIOWO 28.09: workflow gotowy w `docs/ci/db.yml` (PostgreSQL 17 + PostGIS na maszynie CI, pełne `tests/db/gate.sh`, bez sekretów); **CZEKA NA właściciela:** przeniesienie do `.github/workflows/` (token agenta bez uprawnienia `workflow`), rozliczenia Actions (SCOPE 26.2), osobny projekt Supabase (koszt) ·
 **III-4** (P2, z I-11: SCOPE 4.5) pojazdy pilotujące: dane i awizacja — DO ZROBIENIA ·
 **III-5** (P2, z I-11: SCOPE 5.10, 5.13) mapa: unikanie kolizji etykiet, odtwarzanie przebiegu w czasie — DO ZROBIENIA ·
-**III-6** (P2, z I-11: SCOPE 6.1, 6.2) dokumenty: wymagalność i terminy per kategoria w bazie, wersjonowanie dokumentu — DO ZROBIENIA ·
+**III-6** (P2, z I-11: SCOPE 6.1, 6.2) dokumenty: wymagalność i terminy per kategoria w bazie, wersjonowanie dokumentu — DONE 28.09 (0078; terminy startowe = PROPOZYCJA do potwierdzenia z SCX/KSH) ·
 **III-7** (P2, z I-11: SCOPE 7.10) pełna ścieżka sporu i akceptacji faktury — DO ZROBIENIA ·
 **III-8** — (numer zarezerwowany, nieużyty) ·
 **III-9** (P2, z I-11: SCOPE 10.4, 10.6) widok placu budowy tylko do odczytu (opcjonalny), ocena przewoźnika — DO ZROBIENIA ·

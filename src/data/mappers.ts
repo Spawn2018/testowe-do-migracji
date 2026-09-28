@@ -375,6 +375,7 @@ export interface DocumentRow {
   id: string; load_id: string | null; category: string; file_name: string; mime_type: string | null;
   size_bytes: number | null; valid_until: string | null; visible_to: string[] | null; uploaded_at: string;
   storage_path?: string | null;
+  version?: number | null; superseded_at?: string | null;
 }
 const DOC_CAT: Record<string, DocCategory> = {
   PERMIT_PL: 'PERMIT_PL', PERMIT_SE: 'PERMIT_SE', INSURANCE: 'INSURANCE', CMR: 'CMR', POD: 'POD',
@@ -395,6 +396,7 @@ export function documentFromRow(r: DocumentRow): Document | null {
     visibleTo: (r.visible_to ?? []).map(orgKindToApp).filter((k): k is OrgKind => k !== null),
     dataUrl: null, mimeType: r.mime_type, bytes: r.size_bytes, source: 'tower',
     storagePath: r.storage_path && r.storage_path !== '-' ? r.storage_path : null,
+    version: r.version ?? 1, superseded: Boolean(r.superseded_at),
   };
 }
 
