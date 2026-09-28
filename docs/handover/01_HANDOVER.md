@@ -1,3 +1,5 @@
+> **Nieaktualne (etap makiety, 23.09).** Aktualny punkt wejścia: [`PRZEKAZANIE_CURSOR.md`](./PRZEKAZANIE_CURSOR.md) (28.09).
+
 # 01 · Handover — architektura i uruchomienie
 
 | Pole | Wartość |

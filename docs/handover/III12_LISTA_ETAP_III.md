@@ -17,9 +17,9 @@
 | Eksport PDF (10.8, I-24) | **DONE 28.09** — POSTEP 10.8 | czysto techniczne |
 | Wersjonowanie i archiwum pliku harmonogramu (3.6, audyt D4) | **DONE 28.09** — migracja 0093 (historia wersji tylko do dopisywania), POSTEP 3.6 | techniczne |
 | Wymuszenie w bazie: import tylko KSH, eksport tylko HHL (16.3, audyt D11) | **DONE 28.09** — reguła zastąpiona przez I-18 (import HHL, potwierdzanie dat KSH); sprawdzone testem `tests/db/import.sh` 60/60, eksport per rola (POSTEP 16.3) | techniczne (bezpieczeństwo) |
-| Retencja `files/` w R2 | zasady jak dla dokumentów | bez nowych płatnych zasobów — tylko na istniejącym koncie |
+| Retencja `files/` w R2 | **CZEKA na logowanie do Cloudflare** (wrangler wylogowany; bez logowania z naszej strony — polecenie 28.09); pliki `docs/handover/r2/*.json` gotowe | bez nowych płatnych zasobów — tylko na istniejącym koncie |
 | III-13: 36 ujęć wzorca (Harmonogram, Dokumenty) | znaleźć commity, zaklasyfikować (zamierzone → `G4_WZORZEC.md`, regresja → naprawa), odświeżyć | pozycja robocza, nie decyzja właściciela |
-| Przekazanie Cursorowi | pakiet dokumentów przekazania | dokumentacja |
+| Przekazanie Cursorowi | **DONE 28.09** — `PRZEKAZANIE_CURSOR.md` + `.cursor/rules/tower.mdc` | dokumentacja |
 | Dostępność — reszta | `list` w kolejce wyjątków (12), mylący kursor (362) | poprawki bez zmiany wyglądu — tylko jeśli D-27 dopuści |
 
 ## Zależne od właściciela / osób trzecich
