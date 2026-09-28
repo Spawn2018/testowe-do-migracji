@@ -258,6 +258,26 @@ async function setLocale(lang) {
   await sleep(300)
 }
 
+/**
+ * G-V 28.09: przełącznik motywu klikany w DOM (bez page.click) — page.click przewija okno do przycisku,
+ * co przy 390 px przesuwało ujęcie w poziomie zależnie od kolejności zadań (artefakt SV 390 dark, a956ab6).
+ */
+async function clickThemeBtn() {
+  await page.evaluate(() => {
+    const btn = document.querySelector('#themeBtn')
+    if (!btn) throw new Error('theme btn not found: #themeBtn')
+    btn.click()
+  })
+}
+
+/** G-V 28.09: przed ujęciem zerujemy przewinięcie okna w poziomie (pion zostaje — ustawia go navTo). */
+async function resetHorizontalScroll() {
+  await page.evaluate(() => {
+    window.scrollTo(0, window.scrollY)
+    for (const el of [document.scrollingElement, document.documentElement, document.body]) if (el) el.scrollLeft = 0
+  })
+}
+
 /** After setRole (applies role default), toggle #themeBtn once if non-default wanted. */
 async function setTheme(theme, roleDefault) {
   const current = await page.evaluate(() => {
@@ -265,14 +285,14 @@ async function setTheme(theme, roleDefault) {
   })
   if (current === theme) return
   if (current !== roleDefault) {
-    await page.click('#themeBtn')
+    await clickThemeBtn()
     await sleep(300)
   }
   const mid = await page.evaluate(() =>
     document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark',
   )
   if (mid !== theme) {
-    await page.click('#themeBtn')
+    await clickThemeBtn()
     await sleep(300)
   }
   const final = await page.evaluate(() =>
@@ -334,6 +354,7 @@ async function setCurrency(roleId, currency) {
 }
 
 async function shoot(file) {
+  await resetHorizontalScroll()
   const path = join(OUT, file)
   await page.screenshot({ path, type: 'png', fullPage: false })
   return path
