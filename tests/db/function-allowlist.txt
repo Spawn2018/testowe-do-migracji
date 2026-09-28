@@ -87,3 +87,6 @@ authenticated doc_requirement_set
 authenticated doc_requirements_status
 authenticated document_supersede
 authenticated invoice_dispute_reply
+authenticated load_permit_link
+authenticated load_permit_status
+authenticated permit_save

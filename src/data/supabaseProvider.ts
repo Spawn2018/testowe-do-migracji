@@ -57,7 +57,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
   async function loadSnapshot(): Promise<DataSnapshot> {
     await ensureContext();
     const at = now();
-    const [loads, events, messages, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ] = await Promise.all([
+    const [loads, events, messages, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ] = await Promise.all([
       sb.from('loads').select(LOAD_COLUMNS).neq('status', 'CANCELLED').order('plan_load_date', { ascending: true, nullsFirst: false }),
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
@@ -77,7 +77,11 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.from('schedule_imports').select('id,version,file_name,stats,imported_at').order('version', { ascending: false }).limit(20),
       // 0076 (PLAN §1.5): dane kierowcy nie są kolumnami loads dla API — tylko HHL i przewoźnik transportu (RPC); inni: 0 wierszy
       sb.rpc('load_driver_contacts'),
+      // 0081 (SCOPE 6.5): zgodność powiązanych zezwoleń z wymiarami zestawu — tylko transporty z zezwoleniem
+      sb.rpc('load_permit_status'),
     ]);
+    const permitOk = new Map(((permitQ.error ? [] : permitQ.data ?? []) as { load_id: string; permits_linked: number; ok: boolean }[])
+      .filter((p) => p.permits_linked > 0).map((p) => [p.load_id, p.ok]));
     const drivers = new Map(((driversQ.error ? [] : driversQ.data ?? []) as { load_id: string; driver_name: string | null; driver_phone: string | null }[])
       .map((d) => [d.load_id, d]));
     const docRows = must(docs, 'documents') as DocumentRow[];
@@ -87,7 +91,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       ...emptySnapshot(), // automatyzacje: Etap 4 — puste, nie demo
       loads: (must(loads, 'loads') as unknown as LoadRow[])
         .map((r) => ({ ...r, driver_name: drivers.get(r.id)?.driver_name ?? null, driver_phone: drivers.get(r.id)?.driver_phone ?? null }))
-        .map((r, i) => applyPriceViews(loadFromRow(r, orgs, i, at), costBy.get(r.id), revBy.get(r.id))),
+        .map((r, i) => applyPriceViews(loadFromRow(r, orgs, i, at), costBy.get(r.id), revBy.get(r.id)))
+        .map((l) => (permitOk.has(l.id) ? { ...l, permitFits: permitOk.get(l.id) ?? null } : l)),
       events: (must(events, 'load_events') as EventRow[]).map(eventFromRow),
       messages: (must(messages, 'load_messages') as MessageRow[]).map(messageFromRow),
       geofences: (must(geos, 'v_geofences_circle') as GeofenceRow[]).map((g) => geofenceFromRow(g, orgs)),

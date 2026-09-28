@@ -70,3 +70,6 @@ doc_requirement_set | GUARD | select doc_requirement_set('$P', 'CMR', true, 'CAR
 doc_requirements_status | EMPTY | select count(*) from doc_requirements_status('$P') | 0
 document_supersede | GUARD | select document_supersede(gen_random_uuid(), gen_random_uuid()) | Brak aktywnego konta
 invoice_dispute_reply | GUARD | select invoice_dispute_reply('$INV', 'x') | Brak aktywnego konta
+load_permit_link | GUARD | select load_permit_link('$L1', '$PERMIT') | HHL albo przewoźnik transportu
+load_permit_status | EMPTY | select count(*) from load_permit_status() | 0
+permit_save | GUARD | select permit_save('$P', 'PL', 'X-1', current_date, current_date + 30, 30, 4, 4.5, 60) | HHL albo przewoźnik

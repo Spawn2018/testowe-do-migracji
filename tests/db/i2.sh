@@ -606,4 +606,28 @@ $PSQL -c "update invoices set payment_status='NIEOPLACONA', paid_at=null, verifi
 echo; echo "[I-25] opóźnienie od końca okna dostawy (0080) — przeliczenie na transporcie"
 $PSQL -c "update loads set plan_delivery_date='2026-10-01', plan_delivery_from='2026-10-01 08:00 Europe/Stockholm', plan_delivery_to='2026-10-01 12:00 Europe/Stockholm' where id='$L2'" >/dev/null 2>&1
 chk "transport z oknem: delay_minutes = ETA − koniec okna (po refresh_load_eta)" "$(Q "select refresh_load_eta('$L2'); select (delay_minutes is not distinct from greatest(0, round(extract(epoch from eta_site - plan_delivery_to)/60))::int)::text from loads where id='$L2'")" "true"
+echo; echo "[6.5] walidator zezwoleń i wymiarów zestawu (0081)"
+LP=33333333-0000-0000-0000-0000000006d1
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status) values ('$LP','$P','00000000-0000-0000-0000-00000000a003','KSH/P1','DOCS_PENDING')" >/dev/null
+$PSQL -c "update loads set plan_load_date=current_date+3, hhl_order_no='HHL/P1' where id='$LP'" >/dev/null
+chk "anon bez uprawnień do permits; authenticated tylko SELECT" "$(Q "select has_table_privilege('anon','permits','select')::text||'/'||has_table_privilege('authenticated','permits','insert')::text||'/'||has_table_privilege('authenticated','permits','select')::text")" "false/false/true"
+err "KSH nie zapisuje zezwoleń" $KSH "select permit_save('$P','PL','PL/1',current_date,current_date+30,30,4,4.5,60)" "HHL albo przewoźnik"
+err "SCX: kraj spoza PL/SE odrzucony" $SCX "select permit_save('$P','DE','DE/1',current_date,current_date+30,30,4,4.5,60)" "PL albo SE"
+val "SCX zapisuje zezwolenie PL (dł. ≤ 30 m, szer. ≤ 4 m, wys. ≤ 4,5 m, masa ≤ 60 t)" $SCX "select (permit_save('$P','PL','PL/7/2026',current_date,current_date+30,30,4,4.5,60) is not null)::text" true commit
+PM=$(Q "select id from permits where permit_no='PL/7/2026'")
+val "SCX łączy zezwolenie z własnym transportem" $SCX "select load_permit_link('$LP','$PM')::text" true commit
+err "KSH nie łączy zezwoleń" $KSH "select load_permit_link('$LP','$PM')" "HHL albo przewoźnik transportu"
+val "nieznane wymiary zestawu = naruszenie DIMS_UNKNOWN (nie „pasuje”)" $SCX "select ok::text||'/'||array_to_string(breaches,',') from load_permit_status() where load_id='$LP'" "false/DIMS_UNKNOWN"
+err "blokada: DOCS_PENDING → READY przy niezgodnym zezwoleniu" $HHL "update loads set status='READY' where id='$LP'" "transport zablokowany"
+$PSQL -c "update loads set combo_length_m=32.5, combo_width_m=3.9, combo_height_m=4.4, combo_weight_t=58 where id='$LP'" >/dev/null
+val "zestaw 32,5 m przy limicie 30 m → LENGTH" $KSH "select ok::text||'/'||array_to_string(breaches,',')||'/'||array_to_string(missing_countries,',') from load_permit_status() where load_id='$LP'" "false/LENGTH/SE"
+err "blokada nadal: długość ponad limit" $SCX "update loads set status='READY' where id='$LP'" "PL PL/7/2026: LENGTH"
+$PSQL -c "update loads set combo_length_m=29.8 where id='$LP'" >/dev/null
+val "zestaw w limitach → OK (brak SE sygnalizowany, nie blokuje)" $SCX "select ok::text||'/'||array_to_string(missing_countries,',') from load_permit_status() where load_id='$LP'" "true/SE"
+val "zgodne zezwolenie: DOCS_PENDING → READY przechodzi" $HHL "update loads set status='READY' where id='$LP' returning status" READY commit
+val "KSH widzi zezwolenie powiązane z transportem projektu" $KSH "select count(*) from permits where id='$PM'" 1
+$PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER') on conflict do nothing; insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH') on conflict do nothing" >/dev/null
+val "inny przewoźnik nie widzi zezwolenia cudzego transportu" 11111111-0000-0000-0000-00000000000b "select count(*) from permits where id='$PM'" 0
+err "inny przewoźnik nie łączy z cudzym transportem" 11111111-0000-0000-0000-00000000000b "select load_permit_link('$LP','$PM')" "przewoźnik transportu"
+$PSQL -c "delete from load_permits where load_id='$LP'; update loads set status='CANCELLED' where id='$LP'; delete from app_users where email='cx3@test'; delete from organizations where code='CX3'" >/dev/null
 echo; echo "WYNIK: $ok OK, $fail FAIL"

@@ -501,6 +501,8 @@ const pl: Dict = {
   iii7_reply_empty: 'Wpisz treść odpowiedzi',
   iii7_reply_sent: 'Odpowiedź wysłana odbiorcy faktury',
   iii7_pay_blocked: 'Faktura w sporze — zapłata wstrzymana do rozstrzygnięcia',
+  v65_permit_mismatch_b: 'Zezwolenie niezgodne z zestawem.',
+  v65_permit_mismatch: 'Wymiary lub masa zestawu przekraczają limity powiązanego zezwolenia albo nie są podane — transport zablokowany do czasu poprawy (baza odrzuci „Gotowy”).',
 };
 
 const en: Dict = {
@@ -998,6 +1000,8 @@ const en: Dict = {
   iii7_reply_empty: 'Enter a reply',
   iii7_reply_sent: 'Reply sent to the invoice recipient',
   iii7_pay_blocked: 'Invoice disputed — payment on hold until resolved',
+  v65_permit_mismatch_b: 'Permit does not match the combination.',
+  v65_permit_mismatch: 'Combination dimensions or weight exceed the linked permit limits or are missing — the transport is blocked until corrected (the database rejects “Ready”).',
 };
 
 const sv: Dict = {
@@ -1495,6 +1499,8 @@ const sv: Dict = {
   iii7_reply_empty: 'Skriv ett svar',
   iii7_reply_sent: 'Svaret skickat till fakturamottagaren',
   iii7_pay_blocked: 'Faktura bestridd — betalning pausad tills tvisten är avgjord',
+  v65_permit_mismatch_b: 'Tillståndet stämmer inte med ekipaget.',
+  v65_permit_mismatch: 'Ekipagets mått eller vikt överskrider det kopplade tillståndets gränser eller saknas — transporten är spärrad tills det rättas (databasen avvisar ”Klar”).',
 };
 
 export const UI6_I18N: Record<Locale, Dict> = { pl, en, sv };

@@ -121,7 +121,7 @@ Czym udowadniamy, że pozycja jest `GOTOWE`. Bez dowodu status się nie zmienia.
 | 6.2 | Wersjonowanie i widoczność per organizacja | ZROBIONE 28.09 (III-6) | 0078 `document_supersede`, `docs_scope` (dokument organizacyjny przewoźnika niewidoczny dla innego przewoźnika); i2 [III-6]; `tests/doc-versions.test.ts` | |
 | 6.3 | Odnośniki z krótkim czasem ważności | | | |
 | 6.4 | Zezwolenia: pola, ważność, trasa, pilotaż | | | wzór do zmapowania |
-| 6.5 | Walidator wymiarów zestawu wobec zezwolenia | | testy | blokuje transport |
+| 6.5 | Walidator wymiarów zestawu wobec zezwolenia | ZROBIONE 28.09 | 0081 `permit_fits` (brak wymiaru = DIMS_UNKNOWN), `load_permit_status`, blokada READY `trg_loads_permit_gate`; i2 [6.5]; e2e `tests/permit-validator.local.spec.ts` | blokuje transport z niezgodnym zezwoleniem; brak zezwolenia — sygnał, nie blokada |
 | 6.6 | Polisy z alertem wygaśnięcia | | | |
 | 6.7 | Potwierdzenie dostawy i zdjęcia mocowania | | | |
 | 6.8 | Pobieranie paczki per transport i per tydzień | | | |

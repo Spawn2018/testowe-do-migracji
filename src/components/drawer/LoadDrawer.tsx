@@ -345,7 +345,11 @@ export function LoadDrawer() {
                 </dd>
               </dl>
 
-              {permitState ? (
+              {load.permitFits === false ? (
+                <div className="banner red" data-permit="mismatch" style={{ margin: '13px 0 0' }}>
+                  <b>{t(locale, 'v65_permit_mismatch_b')}</b> {t(locale, 'v65_permit_mismatch')}
+                </div>
+              ) : permitState ? (
                 permitState.kind === 'not_required' ? (
                   <div className="banner" data-permit="not_required" style={{ margin: '13px 0 0' }}>{t(locale, 'i2_permit_not_required')}</div>
                 ) : permitState.kind === 'uploaded_unchecked' ? (
@@ -831,6 +835,7 @@ export function LoadDrawer() {
                 <button
                   type="button"
                   className="btn"
+                  data-action="mark-ready"
                   disabled={readyUiBlocked}
                   title={permitBlock ? readyGateReasonLabel(readyGate.reason, locale) : undefined}
                   onClick={() => {
