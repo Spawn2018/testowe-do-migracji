@@ -97,3 +97,5 @@ authenticated load_permit_unlink
 authenticated load_escorts_set
 authenticated load_escort_status
 authenticated load_track
+authenticated carrier_rate_load
+authenticated carrier_scorecard

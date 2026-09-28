@@ -135,7 +135,7 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 **III-6** (P2, z I-11: SCOPE 6.1, 6.2) dokumenty: wymagalność i terminy per kategoria w bazie, wersjonowanie dokumentu — DONE 28.09 (0078; terminy startowe = PROPOZYCJA do potwierdzenia z SCX/KSH) ·
 **III-7** (P2, z I-11: SCOPE 7.10) pełna ścieżka sporu i akceptacji faktury — DONE 28.09 (0079; korekta z załączonym PDF w UI — 0082) ·
 **III-8** — (numer zarezerwowany, nieużyty) ·
-**III-9** (P2, z I-11: SCOPE 10.4, 10.6) widok placu budowy tylko do odczytu (opcjonalny), ocena przewoźnika — DO ZROBIENIA ·
+**III-9** (P2, z I-11: SCOPE 10.4, 10.6) widok placu budowy tylko do odczytu (opcjonalny), ocena przewoźnika — 10.6 DONE 28.09 (0089: `carrier_ratings`, `carrier_rate_load` tylko HHL po rozładunku 1–5, `carrier_scorecard` — karta w Opcjach, ocena w szufladzie; widoczność dla przewoźnika — D-23); 10.4 (widok placu budowy, opcjonalny) → D-24 ·
 Silnik Workflows · źródło pogody morskiej · walidator zezwoleń i wymiarów (DONE 28.09, 0081 — SCOPE 6.5; formularz zezwoleń w UI = SCOPE 6.4 — **DONE 28.09 (0086)**: szuflada → Dokumenty → „Zezwolenia transportu”, HHL i przewoźnik transportu, KSH tylko odczyt) ·
 pozycje D4–D12 audytu · integracja SharePoint (zgoda IT KSH) · kalendarz ·
 e-CMR · ślad węglowy · SMS 6, 7, 10, 11 · retencja `files/` w R2 ·
@@ -171,3 +171,5 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | D-20 | wiadomości do osób zewnętrznych (SMS do kierowców, e-mail poza log-mar.pl) — blokada techniczna do R-2 (0068, flaga `EXTERNAL_MESSAGING`); włącza HHL_ADMIN po podpisaniu umów RODO (D-5) | R-2 |
 | D-21 | **DZIAŁANIE WŁAŚCICIELA przed pierwszym prawdziwym transportem (R-3):** włączyć przełącznik I-27 „brak zezwolenia blokuje Gotowy” dla klas innych niż STANDARD — Opcje → „Wymóg zezwoleń (transporty ponadnormatywne)” → „Włącz wymóg” (konto HHL_ADMIN; wpis w audit_log). Stan na 28.09: przełącznik jest, **WYŁĄCZONY** (produkcja nie ma jeszcze zezwoleń w bazie) | R-3 |
 | D-22 | (z III-4) czy przechowywać imię i telefon kierowcy pojazdu pilotującego (dane osobowe → retencja 90 dni jak kierowca, widoczność jak D6)? Dziś zapisujemy tylko firmę, tablicę i zakres PL/SE | III-4 (rozszerzenie) |
+| D-23 | (z III-9) czy przewoźnik ma widzieć swoje oceny i kartę (zrealizowane, na czas, średnia ocena)? Dziś ocena jest wewnętrzna HHL: tabela z RLS tylko HHL, `carrier_scorecard` odmawia innym | III-9 (rozszerzenie) |
+| D-24 | (z III-9, SCOPE 10.4 opcjonalny) widok placu budowy tylko do odczytu: wymaga nowej roli lub kont (kierownik placu), nowego widoku i wzorca wizualnego spoza makiety v2.0 — czy robić, dla kogo i w jakim zakresie? Do decyzji odłożone | III-9 (10.4) |

@@ -717,6 +717,26 @@ val "limit 2 → dwa najnowsze punkty, nadal rosnąco" $HHL "select string_agg(l
 $PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER') on conflict do nothing; insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH') on conflict do nothing" >/dev/null
 val "inny przewoźnik: 0 punktów (RLS positions_read)" 11111111-0000-0000-0000-00000000000b "select count(*) from load_track('$LT')" 0
 $PSQL -c "delete from app_users where email='cx3@test'; delete from organizations where code='CX3'; update loads set status='CANCELLED' where id='$LT'" >/dev/null 2>&1
+echo; echo "[III-9] ocena przewoźnika (0089)"
+R1=33333333-0000-0000-0000-0000000039a1; R2=33333333-0000-0000-0000-0000000039a2; R3=33333333-0000-0000-0000-0000000039a3
+$PSQL -c "set session_replication_role=replica;
+ insert into loads (id, project_id, carrier_org_id, order_no, status, plan_delivery_date, plan_delivery_to, actual_delivery_at, delay_owner) values
+ ('$R1','$P','00000000-0000-0000-0000-00000000a003','KSH/R1','UNLOADED','2026-09-10','2026-09-10 12:00 Europe/Stockholm','2026-09-10 11:00 Europe/Stockholm',null),
+ ('$R2','$P','00000000-0000-0000-0000-00000000a003','KSH/R2','DELIVERED','2026-09-12',null,'2026-09-13 02:00 Europe/Stockholm','CARRIER'),
+ ('$R3','$P','00000000-0000-0000-0000-00000000a003','KSH/R3','PLANNED','2026-10-12',null,null,null)" >/dev/null
+chk "carrier_ratings: anon 0, authenticated tylko SELECT (RLS: HHL)" "$(Q "select has_table_privilege('anon','carrier_ratings','select')::text||'/'||has_table_privilege('authenticated','carrier_ratings','insert')::text||'/'||has_table_privilege('authenticated','carrier_ratings','select')::text")" "false/false/true"
+err "SCX nie ocenia" $SCX "select carrier_rate_load('$R1', 5)" "wyłącznie HHL"
+err "KSH nie ocenia" $KSH "select carrier_rate_load('$R1', 5)" "wyłącznie HHL"
+err "przed rozładunkiem → odmowa" $HHL "select carrier_rate_load('$R3', 4)" "po rozładunku"
+err "ocena spoza 1–5 → odmowa" $HHL "select carrier_rate_load('$R1', 6)" "Ocena 1–5"
+val "HHL ocenia transport rozładowany (5)" $HHL "select carrier_rate_load('$R1', 5, 'Bez uwag')::text" true commit
+val "HHL ocenia transport dostarczony (2) i zmienia na 3 (nadpisanie)" $HHL "select carrier_rate_load('$R2', 2)::text; select carrier_rate_load('$R2', 3, 'Spóźnienie 2 h')::text" true commit
+chk "2 oceny, audit_log CARRIER_RATING ×3, stara wartość przy zmianie" "$(Q "select count(*) from carrier_ratings where load_id in ('$R1','$R2')")/$(Q "select count(*) from audit_log where action='CARRIER_RATING' and entity_id in ('$R1','$R2')")/$(Q "select old_value->>'score' from audit_log where action='CARRIER_RATING' and entity_id='$R2' and old_value is not null")" "2/3/2"
+val "SCX nie widzi ocen (0 wierszy)" $SCX "select count(*) from carrier_ratings" 0
+val "KSH nie widzi ocen (0 wierszy)" $KSH "select count(*) from carrier_ratings" 0
+err "karta przewoźnika: SCX odmowa" $SCX "select * from carrier_scorecard()" "wyłącznie dla HHL"
+val "karta: zrealizowane 2, na czas 1 (R1 przed końcem okna; R2 po północy dnia dostawy), z winy przewoźnika 1, śr. spóźnienie 120 min, śr. ocena 4, ocen 2" $HHL "select delivered||'/'||on_time||'/'||late_carrier||'/'||avg_late_min||'/'||avg_score||'/'||ratings from carrier_scorecard('2026-09-01','2026-09-30') where carrier_org_id='00000000-0000-0000-0000-00000000a003'" "2/1/1/120/4.00/2"
+$PSQL -c "set session_replication_role=replica; update loads set status='CANCELLED' where id in ('$R1','$R2','$R3')" >/dev/null
 chk "I-28: load_delivery_day_end usunięta (0085), load_delivery_deadline zostaje" "$(Q "select (to_regprocedure('load_delivery_day_end(date,timestamptz)') is null)::text||'/'||(to_regprocedure('load_delivery_deadline(date,timestamptz)') is not null)::text")" "true/true"
 echo; echo "[I-27] brak zezwolenia blokuje Gotowy dla klasy ≠ STANDARD (0084, przełącznik)"
 LD=33333333-0000-0000-0000-0000000027d1; LS=33333333-0000-0000-0000-0000000027a1

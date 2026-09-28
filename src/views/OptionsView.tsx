@@ -28,6 +28,7 @@ const RateCardForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_A
 const SmsGateway = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/SmsGateway')) : null;
 /* I-27 — wymóg zezwoleń dla transportów ponadnormatywnych (0084) — tylko Supabase */
 const PermitRequirement = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/PermitRequirement')) : null;
+const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
 const MyDevices = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/MyDevices')) : null;
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
@@ -151,6 +152,7 @@ export function OptionsView() {
         {BafForm && <Suspense fallback={null}><BafForm /></Suspense>}
         {SmsGateway && <Suspense fallback={null}><SmsGateway /></Suspense>}
         {PermitRequirement && <Suspense fallback={null}><PermitRequirement /></Suspense>}
+        {CarrierScorecard && <Suspense fallback={null}><CarrierScorecard /></Suspense>}
 
         <UiPrefsPanel onSaved={saveMark} showDemoMarks={shows('demoMarksToggle')} />
 

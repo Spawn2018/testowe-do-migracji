@@ -44,6 +44,7 @@ import { delayPillMinutes, permitBannerState } from '../../lib/prodDash';
 /* SCOPE 6.4 — formularz zezwoleń: tylko build Supabase, chunk leniwy (paczka demo bez niego) */
 const PermitForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/PermitForm')) : null;
 /* III-4 — pojazdy pilotujące z bazy (load_escorts): tylko build Supabase; demo zostaje przy polu „Pilot” formularza zasobów */
+const CarrierRating = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/CarrierRating')) : null;
 const EscortPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/EscortPanel')) : null;
 
 /** M8 — poziom, mnożnik paliwowy z datą i kurs strony wyceny. */
@@ -379,6 +380,7 @@ export function LoadDrawer() {
               )}
               {/* I-18: status dat planu — na zakładce przeglądu (widoczny dla trzech ról bez przełączania) */}
               {import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED && load.planDates && isServerId(load.id) && <PlanDatesPanel load={load} />}
+              {CarrierRating && role === 'HHL' && isServerId(load.id) && <Suspense fallback={null}><CarrierRating key={load.id} loadId={load.id} /></Suspense>}
             </>
           )}
 

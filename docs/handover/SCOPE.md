@@ -1526,8 +1526,8 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 9.8 | DO ZROBIENIA (częściowo) | PLAN I-23 |
 | 9.9 | ODŁOŻONA | Dziennik odłożeń |
 | 9.10 | ODŁOŻONA | Dziennik odłożeń; Etap III (kalendarz) |
-| 10.4 | DO ZROBIENIA | PLAN III-9 (opcjonalny) |
-| 10.6 | DO ZROBIENIA | PLAN III-9 |
+| 10.4 | ODŁOŻONE (decyzja właściciela) | PLAN D-24 (opcjonalny) |
+| 10.6 | DONE 28.09 | PLAN III-9 (0089, karta przewoźników w Opcjach, ocena w szufladzie) |
 | 10.7 | GOTOWE | I-2l `825da20`: czas wykrycia z `risk_signals` |
 | 10.8 | DO ZROBIENIA (częściowo) | PLAN I-24 (PDF) |
 | 10.9 | ODŁOŻONA | Dziennik odłożeń; Etap III (ślad węglowy) |
