@@ -21,7 +21,7 @@ import {
 export const PROJECT_CODE = 'STEGRA_BODEN';
 const LOAD_COLUMNS =
   'id,order_no,carrier_org_id,status,plan_load_date,plan_load_from,plan_load_to,plan_delivery_date,plan_delivery_from,' +
-  'plan_delivery_to,tractor_plate,trailer_plate,driver_name,driver_phone,escort_vehicles,ferry_booking_ref,sailing_id,' +
+  'plan_delivery_to,tractor_plate,trailer_plate,escort_vehicles,ferry_booking_ref,sailing_id,' +
   'plan_dates_status,plan_dates_confirmed_at,' +
   'combo_length_m,combo_width_m,combo_height_m,combo_weight_t,delay_minutes,eta_site,eta_confidence_min,eta_basis,eta_computed_at,hhl_order_no,carrier_order_no,actual_delivery_at,' +
   'shipment_items(shipment_code,item_type,cargo_class,length_m,width_m,height_m,total_weight_t,unit_weight_t,qty,assembly_seq),' +
@@ -57,7 +57,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
   async function loadSnapshot(): Promise<DataSnapshot> {
     await ensureContext();
     const at = now();
-    const [loads, events, messages, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ] = await Promise.all([
+    const [loads, events, messages, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ] = await Promise.all([
       sb.from('loads').select(LOAD_COLUMNS).neq('status', 'CANCELLED').order('plan_load_date', { ascending: true, nullsFirst: false }),
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
@@ -75,13 +75,19 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.from('sailings').select(SAILING_COLUMNS).order('departure_at', { ascending: true }),
       // I-1: wersje importu harmonogramu (RLS schedule_imports_hhl — tylko HHL; pozostali: 0 wierszy)
       sb.from('schedule_imports').select('id,version,file_name,stats,imported_at').order('version', { ascending: false }).limit(20),
+      // 0076 (PLAN §1.5): dane kierowcy nie są kolumnami loads dla API — tylko HHL i przewoźnik transportu (RPC); inni: 0 wierszy
+      sb.rpc('load_driver_contacts'),
     ]);
+    const drivers = new Map(((driversQ.error ? [] : driversQ.data ?? []) as { load_id: string; driver_name: string | null; driver_phone: string | null }[])
+      .map((d) => [d.load_id, d]));
     const docRows = must(docs, 'documents') as DocumentRow[];
     const costBy = new Map((must(costV, 'v_load_price_carrier') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
     const revBy = new Map((must(revV, 'v_load_price_client') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
     return {
       ...emptySnapshot(), // automatyzacje: Etap 4 — puste, nie demo
-      loads: (must(loads, 'loads') as unknown as LoadRow[]).map((r, i) => applyPriceViews(loadFromRow(r, orgs, i, at), costBy.get(r.id), revBy.get(r.id))),
+      loads: (must(loads, 'loads') as unknown as LoadRow[])
+        .map((r) => ({ ...r, driver_name: drivers.get(r.id)?.driver_name ?? null, driver_phone: drivers.get(r.id)?.driver_phone ?? null }))
+        .map((r, i) => applyPriceViews(loadFromRow(r, orgs, i, at), costBy.get(r.id), revBy.get(r.id))),
       events: (must(events, 'load_events') as EventRow[]).map(eventFromRow),
       messages: (must(messages, 'load_messages') as MessageRow[]).map(messageFromRow),
       geofences: (must(geos, 'v_geofences_circle') as GeofenceRow[]).map((g) => geofenceFromRow(g, orgs)),

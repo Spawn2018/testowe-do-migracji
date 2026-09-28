@@ -270,7 +270,7 @@ projekcie — wchodzą do rejestru, żeby nie zginęły przy przejęciu.
 | 13.9 | Format daty odszedł od projektu: „30.09.2026, 02:00" zamiast „30.09 06:00" | niska | harmonogram | |
 | 13.10 | Dane zastępcze: „Driver 1", „+48 600 000 000", „PSE 1000" | średnia | wszystkie role | osłabia demonstrację |
 | 13.11 | Ciągi debugowe w interfejsie: `permitFits=false`, `CANCELLED`, `E4 CLOSED` | średnia | kolejka ryzyk | także język angielski w polskim UI |
-| 13.12 | Telefon kierowcy w tabeli dla wszystkich ról, w tym klienta | wysoka | harmonogram | dane osobowe, RODO |
+| 13.12 | Telefon kierowcy w tabeli dla wszystkich ról, w tym klienta | wysoka | harmonogram | dane osobowe, RODO — **NAPRAWIONE 28.09 (0076, SEC-1 w POSTEP)** |
 | 13.13 | `data-theme="dark"` zaszyte w `<html>` — ustawienie systemu ignorowane | niska | źródło strony | regresja naprawiona w makiecie |
 | 13.14 | Udział paliwa = 0% — przy tym wzorze BAF zawsze wyjdzie zero | wysoka | Opcje | do potwierdzenia: wzór czy niewypełnione pole |
 | 13.15 | Nowe wzorce wizualne poza katalogiem komponentów | średnia | eyebrow wersalikami, tytuł strony, etykieta w nagłówku panelu, karty przeciągane | przyjąć do systemu albo usunąć |

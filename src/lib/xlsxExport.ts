@@ -1,6 +1,8 @@
 /** Schedule export → XLSX (ExcelJS) for HHL Eksport / any role. */
 import ExcelJS from 'exceljs';
-import type { Load } from '../types';
+import type { Load, RoleId } from '../types';
+import { canSeeCost, canSeeMargin, canSeeRevenue, visibleDriverPhone } from './permissions';
+import { getNowMs } from './frozenNow';
 
 function toUint8Array(buf: ArrayBuffer | Uint8Array | ExcelJS.Buffer): Uint8Array {
   if (buf instanceof Uint8Array) return buf;
@@ -68,31 +70,52 @@ function triggerBlobDownload(bytes: Uint8Array, filename: string): number {
   return blob.size;
 }
 
-const HEADERS = [
-  'Kod',
-  'Typ',
-  'Ilość',
-  'L_m',
-  'W_m',
-  'H_m',
-  'Masa_t',
-  'Status',
-  'Etap',
-  'Załadunek',
-  'Dostawa',
-  'ETA_Boden',
-  'Kierowca',
-  'Telefon',
-  'Ciągnik',
-  'Naczepa',
-  'Prom',
-  'Rezerwacja',
-  'Koszt_PLN',
-  'Przychód_PLN',
-  'Marża_PLN',
-] as const;
+/**
+ * PLAN §1.5 (28.09) — kolumny eksportu zależą od roli; kolumny niedozwolonej roli NIE istnieją w pliku (także puste).
+ * HHL: wszystko. KSH (klient): cena (przychód HHL), bez kosztu przewoźnika, marży i imienia kierowcy; telefon kierowcy
+ * tylko w oknie ±24 h od dostawy (D6, jak baza 0076). SCX (przewoźnik): koszt (własna stawka) i kierowca, bez przychodu i marży.
+ */
+export interface ExportColumn { header: string; value: (l: Load, nowMs: number) => string | number }
 
-export async function exportLoadsXlsx(loads: Load[], filename = 'WATCH_TOWER_harmonogram.xlsx') {
+export function exportColumnsFor(role: RoleId, currency = 'EUR'): ExportColumn[] {
+  const std = (l: Load, v: number | null | undefined) => (l.dims.cargoClass === 'STANDARD' ? 'Standard' : (v ?? ''));
+  const cols: ExportColumn[] = [
+    { header: 'Kod', value: (l) => l.code },
+    { header: 'Typ', value: (l) => l.itemType ?? '' },
+    { header: 'Ilość', value: (l) => l.qty },
+    { header: 'L_m', value: (l) => std(l, l.dims.lengthM) },
+    { header: 'W_m', value: (l) => std(l, l.dims.widthM) },
+    { header: 'H_m', value: (l) => std(l, l.dims.heightM) },
+    { header: 'Masa_t', value: (l) => l.dims.weightT ?? '' },
+    { header: 'Status', value: (l) => l.status },
+    { header: 'Etap', value: (l) => l.stage },
+    { header: 'Załadunek', value: (l) => l.plannedLoadDate ?? '' },
+    { header: 'Dostawa', value: (l) => l.plannedDeliverDate ?? '' },
+    { header: 'ETA_Boden', value: (l) => l.etaBoden ?? '' },
+  ];
+  if (role === 'HHL' || role === 'SCX') cols.push({ header: 'Kierowca', value: (l) => l.resources.driverName ?? '' });
+  if (role === 'HHL' || role === 'SCX' || role === 'KSH') {
+    cols.push({ header: 'Telefon', value: (l, now) => visibleDriverPhone(role, l, now) ?? '' });
+  }
+  cols.push(
+    { header: 'Ciągnik', value: (l) => l.resources.tractorPlate ?? '' },
+    { header: 'Naczepa', value: (l) => l.resources.trailerPlate ?? '' },
+    { header: 'Prom', value: (l) => l.ferry.vessel ?? '' },
+    { header: 'Rezerwacja', value: (l) => l.ferry.bookingRef ?? '' },
+  );
+  if (canSeeCost(role)) cols.push({ header: `Koszt_${currency}`, value: (l) => l.pricing.costTotal });
+  if (canSeeRevenue(role)) cols.push({ header: role === 'KSH' ? `Cena_${currency}` : `Przychód_${currency}`, value: (l) => l.pricing.revTotal });
+  if (canSeeMargin(role)) cols.push({ header: `Marża_${currency}`, value: (l) => l.pricing.margin });
+  return cols;
+}
+
+/** Wiersze arkusza (nagłówek + dane) — czysta funkcja, testowana w vitest. */
+export function exportRows(loads: Load[], role: RoleId, nowMs: number = getNowMs()): (string | number)[][] {
+  const cols = exportColumnsFor(role, loads[0]?.pricing.currency ?? 'EUR');
+  return [cols.map((c) => c.header), ...loads.map((l) => cols.map((c) => c.value(l, nowMs)))];
+}
+
+export async function exportLoadsXlsx(loads: Load[], role: RoleId, filename = 'WATCH_TOWER_harmonogram.xlsx') {
   // Prefer File System Access when interactive (skip under webdriver/CDP —
   // headless often AbortError's the picker and would kill the blob fallback).
   let fileHandle: FileSystemFileHandle | null = null;
@@ -142,33 +165,9 @@ export async function exportLoadsXlsx(loads: Load[], filename = 'WATCH_TOWER_har
   wb.creator = 'WATCH TOWER';
   wb.created = new Date();
   const ws = wb.addWorksheet('Harmonogram', { views: [{ state: 'frozen', ySplit: 1 }] });
-  ws.addRow([...HEADERS]);
+  const rows = exportRows(loads, role);
+  for (const r of rows) ws.addRow(r);
   ws.getRow(1).font = { bold: true };
-  for (const l of loads) {
-    ws.addRow([
-      l.code,
-      l.itemType,
-      l.qty,
-      l.dims.cargoClass === 'STANDARD' ? 'Standard' : l.dims.lengthM,
-      l.dims.cargoClass === 'STANDARD' ? 'Standard' : l.dims.widthM,
-      l.dims.cargoClass === 'STANDARD' ? 'Standard' : l.dims.heightM,
-      l.dims.weightT,
-      l.status,
-      l.stage,
-      l.plannedLoadDate,
-      l.plannedDeliverDate,
-      l.etaBoden ?? '',
-      l.resources.driverName ?? '',
-      l.resources.driverPhone ?? '',
-      l.resources.tractorPlate ?? '',
-      l.resources.trailerPlate ?? '',
-      l.ferry.vessel ?? '',
-      l.ferry.bookingRef ?? '',
-      l.pricing.costTotal,
-      l.pricing.revTotal,
-      l.pricing.margin,
-    ]);
-  }
   ws.columns.forEach((col) => {
     col.width = Math.min(22, Math.max(10, Number(col.width) || 12));
   });

@@ -325,7 +325,7 @@ export function ScheduleView() {
               void (async () => {
                 try {
                   const { exportLoadsXlsx } = await import('../lib/xlsxExport');
-                  const result = await exportLoadsXlsx(loads, `WATCH_TOWER_${role}_harmonogram.xlsx`);
+                  const result = await exportLoadsXlsx(loads, role, `WATCH_TOWER_${role}_harmonogram.xlsx`);
                   pushToast(tp(locale, 'a6_sch_export_ok', { rows: String(result.rows), bytes: String(result.bytes) }), 'MEDIUM');
                 } catch (err: unknown) {
                   const msg = err instanceof Error ? err.message : String(err);

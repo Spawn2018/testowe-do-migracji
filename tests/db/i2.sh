@@ -527,4 +527,16 @@ echo; echo "[I-23] odsiewanie duplikatów powiadomień (unikalny dedup_key)"
 chk "unikalny indeks notifications_dedup_key_idx (dedup_key not null)" "$(Q "select count(*) from pg_indexes where tablename='notifications' and indexname='notifications_dedup_key_idx' and indexdef like '%UNIQUE%' and indexdef like '%dedup_key IS NOT NULL%'")" 1
 chk "ten sam dedup_key dwa razy: jeden wiersz (on conflict do nothing), drugi zwykły INSERT odrzucony" "$(Q "insert into notifications (channel, recipient, template, dedup_key) values ('IN_APP','ops@log-mar.pl','ORDER_NO_MISSING','i23:test') on conflict (dedup_key) where dedup_key is not null do nothing; insert into notifications (channel, recipient, template, dedup_key) values ('IN_APP','ops@log-mar.pl','ORDER_NO_MISSING','i23:test') on conflict (dedup_key) where dedup_key is not null do nothing; select count(*) from notifications where dedup_key='i23:test'")/$($PSQL -c "insert into notifications (channel, recipient, template, dedup_key) values ('IN_APP','ops@log-mar.pl','ORDER_NO_MISSING','i23:test')" 2>&1 | grep -c notifications_dedup_key_idx)" "1/1"
 $PSQL -c "delete from notifications where dedup_key='i23:test'" >/dev/null
+echo; echo "[§1.5] dane kierowcy: kolumny loads zamknięte, load_driver_contacts per rola (0076)"
+SCXO=$(Q "select org_id from app_users where auth_id='$SCX'")
+$PSQL -c "set session_replication_role=replica; update loads set carrier_org_id='$SCXO', driver_name='Jan Probny', driver_phone='+48600123456', plan_delivery_from=now() + interval '10 days' where id='$L1'" >/dev/null
+chk "authenticated/anon: brak SELECT kolumn driver_name i driver_phone (reszta kolumn tak)" "$(Q "select has_column_privilege('authenticated','loads','driver_phone','select')::text||has_column_privilege('authenticated','loads','driver_name','select')::text||has_column_privilege('anon','loads','driver_phone','select')::text||has_column_privilege('authenticated','loads','status','select')::text")" "falsefalsefalsetrue"
+err "KSH: select driver_phone z loads odrzucony" $KSH "select driver_phone from loads limit 1" "permission denied"
+err "przewoźnik: select driver_phone z loads odrzucony (tylko RPC)" $SCX "select driver_phone from loads limit 1" "permission denied"
+val "HHL: load_driver_contacts — imię i telefon" $HHL "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Probny/+48600123456"
+val "przewoźnik transportu: load_driver_contacts — imię i telefon" $SCX "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Probny/+48600123456"
+val "KSH poza ±24 h od dostawy: 0 wierszy" $KSH "select count(*) from load_driver_contacts()" 0
+$PSQL -c "set session_replication_role=replica; update loads set plan_delivery_from=now() + interval '3 hours' where id='$L1'" >/dev/null
+val "KSH w oknie ±24 h (D6): sam telefon, bez imienia" $KSH "select coalesce(driver_name,'∅')||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "∅/+48600123456"
+$PSQL -c "set session_replication_role=replica; update loads set carrier_org_id=null, driver_name=null, driver_phone=null, plan_delivery_from=null where id='$L1'" >/dev/null
 echo; echo "WYNIK: $ok OK, $fail FAIL"
