@@ -57,3 +57,18 @@ export async function readXlsxRows(buf: ArrayBuffer): Promise<Array<Record<strin
   });
   return rows;
 }
+
+/** I-22: nagłówki pierwszego arkusza (wiersz 1), bez pustych — do kreatora mapowania kolumn. */
+export async function readXlsxHeaders(buf: ArrayBuffer): Promise<string[]> {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buf as unknown as ExcelJS.Buffer);
+  const ws = wb.worksheets[0];
+  if (!ws) return [];
+  const out: string[] = [];
+  ws.getRow(1).eachCell({ includeEmpty: false }, (cell) => {
+    const raw = unwrapCell(cell.value);
+    const h = raw == null ? '' : String(raw).trim();
+    if (h) out.push(h);
+  });
+  return out;
+}

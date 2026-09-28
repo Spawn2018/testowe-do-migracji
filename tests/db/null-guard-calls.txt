@@ -65,3 +65,4 @@ sms_send_test | GUARD | select sms_send_test(null) | wyłącznie HHL
 admin_set_external_messaging | GUARD | select admin_set_external_messaging(null) | wyłącznie administrator HHL
 sms_external_messaging_state | GUARD | select sms_external_messaging_state() | wyłącznie HHL
 load_driver_contacts | EMPTY | select count(*) from load_driver_contacts() | 0
+import_template_save | GUARD | select import_template_save('22222222-0000-0000-0000-000000000001','x','{"shipmentCode":"A","qty":"B"}','sig-ng')::text | wyłącznie HHL

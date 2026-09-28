@@ -2,6 +2,7 @@ import { PROD_BUILD } from '../lib/prodFacade';
 import { delayPillMinutes } from '../lib/prodDash';
 import { useMemo, useRef, useState } from 'react';
 import { invoicedLoadIds } from '../lib/importRemoval';
+import { MAP_FIELDS as MAP_FIELDS_UI, REQUIRED_FIELDS as REQUIRED_FIELDS_UI, type PartialColumnMap } from '../lib/importMapping';
 import { useTowerStore } from '../store/useTowerStore';
 import { filterLoads } from '../lib/selectors';
 import { StatusPill, formatDelayPill } from '../components/ui/StatusPill';
@@ -35,7 +36,7 @@ import type { ServerImportDraft } from '../data/scheduleImportServer';
 /** I-1: import w produkcji przez import_schedule() w bazie (podgląd i zapis w jednej transakcji). */
 const SERVER_IMPORT = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED;
 
-type ImportStep = null | 'upload' | 'map' | 'diff' | 'done';
+type ImportStep = null | 'upload' | 'colmap' | 'map' | 'diff' | 'done';
 type Quick =
   | 'all'
   | 'active'
@@ -92,6 +93,12 @@ export function ScheduleView() {
   const serverDraft = useRef<ServerImportDraft | null>(null);
   const [serverNote, setServerNote] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
+  /* I-22 — kreator mapowania kolumn (plik w innym układzie niż domyślny KSH) */
+  const [colHeaders, setColHeaders] = useState<string[]>([]);
+  const [colMap, setColMap] = useState<PartialColumnMap>({});
+  const [activeMap, setActiveMap] = useState<PartialColumnMap | null>(null);
+  const [tplName, setTplName] = useState('');
+  const pendingBuf = useRef<ArrayBuffer | null>(null);
   const [quick, setQuick] = useState<Quick>('all');
   const fileRef = useRef<HTMLInputElement>(null);
   const [colPrefs, setColPrefs] = useState<SchedColPrefs>(() => loadSchedPrefs());
@@ -141,7 +148,7 @@ export function ScheduleView() {
       : t(locale, 'i1_ver_none')
     : t(locale, 'a6_sch_ver_line');
 
-  const mapKeys = Object.entries(COLUMN_MAP_DEFAULT);
+  const mapKeys = activeMap ? Object.entries(activeMap) : Object.entries(COLUMN_MAP_DEFAULT);
 
   function docFlag(loadId: string, cat: DocCategory, letter: string) {
     const d = documents.find((x) => x.loadId === loadId && x.category === cat);
@@ -171,27 +178,76 @@ export function ScheduleView() {
     setParsing(true);
     serverDraft.current = null;
     setServerNote(null);
+    setActiveMap(null);
     try {
       const buf = await f.arrayBuffer();
-      if (SERVER_IMPORT) {
-        const { serverDryRun } = await import('../data/scheduleImportServer');
-        const draft = await serverDryRun(buf, f.name);
-        serverDraft.current = draft;
-        setConfirmedRows(draft.preview.confirmed ?? []);
-        setServerNote(tp(locale, 'i1_preview', { ms: String(draft.preview.ms), carrier: draft.preview.carrier ?? '—', same: String(draft.preview.unchanged) }));
-        setDryRun(draft.diff);
-        setStep('map');
+      const { readXlsxHeaders } = await import('../lib/xlsxRead');
+      const mapping = await import('../lib/importMapping');
+      const headers = await readXlsxHeaders(buf);
+      if (!mapping.defaultLayoutFits(headers)) {
+        const templates = SERVER_IMPORT
+          ? await (await import('../data/scheduleImportServer')).loadTemplates()
+          : mapping.demoTemplates();
+        const sug = mapping.suggestMap(headers, templates);
+        if (sug.template && mapping.missingRequired(sug.map).length === 0) {
+          pushToast(tp(locale, 'i22_tpl_used', { name: sug.template.name }), 'MEDIUM');
+          await runDryRun(buf, f.name, sug.map);
+          return;
+        }
+        pendingBuf.current = buf;
+        setColHeaders(headers);
+        setColMap(sug.map);
+        setTplName(f.name.replace(/\.xlsx?$/i, ''));
+        setStep('colmap');
         return;
       }
-      const { dryRunFromXlsx } = await import('../lib/scheduleDryRun');
-      const st = useTowerStore.getState();
-      const diff = await dryRunFromXlsx(buf, f.name, st.loads, undefined, invoicedLoadIds(st.bills, st.invoices));
-      setDryRun(diff);
-      setStep('map');
+      await runDryRun(buf, f.name, null);
     } catch (e) {
       setParseError(e instanceof Error ? e.message : String(e));
       setStep('upload');
       pushToast(t(locale, 'a6_sch_xlsx_fail'), 'CRITICAL');
+    } finally {
+      setParsing(false);
+    }
+  }
+
+  /** Podgląd importu (serwer albo demo) z mapowaniem kolumn; null = układ domyślny KSH. */
+  async function runDryRun(buf: ArrayBuffer, name: string, map: PartialColumnMap | null) {
+    setActiveMap(map);
+    if (SERVER_IMPORT) {
+      const { serverDryRun } = await import('../data/scheduleImportServer');
+      const draft = await serverDryRun(buf, name, map ?? undefined);
+      serverDraft.current = draft;
+      setConfirmedRows(draft.preview.confirmed ?? []);
+      setServerNote(tp(locale, 'i1_preview', { ms: String(draft.preview.ms), carrier: draft.preview.carrier ?? '—', same: String(draft.preview.unchanged) }));
+      setDryRun(draft.diff);
+      setStep('map');
+      return;
+    }
+    const { dryRunFromXlsx } = await import('../lib/scheduleDryRun');
+    const { toFullMap } = await import('../lib/importMapping');
+    const st = useTowerStore.getState();
+    const diff = await dryRunFromXlsx(buf, name, st.loads, map ? toFullMap(map) : undefined, invoicedLoadIds(st.bills, st.invoices));
+    setDryRun(diff);
+    setStep('map');
+  }
+
+  /** I-22: zapis szablonu mapowania i podgląd importu. */
+  async function saveTemplateAndRun() {
+    const buf = pendingBuf.current;
+    if (!buf) return;
+    setParsing(true);
+    try {
+      const mapping = await import('../lib/importMapping');
+      const tpl = { name: tplName.trim() || filename, column_map: colMap, header_signature: mapping.headerSignature(colHeaders) };
+      if (SERVER_IMPORT) await (await import('../data/scheduleImportServer')).saveTemplate(tpl);
+      else mapping.demoSaveTemplate(tpl);
+      pushToast(tp(locale, 'i22_tpl_saved', { name: tpl.name }), 'MEDIUM');
+      await runDryRun(buf, filename, colMap);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setParseError(msg);
+      pushToast(tp(locale, 'i22_tpl_fail', { msg }), 'CRITICAL');
     } finally {
       setParsing(false);
     }
@@ -405,6 +461,44 @@ export function ScheduleView() {
             ) : null}
           </div>
           {serverNote ? <div data-import-server style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 6 }}>{serverNote}</div> : null}
+          {step === 'colmap' && (
+            <div data-import-colmap>
+              <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 6 }}>{t(locale, 'i22_intro')}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(160px, max-content) 1fr', gap: '4px 10px', fontSize: 12, marginBottom: 8 }}>
+                {MAP_FIELDS_UI.map((f) => (
+                  <label key={f} style={{ display: 'contents' }}>
+                    <span data-content style={{ color: 'var(--ink)' }}>
+                      {COLUMN_MAP_DEFAULT[f]}{REQUIRED_FIELDS_UI.includes(f) ? ' *' : ''}
+                    </span>
+                    <select
+                      data-colmap-field={f}
+                      value={colMap[f] ?? ''}
+                      onChange={(e) => setColMap((m) => ({ ...m, [f]: e.target.value || undefined }))}
+                    >
+                      <option value="">{t(locale, 'i22_none')}</option>
+                      {colHeaders.map((h) => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </label>
+                ))}
+              </div>
+              <label style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+                {t(locale, 'i22_name')}{' '}
+                <input data-colmap-name value={tplName} maxLength={80} onChange={(e) => setTplName(e.target.value)} />
+              </label>
+              <button
+                type="button"
+                className="btn"
+                data-action="colmap-save"
+                disabled={parsing || REQUIRED_FIELDS_UI.some((f) => !colMap[f])}
+                onClick={() => void saveTemplateAndRun()}
+              >
+                {t(locale, 'i22_save')}
+              </button>{' '}
+              <button type="button" className="chipbtn" onClick={() => setStep('upload')} disabled={parsing}>
+                {t(locale, 'i22_back')}
+              </button>
+            </div>
+          )}
           {step === 'map' && (
             <>
               <ul style={{ fontSize: 12, columns: 2, color: 'var(--ink-3)', margin: '0 0 8px' }}>

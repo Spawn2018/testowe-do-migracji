@@ -82,3 +82,4 @@ authenticated sms_send_test
 authenticated admin_set_external_messaging
 authenticated sms_external_messaging_state
 authenticated load_driver_contacts
+authenticated import_template_save

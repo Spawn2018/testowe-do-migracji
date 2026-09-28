@@ -539,4 +539,14 @@ val "KSH poza ±24 h od dostawy: 0 wierszy" $KSH "select count(*) from load_driv
 $PSQL -c "set session_replication_role=replica; update loads set plan_delivery_from=now() + interval '3 hours' where id='$L1'" >/dev/null
 val "KSH w oknie ±24 h (D6): sam telefon, bez imienia" $KSH "select coalesce(driver_name,'∅')||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "∅/+48600123456"
 $PSQL -c "set session_replication_role=replica; update loads set carrier_org_id=null, driver_name=null, driver_phone=null, plan_delivery_from=null where id='$L1'" >/dev/null
+echo; echo "[I-22] szablony mapowania kolumn importu (0077)"
+err "KSH: zapis szablonu odrzucony" $KSH "select import_template_save('$P','x','{\"shipmentCode\":\"A\",\"qty\":\"B\"}','a|b')" "wyłącznie HHL"
+err "HHL: nieznane pole odrzucone" $HHL "select import_template_save('$P','x','{\"shipmentCode\":\"A\",\"qty\":\"B\",\"cena\":\"C\"}','a|b|c')" "Nieznane pole"
+err "HHL: brak pola wymaganego (ilość) odrzucony" $HHL "select import_template_save('$P','x','{\"shipmentCode\":\"A\"}','a')" "co najmniej pól"
+val "HHL: szablon zapisany" $HHL "select (import_template_save('$P','Układ B','{\"shipmentCode\":\"Shipment ID\",\"qty\":\"Qty\"}','qty|shipment id') is not null)::text" true commit
+val "HHL: ten sam układ ponownie = aktualizacja, nie duplikat" $HHL "select (import_template_save('$P','Układ B2','{\"shipmentCode\":\"Shipment ID\",\"qty\":\"Qty\"}','qty|shipment id') is not null)::text" true commit
+chk "jeden szablon na układ, nazwa zaktualizowana, wpis w audit_log" "$(Q "select count(*)||'/'||max(name)||'/'||((select count(*) from audit_log where action='IMPORT_TEMPLATE_SAVE')>=2) from import_column_templates where header_signature='qty|shipment id'")" "1/Układ B2/true"
+val "KSH: szablony niewidoczne (RLS)" $KSH "select count(*) from import_column_templates" 0
+err "HHL: bezpośredni INSERT odrzucony (tylko RPC)" $HHL "insert into import_column_templates (project_id, name, column_map, header_signature) values ('$P','x','{}','z')" "permission denied"
+$PSQL -c "delete from import_column_templates where header_signature='qty|shipment id'" >/dev/null
 echo; echo "WYNIK: $ok OK, $fail FAIL"
