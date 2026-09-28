@@ -12,7 +12,6 @@ export const PROD_BUILD: boolean = import.meta.env.VITE_AUTH_MODE === 'supabase'
 
 /** Funkcje ukryte w produkcji 1.0 — powód (do POSTEP/SCOPE i do testu). */
 export const HIDDEN_IN_PROD = {
-  workflows: 'Automatyzacje (M9): „Uruchom” zapisywał przebieg bez sprawdzenia warunku; brak silnika reguł w bazie — moduł po 1.0',
   seaWeather: 'Pogoda morska (8.1): brak źródła danych i zadania — wartości fali/wiatru były statyczne',
   ferryAlternatives: 'Przeprawy alternatywne (8.4): lista statyczna, bez przeliczenia',
   roadSituationsSe: 'Zdarzenia drogowe SE (8.5): brak klucza Trafikverket — w produkcji nie pokazujemy danych przykładowych',
@@ -32,6 +31,14 @@ export type FacadeKey = keyof typeof HIDDEN_IN_PROD;
 /** `true` = funkcja widoczna (demo); w produkcji ukryta. */
 export function shows(_key: FacadeKey, prod: boolean = PROD_BUILD): boolean {
   return !prod;
+}
+
+/**
+ * 9.4 (28.09) — Automatyzacje na danych z bazy (silnik 0094): w produkcji widoczne wyłącznie dla HHL_ADMIN
+ * (RLS `wf_all`); pozostałe role nie widzą modułu. Demo — bez zmian (dane demo).
+ */
+export function canSeeWorkflows(prod: boolean = PROD_BUILD, role: string | null | undefined = getAuthProfile()?.role): boolean {
+  return !prod || role === 'HHL_ADMIN';
 }
 
 /**

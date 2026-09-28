@@ -1521,7 +1521,7 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 9.1 | GOTOWE (28.09, 0094) | POSTEP 9.1–9.4 |
 | 9.2 | GOTOWE (28.09, 0094; zadanie cyklicznego wywołania — decyzja) | POSTEP 9.1–9.4 |
 | 9.3 | GOTOWE (28.09, 0094: START-1…7 wyłączone) | POSTEP 9.1–9.4 |
-| 9.4 | CZĘŚCIOWO (baza gotowa: zapis przez API z walidacją; widok WorkflowsView nadal demo, w produkcji ukryty — I-2) | POSTEP 9.1–9.4 |
+| 9.4 | GOTOWE (28.09: widok na danych z bazy dla HHL_ADMIN — lista, włącz/wyłącz, kreator przez API; bez osobnego UI edycji — brak w makiecie) | POSTEP 9.4 |
 | 9.6 | ODŁOŻONA | Dziennik odłożeń; bramka SMS — I-3 (D-4) |
 | 9.8 | GOTOWE (28.09) | PLAN I-23 + POSTEP 9.8 |
 | 9.9 | ODŁOŻONA | Dziennik odłożeń |
@@ -1677,7 +1677,7 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 9.1 | Silnik: wyzwalacz, warunek, akcje | GOTOWE (28.09) | 0094: `wf_logic` (JSONLogic), wyzwalacz `load_events_workflows`, akcje notify/risk, email/sms zablokowane do R-2 | `tests/db/workflows.sh` 35/35 |
 | 9.2 | Wykonanie trwałe, z ponawianiem | GOTOWE (28.09) | 0094: kolejka `workflow_runs` (QUEUED/RETRY/OK/SKIPPED/DEAD, dedup_key), `workflow_worker()` — podtransakcja, 2^n min, 5 prób | bez crona — uruchomienie decyzją |
 | 9.3 | Siedem reguł startowych | GOTOWE (28.09) | 0094: START-1…7 w każdym projekcie, wyłączone | produkcja: 7 reguł, 0 włączonych |
-| 9.4 | Kreator reguł dla administratora | CZĘŚCIOWO | baza: zapis HHL_ADMIN (RLS `wf_all`) + walidacja `wf_validate`; WorkflowsView nadal demo | podpięcie widoku do bazy — pakiet przekazania |
+| 9.4 | Kreator reguł dla administratora | GOTOWE | WorkflowsView na `workflows`/`workflow_runs` (RLS `wf_all` — HHL_ADMIN), zapis przez API z walidacją `wf_validate`; demo na danych demo | UI edycji istniejącej reguły — poza makietą (decyzja o wyglądzie) |
 | 9.5 | Poczta z szablonami w trzech językach | GOTOWE | M7 `c907fe9`; `supabase/functions/_shared/notifyTemplates.ts` pl/en/sv; cron tower-send-notifications |  |
 | 9.6 | Wiadomości tekstowe | ODŁOŻONA | nie zrobione | zob. Dziennik odłożeń |
 | 9.7 | Powiadomienia w aplikacji | GOTOWE | `notifications` + RPC `mark_notifications_read` |  |

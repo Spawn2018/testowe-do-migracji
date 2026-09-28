@@ -52,6 +52,8 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
         if (m.type === 'load.status' && m.status === 'UNLOADING') await refreshFromServer();
         /* M10 — nowy rejs dostaje id z serwera; rezerwacja transportu z rejsu (jedno źródło prawdy) */
         if (m.type === 'sailing.save' || m.type === 'load.sailing') await refreshFromServer();
+        /* 9.4 — reguła: id, walidacja i liczniki z bazy */
+        if (m.type.startsWith('workflow.')) await refreshFromServer();
       } catch (e) {
         useTowerStore.getState().pushToast(`Nie zapisano na serwerze: ${friendlyDbError(e instanceof Error ? e.message : String(e), useTowerStore.getState().locale)}`, 'HIGH');
         await refreshFromServer().catch(() => undefined);

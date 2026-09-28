@@ -54,7 +54,7 @@ import {
 } from '../data/seed';
 import { buildDemoSnapshot } from '../data/demoProvider';
 import { emptySnapshot } from '../data/provider';
-import { writeThrough } from '../data/registry';
+import { hasRemoteSink, writeThrough } from '../data/registry';
 import { invoicedLoadIds, removalBlock } from '../lib/importRemoval';
 import { getNowIso } from '../lib/frozenNow';
 import { orderEditDeniedMessage, orderGateMessage, orderNoReminders, orderNoRisks, orderNumberGate, type OrderSide } from '../lib/orderNumbers';
@@ -1075,15 +1075,19 @@ export const useTowerStore = create<TowerState>()(
       },
 
       toggleWorkflow: (id) => {
+        const cur = get().workflows.find((w) => w.id === id);
         set((s) => ({
           workflows: s.workflows.map((w) => (w.id === id ? { ...w, enabled: !w.enabled } : w)),
         }));
+        // 9.4 — tryb Supabase: zapis `enabled` (RLS: HHL_ADMIN); błąd → komunikat i odświeżenie z serwera
+        if (cur) writeThrough({ type: 'workflow.update', id, patch: { enabled: !cur.enabled } });
       },
 
       createWorkflow: (rule) => {
         const id = uid('wf');
         const workflow: WorkflowRule = { ...rule, id, runCount: 0 };
         set((s) => ({ workflows: [workflow, ...s.workflows] }));
+        writeThrough({ type: 'workflow.create', rule }); // 9.4 — baza waliduje (wf_validate) i nadaje id
         get().pushToast(tp(get().locale, 'a6_ts_rule_added', { name: workflow.name }), 'MEDIUM');
         return id;
       },
@@ -1092,12 +1096,17 @@ export const useTowerStore = create<TowerState>()(
         set((s) => ({
           workflows: s.workflows.map((w) => (w.id === id ? { ...w, ...patch } : w)),
         }));
+        const { runCount: _rc, id: _id, ...dbPatch } = patch as Partial<WorkflowRule>;
+        writeThrough({ type: 'workflow.update', id, patch: dbPatch });
         get().pushToast(t(get().locale, 'a6_ts_wf_updated'), 'MEDIUM');
       },
 
       runWorkflowNow: (id) => {
         const wf = get().workflows.find((w) => w.id === id);
         if (!wf) return;
+        // 9.4 — dane prawdziwe: reguły uruchamia wyłącznie zdarzenie transportu (kolejka + workflow_worker);
+        // bez fałszywego przebiegu i powiadomienia
+        if (hasRemoteSink()) { get().pushToast(t(get().locale, 'a6_ts_wf_run_event_only'), 'LOW'); return; }
         const run: WorkflowRun = {
           id: uid('wr'),
           workflowId: id,

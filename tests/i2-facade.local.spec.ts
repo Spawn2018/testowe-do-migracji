@@ -39,11 +39,11 @@ for (const who of ['ksh', 'scx'] as const) {
   });
 }
 
-test('HHL: przełącznik jest; brak Workflows; ryzyka „brak źródła danych”; szuflada z ETA v1 z bazy', async ({ page }) => {
+test('HHL (HHL_ADMIN): przełącznik jest; Automatyzacje z bazy (9.4); ryzyka „brak źródła danych”; szuflada z ETA v1 z bazy', async ({ page }) => {
   expect(Number(psql('select count(*) from loads where eta_basis is not null'))).toBeGreaterThan(0);
   await login(page, 'hhl@bk5.local');
   await expect(page.locator('.roleswitch')).toHaveCount(1);
-  await expect(page.locator('nav [data-view="wf"]')).toHaveCount(0);
+  await expect(page.locator('nav [data-view="wf"]')).toHaveCount(1);
   await page.locator('nav [data-view="risk"]').first().click();
   await expect(page.locator('[data-panel="ferry"][data-source="db"]')).toBeVisible();
   await expect(page.locator('[data-no-source="sea"]')).toBeVisible();

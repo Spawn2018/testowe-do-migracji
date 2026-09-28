@@ -1,7 +1,7 @@
 import type { Load, RoleId } from '../types';
 import { getNowMs } from './frozenNow';
 import { TZ_UNLOAD_SE, calendarDayNoonMs, parseInstant } from './time';
-import { shows } from './prodFacade';
+import { canSeeWorkflows } from './prodFacade';
 
 export type NavKey =
   | 'dash'
@@ -23,10 +23,11 @@ const NAV_BY_ROLE: Record<RoleId, NavKey[]> = {
   SCX: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'tasks', 'settings'],
 };
 
-/** I-2c: moduł Automatyzacje (wf) ukryty w produkcji 1.0 — silnik reguł po 1.0 (lib/prodFacade). */
-export function navForRole(role: RoleId, prod?: boolean): NavKey[] {
+/** 9.4: moduł Automatyzacje (wf) w produkcji tylko dla HHL_ADMIN (lib/prodFacade canSeeWorkflows); demo bez zmian. */
+export function navForRole(role: RoleId, prod?: boolean, userRole?: string | null): NavKey[] {
   const nav = NAV_BY_ROLE[role];
-  return shows('workflows', prod) ? nav : nav.filter((k) => k !== 'wf');
+  const wf = userRole === undefined ? canSeeWorkflows(prod) : canSeeWorkflows(prod, userRole);
+  return wf ? nav : nav.filter((k) => k !== 'wf');
 }
 
 export function canSeeCost(role: RoleId): boolean {

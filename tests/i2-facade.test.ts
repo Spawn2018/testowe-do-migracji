@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { HIDDEN_IN_PROD, canSwitchView, shows } from '../src/lib/prodFacade'
+import { HIDDEN_IN_PROD, canSeeWorkflows, canSwitchView, shows } from '../src/lib/prodFacade'
 import { navForRole, canImportSchedule } from '../src/lib/permissions'
 import { delayPillMinutes, docsCompleteBeforeLoad, otifShown, permitBannerState, prodBannerRisk } from '../src/lib/prodDash'
 import { progressWeeksFromDb, progressWeeksLabel } from '../src/components/chart/DeliveryProgress'
@@ -24,11 +24,11 @@ describe('I-2: rejestr funkcji ukrytych w produkcji', () => {
   it('każdy klucz HIDDEN_IN_PROD jest użyty przez shows(...) w src (poza delayCodes — brak w UI)', () => {
     const unused = Object.keys(HIDDEN_IN_PROD).filter((k) => k !== 'delayCodes' && !SRC.some((f) => f.s.includes(`shows('${k}'`)))
     expect(unused).toEqual([])
-    expect(Object.keys(HIDDEN_IN_PROD).length).toBe(13)
+    expect(Object.keys(HIDDEN_IN_PROD).length).toBe(12)
   })
   it('shows(): demo widoczne, produkcja ukryte', () => {
-    expect(shows('workflows', false)).toBe(true)
-    expect(shows('workflows', true)).toBe(false)
+    expect(shows('seaWeather', false)).toBe(true)
+    expect(shows('seaWeather', true)).toBe(false)
   })
   it('I-2g: kody opóźnień nie występują w UI (delay_code / A_CLIENT)', () => {
     const hits = SRC.filter((f) => !f.p.endsWith('prodFacade.ts') && /delay_code|delayCode|A_CLIENT/.test(f.s)).map((f) => f.p)
@@ -49,10 +49,15 @@ describe('I-2a: przełącznik widoku i import', () => {
   })
 })
 
-describe('I-2c: Workflows', () => {
-  it('produkcja: brak pozycji wf w nawigacji każdej roli; demo HHL ma wf', () => {
-    for (const r of ['HHL', 'KSH', 'SCX'] as const) expect(navForRole(r, true)).not.toContain('wf')
+describe('9.4: Automatyzacje (dawniej I-2c)', () => {
+  it('produkcja: wf tylko dla HHL_ADMIN; bez profilu i inne role — brak; demo HHL ma wf', () => {
+    for (const r of ['HHL', 'KSH', 'SCX'] as const) expect(navForRole(r, true, null)).not.toContain('wf')
+    expect(navForRole('HHL', true, 'HHL_ADMIN')).toContain('wf')
+    expect(navForRole('HHL', true, 'HHL_OPS')).not.toContain('wf')
     expect(navForRole('HHL', false)).toContain('wf')
+    expect(canSeeWorkflows(true, 'HHL_ADMIN')).toBe(true)
+    expect(canSeeWorkflows(true, 'KSH_USER')).toBe(false)
+    expect(canSeeWorkflows(false, null)).toBe(true)
   })
 })
 

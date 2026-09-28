@@ -13,7 +13,7 @@ import { DemoMark } from '../components/ui/DemoMark';
 import { DEMO_FX_META } from '../lib/money/demoFx';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
-import { PROD_BUILD, shows } from '../lib/prodFacade';
+import { canSeeWorkflows, PROD_BUILD, shows } from '../lib/prodFacade';
 
 // BK2: panel użytkowników HHL_ADMIN — tylko w trybie Supabase.
 const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../components/guide/Guide')) : null;
@@ -176,11 +176,11 @@ export function OptionsView() {
         <section className="panel option-panel">
           <header className="panel-hd"><h2>{t(locale, "opt_notif_h2")}</h2><span className="sub">{notifications.filter((n) => !n.read).length} {t(locale, "opt_unread")}</span></header>
           <div className="panel-bd"><div className="pref-list">
-            {([['workflowAlerts', t(locale, 'opt_wf_rules')], ['geofenceAlerts', t(locale, 'opt_geo_alerts')], ['riskAlerts', t(locale, 'opt_risk_alerts')]] as const).filter(([key]) => key !== 'workflowAlerts' || shows('workflows')).map(([key, label]) => <label key={key} className="switchline"><input type="checkbox" checked={notificationPrefs?.[key] ?? true} onChange={(e) => { updateNotificationPrefs({ [key]: e.target.checked }); saveMark('powiadomienia'); }} /><span>{label}</span></label>)}
+            {([['workflowAlerts', t(locale, 'opt_wf_rules')], ['geofenceAlerts', t(locale, 'opt_geo_alerts')], ['riskAlerts', t(locale, 'opt_risk_alerts')]] as const).filter(([key]) => key !== 'workflowAlerts' || !PROD_BUILD).map(([key, label]) => <label key={key} className="switchline"><input type="checkbox" checked={notificationPrefs?.[key] ?? true} onChange={(e) => { updateNotificationPrefs({ [key]: e.target.checked }); saveMark('powiadomienia'); }} /><span>{label}</span></label>)}
           </div><div className="note option-note">{t(locale, 'opt_notif_filter_note')}</div><button type="button" className="chipbtn" onClick={() => useTowerStore.getState().markAllNotificationsRead('HHL')}>{t(locale, "opt_mark_read")}</button></div>
         </section>
 
-        {shows('workflows') ? <section className="panel option-panel option-wide">
+        {canSeeWorkflows() ? <section className="panel option-panel option-wide">
           <header className="panel-hd"><h2>{t(locale, "opt_auto_h2")}</h2><span className="sub">{workflows.filter((w) => w.enabled).length} {t(locale, "opt_active_of")} {workflows.length}</span><div className="spacer" /><button type="button" className="chipbtn" onClick={() => setView('wf')}>{t(locale, 'opt_open_wf')}</button></header>
           <div className="panel-bd"><div className="workflow-summary">{workflows.map((w) => <button type="button" className="workflow-summary-row" key={w.id} onClick={() => setView('wf')}><span className={`status-dot${w.enabled ? ' on' : ''}`} /><span data-content>{workflowDisplayName(w, locale)}</span><small>{w.enabled ? t(locale, 'on') : t(locale, 'off')}</small></button>)}</div></div>
         </section> : null}

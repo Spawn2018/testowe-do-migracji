@@ -9,6 +9,7 @@ import type { DataMutation, DataProvider, DataSnapshot, UserPrefsPatch } from '.
 import { emptySnapshot } from './provider';
 import type { FerryBooking } from '../types';
 import { isServerId } from './registry';
+import { workflowFromRow, workflowRunFromRow, workflowToDb, type WorkflowDbRow, type WorkflowRunDbRow } from './workflowMap';
 import {
   awizacjaPatchToDb, documentFromRow, eventFromRow, eventToRow, ferryPatchToDb, geofenceFromRow, geofenceToRpc,
   PRICE_VIEW_COLUMNS, applyPriceViews, type PriceViewRow,
@@ -57,7 +58,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
   async function loadSnapshot(): Promise<DataSnapshot> {
     await ensureContext();
     const at = now();
-    const [loads, events, messages, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ] = await Promise.all([
+    const [loads, events, messages, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ] = await Promise.all([
       sb.from('loads').select(LOAD_COLUMNS).neq('status', 'CANCELLED').order('plan_load_date', { ascending: true, nullsFirst: false }),
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
@@ -79,7 +80,13 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.rpc('load_driver_contacts'),
       // 0081 (SCOPE 6.5): zgodność powiązanych zezwoleń z wymiarami zestawu — tylko transporty z zezwoleniem
       sb.rpc('load_permit_status'),
+      // 9.4 (0094): reguły automatyzacji — RLS wf_all: tylko HHL_ADMIN (pozostali: 0 wierszy); przebiegi — odczyt HHL
+      sb.from('workflows').select('id,name,description,trigger_type,condition,actions,enabled').order('code', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false }),
+      sb.from('workflow_runs').select('id,workflow_id,load_id,status,result,ran_at').order('id', { ascending: false }).limit(1000),
     ]);
+    const wfRuns = (wfRunQ.error ? [] : wfRunQ.data ?? []) as WorkflowRunDbRow[];
+    const okBy = new Map<string, number>();
+    for (const r of wfRuns) if (r.status === 'OK') okBy.set(r.workflow_id, (okBy.get(r.workflow_id) ?? 0) + 1);
     const permitOk = new Map(((permitQ.error ? [] : permitQ.data ?? []) as { load_id: string; permits_linked: number; ok: boolean }[])
       .filter((p) => p.permits_linked > 0).map((p) => [p.load_id, p.ok]));
     const drivers = new Map(((driversQ.error ? [] : driversQ.data ?? []) as { load_id: string; driver_name: string | null; driver_phone: string | null }[])
@@ -88,7 +95,9 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     const costBy = new Map((must(costV, 'v_load_price_carrier') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
     const revBy = new Map((must(revV, 'v_load_price_client') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
     return {
-      ...emptySnapshot(), // automatyzacje: Etap 4 — puste, nie demo
+      ...emptySnapshot(),
+      workflows: ((wfQ.error ? [] : wfQ.data ?? []) as WorkflowDbRow[]).map((r) => workflowFromRow(r, okBy.get(r.id) ?? 0)),
+      workflowRuns: wfRuns.map(workflowRunFromRow),
       loads: (must(loads, 'loads') as unknown as LoadRow[])
         .map((r) => ({ ...r, driver_name: drivers.get(r.id)?.driver_name ?? null, driver_phone: drivers.get(r.id)?.driver_phone ?? null }))
         .map((r, i) => applyPriceViews(loadFromRow(r, orgs, i, at), costBy.get(r.id), revBy.get(r.id)))
@@ -266,6 +275,17 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         if (res.error) throw new Error(`import: ${res.error.message}`);
         const rows = (res.data ?? []) as { verdict: string }[];
         return { id: String(rows.filter((r) => r.verdict === 'CANCELLED').length) };
+      }
+      case 'workflow.create': {
+        await ensureContext();
+        if (!projectId) throw new Error('reguła: brak projektu');
+        const res = await sb.from('workflows').insert({ ...workflowToDb(m.rule), project_id: projectId }).select('id').single();
+        return { id: (must(res, 'reguła') as { id: string }).id };
+      }
+      case 'workflow.update': {
+        const res = await sb.from('workflows').update(workflowToDb(m.patch)).eq('id', m.id).select('id');
+        if (!(must(res, 'reguła') as { id: string }[]).length) throw new Error('reguła: zmienia wyłącznie administrator HHL');
+        return;
       }
       case 'geofence.save': {
         await ensureContext();

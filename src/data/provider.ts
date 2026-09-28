@@ -71,7 +71,10 @@ export type DataMutation =
   /** M10 — przypisanie rejsu do transportu (HHL i przewoźnik; po wypłynięciu wyłącznie HHL) */
   | { type: 'load.sailing'; loadId: string; sailingId: string | null; bookingRef: string | null }
   /** ANEKS 3 §2.1 — import: anulowanie (nigdy DELETE) → import_cancel_loads(); baza sprawdza status i faktury */
-  | { type: 'loads.importCancel'; loadIds: string[]; reason: string };
+  | { type: 'loads.importCancel'; loadIds: string[]; reason: string }
+  /** 9.4 — Automatyzacje (0094): zapis reguł przez API (RLS wf_all — HHL_ADMIN; walidacja wf_validate w bazie) */
+  | { type: 'workflow.create'; rule: Omit<WorkflowRule, 'id' | 'runCount'> }
+  | { type: 'workflow.update'; id: string; patch: Partial<Omit<WorkflowRule, 'id' | 'runCount'>> };
 
 /** M4 — ustawienia użytkownika (`user_preferences`); motyw null = domyślny dla roli. */
 export interface UserPrefsPatch {

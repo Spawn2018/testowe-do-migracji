@@ -29,6 +29,8 @@ function targetId(m: DataMutation): string | null {
     case 'notifications.read': return null; // własne powiadomienia (id liczbowe z serwera)
     case 'sailing.save': return m.isNew ? null : m.sailing.id; // nowy rejs = wstawienie; zmiana tylko rejsu z serwera
     case 'loads.importCancel': return m.loadIds.every(isServerId) ? m.loadIds[0] ?? '' : ''; // tylko transporty z serwera
+    case 'workflow.create': return null; // 9.4 — nowa reguła (id nadaje baza)
+    case 'workflow.update': return m.id; // tylko reguły z serwera (demo wf-1… nigdy)
     default: return m.loadId;
   }
 }

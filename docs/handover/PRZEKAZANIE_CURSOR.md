@@ -33,7 +33,7 @@ Ten dokument to punkt wejścia. Starsze `01_HANDOVER.md`…`09_INDEKS_WIEDZY.md`
 | Zależności | `npm ci` |
 | Aplikacja demo | `VITE_AUTH_MODE=demo npm run dev` |
 | Typy | `npx tsc -p tsconfig.app.json --noEmit` |
-| Testy jednostkowe | `npm test` (vitest; 28.09: 525 zaliczonych / 33 pominięte) |
+| Testy jednostkowe | `npm test` (vitest; 28.09 po 9.4: 531 zaliczonych / 33 pominięte) |
 | Brama bazy | `PGCLUSTER=17/main bash tests/db/gate.sh` — lokalny Postgres 17 na porcie 5433 (`postgres://postgres@localhost:5433`), każdy zestaw tworzy własną bazę. Oczekiwane liczby przypadków są w `gate.sh` (`check <zestaw> N`) — **nowy test = podbić liczbę**, inaczej push padnie. 28.09: security 88, status 44, storage 37, money 130, release 145, backup 23, session 27, archive 18, watchdog 27, invite 48, risks 23, import 66, nullguard 369, i2 510, workflows 35. |
 | Push | `PGCLUSTER=17/main TOWER_REQUIRE_DB=1 git push` (pre-push: vitest, brama bazy, e2e Playwright, zrzuty stanów, smoke). |
 | Brama wizualna | `npm run gate:visual` (~42 min, port 4188, 840 ujęć, próg 0,1%, poza pre-push). Wynik: `/workspace/wt-gate-visual/last.txt`. Każde odchylenie wyjaśnić jak w `G4_WZORZEC.md` §III-13 (commit → klasyfikacja zamierzone/regresja → naprawa regresji) **zanim** odświeży się wzorzec. Ujęcia odświeżać w kolejności matrycy (patrz §G-V a956ab6). |
@@ -55,7 +55,7 @@ A11Y-2 (wiersze listy wyjątków z klawiatury, bez zmiany wyglądu) · 16.3 (reg
 
 | Pozycja | Stan | Następny krok | Kto decyduje |
 |---|---|---|---|
-| 9.4 kreator reguł — widok | baza gotowa (zapis HHL_ADMIN przez RLS `wf_all`, walidacja `wf_validate`, kolejka i wynik w `workflow_runs`) | podpiąć `WorkflowsView` do `workflows`/`workflow_runs` w `SupabaseProvider` (lista, włącz/wyłącz, edycja warunku i akcji, historia przebiegów); **bez zmiany wyglądu** — elementy już są w makiecie; potem zdjąć ukrycie modułu w `prodFacade.ts` | właściciel: odkrycie modułu w produkcji |
+| 9.4 kreator reguł — widok | **podpięte 28.09 (9.4)**: `SupabaseProvider` czyta `workflows` (RLS `wf_all` — tylko HHL_ADMIN) i `workflow_runs`; przełącznik i kreator zapisują przez API (`workflow.update`/`workflow.create`, mapowanie `src/data/workflowMap.ts`); w produkcji moduł widoczny tylko dla HHL_ADMIN (`canSeeWorkflows`), „Uruchom” daje tylko komunikat (reguły uruchamia zdarzenie) | brak osobnego UI edycji istniejącej reguły (w makiecie go nie ma — dodanie = zmiana wyglądu, STOP); widok nie pokazuje historii przebiegów (tylko licznik OK) | właściciel: włączenie START-1…7 i zadanie cykliczne `workflow_worker` |
 | 9.2 zadanie cykliczne | `workflow_worker(limit, teraz)` gotowy, bez crona | migracja z `cron.schedule('tower-automatyzacje', '* * * * *', …)` | właściciel (razem z włączeniem reguł START-1…7) |
 | Retencja R2 (`files/`) | **czeka na logowanie do Cloudflare** (`docs/handover/r2/lifecycle.json`, `bucket-lock.json` przygotowane) | po zalogowaniu właściciela: nałożyć lifecycle na kubełek kopii | właściciel (logowanie) |
 | D-2 indeks SEFS / WOB | III-10 gotowe (0092, `fuel-wob` wdrożona, przełącznik wyłączony) | włączenie `FUEL_WOB_INGEST` + cron | właściciel |
