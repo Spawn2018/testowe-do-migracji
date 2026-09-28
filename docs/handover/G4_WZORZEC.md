@@ -93,3 +93,22 @@ missingInBaseline 17` — w katalogu kandydata było 857 plików: 840 ujęć mat
 **brama zgłaszała FAIL przy każdym przebiegu**, także bez żadnej różnicy (tak samo w raportach `24dbbcf` i `a956ab6`: 857 plików).
 Naprawa (narzędzie, nie aplikacja): matryca do `$TMP/gate-shots`. Ocena ujęć `c90c062`: **840/840 bez zmian, regresji 0**
 (A11Y-2 i 10.8 bez wpływu na wygląd — potwierdzone). Wzorzec bez zmian.
+
+## G-V 0efa871 (28.09.2026) — narzędzie odporne na przewinięcie w poziomie: 162 ujęcia, wszystkie artefakt starego narzędzia
+Zmiana narzędzia (commit `0efa871`, `scripts/baseline.mjs`): motyw przełączany kliknięciem w DOM (`clickThemeBtn`, bez przewijania przez
+Puppeteer) i przed każdym ujęciem `resetHorizontalScroll()` (`window.scrollTo(0, scrollY)`, `scrollLeft = 0` dokumentu). Pełny przebieg
+`gate:visual` na `0efa871` (14:26): `FAIL matryca=678/840 zmienione=162` (próg 0,1%). Ten sam HEAD zawiera 9.4 (`0163949`) — w trybie demo
+bez wpływu na wygląd (Automatyzacje i Opcje 1920/1440 identyczne).
+
+| Grupa | Ujęcia | Commit | Przyczyna | Ocena |
+|---|---|---|---|---|
+| wszystkie widoki, 390 px (HHL pl/en/sv × ciemny/jasny, KSH pl/en/sv ciemny, SCX pl/en/sv × ciemny/jasny) | 144 | `0efa871` (narzędzie) | stary wzorzec był robiony z oknem przewiniętym w poziomie o 111–349 px: `page.click('#themeBtn')` przewijał okno do przycisku motywu (poza ekranem przy 390 px), a przewinięcie przechodziło na kolejne ujęcia tej szerokości (strona nie jest przeładowywana między zadaniami tej samej szerokości). Nowe ujęcie = to, co widzi użytkownik po wejściu (x = 0: pasek boczny, logo TOWER, lewa część mapy). Analiza przesunięcia (`/tmp/bis/hshift.mjs`): cała klatka przesunięta w poziomie, zgodność 0,59–0,99 (mapa niżej — kafelki i widoczny wycinek mapy zależą od przesunięcia) | **zamierzona (poprawka narzędzia), regresji 0** |
+| SCX 768 px pl (ciemny/jasny) — kokpit, mapa, harmonogram, ryzyka, dokumenty, faktury, moje stawki, moje zadania, ustawienia | 18 | `0efa871` (narzędzie) | ten sam mechanizm: przy 768 px kliknięcie motywu przewijało okno o 4 px; teraz x = 0 — przesunięcie o dokładnie 4 px, zgodność 1,0000 | **zamierzona, regresji 0** |
+| KSH 390 px pl/en/sv jasny (domyślny) — harmonogram | 3 (poniżej progu, 263–318 px) | `0efa871` (narzędzie) | pasek filtrów (przewijany poziomo) przesunięty o ~1 px (y 206–233); nowe narzędzie daje ten sam wynik niezależnie od kolejności (ujęcie pojedyncze = ujęcie w podzbiorze 390/768, 0 px) | **zamierzona, regresji 0** |
+
+Deterministyczność nowego narzędzia: `harmonogram__ksh__pl__390` zrobione osobno i w podzbiorze wszystkich ujęć 390/768 (336, inna kolejność
+poprzedników) — 0 px różnicy. Zauważone przy okazji (bez zmiany, stan sprzed commitów): przy 390 px dokument jest szerszy niż okno
+(pasek górny z przełącznikami języka/motywu wychodzi poza ekran) — to cecha makiety, nie regresja; ewentualna zmiana = decyzja o wyglądzie.
+
+**Regresji: 0.** Wzorzec odświeżony po klasyfikacji: 165 ujęć (144 + 18 + 3) z buildu `0efa871` nowym narzędziem (podzbiory
+`FILTER=__390__`, `FILTER=__768__`); pozostałe 675 bez zmian.
