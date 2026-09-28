@@ -104,6 +104,14 @@ chk6 "PUBLIC nie wywoła żadnej funkcji public (poza rozszerzeniami)" "$(psql "
 psql "$PGURL" -q -c "create function public.t_nowa_funkcja() returns int language sql as 'select 1'" >/dev/null 2>&1
 chk6 "nowa funkcja (domyślne uprawnienia): anon i authenticated bez EXECUTE" "$(psql "$PGURL" -Atq -c "select has_function_privilege('anon','public.t_nowa_funkcja()','execute')||':'||has_function_privilege('authenticated','public.t_nowa_funkcja()','execute')")" "false:false"
 psql "$PGURL" -q -c "drop function public.t_nowa_funkcja()" >/dev/null 2>&1
+# I-26 (0083): anon bez uprawnień tabelowych w public (poza spatial_ref_sys), authenticated bez TRUNCATE/REFERENCES/TRIGGER
+chk6 "I-26: anon — 0 uprawnień do tabel/widoków public (poza spatial_ref_sys)" "$(psql "$PGURL" -Atq -c "select count(*) from information_schema.role_table_grants where grantee='anon' and table_schema='public' and table_name <> 'spatial_ref_sys'")" 0
+chk6 "I-26: anon — 0 uprawnień do sekwencji public" "$(psql "$PGURL" -Atq -c "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='S' and (has_sequence_privilege('anon', c.oid, 'usage') or has_sequence_privilege('anon', c.oid, 'select') or has_sequence_privilege('anon', c.oid, 'update'))")" 0
+chk6 "I-26: authenticated — 0 × TRUNCATE/REFERENCES/TRIGGER w public (poza spatial_ref_sys)" "$(psql "$PGURL" -Atq -c "select count(*) from information_schema.role_table_grants where grantee='authenticated' and table_schema='public' and table_name <> 'spatial_ref_sys' and privilege_type in ('TRUNCATE','REFERENCES','TRIGGER')")" 0
+psql "$PGURL" -q -c "create table public.t_nowa_tabela (id int); create sequence public.t_nowa_sekw" >/dev/null 2>&1
+chk6 "I-26: nowa tabela i sekwencja (domyślne uprawnienia): anon nic, authenticated bez TRUNCATE" "$(psql "$PGURL" -Atq -c "select has_table_privilege('anon','public.t_nowa_tabela','select,insert,update,delete,truncate')::text||':'||has_sequence_privilege('anon','public.t_nowa_sekw','usage')::text||':'||has_table_privilege('authenticated','public.t_nowa_tabela','truncate')::text")" "false:false:false"
+psql "$PGURL" -q -c "drop table public.t_nowa_tabela; drop sequence public.t_nowa_sekw" >/dev/null 2>&1
+err "I-26: anon INSERT do loads → permission denied" "" "set local role anon; insert into loads (id) values (gen_random_uuid())" "permission denied"
 chk6 "purge_personal_data: brak EXECUTE dla anon i authenticated" "$(psql "$PGURL" -Atq -c "select has_function_privilege('anon','purge_personal_data(int)','execute')||':'||has_function_privilege('authenticated','purge_personal_data(int)','execute')")" "false:false"
 
 echo; echo "[3.2d] Higiena funkcji (0030)"
