@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 
 import { useTowerStore } from '../../store/useTowerStore';
@@ -18,6 +18,12 @@ import { truckDivIcon, ferryDivIcon } from '../../lib/mapMarkers';
 import { nextLiveSailing } from '../../lib/ferry';
 import { severityLabel } from '../../lib/enumLabels';
 import { isFrozenNow } from '../../lib/frozenNow';
+import { declutter } from '../../lib/mapDeclutter';
+import { isServerId } from '../../data/registry';
+import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
+
+/* III-5 — odtwarzanie przebiegu z bazy: tylko build Supabase (chunk leniwy); demo bez zmian */
+const TrackReplay = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./TrackReplay')) : null;
 
 /** Requested Carto public URLs — CDN now watermarks without key (2026-09). */
 export const CARTO_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
@@ -131,6 +137,11 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
   const [tick, setTick] = useState(0);
   const [situations, setSituations] = useState<RoadSituation[]>([]);
   const [aisPositions, setAisPositions] = useState<AisPosition[]>([]);
+  const [zoom, setZoom] = useState(0);
+  const [mapReady, setMapReady] = useState<L.Map | null>(null);
+  /* III-5: odtwarzany transport = ostatnio wybrany (zostaje po zamknięciu szuflady, znika po wyłączeniu warstwy „Ślad”) */
+  const [replayId, setReplayId] = useState<string | null>(null);
+  useEffect(() => { if (selectedLoadId && isServerId(selectedLoadId)) setReplayId(selectedLoadId); }, [selectedLoadId]);
 
   const selectLoadRef = useRef(selectLoad);
   const setHoverLoadRef = useRef(setHoverLoad);
@@ -232,6 +243,8 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
       ais: aisGroup,
     };
     mapRef.current = map;
+    map.on('zoomend', () => setZoom(map.getZoom()));
+    setMapReady(map);
 
     requestAnimationFrame(() => map.invalidateSize());
     const t = window.setTimeout(() => map.invalidateSize(), 250);
@@ -248,6 +261,7 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
       map.remove();
       mapRef.current = null;
       layersRef.current = null;
+      setMapReady(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -313,8 +327,17 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
     if (mapLayers.vehicles) {
       const visibleLoads =
         focusMode && selectedLoadId ? loads.filter((l) => l.id === selectedLoadId) : loads;
-      for (const f of fleetPositions(visibleLoads, tick)) {
-        const m = L.marker([f.lat, f.lng], {
+      const fleet = fleetPositions(visibleLoads, tick);
+      /* III-5 (SCOPE 5.10): produkcja — pozycje z bazy/statusu często w tym samym punkcie (np. plac załadunku);
+         nakładające się znaczniki rozkładamy na okręgu/spirali (≥ 22 px), by etykiety i kliknięcia nie kolidowały.
+         Tryb demo bez zmian (wzorzec zrzutów makiety). */
+      const spread = PROD_BUILD
+        ? declutter(fleet.map((f) => { const p = map.latLngToLayerPoint([f.lat, f.lng]); return { id: f.id, x: p.x, y: p.y }; }), 22)
+        : null;
+      for (const f of fleet) {
+        const sp = spread?.get(f.id);
+        const ll = sp ? map.layerPointToLatLng(L.point(sp.x, sp.y)) : L.latLng(f.lat, f.lng);
+        const m = L.marker(ll, {
           icon: truckDivIcon(f.status, statusColor(f.status)),
           keyboard: false,
         });
@@ -384,7 +407,7 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
           .addTo(layers.ais);
       }
     }
-  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks]);
+  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom]);
 
   return (
     <div
@@ -396,6 +419,11 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
         className="corridor-map-el"
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 0 }}
       />
+      {TrackReplay && !embedded && mapReady && mapLayers.trail && replayId ? (
+        <Suspense fallback={null}>
+          <TrackReplay key={replayId} map={mapReady} loadId={replayId} code={loads.find((l) => l.id === replayId)?.code ?? ''} />
+        </Suspense>
+      ) : null}
       {!embedded ? (
         <div className="mapkey" aria-label={t(locale, 'map_legend')} style={{ zIndex: 500 }}>
           <span>

@@ -1495,9 +1495,9 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 5.2 | ZABLOKOWANA | PLAN II-4, D-6; Dziennik blokad |
 | 5.3 | ZABLOKOWANA | PLAN II-4, D-6; Dziennik blokad |
 | 5.5 | DO ZROBIENIA (częściowo) | PLAN II-4 (po adapterze 5.1) |
-| 5.10 | DO ZROBIENIA (częściowo) | promy z AIS — I-2j (GOTOWE); kolizje etykiet — PLAN III-5 |
+| 5.10 | DO ZROBIENIA (częściowo) → **GOTOWE 28.09** | promy z AIS — I-2j (GOTOWE); kolizje etykiet — PLAN III-5 (GOTOWE: `src/lib/mapDeclutter.ts`, build produkcyjny) |
 | 5.12 | GOTOWE | ETA v1 w bazie: I-2d (0051), D-9 (0054), I-15 pasmo RSS (0062), I-16 walidacja 50 transportów; kalibracja — PLAN III-1 |
-| 5.13 | DO ZROBIENIA | PLAN III-5 |
+| 5.13 | DO ZROBIENIA → **GOTOWE 28.09 (0088)** | PLAN III-5 — warstwa „Ślad”: odtwarzanie przebiegu GPS z bazy (`load_track`) |
 | 6.1 | DO ZROBIENIA (częściowo) | PLAN III-6 |
 | 6.2 | DO ZROBIENIA (częściowo) | PLAN III-6 |
 | 6.4 | DO ZROBIENIA (częściowo) → **GOTOWE 28.09 (0086)** | PLAN Etap III „walidator zezwoleń i wymiarów” (0081); formularz zezwoleń w szufladzie transportu — HHL i przewoźnik transportu (0086) |

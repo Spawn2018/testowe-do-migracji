@@ -703,6 +703,20 @@ chk "po zmianie: 1 wiersz, escort_vehicles 1, stara lista w audit_log (2 pozycje
 $PSQL -c "update loads set status='CANCELLED' where id='$LE'" >/dev/null 2>&1
 err "transport anulowany → awizacja zamknięta" $HHL "select load_escorts_set('$LE','[]')" "zakończony albo anulowany"
 $PSQL -c "delete from app_users where email='cx3@test'; delete from organizations where code='CX3'; update risk_signals set resolved_at=now() where dedup_key like 'RES:%:$LE' and resolved_at is null" >/dev/null
+echo; echo "[III-5] odtwarzanie przebiegu: load_track (0088)"
+LT=33333333-0000-0000-0000-0000000035a1
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status) values ('$LT','$P','00000000-0000-0000-0000-00000000a003','KSH/T35','PLANNED')" >/dev/null 2>&1
+$PSQL -c "insert into positions (load_id, ts, geom_raw, geom_snapped, speed_kmh, source) values
+ ('$LT', now() - interval '3 hours', st_setsrid(st_makepoint(17.0, 52.1), 4326), null, 0, 'DRIVER_PWA'),
+ ('$LT', now() - interval '2 hours', st_setsrid(st_makepoint(17.5, 52.9), 4326), st_setsrid(st_makepoint(17.51, 52.91), 4326), 78.5, 'DRIVER_PWA'),
+ ('$LT', now() - interval '1 hours', st_setsrid(st_makepoint(18.2, 53.8), 4326), null, 81, 'DRIVER_PWA')" >/dev/null 2>&1
+chk "anon bez EXECUTE load_track, authenticated z EXECUTE" "$(Q "select has_function_privilege('anon','load_track(uuid,int)','execute')::text||'/'||has_function_privilege('authenticated','load_track(uuid,int)','execute')::text")" "false/true"
+val "SCX (przewoźnik transportu): 3 punkty w kolejności czasu, punkt przyciągnięty ma pierwszeństwo" $SCX "select count(*)||'/'||string_agg(lng::text, ',' order by ts) from load_track('$LT')" "3/17,17.51,18.2"
+val "KSH (klient projektu) widzi przebieg transportu projektu" $KSH "select count(*) from load_track('$LT')" 3
+val "limit 2 → dwa najnowsze punkty, nadal rosnąco" $HHL "select string_agg(lng::text, ',' order by ts) from load_track('$LT', 2)" "17.51,18.2"
+$PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER') on conflict do nothing; insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH') on conflict do nothing" >/dev/null
+val "inny przewoźnik: 0 punktów (RLS positions_read)" 11111111-0000-0000-0000-00000000000b "select count(*) from load_track('$LT')" 0
+$PSQL -c "delete from app_users where email='cx3@test'; delete from organizations where code='CX3'; update loads set status='CANCELLED' where id='$LT'" >/dev/null 2>&1
 chk "I-28: load_delivery_day_end usunięta (0085), load_delivery_deadline zostaje" "$(Q "select (to_regprocedure('load_delivery_day_end(date,timestamptz)') is null)::text||'/'||(to_regprocedure('load_delivery_deadline(date,timestamptz)') is not null)::text")" "true/true"
 echo; echo "[I-27] brak zezwolenia blokuje Gotowy dla klasy ≠ STANDARD (0084, przełącznik)"
 LD=33333333-0000-0000-0000-0000000027d1; LS=33333333-0000-0000-0000-0000000027a1
