@@ -38,6 +38,7 @@ function weekSubtitle(weekLabel: string | null | undefined, locale: 'pl' | 'en' 
   return `${word} ${week} · ${fmt(mon)}–${fmt(sun)}.${year} · Scandinavian Express`;
 }
 import { docCategoryLabel, payoutStatusLabel } from '../lib/enumLabels';
+import { clickableRow } from '../lib/clickableRow';
 
 export function InvoicesView() {
   const role = useTowerStore((s) => s.role);
@@ -202,7 +203,7 @@ export function InvoicesView() {
                   <tr
                     key={row.loadId}
                     style={{ cursor: 'pointer' }}
-                    onClick={() => selectLoad(row.loadId)}
+                    {...clickableRow(() => selectLoad(row.loadId))}
                   >
                     <td>
                       <span className="code" data-content>{row.code}</span>
@@ -261,6 +262,7 @@ export function InvoicesView() {
                   step="0.1"
                   min={0}
                   max={20}
+                  aria-label={t(locale, 'factoring_fee_pct')}
                   value={factoringOffer.feePercent}
                   onChange={(e) => updateFactoringOffer({ feePercent: Number(e.target.value) || 0 })}
                   style={{ width: 80 }}
@@ -272,6 +274,7 @@ export function InvoicesView() {
                   className="input"
                   type="number"
                   min={1}
+                  aria-label={t(locale, 'factoring_delay')}
                   value={factoringOffer.payoutDelayValue}
                   onChange={(e) =>
                     updateFactoringOffer({ payoutDelayValue: Number(e.target.value) || 1 })
@@ -280,6 +283,7 @@ export function InvoicesView() {
                 />{' '}
                 <select
                   className="input"
+                  aria-label={t(locale, 'factoring_delay')}
                   value={factoringOffer.payoutDelayUnit}
                   onChange={(e) =>
                     updateFactoringOffer({
@@ -296,6 +300,7 @@ export function InvoicesView() {
                 <input
                   className="input"
                   style={{ width: '100%' }}
+                  aria-label={t(locale, 'factoring_label')}
                   value={factoringOffer.label}
                   onChange={(e) => updateFactoringOffer({ label: e.target.value })}
                 />

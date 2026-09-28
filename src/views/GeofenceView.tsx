@@ -4,6 +4,7 @@ import { useTowerStore } from '../store/useTowerStore';
 import { canEditGeofence } from '../lib/permissions';
 import type { Geofence, GeofenceType } from '../types';
 import { t, tp } from '../i18n/messages';
+import { clickableRow } from '../lib/clickableRow';
 
 const TYPE_PILL: Record<string, string> = {
   SITE: 'p-go',
@@ -86,7 +87,7 @@ export function GeofenceView() {
                   <tr
                     key={g.id}
                     style={{ cursor: canEdit ? 'pointer' : undefined }}
-                    onClick={() => canEdit && setEdit(g)}
+                    {...(canEdit ? clickableRow(() => setEdit(g)) : {})}
                   >
                     <td style={{ fontWeight: 600 }} data-content>{geofenceDisplayName(g.name, locale)}</td>
                     <td>

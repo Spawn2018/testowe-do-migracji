@@ -10,6 +10,7 @@ import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { formatEtaBodenCompact } from '../lib/time';
 import { latestReadAt, subscribeFerryPositions, type AisMode } from '../lib/ais';
 import { formatOpsDateTime } from '../lib/time';
+import { clickableRow } from '../lib/clickableRow';
 
 /** Claude maplayers — exactly 5. Labels via i18n. */
 const LAYER_ORDER: { key: string; labelKey: string }[] = [
@@ -238,7 +239,7 @@ export function MapView() {
                       className={selectedLoadId === l.id || hoverLoadId === l.id ? 'is-active' : undefined}
                       onMouseEnter={() => setHoverLoad(l.id)}
                       onMouseLeave={() => setHoverLoad(null)}
-                      onClick={() => selectLoad(l.id)}
+                      {...clickableRow(() => selectLoad(l.id))}
                     >
                       <td>
                         <span className="cell-clip">

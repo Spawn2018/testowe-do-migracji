@@ -19,6 +19,7 @@ import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
 import { AUTO_RISK_CODES, autoRiskLabel, effDeparture, fmtLocal, sailingStatusLabel, sailingStatusPill, type AutoRiskCode } from '../lib/sailings';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { getNowMs } from '../lib/frozenNow';
+import { clickableRow } from '../lib/clickableRow';
 
 const ALT = [
   ['Gdańsk–Karlshamn', 310, 'Polferries'],
@@ -287,12 +288,12 @@ export function RisksView() {
                     <tr
                       key={s.id}
                       style={{ cursor: 'pointer' }}
-                      onClick={() => {
+                      {...clickableRow(() => {
                         const linked =
                           risks.find((r) => r.situationId === s.id) ??
                           risks.find((r) => r.type === 'ROAD_SE' || r.type === 'FORCE_MAJEURE');
                         if (linked?.loadId) selectLoad(linked.loadId);
-                      }}
+                      })}
                     >
                       <td style={{ fontWeight: 600 }} data-content>{s.road}</td>
                       <td data-content>{s.title.replace(/^E4\s*/, '')}</td>

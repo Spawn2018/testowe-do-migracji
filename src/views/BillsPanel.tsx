@@ -22,6 +22,7 @@ import { DocFileRow } from '../components/ui/DocFileRow';
 import { DocPreview } from '../components/ui/DocPreview';
 import { canReplyDispute, correctionFileError, disputeActorSide, paymentBlockedByDispute, type DisputeEvent } from '../lib/invoiceDispute';
 import { readFileAsDataUrl } from '../lib/docsIo';
+import { clickableRow } from '../lib/clickableRow';
 
 /** III-7 — historia sporu (zgłoszenie → odpowiedź / korekta wystawcy → rozstrzygnięcie) i odpowiedź wystawcy. */
 function DisputeThread({ bill }: { bill: Bill }) {
@@ -200,7 +201,7 @@ export function BillsPanel() {
                       {list.map((b) => {
                         const flagged = b.lines.filter((l) => l.flags.length).length + (b.headerFlags.length ? 1 : 0);
                         return (
-                          <tr key={b.id} data-bill={b.id} style={{ cursor: 'pointer' }} aria-selected={openId === b.id} onClick={() => setOpenId(openId === b.id ? null : b.id)}>
+                          <tr key={b.id} data-bill={b.id} style={{ cursor: 'pointer' }} aria-selected={openId === b.id} {...clickableRow(() => setOpenId(openId === b.id ? null : b.id))}>
                             <td><span className="code" data-content>{b.number}</span></td>
                             <td className="mono" data-content>{b.weekKey}</td>
                             <td>{fmtDay(b.issueDate)}</td>
@@ -272,7 +273,7 @@ function BillDetail({ bill }: { bill: Bill }) {
               const l = byId.get(ln.loadId);
               const at = l ? unloadedAtOf(l) : null;
               return (
-                <tr key={ln.loadId} style={{ cursor: 'pointer' }} onClick={() => l && selectLoad(l.id)}>
+                <tr key={ln.loadId} style={{ cursor: 'pointer' }} {...clickableRow(() => { if (l) selectLoad(l.id); })}>
                   <td><span className="code" data-content>{l?.code ?? ln.loadId}</span></td>
                   <td>{fmtDay(at ? localDateOf(at) : null)}</td>
                   <td className="num"><Amount n={ln.expectedNet} cur={bill.currency} /></td>

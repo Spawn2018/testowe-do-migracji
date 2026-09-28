@@ -2,6 +2,7 @@ import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
 import { formatTableDay, refYearInOps } from '../lib/time';
 import { getNow } from '../lib/frozenNow';
+import { clickableRow } from '../lib/clickableRow';
 
 function hoursUntilLoad(plannedLoadDate: string): number {
   const target = Date.parse(`${plannedLoadDate}T06:00:00+02:00`);
@@ -52,7 +53,7 @@ export function TasksView() {
                 const pill = hrs < 24 ? 'p-red' : hrs < 48 ? 'p-amber' : 'p-plan';
                 const lab = hrs < 24 ? t(locale, 'a6_task_urgent') : hrs < 48 ? t(locale, 'a6_task_soon') : t(locale, 'a6_task_on_time');
                 return (
-                  <tr key={l.id} data-load={l.id} style={{ cursor: 'pointer' }} onClick={() => selectLoad(l.id)}>
+                  <tr key={l.id} data-load={l.id} style={{ cursor: 'pointer' }} {...clickableRow(() => selectLoad(l.id))}>
                     <td>
                       <span className="code" data-content>{l.code}</span>
                     </td>

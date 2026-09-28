@@ -137,12 +137,12 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 **III-8** — (numer zarezerwowany, nieużyty) ·
 **III-9** (P2, z I-11: SCOPE 10.4, 10.6) widok placu budowy tylko do odczytu (opcjonalny), ocena przewoźnika — 10.6 DONE 28.09 (0089: `carrier_ratings`, `carrier_rate_load` tylko HHL po rozładunku 1–5, `carrier_scorecard` — karta w Opcjach, ocena w szufladzie; widoczność dla przewoźnika — D-23); 10.4 (widok placu budowy, opcjonalny) → D-24 ·
 **III-10** (P2, decyzja właściciela 28.09) pobieranie odczytów EU Weekly Oil Bulletin (publiczne, bezpłatne) do `fuel_index_readings` — gotowe, ale WYŁĄCZONE do D-2 (który indeks wybierze przewoźnik) — **ZROBIONE 28.09** (0092, funkcja Edge `fuel-wob`, przełącznik `FUEL_WOB_INGEST` wyłączony; włączenie po D-2 — patrz POSTEP III-10) ·
-**III-11** (P2, decyzja właściciela 28.09) źródło pogody morskiej dla trasy Gdańsk–Nynäshamn: porównanie otwartych danych (np. FMI, SMHI) — licencja do użytku komercyjnego, zasięg, częstotliwość. Tylko raport, nic w UI — DO ZROBIENIA ·
-**III-12** (P2, decyzja właściciela 28.09) lista otwartych pozycji Etapu III niezależnych od właściciela; jeśli istnieje audyt dostępności — wykonać — DO ZROBIENIA ·
+**III-11** (P2, decyzja właściciela 28.09) źródło pogody morskiej dla trasy Gdańsk–Nynäshamn: porównanie otwartych danych (np. FMI, SMHI) — licencja do użytku komercyjnego, zasięg, częstotliwość. Tylko raport, nic w UI — **ZROBIONE 28.09** (`RAPORT_POGODA_MORSKA.md`: propozycja FMI WAM + DMI WAM, CC BY 4.0, bez klucza; Open-Meteo i IMGW odpadają — komercyjnie płatne) ·
+**III-12** (P2, decyzja właściciela 28.09) lista otwartych pozycji Etapu III niezależnych od właściciela; jeśli istnieje audyt dostępności — wykonać — **ZROBIONE 28.09** (lista: `III12_LISTA_ETAP_III.md`; audyt: `RAPORT_DOSTEPNOSC.md` — pola bez nazw 36 → 0, klawiatura 1402 → 362, kontrast → D-27) ·
 Silnik Workflows · źródło pogody morskiej · walidator zezwoleń i wymiarów (DONE 28.09, 0081 — SCOPE 6.5; formularz zezwoleń w UI = SCOPE 6.4 — **DONE 28.09 (0086)**: szuflada → Dokumenty → „Zezwolenia transportu”, HHL i przewoźnik transportu, KSH tylko odczyt) ·
 pozycje D4–D12 audytu · integracja SharePoint (zgoda IT KSH) · kalendarz ·
 e-CMR · ślad węglowy · SMS 6, 7, 10, 11 · retencja `files/` w R2 ·
-audyt dostępności · przekazanie Cursorowi.
+audyt dostępności (**wykonany 28.09**, kontrast → D-27) · przekazanie Cursorowi.
 
 ---
 
@@ -178,3 +178,4 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | D-24 | ~~widok placu budowy~~ — **ZAMKNIĘTE 28.09 (właściciel) przez SCOPE 16.1:** Stegra nie jest rolą, tylko strefą/POI. Bez nowej roli; SCOPE 10.4 nie będzie realizowany | — |
 | D-25 | ~~odświeżenie wzorca Dokumenty/Harmonogram~~ — **ZATWIERDZONE WARUNKOWO 28.09 (właściciel):** każde ze 175 ujęć sprawdzić — różnica wyłącznie w miejscu nowych elementów (terminy, „Zmień”, wybór tygodnia, „Wgraj aktualizację”, „Eksport PDF”) → do wzorca; różnica poza tymi obszarami → wypisać, NIE aktualizować. `gate:visual` ma działać bez nadzoru (jeden skrypt, kod wyjścia, linia podsumowania w `/workspace/wt-gate-visual/last.txt`), właściciel uruchamia go co noc, wynik trafia do POSTEP | III-2 (0.3) → **WYKONANE 28.09:** 139 ujęć odświeżonych, 36 wypisanych (niezaktualizowanych); `gate:visual` bez nadzoru → `last.txt` |
 | D-26 | (z D-25) 36 ujęć wypisanych, niezaktualizowanych: (a) 12 × Harmonogram 1920 — inne numery telefonów kierowców w danych demo (+48000000001… zamiast realistycznych) — zostawić nowe numery i odświeżyć wzorzec?; (b)+(c) 24 ujęcia (Dokumenty HHL 1280–1920, Harmonogram HHL sv 390/768/1280) — ta sama treść, różnica tylko z antyaliasingu po ułamkowym przesunięciu — zatwierdzić? Lista: `docs/evidence/d25-verify-2026-09-28.json` | III-2 (0.3) |
+| D-27 | (z III-12, audyt dostępności 28.09) kontrast tekstu poniżej WCAG AA: `--ink-3` jasny #6C7D8A → proponowane #5A6B78, ciemny #748896 → #788C9A, tekst ostrzeżeń `--amber` na `--amber-bg` → #A55A00, licznik dzwonka; oraz usunięcie kursora „rączka” z nagłówków i wierszy tabel bez akcji. Zmiana tokenów = zmiana wyglądu makiety (nowy wzorzec wizualny). Szczegóły: `RAPORT_DOSTEPNOSC.md` | SCOPE 11.5, III-2 |

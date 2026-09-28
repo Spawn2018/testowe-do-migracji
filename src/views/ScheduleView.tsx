@@ -32,6 +32,7 @@ import { formatAppMoney } from '../lib/money/demoFx';
 import { SailingsPanel } from './SailingsPanel';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import type { ServerImportDraft } from '../data/scheduleImportServer';
+import { clickableRow } from '../lib/clickableRow';
 
 /** I-1: import w produkcji przez import_schedule() w bazie (podgląd i zapis w jednej transakcji). */
 const SERVER_IMPORT = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED;
@@ -811,7 +812,7 @@ export function ScheduleView() {
                     className={`${l.status === 'DELIVERED' ? 'done' : ''} ${hoverLoadId === l.id || selectedLoadId === l.id ? 'hl' : ''}`}
                     onMouseEnter={() => setHoverLoad(l.id)}
                     onMouseLeave={() => setHoverLoad(null)}
-                    onClick={() => selectLoad(l.id)}
+                    {...clickableRow(() => selectLoad(l.id))}
                   >
                     {visibleCols.map((id) => {
                       const stick =

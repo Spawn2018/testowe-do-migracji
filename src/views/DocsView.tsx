@@ -11,6 +11,7 @@ import { getNowMs } from '../lib/frozenNow';
 import { shows } from '../lib/prodFacade';
 import { DEFAULT_DOC_REQUIREMENTS, docStatusRows, docSummary, type DocRequirement, type DocStatusRow } from '../lib/docRequirements';
 import { defaultDocWeek, docsForWeek, weeksWithLoads } from '../lib/docWeek';
+import { clickableRow } from '../lib/clickableRow';
 
 const CATS: { key: DocCategory; labelKey: string; who: string; whenKey: string }[] = [
   { key: 'PERMIT_PL', labelKey: 'doc_cat_permit_pl', who: 'Scandinavian Express', whenKey: 'docs_before_load' },
@@ -174,9 +175,9 @@ export function DocsView() {
                     key={r.labelKey}
                     data-docreq={r.key}
                     style={{ cursor: 'pointer' }}
-                    onClick={() => {
+                    {...clickableRow(() => {
                       setFilterCat(r.key);
-                    }}
+                    })}
                   >
                     <td style={{ fontWeight: 600 }}>{t(locale, r.labelKey)}</td>
                     <td>{req ? t(locale, `iii6_r_${req.responsible}`) : r.who}</td>
