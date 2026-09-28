@@ -11,8 +11,8 @@ psql "$ADMIN" -q -c "drop database if exists $DB" -c "create database $DB"
 psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/supabase_stub.sql
 for f in supabase/migrations/*.sql; do psql "$URL" -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null 2>&1 || { echo "MIGRACJA $f: błąd"; exit 1; }; done
 psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/seed.sql
-# projekty z seed.sql powstają po migracjach — ponowne nałożenie 0094 (idempotentna) dodaje reguły startowe, jak na produkcji
-psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0094_workflow_engine.sql >/dev/null 2>&1 || { echo "0094 ponownie: błąd"; exit 1; }
+# projekty z seed.sql powstają po migracjach — ponowne nałożenie 0094+ (idempotentne) dodaje reguły startowe, jak na produkcji
+for f in supabase/migrations/009[4-9]_*.sql; do psql "$URL" -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null 2>&1 || { echo "$f ponownie: błąd"; exit 1; }; done
 set +e
 PSQL="psql $URL -Atq"
 HHL=11111111-0000-0000-0000-000000000001; KSH=11111111-0000-0000-0000-000000000002; SCX=11111111-0000-0000-0000-000000000003
@@ -68,7 +68,7 @@ chk "wynik przebiegu zapisany (akcje, liczba odbiorców)" "$(Q "select result->'
 chk "drugi przebieg workera: kolejka pusta, bez nowych powiadomień" "$(Q "select workflow_worker(50, now())")/$(Q "select count(*) from notifications where template='WORKFLOW_ALERT'")" '{"ok": 0, "dead": 0, "retry": 0, "skipped": 0}/2'
 E3=$(EV STATUS_CANCELLED '{}')
 Q "select workflow_worker(50, now())" >/dev/null
-chk "START-7: akcja risk → otwarty sygnał ryzyka z kluczem reguły" "$(Q "select count(*) from risk_signals where dedup_key like 'WF:%' and resolved_at is null")" 1
+chk "START-7: akcja risk → otwarty sygnał ryzyka z kluczem reguły i tytułem rk_workflow (0095)" "$(Q "select count(*)||':'||max(title_key) from risk_signals where dedup_key like 'WF:%' and resolved_at is null")" "1:rk_workflow"
 chk "reguła wyłączona po zakolejkowaniu → SKIPPED" "$(E4=$(EV GEOFENCE_ENTER '{"geofence_kind":"PRE_ARRIVAL"}'); $PSQL -c "update workflows set enabled=false where code='START-1'" >/dev/null; Q "select workflow_worker(50, now())" >/dev/null; Q "select status||':'||(result->>'reason') from workflow_runs where event_id=$E4")" "SKIPPED:reguła wyłączona"
 
 echo; echo "[9.2] ponawianie: błąd → RETRY (2^n min), po 5 próbach DEAD"
