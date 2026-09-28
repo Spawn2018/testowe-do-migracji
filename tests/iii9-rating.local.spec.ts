@@ -65,6 +65,23 @@ test('HHL: ocena w szufladzie → baza; karta przewoźników w Opcjach', async (
   if (process.env.SHOT) await card.screenshot({ path: '/tmp/iii9-card.png' });
 });
 
+test('D-23 SCX: własna karta i oceny w Ustawieniach, ocena w szufladzie tylko do odczytu, bez notatki HHL', async ({ page }) => {
+  test.setTimeout(120_000);
+  await login(page, 'scx@bk5.local');
+  await page.locator('nav [data-view="settings"]').first().click();
+  const card = page.locator('[data-carrier-scorecard]');
+  await expect(card).toBeVisible();
+  await expect(card.locator('[data-scorecard-row]')).toHaveCount(1);
+  await expect(card.locator('[data-scorecard-score]').first()).toContainText('4,00 / 5 (1)');
+  await expect(card.locator('[data-my-rating="4"]')).toHaveCount(1);
+  await expect(card).not.toContainText('drobne braki');
+  if (process.env.SHOT) await card.screenshot({ path: '/tmp/d23-card.png' });
+  await openLoad(page);
+  await expect(page.locator('[data-carrier-rating-ro]')).toContainText('4 / 5');
+  await expect(page.locator('[data-carrier-rating-form]')).toHaveCount(0);
+  expect(await page.content()).not.toContain('drobne braki');
+});
+
 test('KSH: bez formularza oceny i bez karty', async ({ page }) => {
   test.setTimeout(90_000);
   await login(page, 'ksh@bk5.local');

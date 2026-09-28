@@ -10,6 +10,7 @@ import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 
 const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../components/guide/Guide')) : null;
 /* I-13: parametry SEFS tylko do odczytu (zakres wg RLS) — wyłącznie produkcja */
+const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
 const SefsReadOnly = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/SefsReadOnly')) : null;
 
 export function SettingsView() {
@@ -29,6 +30,7 @@ export function SettingsView() {
       <div className="options-grid">
         <UiPrefsPanel onSaved={saveMark} subKey="settings_prefs_sub" noteKey="settings_prefs_note" />
         {SefsReadOnly && (role === 'KSH' || role === 'SCX') && <Suspense fallback={null}><SefsReadOnly /></Suspense>}
+        {CarrierScorecard && role === 'SCX' && <Suspense fallback={null}><CarrierScorecard /></Suspense>}
         {Guide && <Suspense fallback={null}><Guide locale={locale} role={role === 'KSH' ? 'ksh' : role === 'SCX' ? 'scx' : 'hhl'} /></Suspense>}
       </div>
     </div>

@@ -724,7 +724,7 @@ $PSQL -c "set session_replication_role=replica;
  ('$R1','$P','00000000-0000-0000-0000-00000000a003','KSH/R1','UNLOADED','2026-09-10','2026-09-10 12:00 Europe/Stockholm','2026-09-10 11:00 Europe/Stockholm',null),
  ('$R2','$P','00000000-0000-0000-0000-00000000a003','KSH/R2','DELIVERED','2026-09-12',null,'2026-09-13 02:00 Europe/Stockholm','CARRIER'),
  ('$R3','$P','00000000-0000-0000-0000-00000000a003','KSH/R3','PLANNED','2026-10-12',null,null,null)" >/dev/null
-chk "carrier_ratings: anon 0, authenticated tylko SELECT (RLS: HHL)" "$(Q "select has_table_privilege('anon','carrier_ratings','select')::text||'/'||has_table_privilege('authenticated','carrier_ratings','insert')::text||'/'||has_table_privilege('authenticated','carrier_ratings','select')::text")" "false/false/true"
+chk "carrier_ratings: anon 0, authenticated bez INSERT, SELECT kolumnowo: score tak, comment nie (0091)" "$(Q "select has_table_privilege('anon','carrier_ratings','select')::text||'/'||has_table_privilege('authenticated','carrier_ratings','insert')::text||'/'||has_column_privilege('authenticated','carrier_ratings','score','select')::text||'/'||has_column_privilege('authenticated','carrier_ratings','comment','select')::text")" "false/false/true/false"
 err "SCX nie ocenia" $SCX "select carrier_rate_load('$R1', 5)" "wyłącznie HHL"
 err "KSH nie ocenia" $KSH "select carrier_rate_load('$R1', 5)" "wyłącznie HHL"
 err "przed rozładunkiem → odmowa" $HHL "select carrier_rate_load('$R3', 4)" "po rozładunku"
@@ -732,9 +732,16 @@ err "ocena spoza 1–5 → odmowa" $HHL "select carrier_rate_load('$R1', 6)" "Oc
 val "HHL ocenia transport rozładowany (5)" $HHL "select carrier_rate_load('$R1', 5, 'Bez uwag')::text" true commit
 val "HHL ocenia transport dostarczony (2) i zmienia na 3 (nadpisanie)" $HHL "select carrier_rate_load('$R2', 2)::text; select carrier_rate_load('$R2', 3, 'Spóźnienie 2 h')::text" true commit
 chk "2 oceny, audit_log CARRIER_RATING ×3, stara wartość przy zmianie" "$(Q "select count(*) from carrier_ratings where load_id in ('$R1','$R2')")/$(Q "select count(*) from audit_log where action='CARRIER_RATING' and entity_id in ('$R1','$R2')")/$(Q "select old_value->>'score' from audit_log where action='CARRIER_RATING' and entity_id='$R2' and old_value is not null")" "2/3/2"
-val "SCX nie widzi ocen (0 wierszy)" $SCX "select count(*) from carrier_ratings" 0
+val "D-23: SCX widzi swoje oceny (2, bez notatki)" $SCX "select count(*)||'/'||sum(score) from carrier_ratings" "2/8"
+err "D-23: SCX nie czyta notatki HHL (comment)" $SCX "select comment from carrier_ratings" "permission denied"
+err "D-23: SCX nie czyta notatki przez carrier_rating_detail" $SCX "select * from carrier_rating_detail('$R1')" "wyłącznie dla HHL"
+val "HHL czyta ocenę z notatką (carrier_rating_detail)" $HHL "select score||':'||comment from carrier_rating_detail('$R2')" "3:Spóźnienie 2 h"
+$PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER') on conflict do nothing; insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH') on conflict do nothing" >/dev/null
+val "D-23: inny przewoźnik nie widzi cudzych ocen (0) i ma pustą kartę" 11111111-0000-0000-0000-00000000000b "select (select count(*) from carrier_ratings)||'/'||(select count(*) from carrier_scorecard())" "0/0"
+$PSQL -c "delete from app_users where email='cx3@test'; delete from organizations where code='CX3'" >/dev/null
 val "KSH nie widzi ocen (0 wierszy)" $KSH "select count(*) from carrier_ratings" 0
-err "karta przewoźnika: SCX odmowa" $SCX "select * from carrier_scorecard()" "wyłącznie dla HHL"
+err "karta przewoźnika: KSH odmowa" $KSH "select * from carrier_scorecard()" "wyłącznie dla HHL"
+val "D-23: karta SCX = wyłącznie własny wiersz (zrealizowane 2, na czas 1, z własnej winy 1, śr. ocena 4)" $SCX "select count(*)||'/'||max(delivered)||'/'||max(on_time)||'/'||max(late_carrier)||'/'||max(avg_score) from carrier_scorecard('2026-09-01','2026-09-30')" "1/2/1/1/4.00"
 val "karta: zrealizowane 2, na czas 1 (R1 przed końcem okna; R2 po północy dnia dostawy), z winy przewoźnika 1, śr. spóźnienie 120 min, śr. ocena 4, ocen 2" $HHL "select delivered||'/'||on_time||'/'||late_carrier||'/'||avg_late_min||'/'||avg_score||'/'||ratings from carrier_scorecard('2026-09-01','2026-09-30') where carrier_org_id='00000000-0000-0000-0000-00000000a003'" "2/1/1/120/4.00/2"
 $PSQL -c "set session_replication_role=replica; update loads set status='CANCELLED' where id in ('$R1','$R2','$R3')" >/dev/null
 echo; echo "[D-22] kierowca pojazdu pilotującego: imię i telefon (0090)"

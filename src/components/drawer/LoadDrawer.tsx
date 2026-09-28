@@ -380,7 +380,7 @@ export function LoadDrawer() {
               )}
               {/* I-18: status dat planu — na zakładce przeglądu (widoczny dla trzech ról bez przełączania) */}
               {import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED && load.planDates && isServerId(load.id) && <PlanDatesPanel load={load} />}
-              {CarrierRating && role === 'HHL' && isServerId(load.id) && <Suspense fallback={null}><CarrierRating key={load.id} loadId={load.id} /></Suspense>}
+              {CarrierRating && (role === 'HHL' || role === 'SCX') && isServerId(load.id) && <Suspense fallback={null}><CarrierRating key={load.id} loadId={load.id} /></Suspense>}
             </>
           )}
 

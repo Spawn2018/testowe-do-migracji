@@ -100,3 +100,4 @@ authenticated load_escort_contacts
 authenticated load_track
 authenticated carrier_rate_load
 authenticated carrier_scorecard
+authenticated carrier_rating_detail

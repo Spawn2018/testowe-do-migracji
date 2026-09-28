@@ -38,6 +38,8 @@ jako dokumenty** (`documents`, kategorie `PERMIT_PL`, `PERMIT_SE`, `INSURANCE`; 
 widzi wszystko) — test `security.sh` [3.2f]. Jeśli strukturalne dane mają trafić do interfejsu: polityka odczytu
 HHL w nowej migracji + test.
 
+**0091 (D-23):** `carrier_ratings` — RLS: HHL wszystkie, przewoźnik własne; SELECT kolumnowy authenticated bez `comment` i `rated_by` (notatka HHL wewnętrzna); notatka tylko przez `carrier_rating_detail()` (wyłącznie HHL). `carrier_scorecard` — przewoźnik dostaje wyłącznie własny wiersz. Nie przywracać tabelowego SELECT.
+
 ## 3. Funkcje (stan po 0030)
 - każda funkcja `public` ma ustaloną `search_path` (`public, extensions`) — test `security.sh` [3.2d];
 - `anon` wywołuje wyłącznie: `driver_get_instructions`, `driver_post_event`, `driver_post_position`, `keep_alive`
