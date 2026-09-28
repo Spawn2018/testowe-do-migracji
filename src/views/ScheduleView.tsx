@@ -51,7 +51,7 @@ function fmtDim(n: number, locale: Locale = 'pl'): string {
 }
 
 function delayMinutes(l: Load): number | null {
-  return delayPillMinutes(l, delayMinutesVsPlan(l.etaBoden, l.plannedDeliverDate), PROD_BUILD);
+  return delayPillMinutes(l, delayMinutesVsPlan(l.etaBoden, l.plannedDeliverDate, l.planDates?.deliveryTo), PROD_BUILD);
 }
 
 /** I-18: data wstępna vs potwierdzona przez KSH (tylko produkcja — w demo pola brak). */

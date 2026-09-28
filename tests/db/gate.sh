@@ -34,7 +34,7 @@ check archive 18
 check watchdog 27
 check invite 48
 check risks 23
-check import 48
+check import 49
 check nullguard 300
-check i2 371
+check i2 373
 [ $ok -eq 1 ]

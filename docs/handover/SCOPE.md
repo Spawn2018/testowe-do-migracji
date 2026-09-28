@@ -1779,7 +1779,7 @@ Tabela: `docs/handover/POSTEP.md` § I-2i (11 pozycji: 8 ukrytych/zastąpionych 
 
 ## 57. Założenia planu i czasu przejazdu (27.09)
 
-plan KSH 5 dni od podjęcia do dostawy; obsada jednoosobowa, odpoczynek dobowy na promie; model ok. 2,5 doby + oczekiwanie na rejs; opóźnienie liczone od końca dnia dostawy (Europe/Stockholm).
+plan KSH 5 dni od podjęcia do dostawy; obsada jednoosobowa, odpoczynek dobowy na promie; model ok. 2,5 doby + oczekiwanie na rejs; opóźnienie liczone od końca okna dostawy, a gdy okna nie ma — od końca dnia dostawy (Europe/Stockholm).
 
 ## 58. Daty planu — źródło (27.09)
 

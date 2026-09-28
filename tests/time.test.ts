@@ -54,6 +54,16 @@ describe('D8 timezone policy', () => {
     expect(delayMinutesVsPlan('2026-09-26T23:59:00+02:00', '2026-09-26')).toBeNull();
     expect(delayMinutesVsPlan('2026-09-27T02:00:00+02:00', '2026-09-26')).toBe(120); // północ Sztokholm → 02:00
     expect(delayMinutesVsPlan('2026-12-27T01:00:00+01:00', '2026-12-26')).toBe(60); // zima (CET)
+  });
+  it('I-25 akceptacja (identycznie jak baza, 0080): koniec okna dostawy, a bez okna — koniec dnia (Europe/Stockholm)', () => {
+    // okno 01.10 08:00–12:00, ETA 18:00 → 360 (nie 0)
+    expect(delayMinutesVsPlan('2026-10-01T18:00:00+02:00', '2026-10-01', '2026-10-01T12:00:00+02:00')).toBe(360);
+    // bez okna, ETA 18:00 w dniu dostawy → 0 (brak opóźnienia)
+    expect(delayMinutesVsPlan('2026-10-01T18:00:00+02:00', '2026-10-01', null) ?? 0).toBe(0);
+    // bez okna, ETA 06:00 dnia następnego → 360
+    expect(delayMinutesVsPlan('2026-10-02T06:00:00+02:00', '2026-10-01', null)).toBe(360);
+    // ETA przed końcem okna → brak opóźnienia
+    expect(delayMinutesVsPlan('2026-10-01T11:00:00+02:00', '2026-10-01', '2026-10-01T12:00:00+02:00') ?? 0).toBe(0);
     expect(calendarDayEndMs('2026-09-30', TZ_UNLOAD_SE)).toBe(Date.parse('2026-09-30T22:00:00Z'));
     // naive Date.parse('2026-09-26') is UTC midnight — would skew on some hosts
     const naive = Date.parse('2026-09-26');

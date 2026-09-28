@@ -249,7 +249,7 @@ export function calendarDayNoonMs(day: string, timeZone: CorridorZone): number |
   return Number.isFinite(t) ? t : null;
 }
 
-/** Koniec dnia kalendarzowego w strefie (północ następnego dnia) → epoch ms. SCOPE §57: opóźnienie od końca dnia dostawy. */
+/** Koniec dnia kalendarzowego w strefie (północ następnego dnia) → epoch ms. SCOPE §57: gdy brak okna dostawy — opóźnienie od końca dnia dostawy. */
 export function calendarDayEndMs(day: string, timeZone: CorridorZone): number | null {
   const m = String(day).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!m) return null;
@@ -260,14 +260,19 @@ export function calendarDayEndMs(day: string, timeZone: CorridorZone): number | 
   return Number.isFinite(t) ? t : null;
 }
 
-/** Minuty opóźnienia ETA względem KOŃCA dnia dostawy w Europe/Stockholm (SCOPE §57; jak loads.delay_minutes w bazie, 0070). */
+/**
+ * Minuty opóźnienia ETA (SCOPE §57, I-25; jak loads.delay_minutes w bazie, 0080): od końca okna dostawy
+ * (`plan_delivery_to`, tylko od KSH), a gdy okna nie ma — od końca dnia dostawy w Europe/Stockholm.
+ */
 export function delayMinutesVsPlan(
   etaIso: string | null | undefined,
   plannedDeliverDay: string | null | undefined,
+  deliveryWindowTo?: string | null,
 ): number | null {
-  if (!etaIso || !plannedDeliverDay) return null;
+  if (!etaIso || (!plannedDeliverDay && !deliveryWindowTo)) return null;
   const eta = parseInstant(etaIso);
-  const plan = calendarDayEndMs(plannedDeliverDay, TZ_UNLOAD_SE);
+  const win = deliveryWindowTo ? parseInstant(deliveryWindowTo) : null;
+  const plan = win ? win.getTime() : plannedDeliverDay ? calendarDayEndMs(plannedDeliverDay, TZ_UNLOAD_SE) : null;
   if (!eta || plan == null) return null;
   if (eta.getTime() <= plan) return null;
   return Math.max(1, Math.round((eta.getTime() - plan) / 60_000));

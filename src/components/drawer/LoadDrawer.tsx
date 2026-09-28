@@ -157,7 +157,7 @@ export function LoadDrawer() {
   const permitBlock = readyGate.blocked;
   const coverInfo = evaluateLoadCover(load, loadDocs);
   const readyUiBlocked = permitBlock || !coverInfo.covered || load.docMissing || load.permitFits === false;
-  const delayMin = delayPillMinutes(load, delayMinutesVsPlan(load.etaBoden, load.plannedDeliverDate), PROD_BUILD);
+  const delayMin = delayPillMinutes(load, delayMinutesVsPlan(load.etaBoden, load.plannedDeliverDate, load.planDates?.deliveryTo), PROD_BUILD);
   const delayPillText = delayMin === null ? t(locale, 'i2_delay_pill') : formatDelayPill(delayMin);
   const permitState = !shows('permitNumber') ? permitBannerState(load, loadDocs) : null;
   const comboL = load.resources.setLengthM ?? load.dims.lengthM;
