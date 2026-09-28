@@ -687,7 +687,7 @@ $PSQL -c "delete from app_users where email='cx3@test'; delete from organization
 echo; echo "[III-4] pojazdy pilotujące: dane i awizacja (0087)"
 LE=33333333-0000-0000-0000-0000000034e1
 $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status) values ('$LE','$P','00000000-0000-0000-0000-00000000a003','KSH/E34','PLANNED')" >/dev/null
-$PSQL -c "update loads set plan_load_date=current_date+1, driver_name='Jan Test', driver_phone='+48500000000', tractor_plate='PO1', trailer_plate='PO2' where id='$LE'" >/dev/null
+$PSQL -c "update loads set plan_load_date=current_date+1, plan_load_from=now() + interval '30 hours', driver_name='Jan Test', driver_phone='+48500000000', tractor_plate='PO1', trailer_plate='PO2' where id='$LE'" >/dev/null
 chk "load_escorts: anon 0 uprawnień, authenticated tylko SELECT (kolumnowo od 0090 — bez danych kierowcy pilota)" "$(Q "select has_table_privilege('anon','load_escorts','select')::text||'/'||has_table_privilege('authenticated','load_escorts','insert')::text||'/'||has_column_privilege('authenticated','load_escorts','plate','select')::text")" "false/false/true"
 err "SCX nie wstawia bezpośrednio do load_escorts" $SCX "insert into load_escorts (load_id, seq, company, plate) values ('$LE',1,'X','AB1')" "permission denied"
 val "SCX: zezwolenie z 2 pilotami powiązane" $SCX "select (load_permit_save('$LE','PL','PL/E34',current_date,current_date+30,null,null,null,null,2) is not null)::text" true commit
