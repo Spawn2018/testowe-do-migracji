@@ -1518,10 +1518,10 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 8.5 | ZABLOKOWANA | PLAN II-6; Dziennik blokad |
 | 8.6 | ZABLOKOWANA | PLAN II-6; Dziennik blokad |
 | 8.10 | ZABLOKOWANA | PLAN II-2; Dziennik blokad |
-| 9.1 | DO ZROBIENIA | PLAN Etap III „Silnik Workflows” |
-| 9.2 | DO ZROBIENIA | PLAN Etap III „Silnik Workflows” |
-| 9.3 | DO ZROBIENIA (częściowo) | PLAN Etap III „Silnik Workflows” |
-| 9.4 | DO ZROBIENIA (częściowo) | PLAN Etap III „Silnik Workflows” (w produkcji moduł ukryty — I-2) |
+| 9.1 | GOTOWE (28.09, 0094) | POSTEP 9.1–9.4 |
+| 9.2 | GOTOWE (28.09, 0094; zadanie cyklicznego wywołania — decyzja) | POSTEP 9.1–9.4 |
+| 9.3 | GOTOWE (28.09, 0094: START-1…7 wyłączone) | POSTEP 9.1–9.4 |
+| 9.4 | CZĘŚCIOWO (baza gotowa: zapis przez API z walidacją; widok WorkflowsView nadal demo, w produkcji ukryty — I-2) | POSTEP 9.1–9.4 |
 | 9.6 | ODŁOŻONA | Dziennik odłożeń; bramka SMS — I-3 (D-4) |
 | 9.8 | GOTOWE (28.09) | PLAN I-23 + POSTEP 9.8 |
 | 9.9 | ODŁOŻONA | Dziennik odłożeń |
@@ -1674,10 +1674,10 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 9.1 | Silnik: wyzwalacz, warunek, akcje | DO ZROBIENIA (nie zrobione) | nie zrobione | na produkcji brak silnika reguł (audyt C1); L9 OPEN |
-| 9.2 | Wykonanie trwałe, z ponawianiem | DO ZROBIENIA (nie zrobione) | nie zrobione | zależy od 9.1 |
-| 9.3 | Siedem reguł startowych | DO ZROBIENIA (częściowo) | 12 reguł wf-1…12 tylko w `src/data/seed.ts` (demo) | produkcja `workflows` 0; automatyzacje jako zaszyte funkcje SQL + cron |
-| 9.4 | Kreator reguł dla administratora | DO ZROBIENIA (częściowo) | WorkflowsView (demo, `runWorkflowNow` bez ewaluacji) | fasada — brak zapisu i wykonania |
+| 9.1 | Silnik: wyzwalacz, warunek, akcje | GOTOWE (28.09) | 0094: `wf_logic` (JSONLogic), wyzwalacz `load_events_workflows`, akcje notify/risk, email/sms zablokowane do R-2 | `tests/db/workflows.sh` 35/35 |
+| 9.2 | Wykonanie trwałe, z ponawianiem | GOTOWE (28.09) | 0094: kolejka `workflow_runs` (QUEUED/RETRY/OK/SKIPPED/DEAD, dedup_key), `workflow_worker()` — podtransakcja, 2^n min, 5 prób | bez crona — uruchomienie decyzją |
+| 9.3 | Siedem reguł startowych | GOTOWE (28.09) | 0094: START-1…7 w każdym projekcie, wyłączone | produkcja: 7 reguł, 0 włączonych |
+| 9.4 | Kreator reguł dla administratora | CZĘŚCIOWO | baza: zapis HHL_ADMIN (RLS `wf_all`) + walidacja `wf_validate`; WorkflowsView nadal demo | podpięcie widoku do bazy — pakiet przekazania |
 | 9.5 | Poczta z szablonami w trzech językach | GOTOWE | M7 `c907fe9`; `supabase/functions/_shared/notifyTemplates.ts` pl/en/sv; cron tower-send-notifications |  |
 | 9.6 | Wiadomości tekstowe | ODŁOŻONA | nie zrobione | zob. Dziennik odłożeń |
 | 9.7 | Powiadomienia w aplikacji | GOTOWE | `notifications` + RPC `mark_notifications_read` |  |

@@ -137,6 +137,19 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
         : `Załadunek ${bl} → ${ld}, dostawa ${bd} → ${dd}.` + (reconfirm ? ' KSH musi ponownie potwierdzić daty.' : ''));
       return { subject, body, severity: 'HIGH', view: null };
     }
+    case 'WORKFLOW_ALERT': {
+      // 9.1 (0094): akcja „notify” reguły automatyzacji — nazwa reguły (tekst administratora), transport, opcjonalny tekst
+      const code = String(p.code ?? '');
+      const rule = String(p.rule ?? '');
+      const text = String(p.text ?? '');
+      const subject = locale === 'en'
+        ? `${code}: automation rule „${rule}”`
+        : locale === 'sv' ? `${code}: automatiseringsregel „${rule}”` : `${code}: reguła automatyzacji „${rule}”`;
+      const body = text || (locale === 'en'
+        ? `The rule „${rule}” was triggered for transport ${code}.`
+        : locale === 'sv' ? `Regeln „${rule}” utlöstes för transport ${code}.` : `Reguła „${rule}” zadziałała dla transportu ${code}.`);
+      return { subject, body, severity: 'MEDIUM', view: null };
+    }
     case 'SMS_FALLBACK': {
       // I-3 (0067): SMS niewysłany w 10 min albo FAILED — treść do przekazania kierowcy telefonicznie/komunikatorem
       const code = String(p.code ?? '');

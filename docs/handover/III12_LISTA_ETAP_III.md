@@ -12,7 +12,7 @@
 ## Niezależne od właściciela — można robić dalej
 | Pozycja | Co zostało | Uwagi |
 |---|---|---|
-| Silnik Workflows (SCOPE 9.1–9.4) | reguły w bazie (warunek → akcja), wykonanie przez zadanie; dziś moduł ukryty w produkcji | największa pozycja; akcje wysyłające wiadomości zewnętrzne i tak blokuje `EXTERNAL_MESSAGING` do R-2 |
+| Silnik Workflows (SCOPE 9.1–9.4) | **9.1–9.3 DONE 28.09** (0094, POSTEP 9.1–9.4); 9.4 częściowo — baza gotowa, widok do podpięcia | największa pozycja; akcje wysyłające wiadomości zewnętrzne i tak blokuje `EXTERNAL_MESSAGING` do R-2 |
 | Odsiewanie duplikatów powiadomień (9.8, I-23, audyt D12) | **DONE 28.09** — POSTEP 9.8 | czysto techniczne |
 | Eksport PDF (10.8, I-24) | **DONE 28.09** — POSTEP 10.8 | czysto techniczne |
 | Wersjonowanie i archiwum pliku harmonogramu (3.6, audyt D4) | **DONE 28.09** — migracja 0093 (historia wersji tylko do dopisywania), POSTEP 3.6 | techniczne |
