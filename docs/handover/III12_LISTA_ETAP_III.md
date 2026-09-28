@@ -16,7 +16,7 @@
 | Odsiewanie duplikatów powiadomień (9.8, I-23, audyt D12) | częściowo | czysto techniczne |
 | Eksport PDF (10.8, I-24) | częściowo | czysto techniczne |
 | Wersjonowanie i archiwum pliku harmonogramu (3.6, audyt D4) | do sprawdzenia w SCOPE/POSTEP | techniczne |
-| Wymuszenie w bazie: import tylko KSH, eksport tylko HHL (16.3, audyt D11) | do sprawdzenia testem | techniczne (bezpieczeństwo) |
+| Wymuszenie w bazie: import tylko KSH, eksport tylko HHL (16.3, audyt D11) | **DONE 28.09** — reguła zastąpiona przez I-18 (import HHL, potwierdzanie dat KSH); sprawdzone testem `tests/db/import.sh` 60/60, eksport per rola (POSTEP 16.3) | techniczne (bezpieczeństwo) |
 | Retencja `files/` w R2 | zasady jak dla dokumentów | bez nowych płatnych zasobów — tylko na istniejącym koncie |
 | III-13: 36 ujęć wzorca (Harmonogram, Dokumenty) | znaleźć commity, zaklasyfikować (zamierzone → `G4_WZORZEC.md`, regresja → naprawa), odświeżyć | pozycja robocza, nie decyzja właściciela |
 | Przekazanie Cursorowi | pakiet dokumentów przekazania | dokumentacja |
