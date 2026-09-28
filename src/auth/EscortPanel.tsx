@@ -10,7 +10,7 @@ import './auth.css';
  * powiązane zezwolenia vs awizowane (load_escort_status). Zapis pełnej listy przez load_escorts_set — HHL i przewoźnik
  * transportu (baza odmawia innym i po rozładunku); KSH — tylko odczyt. Tylko build Supabase (chunk leniwy).
  */
-type Row = { company: string; plate: string; scope: 'PL' | 'SE' | 'PL_SE' };
+type Row = { company: string; plate: string; scope: 'PL' | 'SE' | 'PL_SE'; driver_name?: string; driver_phone?: string };
 const SCOPES = ['PL_SE', 'PL', 'SE'] as const;
 
 export default function EscortPanel({ loadId }: { loadId: string }) {
@@ -30,12 +30,16 @@ export default function EscortPanel({ loadId }: { loadId: string }) {
       sb.from('load_escorts').select('seq,company,plate,scope').eq('load_id', loadId).order('seq'),
       sb.rpc('load_escort_status').eq('load_id', loadId),
     ]);
-    const list = ((e.data ?? []) as Row[]).map((r) => ({ company: r.company, plate: r.plate, scope: r.scope }));
+    /* D-22 (0090): imię i telefon kierowcy pilota tylko przez load_escort_contacts (HHL i przewoźnik transportu) */
+    const c = canWrite ? await sb.rpc('load_escort_contacts').eq('load_id', loadId) : { data: [] };
+    const contacts = new Map(((c.data ?? []) as { seq: number; driver_name: string | null; driver_phone: string | null }[]).map((x) => [x.seq, x]));
+    const list = ((e.data ?? []) as (Row & { seq: number })[]).map((r) => ({ company: r.company, plate: r.plate, scope: r.scope,
+      driver_name: contacts.get(r.seq)?.driver_name ?? '', driver_phone: contacts.get(r.seq)?.driver_phone ?? '' }));
     setRows(list); setSaved(list.length);
     const st = (Array.isArray(s.data) ? s.data[0] : null) as { required?: number } | null;
     setReq(st?.required ?? 0);
     setDirty(false);
-  }, [loadId]);
+  }, [loadId, canWrite]);
   useEffect(() => { void refresh(); }, [refresh]);
   if (rows === null) return null;
 
@@ -44,7 +48,7 @@ export default function EscortPanel({ loadId }: { loadId: string }) {
     e.preventDefault();
     setBusy(true); setMsg(null);
     const sb = await getSupabase();
-    const { error } = await sb.rpc('load_escorts_set', { p_load: loadId, p_escorts: rows.map((r) => ({ ...r, plate: r.plate.trim().toUpperCase() })) });
+    const { error } = await sb.rpc('load_escorts_set', { p_load: loadId, p_escorts: rows.map((r) => ({ ...r, plate: r.plate.trim().toUpperCase(), driver_name: (r.driver_name ?? '').trim() || null, driver_phone: (r.driver_phone ?? '').replace(/\s/g, '') || null })) });
     setBusy(false);
     if (error) { setMsg({ ok: false, text: authErrorPl(error.message) }); return; }
     setMsg({ ok: true, text: t(locale, 'e34_saved') });
@@ -82,10 +86,13 @@ export default function EscortPanel({ loadId }: { loadId: string }) {
               <label>{t(locale, 'e34_scope')}<select className="input" name={`scope${i}`} value={r.scope} onChange={(e) => set(i, 'scope', e.target.value)}>
                 {SCOPES.map((s) => <option key={s} value={s}>{t(locale, `e34_scope_${s}`)}</option>)}
               </select></label>
+              <label>{t(locale, 'd22_driver')}<input className="input" name={`driver${i}`} maxLength={120} autoComplete="off" value={r.driver_name ?? ''} onChange={(e) => set(i, 'driver_name', e.target.value)} /></label>
+              <label>{t(locale, 'd22_phone')}<input className="input mono" name={`phone${i}`} type="tel" maxLength={20} placeholder="+48 600 100 200" autoComplete="off" value={r.driver_phone ?? ''} onChange={(e) => set(i, 'driver_phone', e.target.value)} /></label>
               <label className="wide"><button type="button" className="btn ghost" data-escort-remove={i + 1} onClick={() => { setRows(rows.filter((_, j) => j !== i)); setDirty(true); }}>{t(locale, 'e34_remove')}</button></label>
             </div>
           ))}
           <label className="wide"><button type="button" className="btn ghost" disabled={rows.length >= 5} data-escort-add onClick={() => { setRows([...rows, { company: '', plate: '', scope: 'PL_SE' }]); setDirty(true); }}>{t(locale, 'e34_add')}</button></label>
+          <div className="note" style={{ margin: 0, gridColumn: '1 / -1' }} data-escort-pii-note>{t(locale, 'd22_note')}</div>
           <label className="wide"><button type="submit" className="btn" disabled={busy || !dirty} data-escorts-save>{t(locale, 'e34_save')}</button></label>
         </form>
       )}

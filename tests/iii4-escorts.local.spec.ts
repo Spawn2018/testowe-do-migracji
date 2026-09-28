@@ -60,10 +60,18 @@ test('SCX: wymagane 2 → awizacja 2 pilotów → stan zgodny, zapis w bazie', a
     await page.locator(`[name="plate${i}"]`).fill(pl);
     await page.locator(`[name="scope${i}"]`).selectOption(sc);
   }
+  // D-22 (0090): kierowca pierwszego pilota — imię i telefon (spacje usuwane → E.164)
+  await page.locator('[name="driver0"]').fill('Adam Pilot');
+  await page.locator('[name="phone0"]').fill('+48 600 100 200');
+  await expect(page.locator('[data-escort-pii-note]')).toBeVisible()
   await page.locator('[data-escorts-save]').click();
   await expect(page.locator('[data-escorts-msg="ok"]')).toBeVisible();
   await expect(page.locator('[data-escorts-state="ok"]')).toContainText('awizowane 2 / wymagane 2');
   expect(psql(`select string_agg(seq||':'||plate||':'||scope, ',' order by seq) from load_escorts where load_id='${LD}'`)).toBe('1:PO 12345:PL,2:ABC 123:SE');
+  expect(psql(`select string_agg(seq||':'||coalesce(driver_name,'-')||':'||coalesce(driver_phone,'-'), ',' order by seq) from load_escorts where load_id='${LD}'`)).toBe('1:Adam Pilot:+48600100200,2:-:-');
+  expect(psql(`select (new_value::text like '%600100200%')::text from audit_log where action='ESCORTS_SET' and entity_id='${LD}' order by id desc limit 1`)).toBe('false');
+  await page.keyboard.press('Escape'); await openRes(page);
+  await expect(page.locator('[name="phone0"]')).toHaveValue('+48600100200');
   expect(psql(`select escort_vehicles||'/'||(select (count(*) > 0)::text from audit_log where action='ESCORTS_SET' and entity_id='${LD}' and jsonb_array_length(new_value)=2) from loads where id='${LD}'`)).toBe('2/true');
 });
 
@@ -73,4 +81,8 @@ test('KSH: lista pilotów tylko do odczytu', async ({ page }) => {
   await openRes(page);
   await expect(page.locator('[data-escorts="2"]')).toContainText('PO 12345');
   await expect(page.locator('[data-escorts-form]')).toHaveCount(0);
+  // D-22: KSH nie widzi imienia ani telefonu kierowcy pilota (ani w DOM, ani w odpowiedziach API)
+  await expect(page.locator('[data-escorts]')).not.toContainText('Adam Pilot');
+  await expect(page.locator('[data-escorts]')).not.toContainText('600100200');
+  expect(await page.content()).not.toContain('600100200');
 });

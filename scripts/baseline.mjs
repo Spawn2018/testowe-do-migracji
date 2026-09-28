@@ -339,6 +339,9 @@ async function shoot(file) {
   return path
 }
 
+/* D-25: RECTS_SEL='sel1;;sel2' — prostokąty wskazanych elementów (współrzędne ujęcia) → OUT/_rects.json */
+const RECTS_SEL = (process.env.RECTS_SEL || '').split(';;').map((x) => x.trim()).filter(Boolean)
+const rects = {}
 let ok = 0
 let fail = 0
 const errors = []
@@ -359,6 +362,11 @@ for (const job of jobs) {
     if (job.currency) await setCurrency(job.role.id, job.currency)
     await navTo(job.view.dataView, job.view.scrollTo)
     await shoot(job.file)
+    if (RECTS_SEL.length) {
+      rects[job.file] = await page.evaluate((sels) => sels.flatMap((sel) => [...document.querySelectorAll(sel)].map((el) => {
+        const r = el.getBoundingClientRect(); return { sel, x: r.x, y: r.y, w: r.width, h: r.height }
+      })), RECTS_SEL)
+    }
     ok++
     console.log('OK', job.file)
   } catch (e) {
@@ -376,6 +384,7 @@ for (const job of jobs) {
 }
 
 await browser.close()
+if (RECTS_SEL.length) writeFileSync(join(OUT, '_rects.json'), JSON.stringify(rects, null, 1))
 
 const appChecksum = computeAppChecksum()
 

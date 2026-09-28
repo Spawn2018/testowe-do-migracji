@@ -680,7 +680,7 @@ echo; echo "[III-4] pojazdy pilotujące: dane i awizacja (0087)"
 LE=33333333-0000-0000-0000-0000000034e1
 $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status) values ('$LE','$P','00000000-0000-0000-0000-00000000a003','KSH/E34','PLANNED')" >/dev/null
 $PSQL -c "update loads set plan_load_date=current_date+1, driver_name='Jan Test', driver_phone='+48500000000', tractor_plate='PO1', trailer_plate='PO2' where id='$LE'" >/dev/null
-chk "load_escorts: anon 0 uprawnień, authenticated tylko SELECT" "$(Q "select has_table_privilege('anon','load_escorts','select')::text||'/'||has_table_privilege('authenticated','load_escorts','insert')::text||'/'||has_table_privilege('authenticated','load_escorts','select')::text")" "false/false/true"
+chk "load_escorts: anon 0 uprawnień, authenticated tylko SELECT (kolumnowo od 0090 — bez danych kierowcy pilota)" "$(Q "select has_table_privilege('anon','load_escorts','select')::text||'/'||has_table_privilege('authenticated','load_escorts','insert')::text||'/'||has_column_privilege('authenticated','load_escorts','plate','select')::text")" "false/false/true"
 err "SCX nie wstawia bezpośrednio do load_escorts" $SCX "insert into load_escorts (load_id, seq, company, plate) values ('$LE',1,'X','AB1')" "permission denied"
 val "SCX: zezwolenie z 2 pilotami powiązane" $SCX "select (load_permit_save('$LE','PL','PL/E34',current_date,current_date+30,null,null,null,null,2) is not null)::text" true commit
 val "stan: wymagane 2, awizowane 0, brak 2" $KSH "select required||'/'||assigned||'/'||missing from load_escort_status() where load_id='$LE'" "2/0/2"
@@ -737,6 +737,27 @@ val "KSH nie widzi ocen (0 wierszy)" $KSH "select count(*) from carrier_ratings"
 err "karta przewoźnika: SCX odmowa" $SCX "select * from carrier_scorecard()" "wyłącznie dla HHL"
 val "karta: zrealizowane 2, na czas 1 (R1 przed końcem okna; R2 po północy dnia dostawy), z winy przewoźnika 1, śr. spóźnienie 120 min, śr. ocena 4, ocen 2" $HHL "select delivered||'/'||on_time||'/'||late_carrier||'/'||avg_late_min||'/'||avg_score||'/'||ratings from carrier_scorecard('2026-09-01','2026-09-30') where carrier_org_id='00000000-0000-0000-0000-00000000a003'" "2/1/1/120/4.00/2"
 $PSQL -c "set session_replication_role=replica; update loads set status='CANCELLED' where id in ('$R1','$R2','$R3')" >/dev/null
+echo; echo "[D-22] kierowca pojazdu pilotującego: imię i telefon (0090)"
+LP=33333333-0000-0000-0000-0000000022d1
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status) values ('$LP','$P','00000000-0000-0000-0000-00000000a003','KSH/D22','PLANNED')" >/dev/null
+chk "kolumny danych osobowych: authenticated bez SELECT driver_name/driver_phone, anon bez EXECUTE load_escort_contacts" "$(Q "select has_column_privilege('authenticated','load_escorts','driver_name','select')::text||'/'||has_column_privilege('authenticated','load_escorts','driver_phone','select')::text||'/'||has_function_privilege('anon','load_escort_contacts()','execute')::text")" "false/false/false"
+err "zły telefon pilota → odmowa" $SCX "select load_escorts_set('$LP','[{\"company\":\"Pilot\",\"plate\":\"PO1\",\"driver_phone\":\"600100200\"}]')" "formacie międzynarodowym"
+err "imię ponad 120 znaków → odmowa" $SCX "select load_escorts_set('$LP',jsonb_build_array(jsonb_build_object('company','Pilot','plate','PO1','driver_name',repeat('x',121))))" "do 120 znaków"
+val "SCX awizuje pilota z kierowcą (telefon ze spacjami → E.164) i drugiego bez kontaktu" $SCX "select load_escorts_set('$LP','[{\"company\":\"Pilot-Trans\",\"plate\":\"PO 22\",\"driver_name\":\"Adam Pilot\",\"driver_phone\":\"+48 600 100 200\"},{\"company\":\"Följebil AB\",\"plate\":\"SE 22\"}]')" 2 commit
+val "SCX (przewoźnik transportu) widzi kontakt przez load_escort_contacts" $SCX "select string_agg(seq||':'||driver_name||':'||driver_phone, ',') from load_escort_contacts() where load_id='$LP'" "1:Adam Pilot:+48600100200"
+val "HHL widzi kontakt" $HHL "select count(*) from load_escort_contacts() where load_id='$LP'" 1
+val "KSH: load_escort_contacts → 0 wierszy" $KSH "select count(*) from load_escort_contacts()" 0
+err "KSH: bezpośredni odczyt driver_phone → brak uprawnień" $KSH "select driver_phone from load_escorts where load_id='$LP'" "permission denied"
+val "KSH nadal widzi pojazdy (firma, tablica) bez danych osobowych" $KSH "select string_agg(plate, ',' order by seq) from load_escorts where load_id='$LP'" "PO 22,SE 22"
+$PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER') on conflict do nothing; insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH') on conflict do nothing" >/dev/null
+val "inny przewoźnik: 0 kontaktów" 11111111-0000-0000-0000-00000000000b "select count(*) from load_escort_contacts() where load_id='$LP'" 0
+$PSQL -c "delete from app_users where email='cx3@test'; delete from organizations where code='CX3'" >/dev/null
+chk "audit_log ESCORTS_SET bez danych osobowych (tylko znacznik kontakt)" "$(Q "select (new_value::text not like '%Adam%' and new_value::text not like '%600100200%')::text||'/'||(new_value->0->>'kontakt') from audit_log where action='ESCORTS_SET' and entity_id='$LP' order by id desc limit 1")" "true/true"
+$PSQL -c "set session_replication_role=replica; update loads set status='UNLOADED', actual_delivery_at=now()-interval '89 days' where id='$LP'" >/dev/null
+chk "retencja: 89 dni po rozładunku — kontakt pilota zostaje" "$(Q "select purge_personal_data() >= 0")/$(Q "select count(*) from load_escorts where load_id='$LP' and driver_phone is not null")" "t/1"
+$PSQL -c "set session_replication_role=replica; update loads set actual_delivery_at=now()-interval '91 days' where id='$LP'" >/dev/null
+chk "retencja: 91 dni po rozładunku — imię i telefon pilota wyczyszczone, pojazd zostaje, licznik 'piloci' w integration_runs" "$(Q "select purge_personal_data() >= 1")/$(Q "select count(*)||':'||count(driver_name)||':'||count(driver_phone) from load_escorts where load_id='$LP'")/$(Q "select (result->>'piloci')::int >= 1 from integration_runs where job='rodo' order by id desc limit 1")" "t/2:0:0/t"
+$PSQL -c "set session_replication_role=replica; update loads set status='CANCELLED' where id='$LP'" >/dev/null
 chk "I-28: load_delivery_day_end usunięta (0085), load_delivery_deadline zostaje" "$(Q "select (to_regprocedure('load_delivery_day_end(date,timestamptz)') is null)::text||'/'||(to_regprocedure('load_delivery_deadline(date,timestamptz)') is not null)::text")" "true/true"
 echo; echo "[I-27] brak zezwolenia blokuje Gotowy dla klasy ≠ STANDARD (0084, przełącznik)"
 LD=33333333-0000-0000-0000-0000000027d1; LS=33333333-0000-0000-0000-0000000027a1
