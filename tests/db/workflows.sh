@@ -86,6 +86,29 @@ EM=$(EV MILESTONE_UNLOADED '{}')
 Q "select workflow_worker(50, now())" >/dev/null
 chk "e-mail i SMS: ZABLOKOWANE_R2, przebieg OK, 0 wiadomości w kolejkach" "$(Q "select status||':'||(result->'actions'->0->>'status')||':'||(result->'actions'->1->>'status') from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='T-MAIL'")/$(Q "select count(*) from notifications where channel='EMAIL'")/$(Q "select count(*) from sms_outbox")" "OK:ZABLOKOWANE_R2:ZABLOKOWANE_R2/0/0"
 
+echo; echo "[0096] wyzwalacze z kreatora: FERRY_STATUS (zmiana rejsu) i CRON_DAILY_06 (przegląd dzienny)"
+val "HHL_ADMIN zapisuje reguły FERRY_STATUS i CRON_DAILY_06 (dotąd odrzucane)" $HHL "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 'f', 'FERRY_STATUS', 'true', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]'), ('$P', 'd', 'CRON_DAILY_06', 'true', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]'); select 'ok'" ok
+VS=$(Q "insert into vessels (name, operator) values ('T-Prom', 'T') returning id")
+SL=$(Q "insert into sailings (project_id, vessel_id, departure_at, arrival_at) values ('$P', '$VS', '2026-10-05 16:00+00', '2026-10-06 08:00+00') returning id")
+$PSQL -c "set session_replication_role=replica; update loads set sailing_id='$SL' where id='$L1'" >/dev/null
+$PSQL -c "insert into workflows (project_id, code, name, trigger_type, condition, actions) values ('$P', 'T-FERRY', 'prom odwołany', 'FERRY_STATUS', '{\"==\":[{\"var\":\"payload.status\"},\"ODWOLANY\"]}', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]')" >/dev/null
+FR() { Q "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='T-FERRY'"; }
+$PSQL -c "update sailings set status='OPOZNIONY', delayed_departure_at='2026-10-05 18:30+00' where id='$SL'" >/dev/null
+chk "opóźnienie rejsu → 1 przebieg w kolejce z danymi rejsu (status, opóźnienie 150 min)" "$(FR)/$(Q "select (payload->>'event_type')||':'||(payload#>>'{payload,status}')||':'||(payload#>>'{payload,delay_min}') from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='T-FERRY'")" "1/FERRY_STATUS:OPOZNIONY:150"
+chk "worker: warunek (ODWOLANY) niespełniony → SKIPPED" "$(Q "select workflow_worker(50, now())")" '{"ok": 0, "dead": 0, "retry": 0, "skipped": 1}'
+$PSQL -c "update sailings set status='ODWOLANY' where id='$SL'" >/dev/null
+chk "odwołanie rejsu → przebieg OK, powiadomienie HHL (WORKFLOW_ALERT, zdarzenie FERRY_STATUS)" "$(Q "select workflow_worker(50, now())")/$(Q "select count(*) from notifications n join app_users u on u.id=n.user_id where n.template='WORKFLOW_ALERT' and u.auth_id='$HHL' and n.payload->>'event'='FERRY_STATUS'")" '{"ok": 1, "dead": 0, "retry": 0, "skipped": 0}/1'
+chk "zapis rejsu bez zmiany statusu i czasów → bez nowego przebiegu" "$($PSQL -c "update sailings set source='RECZNIE', status='ODWOLANY' where id='$SL'" >/dev/null; FR)" 2
+chk "transport anulowany na rejsie nie dostaje przebiegu" "$($PSQL -c "set session_replication_role=replica; update loads set status='CANCELLED' where id='$L1'" >/dev/null; $PSQL -c "update sailings set status='ZAPLANOWANY' where id='$SL'" >/dev/null; FR)" 2
+$PSQL -c "set session_replication_role=replica; update loads set status='PLANNED' where id='$L1'" >/dev/null
+$PSQL -c "insert into workflows (project_id, code, name, trigger_type, condition, actions) values ('$P', 'T-DAY', 'przegląd dzienny', 'CRON_DAILY_06', 'true', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]')" >/dev/null
+NA=$(Q "select count(*) from loads where project_id='$P' and status not in ('CANCELLED','DELIVERED')")
+chk "wf_enqueue_daily: po 1 przebiegu na aktywny transport; drugie wywołanie tego samego dnia (Europe/Warsaw) — 0" "$(Q "select wf_enqueue_daily('2026-10-02 04:00+00')")/$(Q "select wf_enqueue_daily('2026-10-02 21:30+00')")" "$NA/0"
+chk "kolejny dzień (22:30 UTC = 00:30 Warszawa) — nowe przebiegi; worker wykonuje je z kontekstem dnia" "$(Q "select wf_enqueue_daily('2026-10-02 22:30+00')")/$(Q "select (workflow_worker(500, '2026-10-03 05:00+00')->>'ok')")/$(Q "select count(distinct payload#>>'{payload,day}') from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='T-DAY'")" "$NA/$((NA*2))/2"
+chk "reguła dzienna wyłączona → nic nie kolejkuje" "$($PSQL -c "update workflows set enabled=false where code='T-DAY'" >/dev/null; Q "select wf_enqueue_daily('2026-10-04 04:00+00')")" 0
+chk "authenticated/anon: brak EXECUTE wf_enqueue_daily i wf_enqueue_sailing" "$(Q "select bool_or(has_function_privilege(r, p.oid, 'execute'))::text from pg_proc p cross join unnest(array['anon','authenticated']) r where p.proname in ('wf_enqueue_daily','wf_enqueue_sailing')")" false
+err "KSH nie wywoła wf_enqueue_daily" $KSH "select wf_enqueue_daily(now())" "permission denied"
+
 echo; echo "[odporność] błąd kolejkowania nie blokuje zapisu zdarzenia"
 chk "zdarzenie zapisane mimo reguły, której kolejkowanie się nie uda" "$(Q "alter table workflow_runs add constraint t_blok check (status <> 'QUEUED') not valid; insert into load_events (load_id, event_type, occurred_at) values ('$L1', 'MILESTONE_UNLOADED', now()); alter table workflow_runs drop constraint t_blok; select count(*) from load_events where event_type='MILESTONE_UNLOADED'")" 2
 echo; echo "WYNIK: $ok OK, $fail FAIL"

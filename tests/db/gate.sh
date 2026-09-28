@@ -37,5 +37,5 @@ check risks 23
 check import 66
 check nullguard 369
 check i2 510
-check workflows 35
+check workflows 46
 [ $ok -eq 1 ]

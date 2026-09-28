@@ -21,7 +21,7 @@ Ten dokument to punkt wejścia. Starsze `01_HANDOVER.md`…`09_INDEKS_WIEDZY.md`
 ## 2. Architektura (dziś)
 
 - Front: Vite + React 19 + TypeScript + Zustand, HashRouter. `VITE_AUTH_MODE=demo` = dane demo (`src/data/seed.ts`), inaczej `SupabaseProvider`. Moduły bez backendu są w produkcji ukryte (`src/lib/prodFacade.ts`, `permissions.ts` — m.in. „Automatyzacje”).
-- Baza: Supabase Postgres 17, migracje `0001`…`0095`, RLS na wszystkich tabelach; logika biznesowa w funkcjach SQL + `pg_cron` (25 zadań `tower-*`, lista: `select jobname, schedule from cron.job`).
+- Baza: Supabase Postgres 17, migracje `0001`…`0096`, RLS na wszystkich tabelach; logika biznesowa w funkcjach SQL + `pg_cron` (25 zadań `tower-*`, lista: `select jobname, schedule from cron.job`).
 - Funkcje Edge (`supabase/functions/`): backup-export, document-archive, driver-photo, ferry-ais, ferry-schedule, ferry-status, fuel-wob (bez crona, przełącznik `FUEL_WOB_INGEST` wyłączony), road-pl, road-se, send-notifications, traffic-flow, usage-check. Wspólne: `_shared/` (m.in. `notifyTemplates.ts` — treść powiadomień PL/EN/SV, używana też przez aplikację).
 - Hosting: Vercel, projekt `watch-tower-makieta`, domeny `tower.log-mar.pl` i `watch-tower-makieta.vercel.app`. Ostatnie wdrożenie: `69fdee7` (28.09).
 - Przełączniki (`security_flags`): MFA_HHL_ADMIN=false, EXTERNAL_MESSAGING=false, PERMIT_REQUIRED_NON_STANDARD=false, FUEL_WOB_INGEST=false.
@@ -34,7 +34,7 @@ Ten dokument to punkt wejścia. Starsze `01_HANDOVER.md`…`09_INDEKS_WIEDZY.md`
 | Aplikacja demo | `VITE_AUTH_MODE=demo npm run dev` |
 | Typy | `npx tsc -p tsconfig.app.json --noEmit` |
 | Testy jednostkowe | `npm test` (vitest; 28.09 po 9.4: 531 zaliczonych / 33 pominięte) |
-| Brama bazy | `PGCLUSTER=17/main bash tests/db/gate.sh` — lokalny Postgres 17 na porcie 5433 (`postgres://postgres@localhost:5433`), każdy zestaw tworzy własną bazę. Oczekiwane liczby przypadków są w `gate.sh` (`check <zestaw> N`) — **nowy test = podbić liczbę**, inaczej push padnie. 28.09: security 88, status 44, storage 37, money 130, release 145, backup 23, session 27, archive 18, watchdog 27, invite 48, risks 23, import 66, nullguard 369, i2 510, workflows 35. |
+| Brama bazy | `PGCLUSTER=17/main bash tests/db/gate.sh` — lokalny Postgres 17 na porcie 5433 (`postgres://postgres@localhost:5433`), każdy zestaw tworzy własną bazę. Oczekiwane liczby przypadków są w `gate.sh` (`check <zestaw> N`) — **nowy test = podbić liczbę**, inaczej push padnie. 28.09: security 88, status 44, storage 37, money 130, release 145, backup 23, session 27, archive 18, watchdog 27, invite 48, risks 23, import 66, nullguard 369, i2 510, workflows 46. |
 | Push | `PGCLUSTER=17/main TOWER_REQUIRE_DB=1 git push` (pre-push: vitest, brama bazy, e2e Playwright, zrzuty stanów, smoke). |
 | Brama wizualna | `npm run gate:visual` (~42 min, port 4188, 840 ujęć, próg 0,1%, poza pre-push). Wynik: `/workspace/wt-gate-visual/last.txt`. Każde odchylenie wyjaśnić jak w `G4_WZORZEC.md` §III-13 (commit → klasyfikacja zamierzone/regresja → naprawa regresji) **zanim** odświeży się wzorzec. Ujęcia odświeżać w kolejności matrycy (patrz §G-V a956ab6). |
 | Dostępność | `A11Y_STRICT=1 A11Y_URL=http://127.0.0.1:4189 node scripts/a11y/audit.mjs out.json` na buildzie demo. |
@@ -56,7 +56,7 @@ A11Y-2 (wiersze listy wyjątków z klawiatury, bez zmiany wyglądu) · 16.3 (reg
 | Pozycja | Stan | Następny krok | Kto decyduje |
 |---|---|---|---|
 | 9.4 kreator reguł — widok | **podpięte 28.09 (9.4)**: `SupabaseProvider` czyta `workflows` (RLS `wf_all` — tylko HHL_ADMIN) i `workflow_runs`; przełącznik i kreator zapisują przez API (`workflow.update`/`workflow.create`, mapowanie `src/data/workflowMap.ts`); w produkcji moduł widoczny tylko dla HHL_ADMIN (`canSeeWorkflows`), „Uruchom” daje tylko komunikat (reguły uruchamia zdarzenie) | brak osobnego UI edycji istniejącej reguły (w makiecie go nie ma — dodanie = zmiana wyglądu, STOP); widok nie pokazuje historii przebiegów (tylko licznik OK) | właściciel: włączenie START-1…7 i zadanie cykliczne `workflow_worker` |
-| 9.2 zadanie cykliczne | `workflow_worker(limit, teraz)` gotowy, bez crona | migracja z `cron.schedule('tower-automatyzacje', '* * * * *', …)` | właściciel (razem z włączeniem reguł START-1…7) |
+| 9.2 zadanie cykliczne | `workflow_worker(limit, teraz)` gotowy, bez crona; od 0096 także `wf_enqueue_daily(teraz)` (wyzwalacz „codziennie o 06:00”, jeden przebieg na regułę i aktywny transport na dzień) — bez crona; wyzwalacz „status promu” (FERRY_STATUS) działa od razu (wyzwalacz na `sailings`) | migracja z `cron.schedule('tower-automatyzacje', '* * * * *', …)` i `cron.schedule('tower-automatyzacje-06', …)` o 06:00 Europe/Warsaw (pg_cron liczy w UTC — 04:00 latem, 05:00 zimą, albo co godzinę z warunkiem na godzinę lokalną) | właściciel — PLAN D-29 (START) |
 | Retencja R2 (`files/`) | **czeka na logowanie do Cloudflare** (`docs/handover/r2/lifecycle.json`, `bucket-lock.json` przygotowane) | po zalogowaniu właściciela: nałożyć lifecycle na kubełek kopii | właściciel (logowanie) |
 | D-2 indeks SEFS / WOB | III-10 gotowe (0092, `fuel-wob` wdrożona, przełącznik wyłączony) | włączenie `FUEL_WOB_INGEST` + cron | właściciel |
 | D-27 kontrast tokenów, kursor bez akcji | audyt: 1327 naruszeń kontrastu, 362 elementy z kursorem bez akcji (`RAPORT_DOSTEPNOSC.md`) | zmiana tokenów = zmiana wyglądu | właściciel |
