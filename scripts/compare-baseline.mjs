@@ -92,3 +92,5 @@ console.log(JSON.stringify(report.totals, null, 2))
 console.log('byView', byView)
 console.log('report →', OUT)
 if (missingInCand.length || missingInBase.length || sizeMismatch.length) process.exitCode = 2
+/* III-2: STRICT=1 (npm run gate:visual) — każde ujęcie ponad próg = błąd */
+else if (process.env.STRICT === '1' && changed.length) process.exitCode = 1

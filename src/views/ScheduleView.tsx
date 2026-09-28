@@ -1,6 +1,6 @@
 import { PROD_BUILD } from '../lib/prodFacade';
 import { delayPillMinutes } from '../lib/prodDash';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { invoicedLoadIds } from '../lib/importRemoval';
 import { MAP_FIELDS as MAP_FIELDS_UI, REQUIRED_FIELDS as REQUIRED_FIELDS_UI, type PartialColumnMap } from '../lib/importMapping';
 import { useTowerStore } from '../store/useTowerStore';
@@ -61,6 +61,10 @@ function DateStatusMark({ s, locale }: { s: 'WSTEPNA' | 'POTWIERDZONA'; locale: 
     : <span className="pill" data-date-status="WSTEPNA" title={t(locale, 'i18_provisional')} style={{ marginLeft: 4, padding: '0 4px' }}>{t(locale, 'i18_prov_short')}</span>;
 }
 
+/** III-2: czas szkieletu jak w makiecie (go(): 260 ms) */
+export const SKELETON_MS = 260;
+const SKEL_W = [70, 120, 150, 60, 100, 100, 90, 130, 70, 100, 70, 80, 80, 90];
+
 export function ScheduleView() {
   /* M10 — rozkład rejsów jako druga zakładka harmonogramu (seg) */
   const [schedTab, setSchedTab] = useState<'loads' | 'sailings'>('loads');
@@ -100,6 +104,9 @@ export function ScheduleView() {
   const [tplName, setTplName] = useState('');
   const pendingBuf = useRef<ArrayBuffer | null>(null);
   const [quick, setQuick] = useState<Quick>('all');
+  /* III-2 (SCOPE 0.9, makieta go()): krótki szkielet tabeli po wejściu w widok — wiersze w rytmie tabeli, nigdy spinner */
+  const [skeleton, setSkeleton] = useState(true);
+  useEffect(() => { const id = window.setTimeout(() => setSkeleton(false), SKELETON_MS); return () => window.clearTimeout(id); }, []);
   const fileRef = useRef<HTMLInputElement>(null);
   const [colPrefs, setColPrefs] = useState<SchedColPrefs>(() => loadSchedPrefs());
   const [colMenu, setColMenu] = useState(false);
@@ -703,6 +710,20 @@ export function ScheduleView() {
             {list.length} / {loads.length}
           </span>
         </div>
+        {!skeleton && list.length === 0 ? (
+          <div className="empty" data-sched-empty>
+            <b>{t(locale, 'iii2_empty_title')}</b>
+            <p>
+              {chips.some((c) => c.id === quick && /^[A-Z_]+$/.test(c.id))
+                ? t(locale, 'iii2_empty_stage').replace('{stage}', t(locale, chips.find((c) => c.id === quick)!.labelKey))
+                : t(locale, 'iii2_empty_any')}{' '}
+              {t(locale, 'iii2_empty_hint')}
+            </p>
+            <button type="button" className="btn ghost" data-sched-clear onClick={() => { setSearch(''); setQuick('all'); }}>
+              {t(locale, 'iii2_empty_clear')}
+            </button>
+          </div>
+        ) : (
         <div className="tablewrap" style={{ flex: 1 }}>
           <table className="sched-table" style={{ tableLayout: 'fixed', width: 'max-content', minWidth: '100%' }}>
             <colgroup>
@@ -777,7 +798,11 @@ export function ScheduleView() {
               </tr>
             </thead>
             <tbody>
-              {list.map((l) => {
+              {skeleton ? Array.from({ length: 12 }, (_, r) => (
+                <tr key={`skel-${r}`} className="skel" data-sched-skel>
+                  {visibleCols.map((id, i) => <td key={id}><i style={{ width: SKEL_W[i % SKEL_W.length] - (i % 3) * 8 }} /></td>)}
+                </tr>
+              )) : list.map((l) => {
                 const dmin = delayMinutes(l);
                 return (
                   <tr
@@ -933,6 +958,7 @@ export function ScheduleView() {
             </tbody>
           </table>
         </div>
+        )}
         <div className="note">
           {showMargin
             ? t(locale, 'sched_money_note').replace('{cur}', currency)

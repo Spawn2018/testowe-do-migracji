@@ -250,6 +250,22 @@ po rozwinięciu tokenów i robi się czerwony przy każdej różnicy spoza listy
 
 ---
 
+## 7b. Stany i brama wizualna (III-2)
+
+Zrzuty wzorcowe stanów: `tests/visual-states.spec.ts` → `tests/__screenshots__/stan-*.png` (harmonogram HHL, pl, 1440 × 900):
+najechanie (wiersz `.hl`), fokus (`:focus-visible` po Tab), wciśnięty (`aria-pressed` + `:active`), zablokowany
+(`[data-action="mark-ready"]:disabled` przy brakach dokumentów), ładowanie (`tr.skel` — 12 wierszy w rytmie tabeli przez
+260 ms po wejściu w widok, jak `go()` w makiecie), pusty (`.empty` z „Wyczyść filtry”, tekst jak w makiecie), błąd
+(odczyt XLSX nieudany — czerwony komunikat + toast), błąd walidacji (mapowanie kolumn: pola wymagane `*`, zapis
+zablokowany); najechanie, fokus i pusty także w jasnym. Próg: 0,1% pikseli. Tryb „systemowy”: motyw domyślny roli
+wygrywa z ustawieniem systemu (SCOPE 17.9) — test sprawdza atrybut `data-theme` dla obu ustawień systemu.
+
+Brama: pre-push (`scripts/ci/fresh-smoke.sh`, świeży build HEAD na :4179) = smoke 4 ujęć + 11 stanów (~1,5 min).
+Pełna matryca 840 ujęć wobec `shots-baseline/` z progiem 0,1% na ujęcie: `npm run gate:visual`
+(`scripts/visual/gate.sh`, własny build i port 4188, ~70 min — dlatego poza pre-push). Port 4177 jest zarezerwowany.
+
+---
+
 ## 8. Ikony
 
 Dwanaście ikon rysowanych dla tej dziedziny, w obiekcie `ICONS`. Inline SVG,

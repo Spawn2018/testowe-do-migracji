@@ -1472,11 +1472,11 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | # | Status po etapie I | Gdzie / dowód |
 |---|---|---|
 | 0.1 | DO ZROBIENIA (częściowo) | PLAN III-2 |
-| 0.3 | DO ZROBIENIA (częściowo) | PLAN III-2 |
+| 0.3 | CZĘŚCIOWO 28.09 — brama lokalna gotowa (`npm run gate:visual`, próg 0,1%), wynik 665/840; 175 ujęć (Dokumenty, Harmonogram) = dryf sprzed III-2 → decyzja D-25 | PLAN III-2, D-25 |
 | 0.7 | DO ZROBIENIA | PLAN III-2 |
-| 0.8 | DO ZROBIENIA (częściowo) | PLAN III-2 |
-| 0.9 | DO ZROBIENIA (częściowo) | PLAN III-2 |
-| 0.10 | DO ZROBIENIA (częściowo) | PLAN III-2 |
+| 0.8 | DONE 28.09 | PLAN III-2 (`tests/visual-states.spec.ts`) |
+| 0.9 | DONE 28.09 | PLAN III-2 (szkielet i stan pusty harmonogramu jak w makiecie + zrzuty) |
+| 0.10 | DONE 28.09 | PLAN III-2 (tryb systemowy = motyw roli, SCOPE 17.9; test atrybutu) |
 | 1.1 | DO ZROBIENIA (częściowo) | PLAN III-3 |
 | 1.4 | DO POTWIERDZENIA | I-5 `a548eba` + I-17 `642d68f`: 2FA działa, dwa urządzenia; wymaganie aal2 włącza właściciel — D-11 |
 | 1.5 | GOTOWE | produkcyjny build na tower.log-mar.pl — Vercel `a14a2ac` (POSTEP O-V3), 0 × service_role |
@@ -1532,7 +1532,7 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 10.8 | DO ZROBIENIA (częściowo) | PLAN I-24 (PDF) |
 | 10.9 | ODŁOŻONA | Dziennik odłożeń; Etap III (ślad węglowy) |
 | 11.3 | DO ZROBIENIA (częściowo) | PLAN R-3 (O3b) |
-| 11.4 | DO ZROBIENIA (częściowo) | PLAN III-2 |
+| 11.4 | CZĘŚCIOWO 28.09 | jak 0.3 (D-25) |
 | 11.5 | DO ZROBIENIA | PLAN Etap III „audyt dostępności” |
 | 11.6 | GOTOWE | I-8 `642d68f`: 350 transportów, 112 496 pozycji — liczby w POSTEP |
 | 11.8 | GOTOWE | I-4 `3dac401`: instrukcje w aplikacji dla kierowcy (PL/EN/SV), HHL, KSH, przewoźnika |

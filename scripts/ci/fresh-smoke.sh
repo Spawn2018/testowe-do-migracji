@@ -45,6 +45,8 @@ curl -fsS -o /dev/null "http://127.0.0.1:$PORT/" || { echo "[fresh] podgląd nie
 export PW_BASE_URL="http://127.0.0.1:$PORT"
 echo "[fresh] PW_BASE_URL=$PW_BASE_URL"
 npm run test:visual
+# III-2: zrzuty stanów (najechanie, fokus, wciśnięty, zablokowany, ładowanie, pusty, błąd, walidacja) — próg 0,1%
+npx playwright test tests/visual-states.spec.ts
 npm run test:d19
 npm run test:deur
 npm run test:etap4
