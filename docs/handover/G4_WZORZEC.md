@@ -52,3 +52,23 @@ zmiana wniesiona przez kod to tylko +40 px przy `40eca8a` (PL-T). Regresji: **0*
 Dlaczego przeszło: `compare.mjs` (próg koloru 0,28; zmiana liczona dopiero przy > 60 px albo ratio > 0,001)
 nie liczył tych drobnych różnic, a hak pre-push robi 4 ujęcia. Od teraz: pełny przebieg 840 przed każdym tagiem
 wzorca, wynik w opisie tagu (AGENTS.md, `.cursor/rules/tower.mdc`).
+
+## III-13 (28.09.2026) — 36 ujęć wypisanych w D-25: commity, klasyfikacja, odświeżenie
+Metoda jak przy 13 ujęciach kokpitu: build demo i ujęcia dla **każdego z 40 commitów** zmieniających `src/` od wzorca `ce094ad`
+(27.09) do `6e9e2fb`, po 3 ujęcia reprezentatywne (Harmonogram HHL PL 1920 ciemny, Dokumenty HHL PL 1440 ciemny, Harmonogram HHL SV
+768 ciemny), porównanie dokładne (piksele różne) commit do commitu; potem analiza pikseli poza strefą nowych elementów z uwzględnieniem
+przesunięcia. Wzorzec odtwarza się na `ce094ad` z 0 px różnicy (determinizm potwierdzony, także ponowne ujęcie HEAD = 0 px).
+
+| Grupa | Ujęcia | Commit(y) | Co się zmieniło poza strefą | Ocena |
+|---|---|---|---|---|
+| A | Harmonogram 1920: HHL i SCX × PL/EN/SV × 2 motywy (12) | `16638cb` feat(I-2a–h) | kolumna „Telefon”: numery demo `+48000000001…` / `+37000000001…` / `+46701740001…` zamiast realistycznych (I-2h: numery demo nieprzydzielalne, żeby demo nigdy nie wysłało SMS-a do prawdziwej osoby) — 16 031 px | **zamierzone** (KSH nie widzi telefonu — SEC-1, dlatego tylko HHL/SCX; kolumna widoczna tylko przy 1920) |
+| A | jw. | `f7bda8b` III-2 (część) | wiersz filtrów: chipy za znakiem `/` przesunięte o 1 px w poziomie — naprawa dryfu `kbd` wobec makiety — 3 182 px | **zamierzone** (zgodność z makietą) |
+| A/C | Harmonogram (strefa) | `db3d5e3` I-24 | przycisk „Eksport PDF” w nagłówku (w strefie) | zamierzone — strefa D-25 |
+| B | Dokumenty HHL 1280/1440/1920 × PL/EN/SV × 2 motywy (18) | `bc31ac1` III-6 | nad listą „Pliki w vault” nowa tabela wymagalności i terminów → lista niżej o 133 px (lewa kolumna zgodna co do piksela po przesunięciu o 133 px); prawa kolumna (nazwy plików obok przycisku 26 px, wyrównanie do środka) pada na inny ułamek piksela → te same teksty, inne wygładzanie (5 660 px, x 1200–1427) | **zamierzone** — treść identyczna (sprawdzone na wycinkach), różnica wyłącznie z zaokrąglenia pozycji podpikselowej |
+| B | jw. (strefa) | `e4b393d` I-2k | pasek „paczka tygodnia” (w strefie) | zamierzone — strefa D-25 |
+| C | Harmonogram HHL SV 390/768/1280 × 2 motywy (6) | `db3d5e3` I-24 | szwedzka etykieta przycisku PDF zawija pasek narzędzi → tabela niżej o ~38 px (ułamkowo); co kilka wierszy wiersz pada na inny ułamek piksela (np. SG-05, SG-10) — ta sama treść, inne wygładzanie (10 309 px) | **zamierzone** — skutek nowego przycisku; zawijanie paska jak w makiecie (flex-wrap) |
+
+Szum niezależny od kodu: 7–14 px w pasku górnym (y 10–11) zmienia się między przebiegami niezależnie od commitu — poniżej progu, nie
+wpływa na wynik.
+
+**Regresji: 0.** Wzorzec 36 ujęć odświeżony z buildu `6e9e2fb` (zmiany `6e9e2fb` względem `24dbbcf` są niewidoczne: `aria-label`, `tabIndex`).
