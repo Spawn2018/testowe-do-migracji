@@ -1472,7 +1472,7 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | # | Status po etapie I | Gdzie / dowód |
 |---|---|---|
 | 0.1 | DO ZROBIENIA (częściowo) | PLAN III-2 |
-| 0.3 | CZĘŚCIOWO 28.09 — brama lokalna gotowa (`npm run gate:visual`, próg 0,1%), wynik 665/840; 175 ujęć (Dokumenty, Harmonogram) = dryf sprzed III-2 → decyzja D-25 | PLAN III-2, D-25 |
+| 0.3 | GOTOWE 28.09 (wariant lokalny, jak III-3) — `npm run gate:visual` (840 ujęć, próg 0,1%): zielony przebieg `OK 840/840 kod 0` na `42a72c7` (15:33); w pre-push smoke 4 ujęć + 11 stanów | PLAN III-2, POSTEP G-V 42a72c7 |
 | 0.7 | DO ZROBIENIA | PLAN III-2 |
 | 0.8 | DONE 28.09 | PLAN III-2 (`tests/visual-states.spec.ts`) |
 | 0.9 | DONE 28.09 | PLAN III-2 (szkielet i stan pusty harmonogramu jak w makiecie + zrzuty) |
@@ -1532,7 +1532,7 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 10.8 | GOTOWE (28.09) | PLAN I-24 (PDF) + POSTEP 10.8 |
 | 10.9 | ODŁOŻONA | Dziennik odłożeń; Etap III (ślad węglowy) |
 | 11.3 | DO ZROBIENIA (częściowo) | PLAN R-3 (O3b) |
-| 11.4 | CZĘŚCIOWO 28.09 | jak 0.3 (D-25) |
+| 11.4 | GOTOWE 28.09 (wariant lokalny) | jak 0.3 |
 | 11.5 | DO ZROBIENIA | PLAN Etap III „audyt dostępności” |
 | 11.6 | GOTOWE | I-8 `642d68f`: 350 transportów, 112 496 pozycji — liczby w POSTEP |
 | 11.8 | GOTOWE | I-4 `3dac401`: instrukcje w aplikacji dla kierowcy (PL/EN/SV), HHL, KSH, przewoźnika |
@@ -1545,7 +1545,7 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 |---|---|---|---|---|
 | 0.1 | Arkusz stylów przeniesiony dosłownie z mockupu | DONE 28.09 (III-2: `tests/stylesheet-mockup.test.ts` — suma kontrolna arkusza makiety + porównanie każdej deklaracji, 13 odstępstw z uzasadnieniem) | `src/index.css` nagłówek „CSS 1:1 z tower-makieta.html” (Fala-1-D1) | porównania sum kontrolnych arkusza brak; arkusz rozbudowany o klasy ról |
 | 0.2 | Zrzuty wzorcowe: widok × rola × język × 5 szerokości × 2 tryby | GOTOWE | `shots-baseline/` 840 ujęć, tag `baseline-fala-3e-2026-09-27`; WZORZEC-3C `cede8bd`, A6-WZORZEC2 `ce094ad` |  |
-| 0.3 | Test regresji wizualnej w CI, próg 0,1% | DO ZROBIENIA (częściowo) | F2.2 `14261fc` (720/720); `.githooks/pre-push` → `scripts/ci/fresh-smoke.sh` (smoke 4 ujęć) | próg zmieniony na `maxDiffPixels:60, threshold:0.28` zamiast 0,1%; pełne 840 porównywane ręcznie; GitHub `unit.yml` uruchamia tylko testy jednostkowe |
+| 0.3 | Test regresji wizualnej w CI, próg 0,1% | GOTOWE 28.09 (wariant lokalny: pełna brama 840/840, próg 0,1%; GitHub Actions — jak III-3, poza zakresem) | F2.2 `14261fc` (720/720); `.githooks/pre-push` → `scripts/ci/fresh-smoke.sh` (smoke 4 ujęć) | próg zmieniony na `maxDiffPixels:60, threshold:0.28` zamiast 0,1%; pełne 840 porównywane ręcznie; GitHub `unit.yml` uruchamia tylko testy jednostkowe |
 | 0.4 | Konfiguracja blokująca wartości spoza systemu | GOTOWE | F2.3 `6f77f7e` stylelint `declaration-strict-value`; `npm run lint:css` w pre-push |  |
 | 0.5 | Zakaz Tailwinda i motywów bibliotek w komponentach | GOTOWE | `package.json` bez Tailwind/MUI/Chakra; `src/index.css` „no Tailwind” (Fala-1-D1) | przegląd grep 27.09 |
 | 0.6 | Katalog komponentów jako kontrakt nazw klas | GOTOWE | `docs/handover/DESIGN_SYSTEM.md` |  |
@@ -1707,7 +1707,7 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 11.1 | Testy jednostkowe logiki: cennik, indeksacja, parser, strefy | GOTOWE | unit 353 passed / 28 skipped (money, sefs, schedule-import, routes, …) |  |
 | 11.2 | Testy integracyjne bazy i uprawnień | GOTOWE | `tests/db/gate.sh`: security 83, status 44, storage 37, money 130, release 145, backup 20, session 27, archive 18, watchdog 27, invite 48, risks 23 |  |
 | 11.3 | Testy ścieżek użytkownika | DO ZROBIENIA (częściowo) | etap4/5/6-ui.spec.ts, bk5-api.live.spec.ts | na produkcji niewykonane (O3a/O3b) |
-| 11.4 | Testy regresji wizualnej | DO ZROBIENIA (częściowo) | zob. 0.3 | patrz 0.3 |
+| 11.4 | Testy regresji wizualnej | GOTOWE 28.09 (wariant lokalny) | zob. 0.3 | patrz 0.3 |
 | 11.5 | Dostępność: klawiatura, kontrast, czytniki ekranu | DO ZROBIENIA (nie zrobione) | nie zrobione | nigdy niesprawdzana (audyt D2); są tylko atrybuty aria |
 | 11.6 | Wydajność przy pełnym zakresie projektu | DO ZROBIENIA (częściowo) | D15 `ecb0632` (pierwsze wczytanie 224 kB gz) | bazy z 72 transportami i pełnym GPS nie testowano (audyt D3) |
 | 11.7 | Skróty klawiszowe z widocznymi podpowiedziami | GOTOWE | `src/components/shell/KeyboardHelp.tsx` |  |

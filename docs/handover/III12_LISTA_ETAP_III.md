@@ -12,13 +12,13 @@
 ## Niezależne od właściciela — można robić dalej
 | Pozycja | Co zostało | Uwagi |
 |---|---|---|
-| Silnik Workflows (SCOPE 9.1–9.4) | **9.1–9.4 DONE 28.09** (0094/0095, POSTEP 9.1–9.4 i 9.4): widok „Automatyzacje” na danych z bazy dla HHL_ADMIN; reguły startowe wyłączone, bez zadania cyklicznego (decyzja właściciela) | największa pozycja; akcje wysyłające wiadomości zewnętrzne i tak blokuje `EXTERNAL_MESSAGING` do R-2 |
+| Silnik Workflows (SCOPE 9.1–9.4) | **9.1–9.4 DONE 28.09** (0094/0095, POSTEP 9.1–9.4 i 9.4): widok „Automatyzacje” na danych z bazy dla HHL_ADMIN; reguły startowe wyłączone, bez zadania cyklicznego (decyzja właściciela); 0096: wyzwalacze „status promu” i „codziennie o 06:00” — włączenie z D-29 | największa pozycja; akcje wysyłające wiadomości zewnętrzne i tak blokuje `EXTERNAL_MESSAGING` do R-2 |
 | Odsiewanie duplikatów powiadomień (9.8, I-23, audyt D12) | **DONE 28.09** — POSTEP 9.8 | czysto techniczne |
 | Eksport PDF (10.8, I-24) | **DONE 28.09** — POSTEP 10.8 | czysto techniczne |
 | Wersjonowanie i archiwum pliku harmonogramu (3.6, audyt D4) | **DONE 28.09** — migracja 0093 (historia wersji tylko do dopisywania), POSTEP 3.6 | techniczne |
 | Wymuszenie w bazie: import tylko KSH, eksport tylko HHL (16.3, audyt D11) | **DONE 28.09** — reguła zastąpiona przez I-18 (import HHL, potwierdzanie dat KSH); sprawdzone testem `tests/db/import.sh` 60/60, eksport per rola (POSTEP 16.3) | techniczne (bezpieczeństwo) |
 | Retencja `files/` w R2 | **CZEKA na logowanie do Cloudflare** (wrangler wylogowany; bez logowania z naszej strony — polecenie 28.09); pliki `docs/handover/r2/*.json` gotowe | bez nowych płatnych zasobów — tylko na istniejącym koncie |
-| III-13: 36 ujęć wzorca (Harmonogram, Dokumenty) | znaleźć commity, zaklasyfikować (zamierzone → `G4_WZORZEC.md`, regresja → naprawa), odświeżyć | pozycja robocza, nie decyzja właściciela |
+| III-13: 36 ujęć wzorca (Harmonogram, Dokumenty) | **DONE 28.09** — 3 grupy, regresji 0 (`G4_WZORZEC.md`); brama wizualna 840/840 zielona na `42a72c7` (III-2 0.3/11.4 DONE) | pozycja robocza |
 | Przekazanie Cursorowi | **DONE 28.09** — `PRZEKAZANIE_CURSOR.md` + `.cursor/rules/tower.mdc` | dokumentacja |
 | Dostępność — reszta | `list` w kolejce wyjątków (12), mylący kursor (362) | poprawki bez zmiany wyglądu — tylko jeśli D-27 dopuści |
 
