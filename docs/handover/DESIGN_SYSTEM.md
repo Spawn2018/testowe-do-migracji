@@ -234,6 +234,22 @@ Każda z nich to moment, w którym narzędzie zaczyna wyglądać na wygenerowane
 
 ---
 
+## 7a. Nowa klasa CSS — procedura (3 warunki naraz)
+
+Nowy ekran, moduł i funkcja powstają **wyłącznie z klas, które już istnieją** (§5). Nowa klasa jest dopuszczalna
+tylko wtedy, gdy w tym samym commicie spełnione są trzy warunki:
+
+1. **Wpis w katalogu komponentów** (§5) z uzasadnieniem: dlaczego żaden istniejący wzorzec nie wystarcza.
+2. **Wyłącznie istniejące tokeny** (§2) — kolory, odstępy, promienie i rozmiary z zamkniętej skali; pilnuje tego
+   stylelint `declaration-strict-value` (`npm run lint:css`, pre-push).
+3. **Nowy zrzut wzorcowy** stanu wypełnionego, pustego i błędu (`scripts/baseline.mjs`, `shots-baseline/`).
+
+Brak któregokolwiek = klasa nie wchodzi. Zmiana reguły przeniesionej z makiety (`docs/claude/referencje/tower.css`)
+jest odstępstwem: test `tests/stylesheet-mockup.test.ts` (III-2) porównuje każdą deklarację makiety z `src/index.css`
+po rozwinięciu tokenów i robi się czerwony przy każdej różnicy spoza listy `ODSTEPSTWA` (każde z uzasadnieniem i źródłem).
+
+---
+
 ## 8. Ikony
 
 Dwanaście ikon rysowanych dla tej dziedziny, w obiekcie `ICONS`. Inline SVG,

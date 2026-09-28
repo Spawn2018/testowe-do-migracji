@@ -1543,13 +1543,13 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 
 | # | Pozycja | Status | Dowód | Notatka |
 |---|---|---|---|---|
-| 0.1 | Arkusz stylów przeniesiony dosłownie z mockupu | DO ZROBIENIA (częściowo) | `src/index.css` nagłówek „CSS 1:1 z tower-makieta.html” (Fala-1-D1) | porównania sum kontrolnych arkusza brak; arkusz rozbudowany o klasy ról |
+| 0.1 | Arkusz stylów przeniesiony dosłownie z mockupu | DONE 28.09 (III-2: `tests/stylesheet-mockup.test.ts` — suma kontrolna arkusza makiety + porównanie każdej deklaracji, 13 odstępstw z uzasadnieniem) | `src/index.css` nagłówek „CSS 1:1 z tower-makieta.html” (Fala-1-D1) | porównania sum kontrolnych arkusza brak; arkusz rozbudowany o klasy ról |
 | 0.2 | Zrzuty wzorcowe: widok × rola × język × 5 szerokości × 2 tryby | GOTOWE | `shots-baseline/` 840 ujęć, tag `baseline-fala-3e-2026-09-27`; WZORZEC-3C `cede8bd`, A6-WZORZEC2 `ce094ad` |  |
 | 0.3 | Test regresji wizualnej w CI, próg 0,1% | DO ZROBIENIA (częściowo) | F2.2 `14261fc` (720/720); `.githooks/pre-push` → `scripts/ci/fresh-smoke.sh` (smoke 4 ujęć) | próg zmieniony na `maxDiffPixels:60, threshold:0.28` zamiast 0,1%; pełne 840 porównywane ręcznie; GitHub `unit.yml` uruchamia tylko testy jednostkowe |
 | 0.4 | Konfiguracja blokująca wartości spoza systemu | GOTOWE | F2.3 `6f77f7e` stylelint `declaration-strict-value`; `npm run lint:css` w pre-push |  |
 | 0.5 | Zakaz Tailwinda i motywów bibliotek w komponentach | GOTOWE | `package.json` bez Tailwind/MUI/Chakra; `src/index.css` „no Tailwind” (Fala-1-D1) | przegląd grep 27.09 |
 | 0.6 | Katalog komponentów jako kontrakt nazw klas | GOTOWE | `docs/handover/DESIGN_SYSTEM.md` |  |
-| 0.7 | Procedura dodania nowej klasy (3 warunki) | DO ZROBIENIA (nie zrobione) | nie zrobione | w DESIGN_SYSTEM.md brak zapisanej procedury 3 warunków |
+| 0.7 | Procedura dodania nowej klasy (3 warunki) | DONE 28.09 (DESIGN_SYSTEM.md §7a; warunek 2 wymuszany stylelintem) | nie zrobione | w DESIGN_SYSTEM.md brak zapisanej procedury 3 warunków |
 | 0.8 | Stany: spoczynek, najechanie, fokus, wciśnięty, zablokowany | DO ZROBIENIA (częściowo) | tokeny `--surface-2` (hover), `--focus` w DESIGN_SYSTEM.md | brak zrzutów stanów najechanie/fokus/wciśnięty/zablokowany |
 | 0.9 | Stany: ładowanie, pusty, błąd, błąd walidacji | DO ZROBIENIA (częściowo) | klasa `.empty` (DESIGN_SYSTEM.md:174) | brak zrzutów stanów ładowanie/błąd/błąd walidacji |
 | 0.10 | Tryb jasny, ciemny i honorowanie ustawienia systemu | DO ZROBIENIA (częściowo) | 840 ujęć × 2 tryby; `@media (prefers-color-scheme: dark)` `src/index.css:20` | brak zrzutu trybu „systemowy” |
