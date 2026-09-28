@@ -18,6 +18,7 @@
 | Wersjonowanie i archiwum pliku harmonogramu (3.6, audyt D4) | do sprawdzenia w SCOPE/POSTEP | techniczne |
 | Wymuszenie w bazie: import tylko KSH, eksport tylko HHL (16.3, audyt D11) | do sprawdzenia testem | techniczne (bezpieczeństwo) |
 | Retencja `files/` w R2 | zasady jak dla dokumentów | bez nowych płatnych zasobów — tylko na istniejącym koncie |
+| III-13: 36 ujęć wzorca (Harmonogram, Dokumenty) | znaleźć commity, zaklasyfikować (zamierzone → `G4_WZORZEC.md`, regresja → naprawa), odświeżyć | pozycja robocza, nie decyzja właściciela |
 | Przekazanie Cursorowi | pakiet dokumentów przekazania | dokumentacja |
 | Dostępność — reszta | `list` w kolejce wyjątków (12), mylący kursor (362) | poprawki bez zmiany wyglądu — tylko jeśli D-27 dopuści |
 
@@ -25,7 +26,6 @@
 | Pozycja | Czeka na |
 |---|---|
 | III-1 kalibracja ETA | 5 prawdziwych transportów (dane) |
-| III-2 / 11.4 regresja wizualna (36 ujęć) | D-26 |
 | Kontrast i kursor (11.5) | **D-27** (nowa) |
 | III-10 włączenie | D-2 (wybór indeksu z przewoźnikiem) |
 | III-11 wdrożenie pogody | decyzja, czy wdrażać (propozycja FMI + DMI) |
