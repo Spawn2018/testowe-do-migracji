@@ -408,7 +408,7 @@ export function ScheduleView() {
               void (async () => {
                 try {
                   const { exportLoadsPdf } = await import('../lib/pdfExport');
-                  const result = await exportLoadsPdf(loads, `WATCH_TOWER_${role}_harmonogram.pdf`, `TOWER — harmonogram (${loads.length})`);
+                  const result = await exportLoadsPdf(loads, `WATCH_TOWER_${role}_harmonogram.pdf`, tp(locale, 'i24_pdf_title', { n: String(loads.length) }), locale);
                   pushToast(tp(locale, 'i24_sch_pdf_ok', { rows: String(result.rows), bytes: String(result.bytes) }), 'MEDIUM');
                 } catch (err: unknown) {
                   const msg = err instanceof Error ? err.message : String(err);

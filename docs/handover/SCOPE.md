@@ -1529,7 +1529,7 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 10.4 | ODŁOŻONE (decyzja właściciela) | PLAN D-24 (opcjonalny) |
 | 10.6 | DONE 28.09 | PLAN III-9 (0089, karta przewoźników w Opcjach, ocena w szufladzie) |
 | 10.7 | GOTOWE | I-2l `825da20`: czas wykrycia z `risk_signals` |
-| 10.8 | DO ZROBIENIA (częściowo) | PLAN I-24 (PDF) |
+| 10.8 | GOTOWE (28.09) | PLAN I-24 (PDF) + POSTEP 10.8 |
 | 10.9 | ODŁOŻONA | Dziennik odłożeń; Etap III (ślad węglowy) |
 | 11.3 | DO ZROBIENIA (częściowo) | PLAN R-3 (O3b) |
 | 11.4 | CZĘŚCIOWO 28.09 | jak 0.3 (D-25) |
@@ -1697,7 +1697,7 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 10.5 | Krzywa postępu dostaw | GOTOWE | `src/components/chart/DeliveryProgress.tsx` |  |
 | 10.6 | Ocena przewoźnika | DO ZROBIENIA (nie zrobione) | nie zrobione | brak oceny przewoźnika |
 | 10.7 | Czas wykrycia odchylenia | DO ZROBIENIA (częściowo) | kafelek `a6_dash_detect_time` (DashboardView:261) | wartość wpisana na sztywno „8 min” — atrapa |
-| 10.8 | Eksport do arkusza i pliku przenośnego | DO ZROBIENIA (częściowo) | `src/lib/xlsxExport.ts` (ScheduleView) | XLSX tak, PDF brak |
+| 10.8 | Eksport do arkusza i pliku przenośnego | GOTOWE (28.09) | `src/lib/xlsxExport.ts` + `src/lib/pdfExport.ts` (ScheduleView) | XLSX kolumny per rola; PDF bez kierowcy i kwot, w języku interfejsu, czasy wg D8 |
 | 10.9 | Raport śladu węglowego | ODŁOŻONA | nie zrobione | faza późniejsza; zob. Dziennik odłożeń |
 
 #### 56.2.11 Jakość
