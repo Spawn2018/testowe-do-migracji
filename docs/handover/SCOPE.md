@@ -1589,7 +1589,7 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 3.3 | Parser wymiarów, dat, godzin, telefonów | GOTOWE | `src/lib/scheduleParse.ts`; schedule-import.test.ts | część testów parsera w schedule-import (unit 353 passed) |
 | 3.4 | Walidacja blokująca, w tym przesunięte kolumny | GOTOWE | `scheduleDryRun.ts` (72 błędne → baza nietknięta, D23-S `4c52455`) |  |
 | 3.5 | Podgląd różnic przed zapisem | GOTOWE | `diffSchedule` + podgląd w ScheduleView; D26 `dc364d7` |  |
-| 3.6 | Wersjonowanie i archiwum pliku źródłowego | GOTOWE | I-1 `9bf80d7`: `schedule_imports` (wersja, sha, file_name), koszyk Storage `harmonogramy`; I-2B `d2a8219`: kubełek i tabela w kopii zapasowej | kopia: tabele z katalogu minus jawne wyłączenia, kubełek `harmonogramy` w `files/` |
+| 3.6 | Wersjonowanie i archiwum pliku źródłowego | GOTOWE | I-1 `9bf80d7`: `schedule_imports` (wersja, sha, file_name), koszyk Storage `harmonogramy`; I-2B `d2a8219`: kubełek i tabela w kopii zapasowej; 0093 (28.09): wersje tylko do dopisywania — rolom API sam odczyt (HHL) | kopia: tabele z katalogu minus jawne wyłączenia, kubełek `harmonogramy` w `files/` |
 | 3.7 | Powiadomienie o zmianie daty na transporcie awizowanym | GOTOWE (IN_APP) | I-1 `9bf80d7`: SCHEDULE_DATE_CRITICAL + `notifications` IN_APP dla HHL i przewoźnika | e-mail wymaga wdrożenia Edge `send-notifications` (template gotowy) |
 | 3.8 | Klasyfikacja ponadnormatywności per kraj | DO POTWIERDZENIA | `src/lib/permits.ts` (PL kategorie I–V, SE TSFS); PL-T `40eca8a`; pl-t.test.ts | limity do potwierdzenia; limity do potwierdzenia |
 | 3.9 | Kolejność montażowa i wykrywanie rozjazdu | GOTOWE | cron tower-kolejnosc `detect_sequence_risk`; gate risks 23 | kolejność montażu z kolumny dodanej po naszej stronie |

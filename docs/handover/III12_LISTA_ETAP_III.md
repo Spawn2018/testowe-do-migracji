@@ -15,7 +15,7 @@
 | Silnik Workflows (SCOPE 9.1–9.4) | reguły w bazie (warunek → akcja), wykonanie przez zadanie; dziś moduł ukryty w produkcji | największa pozycja; akcje wysyłające wiadomości zewnętrzne i tak blokuje `EXTERNAL_MESSAGING` do R-2 |
 | Odsiewanie duplikatów powiadomień (9.8, I-23, audyt D12) | **DONE 28.09** — POSTEP 9.8 | czysto techniczne |
 | Eksport PDF (10.8, I-24) | częściowo | czysto techniczne |
-| Wersjonowanie i archiwum pliku harmonogramu (3.6, audyt D4) | do sprawdzenia w SCOPE/POSTEP | techniczne |
+| Wersjonowanie i archiwum pliku harmonogramu (3.6, audyt D4) | **DONE 28.09** — migracja 0093 (historia wersji tylko do dopisywania), POSTEP 3.6 | techniczne |
 | Wymuszenie w bazie: import tylko KSH, eksport tylko HHL (16.3, audyt D11) | **DONE 28.09** — reguła zastąpiona przez I-18 (import HHL, potwierdzanie dat KSH); sprawdzone testem `tests/db/import.sh` 60/60, eksport per rola (POSTEP 16.3) | techniczne (bezpieczeństwo) |
 | Retencja `files/` w R2 | zasady jak dla dokumentów | bez nowych płatnych zasobów — tylko na istniejącym koncie |
 | III-13: 36 ujęć wzorca (Harmonogram, Dokumenty) | znaleźć commity, zaklasyfikować (zamierzone → `G4_WZORZEC.md`, regresja → naprawa), odświeżyć | pozycja robocza, nie decyzja właściciela |
