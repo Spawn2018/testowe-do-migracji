@@ -264,6 +264,19 @@ Brama: pre-push (`scripts/ci/fresh-smoke.sh`, świeży build HEAD na :4179) = sm
 Pełna matryca 840 ujęć wobec `shots-baseline/` z progiem 0,1% na ujęcie: `npm run gate:visual`
 (`scripts/visual/gate.sh`, własny build i port 4188, ~70 min — dlatego poza pre-push). Port 4177 jest zarezerwowany.
 
+**Przebieg bez nadzoru (D-25, np. co noc):** `cd /workspace/watch-tower-app && bash scripts/visual/gate.sh` — jeden skrypt,
+nie wymaga terminala. Wynik zawsze jako jedna linia w `/workspace/wt-gate-visual/last.txt` (także przy błędzie) i dopisany
+do `history.log` w tym samym katalogu; obok `last-report.json` (lista zmienionych ujęć) i `last.log`. Przykład:
+`2026-09-29T02:00:00+02:00 OK HEAD=abc1234 smoke+stany=ok matryca=840/840 zmienione=0 czas=4100s kod=0`.
+Kody wyjścia: 0 OK · 1 różnice ponad 0,1% · 2 port zajęty/4177/trwa inny przebieg (blokada `.lock`) · 3 błąd ujęć
+matrycy · 4 smoke lub stany czerwone · 5 build/podgląd nieudany. Zmienne: `VIS_PORT` (4188), `GATE_OUT`, `SKIP_MATRIX=1`
+(tylko smoke + stany, ~75 s), `KEEP=1`. Przykładowy wpis crona: `0 2 * * * cd /workspace/watch-tower-app && bash scripts/visual/gate.sh >/dev/null 2>&1`.
+Wynik nocny wpisuje się do POSTEP (linia z `last.txt`).
+
+**Odświeżanie wzorca** tylko świadomie i ujęcie po ujęciu: `scripts/visual/d25-verify.mjs` sprawdza, czy różnica leży
+wyłącznie w strefie nowych elementów (prostokąty zapisane przez `RECTS_SEL=… node scripts/baseline.mjs` w `_rects.json`);
+treść poza strefą musi być identyczna (nad strefą, pasy boczne, pod strefą po pionowym przesunięciu).
+
 ---
 
 ## 8. Ikony

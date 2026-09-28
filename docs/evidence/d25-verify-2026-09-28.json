@@ -1,0 +1,2679 @@
+{
+ "zgodne": 139,
+ "wypisane": 36,
+ "bez_zmian": 5,
+ "szczegoly": {
+  "zgodne": [
+   {
+    "file": "dokumenty__hhl__en__390__dark-default.png",
+    "roznica": 5009,
+    "strefa": [
+     0,
+     147,
+     390,
+     591
+    ],
+    "dy": 133,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__hhl__en__390__light.png",
+    "roznica": 5423,
+    "strefa": [
+     0,
+     147,
+     390,
+     591
+    ],
+    "dy": 133,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__hhl__en__768__dark-default.png",
+    "roznica": 11293,
+    "strefa": [
+     69,
+     147,
+     768,
+     591
+    ],
+    "dy": 133,
+    "poza": 90,
+    "nad": 0,
+    "boki": 0,
+    "pod": 90
+   },
+   {
+    "file": "dokumenty__hhl__en__768__light.png",
+    "roznica": 12004,
+    "strefa": [
+     69,
+     147,
+     768,
+     591
+    ],
+    "dy": 133,
+    "poza": 98,
+    "nad": 0,
+    "boki": 0,
+    "pod": 98
+   },
+   {
+    "file": "dokumenty__hhl__pl__390__dark-default.png",
+    "roznica": 5748,
+    "strefa": [
+     0,
+     147,
+     390,
+     591
+    ],
+    "dy": 133,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__hhl__pl__390__light.png",
+    "roznica": 6177,
+    "strefa": [
+     0,
+     147,
+     390,
+     591
+    ],
+    "dy": 133,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__hhl__pl__768__dark-default.png",
+    "roznica": 13395,
+    "strefa": [
+     69,
+     147,
+     768,
+     591
+    ],
+    "dy": 133,
+    "poza": 68,
+    "nad": 0,
+    "boki": 0,
+    "pod": 68
+   },
+   {
+    "file": "dokumenty__hhl__pl__768__light.png",
+    "roznica": 14220,
+    "strefa": [
+     69,
+     147,
+     768,
+     591
+    ],
+    "dy": 133,
+    "poza": 69,
+    "nad": 0,
+    "boki": 0,
+    "pod": 69
+   },
+   {
+    "file": "dokumenty__hhl__sv__390__dark-default.png",
+    "roznica": 4790,
+    "strefa": [
+     0,
+     147,
+     390,
+     591
+    ],
+    "dy": 133,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__hhl__sv__390__light.png",
+    "roznica": 5076,
+    "strefa": [
+     0,
+     147,
+     390,
+     591
+    ],
+    "dy": 133,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__hhl__sv__768__dark-default.png",
+    "roznica": 12533,
+    "strefa": [
+     69,
+     147,
+     768,
+     591
+    ],
+    "dy": 133,
+    "poza": 86,
+    "nad": 0,
+    "boki": 0,
+    "pod": 86
+   },
+   {
+    "file": "dokumenty__hhl__sv__768__light.png",
+    "roznica": 13294,
+    "strefa": [
+     69,
+     147,
+     768,
+     591
+    ],
+    "dy": 133,
+    "poza": 95,
+    "nad": 0,
+    "boki": 0,
+    "pod": 95
+   },
+   {
+    "file": "dokumenty__ksh__en__1280__dark.png",
+    "roznica": 14403,
+    "strefa": [
+     199,
+     147,
+     1267,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__en__1280__light-default.png",
+    "roznica": 15372,
+    "strefa": [
+     199,
+     147,
+     1267,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__en__1440__dark.png",
+    "roznica": 14352,
+    "strefa": [
+     199,
+     147,
+     1427,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__en__1440__light-default.png",
+    "roznica": 15282,
+    "strefa": [
+     199,
+     147,
+     1427,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__en__1920__dark.png",
+    "roznica": 14502,
+    "strefa": [
+     199,
+     147,
+     1907,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__en__1920__light-default.png",
+    "roznica": 15499,
+    "strefa": [
+     199,
+     147,
+     1907,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__en__390__dark.png",
+    "roznica": 2217,
+    "strefa": [
+     0,
+     147,
+     390,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__en__390__light-default.png",
+    "roznica": 4389,
+    "strefa": [
+     69,
+     147,
+     390,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__en__768__dark.png",
+    "roznica": 6980,
+    "strefa": [
+     69,
+     147,
+     768,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__en__768__light-default.png",
+    "roznica": 7767,
+    "strefa": [
+     69,
+     147,
+     768,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__pl__1280__dark.png",
+    "roznica": 17716,
+    "strefa": [
+     199,
+     147,
+     1267,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__pl__1280__light-default.png",
+    "roznica": 18870,
+    "strefa": [
+     199,
+     147,
+     1267,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__pl__1440__dark.png",
+    "roznica": 17857,
+    "strefa": [
+     199,
+     147,
+     1427,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__pl__1440__light-default.png",
+    "roznica": 18903,
+    "strefa": [
+     199,
+     147,
+     1427,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__pl__1920__dark.png",
+    "roznica": 17781,
+    "strefa": [
+     199,
+     147,
+     1907,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__pl__1920__light-default.png",
+    "roznica": 18892,
+    "strefa": [
+     199,
+     147,
+     1907,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__pl__390__dark.png",
+    "roznica": 2646,
+    "strefa": [
+     0,
+     147,
+     390,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__pl__390__light-default.png",
+    "roznica": 5089,
+    "strefa": [
+     69,
+     147,
+     390,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__pl__768__dark.png",
+    "roznica": 8602,
+    "strefa": [
+     69,
+     147,
+     768,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__pl__768__light-default.png",
+    "roznica": 9309,
+    "strefa": [
+     69,
+     147,
+     768,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__sv__1280__dark.png",
+    "roznica": 15006,
+    "strefa": [
+     199,
+     147,
+     1267,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__sv__1280__light-default.png",
+    "roznica": 15974,
+    "strefa": [
+     199,
+     147,
+     1267,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__sv__1440__dark.png",
+    "roznica": 15429,
+    "strefa": [
+     199,
+     147,
+     1427,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__sv__1440__light-default.png",
+    "roznica": 16404,
+    "strefa": [
+     199,
+     147,
+     1427,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__sv__1920__dark.png",
+    "roznica": 15547,
+    "strefa": [
+     199,
+     147,
+     1907,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__sv__1920__light-default.png",
+    "roznica": 16522,
+    "strefa": [
+     199,
+     147,
+     1907,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__sv__390__dark.png",
+    "roznica": 1711,
+    "strefa": [
+     0,
+     147,
+     390,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__sv__390__light-default.png",
+    "roznica": 5234,
+    "strefa": [
+     69,
+     147,
+     390,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__sv__768__dark.png",
+    "roznica": 7520,
+    "strefa": [
+     69,
+     147,
+     768,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__ksh__sv__768__light-default.png",
+    "roznica": 8207,
+    "strefa": [
+     69,
+     147,
+     768,
+     490
+    ],
+    "dy": 36,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__scx__en__1280__dark-default.png",
+    "roznica": 20050,
+    "strefa": [
+     199,
+     147,
+     1267,
+     495
+    ],
+    "dy": 37,
+    "poza": 160,
+    "nad": 0,
+    "boki": 0,
+    "pod": 160
+   },
+   {
+    "file": "dokumenty__scx__en__1280__light.png",
+    "roznica": 21047,
+    "strefa": [
+     199,
+     147,
+     1267,
+     495
+    ],
+    "dy": 37,
+    "poza": 168,
+    "nad": 0,
+    "boki": 0,
+    "pod": 168
+   },
+   {
+    "file": "dokumenty__scx__en__1440__dark-default.png",
+    "roznica": 19997,
+    "strefa": [
+     199,
+     147,
+     1427,
+     495
+    ],
+    "dy": 37,
+    "poza": 160,
+    "nad": 0,
+    "boki": 0,
+    "pod": 160
+   },
+   {
+    "file": "dokumenty__scx__en__1440__light.png",
+    "roznica": 20958,
+    "strefa": [
+     199,
+     147,
+     1427,
+     495
+    ],
+    "dy": 37,
+    "poza": 168,
+    "nad": 0,
+    "boki": 0,
+    "pod": 168
+   },
+   {
+    "file": "dokumenty__scx__en__1920__dark-default.png",
+    "roznica": 20149,
+    "strefa": [
+     199,
+     147,
+     1907,
+     495
+    ],
+    "dy": 37,
+    "poza": 160,
+    "nad": 0,
+    "boki": 0,
+    "pod": 160
+   },
+   {
+    "file": "dokumenty__scx__en__1920__light.png",
+    "roznica": 21174,
+    "strefa": [
+     199,
+     147,
+     1907,
+     495
+    ],
+    "dy": 37,
+    "poza": 168,
+    "nad": 0,
+    "boki": 0,
+    "pod": 168
+   },
+   {
+    "file": "dokumenty__scx__en__390__dark-default.png",
+    "roznica": 4633,
+    "strefa": [
+     0,
+     147,
+     390,
+     495
+    ],
+    "dy": 37,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__scx__en__390__light.png",
+    "roznica": 4966,
+    "strefa": [
+     0,
+     147,
+     390,
+     495
+    ],
+    "dy": 37,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__scx__en__768__dark-default.png",
+    "roznica": 6929,
+    "strefa": [
+     69,
+     147,
+     768,
+     495
+    ],
+    "dy": 37,
+    "poza": 90,
+    "nad": 0,
+    "boki": 0,
+    "pod": 90
+   },
+   {
+    "file": "dokumenty__scx__en__768__light.png",
+    "roznica": 7679,
+    "strefa": [
+     69,
+     147,
+     768,
+     495
+    ],
+    "dy": 37,
+    "poza": 98,
+    "nad": 0,
+    "boki": 0,
+    "pod": 98
+   },
+   {
+    "file": "dokumenty__scx__pl__1280__dark-default.png",
+    "roznica": 23262,
+    "strefa": [
+     199,
+     147,
+     1267,
+     495
+    ],
+    "dy": 37,
+    "poza": 249,
+    "nad": 0,
+    "boki": 0,
+    "pod": 249
+   },
+   {
+    "file": "dokumenty__scx__pl__1280__light.png",
+    "roznica": 24439,
+    "strefa": [
+     199,
+     147,
+     1267,
+     495
+    ],
+    "dy": 37,
+    "poza": 261,
+    "nad": 0,
+    "boki": 0,
+    "pod": 261
+   },
+   {
+    "file": "dokumenty__scx__pl__1440__dark-default.png",
+    "roznica": 23403,
+    "strefa": [
+     199,
+     147,
+     1427,
+     495
+    ],
+    "dy": 37,
+    "poza": 249,
+    "nad": 0,
+    "boki": 0,
+    "pod": 249
+   },
+   {
+    "file": "dokumenty__scx__pl__1440__light.png",
+    "roznica": 24472,
+    "strefa": [
+     199,
+     147,
+     1427,
+     495
+    ],
+    "dy": 37,
+    "poza": 261,
+    "nad": 0,
+    "boki": 0,
+    "pod": 261
+   },
+   {
+    "file": "dokumenty__scx__pl__1920__dark-default.png",
+    "roznica": 23327,
+    "strefa": [
+     199,
+     147,
+     1907,
+     495
+    ],
+    "dy": 37,
+    "poza": 249,
+    "nad": 0,
+    "boki": 0,
+    "pod": 249
+   },
+   {
+    "file": "dokumenty__scx__pl__1920__light.png",
+    "roznica": 24461,
+    "strefa": [
+     199,
+     147,
+     1907,
+     495
+    ],
+    "dy": 37,
+    "poza": 261,
+    "nad": 0,
+    "boki": 0,
+    "pod": 261
+   },
+   {
+    "file": "dokumenty__scx__pl__390__dark-default.png",
+    "roznica": 5410,
+    "strefa": [
+     0,
+     147,
+     390,
+     495
+    ],
+    "dy": 37,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__scx__pl__390__light.png",
+    "roznica": 5721,
+    "strefa": [
+     0,
+     147,
+     390,
+     495
+    ],
+    "dy": 37,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__scx__pl__768__dark-default.png",
+    "roznica": 7902,
+    "strefa": [
+     65,
+     147,
+     768,
+     495
+    ],
+    "dy": 37,
+    "poza": 68,
+    "nad": 0,
+    "boki": 0,
+    "pod": 68
+   },
+   {
+    "file": "dokumenty__scx__pl__768__light.png",
+    "roznica": 8681,
+    "strefa": [
+     65,
+     147,
+     768,
+     495
+    ],
+    "dy": 37,
+    "poza": 69,
+    "nad": 0,
+    "boki": 0,
+    "pod": 69
+   },
+   {
+    "file": "dokumenty__scx__sv__1280__dark-default.png",
+    "roznica": 20681,
+    "strefa": [
+     199,
+     147,
+     1267,
+     495
+    ],
+    "dy": 37,
+    "poza": 170,
+    "nad": 0,
+    "boki": 0,
+    "pod": 170
+   },
+   {
+    "file": "dokumenty__scx__sv__1280__light.png",
+    "roznica": 21675,
+    "strefa": [
+     199,
+     147,
+     1267,
+     495
+    ],
+    "dy": 37,
+    "poza": 182,
+    "nad": 0,
+    "boki": 0,
+    "pod": 182
+   },
+   {
+    "file": "dokumenty__scx__sv__1440__dark-default.png",
+    "roznica": 21104,
+    "strefa": [
+     199,
+     147,
+     1427,
+     495
+    ],
+    "dy": 37,
+    "poza": 170,
+    "nad": 0,
+    "boki": 0,
+    "pod": 170
+   },
+   {
+    "file": "dokumenty__scx__sv__1440__light.png",
+    "roznica": 22105,
+    "strefa": [
+     199,
+     147,
+     1427,
+     495
+    ],
+    "dy": 37,
+    "poza": 182,
+    "nad": 0,
+    "boki": 0,
+    "pod": 182
+   },
+   {
+    "file": "dokumenty__scx__sv__1920__dark-default.png",
+    "roznica": 21222,
+    "strefa": [
+     199,
+     147,
+     1907,
+     495
+    ],
+    "dy": 37,
+    "poza": 170,
+    "nad": 0,
+    "boki": 0,
+    "pod": 170
+   },
+   {
+    "file": "dokumenty__scx__sv__1920__light.png",
+    "roznica": 22223,
+    "strefa": [
+     199,
+     147,
+     1907,
+     495
+    ],
+    "dy": 37,
+    "poza": 182,
+    "nad": 0,
+    "boki": 0,
+    "pod": 182
+   },
+   {
+    "file": "dokumenty__scx__sv__390__dark-default.png",
+    "roznica": 4304,
+    "strefa": [
+     0,
+     147,
+     390,
+     495
+    ],
+    "dy": 37,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__scx__sv__390__light.png",
+    "roznica": 4545,
+    "strefa": [
+     0,
+     147,
+     390,
+     495
+    ],
+    "dy": 37,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "dokumenty__scx__sv__768__dark-default.png",
+    "roznica": 7400,
+    "strefa": [
+     69,
+     147,
+     768,
+     495
+    ],
+    "dy": 37,
+    "poza": 86,
+    "nad": 0,
+    "boki": 0,
+    "pod": 86
+   },
+   {
+    "file": "dokumenty__scx__sv__768__light.png",
+    "roznica": 8109,
+    "strefa": [
+     69,
+     147,
+     768,
+     495
+    ],
+    "dy": 37,
+    "poza": 95,
+    "nad": 0,
+    "boki": 0,
+    "pod": 95
+   },
+   {
+    "file": "harmonogram__hhl__en__1280__dark-default.png",
+    "roznica": 4569,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__hhl__en__1280__light.png",
+    "roznica": 4630,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__hhl__en__1440__dark-default.png",
+    "roznica": 4569,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__hhl__en__1440__light.png",
+    "roznica": 4630,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__hhl__en__390__dark-default.png",
+    "roznica": 4250,
+    "strefa": [
+     0,
+     147,
+     390,
+     197
+    ],
+    "dy": 0,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "harmonogram__hhl__en__390__light.png",
+    "roznica": 4287,
+    "strefa": [
+     0,
+     147,
+     390,
+     197
+    ],
+    "dy": 0,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "harmonogram__hhl__en__768__dark-default.png",
+    "roznica": 2446,
+    "strefa": [
+     69,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__hhl__en__768__light.png",
+    "roznica": 2460,
+    "strefa": [
+     69,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__hhl__pl__1280__dark-default.png",
+    "roznica": 4637,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__hhl__pl__1280__light.png",
+    "roznica": 4704,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__hhl__pl__1440__dark-default.png",
+    "roznica": 4637,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__hhl__pl__1440__light.png",
+    "roznica": 4704,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__hhl__pl__390__dark-default.png",
+    "roznica": 4231,
+    "strefa": [
+     0,
+     147,
+     390,
+     197
+    ],
+    "dy": 0,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "harmonogram__hhl__pl__390__light.png",
+    "roznica": 4261,
+    "strefa": [
+     0,
+     147,
+     390,
+     197
+    ],
+    "dy": 0,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "harmonogram__hhl__pl__768__dark-default.png",
+    "roznica": 2763,
+    "strefa": [
+     69,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__hhl__pl__768__light.png",
+    "roznica": 2786,
+    "strefa": [
+     69,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__hhl__sv__1440__dark-default.png",
+    "roznica": 5001,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__hhl__sv__1440__light.png",
+    "roznica": 5077,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__en__1280__dark.png",
+    "roznica": 1608,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__en__1280__light-default.png",
+    "roznica": 1688,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__en__1440__dark.png",
+    "roznica": 1608,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__en__1440__light-default.png",
+    "roznica": 1688,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__en__390__dark.png",
+    "roznica": 1231,
+    "strefa": [
+     0,
+     147,
+     390,
+     197
+    ],
+    "dy": 0,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "harmonogram__ksh__en__768__dark.png",
+    "roznica": 1135,
+    "strefa": [
+     69,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__en__768__light-default.png",
+    "roznica": 1164,
+    "strefa": [
+     69,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__pl__1280__dark.png",
+    "roznica": 2313,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__pl__1280__light-default.png",
+    "roznica": 2396,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__pl__1440__dark.png",
+    "roznica": 2313,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__pl__1440__light-default.png",
+    "roznica": 2396,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__pl__1920__dark.png",
+    "roznica": 2313,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__pl__1920__light-default.png",
+    "roznica": 2396,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__pl__390__dark.png",
+    "roznica": 1913,
+    "strefa": [
+     0,
+     147,
+     390,
+     197
+    ],
+    "dy": 0,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "harmonogram__ksh__pl__768__dark.png",
+    "roznica": 1794,
+    "strefa": [
+     69,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__pl__768__light-default.png",
+    "roznica": 1822,
+    "strefa": [
+     69,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__sv__1280__dark.png",
+    "roznica": 3008,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__sv__1280__light-default.png",
+    "roznica": 3079,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__sv__1440__dark.png",
+    "roznica": 3008,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__sv__1440__light-default.png",
+    "roznica": 3079,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__sv__1920__dark.png",
+    "roznica": 3008,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__sv__1920__light-default.png",
+    "roznica": 3079,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__sv__390__dark.png",
+    "roznica": 2663,
+    "strefa": [
+     0,
+     147,
+     390,
+     197
+    ],
+    "dy": 0,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "harmonogram__ksh__sv__768__dark.png",
+    "roznica": 2558,
+    "strefa": [
+     69,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__ksh__sv__768__light-default.png",
+    "roznica": 2579,
+    "strefa": [
+     69,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__en__1280__dark-default.png",
+    "roznica": 4483,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__en__1280__light.png",
+    "roznica": 4535,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__en__1440__dark-default.png",
+    "roznica": 4483,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__en__1440__light.png",
+    "roznica": 4535,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__en__390__dark-default.png",
+    "roznica": 4135,
+    "strefa": [
+     0,
+     147,
+     390,
+     197
+    ],
+    "dy": 0,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "harmonogram__scx__en__390__light.png",
+    "roznica": 4146,
+    "strefa": [
+     0,
+     147,
+     390,
+     197
+    ],
+    "dy": 0,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "harmonogram__scx__en__768__dark-default.png",
+    "roznica": 1381,
+    "strefa": [
+     69,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__en__768__light.png",
+    "roznica": 1378,
+    "strefa": [
+     69,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__pl__1280__dark-default.png",
+    "roznica": 4472,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__pl__1280__light.png",
+    "roznica": 4512,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__pl__1440__dark-default.png",
+    "roznica": 4472,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__pl__1440__light.png",
+    "roznica": 4512,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__pl__390__dark-default.png",
+    "roznica": 4054,
+    "strefa": [
+     0,
+     147,
+     390,
+     197
+    ],
+    "dy": 0,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "harmonogram__scx__pl__390__light.png",
+    "roznica": 4079,
+    "strefa": [
+     0,
+     147,
+     390,
+     197
+    ],
+    "dy": 0,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "harmonogram__scx__pl__768__dark-default.png",
+    "roznica": 1971,
+    "strefa": [
+     65,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__pl__768__light.png",
+    "roznica": 1968,
+    "strefa": [
+     65,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__sv__1280__dark-default.png",
+    "roznica": 4736,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__sv__1280__light.png",
+    "roznica": 4800,
+    "strefa": [
+     199,
+     147,
+     1267,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__sv__1440__dark-default.png",
+    "roznica": 4736,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__sv__1440__light.png",
+    "roznica": 4800,
+    "strefa": [
+     199,
+     147,
+     1427,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__sv__390__dark-default.png",
+    "roznica": 4377,
+    "strefa": [
+     0,
+     147,
+     390,
+     197
+    ],
+    "dy": 0,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "harmonogram__scx__sv__390__light.png",
+    "roznica": 4377,
+    "strefa": [
+     0,
+     147,
+     390,
+     197
+    ],
+    "dy": 0,
+    "poza": 0,
+    "nad": 0,
+    "boki": 0,
+    "pod": 0
+   },
+   {
+    "file": "harmonogram__scx__sv__768__dark-default.png",
+    "roznica": 2444,
+    "strefa": [
+     69,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   },
+   {
+    "file": "harmonogram__scx__sv__768__light.png",
+    "roznica": 2441,
+    "strefa": [
+     69,
+     147,
+     768,
+     197
+    ],
+    "dy": 0,
+    "poza": 24,
+    "nad": 0,
+    "boki": 0,
+    "pod": 24
+   }
+  ],
+  "wypisane": [
+   {
+    "file": "dokumenty__hhl__en__1280__dark-default.png",
+    "roznica": 26505,
+    "strefa": [
+     199,
+     147,
+     1267,
+     591
+    ],
+    "dy": 133,
+    "poza": 1848,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1848,
+    "powod": "różnica poza strefą nowych elementów: 1848 px (nad 0, boki 0, pod po przesunięciu 133 px: 1848)"
+   },
+   {
+    "file": "dokumenty__hhl__en__1280__light.png",
+    "roznica": 27318,
+    "strefa": [
+     199,
+     147,
+     1267,
+     591
+    ],
+    "dy": 133,
+    "poza": 1944,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1944,
+    "powod": "różnica poza strefą nowych elementów: 1944 px (nad 0, boki 0, pod po przesunięciu 133 px: 1944)"
+   },
+   {
+    "file": "dokumenty__hhl__en__1440__dark-default.png",
+    "roznica": 26497,
+    "strefa": [
+     199,
+     147,
+     1427,
+     591
+    ],
+    "dy": 133,
+    "poza": 1848,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1848,
+    "powod": "różnica poza strefą nowych elementów: 1848 px (nad 0, boki 0, pod po przesunięciu 133 px: 1848)"
+   },
+   {
+    "file": "dokumenty__hhl__en__1440__light.png",
+    "roznica": 27352,
+    "strefa": [
+     199,
+     147,
+     1427,
+     591
+    ],
+    "dy": 133,
+    "poza": 1944,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1944,
+    "powod": "różnica poza strefą nowych elementów: 1944 px (nad 0, boki 0, pod po przesunięciu 133 px: 1944)"
+   },
+   {
+    "file": "dokumenty__hhl__en__1920__dark-default.png",
+    "roznica": 26607,
+    "strefa": [
+     199,
+     147,
+     1907,
+     591
+    ],
+    "dy": 133,
+    "poza": 1848,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1848,
+    "powod": "różnica poza strefą nowych elementów: 1848 px (nad 0, boki 0, pod po przesunięciu 133 px: 1848)"
+   },
+   {
+    "file": "dokumenty__hhl__en__1920__light.png",
+    "roznica": 27450,
+    "strefa": [
+     199,
+     147,
+     1907,
+     591
+    ],
+    "dy": 133,
+    "poza": 1944,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1944,
+    "powod": "różnica poza strefą nowych elementów: 1944 px (nad 0, boki 0, pod po przesunięciu 133 px: 1944)"
+   },
+   {
+    "file": "dokumenty__hhl__pl__1280__dark-default.png",
+    "roznica": 30013,
+    "strefa": [
+     199,
+     147,
+     1267,
+     591
+    ],
+    "dy": 133,
+    "poza": 1937,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1937,
+    "powod": "różnica poza strefą nowych elementów: 1937 px (nad 0, boki 0, pod po przesunięciu 133 px: 1937)"
+   },
+   {
+    "file": "dokumenty__hhl__pl__1280__light.png",
+    "roznica": 31096,
+    "strefa": [
+     199,
+     147,
+     1267,
+     591
+    ],
+    "dy": 133,
+    "poza": 2037,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2037,
+    "powod": "różnica poza strefą nowych elementów: 2037 px (nad 0, boki 0, pod po przesunięciu 133 px: 2037)"
+   },
+   {
+    "file": "dokumenty__hhl__pl__1440__dark-default.png",
+    "roznica": 30465,
+    "strefa": [
+     199,
+     147,
+     1427,
+     591
+    ],
+    "dy": 133,
+    "poza": 1937,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1937,
+    "powod": "różnica poza strefą nowych elementów: 1937 px (nad 0, boki 0, pod po przesunięciu 133 px: 1937)"
+   },
+   {
+    "file": "dokumenty__hhl__pl__1440__light.png",
+    "roznica": 31345,
+    "strefa": [
+     199,
+     147,
+     1427,
+     591
+    ],
+    "dy": 133,
+    "poza": 2037,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2037,
+    "powod": "różnica poza strefą nowych elementów: 2037 px (nad 0, boki 0, pod po przesunięciu 133 px: 2037)"
+   },
+   {
+    "file": "dokumenty__hhl__pl__1920__dark-default.png",
+    "roznica": 30420,
+    "strefa": [
+     199,
+     147,
+     1907,
+     591
+    ],
+    "dy": 133,
+    "poza": 1937,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1937,
+    "powod": "różnica poza strefą nowych elementów: 1937 px (nad 0, boki 0, pod po przesunięciu 133 px: 1937)"
+   },
+   {
+    "file": "dokumenty__hhl__pl__1920__light.png",
+    "roznica": 31382,
+    "strefa": [
+     199,
+     147,
+     1907,
+     591
+    ],
+    "dy": 133,
+    "poza": 2037,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2037,
+    "powod": "różnica poza strefą nowych elementów: 2037 px (nad 0, boki 0, pod po przesunięciu 133 px: 2037)"
+   },
+   {
+    "file": "dokumenty__hhl__sv__1280__dark-default.png",
+    "roznica": 27047,
+    "strefa": [
+     199,
+     147,
+     1267,
+     591
+    ],
+    "dy": 133,
+    "poza": 1858,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1858,
+    "powod": "różnica poza strefą nowych elementów: 1858 px (nad 0, boki 0, pod po przesunięciu 133 px: 1858)"
+   },
+   {
+    "file": "dokumenty__hhl__sv__1280__light.png",
+    "roznica": 28067,
+    "strefa": [
+     199,
+     147,
+     1267,
+     591
+    ],
+    "dy": 133,
+    "poza": 1958,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1958,
+    "powod": "różnica poza strefą nowych elementów: 1958 px (nad 0, boki 0, pod po przesunięciu 133 px: 1958)"
+   },
+   {
+    "file": "dokumenty__hhl__sv__1440__dark-default.png",
+    "roznica": 27207,
+    "strefa": [
+     199,
+     147,
+     1427,
+     591
+    ],
+    "dy": 133,
+    "poza": 1858,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1858,
+    "powod": "różnica poza strefą nowych elementów: 1858 px (nad 0, boki 0, pod po przesunięciu 133 px: 1858)"
+   },
+   {
+    "file": "dokumenty__hhl__sv__1440__light.png",
+    "roznica": 28200,
+    "strefa": [
+     199,
+     147,
+     1427,
+     591
+    ],
+    "dy": 133,
+    "poza": 1958,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1958,
+    "powod": "różnica poza strefą nowych elementów: 1958 px (nad 0, boki 0, pod po przesunięciu 133 px: 1958)"
+   },
+   {
+    "file": "dokumenty__hhl__sv__1920__dark-default.png",
+    "roznica": 27129,
+    "strefa": [
+     199,
+     147,
+     1907,
+     591
+    ],
+    "dy": 133,
+    "poza": 1858,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1858,
+    "powod": "różnica poza strefą nowych elementów: 1858 px (nad 0, boki 0, pod po przesunięciu 133 px: 1858)"
+   },
+   {
+    "file": "dokumenty__hhl__sv__1920__light.png",
+    "roznica": 28178,
+    "strefa": [
+     199,
+     147,
+     1907,
+     591
+    ],
+    "dy": 133,
+    "poza": 1958,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1958,
+    "powod": "różnica poza strefą nowych elementów: 1958 px (nad 0, boki 0, pod po przesunięciu 133 px: 1958)"
+   },
+   {
+    "file": "harmonogram__hhl__en__1920__dark-default.png",
+    "roznica": 6726,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 2181,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2181,
+    "powod": "różnica poza strefą nowych elementów: 2181 px (nad 0, boki 0, pod po przesunięciu 0 px: 2181)"
+   },
+   {
+    "file": "harmonogram__hhl__en__1920__light.png",
+    "roznica": 7068,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 2462,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2462,
+    "powod": "różnica poza strefą nowych elementów: 2462 px (nad 0, boki 0, pod po przesunięciu 0 px: 2462)"
+   },
+   {
+    "file": "harmonogram__hhl__pl__1920__dark-default.png",
+    "roznica": 6794,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 2181,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2181,
+    "powod": "różnica poza strefą nowych elementów: 2181 px (nad 0, boki 0, pod po przesunięciu 0 px: 2181)"
+   },
+   {
+    "file": "harmonogram__hhl__pl__1920__light.png",
+    "roznica": 7142,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 2462,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2462,
+    "powod": "różnica poza strefą nowych elementów: 2462 px (nad 0, boki 0, pod po przesunięciu 0 px: 2462)"
+   },
+   {
+    "file": "harmonogram__hhl__sv__1280__dark-default.png",
+    "roznica": 54811,
+    "strefa": [
+     199,
+     147,
+     1267,
+     235
+    ],
+    "dy": 38,
+    "poza": 2148,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2148,
+    "powod": "różnica poza strefą nowych elementów: 2148 px (nad 0, boki 0, pod po przesunięciu 38 px: 2148)"
+   },
+   {
+    "file": "harmonogram__hhl__sv__1280__light.png",
+    "roznica": 57512,
+    "strefa": [
+     199,
+     147,
+     1267,
+     235
+    ],
+    "dy": 38,
+    "poza": 2483,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2483,
+    "powod": "różnica poza strefą nowych elementów: 2483 px (nad 0, boki 0, pod po przesunięciu 38 px: 2483)"
+   },
+   {
+    "file": "harmonogram__hhl__sv__1920__dark-default.png",
+    "roznica": 7158,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 2181,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2181,
+    "powod": "różnica poza strefą nowych elementów: 2181 px (nad 0, boki 0, pod po przesunięciu 0 px: 2181)"
+   },
+   {
+    "file": "harmonogram__hhl__sv__1920__light.png",
+    "roznica": 7515,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 2462,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2462,
+    "powod": "różnica poza strefą nowych elementów: 2462 px (nad 0, boki 0, pod po przesunięciu 0 px: 2462)"
+   },
+   {
+    "file": "harmonogram__hhl__sv__390__dark-default.png",
+    "roznica": 12106,
+    "strefa": [
+     0,
+     147,
+     390,
+     235
+    ],
+    "dy": 38,
+    "poza": 583,
+    "nad": 0,
+    "boki": 0,
+    "pod": 583,
+    "powod": "różnica poza strefą nowych elementów: 583 px (nad 0, boki 0, pod po przesunięciu 38 px: 583)"
+   },
+   {
+    "file": "harmonogram__hhl__sv__390__light.png",
+    "roznica": 12397,
+    "strefa": [
+     0,
+     147,
+     390,
+     235
+    ],
+    "dy": 38,
+    "poza": 608,
+    "nad": 0,
+    "boki": 0,
+    "pod": 608,
+    "powod": "różnica poza strefą nowych elementów: 608 px (nad 0, boki 0, pod po przesunięciu 38 px: 608)"
+   },
+   {
+    "file": "harmonogram__hhl__sv__768__dark-default.png",
+    "roznica": 38800,
+    "strefa": [
+     69,
+     147,
+     768,
+     235
+    ],
+    "dy": 38,
+    "poza": 1478,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1478,
+    "powod": "różnica poza strefą nowych elementów: 1478 px (nad 0, boki 0, pod po przesunięciu 38 px: 1478)"
+   },
+   {
+    "file": "harmonogram__hhl__sv__768__light.png",
+    "roznica": 39896,
+    "strefa": [
+     69,
+     147,
+     768,
+     235
+    ],
+    "dy": 38,
+    "poza": 1662,
+    "nad": 0,
+    "boki": 0,
+    "pod": 1662,
+    "powod": "różnica poza strefą nowych elementów: 1662 px (nad 0, boki 0, pod po przesunięciu 38 px: 1662)"
+   },
+   {
+    "file": "harmonogram__scx__en__1920__dark-default.png",
+    "roznica": 6640,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 2181,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2181,
+    "powod": "różnica poza strefą nowych elementów: 2181 px (nad 0, boki 0, pod po przesunięciu 0 px: 2181)"
+   },
+   {
+    "file": "harmonogram__scx__en__1920__light.png",
+    "roznica": 6973,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 2462,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2462,
+    "powod": "różnica poza strefą nowych elementów: 2462 px (nad 0, boki 0, pod po przesunięciu 0 px: 2462)"
+   },
+   {
+    "file": "harmonogram__scx__pl__1920__dark-default.png",
+    "roznica": 6629,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 2181,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2181,
+    "powod": "różnica poza strefą nowych elementów: 2181 px (nad 0, boki 0, pod po przesunięciu 0 px: 2181)"
+   },
+   {
+    "file": "harmonogram__scx__pl__1920__light.png",
+    "roznica": 6950,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 2462,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2462,
+    "powod": "różnica poza strefą nowych elementów: 2462 px (nad 0, boki 0, pod po przesunięciu 0 px: 2462)"
+   },
+   {
+    "file": "harmonogram__scx__sv__1920__dark-default.png",
+    "roznica": 6893,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 2181,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2181,
+    "powod": "różnica poza strefą nowych elementów: 2181 px (nad 0, boki 0, pod po przesunięciu 0 px: 2181)"
+   },
+   {
+    "file": "harmonogram__scx__sv__1920__light.png",
+    "roznica": 7238,
+    "strefa": [
+     199,
+     147,
+     1907,
+     197
+    ],
+    "dy": 0,
+    "poza": 2462,
+    "nad": 0,
+    "boki": 0,
+    "pod": 2462,
+    "powod": "różnica poza strefą nowych elementów: 2462 px (nad 0, boki 0, pod po przesunięciu 0 px: 2462)"
+   }
+  ],
+  "bez_zmian": [
+   "harmonogram__ksh__en__1920__dark.png",
+   "harmonogram__ksh__en__1920__light-default.png",
+   "harmonogram__ksh__en__390__light-default.png",
+   "harmonogram__ksh__pl__390__light-default.png",
+   "harmonogram__ksh__sv__390__light-default.png"
+  ]
+ }
+}
