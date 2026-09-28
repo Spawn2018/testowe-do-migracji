@@ -1500,7 +1500,7 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 5.13 | DO ZROBIENIA | PLAN III-5 |
 | 6.1 | DO ZROBIENIA (częściowo) | PLAN III-6 |
 | 6.2 | DO ZROBIENIA (częściowo) | PLAN III-6 |
-| 6.4 | DO ZROBIENIA (częściowo) | PLAN Etap III „walidator zezwoleń i wymiarów” |
+| 6.4 | DO ZROBIENIA (częściowo) → **GOTOWE 28.09 (0086)** | PLAN Etap III „walidator zezwoleń i wymiarów” (0081); formularz zezwoleń w szufladzie transportu — HHL i przewoźnik transportu (0086) |
 | 6.5 | DO ZROBIENIA (częściowo) | PLAN Etap III „walidator zezwoleń i wymiarów” |
 | 6.6 | DO ZROBIENIA (częściowo) | PLAN Etap III „walidator zezwoleń i wymiarów” (polisy — C4) |
 | 6.8 | GOTOWE | I-2k `e4b393d`: paczka tygodnia tylko z dokumentów tygodnia ISO |

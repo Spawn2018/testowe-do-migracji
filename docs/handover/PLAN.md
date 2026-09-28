@@ -136,7 +136,7 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 **III-7** (P2, z I-11: SCOPE 7.10) pełna ścieżka sporu i akceptacji faktury — DONE 28.09 (0079; korekta z załączonym PDF w UI — 0082) ·
 **III-8** — (numer zarezerwowany, nieużyty) ·
 **III-9** (P2, z I-11: SCOPE 10.4, 10.6) widok placu budowy tylko do odczytu (opcjonalny), ocena przewoźnika — DO ZROBIENIA ·
-Silnik Workflows · źródło pogody morskiej · walidator zezwoleń i wymiarów (DONE 28.09, 0081 — SCOPE 6.5; formularz zezwoleń w UI = SCOPE 6.4, dalej otwarte) ·
+Silnik Workflows · źródło pogody morskiej · walidator zezwoleń i wymiarów (DONE 28.09, 0081 — SCOPE 6.5; formularz zezwoleń w UI = SCOPE 6.4 — **DONE 28.09 (0086)**: szuflada → Dokumenty → „Zezwolenia transportu”, HHL i przewoźnik transportu, KSH tylko odczyt) ·
 pozycje D4–D12 audytu · integracja SharePoint (zgoda IT KSH) · kalendarz ·
 e-CMR · ślad węglowy · SMS 6, 7, 10, 11 · retencja `files/` w R2 ·
 audyt dostępności · przekazanie Cursorowi.

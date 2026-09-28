@@ -30,6 +30,7 @@ przewoźnik przestają widzieć swoje ceny (RLS tabel bazowych), albo — przy �
 `rate_cards`, `rate_rules`, `baf_definitions`, `baf_index_values`, `driver_tokens`, `system_heartbeat` —
 bez uprawnienia SELECT dla `anon`/`authenticated`; czytane wyłącznie przez funkcje `security definer`
 (silnik stawek, token kierowcy — skrót SHA-256, podtrzymanie bazy).
+**Stan po 0081/0086:** `permits` ma politykę odczytu `permits_read` (HHL + strony widzące powiązany transport), authenticated tylko SELECT; zapis wyłącznie RPC: `permit_save` (przewoźnik tylko w projekcie, w którym ma transport), `load_permit_save` (zapis + powiązanie, HHL albo przewoźnik transportu), `load_permit_link`, `load_permit_unlink` (tylko przed READY) — każde z wpisem w audit_log. Opis poniżej dotyczy stanu sprzed 0081 i pozostaje dla `insurance_policies`.
 `permits`, `insurance_policies` — dane strukturalne (wymiary z zezwolenia, zakres polisy) na przyszły silnik
 zgodności; interfejs ich nie czyta (0 wierszy dla każdego zalogowanego). **HHL widzi zezwolenia i polisy w aplikacji
 jako dokumenty** (`documents`, kategorie `PERMIT_PL`, `PERMIT_SE`, `INSURANCE`; polityka `docs_read`: `is_hhl()`

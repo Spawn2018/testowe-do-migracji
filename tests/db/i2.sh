@@ -649,6 +649,33 @@ $PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-000
 val "inny przewoźnik nie widzi zezwolenia cudzego transportu" 11111111-0000-0000-0000-00000000000b "select count(*) from permits where id='$PM'" 0
 err "inny przewoźnik nie łączy z cudzym transportem" 11111111-0000-0000-0000-00000000000b "select load_permit_link('$LP','$PM')" "przewoźnik transportu"
 $PSQL -c "delete from load_permits where load_id='$LP'; update loads set status='CANCELLED' where id='$LP'; delete from app_users where email='cx3@test'; delete from organizations where code='CX3'" >/dev/null
+$PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER') on conflict do nothing; insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH') on conflict do nothing" >/dev/null
+echo; echo "[6.4] formularz zezwoleń: zapis + powiązanie, odłączenie przed READY (0086)"
+LF=33333333-0000-0000-0000-0000000064f1
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status) values ('$LF','$P','00000000-0000-0000-0000-00000000a003','KSH/F64','PLANNED')" >/dev/null
+$PSQL -c "update loads set plan_load_date=current_date+3, hhl_order_no='HHL/F64', carrier_order_no='SCX/F64', combo_length_m=29, combo_width_m=3.9, combo_height_m=4.4, combo_weight_t=58 where id='$LF'" >/dev/null
+err "KSH nie zapisuje zezwolenia transportu" $KSH "select load_permit_save('$LF','PL','PL/F1',current_date,current_date+30,30,4,4.5,60)" "HHL albo przewoźnik transportu"
+err "inny przewoźnik nie zapisuje zezwolenia cudzego transportu" 11111111-0000-0000-0000-00000000000b "select load_permit_save('$LF','PL','PL/F1',current_date,current_date+30,30,4,4.5,60)" "HHL albo przewoźnik transportu"
+err "okres ważności odwrócony → odmowa" $SCX "select load_permit_save('$LF','PL','PL/F1',current_date+5,current_date,30,4,4.5,60)" "okres ważności"
+err "pilotaż > 5 → odmowa" $SCX "select load_permit_save('$LF','PL','PL/F1',current_date,current_date+30,30,4,4.5,60,6)" "dodatnie"
+val "SCX zapisuje zezwolenie PL z organem, pilotażem i trasą — od razu powiązane" $SCX "select (load_permit_save('$LF','PL','PL/F64/2026',current_date,current_date+30,30,4,4.5,60,1,'A1 Gdańsk – DK91','GDDKiA Gdańsk') is not null)::text" true commit
+PF=$(Q "select id from permits where permit_no='PL/F64/2026'")
+chk "zapisane pola: organ, pilotaż 1, trasa, projekt transportu" "$(Q "select authority||'/'||escort_required||'/'||route_desc||'/'||(project_id='$P')::text from permits where id='$PF'")" "GDDKiA Gdańsk/1/A1 Gdańsk – DK91/true"
+chk "powiązanie + audit_log PERMIT_SAVE i PERMIT_LINK" "$(Q "select (select count(*) from load_permits where load_id='$LF' and permit_id='$PF')||'/'||(select count(*) from audit_log where action in ('PERMIT_SAVE','PERMIT_LINK') and (entity_id='$PF' or entity_id='$LF'))")" "1/2"
+val "HHL zapisuje zezwolenie SE dla transportu" $HHL "select (load_permit_save('$LF','SE','SE/F64',current_date,current_date+30,30,4,4.5,60) is not null)::text" true commit
+val "stan: 2 zezwolenia, zgodne, brak brakujących krajów" $SCX "select permits_linked||'/'||ok::text||'/'||cardinality(missing_countries) from load_permit_status() where load_id='$LF'" "2/true/0"
+val "KSH widzi oba zezwolenia transportu (tylko odczyt)" $KSH "select count(*) from permits p join load_permits lp on lp.permit_id=p.id where lp.load_id='$LF'" 2
+err "KSH nie odłącza zezwolenia" $KSH "select load_permit_unlink('$LF','$PF')" "HHL albo przewoźnik transportu"
+err "odłączenie niepowiązanego → odmowa" $SCX "select load_permit_unlink('$LF',gen_random_uuid())" "nie jest powiązane"
+val "SCX odłącza zezwolenie przed READY (audit_log PERMIT_UNLINK)" $SCX "select load_permit_unlink('$LF','$PF')::text" true commit
+chk "po odłączeniu: 1 powiązanie, wpis PERMIT_UNLINK, zezwolenie zostaje w projekcie" "$(Q "select (select count(*) from load_permits where load_id='$LF')||'/'||(select count(*) from audit_log where action='PERMIT_UNLINK' and entity_id='$LF')||'/'||(select count(*) from permits where id='$PF')")" "1/1/1"
+val "HHL łączy ponownie istniejące zezwolenie" $HHL "select load_permit_link('$LF','$PF')::text" true commit
+val "zgodne zezwolenia: PLANNED → READY" $HHL "update loads set status='READY' where id='$LF' returning status" READY commit
+err "po READY odłączenie zablokowane (nie obchodzi blokady)" $HHL "select load_permit_unlink('$LF','$PF')" "przed statusem Gotowy"
+err "permit_save: przewoźnik bez transportu w projekcie → odmowa" 11111111-0000-0000-0000-00000000000b "select permit_save('$P','PL','PL/X',current_date,current_date+30,30,4,4.5,60)" "tylko w projekcie, w którym ma transport"
+$PSQL -c "update loads set status='CANCELLED' where id='$LF'" >/dev/null 2>&1
+err "transport anulowany → zapis zezwolenia odrzucony" $HHL "select load_permit_save('$LF','PL','PL/F2',current_date,current_date+30,30,4,4.5,60)" "anulowany"
+$PSQL -c "delete from app_users where email='cx3@test'; delete from organizations where code='CX3'" >/dev/null
 chk "I-28: load_delivery_day_end usunięta (0085), load_delivery_deadline zostaje" "$(Q "select (to_regprocedure('load_delivery_day_end(date,timestamptz)') is null)::text||'/'||(to_regprocedure('load_delivery_deadline(date,timestamptz)') is not null)::text")" "true/true"
 echo; echo "[I-27] brak zezwolenia blokuje Gotowy dla klasy ≠ STANDARD (0084, przełącznik)"
 LD=33333333-0000-0000-0000-0000000027d1; LS=33333333-0000-0000-0000-0000000027a1

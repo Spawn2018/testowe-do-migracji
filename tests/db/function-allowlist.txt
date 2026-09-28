@@ -92,3 +92,5 @@ authenticated invoice_dispute_reply
 authenticated load_permit_link
 authenticated load_permit_status
 authenticated permit_save
+authenticated load_permit_save
+authenticated load_permit_unlink

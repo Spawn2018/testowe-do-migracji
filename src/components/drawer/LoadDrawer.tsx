@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useRef, useState } from 'react';
+import { Fragment, Suspense, lazy, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { StatusPill } from '../ui/StatusPill';
 import { fmtNum, fmtNumKeepPl, fmtPct, t, tp } from '../../i18n/messages';
@@ -41,6 +41,8 @@ import { PlanDatesPanel } from './PlanDatesPanel';
 import type { Locale } from '../../types';
 import { PROD_BUILD, shows } from '../../lib/prodFacade';
 import { delayPillMinutes, permitBannerState } from '../../lib/prodDash';
+/* SCOPE 6.4 — formularz zezwoleń: tylko build Supabase, chunk leniwy (paczka demo bez niego) */
+const PermitForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/PermitForm')) : null;
 
 /** M8 — poziom, mnożnik paliwowy z datą i kurs strony wyceny. */
 function MoneySideMeta({ side, locale, which }: { side: MoneySideV2; locale: Locale; which: 'cost' | 'rev' }) {
@@ -471,6 +473,7 @@ export function LoadDrawer() {
                   }}
                 />
               </div>
+              {PermitForm && isServerId(load.id) && <Suspense fallback={null}><PermitForm key={load.id} loadId={load.id} /></Suspense>}
             </>
           )}
 
