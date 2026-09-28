@@ -1523,7 +1523,7 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 9.3 | DO ZROBIENIA (częściowo) | PLAN Etap III „Silnik Workflows” |
 | 9.4 | DO ZROBIENIA (częściowo) | PLAN Etap III „Silnik Workflows” (w produkcji moduł ukryty — I-2) |
 | 9.6 | ODŁOŻONA | Dziennik odłożeń; bramka SMS — I-3 (D-4) |
-| 9.8 | DO ZROBIENIA (częściowo) | PLAN I-23 |
+| 9.8 | GOTOWE (28.09) | PLAN I-23 + POSTEP 9.8 |
 | 9.9 | ODŁOŻONA | Dziennik odłożeń |
 | 9.10 | ODŁOŻONA | Dziennik odłożeń; Etap III (kalendarz) |
 | 10.4 | ODŁOŻONE (decyzja właściciela) | PLAN D-24 (opcjonalny) |
@@ -1681,7 +1681,7 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 9.5 | Poczta z szablonami w trzech językach | GOTOWE | M7 `c907fe9`; `supabase/functions/_shared/notifyTemplates.ts` pl/en/sv; cron tower-send-notifications |  |
 | 9.6 | Wiadomości tekstowe | ODŁOŻONA | nie zrobione | zob. Dziennik odłożeń |
 | 9.7 | Powiadomienia w aplikacji | GOTOWE | `notifications` + RPC `mark_notifications_read` |  |
-| 9.8 | Odsiewanie duplikatów | DO ZROBIENIA (częściowo) | unikalny indeks `notifications(dedup_key)`, `risk_signals(dedup_key)` (0001) | brak dedykowanego testu |
+| 9.8 | Odsiewanie duplikatów | GOTOWE (28.09) | unikalny indeks `notifications(dedup_key)`, `risk_signals(dedup_key) where resolved_at is null` (0001), `sms_outbox(dedup_key)` (0067); wysyłka e-mail z `Idempotency-Key` per powiadomienie | `tests/notify-dedup.test.ts` (każdy INSERT: dedup_key + on conflict albo sprawdzenie otwartego sygnału), i2 „[I-23]” i „[9.8]” |
 | 9.9 | Kanał zespołowy | ODŁOŻONA | nie zrobione | zob. Dziennik odłożeń |
 | 9.10 | Kalendarz do subskrypcji | ODŁOŻONA | nie zrobione | zob. Dziennik odłożeń |
 | 9.11 | Czat przy transporcie | GOTOWE | `load_messages` + `message.send` (SupabaseProvider:186); data-layer.test.ts |  |

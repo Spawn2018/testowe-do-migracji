@@ -47,3 +47,28 @@ describe('I-23 odsiewanie duplikatów powiadomień', () => {
     }
   });
 });
+
+/* 9.8 — to samo dla sygnałów ryzyka i kolejki SMS: każdy INSERT podaje dedup_key i albo kończy się
+ * `on conflict … do nothing`, albo stoi za sprawdzeniem otwartego sygnału z tym kluczem (unikalny
+ * indeks risk_signals(dedup_key) where resolved_at is null jest ostatnią zaporą — i2 „[9.8]”). */
+const other: { table: string; fn: string; file: string; stmt: string; before: string }[] = [];
+for (const [fn, { file, body: raw }] of latest) {
+  const body = raw.replace(/'(?:[^']|'')*'/g, "''"); // literały tekstowe mogą zawierać „;”
+  for (const table of ['risk_signals', 'sms_outbox']) {
+    for (const m of body.matchAll(new RegExp(`insert into (?:public\\.)?${table}\\s*\\(([^)]*)\\)([\\s\\S]*?);`, 'gi'))) {
+      other.push({ table, fn, file, stmt: m[0], before: body.slice(Math.max(0, (m.index ?? 0) - 900), m.index) });
+    }
+  }
+}
+describe('9.8 odsiewanie duplikatów: risk_signals i sms_outbox', () => {
+  it('co najmniej 10 miejsc wstawia sygnały ryzyka lub SMS', () => {
+    expect(other.filter((o) => o.table === 'risk_signals').length).toBeGreaterThanOrEqual(10);
+    expect(other.some((o) => o.table === 'sms_outbox')).toBe(true);
+  });
+  it.each(other.map((o) => [o.table, o.fn, o.file, o] as const))('%s w %s (%s): dedup_key i odsiew', (_t, _fn, _f, o) => {
+    expect(o.stmt).toMatch(/\(\s*[^)]*\bdedup_key\b[^)]*\)/i);
+    const onConflict = /on conflict[\s\S]*do nothing/i.test(o.stmt);
+    const checked = /where\s+dedup_key\s*=\s*v_key\s+and\s+resolved_at\s+is\s+null/i.test(o.before);
+    expect(onConflict || checked, 'brak on conflict do nothing i brak sprawdzenia otwartego sygnału').toBe(true);
+  });
+});

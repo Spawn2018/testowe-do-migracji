@@ -36,5 +36,5 @@ check invite 48
 check risks 23
 check import 60
 check nullguard 369
-check i2 505
+check i2 510
 [ $ok -eq 1 ]
