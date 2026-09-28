@@ -54,7 +54,8 @@ export PW_BASE_URL="http://127.0.0.1:$PORT"
 if npx playwright test tests/visual.spec.ts tests/visual-states.spec.ts --output "$TMP/pw-results"; then SMOKE=ok; else SMOKE=fail; fi
 if [ "${SKIP_MATRIX:-0}" = "1" ]; then [ "$SMOKE" = ok ] && finish 0 || finish 4; fi
 
-REL="$(realpath --relative-to="$ROOT" "$TMP/shots")"
+mkdir -p "$TMP/gate-shots"   # nie "$TMP/shots": git archive rozpakowuje tam 17 śledzonych zrzutów z 23.09 (shots/), co psuło porównanie (missingInBaseline=17 → kod 2)
+REL="$(realpath --relative-to="$ROOT" "$TMP/gate-shots")"
 if ! BASE_URL="$PW_BASE_URL/" OUT="$REL" node scripts/baseline.mjs > "$TMP/matrix.log" 2>&1; then
   grep FAIL "$TMP/matrix.log" | head -20; REASON=błędy-ujęć-matrycy; finish 3
 fi

@@ -84,3 +84,12 @@ Wynik `npm run gate:visual` na `a956ab6` (11:33): `FAIL matryca=839/840 zmienion
 | Dowód | `FILTER=harmonogram__hhl__sv__390__dark-default` (samo ujęcie) → 0 px względem wzorca III-13; `FILTER=harmonogram__hhl__sv__390` (jasne, potem ciemne) → 98 276 px, dwa przebiegi identyczne (0 px) — deterministyczne |
 | Ocena | **artefakt narzędzia (kolejność ujęć), nie zmiana aplikacji; regresji 0** |
 | Działanie | ujęcie wzorca zastąpione wersją z kolejności pełnej matrycy (tak jak robi je brama); pozostałe 839 bez zmian. Przyszłe odświeżenia pojedynczych ujęć: robić parami w kolejności matrycy (np. `FILTER=<widok>__<rola>__<język>__<szerokość>`), nie pojedynczym plikiem. Uodpornienie `baseline.mjs` (kliknięcie motywu bez przewijania albo zerowanie `scrollX` przed ujęciem) zmieni wszystkie ujęcia 390/768 przewinięte w ten sam sposób — osobna pozycja z pełnym przebiegiem, nie mieszana z tym wyjaśnieniem |
+
+## G-V c90c062 (28.09.2026) — matryca 840/840 identyczna, a wynik FAIL: błąd bramy (katalog ujęć)
+`gate:visual` na `c90c062` (12:33): `FAIL matryca=840/840 zmienione=0 powód=różnice-ponad-0,1%`. Raport: `identical 840, changed 0,
+missingInBaseline 17` — w katalogu kandydata było 857 plików: 840 ujęć matrycy + 17 śledzonych w repo zrzutów `shots/01-cockpit.png…17-final-hhl-cockpit.png`
+(wzorzec wdrożenia z 23.09, `af3ea61`). `gate.sh` rozpakowuje `git archive HEAD` do katalogu tymczasowego i zapisywał matrycę do
+`$TMP/shots` — tego samego katalogu. `compare-baseline.mjs` kończy się kodem 2 przy plikach bez odpowiednika we wzorcu, więc
+**brama zgłaszała FAIL przy każdym przebiegu**, także bez żadnej różnicy (tak samo w raportach `24dbbcf` i `a956ab6`: 857 plików).
+Naprawa (narzędzie, nie aplikacja): matryca do `$TMP/gate-shots`. Ocena ujęć `c90c062`: **840/840 bez zmian, regresji 0**
+(A11Y-2 i 10.8 bez wpływu na wygląd — potwierdzone). Wzorzec bez zmian.
