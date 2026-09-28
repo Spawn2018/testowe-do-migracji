@@ -72,3 +72,15 @@ Szum niezależny od kodu: 7–14 px w pasku górnym (y 10–11) zmienia się mi�
 wpływa na wynik.
 
 **Regresji: 0.** Wzorzec 36 ujęć odświeżony z buildu `6e9e2fb` (zmiany `6e9e2fb` względem `24dbbcf` są niewidoczne: `aria-label`, `tabIndex`).
+
+## G-V a956ab6 (28.09.2026) — brama wizualna 839/840: 1 ujęcie, artefakt kolejności ujęć
+Wynik `npm run gate:visual` na `a956ab6` (11:33): `FAIL matryca=839/840 zmienione=1` — `harmonogram__hhl__sv__390__dark-default.png`.
+
+| Pytanie | Ustalenie |
+|---|---|
+| Commit | żaden — `6e9e2fb` i `a956ab6` mają identyczne `src/` (a956ab6 to dokumenty + wzorzec); ujęcie z buildu `6e9e2fb` i `a956ab6` = 0 px różnicy między sobą |
+| Co się różni | cała klatka (98 276 px): dokument przewinięty w poziomie o ~370 px (pasek górny, liczniki i tabela przesunięte, pasek boczny poza kadrem) |
+| Przyczyna | `scripts/baseline.mjs` → `setTheme()` przełącza motyw przez `page.click('#themeBtn')`; Puppeteer przewija element do widoku, a przy szerokości 390 px i szwedzkim pasku górnym przycisk motywu leży poza ekranem → okno przewija się w poziomie. Dzieje się to tylko, gdy poprzednie ujęcie było jasne (trzeba kliknąć). W pełnej matrycy `…__light` idzie przed `…__dark-default`, więc przewinięcie jest zawsze. Przy odświeżaniu w III-13 ujęcia robiono pojedynczo (`FILTER=<plik>`) — świeża strona, motyw domyślny, bez kliknięcia, bez przewinięcia |
+| Dowód | `FILTER=harmonogram__hhl__sv__390__dark-default` (samo ujęcie) → 0 px względem wzorca III-13; `FILTER=harmonogram__hhl__sv__390` (jasne, potem ciemne) → 98 276 px, dwa przebiegi identyczne (0 px) — deterministyczne |
+| Ocena | **artefakt narzędzia (kolejność ujęć), nie zmiana aplikacji; regresji 0** |
+| Działanie | ujęcie wzorca zastąpione wersją z kolejności pełnej matrycy (tak jak robi je brama); pozostałe 839 bez zmian. Przyszłe odświeżenia pojedynczych ujęć: robić parami w kolejności matrycy (np. `FILTER=<widok>__<rola>__<język>__<szerokość>`), nie pojedynczym plikiem. Uodpornienie `baseline.mjs` (kliknięcie motywu bez przewijania albo zerowanie `scrollX` przed ujęciem) zmieni wszystkie ujęcia 390/768 przewinięte w ten sam sposób — osobna pozycja z pełnym przebiegiem, nie mieszana z tym wyjaśnieniem |
