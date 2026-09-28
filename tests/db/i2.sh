@@ -600,8 +600,27 @@ err "odpowiedź po rozstrzygnięciu odrzucona" $HHL "select invoice_dispute_repl
 val "HHL: spór faktury kosztowej SCX" $HHL "update invoices set verification_status='SPORNA', dispute_note='brak CMR' where id='$IC' returning verification_status" SPORNA commit
 err "HHL: zapłata faktury kosztowej w sporze wstrzymana" $HHL "select mark_invoice_paid('$IC', current_date)" "zapłata wstrzymana"
 val "SCX (wystawca) odpowiada na spór" $SCX "select (invoice_dispute_reply('$IC','CMR dosłany') > 0)::text" true commit
+echo "  [0082] korekta z dokumentem"
+DK=$(run $SCX "select id from create_document(null,'INVOICE','korekta-1.pdf','application/pdf',1000,'$P')" commit | grep -E '^[0-9a-f-]{36}$' | head -1)
+DH=$(run $HHL "select id from create_document(null,'INVOICE','korekta-hhl.pdf','application/pdf',1000,'$P')" commit | grep -E '^[0-9a-f-]{36}$' | head -1)
+chk "SCX i HHL rejestrują pliki faktur (bez transportu)" "$([ -n "$DK" ] && [ -n "$DH" ] && echo ok)" ok
+err "SCX: korekta z cudzym plikiem odrzucona" $SCX "select invoice_dispute_reply('$IC','korekta','$DH')" "Korekta:"
+DX=$(run $SCX "select id from create_document(null,'INVOICE','inna.pdf','application/pdf',1000,'$P')" commit | grep -E '^[0-9a-f-]{36}$' | head -1)
+$PSQL -c "insert into invoice_documents (invoice_id, document_id, role) values ('$IR','$DX','CMR')" >/dev/null
+err "SCX: korekta z plikiem powiązanym z inną fakturą odrzucona" $SCX "select invoice_dispute_reply('$IC','korekta','$DX')" "Korekta:"
+$PSQL -c "delete from documents where id='$DX'" >/dev/null
+val "SCX: korekta z własnym świeżym plikiem" $SCX "select (invoice_dispute_reply('$IC','faktura korygująca KOR/1','$DK') > 0)::text" true commit
+chk "plik korekty powiązany z fakturą jako KOREKTA, wpis ma document_id, audit_log" "$(Q "select (select role from invoice_documents where document_id='$DK')||'/'||(select count(*) from invoice_dispute_events where document_id='$DK')||'/'||(select count(*)>0 from audit_log where action='INVOICE_DISPUTE_CORRECTION' and entity_id='$IC')")" "KOREKTA/1/true"
+val "KSH (nie strona faktury kosztowej) nie widzi pliku korekty SCX" $KSH "select count(*) from documents where id='$DK'" 0
+err "ten sam plik nie trafi drugi raz jako korekta" $SCX "select invoice_dispute_reply('$IC','jeszcze raz','$DK')" "Korekta:"
+$PSQL -c "update invoices set verification_status='SPORNA', dispute_note='stawka poz. 2' where id='$IR'" >/dev/null
+val "KSH (odbiorca faktury HHL) nie widzi pliku korekty przed wysłaniem" $KSH "select count(*) from documents where id='$DH'" 0
+val "HHL: korekta faktury przychodowej z plikiem" $HHL "select (invoice_dispute_reply('$IR','korekta KOR/2','$DH') > 0)::text" true commit
+chk "wpis CORRECTION z plikiem + powiadomienie KSH" "$(Q "select (select kind from invoice_dispute_events where document_id='$DH')||'/'||(select count(*) from notifications n join app_users u on u.id=n.user_id where n.template='INVOICE_DISPUTE_REPLY' and u.auth_id='$KSH')")" "CORRECTION/2"
+val "KSH widzi plik korekty po wysłaniu (rola KOREKTA w module faktur)" $KSH "select count(*) from documents where id='$DH'" 1
+val "SCX nie widzi pliku korekty faktury HHL → KSH" $SCX "select count(*) from documents where id='$DH'" 0
 val "HHL: ZGODNA → zapłata możliwa" $HHL "update invoices set verification_status='ZGODNA' where id='$IC'; select mark_invoice_paid('$IC', current_date); select payment_status from invoices where id='$IC'" OPLACONA commit
-chk "liczba wpisów historii: 3 (HHL/KSH) + 3 (SCX)" "$(( $(Q "select count(*) from invoice_dispute_events") - N0 ))" "6"
+chk "liczba wpisów historii: 3+2 (HHL/KSH: ponowny spór + korekta) + 4 (SCX, w tym korekta)" "$(( $(Q "select count(*) from invoice_dispute_events") - N0 ))" "9"
 $PSQL -c "update invoices set payment_status='NIEOPLACONA', paid_at=null, verification_status='DO_WERYFIKACJI', dispute_note=null where id in ('$IC','$IR')" >/dev/null 2>&1
 echo; echo "[I-25] opóźnienie od końca okna dostawy (0080) — przeliczenie na transporcie"
 $PSQL -c "update loads set plan_delivery_date='2026-10-01', plan_delivery_from='2026-10-01 08:00 Europe/Stockholm', plan_delivery_to='2026-10-01 12:00 Europe/Stockholm' where id='$L2'" >/dev/null 2>&1

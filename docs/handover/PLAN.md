@@ -101,6 +101,9 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 | I-23 | (P2, z I-11: SCOPE 9.8) test odsiewania duplikatów powiadomień (dedup_key) dla wszystkich szablonów | test bazy | DONE 28.09 — `tests/notify-dedup.test.ts` (każdy INSERT do notifications w bazie: dedup_key + on conflict do nothing; 8 szablonów z własnym tekstem PL/EN/SV) + i2 „[I-23]” (unikalny indeks, duplikat odrzucony) |
 | I-24 | (P2, z I-11: SCOPE 10.8) eksport raportów do PDF (obok XLSX) | plik PDF z harmonogramu | DONE 28.09 — przycisk „Eksport PDF” obok XLSX w harmonogramie (`src/lib/pdfExport.ts`, pdf-lib + Liberation Sans OFL, ładowane leniwie); A4 poziomo, stronicowanie, bez danych kierowcy i kwot |
 | I-25 | (P0, właściciel 28.09) cofnięcie reguły opóźnienia z 0070 (błąd w komunikacie koordynatora): opóźnienie od końca okna dostawy (`plan_delivery_to`, tylko od KSH), a bez okna — od końca dnia dostawy (Europe/Stockholm); import nie ustawia okna | okno 08–12, ETA 18:00 → 360; bez okna ETA 18:00 → 0; bez okna ETA 06:00 nast. dnia → 360; import bez godzin → okno puste (baza i UI identycznie) | **DONE** 28.09 (0080) |
+| I-26 | (P1, właściciel 28.09) anon ma INSERT/UPDATE/DELETE na ~20 tabelach `public` (m.in. loads, invoices, invoice_lines, organizations, projects, documents) — blokuje tylko RLS (wzorzec jak `permits` przed 0081): odebrać anon wszystkie uprawnienia tabel (i sekwencji) w `public` + `ALTER DEFAULT PRIVILEGES`; aplikacja kierowcy działa przez funkcje — sprawdzić; przegląd TRUNCATE/REFERENCES/TRIGGER dla authenticated | anon: 0 uprawnień do tabel w `public` (poza `spatial_ref_sys` — chroni wyzwalacz); przebieg kierowcy z linku przechodzi; test w zestawie security | DO ZROBIENIA |
+| I-27 | (P1, właściciel 28.09, przed R-3) brak zezwolenia dla transportu o klasie innej niż STANDARD blokuje przejście do READY („Gotowy”) — przełącznik w tabeli parametrów; włącza właściciel przed pierwszym prawdziwym transportem (D-21). STANDARD bez zezwolenia przechodzi | test: DIMENSIONED bez zezwolenia nie osiąga READY przy włączonym przełączniku | DO ZROBIENIA |
+| I-28 | (P2, właściciel 28.09) usunąć `load_delivery_day_end` — nieużywana, ignoruje okno dostawy (najpierw sprawdzić brak odwołań) | funkcja usunięta, brama bazy zielona | DO ZROBIENIA |
 
 ## PILOTAŻ I WYDANIE
 
@@ -130,7 +133,7 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 **III-4** (P2, z I-11: SCOPE 4.5) pojazdy pilotujące: dane i awizacja — DO ZROBIENIA ·
 **III-5** (P2, z I-11: SCOPE 5.10, 5.13) mapa: unikanie kolizji etykiet, odtwarzanie przebiegu w czasie — DO ZROBIENIA ·
 **III-6** (P2, z I-11: SCOPE 6.1, 6.2) dokumenty: wymagalność i terminy per kategoria w bazie, wersjonowanie dokumentu — DONE 28.09 (0078; terminy startowe = PROPOZYCJA do potwierdzenia z SCX/KSH) ·
-**III-7** (P2, z I-11: SCOPE 7.10) pełna ścieżka sporu i akceptacji faktury — DONE 28.09 (0079) ·
+**III-7** (P2, z I-11: SCOPE 7.10) pełna ścieżka sporu i akceptacji faktury — DONE 28.09 (0079; korekta z załączonym PDF w UI — 0082) ·
 **III-8** — (numer zarezerwowany, nieużyty) ·
 **III-9** (P2, z I-11: SCOPE 10.4, 10.6) widok placu budowy tylko do odczytu (opcjonalny), ocena przewoźnika — DO ZROBIENIA ·
 Silnik Workflows · źródło pogody morskiej · walidator zezwoleń i wymiarów (DONE 28.09, 0081 — SCOPE 6.5; formularz zezwoleń w UI = SCOPE 6.4, dalej otwarte) ·
@@ -166,3 +169,4 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | D-18 | e-mail do armatora z prośbą o zgodę na odczyt komunikatów | II-5 |
 | D-19 | ~~założenia SMS~~ — **ROZSTRZYGNIĘTE 28.09 (właściciel):** SMS po polsku bez polskich znaków (GSM-7); limit 150 SMS na dobę; język kierowcy z pola transportu (`loads.driver_locale`), a bez niego z prefiksu numeru (+48 pl, +46 sv, inne en); rodzaje w pilotażu: **1–5 oraz 8 (brak GPS) i 9 (prośba o potwierdzenie rozładunku)** — poprawka P0 | I-3 |
 | D-20 | wiadomości do osób zewnętrznych (SMS do kierowców, e-mail poza log-mar.pl) — blokada techniczna do R-2 (0068, flaga `EXTERNAL_MESSAGING`); włącza HHL_ADMIN po podpisaniu umów RODO (D-5) | R-2 |
+| D-21 | **DZIAŁANIE WŁAŚCICIELA przed pierwszym prawdziwym transportem (R-3):** włączyć przełącznik I-27 „brak zezwolenia blokuje Gotowy” dla klas innych niż STANDARD (domyślnie wyłączony, bo produkcja nie ma jeszcze zezwoleń w bazie) | R-3 |

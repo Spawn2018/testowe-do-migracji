@@ -1,6 +1,6 @@
 /** III-7 (SCOPE 7.10) — reguły ścieżki sporu faktury i treści powiadomień PL/EN/SV. */
 import { describe, expect, it } from 'vitest';
-import { canReplyDispute, disputeActorSide, paymentBlockedByDispute } from '../src/lib/invoiceDispute';
+import { canReplyDispute, disputeActorSide, paymentBlockedByDispute, correctionFileError } from '../src/lib/invoiceDispute';
 import { renderNotice } from '../supabase/functions/_shared/notifyTemplates';
 
 describe('III-7 ścieżka sporu faktury', () => {
@@ -27,5 +27,11 @@ describe('III-7 ścieżka sporu faktury', () => {
       expect(seen.size).toBe(3);
     }
     expect(renderNotice({ template: 'INVOICE_DISPUTED', payload: { number: 'X', note: 'brak CMR' } }, 'pl').body).toContain('brak CMR');
+  });
+  it('0082: korekta — tylko PDF do 10 MB', () => {
+    expect(correctionFileError({ name: 'k.pdf', type: 'application/pdf', size: 1000 })).toBeNull();
+    expect(correctionFileError({ name: 'K.PDF', type: '', size: 1000 })).toBeNull();
+    expect(correctionFileError({ name: 'k.jpg', type: 'image/jpeg', size: 1000 })).toBe('type');
+    expect(correctionFileError({ name: 'k.pdf', type: 'application/pdf', size: 10 * 1048576 + 1 })).toBe('size');
   });
 });

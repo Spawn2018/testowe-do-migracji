@@ -20,7 +20,8 @@ import {
 } from '../lib/invoices3';
 import { DocFileRow } from '../components/ui/DocFileRow';
 import { DocPreview } from '../components/ui/DocPreview';
-import { canReplyDispute, disputeActorSide, paymentBlockedByDispute, type DisputeEvent } from '../lib/invoiceDispute';
+import { canReplyDispute, correctionFileError, disputeActorSide, paymentBlockedByDispute, type DisputeEvent } from '../lib/invoiceDispute';
+import { readFileAsDataUrl } from '../lib/docsIo';
 
 /** III-7 — historia sporu (zgłoszenie → odpowiedź / korekta wystawcy → rozstrzygnięcie) i odpowiedź wystawcy. */
 function DisputeThread({ bill }: { bill: Bill }) {
@@ -28,6 +29,9 @@ function DisputeThread({ bill }: { bill: Bill }) {
   const locale = useTowerStore((s) => s.locale);
   const [events, setEvents] = useState<DisputeEvent[] | null>(null);
   const [reply, setReply] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [fileKey, setFileKey] = useState(0);
+  const [busy, setBusy] = useState(false);
   const [tick, setTick] = useState(0);
   const server = import.meta.env.VITE_AUTH_MODE === 'supabase';
   useEffect(() => {
@@ -50,21 +54,43 @@ function DisputeThread({ bill }: { bill: Bill }) {
         ...(bill.disputeNote ? [{ id: 'd0', kind: 'OPENED' as const, statusTo: 'SPORNA', note: bill.disputeNote, at: bill.createdAt ?? '' }] : []),
         ...demoReplies,
       ];
+  const pickFile = (f: File | null) => {
+    const st = useTowerStore.getState();
+    const bad = f ? correctionFileError(f) : null;
+    if (bad) { st.pushToast(t(locale, bad === 'type' ? 'iii7_file_type' : 'iii7_file_size'), 'HIGH'); setFile(null); setFileKey((k) => k + 1); return; }
+    setFile(f);
+  };
   const send = async () => {
     const st = useTowerStore.getState();
     const text = reply.trim();
     if (!text) { st.pushToast(t(locale, 'iii7_reply_empty'), 'HIGH'); return; }
+    setBusy(true);
     try {
       if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
-        await (await import('../data/invoiceDisputeServer')).replyDispute(bill.id, text);
+        await (await import('../data/invoiceDisputeServer')).replyDispute(bill.id, text, file);
         setTick((x) => x + 1);
       } else {
-        setDemoReplies((xs) => [...xs, { id: `r${xs.length + 1}`, kind: 'REPLY', statusTo: 'SPORNA', note: text, at: getNowIso() }]);
+        const att = file ? await readFileAsDataUrl(file) : null;
+        setDemoReplies((xs) => [...xs, {
+          id: `r${xs.length + 1}`, kind: file ? 'CORRECTION' : 'REPLY', statusTo: 'SPORNA', note: text, at: getNowIso(),
+          ...(att && file ? { docName: file.name, docUrl: att.dataUrl } : {}),
+        }]);
       }
-      setReply('');
-      st.pushToast(t(locale, 'iii7_reply_sent'), 'MEDIUM');
+      setReply(''); setFile(null); setFileKey((k) => k + 1);
+      st.pushToast(t(locale, file ? 'iii7_corr_sent' : 'iii7_reply_sent'), 'MEDIUM');
     } catch (e) {
       st.pushToast(t(locale, 'iii6_err').replace('{msg}', e instanceof Error ? e.message : String(e)), 'HIGH');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const openDoc = async (e: DisputeEvent) => {
+    try {
+      const url = e.docUrl ?? (e.docId && import.meta.env.VITE_AUTH_MODE === 'supabase'
+        ? await (await import('../data/invoiceDisputeServer')).disputeDocUrl(e.docId) : null);
+      if (url) window.open(url, '_blank', 'noopener');
+    } catch (err) {
+      useTowerStore.getState().pushToast(t(locale, 'iii6_err').replace('{msg}', err instanceof Error ? err.message : String(err)), 'HIGH');
     }
   };
   if (!list.length && !canReplyDispute(role, bill)) return null;
@@ -77,14 +103,28 @@ function DisputeThread({ bill }: { bill: Bill }) {
             {fmtDay(e.at ? e.at.slice(0, 10) : null)} · {disputeActorSide(e.kind) === 'issuer' ? bill.issuer : bill.recipient} · {t(locale, `iii7_k_${e.kind}`)}
             {e.kind === 'RESOLVED' && e.statusTo ? ` (${VERIFICATION_LABEL[e.statusTo as BillVerification]?.[locale] ?? e.statusTo})` : ''}
           </span>
-          <span data-content>{e.note ?? ''}</span>
+          <span data-content>
+            {e.note ?? ''}
+            {e.docId || e.docUrl ? (
+              <button type="button" className="btn ghost" style={{ marginLeft: 8 }} data-dispute-doc={e.docName ?? ''} onClick={() => void openDoc(e)}>
+                {t(locale, 'iii7_open_doc')}{e.docName ? `: ${e.docName}` : ''}
+              </button>
+            ) : null}
+          </span>
         </div>
       ))}
       {canReplyDispute(role, bill) ? (
         <div className="filters" data-bill-actions="dispute-reply">
           <input className="input" style={{ flex: 1, minWidth: 220 }} placeholder={t(locale, 'iii7_reply_ph')} value={reply}
             onChange={(e) => setReply(e.target.value)} aria-label={t(locale, 'iii7_reply_ph')} data-dispute-reply="" />
-          <button type="button" className="btn" data-action="dispute-reply" onClick={() => void send()}>{t(locale, 'iii7_reply')}</button>
+          <label className="btn ghost" title={t(locale, 'iii7_attach_hint')}>
+            {file ? file.name : t(locale, 'iii7_attach')}
+            <input key={fileKey} type="file" accept="application/pdf" hidden data-dispute-file=""
+              aria-label={t(locale, 'iii7_attach')} onChange={(e) => pickFile(e.target.files?.[0] ?? null)} />
+          </label>
+          <button type="button" className="btn" data-action="dispute-reply" disabled={busy} onClick={() => void send()}>
+            {t(locale, file ? 'iii7_send_corr' : 'iii7_reply')}
+          </button>
         </div>
       ) : null}
     </div>

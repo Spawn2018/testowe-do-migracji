@@ -1,6 +1,7 @@
 /**
  * III-7 (SCOPE 7.10) — pełna ścieżka sporu i akceptacji faktury na BUILDZIE PRODUKCYJNYM i lokalnym Supabase.
  * KSH zgłasza spór faktury HHL → HHL widzi historię i odpowiada → KSH widzi odpowiedź i akceptuje → historia 3 kroków.
+ * 0082: HHL wysyła korektę z plikiem PDF → KSH (odbiorca) widzi wpis „korekta” i otwiera plik linkiem podpisanym.
  * Faktura kosztowa SCX w sporze: przycisk „Opłacona” u HHL wyłączony z komunikatem.
  * Uruchamia: SPEC=tests/iii7-dispute.local.spec.ts scripts/i2/local-ui.sh
  */
@@ -18,7 +19,7 @@ test.describe.configure({ mode: 'serial' });
 test.skip(!LOCAL, 'spór faktury: wymaga I2_UI_BASE i lokalnego Supabase');
 
 let IR = ''; let IC = '';
-const cleanup = () => psql(`set session_replication_role=replica; delete from invoice_dispute_events where invoice_id in (select id from invoices where invoice_number like 'E2E/III7/%');
+const cleanup = () => psql(`set session_replication_role=replica; delete from documents where file_name='e2e-iii7-korekta.pdf'; delete from invoice_dispute_events where invoice_id in (select id from invoices where invoice_number like 'E2E/III7/%');
   delete from notifications where payload->>'number' like 'E2E/III7/%'; delete from invoice_lines where invoice_id in (select id from invoices where invoice_number like 'E2E/III7/%');
   delete from invoices where invoice_number like 'E2E/III7/%';`);
 test.beforeAll(() => {
@@ -71,7 +72,15 @@ test('HHL widzi spór, odpowiada', async ({ page }) => {
   await th.locator('[data-dispute-reply]').fill('stawka wg aneksu 2');
   await th.locator('[data-action="dispute-reply"]').click();
   await expect(th.locator('[data-dispute-event="REPLY"]')).toContainText('stawka wg aneksu 2');
-  expect(Number(psql(`select count(*) from notifications n join app_users u on u.id=n.user_id where n.template='INVOICE_DISPUTE_REPLY' and u.email='ksh@bk5.local' and n.payload->>'invoice_id'='${IR}'`))).toBe(1);
+  // 0082: korekta z załączonym PDF
+  await th.locator('[data-dispute-file]').setInputFiles({ name: 'e2e-iii7-korekta.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n% korekta\n%%EOF\n') });
+  await expect(th.locator('[data-action="dispute-reply"]')).toHaveText(/korekt/i);
+  await th.locator('[data-dispute-reply]').fill('faktura korygująca KOR/1');
+  await th.locator('[data-action="dispute-reply"]').click();
+  await expect(th.locator('[data-dispute-event="CORRECTION"]')).toContainText('faktura korygująca KOR/1');
+  await expect(th.locator('[data-dispute-doc="e2e-iii7-korekta.pdf"]')).toBeVisible();
+  expect(psql(`select x.role from invoice_documents x join documents d on d.id=x.document_id where x.invoice_id='${IR}' and d.file_name='e2e-iii7-korekta.pdf'`)).toBe('KOREKTA');
+  expect(Number(psql(`select count(*) from notifications n join app_users u on u.id=n.user_id where n.template='INVOICE_DISPUTE_REPLY' and u.email='ksh@bk5.local' and n.payload->>'invoice_id'='${IR}'`))).toBe(2);
   // faktura kosztowa SCX w sporze: zapłata wstrzymana
   psql(`set session_replication_role=replica; update invoices set verification_status='SPORNA', dispute_note='brak CMR' where id='${IC}'`);
   await page.reload();
@@ -81,14 +90,22 @@ test('HHL widzi spór, odpowiada', async ({ page }) => {
   await expect(page.locator(`[data-bill-detail="${IC}"] [data-pay-blocked]`)).toBeVisible();
 });
 
-test('KSH widzi odpowiedź i akceptuje — historia 3 kroków', async ({ page }) => {
+test('KSH widzi odpowiedź i plik korekty, akceptuje — historia 4 kroków', async ({ page }) => {
   test.setTimeout(90_000);
   await login(page, 'ksh@bk5.local');
   await openBill(page, IR);
   const th = page.locator(`[data-dispute-thread="${IR}"]`);
   await expect(th.locator('[data-dispute-event="REPLY"]')).toContainText('stawka wg aneksu 2');
   await expect(th.locator('[data-action="dispute-reply"]')).toHaveCount(0);
+  await expect(th.locator('[data-dispute-event="CORRECTION"]')).toContainText('faktura korygująca KOR/1');
+  await page.evaluate(() => { (window as unknown as { __opened: string[] }).__opened = []; window.open = ((u: string) => { (window as unknown as { __opened: string[] }).__opened.push(String(u)); return null; }) as typeof window.open; });
+  await th.locator('[data-dispute-doc="e2e-iii7-korekta.pdf"]').click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __opened: string[] }).__opened[0] ?? '')).toMatch(/\/storage\/v1\/object\/sign\//);
+  const signed = await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened[0]);
+  const got = await fetch(signed);
+  expect(got.status).toBe(200);
+  expect((await got.text()).startsWith('%PDF')).toBe(true);
   await page.locator('[data-verify="ZAAKCEPTOWANA"]').click();
-  await expect.poll(() => psql(`select string_agg(kind, ',' order by id) from invoice_dispute_events where invoice_id='${IR}'`)).toBe('OPENED,REPLY,RESOLVED');
+  await expect.poll(() => psql(`select string_agg(kind, ',' order by id) from invoice_dispute_events where invoice_id='${IR}'`)).toBe('OPENED,REPLY,CORRECTION,RESOLVED');
   await expect(th.locator('[data-dispute-event="RESOLVED"]')).toBeVisible();
 });
