@@ -101,3 +101,5 @@ authenticated load_track
 authenticated carrier_rate_load
 authenticated carrier_scorecard
 authenticated carrier_rating_detail
+authenticated insurance_policy_save
+authenticated insurance_policies_list

@@ -20,6 +20,7 @@
 | Retencja `files/` w R2 | **CZEKA na logowanie do Cloudflare** (wrangler wylogowany; bez logowania z naszej strony — polecenie 28.09); pliki `docs/handover/r2/*.json` gotowe | bez nowych płatnych zasobów — tylko na istniejącym koncie |
 | III-13: 36 ujęć wzorca (Harmonogram, Dokumenty) | **DONE 28.09** — 3 grupy, regresji 0 (`G4_WZORZEC.md`); brama wizualna 840/840 zielona na `42a72c7` (III-2 0.3/11.4 DONE) | pozycja robocza |
 | Przekazanie Cursorowi | **DONE 28.09** — `PRZEKAZANIE_CURSOR.md` + `.cursor/rules/tower.mdc` | dokumentacja |
+| Polisy z przypomnieniem o wygaśnięciu (6.6, audyt C4) | **część bazowa DONE 28.09** — 0097, `tests/db/insurance.sh` 33/33 | harmonogram, formularz polisy i notka w Dokumentach → **D-30** |
 | Dostępność — reszta | `list` w kolejce wyjątków (12), mylący kursor (362) | poprawki bez zmiany wyglądu — tylko jeśli D-27 dopuści |
 
 ## Zależne od właściciela / osób trzecich
@@ -27,6 +28,7 @@
 |---|---|
 | III-1 kalibracja ETA | 5 prawdziwych transportów (dane) |
 | Kontrast i kursor (11.5) | **D-27** (nowa) |
+| 6.6 włączenie przypomnień o polisie | **D-30** (zadanie cykliczne, formularz, notka) |
 | III-10 włączenie | D-2 (wybór indeksu z przewoźnikiem) |
 | III-11 wdrożenie pogody | decyzja, czy wdrażać (propozycja FMI + DMI) |
 | III-9 / 10.4 widok placu budowy | D-24 (zamknięte przez SCOPE 16.1 — nie robić) |

@@ -1502,7 +1502,7 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 | 6.2 | DO ZROBIENIA (częściowo) | PLAN III-6 |
 | 6.4 | DO ZROBIENIA (częściowo) → **GOTOWE 28.09 (0086)** | PLAN Etap III „walidator zezwoleń i wymiarów” (0081); formularz zezwoleń w szufladzie transportu — HHL i przewoźnik transportu (0086) |
 | 6.5 | DO ZROBIENIA (częściowo) | PLAN Etap III „walidator zezwoleń i wymiarów” |
-| 6.6 | DO ZROBIENIA (częściowo) | PLAN Etap III „walidator zezwoleń i wymiarów” (polisy — C4) |
+| 6.6 | DO ZROBIENIA (częściowo) → **część bazowa GOTOWE 28.09 (0097)** | zapis/odczyt polis przez funkcje, `detect_insurance_expiry` (ryzyko + IN_APP 14 dni przed końcem); harmonogram, formularz i notka — PLAN D-30 |
 | 6.8 | GOTOWE | I-2k `e4b393d`: paczka tygodnia tylko z dokumentów tygodnia ISO |
 | 6.9 | ODŁOŻONA | Dziennik odłożeń; Etap III (e-CMR) |
 | 7.1 | ZABLOKOWANA | D-1 (kwoty); formularz cennika — PLAN I-19; pozycja STANDARD — I-12 (0064) |

@@ -84,3 +84,5 @@ load_permit_unlink | GUARD | select load_permit_unlink('$L1', '$PERMIT') | HHL a
 permit_save | GUARD | select permit_save('$P', 'PL', 'X-1', current_date, current_date + 30, 30, 4, 4.5, 60) | HHL albo przewoźnik
 load_escort_contacts | EMPTY | select count(*) from load_escort_contacts() | 0
 carrier_rating_detail | GUARD | select count(*) from carrier_rating_detail('$L1') | wyłącznie dla HHL
+insurance_policy_save | GUARD | select insurance_policy_save('00000000-0000-0000-0000-00000000a003', 'X-1', current_date, current_date + 30) | Brak aktywnego konta
+insurance_policies_list | GUARD | select count(*) from insurance_policies_list() | Brak aktywnego konta

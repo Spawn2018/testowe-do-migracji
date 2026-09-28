@@ -150,6 +150,20 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
         : locale === 'sv' ? `Regeln „${rule}” utlöstes för transport ${code}.` : `Reguła „${rule}” zadziałała dla transportu ${code}.`);
       return { subject, body, severity: 'MEDIUM', view: null };
     }
+    case 'INSURANCE_EXPIRY': {
+      // 6.6 (0097): polisa przewoźnika kończy się w ciągu 14 dni albo już wygasła
+      const carrier = String(p.carrier ?? '');
+      const policy = String(p.policy_no ?? '');
+      const due = formatDay(p.due);
+      const expired = p.severity === 'CRITICAL';
+      const subject = locale === 'en'
+        ? `Policy ${policy} (${carrier}) ${expired ? 'expired' : 'expires'} ${due}`
+        : locale === 'sv' ? `Försäkring ${policy} (${carrier}) ${expired ? 'gick ut' : 'går ut'} ${due}` : `Polisa ${policy} (${carrier}) ${expired ? 'wygasła' : 'wygasa'} ${due}`;
+      const body = locale === 'en'
+        ? 'Upload the current carrier policy in Documents.'
+        : locale === 'sv' ? 'Ladda upp transportörens gällande försäkring under Dokument.' : 'Wgraj aktualną polisę przewoźnika w widoku Dokumenty.';
+      return { subject, body, severity: expired ? 'CRITICAL' : 'HIGH', view: 'risk' };
+    }
     case 'SMS_FALLBACK': {
       // I-3 (0067): SMS niewysłany w 10 min albo FAILED — treść do przekazania kierowcy telefonicznie/komunikatorem
       const code = String(p.code ?? '');
