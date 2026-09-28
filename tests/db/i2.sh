@@ -765,6 +765,26 @@ chk "retencja: 89 dni po rozładunku — kontakt pilota zostaje" "$(Q "select pu
 $PSQL -c "set session_replication_role=replica; update loads set actual_delivery_at=now()-interval '91 days' where id='$LP'" >/dev/null
 chk "retencja: 91 dni po rozładunku — imię i telefon pilota wyczyszczone, pojazd zostaje, licznik 'piloci' w integration_runs" "$(Q "select purge_personal_data() >= 1")/$(Q "select count(*)||':'||count(driver_name)||':'||count(driver_phone) from load_escorts where load_id='$LP'")/$(Q "select (result->>'piloci')::int >= 1 from integration_runs where job='rodo' order by id desc limit 1")" "t/2:0:0/t"
 $PSQL -c "set session_replication_role=replica; update loads set status='CANCELLED' where id='$LP'" >/dev/null
+echo; echo "[III-10] EU Weekly Oil Bulletin — pobieranie wyłączone do D-2 (0092)"
+SR() { $PSQL -v ON_ERROR_STOP=1 -c "begin; set local role service_role; $1; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | grep -v -E '^(CONTEXT|PL/pgSQL|SQL statement)' | tail -1; }
+WROWS="'[{\"index_code\":\"WOB_DIESEL_PL\",\"period\":\"2026-W39\",\"reading_date\":\"2026-09-21\",\"value\":2.0391},{\"index_code\":\"WOB_DIESEL_SE\",\"period\":\"2026-W39\",\"reading_date\":\"2026-09-21\",\"value\":2.0902}]'::jsonb"
+WURL="'https://energy.ec.europa.eu/document/download/264c2d0f-f161-4ea3-a777-78faae59bea0_en?filename=x.xlsx'"
+chk "przełącznik FUEL_WOB_INGEST istnieje i jest wyłączony" "$(Q "select enabled::text from security_flags where key='FUEL_WOB_INGEST'")" "false"
+chk "anon/authenticated: brak EXECUTE fuel_wob_ingest i fuel_wob_enabled; service_role ma" "$(Q "select has_function_privilege('anon','fuel_wob_ingest(uuid,jsonb,text)','execute')::text||has_function_privilege('authenticated','fuel_wob_ingest(uuid,jsonb,text)','execute')::text||has_function_privilege('authenticated','fuel_wob_enabled()','execute')::text||has_function_privilege('service_role','fuel_wob_ingest(uuid,jsonb,text)','execute')::text")" "falsefalsefalsetrue"
+err "HHL nie wywołuje fuel_wob_ingest" $HHL "select fuel_wob_ingest('$P',$WROWS,$WURL)" "permission denied"
+chk "wyłączony przełącznik: ingest odmawia" "$(SR "select fuel_wob_ingest('$P',$WROWS,$WURL)" | grep -c 'wyłączone')" 1
+chk "wyłączony: 0 odczytów WOB w bazie" "$(Q "select count(*) from fuel_index_readings where index_code like 'WOB%'")" 0
+$PSQL -c "update security_flags set enabled=true where key='FUEL_WOB_INGEST'" >/dev/null
+chk "włączony: 2 odczyty przyjęte" "$(SR "select fuel_wob_ingest('$P',$WROWS,$WURL)->>'inserted'")" 2
+chk "włączony: powtórka tego samego tygodnia pomija (idempotentne)" "$($PSQL -c "begin; set local role service_role; select fuel_wob_ingest('$P',$WROWS,$WURL); select fuel_wob_ingest('$P',$WROWS,$WURL)->>'skipped'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)" 2
+chk "źródło spoza energy.ec.europa.eu odrzucone" "$(SR "select fuel_wob_ingest('$P',$WROWS,'https://example.com/x.xlsx')" | grep -c 'energy.ec.europa.eu')" 1
+chk "kod spoza WOB (SEK) odrzucony" "$(SR "select fuel_wob_ingest('$P','[{\"index_code\":\"SEK\",\"period\":\"2026-W39\",\"reading_date\":\"2026-09-21\",\"value\":19.6}]'::jsonb,$WURL)" | grep -c 'spoza WOB')" 1
+chk "data z przyszłości odrzucona" "$(SR "select fuel_wob_ingest('$P',jsonb_build_array(jsonb_build_object('index_code','WOB_DIESEL_PL','period','2026-W39','reading_date',current_date+1,'value',2)),$WURL)" | grep -c 'przyszłości')" 1
+chk "pusta tablica odrzucona" "$(SR "select fuel_wob_ingest('$P','[]'::jsonb,$WURL)" | grep -c '1–10')" 1
+chk "nieznany projekt odrzucony" "$(SR "select fuel_wob_ingest(gen_random_uuid(),$WROWS,$WURL)" | grep -c 'Nieznany projekt')" 1
+chk "wpis w audit_log (system) widoczny w baf_change_log dla HHL" "$($PSQL -c "begin; set local role service_role; select fuel_wob_ingest('$P',$WROWS,$WURL); set local role authenticated; set local request.jwt.claim.sub='$HHL'; select count(*) from baf_change_log('$P') where actor='system' and action='FUEL_READING_ADD'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)" 2
+chk "stary kod spoza listy nadal odrzucany przez tabelę" "$($PSQL -c "insert into fuel_index_readings (project_id,index_code,period,reading_date,value,source_url) values ('$P','EUR','2026-W39',current_date,1,'https://x')" 2>&1 | grep -c 'index_code_check')" 1
+$PSQL -c "update security_flags set enabled=false where key='FUEL_WOB_INGEST'" >/dev/null
 chk "I-28: load_delivery_day_end usunięta (0085), load_delivery_deadline zostaje" "$(Q "select (to_regprocedure('load_delivery_day_end(date,timestamptz)') is null)::text||'/'||(to_regprocedure('load_delivery_deadline(date,timestamptz)') is not null)::text")" "true/true"
 echo; echo "[I-27] brak zezwolenia blokuje Gotowy dla klasy ≠ STANDARD (0084, przełącznik)"
 LD=33333333-0000-0000-0000-0000000027d1; LS=33333333-0000-0000-0000-0000000027a1

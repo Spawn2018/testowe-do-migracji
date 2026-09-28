@@ -70,7 +70,7 @@ export default function BafForm() {
     if (!pid) return;
     const [p, r, l] = await Promise.all([
       sb.from('sefs_parameters').select('*').eq('project_id', pid).order('version', { ascending: false }).limit(1),
-      sb.from('fuel_index_readings').select('*').eq('project_id', pid).order('period', { ascending: false }).order('id', { ascending: false }).limit(60),
+      sb.from('fuel_index_readings').select('*').eq('project_id', pid).in('index_code', ['SEK', 'PLN']).order('period', { ascending: false }).order('id', { ascending: false }).limit(60),
       sb.rpc('baf_change_log', { p_project: pid, p_limit: 30 }),
     ]);
     const cur = ((p.data ?? []) as Params[])[0] ?? null;

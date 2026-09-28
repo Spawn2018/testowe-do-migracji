@@ -46,6 +46,7 @@ HHL w nowej migracji + test.
   (lista: `tests/db/function-allowlist.txt`; funkcja spoza listy = test czerwony);
 - `current_app_role`, `current_app_user_id`, `current_org_id`, `current_org_kind`, `is_hhl`, `can_see_margin` — bez `anon`;
 - `loaded_confirmed` — tylko wewnętrznie (`apply_geofence_status`), bez `authenticated`.
+- **0092 (III-10):** `fuel_wob_enabled`, `fuel_wob_ingest` — wyłącznie `service_role` (funkcja Edge `fuel-wob`), bez `authenticated`; ingest odmawia przy wyłączonym `security_flags.FUEL_WOB_INGEST` i przyjmuje tylko kody WOB oraz źródło `https://energy.ec.europa.eu/`. Nie nadawać `authenticated` — ręczne odczyty HHL idą przez `fuel_add_reading`.
 
 ## 4. `spatial_ref_sys` — tylko do odczytu dla ról API (W1, migracja 0031)
 Na produkcji tabela i jej uprawnienia należą do `supabase_admin`: `anon` i `authenticated` miały INSERT/UPDATE/
