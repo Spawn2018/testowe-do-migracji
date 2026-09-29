@@ -1,0 +1,134 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TOWER — wizualizacje</title>
+<style>
+:root{--bg:#F4F6F8;--ink:#15212B;--ink3:#5A6B78;--rule:#D5DCE2;--card:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1720;--ink:#E6EDF2;--ink3:#8094A2;--rule:#26323D;--card:#162029}}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+header{padding:28px 32px 8px;max-width:1100px;margin:auto} h1{font-size:22px;margin:0 0 4px} header p{color:var(--ink3);margin:0}
+main{max-width:1100px;margin:auto;padding:8px 32px 48px}
+section{background:var(--card);border:1px solid var(--rule);border-radius:2px;padding:18px 20px;margin:16px 0;overflow-x:auto}
+h2{font-size:15px;margin:0 0 12px;letter-spacing:.02em}
+</style></head><body>
+<header><h1>TOWER — wizualizacje</h1><p>KSH–Stegra Boden · stan 29.09.2026</p></header>
+<main><section><h2>1. Architektura</h2><pre class="mermaid">flowchart LR
+  subgraph Uzytkownicy
+    HHL[&quot;HHL — admin, operacje&quot;]
+    KSH[&quot;KSH — klient&quot;]
+    SCX[&quot;Przewoźnik&quot;]
+    DRV[&quot;Kierowca — link 14 dni&quot;]
+  end
+  subgraph Front
+    V[&quot;Vercel — tower.log-mar.pl&quot;]
+    P[&quot;Cloudflare Pages — zapas&quot;]
+  end
+  subgraph Supabase_UE
+    AUTH[&quot;Logowanie — link e-mail, 2FA admina&quot;]
+    DB[(&quot;Postgres + RLS, 97 migracji&quot;)]
+    EDGE[&quot;Funkcje Edge&quot;]
+    CRON[&quot;25 zadań cyklicznych&quot;]
+  end
+  subgraph Zewnetrzne
+    NBP[&quot;NBP — kursy&quot;]
+    AIS[&quot;Digitraffic — AIS promów&quot;]
+    ARM[&quot;Armator — komunikaty&quot;]
+    FUEL[&quot;OKQ8 + Orlen — ceny paliwa&quot;]
+    MET[&quot;FMI / DMI / SMHI — pogoda&quot;]
+    TRV[&quot;Trafikverket — drogi SE&quot;]
+    SP[&quot;SharePoint KSH — harmonogram&quot;]
+    RES[&quot;Resend — e-mail&quot;]
+    R2[&quot;R2 — kopia szyfrowana&quot;]
+    SMS[&quot;Telefon Android — bramka SMS&quot;]
+  end
+  HHL &amp; KSH &amp; SCX &amp; DRV --&gt; V
+  V --&gt; AUTH --&gt; DB
+  EDGE &lt;--&gt; DB
+  CRON --&gt; EDGE
+  EDGE --&gt; NBP &amp; AIS &amp; ARM &amp; FUEL &amp; MET &amp; TRV &amp; RES &amp; R2
+  SP &lt;--&gt; EDGE
+  SMS -- &quot;pobiera co 15 s&quot; --&gt; DB</pre></section><section><h2>2. Kto widzi co</h2><pre class="mermaid">flowchart TB
+  M[&quot;Marża&quot;] --&gt; H1[&quot;tylko HHL&quot;]
+  K[&quot;Koszt — cennik przewoźnika&quot;] --&gt; H2[&quot;HHL + przewoźnik&quot;]
+  R[&quot;Przychód — cennik HHL&quot;] --&gt; H3[&quot;HHL + KSH&quot;]
+  D[&quot;Dane kierowcy i auta&quot;] --&gt; H4[&quot;HHL + przewoźnik + KSH na stałe&quot;]
+  F1[&quot;Faktura HHL → KSH&quot;] --&gt; H5[&quot;HHL + KSH&quot;]
+  F2[&quot;Faktura przewoźnik → HHL&quot;] --&gt; H6[&quot;HHL + przewoźnik&quot;]
+  A[&quot;Dziennik audytu&quot;] --&gt; H7[&quot;tylko HHL_ADMIN&quot;]</pre></section><section><h2>3. Droga transportu i statusy z GPS</h2><pre class="mermaid">stateDiagram-v2
+  [*] --&gt; Planowany: import z SharePoint KSH
+  Planowany --&gt; Gotowy: kierowca, auto, dokumenty, zezwolenia PL i SE
+  Gotowy --&gt; Zaladunek: wjazd w strefę Śrem
+  Zaladunek --&gt; W_drodze_PL: wyjazd ze strefy
+  W_drodze_PL --&gt; Port_Gdansk: strefa portu
+  Port_Gdansk --&gt; Prom: czas odejścia przypisanego rejsu
+  Prom --&gt; Port_Nynashamn: strefa portu SE
+  Port_Nynashamn --&gt; W_drodze_SE
+  W_drodze_SE --&gt; Na_placu: strefa Boden
+  Na_placu --&gt; Rozladowany: potwierdzenie kierowcy — data usługi
+  Rozladowany --&gt; Zafakturowany: faktura tygodniowa
+  Zafakturowany --&gt; [*]</pre></section><section><h2>4. Przepływ pieniędzy</h2><pre class="mermaid">flowchart LR
+  C[&quot;Cennik — symbol, wariant, konwój&quot;] --&gt; FR[&quot;Fracht EUR&quot;]
+  S[&quot;SEFS — mnożnik tygodnia&quot;] --&gt; FR
+  O[&quot;Opłaty: czas wolny, przestój, anulowanie&quot;] --&gt; SUM[&quot;Kwota transportu EUR&quot;]
+  FR --&gt; SUM
+  SUM --&gt; KURS[&quot;Kurs NBP A — dzień roboczy przed rozładunkiem&quot;]
+  KURS --&gt; FV1[&quot;Faktura przewoźnik → HHL, 35 dni&quot;]
+  KURS --&gt; FV2[&quot;Faktura HHL → KSH, 30 dni&quot;]
+  FV2 -. &quot;przychód − koszt&quot; .-&gt; MARZA[&quot;Marża — tylko HHL&quot;]
+  FV1 -.-&gt; MARZA</pre></section><section><h2>5. Mnożnik paliwowy SEFS</h2><pre class="mermaid">flowchart TB
+  A[&quot;OKQ8 — plik historii, kolumna Diesel&quot;] --&gt; A1[&quot;średnia pon–niedz, 2 miejsca&quot;]
+  B[&quot;Orlen API — zł/m³ ÷ 1000&quot;] --&gt; B1[&quot;średnia pon–niedz, 2 miejsca&quot;]
+  A1 --&gt; T1[&quot;tabela SEK, 51 progów&quot;]
+  B1 --&gt; T2[&quot;tabela PLN, 51 progów&quot;]
+  T1 --&gt; MIN{&quot;niższy z dwóch&quot;}
+  T2 --&gt; MIN
+  MIN --&gt; ZAST[&quot;transporty z datą załadunku w tygodniu — D-34&quot;]
+  MIN -. &quot;powyżej tabeli&quot; .-&gt; R1[&quot;ostatni wiersz + ryzyko&quot;]
+  A -. &quot;awaria źródła&quot; .-&gt; R2[&quot;ostatni ustalony mnożnik + ryzyko&quot;]</pre></section><section><h2>6. ETA i kalibracja ucząca się</h2><pre class="mermaid">flowchart LR
+  GPS[&quot;Pozycja GPS&quot;] --&gt; PROJ[&quot;Rzut na korytarz OSM&quot;]
+  PROJ --&gt; REM[&quot;Pozostałe km × tempo odcinka&quot;]
+  REM --&gt; ETA[&quot;ETA + pasmo&quot;]
+  PROM[&quot;Następny rejs z rozkładu&quot;] --&gt; ETA
+  ODP[&quot;Odpoczynek dobowy&quot;] --&gt; ETA
+  POG[&quot;Pogoda i drogi&quot;] --&gt; ETA
+  ETA --&gt; DEL{&quot;ETA &gt; koniec okna?&quot;}
+  DEL -- &quot;tak, &gt; 30 min&quot; --&gt; RYZ[&quot;Ryzyko + powiadomienie&quot;]
+  ROZ[&quot;Rozładunek&quot;] --&gt; POM[&quot;Czasy odcinków — zapis na stałe&quot;]
+  POM --&gt; CAL[&quot;Kalibracja&quot;]
+  CAL --&gt; CHK{&quot;Sprawdzenie wsteczne: lepiej?&quot;}
+  CHK -- &quot;tak, max ±10%/tydz.&quot; --&gt; REM
+  CHK -- &quot;nie&quot; --&gt; ODR[&quot;Zmiana odrzucona&quot;]</pre></section><section><h2>7. SharePoint w obie strony</h2><pre class="mermaid">sequenceDiagram
+  participant KSH as KSH w Excelu
+  participant SP as SharePoint
+  participant T as TOWER
+  participant H as HHL i przewoźnik
+  KSH-&gt;&gt;SP: zmienia datę kratownicy
+  T-&gt;&gt;SP: co 10 min: czy plik się zmienił?
+  SP--&gt;&gt;T: nowa wersja
+  T-&gt;&gt;T: różnica komórka po komórce, wpis do historii
+  T-&gt;&gt;H: powiadomienie: było → jest, kiedy
+  T-&gt;&gt;T: przeliczenie konwoju i ceny
+  H-&gt;&gt;T: przewoźnik wpisuje kierowcę i auto
+  T-&gt;&gt;SP: zapis do pustych kolumn: kierowca, telefon, nr zlecenia, rejestracja</pre></section><section><h2>8. Model pracy</h2><pre class="mermaid">flowchart LR
+  W[&quot;Właściciel — decyzje&quot;] -- &quot;decyzje, dane&quot; --&gt; K[&quot;Koordynator — Claude&quot;]
+  K -- &quot;rekomendacje, sprzeczności&quot; --&gt; W
+  K -- &quot;paczka: DOPISZ + zlecenia&quot; --&gt; E[&quot;Wykonawca — Grok → Cursor&quot;]
+  E -- &quot;potwierdzenie odbioru, raport&quot; --&gt; K
+  K -- &quot;niezależne zapytania&quot; --&gt; PROD[(&quot;Produkcja&quot;)]
+  E -- &quot;migracje, wdrożenia&quot; --&gt; PROD
+  E -- &quot;pytanie&quot; --&gt; DO[&quot;Decyzje oczekujące w PLAN.md&quot;]
+  DO --&gt; W</pre></section><section><h2>9. Oś czasu</h2><pre class="mermaid">gantt
+  dateFormat YYYY-MM-DD
+  title TOWER — wrzesień 2026
+  section Projekt
+  Makieta i zakres           :done, 2026-09-22, 1d
+  Etapy A–D, fale 0–2        :done, 2026-09-23, 2d
+  Pieniądze, statusy, źródła :done, 2026-09-24, 2d
+  Etapy 4–6, produkcja       :done, 2026-09-26, 1d
+  Audyt zakresu, etap I      :done, 2026-09-27, 2d
+  Cennik, SEFS, ETA v2       :active, 2026-09-29, 1d
+  section Przed pilotażem
+  Cursor przejmuje           :2026-09-30, 2d
+  Spotkanie z przewoźnikiem  :2026-09-30, 3d
+  Pilotaż                    :2026-10-03, 7d</pre></section></main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true,theme:window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'neutral',flowchart:{curve:'basis'}});</script>
+</body></html>

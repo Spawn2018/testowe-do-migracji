@@ -1,5 +1,9 @@
 # ZLECENIE — POGODA, PROM, DROGI SE, SILNIK OPÓŹNIEŃ
 
+> **Aktualizacja 29.09 po spotkaniu:** progi 3,8 m / 40 kn **potwierdzone**; druga
+> przeprawa **Stena Line Gdynia – Karlskrona** — pogoda, drogi, ETA i komunikaty także
+> dla niej; tranzyt 4 dni (5 przy ciężkiej pogodzie). `ZLECENIE_PO_SPOTKANIU_SCX.md` §3, §6.
+>
 > **D-28 — DECYZJA KOŃCOWA (30.09): WŁASNY SILNIK, bez zewnętrznego serwisu tras.**
 > Trasa jest stała i wyznaczona w zezwoleniu. HERE — nie. Do tego **automatyczna,
 > ucząca się kalibracja** (II-7b).

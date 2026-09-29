@@ -1,3 +1,4 @@
+﻿> **CZĘŚCIOWO ZASTĄPIONY 29.09 — przy sprzeczności wygrywa wzorzec/03_REJESTR_DECYZJI.md i zlecenia z 29.09.**
 # MECHANIZM PIENIĘDZY — wersja 2.2 — jedyne źródło prawdy
 
 > **Zastępuje w całości wersję 1** oraz `D7_DECYZJA.md` i `D7_CZAS.md`.

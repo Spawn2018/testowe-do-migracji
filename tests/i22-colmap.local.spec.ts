@@ -35,7 +35,7 @@ async function loginUrl(email: string): Promise<string> {
 
 test.beforeAll(async () => {
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.readFile('public/KSH_HARMONOGRAM.xlsx');
+  await wb.xlsx.readFile('tests/fixtures/ksh-harmonogram-synthetic.xlsx');
   wb.worksheets[0].getRow(1).eachCell((c) => { const v = String(c.value ?? '').trim(); if (RENAME[v]) c.value = RENAME[v]; });
   await wb.xlsx.writeFile(FILE);
 });
@@ -59,14 +59,14 @@ test('HHL: nowy układ kolumn → kreator → szablon → import 50/50; drugi ra
   await expect(page.locator('[data-import-server]')).toContainText('Podgląd z bazy', { timeout: 20000 });
   expect(psql(`select name||'/'||(column_map->>'shipmentCode') from import_column_templates`)).toBe('Układ B (test)/Shipment ID');
   await page.getByRole('button', { name: 'Podgląd zmian' }).click();
-  await expect(page.getByText('+50')).toBeVisible();
+  await expect(page.getByText('+8')).toBeVisible();
   await page.getByRole('button', { name: 'Zatwierdź' }).click();
   await expect(page.locator('[data-import-server]')).toContainText('Zapisano w bazie: wersja 1', { timeout: 20000 });
-  await expect(page.locator('tr[data-load]')).toHaveCount(50, { timeout: 20000 });
+  await expect(page.locator('tr[data-load]')).toHaveCount(8, { timeout: 20000 });
   expect(psql(`select count(*)||'/'||max(column_map->>'shipmentCode') from schedule_imports`)).toBe('1/Shipment ID');
   // ten sam układ drugi raz → bez kreatora (szablon rozpoznany), bez zmian
   await page.getByRole('button', { name: /Wgraj|Import/ }).first().click();
   await page.locator('input[type="file"]').setInputFiles(FILE);
-  await expect(page.locator('[data-import-server]')).toContainText('bez zmian: 50', { timeout: 20000 });
+  await expect(page.locator('[data-import-server]')).toContainText('bez zmian: 8', { timeout: 20000 });
   await expect(wiz).toHaveCount(0);
 });

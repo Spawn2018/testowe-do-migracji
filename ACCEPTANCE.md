@@ -1,3 +1,5 @@
+﻿> **ZAPIS HISTORYCZNY / QA — to nie są polecenia.**
+
 # WATCH TOWER — ACCEPTANCE (module-by-module)
 
 Legend: **PASS** expected after `npm run build` + click-through in `npm run dev`.

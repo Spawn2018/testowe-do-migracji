@@ -6,30 +6,32 @@ import { parseSchedule } from '../src/lib/scheduleParse';
 import { rpcToDiff, toRpcRows, type ImportRpcResult } from '../src/lib/scheduleImportRpc';
 import { canImportSchedule } from '../src/lib/permissions';
 
+const KSH_FIXTURE = 'tests/fixtures/ksh-harmonogram-synthetic.xlsx';
+
 async function fullSchedule() {
-  const b = readFileSync('public/KSH_HARMONOGRAM.xlsx');
+  const b = readFileSync(KSH_FIXTURE);
   return parseSchedule(await readXlsxRows(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer));
 }
 
 describe('I-1 import harmonogramu — tryb produkcyjny', () => {
-  const STD = ['T-03', 'T-04', 'T-05', 'T-08', 'T-09', 'T-10', 'T-13', 'T-14', 'T-15'];
-  it('KSH_HARMONOGRAM.xlsx: 123 wiersze, 50 z wysyłką — 50 przyjętych, w tym 9 klasy STANDARD (I-2C)', async () => {
+  const STD = ['STD-01', 'STD-02', 'STD-03'];
+  it('ksh-harmonogram-synthetic.xlsx: układ jak KSH — 8 przyjętych (5 DIMENSIONED + 3 STANDARD)', async () => {
     const p = await fullSchedule();
-    expect(p.stats.total).toBe(123);
-    expect(p.stats.accepted).toBe(50);
+    expect(p.stats.total).toBeGreaterThanOrEqual(8);
+    expect(p.stats.accepted).toBe(8);
     expect(p.issues.filter((i) => i.code === 'BAD_DIMENSIONS')).toEqual([]);
     expect(p.rows.filter((r) => r.cargoClass === 'STANDARD').map((r) => r.shipmentCode)).toEqual(STD);
     expect(p.rows.filter((r) => r.cargoClass === 'STANDARD').every((r) => r.lengthM == null && r.widthM == null && r.heightM == null)).toBe(true);
     expect(p.issues.filter((i) => i.code === 'OVERSIZE' && STD.includes(i.shipmentCode ?? ''))).toEqual([]);
-    expect(p.issues.filter((i) => i.code === 'NO_SHIPMENT_CODE')).toHaveLength(73);
+    expect(p.issues.filter((i) => i.code === 'NO_SHIPMENT_CODE').length).toBeGreaterThanOrEqual(5);
   });
   it('wiersze RPC: klucz = Wysyłka, liczby i daty ISO, bez danych kierowcy', async () => {
     const rows = toRpcRows((await fullSchedule()).rows);
-    expect(rows).toHaveLength(50);
-    expect(new Set(rows.map((r) => r.code)).size).toBe(50);
-    expect(rows.find((r) => r.code === 'T-03')).toMatchObject({ cargo_class: 'STANDARD', length_m: null, width_m: null, height_m: null, qty: 27, total_weight_t: 20.81 });
+    expect(rows).toHaveLength(8);
+    expect(new Set(rows.map((r) => r.code)).size).toBe(8);
+    expect(rows.find((r) => r.code === 'STD-01')).toMatchObject({ cargo_class: 'STANDARD', length_m: null, width_m: null, height_m: null });
     expect(Object.keys(rows[0])).not.toContain('cargo_class');   // wymiarowe bez klucza — schedule_row bez zmian po 0050
-    expect(rows[0]).toMatchObject({ code: 'SG-01', length_m: 18.21, width_m: 2.45, height_m: 2.45, qty: 7, total_weight_t: 20.74, load_date: '2026-09-30', delivery_date: '2026-10-05' });
+    expect(rows.find((r) => r.code === 'QA-01')).toMatchObject({ code: 'QA-01', length_m: 18.21, width_m: 2.45, height_m: 2.45, qty: 7, total_weight_t: 20.74, load_date: '2026-09-30', delivery_date: '2026-10-05' });
     expect(Object.keys(rows[0])).not.toContain('driver_name');
     expect(Object.keys(rows[0])).not.toContain('driver_phone');
   });

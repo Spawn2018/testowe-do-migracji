@@ -1,3 +1,4 @@
+﻿> **CZĘŚCIOWO ZASTĄPIONY 29.09 — przy sprzeczności wygrywa wzorzec/03_REJESTR_DECYZJI.md i zlecenia z 29.09.**
 # ZLECENIE KOŃCOWE — TOWER / STEGRA BODEN
 
 > Jedno zlecenie, całość. Zastępuje wszystkie wcześniejsze polecenia

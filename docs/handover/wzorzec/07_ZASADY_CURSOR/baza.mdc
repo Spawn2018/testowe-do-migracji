@@ -1,0 +1,17 @@
+---
+description: Baza danych TOWER — migracje, reguły wierszy, funkcje
+globs: supabase/**
+alwaysApply: false
+---
+- nowa zmiana = **nowa migracja z kolejnym numerem**; nałożonej nigdy nie edytujesz
+- kolejność: test na produkcji w **wycofanej transakcji** → `supabase db push` →
+  lista migracji lokalnie = na produkcji → wszystkie zestawy testów bazy
+- każda nowa tabela: `enable row level security`, reguły dla ról, **zero uprawnień
+  dla `anon`**, test w zestawie bezpieczeństwa
+- nowa kolumna w `loads` wymaga osobnego nadania uprawnień
+- funkcje `security definer` z `set search_path`; warunki: `if (warunek) is not true`
+- zapis przez funkcje z wpisem w dzienniku audytu; `loads` bez DELETE; zdarzenia
+  tylko dopisywane
+- dane poufne (kwoty cennika) **nigdy w migracji** — skrypt czytający plik lokalny
+- zadanie cykliczne: sukces = zakończony wynik; zadanie w toku dłużej niż limit
+  → błąd i powiadomienie

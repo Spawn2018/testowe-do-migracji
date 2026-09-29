@@ -415,9 +415,9 @@ try {
   if (fileInput && ksh.wgraj) {
     // Create minimal xlsx via ExcelJS in-page is heavy; use existing fixture if any
     const fixtures = [
-      'docs/qa-start/p9r-merge-plus1-valid.xlsx',
-      'docs/qa-start/ship-qa-schedule.xlsx',
-      'public/KSH_HARMONOGRAM.xlsx',
+      'tests/fixtures/p9r-merge-plus1-valid.xlsx',
+      'tests/fixtures/ship-qa-schedule.xlsx',
+      'tests/fixtures/ksh-harmonogram-synthetic.xlsx',
     ]
     let fixture = fixtures.find((f) => existsSync(f))
     if (!fixture) {

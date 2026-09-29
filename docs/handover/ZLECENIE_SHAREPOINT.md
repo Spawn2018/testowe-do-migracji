@@ -1,5 +1,9 @@
 # ZLECENIE — INTEGRACJA Z HARMONOGRAMEM KSH W SHAREPOINT (II-10)
 
+> **Aktualizacja 29.09 po spotkaniu:** KSH wpisuje **datę i godzinę**; „Potwierdź daty"
+> usunąć; **mechanizmu wycofania zgody nie budujemy**; „Nr zlecenia" = **numer przewoźnika**,
+> „Nr zlecenia HHL" = numer HHL. Szczegóły: `ZLECENIE_PO_SPOTKANIU_SCX.md`.
+
 > 30.09.2026. **Decyzja właściciela:** KSH prowadzi harmonogram w Excelu
 > na SharePoint — to jest źródło. Integracja **w obie strony**:
 > zmiany KSH → TOWER automatycznie, z historią „co i kiedy się zmieniło";
@@ -10,6 +14,53 @@
 > nie kopiuj ich do repozytorium ani testów; w testach dane zmyślone.**
 
 ---
+
+## 0. WZÓR PLIKU — AKTUALNY (`SCRAP_transporty_2026_09_23_REV_01.xlsx`, w `D:\Watch Tower\dane`)
+
+Arkusz `STEGRA`, nagłówek w wierszu 1, **20 kolumn**. Kolejność zmieniła się względem
+`haromogram.xlsx` — **mapowanie wyłącznie po nazwach kolumn**, nigdy po pozycji;
+nieznana nowa kolumna = ostrzeżenie, nie błąd.
+
+| Kolumna | Znaczenie | Kierunek |
+|---|---|---|
+| Lp., Typ, Wysyłka, Rozmiar L x W x H, Waga elementu, Ilość elementów, Waga transport [t] | dane ładunku | KSH → TOWER |
+| Data załadunku, Godzina (załadunek) | plan załadunku | KSH → TOWER |
+| Data dostawy na budowę, Godzina (rozładunek) | plan dostawy — **godzina = „najpóźniej do"** | KSH → TOWER |
+| Przewoźnik | `HH` = nasze, `NTG` = nie dotykamy | KSH → TOWER |
+| Dzień (załadunek), Dzień (rozładunek) | wyliczane w Excelu, PL albo EN — **ignorować** | — |
+| Imię i nazwisko kierowcy, Nr tel. kierowcy | awizacja | **TOWER → KSH** |
+| Nr rej. ciągnika, Nr rej. naczepy | awizacja | **TOWER → KSH** |
+| **Nr zlecenia** | **numer zlecenia przewoźnika (SCX)** | **TOWER → KSH** |
+| **Nr zlecenia HHL** | numer zlecenia HHL | w obie strony — komórka wypełniona w pliku wygrywa |
+
+**Formaty kolumn — ustawione przez właściciela 29.09:**
+| Kolumna | Format w Excelu | Odczyt | Zapis przez TOWER |
+|---|---|---|---|
+| Imię i nazwisko kierowcy, Nr rej. ciągnika, Nr rej. naczepy, **Nr zlecenia**, **Nr zlecenia HHL** | **Tekst** | jako tekst, bez zmian | jako tekst — np. `0002/09/S/2026` nie może stać się datą ani liczbą |
+| **Nr tel. kierowcy** | **Liczba** | liczba → same cyfry, bez `.0` i zapisu wykładniczego | **numer krajowy bez kierunkowego** — `ZLECENIE_DECYZJE_POWIADOMIENIA.md` §1 |
+**Telefony zawsze bez kierunkowego** (decyzja właściciela 29.09) — szczegóły i testy:
+`ZLECENIE_DECYZJE_POWIADOMIENIA.md` §1.
+
+**Pułapki w prawdziwym pliku (sprawdzone 29.09):**
+- komórka telefonu sformatowana jako data — Excel zwraca liczbę-serię zamiast numeru.
+  Czytaj **tekst komórki**, nie wartość z formatem daty; niepoprawny numer = ostrzeżenie
+- data dostawy wpisana tekstem (`14/12/2026` przy KR-07) — rozpoznaj `dd/mm/rrrr`,
+  oznacz ostrzeżeniem „data jako tekst"
+- „Waga elementu" bywa `-`, „Ilość elementów" bywa tekstem — puste, nie błąd
+- wiersz `Lp. 0` (`W-00`, NTG) — pomijany regułą przewoźnika
+
+**TEST ODBIORU — porównanie `haromogram.xlsx` → `SCRAP_…_REV_01.xlsx`** (oba w `D:\Watch Tower\dane`).
+TOWER musi pokazać **dokładnie 10 zmian komórek**, nic więcej:
+- T-01: Data załadunku 2026-09-29 → 2026-09-30; Godzina (załadunek) 12:00 → 10:00
+- SG-02: Godzina (załadunek) 07:00 → 06:00
+- SG-03, SG-05, SG-07: Godzina (załadunek) puste → 06:00
+- SG-04, SG-06, SG-08: Godzina (załadunek) puste → 08:00
+- T-02: Godzina (załadunek) puste → 11:00
+Plus: nowe kolumny w pliku (3) jako informacja; 0 nowych i 0 usuniętych wysyłek;
+95 transportów HH, 42 NTG pominięte.
+
+**Transporty z załadunkiem przed uruchomieniem systemu** (pierwsze: 29–30.09) —
+import jako historyczne: bez alarmów, bez powiadomień, bez SMS.
 
 ## 1. CO JEST NASZE — REGUŁA WŁAŚCICIELA
 
@@ -69,18 +120,15 @@ bezterminowe do wycofania.
    „Potwierdź daty" w TOWER może być zbędne. Zaproponuj, jak połączyć
    status dat z plikiem
 
-## 3. KIERUNEK TOWER → KSH (D-33 rozstrzygnięte przez właściciela)
+## 3. KIERUNEK TOWER → KSH
 
-TOWER wpisuje do pliku KSH dane, które powstają po stronie HHL i przewoźnika:
-- **Imię i nazwisko kierowcy · Nr tel. kierowcy · Nr zlecenia**
-- **numer rejestracyjny auta** — w pliku nie ma takiej kolumny: dodaj ją
-  na końcu arkusza jako „Nr rejestracyjny (TOWER)", po uzgodnieniu z KSH
-- **Godzina (załadunek) i Godzina (rozładunek) — nie**: to pola planu KSH,
-  KSH je wypełnia
-- nigdy nie nadpisuj komórki wypełnionej ręcznie przez KSH — konflikt =
-  ryzyko HHL
-- zapis pojedynczych komórek, nie całego arkusza
-- **pętla:** własny zapis nie może wrócić jako „zmiana KSH"
+TOWER wpisuje do pliku KSH dane z awizacji (kolumny już są w pliku):
+**Imię i nazwisko kierowcy · Nr tel. kierowcy · Nr rej. ciągnika · Nr rej. naczepy ·
+Nr zlecenia (numer przewoźnika) · Nr zlecenia HHL** (ten ostatni tylko do pustej komórki).
+- **Godziny załadunku i rozładunku — nigdy**: to pola planu KSH
+- nie nadpisuj komórki wypełnionej ręcznie inną wartością — konflikt = ryzyko HHL
+- **edycja awizacji w TOWER** → aktualizacja tych samych komórek, które TOWER wcześniej zapisał
+- zapis pojedynczych komórek, nie całego arkusza; własny zapis nie wraca jako „zmiana KSH"
 
 ## 4. DO CZASU ZGODY IT KSH
 

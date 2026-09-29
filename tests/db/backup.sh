@@ -83,7 +83,7 @@ mkdir -p "$TMP/files/dokumenty/p1" "$TMP/files/harmonogramy/p1" "$TMP/pliki"
 head -c 200000 /dev/urandom > "$TMP/pliki/a.pdf"; printf 'Zażółć gęślą jaźń\n' > "$TMP/pliki/b.txt"
 age -r "$REC" -o "$TMP/files/dokumenty/p1/a.pdf.age" "$TMP/pliki/a.pdf"; age -r "$REC" -o "$TMP/files/dokumenty/p1/b.txt.age" "$TMP/pliki/b.txt"
 # I-2B: obiekt kubełka harmonogramy (archiwum pliku źródłowego importu) — klucz files/harmonogramy/<projekt>/<sha>.xlsx.age
-cp public/KSH_HARMONOGRAM.xlsx "$TMP/pliki/h.xlsx"; age -r "$REC" -o "$TMP/files/harmonogramy/p1/h.xlsx.age" "$TMP/pliki/h.xlsx"
+cp tests/fixtures/ksh-harmonogram-synthetic.xlsx "$TMP/pliki/h.xlsx"; age -r "$REC" -o "$TMP/files/harmonogramy/p1/h.xlsx.age" "$TMP/pliki/h.xlsx"
 python3 - "$TMP" <<'PY' | age -r "$REC" -o "$TMP/manifest.json.age"
 import hashlib,json,os,sys
 t=sys.argv[1]; f=lambda n: {"key": f"files/dokumenty/p1/{n}.age", "document_id": n, "bytes": 0,

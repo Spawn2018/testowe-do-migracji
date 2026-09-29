@@ -64,7 +64,7 @@ Nowy test bazy: dopisać przypadek **i** podbić liczbę w `tests/db/gate.sh` (`
 ## Znane pułapki
 
 - **Git LFS nie jest zainstalowany.** Samo `git status` potrafi rozwinąć `shots-baseline/*.png` ze wskaźnika LFS (ok. 130 B) do prawdziwego PNG (setki KB) i pokazać 840 zmian. **Tego nie commituj.** Przywracanie: `GIT_LFS_SKIP_SMUDGE=1 git -c filter.lfs.required=false checkout -- shots-baseline`.
-- Kwoty cennika i tabela SEFS **nie mogą** trafić do frontu ani do migracji w repo. Ładowanie skryptem czytającym plik lokalny. Strażnik paczki szuka m.in. `5344.5`, `12745`, `11949`.
+- Kwoty cennika i tabela SEFS **nie mogą** trafić do frontu ani do migracji w repo. Ładowanie skryptem czytającym plik lokalny. Strażnik paczki szuka m.in. kwot z pliku poufnego w czasie testu.
 - `haromogram.xlsx`: prawdziwe nazwiska i telefony. W testach tylko dane zmyślone.
 - Reguł START-1…7 nie włączać i crona silnika nie dodawać, dopóki właściciel nie zaakceptuje tabeli z D-29.
 - Przewoźnik nie zmienia okien załadunku i dostawy (ANEKS 2, migracja 0004).

@@ -1,0 +1,284 @@
+ARCHIWUM — nie wykonywać. Zastąpione 29.09.2026, patrz docs/handover/wzorzec/
+
+Przekazanie wiedzy (WT — QA). Źródła: ReadTranscript tej sesji (strony ~372–560+ z ~568), memory log, pliki w /workspace/watch-tower/qa-start/ i QA_ELITE_UPGRADE_CHECKLIST.md. Nie domyślam — gdzie nie mam, piszę „nie mam”.
+
+1. Co robiłem
+Byłem adversarialnym QA makiety Watch Tower / TOWER: nie budowałem UI, tylko próbowałem obalić kompletność. Po komendzie START Sebastiana weryfikowałem każdy sprint buildera przeciw QA_ELITE_UPGRADE_CHECKLIST, UX_MAP, VISUAL_BRIEF i gate’om S1–S6 oraz AUDIT (zero deferrals / zero hollow). Metoda: static probe źródła + klik e2e na preview (kolejno :4173/:4174/:4177), prefer FAIL, click wygrywa nad „WIRED w kodzie”. Wynik zawsze SHIP / NO_SHIP / FIX / ABORT z hollow listą i screenshotami; raport do Ciebie i do watch tower - koordynator. Zakres: role HHL/KSH/SCX, mapa, bell, KPI/spine, import/eksport XLSX, READY←cover, Plan B, ZIP, factoring, WF, driver PWA, Claude shell / v2.0 eye, P9 (import merge + READY hard-block).
+
+2. Co zostawiłem i gdzie
+Katalog główny evidence: /workspace/watch-tower/qa-start/
+
+Raporty (autorstwo pewne z tej roli):
+
+FINAL_START_SPRINT.md, STATIC_START_SPRINT.md, FINAL_SHIP.md, SHIP_STATIC.md, FUNCTIONAL_REQA_STATIC.md, FUNCTIONAL_REQA_STATIC_FN2.md
+FINAL_FN2_CLICK.md (później VOIDED — stary chrome), FINAL_FN2_CLICK_CLAUDE.md, FINAL_FN3_CLICK.md, FINAL_FN4_CLICK.md
+P9_V2_EYE_CLICK.md, P9_V2_STATIC_CHROME.md, P9_RECLICK.md, P9_RECLICK2_READY.md
+HOLLOW_FIX.md, HOLLOW_VERIFY.md, MAP_TILES_FIX.md
+Shoty: 01–14-*.png, fn-*.png, fn2-*.png, fn3*, fn4-*, p9-*, p9r-*, p9r2-*
+Checklista gate: /workspace/watch-tower/QA_ELITE_UPGRADE_CHECKLIST.md
+
+Kanon, którego używałem (nie mój autor): /workspace/watch-tower/UX_MAP.md, VISUAL_BRIEF.md, AUDIT_CHAT_REQUIREMENTS.md, PERMIT_*, claude-makieta.html, claude-v2.0/, app /workspace/watch-tower-app
+
+W qa-start, autorstwo niepewne / mogło być batch wieczorny: BATCH-PM-SECTIONS.md, BATCH-SCROLL-SECTIONS.md, CHAT_GAP_AUDIT.md, RESTORE-V2-CHROME.md — nie mam pewności, że to wyłącznie ja; szczegóły scroll/chrome batchów ma raczej builder/koordynator.
+
+Tylko w rozmowie / memory agenta: decyzje standby RE_CLICK, void FN2, override „P1 closed — stop do nowych plików Claude”, statusy SHIP/NO_SHIP po każdym sprincie — skróty w durable memory WT-QA; pełna narracja w tym czacie.
+
+3. Ustalenia → aplikacja
+Ustalenie (z QA / gate)	Weszło?	Dlaczego nie / jak
+Prefer FAIL; click > static „wired”	TAK (proces)	Koordynator i builder przyjęli hollow listy z klików
+Nie full-QA pustego scaffoldu Vite; czekaj ≥60 loads + sygnał	TAK (proces)	Oficialny audit dopiero na URL + signal
+Role tylko HHL/KSH/SCX; brak roli Stegra	TAK	Zweryfikowane w SPA; Stegra = site/POI
+Theme #12: HHL+SCX dark, KSH light first paint + toggle	TAK	UX_MAP/VISUAL_BRIEF; klik first-paint
+S1–S6 (mapa live, glass, no Stegra role, bell, DnD XLSX, KPI)	CZĘŚCIOWO→TAK w czasie	Sprint-0 wszystkie FAIL; potem naprawiane sprintami do SHIP funkcyjnego
+READY zablokowane bez cover / przy MISMATCH / DOC_MISSING	TAK (po P9 RE_CLICK #2)	Najpierw FAIL (SG-07/SG-34 → Gotowy); potem hard-block SHIP
+Import KSH: merge, commit 0 nie wolno wipe’ować tabeli	TAK (po P9 RE_CLICK)	FAIL 72→1; potem merge 72→73 PASS
+Eksport XLSX = realny plik bajty > 0	TAK (FN4)	Długo hollow/no-download; FN4 WATCH_TOWER_KSH_harmonogram.xlsx 13265 B
+Spine 2. klik clear list+map	TAK	Wielokrotnie FAIL, potem PASS na Claude DOM
+Leaflet + honest seed AIS/TV (nie fake „live”)	TAK	MapLibre tiles FAIL na START; Leaflet + label seed
+Claude chrome frozen; functions-only przy RE_CLICK	TAK (proces)	Wrong chrome → ABORT/VOID, nie SHIP
+Elite: 100–200 loads, predykcje, real API keys, Next/Supabase	NIE	Poza zakresem makiety; checklista elite nadal ma otwarte D*/API
+Pełny 14-probe re-run na najnowszym bundle po samych focused RE_CLICK P9	NIE	Po import+READY SHIP nie było pełnego sweepu 14 — tylko jeśli ktoś zleci
+Wygląd 1:1 Claude v2 = gate Visual, nie mój redesign	CZĘŚCIOWO	Eye P9 PASS vs ref; look nie budowałem — to WT-Visual / builder
+4. Pomysły omówione i odrzucone
+SHIP na podstawie samego static „14/14 wired” — odrzucony: klik FG2/FN pokazywał hollow mimo grepa PASS.
+Full QA hollow Vite scaffoldu przed ≥60 loads — odrzucony (reguła early START / koordynator).
+Ocena look/CSS podczas functional RE_CLICK — odrzucona; Claude frozen, tylko funkcje (eye osobno jako P9).
+Traktowanie FN2 NO_SHIP jako obowiązującego — void: shoty na starym chrome „WATCH TOWER / Awizacja / Importuj XLSX”.
+Kontynuacja klików mimo złego chrome — ABORT_WRONG_CHROME; czekanie na RE_CLICK.
+Rola Stegra w topbar/nav — nie ma; Stegra nie jest roleId (UX_MAP §4).
+Claim „live AIS/TV” bez kluczy — odrzucony; wymaga labelu seed albo prawdziwego API.
+MapLibre jako mapa produkcyjna w makiecie przy padających tiles — FAIL START; ścieżka poszła w Leaflet.
+Elite volume 100–200 + predykcje w tej makiecie — nie domykane; makieta ~62 loads.
+Theme-start per role „jeszcze otwarte” — później zamknięte acceptance #12 (nie „odrzucone”, tylko rozstrzygnięte).
+5. Niedokończone / ryzykowne / tymczasowe
+AIS / Trafikverket: seed + label; bez kluczy to nie produkcja.
+Driver vault w localStorage: ryzyko quota przy dużych zdjęciach (HOLLOW_VERIFY / residuals).
+GPS: one-shot getCurrentPosition — nie ciągły tracking.
+Martwe leftover MapLibre w drzewie przy żywej Leaflet — residual z FINAL_SHIP, nie FAIL gate.
+Persist store (v5→v6-ready-gate): bez clear localStorage QA czyta fałszywy stan; produkcja musi mieć migrację/wersję store.
+Import XLSX: historycznie wipe i 0/1 clear schedule — naprawione pod P9, ale fixture-sensitive; regresja łatwa.
+Elite checklista (D1–D8, predykcje, real API, sub-role B9, SV i18n parity): nie domknięta jako elite.
+Architektura Vite makieta vs Next/Supabase: PARTIAL / out of scope (CHAT_GAP / audit).
+Pełny regression 14 probes na bundle po P9 READY: nie mam świeżego pełnego przebiegu — mam focused SHIP import+READY + wcześniejsze FN4.
+BATCH/CHAT_GAP wieczorne: nie mam pełnej wiedzy o stanie UI po 15:00 jeśli builder zmieniał dalej bez RE_CLICK do mnie.
+6. Co miało być następne (kolejność w głowie)
+Standby na sygnał koordynatora / nowe pliki Claude albo kolejny punkt sprintu.
+Na życzenie: pełny RE_CLICK 14 probes na aktualnym :4177 + sha256 bundle (po P9 focused).
+Elite poza makietą: klucze AIS/TV, volume 100–200, predykcje, prawdziwy backend.
+Pakiet evidence pod handoff produkcyjny: ten przekaz + qa-start/ + checklista elite jako backlog.
+Kto ma resztę: watch tower - koordynator (kolejność buildów, RE_CLICK, chrome SoT), WT — Visual / UX (look 1:1), Twórca / builder w app (kod), Ty (priorytet produkcja, klucze API, Next/Supabase).
+
+Przekazanie wiedzy (WT — Research) — pod produkcję TOWER / Watch Tower.
+
+Źródło: ta sesja + ReadTranscript (pozycje ~75–107 z 108; starsze wiadomości z first-run / researchu mam z kontekstu tej rozmowy i plików na dysku). Nie odtwarzam stanu kodu aplikacji — tego nie budowałem.
+
+1. Co robiłem
+Przed START zrobiłem głęboki research konkurencji control tower / visibility, API i źródeł danych korytarza PL–SE, modelu ETA/predykcji oraz trendów UX ops (wrzesień 2026), zapisałem to w research-2026/ i wrzucałem krótkie wnioski do koordynatora. Po komendzie START GO spiąłem P0 mapy/API w START_API_NOTES.md (endpointy, seed promu, Situation, symulacja floty). UI i kodu aplikacji nie ruszałem.
+
+2. Co zostawiłem i gdzie
+Moje deep-dive’y (WT Research):
+
+/workspace/watch-tower/research-2026/01-competitors-control-tower.md
+/workspace/watch-tower/research-2026/02-corridor-pl-se-apis.md
+/workspace/watch-tower/research-2026/03-eta-predictions.md
+/workspace/watch-tower/research-2026/04-ux-ops-trends-2026.md
+/workspace/watch-tower/research-2026/README.md (indeks pack vs deep-dive)
+/workspace/watch-tower/START_API_NOTES.md (P0 dla buildera; właśnie uzupełnione o MMSI / Plan B Stena)
+Pack równoległy (koordynator / inny executor — współistnieje w tym samym folderze, nie jest moim pełnym autorstwem): m.in. 00_EXEC_SUMMARY.md, 01_COMPETITORS.md, 03_APIS_VERIFIED.md, 04_ETA_PREDICTION.md, 05_WORKFLOWS.md, 06_BACKLOG_MODULES.md, 07_TEAM_ORDERS.md oraz pliki visual/anti-slop w tym samym katalogu.
+
+Tylko w rozmowie (nie jako osobny artefakt): briefy pingowane do watch tower - koordynator; oferta dopisania przykładowego corridor_ref.geojson (nie powstał).
+
+3. Co weszło do aplikacji vs nie
+Nie mam wglądu w aktualny kod / makietę runtime — to ma koordynator, builder i QA. Poniżej status względem moich ustaleń:
+
+Ustalenie	Weszło?	Dlaczego / kto wie
+Nie kupować enterprise RTTV pod MVP	nie mam	decyzja produktowa — koordynator / Ty
+Exception-first + shipment z legs + permit/ferry first-class (wzorzec)	CZĘŚCIOWO?	było w UX_MAP / briefach przed mną; czy mock to ma → QA / Visual
+ETA deterministic + ferry schedule, zero fake %	nie mam	miało wejść do SoT START — kod: builder
+Polferries = HTML + HITL, zero fake API	CZĘŚCIOWO	w START_API_NOTES i briefach; implementacja → builder
+MapLibre + MapTiler lub OpenFreeMap	nie mam	P0 w notes; czy live tiles w makiecie → builder / QA
+Trafikverket Situation live	NIE (z mojej strony)	nie rejestrowałem klucza; notes + fallback seed
+ORS ≠ prawo trasy; corridor_ref seed	NIE	nie dostarczyłem pliku GeoJSON; tylko spec w notes
+Symulacja floty along(progress)	nie mam	spec w notes; kod → builder
+AIS MMSI Wawel/Nova Star	NIE	dopisane dziś do notes; integracja nie byłam
+UI / makieta	NIE	profil: nie budować UI
+4. Pomysły omówione i odrzucone (research)
+Kupno / rip-and-replace project44, Shippeo, FourKites, pełny Transporeon pod 12–15 userów — overkill, brak fit na permit + Polferries + Excel-plan.
+Traktowanie FourKites jako Leader Gartner RTTVP 2025 — oficjalnie wyszli z MQ (2025-02-24).
+Everstream jako system dnia-do-dnia korytarza — to risk/intelligence, nie ops dla 15 osób.
+Trafikverket FerryAnnouncement jako status Polferries — to vägfärjor, nie Bałtyk.
+Publiczne REST API Polferries / Unity / TT do bookingu — nie znalezione; nie inventować.
+Scraping HTML Polferries jako główne źródło bez zgody/ToS — ryzyko; MVP = seed + HITL.
+ORS / MapTiler Directions jako trasa zezwolenia oversize — tylko orientacja muted.
+ML ETA z „accuracy %” / auto-cancel rejsu na falach Open-Meteo — zakazane w our notes.
+DATEX KPD GDDKiA od dnia 0 — onboarding certyfikatu, P2.
+rFMS OEM od dnia 1 — MVP = PWA GPS / symulacja.
+demotiles.maplibre.org w makiecie START — za ubogie; OpenFreeMap lub MapTiler.
+Global carrier network / AI agents FourKites-class / yard twin w MVP — świadomie defer.
+5. Niedokończone / ryzykowne / tymczasowe
+Brak wygenerowanego corridor_ref.geojson (obiecałem „mogę dopisać” — nie zrobiłem).
+Trafikverket: brak live testu z prawdziwym kluczem; schemaversion 1.5 vs 1.6 i filtr bbox = DO WERYFIKACJI.
+Współrzędne terminali Gdańsk / Nynäshamn w notes = orientacyjne (~), nie SoT jak Śrem/Boden.
+Cutoff cargo Polferries, progi fal, v_planned oversize — checklista „zebrać od ops”, nieuzupełniona.
+AISStream: pozycja ≠ booking; bez SLA.
+Stena Plan B: portal za signup — nie testowałem dostępu.
+Dwa tory plików w research-2026/ (pack + deep-dive) — łatwo o niespójność; README wskazuje konflikt: UX_MAP / VISUAL_BRIEF / CURSOR_PROMPT wygrywają.
+Nie wiem, które checkboxy z §7 START_API_NOTES builder faktycznie odhaczył.
+6. Co miało być następne (kolejność w głowie)
+Seed corridor_ref.geojson Śrem→GDN→ferry→NYN→E4→Boden (geom. referencyjna).
+Rejestracja klucza Trafikverket + live POST Situation + clip bbox E4.
+MapTiler key lub potwierdzenie OpenFreeMap dark w makiecie.
+Seed rejsów Polferries (WAW/NS) + HITL disruption; opcjonalnie AIS MMSI 311852000 / 311000787.
+Dopięcie parametrów ops z checklisty ETA (§8 w 03-eta-predictions.md).
+Dopiero potem: ORS shadow muted, Open-Meteo risk chip, DATEX/rFMS jako P2.
+Jeśli potrzebujesz weryfikacji „co jest w makiecie”, to nie ja — watch tower - koordynator, WT — QA / Visual / UX.
+
+Przekazanie produkcyjne — WT — Visual (tylko wiedza spoza kodu aplikacji).
+
+Źródła: ReadTranscript tej sesji (strony ~364→748; wcześniejsze bramy z pamięci log + pliki SoT na dysku). Nie odtwarzam z domysłów — gdzie brak = „nie mam”.
+
+1. Co robiłem
+Byłem właścicielem wizualnego SoT i bram squintowych Watch Tower: briefy (anti-slop → v4 → flip na Claude 1:1), checklisty powierzchni, adversarial PASS/FAIL vs makieta Claude, komunikacja z koordynatorem i builderem. Nie implementowałem aplikacji — budował Twórca prototypów / koordynator. Po START: FROM ZERO → IDENTICAL CLAUDE → pełna lista ~110 Surface ID → START_SQUINT (18 FAIL) → RE_SQUINT (2 residuale) → FINAL_SQUINT PASS 96/0/6 (~02:49 CEST). Ostatni stan z koordynatora: chrome zamrożony; następny squint = Claude v2.0 BY EYE vs claude-v2-ref.html po P5+ (standby, bez edycji kodu).
+
+2. Co zostawiłem i gdzie
+Kanoniczne (aktualny SoT po flipie Claude):
+
+/workspace/watch-tower/VISUAL_BRIEF.md — Claude 1:1 (Barlow+Condensed; override Plex)
+/workspace/watch-tower/VISUAL_ALIGN_CLAUDE.md, QA_ELITE_UPGRADE_CHECKLIST.md
+/workspace/watch-tower/claude-visual-ref/ — tower-makieta.html, extracted.css, shots
+/workspace/watch-tower/research-2026/START_UI_SPEC.md
+/workspace/watch-tower/research-2026/SOT_FLIP_CLAUDE_SHELL_2026-09-23.md
+/workspace/watch-tower/research-2026/CLAUDE_SHELL_GATE.md + visual-gate-claude-shell/
+/workspace/watch-tower/research-2026/visual-gate-from-zero/ — FULL_1TO1_SURFACE_CHECKLIST.md, FIX_A_C.md, FROM_ZERO_GATE_RESULT.md, IDENTICAL_CLAUDE_GATE_RESULT.md, START_SQUINT_GATE_RESULT.md, RE_SQUINT_GATE_RESULT.md, FINAL_SQUINT_GATE_RESULT.md
+Loga: /workspace/watch-tower-app/public/logos/ (+ pack w research-2026/logos)
+Wcześniejsze warstwy (historyczne / częściowo supersede):
+
+Elite pack: 02_VISUAL_REFS_2026.md, VISUAL_REFS_2026.md, VISUAL_BRIEF_ELITE.md, VISUAL_BRIEF_ELITE_DELTA.md, ELITE_GAPS.md
+Anti-slop: ANTI_SLOP_*, anti-slop-2026-09-23/ (BRIEF_HARD_RESET.md, TRENDS_SEPT_2026.md, …)
+Craft extract: CLAUDE_CRAFT_EXTRACT.md, CLAUDE_CRAFT_HANDOFF.md
+Gates v2–v4: visual-gate-2026-09-23/, visual-gate-v2/, visual-gate-v3/VISUAL_GATE_V3_EYE.md, VISUAL_V4_BRIEF.md, VISUAL_V4_HANDOFF.md, visual-gate-v4/VISUAL_GATE_V4_EYE.md
+Shots buildera: watch-tower-app/shots-start/ (visual-v3/v4, from-zero-claude-*)
+Evidence FINAL: /tmp/wt-final-{dash,map,wf,drawer}.png (tymczasowe na boxie — mogą zniknąć)
+Tylko w rozmowie / agentach (nie jako jeden PDF handoff): pełna chronologia squintów z koordynatorem; decyzja Chrome freeze; standby Claude v2 BY EYE. UX_MAP / M1–M12 / funkcje — nie mam jako właściciel; ma WT — UX / koordynator.
+
+Research 01_COMPETITORS…07_TEAM_ORDERS — leży w research-2026/, ale to track Research, nie Visual.
+
+3. Ustalenia → aplikacja
+Ustalenie	Weszło?	Uwaga
+Claude makieta = 1:1 shell (tekst/layout/styl)	TAK	FINAL_SQUINT PASS; chrome freeze
+Barlow + Barlow Condensed	TAK	Override wcześniejszego banu Barlow
+Role tylko HHL / KSH / SCX; Stegra = SITE POI	TAK	START_UI_SPEC
+Theme first-paint: HHL+SCX dark, KSH light	TAK	Dozwolona delta
+Kokpit: Wymaga decyzji · Postęp dostaw · spine 9+Gdańsk	TAK	FROM ZERO P0 A–C
+Harmonogram kolumny Claude c_*, Eksport-only HHL	TAK	START→RE
+StatusPill etykiety Claude + pill opóźnienia	TAK	
+Drawer 5 tabów; Przegląd = kv; Wymiary L×W×H	TAK	residual DR-KV-DIMS zamknięty
+Mapa 5 warstw (bez Prom); silnik Leaflet dozwolony	TAK / dozwolone	silnik ≠ chrome
+7 nazw Automatyzacji Claude; bez Uruchom	TAK	
+Motyw ◐ bez cudzysłowów w DOM	TAK	TB-07
+NotificationBell / collapse nav	TAK	dozwolone delty
+IBM Plex jako primary product type	NIE	odrzucone po flipie Claude
+Anti-slop „Claude = bar, nie clone” + własny skin Plex	NIE (supersede)	Sebastian HARD 1:1
+v3 „empty brutalist” / icon-only nav	NIE	Sebastian eye FAIL
+v4 triad + nav labels (pre-Claude path)	CZĘŚCIOWO	struktura wchłonięta przez Claude shell; osobny skin v4 nie jest SoT
+Glass na KPI/spine	NIE	Claude solid-first; glass chrome-only w briefie START
+Warstwa Prom na mapie jak wczesny FAIL	NIE	Claude = 5 warstw
+Importuj XLSX u HHL	NIE	tylko Eksport; import KSH
+Pixel-perfect code parity klas CSS	NIE (cel)	teraz: BY EYE Claude v2 (spacing/type/color) — komunikat koordynatora
+4. Pomysły omówione i odrzucone
+IBM Plex + „nie klonuj Claude” — najpierw SoT anti-slop; Sebastian: wrócić 1:1 do Claude; Plex/Barlow-FAIL = override.
+Barlow jako smell AI — odrzucone; Barlow jest wymagany jak w makiecie.
+v3 anti-slop over-correction (puste paski, icon-rail) — Sebastian „tragic”; gate FAIL; stop polish.
+Claude tylko jako density bar przy własnym skinie — zastąpione HARD clone shell.
+Alternate SPA shell / „prawie Claude” — FROM ZERO: rebuild tylko z CSS/DOM makiety; wcześniejsze PASS shell supersede.
+Warstwa Prom / inna mapa chrome — FAIL vs Claude; zostaje 5 warstw.
+Formy Zasoby/Awizacja pod Przegląd — FAIL; przenieść do Ustalenia.
+Statusy „Rozładunek / Opóźniony / Cichy” zamiast s_* — FAIL; Claude labels + osobny delay pill.
+Soft SaaS cards / amber chips / milk glass KPI — kill list anti-slop; trzymać także po flipie (Claude solid).
+„Prawie PASS” przy mikrokopiach — odrzucone (zero prawie); Wymiary / quoted ◐ = FAIL aż do fix.
+5. Niedokończone / ryzykowne / tymczasowe
+Claude v2 BY EYE — SoT ma się zmienić na http://127.0.0.1:4177/claude-v2-ref.html; gate po P5+ jeszcze nie robiony przeze mnie (standby).
+Chrome freeze vs dalszy development funkcji — ryzyko regresji wyglądu przy workflow; Visual ma FAIL-ować drift.
+P1 Nynäshamn vs Port Gdańsk — jeśli produkt nigdy nie emituje stage APPROACH, etykieta portu może kłamać (notatka RE_SQUINT; nie hard FAIL przy FINAL).
+Format delay pill (+1h 35 min vs +1h35) — soft; nie scorowane jako hard FAIL.
+/tmp/wt-*.png — efemeryczne; nie polegać produkcyjnie.
+Stare shoty /tmp/sb/tower_*.png — świadomie ignorowane (stary light build).
+Anti-slop docs nadal mówią Plex — mylące; kanon = VISUAL_BRIEF + SOT_FLIP.
+Kod aplikacji / API / produkcja deploy — nie mam; builder + koordynator.
+Humanizacja copy poza shell Claude — track sprzed flipu; status końcowy copy produkcyjnego: nie mam pewności poza gate’ami.
+6. Co miało być następne (kolejność w głowie)
+Trzymać FINAL_SQUINT PASS / chrome freeze — zero zmian wyglądu bez squintu.
+Po sygnale P5+: adversarial squint app vs claude-v2-ref.html BY EYE (spacing/type/color/breaks) — FAIL przy drift nawet gdy klasy się zgadzają.
+Raport PASS albo twarda lista FAIL (jak FINAL) + path w research-2026/….
+Opcjonalnie: domknięcie P1 Nynäshamn jeśli product stage mapping jest dziurawy.
+Nie kodować aplikacji ani „ulepszać” skinu bez polecenia.
+Jeśli potrzebujesz głębiej UX_MAP / M1–M12 / seed / API: WT — UX, WT — Research, watch tower - koordynator, Twórca prototypów.
+
+Przekazanie wiedzy (WT — UX) — stan na 23.09.2026 ~21:11 CEST.
+
+Źródła: ReadTranscript tej sesji (w tym flip Claude ~01:28–01:41 CEST i potwierdzenia Visual/koordynator); 4 fakty w mojej pamięci (elite / START / theme / SoT flip); pliki na dysku /workspace/watch-tower/. Wczesny fragment sesji (pierwszy UX_MAP przed elite) jest w summary rozmowy, nie w pełnym raw od pozycji 1 — poniżej nie zgaduję szczegółów, których nie ma w tych źródłach.
+
+1. Co robiłem
+
+Projektowałem wyłącznie SoT UX/wizualny makiety Watch Tower (bez kodu aplikacji): mapę ekranów, ról, modułów M1–M12, journeys (w tym elite E1–E4), seed i acceptance oraz brief wizualny dla buildera. Najpierw wzbogaciłem UX_MAP / VISUAL_BRIEF pod START (HHL/KSH/SCX, Stegra = POI, nav/bell/KPI/import/theme). Potem na Twoją komendę w pokoju Watch Tower przepisałem SoT na klon Claude 1:1 (Barlow + shell/layout/menu z makiety; z naszego tylko funkcje/moduły/workflowy) i zsynchronizowałem wording z Visual/QA/koordynatorem.
+
+2. Co zostawiłem i gdzie
+
+Moje SoT (primary):
+
+/workspace/watch-tower/UX_MAP.md — struktura, role, M1–M12, journeys §6/§6.5, seed, acceptance (w tym #21 visual=Claude)
+/workspace/watch-tower/VISUAL_BRIEF.md — Claude 1:1 (tokeny, Barlow, shell recipes, FAIL gates)
+/workspace/watch-tower/VISUAL_ALIGN_CLAUDE.md — polityka clone-target
+/workspace/watch-tower/VISUAL_BRIEF_ELITE.md — krótki pointer → Claude SoT + UX_MAP §6.5
+Ref makiety (nie ja stworzyłem HTML, ale to SoT visual):
+
+/workspace/watch-tower/claude-makieta.html
+/workspace/watch-tower/claude-visual-ref/ (tower-makieta.html, extracted.css, shots…)
+/workspace/watch-tower/claude-v2.0/ (index/tower-makieta + CLAUDE_V2_SOT — obecne na dysku; nie jestem właścicielem treści v2)
+Powiązane (wspólne / nie tylko moje):
+
+ADDRESSES.md, PERMIT_*, QA_ELITE_UPGRADE_CHECKLIST.md, research-2026/START_UI_SPEC.md, CLAUDE_SHELL_GATE.md, SOT_FLIP_CLAUDE_SHELL_2026-09-23.md, gate reports pod research-2026/visual-gate-*
+Canon wejściowy: ROZMOWA_CLAUDE.txt, CURSOR_PROMPT.md (były już na dysku)
+Tylko w rozmowie / pamięci (nie osobny dokument handoff): handoffy do koordynatora/Visual/QA jako wiadomości agentów; 4 logi w mojej pamięci agentowej (elite, START, theme, SoT flip). Nie mam osobnego pliku „UX_HANDOFF_PRODUCTION.md”.
+
+3. Co weszło do aplikacji
+
+Nie buduję SPA — nie mam własnej weryfikacji kodu. Poniżej: ustalenie UX vs to, co wiem z raportów Visual (nie z audytu UI przeze mnie).
+
+Ustalenie	W app?	Uwaga
+Split SoT: visual=Claude, funkcje=UX_MAP	CZĘŚCIOWO	SoT na dysku TAK; implementacja = builder/Visual (FROM ZERO rebuild zgłoszony Visualem)
+Barlow + tokeny Claude 1:1	CZĘŚCIOWO	Visual zgłosił Claude shell gate PASS, potem FROM ZERO (poprzednie PASS „superseded until rebuild”) — aktualny squint-match po rebuild: nie mam świeżego potwierdzenia od ~01:46; ma Visual/QA
+Role tylko HHL/KSH/SCX; Stegra=POI	nie mam	SoT TAK; czy SPA dropnął Stegra z switchera — QA/builder
+Collapsible nav 186↔56 + session	nie mam	SoT TAK
+Bell + Notification Center mark-read	nie mam	SoT TAK
+Zero dead KPI/spine §4.2	nie mam	SoT TAK
+Import XLSX + DnD	nie mam	SoT TAK
+Theme HHL+SCX dark / KSH light	nie mam	SoT TAK (stary log pamięci wspominał też „Stegra light” — przestarzałe, Stegra nie jest rolą)
+Elite E1–E4 (audit, permits, factoring HHL, ETA confidence)	nie mam	SoT w UX_MAP; implementacja = builder/QA
+Glass blur 8–12 na overlayach (wczesny START)	NIE (jako SoT)	Nadpisane: Claude solid-first; glass KPI = FAIL
+IBM Plex jako primary / „Claude = bar not clone”	NIE	Świadomie odrzucone 23.09; stare ANTI_SLOP_* mogą nadal pisać Plex = stale
+4. Pomysły omówione i odrzucone
+
+Stegra jako 4. rola app — odpadło: Stegra = SITE POI / geofence; approaching/POD w widoku KSH.
+Claude tylko jako „quality bar” / zakaz Barlow / wymuszenie IBM Plex — odpadło Twoją decyzją: klon 1:1.
+Anti-slop redesign (Plex, flush wt-kpi-rail, „not a Barlow clone”) jako docelowa tożsamość — supersede przez SoT flip.
+Glass jako personality / glass KPI cards — odpadło; Claude solid surfaces.
+Ukrywanie cen blurrem / •••• — odrzucone w SoT: hide DOM by role.
+Osobny dashboard / first-paint Stegra — odrzucone.
+Prawdziwy factor API / ML accuracy claimy na ETA — poza zakresem makiety (mock / heurystyka).
+Brand string: Claude ma „TOWER”; produkt może „WATCH TOWER” w tym samym slocie Condensed — nie odrzucenie, tylko decyzja copy.
+5. Niedokończone / ryzykowne / tymczasowe
+
+Pakiet research-2026/ANTI_SLOP_* i fragmenty starszych gate’ów nadal mogą mówić Plex / bar-not-clone — ryzyko, że builder czyta stale mimo override w VISUAL_BRIEF.
+Visual zgłaszał FROM ZERO rebuild po wcześniejszym Claude shell PASS — nie wiem, czy obecna SPA jest już squint-match po rebuild; to Visual/QA.
+Nie robiłem adversarial pass modułów M1–M12 w żywej app — to WT — QA.
+claude-v2.0/ vs claude-makieta.html / claude-visual-ref/ — na dysku są dwa/trzy refy; kanoniczny clone target w moim SoT = claude-makieta.html + claude-visual-ref/tower-makieta.html. Który HTML jest „from zero” w buildzie: nie mam (Visual).
+Stary fakt w pamięci „KSH and Stegra light” jest przestarzały.
+6. Co miało być następne (kolejność)
+
+Builder kończy FROM ZERO (Claude CSS/DOM) + Visual re-gate squint-match.
+QA: checklista M1–M12 + journeys + acceptance #1–21 (w tym #21 visual).
+Ja (na ping): doprecyzowanie SoT tylko tam, gdzie builder/QA utknie (journeys, KPI map, edge case ról) — bez kodowania.
+Sprzątanie stale anti-slop docs albo twardy banner „IGNORE — Claude clone” (Visual/koordynator).
+Handoff produkcyjny: jeden indeks SoT (UX_MAP + VISUAL_BRIEF + ADDRESSES + PERMIT) dla zespołu — jeszcze nie napisałem osobnego indeksu.
+Jak potrzebujesz, mogę dopisać krótki UX_PRODUCTION_INDEX.md wskazujący tylko kanoniczne pliki (bez kodu).

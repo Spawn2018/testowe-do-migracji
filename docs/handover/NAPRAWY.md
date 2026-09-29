@@ -46,7 +46,7 @@ Stary zakres NAPRAWY mieszł etykiety Sebastiana (Fala 1/2). **D1–D26 = wyłą
 ### D1 — Tailwind remove
 **DONE Fala 1** — usunięto Tailwind; role CSS + preflight compensation. ≠ L1.
 - Removal SHA: `0dcea24c63e7526992b1eac9747efcef926affd3`
-- Inventory: [`D1_TAILWIND_INVENTORY.md`](./D1_TAILWIND_INVENTORY.md) `de851b80…`
+- Inventory: [`D1_TAILWIND_INVENTORY.md`](../archiwum/D1_TAILWIND_INVENTORY.md) `de851b80…`
 - Testy: `test:unit` **13/13**; playwright **4/4**
 
 ### D2 — fonts / `--tw-` w built CSS

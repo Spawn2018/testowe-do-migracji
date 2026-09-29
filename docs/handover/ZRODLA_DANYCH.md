@@ -1,3 +1,4 @@
+﻿> **CZĘŚCIOWO ZASTĄPIONY 29.09 — przy sprzeczności wygrywa wzorzec/03_REJESTR_DECYZJI.md i zlecenia z 29.09.**
 # ŹRÓDŁA DANYCH ZEWNĘTRZNYCH — jedyne źródło prawdy
 
 > Wszystko poniżej sprawdzone **25.09.2026** — na żywych danych albo

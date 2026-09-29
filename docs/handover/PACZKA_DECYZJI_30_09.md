@@ -1,12 +1,15 @@
 # PACZKA DECYZJI — 30.09.2026
 
-> Wszystko, co czekało na właściciela, w jednej wiadomości.
-> **Załączniki:** `ZLECENIE_CENNIK_SEFS.md`, `CENNIK_STEGRA.json`,
-> trzy oryginały właściciela (`CENY_PODSTAWOWE_-_SCANDINAVIAN_EXPRESS.xlsx`,
-> `CENY_PODSTAWOWE_-_hhl.xlsx`, `SEFS_KSH_Stegra_v2.docx`),
-> `ZLECENIE_POGODA_DROGI_ETA.md`, **`ZLECENIE_SHAREPOINT.md`**, `haromogram.xlsx`
-> (zawiera dane osobowe kierowców — tylko do analizy, nie do repozytorium).
-> Dopisz do planu według priorytetów. Pozycje, które już masz — pomiń.
+> **Wersja finalna 29.09 — dla Cursora.** Najpierw **I-33 (P0): zawieszona kopia
+> zapasowa**, potem kolejność z `3_POLECENIA_DLA_CURSORA/3_START_PRACY.md`.
+> **Najważniejsze po spotkaniu z przewoźnikiem: `ZLECENIE_PO_SPOTKANIU_SCX.md`** —
+> wygrywa ze sprzecznymi wcześniejszymi ustaleniami.
+> Zlecenia w `docs/handover/`: `ZLECENIE_CENNIK_SEFS.md` (bez kwot),
+> `ZLECENIE_POGODA_DROGI_ETA.md`, `ZLECENIE_SHAREPOINT.md`.
+> **Pliki poufne — poza repozytorium, w `D:\Watch Tower\dane\`:** oba cenniki, załącznik
+> SEFS, `CENNIK_STEGRA.json`, `haromogram.xlsx` (dane kierowców).
+> Konstytucja i rejestr decyzji: `docs/handover/wzorzec/`.
+> **Potwierdź odbiór listą identyfikatorów.**
 
 ---
 
@@ -85,6 +88,13 @@ Błąd makiety, nie zamysł. Zmiany wzorca wyłącznie w ujęciach 390 px.
 
 I-0b i reguły R2: napisz, kiedy chcesz się zalogować — właściciel kliknie
 „Allow" w ciągu 2 minut.
+
+## DOPISANE PO AUDYCIE (29.09)
+- **I-33 · P0** — kopia zapasowa 29.09 zawieszona (RUNNING od 00:30 UTC); przyczyna,
+  ponowienie, strażnik: w toku > 30 min → błąd + e-mail
+- **D-34** — tydzień SEFS: załącznik = data załadunku; ustalenie z 24.09 = rozładunek.
+  Do decyzji właściciela; do tego czasu według załącznika
+- **D-35** — hasło bazy bez zmiany (decyzja właściciela)
 
 ## U WŁAŚCICIELA
 D-5 umowy RODO · D-16 lista użytkowników · **D-32 zgoda IT KSH na aplikację

@@ -476,7 +476,7 @@ try {
   const input = await page.$('input[type="file"]')
   let dryOk = false
   if (input) {
-    await input.uploadFile('/workspace/watch-tower/qa-start/ship-qa-unique.xlsx')
+    await input.uploadFile('tests/fixtures/ship-qa-unique.xlsx')
     await sleep(2500)
     const ui = await page.evaluate(() => {
       const note = document.querySelector('.note')?.textContent || ''

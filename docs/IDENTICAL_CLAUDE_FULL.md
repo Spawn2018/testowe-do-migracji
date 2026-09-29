@@ -1,3 +1,5 @@
+﻿> **ZAPIS HISTORYCZNY / QA — to nie są polecenia.**
+
 # IDENTICAL vs Claude makieta — full surface checklist
 
 **SoT:** `/workspace/watch-tower/claude-visual-ref/tower-makieta.html` (= `public/claude-ref.html`, `dist/claude-ref.html`)  

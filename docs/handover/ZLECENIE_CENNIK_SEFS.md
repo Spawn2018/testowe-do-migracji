@@ -5,6 +5,7 @@
 > `CENY_PODSTAWOWE_-_hhl.xlsx` (przychód), `SEFS_KSH_Stegra_v2.docx`
 > (załącznik nr 1 do umowy z 28.09.2026).
 > Koordynator przepisał je do **`CENNIK_STEGRA.json`** i zweryfikował.
+> **Wersja do repozytorium — bez kwot.** Wartości: `D:\Watch Tower\dane\` (poza repozytorium).
 > **Przepisz je niezależnie z oryginałów i porównaj z JSON** — dwie
 > niezależne transkrypcje, każda różnica = STOP.
 >
@@ -16,7 +17,7 @@
 ## Weryfikacja koordynatora — ma się zgadzać z Twoją
 
 - 12 pozycji, identyczne symbole, wymiary, masy i warianty konwoju po obu stronach
-- przychód = koszt × 1,05 — **dokładnie 5,0000% na każdej pozycji**
+- przychód = koszt × stały narzut — **ten sam na każdej pozycji** (wartość w pliku poufnym)
 - SEFS: po 51 progów SEK (17,4–32,4, krok 0,3) i PLN (5,0–10,0, krok 0,1);
   progi rosnące, mnożniki niemalejące; cena bazowa 19,47 SEK i 5,698 PLN
   → mnożnik 1,00
@@ -27,10 +28,9 @@
 
 **Zakres:** tylko transporty HH z wymiarami (reguła właściciela,
 `ZLECENIE_SHAREPOINT.md` §1). Koordynator zmapował plik z 30.09:
-**95 z 95 z ceną** — koszt 695 795 EUR, przychód 730 584,75 EUR, marża
-34 789,75 EUR (bez SEFS i opłat).
+**95 z 95 z ceną** (sumy — wyłącznie w pliku poufnym).
 - **Decyzja właściciela — PL-1, PL-10.1, PL-17.1** (14,70 × 3,40 × 2,60 m):
-  **wycena tak, jakby miały wysokość 2,45 m → pozycja PL-B** (9 690 / 10 174,50 EUR).
+  **wycena tak, jakby miały wysokość 2,45 m → pozycja PL-B**.
   Reguła ogólna: gdy **jedyną** przyczyną braku ceny jest wysokość — cena
   z najmniejszej pozycji rodziny obejmującej pozostałe wymiary i masę;
   w interfejsie widoczne oznaczenie „wycena przy wysokości przyjętej
@@ -140,5 +140,6 @@ Takie same kwoty po obu stronach; **bez dopłaty paliwowej**.
 
 ## STRAŻNIK
 
-Test paczki produkcyjnej: **żadna kwota z cennika** (np. `5344.5`,
-`12745`, `11949`) ani tabela SEFS w kodzie frontu.
+Test paczki produkcyjnej: **żadna kwota z cennika** (lista kwot do wyszukania —
+z `CENNIK_STEGRA.json` w czasie testu, nie zapisana w repozytorium) ani tabela SEFS
+w kodzie frontu.

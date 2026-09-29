@@ -35,11 +35,17 @@ shots-probe/
 tmp/
 test-results/
 
-# Paczka właściciela 30.09 — poufne (ceny, dane kierowców). Leżą w ~/tower-dane/, nigdy w gicie.
-# Wzorce nie wypisują plików już śledzonych (fixtures w docs/qa-start i docs/watch-tower).
+# Poufne (ceny, dane kierowców) — poza repozytorium (~/tower-dane/ lub D:\Watch Tower\dane\).
 CENNIK_STEGRA.json
 haromogram.xlsx
 CENY_PODSTAWOWE_*.xlsx
 SEFS_KSH_Stegra_v2.docx
 *.xlsx
 *.docx
+# Wyłącznie syntetyczne / publiczne fixtures w tests/fixtures/
+!tests/fixtures/wob-*.xlsx
+!tests/fixtures/ksh-harmonogram-synthetic.xlsx
+!tests/fixtures/p9r-merge-plus1-valid.xlsx
+!tests/fixtures/ship-qa-schedule.xlsx
+!tests/fixtures/ship-qa-unique.xlsx
+.vercel

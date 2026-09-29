@@ -387,3 +387,24 @@ Pozostałe 26 pozycji „częściowo” nie zależą od trybu demo (braki infras
 | O-V18 | 0097 na produkcji + wdrożenie Vercel `15647c2` (6.6) | **DONE** 28.09 | Po próbie w wycofanej transakcji: `supabase db push` ×2 (pierwszy nałożył 0097, drugi „up to date”), `schema_migrations`: 0097 insurance_expiry; `insurance_policies` bez SELECT dla authenticated, cron polis 0, cron silnika 0, START 0/7. `npx vercel --prod --yes` z `git archive 15647c2` (bez „Not authorized”) → tower.log-mar.pl 200, watch-tower-makieta.vercel.app 200; rekurencyjny skan 58 plików JS: 0× `service_role`, 0× wartość klucza; `rk_insurance_expiry` w paczce. | — | — |
 | G-V 6900022 | nocna brama wizualna | **DONE** 29.09 (ten commit) | Wynik 01:55: `OK HEAD=6900022 smoke+stany=ok matryca=840/840 zmienione=0 czas=2523s kod=0` — przebieg bez nadzoru (rutyna ~01:11). | — | — |
 | I-30 | cennik według symboli (paczka 30.09) | **PRZERWANE PRZED STARTEM** 29.09 | — | — | Właściciel zatrzymał pracę (limit 93%). Paczka rozpakowana do `/home/box/tower-dane/2026-09-30/`, `sha256sum -c` 9/9 OK. Żadnej transkrypcji, żadnego kodu, żadnej migracji. Kolejka dopisana do PLAN.md. Szczegóły: `PRZEKAZANIE_CURSOR.md`. |
+
+## Porządki 29.09.2026 — archiwum i pliki poufne
+
+| ID | pozycja | status | commit | uwagi |
+|---|---|---|---|---|
+| PORZ-1 | Archiwum instrukcji → `docs/archiwum/`; nowe zasady; grafiki Watch Tower; usunięcie xlsx/docx poufnych z drzewa | **DONE** (ten commit) | (HEAD po pushu) | Historia gita **nie** przepisana (repo prywatne). Commity z plikami poufnymi do wyczyszczenia przed ewentualnym udostępnieniem: `0ad97bae` (SCX_CENNIK.xlsx, KSH_HARMONOGRAM.xlsx, BAF_SPEC.docx, qa xlsx), `af3ea61c` (public/KSH_HARMONOGRAM.xlsx, docs/qa-start/*.xlsx), `deaad9c6` (przykładowe kwoty w PRZEKAZANIE_CURSOR.md). Kopie: `D:\Watch Tower\dane\z_repozytorium\`. |
+
+### Klasyfikacja xlsx (E.2)
+
+**Używane przez testy/skrypty → syntetyczne w `tests/fixtures/`:**
+- `public/KSH_HARMONOGRAM.xlsx` → `ksh-harmonogram-synthetic.xlsx`
+- `docs/qa-start/p9r-merge-plus1-valid.xlsx` (+ kopia watch-tower) → `p9r-merge-plus1-valid.xlsx`
+- `docs/qa-start/ship-qa-schedule.xlsx` → `ship-qa-schedule.xlsx`
+- `docs/qa-start/ship-qa-unique.xlsx` → `ship-qa-unique.xlsx`
+
+**Nieużywane w kodzie → kopia do `dane\z_repozytorium`, `git rm`:**
+- `p9r-import-plus1-exact.xlsx`, `p9r-merge-plus1.xlsx`, `p9r-sg34-restore.xlsx` (oba katalogi qa-start)
+- `docs/watch-tower/SCX_CENNIK.xlsx`, `KSH_HARMONOGRAM.xlsx`, `BAF_SPEC.docx` (E.1)
+
+**Zostaje:** `tests/fixtures/wob-*.xlsx` (dane publiczne KE).
+

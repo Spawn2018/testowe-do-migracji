@@ -35,25 +35,25 @@ test('HHL importuje pełny harmonogram przez interfejs (podgląd z bazy, zapis, 
   await page.locator('nav [data-view="sched"]').first().click();
   await expect(page.getByText('brak zaimportowanego harmonogramu')).toBeVisible();
   await page.getByRole('button', { name: /Wgraj|Import/ }).first().click();
-  await page.locator('input[type="file"]').setInputFiles('public/KSH_HARMONOGRAM.xlsx');
+  await page.locator('input[type="file"]').setInputFiles('tests/fixtures/ksh-harmonogram-synthetic.xlsx');
   await expect(page.locator('[data-import-server]')).toContainText('Podgląd z bazy', { timeout: 20000 });
   await expect(page.locator('[data-import-server]')).toContainText('Scandinavian Express');
   await page.getByRole('button', { name: 'Podgląd zmian' }).click();
-  await expect(page.getByText('+50')).toBeVisible();
+  await expect(page.getByText('+8')).toBeVisible();
   expect(psql('select count(*) from loads')).toBe('0');
   await page.getByRole('button', { name: 'Zatwierdź' }).click();
   await expect(page.locator('[data-import-server]')).toContainText('Zapisano w bazie: wersja 1', { timeout: 20000 });
-  await expect(page.locator('tr[data-load]')).toHaveCount(50, { timeout: 20000 });
+  await expect(page.locator('tr[data-load]')).toHaveCount(8, { timeout: 20000 });
   // I-2C: transport klasy STANDARD pokazuje „Standard”, nie puste pole ani 0 × 0 × 0
-  await expect(page.locator('tr[data-load]', { hasText: 'T-03' }).locator('td[data-col="dims"]')).toHaveText('Standard');
-  await expect(page.locator('td[data-col="dims"][data-cargo="STANDARD"]')).toHaveCount(9);
-  await expect(page.getByText(/wersja 1 · .* · KSH_HARMONOGRAM\.xlsx/)).toBeVisible();
-  expect(psql(`select count(*)||'/'||(select count(*) from shipment_items)||'/'||(select count(*) from schedule_imports where file_path like 'harmonogramy/%' and length(file_hash)=64) from loads`)).toBe('50/50/1');
+  await expect(page.locator('tr[data-load]', { hasText: 'STD-01' }).locator('td[data-col="dims"]')).toHaveText('Standard');
+  await expect(page.locator('td[data-col="dims"][data-cargo="STANDARD"]')).toHaveCount(3);
+  await expect(page.getByText(/wersja 1 · .* · ksh-harmonogram-synthetic\.xlsx/)).toBeVisible();
+  expect(psql(`select count(*)||'/'||(select count(*) from shipment_items)||'/'||(select count(*) from schedule_imports where file_path like 'harmonogramy/%' and length(file_hash)=64) from loads`)).toBe('8/8/1');
   expect(psql(`select count(*) from storage.objects where bucket_id='harmonogramy' and name like '%.xlsx' and name not like 'i1-%' and name not like '%/i1-%'`)).toBe('1');
   // ten sam plik drugi raz → bez zmian
   await page.getByRole('button', { name: /Wgraj|Import/ }).first().click();
-  await page.locator('input[type="file"]').setInputFiles('public/KSH_HARMONOGRAM.xlsx');
-  await expect(page.locator('[data-import-server]')).toContainText('bez zmian: 50', { timeout: 20000 });
+  await page.locator('input[type="file"]').setInputFiles('tests/fixtures/ksh-harmonogram-synthetic.xlsx');
+  await expect(page.locator('[data-import-server]')).toContainText('bez zmian: 8', { timeout: 20000 });
   await page.getByRole('button', { name: 'Podgląd zmian' }).click();
   await page.getByRole('button', { name: 'Zatwierdź' }).click();
   await expect(page.locator('[data-import-server]')).toContainText('Bez zmian', { timeout: 20000 });
