@@ -149,20 +149,43 @@ audyt dostępności (**wykonany 28.09**, kontrast → D-27) · przekazanie Curso
 
 ---
 
+
+## PACZKA 30.09 — kolejka (dopisana 29.09, NIC NIE ZREALIZOWANE)
+
+Źródła w `docs/handover/`: `PACZKA_DECYZJI_30_09.md`, `ZLECENIE_CENNIK_SEFS.md`, `ZLECENIE_SHAREPOINT.md`, `ZLECENIE_POGODA_DROGI_ETA.md`.
+Pliki cen, umowa i harmonogram z danymi kierowców: `/home/box/tower-dane/2026-09-30/` (poza gitem; sumy `SUMY_KONTROLNE.txt` sprawdzone 29.09, wszystkie OK).
+Przekazanie 29.09 przerwało pracę **przed pierwszym commitem** I-30.
+
+| ID | Opis | Kryterium | Status |
+|---|---|---|---|
+| I-30 | P0. Cennik według symboli (zastępuje model I-12/I-19). Niezależna transkrypcja xlsx/docx vs `CENNIK_STEGRA.json` — każda różnica = STOP. Kwoty skryptem z pliku lokalnego, nie migracją. PL-1/PL-10.1/PL-17.1 jak PL-B. Konwój = liczba KR z tą samą datą załadunku | test każdej pozycji; strażnik: żadnej kwoty cennika we froncie; mapowanie 95 HH | DO ZROBIENIA — nie zaczęte |
+| I-31 | P0. SEFS: OKQ8 Diesel (historia, kolumna Diesel) i Orlen Ekodiesel (API, zł/m³ ÷ 1000). Mnożnik = niższy z dwóch. Tydzień 28.09–04.10 ma wyjść **1,14** — inaczej STOP | test 1,14; progi; awaria źródła | DO ZROBIENIA — nie zaczęte |
+| I-7a | P1. KSH widzi na stałe dane kierowcy i auta (bez okna ±24 h, tylko swój projekt). Retencja do wycofania zgody, nie 90 dni. GPS bez zmian (30 dni) | test widoczności i wycofania | DO ZROBIENIA |
+| II-5 | P1. Odczyt komunikatów armatora **włączyć teraz** (co 15 min, uczciwy User-Agent). Cloudflare 403 = status NIEZNANY, bez obchodzenia zabezpieczeń. D-18 (e-mail) zostaje informacją | parser na aktualnej stronie | DO ZROBIENIA |
+| II-10 | P1. SharePoint w obie strony, na kopii pliku do D-32. Import tylko HH z wymiarami; NTG Standard nie zapisywać. Usunięcie wiersza ≠ anulowanie | 95 HH, zero NTG w bazie, pętla własnego zapisu | DO ZROBIENIA |
+| II-7 | P1. Własny silnik ETA na korytarzu OSM (ODbL). Zero zewnętrznych zapytań tras. HERE nie | postęp z GPS, odpoczynek, okno promowe | DO ZROBIENIA |
+| II-7b | P1. Kalibracja ucząca się. Zastępuje III-1. Limity: 10% / tydzień, sprawdzenie wsteczne, wycofanie, zamrożenie przez HHL | symulacja 30 transportów | DO ZROBIENIA |
+| II-8 | P1. Pogoda FMI + DMI + SMHI, progi wstępne oznaczone. IMGW tylko po jasnej licencji komercyjnej | źródło w UI | DO ZROBIENIA |
+| II-9 | P1. Opóźnienie wypłynięcia z AIS. Brak pozycji ≠ opóźnienie (Digitraffic nie widzi Gdańska) | test | DO ZROBIENIA |
+| I-32 | P1. Opłaty: anulowanie, czas wolny, przestój. Bez dopłaty paliwowej. 2 dni przed załadunkiem — dokument nie określa (zostaw parametr wstępny) | test progów | DO ZROBIENIA |
+| I-29 | P1. Budżety darmowych planów na 140 transportów / ~13 tygodni | tabela szczyt dobowy vs limit | DO ZROBIENIA |
+| D-29t | P1. Tabela nakładania się reguł START (bez włączania) | tabela w planie, zero włączeń | DO ZROBIENIA |
+| II-6 | P1. Trafikverket | — | CZEKA NA: klucz (D-34) |
+
 # 4. DECYZJE OCZEKUJĄCE — WŁAŚCICIEL
 
 Wpisujesz tu każde pytanie i idziesz dalej.
 
 | ID | Sprawa | Blokuje |
 |---|---|---|
-| D-1 | stawki — koszt przewoźnika, przychód od KSH | R-1, faktury |
-| D-2 | parametry SEFS — po spotkaniu z przewoźnikiem | II-1 |
+| D-1 | **PRZEKAZANE 30.09** (paczka; pliki cen poza gitem, `~/tower-dane/2026-09-30/`). Realizacja = I-30. **Nie zaczęta** — przerwane przekazaniem 29.09, zero kodu | R-1, I-30 |
+| D-2 | **PRZEKAZANE 30.09** (umowa SEFS, `ZLECENIE_CENNIK_SEFS.md`). Realizacja = I-31. **Nie zaczęta.** III-10 (EU Weekly Oil Bulletin) nie jest źródłem z umowy i zostaje wyłączone. Potwierdzenie przewoźnika (pytanie 9) nie blokuje liczenia | I-31 |
 | D-3 | retencja zdjęć, CMR, POD | część I-7 |
 | D-4 | telefon z Androidem i firmowa karta SIM z SMS na +46 | test I-3 |
 | D-5 | umowy RODO z KSH i przewoźnikiem | R-2 |
 | D-6 | spotkanie ze Scandinavian Express | etap II |
 | D-7 | Vercel: wyłączenie trenowania modeli (panel) | — |
-| D-8 | ~~wycena ładunków STANDARD~~ — **ROZSTRZYGNIĘTE 27.09:** wariant A, osobna stała stawka → I-12 (kwoty w D-1) | I-12 |
+| D-8 | ~~wycena ładunków STANDARD~~ — **ROZSTRZYGNIĘTE 27.09**, potem **NIEAKTUALNE 30.09:** transporty „Standard” należą do NTG (inna firma) i nie są importowane. Osobna stawka STANDARD niepotrzebna. Klasa zostaje tylko jako obrona (HH + Standard = ostrzeżenie) | — |
 | D-9 | ~~parametry odcinków ETA v1~~ — **ROZSTRZYGNIĘTE 27.09:** wartości wpisane (I-D9, 0054); obsada jednoosobowa, przeprawa = dobowy odpoczynek na promie (potwierdzone przez właściciela, bez postoju w Nynäshamn); czasy PL/check-in/SE do potwierdzenia z SCX w II-3. Wartości 0054 zostają; opóźnienie 390 → 1080 min wynika z nowych czasów (+3 h jazdy + 8,5 h odpoczynku = 690 min) — NIE błąd (POSTEP I-D9-a) | — |
 | D-10 | ~~widoczność SEFS dla przewoźnika~~ — **ROZSTRZYGNIĘTE 27.09:** przewoźnik widzi parametry tylko do odczytu, wyłącznie wersje uzgodnione (`agreed_with_carrier = true`) → **I-13** (właściciel 27.09; pierwotnie I-15) | I-13 |
 | D-11 | **ROZSTRZYGNIĘTE 27.09:** właściciel włącza wymaganie dopiero po I-17 (drugie urządzenie). 2FA (I-5): właściciel zapisuje TOTP (Opcje → „Weryfikacja dwuetapowa” → kod QR → kod) i klika „Włącz wymaganie”; do tego czasu egzekwowanie `aal2` dla HHL_ADMIN jest wyłączone (`security_flags.MFA_HHL_ADMIN = false`) | I-5 |
@@ -180,7 +203,11 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | D-23 | ~~widoczność ocen dla przewoźnika~~ — **ROZSTRZYGNIĘTE 28.09 (właściciel): TAK** przewoźnik widzi swoje oceny i punktualność; wewnętrzne notatki HHL (komentarz) niewidoczne | III-9 → **DONE 28.09 (0091)** |
 | D-24 | ~~widok placu budowy~~ — **ZAMKNIĘTE 28.09 (właściciel) przez SCOPE 16.1:** Stegra nie jest rolą, tylko strefą/POI. Bez nowej roli; SCOPE 10.4 nie będzie realizowany | — |
 | D-25 | ~~odświeżenie wzorca Dokumenty/Harmonogram~~ — **ZATWIERDZONE WARUNKOWO 28.09 (właściciel):** każde ze 175 ujęć sprawdzić — różnica wyłącznie w miejscu nowych elementów (terminy, „Zmień”, wybór tygodnia, „Wgraj aktualizację”, „Eksport PDF”) → do wzorca; różnica poza tymi obszarami → wypisać, NIE aktualizować. `gate:visual` ma działać bez nadzoru (jeden skrypt, kod wyjścia, linia podsumowania w `/workspace/wt-gate-visual/last.txt`), właściciel uruchamia go co noc, wynik trafia do POSTEP | III-2 (0.3) → **WYKONANE 28.09:** 139 ujęć odświeżonych, 36 wypisanych (niezaktualizowanych); `gate:visual` bez nadzoru → `last.txt` |
-| D-27 | (z III-12, audyt dostępności 28.09) kontrast tekstu poniżej WCAG AA: `--ink-3` jasny #6C7D8A → proponowane #5A6B78, ciemny #748896 → #788C9A, tekst ostrzeżeń `--amber` na `--amber-bg` → #A55A00, licznik dzwonka; oraz usunięcie kursora „rączka” z nagłówków i wierszy tabel bez akcji. Zmiana tokenów = zmiana wyglądu makiety (nowy wzorzec wizualny). Szczegóły: `RAPORT_DOSTEPNOSC.md` | SCOPE 11.5, III-2 |
-| D-28 | (28.09, wynik regulaminu HERE — STOP dla II-7a) plan podstawowy HERE wyklucza „Asset Management” (śledzenie pojazdu + wyznaczanie tras dla niego) — wymagany plan Enterprise albo asset-based. **Decyzja właściciela:** kontakt z HERE po ofertę Enterprise / asset-based **albo** wybór innego dostawcy tras ([RAPORT_HERE_REGULAMIN.md](RAPORT_HERE_REGULAMIN.md)) | II-7, II-7a |
-| D-29 | **START — silnik reguł na produkcji** (9.2/9.3, 0094–0096): (1) włączenie reguł START-1…7 (dziś 7 reguł, 0 włączonych); (2) zadania cykliczne: `workflow_worker` (np. co minutę) oraz `wf_enqueue_daily` o 06:00 Europe/Warsaw dla wyzwalacza „codziennie o 06:00” (0096). Dziś żadnego zadania cyklicznego silnika nie ma — bez nich przebiegi czekają w kolejce. Kod i testy gotowe | 9.2, 9.3, 0096 |
-| D-30 | (28.09, SCOPE 6.6 — 0097) przypomnienie o wygaśnięciu polisy przewoźnika: (1) zadanie cykliczne `select public.detect_insurance_expiry()` (np. codziennie 06:10 Europe/Warsaw) — polecenie 28.09: bez nowych zadań pg_cron; (2) formularz polisy (numer, ubezpieczyciel, okres, zakres) — w makiecie go nie ma (zmiana wyglądu); do tego czasu wpis przez `insurance_policy_save` (API, HHL albo przewoźnik); (3) pokazanie w Dokumentach notki „Polisa OCP … wygasa …” z danych (dziś ukryta w produkcji) | 6.6 |
+| D-27 | **ZATWIERDZONE 30.09 z warunkiem, NIE ZROBIONE:** każdy kolor tekstu na każdym tle obu motywów ≥ 4,5:1; jeśli #788C9A nie przejdzie na panelu ciemnym — #7C909E. Wzorzec: zmieniają się wyłącznie kolory tekstu, zero przesunięć. Reszta z audytu 28.09 (`RAPORT_DOSTEPNOSC.md`): `--ink-3`, ostrzeżenia, kursor bez akcji | SCOPE 11.5 |
+| D-28 | **ROZSTRZYGNIĘTE 30.09: HERE — nie** (dziękuję za STOP; regulamin w `RAPORT_HERE_REGULAMIN.md`). Trasa stała z zezwolenia. II-7 = własny silnik na korytarzu OSM. II-7b = kalibracja ucząca się, zastępuje III-1. **Nie zaczęte** (`ZLECENIE_POGODA_DROGI_ETA.md`) | II-7, II-7b |
+| D-29 | **ZMIENIONE 30.09: nie włączać.** Najpierw tabela: reguła → warunek → akcja → który istniejący mechanizm robi to samo (`detect_silent_vehicles`, ryzyko opóźnienia z ETA, I-10/I-18, SMS 5 i 9, powiadomienia) → propozycja: włączyć / zostawić wyłączoną / zastąpić mechanizm na sztywno. Cel: zero podwójnych alarmów. Po akceptacji — silnik co minutę. **Tabeli nie ma** (przekazanie 29.09). START-1…7 nadal 0/7, bez crona | 9.2 |
+| D-30 | **TAK 30.09, NIE DOKOŃCZONE.** Część bazowa DONE (0097). Zostało: zadanie dzienne `detect_insurance_expiry()` + formularz polisy dla HHL i przewoźnika (przewoźnik wpisuje swoją polisę OCP, HHL zatwierdza) + notka w Dokumentach. Dane polisy przyjdą po spotkaniu z przewoźnikiem | 6.6 |
+| D-31 | **NOWE 30.09, NIE ZROBIONE.** Pasek górny przy 390 px wychodzi poza ekran. To błąd makiety, nie zamysł. Naprawić. Zmiany wzorca wyłącznie w ujęciach 390 px | wygląd 390 px |
+| D-32 | **CZEKA.** Zgoda IT KSH na aplikację w ich tenancie (Microsoft Graph, `Sites.Selected`, tylko witryna STEGRABODEN). Do tego czasu II-10 tylko na kopii pliku, bez Graph | II-10 (połączenie) |
+| D-33 | **ROZSTRZYGNIĘTE 30.09, NIE ZROBIONE.** TOWER wpisuje do pliku KSH: kierowca, telefon, nr zlecenia, nr rejestracyjny (nowa kolumna „Nr rejestracyjny (TOWER)”). Godzin załadunku i rozładunku nie wpisuje. Realizacja w II-10 | II-10 |
+| D-34 | **CZEKA.** Klucz API Trafikverket (II-6: stan nawierzchni i utrudnienia na E4). Bez klucza nie włączać | II-6 |

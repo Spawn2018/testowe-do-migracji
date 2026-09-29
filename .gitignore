@@ -34,3 +34,12 @@ shots-fala1-gate/
 shots-probe/
 tmp/
 test-results/
+
+# Paczka właściciela 30.09 — poufne (ceny, dane kierowców). Leżą w ~/tower-dane/, nigdy w gicie.
+# Wzorce nie wypisują plików już śledzonych (fixtures w docs/qa-start i docs/watch-tower).
+CENNIK_STEGRA.json
+haromogram.xlsx
+CENY_PODSTAWOWE_*.xlsx
+SEFS_KSH_Stegra_v2.docx
+*.xlsx
+*.docx

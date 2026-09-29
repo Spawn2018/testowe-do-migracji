@@ -1,6 +1,80 @@
-# Przekazanie projektu TOWER dla Cursora (stan 28.09.2026)
+# Przekazanie projektu TOWER dla Cursora (stan 29.09.2026, rano)
 
 Ten dokument to punkt wejścia. Starsze `01_HANDOVER.md`…`09_INDEKS_WIEDZY.md` opisują etap makiety (23.09) i są
+
+
+> **Aktualizacja 29.09.2026 (przekazanie z powodu limitu).** Obowiązuje ten blok.
+> Sekcje niżej są z 28.09 i tam, gdzie się różnią, wygrywa ten blok.
+
+## Stan na teraz
+
+- **HEAD przed tym commitem:** `63cef6e` (nocna brama 29.09: na `6900022` matryca 840/840, zmienione 0, kod 0, 2523 s). Po tym commicie HEAD = commit przekazania. Lokalny = `origin/main` po pushu.
+- **Ostatnia migracja:** `0097_insurance_expiry.sql`. Na produkcji potwierdzone 28.09 (`schema_migrations`, `db push` ×2). Od tamtej pory **żadnej nowej migracji nie dodano**, więc lista lokalna i produkcyjna powinny być równe (0001…0097). Dziś nie odpytywałem produkcji ponownie.
+- **Ostatnie testy (push 28.09, nie powtarzane 29.09):** vitest 533 zaliczone, 33 pominięte. Baza: security 88, status 44, storage 37, money 130, release 145, backup 23, session 27, archive 18, watchdog 27, invite 48, risks 23, import 66, nullguard 379, i2 510, workflows 46, insurance 33.
+- **Vercel:** ostatnie wdrożenie kodu `15647c2` (28.09). Ten commit jest tylko dokumentacją — wdrożenia nie wymaga. Domeny: `tower.log-mar.pl`, `watch-tower-makieta.vercel.app`.
+- **Pozycja w toku:** żadna. **I-30 (cennik) nie wystartowało.** Executor został zatrzymany, zanim powstał jakikolwiek plik kodu. Drzewo było czyste poza rozjechanymi wskaźnikami Git LFS w `shots-baseline/` (przywrócone, nie commitowane).
+- **Następna pozycja, od góry:** I-30, potem I-31. Kolejka paczki 30.09 jest w `PLAN.md` („PACZKA 30.09”). **Nie realizuj niczego poza kolejnością planu.** Pytania dopisuj do §4 i idź dalej.
+- **Paczka:** `/home/box/tower-dane/2026-09-30/`. Sumy 9/9 OK (29.09). Cztery pliki `.md` są w `docs/handover/`. `CENNIK_STEGRA.json`, oba xlsx cen, `haromogram.xlsx` i `SEFS_KSH_Stegra_v2.docx` **zostają tylko tam**. `haromogram.xlsx` ma prawdziwe dane kierowców.
+
+## Poświadczenia na tym komputerze (ścieżki, nie wartości)
+
+| Co | Gdzie |
+|---|---|
+| Sekrety aplikacji | `/workspace/watch-tower-app/.env.local` (poza gitem). Klucze: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`, `SUPABASE_DB_POOLER_URL`, `SUPABASE_ACCESS_TOKEN`, `RESEND_API_KEY`, `MAIL_FROM`, `BACKUP_WRITER_SECRET`, `BACKUP_WRITER_URL`, trzy `TEST_USER_*_EMAIL` |
+| Supabase CLI | brak globalnego `supabase` i brak `~/.supabase/access-token`. Używamy `npx supabase`, a token bierzemy z `SUPABASE_ACCESS_TOKEN` w `.env.local`. Projekt `nglnnrmzmhusvxslousq` |
+| Vercel CLI | zalogowany. Plik sesji: `/home/box/.local/share/com.vercel.cli/auth.json`. Binarka: `/home/box/.local/bin/vercel`. Projekt `watch-tower-makieta` |
+| Wrangler / Cloudflare | **wylogowany celowo.** Są tylko logi w `/home/box/.config/.wrangler/logs/`. Nie logować się samemu — właściciel klika Allow w ciągu 2 minut, gdy o to poprosisz (I-0b i retencja R2) |
+| GitHub CLI | zalogowany jako **Spawn2018**, `/home/box/.config/gh/hosts.yml` |
+
+Ładowanie bazy: `set -a && source .env.local && set +a`. Połączenie produkcyjne idzie przez **pooler** (`SUPABASE_DB_POOLER_URL`). Znak `@` w haśle jest zapisany jako `%40`. Połączenie bezpośrednie wymaga IPv6, którego tu nie ma. Hasła bazy nie zmieniać (właściciel 28.09 przyjął ryzyko wycieku fragmentu).
+
+## Polecenia, tak jak ich używamy
+
+```bash
+cd /workspace/watch-tower-app
+npm test                                          # vitest
+PGCLUSTER=17/main bash tests/db/gate.sh           # lokalny Postgres 17, port 5433
+PGCLUSTER=17/main TOWER_REQUIRE_DB=1 git push     # pre-push ~9 min; bez --no-verify
+npm run gate:visual                               # ~42 min, port 4188, wynik /workspace/wt-gate-visual/last.txt
+```
+
+Migracja na produkcję (dopiero gdy jest plik w `supabase/migrations/`):
+
+```bash
+set -a && source .env.local && set +a
+# 1. próba: begin; \i migracja; \i migracja; kontrole; rollback;
+psql "$SUPABASE_DB_POOLER_URL" -v ON_ERROR_STOP=1 -f proba.sql
+# 2. nałożenie dwa razy
+npx supabase db push --db-url "$SUPABASE_DB_POOLER_URL"
+npx supabase db push --db-url "$SUPABASE_DB_POOLER_URL"   # drugi raz: up to date
+```
+
+Wdrożenie (tylko gdy zmienia się kod aplikacji, nie sam dokument):
+
+```bash
+git archive <sha> | tar -x -C /tmp/tower-deploy
+# skopiować .vercel/project.json do tego katalogu
+cd /tmp/tower-deploy && npx vercel --prod --yes
+# przy „Not authorized” powtórzyć raz
+# potem obie domeny HTTP 200 i skan plików JS: 0× service_role i 0× wartość klucza
+```
+
+Nowy test bazy: dopisać przypadek **i** podbić liczbę w `tests/db/gate.sh` (`check <zestaw> N`), inaczej push padnie.
+
+## Znane pułapki
+
+- **Git LFS nie jest zainstalowany.** Samo `git status` potrafi rozwinąć `shots-baseline/*.png` ze wskaźnika LFS (ok. 130 B) do prawdziwego PNG (setki KB) i pokazać 840 zmian. **Tego nie commituj.** Przywracanie: `GIT_LFS_SKIP_SMUDGE=1 git -c filter.lfs.required=false checkout -- shots-baseline`.
+- Kwoty cennika i tabela SEFS **nie mogą** trafić do frontu ani do migracji w repo. Ładowanie skryptem czytającym plik lokalny. Strażnik paczki szuka m.in. `5344.5`, `12745`, `11949`.
+- `haromogram.xlsx`: prawdziwe nazwiska i telefony. W testach tylko dane zmyślone.
+- Reguł START-1…7 nie włączać i crona silnika nie dodawać, dopóki właściciel nie zaakceptuje tabeli z D-29.
+- Przewoźnik nie zmienia okien załadunku i dostawy (ANEKS 2, migracja 0004).
+- Strażniki SQL: `if (…) is not true then raise`. `SECURITY DEFINER` zawsze z `search_path`. Nowa funkcja dla `authenticated` → `function-allowlist.txt` i `null-guard-calls.txt`. `anon` ma 0 uprawnień do tabel.
+- Nie ruszać portu 4177 ani katalogu `dist/`. Procesy zabijać po PID z `ss`, nie `pkill -f`.
+- Testów bazy nie puszczać równolegle z pre-push (te same bazy `tower_test_*`).
+- Różnicę wzorca wizualnego najpierw sklasyfikować (commit, zamierzona albo regresja, `G4_WZORZEC.md`), dopiero potem odświeżać ujęcia.
+- `rg` bez ścieżki czeka na stdin. `fd` i `rsync` nie są zainstalowane.
+- Bez `--force` i bez `--no-verify`. Zawsze `git pull --rebase` przed pushem.
+
 **nieaktualne** co do architektury (dziś jest produkcyjny Supabase). Źródła prawdy, w tej kolejności:
 `PLAN.md` (kolejka i **§4 decyzje właściciela**) → `POSTEP.md` (dziennik: każda pozycja, commit, testy) → `SCOPE.md`
 (zakres i statusy) → `SECURITY.md` → `G4_WZORZEC.md` (wzorzec wizualny) → `III12_LISTA_ETAP_III.md` (otwarte pozycje).
