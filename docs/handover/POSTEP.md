@@ -480,7 +480,9 @@ Uwaga: zestaw `i2` na hosted wymaga `ensureSeedAuthUsers` (FK `auth.mfa_factors`
 | I-30 | cennik według symbolu (D-1) | **DONE** | `ae62f2f9` | verify xlsx≡JSON **OK**; unit i30 **7/7** + guardian **1/1**; db i30 **10/10**; map HH **87/95** (8× KR-08…15 bez daty → NO_CONVOY, zgodnie z decyzją); vitest powiązane **15/15** | Migracja **0100** (PROD dry-run ROLLBACK + apply; TEST apply). `rate_match` SYMBOL: rodzina z numeru, konwój KR, HEIGHT_ADOPTED, PL-1/10.1/17.1→2,45. Formularz Opcje przebudowany. Skrypty: `i30-verify-cennik.mjs`, `i30-load-cennik.mjs` (TEST domyślnie; PROD: `TOWER_CENNIK_PROD=1`), `i30-map-harmonogram.mjs`. Kwoty załadowane TEST+PROD skryptem z `D:\Watch Tower\dane` — **nigdy w migracji/repo**. Demo `src/data/*` oczyszczone z kolizji kwot. |
 | I-31 | SEFS hybrid_min (D-2) | **DONE** | (ten commit) | unit i31 **3/3** (w tym 28.09–04.10 → **1,14**); db i31 **6/6** | Migracja **0101** (PROD dry-run + apply). `sefs_lookup_mult` / `sefs_compute_hybrid` / `sefs_week_for_load`. Tabele 51+51 skryptem `i31-load-sefs.mjs` → TEST v3 + PROD v1. III-10 WOB **wyłączone**. Odczyty dzienne period=YYYY-MM-DD. Następne: **DEC-2 centrum decyzji**. |
 | DEC-2 | centrum decyzji (DECYZJE §2) | **W TOKU** (baza+UI; skutki opcji dalej) | `26417c73` `805dd034` `158ecebc` | **brama hosted pełna EXIT 0** po 0103: security 84 … dec2 14 … insurance 33 | **0102/0103**. Następne skutki opcji. |
-| DEC-3 | powiadomienia decyzji (§3) | **W TOKU** | (ten commit) | dec3 **6/6**; security **84** | **0104** `decision_notify` OPEN/RESOLVE/ESCALATE → IN_APP; audit DECISION_RESOLVE; macierz `notification_matrix` (szkic DEC-4). PROD apply. Zostaje: statusy/strefy/import → powiadomienia; e-mail wg macierzy. |
+| DEC-3 | powiadomienia decyzji (§3) | **W TOKU** | `61713768` | dec3 **8/8** (z DEC-4) | **0104** notify OPEN/RESOLVE/ESCALATE. Zostaje: statusy/strefy/import. |
+| DEC-4 | widoczność macierz (§4) | **W TOKU** | (ten commit) | nullguard **434**; dec3 **8/8** | **0105** `admin_notification_matrix_set` + UI Opcje. SYSTEM zablokowany poza HHL. PROD apply. |
+
 
 
 
