@@ -12,7 +12,10 @@ psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/supabase_stub.sql
 for f in supabase/migrations/*.sql; do psql "$URL" -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null 2>&1 || { echo "MIGRACJA $f: błąd"; exit 1; }; done
 psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/seed.sql
 # projekty z seed.sql powstają po migracjach — ponowne nałożenie 0094+ (idempotentne) dodaje reguły startowe, jak na produkcji
+# Hosted: TOWER_ALLOW_MIG_REAPPLY=1 — shim inaczej no-opuje pliki migracji.
+export TOWER_ALLOW_MIG_REAPPLY=1
 for f in supabase/migrations/009[4-9]_*.sql; do psql "$URL" -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null 2>&1 || { echo "$f ponownie: błąd"; exit 1; }; done
+unset TOWER_ALLOW_MIG_REAPPLY
 set +e
 PSQL="psql $URL -Atq"
 HHL=11111111-0000-0000-0000-000000000001; KSH=11111111-0000-0000-0000-000000000002; SCX=11111111-0000-0000-0000-000000000003

@@ -416,3 +416,54 @@ Pozostałe 26 pozycji „częściowo” nie zależą od trybu demo (braki infras
 | ID | pozycja | status | commit | testy (liczby) | uwagi |
 |---|---|---|---|---|---|
 | BAZA-T | projekt `watch-tower-test` (ref emkbykwenwrjmbprydml); TEST_DB_URL z Management API (Session :5432) + TEST_DB_PASSWORD; brama `node scripts/test-db-gate.mjs`; bezpiecznik produkcji; zasada w `baza.mdc` | **DONE** (ten commit) | (HEAD po pushu) | połączenie OK (PostgreSQL 17.6); migracje 0001–0097 nałożone (0031 trigger: WARN — brak uprawnień spatial_ref_sys na free test); refuse-prod **5/5**; hosted: archive **18/18**, watchdog **27/27**; FAIL (hosted≠stub): security 74/88, status 8/44, storage 30/37, money 115/130, release 141/145, session 15/27, invite brak WYNIK (auth), risks 20/23, import 65/66, nullguard 358/379, i2 429/510, workflows 27/46, insurance 30/33; backup SKIP (CREATE DATABASE) | **Klient:** istniejący psql pg16 + Node `pg` — bez winget, bez Dockera. Windows psql: URI przez `-d`. Bezpiecznik `refuse-prod.sh`. Zasada: bez zielonych testów bazy żadna migracja nie wchodzi na produkcję. Dane zmyślone. Aplikacji i produkcji nie ruszano. |
+
+| BAZA-T2 | brama hosted: dostosowanie bez osłabiania asercji (Admin API, SKIP tylko spatial/CREATE DATABASE) | **DONE** 30.09 (ten commit) | (HEAD po pushu) | pełna brama — tabela niżej | Bez zmian aplikacji/produkcji. `TEST_SERVICE_ROLE_KEY` z Management API → `.env.local` (nigdy nie wypisany). |
+
+### BAZA-T2 — wyniki bramy hosted (emkbykwenwrjmbprydml)
+
+| Zestaw | OK | FAIL | SKIP | status |
+|---|---|---|---|---|
+| security | 84 | 0 | 2 | OK (oczek. 84; lokalnie 88−4 spatial) |
+| status | 44 | 0 | 0 | OK |
+| storage | 37 | 0 | 0 | OK |
+| money | 130 | 0 | 0 | OK |
+| release | 145 | 0 | 0 | OK |
+| backup | — | — | 1 | SKIP — CREATE DATABASE |
+| session | 27 | 0 | 0 | OK |
+| archive | 18 | 0 | 0 | OK |
+| watchdog | 27 | 0 | 0 | OK |
+| invite | 48 | 0 | 0 | OK |
+| risks | 21 | 0 | 2 | OK (oczek. 21; lokalnie 23−2 tower_test_status) |
+| import | 66 | 0 | 0 | OK |
+| nullguard | 379 | 0 | 0 | OK |
+| i2 | 510 | 0 | 0 | OK |
+| workflows | 46 | 0 | 0 | OK |
+| insurance | 33 | 0 | 0 | OK |
+
+**SKIP (jawne, tylko dozwolone):**
+1. `spatial_ref_sys` DELETE/UPDATE (security) — hosted free: brak OWNER/TRIGGER 0031
+2. `postgres DELETE spatial_ref_sys` — j.w.
+3. `backup` cały zestaw — CREATE DATABASE niedostępne na hosted
+4. `risks` automat statusów/promów (`tower_test_status`) — wymaga osobnej bazy (CREATE DATABASE)
+5. `risks` automat: klucze funkcji — j.w.
+
+**Kategoria (b) prawdziwy błąd:** brak.
+
+Uwaga: zestaw `i2` na hosted wymaga `ensureSeedAuthUsers` (FK `auth.mfa_factors` → `auth.users`); brama woła Admin API przed i2/session.
+
+**Klasyfikacja wcześniejszych FAIL → (a) środowisko hosted (naprawione adaptacją, nie luzowaniem asercji):**
+| FAIL | przyczyna (a) | adaptacja |
+|---|---|---|
+| atrapa `auth.users` / DISABLE TRIGGER | free: brak OWNER na auth | Admin API + `TEST_SERVICE_ROLE_KEY` |
+| `spatial_ref_sys` mutacje | brak uprawnień PostGIS | SKIP (asercja lokalna bez zmian) |
+| backup / `tower_test_status` | CREATE DATABASE | SKIP |
+| nullguard „funkcje bez wpisu” | CRLF w `comm` na Windows | `tr -d '\r'` |
+| workflows START-1…7 = 0 | shim no-opował ponowne migracje po seed | `TOWER_ALLOW_MIG_REAPPLY` |
+| storage KSH PDF HHL = 0 | `storage.objects` przeżywa DROP public + UNIQUE | czyszczenie (replica) + unikalna ścieżka na hosted |
+| i2 GPS flags puste | enum bez `DRIVER_APP` | `DRIVER_PWA` na hosted |
+| i2 rate_card_save / purge | `-c`→`-f`: `set_config(...,true)` poza transakcją | jawne `BEGIN`…`COMMIT` |
+| i2 MFA factors = 0 | prawdziwa `auth.mfa_factors` (nie atrapa) | insert z kolumnami hosted; bez DROP tabeli |
+| i2 UNLOADED +00 vs +02 | TimeZone=UTC na poolerze | `TimeZone=Europe/Warsaw` w shim + `PGTZ` |
+| pooler leftover JWT | `auth.uid()` w insertach postgres | clear JWT na początku każdego psql |
+| money FIX JSON | Windows Store `python3` stub | Node |
+| UTF-8 PL w `-c` | Win32 argv | `-c` → plik UTF-8 + `-f` |

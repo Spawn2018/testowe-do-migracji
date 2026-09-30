@@ -9,10 +9,17 @@ ADMIN=${PGADMIN:-postgres://postgres@localhost:5433/postgres}
 DB=tower_test_invite; URL="${ADMIN%/*}/$DB"
 psql "$ADMIN" -q -c "drop database if exists $DB" -c "create database $DB"
 psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/supabase_stub.sql
-psql "$URL" -q -v ON_ERROR_STOP=1 -c "create table if not exists auth.users (id uuid primary key default gen_random_uuid(),
-  email text, created_at timestamptz not null default now(), last_sign_in_at timestamptz)"
+# Lokalnie: atrapa auth.users. Hosted: prawdziwa tabela (Admin API / SQL) — bez CREATE w schemacie auth.
+if [ -z "${TOWER_HOSTED_READY:-}" ]; then
+  psql "$URL" -q -v ON_ERROR_STOP=1 -c "create table if not exists auth.users (id uuid primary key default gen_random_uuid(),
+    email text, created_at timestamptz not null default now(), last_sign_in_at timestamptz)"
+fi
 for f in supabase/migrations/*.sql; do psql "$URL" -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null 2>&1 || { echo "MIGRACJA $f: błąd"; exit 1; }; done
 psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/seed.sql
+# Hosted: upewnij się, że seed NIE ma kont w auth (test osieroconych app_users / relink).
+if [ -n "${TOWER_HOSTED_READY:-}" ]; then
+  node scripts/test-auth-admin.mjs remove-seed >/dev/null
+fi
 set +e
 PSQL="psql $URL -Atq"
 HHL=11111111-0000-0000-0000-000000000001
@@ -88,9 +95,9 @@ chk "nowe konto auth z adresem z listy → app_users.auth_id = nowe konto" "$(Q 
 chk "rola i organizacja bez zmian"                               "$(Q "select role||':'||(org_id is not null) from app_users where auth_id='$REL'")" "CLIENT_ADMIN:true"
 chk "audit USER_RELINKED_AFTER_RESTORE, adres zdjęty z listy"   "$(Q "select count(*) from audit_log where action='USER_RELINKED_AFTER_RESTORE' and new_value->>'new_auth_id'='$REL'"):$(Q "select count(*) from account_relink_pending where email='ksh@test'")" "1:0"
 chk "połączone konto widzi dane (>0)"                            "$( [ "$(sees $REL)" -gt 0 ] && echo t)" t
-chk "adres spoza listy i bez zaproszenia → TOWER_NO_INVITE"      "$($PSQL -c "insert into auth.users (email) values ('obcy@firma.pl')" 2>&1 | grep -c TOWER_NO_INVITE)" 1
+chk "adres spoza listy i bez zaproszenia → TOWER_NO_INVITE"      "$($PSQL -c "insert into auth.users (id, email) values (gen_random_uuid(), 'obcy@firma.pl')" 2>&1 | grep -c TOWER_NO_INVITE)" 1
 $PSQL -c "insert into account_relink_pending (email, app_user_id, old_auth_id) select 'scx@test', id, '$REL' from app_users where email='scx@test' on conflict (email) do update set old_auth_id = excluded.old_auth_id" >/dev/null
-chk "wiersz nieosierocony (stare auth_id istnieje) → bez przejęcia" "$($PSQL -c "insert into auth.users (email) values ('scx@test')" 2>&1 | grep -c TOWER_NO_INVITE):$(Q "select count(*) from app_users where email='scx@test' and auth_id='11111111-0000-0000-0000-000000000003'")" "1:1"
+chk "wiersz nieosierocony (stare auth_id istnieje) → bez przejęcia" "$($PSQL -c "insert into auth.users (id, email) values (gen_random_uuid(), 'scx@test')" 2>&1 | grep -c TOWER_NO_INVITE):$(Q "select count(*) from app_users where email='scx@test' and auth_id='11111111-0000-0000-0000-000000000003'")" "1:1"
 chk "ponowne restore_mark_relink() — idempotentne (ksh połączony)" "$(Q "select restore_mark_relink()"):$(Q "select count(*) from account_relink_pending where email='ksh@test'")" "2:0"
 chk "anon/authenticated: brak dostępu do listy i funkcji"        "$(Q "select has_table_privilege('authenticated','account_relink_pending','select') or has_table_privilege('anon','account_relink_pending','select') or has_function_privilege('authenticated','restore_mark_relink()','execute')")" f
 

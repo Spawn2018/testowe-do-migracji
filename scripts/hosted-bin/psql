@@ -1,14 +1,29 @@
 #!/usr/bin/env bash
 # Shim / wrapper psql: Windows wymaga -d URI (pozycyjny URI ignoruje -c).
 # Hosted: no-op dla drop/create oraz atrap/migracji/seed.
+# Windows: -c → plik UTF-8 + -f (argv Win32 psuje znaki PL).
+# Pooler: czyści request.jwt.claim.* na początku KAŻDEGO wywołania (ta sama sesja).
 set -e
 REAL_PSQL="${TOWER_REAL_PSQL:-psql}"
+TMPFILES=()
+cleanup() {
+  if [ "${#TMPFILES[@]}" -gt 0 ]; then
+    rm -f "${TMPFILES[@]}" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
+
+noop_exit() {
+  trap - EXIT
+  cleanup
+  exit 0
+}
 
 prev=""
 for a in "$@"; do
   if [ "$prev" = "-c" ] || [ "$prev" = "--command" ]; then
     if printf '%s' "$a" | grep -qiE 'drop[[:space:]]+database|create[[:space:]]+database'; then
-      exit 0
+      noop_exit
     fi
   fi
   prev=$a
@@ -18,17 +33,52 @@ prev=""
 for a in "$@"; do
   if [ "$prev" = "-f" ] || [ "$prev" = "--file" ]; then
     case "$a" in
-      *supabase_stub.sql|*storage_stub.sql|*seed.sql|*supabase/migrations/*)
-        exit 0
+      *supabase_stub.sql|*storage_stub.sql|*seed.sql)
+        noop_exit
+        ;;
+      *supabase/migrations/*)
+        if [ -z "${TOWER_ALLOW_MIG_REAPPLY:-}" ]; then
+          noop_exit
+        fi
         ;;
     esac
   fi
   prev=$a
 done
 
+CLEAR_SQL=$(mktemp "${TMPDIR:-/tmp}/tower-psql-jwt.XXXXXX.sql")
+TMPFILES+=("$CLEAR_SQL")
+printf '%s\n' \
+  "do \$\$ begin" \
+  "  perform set_config('request.jwt.claim.sub','',false);" \
+  "  perform set_config('request.jwt.claim.aal','',false);" \
+  "  perform set_config('request.jwt.claims','',false);" \
+  "  perform set_config('TimeZone','Europe/Warsaw',false);" \
+  "end \$\$;" \
+  >"$CLEAR_SQL"
+
 args=()
+prev=""
+have_sql_file=0
 for a in "$@"; do
+  if [ "$prev" = "-c" ] || [ "$prev" = "--command" ]; then
+    tf=$(mktemp "${TMPDIR:-/tmp}/tower-psql.XXXXXX.sql")
+    # clear JWT w TYM SAMYM skrypcie co polecenie (jedna sesja poolera)
+    cat "$CLEAR_SQL" >"$tf"
+    printf '%s\n' "$a" >>"$tf"
+    TMPFILES+=("$tf")
+    args+=(-f "$tf")
+    have_sql_file=1
+    prev=""
+    continue
+  fi
   case "$a" in
+    -c|--command)
+      prev=$a
+      ;;
+    -f|--file)
+      prev=$a
+      ;;
     postgres://*|postgresql://*)
       a=$(printf '%s' "$a" | sed -E 's#/(tower_test_[A-Za-z0-9_]+)([?#].*)?$#/postgres\2#')
       if [ ${#args[@]} -eq 0 ]; then
@@ -36,12 +86,33 @@ for a in "$@"; do
       else
         args+=("$a")
       fi
+      prev=""
       ;;
     *)
-      args+=("$a")
+      if [ "$prev" = "-f" ] || [ "$prev" = "--file" ]; then
+        if [ "$have_sql_file" = 0 ]; then
+          args+=(-f "$CLEAR_SQL")
+          have_sql_file=1
+        fi
+        args+=(-f "$a")
+        prev=""
+      else
+        args+=("$a")
+        prev=""
+      fi
       ;;
   esac
 done
 
+# samo połączenie / -c już obsłużone; gdy tylko URI bez pliku — i tak wyczyść
+if [ "$have_sql_file" = 0 ]; then
+  args+=(-f "$CLEAR_SQL")
+fi
+
 export PGCLIENTENCODING="${PGCLIENTENCODING:-UTF8}"
-exec "$REAL_PSQL" "${args[@]}"
+export LANG="${LANG:-C.UTF-8}"
+"$REAL_PSQL" "${args[@]}"
+status=$?
+trap - EXIT
+cleanup
+exit "$status"

@@ -54,8 +54,15 @@ if echo "$out" | grep -q "Z1"; then ok=$((ok+1)); echo "  OK    wyliczenie po za
 
 
 echo; echo "[M3] Kurs NBP: fx_rates, reguła W3, migawka przy rozładunku"
-FIX=$(python3 -c "import json;print(json.dumps(json.load(open('tests/fixtures/nbp-eur-2025-12.json'))))")
-val "parser zapisuje tabele z odpowiedzi API (przedział)" $HHL "set local role postgres; select fx_ingest_nbp('$FIX'::jsonb, 'fixture') > 5" t commit
+# Hosted Windows: `python3` bywa atrapą Sklepu (pusty stdout) — bierzemy Node.
+if command -v node >/dev/null 2>&1; then
+  FIX=$(node -e "const fs=require('fs');process.stdout.write(JSON.stringify(JSON.parse(fs.readFileSync('tests/fixtures/nbp-eur-2025-12.json','utf8'))))")
+else
+  FIX=$(python3 -c "import json;print(json.dumps(json.load(open('tests/fixtures/nbp-eur-2025-12.json'))))")
+fi
+# Ingest jako właściciel połączenia (postgres). Na hosted `set local role postgres` z authenticated jest zabronione.
+ing=$($PSQL -c "select fx_ingest_nbp('$FIX'::jsonb, 'fixture') > 5" 2>&1 | grep -vE '^(SELECT|)$' | tail -1 | tr -d '\r')
+if [ "$ing" = "t" ]; then ok=$((ok+1)); echo "  OK    parser zapisuje tabele z odpowiedzi API (przedział)"; else fail=$((fail+1)); echo "  FAIL  parser zapisuje tabele z odpowiedzi API (przedział)  (otrzymano: $ing, oczekiwano: t)"; fi
 val "29.12.2025 → 248/A z 23.12 (5 dni bez tabel)"   $KSH "select table_no||' '||rate_date from fx_rate_before('2025-12-29')" "248/A/NBP/2025 2025-12-23"
 val "2.01.2026 → tabela z 31.12 (dzień roboczy przed)" $KSH "select rate_date from fx_rate_before('2026-01-02')" "2025-12-31"
 err "brak tabeli w przedziale → błąd, nie zgadywanie" $KSH "select * from fx_rate_before('2025-11-01')" "Brak tabeli A NBP"
@@ -74,7 +81,9 @@ sys "delete from fx_rates where table_no='999/A/TEST'"
 sys "update loads set actual_delivery_at='2026-03-10T10:00:00Z' where id='$L2'"
 val "brak tabeli przed rozładunkiem → migawka prowizoryczna (nie zgadywana)" $HHL "select cost_fx_provisional::text||' '||fuel_ref_date from v_load_financials_hhl where load_id='$L2'" "true 2026-03-10"
 sys "insert into fx_rates (currency, rate_date, rate_pln, table_no) values ('EUR','2026-03-09',4.3000,'047/A/NBP/2026')"
-val "fx_apply_pending uzupełnia migawkę po pobraniu tabeli" $HHL "set local role postgres; select fx_apply_pending()" 1 commit
+# fx_apply_pending: tylko service_role / właściciel — nie przez set role z authenticated
+app=$($PSQL -c "select fx_apply_pending()" 2>&1 | grep -vE '^(SELECT|)$' | tail -1 | tr -d '\r')
+if [ "$app" = "1" ]; then ok=$((ok+1)); echo "  OK    fx_apply_pending uzupełnia migawkę po pobraniu tabeli"; else fail=$((fail+1)); echo "  FAIL  fx_apply_pending uzupełnia migawkę po pobraniu tabeli  (otrzymano: $app, oczekiwano: 1)"; fi
 val "po uzupełnieniu: tabela z dnia roboczego przed rozładunkiem" $HHL "select cost_fx_table_no||' '||cost_fx_provisional from v_load_financials_hhl where load_id='$L2'" "047/A/NBP/2026 false"
 
 echo; echo "[M5] Numery zleceń: wymuszenie z bazy, każda strona swój, brak przed terminem → ryzyko + przypomnienie"
@@ -89,8 +98,10 @@ err "przewoźnik nie zmieni okna planowego (AN2)"           $SCX "update loads s
 err "załadunek bez numeru przewoźnika → błąd"              $HHL "update loads set hhl_order_no='HHL/T/2', status='AT_LOADING' where id='$L2'" "bez numeru zlecenia przewo"
 sys "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date) values ('$L3','$P','00000000-0000-0000-0000-00000000a003','KSH/3', current_date + 1), ('$L4','$P','00000000-0000-0000-0000-00000000a003','KSH/4', current_date + 5)"
 err "wykrywanie: zwykły użytkownik nie wywoła"             $HHL "select detect_missing_order_numbers()" "permission denied"
-val "wykrywanie: 2 ryzyka (HHL + przewoźnik) tylko dla terminu < 48 h" $HHL "set local role postgres; select detect_missing_order_numbers()" 2 commit
-val "ponowne wykrywanie nie dubluje"                       $HHL "set local role postgres; select detect_missing_order_numbers()" 0 commit
+d1=$($PSQL -c "select detect_missing_order_numbers()" 2>&1 | grep -vE '^(SELECT|)$' | tail -1 | tr -d '\r')
+if [ "$d1" = "2" ]; then ok=$((ok+1)); echo "  OK    wykrywanie: 2 ryzyka (HHL + przewoźnik) tylko dla terminu < 48 h"; else fail=$((fail+1)); echo "  FAIL  wykrywanie: 2 ryzyka…  (otrzymano: $d1, oczekiwano: 2)"; fi
+d2=$($PSQL -c "select detect_missing_order_numbers()" 2>&1 | grep -vE '^(SELECT|)$' | tail -1 | tr -d '\r')
+if [ "$d2" = "0" ]; then ok=$((ok+1)); echo "  OK    ponowne wykrywanie nie dubluje"; else fail=$((fail+1)); echo "  FAIL  ponowne wykrywanie nie dubluje  (otrzymano: $d2, oczekiwano: 0)"; fi
 val "ryzyka w kolejce (L3: HHL + przewoźnik)"              $HHL "select string_agg(detail->>'side', ',' order by detail->>'side') from risk_signals where load_id='$L3' and resolved_at is null" "CARRIER,HHL"
 val "L4 (termin za 5 dni) bez ryzyka"                      $HHL "select count(*) from risk_signals where load_id='$L4'" 0
 val "przypomnienie dla HHL: tylko HHL-owe"                 $HHL "select string_agg(payload->>'side', ',') from notifications where template='ORDER_NO_MISSING'" "HHL"
@@ -193,7 +204,14 @@ val "SCX (przewoźnik transportu) zapisuje MILESTONE_LOADED"            $SCX "in
 err "„Rozładowany” bez daty rozładunku odrzucony"                      $SCX "update loads set status='UNLOADED' where id='$L9'" "wymaga daty rozładunku"
 val "„Rozładowany” razem z datą w jednej zmianie"                     $SCX "update loads set status='UNLOADED', actual_delivery_at=now() where id='$L9'; select status from loads where id='$L9'" UNLOADED
 sys "insert into geofences (project_id, name, kind, geom, country) values ('$P','Terminal Nynäshamn','PORT_IN',make_circle_fence(58.9350,17.9500,800),'SE')"
-psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0017_driver_positions.sql >/dev/null 2>&1 && psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0017_driver_positions.sql >/dev/null 2>&1
+if [ -n "${TOWER_HOSTED_READY:-}" ]; then
+  # Hosted: shim no-opuje ponowne -f migracji; stosujemy ten sam UPDATE co 0017.
+  $PSQL -c "update geofences set geom = make_circle_fence(58.90453, 17.95621, 800)
+    where name = 'Terminal Nynäshamn'
+      and st_dwithin(st_centroid(geom)::geography, st_setsrid(st_makepoint(17.9500, 58.9350), 4326)::geography, 30)" >/dev/null
+else
+  psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0017_driver_positions.sql >/dev/null 2>&1 && psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0017_driver_positions.sql >/dev/null 2>&1
+fi
 chk "0017 ponownie (2×): terminal Nynäshamn przesunięty na zweryfikowane współrzędne" "$(Q "select round(st_y(st_centroid(geom))::numeric,3)||' '||round(st_x(st_centroid(geom))::numeric,3) from geofences where name='Terminal Nynäshamn' and project_id='$P'")" "58.905 17.956"
 
 echo; echo "[M12] Integracje: ryzyka z funkcji Edge, pozycje dla TomTom, pierwszeństwo źródeł rejsu"

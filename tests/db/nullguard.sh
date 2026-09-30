@@ -33,9 +33,9 @@ call() { $PSQL -c "begin; set local role authenticated; set local request.jwt.cl
 SNAPQ="select (select count(*) from audit_log)||'/'||(select count(*) from import_column_templates)||'/'||(select count(*) from loads)||'/'||(select count(*) from invoices)||'/'||(select count(*) from notifications)"
 SNAP0=$($PSQL -c "$SNAPQ")
 echo; echo "[I-2A] kompletność listy wywołań"
-CAT=$($PSQL -c "select distinct p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prokind='f' and not exists (select 1 from pg_depend d where d.objid=p.oid and d.deptype='e') and has_function_privilege('authenticated', p.oid, 'execute') order by 1")
-LIST=$(grep -vE '^\s*(#|$)' tests/db/null-guard-calls.txt | awk -F' \\| ' '{print $1}' | sort -u)
-MISS=$(comm -23 <(echo "$CAT") <(echo "$LIST") | tr '\n' ' ')
+CAT=$($PSQL -c "select distinct p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prokind='f' and not exists (select 1 from pg_depend d where d.objid=p.oid and d.deptype='e') and has_function_privilege('authenticated', p.oid, 'execute') order by 1" | tr -d '\r')
+LIST=$(grep -vE '^\s*(#|$)' tests/db/null-guard-calls.txt | awk -F' \\| ' '{print $1}' | tr -d '\r' | sort -u)
+MISS=$(comm -23 <(echo "$CAT" | sort -u) <(echo "$LIST") | tr '\n' ' ')
 NFN=$(echo "$CAT" | grep -c .)
 if [ -z "$MISS" ]; then ok=$((ok+1)); say "OK    każda z $NFN funkcji authenticated ma wpis w null-guard-calls.txt"; else fail=$((fail+1)); say "FAIL  funkcje bez wpisu: $MISS"; fi
 

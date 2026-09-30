@@ -29,10 +29,20 @@ sys() { $PSQL -v ON_ERROR_STOP=1 -c "$1" >/dev/null 2>&1; }
 sys "insert into loads (id, project_id, order_no) values ('$L3','$P','KSH/3')"
 
 echo; echo "[1] Koszyki"
-val "trzy koszyki prywatne"                        $HHL "select count(*) from storage.buckets where id in ('dokumenty','zdjecia','faktury') and not public" 3
-val "W4: limit zdjecia 2 MB"                         $HHL "select file_size_limit from storage.buckets where id='zdjecia'" 2097152
-val "W4: limit dokumenty 10 MB"                      $HHL "select file_size_limit from storage.buckets where id='dokumenty'" 10485760
-val "0040: limit faktury 10 MB (jak wszystkie PDF)"  $HHL "select file_size_limit from storage.buckets where id='faktury'" 10485760
+if [ -n "${TOWER_HOSTED_READY:-}" ]; then
+  # Hosted: storage.buckets bez SELECT dla authenticated (RLS platformy) — limity sprawdzamy jako postgres.
+  # Asercje bezpieczeństwa obiektów/dokumentów poniżej bez zmian.
+  chk6s() { if [ "$2" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $2, oczekiwano: $3)"; fi; }
+  chk6s "trzy koszyki prywatne" "$($PSQL -c "select count(*) from storage.buckets where id in ('dokumenty','zdjecia','faktury') and not public" | tr -d '\r')" 3
+  chk6s "W4: limit zdjecia 2 MB" "$($PSQL -c "select file_size_limit from storage.buckets where id='zdjecia'" | tr -d '\r')" 2097152
+  chk6s "W4: limit dokumenty 10 MB" "$($PSQL -c "select file_size_limit from storage.buckets where id='dokumenty'" | tr -d '\r')" 10485760
+  chk6s "0040: limit faktury 10 MB (jak wszystkie PDF)" "$($PSQL -c "select file_size_limit from storage.buckets where id='faktury'" | tr -d '\r')" 10485760
+else
+  val "trzy koszyki prywatne"                        $HHL "select count(*) from storage.buckets where id in ('dokumenty','zdjecia','faktury') and not public" 3
+  val "W4: limit zdjecia 2 MB"                         $HHL "select file_size_limit from storage.buckets where id='zdjecia'" 2097152
+  val "W4: limit dokumenty 10 MB"                      $HHL "select file_size_limit from storage.buckets where id='dokumenty'" 10485760
+  val "0040: limit faktury 10 MB (jak wszystkie PDF)"  $HHL "select file_size_limit from storage.buckets where id='faktury'" 10485760
+fi
 err "0040: PDF faktury 10 MB + 1 B odrzucony"        $SCX "select * from create_document(null,'INVOICE','f.pdf','application/pdf',10485761,'$P')" "za duży"
 
 echo; echo "[2] Rejestracja dokumentu i ścieżka nadawana przez serwer"
@@ -54,7 +64,13 @@ err "SCX nie wgra pliku do innego koszyka niż kategoria" $SCX "insert into stor
 D2=$(run $KSH "select object_path from create_document('$L1','SPEC','rys.pdf','application/pdf',1000)" commit | grep -E '^[0-9a-f]{8}-' | head -1)
 err "SCX nie wgra pliku pod dokument zarejestrowany przez KSH" $SCX "insert into storage.objects (bucket_id, name) values ('dokumenty','$D2')" "row-level security"
 val "SCX nie nadpisze obiektu (brak UPDATE)"        $SCX "with u as (update storage.objects set name=name||'x' where bucket_id='dokumenty' returning 1) select count(*) from u" 0
-val "SCX nie usunie obiektu (brak DELETE)"          $SCX "with u as (delete from storage.objects where bucket_id='dokumenty' returning 1) select count(*) from u" 0
+# Hosted: DELETE bywa blokowany triggerem protect_delete (RAISE) zamiast „0 wierszy” — obie ścieżki = brak usunięcia.
+out=$(run $SCX "with u as (delete from storage.objects where bucket_id='dokumenty' returning 1) select count(*) from u")
+if echo "$out" | grep -qE '^0$|protect_delete|tylko.*odczyt|permission denied|42501'; then
+  ok=$((ok+1)); echo "  OK    SCX nie usunie obiektu (brak DELETE)"
+else
+  fail=$((fail+1)); echo "  FAIL  SCX nie usunie obiektu (brak DELETE)  (otrzymano: $(echo "$out" | tail -1), oczekiwano: 0 lub protect_delete)"
+fi
 
 echo; echo "[4] Odczyt obiektu = widoczność dokumentu"
 val "HHL widzi plik"                                $HHL "select count(*) from storage.objects where name='$D1'" 1
@@ -74,9 +90,18 @@ val "HHL widzi PDF faktury kosztowej"               $HHL "select count(*) from s
 val "SCX widzi PDF własnej faktury"                 $SCX "select count(*) from storage.objects where bucket_id='faktury'" 1
 val "KSH nie widzi PDF faktury kosztowej"           $KSH "select count(*) from storage.objects where bucket_id='faktury'" 0
 val "KSH nie widzi metadanych PDF faktury kosztowej" $KSH "select count(*) from documents where category='INVOICE'" 0
-sys "insert into documents (id, project_id, category, storage_path, file_name) values ('55555555-0000-0000-0000-000000000001','$P','INVOICE','faktury/$P/org/hhl/HHL-9.pdf','HHL-9.pdf'); insert into storage.objects (bucket_id, name) values ('faktury','$P/org/hhl/HHL-9.pdf'); insert into invoice_documents (invoice_id, document_id, role) values ('$INVP','55555555-0000-0000-0000-000000000001','FAKTURA_PDF')"
-val "KSH widzi PDF faktury HHL dla KSH"             $KSH "select count(*) from storage.objects where bucket_id='faktury'" 1
-val "SCX nie widzi PDF faktury HHL dla KSH"         $SCX "select count(*) from storage.objects where name='$P/org/hhl/HHL-9.pdf'" 0
+# Hosted: storage.objects nie czyści się przy DROP public — stała ścieżka HHL-9.pdf koliduje z poprzednim przebiegiem.
+if [ -n "${TOWER_HOSTED_READY:-}" ]; then
+  HHL_DOC=55555555-0000-0000-0000-000000000001
+  HHL_OBJ="$P/org/hhl/HHL-9-$RANDOM$RANDOM.pdf"
+  sys "insert into documents (id, project_id, category, storage_path, file_name) values ('$HHL_DOC','$P','INVOICE','faktury/$HHL_OBJ','HHL-9.pdf'); insert into storage.objects (bucket_id, name) values ('faktury','$HHL_OBJ'); insert into invoice_documents (invoice_id, document_id, role) values ('$INVP','$HHL_DOC','FAKTURA_PDF')"
+  val "KSH widzi PDF faktury HHL dla KSH"             $KSH "select count(*) from storage.objects where bucket_id='faktury'" 1
+  val "SCX nie widzi PDF faktury HHL dla KSH"         $SCX "select count(*) from storage.objects where name='$HHL_OBJ'" 0
+else
+  sys "insert into documents (id, project_id, category, storage_path, file_name) values ('55555555-0000-0000-0000-000000000001','$P','INVOICE','faktury/$P/org/hhl/HHL-9.pdf','HHL-9.pdf'); insert into storage.objects (bucket_id, name) values ('faktury','$P/org/hhl/HHL-9.pdf'); insert into invoice_documents (invoice_id, document_id, role) values ('$INVP','55555555-0000-0000-0000-000000000001','FAKTURA_PDF')"
+  val "KSH widzi PDF faktury HHL dla KSH"             $KSH "select count(*) from storage.objects where bucket_id='faktury'" 1
+  val "SCX nie widzi PDF faktury HHL dla KSH"         $SCX "select count(*) from storage.objects where name='$P/org/hhl/HHL-9.pdf'" 0
+fi
 
 echo; echo "[6] Wycofanie rejestracji"
 DX=$(run $SCX "select id from create_document('$L1','POD','pod.pdf','application/pdf',1000)" commit | grep -E '^[0-9a-f]{8}-' | head -1)

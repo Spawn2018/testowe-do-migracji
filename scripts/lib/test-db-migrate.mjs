@@ -41,6 +41,20 @@ export async function resetPublic(url) {
   await client.query(
     'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO postgres, service_role, anon, authenticated',
   );
+  // Hosted: storage.* przeżywa DROP public; bezpośrednie DELETE bywa zablokowane triggerem.
+  try {
+    await client.query('begin');
+    await client.query(`set local session_replication_role = replica`);
+    const del = await client.query(
+      `delete from storage.objects
+        where bucket_id in ('dokumenty','zdjecia','faktury','harmonogramy')`,
+    );
+    await client.query('commit');
+    console.log(`reset: storage.objects usunięte=${del.rowCount}`);
+  } catch (e) {
+    await client.query('rollback').catch(() => {});
+    console.log(`reset: storage.objects pominięte (${String(e.message || e).slice(0, 100)})`);
+  }
   await client.end();
 }
 

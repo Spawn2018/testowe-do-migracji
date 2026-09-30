@@ -71,7 +71,13 @@ chk "FERRY: segment FERRY, ETA = przypłynięcie po opóźnieniu + 30 h, pasmo �
 
 echo; echo "[I-2d] odcinek SE: pozycja GPS"
 $PSQL -c "set session_replication_role=replica; update loads set status='IN_TRANSIT_SE' where id='$L2'; set session_replication_role=origin;" >/dev/null
-$PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), 'DRIVER_APP')" >/dev/null 2>&1 || $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), (enum_range(null::position_source))[1])" >/dev/null
+# Hosted: enum bez DRIVER_APP (jest DRIVER_PWA). Lokalnie stub może mieć inne etykiety — fallback enum_range.
+if [ -n "${TOWER_HOSTED_READY:-}" ]; then
+  $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), 'DRIVER_PWA')" >/dev/null
+else
+  $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), 'DRIVER_APP')" >/dev/null 2>&1 \
+    || $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), (enum_range(null::position_source))[1])" >/dev/null
+fi
 chk "świeża pozycja: flaga GPS, pozostało < 18,5 h" "$(Q "select eta_basis->'flags'->>0 from loads where id='$L2'")/$(Q "select (eta_site < now()+interval '18 hours')::text from loads where id='$L2'")" "pozycja GPS — odległość do placu w linii prostej/true"
 $PSQL -c "insert into positions (load_id, ts, geom_raw, source) select '$L2', now()-interval '5 hours', st_setsrid(st_makepoint(20.0, 62.0),4326), source from positions where load_id='$L2' limit 1" >/dev/null
 chk "starsza pozycja nie zmienia wyniku (liczy się najnowsza)" "$(Q "select eta_basis->'flags'->>0 from loads where id='$L2'")" "pozycja GPS — odległość do placu w linii prostej"
@@ -169,7 +175,7 @@ chk "nieznana klasa odrzucona (CHECK)" "$($PSQL -c "insert into rate_rules (rate
 err "KSH: dobór stawki odrzucony" $KSH "select rate_match('$RR','$LS')" "wyłącznie HHL"
 err "przewoźnik: dobór stawki odrzucony" $SCX "select rate_match('$RC','$LS')" "wyłącznie HHL"
 val "KSH nie widzi cennika (RLS, 0065)" $KSH "select count(*) from rate_rules" 0
-$PSQL -c "delete from shipment_items where shipment_code like 'I12-%'; delete from loads where id in ('$LS','$LDM','$LMX'); select set_config('tower.rate_purge','on',true); delete from rate_cards where id in ('$RC','$RR')" >/dev/null
+$PSQL -c "delete from shipment_items where shipment_code like 'I12-%'; delete from loads where id in ('$LS','$LDM','$LMX'); begin; select set_config('tower.rate_purge','on',true); delete from rate_cards where id in ('$RC','$RR'); commit" >/dev/null
 
 echo; echo "[I-19] formularz cennika HHL — wersje, walidacja, dziennik (0065; stawki TESTOWE, D-1)"
 CAR=00000000-0000-0000-0000-00000000a003; CLI=00000000-0000-0000-0000-00000000a002
@@ -206,7 +212,7 @@ err "KSH: dziennik cennika odrzucony" $KSH "select count(*) from rate_card_chang
 LI19=77777777-0000-0000-0000-0000000000b1
 $PSQL -c "insert into loads (id, project_id, order_no) values ('$LI19','$P','I19-S'); insert into shipment_items (project_id, load_id, shipment_code, cargo_class) values ('$P','$LI19','I19-S1','STANDARD')" >/dev/null
 val "rate_match na wersji z formularza: STANDARD 98" $HHL "select rate_match((select id from rate_cards where project_id='$P' and side='COST' and org_id='$CAR' and version=2), '$LI19')->>'base_rate'" "98.00"
-$PSQL -c "delete from shipment_items where shipment_code like 'I19-%'; delete from loads where id='$LI19'; delete from audit_log where action='RATE_CARD_VERSION'; select set_config('tower.rate_purge','on',true); delete from rate_cards where project_id='$P'" >/dev/null
+$PSQL -c "delete from shipment_items where shipment_code like 'I19-%'; delete from loads where id='$LI19'; delete from audit_log where action='RATE_CARD_VERSION'; begin; select set_config('tower.rate_purge','on',true); delete from rate_cards where project_id='$P'; commit" >/dev/null
 chk "sprzątanie testu (tower.rate_purge): 0 cenników" "$(Q "select count(*) from rate_cards")" 0
 
 echo; echo "[I-2j] pozycje promów z AIS (vessel_positions, 0053)"
@@ -330,17 +336,44 @@ chk "p_days NULL/ujemne: odmowa" "$($PSQL -c "select purge_personal_data(-1)" 2>
 chk "purge_personal_data bez EXECUTE dla anon i authenticated" "$(Q "select has_function_privilege('anon','purge_personal_data(int)','execute')::text||has_function_privilege('authenticated','purge_personal_data(int)','execute')::text")" "falsefalse"
 
 echo; echo "[I-17] drugie urządzenie 2FA (0060)"
-$PSQL -c "create table if not exists auth.mfa_factors (id uuid primary key default gen_random_uuid(), user_id uuid, factor_type text, status text)" >/dev/null
+if [ -n "${TOWER_HOSTED_READY:-}" ]; then
+  # Hosted: prawdziwa auth.mfa_factors — bez CREATE/DROP atrapy; insert z wymaganymi kolumnami.
+  # Wymaga kont seed w auth.users (brama: ensureSeedAuthUsers przed i2).
+  if [ "$($PSQL -c "select count(*) from auth.users where id='$HHL'" | tr -d '\r')" != "1" ]; then
+    fail=$((fail+3)); echo "  FAIL  auth.users bez konta HHL — uruchom bramę z ensureSeedAuthUsers (i2)"
+  fi
+  $PSQL -c "delete from auth.mfa_factors where user_id in ('$HHL','$KSH') and coalesce(friendly_name,'') like 'tower-db-test%'" >/dev/null
+else
+  $PSQL -c "create table if not exists auth.mfa_factors (id uuid primary key default gen_random_uuid(), user_id uuid, factor_type text, status text)" >/dev/null
+fi
 val "brak składników: factors 0" $HHL "$A2; select my_mfa_status()->>'factors'" 0
-$PSQL -c "insert into auth.mfa_factors (user_id, factor_type, status) values ('$HHL','totp','verified'), ('$HHL','totp','unverified'), ('$KSH','totp','verified')" >/dev/null
+if [ -n "${TOWER_HOSTED_READY:-}" ]; then
+  if ! $PSQL -c "insert into auth.mfa_factors (id, user_id, factor_type, status, friendly_name, created_at, updated_at, secret) values
+    (gen_random_uuid(),'$HHL','totp','verified','tower-db-test-1',now(),now(),'t'),
+    (gen_random_uuid(),'$HHL','totp','unverified','tower-db-test-u',now(),now(),'t'),
+    (gen_random_uuid(),'$KSH','totp','verified','tower-db-test-k',now(),now(),'t')" >/dev/null; then
+    fail=$((fail+1)); echo "  FAIL  insert auth.mfa_factors (1) — FK auth.users / uprawnienia hosted"
+  fi
+else
+  $PSQL -c "insert into auth.mfa_factors (user_id, factor_type, status) values ('$HHL','totp','verified'), ('$HHL','totp','unverified'), ('$KSH','totp','verified')" >/dev/null
+fi
 val "jedno urządzenie (niezweryfikowane i cudze nie liczą się): factors 1" $HHL "$A2; select my_mfa_status()->>'factors'" 1
 err "włączenie wymagania z jednym urządzeniem: odmowa" $HHL "$A2; select admin_set_mfa_enforcement(true)" "drugie urządzenie"
-$PSQL -c "insert into auth.mfa_factors (user_id, factor_type, status) values ('$HHL','totp','verified')" >/dev/null
+if [ -n "${TOWER_HOSTED_READY:-}" ]; then
+  $PSQL -c "insert into auth.mfa_factors (id, user_id, factor_type, status, friendly_name, created_at, updated_at, secret) values
+    (gen_random_uuid(),'$HHL','totp','verified','tower-db-test-2',now(),now(),'t')" >/dev/null
+else
+  $PSQL -c "insert into auth.mfa_factors (user_id, factor_type, status) values ('$HHL','totp','verified')" >/dev/null
+fi
 val "dwa urządzenia: factors 2" $HHL "$A2; select my_mfa_status()->>'factors'" 2
 val "dwa urządzenia + aal2: włączenie wymagania" $HHL "$A2; select admin_set_mfa_enforcement(true)" t
 val "wyłączenie zawsze możliwe (aal2)" $HHL "$A2; select admin_set_mfa_enforcement(false)" f
 chk "mfa_factor_count bez EXECUTE dla API" "$(Q "select has_function_privilege('authenticated','mfa_factor_count()','execute')::text||has_function_privilege('anon','mfa_factor_count()','execute')::text")" "falsefalse"
-$PSQL -c "drop table auth.mfa_factors" >/dev/null
+if [ -n "${TOWER_HOSTED_READY:-}" ]; then
+  $PSQL -c "delete from auth.mfa_factors where coalesce(friendly_name,'') like 'tower-db-test%'" >/dev/null
+else
+  $PSQL -c "drop table auth.mfa_factors" >/dev/null
+fi
 
 echo; echo "[I-18] status dat planu WSTĘPNA | POTWIERDZONA (0061)"
 D1=$(date -d '+20 days' +%F); D2=$(date -d '+25 days' +%F); D3=$(date -d '+21 days' +%F); D4=$(date -d '+26 days' +%F); D5=$(date -d '+22 days' +%F); D6=$(date -d '+27 days' +%F)

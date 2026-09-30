@@ -69,7 +69,11 @@ chk "strażnik: inny rodzaj → drugie ryzyko strażnika" "$(Q "select count(*) 
 chk "wszystkie ryzyka funkcji: 0 bez klucza, 0 generycznych" "$(Q "select count(*) from risk_signals where (title_key is null or title_key='rk_generic') and title not in ('Stary tekst','Drugi stary','Inny rodzaj')")" 0
 
 ST="${ADMIN%/*}/tower_test_status"
-if psql "$ST" -Atqc "select 1" >/dev/null 2>&1; then
+if [ -n "${TOWER_HOSTED_READY:-}" ]; then
+  # Hosted: brak CREATE DATABASE / osobnej bazy po status.sh — SKIP (nie luzujemy asercji lokalnej).
+  echo "  SKIP  automat statusów/promów (tower_test_status) — wymaga osobnej bazy (CREATE DATABASE), niedostępne na hosted"
+  echo "  SKIP  automat: klucze funkcji — j.w."
+elif psql "$ST" -Atqc "select 1" >/dev/null 2>&1; then
   chk "automat statusów/promów (tower_test_status): 7 kluczy, 0 generycznych" \
     "$(psql "$ST" -Atqc "select count(distinct title_key)||'/'||count(*) filter (where title_key is null or title_key='rk_generic') from risk_signals")" "7/0"
   chk "automat: klucze funkcji" "$(psql "$ST" -Atqc "select string_agg(distinct title_key, ',' order by title_key) from risk_signals")" \
