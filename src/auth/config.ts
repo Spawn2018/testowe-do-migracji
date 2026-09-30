@@ -58,14 +58,30 @@ export function viewRoleForOrg(orgCode: string): 'HHL' | 'KSH' | 'SCX' | null {
 export function authErrorPl(message: string | undefined): string {
   const m = String(message ?? '');
   if (/TOWER_NO_INVITE|Database error saving new user|Signups not allowed/i.test(m)) {
-    return 'Ten adres nie ma zaproszenia. Poproś administratora HHL o dostęp.';
+    return 'Brak zaproszenia — skontaktuj się z HHL.';
   }
-  if (/rate limit|too many|security purposes/i.test(m)) {
+  if (/Invalid login credentials|invalid.*credentials|wrong password/i.test(m)) {
+    return 'Nieprawidłowy e-mail lub hasło.';
+  }
+  if (/Email link is invalid or has expired|otp_expired|Token has expired|expired/i.test(m)) {
+    return 'Link wygasł lub został już użyty. Poproś o nowy.';
+  }
+  if (/rate limit|too many|security purposes|over_request_rate/i.test(m)) {
     return 'Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.';
+  }
+  if (/Password should be|password.*weak|at least/i.test(m)) {
+    return 'Hasło musi mieć co najmniej 12 znaków.';
   }
   if (/not authorized|Error sending|smtp/i.test(m)) {
     return 'Wysyłka e-maili nie jest jeszcze skonfigurowana (SMTP Resend — krok właściciela).';
   }
   if (/invalid.*email|unable to validate email/i.test(m)) return 'Nieprawidłowy adres e-mail.';
   return m || 'Nieznany błąd logowania.';
+}
+
+/** AUTH-1: minimalna długość hasła. */
+export const PASSWORD_MIN = 12;
+
+export function passwordOk(pw: string): boolean {
+  return pw.length >= PASSWORD_MIN;
 }

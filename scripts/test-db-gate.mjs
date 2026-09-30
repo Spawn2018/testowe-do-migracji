@@ -1,7 +1,7 @@
 /**
  * Brama bazy na projekcie testowym Supabase (TEST_DB_URL).
  * 1) Bezpiecznik produkcji  2) status projektu  3) wyczyść public
- * 4) migracje 0001…0098  5) seed  6) zestawy z gate.sh  7) wynik liczbami
+ * 4) migracje 0001…0099  5) seed  6) zestawy z gate.sh  7) wynik liczbami
  *
  * Nie wypisuje haseł. Nie zmienia produkcji.
  *

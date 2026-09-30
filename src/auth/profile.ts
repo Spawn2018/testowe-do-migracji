@@ -9,6 +9,8 @@ export interface AuthProfile {
   org_name: string;
   locale: string;
   active: boolean;
+  /** AUTH-1: po zaproszeniu / magic linku — wymuś ustawienie hasła. */
+  must_set_password?: boolean;
 }
 
 let current: AuthProfile | null = null;

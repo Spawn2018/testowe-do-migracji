@@ -9,7 +9,9 @@ export function getSupabase(): Promise<SupabaseClient> {
   if (!clientPromise) {
     clientPromise = import('@supabase/supabase-js').then(({ createClient }) =>
       createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit' },
+        // AUTH-1: detectSessionInUrl=false — najpierw strona „Dalej” (skanery skrzynek
+        // zużywają jednorazowy token z hasha; weryfikacja dopiero po kliknięciu).
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: 'implicit' },
       }),
     );
   }

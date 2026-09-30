@@ -6,6 +6,7 @@ anon driver_get_instructions
 anon driver_post_event
 anon driver_post_position
 anon keep_alive
+anon auth_email_allowed
 # --- authenticated: pomocnicze RLS / widoki / funkcje wywoływane przez funkcje security invoker
 authenticated can_see_margin
 authenticated current_app_role
@@ -13,6 +14,8 @@ authenticated current_app_user_id
 authenticated current_org_id
 authenticated current_org_kind
 authenticated is_hhl
+authenticated auth_email_allowed
+authenticated app_user_mark_password_set
 authenticated doc_bucket
 authenticated doc_safe_name
 authenticated invoice_week_local

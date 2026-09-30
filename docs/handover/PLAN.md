@@ -186,7 +186,7 @@ decyzji, §3 powiadomienia, §4 widoczność, §5 SMS strefy, §6 ustawienia adm
 | ENV-0b | vitest: CRLF / suma makiety / hunspell skip Windows | 0 failed | DONE a2b38f18 (530 passed / 36 skip) |
 | ENV-0c | baza testowa watch-tower-test (emkbykwenwrjmbprydml) | brama hosted zielona | DONE 894a684e — pominięte w tej sesji |
 | ENV-0e | usuń VITE_TRAFIKVERKET_API_KEY — tylko TRAFIKVERKET_API_KEY | brak VITE_ w vite/env | DONE a2b38f18 |
-| AUTH-1 | P0. Logowanie hasłem (PO_SPOTKANIU §1): zaproszenie→ustaw hasło; e-mail+hasło; reset; strona pośrednia „Dalej”; bez zaproszenia zero e-maili | 20 kont / 5 min bez e-maila; skaner nie zużywa tokenu | DO ZROBIENIA |
+| AUTH-1 | P0. Logowanie hasłem (PO_SPOTKANIU §1): zaproszenie→ustaw hasło; e-mail+hasło; reset; strona pośrednia „Dalej”; bez zaproszenia zero e-maili | 20 kont / 5 min bez e-maila; skaner nie zużywa tokenu | DONE (ten commit, 0099) — live 20 kont przy R-2 |
 | I-30 | P0. Cennik według symboli (zastępuje I-12/I-19). Transkrypcja vs JSON — różnica=STOP. Kwoty skryptem z `D:\Watch Tower\dane` | test pozycji; strażnik kwot; 95 HH | DO ZROBIENIA |
 | I-31 | P0. SEFS: OKQ8 + Orlen; mnożnik=niższy; tydzień 28.09–04.10 = **1,14** | test 1,14; progi; awaria | DO ZROBIENIA |
 | DEC-2 | P0. Centrum decyzji — pełny proces (DECYZJE §2) | katalog decyzji + akcje + eskalacja | DO ZROBIENIA |
