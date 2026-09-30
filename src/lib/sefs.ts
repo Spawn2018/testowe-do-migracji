@@ -2,6 +2,10 @@
  * SEFS — Scandinavian Express Fuel Surcharge (contractual annex).
  * Hybrid weekly model: applied = min(mult_sek, mult_pln).
  * Applies ONLY to road freight rate — never cancellation / demurrage / ferry eco.
+ *
+ * I-31: źródła umowy = OKQ8 GoEasy Diesel + Orlen Ekodiesel (nie III-10 WOB).
+ * Tabele mnożników w bazie (sefs_parameters); frontowy sefs-tables.json to fasada makiety —
+ * wycena produkcyjna: sefs_week_for_load / sefs_compute_hybrid.
  */
 import tables from '../data/sefs-tables.json';
 

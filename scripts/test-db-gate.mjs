@@ -37,6 +37,7 @@ const EXPECTED = {
   nullguard: 379,
   i2: 510,
   i30: 10,
+  i31: 6,
   workflows: 46,
   insurance: 33,
 };
@@ -190,6 +191,7 @@ const suites = [
   { name: 'nullguard', file: 'nullguard.sh' },
   { name: 'i2', file: 'i2.sh' },
   { name: 'i30', file: 'i30.sh' },
+  { name: 'i31', file: 'i31.sh' },
   { name: 'workflows', file: 'workflows.sh' },
   { name: 'insurance', file: 'insurance.sh' },
 ];

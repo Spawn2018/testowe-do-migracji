@@ -72,8 +72,9 @@ authenticated rate_match
 authenticated rate_card_save
 authenticated rate_card_change_log
 # I-30 (0100): cennik według symbolu — pomocnicze (HHL przez rate_match)
-authenticated shipment_family
-authenticated kr_convoy_count
+authenticated sefs_lookup_mult
+authenticated sefs_compute_hybrid
+authenticated sefs_week_for_load
 # I-3 (0067): bramka SMS — telefon (anon, token urządzenia), HHL (urządzenia), link kierowcy SMS-em
 anon sms_pull
 anon sms_report

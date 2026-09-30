@@ -17,7 +17,7 @@ if [ -z "${PGCLUSTER:-}" ] && command -v pg_lsclusters >/dev/null 2>&1; then
   PGCLUSTER=$(pg_lsclusters -h 2>/dev/null | awk -v p="$port" '$3==p {print $1"/"$2; exit}')
   [ -n "$PGCLUSTER" ] && export PGCLUSTER
 fi
-out=$(bash tests/db/run.sh 2>/dev/null; bash tests/db/storage.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === storage'; bash tests/db/money.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === money'; bash tests/db/release.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === release'; BACKUP_HOSTED= bash tests/db/backup.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === backup'; bash tests/db/session.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === session'; bash tests/db/archive.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === archive'; bash tests/db/watchdog.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === watchdog'; bash tests/db/invite.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === invite'; bash tests/db/risks.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === risks'; bash tests/db/import.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === import'; bash tests/db/nullguard.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === nullguard'; bash tests/db/i2.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === i2'; bash tests/db/i30.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === i30'; bash tests/db/workflows.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === workflows'; bash tests/db/insurance.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === insurance')
+out=$(bash tests/db/run.sh 2>/dev/null; bash tests/db/storage.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === storage'; bash tests/db/money.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === money'; bash tests/db/release.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === release'; BACKUP_HOSTED= bash tests/db/backup.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === backup'; bash tests/db/session.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === session'; bash tests/db/archive.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === archive'; bash tests/db/watchdog.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === watchdog'; bash tests/db/invite.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === invite'; bash tests/db/risks.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === risks'; bash tests/db/import.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === import'; bash tests/db/nullguard.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === nullguard'; bash tests/db/i2.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === i2'; bash tests/db/i30.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === i30'; bash tests/db/i31.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === i31'; bash tests/db/workflows.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === workflows'; bash tests/db/insurance.sh 2>/dev/null | grep -E "FAIL|WYNIK" | sed '1i === insurance')
 echo "$out" | grep -E "===|WYNIK|FAIL"
 ok=1
 check() { # suite, expected
@@ -39,6 +39,7 @@ check import 66
 check nullguard 379
 check i2 510
 check i30 10
+check i31 6
 check workflows 46
 check insurance 33
 [ $ok -eq 1 ]
