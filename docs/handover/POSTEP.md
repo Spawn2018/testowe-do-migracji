@@ -409,3 +409,10 @@ Pozostałe 26 pozycji „częściowo” nie zależą od trybu demo (braki infras
 
 **Zostaje:** `tests/fixtures/wob-*.xlsx` (dane publiczne KE).
 
+
+
+## Baza testowa 30.09.2026 — Plan B (Supabase hosted, bez Dockera)
+
+| ID | pozycja | status | commit | testy (liczby) | uwagi |
+|---|---|---|---|---|---|
+| BAZA-T | projekt `watch-tower-test` (ref emkbykwenwrjmbprydml); TEST_DB_URL z Management API (Session :5432) + TEST_DB_PASSWORD; brama `node scripts/test-db-gate.mjs`; bezpiecznik produkcji; zasada w `baza.mdc` | **DONE** (ten commit) | (HEAD po pushu) | połączenie OK (PostgreSQL 17.6); migracje 0001–0097 nałożone (0031 trigger: WARN — brak uprawnień spatial_ref_sys na free test); refuse-prod **5/5**; hosted: archive **18/18**, watchdog **27/27**; FAIL (hosted≠stub): security 74/88, status 8/44, storage 30/37, money 115/130, release 141/145, session 15/27, invite brak WYNIK (auth), risks 20/23, import 65/66, nullguard 358/379, i2 429/510, workflows 27/46, insurance 30/33; backup SKIP (CREATE DATABASE) | **Klient:** istniejący psql pg16 + Node `pg` — bez winget, bez Dockera. Windows psql: URI przez `-d`. Bezpiecznik `refuse-prod.sh`. Zasada: bez zielonych testów bazy żadna migracja nie wchodzi na produkcję. Dane zmyślone. Aplikacji i produkcji nie ruszano. |

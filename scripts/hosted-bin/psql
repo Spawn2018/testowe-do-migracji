@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Shim / wrapper psql: Windows wymaga -d URI (pozycyjny URI ignoruje -c).
+# Hosted: no-op dla drop/create oraz atrap/migracji/seed.
+set -e
+REAL_PSQL="${TOWER_REAL_PSQL:-psql}"
+
+prev=""
+for a in "$@"; do
+  if [ "$prev" = "-c" ] || [ "$prev" = "--command" ]; then
+    if printf '%s' "$a" | grep -qiE 'drop[[:space:]]+database|create[[:space:]]+database'; then
+      exit 0
+    fi
+  fi
+  prev=$a
+done
+
+prev=""
+for a in "$@"; do
+  if [ "$prev" = "-f" ] || [ "$prev" = "--file" ]; then
+    case "$a" in
+      *supabase_stub.sql|*storage_stub.sql|*seed.sql|*supabase/migrations/*)
+        exit 0
+        ;;
+    esac
+  fi
+  prev=$a
+done
+
+args=()
+for a in "$@"; do
+  case "$a" in
+    postgres://*|postgresql://*)
+      a=$(printf '%s' "$a" | sed -E 's#/(tower_test_[A-Za-z0-9_]+)([?#].*)?$#/postgres\2#')
+      if [ ${#args[@]} -eq 0 ]; then
+        args+=(-d "$a")
+      else
+        args+=("$a")
+      fi
+      ;;
+    *)
+      args+=("$a")
+      ;;
+  esac
+done
+
+export PGCLIENTENCODING="${PGCLIENTENCODING:-UTF8}"
+exec "$REAL_PSQL" "${args[@]}"

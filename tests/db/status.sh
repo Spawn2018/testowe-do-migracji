@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # TOWER — test automatyki statusów: podróże ciężarówek prawdziwymi pozycjami
 # GPS przez silnik stref (0002) i automat PROM (0004). Uruchamiany po seed.sql.
+. "$(git rev-parse --show-toplevel)/tests/db/refuse-prod.sh"
 PSQL="psql ${PGURL:-postgres://postgres@localhost:5433/tower} -Atq -v ON_ERROR_STOP=1"
 P=22222222-0000-0000-0000-000000000001; SCXO=00000000-0000-0000-0000-00000000a003
 SCX=11111111-0000-0000-0000-000000000003; KSH=11111111-0000-0000-0000-000000000002

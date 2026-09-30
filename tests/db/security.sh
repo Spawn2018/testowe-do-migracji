@@ -2,6 +2,7 @@
 # TOWER — test bezpieczeństwa bazy. Podszywa się pod HHL, KSH i SCX
 # i sprawdza, czego baza NIE pozwala zobaczyć ani zmienić.
 # Użycie: PGURL=postgres://postgres@localhost:5433/tower bash tests/db/security.sh
+. "$(git rev-parse --show-toplevel)/tests/db/refuse-prod.sh"
 PSQL="psql ${PGURL:-postgres://postgres@localhost:5433/tower} -Atq"
 HHL=11111111-0000-0000-0000-000000000001; KSH=11111111-0000-0000-0000-000000000002; SCX=11111111-0000-0000-0000-000000000003
 INVK=44444444-0000-0000-0000-00000000000c; INVP=44444444-0000-0000-0000-0000000000ee

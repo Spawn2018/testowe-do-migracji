@@ -4,16 +4,15 @@
 #   security.sh — kto co widzi i zmienia (podszywanie pod HHL, KSH, SCX)
 #   status.sh   — automatyka statusów: podróże ciężarówek pozycjami GPS
 # UWAGA: supabase_stub.sql NIGDY nie uruchamiaj na prawdziwym Supabase.
+# Hosted: TOWER_HOSTED_READY=1 PGURL=… (schemat przygotowany przez test-db-gate.mjs).
 set -e
+cd "$(git rev-parse --show-toplevel)"
 ADMIN=${PGADMIN:-postgres://postgres@localhost:5433/postgres}
-. "$(git rev-parse --show-toplevel)/tests/db/local-only.sh"
 suma=0
 for t in security status; do
-  DB="tower_test_$t"; URL="${ADMIN%/*}/$DB"
-  psql "$ADMIN" -q -c "drop database if exists $DB" -c "create database $DB"
-  psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/supabase_stub.sql
-  for f in supabase/migrations/*.sql; do psql "$URL" -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null; done
-  psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/seed.sql
+  DB="tower_test_$t"
+  # shellcheck source=boot.sh
+  . "$(git rev-parse --show-toplevel)/tests/db/boot.sh"
   echo "=== $t"
   PGURL="$URL" bash "tests/db/$t.sh" | grep -E "FAIL|WYNIK" || suma=1
 done

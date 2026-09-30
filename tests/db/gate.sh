@@ -8,6 +8,7 @@
 set -u
 cd "$(git rev-parse --show-toplevel)"
 ADMIN=${PGADMIN:-postgres://postgres@localhost:5433/postgres}
+. "$(git rev-parse --show-toplevel)/tests/db/refuse-prod.sh"
 . "$(git rev-parse --show-toplevel)/tests/db/local-only.sh"
 export PGADMIN="$ADMIN"
 # Debian z kilkoma klastrami: bez PGCLUSTER wrapper psql wypisuje ostrzeżenie i psuje porównania.
