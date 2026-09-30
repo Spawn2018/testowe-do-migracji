@@ -48,7 +48,7 @@ function prodStripMockups(): Plugin {
 function trafikverketApi(): Plugin {
   const handler = async (req: import('http').IncomingMessage, res: import('http').ServerResponse, next: () => void) => {
     if (!req.url?.startsWith('/api/trafikverket') || req.method !== 'POST') return next()
-    const key = process.env.TRAFIKVERKET_API_KEY || process.env.VITE_TRAFIKVERKET_API_KEY || ''
+    const key = process.env.TRAFIKVERKET_API_KEY || ''
     const chunks: Buffer[] = []
     for await (const c of req) chunks.push(c as Buffer)
     let body: { objecttype?: string; schemaversion?: string; limit?: number } = {}

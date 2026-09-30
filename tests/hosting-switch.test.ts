@@ -13,7 +13,8 @@ describe('PR8: przełączenie hostingu Vercel ↔ Cloudflare Pages', () => {
   })
 
   it('public/_headers (Cloudflare Pages, tylko tryb demo): /download/* jako załącznik; w buildzie produkcyjnym usuwany', () => {
-    const lines = readFileSync('public/_headers', 'utf8').trim().split('\n')
+    // Windows: CRLF w working tree mimo eol=lf — porównujemy po normalizacji LF
+    const lines = readFileSync('public/_headers', 'utf8').replace(/\r\n/g, '\n').trim().split('\n')
     expect(lines[0]).toBe('/download/*')
     expect(lines.join('\n')).toMatch(/Content-Disposition: attachment/)
     expect(readFileSync('build/prodStrip.ts', 'utf8')).toMatch(/stripDownloadHeaders/)

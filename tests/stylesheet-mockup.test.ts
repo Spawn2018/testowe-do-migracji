@@ -9,8 +9,10 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import postcss, { type Rule } from 'postcss';
 
-const REF = readFileSync('docs/claude/referencje/tower.css', 'utf8');
-const APP = readFileSync('src/index.css', 'utf8');
+/** Windows: working tree może mieć CRLF mimo eol=lf w .gitattributes (core.autocrlf). */
+const eol = (s: string) => s.replace(/\r\n/g, '\n');
+const REF = eol(readFileSync('docs/claude/referencje/tower.css', 'utf8'));
+const APP = eol(readFileSync('src/index.css', 'utf8'));
 const norm = (s: string) => s.replace(/\s+/g, ' ').replace(/\s*,\s*/g, ',').trim();
 
 /** klucz „selektor|właściwość” → uzasadnienie (źródło w dokumentacji) */

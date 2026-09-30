@@ -15,6 +15,22 @@ const EXC = new Set(
     .split('\n').map((l) => l.replace(/#.*/, '').trim()).filter(Boolean),
 );
 
+/** hunspell + pl_PL — na Windows zwykle brak (Debian: apt install hunspell hunspell-pl). */
+function hunspellAvailable(): boolean {
+  try {
+    execFileSync('hunspell', ['-d', 'pl_PL', '-l'], { input: 'test\n', encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+const HUNSPELL_OK = hunspellAvailable();
+const skipHunspell = !HUNSPELL_OK
+  ? process.platform === 'win32'
+    ? 'pominięte na Windows — brak hunspell/pl_PL (wymaga Linux CI lub apt install hunspell hunspell-pl)'
+    : 'pominięte — brak hunspell z słownikiem pl_PL'
+  : false;
+
 /** Słowa do sprawdzenia: bez znaczników {n}, kodów (cyfry, WERSALIKI ≥ 2), adresów i identyfikatorów. */
 export function plWords(text: string): string[] {
   const clean = text
@@ -32,23 +48,36 @@ function hunspellMisses(words: string[]): string[] {
 }
 
 describe('PL-T — słownik PL bez błędów pisowni (hunspell pl_PL + wyjątki)', () => {
-  it('hunspell z pl_PL jest zainstalowany', () => {
-    expect(hunspellMisses(['Marża', 'Załączniki'])).toEqual([]);
-    expect(hunspellMisses(['Marza'])).toEqual(['Marza']);
-  });
+  // Jawny powód w nazwie (Windows nie ma hunspell/pl_PL — Linux CI nadal egzekwuje).
+  const hunspellIt = HUNSPELL_OK ? it : it.skip;
 
-  it('każda wartość słownika PL: 0 słów spoza pl_PL i listy wyjątków', () => {
-    const byWord = new Map<string, string[]>();
-    for (const [key, val] of Object.entries(I18N_ALL.pl)) {
-      for (const w of plWords(val)) {
-        if (EXC.has(w) || EXC.has(w.toLowerCase())) continue;
-        byWord.set(w, [...(byWord.get(w) ?? []), key]);
+  hunspellIt(
+    HUNSPELL_OK
+      ? 'hunspell z pl_PL jest zainstalowany'
+      : `hunspell z pl_PL jest zainstalowany — SKIP: ${skipHunspell}`,
+    () => {
+      expect(hunspellMisses(['Marża', 'Załączniki'])).toEqual([]);
+      expect(hunspellMisses(['Marza'])).toEqual(['Marza']);
+    },
+  );
+
+  hunspellIt(
+    HUNSPELL_OK
+      ? 'każda wartość słownika PL: 0 słów spoza pl_PL i listy wyjątków'
+      : `każda wartość słownika PL — SKIP: ${skipHunspell}`,
+    () => {
+      const byWord = new Map<string, string[]>();
+      for (const [key, val] of Object.entries(I18N_ALL.pl)) {
+        for (const w of plWords(val)) {
+          if (EXC.has(w) || EXC.has(w.toLowerCase())) continue;
+          byWord.set(w, [...(byWord.get(w) ?? []), key]);
+        }
       }
-    }
-    const misses = hunspellMisses([...byWord.keys()]);
-    const report = misses.map((w) => `${w} ← ${byWord.get(w)?.slice(0, 3).join(', ')}`);
-    expect(report).toEqual([]);
-  });
+      const misses = hunspellMisses([...byWord.keys()]);
+      const report = misses.map((w) => `${w} ← ${byWord.get(w)?.slice(0, 3).join(', ')}`);
+      expect(report).toEqual([]);
+    },
+  );
 
   it('formy bez znaków, które słownik przyjmuje jako inne słowa — zakazane w PL (marzy, swoja, pol, spor, Formula, Wyplata)', () => {
     const FORBIDDEN = ['marzy', 'swoja', 'pol', 'spor', 'Formula', 'Wyplata', 'para wjazd', 'Na pokladzie'];
