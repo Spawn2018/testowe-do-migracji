@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getSupabase } from '../auth/client';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
+import { decText } from '../i18n/decisions';
 
 type Opt = { code: string; label_key: string; requires_comment: boolean; effect: string };
 type DecRow = {
@@ -18,13 +19,6 @@ type DecRow = {
   load_id: string | null;
   decision_types: { title_key: string; options: Opt[]; decider_role: string } | null;
 };
-
-function labelOpt(locale: string, key: string, code: string): string {
-  /* na razie kod opcji; pełne tłumaczenia dec_opt_* w kolejnej iteracji i18n */
-  void locale;
-  void key;
-  return code.replace(/_/g, ' ');
-}
 
 export function DecisionCentre() {
   const locale = useTowerStore((s) => s.locale);
@@ -146,7 +140,7 @@ export function DecisionCentre() {
                 disabled={busy}
                 onClick={() => void resolve(o)}
               >
-                {labelOpt(locale, o.label_key, o.code)}
+                {decText(locale, o.label_key, o.code)}
                 {o.requires_comment ? ' *' : ''}
               </button>
             ))}

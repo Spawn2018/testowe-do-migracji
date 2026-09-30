@@ -19,12 +19,16 @@ import { docsCompleteBeforeLoad, otifShown, prodBannerRisk, riskAsException, sor
 export function DashboardView() {
   // I-2l: czas wykrycia odchylenia z bazy (kpi_detection_lag) — wyłącznie build produkcyjny, moduł leniwy
   const [detectLag, setDetectLag] = useState<{ samples: number; medianMin: number | null } | null>(null);
+  const [openDecisions, setOpenDecisions] = useState<number | null>(null);
   useEffect(() => {
     if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
       let cancelled = false;
       void import('../lib/detectLag')
         .then((m) => m.fetchDetectionLag())
         .then((r) => { if (!cancelled) setDetectLag(r); }, () => { if (!cancelled) setDetectLag({ samples: 0, medianMin: null }); });
+      void import('../lib/openDecisions')
+        .then((m) => m.countOpenDecisions())
+        .then((n) => { if (!cancelled) setOpenDecisions(n); }, () => { if (!cancelled) setOpenDecisions(0); });
       return () => { cancelled = true; };
     }
     return undefined;
@@ -172,9 +176,9 @@ export function DashboardView() {
               />
               <KpiTile
                 label={t(locale, 'exceptions')}
-                value={sortedEx.length}
-                delta={t(locale, "dash_signals")}
-                tone={sortedEx.length > 6 ? 'alert' : 'warn'}
+                value={PROD_BUILD && openDecisions !== null ? openDecisions : sortedEx.length}
+                delta={PROD_BUILD && openDecisions !== null ? t(locale, 'dec_centre') : t(locale, "dash_signals")}
+                tone={(PROD_BUILD && openDecisions !== null ? openDecisions : sortedEx.length) > 6 ? 'alert' : 'warn'}
                 onClick={() => setView('risk')}
               />
             </>
