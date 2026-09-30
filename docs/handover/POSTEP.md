@@ -388,6 +388,7 @@ Pozostałe 26 pozycji „częściowo” nie zależą od trybu demo (braki infras
 | G-V 6900022 | nocna brama wizualna | **DONE** 29.09 (ten commit) | Wynik 01:55: `OK HEAD=6900022 smoke+stany=ok matryca=840/840 zmienione=0 czas=2523s kod=0` — przebieg bez nadzoru (rutyna ~01:11). | — | — |
 | I-30 | cennik według symboli (paczka 30.09) | **PRZERWANE PRZED STARTEM** 29.09 | — | — | Właściciel zatrzymał pracę (limit 93%). Paczka rozpakowana do `/home/box/tower-dane/2026-09-30/`, `sha256sum -c` 9/9 OK. Żadnej transkrypcji, żadnego kodu, żadnej migracji. Kolejka dopisana do PLAN.md. Szczegóły: `PRZEKAZANIE_CURSOR.md`. |
 | G-V 629f224 | nocna brama wizualna | **DONE** 30.09 (ten commit) | Wynik 02:39: `OK HEAD=629f224 smoke+stany=ok matryca=840/840 zmienione=0 czas=2452s kod=0` — przebieg bez nadzoru (po `git lfs pull`; pierwszy przebieg 01:57 FAIL: `shots-baseline/` to wskaźniki LFS, nie różnice pikseli). | — | — |
+| G-V 894a684 | nocna brama wizualna | **DONE** 01.10 (ten commit) | Wynik 01:58: `OK HEAD=894a684 smoke+stany=ok matryca=840/840 zmienione=0 czas=2484s kod=0` — przebieg bez nadzoru (rutyna ~01:10). | — | — |
 
 ## Porządki 29.09.2026 — archiwum i pliki poufne
 
