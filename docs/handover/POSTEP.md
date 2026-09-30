@@ -468,3 +468,12 @@ Uwaga: zestaw `i2` na hosted wymaga `ensureSeedAuthUsers` (FK `auth.mfa_factors`
 | pooler leftover JWT | `auth.uid()` w insertach postgres | clear JWT na początku każdego psql |
 | money FIX JSON | Windows Store `python3` stub | Node |
 | UTF-8 PL w `-c` | Win32 argv | `-c` → plik UTF-8 + `-f` |
+
+## Sesja 30.09 (wieczór) — ENV + I-33
+
+| ID | pozycja | status | commit | testy (liczby) | uwagi |
+|---|---|---|---|---|---|
+| ENV-0a/b/e | eol=lf; vitest CRLF+suma makiety; hunspell SKIP Windows; drop VITE_TRAFIKVERKET_API_KEY | **DONE** | `a2b38f18` | vitest **530 passed / 36 skipped / 0 failed** | `core.autocrlf=true` → working tree CRLF; testy normalizują LF. PL-T: 2× SKIP z jawnym powodem w nazwie. 0c (baza testowa) pominięte — DONE wcześniej `894a684e`. |
+| I-33 | strażnik zawieszonej kopii RUNNING > 30 min | **DONE** | (ten commit) | dry-run PROD+TEST ROLLBACK OK; izolowany I-33 na TEST **ok**; produkcja: 0098 + cron `tower-backup-stale` `*/5` | **Przyczyna id=10 (29.09 00:30 UTC):** Edge `backup-export` urwał się w trakcie COPY (postęp 12 tabel / 8062 B w `tables`, m.in. fx_rates…fuel_index_readings); `finished_at` puste do następnej nocy. `backup_run_begin` oznaczył ERROR dopiero przy starcie id=11. **Nocna 30.09 id=11:** OK, `daily/2026-09-30/`, 63238 B, 16 s. **Strażnik:** `backup_stale_watchdog()` → ERROR + JOB_FAILURE + e-mail (Vault). gate backup oczekuje **29** (było 23). Domeny: tower.log-mar.pl **200**, tower-hhl.pages.dev **200**. |
+| ODBIÓR | potwierdzenie paczki/zleceń 30.09 | **DONE** | (ten commit) | — | Lista ID w PLAN.md § PACZKA 30.09. Kolejka rozszerzona (AUTH-1, DEC-*, BRAND-15, …). |
+

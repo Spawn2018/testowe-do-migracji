@@ -150,27 +150,98 @@ audyt dostępności (**wykonany 28.09**, kontrast → D-27) · przekazanie Curso
 ---
 
 
-## PACZKA 30.09 — kolejka (dopisana 29.09, NIC NIE ZREALIZOWANE)
+## PACZKA 30.09 — kolejka (dopisana 29.09, rozszerzona 30.09 po odbiorze zleceń)
 
-Źródła w `docs/handover/`: `PACZKA_DECYZJI_30_09.md`, `ZLECENIE_CENNIK_SEFS.md`, `ZLECENIE_SHAREPOINT.md`, `ZLECENIE_POGODA_DROGI_ETA.md`.
-Pliki cen, umowa i harmonogram z danymi kierowców: `/home/box/tower-dane/2026-09-30/` (poza gitem; sumy `SUMY_KONTROLNE.txt` sprawdzone 29.09, wszystkie OK).
-Przekazanie 29.09 przerwało pracę **przed pierwszym commitem** I-30.
+Źródła w `docs/handover/`: `PACZKA_DECYZJI_30_09.md`, `ZLECENIE_CENNIK_SEFS.md`,
+`ZLECENIE_SHAREPOINT.md`, `ZLECENIE_POGODA_DROGI_ETA.md`,
+`ZLECENIE_PO_SPOTKANIU_SCX.md`, `ZLECENIE_DECYZJE_POWIADOMIENIA.md`.
+Pliki cen / SEFS / harmonogram: `D:\Watch Tower\dane\` (poza gitem).
+**Nowsze wygrywa** ze sprzecznymi wcześniejszymi (§0 każdego zlecenia).
+
+### Potwierdzenie odbioru (30.09) — lista identyfikatorów
+
+**PACZKA_DECYZJI_30_09:** D-1, D-2, D-8 (nieaktualne), D-27, D-28, D-29, D-29t,
+D-30, D-31, D-32, D-33, D-34 (SEFS=załadunek — zamknięte w PO_SPOTKANIU §0),
+D-35, I-29, I-30, I-31, I-32, I-33, I-7a, II-5, II-6, II-7, II-7b, II-8, II-9, II-10.
+
+**ZLECENIE_PO_SPOTKANIU_SCX:** §0 (zastąpienia), §1 logowanie hasłem, §2 telematyka,
+§3 Stena Line, §4 awizacja Dodaj/Edytuj, §4a numer HHL, §5 powiadomienia KSH,
+§6 opóźnienie/czas, §7 daty z pliku KSH, §8 opłaty ręczne (zastępuje auto I-32),
+§9 faktury EUR/PLN, §10 administrator, §11 historia zmian, §12 interfejs,
+§13 zezwolenia (czeka na dane), §14 telefon/instalacja, §15 nazwa i logo.
+
+**ZLECENIE_DECYZJE_POWIADOMIENIA:** §0, §1 telefony bez kierunkowego, §2 centrum
+decyzji, §3 powiadomienia, §4 widoczność, §5 SMS strefy, §6 ustawienia admina.
+
+**ZLECENIE_CENNIK_SEFS:** I-30, I-31, I-32 (auto → zastąpione przez §8 ręczne).
+
+**ZLECENIE_SHAREPOINT:** II-10, I-7a, D-32, D-33.
+
+**ZLECENIE_POGODA_DROGI_ETA:** II-5, II-6, II-7, II-7b, II-8, II-9, I-29.
 
 | ID | Opis | Kryterium | Status |
 |---|---|---|---|
-| I-30 | P0. Cennik według symboli (zastępuje model I-12/I-19). Niezależna transkrypcja xlsx/docx vs `CENNIK_STEGRA.json` — każda różnica = STOP. Kwoty skryptem z pliku lokalnego, nie migracją. PL-1/PL-10.1/PL-17.1 jak PL-B. Konwój = liczba KR z tą samą datą załadunku | test każdej pozycji; strażnik: żadnej kwoty cennika we froncie; mapowanie 95 HH | DO ZROBIENIA — nie zaczęte |
-| I-31 | P0. SEFS: OKQ8 Diesel (historia, kolumna Diesel) i Orlen Ekodiesel (API, zł/m³ ÷ 1000). Mnożnik = niższy z dwóch. Tydzień 28.09–04.10 ma wyjść **1,14** — inaczej STOP | test 1,14; progi; awaria źródła | DO ZROBIENIA — nie zaczęte |
-| I-7a | P1. KSH widzi na stałe dane kierowcy i auta (bez okna ±24 h, tylko swój projekt). Retencja do wycofania zgody, nie 90 dni. GPS bez zmian (30 dni) | test widoczności i wycofania | DO ZROBIENIA |
-| II-5 | P1. Odczyt komunikatów armatora **włączyć teraz** (co 15 min, uczciwy User-Agent). Cloudflare 403 = status NIEZNANY, bez obchodzenia zabezpieczeń. D-18 (e-mail) zostaje informacją | parser na aktualnej stronie | DO ZROBIENIA |
-| II-10 | P1. SharePoint w obie strony, na kopii pliku do D-32. Import tylko HH z wymiarami; NTG Standard nie zapisywać. Usunięcie wiersza ≠ anulowanie | 95 HH, zero NTG w bazie, pętla własnego zapisu | DO ZROBIENIA |
-| II-7 | P1. Własny silnik ETA na korytarzu OSM (ODbL). Zero zewnętrznych zapytań tras. HERE nie | postęp z GPS, odpoczynek, okno promowe | DO ZROBIENIA |
-| II-7b | P1. Kalibracja ucząca się. Zastępuje III-1. Limity: 10% / tydzień, sprawdzenie wsteczne, wycofanie, zamrożenie przez HHL | symulacja 30 transportów | DO ZROBIENIA |
-| II-8 | P1. Pogoda FMI + DMI + SMHI, progi wstępne oznaczone. IMGW tylko po jasnej licencji komercyjnej | źródło w UI | DO ZROBIENIA |
-| II-9 | P1. Opóźnienie wypłynięcia z AIS. Brak pozycji ≠ opóźnienie (Digitraffic nie widzi Gdańska) | test | DO ZROBIENIA |
-| I-32 | P1. Opłaty: anulowanie, czas wolny, przestój. Bez dopłaty paliwowej. 2 dni przed załadunkiem — dokument nie określa (zostaw parametr wstępny) | test progów | DO ZROBIENIA |
-| I-29 | P1. Budżety darmowych planów na 140 transportów / ~13 tygodni | tabela szczyt dobowy vs limit | DO ZROBIENIA |
-| D-29t | P1. Tabela nakładania się reguł START (bez włączania) | tabela w planie, zero włączeń | DO ZROBIENIA |
-| II-6 | P1. Trafikverket | — | CZEKA NA: klucz (D-34) |
+| I-33 | P0. Kopia 29.09 zawieszona (RUNNING, finished_at puste). Przyczyna, ponowienie, strażnik RUNNING > 30 min → ERROR + e-mail. Sprawdź nocną | strażnik w cronie; test; nocna OK | DONE (ten commit, 0098) |
+| ENV-0a | .gitattributes `* text=auto eol=lf` + renormalize | commit | DONE a2b38f18 |
+| ENV-0b | vitest: CRLF / suma makiety / hunspell skip Windows | 0 failed | DONE a2b38f18 (530 passed / 36 skip) |
+| ENV-0c | baza testowa watch-tower-test (emkbykwenwrjmbprydml) | brama hosted zielona | DONE 894a684e — pominięte w tej sesji |
+| ENV-0e | usuń VITE_TRAFIKVERKET_API_KEY — tylko TRAFIKVERKET_API_KEY | brak VITE_ w vite/env | DONE a2b38f18 |
+| AUTH-1 | P0. Logowanie hasłem (PO_SPOTKANIU §1): zaproszenie→ustaw hasło; e-mail+hasło; reset; strona pośrednia „Dalej”; bez zaproszenia zero e-maili | 20 kont / 5 min bez e-maila; skaner nie zużywa tokenu | DO ZROBIENIA |
+| I-30 | P0. Cennik według symboli (zastępuje I-12/I-19). Transkrypcja vs JSON — różnica=STOP. Kwoty skryptem z `D:\Watch Tower\dane` | test pozycji; strażnik kwot; 95 HH | DO ZROBIENIA |
+| I-31 | P0. SEFS: OKQ8 + Orlen; mnożnik=niższy; tydzień 28.09–04.10 = **1,14** | test 1,14; progi; awaria | DO ZROBIENIA |
+| DEC-2 | P0. Centrum decyzji — pełny proces (DECYZJE §2) | katalog decyzji + akcje + eskalacja | DO ZROBIENIA |
+| DEC-3 | P0. Powiadomienia — każde zdarzenie/status/ryzyko/decyzja (DECYZJE §3) | macierz + kanały | DO ZROBIENIA |
+| DEC-4 | P0. Widoczność — admin wybiera firmy (DECYZJE §4) | macierz per typ | DO ZROBIENIA |
+| BRAND-15 | P1. Nazwa i logo Watch Tower (PO_SPOTKANIU §15, `public/brand`) | favicon, splash, manifest, zero „TOWER” w UI | DO ZROBIENIA |
+| AWIZ-4 | P1. Awizacja „Dodaj"/„Edytuj" + okno (PO_SPOTKANIU §4) | przebieg HHL/SCX | DO ZROBIENIA |
+| HHL-4a | P1. Numer HHL — dodawanie/edycja przez HHL (§4a) | test bazy + UI | DO ZROBIENIA |
+| RESP-14 | P1. Telefon i instalacja PWA (§14) | ujęcia 390/768; Lighthouse | DO ZROBIENIA |
+| DEC-5 | P1. SMS przy strefach — 2+2 osoby (DECYZJE §5); brak SMS do kierowców | test bramki | DO ZROBIENIA |
+| DEC-6 | P1. Ustawienia administratora (DECYZJE §6) | sekcje zwijane | DO ZROBIENIA |
+| TEL-1 | P1. Telefony zawsze bez kierunkowego (DECYZJE §1) | zapis/odczyt | DO ZROBIENIA |
+| DATY-67 | P1. Daty z pliku KSH + opóźnienie (§6–7); usunąć „Potwierdź daty" (I-18) | UI + powiadomienia | DO ZROBIENIA |
+| II-10 | P1. SharePoint w obie strony, na kopii pliku do D-32. Tylko HH; NTG nie | 95 HH, pętla | DO ZROBIENIA |
+| OPL-8 | P1. Opłaty wyłącznie ręcznie (§8; zastępuje auto I-32) | brak auto-dopłat | DO ZROBIENIA |
+| FAK-9 | P1. Faktury EUR lub PLN przy wystawieniu (§9) | wybór waluty | DO ZROBIENIA |
+| ADM-10 | P1. Administrator może wszystko (§10) | impersonacja/override z audytem | DO ZROBIENIA |
+| HIST-11 | P1. Pełna historia zmian (§11) | UI historii | DO ZROBIENIA |
+| STENA-3 | P1. Stena Line Gdynia–Karlskrona jak Polferries (§3) | słowniki, strefy, ETA | DO ZROBIENIA |
+| II-5 | P1. Komunikaty armatorów — włączyć odczyt teraz | parser; 403=NIEZNANY | DO ZROBIENIA |
+| II-6 | P1. Trafikverket — ODBLOKOWANE (klucz `TRAFIKVERKET_API_KEY` w sekretach / `.env.local`; bez VITE_) | spowolnienie odcinka SE w II-7 | DO ZROBIENIA |
+| II-7 | P1. Własny silnik ETA na OSM (ODbL). HERE nie | postęp GPS, odpoczynek, prom | DO ZROBIENIA |
+| II-7b | P1. Kalibracja ucząca się (zastępuje III-1) | symulacja 30 transportów | DO ZROBIENIA |
+| II-8 | P1. Pogoda FMI+DMI+SMHI; progi 3,8 m / 40 kn potwierdzone | źródło w UI | DO ZROBIENIA |
+| II-9 | P1. Opóźnienie wypłynięcia z AIS; brak pozycji ≠ opóźnienie | test | DO ZROBIENIA |
+| TELM-2 | P1. Szkielet telematyki (§2) — czeka na API emtrack i linki | adapter + GPS z telematyki | CZEKA NA: docs API emtrack, przykłady linków |
+| I-7a | P1. KSH widzi na stałe dane kierowcy/auta; retencja do wycofania zgody | test widoczności | DO ZROBIENIA — **UWAGA:** PO_SPOTKANIU §0 zamyka mechanizm wycofania RODO; uzgodnić z SHAREPOINT §1a przy realizacji |
+| I-29 | P1. Budżety darmowych planów na 140 transportów | tabela szczyt vs limit | DO ZROBIENIA |
+| UI-12 | P2. Interfejs (§12) | kryteria zlecenia | DO ZROBIENIA |
+| D-27 | P2. Kontrast ≥ 4,5:1; ewentualnie #7C909E | tylko kolory tekstu | DO ZROBIENIA |
+| D-30 | P2. Polisy: cron + formularz HHL/przewoźnik (bazowa 0097 DONE) | UI + detect dzienny | DO ZROBIENIA |
+| D-31 | P2. Pasek górny 390 px — naprawa | wzorzec tylko 390 | DO ZROBIENIA |
+| D-29t | P2. Tabela nakładania reguł START (bez włączania) | tabela w planie | DO ZROBIENIA |
+| ZEZW-13 | P2. Zezwolenia (§13) | — | CZEKA NA: wymiary aut |
+
+**Czeka na dane właściciela:** API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH (D-32), klucz Trafikverket.
+
+Pliki cen, umowa i harmonogram: `D:\Watch Tower\dane\` (poza gitem).
+Przekazanie 29.09 przerwało pracę **przed pierwszym commitem** I-30; kolejka niżej = obowiązująca.
+
+| ID | Opis | Kryterium | Status |
+|---|---|---|---|
+| I-30 | P0. Cennik według symboli (zastępuje model I-12/I-19). Niezależna transkrypcja xlsx/docx vs `CENNIK_STEGRA.json` — każda różnica = STOP. Kwoty skryptem z pliku lokalnego, nie migracją. PL-1/PL-10.1/PL-17.1 jak PL-B. Konwój = liczba KR z tą samą datą załadunku | test każdej pozycji; strażnik: żadnej kwoty cennika we froncie; mapowanie 95 HH | ZASTĄPIONA PRZEZ tabelę powyżej (ta sama treść, status DO ZROBIENIA) |
+| I-31 | P0. SEFS … | … | ZASTĄPIONA PRZEZ tabelę powyżej |
+| I-7a | P1. KSH widzi… | … | ZASTĄPIONA PRZEZ tabelę powyżej |
+| II-5 | P1. Odczyt komunikatów… | … | ZASTĄPIONA PRZEZ tabelę powyżej |
+| II-10 | P1. SharePoint… | … | ZASTĄPIONA PRZEZ tabelę powyżej |
+| II-7 | P1. Własny silnik ETA… | … | ZASTĄPIONA PRZEZ tabelę powyżej |
+| II-7b | P1. Kalibracja… | … | ZASTĄPIONA PRZEZ tabelę powyżej |
+| II-8 | P1. Pogoda… | … | ZASTĄPIONA PRZEZ tabelę powyżej |
+| II-9 | P1. Opóźnienie AIS… | … | ZASTĄPIONA PRZEZ tabelę powyżej |
+| I-32 | P1. Opłaty auto… | … | ZASTĄPIONA PRZEZ OPL-8 (ręczne §8) |
+| I-29 | P1. Budżety… | … | ZASTĄPIONA PRZEZ tabelę powyżej |
+| D-29t | P1. Tabela START… | … | ZASTĄPIONA PRZEZ tabelę powyżej (P2) |
+| II-6 | P1. Trafikverket | — | ZASTĄPIONA PRZEZ tabelę powyżej |
 
 # 4. DECYZJE OCZEKUJĄCE — WŁAŚCICIEL
 
