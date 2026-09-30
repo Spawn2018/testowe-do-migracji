@@ -34,10 +34,11 @@ const EXPECTED = {
   invite: 48,
   risks: 21, // 23 − 2 SKIP (tower_test_status wymaga CREATE DATABASE)
   import: 66,
-  nullguard: 379,
+  nullguard: 429,
   i2: 510,
   i30: 10,
   i31: 6,
+  dec2: 14,
   workflows: 46,
   insurance: 33,
 };
@@ -192,6 +193,7 @@ const suites = [
   { name: 'i2', file: 'i2.sh' },
   { name: 'i30', file: 'i30.sh' },
   { name: 'i31', file: 'i31.sh' },
+  { name: 'dec2', file: 'dec2.sh' },
   { name: 'workflows', file: 'workflows.sh' },
   { name: 'insurance', file: 'insurance.sh' },
 ];

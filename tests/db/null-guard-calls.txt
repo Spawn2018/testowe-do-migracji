@@ -86,3 +86,15 @@ load_escort_contacts | EMPTY | select count(*) from load_escort_contacts() | 0
 carrier_rating_detail | GUARD | select count(*) from carrier_rating_detail('$L1') | wyłącznie dla HHL
 insurance_policy_save | GUARD | select insurance_policy_save('00000000-0000-0000-0000-00000000a003', 'X-1', current_date, current_date + 30) | Brak aktywnego konta
 insurance_policies_list | GUARD | select count(*) from insurance_policies_list() | Brak aktywnego konta
+shipment_family | PURE | select shipment_family('KR-08') | KR
+kr_convoy_count | GUARD | select kr_convoy_count('$L1') | wyłącznie HHL
+sefs_lookup_mult | PURE | select sefs_lookup_mult(1, '[{"lte":10,"mult":1.1}]'::jsonb) | 1.1
+sefs_compute_hybrid | GUARD | select sefs_compute_hybrid('$P', 20, 6) | wyłącznie HHL
+sefs_week_for_load | GUARD | select sefs_week_for_load('$P', current_date) | wyłącznie HHL
+decision_open | GUARD | select decision_open('$P','BACKUP_FAILED','x','{}'::jsonb) | Brak aktywnego konta
+decision_assign | GUARD | select decision_assign(gen_random_uuid(), gen_random_uuid()) | HHL lub
+decision_snooze | GUARD | select decision_snooze(gen_random_uuid(), now() + interval '1 hour') | HHL lub
+decision_resolve | GUARD | select decision_resolve(gen_random_uuid(), 'ACCEPT') | HHL lub
+decision_expire | GUARD | select decision_expire(gen_random_uuid(), 'test wygaszenia') | HHL lub system|Wygaszenie
+auth_email_allowed | EMPTY | select auth_email_allowed('hhl@test') | f
+app_user_mark_password_set | GUARD | select app_user_mark_password_set() | TOWER_AUTH|konto nieaktywne|brak

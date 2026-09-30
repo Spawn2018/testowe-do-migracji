@@ -71,10 +71,19 @@ authenticated rate_match
 # I-19 (0065): formularz cennika HHL — zapis wersji i dziennik zmian
 authenticated rate_card_save
 authenticated rate_card_change_log
-# I-30 (0100): cennik według symbolu — pomocnicze (HHL przez rate_match)
+-- I-30 (0100): pomocnicze cennika SYMBOL
+authenticated shipment_family
+authenticated kr_convoy_count
+# I-31 (0101): SEFS hybrid_min — lookup/tydzień (tylko HHL w ciele funkcji)
 authenticated sefs_lookup_mult
 authenticated sefs_compute_hybrid
 authenticated sefs_week_for_load
+# DEC-2 (0102): centrum decyzji
+authenticated decision_open
+authenticated decision_assign
+authenticated decision_snooze
+authenticated decision_resolve
+authenticated decision_expire
 # I-3 (0067): bramka SMS — telefon (anon, token urządzenia), HHL (urządzenia), link kierowcy SMS-em
 anon sms_pull
 anon sms_report

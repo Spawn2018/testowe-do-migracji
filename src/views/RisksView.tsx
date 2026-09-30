@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import type { RiskType } from '../types';
 import { ExceptionRow } from '../components/ui/ExceptionRow';
+import { DecisionCentre } from '../components/DecisionCentre';
 import { DemoMark } from '../components/ui/DemoMark';
 import { riskText, t, tp } from '../i18n/messages';
 import { ferryLabel, vesselById } from '../lib/ferry';
@@ -105,6 +106,7 @@ export function RisksView() {
 
   return (
     <div className="dash risk-page page-sections" data-page="risks">
+      {PROD_BUILD ? <DecisionCentre /> : null}
       <div className="panel section-card" style={{ margin: 12 }}>
         <header className="panel-hd">
           <h2>{t(locale, 'exceptions')}</h2>
