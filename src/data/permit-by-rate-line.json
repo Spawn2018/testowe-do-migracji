@@ -7,10 +7,10 @@
     "transportow": 10,
     "waga_el_t": 11,
     "zestaw": {
-      "L": 18.0,
-      "W": 3.0,
+      "L": 18,
+      "W": 3,
       "H": 2.5,
-      "masa_max_t": 22.0
+      "masa_max_t": 22
     },
     "cena_bazowa_EUR": 7640,
     "warianty_ceny_uwagi": null,
@@ -42,10 +42,10 @@
     "transportow": 34,
     "waga_el_t": 7.1,
     "zestaw": {
-      "L": 20.0,
+      "L": 20,
       "W": 3.6,
       "H": 2.5,
-      "masa_max_t": 22.0
+      "masa_max_t": 22
     },
     "cena_bazowa_EUR": [
       9950,
@@ -84,15 +84,15 @@
     "transportow": 25,
     "waga_el_t": 7.1,
     "zestaw": {
-      "L": 20.0,
+      "L": 20,
       "W": 3.6,
       "H": 2.9,
-      "masa_max_t": 29.0
+      "masa_max_t": 29
     },
     "cena_bazowa_EUR": [
-      11380,
-      12290,
-      12745
+      11397,
+      12307,
+      12762
     ],
     "warianty_ceny_uwagi": [
       "3 auta w konwoju; elementy scalone, w CMR 1 element",
@@ -126,12 +126,12 @@
     "transportow": 8,
     "waga_el_t": 1.6,
     "zestaw": {
-      "L": 15.0,
+      "L": 15,
       "W": 2.5,
       "H": 2.9,
-      "masa_max_t": 24.0
+      "masa_max_t": 24
     },
-    "cena_bazowa_EUR": 6030,
+    "cena_bazowa_EUR": 6031,
     "warianty_ceny_uwagi": null,
     "PL": {
       "status": "NORMATYWNY (jeśli naciski osi OK)",
@@ -156,12 +156,12 @@
     "transportow": 2,
     "waga_el_t": 4.2,
     "zestaw": {
-      "L": 15.0,
+      "L": 15,
       "W": 2.8,
       "H": 2.5,
-      "masa_max_t": 17.0
+      "masa_max_t": 17
     },
-    "cena_bazowa_EUR": 5510,
+    "cena_bazowa_EUR": 5511,
     "warianty_ceny_uwagi": null,
     "PL": {
       "status": "WYMAGA ZEZWOLENIA",
@@ -193,7 +193,7 @@
       "L": 13.6,
       "W": 2.8,
       "H": 2.5,
-      "masa_max_t": 17.0
+      "masa_max_t": 17
     },
     "cena_bazowa_EUR": 4960,
     "warianty_ceny_uwagi": null,
@@ -227,9 +227,9 @@
       "L": 16.5,
       "W": 2.5,
       "H": 2.5,
-      "masa_max_t": 34.0
+      "masa_max_t": 34
     },
-    "cena_bazowa_EUR": 6280,
+    "cena_bazowa_EUR": 6281,
     "warianty_ceny_uwagi": "elementy scalone, w CMR 1 element",
     "PL": {
       "status": "NORMATYWNY (jeśli naciski osi OK)",
@@ -257,9 +257,9 @@
       "L": 13.6,
       "W": 2.5,
       "H": 2.5,
-      "masa_max_t": 22.0
+      "masa_max_t": 22
     },
-    "cena_bazowa_EUR": 5090,
+    "cena_bazowa_EUR": 5091,
     "warianty_ceny_uwagi": null,
     "PL": {
       "status": "NORMATYWNY (jeśli naciski osi OK)",
@@ -284,10 +284,10 @@
     "transportow": 2,
     "waga_el_t": 1.8,
     "zestaw": {
-      "L": 15.0,
+      "L": 15,
       "W": 2.5,
       "H": 2.5,
-      "masa_max_t": 15.0
+      "masa_max_t": 15
     },
     "cena_bazowa_EUR": 5320,
     "warianty_ceny_uwagi": null,
@@ -314,10 +314,10 @@
     "transportow": 26.67,
     "waga_el_t": 7,
     "zestaw": {
-      "L": 18.0,
+      "L": 18,
       "W": 2.5,
-      "H": 3.0,
-      "masa_max_t": 21.0
+      "H": 3,
+      "masa_max_t": 21
     },
     "cena_bazowa_EUR": 5600,
     "warianty_ceny_uwagi": null,
@@ -350,9 +350,9 @@
       "L": 18.5,
       "W": 2.5,
       "H": 2.5,
-      "masa_max_t": 22.0
+      "masa_max_t": 22
     },
-    "cena_bazowa_EUR": 6900,
+    "cena_bazowa_EUR": 6901,
     "warianty_ceny_uwagi": null,
     "PL": {
       "status": "WYMAGA ZEZWOLENIA",

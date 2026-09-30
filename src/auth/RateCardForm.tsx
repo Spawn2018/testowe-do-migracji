@@ -3,22 +3,23 @@ import { getSupabase } from './client';
 import { authErrorPl } from './config';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
-import { DIM_KEYS, EMPTY_ROW, buildRules, type FormRow } from '../lib/rateCard';
+import { EMPTY_SYMBOL_ROW, buildSymbolRules, familyFromSymbol, type SymbolFormRow } from '../lib/rateCard';
 import './auth.css';
 
-const PROJECT_CODE = 'STEGRA_BODEN';
+const PROJECT_CODES = ['STEGRA_BODEN', 'STEGRA'] as const;
 
 /**
- * I-19 — formularz cennika HHL (0065). Koszt (przewoźnik) i przychód (klient) osobno; każda zmiana
- * to nowa wersja z kompletem pozycji (przedziały wymiarów + najwyżej jedna stawka STANDARD) i powodem;
- * dziennik zmian z audit_log (rate_card_change_log). Zapis wyłącznie RPC rate_card_save — walidacja
- * ostateczna w bazie (nakładanie przedziałów, organizacja zgodna ze stroną). Kwot nie wpisujemy (D-1).
+ * I-30 — formularz cennika HHL według symbolu / wariantu / konwoju (0100).
+ * Każda zmiana = nowa wersja; zapis wyłącznie RPC rate_card_save. Kwoty z D-1 / skryptu lokalnego.
  */
 type Side = 'COST' | 'REVENUE';
 interface Org { id: string; code: string; name: string; kind: string }
 interface RuleRow {
-  cargo_class: 'DIMENSIONED' | 'STANDARD'; length_from: number; length_to: number; width_from: number; width_to: number;
-  height_from: number; height_to: number; weight_from: number; weight_to: number; base_rate: number; note: string | null;
+  cargo_class: 'DIMENSIONED' | 'STANDARD' | 'SYMBOL';
+  symbol: string | null; family: string | null; convoy_cars: number | null;
+  length_from: number; length_to: number; width_from: number; width_to: number;
+  height_from: number; height_to: number; weight_from: number; weight_to: number;
+  base_rate: number; note: string | null;
 }
 interface Card { id: string; version: number; valid_from: string; note: string | null; created_at: string; currency: string; rate_rules: RuleRow[] }
 interface LogRow { at: string; actor: string; entity_id: string; old_value: { rules?: unknown[] } | null; new_value: { side?: Side; version?: number; valid_from?: string; note?: string | null; rules?: unknown[] } | null }
@@ -35,8 +36,7 @@ export default function RateCardForm() {
   const [log, setLog] = useState<LogRow[]>([]);
   const [validFrom, setValidFrom] = useState('');
   const [reason, setReason] = useState('');
-  const [standard, setStandard] = useState('');
-  const [rows, setRows] = useState<FormRow[]>([]);
+  const [rows, setRows] = useState<SymbolFormRow[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -47,14 +47,15 @@ export default function RateCardForm() {
     void (async () => {
       const sb = await getSupabase();
       const [pr, og] = await Promise.all([
-        sb.from('projects').select('id').eq('code', PROJECT_CODE).maybeSingle(),
+        sb.from('projects').select('id, code').in('code', [...PROJECT_CODES]),
         sb.from('organizations').select('id, code, name, kind').in('kind', ['CARRIER', 'CLIENT']).order('code'),
       ]);
-      setProjectId((pr.data as { id: string } | null)?.id ?? null);
+      const list = (pr.data ?? []) as { id: string; code: string }[];
+      const preferred = list.find((p) => p.code === 'STEGRA_BODEN') ?? list[0];
+      setProjectId(preferred?.id ?? null);
       setOrgs((og.data ?? []) as Org[]);
     })();
   }, []);
-
 
   const refresh = useCallback(async () => {
     if (!projectId || !orgId) { setCards([]); return; }
@@ -71,25 +72,41 @@ export default function RateCardForm() {
     setReason('');
     if (cur) {
       setValidFrom(cur.valid_from);
-      const dims = cur.rate_rules.filter((r) => r.cargo_class !== 'STANDARD')
-        .sort((a, b) => a.length_from - b.length_from || a.width_from - b.width_from || a.height_from - b.height_from || a.weight_from - b.weight_from);
-      setRows(dims.map((r) => ({ ...Object.fromEntries(DIM_KEYS.map((k) => [k, fmt(r[k])])), base_rate: fmt(r.base_rate), note: r.note ?? '' }) as FormRow));
-      const std = cur.rate_rules.find((r) => r.cargo_class === 'STANDARD');
-      setStandard(std ? fmt(std.base_rate) : '');
+      const sym = cur.rate_rules.filter((r) => r.cargo_class === 'SYMBOL')
+        .sort((a, b) => (a.family ?? '').localeCompare(b.family ?? '') || (a.symbol ?? '').localeCompare(b.symbol ?? '') || (a.convoy_cars ?? 0) - (b.convoy_cars ?? 0));
+      setRows(sym.map((r) => ({
+        symbol: r.symbol ?? '',
+        family: r.family ?? '',
+        convoy_cars: r.convoy_cars != null ? String(r.convoy_cars) : '',
+        length_to: fmt(r.length_to),
+        width_to: fmt(r.width_to),
+        height_to: fmt(r.height_to),
+        weight_to: fmt(r.weight_to),
+        base_rate: fmt(r.base_rate),
+        note: r.note ?? '',
+      })));
     } else {
-      setValidFrom(''); setRows([]); setStandard('');
+      setValidFrom(''); setRows([]);
     }
   }, [projectId, side, orgId]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const cur = cards[0] ?? null;
-  const setRow = (i: number, k: keyof FormRow, v: string) => setRows((x) => x.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
+  const setRow = (i: number, k: keyof SymbolFormRow, v: string) => setRows((x) => x.map((r, j) => {
+    if (j !== i) return r;
+    const next = { ...r, [k]: v };
+    if (k === 'symbol') {
+      const fam = familyFromSymbol(v);
+      if (fam) next.family = fam;
+    }
+    return next;
+  }));
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!projectId || !orgId) return;
-    const b = buildRules(rows, standard);
-    if ('bad' in b) { setMsg({ ok: false, text: b.bad === 0 ? t(locale, 'i19_bad_standard') : tp(locale, 'i19_bad_row', { n: String(b.bad) }) }); return; }
+    const b = buildSymbolRules(rows);
+    if ('bad' in b) { setMsg({ ok: false, text: tp(locale, 'i30_bad_row', { n: String(b.bad) }) }); return; }
     if (!b.rules.length) { setMsg({ ok: false, text: t(locale, 'i19_empty') }); return; }
     setBusy(true); setMsg(null);
     const sb = await getSupabase();
@@ -107,30 +124,42 @@ export default function RateCardForm() {
 
   return (
     <section className="panel option-panel option-wide pricing-panel" data-rate-card-form>
-      <header className="panel-hd"><h2>{t(locale, 'i19_h')}</h2>
+      <header className="panel-hd"><h2>{t(locale, 'i30_h')}</h2>
         <span className="sub" data-rate-card-current>{cur ? tp(locale, 'i19_sub_v', { v: String(cur.version), d: cur.valid_from }) : t(locale, 'i19_sub_none')}</span>
         <span className="sub">EUR</span>
       </header>
       {msg && <div className={`auth-msg ${msg.ok ? 'ok' : 'err'} auth-admin-row`} role="status">{msg.text}</div>}
       <div className="panel-bd">
-        <div className="note option-note">{t(locale, 'i19_note')}</div>
+        <div className="note option-note">{t(locale, 'i30_note')}</div>
         <form className="baf-form" onSubmit={save} data-rate-card="form">
           <label>{t(locale, 'i19_side')}<select className="input" value={side} onChange={(e) => setSide(e.target.value as Side)}>
             <option value="COST">{t(locale, 'i19_side_COST')}</option><option value="REVENUE">{t(locale, 'i19_side_REVENUE')}</option></select></label>
           <label>{t(locale, side === 'COST' ? 'i19_org_carrier' : 'i19_org_client')}<select className="input" value={orgId} onChange={(e) => setOrgId(e.target.value)}>
             {sideOrgs.map((o) => <option key={o.id} value={o.id}>{o.code} — {o.name}</option>)}</select></label>
           <label>{t(locale, 'i19_valid_from')}<input className="input" type="date" required value={validFrom} onChange={(e) => setValidFrom(e.target.value)} /></label>
-          <label>{t(locale, 'i19_standard')}<input className="input" inputMode="decimal" placeholder={t(locale, 'i19_standard_ph')} value={standard} onChange={(e) => setStandard(e.target.value)} /></label>
           <div className="wide" data-rate-card="rows">
-            <h4 className="sec">{t(locale, 'i19_rows_h')}</h4>
-            {rows.length === 0 ? <div className="note">{t(locale, 'i19_rows_none')}</div> : (
+            <h4 className="sec">{t(locale, 'i30_rows_h')}</h4>
+            {rows.length === 0 ? <div className="note">{t(locale, 'i30_rows_none')}</div> : (
               <table className="rate-table">
-                <thead><tr><th>{t(locale, 'i19_col_len')}</th><th>{t(locale, 'i19_col_wid')}</th><th>{t(locale, 'i19_col_hei')}</th><th>{t(locale, 'i19_col_wei')}</th><th>{t(locale, 'i19_col_rate')}</th><th>{t(locale, 'i19_col_note')}</th><th /></tr></thead>
+                <thead><tr>
+                  <th>{t(locale, 'i30_col_symbol')}</th>
+                  <th>{t(locale, 'i30_col_family')}</th>
+                  <th>{t(locale, 'i30_col_convoy')}</th>
+                  <th>{t(locale, 'i30_col_len')}</th>
+                  <th>{t(locale, 'i30_col_wid')}</th>
+                  <th>{t(locale, 'i30_col_hei')}</th>
+                  <th>{t(locale, 'i30_col_wei')}</th>
+                  <th>{t(locale, 'i19_col_rate')}</th>
+                  <th>{t(locale, 'i19_col_note')}</th>
+                  <th />
+                </tr></thead>
                 <tbody>{rows.map((r, i) => (
                   <tr key={i} data-rate-row={i + 1}>
-                    {(['length', 'width', 'height', 'weight'] as const).map((d) => (
-                      <td key={d}><input className="input" inputMode="decimal" size={5} aria-label={tp(locale, `i19_aria_${d}_from`, { n: String(i + 1) })} value={r[`${d}_from`]} onChange={(e) => setRow(i, `${d}_from`, e.target.value)} />
-                        {' – '}<input className="input" inputMode="decimal" size={5} aria-label={tp(locale, `i19_aria_${d}_to`, { n: String(i + 1) })} value={r[`${d}_to`]} onChange={(e) => setRow(i, `${d}_to`, e.target.value)} /></td>
+                    <td><input className="input" size={6} aria-label={tp(locale, 'i30_aria_symbol', { n: String(i + 1) })} value={r.symbol} onChange={(e) => setRow(i, 'symbol', e.target.value)} /></td>
+                    <td><input className="input" size={4} aria-label={tp(locale, 'i30_aria_family', { n: String(i + 1) })} value={r.family} onChange={(e) => setRow(i, 'family', e.target.value)} /></td>
+                    <td><input className="input" inputMode="numeric" size={3} aria-label={tp(locale, 'i30_aria_convoy', { n: String(i + 1) })} value={r.convoy_cars} onChange={(e) => setRow(i, 'convoy_cars', e.target.value)} placeholder="KR" /></td>
+                    {(['length_to', 'width_to', 'height_to', 'weight_to'] as const).map((k) => (
+                      <td key={k}><input className="input" inputMode="decimal" size={5} aria-label={`${k} ${i + 1}`} value={r[k]} onChange={(e) => setRow(i, k, e.target.value)} /></td>
                     ))}
                     <td><input className="input" inputMode="decimal" size={8} aria-label={tp(locale, 'i19_aria_rate', { n: String(i + 1) })} value={r.base_rate} onChange={(e) => setRow(i, 'base_rate', e.target.value)} /></td>
                     <td><input className="input" size={12} aria-label={tp(locale, 'i19_aria_note', { n: String(i + 1) })} value={r.note} onChange={(e) => setRow(i, 'note', e.target.value)} /></td>
@@ -139,7 +168,7 @@ export default function RateCardForm() {
                 ))}</tbody>
               </table>
             )}
-            <button className="chipbtn" type="button" onClick={() => setRows((x) => [...x, { ...EMPTY_ROW }])}>{t(locale, 'i19_add_row')}</button>
+            <button className="chipbtn" type="button" onClick={() => setRows((x) => [...x, { ...EMPTY_SYMBOL_ROW }])}>{t(locale, 'i30_add_row')}</button>
           </div>
           <label className="wide">{t(locale, cur ? 'i19_reason_req' : 'i19_reason')}<input className="input full" required={!!cur} minLength={cur ? 3 : undefined} value={reason} onChange={(e) => setReason(e.target.value)} /></label>
           <button className="btn" type="submit" disabled={busy || !projectId || !orgId}>{t(locale, 'i19_save')}</button>
@@ -149,7 +178,7 @@ export default function RateCardForm() {
         <div className="panel-bd flush" data-rate-card="versions">
           {cards.length === 0 ? <div className="auth-admin-row">{t(locale, 'i19_versions_none')}</div> : cards.map((c) => (
             <div className="auth-admin-row" key={c.id} data-rate-version={c.version}>
-              <span className="grow"><b>{tp(locale, 'i19_ver', { v: String(c.version) })}</b> · {tp(locale, 'i19_from', { d: c.valid_from })} · {tp(locale, 'i19_n_rules', { n: String(c.rate_rules.length) })}{c.rate_rules.some((r) => r.cargo_class === 'STANDARD') ? ` · ${t(locale, 'i19_has_std')}` : ` · ${t(locale, 'i19_no_std')}`}
+              <span className="grow"><b>{tp(locale, 'i19_ver', { v: String(c.version) })}</b> · {tp(locale, 'i19_from', { d: c.valid_from })} · {tp(locale, 'i19_n_rules', { n: String(c.rate_rules.length) })}
                 {c.note ? <small> · {c.note}</small> : null}</span>
             </div>
           ))}

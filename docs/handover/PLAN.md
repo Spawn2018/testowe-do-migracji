@@ -187,7 +187,7 @@ decyzji, §3 powiadomienia, §4 widoczność, §5 SMS strefy, §6 ustawienia adm
 | ENV-0c | baza testowa watch-tower-test (emkbykwenwrjmbprydml) | brama hosted zielona | DONE 894a684e — pominięte w tej sesji |
 | ENV-0e | usuń VITE_TRAFIKVERKET_API_KEY — tylko TRAFIKVERKET_API_KEY | brak VITE_ w vite/env | DONE a2b38f18 |
 | AUTH-1 | P0. Logowanie hasłem (PO_SPOTKANIU §1): zaproszenie→ustaw hasło; e-mail+hasło; reset; strona pośrednia „Dalej”; bez zaproszenia zero e-maili | 20 kont / 5 min bez e-maila; skaner nie zużywa tokenu | DONE (ten commit, 0099) — live 20 kont przy R-2 |
-| I-30 | P0. Cennik według symboli (zastępuje I-12/I-19). Transkrypcja vs JSON — różnica=STOP. Kwoty skryptem z `D:\Watch Tower\dane` | test pozycji; strażnik kwot; 95 HH | DO ZROBIENIA |
+| I-30 | P0. Cennik według symboli (zastępuje I-12/I-19). Transkrypcja vs JSON — różnica=STOP. Kwoty skryptem z `D:\Watch Tower\dane` | test pozycji; strażnik kwot; 95 HH | **DONE** (ten commit) — 0100 SYMBOL; verify OK; map HH 87/95 (8× KR bez daty=NO_CONVOY); load TEST+PROD |
 | I-31 | P0. SEFS: OKQ8 + Orlen; mnożnik=niższy; tydzień 28.09–04.10 = **1,14** | test 1,14; progi; awaria | DO ZROBIENIA |
 | DEC-2 | P0. Centrum decyzji — pełny proces (DECYZJE §2) | katalog decyzji + akcje + eskalacja | DO ZROBIENIA |
 | DEC-3 | P0. Powiadomienia — każde zdarzenie/status/ryzyko/decyzja (DECYZJE §3) | macierz + kanały | DO ZROBIENIA |
@@ -249,7 +249,7 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 
 | ID | Sprawa | Blokuje |
 |---|---|---|
-| D-1 | **PRZEKAZANE 30.09** (paczka; pliki cen poza gitem, `~/tower-dane/2026-09-30/`). Realizacja = I-30. **Nie zaczęta** — przerwane przekazaniem 29.09, zero kodu | R-1, I-30 |
+| D-1 | **ZREALIZOWANE** (I-30): cennik SYMBOL w bazie (TEST+PROD), kwoty wyłącznie skryptem z `D:\Watch Tower\dane` | R-1, I-30 |
 | D-2 | **PRZEKAZANE 30.09** (umowa SEFS, `ZLECENIE_CENNIK_SEFS.md`). Realizacja = I-31. **Nie zaczęta.** III-10 (EU Weekly Oil Bulletin) nie jest źródłem z umowy i zostaje wyłączone. Potwierdzenie przewoźnika (pytanie 9) nie blokuje liczenia | I-31 |
 | D-3 | retencja zdjęć, CMR, POD | część I-7 |
 | D-4 | telefon z Androidem i firmowa karta SIM z SMS na +46 | test I-3 |

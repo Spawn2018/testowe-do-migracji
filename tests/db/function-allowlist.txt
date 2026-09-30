@@ -71,6 +71,9 @@ authenticated rate_match
 # I-19 (0065): formularz cennika HHL — zapis wersji i dziennik zmian
 authenticated rate_card_save
 authenticated rate_card_change_log
+# I-30 (0100): cennik według symbolu — pomocnicze (HHL przez rate_match)
+authenticated shipment_family
+authenticated kr_convoy_count
 # I-3 (0067): bramka SMS — telefon (anon, token urządzenia), HHL (urządzenia), link kierowcy SMS-em
 anon sms_pull
 anon sms_report

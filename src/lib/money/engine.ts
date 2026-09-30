@@ -203,12 +203,15 @@ export interface RateRule {
   heightFrom: number; heightTo: number;
   weightFrom: number; weightTo: number;
   roadRateEur: number;
-  /** I-12 (D-8): pozycja STANDARD = stała stawka bez przedziałów wymiarów; brak = DIMENSIONED */
-  cargoClass?: 'DIMENSIONED' | 'STANDARD';
+  /** I-12 (D-8): STANDARD; I-30: SYMBOL (max wymiary + rodzina/konwój); brak = DIMENSIONED */
+  cargoClass?: 'DIMENSIONED' | 'STANDARD' | 'SYMBOL';
+  symbol?: string;
+  family?: string;
+  convoyCars?: number | null;
 }
 
 export type RateMatchResult =
-  | { matched: true; rule: RateRule; roadRateEur: number }
+  | { matched: true; rule: RateRule; roadRateEur: number; heightAdopted?: boolean }
   | { matched: false; reason: 'NO_BRACKET'; dims: Dimensions }
   | { matched: false; reason: 'AMBIGUOUS'; candidates: RateRule[] };
 
@@ -235,12 +238,89 @@ export function matchRate(dims: Dimensions, rules: RateRule[]): RateMatchResult 
  * co dla stawki drogowej (buildPriceSide / assertSameMechanism). Kwot nie wymyślamy (D-1).
  * ===================================================================== */
 
-export type CargoClass = 'DIMENSIONED' | 'STANDARD';
+export type CargoClass = 'DIMENSIONED' | 'STANDARD' | 'SYMBOL';
 
 export type RateForCargoResult =
   | RateMatchResult
   | { matched: false; reason: 'NO_STANDARD_RATE' }
-  | { matched: false; reason: 'NO_DIMENSIONS' };
+  | { matched: false; reason: 'NO_DIMENSIONS' }
+  | { matched: false; reason: 'NO_FAMILY' }
+  | { matched: false; reason: 'NO_CONVOY' }
+  | { matched: false; reason: 'NO_PRICE' };
+
+/** Prefiks numeru wysyłki → rodzina (TS≠T, SS≠SG). */
+export function shipmentFamily(code: string): string | null {
+  const c = code.trim().toUpperCase();
+  if (!c) return null;
+  if (/^TS([.-]|$)/.test(c)) return 'TS';
+  if (/^SS([.-]|$)/.test(c)) return 'SS';
+  if (/^SG([.-]|$)/.test(c)) return 'SG';
+  if (/^BS([.-]|$)/.test(c)) return 'BS';
+  if (/^KR([.-]|$)/.test(c)) return 'KR';
+  if (/^PL([.-]|$)/.test(c)) return 'PL';
+  if (/^T([.-]|$)/.test(c)) return 'T';
+  return null;
+}
+
+const bySmallestMax = (a: RateRule, b: RateRule) =>
+  a.lengthTo - b.lengthTo || a.widthTo - b.widthTo || a.heightTo - b.heightTo || a.weightTo - b.weightTo
+  || (a.symbol ?? '').localeCompare(b.symbol ?? '');
+
+/**
+ * I-30 — dobór pozycji według symbolu / wariantu / konwoju.
+ * Kwoty testowe wyłącznie zmyślone — nigdy z pliku poufnego.
+ */
+export function matchRateBySymbol(input: {
+  shipmentCode: string;
+  dims: Dimensions | null;
+  /** Liczba KR z tą samą datą załadunku; wymagane dla rodziny KR. */
+  convoyCount?: number | null;
+  rules: RateRule[];
+}): RateForCargoResult & { heightAdopted?: boolean; convoyCapped?: boolean } {
+  const family = shipmentFamily(input.shipmentCode);
+  if (!family) return { matched: false, reason: 'NO_FAMILY' };
+  let dims = input.dims;
+  if (!dims) return { matched: false, reason: 'NO_DIMENSIONS' };
+
+  let heightAdopted = false;
+  const code = input.shipmentCode.trim().toUpperCase();
+  if (family === 'PL' && ['PL-1', 'PL-10.1', 'PL-17.1'].includes(code) && Math.abs(dims.heightM - 2.6) < 1e-9) {
+    dims = { ...dims, heightM: 2.45 };
+    heightAdopted = true;
+  }
+
+  let convoyCap: number | null = null;
+  let convoyCapped = false;
+  if (family === 'KR') {
+    const n = input.convoyCount;
+    if (n == null || n < 1) return { matched: false, reason: 'NO_CONVOY' };
+    if (n > 3) { convoyCap = 3; convoyCapped = true; }
+    else convoyCap = n;
+  }
+
+  const pool = input.rules
+    .filter((r) => (r.cargoClass ?? 'DIMENSIONED') === 'SYMBOL' && r.family === family)
+    .filter((r) => family !== 'KR' || r.convoyCars === convoyCap);
+
+  const covers = (r: RateRule, h: number) =>
+    dims!.lengthM <= r.lengthTo && dims!.widthM <= r.widthTo && h <= r.heightTo && dims!.weightT <= r.weightTo;
+
+  const full = pool.filter((r) => covers(r, dims!.heightM)).sort(bySmallestMax);
+  if (full.length) {
+    return { matched: true, rule: full[0], roadRateEur: full[0].roadRateEur, heightAdopted, convoyCapped };
+  }
+
+  const heightOnly = pool
+    .filter((r) => dims!.lengthM <= r.lengthTo && dims!.widthM <= r.widthTo && dims!.weightT <= r.weightTo && dims!.heightM > r.heightTo)
+    .sort(bySmallestMax);
+  if (heightOnly.length) {
+    return {
+      matched: true, rule: heightOnly[0], roadRateEur: heightOnly[0].roadRateEur,
+      heightAdopted: true, convoyCapped,
+    };
+  }
+  return { matched: false, reason: 'NO_PRICE' };
+}
 
 export function matchRateForCargo(cargo: { cargoClass: CargoClass; dims: Dimensions | null }, rules: RateRule[]): RateForCargoResult {
   if (cargo.cargoClass === 'STANDARD') {
@@ -250,12 +330,15 @@ export function matchRateForCargo(cargo: { cargoClass: CargoClass; dims: Dimensi
     return { matched: true, rule: std[0], roadRateEur: std[0].roadRateEur };
   }
   if (!cargo.dims) return { matched: false, reason: 'NO_DIMENSIONS' };
-  return matchRate(cargo.dims, rules.filter((r) => r.cargoClass !== 'STANDARD'));
+  return matchRate(cargo.dims, rules.filter((r) => r.cargoClass !== 'STANDARD' && r.cargoClass !== 'SYMBOL'));
 }
 
-/** Klucz komunikatu ostrzeżenia (i18n `i12_warn_*`) albo null, gdy stawka jest. */
+/** Klucz komunikatu ostrzeżenia (i18n `i12_warn_*` / `i30_warn_*`) albo null, gdy stawka jest. */
 export function rateWarningKey(r: RateForCargoResult): string | null {
   if (r.matched) return null;
+  if (r.reason === 'NO_PRICE' || r.reason === 'NO_FAMILY' || r.reason === 'NO_CONVOY') {
+    return `i30_warn_${r.reason}`;
+  }
   return `i12_warn_${r.reason}`;
 }
 
