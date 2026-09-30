@@ -84,6 +84,8 @@ authenticated decision_assign
 authenticated decision_snooze
 authenticated decision_resolve
 authenticated decision_expire
+# DEC-4 (0105): macierz powiadomień — tylko HHL_ADMIN
+authenticated admin_notification_matrix_set
 # I-3 (0067): bramka SMS — telefon (anon, token urządzenia), HHL (urządzenia), link kierowcy SMS-em
 anon sms_pull
 anon sms_report

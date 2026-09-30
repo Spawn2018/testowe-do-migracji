@@ -22,6 +22,7 @@ const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUT
 /* ANEKS 5 §4.4 — Moje urządzenia / Wyloguj ze wszystkich urządzeń (tylko Supabase) */
 /* I-2f — prawdziwy formularz BAF/SEFS (0052) zamiast fasady — tylko Supabase */
 const BafForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/BafForm')) : null;
+const NotificationMatrixForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/NotificationMatrixForm')) : null;
 /* I-19 — formularz cennika HHL (0065) — tylko Supabase */
 const RateCardForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/RateCardForm')) : null;
 /* I-3 — bramka SMS (0067/0068) — tylko Supabase */
@@ -150,6 +151,7 @@ export function OptionsView() {
           </>
         )}
         {BafForm && <Suspense fallback={null}><BafForm /></Suspense>}
+        {NotificationMatrixForm && <Suspense fallback={null}><NotificationMatrixForm /></Suspense>}
         {SmsGateway && <Suspense fallback={null}><SmsGateway /></Suspense>}
         {PermitRequirement && <Suspense fallback={null}><PermitRequirement /></Suspense>}
         {CarrierScorecard && <Suspense fallback={null}><CarrierScorecard /></Suspense>}

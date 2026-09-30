@@ -34,12 +34,12 @@ const EXPECTED = {
   invite: 48,
   risks: 21, // 23 − 2 SKIP (tower_test_status wymaga CREATE DATABASE)
   import: 66,
-  nullguard: 429,
+  nullguard: 434,
   i2: 510,
   i30: 10,
   i31: 6,
   dec2: 14,
-  dec3: 6,
+  dec3: 8,
   workflows: 46,
   insurance: 33,
 };
