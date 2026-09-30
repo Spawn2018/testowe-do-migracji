@@ -189,9 +189,9 @@ decyzji, §3 powiadomienia, §4 widoczność, §5 SMS strefy, §6 ustawienia adm
 | AUTH-1 | P0. Logowanie hasłem (PO_SPOTKANIU §1): zaproszenie→ustaw hasło; e-mail+hasło; reset; strona pośrednia „Dalej”; bez zaproszenia zero e-maili | 20 kont / 5 min bez e-maila; skaner nie zużywa tokenu | DONE (ten commit, 0099) — live 20 kont przy R-2 |
 | I-30 | P0. Cennik według symboli (zastępuje I-12/I-19). Transkrypcja vs JSON — różnica=STOP. Kwoty skryptem z `D:\Watch Tower\dane` | test pozycji; strażnik kwot; 95 HH | **DONE** (ten commit) — 0100 SYMBOL; verify OK; map HH 87/95 (8× KR bez daty=NO_CONVOY); load TEST+PROD |
 | I-31 | P0. SEFS: OKQ8 + Orlen; mnożnik=niższy; tydzień 28.09–04.10 = **1,14** | test 1,14; progi; awaria | **DONE** (ten commit) — 0101; unit+db 1,14; load tabel TEST+PROD |
-| DEC-2 | P0. Centrum decyzji — pełny proces (DECYZJE §2) | katalog decyzji + akcje + eskalacja | W TOKU — baza 0102 DONE (TEST+PROD); UI lista+rozstrzygnięcie w Ryzykach; pełne skutki opcji + i18n opcji — dalej |
-| DEC-3 | P0. Powiadomienia — każde zdarzenie/status/ryzyko/decyzja (DECYZJE §3) | macierz + kanały | DO ZROBIENIA |
-| DEC-4 | P0. Widoczność — admin wybiera firmy (DECYZJE §4) | macierz per typ | DO ZROBIENIA |
+| DEC-2 | P0. Centrum decyzji — pełny proces (DECYZJE §2) | katalog decyzji + akcje + eskalacja | W TOKU — baza+UI; skutki opcji E2E dalej |
+| DEC-3 | P0. Powiadomienia — każde zdarzenie/status/ryzyko/decyzja (DECYZJE §3) | macierz + kanały | W TOKU — decyzje OPEN/RESOLVE/ESCALATE IN_APP (0104); reszta zdarzeń dalej |
+| DEC-4 | P0. Widoczność — admin wybiera firmy (DECYZJE §4) | macierz per typ | W TOKU — tabela notification_matrix + domyślne (0104); UI ustawień dalej |
 | BRAND-15 | P1. Nazwa i logo Watch Tower (PO_SPOTKANIU §15, `public/brand`) | favicon, splash, manifest, zero „TOWER” w UI | DO ZROBIENIA |
 | AWIZ-4 | P1. Awizacja „Dodaj"/„Edytuj" + okno (PO_SPOTKANIU §4) | przebieg HHL/SCX | DO ZROBIENIA |
 | HHL-4a | P1. Numer HHL — dodawanie/edycja przez HHL (§4a) | test bazy + UI | DO ZROBIENIA |
