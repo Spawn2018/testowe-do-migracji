@@ -1278,7 +1278,7 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
     severity: 'MEDIUM',
     read: false,
     roleScope: ['HHL', 'KSH', 'SCX'],
-    href: { view: 'geo', loadId: 'load-020' },
+    href: { view: 'sched', loadId: 'load-020' },
   },
   {
     id: 'n4',

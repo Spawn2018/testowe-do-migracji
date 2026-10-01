@@ -518,7 +518,11 @@ export const useTowerStore = create<TowerState>()(
           dash: 'dash',
         };
         const raw = href?.view ?? '';
-        const view = (alias[raw] ?? raw) || undefined;
+        let view = (alias[raw] ?? raw) || undefined;
+        // DEC-CLICK (b): czyste zdarzenie statusu/strefy → zawsze Transport, bez mini-akcji geo
+        if ((view === 'geo' || view === 'geofence') && (href?.loadId || n.loadId)) {
+          view = 'sched';
+        }
         get().navigateTo({
           view: view as any,
           tab: href?.tab ?? null,
@@ -1063,10 +1067,11 @@ export const useTowerStore = create<TowerState>()(
             severity: g.type === 'PRE_ARRIVAL' || g.type === 'SITE' ? 'HIGH' : 'MEDIUM',
             loadId,
             roleScope: roles,
-            href: { view: 'geo', loadId, entityId: g.id },
+            href: { view: 'sched', loadId },
           });
         }
         // ONE-MECH / D-29t: PRE_ARRIVAL → geofence + DEC-5 / macierz (nie auto-run demo wf-1)
+        // DEC-CLICK (b): klik strefy → Transport (sched), nie geo
         get().pushToast(tp(get().locale, 'a6_ts_zone_event', { type: g.type, name: g.name }), 'MEDIUM', loadId);
       },
 
