@@ -102,6 +102,13 @@
       android:layout_marginTop="8dp"
       android:text="Wyłącz oszczędzanie baterii" />
 
+    <Button
+      android:id="@+id/btnVendor"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="8dp"
+      android:text="Autostart Realme / nigdy nie usypiaj" />
+
     <TextView
       android:id="@+id/status"
       android:layout_width="match_parent"
@@ -109,5 +116,14 @@
       android:layout_marginTop="16dp"
       android:textIsSelectable="true"
       android:text="Status: zatrzymana" />
+
+    <TextView
+      android:id="@+id/vendorHint"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="16dp"
+      android:textSize="13sp"
+      android:lineSpacingMultiplier="1.15"
+      android:textIsSelectable="true" />
   </LinearLayout>
 </ScrollView>

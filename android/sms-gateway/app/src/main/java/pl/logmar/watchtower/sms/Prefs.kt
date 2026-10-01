@@ -29,6 +29,11 @@ class Prefs(ctx: Context) {
     get() = p.getBoolean(KEY_ON, false)
     set(v) = p.edit().putBoolean(KEY_ON, v).apply()
 
+  /** Czy pokazano prośbę o baterię / Realme (pierwsze uruchomienie). */
+  var batteryPromptDone: Boolean
+    get() = p.getBoolean(KEY_BAT_PROMPT, false)
+    set(v) = p.edit().putBoolean(KEY_BAT_PROMPT, v).apply()
+
   fun isConfigured(): Boolean =
     supabaseUrl.startsWith("https://") &&
       anonKey.length > 20 &&
@@ -41,5 +46,6 @@ class Prefs(ctx: Context) {
     private const val KEY_TOKEN = "token"
     private const val KEY_PHONE = "phone"
     private const val KEY_ON = "on"
+    private const val KEY_BAT_PROMPT = "bat_prompt"
   }
 }

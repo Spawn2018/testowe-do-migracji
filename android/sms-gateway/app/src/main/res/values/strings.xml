@@ -5,4 +5,14 @@
   <string name="channel_desc">Pobieranie i wysyłka SMS z kolejki Watch Tower</string>
   <string name="notif_title">Bramka SMS aktywna</string>
   <string name="notif_text">Ostatni kontakt: %1$s</string>
+
+  <string name="battery_dialog_title">Bateria i autostart</string>
+  <string name="battery_dialog_msg">Żeby bramka działała z wyłączonym ekranem (Realme / Android 13), wyłącz optymalizację baterii i włącz autostart. Bez tego system sam wyłącza aplikację.</string>
+  <string name="battery_dialog_ok">Ustaw teraz</string>
+  <string name="battery_dialog_later">Później</string>
+  <string name="battery_already_ok">Oszczędzanie baterii już wyłączone dla tej aplikacji</string>
+
+  <string name="realme_dialog_title">Realme 8 / realme UI 4.0</string>
+  <string name="realme_open_settings">Otwórz ustawienia</string>
+  <string name="realme_setup">Realme 8 (realme UI 4.0) — obowiązkowe:\n\n1. Bateria → Optymalizacja baterii → Watch Tower SMS → Nie optymalizuj / Zezwól.\n\n2. Aplikacje → Autostart → Watch Tower SMS → WŁĄCZ.\n\n3. Bateria → Aplikacje nigdy nieusypiane (lub Zużycie baterii przez aplikacje → Watch Tower SMS → Zezwalaj na aktywność w tle).\n\n4. Ostatnie aplikacje → Watch Tower SMS → kłódka (zablokuj w pamięci).\n\n5. Powiadomienia → Watch Tower SMS → włączone (kanał „Bramka SMS”).</string>
 </resources>

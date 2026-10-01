@@ -11,6 +11,8 @@
   <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
   <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
   <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+  <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
   <application
     android:allowBackup="false"
@@ -33,7 +35,8 @@
     <service
       android:name=".GatewayService"
       android:exported="false"
-      android:foregroundServiceType="dataSync" />
+      android:foregroundServiceType="dataSync"
+      android:stopWithTask="false" />
 
     <receiver
       android:name=".BootReceiver"
@@ -41,6 +44,18 @@
       android:enabled="true">
       <intent-filter>
         <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+        <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+        <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+      </intent-filter>
+    </receiver>
+
+    <receiver
+      android:name=".KeepAliveReceiver"
+      android:exported="false"
+      android:enabled="true">
+      <intent-filter>
+        <action android:name="pl.logmar.watchtower.sms.KEEPALIVE" />
       </intent-filter>
     </receiver>
 

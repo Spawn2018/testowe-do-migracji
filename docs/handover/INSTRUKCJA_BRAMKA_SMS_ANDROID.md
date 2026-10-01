@@ -6,76 +6,67 @@ Aplikacja na telefon z Androidem i kartą SIM. Pobiera kolejkę `sms_outbox`
 **Sekrety (token urządzenia, URL, klucz anon, numer SIM, klucz podpisu APK)
 nigdy nie trafiają do repozytorium ani logów.**
 
-## Gotowy plik (01.10.2026 · v1.0.2)
+## Gotowy plik (01.10.2026 · v1.0.3)
 
 | Pole | Wartość |
 |---|---|
 | Plik | `D:\Watch Tower\dane\apk\WatchTowerSMS.apk` |
-| Wersja | **1.0.2** (`versionCode` 3) |
-| SHA-256 | `8e3edc6b253aad3c64c6653d55c150f0bf2d796e19e228a2a9243ecaf8d47ec9` |
+| Wersja | **1.0.3** (`versionCode` 4) |
+| SHA-256 | `64eca1b17e8a0c179d17cda99041860f9c189636a0271bfed622afa24eef8c05` |
 | Podpis | v2; klucz w `D:\Watch Tower\dane\apk-klucz\` (poza repo) |
 
-**1.0.2:** naprawa raportów — `goAsync` + wątek HTTP w `SmsResultReceiver`,
-`PendingIntent.FLAG_MUTABLE` (1.0.1: CLAIMED bez SENT).  
-**1.0.1:** `sentIntent` + `deliveryIntent`; odstęp ≥ 3 s; retry; watchdog 10 min.
+**1.0.3 (Realme 8 / Android 13):** `onDestroy` nie kasuje „włączona”; KeepAlive co 12 min;
+BOOT + QUICKBOOT + MY_PACKAGE_REPLACED; dialog baterii + instrukcja Realme (autostart,
+nigdy nieusypiane, kłódka).  
+**1.0.2:** `goAsync` + `FLAG_MUTABLE` (raport SENT/DELIVERED).  
+**1.0.1:** sentIntent + deliveryIntent; odstęp ≥ 3 s; retry; watchdog 10 min.
+
+Przed instalacją: `node scripts/sms-apk-smoke.mjs` → **PASS**.
+
+## Realme 8 (realme UI 4.0) — obowiązkowe
+
+1. **Bateria** → Optymalizacja baterii → Watch Tower SMS → **Nie optymalizuj**.
+2. **Aplikacje** → **Autostart** → Watch Tower SMS → **WŁĄCZ**.
+3. **Bateria** → Aplikacje nigdy nieusypiane / Zużycie baterii → **Zezwalaj w tle**.
+4. Ostatnie aplikacje → Watch Tower SMS → **kłódka**.
+5. Powiadomienie „Bramka SMS aktywna” musi być widoczne (nie wyłączać kanału).
+
+W aplikacji: przyciski „Wyłącz oszczędzanie baterii” oraz „Autostart Realme…”.
 
 ## Przeniesienie na telefon
 
-1. **kabel USB:** podłącz telefon → w Eksploratorze Windows skopiuj
-   `D:\Watch Tower\dane\apk\WatchTowerSMS.apk` do folderu Pobrane / Download.
-2. **Dysk Google:** wgraj ten sam plik na Drive właściciela → otwórz na
-   telefonie w aplikacji Dysk → Pobierz.
+1. **kabel USB:** skopiuj `D:\Watch Tower\dane\apk\WatchTowerSMS.apk` do Pobrane.
+2. **Dysk Google:** wgraj ten sam plik → Pobierz na telefonie.
 
-## Instalacja (krok po kroku)
+## Instalacja
 
-1. Na telefonie otwórz plik `WatchTowerSMS.apk` (Pliki / Dysk / Downloads).
-2. Jeśli Android zapyta — włącz **instalację z nieznanego źródła**
-   (dla Plików / Dysku / przeglądarki — przełącznik „Zezwalaj z tego źródła”).
-3. Zainstaluj / zaktualizuj **Watch Tower SMS** do **1.0.2**.
-4. Uruchom aplikację. Przy pierwszym starcie zaakceptuj:
-   - **SMS** (wysyłanie),
-   - **powiadomienia** (Android 13+).
-5. W ustawieniach aplikacji wpisz (lub zostaw po aktualizacji):
-   - **URL projektu Supabase** (produkcja),
-   - **klucz anon** (publiczny: Supabase → Settings → API),
-   - **token parowania** — w aplikacji web: Opcje → Odbiorcy SMS i strefy →
-     Bramka SMS → „Wydaj urządzenie” (token widać **raz**; skopiuj od razu),
-   - **numer SIM bramki** w E.164 (np. `+48…` / `+46…`) — numer karty
-     w **tym** telefonie (nie w repozytorium).
-6. **Zapisz ustawienia**.
-7. **Wyłącz oszczędzanie baterii** (przycisk w aplikacji) → „Bez ograniczeń”
-   / „Nie optymalizuj” dla Watch Tower SMS.
-8. **Uruchom bramkę** — w pasku powiadomień: „Bramka SMS aktywna”.
-9. **Autostart** po restarcie: jeśli była włączona, startuje sama.
-   Xiaomi/Samsung: Ustawienia → Aplikacje → Watch Tower SMS →
-   Autostart / uruchamianie w tle → **włącz**.
+1. Otwórz `WatchTowerSMS.apk` → zezwól na instalację z tego źródła.
+2. Zaktualizuj do **1.0.3**.
+3. Uprawnienia: SMS + powiadomienia.
+4. Zapisz URL / anon / token / numer SIM → **Uruchom bramkę**.
+5. Zaakceptuj dialog baterii + ustawienia Realme (powyżej).
+6. Potwierdź stałe powiadomienie „Bramka SMS aktywna”.
 
-## Po sparowaniu (kolejność właściciela)
+## Po instalacji (kolejność właściciela)
 
-1. W Opcjach dodaj **numer właściciela** jako numer testowy.
-2. Wyślij **SMS testowy** — w kolejce ma być **SENT**, potem **DELIVERED**
-   (Opcje → Bramka SMS → Ostatnie SMS).
-3. Seria akceptacyjna: `node scripts/sms-burst-test.mjs` → **10/10 DELIVERED**.
-4. Dopiero potem włącz wyzwalacze stref (DECYZJE §5) i wpisz odbiorców 2+2.
-5. W **Stanie systemu** sprawdź „ostatni kontakt”; cisza > 15 min
-   → ryzyko + e-mail (cron w bazie).
+1. **2 h** z wyłączonym ekranem — bez ręcznego włączania; w Opcjach „ostatni kontakt”
+   nie może przekroczyć ~15 min (strażnik serwera).
+2. `node scripts/sms-burst-test.mjs` → **10/10 DELIVERED**.
+3. Dopiero potem wyzwalacze stref.
 
-## Ponowna budowa (wykonawca)
-
-Wymaga JDK 17, Android SDK (`platforms;android-35`, `build-tools;35.0.0`),
-Gradle wrapper w `android/sms-gateway/`. Klucz: `D:\Watch Tower\dane\apk-klucz\`.
+## Ponowna budowa
 
 ```bat
 cd android\sms-gateway
 gradlew.bat assembleRelease
 copy app\build\outputs\apk\release\app-release.apk "D:\Watch Tower\dane\apk\WatchTowerSMS.apk"
+node ..\..\scripts\sms-apk-smoke.mjs
 ```
 
-GitHub Actions — **nie używamy** na razie.
+GitHub Actions — **nie używamy**.
 
 ## Bezpieczeństwo
 
-- Token urządzenia: SHA-256 w bazie; jawny tylko przy wydaniu i w telefonie.
-- Aplikacja nie loguje tokenu.
-- Limit 150 SMS/dobę i 20 wywołań/min — po stronie bazy.
-- Plik `.jks` i `keystore.properties` wyłącznie w `D:\Watch Tower\dane\apk-klucz\`.
+- Token: SHA-256 w bazie; jawny tylko przy wydaniu i w telefonie.
+- Limit 150 SMS/dobę, 20 wywołań/min — baza.
+- `.jks` / `keystore.properties` tylko w `D:\Watch Tower\dane\apk-klucz\`.

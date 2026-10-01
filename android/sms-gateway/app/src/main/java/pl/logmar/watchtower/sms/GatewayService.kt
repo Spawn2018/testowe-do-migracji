@@ -25,8 +25,9 @@ import java.util.TimeZone
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Usługa pierwszoplanowa: heartbeat + pull + wysyłka z sentIntent/deliveryIntent.
- * Odstęp ≥ 3 s między SMS. Token urządzenia nie jest logowany.
+ * Usługa pierwszoplanowa: heartbeat + pull + wysyłka.
+ * Stan „włączona” w Prefs — onDestroy NIE wyłącza (zabicie przez system ≠ Stop).
+ * KeepAliveAlarm + BOOT przywracają usługę na Realme/ColorOS.
  */
 class GatewayService : Service() {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -42,11 +43,23 @@ class GatewayService : Service() {
     prefs = Prefs(this)
     api = TowerApi(prefs)
     ensureChannel()
+    // Android 12+: startForeground jak najszybciej po startForegroundService
+    startForeground(NOTIF_ID, buildNotif("start"))
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-    startForeground(NOTIF_ID, buildNotif("start"))
+    if (intent?.action == ACTION_STOP) {
+      prefs.enabled = false
+      KeepAliveReceiver.cancel(this)
+      stopForeground(STOP_FOREGROUND_REMOVE)
+      stopSelf()
+      return START_NOT_STICKY
+    }
+
+    startForeground(NOTIF_ID, buildNotif("aktywna"))
     prefs.enabled = true
+    KeepAliveReceiver.schedule(this)
+
     if (loop?.isActive != true) {
       loop = scope.launch { runLoop() }
     }
@@ -54,15 +67,32 @@ class GatewayService : Service() {
   }
 
   override fun onDestroy() {
-    prefs.enabled = false
+    // NIE kasuj prefs.enabled — zabicie przez system ma przywrócić usługę
     loop?.cancel()
     scope.cancel()
+    if (Prefs(this).enabled) {
+      KeepAliveReceiver.schedule(this)
+    }
     super.onDestroy()
+  }
+
+  override fun onTaskRemoved(rootIntent: Intent?) {
+    super.onTaskRemoved(rootIntent)
+    if (prefs.enabled) {
+      // Realme często zabija po swipe z ostatnich — alarm + natychmiastowy restart
+      KeepAliveReceiver.schedule(this, delayMs = 2_000L)
+      try {
+        startForegroundService(Intent(this, GatewayService::class.java))
+      } catch (_: Exception) {
+        // Alarm dogoni
+      }
+    }
   }
 
   private suspend fun runLoop() {
     var pollMs = 15_000L
-    while (scope.isActive && prefs.enabled) {
+    while (scope.isActive) {
+      if (!prefs.enabled) break
       try {
         if (!prefs.isConfigured()) {
           updateNotif("brak konfiguracji")
@@ -75,9 +105,9 @@ class GatewayService : Service() {
         val daySent = hb.optInt("day_sent", 0)
         val dayLimit = hb.optInt("day_limit", 150)
         updateNotif("OK · dziś $daySent/$dayLimit")
+        KeepAliveReceiver.schedule(this)
 
         if (!paused) {
-          // po 1 naraz — odstęp 3 s między kolejnymi
           val items = api.pull(1)
           for (item in items) {
             sendOne(item)
@@ -97,7 +127,6 @@ class GatewayService : Service() {
       val sm = SmsManager.getDefault()
       val parts = sm.divideMessage(item.body)
       val n = parts.size.coerceAtLeast(1)
-      // FLAG_MUTABLE: framework SMS musi uzupełnić Intent (API 31+)
       val flags = PendingIntent.FLAG_UPDATE_CURRENT or
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE
         else 0
@@ -109,7 +138,6 @@ class GatewayService : Service() {
           action = SmsResultReceiver.ACTION_SENT
           putExtra(SmsResultReceiver.EXTRA_SMS_ID, item.id)
           putExtra(SmsResultReceiver.EXTRA_PARTS, n)
-          // unikalny data URI — osobny PendingIntent per część
           data = android.net.Uri.parse("wt-sms://sent/${item.id}/$i")
         }
         val delIntent = Intent(this, SmsResultReceiver::class.java).apply {
@@ -126,7 +154,6 @@ class GatewayService : Service() {
       } else {
         sm.sendMultipartTextMessage(item.toE164, null, parts, sentList, delList)
       }
-      // SENT / DELIVERED raportuje SmsResultReceiver — nie zgłaszamy tu z góry
     } catch (e: Exception) {
       api.report(item.id, "FAILED", error = e.message ?: "send failed")
     }
@@ -135,9 +162,11 @@ class GatewayService : Service() {
   private fun ensureChannel() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
     val mgr = getSystemService(NotificationManager::class.java)
+    // DEFAULT — Realme czasem chowa kanały LOW
     mgr.createNotificationChannel(
-      NotificationChannel(CHANNEL, getString(R.string.channel_name), NotificationManager.IMPORTANCE_LOW).apply {
+      NotificationChannel(CHANNEL, getString(R.string.channel_name), NotificationManager.IMPORTANCE_DEFAULT).apply {
         description = getString(R.string.channel_desc)
+        setShowBadge(false)
       },
     )
   }
@@ -158,6 +187,9 @@ class GatewayService : Service() {
       .setSmallIcon(android.R.drawable.ic_dialog_email)
       .setContentIntent(open)
       .setOngoing(true)
+      .setOnlyAlertOnce(true)
+      .setCategory(NotificationCompat.CATEGORY_SERVICE)
+      .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
       .build()
   }
 
@@ -170,5 +202,6 @@ class GatewayService : Service() {
     const val CHANNEL = "sms_gateway"
     const val NOTIF_ID = 7103
     const val GAP_MS = 3_000L
+    const val ACTION_STOP = "pl.logmar.watchtower.sms.STOP"
   }
 }

@@ -1,6 +1,7 @@
 package pl.logmar.watchtower.sms
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -24,7 +25,11 @@ class MainActivity : AppCompatActivity() {
     ActivityResultContracts.RequestMultiplePermissions(),
   ) { map ->
     val ok = map.values.all { it }
-    status.text = if (ok) "Uprawnienia SMS OK — możesz uruchomić bramkę." else "Brak uprawnień SMS — bramka nie wyśle."
+    status.text = if (ok) {
+      "Uprawnienia SMS OK — możesz uruchomić bramkę."
+    } else {
+      "Brak uprawnień SMS — bramka nie wyśle."
+    }
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,12 +42,14 @@ class MainActivity : AppCompatActivity() {
     val inputToken = findViewById<TextInputEditText>(R.id.inputToken)
     val inputPhone = findViewById<TextInputEditText>(R.id.inputPhone)
     status = findViewById(R.id.status)
+    val vendorHint = findViewById<TextView>(R.id.vendorHint)
+    vendorHint.text = getString(R.string.realme_setup)
 
     inputUrl.setText(prefs.supabaseUrl)
     inputAnon.setText(prefs.anonKey)
     inputToken.setText(prefs.deviceToken)
     inputPhone.setText(prefs.gatewayPhone)
-    status.text = if (prefs.enabled) "Status: uruchomiona" else "Status: zatrzymana"
+    refreshStatus()
 
     findViewById<Button>(R.id.btnSave).setOnClickListener {
       prefs.supabaseUrl = inputUrl.text?.toString().orEmpty()
@@ -62,21 +69,60 @@ class MainActivity : AppCompatActivity() {
         return@setOnClickListener
       }
       ensureSmsPerms()
+      prefs.enabled = true
       ContextCompat.startForegroundService(this, Intent(this, GatewayService::class.java))
-      status.text = "Status: uruchomiona"
+      KeepAliveReceiver.schedule(this)
+      refreshStatus()
+      maybePromptBatteryAndVendor()
     }
 
     findViewById<Button>(R.id.btnStop).setOnClickListener {
-      stopService(Intent(this, GatewayService::class.java))
+      val stop = Intent(this, GatewayService::class.java).setAction(GatewayService.ACTION_STOP)
+      ContextCompat.startForegroundService(this, stop)
       prefs.enabled = false
-      status.text = "Status: zatrzymana"
+      KeepAliveReceiver.cancel(this)
+      refreshStatus()
     }
 
     findViewById<Button>(R.id.btnBattery).setOnClickListener {
       requestBatteryExemption()
     }
 
+    findViewById<Button>(R.id.btnVendor).setOnClickListener {
+      showVendorDialog()
+      openVendorAutostartSettings()
+    }
+
     ensureSmsPerms()
+
+    // Po otwarciu aplikacji: jeśli miała być włączona — wznów usługę
+    if (prefs.enabled && prefs.isConfigured()) {
+      ContextCompat.startForegroundService(this, Intent(this, GatewayService::class.java))
+      KeepAliveReceiver.schedule(this)
+    }
+
+    if (!prefs.batteryPromptDone) {
+      maybePromptBatteryAndVendor()
+    }
+  }
+
+  override fun onResume() {
+    super.onResume()
+    refreshStatus()
+  }
+
+  private fun refreshStatus() {
+    val bat = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+      val pm = getSystemService(PowerManager::class.java)
+      if (pm.isIgnoringBatteryOptimizations(packageName)) "bateria: bez ograniczeń" else "bateria: OGRANICZONA"
+    } else {
+      "bateria: n/d"
+    }
+    status.text = if (prefs.enabled) {
+      "Status: włączona (zapisane) · $bat · v${BuildConfig.VERSION_NAME}"
+    } else {
+      "Status: zatrzymana · $bat · v${BuildConfig.VERSION_NAME}"
+    }
   }
 
   private fun ensureSmsPerms() {
@@ -88,16 +134,87 @@ class MainActivity : AppCompatActivity() {
     if (missing.isNotEmpty()) askPerms.launch(missing.toTypedArray())
   }
 
+  private fun maybePromptBatteryAndVendor() {
+    if (prefs.batteryPromptDone) return
+    AlertDialog.Builder(this)
+      .setTitle(R.string.battery_dialog_title)
+      .setMessage(R.string.battery_dialog_msg)
+      .setPositiveButton(R.string.battery_dialog_ok) { _, _ ->
+        prefs.batteryPromptDone = true
+        requestBatteryExemption()
+        showVendorDialog()
+      }
+      .setNegativeButton(R.string.battery_dialog_later) { _, _ ->
+        prefs.batteryPromptDone = true
+      }
+      .setCancelable(false)
+      .show()
+  }
+
+  private fun showVendorDialog() {
+    AlertDialog.Builder(this)
+      .setTitle(R.string.realme_dialog_title)
+      .setMessage(R.string.realme_setup)
+      .setPositiveButton(android.R.string.ok, null)
+      .setNeutralButton(R.string.realme_open_settings) { _, _ ->
+        openVendorAutostartSettings()
+      }
+      .show()
+  }
+
   private fun requestBatteryExemption() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
     val pm = getSystemService(PowerManager::class.java)
     if (pm.isIgnoringBatteryOptimizations(packageName)) {
-      Toast.makeText(this, "Oszczędzanie baterii już wyłączone dla tej aplikacji", Toast.LENGTH_LONG).show()
+      Toast.makeText(this, R.string.battery_already_ok, Toast.LENGTH_LONG).show()
+      refreshStatus()
       return
     }
-    val i = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-      data = Uri.parse("package:$packageName")
+    try {
+      startActivity(
+        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+          data = Uri.parse("package:$packageName")
+        },
+      )
+    } catch (_: Exception) {
+      startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
     }
-    startActivity(i)
+  }
+
+  /** Realme / Oppo / ColorOS — najlepsze dostępne ustawienia systemowe. */
+  private fun openVendorAutostartSettings() {
+    val candidates = listOf(
+      Intent().setClassName(
+        "com.coloros.safecenter",
+        "com.coloros.safecenter.permission.startup.StartupAppListActivity",
+      ),
+      Intent().setClassName(
+        "com.oplus.safecenter",
+        "com.oplus.safecenter.permission.startup.StartupAppListActivity",
+      ),
+      Intent().setClassName(
+        "com.coloros.safecenter",
+        "com.coloros.safecenter.startupapp.StartupAppListActivity",
+      ),
+      Intent().setClassName(
+        "com.oppo.safe",
+        "com.oppo.safe.permission.startup.StartupAppListActivity",
+      ),
+      Intent().setClassName(
+        "com.coloros.oppoguardelf",
+        "com.coloros.powermanager.fuelgaue.PowerUsageModelActivity",
+      ),
+      Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.parse("package:$packageName")
+      },
+    )
+    for (i in candidates) {
+      try {
+        startActivity(i)
+        return
+      } catch (_: Exception) {
+        // następny
+      }
+    }
   }
 }

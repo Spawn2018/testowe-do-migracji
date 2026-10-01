@@ -33,7 +33,7 @@ class TowerApi(private val prefs: Prefs) {
         "p_info",
         JSONObject()
           .put("app", "watch-tower-sms")
-          .put("ver", "1.0.2")
+          .put("ver", "1.0.3")
           .put("phone_set", prefs.gatewayPhone.isNotBlank()),
       )
     return postRpc("sms_heartbeat", body)
