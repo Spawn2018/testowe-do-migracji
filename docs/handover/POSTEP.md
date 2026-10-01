@@ -531,7 +531,8 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 |---|---|---|---|---|
 | 0109 | **DONE** PROD+TEST | `93ce1109` | i2 **510/510**; dec5 **11/11** | `sms_zone_on_geofence_enter`: niepoprawny `geofence_id` nie wywala INSERT `load_events` (I-2l). Seed: Bufor przed Sremem w `tests/db/seed.sql`. i2: oczekiwania SMS po `sms_strip_pl` / „Watch Tower”. |
 | O-V | vercel --prod po 0105–0109 | **DONE** | `5d2b0248` | tower.log-mar.pl **200**, watch-tower-makieta.vercel.app **200**; dpl `GJ26sabE…` READY | Deploy z kopii bez `.git` (CLI z metadanymi git → BLOCKED). Naprawy TS: ScheduleView Fragment, `await getSupabase` w SmsZoneRecipients, awizacja bez CANCELLED w typie UI. |
-| ONE-MECH | wyłączenie dubli demo | **W TOKU** | (ten commit) | — | Seed: wf-1…6/8/9 `enabled:false` (lista D-29t); usunięty auto-run wf-1 przy PRE_ARRIVAL. Dalej: DEC-CLICK routing, wf-7/10–12, UI kreatora. |
+| ONE-MECH | wyłączenie dubli + DEC-CLICK | **W TOKU** | `ed59ef8a` | — | Seed wf-1…6/8/9 off; auto-run wf-1 usunięty; klik strefy→Transport; wf w prod = podgląd. Zostaje: wf-7/10–12, mapowanie MONEY. |
+| I-3-APK | APK lokalnie | **DONE APK** | `e2e19668` | APK **1.0.0** v2 | `D:\Watch Tower\dane\apk\WatchTowerSMS.apk` SHA-256 `d6324bb0…ce8c`. Czeka: instalacja na telefonie. |
 
 **Następne:** ONE-MECH (routing DEC-CLICK + reszta) · DEC-6 reszta.
 **Czeka na właściciela:** instalacja APK bramki (`D:\Watch Tower\dane\apk\WatchTowerSMS.apk`) + parowanie + SMS test; API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH + creds SharePoint; szablon e-mail Auth „Watch Tower”; akceptacja pisemna II-10-E2; numer właściciela do SMS testowego (w UI, nie w repo).
