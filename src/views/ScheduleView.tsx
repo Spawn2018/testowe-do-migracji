@@ -725,6 +725,7 @@ export function ScheduleView() {
             </button>
           </div>
         ) : (
+        <>
         <div className="tablewrap sched-table-wrap" style={{ flex: 1 }}>
           <table className="sched-table" style={{ tableLayout: 'fixed', width: 'max-content', minWidth: '100%' }}>
             <colgroup>
@@ -984,6 +985,7 @@ export function ScheduleView() {
             );
           })}
         </div>
+        </>
         )}
         <div className="note">
           {showMargin
