@@ -97,7 +97,10 @@ class GatewayService : Service() {
       val sm = SmsManager.getDefault()
       val parts = sm.divideMessage(item.body)
       val n = parts.size.coerceAtLeast(1)
-      val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+      // FLAG_MUTABLE: framework SMS musi uzupełnić Intent (API 31+)
+      val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE
+        else 0
       val sentList = ArrayList<PendingIntent>(n)
       val delList = ArrayList<PendingIntent>(n)
       for (i in 0 until n) {

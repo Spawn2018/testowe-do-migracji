@@ -6,17 +6,18 @@ Aplikacja na telefon z Androidem i kartą SIM. Pobiera kolejkę `sms_outbox`
 **Sekrety (token urządzenia, URL, klucz anon, numer SIM, klucz podpisu APK)
 nigdy nie trafiają do repozytorium ani logów.**
 
-## Gotowy plik (01.10.2026 · v1.0.1)
+## Gotowy plik (01.10.2026 · v1.0.2)
 
 | Pole | Wartość |
 |---|---|
 | Plik | `D:\Watch Tower\dane\apk\WatchTowerSMS.apk` |
-| Wersja | **1.0.1** (`versionCode` 2) |
-| SHA-256 | `025e1942c2d5a227d7a496634783e636bb9e3269240eb32d1fdd8ea64137afdd` |
+| Wersja | **1.0.2** (`versionCode` 3) |
+| SHA-256 | `8e3edc6b253aad3c64c6653d55c150f0bf2d796e19e228a2a9243ecaf8d47ec9` |
 | Podpis | v2; klucz w `D:\Watch Tower\dane\apk-klucz\` (poza repo) |
 
-**1.0.1:** `sentIntent` + `deliveryIntent` (SENT ≠ DELIVERED); odstęp ≥ 3 s;
-błąd wysyłki → do 3 prób; brak DELIVERED > 10 min → ryzyko + e-mail HHL.
+**1.0.2:** naprawa raportów — `goAsync` + wątek HTTP w `SmsResultReceiver`,
+`PendingIntent.FLAG_MUTABLE` (1.0.1: CLAIMED bez SENT).  
+**1.0.1:** `sentIntent` + `deliveryIntent`; odstęp ≥ 3 s; retry; watchdog 10 min.
 
 ## Przeniesienie na telefon
 
@@ -30,7 +31,7 @@ błąd wysyłki → do 3 prób; brak DELIVERED > 10 min → ryzyko + e-mail HHL.
 1. Na telefonie otwórz plik `WatchTowerSMS.apk` (Pliki / Dysk / Downloads).
 2. Jeśli Android zapyta — włącz **instalację z nieznanego źródła**
    (dla Plików / Dysku / przeglądarki — przełącznik „Zezwalaj z tego źródła”).
-3. Zainstaluj / zaktualizuj **Watch Tower SMS** do **1.0.1**.
+3. Zainstaluj / zaktualizuj **Watch Tower SMS** do **1.0.2**.
 4. Uruchom aplikację. Przy pierwszym starcie zaakceptuj:
    - **SMS** (wysyłanie),
    - **powiadomienia** (Android 13+).

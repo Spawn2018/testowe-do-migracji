@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 /**
  * TEL/SMS — seria 10 SMS testowych na numer właściciela (lista sms_test_numbers).
- * Użycie (po instalacji APK 1.0.1, bramka włączona):
+ * Użycie (po instalacji APK, bramka włączona):
  *   node scripts/sms-burst-test.mjs
  * Wymaga: .env.local z SUPABASE_DB_POOLER_URL; numer w sms_test_numbers.
  * Odstęp not_before: 4 s (telefon ma własne 3 s).
+ * SQL przez plik UTF-8 (Windows: unikamy błędu 0x97 przy -c).
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const ROOT = resolve(import.meta.dirname, '..');
 function loadEnv() {
@@ -63,13 +66,19 @@ select id::text, status, attempts,
        right(to_e164, 4) as last4
   from sms_outbox
  where dedup_key like 'BURST10:%'
+   and created_at > now() - interval '5 minutes'
  order by created_at;
 `;
 
-const r = spawnSync('psql', ['--dbname=' + url, '-v', 'ON_ERROR_STOP=1', '-c', sql], {
+const sqlPath = join(tmpdir(), `tower-sms-burst-${Date.now()}.sql`);
+writeFileSync(sqlPath, sql, 'utf8');
+const r = spawnSync('psql', ['--dbname=' + url, '-v', 'ON_ERROR_STOP=1', '-f', sqlPath], {
   encoding: 'utf8',
+  env: { ...process.env, PGCLIENTENCODING: 'UTF8' },
   maxBuffer: 2 * 1024 * 1024,
 });
-process.stdout.write((r.stdout || '').replace(/postgres(ql)?:\/\/[^\s]+/g, 'postgres://***'));
-process.stderr.write((r.stderr || '').replace(/postgres(ql)?:\/\/[^\s]+/g, 'postgres://***'));
+try { unlinkSync(sqlPath); } catch { /* ignore */ }
+const scrub = (s) => (s || '').replace(/postgres(ql)?:\/\/[^\s]+/g, 'postgres://***');
+process.stdout.write(scrub(r.stdout));
+process.stderr.write(scrub(r.stderr));
 process.exit(r.status ?? 1);
