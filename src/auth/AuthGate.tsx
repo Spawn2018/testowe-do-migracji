@@ -21,7 +21,15 @@ type State =
   | { kind: 'ready'; session: Session; profile: AuthProfile };
 
 function Brand() {
-  return <div className="brand"><b>WATCH TOWER</b><span>Stegra Boden · H&amp;H Logistics</span></div>;
+  const theme = useTowerStore((s) => s.theme);
+  const locale = useTowerStore((s) => s.locale);
+  const src = theme === 'light' ? '/brand/watchtower-logo-full.png' : '/brand/watchtower-logo-full-dark.png';
+  return (
+    <div className="brand auth-brand">
+      <img src={src} alt={t(locale, 'brand')} width={240} height={80} />
+      <span>Stegra Boden · H&amp;H Logistics</span>
+    </div>
+  );
 }
 
 function redirectTo(): string {
@@ -377,7 +385,18 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     });
   }, [state]);
 
-  if (state.kind === 'loading') return <div className="auth-screen" data-auth="loading"><div className="auth-msg">{t(locale, 'a6_auth_loading')}</div></div>;
+  if (state.kind === 'loading') {
+    const theme = useTowerStore.getState().theme;
+    const src = theme === 'light' ? '/brand/watchtower-logo-full.png' : '/brand/watchtower-logo-full-dark.png';
+    return (
+      <div className="auth-screen" data-auth="loading">
+        <div className="auth-card panel">
+          <img className="auth-boot-logo" src={src} alt={t(locale, 'brand')} width={240} height={80} />
+          <div className="auth-msg">{t(locale, 'a6_auth_loading')}</div>
+        </div>
+      </div>
+    );
+  }
 
   if (state.kind === 'link-pending') {
     return (

@@ -192,7 +192,7 @@ decyzji, §3 powiadomienia, §4 widoczność, §5 SMS strefy, §6 ustawienia adm
 | DEC-2 | P0. Centrum decyzji — pełny proces (DECYZJE §2) | katalog decyzji + akcje + eskalacja | W TOKU — baza+UI; skutki opcji E2E dalej |
 | DEC-3 | P0. Powiadomienia — każde zdarzenie/status/ryzyko/decyzja (DECYZJE §3) | macierz + kanały | W TOKU — decyzje IN_APP (0104); reszta zdarzeń dalej |
 | DEC-4 | P0. Widoczność — admin wybiera firmy (DECYZJE §4) | macierz per typ | W TOKU — 0104/0105 + UI Opcje; egzekwowanie poza decyzjami dalej |
-| BRAND-15 | P1. Nazwa i logo Watch Tower (PO_SPOTKANIU §15, `public/brand`) | favicon, splash, manifest, zero „TOWER” w UI | DO ZROBIENIA |
+| BRAND-15 | P1. Nazwa i logo Watch Tower (PO_SPOTKANIU §15, `public/brand`) | favicon, splash, manifest, zero „TOWER” w UI | W TOKU — nazwa/splash/manifest/SW; e-mail Auth (Supabase dashboard) |
 | AWIZ-4 | P1. Awizacja „Dodaj"/„Edytuj" + okno (PO_SPOTKANIU §4) | przebieg HHL/SCX | DO ZROBIENIA |
 | HHL-4a | P1. Numer HHL — dodawanie/edycja przez HHL (§4a) | test bazy + UI | DO ZROBIENIA |
 | RESP-14 | P1. Telefon i instalacja PWA (§14) | ujęcia 390/768; Lighthouse | DO ZROBIENIA |

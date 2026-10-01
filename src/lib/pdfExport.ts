@@ -49,7 +49,7 @@ export async function buildLoadsPdf(loads: Load[], fontBytes: ArrayBuffer | Uint
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   const font = await doc.embedFont(fontBytes, { subset: true });
-  doc.setTitle(opts.title); doc.setCreator('TOWER'); doc.setProducer('TOWER');
+  doc.setTitle(opts.title); doc.setCreator('Watch Tower'); doc.setProducer('Watch Tower');
   const at = opts.generatedAt ?? new Date();
   const locale = opts.locale ?? 'pl';
   const cols = pdfColumns(locale);

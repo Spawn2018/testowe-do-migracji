@@ -20,3 +20,10 @@ createRoot(document.getElementById('root')!).render(
 queueMicrotask(() => {
   document.getElementById('wt-boot')?.remove();
 });
+
+// §15 / §14: service worker (ikony + manifest); wersja w public/sw.js
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}

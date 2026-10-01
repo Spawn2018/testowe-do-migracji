@@ -93,6 +93,7 @@ export function Topbar() {
   return (
     <header className="topbar">
       <div className="brand">
+        <img src="/brand/watchtower-symbol.png" alt="" width={28} height={28} />
         <b>{t(locale, 'brand')}</b>
         <span id="brandSub">{`Stegra Boden · ${ROLE_META[role].name}`}</span>
       </div>

@@ -482,6 +482,8 @@ Uwaga: zestaw `i2` na hosted wymaga `ensureSeedAuthUsers` (FK `auth.mfa_factors`
 | DEC-2 | centrum decyzji (DECYZJE §2) | **W TOKU** (baza+UI; skutki opcji dalej) | `26417c73` `805dd034` `158ecebc` | **brama hosted pełna EXIT 0** po 0103: security 84 … dec2 14 … insurance 33 | **0102/0103**. Następne skutki opcji. |
 | DEC-3 | powiadomienia decyzji (§3) | **W TOKU** | `61713768` | dec3 **8/8** (z DEC-4) | **0104** notify OPEN/RESOLVE/ESCALATE. Zostaje: statusy/strefy/import. |
 | DEC-4 | widoczność macierz (§4) | **W TOKU** | (ten commit) | nullguard **434**; dec3 **8/8** | **0105** `admin_notification_matrix_set` + UI Opcje. SYSTEM zablokowany poza HHL. PROD apply. |
+| BRAND-15 | nazwa i logo Watch Tower (§15) | **W TOKU** | (ten commit) | — | favicon/apple/manifest any+maskable; splash `#wt-boot`; logo na logowaniu; symbol w topbar; `sw.js` v2026-10-01; słowniki bez „TOWER” w UI. Zostaje: szablon e-mail Auth w panelu Supabase (nadawca „Watch Tower”). |
+
 
 
 
