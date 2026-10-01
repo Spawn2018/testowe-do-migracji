@@ -89,7 +89,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     for (const r of wfRuns) if (r.status === 'OK') okBy.set(r.workflow_id, (okBy.get(r.workflow_id) ?? 0) + 1);
     const permitOk = new Map(((permitQ.error ? [] : permitQ.data ?? []) as { load_id: string; permits_linked: number; ok: boolean }[])
       .filter((p) => p.permits_linked > 0).map((p) => [p.load_id, p.ok]));
-    const drivers = new Map(((driversQ.error ? [] : driversQ.data ?? []) as { load_id: string; driver_name: string | null; driver_phone: string | null }[])
+    const drivers = new Map(((driversQ.error ? [] : driversQ.data ?? []) as { load_id: string; driver_name: string | null; driver_phone: string | null; driver_phone_country?: string | null }[])
       .map((d) => [d.load_id, d]));
     const docRows = must(docs, 'documents') as DocumentRow[];
     const costBy = new Map((must(costV, 'v_load_price_carrier') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
@@ -99,7 +99,12 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       workflows: ((wfQ.error ? [] : wfQ.data ?? []) as WorkflowDbRow[]).map((r) => workflowFromRow(r, okBy.get(r.id) ?? 0)),
       workflowRuns: wfRuns.map(workflowRunFromRow),
       loads: (must(loads, 'loads') as unknown as LoadRow[])
-        .map((r) => ({ ...r, driver_name: drivers.get(r.id)?.driver_name ?? null, driver_phone: drivers.get(r.id)?.driver_phone ?? null }))
+        .map((r) => ({
+          ...r,
+          driver_name: drivers.get(r.id)?.driver_name ?? null,
+          driver_phone: drivers.get(r.id)?.driver_phone ?? null,
+          driver_phone_country: drivers.get(r.id)?.driver_phone_country ?? 'PL',
+        }))
         .map((r, i) => applyPriceViews(loadFromRow(r, orgs, i, at), costBy.get(r.id), revBy.get(r.id)))
         .map((l) => (permitOk.has(l.id) ? { ...l, permitFits: permitOk.get(l.id) ?? null } : l)),
       events: (must(events, 'load_events') as EventRow[]).map(eventFromRow),

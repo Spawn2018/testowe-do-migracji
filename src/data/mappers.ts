@@ -83,6 +83,7 @@ export interface LoadRow {
   /** I-18 (0061) */
   plan_dates_status?: string | null; plan_dates_confirmed_at?: string | null;
   tractor_plate: string | null; trailer_plate: string | null; driver_name: string | null; driver_phone: string | null;
+  driver_phone_country?: string | null;
   escort_vehicles: number | null; ferry_booking_ref: string | null; sailing_id?: string | null;
   telematics_vehicle_id?: string | null;
   /** Rejs (AN1): jedno źródło prawdy — `sailings` przez `loads.sailing_id` (embed PostgREST). */
@@ -156,6 +157,7 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
   };
   const resources: LoadResources = {
     driverName: row.driver_name, driverPhone: row.driver_phone,
+    driverPhoneCountry: row.driver_phone_country === 'SE' ? 'SE' : 'PL',
     tractorPlate: row.tractor_plate, trailerPlate: row.trailer_plate,
     escort: (row.escort_vehicles ?? 0) > 0, escortPlate: null,
     setLengthM: num(row.combo_length_m), setWidthM: num(row.combo_width_m),
@@ -230,6 +232,7 @@ export function resourcesPatchToDb(p: Partial<LoadResources>): Record<string, un
   const out: Record<string, unknown> = {};
   if ('driverName' in p) out.driver_name = p.driverName;
   if ('driverPhone' in p) out.driver_phone = p.driverPhone;
+  if ('driverPhoneCountry' in p) out.driver_phone_country = p.driverPhoneCountry ?? 'PL';
   if ('tractorPlate' in p) out.tractor_plate = p.tractorPlate;
   if ('trailerPlate' in p) out.trailer_plate = p.trailerPlate;
   if ('escort' in p) out.escort_vehicles = p.escort ? 1 : 0;

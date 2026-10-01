@@ -21,6 +21,7 @@
  */
 
 import { z } from 'zod';
+import { toNationalPhone } from './phoneNational';
 
 /* --------------------------------------------------------------- */
 /* Parsowanie wartości w formacie polskim                           */
@@ -73,14 +74,13 @@ export function parseTime(v: unknown): string | null {
   return m ? `${m[1].padStart(2, '0')}:${m[2]}` : null;
 }
 
-/** Normalizacja numeru telefonu do E.164. PL domyślnie, SE i LT obsłużone. */
-export function normalizePhone(v: unknown, defaultCc = '+48'): string | null {
-  if (!v) return null;
-  let s = String(v).replace(/[^\d+]/g, '');
-  if (!s) return null;
-  if (s.startsWith('00')) s = '+' + s.slice(2);
-  if (!s.startsWith('+')) s = defaultCc + s.replace(/^0+/, '');
-  return /^\+\d{8,15}$/.test(s) ? s : null;
+/** Normalizacja do numeru krajowego (TEL-1). Zastępuje E.164. */
+export function normalizePhone(v: unknown, defaultCountry: 'PL' | 'SE' = 'PL'): string | null {
+  if (v == null || v === '') return null;
+  // Excel często daje liczbę — SE 070… traciłoby zero; trzymamy jako tekst gdy string.
+  const raw = typeof v === 'number' ? String(Math.trunc(v)) : String(v);
+  const { national } = toNationalPhone(raw, defaultCountry);
+  return national || null;
 }
 
 /* --------------------------------------------------------------- */

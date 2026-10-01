@@ -107,3 +107,4 @@ admin_auth_login_log | GUARD | select * from admin_auth_login_log(5) | Tylko adm
 admin_broadcast_set | GUARD | select admin_broadcast_set('x', now() + interval '1 day', true, false, false) | Tylko administrator HHL
 admin_broadcast_clear | GUARD | select admin_broadcast_clear() | Tylko administrator HHL
 system_broadcast_current | EMPTY | select count(*) from system_broadcast_current() | 0
+driver_phone_e164 | PURE | select driver_phone_e164('601234567','PL') | -

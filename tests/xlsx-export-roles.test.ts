@@ -21,12 +21,12 @@ describe('eksport XLSX per rola', () => {
   });
   it('KSH: telefon kierowcy tylko w oknie ±24 h od dostawy (D6)', () => {
     const l = { ...buildSeedLoads()[0], plannedDeliverDate: '2026-10-10', etaBoden: '2026-10-10T10:00:00+02:00', awizacja: undefined } as never;
-    const withPhone = { ...(l as object), resources: { ...(l as { resources: object }).resources, driverPhone: '+48600123456', driverName: 'Jan Próbny' } } as never;
+    const withPhone = { ...(l as object), resources: { ...(l as { resources: object }).resources, driverPhone: '600123456', driverName: 'Jan Próbny', driverPhoneCountry: 'PL' } } as never;
     const far = exportRows([withPhone], 'KSH', Date.parse('2026-10-01T10:00:00Z'));
     const near = exportRows([withPhone], 'KSH', Date.parse('2026-10-10T06:00:00Z'));
     const i = far[0].indexOf('Telefon');
     expect(far[1][i]).toBe('');
-    expect(near[1][i]).toBe('+48600123456');
+    expect(near[1][i]).toBe('600123456');
     expect(JSON.stringify(near)).not.toContain('Jan Próbny');
   });
 });

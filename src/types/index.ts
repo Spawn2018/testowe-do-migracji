@@ -77,6 +77,8 @@ export interface Dimensions {
 export interface LoadResources {
   driverName: string | null;
   driverPhone: string | null;
+  /** TEL-1 — kraj numeru (tylko SMS); niewidoczny w tabelach. */
+  driverPhoneCountry?: 'PL' | 'SE';
   tractorPlate: string | null;
   trailerPlate: string | null;
   escort: boolean;

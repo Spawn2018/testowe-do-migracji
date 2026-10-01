@@ -1,6 +1,7 @@
 /**
  * TEL-1 / DECYZJE §1 — numer krajowy bez kierunkowego.
  * Wejście z `+48…`, `0048…`, `+46…` → kraj + numer krajowy (bez `+`, spacji, myślników).
+ * E.164 budujemy dopiero przy SMS (`toE164`).
  */
 export type PhoneCountry = 'PL' | 'SE' | 'OTHER';
 
@@ -39,4 +40,20 @@ export function toNationalPhone(raw: string, hint: PhoneCountry = 'PL'): Nationa
 export function isPlausibleNational(national: string): boolean {
   if (!national) return false;
   return /^0?\d{7,11}$/.test(national);
+}
+
+/** E.164 wyłącznie do dial/`tel:` i bramki SMS — nie do zapisu w loads. */
+export function toE164(national: string, country: PhoneCountry = 'PL'): string | null {
+  const d = national.replace(DIGITS, '');
+  if (!d) return null;
+  if (country === 'PL' || country === 'OTHER') {
+    const n = d.startsWith('48') && d.length >= 11 ? d.slice(2) : d;
+    return /^\d{7,11}$/.test(n) ? `+48${n}` : null;
+  }
+  if (country === 'SE') {
+    let n = d.startsWith('46') ? d.slice(2) : d;
+    if (n.startsWith('0')) n = n.slice(1);
+    return /^\d{7,11}$/.test(n) ? `+46${n}` : null;
+  }
+  return null;
 }

@@ -42,7 +42,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
 
   const [driverName, setDriverName] = useState(load.resources.driverName ?? '');
   const [driverPhone, setDriverPhone] = useState(load.resources.driverPhone ?? '');
-  const [phoneCountry, setPhoneCountry] = useState<'PL' | 'SE' | 'OTHER'>('PL');
+  const [phoneCountry, setPhoneCountry] = useState<'PL' | 'SE' | 'OTHER'>(load.resources.driverPhoneCountry ?? 'PL');
   const [tractorPlate, setTractorPlate] = useState(load.resources.tractorPlate ?? '');
   const [trailerPlate, setTrailerPlate] = useState(load.resources.trailerPlate ?? '');
   const [carrierOrder, setCarrierOrder] = useState(load.carrierOrderNo ?? '');
@@ -107,6 +107,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
     updateResources(load.id, {
       driverName: name,
       driverPhone: phone.national || null,
+      driverPhoneCountry: phone.country === 'SE' ? 'SE' : 'PL',
       tractorPlate: plate,
       trailerPlate: trailerPlate.trim().toUpperCase() || null,
       trackingRef: trackingRef.trim() || null,

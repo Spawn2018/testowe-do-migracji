@@ -485,7 +485,11 @@ Uwaga: zestaw `i2` na hosted wymaga `ensureSeedAuthUsers` (FK `auth.mfa_factors`
 | BRAND-15 | nazwa i logo Watch Tower (§15) | **DONE** | `f8c8af6c` `57527034` | risk-keys **14/14** | favicon/splash/manifest/SW; logo AuthGate; topbar; UI bez „TOWER”. Zostaje: szablon e-mail Auth (dashboard Supabase). |
 | AWIZ-4 | awizacja Dodaj/Edytuj (§4) | **DONE** (UI; zapis KSH=II-10) | (ten commit) | awizacja-state **5/5**; phone-national **5/5**; tsc OK | Modal nad panelem; pola §4; armator→rejs→statek; filtr „zdąży” (+14 h); tracking→`telematics_vehicle_id`; Ustalenia bez starego formularza kierowca/rejs. |
 | HHL-4a | nr zlecenia HHL (§4a) | **W TOKU** | (ten commit) | — | Przycisk Dodaj/Edytuj + pole w oknie awizacji; konflikt pliku i zapis SharePoint = II-10. |
-| TEL-1 | telefony bez kierunkowego (§1) | **W TOKU** | (ten commit) | phone-national **5/5** | `toNationalPhone` w oknie awizacji; import/eksport/SMS dalej. |
+| TEL-1 | telefony bez kierunkowego (§1) | **DONE** | (ten commit) | phone-national **10/10**; xlsx-roles **4/4**; tsc OK; security hosted | Migracja **0111** PROD+TEST: `driver_phone_country`, konwersja E.164→krajowy, `driver_phone_e164` przy SMS. Import `normalizePhone` → krajowy. Eksport = krajowy. Escort/awizacja: blur zdejmuje kierunkowy. |
+
+**Następne:** DATY-67 · kolejka PLAN (po TEL-1).
+**Czeka na właściciela:** instalacja APK bramki (`D:\Watch Tower\dane\apk\WatchTowerSMS.apk`) + parowanie + SMS test; API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH + creds SharePoint; szablon e-mail Auth „Watch Tower”; akceptacja pisemna II-10-E2; numer właściciela do SMS testowego (w UI, nie w repo).
+
 | RESP-14 | telefon i PWA (§14) | **W TOKU** | `dfcc0afe` | tsc OK | `sw.js` v2026-10-01b + `offline.html`; toast nowej wersji; menu ☰ + nav overlay ≤768; drawer/awizacja pełny ekran; karty harmonogramu; cele 44px / input 16px. Brama 390/768 + Lighthouse — przy wdrożeniu. |
 | DEC-5 | SMS strefy 2+2 (§5) | **DONE** | (ten commit) | dec5 **11/11** na TEST | Migracja **0106** TEST+PROD. Listy LOAD_SREM/UNLOAD_BODEN; wyzwalacze; dedup; bufor przed Śremem; UI Opcje; TEL-1 przy zapisie. |
 

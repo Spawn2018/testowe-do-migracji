@@ -3,6 +3,7 @@ import { useTowerStore } from '../../store/useTowerStore';
 import { StatusPill } from '../ui/StatusPill';
 import { fmtNum, fmtNumKeepPl, fmtPct, t, tp } from '../../i18n/messages';
 import { canEditResources, canSeeCost, canSeeMargin, canSeeRevenue, visibleDriverPhone } from '../../lib/permissions';
+import { toE164 } from '../../lib/phoneNational';
 import { SITES } from '../../lib/status';
 import { SEFS_SOURCES } from '../../lib/sefs';
 import { isReadyBlocked, evaluateLoadCover } from '../../lib/permits';
@@ -142,6 +143,9 @@ export function LoadDrawer() {
 
   if (!load) return null;
   const driverPhone = visibleDriverPhone(role, load);
+  const driverTel = driverPhone
+    ? (toE164(driverPhone, load.resources.driverPhoneCountry ?? 'PL') ?? driverPhone)
+    : null;
 
   const showCost = canSeeCost(role);
   const showRev = canSeeRevenue(role);
@@ -321,7 +325,7 @@ export function LoadDrawer() {
                 <dt>{t(locale, 'a6_dr_phone')}</dt>
                 <dd>
                   {driverPhone ? (
-                    <a href={`tel:${driverPhone}`} className="mono" data-content>
+                    <a href={`tel:${driverTel}`} className="mono" data-content>
                       {driverPhone}
                     </a>
                   ) : (
@@ -586,7 +590,7 @@ export function LoadDrawer() {
                     <dt>{t(locale, 'a6_dr_phone')}</dt>
                     <dd>
                       {driverPhone ? (
-                        <a href={`tel:${driverPhone}`} className="mono" data-content>
+                        <a href={`tel:${driverTel}`} className="mono" data-content>
                           {driverPhone}
                         </a>
                       ) : (
