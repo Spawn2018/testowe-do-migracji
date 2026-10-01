@@ -49,3 +49,12 @@ SEFS_KSH_Stegra_v2.docx
 !tests/fixtures/ship-qa-schedule.xlsx
 !tests/fixtures/ship-qa-unique.xlsx
 .vercel
+
+# Android — lokalne SDK i artefakty (klucz podpisu nigdy w repo: D:\Watch Tower\dane\apk-klucz\)
+android/sms-gateway/local.properties
+android/sms-gateway/.gradle/
+android/sms-gateway/**/build/
+android/**/*.apk
+android/**/*.aab
+android/**/*.jks
+android/**/*.keystore

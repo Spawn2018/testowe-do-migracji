@@ -505,7 +505,7 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 | DEC-CLICK | routing klików | **AKCEPTACJA** | (docs) | — | Grupa C bez nowych typów; status/strefa → Transport; grupa D bez driver PWA (D-38). Implementacja w ONE-MECH/DEC-3. |
 | D-29t | tabela nakładania | **AKCEPTACJA** | (docs) | — | Warunek: żaden alarm bez zastępnika — lista poniżej. Scalenie = ONE-MECH. |
 | D-4 | telefon+SIM | **ZAMKNIĘTE** | — | — | Koordynator: Android + SIM są. Dalej = I-3-APK. |
-| I-3-APK | aplikacja bramki Android | **W TOKU** | `ef351788`+ | i2 **510/510**; dec5 **11/11** | Źródła Kotlin + instrukcja instalacji; workflow APK; token w Opcjach (SmsGateway); last_seen w Stanie systemu. Zostaje: build APK u właściciela (Studio/Actions) + parowanie na telefonie. |
+| I-3-APK | aplikacja bramki Android | **DONE APK** | (ten commit) | APK **1.0.0** podpisany v2 | Plik: `D:\Watch Tower\dane\apk\WatchTowerSMS.apk` · SHA-256 `d6324bb089e6764d436066ce309b4d4caab59f91de3c42aa54e9a40f4a50ce8c` · klucz poza repo (`dane\apk-klucz`). Instrukcja USB/Drive zaktualizowana. Czeka: instalacja na telefonie właściciela + parowanie + SMS test. |
 
 #### D-29t — lista „było → jest” (warunek akceptacji: zero znikających alarmów)
 
@@ -533,5 +533,5 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 | O-V | vercel --prod po 0105–0109 | **DONE** | `5d2b0248` | tower.log-mar.pl **200**, watch-tower-makieta.vercel.app **200**; dpl `GJ26sabE…` READY | Deploy z kopii bez `.git` (CLI z metadanymi git → BLOCKED). Naprawy TS: ScheduleView Fragment, `await getSupabase` w SmsZoneRecipients, awizacja bez CANCELLED w typie UI. |
 | ONE-MECH | wyłączenie dubli demo | **W TOKU** | (ten commit) | — | Seed: wf-1…6/8/9 `enabled:false` (lista D-29t); usunięty auto-run wf-1 przy PRE_ARRIVAL. Dalej: DEC-CLICK routing, wf-7/10–12, UI kreatora. |
 
-**Następne:** ONE-MECH (routing DEC-CLICK + reszta) · DEC-6 reszta · I-3-APK na telefonie właściciela.
-**Czeka na właściciela:** API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH + creds SharePoint; szablon e-mail Auth „Watch Tower”; akceptacja pisemna II-10-E2; numer właściciela do SMS testowego (w UI, nie w repo); instalacja APK bramki na telefonie (instrukcja `docs/handover/INSTRUKCJA_BRAMKA_SMS_ANDROID.md`).
+**Następne:** ONE-MECH (routing DEC-CLICK + reszta) · DEC-6 reszta.
+**Czeka na właściciela:** instalacja APK bramki (`D:\Watch Tower\dane\apk\WatchTowerSMS.apk`) + parowanie + SMS test; API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH + creds SharePoint; szablon e-mail Auth „Watch Tower”; akceptacja pisemna II-10-E2; numer właściciela do SMS testowego (w UI, nie w repo).

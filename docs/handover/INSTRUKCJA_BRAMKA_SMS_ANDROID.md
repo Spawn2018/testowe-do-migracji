@@ -3,57 +3,73 @@
 Aplikacja na telefon z Androidem i kartą SIM. Pobiera kolejkę `sms_outbox`
 (`sms_pull`), wysyła SMS, raportuje (`sms_report`) i bije (`sms_heartbeat`).
 
-**Sekrety (token urządzenia, URL, klucz anon, numer SIM) nigdy nie trafiają
-do repozytorium ani logów.** Wpisuje je właściciel w ustawieniach aplikacji
-albo jednorazowo z panelu Opcje → „Odbiorcy SMS i strefy” / Bramka SMS.
+**Sekrety (token urządzenia, URL, klucz anon, numer SIM, klucz podpisu APK)
+nigdy nie trafiają do repozytorium ani logów.**
 
-## Budowa APK
+## Gotowy plik (01.10.2026)
 
-Na tym komputerze wykonawcy **nie ma JDK/Android SDK** — APK buduje:
+| Pole | Wartość |
+|---|---|
+| Plik | `D:\Watch Tower\dane\apk\WatchTowerSMS.apk` |
+| Wersja | **1.0.0** (`versionCode` 1) |
+| SHA-256 | `d6324bb089e6764d436066ce309b4d4caab59f91de3c42aa54e9a40f4a50ce8c` |
+| Podpis | v2; klucz w `D:\Watch Tower\dane\apk-klucz\` (poza repo) |
 
-1. **Android Studio** (zalecane dla właściciela): otwórz folder
-   `android/sms-gateway` → Build → Build Bundle(s) / APK(s) → Build APK(s).
-   Plik: `app/build/outputs/apk/release/app-release-unsigned.apk`
-   (albo podpisany debug: `app/build/outputs/apk/debug/app-debug.apk`).
-2. **GitHub Actions** (workflow `.github/workflows/sms-gateway-apk.yml`) —
-   po pushu na `main` artefakt `sms-gateway-debug.apk` do pobrania.
+## Przeniesienie na telefon
 
-Do testów wystarczy **debug APK** (instalacja z pliku).
+1. **Kabel USB:** podłącz telefon → w Eksploratorze Windows skopiuj
+   `D:\Watch Tower\dane\apk\WatchTowerSMS.apk` do folderu Pobrane / Download.
+2. **Dysk Google:** wgraj ten sam plik na Drive właściciela → otwórz na
+   telefonie w aplikacji Dysk → Pobierz.
 
-## Instalacja na telefonie (krok po kroku)
+## Instalacja (krok po kroku)
 
-1. Skopiuj APK na telefon (USB, Drive, e-mail do siebie).
-2. Otwórz plik → pozwól na **instalację z nieznanego źródła** dla tej aplikacji
-   (Pliki / Chrome / Drive — włącz przełącznik).
+1. Na telefonie otwórz plik `WatchTowerSMS.apk` (Pliki / Dysk / Downloads).
+2. Jeśli Android zapyta — włącz **instalację z nieznanego źródła**
+   (dla Plików / Dysku / przeglądarki — przełącznik „Zezwalaj z tego źródła”).
 3. Zainstaluj **Watch Tower SMS**.
-4. Uruchom aplikację. Przy pierwszym starcie zaakceptuj **uprawnienie SMS**
-   (i powiadomienia na Android 13+).
-5. Wpisz:
+4. Uruchom aplikację. Przy pierwszym starcie zaakceptuj:
+   - **SMS** (wysyłanie),
+   - **powiadomienia** (Android 13+).
+5. W ustawieniach aplikacji wpisz:
    - **URL projektu Supabase** (produkcja),
-   - **klucz anon** (publiczny z panelu Supabase → Settings → API),
+   - **klucz anon** (publiczny: Supabase → Settings → API),
    - **token parowania** — w aplikacji web: Opcje → Odbiorcy SMS i strefy →
-     Bramka SMS → „Wydaj urządzenie” (token pokazuje się **raz**; skopiuj
-     od razu na telefon),
-   - **numer SIM bramki** w formacie E.164 (np. `+4670…`) — numer karty
-     w tym telefonie.
+     Bramka SMS → „Wydaj urządzenie” (token widać **raz**; skopiuj od razu),
+   - **numer SIM bramki** w E.164 (np. `+48…` / `+46…`) — numer karty
+     w **tym** telefonie (nie w repozytorium).
 6. **Zapisz ustawienia**.
-7. **Wyłącz oszczędzanie baterii** (przycisk w aplikacji) — wybierz „Bez ograniczeń”
+7. **Wyłącz oszczędzanie baterii** (przycisk w aplikacji) → „Bez ograniczeń”
    / „Nie optymalizuj” dla Watch Tower SMS.
-8. **Uruchom bramkę** — w pasku powiadomień pojawi się „Bramka SMS aktywna”.
-9. Autostart: aplikacja startuje po restarcie telefonu, jeśli była włączona.
-   Na niektórych markach (Xiaomi/Samsung) dodatkowo: Ustawienia → Aplikacje →
-   Watch Tower SMS → Autostart / uruchamianie w tle → **włącz**.
+8. **Uruchom bramkę** — w pasku powiadomień: „Bramka SMS aktywna”.
+9. **Autostart** po restarcie: jeśli była włączona, startuje sama.
+   Xiaomi/Samsung: Ustawienia → Aplikacje → Watch Tower SMS →
+   Autostart / uruchamianie w tle → **włącz**.
 
 ## Po sparowaniu (kolejność właściciela)
 
-1. W Opcjach dodaj numer właściciela jako **numer testowy**.
+1. W Opcjach dodaj **numer właściciela** jako numer testowy.
 2. Wyślij **SMS testowy** wyłącznie na ten numer — potwierdź doręczenie.
 3. Dopiero potem włącz wyzwalacze stref (DECYZJE §5) i wpisz odbiorców 2+2.
-4. W **Stanie systemu** sprawdź „ostatni kontakt” bramki; cisza > 15 min
+4. W **Stanie systemu** sprawdź „ostatni kontakt”; cisza > 15 min
    → ryzyko + e-mail (cron w bazie).
+
+## Ponowna budowa (wykonawca)
+
+Wymaga JDK 17, Android SDK (`platforms;android-35`, `build-tools;35.0.0`),
+Gradle wrapper w `android/sms-gateway/`. Klucz: `D:\Watch Tower\dane\apk-klucz\`.
+
+```bat
+cd android\sms-gateway
+gradlew.bat assembleRelease
+copy app\build\outputs\apk\release\app-release.apk "D:\Watch Tower\dane\apk\WatchTowerSMS.apk"
+```
+
+GitHub Actions — **nie używamy** na razie.
 
 ## Bezpieczeństwo
 
 - Token urządzenia: SHA-256 w bazie; jawny tylko przy wydaniu i w telefonie.
 - Aplikacja nie loguje tokenu.
 - Limit 150 SMS/dobę i 20 wywołań/min — po stronie bazy.
+- Plik `.jks` i `keystore.properties` wyłącznie w `D:\Watch Tower\dane\apk-klucz\`.

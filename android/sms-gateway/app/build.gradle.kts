@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
   id("com.android.application")
   id("org.jetbrains.kotlin.android")
@@ -15,6 +17,26 @@ android {
     versionName = "1.0.0"
   }
 
+  val keystorePropsFile = file(
+    System.getenv("TOWER_APK_KEYSTORE_PROPS")
+      ?: "D:/Watch Tower/dane/apk-klucz/keystore.properties",
+  )
+  val keystoreProps = Properties()
+  if (keystorePropsFile.exists()) {
+    keystorePropsFile.inputStream().use { keystoreProps.load(it) }
+  }
+
+  signingConfigs {
+    create("release") {
+      if (keystoreProps.isNotEmpty()) {
+        storeFile = file(keystoreProps.getProperty("storeFile"))
+        storePassword = keystoreProps.getProperty("storePassword")
+        keyAlias = keystoreProps.getProperty("keyAlias")
+        keyPassword = keystoreProps.getProperty("keyPassword")
+      }
+    }
+  }
+
   buildTypes {
     release {
       isMinifyEnabled = false
@@ -22,6 +44,9 @@ android {
         getDefaultProguardFile("proguard-android-optimize.txt"),
         "proguard-rules.pro",
       )
+      if (keystoreProps.isNotEmpty()) {
+        signingConfig = signingConfigs.getByName("release")
+      }
     }
   }
 
