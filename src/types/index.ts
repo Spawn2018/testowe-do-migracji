@@ -85,6 +85,8 @@ export interface LoadResources {
   setWidthM: number | null;
   setHeightM: number | null;
   setWeightT: number | null;
+  /** AWIZ-4 — link śledzenia / id emtrack → `loads.telematics_vehicle_id` */
+  trackingRef?: string | null;
 }
 
 export interface Awizacja {

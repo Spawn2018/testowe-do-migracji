@@ -1,0 +1,90 @@
+/**
+ * AWIZ-4 — stan awizacji i wybór rejsu (PO_SPOTKANIU §4).
+ * „Zdąży na rejs” = odjazd po planowanym dojeździe do portu + odprawa.
+ */
+import type { Load, LoadResources, Sailing } from '../types';
+import { effDeparture, hasDeparted, selectableSailings } from './sailings';
+
+/** Armatorzy w UI (STENA-3 doda Stena Line). */
+export const FERRY_OPERATORS = [
+  { id: 'POLFERRIES', label: 'Polferries' },
+] as const;
+
+export type FerryOperatorId = (typeof FERRY_OPERATORS)[number]['id'];
+
+/** Godziny: Śrem → Gdańsk + odprawa (orientacyjnie, do II-7). */
+export const PORT_CLEARANCE_H = 14;
+
+/** Awizacja istnieje, gdy są kierowca + ciągnik (kryterium „Edytuj" zamiast „Dodaj"). */
+export function hasAwizacja(
+  load: Pick<Load, 'resources' | 'sailingId' | 'awizacja' | 'ferry'>,
+): boolean {
+  const r = load.resources;
+  if (r.driverName?.trim() && r.tractorPlate?.trim()) return true;
+  if (load.sailingId) return true;
+  if (load.awizacja.confirmed) return true;
+  if (load.ferry.bookingRef?.trim()) return true;
+  return false;
+}
+
+/** Najwcześniejszy sensowny odjazd promu względem planu załadunku. */
+export function earliestFerryDepartureMs(load: Pick<Load, 'plannedLoadDate' | 'awizacja'>): number {
+  const fromWindow = load.awizacja.loadWindowEnd ?? load.awizacja.loadWindowStart;
+  const base = fromWindow ?? (load.plannedLoadDate ? `${load.plannedLoadDate}T06:00:00+02:00` : null);
+  const t = base ? Date.parse(base) : NaN;
+  if (!Number.isFinite(t)) return Date.now();
+  return t + PORT_CLEARANCE_H * 36e5;
+}
+
+/** Rejsy armatora, na które auto zdąży (+ bieżący przypisany). */
+export function reachableSailings(
+  all: Sailing[],
+  load: Pick<Load, 'plannedLoadDate' | 'awizacja' | 'sailingId'>,
+  nowIso: string,
+  operator: FerryOperatorId = 'POLFERRIES',
+): Sailing[] {
+  void operator; // na razie tylko Polferries w rozkładzie
+  const minDep = earliestFerryDepartureMs(load);
+  return selectableSailings(all, nowIso, load.sailingId).filter((s) => {
+    if (s.id === load.sailingId) return true;
+    if (hasDeparted(s, nowIso)) return false;
+    return Date.parse(effDeparture(s)) >= minDep;
+  });
+}
+
+/** Unikalne wcześniej użyte wartości (podpowiedzi). */
+export function resourceSuggestions(
+  loads: Array<{ resources: LoadResources }>,
+  field: keyof Pick<LoadResources, 'driverName' | 'driverPhone' | 'tractorPlate' | 'trailerPlate'>,
+  limit = 8,
+): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const l of loads) {
+    const v = l.resources[field]?.trim();
+    if (!v || seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+/** Ostrzeżenie o duplikacie kierowcy/auta na innym aktywnym transporcie. */
+export function awizacjaDuplicateWarning(
+  loads: Load[],
+  selfId: string,
+  draft: { driverName: string; tractorPlate: string },
+): string | null {
+  const driver = draft.driverName.trim().toLowerCase();
+  const plate = draft.tractorPlate.trim().toUpperCase();
+  if (!driver && !plate) return null;
+  const hit = loads.find((l) => {
+    if (l.id === selfId) return false;
+    if (l.status === 'DELIVERED' || l.status === 'CANCELLED') return false;
+    const sameDriver = driver && l.resources.driverName?.trim().toLowerCase() === driver;
+    const samePlate = plate && l.resources.tractorPlate?.trim().toUpperCase() === plate;
+    return Boolean(sameDriver || samePlate);
+  });
+  return hit ? hit.code : null;
+}

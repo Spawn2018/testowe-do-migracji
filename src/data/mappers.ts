@@ -84,6 +84,7 @@ export interface LoadRow {
   plan_dates_status?: string | null; plan_dates_confirmed_at?: string | null;
   tractor_plate: string | null; trailer_plate: string | null; driver_name: string | null; driver_phone: string | null;
   escort_vehicles: number | null; ferry_booking_ref: string | null; sailing_id?: string | null;
+  telematics_vehicle_id?: string | null;
   /** Rejs (AN1): jedno źródło prawdy — `sailings` przez `loads.sailing_id` (embed PostgREST). */
   sailings?: SailingRow | null;
   combo_length_m: number | string | null; combo_width_m: number | string | null; combo_height_m: number | string | null;
@@ -159,6 +160,7 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
     escort: (row.escort_vehicles ?? 0) > 0, escortPlate: null,
     setLengthM: num(row.combo_length_m), setWidthM: num(row.combo_width_m),
     setHeightM: num(row.combo_height_m), setWeightT: num(row.combo_weight_t),
+    trackingRef: row.telematics_vehicle_id ?? null,
   };
   const awizacja: Awizacja = {
     loadWindowStart: row.plan_load_from, loadWindowEnd: row.plan_load_to,
@@ -235,6 +237,7 @@ export function resourcesPatchToDb(p: Partial<LoadResources>): Record<string, un
   if ('setWidthM' in p) out.combo_width_m = p.setWidthM;
   if ('setHeightM' in p) out.combo_height_m = p.setHeightM;
   if ('setWeightT' in p) out.combo_weight_t = p.setWeightT;
+  if ('trackingRef' in p) out.telematics_vehicle_id = p.trackingRef;
   return out;
 }
 

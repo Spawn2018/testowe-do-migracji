@@ -192,13 +192,13 @@ decyzji, §3 powiadomienia, §4 widoczność, §5 SMS strefy, §6 ustawienia adm
 | DEC-2 | P0. Centrum decyzji — pełny proces (DECYZJE §2) | katalog decyzji + akcje + eskalacja | W TOKU — baza+UI; skutki opcji E2E dalej |
 | DEC-3 | P0. Powiadomienia — każde zdarzenie/status/ryzyko/decyzja (DECYZJE §3) | macierz + kanały | W TOKU — decyzje IN_APP (0104); reszta zdarzeń dalej |
 | DEC-4 | P0. Widoczność — admin wybiera firmy (DECYZJE §4) | macierz per typ | W TOKU — 0104/0105 + UI Opcje; egzekwowanie poza decyzjami dalej |
-| BRAND-15 | P1. Nazwa i logo Watch Tower (PO_SPOTKANIU §15, `public/brand`) | favicon, splash, manifest, zero „TOWER” w UI | W TOKU — nazwa/splash/manifest/SW; e-mail Auth (Supabase dashboard) |
-| AWIZ-4 | P1. Awizacja „Dodaj"/„Edytuj" + okno (PO_SPOTKANIU §4) | przebieg HHL/SCX | DO ZROBIENIA |
-| HHL-4a | P1. Numer HHL — dodawanie/edycja przez HHL (§4a) | test bazy + UI | DO ZROBIENIA |
+| BRAND-15 | P1. Nazwa i logo Watch Tower (PO_SPOTKANIU §15, `public/brand`) | favicon, splash, manifest, zero „TOWER” w UI | **DONE** 57527034 — e-mail Auth (nadawca) = dashboard Supabase |
+| AWIZ-4 | P1. Awizacja „Dodaj"/„Edytuj" + okno (PO_SPOTKANIU §4) | przebieg HHL/SCX | **DONE** (ten commit) — modal; Ustalenia bez formularza awizacji; rejsy „zdąży”; tracking→telematics_vehicle_id; zapis zwrotny KSH = II-10 |
+| HHL-4a | P1. Numer HHL — dodawanie/edycja przez HHL (§4a) | test bazy + UI | **W TOKU** — UI Dodaj/Edytuj + pole w oknie awizacji; konflikt pliku = II-10 |
 | RESP-14 | P1. Telefon i instalacja PWA (§14) | ujęcia 390/768; Lighthouse | DO ZROBIENIA |
 | DEC-5 | P1. SMS przy strefach — 2+2 osoby (DECYZJE §5); brak SMS do kierowców | test bramki | DO ZROBIENIA |
 | DEC-6 | P1. Ustawienia administratora (DECYZJE §6) | sekcje zwijane | DO ZROBIENIA |
-| TEL-1 | P1. Telefony zawsze bez kierunkowego (DECYZJE §1) | zapis/odczyt | DO ZROBIENIA |
+| TEL-1 | P1. Telefony zawsze bez kierunkowego (DECYZJE §1) | zapis/odczyt | **W TOKU** — `toNationalPhone` + awizacja; brak jeszcze w imporcie/eksportcie/SMS |
 | DATY-67 | P1. Daty z pliku KSH + opóźnienie (§6–7); usunąć „Potwierdź daty" (I-18) | UI + powiadomienia | DO ZROBIENIA |
 | II-10 | P1. SharePoint w obie strony, na kopii pliku do D-32. Tylko HH; NTG nie | 95 HH, pętla | DO ZROBIENIA |
 | OPL-8 | P1. Opłaty wyłącznie ręcznie (§8; zastępuje auto I-32) | brak auto-dopłat | DO ZROBIENIA |

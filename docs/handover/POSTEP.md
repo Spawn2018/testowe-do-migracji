@@ -482,10 +482,10 @@ Uwaga: zestaw `i2` na hosted wymaga `ensureSeedAuthUsers` (FK `auth.mfa_factors`
 | DEC-2 | centrum decyzji (DECYZJE §2) | **W TOKU** (baza+UI; skutki opcji dalej) | `26417c73` `805dd034` `158ecebc` | **brama hosted pełna EXIT 0** po 0103: security 84 … dec2 14 … insurance 33 | **0102/0103**. Następne skutki opcji. |
 | DEC-3 | powiadomienia decyzji (§3) | **W TOKU** | `61713768` | dec3 **8/8** (z DEC-4) | **0104** notify OPEN/RESOLVE/ESCALATE. Zostaje: statusy/strefy/import. |
 | DEC-4 | widoczność macierz (§4) | **W TOKU** | (ten commit) | nullguard **434**; dec3 **8/8** | **0105** `admin_notification_matrix_set` + UI Opcje. SYSTEM zablokowany poza HHL. PROD apply. |
-| BRAND-15 | nazwa i logo Watch Tower (§15) | **W TOKU** | (ten commit) | — | favicon/apple/manifest any+maskable; splash `#wt-boot`; logo na logowaniu; symbol w topbar; `sw.js` v2026-10-01; słowniki bez „TOWER” w UI. Zostaje: szablon e-mail Auth w panelu Supabase (nadawca „Watch Tower”). |
+| BRAND-15 | nazwa i logo Watch Tower (§15) | **DONE** | `f8c8af6c` `57527034` | risk-keys **14/14** | favicon/splash/manifest/SW; logo AuthGate; topbar; UI bez „TOWER”. Zostaje: szablon e-mail Auth (dashboard Supabase). |
+| AWIZ-4 | awizacja Dodaj/Edytuj (§4) | **DONE** (UI; zapis KSH=II-10) | (ten commit) | awizacja-state **5/5**; phone-national **5/5**; tsc OK | Modal nad panelem; pola §4; armator→rejs→statek; filtr „zdąży” (+14 h); tracking→`telematics_vehicle_id`; Ustalenia bez starego formularza kierowca/rejs. |
+| HHL-4a | nr zlecenia HHL (§4a) | **W TOKU** | (ten commit) | — | Przycisk Dodaj/Edytuj + pole w oknie awizacji; konflikt pliku i zapis SharePoint = II-10. |
+| TEL-1 | telefony bez kierunkowego (§1) | **W TOKU** | (ten commit) | phone-national **5/5** | `toNationalPhone` w oknie awizacji; import/eksport/SMS dalej. |
 
-
-
-
-
+**Następne:** RESP-14 · DEC-5 · DEC-6 · … (kolejka P1).
 

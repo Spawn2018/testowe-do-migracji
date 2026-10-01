@@ -555,6 +555,12 @@ nav button{padding:8px 14px}
 /* workflow list additions */
 .workflow-page{min-height:calc(100% - 24px)}.wf-copy{flex:1;min-width:0}.wf-copy>b{display:block;font-weight:600}.wf-meta{display:block;color:var(--ink-3);font-family:var(--font-cond);font-size:11px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wf-count{color:var(--ink-3);font-size:12px;white-space:nowrap}.wf-run{align-self:center}.wf .sw{border:0;padding:0}
 .wf-creator{position:fixed;z-index:41;left:50%;top:50%;transform:translate(-50%,-50%);width:min(590px,calc(100vw - 28px));max-height:calc(100vh - 36px);margin:0;box-shadow:none;display:flex;flex-direction:column}.wf-creator .panel-hd{flex-shrink:0}.wf-creator form{overflow:auto}.form-field{display:grid;gap:5px;margin-bottom:12px}.form-field>span{font-size:12.5px;color:var(--ink-2);font-weight:600}.form-field small{font-weight:400;color:var(--ink-3);margin-left:5px}.form-field textarea{min-height:70px;resize:vertical}.creator-enabled{margin:5px 0 14px}.creator-actions{display:flex;gap:8px;border-top:1px solid var(--rule-2);padding-top:12px}
+/* AWIZ-4 — okno awizacji nad szufladą transportu */
+.awiz-modal{position:fixed;z-index:53;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,calc(100vw - 24px));max-height:calc(100vh - 28px);margin:0;display:flex;flex-direction:column;box-shadow:none}
+.awiz-modal .panel-hd{flex-shrink:0}
+.awiz-modal-bd{overflow:auto;padding:13px 15px 16px}
+.awiz-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 0}
+.awiz-row .btn{font-size:12.5px;padding:4px 10px}
 @media (max-width:900px){.options-grid{grid-template-columns:1fr}.option-wide{grid-column:auto}.settings-split,.rate-grid,.fuel-grid{grid-template-columns:1fr;gap:18px}.wf-count{display:none}}
 
 /* RisksView — Claude stacked panels; main scrolls */
