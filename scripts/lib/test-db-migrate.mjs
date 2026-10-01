@@ -62,8 +62,8 @@ export async function applyMigrationsAndSeed(root, url, psqlBin) {
   const migrations = readdirSync(join(root, 'supabase/migrations'))
     .filter((f) => /^\d{4}_.*\.sql$/.test(f))
     .sort();
-  if (migrations.length !== 108) {
-    console.error(`Oczekiwano 108 migracji, jest ${migrations.length}`);
+  if (migrations.length !== 109) {
+    console.error(`Oczekiwano 109 migracji, jest ${migrations.length}`);
     process.exit(1);
   }
   console.log(`migracje: ${migrations[0]} … ${migrations[migrations.length - 1]} (${migrations.length})`);

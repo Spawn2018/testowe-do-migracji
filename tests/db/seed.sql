@@ -27,3 +27,16 @@ insert into invoice_lines (invoice_id, load_id, direction) values
 insert into payment_terms (project_id, payer_org_id, payee_org_id, term_days, basis) values
  ('22222222-0000-0000-0000-000000000001','00000000-0000-0000-0000-00000000a002','00000000-0000-0000-0000-00000000a001',30,'WYSTAWIENIE'),
  ('22222222-0000-0000-0000-000000000001','00000000-0000-0000-0000-00000000a001','00000000-0000-0000-0000-00000000a003',35,'WYSTAWIENIE');
+
+-- DEC-5: bufor przed Śremem (migracja 0106 tworzy go tylko gdy projekt już istnieje — na świeżej bazie testowej po seedzie)
+insert into geofences (
+  project_id, name, kind, country, geom, hysteresis_m, dwell_seconds, debounce_fixes,
+  notify_enter, notify_exit, notify_dwell, notify_orgs, active, sort_order
+)
+select
+  '22222222-0000-0000-0000-000000000001', 'Bufor przed Sremem', 'PRE_ARRIVAL', 'PL',
+  make_circle_fence(52.07391, 17.0246, 50000),
+  1000, 0, 2, true, false, false, '{}', true, 5
+where not exists (
+  select 1 from geofences where name = 'Bufor przed Sremem'
+);

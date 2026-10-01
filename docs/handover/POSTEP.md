@@ -505,7 +505,7 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 | DEC-CLICK | routing klików | **AKCEPTACJA** | (docs) | — | Grupa C bez nowych typów; status/strefa → Transport; grupa D bez driver PWA (D-38). Implementacja w ONE-MECH/DEC-3. |
 | D-29t | tabela nakładania | **AKCEPTACJA** | (docs) | — | Warunek: żaden alarm bez zastępnika — lista poniżej. Scalenie = ONE-MECH. |
 | D-4 | telefon+SIM | **ZAMKNIĘTE** | — | — | Koordynator: Android + SIM są. Dalej = I-3-APK. |
-| I-3-APK | aplikacja bramki Android | **W TOKU** | — | — | Baza/UI/strażnik DONE; APK + instrukcja — następna pozycja. |
+| I-3-APK | aplikacja bramki Android | **W TOKU** | `ef351788`+ | i2 **510/510**; dec5 **11/11** | Źródła Kotlin + instrukcja instalacji; workflow APK; token w Opcjach (SmsGateway); last_seen w Stanie systemu. Zostaje: build APK u właściciela (Studio/Actions) + parowanie na telefonie. |
 
 #### D-29t — lista „było → jest” (warunek akceptacji: zero znikających alarmów)
 
@@ -525,5 +525,11 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 | LOADING_UNCONFIRMED / SEQUENCE / DATES_UNCONFIRMED / USAGE_LIMIT / JOB_FAILURE | zostają w grupie C (DEC-CLICK a) — **bez nowych typów**, mechanizm ryzyka bez zmian |
 | Kopia JOB_FAILURE | poza grupą C (osobna ścieżka strażnika kopii) — bez zmian |
 
-**Następne:** push lokalnych commitów · pełna brama 0105–0107 · `vercel --prod` · I-3-APK · ONE-MECH (kod) · …
-**Czeka na właściciela:** API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH + creds SharePoint; szablon e-mail Auth „Watch Tower”; akceptacja pisemna II-10-E2; numer właściciela do SMS testowego (w UI, nie w repo).
+#### Naprawa bramy po 0106 (01.10)
+
+| ID | status | commit | testy | uwagi |
+|---|---|---|---|---|
+| 0109 | **DONE** PROD+TEST | (ten commit) | i2 **510/510**; dec5 **11/11** | `sms_zone_on_geofence_enter`: niepoprawny `geofence_id` nie wywala INSERT `load_events` (I-2l). Seed: Bufor przed Sremem w `tests/db/seed.sql`. i2: oczekiwania SMS po `sms_strip_pl` / „Watch Tower”. |
+
+**Następne:** `vercel --prod` + obie domeny 200 · dokończenie I-3-APK (APK u właściciela) · ONE-MECH (kod) · DEC-6 reszta.
+**Czeka na właściciela:** API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH + creds SharePoint; szablon e-mail Auth „Watch Tower”; akceptacja pisemna II-10-E2; numer właściciela do SMS testowego (w UI, nie w repo); instalacja APK bramki na telefonie.
