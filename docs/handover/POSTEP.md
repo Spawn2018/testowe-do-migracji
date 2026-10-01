@@ -533,7 +533,7 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 | O-V | vercel --prod po 0105–0109 | **DONE** | `5d2b0248` | tower.log-mar.pl **200**, watch-tower-makieta.vercel.app **200**; dpl `GJ26sabE…` READY | Deploy z kopii bez `.git` (CLI z metadanymi git → BLOCKED). Naprawy TS: ScheduleView Fragment, `await getSupabase` w SmsZoneRecipients, awizacja bez CANCELLED w typie UI. |
 | ONE-MECH | wyłączenie dubli + DEC-CLICK | **DONE** | (ten commit) | — | Seed wf-1…12 off (7/10–12 → MONEY/SYSTEM); auto-run usunięty; klik strefy→Transport; wf w prod = podgląd. |
 | I-3-APK | APK lokalnie | **DONE APK** | `e2e19668` | APK **1.0.0** v2 | `D:\Watch Tower\dane\apk\WatchTowerSMS.apk` SHA-256 `d6324bb0…ce8c`. Czeka: instalacja na telefonie. |
-| DEC-6 | Auth + baner + eksport | **DONE** | (ten commit) | dec6 **15/15**; nullguard **473**; security **84** | Migracja **0110** PROD+TEST. |
+| DEC-6 | Auth + baner + eksport | **DONE** | `7b255027` | dec6 **15/15**; nullguard **473**; security **84** | Migracja **0110** PROD+TEST. vercel --prod `dpl_CMCdmN4Y…` READY; obie domeny **200**. |
 
 **Następne:** TEL-1 · DATY-67 · kolejka PLAN (po DEC-6).
 **Czeka na właściciela:** instalacja APK bramki (`D:\Watch Tower\dane\apk\WatchTowerSMS.apk`) + parowanie + SMS test; API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH + creds SharePoint; szablon e-mail Auth „Watch Tower”; akceptacja pisemna II-10-E2; numer właściciela do SMS testowego (w UI, nie w repo).
