@@ -9,7 +9,7 @@ import { I2_I18N } from './i2';
 type Dict = Record<string, string>;
 
 const pl: Dict = {
-  brand: 'TOWER',
+  brand: 'WATCH TOWER',
   project: 'Stegra Boden · H&H Logistics',
   role: 'Widok',
   lang: 'Język',
@@ -157,6 +157,7 @@ const pl: Dict = {
 
 const en: Dict = {
   ...pl,
+  brand: 'Watch Tower',
   notifications: 'Notifications',
   mark_all_read: 'Mark all read',
   mark_read: 'Mark read',
@@ -303,6 +304,7 @@ const en: Dict = {
 
 const sv: Dict = {
   ...en,
+  brand: 'Watch Tower',
   notifications: 'Aviseringar',
   mark_all_read: 'Markera alla',
   mark_read: 'Läst',

@@ -15,3 +15,8 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
+// §15: zdejmij ekran startowy po pierwszym renderze
+queueMicrotask(() => {
+  document.getElementById('wt-boot')?.remove();
+});
