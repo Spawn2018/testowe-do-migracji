@@ -531,6 +531,7 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 |---|---|---|---|---|
 | 0109 | **DONE** PROD+TEST | `93ce1109` | i2 **510/510**; dec5 **11/11** | `sms_zone_on_geofence_enter`: niepoprawny `geofence_id` nie wywala INSERT `load_events` (I-2l). Seed: Bufor przed Sremem w `tests/db/seed.sql`. i2: oczekiwania SMS po `sms_strip_pl` / „Watch Tower”. |
 | O-V | vercel --prod po 0105–0109 | **DONE** | `5d2b0248` | tower.log-mar.pl **200**, watch-tower-makieta.vercel.app **200**; dpl `GJ26sabE…` READY | Deploy z kopii bez `.git` (CLI z metadanymi git → BLOCKED). Naprawy TS: ScheduleView Fragment, `await getSupabase` w SmsZoneRecipients, awizacja bez CANCELLED w typie UI. |
+| ONE-MECH | wyłączenie dubli demo | **W TOKU** | (ten commit) | — | Seed: wf-1…6/8/9 `enabled:false` (lista D-29t); usunięty auto-run wf-1 przy PRE_ARRIVAL. Dalej: DEC-CLICK routing, wf-7/10–12, UI kreatora. |
 
-**Następne:** dokończenie I-3-APK (APK na telefonie właściciela) · ONE-MECH (kod) · DEC-6 reszta.
+**Następne:** ONE-MECH (routing DEC-CLICK + reszta) · DEC-6 reszta · I-3-APK na telefonie właściciela.
 **Czeka na właściciela:** API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH + creds SharePoint; szablon e-mail Auth „Watch Tower”; akceptacja pisemna II-10-E2; numer właściciela do SMS testowego (w UI, nie w repo); instalacja APK bramki na telefonie (instrukcja `docs/handover/INSTRUKCJA_BRAMKA_SMS_ANDROID.md`).
