@@ -486,6 +486,7 @@ Uwaga: zestaw `i2` na hosted wymaga `ensureSeedAuthUsers` (FK `auth.mfa_factors`
 | AWIZ-4 | awizacja Dodaj/Edytuj (§4) | **DONE** (UI; zapis KSH=II-10) | (ten commit) | awizacja-state **5/5**; phone-national **5/5**; tsc OK | Modal nad panelem; pola §4; armator→rejs→statek; filtr „zdąży” (+14 h); tracking→`telematics_vehicle_id`; Ustalenia bez starego formularza kierowca/rejs. |
 | HHL-4a | nr zlecenia HHL (§4a) | **W TOKU** | (ten commit) | — | Przycisk Dodaj/Edytuj + pole w oknie awizacji; konflikt pliku i zapis SharePoint = II-10. |
 | TEL-1 | telefony bez kierunkowego (§1) | **W TOKU** | (ten commit) | phone-national **5/5** | `toNationalPhone` w oknie awizacji; import/eksport/SMS dalej. |
+| RESP-14 | telefon i PWA (§14) | **W TOKU** | (ten commit) | tsc OK | `sw.js` v2026-10-01b + `offline.html`; toast nowej wersji; menu ☰ + nav overlay ≤768; drawer/awizacja pełny ekran; karty harmonogramu; cele 44px / input 16px. Brama 390/768 + Lighthouse — przy wdrożeniu. |
 
-**Następne:** RESP-14 · DEC-5 · DEC-6 · … (kolejka P1).
+**Następne:** dokończyć RESP-14 (brama) albo DEC-5 SMS strefy · DEC-6 · …
 
