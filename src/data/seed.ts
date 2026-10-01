@@ -66,7 +66,8 @@ export const WORKFLOWS: WorkflowRule[] = [
     trigger: 'GEOFENCE_ENTER',
     condition: '{"==":[{"var":"geofence.type"},"PRE_ARRIVAL"]}',
     actions: ['notify_ksh', 'notify_scx', 'set_status:APPROACHING_SITE'],
-    enabled: true,
+    // ONE-MECH / D-29t: zastąpione silnikiem geofence + DEC-5 + macierz
+    enabled: false,
     runCount: 38,
   },
   {
@@ -77,7 +78,8 @@ export const WORKFLOWS: WorkflowRule[] = [
     trigger: 'CRON_DAILY_06',
     condition: '{"and":[{"missing":["permit_pl"]},{"<=":[{"var":"hours_to_load"},48]}]}',
     actions: ['mail_scx', 'escalate_hhl_12h'],
-    enabled: true,
+    // ONE-MECH / D-29t: I-27 + decyzja + macierz
+    enabled: false,
     runCount: 11,
   },
   {
@@ -88,7 +90,8 @@ export const WORKFLOWS: WorkflowRule[] = [
     trigger: 'POSITION_STALE',
     condition: '{">":[{"var":"silent_min"},90]}',
     actions: ['flag_silent', 'mail_scx', 'escalate_hhl_60m'],
-    enabled: true,
+    // ONE-MECH / D-29t: detect_silent_vehicles (DB)
+    enabled: false,
     runCount: 6,
   },
   {
@@ -99,7 +102,8 @@ export const WORKFLOWS: WorkflowRule[] = [
     trigger: 'FERRY_STATUS',
     condition: '{"!=":[{"var":"ferry.status"},"ON_TIME"]}',
     actions: ['notify_hhl', 'notify_scx', 'open_risk_ferry'],
-    enabled: true,
+    // ONE-MECH / D-29t: jedno ryzyko FERRY → macierz + decyzja
+    enabled: false,
     runCount: 4,
   },
   {
@@ -110,7 +114,8 @@ export const WORKFLOWS: WorkflowRule[] = [
     trigger: 'SCHEDULE_IMPORTED',
     condition: '{"==":[{"var":"criticalDateChange"},true]}',
     actions: ['mail_scx_diff', 'require_ack'],
-    enabled: true,
+    // ONE-MECH / D-29t: DATY-67 + decyzja + I-10
+    enabled: false,
     runCount: 9,
   },
   {
@@ -120,7 +125,8 @@ export const WORKFLOWS: WorkflowRule[] = [
     trigger: 'UNLOADED',
     condition: 'true',
     actions: ['task_pod_24h', 'remind_18h'],
-    enabled: true,
+    // ONE-MECH / D-29t: dokumenty + SMS 9
+    enabled: false,
     runCount: 17,
   },
   {
@@ -142,7 +148,8 @@ export const WORKFLOWS: WorkflowRule[] = [
     trigger: 'GEOFENCE_ENTER',
     condition: '{"and":[{"==":[{"var":"geofence.type"},"PRE_PORT"]},{"==":[{"var":"at_risk_ferry_cutoff"},true]}]}',
     actions: ['open_risk_ferry', 'toast_plan_b', 'task_confirm_sailing'],
-    enabled: true,
+    // ONE-MECH / D-29t: ryzyko FERRY + decyzja plan B
+    enabled: false,
     runCount: 5,
   },
   {
@@ -153,7 +160,8 @@ export const WORKFLOWS: WorkflowRule[] = [
     trigger: 'TRAFIKVERKET_SITUATION',
     condition: '{"and":[{"in":[{"var":"situation.severity"},["HIGH","CRITICAL"]]},{"==":[{"var":"stage"},"SE_ROAD"]}]}',
     actions: ['open_risk_road_se_or_fm', 'map_pin', 'mark_load_delayed', 'notify_hhl', 'notify_scx'],
-    enabled: true,
+    // ONE-MECH / D-29t: ryzyko ROAD_SE + macierz (II-6)
+    enabled: false,
     runCount: 3,
   },
   {

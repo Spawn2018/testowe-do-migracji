@@ -1066,11 +1066,7 @@ export const useTowerStore = create<TowerState>()(
             href: { view: 'geo', loadId, entityId: g.id },
           });
         }
-        // Auto-run PRE_ARRIVAL workflow if enabled
-        if (g.type === 'PRE_ARRIVAL') {
-          const wf = get().workflows.find((w) => w.id === 'wf-1' && w.enabled);
-          if (wf) get().runWorkflowNow(wf.id);
-        }
+        // ONE-MECH / D-29t: PRE_ARRIVAL → geofence + DEC-5 / macierz (nie auto-run demo wf-1)
         get().pushToast(tp(get().locale, 'a6_ts_zone_event', { type: g.type, name: g.name }), 'MEDIUM', loadId);
       },
 
