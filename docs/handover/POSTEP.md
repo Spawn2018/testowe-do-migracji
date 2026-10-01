@@ -529,7 +529,8 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 
 | ID | status | commit | testy | uwagi |
 |---|---|---|---|---|
-| 0109 | **DONE** PROD+TEST | (ten commit) | i2 **510/510**; dec5 **11/11** | `sms_zone_on_geofence_enter`: niepoprawny `geofence_id` nie wywala INSERT `load_events` (I-2l). Seed: Bufor przed Sremem w `tests/db/seed.sql`. i2: oczekiwania SMS po `sms_strip_pl` / „Watch Tower”. |
+| 0109 | **DONE** PROD+TEST | `93ce1109` | i2 **510/510**; dec5 **11/11** | `sms_zone_on_geofence_enter`: niepoprawny `geofence_id` nie wywala INSERT `load_events` (I-2l). Seed: Bufor przed Sremem w `tests/db/seed.sql`. i2: oczekiwania SMS po `sms_strip_pl` / „Watch Tower”. |
+| O-V | vercel --prod po 0105–0109 | **DONE** | `5d2b0248` | tower.log-mar.pl **200**, watch-tower-makieta.vercel.app **200**; dpl `GJ26sabE…` READY | Deploy z kopii bez `.git` (CLI z metadanymi git → BLOCKED). Naprawy TS: ScheduleView Fragment, `await getSupabase` w SmsZoneRecipients, awizacja bez CANCELLED w typie UI. |
 
-**Następne:** `vercel --prod` + obie domeny 200 · dokończenie I-3-APK (APK u właściciela) · ONE-MECH (kod) · DEC-6 reszta.
-**Czeka na właściciela:** API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH + creds SharePoint; szablon e-mail Auth „Watch Tower”; akceptacja pisemna II-10-E2; numer właściciela do SMS testowego (w UI, nie w repo); instalacja APK bramki na telefonie.
+**Następne:** dokończenie I-3-APK (APK na telefonie właściciela) · ONE-MECH (kod) · DEC-6 reszta.
+**Czeka na właściciela:** API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH + creds SharePoint; szablon e-mail Auth „Watch Tower”; akceptacja pisemna II-10-E2; numer właściciela do SMS testowego (w UI, nie w repo); instalacja APK bramki na telefonie (instrukcja `docs/handover/INSTRUKCJA_BRAMKA_SMS_ANDROID.md`).
