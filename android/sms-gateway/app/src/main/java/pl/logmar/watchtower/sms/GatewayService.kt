@@ -22,16 +22,18 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Usługa pierwszoplanowa: heartbeat + pull kolejki + wysyłka SMS + report.
- * Token urządzenia nie jest logowany.
+ * Usługa pierwszoplanowa: heartbeat + pull + wysyłka z sentIntent/deliveryIntent.
+ * Odstęp ≥ 3 s między SMS. Token urządzenia nie jest logowany.
  */
 class GatewayService : Service() {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
   private var loop: Job? = null
   private lateinit var prefs: Prefs
   private lateinit var api: TowerApi
+  private val reqSeq = AtomicInteger(1)
 
   override fun onBind(intent: Intent?): IBinder? = null
 
@@ -75,9 +77,11 @@ class GatewayService : Service() {
         updateNotif("OK · dziś $daySent/$dayLimit")
 
         if (!paused) {
-          val items = api.pull(5)
+          // po 1 naraz — odstęp 3 s między kolejnymi
+          val items = api.pull(1)
           for (item in items) {
             sendOne(item)
+            delay(GAP_MS)
           }
         }
       } catch (e: Exception) {
@@ -92,12 +96,34 @@ class GatewayService : Service() {
       @Suppress("DEPRECATION")
       val sm = SmsManager.getDefault()
       val parts = sm.divideMessage(item.body)
-      if (parts.size == 1) {
-        sm.sendTextMessage(item.toE164, null, item.body, null, null)
-      } else {
-        sm.sendMultipartTextMessage(item.toE164, null, parts, null, null)
+      val n = parts.size.coerceAtLeast(1)
+      val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+      val sentList = ArrayList<PendingIntent>(n)
+      val delList = ArrayList<PendingIntent>(n)
+      for (i in 0 until n) {
+        val req = reqSeq.getAndIncrement()
+        val sentIntent = Intent(this, SmsResultReceiver::class.java).apply {
+          action = SmsResultReceiver.ACTION_SENT
+          putExtra(SmsResultReceiver.EXTRA_SMS_ID, item.id)
+          putExtra(SmsResultReceiver.EXTRA_PARTS, n)
+          // unikalny data URI — osobny PendingIntent per część
+          data = android.net.Uri.parse("wt-sms://sent/${item.id}/$i")
+        }
+        val delIntent = Intent(this, SmsResultReceiver::class.java).apply {
+          action = SmsResultReceiver.ACTION_DELIVERED
+          putExtra(SmsResultReceiver.EXTRA_SMS_ID, item.id)
+          putExtra(SmsResultReceiver.EXTRA_PARTS, n)
+          data = android.net.Uri.parse("wt-sms://delivered/${item.id}/$i")
+        }
+        sentList.add(PendingIntent.getBroadcast(this, req, sentIntent, flags))
+        delList.add(PendingIntent.getBroadcast(this, req + 100_000, delIntent, flags))
       }
-      api.report(item.id, "SENT", parts = parts.size)
+      if (n == 1) {
+        sm.sendTextMessage(item.toE164, null, item.body, sentList[0], delList[0])
+      } else {
+        sm.sendMultipartTextMessage(item.toE164, null, parts, sentList, delList)
+      }
+      // SENT / DELIVERED raportuje SmsResultReceiver — nie zgłaszamy tu z góry
     } catch (e: Exception) {
       api.report(item.id, "FAILED", error = e.message ?: "send failed")
     }
@@ -140,5 +166,6 @@ class GatewayService : Service() {
   companion object {
     const val CHANNEL = "sms_gateway"
     const val NOTIF_ID = 7103
+    const val GAP_MS = 3_000L
   }
 }

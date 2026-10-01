@@ -11,7 +11,7 @@ import './auth.css';
  * Przed R-2 (flaga EXTERNAL_MESSAGING) telefon dostaje wyłącznie SMS testowe na numery z listy.
  */
 interface Device { id: string; label: string; created_at: string; revoked_at: string | null; paused: boolean; last_seen_at: string | null; day_sent: number; day_limit: number }
-interface Sms { id: string; kind: string; status: string; to_e164: string; created_at: string; fallback_at: string | null; error: string | null }
+interface Sms { id: string; kind: string; status: string; to_e164: string; created_at: string; sent_at: string | null; delivered_at: string | null; fallback_at: string | null; error: string | null; attempts: number }
 interface TestNo { to_e164: string; label: string }
 
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' }) : '—');
@@ -33,7 +33,7 @@ export default function SmsGateway() {
     const sb = await getSupabase();
     const [d, o, n, f] = await Promise.all([
       sb.from('sms_devices').select('id, label, created_at, revoked_at, paused, last_seen_at, day_sent, day_limit').order('created_at', { ascending: false }),
-      sb.from('sms_outbox').select('id, kind, status, to_e164, created_at, fallback_at, error').order('created_at', { ascending: false }).limit(20),
+      sb.from('sms_outbox').select('id, kind, status, to_e164, created_at, sent_at, delivered_at, fallback_at, error, attempts').order('created_at', { ascending: false }).limit(20),
       sb.from('sms_test_numbers').select('to_e164, label').order('created_at'),
       sb.rpc('sms_external_messaging_state'),
     ]);
@@ -99,7 +99,17 @@ export default function SmsGateway() {
         <h4 className="sec">{t(locale, 'i3_queue_h')}</h4>
         <div className="panel-bd flush" data-sms="queue">
           {sms.length === 0 ? <div className="auth-admin-row">{t(locale, 'i3_queue_none')}</div> : sms.map((o) => (
-            <div className="auth-admin-row" key={o.id} data-sms-row={o.kind}><span className="grow">{when(o.created_at)} · <b>{o.kind}</b> · {o.status} · …{o.to_e164.slice(-3)}{o.fallback_at ? ` · ${t(locale, 'i3_fallback')}` : ''}{o.error ? ` · ${o.error}` : ''}</span></div>
+            <div className="auth-admin-row" key={o.id} data-sms-row={o.kind} data-sms-status={o.status}>
+              <span className="grow">
+                {when(o.created_at)} · <b>{o.kind}</b> · {o.status}
+                {o.sent_at ? ` · SENT ${when(o.sent_at)}` : ''}
+                {o.delivered_at ? ` · DELIV ${when(o.delivered_at)}` : o.status === 'SENT' ? ` · ${t(locale, 'i3_await_deliv')}` : ''}
+                {' · …'}{o.to_e164.slice(-3)}
+                {o.attempts > 1 ? ` · ×${o.attempts}` : ''}
+                {o.fallback_at ? ` · ${t(locale, 'i3_fallback')}` : ''}
+                {o.error ? ` · ${o.error}` : ''}
+              </span>
+            </div>
           ))}
         </div>
       </div>

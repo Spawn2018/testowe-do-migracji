@@ -6,18 +6,21 @@ Aplikacja na telefon z Androidem i kartą SIM. Pobiera kolejkę `sms_outbox`
 **Sekrety (token urządzenia, URL, klucz anon, numer SIM, klucz podpisu APK)
 nigdy nie trafiają do repozytorium ani logów.**
 
-## Gotowy plik (01.10.2026)
+## Gotowy plik (01.10.2026 · v1.0.1)
 
 | Pole | Wartość |
 |---|---|
 | Plik | `D:\Watch Tower\dane\apk\WatchTowerSMS.apk` |
-| Wersja | **1.0.0** (`versionCode` 1) |
-| SHA-256 | `d6324bb089e6764d436066ce309b4d4caab59f91de3c42aa54e9a40f4a50ce8c` |
+| Wersja | **1.0.1** (`versionCode` 2) |
+| SHA-256 | `025e1942c2d5a227d7a496634783e636bb9e3269240eb32d1fdd8ea64137afdd` |
 | Podpis | v2; klucz w `D:\Watch Tower\dane\apk-klucz\` (poza repo) |
+
+**1.0.1:** `sentIntent` + `deliveryIntent` (SENT ≠ DELIVERED); odstęp ≥ 3 s;
+błąd wysyłki → do 3 prób; brak DELIVERED > 10 min → ryzyko + e-mail HHL.
 
 ## Przeniesienie na telefon
 
-1. **Kabel USB:** podłącz telefon → w Eksploratorze Windows skopiuj
+1. **kabel USB:** podłącz telefon → w Eksploratorze Windows skopiuj
    `D:\Watch Tower\dane\apk\WatchTowerSMS.apk` do folderu Pobrane / Download.
 2. **Dysk Google:** wgraj ten sam plik na Drive właściciela → otwórz na
    telefonie w aplikacji Dysk → Pobierz.
@@ -27,11 +30,11 @@ nigdy nie trafiają do repozytorium ani logów.**
 1. Na telefonie otwórz plik `WatchTowerSMS.apk` (Pliki / Dysk / Downloads).
 2. Jeśli Android zapyta — włącz **instalację z nieznanego źródła**
    (dla Plików / Dysku / przeglądarki — przełącznik „Zezwalaj z tego źródła”).
-3. Zainstaluj **Watch Tower SMS**.
+3. Zainstaluj / zaktualizuj **Watch Tower SMS** do **1.0.1**.
 4. Uruchom aplikację. Przy pierwszym starcie zaakceptuj:
    - **SMS** (wysyłanie),
    - **powiadomienia** (Android 13+).
-5. W ustawieniach aplikacji wpisz:
+5. W ustawieniach aplikacji wpisz (lub zostaw po aktualizacji):
    - **URL projektu Supabase** (produkcja),
    - **klucz anon** (publiczny: Supabase → Settings → API),
    - **token parowania** — w aplikacji web: Opcje → Odbiorcy SMS i strefy →
@@ -49,9 +52,11 @@ nigdy nie trafiają do repozytorium ani logów.**
 ## Po sparowaniu (kolejność właściciela)
 
 1. W Opcjach dodaj **numer właściciela** jako numer testowy.
-2. Wyślij **SMS testowy** wyłącznie na ten numer — potwierdź doręczenie.
-3. Dopiero potem włącz wyzwalacze stref (DECYZJE §5) i wpisz odbiorców 2+2.
-4. W **Stanie systemu** sprawdź „ostatni kontakt”; cisza > 15 min
+2. Wyślij **SMS testowy** — w kolejce ma być **SENT**, potem **DELIVERED**
+   (Opcje → Bramka SMS → Ostatnie SMS).
+3. Seria akceptacyjna: `node scripts/sms-burst-test.mjs` → **10/10 DELIVERED**.
+4. Dopiero potem włącz wyzwalacze stref (DECYZJE §5) i wpisz odbiorców 2+2.
+5. W **Stanie systemu** sprawdź „ostatni kontakt”; cisza > 15 min
    → ryzyko + e-mail (cron w bazie).
 
 ## Ponowna budowa (wykonawca)

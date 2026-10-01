@@ -358,6 +358,7 @@ const pl: Dict = {
   i3_queue_h: "Ostatnie SMS",
   i3_queue_none: "Kolejka pusta.",
   i3_fallback: "wysłano e-mail zastępczy",
+  i3_await_deliv: "czekam na doręczenie",
   i3_dl_sms_btn: "Wyślij link SMS-em",
   i3_dl_sms_queued: "Nowy link dodany do kolejki SMS (poprzedni przestał działać). Przed R-2 SMS do kierowców nie wychodzą — przekaż link ręcznie.",
 };
@@ -717,6 +718,7 @@ const en: Dict = {
   i3_queue_h: "Recent SMS",
   i3_queue_none: "Queue empty.",
   i3_fallback: "fallback e-mail sent",
+  i3_await_deliv: "awaiting delivery",
   i3_dl_sms_btn: "Send link by SMS",
   i3_dl_sms_queued: "New link queued by SMS (the previous one stopped working). Before R-2 SMS to drivers are not sent — pass the link on manually.",
 };
@@ -1076,6 +1078,7 @@ const sv: Dict = {
   i3_queue_h: "Senaste SMS",
   i3_queue_none: "Kön är tom.",
   i3_fallback: "ersättnings-e-post skickad",
+  i3_await_deliv: "väntar på leverans",
   i3_dl_sms_btn: "Skicka länk via SMS",
   i3_dl_sms_queued: "Ny länk köad via SMS (den föregående slutade fungera). Före R-2 skickas inga SMS till förare — vidarebefordra länken manuellt.",
 };

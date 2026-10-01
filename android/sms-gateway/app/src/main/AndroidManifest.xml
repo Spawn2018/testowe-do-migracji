@@ -43,5 +43,15 @@
         <action android:name="android.intent.action.BOOT_COMPLETED" />
       </intent-filter>
     </receiver>
+
+    <receiver
+      android:name=".SmsResultReceiver"
+      android:exported="false"
+      android:enabled="true">
+      <intent-filter>
+        <action android:name="pl.logmar.watchtower.sms.SMS_SENT" />
+        <action android:name="pl.logmar.watchtower.sms.SMS_DELIVERED" />
+      </intent-filter>
+    </receiver>
   </application>
 </manifest>
