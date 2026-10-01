@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <style name="Theme.WatchTowerSms" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+    <item name="colorPrimary">#1B3A4B</item>
+    <item name="colorPrimaryVariant">#0F2430</item>
+    <item name="colorOnPrimary">#FFFFFF</item>
+    <item name="colorSecondary">#C45C26</item>
+  </style>
+</resources>

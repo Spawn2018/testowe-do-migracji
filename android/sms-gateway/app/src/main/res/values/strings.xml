@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name">Watch Tower SMS</string>
+  <string name="channel_name">Bramka SMS</string>
+  <string name="channel_desc">Pobieranie i wysyłka SMS z kolejki Watch Tower</string>
+  <string name="notif_title">Bramka SMS aktywna</string>
+  <string name="notif_text">Ostatni kontakt: %1$s</string>
+</resources>

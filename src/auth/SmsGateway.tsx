@@ -62,6 +62,7 @@ export default function SmsGateway() {
       {msg && <div className={`auth-msg ${msg.ok ? 'ok' : 'err'} auth-admin-row`} role="status">{msg.text}</div>}
       <div className="panel-bd">
         <div className="note option-note">{t(locale, 'i3_note')}</div>
+        <div className="note option-note">{t(locale, 'i3_apk_note')}</div>
 
         <h4 className="sec">{t(locale, 'i3_devices_h')}</h4>
         <form className="baf-form" onSubmit={async (e) => { e.preventDefault(); const tok = await call('sms_issue_device', { p_label: label }, t(locale, 'i3_device_issued')); if (tok) { setToken(String(tok)); setLabel(''); } }}>

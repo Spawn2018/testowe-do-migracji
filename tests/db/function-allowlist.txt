@@ -86,6 +86,12 @@ authenticated decision_resolve
 authenticated decision_expire
 # DEC-4 (0105): macierz powiadomień — tylko HHL_ADMIN
 authenticated admin_notification_matrix_set
+# DEC-5 (0106): SMS stref — odbiorcy i wyzwalacze (tylko HHL w ciele)
+authenticated admin_sms_zone_recipient_set
+authenticated admin_sms_zone_trigger_set
+authenticated admin_sms_zone_test
+# DEC-6 (0107): progi ops_thresholds
+authenticated admin_ops_threshold_set
 # I-3 (0067): bramka SMS — telefon (anon, token urządzenia), HHL (urządzenia), link kierowcy SMS-em
 anon sms_pull
 anon sms_report
