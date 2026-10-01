@@ -1,0 +1,92 @@
+/**
+ * DEC-6 — progi i terminy (ops_thresholds). Tylko HHL_ADMIN zapisuje przez RPC.
+ */
+import { useCallback, useEffect, useState } from 'react';
+import { getSupabase } from './client';
+import { useTowerStore } from '../store/useTowerStore';
+import { t } from '../i18n/messages';
+import './auth.css';
+
+type Row = { key: string; value_num: number; unit: string; label_pl: string };
+
+const ORDER = [
+  'WAVE_M', 'GUST_KN', 'DELAY_MIN', 'LEAD_DAYS',
+  'AWIZ_EARLY_H', 'AWIZ_LATE_H', 'DOC_WARN_H', 'DOC_CRIT_H',
+  'SILENT_MIN', 'OFFROUTE_KM',
+] as const;
+
+export default function OpsThresholdsForm() {
+  const locale = useTowerStore((s) => s.locale);
+  const [rows, setRows] = useState<Row[]>([]);
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const refresh = useCallback(async () => {
+    const sb = await getSupabase();
+    const q = await sb.from('ops_thresholds').select('key,value_num,unit,label_pl');
+    if (q.error) {
+      setMsg(q.error.message);
+      return;
+    }
+    const list = (q.data ?? []) as Row[];
+    list.sort((a, b) => ORDER.indexOf(a.key as typeof ORDER[number]) - ORDER.indexOf(b.key as typeof ORDER[number]));
+    setRows(list);
+    const d: Record<string, string> = {};
+    for (const r of list) d[r.key] = String(r.value_num);
+    setDraft(d);
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  async function save(key: string) {
+    const raw = draft[key];
+    const num = Number(String(raw).replace(',', '.'));
+    if (!(num > 0)) {
+      setMsg(t(locale, 'opt_acc_thresh_bad'));
+      return;
+    }
+    setBusy(true);
+    const sb = await getSupabase();
+    const { error } = await sb.rpc('admin_ops_threshold_set', { p_key: key, p_value: num });
+    setBusy(false);
+    if (error) {
+      setMsg(error.message);
+      return;
+    }
+    setMsg(null);
+    await refresh();
+  }
+
+  return (
+    <div data-panel="ops-thresholds">
+      {msg ? <div className="note">{msg}</div> : null}
+      <dl className="kv options-kv">
+        {rows.map((r) => (
+          <div className="kv-row" key={r.key}>
+            <dt>{locale === 'pl' ? r.label_pl : t(locale, `opt_thr_${r.key}`)}</dt>
+            <dd>
+              <div className="inline-input">
+                <input
+                  className="input"
+                  type="number"
+                  step="any"
+                  min="0"
+                  disabled={busy}
+                  aria-label={r.label_pl}
+                  value={draft[r.key] ?? ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, [r.key]: e.target.value }))}
+                  onBlur={() => void save(r.key)}
+                />
+                <span>{r.unit}</span>
+              </div>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <div className="note option-note">{t(locale, 'opt_acc_thresh_note')}</div>
+    </div>
+  );
+}

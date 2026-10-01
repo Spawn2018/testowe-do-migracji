@@ -41,6 +41,7 @@ const EXPECTED = {
   dec2: 14,
   dec3: 8,
   dec5: 11,
+  dec6: 8,
   workflows: 46,
   insurance: 33,
 };
@@ -198,6 +199,7 @@ const suites = [
   { name: 'dec2', file: 'dec2.sh' },
   { name: 'dec3', file: 'dec3.sh' },
   { name: 'dec5', file: 'dec5.sh' },
+  { name: 'dec6', file: 'dec6.sh' },
   { name: 'workflows', file: 'workflows.sh' },
   { name: 'insurance', file: 'insurance.sh' },
 ];

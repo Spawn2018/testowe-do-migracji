@@ -521,6 +521,27 @@ nav button{padding:8px 14px}
 .options-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:12px}
 .option-panel{margin:0;min-width:0}
 .option-wide{grid-column:1/-1}
+/* DEC-6 — sekcje zwijane */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.opt-acc{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+.opt-acc-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.opt-acc-search{flex:1 1 220px;min-width:0}
+.opt-acc-actions{display:flex;gap:8px;flex:0 0 auto}
+.opt-acc-list{display:flex;flex-direction:column;gap:10px}
+.opt-acc-item{margin:0;min-width:0}
+.opt-acc-summary{list-style:none;cursor:pointer;user-select:none;gap:10px}
+.opt-acc-summary::-webkit-details-marker{display:none}
+.opt-acc-summary-copy{min-width:0;flex:1 1 auto}
+.opt-acc-summary-copy h2{margin:0;font-family:var(--font-cond);font-size:17px;font-weight:600;letter-spacing:.02em}
+.opt-acc-count{margin-left:auto;font-family:var(--font-cond);font-size:12px;color:var(--ink-3);font-weight:700}
+.opt-acc-chevron{flex:0 0 auto;color:var(--ink-3);font-size:14px;width:1.2em;text-align:center}
+.opt-acc-body{padding-top:4px}
+.opt-acc-body>.panel,
+.opt-acc-body>.option-panel{border:0;box-shadow:none;background:transparent;margin:0 0 12px}
+.opt-acc-body>.panel>.panel-hd,
+.opt-acc-body>.option-panel>.panel-hd{display:none}
+.opt-acc-body>.panel>.panel-bd,
+.opt-acc-body>.option-panel>.panel-bd{padding:0}
 .options-kv{grid-template-columns:145px minmax(0,1fr);align-items:center}
 .options-kv .kv-row{display:contents}
 .options-kv dt,.options-kv dd{padding:3px 0}

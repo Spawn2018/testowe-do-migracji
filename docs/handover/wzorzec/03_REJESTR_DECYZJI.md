@@ -25,7 +25,7 @@
 | D-1 | stawki | cenniki SCX i HHL przekazane — 12 pozycji (kwoty w plikach poufnych) | ✅ 29.09 |
 | D-2 | dopłata paliwowa | załącznik SEFS z 28.09; ceny „tak, jak podaje źródło" | ✅ 29.09 |
 | D-3 | retencja dokumentów | CMR, POD, zdjęcia 3 lata; PDF faktur 5 lat — **rekomendacja, czeka na potwierdzenie** | ⏳ |
-| D-4 | telefon i SIM | nadal potrzebny — **SMS tylko do KSH** (do kierowców — rezygnacja) | ⏳ |
+| D-4 | telefon i SIM | **ZAMKNIĘTE 01.10** — telefon Android + SIM są; SMS tylko do KSH (do kierowców — rezygnacja D-37); dokończenie APK = I-3-APK | ✅ 01.10 |
 | D-5 | RODO | **zamknięte** — wszystkie zgody są, temat zakończony | ✅ 29.09 |
 | D-6 | spotkanie z przewoźnikiem | **odbyte 29.09** — decyzje w `ZLECENIE_PO_SPOTKANIU_SCX.md` | ✅ |
 | D-7 | trenowanie modeli Vercel | wyłączyć | ⏳ |
@@ -47,7 +47,7 @@
 | D-25 | wzorzec zrzutów | zatwierdzony z warunkiem | ✅ |
 | D-27 | kontrast | zatwierdzony, test ≥ 4,5:1 | ✅ |
 | D-28 | serwis tras | 🔁 TomTom → HERE → **własny silnik + kalibracja ucząca się** | ✅ |
-| D-29 | reguły automatyzacji | najpierw tabela nakładania się | ⏳ |
+| D-29 | reguły automatyzacji | ONE-MECH: tabela D-29t **zaakceptowana 01.10** (warunek: każdy alarm ma zastępnik); scalenie kodu w toku | ✅ tabela / ⏳ kod |
 | D-30 | polisy | tak | ✅ |
 | D-31 | pasek 390 px | naprawić | ✅ |
 | D-32 | zgoda IT KSH (SharePoint) | — | ⏳ |

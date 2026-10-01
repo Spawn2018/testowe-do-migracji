@@ -489,6 +489,41 @@ Uwaga: zestaw `i2` na hosted wymaga `ensureSeedAuthUsers` (FK `auth.mfa_factors`
 | RESP-14 | telefon i PWA (§14) | **W TOKU** | `dfcc0afe` | tsc OK | `sw.js` v2026-10-01b + `offline.html`; toast nowej wersji; menu ☰ + nav overlay ≤768; drawer/awizacja pełny ekran; karty harmonogramu; cele 44px / input 16px. Brama 390/768 + Lighthouse — przy wdrożeniu. |
 | DEC-5 | SMS strefy 2+2 (§5) | **DONE** | (ten commit) | dec5 **11/11** na TEST | Migracja **0106** TEST+PROD. Listy LOAD_SREM/UNLOAD_BODEN; wyzwalacze; dedup; bufor przed Śremem; UI Opcje; TEL-1 przy zapisie. |
 
-**Następne:** DEC-6 ustawienia admina · DATY-67 · …
-**Czeka na właściciela:** API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH; szablon e-mail Auth „Watch Tower”.
+### Uzupełnienie START PRACY (01.10) — od koordynatora
 
+Przyjęte: **II-10-E1**, **II-10-E2**, **ONE-MECH** (D-29/D-29t), **I-7a** (§1a, bez wycofania zgody), **CLEAN-TT-HERE** (P2).
+Wpisy w `PLAN.md` (PACZKA + decyzje D-29/D-32/D-33 + DEC-CLICK).
+
+### Akceptacja koordynatora (01.10 popołudnie)
+
+Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4** (zamknięte),
+**PUSH+PROD**, **I-3-APK**.
+
+| ID | pozycja | status | commit | testy (liczby) | uwagi |
+|---|---|---|---|---|---|
+| DEC-6 | ustawienia admina §6 | **W TOKU** | (ten commit) | dec6 **8/8**; tsc OK | Układ zwijany (`OptionsAccordion`). Migracja **0107** `ops_thresholds`. Stan systemu: kopie + integracje + **bramka SMS last_seen** (cisza >15 min w UI). Zostaje: dziennik Auth, baner, eksport. |
+| DEC-CLICK | routing klików | **AKCEPTACJA** | (docs) | — | Grupa C bez nowych typów; status/strefa → Transport; grupa D bez driver PWA (D-38). Implementacja w ONE-MECH/DEC-3. |
+| D-29t | tabela nakładania | **AKCEPTACJA** | (docs) | — | Warunek: żaden alarm bez zastępnika — lista poniżej. Scalenie = ONE-MECH. |
+| D-4 | telefon+SIM | **ZAMKNIĘTE** | — | — | Koordynator: Android + SIM są. Dalej = I-3-APK. |
+| I-3-APK | aplikacja bramki Android | **W TOKU** | — | — | Baza/UI/strażnik DONE; APK + instrukcja — następna pozycja. |
+
+#### D-29t — lista „było → jest” (warunek akceptacji: zero znikających alarmów)
+
+| Było (źródło alarmu / akcji) | Jest (zastępnik — alarm zostaje) |
+|---|---|
+| START/wf-3 „Cichy pojazd” | `detect_silent_vehicles` (DB) → ryzyko SILENT + macierz RISK; wf-3 wyłączony (bez dubla) |
+| START/wf-1 Bufor 50 km Boden | silnik geofence + DEC-5 SMS stref + macierz LOAD_STATUS; wf-1 nie osobno |
+| START/wf-8 Plan B / PRE_PORT | ryzyko FERRY + decyzja plan B + macierz; wf-8 wyłączony |
+| START/wf-4 Ryzyko promowe | jedno zdarzenie ryzyka FERRY → macierz + decyzja; wf-4 wyłączony |
+| START/wf-5 Zmiana daty awizowanej | DATY-67 + decyzja + powiadomienia (I-10 ścieżka); wf-5 wyłączony |
+| START/wf-2 Brak zezwolenia 48 h | I-27 + decyzja + macierz; wf-2 wyłączony po podpięciu DEC |
+| START/wf-6 POD po rozładunku | ścieżka dokumentów + SMS 9 (DEC-5/D-19); wf-6 nie dubluje |
+| SMS 5 / 9 z wf | wyłącznie wyzwalacze §5 / macierz (już 0106) |
+| Opóźnienie ETA (mail z wf) | ryzyko DELAY → decyzja; bez osobnego maila z wf |
+| START/wf-9 Trafikverket | ryzyko ROAD_SE + macierz; wf-9 wyłączony |
+| START/wf-7…12 (faktury/marża…) | macierz MONEY/SYSTEM albo osobna decyzja — **nie kasować** przed mapowaniem |
+| LOADING_UNCONFIRMED / SEQUENCE / DATES_UNCONFIRMED / USAGE_LIMIT / JOB_FAILURE | zostają w grupie C (DEC-CLICK a) — **bez nowych typów**, mechanizm ryzyka bez zmian |
+| Kopia JOB_FAILURE | poza grupą C (osobna ścieżka strażnika kopii) — bez zmian |
+
+**Następne:** push lokalnych commitów · pełna brama 0105–0107 · `vercel --prod` · I-3-APK · ONE-MECH (kod) · …
+**Czeka na właściciela:** API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH + creds SharePoint; szablon e-mail Auth „Watch Tower”; akceptacja pisemna II-10-E2; numer właściciela do SMS testowego (w UI, nie w repo).
