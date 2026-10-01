@@ -1,7 +1,7 @@
 /**
- * PLAN §1.5 (28.09) — eksport XLSX harmonogramu per rola na BUILDZIE PRODUKCYJNYM i lokalnym Supabase.
- * Jeden transport (SCX, projekt KSH) z kosztem 11111.11, przychodem 22222.22, kierowcą i telefonem; dostawa poza ±24 h.
- * Sprawdza nagłówki i wartości w pobranym pliku: KSH bez kosztu/marży/kierowcy, SCX bez przychodu/marży.
+ * I-7a — eksport XLSX harmonogramu per rola na BUILDZIE PRODUKCYJNYM i lokalnym Supabase.
+ * Jeden transport (SCX, projekt KSH) z kosztem 11111.11, przychodem 22222.22, kierowcą i telefonem.
+ * KSH: cena + kierowca/telefon na stałe; bez kosztu i marży. SCX: koszt + kierowca; bez przychodu/marży.
  * Uruchamia: SPEC=tests/xlsx-roles.local.spec.ts scripts/i2/local-ui.sh
  */
 import { test, expect, type Page } from '@playwright/test';
@@ -14,7 +14,7 @@ const SR = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const DB = process.env.SUPABASE_DB_URL ?? '';
 const LOCAL = !!APP && /^http:\/\/(127\.0\.0\.1|localhost):/.test(URL_);
 const psql = (sql: string) => execFileSync('psql', [DB, '-Atq', '-c', sql]).toString().trim();
-const NAME = 'Jan Probny'; const PHONE = '+48600' + '123456';
+const NAME = 'Jan Probny'; const PHONE = '600123456';
 
 test.describe.configure({ mode: 'serial' });
 test.skip(!LOCAL, 'eksport per rola: wymaga I2_UI_BASE i lokalnego Supabase');
@@ -23,12 +23,12 @@ let LID = '';
 test.beforeAll(() => {
   LID = psql(`select l.id from loads l join projects p on p.id=l.project_id join organizations c on c.id=l.carrier_org_id join organizations k on k.id=p.client_org_id
               where l.status <> 'CANCELLED' and c.code='SCX' and k.code='KSH' order by l.plan_load_date nulls last, l.id limit 1`);
-  psql(`set session_replication_role=replica; update loads set driver_name='${NAME}', driver_phone='${PHONE}', plan_delivery_from=now() + interval '10 days', plan_delivery_date=(now() + interval '10 days')::date, eta_site=null where id='${LID}';
+  psql(`set session_replication_role=replica; update loads set driver_name='${NAME}', driver_phone='${PHONE}', driver_phone_country='PL', plan_delivery_from=now() + interval '10 days', plan_delivery_date=(now() + interval '10 days')::date, eta_site=null where id='${LID}';
         insert into load_cost (load_id, base_amount) values ('${LID}', 11111.11) on conflict (load_id) do update set base_amount=excluded.base_amount;
         insert into load_revenue (load_id, base_amount) values ('${LID}', 22222.22) on conflict (load_id) do update set base_amount=excluded.base_amount;`);
 });
 test.afterAll(() => {
-  psql(`delete from load_cost where load_id='${LID}'; delete from load_revenue where load_id='${LID}'; set session_replication_role=replica; update loads set driver_name=null, driver_phone=null where id='${LID}';`);
+  psql(`delete from load_cost where load_id='${LID}'; delete from load_revenue where load_id='${LID}'; set session_replication_role=replica; update loads set driver_name=null, driver_phone=null, driver_phone_country=null where id='${LID}';`);
 });
 
 async function login(page: Page, email: string) {
@@ -62,13 +62,14 @@ test('HHL: pełny eksport — koszt, przychód, marża, kierowca, telefon', asyn
   for (const v of ['11111.11', '22222.22', '11111.11', NAME, PHONE]) expect(x.all).toContain(v);
 });
 
-test('KSH: cena tak; koszt, marża, imię i telefon kierowcy (poza ±24 h) — nie', async ({ page }) => {
+test('KSH: cena + kierowca + telefon na stałe (I-7a); bez kosztu i marży', async ({ page }) => {
   test.setTimeout(90_000);
   const x = await exportFor(page, 'ksh@bk5.local');
-  expect(x.headers).toContain('Cena_EUR');
-  for (const h of ['Koszt_EUR', 'Przychód_EUR', 'Marża_EUR', 'Kierowca']) expect(x.headers).not.toContain(h);
+  expect(x.headers).toEqual(expect.arrayContaining(['Cena_EUR', 'Kierowca', 'Telefon']));
+  for (const h of ['Koszt_EUR', 'Przychód_EUR', 'Marża_EUR']) expect(x.headers).not.toContain(h);
   expect(x.all).toContain('22222.22');
-  for (const v of ['11111.11', NAME, PHONE]) expect(x.all).not.toContain(v);
+  for (const v of [NAME, PHONE]) expect(x.all).toContain(v);
+  expect(x.all).not.toContain('11111.11');
 });
 
 test('SCX: koszt i kierowca tak; przychód, cena klienta i marża — nie', async ({ page }) => {

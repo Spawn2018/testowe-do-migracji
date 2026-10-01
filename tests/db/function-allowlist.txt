@@ -134,3 +134,17 @@ authenticated carrier_scorecard
 authenticated carrier_rating_detail
 authenticated insurance_policy_save
 authenticated insurance_policies_list
+# OPL-8 (0115): dopłaty wyłącznie ręczne
+authenticated load_agreed_fee_add
+authenticated fee_catalog_hints
+authenticated load_dwell_info
+# ADM-10 (0117): Działaj jako
+authenticated real_app_user_id
+authenticated real_app_role
+authenticated admin_impersonate_start
+authenticated admin_impersonate_stop
+# HIST-11 (0118): historia zmian
+authenticated admin_audit_history
+# II-7b (0123): kalibracja ETA
+authenticated admin_set_eta_calibration_frozen
+authenticated apply_eta_calibration_version

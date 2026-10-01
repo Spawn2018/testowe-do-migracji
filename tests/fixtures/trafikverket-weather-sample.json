@@ -1,0 +1,41 @@
+{
+  "_zrodlo": "Przykład formatu Trafikverket WeatherMeasurepoint (schema 1) — stacja przy E4 ze śniegiem + stacja normalna. Live 01.10.2026: WeatherStation nie istnieje.",
+  "RESPONSE": {
+    "RESULT": [
+      {
+        "WeatherMeasurepoint": [
+          {
+            "Id": "WX_SNOW_1",
+            "Name": "Umea E4",
+            "Deleted": false,
+            "Geometry": { "WGS84": "POINT (20.2630 63.8258)" },
+            "Observation": {
+              "Sample": "2026-10-01T20:00:00.000+02:00",
+              "Surface": { "Temperature": { "Value": -1.2 } },
+              "Air": { "Temperature": { "Value": -2.5 } },
+              "Wind": [{ "Height": 6, "Speed": { "Value": 3.1 } }],
+              "Aggregated5minutes": {
+                "Precipitation": { "Rain": false, "Snow": true, "RainSum": { "Value": 0 }, "SnowSum": { "Solid": { "Value": 1 } } }
+              }
+            }
+          },
+          {
+            "Id": "WX_OK_1",
+            "Name": "Uppsala",
+            "Deleted": false,
+            "Geometry": { "WGS84": "POINT (17.6389 59.8586)" },
+            "Observation": {
+              "Sample": "2026-10-01T20:00:00.000+02:00",
+              "Surface": { "Temperature": { "Value": 11.0 } },
+              "Air": { "Temperature": { "Value": 10.5 } },
+              "Wind": [{ "Height": 6, "Speed": { "Value": 2.0 } }],
+              "Aggregated5minutes": {
+                "Precipitation": { "Rain": false, "Snow": false, "RainSum": { "Value": 0 }, "SnowSum": { "Solid": { "Value": 0 } } }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

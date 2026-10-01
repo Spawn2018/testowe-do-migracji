@@ -1,3 +1,3 @@
-/** M12 — Trafikverket Situation wzdłuż E4 → ryzyka ROAD_SE. Co 10 min. Wymaga TRAFIKVERKET_API_KEY (bez klucza: DEMO). */
+/** II-6 / M12 — Trafikverket RoadCondition + WeatherMeasurepoint wzdłuż E4 → ROAD_SE + slowdown_mult. Co 10 min. Bez klucza: DEMO. */
 import { serveJob } from '../_shared/integrations/serve.ts';
 serveJob('road-se');

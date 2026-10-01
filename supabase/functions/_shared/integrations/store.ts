@@ -62,5 +62,63 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
     async latestPositions(maxAgeMin: number) {
       return must(await sb.rpc('latest_vehicle_positions', { p_max_age_min: maxAgeMin }), 'latest_vehicle_positions') as VehiclePos[];
     },
+    async seSlowdownPct() {
+      const r = await sb.from('app_parameters').select('value').eq('key', 'SE_ROAD_SLOWDOWN_PCT').maybeSingle();
+      if (r.error || r.data?.value == null) return 15;
+      const n = Number(r.data.value);
+      return Number.isFinite(n) && n >= 0 && n <= 100 ? n : 15;
+    },
+    async saveCorridorCondition(row: {
+      corridor: 'SE_E4'; slowdownMult: number; reason: string | null; detail: unknown; observedAt: string;
+    }) {
+      must(await sb.from('corridor_conditions').upsert({
+        corridor: row.corridor,
+        slowdown_mult: row.slowdownMult,
+        reason: row.reason,
+        detail: row.detail,
+        observed_at: row.observedAt,
+        source: 'TRAFIKVERKET',
+      }, { onConflict: 'corridor' }), 'corridor_conditions upsert');
+    },
+    async opsThresholds() {
+      const r = await sb.from('ops_thresholds').select('key,value_num').in('key', ['WAVE_M', 'GUST_KN']);
+      if (r.error || !r.data) return { waveM: 3.8, gustKn: 40 };
+      let waveM = 3.8;
+      let gustKn = 40;
+      for (const row of r.data as { key: string; value_num: number }[]) {
+        if (row.key === 'WAVE_M' && Number.isFinite(Number(row.value_num))) waveM = Number(row.value_num);
+        if (row.key === 'GUST_KN' && Number.isFinite(Number(row.value_num))) gustKn = Number(row.value_num);
+      }
+      return { waveM, gustKn };
+    },
+    async saveMarineCondition(row: {
+      corridor: 'BALTIC_GDN_NYN';
+      maxWaveM: number | null;
+      maxGustKn: number | null;
+      risk: 'niskie' | 'podwyższone' | 'wysokie';
+      waveThrM: number;
+      gustThrKn: number;
+      sources: string;
+      attribution: string;
+      windowFrom: string | null;
+      windowTo: string | null;
+      detail: unknown;
+      observedAt: string;
+    }) {
+      must(await sb.from('marine_conditions').upsert({
+        corridor: row.corridor,
+        max_wave_m: row.maxWaveM,
+        max_gust_kn: row.maxGustKn,
+        risk: row.risk,
+        wave_thr_m: row.waveThrM,
+        gust_thr_kn: row.gustThrKn,
+        sources: row.sources,
+        attribution: row.attribution,
+        window_from: row.windowFrom,
+        window_to: row.windowTo,
+        detail: row.detail,
+        observed_at: row.observedAt,
+      }, { onConflict: 'corridor' }), 'marine_conditions upsert');
+    },
   };
 }

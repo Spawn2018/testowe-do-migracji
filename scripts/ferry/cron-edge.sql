@@ -14,7 +14,7 @@ begin
     ('tower-ferry-ais',      '*/10 * * * *',  'ferry-ais'),
     ('tower-road-se',        '*/10 * * * *',  'road-se'),          -- bez TRAFIKVERKET_API_KEY: tryb DEMO
     ('tower-road-pl',        '*/10 * * * *',  'road-pl'),          -- bez KPD_DATEX_URL: tryb DEMO
-    ('tower-traffic-flow',   '*/15 * * * *',  'traffic-flow')      -- bez TOMTOM_API_KEY: tryb DEMO
+    ('tower-traffic-flow',   '*/15 * * * *',  'traffic-flow')      -- CLEAN-TT-HERE: zawsze DEMO (TomTom wycofany)
   ) as t(jobname, schedule, fn) loop
     perform cron.unschedule(jobname) from cron.job where jobname = j.jobname;
     perform cron.schedule(j.jobname, j.schedule, format($f$

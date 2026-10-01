@@ -128,13 +128,11 @@ describe('D6 driver phone permissions', () => {
     expect(visibleDriverPhone('HHL', load, far)).toBe('+48000000001');
   });
 
-  it('KSH sees phone only within ±24 h of delivery', () => {
+  it('KSH widzi telefon na stałe (I-7a), także poza ±24 h', () => {
     expect(canSeeDriverPhone('KSH', load, deliverMs)).toBe(true);
-    expect(canSeeDriverPhone('KSH', load, deliverMs + 23 * 60 * 60 * 1000)).toBe(true);
-    expect(canSeeDriverPhone('KSH', load, deliverMs - 23 * 60 * 60 * 1000)).toBe(true);
-    expect(canSeeDriverPhone('KSH', load, deliverMs + 25 * 60 * 60 * 1000)).toBe(false);
-    expect(canSeeDriverPhone('KSH', load, deliverMs - 25 * 60 * 60 * 1000)).toBe(false);
-    expect(visibleDriverPhone('KSH', load, deliverMs + 25 * 60 * 60 * 1000)).toBeNull();
+    expect(canSeeDriverPhone('KSH', load, deliverMs + 25 * 60 * 60 * 1000)).toBe(true);
+    expect(canSeeDriverPhone('KSH', load, deliverMs - 25 * 60 * 60 * 1000)).toBe(true);
+    expect(visibleDriverPhone('KSH', load, deliverMs + 25 * 60 * 60 * 1000)).toBe('+48000000001');
   });
 
   it('no phone stored → never visible', () => {

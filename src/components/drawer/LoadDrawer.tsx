@@ -1,4 +1,4 @@
-import { Suspense, lazy, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { StatusPill } from '../ui/StatusPill';
 import { fmtNum, fmtNumKeepPl, fmtPct, t, tp } from '../../i18n/messages';
@@ -27,6 +27,7 @@ import {
 import { formatAppMoney } from '../../lib/money/demoFx';
 import { formatDelayPill } from '../ui/StatusPill';
 import { delayMinutesVsPlan } from '../../lib/time';
+import { AgreedFeeForm } from './AgreedFeeForm';
 import {
   etaConfidenceLabel,
   eventTypeLabel,
@@ -39,7 +40,6 @@ import { autoStatusText, effArrival, effDeparture, fmtLocal, sailingStatusLabel 
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { isServerId } from '../../data/registry';
 import { DriverLinkPanel } from './DriverLinkPanel';
-import { PlanDatesPanel } from './PlanDatesPanel';
 import type { Locale } from '../../types';
 import { PROD_BUILD, shows } from '../../lib/prodFacade';
 import { delayPillMinutes, permitBannerState } from '../../lib/prodDash';
@@ -119,6 +119,8 @@ export function LoadDrawer() {
   const geofences = useTowerStore((s) => s.geofences);
   const sendMessage = useTowerStore((s) => s.sendMessage);
   const setOrderNo = useTowerStore((s) => s.setOrderNo);
+  const drawerTab = useTowerStore((s) => s.drawerTab);
+  const setDrawerTab = useTowerStore((s) => s.setDrawerTab);
 
   const [tab, setTab] = useState<Tab>('overview');
   const [chat, setChat] = useState('');
@@ -126,6 +128,15 @@ export function LoadDrawer() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadCat, setUploadCat] = useState<import('../../types').Document['category'] | null>(null);
   const [awizOpen, setAwizOpen] = useState(false);
+
+  useEffect(() => {
+    const allowed: Tab[] = ['overview', 'timeline', 'docs', 'pricing', 'chat'];
+    if (drawerTab && (allowed as string[]).includes(drawerTab)) {
+      setTab(drawerTab as Tab);
+      if (drawerTab === 'overview') setAwizOpen(true);
+      setDrawerTab(null);
+    }
+  }, [drawerTab, setDrawerTab]);
 
   const load = loads.find((l) => l.id === id);
   const loadEvents = useMemo(
@@ -309,7 +320,18 @@ export function LoadDrawer() {
                   </span>
                   <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 4, fontWeight: 400 }}>
                     {load.etaConfMin !== undefined && load.etaConfMin !== null
-                      ? <span data-eta="db">{tp(locale, 'i2_eta_band_db', { m: String(load.etaConfMin) })}</span>
+                      ? (
+                        <span data-eta="db">
+                          {tp(
+                            locale,
+                            (load.etaMethod ?? '').includes('OSM') ? 'i2_eta_band_osm' : 'i2_eta_band_db',
+                            { m: String(load.etaConfMin) },
+                          )}
+                          {(load.etaMethod ?? '').includes('OSM')
+                            ? ` · ${t(locale, 'i2_eta_osm_attr')}`
+                            : ''}
+                        </span>
+                      )
                       : tp(locale, 'a6_dr_band', { a: fmtNumKeepPl(locale, load.etaEarliestHours, 1, load.etaEarliestHours.toFixed(1)), b: fmtNumKeepPl(locale, load.etaLatestHours, 1, load.etaLatestHours.toFixed(1)) })}
                     {load.etaReasons?.length ? ` · ${load.etaReasons.slice(0, 3).join(' · ')}` : ''}
                   </div>
@@ -399,7 +421,7 @@ export function LoadDrawer() {
                 </div>
               )}
               {/* I-18: status dat planu — na zakładce przeglądu (widoczny dla trzech ról bez przełączania) */}
-              {import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED && load.planDates && isServerId(load.id) && <PlanDatesPanel load={load} />}
+              {/* DATY-67: „Potwierdź daty” usunięte — daty z pliku KSH */}
               {CarrierRating && (role === 'HHL' || role === 'SCX') && isServerId(load.id) && <Suspense fallback={null}><CarrierRating key={load.id} loadId={load.id} /></Suspense>}
             </>
           )}
@@ -573,6 +595,7 @@ export function LoadDrawer() {
                   OKQ8
                 </a>
               </div>
+              {role === 'HHL' && isServerId(load.id) ? <AgreedFeeForm loadId={load.id} locale={locale} /> : null}
             </>
           )}
 

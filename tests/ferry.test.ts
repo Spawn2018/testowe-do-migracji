@@ -6,7 +6,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parsePolferriesStatus, localToUtc } from '../src/lib/ferry/polferries';
-import { parseDigitrafficLocations, interpretFix } from '../src/lib/ferry/digitraffic';
+import { parseDigitrafficLocations, interpretFix, aisDepartureDelayMin } from '../src/lib/ferry/digitraffic';
+import { parseStenaTimetable, stenaTimetableUrl } from '../src/lib/ferry/stena';
 
 const HTML = readFileSync(new URL('./fixtures/polferries-komunikaty-2026-09-25.html', import.meta.url), 'utf8');
 const AIS = JSON.parse(readFileSync(new URL('./fixtures/digitraffic-nova-star-2026-09-25.json', import.meta.url), 'utf8'));
@@ -109,9 +110,89 @@ describe('Digitraffic — prawdziwa odpowiedź dla Nova Star', () => {
     expect(interpretFix(fix, now)).toBe('BRAK_SWIEZEGO_SYGNALU');
   });
   it('postój w Nynäshamn → W_PORCIE_NYNASHAMN', () => {
-    // Färjeterminal Nynäshamn — współrzędne zweryfikowane z mapą w M9 (0017); wcześniej punkt ~3,4 km na północ
     const inPort = { ...fix, lat: 58.9046, lon: 17.9563, sogKn: 0.2 };
     const now = new Date(Date.parse(fix.timestampUtc) + 5 * 60000).toISOString();
     expect(interpretFix(inPort, now)).toBe('W_PORCIE_NYNASHAMN');
+  });
+  it('postój w Karlskrona (Stena) → W_PORCIE_KARLSKRONA', () => {
+    const inPort = { ...fix, lat: 56.1646, lon: 15.6308, sogKn: 0.1 };
+    const now = new Date(Date.parse(fix.timestampUtc) + 5 * 60000).toISOString();
+    expect(interpretFix(inPort, now, 60, 'KAA')).toBe('W_PORCIE_KARLSKRONA');
+  });
+
+  it('II-9: brak pozycji / stary sygnał / brak SOG → null (nie opóźnienie)', () => {
+    const now = '2026-10-01T10:00:00Z';
+    const dep = '2026-10-01T12:00:00Z';
+    expect(aisDepartureDelayMin(
+      { mmsi: 1, lat: 56, lon: 18, sogKn: null, cog: null, navStat: null, timestampUtc: now },
+      now, dep, 'GDN-NYN',
+    )).toBeNull();
+    expect(aisDepartureDelayMin(
+      { mmsi: 1, lat: 56, lon: 18, sogKn: 15, cog: null, navStat: null, timestampUtc: '2026-10-01T08:00:00Z' },
+      now, dep, 'GDN-NYN',
+    )).toBeNull();
+  });
+
+  it('II-9: daleko przy małej prędkości → opóźnienie > 0', () => {
+    const now = '2026-10-01T10:00:00Z';
+    const dep = '2026-10-01T11:00:00Z'; // 1 h do odejścia
+    // ~200 km od Gdańska, 10 kn ≈ 18,5 km/h → ~10,8 h → spóźnienie
+    const d = aisDepartureDelayMin(
+      { mmsi: 1, lat: 56.0, lon: 18.0, sogKn: 10, cog: null, navStat: null, timestampUtc: now },
+      now, dep, 'GDN-NYN',
+    );
+    expect(d).not.toBeNull();
+    expect(d!).toBeGreaterThan(60);
+  });
+
+  it('II-9: w porcie odejścia → null', () => {
+    const now = '2026-10-01T10:00:00Z';
+    expect(aisDepartureDelayMin(
+      { mmsi: 1, lat: 54.40372, lon: 18.68130, sogKn: 5, cog: null, navStat: null, timestampUtc: now },
+      now, '2026-10-01T12:00:00Z', 'GDN-NYN',
+    )).toBeNull();
+  });
+});
+
+describe('Stena Line — JSON rozkładu 01.10.2026', () => {
+  const GDKA = JSON.parse(readFileSync(new URL('./fixtures/stena-timetable-gdka-2026-10-01.json', import.meta.url), 'utf8'));
+  const KAGD = JSON.parse(readFileSync(new URL('./fixtures/stena-timetable-kagd-2026-10-01.json', import.meta.url), 'utf8'));
+
+  it('URL publiczny AEM z kodem trasy i datą', () => {
+    expect(stenaTimetableUrl('GDKA', '2026-10-01')).toMatch(/timetable\.GDKA\.2026-10-01\.json$/);
+  });
+  it('odczytuje rejsy Gdynia→Karlskrona z nazwami M/F Stena *', () => {
+    const r = parseStenaTimetable(GDKA, { routeCode: 'GDKA', dateYmd: '2026-10-01' });
+    expect(r.warnings).toEqual([]);
+    expect(r.sailings.length).toBeGreaterThanOrEqual(3);
+    expect(r.sailings.every((s) => s.route === 'GDY-KAA')).toBe(true);
+    expect(r.sailings.map((s) => s.vessel).sort()).toEqual(
+      expect.arrayContaining(['M/F Stena Ebba', 'M/F Stena Spirit', 'M/F Stena Estelle']),
+    );
+  });
+  it('Karlskrona→Gdynia: 08:00 lokalnie SE = 06:00 UTC latem', () => {
+    const r = parseStenaTimetable(KAGD, { routeCode: 'KAGD', dateYmd: '2026-10-01' });
+    const este = r.sailings.find((s) => s.vessel === 'M/F Stena Estelle' && s.date === '2026-10-01')!;
+    expect(este.departureUtc).toBe('2026-10-01T06:00:00.000Z');
+    expect(este.status).toBe('ZAPLANOWANY');
+  });
+  it('Delayed → OPOZNIONY; Cancelled → ODWOŁANY; nieznany → NIEZNANY', () => {
+    const delayed = structuredClone(GDKA);
+    delayed[0].status = 'Delayed';
+    delayed[0].estimatedLocalDepartureTime = '2026-10-01T09:30:00';
+    expect(parseStenaTimetable(delayed).sailings[0].status).toBe('OPOZNIONY');
+    const cancelled = structuredClone(GDKA);
+    cancelled[0].status = 'Cancelled';
+    expect(parseStenaTimetable(cancelled).sailings[0].status).toBe('ODWOLANY');
+    const weird = structuredClone(GDKA);
+    weird[0].status = 'Diverted';
+    const r = parseStenaTimetable(weird);
+    expect(r.sailings[0].status).toBe('NIEZNANY');
+    expect(r.warnings.join(' ')).toMatch(/Nieznany status/);
+  });
+  it('zmiana struktury (nie tablica) → ostrzeżenie, pusta lista', () => {
+    const r = parseStenaTimetable({ oops: true });
+    expect(r.sailings).toEqual([]);
+    expect(r.warnings[0]).toMatch(/Struktura rozkładu Stena zmieniona/);
   });
 });

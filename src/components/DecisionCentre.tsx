@@ -23,6 +23,7 @@ type DecRow = {
 export function DecisionCentre() {
   const locale = useTowerStore((s) => s.locale);
   const selectLoad = useTowerStore((s) => s.selectLoad);
+  const setDrawerTab = useTowerStore((s) => s.setDrawerTab);
   const [rows, setRows] = useState<DecRow[]>([]);
   const [active, setActive] = useState<DecRow | null>(null);
   const [note, setNote] = useState('');
@@ -56,8 +57,9 @@ export function DecisionCentre() {
       return;
     }
     setBusy(true);
+    const loadId = active.load_id;
     const sb = await getSupabase();
-    const { error } = await sb.rpc('decision_resolve', {
+    const { data, error } = await sb.rpc('decision_resolve', {
       p_decision: active.id,
       p_option: opt.code,
       p_note: note.trim() || null,
@@ -66,6 +68,13 @@ export function DecisionCentre() {
     if (error) {
       setMsg(error.message);
       return;
+    }
+    const hint = (data as { ui_hint?: string } | null)?.ui_hint;
+    if (loadId && hint) {
+      selectLoad(loadId);
+      if (hint === 'OPEN_AWIZACJA' || hint === 'PICK_SAILING') setDrawerTab('overview');
+      else if (hint === 'OPEN_DOC') setDrawerTab('docs');
+      else if (hint === 'ADD_FEE') setDrawerTab('pricing');
     }
     setActive(null);
     setNote('');

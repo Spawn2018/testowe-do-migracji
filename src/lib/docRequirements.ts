@@ -23,8 +23,9 @@ export const DEFAULT_DOC_REQUIREMENTS: DocRequirement[] = [
   { category: 'PERMIT_PL', required: true, responsible: 'CARRIER', anchor: 'BEFORE_LOAD', offsetHours: 24 },
   { category: 'PERMIT_SE', required: true, responsible: 'CARRIER', anchor: 'BEFORE_FERRY', offsetHours: 24 },
   { category: 'CMR', required: true, responsible: 'CARRIER', anchor: 'AT_LOAD', offsetHours: 2 },
-  { category: 'POD', required: true, responsible: 'CARRIER', anchor: 'AFTER_UNLOAD', offsetHours: 24 },
-  { category: 'LASHING_PHOTOS', required: true, responsible: 'CARRIER', anchor: 'AT_LOAD', offsetHours: 2 },
+  /* UI-12: POD / mocowanie nie wymagane w UI (zostają w modelu/DB) */
+  { category: 'POD', required: false, responsible: 'CARRIER', anchor: 'AFTER_UNLOAD', offsetHours: 24 },
+  { category: 'LASHING_PHOTOS', required: false, responsible: 'CARRIER', anchor: 'AT_LOAD', offsetHours: 2 },
   { category: 'INSURANCE', required: true, responsible: 'CARRIER', anchor: 'ORG', offsetHours: 0 },
   { category: 'DRAWING', required: true, responsible: 'CLIENT', anchor: 'BEFORE_LOAD', offsetHours: 72 },
 ];

@@ -12,7 +12,7 @@ export const PROD_BUILD: boolean = import.meta.env.VITE_AUTH_MODE === 'supabase'
 
 /** Funkcje ukryte w produkcji 1.0 — powód (do POSTEP/SCOPE i do testu). */
 export const HIDDEN_IN_PROD = {
-  seaWeather: 'Pogoda morska (8.1): brak źródła danych i zadania — wartości fali/wiatru były statyczne',
+  seaWeather: 'Pogoda morska demo (statyczna voyageSea); produkcja = marine_conditions z II-8 (FMI+DMI+SMHI)',
   ferryAlternatives: 'Przeprawy alternatywne (8.4): lista statyczna, bez przeliczenia',
   roadSituationsSe: 'Zdarzenia drogowe SE (8.5): brak klucza Trafikverket — w produkcji nie pokazujemy danych przykładowych',
   seRouteAlternatives: 'Objazdy SE (8.4/D25): warianty statyczne',
@@ -21,7 +21,7 @@ export const HIDDEN_IN_PROD = {
   detectTimeKpi: 'Kafelek „czas wykrycia odchylenia” (10.7): w demo wartość przykładowa „8 min”; w produkcji mediana z risk_signals (kpi_detection_lag, I-2l) albo „—”',
   factoringOffer: 'Oferta factoringu: zapis wyłącznie w przeglądarce, bez tabeli w bazie',
   demoMarksToggle: 'Przełącznik oznaczeń demonstracyjnych: w produkcji nie ma danych demonstracyjnych',
-  policyExpiryNote: 'Przypomnienie o polisie OCP (6.6): brak odczytu polis i zadania przypomnień',
+  policyExpiryNote: 'Przypomnienie o polisie OCP (6.6): w produkcji = InsurancePolicyForm + detect/cron (D-30); demo = stała notka makiety',
   permitNumber: 'Numer i zgodność zezwolenia w szufladzie (6.4/6.5): tabela zezwoleń bez polityki odczytu',
   clientEta: 'ETA liczona w przeglądarce ze statusu (M12): w produkcji ETA v1 z bazy (compute_load_eta)',
 } as const;

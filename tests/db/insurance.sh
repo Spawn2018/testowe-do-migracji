@@ -32,9 +32,10 @@ SAVE() { echo "insurance_policy_save('$1', '$2', current_date - 300, current_dat
 
 echo "[6.6] uprawnienia i zapis polis"
 chk "tabela insurance_policies: anon i authenticated bez SELECT/INSERT/UPDATE/DELETE" "$(Q "select bool_or(has_table_privilege(r, 'public.insurance_policies', 'select,insert,update,delete')) from unnest(array['anon','authenticated']) r")" f
-chk "funkcje SECURITY DEFINER z search_path=public" "$(Q "select count(*) from pg_proc where proname in ('insurance_policy_save','insurance_policies_list','detect_insurance_expiry') and prosecdef and proconfig @> array['search_path=public']")" 3
+chk "funkcje SECURITY DEFINER z search_path=public" "$(Q "select count(*) from pg_proc where proname in ('insurance_policy_save','insurance_policies_list','detect_insurance_expiry','insurance_policy_approve') and prosecdef and proconfig @> array['search_path=public']")" 4
 chk "detect_insurance_expiry: brak EXECUTE dla anon i authenticated" "$(Q "select has_function_privilege('anon','detect_insurance_expiry(timestamptz,int)','execute')::text||':'||has_function_privilege('authenticated','detect_insurance_expiry(timestamptz,int)','execute')::text")" "false:false"
 chk "zapis i lista: anon bez EXECUTE" "$(Q "select has_function_privilege('anon','insurance_policies_list()','execute')::text||':'||has_function_privilege('anon','insurance_policy_save(uuid,text,date,date,text,boolean,boolean,numeric,text,uuid)','execute')::text")" "false:false"
+chk "zatwierdzanie: anon bez EXECUTE" "$(Q "select has_function_privilege('anon','insurance_policy_approve(uuid,boolean,text)','execute')::text")" "false"
 val "przewoźnik zapisuje polisę własnej organizacji" $SCX "select (select $(SAVE $SCXO OCP/1 30)) is not null" t
 err "przewoźnik nie zapisze polisy innego przewoźnika" $SCX "select $(SAVE $SCX2O OCP/X 30)" "dla własnej organizacji"
 err "KSH nie zapisuje polisy" $KSH "select $(SAVE $SCXO OCP/K 30)" "Polisę zapisuje HHL albo przewoźnik"
@@ -52,20 +53,38 @@ val "przewoźnik: lista — tylko własne (0)" $SCX "select count(*) from insura
 val "KSH: lista pusta" $KSH "select count(*) from insurance_policies_list()" 0
 err "HHL: wprost z tabeli → permission denied" $HHL "select count(*) from insurance_policies" "permission denied"
 
-echo; echo "[6.6] przypomnienie o wygaśnięciu (detect_insurance_expiry, bez zadania cyklicznego)"
-CRONN=0; [ "$(Q "select to_regclass('cron.job') is not null")" = t ] && CRONN=$(Q "select count(*) from cron.job where command ilike '%detect_insurance_expiry%'")
-chk "brak zadania cyklicznego polis" "$CRONN" 0
+echo; echo "[6.6 / D-30] przypomnienie o wygaśnięciu + zatwierdzanie + cron"
+# D-30: cron tower-polisy (gdy pg_cron dostępny); lokalny stub może nie mieć cron.job
+if [ "$(Q "select to_regclass('cron.job') is not null")" = t ]; then
+  CRONN=$(Q "select count(*) from cron.job where jobname='tower-polisy' and command ilike '%detect_insurance_expiry%'")
+  chk "D-30: zadanie cykliczne tower-polisy" "$CRONN" 1
+else
+  chk "D-30: brak cron.job (stub) — OK" 1 1
+fi
+# przewoźnik zapisuje → PENDING — detect nie liczy
 run $SCX "select $(SAVE $SCXO OCP/SCX 30)" commit >/dev/null
-val "przewoźnik: lista — własna polisa, dni do końca 30" $SCX "select string_agg(policy_no||'/'||days_left, ',') from insurance_policies_list()" "OCP/SCX/30"
-chk "30 dni przed końcem: bez ryzyka i bez powiadomień" "$(Q "select detect_insurance_expiry(now())")/$(Q "select count(*) from notifications where template='INSURANCE_EXPIRY'")" "0/0"
+val "przewoźnik: lista — własna polisa PENDING, dni 30" $SCX "select string_agg(policy_no||'/'||approval_status||'/'||days_left, ',') from insurance_policies_list()" "OCP/SCX/PENDING/30"
+chk "PENDING 14 dni przed końcem: bez ryzyka (niezatwierdzona)" "$(Q "select detect_insurance_expiry(now() + interval '16 days')")/$(Q "select count(*) from risk_signals where dedup_key like 'INS:%' and resolved_at is null")" "0/0"
+val "HHL zatwierdza polisę przewoźnika" $HHL "select insurance_policy_approve((select id from insurance_policies_list() where policy_no='OCP/SCX' limit 1), true, null); select 't'" t commit
+val "po zatwierdzeniu: status APPROVED" $SCX "select approval_status from insurance_policies_list() where policy_no='OCP/SCX'" APPROVED
 chk "14 dni przed końcem: ryzyko INSURANCE HIGH w projekcie transportu" "$(Q "select detect_insurance_expiry(now() + interval '16 days')")/$(Q "select string_agg(kind||':'||severity||':'||title_key||':'||(load_id is null)::text, ',') from risk_signals where dedup_key like 'INS:%' and resolved_at is null")" "1/INSURANCE:HIGH:rk_insurance_expiry:true"
 chk "powiadomienia IN_APP: przewoźnik + HHL (bez KSH), 2" "$(Q "select count(*)||':'||string_agg(distinct u.role::text, ',' order by u.role::text) from notifications n join app_users u on u.id=n.user_id where n.template='INSURANCE_EXPIRY'")" "2:CARRIER_DISPATCH,HHL_ADMIN"
 chk "drugie wywołanie tego dnia: bez dubli" "$(Q "select detect_insurance_expiry(now() + interval '16 days')")/$(Q "select count(*) from notifications where template='INSURANCE_EXPIRY'")/$(Q "select count(*) from risk_signals where dedup_key like 'INS:%'")" "0/2/1"
 val "przewoźnik widzi ryzyko swojej polisy" $SCX "select count(*) from risk_signals where kind='INSURANCE' and resolved_at is null" 1
 val "KSH nie widzi ryzyka polisy przewoźnika" $KSH "select count(*) from risk_signals where kind='INSURANCE'" 0
 chk "inny przewoźnik bez transportów: polisa za 200 dni — bez ryzyka" "$(Q "select count(*) from risk_signals where detail->>'carrier_org_id'='$SCX2O'")" 0
+# HHL zapisuje drugiego przewoźnika → od razu APPROVED (już w pierwszym bloku commit OCP/9)
+val "HHL: lista — wszystkie polisy (≥2)" $HHL "select case when count(*) >= 2 then 't' else 'f' end from insurance_policies_list()" t
+err "KSH nie zatwierdza" $KSH "select insurance_policy_approve((select id from insurance_policies_list() where policy_no='OCP/SCX' limit 1), true, null)" "tylko dla HHL"
+# nowa PENDING do odrzucenia
+run $SCX "select $(SAVE $SCXO OCP/REJ 40)" commit >/dev/null
+err "odrzucenie bez powodu" $HHL "select insurance_policy_approve((select id from insurance_policies_list() where policy_no='OCP/REJ' limit 1), false, null)" "uzasadnienia"
+val "HHL odrzuca z powodem" $HHL "select insurance_policy_approve((select id from insurance_policies_list() where policy_no='OCP/REJ' limit 1), false, 'brak pokrycia SE'); select 't'" t commit
+val "odrzucona: REJECTED + powód" $SCX "select approval_status||':'||coalesce(reject_reason,'') from insurance_policies_list() where policy_no='OCP/REJ'" "REJECTED:brak pokrycia SE"
 chk "po terminie: eskalacja do CRITICAL (to samo ryzyko) + nowe powiadomienia" "$(Q "select detect_insurance_expiry(now() + interval '32 days')")/$(Q "select string_agg(severity::text, ',') from risk_signals where dedup_key like 'INS:%' and resolved_at is null")/$(Q "select count(*) from notifications where template='INSURANCE_EXPIRY'")" "1/CRITICAL/4"
 run $SCX "select $(SAVE $SCXO OCP/SCX-2 400)" commit >/dev/null
+# nowa polisa przewoźnika = PENDING — ryzyko nadal z APPROVED OCP/SCX; zatwierdź nową
+val "HHL zatwierdza nową polisę poza oknem" $HHL "select insurance_policy_approve((select id from insurance_policies_list() where policy_no='OCP/SCX-2' limit 1), true, null); select 't'" t commit
 chk "nowa polisa poza oknem: ryzyko zamknięte automatycznie" "$(Q "select detect_insurance_expiry(now() + interval '32 days')")/$(Q "select count(*) from risk_signals where dedup_key like 'INS:%' and resolved_at is null")" "0/0"
 $PSQL -c "set session_replication_role=replica; update loads set status='CANCELLED' where carrier_org_id='$SCXO'" >/dev/null
 chk "transporty anulowane: polisa kończy się, ale bez ryzyka (nic nie jest zagrożone)" "$(Q "select detect_insurance_expiry(now() + interval '420 days')")" 0

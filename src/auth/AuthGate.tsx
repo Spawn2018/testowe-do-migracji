@@ -1,9 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './client';
 import { authErrorPl, passwordOk, PASSWORD_MIN, viewRoleForOrg } from './config';
 import { t } from '../i18n/messages';
-import { setAuthProfile, type AuthProfile } from './profile';
+import { setAuthProfile, AUTH_RELOAD_EVENT, type AuthProfile } from './profile';
 import { useTowerStore } from '../store/useTowerStore';
 import { markManualLogout, rememberLogin, sessionEndReason, SESSION_END_MSG, type SessionEnd } from './sessionYear';
 import { MfaSetup, MfaVerify, mfaStep, readMfaStatus } from './Mfa';
@@ -303,6 +303,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   );
   const [anonMode, setAnonMode] = useState<'login' | 'forgot'>('login');
   const [recoveryOnce, setRecoveryOnce] = useState(false);
+  const loadRef = useRef<(session: Session | null, opts?: { forcePassword?: boolean }) => Promise<void>>(async () => {});
 
   useEffect(() => {
     let alive = true;
@@ -354,6 +355,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       }
       if (alive) setState({ kind: 'ready', session, profile: p });
     };
+    loadRef.current = load;
 
     void getSupabase().then(async (sb) => {
       if (state.kind === 'link-pending') return; // czekamy na „Dalej”
@@ -375,6 +377,17 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     // link-pending / recoveryOnce — celowo: po Dalej przeładujemy efekt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.kind === 'link-pending' ? 'pending' : 'go', recoveryOnce]);
+
+  useEffect(() => {
+    const onReload = () => {
+      void getSupabase().then(async (sb) => {
+        const { data } = await sb.auth.getSession();
+        await loadRef.current(data.session);
+      });
+    };
+    window.addEventListener(AUTH_RELOAD_EVENT, onReload);
+    return () => window.removeEventListener(AUTH_RELOAD_EVENT, onReload);
+  }, []);
 
   useEffect(() => {
     if (state.kind !== 'ready') return;
@@ -478,13 +491,6 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   }
   if (state.kind === 'noaccess') return <NoAccess reason={state.reason} />;
   if (state.kind === 'mfa') return <MfaScreen step={state.step} />;
-  return (
-    <>
-      {children}
-      <div className="auth-session" data-auth="session">
-        <b>{state.profile.email}</b><span>{t(locale, `a6_role_${state.profile.role}`)}</span>
-        <button className="chipbtn" type="button" onClick={() => { markManualLogout(); void getSupabase().then((sb) => sb.auth.signOut()); }}>{t(locale, 'a6_auth_logout')}</button>
-      </div>
-    </>
-  );
+  /* UI-12: użytkownik / rola / Wyloguj → lewy pasek (Nav), nie fixed bottom */
+  return <>{children}</>;
 }

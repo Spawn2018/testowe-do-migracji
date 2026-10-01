@@ -103,8 +103,8 @@ Rejsu zmienionego ręcznie przez HHL odczyt automatyczny **nie nadpisuje**.
   funkcje Edge: `ferry-schedule`, `ferry-status`, `ferry-ais`, `road-se`, `road-pl`, `traffic-flow`
 - baza (0018): `raise_integration_risk()`, `latest_vehicle_positions()` (tylko service_role), dziennik
   `integration_runs` (odczyt HHL), wyzwalacz: zapis rejsu przez użytkownika = źródło `RECZNIE`
-- test offline: `tests/integrations.test.ts` (Polferries — prawdziwe strony; Trafikverket / TomTom / DATEX II —
-  przykłady w formacie z dokumentacji, do weryfikacji przy rejestracji kluczy)
+- test offline: `tests/integrations.test.ts` (Polferries — prawdziwe strony; Trafikverket / DATEX II —
+  przykłady z dokumentacji; TomTom Flow — wycofany CLEAN-TT-HERE)
 - ręczne uruchomienie do czasu wdrożenia funkcji: `npx tsx scripts/ferry/run-job.ts ferry-status`
 - **krok właściciela W-M12-1:** wdrożenie funkcji + pg_net + Vault + harmonogram (`scripts/ferry/cron-edge.sql`)
 
@@ -116,16 +116,19 @@ Rejsu zmienionego ręcznie przez HHL odczyt automatyczny **nie nadpisuje**.
 - dane na licencji **CC0**
 - endpoint `POST https://api.trafikinfo.trafikverket.se/v2/data.json`,
   zapytanie w XML, odpowiedź w JSON
-- obiekty: **Situation** — wypadki, roboty, ostrzeżenia o korkach, jazda
-  w kolumnie za pługiem, zmiany godzin promów, ograniczenia nośności;
-  **RoadCondition** — stan nawierzchni; **WeatherStation** — stacje pogodowe
-- **funkcja GetBuffer** — obiekty w zadanej odległości wzdłuż geometrii:
-  „utrudnienia w promieniu 5 km od E4 z Nynäshamn do Boden"
+- obiekty: **RoadCondition** — stan nawierzchni; **WeatherMeasurepoint** —
+  stacje pogodowe przy drodze (zastąpiły **WeatherStation** od 2024);
+  **Situation** — **usunięty z Open API** (stan 01.10.2026: `ObjectType does not exists`)
+  — utrudnienia/roboty: czekać na zamiennik dostawcy albo DATEX
+- Edge `road-se` (II-6): RoadCondition + WeatherMeasurepoint → ryzyka ROAD_SE
+  + `corridor_conditions.SE_E4.slowdown_mult` (+15% przy śniegu/śliskości → II-7)
+- **II-7 (DONE 0122):** korytarz `corridor_polylines` (PL_ROAD, SE_E4) z punktów
+  OSM/ODbL — rzut GPS (`corridor_progress`), tempo z `eta_segment_params`,
+  attribution „© OpenStreetMap contributors”; zero zapytań HERE/TomTom
 - **ograniczenie:** pomiary prędkości i czasów przejazdu (TrafficFlow,
   TravelTimeRoute) wyłącznie w dużych miastach — nie na E4 na północy
-- **pozycja D3** („dane demonstracyjne" na panelu SE) może przejść na dane
-  żywe, gdy właściciel założy klucz
-
+- panel SE: dane żywe przez ryzyka z Edge (klucz w sekretach); Vite `/api/trafikverket`
+  tylko dev/podgląd
 ## 2.2 Polska — Krajowy Punkt Dostępowy GDDKiA
 
 - **bezpłatny**, standard **DATEX II**
@@ -137,24 +140,19 @@ Rejsu zmienionego ręcznie przez HHL odczyt automatyczny **nie nadpisuje**.
   prędkość, czas przejazdu**
 - zakres: drogi krajowe w zarządzie GDDKiA — trasa do Gdańska
 
-## 2.3 Cała trasa, także E4 na północy — TomTom
+## 2.3 Cała trasa — TomTom Flow (WYCOFANE — CLEAN-TT-HERE / D-28)
 
-- **plan Freemium: 2 500 zapytań dziennie o dane poza kafelkami + 50 000
-  kafelków mapy, użycie komercyjne dozwolone, bez karty płatniczej**
-- **po przekroczeniu limitu zapytania są blokowane (HTTP 429), nie
-  naliczane** — bez ryzyka nieoczekiwanego rachunku
-- ruch w czasie rzeczywistym: prędkość bieżąca wobec swobodnej na odcinku,
-  zdarzenia, kafelki ruchu na mapę
-- **budżet:** 20 aut w trasie × sprawdzenie co 15 minut = 1 920 zapytań
-  dziennie — mieści się w limicie; kafelki ruchu na mapę z puli 50 000
-- zapowiedziano zmianę cennika od lipca 2026 — **warunki sprawdzić przy
-  rejestracji**
+- **Status 02.10.2026:** usunięte z kodu aktywnego. Job Edge `traffic-flow`
+  zawsze zwraca DEMO. ETA = własny silnik OSM (II-7). Klucz `TOMTOM_API_KEY`
+  nie jest używany.
+- Historycznie: Freemium Flow Segment Data przy pozycji auta; zastąpione
+  korytarzem OSM + Trafikverket RoadCondition (SE).
 
 ## 2.4 Kolejność
 
-1. **Trafikverket** — klucz od ręki, zastępuje dane demonstracyjne D3
-2. **TomTom** — konto od ręki, wypełnia lukę prędkości na E4 i w PL
-3. **KPD GDDKiA** — rejestracja z certyfikatem, najdłuższa droga, zacząć od razu
+1. **Trafikverket** — klucz w sekretach Edge (II-6 LIVE)
+2. **KPD GDDKiA** — rejestracja z certyfikatem (D-17) — DEMO do czasu certu
+3. ~~TomTom Freemium~~ — **wycofane** (CLEAN-TT-HERE); ETA = II-7 OSM
 
 ---
 
@@ -162,8 +160,8 @@ Rejsu zmienionego ręcznie przez HHL odczyt automatyczny **nie nadpisuje**.
 
 | # | Działanie | Czas |
 |---|---|---|
-| 1 | klucz Trafikverket | od ręki |
-| 2 | konto TomTom Freemium | od ręki |
+| 1 | klucz Trafikverket | **DONE** (II-6) |
+| 2 | ~~konto TomTom Freemium~~ | **NIEPOTRZEBNE** (CLEAN-TT-HERE) |
 | 3 | rejestracja w KPD GDDKiA jako odbiorca danych, certyfikat klienta | **najdłużej — zacząć teraz** |
 | 4 | POLSCA Baltic Ferries, dział cargo: zgoda na odczyt komunikatów albo oficjalne powiadomienia; MMSI promu Wawel | pismo |
 | 5 | opcjonalnie: poświadczenia Sjöfartsverket AAA; darmowy klucz AISStream do testu zasięgu przy Gdańsku | wniosek, od ręki |
@@ -179,6 +177,9 @@ w repozytorium ani w rozmowie.**
 |---|---|
 | Digitraffic | **obowiązkowo:** „Dane AIS: Fintraffic / digitraffic.fi, licencja CC BY 4.0" |
 | Trafikverket | CC0 — bez wymogu; dobra praktyka: „Źródło: Trafikverket" |
-| TomTom | zgodnie z warunkami usługi — logo lub dopisek przy kafelkach ruchu |
+| FMI / DMI / SMHI | **obowiązkowo CC BY 4.0** przy pogodzie morskiej (II-8) |
+| OpenStreetMap | ODbL — „© OpenStreetMap contributors” przy ETA (II-7) |
+| ~~TomTom~~ | wycofane (CLEAN-TT-HERE) |
 | KPD GDDKiA | zgodnie z warunkami udostępnienia po rejestracji |
-| komunikaty armatora | „Status rejsów: POLSCA Baltic Ferries (Polferries)" |
+| komunikaty armatora | „Status rejsów: POLSCA Baltic Ferries (Polferries)" /
+  „Status rejsów: Stena Line" |

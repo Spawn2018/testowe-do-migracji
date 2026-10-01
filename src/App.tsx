@@ -6,6 +6,7 @@ import { CorridorSpine } from './components/shell/CorridorSpine';
 import { Nav } from './components/shell/Nav';
 import { Toasts } from './components/shell/Toasts';
 import { SystemBroadcastBanner } from './components/shell/SystemBroadcastBanner';
+import { ImpersonationBanner } from './auth/ImpersonationBanner';
 import { LoadDrawer } from './components/drawer/LoadDrawer';
 import { DashboardView } from './views/DashboardView';
 import { MapView } from './views/MapView';
@@ -157,6 +158,7 @@ function TowerShell() {
         <Nav />
         <main ref={mainRef}>
           <SystemBroadcastBanner />
+          {import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? <ImpersonationBanner /> : null}
           {body}
         </main>
       </div>

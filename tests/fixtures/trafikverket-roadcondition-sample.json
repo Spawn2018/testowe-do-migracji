@@ -1,0 +1,43 @@
+{
+  "_zrodlo": "Przykład formatu Trafikverket Open API v2 RoadCondition (schema 1.2) — E4 w buforze korytarza + odcinek poza (E14). Zweryfikowane live 01.10.2026.",
+  "RESPONSE": {
+    "RESULT": [
+      {
+        "RoadCondition": [
+          {
+            "Id": "RC_E4_NORMAL_1",
+            "ConditionCode": 1,
+            "ConditionText": "Normalt",
+            "RoadNumber": "E 4",
+            "LocationText": "E 4 Sundsvall - Gnarp",
+            "CountyNo": 22,
+            "StartTime": "2026-10-01T06:00:00.000+02:00",
+            "Deleted": false,
+            "Geometry": { "WGS84": "POINT (17.3312 62.4521)" }
+          },
+          {
+            "Id": "RC_E4_SLIP_1",
+            "ConditionCode": 3,
+            "ConditionText": "Risk for halka",
+            "RoadNumber": "E 4",
+            "LocationText": "E 4 Umea N",
+            "CountyNo": 24,
+            "StartTime": "2026-10-01T18:00:00.000+02:00",
+            "Deleted": false,
+            "Geometry": { "WGS84": "POINT (20.2598 63.8301)" }
+          },
+          {
+            "Id": "RC_E14_OUT",
+            "ConditionCode": 3,
+            "ConditionText": "Risk for halka",
+            "RoadNumber": "E 14",
+            "LocationText": "E 14 Matfors - Sundsvall",
+            "CountyNo": 22,
+            "Deleted": false,
+            "Geometry": { "WGS84": "POINT (17.05 62.38)" }
+          }
+        ]
+      }
+    ]
+  }
+}

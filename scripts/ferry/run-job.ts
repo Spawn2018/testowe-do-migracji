@@ -25,6 +25,6 @@ process.exit(res.ok ? 0 : 1);
 /** tylko klucze integracji (bez wypisywania) */
 function pick(e: Record<string, string>) {
   const out: Record<string, string> = {};
-  for (const k of ['TRAFIKVERKET_API_KEY', 'TOMTOM_API_KEY', 'KPD_DATEX_URL', 'KPD_AUTH_HEADER']) if (e[k]) out[k] = e[k];
+  for (const k of ['TRAFIKVERKET_API_KEY', 'KPD_DATEX_URL', 'KPD_AUTH_HEADER', 'DMI_API_KEY']) if (e[k]) out[k] = e[k];
   return out;
 }

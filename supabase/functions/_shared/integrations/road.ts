@@ -2,8 +2,8 @@
  * M12 — ruch drogowy (ZRODLA_DANYCH.md §2). Czyste funkcje: zapytania i parsery odpowiedzi.
  *  - SE: Trafikverket Open API (CC0), klucz TRAFIKVERKET_API_KEY — Situation wzdłuż E4 Nynäshamn → Boden
  *  - PL: KPD GDDKiA, DATEX II (rejestracja + certyfikat klienta) — utrudnienia na trasie Śrem → Gdańsk
- *  - cała trasa: TomTom Flow Segment Data, klucz TOMTOM_API_KEY — prędkość bieżąca wobec swobodnej
- * Bez klucza funkcja NIE działa na niby: zwraca tryb DEMO, panel zostaje oznaczony jako demonstracyjny (D18).
+ *  - TomTom Flow: USUNIĘTE (CLEAN-TT-HERE / D-28); ETA = II-7 OSM
+ * Bez klucza Trafikverket/GDDKiA funkcja NIE działa na niby: zwraca tryb DEMO (D18).
  * Formaty odpowiedzi wg dokumentacji dostawców — przy rejestracji kluczy zweryfikować na żywo.
  */
 import type { RiskInput, RiskSeverity } from './sync.ts';
@@ -44,16 +44,45 @@ export function integrationMode(env: Record<string, string | undefined>, keyName
 /* ---------- Trafikverket ---------- */
 export const TRAFIKVERKET_URL = 'https://api.trafikinfo.trafikverket.se/v2/data.json';
 const xmlEsc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-/** Zapytanie XML: Situation (utrudnienia) w promieniu `radiusM` od punktów E4. */
+/** Län wzdłuż E4 Nynäshamn → Boden (Stockholm…Norrbotten). */
+export const CORRIDOR_SE_COUNTIES = [1, 3, 21, 22, 24, 25] as const;
+/**
+ * Zapytanie XML: Situation (utrudnienia) — **historyczne**.
+ * Live API (01.10.2026): ObjectType `Situation` nie istnieje — road-se używa RoadCondition + WeatherMeasurepoint.
+ * Parser zostaje do testów / ewentualnego powrotu obiektu.
+ */
 export function trafikverketSituationQuery(apiKey: string, radiusM = 20000): string {
   const within = CORRIDOR_SE.map(([la, lo]) => `<WITHIN name="Deviation.Geometry.WGS84" shape="center" value="${lo} ${la}" radius="${radiusM}m"/>`).join('');
   return `<REQUEST><LOGIN authenticationkey="${xmlEsc(apiKey)}"/><QUERY objecttype="Situation" schemaversion="1.5" limit="500"><FILTER><OR>${within}</OR></FILTER></QUERY></REQUEST>`;
+}
+/** RoadCondition — stan nawierzchni w länach korytarza (schema 1.2, zweryfikowane live 01.10.2026). */
+export function trafikverketRoadConditionQuery(apiKey: string, counties: readonly number[] = CORRIDOR_SE_COUNTIES): string {
+  const eqs = counties.map((c) => `<EQ name="CountyNo" value="${c}"/>`).join('');
+  return `<REQUEST><LOGIN authenticationkey="${xmlEsc(apiKey)}"/><QUERY objecttype="RoadCondition" schemaversion="1.2" limit="500"><FILTER><OR>${eqs}</OR></FILTER></QUERY></REQUEST>`;
+}
+/** WeatherMeasurepoint — stacje pogodowe przy drodze (zastąpiły WeatherStation od 2024). */
+export function trafikverketWeatherQuery(apiKey: string, radiusM = 30000): string {
+  const within = CORRIDOR_SE.map(([la, lo]) => `<WITHIN name="Geometry.WGS84" shape="center" value="${lo} ${la}" radius="${radiusM}m"/>`).join('');
+  return `<REQUEST><LOGIN authenticationkey="${xmlEsc(apiKey)}"/><QUERY objecttype="WeatherMeasurepoint" schemaversion="1" limit="200"><FILTER><OR>${within}</OR></FILTER></QUERY></REQUEST>`;
 }
 export interface RoadEvent { id: string; title: string; detail: string; severity: RiskSeverity; lat: number | null; lon: number | null; road: string | null; start: string | null; end: string | null; kind: string }
 const wkt = (s: unknown): LatLon | null => {
   const m = typeof s === 'string' ? s.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i) : null;
   return m ? [Number(m[2]), Number(m[1])] : null;
 };
+/** Środek LINESTRING / POINT WGS84 (lon lat …). */
+export function wktCentroid(s: unknown): LatLon | null {
+  if (typeof s !== 'string') return null;
+  const pt = wkt(s);
+  if (pt) return pt;
+  const m = s.match(/LINESTRING\s*\(([^)]+)\)/i);
+  if (!m) return null;
+  const pts = m[1].split(',').map((p) => p.trim().split(/\s+/).map(Number)).filter((xy) => xy.length >= 2 && Number.isFinite(xy[0]) && Number.isFinite(xy[1]));
+  if (!pts.length) return null;
+  const lon = pts.reduce((a, p) => a + p[0], 0) / pts.length;
+  const lat = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+  return [lat, lon];
+}
 /** SeverityCode Trafikverket: 1 brak wpływu, 2 mały, 4 duży, 5 bardzo duży. */
 const tvSeverity = (c: unknown): RiskSeverity | null => (c === 5 ? 'HIGH' : c === 4 ? 'MEDIUM' : c === 2 || c === 3 ? 'LOW' : null);
 export function parseTrafikverketSituations(json: unknown, bufferKm = 5): RoadEvent[] {
@@ -74,6 +103,98 @@ export function parseTrafikverketSituations(json: unknown, bufferKm = 5): RoadEv
     }
   }
   return out;
+}
+
+const ADVERSE_RE = /halka|blixthalka|sn[oö]|isigt|\bis\b|frost|sn[oö]yra|modd|slask|glatt/i;
+const isE4 = (road: unknown) => typeof road === 'string' && /^E\s*4$/i.test(road.trim());
+export interface RoadConditionReading {
+  id: string; code: number | null; text: string; road: string | null; location: string;
+  lat: number; lon: number; adverse: boolean; start: string | null;
+}
+/** RoadCondition → odcinki E4 w buforze; ConditionCode 1 + „Normalt” = bez ryzyka. */
+export function parseTrafikverketRoadConditions(json: unknown, bufferKm = 8): RoadConditionReading[] {
+  const res = (json as { RESPONSE?: { RESULT?: { RoadCondition?: Record<string, unknown>[] }[] } })?.RESPONSE?.RESULT ?? [];
+  const out: RoadConditionReading[] = [];
+  for (const r of res) for (const c of r.RoadCondition ?? []) {
+    if (c.Deleted === true) continue;
+    if (!isE4(c.RoadNumber)) continue;
+    const pt = wktCentroid((c.Geometry as { WGS84?: string } | undefined)?.WGS84);
+    if (!pt || distanceToCorridorKm(pt[0], pt[1], CORRIDOR_SE) > bufferKm) continue;
+    const text = String(c.ConditionText ?? '');
+    const code = typeof c.ConditionCode === 'number' ? c.ConditionCode : Number(c.ConditionCode);
+    const codeN = Number.isFinite(code) ? code : null;
+    const adverse = (codeN != null && codeN !== 1) || ADVERSE_RE.test(text);
+    out.push({
+      id: String(c.Id), code: codeN, text: text || 'stan nawierzchni', road: (c.RoadNumber as string) ?? null,
+      location: String(c.LocationText ?? ''), lat: pt[0], lon: pt[1], adverse, start: (c.StartTime as string) ?? null,
+    });
+  }
+  return out;
+}
+export interface WeatherReading {
+  id: string; name: string; lat: number; lon: number;
+  airC: number | null; surfaceC: number | null; windMs: number | null; rain: boolean; snow: boolean; adverse: boolean;
+}
+/** WeatherMeasurepoint — śnieg / mróz / silny deszcz na stacjach przy E4. */
+export function parseTrafikverketWeather(json: unknown, bufferKm = 30): WeatherReading[] {
+  const res = (json as { RESPONSE?: { RESULT?: { WeatherMeasurepoint?: Record<string, unknown>[] }[] } })?.RESPONSE?.RESULT ?? [];
+  const out: WeatherReading[] = [];
+  for (const r of res) for (const s of r.WeatherMeasurepoint ?? []) {
+    if (s.Deleted === true) continue;
+    const pt = wkt((s.Geometry as { WGS84?: string } | undefined)?.WGS84);
+    if (!pt || distanceToCorridorKm(pt[0], pt[1], CORRIDOR_SE) > bufferKm) continue;
+    const obs = s.Observation as Record<string, unknown> | undefined;
+    if (!obs) continue;
+    const num = (path: unknown) => (typeof path === 'number' ? path : typeof (path as { Value?: unknown })?.Value === 'number' ? (path as { Value: number }).Value : null);
+    const airC = num((obs.Air as { Temperature?: unknown } | undefined)?.Temperature);
+    const surfaceC = num((obs.Surface as { Temperature?: unknown } | undefined)?.Temperature);
+    const windMs = num(((obs.Wind as { Speed?: unknown }[] | undefined)?.[0])?.Speed);
+    const p5 = (obs.Aggregated5minutes as { Precipitation?: { Rain?: boolean; Snow?: boolean } } | undefined)?.Precipitation;
+    const rain = p5?.Rain === true;
+    const snow = p5?.Snow === true;
+    const icy = (surfaceC != null && surfaceC <= 0) || (airC != null && airC <= -2);
+    const adverse = snow || (rain && icy) || (icy && (windMs ?? 0) >= 8);
+    out.push({
+      id: String(s.Id), name: String(s.Name ?? s.Id), lat: pt[0], lon: pt[1],
+      airC, surfaceC, windMs, rain, snow, adverse,
+    });
+  }
+  return out;
+}
+/** II-6: wstępnie +15% przy śniegu/śliskości (parametr do kalibracji II-7b). */
+export function seRoadSlowdownMult(args: {
+  conditions: RoadConditionReading[]; weather: WeatherReading[]; pct?: number;
+}): { mult: number; reason: string | null; adverseConditions: number; adverseWeather: number } {
+  const pct = args.pct ?? 15;
+  const adverseConditions = args.conditions.filter((c) => c.adverse).length;
+  const adverseWeather = args.weather.filter((w) => w.adverse).length;
+  if (!adverseConditions && !adverseWeather) return { mult: 1, reason: null, adverseConditions: 0, adverseWeather: 0 };
+  const bits: string[] = [];
+  if (adverseConditions) bits.push(`nawierzchnia ${adverseConditions}`);
+  if (adverseWeather) bits.push(`pogoda ${adverseWeather}`);
+  return { mult: Math.round((1 + pct / 100) * 100) / 100, reason: bits.join(', '), adverseConditions, adverseWeather };
+}
+export function roadConditionRisk(c: RoadConditionReading): RiskInput {
+  return {
+    kind: 'ROAD_SE', severity: 'MEDIUM',
+    title: `E4: ${c.text}${c.location ? ` · ${c.location}` : ''}`,
+    titleKey: 'rk_road_se', params: { event: c.text },
+    detail: { opis: c.location || c.text, rodzaj: 'RoadCondition', kod: c.code, lat: c.lat, lon: c.lon, od: c.start, zrodlo: 'Trafikverket RoadCondition (CC0)' },
+    dedup: `ROAD_SE:RC:${c.id}`, sourceUrl: 'https://www.trafikverket.se/trafikinformation/', validUntil: null,
+  };
+}
+export function weatherRisk(w: WeatherReading): RiskInput {
+  const event = w.snow ? 'śnieg' : w.rain ? 'deszcz / mróz' : 'ślisko / mróz';
+  return {
+    kind: 'ROAD_SE', severity: w.snow ? 'HIGH' : 'MEDIUM',
+    title: `E4 ${w.name}: ${event}`,
+    titleKey: 'rk_road_se', params: { event },
+    detail: {
+      opis: `powietrze ${w.airC ?? '—'}°C, nawierzchnia ${w.surfaceC ?? '—'}°C, wiatr ${w.windMs ?? '—'} m/s`,
+      rodzaj: 'WeatherMeasurepoint', lat: w.lat, lon: w.lon, zrodlo: 'Trafikverket WeatherMeasurepoint (CC0)',
+    },
+    dedup: `ROAD_SE:WX:${w.id}`, sourceUrl: 'https://www.trafikverket.se/trafikinformation/', validUntil: null,
+  };
 }
 
 /* ---------- KPD GDDKiA (DATEX II) ---------- */
@@ -113,29 +234,5 @@ export function roadRisk(country: 'SE' | 'PL', e: RoadEvent, sourceUrl: string):
   };
 }
 
-/* ---------- TomTom Flow Segment Data ---------- */
-export const tomtomFlowUrl = (lat: number, lon: number, key: string) =>
-  `https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?point=${lat},${lon}&unit=KMPH&key=${encodeURIComponent(key)}`;
-export interface FlowReading { currentKmh: number; freeKmh: number; ratio: number; closed: boolean; confidence: number | null }
-export function parseTomTomFlow(json: unknown): FlowReading | null {
-  const f = (json as { flowSegmentData?: Record<string, unknown> })?.flowSegmentData;
-  if (!f || typeof f.currentSpeed !== 'number' || typeof f.freeFlowSpeed !== 'number' || f.freeFlowSpeed <= 0) return null;
-  return {
-    currentKmh: f.currentSpeed, freeKmh: f.freeFlowSpeed, ratio: Math.round((f.currentSpeed / f.freeFlowSpeed) * 100) / 100,
-    closed: f.roadClosure === true, confidence: typeof f.confidence === 'number' ? f.confidence : null,
-  };
-}
-/** Próg: zamknięcie → HIGH; prędkość < 50% swobodnej → MEDIUM; niska pewność (<0,5) → brak ryzyka. */
-export function flowRisk(loadId: string, code: string, lat: number, lon: number, r: FlowReading, nowIso: string): (RiskInput & { loadId: string }) | null {
-  if (r.confidence != null && r.confidence < 0.5) return null;
-  if (!r.closed && r.ratio >= 0.5) return null;
-  const se = lat > 55.3;
-  return {
-    loadId, kind: se ? 'ROAD_SE' : 'ROAD_PL', severity: r.closed ? 'HIGH' : 'MEDIUM',
-    title: `${code}: ${r.closed ? 'droga zamknięta' : `ruch ${r.currentKmh} km/h wobec ${r.freeKmh} km/h swobodnie`} przy pozycji auta`,
-    titleKey: r.closed ? 'rk_flow_closed' : 'rk_flow_slow',
-    params: r.closed ? { code } : { code, kmh: r.currentKmh, free: r.freeKmh },
-    detail: { lat, lon, predkosc: r.currentKmh, swobodna: r.freeKmh, stosunek: r.ratio, zrodlo: 'TomTom' },
-    dedup: `TRAFFIC_FLOW:${loadId}:${nowIso.slice(0, 13)}`,
-  };
-}
+/* ---------- TomTom Flow — USUNIĘTE (CLEAN-TT-HERE / D-28); ETA = II-7 OSM ---------- */
+

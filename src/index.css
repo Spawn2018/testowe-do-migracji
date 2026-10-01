@@ -5,9 +5,9 @@
   --font-mono: "Barlow Condensed", "Barlow", Arial, sans-serif;
   --font-cond: "Barlow Condensed", "Barlow", Arial, sans-serif;
   --page:#E3E9ED; --surface:#FFFFFF; --surface-2:#F4F7F9; --surface-3:#EAEFF3;
-  --ink:#0E1A24; --ink-2:#3C4E5C; --ink-3:#6C7D8A;
+  --ink:#0E1A24; --ink-2:#3C4E5C; --ink-3:#5A6B78;
   --rule:#C9D5DD; --rule-2:#DEE6EB;
-  --amber:#C97E12; --amber-bg:#FBEFD9;
+  --amber:#C97E12; --amber-bg:#FBEFD9; --amber-ink:#A55A00;
   --red:#B32639; --red-bg:#F8DEE2;
   --go:#1B6E5D; --go-bg:#DCEDE8;
   --sea:#245C87; --sea-bg:#DCE8F1;
@@ -20,9 +20,9 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --page:#080F15; --surface:#101C25; --surface-2:#16242F; --surface-3:#1D2E3A;
-    --ink:#DCE7EE; --ink-2:#A4B6C2; --ink-3:#748896;
+    --ink:#DCE7EE; --ink-2:#A4B6C2; --ink-3:#788C9A;
     --rule:#263A48; --rule-2:#1C2B36;
-    --amber:#E5A544; --amber-bg:#3A2C12;
+    --amber:#E5A544; --amber-bg:#3A2C12; --amber-ink:#E5A544;
     --red:#E8687C; --red-bg:#3B1720;
     --go:#4FB79E; --go-bg:#0F2B27;
     --sea:#6BA8D6; --sea-bg:#12283A;
@@ -32,9 +32,9 @@
 }
 :root[data-theme="dark"]{
   --page:#080F15; --surface:#101C25; --surface-2:#16242F; --surface-3:#1D2E3A;
-  --ink:#DCE7EE; --ink-2:#A4B6C2; --ink-3:#748896;
+  --ink:#DCE7EE; --ink-2:#A4B6C2; --ink-3:#788C9A;
   --rule:#263A48; --rule-2:#1C2B36;
-  --amber:#E5A544; --amber-bg:#3A2C12;
+  --amber:#E5A544; --amber-bg:#3A2C12; --amber-ink:#E5A544;
   --red:#E8687C; --red-bg:#3B1720;
   --go:#4FB79E; --go-bg:#0F2B27;
   --sea:#6BA8D6; --sea-bg:#12283A;
@@ -138,7 +138,7 @@ main{min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden}
 .kpi .v{font-family:var(--font-cond);font-size:42px;font-weight:700;line-height:1;margin-top:2px}
 .kpi .d{font-size:11.5px;color:var(--ink-3);margin-top:3px}
 .kpi .v.alert{color:var(--red)}
-.kpi .v.warn{color:var(--amber)}
+.kpi .v.warn{color:var(--amber-ink)}
 .kpi .v.good{color:var(--go)}
 
 /* ---------- exception queue ---------- */
@@ -164,12 +164,13 @@ table{width:100%;border-collapse:collapse;font-size:13.2px}
 thead th{
   position:sticky;top:0;z-index:2;background:var(--surface-2);
   font-family:var(--font-cond);font-weight:600;font-size:13px;color:var(--ink-2);
-  text-align:left;padding:7px 7px;border-bottom:1px solid var(--rule);white-space:nowrap;cursor:pointer;
+  text-align:left;padding:7px 7px;border-bottom:1px solid var(--rule);white-space:nowrap;cursor:default;
 }
 thead th.num,td.num{text-align:right}
 thead th .ar{color:var(--ink-3);font-size:10px}
 tbody td{padding:6px 7px;border-bottom:1px solid var(--rule-2);white-space:nowrap}
-tbody tr{cursor:pointer}
+tbody tr{cursor:default}
+tbody tr[tabindex]{cursor:pointer}
 tbody tr:hover{background:var(--surface-2)}
 tbody tr.hl{background:var(--amber-bg)}
 tbody tr.done td{color:var(--ink-3)}
@@ -183,7 +184,7 @@ tbody tr.done td{color:var(--ink-3)}
 .p-plan {background:var(--plan-bg); color:var(--ink-2);border-left-color:var(--plan)}
 .p-go   {background:var(--go-bg);   color:var(--go);  border-left-color:var(--go)}
 .p-sea  {background:var(--sea-bg);  color:var(--sea); border-left-color:var(--sea)}
-.p-amber{background:var(--amber-bg);color:var(--amber);border-left-color:var(--amber)}
+.p-amber{background:var(--amber-bg);color:var(--amber-ink);border-left-color:var(--amber)}
 .p-red  {background:var(--red-bg);  color:var(--red); border-left-color:var(--red)}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:baseline}
 .flagrow{display:flex;gap:3px}
@@ -281,9 +282,10 @@ h4.sec{margin:0 0 8px;font-family:var(--font-cond);font-size:15px;font-weight:60
 .wf .rule{font-size:12.5px;color:var(--ink-3);margin-top:3px}
 .wf .rule b{color:var(--ink-2);font-weight:600}
 .legendline{display:flex;gap:14px;font-size:12px;color:var(--ink-3);padding:7px 13px;flex-wrap:wrap}
-.banner{display:flex;gap:10px;padding:10px 13px;background:var(--amber-bg);border-left:3px solid var(--amber);font-size:13px;margin:12px 12px 0}
+.banner{display:flex;gap:10px;padding:10px 13px;background:var(--amber-bg);border-left:3px solid var(--amber);font-size:13px;margin:12px 12px 0;align-items:center;justify-content:space-between}
 .banner.red{background:var(--red-bg);border-left-color:var(--red)}
 .banner b{font-weight:600}
+.banner[data-banner="impersonation"]{background:var(--amber-bg);border-left-color:var(--amber)}
 .mono{font-family:var(--font-cond);font-weight:600}
 .sronly{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 
@@ -455,7 +457,8 @@ main{display:block;min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden}
 table.data-table{width:100%;border-collapse:collapse;font-size:13.2px}
 table.data-table thead th{position:sticky;top:0;z-index:2;background:var(--surface-2);font-family:var(--font-cond);font-weight:600;font-size:13px;color:var(--ink-2);text-align:left;padding:7px 7px;border-bottom:1px solid var(--rule);white-space:nowrap}
 table.data-table tbody td{padding:6px 7px;border-bottom:1px solid var(--rule-2);white-space:nowrap}
-table.data-table tbody tr{cursor:pointer}
+table.data-table tbody tr{cursor:default}
+table.data-table tbody tr[tabindex]{cursor:pointer}
 table.data-table tbody tr:hover{background:var(--surface-2)}
 .mapkey-item{display:inline-flex;align-items:center;white-space:nowrap}
 /* dash grows with content; main is the scroller (BATCH-SCROLL) */
@@ -928,7 +931,18 @@ img,video{max-width:100%;height:auto}
 }
 
 @media (max-width:430px){
-  .topbar .seg[id="langSeg"] button{padding:6px 8px}
+  /* D-31: pasek górny nie może wychodzić poza 390 px (błąd makiety, nie zamysł) */
+  .topbar{
+    gap:4px;padding:0 6px;
+    overflow-x:clip;overflow-y:hidden;
+  }
+  .topbar .brand{gap:4px;min-width:0;flex:1 1 auto;overflow:hidden}
+  .topbar .brand b{font-size:15px;letter-spacing:.03em;white-space:nowrap}
+  .topbar .brand img{height:22px;width:auto;flex:0 0 auto}
+  .topbar .spacer{flex:0 0 0;min-width:0;width:0;overflow:hidden}
+  /* język + przełącznik widoku: na 390 px nie mieszczą się z ikonami 44 px (język w Ustawieniach) */
+  .topbar .seg[id="langSeg"],
+  .topbar .roleswitch{display:none}
   .corridor{display:none}
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { pctText, t } from '../i18n/messages';
 import type { DocCategory, Document } from '../types';
@@ -12,13 +12,18 @@ import { shows } from '../lib/prodFacade';
 import { DEFAULT_DOC_REQUIREMENTS, docStatusRows, docSummary, type DocRequirement, type DocStatusRow } from '../lib/docRequirements';
 import { defaultDocWeek, docsForWeek, weeksWithLoads } from '../lib/docWeek';
 import { clickableRow } from '../lib/clickableRow';
+import { SUPABASE_AUTH_ENABLED } from '../auth/config';
+
+const InsurancePolicyForm =
+  import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED
+    ? lazy(() => import('../auth/InsurancePolicyForm'))
+    : null;
 
 const CATS: { key: DocCategory; labelKey: string; who: string; whenKey: string }[] = [
   { key: 'PERMIT_PL', labelKey: 'doc_cat_permit_pl', who: 'Scandinavian Express', whenKey: 'docs_before_load' },
   { key: 'PERMIT_SE', labelKey: 'doc_cat_permit_se', who: 'Scandinavian Express', whenKey: 'docs_before_se' },
   { key: 'CMR', labelKey: 'doc_cat_cmr', who: 'Scandinavian Express', whenKey: 'docs_at_load' },
-  { key: 'POD', labelKey: 'doc_cat_pod', who: 'Scandinavian Express', whenKey: 'docs_after_unload' },
-  { key: 'LASHING_PHOTOS', labelKey: 'docs_lashing', who: 'Scandinavian Express', whenKey: 'docs_at_load' },
+  /* UI-12: POD i zdjęcia mocowania usunięte z UI — CMR wgrywa dyspozytor SCX lub HHL */
   { key: 'INSURANCE', labelKey: 'doc_cat_insurance', who: 'Scandinavian Express', whenKey: 'docs_insurance_when' },
   { key: 'DRAWING', labelKey: 'doc_cat_drawing', who: 'KSH', whenKey: 'docs_drawing_when' },
 ];
@@ -276,8 +281,11 @@ export function DocsView() {
             </div>
           </div>
         ) : null}
-        {/* I-2: przypomnienie o polisie — w produkcji brak odczytu polis i zadania (6.6) → ukryte */}
-        {shows('policyExpiryNote') ? (
+        {/* D-30: formularz + notka z bazy (produkcja); demo — stała notka makiety */}
+        {InsurancePolicyForm && (role === 'HHL' || role === 'SCX') ? (
+          <Suspense fallback={null}><InsurancePolicyForm /></Suspense>
+        ) : null}
+        {shows('policyExpiryNote') && !InsurancePolicyForm ? (
           <div className="note">
             {t(locale, 'a6_docs_ocp_note')}
           </div>

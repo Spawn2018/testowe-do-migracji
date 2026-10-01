@@ -50,5 +50,15 @@ if [ "${out:-0}" -ge 1 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    escalate 
 val "escalated_at ustawione" $HHL "select escalated_at is not null from decisions where id='$D3'" t
 val "historia ESCALATE" $HHL "select count(*) filter (where action='ESCALATE') from decision_events where decision_id='$D3'" 1
 
+# skutki opcji (0126)
+L=33333333-0000-0000-0000-000000000001
+D4=$(run "$HHL" "select decision_open('$P','ETA_AFTER_LATEST','ETA po terminie', jsonb_build_object('eta','2026-10-02T12:00:00Z'), '$L')" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+val "NOTIFY_KSH → applied" $HHL "select (decision_resolve('$D4','NOTIFY_KSH')->>'applied')" true commit
+val "NOTIFY → powiadomienie KSH IN_APP" $KSH "select count(*) from notifications where template='ETA_NOTIFY_KSH' and load_id='$L'" 1
+
+D5=$(run "$HHL" "select decision_open('$P','BACKUP_FAILED','kopia retry', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+val "BACKUP_RETRY → ui_hint" $HHL "select decision_resolve('$D5','RETRY_NOW')->>'ui_hint'" BACKUP_RETRY commit
+val "BACKUP_RETRY → audit" $HHL "select count(*) from audit_log where action='BACKUP_RETRY_REQUESTED' and entity_id='$D5'" 1
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

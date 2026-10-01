@@ -1,12 +1,13 @@
 /**
  * M12 — zadania integracji danych zewnętrznych: test każdej funkcji na zapisanych danych, bez sieci.
  * Polferries: prawdziwe strony z 26.09.2026 (rozkład cargo i komunikaty); Digitraffic: prawdziwa odpowiedź z 25.09.2026.
- * Trafikverket / TomTom / DATEX II: przykłady w formacie z dokumentacji dostawców (brak kluczy) — tests/fixtures/*sample*.
+ * Trafikverket / DATEX II: przykłady w formacie z dokumentacji dostawców (brak kluczy) — tests/fixtures/*sample*.
+ * TomTom Flow: usunięty (CLEAN-TT-HERE / D-28).
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
-  runFerryAis, runFerrySchedule, runFerryStatus, runJob, runRoadPl, runRoadSe, runTrafficFlow,
+  runFerryAis, runFerrySchedule, runFerryStatus, runFerryWeather, runJob, runRoadPl, runRoadSe, runTrafficFlow,
   type JobDeps, type JobResult, type SyncStore, type VehiclePos,
 } from '../supabase/functions/_shared/integrations/jobs';
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch } from '../supabase/functions/_shared/integrations/sync';
@@ -17,8 +18,8 @@ const fx = (n: string) => readFileSync(new URL(`./fixtures/${n}`, import.meta.ur
 const CARGO = fx('polferries-cargo-rozklad-2026-09-26.html');
 const STATUS = fx('polferries-komunikaty-2026-09-26.html');
 const AIS = fx('digitraffic-nova-star-2026-09-25.json');
-const TV = fx('trafikverket-situation-sample.json');
-const TT = fx('tomtom-flow-sample.json');
+const TV_RC = fx('trafikverket-roadcondition-sample.json');
+const TV_WX = fx('trafikverket-weather-sample.json');
 const DATEX = fx('datex2-kpd-sample.xml');
 const NOW = new Date('2026-09-26T01:45:00Z');
 const WAW = 'v-waw'; const NS = 'v-ns';
@@ -28,6 +29,9 @@ class MemStore implements SyncStore {
   risks: (RiskInput & { loadId?: string })[] = [];
   runs: { job: string; at: string; ok: boolean; result: JobResult }[] = [];
   positions: VehiclePos[] = [];
+  corridor: { corridor: string; slowdownMult: number; reason: string | null } | null = null;
+  marine: { maxWaveM: number | null; maxGustKn: number | null; risk: string; sources: string } | null = null;
+  thr = { waveM: 3.8, gustKn: 40 };
   n = 0;
   async projectId() { return 'p1'; }
   async vessels() { return [{ id: WAW, name: 'M/F Wawel', mmsi: null }, { id: NS, name: 'M/F Nova Star', mmsi: 311000787 }]; }
@@ -54,6 +58,17 @@ class MemStore implements SyncStore {
     if (this.vesselPositions.some((p) => p.vesselId === vesselId && p.observedAt === fix.timestampUtc)) return;
     this.vesselPositions.push({ vesselId, lat: fix.lat, lon: fix.lon, observedAt: fix.timestampUtc });
   }
+  async seSlowdownPct() { return 15; }
+  async saveCorridorCondition(row: { corridor: 'SE_E4'; slowdownMult: number; reason: string | null }) {
+    this.corridor = { corridor: row.corridor, slowdownMult: row.slowdownMult, reason: row.reason };
+  }
+  async opsThresholds() { return this.thr; }
+  async saveMarineCondition(row: {
+    corridor: 'BALTIC_GDN_NYN'; maxWaveM: number | null; maxGustKn: number | null;
+    risk: 'niskie' | 'podwyższone' | 'wysokie'; sources: string;
+  }) {
+    this.marine = { maxWaveM: row.maxWaveM, maxGustKn: row.maxGustKn, risk: row.risk, sources: row.sources };
+  }
 }
 
 function deps(store: MemStore, pages: Record<string, string | number>, env: Record<string, string> = {}, now = NOW) {
@@ -61,8 +76,14 @@ function deps(store: MemStore, pages: Record<string, string | number>, env: Reco
   const f = (async (input: RequestInfo | URL) => {
     const url = String(input); calls.push(url);
     const hit = Object.entries(pages).find(([k]) => url.includes(k));
-    if (!hit) throw new Error(`nieoczekiwane zapytanie (sieć zabroniona w teście): ${url}`);
-    return typeof hit[1] === 'number' ? new Response('err', { status: hit[1] }) : new Response(hit[1], { status: 200 });
+    if (hit) {
+      return typeof hit[1] === 'number' ? new Response('err', { status: hit[1] }) : new Response(hit[1], { status: 200 });
+    }
+    // STENA-3: domyślnie pusta tablica (testy Polferries nie muszą stubować Steny)
+    if (url.includes('_jcr_content.timetable.')) {
+      return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    throw new Error(`nieoczekiwane zapytanie (sieć zabroniona w teście): ${url}`);
   }) as typeof fetch;
   const d: JobDeps = { store, fetch: f, env, now: () => now };
   return { d, calls };
@@ -104,10 +125,62 @@ describe('ferry-schedule — rozkład cargo (prawdziwa strona 26.09.2026)', () =
   });
   it('zmiana struktury strony → ryzyko „źródło niedostępne”, bez zapisu (nigdy cicha pustka)', async () => {
     const st = new MemStore();
-    const r = await runFerrySchedule(deps(st, { 'cargo/rozklad': '<html><body>nowa strona</body></html>' }).d);
+    const r = await runFerrySchedule(deps(st, { 'cargo/rozklad': '<html><body>nowa strona</body></html>', '_jcr_content.timetable.': 503 }).d);
     expect(r.ok).toBe(false);
     expect(st.sailings).toHaveLength(0);
-    expect(st.risks[0]).toMatchObject({ kind: 'FERRY', severity: 'HIGH', dedup: 'SOURCE_DOWN:POLFERRIES_SCHEDULE:2026-09-26' });
+    expect(st.risks.some((x) => x.dedup === 'SOURCE_DOWN:POLFERRIES_SCHEDULE:2026-09-26')).toBe(true);
+  });
+});
+
+describe('STENA-3 — rozkład/status Gdynia–Karlskrona (JSON 01.10.2026)', () => {
+  const GDKA = fx('stena-timetable-gdka-2026-10-01.json');
+  const KAGD = fx('stena-timetable-kagd-2026-10-01.json');
+  const SPIRIT = 'v-spirit'; const EBBA = 'v-ebba'; const ESTE = 'v-este';
+  class StenaStore extends MemStore {
+    override async vessels() {
+      return [
+        { id: WAW, name: 'M/F Wawel', mmsi: null },
+        { id: NS, name: 'M/F Nova Star', mmsi: 311000787 },
+        { id: SPIRIT, name: 'M/F Stena Spirit', mmsi: 311058100 },
+        { id: EBBA, name: 'M/F Stena Ebba', mmsi: 219031310 },
+        { id: ESTE, name: 'M/F Stena Estelle', mmsi: 219030885 },
+      ];
+    }
+  }
+  it('ferry-status: On Time → ZAPLANOWANY source STENA, trasy GDY-KAA i KAA-GDY', async () => {
+    const st = new StenaStore();
+    const pages: Record<string, string | number> = {
+      'komunikaty-kursowania': 503,
+      'timetable.GDKA.2026-09-26': GDKA,
+      'timetable.KAGD.2026-09-26': KAGD,
+      'timetable.GDKA.2026-09-27': '[]',
+      'timetable.KAGD.2026-09-27': '[]',
+    };
+    const r = await runFerryStatus(deps(st, pages, {}, new Date('2026-09-26T12:00:00Z')).d);
+    expect(r.ok).toBe(true);
+    const stena = st.sailings.filter((s) => s.source === 'STENA');
+    expect(stena.length).toBeGreaterThanOrEqual(4);
+    expect(stena.every((s) => s.status === 'ZAPLANOWANY')).toBe(true);
+    expect(stena.some((s) => s.route === 'GDY-KAA')).toBe(true);
+    expect(stena.some((s) => s.route === 'KAA-GDY')).toBe(true);
+  });
+  it('ferry-status: Delayed → OPOZNIONY z estimatedLocalDepartureTime', async () => {
+    const st = new StenaStore();
+    const rows = JSON.parse(GDKA) as Array<Record<string, unknown>>;
+    rows[0].status = 'Delayed';
+    rows[0].estimatedLocalDepartureTime = '2026-10-01T09:00:00';
+    const delayed = JSON.stringify(rows);
+    const pages: Record<string, string | number> = {
+      'komunikaty-kursowania': 503,
+      'timetable.GDKA.2026-09-26': delayed,
+      'timetable.KAGD.2026-09-26': '[]',
+      'timetable.GDKA.2026-09-27': '[]',
+      'timetable.KAGD.2026-09-27': '[]',
+    };
+    await runFerryStatus(deps(st, pages, {}, new Date('2026-09-26T12:00:00Z')).d);
+    const s = st.sailings.find((x) => x.source === 'STENA' && x.route === 'GDY-KAA' && x.vessel_id === EBBA);
+    expect(s).toMatchObject({ status: 'OPOZNIONY' });
+    expect(s?.delayed_departure_at).toMatch(/2026-10-01T07:00:00/); // 09:00 Warsaw = 07:00 UTC
   });
 });
 
@@ -119,7 +192,16 @@ describe('ferry-status — komunikaty (prawdziwa strona 26.09.2026)', () => {
     expect(r).toMatchObject({ ok: true, unknown: 0, risks: 0 });
     expect(r.inserted).toBe(10);
     expect(st.sailings.every((s) => s.status === 'ZAPLANOWANY' && s.source === 'POLFERRIES')).toBe(true);
-    expect(calls).toEqual(['https://polferries.pl/faq/komunikaty-kursowania-promow.html']);
+    expect(calls.some((c) => c.includes('komunikaty-kursowania'))).toBe(true);
+  });
+  it('HTTP 403 Cloudflare → NIEZNANY + ryzyko źródła (II-5), bez zapisu rejsów Polferries', async () => {
+    const st = new MemStore();
+    const r = await runFerryStatus(deps(st, { 'komunikaty-kursowania': 403, '_jcr_content.timetable.': 503 }).d);
+    expect(r.ok).toBe(false);
+    expect(r.unknown).toBeGreaterThanOrEqual(1);
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:POLFERRIES_STATUS:'))).toBe(true);
+    expect(JSON.stringify(st.risks)).toMatch(/403|Cloudflare/i);
+    expect(st.sailings.filter((s) => s.source === 'POLFERRIES')).toHaveLength(0);
   });
   it('odwołanie z komunikatu → ODWOLANY na istniejącym rejsie POLFERRIES; RECZNIE nietknięty', async () => {
     const st = new MemStore();
@@ -158,13 +240,13 @@ describe('ferry-status — komunikaty (prawdziwa strona 26.09.2026)', () => {
   });
   it('HTTP 503 → ryzyko „źródło niedostępne”, bez zapisu; kolejny udany odczyt zamyka ryzyko', async () => {
     const st = new MemStore();
-    const r = await runFerryStatus(deps(st, { 'komunikaty-kursowania': 503 }).d);
+    const r = await runFerryStatus(deps(st, { 'komunikaty-kursowania': 503, '_jcr_content.timetable.': 503 }).d);
     expect(r.ok).toBe(false);
-    expect(st.risks[0].title).toMatch(/Źródło niedostępne: status promów/);
+    expect(st.risks.some((x) => x.title.match(/Źródło niedostępne: status promów/))).toBe(true);
     expect(st.sailings).toHaveLength(0);
     await runFerryStatus(deps(st, { 'komunikaty-kursowania': STATUS }).d);
-    expect(st.risks).toHaveLength(0);
-    expect(st.resolved).toEqual(['SOURCE_DOWN:POLFERRIES_STATUS:']);
+    expect(st.risks.filter((x) => String(x.dedup).startsWith('SOURCE_DOWN:POLFERRIES_STATUS:'))).toHaveLength(0);
+    expect(st.resolved).toContain('SOURCE_DOWN:POLFERRIES_STATUS:');
   });
   it('nagłówek User-Agent wyłącznie ASCII (inaczej fetch odrzuca żądanie)', async () => {
     const { USER_AGENT, DIGITRAFFIC_USER } = await import('../supabase/functions/_shared/integrations/jobs');
@@ -234,25 +316,38 @@ describe('I-2j — ferry-ais zapisuje pozycje promów do bazy (vessel_positions)
   });
 });
 
-describe('road-se — Trafikverket', () => {
+describe('road-se — Trafikverket (II-6 RoadCondition + WeatherMeasurepoint)', () => {
   it('bez klucza: tryb DEMO, żadnego zapytania (funkcja nie działa na niby)', async () => {
     const st = new MemStore();
     const { d, calls } = deps(st, {});
     expect(await runRoadSe(d)).toMatchObject({ mode: 'DEMO', ok: true });
     expect(calls).toHaveLength(0);
   });
-  it('z kluczem: utrudnienia w buforze 5 km od E4 → ROAD_SE (poziom z SeverityCode); spoza korytarza i „brak wpływu” pominięte', async () => {
+  it('z kluczem: śliskość E4 + śnieg → ROAD_SE + slowdown 1.15; E14 i norma pominięte', async () => {
     const st = new MemStore();
-    const { d, calls } = deps(st, { 'trafikverket.se': TV }, { TRAFIKVERKET_API_KEY: 'k' });
+    let n = 0;
+    const pages: Record<string, string | number> = {};
+    const { d, calls } = deps(st, pages, { TRAFIKVERKET_API_KEY: 'k' });
+    // dwa POST na ten sam URL — kolejność: RoadCondition, potem Weather
+    const orig = d.fetch;
+    d.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      calls.push(url);
+      if (url.includes('trafikinfo.trafikverket.se')) {
+        n++;
+        return new Response(n === 1 ? TV_RC : TV_WX, { status: 200 });
+      }
+      return orig(input, init);
+    }) as typeof fetch;
     const r = await runRoadSe(d);
     expect(r.risks).toBe(2);
-    expect(st.risks.map((x) => [x.kind, x.severity, x.dedup])).toEqual([
-      ['ROAD_SE', 'MEDIUM', 'ROAD_SE:SE_STA_TRISSID_1_1234567'], ['ROAD_SE', 'HIGH', 'ROAD_SE:SE_STA_TRISSID_1_7654321'],
-    ]);
-    expect(calls[0]).toBe('https://api.trafikinfo.trafikverket.se/v2/data.json');
+    expect(st.risks.map((x) => x.dedup).sort()).toEqual(['ROAD_SE:RC:RC_E4_SLIP_1', 'ROAD_SE:WX:WX_SNOW_1']);
+    expect(st.corridor).toMatchObject({ corridor: 'SE_E4', slowdownMult: 1.15 });
+    expect(r.observations?.slowdown).toBe('1.15');
+    expect(calls.filter((c) => c.includes('trafikinfo'))).toHaveLength(2);
     expect(distanceToCorridorKm(63.1792, 14.6357, CORRIDOR_SE)).toBeGreaterThan(100);
   });
-  it('błąd źródła → ryzyko „źródło niedostępne” ROAD_SE', async () => {
+  it('błąd obu źródeł → ryzyko „źródło niedostępne” ROAD_SE', async () => {
     const st = new MemStore();
     await runRoadSe(deps(st, { 'trafikverket.se': 401 }, { TRAFIKVERKET_API_KEY: 'k' }).d);
     expect(st.risks[0]).toMatchObject({ kind: 'ROAD_SE', dedup: 'SOURCE_DOWN:TRAFIKVERKET:2026-09-26' });
@@ -272,24 +367,12 @@ describe('road-pl — KPD GDDKiA (DATEX II)', () => {
   });
 });
 
-describe('traffic-flow — TomTom', () => {
-  const car: VehiclePos = { load_id: 'L1', code: 'SG-07', lat: 53.1235, lon: 18.0084, ts: NOW.toISOString() };
-  it('bez klucza: tryb DEMO', async () => {
-    expect(await runTrafficFlow(deps(new MemStore(), {}).d)).toMatchObject({ mode: 'DEMO' });
-  });
-  it('31 km/h wobec 90 swobodnie przy aucie → ROAD_PL MEDIUM na transporcie; klucz nie trafia do ostrzeżeń', async () => {
-    const st = new MemStore(); st.positions = [car];
-    const r = await runTrafficFlow(deps(st, { 'api.tomtom.com': TT }, { TOMTOM_API_KEY: 'sekret' }).d);
-    expect(r.risks).toBe(1);
-    expect(st.risks[0]).toMatchObject({ loadId: 'L1', kind: 'ROAD_PL', severity: 'MEDIUM' });
-    const st2 = new MemStore(); st2.positions = [car];
-    const r2 = await runTrafficFlow(deps(st2, { 'api.tomtom.com': 500 }, { TOMTOM_API_KEY: 'sekret' }).d);
-    expect(JSON.stringify(r2.warnings)).not.toContain('sekret');
-    expect(st2.risks[0].dedup).toBe('SOURCE_DOWN:TOMTOM:2026-09-26');
-  });
-  it('niska pewność pomiaru → bez ryzyka', async () => {
-    const st = new MemStore(); st.positions = [car];
-    await runTrafficFlow(deps(st, { 'api.tomtom.com': TT.replace('"confidence": 0.97', '"confidence": 0.3') }, { TOMTOM_API_KEY: 'k' }).d);
+describe('traffic-flow — CLEAN-TT-HERE (TomTom wycofany)', () => {
+  it('zawsze DEMO; bez pobierania TomTom nawet przy kluczu w env', async () => {
+    const st = new MemStore();
+    const r = await runTrafficFlow(deps(st, {}, { TOMTOM_API_KEY: 'sekret' }).d);
+    expect(r).toMatchObject({ job: 'traffic-flow', mode: 'DEMO', ok: true });
+    expect(String(r.reason)).toMatch(/CLEAN-TT-HERE|wycofany/i);
     expect(st.risks).toHaveLength(0);
   });
 });
@@ -305,5 +388,63 @@ describe('planSailingSync — zasady', () => {
     });
     expect(p.unknownVessels).toEqual(['M/F Baltivia']);
     expect(p.inserts).toHaveLength(0);
+  });
+});
+
+describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
+  const FMI_WAM = fx('fmi-wam-mid-2026-10-02.xml');
+  const FMI_GUST = fx('fmi-harmonie-gust-2026-10-02.xml');
+  const DMI = fx('dmi-wam-nsb-2026-10-02.json');
+  const SMHI = fx('smhi-ocobs-knolls-latest.json');
+  const WX_NOW = new Date('2026-10-02T04:00:00Z');
+
+  function wxPages(): Record<string, string | number> {
+    return {
+      'forecast%3A%3Awam': FMI_WAM,
+      'forecast%3A%3Aharmonie': FMI_GUST,
+      'forecastedr/collections/wam_nsb': DMI,
+      'ocobs.smhi.se': SMHI,
+    };
+  }
+
+  it('zapisuje marine_conditions + atrybucję; bez breach przy spokojnym Bałtyku', async () => {
+    const st = new MemStore();
+    st.sailings = [{
+      id: 's-wx', vessel_id: WAW, route: 'GDN-NYN',
+      departure_at: '2026-10-02T16:00:00.000Z', arrival_at: '2026-10-03T10:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY', source: 'POLFERRIES',
+    }];
+    const r = await runFerryWeather(deps(st, wxPages(), {}, WX_NOW).d);
+    expect(r.ok).toBe(true);
+    expect(st.marine).not.toBeNull();
+    expect(st.marine!.sources).toMatch(/FMI|DMI|SMHI/);
+    expect(st.marine!.risk).toBe('niskie');
+    expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_WEATHER:'))).toHaveLength(0);
+    expect(r.observations?.attribution).toMatch(/CC BY 4\.0/);
+  });
+
+  it('fala ≥ WAVE_M w oknie rejsu → ryzyko FERRY_WEATHER', async () => {
+    const st = new MemStore();
+    st.thr = { waveM: 1.05, gustKn: 40 }; // próg poniżej fixture (~1.1 m)
+    st.sailings = [{
+      id: 's-storm', vessel_id: WAW, route: 'GDN-NYN',
+      departure_at: '2026-10-02T03:00:00.000Z', arrival_at: '2026-10-02T21:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY', source: 'POLFERRIES',
+    }];
+    const r = await runFerryWeather(deps(st, wxPages(), {}, WX_NOW).d);
+    expect(r.ok).toBe(true);
+    expect(st.risks.some((x) => x.dedup === 'FERRY_WEATHER:s-storm')).toBe(true);
+    expect(st.risks.find((x) => x.dedup === 'FERRY_WEATHER:s-storm')?.titleKey).toBe('rk_ferry_weather');
+  });
+
+  it('wszystkie źródła padły → SOURCE_DOWN MARINE_WEATHER', async () => {
+    const st = new MemStore();
+    const r = await runFerryWeather(deps(st, {
+      'opendata.fmi.fi': 503,
+      'opendataapi.dmi.dk': 429,
+      'ocobs.smhi.se': 500,
+    }, {}, WX_NOW).d);
+    expect(r.ok).toBe(false);
+    expect(st.risks[0]?.dedup).toMatch(/^SOURCE_DOWN:MARINE_WEATHER:/);
   });
 });

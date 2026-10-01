@@ -13,7 +13,7 @@ import { TZ_OPS, isoToDatetimeLocalValue, wallLocalToIso } from '../lib/time';
 import type { Sailing } from '../types';
 import { POLFERRIES_ATTRIBUTION } from '../lib/ferry/polferries';
 
-const VESSELS = ['Wawel', 'Nova Star'] as const;
+const VESSELS = ['Wawel', 'Nova Star', 'Stena Spirit', 'Stena Estelle', 'Stena Ebba'] as const;
 
 export function SailingsPanel() {
   const role = useTowerStore((s) => s.role);
@@ -62,9 +62,15 @@ export function SailingsPanel() {
           onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
+            const routeRaw = String(fd.get('route') || 'GDN-NYN');
+            const route =
+              routeRaw === 'NYN-GDN' ? 'NYN-GDN'
+                : routeRaw === 'GDY-KAA' ? 'GDY-KAA'
+                  : routeRaw === 'KAA-GDY' ? 'KAA-GDY'
+                    : 'GDN-NYN';
             const r = addSailing({
               vessel: String(fd.get('vessel') || ''),
-              route: (String(fd.get('route')) === 'NYN-GDN' ? 'NYN-GDN' : 'GDN-NYN'),
+              route,
               departureAt: wallLocalToIso(String(fd.get('dep') || ''), TZ_OPS) ?? '',
               arrivalAt: wallLocalToIso(String(fd.get('arr') || ''), TZ_OPS) ?? '',
             });
@@ -83,6 +89,8 @@ export function SailingsPanel() {
               <select name="route" className="input" defaultValue="GDN-NYN">
                 <option value="GDN-NYN">Gdańsk → Nynäshamn</option>
                 <option value="NYN-GDN">Nynäshamn → Gdańsk</option>
+                <option value="GDY-KAA">Gdynia → Karlskrona</option>
+                <option value="KAA-GDY">Karlskrona → Gdynia</option>
               </select>
             </dd>
             <dt>{t(locale, 'sail_col_dep')} / {t(locale, 'sail_col_arr')}</dt>
@@ -153,7 +161,12 @@ export function SailingsPanel() {
               return (
                 <tr key={s.id} data-sailing={s.id} data-sail-status={s.status}>
                   <td><b>{s.vessel}</b></td>
-                  <td className="mono">{s.route === 'GDN-NYN' ? 'GDN → NYN' : 'NYN → GDN'}</td>
+                  <td className="mono">{
+                    s.route === 'GDN-NYN' ? 'GDN → NYN'
+                      : s.route === 'NYN-GDN' ? 'NYN → GDN'
+                        : s.route === 'GDY-KAA' ? 'GDY → KAA'
+                          : 'KAA → GDY'
+                  }</td>
                   <td className="mono">
                     {delayed ? <><s style={{ color: 'var(--ink-3)' }}>{fmtLocal(s.departureAt)}</s> {fmtLocal(effDeparture(s))}</> : fmtLocal(s.departureAt)}
                   </td>

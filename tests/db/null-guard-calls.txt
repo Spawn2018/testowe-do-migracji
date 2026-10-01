@@ -108,3 +108,13 @@ admin_broadcast_set | GUARD | select admin_broadcast_set('x', now() + interval '
 admin_broadcast_clear | GUARD | select admin_broadcast_clear() | Tylko administrator HHL
 system_broadcast_current | EMPTY | select count(*) from system_broadcast_current() | 0
 driver_phone_e164 | PURE | select driver_phone_e164('601234567','PL') | -
+load_agreed_fee_add | GUARD | select load_agreed_fee_add('$L1', 'INNE', 10, 'COST', 'test straznika oplaty') | wyłącznie HHL
+fee_catalog_hints | EMPTY | select count(*) from fee_catalog_hints() | 0
+load_dwell_info | GUARD | select count(*) from load_dwell_info('$L1') | Brak aktywnego konta|Brak dostępu
+admin_impersonate_start | GUARD | select admin_impersonate_start('$KSHID') | Tylko administrator HHL|wyłącznie administrator
+admin_impersonate_stop | GUARD | select admin_impersonate_stop() | Tylko administrator HHL
+real_app_user_id | EMPTY | select coalesce(real_app_user_id()::text, '∅') | ∅
+real_app_role | EMPTY | select coalesce(real_app_role()::text, '∅') | ∅
+admin_audit_history | GUARD | select count(*) from admin_audit_history(null,null,null,null,null,null,5,0) | Tylko administrator HHL
+admin_set_eta_calibration_frozen | GUARD | select admin_set_eta_calibration_frozen(true) | wyłącznie HHL_ADMIN
+apply_eta_calibration_version | GUARD | select apply_eta_calibration_version(1) | wyłącznie HHL_ADMIN

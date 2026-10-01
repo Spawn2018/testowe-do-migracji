@@ -121,14 +121,23 @@ export interface SailingRow {
 }
 
 /** `vessels.name` (np. „M/F Wawel”) → nazwa w UI. */
-export function vesselFromDb(name: string | null | undefined): FerryBooking['vessel'] {
+export function vesselFromDb(name: string | null | undefined): string | null {
   if (!name) return null;
-  const n = name.replace(/^M\/F\s+/i, '').trim().toLowerCase();
-  return n === 'wawel' ? 'Wawel' : n === 'nova star' ? 'Nova Star' : null;
+  const cleaned = name.replace(/^M\/F\s+/i, '').trim();
+  const n = cleaned.toLowerCase();
+  if (n === 'wawel') return 'Wawel';
+  if (n === 'nova star') return 'Nova Star';
+  if (n.startsWith('stena ')) return cleaned;
+  return cleaned || null;
 }
-/** Nazwa w UI → `vessels.name` (seed `stegra.sql`). */
-export const vesselToDb = (v: FerryBooking['vessel']): string | null =>
-  v === 'Wawel' ? 'M/F Wawel' : v === 'Nova Star' ? 'M/F Nova Star' : null;
+/** Nazwa w UI → `vessels.name` (seed / STENA-3). */
+export const vesselToDb = (v: string | null | undefined): string | null => {
+  if (!v) return null;
+  if (v === 'Wawel') return 'M/F Wawel';
+  if (v === 'Nova Star') return 'M/F Nova Star';
+  if (/^stena /i.test(v)) return v.startsWith('M/F ') ? v : `M/F ${v}`;
+  return v.startsWith('M/F ') ? v : `M/F ${v}`;
+};
 
 export function ferryFromRow(row: Pick<LoadRow, 'ferry_booking_ref' | 'sailings'>): FerryBooking {
   const s = row.sailings ?? null;
@@ -327,7 +336,7 @@ export interface RiskRow { id: string; load_id: string | null; kind: string; sev
 const RISK_TYPE: Record<string, RiskType> = {
   FERRY: 'FERRY', WEATHER: 'FORCE_MAJEURE', ROAD_SE: 'ROAD_SE', ROAD_PL: 'OPS', PERMIT: 'DOC', INSURANCE: 'DOC',
   DOC_MISSING: 'DOC', SILENT_VEHICLE: 'OPS', ETA_BREACH: 'OPS', RESOURCE_MISSING: 'OPS', SEQUENCE: 'OPS', INVOICE_MISMATCH: 'OPS',
-  AUTO_STATUS: 'OPS', LOADING_UNCONFIRMED: 'OPS', USAGE_LIMIT: 'OPS', JOB_FAILURE: 'OPS', DATES_UNCONFIRMED: 'OPS',
+  AUTO_STATUS: 'OPS', LOADING_UNCONFIRMED: 'OPS', USAGE_LIMIT: 'OPS', JOB_FAILURE: 'OPS', DATES_UNCONFIRMED: 'OPS', LATE_DATE_CHANGE: 'OPS',
 };
 const SEVERITY: Record<string, Severity> = { INFO: 'LOW', LOW: 'LOW', MEDIUM: 'MEDIUM', HIGH: 'HIGH', CRITICAL: 'CRITICAL' };
 export function riskFromRow(r: RiskRow, nowIso: string): Risk {
@@ -356,18 +365,32 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
 export interface SailingDbRow {
   id: string; route: string; departure_at: string; arrival_at: string;
   delayed_departure_at: string | null; delayed_arrival_at: string | null; status: string; source: string;
-  vessels?: { name: string } | null;
+  vessels?: { name: string; operator?: string } | null;
 }
-export const SAILING_COLUMNS = 'id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,status,source,vessels(name)';
+export const SAILING_COLUMNS = 'id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,status,source,vessels(name,operator)';
+function ferryRouteFromDb(route: string): Sailing['route'] {
+  if (route === 'NYN-GDN') return 'NYN-GDN';
+  if (route === 'GDY-KAA') return 'GDY-KAA';
+  if (route === 'KAA-GDY') return 'KAA-GDY';
+  return 'GDN-NYN';
+}
 export function sailingFromRow(r: SailingDbRow): Sailing {
   const name = r.vessels?.name ?? '';
+  const op = r.vessels?.operator ?? '';
+  const src =
+    r.source === 'POLFERRIES' ? 'POLFERRIES'
+      : r.source === 'STENA' ? 'STENA'
+        : r.source === 'DANE_STARTOWE' ? 'DANE_STARTOWE'
+          : 'RECZNIE';
   return {
-    id: r.id, vessel: vesselFromDb(name) ?? name.replace(/^M\/F\s+/i, ''),
-    route: r.route === 'NYN-GDN' ? 'NYN-GDN' : 'GDN-NYN',
+    id: r.id,
+    vessel: vesselFromDb(name) ?? name.replace(/^M\/F\s+/i, ''),
+    operator: op || undefined,
+    route: ferryRouteFromDb(r.route),
     departureAt: r.departure_at, arrivalAt: r.arrival_at,
     delayedDepartureAt: r.delayed_departure_at, delayedArrivalAt: r.delayed_arrival_at,
     status: r.status === 'ODWOLANY' ? 'ODWOLANY' : r.status === 'OPOZNIONY' ? 'OPOZNIONY' : 'ZAPLANOWANY',
-    source: r.source === 'POLFERRIES' ? 'POLFERRIES' : r.source === 'DANE_STARTOWE' ? 'DANE_STARTOWE' : 'RECZNIE',
+    source: src,
   };
 }
 export function sailingToRow(s: Sailing): Record<string, unknown> {

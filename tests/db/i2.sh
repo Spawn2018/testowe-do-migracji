@@ -78,9 +78,10 @@ else
   $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), 'DRIVER_APP')" >/dev/null 2>&1 \
     || $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), (enum_range(null::position_source))[1])" >/dev/null
 fi
-chk "świeża pozycja: flaga GPS, pozostało < 18,5 h" "$(Q "select eta_basis->'flags'->>0 from loads where id='$L2'")/$(Q "select (eta_site < now()+interval '18 hours')::text from loads where id='$L2'")" "pozycja GPS — odległość do placu w linii prostej/true"
+chk "świeża pozycja: flaga GPS (korytarz OSM II-7), pozostało < 18,5 h" "$(Q "select eta_basis->'flags'->>0 from loads where id='$L2'")/$(Q "select (eta_site < now()+interval '18 hours')::text from loads where id='$L2'")" "pozycja GPS — postęp na korytarzu OSM/true"
+chk "II-7: method ETA v2 (OSM) + attribution ODbL" "$(Q "select (eta_basis->>'method')||'|'||(eta_basis->>'attribution') from loads where id='$L2'")" "ETA v2 (OSM)|© OpenStreetMap contributors"
 $PSQL -c "insert into positions (load_id, ts, geom_raw, source) select '$L2', now()-interval '5 hours', st_setsrid(st_makepoint(20.0, 62.0),4326), source from positions where load_id='$L2' limit 1" >/dev/null
-chk "starsza pozycja nie zmienia wyniku (liczy się najnowsza)" "$(Q "select eta_basis->'flags'->>0 from loads where id='$L2'")" "pozycja GPS — odległość do placu w linii prostej"
+chk "starsza pozycja nie zmienia wyniku (liczy się najnowsza)" "$(Q "select eta_basis->'flags'->>0 from loads where id='$L2'")" "pozycja GPS — postęp na korytarzu OSM"
 
 echo; echo "[I-2d] na placu, rozładunek, anulowanie"
 $PSQL -c "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L2','STATUS_AUTO', now()-interval '10 minutes', '{\"to\":\"AT_SITE\"}')" >/dev/null
@@ -375,49 +376,39 @@ else
   $PSQL -c "drop table auth.mfa_factors" >/dev/null
 fi
 
-echo; echo "[I-18] status dat planu WSTĘPNA | POTWIERDZONA (0061)"
+echo; echo "[DATY-67] daty z pliku KSH + opóźnienie (§6–7); bez „Potwierdź daty”"
 D1=$(date -d '+20 days' +%F); D2=$(date -d '+25 days' +%F); D3=$(date -d '+21 days' +%F); D4=$(date -d '+26 days' +%F); D5=$(date -d '+22 days' +%F); D6=$(date -d '+27 days' +%F)
+DNEAR=$(date -d '+3 days' +%F); DNEAR2=$(date -d '+8 days' +%F)
 ROW() { echo "[{\"code\":\"D18-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"delivery_date\":\"$2\"}]"; }
+ROWT() { echo "[{\"code\":\"D18-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"load_time\":\"08:00\",\"delivery_date\":\"$2\",\"delivery_time\":\"12:00\"}]"; }
 IMP18() { echo "select import_schedule('$P', '$(ROW $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"d18.xlsx\"$3}'::jsonb, $4)"; }
+IMP18T() { echo "select import_schedule('$P', '$(ROWT $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"d18.xlsx\"}'::jsonb, $3)"; }
 val "import HHL: nowy transport D18-1" $HHL "select jsonb_array_length(r->'added') from ($(IMP18 $D1 $D2 '' false)) s(r)" 1 commit
 LD=$(Q "select load_id from shipment_items where shipment_code='D18-1'")
 $PSQL -c "update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003' where id='$LD'" >/dev/null
-chk "nowy transport: data WSTĘPNA, bez autora" "$(Q "select plan_dates_status||'/'||coalesce(plan_dates_confirmed_by::text,'∅') from loads where id='$LD'")" "WSTEPNA/∅"
-err "SCX nie potwierdza dat" $SCX "select ksh_confirm_dates('$LD')" "wyłącznie KSH"
-err "HHL nie potwierdza dat (D-12: daty podaje KSH)" $HHL "select ksh_confirm_dates('$LD')" "wyłącznie KSH"
+chk "nowy transport: POTWIERDZONA z pliku, bez autora KSH" "$(Q "select plan_dates_status||'/'||coalesce(plan_dates_confirmed_by::text,'∅')||'/'||(plan_dates_confirmed_at is not null)::text from loads where id='$LD'")" "POTWIERDZONA/∅/true"
+err "ksh_confirm usunięte (KSH)" $KSH "select ksh_confirm_dates('$LD')" "DATY-67"
+err "ksh_confirm usunięte (HHL)" $HHL "select ksh_confirm_dates('$LD')" "DATY-67"
 err "konto bez app_users: odmowa" 11111111-0000-0000-0000-0000000000ee "select ksh_confirm_dates('$LD')" "Brak aktywnego konta"
-err "KSH: dostawa przed załadunkiem — odmowa" $KSH "select ksh_confirm_dates('$LD', '$D2'::date, '$D1'::date)" "przed datą załadunku"
-err "HHL nie ustawi statusu ręcznie (PATCH)" $HHL "update loads set plan_dates_status='POTWIERDZONA' where id='$LD'" "wyłącznie potwierdzenie KSH"
+err "HHL nie ustawi statusu ręcznie (PATCH)" $HHL "update loads set plan_dates_status='WSTEPNA' where id='$LD'" "Status dat planu"
 err "ANEKS 2: przewoźnik nadal nie zmienia okien KSH" $SCX "update loads set plan_load_date='$D3' where id='$LD'" "Przewoźnik nie może zmieniać"
-err "przewoźnik nie ustawi statusu dat" $SCX "update loads set plan_dates_status='POTWIERDZONA' where id='$LD'" "Status dat planu|Przewoźnik nie może"
-val "KSH: potwierdzenie bez zmiany" $KSH "select ksh_confirm_dates('$LD')->>'changed'" false commit
-chk "POTWIERDZONA, autor = konto KSH, czas, zdarzenie PLAN_DATES_CONFIRMED" "$(Q "select l.plan_dates_status||'/'||(u.email)||'/'||(l.plan_dates_confirmed_at is not null)::text from loads l join app_users u on u.id=l.plan_dates_confirmed_by where l.id='$LD'")/$(Q "select count(*) from load_events where load_id='$LD' and event_type='PLAN_DATES_CONFIRMED'")" "POTWIERDZONA/ksh@test/true/1"
-chk "pierwsze potwierdzenie bez zmiany: bez powiadomień" "$(Q "select count(*) from notifications where template='PLAN_DATES_CHANGED'")" 0
-val "KSH: zmiana daty potwierdzonej" $KSH "select ksh_confirm_dates('$LD', '$D3'::date, '$D4'::date)->>'changed'" true commit
-chk "po zmianie przez KSH: nadal POTWIERDZONA, nowe daty" "$(Q "select plan_dates_status||'/'||plan_load_date||'/'||plan_delivery_date from loads where id='$LD'")" "POTWIERDZONA/$D3/$D4"
-chk "zdarzenie PLAN_DATES_CHANGED (by KSH, przed/po)" "$(Q "select payload->>'by'||'/'||(payload->>'before_load_date')||'/'||(payload->>'load_date') from load_events where load_id='$LD' and event_type='PLAN_DATES_CHANGED'")" "KSH/$D1/$D3"
-chk "powiadomienia w aplikacji: HHL i przewoźnik, bez autora (KSH)" "$(Q "select string_agg(distinct o.code, ',' order by o.code) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.template='PLAN_DATES_CHANGED' and n.channel='IN_APP'")" "HHL,SCX"
-chk "bliźniaczy e-mail dla każdego powiadomienia (I-10)" "$(Q "select count(*) filter (where channel='EMAIL')||'/'||count(*) filter (where channel='IN_APP') from notifications where template='PLAN_DATES_CHANGED'")" "$(Q "select count(*) from notifications where template='PLAN_DATES_CHANGED' and channel='IN_APP'")/$(Q "select count(*) from notifications where template='PLAN_DATES_CHANGED' and channel='IN_APP'")"
-val "import z inną datą, bez zgody: podgląd pokazuje konflikt" $HHL "select jsonb_array_length(r->'confirmed')||'/'||(r->'confirmed'->0->>'overwrite') from ($(IMP18 $D5 $D6 '' true)) s(r)" "1/false"
-val "import bez zgody: data potwierdzona NIE nadpisana" $HHL "select (r->'confirmed'->0->>'overwrite') from ($(IMP18 $D5 $D6 '' false)) s(r)" false commit
-chk "po imporcie bez zgody: daty i status bez zmian, bez SCHEDULE_DATE_CRITICAL" "$(Q "select plan_dates_status||'/'||plan_load_date from loads where id='$LD'")/$(Q "select count(*) from load_events where load_id='$LD' and event_type='SCHEDULE_DATE_CRITICAL'")" "POTWIERDZONA/$D3/0"
-val "import ZA ZGODĄ (overwrite_confirmed): nadpisuje" $HHL "select (r->'confirmed'->0->>'overwrite') from ($(IMP18 $D5 $D6 ',"overwrite_confirmed":["D18-1"]' false)) s(r)" true commit
-chk "po nadpisaniu przez HHL: WSTĘPNA (KSH potwierdza ponownie), nowe daty" "$(Q "select plan_dates_status||'/'||plan_load_date||'/'||coalesce(plan_dates_confirmed_by::text,'∅') from loads where id='$LD'")" "WSTEPNA/$D5/∅"
-chk "zmiana przez HHL: powiadomienie także dla KSH (by HHL)" "$(Q "select count(*) from notifications n join app_users u on u.id=n.user_id where n.template='PLAN_DATES_CHANGED' and n.channel='IN_APP' and u.auth_id='$KSH' and n.payload->>'by'='HHL'")" 1
-val "KSH widzi status dat (RLS)" $KSH "select plan_dates_status from loads where id='$LD'" WSTEPNA
-chk "parametr N (DATE_CONFIRM_DAYS) = 5, źródło D-12" "$(Q "select value::int||'/'||(source like 'D-12%')::text from app_parameters where key='DATE_CONFIRM_DAYS'")" "5/true"
-val "parametry czytelne dla zalogowanych, nie dla konta bez app_users" $KSH "select count(*) from app_parameters" 1
+err "przewoźnik nie ustawi statusu dat" $SCX "update loads set plan_dates_status='WSTEPNA' where id='$LD'" "Status dat planu|Przewoźnik nie może"
+chk "schedule_cell_ts: załadunek PL / dostawa SE" "$(Q "select to_char(schedule_cell_ts('2026-10-01','08:00','Europe/Warsaw') at time zone 'UTC','HH24:MI')||'/'||to_char(schedule_cell_ts('2026-10-05','12:00','Europe/Stockholm') at time zone 'UTC','HH24:MI')")" "06:00/10:00"
+val "import z godzinami: ustawia plan_load_from i plan_delivery_to" $HHL "select (r->'changed'->0->>'critical') from ($(IMP18T $D3 $D4 false)) s(r)" false commit
+chk "godziny z pliku = okno (PL / SE)" "$(Q "select (plan_load_from is not null)::text||'/'||(plan_delivery_to is not null)::text||'/'||plan_dates_status from loads where id='$LD'")" "true/true/POTWIERDZONA"
+chk "I-25: deadline = plan_delivery_to gdy jest godzina" "$(Q "select (load_delivery_deadline(plan_delivery_date, plan_delivery_to) is not distinct from plan_delivery_to)::text from loads where id='$LD'")" "true"
+val "import zmienia datę — zawsze (plik=źródło), overwrite zbędne" $HHL "select (r->'confirmed'->0->>'overwrite')||'/'||jsonb_array_length(r->'confirmed') from ($(IMP18 $D5 $D6 '' false)) s(r)" "true/1" commit
+chk "po imporcie: nowe daty, POTWIERDZONA" "$(Q "select plan_dates_status||'/'||plan_load_date||'/'||plan_delivery_date from loads where id='$LD'")" "POTWIERDZONA/$D5/$D6"
+chk "zmiana daty: zdarzenie PLAN_DATES_CHANGED" "$(Q "select (count(*) >= 1)::text from load_events where load_id='$LD' and event_type='PLAN_DATES_CHANGED'")" "true"
+chk "zmiana daty: powiadomienie IN_APP" "$(Q "select (count(*) >= 1)::text from notifications where template='PLAN_DATES_CHANGED' and channel='IN_APP' and load_id='$LD'")" "true"
+chk "parametr N (DATE_CONFIRM_DAYS) = 5, źródło DATY-67" "$(Q "select value::int||'/'||(source like 'DATY-67%')::text from app_parameters where key='DATE_CONFIRM_DAYS'")" "5/true"
+chk "TRANSIT_TARGET_DAYS = 4" "$(Q "select value::int from app_parameters where key='TRANSIT_TARGET_DAYS'")" "4"
+val "parametry czytelne dla zalogowanych" $KSH "select count(*) from app_parameters where key in ('DATE_CONFIRM_DAYS','TRANSIT_TARGET_DAYS')" 2
 val "app_parameters: konto bez app_users 0" 11111111-0000-0000-0000-0000000000ee "select count(*) from app_parameters" 0
-chk "ryzyko: załadunek za 20 dni > N — brak ryzyka" "$(Q "select detect_unconfirmed_dates()")" 0
-$PSQL -c "set session_replication_role = replica; update loads set plan_load_date = current_date + 3 where id='$LD'" >/dev/null
-chk "ryzyko: WSTĘPNA, załadunek za 3 dni ≤ 5 → DATES_UNCONFIRMED (HHL+KSH, MEDIUM)" "$(Q "select detect_unconfirmed_dates()")/$(Q "select audience::text||'/'||severity::text||'/'||title_key from risk_signals where kind='DATES_UNCONFIRMED' and load_id='$LD' and resolved_at is null")" "1/HHL_KLIENT/MEDIUM/rk_dates_unconfirmed"
-val "KSH widzi ryzyko" $KSH "select count(*) from risk_signals where kind='DATES_UNCONFIRMED'" 1
-val "SCX nie widzi ryzyka (sprawa HHL–KSH)" $SCX "select count(*) from risk_signals where kind='DATES_UNCONFIRMED'" 0
-chk "drugi przebieg: bez duplikatu" "$(Q "select detect_unconfirmed_dates()")" 0
-val "KSH potwierdza → ryzyko zamknięte" $KSH "select ksh_confirm_dates('$LD')->>'status'" POTWIERDZONA commit
-chk "ryzyko zamknięte po potwierdzeniu" "$(Q "select count(*) from risk_signals where kind='DATES_UNCONFIRMED' and resolved_at is null")" 0
-$PSQL -c "set session_replication_role = replica; update loads set status='AT_LOADING' where id='$LD'" >/dev/null
-err "po wjeździe na załadunek KSH nie zmienia dat" $KSH "select ksh_confirm_dates('$LD', '$D3'::date)" "wyłącznie HHL"
+chk "detect_unconfirmed_dates wyłączone (=0)" "$(Q "select detect_unconfirmed_dates()")" 0
+val "import blisko załadunku → LATE_DATE_CHANGE" $HHL "select jsonb_array_length(r->'changed') from ($(IMP18 $DNEAR $DNEAR2 '' false)) s(r)" 1 commit
+chk "ryzyko LATE_DATE_CHANGE (HHL+przewoźnik)" "$(Q "select audience::text||'/'||severity::text||'/'||title_key from risk_signals where kind='LATE_DATE_CHANGE' and load_id='$LD' and resolved_at is null order by detected_at desc limit 1")" "HHL_PRZEWOZNIK/MEDIUM/rk_late_date_change"
+val "SCX widzi ryzyko późnej zmiany" $SCX "select count(*) from risk_signals where kind='LATE_DATE_CHANGE' and load_id='$LD' and resolved_at is null" 1
 chk "anon bez EXECUTE ksh_confirm_dates / detect_unconfirmed_dates" "$(Q "select has_function_privilege('anon','ksh_confirm_dates(uuid,date,date,timestamptz,timestamptz,timestamptz,timestamptz)','execute')::text||has_function_privilege('authenticated','detect_unconfirmed_dates(timestamptz)','execute')::text")" "falsefalse"
 
 echo; echo "[I-3] bramka SMS — część bazowa (0067; bez telefonu, D-4)"
@@ -520,8 +511,11 @@ chk "po włączeniu: e-mail zewnętrzny PENDING, SMS do kierowcy wydawany" "$(Q 
 $PSQL -c "update security_flags set enabled=false where key='EXTERNAL_MESSAGING'; delete from notifications where recipient in ('dispo@scx.example','dispo2@scx.example','ops@log-mar.pl'); delete from sms_outbox; delete from sms_test_numbers; delete from sms_devices; delete from audit_log where action='EXTERNAL_MESSAGING_SET'" >/dev/null
 chk "stan końcowy: wiadomości zewnętrzne wyłączone" "$(Q "select enabled from security_flags where key='EXTERNAL_MESSAGING'")" f
 
-echo; echo "[I-20] ogólny dziennik audytu tabel biznesowych (0072)"
-chk "wyzwalacz trg_audit_row na 7 tabelach biznesowych" "$(Q "select count(distinct tgrelid::regclass::text) from pg_trigger where tgname='trg_audit_row' and tgrelid::regclass::text in ('loads','shipment_items','invoices','invoice_lines','rate_cards','rate_rules','sefs_parameters')")" 7
+echo; echo "[I-20] ogólny dziennik audytu tabel biznesowych (0072 + HIST-11/0118)"
+chk "wyzwalacz trg_audit_row na 7 tabelach I-20" "$(Q "select count(distinct tgrelid::regclass::text) from pg_trigger where tgname='trg_audit_row' and tgrelid::regclass::text in ('loads','shipment_items','invoices','invoice_lines','rate_cards','rate_rules','sefs_parameters')")" 7
+chk "HIST-11: trg_audit_row >= 30 tabel biznesowych" "$(Q "select (count(distinct tgrelid) >= 30)::text from pg_trigger where tgname='trg_audit_row' and not tgisinternal")" t
+chk "HIST-11: kolumna audit_log.source" "$(Q "select count(*) from information_schema.columns where table_schema='public' and table_name='audit_log' and column_name='source'")" 1
+chk "HIST-11: admin_audit_history EXECUTE tylko authenticated" "$(Q "select has_function_privilege('authenticated','admin_audit_history(timestamptz,timestamptz,uuid,text,text,text,int,int)','execute')::text||has_function_privilege('anon','admin_audit_history(timestamptz,timestamptz,uuid,text,text,text,int,int)','execute')::text")" "truefalse"
 $PSQL -c "delete from audit_log where action like 'ROW_%'" >/dev/null
 val "HHL: zmiana transportu (numer rezerwacji promu)" $HHL "update loads set ferry_booking_ref='AUD-20' where id='$L1' returning ferry_booking_ref" "AUD-20" commit
 chk "ROW_UPDATE loads: kto (HHL), tylko zmieniona kolumna, stara i nowa wartość" "$(Q "select count(*)||'/'||bool_and(u.auth_id='$HHL')::text||'/'||bool_and(a.new_value->>'ferry_booking_ref'='AUD-20' and a.old_value ? 'ferry_booking_ref' and not a.new_value ? 'status')::text from audit_log a join app_users u on u.id=a.user_id where a.action='ROW_UPDATE' and a.entity='loads' and a.entity_id='$L1'")" "1/true/true"
@@ -570,17 +564,17 @@ chk "po rozwiązaniu sygnału ten sam klucz otwiera nowy (powrót problemu nie j
 $PSQL -c "delete from risk_signals where dedup_key='d98:test'" >/dev/null
 A98=$(Q "select job_watchdog(); select count(*) from risk_signals where resolved_at is null and kind='JOB_FAILURE'" | tail -1); B98=$(Q "select job_watchdog(); select count(*) from risk_signals where resolved_at is null and kind='JOB_FAILURE'" | tail -1)
 chk "job_watchdog dwa razy pod rząd: drugi przebieg nie dokłada sygnałów (>0 za pierwszym)" "$([ "$A98" -gt 0 ] && echo "$B98" || echo "brak:$A98")" "$A98"
-echo; echo "[§1.5] dane kierowcy: kolumny loads zamknięte, load_driver_contacts per rola (0076)"
+echo; echo "[I-7a] dane kierowcy dla KSH na stałe (0114; było §1.5/0076 ±24 h)"
 SCXO=$(Q "select org_id from app_users where auth_id='$SCX'")
-$PSQL -c "set session_replication_role=replica; update loads set carrier_org_id='$SCXO', driver_name='Jan Probny', driver_phone='+48600123456', plan_delivery_from=now() + interval '10 days' where id='$L1'" >/dev/null
+$PSQL -c "set session_replication_role=replica; update loads set carrier_org_id='$SCXO', driver_name='Jan Probny', driver_phone='600123456', driver_phone_country='PL', plan_delivery_from=now() + interval '10 days' where id='$L1'" >/dev/null
 chk "authenticated/anon: brak SELECT kolumn driver_name i driver_phone (reszta kolumn tak)" "$(Q "select has_column_privilege('authenticated','loads','driver_phone','select')::text||has_column_privilege('authenticated','loads','driver_name','select')::text||has_column_privilege('anon','loads','driver_phone','select')::text||has_column_privilege('authenticated','loads','status','select')::text")" "falsefalsefalsetrue"
 err "KSH: select driver_phone z loads odrzucony" $KSH "select driver_phone from loads limit 1" "permission denied"
 err "przewoźnik: select driver_phone z loads odrzucony (tylko RPC)" $SCX "select driver_phone from loads limit 1" "permission denied"
-val "HHL: load_driver_contacts — imię i telefon" $HHL "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Probny/+48600123456"
-val "przewoźnik transportu: load_driver_contacts — imię i telefon" $SCX "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Probny/+48600123456"
-val "KSH poza ±24 h od dostawy: 0 wierszy" $KSH "select count(*) from load_driver_contacts()" 0
+val "HHL: load_driver_contacts — imię i telefon" $HHL "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Probny/600123456"
+val "przewoźnik transportu: load_driver_contacts — imię i telefon" $SCX "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Probny/600123456"
+val "KSH poza dawnym ±24 h: pełne dane (imię + telefon)" $KSH "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Probny/600123456"
 $PSQL -c "set session_replication_role=replica; update loads set plan_delivery_from=now() + interval '3 hours' where id='$L1'" >/dev/null
-val "KSH w oknie ±24 h (D6): sam telefon, bez imienia" $KSH "select coalesce(driver_name,'∅')||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "∅/+48600123456"
+val "KSH w oknie dostawy: nadal pełne dane" $KSH "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Probny/600123456"
 $PSQL -c "set session_replication_role=replica; update loads set carrier_org_id=null, driver_name=null, driver_phone=null, plan_delivery_from=null where id='$L1'" >/dev/null
 echo; echo "[I-22] szablony mapowania kolumn importu (0077)"
 err "KSH: zapis szablonu odrzucony" $KSH "select import_template_save('$P','x','{\"shipmentCode\":\"A\",\"qty\":\"B\"}','a|b')" "wyłącznie HHL"
@@ -789,10 +783,10 @@ echo; echo "[D-22] kierowca pojazdu pilotującego: imię i telefon (0090)"
 LP=33333333-0000-0000-0000-0000000022d1
 $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status) values ('$LP','$P','00000000-0000-0000-0000-00000000a003','KSH/D22','PLANNED')" >/dev/null
 chk "kolumny danych osobowych: authenticated bez SELECT driver_name/driver_phone, anon bez EXECUTE load_escort_contacts" "$(Q "select has_column_privilege('authenticated','load_escorts','driver_name','select')::text||'/'||has_column_privilege('authenticated','load_escorts','driver_phone','select')::text||'/'||has_function_privilege('anon','load_escort_contacts()','execute')::text")" "false/false/false"
-err "zły telefon pilota → odmowa" $SCX "select load_escorts_set('$LP','[{\"company\":\"Pilot\",\"plate\":\"PO1\",\"driver_phone\":\"600100200\"}]')" "formacie międzynarodowym"
+err "zły telefon pilota → odmowa" $SCX "select load_escorts_set('$LP','[{\"company\":\"Pilot\",\"plate\":\"PO1\",\"driver_phone\":\"12\"}]')" "numer krajowy"
 err "imię ponad 120 znaków → odmowa" $SCX "select load_escorts_set('$LP',jsonb_build_array(jsonb_build_object('company','Pilot','plate','PO1','driver_name',repeat('x',121))))" "do 120 znaków"
-val "SCX awizuje pilota z kierowcą (telefon ze spacjami → E.164) i drugiego bez kontaktu" $SCX "select load_escorts_set('$LP','[{\"company\":\"Pilot-Trans\",\"plate\":\"PO 22\",\"driver_name\":\"Adam Pilot\",\"driver_phone\":\"+48 600 100 200\"},{\"company\":\"Följebil AB\",\"plate\":\"SE 22\"}]')" 2 commit
-val "SCX (przewoźnik transportu) widzi kontakt przez load_escort_contacts" $SCX "select string_agg(seq||':'||driver_name||':'||driver_phone, ',') from load_escort_contacts() where load_id='$LP'" "1:Adam Pilot:+48600100200"
+val "SCX awizuje pilota z kierowcą (telefon ze spacjami → krajowy) i drugiego bez kontaktu" $SCX "select load_escorts_set('$LP','[{\"company\":\"Pilot-Trans\",\"plate\":\"PO 22\",\"driver_name\":\"Adam Pilot\",\"driver_phone\":\"+48 600 100 200\"},{\"company\":\"Följebil AB\",\"plate\":\"SE 22\"}]')" 2 commit
+val "SCX (przewoźnik transportu) widzi kontakt przez load_escort_contacts" $SCX "select string_agg(seq||':'||driver_name||':'||driver_phone, ',') from load_escort_contacts() where load_id='$LP'" "1:Adam Pilot:600100200"
 val "HHL widzi kontakt" $HHL "select count(*) from load_escort_contacts() where load_id='$LP'" 1
 val "KSH: load_escort_contacts → 0 wierszy" $KSH "select count(*) from load_escort_contacts()" 0
 err "KSH: bezpośredni odczyt driver_phone → brak uprawnień" $KSH "select driver_phone from load_escorts where load_id='$LP'" "permission denied"
@@ -853,4 +847,48 @@ $PSQL -c "delete from load_permits where load_id='$LD'" >/dev/null
 err "transport bez pozycji (klasa nieznana) traktowany jak ponadnormatywny" $HHL "update loads set status='READY' where id='$LD'" "Brak zezwolenia"
 val "HHL_ADMIN wyłącza wymóg" $HHL "select admin_set_permit_requirement(false)::text" false commit
 $PSQL -c "delete from shipment_items where load_id in ('$LD','$LS'); update loads set status='CANCELLED' where id in ('$LD','$LS')" >/dev/null 2>&1
+echo; echo "[OPL-8] opłaty wyłącznie ręcznie (§8; 0115)"
+LF=33333333-0000-0000-0000-00000000fee1
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status) values ('$LF','$P','00000000-0000-0000-0000-00000000a003','KSH/OPL8','PLANNED') on conflict (id) do nothing" >/dev/null
+chk "anon bez EXECUTE load_agreed_fee_add / fee_catalog_hints / load_dwell_info" "$(Q "select has_function_privilege('anon','load_agreed_fee_add(uuid,text,numeric,text,text)','execute')::text||has_function_privilege('anon','fee_catalog_hints()','execute')::text||has_function_privilege('anon','load_dwell_info(uuid)','execute')::text")" "falsefalsefalse"
+err "KSH nie dodaje dopłaty" $KSH "select load_agreed_fee_add('$LF','INNE',50,'COST','opis testowy OPL')" "wyłącznie HHL"
+err "SCX nie dodaje dopłaty" $SCX "select load_agreed_fee_add('$LF','INNE',50,'COST','opis testowy OPL')" "wyłącznie HHL"
+err "HHL: kwota 0 odrzucona" $HHL "select load_agreed_fee_add('$LF','INNE',0,'COST','opis testowy OPL')" "dodatnia"
+err "HHL: krótki opis odrzucony" $HHL "select load_agreed_fee_add('$LF','INNE',10,'COST','ab')" "3–1000"
+val "HHL: podpowiedzi cennika (9 pozycji, bez automatu)" $HHL "select count(*) from fee_catalog_hints()" 9
+val "HHL: dopłata COST zapisana" $HHL "select (load_agreed_fee_add('$LF','POSTOJOWE',75.5,'COST','uzgodnione z SCX po postoju') is not null)::text" true commit
+chk "extras kosztu += 75.50; audit AGREED_FEE_ADD" "$(Q "select round(extras_amount,2)::text from load_cost where load_id='$LF'")/$(Q "select count(*) from audit_log where action='AGREED_FEE_ADD' and entity_id='$LF'")" "75.50/1"
+val "HHL: dopłata BOTH" $HHL "select (load_agreed_fee_add('$LF','ANULOWANIE',100,'BOTH','anulowanie uzgodnione mail') is not null)::text" true commit
+chk "BOTH: koszt i przychód mają extras; brak funkcji auto-naliczania" "$(Q "select round((select extras_amount from load_cost where load_id='$LF'),2)||'/'||round((select extras_amount from load_revenue where load_id='$LF'),2)")/$(Q "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname ~* 'auto.*(fee|surcharge|dophat)|compute.*cancel.*fee'")" "175.50/100.00/0"
+val "KSH widzi tylko REVENUE/BOTH (1 aktywna BOTH)" $KSH "select count(*) from load_agreed_fees where load_id='$LF' and voided_at is null" 1
+val "SCX widzi COST+BOTH (2)" $SCX "select count(*) from load_agreed_fees where load_id='$LF' and voided_at is null" 2
+val "dwell_info bez zdarzeń = 0 (bez kwoty)" $HHL "select count(*) from load_dwell_info('$LF')" 0
+$PSQL -c "delete from load_agreed_fees where load_id='$LF'; delete from load_cost where load_id='$LF'; delete from load_revenue where load_id='$LF'; update loads set status='CANCELLED' where id='$LF'" >/dev/null 2>&1
+
+echo; echo "[II-7] korytarz OSM + ETA v2"
+chk "corridor_polylines: PL_ROAD + SE_E4" "$(Q "select string_agg(code||'='||(total_km>100)::text, ',' order by code) from corridor_polylines")" "PL_ROAD=true,SE_E4=true"
+chk "anon bez SELECT corridor_polylines / EXECUTE corridor_progress" "$(Q "select has_table_privilege('anon','corridor_polylines','select')::text||has_function_privilege('anon','corridor_progress(text,geometry)','execute')::text")" "falsefalse"
+val "KSH czyta korytarz (2 linie)" $KSH "select count(*) from corridor_polylines" 2
+chk "postęp środek SE: remaining_frac w (0,1), off < 30 km" "$(Q "select (remaining_frac between 0.05 and 0.95)::text||'/'||(off_m < 30000)::text from corridor_progress('SE_E4', st_setsrid(st_makepoint(19.5, 63.5),4326))")" "true/true"
+chk "OFF_CORRIDOR_M = 2000" "$(Q "select value::text from app_parameters where key='OFF_CORRIDOR_M'")" "2000"
+# spowolnienie SE 1.15 → jazda SE 17×1.15 = 19,55 h w basis (transport przed promem)
+L7=33333333-0000-0000-0000-00000000ii70
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date) values ('$L7','$P','00000000-0000-0000-0000-00000000a003','KSH/II7','PLANNED', current_date+1, current_date+5) on conflict (id) do nothing" >/dev/null
+$PSQL -c "update corridor_conditions set slowdown_mult=1.15, reason='test II-7 snieg' where corridor='SE_E4'" >/dev/null
+$PSQL -c "select refresh_load_eta('$L7')" >/dev/null
+chk "II-6→II-7: SE_ROAD hours ×1.15 przy śniegu" "$(Q "select (s->>'hours') from loads, jsonb_array_elements(eta_basis->'segments') s where id='$L7' and s->>'code'='SE_ROAD' limit 1")" "19.6"
+chk "II-7 causes.weather_slowdown_pct=15" "$(Q "select eta_basis->'causes'->>'weather_slowdown_pct' from loads where id='$L7'")" "15"
+$PSQL -c "update corridor_conditions set slowdown_mult=1.00, reason='start — normalne warunki' where corridor='SE_E4'" >/dev/null
+# zjazd z korytarza: pozycja daleko od PL, status IN_TRANSIT_PL
+$PSQL -c "set session_replication_role=replica; update loads set status='IN_TRANSIT_PL' where id='$L7'; set session_replication_role=origin;" >/dev/null
+if [ -n "${TOWER_HOSTED_READY:-}" ]; then
+  $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L7', now(), st_setsrid(st_makepoint(14.0, 52.0),4326), 'DRIVER_PWA')" >/dev/null
+else
+  $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L7', now(), st_setsrid(st_makepoint(14.0, 52.0),4326), 'DRIVER_APP')" >/dev/null 2>&1 \
+    || $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L7', now(), st_setsrid(st_makepoint(14.0, 52.0),4326), (enum_range(null::position_source))[1])" >/dev/null
+fi
+$PSQL -c "select refresh_load_eta('$L7')" >/dev/null
+chk "II-7: >2 km od korytarza → ryzyko rk_off_corridor" "$(Q "select title_key from risk_signals where load_id='$L7' and dedup_key='OFF_CORRIDOR:$L7' and resolved_at is null")" "rk_off_corridor"
+$PSQL -c "update loads set status='CANCELLED' where id='$L7'" >/dev/null 2>&1
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

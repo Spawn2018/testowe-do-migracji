@@ -22,8 +22,8 @@
 | Strona komunikatów armatora POLSCA Baltic Ferries | odwołania i zmiany rejsów | `robots.txt` dopuszcza; **za Cloudflare** — 403 przy minimalnym nagłówku | ⏳ włączyć (II-5) |
 | OKQ8 — plik historii cen firmowych | SEFS, SEK — kolumna „Diesel" (cena listowa) | publiczne | ⏳ I-31 |
 | Orlen — API cen hurtowych `tool.orlen.pl` | SEFS, PLN — Ekodiesel, zł/m³ ÷ 1000 | publiczne | ⏳ I-31 |
-| FMI, DMI, SMHI | pogoda morska | CC BY 4.0 — podać źródło | ⏳ II-8 |
-| IMGW | ostrzeżenia sztormowe, Zatoka Gdańska | **licencja komercyjna do sprawdzenia** | ⏳ |
+| FMI, DMI, SMHI | pogoda morska Bałtyk | CC BY 4.0 — podać źródło | ✅ II-8 (`ferry-weather`, 0124) |
+| IMGW | ostrzeżenia sztormowe, Zatoka Gdańska | **użycie gospodarcze wymaga umowy** — pominięte (RAPORT_POGODA_MORSKA) | ❌ nie |
 | Trafikverket | drogi SE: nawierzchnia, zdarzenia | darmowe, klucz | ⏳ klucz od właściciela |
 | KPD GDDKiA | drogi PL, DATEX II | rejestracja firmy + certyfikat | ⏳ właściciel |
 | OpenStreetMap | korytarz trasy dla silnika ETA | ODbL — „© OpenStreetMap contributors" | ⏳ II-7 |

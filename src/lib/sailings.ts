@@ -24,17 +24,31 @@ export function sailingAssignDenied(role: OrgKind, load: Load, current: Sailing 
   return null;
 }
 
-/** Rejsy do wyboru w szufladzie: Gdańsk → Nynäshamn, przyszłe i nieodwołane (+ bieżący). */
-export function selectableSailings(all: Sailing[], nowIso: string, currentId: string | null | undefined): Sailing[] {
+/** Rejsy do wyboru w szufladzie: trasa armatora, przyszłe i nieodwołane (+ bieżący). */
+export function selectableSailings(
+  all: Sailing[],
+  nowIso: string,
+  currentId: string | null | undefined,
+  operator: 'POLFERRIES' | 'STENA' = 'POLFERRIES',
+): Sailing[] {
+  const outbound = operator === 'STENA' ? 'GDY-KAA' : 'GDN-NYN';
   return all
-    .filter((s) => s.id === currentId || (s.route === 'GDN-NYN' && s.status !== 'ODWOLANY' && !hasDeparted(s, nowIso)))
+    .filter((s) => {
+      if (s.id === currentId) return true;
+      if (s.route !== outbound) return false;
+      if (s.status === 'ODWOLANY') return false;
+      if (hasDeparted(s, nowIso)) return false;
+      const op = (s.operator ?? '').toLowerCase();
+      if (operator === 'STENA') return op.includes('stena') || s.route === 'GDY-KAA';
+      return !op.includes('stena');
+    })
     .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b)));
 }
 
 /** Widok rezerwacji transportu z rejsu (jedno źródło prawdy). */
 export function ferryFromSailing(s: Sailing | undefined, bookingRef: string | null, prev?: FerryBooking): FerryBooking {
   if (!s) return { vessel: prev?.vessel ?? null, departureAt: null, arrivalAt: null, bookingRef, status: bookingRef ? 'BOOKED' : 'NONE' };
-  const vessel = s.vessel === 'Wawel' || s.vessel === 'Nova Star' ? s.vessel : null;
+  const vessel = s.vessel || null;
   const keep = prev && (prev.status === 'CHECKED_IN' || prev.status === 'ONBOARD' || prev.status === 'LANDED') ? prev.status : null;
   return {
     vessel,
@@ -45,7 +59,7 @@ export function ferryFromSailing(s: Sailing | undefined, bookingRef: string | nu
   };
 }
 
-export interface SailingDraft { vessel: string; route: 'GDN-NYN' | 'NYN-GDN'; departureAt: string; arrivalAt: string }
+export interface SailingDraft { vessel: string; route: Sailing['route']; departureAt: string; arrivalAt: string }
 export type SailingDraftError = 'VESSEL' | 'TIMES' | 'ORDER' | 'DUPLICATE' | null;
 export function checkSailingDraft(d: SailingDraft, all: Sailing[]): SailingDraftError {
   if (!d.vessel.trim()) return 'VESSEL';
@@ -177,6 +191,10 @@ export function dbFerryWidget(s: Sailing | null, nowMs: number): { cd: string; l
   if (!s) return null;
   const depMs = Date.parse(effDeparture(s));
   const mins = Math.max(0, Math.round((depMs - nowMs) / 60_000));
-  const dir = s.route === 'GDN-NYN' ? 'GDN→NYN' : 'NYN→GDN';
+  const dir =
+    s.route === 'GDN-NYN' ? 'GDN→NYN'
+      : s.route === 'NYN-GDN' ? 'NYN→GDN'
+        : s.route === 'GDY-KAA' ? 'GDY→KAA'
+          : 'KAA→GDY';
   return { cd: `${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')} min`, line: `${s.vessel} · ${fmtLocal(effDeparture(s))} · ${dir}` };
 }

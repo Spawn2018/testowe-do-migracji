@@ -56,12 +56,6 @@ function delayMinutes(l: Load): number | null {
 }
 
 /** I-18: data wstępna vs potwierdzona przez KSH (tylko produkcja — w demo pola brak). */
-function DateStatusMark({ s, locale }: { s: 'WSTEPNA' | 'POTWIERDZONA'; locale: Locale }) {
-  return s === 'POTWIERDZONA'
-    ? <span className="pill p-go" data-date-status="POTWIERDZONA" title={t(locale, 'i18_confirmed')} style={{ marginLeft: 4, padding: '0 4px' }}>✓</span>
-    : <span className="pill" data-date-status="WSTEPNA" title={t(locale, 'i18_provisional')} style={{ marginLeft: 4, padding: '0 4px' }}>{t(locale, 'i18_prov_short')}</span>;
-}
-
 /** III-2: czas szkieletu jak w makiecie (go(): 260 ms) */
 export const SKELETON_MS = 260;
 const SKEL_W = [70, 120, 150, 60, 100, 100, 90, 130, 70, 100, 70, 80, 80, 90];
@@ -93,8 +87,7 @@ export function ScheduleView() {
   const [dryRun, setDryRun] = useState<ImportDiff | null>(null);
   /* D26 — usunięcia wyłącznie za wyraźną zgodą (domyślnie odznaczone, reset przy każdym pliku) */
   const [allowRemovals, setAllowRemovals] = useState(false);
-  const [overwriteConfirmed, setOverwriteConfirmed] = useState(false);
-  const [confirmedRows, setConfirmedRows] = useState<NonNullable<ServerImportDraft['preview']['confirmed']>>([]);
+  const [dateChangeRows, setDateChangeRows] = useState<NonNullable<ServerImportDraft['preview']['confirmed']>>([]);
   const serverDraft = useRef<ServerImportDraft | null>(null);
   const [serverNote, setServerNote] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
@@ -181,8 +174,7 @@ export function ScheduleView() {
     setParseError(null);
     setDryRun(null);
     setAllowRemovals(false);
-    setOverwriteConfirmed(false);
-    setConfirmedRows([]);
+    setDateChangeRows([]);
     setParsing(true);
     serverDraft.current = null;
     setServerNote(null);
@@ -226,7 +218,7 @@ export function ScheduleView() {
       const { serverDryRun } = await import('../data/scheduleImportServer');
       const draft = await serverDryRun(buf, name, map ?? undefined);
       serverDraft.current = draft;
-      setConfirmedRows(draft.preview.confirmed ?? []);
+      setDateChangeRows(draft.preview.confirmed ?? []);
       setServerNote(tp(locale, 'i1_preview', { ms: String(draft.preview.ms), carrier: draft.preview.carrier ?? '—', same: String(draft.preview.unchanged) }));
       setDryRun(draft.diff);
       setStep('map');
@@ -561,25 +553,17 @@ export function ScheduleView() {
                   </div>
                 </div>
               ) : null}
-              {SERVER_IMPORT && confirmedRows.length > 0 ? (
-                <div data-import-confirmed style={{ fontSize: 12, margin: '0 0 8px' }}>
+              {SERVER_IMPORT && dateChangeRows.length > 0 ? (
+                <div data-import-date-changes style={{ fontSize: 12, margin: '0 0 8px' }}>
                   <div style={{ color: 'var(--amber)' }}>
-                    {t(locale, 'i18_imp_warn').replace('{n}', String(confirmedRows.length))}
+                    {t(locale, 'i18_imp_dates').replace('{n}', String(dateChangeRows.length))}
                   </div>
-                  <div className="mono" style={{ color: 'var(--ink-3)', marginTop: 4 }} data-import-confirmed-codes>
-                    {confirmedRows
+                  <div className="mono" style={{ color: 'var(--ink-3)', marginTop: 4 }} data-import-date-change-codes>
+                    {dateChangeRows
                       .map((c) => `${c.code}: ${c.before.load_date ?? '—'} → ${c.after.load_date ?? '—'} / ${c.before.delivery_date ?? '—'} → ${c.after.delivery_date ?? '—'}`)
                       .join(' · ')}
                   </div>
-                  <label className="switchline" style={{ marginTop: 4 }}>
-                    <input
-                      type="checkbox"
-                      checked={overwriteConfirmed}
-                      data-import-overwrite-confirmed
-                      onChange={(e) => setOverwriteConfirmed(e.target.checked)}
-                    />
-                    <span>{t(locale, 'i18_imp_consent')}</span>
-                  </label>
+                  <div style={{ color: 'var(--ink-3)', marginTop: 4 }}>{t(locale, 'i18_imp_dates_note')}</div>
                 </div>
               ) : null}
               {dryRun.removalBlocked.length > 0 ? (
@@ -621,7 +605,7 @@ export function ScheduleView() {
                         const res = await serverCommit(
                           draft,
                           allowRemovals ? dryRun.removalCandidates.map((c) => c.code) : [],
-                          overwriteConfirmed ? (draft.preview.confirmed ?? []).map((c) => c.code) : [],
+                          [],
                         );
                         setServerNote(
                           res.version == null
@@ -868,10 +852,9 @@ export function ScheduleView() {
                             </td>
                           );
                         case 'load':
-                          return <td key={id} data-col={id}>{formatTableDay(l.plannedLoadDate, refYear)}{l.planDates ? <DateStatusMark s={l.planDates.status} locale={locale} /> : null}</td>;
+                          return <td key={id} data-col={id}>{formatTableDay(l.plannedLoadDate, refYear)}</td>;
                         case 'deliver':
-                          return <td key={id} data-col={id}>{formatTableDay(l.plannedDeliverDate, refYear)}{l.planDates ? <DateStatusMark s={l.planDates.status} locale={locale} /> : null}</td>;
-                        case 'status':
+                          return <td key={id} data-col={id}>{formatTableDay(l.plannedDeliverDate, refYear)}</td>;                        case 'status':
                           return (
                             <td key={id} data-col={id}>
                               <StatusPill status={l.status} stage={l.stage} />
@@ -924,8 +907,6 @@ export function ScheduleView() {
                               <span className="flagrow">
                                 {docFlag(l.id, 'PERMIT_PL', 'Z')}
                                 {docFlag(l.id, 'CMR', 'C')}
-                                {docFlag(l.id, 'POD', 'P')}
-                                {docFlag(l.id, 'LASHING_PHOTOS', 'M')}
                               </span>
                             </td>
                           );

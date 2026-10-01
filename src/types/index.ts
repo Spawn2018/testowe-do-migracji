@@ -100,21 +100,24 @@ export interface Awizacja {
 }
 
 /** M10 — rejs z rozkładu (`sailings`); jedno źródło prawdy o statku i godzinach. */
+export type FerryRoute = 'GDN-NYN' | 'NYN-GDN' | 'GDY-KAA' | 'KAA-GDY';
 export type SailingStatus = 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY';
 export interface Sailing {
   id: string;
   vessel: string;
-  route: 'GDN-NYN' | 'NYN-GDN';
+  /** Armator z vessels.operator (Polferries / Stena Line). */
+  operator?: string;
+  route: FerryRoute;
   departureAt: string;
   arrivalAt: string;
   delayedDepartureAt: string | null;
   delayedArrivalAt: string | null;
   status: SailingStatus;
-  source: 'DANE_STARTOWE' | 'RECZNIE' | 'POLFERRIES';
+  source: 'DANE_STARTOWE' | 'RECZNIE' | 'POLFERRIES' | 'STENA';
 }
 
 export interface FerryBooking {
-  vessel: 'Wawel' | 'Nova Star' | null;
+  vessel: string | null;
   departureAt: string | null;
   arrivalAt: string | null;
   bookingRef: string | null;

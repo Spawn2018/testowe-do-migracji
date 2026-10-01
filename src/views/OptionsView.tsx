@@ -29,6 +29,7 @@ const SystemStatusPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPAB
 const AuthLoginLog = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/AuthLoginLog')) : null;
 const BroadcastForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/BroadcastForm')) : null;
 const DataExportPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/DataExportPanel')) : null;
+const ChangeHistoryPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/ChangeHistoryPanel')) : null;
 const PermitRequirement = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/PermitRequirement')) : null;
 const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
 const MyDevices = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/MyDevices')) : null;
@@ -245,6 +246,16 @@ export function OptionsView() {
       children: BroadcastForm
         ? <SuspenseBlock><BroadcastForm /></SuspenseBlock>
         : <Soon locale={locale} tipKey="opt_acc_bcast_soon" />,
+    });
+
+    list.push({
+      id: 'history',
+      titleKey: 'opt_acc_hist_title',
+      descKey: 'opt_acc_hist_desc',
+      keywords: 'historia zmian audit dziennik było jest',
+      children: ChangeHistoryPanel
+        ? <SuspenseBlock><ChangeHistoryPanel /></SuspenseBlock>
+        : <Soon locale={locale} tipKey="opt_acc_hist_soon" />,
     });
 
     list.push({

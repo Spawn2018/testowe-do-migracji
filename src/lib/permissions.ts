@@ -71,9 +71,6 @@ export function canEditResources(role: RoleId): boolean {
 }
 
 
-const MS_24H = 24 * 60 * 60 * 1000;
-
-/** Instant used as "dostawa" for D6 phone window (unload start → ETA → planned noon SE). */
 export function deliveryInstantMs(load: Pick<Load, 'plannedDeliverDate' | 'etaBoden' | 'awizacja'>): number | null {
   const unload = load.awizacja?.unloadWindowStart;
   if (unload) {
@@ -88,21 +85,17 @@ export function deliveryInstantMs(load: Pick<Load, 'plannedDeliverDate' | 'etaBo
 }
 
 /**
- * D6 — driver phone visibility.
- * HHL / SCX: always (when present).
- * KSH: only within ±24 h of delivery instant.
+ * I-7a — widoczność telefonu kierowcy.
+ * HHL / SCX / KSH: zawsze (gdy jest). KSH = własny projekt (RLS + load_driver_contacts).
  */
 export function canSeeDriverPhone(
   role: RoleId,
   load: Pick<Load, 'plannedDeliverDate' | 'etaBoden' | 'awizacja' | 'resources'>,
-  nowMs: number = getNowMs(),
+  _nowMs: number = getNowMs(),
 ): boolean {
   if (!load.resources?.driverPhone) return false;
-  if (role === 'HHL' || role === 'SCX') return true;
-  if (role !== 'KSH') return false;
-  const at = deliveryInstantMs(load);
-  if (at == null) return false;
-  return Math.abs(nowMs - at) <= MS_24H;
+  if (role === 'HHL' || role === 'SCX' || role === 'KSH') return true;
+  return false;
 }
 
 /** Same phone string the schedule table shows — or null when masked. */

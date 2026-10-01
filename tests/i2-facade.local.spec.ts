@@ -50,7 +50,7 @@ test('HHL (HHL_ADMIN): przełącznik jest; Automatyzacje z bazy (9.4); ryzyka �
   await expect(page.locator('[data-no-source="ferry-alt"]')).toBeVisible();
   await page.locator('nav [data-view="sched"]').first().click();
   await page.locator('tr[data-load]').first().click();
-  await expect(page.locator('[data-eta="db"]')).toContainText(/± \d+ min · ETA v1/);
+  await expect(page.locator('[data-eta="db"]')).toContainText(/± \d+ min · ETA/);
   await expect(page.locator('[data-permit]')).toHaveCount(1);
   await expect(page.locator('.drawer')).not.toContainText(/PL\/2026\/14\d\d|HHL\/2026\/12\d\d/);
 });

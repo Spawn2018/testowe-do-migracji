@@ -67,7 +67,7 @@ export function NotificationBell() {
               padding: '0 4px',
               borderRadius: 2,
               background: 'var(--red)',
-              color: '#fff',
+              color: '#0E1A24',
               fontSize: 10,
               fontWeight: 700,
               lineHeight: '16px',

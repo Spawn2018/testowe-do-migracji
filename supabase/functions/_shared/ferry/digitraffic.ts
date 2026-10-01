@@ -5,15 +5,15 @@
  *   „Dane AIS: Fintraffic / digitraffic.fi, licencja CC BY 4.0"
  * Bez klucza. Wymagany nagłówek Accept-Encoding: gzip; zalecany Digitraffic-User.
  *
- * ZASIĘG — zmierzony na żywo 25.09.2026:
- *   Zatoka Gdańska        — BRAK (0 statków)
- *   środek trasy          — praktycznie brak
- *   podejście do Nynäshamn — TAK (Nova Star widziany ~100 km na S od portu)
- * Dlatego Digitraffic potwierdza WYŁĄCZNIE stronę szwedzką: przypłynięcie
- * do Nynäshamn i odejście stamtąd. Nie służy do potwierdzania odejścia z Gdańska.
+ * ZASIĘG — zmierzony na żywo 25.09.2026 (Polferries) i 01.10.2026 (Stena):
+ *   Zatoka Gdańska / Gdynia — BRAK
+ *   podejście do Nynäshamn — TAK (Nova Star)
+ *   Karlskrona / Spirit/Estelle/Ebba — BRAK (0 pozycji w dniu sprawdzenia)
+ * Digitraffic potwierdza stronę szwedzką gdy jest sygnał (Nynäshamn albo Karlskrona).
+ * Brak pozycji ≠ opóźnienie. Nie służy do potwierdzania odejścia z PL.
  *
- * MMSI potwierdzone w rejestrze Digitraffic: Nova Star 311000787 (IMO 9462067).
- * Wawel — nieobecny w rejestrze w dniu sprawdzenia; MMSI do potwierdzenia.
+ * MMSI: Nova Star 311000787; Stena Spirit/Estelle/Ebba — w rejestrze vessels (0119),
+ * zasięg Digitraffic do potwierdzenia w kolejnych odczytach.
  */
 
 export interface VesselFix {
@@ -44,6 +44,8 @@ export function parseDigitrafficLocations(json: any, mmsi: number): VesselFix | 
 
 /** Nynäshamn Färjeterminal — zweryfikowane z mapą w M9 (jak strefa PORT_IN w 0017; wcześniej ~3,4 km na północ). */
 export const NYNASHAMN = { lat: 58.90453, lon: 17.95621 };
+/** Terminal Stena Line Karlskrona — współrzędne jak geofence STENA-3 (0119); do potwierdzenia mapą właściciela. */
+export const KARLSKRONA = { lat: 56.16460, lon: 15.63080 };
 
 export function distanceKm(aLat: number, aLon: number, bLat: number, bLon: number): number {
   const R = 6371, rad = Math.PI / 180;
@@ -52,20 +54,79 @@ export function distanceKm(aLat: number, aLon: number, bLat: number, bLon: numbe
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-export type FerryObservation = 'W_PORCIE_NYNASHAMN' | 'W_REJSIE' | 'POSTOJ_POZA_PORTEM' | 'BRAK_SWIEZEGO_SYGNALU';
+export type FerryObservation =
+  | 'W_PORCIE_NYNASHAMN'
+  | 'W_PORCIE_KARLSKRONA'
+  | 'W_REJSIE'
+  | 'POSTOJ_POZA_PORTEM'
+  | 'BRAK_SWIEZEGO_SYGNALU';
 
 /**
  * Interpretacja pozycji. Sygnał starszy niż maxAgeMin → BRAK_SWIEZEGO_SYGNALU —
  * to NIE jest informacja o statku, tylko o zasięgu odbiorników.
+ * `port`: NYN (domyślnie) albo KAA (Stena).
  */
-export function interpretFix(fix: VesselFix, nowUtc: string, maxAgeMin = 60): FerryObservation {
+export function interpretFix(
+  fix: VesselFix, nowUtc: string, maxAgeMin = 60, port: 'NYN' | 'KAA' = 'NYN',
+): FerryObservation {
   const ageMin = (Date.parse(nowUtc) - Date.parse(fix.timestampUtc)) / 60000;
   if (ageMin > maxAgeMin) return 'BRAK_SWIEZEGO_SYGNALU';
-  const inPort = distanceKm(fix.lat, fix.lon, NYNASHAMN.lat, NYNASHAMN.lon) <= 3;
+  const hub = port === 'KAA' ? KARLSKRONA : NYNASHAMN;
+  const inPort = distanceKm(fix.lat, fix.lon, hub.lat, hub.lon) <= 3;
   const moving = (fix.sogKn ?? 0) >= 3;
-  if (inPort && !moving) return 'W_PORCIE_NYNASHAMN';
+  if (inPort && !moving) return port === 'KAA' ? 'W_PORCIE_KARLSKRONA' : 'W_PORCIE_NYNASHAMN';
   if (moving) return 'W_REJSIE';
   return 'POSTOJ_POZA_PORTEM';
 }
 
 export const DIGITRAFFIC_ATTRIBUTION = 'Dane AIS: Fintraffic / digitraffic.fi, licencja CC BY 4.0';
+
+/** Terminal Polferries Gdańsk — M9 / geofence PORT_OUT. */
+export const GDANSK = { lat: 54.40372, lon: 18.68130 };
+/** Terminal Stena Gdynia — STENA-3 (do potwierdzenia mapą — D-STENA-COORDS). */
+export const GDYNIA = { lat: 54.53321, lon: 18.54425 };
+
+export type DeparturePort = 'GDN' | 'GDY' | 'NYN' | 'KAA';
+
+export function departurePortForRoute(route: string): DeparturePort {
+  if (route === 'GDY-KAA') return 'GDY';
+  if (route === 'KAA-GDY') return 'KAA';
+  if (route === 'NYN-GDN') return 'NYN';
+  return 'GDN';
+}
+
+export function portCoords(port: DeparturePort): { lat: number; lon: number } {
+  if (port === 'GDY') return GDYNIA;
+  if (port === 'NYN') return NYNASHAMN;
+  if (port === 'KAA') return KARLSKRONA;
+  return GDANSK;
+}
+
+/**
+ * II-9: czy AIS mówi, że prom nie zdąży do portu odejścia przed planowanym wypłynięciem.
+ * Brak pozycji / brak prędkości / zasięg Digitraffic (PL) → null (brak ≠ opóźnienie).
+ * Zwraca szacowane spóźnienie [min] albo null.
+ */
+export function aisDepartureDelayMin(
+  fix: VesselFix,
+  nowUtc: string,
+  departureAtIso: string,
+  route: string,
+  maxAgeMin = 60,
+  minSogKn = 3,
+): number | null {
+  const ageMin = (Date.parse(nowUtc) - Date.parse(fix.timestampUtc)) / 60000;
+  if (!Number.isFinite(ageMin) || ageMin > maxAgeMin) return null;
+  const depMs = Date.parse(departureAtIso);
+  const nowMs = Date.parse(nowUtc);
+  if (!Number.isFinite(depMs) || depMs <= nowMs) return null; // już odpłynął / w toku — nie II-9
+  const sog = fix.sogKn;
+  if (sog == null || sog < minSogKn) return null; // postoju nie interpretujemy jako opóźnienia
+  const hub = portCoords(departurePortForRoute(route));
+  const distKm = distanceKm(fix.lat, fix.lon, hub.lat, hub.lon);
+  if (distKm <= 3) return null; // już w porcie odejścia
+  const hoursNeed = distKm / (sog * 1.852); // kn → km/h
+  const hoursLeft = (depMs - nowMs) / 3.6e6;
+  if (hoursNeed <= hoursLeft) return null;
+  return Math.round((hoursNeed - hoursLeft) * 60);
+}

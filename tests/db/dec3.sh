@@ -29,12 +29,19 @@ val "macierz DECISION KSH in_app=false" $HHL "select in_app::text from notificat
 val "KSH nie czyta macierzy" $KSH "select count(*) from notification_matrix" 0
 # open → powiadomienie HHL
 D=$(run "$HHL" "select decision_open('$P','BACKUP_FAILED','test powiadomienia', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
-val "OPEN → powiadomienie IN_APP HHL" $HHL "select count(*) from notifications where template='DECISION_OPEN' and payload->>'decision_id'='$D'" 1
+val "OPEN → powiadomienie IN_APP HHL" $HHL "select count(*) from notifications where channel='IN_APP' and template='DECISION_OPEN' and payload->>'decision_id'='$D'" 1
 val "resolve → audit DECISION_RESOLVE" $HHL "select decision_resolve('$D','RETRY_NOW'); select count(*) from audit_log where action='DECISION_RESOLVE' and entity_id='$D'" 1 commit
-val "RESOLVE → powiadomienie" $HHL "select count(*) from notifications where template='DECISION_RESOLVED' and payload->>'decision_id'='$D'" 1
+val "RESOLVE → powiadomienie" $HHL "select count(*) from notifications where channel='IN_APP' and template='DECISION_RESOLVED' and payload->>'decision_id'='$D'" 1
 # DEC-4 admin macierz
 val "admin ustawia e-mail DECISION HHL" $HHL "select admin_notification_matrix_set('DECISION','FORWARDER',true,true); select email::text from notification_matrix where event_group='DECISION' and org_kind='FORWARDER'" true commit
 err "SYSTEM nie dla KSH" $HHL "select admin_notification_matrix_set('SYSTEM','CLIENT',true,false)" "tylko HHL|systemowe"
+
+# DEC-3 reszta: status + ryzyko przez macierz (0126)
+L=33333333-0000-0000-0000-000000000001
+# zmiana statusu jako postgres (wyzwalacz AFTER) — bez reguł przejść UI
+$PSQL -c "update loads set status = case when status = 'PLANNED' then 'RESOURCES_PENDING'::load_status when status = 'RESOURCES_PENDING' then 'DOCS_PENDING'::load_status else status end where id='$L'" >/dev/null
+val "status → powiadomienie HHL" $HHL "select count(*) > 0 from notifications where template='LOAD_STATUS_CHANGED' and load_id='$L'" t
+val "KSH widzi status IN_APP" $KSH "select count(*) > 0 from notifications where template='LOAD_STATUS_CHANGED' and load_id='$L'" t
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

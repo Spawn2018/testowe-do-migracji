@@ -1,16 +1,19 @@
 /**
  * M12 — rdzeń integracji danych zewnętrznych (ZRODLA_DANYCH.md). Czyste funkcje — wspólne dla
  * funkcji Edge (Deno) i testów (vitest, bez sieci). Zasady (ZLECENIE_FINAL AN2 · M12):
- *  - pierwszeństwo źródeł rejsu: RECZNIE > POLFERRIES > DANE_STARTOWE — zmiany ręcznej HHL odczyt nie nadpisuje
+ *  - pierwszeństwo źródeł rejsu: RECZNIE > POLFERRIES/STENA > DANE_STARTOWE — zmiany ręcznej HHL odczyt nie nadpisuje
  *  - status NIEZNANY → bez zmiany rejsu, ryzyko dla HHL
  *  - awaria źródła albo zmiana struktury strony → ryzyko „źródło niedostępne”, nigdy cicha pustka
  *  - ryzyka drogowe w rodzajach ROAD_SE / ROAD_PL
  */
 import type { FerryRoute, FerryStatus } from '../ferry/polferries.ts';
 
-export type SailingSource = 'DANE_STARTOWE' | 'RECZNIE' | 'POLFERRIES';
+export type SailingSource = 'DANE_STARTOWE' | 'RECZNIE' | 'POLFERRIES' | 'STENA';
+export type AutoSailingSource = 'POLFERRIES' | 'STENA';
 export type DbSailingStatus = 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY';
-export const SOURCE_RANK: Record<SailingSource, number> = { DANE_STARTOWE: 1, POLFERRIES: 2, RECZNIE: 3 };
+export const SOURCE_RANK: Record<SailingSource, number> = {
+  DANE_STARTOWE: 1, POLFERRIES: 2, STENA: 2, RECZNIE: 3,
+};
 
 export interface VesselRow { id: string; name: string; mmsi: number | null }
 export interface DbSailing {
@@ -25,7 +28,7 @@ export interface IncomingSailing {
 export type SailingPatch = Partial<Pick<DbSailing, 'vessel_id' | 'arrival_at' | 'delayed_departure_at' | 'delayed_arrival_at' | 'status' | 'source'>>;
 export interface SailingInsert {
   project_id: string; vessel_id: string; route: FerryRoute; departure_at: string; arrival_at: string;
-  delayed_departure_at: string | null; delayed_arrival_at: string | null; status: DbSailingStatus; source: 'POLFERRIES';
+  delayed_departure_at: string | null; delayed_arrival_at: string | null; status: DbSailingStatus; source: AutoSailingSource;
 }
 export type RiskKind = 'FERRY' | 'ROAD_SE' | 'ROAD_PL';
 export type RiskSeverity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
@@ -54,7 +57,9 @@ export interface SyncPlan {
  */
 export function planSailingSync(o: {
   existing: DbSailing[]; vessels: VesselRow[]; incoming: IncomingSailing[]; projectId: string; sinceUtc?: string;
+  source?: AutoSailingSource;
 }): SyncPlan {
+  const src: AutoSailingSource = o.source ?? 'POLFERRIES';
   const plan: SyncPlan = { inserts: [], updates: [], manualKept: 0, unchanged: 0, unknown: [], unknownVessels: [] };
   const byName = new Map(o.vessels.map((v) => [v.name, v.id]));
   const byKey = new Map<string, DbSailing[]>();
@@ -76,12 +81,12 @@ export function planSailingSync(o: {
         project_id: o.projectId, vessel_id: vesselId, route: inc.route,
         departure_at: new Date(inc.departureUtc).toISOString(), arrival_at: new Date(inc.arrivalUtc).toISOString(),
         delayed_departure_at: inc.status ? delayed.dep : null, delayed_arrival_at: inc.status ? delayed.arr : null,
-        status: inc.status ? status : 'ZAPLANOWANY', source: 'POLFERRIES',
+        status: inc.status ? status : 'ZAPLANOWANY', source: src,
       });
       continue;
     }
-    if (SOURCE_RANK[cur.source] > SOURCE_RANK.POLFERRIES) { plan.manualKept += 1; continue; }
-    const want: SailingPatch = { source: 'POLFERRIES' };
+    if (SOURCE_RANK[cur.source] > SOURCE_RANK[src]) { plan.manualKept += 1; continue; }
+    const want: SailingPatch = { source: src };
     if (cur.vessel_id !== vesselId) want.vessel_id = vesselId;
     if (iso(cur.arrival_at) !== iso(inc.arrivalUtc)) want.arrival_at = new Date(inc.arrivalUtc).toISOString();
     if (inc.status) {
@@ -105,30 +110,41 @@ const warsaw = (utc: string) => new Intl.DateTimeFormat('pl-PL', {
 }).format(new Date(utc));
 
 /** Ryzyko dla HHL: status rejsu nierozpoznany — rejs bez zmian, do weryfikacji. */
-export function unknownStatusRisk(s: IncomingSailing, raw: string): RiskInput {
+export function unknownStatusRisk(s: IncomingSailing, raw: string, source: AutoSailingSource = 'POLFERRIES'): RiskInput {
   return {
     kind: 'FERRY', severity: 'MEDIUM',
     title: `Nieznany status rejsu ${s.vessel} ${warsaw(s.departureUtc)} — bez zmiany, do weryfikacji HHL`,
     titleKey: 'rk_ferry_status_unknown', params: { vessel: s.vessel, dep: warsaw(s.departureUtc) },
-    detail: { zrodlo: 'POLFERRIES', statek: s.vessel, odejscie: s.departureUtc, surowy_status: raw },
+    detail: { zrodlo: source, statek: s.vessel, odejscie: s.departureUtc, surowy_status: raw },
     dedup: `FERRY_UNKNOWN:${s.vessel}:${new Date(s.departureUtc).toISOString()}`,
   };
 }
 
-export type SourceId = 'POLFERRIES_STATUS' | 'POLFERRIES_SCHEDULE' | 'DIGITRAFFIC' | 'TRAFIKVERKET' | 'KPD_GDDKIA' | 'TOMTOM';
+export type SourceId =
+  | 'POLFERRIES_STATUS' | 'POLFERRIES_SCHEDULE'
+  | 'STENA_STATUS' | 'STENA_SCHEDULE'
+  | 'DIGITRAFFIC' | 'TRAFIKVERKET' | 'KPD_GDDKIA' | 'TOMTOM'
+  | 'FMI' | 'DMI' | 'SMHI' | 'MARINE_WEATHER';
 const SOURCE_LABEL: Record<SourceId, string> = {
   POLFERRIES_STATUS: 'status promów (Polferries)', POLFERRIES_SCHEDULE: 'rozkład promów (Polferries)',
+  STENA_STATUS: 'status promów (Stena Line)', STENA_SCHEDULE: 'rozkład promów (Stena Line)',
   DIGITRAFFIC: 'AIS promów (Digitraffic)', TRAFIKVERKET: 'utrudnienia drogowe SE (Trafikverket)',
-  KPD_GDDKIA: 'utrudnienia drogowe PL (KPD GDDKiA)', TOMTOM: 'prędkość ruchu (TomTom)',
+  KPD_GDDKIA: 'utrudnienia drogowe PL (KPD GDDKiA)', TOMTOM: 'prędkość ruchu (TomTom — wycofane)',
+  FMI: 'pogoda morska (FMI)', DMI: 'pogoda morska (DMI)', SMHI: 'pogoda morska (SMHI)',
+  MARINE_WEATHER: 'pogoda morska (FMI+DMI+SMHI)',
 };
 const SOURCE_KIND: Record<SourceId, RiskKind> = {
-  POLFERRIES_STATUS: 'FERRY', POLFERRIES_SCHEDULE: 'FERRY', DIGITRAFFIC: 'FERRY', TRAFIKVERKET: 'ROAD_SE', KPD_GDDKIA: 'ROAD_PL', TOMTOM: 'ROAD_SE',
+  POLFERRIES_STATUS: 'FERRY', POLFERRIES_SCHEDULE: 'FERRY',
+  STENA_STATUS: 'FERRY', STENA_SCHEDULE: 'FERRY',
+  DIGITRAFFIC: 'FERRY', TRAFIKVERKET: 'ROAD_SE', KPD_GDDKIA: 'ROAD_PL', TOMTOM: 'ROAD_SE',
+  FMI: 'FERRY', DMI: 'FERRY', SMHI: 'FERRY', MARINE_WEATHER: 'FERRY',
 };
 
 /** Awaria źródła albo zmiana struktury → ryzyko widoczne w kolejce (jedno na źródło i dzień), nigdy cicha pustka. */
 export function sourceDownRisk(src: SourceId, warnings: string[], nowIso: string, url?: string): RiskInput {
   return {
-    kind: SOURCE_KIND[src], severity: src.startsWith('POLFERRIES') ? 'HIGH' : 'MEDIUM',
+    kind: SOURCE_KIND[src],
+    severity: src.startsWith('POLFERRIES') || src.startsWith('STENA') ? 'HIGH' : 'MEDIUM',
     title: `Źródło niedostępne: ${SOURCE_LABEL[src]} — HHL weryfikuje ręcznie`,
     titleKey: 'rk_source_down', params: { source: SOURCE_LABEL[src], source_key: `rk_src_${src}` },
     detail: { zrodlo: src, ostrzezenia: warnings.slice(0, 10), czas: nowIso },
@@ -139,5 +155,5 @@ export function sourceDownRisk(src: SourceId, warnings: string[], nowIso: string
 /** Czy odczyt jest „awarią”: brak danych albo ostrzeżenia o strukturze/HTTP. Ostrzeżenia o pojedynczych wpisach — nie. */
 export function isSourceFailure(r: { warnings: string[]; count: number }): boolean {
   if (r.count === 0) return true;
-  return r.warnings.some((w) => /Struktura|HTTP|brak rejsów Gdańsk|brak tabel|Brak rejsów/i.test(w));
+  return r.warnings.some((w) => /Struktura|HTTP|brak rejsów Gdańsk|brak tabel|Brak rejsów|Cloudflare|Stena.*zmieniona/i.test(w));
 }

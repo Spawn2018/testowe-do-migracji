@@ -71,9 +71,9 @@ function triggerBlobDownload(bytes: Uint8Array, filename: string): number {
 }
 
 /**
- * PLAN §1.5 (28.09) — kolumny eksportu zależą od roli; kolumny niedozwolonej roli NIE istnieją w pliku (także puste).
- * HHL: wszystko. KSH (klient): cena (przychód HHL), bez kosztu przewoźnika, marży i imienia kierowcy; telefon kierowcy
- * tylko w oknie ±24 h od dostawy (D6, jak baza 0076). SCX (przewoźnik): koszt (własna stawka) i kierowca, bez przychodu i marży.
+ * PLAN §1.5 / I-7a — kolumny eksportu zależą od roli.
+ * HHL: wszystko. KSH: cena (przychód), kierowca+telefon+tablice na stałe; bez kosztu i marży.
+ * SCX: koszt i kierowca; bez przychodu i marży.
  */
 export interface ExportColumn { header: string; value: (l: Load, nowMs: number) => string | number }
 
@@ -93,8 +93,8 @@ export function exportColumnsFor(role: RoleId, currency = 'EUR'): ExportColumn[]
     { header: 'Dostawa', value: (l) => l.plannedDeliverDate ?? '' },
     { header: 'ETA_Boden', value: (l) => l.etaBoden ?? '' },
   ];
-  if (role === 'HHL' || role === 'SCX') cols.push({ header: 'Kierowca', value: (l) => l.resources.driverName ?? '' });
   if (role === 'HHL' || role === 'SCX' || role === 'KSH') {
+    cols.push({ header: 'Kierowca', value: (l) => l.resources.driverName ?? '' });
     cols.push({ header: 'Telefon', value: (l, now) => visibleDriverPhone(role, l, now) ?? '' });
   }
   cols.push(

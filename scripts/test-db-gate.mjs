@@ -34,16 +34,18 @@ const EXPECTED = {
   invite: 48,
   risks: 21, // 23 − 2 SKIP (tower_test_status wymaga CREATE DATABASE)
   import: 66,
-  nullguard: 473,
-  i2: 510,
+  nullguard: 523,
+  i2: 524,
   i30: 10,
   i31: 6,
-  dec2: 14,
-  dec3: 8,
+  dec2: 18,
+  dec3: 10,
   dec5: 11,
   dec6: 15,
+  adm10: 8,
+  hist11: 11,
   workflows: 46,
-  insurance: 33,
+  insurance: 42,
 };
 
 /** Zestawy wymagające kont seed w auth.users (FK auth.sessions / auth.mfa_factors). */
@@ -200,6 +202,8 @@ const suites = [
   { name: 'dec3', file: 'dec3.sh' },
   { name: 'dec5', file: 'dec5.sh' },
   { name: 'dec6', file: 'dec6.sh' },
+  { name: 'adm10', file: 'adm10.sh' },
+  { name: 'hist11', file: 'hist11.sh' },
   { name: 'workflows', file: 'workflows.sh' },
   { name: 'insurance', file: 'insurance.sh' },
 ];

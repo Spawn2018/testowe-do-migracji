@@ -38,7 +38,7 @@ export function DriverPwa() {
   const [geoError, setGeoError] = useState(false);
   const sentRef = useRef<DriverFix | null>(null);
   const [lastFile, setLastFile] = useState<string | null>(null);
-  const [cat, setCat] = useState<'CMR' | 'POD'>('CMR');
+  const [cat, setCat] = useState<'CMR'>('CMR');
   const [busy, setBusy] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const camRef = useRef<HTMLInputElement>(null);
@@ -216,17 +216,15 @@ export function DriverPwa() {
           </button>
         ))}
         <div className="driver-btn-row">
-          {(['CMR', 'POD'] as const).map((c) => (
-            <button
-              key={c}
-              type="button"
-              className="btn driver-btn-grow"
-              aria-pressed={cat === c}
-              onClick={() => setCat(c)}
-            >
-              {c}
-            </button>
-          ))}
+          {/* UI-12: tylko CMR (dyspozytor/HHL); POD usunięte z UI */}
+          <button
+            type="button"
+            className="btn driver-btn-grow"
+            aria-pressed={cat === 'CMR'}
+            onClick={() => setCat('CMR')}
+          >
+            CMR
+          </button>
         </div>
         <button
           type="button"

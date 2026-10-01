@@ -122,8 +122,8 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 | II-2 | kody opóźnień uzgodnione — włączenie w interfejsie | CZEKA NA: spotkanie |
 | II-3 | parametry operacyjne: cutoff promu, progi fal, prędkość; potwierdzenie z SCX czasów odcinków D-9 (PL 7,5 h, check-in 3 h, SE 17 h — „szacunek koordynatora”) oraz najpóźniejszej godziny końca załadunku (model: 07:30 dla rejsu 18:00 — POSTEP I-D9-a); odpoczynek na promie NIE jest do potwierdzenia — zamknięty decyzją właściciela (D-9); **pytania do SCX/KSH (propozycje w bazie, HHL zmienia w UI):** (a) terminy zasobów z I-21 — kierowca 48/12 h, pojazd 48/12 h, dokumenty 24/6 h przed załadunkiem; (b) terminy dokumentów z III-6 (`doc_requirements`, widok Dokumenty) — zezwolenie PL 24 h przed załadunkiem, zezwolenie SE 24 h przed promem, CMR i zdjęcia mocowania do 2 h po załadunku, POD do 24 h po rozładunku, rysunek KSH 72 h przed załadunkiem (KSH), polisa — dokument organizacyjny przewoźnika; czy któryś dokument jest nieobowiązkowy; (c) termin awizacji pojazdów pilotujących z III-4 — 48 h przed załadunkiem, alarm krytyczny 12 h (liczba wymagana = maks. z powiązanych zezwoleń) | CZEKA NA: spotkanie |
 | II-4 | adapter telematyki przewoźnika | CZEKA NA: spotkanie |
-| II-5 | komunikaty armatora w harmonogramie | CZEKA NA: zgoda armatora |
-| II-6 | Trafikverket, ~~TomTom~~ (zastąpiony przez HERE — II-7), KPD — zadania i klucze | CZEKA NA: klucze (każdy osobno — rusza, gdy jego klucz dotrze) |
+| II-5 | komunikaty armatora w harmonogramie | **DONE** 01.10 (parser + 403=NIEZNANY; D-18 e-mail informacyjny zostaje) |
+| II-6 | Trafikverket, ~~TomTom~~ (zastąpiony przez HERE — II-7), KPD — zadania i klucze | **DONE** Trafikverket (01.10); TomTom/KPD nadal bez kluczy/cert |
 | II-7 | (decyzja właściciela 28.09 — zmiana) serwis tras = **HERE Routing API v8** zamiast TomTom: `transportMode=truck`, trasa przez punkty pośrednie z zezwolenia | **ZABLOKOWANE przez D-28** (regulamin HERE — `RAPORT_HERE_REGULAMIN.md`); nic z HERE nie implementujemy |
 | II-7a | (P1, decyzja właściciela 28.09) **warunek włączenia II-7:** twardy limit w kodzie **25 000 transakcji HERE / miesiąc** — po limicie zero zapytań do końca miesiąca, ETA v1, ryzyko dla HHL + e-mail; alarm przy 80%; przeliczenie najwyżej co 15 min i tylko dla jadących transportów. Przed podpięciem GPS — sprawdzenie dosłownego regulaminu HERE: (a) czy plan podstawowy wyklucza śledzenie pojazdów / telematykę, (b) zakaz przechowywania wyników — zapisujemy tylko ETA, bez trasy, (c) podanie źródła w szczegółach ETA; cytaty klauzul w raporcie; **jeśli (a) wyklucza użycie — STOP i do właściciela.** Klucz HERE wyłącznie w sekretach funkcji Edge. Analiza regulaminu — osobny wątek (`RAPORT_HERE_REGULAMIN.md`); implementacji nie zaczynać przed tym raportem | **ZABLOKOWANE przez D-28** — wynik regulaminu 28.09: STOP, plan podstawowy HERE wyklucza „Asset Management” (śledzenie + wyznaczanie tras dla pojazdu); potrzebny plan Enterprise lub asset-based ([RAPORT_HERE_REGULAMIN.md](RAPORT_HERE_REGULAMIN.md)) |
 
@@ -209,41 +209,42 @@ Przyjęte identyfikatory: **II-10-E1**, **II-10-E2**, **ONE-MECH** (D-29 + D-29t
 | AUTH-1 | P0. Logowanie hasłem (PO_SPOTKANIU §1): zaproszenie→ustaw hasło; e-mail+hasło; reset; strona pośrednia „Dalej”; bez zaproszenia zero e-maili | 20 kont / 5 min bez e-maila; skaner nie zużywa tokenu | DONE (ten commit, 0099) — live 20 kont przy R-2 |
 | I-30 | P0. Cennik według symboli (zastępuje I-12/I-19). Transkrypcja vs JSON — różnica=STOP. Kwoty skryptem z `D:\Watch Tower\dane` | test pozycji; strażnik kwot; 95 HH | **DONE** (ten commit) — 0100 SYMBOL; verify OK; map HH 87/95 (8× KR bez daty=NO_CONVOY); load TEST+PROD |
 | I-31 | P0. SEFS: OKQ8 + Orlen; mnożnik=niższy; tydzień 28.09–04.10 = **1,14** | test 1,14; progi; awaria | **DONE** (ten commit) — 0101; unit+db 1,14; load tabel TEST+PROD |
-| DEC-2 | P0. Centrum decyzji — pełny proces (DECYZJE §2) | katalog decyzji + akcje + eskalacja | W TOKU — baza+UI; skutki opcji E2E dalej |
-| DEC-3 | P0. Powiadomienia — każde zdarzenie/status/ryzyko/decyzja (DECYZJE §3) | macierz + kanały | W TOKU — decyzje IN_APP (0104); reszta zdarzeń dalej |
-| DEC-4 | P0. Widoczność — admin wybiera firmy (DECYZJE §4) | macierz per typ | W TOKU — 0104/0105 + UI Opcje; egzekwowanie poza decyzjami dalej |
+| DEC-2 | P0. Centrum decyzji — pełny proces (DECYZJE §2) | katalog decyzji + akcje + eskalacja | **DONE** (ten commit) — 0102/0103 + **0126** skutki opcji (`decision_apply_effect`); UI hint → szuflada |
+| DEC-3 | P0. Powiadomienia — każde zdarzenie/status/ryzyko/decyzja (DECYZJE §3) | macierz + kanały | **DONE** (ten commit) — 0104 decyzje; **0126** status/ryzyko/strefy przez `matrix_notify` |
+| DEC-4 | P0. Widoczność — admin wybiera firmy (DECYZJE §4) | macierz per typ | **DONE** (ten commit) — 0105 UI + egzekwowanie w `matrix_notify` (IN_APP/EMAIL × firma) |
 | BRAND-15 | P1. Nazwa i logo Watch Tower (PO_SPOTKANIU §15, `public/brand`) | favicon, splash, manifest, zero „TOWER” w UI | **DONE** 57527034 — e-mail Auth (nadawca) = dashboard Supabase |
 | AWIZ-4 | P1. Awizacja „Dodaj"/„Edytuj" + okno (PO_SPOTKANIU §4) | przebieg HHL/SCX | **DONE** (ten commit) — modal; Ustalenia bez formularza awizacji; rejsy „zdąży”; tracking→telematics_vehicle_id; zapis zwrotny KSH = II-10 |
-| HHL-4a | P1. Numer HHL — dodawanie/edycja przez HHL (§4a) | test bazy + UI | **W TOKU** — UI Dodaj/Edytuj + pole w oknie awizacji; konflikt pliku = II-10 |
-| RESP-14 | P1. Telefon i instalacja PWA (§14) | ujęcia 390/768; Lighthouse | **W TOKU** — SW+offline+update; menu telefon; drawer/awizacja full; karty harmonogramu; touch 44px. Zostaje: brama 390/768, Lighthouse, §12 user w menu |
+| HHL-4a | P1. Numer HHL — dodawanie/edycja przez HHL (§4a) | test bazy + UI | **DONE** — Dodaj/Edytuj + pole w awizacji/szufladzie; zapis SharePoint = II-10-E2 / D-33 |
+| RESP-14 | P1. Telefon i instalacja PWA (§14) | ujęcia 390/768; Lighthouse | **DONE** — SW+offline+menu; brama `tests/resp14-phone.spec.ts` 390/768 OK; LH viewport+a11y; §12 user w menu (UI-12). Pełny installable = HTTPS prod |
 | DEC-5 | P1. SMS przy strefach — 2+2 osoby (DECYZJE §5); brak SMS do kierowców | test bramki | **DONE** (ten commit) — 0106; dec5 **11/11**; UI Opcje; bufor Śrem; wyzwalacze |
 | DEC-6 | P1. Ustawienia administratora (DECYZJE §6) | sekcje zwijane | **DONE** — układ + **0107** progi + **0110** dziennik Auth + baner + eksport CSV/XLSX; stan systemu (kopie/integracje/bramka SMS) |
-| I-3-APK | P0 (akceptacja 01.10). Aplikacja bramki Android: PULL `sms_pull`/`sms_report`/`sms_heartbeat`, APK + instrukcja instalacji; token parowania w Opcjach (nigdy w repo/logach); numer SIM w ustawieniach app; SMS test → właściciel → potem wyzwalacze §5; stan w „Stanie systemu” | APK + instrukcja; parowanie; test SMS; cisza >15 min w UI | **DONE APK** `1.0.0` — `D:\Watch Tower\dane\apk\WatchTowerSMS.apk` (SHA-256 w INSTRUKCJA). Zostaje u właściciela: instalacja + parowanie + SMS test |
+| I-3-APK | P0 (akceptacja 01.10). Aplikacja bramki Android: PULL `sms_pull`/`sms_report`/`sms_heartbeat`, APK + instrukcja instalacji; token parowania w Opcjach (nigdy w repo/logach); numer SIM w ustawieniach app; SMS test → właściciel → potem wyzwalacze §5; stan w „Stanie systemu” | APK + instrukcja; parowanie; test SMS; cisza >15 min w UI | **DONE** — APK 1.0.3; burst **10/10 DELIVERED**; strefy ON (**0116**). Zamknięte decyzją koordynatora 02.10 |
+| SMS-DELIV | P0. Burst 10/10 DELIVERED → włączenie wyzwalaczy stref §5 | 10/10 DELIVERED; SMS_ZONE_APPROACH+ENTER = true | **DONE** — burst 10/10; migracja **0116** PROD+TEST: strefy **ON** |
 | TEL-1 | P1. Telefony zawsze bez kierunkowego (DECYZJE §1) | zapis/odczyt | **DONE** — `toNationalPhone` + awizacja + import + eksport + SMS (E.164 dopiero przy enqueue); **0111** `driver_phone_country` |
-| DATY-67 | P1. Daty z pliku KSH + opóźnienie (§6–7); usunąć „Potwierdź daty" (I-18) | UI + powiadomienia | DO ZROBIENIA |
+| DATY-67 | P1. Daty z pliku KSH + opóźnienie (§6–7); usunąć „Potwierdź daty" (I-18) | UI + powiadomienia | **DONE** (ten commit) — 0113 |
 | II-10-E1 | P1. SharePoint etap 1: STEGRABODEN **tylko odczyt**; zapis testowy wyłącznie do `harmonogram_TEST_WatchTower.xlsx` (ID pliku na sztywno — inny plik = błąd). Tylko HH; NTG nie. Creds po D-32 → `.env.local` | 95 HH odczyt; zapis tylko test; strażnik ID | DO ZROBIENIA — **zastępuje** wcześniejszy wiersz II-10 do czasu E2 |
 | II-10-E2 | P1. SharePoint etap 2: zapis do pliku produkcyjnego — **tylko po pisemnej akceptacji właściciela** | akceptacja na piśmie + test pętli | CZEKA NA: akceptację właściciela po E1 |
-| I-7a | P1. KSH widzi na stałe pełne dane kierowcy i auta (SHAREPOINT §1a). **Bez** mechanizmu wycofania zgody | test widoczności KSH + eksport | DO ZROBIENIA |
+| I-7a | P1. KSH widzi na stałe pełne dane kierowcy i auta (SHAREPOINT §1a). **Bez** mechanizmu wycofania zgody | test widoczności KSH + eksport | **DONE** (ten commit) — 0114 |
 | ONE-MECH | P1. Jeden przepływ: decyzje (§2) + ryzyka + reguły + powiadomienia (§3); zero podwójnych alarmów. Tabela D-29t **zaakceptowana 01.10** (warunek: żaden alarm bez zastępnika — lista było→jest w POSTEP) | tabela zaakceptowana; brak dubli w testach | **DONE** (seed) — wf-1…12 wyłączone z mapowaniem D-29t (MONEY/SYSTEM dla 7/10–12); auto-run usunięty; klik strefy→Transport; wf w prod = podgląd. Silnik START/cron — poza zakresem (macierz) |
-| OPL-8 | P1. Opłaty wyłącznie ręcznie (§8; zastępuje auto I-32) | brak auto-dopłat | DO ZROBIENIA |
-| FAK-9 | P1. Faktury EUR lub PLN przy wystawieniu (§9) | wybór waluty | DO ZROBIENIA |
-| ADM-10 | P1. Administrator może wszystko (§10) | impersonacja/override z audytem | DO ZROBIENIA |
-| HIST-11 | P1. Pełna historia zmian (§11) | UI historii | DO ZROBIENIA |
-| STENA-3 | P1. Stena Line Gdynia–Karlskrona jak Polferries (§3) | słowniki, strefy, ETA | DO ZROBIENIA |
-| II-5 | P1. Komunikaty armatorów — włączyć odczyt teraz | parser; 403=NIEZNANY | DO ZROBIENIA |
-| II-6 | P1. Trafikverket — ODBLOKOWANE (klucz `TRAFIKVERKET_API_KEY` w sekretach / `.env.local`; bez VITE_) | spowolnienie odcinka SE w II-7 | DO ZROBIENIA |
-| II-7 | P1. Własny silnik ETA na OSM (ODbL). HERE nie | postęp GPS, odpoczynek, prom | DO ZROBIENIA |
-| II-7b | P1. Kalibracja ucząca się (zastępuje III-1) | symulacja 30 transportów | DO ZROBIENIA |
-| II-8 | P1. Pogoda FMI+DMI+SMHI; progi 3,8 m / 40 kn potwierdzone | źródło w UI | DO ZROBIENIA |
-| II-9 | P1. Opóźnienie wypłynięcia z AIS; brak pozycji ≠ opóźnienie | test | DO ZROBIENIA |
+| OPL-8 | P1. Opłaty wyłącznie ręcznie (§8; zastępuje auto I-32) | brak auto-dopłat | **DONE** (ten commit) — 0115 |
+| FAK-9 | P1. Faktury EUR lub PLN przy wystawieniu (§9) | wybór waluty | **DONE** (ten commit) — weryfikacja M6/invoices3 |
+| ADM-10 | P1. Administrator może wszystko (§10) | impersonacja/override z audytem | **DONE** (ten commit) — **0117**; adm10 **8/8**; „Działaj jako” + pasek + audit acting_as |
+| HIST-11 | P1. Pełna historia zmian (§11) | UI historii | **DONE** (ten commit) — **0118**; hist11 **11/11**; Opcje „Historia zmian” |
+| STENA-3 | P1. Stena Line Gdynia–Karlskrona jak Polferries (§3) | słowniki, strefy, ETA | **DONE** (ten commit) — 0119/0120 + rozkład/status JSON AEM w `ferry-schedule`/`ferry-status` (źródło `STENA`); AIS Digitraffic z portem Karlskrona. **Luki → II-7/8/9:** ETA odcinki, pogoda, opóźnienie AIS; Digitraffic 01.10: 0 pozycji Spirit/Estelle/Ebba (brak ≠ opóźnienie); współrzędne terminali do potwierdzenia mapą |
+| II-5 | P1. Komunikaty armatorów — włączyć odczyt teraz | parser; 403=NIEZNANY | **DONE** (ten commit) — Polferries 403→NIEZNANY+ryzyko; Stena status z JSON; testy ferry+integrations |
+| II-6 | P1. Trafikverket — LIVE (klucz w sekretach Edge; RoadCondition+WeatherMeasurepoint; Situation usunięty z Open API) | `corridor_conditions.SE_E4.slowdown_mult` (+15% śnieg/śliskość → II-7) | **DONE** (ten commit) — migracja **0121** PROD+TEST; Edge `road-se` wdrożony; testy integrations (road-se) |
+| II-7 | P1. Własny silnik ETA na OSM (ODbL). HERE nie | postęp GPS, odpoczynek, prom | **DONE** (ten commit) — **0122** PROD+TEST; `corridor_polylines` + `compute_load_eta` v2 (OSM locate, SE×II-6, rejs GDN-NYN/GDY-KAA, odpoczynek I-15); ryzyko OFF_CORRIDOR + ETA_BREACH; UI attribution ODbL |
+| II-7b | P1. Kalibracja ucząca się (zastępuje III-1) | symulacja 30 transportów | **SZKIELET** (ten commit) — **0123** tabele obserwacji/wersji + freeze HHL_ADMIN; pełna nauka **CZEKA NA TELM-2** (GPS po rozładunku) |
+| II-8 | P1. Pogoda FMI+DMI+SMHI; progi 3,8 m / 40 kn potwierdzone | źródło w UI | **DONE** (ten commit) — **0124** PROD+TEST; Edge `ferry-weather`; cron `15 */6`; LIVE wave≈1,2 m / gust≈20 kn; źródło CC BY 4.0 w Ryzykach |
+| II-9 | P1. Opóźnienie wypłynięcia z AIS; brak pozycji ≠ opóźnienie | test | **DONE** (ten commit) — `aisDepartureDelayMin` + ferry-ais przed odejściem; brak pozycji = brak wniosku; Edge wdrożony; ferry testy +3 |
 | TELM-2 | P1. Szkielet telematyki (§2) — czeka na API emtrack i linki | adapter + GPS z telematyki | CZEKA NA: docs API emtrack, przykłady linków |
-| I-29 | P1. Budżety darmowych planów na 140 transportów | tabela szczyt vs limit | DO ZROBIENIA |
-| UI-12 | P2. Interfejs (§12) | kryteria zlecenia | DO ZROBIENIA |
-| D-27 | P2. Kontrast ≥ 4,5:1; ewentualnie #7C909E | tylko kolory tekstu | DO ZROBIENIA |
-| D-30 | P2. Polisy: cron + formularz HHL/przewoźnik (bazowa 0097 DONE) | UI + detect dzienny | DO ZROBIENIA |
-| D-31 | P2. Pasek górny 390 px — naprawa | wzorzec tylko 390 | DO ZROBIENIA |
+| I-29 | P1. Budżety darmowych planów na 140 transportów | tabela szczyt vs limit | **DONE** (ten commit) — `I29_BUDGETY_140.md`; wszystkie limity OK (Edge ~5%, baza ~14%, Resend ~40%) |
+| UI-12 | P2. Interfejs (§12) | użytkownik/rola/Wyloguj w menu; bez POD/mocowania | **DONE** (ten commit) — Nav session; Docs/Schedule bez POD/LASHING; Driver tylko CMR |
+| D-27 | P2. Kontrast ≥ 4,5:1; ewentualnie #7C909E | tylko kolory tekstu | **DONE** (ten commit) — --ink-3 #5A6B78/#788C9A; --amber-ink; bell #0E1A24; kursor default na thead/tr |
+| D-30 | P2. Polisy: cron + formularz HHL/przewoźnik (bazowa 0097 DONE) | UI + detect dzienny | **DONE** (ten commit) — **0125**; formularz Dokumenty; cron `tower-polisy` |
+| D-31 | P2. Pasek górny 390 px — naprawa | wzorzec tylko 390 | **DONE** (ten commit) — CSS ≤430: bez lang/roleswitch, overflow clip; test RESP-14 390 OK. **Wzorzec 390 → G4-WZORZEC (decyzja właściciela)** |
 | D-29t | P2. Tabela nakładania reguł START → **część ONE-MECH / D-29** (nie osobny tor) | tabela w planie przed włączaniem | ZASTĄPIONA PRZEZ ONE-MECH |
-| CLEAN-TT-HERE | P2. Usunąć martwy kod/zmienne TomTom i HERE (`TOMTOM_API_KEY`, job traffic-flow TomTom, i18n źródła itd.). ETA = II-7 | zero TOMTOM/HERE w kodzie i env przykładach | DO ZROBIENIA |
+| CLEAN-TT-HERE | P2. Usunąć martwy kod/zmienne TomTom i HERE (TOMTOM_API_KEY, job traffic-flow TomTom, i18n źródła itd.). ETA = II-7 | zero aktywnego TOMTOM/HERE w kodzie i env | **DONE** (ten commit) — traffic-flow DEMO; parsery TomTom usunięte; i18n wycofane; ZRODLA §2.3 |
 | ZEZW-13 | P2. Zezwolenia (§13) | — | CZEKA NA: wymiary aut |
 
 ### Potwierdzenie akceptacji koordynatora (01.10 — popołudnie)
@@ -283,7 +284,7 @@ Silnik START / cron reguł — dopiero po scaleniu ONE-MECH (lista było→jest 
 
 Po akceptacji: kod scala ścieżki (ONE-MECH), `canSeeWorkflows` / fasada wf → tylko podgląd historyczny lub usunięcie UI kreatora do SCOPE 9.4.
 
-**Czeka na dane właściciela:** API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH (D-32) + wpis creds SharePoint do `.env.local`, klucz Trafikverket (jeśli jeszcze nie w sekretach).
+**Czeka na dane właściciela:** API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH (D-32) + wpis creds SharePoint do `.env.local`; TomTom (opcjonalnie traffic-flow); certyfikat KPD GDDKiA (D-17).
 
 Pliki cen, umowa i harmonogram: `D:\Watch Tower\dane\` (poza gitem).
 Przekazanie 29.09 przerwało pracę **przed pierwszym commitem** I-30; kolejka niżej = obowiązująca.
@@ -327,20 +328,22 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | D-15 | (z I-11: SCOPE 3.8) limity ponadnormatywności PL i SE — zebrane z podstawą prawną w [LIMITY_PONADNORMATYWNOSC.md](LIMITY_PONADNORMATYWNOSC.md) (zebrane 28.09), **do potwierdzenia z przewoźnikiem** | SCOPE 3.8 |
 | D-16 | lista użytkowników do zaproszenia: imię i nazwisko, e-mail, firma, rola | R-2 |
 | D-17 | rejestracja w KPD GDDKiA: najpierw firma, potem użytkownik z certyfikatem | II-6 (Polska) |
-| D-18 | e-mail do armatora z prośbą o zgodę na odczyt komunikatów | II-5 |
-| D-19 | ~~założenia SMS~~ — **ROZSTRZYGNIĘTE 28.09 (właściciel):** SMS po polsku bez polskich znaków (GSM-7); limit 150 SMS na dobę; język kierowcy z pola transportu (`loads.driver_locale`), a bez niego z prefiksu numeru (+48 pl, +46 sv, inne en); rodzaje w pilotażu: **1–5 oraz 8 (brak GPS) i 9 (prośba o potwierdzenie rozładunku)** — poprawka P0 | I-3 |
+| D-18 | e-mail do armatora z prośbą o zgodę na odczyt komunikatów (informacja — odczyt II-5 już włączony) | II-5 DONE; oficjalny kanał |
+| D-34 | **ROZSTRZYGNIĘTE 01.10:** klucz Trafikverket w sekretach Edge + `.env.local` — II-6 LIVE (RoadCondition + WeatherMeasurepoint). Situation usunięty z Open API dostawcy | II-6 DONE |
+| D-STENA-COORDS | **CZEKA.** Potwierdzenie współrzędnych terminali Stena Gdynia (54.53321, 18.54425) i Karlskrona (56.16460, 15.63080) na mapie — dziś orientacyjne ze stron Stena | STENA-3 geofence |
 | D-20 | wiadomości do osób zewnętrznych (SMS do kierowców, e-mail poza log-mar.pl) — blokada techniczna do R-2 (0068, flaga `EXTERNAL_MESSAGING`); włącza HHL_ADMIN po podpisaniu umów RODO (D-5) | R-2 |
 | D-21 | **POTWIERDZONE 28.09 (właściciel): właściciel włącza przed pierwszym transportem.** **DZIAŁANIE WŁAŚCICIELA przed pierwszym prawdziwym transportem (R-3):** włączyć przełącznik I-27 „brak zezwolenia blokuje Gotowy” dla klas innych niż STANDARD — Opcje → „Wymóg zezwoleń (transporty ponadnormatywne)” → „Włącz wymóg” (konto HHL_ADMIN; wpis w audit_log). Stan na 28.09: przełącznik jest, **WYŁĄCZONY** (produkcja nie ma jeszcze zezwoleń w bazie) | R-3 |
 | D-22 | ~~dane kierowcy pojazdu pilotującego~~ — **ROZSTRZYGNIĘTE 28.09 (właściciel): TAK** imię i telefon, te same zasady co kierowca: retencja 90 dni, dostęp przez funkcję danych kontaktowych, KSH nie widzi, nie ma w eksporcie KSH | III-4 → **DONE 28.09 (0090)** |
 | D-23 | ~~widoczność ocen dla przewoźnika~~ — **ROZSTRZYGNIĘTE 28.09 (właściciel): TAK** przewoźnik widzi swoje oceny i punktualność; wewnętrzne notatki HHL (komentarz) niewidoczne | III-9 → **DONE 28.09 (0091)** |
 | D-24 | ~~widok placu budowy~~ — **ZAMKNIĘTE 28.09 (właściciel) przez SCOPE 16.1:** Stegra nie jest rolą, tylko strefą/POI. Bez nowej roli; SCOPE 10.4 nie będzie realizowany | — |
 | D-25 | ~~odświeżenie wzorca Dokumenty/Harmonogram~~ — **ZATWIERDZONE WARUNKOWO 28.09 (właściciel):** każde ze 175 ujęć sprawdzić — różnica wyłącznie w miejscu nowych elementów (terminy, „Zmień”, wybór tygodnia, „Wgraj aktualizację”, „Eksport PDF”) → do wzorca; różnica poza tymi obszarami → wypisać, NIE aktualizować. `gate:visual` ma działać bez nadzoru (jeden skrypt, kod wyjścia, linia podsumowania w `/workspace/wt-gate-visual/last.txt`), właściciel uruchamia go co noc, wynik trafia do POSTEP | III-2 (0.3) → **WYKONANE 28.09:** 139 ujęć odświeżonych, 36 wypisanych (niezaktualizowanych); `gate:visual` bez nadzoru → `last.txt` |
-| D-27 | **ZATWIERDZONE 30.09 z warunkiem, NIE ZROBIONE:** każdy kolor tekstu na każdym tle obu motywów ≥ 4,5:1; jeśli #788C9A nie przejdzie na panelu ciemnym — #7C909E. Wzorzec: zmieniają się wyłącznie kolory tekstu, zero przesunięć. Reszta z audytu 28.09 (`RAPORT_DOSTEPNOSC.md`): `--ink-3`, ostrzeżenia, kursor bez akcji | SCOPE 11.5 |
-| D-28 | **ROZSTRZYGNIĘTE 30.09: HERE — nie** (dziękuję za STOP; regulamin w `RAPORT_HERE_REGULAMIN.md`). Trasa stała z zezwolenia. II-7 = własny silnik na korytarzu OSM. II-7b = kalibracja ucząca się, zastępuje III-1. **Nie zaczęte** (`ZLECENIE_POGODA_DROGI_ETA.md`) | II-7, II-7b |
+| D-27 | **ZATWIERDZONE 30.09 · DONE (ten commit):** każdy kolor tekstu na każdym tle obu motywów ≥ 4,5:1; jeśli #788C9A nie przejdzie na panelu ciemnym — #7C909E. Wzorzec: zmieniają się wyłącznie kolory tekstu, zero przesunięć. Reszta z audytu 28.09 (`RAPORT_DOSTEPNOSC.md`): `--ink-3`, ostrzeżenia, kursor bez akcji | SCOPE 11.5 |
+| D-28 | **ROZSTRZYGNIĘTE 30.09: HERE — nie**. II-7 DONE (0122, OSM). II-7b szkielet 0123; nauka CZEKA NA TELM-2 | II-7 DONE; II-7b częściowo |
+| D-TELM-ETA | **CZEKA.** API emtrack + przykłady linków podwykonawców (TELM-2) — bez GPS po rozładunku nie domykamy II-7b (symulacja 30 / uczenie tempa) | II-7b, TELM-2 |
 | D-29 | **AKCEPTACJA 01.10 (D-29t + warunek zastępników).** Tabela w PLAN zaakceptowana; żaden alarm bez zastępnika (lista w POSTEP). Scalenie kodu = pozycja ONE-MECH. START-1…7 nadal 0/7 do scalenia | ONE-MECH |
-| D-30 | **TAK 30.09, NIE DOKOŃCZONE.** Część bazowa DONE (0097). Zostało: zadanie dzienne `detect_insurance_expiry()` + formularz polisy dla HHL i przewoźnika (przewoźnik wpisuje swoją polisę OCP, HHL zatwierdza) + notka w Dokumentach. Dane polisy przyjdą po spotkaniu z przewoźnikiem | 6.6 |
-| D-31 | **NOWE 30.09, NIE ZROBIONE.** Pasek górny przy 390 px wychodzi poza ekran. To błąd makiety, nie zamysł. Naprawić. Zmiany wzorca wyłącznie w ujęciach 390 px | wygląd 390 px |
+| D-30 | **DONE (ten commit).** Część bazowa 0097 + **0125**: cron `tower-polisy` 04:10 UTC, zatwierdzanie HHL (`insurance_policy_approve`), formularz w Dokumentach (HHL/SCX), notka z bazy. Dane polisy od przewoźnika — po spotkaniu | 6.6 |
+| D-31 | **DONE (ten commit).** Pasek górny ≤430 px: bez wystawania (ukryty lang+roleswitch, brand ściśnięty, overflow clip). Test `resp14-phone` 390 OK. **Odświeżenie ujęć 390 w shots-baseline — tylko po G4_WZORZEC + zgodzie właściciela (G4-D27-D31)** | wygląd 390 px |
 | D-32 | **CZEKA.** Zgoda IT KSH (Graph, `Sites.Selected`, witryna STEGRABODEN). Po odpowiedzi IT: właściciel wpisuje Tenant ID / Client ID / sekret do `.env.local`. Do E2: odczyt STEGRABODEN + zapis tylko do pliku testowego (II-10-E1) | II-10-E1 |
+| G4-D27-D31 | **CZEKA.** Odświeżenie wzorca bramy wizualnej po D-27 (kontrast tekstu) i D-31 (pasek 390). Wymaga opisu w `G4_WZORZEC.md` + zgody właściciela — **nie regenerować** bez ścieżki zatwierdzonej. Zakres: ujęcia z różnicą koloru tekstu + wyłącznie 390 px dla paska | gate:visual |
 | D-33 | **ROZSTRZYGNIĘTE 30.09, NIE ZROBIONE.** TOWER wpisuje do pliku KSH: kierowca, telefon, nr zlecenia, nr rejestracyjny (nowa kolumna „Nr rejestracyjny (TOWER)”). Godzin załadunku i rozładunku nie wpisuje. Realizacja w II-10-E2 (po akceptacji) | II-10-E2 |
 | DEC-CLICK | **AKCEPTACJA 01.10.** (a) grupy C bez nowych typów: LOADING_UNCONFIRMED, SEQUENCE, DATES_UNCONFIRMED, USAGE_LIMIT, JOB_FAILURE (poza kopią). (b) status/strefa → zawsze Transport, bez mini-akcji. (c) grupa D bez „driver PWA” (D-38). Routing klików w ONE-MECH / DEC-3 | ONE-MECH / DEC-3 |
-| D-34 | **CZEKA.** Klucz API Trafikverket (II-6: stan nawierzchni i utrudnienia na E4). Bez klucza nie włączać | II-6 |

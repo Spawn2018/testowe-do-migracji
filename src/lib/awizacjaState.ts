@@ -5,15 +5,17 @@
 import type { Load, LoadResources, Sailing } from '../types';
 import { effDeparture, hasDeparted, selectableSailings } from './sailings';
 
-/** Armatorzy w UI (STENA-3 doda Stena Line). */
+/** Armatorzy w UI (STENA-3). */
 export const FERRY_OPERATORS = [
   { id: 'POLFERRIES', label: 'Polferries' },
+  { id: 'STENA', label: 'Stena Line' },
 ] as const;
 
 export type FerryOperatorId = (typeof FERRY_OPERATORS)[number]['id'];
 
-/** Godziny: Śrem → Gdańsk + odprawa (orientacyjnie, do II-7). */
+/** Godziny: Śrem → port + odprawa (orientacyjnie, do II-7). */
 export const PORT_CLEARANCE_H = 14;
+export const STENA_PORT_CLEARANCE_H = 16;
 
 /** Awizacja istnieje, gdy są kierowca + ciągnik (kryterium „Edytuj" zamiast „Dodaj"). */
 export function hasAwizacja(
@@ -27,13 +29,23 @@ export function hasAwizacja(
   return false;
 }
 
+function operatorMatches(s: Sailing, operator: FerryOperatorId): boolean {
+  const op = (s.operator ?? '').toLowerCase();
+  if (operator === 'STENA') return op.includes('stena') || s.route === 'GDY-KAA' || s.route === 'KAA-GDY';
+  return !op.includes('stena') && (s.route === 'GDN-NYN' || s.route === 'NYN-GDN' || !s.route);
+}
+
 /** Najwcześniejszy sensowny odjazd promu względem planu załadunku. */
-export function earliestFerryDepartureMs(load: Pick<Load, 'plannedLoadDate' | 'awizacja'>): number {
+export function earliestFerryDepartureMs(
+  load: Pick<Load, 'plannedLoadDate' | 'awizacja'>,
+  operator: FerryOperatorId = 'POLFERRIES',
+): number {
   const fromWindow = load.awizacja.loadWindowEnd ?? load.awizacja.loadWindowStart;
   const base = fromWindow ?? (load.plannedLoadDate ? `${load.plannedLoadDate}T06:00:00+02:00` : null);
   const t = base ? Date.parse(base) : NaN;
   if (!Number.isFinite(t)) return Date.now();
-  return t + PORT_CLEARANCE_H * 36e5;
+  const h = operator === 'STENA' ? STENA_PORT_CLEARANCE_H : PORT_CLEARANCE_H;
+  return t + h * 36e5;
 }
 
 /** Rejsy armatora, na które auto zdąży (+ bieżący przypisany). */
@@ -43,11 +55,11 @@ export function reachableSailings(
   nowIso: string,
   operator: FerryOperatorId = 'POLFERRIES',
 ): Sailing[] {
-  void operator; // na razie tylko Polferries w rozkładzie
-  const minDep = earliestFerryDepartureMs(load);
-  return selectableSailings(all, nowIso, load.sailingId).filter((s) => {
+  const minDep = earliestFerryDepartureMs(load, operator);
+  return selectableSailings(all, nowIso, load.sailingId, operator).filter((s) => {
     if (s.id === load.sailingId) return true;
     if (hasDeparted(s, nowIso)) return false;
+    if (!operatorMatches(s, operator)) return false;
     return Date.parse(effDeparture(s)) >= minDep;
   });
 }

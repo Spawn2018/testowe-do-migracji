@@ -1,7 +1,8 @@
 /**
  * M12 — wspólny punkt wejścia funkcji Edge integracji. Wywołanie: pg_cron → pg_net z kluczem service role
  * (scripts/ferry/cron-edge.sql, krok właściciela W-M12-1); `ferry-schedule` także ręcznie przez HHL (sesja).
- * Sekrety funkcji: TRAFIKVERKET_API_KEY, TOMTOM_API_KEY, KPD_DATEX_URL (+ KPD_AUTH_HEADER) — opcjonalne;
+ * Sekrety funkcji: TRAFIKVERKET_API_KEY, KPD_DATEX_URL (+ KPD_AUTH_HEADER) — opcjonalne;
+ * (TOMTOM_API_KEY usunięty — CLEAN-TT-HERE / D-28).
  * bez nich funkcja zwraca tryb DEMO i niczego nie pobiera. SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY — platforma.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';

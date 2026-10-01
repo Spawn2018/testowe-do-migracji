@@ -1,3 +1,3 @@
-/** M12 — TomTom Flow Segment Data przy aktywnych autach → ryzyka ROAD_SE/ROAD_PL. Co 15 min. Wymaga TOMTOM_API_KEY (bez: DEMO). */
+/** CLEAN-TT-HERE / D-28 — TomTom Flow wycofany; job zostaje pod cronem jako DEMO (ETA = II-7 OSM). */
 import { serveJob } from '../_shared/integrations/serve.ts';
 serveJob('traffic-flow');

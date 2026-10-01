@@ -15,12 +15,15 @@ import {
 } from '../lib/voyage';
 import { isDemoSourceMode, trafikverketSourceNote } from '../lib/demoLabel';
 import { severityLabel } from '../lib/enumLabels';
-import { formatSeaRiskLabel } from '../lib/voyageSea';
+import { formatSeaRiskLabel, formatWaveM, formatWindMs } from '../lib/voyageSea';
+import { fetchMarineCondition, type MarineConditionRow } from '../lib/marineWeatherDb';
+import { knotsToMs } from '../lib/marineUnits';
 import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
 import { AUTO_RISK_CODES, autoRiskLabel, effDeparture, fmtLocal, sailingStatusLabel, sailingStatusPill, type AutoRiskCode } from '../lib/sailings';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { getNowMs } from '../lib/frozenNow';
 import { clickableRow } from '../lib/clickableRow';
+import { seaRiskPillClass } from '../lib/voyageSea';
 
 const ALT = [
   ['Gdańsk–Karlshamn', 310, 'Polferries'],
@@ -43,6 +46,7 @@ export function RisksView() {
   const [picked, setPicked] = useState(0);
   const [seSituations, setSeSituations] = useState<RoadSituation[]>([]);
   const [seMode, setSeMode] = useState<'live' | 'seed'>('seed');
+  const [marine, setMarine] = useState<MarineConditionRow | null>(null);
 
   const list = useMemo(() => {
     let r = risks;
@@ -81,6 +85,18 @@ export function RisksView() {
       if (cancelled) return;
       setSeSituations(r.items);
       setSeMode(r.mode);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    // II-8: produkcja — pogoda morska z marine_conditions (FMI+DMI+SMHI)
+    if (!PROD_BUILD) return;
+    let cancelled = false;
+    fetchMarineCondition().then((row) => {
+      if (!cancelled) setMarine(row);
     });
     return () => {
       cancelled = true;
@@ -167,7 +183,39 @@ export function RisksView() {
                     </tbody>
                   </table>
                 )}
-                <div className="note" data-no-source="sea" style={{ marginTop: 8 }}>{t(locale, 'i2_sea_no_source')}</div>
+                {marine && (marine.maxWaveM != null || marine.maxGustKn != null) ? (
+                  <div data-source="marine" style={{ marginTop: 8 }}>
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center', fontSize: 13 }}>
+                      <span className="num">
+                        {marine.maxWaveM != null ? formatWaveM(marine.maxWaveM, locale) : '—'}
+                      </span>
+                      <span className="num">
+                        {marine.maxGustKn != null
+                          ? formatWindMs(knotsToMs(marine.maxGustKn), locale)
+                          : '—'}
+                      </span>
+                      <span className={`pill ${seaRiskPillClass(marine.risk)}`}>
+                        {formatSeaRiskLabel(marine.risk, locale)}
+                      </span>
+                    </div>
+                    <div className="note" style={{ marginTop: 6, border: 0 }}>
+                      {tp(locale, 'i2_sea_wave_gust', {
+                        wave: marine.maxWaveM != null ? formatWaveM(marine.maxWaveM, locale) : '—',
+                        gust: marine.maxGustKn != null ? `${Math.round(marine.maxGustKn)} kn` : '—',
+                        wave_thr: String(marine.waveThrM),
+                        gust_thr: String(marine.gustThrKn),
+                      })}
+                    </div>
+                    <div className="sub" data-attribution="marine" style={{ marginTop: 4 }}>
+                      {tp(locale, 'i2_sea_source', { attr: marine.attribution })}
+                      {marine.observedAt
+                        ? ` · ${tp(locale, 'i2_sea_observed', { at: fmtLocal(marine.observedAt) })}`
+                        : null}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="note" data-no-source="sea" style={{ marginTop: 8 }}>{t(locale, 'i2_sea_no_source')}</div>
+                )}
               </div>
               <div>
                 <h4 className="sec">{t(locale, 'risk_alt_for_day').replace(/\s*$/, '')}</h4>

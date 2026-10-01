@@ -26,6 +26,8 @@
     "audit:a11y": "node scripts/a11y/audit.mjs",
     "test:db:hosted": "node scripts/test-db-gate.mjs",
     "test:db:refuse-prod": "node --test tests/db/refuse-prod.test.mjs",
+    "test:resp14": "playwright test tests/resp14-phone.spec.ts",
+    "lh:resp14": "node scripts/resp14-lighthouse.mjs",
     "setup:test-db-url": "node scripts/setup-test-db-url.mjs"
   },
   "dependencies": {
