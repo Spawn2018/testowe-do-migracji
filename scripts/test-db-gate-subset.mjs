@@ -15,12 +15,12 @@ import {
 const ROOT = resolve(import.meta.dirname, '..');
 const TEST_REF = 'emkbykwenwrjmbprydml';
 const EXPECTED = {
-  nullguard: 454,
+  nullguard: 473,
   i2: 510,
   dec5: 11,
   workflows: 46,
   security: 84,
-  dec6: 8,
+  dec6: 15,
 };
 const NEED_SEED_AUTH = new Set(['session', 'i2']);
 const names = process.argv.slice(2);

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# DEC-6 — progi ops_thresholds + admin_ops_threshold_set + audit.
+# DEC-6 — progi ops_thresholds + admin_ops_threshold_set + audit + Auth log + baner.
 . "$(git rev-parse --show-toplevel)/tests/db/refuse-prod.sh"
 PSQL="psql ${PGURL:-postgres://postgres@localhost:5433/tower} -Atq"
 HHL=11111111-0000-0000-0000-000000000001
@@ -33,6 +33,28 @@ err "nieznany klucz" "begin; select set_config('request.jwt.claim.sub','$HHL',tr
 # przywróć 30
 sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated;
      select admin_ops_threshold_set('DELAY_MIN', 30); commit;" >/dev/null
+
+echo; echo "[dec6] Auth login log + baner"
+val "funkcja admin_auth_login_log istnieje" "select count(*)>0 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='admin_auth_login_log'" t
+sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated;
+     select count(*) from admin_auth_login_log(5); commit;" >/dev/null
+ok=$((ok+1)); echo "  OK    admin_auth_login_log wywołanie HHL"
+
+sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated;
+     select admin_broadcast_set('Test DEC-6', now() + interval '2 hours', true, true, false); commit;" >/dev/null
+val "baner aktywny" "select count(*) from system_broadcast where cleared_at is null and expires_at > now()" 1
+val "audit BROADCAST_SET" "select count(*)>0 from audit_log where action='BROADCAST_SET'" t
+
+sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated;
+     select count(*) from system_broadcast_current(); commit;" >/dev/null
+ok=$((ok+1)); echo "  OK    system_broadcast_current HHL"
+
+err "baner bez firm" "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated;
+     select admin_broadcast_set('x', now() + interval '1 hour', false, false, false); rollback;" "co najmniej jedną firmę"
+
+sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated;
+     select admin_broadcast_clear(); commit;" >/dev/null
+val "baner wycofany" "select count(*) from system_broadcast where cleared_at is null and expires_at > now()" 0
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

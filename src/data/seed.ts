@@ -137,6 +137,7 @@ export const WORKFLOWS: WorkflowRule[] = [
     trigger: 'CRON_FRI_14',
     condition: 'true',
     actions: ['mail_scx_invoice_list'],
+    // ONE-MECH / D-29t: macierz MONEY (faktury) — bez osobnego crona wf
     enabled: false,
     runCount: 2,
   },
@@ -172,7 +173,8 @@ export const WORKFLOWS: WorkflowRule[] = [
     trigger: 'FACTORING_ACCEPTED',
     condition: '{"==":[{"var":"invoice.status"},"MATCHED"]}',
     actions: ['set_payout_scheduled', 'audit_factoring', 'notify_scx'],
-    enabled: true,
+    // ONE-MECH / D-29t: macierz MONEY + ścieżka faktoring w Finance
+    enabled: false,
     runCount: 2,
   },
   {
@@ -183,7 +185,8 @@ export const WORKFLOWS: WorkflowRule[] = [
     trigger: 'CRON_DAILY_07',
     condition: '{"and":[{"<=":[{"var":"period.days_left"},14]},{">":[{"var":"loads_needing_cover"},0]}]}',
     actions: ['alert_period_expiry', 'banner_docs', 'notify_scx', 'notify_hhl'],
-    enabled: true,
+    // ONE-MECH / D-29t: macierz SYSTEM + resource_deadlines (0073)
+    enabled: false,
     runCount: 7,
   },
   {
@@ -194,7 +197,8 @@ export const WORKFLOWS: WorkflowRule[] = [
     trigger: 'PRICING_SNAPSHOT',
     condition: '{"<":[{"var":"margin_pct"},{"var":"threshold_pct"}]}',
     actions: ['flag_margin_below', 'kpi_hhl', 'audit_margin'],
-    enabled: true,
+    // ONE-MECH / D-29t: macierz MONEY (tylko HHL) — bez dubla wf
+    enabled: false,
     runCount: 4,
   },
 ];

@@ -501,7 +501,7 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 
 | ID | pozycja | status | commit | testy (liczby) | uwagi |
 |---|---|---|---|---|---|
-| DEC-6 | ustawienia admina §6 | **W TOKU** | (ten commit) | dec6 **8/8**; tsc OK | Układ zwijany (`OptionsAccordion`). Migracja **0107** `ops_thresholds`. Stan systemu: kopie + integracje + **bramka SMS last_seen** (cisza >15 min w UI). Zostaje: dziennik Auth, baner, eksport. |
+| DEC-6 | ustawienia admina §6 | **DONE** | (ten commit) | dec6 **15/15**; nullguard **473**; security **84/84**; tsc OK | Układ zwijany. **0107** progi. **0110** (PROD dry-run ROLLBACK + push; TEST apply): `admin_auth_login_log`, `system_broadcast` + `admin_broadcast_set/clear` + `system_broadcast_current`. UI: AuthLoginLog, BroadcastForm, DataExportPanel (CSV/XLSX z widocznością). Baner w shell. |
 | DEC-CLICK | routing klików | **AKCEPTACJA** | (docs) | — | Grupa C bez nowych typów; status/strefa → Transport; grupa D bez driver PWA (D-38). Implementacja w ONE-MECH/DEC-3. |
 | D-29t | tabela nakładania | **AKCEPTACJA** | (docs) | — | Warunek: żaden alarm bez zastępnika — lista poniżej. Scalenie = ONE-MECH. |
 | D-4 | telefon+SIM | **ZAMKNIĘTE** | — | — | Koordynator: Android + SIM są. Dalej = I-3-APK. |
@@ -531,8 +531,9 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 |---|---|---|---|---|
 | 0109 | **DONE** PROD+TEST | `93ce1109` | i2 **510/510**; dec5 **11/11** | `sms_zone_on_geofence_enter`: niepoprawny `geofence_id` nie wywala INSERT `load_events` (I-2l). Seed: Bufor przed Sremem w `tests/db/seed.sql`. i2: oczekiwania SMS po `sms_strip_pl` / „Watch Tower”. |
 | O-V | vercel --prod po 0105–0109 | **DONE** | `5d2b0248` | tower.log-mar.pl **200**, watch-tower-makieta.vercel.app **200**; dpl `GJ26sabE…` READY | Deploy z kopii bez `.git` (CLI z metadanymi git → BLOCKED). Naprawy TS: ScheduleView Fragment, `await getSupabase` w SmsZoneRecipients, awizacja bez CANCELLED w typie UI. |
-| ONE-MECH | wyłączenie dubli + DEC-CLICK | **W TOKU** | `ed59ef8a` | — | Seed wf-1…6/8/9 off; auto-run wf-1 usunięty; klik strefy→Transport; wf w prod = podgląd. Zostaje: wf-7/10–12, mapowanie MONEY. |
+| ONE-MECH | wyłączenie dubli + DEC-CLICK | **DONE** | (ten commit) | — | Seed wf-1…12 off (7/10–12 → MONEY/SYSTEM); auto-run usunięty; klik strefy→Transport; wf w prod = podgląd. |
 | I-3-APK | APK lokalnie | **DONE APK** | `e2e19668` | APK **1.0.0** v2 | `D:\Watch Tower\dane\apk\WatchTowerSMS.apk` SHA-256 `d6324bb0…ce8c`. Czeka: instalacja na telefonie. |
+| DEC-6 | Auth + baner + eksport | **DONE** | (ten commit) | dec6 **15/15**; nullguard **473**; security **84** | Migracja **0110** PROD+TEST. |
 
-**Następne:** ONE-MECH (routing DEC-CLICK + reszta) · DEC-6 reszta.
+**Następne:** TEL-1 · DATY-67 · kolejka PLAN (po DEC-6).
 **Czeka na właściciela:** instalacja APK bramki (`D:\Watch Tower\dane\apk\WatchTowerSMS.apk`) + parowanie + SMS test; API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH + creds SharePoint; szablon e-mail Auth „Watch Tower”; akceptacja pisemna II-10-E2; numer właściciela do SMS testowego (w UI, nie w repo).

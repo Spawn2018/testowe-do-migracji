@@ -5,6 +5,7 @@ import { Topbar } from './components/shell/Topbar';
 import { CorridorSpine } from './components/shell/CorridorSpine';
 import { Nav } from './components/shell/Nav';
 import { Toasts } from './components/shell/Toasts';
+import { SystemBroadcastBanner } from './components/shell/SystemBroadcastBanner';
 import { LoadDrawer } from './components/drawer/LoadDrawer';
 import { DashboardView } from './views/DashboardView';
 import { MapView } from './views/MapView';
@@ -154,7 +155,10 @@ function TowerShell() {
           onClick={() => setNavCollapsed(true, { persist: false })}
         />
         <Nav />
-        <main ref={mainRef}>{body}</main>
+        <main ref={mainRef}>
+          <SystemBroadcastBanner />
+          {body}
+        </main>
       </div>
       <LoadDrawer />
       <Toasts />

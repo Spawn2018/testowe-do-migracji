@@ -92,6 +92,11 @@ authenticated admin_sms_zone_trigger_set
 authenticated admin_sms_zone_test
 # DEC-6 (0107): progi ops_thresholds
 authenticated admin_ops_threshold_set
+# DEC-6 (0110): dziennik Auth + baner
+authenticated admin_auth_login_log
+authenticated admin_broadcast_set
+authenticated admin_broadcast_clear
+authenticated system_broadcast_current
 # I-3 (0067): bramka SMS — telefon (anon, token urządzenia), HHL (urządzenia), link kierowcy SMS-em
 anon sms_pull
 anon sms_report

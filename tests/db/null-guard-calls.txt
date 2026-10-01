@@ -103,3 +103,7 @@ admin_sms_zone_recipient_set | GUARD | select admin_sms_zone_recipient_set('LOAD
 admin_sms_zone_trigger_set | GUARD | select admin_sms_zone_trigger_set('SMS_ZONE_APPROACH',true) | Tylko administrator HHL|wyłącznie HHL
 admin_sms_zone_test | GUARD | select admin_sms_zone_test('LOAD_SREM') | Tylko administrator HHL|wyłącznie HHL
 admin_ops_threshold_set | GUARD | select admin_ops_threshold_set('WAVE_M',3.8) | wyłącznie administrator HHL
+admin_auth_login_log | GUARD | select * from admin_auth_login_log(5) | Tylko administrator HHL
+admin_broadcast_set | GUARD | select admin_broadcast_set('x', now() + interval '1 day', true, false, false) | Tylko administrator HHL
+admin_broadcast_clear | GUARD | select admin_broadcast_clear() | Tylko administrator HHL
+system_broadcast_current | EMPTY | select count(*) from system_broadcast_current() | 0

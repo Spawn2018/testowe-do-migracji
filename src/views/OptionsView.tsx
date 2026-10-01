@@ -26,6 +26,9 @@ const SmsGateway = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUT
 const SmsZoneRecipients = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/SmsZoneRecipients')) : null;
 const OpsThresholdsForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/OpsThresholdsForm')) : null;
 const SystemStatusPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/SystemStatusPanel')) : null;
+const AuthLoginLog = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/AuthLoginLog')) : null;
+const BroadcastForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/BroadcastForm')) : null;
+const DataExportPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/DataExportPanel')) : null;
 const PermitRequirement = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/PermitRequirement')) : null;
 const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
 const MyDevices = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/MyDevices')) : null;
@@ -229,7 +232,9 @@ export function OptionsView() {
       titleKey: 'opt_acc_authlog_title',
       descKey: 'opt_acc_authlog_desc',
       keywords: 'dziennik logowań auth',
-      children: <Soon locale={locale} tipKey="opt_acc_authlog_soon" />,
+      children: AuthLoginLog
+        ? <SuspenseBlock><AuthLoginLog /></SuspenseBlock>
+        : <Soon locale={locale} tipKey="opt_acc_authlog_soon" />,
     });
 
     list.push({
@@ -237,7 +242,9 @@ export function OptionsView() {
       titleKey: 'opt_acc_bcast_title',
       descKey: 'opt_acc_bcast_desc',
       keywords: 'komunikat baner',
-      children: <Soon locale={locale} tipKey="opt_acc_bcast_soon" />,
+      children: BroadcastForm
+        ? <SuspenseBlock><BroadcastForm /></SuspenseBlock>
+        : <Soon locale={locale} tipKey="opt_acc_bcast_soon" />,
     });
 
     list.push({
@@ -245,7 +252,9 @@ export function OptionsView() {
       titleKey: 'opt_acc_export_title',
       descKey: 'opt_acc_export_desc',
       keywords: 'eksport csv xlsx',
-      children: <Soon locale={locale} tipKey="opt_acc_export_soon" />,
+      children: DataExportPanel
+        ? <SuspenseBlock><DataExportPanel /></SuspenseBlock>
+        : <Soon locale={locale} tipKey="opt_acc_export_soon" />,
     });
 
     list.push({
