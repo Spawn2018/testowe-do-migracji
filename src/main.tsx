@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import './index.css';
 import App from './App';
 import { SUPABASE_AUTH_ENABLED } from './auth/config';
+import { registerPwa } from './lib/pwa';
 
 // I-6: błędy przeglądarki do bazy — wyłącznie build produkcyjny (paczka demo bez tego kodu)
 if (import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED) {
@@ -21,9 +22,5 @@ queueMicrotask(() => {
   document.getElementById('wt-boot')?.remove();
 });
 
-// §15 / §14: service worker (ikony + manifest); wersja w public/sw.js
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    void navigator.serviceWorker.register('/sw.js').catch(() => {});
-  });
-}
+registerPwa();
+

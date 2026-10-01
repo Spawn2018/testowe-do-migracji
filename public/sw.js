@@ -1,7 +1,8 @@
-/* Watch Tower — PWA cache (BRAND-15 / §14). Podbij CACHE przy zmianie ikon/manifestu. */
-const CACHE = 'wt-static-v2026-10-01';
+/* Watch Tower — PWA (§14). CACHE bump przy każdej zmianie precache / offline. */
+const CACHE = 'wt-static-v2026-10-01b';
 const PRECACHE = [
   '/',
+  '/offline.html',
   '/brand/manifest.webmanifest',
   '/brand/icon-192.png',
   '/brand/icon-512.png',
@@ -21,16 +22,46 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+function isApiOrAuth(url) {
+  const p = url.pathname;
+  if (p.startsWith('/rest/') || p.startsWith('/auth/') || p.startsWith('/functions/') || p.startsWith('/realtime/') || p.startsWith('/storage/')) return true;
+  if (url.hostname.includes('supabase')) return true;
+  return false;
+}
+
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith('/brand/') || url.pathname === '/brand/manifest.webmanifest') {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+  if (isApiOrAuth(url)) return;
+
+  /* Nawigacja (HTML) — sieć najpierw; offline → offline.html */
+  if (req.mode === 'navigate') {
     event.respondWith(
-      caches.match(event.request).then((hit) => hit || fetch(event.request).then((res) => {
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          void caches.open(CACHE).then((c) => c.put('/', copy));
+          return res;
+        })
+        .catch(() => caches.match('/offline.html').then((h) => h || caches.match('/'))),
+    );
+    return;
+  }
+
+  /* Statyczne brand / offline — cache first */
+  if (url.pathname.startsWith('/brand/') || url.pathname === '/offline.html' || url.pathname === '/sw.js') {
+    event.respondWith(
+      caches.match(req).then((hit) => hit || fetch(req).then((res) => {
         const copy = res.clone();
-        void caches.open(CACHE).then((c) => c.put(event.request, copy));
+        void caches.open(CACHE).then((c) => c.put(req, copy));
         return res;
       })),
     );
   }
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });

@@ -195,7 +195,7 @@ decyzji, §3 powiadomienia, §4 widoczność, §5 SMS strefy, §6 ustawienia adm
 | BRAND-15 | P1. Nazwa i logo Watch Tower (PO_SPOTKANIU §15, `public/brand`) | favicon, splash, manifest, zero „TOWER” w UI | **DONE** 57527034 — e-mail Auth (nadawca) = dashboard Supabase |
 | AWIZ-4 | P1. Awizacja „Dodaj"/„Edytuj" + okno (PO_SPOTKANIU §4) | przebieg HHL/SCX | **DONE** (ten commit) — modal; Ustalenia bez formularza awizacji; rejsy „zdąży”; tracking→telematics_vehicle_id; zapis zwrotny KSH = II-10 |
 | HHL-4a | P1. Numer HHL — dodawanie/edycja przez HHL (§4a) | test bazy + UI | **W TOKU** — UI Dodaj/Edytuj + pole w oknie awizacji; konflikt pliku = II-10 |
-| RESP-14 | P1. Telefon i instalacja PWA (§14) | ujęcia 390/768; Lighthouse | DO ZROBIENIA |
+| RESP-14 | P1. Telefon i instalacja PWA (§14) | ujęcia 390/768; Lighthouse | **W TOKU** — SW+offline+update; menu telefon; drawer/awizacja full; karty harmonogramu; touch 44px. Zostaje: brama 390/768, Lighthouse, §12 user w menu |
 | DEC-5 | P1. SMS przy strefach — 2+2 osoby (DECYZJE §5); brak SMS do kierowców | test bramki | DO ZROBIENIA |
 | DEC-6 | P1. Ustawienia administratora (DECYZJE §6) | sekcje zwijane | DO ZROBIENIA |
 | TEL-1 | P1. Telefony zawsze bez kierunkowego (DECYZJE §1) | zapis/odczyt | **W TOKU** — `toNationalPhone` + awizacja; brak jeszcze w imporcie/eksportcie/SMS |

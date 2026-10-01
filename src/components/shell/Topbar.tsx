@@ -92,6 +92,18 @@ export function Topbar() {
 
   return (
     <header className="topbar">
+      <button
+        type="button"
+        className="iconbtn phone-menu-btn"
+        aria-label={t(locale, 'a6_nav_menu_open')}
+        title={t(locale, 'a6_nav_menu_open')}
+        onClick={() => {
+          const s = useTowerStore.getState();
+          s.setNavCollapsed(!s.navCollapsed, { persist: false });
+        }}
+      >
+        ☰
+      </button>
       <div className="brand">
         <img src="/brand/watchtower-symbol.png" alt="" width={28} height={28} />
         <b>{t(locale, 'brand')}</b>

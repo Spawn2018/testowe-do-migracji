@@ -64,8 +64,9 @@ export function Nav() {
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 1100px)')
+    const phone = window.matchMedia('(max-width: 768px)')
     const apply = () => {
-      if (mq.matches) {
+      if (phone.matches || mq.matches) {
         setNavCollapsed(true, { persist: false })
         return
       }
@@ -78,9 +79,19 @@ export function Nav() {
     }
     apply()
     mq.addEventListener('change', apply)
-    return () => mq.removeEventListener('change', apply)
+    phone.addEventListener('change', apply)
+    return () => {
+      mq.removeEventListener('change', apply)
+      phone.removeEventListener('change', apply)
+    }
   }, [setNavCollapsed])
 
+  const go = (key: NavKey) => {
+    setView(key)
+    if (window.matchMedia('(max-width: 768px)').matches) {
+      setNavCollapsed(true, { persist: false })
+    }
+  }
   const items = navForRole(role)
   const rows = rowsForRole(items)
 
@@ -135,7 +146,7 @@ export function Nav() {
             aria-current={current ? 'page' : 'false'}
             aria-label={label}
             title={navCollapsed ? label : undefined}
-            onClick={() => setView(key)}
+            onClick={() => go(key)}
           >
             <span className="glyph"><ClaudeIcon name={ICON[key]} /></span>
             <span className="lbl">{label}</span>

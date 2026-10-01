@@ -725,7 +725,7 @@ export function ScheduleView() {
             </button>
           </div>
         ) : (
-        <div className="tablewrap" style={{ flex: 1 }}>
+        <div className="tablewrap sched-table-wrap" style={{ flex: 1 }}>
           <table className="sched-table" style={{ tableLayout: 'fixed', width: 'max-content', minWidth: '100%' }}>
             <colgroup>
               {visibleCols.map((id) => (
@@ -958,6 +958,31 @@ export function ScheduleView() {
               })}
             </tbody>
           </table>
+        </div>
+        <div className="sched-cards" data-sched-cards>
+          {list.map((l) => {
+            const dmin = delayMinutes(l);
+            return (
+              <button
+                key={`card-${l.id}`}
+                type="button"
+                className={`sched-card${hoverLoadId === l.id || selectedLoadId === l.id ? ' hl' : ''}`}
+                data-load={l.id}
+                onClick={() => selectLoad(l.id)}
+              >
+                <div className="r1">
+                  <span className="code" data-content>{l.code}</span>
+                  <StatusPill status={l.status} stage={l.stage} />
+                  {dmin != null ? <span className="pill p-red">{formatDelayPill(dmin)}</span> : null}
+                </div>
+                <div className="meta" data-content>{l.itemType}</div>
+                <div className="meta">
+                  {formatTableDay(l.plannedLoadDate, refYear)} → {formatTableDay(l.plannedDeliverDate, refYear)}
+                </div>
+                {l.resources.driverName ? <div className="meta" data-content>{l.resources.driverName}</div> : null}
+              </button>
+            );
+          })}
         </div>
         )}
         <div className="note">

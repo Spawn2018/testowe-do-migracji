@@ -24,6 +24,7 @@ import { usePageSectionDnD } from './hooks/usePageSectionDnD';
 import { useRouteSync } from './hooks/useRouteSync';
 import { SUPABASE_AUTH_ENABLED } from './auth/config';
 import { canSwitchView } from './lib/prodFacade';
+import { t } from './i18n/messages';
 
 // BK2: bramka logowania tylko w trybie Supabase (VITE_AUTH_MODE=supabase); demo bez zmian.
 const AuthGate = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./auth/AuthGate')) : null;
@@ -31,9 +32,11 @@ const AuthGate = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_
 function TowerShell() {
   const view = useTowerStore((s) => s.view);
   const role = useTowerStore((s) => s.role);
+  const locale = useTowerStore((s) => s.locale);
   const setView = useTowerStore((s) => s.setView);
   const initTheme = useTowerStore((s) => s.initTheme);
   const navCollapsed = useTowerStore((s) => s.navCollapsed);
+  const setNavCollapsed = useTowerStore((s) => s.setNavCollapsed);
 
   usePageSectionDnD();
   useRouteSync();
@@ -144,6 +147,12 @@ function TowerShell() {
       <Topbar />
       <CorridorSpine />
       <div className="body">
+        <button
+          type="button"
+          className="nav-scrim"
+          aria-label={t(locale, 'a6_dr_close')}
+          onClick={() => setNavCollapsed(true, { persist: false })}
+        />
         <Nav />
         <main ref={mainRef}>{body}</main>
       </div>
