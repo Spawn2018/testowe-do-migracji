@@ -27,6 +27,7 @@ const NotificationMatrixForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && 
 const RateCardForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/RateCardForm')) : null;
 /* I-3 — bramka SMS (0067/0068) — tylko Supabase */
 const SmsGateway = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/SmsGateway')) : null;
+const SmsZoneRecipients = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/SmsZoneRecipients')) : null;
 /* I-27 — wymóg zezwoleń dla transportów ponadnormatywnych (0084) — tylko Supabase */
 const PermitRequirement = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/PermitRequirement')) : null;
 const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
@@ -153,6 +154,7 @@ export function OptionsView() {
         {BafForm && <Suspense fallback={null}><BafForm /></Suspense>}
         {NotificationMatrixForm && <Suspense fallback={null}><NotificationMatrixForm /></Suspense>}
         {SmsGateway && <Suspense fallback={null}><SmsGateway /></Suspense>}
+        {SmsZoneRecipients && <Suspense fallback={null}><SmsZoneRecipients /></Suspense>}
         {PermitRequirement && <Suspense fallback={null}><PermitRequirement /></Suspense>}
         {CarrierScorecard && <Suspense fallback={null}><CarrierScorecard /></Suspense>}
 
