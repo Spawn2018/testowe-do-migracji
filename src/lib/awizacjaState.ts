@@ -81,7 +81,7 @@ export function awizacjaDuplicateWarning(
   if (!driver && !plate) return null;
   const hit = loads.find((l) => {
     if (l.id === selfId) return false;
-    if (l.status === 'DELIVERED' || l.status === 'CANCELLED') return false;
+    if (l.status === 'DELIVERED') return false;
     const sameDriver = driver && l.resources.driverName?.trim().toLowerCase() === driver;
     const samePlate = plate && l.resources.tractorPlate?.trim().toUpperCase() === plate;
     return Boolean(sameDriver || samePlate);

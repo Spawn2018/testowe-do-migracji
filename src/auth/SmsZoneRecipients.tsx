@@ -29,7 +29,7 @@ export default function SmsZoneRecipients() {
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
-    const sb = getSupabase();
+    const sb = await getSupabase();
     const [r, f] = await Promise.all([
       sb.from('sms_zone_recipients').select('list_key,slot,display_name,phone_national,country,active').order('list_key').order('slot'),
       sb.from('security_flags').select('key,enabled').in('key', ['SMS_ZONE_APPROACH', 'SMS_ZONE_ENTER']),
@@ -45,7 +45,8 @@ export default function SmsZoneRecipients() {
 
   const saveSlot = async (list: string, slot: number, name: string, phone: string, country: string) => {
     setBusy(true);
-    const { error } = await getSupabase().rpc('admin_sms_zone_recipient_set', {
+    const sb = await getSupabase();
+    const { error } = await sb.rpc('admin_sms_zone_recipient_set', {
       p_list: list, p_slot: slot, p_name: name, p_phone: phone, p_country: country, p_active: true,
     });
     setBusy(false);
@@ -57,13 +58,15 @@ export default function SmsZoneRecipients() {
   };
 
   const setTrigger = async (key: string, enabled: boolean) => {
-    const { error } = await getSupabase().rpc('admin_sms_zone_trigger_set', { p_key: key, p_enabled: enabled });
+    const sb = await getSupabase();
+    const { error } = await sb.rpc('admin_sms_zone_trigger_set', { p_key: key, p_enabled: enabled });
     if (error) pushToast(error.message, 'HIGH');
     else void load();
   };
 
   const testList = async (list: string) => {
-    const { data, error } = await getSupabase().rpc('admin_sms_zone_test', { p_list: list });
+    const sb = await getSupabase();
+    const { data, error } = await sb.rpc('admin_sms_zone_test', { p_list: list });
     if (error) pushToast(error.message, 'HIGH');
     else pushToast(t(locale, 'dec5_test_queued').replace('{n}', String(data ?? 0)), 'MEDIUM');
   };
