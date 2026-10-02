@@ -1,6 +1,5 @@
 /** OPL-8 — ręczna dopłata uzgodniona (HHL). Podpowiedzi cennika ≠ automat. */
 import { useEffect, useState } from 'react';
-import { getSupabase } from '../../auth/client';
 import { t } from '../../i18n/messages';
 import type { Locale } from '../../types';
 
@@ -24,7 +23,9 @@ export function AgreedFeeForm({ loadId, locale }: { loadId: string; locale: Loca
 
   useEffect(() => {
     let cancelled = false;
+    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return;
     void (async () => {
+      const { getSupabase } = await import('../../auth/client');
       const sb = await getSupabase();
       const [h, d] = await Promise.all([
         sb.rpc('fee_catalog_hints'),
@@ -38,10 +39,12 @@ export function AgreedFeeForm({ loadId, locale }: { loadId: string; locale: Loca
   }, [loadId]);
 
   async function submit() {
+    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return;
     setBusy(true);
     setMsg(null);
     try {
       const eur = Number(amount.replace(',', '.'));
+      const { getSupabase } = await import('../../auth/client');
       const sb = await getSupabase();
       const { error } = await sb.rpc('load_agreed_fee_add', {
         p_load: loadId,

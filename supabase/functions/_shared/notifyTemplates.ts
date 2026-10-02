@@ -189,6 +189,38 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
         : `Brak sygnału telefonu-bramki od ${since} (próg 15 min). SMS w kolejce: ${q}. Sprawdź zasilanie, Wi-Fi i aplikację Watch Tower SMS.`;
       return { subject, body, severity: 'HIGH', view: 'risk' };
     }
+    case 'SMS_UNDELIVERED': {
+      const code = String(p.code ?? '');
+      const tail = String(p.to_tail ?? '');
+      const text = String(p.text ?? '');
+      const subject = locale === 'en'
+        ? `${code}: SMS sent, no delivery receipt (…${tail})`
+        : locale === 'sv' ? `${code}: SMS skickat, ingen leveranskvittens (…${tail})` : `${code}: SMS wysłany, brak potwierdzenia doręczenia (…${tail})`;
+      const body = locale === 'en'
+        ? `The message was sent but not confirmed as delivered within 10 minutes. Call the driver or forward the text:\n\n${text}`
+        : locale === 'sv' ? `Meddelandet skickades men bekräftades inte som levererat inom 10 minuter. Ring föraren eller vidarebefordra texten:\n\n${text}`
+        : `Wiadomość wyszła, ale w ciągu 10 minut nie ma potwierdzenia doręczenia. Zadzwoń do kierowcy albo przekaż treść:\n\n${text}`;
+      return { subject, body, severity: 'HIGH', view: null };
+    }
+    case 'ZONE_LIMIT': {
+      const subject = locale === 'en'
+        ? 'Zone SMS daily limit reached'
+        : locale === 'sv' ? 'Dagsgränsen för zon-SMS är nådd' : 'Dzienny limit SMS stref wyczerpany';
+      const body = locale === 'en'
+        ? 'The 150 zone SMS limit for today is used up. Further zone messages wait until the next day.'
+        : locale === 'sv' ? 'Dagens gräns på 150 zon-SMS är förbrukad. Fler zonmeddelanden väntar till nästa dag.'
+        : 'Limit 150 SMS stref na dobę jest wyczerpany. Kolejne wiadomości stref poczekają do następnego dnia.';
+      return { subject, body, severity: 'HIGH', view: null };
+    }
+    case 'CLIENT': {
+      const subject = locale === 'en'
+        ? 'Client organisation notice'
+        : locale === 'sv' ? 'Meddelande för kundorganisation' : 'Powiadomienie dla organizacji klienta';
+      const body = locale === 'en'
+        ? 'This notice is addressed to a client organisation.'
+        : locale === 'sv' ? 'Det här meddelandet gäller en kundorganisation.' : 'To powiadomienie dotyczy organizacji klienta.';
+      return { subject, body, severity: 'LOW', view: null };
+    }
     default:
       return { subject: row.template, body: '', severity: 'LOW', view: null };
   }

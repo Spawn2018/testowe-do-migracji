@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import type { RiskType } from '../types';
 import { ExceptionRow } from '../components/ui/ExceptionRow';
-import { DecisionCentre } from '../components/DecisionCentre';
 import { DemoMark } from '../components/ui/DemoMark';
 import { riskText, t, tp } from '../i18n/messages';
 import { ferryLabel, vesselById } from '../lib/ferry';
@@ -16,12 +15,16 @@ import {
 import { isDemoSourceMode, trafikverketSourceNote } from '../lib/demoLabel';
 import { severityLabel } from '../lib/enumLabels';
 import { formatSeaRiskLabel, formatWaveM, formatWindMs } from '../lib/voyageSea';
-import { fetchMarineCondition, type MarineConditionRow } from '../lib/marineWeatherDb';
-import { fetchCorridorCondition, type CorridorConditionRow } from '../lib/corridorConditionsDb';
+import type { MarineConditionRow } from '../lib/marineWeatherDb';
+import type { CorridorConditionRow } from '../lib/corridorConditionsDb';
 import { knotsToMs } from '../lib/marineUnits';
 import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
 import { AUTO_RISK_CODES, autoRiskLabel, effDeparture, fmtLocal, sailingStatusLabel, sailingStatusPill, type AutoRiskCode } from '../lib/sailings';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
+
+const DecisionCentreLazy = import.meta.env.VITE_AUTH_MODE === 'supabase'
+  ? lazy(() => import('../components/DecisionCentre').then((m) => ({ default: m.DecisionCentre })))
+  : null;
 import { getNowMs } from '../lib/frozenNow';
 import { clickableRow } from '../lib/clickableRow';
 import { seaRiskPillClass } from '../lib/voyageSea';
@@ -81,9 +84,9 @@ export function RisksView() {
 
   useEffect(() => {
     // Demo: seed Trafikverket w UI. Produkcja: corridor_conditions z II-6 (road-se).
-    if (PROD_BUILD) {
+    if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
       let cancelled = false;
-      fetchCorridorCondition().then((row) => {
+      void import('../lib/corridorConditionsDb').then((m) => m.fetchCorridorCondition()).then((row) => {
         if (!cancelled) setCorridor(row);
       });
       return () => {
@@ -104,9 +107,9 @@ export function RisksView() {
 
   useEffect(() => {
     // II-8: produkcja — pogoda morska z marine_conditions (FMI+DMI+SMHI)
-    if (!PROD_BUILD) return;
+    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return;
     let cancelled = false;
-    fetchMarineCondition().then((row) => {
+    void import('../lib/marineWeatherDb').then((m) => m.fetchMarineCondition()).then((row) => {
       if (!cancelled) setMarine(row);
     });
     return () => {
@@ -134,7 +137,7 @@ export function RisksView() {
 
   return (
     <div className="dash risk-page page-sections" data-page="risks">
-      {PROD_BUILD ? <DecisionCentre /> : null}
+      {DecisionCentreLazy ? <Suspense fallback={null}><DecisionCentreLazy /></Suspense> : null}
       <div className="panel section-card" style={{ margin: 12 }}>
         <header className="panel-hd">
           <h2>{t(locale, 'exceptions')}</h2>

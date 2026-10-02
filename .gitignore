@@ -58,3 +58,8 @@ android/**/*.apk
 android/**/*.aab
 android/**/*.jks
 android/**/*.keystore
+
+# Kopia robocza (02.10): sondy i pliki tymczasowe — nie commitować
+scripts/_probe-*
+tmp-*
+tmp_*.txt

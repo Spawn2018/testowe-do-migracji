@@ -14,7 +14,7 @@ import {
 } from '../lib/driverTracking';
 import { getNowIso } from '../lib/frozenNow';
 import { SUPABASE_ANON_KEY, SUPABASE_AUTH_ENABLED, SUPABASE_URL } from '../auth/config';
-import { createDriverApi, isServerDriverToken, uploadDriverFile, type DriverInstructions } from '../data/driverApi';
+import { createDriverApi, isServerDriverToken, type DriverInstructions } from '../data/driverApi';
 import type { DriverMilestone } from '../lib/driverTracking';
 
 /* ANEKS 3 §2.3 — link z tokenem z bazy (tylko build Supabase; w demo stała false → kod usuwany) */
@@ -255,7 +255,12 @@ export function DriverPwa() {
                 return;
               }
               void compressImage(f)
-                .then((c) => uploadDriverFile(SUPABASE_URL, SUPABASE_ANON_KEY, token, loadId, cat, c, c.name).then(() => c))
+                .then(async (c) => {
+                  if (import.meta.env.VITE_AUTH_MODE !== 'supabase') throw new Error('Tryb demo — brak bazy');
+                  const { uploadDriverFile } = await import('../data/driverPhoto');
+                  await uploadDriverFile(SUPABASE_URL, SUPABASE_ANON_KEY, token, loadId, cat, c, c.name);
+                  return c;
+                })
                 .then((c) => setLastFile(`${cat} · ${c.name} (${c.size} B)`))
                 .catch((err: unknown) => setLastFile(t(locale, 'a6_drv_err').replace('{msg}', err instanceof Error ? err.message : String(err))))
                 .finally(() => setBusy(false));

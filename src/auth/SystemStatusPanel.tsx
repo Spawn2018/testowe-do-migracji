@@ -91,9 +91,9 @@ export default function SystemStatusPanel() {
   return (
     <div data-panel="system-status">
       {msg ? <div className="note">{msg}</div> : null}
-      <h4 className="sec">{t(locale, 'opt_acc_sys_sms')}</h4>
+      <h4 className="sec">{t(locale, 'opt_acc_sys_gateway')}</h4>
       {smsDevices.length === 0 ? (
-        <div className="muted">{t(locale, 'opt_acc_sys_sms_none')}</div>
+        <div className="muted">{t(locale, 'opt_acc_gateway_none')}</div>
       ) : (
         <div className="settings-list">
           {smsDevices.map((d) => {
@@ -103,8 +103,8 @@ export default function SystemStatusPanel() {
                 <div>
                   <b>{d.label}{d.paused ? ` · ${t(locale, 'i3_device_paused')}` : ''}</b>
                   <span>
-                    {tp(locale, 'opt_acc_sys_sms_seen', { d: fmt(d.last_seen_at) })}
-                    {silent ? ` · ${t(locale, 'opt_acc_sys_sms_risk')}` : ''}
+                    {tp(locale, 'opt_acc_gateway_seen', { d: fmt(d.last_seen_at) })}
+                    {silent ? ` · ${t(locale, 'opt_acc_gateway_risk')}` : ''}
                   </span>
                 </div>
               </div>

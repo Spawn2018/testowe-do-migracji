@@ -112,7 +112,7 @@ export default function SmsZoneRecipients() {
                 </form>
               );
             })}
-            <button type="button" className="btn ghost" onClick={() => void testList(L.key)}>{t(locale, 'dec5_test_sms')}</button>
+            <button type="button" className="btn ghost" onClick={() => void testList(L.key)}>{t(locale, 'dec5_sms_test')}</button>
           </div>
         ))}
       </div>

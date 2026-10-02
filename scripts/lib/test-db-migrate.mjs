@@ -1,5 +1,5 @@
 /**
- * Reset public + migracje 0001…0097 + seed na TEST_DB_URL.
+ * Reset public + migracje 0001…0135 + seed na TEST_DB_URL.
  * Windows psql: zawsze -d URI.
  * 0031: na free test trigger na spatial_ref_sys bywa bez uprawnień — funkcja i tak powstaje.
  */
@@ -62,8 +62,8 @@ export async function applyMigrationsAndSeed(root, url, psqlBin) {
   const migrations = readdirSync(join(root, 'supabase/migrations'))
     .filter((f) => /^\d{4}_.*\.sql$/.test(f))
     .sort();
-  if (migrations.length !== 130) {
-    console.error(`Oczekiwano 130 migracji, jest ${migrations.length}`);
+  if (migrations.length !== 135) {
+    console.error(`Oczekiwano 135 migracji, jest ${migrations.length}`);
     process.exit(1);
   }
   console.log(`migracje: ${migrations[0]} … ${migrations[migrations.length - 1]} (${migrations.length})`);

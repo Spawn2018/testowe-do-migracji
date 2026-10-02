@@ -25,7 +25,6 @@ self.addEventListener('activate', (event) => {
 function isApiOrAuth(url) {
   const p = url.pathname;
   if (p.startsWith('/rest/') || p.startsWith('/auth/') || p.startsWith('/functions/') || p.startsWith('/realtime/') || p.startsWith('/storage/')) return true;
-  if (url.hostname.includes('supabase')) return true;
   return false;
 }
 
