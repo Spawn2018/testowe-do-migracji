@@ -661,10 +661,11 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 
 | ID | Status | Wynik |
 |---|---|---|
-| DR-TEST | W TOKU | CZEKA NA: klucz age lokalnie u właściciela |
+| BRAND+deploy | DONE | `4a274d10` push; Vercel `watch-tower-makieta` READY → `tower.log-mar.pl`; obie domeny **200**; 404 = Watch Tower |
+| DR-TEST | W TOKU / STOP | Ostatnia kopia PROD: `daily/2026-10-02/` (67 tabel, **4920** wierszy, 1 plik). Pobrane lokalnie do `D:\Watch Tower\dane\restore-dr-test\daily-2026-10-02\` (68 × .age). `age` 1.3.2 zainstalowany. **Brak pliku AGE_IDENTITY** — właściciel podaje ścieżkę lokalnie (nie do czatu/repo). Potem: `restore.sh` → TEST `emkbykwenwrjmbprydml` (tryb schematu `restore_*`, porównanie wierszy). |
 | SIM-1 | DO ZROBIENIA | — |
 | LOAD-1 | DO ZROBIENIA | — |
 | DOC-ROLE | DO ZROBIENIA | — |
 | DAILY-1 | DO ZROBIENIA | — |
 
-**Czekam także (dane):** IT KSH (SharePoint / D-32), API emtrack + linki, wymiary aut, polisy OCP.
+**Czekam także (dane):** klucz age (DR-TEST); IT KSH (SharePoint / D-32); API emtrack + linki; wymiary aut; polisy OCP.

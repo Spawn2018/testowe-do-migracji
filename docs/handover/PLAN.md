@@ -253,7 +253,7 @@ Przyjęte identyfikatory: **II-10-E1**, **II-10-E2**, **ONE-MECH** (D-29 + D-29t
 
 | ID | Opis | Kryterium | Status |
 |---|---|---|---|
-| DR-TEST | Odtworzenie ostatniej kopii z R2 na projekt TEST (`emkbykwenwrjmbprydml`). Klucz age tylko lokalnie na czas próby (nigdy repo/logi) | wiersze tabel = kopia; czas odtworzenia w POSTEP | **W TOKU** — CZEKA NA: klucz age u właściciela lokalnie |
+| DR-TEST | Odtworzenie ostatniej kopii z R2 na projekt TEST (`emkbykwenwrjmbprydml`). Klucz age tylko lokalnie na czas próby (nigdy repo/logi) | wiersze tabel = kopia; czas odtworzenia w POSTEP | **W TOKU** — kopia `daily/2026-10-02/` pobrana (67/4920); **CZEKA NA: AGE_IDENTITY lokalnie** |
 | SIM-1 | Symulacja pełnego transportu na TEST — zmyślony GPS Śrem→Gdańsk→prom→Nynäshamn→Boden: statusy, ETA, decyzje, powiadomienia; SMS tylko na numer właściciela | raport krok po kroku w POSTEP | DO ZROBIENIA |
 | LOAD-1 | Test obciążenia na TEST — 140 transportów, 20 jednoczesnych użytkowników (3 role); czasy kokpitu, harmonogramu, mapy | liczby w POSTEP | DO ZROBIENIA |
 | DOC-ROLE | 1-stronicowe instrukcje dla KSH, przewoźnika i HHL (PL); także w aplikacji (panel „Instrukcja”) | 3 PDF/teksty + panel UI | DO ZROBIENIA |
