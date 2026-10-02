@@ -11,10 +11,13 @@ psql "$ADMIN" -q -c "drop database if exists $DB" -c "create database $DB"
 psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/supabase_stub.sql
 for f in supabase/migrations/*.sql; do psql "$URL" -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null 2>&1 || { echo "MIGRACJA $f: błąd"; exit 1; }; done
 psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/seed.sql
-# projekty z seed.sql powstają po migracjach — ponowne nałożenie 0094+ (idempotentne) dodaje reguły startowe, jak na produkcji
+# projekty z seed.sql powstają po migracjach — ponowne nałożenie 0094–0096 (idempotentne) dodaje reguły startowe.
+# 0097 nie re-apply: po 0125 cron tower-polisy istnieje → DO w 0097 rzuca wyjątek.
 # Hosted: TOWER_ALLOW_MIG_REAPPLY=1 — shim inaczej no-opuje pliki migracji.
 export TOWER_ALLOW_MIG_REAPPLY=1
-for f in supabase/migrations/009[4-9]_*.sql; do psql "$URL" -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null 2>&1 || { echo "$f ponownie: błąd"; exit 1; }; done
+for f in supabase/migrations/0094_*.sql supabase/migrations/0095_*.sql supabase/migrations/0096_*.sql; do
+  psql "$URL" -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null 2>&1 || { echo "$f ponownie: błąd"; exit 1; }
+done
 unset TOWER_ALLOW_MIG_REAPPLY
 set +e
 PSQL="psql $URL -Atq"
@@ -75,8 +78,13 @@ chk "START-7: akcja risk → otwarty sygnał ryzyka z kluczem reguły i tytułem
 chk "reguła wyłączona po zakolejkowaniu → SKIPPED" "$(E4=$(EV GEOFENCE_ENTER '{"geofence_kind":"PRE_ARRIVAL"}'); $PSQL -c "update workflows set enabled=false where code='START-1'" >/dev/null; Q "select workflow_worker(50, now())" >/dev/null; Q "select status||':'||(result->>'reason') from workflow_runs where event_id=$E4")" "SKIPPED:reguła wyłączona"
 
 echo; echo "[9.2] ponawianie: błąd → RETRY (2^n min), po 5 próbach DEAD"
-WB=$(Q "insert into workflows (project_id, code, name, trigger_type, condition, actions) values ('$P', 'T-BOOM', 'test błędu', 'DRIVER_ON_FERRY', '{\"and\":[{\"var\":\"payload.boom\"},{\"xyz\":[1]}]}', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]') returning id")
+# warunek z nieznanym operatorem: przy zapisie short-circuit and nie wywołuje xyz (ctx pusty);
+# przy wykonaniu z boom=true → wyjątek → RETRY → DEAD
+WB=$(Q "insert into workflows (project_id, code, name, trigger_type, condition, actions, enabled) values ('$P', 'T-BOOM', 'test błędu', 'DRIVER_ON_FERRY', '{\"and\":[{\"var\":\"payload.boom\"},{\"xyz\":[1]}]}', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]', true) returning id")
 EB=$(EV DRIVER_ON_FERRY '{"boom":true}')
+chk "T-BOOM zakolejkowany" "$(Q "select count(*) from workflow_runs where event_id=$EB")" 1
+# next_attempt_at=now() przy enqueue — ustaw na oś czasu testu (inaczej worker z p_now w przeszłości nie bierze przebiegu)
+$PSQL -c "update workflow_runs set next_attempt_at='2026-10-01 10:00+00', ran_at='2026-10-01 10:00+00' where event_id=$EB" >/dev/null
 chk "1. próba: RETRY, next_attempt_at = +2 min, błąd w wyniku" "$(Q "select workflow_worker(50, '2026-10-01 10:00+00')" >/dev/null; Q "select status||':'||attempts||':'||(extract(epoch from next_attempt_at - '2026-10-01 10:00+00'::timestamptz)/60)::int||':'||(result->>'error' like '%nieobsługiwany operator%') from workflow_runs where event_id=$EB")" "RETRY:1:2:true"
 chk "przed terminem ponowienia worker go nie bierze" "$(Q "select workflow_worker(50, '2026-10-01 10:01+00')")" '{"ok": 0, "dead": 0, "retry": 0, "skipped": 0}'
 for t in '2026-10-01 11:00+00' '2026-10-01 12:00+00' '2026-10-01 13:00+00' '2026-10-01 14:00+00'; do Q "select workflow_worker(50, '$t')" >/dev/null; done
@@ -84,6 +92,7 @@ chk "po 5 próbach: DEAD, attempts 5" "$(Q "select status||':'||attempts from wo
 chk "nieudane przebiegi nie zostawiły powiadomień HHL" "$(Q "select count(*) from notifications n join app_users u on u.id=n.user_id where n.template='WORKFLOW_ALERT' and u.auth_id='$HHL'")" 0
 
 echo; echo "[R-2] akcje zewnętrzne zablokowane (EXTERNAL_MESSAGING wyłączone)"
+$PSQL -c "delete from notifications where channel='EMAIL'" >/dev/null
 $PSQL -c "insert into workflows (project_id, code, name, trigger_type, condition, actions) values ('$P', 'T-MAIL', 'test e-mail', 'MILESTONE_UNLOADED', 'true', '[{\"type\":\"email\"},{\"type\":\"sms\"}]')" >/dev/null
 EM=$(EV MILESTONE_UNLOADED '{}')
 Q "select workflow_worker(50, now())" >/dev/null

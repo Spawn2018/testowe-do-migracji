@@ -15,13 +15,14 @@ import {
 const ROOT = resolve(import.meta.dirname, '..');
 const TEST_REF = 'emkbykwenwrjmbprydml';
 const EXPECTED = {
-  nullguard: 523,
+  nullguard: 528,
   i2: 524,
   dec2: 18,
-  dec3: 10,
+  dec3: 13,
   dec5: 11,
-  workflows: 46,
+  workflows: 47,
   security: 84,
+  money: 131,
   dec6: 15,
   adm10: 8,
   insurance: 42,

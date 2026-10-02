@@ -428,7 +428,7 @@ chk "HHL: token urządzenia sd_ + 64 hex (jawny raz), w bazie tylko skrót" "$(e
 chk "anon: zły token urządzenia odrzucony" "$(AN "select count(*) from sms_pull('sd_$(printf 'b%.0s' {1..64})')" | grep -c 'odwołane urządzenie')" 1
 chk "anon: brak tokenu odrzucony" "$(AN "select count(*) from sms_pull()" | grep -c 'Brak tokenu')" 1
 chk "authenticated: brak EXECUTE sms_pull (tylko anon)" "$(Q "select has_function_privilege('authenticated','sms_pull(text,int)','execute')::text || has_function_privilege('anon','sms_pull(text,int)','execute')::text")" "falsetrue"
-$PSQL -c "set session_replication_role=replica; update loads set driver_phone='+46701234567', driver_locale=null, status='PLANNED', actual_delivery_at=null, sailing_id=null where id='$SL'" >/dev/null
+$PSQL -c "set session_replication_role=replica; update loads set driver_phone='0701234567', driver_phone_country='SE', driver_locale=null, status='PLANNED', actual_delivery_at=null, sailing_id=null where id='$SL'" >/dev/null
 err "link SMS bez numeru kierowcy odrzucony" $HHL "select issue_driver_token_sms('$L2')" "Brak numeru telefonu"
 val "HHL: link kierowcy + SMS w jednej transakcji" $HHL "select (r->>'token' like 'wt_%')::text || (r->>'sms_id' is not null)::text from (select issue_driver_token_sms('$SL') r) x" "truetrue" commit
 chk "DRIVER_LINK: sv z prefiksu +46, sekret, priorytet 100; w sms_outbox.body „[link usunięty]”, bez tokenu" "$(Q "select locale||'/'||contains_secret||'/'||priority||'/'||(body like '%forarlank [link usuniety]%')::text||'/'||(body !~ 'wt_|https?://')::text from sms_outbox where kind='DRIVER_LINK' and load_id='$SL'")" "sv/true/100/true/true"
@@ -490,7 +490,7 @@ chk "anulowanie: LOAD_CANCELLED" "$(Q "select count(*) from sms_outbox where kin
 DID=$(Q "select id from sms_devices where revoked_at is null")
 val "HHL: odwołanie urządzenia" $HHL "select sms_revoke_device('$DID')::text" true commit
 chk "odwołane urządzenie: pobranie odrzucone" "$(AN "select count(*) from sms_pull('$DEVTOK')" | grep -c 'odwołane urządzenie')" 1
-$PSQL -c "delete from notifications where template in ('SMS_FALLBACK','SMS_GATEWAY_SILENT'); delete from risk_signals where dedup_key like 'sms-gateway:%'; delete from sms_outbox; delete from sms_heartbeats; delete from sms_devices; set session_replication_role=replica; update loads set status='PLANNED', driver_phone=null, sailing_id=null where id='$SL'; delete from driver_tokens where load_id='$SL'; delete from sailings where id='$SA'" >/dev/null
+$PSQL -c "delete from notifications where template in ('SMS_FALLBACK','SMS_GATEWAY_SILENT'); delete from risk_signals where dedup_key like 'sms-gateway:%'; delete from sms_outbox; delete from sms_heartbeats; delete from sms_devices; set session_replication_role=replica; update loads set status='PLANNED', driver_phone=null, driver_phone_country='PL', sailing_id=null where id='$SL'; delete from driver_tokens where load_id='$SL'; delete from sailings where id='$SA'" >/dev/null
 
 echo; echo "[R-2] blokada wiadomości do osób zewnętrznych przed umowami RODO (0068)"
 $PSQL -c "update security_flags set enabled=false where key='EXTERNAL_MESSAGING'" >/dev/null
@@ -513,7 +513,7 @@ chk "stan końcowy: wiadomości zewnętrzne wyłączone" "$(Q "select enabled fr
 
 echo; echo "[I-20] ogólny dziennik audytu tabel biznesowych (0072 + HIST-11/0118)"
 chk "wyzwalacz trg_audit_row na 7 tabelach I-20" "$(Q "select count(distinct tgrelid::regclass::text) from pg_trigger where tgname='trg_audit_row' and tgrelid::regclass::text in ('loads','shipment_items','invoices','invoice_lines','rate_cards','rate_rules','sefs_parameters')")" 7
-chk "HIST-11: trg_audit_row >= 30 tabel biznesowych" "$(Q "select (count(distinct tgrelid) >= 30)::text from pg_trigger where tgname='trg_audit_row' and not tgisinternal")" t
+chk "HIST-11: trg_audit_row >= 30 tabel biznesowych" "$(Q "select (count(distinct tgrelid) >= 30)::text from pg_trigger where tgname='trg_audit_row' and not tgisinternal")" "true"
 chk "HIST-11: kolumna audit_log.source" "$(Q "select count(*) from information_schema.columns where table_schema='public' and table_name='audit_log' and column_name='source'")" 1
 chk "HIST-11: admin_audit_history EXECUTE tylko authenticated" "$(Q "select has_function_privilege('authenticated','admin_audit_history(timestamptz,timestamptz,uuid,text,text,text,int,int)','execute')::text||has_function_privilege('anon','admin_audit_history(timestamptz,timestamptz,uuid,text,text,text,int,int)','execute')::text")" "truefalse"
 $PSQL -c "delete from audit_log where action like 'ROW_%'" >/dev/null
@@ -872,7 +872,7 @@ val "KSH czyta korytarz (2 linie)" $KSH "select count(*) from corridor_polylines
 chk "postęp środek SE: remaining_frac w (0,1), off < 30 km" "$(Q "select (remaining_frac between 0.05 and 0.95)::text||'/'||(off_m < 30000)::text from corridor_progress('SE_E4', st_setsrid(st_makepoint(19.5, 63.5),4326))")" "true/true"
 chk "OFF_CORRIDOR_M = 2000" "$(Q "select value::text from app_parameters where key='OFF_CORRIDOR_M'")" "2000"
 # spowolnienie SE 1.15 → jazda SE 17×1.15 = 19,55 h w basis (transport przed promem)
-L7=33333333-0000-0000-0000-00000000ii70
+L7=33333333-0000-0000-0000-00000000a170
 $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date) values ('$L7','$P','00000000-0000-0000-0000-00000000a003','KSH/II7','PLANNED', current_date+1, current_date+5) on conflict (id) do nothing" >/dev/null
 $PSQL -c "update corridor_conditions set slowdown_mult=1.15, reason='test II-7 snieg' where corridor='SE_E4'" >/dev/null
 $PSQL -c "select refresh_load_eta('$L7')" >/dev/null

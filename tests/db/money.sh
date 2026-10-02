@@ -106,7 +106,9 @@ val "ryzyka w kolejce (L3: HHL + przewoźnik)"              $HHL "select string_
 val "L4 (termin za 5 dni) bez ryzyka"                      $HHL "select count(*) from risk_signals where load_id='$L4'" 0
 val "przypomnienie dla HHL: tylko HHL-owe"                 $HHL "select string_agg(payload->>'side', ',') from notifications where template='ORDER_NO_MISSING'" "HHL"
 val "przypomnienie dla przewoźnika: tylko przewoźnika"     $SCX "select string_agg(payload->>'side', ',') from notifications where template='ORDER_NO_MISSING'" "CARRIER"
-val "KSH nie dostaje przypomnień o numerach"               $KSH "select count(*) from notifications" 0
+# M5 = numery zleceń (nie cisza całkowita): po DATY-67 zmiana planu w M3 daje KSH PLAN_DATES_CHANGED
+val "KSH nie dostaje przypomnień o numerach"               $KSH "select count(*) from notifications where template='ORDER_NO_MISSING'" 0
+val "KSH bez RISK_OPEN dla RESOURCE_MISSING (0127)"        $KSH "select count(*) from notifications where template='RISK_OPEN' and payload->>'kind'='RESOURCE_MISSING'" 0
 err "zalogowany nie wstawi powiadomienia"                  $SCX "insert into notifications (channel, recipient, template) values ('IN_APP','x','X')" "permission denied"
 val "uzupełnienie numeru HHL zamyka ryzyko HHL"            $HHL "update loads set hhl_order_no='HHL/T/3' where id='$L3'; select string_agg(detail->>'side', ',') from risk_signals where load_id='$L3' and resolved_at is null" "CARRIER" commit
 val "uzupełnienie numeru przewoźnika zamyka ryzyko"        $SCX "update loads set carrier_order_no='SCX/T/3' where id='$L3'; select count(*) from risk_signals where load_id='$L3' and resolved_at is null" 0 commit

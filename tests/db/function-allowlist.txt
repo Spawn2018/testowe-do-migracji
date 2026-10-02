@@ -134,6 +134,8 @@ authenticated carrier_scorecard
 authenticated carrier_rating_detail
 authenticated insurance_policy_save
 authenticated insurance_policies_list
+# D-30 (0125): zatwierdzanie polisy — tylko HHL w ciele; testy insurance.sh
+authenticated insurance_policy_approve
 # OPL-8 (0115): dopłaty wyłącznie ręczne
 authenticated load_agreed_fee_add
 authenticated fee_catalog_hints

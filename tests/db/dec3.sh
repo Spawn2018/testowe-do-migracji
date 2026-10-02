@@ -43,5 +43,17 @@ $PSQL -c "update loads set status = case when status = 'PLANNED' then 'RESOURCES
 val "status → powiadomienie HHL" $HHL "select count(*) > 0 from notifications where template='LOAD_STATUS_CHANGED' and load_id='$L'" t
 val "KSH widzi status IN_APP" $KSH "select count(*) > 0 from notifications where template='LOAD_STATUS_CHANGED' and load_id='$L'" t
 
+# 0127: RISK_FERRY_WEATHER tylko FERRY/WEATHER/ETA_BREACH — nie RESOURCE_MISSING
+$PSQL -c "delete from notifications where template like 'RISK_%' and load_id='$L'" >/dev/null
+$PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key)
+  values ('$P','$L','RESOURCE_MISSING','HIGH','test numer','rk_test_orderno',
+          jsonb_build_object('rule','ORDER_NO','side','HHL'),'TEST:ORDERNO:'||gen_random_uuid()::text)" >/dev/null
+val "RESOURCE_MISSING → KSH bez RISK_OPEN (0127)" $KSH "select count(*) from notifications where template='RISK_OPEN' and load_id='$L'" 0
+val "RESOURCE_MISSING → HHL RISK_OPEN (SYSTEM)" $HHL "select count(*) > 0 from notifications where template='RISK_OPEN' and payload->>'kind'='RESOURCE_MISSING'" t
+$PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key)
+  values ('$P','$L','FERRY','HIGH','test prom','rk_test_ferry',
+          jsonb_build_object('rule','FERRY'),'TEST:FERRY:'||gen_random_uuid()::text)" >/dev/null
+val "FERRY → KSH RISK_OPEN (macierz)" $KSH "select count(*) > 0 from notifications where template='RISK_OPEN' and payload->>'kind'='FERRY'" t
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

@@ -30,7 +30,9 @@ ok=0; fail=0; denied=0; total=0; pure=0; posok=0; posna=0
 say() { echo "  $1"; }
 call() { $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; $2; rollback;" 2>&1 | grep -vE '^(BEGIN|SET|ROLLBACK)$' | tr '\n' ' ' | sed 's/ *$//'; }
 
-SNAPQ="select (select count(*) from audit_log)||'/'||(select count(*) from import_column_templates)||'/'||(select count(*) from loads)||'/'||(select count(*) from invoices)||'/'||(select count(*) from notifications)"
+# HIST-11: trg_audit_row na app_users — przełączanie active w tym teście wpisuje ROW_UPDATE;
+# migawka pomija entity=app_users, żeby nie mylić z wyciekiem rollbacku.
+SNAPQ="select (select count(*) from audit_log where entity is distinct from 'app_users')||'/'||(select count(*) from import_column_templates)||'/'||(select count(*) from loads)||'/'||(select count(*) from invoices)||'/'||(select count(*) from notifications)"
 SNAP0=$($PSQL -c "$SNAPQ")
 echo; echo "[I-2A] kompletność listy wywołań"
 CAT=$($PSQL -c "select distinct p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prokind='f' and not exists (select 1 from pg_depend d where d.objid=p.oid and d.deptype='e') and has_function_privilege('authenticated', p.oid, 'execute') order by 1" | tr -d '\r')

@@ -86,6 +86,8 @@ load_escort_contacts | EMPTY | select count(*) from load_escort_contacts() | 0
 carrier_rating_detail | GUARD | select count(*) from carrier_rating_detail('$L1') | wyłącznie dla HHL
 insurance_policy_save | GUARD | select insurance_policy_save('00000000-0000-0000-0000-00000000a003', 'X-1', current_date, current_date + 30) | Brak aktywnego konta
 insurance_policies_list | GUARD | select count(*) from insurance_policies_list() | Brak aktywnego konta
+# D-30 (0125): zatwierdzanie — tylko HHL (is_hhl)
+insurance_policy_approve | GUARD | select insurance_policy_approve(gen_random_uuid(), true, null) | Zatwierdzenie polisy tylko dla HHL|Brak aktywnego konta
 shipment_family | PURE | select shipment_family('KR-08') | KR
 kr_convoy_count | GUARD | select kr_convoy_count('$L1') | wyłącznie HHL
 sefs_lookup_mult | PURE | select sefs_lookup_mult(1, '[{"lte":10,"mult":1.1}]'::jsonb) | 1.1

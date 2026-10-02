@@ -577,3 +577,40 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 
 | I-3-APK | bramka Android | **DONE** | (ten commit) | burst **10/10 DELIVERED**; strefy **0116** ON | Zamknięte decyzją koordynatora 02.10 (po teście stabilności + burst). |
 | DEC-2/3/4 | skutki + macierz powiadomień | **DONE** | (ten commit) | **0126** PROD+TEST (dry-run ROLLBACK OK → apply); dec2 **18/18**; dec3 **10/10** | `matrix_notify` + skutki opcji; wyzwalacze status/ryzyko/strefa; UI hint. |
+| AUTH-MAIL | szablony e-mail Auth „Watch Tower” | **DONE** 02.10 | — | Management API PATCH `config/auth` (bez wysyłki) | Tematy + treści: confirmation/invite/magic_link/recovery/email_change — wszystkie zawierają „Watch Tower”. |
+| MIG-PARITY | lista migracji repo = PROD | **DONE** 02.10 | `e2947d70` | LOCAL 126 = PROD 126 (`0001`…`0126`); missing 0 | Commit + push `e2947d70`. |
+
+#### Zmiany oczekiwań bramy (sesja 01–02.10) — `scripts/test-db-gate.mjs` / `tests/db/gate.sh`
+
+| Zestaw | Było (przed sesją / `59a5ce49`) | Jest | Dlaczego (test za zmianą) |
+|---|---|---|---|
+| nullguard (hosted) | 473 | **523** → **528** | + `insurance_policy_approve` w `null-guard-calls.txt` (GUARD ×4 + pozytywne HHL). Migawka: pomija `audit_log` entity=`app_users` — HIST-11 `trg_audit_row` zapisuje ROW_UPDATE przy przełączaniu `active` w teście (34→38 to nie wyciek rollbacku). |
+| i2 (hosted) | 510 → w trakcie 499/512/515… | **524** | DATY-67, I-7a, OPL-8 (+13), HIST-11 (+3), II-7 (+9) — sekcje w `tests/db/i2.sh` |
+| dec2 | 14 | **18** | **0126** skutki opcji — `tests/db/dec2.sh` |
+| money | 130 | **131** | M5: asercja numerów precyzyjna + `RISK_OPEN/RESOURCE_MISSING` (0127); test w `money.sh` |
+| dec3 | 8 | **10** → **13** | **0126** macierz + wyzwalacze; **0127** +3 asercje mapowania kind→grupa (`tests/db/dec3.sh`) |
+| adm10 | (brak) | **8** | nowy `tests/db/adm10.sh` (0117) |
+| hist11 | (brak) | **11** | nowy `tests/db/hist11.sh` (0118) |
+| insurance | 33 | **42** | **0125** approve/cron — `tests/db/insurance.sh` |
+| workflows | 46 | **47** | +chk T-BOOM w kolejce; RETRY: pin `next_attempt_at` do osi testu (po 01.10.2026 `now()` > p_now testu) |
+| migracje (hosted) | 126 | **127** | **0127** `risk_matrix_group_map` |
+| nullguard (lokal `gate.sh`) | 379 | **389** | lokalna lista wywołań (bez pełnego hosted) — do weryfikacji na czystej bramie |
+| i2 (lokal `gate.sh`) | 510 | **519** | jak i2 hosted, podzbiór lokalny |
+
+**Allowlist (nie EXPECTED):** pierwsza czysta brama 02.10 → security **83 OK / 1 FAIL**: brak `authenticated insurance_policy_approve` w `function-allowlist.txt` mimo grantu w **0125** i testów w `insurance.sh` (approve/reject HHL, odmowa KSH). **Dopisano do allowlist** — EXPECTED security **84** bez zmiany (FAIL → OK).
+
+**money FAIL (naprawa 0127 + precyzja asercji M5):** czysta brama → money **129/130**: `KSH nie dostaje przypomnień o numerach` (otrzymano 5→3, oczekiwano 0).
+1. **0126** mapował `RESOURCE_MISSING` → `RISK_FERRY_WEATHER` (KSH IN_APP). **0127** — tylko `FERRY`/`WEATHER`/`ETA_BREACH` → ta grupa; reszta → `SYSTEM`. Test: `dec3.sh` +3. 
+2. Asercja M5 była `count(*) from notifications = 0` — za szeroka: M3 (`plan_delivery_*`) po **0113** tworzy `PLAN_DATES_CHANGED` dla KSH (zamierzone). **Było:** cisza całkowita. **Jest:** `ORDER_NO_MISSING = 0` + nowa asercja `RISK_OPEN+RESOURCE_MISSING = 0`. EXPECTED money **130 → 131**.
+
+**D-STENA-COORDS — linki do potwierdzenia:**
+- Gdynia (54.53321, 18.54425): https://www.google.com/maps?q=54.53321,18.54425
+- Karlskrona (56.16460, 15.63080): https://www.google.com/maps?q=56.16460,15.63080
+
+**i2 / workflows (czysta brama 02.10):**
+- i2 SMS: TEL-1 — test ustawiał `driver_phone='+4670…'` przy domyślnym `driver_phone_country='PL'` → E.164 `+48467…` → locale pl. **Jest:** `0701234567` + `country='SE'`.
+- i2 HIST-11: `(…)::text` → **true** (nie `t`).
+- i2 II-7: UUID `…ii70` (nie-hex) — INSERT cicho padał → `…a170`.
+- workflows: re-apply tylko 0094–0096; R-2 czyści EMAIL; RETRY pinuje `next_attempt_at` do 2026-10-01. EXPECTED **47**.
+
+*Czysta brama hosted — pełny bieg po poprawkach (02.10).*

@@ -112,3 +112,19 @@ poprzedników) — 0 px różnicy. Zauważone przy okazji (bez zmiany, stan sprz
 
 **Regresji: 0.** Wzorzec odświeżony po klasyfikacji: 165 ujęć (144 + 18 + 3) z buildu `0efa871` nowym narzędziem (podzbiory
 `FILTER=__390__`, `FILTER=__768__`); pozostałe 675 bez zmian.
+
+## G4-D27-D31 (02.10.2026) — zgoda koordynatora: odświeżyć TYLKO ujęcia z przyczyną
+
+Zgoda: odświeżenie wzorca **wyłącznie** dla ujęć, których różnica wynika z:
+**D-27** (kontrast tekstu), **D-31** (pasek ≤430), **BRAND-15** (logo/nazwa), **RESP-14** (telefon/PWA layout), **UI-12** (user/rola/Wyloguj w Nav; bez POD/mocowania).
+
+| Grupa przyczyny | Oczekiwane ujęcia | Przyczyna |
+|---|---|---|
+| D-27 | wszystkie motywy / widoki z `--ink-3`, amber, badge, kursor thead | kolory tekstu ≥ 4,5:1; zero przesunięć layoutu |
+| D-31 | ujęcia **390** (pasek górny) | ukryty lang+roleswitch, brand ściśnięty, overflow-x clip |
+| BRAND-15 | splash / login / favicon / Nav brand | Watch Tower branding |
+| RESP-14 | **390** i **768** — Nav menu, drawer, karty harmonogramu | menu ☰, full drawer, touch targets |
+| UI-12 | Nav (wszystkie szerokości) + Docs/Schedule bez POD/LASHING | sesja w menu; usunięte typy dokumentów z UI |
+
+**Procedura:** po `gate:visual` — lista zmienionych; każde ujęcie z przyczyną z tabeli → odświeżyć; ujęcie bez przyczyny → **wypisać, nie odświeżać**.
+**Stan 02.10:** klasyfikacja + odświeżenie — po zielonej bramie bazy i `vercel --prod` (poniżej w POSTEP).
