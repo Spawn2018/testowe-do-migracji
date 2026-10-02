@@ -17,6 +17,8 @@ const TEST_REF = 'emkbykwenwrjmbprydml';
 const EXPECTED = {
   nullguard: 528,
   i2: 524,
+  i30: 10,
+  i31: 6,
   dec2: 18,
   dec3: 13,
   dec5: 11,

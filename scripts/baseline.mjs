@@ -40,11 +40,22 @@ const ROOT = join(__dirname, '..')
 /** Bump when nav/role selectors or matrix semantics change. */
 const SCRIPT_VERSION = '2026-09-26-g4-fala3b-views'
 
-const chrome = existsSync('/usr/bin/google-chrome-stable')
-  ? '/usr/bin/google-chrome-stable'
-  : existsSync('/usr/bin/google-chrome')
-    ? '/usr/bin/google-chrome'
-    : '/usr/bin/chromium'
+const chromeCandidates = [
+  process.env.CHROME_PATH,
+  '/usr/bin/google-chrome-stable',
+  '/usr/bin/google-chrome',
+  '/usr/bin/chromium',
+  'C:/Program Files/Google/Chrome/Application/chrome.exe',
+  'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
+  process.env.LOCALAPPDATA
+    ? join(process.env.LOCALAPPDATA, 'Google/Chrome/Application/chrome.exe')
+    : '',
+].filter(Boolean)
+const chrome = chromeCandidates.find((p) => existsSync(p))
+if (!chrome) {
+  console.error('baseline: brak Chrome (ustaw CHROME_PATH). Szukano:', chromeCandidates.join(' | '))
+  process.exit(1)
+}
 
 const BASE = (process.env.BASE_URL || 'http://127.0.0.1:4177/').replace(/\/?$/, '/')
 const OUT = join(ROOT, process.env.OUT || 'shots-baseline')

@@ -563,13 +563,12 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 | RESP-14 | telefon/PWA dokończenie | **DONE** | (ten commit) | resp14-phone **3/3**; LH viewport=1 a11y=1 | Brama 390/768 overflow; menu sesja; skrypt `lh:resp14`. Installable/SW na HTTPS prod. §12 user = UI-12. |
 | HHL-4a | nr zlecenia HHL (§4a) | **DONE** | (ten commit) | UI awizacja/szuflada | Dodaj/Edytuj nr HHL działa; zapis zwrotny do pliku KSH = II-10-E2 / D-33. |
 
-**Następne:** kolejka P0–P1 bez blockerów właściciela — **wyczerpana**. Czeka wyłącznie na właściciela (poniżej). Nie regenerować G4 bez zgody.
+**Następne:** kolejka P0–P1 bez blockerów właściciela — **wyczerpana** (G4-D27-D31 DONE 02.10).
 **Czeka na właściciela:**
-- **G4-D27-D31** — opis w `G4_WZORZEC.md` + zgoda na odświeżenie wzorca (D-27 kontrast, D-31 pasek 390) — koordynator 02.10: zgoda tylko na ujęcia z przyczyną D-27/D-31/BRAND-15/RESP-14/UI-12
 - **D-32** — zgoda IT KSH + creds SharePoint → `.env.local` (blokuje II-10-E1)
 - **D-TELM-ETA / TELM-2** — API emtrack + przykłady linków (blokuje II-7b naukę)
 - **ZEZW-13** — wymiary aut (P2)
-- **D-STENA-COORDS** — potwierdzenie współrzędnych terminali Stena (linki Maps poniżej / w raporcie)
+- **D-STENA-COORDS** — potwierdzenie współrzędnych terminali Stena (linki Maps poniżej)
 - **D-18** — e-mail informacyjny do armatora (II-5 odczyt już DONE)
 - **D-17** — cert KPD GDDKiA
 - dane polisy OCP po spotkaniu SCX
@@ -614,3 +613,25 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 - workflows: re-apply tylko 0094–0096; R-2 czyści EMAIL; RETRY pinuje `next_attempt_at` do 2026-10-01. EXPECTED **47**.
 
 *Czysta brama hosted — pełny bieg po poprawkach (02.10).*
+
+### Raport wznowienia po awarii (02.10 popołudnie)
+
+| Pozycja | Status | Wynik |
+|---|---|---|
+| E2E `tests/e2e-core.spec.ts` | DONE | selektory awizacji `label.form-field` Kierowca/Ciągnik; telefon 390 → `button.phone-menu-btn` |
+| G4 visual-states + smoke | DONE | 11× stan + 4× smoke odświeżone — **BRAND-15 + D-27** (nie regresja) |
+| G4 matryca 840 | DONE | SHA: **840/840 zmienione**, 0 bez przyczyny; odświeżone (`G4_WZORZEC.md`) |
+| **0128** | DONE PROD+TEST | tylko `(select auth.uid())` w 4 politykach |
+| vercel --prod | (ten commit) | po push |
+
+**0128 — ostrzeżenia doradcy świadomie NIE zmieniane:**
+- **security_definer_view** `v_load_*` — zamierzone (0010): tabele `load_cost`/`load_revenue` bez GRANT dla API; widok = właściciel + filtr WHERE + `security_barrier`. Bez porównania HHL/KSH/SCX przed/po → **nie ruszamy**.
+- **rls_disabled_in_public** `spatial_ref_sys` — PostGIS (`supabase_admin`), chronione wyzwalaczem **0031**; RLS nie włączamy.
+- **st_estimatedextent** anon EXECUTE — właściciel `supabase_admin`; `REVOKE` nie zmienia ACL (grantor admin) — **bez zmiany**.
+
+**Brama TEST (0128, 128 mig):** security…import OK (wcześniejszy bieg); remainder: nullguard **528**, i2 **524**, i30 **10**, i31 **6**, dec2 **18**, dec3 **13**, dec5 **11**, dec6 **15**, adm10 **8**, hist11 **11**, workflows **47**, insurance **42** — wszystkie 0 FAIL.
+
+| Zestaw EXPECTED | Było | Jest | Dlaczego |
+|---|---|---|---|
+| migracje (hosted) | 127 | **128** | **0128** `advisor_security_perf` |
+| subset i30/i31 | (brak w subset) | **10 / 6** | dopisane do `test-db-gate-subset.mjs` (testy już istniały) |

@@ -127,4 +127,26 @@ Zgoda: odświeżenie wzorca **wyłącznie** dla ujęć, których różnica wynik
 | UI-12 | Nav (wszystkie szerokości) + Docs/Schedule bez POD/LASHING | sesja w menu; usunięte typy dokumentów z UI |
 
 **Procedura:** po `gate:visual` — lista zmienionych; każde ujęcie z przyczyną z tabeli → odświeżyć; ujęcie bez przyczyny → **wypisać, nie odświeżać**.
-**Stan 02.10:** klasyfikacja + odświeżenie — po zielonej bramie bazy i `vercel --prod` (poniżej w POSTEP).
+
+### Wynik 02.10 — Playwright `visual-states` + smoke (nie matryca 840)
+
+Przyczyna `stan-najechanie` (i pozostałych stanów): **zamierzona**, nie regresja.
+
+| Ujęcia | Przyczyna | Decyzja |
+|---|---|---|
+| `stan-najechanie__{dark,light}`, `stan-fokus__{dark,light}`, `stan-pusty__{dark,light}`, `stan-wcisniety__dark`, `stan-zablokowany__dark`, `stan-ladowanie__dark`, `stan-blad__dark`, `stan-walidacja__dark` (11) | **BRAND-15** (TOWER→Watch Tower + symbol) + **D-27** (kontrast `--ink-3` / badge w treści tabeli ~3% px) | **odświeżone** w `tests/__screenshots__/` |
+| `tryb systemowy` | bez różnicy | bez zmian |
+| smoke `kokpit__hhl__pl__1920__{light,dark-default}`, `mapa__hhl__pl__1920__{light,dark-default}` (4) | te same: BRAND-15 + D-27 | **odświeżone** |
+
+D-31 / RESP-14: nie dotyczą ujęć 1440/1920 (pasek/menu telefonu). UI-12: marginalny wpływ na te kadry.
+
+**Matryca 840 (`shots-baseline/`):** porównanie SHA-256 kandydat (Windows Chrome) vs wzorzec:
+**840/840 zmienione**, 0 bez przyczyny. Odświeżone wszystkie.
+
+| Szerokość | Ujęcia | Przyczyny |
+|---|---|---|
+| 390 | 168 | BRAND-15, D-27, D-31, RESP-14, UI-12 |
+| 768 | 168 | BRAND-15, D-27, RESP-14, UI-12 |
+| 1280 / 1440 / 1920 | 168×3 | BRAND-15, D-27, UI-12 |
+
+Ujęcia bez przyczyny: **brak** (lista pusta).
