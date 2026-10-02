@@ -98,7 +98,13 @@ test('KSH widzi odpowiedź i plik korekty, akceptuje — historia 4 kroków', as
   await expect(th.locator('[data-dispute-event="REPLY"]')).toContainText('stawka wg aneksu 2');
   await expect(th.locator('[data-action="dispute-reply"]')).toHaveCount(0);
   await expect(th.locator('[data-dispute-event="CORRECTION"]')).toContainText('faktura korygująca KOR/1');
-  await page.evaluate(() => { (window as unknown as { __opened: string[] }).__opened = []; window.open = ((u: string) => { (window as unknown as { __opened: string[] }).__opened.push(String(u)); return null; }) as typeof window.open; });
+  await page.evaluate(() => {
+    (window as unknown as { __opened: string[] }).__opened = [];
+    document.addEventListener('click', (ev) => {
+      const a = (ev.target as HTMLElement | null)?.closest?.('a');
+      if (a instanceof HTMLAnchorElement && a.href) (window as unknown as { __opened: string[] }).__opened.push(a.href);
+    }, true);
+  });
   await th.locator('[data-dispute-doc="e2e-iii7-korekta.pdf"]').click();
   await expect.poll(() => page.evaluate(() => (window as unknown as { __opened: string[] }).__opened[0] ?? '')).toMatch(/\/storage\/v1\/object\/sign\//);
   const signed = await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened[0]);

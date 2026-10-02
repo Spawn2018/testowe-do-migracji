@@ -41,7 +41,9 @@ Deno.serve(async (req) => {
   });
   const row = (Array.isArray(reg.data) ? reg.data[0] : reg.data) as { id: string; bucket: string; object_path: string } | null;
   if (reg.error || !row) return json(403, { error: reg.error?.message ?? 'Odrzucono' });
-  const up = await sb.storage.from(row.bucket).upload(row.object_path, file, { contentType: check.mime, upsert: false });
+  if (row.object_path.includes('..') || row.bucket.includes('..')) return json(400, { error: 'Niedozwolona ścieżka pliku' });
+  const objectPath = row.object_path.replace(/\.\.\//g, '');
+  const up = await sb.storage.from(row.bucket).upload(objectPath, file, { contentType: check.mime, upsert: false });
   if (up.error) {
     await sb.from('documents').delete().eq('id', row.id);
     return json(500, { error: `Zapis pliku: ${up.error.message}` });

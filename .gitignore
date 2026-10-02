@@ -63,3 +63,6 @@ android/**/*.keystore
 scripts/_probe-*
 tmp-*
 tmp_*.txt
+
+# Wyniki bramy TEST (lokalne)
+tmp-gate/

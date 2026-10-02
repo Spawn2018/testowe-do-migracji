@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getSupabase } from './client';
 import { authErrorPl } from './config';
 import { getAuthProfile } from './profile';
+import { safeStorageTarget } from '../data/storagePath';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
 import './auth.css';
@@ -96,7 +97,9 @@ export default function InsurancePolicyForm() {
     const row = (Array.isArray(created.data) ? created.data[0] : created.data) as
       | { id: string; bucket: string; object_path: string } | undefined;
     if (!row) throw new Error('Brak rejestracji dokumentu');
-    const up = await sb.storage.from(row.bucket).upload(row.object_path, file, {
+    const stored = safeStorageTarget(row.bucket, row.object_path);
+    const objectPath = stored.objectPath.replace(/\.\.\//g, '');
+    const up = await sb.storage.from(stored.bucket).upload(objectPath, file, {
       contentType: file.type || 'application/pdf',
       upsert: false,
     });

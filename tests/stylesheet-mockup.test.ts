@@ -30,7 +30,23 @@ const ODSTEPSTWA: Record<string, string> = {
   '.mapbox svg|display': 'FIX_MORNING: jw. (reguła .mapbox svg usunięta)',
   '.mapbox svg|width': 'FIX_MORNING: rozciąganie SVG psuło warstwy Leaflet (mapa SVG makiety → Leaflet)',
   '.mapbox svg|height': 'FIX_MORNING: jw.',
+  'thead th|cursor': 'D-27: nagłówek nie jest przyciskiem; kursor pointer tylko przy tabindex',
+  'tbody tr|cursor': 'D-27: wiersz bez tabindex nie udaje łącza; aktywne wiersze mają tabindex',
+  '.brand|align-items': 'BRAND-15 (4e836e2): logo w górnym pasku do środka, nie baseline makiety sprzed symbolu',
 };
+
+/** D-27 — kontrast WCAG. Makieta ma stare heksy; cofnięcie w aplikacji łamie AA. */
+const D27_COLOR = new Map<string, string>([
+  ['#6c7d8a', '#5a6b78'],
+  ['#748896', '#788c9a'],
+  ['#c97e12', '#a55a00'],
+]);
+function d27Color(prop: string, mock: string, app: string) {
+  const colorish = prop === 'color' || prop === '--ink-3' || prop === '--amber-ink' || prop.endsWith('-color');
+  if (!colorish) return false;
+  const to = D27_COLOR.get(mock.trim().toLowerCase());
+  return to !== undefined && app.trim().toLowerCase() === to;
+}
 
 function vars(css: string) {
   const v = new Map<string, string>();
@@ -73,7 +89,13 @@ describe('III-2: arkusz aplikacji wobec makiety v2.0', () => {
 
   it('tokeny :root makiety mają te same wartości', () => {
     const rv = vars(REF), av = vars(APP);
-    const zle = [...rv].filter(([k, x]) => av.get(k) !== x && !(k.startsWith('--font') && same('font-family', x, av.get(k) ?? '')));
+    const zle = [...rv].filter(([k, x]) => {
+      const appv = av.get(k);
+      if (appv === x) return false;
+      if (k.startsWith('--font') && same('font-family', x, appv ?? '')) return false;
+      if (appv !== undefined && d27Color(k, x, appv)) return false;
+      return true;
+    });
     expect(zle).toEqual([]);
   });
 
@@ -85,7 +107,7 @@ describe('III-2: arkusz aplikacji wobec makiety v2.0', () => {
         const key = `${sel}|${prop}`;
         if (ODSTEPSTWA[key]) continue;
         if (!a || !a.has(prop)) { roznice.push(`${key}: brak (makieta: ${val})`); continue; }
-        if (!same(prop, val, a.get(prop)!)) roznice.push(`${key}: ${a.get(prop)} (makieta: ${val})`);
+        if (!same(prop, val, a.get(prop)!) && !d27Color(prop, val, a.get(prop)!)) roznice.push(`${key}: ${a.get(prop)} (makieta: ${val})`);
       }
     }
     expect(roznice).toEqual([]);

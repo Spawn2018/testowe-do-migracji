@@ -22,10 +22,20 @@ P=22222222-0000-0000-0000-000000000001; L1=33333333-0000-0000-0000-000000000001;
 INV=44444444-0000-0000-0000-0000000000ee
 KSHID=$($PSQL -c "select id from app_users where auth_id='$KSH'")
 HHLID=$($PSQL -c "select id from app_users where auth_id='$HHL'")
-DOC=$($PSQL -c "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_by) values ('$P','$L2','CMR','dokumenty/t/ng.pdf','ng.pdf','application/pdf',100,'$HHLID') returning id" | head -1)
+# Powtórzenie części (zerwane połączenie) nie dubluje wierszy. Świeża baza: insert jak dotychczas.
+DOC=$($PSQL -c "select id from documents where storage_path='dokumenty/t/ng.pdf' limit 1" | head -1)
+if [ -z "$DOC" ]; then
+  DOC=$($PSQL -c "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_by) values ('$P','$L2','CMR','dokumenty/t/ng.pdf','ng.pdf','application/pdf',100,'$HHLID') returning id" | head -1)
+fi
 DOCOBJ=t/ng.pdf
-NOTIF=$($PSQL -c "insert into notifications (channel, recipient, user_id, template) values ('IN_APP','hhl@test','$HHLID','TEST') returning id" | head -1)
-PERMIT=$($PSQL -c "insert into permits (project_id, country, permit_no, valid_from, valid_until) values ('$P','SE','P-1',current_date-1,current_date+30) returning id" | head -1)
+NOTIF=$($PSQL -c "select id from notifications where template='TEST' and user_id='$HHLID' limit 1" | head -1)
+if [ -z "$NOTIF" ]; then
+  NOTIF=$($PSQL -c "insert into notifications (channel, recipient, user_id, template) values ('IN_APP','hhl@test','$HHLID','TEST') returning id" | head -1)
+fi
+PERMIT=$($PSQL -c "select id from permits where project_id='$P' and permit_no='P-1' limit 1" | head -1)
+if [ -z "$PERMIT" ]; then
+  PERMIT=$($PSQL -c "insert into permits (project_id, country, permit_no, valid_from, valid_until) values ('$P','SE','P-1',current_date-1,current_date+30) returning id" | head -1)
+fi
 ok=0; fail=0; denied=0; total=0; pure=0; posok=0; posna=0
 say() { echo "  $1"; }
 call() { $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; $2; rollback;" 2>&1 | grep -vE '^(BEGIN|SET|ROLLBACK)$' | tr '\n' ' ' | sed 's/ *$//'; }
@@ -34,16 +44,34 @@ call() { $PSQL -c "begin; set local role authenticated; set local request.jwt.cl
 # migawka pomija entity=app_users, żeby nie mylić z wyciekiem rollbacku.
 SNAPQ="select (select count(*) from audit_log where entity is distinct from 'app_users')||'/'||(select count(*) from import_column_templates)||'/'||(select count(*) from loads)||'/'||(select count(*) from invoices)||'/'||(select count(*) from notifications)"
 SNAP0=$($PSQL -c "$SNAPQ")
+# TOWER_NG_PART=1..4 (pusto = całość). 1: linie 1–40 + kompletność; 2: 41–80; 3: 81–koniec; 4: kontrola dodatnia i statyczna.
+_ng_denial_line() {
+  [ -z "${TOWER_NG_PART:-}" ] && return 0
+  case "${TOWER_NG_PART}" in
+    1) [ "$1" -le 40 ] ;;
+    2) [ "$1" -ge 41 ] && [ "$1" -le 80 ] ;;
+    3) [ "$1" -ge 81 ] ;;
+    *) return 1 ;;
+  esac
+}
+_ng_want() { [ -z "${TOWER_NG_PART:-}" ] || [ "${TOWER_NG_PART}" = "$1" ]; }
+
+if _ng_want 1; then
 echo; echo "[I-2A] kompletność listy wywołań"
 CAT=$($PSQL -c "select distinct p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prokind='f' and not exists (select 1 from pg_depend d where d.objid=p.oid and d.deptype='e') and has_function_privilege('authenticated', p.oid, 'execute') order by 1" | tr -d '\r')
 LIST=$(grep -vE '^\s*(#|$)' tests/db/null-guard-calls.txt | awk -F' \\| ' '{print $1}' | tr -d '\r' | sort -u)
 MISS=$(comm -23 <(echo "$CAT" | sort -u) <(echo "$LIST") | tr '\n' ' ')
 NFN=$(echo "$CAT" | grep -c .)
 if [ -z "$MISS" ]; then ok=$((ok+1)); say "OK    każda z $NFN funkcji authenticated ma wpis w null-guard-calls.txt"; else fail=$((fail+1)); say "FAIL  funkcje bez wpisu: $MISS"; fi
+fi # tower-ng-part kompletność
 
+if _ng_want 1 || _ng_want 2 || _ng_want 3; then
 echo; echo "[I-2A] konta bez aktywnego wiersza app_users: nieaktywny HHL, KSH, SCX + brak app_users"
 $PSQL -c "update app_users set active=false where auth_id in ('$HHL','$KSH','$SCX')" >/dev/null
+_ng_i=0
 while IFS='|' read -r name kind sql exp; do
+  _ng_i=$((_ng_i+1))
+  _ng_denial_line "$_ng_i" || continue
   name=$(echo $name); kind=$(echo $kind); exp=$(echo "$exp" | sed 's/^ *//;s/ *$//')
   sql=$(echo "$sql" | sed "s/\$KSHID/$KSHID/g;s/\$L1/$L1/g;s/\$L2/$L2/g;s/\$P\b/$P/g;s/\$INV/$INV/g;s/\$DOCOBJ/${DOCOBJ//\//\\/}/g;s/\$DOC/$DOC/g;s/\$NOTIF/$NOTIF/g;s/\$PERMIT/$PERMIT/g")
   if [ "$kind" = PURE ]; then pure=$((pure+1)); continue; fi
@@ -58,7 +86,9 @@ while IFS='|' read -r name kind sql exp; do
   done
 done < <(grep -vE '^\s*(#|$)' tests/db/null-guard-calls.txt)
 say "odmowy: $denied/$total (funkcje z kontrolą: $((total/4)) × 4 konta); czyste obliczeniowe bez dostępu do danych: $pure"
+fi # tower-ng-part odmowy
 
+if _ng_want 4; then
 echo; echo "[I-2A] kontrola pozytywna: aktywny HHL nie dostaje komunikatu odmowy"
 $PSQL -c "update app_users set active=true where auth_id='$HHL'" >/dev/null
 while IFS='|' read -r name kind sql exp; do
@@ -85,4 +115,6 @@ chk "keep_alive dla anon działa dalej (worker)" "$($PSQL -c "begin; set local r
 echo; echo "[I-2A] test statyczny definicji (baza po migracjach)"
 node tests/db/null-guard-static.mjs --db "$URL" >/tmp/ng_static.out 2>&1; rc=$?
 if [ $rc = 0 ]; then ok=$((ok+1)); say "OK    $(tail -1 /tmp/ng_static.out)"; else fail=$((fail+1)); say "FAIL  $(cat /tmp/ng_static.out | tr '\n' ' ')"; fi
+fi # tower-ng-part 4
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

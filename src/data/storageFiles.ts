@@ -10,6 +10,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Document } from '../types';
 import { DOC_CAT_TO_DB } from './mappers';
 import { SIGNED_URL_TTL_S, type FileSink, type FileUploadInput } from './registry';
+import { safeStorageTarget } from './storagePath';
 
 interface CreatedDoc { id: string; bucket: string; object_path: string; storage_path: string }
 
@@ -29,7 +30,9 @@ export function createStorageSink(sb: SupabaseClient, now: () => string = () => 
     if (error) throw new Error(error.message);
     const row = (Array.isArray(data) ? data[0] : data) as CreatedDoc | undefined;
     if (!row) throw new Error('Brak rejestracji dokumentu');
-    const up = await sb.storage.from(row.bucket).upload(row.object_path, input.file, {
+    const stored = safeStorageTarget(row.bucket, row.object_path);
+    const objectPath = stored.objectPath.replace(/\.\.\//g, '');
+    const up = await sb.storage.from(stored.bucket).upload(objectPath, input.file, {
       contentType: input.mimeType, upsert: false,
     });
     if (up.error) {
@@ -54,8 +57,10 @@ export function createStorageSink(sb: SupabaseClient, now: () => string = () => 
 
   async function signedUrl(doc: Document, opts?: { download?: string }): Promise<string> {
     if (!doc.storagePath) throw new Error('Dokument bez pliku w magazynie');
-    const [bucket, path] = splitStoragePath(doc.storagePath);
-    const { data, error } = await sb.storage.from(bucket).createSignedUrl(
+    const [bucketName, rawPath] = splitStoragePath(doc.storagePath);
+    const stored = safeStorageTarget(bucketName, rawPath);
+    const path = stored.objectPath.replace(/\.\.\//g, '');
+    const { data, error } = await sb.storage.from(stored.bucket).createSignedUrl(
       path, SIGNED_URL_TTL_S, opts?.download ? { download: opts.download } : undefined,
     );
     if (error || !data?.signedUrl) throw new Error(error?.message ?? 'Brak linku');

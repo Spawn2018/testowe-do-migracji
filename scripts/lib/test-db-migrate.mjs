@@ -4,11 +4,27 @@
  * 0031: na free test trigger na spatial_ref_sys bywa bez uprawnień — funkcja i tak powstaje.
  */
 import { readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import pg from 'pg';
 
 const PROD = 'nglnnrmzmhusvxslousq';
+
+/** Nie wypisuj URI ani haseł. */
+export function redactSecrets(text) {
+  return String(text ?? '')
+    .replace(/postgres(?:ql)?:\/\/[^\s'"\\]+/gi, 'postgres://***')
+    .replace(/((?:password|secret|service_role|access_token)=)([^\s&]+)/gi, '$1***');
+}
+
+function pgClient(url) {
+  return new pg.Client({
+    connectionString: url,
+    ssl: { rejectUnauthorized: false },
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
+  });
+}
 
 export function refuseProdUrl(url) {
   if (!url || url.includes(PROD)) {
@@ -24,8 +40,25 @@ function psqlFile(psqlBin, url, file, { stopOnError = true } = {}) {
 }
 
 export async function resetPublic(url) {
-  const client = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
+  refuseProdUrl(url);
+  const TEST_REF = 'emkbykwenwrjmbprydml';
+  if (!url.includes(TEST_REF)) {
+    console.error('ODMOWA: reset schematu tylko na projekcie testowym');
+    process.exit(2);
+  }
+  const client = pgClient(url);
   await client.connect();
+  // DR-TEST zostawia restore_RRRRMMDD. DROP public go nie rusza, a information_schema
+  // liczy kolumny ze wszystkich schematów (risks.sh: title_key = 2 zamiast 1).
+  const extra = await client.query(
+    `select nspname from pg_namespace where nspname ~ '^restore_[0-9]{8}$' order by 1`,
+  );
+  for (const row of extra.rows) {
+    const name = String(row.nspname);
+    if (!/^restore_[0-9]{8}$/.test(name)) continue;
+    await client.query(`drop schema ${name} cascade`);
+    console.log(`reset: DROP SCHEMA ${name} CASCADE`);
+  }
   console.log('reset: DROP SCHEMA public CASCADE');
   await client.query('DROP SCHEMA IF EXISTS public CASCADE');
   await client.query('CREATE SCHEMA public');
@@ -58,23 +91,50 @@ export async function resetPublic(url) {
   await client.end();
 }
 
-export async function applyMigrationsAndSeed(root, url, psqlBin) {
-  const migrations = readdirSync(join(root, 'supabase/migrations'))
-    .filter((f) => /^\d{4}_.*\.sql$/.test(f))
-    .sort();
-  if (migrations.length !== 135) {
-    console.error(`Oczekiwano 135 migracji, jest ${migrations.length}`);
+const REPO_ROOT = resolve(import.meta.dirname, '../..');
+const MIGRATION_DIR = join(REPO_ROOT, 'supabase', 'migrations');
+const SEED_FILE = join(REPO_ROOT, 'tests', 'db', 'seed.sql');
+
+/** Nazwa pliku migracji z katalogu repo — bez .. i separatorów. */
+function migrationName(f) {
+  const name = basename(String(f));
+  if (name !== f || name.includes('..') || !/^\d{4}_[A-Za-z0-9_]+\.sql$/.test(name)) {
+    console.error('ODMOWA: nazwa migracji');
     process.exit(1);
   }
+  return name;
+}
+
+export function listMigrationFiles() {
+  const migrations = readdirSync(MIGRATION_DIR)
+    .map((f) => migrationName(f))
+    .filter((f) => /^\d{4}_[A-Za-z0-9_]+\.sql$/.test(f))
+    .sort();
+  if (!migrations.length) {
+    console.error('ODMOWA: brak migracji');
+    process.exit(1);
+  }
+  for (let i = 0; i < migrations.length; i++) {
+    const n = Number(migrations[i].slice(0, 4));
+    if (n !== i + 1) {
+      console.error(`ODMOWA: dziura w numerach migracji przy ${migrations[i]}`);
+      process.exit(1);
+    }
+  }
+  return migrations;
+}
+
+export async function applyMigrationsAndSeed(_root, url, psqlBin) {
+  const migrations = listMigrationFiles();
   console.log(`migracje: ${migrations[0]} … ${migrations[migrations.length - 1]} (${migrations.length})`);
   for (const f of migrations) {
-    const path = join(root, 'supabase/migrations', f);
+    const path = join(MIGRATION_DIR, migrationName(f));
     if (f.startsWith('0031_')) {
       // Najpierw funkcja (zawsze); trigger może dostać permission denied na free test.
       const r = psqlFile(psqlBin, url, path, { stopOnError: false });
       const err = `${r.stderr || ''}${r.stdout || ''}`;
       if (r.status !== 0 && !/permission denied for table spatial_ref_sys/i.test(err)) {
-        console.error(`MIGRACJA ${f} BŁĄD:`, err.slice(0, 2000));
+        console.error(`MIGRACJA ${f} BŁĄD:`, redactSecrets(err).slice(0, 2000));
         process.exit(1);
       }
       if (/permission denied for table spatial_ref_sys/i.test(err)) {
@@ -85,18 +145,18 @@ export async function applyMigrationsAndSeed(root, url, psqlBin) {
     }
     const r = psqlFile(psqlBin, url, path, { stopOnError: true });
     if (r.status !== 0) {
-      console.error(`MIGRACJA ${f} BŁĄD:`, (r.stderr || r.stdout || '').slice(0, 2000));
+      console.error(`MIGRACJA ${f} BŁĄD:`, redactSecrets(r.stderr || r.stdout || '').slice(0, 2000));
       process.exit(1);
     }
     process.stdout.write('.');
   }
   console.log('\nseed…');
-  const seed = psqlFile(psqlBin, url, join(root, 'tests/db/seed.sql'), { stopOnError: true });
+  const seed = psqlFile(psqlBin, url, SEED_FILE, { stopOnError: true });
   if (seed.status !== 0) {
-    console.error('SEED BŁĄD:', (seed.stderr || seed.stdout || '').slice(0, 2000));
+    console.error('SEED BŁĄD:', redactSecrets(seed.stderr || seed.stdout || '').slice(0, 2000));
     process.exit(1);
   }
-  const client = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
+  const client = pgClient(url);
   await client.connect();
   const n = await client.query(
     `select count(*)::int as n from information_schema.tables where table_schema='public' and table_name='loads'`,
@@ -108,4 +168,5 @@ export async function applyMigrationsAndSeed(root, url, psqlBin) {
     console.error('VERIFY FAIL po migracjach/seed');
     process.exit(1);
   }
+  return migrations[migrations.length - 1];
 }

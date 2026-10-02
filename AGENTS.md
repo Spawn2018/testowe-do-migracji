@@ -33,6 +33,7 @@ Pełne: `.cursor/rules/*.mdc`. Procedury: `docs/handover/wzorzec/08_SKILLE/`.
 - ochrona w bazie; `anon` bez uprawnień; `is not true`
 - **migracja: commit + push do repozytorium PRZED nałożeniem na PROD** (lista plików
   w `supabase/migrations/` = `schema_migrations` na produkcji)
+- **brama bazy:** scalenie z migracją = pełna brama w częściach; scalenie bez zmian w bazie = testy aplikacji + tylko dotknięte zestawy; pełna brama co niedzielę i przed migracją na produkcję. Jedno zadanie w tle max 40 min. Wyniki w `tmp-gate/wyniki.json`. Zielone tylko przy jednym commicie i jednej wersji migracji (`scripts/test-db-gate-summary.mjs`)
 - sekrety i pliki poufne poza repozytorium; hasło bazy tylko w `.env.local`
 - wygląd = makieta w 100%; **pełna responsywność i instalacja na telefonie (D-55)**
 - każda paczka decyzji potwierdzona listą identyfikatorów

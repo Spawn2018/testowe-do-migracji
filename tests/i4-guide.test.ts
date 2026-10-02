@@ -5,7 +5,8 @@ import { guideSteps, type GuideRole } from '../src/components/guide/Guide';
 import { I18N_ALL } from '../src/i18n/messages';
 
 const ROLES: GuideRole[] = ['drv', 'hhl', 'ksh', 'scx'];
-const EXPECT: Record<GuideRole, number> = { drv: 8, hhl: 7, ksh: 6, scx: 6 };
+// DOC-ROLE (02.10): HHL +Decyzje (i4_hhl_8), KSH/SCX +panel Instrukcja (i4_*_7).
+const EXPECT: Record<GuideRole, number> = { drv: 8, hhl: 8, ksh: 7, scx: 7 };
 
 describe('I-4 treść', () => {
   for (const r of ROLES) {
