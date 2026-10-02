@@ -82,20 +82,25 @@ try {
 
   step('start', 'połączenie TEST OK; org HHL/SCX/KSH obecne');
 
-  // Czyść poprzedni przebieg SIM-1
+  // Czyść poprzedni przebieg SIM-1 (kolejność FK; load_events/loads mają strażników)
+  await q(`alter table load_events disable trigger trg_load_events_immutable`);
+  await q(`alter table loads disable trigger loads_no_delete`).catch(() => {});
+  await q(`delete from decision_events where decision_id in (select id from decisions where load_id = $1)`, [ids.load]).catch(() => {});
+  await q(`delete from decisions where load_id = $1`, [ids.load]).catch(() => {});
   await q(`delete from positions where load_id = $1`, [ids.load]);
   await q(`delete from load_events where load_id = $1`, [ids.load]);
   await q(`delete from risk_signals where load_id = $1`, [ids.load]);
   await q(`delete from notifications where load_id = $1`, [ids.load]);
-  await q(`delete from decisions where load_id = $1`, [ids.load]);
-  await q(`delete from decision_events where decision_id in (select id from decisions where load_id = $1)`, [ids.load]).catch(() => {});
-  await q(`delete from sms_outbox where load_id = $1`, [ids.load]);
-  await q(`delete from geofence_states where load_id = $1`, [ids.load]);
+  await q(`delete from sms_outbox where load_id = $1`, [ids.load]).catch(() => {});
+  await q(`delete from geofence_states where load_id = $1`, [ids.load]).catch(() => {});
   await q(`delete from loads where id = $1`, [ids.load]);
+  await q(`alter table load_events enable trigger trg_load_events_immutable`);
+  await q(`alter table loads enable trigger loads_no_delete`).catch(() => {});
   await q(`delete from sailings where id = $1`, [ids.sailing]);
   await q(`delete from vessels where id = $1`, [ids.vessel]);
   await q(`delete from geofences where project_id = $1 and name like 'SIM1 %'`, [ids.project]);
-  await q(`delete from projects where id = $1`, [ids.project]);
+  // nie kasuj cudzego projektu KSH — tylko własnego SIM1_TEST
+  await q(`delete from projects where id = $1 and code = 'SIM1_TEST'`, [ids.project]);
 
   // Użyj projektu KSH jeśli jest; inaczej utwórz SIM1
   const existingProj = await one(
@@ -243,14 +248,11 @@ try {
   // SMS tylko na numer właściciela
   if (OWNER_SMS) {
     await q(
-      `insert into sms_test_numbers (e164, label) values ($1, 'SIM1 owner')
-       on conflict do nothing`,
+      `insert into sms_test_numbers (to_e164, label)
+       select $1, 'SIM1 owner'
+        where not exists (select 1 from sms_test_numbers where to_e164 = $1)`,
       [OWNER_SMS],
-    ).catch(async () => {
-      // tabela może mieć inny unikalny klucz
-      await q(`insert into sms_test_numbers (e164, label) select $1, 'SIM1 owner'
-               where not exists (select 1 from sms_test_numbers where e164 = $1)`, [OWNER_SMS]);
-    });
+    );
     await q(
       `insert into sms_outbox (kind, to_e164, locale, body, priority, load_id, status)
        values ('TEST', $1, 'pl', 'Watch Tower: SIM-1 test SMS (zmyslony transport).', 10, $2, 'QUEUED')`,

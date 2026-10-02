@@ -109,8 +109,8 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 
 | ID | Opis | Status |
 |---|---|---|
-| R-1 | import prawdziwego harmonogramu na produkcję | CZEKA NA: I-1b, stawki (D-1) |
-| R-2 | zaproszenie pracowników HHL, potem KSH, potem przewoźnika | CZEKA NA: etap I |
+| R-1 | import prawdziwego harmonogramu na produkcję | **otwarte** — RODO/zgody OK; import + stawki (D-1 SYMBOL w bazie) — właściciel |
+| R-2 | zaproszenie pracowników HHL, potem KSH, potem przewoźnika | **CZĘŚCIOWO** — właściciel sam dodaje użytkowników w aplikacji; zaproszenia/e-maile do tych kont mogą wychodzić (0133). Lista D-16 nadal u właściciela |
 | R-3 | O3b — pierwszy prawdziwy transport od importu do faktury | CZEKA NA: R-2 |
 | R-4 | raport końcowy, tag `release-1.0` | CZEKA NA: R-3 |
 
@@ -232,10 +232,10 @@ Przyjęte identyfikatory: **II-10-E1**, **II-10-E2**, **ONE-MECH** (D-29 + D-29t
 | HIST-11 | P1. Pełna historia zmian (§11) | UI historii | **DONE** (ten commit) — **0118**; hist11 **11/11**; Opcje „Historia zmian” |
 | STENA-3 | P1. Stena Line Gdynia–Karlskrona jak Polferries (§3) | słowniki, strefy, ETA | **DONE** (ten commit) — 0119/0120 + rozkład/status JSON AEM w `ferry-schedule`/`ferry-status` (źródło `STENA`); AIS Digitraffic z portem Karlskrona. **Luki → II-7/8/9:** ETA odcinki, pogoda, opóźnienie AIS; Digitraffic 01.10: 0 pozycji Spirit/Estelle/Ebba (brak ≠ opóźnienie); współrzędne terminali do potwierdzenia mapą |
 | II-5 | P1. Komunikaty armatorów — włączyć odczyt teraz | parser; 403=NIEZNANY | **DONE** (ten commit) — Polferries 403→NIEZNANY+ryzyko; Stena status z JSON; testy ferry+integrations |
-| II-6 | P1. Trafikverket — LIVE (klucz w sekretach Edge; RoadCondition+WeatherMeasurepoint; Situation usunięty z Open API) | `corridor_conditions.SE_E4.slowdown_mult` (+15% śnieg/śliskość → II-7) | **DONE** (ten commit) — migracja **0121** PROD+TEST; Edge `road-se` wdrożony; testy integrations (road-se) |
+| II-6 | P1. Trafikverket — LIVE (klucz w sekretach Edge; RoadCondition+WeatherMeasurepoint; Situation usunięty z Open API) | `corridor_conditions.SE_E4.slowdown_mult` (+15% śnieg/śliskość → II-7) | **DONE** — **0121** + cron **0131** `tower-road-se` `*/15`; panel SE czyta bazę (nie fasadę) |
 | II-7 | P1. Własny silnik ETA na OSM (ODbL). HERE nie | postęp GPS, odpoczynek, prom | **DONE** (ten commit) — **0122** PROD+TEST; `corridor_polylines` + `compute_load_eta` v2 (OSM locate, SE×II-6, rejs GDN-NYN/GDY-KAA, odpoczynek I-15); ryzyko OFF_CORRIDOR + ETA_BREACH; UI attribution ODbL |
 | II-7b | P1. Kalibracja ucząca się (zastępuje III-1) | symulacja 30 transportów | **SZKIELET** (ten commit) — **0123** tabele obserwacji/wersji + freeze HHL_ADMIN; pełna nauka **CZEKA NA TELM-2** (GPS po rozładunku) |
-| II-8 | P1. Pogoda FMI+DMI+SMHI; progi 3,8 m / 40 kn potwierdzone | źródło w UI | **DONE** (ten commit) — **0124** PROD+TEST; Edge `ferry-weather`; cron `15 */6`; LIVE wave≈1,2 m / gust≈20 kn; źródło CC BY 4.0 w Ryzykach |
+| II-8 | P1. Pogoda FMI+DMI+SMHI; progi 3,8 m / 40 kn potwierdzone | źródło w UI | **DONE** — **0124**; cron **0131** `tower-ferry-weather` `15 * * * *` (co 1 h; było co 6 h) |
 | II-9 | P1. Opóźnienie wypłynięcia z AIS; brak pozycji ≠ opóźnienie | test | **DONE** (ten commit) — `aisDepartureDelayMin` + ferry-ais przed odejściem; brak pozycji = brak wniosku; Edge wdrożony; ferry testy +3 |
 | TELM-2 | P1. Szkielet telematyki (§2) — czeka na API emtrack i linki | adapter + GPS z telematyki | CZEKA NA: docs API emtrack, przykłady linków |
 | I-29 | P1. Budżety darmowych planów na 140 transportów | tabela szczyt vs limit | **DONE** (ten commit) — `I29_BUDGETY_140.md`; wszystkie limity OK (Edge ~5%, baza ~14%, Resend ~40%) |
@@ -254,7 +254,7 @@ Przyjęte identyfikatory: **II-10-E1**, **II-10-E2**, **ONE-MECH** (D-29 + D-29t
 | ID | Opis | Kryterium | Status |
 |---|---|---|---|
 | DR-TEST | Odtworzenie ostatniej kopii z R2 na projekt TEST (`emkbykwenwrjmbprydml`). Klucz age tylko lokalnie na czas próby (nigdy repo/logi) | wiersze tabel = kopia; czas odtworzenia w POSTEP | **DONE** — 67 tabel / 4920 wierszy / 20 s (`restore_20261002`) |
-| SIM-1 | Symulacja pełnego transportu na TEST — zmyślony GPS Śrem→Gdańsk→prom→Nynäshamn→Boden: statusy, ETA, decyzje, powiadomienia; SMS tylko na numer właściciela | raport krok po kroku w POSTEP | **DONE** — SMS QUEUED (OWNER_SMS_E164) |
+| SIM-1 | Symulacja pełnego transportu na TEST — zmyślony GPS Śrem→Gdańsk→prom→Nynäshamn→Boden: statusy, ETA, decyzje, powiadomienia; SMS tylko na numer właściciela | raport krok po kroku w POSTEP | **DONE** — pełny tor → AT_SITE; SMS OWNER; e-mail BLOCKED_R2 (oczekiwane) |
 | LOAD-1 | Test obciążenia na TEST — 140 transportów, 20 jednoczesnych użytkowników (3 role); czasy kokpitu, harmonogramu, mapy | liczby w POSTEP | **DONE** — seed 140/570 ms; kokpit p50 386 ms, harmonogram 319, mapa 88 |
 | DOC-ROLE | 1-stronicowe instrukcje dla KSH, przewoźnika i HHL (PL); także w aplikacji (panel „Instrukcja”) | 3 PDF/teksty + panel UI | **DONE** — `docs/handover/instrukcje/{HHL,KSH,SCX}.md`; panel Guide (`i4_*`) w Opcjach/Ustawieniach |
 | DAILY-1 | Codzienny e-mail o 7:00 tylko do administratora — kopie, integracje, bramka SMS, błędy z ostatniej doby | cron + treść; test na adres właściciela | **DONE** — 0129+0130; okno 24 h OK; sms_failed=seria anulowana 01.10; Leaflet+lazyRetry |
@@ -332,7 +332,7 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | D-2 | **ZREALIZOWANE** (I-31): SEFS hybrid_min w bazie; III-10 WOB wyłączone (niezgodne z umową). Potwierdzenie SCX (pyt. 9) nie blokuje | I-31 |
 | D-3 | retencja zdjęć, CMR, POD | część I-7 |
 | D-4 | ~~telefon i SIM~~ — **ZAMKNIĘTE 01.10:** telefon Android + karta SIM są (koordynator). Dokończenie = I-3-APK | I-3-APK |
-| D-5 | umowy RODO z KSH i przewoźnikiem | R-2 |
+| D-5 | **DONE 02.10** (właściciel): umowy RODO / zgody załatwione — odblokowanie zaproszeń i e-maili do kont dodanych w aplikacji (0133); pełne EXTERNAL_MESSAGING nadal osobna decyzja | R-2 |
 | D-6 | spotkanie ze Scandinavian Express | etap II |
 | D-7 | Vercel: wyłączenie trenowania modeli (panel) | — |
 | D-8 | ~~wycena ładunków STANDARD~~ — **ROZSTRZYGNIĘTE 27.09**, potem **NIEAKTUALNE 30.09:** transporty „Standard” należą do NTG (inna firma) i nie są importowane. Osobna stawka STANDARD niepotrzebna. Klasa zostaje tylko jako obrona (HH + Standard = ostrzeżenie) | — |
@@ -347,8 +347,8 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | D-17 | rejestracja w KPD GDDKiA: najpierw firma, potem użytkownik z certyfikatem | II-6 (Polska) |
 | D-18 | e-mail do armatora z prośbą o zgodę na odczyt komunikatów (informacja — odczyt II-5 już włączony) | II-5 DONE; oficjalny kanał |
 | D-34 | **ROZSTRZYGNIĘTE 01.10:** klucz Trafikverket w sekretach Edge + `.env.local` — II-6 LIVE (RoadCondition + WeatherMeasurepoint). Situation usunięty z Open API dostawcy | II-6 DONE |
-| D-STENA-COORDS | **CZEKA.** Potwierdzenie współrzędnych terminali Stena Gdynia (54.53321, 18.54425) i Karlskrona (56.16460, 15.63080) na mapie — dziś orientacyjne ze stron Stena | STENA-3 geofence |
-| D-20 | wiadomości do osób zewnętrznych (SMS do kierowców, e-mail poza log-mar.pl) — blokada techniczna do R-2 (0068, flaga `EXTERNAL_MESSAGING`); włącza HHL_ADMIN po podpisaniu umów RODO (D-5) | R-2 |
+| D-STENA-COORDS | **DONE 02.10** (właściciel potwierdził terminale). Współrzędne: Gdynia 54.53321, 18.54425; Karlskrona 56.16460, 15.63080 — obowiązują w geofence STENA-3 | STENA-3 geofence |
+| D-20 | **CZĘŚCIOWO 02.10:** RODO/zgody załatwione (R-1/R-2). **0133:** e-mail do kont `app_users` + aktywnych zaproszeń `user_invites` = PENDING (nie BLOCKED_R2); SMS do kierowców nadal zablokowane (`EXTERNAL_MESSAGING` = false). Pełne włączenie: `admin_set_external_messaging(true)` gdy HHL zdecyduje | R-2 |
 | D-21 | **POTWIERDZONE 28.09 (właściciel): właściciel włącza przed pierwszym transportem.** **DZIAŁANIE WŁAŚCICIELA przed pierwszym prawdziwym transportem (R-3):** włączyć przełącznik I-27 „brak zezwolenia blokuje Gotowy” dla klas innych niż STANDARD — Opcje → „Wymóg zezwoleń (transporty ponadnormatywne)” → „Włącz wymóg” (konto HHL_ADMIN; wpis w audit_log). Stan na 28.09: przełącznik jest, **WYŁĄCZONY** (produkcja nie ma jeszcze zezwoleń w bazie) | R-3 |
 | D-22 | ~~dane kierowcy pojazdu pilotującego~~ — **ROZSTRZYGNIĘTE 28.09 (właściciel): TAK** imię i telefon, te same zasady co kierowca: retencja 90 dni, dostęp przez funkcję danych kontaktowych, KSH nie widzi, nie ma w eksporcie KSH | III-4 → **DONE 28.09 (0090)** |
 | D-23 | ~~widoczność ocen dla przewoźnika~~ — **ROZSTRZYGNIĘTE 28.09 (właściciel): TAK** przewoźnik widzi swoje oceny i punktualność; wewnętrzne notatki HHL (komentarz) niewidoczne | III-9 → **DONE 28.09 (0091)** |

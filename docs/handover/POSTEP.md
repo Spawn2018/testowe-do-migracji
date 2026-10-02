@@ -568,11 +568,13 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 - **D-32** — zgoda IT KSH + creds SharePoint → `.env.local` (blokuje II-10-E1)
 - **D-TELM-ETA / TELM-2** — API emtrack + przykłady linków (blokuje II-7b naukę)
 - **ZEZW-13** — wymiary aut (P2)
-- **D-STENA-COORDS** — potwierdzenie współrzędnych terminali Stena (linki Maps poniżej)
 - **D-18** — e-mail informacyjny do armatora (II-5 odczyt już DONE)
 - **D-17** — cert KPD GDDKiA
 - dane polisy OCP po spotkaniu SCX
 - II-10-E2 — pisemna akceptacja po E1
+- **R-2 / D-16** — właściciel sam dodaje użytkowników w aplikacji (zaproszenia odblokowane 0133)
+- **R-1** — import prawdziwego harmonogramu na PROD
+- pełne `EXTERNAL_MESSAGING` (SMS do kierowców) — osobna decyzja HHL_ADMIN
 
 | I-3-APK | bramka Android | **DONE** | (ten commit) | burst **10/10 DELIVERED**; strefy **0116** ON | Zamknięte decyzją koordynatora 02.10 (po teście stabilności + burst). |
 | DEC-2/3/4 | skutki + macierz powiadomień | **DONE** | (ten commit) | **0126** PROD+TEST (dry-run ROLLBACK OK → apply); dec2 **18/18**; dec3 **10/10** | `matrix_notify` + skutki opcji; wyzwalacze status/ryzyko/strefa; UI hint. |
@@ -602,7 +604,7 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 1. **0126** mapował `RESOURCE_MISSING` → `RISK_FERRY_WEATHER` (KSH IN_APP). **0127** — tylko `FERRY`/`WEATHER`/`ETA_BREACH` → ta grupa; reszta → `SYSTEM`. Test: `dec3.sh` +3. 
 2. Asercja M5 była `count(*) from notifications = 0` — za szeroka: M3 (`plan_delivery_*`) po **0113** tworzy `PLAN_DATES_CHANGED` dla KSH (zamierzone). **Było:** cisza całkowita. **Jest:** `ORDER_NO_MISSING = 0` + nowa asercja `RISK_OPEN+RESOURCE_MISSING = 0`. EXPECTED money **130 → 131**.
 
-**D-STENA-COORDS — linki do potwierdzenia:**
+**D-STENA-COORDS — DONE 02.10** (właściciel potwierdził terminale):
 - Gdynia (54.53321, 18.54425): https://www.google.com/maps?q=54.53321,18.54425
 - Karlskrona (56.16460, 15.63080): https://www.google.com/maps?q=56.16460,15.63080
 
@@ -663,10 +665,62 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 |---|---|---|
 | BRAND+deploy | DONE | `4a274d10` push; Vercel `watch-tower-makieta` READY → `tower.log-mar.pl`; obie domeny **200**; 404 = Watch Tower |
 | DR-TEST | **DONE** | `node scripts/dr-test-restore.mjs` → TEST `emkbykwenwrjmbprydml`, schemat `restore_20261002`. **RESTORE OK tabel=67 wierszy=4920** (= manifest). **ELAPSED_SEC=20**. Klucz age tylko lokalnie — właściciel może usunąć plik. |
-| SIM-1 | **DONE** (SMS) | SMS-only: `sim1-sms-only.mjs` — 1× TEST QUEUED na OWNER_SMS_E164 (zamaskowany). |
+| SIM-1 | **DONE** | Pełny przebieg `sim1-full-transport.mjs` na TEST: READY→AT_LOADING→IN_TRANSIT_PL→AT_PORT_GDANSK→FERRY→AT_PORT_NYNASHAMN→IN_TRANSIT_SE→**AT_SITE**; pozycje=16, zdarzenia=58, ryzyka=2, powiadomienia=155 (IN_APP 151 PENDING, EMAIL 4 BLOCKED_R2); ETA site 07.10 12:05; SMS 1× OWNER (zamaskowany), inne numery=0. |
 | LOAD-1 | **DONE** | `scripts/load1-stress.mjs`: seed **140** w 570 ms; 20 użytkowników (3 role) falami×8 (limit Session pooler 15). Czasy ms — kokpit p50 **386** / p95 **475**; harmonogram p50 **319** / p95 **373**; mapa p50 **88** / p95 **153**; wall 4580 ms. LOADS_TOTAL=143. |
 | DOC-ROLE | **DONE** | Teksty 1-stronicowe PL: `docs/handover/instrukcje/HHL.md`, `KSH.md`, `SCX.md`. W aplikacji: panel „Instrukcja” (`Guide.tsx`) — HHL w Opcjach, KSH/SCX w Ustawieniach, kierowca w PWA; rozszerzone `i4_hhl_7/8`, `i4_ksh_7`, `i4_scx_7` (PL/EN/SV). Commit `4971ffbf`. |
 | DAILY-1 | **DONE** (+0130) | Okno = **ostatnie 24 h** (`created_at` / `last_seen_at`). **sms_failed=10**: anulowana seria TEST bursta 01.10 19:58 PL (`burst 1.0.1: CLAIMED bez SENT…`) — nadal w oknie 24 h w chwili raportu; **nie bug zakresu**. **client_error_types**: było 10 wierszy (głównie Leaflet `_leaflet_pos` + 1× stale chunk BroadcastForm). Naprawy: `CorridorMap` safeInvalidate; `lazyRetry` w Opcjach; migracja **0130** = `count(distinct fingerprint)` (dry-run → **4** typy). |
-| Deploy `4971ffbf`+naprawy | **CZEKA** | Vercel status: All Systems Operational, ale nowe deploye nadal UNKNOWN. Ready nie kasowane. Retry co 30 min. |
+| Deploy `4971ffbf`+naprawy | **DONE** | Usunięto 3× UNKNOWN. Pętla 30 min **STOP**. Jedno `vercel --prod` (kopia bez `.git`) → `dpl_HbRcgv8…` **READY**, alias `tower.log-mar.pl`. |
+
+### II-6/II-8 cron + panel SE + send-notifications (02.10)
+
+| Pozycja | Status | Wynik |
+|---|---|---|
+| Cron `road-se` | **DONE** | migracja **0131** PROD+TEST: `tower-road-se` `*/15 * * * *`; Edge przeładowany; ręczny przebieg po wdrożeniu |
+| Cron `ferry-weather` | **DONE** | **0131**: było `15 */6` → `15 * * * *` (co 1 h) |
+| Cron `ferry-status` | **DONE** | **0132** PROD+TEST: `tower-ferry-status` `*/15`; ręczny przebieg LIVE `inserted=8 unchanged=10` |
+| Panel „Warunki drogowe SE” | **DONE** | przyczyna „brak źródła”: `shows('roadSituationsSe')=false` w PROD mimo żywych danych w `corridor_conditions`. Naprawa: odczyt z bazy (`corridorConditionsDb`); „brak źródła” tylko gdy brak żywego wiersza. **Zrzut po wdrożeniu:** `tmp-se-panel-e4.png` — `NO_SOURCE=0`, sub `Trafikverket · ×1.00`, nota `RC 25 · WX 115 · sytuacji: 0 · 2.10.2026, 17:22:38` |
+| send-notifications | **DONE** | 1 fail / 1740: `Gateway Timeout` 28.09 23:00 UTC (przejściowy). Od wtedy same `ok`. Timeout HTTP cron 60→**90 s** (0131) |
+
+#### Przegląd harmonogramów integracji Edge (02.10)
+
+| Integracja | Harmonogram | Powód braku / uwagi |
+|---|---|---|
+| `road-se` | **`*/15 * * * *`** (`tower-road-se`) | LIVE Trafikverket → `corridor_conditions` + ROAD_SE |
+| `ferry-weather` | **`15 * * * *`** (`tower-ferry-weather`) | FMI+DMI+SMHI → `marine_conditions` |
+| `ferry-ais` | `*/10 * * * *` | działa |
+| `send-notifications` | `*/5 * * * *` | timeout 90 s |
+| `usage-check` | `0 5 * * *` | działa |
+| `backup-export` | `30 0 * * *` | włączony; wymaga R2 |
+| `ferry-status` | **`*/15 * * * *`** (`tower-ferry-status`) | **0132** PROD+TEST — II-5/STENA LIVE |
+| `ferry-schedule` | **`0 5 * * 1`** (`tower-ferry-schedule`) | **0134** — zgoda właściciela 02.10; poniedziałek 05:00 UTC |
+| `road-pl` | **brak** | KPD DATEX bez URL/cert → DEMO; cron zapisałby atrapy |
+| `traffic-flow` | **brak** | CLEAN-TT-HERE: zawsze DEMO |
+| `fuel-wob` | **brak** | `FUEL_WOB_INGEST` wyłączony (D-2) |
+| `document-archive` | **brak** | czeka na R2 / Cloudflare |
+| `driver-photo` | **brak** | na żądanie (kierowca) |
+| `daily-admin-digest` | `0 5 * * *` (SQL) | nie Edge |
+
+### Przekazanie 02.10 (OSTATNIE POLECENIE) — STOP dla tego wykonawcy
+
+| Pozycja | Status | Wynik |
+|---|---|---|
+| Commit + push | **DONE** | panel SE + `corridorConditionsDb` + 0131–0134 + SIM-1 + reguła migracji + POSTEP/PLAN |
+| Migracje repo = PROD | **DONE** (0131–0132 w historii; 0133–0134 po pushu → `db push`) | numery `0001`…`0134`; naprawa MCP timestamp→0131/0132 na PROD+TEST |
+| Reguła: migracja w gicie przed PROD | **DONE** | `.cursor/rules/baza.mdc`, `tower.mdc`, `AGENTS.md` (+ wzorzec) |
+| D-STENA-COORDS | **DONE** | właściciel potwierdził terminale Gdynia/Karlskrona |
+| BLOCKED_R2 częściowo | **0133** (po pushu → apply) | e-mail do `app_users` + aktywnych `user_invites` = PENDING; SMS kierowców nadal zablokowane |
+| Cron `ferry-schedule` | **0134** (po pushu → apply) | `tower-ferry-schedule` `0 5 * * 1` |
+| Deploy Vercel | po apply | `vercel --prod`; obie domeny 200 |
+| SIM-1 | **DONE** | pełny tor TEST → AT_SITE (wcześniej w tej sesji) |
+
+#### Stan końcowy — zrobione / otwarte / czeka na właściciela
+
+**Zrobione (ta sesja + kolejka przed pilotażem):** II-6/II-8 crony, panel SE z DB, send-notifications timeout, ferry-status cron, ferry-schedule tygodniowy, 0133 messaging owner accounts, D-STENA-COORDS, DR-TEST, SIM-1, LOAD-1, DOC-ROLE, DAILY-1, BRAND, reguła migracji-przed-PROD.
+
+**Otwarte (kolejny wykonawca):** R-1 import harmonogramu; R-2 dokończenie zaproszeń (właściciel dodaje w UI); R-3 pierwszy prawdziwy transport; II-10-E1/E2 (po D-32); II-7b nauka ETA (po TELM-2); pełne EXTERNAL_MESSAGING gdy HHL włączy SMS do kierowców.
+
+**Czeka na właściciela:** D-32 (IT KSH), D-TELM-ETA, ZEZW-13, D-17, D-18, D-16 lista osób, polisy OCP, II-10-E2 akceptacja, ewentualnie `admin_set_external_messaging(true)`.
+
+**ZATRZYMANE — pracę przejmuje inny wykonawca.**
 
 **Czekam także (dane):** IT KSH (SharePoint / D-32); API emtrack + linki; wymiary aut; polisy OCP. **DR-TEST zakończony — właściciel może usunąć klucz age.**

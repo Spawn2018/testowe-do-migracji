@@ -17,6 +17,7 @@ import { isDemoSourceMode, trafikverketSourceNote } from '../lib/demoLabel';
 import { severityLabel } from '../lib/enumLabels';
 import { formatSeaRiskLabel, formatWaveM, formatWindMs } from '../lib/voyageSea';
 import { fetchMarineCondition, type MarineConditionRow } from '../lib/marineWeatherDb';
+import { fetchCorridorCondition, type CorridorConditionRow } from '../lib/corridorConditionsDb';
 import { knotsToMs } from '../lib/marineUnits';
 import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
 import { AUTO_RISK_CODES, autoRiskLabel, effDeparture, fmtLocal, sailingStatusLabel, sailingStatusPill, type AutoRiskCode } from '../lib/sailings';
@@ -47,6 +48,7 @@ export function RisksView() {
   const [seSituations, setSeSituations] = useState<RoadSituation[]>([]);
   const [seMode, setSeMode] = useState<'live' | 'seed'>('seed');
   const [marine, setMarine] = useState<MarineConditionRow | null>(null);
+  const [corridor, setCorridor] = useState<CorridorConditionRow | null>(null);
 
   const list = useMemo(() => {
     let r = risks;
@@ -78,7 +80,16 @@ export function RisksView() {
   }, [sailings]);
 
   useEffect(() => {
-    // I-2e: produkcja — bez klucza Trafikverket nie ma źródła; danych przykładowych nie pokazujemy
+    // Demo: seed Trafikverket w UI. Produkcja: corridor_conditions z II-6 (road-se).
+    if (PROD_BUILD) {
+      let cancelled = false;
+      fetchCorridorCondition().then((row) => {
+        if (!cancelled) setCorridor(row);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
     if (!shows('roadSituationsSe')) return;
     let cancelled = false;
     fetchSituations().then((r) => {
@@ -103,6 +114,7 @@ export function RisksView() {
     };
   }, []);
 
+  const roadSeHasSource = PROD_BUILD ? corridor != null : shows('roadSituationsSe');
   const roadSeRisks = risks.filter((r) => r.type === 'ROAD_SE');
   const fmRisks = risks.filter((r) => r.type === 'FORCE_MAJEURE');
 
@@ -316,8 +328,10 @@ export function RisksView() {
         <header className="panel-hd">
           <h2>{t(locale, 'risk_road_se_title')}</h2>
           <span className="sub">
-            {shows('roadSituationsSe')
-              ? <>{t(locale, 'a6_risk_route_se')} · {trafikverketSourceNote(seMode, showDemoMarks, locale)} · {seSituations.length} {t(locale, 'risk_situations')}</>
+            {roadSeHasSource
+              ? PROD_BUILD && corridor
+                ? <>{t(locale, 'a6_risk_route_se')} · Trafikverket · ×{corridor.slowdownMult.toFixed(2)}{corridor.reason ? ` · ${corridor.reason}` : ''}</>
+                : <>{t(locale, 'a6_risk_route_se')} · {trafikverketSourceNote(seMode, showDemoMarks, locale)} · {seSituations.length} {t(locale, 'risk_situations')}</>
               : <>{t(locale, 'a6_risk_route_se')} · {t(locale, 'i2_no_source')}</>}
           </span>
           {shows('roadSituationsSe') && isDemoSourceMode(seMode) ? <DemoMark /> : null}
@@ -328,13 +342,44 @@ export function RisksView() {
               {t(locale, 'a6_risk_demo_a')} <b>{t(locale, 'a6_risk_demo_b')}</b> {t(locale, 'a6_risk_demo_c')}
             </div>
           ) : null}
+          {PROD_BUILD && corridor ? (
+            <div className="note" style={{ marginBottom: 12 }} data-content data-corridor="SE_E4">
+              {corridor.zrodlo ?? 'Trafikverket'}
+              {corridor.conditions != null ? ` · RC ${corridor.conditions}` : ''}
+              {corridor.weather != null ? ` · WX ${corridor.weather}` : ''}
+              {corridor.adverseConditions || corridor.adverseWeather
+                ? ` · ${t(locale, 'risk_situations')}: ${(corridor.adverseConditions ?? 0) + (corridor.adverseWeather ?? 0)}`
+                : ` · ${t(locale, 'risk_situations')}: 0`}
+              {' · '}
+              {new Date(corridor.observedAt).toLocaleString(
+                locale === 'sv' ? 'sv-SE' : locale === 'en' ? 'en-GB' : 'pl-PL',
+              )}
+            </div>
+          ) : null}
           <div className="two">
             <div>
               <h4 className="sec">{t(locale, 'risk_situations_title')}</h4>
-              {!shows('roadSituationsSe') ? <div className="note" data-no-source="road-se">{t(locale, 'i2_road_se_no_source')}</div> : null}
+              {!roadSeHasSource ? <div className="note" data-no-source="road-se">{t(locale, 'i2_road_se_no_source')}</div> : null}
               <table style={{ width: '100%', fontSize: 13 }}>
                 <tbody>
-                  {seSituations.map((s) => (
+                  {PROD_BUILD
+                    ? roadSeRisks.map((r) => (
+                        <tr
+                          key={r.id}
+                          style={{ cursor: r.loadId ? 'pointer' : undefined }}
+                          {...(r.loadId ? clickableRow(() => selectLoad(r.loadId!)) : {})}
+                        >
+                          <td style={{ fontWeight: 600 }} data-content>E4</td>
+                          <td data-content>{riskText(locale, r.title, r.titleKey, r.titleParams)}</td>
+                          <td className="num">{r.delayImpactHours != null ? `+${r.delayImpactHours} h` : '—'}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <span className={`pill ${sevPill(r.severity)}`}>
+                              {severityLabel(r.severity, locale)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    : seSituations.map((s) => (
                     <tr
                       key={s.id}
                       style={{ cursor: 'pointer' }}

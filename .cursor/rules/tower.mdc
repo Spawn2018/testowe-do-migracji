@@ -57,9 +57,12 @@ alwaysApply: true
 ## Baza danych
 - migracje numerowane kolejno; **nigdy nie zmieniasz migracji już
   nałożonej na produkcję** — poprawka = nowa migracja
+- **migracja najpierw w gicie:** commit + push pliku w `supabase/migrations/`
+  **przed** nałożeniem na PROD; potem test w wycofanej transakcji →
+  `supabase db push` → lista migracji w repo = na produkcji
 - przed nałożeniem: test migracji na produkcji **w wycofanej transakcji**,
   potem `supabase db push`, potem sprawdzenie, że lista migracji zgadza się
-- po każdej zmianie: zestawy testów bazy — wszystkie muszą przejść
+  (i że wersje w `schema_migrations` to numery plików, nie same timestampy MCP)- po każdej zmianie: zestawy testów bazy — wszystkie muszą przejść
 
 ## Front i wdrożenie
 - wygląd = makieta. Zmiana wyglądu tylko gdy wynika ze zlecenia

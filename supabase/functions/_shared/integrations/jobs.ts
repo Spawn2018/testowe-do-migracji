@@ -368,7 +368,7 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
 }
 
 /**
- * road-se — Trafikverket wzdłuż E4 (co 10 min). Live 01.10.2026: RoadCondition + WeatherMeasurepoint
+ * road-se — Trafikverket wzdłuż E4 (co 15 min). Live 01.10.2026: RoadCondition + WeatherMeasurepoint
  * (ObjectType Situation usunięty z Open API). Bez klucza: DEMO.
  * Wynik: ryzyka ROAD_SE + `corridor_conditions.SE_E4.slowdown_mult` (+15% przy śniegu/śliskości → II-7).
  */
@@ -461,7 +461,7 @@ export async function runTrafficFlow(_deps: JobDeps): Promise<JobResult> {
 
 /**
  * ferry-weather — II-8 FMI (główne) + DMI (zapas) + SMHI ocobs (podejście SE).
- * Okno: odejście rejsu ± 6 h; progi WAVE_M / GUST_KN (D-39). Co 6 h.
+ * Okno: odejście rejsu ± 6 h; progi WAVE_M / GUST_KN (D-39). Co 1 h.
  */
 export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
   const now = deps.now();
@@ -624,8 +624,8 @@ export type JobName = keyof typeof JOBS;
 
 /** Minimalny odstęp między przebiegami [min] — ferry-status: co 15 min, nie częściej (ZRODLA_DANYCH §1.1). */
 export const MIN_INTERVAL_MIN: Record<JobName, number> = {
-  'ferry-schedule': 60, 'ferry-status': 15, 'ferry-ais': 10, 'ferry-weather': 360,
-  'road-se': 10, 'road-pl': 10, 'traffic-flow': 15,
+  'ferry-schedule': 60, 'ferry-status': 15, 'ferry-ais': 10, 'ferry-weather': 60,
+  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15,
 };
 
 /** Przebieg zadania z kontrolą częstotliwości i zapisem do dziennika (integration_runs). */

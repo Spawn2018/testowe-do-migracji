@@ -4,11 +4,14 @@ globs: supabase/**
 alwaysApply: false
 ---
 - nowa zmiana = **nowa migracja z kolejnym numerem**; nałożonej nigdy nie edytujesz
+- **Migracja najpierw w repozytorium:** plik w `supabase/migrations/` → **commit + push**
+  → dopiero potem nałożenie na PROD. Nigdy odwrotnie (MCP/`db push` bez pusha do gita
+  tworzy rozjazdy numerów vs timestampów w `schema_migrations`)
 - **BEZ ZIELONYCH TESTÓW BAZY ŻADNA MIGRACJA NIE WCHODZI NA PRODUKCJĘ**
   (brama: `node scripts/test-db-gate.mjs` na `TEST_DB_URL` / lokalny Postgres
   `tests/db/gate.sh` — wszystkie zestawy zielone, dopiero potem `supabase db push`)
-- kolejność: testy bazy zielone → test na produkcji w **wycofanej transakcji** →
-  `supabase db push` → lista migracji lokalnie = na produkcji
+- kolejność: testy bazy zielone → **commit + push migracji** → test na produkcji w
+  **wycofanej transakcji** → `supabase db push` → lista migracji w repo = na produkcji
 - każda nowa tabela: `enable row level security`, reguły dla ról, **zero uprawnień
   dla `anon`**, test w zestawie bezpieczeństwa
 - nowa kolumna w `loads` wymaga osobnego nadania uprawnień

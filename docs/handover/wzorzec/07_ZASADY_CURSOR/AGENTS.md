@@ -31,6 +31,8 @@ W razie sprzeczności: konstytucja → rejestr decyzji → PLAN → reszta.
 Pełne: `.cursor/rules/*.mdc`. Procedury: `docs/handover/wzorzec/08_SKILLE/`.
 - plan ciągły; STOP tylko w przypadkach z konstytucji IX.3
 - ochrona w bazie; `anon` bez uprawnień; `is not true`
+- **migracja: commit + push do repozytorium PRZED nałożeniem na PROD** (lista plików
+  w `supabase/migrations/` = `schema_migrations` na produkcji)
 - sekrety i pliki poufne poza repozytorium; hasło bazy tylko w `.env.local`
 - wygląd = makieta w 100%; **pełna responsywność i instalacja na telefonie (D-55)**
 - każda paczka decyzji potwierdzona listą identyfikatorów

@@ -501,14 +501,17 @@ err "KSH: numer testowy odrzucony" $KSH "select sms_add_test_number('+4860000000
 val "HHL: numer testowy dodany" $HHL "select sms_add_test_number('+48600000001','telefon HHL')::text" true commit
 val "HHL: SMS testowy zakolejkowany" $HHL "select (sms_send_test('+48600000001') is not null)::text" true commit
 chk "przed R-2 telefon dostaje tylko SMS testowy (SMS do kierowcy zostaje w kolejce)" "$(AN "select string_agg(body, ',') from sms_pull('$DEV2', 5)")/$(Q "select status from sms_outbox where body='TOWER X: test R2'")" "Watch Tower: SMS testowy bramki./QUEUED"
-chk "e-mail na adres zewnętrzny: BLOCKED_R2 (nie wychodzi)" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','dispo@scx.example','SMS_FALLBACK') returning status")" BLOCKED_R2
+chk "e-mail na adres zewnętrzny (bez konta): BLOCKED_R2 (nie wychodzi)" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','dispo@scx.example','SMS_FALLBACK') returning status")" BLOCKED_R2
 chk "e-mail na log-mar.pl: PENDING" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','ops@log-mar.pl','SMS_FALLBACK') returning status")" PENDING
 chk "próba odblokowania (UPDATE na PENDING) nadal BLOCKED_R2" "$(Q "update notifications set status='PENDING' where recipient='dispo@scx.example' returning status")" BLOCKED_R2
+chk "0133: e-mail do konta w app_users (nie log-mar): PENDING" "$(Q "insert into notifications (channel, recipient, template) select 'EMAIL', email::text, 'SMS_FALLBACK' from app_users where email='hhl@test' returning status")" PENDING
+$PSQL -c "insert into user_invites (email, org_id, role) values ('invitee@example.com','00000000-0000-0000-0000-00000000a001','HHL_OPS') on conflict do nothing" >/dev/null
+chk "0133: e-mail do aktywnego zaproszenia: PENDING" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','invitee@example.com','SMS_FALLBACK') returning status")" PENDING
 chk "centrum powiadomień (IN_APP) bez zmian" "$(Q "insert into notifications (channel, recipient, template) values ('IN_APP','dispo@scx.example','TEST') returning status")" PENDING
 err "KSH: włączenie wiadomości zewnętrznych odrzucone" $KSH "select admin_set_external_messaging(true)" "wyłącznie administrator HHL"
 val "HHL_ADMIN: włączenie (po R-2) z wpisem w dzienniku" $HHL "select admin_set_external_messaging(true)::text" true commit
 chk "po włączeniu: e-mail zewnętrzny PENDING, SMS do kierowcy wydawany" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','dispo2@scx.example','SMS_FALLBACK') returning status")/$(AN "select count(*) from sms_pull('$DEV2', 5)")/$(Q "select count(*) from audit_log where action='EXTERNAL_MESSAGING_SET'")" "PENDING/1/1"
-$PSQL -c "update security_flags set enabled=false where key='EXTERNAL_MESSAGING'; delete from notifications where recipient in ('dispo@scx.example','dispo2@scx.example','ops@log-mar.pl'); delete from sms_outbox; delete from sms_test_numbers; delete from sms_devices; delete from audit_log where action='EXTERNAL_MESSAGING_SET'" >/dev/null
+$PSQL -c "update security_flags set enabled=false where key='EXTERNAL_MESSAGING'; delete from notifications where recipient in ('dispo@scx.example','dispo2@scx.example','ops@log-mar.pl','invitee@example.com') or recipient in (select email::text from app_users where email='hhl@test'); delete from user_invites where email='invitee@example.com'; delete from sms_outbox; delete from sms_test_numbers; delete from sms_devices; delete from audit_log where action='EXTERNAL_MESSAGING_SET'" >/dev/null
 chk "stan końcowy: wiadomości zewnętrzne wyłączone" "$(Q "select enabled from security_flags where key='EXTERNAL_MESSAGING'")" f
 
 echo; echo "[I-20] ogólny dziennik audytu tabel biznesowych (0072 + HIST-11/0118)"

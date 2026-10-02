@@ -5,6 +5,7 @@ import { StatusPill } from '../components/ui/StatusPill';
 import { CorridorMap } from '../components/map/LazyCorridorMap';
 import { t, tp } from '../i18n/messages';
 import { fetchSituations } from '../lib/trafikverket';
+import { fetchCorridorCondition } from '../lib/corridorConditionsDb';
 import { trafikverketShortLabel } from '../lib/demoLabel';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { formatEtaBodenCompact } from '../lib/time';
@@ -69,6 +70,7 @@ export function MapView() {
   const showDemoMarks = useTowerStore((s) => s.showDemoMarks);
   const setView = useTowerStore((s) => s.setView);
   const [tvMode, setTvMode] = useState<'live' | 'seed'>('seed');
+  const [tvFromDb, setTvFromDb] = useState(false);
   const [aisMode, setAisMode] = useState<AisMode>(PROD_BUILD ? 'none' : 'seed');
   const [aisReadAt, setAisReadAt] = useState<string | null>(null);
   const [timing, setTiming] = useState<TimingFilter>('all');
@@ -77,6 +79,15 @@ export function MapView() {
   widthsRef.current = widths;
 
   useEffect(() => {
+    if (PROD_BUILD) {
+      let cancelled = false;
+      fetchCorridorCondition().then((row) => {
+        if (!cancelled) setTvFromDb(row != null);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
     if (!shows('roadSituationsSe')) return;
     let cancelled = false;
     fetchSituations().then((r) => {
@@ -282,7 +293,7 @@ export function MapView() {
 
       <div className="note">
         {t(locale, 'map_note')} {t(locale, 'a6_map_tv')}{' '}
-        <b>{shows('roadSituationsSe') ? trafikverketShortLabel(tvMode, showDemoMarks, locale) : t(locale, 'i2_no_source')}</b>
+        <b>{PROD_BUILD ? (tvFromDb ? 'Trafikverket · E4' : t(locale, 'i2_no_source')) : shows('roadSituationsSe') ? trafikverketShortLabel(tvMode, showDemoMarks, locale) : t(locale, 'i2_no_source')}</b>
         {' · '}
         {t(locale, 'a6_map_ais')}{' '}
         <b data-ais={aisMode}>{aisMode === 'live' ? t(locale, 'map_ais_live') : aisMode === 'db' ? t(locale, 'i2_ais_db').replace('{d}', formatOpsDateTime(aisReadAt)) : shows('aisSeedPositions') ? t(locale, 'a6_demo_seed') : t(locale, 'i2_no_source')}</b>
