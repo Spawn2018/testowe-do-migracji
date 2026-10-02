@@ -246,16 +246,27 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
     map.on('zoomend', () => setZoom(map.getZoom()));
     setMapReady(map);
 
-    requestAnimationFrame(() => map.invalidateSize());
-    const t = window.setTimeout(() => map.invalidateSize(), 250);
+    let alive = true;
+    const safeInvalidate = (opts?: boolean | { animate?: boolean }) => {
+      if (!alive) return;
+      try {
+        if (!map.getPane('mapPane')) return;
+        map.invalidateSize(opts);
+      } catch {
+        /* mapa już usunięta / panel niegotowy */
+      }
+    };
+    requestAnimationFrame(() => safeInvalidate());
+    const t = window.setTimeout(() => safeInvalidate(), 250);
     const ro = typeof ResizeObserver !== 'undefined'
       ? new ResizeObserver(() => {
-          map.invalidateSize({ animate: false });
+          safeInvalidate({ animate: false });
         })
       : null;
     if (ro && containerRef.current) ro.observe(containerRef.current);
 
     return () => {
+      alive = false;
       clearTimeout(t);
       ro?.disconnect();
       map.remove();

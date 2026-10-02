@@ -31,7 +31,8 @@ done
 : "${AGE_IDENTITY:?AGE_IDENTITY — plik klucza prywatnego age}"
 : "${RESTORE_DB_URL:?RESTORE_DB_URL — baza docelowa}"
 command -v age >/dev/null || { echo "RESTORE FAIL: brak programu age" >&2; exit 3; }
-PSQL=(psql "$RESTORE_DB_URL" -v ON_ERROR_STOP=1 -Atq)
+# Kolejność: opcje, potem -c SQL, na końcu URI (Windows psql).
+psql_q() { psql -v ON_ERROR_STOP=1 -A -t -q -c "$1" "$RESTORE_DB_URL"; }
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 
 age -d -i "$AGE_IDENTITY" -o "$TMP/manifest.json" "$DIR/manifest.json.age"
@@ -40,10 +41,10 @@ expected() { python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['tab
 if [ "$MODE" = schema ]; then
   [ -n "$SCHEMA" ] || SCHEMA="restore_$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['created_at'][:10].replace('-',''))" "$TMP/manifest.json")"
   [[ "$SCHEMA" =~ ^restore_[a-z0-9_]+$ ]] || { echo "RESTORE FAIL: schemat musi mieć postać restore_…" >&2; exit 2; }
-  "${PSQL[@]}" -c "create schema if not exists $SCHEMA"
+  psql_q "create schema if not exists $SCHEMA"
 else
   [ "${RESTORE_CONFIRM:-}" = TAK ] || { echo "RESTORE FAIL: --into-public wymaga RESTORE_CONFIRM=TAK" >&2; exit 2; }
-  "${PSQL[@]}" -c "truncate $(python3 -c "import sys;print(', '.join('public.'+t for t in sys.argv[1:]))" $TABLES) cascade"
+  psql_q "truncate $(python3 -c "import sys;print(', '.join('public.'+t for t in sys.argv[1:]))" $TABLES) cascade"
 fi
 
 n=0; rows=0; bad=""
@@ -51,28 +52,32 @@ for t in $TABLES; do
   [[ "$t" =~ ^[a-z_]+$ ]] || { echo "RESTORE FAIL: nazwa tabeli $t" >&2; exit 2; }
   age -d -i "$AGE_IDENTITY" "$DIR/$t.csv.gz.age" | gunzip > "$TMP/$t.csv"
   cols=$(head -1 "$TMP/$t.csv")
+  # Ścieżka CSV: na Windows natywny psql wymaga ścieżki Win; cygpath gdy dostępny.
+  CSV_PATH=$TMP/$t.csv
+  if command -v cygpath >/dev/null 2>&1; then CSV_PATH=$(cygpath -m "$CSV_PATH"); fi
   if [ "$MODE" = schema ]; then
-    "${PSQL[@]}" -c "drop table if exists $SCHEMA.$t" -c "create table $SCHEMA.$t (like public.$t)"
+    psql_q "drop table if exists $SCHEMA.$t"
+    psql_q "create table $SCHEMA.$t (like public.$t)"
     target="$SCHEMA.$t"
-    "${PSQL[@]}" -c "\\copy $target ($cols) from '$TMP/$t.csv' with (format csv, header true)"
+    psql_q "\\copy $target ($cols) from '$CSV_PATH' with (format csv, header true)"
   else
     target="public.$t"
-    "${PSQL[@]}" -c "set session_replication_role = replica" -c "\\copy $target ($cols) from '$TMP/$t.csv' with (format csv, header true)"
+    psql_q "set session_replication_role = replica; \\copy $target ($cols) from '$CSV_PATH' with (format csv, header true)"
   fi
-  got=$("${PSQL[@]}" -c "select count(*) from $target")
+  got=$(psql_q "select count(*) from $target")
   exp=$(expected "$t")
   [ "$got" = "$exp" ] || bad="$bad $t($got≠$exp)"
   n=$((n+1)); rows=$((rows+got))
 done
 if [ -n "$bad" ]; then echo "RESTORE FAIL: liczba wierszy:$bad"; exit 1; fi
-if [ "$MODE" = schema ] && [ $DROP_AFTER -eq 1 ]; then "${PSQL[@]}" -c "drop schema $SCHEMA cascade"; fi
+if [ "$MODE" = schema ] && [ $DROP_AFTER -eq 1 ]; then psql_q "drop schema $SCHEMA cascade"; fi
 RELINK=""
 if [ "$MODE" = public ]; then
   # kopia zawiera własny przebieg backup_runs w stanie RUNNING (zapisany w trakcie) — inaczej blokowałby kopie (0044)
-  "${PSQL[@]}" -c "update public.backup_runs set status = 'ERROR', finished_at = coalesce(finished_at, now()), error = 'przebieg w toku w chwili kopii (odtworzenie)' where status = 'RUNNING'"
+  psql_q "update public.backup_runs set status = 'ERROR', finished_at = coalesce(finished_at, now()), error = 'przebieg w toku w chwili kopii (odtworzenie)' where status = 'RUNNING'"
   # PR2-B (0045): konta z kopii bez auth.users w nowym projekcie → lista do połączenia po e-mailu przy pierwszym logowaniu
-  if [ "$("${PSQL[@]}" -c "select to_regprocedure('public.restore_mark_relink()') is not null")" = t ]; then
-    RELINK=" konta_do_polaczenia=$("${PSQL[@]}" -c "select public.restore_mark_relink()")"
+  if [ "$(psql_q "select to_regprocedure('public.restore_mark_relink()') is not null")" = t ]; then
+    RELINK=" konta_do_polaczenia=$(psql_q "select public.restore_mark_relink()")"
   fi
 fi
 echo "RESTORE OK tabel=$n wierszy=$rows tryb=$MODE${SCHEMA:+ schemat=$SCHEMA}$RELINK"
