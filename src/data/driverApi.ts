@@ -52,3 +52,5 @@ export function createDriverApi(sb: RpcClient) {
       call('driver_post_event', { p_token: token, p_load_id: loadId, p_event_type: MILESTONE_EVENT[m], p_ts: at, p_note: note }),
   };
 }
+
+export { uploadDriverFile } from './driverPhoto';
