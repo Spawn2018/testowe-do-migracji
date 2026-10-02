@@ -704,22 +704,22 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 
 | Pozycja | Status | Wynik |
 |---|---|---|
-| Commit + push | **DONE** | panel SE + `corridorConditionsDb` + 0131–0134 + SIM-1 + reguła migracji + POSTEP/PLAN |
-| Migracje repo = PROD | **DONE** (0131–0132 w historii; 0133–0134 po pushu → `db push`) | numery `0001`…`0134`; naprawa MCP timestamp→0131/0132 na PROD+TEST |
+| Commit + push | **DONE** | `324ab953` — panel SE + corridorConditionsDb + 0131–0134 + SIM-1 + reguła migracji |
+| Migracje repo = PROD | **DONE** | `0001`…`0134` na PROD+TEST (naprawa timestamp→0131/0132; `db push` 0133+0134) |
 | Reguła: migracja w gicie przed PROD | **DONE** | `.cursor/rules/baza.mdc`, `tower.mdc`, `AGENTS.md` (+ wzorzec) |
 | D-STENA-COORDS | **DONE** | właściciel potwierdził terminale Gdynia/Karlskrona |
-| BLOCKED_R2 częściowo | **0133** (po pushu → apply) | e-mail do `app_users` + aktywnych `user_invites` = PENDING; SMS kierowców nadal zablokowane |
-| Cron `ferry-schedule` | **0134** (po pushu → apply) | `tower-ferry-schedule` `0 5 * * 1` |
-| Deploy Vercel | po apply | `vercel --prod`; obie domeny 200 |
-| SIM-1 | **DONE** | pełny tor TEST → AT_SITE (wcześniej w tej sesji) |
+| BLOCKED_R2 częściowo | **DONE** | **0133:** e-mail do `app_users` + aktywnych `user_invites` = PENDING; SMS kierowców nadal zablokowane; PROD: 0× BLOCKED_R2 |
+| Cron `ferry-schedule` | **DONE** | **0134** `tower-ferry-schedule` `0 5 * * 1` |
+| Deploy Vercel | **CZEKA (ENOSPC)** | dysk C: pełny (robocopy `%TEMP%\tower-vercel-once-*` + SQLITE_FULL). Następny: zabij PID 14404 / usuń kopie TEMP, potem `vercel --prod` bez `.git`/`node_modules`/`shots-baseline`/`tmp-*` → obie domeny 200 |
+| SIM-1 | **DONE** | pełny tor TEST → AT_SITE |
 
 #### Stan końcowy — zrobione / otwarte / czeka na właściciela
 
-**Zrobione (ta sesja + kolejka przed pilotażem):** II-6/II-8 crony, panel SE z DB, send-notifications timeout, ferry-status cron, ferry-schedule tygodniowy, 0133 messaging owner accounts, D-STENA-COORDS, DR-TEST, SIM-1, LOAD-1, DOC-ROLE, DAILY-1, BRAND, reguła migracji-przed-PROD.
+**Zrobione:** II-6/II-8 crony, panel SE z DB, send-notifications timeout, ferry-status+ferry-schedule, 0133 messaging, D-STENA-COORDS, DR-TEST, SIM-1, LOAD-1, DOC-ROLE, DAILY-1, BRAND, reguła migracji-przed-PROD, commit `324ab953`.
 
-**Otwarte (kolejny wykonawca):** R-1 import harmonogramu; R-2 dokończenie zaproszeń (właściciel dodaje w UI); R-3 pierwszy prawdziwy transport; II-10-E1/E2 (po D-32); II-7b nauka ETA (po TELM-2); pełne EXTERNAL_MESSAGING gdy HHL włączy SMS do kierowców.
+**Otwarte (kolejny wykonawca):** **vercel --prod** (po zwolnieniu dysku C:); R-1 import; R-2 zaproszenia w UI; R-3; II-10-E1/E2; II-7b; pełne EXTERNAL_MESSAGING.
 
-**Czeka na właściciela:** D-32 (IT KSH), D-TELM-ETA, ZEZW-13, D-17, D-18, D-16 lista osób, polisy OCP, II-10-E2 akceptacja, ewentualnie `admin_set_external_messaging(true)`.
+**Czeka na właściciela:** D-32, D-TELM-ETA, ZEZW-13, D-17, D-18, D-16, polisy OCP, II-10-E2, ewentualnie `admin_set_external_messaging(true)`.
 
 **ZATRZYMANE — pracę przejmuje inny wykonawca.**
 
