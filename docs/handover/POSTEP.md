@@ -622,7 +622,9 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 | G4 visual-states + smoke | DONE | 11× stan + 4× smoke odświeżone — **BRAND-15 + D-27** (nie regresja) |
 | G4 matryca 840 | DONE | SHA: **840/840 zmienione**, 0 bez przyczyny; odświeżone (`G4_WZORZEC.md`) |
 | **0128** | DONE PROD+TEST | tylko `(select auth.uid())` w 4 politykach |
-| vercel --prod | (ten commit) | po push |
+| commit + push | DONE | `b34a2236` — LOCAL HEAD = origin/HEAD |
+| vercel --prod | DONE | `dpl_4Dy6w3KdB4xt1kytHWFtEU4Ab5pX` READY; Aliased `tower.log-mar.pl` |
+| domeny | DONE | `tower.log-mar.pl` **200**, `watch-tower-makieta.vercel.app` **200** |
 
 **0128 — ostrzeżenia doradcy świadomie NIE zmieniane:**
 - **security_definer_view** `v_load_*` — zamierzone (0010): tabele `load_cost`/`load_revenue` bez GRANT dla API; widok = właściciel + filtr WHERE + `security_barrier`. Bez porównania HHL/KSH/SCX przed/po → **nie ruszamy**.
@@ -634,4 +636,18 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 | Zestaw EXPECTED | Było | Jest | Dlaczego |
 |---|---|---|---|
 | migracje (hosted) | 127 | **128** | **0128** `advisor_security_perf` |
-| subset i30/i31 | (brak w subset) | **10 / 6** | dopisane do `test-db-gate-subset.mjs` (testy już istniały) |
+| subset i30/i31 | (brak w subset) | **10 / 6** | dopisane do `test-db-gate.mjs` + `test-db-gate-subset.mjs` |
+
+**EXPECTED i30/i31 — potwierdzenie 02.10:** `node scripts/test-db-gate-subset.mjs i30 i31` → i30 **10/10**, i31 **6/6**, **EXIT=0**.
+
+### Rytm: niedzielna czysta brama TEST
+
+| Bieg | Data | Wynik |
+|---|---|---|
+| (następny) | **niedziela 05.10.2026** | — pełny `test-db-gate.mjs` od zera; wynik tutaj |
+
+### Stan po wznowieniu (02.10)
+
+Kolejka wykonawcza **pusta**. Bez nowych funkcji bez zlecenia.
+**Czekam na właściciela:** IT KSH (SharePoint / D-32), API emtrack + linki podwykonawców,
+wymiary aut, polisy OCP.

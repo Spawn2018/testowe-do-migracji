@@ -246,6 +246,15 @@ Przyjęte identyfikatory: **II-10-E1**, **II-10-E2**, **ONE-MECH** (D-29 + D-29t
 | D-29t | P2. Tabela nakładania reguł START → **część ONE-MECH / D-29** (nie osobny tor) | tabela w planie przed włączaniem | ZASTĄPIONA PRZEZ ONE-MECH |
 | CLEAN-TT-HERE | P2. Usunąć martwy kod/zmienne TomTom i HERE (TOMTOM_API_KEY, job traffic-flow TomTom, i18n źródła itd.). ETA = II-7 | zero aktywnego TOMTOM/HERE w kodzie i env | **DONE** (ten commit) — traffic-flow DEMO; parsery TomTom usunięte; i18n wycofane; ZRODLA §2.3 |
 | ZEZW-13 | P2. Zezwolenia (§13) | — | CZEKA NA: wymiary aut |
+| GATE-WEEKLY | P1. Co niedzielę: czysta brama TEST od zera (`node scripts/test-db-gate.mjs`) | exit 0; wynik liczbami w POSTEP.md | **RYTM** — następny bieg: **niedziela 05.10.2026** |
+| GATE-I30-I31 | P0. EXPECTED i30=10, i31=6 w `test-db-gate.mjs` + subset — brama kończy kodem 0 | subset i30+i31 exit 0 | **DONE** `b34a2236` (potwierdzenie exit 0: 02.10) |
+
+### Stan kolejki (02.10)
+
+**Kolejka wykonawcza pusta** (poza rytmem GATE-WEEKLY i pozycjami CZEKA NA).
+Bez nowych funkcji bez zlecenia. Czekam na dane właściciela:
+IT KSH / SharePoint (D-32), API emtrack + linki podwykonawców (TELM-2 / D-TELM-ETA),
+wymiary aut (ZEZW-13), polisy OCP (D-30 — dane od przewoźnika).
 
 ### Potwierdzenie akceptacji koordynatora (01.10 — popołudnie)
 
@@ -284,7 +293,7 @@ Silnik START / cron reguł — dopiero po scaleniu ONE-MECH (lista było→jest 
 
 Po akceptacji: kod scala ścieżki (ONE-MECH), `canSeeWorkflows` / fasada wf → tylko podgląd historyczny lub usunięcie UI kreatora do SCOPE 9.4.
 
-**Czeka na dane właściciela:** API emtrack, linki podwykonawców, wymiary aut, zgoda IT KSH (D-32) + wpis creds SharePoint do `.env.local`; TomTom (opcjonalnie traffic-flow); certyfikat KPD GDDKiA (D-17).
+**Czeka na dane właściciela:** API emtrack, linki podwykonawców, wymiary aut, polisy OCP (dane od przewoźnika), zgoda IT KSH (D-32) + wpis creds SharePoint do `.env.local`; certyfikat KPD GDDKiA (D-17).
 
 Pliki cen, umowa i harmonogram: `D:\Watch Tower\dane\` (poza gitem).
 Przekazanie 29.09 przerwało pracę **przed pierwszym commitem** I-30; kolejka niżej = obowiązująca.
