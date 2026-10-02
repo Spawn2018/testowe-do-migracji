@@ -17,7 +17,7 @@ export interface MfaStatus { role: string | null; aal: string; enforced: boolean
 
 /** I-17: nazwa nowego urządzenia — unikalna na koncie (Supabase wymaga różnych friendlyName). */
 export function deviceName(existing: string[], now = new Date()): string {
-  const base = `TOWER ${existing.length + 1} · ${now.toISOString().slice(0, 16).replace('T', ' ')}`;
+  const base = `Watch Tower ${existing.length + 1} · ${now.toISOString().slice(0, 16).replace('T', ' ')}`;
   let name = base; let i = 2;
   while (existing.includes(name)) name = `${base} (${i++})`;
   return name;

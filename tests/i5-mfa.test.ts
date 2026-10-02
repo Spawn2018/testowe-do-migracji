@@ -35,9 +35,9 @@ import { deviceName } from '../src/auth/Mfa';
 describe('I-17 drugie urządzenie', () => {
   const now = new Date('2026-09-27T20:00:00Z');
   it('nazwa urządzenia: numer kolejny + czas, unikalna', () => {
-    expect(deviceName([], now)).toBe('TOWER 1 · 2026-09-27 20:00');
-    expect(deviceName(['TOWER 1 · 2026-09-27 20:00'], now)).toBe('TOWER 2 · 2026-09-27 20:00');
-    expect(deviceName(['x', 'TOWER 3 · 2026-09-27 20:00'].slice(0, 2), now)).not.toBe('x');
+    expect(deviceName([], now)).toBe('Watch Tower 1 · 2026-09-27 20:00');
+    expect(deviceName(['Watch Tower 1 · 2026-09-27 20:00'], now)).toBe('Watch Tower 2 · 2026-09-27 20:00');
+    expect(deviceName(['x', 'Watch Tower 3 · 2026-09-27 20:00'].slice(0, 2), now)).not.toBe('x');
   });
   it('panel: dodanie drugiego urządzenia, lista urządzeń, wymaganie dopiero przy dwóch', () => {
     const src = readFileSync('src/auth/Mfa.tsx', 'utf8');

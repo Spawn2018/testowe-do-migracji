@@ -28,7 +28,10 @@ describe('O2: build produkcyjny bez makiety', () => {
       const headers = readFileSync(join(out, '_headers'), 'utf8')
       expect(headers).not.toMatch(/Content-Disposition|attachment/)
       for (const p of ['/tower-makieta', '/download/*', '/claude-*', '/KSH_HARMONOGRAM.xlsx']) expect(headers).toContain(`${p}\n  Cache-Control: no-store`)
-      expect(readFileSync(join(out, '404.html'), 'utf8')).toMatch(/nie znaleziono/)
+      const html404 = readFileSync(join(out, '404.html'), 'utf8')
+      expect(html404).toMatch(/nie znaleziono/)
+      expect(html404).toMatch(/Watch Tower/)
+      expect(html404).not.toMatch(/\bTOWER\b/)
     } finally {
       rmSync(out, { recursive: true, force: true })
     }

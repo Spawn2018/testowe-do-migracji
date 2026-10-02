@@ -18,6 +18,7 @@ describe('PR4 usage-check — progi', () => {
   it('e-mail po polsku z liczbami', () => {
     const e = alertEmail([{ metric: 'DB_BYTES', pct: 86, used: 430_000_000, quota: 500_000_000, title: 'Limit planu darmowego: baza danych 86,0%' }]);
     expect(e.subject).toContain('85%');
+    expect(e.subject).toMatch(/^Watch Tower:/);
     expect(e.text).toContain('baza danych 86,0%');
     expect(e.text).toMatch(/430\s000\s000 z 500\s000\s000/);
   });

@@ -38,7 +38,7 @@ export async function alert(env: KeepAliveEnv, detail: string, fetchImpl: typeof
     body: JSON.stringify({
       from: env.MAIL_FROM,
       to: [env.ALERT_EMAIL],
-      subject: 'TOWER: baza produkcyjna nie odpowiada',
+      subject: 'Watch Tower: baza produkcyjna nie odpowiada',
       text: `Podtrzymanie (Cloudflare Worker, co 6 h) nie zapisało znacznika w bazie produkcyjnej.\n\nSzczegóły: ${detail}\n\nSprawdź panel Supabase — uśpiony projekt przywraca się jednym kliknięciem (Restore project).`,
     }),
   });

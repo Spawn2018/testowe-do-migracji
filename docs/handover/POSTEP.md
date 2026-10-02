@@ -648,6 +648,23 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 
 ### Stan po wznowieniu (02.10)
 
-Kolejka wykonawcza **pusta**. Bez nowych funkcji bez zlecenia.
-**Czekam na właściciela:** IT KSH (SharePoint / D-32), API emtrack + linki podwykonawców,
-wymiary aut, polisy OCP.
+### BRAND-15 uzupełnienie (02.10) — 404 i szablony
+
+| Pozycja | Status | Wynik |
+|---|---|---|
+| 404 `prodStrip` | DONE | tytuł/link „Watch Tower — nie znaleziono” |
+| makiety `public/` | DONE | tytuł + brand |
+| MFA / e-maile / notify | DONE | Watch Tower zamiast TOWER w UI/szablonach |
+| testy | DONE | o2-prod-strip, i5-mfa, keep-alive, usage |
+
+### Przed pilotażem — kolejka (02.10)
+
+| ID | Status | Wynik |
+|---|---|---|
+| DR-TEST | W TOKU | CZEKA NA: klucz age lokalnie u właściciela |
+| SIM-1 | DO ZROBIENIA | — |
+| LOAD-1 | DO ZROBIENIA | — |
+| DOC-ROLE | DO ZROBIENIA | — |
+| DAILY-1 | DO ZROBIENIA | — |
+
+**Czekam także (dane):** IT KSH (SharePoint / D-32), API emtrack + linki, wymiary aut, polisy OCP.

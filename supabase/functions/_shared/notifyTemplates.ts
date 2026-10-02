@@ -184,9 +184,9 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
       const q = String(p.queued ?? 0);
       const subject = locale === 'en' ? 'SMS gateway silent' : locale === 'sv' ? 'SMS-gatewayen är tyst' : 'Bramka SMS milczy';
       const body = locale === 'en'
-        ? `No signal from the gateway phone since ${since} (threshold 15 min). SMS in queue: ${q}. Check power, Wi-Fi and the TOWER SMS app.`
-        : locale === 'sv' ? `Ingen signal från gateway-telefonen sedan ${since} (gräns 15 min). SMS i kö: ${q}. Kontrollera ström, Wi-Fi och appen TOWER SMS.`
-        : `Brak sygnału telefonu-bramki od ${since} (próg 15 min). SMS w kolejce: ${q}. Sprawdź zasilanie, Wi-Fi i aplikację TOWER SMS.`;
+        ? `No signal from the gateway phone since ${since} (threshold 15 min). SMS in queue: ${q}. Check power, Wi-Fi and the Watch Tower SMS app.`
+        : locale === 'sv' ? `Ingen signal från gateway-telefonen sedan ${since} (gräns 15 min). SMS i kö: ${q}. Kontrollera ström, Wi-Fi och appen Watch Tower SMS.`
+        : `Brak sygnału telefonu-bramki od ${since} (próg 15 min). SMS w kolejce: ${q}. Sprawdź zasilanie, Wi-Fi i aplikację Watch Tower SMS.`;
       return { subject, body, severity: 'HIGH', view: 'risk' };
     }
     default:

@@ -36,7 +36,7 @@ const fmt = (n: number) => new Intl.NumberFormat('pl-PL').format(n);
 export function alertEmail(rows: { metric: string; pct: number; used: number; quota: number; title?: string }[]) {
   const lines = rows.map((r) => `• ${r.title ?? r.metric}: ${fmt(r.used)} z ${fmt(r.quota)}`);
   return {
-    subject: `TOWER: przekroczone ${HIGH_PCT}% limitu planu darmowego`,
+    subject: `Watch Tower: przekroczone ${HIGH_PCT}% limitu planu darmowego`,
     text: ['Codzienna kontrola limitów (usage-check) wykryła:', ...lines, '',
       'Co zrobić: sprawdź panel Supabase i historię usage_history; przy plikach — archiwizacja (PR7).'].join('\n'),
   };

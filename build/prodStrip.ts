@@ -21,9 +21,9 @@ export const PROD_STRIPPED = [
 
 export const PROD_404_HTML = `<!doctype html>
 <html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TOWER — nie znaleziono</title></head>
+<title>Watch Tower — nie znaleziono</title></head>
 <body style="font-family:system-ui,sans-serif;padding:2rem"><h1>404 — nie znaleziono</h1>
-<p><a href="/">Przejdź do strony logowania TOWER</a></p></body></html>
+<p><a href="/">Przejdź do strony logowania Watch Tower</a></p></body></html>
 `
 
 export function isProdAuthMode(mode: string | undefined): boolean {

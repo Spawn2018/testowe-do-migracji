@@ -249,12 +249,20 @@ Przyjęte identyfikatory: **II-10-E1**, **II-10-E2**, **ONE-MECH** (D-29 + D-29t
 | GATE-WEEKLY | P1. Co niedzielę: czysta brama TEST od zera (`node scripts/test-db-gate.mjs`) | exit 0; wynik liczbami w POSTEP.md | **RYTM** — następny bieg: **niedziela 05.10.2026** |
 | GATE-I30-I31 | P0. EXPECTED i30=10, i31=6 w `test-db-gate.mjs` + subset — brama kończy kodem 0 | subset i30+i31 exit 0 | **DONE** `b34a2236` (potwierdzenie exit 0: 02.10) |
 
+### Przed pilotażem (P1, kolejność 02.10) — dopisane zleceniem właściciela
+
+| ID | Opis | Kryterium | Status |
+|---|---|---|---|
+| DR-TEST | Odtworzenie ostatniej kopii z R2 na projekt TEST (`emkbykwenwrjmbprydml`). Klucz age tylko lokalnie na czas próby (nigdy repo/logi) | wiersze tabel = kopia; czas odtworzenia w POSTEP | **W TOKU** — CZEKA NA: klucz age u właściciela lokalnie |
+| SIM-1 | Symulacja pełnego transportu na TEST — zmyślony GPS Śrem→Gdańsk→prom→Nynäshamn→Boden: statusy, ETA, decyzje, powiadomienia; SMS tylko na numer właściciela | raport krok po kroku w POSTEP | DO ZROBIENIA |
+| LOAD-1 | Test obciążenia na TEST — 140 transportów, 20 jednoczesnych użytkowników (3 role); czasy kokpitu, harmonogramu, mapy | liczby w POSTEP | DO ZROBIENIA |
+| DOC-ROLE | 1-stronicowe instrukcje dla KSH, przewoźnika i HHL (PL); także w aplikacji (panel „Instrukcja”) | 3 PDF/teksty + panel UI | DO ZROBIENIA |
+| DAILY-1 | Codzienny e-mail o 7:00 tylko do administratora — kopie, integracje, bramka SMS, błędy z ostatniej doby | cron + treść; test na adres właściciela | DO ZROBIENIA |
+
 ### Stan kolejki (02.10)
 
-**Kolejka wykonawcza pusta** (poza rytmem GATE-WEEKLY i pozycjami CZEKA NA).
-Bez nowych funkcji bez zlecenia. Czekam na dane właściciela:
-IT KSH / SharePoint (D-32), API emtrack + linki podwykonawców (TELM-2 / D-TELM-ETA),
-wymiary aut (ZEZW-13), polisy OCP (D-30 — dane od przewoźnika).
+Aktywna kolejka przed pilotażem: **DR-TEST → SIM-1 → LOAD-1 → DOC-ROLE → DAILY-1**.
+Bez nowych funkcji poza tą listą. Blokery danych (IT KSH, emtrack, wymiary, OCP) zostają w sekcji 4.
 
 ### Potwierdzenie akceptacji koordynatora (01.10 — popołudnie)
 

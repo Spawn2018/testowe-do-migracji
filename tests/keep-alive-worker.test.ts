@@ -22,7 +22,7 @@ describe('ANEKS 4 PR1 — Worker podtrzymania', () => {
     const [url, init] = f.mock.calls[1] as [string, RequestInit];
     expect(url).toBe('https://api.resend.com/emails');
     const mail = JSON.parse(String(init.body));
-    expect(mail.subject).toBe('TOWER: baza produkcyjna nie odpowiada');
+    expect(mail.subject).toBe('Watch Tower: baza produkcyjna nie odpowiada');
     expect(mail.to).toEqual(['admin@hhl']);
   });
 

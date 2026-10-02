@@ -1,5 +1,5 @@
 <!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TOWER — wizualizacje</title>
+<title>Watch Tower — wizualizacje</title>
 <style>
 :root{--bg:#F4F6F8;--ink:#15212B;--ink3:#5A6B78;--rule:#D5DCE2;--card:#fff}
 @media (prefers-color-scheme:dark){:root{--bg:#0F1720;--ink:#E6EDF2;--ink3:#8094A2;--rule:#26323D;--card:#162029}}
@@ -9,7 +9,7 @@ main{max-width:1100px;margin:auto;padding:8px 32px 48px}
 section{background:var(--card);border:1px solid var(--rule);border-radius:2px;padding:18px 20px;margin:16px 0;overflow-x:auto}
 h2{font-size:15px;margin:0 0 12px;letter-spacing:.02em}
 </style></head><body>
-<header><h1>TOWER — wizualizacje</h1><p>KSH–Stegra Boden · stan 29.09.2026</p></header>
+<header><h1>Watch Tower — wizualizacje</h1><p>KSH–Stegra Boden · stan 29.09.2026</p></header>
 <main><section><h2>1. Architektura</h2><pre class="mermaid">flowchart LR
   subgraph Uzytkownicy
     HHL[&quot;HHL — admin, operacje&quot;]
@@ -98,7 +98,7 @@ h2{font-size:15px;margin:0 0 12px;letter-spacing:.02em}
   CHK -- &quot;nie&quot; --&gt; ODR[&quot;Zmiana odrzucona&quot;]</pre></section><section><h2>7. SharePoint w obie strony</h2><pre class="mermaid">sequenceDiagram
   participant KSH as KSH w Excelu
   participant SP as SharePoint
-  participant T as TOWER
+  participant T as Watch Tower
   participant H as HHL i przewoźnik
   KSH-&gt;&gt;SP: zmienia datę kratownicy
   T-&gt;&gt;SP: co 10 min: czy plik się zmienił?
@@ -117,7 +117,7 @@ h2{font-size:15px;margin:0 0 12px;letter-spacing:.02em}
   E -- &quot;pytanie&quot; --&gt; DO[&quot;Decyzje oczekujące w PLAN.md&quot;]
   DO --&gt; W</pre></section><section><h2>9. Oś czasu</h2><pre class="mermaid">gantt
   dateFormat YYYY-MM-DD
-  title TOWER — wrzesień 2026
+  title Watch Tower — wrzesień 2026
   section Projekt
   Makieta i zakres           :done, 2026-09-22, 1d
   Etapy A–D, fale 0–2        :done, 2026-09-23, 2d
