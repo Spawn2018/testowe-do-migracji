@@ -1,5 +1,5 @@
 /**
- * Jeden krok bramy TEST. Nie czyści schematu poza krokiem `prep`.
+ * Jeden krok bramy TEST.
  *
  *   node scripts/test-db-gate-step.mjs prep
  *   node scripts/test-db-gate-step.mjs security
@@ -7,7 +7,10 @@
  *   node scripts/test-db-gate-step.mjs next
  *
  * Nie wypisuje haseł. Produkcja nglnnrmzmhusvxslousq jest odmową.
- * Zestaw nie nakłada migracji. nullguard/i2: własne połączenie, keepalive,
+ * Zestawy commitują wspólne wiersze seedu (L2, L3). Przed każdym zestawem
+ * schemat TEST jest czyszczony i nakładany od zera — tak jak stara brama
+ * przed każdym zestawem. Bez tego money widzi numer przewoźnika z security
+ * i L3 bez daty z storage. nullguard/i2: własne połączenie, keepalive,
  * ponowienie tylko przy zerwaniu połączenia (nie przy FAIL merytorycznym).
  */
 import { readFileSync } from 'node:fs';
@@ -174,6 +177,9 @@ try {
     }
     const psqlBin = findPsql();
     const bash = findBash();
+    console.log('zestaw: świeży schemat TEST (reset + migracje + seed)');
+    await resetPublic(url);
+    migration = await applyMigrationsAndSeed(ROOT, url, psqlBin);
     const authCtx = {
       dbUrl: url,
       supabaseUrl: env.TEST_SUPABASE_URL || `https://${TEST_REF}.supabase.co`,
