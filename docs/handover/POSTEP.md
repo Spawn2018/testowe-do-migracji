@@ -389,6 +389,7 @@ Pozostałe 26 pozycji „częściowo” nie zależą od trybu demo (braki infras
 | I-30 | cennik według symboli (paczka 30.09) | **DONE** (sesja 30.09 wieczór) | (HEAD) | verify OK; i30 db 10/10; map 87/95 | zob. wpis I-30 w tabeli „Sesja 30.09 (wieczór)” |
 | G-V 629f224 | nocna brama wizualna | **DONE** 30.09 (ten commit) | Wynik 02:39: `OK HEAD=629f224 smoke+stany=ok matryca=840/840 zmienione=0 czas=2452s kod=0` — przebieg bez nadzoru (po `git lfs pull`; pierwszy przebieg 01:57 FAIL: `shots-baseline/` to wskaźniki LFS, nie różnice pikseli). | — | — |
 | G-V 894a684 | nocna brama wizualna | **DONE** 01.10 (ten commit) | Wynik 01:58: `OK HEAD=894a684 smoke+stany=ok matryca=840/840 zmienione=0 czas=2484s kod=0` — przebieg bez nadzoru (rutyna ~01:10). | — | — |
+| G-V 59a5ce4 | nocna brama wizualna | **DONE** 02.10 (ten commit) | Wynik 01:58: `FAIL HEAD=59a5ce4 smoke+stany=fail matryca=310/840 zmienione=530 powód=różnice-ponad-0,1% czas=2450s kod=1` — przebieg bez nadzoru (rutyna ~01:10). | 530 ponad próg 0,1%: harmonogram 56, dokumenty/faktury/kokpit/mapa/ryzyka po 54, ustawienia 36, automatyzacje/opcje 30, pozostałe 18; smoke+stany też fail; wzorca NIE odświeżano. | — |
 
 ## Porządki 29.09.2026 — archiwum i pliki poufne
 
