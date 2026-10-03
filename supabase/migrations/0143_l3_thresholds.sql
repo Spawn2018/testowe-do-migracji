@@ -32,6 +32,7 @@ create or replace function public.l3_anchor(p_date date, p_ts timestamptz)
 returns timestamptz
 language sql
 immutable
+set search_path = public
 as $$
   select coalesce(
     p_ts,
@@ -304,6 +305,7 @@ create or replace function public.l1_decision_type(p_kind text, p_detail jsonb)
 returns text
 language sql
 stable
+set search_path = public
 as $$
   select case
     when p_kind = 'RESOURCE_MISSING' and coalesce(p_detail->>'rule', '') = 'L3_AWIZ' then 'NO_AWIZACJA'
