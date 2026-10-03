@@ -52,6 +52,7 @@ declare
   v_role text;
   v_due timestamptz;
   v_detail jsonb;
+  v_group text := 'DECISION';
 begin
   if p_event_key is null or length(btrim(p_event_key)) = 0 then
     raise exception 'L-1: zdarzenie bez klucza' using errcode = '22023';
@@ -88,13 +89,13 @@ begin
   select 'IN_APP', coalesce(u.email::text, u.id::text), u.id, p_load, 'DECISION_OPEN',
          jsonb_build_object(
            'decision_id', v_id, 'type', p_type, 'title', p_title,
-           'status', 'NEW', 'event', 'OPEN', 'locale', u.locale, 'event_group', 'DECISION'
+           'status', 'NEW', 'event', 'OPEN', 'locale', u.locale
          ),
          left('dec:OPEN:' || v_id::text || ':IN:' || u.id::text, 200)
     from app_users u
     join organizations o on o.id = u.org_id
     join notification_matrix m
-      on m.event_group = 'DECISION' and m.org_kind = o.kind::text and m.in_app
+      on m.event_group = v_group and m.org_kind = o.kind::text and m.in_app
    where u.active
      and (
        o.kind = 'FORWARDER'

@@ -221,6 +221,17 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
         : locale === 'sv' ? 'Det här meddelandet gäller en kundorganisation.' : 'To powiadomienie dotyczy organizacji klienta.';
       return { subject, body, severity: 'LOW', view: null };
     }
+    case 'DECISION_OPEN': {
+      const title = String(p.title ?? '');
+      const subject = locale === 'en'
+        ? `Decision needed: ${title}`
+        : locale === 'sv' ? `Beslut krävs: ${title}` : `Do decyzji: ${title}`;
+      const body = locale === 'en'
+        ? 'A decision is open in the app. E-mail and SMS for automatic decisions stay off until L-13.'
+        : locale === 'sv' ? 'Ett beslut är öppet i appen. E-post och SMS för automatiska beslut är avstängda till L-13.'
+        : 'Decyzja jest otwarta w aplikacji. E-mail i SMS przy decyzjach automatycznych są wyłączone do L-13.';
+      return { subject, body, severity: 'MEDIUM', view: 'risk' };
+    }
     default:
       return { subject: row.template, body: '', severity: 'LOW', view: null };
   }
