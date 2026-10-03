@@ -35,6 +35,7 @@ Pełne: `.cursor/rules/*.mdc`. Procedury: `docs/handover/wzorzec/08_SKILLE/`.
   w `supabase/migrations/` = `schema_migrations` na produkcji)
 - **brama bazy:** scalenie z migracją = pełna brama w częściach; scalenie bez zmian w bazie = testy aplikacji + tylko dotknięte zestawy; pełna brama co niedzielę i przed migracją na produkcję. Jedno zadanie w tle max 40 min. Wyniki w `tmp-gate/wyniki.json`. Zielone tylko przy jednym commicie i jednej wersji migracji (`scripts/test-db-gate-summary.mjs`)
 - **hook pre-push:** gałąź robocza = szybkie testy (unit, lint css, null-guard statyczny). Pełna brama wizualna (`scripts/ci/fresh-smoke.sh`) przy prośbie o scalenie i przed scaleniem do main. Push na `main`: zasady bez zmian (unit + świeży build wizualny + lint + null-guard + baza, gdy jest).
+- **scalenie:** zielone testy aplikacji; brama bazy w częściach, gdy jest zmiana SQL albo migracji; **gitleaks przy każdym commicie** (zero nowych sekretów). **BLOKUJE:** luki wysokie i krytyczne w zależnościach produkcyjnych (`npm audit --omit=dev --audit-level=high`). **NIE BLOKUJE:** zależności deweloperskie — tylko wpis do PLAN.md (P3) i sprawdzenie raz w tygodniu w niedzielnej bramie, czy wyszła poprawka. Aikido i CodeRabbit nie są warunkiem scalenia.
 - sekrety i pliki poufne poza repozytorium; hasło bazy tylko w `.env.local`
 - wygląd = makieta w 100%; **pełna responsywność i instalacja na telefonie (D-55)**
 - **wzorce zrzutów (baselines) odświeża tylko środowisko bramy wizualnej**, nie inne maszyny (`shots-baseline/` i snapshoty Playwright).

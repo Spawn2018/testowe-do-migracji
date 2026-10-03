@@ -24,3 +24,5 @@
 - wtyczek z dostępem do poczty, kalendarza, SharePointa — integracja z SharePoint idzie
   przez aplikację (II-10) po zgodzie IT KSH (D-32), nie przez Cursora
 - wtyczek płatnych i wymagających karty
+
+6. **Aikido i CodeRabbit nie są wtyczkami tej listy i nie są warunkiem scalenia.** BLOKUJE: high/critical w zależnościach produkcyjnych (`npm audit --omit=dev --audit-level=high`). NIE BLOKUJE: zależności deweloperskie — wpis P3 i sprawdzenie w niedzielnej bramie, czy wyszła poprawka. Do scalenia także: zielone testy aplikacji, brama bazy gdy dotyczy SQL, gitleaks przy każdym commicie.
