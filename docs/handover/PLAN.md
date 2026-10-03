@@ -408,6 +408,7 @@ Feed Aikido wyłączony (400). Pięć średnich, bez numerów CVE. Nie krytyczne
 
 | ID | Opis | Status |
 |---|---|---|
+| P1-LINT | 9 błędów stylelint w `src/index.css`, już na main: `clip`, `#brandSub`, `#roleLbl`, siedem `!important`. Osobna mała prośba o scalenie zaraz po tej gałęzi. | NIEZACZĘTE |
 | P3-AND | Dwa eksportowane komponenty Androida w manifeście bramki SMS (score 60) | NIEZACZĘTE |
 | P3-SW | Dwa trafienia SSRF w `public/sw.js` | NIEZACZĘTE |
 | P3-ZIP | Trafienie SSRF w `src/lib/zipDocs.ts` | NIEZACZĘTE |
