@@ -136,6 +136,8 @@ L6=33333333-0000-0000-0000-000000000006; L7=33333333-0000-0000-0000-000000000007
 for x in 6 7; do sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no) values ('33333333-0000-0000-0000-00000000000$x','$P','$OSCX','KSH/$x','HHL/$x','SCX/$x')"; done
 sys "update loads set status='IN_TRANSIT_PL' where id in ('$L6','$L7')"
 sys "insert into load_cost (load_id, base_amount) values ('$L6', 3000)"
+ROLE=anon err "pozycja z linku kierowcy = odmowa" "" "select * from driver_post_position('wt_00ff', '$L6', 54.0, 18.5, now(), 10, 60, 90)" "nieaktywny"
+sys "update security_flags set enabled = true where key = 'DRIVER_LINK_ACCEPT'"
 tok() { $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; select issue_driver_token('$2'); commit;" 2>&1 | grep '^wt_'; }
 err "anon nie wyda tokenu"                               "" "set local role anon; select issue_driver_token('$L6')" "permission denied"
 err "KSH nie wyda tokenu"                                $KSH "select issue_driver_token('$L6')" "wyłącznie przewoźnik"

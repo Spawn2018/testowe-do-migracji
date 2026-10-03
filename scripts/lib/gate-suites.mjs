@@ -13,7 +13,7 @@ export const EXPECTED = {
   status: 44,
   storage: 37,
   money: 131,
-  release: 145,
+  release: 146,
   session: 27,
   archive: 18,
   watchdog: 27,

@@ -125,7 +125,9 @@ export function DriverPwa() {
         )}
         {serverMode && srvErr && (
           <div className="driver-alert" data-driver-token-error>
-            Link kierowcy nieważny — {srvErr}. Poproś dyspozytora o nowy link.
+            {/nieaktywny/i.test(srvErr)
+              ? 'Link jest nieaktywny.'
+              : `Link kierowcy nieważny — ${srvErr}. Poproś dyspozytora o nowy link.`}
           </div>
         )}
         {serverMode && srvNote && (
