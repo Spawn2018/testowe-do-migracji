@@ -156,3 +156,15 @@ Start L-2. Rozstrzygnąć decyzję może tylko firma z katalogu (kto decyduje) o
 
 Od teraz bez wyjątków: migracja wchodzi na produkcję dopiero po pełnej bramie w częściach, zielonej na tym samym commicie i tej samej wersji migracji. Nałożenie 0138 na produkcję bez tej bramy było błędem. Bieżąca brama (0001…0139 od zera) obejmuje też zmiany z 0138.
 
+
+---
+
+## Polecenie 2026-10-03 — domknięcie L-1, stop L-3
+
+Stop L-3. Najpierw domknąć L-1.
+
+KR-07 rozstrzygnął właściciel (administrator) w aplikacji. Sprawdzić tylko, że w historii widać kto i kiedy. Nie szukać w tym błędu.
+
+Dla pięciu decyzji ETA_AFTER_LATEST (KR-04, KR-05, KR-06, KR-07, SG-24) sprawdzić, czy są prawdziwe: data z pliku KSH, okno dostawy, wyliczona ETA i podstawa (GPS, awizacja, sam plan). Brak pozycji i awizacji → ETA nie otwiera decyzji „po terminie”. Fałszywe zamknąć z opisem „otwarta błędnie — brak danych” i poprawić warunek. KR-07: data w pliku była tekstem „14/12/2026”.
+
+Do bramy bazy zestaw dec-auto: dla każdego z 16 typów zdarzenie → decyzja; drugie wykrycie → bez duplikatu; brak danych → bez decyzji. Pełna brama przed migracją na produkcję. Bez tego L-1 nie jest zamknięte. Nie zaczynać L-4 ani L-3.
