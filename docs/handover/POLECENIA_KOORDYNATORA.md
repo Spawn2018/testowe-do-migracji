@@ -149,3 +149,10 @@ Scalasz sam. Nie czekasz na właściciela, gdy zielone są testy aplikacji, gitl
 ## Polecenie 2026-10-03 — start L-2
 
 Start L-2. Rozstrzygnąć decyzję może tylko firma z katalogu (kto decyduje) oraz administrator. Odmowa w funkcji bazy, nie tylko ukryty przycisk.
+
+---
+
+## Polecenie 2026-10-03 — pełna brama przed produkcją
+
+Od teraz bez wyjątków: migracja wchodzi na produkcję dopiero po pełnej bramie w częściach, zielonej na tym samym commicie i tej samej wersji migracji. Nałożenie 0138 na produkcję bez tej bramy było błędem. Bieżąca brama (0001…0139 od zera) obejmuje też zmiany z 0138.
+
