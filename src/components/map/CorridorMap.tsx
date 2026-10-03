@@ -3,14 +3,11 @@ import L from 'leaflet';
 
 import { useTowerStore } from '../../store/useTowerStore';
 import { t } from '../../i18n/messages';
-import {
-  CORRIDOR_REF_COORDS,
-  FERRY_LEG_COORDS,
-  positionAlongCorridor,
-} from '../../lib/corridor';
+import { CORRIDOR_REF_COORDS, FERRY_LEG_COORDS } from '../../lib/corridor';
 import { SITES } from '../../lib/status';
 import { fetchSituations, type RoadSituation } from '../../lib/trafikverket';
 import { PROD_BUILD, shows } from '../../lib/prodFacade';
+import { demoFleetMarkers, prodFleetMarkers, type VehicleMarkerIn } from '../../lib/vehicleMarkers';
 import { subscribeFerryPositions, type AisPosition } from '../../lib/ais';
 import { formatOpsDateTime } from '../../lib/time';
 import type { Load } from '../../types';
@@ -37,35 +34,6 @@ const TILE_LIGHT =
 
 const ATTR =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> · Esri';
-
-type FleetPos = {
-  id: string;
-  code: string;
-  status: string;
-  lat: number;
-  lng: number;
-  driver: string | null;
-  plate: string | null;
-};
-
-function fleetPositions(loads: Load[], tickBump: number): FleetPos[] {
-  return loads.map((l) => {
-    const drift = ['IN_TRANSIT_PL', 'ON_FERRY', 'IN_TRANSIT_SE', 'APPROACHING_SITE'].includes(l.status)
-      ? (tickBump % 40) * 0.00012
-      : 0;
-    const prog = Math.min(1, l.progress + drift);
-    const pos = positionAlongCorridor(prog);
-    return {
-      id: l.id,
-      code: l.code,
-      status: l.status,
-      lat: pos.lat,
-      lng: pos.lng,
-      driver: l.resources.driverName,
-      plate: l.resources.tractorPlate,
-    };
-  });
-}
 
 function statusColor(status: string): string {
   switch (status) {
@@ -137,6 +105,8 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
   const [tick, setTick] = useState(0);
   const [situations, setSituations] = useState<RoadSituation[]>([]);
   const [aisPositions, setAisPositions] = useState<AisPosition[]>([]);
+  const [gpsFixes, setGpsFixes] = useState<Map<string, { lat: number; lng: number }>>(() => new Map());
+  const [gpsReady, setGpsReady] = useState(false);
   const [zoom, setZoom] = useState(0);
   const [mapReady, setMapReady] = useState<L.Map | null>(null);
   /* III-5: odtwarzany transport = ostatnio wybrany (zostaje po zamknięciu szuflady, znika po wyłączeniu warstwy „Ślad”) */
@@ -181,9 +151,35 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
   }, []);
 
   useEffect(() => {
+    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return undefined;
+    let cancelled = false;
+    const ids = loads.map((l) => l.id);
+    const run = () => {
+      void import('../../lib/vehiclePositions').then(({ fetchLatestVehicleFixes }) => fetchLatestVehicleFixes(ids)).then(
+        (rows) => {
+          if (cancelled) return;
+          setGpsFixes(new Map(rows.map((r) => [r.loadId, { lat: r.lat, lng: r.lng }])));
+          setGpsReady(true);
+        },
+        () => {
+          if (cancelled) return;
+          setGpsFixes(new Map());
+          setGpsReady(true);
+        },
+      );
+    };
+    run();
+    const id = window.setInterval(run, 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [loads]);
+
+  useEffect(() => {
     // D15/G5: przy zamrożonym czasie (?now=, VITE_FROZEN_NOW) bez dryfu pozycji — ujęcia deterministyczne
     // niezależnie od chwili zamontowania mapy (leniwy kawałek).
-    if (isFrozenNow()) return;
+    if (isFrozenNow() || PROD_BUILD) return;
     const id = window.setInterval(() => setTick((t) => t + 1), 1500);
     return () => clearInterval(id);
   }, []);
@@ -338,7 +334,15 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
     if (mapLayers.vehicles) {
       const visibleLoads =
         focusMode && selectedLoadId ? loads.filter((l) => l.id === selectedLoadId) : loads;
-      const fleet = fleetPositions(visibleLoads, tick);
+      const markerIn: VehicleMarkerIn[] = visibleLoads.map((l) => ({
+        id: l.id,
+        code: l.code,
+        status: l.status,
+        progress: l.progress,
+        driver: l.resources.driverName,
+        plate: l.resources.tractorPlate,
+      }));
+      const fleet = PROD_BUILD ? prodFleetMarkers(markerIn, gpsFixes) : demoFleetMarkers(markerIn, tick);
       /* III-5 (SCOPE 5.10): produkcja — pozycje z bazy/statusu często w tym samym punkcie (np. plac załadunku);
          nakładające się znaczniki rozkładamy na okręgu/spirali (≥ 22 px), by etykiety i kliknięcia nie kolidowały.
          Tryb demo bez zmian (wzorzec zrzutów makiety). */
@@ -418,7 +422,7 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
           .addTo(layers.ais);
       }
     }
-  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom]);
+  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes]);
 
   return (
     <div
@@ -434,6 +438,11 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
         <Suspense fallback={null}>
           <TrackReplay key={replayId} map={mapReady} loadId={replayId} code={loads.find((l) => l.id === replayId)?.code ?? ''} />
         </Suspense>
+      ) : null}
+      {PROD_BUILD && mapLayers.vehicles && gpsReady && !loads.some((l) => gpsFixes.has(l.id)) ? (
+        <div className="note" data-empty="vehicle-positions" style={{ position: 'absolute', left: 12, right: 12, bottom: embedded ? 8 : 36, zIndex: 500, maxWidth: 360, background: 'var(--surface)', padding: '6px 8px' }}>
+          {t(locale, 'b1_no_vehicle_positions')}
+        </div>
       ) : null}
       {!embedded ? (
         <div className="mapkey" aria-label={t(locale, 'map_legend')} style={{ zIndex: 500 }}>

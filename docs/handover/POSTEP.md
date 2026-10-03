@@ -1610,3 +1610,7 @@ Lista ujęć, które się zmieniły:
 ### 2026-10-03 — jeden wzorzec mapy
 
 Odświeżono wyłącznie `shots-baseline/mapa__hhl__pl__1920__light.png` w środowisku bramy. Powód: zmiana kafelka u dostawcy map. Pozostałych 839 ujęć nie odświeżano.
+
+### 2026-10-03 — B-1
+
+Mapa w produkcji: znacznik pojazdu tylko z ostatniej pozycji GPS (`load_track`). Brak pozycji — komunikat „Brak danych — pozycji pojazdów”, bez punktu ze statusu. Strefy, porty, korytarz, promy i sytuacje drogowe bez zmian, nadal włączane checkboxami. Tryb demo (makieta) bez zmian.

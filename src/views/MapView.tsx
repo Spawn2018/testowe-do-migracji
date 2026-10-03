@@ -297,8 +297,12 @@ export function MapView() {
         {t(locale, 'a6_map_ais')}{' '}
         <b data-ais={aisMode}>{aisMode === 'live' ? t(locale, 'map_ais_live') : aisMode === 'db' ? t(locale, 'i2_ais_db').replace('{d}', formatOpsDateTime(aisReadAt)) : shows('aisSeedPositions') ? t(locale, 'a6_demo_seed') : t(locale, 'i2_no_source')}</b>
         {aisMode === 'db' ? <> ({t(locale, 'i2_ais_attr')})</> : null}
-        {' · '}
-        {t(locale, 'map_gps_note')}</div>
+        {PROD_BUILD ? null : (
+          <>
+            {' · '}
+            {t(locale, 'map_gps_note')}
+          </>
+        )}</div>
     </div>
   );
 }
