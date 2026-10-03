@@ -435,3 +435,33 @@ Feed Aikido wyłączony (400). Pięć średnich, bez numerów CVE. Nie krytyczne
 | ID | Opis | Status |
 |---|---|---|
 | D-LATER | API Stena + telematyka + SharePoint (notatki właściciela) | na później, nie zaczynać |
+
+
+## Kolejka L i pozostałe polecenia koordynatora (03.10)
+
+Źródło: `docs/handover/POLECENIA_KOORDYNATORA.md` i `docs/handover/LOGIKA_SYSTEMU.md`. Istniejących wierszy nie ruszano. P2-TILES, P3-APK i SEC-OWASP już są w planie — tu tylko odesłanie, bez drugiej kopii.
+
+Kolejność od 03.10: L-1 → L-2 → L-3 → L-4 → L-5 → L-13 → L-6 → L-7 → L-8 → L-9 → L-10 → L-11 → L-12 → część B od początku (pozycje zrobione w L oznacz „zrobione w ramach L-x”) → SEC-OWASP → część D po danych od właściciela.
+
+| ID | Opis | Kryterium | Status |
+|---|---|---|---|
+| L-1 | P1. Automatyczne otwieranie decyzji. Każde ryzyko, które w tabeli DEC-CLICK (część B) ma typ decyzji, otwiera decyzję z katalogu 16 typów. Jedno zdarzenie = jedna decyzja (bez duplikatu przy ponownym wykryciu tego samego ryzyka). Zamknięcie ryzyka nie kasuje decyzji — decyzja ma własny status. Źródło: B 2c, pytanie 3; LOGIKA §1. | Test dla każdego z 16 typów: zdarzenie → decyzja otwarta, drugie wykrycie → brak drugiej decyzji. Na TEST centrum decyzji pokazuje decyzje z symulacji SIM-1. | NIEZACZĘTE |
+| L-2 | P1. Kto decyduje. Rozstrzygnąć decyzję może tylko firma wskazana w katalogu (kolumna „kto decyduje”) oraz administrator. Odmowa w bazie (funkcja), nie tylko ukryty przycisk. Źródło: B 2c; LOGIKA §1. | Test: właściwa firma może, inna dostaje odmowę z bazy. | NIEZACZĘTE |
+| L-3 | P1. Osiem progów podłączonych do alarmów: próg opóźnienia, wyprzedzenie dat KSH, awizacja ostrzeżenie/krytyczne, dokumenty ostrzeżenie/krytyczne, brak pozycji GPS, zjazd z trasy. Źródło: B 6c; LOGIKA §4. | Dla każdego progu test: zmiana wartości w Opcjach zmienia moment wywołania alarmu. | NIEZACZĘTE |
+| L-4 | P1. Cele kliknięć i link w e-mailu. Każde powiadomienie, ryzyko i kafelek prowadzi tam, gdzie mówi tabela DEC-CLICK (okno decyzji, transport albo formularz z gotową akcją). Żadna pozycja nie prowadzi donikąd. E-mail linkuje do konkretnego transportu albo decyzji, nie do strony głównej. Źródło: pytania 1, 2, 12, 13; LOGIKA §8 i §12. | Test dla każdego typu powiadomienia: klik otwiera właściwy cel; link w e-mailu otwiera właściwy obiekt po zalogowaniu. | NIEZACZĘTE |
+| L-5 | P1. Dzwonek. Bez napisu „przeczytane”. Pozycja znika z listy po kliknięciu i prowadzi do celu z L-4. Źródło: pytanie 13. | Test: klik → pozycja znika, licznik maleje, otwiera cel. | NIEZACZĘTE |
+| L-6 | P1. „Ponów kopię” uruchamia kopię zapasową (dziś tylko zapisuje prośbę, LOGIKA §1). | Klik uruchamia kopię, a wynik (udana/nieudana) widać w Stanie systemu. | NIEZACZĘTE |
+| L-7 | P1. Nazwy statusów „opóźniony” i „cichy”. Na liście harmonogramu oba mają własną polską nazwę. Źródło: B 8, pytanie 4; LOGIKA §5. | Na liście harmonogramu oba statusy mają własną polską nazwę. | NIEZACZĘTE |
+| L-8 | P1. Kafelki kokpitu. Kafelek KSH „Wymaga decyzji” liczy tylko to, co KSH widzi. Kafelek przewoźnika pokazuje bieżący tydzień zamiast stałego „tydzień 38”. Źródło: pytanie 12; LOGIKA §11. | Test liczb dla każdej firmy. | NIEZACZĘTE |
+| L-9 | P1. Alternatywy dla rejsu. Na produkcji lista z prawdziwych rozkładów w bazie — najbliższe rejsy Polferries i Stena. Bez danych zmyślonych. Objazdy w Szwecji zostają ukryte. Źródło: pytanie 5; LOGIKA §9. | Lista z bazy; brak rozkładów = komunikat „Brak danych”. | NIEZACZĘTE |
+| L-10 | P1. Opis trzech ścieżek pracy. Plik `docs/handover/WORKFLOW_FIRM.md`: trzy schematy krok po kroku (HHL, KSH, Scandinavian Express), od zaproszenia do zamknięcia transportu, prostym językiem, ze schematami Mermaid. To opis, nie automat. Źródło: pytanie 14. | Plik w repozytorium. | NIEZACZĘTE |
+| L-11 | P1. Górny pasek bez numeru etapu. Usunąć numer etapu (1–9) z kafelków; liczba transportów zostaje. Źródło: B 9, decyzja właściciela 03.10. | Numer etapu znika z kafelka, liczba transportów zostaje. | NIEZACZĘTE |
+| L-12 | P1. Kreator stref z mapą, tylko HHL: ustawianie i przesuwanie środka na mapie, podgląd koła i zapasu, kraj, kogo powiadomić, usuwanie. Nowa strefa nie startuje na środku Bałtyku. Źródło: B 6b, pytanie 16, decyzja właściciela 03.10; LOGIKA §14. | HHL tworzy, przesuwa, edytuje i usuwa strefę na mapie; SMS ze strefy działa według kraju i rodzaju (test). | NIEZACZĘTE |
+| L-13 | P1, po L-5. Zalew powiadomień. Symulacja SIM-1 dała 155 powiadomień dla jednego transportu. Rozbicie według typu, odbiorcy i firmy; łączenie duplikatów. | Ponowna symulacja SIM-1: liczba powiadomień na transport i firmę w raporcie, bez duplikatów tego samego zdarzenia. | NIEZACZĘTE |
+| B-KSH | P2. Lista harmonogramu KSH: klik otwiera boczny panel tylko z „Edytuj”. KSH edytuje daty i godziny załadunku i rozładunku. | Klik → panel tylko z Edytuj; zapis dat i godzin. | NIEZACZĘTE |
+| B-REJSY | P2. Rejsy — część B zlecenia, sekcja REJSY, jako osobna pozycja. | Osobna pozycja planu zrealizowana według sekcji REJSY. | NIEZACZĘTE |
+| Q-11a | P2. Pięć rozmiarów ekranu. | Pięć rozmiarów sprawdzonych. | NIEZACZĘTE |
+| Q-11b | P2. Powiadomienia na Android i iOS. | Powiadomienia działają na Androidzie i iOS. | NIEZACZĘTE |
+| KOPIA-D | P3. Dograć kopię `usuniete_standard_2026-10-03` na `D:\Watch Tower\dane\`, gdy komputer domowy będzie włączony. | Plik na dysku D: i suma SHA-256 zgodna z kopią. | NIEZACZĘTE — komputer Domowy był offline 03.10; kopia jest w R2 |
+| AUDIT-PROD | Zasada: blokują tylko luki wysokie i krytyczne w zależnościach produkcyjnych (`npm audit --omit=dev --audit-level=high`). Zależności deweloperskie to P3, sprawdzane w niedzielnej bramie. | Brama odrzuca tylko high/critical w prod. | OBOWIĄZUJE |
+
