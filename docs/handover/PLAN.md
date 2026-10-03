@@ -415,6 +415,7 @@ Feed Aikido wyłączony (400). Pięć średnich, bez numerów CVE. Nie krytyczne
 |---|---|---|
 | P1-FONT | Czcionki z repozytorium (Barlow 400/500/600/700, Barlow Condensed 500/600/700, woff2 + OFL), zero fonts.googleapis.com i fonts.gstatic.com, także w CSP. W tej samej gałęzi P1-LINT. Wzorce odświeżone w środowisku bramy. | **DO SCALENIA** — `fix/p1-font` |
 | P1-LINT | 9 błędów stylelint w `src/index.css` (`clip`, `#brandSub`, `#roleLbl`, siedem `!important`) naprawione bez wyłączania reguł. Ta sama gałąź co P1-FONT. | **DO SCALENIA** — `fix/p1-font` |
+| P2-TILES | W testach wizualnych mapa korzysta z kafelków zapisanych lokalnie w repozytorium (bez pobierania z sieci), żeby aktualizacje u dostawcy nie psuły bramy. Na produkcji bez zmian. | NIEZACZĘTE |
 | P3-AND | Dwa eksportowane komponenty Androida w manifeście bramki SMS (score 60) | NIEZACZĘTE |
 | P3-SW | Dwa trafienia SSRF w `public/sw.js` | NIEZACZĘTE |
 | P3-ZIP | Trafienie SSRF w `src/lib/zipDocs.ts` | NIEZACZĘTE |

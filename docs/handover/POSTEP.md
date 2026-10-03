@@ -1606,3 +1606,7 @@ Lista ujęć, które się zmieniły:
 - `tests/__screenshots__/stan-walidacja-dark.png`
 - `tests/__screenshots__/stan-wcisniety-dark.png`
 - `tests/__screenshots__/stan-zablokowany-dark.png`
+
+### 2026-10-03 — jeden wzorzec mapy
+
+Odświeżono wyłącznie `shots-baseline/mapa__hhl__pl__1920__light.png` w środowisku bramy. Powód: zmiana kafelka u dostawcy map. Pozostałych 839 ujęć nie odświeżano.
