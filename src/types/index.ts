@@ -528,6 +528,8 @@ export interface ScheduleVersion {
   changed: number;
   removed: number;
   rejected: number;
+  /** B-8-IMP: pominięte wiersze TYP = STANDARD */
+  skippedStandard?: number;
 }
 
 export interface ExceptionItem {

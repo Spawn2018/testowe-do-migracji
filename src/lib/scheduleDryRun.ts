@@ -22,6 +22,7 @@ export type ImportDiff = {
   removalBlocked: RemovalBlocked[];
   rejected: number;
   warnings: number;
+  skippedStandard: number;
   filename: string;
   accepted: number;
   total: number;
@@ -123,7 +124,9 @@ export async function dryRunFromXlsx(
   // spoza faktur); pozostałe trafiają do `removalBlocked` z powodem — podgląd je pokazuje.
   const missing = parsed.stats.accepted === 0 ? [] : diff.removed
     .map((code) => byCode.get(code))
-    .filter((l): l is Load => !!l);
+    .filter((l): l is Load => !!l)
+    // B-8-IMP: istniejące STANDARD (NTG) nie są „brakiem w pliku” — nie proponujemy anulowania
+    .filter((l) => l.dims.cargoClass !== 'STANDARD');
   const { cancellable: removalCandidates, blocked: removalBlocked } = splitRemovals(missing, invoiced);
   return {
     added: parsed.stats.accepted === 0 ? [] : diff.added.map(rowToPartialLoad),
@@ -133,6 +136,7 @@ export async function dryRunFromXlsx(
     removalBlocked,
     rejected: parsed.stats.rejected,
     warnings: parsed.stats.warnings,
+    skippedStandard: parsed.stats.skippedStandard,
     filename,
     accepted: parsed.stats.accepted,
     total: parsed.stats.total,

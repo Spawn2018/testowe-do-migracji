@@ -15,21 +15,21 @@ async function fullSchedule() {
 
 describe('I-1 import harmonogramu — tryb produkcyjny', () => {
   const STD = ['STD-01', 'STD-02', 'STD-03'];
-  it('ksh-harmonogram-synthetic.xlsx: układ jak KSH — 8 przyjętych (5 DIMENSIONED + 3 STANDARD)', async () => {
+  it('ksh-harmonogram-synthetic.xlsx: STANDARD (NTG) pominięte, reszta przyjęta', async () => {
     const p = await fullSchedule();
     expect(p.stats.total).toBeGreaterThanOrEqual(8);
-    expect(p.stats.accepted).toBe(8);
+    expect(p.stats.skippedStandard).toBe(3);
+    expect(p.stats.accepted).toBe(5);
+    expect(p.rows.map((r) => r.shipmentCode)).toEqual(['QA-01', 'QA-02', 'QA-03', 'QA-04', 'QA-05']);
     expect(p.issues.filter((i) => i.code === 'BAD_DIMENSIONS')).toEqual([]);
-    expect(p.rows.filter((r) => r.cargoClass === 'STANDARD').map((r) => r.shipmentCode)).toEqual(STD);
-    expect(p.rows.filter((r) => r.cargoClass === 'STANDARD').every((r) => r.lengthM == null && r.widthM == null && r.heightM == null)).toBe(true);
-    expect(p.issues.filter((i) => i.code === 'OVERSIZE' && STD.includes(i.shipmentCode ?? ''))).toEqual([]);
+    expect(p.issues.filter((i) => STD.includes(i.shipmentCode ?? ''))).toEqual([]);
     expect(p.issues.filter((i) => i.code === 'NO_SHIPMENT_CODE').length).toBeGreaterThanOrEqual(5);
   });
   it('wiersze RPC: klucz = Wysyłka, liczby i daty ISO, bez danych kierowcy', async () => {
     const rows = toRpcRows((await fullSchedule()).rows);
-    expect(rows).toHaveLength(8);
-    expect(new Set(rows.map((r) => r.code)).size).toBe(8);
-    expect(rows.find((r) => r.code === 'STD-01')).toMatchObject({ cargo_class: 'STANDARD', length_m: null, width_m: null, height_m: null });
+    expect(rows).toHaveLength(5);
+    expect(new Set(rows.map((r) => r.code)).size).toBe(5);
+    expect(rows.find((r) => r.code === 'STD-01')).toBeUndefined();
     expect(Object.keys(rows[0])).not.toContain('cargo_class');   // wymiarowe bez klucza — schedule_row bez zmian po 0050
     expect(rows.find((r) => r.code === 'QA-01')).toMatchObject({ code: 'QA-01', length_m: 18.21, width_m: 2.45, height_m: 2.45, qty: 7, total_weight_t: 20.74, load_date: '2026-09-30', delivery_date: '2026-10-05' });
     expect(Object.keys(rows[0])).not.toContain('driver_name');
@@ -43,12 +43,12 @@ describe('I-1 import harmonogramu — tryb produkcyjny', () => {
       blocked: [{ code: 'SG-00', load_id: 'u3', reason: 'INVOICED', message: '' }, { code: 'T-02', load_id: 'u4', reason: 'CANCELLED', message: '' }],
       cancelled: [], critical: [{ code: 'SG-01', fields: ['load_date'] }],
     };
-    const d = rpcToDiff(res, { filename: 'h.xlsx', accepted: 3, total: 3, rejected: 0, warnings: 0, issues: [] });
+    const d = rpcToDiff(res, { filename: 'h.xlsx', accepted: 3, total: 3, rejected: 0, warnings: 0, skippedStandard: 0, issues: [] });
     expect(d.added).toEqual([{ code: 'SG-03' }]);
     expect(d.changed).toEqual([{ id: 'u1', patch: {}, criticalDate: true }]);
     expect(d.removalCandidates).toEqual([{ id: 'u2', code: 'T-01' }]);
     expect(d.removalBlocked.map((b) => b.reason)).toEqual(['INVOICED', 'CANCELLED']);
-    expect(rpcToDiff(res, { filename: 'h.xlsx', accepted: 0, total: 3, rejected: 3, warnings: 0, issues: [] }).removalCandidates).toEqual([]);
+    expect(rpcToDiff(res, { filename: 'h.xlsx', accepted: 0, total: 3, rejected: 3, warnings: 0, skippedStandard: 0, issues: [] }).removalCandidates).toEqual([]);
   });
   it('uprawnienie: tylko HHL — produkcja i demo (I-2a)', () => {
     expect(['HHL', 'KSH', 'SCX'].map((r) => canImportSchedule(r as 'HHL', true))).toEqual([true, false, false]);
@@ -57,10 +57,12 @@ describe('I-1 import harmonogramu — tryb produkcyjny', () => {
 });
 
 describe('I-2C klasa STANDARD — parser, walidator zezwoleń, UI', () => {
-  it('„Standard” (dowolna wielkość liter) → klasa STANDARD; śmieci w wymiarach nadal BAD_DIMENSIONS', () => {
+  it('„Standard” w wymiarach jest pomijany (NTG), śmieci w wymiarach nadal BAD_DIMENSIONS', () => {
     const base = { 'Wysyłka': 'X-1', 'Ilość elementów': 20, 'Waga transport [t]': 15.34 };
     const ok = parseSchedule([{ ...base, 'Rozmiar L x W x H': ' standard ' }]);
-    expect(ok.rows[0]).toMatchObject({ cargoClass: 'STANDARD', lengthM: null, widthM: null, heightM: null });
+    expect(ok.rows).toHaveLength(0);
+    expect(ok.stats.skippedStandard).toBe(1);
+    expect(ok.issues.filter((i) => i.severity === 'ERROR')).toEqual([]);
     const bad = parseSchedule([{ ...base, 'Rozmiar L x W x H': 'duży' }]);
     expect(bad.rows).toHaveLength(0);
     expect(bad.issues[0].code).toBe('BAD_DIMENSIONS');

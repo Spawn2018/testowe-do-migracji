@@ -121,6 +121,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
           id: r.id, at: r.imported_at, by: `v${r.version}`, filename: r.file_name ?? '',
           added: Number(r.stats?.added ?? 0), changed: Number(r.stats?.changed ?? 0),
           removed: Number(r.stats?.cancelled ?? 0), rejected: Number(r.stats?.rejected ?? 0),
+          skippedStandard: Number(r.stats?.skipped_standard ?? 0),
         })),
     };
   }

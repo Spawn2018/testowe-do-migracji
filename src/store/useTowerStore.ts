@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { paymentBlockedByDispute } from '../lib/invoiceDispute';
+import { standardSkipMessage } from '../lib/standardSkipMessage';
 import { persist } from 'zustand/middleware';
 import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
 import type {
@@ -309,6 +310,8 @@ interface TowerState {
     accepted?: number;
     /** Destructive removal is opt-in; schedule UI intentionally never sets this. */
     allowRemovals?: boolean;
+    /** B-8-IMP: pominięte wiersze TYP = STANDARD (nie błąd). */
+    skippedStandard?: number;
   }) => void;
 
   updateFactoringOffer: (patch: Partial<FactoringOffer>) => void;
@@ -1152,7 +1155,7 @@ export const useTowerStore = create<TowerState>()(
       updateNotificationPrefs: (patch) =>
         set((s) => ({ notificationPrefs: { ...s.notificationPrefs, ...patch } })),
 
-      commitImport: ({ added, changed, removedIds, rejected, filename, accepted, allowRemovals }) => {
+      commitImport: ({ added, changed, removedIds, rejected, filename, accepted, allowRemovals, skippedStandard = 0 }) => {
         // Normal schedule imports are additive. Ignore any legacy/provided removals unless
         // a caller explicitly opts into the destructive path.
         // ANEKS 3 §2.1: usunięcie przez import = anulowanie, wyłącznie sprzed załadunku i spoza faktur
@@ -1284,6 +1287,7 @@ export const useTowerStore = create<TowerState>()(
             changed: changed.length,
             removed: effectiveRemovedIds.length,
             rejected,
+            skippedStandard,
           };
           return {
             loads,
@@ -1312,6 +1316,7 @@ export const useTowerStore = create<TowerState>()(
           note: filename,
         });
         get().pushToast(tp(get().locale, 'a6_ts_imp_sched', { filename }), 'MEDIUM');
+        get().pushToast(standardSkipMessage(accepted ?? added.length, skippedStandard), 'MEDIUM');
       },
 
       updateFactoringOffer: (patch) => {

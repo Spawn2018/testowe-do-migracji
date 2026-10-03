@@ -33,6 +33,7 @@ import { SailingsPanel } from './SailingsPanel';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import type { ServerImportDraft } from '../data/scheduleImportServer';
 import { clickableRow } from '../lib/clickableRow';
+import { standardSkipMessage } from '../lib/standardSkipMessage';
 
 /** I-1: import w produkcji przez import_schedule() w bazie (podgląd i zapis w jednej transakcji). */
 const SERVER_IMPORT = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED;
@@ -143,11 +144,14 @@ export function ScheduleView() {
   const showRev = canSeeRevenue(role);
   const showMargin = canSeeMargin(role);
   const ver = scheduleVersions[0];
-  const verLine = SERVER_IMPORT
+  const skippedNote = ver?.skippedStandard
+    ? ` · pominięto ${ver.skippedStandard} wierszy typu STANDARD`
+    : '';
+  const verLine = (SERVER_IMPORT
     ? ver
       ? tp(locale, 'i1_ver_line', { v: ver.by.replace(/^v/, ''), at: formatTableInZone(ver.at, 'Europe/Warsaw', refYear), file: ver.filename })
       : t(locale, 'i1_ver_none')
-    : t(locale, 'a6_sch_ver_line');
+    : t(locale, 'a6_sch_ver_line')) + skippedNote;
 
   const mapKeys = activeMap ? Object.entries(activeMap) : Object.entries(COLUMN_MAP_DEFAULT);
 
@@ -607,10 +611,11 @@ export function ScheduleView() {
                           allowRemovals ? dryRun.removalCandidates.map((c) => c.code) : [],
                           [],
                         );
+                        const note = standardSkipMessage(draft.meta.accepted, draft.meta.skippedStandard);
                         setServerNote(
                           res.version == null
-                            ? t(locale, 'i1_nochange')
-                            : tp(locale, 'i1_saved', { v: String(res.version), a: String(res.added.length), c: String(res.changed.length), x: String(res.cancelled.length), ms: String(res.ms) }) +
+                            ? t(locale, 'i1_nochange') + ' · ' + note
+                            : note + ' · ' + tp(locale, 'i1_saved', { v: String(res.version), a: String(res.added.length), c: String(res.changed.length), x: String(res.cancelled.length), ms: String(res.ms) }) +
                               (res.critical.length ? ' · ' + tp(locale, 'i1_crit', { codes: res.critical.map((k) => k.code).join(', ') }) : ''),
                         );
                         const { refreshFromServer } = await import('../data/supabaseBridge');
@@ -632,6 +637,7 @@ export function ScheduleView() {
                     filename: dryRun.filename,
                     accepted: dryRun.accepted,
                     allowRemovals,
+                    skippedStandard: dryRun.skippedStandard,
                   });
                   setStep('done');
                 }}
@@ -653,6 +659,9 @@ export function ScheduleView() {
           {step === 'done' && (
             <>
               <span style={{ color: 'var(--go)' }}>{t(locale, 'a6_sch_import_ok')}</span>{' '}
+              {dryRun ? (
+                <span data-import-standard style={{ color: 'var(--ink)' }}>{standardSkipMessage(dryRun.accepted, dryRun.skippedStandard)}</span>
+              ) : null}{' '}
               <button
                 type="button"
                 className="btn ghost"
