@@ -168,3 +168,30 @@ KR-07 rozstrzygnął właściciel (administrator) w aplikacji. Sprawdzić tylko,
 Dla pięciu decyzji ETA_AFTER_LATEST (KR-04, KR-05, KR-06, KR-07, SG-24) sprawdzić, czy są prawdziwe: data z pliku KSH, okno dostawy, wyliczona ETA i podstawa (GPS, awizacja, sam plan). Brak pozycji i awizacji → ETA nie otwiera decyzji „po terminie”. Fałszywe zamknąć z opisem „otwarta błędnie — brak danych” i poprawić warunek. KR-07: data w pliku była tekstem „14/12/2026”.
 
 Do bramy bazy zestaw dec-auto: dla każdego z 16 typów zdarzenie → decyzja; drugie wykrycie → bez duplikatu; brak danych → bez decyzji. Pełna brama przed migracją na produkcję. Bez tego L-1 nie jest zamknięte. Nie zaczynać L-4 ani L-3.
+
+---
+
+## Polecenie 2026-10-03 21:02 (czas warszawski) — domknięcie L-1, SG-24, link kierowcy, L-1b, potem L-3
+
+L-1 — domknięcie, w tej kolejności:
+
+1. Scal 0140 i wdróż (pełna brama zielona). 9 typów decyzji działa, nie blokujemy reszty.
+
+2. SG-24 — 5 pozycji GPS to TEST WŁAŚCICIELA: wysłał lokalizację swojego telefonu przez stary link dla kierowców. Zgoda właściciela na usunięcie.
+   a) kopia tych 5 pozycji (R2, poza repozytorium), potem usunięcie migracją przez pełną bramę — tylko te 5 wierszy SG-24, warunek po źródle i czasie zapisu
+   b) przelicz ETA dla SG-24; decyzję ETA_AFTER_LATEST zamknij z opisem „otwarta błędnie — pozycje testowe właściciela"
+   c) sprawdź, czy przez ten link nie przyszły pozycje do innych transportów — raport, nic nie usuwaj bez zgody właściciela
+
+3. Stary link dla kierowców — na produkcji wyłącz przyjmowanie pozycji (aplikacja kierowcy ukryta, D-38). Unieważnij wszystkie aktywne linki i tokeny kierowców; wejście na link pokazuje komunikat, że link jest nieaktywny. Test w bramie: pozycja z linku kierowcy = odmowa. Ponowne włączenie tylko decyzją właściciela.
+
+4. Brakujące 7 typów decyzji NIE jest wymyślonych — wyzwalacze są w katalogu (ZLECENIE_DECYZJE_POWIADOMIENIA.md §2, tabela DEC-CLICK). Nowa pozycja L-1b, zaraz po L-3:
+   - NO_AWIZACJA → w ramach L-3 (próg awizacji 48/12 h)
+   - KSH_ROW_GONE, TOWER_KSH_CONFLICT, KSH_FILE_ERROR → przy obecnym imporcie Excela: wiersz zniknął względem poprzedniego importu; pole zmienione w Watch Tower różni się od pliku; pliku nie da się odczytać. SharePoint później użyje tego samego.
+   - SEFS_OUT_OF_TABLE → indeks poza tabelą 51 progów albo brak źródła
+   - KR_OVER_3 → więcej niż 3 ładunki KR jednego dnia
+   - DWELL_OVER_FREE → postój w strefie ponad czas wolny (zadziała, gdy będą prawdziwe pozycje GPS)
+   Do zestawu dec-auto test dla każdego typu.
+
+5. Dopisz wszystko do POLECENIA_KOORDYNATORA.md i PLAN.md, potem L-3.
+
+Nie zaczynać SEC-OWASP, P2-TILES, P3-APK ani części D.

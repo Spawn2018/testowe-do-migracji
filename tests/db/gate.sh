@@ -28,7 +28,7 @@ check security 88
 check status 44
 check storage 37
 check money 131
-check release 145
+check release 146
 check backup 29
 check session 27
 check archive 18
