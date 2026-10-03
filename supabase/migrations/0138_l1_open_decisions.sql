@@ -83,11 +83,35 @@ begin
   end;
   insert into decision_events (decision_id, actor_id, action, payload)
   values (v_id, null, 'OPEN', jsonb_build_object('type', p_type, 'event_key', p_event_key));
-  perform decision_notify(v_id, 'OPEN');
+  -- Do L-13: tylko aplikacja. Bez e-maila (macierz DECISION ma e-mail dla HHL) i bez SMS.
+  insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key)
+  select 'IN_APP', coalesce(u.email::text, u.id::text), u.id, p_load, 'DECISION_OPEN',
+         jsonb_build_object(
+           'decision_id', v_id, 'type', p_type, 'title', p_title,
+           'status', 'NEW', 'event', 'OPEN', 'locale', u.locale, 'event_group', 'DECISION'
+         ),
+         left('dec:OPEN:' || v_id::text || ':IN:' || u.id::text, 200)
+    from app_users u
+    join organizations o on o.id = u.org_id
+    join notification_matrix m
+      on m.event_group = 'DECISION' and m.org_kind = o.kind::text and m.in_app
+   where u.active
+     and (
+       o.kind = 'FORWARDER'
+       or (o.kind = 'CARRIER' and v_role = 'CARRIER' and (
+            p_load is null
+            or exists (select 1 from loads l where l.id = p_load and l.carrier_org_id = o.id)))
+       or (o.kind = 'CLIENT' and (
+            p_project is null
+            or exists (select 1 from projects pr where pr.id = p_project and pr.client_org_id = o.id)
+            or exists (select 1 from loads l join projects pr on pr.id = l.project_id
+                        where l.id = p_load and pr.client_org_id = o.id)))
+     )
+  on conflict (dedup_key) where dedup_key is not null do nothing;
   return v_id;
 end $$;
 comment on function public.decision_open_from_event(uuid, text, text, text, jsonb, uuid, uuid) is
-  'L-1: otwiera decyzję dla zdarzenia. Drugie wywołanie z tym samym event_key zwraca istniejącą.';
+  'L-1: otwiera decyzję. Ten sam event_key nie dubluje. Do L-13 powiadomienie tylko IN_APP, bez e-maila i SMS.';
 revoke all on function public.decision_open_from_event(uuid, text, text, text, jsonb, uuid, uuid) from public, anon, authenticated;
 
 create unique index if not exists decisions_event_key_uidx
