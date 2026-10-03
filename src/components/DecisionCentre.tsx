@@ -7,6 +7,8 @@ import { getSupabase } from '../auth/client';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 import { decText } from '../i18n/decisions';
+import { getAuthProfile } from '../auth/profile';
+import { mayResolveDecision } from '../lib/decisionAccess';
 
 type Opt = { code: string; label_key: string; requires_comment: boolean; effect: string };
 type DecRow = {
@@ -96,6 +98,8 @@ export function DecisionCentre() {
     await refresh();
   }
 
+  const mayResolve = mayResolveDecision(active?.decision_types?.decider_role, getAuthProfile()?.role);
+
   return (
     <div className="panel section-card" style={{ margin: 12 }} data-panel="decisions">
       <header className="panel-hd">
@@ -140,28 +144,36 @@ export function DecisionCentre() {
               {t(locale, 'dec_open_load')}
             </button>
           ) : null}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-            {(active.decision_types?.options ?? []).map((o) => (
-              <button
-                key={o.code}
-                type="button"
-                className="btn primary"
-                disabled={busy}
-                onClick={() => void resolve(o)}
-              >
-                {decText(locale, o.label_key, o.code)}
-                {o.requires_comment ? ' *' : ''}
-              </button>
-            ))}
-          </div>
-          <label style={{ display: 'block', marginTop: 12 }}>
-            {t(locale, 'dec_comment')}
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} style={{ width: '100%' }} />
-          </label>
+          {mayResolve ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+              {(active.decision_types?.options ?? []).map((o) => (
+                <button
+                  key={o.code}
+                  type="button"
+                  className="btn primary"
+                  disabled={busy}
+                  onClick={() => void resolve(o)}
+                >
+                  {decText(locale, o.label_key, o.code)}
+                  {o.requires_comment ? ' *' : ''}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="note">{t(locale, 'dec_wrong_firm')}</p>
+          )}
+          {mayResolve ? (
+            <label style={{ display: 'block', marginTop: 12 }}>
+              {t(locale, 'dec_comment')}
+              <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} style={{ width: '100%' }} />
+            </label>
+          ) : null}
           <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-            <button type="button" className="btn" disabled={busy} onClick={() => void snoozeHours(2)}>
-              {t(locale, 'dec_snooze_2h')}
-            </button>
+            {mayResolve ? (
+              <button type="button" className="btn" disabled={busy} onClick={() => void snoozeHours(2)}>
+                {t(locale, 'dec_snooze_2h')}
+              </button>
+            ) : null}
             <button type="button" className="btn" onClick={() => setActive(null)}>
               {t(locale, 'dec_close')}
             </button>
