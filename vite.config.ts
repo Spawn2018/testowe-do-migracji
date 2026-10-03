@@ -2,6 +2,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
 import { resolveAuthMode } from './build/authMode.ts'
 import { PROD_DEMO_SWAP, isProdAuthMode, stripProdDist } from './build/prodStrip.ts'
+import { assertProdBundleHasNoSeedMarkers } from './build/seedMarkers.ts'
 import { isAbsolute, resolve as resolvePath } from 'node:path'
 
 // A5-PODGLADY: podglądy Vercel zawsze w trybie demo; produkcja tylko z main.
@@ -40,6 +41,7 @@ function prodStripMockups(): Plugin {
       if (!isProdAuthMode(process.env.VITE_AUTH_MODE)) return
       const removed = stripProdDist(outDir)
       console.log(`[o2] build produkcyjny: usunięto z dist: ${removed.join(', ') || '—'}; dodano 404.html`)
+      assertProdBundleHasNoSeedMarkers(outDir)
     },
   }
 }

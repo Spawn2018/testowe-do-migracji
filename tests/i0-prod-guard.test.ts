@@ -4,6 +4,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:f
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { PROD_DEMO_SWAP } from '../build/prodStrip'
+import { findSeedMarkerHits, loadSeedMarkers } from '../build/seedMarkers'
 
 // I-0 (strażnik wycieku): paczka produkcyjna (VITE_AUTH_MODE=supabase) nie może zawierać plików klienta
 // ani makiet (*.xlsx, *makieta*, claude-*) ani danych demonstracyjnych w JS/HTML.
@@ -74,6 +75,21 @@ describe('I-0: strażnik paczki produkcyjnej', () => {
   it('B-1: build produkcyjny nie zawiera dryfu pozycji pojazdu ze statusu', () => {
     const hits = walk(out).filter((f) => f.endsWith('.js') && readFileSync(f, 'utf8').includes('0.00012')).map((f) => relative(out, f))
     expect(hits).toEqual([])
+  })
+
+  it('znaczniki danych przykładowych są wyciągane z seeda, bez nazw promów i Gävle', () => {
+    const m = loadSeedMarkers()
+    expect(m.codes.length).toBeGreaterThanOrEqual(60)
+    expect(m.codes).toEqual(expect.arrayContaining(['SG-34', 'SG-14', 'T-17']))
+    expect(m.phrases).toContain('Permit mismatch')
+    expect(m.amounts).toContain('1 840 PLN')
+    expect(m.amounts).toContain('3758.54')
+    expect(m.all.join('\n')).not.toMatch(/Wawel|Nova Star|Gävle|Gavle/)
+  })
+
+  it('build produkcyjny nie zawiera znaczników z seeda (kody, Permit mismatch, kwoty)', () => {
+    const hits = findSeedMarkerHits(out)
+    expect(hits, hits.slice(0, 20).join('\n')).toEqual([])
   })
 
   it('moduły *.prod.ts mają te same eksporty co moduły demo (build produkcyjny się nie rozjedzie)', () => {
