@@ -736,3 +736,7 @@ Wcześniej czerwone testy aplikacji, liczby z kodu: przewodnik i4 (`tests/i4-gui
 Dwa trafienia score 70 w `scripts/bundle-size.mjs`: skrypt uruchamiany tylko przy budowaniu, nie trafia do aplikacji. Zaakceptowane ryzyko. Feed Aikido w workspace Spawn2018 zwraca 400 (funkcja wyłączona), więc oznaczenia w panelu Aikido nie da się zapisać. Zapis jest tutaj.
 
 Kokpit, ujęcie `kokpit__hhl__pl__1920__light`: 18579 px przy progu 60. Układ i treść zgodne ze wzorcem. Różnica na krawędziach liter (antyaliasing), nie z D-27, BRAND-15, RESP-14 ani UI-12. Wzorca nie odświeżono. SCALENIE ZABLOKOWANE do decyzji właściciela.
+
+### 2026-10-03 — wyjątek wizualny PR #2
+
+Wyjątek — test wizualny czerwony także na main, naprawa w P1-FONT. Kokpit 18579 px przy progu 60. Przyczyna: czcionka z Google Fonts, różne pliki na różnych systemach. Nie jest błędem gałęzi `fix/przejecie-testy-02-10`.

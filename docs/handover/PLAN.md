@@ -408,11 +408,12 @@ Feed Aikido wyłączony (400). Pięć średnich, bez numerów CVE. Nie krytyczne
 
 | ID | Opis | Status |
 |---|---|---|
+| P1-FONT | Zaraz po PR #2, jedna prośba o scalenie: czcionki z repozytorium (te same rodziny i grubości), zero połączeń do fonts.googleapis.com i fonts.gstatic.com, także w CSP. W tej samej prośbie P1-LINT. Potem wzorce wszystkich ujęć odświeżone w środowisku bramy. Zasada: wzorce odświeża tylko środowisko bramy. | NIEZACZĘTE |
 | P1-LINT | 9 błędów stylelint w `src/index.css`, już na main: `clip`, `#brandSub`, `#roleLbl`, siedem `!important`. Osobna mała prośba o scalenie zaraz po tej gałęzi. | NIEZACZĘTE |
 | P3-AND | Dwa eksportowane komponenty Androida w manifeście bramki SMS (score 60) | NIEZACZĘTE |
 | P3-SW | Dwa trafienia SSRF w `public/sw.js` | NIEZACZĘTE |
 | P3-ZIP | Trafienie SSRF w `src/lib/zipDocs.ts` | NIEZACZĘTE |
-| P3-APK | Pin akcji w `.github/workflows/sms-gateway-apk.yml` (SHA zamiast @v3/@v4). Czy w ogóle potrzebny, skoro APK budujemy lokalnie. Wyjęte z gałęzi fix/przejecie-testy-02-10. | DO DECYZJI |
+| P3-APK | Pin akcji w `.github/workflows/sms-gateway-apk.yml` (SHA zamiast @v3/@v4). Czy w ogóle potrzebny, skoro APK budujemy lokalnie. Dobra zmiana bezpieczeństwa. Zostaje. Wraca, gdy token dostanie uprawnienie workflow. | ZOSTAJE |
 
 
 ## Część C — NIEZACZĘTE (wygrywa z separatorami w B)
