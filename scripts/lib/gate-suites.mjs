@@ -32,7 +32,7 @@ export const EXPECTED = {
   hist11: 11,
   workflows: 47,
   insurance: 42,
-  'dec-auto': 24,
+  'dec-auto': 39,
 };
 
 export const SUITE_FILE = {

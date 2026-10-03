@@ -195,3 +195,31 @@ L-1 — domknięcie, w tej kolejności:
 5. Dopisz wszystko do POLECENIA_KOORDYNATORA.md i PLAN.md, potem L-3.
 
 Nie zaczynać SEC-OWASP, P2-TILES, P3-APK ani części D.
+---
+
+## Polecenie 2026-10-04 00:07 (czas warszawski) — wzory progów L-3, SG-01, potem L-1b
+
+L-3 — WZORY PROGÓW (zapisz w POLECENIA_KOORDYNATORA.md i LOGIKA_SYSTEMU.md):
+
+ZASADY OGÓLNE
+1. Jedno źródło: wszystkie progi czytane WYŁĄCZNIE z tabeli Opcji. Kod czytający inną tabelę — przepnij migracją, duplikaty usuń.
+2. Ostrzeżenie i próg krytyczny to JEDEN alarm, który rośnie (ostrzeżenie → krytyczne), nie dwa osobne. Jedna decyzja: otwiera się przy ostrzeżeniu, termin = moment krytyczny; przy krytycznym ta sama decyzja czerwienieje i idą powiadomienia według macierzy.
+3. Warunek ustał (np. awizacja uzupełniona) → alarm zamknięty, decyzja ze statusem „nieaktualna — warunek ustał" (zapis systemu w Historii). To nie jest rozstrzygnięcie — rozstrzyga tylko firma (L-2).
+4. Czas: Europe/Warsaw. Brak godziny w pliku KSH → liczymy od 00:00 tego dnia (wcześniejsze ostrzeżenie).
+5. Brak prawdziwych danych → brak alarmu (tak jak przy L-1).
+
+WZORY
+A. Awizacja (NO_AWIZACJA, w ramach L-3): kierowca odbierający, ciągnik, naczepa, telefon — liczone od planowanego ZAŁADUNKU (data + godzina z pliku KSH). Kierowca dostarczający z telefonem i ciągnikiem — od planowanej DOSTAWY (48 h przed dostawą). Brak na 48 h przed → ostrzeżenie; brak na 12 h przed → krytyczne.
+B. Dokumenty (DOC_MISSING): brak wymaganego dokumentu (zezwolenie, gdy wymagane; polisa) na 24 h przed planowanym załadunkiem → ostrzeżenie; na 6 h → krytyczne.
+C. Wyprzedzenie KSH (KSH_DATE_LT_5D, D-12): zmiana daty albo nowy transport w pliku KSH, gdy od chwili zmiany do wcześniejszej z dat (stara/nowa data załadunku) zostało mniej niż 5 dni.
+D. Opóźnienie (ETA_AFTER_LATEST): ETA > koniec okna dostawy + próg z Opcji. ETA tylko z prawdziwych danych (GPS albo potwierdzony status). Sam plan → bez alarmu.
+E. Brak GPS: ostatnia pozycja starsza niż próg (15 min) — tylko gdy pojazd ma podłączone źródło pozycji i status jest w ruchu (IN_TRANSIT_PL, AT_PORT_*, IN_TRANSIT_SE). Bez alarmu: READY, FERRY (na promie pozycja z AIS), AT_SITE, DELIVERED.
+F. Zjazd z trasy (ROUTE_DEVIATION): odległość od trasy korytarza > próg z Opcji przez co najmniej 2 kolejne pozycje i co najmniej 10 min. Bez alarmu na promie i w strefach portów oraz placów.
+
+TESTY: dla każdego wzoru — zmiana wartości w Opcjach zmienia moment alarmu; brak danych = brak alarmu; ostrzeżenie → krytyczne = ta sama decyzja.
+
+9. SG-01: jedna pozycja z linku kierowcy (1 października 2026, 22:08 czasu warszawskiego, via=driver_token, wcześniej id 13). Test właściciela. Usuń tak samo jak SG-24: kopia w R2 poza repozytorium (ścieżka + sha256), migracja przez pełną bramę, tylko ten wiersz, warunek po źródle i czasie zapisu. Przelicz ETA. Nic innego nie usuwaj.
+
+Potem L-1b z PLAN.md (zaraz po L-3): NO_AWIZACJA jest w ramach L-3. Reszta: KSH_ROW_GONE, TOWER_KSH_CONFLICT, KSH_FILE_ERROR przy obecnym imporcie Excela; SEFS_OUT_OF_TABLE; KR_OVER_3; DWELL_OVER_FREE. Źródło ZLECENIE_DECYZJE_POWIADOMIENIA.md §2 DEC-CLICK. Do zestawu dec-auto test dla każdego typu. Nowa migracja = pełna brama przed produkcją.
+
+Nie zaczynać SEC-OWASP, P2-TILES, P3-APK ani części D.

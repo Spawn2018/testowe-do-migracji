@@ -90,5 +90,33 @@ val "kopia drugi ERROR → jedna decyzja" "select count(*) from decisions where 
 
 val "powiadomienia decyzji tylko w aplikacji" "select count(*) from notifications where template='DECISION_OPEN' and channel <> 'IN_APP'" 0
 
+echo; echo "[dec-auto] L-3 moment progu zależy od Opcji"
+ANCHOR="2026-12-10 12:00:00+01"
+val "awizacja 48 h" "select l3_moment(timestamptz '$ANCHOR', 'AWIZ_EARLY_H') = timestamptz '$ANCHOR' - interval '48 hours'" t
+$PSQL -c "update ops_thresholds set value_num = 36 where key = 'AWIZ_EARLY_H'" >/dev/null
+val "zmiana AWIZ_EARLY_H przesuwa moment" "select l3_moment(timestamptz '$ANCHOR', 'AWIZ_EARLY_H') = timestamptz '$ANCHOR' - interval '36 hours'" t
+$PSQL -c "update ops_thresholds set value_num = 48 where key = 'AWIZ_EARLY_H'" >/dev/null
+val "brak daty = brak momentu" "select l3_moment(null, 'AWIZ_EARLY_H') is null" t
+val "ETA bez danych = bez alarmu" "select l3_eta_alarm(now(), now() - interval '2 hours', false)" f
+val "ETA po progu 30 min" "select l3_eta_alarm(timestamptz '2026-12-10 15:00+01', timestamptz '2026-12-10 14:00+01', true)" t
+$PSQL -c "update ops_thresholds set value_num = 120 where key = 'DELAY_MIN'" >/dev/null
+val "większy próg ETA gasi alarm" "select l3_eta_alarm(timestamptz '2026-12-10 15:00+01', timestamptz '2026-12-10 14:00+01', true)" f
+$PSQL -c "update ops_thresholds set value_num = 30 where key = 'DELAY_MIN'" >/dev/null
+val "KSH mniej niż 5 dni" "select l3_lead_alarm(now() + interval '4 days', now())" t
+$PSQL -c "update ops_thresholds set value_num = 3 where key = 'LEAD_DAYS'" >/dev/null
+val "krótsze wyprzedzenie KSH gasi alarm" "select l3_lead_alarm(now() + interval '4 days', now())" f
+$PSQL -c "update ops_thresholds set value_num = 5 where key = 'LEAD_DAYS'" >/dev/null
+val "cisza GPS tylko przy źródle i ruchu" "select l3_silent_alarm(now() - interval '30 minutes', now(), false, true)" f
+val "cisza 30 min przy progu 15" "select l3_silent_alarm(now() - interval '30 minutes', now(), true, true)" t
+$PSQL -c "update ops_thresholds set value_num = 60 where key = 'SILENT_MIN'" >/dev/null
+val "dłuższy próg ciszy gasi alarm" "select l3_silent_alarm(now() - interval '30 minutes', now(), true, true)" f
+$PSQL -c "update ops_thresholds set value_num = 15 where key = 'SILENT_MIN'" >/dev/null
+val "zjazd: jedna pozycja nie alarmuje" "select l3_deviation_alarm(5000, 1, 20, false)" f
+val "zjazd: dwie pozycje, 10 min, ponad 2 km" "select l3_deviation_alarm(5000, 2, 10, false)" t
+$PSQL -c "update ops_thresholds set value_num = 9 where key = 'OFFROUTE_KM'" >/dev/null
+val "większy próg zjazdu gasi alarm" "select l3_deviation_alarm(5000, 2, 10, false)" f
+$PSQL -c "update ops_thresholds set value_num = 2 where key = 'OFFROUTE_KM'" >/dev/null
+val "prom i port bez zjazdu" "select l3_deviation_alarm(5000, 2, 10, true)" f
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

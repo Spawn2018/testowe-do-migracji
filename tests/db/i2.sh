@@ -257,7 +257,7 @@ $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order
 $PSQL -c "insert into positions (load_id, ts, geom_raw, source) select '$L7', now()-interval '3 hours', st_setsrid(st_makepoint(18.0, 53.0),4326), source from positions limit 1" >/dev/null
 chk "anon bez EXECUTE kpi_detection_lag; funkcja SECURITY INVOKER" "$(Q "select has_function_privilege('anon','kpi_detection_lag(uuid,integer)','execute')::text||'/'||(select prosecdef::text from pg_proc where proname='kpi_detection_lag')")" "false/false"
 val "brak ryzyk z czasem zdarzenia → 0 próbek, mediana NULL (kafelek „—”)" $HHL "select samples||'/'||coalesce(median_min::text,'∅') from kpi_detection_lag('$P')" "0/∅"
-chk "cichy pojazd: occurred_at = ostatnia pozycja + 90 min → wykrycie po 90 min" "$(Q "select detect_silent_vehicles(90) >= 1")/$(Q "select round(extract(epoch from detected_at-occurred_at)/60) from risk_signals where load_id='$L7' and kind='SILENT_VEHICLE'")" "t/90"
+chk "cichy pojazd: próg z Opcji (15 min), pozycja sprzed 3 h → wykrycie po 165 min" "$(Q "select detect_silent_vehicles(90) >= 1")/$(Q "select round(extract(epoch from detected_at-occurred_at)/60) from risk_signals where load_id='$L7' and kind='SILENT_VEHICLE'")" "t/165"
 $PSQL -c "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L7','GEOFENCE_ENTER', now()-interval '7 minutes', '{\"geofence_id\":\"g-test\"}')" >/dev/null
 $PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key) values ('$P','$L7','LOADING_UNCONFIRMED','MEDIUM','test strefy','rk_dates_unconfirmed','{\"geofence_id\":\"g-test\",\"zdarzenie\":\"GEOFENCE_ENTER\"}','T-I2L-G')" >/dev/null 2>&1
 chk "ryzyko strefy: occurred_at = czas zdarzenia strefy z load_events (7 min)" "$(Q "select round(extract(epoch from detected_at-occurred_at)/60) from risk_signals where dedup_key='T-I2L-G'")" 7
@@ -421,9 +421,9 @@ val "import zmienia datę — zawsze (plik=źródło), overwrite zbędne" $HHL "
 chk "po imporcie: nowe daty, POTWIERDZONA" "$(Q "select plan_dates_status||'/'||plan_load_date||'/'||plan_delivery_date from loads where id='$LD'")" "POTWIERDZONA/$D5/$D6"
 chk "zmiana daty: zdarzenie PLAN_DATES_CHANGED" "$(Q "select (count(*) >= 1)::text from load_events where load_id='$LD' and event_type='PLAN_DATES_CHANGED'")" "true"
 chk "zmiana daty: powiadomienie IN_APP" "$(Q "select (count(*) >= 1)::text from notifications where template='PLAN_DATES_CHANGED' and channel='IN_APP' and load_id='$LD'")" "true"
-chk "parametr N (DATE_CONFIRM_DAYS) = 5, źródło DATY-67" "$(Q "select value::int||'/'||(source like 'DATY-67%')::text from app_parameters where key='DATE_CONFIRM_DAYS'")" "5/true"
+chk "próg wyprzedzenia KSH jest w Opcjach (LEAD_DAYS = 5), nie w app_parameters" "$(Q "select value_num::int::text from ops_thresholds where key='LEAD_DAYS'")/$(Q "select count(*) from app_parameters where key='DATE_CONFIRM_DAYS'")" "5/0"
 chk "TRANSIT_TARGET_DAYS = 4" "$(Q "select value::int from app_parameters where key='TRANSIT_TARGET_DAYS'")" "4"
-val "parametry czytelne dla zalogowanych" $KSH "select count(*) from app_parameters where key in ('DATE_CONFIRM_DAYS','TRANSIT_TARGET_DAYS')" 2
+val "parametry czytelne dla zalogowanych" $KSH "select count(*) from app_parameters where key in ('DATE_CONFIRM_DAYS','TRANSIT_TARGET_DAYS')" 1
 val "app_parameters: konto bez app_users 0" 11111111-0000-0000-0000-0000000000ee "select count(*) from app_parameters" 0
 chk "detect_unconfirmed_dates wyłączone (=0)" "$(Q "select detect_unconfirmed_dates()")" 0
 val "import blisko załadunku → LATE_DATE_CHANGE" $HHL "select jsonb_array_length(r->'changed') from ($(IMP18 $DNEAR $DNEAR2 '' false)) s(r)" 1 commit
@@ -566,20 +566,20 @@ $PSQL -c "update loads set ferry_booking_ref=null where id='$L1'; set session_re
 echo; echo "[I-21] terminy uzupełnienia zasobów przed załadunkiem i eskalacja (0073)"
 SCXORG=$(Q "select org_id from app_users where auth_id='$SCX'")
 $PSQL -c "set session_replication_role=replica; update loads set carrier_org_id='$SCXORG', status='PLANNED', plan_load_from=now() + interval '30 hours', driver_name=null, driver_phone=null, tractor_plate=null, trailer_plate=null where id='$L2'" >/dev/null
-chk "terminy startowe: DRIVER 48/12, VEHICLE 48/12, DOCS 24/6 h, ESCORT 48/12 (III-4), źródło „do potwierdzenia z SCX (II-3)”" "$(Q "select string_agg(kind||lead_h||'/'||critical_h, ',' order by kind)||'|'||bool_and(source like '%do potwierdzenia z SCX (II-3)%') from resource_deadlines")" "DOCS24/6,DRIVER48/12,ESCORT48/12,VEHICLE48/12|true"
+chk "progi awizacji i dokumentów tylko w Opcjach; duplikaty DRIVER/VEHICLE/DOCS usunięte" "$(Q "select (select value_num::int from ops_thresholds where key='AWIZ_EARLY_H')||'/'||(select value_num::int from ops_thresholds where key='AWIZ_LATE_H')||'/'||(select value_num::int from ops_thresholds where key='DOC_WARN_H')||'/'||(select value_num::int from ops_thresholds where key='DOC_CRIT_H')||'/'||(select count(*) from resource_deadlines where kind in ('DRIVER','VEHICLE','DOCS'))")" "48/12/24/6/0"
 chk "załadunek za 54 h (poza oknem 48 h): bez ryzyka" "$(Q "select detect_resource_deadlines(now() - interval '24 hours')")" 0
-chk "załadunek za 30 h: brak kierowcy i pojazdu → 2 ryzyka HIGH (RESOURCE_MISSING, HHL + przewoźnik)" "$(Q "select detect_resource_deadlines()")/$(Q "select string_agg(detail->>'resource'||':'||severity||':'||audience, ',' order by detail->>'resource') from risk_signals where dedup_key like 'RES:%:$L2' and resolved_at is null")" "2/DRIVER:HIGH:HHL_PRZEWOZNIK,VEHICLE:HIGH:HHL_PRZEWOZNIK"
-chk "powiadomienia IN_APP: przewoźnik tak, HHL jeszcze nie (HIGH)" "$(Q "select (count(*) filter (where u.org_id='$SCXORG') > 0)::text||'/'||count(*) filter (where u.role in ('HHL_ADMIN','HHL_OPS')) from notifications n join app_users u on u.id=n.user_id where n.template='RESOURCE_DEADLINE' and n.load_id='$L2'")" "true/0"
-chk "ponowny skan: bez duplikatów" "$(Q "select detect_resource_deadlines()")/$(Q "select count(*) from risk_signals where dedup_key like 'RES:%:$L2'")" "0/2"
-val "przewoźnik widzi ryzyko swojego transportu" $SCX "select (count(*) >= 2)::text from risk_signals where load_id='$L2' and kind='RESOURCE_MISSING' and resolved_at is null and detail->>'rule'='RESOURCE_DEADLINE'" true
-val "KSH (klient) nie widzi ryzyka zasobów przewoźnika" $KSH "select count(*) from risk_signals where load_id='$L2' and detail->>'rule'='RESOURCE_DEADLINE'" 0
-chk "12 h przed załadunkiem: eskalacja do CRITICAL (to samo ryzyko) + powiadomienie HHL" "$(Q "select (detect_resource_deadlines(now() + interval '20 hours') >= 2)::text")/$(Q "select string_agg(distinct severity::text, ',') from risk_signals where dedup_key like 'RES:%:$L2' and resolved_at is null")/$(Q "select count(*) from risk_signals where dedup_key like 'RES:%:$L2'")/$(Q "select (count(*) > 0)::text from notifications n join app_users u on u.id=n.user_id where n.template='RESOURCE_DEADLINE' and n.load_id='$L2' and u.role in ('HHL_ADMIN','HHL_OPS')")" "true/CRITICAL/2/true"
+chk "załadunek za 30 h: jeden alarm awizacji (ostrzeżenie)" "$(Q "select detect_resource_deadlines()")/$(Q "select detail->>'rule'||':'||severity||':'||audience from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is null")" "1/L3_AWIZ:HIGH:HHL_PRZEWOZNIK"
+chk "decyzja awizacji: powiadomienie tylko w aplikacji" "$(Q "select (count(*) filter (where channel='IN_APP') > 0)::text||'/'||count(*) filter (where channel<>'IN_APP') from notifications n where n.template='DECISION_OPEN' and n.load_id='$L2'")" "true/0"
+chk "ponowny skan: bez duplikatów" "$(Q "select detect_resource_deadlines()")/$(Q "select count(*) from decisions where detail->>'event_key'='l3:NO_AWIZACJA:$L2'")" "0/1"
+val "przewoźnik widzi ryzyko swojego transportu" $SCX "select count(*) from risk_signals where load_id='$L2' and resolved_at is null and detail->>'rule'='L3_AWIZ'" 1
+val "KSH (klient) nie widzi ryzyka zasobów przewoźnika" $KSH "select count(*) from risk_signals where load_id='$L2' and detail->>'rule'='L3_AWIZ'" 0
+chk "12 h przed załadunkiem: ta sama decyzja, poziom krytyczny" "$(Q "select (detect_resource_deadlines(now() + interval '20 hours') >= 1)::text")/$(Q "select severity::text from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is null")/$(Q "select count(*) from decisions where detail->>'event_key'='l3:NO_AWIZACJA:$L2'")/$(Q "select detail->>'level' from decisions where detail->>'event_key'='l3:NO_AWIZACJA:$L2'")" "true/CRITICAL/1/critical"
 $PSQL -c "update loads set driver_name='Kierowca Test', driver_phone='+48600000999' where id='$L2'" >/dev/null
-chk "kierowca uzupełniony: ryzyko DRIVER zamknięte automatycznie, VEHICLE otwarte" "$(Q "select detect_resource_deadlines()")/$(Q "select string_agg(detail->>'resource', ',') from risk_signals where dedup_key like 'RES:%:$L2' and resolved_at is null")" "0/VEHICLE"
-$PSQL -c "set session_replication_role=replica; update loads set status='DOCS_PENDING', plan_load_from=now() + interval '10 hours' where id='$L2'" >/dev/null
-chk "DOCS_PENDING 10 h przed załadunkiem: ryzyko DOCS HIGH" "$(Q "select detect_resource_deadlines()")/$(Q "select severity from risk_signals where dedup_key='RES:DOCS:$L2' and resolved_at is null")" "1/HIGH"
-$PSQL -c "set session_replication_role=replica; update loads set status='AT_LOADING' where id='$L2'" >/dev/null
-chk "transport na załadunku: otwarte ryzyka zasobów zamknięte" "$(Q "select detect_resource_deadlines()")/$(Q "select count(*) from risk_signals where dedup_key like 'RES:%:$L2' and resolved_at is null")" "0/0"
+chk "sam kierowca nie zamyka alarmu — brakuje ciągnika i naczepy" "$(Q "select detect_resource_deadlines()")/$(Q "select detail->>'rule' from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is null")" "0/L3_AWIZ"
+$PSQL -c "update loads set tractor_plate='PO 100', trailer_plate='NA 100' where id='$L2'" >/dev/null
+chk "awizacja uzupełniona: alarm zamknięty, decyzja nieaktualna" "$(Q "select detect_resource_deadlines()")/$(Q "select count(*) from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is null")/$(Q "select resolution_note from decisions where detail->>'event_key'='l3:NO_AWIZACJA:$L2'")" "0/0/nieaktualna — warunek ustał"
+$PSQL -c "set session_replication_role=replica; update loads set plan_load_from=now() + interval '10 hours' where id='$L2'" >/dev/null
+chk "brak polisy 10 h przed załadunkiem: jeden alarm dokumentów (ostrzeżenie)" "$(Q "select detect_resource_deadlines()")/$(Q "select severity::text from risk_signals where dedup_key='l3:DOC_MISSING:$L2' and resolved_at is null")/$(Q "select count(*) from decisions where detail->>'event_key'='l3:DOC_MISSING:$L2'")" "1/HIGH/1"
 chk "pg_cron: tower-zasoby co 15 min (w migracji)" "$(grep -c "cron.schedule('tower-zasoby', '7,22,37,52 \* \* \* \*'" supabase/migrations/0073_resource_deadlines.sql)" 1
 err "KSH: zmiana terminów odrzucona" $KSH "update resource_deadlines set lead_h=1 where kind='DRIVER' returning kind" "permission denied"
 $PSQL -c "delete from notifications where template='RESOURCE_DEADLINE'; delete from risk_signals where dedup_key like 'RES:%'; set session_replication_role=replica; update loads set status='PLANNED', carrier_org_id=null, driver_name=null, driver_phone=null, plan_load_from=null where id='$L2'" >/dev/null
@@ -907,7 +907,7 @@ chk "corridor_polylines: PL_ROAD + SE_E4" "$(Q "select string_agg(code||'='||(to
 chk "anon bez SELECT corridor_polylines / EXECUTE corridor_progress" "$(Q "select has_table_privilege('anon','corridor_polylines','select')::text||has_function_privilege('anon','corridor_progress(text,geometry)','execute')::text")" "falsefalse"
 val "KSH czyta korytarz (2 linie)" $KSH "select count(*) from corridor_polylines" 2
 chk "postęp środek SE: remaining_frac w (0,1), off < 30 km" "$(Q "select (remaining_frac between 0.05 and 0.95)::text||'/'||(off_m < 30000)::text from corridor_progress('SE_E4', st_setsrid(st_makepoint(19.5, 63.5),4326))")" "true/true"
-chk "OFF_CORRIDOR_M = 2000" "$(Q "select value::text from app_parameters where key='OFF_CORRIDOR_M'")" "2000"
+chk "zjazd z trasy: próg w Opcjach OFFROUTE_KM = 2" "$(Q "select value_num::int::text from ops_thresholds where key='OFFROUTE_KM'")/$(Q "select count(*) from app_parameters where key='OFF_CORRIDOR_M'")" "2/0"
 # spowolnienie SE 1.15 → jazda SE 17×1.15 = 19,55 h w basis (transport przed promem)
 L7=33333333-0000-0000-0000-00000000a170
 $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date) values ('$L7','$P','00000000-0000-0000-0000-00000000a003','KSH/II7','PLANNED', current_date+1, current_date+5) on conflict (id) do nothing" >/dev/null
@@ -919,10 +919,16 @@ $PSQL -c "update corridor_conditions set slowdown_mult=1.00, reason='start — n
 # zjazd z korytarza: pozycja daleko od PL, status IN_TRANSIT_PL
 $PSQL -c "set session_replication_role=replica; update loads set status='IN_TRANSIT_PL' where id='$L7'; set session_replication_role=origin;" >/dev/null
 if [ -n "${TOWER_HOSTED_READY:-}" ]; then
-  $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L7', now(), st_setsrid(st_makepoint(14.0, 52.0),4326), 'DRIVER_PWA')" >/dev/null
+  $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values
+    ('$L7', now() - interval '15 minutes', st_setsrid(st_makepoint(14.0, 52.0),4326), 'DRIVER_PWA'),
+    ('$L7', now(), st_setsrid(st_makepoint(14.0, 52.0),4326), 'DRIVER_PWA')" >/dev/null
 else
-  $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L7', now(), st_setsrid(st_makepoint(14.0, 52.0),4326), 'DRIVER_APP')" >/dev/null 2>&1 \
-    || $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L7', now(), st_setsrid(st_makepoint(14.0, 52.0),4326), (enum_range(null::position_source))[1])" >/dev/null
+  $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values
+    ('$L7', now() - interval '15 minutes', st_setsrid(st_makepoint(14.0, 52.0),4326), 'DRIVER_APP'),
+    ('$L7', now(), st_setsrid(st_makepoint(14.0, 52.0),4326), 'DRIVER_APP')" >/dev/null 2>&1 \
+    || $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values
+    ('$L7', now() - interval '15 minutes', st_setsrid(st_makepoint(14.0, 52.0),4326), (enum_range(null::position_source))[1]),
+    ('$L7', now(), st_setsrid(st_makepoint(14.0, 52.0),4326), (enum_range(null::position_source))[1])" >/dev/null
 fi
 $PSQL -c "select refresh_load_eta('$L7')" >/dev/null
 chk "II-7: >2 km od korytarza → ryzyko rk_off_corridor" "$(Q "select title_key from risk_signals where load_id='$L7' and dedup_key='OFF_CORRIDOR:$L7' and resolved_at is null")" "rk_off_corridor"

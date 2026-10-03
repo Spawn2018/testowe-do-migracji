@@ -27,10 +27,11 @@ echo; echo "[0042] title_key w każdej funkcji zapisującej ryzyko"
 chk "kolumna risk_signals.title_key istnieje" "$(Q "select count(*) from information_schema.columns where table_name='risk_signals' and column_name='title_key'")" 1
 
 fx "update loads set status='IN_TRANSIT_PL', tractor_plate='WGM 1234' where id='$L1'"
+$PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L1', now() - interval '3 hours', st_setsrid(st_makepoint(18.0,53.0),4326), 'TELEMATICS_API')" >/dev/null
 Q "select detect_silent_vehicles(90)" >/dev/null
 chk "detect_silent_vehicles → rk_silent_vehicle" "$(key "kind='SILENT_VEHICLE'")" rk_silent_vehicle
-chk "detect_silent_vehicles: params plate i minutes" "$(Q "select (detail->'params'->>'plate')||'/'||(detail->'params'->>'minutes') from risk_signals where kind='SILENT_VEHICLE'")" "WGM 1234/90"
-chk "tytuł PL bez zmian (dziennik)" "$(Q "select title from risk_signals where kind='SILENT_VEHICLE'")" "Brak pozycji pojazdu WGM 1234 od 90 min"
+chk "detect_silent_vehicles: params plate i minutes" "$(Q "select (detail->'params'->>'plate')||'/'||(detail->'params'->>'minutes') from risk_signals where kind='SILENT_VEHICLE'")" "WGM 1234/15"
+chk "tytuł PL bez zmian (dziennik)" "$(Q "select title from risk_signals where kind='SILENT_VEHICLE'")" "Brak pozycji pojazdu WGM 1234 od 15 min"
 
 fx "update loads set plan_delivery_date='2026-10-10' where id='$L1'; update loads set plan_delivery_date='2026-10-01' where id='$L2';
     insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, assembly_seq) values
