@@ -379,7 +379,7 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 
 | ID | Opis | Status |
 |---|---|---|
-| B-1 | Mapy: obiekty widoczne mimo braku podłączonych pojazdów | NIEZACZĘTE |
+| B-1 | Mapy: pojazdy tylko z prawdziwych pozycji GPS (brak pozycji = brak znacznika). Warstwy stref, portów, korytarza, promów i sytuacji drogowych zostają. Na produkcji brak danych przykładowych. | **DO SCALENIA** — `fix/b-1` |
 | B-2a | Ryzyka: brak wypłynięć Steny | NIEZACZĘTE |
 | B-2b | Ryzyka: brak widoczności warunków drogowych w SE | NIEZACZĘTE |
 | B-2c | Centrum decyzji: jak działa i dlaczego puste — opisać logikę, nie zgadywać | NIEZACZĘTE |

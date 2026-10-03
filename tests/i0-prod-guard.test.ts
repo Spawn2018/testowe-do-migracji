@@ -71,6 +71,11 @@ describe('I-0: strażnik paczki produkcyjnej', () => {
     expect(hits, hits.slice(0, 20).join('\n')).toEqual([])
   })
 
+  it('B-1: build produkcyjny nie zawiera dryfu pozycji pojazdu ze statusu', () => {
+    const hits = walk(out).filter((f) => f.endsWith('.js') && readFileSync(f, 'utf8').includes('0.00012')).map((f) => relative(out, f))
+    expect(hits).toEqual([])
+  })
+
   it('moduły *.prod.ts mają te same eksporty co moduły demo (build produkcyjny się nie rozjedzie)', () => {
     const names = (f: string) => new Set([...readFileSync(f, 'utf8').matchAll(/^export (?:const|function|let) (\w+)|^export \{ ([^}]+) \}/gm)]
       .flatMap((m) => (m[1] ? [m[1]] : m[2].split(',').map((x) => x.trim().split(' as ').pop()!.trim()))))
