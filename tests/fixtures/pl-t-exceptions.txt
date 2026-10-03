@@ -62,3 +62,17 @@ Timeout
 Fintraffic
 digitraffic
 Authenticator
+# 02.10 — terminy techniczne i nazwy własne w słowniku PL (hunspell pl_PL ich nie ma)
+cron
+crona
+Auth
+scorecard
+Watch
+kn
+emtrack
+corridor
+conditions
+OpenStreetMap
+contributors
+docs
+handover

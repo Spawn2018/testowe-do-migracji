@@ -5,7 +5,6 @@ import { StatusPill } from '../components/ui/StatusPill';
 import { CorridorMap } from '../components/map/LazyCorridorMap';
 import { t, tp } from '../i18n/messages';
 import { fetchSituations } from '../lib/trafikverket';
-import { fetchCorridorCondition } from '../lib/corridorConditionsDb';
 import { trafikverketShortLabel } from '../lib/demoLabel';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { formatEtaBodenCompact } from '../lib/time';
@@ -79,9 +78,9 @@ export function MapView() {
   widthsRef.current = widths;
 
   useEffect(() => {
-    if (PROD_BUILD) {
+    if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
       let cancelled = false;
-      fetchCorridorCondition().then((row) => {
+      void import('../lib/corridorConditionsDb').then((mod) => mod.fetchCorridorCondition()).then((row) => {
         if (!cancelled) setTvFromDb(row != null);
       });
       return () => {

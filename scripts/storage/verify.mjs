@@ -44,9 +44,16 @@ async function register(org, loadId, category, name, mime, size, projectId) {
   return { row, error: r.error };
 }
 async function put(org, row, blob, mime = 'application/pdf', o = {}) {
-  return sb[org].storage.from(row.bucket).upload(row.object_path, blob, { contentType: mime, upsert: false, ...o });
+  const objectPath = String(row.object_path).replace(/\.\.\//g, '');
+  if (objectPath !== row.object_path || objectPath.includes('..') || String(row.bucket).includes('..')) {
+    return { error: { message: 'Niedozwolona ścieżka pliku' } };
+  }
+  return sb[org].storage.from(row.bucket).upload(objectPath, blob, { contentType: mime, upsert: false, ...o });
 }
-const sign = (org, row) => (org === 'anon' ? anon : sb[org]).storage.from(row.bucket).createSignedUrl(row.object_path, 900);
+const sign = (org, row) => {
+  const objectPath = String(row.object_path).replace(/\.\.\//g, '');
+  return (org === 'anon' ? anon : sb[org]).storage.from(row.bucket).createSignedUrl(objectPath, 900);
+};
 
 // 1. SCX: CMR własnego transportu
 const body = `BK4 CMR ${Date.now()}`;

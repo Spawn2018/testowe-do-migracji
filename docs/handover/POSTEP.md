@@ -389,6 +389,8 @@ Pozostałe 26 pozycji „częściowo” nie zależą od trybu demo (braki infras
 | I-30 | cennik według symboli (paczka 30.09) | **DONE** (sesja 30.09 wieczór) | (HEAD) | verify OK; i30 db 10/10; map 87/95 | zob. wpis I-30 w tabeli „Sesja 30.09 (wieczór)” |
 | G-V 629f224 | nocna brama wizualna | **DONE** 30.09 (ten commit) | Wynik 02:39: `OK HEAD=629f224 smoke+stany=ok matryca=840/840 zmienione=0 czas=2452s kod=0` — przebieg bez nadzoru (po `git lfs pull`; pierwszy przebieg 01:57 FAIL: `shots-baseline/` to wskaźniki LFS, nie różnice pikseli). | — | — |
 | G-V 894a684 | nocna brama wizualna | **DONE** 01.10 (ten commit) | Wynik 01:58: `OK HEAD=894a684 smoke+stany=ok matryca=840/840 zmienione=0 czas=2484s kod=0` — przebieg bez nadzoru (rutyna ~01:10). | — | — |
+| G-V 59a5ce4 | nocna brama wizualna | **DONE** 02.10 (ten commit) | Wynik 01:58: `FAIL HEAD=59a5ce4 smoke+stany=fail matryca=310/840 zmienione=530 powód=różnice-ponad-0,1% czas=2450s kod=1` — przebieg bez nadzoru (rutyna ~01:10). | 530 ponad próg 0,1%: harmonogram 56, dokumenty/faktury/kokpit/mapa/ryzyka po 54, ustawienia 36, automatyzacje/opcje 30, pozostałe 18; smoke+stany też fail; wzorca NIE odświeżano. | — |
+| G-V a232da9 | nocna brama wizualna | **DONE** 03.10 (ten commit) | Wynik 01:54: `FAIL HEAD=a232da9 smoke+stany=fail matryca=631/840 zmienione=209 powód=różnice-ponad-0,1% czas=2417s kod=1` — przebieg bez nadzoru (rutyna ~01:14; git-lfs zainstalowany ręcznie, `git pull --rebase` pominięty — brak upstream gałęzi `fix/przejecie-testy-02-10`). | 209 ponad próg 0,1%: kokpit/harmonogram/mapa po 54, faktury 27, automatyzacje 18, strefy 2; smoke+stany też fail; vs 02.10 (530) poprawa po G4-D27-D31; wzorca NIE odświeżano. | — |
 
 ## Porządki 29.09.2026 — archiwum i pliki poufne
 
@@ -724,3 +726,17 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 **ZATRZYMANE — pracę przejmuje inny wykonawca.**
 
 **Czekam także (dane):** IT KSH (SharePoint / D-32); API emtrack + linki; wymiary aut; polisy OCP. **DR-TEST zakończony — właściciel może usunąć klucz age.**
+
+### 2026-10-03 — PB-2
+
+Wcześniej czerwone testy aplikacji, liczby z kodu: przewodnik i4 (`tests/i4-guide.test.ts`) — HHL ma 8 kroków, nie 7; KSH i SCX mają po 7, nie 6 (`EXPECT`: hhl 8, ksh 7, scx 7). Klucze ryzyk (`tests/risk-keys.test.ts`) — lista 12 źródeł (`SOURCE_IDS`), nie asercja `toBe(6)`.
+
+### 2026-10-03 — PB-3 i kokpit (scalenie zablokowane)
+
+Dwa trafienia score 70 w `scripts/bundle-size.mjs`: skrypt uruchamiany tylko przy budowaniu, nie trafia do aplikacji. Zaakceptowane ryzyko. Feed Aikido w workspace Spawn2018 zwraca 400 (funkcja wyłączona), więc oznaczenia w panelu Aikido nie da się zapisać. Zapis jest tutaj.
+
+Kokpit, ujęcie `kokpit__hhl__pl__1920__light`: 18579 px przy progu 60. Układ i treść zgodne ze wzorcem. Różnica na krawędziach liter (antyaliasing), nie z D-27, BRAND-15, RESP-14 ani UI-12. Wzorca nie odświeżono. SCALENIE ZABLOKOWANE do decyzji właściciela.
+
+### 2026-10-03 — wyjątek wizualny PR #2
+
+Wyjątek — test wizualny czerwony także na main, naprawa w P1-FONT. Kokpit 18579 px przy progu 60. Przyczyna: czcionka z Google Fonts, różne pliki na różnych systemach. Nie jest błędem gałęzi `fix/przejecie-testy-02-10`.

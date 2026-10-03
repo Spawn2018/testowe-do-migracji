@@ -25,13 +25,20 @@ Q() { $PSQL -c "$1" 2>&1 | tail -1; }
 chk() { if [ "$2" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $2, oczekiwano: $3)"; fi; }
 H() { Q "select round(extract(epoch from (eta_site - $2))/3600, 1) from loads where id='$1'"; }   # ETA − punkt odniesienia [h]
 
+
+# Brama hosted: TOWER_I2_PART=1..N (pusto = cały plik, asercje bez zmian).
+_i2_part_ok() { [ -z "${TOWER_I2_PART:-}" ] || [ "${TOWER_I2_PART}" = "$1" ]; }
+
+if _i2_part_ok 1; then
 # strefy projektu: załadunek Śrem, terminal Gdańsk, terminal Nynäshamn, plac Boden
+if [ "$($PSQL -c "select count(*) from geofences where project_id='$P' and name='KSH Śrem'")" = 0 ]; then
 $PSQL -c "insert into geofences (project_id, name, kind, geom, country) values
  ('$P','KSH Śrem','LOADING', make_circle_fence(52.087,17.015,600),'PL'),
  ('$P','Terminal Gdańsk','PORT_OUT', make_circle_fence(54.395,18.668,800),'PL'),
  ('$P','Terminal Nynäshamn','PORT_IN', make_circle_fence(58.9,17.95,800),'SE'),
  ('$P','Plac Boden','SITE', make_circle_fence(65.83,21.69,2000),'SE')" >/dev/null
-$PSQL -c "insert into vessels (id, name, operator) values ('55555555-0000-0000-0000-000000000001','Nova Star','Polferries')" >/dev/null
+fi
+$PSQL -c "insert into vessels (id, name, operator) values ('55555555-0000-0000-0000-000000000001','Nova Star','Polferries') on conflict (id) do nothing" >/dev/null
 
 echo; echo "[I-2d] ETA v1 — uprawnienia i dostęp"
 chk "authenticated/anon: brak EXECUTE compute_load_eta i refresh_load_eta" "$(Q "select has_function_privilege('authenticated','compute_load_eta(uuid,timestamptz)','execute')::text||has_function_privilege('anon','refresh_load_eta(uuid)','execute')::text")" "falsefalse"
@@ -216,7 +223,20 @@ val "rate_match na wersji z formularza: STANDARD 98" $HHL "select rate_match((se
 $PSQL -c "delete from shipment_items where shipment_code like 'I19-%'; delete from loads where id='$LI19'; delete from audit_log where action='RATE_CARD_VERSION'; begin; select set_config('tower.rate_purge','on',true); delete from rate_cards where project_id='$P'; commit" >/dev/null
 chk "sprzątanie testu (tower.rate_purge): 0 cenników" "$(Q "select count(*) from rate_cards")" 0
 
+fi # tower-i2-part 1
+
+if _i2_part_ok 2; then
 echo; echo "[I-2j] pozycje promów z AIS (vessel_positions, 0053)"
+# Część 2 osobno: statek i pierwszą pozycję GPS wstawia tylko część 1. seed.sql ich nie ma.
+# Bez statku insert vessel_positions odpada (FK). Bez wiersza w positions kopia source (limit 1) wstawia 0 wierszy.
+$PSQL -c "insert into vessels (id, name, operator) values ('55555555-0000-0000-0000-000000000001','Nova Star','Polferries') on conflict (id) do nothing" >/dev/null
+$PSQL -c "set session_replication_role=replica; update loads set status='IN_TRANSIT_SE' where id='$L2'; set session_replication_role=origin;" >/dev/null
+if [ -n "${TOWER_HOSTED_READY:-}" ]; then
+  $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), 'DRIVER_PWA')" >/dev/null
+else
+  $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), 'DRIVER_APP')" >/dev/null 2>&1 \
+    || $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), (enum_range(null::position_source))[1])" >/dev/null
+fi
 V=55555555-0000-0000-0000-000000000001
 NOAPP=99999999-0000-0000-0000-0000000000aa
 chk "tabela z RLS; anon bez SELECT; authenticated bez INSERT/UPDATE/DELETE" "$(Q "select (select relrowsecurity from pg_class where oid='public.vessel_positions'::regclass)::text||has_table_privilege('anon','vessel_positions','select')::text||has_table_privilege('authenticated','vessel_positions','insert')::text||has_table_privilege('authenticated','vessel_positions','update')::text||has_table_privilege('authenticated','vessel_positions','delete')::text")" "truefalsefalsefalsefalse"
@@ -411,6 +431,9 @@ chk "ryzyko LATE_DATE_CHANGE (HHL+przewoźnik)" "$(Q "select audience::text||'/'
 val "SCX widzi ryzyko późnej zmiany" $SCX "select count(*) from risk_signals where kind='LATE_DATE_CHANGE' and load_id='$LD' and resolved_at is null" 1
 chk "anon bez EXECUTE ksh_confirm_dates / detect_unconfirmed_dates" "$(Q "select has_function_privilege('anon','ksh_confirm_dates(uuid,date,date,timestamptz,timestamptz,timestamptz,timestamptz)','execute')::text||has_function_privilege('authenticated','detect_unconfirmed_dates(timestamptz)','execute')::text")" "falsefalse"
 
+fi # tower-i2-part 2
+
+if _i2_part_ok 3; then
 echo; echo "[I-3] bramka SMS — część bazowa (0067; bez telefonu, D-4)"
 chk "EXTERNAL_MESSAGING domyślnie wyłączone (R-2, 0068)" "$(Q "select enabled from security_flags where key='EXTERNAL_MESSAGING'")" f
 $PSQL -c "update security_flags set enabled=true where key='EXTERNAL_MESSAGING'" >/dev/null   # testy funkcjonalne I-3 jak po R-2
@@ -451,6 +474,8 @@ chk "zmiana okna załadunku ≥ 30 min: WINDOW_CHANGE (sv, lastningsfonster)" "$
 $PSQL -c "update loads set plan_load_from = plan_load_from - interval '1 second' + interval '1 second' where id='$SL'" >/dev/null
 chk "to samo okno ponownie: bez duplikatu" "$(Q "select count(*) from sms_outbox where kind='WINDOW_CHANGE' and load_id='$SL'")" 1
 SA=66666666-0000-0000-0000-0000000000e3
+# Część 3 osobno: vessels wstawia tylko część 1. sailings.vessel_id NOT NULL — bez statku rejs (i SMS rejsu) nie powstaje.
+$PSQL -c "insert into vessels (id, name, operator) values ('55555555-0000-0000-0000-000000000001','Nova Star','Polferries') on conflict (id) do nothing" >/dev/null
 $PSQL -c "insert into sailings (id, project_id, vessel_id, departure_at, arrival_at) values ('$SA','$P','55555555-0000-0000-0000-000000000001', now() + interval '3 days', now() + interval '3 days 18 hours')" >/dev/null
 $PSQL -c "update loads set sailing_id='$SA' where id='$SL'" >/dev/null
 chk "przypisanie rejsu: SAILING_CHANGE" "$(Q "select count(*) from sms_outbox where kind='SAILING_CHANGE' and load_id='$SL'")" 1
@@ -526,6 +551,8 @@ $PSQL -c "select set_config('tower.eta_ctx','on',false); update loads set eta_si
 chk "przeliczenie ETA (tylko eta_*/delay_minutes): bez wiersza w dzienniku" "$(Q "select count(*) from audit_log where action='ROW_UPDATE' and entity='loads' and entity_id='$L1'")" 1
 $PSQL -c "set session_replication_role=replica; update loads set driver_phone=null where id='$L1'; set session_replication_role=origin; update loads set driver_phone='+48600111222', driver_name='Jan Test' where id='$L1'" >/dev/null
 chk "dane osobowe kierowcy: w dzienniku „[dane osobowe]”, nie numer" "$(Q "select count(*)||'/'||bool_and(new_value->>'driver_phone'='[dane osobowe]' and new_value->>'driver_name'='[dane osobowe]')::text||'/'||(select count(*) from audit_log where new_value::text like '%600111222%' or old_value::text like '%Jan Test%') from audit_log where entity='loads' and new_value ? 'driver_phone'")" "1/true/0"
+# Część 3 osobno: shipment_items nie ma w seed.sql. Wstawia je część 1 (i kasuje) oraz część 5.
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, cargo_class) values ('$P','$L2','I2P3-S1','STANDARD')" >/dev/null
 $PSQL -c "update shipment_items set qty = qty + 1 where id=(select id from shipment_items order by id limit 1); update shipment_items set qty = qty - 1 where id=(select id from shipment_items order by id limit 1)" >/dev/null
 chk "zmiana pozycji ładunku: ROW_UPDATE shipment_items (qty stara/nowa)" "$(Q "select (count(*) = 2 and bool_and(new_value ? 'qty' and old_value ? 'qty'))::text from audit_log where action='ROW_UPDATE' and entity='shipment_items'")" true
 $PSQL -c "insert into loads (project_id, order_no, status) values ('$P', 'AUD-NEW-1', 'PLANNED')" >/dev/null
@@ -589,6 +616,9 @@ chk "jeden szablon na układ, nazwa zaktualizowana, wpis w audit_log" "$(Q "sele
 val "KSH: szablony niewidoczne (RLS)" $KSH "select count(*) from import_column_templates" 0
 err "HHL: bezpośredni INSERT odrzucony (tylko RPC)" $HHL "insert into import_column_templates (project_id, name, column_map, header_signature) values ('$P','x','{}','z')" "permission denied"
 $PSQL -c "delete from import_column_templates where header_signature='qty|shipment id'" >/dev/null
+fi # tower-i2-part 3
+
+if _i2_part_ok 4; then
 echo; echo "[III-6] wymagalność i terminy dokumentów, wersje, widoczność per organizacja (0078)"
 chk "projekt ma 7 wymagań startowych (seed przez wyzwalacz projektu)" "$(Q "select count(*) from doc_requirements where project_id='$P'")" "7"
 err "KSH: zmiana wymagalności odrzucona" $KSH "select doc_requirement_set('$P','CMR',true,'CARRIER','AT_LOAD',4)" "wyłącznie HHL"
@@ -755,6 +785,9 @@ val "limit 2 → dwa najnowsze punkty, nadal rosnąco" $HHL "select string_agg(l
 $PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER') on conflict do nothing; insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH') on conflict do nothing" >/dev/null
 val "inny przewoźnik: 0 punktów (RLS positions_read)" 11111111-0000-0000-0000-00000000000b "select count(*) from load_track('$LT')" 0
 $PSQL -c "delete from app_users where email='cx3@test'; delete from organizations where code='CX3'; update loads set status='CANCELLED' where id='$LT'" >/dev/null 2>&1
+fi # tower-i2-part 4
+
+if _i2_part_ok 5; then
 echo; echo "[III-9] ocena przewoźnika (0089)"
 R1=33333333-0000-0000-0000-0000000039a1; R2=33333333-0000-0000-0000-0000000039a2; R3=33333333-0000-0000-0000-0000000039a3
 $PSQL -c "set session_replication_role=replica;
@@ -893,5 +926,7 @@ fi
 $PSQL -c "select refresh_load_eta('$L7')" >/dev/null
 chk "II-7: >2 km od korytarza → ryzyko rk_off_corridor" "$(Q "select title_key from risk_signals where load_id='$L7' and dedup_key='OFF_CORRIDOR:$L7' and resolved_at is null")" "rk_off_corridor"
 $PSQL -c "update loads set status='CANCELLED' where id='$L7'" >/dev/null 2>&1
+
+fi # tower-i2-part 5
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

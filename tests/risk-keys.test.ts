@@ -47,8 +47,16 @@ describe('A6-T1 klucze ryzyk', () => {
     const metrics = /metric in \(([^)]+)\)/.exec(read('supabase/migrations/0024_usage_check.sql'))![1].match(/[A-Z_]+/g)!;
     const sql = read('supabase/migrations/0042_risk_title_key.sql');
     const jobs = [...sql.matchAll(/^\s+\('([a-z-]+)',\s+interval/gm)].map((m) => m[1]);
-    const srcs = /type SourceId = ([^;]+);/.exec(read(EDGE + 'sync.ts'))![1].match(/[A-Z_]+/g)!;
-    expect(metrics.length).toBe(4); expect(jobs.length).toBe(4); expect(srcs.length).toBe(6);
+    // SourceId jest wieloliniowy (sync.ts). Lista 12 źródeł II-5/II-6/II-8 — nie sama liczba.
+    const srcBlock = /export type SourceId =([\s\S]*?);/.exec(read(EDGE + 'sync.ts'));
+    const srcs = srcBlock![1].match(/'([A-Z0-9_]+)'/g)!.map((x) => x.slice(1, -1));
+    const SOURCE_IDS = [
+      'POLFERRIES_STATUS', 'POLFERRIES_SCHEDULE',
+      'STENA_STATUS', 'STENA_SCHEDULE',
+      'DIGITRAFFIC', 'TRAFIKVERKET', 'KPD_GDDKIA', 'TOMTOM',
+      'FMI', 'DMI', 'SMHI', 'MARINE_WEATHER',
+    ];
+    expect(metrics.length).toBe(4); expect(jobs.length).toBe(4); expect(srcs).toEqual(SOURCE_IDS);
     const need = [...metrics.map((m) => `usage_metric_${m}`), ...jobs.map((j) => `job_label_${j.replace(/-/g, '_')}`), ...srcs.map((x) => `rk_src_${x}`)];
     for (const loc of LOCALES) expect(need.filter((k) => !RISK_I18N[loc][k]), loc).toEqual([]);
   });

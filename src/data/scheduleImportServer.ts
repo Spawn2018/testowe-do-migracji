@@ -62,7 +62,7 @@ export async function serverDryRun(buf: ArrayBuffer, filename: string, map?: Par
 export async function serverCommit(d: ServerImportDraft, cancelCodes: string[], overwriteCodes: string[] = []): Promise<ImportRpcResult> {
   if (d.meta.accepted === 0) throw new Error('Plik bez poprawnych wierszy — nic nie zapisano');
   const sb = await getSupabase();
-  const path = `${d.projectId}/${d.hash}.xlsx`;
+  const path = `${d.projectId}/${d.hash}.xlsx`.replace(/\.\.\//g, '');
   const up = await sb.storage.from('harmonogramy').upload(path, new Blob([d.buf], { type: XLSX_MIME }), { contentType: XLSX_MIME, upsert: false });
   if (up.error && !/exists|duplicate/i.test(up.error.message)) throw new Error(`Archiwum pliku: ${up.error.message}`);
   return call(d.projectId, d.rows, cancelCodes, {

@@ -89,7 +89,22 @@ function DisputeThread({ bill }: { bill: Bill }) {
     try {
       const url = e.docUrl ?? (e.docId && import.meta.env.VITE_AUTH_MODE === 'supabase'
         ? await (await import('../data/invoiceDisputeServer')).disputeDocUrl(e.docId) : null);
-      if (url) window.open(url, '_blank', 'noopener');
+      // Tylko https (link podpisany) albo data: PDF/obraz z lokalnego odczytu — nie javascript:.
+      if (!url) return;
+      let allowed: URL;
+      try { allowed = new URL(url); } catch { return; }
+      const href = allowed.protocol === 'https:'
+        ? allowed.href
+        : (allowed.protocol === 'data:' && /^data:(application\/pdf|image\/)/i.test(allowed.href) ? allowed.href : '');
+      if (href.startsWith('https://') || href.startsWith('data:application/pdf') || href.startsWith('data:image/')) {
+        const a = document.createElement('a');
+        a.href = href;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
     } catch (err) {
       useTowerStore.getState().pushToast(t(locale, 'iii6_err').replace('{msg}', err instanceof Error ? err.message : String(err)), 'HIGH');
     }

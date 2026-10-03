@@ -365,3 +365,65 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 
 | D-33 | **ROZSTRZYGNIĘTE 30.09, NIE ZROBIONE.** TOWER wpisuje do pliku KSH: kierowca, telefon, nr zlecenia, nr rejestracyjny (nowa kolumna „Nr rejestracyjny (TOWER)”). Godzin załadunku i rozładunku nie wpisuje. Realizacja w II-10-E2 (po akceptacji) | II-10-E2 |
 | DEC-CLICK | **AKCEPTACJA 01.10.** (a) grupy C bez nowych typów: LOADING_UNCONFIRMED, SEQUENCE, DATES_UNCONFIRMED, USAGE_LIMIT, JOB_FAILURE (poza kopią). (b) status/strefa → zawsze Transport, bez mini-akcji. (c) grupa D bez „driver PWA” (D-38). Routing klików w ONE-MECH / DEC-3 | ONE-MECH / DEC-3 |
+
+# 5. ZLECENIE 02.10 — POPRAWKI (NIEZACZĘTE)
+
+Źródło: `docs/handover/ZLECENIE_POPRAWKI_02_10.md`. Dopisane przy przejęciu (część A). **Nie realizować**, dopóki właściciel nie zaakceptuje. Część C wygrywa z zapisami separatorów w części B.
+
+## Część B — NIEZACZĘTE
+
+| ID | Opis | Status |
+|---|---|---|
+| B-1 | Mapy: obiekty widoczne mimo braku podłączonych pojazdów | NIEZACZĘTE |
+| B-2a | Ryzyka: brak wypłynięć Steny | NIEZACZĘTE |
+| B-2b | Ryzyka: brak widoczności warunków drogowych w SE | NIEZACZĘTE |
+| B-2c | Centrum decyzji: jak działa i dlaczego puste — opisać logikę, nie zgadywać | NIEZACZĘTE |
+| B-3a | Dokumenty: zezwolenie per firma obok polisy; auto-podpięcie do trasy wg wymiarów; polisa auto do każdej trasy | NIEZACZĘTE |
+| B-4a | Finanse: przychód — pilotaż i dodatki mają zniknąć | NIEZACZĘTE |
+| B-4b | Załącznik: zostaje samo CMR (bez POD) | NIEZACZĘTE |
+| B-5 | Automatyzacje: brak przycisku nowej automatyzacji | NIEZACZĘTE |
+| B-6a | Opcje: logika i workflow „Powiadomienia i decyzje” | NIEZACZĘTE |
+| B-6b | Odbiorcy SMS i strefy: po co strefy i co robią | NIEZACZĘTE |
+| B-6c | Progi i terminy: jak działa mechanizm | NIEZACZĘTE |
+| B-6d | Stan systemu: styl dashboardu (teraz nieczytelne) | NIEZACZĘTE |
+| B-6e | Dziennik logowań nic nie pokazuje | NIEZACZĘTE |
+| B-6f | Historia zmian: „200” obok przycisku — usunąć z wyglądu, jeśli nie pełni roli | NIEZACZĘTE |
+| B-6g | Cennik: rozjazd tabeli w prawo | NIEZACZĘTE |
+| B-6h | SEFS/BAF: czy średnia PL i SE z poprzedniego tygodnia uzupełnia indeksy i liczy opłatę | NIEZACZĘTE |
+| B-6i | Wymóg zezwoleń: rozjazd wizualny w prawo | NIEZACZĘTE |
+| B-7a | Mapa: stały rozmiar, całość widoczna przy otwarciu (nie wysokość tabeli) | NIEZACZĘTE |
+| B-7b | Checkboxy mapy zawsze widoczne; na telefonie nie nachodzą | NIEZACZĘTE |
+| B-7c | Filtry mapy i tabeli: znaczenie, logika, propozycja nowych | NIEZACZĘTE |
+| B-8 | Harmonogram: mapowanie pól, godziny, ciągnik, linie, szerokość kolumn, bez TYP STANDARD (D-8), ETA, statusy, polisa, rok w datach, kierowca/telefon, PDF, filtr dat | NIEZACZĘTE |
+| B-9 | Górny pasek filtrów: logika; usunąć cyfry w kafelku; propozycje ułatwień | NIEZACZĘTE |
+| B-10 | Podgląd zlecenia, edycja/awizacja, przepięcie, Status/Historia, dokumenty, ceny, ustalenia, lista KSH, rejsy Steny | NIEZACZĘTE |
+| B-Q | Pytania o logikę 1–19 (powiadomienia, dzwonek, decyzje, statusy, alternatywy, faktury opłacone, Stena w pasku, bez EN/SV, tryb jasny, zegar, responsywność, kokpit, workflow 3 kont, logowanie, strefy, trasy OSM, statki, ulice) | NIEZACZĘTE |
+
+Szczegół punktów B-8, B-10 i B-Q jest w zleceniu, słowo w słowo. Tu tylko pozycje kolejki — bez realizacji.
+
+
+### P3 — średnie z lokalnego skanu 03.10 (nie blokują kolejki)
+
+Feed Aikido wyłączony (400). Pięć średnich, bez numerów CVE. Nie krytyczne i nie wysokie.
+
+| ID | Opis | Status |
+|---|---|---|
+| P1-FONT | Zaraz po PR #2, jedna prośba o scalenie: czcionki z repozytorium (te same rodziny i grubości), zero połączeń do fonts.googleapis.com i fonts.gstatic.com, także w CSP. W tej samej prośbie P1-LINT. Potem wzorce wszystkich ujęć odświeżone w środowisku bramy. Zasada: wzorce odświeża tylko środowisko bramy. | NIEZACZĘTE |
+| P1-LINT | 9 błędów stylelint w `src/index.css`, już na main: `clip`, `#brandSub`, `#roleLbl`, siedem `!important`. Osobna mała prośba o scalenie zaraz po tej gałęzi. | NIEZACZĘTE |
+| P3-AND | Dwa eksportowane komponenty Androida w manifeście bramki SMS (score 60) | NIEZACZĘTE |
+| P3-SW | Dwa trafienia SSRF w `public/sw.js` | NIEZACZĘTE |
+| P3-ZIP | Trafienie SSRF w `src/lib/zipDocs.ts` | NIEZACZĘTE |
+| P3-APK | Pin akcji w `.github/workflows/sms-gateway-apk.yml` (SHA zamiast @v3/@v4). Czy w ogóle potrzebny, skoro APK budujemy lokalnie. Dobra zmiana bezpieczeństwa. Zostaje. Wraca, gdy token dostanie uprawnienie workflow. | ZOSTAJE |
+
+
+## Część C — NIEZACZĘTE (wygrywa z separatorami w B)
+
+| ID | Opis | Status |
+|---|---|---|
+| C-SEP | Separator „ / ” domyślnie. „\|” tylko w Watch Tower, gdy przy dodawaniu lub edycji awizacji SCX zaznaczy checkbox Przepięcie. Zapis do Excela SharePoint zawsze „ / ”. Brak drugiej wartości: „Kierowca Odbierający / ...” (SharePoint) oraz tabela pięciu sytuacji ze zlecenia | NIEZACZĘTE |
+
+## Część D — na później, nie zaczynać
+
+| ID | Opis | Status |
+|---|---|---|
+| D-LATER | API Stena + telematyka + SharePoint (notatki właściciela) | na później, nie zaczynać |

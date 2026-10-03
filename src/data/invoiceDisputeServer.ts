@@ -8,6 +8,7 @@ import { getSupabase } from '../auth/client';
 import type { DisputeEvent } from '../lib/invoiceDispute';
 import { SIGNED_URL_TTL_S } from './registry';
 import { splitStoragePath } from './storageFiles';
+import { safeStorageTarget } from './storagePath';
 
 export async function loadDisputeEvents(invoiceId: string): Promise<DisputeEvent[]> {
   const sb = await getSupabase();
@@ -33,8 +34,10 @@ export async function disputeDocUrl(docId: string): Promise<string> {
   const d = await sb.from('documents').select('storage_path,file_name').eq('id', docId).maybeSingle();
   const row = d.data as { storage_path: string; file_name: string } | null;
   if (d.error || !row) throw new Error(d.error?.message ?? 'Brak dostępu do pliku');
-  const [bucket, path] = splitStoragePath(row.storage_path);
-  const u = await sb.storage.from(bucket).createSignedUrl(path, SIGNED_URL_TTL_S);
+  const [bucketName, rawPath] = splitStoragePath(row.storage_path);
+  const stored = safeStorageTarget(bucketName, rawPath);
+  const path = stored.objectPath.replace(/\.\.\//g, '');
+  const u = await sb.storage.from(stored.bucket).createSignedUrl(path, SIGNED_URL_TTL_S);
   if (u.error || !u.data?.signedUrl) throw new Error(u.error?.message ?? 'Brak linku');
   return u.data.signedUrl;
 }
@@ -55,14 +58,16 @@ export async function replyDispute(invoiceId: string, note: string, file?: File 
   });
   const row = (Array.isArray(created.data) ? created.data[0] : created.data) as { id: string; bucket: string; object_path: string } | null;
   if (created.error || !row) throw new Error(`korekta: ${created.error?.message ?? 'brak rejestracji'}`);
-  const up = await sb.storage.from(row.bucket).upload(row.object_path, file, { contentType: 'application/pdf', upsert: false });
+  const stored = safeStorageTarget(row.bucket, row.object_path);
+  const objectPath = stored.objectPath.replace(/\.\.\//g, '');
+  const up = await sb.storage.from(stored.bucket).upload(objectPath, file, { contentType: 'application/pdf', upsert: false });
   if (up.error) {
     await sb.rpc('discard_document', { p_id: row.id });
     throw new Error(`korekta: ${up.error.message}`);
   }
   const r = await sb.rpc('invoice_dispute_reply', { p_invoice: invoiceId, p_note: note, p_document: row.id });
   if (r.error) {
-    await sb.storage.from(row.bucket).remove([row.object_path]);
+    await sb.storage.from(stored.bucket).remove([objectPath]);
     await sb.rpc('discard_document', { p_id: row.id });
     throw new Error(r.error.message);
   }

@@ -175,7 +175,9 @@ try {
       const row = Array.isArray(c.data) ? c.data[0] : c.data;
       if (c.error || !row) return { error: c.error?.message ?? 'brak' };
       m6.docs.push(row.id); m6.paths.push([row.bucket, row.object_path]);
-      const u = await sb[org].storage.from(row.bucket).upload(row.object_path, pdf, { contentType: 'application/pdf' });
+      const objectPath = String(row.object_path).replace(/\.\.\//g, '');
+      if (objectPath !== row.object_path || objectPath.includes('..')) return { error: 'Niedozwolona ścieżka pliku' };
+      const u = await sb[org].storage.from(row.bucket).upload(objectPath, pdf, { contentType: 'application/pdf' });
       return { id: row.id, error: u.error?.message };
     };
     const reg = (org, p) => sb[org].rpc('register_invoice', { p });

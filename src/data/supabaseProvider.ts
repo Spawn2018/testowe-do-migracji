@@ -9,6 +9,7 @@ import type { DataMutation, DataProvider, DataSnapshot, UserPrefsPatch } from '.
 import { emptySnapshot } from './provider';
 import type { FerryBooking } from '../types';
 import { isServerId } from './registry';
+import { safeStorageTarget } from './storagePath';
 import { workflowFromRow, workflowRunFromRow, workflowToDb, type WorkflowDbRow, type WorkflowRunDbRow } from './workflowMap';
 import {
   awizacjaPatchToDb, documentFromRow, eventFromRow, eventToRow, ferryPatchToDb, geofenceFromRow, geofenceToRpc,
@@ -237,7 +238,9 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         });
         const row = (Array.isArray(created.data) ? created.data[0] : created.data) as { id: string; bucket: string; object_path: string } | null;
         if (created.error || !row) throw new Error(`faktura PDF: ${created.error?.message ?? 'brak rejestracji'}`);
-        const up = await sb.storage.from(row.bucket).upload(row.object_path, m.file, { contentType: 'application/pdf', upsert: false });
+        const stored = safeStorageTarget(row.bucket, row.object_path);
+        const objectPath = stored.objectPath.replace(/\.\.\//g, '');
+        const up = await sb.storage.from(stored.bucket).upload(objectPath, m.file, { contentType: 'application/pdf', upsert: false });
         if (up.error) {
           await sb.rpc('discard_document', { p_id: row.id });
           throw new Error(`faktura PDF: ${up.error.message}`);
@@ -245,7 +248,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         const res = await sb.rpc('register_invoice', { p: billToRpc(m.bill, row.id) });
         if (res.error) {
           // odrzucona rejestracja: najpierw plik (discard_document wymaga braku obiektu), potem wiersz
-          await sb.storage.from(row.bucket).remove([row.object_path]);
+          await sb.storage.from(stored.bucket).remove([objectPath]);
           await sb.rpc('discard_document', { p_id: row.id });
           throw new Error(res.error.message);
         }

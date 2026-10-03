@@ -2,7 +2,6 @@
  * DEC-6 — baner komunikatu dla firm (system_broadcast_current).
  */
 import { useEffect, useState } from 'react';
-import { getSupabase } from '../../auth/client';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 
 type Row = { id: number; body: string; expires_at: string };
@@ -15,6 +14,7 @@ export function SystemBroadcastBanner() {
     let cancelled = false;
     void (async () => {
       try {
+        const { getSupabase } = await import('../../auth/client');
         const sb = await getSupabase();
         const { data, error } = await sb.rpc('system_broadcast_current');
         if (cancelled || error) return;

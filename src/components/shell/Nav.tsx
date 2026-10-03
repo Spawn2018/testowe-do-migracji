@@ -5,7 +5,6 @@ import { navLabel, t } from '../../i18n/messages'
 import { ClaudeIcon, type IconKey } from './ClaudeIcon'
 import { AUTH_RELOAD_EVENT, getAuthProfile, type AuthProfile } from '../../auth/profile'
 import { markManualLogout } from '../../auth/sessionYear'
-import { getSupabase } from '../../auth/client'
 
 /** Claude v2.0 SVG icons 1:1 */
 const ICON: Record<NavKey, IconKey> = {
@@ -185,7 +184,9 @@ export function Nav() {
               aria-label={t(locale, 'a6_auth_logout')}
               onClick={() => {
                 markManualLogout()
-                void getSupabase().then((sb) => sb.auth.signOut())
+                if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
+                  void import('../../auth/client').then(({ getSupabase }) => getSupabase()).then((sb) => sb.auth.signOut())
+                }
               }}
             >
               {navCollapsed ? '⎋' : t(locale, 'a6_auth_logout')}

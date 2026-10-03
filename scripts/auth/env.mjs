@@ -2,8 +2,10 @@
 import { readFileSync } from 'node:fs';
 
 export function loadEnvLocal(path = '.env.local') {
+  const file = String(path).replace(/\.\.\//g, '').replace(/\.\.\\/g, '');
+  if (file !== path || file.includes('..')) throw new Error('Niedozwolona ścieżka env');
   const out = {};
-  for (const raw of readFileSync(path, 'utf8').split('\n')) {
+  for (const raw of readFileSync(file, 'utf8').split('\n')) {
     const line = raw.trim();
     if (!line || line.startsWith('#') || !line.includes('=')) continue;
     const i = line.indexOf('=');
