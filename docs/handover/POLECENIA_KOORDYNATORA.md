@@ -137,3 +137,9 @@ L-11 → L-12 → część B od początku (pozycje zrobione w L oznacz
 ## Polecenie 2026-10-03
 
 Każde polecenie koordynatora najpierw dopisujesz na końcu tego pliku, z datą, i dopiero potem je wykonujesz. Wszystko o planie ma być w repozytorium, nie tylko w rozmowie.
+
+---
+
+## Polecenie 2026-10-03 — scalanie
+
+Scalasz sam. Nie czekasz na właściciela, gdy zielone są testy aplikacji, gitleaks ma 0, a audyt produkcyjny nie ma luk wysokich ani krytycznych. Gdy prośba o scalenie zawiera migrację, brama bazy jest zielona, a migracja jest w repozytorium, zanim nałożysz ją na produkcję. Właściciel dostaje raport, nie przegląd kodu. Stop tylko przy liście STOP (konstytucja IX.3).
