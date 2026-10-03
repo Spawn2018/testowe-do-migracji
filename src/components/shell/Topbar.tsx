@@ -107,12 +107,12 @@ export function Topbar() {
       <div className="brand">
         <img src="/brand/watchtower-symbol.png" alt="" width={28} height={28} />
         <b>{t(locale, 'brand')}</b>
-        <span id="brandSub">{`Stegra Boden · ${ROLE_META[role].name}`}</span>
+        <span id="brandSub" className="brand-sub">{`Stegra Boden · ${ROLE_META[role].name}`}</span>
       </div>
       <div className="spacer" />
       {/* I-2a: przełącznik widoku tylko dla HHL (w produkcji — konto organizacji HHL) */}
       {canSwitchView() ? <div className="roleswitch">
-        <span id="roleLbl">{t(locale, 'role')}</span>
+        <span id="roleLbl" className="role-lbl">{t(locale, 'role')}</span>
         <div className="seg" role="group" aria-label={t(locale, 'role')} id="roleSeg">
           {ROLES.map((r) => (
             <button

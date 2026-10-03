@@ -37,4 +37,5 @@ Pełne: `.cursor/rules/*.mdc`. Procedury: `docs/handover/wzorzec/08_SKILLE/`.
 - **hook pre-push:** gałąź robocza = szybkie testy (unit, lint css, null-guard statyczny). Pełna brama wizualna (`scripts/ci/fresh-smoke.sh`) przy prośbie o scalenie i przed scaleniem do main. Push na `main`: zasady bez zmian (unit + świeży build wizualny + lint + null-guard + baza, gdy jest).
 - sekrety i pliki poufne poza repozytorium; hasło bazy tylko w `.env.local`
 - wygląd = makieta w 100%; **pełna responsywność i instalacja na telefonie (D-55)**
+- **wzorce zrzutów (baselines) odświeża tylko środowisko bramy wizualnej**, nie inne maszyny (`shots-baseline/` i snapshoty Playwright).
 - każda paczka decyzji potwierdzona listą identyfikatorów
