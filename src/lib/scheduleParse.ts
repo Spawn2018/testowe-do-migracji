@@ -22,6 +22,7 @@
 
 import { z } from 'zod';
 import { toNationalPhone } from './phoneNational';
+export { standardSkipMessage } from './standardSkipMessage';
 
 /* --------------------------------------------------------------- */
 /* Parsowanie wartości w formacie polskim                           */
@@ -186,7 +187,7 @@ export function classifyOversize(
 export interface ParseResult {
   rows: ParsedRow[];
   issues: RowIssue[];
-  stats: { total: number; accepted: number; rejected: number; warnings: number };
+  stats: { total: number; accepted: number; rejected: number; warnings: number; skippedStandard: number };
 }
 
 export function parseSchedule(
@@ -196,9 +197,18 @@ export function parseSchedule(
   const rows: ParsedRow[] = [];
   const issues: RowIssue[] = [];
   const seen = new Set<string>();
+  let skippedStandard = 0;
 
   raw.forEach((r, i) => {
     const rowIndex = i + 2; // +1 nagłówek, +1 indeks od 1 (jak w Excelu)
+    // B-8-IMP / D-8: TYP = STANDARD (kolumna Typ albo „Standard” w wymiarach) to ładunek NTG.
+    // Pomijamy wiersz. To nie jest błąd i nie trafia do odrzuconych.
+    const typCell = r[map.itemType];
+    const typStandard = typeof typCell === 'string' && /^\s*standard\s*$/i.test(typCell);
+    if (typStandard || isStandardDims(r[map.dimensions])) {
+      skippedStandard += 1;
+      return;
+    }
     const code = String(r[map.shipmentCode] ?? '').trim();
 
     if (!code) {
@@ -214,9 +224,8 @@ export function parseSchedule(
       return;
     }
 
-    const standard = isStandardDims(r[map.dimensions]);
-    const dims = standard ? null : parseDimensions(r[map.dimensions]);
-    if (!standard && !dims) {
+    const dims = parseDimensions(r[map.dimensions]);
+    if (!dims) {
       issues.push({ rowIndex, shipmentCode: code, severity: 'ERROR',
         code: 'BAD_DIMENSIONS',
         message: 'Nie da się sparsować wymiarów (oczekiwany format "L x W x H")',
@@ -280,7 +289,7 @@ export function parseSchedule(
     const parsed = ParsedRow.safeParse({
       shipmentCode: code,
       itemType: (r[map.itemType] as string) ?? null,
-      cargoClass: standard ? 'STANDARD' : 'DIMENSIONED',
+      cargoClass: 'DIMENSIONED',
       lengthM: dims?.lengthM ?? null, widthM: dims?.widthM ?? null, heightM: dims?.heightM ?? null,
       unitWeightT, qty, totalWeightT,
       loadDate, loadTime: parseTime(r[map.loadTime]),
@@ -309,6 +318,7 @@ export function parseSchedule(
       accepted: rows.length,
       rejected: issues.filter((i) => i.severity === 'ERROR').length,
       warnings: issues.filter((i) => i.severity === 'WARN').length,
+      skippedStandard,
     },
   };
 }

@@ -73,6 +73,7 @@ export interface ParseMeta {
   total: number;
   rejected: number;
   warnings: number;
+  skippedStandard: number;
   issues: ImportDiff['issues'];
 }
 
@@ -85,6 +86,7 @@ export function rpcToDiff(res: ImportRpcResult, meta: ParseMeta): ImportDiff {
     removalBlocked: res.blocked.map((b) => ({ id: b.load_id, code: b.code, reason: b.reason as RemovalBlock })),
     rejected: meta.rejected,
     warnings: meta.warnings,
+    skippedStandard: meta.skippedStandard,
     filename: meta.filename,
     accepted: meta.accepted,
     total: meta.total,

@@ -74,7 +74,7 @@ describe.skipIf(!LOCAL)('I-1 import harmonogramu — lokalny Supabase, pełny pl
     const tPre = performance.now() - t;
     expect(pre.status).toBe(200);
     const p = pre.body as unknown as ImportRpcResult;
-    expect(p.added).toHaveLength(8);
+    expect(p.added).toHaveLength(5);
     expect(psql('select count(*) from loads')).toBe('0');
     t = performance.now();
     const r = await imp(HHL, full, false, [], { name: 'ksh-harmonogram-synthetic.xlsx', hash: 'h1', path: `harmonogramy/${P}/i1-test.xlsx` });
@@ -83,12 +83,12 @@ describe.skipIf(!LOCAL)('I-1 import harmonogramu — lokalny Supabase, pełny pl
     const res = r.body as unknown as ImportRpcResult;
     expect(res.version).toBe(1);
     const counts = psql(`select (select count(*) from loads)||'/'||(select count(*) from shipment_items)||'/'||(select count(*) from load_events where event_type='SCHEDULE_IMPORTED')||'/'||(select count(*) from schedule_imports)`);
-    expect(counts).toBe('8/8/8/1');
-    expect(psql(`select count(*) filter (where cargo_class='STANDARD' and length_m is null and width_m is null and height_m is null)||'/'||count(*) filter (where cargo_class='DIMENSIONED' and length_m is not null) from shipment_items`)).toBe('3/5');
-    console.log(`[I-2C] syntetyk: 8 przyjętych (5 DIMENSIONED + 3 STANDARD) · podgląd ${tPre.toFixed(0)} ms (SQL ${p.ms} ms) · zapis ${tCommit.toFixed(0)} ms (SQL ${res.ms} ms) · ${counts}`);
+    expect(counts).toBe('5/5/5/1');
+    expect(psql(`select count(*) filter (where cargo_class='STANDARD' and length_m is null and width_m is null and height_m is null)||'/'||count(*) filter (where cargo_class='DIMENSIONED' and length_m is not null) from shipment_items`)).toBe('0/5');
+    console.log(`[I-2C] syntetyk: 5 przyjętych, STANDARD pominięte · podgląd ${tPre.toFixed(0)} ms (SQL ${p.ms} ms) · zapis ${tCommit.toFixed(0)} ms (SQL ${res.ms} ms) · ${counts}`);
     for (const jwt of [KSH, SCX]) {
       const g = await fetch(`${URL_}/rest/v1/loads?select=id`, { headers: { apikey: ANON, Authorization: `Bearer ${jwt}` } });
-      expect(((await g.json()) as unknown[]).length).toBe(8);
+      expect(((await g.json()) as unknown[]).length).toBe(5);
     }
   });
 
@@ -98,9 +98,9 @@ describe.skipIf(!LOCAL)('I-1 import harmonogramu — lokalny Supabase, pełny pl
     const r = await imp(HHL, full, false, [], { name: 'ksh-harmonogram-synthetic.xlsx', hash: 'h1' });
     const ms = performance.now() - t;
     const res = r.body as unknown as ImportRpcResult;
-    expect([res.added.length, res.changed.length, res.unchanged, res.cancelled.length, res.version]).toEqual([0, 0, 8, 0, null]);
+    expect([res.added.length, res.changed.length, res.unchanged, res.cancelled.length, res.version]).toEqual([0, 0, 5, 0, null]);
     expect(psql(`select (select count(*) from load_events)||'/'||(select count(*) from schedule_imports)||'/'||(select max(updated_at) from loads)`)).toBe(before);
-    console.log(`[I-2C] drugi import: 0 nowych · 0 zmian · 8 bez zmian · ${ms.toFixed(0)} ms (SQL ${res.ms} ms)`);
+    console.log(`[I-2C] drugi import: 0 nowych · 0 zmian · 5 bez zmian · ${ms.toFixed(0)} ms (SQL ${res.ms} ms)`);
   });
 
   it('zmieniony plik (XLSX): 2 daty, 1 wymiar, 2 usunięte, 1 nowy → poprawne różnice', async () => {
@@ -123,18 +123,18 @@ describe.skipIf(!LOCAL)('I-1 import harmonogramu — lokalny Supabase, pełny pl
     last.getCell(hdr['Data dostawy na budowę']).value = new Date('2026-11-07T00:00:00Z');
     last.commit();
     const rows = await rowsFromXlsx((await wb.xlsx.writeBuffer()) as ArrayBuffer);
-    expect(rows).toHaveLength(7);
+    expect(rows).toHaveLength(5);
     psql(`update loads set plan_load_from = now(), plan_load_to = now() + interval '4 hours' where id = (select load_id from shipment_items where shipment_code = 'QA-02')`);
     const pre = (await imp(HHL, rows, true)).body as unknown as ImportRpcResult;
     expect(pre.added.map((a) => a.code)).toEqual(['QA-99']);
     expect(pre.changed.map((c) => `${c.code}:${c.fields.join('+')}`).sort()).toEqual(['QA-02:delivery_date', 'QA-03:delivery_date', 'QA-04:length_m']);
-    expect(pre.cancel_candidates.map((c) => c.code).sort()).toEqual(['QA-05', 'STD-03']);
+    expect(pre.cancel_candidates.map((c) => c.code).sort()).toEqual(['QA-05']);
     expect(pre.critical.map((c) => c.code)).toEqual(['QA-02']);
     const t = performance.now();
-    const res = (await imp(HHL, rows, false, ['QA-05', 'STD-03'], { name: 'ksh-harmonogram-v2.xlsx', hash: 'h2' })).body as unknown as ImportRpcResult;
+    const res = (await imp(HHL, rows, false, ['QA-05'], { name: 'ksh-harmonogram-v2.xlsx', hash: 'h2' })).body as unknown as ImportRpcResult;
     const ms = performance.now() - t;
-    expect([res.version, res.added.length, res.changed.length, res.cancelled.length]).toEqual([2, 1, 3, 2]);
-    expect(psql(`select count(*) filter (where status='CANCELLED')||'/'||count(*) from loads`)).toBe('2/9');
+    expect([res.version, res.added.length, res.changed.length, res.cancelled.length]).toEqual([2, 1, 3, 1]);
+    expect(psql(`select count(*) filter (where status='CANCELLED')||'/'||count(*) from loads`)).toBe('1/5');
     expect(psql(`select plan_delivery_date from loads where id = (select load_id from shipment_items where shipment_code='QA-03')`)).toBe('2026-11-20');
     expect(psql(`select length_m from shipment_items where shipment_code='QA-04'`)).toBe('19.00');
     expect(psql(`select count(*) from load_events where event_type='SCHEDULE_DATE_CRITICAL'`)).toBe('1');

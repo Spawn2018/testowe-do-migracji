@@ -49,6 +49,7 @@ export async function serverDryRun(buf: ArrayBuffer, filename: string, map?: Par
     total: parsed.stats.total,
     rejected: parsed.stats.rejected,
     warnings: parsed.stats.warnings,
+    skippedStandard: parsed.stats.skippedStandard,
     issues: parsed.issues.filter((i) => i.severity === 'ERROR').slice(0, 12)
       .map((i) => ({ code: i.code, message: i.message, shipmentCode: i.shipmentCode })),
   };
@@ -68,6 +69,7 @@ export async function serverCommit(d: ServerImportDraft, cancelCodes: string[], 
   return call(d.projectId, d.rows, cancelCodes, {
     name: d.meta.filename, hash: d.hash, path: `harmonogramy/${path}`,
     column_map: d.map ?? COLUMN_MAP_DEFAULT, rejected: d.meta.rejected,
+    skipped_standard: d.meta.skippedStandard,
     ...(overwriteCodes.length ? { overwrite_confirmed: overwriteCodes } : {}),
   }, false);
 }
