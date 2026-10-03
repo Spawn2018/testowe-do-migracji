@@ -223,3 +223,7 @@ TESTY: dla każdego wzoru — zmiana wartości w Opcjach zmienia moment alarmu; 
 Potem L-1b z PLAN.md (zaraz po L-3): NO_AWIZACJA jest w ramach L-3. Reszta: KSH_ROW_GONE, TOWER_KSH_CONFLICT, KSH_FILE_ERROR przy obecnym imporcie Excela; SEFS_OUT_OF_TABLE; KR_OVER_3; DWELL_OVER_FREE. Źródło ZLECENIE_DECYZJE_POWIADOMIENIA.md §2 DEC-CLICK. Do zestawu dec-auto test dla każdego typu. Nowa migracja = pełna brama przed produkcją.
 
 Nie zaczynać SEC-OWASP, P2-TILES, P3-APK ani części D.
+
+## Polecenie 2026-10-04 01:17 (czas warszawski) — nocna brama wizualna
+
+Rutyna WT nocna brama wizualna: `git pull --rebase`, `git lfs pull`, `npm run gate:visual` (bez nadzoru, własne build/port), wpis 1-liniowy w POSTEP.md (ujęć w progu / ponad, HEAD sha), commit+push bez --force. Zielona = cisza. Ponad próg = rano krótki raport PL (ile, które widoki, prawdopodobna przyczyna); wzorca nie odświeżać bez zgody właściciela.
