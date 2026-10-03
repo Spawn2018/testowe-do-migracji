@@ -8,24 +8,41 @@
 set -e
 cd "$(git rev-parse --show-toplevel)"
 
+# Stdin (refs) czytamy raz: git-lfs też go konsumuje.
+refs=$(cat)
 if command -v git-lfs >/dev/null 2>&1; then
-  git lfs pre-push "$@"
+  printf '%s\n' "$refs" | git lfs pre-push "$@"
 else
   printf >&2 '\nGit LFS required (shots-baseline). Install git-lfs or fix PATH.\n\n'
   exit 2
 fi
 
+# Gałąź robocza: tylko szybkie testy. Pełna brama (wizualna + baza), gdy cel to main.
+# Pełna brama wizualna także przy prośbie o scalenie i przed scaleniem do main
+# (scripts/ci/fresh-smoke.sh) — patrz AGENTS.md.
+FULL=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main) FULL=1 ;;
+  esac
+done <<EOF
+$refs
+EOF
+
 echo "[pre-push] npm run test:unit"
 npm run test:unit
-
-echo "[pre-push] scripts/ci/fresh-smoke.sh (świeży build HEAD → :${FRESH_PORT:-4179}: visual + d19 + deur)"
-bash scripts/ci/fresh-smoke.sh
 
 echo "[pre-push] npm run lint:css"
 npm run lint:css
 
 echo "[pre-push] tests/db/null-guard-static.mjs (I-2A: strażnik „if not …” bez „is not true” = błąd)"
 node tests/db/null-guard-static.mjs
+
+if [ "$FULL" != "1" ]; then
+  echo "[pre-push] gałąź robocza — pomijam świeży build wizualny i bramę bazy (pełna brama przy scaleniu i na main)"
+else
+echo "[pre-push] scripts/ci/fresh-smoke.sh (świeży build HEAD → :${FRESH_PORT:-4179}: visual + d19 + deur)"
+bash scripts/ci/fresh-smoke.sh
 
 PGADMIN=${PGADMIN:-postgres://postgres@localhost:5433/postgres}
 if command -v psql >/dev/null 2>&1 && psql "$PGADMIN" -Atqc "select 1" >/dev/null 2>&1; then
@@ -36,6 +53,8 @@ elif [ "${TOWER_REQUIRE_DB:-0}" = "1" ]; then
   exit 3
 else
   printf >&2 '\n[pre-push] UWAGA: lokalny Postgres niedostępny — tests/db POMINIĘTE (uruchom: bash tests/db/gate.sh).\n\n'
+fi
+
 fi
 
 echo "[pre-push] OK"

@@ -34,6 +34,7 @@ Pełne: `.cursor/rules/*.mdc`. Procedury: `docs/handover/wzorzec/08_SKILLE/`.
 - **migracja: commit + push do repozytorium PRZED nałożeniem na PROD** (lista plików
   w `supabase/migrations/` = `schema_migrations` na produkcji)
 - **brama bazy:** scalenie z migracją = pełna brama w częściach; scalenie bez zmian w bazie = testy aplikacji + tylko dotknięte zestawy; pełna brama co niedzielę i przed migracją na produkcję. Jedno zadanie w tle max 40 min. Wyniki w `tmp-gate/wyniki.json`. Zielone tylko przy jednym commicie i jednej wersji migracji (`scripts/test-db-gate-summary.mjs`)
+- **hook pre-push:** gałąź robocza = szybkie testy (unit, lint css, null-guard statyczny). Pełna brama wizualna (`scripts/ci/fresh-smoke.sh`) przy prośbie o scalenie i przed scaleniem do main. Push na `main`: zasady bez zmian (unit + świeży build wizualny + lint + null-guard + baza, gdy jest).
 - sekrety i pliki poufne poza repozytorium; hasło bazy tylko w `.env.local`
 - wygląd = makieta w 100%; **pełna responsywność i instalacja na telefonie (D-55)**
 - każda paczka decyzji potwierdzona listą identyfikatorów

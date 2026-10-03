@@ -730,3 +730,9 @@ Przyjęte: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników), **D-4**
 ### 2026-10-03 — PB-2
 
 Wcześniej czerwone testy aplikacji, liczby z kodu: przewodnik i4 (`tests/i4-guide.test.ts`) — HHL ma 8 kroków, nie 7; KSH i SCX mają po 7, nie 6 (`EXPECT`: hhl 8, ksh 7, scx 7). Klucze ryzyk (`tests/risk-keys.test.ts`) — lista 12 źródeł (`SOURCE_IDS`), nie asercja `toBe(6)`.
+
+### 2026-10-03 — PB-3 i kokpit (scalenie zablokowane)
+
+Dwa trafienia score 70 w `scripts/bundle-size.mjs`: skrypt uruchamiany tylko przy budowaniu, nie trafia do aplikacji. Zaakceptowane ryzyko. Feed Aikido w workspace Spawn2018 zwraca 400 (funkcja wyłączona), więc oznaczenia w panelu Aikido nie da się zapisać. Zapis jest tutaj.
+
+Kokpit, ujęcie `kokpit__hhl__pl__1920__light`: 18579 px przy progu 60. Układ i treść zgodne ze wzorcem. Różnica na krawędziach liter (antyaliasing), nie z D-27, BRAND-15, RESP-14 ani UI-12. Wzorca nie odświeżono. SCALENIE ZABLOKOWANE do decyzji właściciela.

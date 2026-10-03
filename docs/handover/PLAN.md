@@ -401,6 +401,18 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 
 Szczegół punktów B-8, B-10 i B-Q jest w zleceniu, słowo w słowo. Tu tylko pozycje kolejki — bez realizacji.
 
+
+### P3 — średnie z lokalnego skanu 03.10 (nie blokują kolejki)
+
+Feed Aikido wyłączony (400). Pięć średnich, bez numerów CVE. Nie krytyczne i nie wysokie.
+
+| ID | Opis | Status |
+|---|---|---|
+| P3-AND | Dwa eksportowane komponenty Androida w manifeście bramki SMS (score 60) | NIEZACZĘTE |
+| P3-SW | Dwa trafienia SSRF w `public/sw.js` | NIEZACZĘTE |
+| P3-ZIP | Trafienie SSRF w `src/lib/zipDocs.ts` | NIEZACZĘTE |
+
+
 ## Część C — NIEZACZĘTE (wygrywa z separatorami w B)
 
 | ID | Opis | Status |
