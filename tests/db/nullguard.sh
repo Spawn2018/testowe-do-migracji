@@ -113,7 +113,14 @@ chk "aktywny HHL_ADMIN: is_hhl()=true, can_see_margin()=true" "$(call $HHL "sele
 chk "keep_alive dla anon działa dalej (worker)" "$($PSQL -c "begin; set local role anon; select (keep_alive('test')->>'ok'); rollback;" 2>&1 | grep -vE '^(BEGIN|SET|ROLLBACK)$')" "true"
 
 echo; echo "[I-2A] test statyczny definicji (baza po migracjach)"
-node tests/db/null-guard-static.mjs --db "$URL" >/tmp/ng_static.out 2>&1; rc=$?
+# Lokalny Postgres: osobna baza po CREATE DATABASE (URL).
+# Hosted: DROP/CREATE DATABASE to no-op shimu, tower_test_nullguard nie istnieje.
+# Wtedy katalog tej samej zmigrowanej bazy TEST (PGURL/ADMIN), bez pomijania kontroli.
+NG_STATIC_URL="$URL"
+if ! psql "$ADMIN" -Atq -c "select 1 from pg_database where datname='${DB}'" | grep -qx 1; then
+  NG_STATIC_URL="${PGURL:-$ADMIN}"
+fi
+node tests/db/null-guard-static.mjs --db "$NG_STATIC_URL" >/tmp/ng_static.out 2>&1; rc=$?
 if [ $rc = 0 ]; then ok=$((ok+1)); say "OK    $(tail -1 /tmp/ng_static.out)"; else fail=$((fail+1)); say "FAIL  $(cat /tmp/ng_static.out | tr '\n' ' ')"; fi
 fi # tower-ng-part 4
 
