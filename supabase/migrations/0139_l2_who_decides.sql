@@ -6,6 +6,8 @@
 -- nie tylko w ukrytym przycisku. KSH i zła firma dostają błąd bazy.
 -- =====================================================================
 
+alter function public.l1_decision_type(text, jsonb) set search_path = public;
+
 create or replace function public.l2_may_resolve(p_role text)
 returns boolean
 language sql
