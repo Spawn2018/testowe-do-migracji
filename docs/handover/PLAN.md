@@ -411,6 +411,7 @@ Feed Aikido wyłączony (400). Pięć średnich, bez numerów CVE. Nie krytyczne
 | P3-AND | Dwa eksportowane komponenty Androida w manifeście bramki SMS (score 60) | NIEZACZĘTE |
 | P3-SW | Dwa trafienia SSRF w `public/sw.js` | NIEZACZĘTE |
 | P3-ZIP | Trafienie SSRF w `src/lib/zipDocs.ts` | NIEZACZĘTE |
+| P3-APK | Pin akcji w `.github/workflows/sms-gateway-apk.yml` (SHA zamiast @v3/@v4). Czy w ogóle potrzebny, skoro APK budujemy lokalnie. Wyjęte z gałęzi fix/przejecie-testy-02-10. | DO DECYZJI |
 
 
 ## Część C — NIEZACZĘTE (wygrywa z separatorami w B)
