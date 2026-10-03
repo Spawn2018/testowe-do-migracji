@@ -143,3 +143,9 @@ Każde polecenie koordynatora najpierw dopisujesz na końcu tego pliku, z datą,
 ## Polecenie 2026-10-03 — scalanie
 
 Scalasz sam. Nie czekasz na właściciela, gdy zielone są testy aplikacji, gitleaks ma 0, a audyt produkcyjny nie ma luk wysokich ani krytycznych. Gdy prośba o scalenie zawiera migrację, brama bazy jest zielona, a migracja jest w repozytorium, zanim nałożysz ją na produkcję. Właściciel dostaje raport, nie przegląd kodu. Stop tylko przy liście STOP (konstytucja IX.3).
+
+---
+
+## Polecenie 2026-10-03 — start L-2
+
+Start L-2. Rozstrzygnąć decyzję może tylko firma z katalogu (kto decyduje) oraz administrator. Odmowa w funkcji bazy, nie tylko ukryty przycisk.

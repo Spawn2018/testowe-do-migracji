@@ -24,7 +24,7 @@ export const EXPECTED = {
   i2: 526, // +2 asercje 0133 — POSTEP
   i30: 10,
   i31: 6,
-  dec2: 18,
+  dec2: 24,
   dec3: 13,
   dec5: 11,
   dec6: 15,

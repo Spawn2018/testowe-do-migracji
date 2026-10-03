@@ -60,5 +60,21 @@ D5=$(run "$HHL" "select decision_open('$P','BACKUP_FAILED','kopia retry', '{}'::
 val "BACKUP_RETRY → ui_hint" $HHL "select decision_resolve('$D5','RETRY_NOW')->>'ui_hint'" BACKUP_RETRY commit
 val "BACKUP_RETRY → audit" $HHL "select count(*) from audit_log where action='BACKUP_RETRY_REQUESTED' and entity_id='$D5'" 1
 
+
+# L-2: firma z katalogu albo administrator. Odmowa z bazy.
+OPS=11111111-0000-0000-0000-000000000004
+sys "insert into app_users (auth_id, org_id, email, role) values ('$OPS','00000000-0000-0000-0000-00000000a001','ops@test','HHL_OPS')" >/dev/null
+
+DC=$(run "$HHL" "select decision_open('$P','KSH_DATE_LT_5D','data KSH', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+val "przewoźnik rozstrzyga typ CARRIER" $SCX "select (decision_resolve('$DC','ACCEPT')->>'applied'); select status::text from decisions where id='$DC'" RESOLVED commit
+DH=$(run "$HHL" "select decision_open('$P','SEFS_INVOICE_DIFF','faktura obca', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+err "przewoźnik nie rozstrzyga typu HHL" $SCX "select decision_resolve('$DH','ACCEPT','nie moja decyzja')" "wskazana firma|Rozstrzyg"
+val "operacje HHL rozstrzygają typ HHL" $OPS "select (decision_resolve('$DH','ACCEPT','akceptacja operacji')->>'applied'); select status::text from decisions where id='$DH'" RESOLVED commit
+DCar=$(run "$HHL" "select decision_open('$P','NO_POSITION','brak pozycji', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+err "operacje HHL nie rozstrzygają typu CARRIER" $OPS "select decision_resolve('$DCar','MANUAL_STATUS','proba operacji')" "wskazana firma|Rozstrzyg"
+DAd=$(run "$HHL" "select decision_open('$P','BACKUP_FAILED','kopia ops', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+err "operacje HHL nie rozstrzygają typu ADMIN" $OPS "select decision_resolve('$DAd','RETRY_NOW')" "wskazana firma|Rozstrzyg"
+val "administrator rozstrzyga typ ADMIN" $HHL "select decision_resolve('$DAd','RETRY_NOW')->>'ui_hint'" BACKUP_RETRY commit
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
