@@ -32,6 +32,7 @@ export const EXPECTED = {
   hist11: 11,
   workflows: 47,
   insurance: 42,
+  'dec-auto': 24,
 };
 
 export const SUITE_FILE = {
@@ -56,6 +57,7 @@ export const SUITE_FILE = {
   hist11: 'hist11.sh',
   workflows: 'workflows.sh',
   insurance: 'insurance.sh',
+  'dec-auto': 'dec-auto.sh',
 };
 
 const NEED_SEED_BASE = new Set(['session']);
@@ -143,7 +145,7 @@ export function gateSteps() {
     steps[name] = i2[name];
     order.push(name);
   }
-  for (const name of ['i30', 'i31', 'dec2', 'dec3', 'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance']) {
+  for (const name of ['i30', 'i31', 'dec2', 'dec3', 'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto']) {
     steps[name] = { file: SUITE_FILE[name], env: {}, expected: EXPECTED[name], group: null };
     order.push(name);
   }
