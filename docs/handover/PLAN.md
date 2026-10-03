@@ -104,6 +104,7 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 | I-26 | (P1, właściciel 28.09) anon ma INSERT/UPDATE/DELETE na ~20 tabelach `public` (m.in. loads, invoices, invoice_lines, organizations, projects, documents) — blokuje tylko RLS (wzorzec jak `permits` przed 0081): odebrać anon wszystkie uprawnienia tabel (i sekwencji) w `public` + `ALTER DEFAULT PRIVILEGES`; aplikacja kierowcy działa przez funkcje — sprawdzić; przegląd TRUNCATE/REFERENCES/TRIGGER dla authenticated | anon: 0 uprawnień do tabel w `public` (poza `spatial_ref_sys` — chroni wyzwalacz); przebieg kierowcy z linku przechodzi; test w zestawie security | **DONE** 28.09 (0083) |
 | I-27 | (P1, właściciel 28.09, przed R-3) brak zezwolenia dla transportu o klasie innej niż STANDARD blokuje przejście do READY („Gotowy”) — przełącznik w tabeli parametrów; włącza właściciel przed pierwszym prawdziwym transportem (D-21). STANDARD bez zezwolenia przechodzi | test: DIMENSIONED bez zezwolenia nie osiąga READY przy włączonym przełączniku | **DONE** 28.09 (0084; przełącznik WYŁĄCZONY — włącza właściciel, D-21) |
 | I-28 | (P2, właściciel 28.09) usunąć `load_delivery_day_end` — nieużywana, ignoruje okno dostawy (najpierw sprawdzić brak odwołań) | funkcja usunięta, brama bazy zielona | **DONE** 28.09 (0085) |
+| SEC-OWASP | (P1) Na końcu, przed pilotażem. OWASP ASVS poziom 2: lista z wynikiem każdego punktu. OWASP ZAP: skan pasywny produkcji; skan aktywny wyłącznie na teście, nigdy aktywnie na produkcji. Zależności wg OWASP (Dependency-Check albo odpowiednik). Przegląd OWASP Top 10 dla bazy (uprawnienia, RLS, funkcje). Raport z wynikami i planem napraw do właściciela. Nie zaczynać przed kolejką P1-FONT, B-1, B-8-IMP, L-1. | raport u właściciela | NIEZACZĘTE |
 
 ## PILOTAŻ I WYDANIE
 
@@ -264,6 +265,10 @@ Przyjęte identyfikatory: **II-10-E1**, **II-10-E2**, **ONE-MECH** (D-29 + D-29t
 Aktywna kolejka przed pilotażem: **DR-TEST → SIM-1 → LOAD-1 → DOC-ROLE → DAILY-1**.
 Bez nowych funkcji poza tą listą. Blokery danych (IT KSH, emtrack, wymiary, OCP) zostają w sekcji 4.
 
+### Kolejność po PR #2 (03.10)
+
+Po scaleniu PR #2: **P1-FONT → B-1 → B-8-IMP → L-1**. **SEC-OWASP** jest na końcu planu, przed pilotażem (nie zaczynać wcześniej). Aikido i CodeRabbit nie blokują scalenia.
+
 ### Potwierdzenie akceptacji koordynatora (01.10 — popołudnie)
 
 Przyjęte identyfikatory: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników),
@@ -408,11 +413,13 @@ Feed Aikido wyłączony (400). Pięć średnich, bez numerów CVE. Nie krytyczne
 
 | ID | Opis | Status |
 |---|---|---|
-| P1-FONT | Zaraz po PR #2, jedna prośba o scalenie: czcionki z repozytorium (te same rodziny i grubości), zero połączeń do fonts.googleapis.com i fonts.gstatic.com, także w CSP. W tej samej prośbie P1-LINT. Potem wzorce wszystkich ujęć odświeżone w środowisku bramy. Zasada: wzorce odświeża tylko środowisko bramy. | NIEZACZĘTE |
-| P1-LINT | 9 błędów stylelint w `src/index.css`, już na main: `clip`, `#brandSub`, `#roleLbl`, siedem `!important`. Osobna mała prośba o scalenie zaraz po tej gałęzi. | NIEZACZĘTE |
+| P1-FONT | Czcionki z repozytorium (Barlow 400/500/600/700, Barlow Condensed 500/600/700, woff2 + OFL), zero fonts.googleapis.com i fonts.gstatic.com, także w CSP. W tej samej gałęzi P1-LINT. Wzorce odświeżone w środowisku bramy. | **DO SCALENIA** — `fix/p1-font` |
+| P1-LINT | 9 błędów stylelint w `src/index.css` (`clip`, `#brandSub`, `#roleLbl`, siedem `!important`) naprawione bez wyłączania reguł. Ta sama gałąź co P1-FONT. | **DO SCALENIA** — `fix/p1-font` |
+| P2-TILES | W testach wizualnych mapa korzysta z kafelków zapisanych lokalnie w repozytorium (bez pobierania z sieci), żeby aktualizacje u dostawcy nie psuły bramy. Na produkcji bez zmian. | NIEZACZĘTE |
 | P3-AND | Dwa eksportowane komponenty Androida w manifeście bramki SMS (score 60) | NIEZACZĘTE |
 | P3-SW | Dwa trafienia SSRF w `public/sw.js` | NIEZACZĘTE |
 | P3-ZIP | Trafienie SSRF w `src/lib/zipDocs.ts` | NIEZACZĘTE |
+| P3-BRACES | Osiem high w devDependencies łańcucha stylelint: braces, fast-glob, globby, micromatch, stylelint, stylelint-config-recommended, stylelint-config-standard, stylelint-declaration-strict-value. GHSA-vfj7-8cjw-p6xm. Nie trafiają do aplikacji. Najnowszy braces na npm to 3.0.3, poprawka niewydana. | czeka na wydanie poprawki; sprawdzenie w niedzielnej bramie |
 | P3-APK | Pin akcji w `.github/workflows/sms-gateway-apk.yml` (SHA zamiast @v3/@v4). Czy w ogóle potrzebny, skoro APK budujemy lokalnie. Dobra zmiana bezpieczeństwa. Zostaje. Wraca, gdy token dostanie uprawnienie workflow. | ZOSTAJE |
 
 

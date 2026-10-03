@@ -19,8 +19,10 @@
 3. **Sekrety z wtyczek nie trafiają do kodu, commitów, logów ani odpowiedzi**
 4. Wynik ważnego sprawdzenia przez wtyczkę → zapis w `POSTEP.md` (co sprawdzone, wynik)
 5. Wtyczka niedostępna albo wylogowana → napisz w raporcie, nie obchodź jej
+6. **Aikido i CodeRabbit nie są wtyczkami tej listy i nie są warunkiem scalenia.** BLOKUJE: high/critical w zależnościach produkcyjnych (`npm audit --omit=dev --audit-level=high`). NIE BLOKUJE: zależności deweloperskie — wpis P3 i sprawdzenie w niedzielnej bramie, czy wyszła poprawka. Do scalenia także: zielone testy aplikacji, brama bazy gdy dotyczy SQL, gitleaks przy każdym commicie.
 
 ## Czego NIE instalujemy
 - wtyczek z dostępem do poczty, kalendarza, SharePointa — integracja z SharePoint idzie
   przez aplikację (II-10) po zgodzie IT KSH (D-32), nie przez Cursora
 - wtyczek płatnych i wymagających karty
+

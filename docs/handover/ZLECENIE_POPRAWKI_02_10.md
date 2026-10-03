@@ -32,10 +32,11 @@ A1. PRZEJĘCIE (bez zmian w kodzie):
 A2. ZASADY PRACY:
     - każda paczka poprawek na osobnej gałęzi + prośba o scalenie
       (pull request); nigdy wprost do main
-    - CodeRabbit sprawdza każdą prośbę o scalenie; scalenie tylko przy
-      zielonych testach i bez otwartych uwag krytycznych
-    - Aikido: pełny skan na start, wynik do raportu; krytyczne
-      i wysokie naprawiasz najpierw
+    - scalenie: zielone testy aplikacji, brama bazy gdy jest zmiana SQL,
+      gitleaks przy każdym commicie. BLOKUJE tylko high/critical w
+      zależnościach produkcyjnych (`npm audit --omit=dev --audit-level=high`).
+      Zależności deweloperskie nie blokują: wpis P3 i sprawdzenie w niedzielę,
+      czy wyszła poprawka. Aikido i CodeRabbit nie są warunkiem scalenia.
     - migracja: commit + push PRZED nałożeniem na PROD; każda migracja
       przez bramę testów bazy na TEST
     - po scaleniu: vercel --prod, obie domeny 200
