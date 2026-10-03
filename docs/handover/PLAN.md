@@ -263,11 +263,11 @@ Przyjęte identyfikatory: **II-10-E1**, **II-10-E2**, **ONE-MECH** (D-29 + D-29t
 ### Stan kolejki (02.10)
 
 Aktywna kolejka przed pilotażem: **DR-TEST → SIM-1 → LOAD-1 → DOC-ROLE → DAILY-1**.
+Bez nowych funkcji poza tą listą. Blokery danych (IT KSH, emtrack, wymiary, OCP) zostają w sekcji 4.
 
 ### Kolejność po PR #2 (03.10)
 
 Po scaleniu PR #2: **P1-FONT → B-1 → B-8-IMP → L-1**. **SEC-OWASP** jest na końcu planu, przed pilotażem (nie zaczynać wcześniej). Aikido i CodeRabbit nie blokują scalenia.
-Bez nowych funkcji poza tą listą. Blokery danych (IT KSH, emtrack, wymiary, OCP) zostają w sekcji 4.
 
 ### Potwierdzenie akceptacji koordynatora (01.10 — popołudnie)
 
