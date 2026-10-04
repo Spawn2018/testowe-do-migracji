@@ -541,3 +541,13 @@ Rejestr z PR #38 przyjęty. Osobny PR, tylko dokumenty. Bez wdrożenia. Nie wcho
 U-38: zamknąć stary link kierowcy. Pozycja w `PLAN.md`: DRV-CLOSE (P1, po REJESTR — DOWODY, przed częścią B). Zakres, bez wykonania teraz: odebrać anonimowi dostęp do `driver_post_position` (migracja); unieważnić wszystkie wydane tokeny kierowców; trasa `#/driver/:token` pokazuje „Link nieaktywny”; kod zostaje w repozytorium, bez usuwania; test: anonim z ważnym tokenem dostaje odmowę, pozycja się nie zapisuje; pozycje mają przychodzić wyłącznie z telematyki (D-36).
 
 U-8: obowiązuje „fakturę SCX widzą HHL i SCX (wystawca); KSH nie widzi”. Kod bez zmian. Poprawić zapis w dokumentach z adnotacją „doprecyzowane 04.10” i zamknąć rozjazd U-8 w sekcji 3 rejestru.
+
+## Polecenie 2026-10-04 (czas warszawski) — TRIAGE REJESTRU, akceptacja koordynatora
+
+Osobny PR, tylko dokumenty. Bez wdrożenia. Nie wchodzić na gałąź H-3. Kodu nie zmieniać. Części B nie zaczynać.
+
+1. Zapisać `TRIAGE_REJESTRU.md` w `docs/handover/` (treść decyzji). Wpisać statusy do `REJESTR_CALOSCI.md` (sekcja drugiego przejścia) i do `PLAN.md`. „Zrobione przez X” tylko gdy X ma dowód: plik, migracja albo test. Brak dowodu: nie oznaczać zrobione, zgłosić listę.
+2. Przywrócić w `REJESTR_CALOSCI.md` sekcję „USTALENIA Z ROZMÓW” (U-1–U-50) ze źródła w gicie. Jeśli w gicie jej nie ma, zgłosić i nie wymyślać.
+3. Do `PLAN.md`: H-2-PL (utrudnienia PL z HERE), CLEAN-MAPLIBRE (P3). SMS-KSH-1H tylko gdy SCX-§5 nie jest spełnione. Kryteria U-3-PALIWO rozszerzyć o punkt 4 pliku (32.x/33.x). Pozycji nie wykonywać.
+4. Pozycje „do sprawdzenia” z punktu 6: jeden raport, bez budowania.
+5. Kolejność: H-3, potem U-3-PALIWO, potem DRV-CLOSE, potem STD-CLEAN. Część B rusza po tych czterech. Tabela dowodów jest przyjęta.
