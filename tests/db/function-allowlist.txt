@@ -4,7 +4,6 @@
 # --- anon: API tokenu kierowcy (2.3), podtrzymanie bazy (PR1). Od 0030 (3.2d) bez pomocniczych RLS.
 anon driver_get_instructions
 anon driver_post_event
-anon driver_post_position
 anon keep_alive
 anon auth_email_allowed
 # --- authenticated: pomocnicze RLS / widoki / funkcje wywoływane przez funkcje security invoker

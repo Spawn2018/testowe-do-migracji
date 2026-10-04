@@ -596,3 +596,9 @@ Osobny PR, tylko dokumenty. Bez zmian w kodzie, bez diagnozy teraz, bez wdrożen
 2. Diagnoza (nie teraz w kodzie): właściciel widzi ETA dla SG-01, SG-24, KR-04, KR-05, KR-06, KR-07. Dla każdego podać, skąd wartość: ostatnia pozycja GPS i jej data / wartość zapisana przed 0146 / wartość liczona z planu. Wartość liczona z planu = błąd P1, zgłosić miejsce w kodzie. Wartości sprzed 0146 tylko zgłosić; posprząta R-0.
 
 Kolejność: U-3-PALIWO → diagnoza ETA (SG-01, SG-24, KR-04, KR-05, KR-06, KR-07, bez zmian w kodzie) → DRV-CLOSE → STD-CLEAN → SMS-KSH-1H + ETA-PRE-LOAD (jeden PR, ten sam mechanizm) → VERIFY-13 → część B.
+
+## Polecenie 2026-10-05 (czas warszawski) — DRV-CLOSE, wykonanie
+
+Osobny PR. Nie robić STD-CLEAN, SMS-KSH-1H, ETA-PRE-LOAD, VERIFY-13 ani części B. Nie włączać H-1 ani H-3. Nie kasować transportów.
+
+U-38: odebrać anonimowi dostęp do `driver_post_position` (migracja). Unieważnić wszystkie wydane tokeny kierowców. Trasa `#/driver/:token` pokazuje „Link nieaktywny”. Kodu nie usuwać. Test: anonim z ważnym tokenem dostaje odmowę, pozycja się nie zapisuje. Pozycje wyłącznie z telematyki (D-36). Brama lokalna zielona na tym samym commicie przed scaleniem i produkcją.

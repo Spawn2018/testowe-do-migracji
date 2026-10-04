@@ -136,7 +136,7 @@ L6=33333333-0000-0000-0000-000000000006; L7=33333333-0000-0000-0000-000000000007
 for x in 6 7; do sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no) values ('33333333-0000-0000-0000-00000000000$x','$P','$OSCX','KSH/$x','HHL/$x','SCX/$x')"; done
 sys "update loads set status='IN_TRANSIT_PL' where id in ('$L6','$L7')"
 sys "insert into load_cost (load_id, base_amount) values ('$L6', 3000)"
-ROLE=anon err "pozycja z linku kierowcy = odmowa" "" "select * from driver_post_position('wt_00ff', '$L6', 54.0, 18.5, now(), 10, 60, 90)" "nieaktywny"
+ROLE=anon err "pozycja z linku kierowcy = odmowa" "" "select * from driver_post_position('wt_00ff', '$L6', 54.0, 18.5, now(), 10, 60, 90)" "permission denied"
 sys "update security_flags set enabled = true where key = 'DRIVER_LINK_ACCEPT'"
 tok() { $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; select issue_driver_token('$2'); commit;" 2>&1 | grep '^wt_'; }
 err "anon nie wyda tokenu"                               "" "set local role anon; select issue_driver_token('$L6')" "permission denied"
@@ -148,9 +148,9 @@ chk "w bazie wyłącznie skrót SHA-256, nie token"         "$(Q "select count(*
 chk "ważność ≤ 14 dni od wydania"                        "$(Q "select bool_and(expires_at <= issued_at + interval '14 days') from driver_tokens")" t
 err "anon nie czyta tabeli tokenów"                      "" "set local role anon; select count(*) from driver_tokens" "permission denied"
 err "anon nie wywoła sprawdzenia tokenu wprost"          "" "set local role anon; select driver_token_load('$TA')" "permission denied"
-ROLE=anon val "kierowca: pozycja do własnego transportu (anon, API bazy)" "" "select count(*) >= 0 from driver_post_position('$TA', '$L6', 54.0, 18.5, now() - interval '1 minute', 10, 60, 90)" t commit
-chk "pozycja zapisana (DRIVER_PWA, via driver_token)"    "$(Q "select count(*) from positions where load_id='$L6' and source='DRIVER_PWA'")" 1
-ROLE=anon err "token transportu A odrzucony przy pozycji do B" "" "select * from driver_post_position('$TA', '$L7', 54.0, 18.5, now(), 10, 60, 90)" "nie dotyczy tego transportu"
+ROLE=anon err "anonim z ważnym tokenem: odmowa pozycji" "" "select * from driver_post_position('$TA', '$L6', 54.0, 18.5, now() - interval '1 minute', 10, 60, 90)" "permission denied"
+chk "pozycja z ważnego tokenu się nie zapisuje"          "$(Q "select count(*) from positions where load_id='$L6' and source='DRIVER_PWA'")" 0
+ROLE=anon err "token transportu A: pozycja do B też odmowa" "" "select * from driver_post_position('$TA', '$L7', 54.0, 18.5, now(), 10, 60, 90)" "permission denied"
 ROLE=anon err "token transportu A odrzucony przy zdarzeniu w B" "" "select driver_post_event('$TA', '$L7', 'MILESTONE_LOADED')" "nie dotyczy tego transportu"
 ROLE=anon err "zdarzenie spoza listy odrzucone"         "" "select driver_post_event('$TA', '$L6', 'GEOFENCE_ENTER')" "Niedozwolone"
 ROLE=anon val "kierowca: zdarzenie etapu (Załadowany)"  "" "select driver_post_event('$TA', '$L6', 'MILESTONE_LOADED')" MILESTONE_LOADED commit
@@ -163,7 +163,7 @@ TA2=$(tok $SCX $L6)
 ROLE=anon err "nowy token unieważnia poprzedni"         "" "select driver_get_instructions('$TA')" "odwołany"
 ROLE=anon val "nowy token działa"                        "" "select driver_get_instructions('$TA2')->>'order_no'" KSH/6
 val "przewoźnik odwołuje token swojego transportu"       $SCX "select revoke_driver_token('$L6')" 1 commit
-ROLE=anon err "token odwołany odrzucony"                "" "select * from driver_post_position('$TA2', '$L6', 54.0, 18.5, now(), 10, 60, 90)" "odwołany"
+ROLE=anon err "token odwołany: pozycja nadal odmowa"    "" "select * from driver_post_position('$TA2', '$L6', 54.0, 18.5, now(), 10, 60, 90)" "permission denied"
 err "inny przewoźnik nie odwoła"                         $CRX "select revoke_driver_token('$L7')" "wyłącznie przewoźnik"
 TA3=$(tok $SCX $L6)
 val "HHL odwołuje token"                                 $HHL "select revoke_driver_token('$L6')" 1 commit
