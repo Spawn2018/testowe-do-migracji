@@ -38,9 +38,24 @@ function reminderPhrase(off: number, locale: NotifyLocale): string {
   return off < 0 ? `termin za ${d} ${d === 1 ? 'dzień' : 'dni'}` : off === 0 ? 'termin dziś' : `${d} ${d === 1 ? 'dzień' : 'dni'} po terminie`;
 }
 
+function digestLine(p: Record<string, unknown>, locale: NotifyLocale): RenderedNotice | null {
+  const events = Array.isArray(p.events) ? p.events as { order_no?: string }[] : [];
+  const orders = events.map((r) => r?.order_no).filter((x): x is string => Boolean(x));
+  if (orders.length === 0) return null;
+  const list = orders.join(', ');
+  const subject = locale === 'en' ? 'Watch Tower digest' : locale === 'sv' ? 'Watch Tower — sammanfattning' : 'Watch Tower — skrót';
+  const lead = locale === 'en'
+    ? 'Non-critical events from today, in one e-mail.'
+    : locale === 'sv' ? 'Icke-kritiska händelser från idag, i ett e-postmeddelande.'
+    : 'Zdarzenia niekrytyczne z dzisiaj, w jednym e-mailu.';
+  return { subject, body: `${lead}\n${list}`, severity: 'LOW', view: 'risk' };
+}
+
 export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): RenderedNotice {
   const p = row.payload ?? {};
   const locale = localeOverride ?? asLocale(p.locale);
+  const folded = digestLine(p, locale);
+  if (folded) return folded;
   const num = String(p.number ?? '');
   switch (row.template) {
     case 'PAYMENT_REMINDER': {
@@ -222,27 +237,25 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
         : locale === 'sv' ? 'Det här meddelandet gäller en kundorganisation.' : 'To powiadomienie dotyczy organizacji klienta.';
       return { subject, body, severity: 'LOW', view: null };
     }
-    case 'DECISION_ESCALATED': {
-      const title = String(p.title ?? '');
-      const subject = locale === 'en'
-        ? `Decision is now critical: ${title}`
-        : locale === 'sv' ? `Beslutet är nu kritiskt: ${title}` : `Decyzja jest teraz krytyczna: ${title}`;
-      const body = locale === 'en'
-        ? 'The same decision reached the critical threshold. E-mail and SMS stay off until L-13.'
-        : locale === 'sv' ? 'Samma beslut nådde den kritiska gränsen. E-post och SMS är avstängda till L-13.'
-        : 'Ta sama decyzja doszła do progu krytycznego. E-mail i SMS są wyłączone do L-13.';
-      return { subject, body, severity: 'HIGH', view: 'risk' };
-    }
+    case 'DECISION_ESCALATED':
     case 'DECISION_OPEN': {
       const title = String(p.title ?? '');
-      const subject = locale === 'en'
-        ? `Decision needed: ${title}`
-        : locale === 'sv' ? `Beslut krävs: ${title}` : `Do decyzji: ${title}`;
-      const body = locale === 'en'
-        ? 'A decision is open in the app. E-mail and SMS for automatic decisions stay off until L-13.'
-        : locale === 'sv' ? 'Ett beslut är öppet i appen. E-post och SMS för automatiska beslut är avstängda till L-13.'
-        : 'Decyzja jest otwarta w aplikacji. E-mail i SMS przy decyzjach automatycznych są wyłączone do L-13.';
-      return { subject, body, severity: 'MEDIUM', view: 'risk' };
+      const rows = Array.isArray(p.transports) ? p.transports as { order_no?: string }[] : [];
+      const orders = rows.map((r) => r?.order_no).filter((x): x is string => Boolean(x));
+      const list = orders.length
+        ? (locale === 'en' ? `Transports: ${orders.join(', ')}`
+          : locale === 'sv' ? `Transporter: ${orders.join(', ')}`
+          : `Transporty: ${orders.join(', ')}`)
+        : '';
+      const subject = row.template === 'DECISION_ESCALATED'
+        ? (locale === 'en' ? `Decision is now critical: ${title}` : locale === 'sv' ? `Beslutet är nu kritiskt: ${title}` : `Decyzja jest teraz krytyczna: ${title}`)
+        : (locale === 'en' ? `Decision needed: ${title}` : locale === 'sv' ? `Beslut krävs: ${title}` : `Do decyzji: ${title}`);
+      const lead = locale === 'en'
+        ? 'One event, one e-mail. The list is every affected transport.'
+        : locale === 'sv' ? 'En händelse, ett e-postmeddelande. Listan är alla berörda transporter.'
+        : 'Jedno zdarzenie, jeden e-mail. Lista to wszystkie dotknięte transporty.';
+      const body = list ? `${lead}\n${list}` : lead;
+      return { subject, body, severity: row.template === 'DECISION_ESCALATED' ? 'HIGH' : 'MEDIUM', view: 'risk' };
     }
     default:
       return { subject: row.template, body: '', severity: 'LOW', view: null };

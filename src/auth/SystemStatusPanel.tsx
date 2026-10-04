@@ -39,7 +39,7 @@ export default function SystemStatusPanel() {
   const [integs, setIntegs] = useState<IntegRow[]>([]);
   const [smsDevices, setSmsDevices] = useState<SmsDeviceRow[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
-  const [mailBudget, setMailBudget] = useState<{ immediate_n: number; digest_n: number; suppressed_n: number; level: string } | null>(null);
+  const [mailBudget, setMailBudget] = useState<{ immediate_n: number; digest_n: number; suppressed_n: number; level: string; suppressed_to?: { recipient: string; n: number }[] | null } | null>(null);
 
   const refresh = useCallback(async () => {
     const sb = await getSupabase();
@@ -72,7 +72,7 @@ export default function SystemStatusPanel() {
 
     const e = await sb.rpc('email_budget_status');
     if (e.error || e.data == null) setMailBudget(null);
-    else setMailBudget(e.data as { immediate_n: number; digest_n: number; suppressed_n: number; level: string });
+    else setMailBudget(e.data as { immediate_n: number; digest_n: number; suppressed_n: number; level: string; suppressed_to?: { recipient: string; n: number }[] | null });
   }, []);
 
   useEffect(() => {
@@ -126,6 +126,12 @@ export default function SystemStatusPanel() {
           })}
           {mailBudget.level === 'warn' ? ` ${t(locale, 'opt_acc_email_warn')}` : ''}
           {mailBudget.level === 'critical_only' ? ` ${t(locale, 'opt_acc_email_crit')}` : ''}
+          {mailBudget.suppressed_n > 0
+            ? ` ${tp(locale, 'opt_acc_email_held', {
+                s: String(mailBudget.suppressed_n),
+                who: (mailBudget.suppressed_to ?? []).map((x) => `${x.recipient} (${x.n})`).join(', ') || '—',
+              })}`
+            : ''}
         </div>
       ) : null}
       <h4 className="sec" style={{ marginTop: 14 }}>{t(locale, 'opt_acc_sys_backup')}</h4>

@@ -347,3 +347,25 @@ Zanim e-mail decyzji automatycznych wolno włączyć:
 4. Podać liczby. E-maili nie włączać. Włączenie po L-13 czeka na wyraźne OK właściciela. Żadnego prawdziwego e-maila. Testy tylko na fixture.
 
 Nie zaczynać L-6, L-12, SEC-OWASP, kafelków mapy ani części D.
+
+## Polecenie 2026-10-04 17:03 (czas warszawski) — zlecenie HERE
+
+Polecenie właściciela Watch Tower z 2026-10-04 17:03 czasu warszawskiego. Najpierw dopis na końcu tego pliku, potem reszta.
+
+Plik zapisany bez zmian jako `docs/handover/ZLECENIE_HERE.md`. Kolejność w planie według sekcji 5 tego pliku. Decyzje D-77–D-84 w rejestrze `docs/handover/wzorzec/03_REJESTR_DECYZJI.md`.
+
+Zasada nadrzędna: dodajemy wyłącznie funkcje oparte na HERE. Innych mechanizmów aplikacji nie zmieniamy. Wymiary zestawu dla każdego transportu poda właściciel (D-83). Kontrola trasy nie bierze niczego z dokumentów. Przewoźnik nie wprowadza żadnych wymiarów.
+
+H-0 to test na koncie właściciela, bez zmian w aplikacji. Klucz `HERE_API_KEY` wpisuje właściciel do sekretów Supabase i `.env.local`. Gdy klucza nie ma, H-0 czeka. O klucz nie pytamy w rozmowie.
+
+## Polecenie 2026-10-04 17:06 (czas warszawski) — e-mail decyzji automatycznych
+
+L-13 przyjęte. Właściciel włącza e-mail decyzji automatycznych (`automatic_decision_email` = true). Niekrytyczne idą w skrót, jak w szacunku (szczyt 34 e-maile na dobę).
+
+Zanim przełącznik jest true, w kodzie i w teście:
+1. Krytyczne e-maile grupowane po zdarzeniu i po odbiorcy. Jedno zdarzenie (na przykład odwołany prom) = jeden e-mail do osoby, z listą wszystkich transportów, nie jeden e-mail na transport. Test: zdarzenie na 5 transportach → 1 e-mail na odbiorcę.
+2. Gdy limit doby jest wyczerpany, powiadomienia w aplikacji i dzwonek działają bez zmiany. Stan systemu pokazuje, ile e-maili nie wyszło i do kogo.
+3. Przy limicie najpierw krytyczne, potem skróty. Zaproszenia i reset hasła mają zawsze 10 e-maili na dobę w rezerwie.
+4. Co tydzień `POSTEP.md` dostaje prawdziwe liczby produkcji: e-maile na dobę (średnia, maksimum, krytyczne, skróty) zestawione ze szacunkiem 34. Gdy strażnik 80 zapali się więcej niż dwa razy w tygodniu, raport do właściciela. Nie wpisywać liczb z tego tygodnia, jeśli nie da się ich odczytać.
+
+Bez prawdziwego e-maila do osoby. Testy na fixture.

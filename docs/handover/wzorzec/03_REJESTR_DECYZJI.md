@@ -46,7 +46,7 @@
 | D-24 | widok placu | zamknięte decyzją 16.1 — Stegra nie jest rolą | ✅ |
 | D-25 | wzorzec zrzutów | zatwierdzony z warunkiem | ✅ |
 | D-27 | kontrast | zatwierdzony, test ≥ 4,5:1 | ✅ |
-| D-28 | serwis tras | 🔁 TomTom → HERE → **własny silnik + kalibracja ucząca się** | ✅ |
+| D-28 | serwis tras | 🔁 TomTom → HERE → **własny silnik + kalibracja ucząca się** | 🔁 04.10.2026 — zapis „bez HERE" zastąpiony przez D-77 |
 | D-29 | reguły automatyzacji | ONE-MECH: tabela D-29t **zaakceptowana 01.10** (warunek: każdy alarm ma zastępnik); scalenie kodu w toku | ✅ tabela / ⏳ kod |
 | D-30 | polisy | tak | ✅ |
 | D-31 | pasek 390 px | naprawić | ✅ |
@@ -98,3 +98,16 @@
 | D-63 | widoczność | administrator wybiera firmy (HHL / przewoźnik / KSH — jedna, dwie, trzy) dla każdego typu; blokady danych finansowych |
 | D-64 | SMS | 2 osoby na załadunku (Śrem) i 2 na rozładunku (Boden); strefa zbliżania i wjazd; odbiorców wpisuje administrator |
 | D-65 | ustawienia administratora | sekcje zwijane, domyślnie zwinięte; nowe: widoczność, SMS i strefy, progi, stan systemu, użytkownicy i sesje, dziennik logowań, komunikat, eksport |
+
+## Decyzje HERE (04.10.2026) — szczegóły w `ZLECENIE_HERE.md`
+| ID | Sprawa | Decyzja | Status |
+|---|---|---|---|
+| D-77 | HERE | HERE wchodzi do systemu. Zastępuje zapis „bez HERE" z D-28. Własny silnik zostaje jako zapas, gdy HERE jest niedostępne albo budżet wyczerpany. | ✅ 04.10.2026 |
+| D-78 | budżet HERE | Do 100 USD miesięcznie. Ostrzeżenia w Stanie systemu przy 50%, 80% i 100%. Po przekroczeniu 100% system przestaje odpytywać HERE i przechodzi na darmowe wyliczenia. Nigdy nie płaci ponad budżet. | ✅ 04.10.2026 |
+| D-79 | aplikacja kierowcy | Zero aplikacji dla kierowców (Scandinavian Express). HERE WeGo Pro i pakiet nawigacyjny HERE SDK wykluczone. Nic nie jest instalowane u przewoźnika ani kierowców. | ✅ 04.10.2026 |
+| D-80 | ETA | ETA nadal wyłącznie z pozycji GPS i AIS (decyzja z 04.10). HERE liczy czas przejazdu z bieżącej pozycji, nigdy z planu. | ✅ 04.10.2026 |
+| D-81 | licencja HERE | Wyniki przechowujemy najwyżej 30 dni. Na stałe wyłącznie własne podsumowania. Geometria i surowe dane HERE kasowane po 30 dniach. Warunki usługi — w `POSTEP.md` przed startem. | ✅ 04.10.2026 |
+| D-82 | myto | Opłaty drogowe poza zakresem. Nie liczymy i nie pokazujemy. | ✅ 04.10.2026 |
+| D-83 | wymiary zestawu | Wymiary dla każdego transportu poda właściciel. Kontrola trasy nie bierze niczego z dokumentów. Przewoźnik nie wprowadza żadnych wymiarów. | ✅ 04.10.2026 |
+| D-84 | próg wiatru | Porywy 15 m/s. Silny wiatr na trasie wydłuża ETA (H-10). | ✅ 04.10.2026 |
+

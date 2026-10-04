@@ -499,3 +499,19 @@ F. Zjazd z trasy (ROUTE_DEVIATION): odległość od trasy korytarza > próg z Op
 
 TESTY: dla każdego wzoru — zmiana wartości w Opcjach zmienia moment alarmu; brak danych = brak alarmu; ostrzeżenie → krytyczne = ta sama decyzja.
 
+## Zlecenie HERE (04.10.2026) — kolejność z sekcji 5
+
+Źródło: `docs/handover/ZLECENIE_HERE.md`. Zasada: wyłącznie funkcje oparte na HERE. Innych mechanizmów nie zmieniamy. II-7 i II-7a zostają w historii; zapis „bez HERE" z D-28 zastępuje D-77. Q-17 i Q-19 nie są jeszcze w tym planie — H-6 startuje dopiero razem z nimi, gdy zostaną dopisane.
+
+| Kiedy | ID | Opis | Status |
+|---|---|---|---|
+| zaraz po L-13 | H-0 | Test na koncie właściciela, bez zmian w aplikacji. Odcinki Śrem → Gdańsk, Nynäshamn → Boden, Karlskrona → Boden. Raport do właściciela. | CZEKA — brak `HERE_API_KEY` (nazwa sekretu). Bez pytania o klucz. |
+| po etapie 1 (po L-12) | H-1, H-2, H-3 | Kontrola trasy z wymiarów właściciela, utrudnienia PL/SE, przeszkody wzdłuż korytarza. | NIEZACZĘTE |
+| razem z Q-17 i Q-19 | H-6 | Mapa przeszkód. Jedna praca z Q-17 i Q-19, bez dublowania. | NIEZACZĘTE — Q-17 i Q-19 nie są w planie |
+| po etapie 2 | H-7, H-8, H-10, H-12 | Mapa w e-mailu i PDF, profil trasy, pogoda i wiatr (ryzyko), zakazy czasowe. | NIEZACZĘTE |
+| etap 4 (po emtrack) | H-4, H-5, H-10 ETA | ETA z GPS przez HERE, kontrola po przejeździe, wydłużanie ETA przez wiatr. | NIEZACZĘTE |
+
+## Polecenie 2026-10-04 17:06 — e-mail decyzji automatycznych
+
+L-13 przyjęte. `automatic_decision_email` = true. Niekrytyczne w skrócie (szacunek szczytu 34 na dobę). Krytyczne: jedno zdarzenie = jeden e-mail na odbiorcę, lista transportów. Limit: najpierw krytyczne, potem skróty; 10 na dobę zostaje na zaproszenia i reset hasła. Po wyczerpaniu limitu aplikacja i dzwonek bez zmiany. Stan systemu: ile e-maili nie wyszło i do kogo. Co tydzień liczby produkcji w `POSTEP.md` obok szacunku 34; strażnik 80 więcej niż dwa razy w tygodniu → raport do właściciela.
+

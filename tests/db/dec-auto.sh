@@ -88,7 +88,7 @@ $PSQL -c "update backup_runs set status='OK' where id=$BID" >/dev/null
 $PSQL -c "update backup_runs set status='ERROR', error='dec-auto drugi' where id=$BID" >/dev/null
 val "kopia drugi ERROR → jedna decyzja" "select count(*) from decisions where detail->>'event_key' = 'backup-run:$BID'" 1
 
-val "powiadomienia decyzji tylko w aplikacji" "select count(*) from notifications where template='DECISION_OPEN' and channel <> 'IN_APP'" 0
+val "poza aplikacją decyzja idzie tylko e-mailem" "select count(*) from notifications where template='DECISION_OPEN' and channel not in ('IN_APP','EMAIL')" 0
 
 echo; echo "[dec-auto] L-3 moment progu zależy od Opcji"
 ANCHOR="2026-12-10 12:00:00+01"
