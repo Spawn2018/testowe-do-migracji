@@ -3,6 +3,7 @@ import { useTowerStore } from '../../store/useTowerStore';
 import { t } from '../../i18n/messages';
 import type { Severity } from '../../types';
 import { getNowMs } from '../../lib/frozenNow';
+import { bellVisible } from '../../lib/bellList';
 
 function gut(s: Severity) {
   if (s === 'CRITICAL' || s === 'HIGH') return 'var(--red)';
@@ -22,17 +23,13 @@ export function NotificationBell() {
   const locale = useTowerStore((s) => s.locale);
   const role = useTowerStore((s) => s.role);
   const notifications = useTowerStore((s) => s.notifications);
-  const markNotificationRead = useTowerStore((s) => s.markNotificationRead);
   const markAllNotificationsRead = useTowerStore((s) => s.markAllNotificationsRead);
   const openNotification = useTowerStore((s) => s.openNotification);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const scoped = notifications.filter(
-    (n) => !n.roleScope || n.roleScope.length === 0 || n.roleScope.includes(role),
-  );
-  const unread = scoped.filter((n) => !n.read).length;
-  const visible = [...scoped.filter((n) => !n.read), ...scoped.filter((n) => n.read)].slice(0, 40);
+  const visible = bellVisible(notifications, role).slice(0, 40);
+  const unread = visible.length;
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -127,14 +124,6 @@ export function NotificationBell() {
                   </button>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                     <span className="age">{relTime(n.at)}</span>
-                    <button
-                      type="button"
-                      className="btn ghost"
-                      style={{ padding: '2px 7px', fontSize: 11 }}
-                      onClick={() => markNotificationRead(n.id)}
-                    >
-                      {t(locale, 'mark_read')}
-                    </button>
                   </div>
                 </div>
               ))

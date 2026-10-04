@@ -115,6 +115,8 @@ z odpowiedziami a/b/c) + uzupełnienia koordynatora 04.10.
 | SMS niedoręczony (SMS_UNDELIVERED) | Stan systemu → Bramka SMS → lista SMS z tym wpisem | tylko HHL / administrator |
 | **Limit stref** (osiągnięty limit stref albo limit SMS ze stref) | Opcje → Odbiorcy SMS i strefy (kreator stref, L-12) | tylko HHL / administrator |
 | **Wpis bez obiektu** (ogłoszenie, baner, komunikat systemu) | Szczegóły wpisu; po kliknięciu znika z dzwonka (L-5) | według macierzy |
+| **SMS niewysłany, e-mail zastępczy** (SMS_FALLBACK) | Stan systemu → Bramka SMS → wpis tego SMS-a (status, odbiorca, wysłany e-mail zastępczy) z linkiem do transportu | tylko HHL i administrator |
+| **Alert reguły** (WORKFLOW_ALERT) | gdy dotyczy transportu: Transport → zakładka Status; gdy nie: Automatyzacje → reguła, która wywołała alert (podgląd reguły) | według macierzy |
 
 ---
 

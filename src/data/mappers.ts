@@ -9,7 +9,7 @@ import type {
 } from '../types';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
 import { renderNotice, asLocale } from '../../supabase/functions/_shared/notifyTemplates';
-import { clickTarget } from '../../supabase/functions/_shared/clickTargets';
+import { clickFromPayload, clickTarget } from '../../supabase/functions/_shared/clickTargets';
 import { shows } from '../lib/prodFacade';
 import { autoRiskCode } from '../lib/sailings';
 import type { Sailing } from '../types';
@@ -568,25 +568,19 @@ export interface NotificationRow {
 export const NOTIFICATION_PREFIX = 'srv-';
 export function notificationFromRow(r: NotificationRow, locale?: string): Notification {
   const n = renderNotice({ template: r.template, payload: r.payload ?? {} }, locale ? asLocale(locale) : undefined);
-  const inv = (r.payload ?? {}).invoice_id;
   const payload = r.payload ?? {};
-  const target = clickTarget({
-    source: 'bell',
-    type: r.template,
-    decisionId: typeof payload.decision_id === 'string' ? payload.decision_id : null,
-    loadCode: typeof payload.code === 'string' ? payload.code : null,
-    invoiceId: typeof inv === 'string' ? inv : null,
-    resource: typeof payload.resource === 'string' ? payload.resource : null,
-  });
+  const inv = payload.invoice_id;
+  const target = clickTarget(clickFromPayload(r.template, payload, 'bell'));
   return {
     id: `${NOTIFICATION_PREFIX}${r.id}`, at: r.created_at, title: n.subject, body: n.body, severity: n.severity,
     loadId: r.load_id ?? undefined, read: Boolean(r.read_at),
+    roleScope: r.template === 'SMS_FALLBACK' ? ['HHL'] : undefined,
     href: {
       view: n.view ?? undefined,
       entityId: typeof inv === 'string' ? inv : undefined,
       loadId: r.load_id ?? undefined,
       path: target.path,
-      allowed: true,
+      allowed: target.kind !== 'denied',
     },
   };
 }

@@ -21,6 +21,9 @@ describe('D14 trasy', () => {
     expect(parseRoute('')).toEqual({ kind: 'root' });
     expect(parseRoute('/access_token=abc&type=magiclink')).toEqual({ kind: 'unknown' });
     expect(parseRoute('/driver/demo-active')).toEqual({ kind: 'unknown' });
+    expect(parseRoute('/opcje/stan-systemu/bramka-sms/abc')).toEqual({ kind: 'sms', id: 'abc' });
+    expect(parseRoute('/automatyzacje/START-7')).toEqual({ kind: 'workflow', id: 'START-7' });
+    expect(parseRoute('/automatyzacje')).toEqual({ kind: 'view', view: 'wf' });
   });
   it('buildRoute: szuflada ma pierwszeństwo przed widokiem', () => {
     expect(buildRoute('sched', null)).toBe('/harmonogram');

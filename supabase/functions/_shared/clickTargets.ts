@@ -2,6 +2,7 @@
  * L-4 — cele kliknięć (docs/handover/CELE_KLIKNIEC.md).
  * Ten sam cel z kokpitu, listy ryzyk, dzwonka i e-maila.
  * Nigdy ścieżka strony głównej. Typ spoza tabeli → Szczegóły wpisu.
+ * SMS_FALLBACK i WORKFLOW_ALERT są w tabeli (sekcja E, 15:47).
  */
 export type ClickSource = 'cockpit' | 'risk' | 'bell' | 'email';
 
@@ -15,10 +16,19 @@ export interface ClickInput {
   tab?: string | null;
   resource?: string | null;
   allowed?: boolean;
+  /** Id wiersza sms_outbox, gdy jest w payloadzie. */
+  smsId?: string | null;
+  /** Kod albo nazwa reguły automatyzacji. */
+  ruleId?: string | null;
+  status?: string | null;
+  recipient?: string | null;
+  email?: string | null;
+  /** Rola widoku albo rola konta. Puste = nie sprawdzaj (ukrycie robi lista). */
+  role?: string | null;
 }
 
 export interface ClickTarget {
-  kind: 'decision' | 'transport' | 'form' | 'system' | 'invoice' | 'options' | 'entry' | 'denied';
+  kind: 'decision' | 'transport' | 'form' | 'system' | 'invoice' | 'options' | 'entry' | 'denied' | 'sms' | 'workflow';
   path: string;
   message?: string;
 }
@@ -103,8 +113,43 @@ put(['MESSAGE', 'USTALENIA'], (i) => transport(i.loadCode, 'ustalenia'));
 put(['RATE_CHANGE', 'SEFS_CHANGE'], () => ({ kind: 'options', path: '/opcje/cennik' }));
 put(['CLIENT', 'BROADCAST', 'BANNER'], () => entry());
 
-/** Typ jest w kodzie, ale nie ma wiersza w CELE_KLIKNIEC.md — nie zgadujemy celu. */
-export const STOPPED_TYPES = ['SMS_FALLBACK', 'WORKFLOW_ALERT'] as const;
+function realCode(code?: string | null): string {
+  const c = (code ?? '').trim();
+  if (!c || c === '—' || c === '-') return '';
+  return c;
+}
+
+/** HHL i administrator. Inna firma nie widzi wpisu SMS_FALLBACK. */
+export function smsFallbackVisible(role?: string | null): boolean {
+  if (!role) return true;
+  const r = role.trim().toUpperCase();
+  return r === 'HHL' || r === 'HHL_ADMIN' || r === 'HHL_OPS' || r === 'ADMIN' || r === 'ADMINISTRATOR';
+}
+
+function smsFallback(i: ClickInput): ClickTarget {
+  const id = encodeURIComponent(i.smsId && i.smsId.length ? i.smsId : 'wpis');
+  const q = new URLSearchParams();
+  if (i.status) q.set('status', i.status);
+  if (i.recipient) q.set('odbiorca', i.recipient);
+  if (i.email) q.set('email', i.email);
+  const code = realCode(i.loadCode);
+  if (code) q.set('transport', code);
+  const qs = q.toString();
+  return { kind: 'sms', path: `/opcje/stan-systemu/bramka-sms/${id}${qs ? `?${qs}` : ''}` };
+}
+
+function workflowAlert(i: ClickInput): ClickTarget {
+  const code = realCode(i.loadCode);
+  if (code) return transport(code, 'status');
+  const rule = encodeURIComponent(i.ruleId && i.ruleId.length ? i.ruleId : 'brak');
+  return { kind: 'workflow', path: `/automatyzacje/${rule}` };
+}
+
+put(['SMS_FALLBACK'], smsFallback);
+put(['WORKFLOW_ALERT'], workflowAlert);
+
+/** Pusta: każdy typ z kodu musi być w tabeli. Brama odrzuca typ bez celu. */
+export const STOPPED_TYPES = [] as const;
 
 export function isHomePath(path: string): boolean {
   const p = path.split('?')[0];
@@ -113,16 +158,44 @@ export function isHomePath(path: string): boolean {
 
 export function clickTarget(input: ClickInput): ClickTarget {
   const type = (input.type ?? '').trim();
-  const stopped = (STOPPED_TYPES as readonly string[]).includes(type);
   const fn = TABLE[type];
-  const base = !type || stopped || !fn ? entry() : fn(input);
+  const base = !type || !fn ? entry() : fn(input);
   if (isHomePath(base.path)) {
     return entry();
+  }
+  if (type === 'SMS_FALLBACK' && !smsFallbackVisible(input.role)) {
+    return { kind: 'denied', path: '/brak-dostepu', message: 'Brak dostępu' };
   }
   if (input.allowed === false) {
     return { kind: 'denied', path: '/brak-dostepu', message: 'Brak dostępu' };
   }
   return base;
+}
+
+/** Ten sam zestaw pól z kokpitu, listy ryzyk, dzwonka i e-maila. */
+export function clickFromPayload(
+  template: string,
+  payload: Record<string, unknown> | null | undefined,
+  source?: ClickSource,
+): ClickInput {
+  const p = payload ?? {};
+  const code = typeof p.code === 'string' ? p.code : null;
+  return {
+    source,
+    type: template,
+    decisionId: typeof p.decision_id === 'string' ? p.decision_id : null,
+    loadCode: code,
+    invoiceId: typeof p.invoice_id === 'string' ? p.invoice_id : null,
+    resource: typeof p.resource === 'string' ? p.resource : null,
+    tab: typeof p.tab === 'string' ? p.tab : null,
+    smsId: typeof p.sms_id === 'string' ? p.sms_id : null,
+    ruleId: typeof p.rule_code === 'string' && p.rule_code
+      ? p.rule_code
+      : (typeof p.rule === 'string' ? p.rule : null),
+    status: typeof p.status === 'string' ? p.status : null,
+    recipient: typeof p.to_tail === 'string' ? p.to_tail : null,
+    email: typeof p.fallback_email === 'string' ? p.fallback_email : null,
+  };
 }
 
 export function emailUrl(appUrl: string, input: ClickInput): string {

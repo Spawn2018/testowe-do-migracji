@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t } from '../../i18n/messages';
 
@@ -16,12 +16,17 @@ export type OptionsSectionDef = {
 type Props = {
   locale: Locale;
   sections: OptionsSectionDef[];
+  /** Otwórz sekcję (np. stan systemu po kliknięciu SMS_FALLBACK). */
+  forceOpen?: string | null;
 };
 
 /** DEC-6 — sekcje zwijane, domyślnie zwinięte; szukaj + rozwiń/zwiń wszystkie. */
-export function OptionsAccordion({ locale, sections }: Props) {
+export function OptionsAccordion({ locale, sections, forceOpen }: Props) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [q, setQ] = useState('');
+  useEffect(() => {
+    if (forceOpen) setOpen((prev) => ({ ...prev, [forceOpen]: true }));
+  }, [forceOpen]);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();

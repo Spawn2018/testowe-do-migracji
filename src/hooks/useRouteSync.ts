@@ -32,6 +32,8 @@ export function useRouteSync() {
       status: 'timeline', dokumenty: 'docs', ceny: 'pricing', ustalenia: 'chat', awizacja: 'overview',
       'awizacja-pilot': 'overview', 'numer-hhl': 'overview', 'numer-przewoznika': 'overview',
     };
+    if (r.kind !== 'sms' && st.smsEntry) st.setSmsEntry(null);
+    if (r.kind !== 'workflow' && st.workflowFocus) st.setWorkflowFocus(null);
     if (r.kind === 'view') {
       if (navForRole(st.role).includes(r.view) && st.view !== r.view) st.setView(r.view);
       if (st.selectedLoadId) st.selectLoad(null);
@@ -62,6 +64,38 @@ export function useRouteSync() {
       st.setAccessMessage('Brak dostępu');
     } else if (r.kind === 'entry') {
       st.setEntryOpen(true);
+      st.setSmsEntry(null);
+      st.setWorkflowFocus(null);
+    } else if (r.kind === 'sms') {
+      st.setEntryOpen(false);
+      st.setWorkflowFocus(null);
+      if (st.role !== 'HHL') {
+        st.setSmsEntry(null);
+        st.setAccessMessage('Brak dostępu');
+      } else {
+        const q = new URLSearchParams(location.search);
+        if (st.view !== 'options') st.setView('options');
+        st.setSmsEntry({
+          id: r.id,
+          status: q.get('status') ?? '',
+          recipient: q.get('odbiorca') ?? '',
+          email: q.get('email') ?? '',
+          transport: q.get('transport') ?? '',
+        });
+      }
+    } else if (r.kind === 'workflow') {
+      st.setEntryOpen(false);
+      st.setSmsEntry(null);
+      if (!navForRole(st.role).includes('wf')) {
+        st.setWorkflowFocus(null);
+        st.setAccessMessage('Brak dostępu');
+      } else {
+        if (st.view !== 'wf') st.setView('wf');
+        st.setWorkflowFocus(r.id);
+      }
+    } else {
+      st.setSmsEntry(null);
+      st.setWorkflowFocus(null);
     }
   }, [location.pathname, location.search]);
 
@@ -70,7 +104,7 @@ export function useRouteSync() {
     const st = useTowerStore.getState();
     const cur = loc.current;
     const r = parseRoute(cur.pathname);
-    if (r.kind === 'unknown' || r.kind === 'decision' || r.kind === 'invoice' || r.kind === 'system' || r.kind === 'options' || r.kind === 'denied' || r.kind === 'entry') return;
+    if (r.kind === 'unknown' || r.kind === 'decision' || r.kind === 'invoice' || r.kind === 'system' || r.kind === 'options' || r.kind === 'denied' || r.kind === 'entry' || r.kind === 'sms' || r.kind === 'workflow') return;
     let replace = r.kind === 'root' || (r.kind === 'view' && !navForRole(st.role).includes(r.view));
     if (pendingCode.current) {
       const l = st.loads.find((x) => x.code.toUpperCase() === pendingCode.current);

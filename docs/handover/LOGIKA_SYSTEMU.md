@@ -239,17 +239,19 @@ Przełączniki z opcji tego banera nie gaszą.
 
 ### Dzwonek
 
-Liczba na dzwonku to nieprzeczytane pozycje widoczne dla bieżącego widoku firmy (`src/components/shell/NotificationBell.tsx`).
+Liczba na dzwonku to pozycje jeszcze niekliknięte, widoczne dla bieżącego widoku firmy (`src/components/shell/NotificationBell.tsx`, L-5).
 
-Lista pokazuje najpierw nieprzeczytane, potem przeczytane, najwyżej 40. Przycisk „przeczytane” **nie usuwa** pozycji. Zostaje na liście, tylko bez pogrubienia nowości. „Oznacz wszystkie” robi to samo hurtem. W bazie przeczytanie zapisuje się tylko dla pozycji, które przyszły z serwera.
+Lista nie ma napisu „przeczytane”. Po kliknięciu pozycja znika, licznik maleje i otwiera cel z `docs/handover/CELE_KLIKNIEC.md`. Najwyżej 40. W bazie kliknięcie zapisuje się jako przeczytane tylko dla pozycji z serwera. Wpis bez obiektu (ogłoszenie, baner, komunikat) też znika po kliknięciu i otwiera Szczegóły wpisu.
 
-Kliknięcie w treść oznacza jako przeczytane i dopiero wtedy prowadzi dalej (`src/store/useTowerStore.ts`, `supabase/functions/_shared/notifyTemplates.ts`):
+Kliknięcie prowadzi do celu (`src/store/useTowerStore.ts`, `supabase/functions/_shared/clickTargets.ts`):
 
 | O czym jest wpis | Dokąd |
 | --- | --- |
 | Faktura: nowa, termin, spór | Faktury |
 | Brak numeru zlecenia, brak zasobu, polisa, milcząca bramka SMS | Ryzyka |
-| Zmiana statusu, wjazd i wyjazd ze strefy, nowe ryzyko, decyzja, zmiana dat, automatyzacja, SMS do kierowcy | **w kodzie nie ma osobnego ekranu.** Jeśli wpis ma transport, otwiera się jego szuflada na stronie, na której akurat jesteś. Jeśli transportu nie ma, zostajesz gdzie jesteś |
+| Zmiana statusu, wjazd i wyjazd ze strefy, nowe ryzyko, decyzja, zmiana dat | cel z tabeli `CELE_KLIKNIEC.md` (transport, decyzja albo stan systemu), nigdy strona główna |
+| SMS niewysłany (SMS_FALLBACK) | Stan systemu → Bramka SMS → wpis tego SMS-a. Widzi tylko HHL i administrator |
+| Alert reguły (WORKFLOW_ALERT) | transport → zakładka Status; bez transportu → Automatyzacje, podgląd reguły |
 | Wpis o strefie, który ma transport | nie idzie do widoku Strefy. Kod świadomie zamienia to na harmonogram i otwiera transport |
 
 E-mail z bazy, jeśli macierz go włączyła, ma link do strony głównej aplikacji, nie do konkretnego transportu (`renderEmail` w tym samym pliku szablonów).
@@ -334,7 +336,7 @@ Gdyby marża była ukryta, w to miejsce wchodzi drugi kafelek „W drodze” i t
 
 ## 12. Dzwonek — dokąd prowadzi
 
-Skrót: patrz tabela w punkcie 8. Nie ma jednego stałego miejsca. Faktury idą do faktur, część alarmów do ryzyk, a większość zdarzeń z drogi i ze stref tylko otwiera transport albo nie prowadzi nigdzie. Napis „przeczytane” niczego nie chowa.
+Skrót: patrz tabela w punkcie 8 i `CELE_KLIKNIEC.md`. Kliknięcie zdejmuje pozycję z dzwonka i otwiera ten sam cel co kokpit, lista ryzyk i e-mail. Napisu „przeczytane” nie ma.
 
 ---
 
@@ -381,7 +383,7 @@ Nie budować, dopóki właściciel nie powie „tak” na konkretny punkt:
 
 - automatycznego otwierania szesnastu typów decyzji (dziś nikt ich nie otwiera; podłączenie zmieni codzienną pracę trzech firm);
 - traktowania wyboru w centrum jako pełnej zmiany ceny, trasy albo rejsu — część przycisków tylko otwiera zakładkę albo dopisuje ślad;
-- chowania pozycji dzwonka po kliknięciu i usuwania napisu „przeczytane” — dziś przeczytane zostają;
+- chowania pozycji dzwonka po kliknięciu — zrobione w L-5 (pozycja znika, licznik maleje, otwiera cel);
 - nowych celów kliknięcia dla zdarzeń statusu i stref — dziś większość nie ma własnego ekranu;
 - listy alternatywnych promów i objazdów w Szwecji na produkcji — kod celowo pisze „brak źródła” albo chowa stałą listę;
 - trzech osobnych automatów „workflow HHL / KSH / Scandinavian Express” — takiego bytu w kodzie nie ma;

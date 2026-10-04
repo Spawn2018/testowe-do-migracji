@@ -221,6 +221,8 @@ interface TowerState {
   openInvoiceId: string | null;
   accessMessage: string | null;
   entryOpen: boolean;
+  smsEntry: { id: string; status: string; recipient: string; email: string; transport: string } | null;
+  workflowFocus: string | null;
   riskFilter: string | null;
   docsFilter: 'missing' | null;
   /** Map POI / geofence / situation focus — 2nd click same key clears */
@@ -233,6 +235,8 @@ interface TowerState {
   setOpenInvoiceId: (id: string | null) => void;
   setAccessMessage: (msg: string | null) => void;
   setEntryOpen: (open: boolean) => void;
+  setSmsEntry: (entry: { id: string; status: string; recipient: string; email: string; transport: string } | null) => void;
+  setWorkflowFocus: (id: string | null) => void;
   navigateTo: (opts: {
     view?: ViewKey;
     tab?: string | null;
@@ -369,6 +373,8 @@ export const useTowerStore = create<TowerState>()(
       openInvoiceId: null,
       accessMessage: null,
       entryOpen: false,
+      smsEntry: null,
+      workflowFocus: null,
       riskFilter: null,
       docsFilter: null,
       mapFocusKey: null,
@@ -477,6 +483,8 @@ export const useTowerStore = create<TowerState>()(
       setOpenInvoiceId: (openInvoiceId) => set({ openInvoiceId }),
       setAccessMessage: (accessMessage) => set({ accessMessage }),
       setEntryOpen: (entryOpen) => set({ entryOpen }),
+      setSmsEntry: (smsEntry) => set({ smsEntry }),
+      setWorkflowFocus: (workflowFocus) => set({ workflowFocus }),
 
       navigateTo: (opts) => {
         set((s) => ({
