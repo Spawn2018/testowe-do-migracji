@@ -416,3 +416,13 @@ Uzupełnić H-0, ten sam zestaw próbny (wysokość 4,2 m, szerokość 3,0 m, d�
 3. Nynäshamn–Boden: czy kontrola objęła szwedzkie klasy BK1–BK4. Wynik wprost dla każdej klasy.
 4. Czasy HERE 4,7 / 13,2 / 18,6 h są dla zwykłej ciężarówki. Porównać z czasami z D-9. Propozycja, jak H-4 (ETA z GPS) uwzględni limit prędkości zestawu ponadnormatywnego (parametr HERE) oraz przerwy i odpoczynki kierowcy według przepisów UE o czasie pracy. Tylko propozycja, do akceptacji przed budową H-4. H-4 nie budować.
 5. Wynik w `POSTEP.md`. Potem następna pozycja z `PLAN.md`, która realnie jest następna po H-0. Gdy jest niejednoznaczna albo wymaga akceptacji, zatrzymać się. Nie zmieniać innych mechanizmów aplikacji.
+
+## Polecenie 2026-10-04 19:40 (czas warszawski) — limity Resend, status z odpowiedzi, testy bez wysyłki
+
+Bez płatnego planu Resend. Bez nowych mechanizmów. Tylko odczyt Resend. Żadnego e-maila.
+
+1. Z Resend (odczyt): kiedy odnawia się limit dzienny i miesięczny (data i godzina) oraz rzeczywisty status testowego e-maila wysłanego 2026-10-04 o 19:01 czasu warszawskiego na sebastian@log-mar.pl. Nie wysyłać.
+2. L-13 punkt 2: Stan systemu ma pokazywać, ile e-maili nie wyszło. Test pokazał „wysłany” dla e-maila, który Resend odrzucił. Poprawka błędu L-13: status wyłącznie z odpowiedzi Resend.
+3. Według NARZEDZIA_CURSOR.md sprawdzić, czy jakikolwiek test, symulacja albo brama wysyła przez Resend. Jeśli tak — to naruszenie zasady. Poprawić tak, żeby testy nie wysyłały.
+
+Potem L-6 według polecenia z 19:38: „Ponów kopię” uruchamia istniejącą kopię, wynik w Stanie systemu. Bez H-4 i bez H-1. Nie zaczynać pozycji po L-6.

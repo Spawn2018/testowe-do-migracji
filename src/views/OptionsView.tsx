@@ -1,4 +1,5 @@
 import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTowerStore } from '../store/useTowerStore';
 import type { BafParams, FactoringOffer, Locale, RateRule } from '../types';
 import { geofenceDisplayName, geofenceTypeLabel, workflowDisplayName } from '../lib/enumLabels';
@@ -10,6 +11,7 @@ import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
 import { OptionsAccordion, type OptionsSectionDef } from '../components/settings/OptionsAccordion';
 import { SmsFallbackEntry } from '../components/shell/SmsFallbackEntry';
 import { canSeeWorkflows, PROD_BUILD, shows } from '../lib/prodFacade';
+import { parseRoute } from '../lib/routes';
 
 /** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */
 function savedText(locale: Locale, code: string): string {
@@ -107,6 +109,8 @@ export function OptionsView() {
   const notifications = useTowerStore((s) => s.notifications);
   const workflows = useTowerStore((s) => s.workflows);
   const smsEntry = useTowerStore((s) => s.smsEntry);
+  const location = useLocation();
+  const openSystem = smsEntry != null || parseRoute(location.pathname).kind === 'system';
   const setView = useTowerStore((s) => s.setView);
   const [saved, setSaved] = useState('');
 
@@ -380,7 +384,7 @@ export function OptionsView() {
         </div>
         {saved ? <span className="pill p-go">{t(locale, 'opt_saved')} · {savedText(locale, saved)}</span> : null}
       </header>
-      <OptionsAccordion locale={locale} sections={sections} forceOpen={smsEntry ? 'system' : null} />
+      <OptionsAccordion locale={locale} sections={sections} forceOpen={openSystem ? 'system' : null} />
     </div>
   );
 }

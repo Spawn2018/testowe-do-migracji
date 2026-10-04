@@ -3,6 +3,7 @@
  * SharePoint „Synchronizuj” / wymuszenie kopii — po II-10 / RPC admin.
  */
 import { useCallback, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { getSupabase } from './client';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
@@ -35,6 +36,8 @@ const SILENT_MS = 15 * 60 * 1000;
 
 export default function SystemStatusPanel() {
   const locale = useTowerStore((s) => s.locale);
+  const location = useLocation();
+  const watchBackup = new URLSearchParams(location.search).get('kopia') === '1';
   const [backups, setBackups] = useState<BackupRow[]>([]);
   const [integs, setIntegs] = useState<IntegRow[]>([]);
   const [smsDevices, setSmsDevices] = useState<SmsDeviceRow[]>([]);
@@ -78,6 +81,18 @@ export default function SystemStatusPanel() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!watchBackup) return;
+    const tick = window.setInterval(() => { void refresh(); }, 4000);
+    const stop = window.setTimeout(() => window.clearInterval(tick), 180000);
+    return () => { window.clearInterval(tick); window.clearTimeout(stop); };
+  }, [watchBackup, refresh]);
+
+  useEffect(() => {
+    if (!watchBackup) return;
+    document.querySelector('[data-backup-list]')?.scrollIntoView({ block: 'start' });
+  }, [watchBackup, backups.length]);
 
   const fmt = (iso: string | null) => {
     if (!iso) return '—';
@@ -134,11 +149,11 @@ export default function SystemStatusPanel() {
             : ''}
         </div>
       ) : null}
-      <h4 className="sec" style={{ marginTop: 14 }}>{t(locale, 'opt_acc_sys_backup')}</h4>
+      <h4 className="sec" style={{ marginTop: 14 }} data-backup-list>{t(locale, 'opt_acc_sys_backup')}</h4>
       {backups.length === 0 ? (
         <div className="muted">{t(locale, 'opt_acc_sys_none')}</div>
       ) : (
-        <div className="settings-list">
+        <div className="settings-list" data-backup-list>
           {backups.map((r) => (
             <div className="settings-row" key={r.id}>
               <div>

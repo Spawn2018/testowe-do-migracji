@@ -48,7 +48,7 @@ const pl: Dict = {
   dec_opt_UPLOAD_POLICY: 'Wgraj nową polisę',
   dec_opt_ADD_FEE: 'Dodaj dopłatę uzgodnioną',
   dec_opt_NOT_APPLICABLE: 'Nie dotyczy',
-  dec_opt_RETRY_NOW: 'Ponów teraz',
+  dec_opt_RETRY_NOW: 'Ponów kopię',
   dec_opt_REPORT: 'Zgłoś',
 };
 
@@ -97,7 +97,7 @@ const en: Dict = {
   dec_opt_UPLOAD_POLICY: 'Upload new policy',
   dec_opt_ADD_FEE: 'Add agreed surcharge',
   dec_opt_NOT_APPLICABLE: 'Not applicable',
-  dec_opt_RETRY_NOW: 'Retry now',
+  dec_opt_RETRY_NOW: 'Retry backup',
   dec_opt_REPORT: 'Report',
 };
 
@@ -146,7 +146,7 @@ const sv: Dict = {
   dec_opt_UPLOAD_POLICY: 'Ladda upp ny försäkring',
   dec_opt_ADD_FEE: 'Lägg till överenskommen avgift',
   dec_opt_NOT_APPLICABLE: 'Gäller inte',
-  dec_opt_RETRY_NOW: 'Försök igen nu',
+  dec_opt_RETRY_NOW: 'Gör om kopian',
   dec_opt_REPORT: 'Rapportera',
 };
 

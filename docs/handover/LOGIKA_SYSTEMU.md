@@ -68,7 +68,7 @@ Co wybór naprawdę robi (`supabase/migrations/0126_dec234_effects_matrix_notify
 - „Wartość z pliku” — przepisuje numer zlecenia tylko dla trzech znanych pól i tylko gdy plik podał nową wartość.
 - „Wstrzymaj”, „przyjmuję”, „objazd”, „cena ręczna” i podobne — dopisują zdarzenie przy transporcie. Nie zmieniają same daty, ceny ani trasy.
 - „Dodaj awizację”, „dodaj zezwolenie”, „dodaj dopłatę” — nie zapisują awizacji, dokumentu ani kwoty. Otwierają odpowiednią zakładkę transportu.
-- „Ponów kopię” — zapisuje prośbę w historii. W kodzie nie ma tu uruchomienia kopii.
+- „Ponów kopię” — uruchamia tę samą kopię co codzienny cron (`backup-export`). Wynik (udana, nieudana albo pominięta) jest w Stanie systemu, na liście kopii. Sam zapis prośby w historii zostaje.
 
 ---
 

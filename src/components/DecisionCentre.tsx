@@ -3,6 +3,7 @@
  * Zapis wyłącznie przez RPC (decision_resolve / assign / snooze).
  */
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getSupabase } from '../auth/client';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
@@ -23,6 +24,7 @@ type DecRow = {
 };
 
 export function DecisionCentre() {
+  const navigate = useNavigate();
   const locale = useTowerStore((s) => s.locale);
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const setDrawerTab = useTowerStore((s) => s.setDrawerTab);
@@ -87,7 +89,9 @@ export function DecisionCentre() {
       return;
     }
     const hint = (data as { ui_hint?: string } | null)?.ui_hint;
-    if (loadId && hint) {
+    if (hint === 'BACKUP_RETRY') {
+      navigate({ pathname: '/opcje/stan-systemu', search: 'kopia=1' });
+    } else if (loadId && hint) {
       selectLoad(loadId);
       if (hint === 'OPEN_AWIZACJA' || hint === 'PICK_SAILING') setDrawerTab('overview');
       else if (hint === 'OPEN_DOC') setDrawerTab('docs');
