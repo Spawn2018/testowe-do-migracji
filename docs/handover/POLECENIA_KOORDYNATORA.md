@@ -504,3 +504,15 @@ Tylko L-9. L-10, H-1 i H-2 nie startują. Nic nie usuwać. Bez e-maila. Testy ni
 Gotowe, gdy: lista jest z bazy; brak rozkładu = komunikat „Brak danych”. Język interfejsu polski.
 
 Po zielonej bramie: PR, scalenie, wdrożenie z main od razu, bez pytania. Obie domeny 200 na nowym wdrożeniu. Migracji nie ma, więc pełna brama bazy nie jest warunkiem.
+
+## Polecenie 2026-10-04 20:52 (czas warszawski) — L-10
+
+Rozstrzygnięcia L-10 z istniejących ustaleń. Nowsze wygrywa. Najpierw ten zapis, potem opis trzech ścieżek. Bez zmiany logiki aplikacji i bez migracji. Nic nie kasować. Status R-1 bez zmiany.
+
+1. Trzy różne momenty, nie trzy wersje:
+   - ROZŁADUNEK (UNLOADED) = data realizacji usługi (faktura, kurs NBP, opłata paliwowa — W5). Wyjazd ze strefy placu z telematyki, bez niej potwierdzenie dyspozytora (ZLECENIE_PO_SPOTKANIU_SCX §2). Zastępuje starszy zapis „rozładunek nigdy automatycznie".
+   - DOSTARCZONY (DELIVERED) = zamknięcie transportu: HHL po komplecie dokumentów — samo CMR, wgrywa dyspozytor przewoźnika albo HHL (§0).
+   - FAKTURA OPŁACONA = status finansowy, tylko HHL (Q-6).
+2. Do czasu telematyki statusy, w tym załadunek i rozładunek, ustawiane ręcznie przez dyspozytora przewoźnika i HHL (przycisk + dziennik, §2). Z pozycjami — strefy automatycznie. Kierowca nic (D-38, D-79).
+3. Opis = stan dzisiejszy. Zaplanowane zmiany oznaczone wprost, np. „planowane: KSH edytuje daty i godziny (B-KSH)", „docelowo harmonogram z SharePoint (D-12, D-SP)".
+4. Import: tylko HHL (I-2a). Instrukcję KSH popraw zgodnie z macierzą widoczności — KSH nie rozstrzyga żadnej z 16 decyzji.

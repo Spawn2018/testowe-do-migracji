@@ -176,6 +176,19 @@ Dwa statusy — opóźniony i cichy — mają na liście własne nazwy: „Opó�
 
 W bazie jest jeszcze „anulowany” oraz drobniejsze nazwy techniczne (osobno „dokumenty w toku”, „na załadunku”, „port Gdańsk”, „port Nynäshamn”, „na placu”, „rozładowany”). Ekran składa je do nazw powyżej (`src/data/mappers.ts`, `supabase/migrations/0001_core.sql`).
 
+### Trzy momenty (2026-10-04 20:52 — wygrywa)
+
+Etap „dostarczone” na pasku i status „dostarczony” na liście to nie to samo co rozładunek i nie to samo co opłacenie faktury. Starszy zapis „rozładunek nigdy automatycznie” oraz „UNLOADED ustawia kierowca w aplikacji albo HHL” zostaje w `STATUSY_AUTOMATYCZNE.md` §2 zasada 3 i §3.3 jako historia. Od polecenia 2026-10-04 20:52 obowiązuje nowsze:
+
+- Rozładunek (UNLOADED) = data realizacji usługi (faktura, kurs NBP, opłata paliwowa — W5). Wyjazd ze strefy placu z telematyki, bez niej potwierdzenie dyspozytora (`ZLECENIE_PO_SPOTKANIU_SCX.md` §2). Obecność na placu zostaje „na placu”, nie rozładunkiem.
+- Dostarczony (DELIVERED) = zamknięcie transportu: HHL po komplecie dokumentów — samo CMR, wgrywa dyspozytor przewoźnika albo HHL (§0).
+- Faktura opłacona = status finansowy, tylko HHL (Q-6). Nie zamyka transportu.
+
+Do czasu telematyki statusy, w tym załadunek i rozładunek, ustawiają ręcznie dyspozytor przewoźnika i HHL (przycisk i dziennik). Gdy są pozycje, strefy zmieniają status same. Kierowca nic (D-38, D-79).
+
+Import harmonogramu: tylko HHL (I-2a).
+
+
 ### Status decyzji
 
 Nowa, przypisana, odłożona, rozstrzygnięta, wygasła. Na liście widać tylko trzy pierwsze.
@@ -350,6 +363,8 @@ W kodzie nie ma trzech osobnych „workflow” firm. Jest jeden korytarz: Śrem 
 **HHL (spedytor).** Kokpit, mapa, harmonogram, ryzyka, dokumenty, finanse, faktury, strefy, opcje. Właściwe konto administratora widzi też automatyzacje. Może importować harmonogram, widzi koszt, przychód i marżę, oznacza faktury jako opłacone, edytuje strefy, ustawia macierz, progi i komunikat na banerze. W bazie widzi decyzje.
 
 **KSH (klient).** Kokpit, mapa, harmonogram, ryzyka, dokumenty, rozliczenia, faktury, ustawienia. Nie ma stref, opcji ani automatyzacji. Widzi swoją cenę, nie widzi stawki przewoźnika ani marży. Nie importuje harmonogramu. Nie oznacza płatności. Listy decyzji nie widzi. Na ryzykach odpada część pozycji operacyjnych, które nie są jego.
+
+KSH nie rozstrzyga żadnej z 16 decyzji z katalogu (`ZLECENIE_DECYZJE_POWIADOMIENIA.md` §2). Decyduje tam przewoźnik, HHL albo administrator. Zapis macierzy „gdy decyduje” nie dodaje KSH żadnego z tych typów. Planowane: KSH edytuje daty i godziny (B-KSH). Docelowo harmonogram z SharePoint (D-12, D-SP). Dziś import jest tylko u HHL (I-2a).
 
 **Scandinavian Express (przewoźnik).** Kokpit, mapa, harmonogram, ryzyka, dokumenty, moje stawki, faktury, moje zadania, ustawienia. Nie ma stref ani opcji. Widzi swój koszt, nie widzi ceny klienta ani marży. Wystawia fakturę kosztową. Nie oznacza jej jako opłaconej. Na ryzykach zostają pozycje przewoźnika oraz prom, droga w Szwecji i siła wyższa. Może uzupełniać auto i kierowcę.
 
