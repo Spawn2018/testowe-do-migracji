@@ -15,6 +15,30 @@ export interface CorridorConditionRow {
   adverseConditions: number | null;
   adverseWeather: number | null;
   zrodlo: string | null;
+  /** H-2: sytuacje drogowe z Situation 1.6. Pusta lista = API nic nie zwróciło. */
+  situations: { id: string; kind: string; severity: string; title: string; road: string }[];
+  situationsStatus: 'ok' | 'blad' | null;
+}
+
+
+function parseSituations(v: unknown): { id: string; kind: string; severity: string; title: string; road: string }[] {
+  if (!Array.isArray(v)) return [];
+  const out = [];
+  for (const item of v) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    const id = typeof row.id === 'string' ? row.id : '';
+    const title = typeof row.title === 'string' ? row.title : '';
+    if (!id || !title) continue;
+    out.push({
+      id,
+      kind: typeof row.kind === 'string' ? row.kind : 'roboty',
+      severity: typeof row.severity === 'string' ? row.severity : 'LOW',
+      title,
+      road: typeof row.road === 'string' ? row.road : 'E4',
+    });
+  }
+  return out;
 }
 
 /** null = brak odczytu / nie produkcja / błąd / brak żywego źródła. */
@@ -54,6 +78,8 @@ export async function fetchCorridorCondition(): Promise<CorridorConditionRow | n
       adverseConditions: num(detail.adverseConditions),
       adverseWeather: num(detail.adverseWeather),
       zrodlo,
+      situations: parseSituations(detail.situations),
+      situationsStatus: detail.situationsStatus === 'ok' || detail.situationsStatus === 'blad' ? detail.situationsStatus : null,
     };
   } catch {
     return null;

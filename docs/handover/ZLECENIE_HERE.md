@@ -189,7 +189,7 @@ korzysta z nich w obecnej postaci.
        Nie rozstrzyga jeszcze „pomiar na bieżącym odcinku, prognoza dalej”.
      - **Sytuacje (wypadki, zamknięcia, roboty, ograniczenia dla ciężarówek)
        nie czekają na H-4.** Wchodzą w H-2 (B-2b), zaraz po L-12. Obiekt
-       `Situation` wypadł z Open API 01.10.2026 (D-34). Źródło szukać przy H-2.
+       `Situation` w schemacie 1.5 wypadł (D-34). H-2 używa Situation 1.6, namespace `road.trafficinfo`.
      - **Nie ma, do dodania przy H-4.** Spowolnienie na konkretnym odcinku
        według wytycznych, potem nauka z GPS. Linia „nawierzchnia” w rozbiciu
        ETA. Dziś jest tylko jeden współczynnik na cały korytarz.

@@ -382,7 +382,7 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 |---|---|---|
 | B-1 | Mapy: pojazdy tylko z prawdziwych pozycji GPS (brak pozycji = brak znacznika). Warstwy stref, portów, korytarza, promów i sytuacji drogowych zostają. Na produkcji brak danych przykładowych. | **DO SCALENIA** — `fix/b-1` |
 | B-2a | Ryzyka: brak wypłynięć Steny | NIEZACZĘTE |
-| B-2b | Ryzyka: brak widoczności warunków drogowych w SE. Sytuacje drogowe Trafikverket (wypadki, zamknięcia, roboty) wchodzą w H-2, zaraz po L-12, nie w H-4: nowe źródło API, panel „Warunki drogowe SE”, ryzyka ROAD_SE z prawdziwych danych. | NIEZACZĘTE — realizacja w H-2, po L-12 |
+| B-2b | Ryzyka: brak widoczności warunków drogowych w SE. Sytuacje drogowe Trafikverket (wypadki, zamknięcia, roboty) wchodzą w H-2, zaraz po L-12, nie w H-4: nowe źródło API, panel „Warunki drogowe SE”, ryzyka ROAD_SE z prawdziwych danych. | **DONE** — Situation schemat 1.6, namespace `road.trafficinfo` (1.5 bez przestrzeni nazw nie istnieje). Pusto = „Brak danych”. |
 | B-2c | Centrum decyzji: jak działa i dlaczego puste — opisać logikę, nie zgadywać | NIEZACZĘTE |
 | B-3a | Dokumenty: zezwolenie per firma obok polisy; auto-podpięcie do trasy wg wymiarów; polisa auto do każdej trasy | NIEZACZĘTE |
 | B-4a | Finanse: przychód — pilotaż i dodatki mają zniknąć | NIEZACZĘTE |
@@ -511,7 +511,7 @@ TESTY: dla każdego wzoru — zmiana wartości w Opcjach zmienia moment alarmu; 
 |---|---|---|---|
 | zaraz po L-13 | H-0 | Test na koncie właściciela, bez zmian w aplikacji. Odcinki Śrem → Gdańsk, Nynäshamn → Boden, Karlskrona → Boden. Raport do właściciela. | DONE 2026-10-04 — uzupełnienie limitów, BK i propozycji H-4 w POSTEP. Kodu aplikacji nie ruszano. |
 | po L-12, przed H-2 | H-1 | Kontrola trasy z wymiarów właściciela. Zbudować, zostawić wyłączone do D-83. | **DONE** (ten commit) — flaga `H1_ROUTE_CHECK` wyłączona, bez crona, bez wymiarów przykładowych. „Wymaga zezwolenia” nie jest przeszkodą. Ryzyko tylko dla wiaduktu, mostu albo tunelu. |
-| zaraz po H-1 | H-2 | Utrudnienia PL/SE oraz B-2b: sytuacje Trafikverket (wypadki, zamknięcia, roboty). Nowe źródło API, panel „Warunki drogowe SE”, ROAD_SE z prawdziwych danych. Nie odkładać na H-4. | NIEZACZĘTE — start od razu po H-1, nie przed L-12 |
+| zaraz po H-1 | H-2 | Utrudnienia PL/SE oraz B-2b: sytuacje Trafikverket (wypadki, zamknięcia, roboty). Nowe źródło API, panel „Warunki drogowe SE”, ROAD_SE z prawdziwych danych. Nie odkładać na H-4. | **DONE** (B-2b, ten commit) — Situation 1.6 `road.trafficinfo`. Utrudnienia PL (HERE) zostają na później, nie w tym commicie. |
 | zaraz po H-2 | H-3 | Przeszkody wzdłuż korytarza. | NIEZACZĘTE — start od razu po H-2 |
 | razem z Q-17 i Q-19 | H-6 | Mapa przeszkód. Jedna praca z Q-17 i Q-19, bez dublowania. | NIEZACZĘTE — Q-17 i Q-19 dopisane 04.10 |
 | po etapie 2 | H-7, H-8, H-10, H-12 | Mapa w e-mailu i PDF, profil trasy, pogoda i wiatr (ryzyko), zakazy czasowe. | NIEZACZĘTE |

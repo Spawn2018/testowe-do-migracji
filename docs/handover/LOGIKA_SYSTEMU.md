@@ -287,7 +287,7 @@ W podglądzie demonstracyjnym jest na sztywno cztery trasy (Gdańsk–Karlshamn,
 
 ### Na drodze (Szwecja)
 
-Panel „Warunki drogowe” czyta sytuacje z bazy albo, w podglądzie, przykładową listę. Kliknięcie wiersza otwiera transport powiązany z ryzykiem drogowym, jeśli taki jest.
+Panel „Warunki drogowe SE” w produkcji czyta listę sytuacji z `corridor_conditions` (zadanie `road-se`, obiekt Situation 1.6). Pusta lista albo błąd odczytu sytuacji = „Brak danych”, bez danych przykładowych. W podglądzie zostaje przykładowa lista. Kliknięcie wiersza w podglądzie otwiera transport powiązany z ryzykiem drogowym, jeśli taki jest.
 
 Cztery „alternatywy trasy” (objazd przez E18, objazd przez drogi 83/84, kolej, pauza) są **ukryte po zalogowaniu do bazy**, bo to stały tekst, nie wyliczenie z mapy (`src/lib/seRouteAlts.ts`). W podglądzie przycisk „Wybierz” oznacza jeden transport jako opóźniony i przesuwa godzinę przyjazdu o czas z tej stałej listy. Nie rysuje nowej drogi.
 

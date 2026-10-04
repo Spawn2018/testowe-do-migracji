@@ -46,6 +46,15 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         .like('dedup_key', `${dedupPrefix.replace(/[%_]/g, (c) => `\\${c}`)}%`).is('resolved_at', null).select('id'), 'risk_signals resolve') as unknown[];
       return r.length;
     },
+    async resolveStaleRisks(dedupPrefix: string, keepDedup: string[]) {
+      const like = `${dedupPrefix.replace(/[%_]/g, (c) => `\\${c}`)}%`;
+      const rows = must(await sb.from('risk_signals').select('id,dedup_key').like('dedup_key', like).is('resolved_at', null), 'risk_signals stale') as { id: string; dedup_key: string | null }[];
+      const keep = new Set(keepDedup);
+      const drop = rows.filter((row) => row.dedup_key && !keep.has(row.dedup_key)).map((row) => row.id);
+      if (!drop.length) return 0;
+      const updated = must(await sb.from('risk_signals').update({ resolved_at: new Date().toISOString() }).in('id', drop).is('resolved_at', null).select('id'), 'risk_signals resolve stale') as unknown[];
+      return updated.length;
+    },
     async lastRun(job: string) {
       const r = must(await sb.from('integration_runs').select('ran_at').eq('job', job).order('ran_at', { ascending: false }).limit(1), 'integration_runs') as { ran_at: string }[];
       return r[0]?.ran_at ?? null;
