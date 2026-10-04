@@ -93,6 +93,9 @@ Macierz jest używana, gdy (`supabase/migrations/0126_dec234_effects_matrix_noti
 
 Przewoźnik dostaje wpis tylko o swoim transporcie. KSH tylko o projekcie, którego jest klientem. HHL dostaje według macierzy bez tego zawężenia.
 
+Od L-13 (2026-10-04) powtórzenie tego samego zdarzenia nie dokłada wpisu: status bez znacznika minuty, ryzyko bez mikrosekundy, strefa bez minuty wjazdu. Raport `notification_flood_report` rozbija wpisy według typu, odbiorcy i firmy i liczy ten sam klucz raz. Decyzje otwierane automatycznie zostają tylko w aplikacji. E-mail z macierzy, który już był włączony, dla zdarzenia niekrytycznego dostaje status skrótu (DIGEST) i nie idzie do wysyłki. Krytyczne (czerwona decyzja, odwołany prom) mogą wejść do kolejki, ale przy 95 na dobę zostają tylko one, a przy 100 staje wszystko. Ostrzeżenie od 80 widać w Stanie systemu. Włączenie e-maila decyzji automatycznych czeka na OK właściciela.
+
+
 ---
 
 ## 3. Po co są strefy i co robią

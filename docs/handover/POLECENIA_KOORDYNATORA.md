@@ -325,3 +325,25 @@ Polecenie właściciela Watch Tower z 2026-10-04 15:47 czasu warszawskiego. Najp
 2. Zrealizować te dwa cele. Zdjąć je z zapasu „brak celu / Szczegóły wpisu”. Test dla każdego typu: kokpit, lista ryzyk, dzwonek i link w e-mailu otwierają ten sam cel; nigdy strona główna; brak uprawnień → „Brak dostępu”. SMS_FALLBACK ukryty poza HHL. WORKFLOW_ALERT bez transportu otwiera regułę automatyzacji, nie transport. Test bramy nadal odrzuca typ bez celu.
 
 3. Potem L-5. Czytać L-5 z PLAN.md, docs/handover/LOGIKA_SYSTEMU.md i kryterium „Gotowe, gdy” oraz z CELE_KLIKNIEC.md (wpis bez obiektu znika z dzwonka po kliknięciu). Gdy opis L-5 jest niejednoznaczny — STOP i raport, bez wymyślania. Nie zaczynać L-6, L-12, L-13, SEC-OWASP, kafelków mapy ani części D.
+
+## Polecenie 2026-10-04 15:57 (czas warszawski) — L-13
+
+Polecenie właściciela Watch Tower z 2026-10-04 15:57 czasu warszawskiego. Najpierw dopis na końcu docs/handover/POLECENIA_KOORDYNATORA.md z datą, potem wykonaj. Tylko L-13.
+
+L-13 z PLAN.md i LOGIKA_SYSTEMU.md, kryterium „Gotowe, gdy”: zalew powiadomień po SIM-1 (155 na jeden transport). Rozbicie według typu, odbiorcy i firmy. Łączenie duplikatów tego samego zdarzenia. Ponowna symulacja na fixture, bez prawdziwego e-maila i SMS. Raport: liczba powiadomień na transport i firmę, bez duplikatu tego samego zdarzenia.
+
+Reguła „do L-13 tylko aplikacja” kończy się tylko tak, jak plan to pisze. Plan nie wymienia odbiorców, typów ani dostawcy e-maila ani SMS dla decyzji automatycznych. Tego nie włączać. Decyzje automatyczne zostają IN_APP.
+
+Nie zaczynać L-6, L-12, SEC-OWASP, kafelków mapy ani części D. Celów w CELE_KLIKNIEC.md nie zmieniać.
+
+## Polecenie 2026-10-04 16:02 (czas warszawski) — L-13, bez włączania e-maili
+
+STOP przed włączeniem e-maila dla decyzji automatycznych. Najpierw dopis na końcu tego pliku, potem dalsza praca nad L-13.
+
+Zanim e-mail decyzji automatycznych wolno włączyć:
+1. Po odsieaniu duplikatów oszacować e-maile na dobę (na firmę i łącznie) przy obecnych 94 transportach i przy szczycie (około 10 transportów dziennie w ruchu). Limit Resend: 100 e-maili na dobę na wszystko.
+2. Gdy szacunek przekracza 60 na dobę, zdarzenia niekrytyczne idą w skrót (na przykład co 2 godziny albo raz rano), a nie jako osobny e-mail. Krytyczne (czerwone decyzje, odwołany prom) wychodzą od razu.
+3. Strażnik: przy 80 na dobę ostrzeżenie w Stanie systemu; przy 95 tylko e-maile krytyczne.
+4. Podać liczby. E-maili nie włączać. Włączenie po L-13 czeka na wyraźne OK właściciela. Żadnego prawdziwego e-maila. Testy tylko na fixture.
+
+Nie zaczynać L-6, L-12, SEC-OWASP, kafelków mapy ani części D.
