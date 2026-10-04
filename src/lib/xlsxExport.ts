@@ -91,7 +91,7 @@ export function exportColumnsFor(role: RoleId, currency = 'EUR'): ExportColumn[]
     { header: 'Etap', value: (l) => l.stage },
     { header: 'Załadunek', value: (l) => l.plannedLoadDate ?? '' },
     { header: 'Dostawa', value: (l) => l.plannedDeliverDate ?? '' },
-    { header: 'ETA_Boden', value: (l) => l.etaBoden ?? '' },
+    { header: 'ETA_Boden', value: (l) => (l.etaPreLoad ? '–' : (l.etaBoden ?? '')) },
   ];
   if (role === 'HHL' || role === 'SCX' || role === 'KSH') {
     cols.push({ header: 'Kierowca', value: (l) => l.resources.driverName ?? '' });

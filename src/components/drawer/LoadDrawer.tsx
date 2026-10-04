@@ -309,16 +309,19 @@ export function LoadDrawer() {
                 <dt>{t(locale, 'a6_dr_delivery')}</dt>
                 <dd className="cond">{formatUnloadSe(load.plannedDeliverDate)}</dd>
                 <dt>{t(locale, 'eta')}</dt>
-                <dd className="cond">
-                  {load.etaBoden ? formatEtaBoden(load.etaBoden) : (
+                <dd className="cond" data-eta={load.etaPreLoad ? 'pre-load' : 'value'}>
+                  {load.etaPreLoad ? (
+                    <span>{t(locale, 'eta_dash')}</span>
+                  ) : load.etaBoden ? formatEtaBoden(load.etaBoden) : (
                     <span>{t(locale, 'eta_dash')} <span className="note">{load.etaReasons[0] || t(locale, 'eta_no_gps')}</span></span>
                   )}{' '}
-                  {load.etaBoden && load.delayed ? (
+                  {!load.etaPreLoad && load.etaBoden && load.delayed ? (
                     <span className="pill p-red">{delayPillText}</span>
-                  ) : load.etaBoden ? (
+                  ) : !load.etaPreLoad && load.etaBoden ? (
                     <span className="pill p-go">{t(locale, 'a6_dr_in_window')}</span>
                   ) : null}
                   {' '}
+                  {!load.etaPreLoad && <>
                   <span
                     className={`pill ${
                       load.etaConfidence === 'LOW'
@@ -347,6 +350,7 @@ export function LoadDrawer() {
                       : tp(locale, 'a6_dr_band', { a: fmtNumKeepPl(locale, load.etaEarliestHours, 1, load.etaEarliestHours.toFixed(1)), b: fmtNumKeepPl(locale, load.etaLatestHours, 1, load.etaLatestHours.toFixed(1)) })}
                     {load.etaReasons?.length ? ` · ${load.etaReasons.slice(0, 3).join(' · ')}` : ''}
                   </div>
+                  </>}
                 </dd>
                 <dt>{t(locale, 'a6_dr_driver')}</dt>
                 <dd>

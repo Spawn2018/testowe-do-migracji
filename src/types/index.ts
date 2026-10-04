@@ -266,6 +266,8 @@ export interface Load {
   etaReasons: string[];
   etaMethod: string;
   etaUpdatedAt: string;
+  /** ETA-PRE-LOAD: przed wyjazdem ze Śremu pole ETA to sam „–”, bez tekstu. */
+  etaPreLoad?: boolean;
   /** I-2d: ETA v1 z bazy — pasmo ± minut (eta_confidence_min); null = ETA liczone w kliencie (demo). */
   etaConfMin?: number | null;
   /** I-2d: `loads.delay_minutes` (ETA v1 vs koniec okna planu); undefined w demo. */

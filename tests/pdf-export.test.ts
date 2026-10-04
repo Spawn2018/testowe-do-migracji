@@ -48,6 +48,7 @@ describe('I-24 eksport PDF', () => {
     expect(c[4].value(l)).toBe('05.10.2026');
     expect(c[5].value(l)).toMatch(/05\.10\.2026,? 10:30/);
     expect(c[5].value({ ...l, etaBoden: null })).toBe('');
+    expect(c[5].value({ ...l, etaBoden: null, etaPreLoad: true })).toBe('–');
   });
   it('10.8: stopka i tytuł w PL/EN/SV ze strefą Europe/Warsaw; PDF budowany w każdym języku', async () => {
     for (const loc of ['pl', 'en', 'sv'] as const) {

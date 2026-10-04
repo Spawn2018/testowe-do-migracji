@@ -57,10 +57,10 @@ fire "$G_SITE_PL" SITE
 val "SITE + PL → brak SMS" "select count(*) from sms_outbox where kind in ('ZONE_ENTER','ZONE_APPROACH')" 0
 
 fire "$G_PRE_PL" PRE_ARRIVAL
-val "PRE_ARRIVAL + PL → 2 SMS zblizenia na liste Srem" "select count(*) from sms_outbox where kind='ZONE_APPROACH' and to_e164 like '+48%'" 2
+val "PRE_ARRIVAL + PL nie wysyla SMS 1 h (to nie jest czas jazdy)" "select count(*) from sms_outbox where kind='ZONE_APPROACH'" 0
 
 fire "$G_PRE_SE" PRE_ARRIVAL
-val "PRE_ARRIVAL + SE → 2 SMS zblizenia na liste Boden" "select count(*) from sms_outbox where kind='ZONE_APPROACH' and to_e164 like '+46%'" 2
+val "PRE_ARRIVAL + SE nie wysyla SMS 1 h (to nie jest czas jazdy)" "select count(*) from sms_outbox where kind='ZONE_APPROACH'" 0
 
 hhl "select delete_geofence('$G_LOAD_PL')" >/dev/null
 val "HHL usuwa strefe" "select count(*) from geofences where id='$G_LOAD_PL'" 0

@@ -103,6 +103,7 @@ const num = (v: number | string | null | undefined): number | null =>
 export interface EtaBasis {
   method?: string; segment?: string; flags?: string[]; sailing?: string | null;
   segments?: Array<Record<string, unknown>>; computed_at?: string;
+  pre_load?: boolean;
 }
 
 /** I-2d: pasmo ufności (minuty) → poziom. ≤60 min WYSOKA, ≤240 ŚREDNIA, inaczej NISKA. */
@@ -228,7 +229,8 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
       etaConfMin: conf,
       etaEarliestHours: Number.isFinite(etaMs) ? Math.max(0, h(etaMs - (conf ?? 0) * 60000 - nowMs)) : 0,
       etaLatestHours: Number.isFinite(etaMs) ? Math.max(0, h(etaMs + (conf ?? 0) * 60000 - nowMs)) : 0,
-      etaReasons: row.eta_basis?.flags ?? [],
+      etaPreLoad: row.eta_basis?.pre_load === true,
+      etaReasons: row.eta_basis?.pre_load === true ? [] : (row.eta_basis?.flags ?? []),
       etaMethod: row.eta_basis?.method ?? 'ETA v1 (baza)',
       etaUpdatedAt: row.eta_computed_at ?? nowIso,
     };
