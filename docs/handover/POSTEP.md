@@ -1761,3 +1761,7 @@ PR #26 scalony. `main` to `419c5bb`. Brama lokalna zielona przed scaleniem (log 
 ### D-85
 
 Propozycja H-4 z limitem km/h w Opcjach jest nieaktualna. Decyzja D-85: ETA w pełni automatyczne, zero ręcznego wpisu, także prędkości. Opis i plan testu są w `ZLECENIE_HERE.md` (H-4) i w rejestrze (D-85). H-4 nie budowane. H-1 też nie: komunikat HERE o limicie 400 cm na województwo to przepis, nie przeszkoda. Ryzyko tylko dla konkretnego wiaduktu, mostu albo tunelu.
+
+## 2026-10-04 21:40 (czas warszawski) — H-1 zbudowane, wyłączone
+
+Kontrola trasy jest w kodzie i zostaje wyłączona. `security_flags.H1_ROUTE_CHECK` jest false. Nie ma crona i nic na produkcji nie woła HERE dla tej kontroli. Puste wymiary nie są uzupełniane wymiarami przykładowymi z H-0. Komunikat o limicie wysokości województwa to „wymaga zezwolenia”, nie przeszkoda. Ryzyko `ROUTE_OBSTACLE` powstaje tylko dla wiaduktu, mostu albo tunelu z miejscem i tylko gdy kontrola jest włączona. H-2, H-3 i część B nie są ruszane. R-0 i R-1 bez zmian.

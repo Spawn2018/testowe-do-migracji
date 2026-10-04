@@ -510,7 +510,7 @@ TESTY: dla każdego wzoru — zmiana wartości w Opcjach zmienia moment alarmu; 
 | Kiedy | ID | Opis | Status |
 |---|---|---|---|
 | zaraz po L-13 | H-0 | Test na koncie właściciela, bez zmian w aplikacji. Odcinki Śrem → Gdańsk, Nynäshamn → Boden, Karlskrona → Boden. Raport do właściciela. | DONE 2026-10-04 — uzupełnienie limitów, BK i propozycji H-4 w POSTEP. Kodu aplikacji nie ruszano. |
-| po L-12, przed H-2 | H-1 | Kontrola trasy z wymiarów właściciela. Zbudować, zostawić wyłączone do D-83. | NIEZACZĘTE — nie startować przed L-12 |
+| po L-12, przed H-2 | H-1 | Kontrola trasy z wymiarów właściciela. Zbudować, zostawić wyłączone do D-83. | **DONE** (ten commit) — flaga `H1_ROUTE_CHECK` wyłączona, bez crona, bez wymiarów przykładowych. „Wymaga zezwolenia” nie jest przeszkodą. Ryzyko tylko dla wiaduktu, mostu albo tunelu. |
 | zaraz po H-1 | H-2 | Utrudnienia PL/SE oraz B-2b: sytuacje Trafikverket (wypadki, zamknięcia, roboty). Nowe źródło API, panel „Warunki drogowe SE”, ROAD_SE z prawdziwych danych. Nie odkładać na H-4. | NIEZACZĘTE — start od razu po H-1, nie przed L-12 |
 | zaraz po H-2 | H-3 | Przeszkody wzdłuż korytarza. | NIEZACZĘTE — start od razu po H-2 |
 | razem z Q-17 i Q-19 | H-6 | Mapa przeszkód. Jedna praca z Q-17 i Q-19, bez dublowania. | NIEZACZĘTE — Q-17 i Q-19 dopisane 04.10 |

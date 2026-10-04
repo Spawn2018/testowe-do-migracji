@@ -154,3 +154,6 @@ authenticated admin_set_eta_calibration_frozen
 authenticated apply_eta_calibration_version
 # L-13: licznik poczty w Stanie systemu
 authenticated email_budget_status
+# H-1: stan kontroli trasy i kafelek HERE
+authenticated h1_route_check_state
+authenticated here_budget_view

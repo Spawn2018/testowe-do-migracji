@@ -253,6 +253,15 @@ const pl: Dict = {
   map_events: 'zdarzeń SE',
   map_ais_live: 'AIS na żywo',
   ferry_status: 'status',
+  h1_title: 'Kontrola trasy',
+  h1_off: 'Kontrola trasy jest wyłączona. Włączy się, gdy właściciel poda wymiary zestawu. Nie ma listy przeszkód.',
+  h1_permit: 'Wymaga zezwolenia',
+  h1_obstacle: 'Przeszkoda',
+  h1_limit: 'Limit',
+  h1_set: 'Zestaw',
+  h1_no_here: 'Bez danych o drodze. Zostaje dotychczasowe wyliczenie.',
+  h1_tile: 'HERE',
+  h1_tile_body: 'Kontrola trasy wyłączona. Zapytań w tym miesiącu: {n}. Szacunek kosztu: {usd} USD z budżetu 100 USD.',
 };
 
 const en: Dict = {
@@ -510,6 +519,15 @@ const en: Dict = {
   factoring_payout_scheduled: 'SCHEDULED',
   factoring_badge: 'FACTORING',
   factoring_review_title: 'Factoring — stored rates',
+  h1_title: 'Route check',
+  h1_off: 'Route check is off. It stays off until the owner provides the vehicle dimensions. There is no obstacle list.',
+  h1_permit: 'Permit required',
+  h1_obstacle: 'Obstacle',
+  h1_limit: 'Limit',
+  h1_set: 'Vehicle',
+  h1_no_here: 'No road data. The existing calculation stays.',
+  h1_tile: 'HERE',
+  h1_tile_body: 'Route check is off. Requests this month: {n}. Estimated cost: {usd} USD of a 100 USD budget.',
 };
 
 const sv: Dict = {
@@ -758,6 +776,15 @@ const sv: Dict = {
   map_events: 'SE-händelser',
   map_ais_live: 'AIS live',
   ferry_status: 'status',
+  h1_title: 'Rutkontroll',
+  h1_off: 'Rutkontrollen är av. Den förblir av tills ägaren anger fordonets mått. Det finns ingen lista med hinder.',
+  h1_permit: 'Tillstånd krävs',
+  h1_obstacle: 'Hinder',
+  h1_limit: 'Gräns',
+  h1_set: 'Fordon',
+  h1_no_here: 'Inga vägdata. Den befintliga beräkningen står kvar.',
+  h1_tile: 'HERE',
+  h1_tile_body: 'Rutkontrollen är av. Förfrågningar denna månad: {n}. Uppskattad kostnad: {usd} USD av budgeten 100 USD.',
 };
 
 /** PL-T (ANEKS 3 §3) — pełne słowniki do testu pisowni. */
