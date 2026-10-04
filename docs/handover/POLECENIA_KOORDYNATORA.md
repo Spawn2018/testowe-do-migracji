@@ -587,3 +587,12 @@ Osobny PR. Nie włączać H-1 ani H-3. Nie ruszać DRV-CLOSE, STD-CLEAN ani czę
 
 Tydzień opłaty paliwowej od daty załadunku (D-34), nie od rozładunku. Kurs NBP zostaje od rozładunku. Test: załadunek w tygodniu N i rozładunek w N+1 dostaje stawkę z tygodnia N. Kryteria SCOPE 32.x i 33.x tak, jak w PLAN.md. Nie zgadywać stawek. Brama lokalna zielona przed scaleniem.
 
+
+## Polecenie 2026-10-04 (czas warszawski) — ETA-PRE-LOAD i diagnoza ETA
+
+Osobny PR, tylko dokumenty. Bez zmian w kodzie, bez diagnozy teraz, bez wdrożenia. Nie wchodzić na gałąź U-3-PALIWO.
+
+1. ETA dostawy pokazujemy dopiero po załadunku (wyjazd ze strefy placu w Śremie). Przed załadunkiem w polu ETA tylko kreska „–”, bez tekstu — wszędzie: harmonogram, szczegóły, kokpit, eksport, e-maile. SMS-KSH-1H liczy czas dojazdu do Śremu w tle i dalej działa. Test: auto z pozycją GPS przed załadunkiem → ETA „–”; po wyjeździe ze strefy placu → ETA się pojawia.
+2. Diagnoza (nie teraz w kodzie): właściciel widzi ETA dla SG-01, SG-24, KR-04, KR-05, KR-06, KR-07. Dla każdego podać, skąd wartość: ostatnia pozycja GPS i jej data / wartość zapisana przed 0146 / wartość liczona z planu. Wartość liczona z planu = błąd P1, zgłosić miejsce w kodzie. Wartości sprzed 0146 tylko zgłosić; posprząta R-0.
+
+Kolejność: U-3-PALIWO → diagnoza ETA (SG-01, SG-24, KR-04, KR-05, KR-06, KR-07, bez zmian w kodzie) → DRV-CLOSE → STD-CLEAN → SMS-KSH-1H + ETA-PRE-LOAD (jeden PR, ten sam mechanizm) → VERIFY-13 → część B.
