@@ -27,6 +27,11 @@ export function useRouteSync() {
   useEffect(() => {
     const r = parseRoute(location.pathname);
     const st = useTowerStore.getState();
+    const tab = new URLSearchParams(location.search).get('zakladka');
+    const tabMap: Record<string, string> = {
+      status: 'timeline', dokumenty: 'docs', ceny: 'pricing', ustalenia: 'chat', awizacja: 'overview',
+      'awizacja-pilot': 'overview', 'numer-hhl': 'overview', 'numer-przewoznika': 'overview',
+    };
     if (r.kind === 'view') {
       if (navForRole(st.role).includes(r.view) && st.view !== r.view) st.setView(r.view);
       if (st.selectedLoadId) st.selectLoad(null);
@@ -36,18 +41,36 @@ export function useRouteSync() {
       if (l) {
         pendingCode.current = null;
         if (st.selectedLoadId !== l.id) st.selectLoad(l.id);
+        if (tab && tabMap[tab]) st.setDrawerTab(tabMap[tab]);
+      } else if (st.loads.length) {
+        pendingCode.current = null;
+        st.setAccessMessage('Brak dostępu');
       } else {
         pendingCode.current = r.code;
       }
+    } else if (r.kind === 'decision') {
+      if (st.view !== 'risk') st.setView('risk');
+      st.setOpenDecisionId(r.id);
+    } else if (r.kind === 'invoice') {
+      if (navForRole(st.role).includes('inv')) st.setView('inv');
+      else st.setAccessMessage('Brak dostępu');
+      st.setOpenInvoiceId(r.id);
+    } else if (r.kind === 'system' || r.kind === 'options') {
+      if (navForRole(st.role).includes('options')) st.setView('options');
+      else st.setAccessMessage('Brak dostępu');
+    } else if (r.kind === 'denied') {
+      st.setAccessMessage('Brak dostępu');
+    } else if (r.kind === 'entry') {
+      st.setEntryOpen(true);
     }
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   // Sklep → URL (także gdy dojadą transporty dla linku wprowadzonego przed ich wczytaniem).
   useEffect(() => {
     const st = useTowerStore.getState();
     const cur = loc.current;
     const r = parseRoute(cur.pathname);
-    if (r.kind === 'unknown') return;
+    if (r.kind === 'unknown' || r.kind === 'decision' || r.kind === 'invoice' || r.kind === 'system' || r.kind === 'options' || r.kind === 'denied' || r.kind === 'entry') return;
     let replace = r.kind === 'root' || (r.kind === 'view' && !navForRole(st.role).includes(r.view));
     if (pendingCode.current) {
       const l = st.loads.find((x) => x.code.toUpperCase() === pendingCode.current);
@@ -57,8 +80,9 @@ export function useRouteSync() {
         return;
       }
       if (!st.loads.length) return; // dane jeszcze się wczytują
-      pendingCode.current = null; // kod nieznany — wracamy do ścieżki widoku
-      replace = true;
+      pendingCode.current = null;
+      st.setAccessMessage('Brak dostępu');
+      return;
     }
     const sel = st.selectedLoadId ? st.loads.find((x) => x.id === st.selectedLoadId) : null;
     const target = buildRoute(st.view, sel?.code ?? null);

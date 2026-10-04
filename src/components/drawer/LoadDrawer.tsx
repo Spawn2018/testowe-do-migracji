@@ -300,12 +300,14 @@ export function LoadDrawer() {
                 <dd className="cond">{formatUnloadSe(load.plannedDeliverDate)}</dd>
                 <dt>{t(locale, 'eta')}</dt>
                 <dd className="cond">
-                  {formatEtaBoden(load.etaBoden)}{' '}
-                  {load.delayed ? (
+                  {load.etaBoden ? formatEtaBoden(load.etaBoden) : (
+                    <span>{t(locale, 'eta_dash')} <span className="note">{load.etaReasons[0] || t(locale, 'eta_no_gps')}</span></span>
+                  )}{' '}
+                  {load.etaBoden && load.delayed ? (
                     <span className="pill p-red">{delayPillText}</span>
-                  ) : (
+                  ) : load.etaBoden ? (
                     <span className="pill p-go">{t(locale, 'a6_dr_in_window')}</span>
-                  )}
+                  ) : null}
                   {' '}
                   <span
                     className={`pill ${

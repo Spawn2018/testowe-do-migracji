@@ -32,6 +32,12 @@ export type ParsedRoute =
   | { kind: 'root' }
   | { kind: 'view'; view: NavKey }
   | { kind: 'transport'; code: string }
+  | { kind: 'decision'; id: string }
+  | { kind: 'invoice'; id: string }
+  | { kind: 'system' }
+  | { kind: 'options'; section: string }
+  | { kind: 'denied' }
+  | { kind: 'entry' }
   | { kind: 'unknown' };
 
 export function parseRoute(pathname: string): ParsedRoute {
@@ -41,6 +47,15 @@ export function parseRoute(pathname: string): ParsedRoute {
   if (view) return { kind: 'view', view };
   const m = /^\/transport\/([^/]+)$/i.exec(p);
   if (m) return { kind: 'transport', code: decodeURIComponent(m[1]).toUpperCase() };
+  const d = /^\/decyzje\/([^/]+)$/i.exec(p);
+  if (d) return { kind: 'decision', id: decodeURIComponent(d[1]) };
+  const inv = /^\/finanse\/faktury\/([^/]+)$/i.exec(p);
+  if (inv) return { kind: 'invoice', id: decodeURIComponent(inv[1]) };
+  if (p.toLowerCase() === '/opcje/stan-systemu') return { kind: 'system' };
+  if (p.toLowerCase() === '/opcje/odbiorcy-sms') return { kind: 'options', section: 'sms' };
+  if (p.toLowerCase() === '/opcje/cennik') return { kind: 'options', section: 'cennik' };
+  if (p.toLowerCase() === '/brak-dostepu') return { kind: 'denied' };
+  if (p.toLowerCase() === '/szczegoly-wpisu') return { kind: 'entry' };
   return { kind: 'unknown' };
 }
 

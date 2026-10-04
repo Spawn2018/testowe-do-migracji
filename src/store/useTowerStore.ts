@@ -217,6 +217,10 @@ interface TowerState {
 
   navCollapsed: boolean;
   drawerTab: string | null;
+  openDecisionId: string | null;
+  openInvoiceId: string | null;
+  accessMessage: string | null;
+  entryOpen: boolean;
   riskFilter: string | null;
   docsFilter: 'missing' | null;
   /** Map POI / geofence / situation focus — 2nd click same key clears */
@@ -225,6 +229,10 @@ interface TowerState {
   setRole: (role: RoleId) => void;
   setNavCollapsed: (v: boolean, opts?: { persist?: boolean }) => void;
   setDrawerTab: (tab: string | null) => void;
+  setOpenDecisionId: (id: string | null) => void;
+  setOpenInvoiceId: (id: string | null) => void;
+  setAccessMessage: (msg: string | null) => void;
+  setEntryOpen: (open: boolean) => void;
   navigateTo: (opts: {
     view?: ViewKey;
     tab?: string | null;
@@ -357,6 +365,10 @@ export const useTowerStore = create<TowerState>()(
       navCollapsed:
         typeof sessionStorage !== 'undefined' && sessionStorage.getItem('wtNavCollapsed') === '1',
       drawerTab: null,
+      openDecisionId: null,
+      openInvoiceId: null,
+      accessMessage: null,
+      entryOpen: false,
       riskFilter: null,
       docsFilter: null,
       mapFocusKey: null,
@@ -461,6 +473,10 @@ export const useTowerStore = create<TowerState>()(
       },
 
       setDrawerTab: (drawerTab) => set({ drawerTab }),
+      setOpenDecisionId: (openDecisionId) => set({ openDecisionId }),
+      setOpenInvoiceId: (openInvoiceId) => set({ openInvoiceId }),
+      setAccessMessage: (accessMessage) => set({ accessMessage }),
+      setEntryOpen: (entryOpen) => set({ entryOpen }),
 
       navigateTo: (opts) => {
         set((s) => ({
@@ -502,37 +518,34 @@ export const useTowerStore = create<TowerState>()(
         const n = get().notifications.find((x) => x.id === id);
         if (!n) return;
         const href = n.href;
-        const alias: Record<string, string> = {
-          risk: 'risk',
-          risks: 'risk',
-          docs: 'docs',
-          fin: 'fin',
-          finance: 'fin',
-          inv: 'inv',
-          invoices: 'inv',
-          map: 'map',
-          geo: 'geo',
-          geofence: 'geo',
-          wf: 'wf',
-          workflow: 'wf',
-          sched: 'sched',
-          schedule: 'sched',
-          tasks: 'tasks',
-          dash: 'dash',
-        };
-        const raw = href?.view ?? '';
-        let view = (alias[raw] ?? raw) || undefined;
-        // DEC-CLICK (b): czyste zdarzenie statusu/strefy → zawsze Transport, bez mini-akcji geo
-        if ((view === 'geo' || view === 'geofence') && (href?.loadId || n.loadId)) {
-          view = 'sched';
+        const path = href?.path;
+        if (path) {
+          const allowed = href?.allowed !== false;
+          set({
+            accessMessage: allowed ? null : 'Brak dostępu',
+            entryOpen: path.startsWith('/szczegoly-wpisu'),
+          });
+          if (typeof window !== 'undefined') {
+            const hash = path.startsWith('/') ? path : `/${path}`;
+            window.location.hash = hash;
+          }
+        } else {
+          const alias: Record<string, string> = {
+            risk: 'risk', risks: 'risk', docs: 'docs', fin: 'fin', finance: 'fin',
+            inv: 'inv', invoices: 'inv', map: 'map', geo: 'geo', geofence: 'geo',
+            wf: 'wf', workflow: 'wf', sched: 'sched', schedule: 'sched', tasks: 'tasks', dash: 'dash',
+          };
+          const raw = href?.view ?? '';
+          let view = (alias[raw] ?? raw) || undefined;
+          if ((view === 'geo' || view === 'geofence') && (href?.loadId || n.loadId)) view = 'sched';
+          get().navigateTo({
+            view: view as never,
+            tab: href?.tab ?? null,
+            loadId: href?.loadId ?? n.loadId ?? null,
+            riskFilter: href?.entityId && view === 'risk' ? href.entityId : undefined,
+            docsFilter: view === 'docs' ? 'missing' : undefined,
+          });
         }
-        get().navigateTo({
-          view: view as any,
-          tab: href?.tab ?? null,
-          loadId: href?.loadId ?? n.loadId ?? null,
-          riskFilter: href?.entityId?.startsWith('risk') ? href.entityId : href?.entityId && view === 'risk' ? href.entityId : undefined,
-          docsFilter: view === 'docs' ? 'missing' : undefined,
-        });
         get().markNotificationRead(id);
       },
 

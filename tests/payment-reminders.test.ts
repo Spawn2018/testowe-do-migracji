@@ -61,7 +61,7 @@ describe('M7 — treść w języku odbiorcy, kwota w walucie faktury', () => {
     const n = notificationFromRow({ id: 42, template: 'PAYMENT_REMINDER', payload: { ...row('pl', 1).payload, invoice_id: 'abc' }, load_id: null, created_at: '2026-10-31T00:15:00Z', read_at: null });
     expect(n.id).toBe('srv-42');
     expect(n.read).toBe(false);
-    expect(n.href).toEqual({ view: 'inv', entityId: 'abc', loadId: undefined });
+    expect(n.href).toEqual({ view: 'inv', entityId: 'abc', loadId: undefined, path: '/finanse/faktury/abc', allowed: true });
     expect(n.title).toBe('Faktura SCX/FV/39/8: 1 dzień po terminie');
   });
 });

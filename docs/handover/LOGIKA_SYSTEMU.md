@@ -148,7 +148,7 @@ WZORY
 A. Awizacja (NO_AWIZACJA, w ramach L-3): kierowca odbierający, ciągnik, naczepa, telefon — liczone od planowanego ZAŁADUNKU (data + godzina z pliku KSH). Kierowca dostarczający z telefonem i ciągnikiem — od planowanej DOSTAWY (48 h przed dostawą). Brak na 48 h przed → ostrzeżenie; brak na 12 h przed → krytyczne.
 B. Dokumenty (DOC_MISSING): brak wymaganego dokumentu (zezwolenie, gdy wymagane; polisa) na 24 h przed planowanym załadunkiem → ostrzeżenie; na 6 h → krytyczne.
 C. Wyprzedzenie KSH (KSH_DATE_LT_5D, D-12): zmiana daty albo nowy transport w pliku KSH, gdy od chwili zmiany do wcześniejszej z dat (stara/nowa data załadunku) zostało mniej niż 5 dni.
-D. Opóźnienie (ETA_AFTER_LATEST): ETA > koniec okna dostawy + próg z Opcji. ETA tylko z prawdziwych danych (GPS albo potwierdzony status). Sam plan → bez alarmu.
+D. Opóźnienie (ETA_AFTER_LATEST): ETA > koniec okna dostawy + próg z Opcji. ETA wyłącznie z pozycji: GPS pojazdu na drodze w Szwecji, na promie pozycja statku z AIS (`vessel_positions`). Sam plan, założony rejs i przeprawa „z założenia" nie wypełniają ETA — w interfejsie „–" i podpowiedź „Brak pozycji GPS". Brak świeżego AIS na promie: ETA czeka na AIS, bez powrotu do planu.
 E. Brak GPS: ostatnia pozycja starsza niż próg (15 min) — tylko gdy pojazd ma podłączone źródło pozycji i status jest w ruchu (IN_TRANSIT_PL, AT_PORT_*, IN_TRANSIT_SE). Bez alarmu: READY, FERRY (na promie pozycja z AIS), AT_SITE, DELIVERED.
 F. Zjazd z trasy (ROUTE_DEVIATION): odległość od trasy korytarza > próg z Opcji przez co najmniej 2 kolejne pozycje i co najmniej 10 min. Bez alarmu na promie i w strefach portów oraz placów.
 
@@ -388,3 +388,12 @@ Nie budować, dopóki właściciel nie powie „tak” na konkretny punkt:
 - podłączenia ośmiu progów (opóźnienie, daty KSH, awizacja, dokumenty, GPS, zjazd) — wzory są w §4 od 2026-10-04 00:07; L-3 je wdraża, zmiana liczby w Opcjach zmienia moment alarmu;
 - zdjęcia cyfr z górnego paska — to zmiana wyglądu, nie poprawka błędu liczenia;
 - nowego kreatora stref z mapą, krajem i odbiorcami — obecny formularz tego nie umie i nie wolno udawać, że umie.
+
+
+## ETA i postój (2026-10-04)
+
+ETA na placu nie jest liczona z planu załadunku ani z założonego rejsu. Źródło: pozycja GPS na odcinku szwedzkim albo, na promie, pozycja AIS statku. Brak pozycji zostawia pole puste.
+
+Postój ponad czas wolny (decyzja 15) czyta parametry z Opcji, sekcja „Czas wolny i przestój". Domyślne wartości są WSTĘPNE: czas wolny 6 h / 4 h, 75 EUR/h, 750 EUR/doba, start od późniejszego z wjazdu i planu, rozpoczęta godzina w całości, powyżej 24 h stawka dobowa. Przekroczenie otwiera decyzję z podpowiedzią kwoty. Dopłatę wpisuje HHL ręcznie. Brak parametru w Opcjach nie otwiera decyzji.
+
+Cele kliknięć: `docs/handover/CELE_KLIKNIEC.md`.

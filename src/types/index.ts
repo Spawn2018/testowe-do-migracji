@@ -336,6 +336,9 @@ export interface NotificationHref {
   tab?: string;
   entityId?: string;
   loadId?: string;
+  /** L-4 — ścieżka celu, nigdy strona główna */
+  path?: string;
+  allowed?: boolean;
 }
 
 export interface Notification {

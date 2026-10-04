@@ -39,6 +39,10 @@ function TowerShell() {
   const initTheme = useTowerStore((s) => s.initTheme);
   const navCollapsed = useTowerStore((s) => s.navCollapsed);
   const setNavCollapsed = useTowerStore((s) => s.setNavCollapsed);
+  const accessMessage = useTowerStore((s) => s.accessMessage);
+  const setAccessMessage = useTowerStore((s) => s.setAccessMessage);
+  const entryOpen = useTowerStore((s) => s.entryOpen);
+  const setEntryOpen = useTowerStore((s) => s.setEntryOpen);
 
   usePageSectionDnD();
   useRouteSync();
@@ -158,6 +162,18 @@ function TowerShell() {
         <Nav />
         <main ref={mainRef}>
           <SystemBroadcastBanner />
+          {accessMessage ? (
+            <div className="note" role="alert" data-access-denied>
+              {t(locale, 'click_denied')}
+              <button type="button" className="btn ghost" onClick={() => setAccessMessage(null)}>OK</button>
+            </div>
+          ) : null}
+          {entryOpen ? (
+            <div className="note" role="dialog" data-entry-detail>
+              {t(locale, 'click_entry')}
+              <button type="button" className="btn ghost" onClick={() => setEntryOpen(false)}>OK</button>
+            </div>
+          ) : null}
           {import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? <ImpersonationBanner /> : null}
           {body}
         </main>

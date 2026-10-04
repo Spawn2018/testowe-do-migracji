@@ -9,7 +9,7 @@ import type {
 } from '../types';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
 import { renderNotice, asLocale } from '../../supabase/functions/_shared/notifyTemplates';
-import { applyEtaToLoad } from '../lib/eta';
+import { clickTarget } from '../../supabase/functions/_shared/clickTargets';
 import { shows } from '../lib/prodFacade';
 import { autoRiskCode } from '../lib/sailings';
 import type { Sailing } from '../types';
@@ -233,7 +233,12 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
       etaUpdatedAt: row.eta_computed_at ?? nowIso,
     };
   }
-  return applyEtaToLoad(base, nowIso);
+  return {
+    ...base,
+    etaBoden: null,
+    etaReasons: ['Brak pozycji GPS'],
+    etaMethod: 'pozycja',
+  };
 }
 
 /** Zmiany zasobów → kolumny `loads` (przywileje kolumnowe przewoźnika z 0001). */
@@ -564,9 +569,24 @@ export const NOTIFICATION_PREFIX = 'srv-';
 export function notificationFromRow(r: NotificationRow, locale?: string): Notification {
   const n = renderNotice({ template: r.template, payload: r.payload ?? {} }, locale ? asLocale(locale) : undefined);
   const inv = (r.payload ?? {}).invoice_id;
+  const payload = r.payload ?? {};
+  const target = clickTarget({
+    source: 'bell',
+    type: r.template,
+    decisionId: typeof payload.decision_id === 'string' ? payload.decision_id : null,
+    loadCode: typeof payload.code === 'string' ? payload.code : null,
+    invoiceId: typeof inv === 'string' ? inv : null,
+    resource: typeof payload.resource === 'string' ? payload.resource : null,
+  });
   return {
     id: `${NOTIFICATION_PREFIX}${r.id}`, at: r.created_at, title: n.subject, body: n.body, severity: n.severity,
     loadId: r.load_id ?? undefined, read: Boolean(r.read_at),
-    href: n.view ? { view: n.view, entityId: typeof inv === 'string' ? inv : undefined, loadId: r.load_id ?? undefined } : undefined,
+    href: {
+      view: n.view ?? undefined,
+      entityId: typeof inv === 'string' ? inv : undefined,
+      loadId: r.load_id ?? undefined,
+      path: target.path,
+      allowed: true,
+    },
   };
 }

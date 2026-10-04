@@ -15,7 +15,7 @@ err() {
 }
 
 echo; echo "[dec6] progi ops_thresholds"
-val "10 progów domyślnych" "select count(*) from ops_thresholds" 10
+val "17 progów domyślnych (10 + 7 postój)" "select count(*) from ops_thresholds" 17
 val "fala 3.8" "select value_num::text from ops_thresholds where key='WAVE_M'" "3.8"
 val "porywy 40" "select value_num::text from ops_thresholds where key='GUST_KN'" "40"
 val "silent 15" "select value_num::text from ops_thresholds where key='SILENT_MIN'" "15"
