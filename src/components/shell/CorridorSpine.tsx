@@ -26,7 +26,7 @@ export function CorridorSpine() {
   return (
     <div className="corridor">
       <div className="corridor-inner" id="corridor">
-        {STAGE_ORDER.map((stage, i) => {
+        {STAGE_ORDER.map((stage) => {
           const n = counts[stage];
           const pressed = stageFilter === stage;
           const fill = Math.round((n / max) * 100);
@@ -51,7 +51,6 @@ export function CorridorSpine() {
               }}
               className={`stage${domain ? ` ${domain}` : ''}`}
             >
-              <span className="kb">{i + 1}</span>
               <div className={`n${n === 0 ? ' zero' : ''}`}>{n}</div>
               <div className="l">{t(locale, `stage_${stage}`)}</div>
               <div className="bar">

@@ -228,7 +228,7 @@ To pasek dziewięciu kafelków pod nagłówkiem (`src/components/shell/CorridorS
 
 - Cyfra to liczba transportów w danym etapie, liczona po etapie, nie po statusie (`src/lib/corridorKpis.ts`).
 - Pasek pod cyfrą jest tylko skalą względem najliczniejszego etapu. Nie jest procentem planu.
-- Jedynka z lewej to numer kolejny etapu (1–9), nie liczba transportów.
+- Numer kolejny etapu (1–9) nie jest na kafelku (L-11, decyzja właściciela 03.10). Zostaje polska nazwa etapu i liczba transportów.
 - Kliknięcie przełącza na Mapę i zostawia na niej tylko ten etap.
 - Drugie kliknięcie tego samego kafelka zdejmuje filtr.
 - Harmonogram, kokpit, ryzyka i faktury tego filtra nie stosują.
