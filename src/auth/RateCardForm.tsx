@@ -15,7 +15,7 @@ const PROJECT_CODES = ['STEGRA_BODEN', 'STEGRA'] as const;
 type Side = 'COST' | 'REVENUE';
 interface Org { id: string; code: string; name: string; kind: string }
 interface RuleRow {
-  cargo_class: 'DIMENSIONED' | 'STANDARD' | 'SYMBOL';
+  cargo_class: 'DIMENSIONED' | 'SYMBOL';
   symbol: string | null; family: string | null; convoy_cars: number | null;
   length_from: number; length_to: number; width_from: number; width_to: number;
   height_from: number; height_to: number; weight_from: number; weight_to: number;

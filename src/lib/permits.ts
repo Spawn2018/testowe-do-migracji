@@ -476,8 +476,6 @@ export function attachmentDocForLoad(load: Load, docs: Document[]): PermitAttach
 
 export function evaluateLoadCover(load: Load, docs: Document[]): { covered: boolean; reason: string; kind: PermitAttachmentKind } {
   const kind = (load.permit?.attachmentKind ?? 'NONE') as PermitAttachmentKind;
-  // I-2C: ładunek normatywny (Standard) — walidator zezwoleń/wymiarów go pomija
-  if (load.dims.cargoClass === 'STANDARD') return { covered: true, reason: 'ładunek normatywny (Standard) — zezwolenie niewymagane', kind: 'NONE' };
   // MISMATCH / permitFits=false always wins — even when attachmentKind is NONE
   // (avoids cover(NONE)·OK contradicting a seeded MISMATCH doc).
   const bad = docs.find(
@@ -502,7 +500,6 @@ export function evaluateLoadCover(load: Load, docs: Document[]): { covered: bool
 /** READY blocked when cover gap / mismatch / permitFits false / docMissing. */
 export function isReadyBlocked(load: Load, docs: Document[]): { blocked: boolean; reason: string } {
   if (load.docMissing) return { blocked: true, reason: 'Brak wymaganych dokumentów' };
-  if (load.dims.cargoClass === 'STANDARD') return { blocked: false, reason: 'ładunek normatywny (Standard) — zezwolenie niewymagane' };
   if (load.permitFits === false) return { blocked: true, reason: 'Zezwolenie nie pasuje do wymiarów zestawu' };
   const mismatch = docs.find(
     (d) =>

@@ -78,7 +78,7 @@ function triggerBlobDownload(bytes: Uint8Array, filename: string): number {
 export interface ExportColumn { header: string; value: (l: Load, nowMs: number) => string | number }
 
 export function exportColumnsFor(role: RoleId, currency = 'EUR'): ExportColumn[] {
-  const std = (l: Load, v: number | null | undefined) => (l.dims.cargoClass === 'STANDARD' ? 'Standard' : (v ?? ''));
+  const std = (l: Load, v: number | null | undefined) => (l.dims.cargoClass === 'STANDARD' ? '' : (v ?? ''));
   const cols: ExportColumn[] = [
     { header: 'Kod', value: (l) => l.code },
     { header: 'Typ', value: (l) => l.itemType ?? '' },

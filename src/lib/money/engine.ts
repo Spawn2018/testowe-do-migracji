@@ -229,7 +229,7 @@ export interface RateRule {
   heightFrom: number; heightTo: number;
   weightFrom: number; weightTo: number;
   roadRateEur: number;
-  /** I-12 (D-8): STANDARD; I-30: SYMBOL (max wymiary + rodzina/konwój); brak = DIMENSIONED */
+  /** I-30: SYMBOL (max wymiary + rodzina/konwój); brak = DIMENSIONED. STD-CLEAN: STANDARD nie jest stawką. */
   cargoClass?: 'DIMENSIONED' | 'STANDARD' | 'SYMBOL';
   symbol?: string;
   family?: string;
@@ -256,12 +256,9 @@ export function matchRate(dims: Dimensions, rules: RateRule[]): RateMatchResult 
 }
 
 /* =====================================================================
- * 5a. I-12 (D-8) — ładunek STANDARD: osobna stała stawka z cennika
- *
- * cargo_class = STANDARD → pozycja STANDARD (jedna na cennik i stronę).
- * Brak pozycji STANDARD NIE daje zera — wynik `NO_STANDARD_RATE` (ostrzeżenie, lista wyjątków).
- * Pozycja STANDARD nie bierze udziału w dopasowaniu po wymiarach. Paliwo i kurs — ten sam mechanizm
- * co dla stawki drogowej (buildPriceSide / assertSameMechanism). Kwot nie wymyślamy (D-1).
+ * 5a. STD-CLEAN — klasa STANDARD nie ma stawki (ładunki NTG, poza Watch Tower).
+ * Wynik `NO_STANDARD_RATE` to ostrzeżenie, nie zero i nie nowa pozycja cennika.
+ * Ewentualna stara reguła STANDARD nie wchodzi w dobór po wymiarach.
  * ===================================================================== */
 
 export type CargoClass = 'DIMENSIONED' | 'STANDARD' | 'SYMBOL';
@@ -349,12 +346,7 @@ export function matchRateBySymbol(input: {
 }
 
 export function matchRateForCargo(cargo: { cargoClass: CargoClass; dims: Dimensions | null }, rules: RateRule[]): RateForCargoResult {
-  if (cargo.cargoClass === 'STANDARD') {
-    const std = rules.filter((r) => r.cargoClass === 'STANDARD');
-    if (std.length === 0) return { matched: false, reason: 'NO_STANDARD_RATE' };
-    if (std.length > 1) return { matched: false, reason: 'AMBIGUOUS', candidates: std };
-    return { matched: true, rule: std[0], roadRateEur: std[0].roadRateEur };
-  }
+  if (cargo.cargoClass === 'STANDARD') return { matched: false, reason: 'NO_STANDARD_RATE' };
   if (!cargo.dims) return { matched: false, reason: 'NO_DIMENSIONS' };
   return matchRate(cargo.dims, rules.filter((r) => r.cargoClass !== 'STANDARD' && r.cargoClass !== 'SYMBOL'));
 }

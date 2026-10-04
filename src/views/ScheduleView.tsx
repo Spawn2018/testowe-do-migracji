@@ -841,9 +841,7 @@ export function ScheduleView() {
                         case 'dims':
                           if (l.dims.cargoClass === 'STANDARD') {
                             return (
-                              <td key={id} data-col={id} data-cargo="STANDARD" title={t(locale, 'i2_std_title')}>
-                                {t(locale, 'i2_std')}
-                              </td>
+                              <td key={id} data-col={id} data-cargo="none">—</td>
                             );
                           }
                           return (

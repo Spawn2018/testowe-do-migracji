@@ -69,10 +69,11 @@ describe('I-2b: kokpit z bazy', () => {
     expect(prodBannerRisk(rs)).toMatchObject({ top: { id: 'b' }, count: 2 })
     expect(prodBannerRisk([rs[2]])).toBeNull()
   })
-  it('OTIF bez dostarczonych = „—”; dokumenty: STANDARD bez zezwolenia, PERMIT_PL tylko z plikiem', () => {
+  it('OTIF bez dostarczonych = „—”; dokumenty: PERMIT_PL tylko z plikiem, STANDARD nie zwalnia', () => {
     expect(otifShown(0)).toBe(false)
     const docs = [{ loadId: 'p1', category: 'PERMIT_PL', status: 'UPLOADED', name: 'z.pdf' }] as Document[]
-    expect(docsCompleteBeforeLoad([L({ id: 's', dims: { cargoClass: 'STANDARD' } as never }), L({ id: 'p1' }), L({ id: 'p2' })], docs)).toBe(2)
+    expect(docsCompleteBeforeLoad([L({ id: 's', dims: { cargoClass: 'STANDARD' } as never }), L({ id: 'p1' }), L({ id: 'p2' })], docs)).toBe(1)
+    expect(permitBannerState(L({ id: 's', dims: { cargoClass: 'STANDARD' } as never }), docs)).toEqual({ kind: 'missing' })
     expect(permitBannerState(L({ id: 'p1' }), docs)).toEqual({ kind: 'uploaded_unchecked', fileName: 'z.pdf' })
     expect(permitBannerState(L({ id: 'p2' }), docs)).toEqual({ kind: 'missing' })
   })

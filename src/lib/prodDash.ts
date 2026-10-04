@@ -29,13 +29,11 @@ export function prodBannerRisk(risks: readonly Risk[]): { top: Risk; count: numb
 }
 
 /**
- * Kafelek „komplet dokumentów przed załadunkiem” w produkcji: transport ma komplet, gdy ma wgrane wszystkie
- * dokumenty wymagane przed załadunkiem — zezwolenie PL (dokument w `documents`, kategoria PERMIT_PL).
- * Ładunek normatywny (STANDARD) zezwolenia nie wymaga.
+ * Kafelek „komplet dokumentów przed załadunkiem” w produkcji: transport ma komplet, gdy ma wgrane
+ * zezwolenie PL (dokument w `documents`, kategoria PERMIT_PL). STD-CLEAN: klasa STANDARD nie zwalnia.
  */
 export function docsCompleteBeforeLoad(loads: readonly Load[], documents: readonly Document[]): number {
-  return loads.filter((l) => l.dims.cargoClass === 'STANDARD'
-    || documents.some((d) => d.loadId === l.id && d.category === 'PERMIT_PL' && d.status === 'UPLOADED')).length;
+  return loads.filter((l) => documents.some((d) => d.loadId === l.id && d.category === 'PERMIT_PL' && d.status === 'UPLOADED')).length;
 }
 
 /** OTIF bez dostarczonych transportów nie istnieje — „—” zamiast 0% (ani 100%). */
@@ -61,7 +59,6 @@ export type PermitBannerState =
 /** I-2 (zero fasady): stan zezwolenia wyłącznie z dokumentów — bez fikcyjnego numeru PL/2026/14xx.
  *  Odczytu treści zezwoleń nie ma, więc zgodności wymiarów NIE deklarujemy. */
 export function permitBannerState(load: Pick<Load, 'id' | 'dims'>, documents: readonly Document[]): PermitBannerState {
-  if (load.dims.cargoClass === 'STANDARD') return { kind: 'not_required' };
   const d = documents.find((x) => x.loadId === load.id && x.category === 'PERMIT_PL' && x.status === 'UPLOADED');
   return d ? { kind: 'uploaded_unchecked', fileName: d.name } : { kind: 'missing' };
 }
