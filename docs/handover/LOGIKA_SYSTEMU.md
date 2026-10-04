@@ -265,10 +265,10 @@ E-mail z bazy, jeśli macierz go włączyła, ma link do strony głównej aplika
 
 ### Rejs
 
-Po zalogowaniu do bazy (`src/views/RisksView.tsx`, `src/lib/prodFacade.ts`):
+Po zalogowaniu do bazy (`src/views/RisksView.tsx`, `src/lib/sailings.ts`):
 
 - widać rozkład rejsów z bazy i, jeśli jest odczyt, falę i wiatr,
-- obok stoi nagłówek „Alternatywy dla rejsu” i zdanie: „Alternatywne przeprawy: brak źródła danych.” Nie ma listy do kliknięcia.
+- obok stoi nagłówek „Alternatywy dla rejsu” i lista z tabeli `sailings`: najbliższe odejścia do Szwecji Polferries (Gdańsk–Nynäshamn) i Stena Line (Gdynia–Karlskrona), do trzech na armatora. Odwołane i już odeszłe nie wchodzą. Brak wierszy armatora = „Brak danych”. Nie ma zmyślonych tras (TT-Line, Unity Line, kilometry) i nie ma przycisku, który zmienia transport.
 
 W podglądzie demonstracyjnym jest na sztywno cztery trasy (Gdańsk–Karlshamn, Gdynia–Karlskrona, Świnoujście–Trelleborg, Świnoujście–Ystad) z kilometrami do Boden. Przycisk „Przelicz” coś zmienia tylko wtedy, gdy istnieje ryzyko promowe z planem awaryjnym: obniża wagę tego ryzyka i dopisuje zdarzenie przy transporcie. Nie rezerwuje promu i nie przelicza trasy na mapie (`src/store/useTowerStore.ts`, funkcja planu awaryjnego).
 
@@ -388,7 +388,7 @@ Nie budować, dopóki właściciel nie powie „tak” na konkretny punkt:
 - traktowania wyboru w centrum jako pełnej zmiany ceny, trasy albo rejsu — część przycisków tylko otwiera zakładkę albo dopisuje ślad;
 - chowania pozycji dzwonka po kliknięciu — zrobione w L-5 (pozycja znika, licznik maleje, otwiera cel);
 - nowych celów kliknięcia dla zdarzeń statusu i stref — dziś większość nie ma własnego ekranu;
-- listy alternatywnych promów i objazdów w Szwecji na produkcji — kod celowo pisze „brak źródła” albo chowa stałą listę;
+- objazdów w Szwecji na produkcji — stała lista zostaje ukryta; alternatywy rejsu są już z bazy (L-9), nie ze stałego tekstu;
 - trzech osobnych automatów „workflow HHL / KSH / Scandinavian Express” — takiego bytu w kodzie nie ma;
 - podłączenia ośmiu progów (opóźnienie, daty KSH, awizacja, dokumenty, GPS, zjazd) — wzory są w §4 od 2026-10-04 00:07; L-3 je wdraża, zmiana liczby w Opcjach zmienia moment alarmu;
 - zdjęcia cyfr z górnego paska — to zmiana wyglądu, nie poprawka błędu liczenia;

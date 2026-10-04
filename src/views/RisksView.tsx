@@ -19,7 +19,7 @@ import type { MarineConditionRow } from '../lib/marineWeatherDb';
 import type { CorridorConditionRow } from '../lib/corridorConditionsDb';
 import { knotsToMs } from '../lib/marineUnits';
 import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
-import { AUTO_RISK_CODES, autoRiskLabel, effDeparture, fmtLocal, sailingStatusLabel, sailingStatusPill, type AutoRiskCode } from '../lib/sailings';
+import { AUTO_RISK_CODES, autoRiskLabel, effDeparture, fmtLocal, nearestCrossingSailings, sailingStatusLabel, sailingStatusPill, type AutoRiskCode } from '../lib/sailings';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
 
 const DecisionCentreLazy = import.meta.env.VITE_AUTH_MODE === 'supabase'
@@ -81,6 +81,11 @@ export function RisksView() {
     return sailings.filter((x) => x.route === 'GDN-NYN' && Date.parse(effDeparture(x)) >= now)
       .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b))).slice(0, 6);
   }, [sailings]);
+
+  const crossingAlts = useMemo(
+    () => nearestCrossingSailings(sailings, getNowMs()),
+    [sailings],
+  );
 
   useEffect(() => {
     // Demo: seed Trafikverket w UI. Produkcja: corridor_conditions z II-6 (road-se).
@@ -232,9 +237,31 @@ export function RisksView() {
                   <div className="note" data-no-source="sea" style={{ marginTop: 8 }}>{t(locale, 'i2_sea_no_source')}</div>
                 )}
               </div>
-              <div>
+              <div data-ferry-alt="db">
                 <h4 className="sec">{t(locale, 'risk_alt_for_day').replace(/\s*$/, '')}</h4>
-                <div className="note" data-no-source="ferry-alt">{t(locale, 'i2_alt_no_source')}</div>
+                {([
+                  ['polferries', crossingAlts.polferries, 'l9_alt_pol'],
+                  ['stena', crossingAlts.stena, 'l9_alt_stena'],
+                ] as const).map(([line, rows, label]) => (
+                  <div key={line} data-ferry-line={line} style={{ marginBottom: 10 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>{t(locale, label)}</div>
+                    {rows.length === 0 ? (
+                      <div className="note" data-no-source="ferry-alt" style={{ border: 0 }}>{t(locale, 'l9_brak')}</div>
+                    ) : (
+                      <table style={{ width: '100%', fontSize: 13 }}>
+                        <tbody>
+                          {rows.map((x) => (
+                            <tr key={x.id}>
+                              <td><span className="mono">{fmtLocal(effDeparture(x))}</span></td>
+                              <td>{x.vessel || '—'}</td>
+                              <td style={{ textAlign: 'right' }}><span className={`pill ${sailingStatusPill(x.status)}`}>{sailingStatusLabel(x.status, locale)}</span></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           </div>

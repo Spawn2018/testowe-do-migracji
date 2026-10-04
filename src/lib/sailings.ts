@@ -187,6 +187,48 @@ export function nextDbSailing(all: readonly Sailing[], nowMs: number): Sailing |
     .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b)))[0] ?? null;
 }
 
+/** L-9: ile najbliższych odejść do Szwecji pokazać na armatora. */
+export const NEAREST_CROSSING_LIMIT = 3;
+
+/**
+ * L-9 — linia z rozkładu w bazie. Dane startowe (demo) nie są rozkładem.
+ * Stena: źródło STENA albo armator ze słowem „stena”. Polferries analogicznie.
+ * Ręczny wpis bez armatora: trasa GDY–KAA to Stena, GDN–NYN to Polferries.
+ */
+export function crossingLine(s: Sailing): 'POLFERRIES' | 'STENA' | null {
+  if (s.source === 'DANE_STARTOWE') return null;
+  const op = (s.operator ?? '').toLowerCase();
+  if (s.source === 'STENA' || op.includes('stena')) return 'STENA';
+  if (s.source === 'POLFERRIES' || op.includes('polferries')) return 'POLFERRIES';
+  // Inny armator (np. TT-Line) nie jest ani Polferries, ani Steną — nie dopisujemy go do listy.
+  if (op.trim()) return null;
+  if (s.route === 'GDY-KAA' || s.route === 'KAA-GDY') return 'STENA';
+  if (s.route === 'GDN-NYN' || s.route === 'NYN-GDN') return 'POLFERRIES';
+  return null;
+}
+
+/**
+ * L-9 — najbliższe rejsy do Szwecji z tabeli `sailings`.
+ * Polferries: GDN–NYN. Stena: GDY–KAA. Odwołane i już odeszłe odpadają.
+ * Pusta lista = brak rozkładu tego armatora (w interfejsie „Brak danych”).
+ */
+export function nearestCrossingSailings(
+  all: readonly Sailing[],
+  nowMs: number,
+  limit = NEAREST_CROSSING_LIMIT,
+): { polferries: Sailing[]; stena: Sailing[] } {
+  const pick = (line: 'POLFERRIES' | 'STENA', route: Sailing['route']) =>
+    all
+      .filter((s) => {
+        if (crossingLine(s) !== line || s.route !== route || s.status === 'ODWOLANY') return false;
+        const dep = Date.parse(effDeparture(s));
+        return Number.isFinite(dep) && dep >= nowMs;
+      })
+      .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b)))
+      .slice(0, limit);
+  return { polferries: pick('POLFERRIES', 'GDN-NYN'), stena: pick('STENA', 'GDY-KAA') };
+}
+
 export function dbFerryWidget(s: Sailing | null, nowMs: number): { cd: string; line: string } | null {
   if (!s) return null;
   const depMs = Date.parse(effDeparture(s));
