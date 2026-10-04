@@ -32,7 +32,7 @@ export const EXPECTED = {
   hist11: 11,
   workflows: 47,
   insurance: 42,
-  'dec-auto': 39,
+  'dec-auto': 64, // 39 + 25 asercji L-1b (ten commit)
 };
 
 export const SUITE_FILE = {

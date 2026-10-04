@@ -183,11 +183,13 @@ export function ScheduleView() {
     serverDraft.current = null;
     setServerNote(null);
     setActiveMap(null);
+    let fileRead = false;
     try {
       const buf = await f.arrayBuffer();
       const { readXlsxHeaders } = await import('../lib/xlsxRead');
       const mapping = await import('../lib/importMapping');
       const headers = await readXlsxHeaders(buf);
+      fileRead = true;
       if (!mapping.defaultLayoutFits(headers)) {
         const templates = SERVER_IMPORT
           ? await (await import('../data/scheduleImportServer')).loadTemplates()
@@ -207,6 +209,10 @@ export function ScheduleView() {
       }
       await runDryRun(buf, f.name, null);
     } catch (e) {
+      if (SERVER_IMPORT && !fileRead) {
+        const { reportUnreadableKshFile } = await import('../data/scheduleImportServer');
+        await reportUnreadableKshFile(f.name);
+      }
       setParseError(e instanceof Error ? e.message : String(e));
       setStep('upload');
       pushToast(t(locale, 'a6_sch_xlsx_fail'), 'CRITICAL');
