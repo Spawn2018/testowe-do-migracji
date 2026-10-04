@@ -110,7 +110,8 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 
 | ID | Opis | Status |
 |---|---|---|
-| R-1 | import prawdziwego harmonogramu na produkcję | **otwarte** — RODO/zgody OK; import + stawki (D-1 SYMBOL w bazie) — właściciel |
+| R-0 | Plan czyszczenia przed R-1. Tylko plan, do akceptacji. Kasowane wyłącznie transporty i wiersze związane kluczem obcym. Reszta zostaje. Wykonanie dopiero tuż przed R-1, po pisemnej akceptacji. Nic nie kasować wcześniej. | PLAN — liczby z produkcji 04.10 20:30, bez kasowania |
+| R-1 | import prawdziwego harmonogramu na produkcję. Start produkcji = import ze SharePoint po D-SP (w planie już II-10-E1 i II-10-E2, bez drugiej kopii). Przed tym importem, i tylko po pisemnej akceptacji, czyszczenie z R-0. | **otwarte** — RODO/zgody OK; import + stawki (D-1 SYMBOL w bazie) — właściciel. Status bez zmiany. 94 transporty zostają do akceptacji czyszczenia |
 | R-2 | zaproszenie pracowników HHL, potem KSH, potem przewoźnika | **CZĘŚCIOWO** — właściciel sam dodaje użytkowników w aplikacji; zaproszenia/e-maile do tych kont mogą wychodzić (0133). Lista D-16 nadal u właściciela |
 | R-3 | O3b — pierwszy prawdziwy transport od importu do faktury | CZEKA NA: R-2 |
 | R-4 | raport końcowy, tag `release-1.0` | CZEKA NA: R-3 |
@@ -381,7 +382,7 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 |---|---|---|
 | B-1 | Mapy: pojazdy tylko z prawdziwych pozycji GPS (brak pozycji = brak znacznika). Warstwy stref, portów, korytarza, promów i sytuacji drogowych zostają. Na produkcji brak danych przykładowych. | **DO SCALENIA** — `fix/b-1` |
 | B-2a | Ryzyka: brak wypłynięć Steny | NIEZACZĘTE |
-| B-2b | Ryzyka: brak widoczności warunków drogowych w SE | NIEZACZĘTE |
+| B-2b | Ryzyka: brak widoczności warunków drogowych w SE. Sytuacje drogowe Trafikverket (wypadki, zamknięcia, roboty) wchodzą w H-2, zaraz po L-12, nie w H-4: nowe źródło API, panel „Warunki drogowe SE”, ryzyka ROAD_SE z prawdziwych danych. | NIEZACZĘTE — realizacja w H-2, po L-12 |
 | B-2c | Centrum decyzji: jak działa i dlaczego puste — opisać logikę, nie zgadywać | NIEZACZĘTE |
 | B-3a | Dokumenty: zezwolenie per firma obok polisy; auto-podpięcie do trasy wg wymiarów; polisa auto do każdej trasy | NIEZACZĘTE |
 | B-4a | Finanse: przychód — pilotaż i dodatki mają zniknąć | NIEZACZĘTE |
@@ -441,7 +442,7 @@ Feed Aikido wyłączony (400). Pięć średnich, bez numerów CVE. Nie krytyczne
 
 Źródło: `docs/handover/POLECENIA_KOORDYNATORA.md` i `docs/handover/LOGIKA_SYSTEMU.md`. Istniejących wierszy nie ruszano. P2-TILES, P3-APK i SEC-OWASP już są w planie — tu tylko odesłanie, bez drugiej kopii.
 
-Kolejność od 03.10 21:02: L-1 (domknięcie: 9 typów, 0140) → L-2 → L-3 → L-1b → L-4 → L-5 → L-13 → L-6 → L-7 → L-8 → L-9 → L-10 → L-11 → L-12 → część B od początku (pozycje zrobione w L oznacz „zrobione w ramach L-x”) → SEC-OWASP → część D po danych od właściciela. SEC-OWASP, P2-TILES, P3-APK i część D nie startują w tym przebiegu.
+Kolejność od 04.10 20:23: L-9 → L-10 → L-11 → L-12 → H-1 (zbudować, zostaje wyłączone do wymiarów D-83) → H-2 od razu (w tym B-2b: sytuacje drogowe Trafikverket) → H-3 od razu → dopiero potem część B od początku (pozycje zrobione w L oznacz „zrobione w ramach L-x”) → SEC-OWASP → część D po danych od właściciela. L-6 jest już na produkcji, nie wraca. P2-TILES i P3-APK zostają w tle, nie teraz. SEC-OWASP i część D nie startują w tym przebiegu. H-2 nie startuje przed końcem L-12.
 
 | ID | Opis | Kryterium | Status |
 |---|---|---|---|
@@ -453,7 +454,7 @@ Kolejność od 03.10 21:02: L-1 (domknięcie: 9 typów, 0140) → L-2 → L-3 �
 | L-5 | P1. Dzwonek. Bez napisu „przeczytane”. Pozycja znika z listy po kliknięciu i prowadzi do celu z L-4. Źródło: pytanie 13. | Test: klik → pozycja znika, licznik maleje, otwiera cel. | **ZROBIONE** — bez napisu „przeczytane”; klik oznacza pozycję i zdejmuje ją z listy; licznik to długość listy; cel z L-4. |
 | L-6 | P1. „Ponów kopię” uruchamia kopię zapasową (dziś tylko zapisuje prośbę, LOGIKA §1). | Klik uruchamia kopię, a wynik (udana/nieudana) widać w Stanie systemu. | **NA PRODUKCJI** — 0151 `l6_backup_retry`, wdrożenie `dpl_DzV56mBDm5K1vCrjuwoiBNL6rq55` (04.10.2026, `main` 419c5bb). Ten sam start co cron. Brak pg_net albo Vault zostawia ERROR na liście kopii. |
 | L-7 | P1. Nazwy statusów „opóźniony” i „cichy”. Na liście harmonogramu oba mają własną polską nazwę. Źródło: B 8, pytanie 4; LOGIKA §5. | Na liście harmonogramu oba statusy mają własną polską nazwę. | **NA PRODUKCJI** — PR #29, `main` 163ecf8, wdrożenie `dpl_EmxNgLKUy16bNEt25ZgD4J82BbWj`. |
-| L-8 | P1. Kafelki kokpitu. Kafelek KSH „Wymaga decyzji” liczy tylko to, co KSH widzi. Kafelek przewoźnika pokazuje bieżący tydzień zamiast stałego „tydzień 38”. Źródło: pytanie 12; LOGIKA §11. | Test liczb dla każdej firmy. | **W TEJ PACZCE** — KSH liczy ryzyka widoczne na liście Ryzyk, nie Centrum decyzji. Przewoźnik: bieżący tydzień ISO. |
+| L-8 | P1. Kafelki kokpitu. Kafelek KSH „Wymaga decyzji” liczy tylko to, co KSH widzi. Kafelek przewoźnika pokazuje bieżący tydzień zamiast stałego „tydzień 38”. Źródło: pytanie 12; LOGIKA §11. | Test liczb dla każdej firmy. | **NA PRODUKCJI** — PR #30, `main` e9eb6ae, wdrożenie `dpl_3jRbftYi8YXHRyuH3ecNdc1NbVxu`. |
 | L-9 | P1. Alternatywy dla rejsu. Na produkcji lista z prawdziwych rozkładów w bazie — najbliższe rejsy Polferries i Stena. Bez danych zmyślonych. Objazdy w Szwecji zostają ukryte. Źródło: pytanie 5; LOGIKA §9. | Lista z bazy; brak rozkładów = komunikat „Brak danych”. | NIEZACZĘTE |
 | L-10 | P1. Opis trzech ścieżek pracy. Plik `docs/handover/WORKFLOW_FIRM.md`: trzy schematy krok po kroku (HHL, KSH, Scandinavian Express), od zaproszenia do zamknięcia transportu, prostym językiem, ze schematami Mermaid. To opis, nie automat. Źródło: pytanie 14. | Plik w repozytorium. | NIEZACZĘTE |
 | L-11 | P1. Górny pasek bez numeru etapu. Usunąć numer etapu (1–9) z kafelków; liczba transportów zostaje. Źródło: B 9, decyzja właściciela 03.10. | Numer etapu znika z kafelka, liczba transportów zostaje. | NIEZACZĘTE |
@@ -463,6 +464,9 @@ Kolejność od 03.10 21:02: L-1 (domknięcie: 9 typów, 0140) → L-2 → L-3 �
 | B-REJSY | P2. Rejsy — część B zlecenia, sekcja REJSY, jako osobna pozycja. | Osobna pozycja planu zrealizowana według sekcji REJSY. | NIEZACZĘTE |
 | Q-11a | P2. Pięć rozmiarów ekranu. | Pięć rozmiarów sprawdzonych. | NIEZACZĘTE |
 | Q-11b | P2. Powiadomienia na Android i iOS. | Powiadomienia działają na Androidzie i iOS. | NIEZACZĘTE |
+| Q-17 | Pytanie 17. Trasy promów i drogi pokrywają się z OpenStreetMap. Trasa statku to trasa promu, nie ląd. | Trasa promu nie idzie przez ląd. | NIEZACZĘTE — razem z H-6 |
+| Q-18 | Pytanie 18. Statki: tylko płynące do Szwecji, odświeżane bez przestojów. | Na mapie tylko statki do Szwecji, odświeżanie bez przerwy. | NIEZACZĘTE |
+| Q-19 | Pytanie 19. Na mapie widać ulice i miejscowości, szczególnie w widoku Mapa. | Ulice i miejscowości widać na mapie. | NIEZACZĘTE — razem z H-6 |
 | KOPIA-D | P3. Dograć kopię `usuniete_standard_2026-10-03` na `D:\Watch Tower\dane\`, gdy komputer domowy będzie włączony. | Plik na dysku D: i suma SHA-256 zgodna z kopią. | NIEZACZĘTE — komputer Domowy był offline 03.10; kopia jest w R2 |
 | AUDIT-PROD | Zasada: blokują tylko luki wysokie i krytyczne w zależnościach produkcyjnych (`npm audit --omit=dev --audit-level=high`). Zależności deweloperskie to P3, sprawdzane w niedzielnej bramie. | Brama odrzuca tylko high/critical w prod. | OBOWIĄZUJE |
 
@@ -501,17 +505,45 @@ TESTY: dla każdego wzoru — zmiana wartości w Opcjach zmienia moment alarmu; 
 
 ## Zlecenie HERE (04.10.2026) — kolejność z sekcji 5
 
-Źródło: `docs/handover/ZLECENIE_HERE.md`. Zasada: wyłącznie funkcje oparte na HERE. Innych mechanizmów nie zmieniamy. II-7 i II-7a zostają w historii; zapis „bez HERE" z D-28 zastępuje D-77. Q-17 i Q-19 nie są jeszcze w tym planie — H-6 startuje dopiero razem z nimi, gdy zostaną dopisane.
+Źródło: `docs/handover/ZLECENIE_HERE.md`. Zasada: wyłącznie funkcje oparte na HERE. Innych mechanizmów nie zmieniamy. II-7 i II-7a zostają w historii; zapis „bez HERE" z D-28 zastępuje D-77. Po L-12 kolejność to H-1, potem H-2, potem H-3, i dopiero część B. H-2 i H-3 startują od razu, gdy przyjdzie ich kolej. H-1 powstaje, ale zostaje wyłączone, aż właściciel poda wymiary (D-83). Q-17, Q-18 i Q-19 są w planie. H-6 nadal razem z Q-17 i Q-19, bez dublowania.
 
 | Kiedy | ID | Opis | Status |
 |---|---|---|---|
 | zaraz po L-13 | H-0 | Test na koncie właściciela, bez zmian w aplikacji. Odcinki Śrem → Gdańsk, Nynäshamn → Boden, Karlskrona → Boden. Raport do właściciela. | DONE 2026-10-04 — uzupełnienie limitów, BK i propozycji H-4 w POSTEP. Kodu aplikacji nie ruszano. |
-| po etapie 1 (po L-12) | H-1, H-2, H-3 | Kontrola trasy z wymiarów właściciela, utrudnienia PL/SE, przeszkody wzdłuż korytarza. | NIEZACZĘTE |
-| razem z Q-17 i Q-19 | H-6 | Mapa przeszkód. Jedna praca z Q-17 i Q-19, bez dublowania. | NIEZACZĘTE — Q-17 i Q-19 nie są w planie |
+| po L-12, przed H-2 | H-1 | Kontrola trasy z wymiarów właściciela. Zbudować, zostawić wyłączone do D-83. | NIEZACZĘTE — nie startować przed L-12 |
+| zaraz po H-1 | H-2 | Utrudnienia PL/SE oraz B-2b: sytuacje Trafikverket (wypadki, zamknięcia, roboty). Nowe źródło API, panel „Warunki drogowe SE”, ROAD_SE z prawdziwych danych. Nie odkładać na H-4. | NIEZACZĘTE — start od razu po H-1, nie przed L-12 |
+| zaraz po H-2 | H-3 | Przeszkody wzdłuż korytarza. | NIEZACZĘTE — start od razu po H-2 |
+| razem z Q-17 i Q-19 | H-6 | Mapa przeszkód. Jedna praca z Q-17 i Q-19, bez dublowania. | NIEZACZĘTE — Q-17 i Q-19 dopisane 04.10 |
 | po etapie 2 | H-7, H-8, H-10, H-12 | Mapa w e-mailu i PDF, profil trasy, pogoda i wiatr (ryzyko), zakazy czasowe. | NIEZACZĘTE |
 | etap 4 (po emtrack) | H-4, H-5, H-10 ETA | ETA z GPS przez HERE, kontrola po przejeździe, wydłużanie ETA przez wiatr. | NIEZACZĘTE — propozycja H-4 (limit prędkości i przerwy UE) w POSTEP 2026-10-04, bez budowy, do akceptacji właściciela |
 
 ## Polecenie 2026-10-04 17:06 — e-mail decyzji automatycznych
 
 L-13 przyjęte. `automatic_decision_email` = true. Niekrytyczne w skrócie (szacunek szczytu 34 na dobę). Krytyczne: jedno zdarzenie = jeden e-mail na odbiorcę, lista transportów. Limit: najpierw krytyczne, potem skróty; 10 na dobę zostaje na zaproszenia i reset hasła. Po wyczerpaniu limitu aplikacja i dzwonek bez zmiany. Stan systemu: ile e-maili nie wyszło i do kogo. Co tydzień liczby produkcji w `POSTEP.md` obok szacunku 34; strażnik 80 więcej niż dwa razy w tygodniu → raport do właściciela.
+
+## R-0 — plan czyszczenia (04.10.2026 20:30, czas warszawski)
+
+Tylko plan do akceptacji. Nic nie skasowano. 94 transporty zostają do pisemnej akceptacji. Status R-1 bez zmiany. Polecenie z listą do potwierdzania punkt po punkcie jest nieważne i nie jest zapisane.
+
+Kasowane, wyłącznie wiersze transportów i tego, co wisi na nich kluczem obcym (liczby z produkcji `nglnnrmzmhusvxslousq`, odczyt 04.10):
+
+| Co | Teraz | Po czyszczeniu |
+|---|---|---|
+| loads | 94 | 0 |
+| shipment_items | 94 | 0 |
+| load_events | 108 | 0 |
+| load_messages | 1 | 0 |
+| geofence_states | 3 | 0 |
+| driver_tokens | 3 | 0 |
+| risk_signals z transportem | 117 | 0 (zostaje 15 bez transportu) |
+| decisions z transportem | 32 | 0 (zostaje 12 bez transportu) |
+| decision_events tych decyzji | 65 | 0 (zostaje 12 przy decyzjach bez transportu) |
+| notifications z transportem | 1535 | 0 (zostaje 139 bez transportu) |
+| sms_outbox z transportem | 1 | 0 (zostaje 24 bez transportu) |
+| workflow_runs z transportem | 2 | 0 |
+| documents, positions, invoice_lines, load_cost, load_revenue, load_permits, load_escorts, load_agreed_fees, eta_segment_observations, carrier_ratings z transportem | 0 | 0 |
+
+Zostaje bez zmian: organizacje (3), konta (11), rejsy (164), strefy (10), faktury (0), import harmonogramu (1 wiersz historii), automatyzacje (7), cennik, opcje, progi, użytkownicy, zaproszenia. Decyzje, ryzyka, powiadomienia i SMS-y bez transportu zostają.
+
+Przed wykonaniem: pełna kopia do R2, poza repozytorium; próba odtworzenia na teście; potem migracja przez bramę. Liczby przed i po w raporcie. Wykonanie dopiero tuż przed R-1.
 
