@@ -110,4 +110,4 @@
 | D-82 | myto | Opłaty drogowe poza zakresem. Nie liczymy i nie pokazujemy. | ✅ 04.10.2026 |
 | D-83 | wymiary zestawu | Wymiary dla każdego transportu poda właściciel. Kontrola trasy nie bierze niczego z dokumentów. Przewoźnik nie wprowadza żadnych wymiarów. | ✅ 04.10.2026 |
 | D-84 | próg wiatru | Porywy 15 m/s. Silny wiatr na trasie wydłuża ETA (H-10). | ✅ 04.10.2026 |
-
+| D-85 | ETA | W pełni automatyczne, zero ręcznego wpisu, także prędkości. Limit km/h w Opcjach nie obowiązuje. H-4 dopiero po emtrack. Szczegóły w `ZLECENIE_HERE.md`. | ✅ 04.10.2026 |

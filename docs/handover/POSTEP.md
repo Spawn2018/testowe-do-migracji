@@ -1730,3 +1730,34 @@ Ilustracja reguły na dzisiejszej jeździe, to nie jest nowe ETA: Śrem–Gdańs
 #### Czego nie ruszam
 
 H-4 nie budowane. H-1, H-2 i H-3 w planie są dopiero po L-12, a wymiary ma podać właściciel (D-83) — nie startuję. L-6 jest następną otwartą pozycją listy L, ale to zmiana mechanizmu kopii, a to polecenie każe stanąć, gdy następne nie jest jednoznaczne. Kodu aplikacji nie zmieniałem. Wdrożenia aplikacji nie ma.
+
+## 2026-10-04 20:06 (czas warszawski) — POCZTA-3, L-13, L-6, D-85
+
+Żadnego e-maila w tym kroku.
+
+### Limity Resend
+
+Odczyt użycia, bez wysyłki. Ostatni odczyt około 20:05: dziennie 203 / 100, miesięcznie 429 / 3000. Wtyczka nie podaje daty dziennej właściciela.
+
+- Limit dzienny odnawia się **5 października 2026 o 01:00** (właściciel, z panelu, polecenie 20:04).
+- Limit miesięczny odnawia się **25 października 2026 o 01:00** (właściciel, polecenie 20:06). Zegar z odczytu użycia (około 02:03 czasu warszawskiego) nie zastępuje tej godziny.
+
+### Testowy e-mail z 19:01
+
+2026-10-04 19:01:53 czasu warszawskiego, na sebastian@log-mar.pl. Temat: test, nie prawdziwa decyzja. Identyfikator Resend `01a107dd-6859-7bf3-813c-4bb10518762e`. Status **failed**. Identyfikator wiadomości pusty. W logu API `POST /emails` dał HTTP 200 w tej samej sekundzie. Aplikacja brała 200 za „wysłany”. To był błąd L-13.
+
+### L-13 na produkcji
+
+Status wyłącznie z odpowiedzi Resend. Samo HTTP 200 i samo id to `PENDING`, nie `SENT`. `last_event` failed, bounced albo complained, albo nazwa błędu Resend, to `ERROR`. Migracja `email_status_from_resend` jest na produkcji. `email_budget_status()` liczy `SUPPRESSED` i `ERROR` jako „nie wyszło”. Funkcja `send-notifications` jest w wersji 16, `verify_jwt` włączone: po samym id dopytuje `GET /emails/{id}` i bierze `last_event`. Brak statusu zostawia wiersz `PENDING` (klucz idempotencji `tower-notif-${id}`, następny cron nie wysyła drugi raz). Treść błędu jest krótka i bez klucza.
+
+### Testy nie wysyłają
+
+Potwierdzone, bez zmiany kodu. Zestawy bazy i `tests/db/gate.sh` idą na lokalny Postgres. SIM-1 (`scripts/sim1-full-transport.mjs`, `scripts/sim1-sms-only.mjs`) nie woła Resend. Test statusu Resend jest czysty. Test żywy keep-alive zeruje klucz i woła tylko `beat()`. Playwright idzie w lokalne logowanie, nie na api.resend.com.
+
+### L-6 na produkcji
+
+PR #26 scalony. `main` to `419c5bb`. Brama lokalna zielona przed scaleniem (log `/tmp/gate-l6.txt`). Wdrożenie `dpl_DzV56mBDm5K1vCrjuwoiBNL6rq55`. Obie domeny, tower.log-mar.pl i watch-tower-makieta.vercel.app, zwróciły 200 na tej wersji (04.10.2026, około 20:06). Migracja `l6_backup_retry` jest na produkcji: „Ponów kopię” woła ten sam `backup-export` co cron. Brak pg_net albo Vault zostawia wiersz ERROR, bez sekretu w tekście.
+
+### D-85
+
+Propozycja H-4 z limitem km/h w Opcjach jest nieaktualna. Decyzja D-85: ETA w pełni automatyczne, zero ręcznego wpisu, także prędkości. Opis i plan testu są w `ZLECENIE_HERE.md` (H-4) i w rejestrze (D-85). H-4 nie budowane. H-1 też nie: komunikat HERE o limicie 400 cm na województwo to przepis, nie przeszkoda. Ryzyko tylko dla konkretnego wiaduktu, mostu albo tunelu.
