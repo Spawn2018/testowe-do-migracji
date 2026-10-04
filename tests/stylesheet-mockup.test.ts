@@ -33,6 +33,16 @@ const ODSTEPSTWA: Record<string, string> = {
   'thead th|cursor': 'D-27: nagłówek nie jest przyciskiem; kursor pointer tylko przy tabindex',
   'tbody tr|cursor': 'D-27: wiersz bez tabindex nie udaje łącza; aktywne wiersze mają tabindex',
   '.brand|align-items': 'BRAND-15 (4e836e2): logo w górnym pasku do środka, nie baseline makiety sprzed symbolu',
+  '.stage .kb|position': 'L-11 (decyzja 03.10): numer etapu 1–9 znika z kafelka, reguła .kb bez elementu',
+  '.stage .kb|top': 'L-11 (decyzja 03.10): numer etapu 1–9 znika z kafelka, reguła .kb bez elementu',
+  '.stage .kb|right': 'L-11 (decyzja 03.10): numer etapu 1–9 znika z kafelka, reguła .kb bez elementu',
+  '.stage .kb|font-family': 'L-11 (decyzja 03.10): numer etapu 1–9 znika z kafelka, reguła .kb bez elementu',
+  '.stage .kb|font-size': 'L-11 (decyzja 03.10): numer etapu 1–9 znika z kafelka, reguła .kb bez elementu',
+  '.stage .kb|font-weight': 'L-11 (decyzja 03.10): numer etapu 1–9 znika z kafelka, reguła .kb bez elementu',
+  '.stage .kb|color': 'L-11 (decyzja 03.10): numer etapu 1–9 znika z kafelka, reguła .kb bez elementu',
+  '.stage .kb|opacity': 'L-11 (decyzja 03.10): numer etapu 1–9 znika z kafelka, reguła .kb bez elementu',
+  '.stage[aria-pressed="true"] .kb|opacity': 'L-11 (decyzja 03.10): numer etapu 1–9 znika z kafelka, reguła .kb bez elementu',
+  '.stage[aria-pressed="true"] .kb|color': 'L-11 (decyzja 03.10): numer etapu 1–9 znika z kafelka, reguła .kb bez elementu',
 };
 
 /** D-27 — kontrast WCAG. Makieta ma stare heksy; cofnięcie w aplikacji łamie AA. */
