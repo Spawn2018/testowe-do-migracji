@@ -426,3 +426,25 @@ Bez płatnego planu Resend. Bez nowych mechanizmów. Tylko odczyt Resend. Żadne
 3. Według NARZEDZIA_CURSOR.md sprawdzić, czy jakikolwiek test, symulacja albo brama wysyła przez Resend. Jeśli tak — to naruszenie zasady. Poprawić tak, żeby testy nie wysyłały.
 
 Potem L-6 według polecenia z 19:38: „Ponów kopię” uruchamia istniejącą kopię, wynik w Stanie systemu. Bez H-4 i bez H-1. Nie zaczynać pozycji po L-6.
+
+## Polecenie 2026-10-04 20:04 (czas warszawski) — POCZTA-3
+
+Nie przerywać L-6. Żadnego e-maila.
+
+Limit dzienny Resend odnawia się **5 października 2026 o 01:00** (właściciel, z panelu). Wtyczka tej daty dziennej nie podaje.
+
+Limit miesięczny Resend odnawia się **25 października 2026 o 01:00** (właściciel, 2026-10-04 20:06). Obok daty dziennej. Zegar z odczytu użycia nie zastępuje tej godziny.
+
+Testy, symulacje (w tym SIM-1) i bramy nie wysyłają przez Resend. Potwierdzone w kodzie: brama lokalna to Postgres na localhost, SIM-1 nie woła Resend, testy statusu są czyste, a test żywy keep-alive zeruje klucz i nie wysyła.
+
+## Polecenie 2026-10-04 20:05 (czas warszawski) — wdrożenie z main bez kolejnej zgody
+
+Po zielonej bramie i scaleniu na `main` wdrażać produkcję od razu, z `main`. Nie czekać na kolejną zgodę. Bez wysyłki e-mail. `AUTOMATIC_DECISION_EMAIL` bez zmian.
+
+## Decyzja D-85 (2026-10-04) — ETA w pełni automatyczne
+
+H-4 nie budować (czeka na emtrack). Propozycja limitu km/h w Opcjach jest nieaktualna.
+
+ETA z bieżącej pozycji GPS, zero ręcznego wpisu, także prędkości. Łańcuch: droga PL i SE (HERE, wymiary D-83, ruch, utrudnienia, wiatr H-10, zakazy H-12), współczynnik zestawu uczona z planu (start: czasy D-9 wobec HERE), prom (rozkład, status, AIS, następny rejs tego armatora), port, godziny kierowcy (przerwa 45 min po 4,5 h, odpoczynek na promie, licznik od nowa po promie, osobno przy zmianie kierowcy). Rozbicie: jazda, prom, port, przerwy, wiatr, ruch.
+
+Komunikat HERE o ogólnym limicie wysokości województwa (400 cm) to przepis, nie przeszkoda. Ryzyko tylko dla konkretnego wiaduktu, mostu albo tunelu.

@@ -23,6 +23,7 @@ korzysta z nich w obecnej postaci.
 | **D-82** | Opłaty drogowe (myto) — **poza zakresem**. Nie liczymy i nie pokazujemy. |
 | **D-83** | Wymiary zestawów **dla każdego transportu** poda właściciel na etapie budowy aplikacji — Watch Tower będzie je mieć. Kontrola trasy **nie bierze niczego z dokumentów** (zezwoleń). **Przewoźnik nie wprowadza żadnych wymiarów.** |
 | **D-84** | Próg wiatru **zatwierdzony: porywy 15 m/s**. Silny wiatr na trasie **wydłuża ETA** — zgodnie z logiką i faktami (sekcja H-10). |
+| **D-85** | ETA **w pełni automatyczne**: zero ręcznego wpisu, także prędkości. H-4 po emtrack. Opis i plan testu w sekcji H-4. |
 
 ---
 
@@ -79,6 +80,10 @@ korzysta z nich w obecnej postaci.
   dopisz do `CELE_KLIKNIEC.md`).
 - Ponowna kontrola przy zmianie wymiarów transportu i co najwyżej co 30 dni
   (licencja).
+- Komunikat HERE o **ogólnym limicie wysokości województwa** (400 cm, H-0)
+  to **przepis** („wymaga zezwolenia”), nie przeszkoda. Przeszkoda to
+  konkretny wiadukt, most albo tunel, z miejscem. Ryzyko tylko dla
+  przeszkody fizycznej.
 
 ### H-2 · Utrudnienia drogowe w Polsce (i uzupełnienie Szwecji)
 - Utrudnienia i natężenie ruchu wzdłuż korytarza: Śrem–Gdańsk/Gdynia oraz
@@ -141,9 +146,40 @@ korzysta z nich w obecnej postaci.
   transportu.
 
 ### Po podłączeniu emtrack (etap 4 planu)
-- **H-4 · ETA z GPS przez HERE** — czas przejazdu z bieżącej pozycji z ruchem
-  drogowym i profilem ciężarówki. Co 15 min w ruchu, częściej przy dużej
-  zmianie, rzadziej na postoju.
+- **H-4 · ETA z GPS, w pełni automatyczne (D-85)** — zero ręcznego wpisu,
+  także prędkości. Propozycja limitu km/h w Opcjach (04.10, po H-0) jest
+  **nieaktualna**. H-4 budować dopiero po emtrack. Do tego czasu tylko opis
+  i plan testu.
+
+  Łańcuch, wszystko z bieżącej pozycji GPS (D-80). Bez GPS nie ma ETA.
+
+  1. **Droga PL i SE.** Trasa ciężarówki HERE z wymiarami transportu (D-83),
+     ruch na żywo (PL i SE), utrudnienia (HERE i Trafikverket), wiatr (H-10)
+     i zakazy czasowe (H-12).
+  2. **Współczynnik zestawu, bez ręcznej prędkości.** Kalibracja uczona
+     z planu (II-7b, D-28). Start: czasy D-9 wobec HERE (PL 7,5 h / 4,61 h,
+     SE 17 h / 12,78 h). Potem nauka z prawdziwego GPS, osobno dla PL i SE
+     oraz dla typu zestawu.
+  3. **Prom.** Rejs i armator z awizacji przewoźnika (dodanie albo zmiana).
+     Odjazd i przyjazd z rozkładu oraz statusu na żywo (opóźnienia, sztorm,
+     odwołania, ferry-status). W trakcie przeprawy pozycja statku z AIS.
+     Przyjazd po granicy odprawy → następny rejs tego armatora i ryzyko.
+     Odwołany rejs → decyzja `FERRY_CANCELLED`, ETA z następnego rejsu.
+  4. **Port.** Odprawa przed odjazdem i zjazd z promu: na start czasy D-9,
+     potem nauka z GPS i AIS.
+  5. **Godziny kierowcy (UE), z GPS.** Przerwa 45 min po 4,5 h jazdy,
+     odpoczynek dobowy po limicie jazdy. Odpoczynek jest na promie. Po
+     promie licznik zaczyna się od nowa. Przy zmianie kierowcy godziny
+     są osobno dla każdego.
+  6. **Rozbicie ETA:** jazda, prom, port, przerwy, wiatr, ruch.
+
+  Plan testu (gdy H-4 powstanie, nie teraz): ten sam GPS daje rozbicie na
+  sześć składników; brak pola prędkości w Opcjach; start współczynnika to
+  stosunek D-9 do HERE, a nie wpisana liczba km/h; odwołany rejs otwiera
+  `FERRY_CANCELLED` i liczy ETA z następnego rejsu tego armatora; przyjazd
+  po odprawie bierze następny rejs; odpoczynek dobowy nie dolicza się drugi
+  raz na promie, a po zjeździe licznik jazdy jest pusty; zmiana kierowcy
+  nie przenosi godzin; brak GPS → brak ETA. Testy i brama nie wołają Resend.
 - **H-5 · Kontrola po przejeździe** — rzeczywisty ślad GPS sprawdzony w HERE:
   czy pojazd trzymał się trasy z zezwolenia i czy naruszył ograniczenia.
   Raport przy zamknięciu transportu.
