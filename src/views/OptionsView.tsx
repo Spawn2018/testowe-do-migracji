@@ -8,6 +8,7 @@ import { DEMO_FX_META } from '../lib/money/demoFx';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
 import { OptionsAccordion, type OptionsSectionDef } from '../components/settings/OptionsAccordion';
+import { SmsFallbackEntry } from '../components/shell/SmsFallbackEntry';
 import { canSeeWorkflows, PROD_BUILD, shows } from '../lib/prodFacade';
 
 /** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */
@@ -105,6 +106,7 @@ export function OptionsView() {
   const updateNotificationPrefs = useTowerStore((s) => s.updateNotificationPrefs);
   const notifications = useTowerStore((s) => s.notifications);
   const workflows = useTowerStore((s) => s.workflows);
+  const smsEntry = useTowerStore((s) => s.smsEntry);
   const setView = useTowerStore((s) => s.setView);
   const [saved, setSaved] = useState('');
 
@@ -220,9 +222,14 @@ export function OptionsView() {
       titleKey: 'opt_acc_sys_title',
       descKey: 'opt_acc_sys_desc',
       keywords: 'integracje sharepoint kopia backup sms bramka',
-      children: SystemStatusPanel
-        ? <SuspenseBlock><SystemStatusPanel /></SuspenseBlock>
-        : <Soon locale={locale} tipKey="opt_acc_sys_soon" />,
+      children: (
+        <>
+          <SmsFallbackEntry />
+          {SystemStatusPanel
+            ? <SuspenseBlock><SystemStatusPanel /></SuspenseBlock>
+            : <Soon locale={locale} tipKey="opt_acc_sys_soon" />}
+        </>
+      ),
     });
 
     list.push({
@@ -373,7 +380,7 @@ export function OptionsView() {
         </div>
         {saved ? <span className="pill p-go">{t(locale, 'opt_saved')} · {savedText(locale, saved)}</span> : null}
       </header>
-      <OptionsAccordion locale={locale} sections={sections} />
+      <OptionsAccordion locale={locale} sections={sections} forceOpen={smsEntry ? 'system' : null} />
     </div>
   );
 }

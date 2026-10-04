@@ -22,7 +22,11 @@ export function WorkflowsView() {
   const runWorkflowNow = useTowerStore((s) => s.runWorkflowNow);
   const createWorkflow = useTowerStore((s) => s.createWorkflow);
   const locale = useTowerStore((s) => s.locale);
+  const workflowFocus = useTowerStore((s) => s.workflowFocus);
   const active = workflows.filter((w) => w.enabled).length;
+  const focused = workflowFocus
+    ? workflows.find((w) => w.id === workflowFocus || w.name === workflowFocus)
+    : undefined;
   // ONE-MECH: w produkcji tylko podgląd historii — bez kreatora i ręcznego „Uruchom”
   const historyOnly = PROD_BUILD;
   const triggerLabel = (code: string) => {
@@ -56,9 +60,17 @@ export function WorkflowsView() {
         <div className="spacer" />
         {historyOnly ? null : <button type="button" className="btn" onClick={openCreator}>{t(locale, 'wf_new')}</button>}
       </header>
+      {workflowFocus ? (
+        <section className="note" data-workflow-preview={workflowFocus} style={{ margin: '0 12px 8px' }}>
+          <b>{t(locale, 'wf_preview')}</b>
+          <div data-content>{focused?.name ?? workflowFocus}</div>
+          {focused ? <div className="rule" data-content>{focused.description || `${triggerLabel(focused.trigger)} → ${focused.actions.join(', ')}`}</div> : null}
+          {focused ? <div className="wf-meta" data-content>{triggerLabel(focused.trigger)}{tp(locale, 'a6_wf_cond', { c: focused.condition })}</div> : null}
+        </section>
+      ) : null}
       <div className="panel-bd flush">
         {workflows.map((w) => (
-          <div key={w.id} className="wf">
+          <div key={w.id} className="wf" data-wf-id={w.id} data-wf-open={workflowFocus === w.id || workflowFocus === w.name ? '1' : '0'}>
             <button type="button" className="sw" aria-pressed={w.enabled} aria-label={tp(locale, w.enabled ? 'a6_wf_toggle_off' : 'a6_wf_toggle_on', { name: workflowDisplayName(w, locale) })} onClick={() => toggleWorkflow(w.id)} disabled={historyOnly} />
             <div className="wf-copy"><b data-content>{workflowDisplayName(w, locale)}</b><span className="rule" data-content>{w.description || `${triggerLabel(w.trigger)} → ${w.actions.join(', ')}`}</span><span className="wf-meta" data-content>{triggerLabel(w.trigger)}{tp(locale, 'a6_wf_cond', { c: w.condition })}</span></div>
             <span className="wf-count">{w.runCount}× {t(locale, 'wf_runs')}</span>

@@ -38,6 +38,8 @@ export type ParsedRoute =
   | { kind: 'options'; section: string }
   | { kind: 'denied' }
   | { kind: 'entry' }
+  | { kind: 'sms'; id: string }
+  | { kind: 'workflow'; id: string }
   | { kind: 'unknown' };
 
 export function parseRoute(pathname: string): ParsedRoute {
@@ -56,6 +58,10 @@ export function parseRoute(pathname: string): ParsedRoute {
   if (p.toLowerCase() === '/opcje/cennik') return { kind: 'options', section: 'cennik' };
   if (p.toLowerCase() === '/brak-dostepu') return { kind: 'denied' };
   if (p.toLowerCase() === '/szczegoly-wpisu') return { kind: 'entry' };
+  const sms = /^\/opcje\/stan-systemu\/bramka-sms\/([^/]+)$/i.exec(p);
+  if (sms) return { kind: 'sms', id: decodeURIComponent(sms[1]) };
+  const wf = /^\/automatyzacje\/([^/]+)$/i.exec(p);
+  if (wf) return { kind: 'workflow', id: decodeURIComponent(wf[1]) };
   return { kind: 'unknown' };
 }
 

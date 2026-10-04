@@ -1,6 +1,8 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { STOPPED_TYPES, clickTarget, emailUrl, isHomePath, tableTypes } from '../supabase/functions/_shared/clickTargets';
+import { STOPPED_TYPES, clickFromPayload, clickTarget, emailUrl, isHomePath, smsFallbackVisible, tableTypes } from '../supabase/functions/_shared/clickTargets';
+import { notificationFromRow } from '../src/data/mappers';
+import { bellAfterClick, bellVisible } from '../src/lib/bellList';
 
 function codeTypes(): string[] {
   const notes = readFileSync('supabase/functions/_shared/notifyTemplates.ts', 'utf8');
@@ -75,9 +77,96 @@ describe('L-4 cele kliknięć', () => {
     expect(missing).toEqual([]);
   });
 
-  it('typy STOP nie dostają wymyślonego celu', () => {
-    for (const type of STOPPED_TYPES) {
-      expect(clickTarget({ type, loadCode: 'SG-01', decisionId: 'd1' }).path).toBe('/szczegoly-wpisu');
+  it('brama odrzuca typ bez celu — lista STOP jest pusta', () => {
+    expect([...STOPPED_TYPES]).toEqual([]);
+    expect(tableTypes()).toContain('SMS_FALLBACK');
+    expect(tableTypes()).toContain('WORKFLOW_ALERT');
+    const known = new Set(tableTypes());
+    expect(known.has('NIE_MA_TAKIEGO')).toBe(false);
+    expect(clickTarget({ type: 'NIE_MA_TAKIEGO' }).kind).toBe('entry');
+  });
+
+  it('SMS_FALLBACK: cztery źródła, wpis bramki, nie strona główna', () => {
+    const input = {
+      type: 'SMS_FALLBACK',
+      smsId: 'abc',
+      status: 'FAILED',
+      recipient: '567',
+      email: 'ops@log-mar.pl',
+      loadCode: 'SG-01',
+      role: 'HHL',
+      allowed: true as const,
+    };
+    const paths = sources.map((source) => clickTarget({ ...input, source }).path);
+    expect(new Set(paths).size).toBe(1);
+    const path = paths[0];
+    expect(path.startsWith('/opcje/stan-systemu/bramka-sms/abc?')).toBe(true);
+    expect(path).toContain('status=FAILED');
+    expect(path).toContain('odbiorca=567');
+    expect(path).toContain('email=ops%40log-mar.pl');
+    expect(path).toContain('transport=SG-01');
+    expect(isHomePath(path)).toBe(false);
+    expect(path).not.toBe('/szczegoly-wpisu');
+    const mail = emailUrl('https://tower.log-mar.pl', { ...input, source: 'email' });
+    expect(mail).toBe(`https://tower.log-mar.pl/#${path}`);
+    expect(clickTarget({ ...input, role: 'HHL_ADMIN' }).path).toBe(path);
+    for (const role of ['SCX', 'KSH']) {
+      const denied = clickTarget({ ...input, role, source: 'bell' });
+      expect(denied.message).toBe('Brak dostępu');
+      expect(denied.path).toBe('/brak-dostepu');
+      expect(isHomePath(denied.path)).toBe(false);
     }
+    expect(smsFallbackVisible('HHL')).toBe(true);
+    expect(smsFallbackVisible('SCX')).toBe(false);
+    const row = notificationFromRow({
+      id: 7,
+      template: 'SMS_FALLBACK',
+      payload: { sms_id: 'abc', status: 'FAILED', to_tail: '567', fallback_email: 'ops@log-mar.pl', code: 'SG-01' },
+      load_id: null,
+      created_at: '2026-10-04T12:00:00Z',
+      read_at: null,
+    });
+    expect(row.roleScope).toEqual(['HHL']);
+    expect(row.href?.path).toBe(path);
+    expect(bellVisible([row], 'SCX')).toEqual([]);
+    expect(bellVisible([row], 'HHL').map((n) => n.id)).toEqual([row.id]);
+  });
+
+  it('WORKFLOW_ALERT: transport albo podgląd reguły, ten sam cel z czterech źródeł', () => {
+    const withLoad = { type: 'WORKFLOW_ALERT', loadCode: 'SG-01', ruleId: 'START-7', allowed: true as const };
+    const transportPaths = sources.map((source) => clickTarget({ ...withLoad, source }).path);
+    expect(new Set(transportPaths).size).toBe(1);
+    expect(transportPaths[0]).toBe('/transport/SG-01?zakladka=status');
+    expect(isHomePath(transportPaths[0])).toBe(false);
+    const bare = { type: 'WORKFLOW_ALERT', ruleId: 'START-7', allowed: true as const };
+    const rulePaths = sources.map((source) => clickTarget({ ...bare, source }).path);
+    expect(new Set(rulePaths).size).toBe(1);
+    expect(rulePaths[0]).toBe('/automatyzacje/START-7');
+    expect(rulePaths[0]).not.toContain('/transport/');
+    expect(isHomePath(rulePaths[0])).toBe(false);
+    expect(emailUrl('https://tower.log-mar.pl', bare)).toBe('https://tower.log-mar.pl/#/automatyzacje/START-7');
+    const denied = clickTarget({ ...bare, allowed: false });
+    expect(denied.message).toBe('Brak dostępu');
+    expect(isHomePath(denied.path)).toBe(false);
+    const fromPayload = clickTarget(clickFromPayload('WORKFLOW_ALERT', { rule_code: 'START-7', code: '' }, 'risk'));
+    expect(fromPayload.path).toBe('/automatyzacje/START-7');
+  });
+
+  it('L-5: klik zdejmuje pozycję z dzwonka i otwiera cel, bez napisu przeczytane', () => {
+    const bell = readFileSync('src/components/shell/NotificationBell.tsx', 'utf8');
+    expect(bell).not.toContain('mark_read');
+    expect(bell).not.toContain('Przeczytane');
+    const items = [
+      { id: 'a', read: false, roleScope: undefined as string[] | undefined },
+      { id: 'b', read: false },
+    ];
+    expect(bellVisible(items, 'HHL')).toHaveLength(2);
+    const after = bellAfterClick(items, 'a');
+    const left = bellVisible(after, 'HHL');
+    expect(left.map((n) => n.id)).toEqual(['b']);
+    expect(left.length).toBe(1);
+    const entry = clickTarget({ source: 'bell', type: 'CLIENT' });
+    expect(entry.path).toBe('/szczegoly-wpisu');
+    expect(isHomePath(entry.path)).toBe(false);
   });
 });

@@ -313,3 +313,15 @@ Właściciel podał cele kliknięć. Plik zapisany bez zmian jako docs/handover/
 Każde powiadomienie, ryzyko i decyzja w kodzie ma cel z tabeli (test bramy odrzuca typ bez celu). Dla każdego typu test: klik z kokpitu, listy ryzyk, dzwonka i link w e-mailu otwiera ten sam cel. Żadne kliknięcie nie prowadzi na stronę główną. Typ nieznany → Szczegóły wpisu i błąd w teście. Brak uprawnień → „Brak dostępu", nigdy strona główna. Zdarzenie statusu albo strefy → zawsze Transport, bez mini-akcji. Linki e-mail: decyzja /decyzje/{id}, transport /transport/{kod}?zakladka=…, faktura /finanse/faktury/{id}, stan systemu /opcje/stan-systemu#{sekcja}. Nie wymyślać celów spoza pliku. Typ w kodzie, którego nie ma w tabeli — STOP na tym typie i raport, bez zgadywania. Pozycje oznaczone L-5, L-6, L-12 to cele linku, nie budowa tych pozycji teraz. Nie zaczynać L-5, SEC-OWASP, kafelków mapy ani części D.
 
 Najpierw domknąć ETA i DWELL_OVER_FREE z polecenia 14:43, potem L-4.
+
+## Polecenie 2026-10-04 15:47 (czas warszawski) — SMS_FALLBACK, WORKFLOW_ALERT, potem L-5
+
+Polecenie właściciela Watch Tower z 2026-10-04 15:47 czasu warszawskiego. Najpierw dopis na końcu docs/handover/POLECENIA_KOORDYNATORA.md z datą, potem wykonaj.
+
+1. Dopisać do docs/handover/CELE_KLIKNIEC.md sekcję E (reszty pliku nie przepisywać):
+- SMS_FALLBACK → Stan systemu → Bramka SMS → wpis tego SMS-a (status, odbiorca, wysłany e-mail zastępczy) z linkiem do transportu. Widzi tylko HHL i administrator.
+- WORKFLOW_ALERT → gdy dotyczy transportu: Transport → zakładka Status; gdy nie: Automatyzacje → reguła, która wywołała alert (podgląd reguły). Widzi według macierzy.
+
+2. Zrealizować te dwa cele. Zdjąć je z zapasu „brak celu / Szczegóły wpisu”. Test dla każdego typu: kokpit, lista ryzyk, dzwonek i link w e-mailu otwierają ten sam cel; nigdy strona główna; brak uprawnień → „Brak dostępu”. SMS_FALLBACK ukryty poza HHL. WORKFLOW_ALERT bez transportu otwiera regułę automatyzacji, nie transport. Test bramy nadal odrzuca typ bez celu.
+
+3. Potem L-5. Czytać L-5 z PLAN.md, docs/handover/LOGIKA_SYSTEMU.md i kryterium „Gotowe, gdy” oraz z CELE_KLIKNIEC.md (wpis bez obiektu znika z dzwonka po kliknięciu). Gdy opis L-5 jest niejednoznaczny — STOP i raport, bez wymyślania. Nie zaczynać L-6, L-12, L-13, SEC-OWASP, kafelków mapy ani części D.
