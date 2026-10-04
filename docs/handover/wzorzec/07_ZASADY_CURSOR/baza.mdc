@@ -8,8 +8,11 @@ alwaysApply: false
   → dopiero potem nałożenie na PROD. Nigdy odwrotnie (MCP/`db push` bez pusha do gita
   tworzy rozjazdy numerów vs timestampów w `schema_migrations`)
 - **BEZ ZIELONYCH TESTÓW BAZY ŻADNA MIGRACJA NIE WCHODZI NA PRODUKCJĘ**
-  (brama: `node scripts/test-db-gate.mjs` na `TEST_DB_URL` / lokalny Postgres
-  `tests/db/gate.sh` — wszystkie zestawy zielone, dopiero potem `supabase db push`)
+  (podstawowa brama: lokalny Postgres 17, `bash tests/db/gate.sh`.
+  Baza TEST `emkbykwenwrjmbprydml` tylko w niedzielę i jako ostateczne potwierdzenie przed wdrożeniem,
+  w częściach, nie `node scripts/test-db-gate.mjs` bez filtra.
+  Werdykt zielony, dopiero potem `supabase db push`.
+  Wdrożenie od razu po scaleniu, gdy brama jest zielona. Paczka dzienna tylko, gdy brama lokalna jest wolna.)
 - kolejność: testy bazy zielone → **commit + push migracji** → test na produkcji w
   **wycofanej transakcji** → `supabase db push` → lista migracji w repo = na produkcji
 - każda nowa tabela: `enable row level security`, reguły dla ról, **zero uprawnień

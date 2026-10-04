@@ -227,3 +227,33 @@ Nie zaczynać SEC-OWASP, P2-TILES, P3-APK ani części D.
 ## Polecenie 2026-10-04 01:17 (czas warszawski) — nocna brama wizualna
 
 Rutyna WT nocna brama wizualna: `git pull --rebase`, `git lfs pull`, `npm run gate:visual` (bez nadzoru, własne build/port), wpis 1-liniowy w POSTEP.md (ujęć w progu / ponad, HEAD sha), commit+push bez --force. Zielona = cisza. Ponad próg = rano krótki raport PL (ile, które widoki, prawdopodobna przyczyna); wzorca nie odświeżać bez zgody właściciela.
+
+
+## Polecenie 2026-10-04 13:31 (czas warszawski) — tempo: brama lokalna, paczki
+
+TEMPO — zmiana sposobu pracy (bezpieczeństwo bez zmian):
+
+1. BRAMA LOKALNIE: na komputerze była lokalna brama bazy (tests/db/gate.sh, Postgres 17, z przekazania) — działała w minuty. Sprawdź i przywróć ją jako podstawową. Bezpiecznik produkcji zostaje. Baza TEST w Supabase (emkbykwenwrjmbprydml) — tylko niedzielna brama tygodniowa i ostateczne potwierdzenie przed wdrożeniem paczki. Podaj czas pełnej bramy lokalnie.
+
+2. PACZKI: migracje i zmiany zbierasz w jedną paczkę dziennie. Jedna pełna brama na paczkę, jedno wdrożenie na produkcję dziennie (wieczorem). Drobne poprawki danych (np. pozycja SG-01) — do najbliższej paczki, nie jako osobna migracja z osobną bramą.
+
+3. RÓWNOLEGLE: gdy brama się kręci, piszesz następną pozycję z planu na kolejnej gałęzi. Nie czekasz bezczynnie.
+
+4. Przy każdej zmianie w kodzie — szybkie testy (aplikacja + zestawy bazy dotknięte zmianą) w minutach. Pełna brama — raz na paczkę.
+
+Zapisz w AGENTS.md i POLECENIA_KOORDYNATORA.md. Raport: czas bramy lokalnej i plan paczek na najbliższe 3 dni (które pozycje w której).
+
+Stan z polecenia: L-3 (0143) jest już na produkcji. SG-01 (jedna pozycja driver_token, 1 października 2026, 22:08) nie jest jeszcze usunięta i wchodzi do najbliższej paczki, nie jako osobna migracja. L-1b nie zaczęte. Następne po L-3: L-1b, potem L-4…L-13. Nie zaczynać SEC-OWASP, P2-TILES ani części D.
+
+
+## Polecenie 2026-10-04 13:35 (czas warszawski) — autor commitów i wdrożenie od razu
+
+Ważniejsze niż dokańczanie samego pomiaru bramy. Zasady:
+
+- Autor commitów TYLKO lokalnie dla tego repozytorium (nie globalnie): git config user.name "Sebastian Bożek" i git config user.email "sebastian.bozekq@gmail.com". To adres konta Vercel właściciela, plan Hobby inaczej blokuje wdrożenie. Nigdy sebastian@watch-tower.local. Nie ustawiaj --global.
+- WDROŻENIA: po każdym scaleniu na produkcję od razu (także kilka razy dziennie), gdy brama jest zielona. Migracje: pełna brama lokalna przed każdym wdrożeniem z migracją. Paczki dzienne TYLKO jeśli lokalna brama okaże się wolna. Podaj jej czas.
+- Reszta tempa z 13:31 zostaje, o ile nie sprzeczna: brama lokalna (tests/db/gate.sh, Postgres 17) podstawowa; Supabase TEST emkbykwenwrjmbprydml tylko niedziela i ostateczne potwierdzenie przed wdrożeniem; przy zmianie w kodzie szybkie testy; równolegle następna pozycja gdy brama się kręci.
+
+Ponowić wdrożenie bieżącego main (migracja 0143 już na produkcji). Poprzednie wdrożenie dpl_9iuV7tt4g71bpp4USKQ8bmDuP89m jest zablokowane, bo zły autor. Nowy commit i wdrożenie muszą iść z sebastian.bozekq@gmail.com. Potwierdzić, że https://tower.log-mar.pl i https://watch-tower-makieta.vercel.app zwracają 200 i wskazują nowe wdrożenie, nie dpl_5tY7LDTCY9J4wEhdey4QwQYXK7As.
+
+Nie osobna migracja SG-01.

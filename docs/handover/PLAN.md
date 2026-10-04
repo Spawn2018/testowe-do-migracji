@@ -247,7 +247,7 @@ Przyjęte identyfikatory: **II-10-E1**, **II-10-E2**, **ONE-MECH** (D-29 + D-29t
 | D-29t | P2. Tabela nakładania reguł START → **część ONE-MECH / D-29** (nie osobny tor) | tabela w planie przed włączaniem | ZASTĄPIONA PRZEZ ONE-MECH |
 | CLEAN-TT-HERE | P2. Usunąć martwy kod/zmienne TomTom i HERE (TOMTOM_API_KEY, job traffic-flow TomTom, i18n źródła itd.). ETA = II-7 | zero aktywnego TOMTOM/HERE w kodzie i env | **DONE** (ten commit) — traffic-flow DEMO; parsery TomTom usunięte; i18n wycofane; ZRODLA §2.3 |
 | ZEZW-13 | P2. Zezwolenia (§13) | — | CZEKA NA: wymiary aut |
-| GATE-WEEKLY | P1. Co niedzielę: czysta brama TEST od zera (`node scripts/test-db-gate.mjs`) | exit 0; wynik liczbami w POSTEP.md | **RYTM** — następny bieg: **niedziela 05.10.2026** |
+| GATE-WEEKLY | P1. Co niedzielę: brama TEST (`emkbykwenwrjmbprydml`) w częściach, nie jednym procesem. Podstawowa brama na co dzień jest lokalna (`tests/db/gate.sh`, Postgres 17). TEST także jako ostateczne potwierdzenie przed wdrożeniem. | exit 0; wynik liczbami w POSTEP.md | **RYTM** — najbliższa niedziela: **11.10.2026** (4.10 brama TEST poszła przy 0143) |
 | GATE-I30-I31 | P0. EXPECTED i30=10, i31=6 w `test-db-gate.mjs` + subset — brama kończy kodem 0 | subset i30+i31 exit 0 | **DONE** `b34a2236` (potwierdzenie exit 0: 02.10) |
 
 ### Przed pilotażem (P1, kolejność 02.10) — dopisane zleceniem właściciela
@@ -447,7 +447,7 @@ Kolejność od 03.10 21:02: L-1 (domknięcie: 9 typów, 0140) → L-2 → L-3 �
 |---|---|---|---|
 | L-1 | P1. Automatyczne otwieranie decyzji. Każde ryzyko, które w tabeli DEC-CLICK (część B) ma typ decyzji, otwiera decyzję z katalogu 16 typów. Jedno zdarzenie = jedna decyzja (bez duplikatu przy ponownym wykryciu tego samego ryzyka). Zamknięcie ryzyka nie kasuje decyzji — decyzja ma własny status. ETA po terminie nie otwiera się z samego planu: potrzebna pozycja albo awizacja. Źródło: B 2c, pytanie 3; LOGIKA §1. | Test dla typów, które mają zdarzenie w kodzie: zdarzenie → decyzja otwarta, drugie wykrycie → brak drugiej decyzji; brak danych → bez decyzji. Na TEST centrum decyzji pokazuje decyzje z symulacji SIM-1. | **DOMKNIĘCIE** — 9 typów ze zdarzeniem w kodzie działa (0138 + 0140, zestaw `dec-auto` 24/24 na 1a3a96f). Nie blokuje reszty. Siedem typów bez zdarzenia w kodzie nie jest wymyślonych: pozycja L-1b, zaraz po L-3. Scalenie i wdrożenie 0140 w tym poleceniu. |
 | L-2 | P1. Kto decyduje. Rozstrzygnąć decyzję może tylko firma wskazana w katalogu (kolumna „kto decyduje”) oraz administrator. Odmowa w bazie (funkcja), nie tylko ukryty przycisk. Źródło: B 2c; LOGIKA §1. | Test: właściwa firma może, inna dostaje odmowę z bazy. | **ZROBIONE** — migracja 0139. Przewoźnik rozstrzyga typ CARRIER, operacje HHL typ HHL, administrator HHL każdy typ. Inna firma i KSH dostają odmowę z `decision_resolve`. |
-| L-3 | P1. Osiem progów podłączonych do alarmów: próg opóźnienia, wyprzedzenie dat KSH, awizacja ostrzeżenie/krytyczne, dokumenty ostrzeżenie/krytyczne, brak pozycji GPS, zjazd z trasy. Źródło: B 6c; LOGIKA §4. NO_AWIZACJA (próg awizacji 48/12 h) jest w tym zakresie i zasila L-1b. Wzory właściciela 2026-10-04 00:07 są w LOGIKA §4 i poniżej tej tabeli (w PLAN nie ma sekcji 5; L-3 jest w kolejce L). | Dla każdego wzoru: zmiana wartości w Opcjach zmienia moment alarmu; brak danych = brak alarmu; ostrzeżenie → krytyczne = ta sama decyzja. | W TRAKCIE — migracja 0143 czyta osiem progów z Opcji. STOP: kierowca dostarczający nie ma kolumny (osobne pola są w C-SEP). Wzór A dla dostawy nie otwiera alarmu, żeby nie zgadywać pola. Reszta wzorów A (załadunek), B–F jest w 0143. |
+| L-3 | P1. Osiem progów podłączonych do alarmów: próg opóźnienia, wyprzedzenie dat KSH, awizacja ostrzeżenie/krytyczne, dokumenty ostrzeżenie/krytyczne, brak pozycji GPS, zjazd z trasy. Źródło: B 6c; LOGIKA §4. NO_AWIZACJA (próg awizacji 48/12 h) jest w tym zakresie i zasila L-1b. Wzory właściciela 2026-10-04 00:07 są w LOGIKA §4 i poniżej tej tabeli (w PLAN nie ma sekcji 5; L-3 jest w kolejce L). | Dla każdego wzoru: zmiana wartości w Opcjach zmienia moment alarmu; brak danych = brak alarmu; ostrzeżenie → krytyczne = ta sama decyzja. | **NA PRODUKCJI** — migracja 0143. Wzór A dla dostawy nadal bez alarmu (brak kolumny kierowcy dostarczającego, C-SEP). Reszta wzorów A (załadunek), B–F jest w 0143. |
 | L-1b | P1, zaraz po L-3. Siedem typów decyzji z katalogu (ZLECENIE_DECYZJE_POWIADOMIENIA.md §2, tabela DEC-CLICK), których wyzwalacze nie były w kodzie. Nie wymyślać alarmów spoza katalogu. NO_AWIZACJA → w ramach L-3 (próg awizacji 48/12 h). KSH_ROW_GONE, TOWER_KSH_CONFLICT, KSH_FILE_ERROR → przy obecnym imporcie Excela: wiersz zniknął względem poprzedniego importu; pole zmienione w Watch Tower różni się od pliku; pliku nie da się odczytać. SharePoint później użyje tego samego. SEFS_OUT_OF_TABLE → indeks poza tabelą 51 progów albo brak źródła. KR_OVER_3 → więcej niż 3 ładunki KR jednego dnia. DWELL_OVER_FREE → postój w strefie ponad czas wolny (gdy będą prawdziwe pozycje GPS). | Zestaw bramy `dec-auto`: test dla każdego z tych siedmiu typów (zdarzenie → decyzja, drugie wykrycie → bez duplikatu). | NIEZACZĘTE — nie w tym przebiegu; zapis planu tylko |
 | L-4 | P1. Cele kliknięć i link w e-mailu. Każde powiadomienie, ryzyko i kafelek prowadzi tam, gdzie mówi tabela DEC-CLICK (okno decyzji, transport albo formularz z gotową akcją). Żadna pozycja nie prowadzi donikąd. E-mail linkuje do konkretnego transportu albo decyzji, nie do strony głównej. Źródło: pytania 1, 2, 12, 13; LOGIKA §8 i §12. | Test dla każdego typu powiadomienia: klik otwiera właściwy cel; link w e-mailu otwiera właściwy obiekt po zalogowaniu. | NIEZACZĘTE |
 | L-5 | P1. Dzwonek. Bez napisu „przeczytane”. Pozycja znika z listy po kliknięciu i prowadzi do celu z L-4. Źródło: pytanie 13. | Test: klik → pozycja znika, licznik maleje, otwiera cel. | NIEZACZĘTE |
@@ -466,6 +466,21 @@ Kolejność od 03.10 21:02: L-1 (domknięcie: 9 typów, 0140) → L-2 → L-3 �
 | KOPIA-D | P3. Dograć kopię `usuniete_standard_2026-10-03` na `D:\Watch Tower\dane\`, gdy komputer domowy będzie włączony. | Plik na dysku D: i suma SHA-256 zgodna z kopią. | NIEZACZĘTE — komputer Domowy był offline 03.10; kopia jest w R2 |
 | AUDIT-PROD | Zasada: blokują tylko luki wysokie i krytyczne w zależnościach produkcyjnych (`npm audit --omit=dev --audit-level=high`). Zależności deweloperskie to P3, sprawdzane w niedzielnej bramie. | Brama odrzuca tylko high/critical w prod. | OBOWIĄZUJE |
 
+
+
+### Tempo i kolejka 4–6.10.2026 (polecenia 13:31 i 13:35)
+
+Wdrożenie idzie od razu po scaleniu, także kilka razy dziennie, gdy brama jest zielona. Paczka dzienna (jedna pełna brama, jedno wdrożenie wieczorem) tylko wtedy, gdy pełna brama lokalna okaże się wolna. Czas jednego przebiegu dopisany po pomiarze, bez zgadywania.
+
+Kolejność pracy, bez pozycji spoza planu. SG-01 (pozycja testowa właściciela, 1.10.2026 22:08, driver_token) wchodzi do najbliższego wdrożenia razem z następną pozycją, nie jako osobna migracja i nie z osobną bramą.
+
+| Dzień | Pozycje |
+|---|---|
+| niedziela 4.10 | L-3 (0143) już na produkcji. Osobnego wdrożenia migracji nie ma. SG-01 nie idzie osobno. |
+| poniedziałek 5.10 | L-1b. W tym samym wdrożeniu poprawka danych SG-01, jeśli nie weszła wcześniej. |
+| wtorek 6.10 | L-4. Dalej, gdy L-4 jest zielone: L-5, potem L-13. |
+
+Nie zaczynać SEC-OWASP, P2-TILES ani części D.
 
 ### Wzory progów L-3 (polecenie 2026-10-04 00:07, czas warszawski)
 

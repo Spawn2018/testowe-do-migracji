@@ -8,14 +8,19 @@ alwaysApply: false
   → dopiero potem nałożenie na PROD. Nigdy odwrotnie (MCP/`db push` bez pusha do gita
   tworzy rozjazdy numerów vs timestampów w `schema_migrations`)
 - **BEZ ZIELONYCH TESTÓW BAZY ŻADNA MIGRACJA NIE WCHODZI NA PRODUKCJĘ**
-  (brama w częściach: `node scripts/test-db-gate-step.mjs` + `node scripts/test-db-gate-summary.mjs`
-  na `TEST_DB_URL` / lokalny Postgres `tests/db/gate.sh` — werdykt zielony, dopiero potem `supabase db push`)
-- **Brama TEST w częściach** (jedno zadanie w tle max 40 min):
-  - prośba o scalenie z migracją → pełna brama w częściach (`prep`, potem każdy zestaw)
-  - prośba o scalenie bez zmian w bazie → testy aplikacji + tylko zestawy bazy dotknięte zmianą
-  - pełna brama co niedzielę i przed każdą migracją na produkcję
-  - wyniki w `tmp-gate/wyniki.json` (poza gitem); zielone tylko przy jednym commicie i jednej wersji migracji
-  - nie uruchamiaj `node scripts/test-db-gate.mjs` bez filtra — pełny przebieg w jednym procesie jest wyłączony
+  (podstawowa brama: lokalny Postgres 17, `bash tests/db/gate.sh`, domyślnie localhost:5433.
+  Werdykt zielony, dopiero potem `supabase db push`)
+- **Brama lokalna jest podstawowa** (2026-10-04 13:31, doprecyzowane 13:35):
+  - przy zmianie w kodzie: szybkie testy aplikacji + tylko zestawy bazy dotknięte zmianą (minuty)
+  - pełna brama lokalna przed każdym wdrożeniem, które zawiera migrację
+  - gdy brama się kręci, następna pozycja planu na kolejnej gałęzi
+  - wdrożenie na produkcję od razu po scaleniu, także kilka razy dziennie, gdy brama jest zielona
+  - paczka dzienna tylko wtedy, gdy pełna brama lokalna okaże się wolna
+- **Baza TEST** `emkbykwenwrjmbprydml` tylko na niedzielną bramę tygodniową i ostateczne potwierdzenie przed wdrożeniem.
+  Na TEST nadal w częściach (`node scripts/test-db-gate-step.mjs` + `node scripts/test-db-gate-summary.mjs`, jedno zadanie max 40 min).
+  Wyniki w `tmp-gate/wyniki.json` (poza gitem); zielone tylko przy jednym commicie i jednej wersji migracji.
+  Nie uruchamiaj `node scripts/test-db-gate.mjs` bez filtra — pełny przebieg w jednym procesie jest wyłączony.
+  Produkcja `nglnnrmzmhusvxslousq` tylko przy wdrożeniu.
 - kolejność: testy bazy zielone → **commit + push migracji** → test na produkcji w
   **wycofanej transakcji** → `supabase db push` → lista migracji w repo = na produkcji
 - każda nowa tabela: `enable row level security`, reguły dla ról, **zero uprawnień
