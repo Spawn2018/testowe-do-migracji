@@ -12,7 +12,7 @@ import {
 } from '../supabase/functions/_shared/integrations/jobs';
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch } from '../supabase/functions/_shared/integrations/sync';
 import { planSailingSync } from '../supabase/functions/_shared/integrations/sync';
-import { distanceToCorridorKm, CORRIDOR_SE } from '../supabase/functions/_shared/integrations/road';
+import { distanceToCorridorKm, CORRIDOR_SE, parseTrafikverketSituations, trafikverketResultError, trafikverketSituationQuery } from '../supabase/functions/_shared/integrations/road';
 
 const fx = (n: string) => readFileSync(new URL(`./fixtures/${n}`, import.meta.url), 'utf8');
 const CARGO = fx('polferries-cargo-rozklad-2026-09-26.html');
@@ -20,6 +20,8 @@ const STATUS = fx('polferries-komunikaty-2026-09-26.html');
 const AIS = fx('digitraffic-nova-star-2026-09-25.json');
 const TV_RC = fx('trafikverket-roadcondition-sample.json');
 const TV_WX = fx('trafikverket-weather-sample.json');
+const TV_SIT = fx('trafikverket-situation-sample.json');
+const TV_SIT_EMPTY = '{"RESPONSE":{"RESULT":[{"Situation":[]}]}}';
 const DATEX = fx('datex2-kpd-sample.xml');
 const NOW = new Date('2026-09-26T01:45:00Z');
 const WAW = 'v-waw'; const NS = 'v-ns';
@@ -29,7 +31,7 @@ class MemStore implements SyncStore {
   risks: (RiskInput & { loadId?: string })[] = [];
   runs: { job: string; at: string; ok: boolean; result: JobResult }[] = [];
   positions: VehiclePos[] = [];
-  corridor: { corridor: string; slowdownMult: number; reason: string | null } | null = null;
+  corridor: { corridor: string; slowdownMult: number; reason: string | null; detail?: unknown } | null = null;
   marine: { maxWaveM: number | null; maxGustKn: number | null; risk: string; sources: string } | null = null;
   thr = { waveM: 3.8, gustKn: 40 };
   n = 0;
@@ -50,6 +52,12 @@ class MemStore implements SyncStore {
   }
   resolved: string[] = [];
   async resolveRisks(prefix: string) { const hit = this.risks.filter((r) => r.dedup.startsWith(prefix)); this.risks = this.risks.filter((r) => !r.dedup.startsWith(prefix)); this.resolved.push(prefix); return hit.length; }
+  async resolveStaleRisks(prefix: string, keep: string[]) {
+    const keepSet = new Set(keep);
+    const hit = this.risks.filter((r) => r.dedup.startsWith(prefix) && !keepSet.has(r.dedup));
+    this.risks = this.risks.filter((r) => !(r.dedup.startsWith(prefix) && !keepSet.has(r.dedup)));
+    return hit.length;
+  }
   async latestPositions() { return this.positions; }
   async lastRun(job: string) { return this.runs.filter((r) => r.job === job).at(-1)?.at ?? null; }
   async recordRun(job: string, ok: boolean, result: JobResult) { this.runs.push({ job, at: NOW.toISOString(), ok, result }); }
@@ -59,8 +67,8 @@ class MemStore implements SyncStore {
     this.vesselPositions.push({ vesselId, lat: fix.lat, lon: fix.lon, observedAt: fix.timestampUtc });
   }
   async seSlowdownPct() { return 15; }
-  async saveCorridorCondition(row: { corridor: 'SE_E4'; slowdownMult: number; reason: string | null }) {
-    this.corridor = { corridor: row.corridor, slowdownMult: row.slowdownMult, reason: row.reason };
+  async saveCorridorCondition(row: { corridor: 'SE_E4'; slowdownMult: number; reason: string | null; detail?: unknown }) {
+    this.corridor = { corridor: row.corridor, slowdownMult: row.slowdownMult, reason: row.reason, detail: row.detail };
   }
   async opsThresholds() { return this.thr; }
   async saveMarineCondition(row: {
@@ -328,14 +336,15 @@ describe('road-se — Trafikverket (II-6 RoadCondition + WeatherMeasurepoint)', 
     let n = 0;
     const pages: Record<string, string | number> = {};
     const { d, calls } = deps(st, pages, { TRAFIKVERKET_API_KEY: 'k' });
-    // dwa POST na ten sam URL — kolejność: RoadCondition, potem Weather
+    // trzy POST na ten sam URL — kolejność: RoadCondition, Weather, Situation (pusta = brak zmyślonych zdarzeń)
     const orig = d.fetch;
     d.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       calls.push(url);
       if (url.includes('trafikinfo.trafikverket.se')) {
         n++;
-        return new Response(n === 1 ? TV_RC : TV_WX, { status: 200 });
+        const body = n === 1 ? TV_RC : n === 2 ? TV_WX : TV_SIT_EMPTY;
+        return new Response(body, { status: 200 });
       }
       return orig(input, init);
     }) as typeof fetch;
@@ -344,7 +353,9 @@ describe('road-se — Trafikverket (II-6 RoadCondition + WeatherMeasurepoint)', 
     expect(st.risks.map((x) => x.dedup).sort()).toEqual(['ROAD_SE:RC:RC_E4_SLIP_1', 'ROAD_SE:WX:WX_SNOW_1']);
     expect(st.corridor).toMatchObject({ corridor: 'SE_E4', slowdownMult: 1.15 });
     expect(r.observations?.slowdown).toBe('1.15');
-    expect(calls.filter((c) => c.includes('trafikinfo'))).toHaveLength(2);
+    expect(r.observations?.situations).toBe('0');
+    expect((st.corridor?.detail as { situations?: unknown[] }).situations).toEqual([]);
+    expect(calls.filter((c) => c.includes('trafikinfo'))).toHaveLength(3);
     expect(distanceToCorridorKm(63.1792, 14.6357, CORRIDOR_SE)).toBeGreaterThan(100);
   });
   it('błąd obu źródeł → ryzyko „źródło niedostępne” ROAD_SE', async () => {
@@ -353,6 +364,77 @@ describe('road-se — Trafikverket (II-6 RoadCondition + WeatherMeasurepoint)', 
     expect(st.risks[0]).toMatchObject({ kind: 'ROAD_SE', dedup: 'SOURCE_DOWN:TRAFIKVERKET:2026-09-26' });
   });
 });
+
+  it('Situation 1.6 na E4 → ROAD_SE; poza korytarzem, zawieszone i pusta lista nie tworzą zdarzeń', async () => {
+    const q = trafikverketSituationQuery('klucz-test');
+    expect(q).toContain('schemaversion="1.6"');
+    expect(q).toContain('namespace="road.trafficinfo"');
+    expect(q).not.toContain('schemaversion="1.5"');
+    const parsed = parseTrafikverketSituations(JSON.parse(TV_SIT));
+    // jedna sytuacja, kilka odchyleń: zostaje wypadek (wyżej niż roboty); info i droga 45 odpadają
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]).toMatchObject({ id: 'SE_STA_TRISSID_1_7654321', kind: 'wypadek', road: 'E4', severity: 'HIGH' });
+    const off = JSON.parse(TV_SIT);
+    for (const d of off.RESPONSE.RESULT[0].Situation[0].Deviation) d.Geometry.WGS84 = 'POINT (12.694 56.046)';
+    expect(parseTrafikverketSituations(off)).toHaveLength(0);
+    const suspended = JSON.parse(TV_SIT);
+    for (const d of suspended.RESPONSE.RESULT[0].Situation[0].Deviation) d.Suspended = true;
+    expect(parseTrafikverketSituations(suspended)).toHaveLength(0);
+    expect(parseTrafikverketSituations(JSON.parse(TV_SIT_EMPTY))).toEqual([]);
+
+    const st = new MemStore();
+    st.risks.push({ kind: 'ROAD_SE', severity: 'HIGH', title: 'stare', titleKey: 'rk_road_se', params: {}, detail: {}, dedup: 'ROAD_SE:SIT:STARE', sourceUrl: '', validUntil: null });
+    let n = 0;
+    const bodies = [TV_RC, TV_WX, TV_SIT];
+    const { d } = deps(st, {}, { TRAFIKVERKET_API_KEY: 'k' });
+    d.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (!url.includes('trafikinfo.trafikverket.se')) throw new Error(url);
+      return new Response(bodies[n++] ?? TV_SIT_EMPTY, { status: 200 });
+    }) as typeof fetch;
+    const r = await runRoadSe(d);
+    expect(r.observations?.slowdown).toBe('1.15');
+    expect(st.risks.map((x) => x.dedup).sort()).toEqual(['ROAD_SE:RC:RC_E4_SLIP_1', 'ROAD_SE:SIT:SE_STA_TRISSID_1_7654321', 'ROAD_SE:WX:WX_SNOW_1']);
+    expect(st.risks.find((x) => x.dedup === 'ROAD_SE:SIT:SE_STA_TRISSID_1_7654321')).toMatchObject({ kind: 'ROAD_SE', severity: 'HIGH' });
+    const detail = st.corridor?.detail as { situations?: { id: string; kind: string }[]; situationsStatus?: string };
+    expect(detail.situationsStatus).toBe('ok');
+    expect(detail.situations?.map((s) => s.kind)).toEqual(['wypadek']);
+  });
+
+  it('błąd samych sytuacji nie kasuje współczynnika II-6 i nie zmyśla zdarzeń', async () => {
+    const st = new MemStore();
+    let n = 0;
+    const { d } = deps(st, {}, { TRAFIKVERKET_API_KEY: 'k' });
+    d.fetch = (async () => {
+      n++;
+      if (n === 3) return new Response('nope', { status: 503 });
+      return new Response(n === 1 ? TV_RC : TV_WX, { status: 200 });
+    }) as typeof fetch;
+    const r = await runRoadSe(d);
+    expect(r.ok).toBe(false);
+    expect(r.observations?.slowdown).toBe('1.15');
+    expect(st.risks.map((x) => x.dedup).sort()).toEqual(['ROAD_SE:RC:RC_E4_SLIP_1', 'ROAD_SE:WX:WX_SNOW_1']);
+    expect((st.corridor?.detail as { situationsStatus?: string }).situationsStatus).toBe('blad');
+    expect((st.corridor?.detail as { situations?: unknown[] }).situations).toEqual([]);
+  });
+
+  it('koperta błędu Situation nie jest pustą listą i nie zamyka istniejących ryzyk', async () => {
+    const body = JSON.stringify({ RESPONSE: { RESULT: [{ ERROR: { SOURCE: 'Request', MESSAGE: 'ObjectType does not exist' } }] } });
+    expect(trafikverketResultError(JSON.parse(body))).toMatch(/does not exist/);
+    const st = new MemStore();
+    st.risks.push({ kind: 'ROAD_SE', severity: 'HIGH', title: 'stare', titleKey: 'rk_road_se', params: {}, detail: {}, dedup: 'ROAD_SE:SIT:ZOSTAJE', sourceUrl: '', validUntil: null });
+    let n = 0;
+    const { d } = deps(st, {}, { TRAFIKVERKET_API_KEY: 'k' });
+    d.fetch = (async () => {
+      n++;
+      return new Response(n === 3 ? body : n === 1 ? TV_RC : TV_WX, { status: 200 });
+    }) as typeof fetch;
+    const r = await runRoadSe(d);
+    expect(r.ok).toBe(false);
+    expect(st.risks.some((x) => x.dedup === 'ROAD_SE:SIT:ZOSTAJE')).toBe(true);
+    expect((st.corridor?.detail as { situationsStatus?: string }).situationsStatus).toBe('blad');
+    expect(r.observations?.slowdown).toBe('1.15');
+  });
 
 describe('road-pl — KPD GDDKiA (DATEX II)', () => {
   it('bez rejestracji: tryb DEMO', async () => {

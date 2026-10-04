@@ -118,9 +118,12 @@ Rejsu zmienionego ręcznie przez HHL odczyt automatyczny **nie nadpisuje**.
   zapytanie w XML, odpowiedź w JSON
 - obiekty: **RoadCondition** — stan nawierzchni; **WeatherMeasurepoint** —
   stacje pogodowe przy drodze (zastąpiły **WeatherStation** od 2024);
-  **Situation** — **usunięty z Open API** (stan 01.10.2026: `ObjectType does not exists`)
-  — utrudnienia/roboty: czekać na zamiennik dostawcy albo DATEX
-- Edge `road-se` (II-6): RoadCondition + WeatherMeasurepoint → ryzyka ROAD_SE
+  **Situation** — schemat **1.5 bez przestrzeni nazw** zwraca `ObjectType does not exist`
+  (01.10.2026). Następca to ten sam obiekt, schemat **1.6**, `namespace="road.trafficinfo"`
+  (sprawdzone 04.10.2026): wypadki, zamknięcia, roboty, przeszkody
+- Edge `road-se`: RoadCondition + WeatherMeasurepoint (II-6, współczynnik bez zmian)
+  oraz Situation 1.6 (H-2) → ryzyka `ROAD_SE:SIT:` i lista w `corridor_conditions.detail.situations`.
+  Pusta odpowiedź = pusta lista, w panelu „Brak danych”.
   + `corridor_conditions.SE_E4.slowdown_mult` (+15% przy śniegu/śliskości → II-7)
 - **II-7 (DONE 0122):** korytarz `corridor_polylines` (PL_ROAD, SE_E4) z punktów
   OSM/ODbL — rzut GPS (`corridor_progress`), tempo z `eta_segment_params`,

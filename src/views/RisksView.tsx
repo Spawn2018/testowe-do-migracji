@@ -133,9 +133,13 @@ export function RisksView() {
     (
       ({
         roadworks: t(locale, 'a6_kind_roadworks'),
+        roboty: t(locale, 'a6_kind_roadworks'),
         weather: t(locale, 'weather_ice'),
         accident: t(locale, 'a6_kind_accident'),
+        wypadek: t(locale, 'a6_kind_accident'),
         restriction: t(locale, 'a6_kind_restriction'),
+        zamkniecie: t(locale, 'a6_kind_closure'),
+        przeszkoda: t(locale, 'a6_kind_obstacle'),
         other: t(locale, 'a6_kind_other'),
       }) as Record<string, string>
     )[k] ?? k;
@@ -377,9 +381,7 @@ export function RisksView() {
               {corridor.zrodlo ?? 'Trafikverket'}
               {corridor.conditions != null ? ` · RC ${corridor.conditions}` : ''}
               {corridor.weather != null ? ` · WX ${corridor.weather}` : ''}
-              {corridor.adverseConditions || corridor.adverseWeather
-                ? ` · ${t(locale, 'risk_situations')}: ${(corridor.adverseConditions ?? 0) + (corridor.adverseWeather ?? 0)}`
-                : ` · ${t(locale, 'risk_situations')}: 0`}
+              {` · ${t(locale, 'risk_situations')}: ${corridor.situations.length}`}
               {' · '}
               {new Date(corridor.observedAt).toLocaleString(
                 locale === 'sv' ? 'sv-SE' : locale === 'en' ? 'en-GB' : 'pl-PL',
@@ -393,22 +395,22 @@ export function RisksView() {
               <table style={{ width: '100%', fontSize: 13 }}>
                 <tbody>
                   {PROD_BUILD
-                    ? roadSeRisks.map((r) => (
-                        <tr
-                          key={r.id}
-                          style={{ cursor: r.loadId ? 'pointer' : undefined }}
-                          {...(r.loadId ? clickableRow(() => selectLoad(r.loadId!)) : {})}
-                        >
-                          <td style={{ fontWeight: 600 }} data-content>E4</td>
-                          <td data-content>{riskText(locale, r.title, r.titleKey, r.titleParams)}</td>
-                          <td className="num">{r.delayImpactHours != null ? `+${r.delayImpactHours} h` : '—'}</td>
+                    ? (corridor?.situations.length
+                      ? corridor.situations.map((s) => (
+                        <tr key={s.id}>
+                          <td style={{ fontWeight: 600 }} data-content>{s.road || 'E4'}</td>
+                          <td data-content>{s.title}</td>
+                          <td className="num">—</td>
                           <td style={{ textAlign: 'right' }}>
-                            <span className={`pill ${sevPill(r.severity)}`}>
-                              {severityLabel(r.severity, locale)}
+                            <span className={`pill ${sevPill(s.severity)}`}>
+                              {kindLabel(s.kind)} · {severityLabel(s.severity as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL', locale)}
                             </span>
                           </td>
                         </tr>
                       ))
+                      : (roadSeHasSource
+                        ? [<tr key="brak"><td colSpan={4}><div className="note" data-empty="road-se-situations">{t(locale, 'l9_brak')}</div></td></tr>]
+                        : []))
                     : seSituations.map((s) => (
                     <tr
                       key={s.id}

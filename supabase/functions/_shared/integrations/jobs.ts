@@ -17,8 +17,8 @@ import {
 } from '../ferry/marineWeather.ts';
 import {
   integrationMode, parseDatexSituations, parseTrafikverketRoadConditions,
-  parseTrafikverketWeather, roadConditionRisk, roadRisk, seRoadSlowdownMult,
-  trafikverketRoadConditionQuery, trafikverketWeatherQuery, weatherRisk, TRAFIKVERKET_URL,
+  parseTrafikverketSituations, parseTrafikverketWeather, roadConditionRisk, roadRisk, seRoadSlowdownMult, trafikverketResultError,
+  trafikverketRoadConditionQuery, trafikverketSituationQuery, trafikverketWeatherQuery, weatherRisk, TRAFIKVERKET_URL,
 } from './road.ts';
 import {
   isSourceFailure, planSailingSync, sourceDownRisk, unknownStatusRisk,
@@ -42,6 +42,8 @@ export interface SyncStore {
   lastRun(job: string): Promise<string | null>;
   /** zamyka otwarte ryzyka o kluczu z prefiksem (np. źródło znów działa) — zwraca liczbę */
   resolveRisks(dedupPrefix: string): Promise<number>;
+  /** zamyka otwarte ryzyka z prefiksu, których klucza nie ma na liście (sytuacja zniknęła) */
+  resolveStaleRisks?(dedupPrefix: string, keepDedup: string[]): Promise<number>;
   recordRun(job: string, ok: boolean, result: JobResult): Promise<void>;
   /** I-2j: pozycja promu z AIS do `vessel_positions` (powtórka tego samego sygnału = bez zmian) */
   saveVesselPosition(vesselId: string, fix: VesselFix): Promise<void>;
@@ -368,9 +370,10 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
 }
 
 /**
- * road-se — Trafikverket wzdłuż E4 (co 15 min). Live 01.10.2026: RoadCondition + WeatherMeasurepoint
- * (ObjectType Situation usunięty z Open API). Bez klucza: DEMO.
- * Wynik: ryzyka ROAD_SE + `corridor_conditions.SE_E4.slowdown_mult` (+15% przy śniegu/śliskości → II-7).
+ * road-se — Trafikverket wzdłuż E4 (co 15 min).
+ * II-6: RoadCondition + WeatherMeasurepoint → współczynnik korytarza i ryzyka nawierzchni/pogody.
+ * H-2: Situation 1.6 (namespace road.trafficinfo) → wypadki, zamknięcia, roboty, ryzyka ROAD_SE.
+ * Pusta lista sytuacji nie jest uzupełniana. Bez klucza: DEMO.
  */
 export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
   const m = integrationMode(deps.env, 'TRAFIKVERKET_API_KEY');
@@ -378,20 +381,24 @@ export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
   const now = deps.now().toISOString();
   const key = deps.env.TRAFIKVERKET_API_KEY!;
   const headers = { 'Content-Type': 'text/xml' };
-  const [rcRes, wxRes] = await Promise.all([
+  const [rcRes, wxRes, sitRes] = await Promise.all([
     readText(deps, TRAFIKVERKET_URL, { method: 'POST', headers, body: trafikverketRoadConditionQuery(key) }),
     readText(deps, TRAFIKVERKET_URL, { method: 'POST', headers, body: trafikverketWeatherQuery(key) }),
+    readText(deps, TRAFIKVERKET_URL, { method: 'POST', headers, body: trafikverketSituationQuery(key) }),
   ]);
   const warnings: string[] = [];
   if (!rcRes.ok) warnings.push(rcRes.warning);
   if (!wxRes.ok) warnings.push(wxRes.warning);
-  if (!rcRes.ok && !wxRes.ok) {
+  if (!sitRes.ok) warnings.push(sitRes.warning);
+  if (!rcRes.ok && !wxRes.ok && !sitRes.ok) {
     await deps.store.raiseRisk(sourceDownRisk('TRAFIKVERKET', warnings, now, TRAFIKVERKET_URL));
     return { job: 'road-se', mode: 'LIVE', ok: false, risks: 1, warnings };
   }
-  await deps.store.resolveRisks('SOURCE_DOWN:TRAFIKVERKET:');
+  if (rcRes.ok || wxRes.ok || sitRes.ok) await deps.store.resolveRisks('SOURCE_DOWN:TRAFIKVERKET:');
   let conditions: ReturnType<typeof parseTrafikverketRoadConditions> = [];
   let weather: ReturnType<typeof parseTrafikverketWeather> = [];
+  let situations: ReturnType<typeof parseTrafikverketSituations> = [];
+  let situationsStatus: 'ok' | 'blad' = 'blad';
   if (rcRes.ok) {
     try { conditions = parseTrafikverketRoadConditions(JSON.parse(rcRes.text)); }
     catch { warnings.push('Trafikverket RoadCondition: nieczytelna odpowiedź'); }
@@ -400,6 +407,17 @@ export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
     try { weather = parseTrafikverketWeather(JSON.parse(wxRes.text)); }
     catch { warnings.push('Trafikverket WeatherMeasurepoint: nieczytelna odpowiedź'); }
   }
+  if (sitRes.ok) {
+    try {
+      const json = JSON.parse(sitRes.text) as unknown;
+      const err = trafikverketResultError(json);
+      if (err) warnings.push(`Trafikverket Situation: ${err}`);
+      else {
+        situations = parseTrafikverketSituations(json);
+        situationsStatus = 'ok';
+      }
+    } catch { warnings.push('Trafikverket Situation: nieczytelna odpowiedź'); }
+  }
   let risks = 0;
   for (const c of conditions.filter((x) => x.adverse)) {
     if (await deps.store.raiseRisk(roadConditionRisk(c))) risks++;
@@ -407,15 +425,27 @@ export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
   for (const w of weather.filter((x) => x.adverse)) {
     if (await deps.store.raiseRisk(weatherRisk(w))) risks++;
   }
+  if (situationsStatus === 'ok' && deps.store.resolveStaleRisks) {
+    await deps.store.resolveStaleRisks('ROAD_SE:SIT:', situations.map((e) => `ROAD_SE:SIT:${e.id}`));
+  }
+  for (const e of situations) {
+    const risk = roadRisk('SE', e, 'https://www.trafikverket.se/trafikinformation/');
+    risk.dedup = `ROAD_SE:SIT:${e.id}`;
+    if (await deps.store.raiseRisk(risk)) risks++;
+  }
   const pct = deps.store.seSlowdownPct ? await deps.store.seSlowdownPct() : 15;
-  const slow = seRoadSlowdownMult({ conditions, weather, pct });
-  if (deps.store.saveCorridorCondition) {
+  const slow = (rcRes.ok || wxRes.ok) ? seRoadSlowdownMult({ conditions, weather, pct }) : null;
+  if (slow && deps.store.saveCorridorCondition) {
     await deps.store.saveCorridorCondition({
       corridor: 'SE_E4', slowdownMult: slow.mult, reason: slow.reason, observedAt: now,
       detail: {
         conditions: conditions.length, weather: weather.length,
         adverseConditions: slow.adverseConditions, adverseWeather: slow.adverseWeather,
-        pct, zrodlo: 'Trafikverket RoadCondition+WeatherMeasurepoint',
+        pct, zrodlo: 'Trafikverket RoadCondition+WeatherMeasurepoint+Situation',
+        situationsStatus,
+        situations: situations.slice(0, 60).map((e) => ({
+          id: e.id, kind: e.kind, severity: e.severity, title: e.title, road: e.road ?? 'E4',
+        })),
       },
     });
   }
@@ -424,7 +454,9 @@ export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
     risks, warnings,
     observations: {
       conditions: String(conditions.length), weather: String(weather.length),
-      slowdown: String(slow.mult), reason: slow.reason ?? 'norma',
+      situations: String(situationsStatus === 'ok' ? situations.length : 'blad'),
+      slowdown: slow ? String(slow.mult) : 'bez_zmiany',
+      reason: slow?.reason ?? 'norma',
     },
   };
 }

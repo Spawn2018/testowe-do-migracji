@@ -1,6 +1,6 @@
 /**
  * M12 — ruch drogowy (ZRODLA_DANYCH.md §2). Czyste funkcje: zapytania i parsery odpowiedzi.
- *  - SE: Trafikverket Open API (CC0), klucz TRAFIKVERKET_API_KEY — Situation wzdłuż E4 Nynäshamn → Boden
+ *  - SE: Trafikverket Open API (CC0), klucz TRAFIKVERKET_API_KEY — RoadCondition, WeatherMeasurepoint i Situation 1.6 wzdłuż E4
  *  - PL: KPD GDDKiA, DATEX II (rejestracja + certyfikat klienta) — utrudnienia na trasie Śrem → Gdańsk
  *  - TomTom Flow: USUNIĘTE (CLEAN-TT-HERE / D-28); ETA = II-7 OSM
  * Bez klucza Trafikverket/GDDKiA funkcja NIE działa na niby: zwraca tryb DEMO (D18).
@@ -47,13 +47,13 @@ const xmlEsc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').r
 /** Län wzdłuż E4 Nynäshamn → Boden (Stockholm…Norrbotten). */
 export const CORRIDOR_SE_COUNTIES = [1, 3, 21, 22, 24, 25] as const;
 /**
- * Zapytanie XML: Situation (utrudnienia) — **historyczne**.
- * Live API (01.10.2026): ObjectType `Situation` nie istnieje — road-se używa RoadCondition + WeatherMeasurepoint.
- * Parser zostaje do testów / ewentualnego powrotu obiektu.
+ * Situation — wypadki, zamknięcia, roboty na E4 (H-2 / B-2b).
+ * Schemat 1.5 bez przestrzeni nazw: dostawca zwraca „ObjectType does not exist” (01.10.2026).
+ * Działa schemat 1.6 z namespace `road.trafficinfo` (sprawdzone 04.10.2026).
+ * Filtr drogi po stronie API; bufor korytarza odcina E4 poza Nynäshamn–Boden.
  */
-export function trafikverketSituationQuery(apiKey: string, radiusM = 20000): string {
-  const within = CORRIDOR_SE.map(([la, lo]) => `<WITHIN name="Deviation.Geometry.WGS84" shape="center" value="${lo} ${la}" radius="${radiusM}m"/>`).join('');
-  return `<REQUEST><LOGIN authenticationkey="${xmlEsc(apiKey)}"/><QUERY objecttype="Situation" schemaversion="1.5" limit="500"><FILTER><OR>${within}</OR></FILTER></QUERY></REQUEST>`;
+export function trafikverketSituationQuery(apiKey: string): string {
+  return `<REQUEST><LOGIN authenticationkey="${xmlEsc(apiKey)}"/><QUERY objecttype="Situation" namespace="road.trafficinfo" schemaversion="1.6" limit="400"><FILTER><AND><EQ name="Deviation.RoadNumber" value="E4"/><IN name="Deviation.MessageType" value="Olycka,Vägarbete,Hinder"/></AND></FILTER></QUERY></REQUEST>`;
 }
 /** RoadCondition — stan nawierzchni w länach korytarza (schema 1.2, zweryfikowane live 01.10.2026). */
 export function trafikverketRoadConditionQuery(apiKey: string, counties: readonly number[] = CORRIDOR_SE_COUNTIES): string {
@@ -85,24 +85,71 @@ export function wktCentroid(s: unknown): LatLon | null {
 }
 /** SeverityCode Trafikverket: 1 brak wpływu, 2 mały, 4 duży, 5 bardzo duży. */
 const tvSeverity = (c: unknown): RiskSeverity | null => (c === 5 ? 'HIGH' : c === 4 ? 'MEDIUM' : c === 2 || c === 3 ? 'LOW' : null);
-export function parseTrafikverketSituations(json: unknown, bufferKm = 5): RoadEvent[] {
+/** Rodzaj sytuacji na panel i ryzyko. Nie zgadujemy zdarzenia spoza tych czterech. */
+export type SituationKind = 'wypadek' | 'zamkniecie' | 'roboty' | 'przeszkoda';
+const CLOSURE_CODES = new Set(['roadClosed', 'carriagewayClosures']);
+const SIT_RANK: Record<SituationKind, number> = { zamkniecie: 4, wypadek: 3, przeszkoda: 2, roboty: 1 };
+function deviationKind(d: Record<string, unknown>): SituationKind | null {
+  if (d.Suspended === true) return null;
+  const mt = String(d.MessageType ?? '');
+  const code = String(d.MessageCodeValue ?? '');
+  if (CLOSURE_CODES.has(code)) return 'zamkniecie';
+  if (mt === 'Olycka' || code === 'accident') return 'wypadek';
+  if (mt === 'Hinder') return 'przeszkoda';
+  if (mt === 'Vägarbete' || mt === 'MaintenanceWorks' || code === 'roadworks') return 'roboty';
+  return null;
+}
+function deviationPoint(d: Record<string, unknown>): LatLon | null {
+  const g = d.Geometry as { WGS84?: string; Point?: { WGS84?: string }; Line?: { WGS84?: string } } | undefined;
+  if (!g) return null;
+  return wktCentroid(g.WGS84) ?? wktCentroid(g.Point?.WGS84) ?? wktCentroid(g.Line?.WGS84);
+}
+function situationSeverity(code: unknown, kind: SituationKind): RiskSeverity {
+  return tvSeverity(code) ?? (kind === 'zamkniecie' || kind === 'wypadek' ? 'HIGH' : 'LOW');
+}
+/**
+ * Jedno zdarzenie na sytuację (wypadek, zamknięcie, roboty, przeszkoda) w buforze E4.
+ * Zawieszone, bez geometrii i poza korytarzem odpadają. Pusta odpowiedź = pusta lista.
+ */
+
+/** Błąd w kopercie 200 (RESULT.ERROR). Pusta lista sytuacji to nie błąd. */
+export function trafikverketResultError(json: unknown): string | null {
+  const res = (json as { RESPONSE?: { RESULT?: { ERROR?: { MESSAGE?: string } }[] } })?.RESPONSE?.RESULT ?? [];
+  for (const row of res) {
+    const msg = row?.ERROR?.MESSAGE;
+    if (msg) return String(msg);
+  }
+  return null;
+}
+export function parseTrafikverketSituations(json: unknown, bufferKm = 8): RoadEvent[] {
   const res = (json as { RESPONSE?: { RESULT?: { Situation?: unknown[] }[] } })?.RESPONSE?.RESULT ?? [];
   const out: RoadEvent[] = [];
-  for (const r of res) for (const sit of (r.Situation ?? []) as { Deviation?: Record<string, unknown>[] }[]) {
+  for (const r of res) for (const sit of (r.Situation ?? []) as { Id?: unknown; Deleted?: unknown; Deviation?: Record<string, unknown>[] }[]) {
+    if (sit.Deleted === true) continue;
+    let best: { d: Record<string, unknown>; kind: SituationKind; pt: LatLon } | null = null;
     for (const d of sit.Deviation ?? []) {
-      const sev = tvSeverity(d.SeverityCode);
-      const pt = wkt((d.Geometry as { WGS84?: string } | undefined)?.WGS84 ?? (d.Geometry as { Point?: { WGS84?: string } } | undefined)?.Point?.WGS84);
-      if (!sev || !pt) continue;
+      const kind = deviationKind(d);
+      const pt = deviationPoint(d);
+      if (!kind || !pt) continue;
       if (distanceToCorridorKm(pt[0], pt[1], CORRIDOR_SE) > bufferKm) continue;
-      out.push({
-        id: String(d.Id), kind: String(d.MessageType ?? ''), severity: sev, lat: pt[0], lon: pt[1],
-        title: String(d.Header ?? d.MessageCode ?? d.MessageType ?? 'Utrudnienie'),
-        detail: String(d.Message ?? d.LocationDescriptor ?? ''), road: (d.RoadNumber as string) ?? null,
-        start: (d.StartTime as string) ?? null, end: (d.EndTime as string) ?? null,
-      });
+      if (!best || SIT_RANK[kind] > SIT_RANK[best.kind]) best = { d, kind, pt };
     }
+    if (!best) continue;
+    const d = best.d;
+    const loc = String(d.LocationDescriptor ?? d.Header ?? d.Message ?? d.MessageCode ?? best.kind).replace(/^E4\s+/i, '').trim();
+    out.push({
+      id: String(d.Id ?? sit.Id ?? ''),
+      kind: best.kind,
+      severity: situationSeverity(d.SeverityCode, best.kind),
+      lat: best.pt[0], lon: best.pt[1],
+      title: loc || best.kind,
+      detail: String(d.Message ?? d.TrafficRestrictionType ?? d.LocationDescriptor ?? ''),
+      road: (d.RoadNumber as string) ?? 'E4',
+      start: (d.StartTime as string) ?? null,
+      end: (d.EndTime as string) ?? null,
+    });
   }
-  return out;
+  return out.filter((e) => e.id);
 }
 
 const ADVERSE_RE = /halka|blixthalka|sn[oö]|isigt|\bis\b|frost|sn[oö]yra|modd|slask|glatt/i;
