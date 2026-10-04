@@ -404,3 +404,15 @@ Właściciel zatwierdził wdrożenie. Dwa trafienia w paczce to klucze tłumacze
 4. Wdrożenie produkcji wyłącznie z `main` po tym scaleniu. Obie domeny (tower.log-mar.pl i watch-tower-makieta.vercel.app) mają zwrócić 200 i wskazywać nowe wdrożenie. `AUTOMATIC_DECISION_EMAIL` zostaje true.
 5. Po 200 na obu: dokładnie jeden testowy e-mail decyzji, tylko do właściciela (jeden z Sebastian@log-mar.pl albo sebastian.bozek@hhlogistics.pl, ten który produkt traktuje jako właściciela). Nie oba. Nie do przewoźników. Ścieżka powiadomień aplikacji. Po polsku, wyraźnie test, bez sekretów. Gdy nie da się wskazać jednego odbiorcy — nie wysyłać.
 6. Potem H-0 z `docs/handover/ZLECENIE_HERE.md`: test na koncie właściciela, bez zmian w aplikacji. Klucza HERE nie wypisywać. Gdy H-0 wymaga zmiany aplikacji — stop. Pozycji po H-0 nie zaczynać.
+
+## Polecenie 2026-10-04 19:29 (czas warszawski) — uzupełnienie H-0
+
+Polecenie właściciela Watch Tower z 2026-10-04 19:29 czasu warszawskiego. Najpierw dopis na końcu tego pliku, potem odpowiedź. Bez zmian w kodzie aplikacji. Klucza HERE nie wypisywać i nie zapisywać.
+
+Uzupełnić H-0, ten sam zestaw próbny (wysokość 4,2 m, szerokość 3,0 m, długość 25 m, masa 52 t, 6 osi), bo w 94 transportach wymiary są puste:
+
+1. Śrem–Gdańsk, trzy limity wysokości 400 cm. Dla każdego: droga, miejscowość, współrzędne, rodzaj (wiadukt, most, tunel). Czy HERE ma objazd bez naruszeń. Różnica w km i czasie wobec 346,7 km / 4,7 h.
+2. Karlskrona–Boden: jakie ograniczenie czasowe, gdzie i kiedy obowiązuje.
+3. Nynäshamn–Boden: czy kontrola objęła szwedzkie klasy BK1–BK4. Wynik wprost dla każdej klasy.
+4. Czasy HERE 4,7 / 13,2 / 18,6 h są dla zwykłej ciężarówki. Porównać z czasami z D-9. Propozycja, jak H-4 (ETA z GPS) uwzględni limit prędkości zestawu ponadnormatywnego (parametr HERE) oraz przerwy i odpoczynki kierowcy według przepisów UE o czasie pracy. Tylko propozycja, do akceptacji przed budową H-4. H-4 nie budować.
+5. Wynik w `POSTEP.md`. Potem następna pozycja z `PLAN.md`, która realnie jest następna po H-0. Gdy jest niejednoznaczna albo wymaga akceptacji, zatrzymać się. Nie zmieniać innych mechanizmów aplikacji.

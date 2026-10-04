@@ -1670,3 +1670,63 @@ Tydzień od poniedziałku 2026-09-28 (liczony do niedzieli 2026-10-04). Wiersze 
 Od następnego tygodnia ten sam odczyt ma iść tu co tydzień, już ze skrótem i z krytycznymi, obok 34.
 
 2026-10-04 — HERE_API_KEY dodany do sekretów Supabase produkcji (projekt nglnnrmzmhusvxslousq) i do .env.local. Wartość nie jest zapisana w repozytorium.
+
+### 2026-10-04 19:29 — H-0 uzupełnienie (bez zmian aplikacji)
+
+Polecenie właściciela z 19:29 czasu warszawskiego. Zestaw próbny, bo wymiary 94 transportów są puste: wysokość 4,2 m, szerokość 3,0 m, długość 25 m, masa 52 t, 6 osi. Współrzędne z repozytorium, nie z głowy: Śrem 52.07391, 17.02460 (`docs/watch-tower/ADDRESSES.md`), Gdańsk Westerplatte 54.40372, 18.68130 (migracja 0017), Nynäshamn 58.90453, 17.95621 (ADDRESSES), Boden 65.80539, 21.75914 (ADDRESSES), Karlskrona Stena 56.16460, 15.63080 (migracja 0120). Odpytanie HERE Routing v8, `transportMode=truck`, odjazd niedziela 2026-10-04 około 19:33 czasu warszawskiego. Klucza nie ma w tym pliku. Zapytań routingu 14 (4 z nich HERE odrzucił kodem E605013, bo brakowało polilinii przy spanach) i 6 odwrotnych geokodowań. Kosztu nie liczę — cennika konta tu nie czytałem.
+
+Pomiar tego wieczora wobec liczb z H-0: Śrem–Gdańsk 346,1 km i 4,61 h (346116 m, 16584 s z ruchem; czas bazowy 16486 s) wobec 346,7 km / 4,7 h. Nynäshamn–Boden 989,4 km i 12,78 h (989400 m, 46018 s) wobec 991,7 km / 13,2 h. Karlskrona–Boden trasą krótką 1384,1 km (1384107 m): z ruchem 18,35 h (66073 s), bez zależności od godziny (`departureTime=any`) 18,20 h (65511 s), wobec 1385,6 km / 18,6 h.
+
+#### 1. Trzy limity 400 cm, Śrem–Gdańsk
+
+To nie są trzy budowle. HERE dał trzy komunikaty `violatedAdminWideVehicleRestriction`, waga `info` (nie `critical`), typ `adminWideRestriction`: limit wysokości 400 cm na całe województwo. Zestaw ma 420 cm. Komunikat wisi na całym odcinku w województwie, bez dziur. Rodzaj dla każdego: ani wiadukt, ani most, ani tunel. Atrybut `tunnel` jest na 52 m S5 przy wejściu w drugi odcinek, atrybut `bridge` na 219 m A1 przy wejściu w trzeci. To cecha jezdni, nie przyczyna limitu.
+
+| # | Kod HERE | Co mówi geokoder | Odcinek z komunikatem | Droga | Współrzędne początku → końca |
+|---|---|---|---|---|---|
+| 1 | województwo `30` | oba końce: woj. wielkopolskie (początek ul. Grunwaldzka, Śrem; koniec S5, Mieleszyn) | 99,989 km, 48 spanów | początek bez numeru: ul. Staszica, ul. Gostyńska; dalej głównie S5 i E261, krócej 434, S11, A2/E30 | 52.07369, 17.02378 → 52.65487, 17.63049 |
+| 2 | województwo `04` | koniec odcinka: A1, Nowe, woj. kujawsko-pomorskie. Początek to ten sam punkt graniczny, geokoder stawia go jeszcze w wielkopolskim | 156,341 km | głównie S5 i E261, dalej A1 i E75 | 52.65487, 17.63049 → 53.67647, 18.63650 |
+| 3 | województwo `22` | koniec: ul. Sucharskiego, Gdańsk, woj. pomorskie. Początek geokoder stawia jeszcze przy A1, Nowe, kujawsko-pomorskie | 89,786 km | głównie A1 i E75 (Autostrada Bursztynowa), krócej 89, S6, S7, E77 | 53.67647, 18.63650 → 54.40380, 18.68149 |
+
+Pole `state` w HERE to druga część ISO 3166-2. Geokoder zgadza się z PL-30, PL-04 i PL-22.
+
+Objazd bez tych komunikatów: nie ma. Osiem tras (4 szybkie, 4 krótkie) — każda ma co najmniej dwa z trzech. Najkrótsza, 336,3 km i 4,62 h, nadal ma wszystkie trzy. Jedyna, która omija kod `04`, ma 385,0 km i 6,32 h i zostawia kody `30` i `22`. Wobec 346,7 km / 4,7 h byłoby to +38,3 km i +1,62 h, ale to nie jest trasa bez naruszeń, więc różnicy objazdu bez naruszeń nie podaję. Czystej nie ma, bo początek leży w województwie `30`, a koniec w `22`.
+
+#### 2. Karlskrona–Boden, ograniczenie czasowe
+
+Nie ma go w odpowiedzi. Trasa krótka, ta od 1385,6 km, ma dziś 1384,1 km. Brak `violatedVehicleRestriction`, brak `restrictedTimes`, brak `potentialTimeDependentViolations`. Sprawdzone odjazdy: niedziela 19:33 z ruchem, `departureTime=any`, poniedziałek 2026-10-05 06:00, sobota 2026-10-10 10:00, wtorek 2026-10-06 22:00 (czas warszawski). Jest 24 incydentów drogowych (roboty, zamknięty pas) z datami ważności. To nie zakaz jazdy zestawu i nie podaję go jako ograniczenia czasowego. Miejsca i godzin zakazu nie ma, bo HERE ich nie zwrócił.
+
+#### 3. Nynäshamn–Boden, BK1–BK4
+
+Tak, klasy są w odpowiedzi tej trasy (989,4 km). Indeks spanu wskazuje klasę z listy sekcji: BK1, BK2, BK4. BK3 na liście nie ma. Naruszenia masy ani klasy nie ma — 52 t i 6 osi przejechały bez komunikatu.
+
+- BK1: 43,5 km. Naruszenia nie ma.
+- BK2: 1,6 km, jeden odcinek, Svartbyleden, od 65.79788, 21.73910. Naruszenia nie ma.
+- BK3: 0 km. Tej klasy na wybranej drodze nie ma. To nie jest wynik „dozwolone”.
+- BK4: 943,8 km. Naruszenia nie ma.
+- Bez klasy: 0,5 km na wyjeździe z terminalu w Nynäshamn (Hamnterminalen, Skyttens hälls väg, Nynäsvägen).
+
+Kontrola widzi klasę na odcinku. Nie daje osobnego werdyktu „ta klasa puszcza 52 t”.
+
+#### 4. Zwykła ciężarówka wobec D-9 i propozycja H-4
+
+D-9 (PLAN, POSTEP I-D9 i I-15): PL_ROAD 7,5 h, check-in 3 h, przeprawa 18 h, SE_ROAD 17 h, odpoczynek dobowy 11 h, przerwy 2 h. Razem noga szwedzka 30 h. Karlskrona–Boden nie ma własnej liczby w D-9.
+
+| Odcinek | HERE, zwykła ciężarówka | D-9 |
+|---|---|---|
+| Śrem–Gdańsk | H-0 4,7 h; dziś 4,61 h | 7,5 h samej jazdy w modelu, bez przerwy UE |
+| Nynäshamn–Boden | H-0 13,2 h; dziś 12,78 h | 17 h jazdy, a z odpoczynkiem i przerwami 30 h |
+| Karlskrona–Boden | H-0 18,6 h; dziś 18,35 h z ruchem, 18,20 h bez godziny | brak odcinka |
+
+Model D-9 jest wolniejszy od samej jazdy HERE: na PL o około 2,9 h (7,5 wobec 4,61), na SE o około 4,2 h samej jazdy (17 wobec 12,78) i o około 17 h, gdy liczyć 30 h z odpoczynkiem.
+
+Propozycja H-4, bez budowy, do akceptacji:
+
+ETA dalej tylko z pozycji GPS (D-80). HERE liczy czas jazdy z tej pozycji, profilem zestawu z D-83 i parametrem `vehicle[speedCap]` w metrach na sekundę. Ten parametr nie skraca czasu względem zwykłej ciężarówki, może go tylko wydłużyć. Liczbę km/h ustala właściciel w Opcjach jako wartość wstępną. Sam jej nie przyjmuję.
+
+Przerwy i odpoczynki zostają w Watch Tower, nie w HERE. Przepis UE (rozporządzenie 561/2006 ze zmianami pakietu mobilności): po 4,5 h jazdy przerwa 45 min (albo 15 min i potem 30 min); jazda dobowa 9 h, a 10 h co najwyżej dwa razy w tygodniu, jeśli właściciel to włączy; potem odpoczynek dobowy 11 h. Prom zostaje odpoczynkiem dobowym jak w D-9 i nie doliczamy drugiego. HERE ma `driver[schedule]` (pary „jazda, postój” w sekundach) i samo wstawia postoje, ale nie zna limitu 9 h ani wyjątku promu: przeprawa dłuższa niż 15 min nie liczy się tam ani jako jazda, ani jako odpoczynek. Dlatego harmonogramu HERE nie bierzemy za przepis. Tabela D-9 i silnik OSM bez zmian — zapas, gdy HERE nie działa albo budżet się skończy (D-77).
+
+Ilustracja reguły na dzisiejszej jeździe, to nie jest nowe ETA: Śrem–Gdańsk 4,61 h jazdy plus jedna przerwa 45 min daje 5,36 h, a D-9 ma 7,5 h. Nynäshamn–Boden 12,78 h jazdy: przerwa 45 min po 4,5 h, po 9 h odpoczynek 11 h, zostaje 3,78 h jazdy, razem 24,53 h, a D-9 ma 30 h.
+
+#### Czego nie ruszam
+
+H-4 nie budowane. H-1, H-2 i H-3 w planie są dopiero po L-12, a wymiary ma podać właściciel (D-83) — nie startuję. L-6 jest następną otwartą pozycją listy L, ale to zmiana mechanizmu kopii, a to polecenie każe stanąć, gdy następne nie jest jednoznaczne. Kodu aplikacji nie zmieniałem. Wdrożenia aplikacji nie ma.

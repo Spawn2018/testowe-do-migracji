@@ -505,11 +505,11 @@ TESTY: dla każdego wzoru — zmiana wartości w Opcjach zmienia moment alarmu; 
 
 | Kiedy | ID | Opis | Status |
 |---|---|---|---|
-| zaraz po L-13 | H-0 | Test na koncie właściciela, bez zmian w aplikacji. Odcinki Śrem → Gdańsk, Nynäshamn → Boden, Karlskrona → Boden. Raport do właściciela. | CZEKA — brak `HERE_API_KEY` (nazwa sekretu). Bez pytania o klucz. |
+| zaraz po L-13 | H-0 | Test na koncie właściciela, bez zmian w aplikacji. Odcinki Śrem → Gdańsk, Nynäshamn → Boden, Karlskrona → Boden. Raport do właściciela. | DONE 2026-10-04 — uzupełnienie limitów, BK i propozycji H-4 w POSTEP. Kodu aplikacji nie ruszano. |
 | po etapie 1 (po L-12) | H-1, H-2, H-3 | Kontrola trasy z wymiarów właściciela, utrudnienia PL/SE, przeszkody wzdłuż korytarza. | NIEZACZĘTE |
 | razem z Q-17 i Q-19 | H-6 | Mapa przeszkód. Jedna praca z Q-17 i Q-19, bez dublowania. | NIEZACZĘTE — Q-17 i Q-19 nie są w planie |
 | po etapie 2 | H-7, H-8, H-10, H-12 | Mapa w e-mailu i PDF, profil trasy, pogoda i wiatr (ryzyko), zakazy czasowe. | NIEZACZĘTE |
-| etap 4 (po emtrack) | H-4, H-5, H-10 ETA | ETA z GPS przez HERE, kontrola po przejeździe, wydłużanie ETA przez wiatr. | NIEZACZĘTE |
+| etap 4 (po emtrack) | H-4, H-5, H-10 ETA | ETA z GPS przez HERE, kontrola po przejeździe, wydłużanie ETA przez wiatr. | NIEZACZĘTE — propozycja H-4 (limit prędkości i przerwy UE) w POSTEP 2026-10-04, bez budowy, do akceptacji właściciela |
 
 ## Polecenie 2026-10-04 17:06 — e-mail decyzji automatycznych
 
