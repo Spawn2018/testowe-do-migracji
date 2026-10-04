@@ -151,3 +151,5 @@ authenticated admin_audit_history
 # II-7b (0123): kalibracja ETA
 authenticated admin_set_eta_calibration_frozen
 authenticated apply_eta_calibration_version
+# L-13: licznik poczty w Stanie systemu
+authenticated email_budget_status

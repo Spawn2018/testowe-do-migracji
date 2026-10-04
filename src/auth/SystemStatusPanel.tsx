@@ -39,6 +39,7 @@ export default function SystemStatusPanel() {
   const [integs, setIntegs] = useState<IntegRow[]>([]);
   const [smsDevices, setSmsDevices] = useState<SmsDeviceRow[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
+  const [mailBudget, setMailBudget] = useState<{ immediate_n: number; digest_n: number; suppressed_n: number; level: string } | null>(null);
 
   const refresh = useCallback(async () => {
     const sb = await getSupabase();
@@ -68,6 +69,10 @@ export default function SystemStatusPanel() {
       .order('last_seen_at', { ascending: false, nullsFirst: false });
     if (s.error) setSmsDevices([]);
     else setSmsDevices((s.data ?? []) as SmsDeviceRow[]);
+
+    const e = await sb.rpc('email_budget_status');
+    if (e.error || e.data == null) setMailBudget(null);
+    else setMailBudget(e.data as { immediate_n: number; digest_n: number; suppressed_n: number; level: string });
   }, []);
 
   useEffect(() => {
@@ -112,6 +117,17 @@ export default function SystemStatusPanel() {
           })}
         </div>
       )}
+      {mailBudget ? (
+        <div className="note" data-email-budget={mailBudget.level} style={{ marginTop: 14 }}>
+          {tp(locale, 'opt_acc_email_budget', {
+            n: String(mailBudget.immediate_n),
+            d: String(mailBudget.digest_n),
+            s: String(mailBudget.suppressed_n),
+          })}
+          {mailBudget.level === 'warn' ? ` ${t(locale, 'opt_acc_email_warn')}` : ''}
+          {mailBudget.level === 'critical_only' ? ` ${t(locale, 'opt_acc_email_crit')}` : ''}
+        </div>
+      ) : null}
       <h4 className="sec" style={{ marginTop: 14 }}>{t(locale, 'opt_acc_sys_backup')}</h4>
       {backups.length === 0 ? (
         <div className="muted">{t(locale, 'opt_acc_sys_none')}</div>
