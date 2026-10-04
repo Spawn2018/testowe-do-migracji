@@ -46,9 +46,10 @@ describe('M2 dane v2', () => {
   it('migawka mnożnika: ta sama data i mnożnik po obu stronach; migawka kursu z numerem tabeli', () => {
     const m = inTransit.pricing.money!;
     expect(m.cost.fuel).toEqual(m.rev.fuel);
+    expect(m.cost.fuel.refDate).toBe(inTransit.plannedLoadDate);
     expect(m.cost.fuel.applied).toBe(Math.min(m.cost.fuel.multSek, m.cost.fuel.multPln));
     expect(m.cost.fx.tableNo).toMatch(/^\d{3}\/A\/NBP\/2026$/);
-    expect(m.cost.fx.date < m.cost.fuel.refDate).toBe(true); // kurs: dzień roboczy PRZED datą
+    expect(m.cost.fx.date < inTransit.plannedDeliverDate).toBe(true); // kurs: dzień roboczy przed dostawą, nie przed załadunkiem
   });
 
   it('kurs prowizoryczny dla daty w przyszłości; rozładunek → tabela sprzed dnia rozładunku', () => {

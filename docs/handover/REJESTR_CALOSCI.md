@@ -817,13 +817,13 @@ Kod nie był zmieniany. „Tylko dokumenty” = zapis poprawiony adnotacją. „
 
 | ID | Gdzie | Wynik |
 |---|---|---|
-| U-3 | także kod | Tydzień opłaty paliwowej liczy się od rozładunku (`actual_delivery_at` → `fuel_ref_date` w `supabase/migrations/0011_fx_nbp.sql`; `referenceUtc` w `src/lib/money/engine.ts`), nie od daty załadunku (D-34). Pozycja planu: błąd P1 `U-3-PALIWO`. |
+| U-3 | także kod — **naprawione 04.10** | Było: tydzień od rozładunku (`0011_fx_nbp.sql`, `referenceUtc`). D-34: data załadunku. Naprawa: migracja `0155_u3_paliwo_zaladunek.sql`, `fuelLocalDate`. Kurs NBP bez zmiany. |
 | U-5 | tylko dokumenty | Kod ma przełącznik waluty wyświetlania PLN (`src/components/settings/UiPrefsPanel.tsx`). Stary zapis SCOPE §34 „nigdzie PLN” poprawiony 04.10; obowiązuje §35.1. |
 | U-8 | tylko dokumenty | Zamknięte. Obowiązuje: fakturę SCX widzą HHL i SCX (wystawca); KSH nie widzi. Kod już tak ma (`invoices_read` w `supabase/migrations/0003_faktury_zlecenia_ustawienia.sql`). Zapis doprecyzowany 04.10. |
 | U-32 | tylko dokumenty | Kod nie używa 5 dni jako celu tranzytu. `TRANSIT_TARGET_DAYS` = 4 (`supabase/migrations/0113_daty67_ksh_file_dates.sql`, test `tests/db/i2.sh`). Piątka w kodzie to wyprzedzenie dat KSH (`LEAD_DAYS` / `DATE_CONFIRM_DAYS`), nie D-41. Stary „plan 5 dni” w PLAN D-12 i SCOPE §57 poprawiony 04.10. |
 | D-8 | tylko dokumenty | „Tężniki” zastąpione 04.10. Resztki klasy STANDARD w kodzie to osobna pozycja STD-CLEAN, nie ten rozjazd. |
 | D-28 | tylko dokumenty | Zapis „HERE — nie” poprawiony 04.10. Obowiązuje D-77; własny silnik (0122) zostaje zapasem. |
-| D-34 (numer) | tylko dokumenty | Numer w planie nie oznacza już klucza Trafikverket. Tydzień paliwa od rozładunku to U-3, nie ta kolizja numeru. |
+| D-34 (numer) | tylko dokumenty | Numer w planie nie oznacza już klucza Trafikverket. Tydzień paliwa od rozładunku był U-3 (naprawione 04.10), nie ta kolizja numeru. |
 | II-7 | tylko dokumenty | Blokada „ZABLOKOWANE przez D-28” dotyczyła starego planu HERE. Dowód wykonania: `supabase/migrations/0122_ii7_eta_osm_corridor.sql`. Adnotacja 04.10. |
 | SCOPE 56.1 wobec 56.2 | tylko dokumenty | 56.1 wygrywa. Wyjątek tylko przy późniejszym datowanym „zrobione” z plikiem. Adnotacja przy §56. |
 | I-3, II-5, II-6, R-2, 0.1, 0.7 (kopia STAN) | tylko dokumenty | Kopia `wzorzec/STAN` przegrywa z `PLAN.md`. Adnotacja na kopii planu 04.10. |

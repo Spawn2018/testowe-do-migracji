@@ -580,3 +580,10 @@ Decyzja właściciela 04.10.2026:
 - Treść SMS: kto, nr rejestracyjny, przewidywana godzina przyjazdu.
 
 Testy (SIM-1 na TEST, numer właściciela), nie wykonywać teraz: dojazd z 120 min → jeden SMS przy ≤ 60; start w 40 min → SMS od razu; brak GPS → brak SMS; powtórne pozycje → bez duplikatu; to samo dla Boden.
+
+## Polecenie 2026-10-04 (czas warszawski) — U-3-PALIWO, wykonanie
+
+Osobny PR. Nie włączać H-1 ani H-3. Nie ruszać DRV-CLOSE, STD-CLEAN ani części B.
+
+Tydzień opłaty paliwowej od daty załadunku (D-34), nie od rozładunku. Kurs NBP zostaje od rozładunku. Test: załadunek w tygodniu N i rozładunek w N+1 dostaje stawkę z tygodnia N. Kryteria SCOPE 32.x i 33.x tak, jak w PLAN.md. Nie zgadywać stawek. Brama lokalna zielona przed scaleniem.
+

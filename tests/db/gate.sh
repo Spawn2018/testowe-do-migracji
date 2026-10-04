@@ -66,7 +66,7 @@ check() { # suite, expected
 check security 88
 check status 44
 check storage 37
-check money 131
+check money 135
 check release 146
 check backup 29
 check session 27
