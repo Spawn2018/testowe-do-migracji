@@ -107,7 +107,7 @@
 | D-77 | HERE | HERE wchodzi do systemu. Zastępuje zapis „bez HERE" z D-28. Własny silnik zostaje jako zapas, gdy HERE jest niedostępne albo budżet wyczerpany. | ✅ 04.10.2026 |
 | D-78 | budżet HERE | Do 100 USD miesięcznie. Ostrzeżenia w Stanie systemu przy 50%, 80% i 100%. Po przekroczeniu 100% system przestaje odpytywać HERE i przechodzi na darmowe wyliczenia. Nigdy nie płaci ponad budżet. | ✅ 04.10.2026 |
 | D-79 | aplikacja kierowcy | Zero aplikacji dla kierowców (Scandinavian Express). HERE WeGo Pro i pakiet nawigacyjny HERE SDK wykluczone. Nic nie jest instalowane u przewoźnika ani kierowców. | ✅ 04.10.2026 |
-| D-80 | ETA | ETA nadal wyłącznie z pozycji GPS i AIS (decyzja z 04.10). HERE liczy czas przejazdu z bieżącej pozycji, nigdy z planu. | ✅ 04.10.2026 |
+| D-80 | ETA | ETA nadal wyłącznie z pozycji GPS i AIS (decyzja z 04.10). HERE liczy czas przejazdu z bieżącej pozycji, nigdy z planu. **Doprecyzowanie ETA-PRE-LOAD 04.10.2026:** ETA dostawy pokazujemy dopiero po załadunku, czyli po wyjeździe ze strefy placu w Śremie. Przed załadunkiem we wszystkich miejscach (harmonogram, szczegóły, kokpit, eksport, e-maile) jest wyłącznie „–”, bez tekstu. SMS-KSH-1H nadal w tle liczy dojazd do Śremu. | ✅ 04.10.2026 |
 | D-81 | licencja HERE | Wyniki przechowujemy najwyżej 30 dni. Na stałe wyłącznie własne podsumowania. Geometria i surowe dane HERE kasowane po 30 dniach. Warunki usługi — w `POSTEP.md` przed startem. | ✅ 04.10.2026 |
 | D-82 | myto | Opłaty drogowe poza zakresem. Nie liczymy i nie pokazujemy. | ✅ 04.10.2026 |
 | D-83 | wymiary zestawu | Wymiary dla każdego transportu poda właściciel. Kontrola trasy nie bierze niczego z dokumentów. Przewoźnik nie wprowadza żadnych wymiarów. | ✅ 04.10.2026 |
