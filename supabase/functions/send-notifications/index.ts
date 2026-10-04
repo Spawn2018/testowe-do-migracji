@@ -6,6 +6,7 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { recipientLocale, renderEmail } from '../_shared/notifyTemplates.ts';
+import { asResendBody, emailOutcome, resendErrorText } from '../_shared/resendStatus.ts';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
 
 Deno.serve(async (req) => {
@@ -38,13 +39,29 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'Idempotency-Key': `tower-notif-${r.id}` },
       body: JSON.stringify({ from, to: [r.recipient], subject: mail.subject, text: mail.text, html: mail.html }),
     });
-    if (res.ok) {
+    const raw = await res.text();
+    let body = asResendBody(null);
+    try { body = asResendBody(JSON.parse(raw)); } catch { body = {}; }
+    let outcome = emailOutcome(res.status, body);
+    // Samo id przy HTTP 200 nie wystarcza: dopytaj last_event. Klucz nie wchodzi do błędu.
+    if (outcome === 'PENDING' && typeof body.id === 'string') {
+      const look = await fetch(`https://api.resend.com/emails/${encodeURIComponent(body.id)}`, {
+        headers: { Authorization: `Bearer ${key}` },
+      });
+      const lookRaw = await look.text();
+      let lookBody = asResendBody(null);
+      try { lookBody = asResendBody(JSON.parse(lookRaw)); } catch { lookBody = {}; }
+      outcome = emailOutcome(look.status, lookBody);
+      if (outcome !== 'SENT') body = lookBody;
+    }
+    if (outcome === 'SENT') {
       sent++;
       await sb.from('notifications').update({ status: 'SENT', sent_at: new Date().toISOString(), error: null }).eq('id', r.id).eq('status', 'PENDING');
-    } else {
+    } else if (outcome === 'ERROR') {
       failed++;
-      await sb.from('notifications').update({ status: 'ERROR', error: `Resend ${res.status}: ${(await res.text()).slice(0, 300)}` }).eq('id', r.id);
+      await sb.from('notifications').update({ status: 'ERROR', error: resendErrorText(res.status, body) }).eq('id', r.id);
     }
+    // PENDING: odpowiedź nie ma jeszcze statusu wysłania. Wiersz zostaje w kolejce (klucz idempotencji nie wyśle drugi raz).
   }
   await log(failed === 0, { pending: rows?.length ?? 0, sent, failed });
   return Response.json({ sent, failed });

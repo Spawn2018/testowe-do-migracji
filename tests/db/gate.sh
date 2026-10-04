@@ -79,7 +79,7 @@ check nullguard 538
 check i2 527
 check i30 10
 check i31 6
-check dec2 24
+check dec2 26
 check dec3 13
 check dec5 11
 check dec6 15
@@ -89,5 +89,5 @@ check workflows 47
 check insurance 42
 check dec-auto 64
 check dwell 17
-check l13 33
+check l13 34
 [ $ok -eq 1 ]

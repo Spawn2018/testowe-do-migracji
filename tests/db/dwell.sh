@@ -34,7 +34,7 @@ sys "select dwell_scan('$L','2026-10-01 16:01+02')" >/dev/null
 val "6 h 1 min → decyzja, podpowiedź 75 EUR" "select (count(*)=1)::text||'/'||(detail->>'hint_eur') from decisions where load_id='$L' and type_code='DWELL_OVER_FREE' group by detail" "true/75"
 val "drugi skan nie dubluje decyzji" "select dwell_scan('$L','2026-10-01 16:01+02'); select count(*) from decisions where load_id='$L' and type_code='DWELL_OVER_FREE'" 1
 val "brak wiersza dopłaty uzgodnionej" "select count(*) from load_agreed_fees where load_id='$L'" 0
-val "powiadomienie tylko w aplikacji" "select coalesce(string_agg(distinct channel, ','),'') from notifications where load_id='$L' and template='DECISION_OPEN'" "IN_APP"
+val "powiadomienie w aplikacji, e-mail tylko jako skrót" "select (count(*) filter (where channel='IN_APP') > 0 and count(*) filter (where channel='EMAIL' and status is distinct from 'DIGEST') = 0 and count(*) filter (where channel not in ('IN_APP','EMAIL')) = 0)::text from notifications where load_id='$L' and template='DECISION_OPEN'" true
 
 # parametr: czas wolny załadunku 8 h → ten sam postój nie przekracza
 sys "update ops_thresholds set value_num=8 where key='DWELL_FREE_LOAD_H'" >/dev/null

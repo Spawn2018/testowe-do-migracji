@@ -148,5 +148,8 @@ done
 val "10 zaproszeń mieści się w rezerwie" "select count(*) from notifications where template='AUTH_INVITE' and status='PENDING'" 10
 val "11. zaproszenie stoi" "select l13_auth_email_book('AUTH_PASSWORD_RESET','hhl@test')" SUPPRESSED
 
+sys "insert into notifications (channel, recipient, template, status, dedup_key) values ('EMAIL','odrzucony@test','L13_REJECT','ERROR','l13-reject-1')" >/dev/null
+val "odrzucenie Resend liczy się jako nie wyszło" "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated; select ((email_budget_status()->'suppressed_to')::text like '%odrzucony@test%')::text; rollback" true
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

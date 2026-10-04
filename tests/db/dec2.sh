@@ -59,6 +59,9 @@ val "NOTIFY → powiadomienie KSH IN_APP" $KSH "select count(*) from notificatio
 D5=$(run "$HHL" "select decision_open('$P','BACKUP_FAILED','kopia retry', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
 val "BACKUP_RETRY → ui_hint" $HHL "select decision_resolve('$D5','RETRY_NOW')->>'ui_hint'" BACKUP_RETRY commit
 val "BACKUP_RETRY → audit" $HHL "select count(*) from audit_log where action='BACKUP_RETRY_REQUESTED' and entity_id='$D5'" 1
+val "BACKUP_RETRY zostawia wynik kopii" $HHL "select (count(*) >= 1) from backup_runs where status = 'ERROR' and error like 'Kopia nie wystartowała%'" t
+def=$(sys "select (position('functions/v1/backup-export' in pg_get_functiondef('public.request_backup_export()'::regprocedure)) > 0)" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+if [ "$def" = "t" ]; then ok=$((ok+1)); echo "  OK    BACKUP_RETRY woła backup-export"; else fail=$((fail+1)); echo "  FAIL  BACKUP_RETRY woła backup-export (otrzymano: $def)"; fi
 
 
 # L-2: firma z katalogu albo administrator. Odmowa z bazy.
