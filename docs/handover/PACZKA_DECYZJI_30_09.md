@@ -22,7 +22,7 @@ i porównaj z JSON.
 - **KSH ma identyczną dopłatę paliwową** (właściciel)
 - **konwój = liczba aut z kratownicami z tą samą datą załadunku**, liczona
   automatycznie (właściciel)
-- **D-8 zamknięte:** „Standard" = tężniki T, bez osobnej stawki
+- **D-8 zamknięte:** „Standard" = tężniki T, bez osobnej stawki — **zastąpione 04.10.** Obowiązuje: „Standard" = transporty NTG (potwierdzenie właściciela 04.10). Ten zapis o tężnikach jest nieaktualny.
 
 ## D-28 — DECYZJA KOŃCOWA: WŁASNY SILNIK + KALIBRACJA UCZĄCA SIĘ
 

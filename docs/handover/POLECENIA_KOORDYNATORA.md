@@ -516,3 +516,14 @@ Rozstrzygnięcia L-10 z istniejących ustaleń. Nowsze wygrywa. Najpierw ten zap
 2. Do czasu telematyki statusy, w tym załadunek i rozładunek, ustawiane ręcznie przez dyspozytora przewoźnika i HHL (przycisk + dziennik, §2). Z pozycjami — strefy automatycznie. Kierowca nic (D-38, D-79).
 3. Opis = stan dzisiejszy. Zaplanowane zmiany oznaczone wprost, np. „planowane: KSH edytuje daty i godziny (B-KSH)", „docelowo harmonogram z SharePoint (D-12, D-SP)".
 4. Import: tylko HHL (I-2a). Instrukcję KSH popraw zgodnie z macierzą widoczności — KSH nie rozstrzyga żadnej z 16 decyzji.
+
+## Polecenie 2026-10-04 22:32 (czas warszawski) — REJESTR_CALOSCI, poprawki
+
+Osobny PR, tylko docs. Nie wchodzić na gałąź H-2. Nie zaczynać części B. Nie robić H-2 ani H-3.
+
+1. D-66–D-76 to decyzje właściciela z 02.10 (`ZLECENIE_POPRAWKI_02_10.md`, „CZĘŚĆ 2 — NOWE DECYZJE”). Sprawdzić `grep` D-66–D-76. Dopisać do `03_REJESTR_DECYZJI.md` dosłownie z tego pliku. D-69 w wersji końcowej („ / ” podstawowy; „|” tylko przy przepięciu i tylko w Watch Tower; SharePoint zawsze „ / ”). Jeśli w pliku ich nie ma — zgłosić, nie odtwarzać.
+2. D-26: status „przeniesiona do III-13, zamknięta”. D-19: „numer nieużyty”. D-20 i D-34 w PLAN.md §4 to inna numeracja — zmienić na nazwy opisowe albo numery z rejestru. Jedna numeracja D-n w projekcie.
+3. Statusy: D-8 obowiązuje — „Standard” = transporty NTG (potwierdzenie właściciela 04.10). Zapis w `PACZKA_DECYZJI_30_09.md` („tężniki T, bez osobnej stawki”) nieaktualny — adnotacja „zastąpione 04.10”. Kod, import, cennik i UI: jeśli opisują STANDARD jako tężniki, zgłosić, nie zmieniać logiki. D-28 zmieniona przez D-77 (własny silnik = zapas). D-54: część „wymiary od przewoźnika” zastąpiona przez D-83 i D-68. D-9: czasy = start kalibracji (D-85); ETA z planu usunięte (D-80). D-3, D-14, D-15: otwarta — czeka na potwierdzenie. D-17, D-32: treść ze źródła albo „treść utracona”. D-34: obowiązuje (kolizja numeru z PLAN.md).
+4. Sprzeczności rozstrzygnąć, nie pytać: D-8 jak w punkcie 3; kopia `wzorzec/STAN` przegrywa z PLAN.md; II-7 zrobione (blokada dotyczyła starego planu HERE); SCOPE 56.1 wygrywa z 56.2, z wyjątkiem późniejszego datowanego „zrobione” tylko z dowodem z punktu 5.
+5. Drugie przejście pozycji NIEZNANY. „Zrobione” wyłącznie z dowodem (plik, migracja albo test). Brak dowodu = „do zrobienia”. Tabela ID | status | dowód. Osobno powtórzenia i pozycje bez sensu — do decyzji koordynatora.
+6. Pozycje bez miejsca w PLAN.md, które są „do zrobienia”: przypisać do etapu w PLAN.md albo „do decyzji koordynatora”.
