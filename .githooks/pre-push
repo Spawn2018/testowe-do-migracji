@@ -3,8 +3,8 @@
 # D19-T + D-EUR-T w pre-push (Etap 2 / G2).
 # chore(BK6): visual/d19/deur na świeżym buildzie HEAD (scripts/ci/fresh-smoke.sh, port 4179) — nie na dist/ podglądu :4177.
 # BK6: CI lokalne (GitHub Actions odłożone — AN1). test:unit obejmuje money.test.ts i ferry.test.ts;
-# baza: tests/db/gate.sh (security 52 + status 44 + storage 33) na lokalnym Postgres+PostGIS,
-# gdy osiągalny (PGADMIN, domyślnie :5433). TOWER_REQUIRE_DB=1 → brak bazy = błąd.
+# baza: tests/db/gate.sh na lokalnym Postgres 17 + PostGIS (PGADMIN, domyślnie :5433).
+# TOWER_REQUIRE_DB=1 → brak bazy = błąd. Pełna brama lokalna przy pushu na main.
 set -e
 cd "$(git rev-parse --show-toplevel)"
 
