@@ -15,7 +15,7 @@ export const SOURCE_RANK: Record<SailingSource, number> = {
   DANE_STARTOWE: 1, POLFERRIES: 2, STENA: 2, RECZNIE: 3,
 };
 
-export interface VesselRow { id: string; name: string; mmsi: number | null }
+export interface VesselRow { id: string; name: string; mmsi: number | null; imo?: number | null }
 export interface DbSailing {
   id: string; vessel_id: string; route: FerryRoute; departure_at: string; arrival_at: string;
   delayed_departure_at: string | null; delayed_arrival_at: string | null; status: DbSailingStatus; source: SailingSource;
@@ -123,12 +123,12 @@ export function unknownStatusRisk(s: IncomingSailing, raw: string, source: AutoS
 export type SourceId =
   | 'POLFERRIES_STATUS' | 'POLFERRIES_SCHEDULE'
   | 'STENA_STATUS' | 'STENA_SCHEDULE'
-  | 'DIGITRAFFIC' | 'TRAFIKVERKET' | 'KPD_GDDKIA' | 'TOMTOM'
+  | 'DIGITRAFFIC' | 'STENA_IRM' | 'TRAFIKVERKET' | 'KPD_GDDKIA' | 'TOMTOM'
   | 'FMI' | 'DMI' | 'SMHI' | 'MARINE_WEATHER';
 const SOURCE_LABEL: Record<SourceId, string> = {
   POLFERRIES_STATUS: 'status promów (Polferries)', POLFERRIES_SCHEDULE: 'rozkład promów (Polferries)',
   STENA_STATUS: 'status promów (Stena Line)', STENA_SCHEDULE: 'rozkład promów (Stena Line)',
-  DIGITRAFFIC: 'AIS promów (Digitraffic)', TRAFIKVERKET: 'utrudnienia drogowe SE (Trafikverket)',
+  DIGITRAFFIC: 'AIS promów (Digitraffic)', STENA_IRM: 'pozycje promów Stena (IRM)', TRAFIKVERKET: 'utrudnienia drogowe SE (Trafikverket)',
   KPD_GDDKIA: 'utrudnienia drogowe PL (KPD GDDKiA)', TOMTOM: 'prędkość ruchu (TomTom — wycofane)',
   FMI: 'pogoda morska (FMI)', DMI: 'pogoda morska (DMI)', SMHI: 'pogoda morska (SMHI)',
   MARINE_WEATHER: 'pogoda morska (FMI+DMI+SMHI)',
@@ -136,7 +136,7 @@ const SOURCE_LABEL: Record<SourceId, string> = {
 const SOURCE_KIND: Record<SourceId, RiskKind> = {
   POLFERRIES_STATUS: 'FERRY', POLFERRIES_SCHEDULE: 'FERRY',
   STENA_STATUS: 'FERRY', STENA_SCHEDULE: 'FERRY',
-  DIGITRAFFIC: 'FERRY', TRAFIKVERKET: 'ROAD_SE', KPD_GDDKIA: 'ROAD_PL', TOMTOM: 'ROAD_SE',
+  DIGITRAFFIC: 'FERRY', STENA_IRM: 'FERRY', TRAFIKVERKET: 'ROAD_SE', KPD_GDDKIA: 'ROAD_PL', TOMTOM: 'ROAD_SE',
   FMI: 'FERRY', DMI: 'FERRY', SMHI: 'FERRY', MARINE_WEATHER: 'FERRY',
 };
 

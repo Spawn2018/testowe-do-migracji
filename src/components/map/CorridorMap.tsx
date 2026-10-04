@@ -14,7 +14,8 @@ import type { Load } from '../../types';
 import { truckDivIcon, ferryDivIcon } from '../../lib/mapMarkers';
 import { nextLiveSailing } from '../../lib/ferry';
 import { severityLabel } from '../../lib/enumLabels';
-import { isFrozenNow } from '../../lib/frozenNow';
+import { getNowIso, isFrozenNow } from '../../lib/frozenNow';
+import { ferryMarkerTone } from '../../lib/ferry/stenaAis';
 import { declutter } from '../../lib/mapDeclutter';
 import { isServerId } from '../../data/registry';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
@@ -414,11 +415,18 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
       const liveSail = nextLiveSailing();
       for (const p of aisPositions) {
         const heading = typeof p.cog === 'number' ? p.cog : (p.vesselId === liveSail.vessel ? (liveSail.depPort === 'GDN' ? 20 : 200) : 20);
+        const stale = ferryMarkerTone(p.ts, getNowIso()) === 'stale';
+        const when = formatOpsDateTime(p.ts);
+        const tip = stale
+          ? `${p.name || p.mmsi} · ${t(useTowerStore.getState().locale, 'i2_ais_stale').replace('{d}', when)}`
+          : (p.source === 'db'
+            ? `${p.name || p.mmsi} · ${t(useTowerStore.getState().locale, 'i2_ais_read_at').replace('{d}', when)}`
+            : (p.name || p.mmsi));
         L.marker([p.lat, p.lng], {
-          icon: ferryDivIcon('#6BA8D6', heading),
+          icon: ferryDivIcon(stale ? '#8E9BA6' : '#6BA8D6', heading, stale),
           keyboard: false,
         })
-          .bindTooltip(p.source === 'db' ? `${p.name || p.mmsi} · ${t(useTowerStore.getState().locale, 'i2_ais_read_at').replace('{d}', formatOpsDateTime(p.ts))}` : (p.name || p.mmsi), { direction: 'top', offset: [0, -10] })
+          .bindTooltip(tip, { direction: 'top', offset: [0, -10] })
           .addTo(layers.ais);
       }
     }

@@ -28,11 +28,11 @@ export function truckDivIcon(status: string, color: string): L.DivIcon {
   });
 }
 
-export function ferryDivIcon(color: string, headingOrSailing: number | FerrySailing): L.DivIcon {
+export function ferryDivIcon(color: string, headingOrSailing: number | FerrySailing, stale = false): L.DivIcon {
   const heading =
     typeof headingOrSailing === 'number' ? headingOrSailing : ferryHeadingDeg(headingOrSailing);
   return L.divIcon({
-    className: 'wt-marker wt-marker-ferry',
+    className: stale ? 'wt-marker wt-marker-ferry wt-marker-ferry-stale' : 'wt-marker wt-marker-ferry',
     html: arrowDotHtml({ color, dir: heading, size: 22, ring: '#DCE7EE' }),
     iconSize: [22, 22],
     iconAnchor: [11, 11],

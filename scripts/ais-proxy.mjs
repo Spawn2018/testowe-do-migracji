@@ -10,11 +10,11 @@ import { WebSocketServer, WebSocket } from 'ws';
 const PORT = Number(process.env.AIS_PROXY_PORT || 4175);
 const KEY = process.env.AISSTREAM_API_KEY || '';
 const UPSTREAM = 'wss://stream.aisstream.io/v0/stream';
-const MMSI = ['311852000', '311000787']; // Wawel, Nova Star
+const MMSI = ['311852000', '311000787', '219031605', '219030885', '219031310']; // Wawel, Nova Star, Spirit, Estelle, Ebba
 const BBOX = [
   [
-    [54.0, 17.5],
-    [59.5, 19.5],
+    [54.0, 15.2],
+    [59.3, 19.9],
   ],
 ];
 

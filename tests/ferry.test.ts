@@ -196,3 +196,36 @@ describe('Stena Line — JSON rozkładu 01.10.2026', () => {
     expect(r.warnings[0]).toMatch(/Struktura rozkładu Stena zmieniona/);
   });
 });
+
+describe('AIS-SRC — parser Steny i znacznik', () => {
+  it('współrzędne z properties, nie z geometry.coordinates (lat, lon)', async () => {
+    const { parseStenaFerries } = await import('../src/lib/ferry/stenaAis');
+    const parsed = parseStenaFerries({
+      data: [{
+        geometry: { type: 'Point', coordinates: [55.09783936, 18.12014198] },
+        properties: {
+          imo: 7907661, mmsi: 219031605, latitude: 55.09783936, longitude: 18.12014198,
+          dt_pos_utc: '2026-10-04 23:29:58', eta: '2026-10-05T06:00:00Z', sog: 15.9,
+        },
+      }],
+    });
+    expect(parsed.warning).toBeNull();
+    expect(parsed.fixes[0].lat).toBe(55.09783936);
+    expect(parsed.fixes[0].lon).toBe(18.12014198);
+    expect(parsed.fixes[0].lon).not.toBe(55.09783936);
+    expect(parsed.fixes[0].source).toBe('STENA');
+    expect(parsed.fixes[0].timestampUtc).toBe('2026-10-04T23:29:58.000Z');
+  });
+  it('pozycja starsza niż 15 min → znacznik wyszarzony; 24 h nie jest mierzone tej nocy', async () => {
+    const { ferryMarkerTone, pickNewerFix, STENA_FRESHNESS_24H } = await import('../src/lib/ferry/stenaAis');
+    expect(ferryMarkerTone('2026-10-04T23:00:00Z', '2026-10-04T23:16:00Z')).toBe('stale');
+    expect(ferryMarkerTone('2026-10-04T23:00:00Z', '2026-10-04T23:10:00Z')).toBe('fresh');
+    const newer = pickNewerFix([
+      { mmsi: 1, lat: 1, lon: 2, sogKn: null, cog: null, navStat: null, timestampUtc: '2026-10-04T23:00:00Z', source: 'STENA' },
+      { mmsi: 1, lat: 3, lon: 4, sogKn: null, cog: null, navStat: null, timestampUtc: '2026-10-04T23:20:00Z', source: 'DIGITRAFFIC' },
+    ]);
+    expect(newer?.source).toBe('DIGITRAFFIC');
+    expect(newer?.lat).toBe(3);
+    expect(STENA_FRESHNESS_24H).toMatchObject({ hours: 24, maxAgeMin: 5, vessels: 3, runTonight: false });
+  });
+});

@@ -61,10 +61,18 @@ class MemStore implements SyncStore {
   async latestPositions() { return this.positions; }
   async lastRun(job: string) { return this.runs.filter((r) => r.job === job).at(-1)?.at ?? null; }
   async recordRun(job: string, ok: boolean, result: JobResult) { this.runs.push({ job, at: NOW.toISOString(), ok, result }); }
-  vesselPositions: { vesselId: string; lat: number; lon: number; observedAt: string }[] = [];
-  async saveVesselPosition(vesselId: string, fix: { lat: number; lon: number; timestampUtc: string }) {
+  vesselPositions: { vesselId: string; lat: number; lon: number; observedAt: string; source?: string; etaAt?: string | null }[] = [];
+  async saveVesselPosition(vesselId: string, fix: { lat: number; lon: number; timestampUtc: string; source?: string; etaAt?: string | null }) {
     if (this.vesselPositions.some((p) => p.vesselId === vesselId && p.observedAt === fix.timestampUtc)) return;
-    this.vesselPositions.push({ vesselId, lat: fix.lat, lon: fix.lon, observedAt: fix.timestampUtc });
+    this.vesselPositions.push({ vesselId, lat: fix.lat, lon: fix.lon, observedAt: fix.timestampUtc, source: fix.source, etaAt: fix.etaAt ?? null });
+  }
+  async latestVesselObserved() {
+    const best = new Map<string, string>();
+    for (const row of this.vesselPositions) {
+      const cur = best.get(row.vesselId);
+      if (!cur || row.observedAt > cur) best.set(row.vesselId, row.observedAt);
+    }
+    return [...best.entries()].map(([vesselId, observedAt]) => ({ vesselId, observedAt }));
   }
   async seSlowdownPct() { return 15; }
   async saveCorridorCondition(row: { corridor: 'SE_E4'; slowdownMult: number; reason: string | null; detail?: unknown }) {
@@ -257,8 +265,9 @@ describe('ferry-status — komunikaty (prawdziwa strona 26.09.2026)', () => {
     expect(st.resolved).toContain('SOURCE_DOWN:POLFERRIES_STATUS:');
   });
   it('nagłówek User-Agent wyłącznie ASCII (inaczej fetch odrzuca żądanie)', async () => {
-    const { USER_AGENT, DIGITRAFFIC_USER } = await import('../supabase/functions/_shared/integrations/jobs');
-    expect(/^[\x20-\x7e]+$/.test(USER_AGENT) && /^[\x20-\x7e]+$/.test(DIGITRAFFIC_USER)).toBe(true);
+    const { USER_AGENT, DIGITRAFFIC_USER, STENA_IRM_UA } = await import('../supabase/functions/_shared/integrations/jobs');
+    expect(/^[\x20-\x7e]+$/.test(USER_AGENT) && /^[\x20-\x7e]+$/.test(DIGITRAFFIC_USER) && /^[\x20-\x7e]+$/.test(STENA_IRM_UA)).toBe(true);
+    expect(STENA_IRM_UA).toMatch(/Watch Tower/);
     expect(() => new Headers({ 'User-Agent': USER_AGENT })).not.toThrow();
   });
   it('runJob: nie częściej niż co 15 min (dziennik przebiegów)', async () => {
@@ -292,7 +301,8 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
     st2.sailings.push(sail(NS, '2026-09-24T16:00:00.000Z', '2026-09-25T10:00:00.000Z'));
     const r = await runFerryAis(deps(st2, { 'digitraffic.fi': inPort }, {}, new Date('2026-09-25T09:00:00Z')).d);
     expect(r.observations?.['M/F Nova Star']).toBe('BRAK_SWIEZEGO_SYGNALU');
-    expect(st2.risks).toHaveLength(0);
+    expect(st2.risks.some((x) => x.dedup.startsWith('AIS_NYN:'))).toBe(false);
+    expect(st2.risks.some((x) => x.titleKey === 'rk_ais_gap')).toBe(true);
   });
 });
 
@@ -528,5 +538,76 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
     }, {}, WX_NOW).d);
     expect(r.ok).toBe(false);
     expect(st.risks[0]?.dedup).toMatch(/^SOURCE_DOWN:MARINE_WEATHER:/);
+  });
+});
+
+
+describe('AIS-SRC — trzy źródła, bez filtra Q-18', () => {
+  const SPIRIT = 'v-spirit';
+  const stenaBody = JSON.stringify({
+    errors: [],
+    data: [{
+      geometry: { type: 'Point', coordinates: [55.1, 18.12] },
+      properties: {
+        imo: 7907661, mmsi: 219031605, vessel_name: 'STENA SPIRIT',
+        latitude: 55.09783936, longitude: 18.12014198,
+        dt_pos_utc: '2026-10-04 23:29:58', eta: '2026-10-05T06:00:00Z', sog: 15.9, cog: 200, nav_status_code: 0,
+      },
+    }],
+  });
+  class AisStore extends MemStore {
+    override async vessels() {
+      return [
+        { id: NS, name: 'M/F Nova Star', mmsi: 311000787, imo: 9462067 },
+        { id: SPIRIT, name: 'M/F Stena Spirit', mmsi: 219031605, imo: 7907661 },
+      ];
+    }
+  }
+  it('dwie pozycje: zapisana nowsza, ze źródłem; ETA Steny zostaje przy pozycji', async () => {
+    const { resetStenaIrmCache } = await import('../supabase/functions/_shared/integrations/jobs');
+    resetStenaIrmCache();
+    const st = new AisStore();
+    const olderAis = [{
+      mmsi: 219031605, lat: 54.5, lon: 18.5, sogKn: 10, cog: 1, navStat: 0,
+      timestampUtc: '2026-10-04T23:00:00.000Z', source: 'AISSTREAM' as const,
+    }];
+    const { d } = deps(st, { 'irm.stenalinefreight.com': stenaBody, 'digitraffic.fi': '{"type":"FeatureCollection","features":[]}' }, { AISSTREAM_API_KEY: 'test-key-not-real' }, new Date('2026-10-04T23:35:00Z'));
+    d.collectAisstream = async () => olderAis;
+    await runFerryAis(d);
+    const spirit = st.vesselPositions.filter((p) => p.vesselId === SPIRIT);
+    expect(spirit).toHaveLength(1);
+    expect(spirit[0]).toMatchObject({ lat: 55.09783936, lon: 18.12014198, source: 'STENA', etaAt: '2026-10-05T06:00:00.000Z' });
+    expect(spirit[0].lat).not.toBe(55.1);
+  });
+  it('awaria aisstream → pozycja z Digitraffic, bez wyjątku', async () => {
+    const { resetStenaIrmCache } = await import('../supabase/functions/_shared/integrations/jobs');
+    resetStenaIrmCache();
+    const st = new AisStore();
+    const { d } = deps(st, { 'irm.stenalinefreight.com': 503, 'digitraffic.fi': AIS }, { AISSTREAM_API_KEY: 'test-key-not-real' }, new Date('2026-09-24T19:40:00Z'));
+    d.collectAisstream = async () => { throw new Error('socket down'); };
+    const r = await runFerryAis(d);
+    expect(r.ok).toBe(true);
+    expect(st.vesselPositions.some((p) => p.vesselId === NS && p.source === 'DIGITRAFFIC')).toBe(true);
+    expect(st.risks.some((x) => x.dedup.startsWith('SOURCE_DOWN:STENA_IRM:'))).toBe(true);
+  });
+  it('zły format Steny → ryzyko i zapas Digitraffic', async () => {
+    const { resetStenaIrmCache } = await import('../supabase/functions/_shared/integrations/jobs');
+    resetStenaIrmCache();
+    const st = new AisStore();
+    const { d } = deps(st, { 'irm.stenalinefreight.com': '{"foo":1}', 'digitraffic.fi': AIS }, {}, new Date('2026-09-24T19:40:00Z'));
+    const r = await runFerryAis(d);
+    expect(r.ok).toBe(true);
+    expect(st.vesselPositions.some((p) => p.vesselId === NS)).toBe(true);
+    expect(st.risks.some((x) => String(x.detail.zrodlo) === 'STENA_IRM')).toBe(true);
+  });
+  it('rejs do Polski nie gubi pozycji (Q-18 nie jest zbudowane, ETA ma pełne dane)', async () => {
+    const { resetStenaIrmCache } = await import('../supabase/functions/_shared/integrations/jobs');
+    resetStenaIrmCache();
+    const st = new AisStore();
+    st.sailings.push({ id: 'back', vessel_id: NS, route: 'NYN-GDN', departure_at: '2026-09-24T16:00:00.000Z', arrival_at: '2026-09-25T10:00:00.000Z', delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY', source: 'POLFERRIES' });
+    const { d } = deps(st, { 'irm.stenalinefreight.com': 503, 'digitraffic.fi': AIS }, {}, new Date('2026-09-24T19:40:00Z'));
+    await runFerryAis(d);
+    expect(st.vesselPositions.some((p) => p.vesselId === NS)).toBe(true);
+    expect(st.vesselPositions.find((p) => p.vesselId === NS)?.lat).toBeCloseTo(57.980348, 4);
   });
 });
