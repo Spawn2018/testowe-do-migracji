@@ -712,7 +712,7 @@ Zasada: tylko język polski tam, gdzie widzi użytkownik (panele, ryzyka, powiad
 
 1. HERE: język pl-PL tam, gdzie API przyjmuje. Brak tłumaczenia idzie do punktu 3.
 2. Trafikverket: opis po polsku z pól kodowych, nie ze szwedzkiego tekstu. Pełny słownik kod→polski w repozytorium. Test: każdy kod z API ma tłumaczenie. Nieznany kod → ryzyko w Stanie systemu, w panelu „zdarzenie drogowe” po polsku, nigdy surowy szwedzki.
-3. DeepL od razu, bez czekania na pomiar znaków. Klucz DEEPL_API_KEY zapisuje osobny agent (sekrety Edge i .env.local). Nie prosić właściciela. Wartości nie wypisywać. Jeśli nazwy klucza jeszcze nie ma: reszta PL-DATA bez punktu 3 i powrót, gdy klucz się pojawi. Tekst wolny z Trafikverket i HERE, którego nie da się złożyć po polsku z kodów: najpierw słownik zwrotów, potem pamięć tłumaczeń, potem DeepL API Free (SV/EN → PL). Każde tłumaczenie z DeepL trafia do pamięci. Ten sam tekst nigdy drugi raz. Zużycie w Stanie systemu, ostrzeżenie przy 80% limitu miesięcznego. Przy 100% albo błędzie: opis z kodów, tekst w kolejce, bez szwedzkiego w głównej treści. Oryginał tylko pod „Pokaż oryginał”. Do DeepL wyłącznie publiczne komunikaty drogowe, nigdy dane transportów, kierowców ani firm.
+3. DeepL od razu, bez czekania na pomiar znaków. Klucz DEEPL_API_KEY zapisuje osobny agent (sekrety Edge i .env.local). Nie prosić właściciela. Wartości nie wypisywać. Nazwa DEEPL_API_KEY jest w sekretach Edge produkcji i w .env.local (sprawdzone 05.10.2026; wartości nie wypisywać). Test właściciela 04.10: działa, zużycie 38 / 1 000 000 znaków. Punkt 3 idzie razem z resztą PL-DATA, bez odkładania. Tekst wolny z Trafikverket i HERE, którego nie da się złożyć po polsku z kodów: najpierw słownik zwrotów, potem pamięć tłumaczeń, potem DeepL API Free (SV/EN → PL). Każde tłumaczenie z DeepL trafia do pamięci. Ten sam tekst nigdy drugi raz. Zużycie w Stanie systemu, ostrzeżenie przy 80% limitu miesięcznego. Przy 100% albo błędzie: opis z kodów, tekst w kolejce, bez szwedzkiego w głównej treści. Oryginał tylko pod „Pokaż oryginał”. Do DeepL wyłącznie publiczne komunikaty drogowe, nigdy dane transportów, kierowców ani firm.
 4. Stena i AIS: Arrived → Przypłynął, Departed → Wypłynął, odwołanie → Odwołany. Porty: PLGDY Gdynia, SEKAA Karlskrona, PLGDN Gdańsk, SENYN Nynäshamn. Nazwy statków bez zmian.
 5. Pogoda FMI/DMI/SMHI: opisy i jednostki po polsku (m, węzły, m/s, °C), kierunki wiatru po polsku.
 6. Przegląd UI i szablonów: lista miejsc bez tłumaczenia w raporcie, poprawki w tym samym PR.
@@ -720,3 +720,9 @@ Zasada: tylko język polski tam, gdzie widzi użytkownik (panele, ryzyka, powiad
 Testy: roboty drogowe po polsku bez szwedzkich słów; nieznany kod; HERE pl-PL; Departed → Wypłynął; e-mail i SMS ryzyka drogowego tylko po polsku; szwedzki → polski w panelu; drugi raz z pamięci (0 zapytań DeepL); błąd DeepL → opis z kodów, bez błędu aplikacji.
 
 Kolejka: zaraz po FERRY-STATUS, przed VERIFY-13. STD-CLEAN zrobione → SMS-KSH-1H + ETA-PRE-LOAD → AIS-SRC → FERRY-STATUS → PL-DATA → VERIFY-13 → PALIWO-33.3 (do 23.10) → część B od B-MAPA z Q-18. PL-DATA nie budować w tym zadaniu.
+
+## Polecenie 2026-10-05 (czas warszawski) — PL-DATA, klucz DeepL jest
+
+Dopisek do punktu 3. Bez budowy. Nie przerywa AIS-SRC.
+
+Nazwa DEEPL_API_KEY jest już w sekretach Edge produkcji i w .env.local. Wartości nie wypisywać. Test właściciela 04.10: działa, zużycie 38 / 1 000 000 znaków. Punkt 3 realizuje się razem z resztą PL-DATA, bez odkładania. Budowa PL-DATA czeka, aż skończy się AIS-SRC.
