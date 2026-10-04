@@ -602,3 +602,9 @@ Kolejność: U-3-PALIWO → diagnoza ETA (SG-01, SG-24, KR-04, KR-05, KR-06, KR-
 Osobny PR. Nie robić STD-CLEAN, SMS-KSH-1H, ETA-PRE-LOAD, VERIFY-13 ani części B. Nie włączać H-1 ani H-3. Nie kasować transportów.
 
 U-38: odebrać anonimowi dostęp do `driver_post_position` (migracja). Unieważnić wszystkie wydane tokeny kierowców. Trasa `#/driver/:token` pokazuje „Link nieaktywny”. Kodu nie usuwać. Test: anonim z ważnym tokenem dostaje odmowę, pozycja się nie zapisuje. Pozycje wyłącznie z telematyki (D-36). Brama lokalna zielona na tym samym commicie przed scaleniem i produkcją.
+
+## Polecenie 2026-10-05 (czas warszawski) — dowody U-3-PALIWO, 32.x i 33.x
+
+Osobny PR, tylko dokumenty. Bez zmian w kodzie, bez migracji i bez wdrożenia.
+
+Raport dowodów dla punktu 4 w TRIAGE_REJESTRU.md (32.1–32.5, 33.1–33.6). Brak testu zmiany czasu 25.10.2026 przy tygodniu paliwa (Europe/Warsaw) zamyka 33.3 jako brak, mimo granicy niedziela/poniedziałek lato/zima. Pozycja PALIWO-33.3 w PLAN.md: po VERIFY-13, przed częścią B. Bez wykonania teraz.
