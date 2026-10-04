@@ -33,8 +33,7 @@ Jedno użycie gita: `git -C /workspace/watch-tower-app rev-parse --short HEAD` o
 
 ## Pliki z polecenia, których nie ma na dysku
 
-- `ZLECENIE_ETAP_I.md` — brak jako plik w `/workspace/watch-tower-app` (find, bez `node_modules`). Wzmianki: `docs/handover/SCOPE.md` §52.2, `docs/handover/PLAN.md` wiersz I-3, `docs/handover/POSTEP.md` wiersz I-3 P0, `docs/handover/wzorzec/11_INWENTARZ_PLIKOW.md` („wykonane”). Treści pliku nie odtworzono.
-- `ZLECENIE_DLA_GROKA.md` — brak jako plik. Wzmianki: `docs/handover/ZLECENIE_FINAL.md` (tabela etapu 0: „to samo zlecenie”), `docs/handover/SCOPE.md` §36, `docs/handover/POSTEP.md` P0.1 („identyczne z `ZLECENIE_DLA_GROKA.md` z pakietu”), `docs/handover/wzorzec/11_INWENTARZ_PLIKOW.md`. Treści pliku nie odtworzono.
+- `ZLECENIE_ETAP_I.md` i `ZLECENIE_DLA_GROKA.md` — 04.10 leżały niezacommitowane w `docs/handover/` i weszły do repozytorium tym PR. Wcześniejszy spis mówił „brak pliku”, bo nie było ich na `main`.
 
 Dodatkowe trafienie nazwy `ZLECENIE_ETAP_I` w `supabase/migrations/0069_sms_8_9_secret.sql` — plik kodu, nie źródło statusu i nie odtworzenie treści.
 
@@ -812,6 +811,23 @@ Cytat z tego samego pliku, bez wyboru zwycięzcy: `SCOPE.md` przy §56 — „St
 | 0.1 | docs/handover/SCOPE.md | 56.1 | 0.1 \| DO ZROBIENIA (częściowo) \| PLAN III-2 | docs/handover/PLAN.md | ETAP III | III-2 (P2, z I-11: SCOPE 0.1, 0.3, 0.7–0.10, 11.4) domknięcie wierności wizualnej — 0.1, 0.7 DONE 28.09 |
 | 0.7 | docs/handover/SCOPE.md | 56.1 | 0.7 \| DO ZROBIENIA \| PLAN III-2 | docs/handover/PLAN.md | ETAP III | 0.1, 0.7 DONE 28.09 (`tests/stylesheet-mockup.test.ts`, naprawiony dryf `kbd`, DESIGN_SYSTEM §7a) |
 
+### Rozjazdy U i sekcji 3 — klasyfikacja 04.10
+
+Kod nie był zmieniany. „Tylko dokumenty” = zapis poprawiony adnotacją. „Także kod” = pozycja w `PLAN.md`, bez naprawy teraz.
+
+| ID | Gdzie | Wynik |
+|---|---|---|
+| U-3 | także kod | Tydzień opłaty paliwowej liczy się od rozładunku (`actual_delivery_at` → `fuel_ref_date` w `supabase/migrations/0011_fx_nbp.sql`; `referenceUtc` w `src/lib/money/engine.ts`), nie od daty załadunku (D-34). Pozycja planu: błąd P1 `U-3-PALIWO`. |
+| U-5 | tylko dokumenty | Kod ma przełącznik waluty wyświetlania PLN (`src/components/settings/UiPrefsPanel.tsx`). Stary zapis SCOPE §34 „nigdzie PLN” poprawiony 04.10; obowiązuje §35.1. |
+| U-8 | tylko dokumenty | Zamknięte. Obowiązuje: fakturę SCX widzą HHL i SCX (wystawca); KSH nie widzi. Kod już tak ma (`invoices_read` w `supabase/migrations/0003_faktury_zlecenia_ustawienia.sql`). Zapis doprecyzowany 04.10. |
+| U-32 | tylko dokumenty | Kod nie używa 5 dni jako celu tranzytu. `TRANSIT_TARGET_DAYS` = 4 (`supabase/migrations/0113_daty67_ksh_file_dates.sql`, test `tests/db/i2.sh`). Piątka w kodzie to wyprzedzenie dat KSH (`LEAD_DAYS` / `DATE_CONFIRM_DAYS`), nie D-41. Stary „plan 5 dni” w PLAN D-12 i SCOPE §57 poprawiony 04.10. |
+| D-8 | tylko dokumenty | „Tężniki” zastąpione 04.10. Resztki klasy STANDARD w kodzie to osobna pozycja STD-CLEAN, nie ten rozjazd. |
+| D-28 | tylko dokumenty | Zapis „HERE — nie” poprawiony 04.10. Obowiązuje D-77; własny silnik (0122) zostaje zapasem. |
+| D-34 (numer) | tylko dokumenty | Numer w planie nie oznacza już klucza Trafikverket. Tydzień paliwa od rozładunku to U-3, nie ta kolizja numeru. |
+| II-7 | tylko dokumenty | Blokada „ZABLOKOWANE przez D-28” dotyczyła starego planu HERE. Dowód wykonania: `supabase/migrations/0122_ii7_eta_osm_corridor.sql`. Adnotacja 04.10. |
+| SCOPE 56.1 wobec 56.2 | tylko dokumenty | 56.1 wygrywa. Wyjątek tylko przy późniejszym datowanym „zrobione” z plikiem. Adnotacja przy §56. |
+| I-3, II-5, II-6, R-2, 0.1, 0.7 (kopia STAN) | tylko dokumenty | Kopia `wzorzec/STAN` przegrywa z `PLAN.md`. Adnotacja na kopii planu 04.10. |
+
 ## 4. BEZ STATUSU LUB BEZ MIEJSCA W PLAN.md
 
 „Bez statusu” = żaden z dokumentów PLAN.md, POSTEP.md ani plik źródłowy pozycji nie podaje komórki statusu. Sprzeczność (sekcja 3) nie jest brakiem statusu. „Bez PLAN” = identyfikatora nie ma jako tokenu w `PLAN.md`.
@@ -1248,11 +1264,13 @@ Cytat z tego samego pliku, bez wyboru zwycięzcy: `SCOPE.md` przy §56 — „St
 
 Dla każdej pozycji sekcji 2, która miała status NIEZNANY. „zrobione” tylko wtedy, gdy plik, migracja albo test istnieje. Inaczej „do zrobienia”. Kopia `wzorzec/STAN` nie jest dowodem. Przy SCOPE wygrywa 56.1, chyba że późniejszy datowany wpis „zrobione” ma dowód w pliku.
 
+Drugie szukanie dowodów, 04.10 wieczór. „zrobione” tylko przy istniejącym pliku, migracji albo teście. Brak dowodu zostaje „do zrobienia”. Szkielet II-7b (0123) nie jest pełną kalibracją — zostaje do zrobienia. Część B nie startuje, dopóki koordynator nie przyjmie tej tabeli.
+
 | ID | Status | Dowód |
 |---|---|---|
 | BRAK-PLIKU-ZLECENIE_ETAP_I | do zrobienia | — |
 | BRAK-PLIKU-ZLECENIE_DLA_GROKA | do zrobienia | — |
-| D-10 | do zrobienia | — |
+| D-10 | zrobione | supabase/migrations/0063_sefs_applies_to.sql |
 | D-11 | do zrobienia | — |
 | D-12 | do zrobienia | — |
 | D-14 | do zrobienia | — |
@@ -1273,7 +1291,7 @@ Dla każdej pozycji sekcji 2, która miała status NIEZNANY. „zrobione” tylk
 | D-6 | do zrobienia | — |
 | D-7 | do zrobienia | — |
 | D-8 | do zrobienia | — |
-| D-9 | do zrobienia | — |
+| D-9 | zrobione | supabase/migrations/0054_eta_params_d9.sql |
 | D-STENA-COORDS | zrobione | supabase/functions/_shared/ferry/digitraffic.ts |
 | D-TELM-ETA | do zrobienia | — |
 | D-1 | zrobione | supabase/migrations/0100_i30_symbol_rate.sql |
@@ -1284,18 +1302,18 @@ Dla każdej pozycji sekcji 2, która miała status NIEZNANY. „zrobione” tylk
 | D-13 | do zrobienia | — |
 | D-15 | do zrobienia | — |
 | D-34 | do zrobienia | — |
-| B-8-IMP | do zrobienia | — |
+| B-8-IMP | zrobione | tests/b8-imp.test.ts |
 | C-SEP | do zrobienia | — |
 | D-LATER | do zrobienia | — |
 | I-18 | zrobione | supabase/migrations/0061_plan_dates_confirm.sql |
 | I-3 | zrobione | supabase/migrations/0067_sms_gateway_base.sql |
 | II-7a | do zrobienia | — |
-| II-5 | do zrobienia | — |
-| II-6 | do zrobienia | — |
-| II-7 | do zrobienia | — |
+| II-5 | zrobione | tests/integrations.test.ts |
+| II-6 | zrobione | supabase/migrations/0121_ii6_corridor_conditions.sql |
+| II-7 | zrobione | supabase/migrations/0122_ii7_eta_osm_corridor.sql |
 | AUDIT-PROD | do zrobienia | — |
-| L-1 | do zrobienia | — |
-| L-4 | do zrobienia | — |
+| L-1 | zrobione | supabase/migrations/0138_l1_open_decisions.sql |
+| L-4 | zrobione | tests/click-targets.test.ts |
 | R-1 | do zrobienia | — |
 | R-2 | do zrobienia | — |
 | R-0 | do zrobienia | — |
@@ -1304,15 +1322,15 @@ Dla każdej pozycji sekcji 2, która miała status NIEZNANY. „zrobione” tylk
 | D-30 | zrobione | supabase/migrations/0097_insurance_expiry.sql |
 | D-31 | do zrobienia | — |
 | D-29t | do zrobienia | — |
-| I-7a | do zrobienia | — |
-| I-30 | do zrobienia | — |
+| I-7a | zrobione | supabase/migrations/0114_i7a_ksh_driver_always.sql |
+| I-30 | zrobione | supabase/migrations/0100_i30_symbol_rate.sql |
 | I-29 | do zrobienia | — |
 | II-7b | do zrobienia | — |
-| II-8 | do zrobienia | — |
-| II-9 | do zrobienia | — |
+| II-8 | zrobione | supabase/migrations/0124_ii8_marine_weather.sql |
+| II-9 | zrobione | tests/ferry.test.ts |
 | I-3-APK | zrobione | supabase/migrations/0116_sms_zone_triggers_on.sql |
 | ADM-10 | zrobione | supabase/migrations/0117_adm10_impersonate.sql |
-| CLEAN-TT-HERE | do zrobienia | — |
+| CLEAN-TT-HERE | zrobione | tests/integrations.test.ts |
 | DATY-67 | zrobione | supabase/migrations/0113_daty67_ksh_file_dates.sql |
 | FAK-9 | do zrobienia | — |
 | HIST-11 | zrobione | supabase/migrations/0118_hist11_full_audit.sql |
@@ -1323,7 +1341,7 @@ Dla każdej pozycji sekcji 2, która miała status NIEZNANY. „zrobione” tylk
 | UI-12 | do zrobienia | — |
 | HHL-4a | do zrobienia | — |
 | RESP-14 | zrobione | tests/resp14-phone.spec.ts |
-| PR8 | do zrobienia | — |
+| PR8 | zrobione | tests/hosting-switch.test.ts |
 | O-V | do zrobienia | — |
 | AUTH-MAIL | do zrobienia | — |
 | SMS-ZONE-ON | do zrobienia | — |
@@ -1334,7 +1352,7 @@ Dla każdej pozycji sekcji 2, która miała status NIEZNANY. „zrobione” tylk
 | 0.10 | do zrobienia | — |
 | 0.7 | do zrobienia | — |
 | 0.8 | zrobione | tests/visual-states.spec.ts |
-| 0.9 | do zrobienia | — |
+| 0.9 | zrobione | tests/visual-states.spec.ts |
 | 1.4 | do zrobienia | — |
 | 1.5 | do zrobienia | — |
 | 1.6 | do zrobienia | — |
@@ -1417,7 +1435,7 @@ Dla każdej pozycji sekcji 2, która miała status NIEZNANY. „zrobione” tylk
 | 17.6 | do zrobienia | — |
 | 17.7 | do zrobienia | — |
 | 17.8 | do zrobienia | — |
-| 17.9 | do zrobienia | — |
+| 17.9 | zrobione | tests/visual-states.spec.ts |
 | 2.7 | do zrobienia | — |
 | 2.8 | do zrobienia | — |
 | 23.2 | do zrobienia | — |
@@ -1445,7 +1463,7 @@ Dla każdej pozycji sekcji 2, która miała status NIEZNANY. „zrobione” tylk
 | 33.4 | do zrobienia | — |
 | 33.5 | do zrobienia | — |
 | 33.6 | do zrobienia | — |
-| 4.3 | do zrobienia | — |
+| 4.3 | zrobione | supabase/migrations/0073_resource_deadlines.sql |
 | 4.5 | zrobione | supabase/migrations/0087_escort_vehicles.sql |
 | 5.1 | do zrobienia | — |
 | 5.10 | zrobione | src/lib/mapDeclutter.ts |
@@ -1463,14 +1481,14 @@ Dla każdej pozycji sekcji 2, która miała status NIEZNANY. „zrobione” tylk
 | ETAP_I/I-7 | do zrobienia | — |
 | ETAP_I/I-8 | do zrobienia | — |
 | ETAP_I/I-9 | do zrobienia | — |
-| 6.2 | do zrobienia | — |
+| 6.2 | zrobione | supabase/migrations/0078_doc_requirements_versions.sql |
 | 6.4 | zrobione | supabase/migrations/0086_permit_form.sql |
-| 6.5 | do zrobienia | — |
+| 6.5 | zrobione | supabase/migrations/0081_permit_validator.sql |
 | 6.6 | zrobione | supabase/migrations/0097_insurance_expiry.sql |
 | 6.8 | do zrobienia | — |
 | 6.9 | do zrobienia | — |
 | 7.1 | do zrobienia | — |
-| 7.10 | do zrobienia | — |
+| 7.10 | zrobione | supabase/migrations/0079_invoice_dispute_path.sql |
 | 7.11 | do zrobienia | — |
 | 7.3 | do zrobienia | — |
 | 7.5 | do zrobienia | — |
@@ -1601,7 +1619,6 @@ Dla każdej pozycji sekcji 2, która miała status NIEZNANY. „zrobione” tylk
 | SCX-§7 | do zrobienia | — |
 | SCX-§8 | do zrobienia | — |
 | SCX-§9 | do zrobienia | — |
-
 ### Powtórzenia i pozycje bez sensu — do decyzji koordynatora
 
 | Pozycja | Z czym się kłóci albo dubluje | Dlaczego |
@@ -1680,6 +1697,7 @@ Dla każdej pozycji sekcji 2, która miała status NIEZNANY. „zrobione” tylk
 - II-7: zrobione. Blokada „ZABLOKOWANE przez D-28” dotyczyła starego planu HERE. Dowód: `supabase/migrations/0122_ii7_eta_osm_corridor.sql`.
 - SCOPE: 56.1 wygrywa z 56.2. Wyjątek zastosowany tylko tam, gdzie późniejszy datowany wpis „zrobione” ma istniejący plik, migrację albo test. Wynik jest w tabeli powyżej.
 - D-66–D-76: nie dopisane. W `ZLECENIE_POPRAWKI_02_10.md` nie ma tych numerów.
+- U-8: zamknięte 04.10. Fakturę SCX widzą HHL i SCX (wystawca); KSH nie widzi. Kod bez zmian.
 
 ## Liczniki
 
@@ -1688,8 +1706,9 @@ Dla każdej pozycji sekcji 2, która miała status NIEZNANY. „zrobione” tylk
 - D-19: numer nieużyty
 - D-26: przeniesiona do III-13, zamknięta
 - Pozycje sekcji 2 przejrzane ze statusu NIEZNANY: 351
-- Z tego „zrobione” z dowodem: 28
-- Z tego „do zrobienia”: 323
+- Z tego „zrobione” z dowodem: 48
+- Z tego „do zrobienia”: 303
+- Drugie szukanie 04.10 wieczór: 20 nowych dowodów (48 łącznie, 303 zostało)
 - Pozycje sekcji 4: 424
 - Z sekcji 4 przypisane do etapu albo „już w PLAN”: 107
 - Z sekcji 4 „do decyzji koordynatora”: 308

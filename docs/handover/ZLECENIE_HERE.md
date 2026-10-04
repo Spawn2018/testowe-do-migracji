@@ -118,6 +118,10 @@ korzysta z nich w obecnej postaci.
   oraz w eksporcie PDF transportu. Generowany przy wysyłce, nie przechowywany
   dłużej niż 30 dni.
 
+### H-9 — usunięte 04.10 (U-36)
+
+H-9 — usunięte 04.10 (U-36). Pozycji nie ma w kolejności realizacji.
+
 ### H-8 · Profil trasy
 - Podsumowanie trasy dla transportu: **nachylenia**, **miejsca niebezpieczne**
   (punkty wypadków), **nawierzchnia** (szczególnie dojazd do placu budowy

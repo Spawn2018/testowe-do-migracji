@@ -1,3 +1,5 @@
+> Poprawione 04.10: ta kopia przegrywa z `docs/handover/PLAN.md`. Nie jest listą pracy.
+
 # PLAN CIĄGŁY — TOWER
 
 > Zapisz jako `docs/handover/PLAN.md`. **Od teraz to jedyna lista pracy.**
