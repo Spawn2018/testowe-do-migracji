@@ -113,7 +113,7 @@ Ptaszki „zbliżenie” i „wjazd” włączają albo gaszą te SMS-y. Test z 
 
 W opcjach HHL widać też listę stref z przełącznikiem włącz/wyłącz i licznik „aktywne / wszystkie”. To nie jest edytor kształtu. Kształt jest w widoku Strefy.
 
-Kolumna „kogo powiadamia” w tabeli stref jest uproszczona na sztywno według rodzaju, a nie według ptaszków zapisanych przy strefie (`src/views/GeofenceView.tsx`): przed przyjazdem pokazuje KSH, Scandinavian Express i HHL; załadunek pokazuje samo HHL; reszta pokazuje KSH i HHL. To jest opis na ekranie, nie pełna reguła wysyłki.
+Kolumna „kogo powiadamia” w tabeli stref pokazuje ptaszki zapisane przy strefie (KSH, SCX, HHL), nie sztywny opis według rodzaju (`src/views/GeofenceView.tsx`). To jest lista odbiorców w aplikacji. SMS ze strefy i tak idzie osobno, według kraju i rodzaju.
 
 ---
 
@@ -374,12 +374,13 @@ Dwanaście reguł z podglądu (powiadomienie przed placem, brak zezwolenia, cich
 
 ## 14. Jak budować strefy i nimi zarządzać
 
-Dziś, na koncie HHL, widok Strefy (`src/views/GeofenceView.tsx`):
+Od L-12, na koncie HHL, widok Strefy (`src/views/GeofenceView.tsx`):
 
-- przycisk nowej strefy stawia koło o środku 60°N, 18°E (zgrubnie środek Bałtyku), promień 1 km, zapas 200 m, jedna próbka, postój 5 minut, rodzaj „punkt kontrolny”, włączona, wyzwalacz „wjazd”;
-- zapis edytuje nazwę, rodzaj, promień, zapas, minuty postoju i liczbę próbek;
-- w tym formularzu nie ma przesuwania środka na mapie, nie ma kraju, nie ma wyboru „kogo powiadomić”, nie ma usuwania;
-- KSH i przewoźnik tabelę widzą, ale nie mają przycisku edycji.
+- przycisk nowej strefy stawia koło na załadunku w Śremie (Polska), promień 1 km, zapas 200 m, jedna próbka, postój 5 minut, rodzaj „punkt kontrolny”, włączona, wyzwalacz „wjazd”. Nie startuje na środku Bałtyku (60°N, 18°E);
+- środek ustawia się kliknięciem mapy albo przeciągnięciem. Na mapie widać koło i zapas;
+- zapis edytuje nazwę, rodzaj, kraj, promień, zapas, minuty postoju, liczbę próbek i kogo powiadomić (HHL, KSH, Scandinavian Express);
+- usuwanie jest przyciskiem, tylko HHL;
+- KSH i przewoźnik tabelę widzą, ale nie mają przycisku edycji ani usuwania.
 
 Włączenie i wyłączenie istniejącej strefy jest też przełącznikiem w opcjach HHL, w sekcji SMS i stref.
 
@@ -407,7 +408,7 @@ Nie budować, dopóki właściciel nie powie „tak” na konkretny punkt:
 - trzech osobnych automatów „workflow HHL / KSH / Scandinavian Express” — takiego bytu w kodzie nie ma;
 - podłączenia ośmiu progów (opóźnienie, daty KSH, awizacja, dokumenty, GPS, zjazd) — wzory są w §4 od 2026-10-04 00:07; L-3 je wdraża, zmiana liczby w Opcjach zmienia moment alarmu;
 - zdjęcia cyfr z górnego paska — to zmiana wyglądu, nie poprawka błędu liczenia;
-- nowego kreatora stref z mapą, krajem i odbiorcami — obecny formularz tego nie umie i nie wolno udawać, że umie.
+- nowego kreatora stref z mapą, krajem i odbiorcami — zrobione w L-12.
 
 
 ## ETA i postój (2026-10-04)

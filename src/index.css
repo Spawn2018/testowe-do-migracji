@@ -873,6 +873,14 @@ img,video{max-width:100%;height:auto}
 .leaflet-container img.leaflet-tile{max-width:none;max-height:none;width:256px;height:256px}
 .leaflet-container img.leaflet-marker-icon,.leaflet-container img.leaflet-marker-shadow{max-width:none;height:auto}
 
+.gf-editor-map{height:280px;border:1px solid var(--rule);border-radius:8px;margin-top:8px}
+.leaflet-div-icon.gf-pin{background:#E5A544;border:2px solid #080F15;border-radius:50%;margin:0}
+.gf-legend{display:flex;flex-wrap:wrap;gap:14px;align-items:center;font-size:12px;margin:6px 0 10px;color:var(--ink-2)}
+.gf-swatch{display:inline-block;width:18px;height:10px;margin-right:4px;vertical-align:-1px;border:2px solid #6BA8D6;background:rgba(107,168,214,.25)}
+.gf-swatch-buffer{border-style:dashed;border-color:#E5A544;background:rgba(229,165,68,.12)}
+.gf-who{display:flex;gap:14px;align-items:center}
+.gf-who label{display:flex;gap:6px;align-items:center}
+
 /* ===== RESP-14 — telefon / tablet ===== */
 .phone-menu-btn{display:none}
 .nav-scrim{display:none;border:0;padding:0;margin:0;background:rgba(6,14,20,.45);cursor:pointer}

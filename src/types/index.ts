@@ -292,6 +292,8 @@ export interface Load {
   sailingId?: string | null;
 }
 
+export type GeofenceCountry = 'PL' | 'SE' | 'LT' | 'DE';
+
 export interface Geofence {
   id: string;
   name: string;
@@ -299,6 +301,8 @@ export interface Geofence {
   shape: 'circle' | 'polygon';
   lat: number;
   lng: number;
+  /** Kraj strefy. SMS załadunku i placu czyta tę wartość, nie sam środek koła. */
+  country?: GeofenceCountry;
   radiusM: number;
   hysteresisM: number;
   dwellMin: number;
