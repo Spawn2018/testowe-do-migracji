@@ -295,3 +295,21 @@ Brama: tests/db/gate.sh, Postgres 17, localhost:5433, pełna brama lokalna raz p
 ## Polecenie 2026-10-04 14:40 (czas warszawski) — kolejka po L-1b
 
 Po L-1b idzie L-4, potem L-5, L-13. DWELL_OVER_FREE jest STOP i nie ruszaj go.
+
+## Polecenie 2026-10-04 14:43 (czas warszawski) — ETA tylko z pozycji i postój ponad czas wolny
+
+Polecenie właściciela Watch Tower z 2026-10-04 14:43 czasu warszawskiego. Najpierw dopis na końcu docs/handover/POLECENIA_KOORDYNATORA.md z datą, potem wykonaj.
+
+1. ETA wyłącznie z lokalizacji (GPS pojazdu; na promie pozycja statku z AIS). Liczenie ETA z planu usunąć z całej aplikacji. Brak pozycji → „–" z podpowiedzią „Brak pozycji GPS". SG-01 i inne nieodebrane transporty — bez ETA. Poprawić LOGIKA_SYSTEMU.md. Przeliczenie, które dotąd brało ETA z planu, zostawia ETA puste. Nie wymyślać AIS: jeśli źródła AIS nie ma, ETA promu czeka na AIS i nie wraca do planu.
+
+2. DWELL_OVER_FREE jest ustalone (ZLECENIE_PO_SPOTKANIU_SCX §8 i decyzja nr 15). Czas wolny: załadunek 6 h, rozładunek 4 h; każda kolejna godzina 75 EUR; przestój 750 EUR/doba. Czas postoju ze zdarzeń stref (wjazd–wyjazd) — informacja dla HHL. Przekroczenie → decyzja nr 15: „dodaj dopłatę uzgodnioną" albo „nie dotyczy"; dopłata ręcznie (część B 10f), cennik tylko podpowiedź. Wszystkie parametry w Opcjach, sekcja „Czas wolny i przestój", wartości domyślne WSTĘPNE: (a) start = późniejsze z wjazdu i planowanej godziny, (b) rozpoczęta godzina w całości, (c) postój > 24 h → 750 EUR za rozpoczętą dobę zamiast stawki godzinowej. Test dla każdego parametru. Nie wpisywać 360/240 poza domyślnymi wartościami Opcji.
+
+3. Potem L-4. Gdy opis L-4 jest niejednoznaczny — STOP, bez L-5, SEC-OWASP, kafelków mapy i części D.
+
+## Polecenie 2026-10-04 14:48 (czas warszawski) — cele kliknięć, L-4
+
+Właściciel podał cele kliknięć. Plik zapisany bez zmian jako docs/handover/CELE_KLIKNIEC.md. L-4 wykonać według sekcji „Gotowe, gdy" w tym pliku.
+
+Każde powiadomienie, ryzyko i decyzja w kodzie ma cel z tabeli (test bramy odrzuca typ bez celu). Dla każdego typu test: klik z kokpitu, listy ryzyk, dzwonka i link w e-mailu otwiera ten sam cel. Żadne kliknięcie nie prowadzi na stronę główną. Typ nieznany → Szczegóły wpisu i błąd w teście. Brak uprawnień → „Brak dostępu", nigdy strona główna. Zdarzenie statusu albo strefy → zawsze Transport, bez mini-akcji. Linki e-mail: decyzja /decyzje/{id}, transport /transport/{kod}?zakladka=…, faktura /finanse/faktury/{id}, stan systemu /opcje/stan-systemu#{sekcja}. Nie wymyślać celów spoza pliku. Typ w kodzie, którego nie ma w tabeli — STOP na tym typie i raport, bez zgadywania. Pozycje oznaczone L-5, L-6, L-12 to cele linku, nie budowa tych pozycji teraz. Nie zaczynać L-5, SEC-OWASP, kafelków mapy ani części D.
+
+Najpierw domknąć ETA i DWELL_OVER_FREE z polecenia 14:43, potem L-4.

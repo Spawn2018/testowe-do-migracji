@@ -177,13 +177,8 @@ export function computeEta(opts: {
   ].slice(0, 6);
   if (opts.ferry?.vessel) reasons.unshift(`prom ${opts.ferry.vessel}`);
 
-  let etaBodenIso: string | null = null;
-  if (totalHours > 0 && status !== 'DELIVERED') {
-    const t = Date.parse(now);
-    if (!Number.isNaN(t)) {
-      etaBodenIso = new Date(t + totalHours * 3600_000).toISOString();
-    }
-  }
+  // 2026-10-04: ETA nie powstaje z planu ani ze statusu. Tylko pozycja (baza).
+  const etaBodenIso: string | null = null;
 
   return {
     segments,
@@ -220,11 +215,11 @@ export function applyEtaToLoad<T extends { status: LoadStatus; ferry: FerryBooki
   return {
     ...load,
     etaSegments: snap.segments,
-    etaBoden: snap.etaBodenIso ?? load.etaBoden,
+    etaBoden: null,
+    etaReasons: ['Brak pozycji GPS'],
     etaConfidence: snap.confidence,
     etaEarliestHours: snap.earliestHours,
     etaLatestHours: snap.latestHours,
-    etaReasons: snap.reasons,
     etaMethod: snap.method,
     etaUpdatedAt: snap.updatedAt,
   };

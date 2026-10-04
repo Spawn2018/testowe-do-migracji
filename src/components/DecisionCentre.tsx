@@ -26,6 +26,9 @@ export function DecisionCentre() {
   const locale = useTowerStore((s) => s.locale);
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const setDrawerTab = useTowerStore((s) => s.setDrawerTab);
+  const openDecisionId = useTowerStore((s) => s.openDecisionId);
+  const setOpenDecisionId = useTowerStore((s) => s.setOpenDecisionId);
+  const setAccessMessage = useTowerStore((s) => s.setAccessMessage);
   const [rows, setRows] = useState<DecRow[]>([]);
   const [active, setActive] = useState<DecRow | null>(null);
   const [note, setNote] = useState('');
@@ -51,6 +54,18 @@ export function DecisionCentre() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!openDecisionId) return;
+    const row = rows.find((r) => r.id === openDecisionId);
+    if (row) {
+      setActive(row);
+      setOpenDecisionId(null);
+    } else if (rows.length) {
+      setAccessMessage('Brak dostępu');
+      setOpenDecisionId(null);
+    }
+  }, [openDecisionId, rows, setOpenDecisionId, setAccessMessage]);
 
   async function resolve(opt: Opt) {
     if (!active) return;

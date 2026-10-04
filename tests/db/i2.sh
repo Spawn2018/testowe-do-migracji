@@ -50,31 +50,36 @@ echo; echo "[D-9] parametry odcinków (0054)"
 chk "wartości D-9 + I-15: PL 7,5±25, check-in 3, przeprawa 18, SE 17±20, odpoczynek dobowy 11±0, przerwy 2±50" "$(Q "select string_agg(code||'='||hours::float||'/'||spread_pct::float, ',' order by code) from eta_segment_params where code<>'GPS_FRESH_MIN'")" "CROSSING_DEFAULT=18/15,PL_ROAD=7.5/25,PORT_CHECKIN=3/0,SE_BREAKS=2/50,SE_DAILY_REST=11/0,SE_ROAD=17/20"
 chk "źródła: koordynator D-9 ×3, właściciel I-15 ×2" "$(Q "select count(*) filter (where source='szacunek koordynatora 27.09 — do potwierdzenia z SCX (II-3)')||'/'||count(*) filter (where source like 'właściciel 27.09 (I-15)%') from eta_segment_params")" "3/2"
 
-echo; echo "[I-2d] bez rozkładu: przeprawa z założenia, szerokie pasmo"
-chk "ETA wyliczona przy wstawieniu (seed): basis + pasmo" "$(Q "select (eta_site is not null)::text||'/'||(eta_confidence_min>=720)::text||'/'||(eta_basis->'flags'->>0) from loads where id='$L2'")" "true/true/brak rejsu w rozkładzie — przeprawa z założenia"
-chk "ETA = teraz + 7,5 (PL) + 3 (check-in) + 18 (przeprawa) + 17+13 (SE, D-9) = 58,5 h" "$(H $L2 "eta_computed_at")" "58.5"
+echo; echo "[I-2d] bez pozycji: ETA pusta, nie z planu"
+chk "ETA przy wstawieniu bez GPS: pusta, flaga brak pozycji" "$(Q "select (eta_site is not null)::text||'/'||coalesce(eta_basis->'flags'->>0,'') from loads where id='$L2'")" "false/brak pozycji GPS"
+chk "przeliczenie z planu nie wpisuje godzin" "$(Q "select coalesce(eta_site::text,'∅') from loads where id='$L2'")" "∅"
 
 echo; echo "[I-2d] rozkład w sailings: bez przypisania — najbliższy rejs jako założenie"
 $PSQL -c "insert into sailings (id, project_id, vessel_id, departure_at, arrival_at, source) values
  ('66666666-0000-0000-0000-000000000001','$P','55555555-0000-0000-0000-000000000001', now()+interval '30 hours', now()+interval '48 hours','RECZNIE'),
  ('66666666-0000-0000-0000-000000000002','$P','55555555-0000-0000-0000-000000000001', now()+interval '54 hours', now()+interval '72 hours','RECZNIE')" >/dev/null
 $PSQL -c "insert into load_events (load_id, event_type, occurred_at) values ('$L2','NOTE',now())" >/dev/null
-chk "zdarzenie → przeliczenie: rejs założony (najbliższy po dojeździe), ETA = przypłynięcie + 30 h (D-9)" "$(Q "select eta_basis->>'sailing' from loads where id='$L2'")/$(H $L2 "(now()+interval '48 hours')")" "założony (najbliższy w rozkładzie)/30.0"
-chk "I-15 pasmo RSS: √(360² + 112,5² + 204² + 0² + 60²) = 433 min (przed I-15: suma 1013)" "$(Q "select eta_confidence_min from loads where id='$L2'")" "433"
-chk "I-15 basis.band: RSS, suma liniowa 737 (360+112,5+204+60), składniki bez zerowego odpoczynku" "$(Q "select (eta_basis->'band'->>'method')||'/'||(eta_basis->'band'->>'linear_sum_min')||'/'||(select string_agg(c->>'code', ',' order by c->>'code') from jsonb_array_elements(eta_basis->'band'->'components') c) from loads where id='$L2'")" "RSS/737/PL_ROAD,SAILING_ASSUMED,SE_BREAKS,SE_ROAD"
-chk "I-15 odcinki SE: jazda 17 h ±20, odpoczynek dobowy 11 h ±0 (osobny), przerwy 2 h ±50; suma 30 h bez zmian" "$(Q "select string_agg((s->>'code')||'='||(s->>'hours')||'/'||(s->>'spread_pct'), ',') from loads, jsonb_array_elements(eta_basis->'segments') s where id='$L2' and s->>'code' like 'SE_%'")" "SE_ROAD=17.0/20,SE_DAILY_REST=11.0/0,SE_BREAKS=2.0/50"
+chk "zdarzenie bez GPS nie bierze rejsu z planu" "$(Q "select coalesce(eta_site::text,'∅')||'/'||coalesce(eta_basis->>'sailing','') from loads where id='$L2'")" "∅/"
+chk "bez pozycji pasmo ETA jest puste" "$(Q "select coalesce(eta_confidence_min::text,'∅') from loads where id='$L2'")" "∅"
+chk "basis nie niesie pasma z planu" "$(Q "select coalesce(eta_basis->'band'->>'method','∅')||'/'||(eta_basis->>'plan_eta') from loads where id='$L2'")" "∅/false"
+chk "bez pozycji nie ma odcinków SE z planu" "$(Q "select coalesce(jsonb_array_length(eta_basis->'segments')::text,'0') from loads where id='$L2'")" "0"
 
 echo; echo "[I-2d] przypisanie rejsu (HHL) → ETA z przypisanego rejsu"
 val "HHL przypisuje rejs 2" $HHL "update loads set sailing_id='66666666-0000-0000-0000-000000000002' where id='$L2' returning 1" 1 commit
-chk "źródło: przypisany; ETA = przypłynięcie rejsu 2 + 30 h" "$(Q "select eta_basis->>'sailing' from loads where id='$L2'")/$(H $L2 "(now()+interval '72 hours')")" "przypisany/30.0"
-chk "pasmo RSS = √(30² + 112,5² + 204² + 60²) = 242 min (przed I-15: 683)" "$(Q "select eta_confidence_min from loads where id='$L2'")" 242
+chk "przypisany rejs bez GPS nie wypełnia ETA" "$(Q "select coalesce(eta_site::text,'∅') from loads where id='$L2'")" "∅"
+chk "pasmo po przypisaniu rejsu nadal puste" "$(Q "select coalesce(eta_confidence_min::text,'∅') from loads where id='$L2'")" "∅"
 $PSQL -c "update sailings set delayed_departure_at=departure_at+interval '3 hours', delayed_arrival_at=arrival_at+interval '3 hours', status='OPOZNIONY' where id='66666666-0000-0000-0000-000000000002'" >/dev/null
-chk "opóźnienie rejsu w rozkładzie → ETA +3 h, pasmo RSS + składnik 60 → 250 (przed I-15: 743)" "$(H $L2 "(now()+interval '72 hours')")/$(Q "select eta_confidence_min from loads where id='$L2'")" "33.0/250"
+chk "opóźnienie rejsu w rozkładzie nie jest ETA" "$(Q "select coalesce(eta_site::text,'∅') from loads where id='$L2'")" "∅"
 
 $PSQL -c "set session_replication_role=replica; update loads set hhl_order_no='HHL/2026/1', carrier_order_no='SCX/1', plan_delivery_date=current_date-1, plan_delivery_to=null where id='$L2'; set session_replication_role=origin;" >/dev/null
 echo; echo "[I-2d] przewoźnik zmienia status (strażnik nie blokuje przeliczenia), prom"
 val "SCX: status FERRY" $SCX "update loads set status='FERRY' where id='$L2' returning status" FERRY commit
-chk "FERRY: segment FERRY, ETA = przypłynięcie po opóźnieniu + 30 h, pasmo √(30²+60²+204²+60²) = 223 (przed: 630)" "$(Q "select eta_basis->>'segment' from loads where id='$L2'")/$(H $L2 "(now()+interval '75 hours')")/$(Q "select eta_confidence_min from loads where id='$L2'")" "FERRY/30.0/223"
+chk "FERRY bez AIS: ETA pusta, czeka na AIS, nie z rozkładu" "$(Q "select coalesce(eta_site::text,'∅')||'/'||(eta_basis->>'ferry_eta')||'/'||(eta_basis->>'segment') from loads where id='$L2'")" "∅/waits_for_ais/FERRY"
+
+$PSQL -c "insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values ('55555555-0000-0000-0000-000000000001', 58.0, 18.2, 16, now(), 'DIGITRAFFIC')" >/dev/null
+$PSQL -c "select refresh_load_eta('$L2')" >/dev/null
+chk "FERRY z AIS: ETA z pozycji statku, nie z rozkładu" "$(Q "select (eta_site is not null)::text||'/'||(eta_basis->>'ferry_eta')||'/'||(eta_basis->>'plan_eta') from loads where id='$L2'")" "true/ais/false"
+$PSQL -c "delete from vessel_positions where vessel_id='55555555-0000-0000-0000-000000000001' and source='DIGITRAFFIC'" >/dev/null
 
 echo; echo "[I-2d] odcinek SE: pozycja GPS"
 $PSQL -c "set session_replication_role=replica; update loads set status='IN_TRANSIT_SE' where id='$L2'; set session_replication_role=origin;" >/dev/null
@@ -105,7 +110,7 @@ chk "CANCELLED: ETA NULL, flaga" "$(Q "select coalesce(eta_site::text,'∅')||'/
 echo; echo "[I-2d] strażnik kontekstu ETA"
 err "w kontekście ETA zmiana innej kolumny = wyjątek" $HHL "select set_config('tower.eta_ctx','on',true); update loads set order_no='X' where id='$L1'" "wyłącznie kolumny eta_"
 chk "KSH widzi ETA i podstawę (RLS loads)" "$(run $KSH "select count(*) from loads where eta_basis is not null" | grep -E '^[0-9]+$')" 2
-chk "rejs odwołany → flaga i rejs założony" "$($PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, sailing_id) values ('33333333-0000-0000-0000-000000000009','$P','00000000-0000-0000-0000-00000000a003','KSH/9','66666666-0000-0000-0000-000000000001')" >/dev/null; $PSQL -c "update sailings set status='ODWOLANY' where id='66666666-0000-0000-0000-000000000001'" >/dev/null; Q "select eta_basis->'flags'->>0 from loads where id='33333333-0000-0000-0000-000000000009'")" "przypisany rejs odwołany"
+chk "rejs odwołany bez pozycji: brak ETA z planu" "$($PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, sailing_id) values ('33333333-0000-0000-0000-000000000009','$P','00000000-0000-0000-0000-00000000a003','KSH/9','66666666-0000-0000-0000-000000000001')" >/dev/null; $PSQL -c "update sailings set status='ODWOLANY' where id='66666666-0000-0000-0000-000000000001'" >/dev/null; Q "select coalesce(eta_site::text,'∅')||'/'||(eta_basis->'flags'->>0) from loads where id='33333333-0000-0000-0000-000000000009'")" "∅/brak pozycji GPS"
 
 echo; echo "[I-2f] SEFS — uprawnienia"
 TIERS='[{"lte":17.4,"mult":0.92},{"lte":19.5,"mult":1.0},{"lte":25,"mult":1.1}]'
@@ -692,8 +697,9 @@ val "HHL: ZGODNA → zapłata możliwa" $HHL "update invoices set verification_s
 chk "liczba wpisów historii: 3+2 (HHL/KSH: ponowny spór + korekta) + 4 (SCX, w tym korekta)" "$(( $(Q "select count(*) from invoice_dispute_events") - N0 ))" "9"
 $PSQL -c "update invoices set payment_status='NIEOPLACONA', paid_at=null, verification_status='DO_WERYFIKACJI', dispute_note=null where id in ('$IC','$IR')" >/dev/null 2>&1
 echo; echo "[I-25] opóźnienie od końca okna dostawy (0080) — przeliczenie na transporcie"
-$PSQL -c "update loads set plan_delivery_date='2026-10-01', plan_delivery_from='2026-10-01 08:00 Europe/Stockholm', plan_delivery_to='2026-10-01 12:00 Europe/Stockholm' where id='$L2'" >/dev/null 2>&1
-chk "transport z oknem: delay_minutes = ETA − koniec okna (po refresh_load_eta)" "$(Q "select refresh_load_eta('$L2'); select (delay_minutes is not distinct from greatest(0, round(extract(epoch from eta_site - plan_delivery_to)/60))::int)::text from loads where id='$L2'")" "true"
+$PSQL -c "set session_replication_role=replica; update loads set status='IN_TRANSIT_SE', plan_delivery_date='2026-10-01', plan_delivery_from='2026-10-01 08:00 Europe/Stockholm', plan_delivery_to='2026-10-01 12:00 Europe/Stockholm' where id='$L2'; set session_replication_role=origin;" >/dev/null
+$PSQL -c "insert into positions (load_id, ts, geom_raw, source) select '$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), source from positions where load_id='$L2' limit 1" >/dev/null
+chk "transport z oknem: delay_minutes = ETA z GPS − koniec okna (po refresh_load_eta)" "$(Q "select refresh_load_eta('$L2'); select (eta_site is not null and delay_minutes is not distinct from greatest(0, round(extract(epoch from eta_site - plan_delivery_to)/60))::int)::text from loads where id='$L2'")" "true"
 echo; echo "[6.5] walidator zezwoleń i wymiarów zestawu (0081)"
 LP=33333333-0000-0000-0000-0000000006d1
 $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status) values ('$LP','$P','00000000-0000-0000-0000-00000000a003','KSH/P1','DOCS_PENDING')" >/dev/null
@@ -908,16 +914,24 @@ chk "anon bez SELECT corridor_polylines / EXECUTE corridor_progress" "$(Q "selec
 val "KSH czyta korytarz (2 linie)" $KSH "select count(*) from corridor_polylines" 2
 chk "postęp środek SE: remaining_frac w (0,1), off < 30 km" "$(Q "select (remaining_frac between 0.05 and 0.95)::text||'/'||(off_m < 30000)::text from corridor_progress('SE_E4', st_setsrid(st_makepoint(19.5, 63.5),4326))")" "true/true"
 chk "zjazd z trasy: próg w Opcjach OFFROUTE_KM = 2" "$(Q "select value_num::int::text from ops_thresholds where key='OFFROUTE_KM'")/$(Q "select count(*) from app_parameters where key='OFF_CORRIDOR_M'")" "2/0"
-# spowolnienie SE 1.15 → jazda SE 17×1.15 = 19,55 h w basis (transport przed promem)
+# spowolnienie SE 1.15 liczone z pozycji (AT_PORT_NYNASHAMN = cały odcinek SE), nie z planu
 L7=33333333-0000-0000-0000-00000000a170
 $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date) values ('$L7','$P','00000000-0000-0000-0000-00000000a003','KSH/II7','PLANNED', current_date+1, current_date+5) on conflict (id) do nothing" >/dev/null
+$PSQL -c "set session_replication_role=replica; update loads set status='AT_PORT_NYNASHAMN' where id='$L7'; set session_replication_role=origin;" >/dev/null
 $PSQL -c "update corridor_conditions set slowdown_mult=1.15, reason='test II-7 snieg' where corridor='SE_E4'" >/dev/null
+if [ -n "${TOWER_HOSTED_READY:-}" ]; then
+  $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L7', now(), st_setsrid(st_makepoint(17.95, 58.90),4326), 'DRIVER_PWA')" >/dev/null
+else
+  $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L7', now(), st_setsrid(st_makepoint(17.95, 58.90),4326), 'DRIVER_APP')" >/dev/null 2>&1 \
+    || $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L7', now(), st_setsrid(st_makepoint(17.95, 58.90),4326), (enum_range(null::position_source))[1])" >/dev/null
+fi
 $PSQL -c "select refresh_load_eta('$L7')" >/dev/null
 chk "II-6→II-7: SE_ROAD hours ×1.15 przy śniegu" "$(Q "select (s->>'hours') from loads, jsonb_array_elements(eta_basis->'segments') s where id='$L7' and s->>'code'='SE_ROAD' limit 1")" "19.6"
 chk "II-7 causes.weather_slowdown_pct=15" "$(Q "select eta_basis->'causes'->>'weather_slowdown_pct' from loads where id='$L7'")" "15"
 $PSQL -c "update corridor_conditions set slowdown_mult=1.00, reason='start — normalne warunki' where corridor='SE_E4'" >/dev/null
 # zjazd z korytarza: pozycja daleko od PL, status IN_TRANSIT_PL
-$PSQL -c "set session_replication_role=replica; update loads set status='IN_TRANSIT_PL' where id='$L7'; set session_replication_role=origin;" >/dev/null
+# pozycja z testu śniegu nie może zostać jedną z dwóch ostatnich próbek
+$PSQL -c "set session_replication_role=replica; update loads set status='IN_TRANSIT_PL' where id='$L7'; delete from positions where load_id='$L7'; set session_replication_role=origin;" >/dev/null
 if [ -n "${TOWER_HOSTED_READY:-}" ]; then
   $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values
     ('$L7', now() - interval '15 minutes', st_setsrid(st_makepoint(14.0, 52.0),4326), 'DRIVER_PWA'),

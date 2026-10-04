@@ -25,6 +25,7 @@ const RateCardForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_A
 const SmsGateway = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/SmsGateway')) : null;
 const SmsZoneRecipients = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/SmsZoneRecipients')) : null;
 const OpsThresholdsForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/OpsThresholdsForm')) : null;
+const DwellOptionsForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/OpsThresholdsForm').then((m) => ({ default: m.DwellOptionsForm }))) : null;
 const SystemStatusPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/SystemStatusPanel')) : null;
 const AuthLoginLog = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/AuthLoginLog')) : null;
 const BroadcastForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/BroadcastForm')) : null;
@@ -201,6 +202,17 @@ export function OptionsView() {
       children: OpsThresholdsForm
         ? <SuspenseBlock><OpsThresholdsForm /></SuspenseBlock>
         : <Soon locale={locale} tipKey="opt_acc_thresh_soon" />,
+    });
+
+    list.push({
+      id: 'dwell',
+      titleKey: 'opt_acc_dwell_title',
+      descKey: 'opt_acc_dwell_desc',
+      count: '7',
+      keywords: 'czas wolny przestój postój dopłata WSTĘPNE',
+      children: DwellOptionsForm
+        ? <SuspenseBlock><DwellOptionsForm /></SuspenseBlock>
+        : <Soon locale={locale} tipKey="opt_acc_dwell_note" />,
     });
 
     list.push({

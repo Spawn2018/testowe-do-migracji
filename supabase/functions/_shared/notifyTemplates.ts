@@ -1,3 +1,4 @@
+import { emailUrl } from './clickTargets.ts';
 /**
  * M7 — treść powiadomień (e-mail + centrum powiadomień) w języku odbiorcy.
  * Jedno źródło dla funkcji `send-notifications` (Deno) i aplikacji (SupabaseProvider).
@@ -265,7 +266,15 @@ export function recipientLocale(
 export function renderEmail(row: NotifyRow, appUrl: string, localeOverride?: NotifyLocale): { subject: string; text: string; html: string } {
   const n = renderNotice(row, localeOverride);
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const link = appUrl ? `${appUrl.replace(/\/$/, '')}/#/` : '';
+  const p = row.payload ?? {};
+  const link = emailUrl(appUrl, {
+    type: row.template,
+    decisionId: typeof p.decision_id === 'string' ? p.decision_id : null,
+    loadCode: typeof p.code === 'string' ? p.code : null,
+    invoiceId: typeof p.invoice_id === 'string' ? p.invoice_id : null,
+    resource: typeof p.resource === 'string' ? p.resource : null,
+    tab: typeof p.tab === 'string' ? p.tab : null,
+  });
   const text = `${n.body}${link ? `\n\n${link}` : ''}\n\n— Tower · H&H Logistics`;
   const html = `<p>${esc(n.body)}</p>${link ? `<p><a href="${esc(link)}">${esc(link)}</a></p>` : ''}<p style="color:#666">— Tower · H&amp;H Logistics</p>`;
   return { subject: n.subject, text, html };
