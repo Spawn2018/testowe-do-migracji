@@ -257,3 +257,19 @@ Ważniejsze niż dokańczanie samego pomiaru bramy. Zasady:
 Ponowić wdrożenie bieżącego main (migracja 0143 już na produkcji). Poprzednie wdrożenie dpl_9iuV7tt4g71bpp4USKQ8bmDuP89m jest zablokowane, bo zły autor. Nowy commit i wdrożenie muszą iść z sebastian.bozekq@gmail.com. Potwierdzić, że https://tower.log-mar.pl i https://watch-tower-makieta.vercel.app zwracają 200 i wskazują nowe wdrożenie, nie dpl_5tY7LDTCY9J4wEhdey4QwQYXK7As.
 
 Nie osobna migracja SG-01.
+
+## Polecenie 2026-10-04 13:47 (czas warszawski) — domknięcie bramy lokalnej
+
+Polecenie właściciela Watch Tower z 2026-10-04 13:47 czasu warszawskiego. Najpierw dopisz CAŁE polecenie na końcu docs/handover/POLECENIA_KOORDYNATORA.md z datą, potem wykonaj. Repo /workspace/watch-tower-app. Autor commitów LOKALNIE (nie globalnie): Sebastian Bożek, sebastian.bozekq@gmail.com. Nigdy sebastian@watch-tower.local. Nie pushuj main bezpośrednio, nie --force. Nie drukuj sekretów. Nie używaj cloud agentów. Nie zmieniaj .github/workflows/.
+
+Stan: lokalna brama tests/db/gate.sh na Postgres 17.11 localhost:5433 trwała 4 min 29 s i padła (kod 1). Przeszły m.in. security 88, status 44, storage 37, money 131, release 146, nullguard 528, i2 526, dec2 24, dec3 13. Nie przeszło: backup 17/12 bo brak age i age-keygen; dec5, dec6, adm10, hist11, dec-auto bo szukają bazy tower i same jej nie tworzą. W gate.sh liczby są stare (nullguard 389, i2 521, workflows 46, insurance 42) wobec 528, 526, 47, 42. Tej poprawki NIE scalono. Wdrożenie dpl_5TJ448knWmMVSimAytWMcfmqrFyY READY ~13:42, obie domeny 200. Potwierdź to jeszcze raz (curl) i wpisz w raporcie.
+
+Kolejność:
+1. Zainstaluj age i age-keygen (pakiet systemowy). Test kopii zapasowej ma przejść lokalnie.
+2. Skrypt bramy sam tworzy bazę tower przed zestawami, które jej potrzebują, i usuwa ją po przebiegu.
+3. Oczekiwane liczby w skrypcie zaktualizuj DOPIERO po punktach 1 i 2. Dla każdego zestawu w POSTEP.md: było → jest i który commit dodał te testy. Liczba bez wyjaśnienia = NIE zmieniaj, zgłoś w raporcie.
+4. Pełna brama lokalna zielona. Podaj wynik i czas. Scal czekające (PR, nie push main).
+5. Wdrożenie z autorem sebastian.bozekq@gmail.com już przeszło jako dpl_5TJ448knWmMVSimAytWMcfmqrFyY. Potwierdź identyfikator i że https://tower.log-mar.pl oraz https://watch-tower-makieta.vercel.app zwracają 200 na TYM wdrożeniu. Nie rób nowego wdrożenia, jeśli to się zgadza. Jeśli scalenie bramy zmieni main, wdrożenie od razu po zielonej bramie (nowy autor).
+6. KOLEJKA BEZ DNI TYGODNIA: pracujesz ciągle, pozycja za pozycją, wdrożenie po każdej zielonej bramie. Zapisz to w AGENTS.md i POLECENIA (paczki dzienne OFF, bo 4:29 nie jest wolne). Następne po zielonej bramie: L-1b + usunięcie pozycji SG-01 (jedna pozycja driver_token, 1 października 2026 22:08 czasu warszawskiego, kopia R2 poza repo ścieżka+sha256, tylko ten wiersz, warunek po źródle i czasie, przelicz ETA), potem L-4, L-5, L-13. Nie zaczynaj L-1b zanim brama lokalna nie jest zielona i scalona. Nowa migracja = pełna brama lokalna przed produkcją. Supabase TEST emkbykwenwrjmbprydml tylko niedziela i ostateczne potwierdzenie przed wdrożeniem.
+
+Raport: czas i wynik bramy, które liczby zmienione (było→jest, commit) a które zgłoszone bez zmiany, PR, deploy id i obie domeny, czy L-1b ruszyło.

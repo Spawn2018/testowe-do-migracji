@@ -1615,3 +1615,29 @@ Odświeżono wyłącznie `shots-baseline/mapa__hhl__pl__1920__light.png` w środ
 ### 2026-10-03 — B-1
 
 Mapa w produkcji: znacznik pojazdu tylko z ostatniej pozycji GPS (`load_track`). Brak pozycji — komunikat „Brak danych — pozycji pojazdów”, bez punktu ze statusu. Strefy, porty, korytarz, promy i sytuacje drogowe bez zmian, nadal włączane checkboxami. Tryb demo (makieta) bez zmian.
+
+### 2026-10-04 13:47 — liczby bramy lokalnej (`tests/db/gate.sh`)
+
+Polecenie: liczby dopiero po `age` (pakiet `age` 1.2.1, są `age` i `age-keygen`) i po tym, jak brama sama tworzy bazę `tower`. Szablon `tower_boot` (atrapa, migracje, seed) jest klonowany przed każdym zestawem, który łączy się z bazą o nazwie `tower`, i kasowany po przebiegu. Zestawy: dec5, dec6, adm10, hist11, dec-auto. dec2 i dec3 były w przebiegu 4:29 (24 i 13) i same tworzą bazę — weszły do `gate.sh`, bo lokalna brama ich nie uruchamiała.
+
+| Zestaw | Było w gate.sh | Jest | Który commit dodał testy |
+|---|---|---|---|
+| nullguard | 389 | 528 | `e2947d7` podniósł bramę 379→389 o liczbę nowych wierszy listy (10: 7 GUARD + 3 EMPTY: admin_audit_history, admin_impersonate_start, admin_impersonate_stop, admin_set_eta_calibration_frozen, apply_eta_calibration_version, fee_catalog_hints, load_agreed_fee_add, load_dwell_info, real_app_role, real_app_user_id), a nie o asercje (4 odmowy na wiersz). `383560e` dodał `insurance_policy_approve` (GUARD). Macierz pełnej listy = 528, jak brama hosted i przebieg lokalny 4.10. |
+| i2 | 521 | 526 | `e2947d7`: plik 510→524, brama tylko 510→519 (zabrakło 5). `324ab95`: plik +2 (panel SE, 526). `2492f64` podniósł bramę tylko o te 2 (519→521). Zostaje 521→526. |
+| workflows | 46 | 47 | `383560e`: chk „T-BOOM zakolejkowany”. |
+| insurance | 33 | 42 | W poleceniu stara liczba padła jako 42, w pliku było 33. `e2947d7` (D-30, migracja 0125): 33→43 linii chk/val/err, jedna w if/else `cron.job` (zawsze jedna), więc 42. |
+| dec2 | nie było w gate.sh | 24 | Przebieg 4.10: 24/24. `e2947d7` dał 18 (z ręcznym escalate). `5fa5441` (L-2) dodał 6 asercji → 24. |
+| dec3 | nie było | 13 | `e2947d7` / 0127, przebieg 4.10: 13/13. Plik: 13 chk/val/err. |
+| dec5 | nie było | 11 | Plik: 11 val/err. Wymaga bazy `tower`. |
+| dec6 | nie było | 15 | `7b25502`: 13 val/err + 2 ręczne OK (admin_auth_login_log, system_broadcast_current). |
+| adm10 | nie było | 8 | Plik: 8. Nowy zestaw przy 0117 (`e2947d7`). |
+| hist11 | nie było | 11 | Plik: 11. Nowy zestaw przy 0118 (`e2947d7`). |
+| dec-auto | nie było | 39 | `e9fe090` miał 24. `f8d80a5` (L-3) dodał 15 → 39. |
+| backup | 29 | 29, bez zmiany | Przebieg 4.10: 17 OK i 12 FAIL (razem 29) przez brak `age`. Po pakiecie oczekiwane zostaje 29/29. |
+| security, status, storage, money, release, session, archive, watchdog, invite, risks, import, i30, i31 | bez zmiany | jak w gate.sh | Przebieg 4.10 zgodny z liczbą w skrypcie. |
+
+Liczby bez wyjaśnienia nie były ruszane. `insurance` w poleceniu było opisane jako „42 wobec 42”; w skrypcie stało 33, więc zmiana 33→42 jest opisana wyżej, a nie pominięta.
+
+Backup po instalacji `age`: liczba zostaje 29. Dwa czerwone testy nie były brakiem `age`. (1) `scripts/restore.sh` przy `--into-public` składał `set session_replication_role` i `\copy` w jednym `psql -c` — psql zgłasza błąd składni przy `\`. Poprawka: jedna sesja, najpierw SET, potem `\copy` (klient czyta plik, nie serwer). (2) Asercja I-33 oczekiwała `ERROR/t/t`, a sklejenie `||` w Postgresie 17 daje `ERROR/true/true`. Po obu poprawkach `backup.sh` daje 29 OK, 0 FAIL.
+
+Pełna brama lokalna 2026-10-04 14:05 czasu warszawskiego: kod 0, 4 min 56 s (296 s). Wszystkie zestawy 0 FAIL, w tym backup 29/29 i dec-auto 39/39. Bazy tower i tower_boot usunięte po przebiegu.
