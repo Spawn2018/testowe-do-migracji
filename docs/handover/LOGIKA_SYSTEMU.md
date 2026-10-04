@@ -18,7 +18,7 @@ Na kokpicie tak nazywa się kolejka wyjątków, nie lista decyzji (`src/i18n/mes
 - Przycisk obok nagłówka też prowadzi do Ryzyka.
 - Gdy lista jest pusta, widać zdanie: „Nic nie wymaga reakcji. Wszystkie transporty idą zgodnie z planem.”
 
-U HHL kafelek o tej samej nazwie liczy tę kolejkę. U KSH, po zalogowaniu do bazy, kafelek liczy coś innego: otwarte pozycje z Centrum decyzji (patrz niżej). Kliknięcie i tak idzie do Ryzyk, nie do osobnego ekranu decyzji.
+U HHL kafelek o tej samej nazwie liczy tę kolejkę. U KSH kafelek liczy tylko ryzyka, które KSH widzi na liście Ryzyk (nie Centrum decyzji — tej listy KSH nie ma). Kliknięcie i tak idzie do Ryzyk, nie do osobnego ekranu decyzji.
 
 ### Centrum decyzji
 
@@ -309,7 +309,7 @@ Wspólne dla trzech widoków: kolejka „Wymaga decyzji” (do siedmiu wierszy),
 | Najbliższa dostawa | najbliższy przyjazd wśród etapów: droga w Szwecji, Nynäshamn, Boden | ten transport, a gdy go nie ma — harmonogram |
 | Transporty w drodze | suma pięciu etapów z punktu 7 | Mapa |
 | Terminowość | dostarczone / (dostarczone + opóźnione), w procentach. Gdy nic nie dostarczono, jest kreska, nie zero | Harmonogram |
-| Wymaga decyzji | po zalogowaniu: liczba otwartych decyzji (KSH i tak ich nie widzi na liście, więc często wyjdzie zero). W podglądzie: długość kolejki wyjątków | Ryzyka |
+| Wymaga decyzji | liczba ryzyk, które KSH widzi na liście Ryzyk (nie Centrum decyzji). W podglądzie: długość kolejki wyjątków | Ryzyka |
 
 ### Widok Scandinavian Express
 
@@ -318,7 +318,7 @@ Wspólne dla trzech widoków: kolejka „Wymaga decyzji” (do siedmiu wierszy),
 | Do uzupełnienia | transporty ze statusem „brak auta” albo „brak dokumentów” | Moje zadania |
 | Transporty w drodze | jak wyżej | Mapa |
 | Terminowość | jak u KSH | Harmonogram |
-| Przychód tygodnia | suma kosztów ostatnich sześciu transportów w etapie „dostarczone”, nie przychód klienta. Podpis na ekranie jest stałym zdaniem „tydzień 38, do zafakturowania” — nie jest to bieżący tydzień | Faktury |
+| Przychód tygodnia | suma kosztów ostatnich sześciu transportów w etapie „dostarczone”, nie przychód klienta. Podpis to bieżący tydzień ISO: „tydzień N, do zafakturowania” | Faktury |
 | Ryzyko promowe | liczba ryzyk typu prom o wadze wysokiej albo krytycznej. W podglądzie podpis dokłada pogodę morską; po zalogowaniu, gdy nie ma odczytu, podpis mówi, że nie ma źródła | Ryzyka, przefiltrowane na prom |
 | Komplet dokumentów | po zalogowaniu: transporty z wgranym zezwoleniem polskim albo ładunek zwykły, który zezwolenia nie wymaga. W podglądzie: transporty bez flagi „brak dokumentów” | Dokumenty. Jeśli czegoś brakuje, od razu filtr „brakujące” |
 

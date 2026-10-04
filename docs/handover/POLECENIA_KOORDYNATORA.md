@@ -472,3 +472,13 @@ Tylko L-7. H-4 nie budować. H-1 nie zaczynać. L-8 nie zaczynać. Bez e-maila. 
 Gotowe, gdy: na liście harmonogramu oba statusy mają własną polską nazwę. Język interfejsu polski. Bez nowych angielskich napisów w widoku polskim.
 
 Po zielonej bramie: PR, scalenie, wdrożenie z main od razu, bez pytania. Obie domeny 200 na nowym wdrożeniu.
+
+## Polecenie 2026-10-04 20:22 (czas warszawski) — L-8
+
+Tylko L-8. H-4 nie budować. H-1 nie zaczynać. L-9 nie zaczynać. Bez e-maila. Testy nie wołają Resend.
+
+Źródło: pytanie 12; LOGIKA §11. Kafelek KSH „Wymaga decyzji” liczy tylko to, co KSH widzi (ryzyka z listy Ryzyk, nie Centrum decyzji). Kafelek przewoźnika pokazuje bieżący tydzień zamiast stałego „tydzień 38”.
+
+Gotowe, gdy: test liczb dla każdej firmy. Język interfejsu polski. Bez nowych angielskich napisów w widoku polskim.
+
+Po zielonej bramie: PR, scalenie, wdrożenie z main od razu, bez pytania. Obie domeny 200 na nowym wdrożeniu.
