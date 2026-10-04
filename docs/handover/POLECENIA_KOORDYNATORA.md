@@ -494,3 +494,13 @@ L-8 nie przerywać. Po L-8 tylko dokumenty. Nic nie kasować. H-1 i H-2 nie star
 5. Drugie polecenie R-0 (lista do potwierdzania punkt po punkcie) jest nieważne. Nie zapisane. Obowiązuje trzecie: R-0 to plan. Kasowane tylko transporty i wiersze na kluczu obcym. Reszta zostaje. Wykonanie dopiero tuż przed R-1, po pisemnej akceptacji. 94 transporty zostają.
 
 Sytuacje drogowe Trafikverket nie czekają na H-4. To B-2b i część H-2, zaraz po L-12.
+
+## Polecenie 2026-10-04 20:35 (czas warszawski) — L-9
+
+Tylko L-9. L-10, H-1 i H-2 nie startują. Nic nie usuwać. Bez e-maila. Testy nie wołają Resend.
+
+Źródło: pytanie 5; LOGIKA §9. Na produkcji „Alternatywy dla rejsu” biorą się z prawdziwego rozkładu w bazie (`sailings`): najbliższe rejsy Polferries i Stena. Bez danych zmyślonych. Objazdy w Szwecji zostają ukryte.
+
+Gotowe, gdy: lista jest z bazy; brak rozkładu = komunikat „Brak danych”. Język interfejsu polski.
+
+Po zielonej bramie: PR, scalenie, wdrożenie z main od razu, bez pytania. Obie domeny 200 na nowym wdrożeniu. Migracji nie ma, więc pełna brama bazy nie jest warunkiem.

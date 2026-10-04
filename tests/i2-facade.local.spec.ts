@@ -47,7 +47,12 @@ test('HHL (HHL_ADMIN): przełącznik jest; Automatyzacje z bazy (9.4); ryzyka �
   await page.locator('nav [data-view="risk"]').first().click();
   await expect(page.locator('[data-panel="ferry"][data-source="db"]')).toBeVisible();
   await expect(page.locator('[data-no-source="sea"]')).toBeVisible();
-  await expect(page.locator('[data-no-source="ferry-alt"]')).toBeVisible();
+  await expect(page.locator('[data-ferry-alt="db"]')).toBeVisible();
+  const ferry = page.locator('[data-panel="ferry"][data-source="db"]');
+  await expect(ferry).not.toContainText('TT-Line');
+  await expect(ferry).not.toContainText('Unity Line');
+  await expect(ferry).not.toContainText('Karlshamn');
+  await expect(page.locator('[data-panel="road-se"] .alt-list')).toHaveCount(0);
   await page.locator('nav [data-view="sched"]').first().click();
   await page.locator('tr[data-load]').first().click();
   await expect(page.locator('[data-eta="db"]')).toContainText(/± \d+ min · ETA/);
