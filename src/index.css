@@ -647,6 +647,7 @@ nav button{padding:8px 14px}
 
 /* arrow-in-dot markers */
 .wt-marker{background:transparent;border:0}
+.wt-marker-ferry-stale{opacity:.45}
 .wt-dot{position:relative;border-radius:50%;outline:1px solid rgba(0,0,0,.25);box-sizing:border-box}
 .wt-arrow{position:absolute;left:50%;top:50%;width:0;height:0;
   border-left:3.5px solid transparent;border-right:3.5px solid transparent;

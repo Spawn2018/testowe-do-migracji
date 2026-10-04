@@ -11,7 +11,7 @@ begin
   for j in select * from (values
     ('tower-ferry-schedule', '0 5 * * 1',     'ferry-schedule'),   -- raz w tygodniu (pon. 05:00 UTC) + ręcznie HHL
     ('tower-ferry-status',   '*/15 * * * *',  'ferry-status'),     -- co 15 min, nie częściej
-    ('tower-ferry-ais',      '*/10 * * * *',  'ferry-ais'),
+    ('tower-ferry-ais',      '*/3 * * * *',  'ferry-ais'),
     ('tower-road-se',        '*/10 * * * *',  'road-se'),          -- bez TRAFIKVERKET_API_KEY: tryb DEMO
     ('tower-road-pl',        '*/10 * * * *',  'road-pl'),          -- bez KPD_DATEX_URL: tryb DEMO
     ('tower-traffic-flow',   '*/15 * * * *',  'traffic-flow')      -- CLEAN-TT-HERE: zawsze DEMO (TomTom wycofany)

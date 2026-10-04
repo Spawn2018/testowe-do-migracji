@@ -16,10 +16,17 @@
  * zasięg Digitraffic do potwierdzenia w kolejnych odczytach.
  */
 
+export type PositionSource = 'DIGITRAFFIC' | 'AISSTREAM' | 'STENA';
+
 export interface VesselFix {
   mmsi: number; lon: number; lat: number;
   sogKn: number | null; cog: number | null; navStat: number | null;
   timestampUtc: string;
+  /** AIS-SRC. Brak = DIGITRAFFIC (stare wywołania). */
+  source?: PositionSource;
+  /** properties.eta ze Steny (UTC) — dodatkowe wejście ETA promu, nie zastępuje pozycji. */
+  etaAt?: string | null;
+  imo?: number | null;
 }
 
 export async function fetchVesselFix(mmsi: number, appId: string): Promise<VesselFix | null> {
@@ -39,6 +46,7 @@ export function parseDigitrafficLocations(json: any, mmsi: number): VesselFix | 
     mmsi, lon, lat,
     sogKn: p.sog ?? null, cog: p.cog ?? null, navStat: p.navStat ?? null,
     timestampUtc: new Date(p.timestampExternal).toISOString(),
+    source: 'DIGITRAFFIC',
   };
 }
 

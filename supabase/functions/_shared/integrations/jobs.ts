@@ -10,6 +10,10 @@ import {
   dateRangeYmd, parseStenaTimetable, stenaTimetableUrl, STENA_ROUTE_PAGE, type StenaSailing,
 } from '../ferry/stena.ts';
 import { DIGITRAFFIC_ATTRIBUTION, interpretFix, parseDigitrafficLocations, aisDepartureDelayMin, type VesselFix } from '../ferry/digitraffic.ts';
+import { collectAisstreamFixes } from '../ferry/aisstream.ts';
+import {
+  STENA_FERRIES_URL, STENA_IMO, STENA_MMSI, isTrackedMmsi, parseStenaFerries, pickNewerFix,
+} from '../ferry/stenaAis.ts';
 import {
   MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
   marineWeatherRisk, parseDmiCoverageJson, parseFmiTimeValuePair, parseSmhiOcobs,
@@ -28,6 +32,8 @@ import {
 /** Wyłącznie ASCII (nagłówek HTTP) — test pilnuje. */
 export const USER_AGENT = 'TOWER-WatchTower/1.0 (+https://log-mar.pl; H&H Logistics; read max every 15 min)';
 export const DIGITRAFFIC_USER = 'TOWER-WatchTower/HHL';
+/** AIS-SRC: jedno zapytanie Stena IRM, nagłówek z nazwą Watch Tower. */
+export const STENA_IRM_UA = 'Watch Tower (https://tower.log-mar.pl; ferry positions)';
 
 export interface VehiclePos { load_id: string; code: string; lat: number; lon: number; ts: string }
 export interface SyncStore {
@@ -45,8 +51,10 @@ export interface SyncStore {
   /** zamyka otwarte ryzyka z prefiksu, których klucza nie ma na liście (sytuacja zniknęła) */
   resolveStaleRisks?(dedupPrefix: string, keepDedup: string[]): Promise<number>;
   recordRun(job: string, ok: boolean, result: JobResult): Promise<void>;
-  /** I-2j: pozycja promu z AIS do `vessel_positions` (powtórka tego samego sygnału = bez zmian) */
+  /** I-2j / AIS-SRC: pozycja promu (powtórka tego samego sygnału = bez zmian). Źródło jest na fix.source. */
   saveVesselPosition(vesselId: string, fix: VesselFix): Promise<void>;
+  /** Ostatni sygnał każdego statku — ryzyko „brak ponad 1 h”. */
+  latestVesselObserved?(): Promise<{ vesselId: string; observedAt: string }[]>;
   /** II-6: współczynnik spowolnienia SE (E4) dla silnika ETA II-7 */
   saveCorridorCondition?(row: {
     corridor: 'SE_E4'; slowdownMult: number; reason: string | null; detail: unknown; observedAt: string;
@@ -76,6 +84,8 @@ export interface JobDeps {
   fetch: typeof fetch;
   env: Record<string, string | undefined>;
   now: () => Date;
+  /** Testy: zamiast żywego WebSocket aisstream. Brak = collectAisstreamFixes. */
+  collectAisstream?: () => Promise<VesselFix[]>;
 }
 export interface JobResult {
   job: string; mode: 'LIVE' | 'DEMO'; ok: boolean; reason?: string;
@@ -263,15 +273,33 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
   };
 }
 
-/** ferry-ais — Digitraffic dla statków z rejsem w toku (co 10 min). Potwierdza wyłącznie stronę szwedzką.
- *  II-9: przed odejściem — jeśli AIS (świeży + SOG) mówi, że nie zdąży do portu odejścia → ryzyko;
- *  brak pozycji ≠ opóźnienie. */
+/** ferry-ais — AIS-SRC. Stena IRM (3 statki, co 3 min), aisstream (5 MMSI), Digitraffic jako zapas.
+ *  Nowsza pozycja wygrywa, źródło jest zapisane. Q-18 (kierunek) nie filtruje zapisu.
+ *  II-9 i ETA biorą pełne dane, także gdy prom byłby niewidoczny na mapie. */
+let stenaIrmCache: { at: number; text: string } | null = null;
+export function resetStenaIrmCache(): void { stenaIrmCache = null; }
+
+async function readStenaIrm(deps: JobDeps, nowMs: number): Promise<{ fixes: VesselFix[]; warning: string | null }> {
+  if (stenaIrmCache && nowMs - stenaIrmCache.at < 3 * 60_000) {
+    return parseStenaFerries(JSON.parse(stenaIrmCache.text));
+  }
+  const r = await readText(deps, STENA_FERRIES_URL, { headers: { 'User-Agent': STENA_IRM_UA, Accept: 'application/json' } });
+  if (!r.ok) return { fixes: [], warning: r.warning };
+  try {
+    const parsed = parseStenaFerries(JSON.parse(r.text));
+    if (!parsed.warning) stenaIrmCache = { at: nowMs, text: r.text };
+    return parsed;
+  } catch {
+    return { fixes: [], warning: 'Stena IRM: nieczytelna odpowiedź (zmiana formatu?)' };
+  }
+}
+
 export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
   const nowD = deps.now(); const now = nowD.toISOString();
   const [vessels, sailings] = await Promise.all([deps.store.vessels(), deps.store.sailingsSince(new Date(nowD.getTime() - 2 * 864e5).toISOString())]);
+  const tracked = vessels.filter((v) => isTrackedMmsi(v.mmsi) || (v.imo != null && STENA_IMO.has(v.imo)));
   const eff = (s: DbSailing) => ({ dep: Date.parse(s.delayed_departure_at ?? s.departure_at), arr: Date.parse(s.delayed_arrival_at ?? s.arrival_at) });
   const inProgress = sailings.filter((s) => s.status !== 'ODWOLANY' && eff(s).dep <= nowD.getTime() && nowD.getTime() <= eff(s).arr + 3 * 36e5);
-  /** II-9: rejsy przed odejściem (do 6 h) — tylko gdy jest świeży AIS. */
   const upcoming = sailings.filter((s) => {
     if (s.status === 'ODWOLANY') return false;
     const d = eff(s).dep;
@@ -280,26 +308,76 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
   const observations: Record<string, string> = {};
   const warnings: string[] = [];
   let risks = 0;
-  const polled = new Set<string>();
-  const pollFix = async (v: VesselRow): Promise<VesselFix | null> => {
-    if (!v.mmsi) return null;
+  const byVessel = new Map<string, VesselFix[]>();
+  const pushFix = (vesselId: string, fix: VesselFix | null) => {
+    if (!fix) return;
+    const list = byVessel.get(vesselId) ?? [];
+    list.push(fix);
+    byVessel.set(vesselId, list);
+  };
+
+  const wantsStena = tracked.some((v) => (v.imo != null && STENA_IMO.has(v.imo)) || (v.mmsi != null && STENA_MMSI.has(v.mmsi)));
+  if (wantsStena) {
+    const stena = await readStenaIrm(deps, nowD.getTime());
+    if (stena.warning) {
+      warnings.push(stena.warning);
+      await deps.store.raiseRisk(sourceDownRisk('STENA_IRM', [stena.warning], now, STENA_FERRIES_URL));
+      risks++;
+    } else {
+      await deps.store.resolveRisks('SOURCE_DOWN:STENA_IRM:');
+    }
+    for (const fix of stena.fixes) {
+      const v = tracked.find((x) => (fix.imo != null && x.imo === fix.imo) || x.mmsi === fix.mmsi);
+      if (v) pushFix(v.id, fix);
+    }
+  }
+
+  const allow = tracked.map((v) => v.mmsi).filter((m): m is number => isTrackedMmsi(m)).map(String);
+  const key = deps.env.AISSTREAM_API_KEY;
+  if (key && allow.length) {
+    try {
+      const fixes = deps.collectAisstream ? await deps.collectAisstream() : await collectAisstreamFixes(key, allow);
+      for (const fix of fixes) {
+        if (!isTrackedMmsi(fix.mmsi)) continue;
+        const v = tracked.find((x) => x.mmsi === fix.mmsi);
+        if (v) pushFix(v.id, { ...fix, source: 'AISSTREAM' });
+      }
+    } catch {
+      warnings.push('aisstream niedostępne — zapas Digitraffic');
+    }
+  }
+
+  const pollDigitraffic = async (v: { id: string; mmsi: number | null }) => {
+    if (!v.mmsi) return;
     const r = await readText(deps, `https://meri.digitraffic.fi/api/ais/v1/locations?mmsi=${v.mmsi}`, { headers: { 'Accept-Encoding': 'gzip', 'Digitraffic-User': DIGITRAFFIC_USER } });
-    if (!r.ok) { warnings.push(r.warning); return null; }
+    if (!r.ok) { warnings.push(r.warning); return; }
     try {
       const fix = parseDigitrafficLocations(JSON.parse(r.text), v.mmsi);
-      if (fix) await deps.store.saveVesselPosition(v.id, fix);
-      return fix;
+      if (fix) pushFix(v.id, fix);
     } catch {
       warnings.push('Digitraffic: nieczytelna odpowiedź (zmiana formatu?)');
-      return null;
     }
   };
+  for (const v of tracked) {
+    if (v.mmsi) await pollDigitraffic(v);
+  }
+
+  const chosen = new Map<string, VesselFix>();
+  for (const v of tracked) {
+    const list = byVessel.get(v.id) ?? [];
+    const stenaEta = list.find((f) => f.source === 'STENA' && f.etaAt)?.etaAt ?? null;
+    const win = pickNewerFix(list);
+    if (!win) continue;
+    const fix = stenaEta && !win.etaAt ? { ...win, etaAt: stenaEta } : win;
+    chosen.set(v.id, fix);
+    await deps.store.saveVesselPosition(v.id, fix);
+  }
+
   for (const s of inProgress) {
     const v = vessels.find((x) => x.id === s.vessel_id);
     if (!v) continue;
-    if (!v.mmsi) { observations[v.name] = 'BRAK_MMSI'; continue; }
-    const fix = await pollFix(v);
-    polled.add(v.id);
+    if (!v.mmsi && !(v.imo != null && STENA_IMO.has(v.imo))) { observations[v.name] = 'BRAK_MMSI'; continue; }
+    const fix = chosen.get(v.id);
     if (!fix) { observations[v.name] = 'BRAK_SWIEZEGO_SYGNALU'; continue; }
     const port = (s.route === 'GDY-KAA' || s.route === 'KAA-GDY') ? 'KAA' : 'NYN';
     const obs = interpretFix(fix, now, 60, port);
@@ -308,7 +386,7 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
       const ok = await deps.store.raiseRisk({
         kind: 'FERRY', severity: 'INFO', title: `AIS: ${v.name} w porcie Nynäshamn — potwierdzenie przypłynięcia (informacja)`,
         titleKey: 'rk_ais_arrived', params: { vessel: v.name },
-        detail: { sailing_id: s.id, statek: v.name, pozycja: [fix.lat, fix.lon], sygnal: fix.timestampUtc, atrybucja: DIGITRAFFIC_ATTRIBUTION },
+        detail: { sailing_id: s.id, statek: v.name, pozycja: [fix.lat, fix.lon], sygnal: fix.timestampUtc, zrodlo: fix.source ?? 'DIGITRAFFIC', atrybucja: DIGITRAFFIC_ATTRIBUTION },
         dedup: `AIS_NYN:${s.id}`, sourceUrl: 'https://www.digitraffic.fi/en/marine-traffic/',
       });
       if (ok) risks++;
@@ -317,20 +395,17 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
       const ok = await deps.store.raiseRisk({
         kind: 'FERRY', severity: 'INFO', title: `AIS: ${v.name} w porcie Karlskrona — potwierdzenie przypłynięcia (informacja)`,
         titleKey: 'rk_ais_arrived_kaa', params: { vessel: v.name },
-        detail: { sailing_id: s.id, statek: v.name, pozycja: [fix.lat, fix.lon], sygnal: fix.timestampUtc, atrybucja: DIGITRAFFIC_ATTRIBUTION },
+        detail: { sailing_id: s.id, statek: v.name, pozycja: [fix.lat, fix.lon], sygnal: fix.timestampUtc, zrodlo: fix.source ?? 'DIGITRAFFIC', atrybucja: DIGITRAFFIC_ATTRIBUTION },
         dedup: `AIS_KAA:${s.id}`, sourceUrl: 'https://www.digitraffic.fi/en/marine-traffic/',
       });
       if (ok) risks++;
     }
   }
-  // II-9: przed wypłynięciem — opóźnienie z dystansu/SOG (tylko przy świeżym sygnale)
   for (const s of upcoming) {
     const v = vessels.find((x) => x.id === s.vessel_id);
-    if (!v?.mmsi) continue;
-    let fix: VesselFix | null = null;
-    if (polled.has(v.id)) continue; // już obsłużony w inProgress (nie powinno się zdarzyć)
-    fix = await pollFix(v);
-    polled.add(v.id);
+    if (!v?.mmsi || !isTrackedMmsi(v.mmsi)) continue;
+    if (inProgress.some((x) => x.vessel_id === v.id)) continue;
+    const fix = chosen.get(v.id);
     if (!fix) {
       observations[`${v.name}:II9`] = 'BRAK_POZYCJI_NIE_OPOZNIENIE';
       continue;
@@ -346,27 +421,35 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
       detail: {
         sailing_id: s.id, statek: v.name, minutes: delayMin,
         pozycja: [fix.lat, fix.lon], sog_kn: fix.sogKn, sygnal: fix.timestampUtc,
-        atrybucja: DIGITRAFFIC_ATTRIBUTION,
+        zrodlo: fix.source ?? 'DIGITRAFFIC', atrybucja: DIGITRAFFIC_ATTRIBUTION,
       },
       dedup: `AIS_DEP_DELAY:${s.id}`,
       sourceUrl: 'https://www.digitraffic.fi/en/marine-traffic/',
     });
     if (ok) risks++;
   }
-  // I-2j: pozycja na mapę także dla statków bez rejsu w toku (bez wniosków o rejsie — tylko zapis pozycji z czasem sygnału)
-  for (const v of vessels) {
-    if (!v.mmsi || polled.has(v.id) || inProgress.some((s) => s.vessel_id === v.id)) continue;
-    const r = await readText(deps, `https://meri.digitraffic.fi/api/ais/v1/locations?mmsi=${v.mmsi}`, { headers: { 'Accept-Encoding': 'gzip', 'Digitraffic-User': DIGITRAFFIC_USER } });
-    if (!r.ok) { warnings.push(r.warning); continue; }
-    let fix = null;
-    try { fix = parseDigitrafficLocations(JSON.parse(r.text), v.mmsi); } catch { warnings.push('Digitraffic: nieczytelna odpowiedź (zmiana formatu?)'); continue; }
-    if (fix) await deps.store.saveVesselPosition(v.id, fix);
+
+  const latest = deps.store.latestVesselObserved ? await deps.store.latestVesselObserved() : [];
+  const latestById = new Map(latest.map((r) => [r.vesselId, r.observedAt]));
+  for (const v of tracked) {
+    if (!v.mmsi) continue;
+    const saved = chosen.get(v.id);
+    const obsAt = saved?.timestampUtc ?? latestById.get(v.id) ?? null;
+    const ageMin = obsAt ? (nowD.getTime() - Date.parse(obsAt)) / 60000 : Infinity;
+    if (ageMin > 60) {
+      const ok = await deps.store.raiseRisk({
+        kind: 'FERRY', severity: 'MEDIUM',
+        title: `Brak pozycji AIS: ${v.name} — ostatni sygnał starszy niż godzina`,
+        titleKey: 'rk_ais_gap', params: { vessel: v.name },
+        detail: { statek: v.name, mmsi: v.mmsi, ostatni: obsAt, zrodlo: 'AIS-SRC' },
+        dedup: `AIS_GAP:${v.mmsi}:${now.slice(0, 10)}`,
+      });
+      if (ok) risks++;
+    } else {
+      await deps.store.resolveRisks(`AIS_GAP:${v.mmsi}:`);
+    }
   }
-  if (warnings.length && inProgress.some((s) => vessels.find((x) => x.id === s.vessel_id)?.mmsi)) {
-    await deps.store.raiseRisk(sourceDownRisk('DIGITRAFFIC', warnings, now, 'https://meri.digitraffic.fi'));
-    risks++;
-  }
-  return { job: 'ferry-ais', mode: 'LIVE', ok: warnings.length === 0, risks, warnings, observations };
+  return { job: 'ferry-ais', mode: 'LIVE', ok: true, risks, warnings, observations };
 }
 
 /**
@@ -656,7 +739,7 @@ export type JobName = keyof typeof JOBS;
 
 /** Minimalny odstęp między przebiegami [min] — ferry-status: co 15 min, nie częściej (ZRODLA_DANYCH §1.1). */
 export const MIN_INTERVAL_MIN: Record<JobName, number> = {
-  'ferry-schedule': 60, 'ferry-status': 15, 'ferry-ais': 10, 'ferry-weather': 60,
+  'ferry-schedule': 60, 'ferry-status': 15, 'ferry-ais': 3, 'ferry-weather': 60,
   'road-se': 15, 'road-pl': 10, 'traffic-flow': 15,
 };
 

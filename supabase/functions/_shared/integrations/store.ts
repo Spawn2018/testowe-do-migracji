@@ -22,7 +22,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
   };
   return {
     projectId,
-    async vessels() { return must(await sb.from('vessels').select('id,name,mmsi'), 'vessels') as VesselRow[]; },
+    async vessels() { return must(await sb.from('vessels').select('id,name,mmsi,imo'), 'vessels') as VesselRow[]; },
     async sailingsSince(fromIso: string) {
       return must(await sb.from('sailings').select(SAILING_COLS).gte('departure_at', fromIso).order('departure_at'), 'sailings') as DbSailing[];
     },
@@ -65,8 +65,14 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
     async saveVesselPosition(vesselId: string, fix: VesselFix) {
       must(await sb.from('vessel_positions').upsert({
         vessel_id: vesselId, lat: fix.lat, lon: fix.lon, sog_kn: fix.sogKn, cog: fix.cog, nav_stat: fix.navStat,
-        observed_at: fix.timestampUtc, source: 'DIGITRAFFIC',
+        observed_at: fix.timestampUtc, source: fix.source ?? 'DIGITRAFFIC', eta_at: fix.etaAt ?? null,
       }, { onConflict: 'vessel_id,observed_at', ignoreDuplicates: true }), 'vessel_positions insert');
+    },
+    async latestVesselObserved() {
+      const rows = must(await sb.from('vessel_positions').select('vessel_id,observed_at').order('observed_at', { ascending: false }).limit(50), 'vessel_positions latest') as { vessel_id: string; observed_at: string }[];
+      const best = new Map<string, string>();
+      for (const r of rows) if (!best.has(r.vessel_id)) best.set(r.vessel_id, r.observed_at);
+      return [...best.entries()].map(([vesselId, observedAt]) => ({ vesselId, observedAt }));
     },
     async latestPositions(maxAgeMin: number) {
       return must(await sb.rpc('latest_vehicle_positions', { p_max_age_min: maxAgeMin }), 'latest_vehicle_positions') as VehiclePos[];
