@@ -552,6 +552,35 @@ Osobny PR, tylko dokumenty. Bez wdrożenia. Nie wchodzić na gałąź H-3. Kodu 
 4. Pozycje „do sprawdzenia” z punktu 6: jeden raport, bez budowania.
 5. Kolejność: H-3, potem U-3-PALIWO, potem DRV-CLOSE, potem STD-CLEAN. Część B rusza po tych czterech. Tabela dowodów jest przyjęta.
 
+## Polecenie 2026-10-04 (czas warszawski) — SMS-KSH-1H, sprawdzenie D-37
+
+Osobny PR, tylko dokumenty. Bez wdrożenia. Nie wchodzić na gałąź U-3-PALIWO. Kodu nie zmieniać. DRV-CLOSE, STD-CLEAN, VERIFY-13 i części B nie zaczynać.
+
+D-37: jeden SMS do KSH około 1 h przed przyjazdem auta na załadunek. To nie jest SMS co godzinę.
+
+Sprawdzić w kodzie i migracjach (0106, 0116, L-12, strefa zbliżania w Śremie), czy SMS przychodzi około 1 h przed wjazdem (promień albo czas dojazdu), czy liczy samą odległość albo sam fakt wejścia w strefę.
+
+Jeśli nie spełnia: dopisać do `PLAN.md` pozycję SMS-KSH-1H z tym kryterium. Jeśli spełnia: żadnej pozycji.
+
+Kolejność bez zmian: U-3-PALIWO, potem DRV-CLOSE, potem STD-CLEAN, potem VERIFY-13, potem część B. VERIFY-13 tylko zapamiętać, nie wykonywać.
+
+## Polecenie 2026-10-04 (czas warszawski) — SMS-KSH-1H, rozszerzenie D-37 i D-64
+
+Osobny PR, tylko dokumenty. Bez budowy funkcji i bez wdrożenia. Nie wchodzić na gałąź U-3-PALIWO. Najpierw U-3-PALIWO, potem DRV-CLOSE, STD-CLEAN, SMS-KSH-1H, VERIFY-13, a dopiero potem część B.
+
+Decyzja właściciela 04.10.2026:
+
+- Załadunek (Śrem) i rozładunek (Boden) podlegają tej samej zasadzie.
+- SMS „strefa zbliżania” (koło 50 km) jest ZASTĄPIONY SMS-em „1 h przed przyjazdem”: wysyłka następuje, gdy wyliczony czas dojazdu do placu wynosi ≤ 60 min.
+- Czas dojazdu jest liczony z bieżącej pozycji GPS tym samym mechanizmem co ETA (D-80): HERE, gdy dostępne; własny silnik (0122), gdy flaga jest wyłączona albo budżet HERE wyczerpany.
+- Jeden SMS na transport na każdy koniec trasy; pierwsza pozycja już bliżej niż 60 min oznacza SMS od razu.
+- Brak pozycji GPS oznacza brak SMS i ryzyko „brak pozycji” jak dziś.
+- SMS „wjazd na plac” pozostaje bez zmian.
+- Odbiorcy bez zmian: 2 osoby na załadunku i 2 osoby na rozładunku (D-64); odbiorców wpisuje administrator.
+- Treść SMS: kto, nr rejestracyjny, przewidywana godzina przyjazdu.
+
+Testy (SIM-1 na TEST, numer właściciela), nie wykonywać teraz: dojazd z 120 min → jeden SMS przy ≤ 60; start w 40 min → SMS od razu; brak GPS → brak SMS; powtórne pozycje → bez duplikatu; to samo dla Boden.
+
 ## Polecenie 2026-10-04 (czas warszawski) — U-3-PALIWO, wykonanie
 
 Osobny PR. Nie włączać H-1 ani H-3. Nie ruszać DRV-CLOSE, STD-CLEAN ani części B.
