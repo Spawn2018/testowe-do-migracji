@@ -442,7 +442,7 @@ Feed Aikido wyłączony (400). Pięć średnich, bez numerów CVE. Nie krytyczne
 
 Źródło: `docs/handover/POLECENIA_KOORDYNATORA.md` i `docs/handover/LOGIKA_SYSTEMU.md`. Istniejących wierszy nie ruszano. P2-TILES, P3-APK i SEC-OWASP już są w planie — tu tylko odesłanie, bez drugiej kopii.
 
-Kolejność od 04.10 20:23: L-9 → L-10 → L-11 → L-12 → H-1 (zbudować, zostaje wyłączone do wymiarów D-83) → H-2 od razu (w tym B-2b: sytuacje drogowe Trafikverket) → H-3 od razu → dopiero potem część B od początku (pozycje zrobione w L oznacz „zrobione w ramach L-x”) → SEC-OWASP → część D po danych od właściciela. L-6 jest już na produkcji, nie wraca. P2-TILES i P3-APK zostają w tle, nie teraz. SEC-OWASP i część D nie startują w tym przebiegu. H-2 nie startuje przed końcem L-12.
+Kolejność od 04.10 20:23: L-9 → L-10 → L-11 → L-12 → H-1 (zbudować, zostaje wyłączone do wymiarów D-83) → H-2 od razu (w tym B-2b: sytuacje drogowe Trafikverket) → H-3 od razu → dopiero potem część B od początku (pozycje zrobione w L oznacz „zrobione w ramach L-x”) → SEC-OWASP → część D po danych od właściciela. L-6 jest już na produkcji, nie wraca. P2-TILES i P3-APK zostają w tle, nie teraz. SEC-OWASP i część D nie startują w tym przebiegu. H-2 nie startuje przed końcem L-12. Kolejność po H-3 zastąpiona triage 04.10: U-3-PALIWO, potem DRV-CLOSE, potem STD-CLEAN, część B dopiero po tych czterech.
 
 | ID | Opis | Kryterium | Status |
 |---|---|---|---|
@@ -505,7 +505,7 @@ TESTY: dla każdego wzoru — zmiana wartości w Opcjach zmienia moment alarmu; 
 
 ## Zlecenie HERE (04.10.2026) — kolejność z sekcji 5
 
-Źródło: `docs/handover/ZLECENIE_HERE.md`. Zasada: wyłącznie funkcje oparte na HERE. Innych mechanizmów nie zmieniamy. II-7 i II-7a zostają w historii; zapis „bez HERE" z D-28 zastępuje D-77. Po L-12 kolejność to H-1, potem H-2, potem H-3, i dopiero część B. H-2 i H-3 startują od razu, gdy przyjdzie ich kolej. H-1 powstaje, ale zostaje wyłączone, aż właściciel poda wymiary (D-83). Q-17, Q-18 i Q-19 są w planie. H-6 nadal razem z Q-17 i Q-19, bez dublowania.
+Źródło: `docs/handover/ZLECENIE_HERE.md`. Zasada: wyłącznie funkcje oparte na HERE. Innych mechanizmów nie zmieniamy. II-7 i II-7a zostają w historii; zapis „bez HERE" z D-28 zastępuje D-77. Po L-12 kolejność to H-1, potem H-2, potem H-3, i dopiero część B. Doprecyzowanie 04.10 (triage przyjęty): po H-3 najpierw U-3-PALIWO, DRV-CLOSE i STD-CLEAN, część B dopiero po tych czterech. H-2 i H-3 startują od razu, gdy przyjdzie ich kolej. H-1 powstaje, ale zostaje wyłączone, aż właściciel poda wymiary (D-83). Q-17, Q-18 i Q-19 są w planie. H-6 nadal razem z Q-17 i Q-19, bez dublowania.
 
 | Kiedy | ID | Opis | Status |
 |---|---|---|---|
@@ -520,13 +520,16 @@ TESTY: dla każdego wzoru — zmiana wartości w Opcjach zmienia moment alarmu; 
 
 ## Po REJESTR — DOWODY, przed częścią B (04.10)
 
-Część B nie startuje, dopóki koordynator nie przyjmie wyniku REJESTR — DOWODY. Poniższych pozycji nie wykonywać w tym przebiegu.
+Tabela dowodów jest przyjęta (triage 04.10, `TRIAGE_REJESTRU.md`). Kolejność: H-3, potem U-3-PALIWO, potem DRV-CLOSE, potem STD-CLEAN. H-3 jest już na main (PR #40) i zostaje wyłączone do wymiarów. Część B rusza po U-3-PALIWO, DRV-CLOSE i STD-CLEAN. Tych trzech nie wykonywać w przebiegu dokumentów.
 
 | ID | Priorytet | Kiedy | Opis | Status |
 |---|---|---|---|---|
-| DRV-CLOSE | P1 | po REJESTR — DOWODY, przed częścią B | Zamknąć stary link kierowcy (U-38, D-36). Odebrać anonimowi dostęp do `driver_post_position` (migracja). Unieważnić wszystkie wydane tokeny kierowców. Trasa `#/driver/:token` pokazuje „Link nieaktywny”. Kodu nie usuwać. Test: anonim z ważnym tokenem dostaje odmowę i pozycja się nie zapisuje. Pozycje tylko z telematyki. | NIEZACZĘTE |
-| U-3-PALIWO | P1 | błąd, bez naprawy w przebiegu dokumentów | Tydzień opłaty paliwowej liczy się od rozładunku (`fuel_ref_date` z `actual_delivery_at`, migracja 0011; `referenceUtc` w `src/lib/money/engine.ts`), a D-34 każe liczyć od daty załadunku. Nie zmieniać kodu bez osobnego zlecenia. | NIEZACZĘTE |
-| STD-CLEAN | — | po DRV-CLOSE, bez wykonania teraz | U-17. Usunąć resztki klasy STANDARD: cennik 0100 i `src/lib/rateCard.ts`, typ wiersza, szuflada ładunku, pomijanie zezwolenia dla STANDARD. | NIEZACZĘTE |
+| H-3 | — | 1. z czterech | Przeszkody wzdłuż korytarza. | **DONE** na main (PR #40) — flaga `H3_CORRIDOR_OBSTACLES` wyłączona, do wymiarów D-83. Nie w tym PR. |
+| U-3-PALIWO | P1 | 2. z czterech, po H-3 | Tydzień opłaty paliwowej liczy się od rozładunku (`fuel_ref_date` z `actual_delivery_at`, migracja 0011; `referenceUtc` w `src/lib/money/engine.ts`), a D-34 każe liczyć od daty załadunku. Test: transport z załadunkiem w tygodniu N i rozładunkiem w N+1 dostaje stawkę z tygodnia N. Przy naprawie sprawdzić i wpisać dowód dla SCOPE §32–§33 (punkt 4 triage): 32.3 ta sama data mnożnika dla kosztu i przychodu, migawka przy transporcie; 32.4 test niezmiennika (M8); 33.1 trzy wartości ze źródłem i migawką (M2); 33.2 faktura nadpisuje, ale nie kasuje wartości wyliczonej; 33.3 tydzień w czasie Europe/Warsaw, nie UTC; 33.5 testy granicy tygodnia i zmiany czasu; 33.6 zrobione przez M11 (`tests/money-m11.test.ts`). 32.1, 32.2, 32.5 i 33.4 to dokumentacja: jeden opis mechanizmu, tabela zgodności w `03_PARAMETRY_BIZNESOWE.md`, pola Opcji bez skutku w `computeSefs`, oraz który odczyt indeksu obowiązuje w danej dacie. Nie zakładać milczącej reguły. Bez naprawy w tym PR. | NIEZACZĘTE |
+| DRV-CLOSE | P1 | 3. z czterech, po U-3-PALIWO | Zamknąć stary link kierowcy (U-38, D-36). Odebrać anonimowi dostęp do `driver_post_position` (migracja). Unieważnić wszystkie wydane tokeny kierowców. Trasa `#/driver/:token` pokazuje „Link nieaktywny”. Kodu nie usuwać. Test: anonim z ważnym tokenem dostaje odmowę i pozycja się nie zapisuje. Pozycje tylko z telematyki. | NIEZACZĘTE |
+| STD-CLEAN | — | 4. z czterech, po DRV-CLOSE | U-17. Usunąć resztki klasy STANDARD: cennik 0100 i `src/lib/rateCard.ts`, typ wiersza, szuflada ładunku, pomijanie zezwolenia dla STANDARD. | NIEZACZĘTE |
+| H-2-PL | — | po H-2, nie w tym przebiegu | Utrudnienia w Polsce z HERE. H-2 zrobiło tylko Szwecję (`supabase/functions/road-se`). `road-pl` to KPD GDDKiA, nie HERE. | NIEZACZĘTE |
+| CLEAN-MAPLIBRE | P3 | stałe, bez wykonania teraz | Usunąć martwy MapLibre, jeśli nadal jest w zależnościach (17.7). Sprawdzenie 04.10: w `package.json` nie ma `maplibre`. Zostaje jako potwierdzenie, bez wykonania. | NIEZACZĘTE |
 
 ## Polecenie 2026-10-04 17:06 — e-mail decyzji automatycznych
 
@@ -560,7 +563,7 @@ Przed wykonaniem: pełna kopia do R2, poza repozytorium; próba odtworzenia na t
 
 # 6. PRZYPISANIE POZYCJI BEZ MIEJSCA (04.10.2026)
 
-Drugie przejście rejestru całości. Tu tylko pozycje z sekcji 4 rejestru, które nie dostały dowodu „zrobione”. Realizacji części B ten zapis nie zaczyna.
+Drugie przejście rejestru całości. Tu tylko pozycje z sekcji 4 rejestru, które nie dostały dowodu „zrobione”. Od 04.10 status ID objętych `TRIAGE_REJESTRU.md` bierze się z tego pliku i z sekcji 5 rejestru, nie z kolumny poniżej, gdy się różnią. Realizacji części B ten zapis nie zaczyna.
 
 | ID | Przypisanie | Uzasadnienie |
 |---|---|---|
@@ -980,3 +983,24 @@ Drugie przejście rejestru całości. Tu tylko pozycje z sekcji 4 rejestru, któ
 | W3 | do decyzji koordynatora | brak jednoznacznego etapu |
 | W4 | do decyzji koordynatora | brak jednoznacznego etapu |
 
+# 7. TRIAGE REJESTRU (04.10.2026, przyjęte)
+
+Źródło: `docs/handover/TRIAGE_REJESTRU.md`. Kodu ten zapis nie zmienia.
+
+Kolejka: H-3 (DONE na main, PR #40, flaga wyłączona), potem U-3-PALIWO (z kryteriami SCOPE 32.x i 33.x), potem DRV-CLOSE, potem STD-CLEAN. Część B dopiero po U-3-PALIWO, DRV-CLOSE i STD-CLEAN. Tabela dowodów jest przyjęta.
+
+Część B, po tych czterech: B-1 (do scalenia), B-2a, B-2c, B-3a (po wymiarach), B-4a, B-4b, B-5, B-6a…B-6i, B-7a…B-7c, B-8, B-9, B-10, B-KSH, B-REJSY, B-Q (bez pytań zrobionych w L-*), Q-11a, Q-11b, Q-17, Q-18, Q-19, C-SEP, HHL-4a, FAK-9, UI-12, D-31, D-27.
+
+HERE i ETA, poza bieżącą czwórką: H-2-PL, H-6, H-7, H-8, H-10, H-12, H-4 i H-5 po emtrack, II-7b.
+
+Na dane z zewnątrz: TELM-2, II-2, II-3, II-4, II-10-E1, II-10-E2, ZEZW-13, D-15.
+
+Sprawy właściciela, nie blokują B: D-3, D-7, D-14, D-16, D-17, D-21, wymiary (D-83).
+
+Stałe: GATE-WEEKLY, SEC-OWASP (przed pilotażem), CLEAN-MAPLIBRE (P3).
+
+Pilotaż: R-0, potem R-1, potem R-2, potem R-3, potem R-4.
+
+SMS-KSH-1H nie dodane. SCX-§5 (zmiana 29.09) to SMS przy strefach, nie timer 1 h przed załadunkiem. Dowód: `supabase/migrations/0106_dec5_sms_zones.sql` i `0116_sms_zone_triggers_on.sql`.
+
+Raport punktu 6 (bez budowania) jest na końcu `TRIAGE_REJESTRU.md`.

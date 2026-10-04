@@ -1264,361 +1264,369 @@ Kod nie był zmieniany. „Tylko dokumenty” = zapis poprawiony adnotacją. „
 
 Dla każdej pozycji sekcji 2, która miała status NIEZNANY. „zrobione” tylko wtedy, gdy plik, migracja albo test istnieje. Inaczej „do zrobienia”. Kopia `wzorzec/STAN` nie jest dowodem. Przy SCOPE wygrywa 56.1, chyba że późniejszy datowany wpis „zrobione” ma dowód w pliku.
 
-Drugie szukanie dowodów, 04.10 wieczór. „zrobione” tylko przy istniejącym pliku, migracji albo teście. Brak dowodu zostaje „do zrobienia”. Szkielet II-7b (0123) nie jest pełną kalibracją — zostaje do zrobienia. Część B nie startuje, dopóki koordynator nie przyjmie tej tabeli.
+Drugie szukanie dowodów, 04.10 wieczór. „zrobione” tylko przy istniejącym pliku, migracji albo teście. Brak dowodu zostaje „do zrobienia”. Szkielet II-7b (0123) nie jest pełną kalibracją — zostaje do zrobienia. Część B nie startuje, dopóki koordynator nie przyjmie tej tabeli. Triage koordynatora 04.10 przyjęty (`TRIAGE_REJESTRU.md`). „zrobione przez X” tylko z plikiem, migracją albo testem. Brak dowodu zostaje „do zrobienia”.
 
 | ID | Status | Dowód |
 |---|---|---|
-| BRAK-PLIKU-ZLECENIE_ETAP_I | do zrobienia | — |
-| BRAK-PLIKU-ZLECENIE_DLA_GROKA | do zrobienia | — |
-| D-10 | zrobione | supabase/migrations/0063_sefs_applies_to.sql |
-| D-11 | do zrobienia | — |
-| D-12 | do zrobienia | — |
-| D-14 | do zrobienia | — |
-| D-16 | do zrobienia | — |
-| D-17 | do zrobienia | — |
-| D-18 | do zrobienia | — |
-| D-2 | zrobione | supabase/migrations/0101_i31_sefs_week.sql |
-| D-20 | do zrobienia | — |
-| D-21 | do zrobienia | — |
-| D-22 | zrobione | supabase/migrations/0090_escort_driver_contact.sql |
-| D-23 | zrobione | supabase/migrations/0091_carrier_sees_ratings.sql |
-| D-24 | do zrobienia | — |
-| D-25 | do zrobienia | — |
-| D-3 | do zrobienia | — |
-| D-32 | do zrobienia | — |
-| D-33 | do zrobienia | — |
-| D-5 | zrobione | supabase/migrations/0133_messaging_owner_accounts.sql |
-| D-6 | do zrobienia | — |
-| D-7 | do zrobienia | — |
-| D-8 | do zrobienia | — |
-| D-9 | zrobione | supabase/migrations/0054_eta_params_d9.sql |
+| BRAK-PLIKU-ZLECENIE_ETAP_I | historia | docs/handover/ZLECENIE_ETAP_I.md (PR #39) |
+| BRAK-PLIKU-ZLECENIE_DLA_GROKA | historia | docs/handover/ZLECENIE_DLA_GROKA.md (PR #39) |
+| D-10 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-11 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-12 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-14 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-16 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-17 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-18 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-2 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-20 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-21 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-22 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-23 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-24 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-25 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-3 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-32 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-33 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-5 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-6 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-7 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-8 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-9 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
 | D-STENA-COORDS | zrobione | supabase/functions/_shared/ferry/digitraffic.ts |
-| D-TELM-ETA | do zrobienia | — |
-| D-1 | zrobione | supabase/migrations/0100_i30_symbol_rate.sql |
-| D-28 | zrobione | supabase/migrations/0122_ii7_eta_osm_corridor.sql |
-| D-29 | do zrobienia | — |
-| D-4 | do zrobienia | — |
-| DEC-CLICK | do zrobienia | — |
-| D-13 | do zrobienia | — |
-| D-15 | do zrobienia | — |
-| D-34 | do zrobienia | — |
+| D-TELM-ETA | duplikat | duplikat TELM-2 i II-7b |
+| D-1 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-28 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-29 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-4 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| DEC-CLICK | zrobione przez L-4 | tests/click-targets.test.ts |
+| D-13 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-15 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-34 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
 | B-8-IMP | zrobione | tests/b8-imp.test.ts |
-| C-SEP | do zrobienia | — |
-| D-LATER | do zrobienia | — |
+| C-SEP | zostaje | część B, po H-3, U-3-PALIWO, DRV-CLOSE i STD-CLEAN |
+| D-LATER | zostaje | część D; POPRAWKI-D jest duplikatem tej pozycji |
 | I-18 | zrobione | supabase/migrations/0061_plan_dates_confirm.sql |
 | I-3 | zrobione | supabase/migrations/0067_sms_gateway_base.sql |
-| II-7a | do zrobienia | — |
+| II-7a | zastąpione | zastąpione przez D-78 (budżet 100 USD) |
 | II-5 | zrobione | tests/integrations.test.ts |
 | II-6 | zrobione | supabase/migrations/0121_ii6_corridor_conditions.sql |
 | II-7 | zrobione | supabase/migrations/0122_ii7_eta_osm_corridor.sql |
-| AUDIT-PROD | do zrobienia | — |
+| AUDIT-PROD | historia | zasada pracy, nie pozycja |
 | L-1 | zrobione | supabase/migrations/0138_l1_open_decisions.sql |
 | L-4 | zrobione | tests/click-targets.test.ts |
-| R-1 | do zrobienia | — |
-| R-2 | do zrobienia | — |
-| R-0 | do zrobienia | — |
-| GATE-WEEKLY | do zrobienia | — |
-| D-27 | do zrobienia | — |
-| D-30 | zrobione | supabase/migrations/0097_insurance_expiry.sql |
-| D-31 | do zrobienia | — |
-| D-29t | do zrobienia | — |
+| R-1 | zostaje | pilotaż, po R-0 |
+| R-2 | zostaje | pilotaż |
+| R-0 | zostaje | pilotaż, plan czyszczenia; wykonanie przed R-1 |
+| GATE-WEEKLY | zostaje | stałe, przed pilotażem |
+| D-27 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-30 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-31 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-29t | zostaje | sprawdzenie: tabela w PLAN zaakceptowana; START-1…7 nadal 0/7. L-1 i L-13 tego nie domknęły. |
 | I-7a | zrobione | supabase/migrations/0114_i7a_ksh_driver_always.sql |
 | I-30 | zrobione | supabase/migrations/0100_i30_symbol_rate.sql |
-| I-29 | do zrobienia | — |
-| II-7b | do zrobienia | — |
+| I-29 | zostaje | P2. L-13 (0148) nie pokrywa budżetów. Dokument: docs/handover/I29_BUDGETY_140.md. Bez nowego sprawdzenia. |
+| II-7b | zostaje | HERE i ETA; szkielet 0123 nie jest pełną kalibracją |
 | II-8 | zrobione | supabase/migrations/0124_ii8_marine_weather.sql |
 | II-9 | zrobione | tests/ferry.test.ts |
 | I-3-APK | zrobione | supabase/migrations/0116_sms_zone_triggers_on.sql |
 | ADM-10 | zrobione | supabase/migrations/0117_adm10_impersonate.sql |
 | CLEAN-TT-HERE | zrobione | tests/integrations.test.ts |
 | DATY-67 | zrobione | supabase/migrations/0113_daty67_ksh_file_dates.sql |
-| FAK-9 | do zrobienia | — |
+| FAK-9 | zostaje | część B |
 | HIST-11 | zrobione | supabase/migrations/0118_hist11_full_audit.sql |
-| ONE-MECH | do zrobienia | — |
+| ONE-MECH | zostaje | sprawdzenie: seed w PLAN, silnik START poza zakresem. L-1 (0138) i L-13 (0148) nie domykają 7 reguł. |
 | OPL-8 | zrobione | supabase/migrations/0115_opl8_manual_fees.sql |
 | SMS-DELIV | zrobione | supabase/migrations/0116_sms_zone_triggers_on.sql |
 | STENA-3 | zrobione | supabase/migrations/0119_stena3_dictionaries.sql |
-| UI-12 | do zrobienia | — |
-| HHL-4a | do zrobienia | — |
+| UI-12 | zostaje | część B |
+| HHL-4a | zostaje | część B |
 | RESP-14 | zrobione | tests/resp14-phone.spec.ts |
 | PR8 | zrobione | tests/hosting-switch.test.ts |
-| O-V | do zrobienia | — |
-| AUTH-MAIL | do zrobienia | — |
-| SMS-ZONE-ON | do zrobienia | — |
-| L16 | do zrobienia | — |
-| L5 | do zrobienia | — |
-| L9 | do zrobienia | — |
+| O-V | historia | stare wdrożenie |
+| AUTH-MAIL | zostaje | P3. Szablonów Auth nie ma w repozytorium. POSTEP: DONE 02.10 przez Management API, bez pliku do weryfikacji. |
+| SMS-ZONE-ON | zrobione przez SMS-DELIV | supabase/migrations/0116_sms_zone_triggers_on.sql |
+| L16 | duplikat | duplikat ONE-MECH |
+| L5 | zastąpione | zastąpione przez DEC-4 |
+| L9 | zrobione przez 9.1 | supabase/migrations/0094_workflow_engine.sql |
 | 0.1 | zrobione | tests/stylesheet-mockup.test.ts |
-| 0.10 | do zrobienia | — |
-| 0.7 | do zrobienia | — |
+| 0.10 | duplikat | duplikat Q-9 |
+| 0.7 | zrobione | docs/handover/DESIGN_SYSTEM.md §7a; .stylelintrc.json |
 | 0.8 | zrobione | tests/visual-states.spec.ts |
 | 0.9 | zrobione | tests/visual-states.spec.ts |
-| 1.4 | do zrobienia | — |
-| 1.5 | do zrobienia | — |
-| 1.6 | do zrobienia | — |
-| 1.7 | do zrobienia | — |
-| 10.4 | do zrobienia | — |
+| 1.4 | zastąpione | zastąpione przez D-49 (hasło); 2FA: supabase/migrations/0057_mfa_hhl_admin.sql |
+| 1.5 | zrobione | docs/handover/wzorzec/04_KONEKTORY.md (tower.log-mar.pl, U-42) |
+| 1.6 | zastąpione | zastąpione przez D-13 |
+| 1.7 | zrobione przez I-6 | supabase/migrations/0058_client_errors.sql |
+| 10.4 | zastąpione | zastąpione przez D-24 |
 | 10.6 | zrobione | supabase/migrations/0089_carrier_rating.sql |
-| 10.7 | do zrobienia | — |
-| 10.9 | do zrobienia | — |
-| 11.5 | do zrobienia | — |
-| 11.6 | do zrobienia | — |
-| 11.8 | do zrobienia | — |
-| 12.1 | do zrobienia | — |
-| 12.10 | do zrobienia | — |
-| 12.11 | do zrobienia | — |
-| 12.12 | do zrobienia | — |
-| 12.13 | do zrobienia | — |
-| 12.14 | do zrobienia | — |
-| 12.2 | do zrobienia | — |
-| 12.3 | do zrobienia | — |
-| 12.4 | do zrobienia | — |
-| 12.5 | do zrobienia | — |
-| 12.6 | do zrobienia | — |
-| 12.7 | do zrobienia | — |
-| 12.8 | do zrobienia | — |
-| 12.9 | do zrobienia | — |
-| 13.1 | do zrobienia | — |
-| 13.10 | do zrobienia | — |
-| 13.11 | do zrobienia | — |
-| 13.12 | do zrobienia | — |
-| 13.13 | do zrobienia | — |
-| 13.14 | do zrobienia | — |
-| 13.15 | do zrobienia | — |
-| 13.16 | do zrobienia | — |
-| 13.2 | do zrobienia | — |
-| 13.3 | do zrobienia | — |
-| 13.4 | do zrobienia | — |
-| 13.5 | do zrobienia | — |
-| 13.6 | do zrobienia | — |
-| 13.7 | do zrobienia | — |
-| 13.8 | do zrobienia | — |
-| 13.9 | do zrobienia | — |
-| 14.1 | do zrobienia | — |
-| 14.10 | do zrobienia | — |
-| 14.11 | do zrobienia | — |
-| 14.2 | do zrobienia | — |
-| 14.3 | do zrobienia | — |
-| 14.4 | do zrobienia | — |
-| 14.5 | do zrobienia | — |
-| 14.6 | do zrobienia | — |
-| 14.7 | do zrobienia | — |
-| 14.8 | do zrobienia | — |
-| 14.9 | do zrobienia | — |
-| 15.1 | do zrobienia | — |
-| 15.2 | do zrobienia | — |
-| 15.3 | do zrobienia | — |
-| 15.4 | do zrobienia | — |
-| 15.5 | do zrobienia | — |
-| 15.6 | do zrobienia | — |
-| 15.7 | do zrobienia | — |
-| 16.1 | do zrobienia | — |
-| 16.2 | do zrobienia | — |
-| 16.3 | do zrobienia | — |
-| 16.4 | do zrobienia | — |
-| 16.5 | do zrobienia | — |
-| 16.6 | do zrobienia | — |
-| 16.7 | do zrobienia | — |
-| 16.8 | do zrobienia | — |
-| 17.1 | do zrobienia | — |
-| 17.10 | do zrobienia | — |
-| 17.11 | do zrobienia | — |
-| 17.12 | do zrobienia | — |
-| 17.13 | do zrobienia | — |
-| 17.14 | do zrobienia | — |
-| 17.15 | do zrobienia | — |
-| 17.16 | do zrobienia | — |
-| 17.2 | do zrobienia | — |
-| 17.3 | do zrobienia | — |
-| 17.4 | do zrobienia | — |
-| 17.5 | do zrobienia | — |
-| 17.6 | do zrobienia | — |
-| 17.7 | do zrobienia | — |
-| 17.8 | do zrobienia | — |
+| 10.7 | zrobione przez I-2l | src/lib/detectLag.ts |
+| 10.9 | odłożone po 1.0 | ślad węglowy; rekomendacja 27.09, bez sprzeciwu |
+| 11.5 | zostaje | D-27 (kontrast). III-12 zrobione: docs/handover/III12_LISTA_ETAP_III.md |
+| 11.6 | do zrobienia | brak dowodu I-8 i LOAD-1 (hash albo liczby w POSTEP, bez pliku testu) |
+| 11.8 | zrobione przez I-4 i DOC-ROLE | docs/handover/instrukcje/HHL.md |
+| 12.1 | historia | inwentarz wdrożenia 23.09, nie zadanie |
+| 12.10 | historia | inwentarz wdrożenia 23.09, nie zadanie |
+| 12.11 | historia | inwentarz wdrożenia 23.09, nie zadanie |
+| 12.12 | historia | inwentarz wdrożenia 23.09, nie zadanie |
+| 12.13 | zastąpione | zero danych demo, B-1 |
+| 12.14 | historia | inwentarz wdrożenia 23.09, nie zadanie |
+| 12.2 | historia | inwentarz wdrożenia 23.09, nie zadanie |
+| 12.3 | historia | inwentarz wdrożenia 23.09, nie zadanie |
+| 12.4 | historia | inwentarz wdrożenia 23.09, nie zadanie |
+| 12.5 | zastąpione | faktoring poza zakresem 1.0 |
+| 12.6 | historia | inwentarz wdrożenia 23.09, nie zadanie |
+| 12.7 | historia | inwentarz wdrożenia 23.09, nie zadanie |
+| 12.8 | historia | inwentarz wdrożenia 23.09, nie zadanie |
+| 12.9 | historia | inwentarz wdrożenia 23.09, nie zadanie |
+| 13.1 | do zrobienia | brak dowodu D2 (nie ma wiersza z plikiem) |
+| 13.10 | do zrobienia | brak dowodu D12 i I-2h (DONE albo hash, bez pliku) |
+| 13.11 | do zrobienia | brak dowodu D11 (w rejestrze tylko DONE, bez pliku) |
+| 13.12 | do zrobienia | brak dowodu D6 i SEC-1 (w rejestrze tylko DONE, bez pliku) |
+| 13.13 | do zrobienia | brak dowodu M4 (w rejestrze tylko DONE, bez pliku) |
+| 13.14 | zrobione przez M1 i I-31 | tests/money.test.ts; supabase/migrations/0101_i31_sefs_week.sql |
+| 13.15 | do zrobienia | brak dowodu D13 (w rejestrze tylko DONE, bez pliku) |
+| 13.16 | do zrobienia | brak dowodu D15 (podział paczki; w rejestrze tylko DONE, bez pliku) |
+| 13.2 | do zrobienia | brak dowodu D2 (nie ma wiersza z plikiem) |
+| 13.3 | do zrobienia | brak dowodu D9 (nie ma wiersza z plikiem) |
+| 13.4 | zastąpione | zastąpione funkcją Edge (II-6, H-2); supabase/functions/road-se/index.ts |
+| 13.5 | zastąpione | demo usunięte (I-0, B-1) |
+| 13.6 | zastąpione | demo usunięte (I-0, B-1) |
+| 13.7 | zrobione przez D10 | src/lib/money/engine.ts (formatMoney) |
+| 13.8 | do zrobienia | brak dowodu F2.6 i D17 (w rejestrze tylko DONE, bez pliku) |
+| 13.9 | do zrobienia | brak dowodu F2.6 i D17 (w rejestrze tylko DONE, bez pliku) |
+| 14.1 | historia | ustalenia etapu 0; repozytorium, CI i klucze w etapach 0.5–3 i II-6 |
+| 14.10 | historia | ustalenia etapu 0; repozytorium, CI i klucze w etapach 0.5–3 i II-6 |
+| 14.11 | historia | ustalenia etapu 0; repozytorium, CI i klucze w etapach 0.5–3 i II-6 |
+| 14.2 | historia | ustalenia etapu 0; repozytorium, CI i klucze w etapach 0.5–3 i II-6 |
+| 14.3 | historia | ustalenia etapu 0; repozytorium, CI i klucze w etapach 0.5–3 i II-6 |
+| 14.4 | historia | ustalenia etapu 0; repozytorium, CI i klucze w etapach 0.5–3 i II-6 |
+| 14.5 | historia | ustalenia etapu 0; repozytorium, CI i klucze w etapach 0.5–3 i II-6 |
+| 14.6 | historia | ustalenia etapu 0; repozytorium, CI i klucze w etapach 0.5–3 i II-6 |
+| 14.7 | historia | ustalenia etapu 0; repozytorium, CI i klucze w etapach 0.5–3 i II-6 |
+| 14.8 | historia | ustalenia etapu 0; repozytorium, CI i klucze w etapach 0.5–3 i II-6 |
+| 14.9 | historia | ustalenia etapu 0; repozytorium, CI i klucze w etapach 0.5–3 i II-6 |
+| 15.1 | historia | zrobione 23.09 (tag baseline-2026-09-23) |
+| 15.2 | historia | zrobione 23.09 (tag baseline-2026-09-23) |
+| 15.3 | historia | zrobione 23.09 (tag baseline-2026-09-23) |
+| 15.4 | historia | zrobione 23.09 (tag baseline-2026-09-23) |
+| 15.5 | historia | zrobione 23.09 (tag baseline-2026-09-23) |
+| 15.6 | historia | zrobione 23.09 (tag baseline-2026-09-23) |
+| 15.7 | historia | zrobione 23.09 (tag baseline-2026-09-23) |
+| 16.1 | do zrobienia | brak dowodu D-24 (drugie przejście: do zrobienia, bez pliku) |
+| 16.2 | zastąpione | motyw rozstrzyga Q-9 (tryb jasny, część B) |
+| 16.3 | zastąpione | zastąpione przez I-18 i I-2a |
+| 16.4 | do zrobienia | brak dowodu usunięcia cen z DOM; tests/xlsx-export-roles.test.ts dotyczy eksportu XLSX, nie DOM |
+| 16.5 | historia | ustalenie etapu, nie zadanie |
+| 16.6 | historia | ustalenie etapu, nie zadanie |
+| 16.7 | historia | ustalenie etapu, nie zadanie |
+| 16.8 | historia | ustalenie etapu, nie zadanie |
+| 17.1 | do zrobienia | brak dowodu D23 i D23-S (D23 nie jest wierszem; D23-S tylko DONE) |
+| 17.10 | zrobione przez P1-FONT | public/fonts/barlow-400-latin.woff2 |
+| 17.11 | zrobione przez II-7 | supabase/migrations/0122_ii7_eta_osm_corridor.sql |
+| 17.12 | zrobione przez H-2 | supabase/functions/road-se/index.ts |
+| 17.13 | zostaje | sprawdzenie współrzędnych. Migracja 0017: Gdańsk 54.40372, 18.68130; Nynäshamn 58.90453, 17.95621. Brak potwierdzenia na mapie. Bez budowy. |
+| 17.14 | duplikat | duplikat II-3 |
+| 17.15 | historia | ustalenie etapu, nie zadanie |
+| 17.16 | historia | ustalenie etapu, nie zadanie |
+| 17.2 | zastąpione | pamięć przeglądarki zastąpiona bazą; aplikacja kierowcy ukryta (D-38, D-79) |
+| 17.3 | do zrobienia | brak dowodu P0.2 (hash w POSTEP, bez pliku kanonu) |
+| 17.4 | do zrobienia | brak dowodu O1 (w rejestrze tylko DONE, bez pliku) |
+| 17.5 | zastąpione | pamięć przeglądarki zastąpiona bazą; aplikacja kierowcy ukryta (D-38, D-79) |
+| 17.6 | zastąpione | pozycje tylko z telematyki (D-36); link kierowcy: DRV-CLOSE |
+| 17.7 | zostaje | CLEAN-MAPLIBRE (P3). 04.10: brak maplibre w package.json. Pozycja w planie, bez wykonania. |
+| 17.8 | do zrobienia | brak dowodu 0.3 (opis bramy, bez pliku wyniku) |
 | 17.9 | zrobione | tests/visual-states.spec.ts |
-| 2.7 | do zrobienia | — |
-| 2.8 | do zrobienia | — |
-| 23.2 | do zrobienia | — |
-| 23.3 | do zrobienia | — |
-| 23.4 | do zrobienia | — |
-| 23.5 | do zrobienia | — |
-| 23.6 | do zrobienia | — |
-| 26.2 | do zrobienia | — |
-| 26.3 | do zrobienia | — |
-| 26.4 | do zrobienia | — |
-| 28.2 | do zrobienia | — |
-| 28.3 | do zrobienia | — |
-| 28.4 | do zrobienia | — |
-| 28.5 | do zrobienia | — |
-| 3.10 | do zrobienia | — |
-| 3.8 | do zrobienia | — |
-| 32.1 | do zrobienia | — |
-| 32.2 | do zrobienia | — |
-| 32.3 | do zrobienia | — |
-| 32.4 | do zrobienia | — |
-| 32.5 | do zrobienia | — |
-| 33.1 | do zrobienia | — |
-| 33.2 | do zrobienia | — |
-| 33.3 | do zrobienia | — |
-| 33.4 | do zrobienia | — |
-| 33.5 | do zrobienia | — |
-| 33.6 | do zrobienia | — |
+| 2.7 | zrobione przez I-7 | supabase/migrations/0059_driver_retention.sql; dokumenty: D-3 otwarte |
+| 2.8 | zastąpione | zastąpione przez D-5 |
+| 23.2 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 23.3 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 23.4 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 23.5 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 23.6 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 26.2 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 26.3 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 26.4 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 28.2 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 28.3 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 28.4 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 28.5 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 3.10 | duplikat | duplikat II-10-E1, II-10-E2 |
+| 3.8 | duplikat | duplikat D-15 |
+| 32.1 | kryterium U-3-PALIWO | sprawdzić przy naprawie tygodnia paliwa; bez wykonania teraz |
+| 32.2 | kryterium U-3-PALIWO | sprawdzić przy naprawie tygodnia paliwa; bez wykonania teraz |
+| 32.3 | kryterium U-3-PALIWO | sprawdzić przy naprawie tygodnia paliwa; bez wykonania teraz |
+| 32.4 | kryterium U-3-PALIWO | sprawdzić przy naprawie tygodnia paliwa; bez wykonania teraz |
+| 32.5 | kryterium U-3-PALIWO | sprawdzić przy naprawie tygodnia paliwa; bez wykonania teraz |
+| 33.1 | kryterium U-3-PALIWO | sprawdzić przy naprawie tygodnia paliwa; bez wykonania teraz |
+| 33.2 | kryterium U-3-PALIWO | sprawdzić przy naprawie tygodnia paliwa; bez wykonania teraz |
+| 33.3 | kryterium U-3-PALIWO | sprawdzić przy naprawie tygodnia paliwa; bez wykonania teraz |
+| 33.4 | kryterium U-3-PALIWO | sprawdzić przy naprawie tygodnia paliwa; bez wykonania teraz |
+| 33.5 | kryterium U-3-PALIWO | sprawdzić przy naprawie tygodnia paliwa; bez wykonania teraz |
+| 33.6 | zrobione przez M11 | tests/money-m11.test.ts (U-12) |
 | 4.3 | zrobione | supabase/migrations/0073_resource_deadlines.sql |
 | 4.5 | zrobione | supabase/migrations/0087_escort_vehicles.sql |
-| 5.1 | do zrobienia | — |
+| 5.1 | duplikat | duplikat TELM-2 |
 | 5.10 | zrobione | src/lib/mapDeclutter.ts |
 | 5.12 | zrobione | supabase/migrations/0051_eta_v1.sql |
 | 5.13 | zrobione | supabase/migrations/0088_load_track.sql |
-| 5.2 | do zrobienia | — |
-| 5.3 | do zrobienia | — |
-| ETAP_I/I-0 | do zrobienia | — |
-| ETAP_I/I-1 | do zrobienia | — |
-| ETAP_I/I-2 | do zrobienia | — |
-| ETAP_I/I-3 | do zrobienia | — |
-| ETAP_I/I-4 | do zrobienia | — |
-| ETAP_I/I-5 | do zrobienia | — |
-| ETAP_I/I-6 | do zrobienia | — |
-| ETAP_I/I-7 | do zrobienia | — |
-| ETAP_I/I-8 | do zrobienia | — |
-| ETAP_I/I-9 | do zrobienia | — |
+| 5.2 | duplikat | duplikat TELM-2 |
+| 5.3 | duplikat | duplikat TELM-2 |
+| ETAP_I/I-0 | duplikat | duplikat I-0 |
+| ETAP_I/I-1 | duplikat | duplikat I-1 |
+| ETAP_I/I-2 | duplikat | duplikat I-2 |
+| ETAP_I/I-3 | duplikat | duplikat I-3 |
+| ETAP_I/I-4 | duplikat | duplikat I-4 |
+| ETAP_I/I-5 | duplikat | duplikat I-5 |
+| ETAP_I/I-6 | duplikat | duplikat I-6 |
+| ETAP_I/I-7 | duplikat | duplikat I-7 |
+| ETAP_I/I-8 | duplikat | duplikat I-8 |
+| ETAP_I/I-9 | duplikat | duplikat I-9 |
 | 6.2 | zrobione | supabase/migrations/0078_doc_requirements_versions.sql |
 | 6.4 | zrobione | supabase/migrations/0086_permit_form.sql |
 | 6.5 | zrobione | supabase/migrations/0081_permit_validator.sql |
 | 6.6 | zrobione | supabase/migrations/0097_insurance_expiry.sql |
-| 6.8 | do zrobienia | — |
-| 6.9 | do zrobienia | — |
-| 7.1 | do zrobienia | — |
+| 6.8 | zrobione przez I-2k | src/lib/docWeek.ts; tests/i2k-doc-week.test.ts |
+| 6.9 | odłożone po 1.0 | e-CMR; rekomendacja 27.09, bez sprzeciwu |
+| 7.1 | zrobione przez I-19 i I-30 | supabase/migrations/0065_rate_card_form.sql; 0100_i30_symbol_rate.sql |
 | 7.10 | zrobione | supabase/migrations/0079_invoice_dispute_path.sql |
-| 7.11 | do zrobienia | — |
-| 7.3 | do zrobienia | — |
-| 7.5 | do zrobienia | — |
-| 8.1 | do zrobienia | — |
-| 8.10 | do zrobienia | — |
-| 8.2 | do zrobienia | — |
-| 8.5 | do zrobienia | — |
-| 8.6 | do zrobienia | — |
-| 9.10 | do zrobienia | — |
-| 9.6 | do zrobienia | — |
-| 9.9 | do zrobienia | — |
-| 20.1 | do zrobienia | — |
-| 20.10 | do zrobienia | — |
-| 20.2 | do zrobienia | — |
-| 20.3 | do zrobienia | — |
-| 20.4 | do zrobienia | — |
-| 20.5 | do zrobienia | — |
-| 20.6 | do zrobienia | — |
-| 20.7 | do zrobienia | — |
-| 20.8 | do zrobienia | — |
-| 20.9 | do zrobienia | — |
-| DECPOW-§0 | do zrobienia | — |
-| DECPOW-§1 | do zrobienia | — |
-| DECPOW-§2 | do zrobienia | — |
-| DECPOW-§3 | do zrobienia | — |
-| DECPOW-§4 | do zrobienia | — |
-| DECPOW-§5 | do zrobienia | — |
-| DECPOW-§6 | do zrobienia | — |
-| F2.4. | do zrobienia | — |
-| P0.1. | do zrobienia | — |
-| O3 | do zrobienia | — |
-| O5 | do zrobienia | — |
+| 7.11 | zastąpione | KSeF poza Watch Tower na stałe (27.09) |
+| 7.3 | zrobione przez I-2f i I-31 | supabase/migrations/0052_sefs_form.sql; 0101_i31_sefs_week.sql |
+| 7.5 | zrobione przez M3 | supabase/migrations/0011_fx_nbp.sql; D-14 otwarte |
+| 8.1 | zrobione przez II-8 | supabase/migrations/0124_ii8_marine_weather.sql |
+| 8.10 | duplikat | duplikat II-2 |
+| 8.2 | zrobione przez II-5 | tests/integrations.test.ts |
+| 8.5 | zrobione przez H-2 | supabase/functions/road-se/index.ts |
+| 8.6 | zostaje | H-2-PL: utrudnienia PL z HERE. road-pl to KPD, nie HERE. Bez wykonania. |
+| 9.10 | odłożone po 1.0 | kalendarz; rekomendacja 27.09, bez sprzeciwu |
+| 9.6 | zrobione przez I-3 i I-3-APK | supabase/migrations/0067_sms_gateway_base.sql; 0116_sms_zone_triggers_on.sql |
+| 9.9 | odłożone po 1.0 | Slack/Teams |
+| 20.1 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 20.10 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 20.2 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 20.3 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 20.4 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 20.5 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 20.6 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 20.7 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 20.8 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| 20.9 | historia | sprawa etapu C albo fali 1; CI na GitHub zastąpiła brama lokalna (03.10) |
+| DECPOW-§0 | historia | spis tego, co przestaje obowiązywać |
+| DECPOW-§1 | zrobione przez TEL-1 | supabase/migrations/0111_tel1_national_phone.sql |
+| DECPOW-§2 | zrobione przez DEC-2 | supabase/migrations/0102_dec2_decision_center.sql |
+| DECPOW-§3 | zrobione przez DEC-3 | supabase/migrations/0104_dec3_decision_notify.sql |
+| DECPOW-§4 | zrobione przez DEC-4 | supabase/migrations/0105_dec4_matrix_admin.sql |
+| DECPOW-§5 | zrobione przez DEC-5 | supabase/migrations/0106_dec5_sms_zones.sql |
+| DECPOW-§6 | zrobione przez DEC-6 | supabase/migrations/0107_dec6_ops_thresholds.sql |
+| F2.4. | duplikat | duplikat F2.4 |
+| P0.1. | duplikat | duplikat P0.1 |
+| O3 | zastąpione | zastąpione przez R-3 |
+| O5 | duplikat | duplikat R-4 |
 | T1 | do zrobienia | — |
 | T2 | do zrobienia | — |
 | T3 | do zrobienia | — |
-| D-77 | do zrobienia | — |
-| D-78 | do zrobienia | — |
-| D-79 | do zrobienia | — |
-| D-80 | do zrobienia | — |
-| D-81 | do zrobienia | — |
-| D-82 | do zrobienia | — |
-| D-83 | do zrobienia | — |
-| D-84 | do zrobienia | — |
-| D-85 | do zrobienia | — |
-| H-10 | do zrobienia | — |
-| H-12 | do zrobienia | — |
-| H-7 | do zrobienia | — |
-| H-8 | do zrobienia | — |
-| POPRAWKI-A1 | do zrobienia | — |
-| POPRAWKI-A2 | do zrobienia | — |
-| POPRAWKI-B-1 | do zrobienia | — |
-| POPRAWKI-B-10 | do zrobienia | — |
-| POPRAWKI-B-10a | do zrobienia | — |
-| POPRAWKI-B-10b | do zrobienia | — |
-| POPRAWKI-B-10c | do zrobienia | — |
-| POPRAWKI-B-10d | do zrobienia | — |
-| POPRAWKI-B-10e | do zrobienia | — |
-| POPRAWKI-B-10f | do zrobienia | — |
-| POPRAWKI-B-10g | do zrobienia | — |
-| POPRAWKI-B-11 | do zrobienia | — |
-| POPRAWKI-B-12 | do zrobienia | — |
-| POPRAWKI-B-13 | do zrobienia | — |
-| POPRAWKI-B-14 | do zrobienia | — |
-| POPRAWKI-B-15 | do zrobienia | — |
-| POPRAWKI-B-16 | do zrobienia | — |
-| POPRAWKI-B-17 | do zrobienia | — |
-| POPRAWKI-B-18 | do zrobienia | — |
-| POPRAWKI-B-19 | do zrobienia | — |
-| POPRAWKI-B-2 | do zrobienia | — |
-| POPRAWKI-B-2a | do zrobienia | — |
-| POPRAWKI-B-2b | zrobione | tests/integrations.test.ts |
-| POPRAWKI-B-2c | do zrobienia | — |
-| POPRAWKI-B-3 | do zrobienia | — |
-| POPRAWKI-B-3a | do zrobienia | — |
-| POPRAWKI-B-4 | do zrobienia | — |
-| POPRAWKI-B-4a | do zrobienia | — |
-| POPRAWKI-B-4b | do zrobienia | — |
-| POPRAWKI-B-5 | do zrobienia | — |
-| POPRAWKI-B-6 | do zrobienia | — |
-| POPRAWKI-B-6a | do zrobienia | — |
-| POPRAWKI-B-6b | do zrobienia | — |
-| POPRAWKI-B-6c | do zrobienia | — |
-| POPRAWKI-B-6d | do zrobienia | — |
-| POPRAWKI-B-6e | do zrobienia | — |
-| POPRAWKI-B-6f | do zrobienia | — |
-| POPRAWKI-B-6g | do zrobienia | — |
-| POPRAWKI-B-6h | do zrobienia | — |
-| POPRAWKI-B-6i | do zrobienia | — |
-| POPRAWKI-B-7 | do zrobienia | — |
-| POPRAWKI-B-7a | do zrobienia | — |
-| POPRAWKI-B-7b | do zrobienia | — |
-| POPRAWKI-B-7c | do zrobienia | — |
-| POPRAWKI-B-8 | do zrobienia | — |
-| POPRAWKI-B-8a | do zrobienia | — |
-| POPRAWKI-B-9 | do zrobienia | — |
-| POPRAWKI-Q-1 | do zrobienia | — |
-| POPRAWKI-Q-10 | do zrobienia | — |
-| POPRAWKI-Q-11 | do zrobienia | — |
-| POPRAWKI-Q-12 | do zrobienia | — |
-| POPRAWKI-Q-13 | do zrobienia | — |
-| POPRAWKI-Q-14 | do zrobienia | — |
-| POPRAWKI-Q-15 | do zrobienia | — |
-| POPRAWKI-Q-16 | do zrobienia | — |
-| POPRAWKI-Q-17 | do zrobienia | — |
-| POPRAWKI-Q-18 | do zrobienia | — |
-| POPRAWKI-Q-19 | do zrobienia | — |
-| POPRAWKI-Q-2 | do zrobienia | — |
-| POPRAWKI-Q-3 | do zrobienia | — |
-| POPRAWKI-Q-4 | do zrobienia | — |
-| POPRAWKI-Q-5 | do zrobienia | — |
-| POPRAWKI-Q-6 | do zrobienia | — |
-| POPRAWKI-Q-7 | do zrobienia | — |
-| POPRAWKI-Q-8 | do zrobienia | — |
-| POPRAWKI-Q-9 | do zrobienia | — |
-| POPRAWKI-D | do zrobienia | — |
-| SCX-§0 | do zrobienia | — |
-| SCX-§1 | do zrobienia | — |
-| SCX-§10 | do zrobienia | — |
-| SCX-§11 | do zrobienia | — |
-| SCX-§12 | do zrobienia | — |
-| SCX-§14 | do zrobienia | — |
-| SCX-§15 | do zrobienia | — |
-| SCX-§3 | do zrobienia | — |
-| SCX-§4 | do zrobienia | — |
-| SCX-§4a | do zrobienia | — |
-| SCX-§5 | do zrobienia | — |
-| SCX-§6 | do zrobienia | — |
-| SCX-§7 | do zrobienia | — |
-| SCX-§8 | do zrobienia | — |
-| SCX-§9 | do zrobienia | — |
+| D-77 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-78 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-79 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-80 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-81 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-82 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-83 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-84 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| D-85 | duplikat | duplikat sekcji 1; praca jest w pozycji planu |
+| H-10 | zostaje | HERE i ETA, po etapie 2 |
+| H-12 | zostaje | HERE i ETA, po etapie 2 |
+| H-7 | zostaje | HERE i ETA, po etapie 2 |
+| H-8 | zostaje | HERE i ETA, po etapie 2 |
+| POPRAWKI-A1 | historia | przejęcie 02.10 |
+| POPRAWKI-A2 | historia | zasady pracy; CodeRabbit i Aikido zastąpione przez U-43 |
+| POPRAWKI-B-1 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-10 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-10a | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-10b | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-10c | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-10d | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-10e | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-10f | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-10g | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-11 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-12 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-13 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-14 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-15 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-16 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-17 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-18 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-19 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-2 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-2a | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-2b | duplikat | duplikat ID z PLAN.md (część B); wykonanie B-2b: tests/integrations.test.ts |
+| POPRAWKI-B-2c | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-3 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-3a | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-4 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-4a | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-4b | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-5 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-6 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-6a | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-6b | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-6c | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-6d | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-6e | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-6f | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-6g | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-6h | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-6i | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-7 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-7a | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-7b | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-7c | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-8 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-8a | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-B-9 | duplikat | duplikat ID z PLAN.md (część B) |
+| POPRAWKI-Q-1 | duplikat | duplikat POPRAWKI-B-1 |
+| POPRAWKI-Q-10 | duplikat | duplikat POPRAWKI-B-10 |
+| POPRAWKI-Q-11 | duplikat | duplikat POPRAWKI-B-11 |
+| POPRAWKI-Q-12 | duplikat | duplikat POPRAWKI-B-12 |
+| POPRAWKI-Q-13 | duplikat | duplikat POPRAWKI-B-13 |
+| POPRAWKI-Q-14 | duplikat | duplikat POPRAWKI-B-14 |
+| POPRAWKI-Q-15 | duplikat | duplikat POPRAWKI-B-15 |
+| POPRAWKI-Q-16 | duplikat | duplikat POPRAWKI-B-16 |
+| POPRAWKI-Q-17 | duplikat | duplikat POPRAWKI-B-17 |
+| POPRAWKI-Q-18 | duplikat | duplikat POPRAWKI-B-18 |
+| POPRAWKI-Q-19 | duplikat | duplikat POPRAWKI-B-19 |
+| POPRAWKI-Q-2 | duplikat | duplikat POPRAWKI-B-2 |
+| POPRAWKI-Q-3 | duplikat | duplikat POPRAWKI-B-3 |
+| POPRAWKI-Q-4 | duplikat | duplikat POPRAWKI-B-4 |
+| POPRAWKI-Q-5 | duplikat | duplikat POPRAWKI-B-5 |
+| POPRAWKI-Q-6 | duplikat | duplikat POPRAWKI-B-6 |
+| POPRAWKI-Q-7 | duplikat | duplikat POPRAWKI-B-7 |
+| POPRAWKI-Q-8 | duplikat | duplikat POPRAWKI-B-8 |
+| POPRAWKI-Q-9 | duplikat | duplikat POPRAWKI-B-9 |
+| POPRAWKI-D | duplikat | duplikat D-LATER |
+| SCX-§0 | historia | spis |
+| SCX-§1 | zrobione przez AUTH-1 | supabase/migrations/0099_auth_password_login.sql |
+| SCX-§10 | zrobione przez ADM-10 | supabase/migrations/0117_adm10_impersonate.sql |
+| SCX-§11 | zrobione przez HIST-11 | supabase/migrations/0118_hist11_full_audit.sql |
+| SCX-§12 | duplikat | duplikat UI-12 |
+| SCX-§14 | zrobione przez RESP-14 | tests/resp14-phone.spec.ts |
+| SCX-§15 | zrobione przez BRAND-15 | public/brand/manifest.webmanifest |
+| SCX-§3 | zrobione przez STENA-3 | supabase/migrations/0119_stena3_dictionaries.sql |
+| SCX-§4 | zrobione przez AWIZ-4 | src/components/drawer/AwizacjaModal.tsx |
+| SCX-§4a | duplikat | duplikat HHL-4a |
+| SCX-§5 | zrobione przez DEC-5 | supabase/migrations/0106_dec5_sms_zones.sql; 0116_sms_zone_triggers_on.sql. SMS 1 h przed załadunkiem zastąpione 29.09 strefami. SMS-KSH-1H nie dodane. |
+| SCX-§6 | zrobione przez DATY-67 | supabase/migrations/0113_daty67_ksh_file_dates.sql |
+| SCX-§7 | zrobione przez DATY-67 | supabase/migrations/0113_daty67_ksh_file_dates.sql |
+| SCX-§8 | zrobione przez OPL-8 | supabase/migrations/0115_opl8_manual_fees.sql |
+| SCX-§9 | duplikat | duplikat FAK-9 |
+
+Pozycje spoza tabeli NIEZNANY, status z triage:
+
+| ID | Status | Dowód |
+|---|---|---|
+| SCX-§2 | duplikat | duplikat TELM-2; czeka na dane |
+| SCX-§13 | duplikat | duplikat ZEZW-13; czeka na dane |
+
 ### Powtórzenia i pozycje bez sensu — do decyzji koordynatora
 
 | Pozycja | Z czym się kłóci albo dubluje | Dlaczego |
@@ -1699,6 +1707,104 @@ Drugie szukanie dowodów, 04.10 wieczór. „zrobione” tylko przy istniejącym
 - D-66–D-76: nie dopisane. W `ZLECENIE_POPRAWKI_02_10.md` nie ma tych numerów.
 - U-8: zamknięte 04.10. Fakturę SCX widzą HHL i SCX (wystawca); KSH nie widzi. Kod bez zmian.
 
+
+## 6. USTALENIA Z ROZMÓW (U-1–U-50)
+
+Przywrócone 04.10 z `docs/handover/USTALENIA_Z_ROZMOW.md` (commit `8d28b6a`, PR #39). W historii git tej sekcji nie było wewnątrz `REJESTR_CALOSCI.md`. Numer 5 jest zajęty przez drugie przejście, dlatego sekcja ma numer 6. Treść bez zmian.
+
+
+Źródło: pełne zapisy rozmów właściciela z koordynatorem (5 sesji). Wypisane
+są wyłącznie słowa właściciela, nie propozycje koordynatora. Cytaty są
+skrócone, a sens zostaje bez zmian. Kolumna „Stan” mówi, które ustalenie wygrywa,
+gdy późniejsze zmienia wcześniejsze. Zasada jest stała: nowsza wypowiedź
+właściciela wygrywa ze starszą.
+
+Zadanie dla wykonawcy: dla każdego U-n znajdź zapis w repozytorium (plik
+i sekcja). Jeśli go nie ma, dopisz U-n do `REJESTR_CALOSCI.md` w nowej
+sekcji „5. USTALENIA Z ROZMÓW”. Jeśli zapis w repozytorium jest inny niż
+tutaj, ustalenie trafia do sekcji 3 i wygrywa wersja z tej listy.
+
+## Pieniądze i faktury
+
+| ID | Data | Słowa właściciela | Stan |
+|---|---|---|---|
+| U-1 | 24.09 | Każda ze stron ma dokładnie ten sam mechanizm opłaty paliwowej, opisany w plikach. 28.09: „KSH ma identyczną opłatę paliwową” | obowiązuje |
+| U-2 | 24.09 | Faktura jest wystawiana z transportów zrealizowanych w danym tygodniu. Realizacja usługi to dostarczenie, czyli rozładunek | obowiązuje (wg L-10: UNLOADED z wyjazdu ze strefy, bez telematyki ręcznie) |
+| U-3 | 24.09 | Opłata paliwowa według daty realizacji usługi | **zastąpione** 29.09: „dzień opłaty paliwowej zgodny z mechanizmem BAF”, czyli D-34 (data załadunku) |
+| U-4 | 24.09 | Marża transportów niedostarczonych liczona od daty dostawy z harmonogramu. Faktury są nadrzędne i nadpisują wyliczenie | obowiązuje |
+| U-5 | 24.09 | Wszędzie EUR. Użytkownik może w swoich ustawieniach przełączyć walutę na PLN. Przy kursie podawać, z którego dnia jest | obowiązuje (wcześniejsze tego samego dnia „nigdzie PLN” zastąpione) |
+| U-6 | 24.09 | Każdy zrealizowany transport ma swój indywidualny kurs. Kurs NBP, tabela A, z dnia roboczego poprzedzającego rozładunek | obowiązuje (zgodne z D-43) |
+| U-7 | 24.09 | Termin płatności liczony od wystawienia: KSH 30 dni, SCX 35 dni | obowiązuje |
+| U-8 | 24.09 | Fakturę HHL widzi tylko KSH (i HHL). Fakturę SCX widzi tylko HHL. HHL widzi wszystkie | doprecyzowane 04.10: fakturę SCX widzą HHL i SCX (wystawca); KSH nie widzi. Wcześniejsze „tylko HHL” nie obowiązuje. |
+| U-9 | 24.09 | KSH ma moduł Faktury: tygodniowe faktury HHL z dokumentami potwierdzającymi transport, bez zdjęć i zezwoleń. KSH tam sprawdza faktury | obowiązuje |
+| U-10 | 24.09 | System liczy termin płatności każdej faktury i wysyła przypomnienia o braku płatności. Opłaconą fakturę oznacza tylko HHL (powtórzone 02.10) | obowiązuje |
+| U-11 | 24.09 | Faktury są wystawiane w systemach HHL i SCX i dołączane jako plik. HHL i SCX wybierają PLN albo EUR | obowiązuje |
+| U-12 | 24.09 | „Tak, chcę rozbitą marżę” | obowiązuje. **Sprawdź**: SCOPE §36.6 podaje „czeka na zgodę”. Zgoda jest z 24.09 |
+| U-13 | 24.09 | Rozliczenie GitHub Actions — zaparkowane | obowiązuje do odwołania |
+| U-14 | 28.09 | Ceny paliwa: SE ze strony okq8.se/foretag/priser, PL z hurtowych cen Orlen. VAT nie ma znaczenia, cenę bierzemy wprost ze strony | obowiązuje |
+| U-15 | 28.09 | Ładunki bez ceny wyceniamy tak, jakby miały wysokość 2,45 m | obowiązuje |
+| U-16 | 04.10 | Mechanizm czasu wolnego na załadunku i rozładunku oraz dopłaty był już ustalony (cennik) | obowiązuje: DWELL 6 h / 4 h, 75 EUR/h, 750 EUR/doba (0147) |
+
+## Transporty, harmonogram, SharePoint
+
+| ID | Data | Słowa właściciela | Stan |
+|---|---|---|---|
+| U-17 | 28.09 | „Gdy w rozmiarze masz Standard, a w przewoźniku NTG, te ładunki ma inna firma i nie dotykamy tych transportów. Interesują nas tylko te z wymiarami oraz HH.” 02.10: import miał nie dodawać typu STANDARD. 04.10: Standard = transporty NTG | **obowiązuje**. Klasa STANDARD z importu (I-1b) i stawka STANDARD w cenniku (I-12) są sprzeczne z tym ustaleniem. Zgłoś listę miejsc |
+| U-18 | 03.10 | Transporty Standard na produkcji właściciel zaimportował ręcznie, można je usunąć | obowiązuje (w ramach R-0) |
+| U-19 | 27.09 | Datę załadunku i rozładunku finalnie podaje KSH | obowiązuje (D-12) |
+| U-20 | 25.09 | Przewoźnik nie może zmieniać planowanych okien | obowiązuje |
+| U-21 | 28.09 | Konwój to liczba aut z kratownicami jadących tego samego dnia, a nie kratownice z dowolnym innym towarem | obowiązuje |
+| U-22 | 28.09 | Błędne daty kratownic od KSH zostają. Gdy KSH je poprawi, będzie to test, czy system wyłapuje zmianę i pokazuje, co się zmieniło | obowiązuje |
+| U-23 | 28.09 | SharePoint w obie strony: każda zmiana KSH aktualizuje Watch Tower z informacją, co i kiedy zmieniono, a Watch Tower uzupełnia plik | obowiązuje (część D, D-SP) |
+| U-24 | 27.09, 30.09 | Pliku SharePoint nie wolno zmieniać, bo to plik roboczy zespołów. Podczas testów nic nie może się z nim stać | obowiązuje |
+| U-25 | 29.09 | „Nr zlecenia” = numer SCX, „Nr zlecenia HHL” = numer HHL. SCX wpisuje swój numer w awizacji. HHL, także administrator, sam dodaje i edytuje numer HHL | obowiązuje (D-44). Numer HHL to pole HHL, a nie awizacja |
+| U-26 | 02.10 | Użytkownik HHL (nie administrator) nie może dodawać awizacji. Awizację dodaje Scandinavian Express | obowiązuje |
+| U-27 | 02.10 | Separator „ / ”. Znak „\|” tylko w Watch Tower i tylko po zaznaczeniu „Przepięcie” w awizacji SCX. SharePoint zawsze „ / ”. Brak drugiej wartości: „Kierowca Odbierający / ...” | obowiązuje (część C zlecenia z 02.10, tabela potwierdzona) |
+| U-28 | 01.10 | Numery telefonów zawsze bez kierunkowego | obowiązuje (D-60) |
+| U-29 | 28.09 | KSH na stałe widzi wszystkie dane kierowcy, auta i jego numer. Zgody RODO są od wszystkich stron, bezterminowo do wycofania. 02.10: RODO i komplet zgód załatwione | obowiązuje |
+
+## Statusy, ETA, trasa
+
+| ID | Data | Słowa właściciela | Stan |
+|---|---|---|---|
+| U-30 | 24.09 | Statusy zmieniają się z pozycji. Porty w PL i SE mają strefy. Gdy auto jest w strefie portu i nadchodzi godzina wypłynięcia przypisanego rejsu z rozkładu armatora, system sam ustawia status PROM | obowiązuje |
+| U-31 | 27.09 | Obsada jednoosobowa, odpoczynek na promie | obowiązuje (D-9, D-85) |
+| U-32 | 27.09 | Plan: 5 dni od podjęcia do dostawy | **zastąpione** 29.09 przez D-41 (4 dni, 5 przy ciężkiej pogodzie w SE) |
+| U-33 | 04.10 | ETA tylko z lokalizacji i GPS. Liczenie według planu porzucamy | obowiązuje (D-80) |
+| U-34 | 28.09 → 04.10 | Kolejność decyzji o trasach: 28.09 HERE, potem własny silnik z kalibracją uczącą się (D-28), 04.10 HERE do 100 USD/mies. (D-77, D-78) | obowiązuje D-77/D-78; własny silnik jako zapas |
+| U-35 | 04.10 | Wymiary zestawu dla każdego transportu podaje właściciel na etapie budowy. Kontrola trasy nie bierze niczego z dokumentów, a przewoźnik nie wprowadza wymiarów | obowiązuje (D-83). **Zastępuje** wcześniejsze z 04.10 „przewoźnik poda wymiary dla rodzaju transportu” oraz D-54 w tej części |
+| U-36 | 04.10 | H-9 likwidujemy | obowiązuje — oznacz H-9 jako usunięte |
+| U-37 | 04.10 | Opłaty drogowe nas nie interesują. Nic nie instalujemy, kierowcy nie mają żadnej aplikacji | obowiązuje (D-82, D-79) |
+| U-38 | 03.10 | Pozycje na mapie pochodziły ze starego, nieużywanego linku kierowcy, na którym właściciel udostępnił swój telefon | **sprawdź i zgłoś**: czy stary link kierowcy nadal przyjmuje pozycje (D-38, D-79). Nic nie zmieniaj bez zlecenia |
+
+## Narzędzia, koszty, sposób pracy
+
+| ID | Data | Słowa właściciela | Stan |
+|---|---|---|---|
+| U-39 | 26.09 | Vercel tylko na planie darmowym, nigdy Pro. „Wszystko za darmo” | obowiązuje. Wyjątek: HERE do 100 USD (D-78) |
+| U-40 | 04.10 | Resend bez płatnego planu | obowiązuje |
+| U-41 | 26.09 | Autoryzacja urządzenia z linku: użytkownicy rok, kierowcy 14 dni | **sprawdź**: od 29.09 logowanie hasłem (D-49), a aplikacja kierowcy jest ukryta (D-38). Podaj, ile dziś trwa sesja użytkownika |
+| U-42 | 27.09 | Domena tower.log-mar.pl | obowiązuje |
+| U-43 | 03.10 | CodeRabbit nie jest używany. Aikido zdjęte. Po zbudowaniu aplikacji testy OWASP | obowiązuje (SEC-OWASP). **Zastępuje** część A2 zlecenia z 02.10 (CodeRabbit, Aikido) |
+| U-44 | 04.10 | Na produkcję częściej niż raz dziennie | obowiązuje: wdrożenie po każdej zielonej bramie |
+| U-45 | 04.10 | Grok pracuje samodzielnie, bez proszenia o akceptację | obowiązuje. Wyjątki ustalone osobno: R-0 i wydatki wymagają pisemnej zgody |
+| U-46 | 02.10 | Poprawki dopisujemy do planu, bez skakania między zadaniami | obowiązuje |
+| U-47 | 02.10 | Zdjąć numery etapów 1–9 z górnego paska. Kreator stref z mapą | zrobione (L-11, L-12) |
+
+## Start produkcji
+
+| ID | Data | Słowa właściciela | Stan |
+|---|---|---|---|
+| U-48 | 04.10 | R-1: po ukończeniu pracy import harmonogramu z SharePoint jest prawdziwym startem produkcji. Wcześniej, po akceptacji właściciela, program ma być czysty | obowiązuje |
+| U-49 | 04.10 | R-0: znikają tylko transporty i to, co z nimi związane. Reszta zostaje | obowiązuje |
+| U-50 | 02.10 | Użytkowników właściciel dodaje sam w programie | obowiązuje (R-2) |
+
+## Uwaga o D-66–D-76
+
+Numery D-66–D-76 to propozycje koordynatora z 02.10, wycofane tego samego
+dnia na polecenie właściciela („bez domysłów i interpretacji”). Nie są
+decyzjami. Obowiązują słowa właściciela z części B i C pliku
+`ZLECENIE_POPRAWKI_02_10.md`. Status w rejestrze: „numery nieużyte”.
 ## Liczniki
 
 - Decyzje D-1…D-85 razem: 85
@@ -1713,3 +1819,6 @@ Drugie szukanie dowodów, 04.10 wieczór. „zrobione” tylko przy istniejącym
 - Z sekcji 4 przypisane do etapu albo „już w PLAN”: 107
 - Z sekcji 4 „do decyzji koordynatora”: 308
 - Powtórzenia i pozycje bez sensu (lista w sekcji 5): 66
+- Triage 04.10: statusy z `TRIAGE_REJESTRU.md` wpisane w tabeli drugiego przejścia. „zrobione przez X” tylko z plikiem, migracją albo testem.
+- U-1–U-50: sekcja 6, treść z `USTALENIA_Z_ROZMOW.md` (PR #39), nie z pamięci.
+- SMS-KSH-1H: nie dodane. SCX-§5 spełnione strefami (0106, 0116), nie timerem 1 h.
