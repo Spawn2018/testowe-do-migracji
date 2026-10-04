@@ -261,7 +261,13 @@ const pl: Dict = {
   h1_set: 'Zestaw',
   h1_no_here: 'Bez danych o drodze. Zostaje dotychczasowe wyliczenie.',
   h1_tile: 'HERE',
-  h1_tile_body: 'Kontrola trasy wyłączona. Zapytań w tym miesiącu: {n}. Szacunek kosztu: {usd} USD z budżetu 100 USD.',
+  h1_tile_body: 'Kontrola trasy wyłączona. Zapytań HERE w tym miesiącu: {n}. Szacunek kosztu: {usd} USD z budżetu 100 USD.',
+  h3_title: 'Przeszkody wzdłuż korytarza',
+  h3_off: 'Przeszkody wzdłuż korytarza są wyłączone. Włączą się, gdy właściciel poda wymiary zestawu. Nie ma listy przeszkód.',
+  h3_none: 'Brak danych',
+  h3_clear: 'Brak przeszkód dla wymiarów tego transportu.',
+  h3_obstacle: 'Przeszkoda',
+  h3_more: 'Pokazano 200 z {n}.',
 };
 
 const en: Dict = {
@@ -527,7 +533,13 @@ const en: Dict = {
   h1_set: 'Vehicle',
   h1_no_here: 'No road data. The existing calculation stays.',
   h1_tile: 'HERE',
-  h1_tile_body: 'Route check is off. Requests this month: {n}. Estimated cost: {usd} USD of a 100 USD budget.',
+  h1_tile_body: 'Route check is off. HERE requests this month: {n}. Estimated cost: {usd} USD of a 100 USD budget.',
+  h3_title: 'Obstacles along the corridor',
+  h3_off: 'Corridor obstacles are off. They stay off until the owner provides the vehicle dimensions. There is no obstacle list.',
+  h3_none: 'No data',
+  h3_clear: 'No obstacles for this vehicle\'s dimensions.',
+  h3_obstacle: 'Obstacle',
+  h3_more: 'Showing 200 of {n}.',
 };
 
 const sv: Dict = {
@@ -784,7 +796,13 @@ const sv: Dict = {
   h1_set: 'Fordon',
   h1_no_here: 'Inga vägdata. Den befintliga beräkningen står kvar.',
   h1_tile: 'HERE',
-  h1_tile_body: 'Rutkontrollen är av. Förfrågningar denna månad: {n}. Uppskattad kostnad: {usd} USD av budgeten 100 USD.',
+  h1_tile_body: 'Rutkontrollen är av. HERE-förfrågningar denna månad: {n}. Uppskattad kostnad: {usd} USD av budgeten 100 USD.',
+  h3_title: 'Hinder längs korridoren',
+  h3_off: 'Hinder längs korridoren är av. De förblir av tills ägaren anger fordonets mått. Det finns ingen lista med hinder.',
+  h3_none: 'Inga data',
+  h3_clear: 'Inga hinder för det här fordonets mått.',
+  h3_obstacle: 'Hinder',
+  h3_more: 'Visar 200 av {n}.',
 };
 
 /** PL-T (ANEKS 3 §3) — pełne słowniki do testu pisowni. */

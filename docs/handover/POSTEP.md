@@ -1765,3 +1765,7 @@ Propozycja H-4 z limitem km/h w Opcjach jest nieaktualna. Decyzja D-85: ETA w pe
 ## 2026-10-04 21:40 (czas warszawski) — H-1 zbudowane, wyłączone
 
 Kontrola trasy jest w kodzie i zostaje wyłączona. `security_flags.H1_ROUTE_CHECK` jest false. Nie ma crona i nic na produkcji nie woła HERE dla tej kontroli. Puste wymiary nie są uzupełniane wymiarami przykładowymi z H-0. Komunikat o limicie wysokości województwa to „wymaga zezwolenia”, nie przeszkoda. Ryzyko `ROUTE_OBSTACLE` powstaje tylko dla wiaduktu, mostu albo tunelu z miejscem i tylko gdy kontrola jest włączona. H-2, H-3 i część B nie są ruszane. R-0 i R-1 bez zmian.
+
+## 2026-10-04 — H-3 przeszkody wzdłuż korytarza, wyłączone
+
+Katalog ograniczeń dla ciężarówek w pasie 3 km wzdłuż korytarza jest w kodzie i zostaje wyłączony. `security_flags.H3_CORRIDOR_OBSTACLES` jest false. Nie ma crona i nic na produkcji nie woła HERE dla tego katalogu. Puste wymiary nie są uzupełniane. Podświetlenie w podglądzie działa dopiero po włączeniu flagi i tylko dla wymiarów tego zestawu. Brak wymiarów albo pusta odpowiedź = „Brak danych”. `H1_ROUTE_CHECK` zostaje false. Surowe dane HERE kasowane po 30 dniach, podsumowanie zostaje. Szacunek kosztu atrybutów mapy to sufit 0,01 USD za zapytanie, bo cennik publiczny tej usługi nie podaje stawki.

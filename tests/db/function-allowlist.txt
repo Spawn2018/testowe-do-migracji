@@ -157,3 +157,7 @@ authenticated email_budget_status
 # H-1: stan kontroli trasy i kafelek HERE
 authenticated h1_route_check_state
 authenticated here_budget_view
+
+# H-3: podświetlenie przeszkód korytarza
+authenticated h3_corridor_state
+authenticated h3_highlighted

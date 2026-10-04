@@ -29,3 +29,13 @@ src/i18n/decisions.ts:generic-api-key:92
 src/i18n/decisions.ts:generic-api-key:95
 src/i18n/decisions.ts:generic-api-key:141
 src/i18n/decisions.ts:generic-api-key:144
+
+# Nie sekret. Nazwa flagi security_flags H3_CORRIDOR_OBSTACLES (H-3, wyłączona).
+# Reguła generic-api-key łapie porównanie kolumny key z nazwą flagi. To identyfikator
+# przełącznika w bazie, nie klucz HERE, Supabase, Resend ani Trafikverket.
+supabase/migrations/0154_h3_corridor_obstacles.sql:generic-api-key:35
+tests/db/h3.sh:generic-api-key:24
+tests/db/h3.sh:generic-api-key:30
+tests/db/h3.sh:generic-api-key:40
+tests/db/h3.sh:generic-api-key:66
+tests/db/h3.sh:generic-api-key:67

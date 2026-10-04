@@ -125,3 +125,5 @@ apply_eta_calibration_version | GUARD | select apply_eta_calibration_version(1) 
 email_budget_status | EMPTY | select coalesce(email_budget_status()::text, '∅') | ∅
 h1_route_check_state | GUARD | select h1_route_check_state() | Brak aktywnego konta
 here_budget_view | GUARD | select here_budget_view() | wyłącznie HHL
+h3_corridor_state | GUARD | select h3_corridor_state() | Brak aktywnego konta
+h3_highlighted | GUARD | select h3_highlighted('$L1') | Brak aktywnego konta
