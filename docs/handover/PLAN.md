@@ -470,7 +470,7 @@ Kolejność od 03.10 21:02: L-1 (domknięcie: 9 typów, 0140) → L-2 → L-3 �
 
 ### Tempo i kolejka 4–6.10.2026 (polecenia 13:31 i 13:35)
 
-Wdrożenie idzie od razu po scaleniu, także kilka razy dziennie, gdy brama jest zielona. Paczka dzienna (jedna pełna brama, jedno wdrożenie wieczorem) tylko wtedy, gdy pełna brama lokalna okaże się wolna. Czas jednego przebiegu dopisany po pomiarze, bez zgadywania.
+Wdrożenie idzie od razu po scaleniu, także kilka razy dziennie, gdy brama jest zielona. Paczka dzienna tylko wtedy, gdy pełna brama lokalna okaże się wolna. Pomiar 4.10.2026: jeden pełny przebieg `tests/db/gate.sh` na Postgres 17 trwał 4 min 29 s (269 s) i skończył się kodem 1, więc nie jest zielony. 4,5 min nie jest wolne jak brama TEST — paczki dziennej nie włączamy. Do zielonego przebiegu brakuje: programu `age` (kopie), bazy przygotowanej dla zestawów dec5/dec6/adm10/hist11/dec-auto (szukają bazy `tower`) oraz aktualnych liczb w gate.sh (nullguard 528, i2 526, workflows 47, insurance 42).
 
 Kolejność pracy, bez pozycji spoza planu. SG-01 (pozycja testowa właściciela, 1.10.2026 22:08, driver_token) wchodzi do najbliższego wdrożenia razem z następną pozycją, nie jako osobna migracja i nie z osobną bramą.
 
