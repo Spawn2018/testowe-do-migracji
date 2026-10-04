@@ -71,7 +71,7 @@
 | ID | Sprawa | Decyzja |
 |---|---|---|
 | D-36 | telematyka | emtrack.eu przez API + linki od podwykonawców; dokumentacja i przykłady — właściciel dostarczy |
-| D-37 | SMS | do kierowców — rezygnacja; do KSH — 1 h przed przyjazdem na załadunek |
+| D-37 | SMS | do kierowców — rezygnacja; do KSH — **rozszerzenie 04.10.2026**: dla załadunku (Śrem) i rozładunku (Boden) jeden SMS na transport na każdy koniec trasy, gdy wyliczony czas dojazdu z bieżącej pozycji GPS do placu wynosi ≤ 60 min; HERE, gdy dostępne, w przeciwnym razie własny silnik (0122) przy wyłączonej fladze lub wyczerpanym budżecie; pierwsza pozycja bliżej niż 60 min — SMS od razu; brak GPS — brak SMS i ryzyko „brak pozycji”; SMS „wjazd na plac” bez zmian. |
 | D-38 | aplikacja kierowcy | ukryta; CMR wgrywa dyspozytor; POD i zdjęcia mocowania — rezygnacja |
 | D-39 | progi sztormowe | fala 3,8 m, porywy 40 węzłów — potwierdzone |
 | D-40 | promy | rezerwuje i opłaca przewoźnik |
@@ -98,7 +98,7 @@
 | D-61 | decyzje | pełny proces: katalog 16 typów, kto decyduje, opcje ze skutkiem, terminy, eskalacja, historia |
 | D-62 | powiadomienia | każde zdarzenie, zmiana statusu, ryzyko i decyzja w centrum powiadomień |
 | D-63 | widoczność | administrator wybiera firmy (HHL / przewoźnik / KSH — jedna, dwie, trzy) dla każdego typu; blokady danych finansowych |
-| D-64 | SMS | 2 osoby na załadunku (Śrem) i 2 na rozładunku (Boden); strefa zbliżania i wjazd; odbiorców wpisuje administrator |
+| D-64 | SMS | 2 osoby na załadunku (Śrem) i 2 na rozładunku (Boden); odbiorców wpisuje administrator. **Rozszerzenie 04.10.2026 (wspólnie z D-37):** strefa zbliżania (koło 50 km) zastąpiona SMS-em 1 h przed przyjazdem; jeden SMS na transport na każdy koniec trasy; treść: kto, nr rejestracyjny, przewidywana godzina przyjazdu. Testy SIM-1 na TEST (nie wykonywać teraz): 120 min → jeden SMS przy ≤ 60, start w 40 min → SMS od razu, brak GPS → brak SMS, powtórne pozycje → bez duplikatu; analogicznie dla Boden. |
 | D-65 | ustawienia administratora | sekcje zwijane, domyślnie zwinięte; nowe: widoczność, SMS i strefy, progi, stan systemu, użytkownicy i sesje, dziennik logowań, komunikat, eksport |
 
 ## Decyzje HERE (04.10.2026) — szczegóły w `ZLECENIE_HERE.md`
