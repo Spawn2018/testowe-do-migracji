@@ -90,3 +90,14 @@ export async function saveTemplate(t: ImportTemplate): Promise<string> {
   if (r.error) throw new Error(r.error.message);
   return r.data as string;
 }
+
+export async function reportUnreadableKshFile(fileName: string): Promise<void> {
+  try {
+    const sb = await getSupabase();
+    const pid = await projectId();
+    const r = await sb.rpc('l1b_ksh_file_unreadable', { p_project: pid, p_file_name: fileName });
+    if (r.error) throw new Error(r.error.message);
+  } catch {
+    // Komunikat o nieczytelnym pliku zostaje. Decyzja jest dodatkiem.
+  }
+}

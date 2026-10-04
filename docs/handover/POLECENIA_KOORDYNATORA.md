@@ -273,3 +273,20 @@ Kolejność:
 6. KOLEJKA BEZ DNI TYGODNIA: pracujesz ciągle, pozycja za pozycją, wdrożenie po każdej zielonej bramie. Zapisz to w AGENTS.md i POLECENIA (paczki dzienne OFF, bo 4:29 nie jest wolne). Następne po zielonej bramie: L-1b + usunięcie pozycji SG-01 (jedna pozycja driver_token, 1 października 2026 22:08 czasu warszawskiego, kopia R2 poza repo ścieżka+sha256, tylko ten wiersz, warunek po źródle i czasie, przelicz ETA), potem L-4, L-5, L-13. Nie zaczynaj L-1b zanim brama lokalna nie jest zielona i scalona. Nowa migracja = pełna brama lokalna przed produkcją. Supabase TEST emkbykwenwrjmbprydml tylko niedziela i ostateczne potwierdzenie przed wdrożeniem.
 
 Raport: czas i wynik bramy, które liczby zmienione (było→jest, commit) a które zgłoszone bez zmiany, PR, deploy id i obie domeny, czy L-1b ruszyło.
+
+## Polecenie 2026-10-04 14:14 (czas warszawski) — L-1b i pozycja SG-01
+
+Polecenie właściciela po zielonej bramie lokalnej (4 min 56 s, kod 0). Kolejka ciągła, bez dni tygodnia. Wdrożenie po każdej zielonej bramie lokalnej.
+
+Następne: L-1b razem z usunięciem pozycji SG-01, potem L-4, L-5, L-13. Nie zaczynać L-4 w tej paczce. Nie SEC-OWASP, nie kafelki mapy, nie część D.
+
+L-1b (PLAN, zaraz po L-3). NO_AWIZACJA jest już w L-3, drugi raz jej nie robić. Reszta z ZLECENIE_DECYZJE_POWIADOMIENIA.md §2:
+- KSH_ROW_GONE, TOWER_KSH_CONFLICT, KSH_FILE_ERROR przy obecnym imporcie Excela: wiersz zniknął względem poprzedniego importu; pole zmienione w Watch Tower różni się od pliku; pliku nie da się odczytać. SharePoint później użyje tego samego.
+- SEFS_OUT_OF_TABLE: indeks poza tabelą 51 progów albo brak źródła.
+- KR_OVER_3: więcej niż 3 ładunki KR jednego dnia.
+- DWELL_OVER_FREE: postój w strefie ponad czas wolny (gdy będą prawdziwe pozycje GPS).
+Do zestawu dec-auto test dla każdego typu, który wchodzi. Zasady L-3: progi tylko z tabeli Opcji, jeden alarm rośnie, brak danych = brak alarmu, czas Europe/Warsaw. Gdy opis typu jest niejednoznaczny — STOP na tym typie, resztę zrobić.
+
+SG-01 w tej samej paczce: jedna pozycja driver_token z 1 października 2026, 22:08 czasu warszawskiego. Kopia R2 poza repozytorium (ścieżka i sha256). Usunięcie migracją tylko tego wiersza, warunek po źródle i czasie. Przeliczyć ETA. Nic innego nie usuwać.
+
+Brama: tests/db/gate.sh, Postgres 17, localhost:5433, pełna brama lokalna raz przed scaleniem. Supabase TEST emkbykwenwrjmbprydml tylko niedziela i ostateczne potwierdzenie przed wdrożeniem. Po scaleniu wdrożyć od razu. Obie domeny mają zwracać 200 na nowym wdrożeniu.

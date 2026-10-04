@@ -75,7 +75,7 @@ check watchdog 27
 check invite 48
 check risks 23
 check import 66
-check nullguard 528
+check nullguard 533
 check i2 526
 check i30 10
 check i31 6
@@ -87,5 +87,5 @@ check adm10 8
 check hist11 11
 check workflows 47
 check insurance 42
-check dec-auto 39
+check dec-auto 64
 [ $ok -eq 1 ]
