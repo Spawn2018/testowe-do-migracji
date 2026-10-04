@@ -369,3 +369,38 @@ Zanim przełącznik jest true, w kodzie i w teście:
 4. Co tydzień `POSTEP.md` dostaje prawdziwe liczby produkcji: e-maile na dobę (średnia, maksimum, krytyczne, skróty) zestawione ze szacunkiem 34. Gdy strażnik 80 zapali się więcej niż dwa razy w tygodniu, raport do właściciela. Nie wpisywać liczb z tego tygodnia, jeśli nie da się ich odczytać.
 
 Bez prawdziwego e-maila do osoby. Testy na fixture.
+
+## Polecenie 2026-10-04 17:37 (czas warszawski) — gitleaks, P0
+
+Polecenie właściciela Watch Tower z 2026-10-04 17:37 czasu warszawskiego. Najpierw dopis na końcu tego pliku, potem sprawdzenie. Bez commitu, scalenia i wdrożenia. Żadnego klucza nie wymieniamy. Bieżącej funkcji i H-0 nie ruszamy.
+
+Poprzedni skan podał gitleaks = 3, nie klucz HERE: generic-api-key dwa razy w supabase/migrations/0102_dec2_decision_center.sql oraz jwt w tests/db/i2.sh. Sprawdzić samemu, nie ufać tej liczbie w ciemno.
+
+1. Dla każdego trafienia: plik, linia, identyfikator reguły, SHA commitu i data wejścia do repozytorium (git log -S albo git blame). Wartości nie wypisywać. Najwyżej pierwsze 4 znaki i długość.
+2. Ocena każdego: (a) prawdziwy sekret produkcyjny (klucz Supabase, zwłaszcza service_role, token, hasło, Resend, R2, Trafikverket, HERE) albo (b) wartość testowa, przykładowa albo publiczna. Uzasadnienie z otaczającego kodu, nie z tego, że ciąg wygląda losowo.
+3. Gdy którekolwiek jest (a): STOP. Nie podmieniać, nie usuwać wartości z historii gita, nie rotować. Raport: który sekret, jakie uprawnienia daje, plan wymiany (nowy klucz, podmiana w sekretach, unieważnienie starego). Usunięcie żywej wartości z kodu bez OK właściciela jest zabronione, jeśli zatrzymałoby produkcję. Plan wolno opisać. Nie wykonywać go.
+4. Gdy (b): wpis w .gitleaksignore z komentarzem, dlaczego to nie sekret, oraz zmiana fixture testowego tak, żeby nie wyglądał jak prawdziwy klucz (oczywista podróbka, na przykład przedrostek tylko do testu). Nie używać kształtu prawdziwego JWT ani klucza API.
+5. Skan całej historii repozytorium, nie tylko drzewa roboczego (gitleaks git albo detect --log-opts). Podać sumę i każde trafienie poza obecnymi trzema tak samo (plik, reguła, commit, data, klasa a/b, pierwsze 4 znaki i długość). Wartości nie wypisywać.
+6. Koniec: gitleaks 0 albo tylko udokumentowane wyjątki. Powtórzyć skan i podać liczbę. Jeśli historia nadal zawiera prawdziwy sekret, napisać to wprost i nie przepisywać historii.
+
+Commit autora, jeśli wolno commitować wyłącznie ignore i zmianę fixture: Sebastian Bożek / sebastian.bozekq@gmail.com, lokalnie. Nie stage'ować .env.local. Nie stage'ować obcej brudnej pracy (migracja 0149 należy do innego przebiegu). Gdy drzewo jest za brudne, żeby commitować bezpiecznie, zostawić pliki gitleaks bez commitu i napisać to wprost.
+
+## Polecenie 2026-10-04 17:46 (czas warszawski) — niespójność: flaga włączona, wdrożenie nie weszło
+
+PILNE. E-maile decyzji włączone w bazie (migracja 0149), nowa wersja aplikacji nie wdrożona.
+
+1. Najpierw sprawdzić, czy grupowanie e-maili krytycznych (jedno zdarzenie, jeden e-mail na odbiorcę z listą transportów), skróty i rezerwa 10 e-maili na dobę na zaproszenia i reset hasła są w funkcjach serwerowych już na produkcji (migracja 0149 i wcześniejsze), a nie tylko w niewdrożonym kodzie aplikacji. Czytać zastosowany SQL. Gdy tego nie ma w funkcjach bazy, albo nie ma pewności — ustawić AUTOMATIC_DECISION_EMAIL = false do czasu udanego wdrożenia (zgoda właściciela na to tymczasowe wyłączenie). Nic innego nie zmieniać. Policzyć, ile e-maili decyzji wyszło od włączenia flagi. Nie wysyłać żadnego e-maila.
+2. Logi wdrożenia dpl_BfKMFMpswppKUcJhiqDZCFUhacQ4 — przyczyna błędu. Czy to strażnik gitleaks w procesie budowania?
+3. Dokończyć wyjaśnianie 3 trafień gitleaks według polecenia 17:37. Tego przebiegu nie ruszać: inny przebieg klasyfikuje gitleaks. Nie przepisywać .gitleaksignore.
+4. Gdy gitleaks jest wyjaśniony: wdrożenie, obie domeny 200 na nowym wdrożeniu, dopiero wtedy AUTOMATIC_DECISION_EMAIL = true, potem jeden testowy e-mail decyzji wyłącznie na adres właściciela. Tego przebiegu nie wdrażać i nie włączać flagi z powrotem.
+
+## Polecenie 2026-10-04 18:52 (czas warszawski) — wdrożenie z main, wyjątki gitleaks, test e-mail, H-0
+
+Właściciel zatwierdził wdrożenie. Dwa trafienia w paczce to klucze tłumaczeń opcji decyzji (prefiks dec_, długość 18), nie sekrety.
+
+1. Dopisać do `.gitleaksignore` te dwa klucze (generic-api-key w `supabase/migrations/0102_dec2_decision_center.sql` i `src/i18n/decisions.ts`) z komentarzem: klucze tłumaczeń opcji decyzji — nie sekrety. Zostawić wcześniejszy wyjątek atrapy JWT z b40ff9c, jeśli już jest. W raporcie nie wypisywać pełnych napisów.
+2. W AGENTS.md: wdrożenie produkcyjne zawsze z `main` po scaleniu, nigdy z gałęzi roboczej.
+3. Commit lokalny: Sebastian Bożek / sebastian.bozekq@gmail.com. PR, bez pusha wprost na main, bez `--force`, bez `.env.local`. Scalenie, gdy gitleaks na śledzonym drzewie daje 0.
+4. Wdrożenie produkcji wyłącznie z `main` po tym scaleniu. Obie domeny (tower.log-mar.pl i watch-tower-makieta.vercel.app) mają zwrócić 200 i wskazywać nowe wdrożenie. `AUTOMATIC_DECISION_EMAIL` zostaje true.
+5. Po 200 na obu: dokładnie jeden testowy e-mail decyzji, tylko do właściciela (jeden z Sebastian@log-mar.pl albo sebastian.bozek@hhlogistics.pl, ten który produkt traktuje jako właściciela). Nie oba. Nie do przewoźników. Ścieżka powiadomień aplikacji. Po polsku, wyraźnie test, bez sekretów. Gdy nie da się wskazać jednego odbiorcy — nie wysyłać.
+6. Potem H-0 z `docs/handover/ZLECENIE_HERE.md`: test na koncie właściciela, bez zmian w aplikacji. Klucza HERE nie wypisywać. Gdy H-0 wymaga zmiany aplikacji — stop. Pozycji po H-0 nie zaczynać.

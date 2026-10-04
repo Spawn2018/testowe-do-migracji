@@ -1,0 +1,31 @@
+# Nie sekret. Klucz i18n opcji decyzji (label_key) w ziarnie katalogu, migracja 0102.
+# Reguła generic-api-key łapie słowo "key" w label_key. To identyfikator tłumaczenia
+# dec_opt_EXTEND_14D, ten sam co w src/i18n/decisions.ts. Nie daje dostępu do żadnej usługi.
+35e1f336704a484a7d68f8ad97e1935cb9cd0aab:supabase/migrations/0102_dec2_decision_center.sql:generic-api-key:120
+
+# Nie sekret. Klucz i18n opcji decyzji (label_key) w ziarnie katalogu, migracja 0102.
+# To identyfikator tłumaczenia dec_opt_PRICE_AS_3, ten sam co w src/i18n/decisions.ts.
+# Nie jest kluczem Supabase, Resend, R2, Trafikverket ani HERE.
+35e1f336704a484a7d68f8ad97e1935cb9cd0aab:supabase/migrations/0102_dec2_decision_center.sql:generic-api-key:126
+
+# Nie sekret. Fixture testu client_error_scrub (I-6) z commitu, który go wprowadził.
+# Atrapa: nagłówek z samym alg, sub z cyfr, podpis z kolejnych liter. Nie jest
+# service_role, tokenem dostawcy ani kluczem HERE. Zostaje w historii.
+# Bieżący test używa jawnej atrapy test-only, bez kształtu JWT (ey… . ey…).
+642d68f52e3e88248362b2402a9bb410f1b3f199:tests/db/i2.sh:jwt:208
+
+# Te same dwa klucze i18n, odcisk bez commitu (skan katalogu, nie historii).
+supabase/migrations/0102_dec2_decision_center.sql:generic-api-key:120
+supabase/migrations/0102_dec2_decision_center.sql:generic-api-key:126
+
+# klucze tłumaczeń opcji decyzji — nie sekrety
+# Dwa identyfikatory (prefiks dec_, długość 18) z migracji 0102 i src/i18n/decisions.ts.
+# Reguła generic-api-key łapie je obok label_key. To teksty interfejsu, nie klucze dostępu.
+supabase/migrations/0102_dec2_decision_center.sql:generic-api-key:120
+supabase/migrations/0102_dec2_decision_center.sql:generic-api-key:126
+src/i18n/decisions.ts:generic-api-key:43
+src/i18n/decisions.ts:generic-api-key:46
+src/i18n/decisions.ts:generic-api-key:92
+src/i18n/decisions.ts:generic-api-key:95
+src/i18n/decisions.ts:generic-api-key:141
+src/i18n/decisions.ts:generic-api-key:144

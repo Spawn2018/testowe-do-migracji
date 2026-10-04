@@ -323,7 +323,7 @@ chk "wiersz HHL: rola HHL_ADMIN, konto ustawione" "$(Q "select app_role||'/'||(u
 err "zalogowany bez aktywnego konta: odmowa" 11111111-0000-0000-0000-0000000000ee "select report_client_error('error', 'x')" "Brak aktywnego konta"
 err "nieznany rodzaj: odmowa" $HHL "select report_client_error('warn', 'x')" "Nieznany rodzaj"
 err "pusty komunikat / NULL: odmowa" $HHL "select report_client_error('error', null)" "Pusty komunikat"
-chk "JWT i token w zapytaniu wycięte" "$(Q "select client_error_scrub('a eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abcdefghijklmnop b ?access_token=SEKRET&x=1')")" "a jwt… b ?access_token=…&x=1"
+chk "JWT i token w zapytaniu wycięte" "$(Q "select client_error_scrub('a eyJtest-only-fixture.test-only-body.not-a-secret b ?access_token=SEKRET&x=1')")" "a jwt… b ?access_token=…&x=1"
 val "odczyt: HHL_ADMIN widzi 2" $HHL "select count(*) from client_errors" 2
 val "odczyt: KSH 0 (RLS)" $KSH "select count(*) from client_errors" 0
 val "odczyt: SCX 0 (RLS)" $SCX "select count(*) from client_errors" 0
