@@ -15,6 +15,7 @@ import { editableOrderSide } from '../../lib/orderNumbers';
 import { DocPreview } from '../ui/DocPreview';
 import { DocFileRow } from '../ui/DocFileRow';
 import { AwizacjaModal } from './AwizacjaModal';
+import { RouteCheckPanel } from './RouteCheckPanel';
 import {
   TZ_LOAD_PL,
   TZ_UNLOAD_SE,
@@ -264,6 +265,10 @@ export function LoadDrawer() {
                     <span className="board" title={t(locale, 'a6_dr_oversize')} />
                   ) : null}
                   {fmtDim(comboL, locale)} × {fmtDim(comboW, locale)} × {fmtDim(comboH, locale)} m
+                </dd>
+                <dt>{t(locale, 'h1_title')}</dt>
+                <dd data-route-check>
+                  <RouteCheckPanel loadId={load.id} locale={locale} />
                 </dd>
                 <dt>{t(locale, 'a6_dr_mass')}</dt>
                 <dd>

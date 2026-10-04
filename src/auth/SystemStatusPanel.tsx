@@ -43,6 +43,7 @@ export default function SystemStatusPanel() {
   const [smsDevices, setSmsDevices] = useState<SmsDeviceRow[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [mailBudget, setMailBudget] = useState<{ immediate_n: number; digest_n: number; suppressed_n: number; level: string; suppressed_to?: { recipient: string; n: number }[] | null } | null>(null);
+  const [hereBudget, setHereBudget] = useState<{ enabled: boolean; requests: number; estimated_usd: number; level: string } | null>(null);
 
   const refresh = useCallback(async () => {
     const sb = await getSupabase();
@@ -64,6 +65,10 @@ export default function SystemStatusPanel() {
       .limit(12);
     if (i.error) setIntegs([]);
     else setIntegs((i.data ?? []) as IntegRow[]);
+
+    const h = await sb.rpc('here_budget_view');
+    if (h.error || !h.data) setHereBudget({ enabled: false, requests: 0, estimated_usd: 0, level: 'off' });
+    else setHereBudget(h.data as { enabled: boolean; requests: number; estimated_usd: number; level: string });
 
     const s = await sb
       .from('sms_devices')
@@ -164,6 +169,13 @@ export default function SystemStatusPanel() {
           ))}
         </div>
       )}
+      <h4 className="sec" id="here" style={{ marginTop: 14 }}>{t(locale, 'h1_tile')}</h4>
+      <div data-here-tile>
+        {tp(locale, 'h1_tile_body', {
+          n: String(hereBudget?.requests ?? 0),
+          usd: String(hereBudget?.estimated_usd ?? 0),
+        })}
+      </div>
       <h4 className="sec" style={{ marginTop: 14 }}>{t(locale, 'opt_acc_sys_integ')}</h4>
       {integs.length === 0 ? (
         <div className="muted">{t(locale, 'opt_acc_sys_none')}</div>

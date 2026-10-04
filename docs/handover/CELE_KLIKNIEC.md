@@ -83,6 +83,7 @@ z odpowiedziami a/b/c) + uzupełnienia koordynatora 04.10.
 | SEQUENCE (kolejność montażu) | Transport → zakładka Status, z listą powiązanych transportów |
 | DATES_UNCONFIRMED | Transport → zakładka Status |
 | sytuacja drogowa PL/SE (spowolnienie, zamknięcie) | Transport; powyżej progu zjazdu → Decyzja #10 |
+| przeszkoda na trasie (wiadukt, most, tunel) | Transport → zakładka Status |
 | pogoda (sztorm) | rejs zagrożony → Decyzja #1; inaczej → Transport |
 | USAGE_LIMIT (70/85 % limitów usług) | Stan systemu → Zużycie |
 | JOB_FAILURE poza kopią (integracja, SMS, błędy przeglądarki, zadania) | Stan systemu → Integracje / Dziennik |
