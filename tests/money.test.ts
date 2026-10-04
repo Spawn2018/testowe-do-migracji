@@ -16,8 +16,11 @@ import {
   buildPriceSide, assertSameMechanism, marginForLoad, marginIn, totalsByTier,
   matchInvoice, invoiceLineToEur, validateInvoiceLines, dueDate, paymentState,
   remindersDueToday, invoiceParties, formatMoney, formatForUser,
-  hybridMin, resolveTier, referenceUtc, type NbpRate, type FuelSnapshot,
+  hybridMin, resolveTier, referenceUtc, fuelLocalDate, fxReferenceUtc, type NbpRate, type FuelSnapshot,
 } from '../src/lib/money/engine';
+import { sefsForLoadDate, sefsWeekContaining, type SefsWeekSnapshot } from '../src/lib/sefs';
+import { buildLoadMoney } from '../src/lib/money/loadMoney';
+import { buildDemoSnapshot } from '../src/data/demoProvider';
 
 const RATES: NbpRate[] = fixture.rates.map((r) => ({ table: 'A', no: r.no, effectiveDate: r.effectiveDate, mid: r.mid }));
 
@@ -78,18 +81,73 @@ describe('Czas lokalny — dzień i tydzień nigdy w UTC', () => {
 
 describe('Poziomy wyceny', () => {
   const planned = '2026-10-10T08:00:00Z';
-  it('niedostarczony → PROGNOZA, data z harmonogramu', () => {
+  it('niedostarczony → PROGNOZA; kurs z planu dostawy, paliwo czeka na datę załadunku', () => {
     const t = { plannedDeliveryUtc: planned };
     expect(resolveTier(t)).toBe('PROGNOZA');
-    expect(referenceUtc(t)).toBe(planned);
+    expect(fxReferenceUtc(t)).toBe(planned);
+    expect(fuelLocalDate(t)).toBeNull();
+    expect(referenceUtc(t)).toBeNull();
   });
-  it('rozładowany → REALIZACJA, data rzeczywista wygrywa z planem', () => {
-    const t = { plannedDeliveryUtc: planned, unloadedAtUtc: '2026-10-12T11:00:00Z' };
+  it('rozładowany → REALIZACJA; kurs z rozładunku, paliwo z załadunku', () => {
+    const t = {
+      plannedDeliveryUtc: planned,
+      unloadedAtUtc: '2026-10-12T11:00:00Z',
+      plannedLoadDate: '2026-10-05',
+    };
     expect(resolveTier(t)).toBe('REALIZACJA');
-    expect(referenceUtc(t)).toBe('2026-10-12T11:00:00Z');
+    expect(fxReferenceUtc(t)).toBe('2026-10-12T11:00:00Z');
+    expect(fuelLocalDate(t)).toBe('2026-10-05');
+    expect(referenceUtc(t)).toBe('2026-10-05T12:00:00+02:00');
   });
   it('zafakturowany → FAKTURA', () => {
     expect(resolveTier({ plannedDeliveryUtc: planned, unloadedAtUtc: planned, invoiced: true })).toBe('FAKTURA');
+  });
+});
+
+describe('U-3-PALIWO — tydzień od daty załadunku (D-34)', () => {
+  it('załadunek w tygodniu N, rozładunek w N+1 → stawka tygodnia N', () => {
+    // Mnożniki tylko w tym teście wyboru tygodnia. Nie są stawką cennika.
+    const weeks: SefsWeekSnapshot[] = [
+      { weekLabel: 'N', weekStart: '2026-10-05', weekEnd: '2026-10-11', priceSek: 0, pricePln: 0, multSek: 1.2, multPln: 1.2, appliedMult: 1.2, sourceNote: 'test N' },
+      { weekLabel: 'N+1', weekStart: '2026-10-12', weekEnd: '2026-10-18', priceSek: 0, pricePln: 0, multSek: 1.5, multPln: 1.5, appliedMult: 1.5, sourceNote: 'test N+1' },
+    ];
+    const loadDate = fuelLocalDate({ loadedAtUtc: '2026-10-04T22:30:00Z' });
+    const unloadDate = localDateOf('2026-10-13T08:00:00Z');
+    expect(loadDate).toBe('2026-10-05');
+    expect(unloadDate).toBe('2026-10-13');
+    expect(isoWeekKeyLocal('2026-10-04T22:30:00Z')).toBe('2026-W41');
+    expect(isoWeekKeyLocal('2026-10-13T08:00:00Z')).toBe('2026-W42');
+    const rateN = sefsWeekContaining(loadDate!, weeks);
+    const rateNext = sefsWeekContaining(unloadDate, weeks);
+    expect(rateN?.weekLabel).toBe('N');
+    expect(rateNext?.weekLabel).toBe('N+1');
+    expect(rateN?.appliedMult).not.toBe(rateNext?.appliedMult);
+    expect(rateN?.appliedMult).toBe(1.2);
+  });
+
+  it('granica tygodnia lato i zima: dzień lokalny, nie UTC', () => {
+    expect(fuelLocalDate({ loadedAtUtc: '2026-10-04T22:30:00Z' })).toBe('2026-10-05');
+    expect(isoWeekKeyLocal('2026-10-04T22:30:00Z')).not.toBe(isoWeekKeyLocal('2026-10-04T12:00:00Z'));
+    expect(fuelLocalDate({ loadedAtUtc: '2026-11-29T23:30:00Z' })).toBe('2026-11-30');
+    expect(isoWeekKeyLocal('2026-11-29T23:30:00Z')).toBe('2026-W49');
+    expect(isoWeekKeyLocal('2026-11-29T12:00:00Z')).not.toBe('2026-W49');
+  });
+
+  it('wyliczenie transportu: data paliwa z załadunku, kurs z rozładunku, ten sam mnożnik po obu stronach', () => {
+    const delivered = buildDemoSnapshot().loads.find((l) => l.status === 'DELIVERED')!;
+    const load = {
+      ...delivered,
+      plannedLoadDate: '2026-10-05',
+      plannedDeliverDate: '2026-10-13',
+      unloadedAt: '2026-10-13T08:00:00Z',
+    };
+    const m = buildLoadMoney(load, { todayLocal: '2026-10-14' });
+    expect(m.cost.fuel.refDate).toBe('2026-10-05');
+    expect(m.rev.fuel.refDate).toBe('2026-10-05');
+    expect(m.cost.fuel.applied).toBe(m.rev.fuel.applied);
+    expect(m.cost.fuel.applied).toBe(sefsForLoadDate('2026-10-05').appliedMult);
+    expect(m.cost.fx.date < '2026-10-13').toBe(true);
+    expect(isoWeekKeyLocal('2026-10-05T12:00:00+02:00')).not.toBe(isoWeekKeyLocal(load.unloadedAt));
   });
 });
 

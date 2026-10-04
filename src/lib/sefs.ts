@@ -88,8 +88,12 @@ export const SEFS_WEEKLY: SefsWeekSnapshot[] = [
   week('2026-W38', '2026-09-14', '2026-09-20', 19.68, 5.74, 'Mean Mon–Sun OKQ8 + ORLEN · current'),
 ];
 
-export function sefsForLoadDate(loadDate: string): SefsWeekSnapshot {
+/** Tydzień, którego okno zawiera datę załadunku. Brak okna → null (bez zgadywania). */
+export function sefsWeekContaining(loadDate: string, weeks: SefsWeekSnapshot[]): SefsWeekSnapshot | null {
   const d = loadDate.slice(0, 10);
-  const hit = SEFS_WEEKLY.find((w) => d >= w.weekStart && d <= w.weekEnd);
-  return hit ?? SEFS_WEEKLY[SEFS_WEEKLY.length - 1];
+  return weeks.find((w) => d >= w.weekStart && d <= w.weekEnd) ?? null;
+}
+
+export function sefsForLoadDate(loadDate: string): SefsWeekSnapshot {
+  return sefsWeekContaining(loadDate, SEFS_WEEKLY) ?? SEFS_WEEKLY[SEFS_WEEKLY.length - 1];
 }

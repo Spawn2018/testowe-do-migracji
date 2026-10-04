@@ -11,7 +11,7 @@
 import type { Invoice, Load } from '../../types';
 import { sefsForLoadDate } from '../sefs';
 import {
-  buildPriceSide, assertSameMechanism, localDateOf, nbpRateBefore, resolveTier, totalsByTier,
+  buildPriceSide, assertSameMechanism, fuelLocalDate, fxReferenceUtc, localDateOf, nbpRateBefore, resolveTier, totalsByTier,
   type LoadMargin, type NbpRate, type PriceSide, type PricingTier,
 } from './engine';
 import { DEMO_NBP_RATES } from './demoFx';
@@ -103,9 +103,10 @@ export function buildLoadMoney(load: Load, opts: {
   const p = load.pricing;
   const unloadedAtUtc = unloadedAtOf(load);
   const tier = resolveTier({ plannedDeliveryUtc: plannedDeliveryUtc(load), unloadedAtUtc });
-  const refUtc = unloadedAtUtc ?? plannedDeliveryUtc(load);
-  const refDate = localDateOf(refUtc);
+  const refDate = fuelLocalDate({ plannedLoadDate: load.plannedLoadDate });
+  if (!refDate) throw new Error('Brak daty załadunku — opłata paliwowa nie zgaduje daty rozładunku');
   const sefs = sefsForLoadDate(refDate);
+  const fxDate = localDateOf(fxReferenceUtc({ plannedDeliveryUtc: plannedDeliveryUtc(load), unloadedAtUtc }));
   const fuel = {
     mechanism: 'SEFS_HYBRID_MIN' as const,
     referenceDate: refDate,
@@ -114,7 +115,7 @@ export function buildLoadMoney(load: Load, opts: {
     appliedMultiplier: sefs.appliedMult,
     documentRef: 'src/lib/sefs.ts',
   };
-  const { rate, provisional } = fxForDate(refDate, opts.todayLocal, opts.rates);
+  const { rate, provisional } = fxForDate(fxDate, opts.todayLocal, opts.rates);
   const costSide: PriceSide = buildPriceSide({
     tier, roadRateEur: p.costBase, roadRateAfterFuelEur: p.costBase + (p.costSefs ?? 0),
     extras: [{ code: 'EXTRAS', label: 'extras', amountEur: round2(p.costTotal - p.costBase - (p.costSefs ?? 0)) }],

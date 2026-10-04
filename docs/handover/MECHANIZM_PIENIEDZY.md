@@ -100,12 +100,13 @@ dni wcześniej. Przewoźnik policzyłby dobrze, system oflagowałby go jako bł�
 
 | Poziom | Stan transportu | Data opłaty paliwowej | Kurs do przeliczenia |
 |---|---|---|---|
-| **PROGNOZA** | nierozładowany | planowana dostawa | ostatnia tabela przed planowaną datą — **prowizoryczny**, gdy data w przyszłości |
-| **REALIZACJA** | rozładowany | dzień rozładunku (migawka) | ostatnia tabela przed dniem rozładunku (migawka) |
-| **FAKTURA** | zafakturowany | z faktury | **z faktury** |
+| **PROGNOZA** | nierozładowany | planowana data załadunku | ostatnia tabela przed planowaną dostawą — **prowizoryczny**, gdy data w przyszłości |
+| **REALIZACJA** | rozładowany | data załadunku (migawka, D-34) | ostatnia tabela przed dniem rozładunku (migawka) |
+| **FAKTURA** | zafakturowany | z faktury (wyliczenie zostaje) | **z faktury** |
 
-**Dwie różne daty:** opłata paliwowa bierze **dzień rozładunku**, kurs —
-**dzień roboczy przed nim**.
+**Dwie różne daty (doprecyzowane 04.10, D-34 / U-3-PALIWO):** opłata paliwowa bierze **datę załadunku** (rzeczywisty załadunek w czasie Europe/Warsaw, inaczej plan). Kurs bierze **dzień roboczy przed rozładunkiem**. Tydzień faktury zostaje tygodniem rozładunku. Starszy zapis „opłata paliwowa bierze dzień rozładunku” jest zastąpiony.
+
+Który odczyt indeksu: średnia arytmetyczna poprzedniego tygodnia kalendarzowego (pon–niedz) względem daty załadunku (`sefs_week_for_load` / `sefs_week_calc`). Nie ostatni odczyt przed datą. Brak odczytów nie podstawia stawki.
 
 **Poziom transportu = poziom mniej pewnej strony.**
 

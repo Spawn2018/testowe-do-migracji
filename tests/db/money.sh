@@ -72,14 +72,15 @@ err "SCX nie wywoła parsera"                         $SCX "select fx_ingest_nbp
 err "KSH nie wywoła pobierania"                      $KSH "select fx_sync_nbp()" "permission denied"
 sys "insert into load_cost (load_id, base_amount, computed_total_eur) values ('$L2', 1000, 1000); insert into load_revenue (load_id, base_amount, computed_total_eur) values ('$L2', 1300, 1300)"
 sys "update loads set actual_delivery_at='2025-12-29T23:30:00Z' where id='$L2'"
-val "migawka: pułapka UTC — 29.12 23:30Z = 30.12 lokalnie → 249/A z 29.12" $HHL "select cost_fx_table_no||' '||cost_fx_date||' '||fuel_ref_date from v_load_financials_hhl where load_id='$L2'" "249/A/NBP/2025 2025-12-29 2025-12-30"
+val "migawka: pułapka UTC — 29.12 23:30Z = 30.12 lokalnie → 249/A z 29.12" $HHL "select cost_fx_table_no||' '||cost_fx_date from v_load_financials_hhl where load_id='$L2'" "249/A/NBP/2025 2025-12-29"
+val "opłata paliwowa bez daty załadunku nie bierze rozładunku" $HHL "select coalesce(fuel_ref_date::text,'brak') from v_load_financials_hhl where load_id='$L2'" brak
 val "migawka po obu stronach ta sama, poziom REALIZACJA" $HHL "select (cost_fx_table_no = rev_fx_table_no and pricing_tier='REALIZACJA' and not cost_fx_provisional)::text from v_load_financials_hhl where load_id='$L2'" true
 sys "update loads set plan_delivery_from='2026-01-15T08:00:00Z', plan_delivery_to='2026-01-15T16:00:00Z' where id='$L2'"
 sys "insert into fx_rates (currency, rate_date, rate_pln, table_no) values ('EUR','2025-12-30',9.9999,'999/A/TEST') on conflict do nothing"
 val "migawka niezmienna po zmianie planu i nowych tabelach" $HHL "select cost_fx_table_no||' '||cost_fx_mid from v_load_financials_hhl where load_id='$L2'" "249/A/NBP/2025 4.227400"
 sys "delete from fx_rates where table_no='999/A/TEST'"
 sys "update loads set actual_delivery_at='2026-03-10T10:00:00Z' where id='$L2'"
-val "brak tabeli przed rozładunkiem → migawka prowizoryczna (nie zgadywana)" $HHL "select cost_fx_provisional::text||' '||fuel_ref_date from v_load_financials_hhl where load_id='$L2'" "true 2026-03-10"
+val "brak tabeli przed rozładunkiem → migawka prowizoryczna (nie zgadywana)" $HHL "select cost_fx_provisional::text||' '||coalesce(fuel_ref_date::text,'brak') from v_load_financials_hhl where load_id='$L2'" "true brak"
 sys "insert into fx_rates (currency, rate_date, rate_pln, table_no) values ('EUR','2026-03-09',4.3000,'047/A/NBP/2026')"
 # fx_apply_pending: tylko service_role / właściciel — nie przez set role z authenticated
 app=$($PSQL -c "select fx_apply_pending()" 2>&1 | grep -vE '^(SELECT|)$' | tail -1 | tr -d '\r')
@@ -239,6 +240,63 @@ psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0018_integrations.sql >
 chk "0018 ponownie (2×): bez błędu, dziennik zachowany"                 "$(Q "select count(*) from integration_runs")" 1
 
 #@@NEXT@@
+
+echo; echo "[U-3-PALIWO] tydzień opłaty od daty załadunku (D-34), nie od rozładunku"
+LF=33333333-0000-0000-0000-0000000000f1
+LW=33333333-0000-0000-0000-0000000000f2
+CAR=00000000-0000-0000-0000-00000000a003
+sys "begin; set local request.jwt.claim.sub='$HHL'; set local role authenticated;
+  select sefs_save_parameters('$P', jsonb_build_object(
+    'valid_from','2026-09-28',
+    'base_sek',19.47,'base_pln',5.698,
+    'index_sek','OKQ8_TEST','index_pln','ORLEN_TEST',
+    'source_url_sek','https://www.okq8.se/foretag/priser/',
+    'source_url_pln','https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw',
+    'cycle','WEEKLY',
+    'tiers_sek', jsonb_build_array(
+      jsonb_build_object('lte',19.47,'mult',1.00),
+      jsonb_build_object('lte',23.0,'mult',1.13),
+      jsonb_build_object('lte',23.1,'mult',1.14),
+      jsonb_build_object('lte',30.0,'mult',1.20)
+    ),
+    'tiers_pln', jsonb_build_array(
+      jsonb_build_object('lte',5.698,'mult',1.00),
+      jsonb_build_object('lte',7.40,'mult',1.16),
+      jsonb_build_object('lte',7.50,'mult',1.17),
+      jsonb_build_object('lte',10.0,'mult',1.30)
+    ),
+    'note','U-3 test progi, nie cennik'
+  )); commit"
+# Poprzedni tydzień załadunku 2026-10-05 (pon) = 28.09–04.10. Poprzedni tydzień rozładunku 13.10 = 05.10–11.10.
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note)
+  select '$P', 'SEK', to_char(d,'YYYY-MM-DD'), d, 23.05, 'https://www.okq8.se/foretag/priser/', 'U-3 test'
+    from generate_series('2026-09-28'::date, '2026-10-04'::date, '1 day') d"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note)
+  select '$P', 'PLN', to_char(d,'YYYY-MM-DD'), d, 7.41, 'https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw', 'U-3 test'
+    from generate_series('2026-09-28'::date, '2026-10-04'::date, '1 day') d"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note)
+  select '$P', 'SEK', to_char(d,'YYYY-MM-DD'), d, 19.00, 'https://www.okq8.se/foretag/priser/', 'U-3 test N+1'
+    from generate_series('2026-10-05'::date, '2026-10-11'::date, '1 day') d"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note)
+  select '$P', 'PLN', to_char(d,'YYYY-MM-DD'), d, 5.50, 'https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw', 'U-3 test N+1'
+    from generate_series('2026-10-05'::date, '2026-10-11'::date, '1 day') d"
+sys "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date) values ('$LF','$P','$CAR','KSH/PAL', date '2026-10-04')"
+sys "insert into load_cost (load_id, base_amount, computed_total_eur) values ('$LF', 1000, 1000); insert into load_revenue (load_id, base_amount, computed_total_eur) values ('$LF', 1300, 1300)"
+# 04.10 22:30Z = 05.10 00:30 czasu Warszawy (lato). Plan 04.10 nie wygrywa.
+sys "update loads set actual_load_at='2026-10-04T22:30:00Z', actual_delivery_at='2026-10-13T08:00:00Z' where id='$LF'"
+val "załadunek 22:30Z to poniedziałek lokalnie, nie data planu" $HHL "select fuel_ref_date::text from v_load_financials_hhl where load_id='$LF'" "2026-10-05"
+val "stawka z tygodnia załadunku N, nie z tygodnia rozładunku N+1; obie strony" $HHL "select (
+  (sefs_week_for_load('$P','2026-10-05')->>'ok') = 'true'
+  and (sefs_week_for_load('$P','2026-10-13')->>'ok') = 'true'
+  and fuel_ref_date = date '2026-10-05'
+  and cost_fuel_mult = rev_fuel_mult
+  and cost_fuel_mult = (sefs_week_for_load('$P','2026-10-05')->>'applied_mult')::numeric
+  and cost_fuel_mult <> (sefs_week_for_load('$P','2026-10-13')->>'applied_mult')::numeric
+)::text from v_load_financials_hhl where load_id='$LF'" true
+sys "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date) values ('$LW','$P','$CAR','KSH/ZIMA', date '2026-11-29')"
+sys "insert into load_cost (load_id, base_amount, computed_total_eur) values ('$LW', 1000, 1000); insert into load_revenue (load_id, base_amount, computed_total_eur) values ('$LW', 1300, 1300)"
+sys "update loads set actual_load_at='2026-11-29T23:30:00Z', actual_delivery_at='2026-12-07T10:00:00Z' where id='$LW'"
+val "zima: 29.11 23:30Z = 30.11 lokalnie; brak odczytów nie zgaduje mnożnika" $HHL "select fuel_ref_date::text||' '||coalesce(cost_fuel_mult::text,'brak') from v_load_financials_hhl where load_id='$LW'" "2026-11-30 brak"
 
 echo
 echo "WYNIK: $ok OK, $fail FAIL"

@@ -551,3 +551,10 @@ Osobny PR, tylko dokumenty. Bez wdrożenia. Nie wchodzić na gałąź H-3. Kodu 
 3. Do `PLAN.md`: H-2-PL (utrudnienia PL z HERE), CLEAN-MAPLIBRE (P3). SMS-KSH-1H tylko gdy SCX-§5 nie jest spełnione. Kryteria U-3-PALIWO rozszerzyć o punkt 4 pliku (32.x/33.x). Pozycji nie wykonywać.
 4. Pozycje „do sprawdzenia” z punktu 6: jeden raport, bez budowania.
 5. Kolejność: H-3, potem U-3-PALIWO, potem DRV-CLOSE, potem STD-CLEAN. Część B rusza po tych czterech. Tabela dowodów jest przyjęta.
+
+## Polecenie 2026-10-04 (czas warszawski) — U-3-PALIWO, wykonanie
+
+Osobny PR. Nie włączać H-1 ani H-3. Nie ruszać DRV-CLOSE, STD-CLEAN ani części B.
+
+Tydzień opłaty paliwowej od daty załadunku (D-34), nie od rozładunku. Kurs NBP zostaje od rozładunku. Test: załadunek w tygodniu N i rozładunek w N+1 dostaje stawkę z tygodnia N. Kryteria SCOPE 32.x i 33.x tak, jak w PLAN.md. Nie zgadywać stawek. Brama lokalna zielona przed scaleniem.
+

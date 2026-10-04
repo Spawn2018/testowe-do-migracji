@@ -23,11 +23,13 @@
  *     zastosowany wyłącznie do stawki drogowej. Źródłem prawdy jest
  *     dokumentacja projektu i src/lib/sefs.ts w aplikacji. TEN PLIK NIE
  *     REIMPLEMENTUJE MECHANIZMU — przyjmuje jego wynik jako migawkę.
+ *     D-34 (04.10): tydzień opłaty = data załadunku, nie rozładunek.
  *
  *  4. CZAS. Realizacja usługi = rozładunek (potwierdzone przez właściciela). Faktura obejmuje transporty
- *     zrealizowane w danym tygodniu. Trzy poziomy wyceny:
- *       PROGNOZA    — niedostarczony: data z harmonogramu (planowana dostawa)
- *       REALIZACJA  — dostarczony: rzeczywista data rozładunku, migawka
+ *     zrealizowane w danym tygodniu (tydzień rozładunku). Kurs NBP: dzień rozładunku.
+ *     Opłata paliwowa: data załadunku (D-34). Trzy poziomy wyceny (kwota, nie tydzień paliwa):
+ *       PROGNOZA    — niedostarczony
+ *       REALIZACJA  — dostarczony: migawka kursu z rozładunku, paliwa z załadunku
  *       FAKTURA     — zafakturowany: kwota z faktury NADRZĘDNA
  *     Faktura nadpisuje wynik, ale NIE kasuje wartości wyliczonej —
  *     inaczej dopasowanie trójstronne porównuje fakturę samą ze sobą.
@@ -158,7 +160,7 @@ export async function fetchNbpRateForUnload(localUnloadDate: string): Promise<Nb
 
 export interface FuelSnapshot {
   mechanism: 'SEFS_HYBRID_MIN';
-  referenceDate: string;      // lokalna data: rozładunku albo planowanej dostawy
+  referenceDate: string;      // lokalna data załadunku (D-34), nie rozładunku
   multSek: number;            // składnik hybrid_min, do audytu
   multPln: number;            // składnik hybrid_min, do audytu
   appliedMultiplier: number;  // = Math.min(multSek, multPln)
@@ -174,8 +176,12 @@ export function hybridMin(multSek: number, multPln: number): number {
  * ===================================================================== */
 
 export interface LoadTiming {
-  plannedDeliveryUtc: string;          // z harmonogramu
-  unloadedAtUtc?: string | null;       // rzeczywisty rozładunek = realizacja usługi
+  plannedDeliveryUtc: string;          // z harmonogramu — kotwica kursu, nie paliwa
+  unloadedAtUtc?: string | null;       // rzeczywisty rozładunek = realizacja usługi i kurs NBP
+  /** Rzeczywisty załadunek (UTC). Wygrywa z planem przy opłacie paliwowej. */
+  loadedAtUtc?: string | null;
+  /** Planowana data załadunku YYYY-MM-DD, gdy nie ma rzeczywistego załadunku. */
+  plannedLoadDate?: string | null;
   invoiced?: boolean;
 }
 
@@ -185,8 +191,25 @@ export function resolveTier(t: LoadTiming): PricingTier {
   return 'PROGNOZA';
 }
 
-/** Data, od której liczy się zarówno opłata paliwowa, jak i kurs. */
-export function referenceUtc(t: LoadTiming): string {
+/**
+ * D-34: lokalna data załadunku (Europe/Warsaw). Nie rozładunek.
+ * Brak daty załadunku → null. Nie podstawiamy dostawy.
+ */
+export function fuelLocalDate(t: LoadTiming): string | null {
+  if (t.loadedAtUtc) return localDateOf(t.loadedAtUtc);
+  if (t.plannedLoadDate && /^\d{4}-\d{2}-\d{2}$/.test(t.plannedLoadDate)) return t.plannedLoadDate;
+  return null;
+}
+
+/** Moment załadunku do migawki paliwa. Null, gdy nie ma daty załadunku. */
+export function referenceUtc(t: LoadTiming): string | null {
+  if (t.loadedAtUtc) return t.loadedAtUtc;
+  const day = fuelLocalDate(t);
+  return day ? `${day}T12:00:00+02:00` : null;
+}
+
+/** Kurs NBP: rozładunek, a przed nim planowana dostawa. Nie data paliwa. */
+export function fxReferenceUtc(t: LoadTiming): string {
   return t.unloadedAtUtc ?? t.plannedDeliveryUtc;
 }
 

@@ -755,6 +755,8 @@ Realizacja usługi = dostarczenie towaru. Mnożnik opłaty paliwowej:
 
 Ta sama data po obu stronach → ten sam mnożnik. **Pozycja 32.3 zamknięta.**
 
+**Dopisek 04.10 (D-34, U-3-PALIWO):** data mnożnika w tabeli powyżej (planowana dostawa / rozładunek) jest zastąpiona **datą załadunku**. Tydzień faktury zostaje tygodniem realizacji (rozładunek). Kurs NBP zostaje przy rozładunku. Ta sama data załadunku po obu stronach.
+
 | # | Pozycja | Waga | Uwaga |
 |---|---|---|---|
 | 33.1 | Trzy wartości przy transporcie ze źródłem i migawką mnożnika | wysoka | zmiana schematu → `STORE_SCHEMA_VERSION` 2 z migracją |

@@ -76,9 +76,15 @@ Kolumny: `reguła z dokumentu | cytat, plik, sekcja | kod: plik, linia | zgodne?
 |---|---|---|
 | **`BAF_SEFS.md` (obowiązujący)** | Cena = **średnia arytmetyczna** cen ON z **poprzedniego** tygodnia kalendarzowego (pon–niedz), 2 dp. Mnożnik stosuje się do zleceń z **datą załadunku** w tygodniu zastosowania. | §3–§5: „średnia… z poprzedniego tygodnia”; „datą załadunku w danym tygodniu” |
 | Kod (`sefs.ts`) | **Nie liczy** średniej z dziennych odczytów. Bierze gotowe `priceSek`/`pricePln` z `SEFS_WEEKLY` dla okna `weekStart…weekEnd` zawierającego `loadDate`, inaczej ostatni snapshot. | `sefsForLoadDate` 87–90; `SEFS_WEEKLY` 81–85 (note: „Mean Mon–Sun…”) |
-| `MECHANIZM_PIENIEDZY.md` | Opłata paliwowa wg **dnia rozładunku** (migawka) — inna kotwica daty niż `BAF_SEFS` / kod. | „opłata paliwowa bierze **dzień rozładunku**” |
+| `MECHANIZM_PIENIEDZY.md` | Od 04.10 (D-34, U-3-PALIWO) opłata paliwowa wg **daty załadunku**. Kurs NBP nadal wg rozładunku. Starszy zapis o dniu rozładunku jako dacie paliwa jest zastąpiony. | §4, adnotacja 04.10 |
 
-**Wniosek:** dokument SoT SEFS **nie milczy** — reguła to **średnia z poprzedniego tygodnia**, nie „ostatni odczyt przed datą” ani „z tego samego dnia”. Kod **nie implementuje** tej średniej (demo snapshoty) → **F2.4-b**. Kotwica daty zlecenia: SoT SEFS = **załadunek**; MECHANIZM = **rozładunek**; kod = **loadDate** jak SoT SEFS → konflikt MECHANIZM↔BAF_SEFS = **F2.4-a**.
+**Wniosek:** dokument SoT SEFS **nie milczy** — reguła to **średnia z poprzedniego tygodnia**, nie „ostatni odczyt przed datą” ani „z tego samego dnia”. Fasada `SEFS_WEEKLY` w `sefs.ts` nadal nie liczy tej średniej (demo) → **F2.4-b**. Produkcja liczy średnią w `sefs_week_calc` (migracja 0155) z `fuel_index_readings`. Kotwica daty: SoT SEFS = **załadunek**; od 04.10 MECHANIZM i migawka (`fuel_ref_date`, `fuelLocalDate`) też = **załadunek**. Konflikt F2.4-a (MECHANIZM kontra BAF) **zamknięty 04.10**. Jeden opis mechanizmu: `docs/watch-tower/BAF_SEFS.md`. Pieniądze i kurs: `MECHANIZM_PIENIEDZY.md`.
+
+**32.1** Jeden obowiązujący opis mechanizmu SEFS: `docs/watch-tower/BAF_SEFS.md`. `MECHANIZM_PIENIEDZY.md` nie buduje tablic.
+
+**32.5** Pola Opcji poniżej nie wchodzą do `computeSefs` (bez zmian 04.10).
+
+**33.4** Odczyt obowiązujący w dacie załadunku: średnia poprzedniego tygodnia pon–niedz. Bez odczytów mnożnik nie jest zgadywany.
 
 ### 2.4 Opcje UI → `computeSefs`
 
