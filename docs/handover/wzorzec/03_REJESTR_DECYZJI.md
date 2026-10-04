@@ -9,7 +9,7 @@
 | Waluta | EUR wszędzie; PLN tylko w ustawieniach użytkownika | 24.09 |
 | Kurs | NBP A, dzień roboczy przed rozładunkiem, każdy transport osobno | 24.09 |
 | Realizacja usługi | rozładunek | 24.09 |
-| Faktury | tygodniowe; HHL→KSH widzi KSH; SCX→HHL widzi HHL; terminy 30/35 dni od wystawienia | 24.09 |
+| Faktury | tygodniowe; HHL→KSH widzą HHL i KSH; SCX→HHL widzą HHL i SCX (wystawca); KSH nie widzi faktur SCX; terminy 30/35 dni od wystawienia. Doprecyzowane 04.10 (U-8). | 24.09 |
 | Marża | z daty dostawy w harmonogramie; faktura nadrzędna | 24.09 |
 | Statusy | z GPS, strefy portów PL i SE; prom = strefa + czas odejścia rejsu | 24.09 |
 | Okna planu | przewoźnik nie zmienia okien planowanych | 25.09 |

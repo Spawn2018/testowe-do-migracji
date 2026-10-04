@@ -126,7 +126,7 @@ Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 | II-4 | adapter telematyki przewoźnika | CZEKA NA: spotkanie |
 | II-5 | komunikaty armatora w harmonogramie | **DONE** 01.10 (parser + 403=NIEZNANY; D-18 e-mail informacyjny zostaje) |
 | II-6 | Trafikverket, ~~TomTom~~ (zastąpiony przez HERE — II-7), KPD — zadania i klucze | **DONE** Trafikverket (01.10); TomTom/KPD nadal bez kluczy/cert |
-| II-7 | (decyzja właściciela 28.09 — zmiana) serwis tras = **HERE Routing API v8** zamiast TomTom: `transportMode=truck`, trasa przez punkty pośrednie z zezwolenia | **ZABLOKOWANE przez D-28** (regulamin HERE — `RAPORT_HERE_REGULAMIN.md`); nic z HERE nie implementujemy |
+| II-7 | (decyzja właściciela 28.09 — zmiana) serwis tras = **HERE Routing API v8** zamiast TomTom: `transportMode=truck`, trasa przez punkty pośrednie z zezwolenia | **ZABLOKOWANE przez D-28** (regulamin HERE — `RAPORT_HERE_REGULAMIN.md`); nic z HERE nie implementujemy. Poprawione 04.10: blokada dotyczyła starego planu HERE. Wykonanie korytarza OSM: 0122. HERE od D-77, osobno od tej blokady. |
 | II-7a | (P1, decyzja właściciela 28.09) **warunek włączenia II-7:** twardy limit w kodzie **25 000 transakcji HERE / miesiąc** — po limicie zero zapytań do końca miesiąca, ETA v1, ryzyko dla HHL + e-mail; alarm przy 80%; przeliczenie najwyżej co 15 min i tylko dla jadących transportów. Przed podpięciem GPS — sprawdzenie dosłownego regulaminu HERE: (a) czy plan podstawowy wyklucza śledzenie pojazdów / telematykę, (b) zakaz przechowywania wyników — zapisujemy tylko ETA, bez trasy, (c) podanie źródła w szczegółach ETA; cytaty klauzul w raporcie; **jeśli (a) wyklucza użycie — STOP i do właściciela.** Klucz HERE wyłącznie w sekretach funkcji Edge. Analiza regulaminu — osobny wątek (`RAPORT_HERE_REGULAMIN.md`); implementacji nie zaczynać przed tym raportem | **ZABLOKOWANE przez D-28** — wynik regulaminu 28.09: STOP, plan podstawowy HERE wyklucza „Asset Management” (śledzenie + wyznaczanie tras dla pojazdu); potrzebny plan Enterprise lub asset-based ([RAPORT_HERE_REGULAMIN.md](RAPORT_HERE_REGULAMIN.md)) |
 
 ## ETAP III — po pilotażu
@@ -345,7 +345,7 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | D-9 | ~~parametry odcinków ETA v1~~ — **ROZSTRZYGNIĘTE 27.09:** wartości wpisane (I-D9, 0054); obsada jednoosobowa, przeprawa = dobowy odpoczynek na promie (potwierdzone przez właściciela, bez postoju w Nynäshamn); czasy PL/check-in/SE do potwierdzenia z SCX w II-3. Wartości 0054 zostają; opóźnienie 390 → 1080 min wynika z nowych czasów (+3 h jazdy + 8,5 h odpoczynku = 690 min) — NIE błąd (POSTEP I-D9-a) | — |
 | D-10 | ~~widoczność SEFS dla przewoźnika~~ — **ROZSTRZYGNIĘTE 27.09:** przewoźnik widzi parametry tylko do odczytu, wyłącznie wersje uzgodnione (`agreed_with_carrier = true`) → **I-13** (właściciel 27.09; pierwotnie I-15) | I-13 |
 | D-11 | **ROZSTRZYGNIĘTE 27.09:** właściciel włącza wymaganie dopiero po I-17 (drugie urządzenie). 2FA (I-5): właściciel zapisuje TOTP (Opcje → „Weryfikacja dwuetapowa” → kod QR → kod) i klika „Włącz wymaganie”; do tego czasu egzekwowanie `aal2` dla HHL_ADMIN jest wyłączone (`security_flags.MFA_HHL_ADMIN = false`) | I-5 |
-| D-12 | **ROZSTRZYGNIĘTE 27.09:** ostateczne daty załadunku i rozładunku podaje KSH (→ I-18). Termin potwierdzenia N — do uzgodnienia, domyślnie 5 dni. INFO: plan KSH = 5 dni od odbioru do dostawy | I-18 |
+| D-12 | **ROZSTRZYGNIĘTE 27.09:** ostateczne daty załadunku i rozładunku podaje KSH (→ I-18). Termin potwierdzenia N — do uzgodnienia, domyślnie 5 dni. INFO: plan KSH = 5 dni od odbioru do dostawy — poprawione 04.10 (U-32): cel tranzytu to D-41 (4 dni; 5 przy ciężkiej pogodzie w SE), nie stałe 5 dni. Piątka zostaje tylko jako wyprzedzenie potwierdzenia dat. | I-18 |
 | D-13 | ~~podglądy wdrożeń~~ — **ZAMKNIĘTE 28.09 (zastąpione):** podglądy Vercel za Vercel Authentication i wyłącznie na danych demo; podglądy Pages wyłączone. SCOPE 1.6 = zamknięte przez zastąpienie (stan paneli: POSTEP, wpis D-13) | SCOPE 1.6 |
 | D-14 | (z I-11: SCOPE 7.5) konwencja kursu NBP (tabela A z dnia roboczego przed rozładunkiem) — **CZEKA:** właściciel pyta księgowość | SCOPE 7.5 |
 | D-15 | (z I-11: SCOPE 3.8) limity ponadnormatywności PL i SE — zebrane z podstawą prawną w [LIMITY_PONADNORMATYWNOSC.md](LIMITY_PONADNORMATYWNOSC.md) (zebrane 28.09), **do potwierdzenia z przewoźnikiem** | SCOPE 3.8 |
@@ -361,7 +361,7 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | D-24 | ~~widok placu budowy~~ — **ZAMKNIĘTE 28.09 (właściciel) przez SCOPE 16.1:** Stegra nie jest rolą, tylko strefą/POI. Bez nowej roli; SCOPE 10.4 nie będzie realizowany | — |
 | D-25 | ~~odświeżenie wzorca Dokumenty/Harmonogram~~ — **ZATWIERDZONE WARUNKOWO 28.09 (właściciel):** każde ze 175 ujęć sprawdzić — różnica wyłącznie w miejscu nowych elementów (terminy, „Zmień”, wybór tygodnia, „Wgraj aktualizację”, „Eksport PDF”) → do wzorca; różnica poza tymi obszarami → wypisać, NIE aktualizować. `gate:visual` ma działać bez nadzoru (jeden skrypt, kod wyjścia, linia podsumowania w `/workspace/wt-gate-visual/last.txt`), właściciel uruchamia go co noc, wynik trafia do POSTEP | III-2 (0.3) → **WYKONANE 28.09:** 139 ujęć odświeżonych, 36 wypisanych (niezaktualizowanych); `gate:visual` bez nadzoru → `last.txt` |
 | D-27 | **ZATWIERDZONE 30.09 · DONE (ten commit):** każdy kolor tekstu na każdym tle obu motywów ≥ 4,5:1; jeśli #788C9A nie przejdzie na panelu ciemnym — #7C909E. Wzorzec: zmieniają się wyłącznie kolory tekstu, zero przesunięć. Reszta z audytu 28.09 (`RAPORT_DOSTEPNOSC.md`): `--ink-3`, ostrzeżenia, kursor bez akcji | SCOPE 11.5 |
-| D-28 | **ROZSTRZYGNIĘTE 30.09: HERE — nie**. II-7 DONE (0122, OSM). II-7b szkielet 0123; nauka CZEKA NA TELM-2 | II-7 DONE; II-7b częściowo |
+| D-28 | **ROZSTRZYGNIĘTE 30.09: HERE — nie**. II-7 DONE (0122, OSM). II-7b szkielet 0123; nauka CZEKA NA TELM-2. Poprawione 04.10: zapis „HERE — nie” zastąpiony przez D-77. HERE wchodzi w budżecie; własny silnik zostaje zapasem. | II-7 DONE; II-7b częściowo |
 | D-TELM-ETA | **CZEKA.** API emtrack + przykłady linków podwykonawców (TELM-2) — bez GPS po rozładunku nie domykamy II-7b (symulacja 30 / uczenie tempa) | II-7b, TELM-2 |
 | D-29 | **AKCEPTACJA 01.10 (D-29t + warunek zastępników).** Tabela w PLAN zaakceptowana; żaden alarm bez zastępnika (lista w POSTEP). Scalenie kodu = pozycja ONE-MECH. START-1…7 nadal 0/7 do scalenia | ONE-MECH |
 | D-30 | **DONE (ten commit).** Część bazowa 0097 + **0125**: cron `tower-polisy` 04:10 UTC, zatwierdzanie HHL (`insurance_policy_approve`), formularz w Dokumentach (HHL/SCX), notka z bazy. Dane polisy od przewoźnika — po spotkaniu | 6.6 |
@@ -516,6 +516,17 @@ TESTY: dla każdego wzoru — zmiana wartości w Opcjach zmienia moment alarmu; 
 | razem z Q-17 i Q-19 | H-6 | Mapa przeszkód. Jedna praca z Q-17 i Q-19, bez dublowania. | NIEZACZĘTE — Q-17 i Q-19 dopisane 04.10 |
 | po etapie 2 | H-7, H-8, H-10, H-12 | Mapa w e-mailu i PDF, profil trasy, pogoda i wiatr (ryzyko), zakazy czasowe. | NIEZACZĘTE |
 | etap 4 (po emtrack) | H-4, H-5, H-10 ETA | ETA z GPS przez HERE, kontrola po przejeździe, wydłużanie ETA przez wiatr. | NIEZACZĘTE — propozycja H-4 (limit prędkości i przerwy UE) w POSTEP 2026-10-04, bez budowy, do akceptacji właściciela |
+
+
+## Po REJESTR — DOWODY, przed częścią B (04.10)
+
+Część B nie startuje, dopóki koordynator nie przyjmie wyniku REJESTR — DOWODY. Poniższych pozycji nie wykonywać w tym przebiegu.
+
+| ID | Priorytet | Kiedy | Opis | Status |
+|---|---|---|---|---|
+| DRV-CLOSE | P1 | po REJESTR — DOWODY, przed częścią B | Zamknąć stary link kierowcy (U-38, D-36). Odebrać anonimowi dostęp do `driver_post_position` (migracja). Unieważnić wszystkie wydane tokeny kierowców. Trasa `#/driver/:token` pokazuje „Link nieaktywny”. Kodu nie usuwać. Test: anonim z ważnym tokenem dostaje odmowę i pozycja się nie zapisuje. Pozycje tylko z telematyki. | NIEZACZĘTE |
+| U-3-PALIWO | P1 | błąd, bez naprawy w przebiegu dokumentów | Tydzień opłaty paliwowej liczy się od rozładunku (`fuel_ref_date` z `actual_delivery_at`, migracja 0011; `referenceUtc` w `src/lib/money/engine.ts`), a D-34 każe liczyć od daty załadunku. Nie zmieniać kodu bez osobnego zlecenia. | NIEZACZĘTE |
+| STD-CLEAN | — | po DRV-CLOSE, bez wykonania teraz | U-17. Usunąć resztki klasy STANDARD: cennik 0100 i `src/lib/rateCard.ts`, typ wiersza, szuflada ładunku, pomijanie zezwolenia dla STANDARD. | NIEZACZĘTE |
 
 ## Polecenie 2026-10-04 17:06 — e-mail decyzji automatycznych
 

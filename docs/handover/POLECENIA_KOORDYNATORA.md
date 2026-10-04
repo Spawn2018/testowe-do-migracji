@@ -527,3 +527,17 @@ Osobny PR, tylko docs. Nie wchodzić na gałąź H-2. Nie zaczynać części B. 
 4. Sprzeczności rozstrzygnąć, nie pytać: D-8 jak w punkcie 3; kopia `wzorzec/STAN` przegrywa z PLAN.md; II-7 zrobione (blokada dotyczyła starego planu HERE); SCOPE 56.1 wygrywa z 56.2, z wyjątkiem późniejszego datowanego „zrobione” tylko z dowodem z punktu 5.
 5. Drugie przejście pozycji NIEZNANY. „Zrobione” wyłącznie z dowodem (plik, migracja albo test). Brak dowodu = „do zrobienia”. Tabela ID | status | dowód. Osobno powtórzenia i pozycje bez sensu — do decyzji koordynatora.
 6. Pozycje bez miejsca w PLAN.md, które są „do zrobienia”: przypisać do etapu w PLAN.md albo „do decyzji koordynatora”.
+
+## Polecenie 2026-10-04 (czas warszawski) — REJESTR — przyjęte
+
+Rejestr z PR #38 przyjęty. Osobny PR, tylko dokumenty. Bez wdrożenia. Nie wchodzić na gałąź H-3. Części B nie zaczynać. DRV-CLOSE nie wykonywać.
+
+1. Zacommitować `REJESTR_CALOSCI.md` i trzy niezacommitowane pliki z `docs/handover`, jeśli leżą poza `main`. Osobny PR, tylko docs, scalenie, bez wdrożenia. Jeśli pliki już są na `main` — nie robić pustego PR.
+2. U-36: w `ZLECENIE_HERE.md` dopisać „H-9 — usunięte 04.10 (U-36)”.
+3. Rozjazdy U-3, U-5, U-8, U-32 i pozostałe z sekcji 3: dla każdego podać, czy rozjazd jest tylko w dokumentach, czy także w kodzie. U-3: jeśli kod liczy tydzień opłaty paliwowej od rozładunku zamiast od daty załadunku (D-34) — pozycja planu jako błąd P1, bez naprawy kodu. U-32: czy kod używa 5 dni zamiast D-41 (4; 5 przy ciężkiej pogodzie w SE). Rozjazd tylko w dokumentach — poprawić dokument z adnotacją „poprawione 04.10”. W kodzie — pozycja w `PLAN.md`, bez naprawiania teraz.
+4. U-17: w `PLAN.md` pozycja STD-CLEAN — usunięcie resztek klasy STANDARD (cennik 0100 i `rateCard.ts`, typ wiersza, szuflada ładunku, pomijanie zezwolenia). Bez wykonania teraz.
+5. REJESTR — DOWODY: drugie szukanie dla pozycji „do zrobienia”. „zrobione” wyłącznie z dowodem (plik, migracja albo test). Brak dowodu = „do zrobienia”. Wynik w `REJESTR_CALOSCI.md`. Część B dopiero po akceptacji koordynatora tego wyniku.
+
+U-38: zamknąć stary link kierowcy. Pozycja w `PLAN.md`: DRV-CLOSE (P1, po REJESTR — DOWODY, przed częścią B). Zakres, bez wykonania teraz: odebrać anonimowi dostęp do `driver_post_position` (migracja); unieważnić wszystkie wydane tokeny kierowców; trasa `#/driver/:token` pokazuje „Link nieaktywny”; kod zostaje w repozytorium, bez usuwania; test: anonim z ważnym tokenem dostaje odmowę, pozycja się nie zapisuje; pozycje mają przychodzić wyłącznie z telematyki (D-36).
+
+U-8: obowiązuje „fakturę SCX widzą HHL i SCX (wystawca); KSH nie widzi”. Kod bez zmian. Poprawić zapis w dokumentach z adnotacją „doprecyzowane 04.10” i zamknąć rozjazd U-8 w sekcji 3 rejestru.

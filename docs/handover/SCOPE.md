@@ -769,7 +769,7 @@ Kolejność: fala 3, po D10 i D17.
 ## 34. Mechanizm pieniędzy — decyzje W1–W6 i realizacja (24.09.2026)
 
 **DECYZJE WŁAŚCICIELA:**
-- **W1** wszystkie ceny w EUR; nigdzie PLN ani SEK
+- **W1** wszystkie ceny w EUR; nigdzie PLN ani SEK — poprawione 04.10 (U-5): zastąpione przez §35.1 (użytkownik przełącza wyświetlanie na PLN). SEK nadal nigdzie jako waluta cen.
 - **W2** wyjątek: kokpit przeliczany na PLN
 - **W3** kurs przewoźnika na fakturze: NBP, tabela A, kurs średni z dnia
   roboczego poprzedzającego dzień rozładunku
@@ -1539,6 +1539,9 @@ DO POTWIERDZENIA 5, DO ZROBIENIA 9, DO ZROBIENIA (częściowo) 26, GOTOWE 8, OD�
 
 ### 56.2 Tabele statusów sekcji 0–11 (stan audytu 27.09.2026, przeniesione z poprzedniego `SCOPE.md` repo)
 
+Poprawione 04.10: gdy 56.2 różni się od 56.1, obowiązuje 56.1. Wyjątek tylko wtedy, gdy późniejszy datowany wpis „zrobione” ma plik, migrację albo test.
+
+
 #### 56.2.0 Wierność wizualna
 
 | # | Pozycja | Status | Dowód | Notatka |
@@ -1779,7 +1782,7 @@ Tabela: `docs/handover/POSTEP.md` § I-2i (11 pozycji: 8 ukrytych/zastąpionych 
 
 ## 57. Założenia planu i czasu przejazdu (27.09)
 
-plan KSH 5 dni od podjęcia do dostawy; obsada jednoosobowa, odpoczynek dobowy na promie; model ok. 2,5 doby + oczekiwanie na rejs; opóźnienie liczone od końca okna dostawy, a gdy okna nie ma — od końca dnia dostawy (Europe/Stockholm).
+plan KSH 5 dni od podjęcia do dostawy — poprawione 04.10 (U-32): obowiązuje D-41, 4 dni, 5 przy ciężkiej pogodzie w SE; obsada jednoosobowa, odpoczynek dobowy na promie; model ok. 2,5 doby + oczekiwanie na rejs; opóźnienie liczone od końca okna dostawy, a gdy okna nie ma — od końca dnia dostawy (Europe/Stockholm).
 
 ## 58. Daty planu — źródło (27.09)
 
