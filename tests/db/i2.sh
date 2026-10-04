@@ -402,8 +402,11 @@ else
 fi
 
 echo; echo "[DATY-67] daty z pliku KSH + opóźnienie (§6–7); bez „Potwierdź daty”"
-D1=$(date -d '+20 days' +%F); D2=$(date -d '+25 days' +%F); D3=$(date -d '+21 days' +%F); D4=$(date -d '+26 days' +%F); D5=$(date -d '+22 days' +%F); D6=$(date -d '+27 days' +%F)
-DNEAR=$(date -d '+3 days' +%F); DNEAR2=$(date -d '+8 days' +%F)
+# Dni kalendarzowe, nie 24 h × n: w noc zmiany czasu (ostatnia niedziela października)
+# `date -d '+21 days'` ląduje w tym samym dniu co '+20 days' i test dat się myli.
+_dcal() { date -d "$(date +%F) + $1 days" +%F; }
+D1=$(_dcal 20); D2=$(_dcal 25); D3=$(_dcal 21); D4=$(_dcal 26); D5=$(_dcal 22); D6=$(_dcal 27)
+DNEAR=$(_dcal 3); DNEAR2=$(_dcal 8)
 ROW() { echo "[{\"code\":\"D18-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"delivery_date\":\"$2\"}]"; }
 ROWT() { echo "[{\"code\":\"D18-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"load_time\":\"08:00\",\"delivery_date\":\"$2\",\"delivery_time\":\"12:00\"}]"; }
 IMP18() { echo "select import_schedule('$P', '$(ROW $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"d18.xlsx\"$3}'::jsonb, $4)"; }

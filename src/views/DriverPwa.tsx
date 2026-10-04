@@ -24,7 +24,24 @@ const driverApi = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH
 
 const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../components/guide/Guide')) : null;
 
+/** U-38 / DRV-CLOSE: trasa zostaje, ale nie przyjmuje pozycji. Kod aplikacji niżej zostaje w repozytorium. */
 export function DriverPwa() {
+  // Odwołanie zostawia kod w module. Trasa go nie renderuje.
+  void DriverPwaBody;
+  return <DriverLinkClosed />;
+}
+
+function DriverLinkClosed() {
+  return (
+    <div className="driver-pwa" data-driver-link-closed>
+      <main className="driver-pwa-main">
+        <div className="driver-alert">Link nieaktywny</div>
+      </main>
+    </div>
+  );
+}
+
+function DriverPwaBody() {
   const { token = 'demo-active' } = useParams();
   const driverMilestone = useTowerStore((s) => s.driverMilestone);
   const driverSharePosition = useTowerStore((s) => s.driverSharePosition);
