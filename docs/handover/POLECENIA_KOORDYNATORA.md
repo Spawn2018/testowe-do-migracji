@@ -608,3 +608,12 @@ U-38: odebrać anonimowi dostęp do `driver_post_position` (migracja). Unieważn
 Osobny PR, tylko dokumenty. Bez zmian w kodzie, bez migracji i bez wdrożenia.
 
 Raport dowodów dla punktu 4 w TRIAGE_REJESTRU.md (32.1–32.5, 33.1–33.6). Brak testu zmiany czasu 25.10.2026 przy tygodniu paliwa (Europe/Warsaw) zamyka 33.3 jako brak, mimo granicy niedziela/poniedziałek lato/zima. Pozycja PALIWO-33.3 w PLAN.md: po VERIFY-13, przed częścią B. Bez wykonania teraz.
+
+
+## Polecenie 2026-10-05 (czas warszawski) — PALIWO-33.3, termin i test
+
+PALIWO-33.3 przyjęte. Termin realizacji: najpóźniej 23.10.2026, niezależnie od postępu części B.
+
+Test (nie wykonywać teraz): transport z załadunkiem w niedzielę 25.10.2026 przed 03:00 i po 03:00 oraz w poniedziałek 26.10.2026 — przypisanie do właściwego tygodnia w czasie `Europe/Warsaw`.
+
+Nie wykonywać testu w tym przebiegu. Tylko dokumentacja; bez zmian w kodzie, bez wdrożenia.
