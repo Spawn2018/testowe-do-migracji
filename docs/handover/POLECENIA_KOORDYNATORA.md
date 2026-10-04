@@ -609,9 +609,16 @@ Osobny PR, tylko dokumenty. Bez zmian w kodzie, bez migracji i bez wdrożenia.
 
 Raport dowodów dla punktu 4 w TRIAGE_REJESTRU.md (32.1–32.5, 33.1–33.6). Brak testu zmiany czasu 25.10.2026 przy tygodniu paliwa (Europe/Warsaw) zamyka 33.3 jako brak, mimo granicy niedziela/poniedziałek lato/zima. Pozycja PALIWO-33.3 w PLAN.md: po VERIFY-13, przed częścią B. Bez wykonania teraz.
 
+## Polecenie 2026-10-05 (czas warszawski) — PALIWO-33.3, termin i test
+
+PALIWO-33.3 przyjęte. Termin realizacji: najpóźniej 23.10.2026, niezależnie od postępu części B.
+
+Test (nie wykonywać teraz): transport z załadunkiem w niedzielę 25.10.2026 przed 03:00 i po 03:00 oraz w poniedziałek 26.10.2026 — przypisanie do właściwego tygodnia w czasie `Europe/Warsaw`.
+
+Nie wykonywać testu w tym przebiegu. Tylko dokumentacja; bez zmian w kodzie, bez wdrożenia.
+
 ## Polecenie 2026-10-05 (czas warszawski) — STD-CLEAN, wykonanie
 
 Osobny PR. Nie robić SMS-KSH-1H, ETA-PRE-LOAD, VERIFY-13, PALIWO-33.3 ani części B. Nie włączać H-1 ani H-3. Nie kasować transportów. Nie wołać Resend.
 
 U-17: usunąć resztki klasy STANDARD. Cennik: migracja po 0100 i `src/lib/rateCard.ts` — bez pozycji STANDARD i bez nowej stawki. Typ wiersza i szuflada ładunku nie pokazują klasy STANDARD. Pomijanie zezwolenia dla STANDARD schodzi (klient i `load_needs_permit`). Import nadal pomija wiersze TYP = STANDARD (B-8-IMP, ładunki NTG). Nie wymyślać cennika. Brama lokalna zielona na tym samym commicie przed scaleniem i produkcją.
-
