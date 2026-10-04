@@ -255,7 +255,7 @@ export function LoadDrawer() {
                 <dt>{t(locale, 'a6_dr_dims')}</dt>
                 <dd>
                   {load.dims.cargoClass === 'STANDARD' ? (
-                    <span data-cargo="STANDARD" title={t(locale, 'i2_std_title')}>{t(locale, 'i2_std')}</span>
+                    <span data-cargo="none">—</span>
                   ) : (
                     <>{fmtDim(load.dims.lengthM, locale)} × {fmtDim(load.dims.widthM, locale)} × {fmtDim(load.dims.heightM, locale)} m</>
                   )}

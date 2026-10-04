@@ -84,11 +84,11 @@ describe('I-2C klasa STANDARD — baza → UI i walidator zezwoleń', () => {
       length_m: cargo === 'STANDARD' ? null : 14.62, width_m: cargo === 'STANDARD' ? null : 2.45, height_m: cargo === 'STANDARD' ? null : 2.45,
       total_weight_t: 20.81, unit_weight_t: null }],
   });
-  it('wiersz bazy STANDARD (wymiary NULL) → Load z cargoClass STANDARD; walidator zezwoleń pomija, READY niezablokowany', () => {
+  it('wiersz bazy STANDARD zostaje klasą historyczną; zezwolenie nie jest pomijane z powodu klasy', () => {
     const l = loadFromRow(row('STANDARD'), [], 0, '2026-09-27T12:00:00Z');
     expect(l.dims.cargoClass).toBe('STANDARD');
-    expect(isReadyBlocked(l, [])).toEqual({ blocked: false, reason: 'ładunek normatywny (Standard) — zezwolenie niewymagane' });
-    expect(evaluateLoadCover(l, []).covered).toBe(true);
+    expect(isReadyBlocked(l, []).reason).not.toContain('zezwolenie niewymagane');
+    expect(evaluateLoadCover(l, []).reason).not.toContain('ładunek normatywny');
     expect(loadFromRow(row('DIMENSIONED'), [], 0, '2026-09-27T12:00:00Z').dims).toMatchObject({ lengthM: 14.62 });
     expect(loadFromRow(row('DIMENSIONED'), [], 0, '2026-09-27T12:00:00Z').dims.cargoClass).toBeUndefined();
   });

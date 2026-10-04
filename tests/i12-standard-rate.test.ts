@@ -12,11 +12,12 @@ const stdRule = (id: string, rate: number): RateRule => ({ id, lengthFrom: 0, le
 const fuel: FuelSnapshot = { mechanism: 'SEFS_HYBRID_MIN', referenceDate: '2026-10-06', multSek: 1.1, multPln: 1.04, appliedMultiplier: 1.04, documentRef: 'test' };
 const fx: NbpRate = { table: 'A', no: '190/A/NBP/2026', effectiveDate: '2026-10-05', mid: 4.25 };
 
-describe('I-12 — pozycja STANDARD w cenniku (D-8)', () => {
-  it('cargo_class STANDARD → pozycja STANDARD (bez względu na wymiary); wymiarowy nie trafia w STANDARD', () => {
+describe('STD-CLEAN — klasa STANDARD bez stawki', () => {
+  it('STANDARD nie dobiera stawki, także gdy w regułach została stara pozycja; wymiarowy jej nie bierze', () => {
     const rules = [dimRule('d1', 2000), stdRule('s1', TEST_STD_COST)];
     const s = matchRateForCargo({ cargoClass: 'STANDARD', dims: null }, rules);
-    expect(s.matched && s.rule.id).toBe('s1');
+    expect(s.matched).toBe(false);
+    expect('roadRateEur' in s).toBe(false);
     const d = matchRateForCargo({ cargoClass: 'DIMENSIONED', dims: { lengthM: 18, widthM: 2.4, heightM: 2.4, weightT: 20 } }, rules);
     expect(d.matched && d.rule.id).toBe('d1');
   });
@@ -27,12 +28,14 @@ describe('I-12 — pozycja STANDARD w cenniku (D-8)', () => {
     const key = rateWarningKey(r)!;
     expect(key).toBe('i12_warn_NO_STANDARD_RATE');
     for (const loc of ['pl', 'en', 'sv'] as const) expect(hasKey(loc, key)).toBe(true);
-    expect(rateWarningKey(matchRateForCargo({ cargoClass: 'STANDARD', dims: null }, [stdRule('a', 1), stdRule('b', 2)]))).toBe('i12_warn_AMBIGUOUS');
+    expect(rateWarningKey(matchRateForCargo({ cargoClass: 'STANDARD', dims: null }, [stdRule('a', 1), stdRule('b', 2)]))).toBe('i12_warn_NO_STANDARD_RATE');
     expect(rateWarningKey(matchRateForCargo({ cargoClass: 'DIMENSIONED', dims: null }, [dimRule('d1', 1)]))).toBe('i12_warn_NO_DIMENSIONS');
   });
-  it('ten sam mechanizm paliwa i kursu na stawce testowej: koszt i przychód osobno', () => {
-    const c = matchRateForCargo({ cargoClass: 'STANDARD', dims: null }, [stdRule('sc', TEST_STD_COST)]);
-    const r = matchRateForCargo({ cargoClass: 'STANDARD', dims: null }, [stdRule('sr', TEST_STD_REV)]);
+  it('mechanizm paliwa i kursu zostaje na stawce wymiarowej; STANDARD nie daje kwoty', () => {
+    const blocked = matchRateForCargo({ cargoClass: 'STANDARD', dims: null }, [stdRule('sc', TEST_STD_COST)]);
+    expect(blocked.matched).toBe(false);
+    const c = matchRateForCargo({ cargoClass: 'DIMENSIONED', dims: { lengthM: 18, widthM: 2.4, heightM: 2.4, weightT: 20 } }, [dimRule('sc', TEST_STD_COST)]);
+    const r = matchRateForCargo({ cargoClass: 'DIMENSIONED', dims: { lengthM: 18, widthM: 2.4, heightM: 2.4, weightT: 20 } }, [dimRule('sr', TEST_STD_REV)]);
     if (!c.matched || !r.matched) throw new Error('brak stawki testowej');
     const cost = buildPriceSide({ tier: 'PROGNOZA', roadRateEur: c.roadRateEur, roadRateAfterFuelEur: c.roadRateEur * fuel.appliedMultiplier, fuel, fx });
     const rev = buildPriceSide({ tier: 'PROGNOZA', roadRateEur: r.roadRateEur, roadRateAfterFuelEur: r.roadRateEur * fuel.appliedMultiplier, fuel, fx });

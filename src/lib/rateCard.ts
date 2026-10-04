@@ -91,7 +91,7 @@ export const EMPTY_ROW: FormRow = {
   height_from: '', height_to: '', weight_from: '', weight_to: '', base_rate: '', note: '',
 };
 
-export function buildRules(rows: readonly FormRow[], standard: string): { rules: Array<Record<string, unknown>> } | { bad: number } {
+export function buildRules(rows: readonly FormRow[]): { rules: Array<Record<string, unknown>> } | { bad: number } {
   const rules: Array<Record<string, unknown>> = [];
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
@@ -102,11 +102,6 @@ export function buildRules(rows: readonly FormRow[], standard: string): { rules:
       out[k] = v;
     }
     rules.push(out);
-  }
-  if (standard.trim() !== '') {
-    const v = num(standard);
-    if (v === null || v < 0) return { bad: 0 };
-    rules.push({ cargo_class: 'STANDARD', base_rate: v });
   }
   return { rules };
 }
