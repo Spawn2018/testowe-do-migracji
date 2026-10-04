@@ -195,7 +195,10 @@ export function resolveTier(t: LoadTiming): PricingTier {
  * D-34: lokalna data załadunku (Europe/Warsaw). Nie rozładunek.
  * Brak daty załadunku → null. Nie podstawiamy dostawy.
  */
-export function fuelLocalDate(t: LoadTiming): string | null {
+export function fuelLocalDate(t: {
+  loadedAtUtc?: string | null;
+  plannedLoadDate?: string | null;
+}): string | null {
   if (t.loadedAtUtc) return localDateOf(t.loadedAtUtc);
   if (t.plannedLoadDate && /^\d{4}-\d{2}-\d{2}$/.test(t.plannedLoadDate)) return t.plannedLoadDate;
   return null;
