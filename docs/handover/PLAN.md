@@ -468,17 +468,11 @@ Kolejność od 03.10 21:02: L-1 (domknięcie: 9 typów, 0140) → L-2 → L-3 �
 
 
 
-### Tempo i kolejka 4–6.10.2026 (polecenia 13:31 i 13:35)
+### Tempo i kolejka (polecenia 13:31, 13:35 i 13:47)
 
-Wdrożenie idzie od razu po scaleniu, także kilka razy dziennie, gdy brama jest zielona. Paczka dzienna tylko wtedy, gdy pełna brama lokalna okaże się wolna. Pomiar 4.10.2026: jeden pełny przebieg `tests/db/gate.sh` na Postgres 17 trwał 4 min 29 s (269 s) i skończył się kodem 1, więc nie jest zielony. 4,5 min nie jest wolne jak brama TEST — paczki dziennej nie włączamy. Do zielonego przebiegu brakuje: programu `age` (kopie), bazy przygotowanej dla zestawów dec5/dec6/adm10/hist11/dec-auto (szukają bazy `tower`) oraz aktualnych liczb w gate.sh (nullguard 528, i2 526, workflows 47, insurance 42).
+Wdrożenie idzie od razu po scaleniu, także kilka razy dziennie, gdy brama jest zielona. Paczki dzienne są WYŁĄCZONE. Pomiar 4.10.2026: jeden pełny przebieg `tests/db/gate.sh` na Postgres 17 trwał 4 min 29 s (269 s) i skończył się kodem 1. 4,5 min nie jest wolne — nie zbieramy dnia w jedną paczkę.
 
-Kolejność pracy, bez pozycji spoza planu. SG-01 (pozycja testowa właściciela, 1.10.2026 22:08, driver_token) wchodzi do najbliższego wdrożenia razem z następną pozycją, nie jako osobna migracja i nie z osobną bramą.
-
-| Dzień | Pozycje |
-|---|---|
-| niedziela 4.10 | L-3 (0143) już na produkcji. Osobnego wdrożenia migracji nie ma. SG-01 nie idzie osobno. |
-| poniedziałek 5.10 | L-1b. W tym samym wdrożeniu poprawka danych SG-01, jeśli nie weszła wcześniej. |
-| wtorek 6.10 | L-4. Dalej, gdy L-4 jest zielone: L-5, potem L-13. |
+Kolejka bez dni tygodnia. Pozycja za pozycją, wdrożenie po każdej zielonej bramie lokalnej. Najpierw domknięcie bramy (age, baza `tower`, liczby z wyjaśnieniem). Dopiero gdy ta brama jest zielona i scalona: L-1b razem z usunięciem pozycji SG-01 (jedna pozycja `driver_token`, 1.10.2026 22:08 czasu warszawskiego, kopia w R2 poza repozytorium: ścieżka i sha256, tylko ten wiersz, warunek po źródle i czasie, przelicz ETA). Potem L-4, L-5, L-13. Nowa migracja = pełna brama lokalna przed produkcją. Supabase TEST `emkbykwenwrjmbprydml` tylko w niedzielę i jako ostateczne potwierdzenie przed wdrożeniem.
 
 Nie zaczynać SEC-OWASP, P2-TILES ani części D.
 

@@ -62,7 +62,11 @@ for t in $TABLES; do
     psql_q "\\copy $target ($cols) from '$CSV_PATH' with (format csv, header true)"
   else
     target="public.$t"
-    psql_q "set session_replication_role = replica; \\copy $target ($cols) from '$CSV_PATH' with (format csv, header true)"
+    # psql -c nie wykonuje \copy po SQL (syntax error przy "\"). Jedna sesja: SET, potem \copy.
+    {
+      echo "set session_replication_role = replica;"
+      printf '\copy %s (%s) from '\''%s'\'' with (format csv, header true)\n' "$target" "$cols" "$CSV_PATH"
+    } | psql -v ON_ERROR_STOP=1 -q "$RESTORE_DB_URL" >/dev/null
   fi
   got=$(psql_q "select count(*) from $target")
   exp=$(expected "$t")
