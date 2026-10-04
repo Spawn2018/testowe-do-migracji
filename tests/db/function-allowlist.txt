@@ -78,6 +78,7 @@ authenticated kr_convoy_count
 authenticated sefs_lookup_mult
 authenticated sefs_compute_hybrid
 authenticated sefs_week_for_load
+authenticated l1b_ksh_file_unreadable
 # DEC-2 (0102): centrum decyzji
 authenticated decision_open
 authenticated decision_assign

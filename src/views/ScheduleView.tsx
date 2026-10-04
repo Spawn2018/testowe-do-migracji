@@ -207,6 +207,10 @@ export function ScheduleView() {
       }
       await runDryRun(buf, f.name, null);
     } catch (e) {
+      if (SERVER_IMPORT) {
+        const { reportUnreadableKshFile } = await import('../data/scheduleImportServer');
+        await reportUnreadableKshFile(f.name);
+      }
       setParseError(e instanceof Error ? e.message : String(e));
       setStep('upload');
       pushToast(t(locale, 'a6_sch_xlsx_fail'), 'CRITICAL');

@@ -118,5 +118,83 @@ val "większy próg zjazdu gasi alarm" "select l3_deviation_alarm(5000, 2, 10, f
 $PSQL -c "update ops_thresholds set value_num = 2 where key = 'OFFROUTE_KM'" >/dev/null
 val "prom i port bez zjazdu" "select l3_deviation_alarm(5000, 2, 10, true)" f
 
+echo; echo "[dec-auto] L-1b"
+$PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key)
+  values ('$P', '$L', 'RESOURCE_MISSING', 'HIGH', 'dec-auto awiz', 'rk_res_awiz', '{\"rule\":\"L3_AWIZ\"}'::jsonb, 'decauto:awiz')
+  on conflict (dedup_key) where dedup_key is not null and resolved_at is null do nothing" >/dev/null
+val "NO_AWIZACJA → decyzja" "select count(*) from decisions where type_code='NO_AWIZACJA' and detail->>'event_key'='decauto:awiz'" 1
+$PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key)
+  values ('$P', '$L', 'RESOURCE_MISSING', 'HIGH', 'dec-auto awiz', 'rk_res_awiz', '{\"rule\":\"L3_AWIZ\"}'::jsonb, 'decauto:awiz')
+  on conflict (dedup_key) where dedup_key is not null and resolved_at is null do nothing" >/dev/null
+val "NO_AWIZACJA drugie wykrycie → jedna" "select count(*) from decisions where type_code='NO_AWIZACJA' and detail->>'event_key'='decauto:awiz'" 1
+
+val "zniknięcie wiersza → decyzja" "select (l1b_note_row_gone('$P','$L','SG-GONE') is not null)::text" t
+$PSQL -c "select l1b_note_row_gone('$P','$L','SG-GONE')" >/dev/null
+val "zniknięcie drugie → jedna" "select count(*) from decisions where detail->>'event_key'='l1b:row-gone:$P:SG-GONE'" 1
+val "import woła zniknięcie wiersza" "select (position('l1b_note_row_gone' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean)'::regprocedure)) > 0)::text" t
+
+val "konflikt numeru HHL → decyzja" "select (l1b_note_conflict('$P','$L','SG-C','HHL/1','KSH/2') is not null)::text" t
+$PSQL -c "select l1b_note_conflict('$P','$L','SG-C','HHL/1','KSH/2')" >/dev/null
+val "konflikt drugie → jedna" "select count(*) from decisions where detail->>'event_key'='l1b:conflict:$P:SG-C:hhl_order_no'" 1
+val "ten sam numer → bez decyzji" "select (l1b_note_conflict('$P','$L','SG-C2','HHL/1','HHL/1') is null)::text" t
+val "import woła konflikt" "select (position('l1b_note_conflict' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean)'::regprocedure)) > 0)::text" t
+
+val "plik nieczytelny → decyzja" "select (l1b_ksh_file_unreadable('$P','zly.xlsx') is not null)::text" t
+$PSQL -c "select l1b_ksh_file_unreadable('$P','zly.xlsx')" >/dev/null
+val "plik drugi → jedna" "select count(*) from decisions where detail->>'event_key'='l1b:file:$P:zly.xlsx'" 1
+
+val "SEFS brak źródła → decyzja" "select l1b_sefs_note('$P','2026-11-16')" SOURCE
+$PSQL -c "select l1b_sefs_note('$P','2026-11-16')" >/dev/null
+val "SEFS brak źródła drugie → jedna" "select count(*) from decisions where detail->>'event_key' like 'l1b:sefs:$P:%:SOURCE'" 1
+$PSQL -c "insert into sefs_parameters (project_id, version, valid_from, base_sek, base_pln, index_sek, index_pln, source_url_sek, source_url_pln, cycle, tiers_sek, tiers_pln)
+  values ('$P', 91, '2026-01-01', 1, 1, 'OKQ8', 'ORLEN', 'https://example.com/sek', 'https://example.com/pln', 'WEEKLY',
+          '[{\"lte\":100,\"mult\":1}]'::jsonb, '[{\"lte\":100,\"mult\":1}]'::jsonb)" >/dev/null
+$PSQL -c "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url)
+  values ('$P','SEK','2026-10-06','2026-10-06',10,'https://example.com/sek'),
+         ('$P','PLN','2026-10-06','2026-10-06',10,'https://example.com/pln')" >/dev/null
+val "SEFS w tabeli → bez decyzji" "select l1b_sefs_note('$P','2026-10-12')" OK
+val "SEFS w tabeli nie otwiera" "select count(*) from decisions where detail->>'event_key' like 'l1b:sefs:$P:2026-10-05:%'" 0
+$PSQL -c "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url)
+  values ('$P','SEK','2026-10-13','2026-10-13',150,'https://example.com/sek'),
+         ('$P','PLN','2026-10-13','2026-10-13',150,'https://example.com/pln')" >/dev/null
+val "SEFS ponad tabelę → decyzja" "select l1b_sefs_note('$P','2026-10-19')" OVER
+$PSQL -c "select l1b_sefs_note('$P','2026-10-19')" >/dev/null
+val "SEFS ponad tabelę drugie → jedna" "select count(*) from decisions where detail->>'event_key'='l1b:sefs:$P:2026-10-12:OVER'" 1
+
+$PSQL -c "insert into loads (id, project_id, order_no, status, plan_load_date) values
+  ('33333333-0000-0000-0000-00000000kr01','$P','KR-1','PLANNED','2026-12-01'),
+  ('33333333-0000-0000-0000-00000000kr02','$P','KR-2','PLANNED','2026-12-01'),
+  ('33333333-0000-0000-0000-00000000kr03','$P','KR-3','PLANNED','2026-12-01')" >/dev/null
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m) values
+  ('$P','33333333-0000-0000-0000-00000000kr01','KR-01',1,1,1),
+  ('$P','33333333-0000-0000-0000-00000000kr02','KR-02',1,1,1),
+  ('$P','33333333-0000-0000-0000-00000000kr03','KR-03',1,1,1)" >/dev/null
+val "3 ładunki KR → bez decyzji" "select l1b_kr_check('$P','2026-12-01')" 3
+val "3 KR nie otwiera" "select count(*) from decisions where detail->>'event_key'='l1b:kr:$P:2026-12-01'" 0
+$PSQL -c "insert into loads (id, project_id, order_no, status, plan_load_date) values
+  ('33333333-0000-0000-0000-00000000kr04','$P','KR-4','PLANNED','2026-12-01')" >/dev/null
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m) values
+  ('$P','33333333-0000-0000-0000-00000000kr04','KR-04',1,1,1)" >/dev/null
+val "4 ładunki KR → decyzja" "select l1b_kr_check('$P','2026-12-01')" 4
+$PSQL -c "select l1b_kr_check('$P','2026-12-01')" >/dev/null
+val "KR drugie → jedna" "select count(*) from decisions where detail->>'event_key'='l1b:kr:$P:2026-12-01'" 1
+val "import woła próg KR" "select (position('l1b_kr_check' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean)'::regprocedure)) > 0)::text" t
+
+LD=33333333-0000-0000-0000-00000000dw01
+$PSQL -c "insert into loads (id, project_id, order_no, status) values ('$LD','$P','DW-1','PLANNED')" >/dev/null
+val "postój bez pozycji → bez alarmu" "select l1b_dwell_check('$LD')" 0
+$PSQL -c "insert into positions (load_id, ts, geom_raw, source) values
+  ('$LD', now(), ST_SetSRID(ST_MakePoint(18.6,54.3),4326), 'DRIVER_PWA')" >/dev/null
+$PSQL -c "insert into load_events (load_id, event_type, occurred_at, payload) values
+  ('$LD','GEOFENCE_ENTER', now() - interval '3 hours', '{\"geofence_kind\":\"LOADING\"}'::jsonb),
+  ('$LD','GEOFENCE_EXIT', now() - interval '1 hour', '{\"geofence_kind\":\"LOADING\"}'::jsonb)" >/dev/null
+val "postój w czasie wolnym → bez decyzji" "select l1b_dwell_check('$LD')" 0
+$PSQL -c "insert into load_events (load_id, event_type, occurred_at, payload) values
+  ('$LD','GEOFENCE_ENTER', now() - interval '20 hours', '{\"geofence_kind\":\"SITE\"}'::jsonb),
+  ('$LD','GEOFENCE_EXIT', now() - interval '10 hours', '{\"geofence_kind\":\"SITE\"}'::jsonb)" >/dev/null
+val "postój ponad czas wolny → decyzja" "select l1b_dwell_check('$LD')" 1
+$PSQL -c "select l1b_dwell_check('$LD')" >/dev/null
+val "postój drugie → jedna" "select count(*) from decisions where type_code='DWELL_OVER_FREE' and load_id='$LD'" 1
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
