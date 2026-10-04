@@ -89,5 +89,5 @@ check workflows 47
 check insurance 42
 check dec-auto 64
 check dwell 17
-check l13 21
+check l13 33
 [ $ok -eq 1 ]

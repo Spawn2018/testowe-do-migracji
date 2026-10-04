@@ -1653,3 +1653,20 @@ Wdrożenie po scaleniu #16 idzie z tego commita, bo squash #16 ma autora konta G
 DWELL_OVER_FREE nie wchodzi: czas wolny nie jest w `ops_thresholds`, a I-32 zostawia „od kiedy” do wyjaśnienia. Sztywne 360 i 240 minut nie otwierają decyzji.
 
 | nullguard | 528 | 533 | Ta sama paczka L-1b: `l1b_ksh_file_unreadable` jest GRANT dla authenticated, więc `null-guard-calls.txt` dostaje jeden wpis GUARD. To 4 odmowy (nieaktywny HHL, KSH, SCX, brak konta) i 1 kontrola pozytywna aktywnego HHL. 528+5=533. |
+
+### 2026-10-04 17:06 — poczta, tydzień produkcji (odczyt, nie szacunek)
+
+Tydzień od poniedziałku 2026-09-28 (liczony do niedzieli 2026-10-04). Wiersze `notifications` kanał EMAIL na produkcji, odczyt 2026-10-04 około 17:20 czasu warszawskiego. To stan sprzed włączenia skrótów (status DIGEST = 0). Szacunek szczytu po skrócie: 34.
+
+| Dzień | od razu (PENDING+SENT) | skrót | wstrzymane | wiersze e-mail |
+|---|---|---|---|---|
+| 2026-10-01 | 37 | 0 | 0 | 37 |
+| 2026-10-02 | 20 | 0 | 0 | 20 |
+| 2026-10-03 | 55 | 0 | 0 | 55 |
+| 2026-10-04 | 267 | 0 | 0 | 325 |
+
+Średnia z tych czterech dni: 94,75 od razu. Maksimum: 267 (4.10, jeszcze bez skrótu). Krytycznych osobno stary zapis nie rozdziela. Skrót: 0. Strażnik 80 (`integration_runs` job `email-budget`) w tym tygodniu: 0 razy. Próg „więcej niż dwa razy” nie zapalił się.
+
+Od następnego tygodnia ten sam odczyt ma iść tu co tydzień, już ze skrótem i z krytycznymi, obok 34.
+
+2026-10-04 — HERE_API_KEY dodany do sekretów Supabase produkcji (projekt nglnnrmzmhusvxslousq) i do .env.local. Wartość nie jest zapisana w repozytorium.
