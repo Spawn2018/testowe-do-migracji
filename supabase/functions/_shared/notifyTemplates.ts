@@ -221,6 +221,17 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
         : locale === 'sv' ? 'Det här meddelandet gäller en kundorganisation.' : 'To powiadomienie dotyczy organizacji klienta.';
       return { subject, body, severity: 'LOW', view: null };
     }
+    case 'DECISION_ESCALATED': {
+      const title = String(p.title ?? '');
+      const subject = locale === 'en'
+        ? `Decision is now critical: ${title}`
+        : locale === 'sv' ? `Beslutet är nu kritiskt: ${title}` : `Decyzja jest teraz krytyczna: ${title}`;
+      const body = locale === 'en'
+        ? 'The same decision reached the critical threshold. E-mail and SMS stay off until L-13.'
+        : locale === 'sv' ? 'Samma beslut nådde den kritiska gränsen. E-post och SMS är avstängda till L-13.'
+        : 'Ta sama decyzja doszła do progu krytycznego. E-mail i SMS są wyłączone do L-13.';
+      return { subject, body, severity: 'HIGH', view: 'risk' };
+    }
     case 'DECISION_OPEN': {
       const title = String(p.title ?? '');
       const subject = locale === 'en'

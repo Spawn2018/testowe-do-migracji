@@ -131,7 +131,29 @@ W opcjach HHL jest dziesięć liczb. Zapisuje je tylko administrator HHL, przy w
 | Brak pozycji GPS | 15 min |
 | Zjazd z trasy | 2 km |
 
-Z tych dziesięciu **tylko fala i porywy są czytane przez automat pogody** (`supabase/functions/_shared/integrations/store.ts`). Reszta jest zapisana i da się ją zmienić, ale w kodzie nie znalazłem miejsca, które by je stosowało do opóźnień, awizacji, dokumentów, ciszy GPS albo zjazdu z trasy. Zmiana tych ośmiu liczb sama z siebie niczego w transporcie nie przesuwa.
+Z tych dziesięciu **tylko fala i porywy są czytane przez automat pogody** (`supabase/functions/_shared/integrations/store.ts`). Stan na 03.10: reszta jest zapisana i da się ją zmienić, ale kod jej nie stosował do opóźnień, awizacji, dokumentów, ciszy GPS albo zjazdu z trasy. Od polecenia 2026-10-04 00:07 (czas warszawski) osiem progów podłącza L-3 według wzorów poniżej. Jedno źródło liczb: tabela Opcji. Kod, który czyta próg z innej tabeli, przepina się migracją, a duplikat znika.
+
+### Wzory progów (polecenie właściciela 2026-10-04 00:07, czas warszawski)
+
+ZASADY OGÓLNE
+
+1. Jedno źródło: wszystkie progi czytane WYŁĄCZNIE z tabeli Opcji. Kod czytający inną tabelę — przepnij migracją, duplikaty usuń.
+2. Ostrzeżenie i próg krytyczny to JEDEN alarm, który rośnie (ostrzeżenie → krytyczne), nie dwa osobne. Jedna decyzja: otwiera się przy ostrzeżeniu, termin = moment krytyczny; przy krytycznym ta sama decyzja czerwienieje i idą powiadomienia według macierzy.
+3. Warunek ustał (np. awizacja uzupełniona) → alarm zamknięty, decyzja ze statusem „nieaktualna — warunek ustał" (zapis systemu w Historii). To nie jest rozstrzygnięcie — rozstrzyga tylko firma (L-2).
+4. Czas: Europe/Warsaw. Brak godziny w pliku KSH → liczymy od 00:00 tego dnia (wcześniejsze ostrzeżenie).
+5. Brak prawdziwych danych → brak alarmu (tak jak przy L-1).
+
+WZORY
+
+A. Awizacja (NO_AWIZACJA, w ramach L-3): kierowca odbierający, ciągnik, naczepa, telefon — liczone od planowanego ZAŁADUNKU (data + godzina z pliku KSH). Kierowca dostarczający z telefonem i ciągnikiem — od planowanej DOSTAWY (48 h przed dostawą). Brak na 48 h przed → ostrzeżenie; brak na 12 h przed → krytyczne.
+B. Dokumenty (DOC_MISSING): brak wymaganego dokumentu (zezwolenie, gdy wymagane; polisa) na 24 h przed planowanym załadunkiem → ostrzeżenie; na 6 h → krytyczne.
+C. Wyprzedzenie KSH (KSH_DATE_LT_5D, D-12): zmiana daty albo nowy transport w pliku KSH, gdy od chwili zmiany do wcześniejszej z dat (stara/nowa data załadunku) zostało mniej niż 5 dni.
+D. Opóźnienie (ETA_AFTER_LATEST): ETA > koniec okna dostawy + próg z Opcji. ETA tylko z prawdziwych danych (GPS albo potwierdzony status). Sam plan → bez alarmu.
+E. Brak GPS: ostatnia pozycja starsza niż próg (15 min) — tylko gdy pojazd ma podłączone źródło pozycji i status jest w ruchu (IN_TRANSIT_PL, AT_PORT_*, IN_TRANSIT_SE). Bez alarmu: READY, FERRY (na promie pozycja z AIS), AT_SITE, DELIVERED.
+F. Zjazd z trasy (ROUTE_DEVIATION): odległość od trasy korytarza > próg z Opcji przez co najmniej 2 kolejne pozycje i co najmniej 10 min. Bez alarmu na promie i w strefach portów oraz placów.
+
+TESTY: dla każdego wzoru — zmiana wartości w Opcjach zmienia moment alarmu; brak danych = brak alarmu; ostrzeżenie → krytyczne = ta sama decyzja.
+
 
 ---
 
@@ -363,6 +385,6 @@ Nie budować, dopóki właściciel nie powie „tak” na konkretny punkt:
 - nowych celów kliknięcia dla zdarzeń statusu i stref — dziś większość nie ma własnego ekranu;
 - listy alternatywnych promów i objazdów w Szwecji na produkcji — kod celowo pisze „brak źródła” albo chowa stałą listę;
 - trzech osobnych automatów „workflow HHL / KSH / Scandinavian Express” — takiego bytu w kodzie nie ma;
-- podłączenia ośmiu progów (opóźnienie, daty KSH, awizacja, dokumenty, GPS, zjazd) do prawdziwych alarmów — zmiana liczby dziś nic nie zrobi, a podłączenie zmieni, kiedy coś krzyczy;
+- podłączenia ośmiu progów (opóźnienie, daty KSH, awizacja, dokumenty, GPS, zjazd) — wzory są w §4 od 2026-10-04 00:07; L-3 je wdraża, zmiana liczby w Opcjach zmienia moment alarmu;
 - zdjęcia cyfr z górnego paska — to zmiana wyglądu, nie poprawka błędu liczenia;
 - nowego kreatora stref z mapą, krajem i odbiorcami — obecny formularz tego nie umie i nie wolno udawać, że umie.
