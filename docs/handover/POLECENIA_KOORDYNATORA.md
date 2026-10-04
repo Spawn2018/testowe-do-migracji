@@ -290,3 +290,8 @@ Do zestawu dec-auto test dla każdego typu, który wchodzi. Zasady L-3: progi ty
 SG-01 w tej samej paczce: jedna pozycja driver_token z 1 października 2026, 22:08 czasu warszawskiego. Kopia R2 poza repozytorium (ścieżka i sha256). Usunięcie migracją tylko tego wiersza, warunek po źródle i czasie. Przeliczyć ETA. Nic innego nie usuwać.
 
 Brama: tests/db/gate.sh, Postgres 17, localhost:5433, pełna brama lokalna raz przed scaleniem. Supabase TEST emkbykwenwrjmbprydml tylko niedziela i ostateczne potwierdzenie przed wdrożeniem. Po scaleniu wdrożyć od razu. Obie domeny mają zwracać 200 na nowym wdrożeniu.
+
+
+## Polecenie 2026-10-04 14:40 (czas warszawski) — kolejka po L-1b
+
+Po L-1b idzie L-4, potem L-5, L-13. DWELL_OVER_FREE jest STOP i nie ruszaj go.
