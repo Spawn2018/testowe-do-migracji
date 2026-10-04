@@ -520,7 +520,7 @@ TESTY: dla każdego wzoru — zmiana wartości w Opcjach zmienia moment alarmu; 
 
 ## Po REJESTR — DOWODY, przed częścią B (04.10)
 
-Tabela dowodów jest przyjęta (triage 04.10, `TRIAGE_REJESTRU.md`). Kolejność: H-3, potem U-3-PALIWO, potem DRV-CLOSE, potem STD-CLEAN. H-3 jest już na main (PR #40) i zostaje wyłączone do wymiarów. Część B rusza po U-3-PALIWO, DRV-CLOSE i STD-CLEAN. Tych trzech nie wykonywać w przebiegu dokumentów.
+Tabela dowodów jest przyjęta (triage 04.10, `TRIAGE_REJESTRU.md`). Kolejność: H-3, potem U-3-PALIWO, DRV-CLOSE, STD-CLEAN, SMS-KSH-1H i VERIFY-13. H-3 jest już na main (PR #40) i zostaje wyłączone do wymiarów. Część B rusza dopiero po całej tej kolejce. Pozycji nie wykonywać w przebiegu dokumentów.
 
 | ID | Priorytet | Kiedy | Opis | Status |
 |---|---|---|---|---|
