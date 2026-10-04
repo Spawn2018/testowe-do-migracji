@@ -622,3 +622,39 @@ Nie wykonywać testu w tym przebiegu. Tylko dokumentacja; bez zmian w kodzie, be
 Osobny PR. Nie robić SMS-KSH-1H, ETA-PRE-LOAD, VERIFY-13, PALIWO-33.3 ani części B. Nie włączać H-1 ani H-3. Nie kasować transportów. Nie wołać Resend.
 
 U-17: usunąć resztki klasy STANDARD. Cennik: migracja po 0100 i `src/lib/rateCard.ts` — bez pozycji STANDARD i bez nowej stawki. Typ wiersza i szuflada ładunku nie pokazują klasy STANDARD. Pomijanie zezwolenia dla STANDARD schodzi (klient i `load_needs_permit`). Import nadal pomija wiersze TYP = STANDARD (B-8-IMP, ładunki NTG). Nie wymyślać cennika. Brama lokalna zielona na tym samym commicie przed scaleniem i produkcją.
+
+## Polecenie 2026-10-05 (czas warszawski) — B-MAPA, podkład i rysowanie
+
+Osobny zapis decyzji. Bez budowy w tym poleceniu. Kolejność przed częścią B zostaje taka, jak przed tym zapisem. Późniejsze polecenie AIS-SRC wstawia AIS-SRC między SMS-KSH-1H a VERIFY-13.
+
+Decyzja właściciela 2026-10-05. Zmienia zakres H-6. Obejmuje Q-17 i Q-19.
+
+Stan: wszystkie mapy mają podkład Esri „World Light/Dark Gray Base”. Brak nazw miast, ulic i numerów dróg, brak klas dróg, zoom max 16. Podpis „OpenStreetMap · CARTO” jest błędny — kafelki są z Esri.
+
+1. Podkład: HERE Raster Tile API v3, styl logistyczny, wersja jasna i ciemna zgodnie z motywem. Na wszystkich mapach: widok Mapa, kokpit, szczegóły transportu, kreator stref, odtwarzanie przebiegu. Zoom do poziomu, na którym widać plac w Śremie i w Boden. Podpis źródeł: HERE (w trybie zapasowym — właściwy dostawca). Usunąć podpis „OpenStreetMap · CARTO” przy kafelkach Esri.
+2. Budżet D-78, 100 USD miesięcznie, wspólny dla wszystkich usług HERE. Przy 80% mapy same przechodzą na zapasowy podkład z etykietami (miejscowości, ulice, numery dróg), nigdy na obecny szary. Powrót na HERE od 1. dnia miesiąca. Zużycie kafelków i dopasowania śladów widoczne w Stanie systemu.
+3. Trasa planowana z geometrii trasy HERE, dokładnie na drogach. Pozycja auta: surowy punkt GPS, bez przesuwania; zapis w bazie bez zmian. Przejechany ślad: HERE Route Matching wyłącznie do rysowania; surowe pozycje nietknięte. Jeśli pomiar pokaże zagrożenie budżetu — ślad z samych punktów i informacja w raporcie. Pozycja promu z AIS bez zmian. Trasa promu z historii AIS, po torze wodnym, nigdy prosta przez ląd. Warstwa przeszkód HERE dla wymiarów (H-6): zbudować, zostawić wyłączoną do wymiarów (D-83).
+4. Przed budową pomiar na TEST: kilku użytkowników, typowy dzień. Szacunek miesięczny w USD razem z resztą wydatków HERE. Warunki licencji kafelków i dopasowania zgodne z D-81 (dane HERE najwyżej 30 dni).
+5. Testy: każda mapa ładuje podkład HERE, jasny i ciemny; symulacja 80% budżetu — podkład zapasowy z etykietami, zero zapytań o kafelki HERE do końca miesiąca; trasy Śrem–Gdańsk i Nynäshamn–Boden leżą na drogach; ślad przejazdu przez rondo leży na drodze; trasy promów Gdańsk–Nynäshamn i Gdynia–Karlskrona nie przecinają lądu; pozycja auta w bazie = surowy GPS; wzorce zrzutów odświeżone raz, z opisem przyczyny.
+6. Część B, pozycja B-MAPA, pierwsza z prac nad mapami, przed B-7a, B-7b i B-7c. Bez budowy teraz.
+
+## Polecenie 2026-10-05 (czas warszawski) — AIS-SRC i Q-18
+
+Osobny zapis decyzji. Bez budowy w tym poleceniu. Klucz AISSTREAM_API_KEY już jest w sekretach Edge produkcji i w .env.local. Nie prosić o niego i nie wypisywać go.
+
+Stan: aplikacja zna 5 promów. Wawel (311852000) i Nova Star (311000787) — Polferries Gdańsk–Nynäshamn. Stena Spirit, Stena Estelle, Stena Ebba — Stena Line Gdynia–Karlskrona. Lista jest kompletna. Stena Vision zeszła z trasy w 2023, listy nie rozszerzać. Jedyne źródło dziś: Digitraffic (Finlandia). Na południowym Bałtyku jest ślepe.
+
+1. AIS-SRC. Dodać aisstream.io do funkcji pobierającej pozycje promów. Filtr wyłącznie na MMSI pięciu promów. MMSI Sten ustalić z danych aisstream, nie zgadywać. Digitraffic zostaje zapasem. Przy dwóch pozycjach tego samego statku nowsza wygrywa. Zapis źródła przy każdej pozycji. Najpierw diagnoza: (a) dla każdego promu data ostatniej pozycji w bazie wobec ostatniej w źródle — czy obecne odświeżanie w ogóle działa; (b) czy aisstream widzi wszystkie 5 promów, w portach Gdańsk, Gdynia, Nynäshamn, Karlskrona i na morzu. Jeśli któregoś nie widzi — zgłosić i zaproponować inne darmowe źródło, nie zgadywać.
+2. Q-18. Słowa właściciela 04.10: „Na mapach mają być pokazane tylko te statki, które w danym momencie płyną do Szwecji.” Prom widoczny od wyjścia ze strefy portu w Polsce (Gdańsk, Gdynia) do wejścia w strefę portu w Szwecji (Nynäshamn, Karlskrona). Niewidoczny: postój w porcie i rejs do Polski. Kierunek z wyjścia ze strefy portu. Pole „destination” z AIS tylko jako potwierdzenie. Dotyczy wszystkich map: Mapa, kokpit, szczegóły transportu.
+3. Śledzenie w tle bez zmian. Baza zapisuje pozycje wszystkich 5 promów w obie strony. Filtr z punktu 2 to wyłącznie warstwa wyświetlania. ETA (D-85), opóźnienie wypłynięcia (II-9) i alternatywy rejsu (L-9) korzystają z pełnych danych.
+4. Odświeżanie bez przestojów. Pozycja promu na mapie nie starsza niż 5 minut. Starsza niż 15 minut — znacznik wyszarzony z godziną ostatniej pozycji. Brak danych o promie ponad 1 h — ryzyko w Stanie systemu.
+5. Testy: prom wychodzi z Gdańska → pojawia się, wchodzi do Nynäshamn → znika; prom w drodze do Polski → niewidoczny na mapie, pozycja zapisana w bazie; dwie pozycje z dwóch źródeł → zapisana nowsza, ze źródłem; awaria aisstream → pozycje z Digitraffic, bez błędu aplikacji; pozycja starsza niż 15 min → znacznik wyszarzony; ETA transportu na promie liczy się także, gdy prom jest niewidoczny; gitleaks 0 w śledzonych plikach.
+6. Kolejka: STD-CLEAN (zrobione) → SMS-KSH-1H + ETA-PRE-LOAD → AIS-SRC (punkty 1, 3 i 4) → VERIFY-13 → PALIWO-33.3 (najpóźniej 23.10.2026) → część B zaczyna od B-MAPA razem z Q-18. Q-18 nie wchodzi do budowy AIS-SRC. Bez budowy teraz.
+
+## Polecenie 2026-10-05 (czas warszawski) — PL-PLURAL
+
+Tylko dokument. Bez budowy. Nie przerywa SMS-KSH-1H + ETA-PRE-LOAD. To pozycja planu, nie decyzja właściciela.
+
+Część B, priorytet P3, ID PL-PLURAL, za B-MAPA i za kolejką nocną.
+
+Komunikat importu „Pominięto 2 wierszy” ma brzmieć „2 wiersze”. Sprawdzić odmianę przez liczby we wszystkich komunikatach PL (1 / 2–4 / 5+, także 22–24 = wiersze, 12–14 = wierszy). Jedna funkcja odmiany. Test na wartościach 1, 2, 5, 12, 22, 25. Źródło błędu: `tests/b8-imp.test.ts` i `standardSkipMessage`.
