@@ -23,7 +23,7 @@ korzysta z nich w obecnej postaci.
 | **D-82** | Opłaty drogowe (myto) — **poza zakresem**. Nie liczymy i nie pokazujemy. |
 | **D-83** | Wymiary zestawów **dla każdego transportu** poda właściciel na etapie budowy aplikacji — Watch Tower będzie je mieć. Kontrola trasy **nie bierze niczego z dokumentów** (zezwoleń). **Przewoźnik nie wprowadza żadnych wymiarów.** |
 | **D-84** | Próg wiatru **zatwierdzony: porywy 15 m/s**. Silny wiatr na trasie **wydłuża ETA** — zgodnie z logiką i faktami (sekcja H-10). |
-| **D-85** | ETA **w pełni automatyczne**: zero ręcznego wpisu, także prędkości. H-4 po emtrack. Opis i plan testu w sekcji H-4. |
+| **D-85** | ETA **w pełni automatyczne**: zero ręcznego wpisu, także prędkości. H-4 po emtrack. Opis i plan testu w sekcji H-4. **20:10:** droga SE z Trafikverket w pełnym zakresie (sytuacje, nawierzchnia, pomiary stacji), nie tylko utrudnienia. Linia ETA „nawierzchnia”. |
 
 ---
 
@@ -156,6 +156,38 @@ korzysta z nich w obecnej postaci.
   1. **Droga PL i SE.** Trasa ciężarówki HERE z wymiarami transportu (D-83),
      ruch na żywo (PL i SE), utrudnienia (HERE i Trafikverket), wiatr (H-10)
      i zakazy czasowe (H-12).
+
+     **Droga SE, Trafikverket, pełny zakres, nie tylko utrudnienia**
+     (właściciel 2026-10-04 20:10). H-4 nadal bez budowy.
+
+     - Sytuacje na drodze: wypadki, zamknięcia, roboty, ograniczenia dla
+       ciężarówek.
+     - Stan nawierzchni: śnieg, lód, gołoledź. Na tych odcinkach zestaw
+       jedzie wolniej.
+     - Pomiary ze stacji przy drodze: wiatr i temperatura nawierzchni.
+       Na odcinku, na którym pojazd jest teraz, pomiar wygrywa z prognozą
+       (H-10). Na dalszych odcinkach zostaje prognoza.
+     - Wpływ nawierzchni na prędkość: start z oficjalnych wytycznych, potem
+       kalibracja uczona z GPS (II-7b). Żadnych ręcznych wartości.
+     - W rozbiciu ETA osobna linia **nawierzchnia**.
+
+     Co II-6 już bierze, a czego nie ma (kod `road-se`, bez zmiany aplikacji):
+
+     - **Jest.** `RoadCondition` na E4 w länach korytarza: tekst i kod stanu,
+       w tym śnieg, lód i błoto pośniegowe. Z tego powstaje ryzyko ROAD_SE
+       i jeden współczynnik na cały korytarz (+15%, parametr wstępny w kodzie,
+       nie wytyczna i nie odcinek).
+     - **Jest.** `WeatherMeasurepoint`: wiatr, temperatura nawierzchni,
+       temperatura powietrza, deszcz i śnieg. Idzie do ryzyka ROAD_SE.
+       Nie rozstrzyga jeszcze „pomiar na bieżącym odcinku, prognoza dalej”.
+     - **Nie ma, do dodania przy H-4.** Sytuacje: wypadki, zamknięcia, roboty,
+       ograniczenia dla ciężarówek. Zapytanie `Situation` jest w kodzie, ale
+       zadanie go nie woła. Od 01.10.2026 obiekt `Situation` nie istnieje
+       w Open API (D-34). Trzeba znaleźć zastępcze źródło Trafikverket.
+       Nie włączać starego zapytania na ślepo.
+     - **Nie ma, do dodania przy H-4.** Spowolnienie na konkretnym odcinku
+       według wytycznych, potem nauka z GPS. Linia „nawierzchnia” w rozbiciu
+       ETA. Dziś jest tylko jeden współczynnik na cały korytarz.
   2. **Współczynnik zestawu, bez ręcznej prędkości.** Kalibracja uczona
      z planu (II-7b, D-28). Start: czasy D-9 wobec HERE (PL 7,5 h / 4,61 h,
      SE 17 h / 12,78 h). Potem nauka z prawdziwego GPS, osobno dla PL i SE
@@ -171,10 +203,10 @@ korzysta z nich w obecnej postaci.
      odpoczynek dobowy po limicie jazdy. Odpoczynek jest na promie. Po
      promie licznik zaczyna się od nowa. Przy zmianie kierowcy godziny
      są osobno dla każdego.
-  6. **Rozbicie ETA:** jazda, prom, port, przerwy, wiatr, ruch.
+  6. **Rozbicie ETA:** jazda, prom, port, przerwy, wiatr, ruch, nawierzchnia.
 
   Plan testu (gdy H-4 powstanie, nie teraz): ten sam GPS daje rozbicie na
-  sześć składników; brak pola prędkości w Opcjach; start współczynnika to
+  siedem składników, w tym osobna linia nawierzchnia; brak pola prędkości w Opcjach; start współczynnika to
   stosunek D-9 do HERE, a nie wpisana liczba km/h; odwołany rejs otwiera
   `FERRY_CANCELLED` i liczy ETA z następnego rejsu tego armatora; przyjazd
   po odprawie bierze następny rejs; odpoczynek dobowy nie dolicza się drugi

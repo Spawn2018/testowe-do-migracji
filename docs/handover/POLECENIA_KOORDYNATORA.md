@@ -448,3 +448,18 @@ H-4 nie budować (czeka na emtrack). Propozycja limitu km/h w Opcjach jest nieak
 ETA z bieżącej pozycji GPS, zero ręcznego wpisu, także prędkości. Łańcuch: droga PL i SE (HERE, wymiary D-83, ruch, utrudnienia, wiatr H-10, zakazy H-12), współczynnik zestawu uczona z planu (start: czasy D-9 wobec HERE), prom (rozkład, status, AIS, następny rejs tego armatora), port, godziny kierowcy (przerwa 45 min po 4,5 h, odpoczynek na promie, licznik od nowa po promie, osobno przy zmianie kierowcy). Rozbicie: jazda, prom, port, przerwy, wiatr, ruch.
 
 Komunikat HERE o ogólnym limicie wysokości województwa (400 cm) to przepis, nie przeszkoda. Ryzyko tylko dla konkretnego wiaduktu, mostu albo tunelu.
+
+## Polecenie 2026-10-04 20:10 (czas warszawski) — D-85, droga SE
+
+Nie przerywać L-6. H-4 nie budować. Żadnego e-maila.
+
+Punkt 1 decyzji D-85, droga w Szwecji, z Trafikverket, pełny zakres, nie tylko utrudnienia:
+
+- sytuacje na drodze: wypadki, zamknięcia, roboty, ograniczenia dla ciężarówek
+- stan nawierzchni: śnieg, lód, gołoledź — zestaw na tych odcinkach jedzie wolniej
+- pomiary ze stacji przy drodze: wiatr i temperatura nawierzchni; na bieżącym odcinku pomiar wygrywa z prognozą (H-10), na dalszych zostaje prognoza
+
+Wpływ nawierzchni na prędkość: start z oficjalnych wytycznych, potem kalibracja uczona z GPS (II-7b). Bez ręcznych wartości. W rozbiciu ETA osobna linia „nawierzchnia”.
+
+II-6 już bierze `RoadCondition` i `WeatherMeasurepoint` (nawierzchnia E4 oraz wiatr i temperatura nawierzchni) i składa z tego jeden współczynnik na cały korytarz oraz ryzyko ROAD_SE. Nie bierze sytuacji: obiekt `Situation` wypadł z Open API (D-34, 01.10.2026), a zadanie `road-se` i tak go nie woła. Do dodania przy H-4: zastępcze źródło sytuacji, spowolnienie na odcinku oraz linia „nawierzchnia”. Zapis w `ZLECENIE_HERE.md` i w rejestrze (D-85).
+
