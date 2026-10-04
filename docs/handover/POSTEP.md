@@ -1641,3 +1641,5 @@ Liczby bez wyjaśnienia nie były ruszane. `insurance` w poleceniu było opisane
 Backup po instalacji `age`: liczba zostaje 29. Dwa czerwone testy nie były brakiem `age`. (1) `scripts/restore.sh` przy `--into-public` składał `set session_replication_role` i `\copy` w jednym `psql -c` — psql zgłasza błąd składni przy `\`. Poprawka: jedna sesja, najpierw SET, potem `\copy` (klient czyta plik, nie serwer). (2) Asercja I-33 oczekiwała `ERROR/t/t`, a sklejenie `||` w Postgresie 17 daje `ERROR/true/true`. Po obu poprawkach `backup.sh` daje 29 OK, 0 FAIL.
 
 Pełna brama lokalna 2026-10-04 14:05 czasu warszawskiego: kod 0, 4 min 56 s (296 s). Wszystkie zestawy 0 FAIL, w tym backup 29/29 i dec-auto 39/39. Bazy tower i tower_boot usunięte po przebiegu.
+
+Wdrożenie po scaleniu #16 idzie z tego commita, bo squash #16 ma autora konta GitHub, a plan Hobby puszcza tylko sebastian.bozekq@gmail.com.
