@@ -461,7 +461,7 @@ Punkt 1 decyzji D-85, droga w Szwecji, z Trafikverket, pełny zakres, nie tylko 
 
 Wpływ nawierzchni na prędkość: start z oficjalnych wytycznych, potem kalibracja uczona z GPS (II-7b). Bez ręcznych wartości. W rozbiciu ETA osobna linia „nawierzchnia”.
 
-II-6 już bierze `RoadCondition` i `WeatherMeasurepoint` (nawierzchnia E4 oraz wiatr i temperatura nawierzchni) i składa z tego jeden współczynnik na cały korytarz oraz ryzyko ROAD_SE. Nie bierze sytuacji: obiekt `Situation` wypadł z Open API (D-34, 01.10.2026), a zadanie `road-se` i tak go nie woła. Do dodania przy H-4: zastępcze źródło sytuacji, spowolnienie na odcinku oraz linia „nawierzchnia”. Zapis w `ZLECENIE_HERE.md` i w rejestrze (D-85).
+II-6 już bierze `RoadCondition` i `WeatherMeasurepoint` (nawierzchnia E4 oraz wiatr i temperatura nawierzchni) i składa z tego jeden współczynnik na cały korytarz oraz ryzyko ROAD_SE. Nie bierze sytuacji: obiekt `Situation` wypadł z Open API (D-34, 01.10.2026), a zadanie `road-se` i tak go nie woła. Sytuacje (wypadki, zamknięcia, roboty) wchodzą w H-2 jako B-2b, zaraz po L-12, nie w H-4. Przy H-4 zostaje spowolnienie na odcinku i linia „nawierzchnia”.
 
 ## Polecenie 2026-10-04 20:15 (czas warszawski) — L-7
 
@@ -482,3 +482,15 @@ Tylko L-8. H-4 nie budować. H-1 nie zaczynać. L-9 nie zaczynać. Bez e-maila. 
 Gotowe, gdy: test liczb dla każdej firmy. Język interfejsu polski. Bez nowych angielskich napisów w widoku polskim.
 
 Po zielonej bramie: PR, scalenie, wdrożenie z main od razu, bez pytania. Obie domeny 200 na nowym wdrożeniu.
+
+## Polecenie 2026-10-04 20:23 (czas warszawski) — kolejka, pytania 17–19, R-0
+
+L-8 nie przerywać. Po L-8 tylko dokumenty. Nic nie kasować. H-1 i H-2 nie startują. Status R-1 bez zmiany.
+
+1. Po L-12: H-1, H-2, H-3, dopiero potem część B. H-2 i H-3 od razu, gdy przyjdzie kolej. H-1 zbudować i zostawić wyłączone do wymiarów (D-83).
+2. Q-17, Q-18 i Q-19 są w planie (pytania 17–19 z części B). Dopisane jako własne wiersze. Reszta części B i C już była (B-1–B-10, B-KSH, B-REJSY, C-SEP, pytania 1–16 w L albo w B-Q).
+3. P2-TILES i P3-APK zostają w tle. Tygodniowy raport poczty, niedzielna brama i luki narzędzi deweloperskich bez zmian.
+4. Resend, sam odczyt, bez wysyłki. Miesiąc: 429 z 3000, limit miesięczny nie jest wyczerpany. Reset miesięczny według API: 25.10.2026 02:03 czasu warszawskiego. Dzień: 203 z 100, wyczerpany. Reset dzienny według API: 05.10.2026 01:59 czasu warszawskiego. Właściciel podał 05.10.2026 01:00 i 25.10.2026 01:00. Zaproszenia i e-maile od 5 października, gdy dzienny limit wróci.
+5. Drugie polecenie R-0 (lista do potwierdzania punkt po punkcie) jest nieważne. Nie zapisane. Obowiązuje trzecie: R-0 to plan. Kasowane tylko transporty i wiersze na kluczu obcym. Reszta zostaje. Wykonanie dopiero tuż przed R-1, po pisemnej akceptacji. 94 transporty zostają.
+
+Sytuacje drogowe Trafikverket nie czekają na H-4. To B-2b i część H-2, zaraz po L-12.

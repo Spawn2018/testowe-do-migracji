@@ -93,6 +93,12 @@ korzysta z nich w obecnej postaci.
 - Zasilają istniejące ryzyka ROAD_PL i ROAD_SE oraz panel „Warunki drogowe".
 - Częstotliwość: co 15 min dla odcinków z transportem w drodze; co 60 min,
   gdy nikogo nie ma.
+- **B-2b, nie H-4** (właściciel 2026-10-04 20:23). Sytuacje drogowe
+  Trafikverket — wypadki, zamknięcia, roboty — wchodzą tutaj, zaraz po L-12.
+  Znaleźć aktualny obiekt albo wersję API (stare `Situation` wypadło 01.10,
+  D-34). Przywrócić pobieranie. Panel „Warunki drogowe SE”. Ryzyka ROAD_SE
+  z prawdziwych danych. Nie włączać starego zapytania na ślepo. Nie startować
+  przed końcem L-12.
 
 ### H-3 · Przeszkody wzdłuż korytarza
 - Pełna lista ograniczeń dla ciężarówek w pasie wzdłuż korytarza (także drogi
@@ -157,8 +163,9 @@ korzysta z nich w obecnej postaci.
      ruch na żywo (PL i SE), utrudnienia (HERE i Trafikverket), wiatr (H-10)
      i zakazy czasowe (H-12).
 
-     **Droga SE, Trafikverket, pełny zakres, nie tylko utrudnienia**
-     (właściciel 2026-10-04 20:10). H-4 nadal bez budowy.
+     **Droga SE, Trafikverket.** Sytuacje drogowe są w H-2 (B-2b), nie tutaj.
+     W H-4 zostaje wpływ na ETA: nawierzchnia, pomiary, linia „nawierzchnia”.
+     H-4 nadal bez budowy.
 
      - Sytuacje na drodze: wypadki, zamknięcia, roboty, ograniczenia dla
        ciężarówek.
@@ -180,11 +187,9 @@ korzysta z nich w obecnej postaci.
      - **Jest.** `WeatherMeasurepoint`: wiatr, temperatura nawierzchni,
        temperatura powietrza, deszcz i śnieg. Idzie do ryzyka ROAD_SE.
        Nie rozstrzyga jeszcze „pomiar na bieżącym odcinku, prognoza dalej”.
-     - **Nie ma, do dodania przy H-4.** Sytuacje: wypadki, zamknięcia, roboty,
-       ograniczenia dla ciężarówek. Zapytanie `Situation` jest w kodzie, ale
-       zadanie go nie woła. Od 01.10.2026 obiekt `Situation` nie istnieje
-       w Open API (D-34). Trzeba znaleźć zastępcze źródło Trafikverket.
-       Nie włączać starego zapytania na ślepo.
+     - **Sytuacje (wypadki, zamknięcia, roboty, ograniczenia dla ciężarówek)
+       nie czekają na H-4.** Wchodzą w H-2 (B-2b), zaraz po L-12. Obiekt
+       `Situation` wypadł z Open API 01.10.2026 (D-34). Źródło szukać przy H-2.
      - **Nie ma, do dodania przy H-4.** Spowolnienie na konkretnym odcinku
        według wytycznych, potem nauka z GPS. Linia „nawierzchnia” w rozbiciu
        ETA. Dziś jest tylko jeden współczynnik na cały korytarz.
