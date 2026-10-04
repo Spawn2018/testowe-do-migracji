@@ -15,20 +15,17 @@ import { formatAppMoney } from '../lib/money/demoFx';
 import { TIER_PILL, aggregateTier } from '../lib/money/loadMoney';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { docsCompleteBeforeLoad, otifShown, prodBannerRisk, riskAsException, sortExceptions } from '../lib/prodDash';
+import { isoWeekNumber, needsDecisionCount } from '../lib/cockpitTiles';
 
 export function DashboardView() {
   // I-2l: czas wykrycia odchylenia z bazy (kpi_detection_lag) — wyłącznie build produkcyjny, moduł leniwy
   const [detectLag, setDetectLag] = useState<{ samples: number; medianMin: number | null } | null>(null);
-  const [openDecisions, setOpenDecisions] = useState<number | null>(null);
   useEffect(() => {
     if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
       let cancelled = false;
       void import('../lib/detectLag')
         .then((m) => m.fetchDetectionLag())
         .then((r) => { if (!cancelled) setDetectLag(r); }, () => { if (!cancelled) setDetectLag({ samples: 0, medianMin: null }); });
-      void import('../lib/openDecisions')
-        .then((m) => m.countOpenDecisions())
-        .then((n) => { if (!cancelled) setOpenDecisions(n); }, () => { if (!cancelled) setOpenDecisions(0); });
       return () => { cancelled = true; };
     }
     return undefined;
@@ -74,6 +71,10 @@ export function DashboardView() {
   const docsOkShown = PROD_BUILD ? docsCompleteBeforeLoad(loads, documents) : docsOk;
   const prodWeeks = useMemo(() => (PROD_BUILD ? progressWeeksLabel(progressWeeksFromDb(loads, getNow())) : null), [loads]);
   const otifText = otifShown(delivered) ? fmtPct(locale, otif / 100, 0) : '—';
+
+  const weekNo = isoWeekNumber(getNow().toISOString());
+  const kshDecisionN = PROD_BUILD ? needsDecisionCount('KSH', risks) : sortedEx.length;
+  const hhlDecisionN = PROD_BUILD ? needsDecisionCount('HHL', risks) : sortedEx.length;
 
   const critEx = sortedEx.filter((e) => e.severity === 'CRITICAL');
 
@@ -176,9 +177,9 @@ export function DashboardView() {
               />
               <KpiTile
                 label={t(locale, 'exceptions')}
-                value={PROD_BUILD && openDecisions !== null ? openDecisions : sortedEx.length}
-                delta={PROD_BUILD && openDecisions !== null ? t(locale, 'dec_centre') : t(locale, "dash_signals")}
-                tone={(PROD_BUILD && openDecisions !== null ? openDecisions : sortedEx.length) > 6 ? 'alert' : 'warn'}
+                value={kshDecisionN}
+                delta={t(locale, "dash_signals")}
+                tone={kshDecisionN > 6 ? 'alert' : 'warn'}
                 onClick={() => setView('risk')}
               />
             </>
@@ -213,7 +214,7 @@ export function DashboardView() {
                   locale,
                   currency,
                 )}
-                delta={t(locale, "dash_week_invoice")}
+                delta={tp(locale, 'dash_week_invoice', { week: String(weekNo) })}
                 tags={tierTags(weekLoads)}
                 onClick={() => navigateTo({ view: 'inv' })}
               />
@@ -243,7 +244,7 @@ export function DashboardView() {
               />
               <KpiTile
                 label={t(locale, 'exceptions')}
-                value={sortedEx.length}
+                value={hhlDecisionN}
                 delta={t(locale, 'kpi_ex_queue')}
                 tone={critEx.length ? 'alert' : 'warn'}
                 onClick={() => setView('risk')}
