@@ -110,4 +110,4 @@
 | D-82 | myto | Opłaty drogowe poza zakresem. Nie liczymy i nie pokazujemy. | ✅ 04.10.2026 |
 | D-83 | wymiary zestawu | Wymiary dla każdego transportu poda właściciel. Kontrola trasy nie bierze niczego z dokumentów. Przewoźnik nie wprowadza żadnych wymiarów. | ✅ 04.10.2026 |
 | D-84 | próg wiatru | Porywy 15 m/s. Silny wiatr na trasie wydłuża ETA (H-10). | ✅ 04.10.2026 |
-| D-85 | ETA | W pełni automatyczne, zero ręcznego wpisu, także prędkości. Limit km/h w Opcjach nie obowiązuje. H-4 dopiero po emtrack. Szczegóły w `ZLECENIE_HERE.md`. | ✅ 04.10.2026 |
+| D-85 | ETA | W pełni automatyczne, zero ręcznego wpisu, także prędkości. Limit km/h w Opcjach nie obowiązuje. H-4 dopiero po emtrack. **20:10:** droga SE z Trafikverket w pełnym zakresie — sytuacje (wypadki, zamknięcia, roboty, ograniczenia dla ciężarówek), nawierzchnia (śnieg, lód, gołoledź), pomiary stacji (wiatr i temperatura nawierzchni; na bieżącym odcinku pomiar, dalej prognoza). Wpływ na prędkość z wytycznych, potem nauka z GPS. Osobna linia ETA „nawierzchnia”. Szczegóły w `ZLECENIE_HERE.md`. | ✅ 04.10.2026 |
