@@ -530,6 +530,7 @@ Tabela dowodów jest przyjęta (triage 04.10, `TRIAGE_REJESTRU.md`). Kolejność
 | STD-CLEAN | — | 4. z czterech, po DRV-CLOSE | U-17. Usunąć resztki klasy STANDARD: cennik 0100 i `src/lib/rateCard.ts`, typ wiersza, szuflada ładunku, pomijanie zezwolenia dla STANDARD. | NIEZACZĘTE |
 | H-2-PL | — | po H-2, nie w tym przebiegu | Utrudnienia w Polsce z HERE. H-2 zrobiło tylko Szwecję (`supabase/functions/road-se`). `road-pl` to KPD GDDKiA, nie HERE. | NIEZACZĘTE |
 | CLEAN-MAPLIBRE | P3 | stałe, bez wykonania teraz | Usunąć martwy MapLibre, jeśli nadal jest w zależnościach (17.7). Sprawdzenie 04.10: w `package.json` nie ma `maplibre`. Zostaje jako potwierdzenie, bez wykonania. | NIEZACZĘTE |
+| SMS-KSH-1H | — | poza bieżącą czwórką, bez wykonania teraz | D-37 (04.10): jeden SMS do KSH około 1 h przed przyjazdem auta na załadunek. To nie jest SMS co godzinę. Sprawdzenie 04.10: nie spełnia. „Bufor przed Sremem” (`0106_dec5_sms_zones.sql`) to koło 50 km, rodzaj PRE_ARRIVAL, kraj PL, środek 52.07391, 17.0246. SMS `ZONE_APPROACH` idzie przy `GEOFENCE_ENTER` (`st_contains`, dwa kolejne odczyty w `0002_geofence_engine.sql`), nie z czasu dojazdu. Argument ETA jest pusty, w treści zostaje „—”. Drugi SMS `ZONE_ENTER` pada przy strefie załadunku 600 m (`0017_driver_positions.sql`, „KSH Śrem”). Odbiorcy to lista `LOAD_SREM` (dwa sloty ustawiane przez administratora), nie rola KSH i nie zegar 1 h. L-12 (`geofenceDraft.ts`) daje nowej strefie promień 1000 m i start w Śremie, bez czasu do przyjazdu. `0116` tylko włącza flagi. Kryterium: jeden SMS do KSH około 1 h przed załadunkiem, z czasu dojazdu albo z promienia, który ten czas naprawdę daje. | NIEZACZĘTE |
 
 ## Polecenie 2026-10-04 17:06 — e-mail decyzji automatycznych
 
@@ -1001,6 +1002,6 @@ Stałe: GATE-WEEKLY, SEC-OWASP (przed pilotażem), CLEAN-MAPLIBRE (P3).
 
 Pilotaż: R-0, potem R-1, potem R-2, potem R-3, potem R-4.
 
-SMS-KSH-1H nie dodane. SCX-§5 (zmiana 29.09) to SMS przy strefach, nie timer 1 h przed załadunkiem. Dowód: `supabase/migrations/0106_dec5_sms_zones.sql` i `0116_sms_zone_triggers_on.sql`.
+SMS-KSH-1H dodane 04.10. SCX-§5 (strefy, 0106 i 0116) nie spełnia D-37: SMS leci przy wejściu w koło 50 km, nie około 1 h przed załadunkiem. Pozycja jest w tabeli powyżej, poza bieżącą czwórką, bez wykonania.
 
 Raport punktu 6 (bez budowania) jest na końcu `TRIAGE_REJESTRU.md`.

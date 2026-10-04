@@ -551,3 +551,15 @@ Osobny PR, tylko dokumenty. Bez wdrożenia. Nie wchodzić na gałąź H-3. Kodu 
 3. Do `PLAN.md`: H-2-PL (utrudnienia PL z HERE), CLEAN-MAPLIBRE (P3). SMS-KSH-1H tylko gdy SCX-§5 nie jest spełnione. Kryteria U-3-PALIWO rozszerzyć o punkt 4 pliku (32.x/33.x). Pozycji nie wykonywać.
 4. Pozycje „do sprawdzenia” z punktu 6: jeden raport, bez budowania.
 5. Kolejność: H-3, potem U-3-PALIWO, potem DRV-CLOSE, potem STD-CLEAN. Część B rusza po tych czterech. Tabela dowodów jest przyjęta.
+
+## Polecenie 2026-10-04 (czas warszawski) — SMS-KSH-1H, sprawdzenie D-37
+
+Osobny PR, tylko dokumenty. Bez wdrożenia. Nie wchodzić na gałąź U-3-PALIWO. Kodu nie zmieniać. DRV-CLOSE, STD-CLEAN, VERIFY-13 i części B nie zaczynać.
+
+D-37: jeden SMS do KSH około 1 h przed przyjazdem auta na załadunek. To nie jest SMS co godzinę.
+
+Sprawdzić w kodzie i migracjach (0106, 0116, L-12, strefa zbliżania w Śremie), czy SMS przychodzi około 1 h przed wjazdem (promień albo czas dojazdu), czy liczy samą odległość albo sam fakt wejścia w strefę.
+
+Jeśli nie spełnia: dopisać do `PLAN.md` pozycję SMS-KSH-1H z tym kryterium. Jeśli spełnia: żadnej pozycji.
+
+Kolejność bez zmian: U-3-PALIWO, potem DRV-CLOSE, potem STD-CLEAN, potem VERIFY-13, potem część B. VERIFY-13 tylko zapamiętać, nie wykonywać.
