@@ -39,3 +39,7 @@ tests/db/h3.sh:generic-api-key:30
 tests/db/h3.sh:generic-api-key:40
 tests/db/h3.sh:generic-api-key:66
 tests/db/h3.sh:generic-api-key:67
+
+# Nie sekret. Ta sama nazwa flagi H3_CORRIDOR_OBSTACLES w teście SMS-KSH-1H.
+# generic-api-key łapie kolumnę key. To przełącznik w bazie, nie klucz dostępu.
+tests/db/smsksh.sh:generic-api-key:21

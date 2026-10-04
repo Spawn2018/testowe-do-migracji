@@ -19,6 +19,11 @@ describe('eksport XLSX per rola', () => {
     expect(h).toEqual(expect.arrayContaining(['Koszt_EUR', 'Kierowca', 'Telefon']));
     for (const x of ['Przychód_EUR', 'Cena_EUR', 'Marża_EUR']) expect(h).not.toContain(x);
   });
+  it('ETA przed załadunkiem to sama kreska', () => {
+    const l = { ...buildSeedLoads()[0], etaBoden: null, etaPreLoad: true } as never;
+    const rows = exportRows([l], 'HHL');
+    expect(rows[1][rows[0].indexOf('ETA_Boden')]).toBe('–');
+  });
   it('KSH: telefon i imię kierowcy zawsze (I-7a), także poza ±24 h', () => {
     const l = { ...buildSeedLoads()[0], plannedDeliverDate: '2026-10-10', etaBoden: '2026-10-10T10:00:00+02:00', awizacja: undefined } as never;
     const withPhone = { ...(l as object), resources: { ...(l as { resources: object }).resources, driverPhone: '600123456', driverName: 'Jan Próbny', driverPhoneCountry: 'PL' } } as never;

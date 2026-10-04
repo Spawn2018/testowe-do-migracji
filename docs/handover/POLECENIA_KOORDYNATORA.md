@@ -658,3 +658,48 @@ Tylko dokument. Bez budowy. Nie przerywa SMS-KSH-1H + ETA-PRE-LOAD. To pozycja p
 Część B, priorytet P3, ID PL-PLURAL, za B-MAPA i za kolejką nocną.
 
 Komunikat importu „Pominięto 2 wierszy” ma brzmieć „2 wiersze”. Sprawdzić odmianę przez liczby we wszystkich komunikatach PL (1 / 2–4 / 5+, także 22–24 = wiersze, 12–14 = wierszy). Jedna funkcja odmiany. Test na wartościach 1, 2, 5, 12, 22, 25. Źródło błędu: `tests/b8-imp.test.ts` i `standardSkipMessage`.
+
+## Polecenie 2026-10-05 (czas warszawski) — SMS-KSH-1H + ETA-PRE-LOAD, wykonanie
+
+Osobny PR kodu, po zapisie dokumentów. Nie robić VERIFY-13, PALIWO-33.3, AIS-SRC, B-MAPA, Q-18 ani części B. Nie włączać H-1 ani H-3. Nie kasować transportów. Nie wołać Resend. Nie wysyłać prawdziwego SMS.
+
+D-37 i D-64: koło 50 km nie spełnia decyzji. Jeden SMS, gdy czas jazdy z bieżącego GPS do placu wynosi ≤ 60 min, dla Śremu i dla Boden. HERE, gdy flaga jest włączona i budżet nie jest wyczerpany; inaczej własny silnik (0122). Ta paczka flagi nie włącza i sieci nie woła. Jeden SMS na transport i koniec trasy. Pierwsza pozycja poniżej 60 min — SMS od razu. Brak GPS — brak SMS. Wjazd na plac bez zmian. Treść: kto, rejestracja, przewidywana godzina przyjazdu.
+
+ETA-PRE-LOAD: przed opuszczeniem strefy placu w Śremie pole ETA to tylko „–”, bez tekstu (harmonogram, szczegóły, kokpit, eksport). Po wyjeździe ETA pojawia się z pozycji, nie z planu. SMS do Śremu liczy się w tle także przed załadunkiem.
+
+Testy w bazie, bez telefonu właściciela. Brama lokalna zielona na tym samym commicie przed scaleniem i produkcją.
+
+## Polecenie 2026-10-05 (czas warszawski) — AIS-SRC, trzecie źródło Sten
+
+Dopisek do decyzji AIS-SRC. Bez budowy. Nie przerywa SMS-KSH-1H + ETA-PRE-LOAD.
+
+Trzecie źródło dla Sten, znalezione 04.10.2026 23:12 UTC: GET https://irm.stenalinefreight.com/ferries?imos=7907661,9862994,9863003 (Stena Spirit, Stena Estelle, Stena Ebba). Bez klucza. Wtedy pozycje wszystkich trzech sprzed 1–10 min, źródło TER.
+
+1. Współrzędne wyłącznie z properties.latitude i properties.longitude. geometry.coordinates ma zamienioną kolejność (lat, lon) — nie używać.
+2. Czas pozycji: properties.dt_pos_utc (UTC).
+3. Odpytywanie co 3 min, jedno zapytanie na 3 statki. Nagłówek User-Agent z nazwą Watch Tower. Cache. Przy błędzie odczekać, bez ponawiania w pętli.
+4. Priorytet dla Sten: 1) Stena, 2) aisstream, 3) Digitraffic. Nowsza pozycja wygrywa. Źródło zapisane przy każdej pozycji.
+5. Pole properties.eta (ETA statku do portu) zapisywać. Dodatkowe wejście do ETA promu (D-85), obok rozkładu i statusu.
+6. Adres nieopisany: zmiana formatu albo błąd → ryzyko w Stanie systemu, automatyczne przejście na aisstream i Digitraffic, bez błędu aplikacji.
+7. Polferries (Wawel, Nova Star): aisstream i Digitraffic jak dotąd.
+8. Test, nie teraz: 3 Steny mają pozycje nie starsze niż 5 min przez 24 h pomiaru. Symulacja błędu adresu Steny → przejście na zapas.
+
+## Polecenie 2026-10-05 (czas warszawski) — FERRY-STATUS
+
+Dopisek przy D-45. Bez budowy. Nie przerywa SMS-KSH-1H + ETA-PRE-LOAD. Krok 0 wykona następny krok kolejki, nie to polecenie.
+
+Decyzja właściciela 04.10 przy D-45: zezwolenia na transport ponadnormatywny obejmują dwie trasy (Gdańsk–Nynäshamn i Gdynia–Karlskrona). Przesiadka na drugą przeprawę nie wymaga nowego zezwolenia.
+
+Jedna pozycja planu: FERRY-STATUS.
+
+Krok 0 (najpierw, raport bez budowania): a) pogoda morska II-8 dla Stena (Gdynia, środek, Karlskrona) i Gdańsk–Nynäshamn, ostatni odczyt ze źródłem FMI/DMI/SMHI; b) alarmy fala 3,8 m i porywy 40 kn (D-39) — jeśli wyłączone od 02.10 „do II-3”, włączyć w kroku 3 (progi potwierdzone 29.09); c) korytarz 0122, HERE H-1/H-3 i Trafikverket czy obejmują E22 aż do E4, panel Warunki drogowe SE obie trasy; d) L-9 FERRY_CANCELLED czy ETA liczy całą nową trasę; e) skąd II-5 bierze status Steny i co zwraca.
+
+Krok 1: rozkład Steny żywo. Strona https://stenalinefreight.com/timetable/GDKA, POST https://stenalinefreight.com/wp/wp-admin/admin-ajax.php action=timetable, data[from], data[to], data[routeCode]=GDKA, security = świeży token z ajax_object na tej stronie przed każdym odczytem. Planowy i rzeczywisty odjazd/przyjazd, statek, status. Porównać z II-5: lepsze główne, drugie zapas. Co 10 min, dziś+6 dni, oba kierunki. User-Agent Watch Tower, cache, przy błędzie odczekać bez pętli. Rzeczywiste godziny → D-85 i II-9. Odwołanie → FERRY_CANCELLED. Błąd formatu → ryzyko w Stanie systemu i zapas.
+
+Krok 2: nie obchodzić 403 polferries.pl ani 503 polsca.com. Warstwy: opóźnienie z AIS (II-9), pogoda II-8 jako ostrzeżenie, formularz „Komunikat armatora” (admin i dyspozytor przewoźnika: armator, rejs, typ odwołany/opóźniony/zmiana godziny, nowa godzina, treść) ze skutkami jak status automatyczny i historią kto/kiedy. W raporcie: czy POLSCA ma e-mail dla frachtu albo inne oficjalne źródło.
+
+Krok 3: uzupełnienia z kroku 0 — pogoda w trzech punktach każdej trasy, alarmy D-39 włączone, Karlskrona–Boden E22→E4 w korytarzu, ETA, H-1/H-3 i Trafikverket, panel obie trasy, alternatywa L-9 liczy całą trasę (dojazd, rejs, droga SE, czas pracy D-85), bez ostrzeżenia o zezwoleniu przy przesiadce.
+
+Testy: odwołany rejs Steny; komunikat ręczny POLSCA; błąd źródła; fala >3,8 m; ETA alternatywy różni się o dojazd, rejs i drogę SE; panel pokazuje E22 i E4.
+
+Kolejka: STD-CLEAN zrobione → SMS-KSH-1H + ETA-PRE-LOAD → AIS-SRC → FERRY-STATUS → VERIFY-13 → PALIWO-33.3 (do 23.10) → część B od B-MAPA z Q-18. FERRY-STATUS nie budować w tym zadaniu.
