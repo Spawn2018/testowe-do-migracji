@@ -1651,3 +1651,5 @@ Wdrożenie po scaleniu #16 idzie z tego commita, bo squash #16 ma autora konta G
 | dec-auto | 39 | 64 | Ta paczka (migracja 0145) dodaje 25 asercji: zniknięcie wiersza, konflikt numeru HHL, plik nieczytelny, SEFS brak źródła / w tabeli / ponad tabelę, KR 3 i 4, brak danych, oraz brak funkcji `l1b_dwell_check`. NO_AWIZACJA nie jest liczona drugi raz (zostaje w 0143 / L-3). |
 
 DWELL_OVER_FREE nie wchodzi: czas wolny nie jest w `ops_thresholds`, a I-32 zostawia „od kiedy” do wyjaśnienia. Sztywne 360 i 240 minut nie otwierają decyzji.
+
+| nullguard | 528 | 533 | Ta sama paczka L-1b: `l1b_ksh_file_unreadable` jest GRANT dla authenticated, więc `null-guard-calls.txt` dostaje jeden wpis GUARD. To 4 odmowy (nieaktywny HHL, KSH, SCX, brak konta) i 1 kontrola pozytywna aktywnego HHL. 528+5=533. |

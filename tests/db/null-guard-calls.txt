@@ -14,6 +14,7 @@ fx_rate_before | GUARD | select rate_pln from fx_rate_before(current_date) | Bra
 import_cancel_loads | GUARD | select count(*) from import_cancel_loads(array['$L2']::uuid[], 'test') | wyłącznie HHL
 import_removal_check | GUARD | select count(*) from import_removal_check(array['$L2']::uuid[]) | wyłącznie HHL
 import_schedule | GUARD | select import_schedule('$P', '[]'::jsonb, '{}', '{}', true) | wyłącznie HHL
+l1b_ksh_file_unreadable | GUARD | select l1b_ksh_file_unreadable('$P', 'zly.xlsx') | wyłącznie HHL
 issue_driver_token | GUARD | select issue_driver_token('$L2') | wyłącznie przewoźnik transportu albo HHL
 keep_alive | GUARD | select keep_alive('test') | Brak aktywnego konta
 mark_invoice_paid | GUARD | select mark_invoice_paid('$INV', current_date) | wyłącznie HHL

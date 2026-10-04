@@ -20,7 +20,7 @@ export const EXPECTED = {
   invite: 48,
   risks: 21, // 23 − 2 SKIP (tower_test_status wymaga CREATE DATABASE)
   import: 66,
-  nullguard: 528,
+  nullguard: 533,
   i2: 526, // +2 asercje 0133 — POSTEP
   i30: 10,
   i31: 6,
