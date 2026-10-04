@@ -352,9 +352,9 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | D-16 | lista użytkowników do zaproszenia: imię i nazwisko, e-mail, firma, rola | R-2 |
 | D-17 | rejestracja w KPD GDDKiA: najpierw firma, potem użytkownik z certyfikatem | II-6 (Polska) |
 | D-18 | e-mail do armatora z prośbą o zgodę na odczyt komunikatów (informacja — odczyt II-5 już włączony) | II-5 DONE; oficjalny kanał |
-| D-34 | **ROZSTRZYGNIĘTE 01.10:** klucz Trafikverket w sekretach Edge + `.env.local` — II-6 LIVE (RoadCondition + WeatherMeasurepoint). Situation usunięty z Open API dostawcy | II-6 DONE |
+| klucz Trafikverket (II-6) | **ROZSTRZYGNIĘTE 01.10:** klucz Trafikverket w sekretach Edge + `.env.local` — II-6 LIVE (RoadCondition + WeatherMeasurepoint). Situation usunięty z Open API dostawcy. To nie jest decyzja D-34 (tydzień dopłaty paliwowej, data załadunku). | II-6 DONE |
 | D-STENA-COORDS | **DONE 02.10** (właściciel potwierdził terminale). Współrzędne: Gdynia 54.53321, 18.54425; Karlskrona 56.16460, 15.63080 — obowiązują w geofence STENA-3 | STENA-3 geofence |
-| D-20 | **CZĘŚCIOWO 02.10:** RODO/zgody załatwione (R-1/R-2). **0133:** e-mail do kont `app_users` + aktywnych zaproszeń `user_invites` = PENDING (nie BLOCKED_R2); SMS do kierowców nadal zablokowane (`EXTERNAL_MESSAGING` = false). Pełne włączenie: `admin_set_external_messaging(true)` gdy HHL zdecyduje | R-2 |
+| poczta zewnętrzna (EXTERNAL_MESSAGING) | **CZĘŚCIOWO 02.10:** RODO/zgody załatwione (R-1/R-2, decyzja D-5). **0133:** e-mail do kont `app_users` + aktywnych zaproszeń `user_invites` = PENDING (nie BLOCKED_R2); SMS do kierowców nadal zablokowane (`EXTERNAL_MESSAGING` = false). Pełne włączenie: `admin_set_external_messaging(true)` gdy HHL zdecyduje. Numer D-20 w tej tabeli nie był numerem z rejestru decyzji. | R-2 |
 | D-21 | **POTWIERDZONE 28.09 (właściciel): właściciel włącza przed pierwszym transportem.** **DZIAŁANIE WŁAŚCICIELA przed pierwszym prawdziwym transportem (R-3):** włączyć przełącznik I-27 „brak zezwolenia blokuje Gotowy” dla klas innych niż STANDARD — Opcje → „Wymóg zezwoleń (transporty ponadnormatywne)” → „Włącz wymóg” (konto HHL_ADMIN; wpis w audit_log). Stan na 28.09: przełącznik jest, **WYŁĄCZONY** (produkcja nie ma jeszcze zezwoleń w bazie) | R-3 |
 | D-22 | ~~dane kierowcy pojazdu pilotującego~~ — **ROZSTRZYGNIĘTE 28.09 (właściciel): TAK** imię i telefon, te same zasady co kierowca: retencja 90 dni, dostęp przez funkcję danych kontaktowych, KSH nie widzi, nie ma w eksporcie KSH | III-4 → **DONE 28.09 (0090)** |
 | D-23 | ~~widoczność ocen dla przewoźnika~~ — **ROZSTRZYGNIĘTE 28.09 (właściciel): TAK** przewoźnik widzi swoje oceny i punktualność; wewnętrzne notatki HHL (komentarz) niewidoczne | III-9 → **DONE 28.09 (0091)** |
@@ -546,4 +546,426 @@ Kasowane, wyłącznie wiersze transportów i tego, co wisi na nich kluczem obcym
 Zostaje bez zmian: organizacje (3), konta (11), rejsy (164), strefy (10), faktury (0), import harmonogramu (1 wiersz historii), automatyzacje (7), cennik, opcje, progi, użytkownicy, zaproszenia. Decyzje, ryzyka, powiadomienia i SMS-y bez transportu zostają.
 
 Przed wykonaniem: pełna kopia do R2, poza repozytorium; próba odtworzenia na teście; potem migracja przez bramę. Liczby przed i po w raporcie. Wykonanie dopiero tuż przed R-1.
+
+# 6. PRZYPISANIE POZYCJI BEZ MIEJSCA (04.10.2026)
+
+Drugie przejście rejestru całości. Tu tylko pozycje z sekcji 4 rejestru, które nie dostały dowodu „zrobione”. Realizacji części B ten zapis nie zaczyna.
+
+| ID | Przypisanie | Uzasadnienie |
+|---|---|---|
+| D-18 | do decyzji koordynatora | e-mail do armatora; wiersz II-5 DONE nie jest dowodem tej pozycji |
+| 0.2 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 0.4 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 0.5 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 0.6 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 0.9 | ETAP III | PLAN III-2 (szkielet i stan pusty harmonogramu jak w makiecie + zrzuty) |
+| 1.2 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 1.3 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 1.7 | ETAP I | I-6 `642d68f`: `client_errors` + alarm co 15 min (test produkcyjny: ryzyko + e-mail 200) |
+| 1.8 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 10.2 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 10.3 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 10.5 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 10.9 | ETAP III | Dziennik odłożeń; Etap III (ślad węglowy) |
+| 11.1 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 11.2 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 11.3 | do decyzji koordynatora | PLAN R-3 (O3b) |
+| 11.6 | ETAP I | I-8 `642d68f`: 350 transportów, 112 496 pozycji — liczby w POSTEP |
+| 11.7 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 11.8 | ETAP I | I-4 `3dac401`: instrukcje w aplikacji dla kierowcy (PL/EN/SV), HHL, KSH, przewoźnika |
+| 12.1 | do decyzji koordynatora | brak etapu w 56.1 |
+| 12.10 | do decyzji koordynatora | brak etapu w 56.1 |
+| 12.11 | do decyzji koordynatora | brak etapu w 56.1 |
+| 12.12 | do decyzji koordynatora | brak etapu w 56.1 |
+| 12.13 | do decyzji koordynatora | brak etapu w 56.1 |
+| 12.14 | do decyzji koordynatora | brak etapu w 56.1 |
+| 12.2 | do decyzji koordynatora | brak etapu w 56.1 |
+| 12.3 | do decyzji koordynatora | brak etapu w 56.1 |
+| 12.4 | do decyzji koordynatora | brak etapu w 56.1 |
+| 12.5 | do decyzji koordynatora | brak etapu w 56.1 |
+| 12.6 | do decyzji koordynatora | brak etapu w 56.1 |
+| 12.7 | do decyzji koordynatora | brak etapu w 56.1 |
+| 12.8 | do decyzji koordynatora | brak etapu w 56.1 |
+| 12.9 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.1 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.10 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.11 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.12 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.13 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.14 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.15 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.16 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.2 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.3 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.4 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.5 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.6 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.7 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.8 | do decyzji koordynatora | brak etapu w 56.1 |
+| 13.9 | do decyzji koordynatora | brak etapu w 56.1 |
+| 14.1 | do decyzji koordynatora | brak etapu w 56.1 |
+| 14.10 | do decyzji koordynatora | brak etapu w 56.1 |
+| 14.11 | do decyzji koordynatora | brak etapu w 56.1 |
+| 14.2 | do decyzji koordynatora | brak etapu w 56.1 |
+| 14.3 | do decyzji koordynatora | brak etapu w 56.1 |
+| 14.4 | do decyzji koordynatora | brak etapu w 56.1 |
+| 14.5 | do decyzji koordynatora | brak etapu w 56.1 |
+| 14.6 | do decyzji koordynatora | brak etapu w 56.1 |
+| 14.7 | do decyzji koordynatora | brak etapu w 56.1 |
+| 14.8 | do decyzji koordynatora | brak etapu w 56.1 |
+| 14.9 | do decyzji koordynatora | brak etapu w 56.1 |
+| 15.1 | do decyzji koordynatora | brak etapu w 56.1 |
+| 15.2 | do decyzji koordynatora | brak etapu w 56.1 |
+| 15.3 | do decyzji koordynatora | brak etapu w 56.1 |
+| 15.4 | do decyzji koordynatora | brak etapu w 56.1 |
+| 15.5 | do decyzji koordynatora | brak etapu w 56.1 |
+| 15.6 | do decyzji koordynatora | brak etapu w 56.1 |
+| 15.7 | do decyzji koordynatora | brak etapu w 56.1 |
+| 16.1 | do decyzji koordynatora | brak etapu w 56.1 |
+| 16.2 | do decyzji koordynatora | brak etapu w 56.1 |
+| 16.3 | do decyzji koordynatora | brak etapu w 56.1 |
+| 16.4 | do decyzji koordynatora | brak etapu w 56.1 |
+| 16.5 | do decyzji koordynatora | brak etapu w 56.1 |
+| 16.6 | do decyzji koordynatora | brak etapu w 56.1 |
+| 16.7 | do decyzji koordynatora | brak etapu w 56.1 |
+| 16.8 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.1 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.10 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.11 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.12 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.13 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.14 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.15 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.16 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.2 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.3 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.4 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.5 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.6 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.7 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.8 | do decyzji koordynatora | brak etapu w 56.1 |
+| 17.9 | do decyzji koordynatora | brak etapu w 56.1 |
+| 2.1 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 2.2 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 2.4 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 2.5 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 2.7 | ETAP I | I-7 `642d68f`: dane kierowcy 90 dni; zdjęcia, CMR, POD — D-3 |
+| 2.8 | do decyzji koordynatora | D-5 (umowy RODO), Dziennik blokad |
+| 20.1 | do decyzji koordynatora | brak etapu w 56.1 |
+| 20.10 | do decyzji koordynatora | brak etapu w 56.1 |
+| 20.2 | do decyzji koordynatora | brak etapu w 56.1 |
+| 20.3 | do decyzji koordynatora | brak etapu w 56.1 |
+| 20.4 | do decyzji koordynatora | brak etapu w 56.1 |
+| 20.5 | do decyzji koordynatora | brak etapu w 56.1 |
+| 20.6 | do decyzji koordynatora | brak etapu w 56.1 |
+| 20.7 | do decyzji koordynatora | brak etapu w 56.1 |
+| 20.8 | do decyzji koordynatora | brak etapu w 56.1 |
+| 20.9 | do decyzji koordynatora | brak etapu w 56.1 |
+| 23.2 | do decyzji koordynatora | brak etapu w 56.1 |
+| 23.3 | do decyzji koordynatora | brak etapu w 56.1 |
+| 23.4 | do decyzji koordynatora | brak etapu w 56.1 |
+| 23.5 | do decyzji koordynatora | brak etapu w 56.1 |
+| 23.6 | do decyzji koordynatora | brak etapu w 56.1 |
+| 26.2 | do decyzji koordynatora | brak etapu w 56.1 |
+| 26.3 | do decyzji koordynatora | brak etapu w 56.1 |
+| 26.4 | do decyzji koordynatora | brak etapu w 56.1 |
+| 28.2 | do decyzji koordynatora | brak etapu w 56.1 |
+| 28.3 | do decyzji koordynatora | brak etapu w 56.1 |
+| 28.4 | do decyzji koordynatora | brak etapu w 56.1 |
+| 28.5 | do decyzji koordynatora | brak etapu w 56.1 |
+| 3.1 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 3.10 | ETAP III | Dziennik odłożeń; Etap III (SharePoint) |
+| 3.3 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 3.4 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 3.5 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 3.6 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 3.7 | ETAP I | I-10 `a0d21bc`: e-mail wysłany (SENT 21:20); I-18: także zmiana daty potwierdzonej |
+| 3.9 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 32.1 | do decyzji koordynatora | brak etapu w 56.1 |
+| 32.2 | do decyzji koordynatora | brak etapu w 56.1 |
+| 32.3 | do decyzji koordynatora | brak etapu w 56.1 |
+| 32.4 | do decyzji koordynatora | brak etapu w 56.1 |
+| 32.5 | do decyzji koordynatora | brak etapu w 56.1 |
+| 33.1 | do decyzji koordynatora | brak etapu w 56.1 |
+| 33.2 | do decyzji koordynatora | brak etapu w 56.1 |
+| 33.3 | do decyzji koordynatora | brak etapu w 56.1 |
+| 33.4 | do decyzji koordynatora | brak etapu w 56.1 |
+| 33.5 | do decyzji koordynatora | brak etapu w 56.1 |
+| 33.6 | do decyzji koordynatora | brak etapu w 56.1 |
+| 4.1 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 4.2 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 4.4 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 4.6 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 5.1 | ETAP II | PLAN II-4, D-6; Dziennik blokad |
+| 5.11 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 5.14 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 5.2 | ETAP II | PLAN II-4, D-6; Dziennik blokad |
+| 5.3 | ETAP II | PLAN II-4, D-6; Dziennik blokad |
+| 5.4 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 5.5 | ETAP II | PLAN II-4 (po adapterze 5.1) |
+| 5.6 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 5.7 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 5.8 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 5.9 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 6.3 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 6.7 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 6.9 | ETAP III | Dziennik odłożeń; Etap III (e-CMR) |
+| 7.1 | ETAP I | D-1 (kwoty); formularz cennika — PLAN I-19; pozycja STANDARD — I-12 (0064) |
+| 7.11 | do decyzji koordynatora | Dziennik odłożeń |
+| 7.2 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 7.3 | ETAP II | D-2 / PLAN II-1 (wartości); formularz SEFS I-2f (0052), zakres I-13 (0063) |
+| 7.4 | ETAP II | PLAN II-1 (zadanie notowań po D-2) |
+| 7.6 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 7.7 | ETAP I | PLAN I-19 (dodatki w cenniku) + D-1 |
+| 7.8 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 7.9 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 8.1 | ETAP III | PLAN Etap III „źródło pogody morskiej” |
+| 8.10 | ETAP II | PLAN II-2; Dziennik blokad |
+| 8.2 | ETAP II | PLAN II-5; Dziennik blokad |
+| 8.3 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 8.4 | ETAP II | PLAN II-6 |
+| 8.5 | ETAP II | PLAN II-6; Dziennik blokad |
+| 8.6 | ETAP II | PLAN II-6; Dziennik blokad |
+| 8.7 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 8.8 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 8.9 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 9.1 | do decyzji koordynatora | POSTEP 9.1–9.4 |
+| 9.10 | ETAP III | Dziennik odłożeń; Etap III (kalendarz) |
+| 9.11 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 9.2 | do decyzji koordynatora | POSTEP 9.1–9.4 |
+| 9.3 | do decyzji koordynatora | POSTEP 9.1–9.4 |
+| 9.5 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 9.6 | ETAP I | Dziennik odłożeń; bramka SMS — I-3 (D-4) |
+| 9.7 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
+| 9.9 | do decyzji koordynatora | Dziennik odłożeń |
+| AN1 | do decyzji koordynatora | brak jednoznacznego etapu |
+| AN2 | do decyzji koordynatora | brak jednoznacznego etapu |
+| AN3 | do decyzji koordynatora | brak jednoznacznego etapu |
+| AN4 | do decyzji koordynatora | brak jednoznacznego etapu |
+| AN5 | do decyzji koordynatora | brak jednoznacznego etapu |
+| AUTH-MAIL | do decyzji koordynatora | brak jednoznacznego etapu |
+| BK0 | do decyzji koordynatora | brak jednoznacznego etapu |
+| BK1 | do decyzji koordynatora | brak jednoznacznego etapu |
+| BK2 | do decyzji koordynatora | brak jednoznacznego etapu |
+| BK3 | do decyzji koordynatora | brak jednoznacznego etapu |
+| BK4 | do decyzji koordynatora | brak jednoznacznego etapu |
+| BK5 | do decyzji koordynatora | brak jednoznacznego etapu |
+| BK6 | do decyzji koordynatora | brak jednoznacznego etapu |
+| BRAK-PLIKU-ZLECENIE_DLA_GROKA | do decyzji koordynatora | brak jednoznacznego etapu |
+| BRAK-PLIKU-ZLECENIE_ETAP_I | do decyzji koordynatora | brak jednoznacznego etapu |
+| D-10 | już w PLAN jako D-10 | identyfikator jest w PLAN.md |
+| D-11 | już w PLAN jako D-11 | identyfikator jest w PLAN.md |
+| D-12 | już w PLAN jako D-12 | identyfikator jest w PLAN.md |
+| D-14 | już w PLAN jako D-14 | identyfikator jest w PLAN.md |
+| D-16 | już w PLAN jako D-16 | identyfikator jest w PLAN.md |
+| D-17 | już w PLAN jako D-17 | identyfikator jest w PLAN.md |
+| D-20 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| D-21 | już w PLAN jako D-21 | identyfikator jest w PLAN.md |
+| D-24 | już w PLAN jako D-24 | identyfikator jest w PLAN.md |
+| D-25 | już w PLAN jako D-25 | identyfikator jest w PLAN.md |
+| D-29 | już w PLAN jako D-29 | identyfikator jest w PLAN.md |
+| D-3 | już w PLAN jako D-3 | identyfikator jest w PLAN.md |
+| D-32 | już w PLAN jako D-32 | identyfikator jest w PLAN.md |
+| D-33 | już w PLAN jako D-33 | identyfikator jest w PLAN.md |
+| D-34 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| D-6 | już w PLAN jako D-6 | identyfikator jest w PLAN.md |
+| D-7 | już w PLAN jako D-7 | identyfikator jest w PLAN.md |
+| D-77 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| D-78 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| D-79 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| D-8 | już w PLAN jako D-8 | identyfikator jest w PLAN.md |
+| D-80 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| D-81 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| D-82 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| D-83 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| D-84 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| D-85 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| D-9 | już w PLAN jako D-9 | identyfikator jest w PLAN.md |
+| D-EUR-T | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| D-TELM-ETA | już w PLAN jako D-TELM-ETA | identyfikator jest w PLAN.md |
+| D10 | do decyzji koordynatora | brak jednoznacznego etapu |
+| D11 | do decyzji koordynatora | brak jednoznacznego etapu |
+| D13 | do decyzji koordynatora | brak jednoznacznego etapu |
+| D14 | do decyzji koordynatora | brak jednoznacznego etapu |
+| D15 | do decyzji koordynatora | brak jednoznacznego etapu |
+| D17 | do decyzji koordynatora | brak jednoznacznego etapu |
+| D18 | do decyzji koordynatora | brak jednoznacznego etapu |
+| D19 | do decyzji koordynatora | brak jednoznacznego etapu |
+| D19-T | do decyzji koordynatora | brak jednoznacznego etapu |
+| D23-S | do decyzji koordynatora | brak jednoznacznego etapu |
+| D25 | do decyzji koordynatora | brak jednoznacznego etapu |
+| D26 | do decyzji koordynatora | brak jednoznacznego etapu |
+| D6 | do decyzji koordynatora | brak jednoznacznego etapu |
+| DECPOW-§0 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| DECPOW-§1 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| DECPOW-§2 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| DECPOW-§3 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| DECPOW-§4 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| DECPOW-§5 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| DECPOW-§6 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| ETAP_I/I-0 | do decyzji koordynatora | brak jednoznacznego etapu |
+| ETAP_I/I-1 | do decyzji koordynatora | brak jednoznacznego etapu |
+| ETAP_I/I-2 | do decyzji koordynatora | brak jednoznacznego etapu |
+| ETAP_I/I-3 | do decyzji koordynatora | brak jednoznacznego etapu |
+| ETAP_I/I-4 | do decyzji koordynatora | brak jednoznacznego etapu |
+| ETAP_I/I-5 | do decyzji koordynatora | brak jednoznacznego etapu |
+| ETAP_I/I-6 | do decyzji koordynatora | brak jednoznacznego etapu |
+| ETAP_I/I-7 | do decyzji koordynatora | brak jednoznacznego etapu |
+| ETAP_I/I-8 | do decyzji koordynatora | brak jednoznacznego etapu |
+| ETAP_I/I-9 | do decyzji koordynatora | brak jednoznacznego etapu |
+| F-KLUCZ | do decyzji koordynatora | brak jednoznacznego etapu |
+| F2.1 | do decyzji koordynatora | brak jednoznacznego etapu |
+| F2.2 | do decyzji koordynatora | brak jednoznacznego etapu |
+| F2.3 | do decyzji koordynatora | brak jednoznacznego etapu |
+| F2.4 | do decyzji koordynatora | brak jednoznacznego etapu |
+| F2.4. | do decyzji koordynatora | brak jednoznacznego etapu |
+| F2.5 | do decyzji koordynatora | brak jednoznacznego etapu |
+| F2.6 | do decyzji koordynatora | brak jednoznacznego etapu |
+| G1 | do decyzji koordynatora | brak jednoznacznego etapu |
+| G2 | do decyzji koordynatora | brak jednoznacznego etapu |
+| G3 | do decyzji koordynatora | brak jednoznacznego etapu |
+| G5 | do decyzji koordynatora | brak jednoznacznego etapu |
+| H-10 | do decyzji koordynatora | brak jednoznacznego etapu |
+| H-12 | do decyzji koordynatora | brak jednoznacznego etapu |
+| H-7 | do decyzji koordynatora | brak jednoznacznego etapu |
+| H-8 | do decyzji koordynatora | brak jednoznacznego etapu |
+| I-2A | do decyzji koordynatora | brak jednoznacznego etapu |
+| I-2B | do decyzji koordynatora | brak jednoznacznego etapu |
+| I-2C | do decyzji koordynatora | brak jednoznacznego etapu |
+| I-2b | do decyzji koordynatora | brak jednoznacznego etapu |
+| L1 | do decyzji koordynatora | brak jednoznacznego etapu |
+| L16 | do decyzji koordynatora | brak jednoznacznego etapu |
+| L2 | do decyzji koordynatora | brak jednoznacznego etapu |
+| L4 | do decyzji koordynatora | brak jednoznacznego etapu |
+| L5 | do decyzji koordynatora | brak jednoznacznego etapu |
+| L7 | do decyzji koordynatora | brak jednoznacznego etapu |
+| L8 | do decyzji koordynatora | brak jednoznacznego etapu |
+| L9 | do decyzji koordynatora | brak jednoznacznego etapu |
+| M1 | do decyzji koordynatora | brak jednoznacznego etapu |
+| M10 | do decyzji koordynatora | brak jednoznacznego etapu |
+| M11 | do decyzji koordynatora | brak jednoznacznego etapu |
+| M12 | do decyzji koordynatora | brak jednoznacznego etapu |
+| M2 | do decyzji koordynatora | brak jednoznacznego etapu |
+| M3 | do decyzji koordynatora | brak jednoznacznego etapu |
+| M4 | do decyzji koordynatora | brak jednoznacznego etapu |
+| M5 | do decyzji koordynatora | brak jednoznacznego etapu |
+| M7 | do decyzji koordynatora | brak jednoznacznego etapu |
+| M8 | do decyzji koordynatora | brak jednoznacznego etapu |
+| M9 | do decyzji koordynatora | brak jednoznacznego etapu |
+| O-V | do decyzji koordynatora | brak jednoznacznego etapu |
+| O-V2 | do decyzji koordynatora | brak jednoznacznego etapu |
+| O-V3 | do decyzji koordynatora | brak jednoznacznego etapu |
+| O-V4 | do decyzji koordynatora | brak jednoznacznego etapu |
+| O-V5 | do decyzji koordynatora | brak jednoznacznego etapu |
+| O-V6 | do decyzji koordynatora | brak jednoznacznego etapu |
+| O1 | do decyzji koordynatora | brak jednoznacznego etapu |
+| O2 | do decyzji koordynatora | brak jednoznacznego etapu |
+| O3 | do decyzji koordynatora | brak jednoznacznego etapu |
+| O4 | do decyzji koordynatora | brak jednoznacznego etapu |
+| O5 | do decyzji koordynatora | brak jednoznacznego etapu |
+| P0.1 | do decyzji koordynatora | brak jednoznacznego etapu |
+| P0.1. | do decyzji koordynatora | brak jednoznacznego etapu |
+| P0.2 | do decyzji koordynatora | brak jednoznacznego etapu |
+| P0.3 | do decyzji koordynatora | brak jednoznacznego etapu |
+| P6 | do decyzji koordynatora | brak jednoznacznego etapu |
+| PL-T | do decyzji koordynatora | brak jednoznacznego etapu |
+| POPRAWKI-A1 | do decyzji koordynatora | zasady pracy, nie pozycja budowy |
+| POPRAWKI-A2 | do decyzji koordynatora | zasady pracy, nie pozycja budowy |
+| POPRAWKI-B-1 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-B-10 | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
+| POPRAWKI-B-10a | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
+| POPRAWKI-B-10b | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
+| POPRAWKI-B-10c | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
+| POPRAWKI-B-10d | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
+| POPRAWKI-B-10e | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
+| POPRAWKI-B-10f | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
+| POPRAWKI-B-10g | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
+| POPRAWKI-B-11 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-B-12 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-B-13 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-B-14 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-B-15 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-B-16 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-B-17 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-B-18 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-B-19 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-B-2 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-B-2a | już w PLAN §5 jako B-2a | pozycja kolejki już istnieje |
+| POPRAWKI-B-2c | już w PLAN §5 jako B-2c | pozycja kolejki już istnieje |
+| POPRAWKI-B-3 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-B-3a | już w PLAN §5 jako B-3a | pozycja kolejki już istnieje |
+| POPRAWKI-B-4 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-B-4a | już w PLAN §5 jako B-4a | pozycja kolejki już istnieje |
+| POPRAWKI-B-4b | już w PLAN §5 jako B-4b | pozycja kolejki już istnieje |
+| POPRAWKI-B-5 | już w PLAN §5 jako B-5 | pozycja kolejki już istnieje |
+| POPRAWKI-B-6 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-B-6a | już w PLAN §5 jako B-6a | pozycja kolejki już istnieje |
+| POPRAWKI-B-6b | już w PLAN §5 jako B-6b | pozycja kolejki już istnieje |
+| POPRAWKI-B-6c | już w PLAN §5 jako B-6c | pozycja kolejki już istnieje |
+| POPRAWKI-B-6d | już w PLAN §5 jako B-6d | pozycja kolejki już istnieje |
+| POPRAWKI-B-6e | już w PLAN §5 jako B-6e | pozycja kolejki już istnieje |
+| POPRAWKI-B-6f | już w PLAN §5 jako B-6f | pozycja kolejki już istnieje |
+| POPRAWKI-B-6g | już w PLAN §5 jako B-6g | pozycja kolejki już istnieje |
+| POPRAWKI-B-6h | już w PLAN §5 jako B-6h | pozycja kolejki już istnieje |
+| POPRAWKI-B-6i | już w PLAN §5 jako B-6i | pozycja kolejki już istnieje |
+| POPRAWKI-B-7 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-B-7a | już w PLAN §5 jako B-7a | pozycja kolejki już istnieje |
+| POPRAWKI-B-7b | już w PLAN §5 jako B-7b | pozycja kolejki już istnieje |
+| POPRAWKI-B-7c | już w PLAN §5 jako B-7c | pozycja kolejki już istnieje |
+| POPRAWKI-B-8 | już w PLAN §5 jako B-8 | pozycja kolejki już istnieje |
+| POPRAWKI-B-8a | już w PLAN §5 jako B-8 | pozycja kolejki już istnieje |
+| POPRAWKI-B-9 | już w PLAN §5 jako B-9 | pozycja kolejki już istnieje |
+| POPRAWKI-D | już w PLAN §5 jako D-LATER | pozycja kolejki już istnieje |
+| POPRAWKI-Q-1 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-10 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-11 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-12 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-13 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-14 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-15 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-16 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-17 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-18 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-19 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-2 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-3 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-4 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-5 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-6 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-7 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-8 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| POPRAWKI-Q-9 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
+| PR1 | do decyzji koordynatora | brak jednoznacznego etapu |
+| PR2 | do decyzji koordynatora | brak jednoznacznego etapu |
+| PR3 | do decyzji koordynatora | brak jednoznacznego etapu |
+| PR4 | do decyzji koordynatora | brak jednoznacznego etapu |
+| PR6 | do decyzji koordynatora | brak jednoznacznego etapu |
+| PR7 | do decyzji koordynatora | brak jednoznacznego etapu |
+| PR8 | do decyzji koordynatora | brak jednoznacznego etapu |
+| SCX-§0 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§1 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§10 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§11 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§12 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§13 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§14 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§15 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§2 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§3 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§4 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§4a | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§5 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§6 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§7 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§8 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SCX-§9 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
+| SEC-1 | do decyzji koordynatora | brak jednoznacznego etapu |
+| SMS-ZONE-ON | do decyzji koordynatora | brak jednoznacznego etapu |
+| T1 | do decyzji koordynatora | brak jednoznacznego etapu |
+| T2 | do decyzji koordynatora | brak jednoznacznego etapu |
+| T3 | do decyzji koordynatora | brak jednoznacznego etapu |
+| W1 | do decyzji koordynatora | brak jednoznacznego etapu |
+| W2 | do decyzji koordynatora | brak jednoznacznego etapu |
+| W3 | do decyzji koordynatora | brak jednoznacznego etapu |
+| W4 | do decyzji koordynatora | brak jednoznacznego etapu |
 
