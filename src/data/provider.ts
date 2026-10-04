@@ -56,6 +56,7 @@ export type DataMutation =
   | { type: 'event.append'; event: Omit<LoadEvent, 'id'> }
   | { type: 'message.send'; loadId: string; text: string }
   | { type: 'geofence.save'; geofence: Geofence }
+  | { type: 'geofence.delete'; id: string }
   | { type: 'prefs.save'; prefs: UserPrefsPatch }
   /** M5 — numer zlecenia własnej strony (HHL → hhl_order_no, przewoźnik → carrier_order_no) */
   | { type: 'load.orderNo'; loadId: string; side: 'HHL' | 'CARRIER'; value: string | null }

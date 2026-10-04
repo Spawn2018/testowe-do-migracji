@@ -308,11 +308,13 @@ export function messageFromRow(r: MessageRow): LoadMessage {
 export interface GeofenceRow {
   id: string; name: string; kind: string; hysteresis_m: number; dwell_seconds: number; debounce_fixes: number;
   notify_enter: boolean; notify_exit: boolean; notify_dwell: boolean; notify_orgs: string[] | null;
-  active: boolean; lat: number; lng: number; radius_m: number;
+  active: boolean; lat: number; lng: number; radius_m: number; country?: string | null;
 }
 const GEO_KINDS: GeofenceType[] = ['LOADING', 'PORT_OUT', 'PRE_PORT', 'PORT_IN', 'CHECKPOINT', 'PRE_ARRIVAL', 'SITE', 'REST'];
+const GEO_COUNTRIES = ['PL', 'SE', 'LT', 'DE'] as const;
 export function geofenceFromRow(r: GeofenceRow, orgs: OrgRow[]): Geofence {
   const kinds = new Set((r.notify_orgs ?? []).map((id) => orgKindToApp(orgs.find((o) => o.id === id)?.kind ?? '')));
+  const country = (r.country ?? '').trim();
   return {
     id: r.id, name: r.name,
     type: (GEO_KINDS as string[]).includes(r.kind) ? (r.kind as GeofenceType) : 'CHECKPOINT',
@@ -321,6 +323,7 @@ export function geofenceFromRow(r: GeofenceRow, orgs: OrgRow[]): Geofence {
     notifyHhl: kinds.has('HHL'), notifyKsh: kinds.has('KSH'), notifyScx: kinds.has('SCX'),
     active: r.active,
     trigger: r.notify_dwell ? 'DWELL_EXCEEDED' : r.notify_exit ? 'EXIT' : 'ENTER',
+    ...(GEO_COUNTRIES.includes(country as typeof GEO_COUNTRIES[number]) ? { country: country as typeof GEO_COUNTRIES[number] } : {}),
   };
 }
 export function geofenceToRpc(g: Geofence, projectId: string, orgs: OrgRow[], serverId: string | null) {
@@ -333,6 +336,7 @@ export function geofenceToRpc(g: Geofence, projectId: string, orgs: OrgRow[], se
     p_notify_enter: g.trigger === 'ENTER', p_notify_exit: g.trigger === 'EXIT', p_notify_dwell: g.trigger === 'DWELL_EXCEEDED',
     p_notify_orgs: [...(g.notifyHhl ? orgIds('HHL') : []), ...(g.notifyKsh ? orgIds('KSH') : []), ...(g.notifyScx ? orgIds('SCX') : [])],
     p_active: g.active,
+    p_country: g.country ?? null,
   };
 }
 

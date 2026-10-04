@@ -51,6 +51,7 @@ authenticated report_position
 authenticated revoke_driver_token
 authenticated revoke_user_sessions
 authenticated unmark_invoice_paid
+authenticated delete_geofence
 authenticated upsert_geofence_circle
 # I-2f (0052): formularz BAF/SEFS — tylko HHL (strażnik is_hhl() is not true), null-guard-calls GUARD
 authenticated baf_change_log

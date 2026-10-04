@@ -303,6 +303,12 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         const res = await sb.rpc('upsert_geofence_circle', geofenceToRpc(m.geofence, projectId, orgs, serverId));
         return { id: String(must(res, 'strefa')) };
       }
+      case 'geofence.delete': {
+        if (!isServerId(m.id)) return;
+        const res = await sb.rpc('delete_geofence', { p_id: m.id });
+        if (res.error) throw new Error(res.error.message);
+        return;
+      }
     }
   }
 

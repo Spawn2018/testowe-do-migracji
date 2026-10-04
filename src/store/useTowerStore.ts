@@ -301,6 +301,7 @@ interface TowerState {
   addStoredDocument: (doc: Document, actor?: string) => void;
 
   saveGeofence: (g: Geofence) => void;
+  deleteGeofence: (id: string) => void;
   assignScx: (loadId: string, rateNote?: string) => void;
   triggerGeofence: (loadId: string, geofenceId: string) => void;
   toggleWorkflow: (id: string) => void;
@@ -1010,6 +1011,16 @@ export const useTowerStore = create<TowerState>()(
             href: { view: 'geo', entityId: g.id },
           });
         }
+      },
+
+      deleteGeofence: (id) => {
+        const g = get().geofences.find((x) => x.id === id);
+        if (!g) return;
+        set((s) => ({
+          geofences: s.geofences.filter((x) => x.id !== id),
+        }));
+        writeThrough({ type: 'geofence.delete', id });
+        get().pushToast(tp(get().locale, 'geo_deleted', { name: g.name }), 'MEDIUM');
       },
 
       assignScx: (loadId, rateNote) => {

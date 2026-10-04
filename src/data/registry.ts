@@ -23,6 +23,7 @@ function targetId(m: DataMutation): string | null {
   switch (m.type) {
     case 'event.append': return m.event.loadId;
     case 'geofence.save': return null; // nowa strefa ma id lokalne — wstawienie
+    case 'geofence.delete': return m.id;
     case 'prefs.save': return null; // ustawienia bieżącego użytkownika (bez id encji)
     case 'bill.register': return m.bill.lines[0]?.loadId ?? ''; // pozycje = transporty z serwera
     case 'bill.verify': case 'bill.paid': case 'bill.unpaid': return m.billId;
