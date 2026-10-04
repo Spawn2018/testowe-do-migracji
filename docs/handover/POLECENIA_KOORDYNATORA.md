@@ -463,3 +463,12 @@ Wpływ nawierzchni na prędkość: start z oficjalnych wytycznych, potem kalibra
 
 II-6 już bierze `RoadCondition` i `WeatherMeasurepoint` (nawierzchnia E4 oraz wiatr i temperatura nawierzchni) i składa z tego jeden współczynnik na cały korytarz oraz ryzyko ROAD_SE. Nie bierze sytuacji: obiekt `Situation` wypadł z Open API (D-34, 01.10.2026), a zadanie `road-se` i tak go nie woła. Do dodania przy H-4: zastępcze źródło sytuacji, spowolnienie na odcinku oraz linia „nawierzchnia”. Zapis w `ZLECENIE_HERE.md` i w rejestrze (D-85).
 
+## Polecenie 2026-10-04 20:15 (czas warszawski) — L-7
+
+Tylko L-7. H-4 nie budować. H-1 nie zaczynać. L-8 nie zaczynać. Bez e-maila. Testy nie wołają Resend.
+
+Źródło: część B 8, pytanie 4; LOGIKA §5. Na liście harmonogramu statusy „opóźniony” i „cichy” mają własną polską nazwę. Dziś zamiast nich widać nazwę etapu (albo „w drodze w Polsce”, gdy etapu brak).
+
+Gotowe, gdy: na liście harmonogramu oba statusy mają własną polską nazwę. Język interfejsu polski. Bez nowych angielskich napisów w widoku polskim.
+
+Po zielonej bramie: PR, scalenie, wdrożenie z main od razu, bez pytania. Obie domeny 200 na nowym wdrożeniu.

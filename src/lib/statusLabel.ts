@@ -2,7 +2,8 @@ import type { CorridorStage, LoadStatus, Locale } from '../types';
 import { t } from '../i18n/messages';
 
 /**
- * Status / stage labels via dictionary (D19). DELAYED / SILENT fall back to stage.
+ * Status / stage labels via dictionary (D19).
+ * L-7: DELAYED and SILENT have their own names (not the stage).
  */
 const STATUS_KEYS: Partial<Record<LoadStatus, string>> = {
   PLANNED: 's_planned',
@@ -17,6 +18,8 @@ const STATUS_KEYS: Partial<Record<LoadStatus, string>> = {
   APPROACHING_SITE: 's_on_site',
   UNLOADING: 's_unloaded',
   DELIVERED: 's_delivered',
+  DELAYED: 's_delayed',
+  SILENT: 's_silent',
 };
 
 const STAGE_KEYS: Record<CorridorStage, string> = {
@@ -32,9 +35,6 @@ const STAGE_KEYS: Record<CorridorStage, string> = {
 };
 
 export function statusLabel(status: LoadStatus, stage?: CorridorStage, locale: Locale = 'pl'): string {
-  if (status === 'DELAYED' || status === 'SILENT') {
-    return stage ? t(locale, STAGE_KEYS[stage]) : t(locale, 's_road_pl');
-  }
   const key = STATUS_KEYS[status];
   if (key) return t(locale, key);
   return stage ? t(locale, STAGE_KEYS[stage]) : status;

@@ -172,7 +172,7 @@ Dziewięć etapów (`src/lib/status.ts`, nazwy w `src/i18n/messages.ts`): przygo
 
 Na liście harmonogramu widać polską nazwę (`src/lib/statusLabel.ts`, `src/i18n/d19Extra.ts`): planowany, brak auta, brak dokumentów, gotowy, załadunek, w drodze w Polsce, port Gdańsk, na promie, w drodze w Szwecji, na placu, rozładowany, dostarczony.
 
-Dwa statusy — opóźniony i cichy — **nie mają własnej nazwy na liście**. Zamiast nich widać nazwę etapu (albo „w drodze w Polsce”, gdy etapu brak).
+Dwa statusy — opóźniony i cichy — mają na liście własne nazwy: „Opóźniony” i „Cichy” (`s_delayed`, `s_silent` w `src/lib/statusLabel.ts`). Nie zastępuje ich nazwa etapu.
 
 W bazie jest jeszcze „anulowany” oraz drobniejsze nazwy techniczne (osobno „dokumenty w toku”, „na załadunku”, „port Gdańsk”, „port Nynäshamn”, „na placu”, „rozładowany”). Ekran składa je do nazw powyżej (`src/data/mappers.ts`, `supabase/migrations/0001_core.sql`).
 
