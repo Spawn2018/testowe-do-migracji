@@ -136,3 +136,23 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 - Wdrożenie: PR #108, Vercel READY `dpl_FvtWKtyxMxzMdCkMrKm9CWnFeVDf`, tower.log-mar.pl **200**, watch-tower-makieta.vercel.app **200** (15:45 PL)
 - Auth Supabase: timeout przy ponownym logowaniu ~15:53 PL — K/R/P dokończyć po przywróceniu Auth
 
+## Raport K / R / P / C (częściowy — 15:57 PL)
+
+| K.1 | KSH klik → menu tylko „Edytuj” | **niezgodne** — KSH widzi pełną szufladę (Przegląd/Status/…) + „Edytuj” w datach planu | `K.1` brak osobnego; obserwacja w sesji | otwarte |
+| K.2 | Edycja dat/godzin załadunku i rozładunku | **częściowo** — panel dat KSH w szufladzie; nie domknięte osobnym zrzutem | — | otwarte |
+
+| R.1 | Widać rejsy Steny | **zgodne** — Estelle/Ebba/Spirit | `R.1.png` | stan prod |
+| R.2 | Tylko admin dodaje/edytuje | **zgodne** — „Dodaj rejs” + Opóźnienie/Odwołaj dla HHL admin | `R.1.png` | stan prod |
+| R.3 | Przyszłe / minione + filtr Przyszłe | **zgodne** — „Przyszłe” / „pokaż minione” | `R.1.png` | stan prod |
+| R.4 | Daty z rokiem | **zgodne** — `05.10.2026` itd. | `R.1.png` | stan prod |
+
+| P6 | Oznaczanie opłaconych faktur — tylko HHL | **częściowo** — widok Faktury HHL; brak faktur do kliknięcia „opłacona” dziś | `P6.png` | otwarte |
+| P7 | Najbliższe Steny obok Polferries w pasku | **niezgodne** — pasek: Wawel (Polferries); brak Steny obok | `P-topbar.png` | otwarte |
+| P8 | Brak wyboru języka | **niezgodne** — PL/EN/SV w pasku (już w poczekalni) | `P-topbar.png` | poczekalnia |
+| P9 | Tryb jasny / system | nie sprawdzone dziś | — | otwarte |
+| P10 | Brak zegara Prawy górny | **niezgodne** — widoczna godzina `15:57` | `P-topbar.png` | otwarte |
+| P11–P19 | Responsywność / push / dzwonek / trasy / promy / ulice | nie domknięte dziś (auth timeout + czas) | — | otwarte |
+
+| C.1 | Domyślnie „ / ”; „\|” tylko przy Przepięciu w WT | **zgodne** na SG-03 z `trailer_swap` — telefony/kierowcy `\|` | `C.1.png` / `10a.png` | stan prod |
+
+**Do C.1 listy:** zamknięte 8.14 + §10 (z częściowymi) + R + C.1; **otwarte:** K.1–K.2, P6 (flow), P7, P8, P9, P10, P11–P19, 10g.3, pytania poczekalni 10a.1/10c.1.
