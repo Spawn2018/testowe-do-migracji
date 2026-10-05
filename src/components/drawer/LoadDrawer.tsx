@@ -162,14 +162,7 @@ export function LoadDrawer() {
     if (!load || import.meta.env.VITE_AUTH_MODE !== 'supabase') { setInsAuto(null); return; }
     let alive = true;
     void import('../../data/insuranceCoverServer')
-      .then(async (m) => {
-        const sb = await import('../../auth/client').then((c) => c.getSupabase());
-        const pr = await sb.from('projects').select('id').limit(1).maybeSingle();
-        const pid = pr.data?.id as string | undefined;
-        if (!pid) return null;
-        const rows = await m.loadInsuranceCover(pid);
-        return rows.find((r) => r.loadId === load.id) ?? null;
-      })
+      .then((m) => m.loadInsuranceCoverOne(load.id))
       .then((row) => {
         if (!alive) return;
         if (!row) { setInsAuto(null); return; }
