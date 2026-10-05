@@ -18,3 +18,4 @@
 | 2026-10-05 15:57 | executor | K.1: KSH ma pełną szufladę zamiast bocznego menu tylko „Edytuj” | K.1 |
 
 | 2026-10-05 16:10 | executor | **ZAMKNIĘTE na prod (PR #111):** P8 język, P10 zegar, K.1–K.2 menu KSH | — |
+| 2026-10-05 16:18 | executor | **P6 + 10g.3 ZAMKNIĘTE** (faktura testowa; 0184 chat notify). Lista kontrolna zamknięta poza pozycjami do decyzji. | — |

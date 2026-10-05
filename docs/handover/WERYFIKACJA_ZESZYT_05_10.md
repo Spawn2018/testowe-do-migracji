@@ -129,7 +129,7 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 
 | 10g.1 | Czat: kto // firma — data — godzina | **zgodne** (kod + input „Wyślij”); brak wiadomości na SG-03 | `10g.png` | stan prod |
 | 10g.2 | „Odczytano” → kto i kiedy | **zgodne** (kod `details`/`odczytano`) — brak reads na SG-03 | `10g.png` | stan prod |
-| 10g.3 | Powiadomienie o nowej wiadomości | **częściowo** — zakładka Ustalenia + chatbar Wyślij na prod; e2e powiadomienia (drugi user) nie odtworzone dziś | `10g.3.png` | otwarte e2e |
+| 10g.3 | Powiadomienie o nowej wiadomości | **poprawione** — migracja **0184** (fix `loads.code`→`hhl_order_no`); dzwonek: „Czat: … Agata… WT-TEST-10g3”; UI Wyślij OK | `10g.3.png` (+ `10g.3-chat.png`) | migracja **0184** na prod |
 
 ## Raport sekcji 10 (Podgląd zlecenia)
 - Zgodne: 18 · Poprawione: 4 (10a.3/5/9/10) · Częściowo: 7 (w tym 10g.3) · Otwarte/⛔: 0 nowych poza poczekalnią
@@ -146,7 +146,7 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 | R.2 | Tylko admin dodaje/edytuje | **zgodne** — „Dodaj rejs” + Opóźnienie/Odwołaj dla HHL admin | `R.1.png` | stan prod |
 | R.3 | Przyszłe / minione + filtr Przyszłe | **zgodne** — „Przyszłe” / „pokaż minione” | `R.1.png` | stan prod |
 | R.4 | Daty z rokiem | **zgodne** — `05.10.2026` itd. | `R.1.png` | stan prod |
-| P6 | Oznaczanie opłaconych faktur — tylko HHL | **częściowo** — UI HHL + `canMarkPaid`; brak faktur w tyg. 38 do Opłacona | `P6.png` | UI OK · brak faktury testowej |
+| P6 | Oznaczanie opłaconych faktur — tylko HHL | **poprawione** — faktura testowa `WT-TEST-P6-20261005`; HHL: Opłacona→opłacona+Cofnij; SCX widzi bez przycisku; KSH bez kosztowych | `P6-paid.png` (+ `P6-scx-no-paid.png`, `P6-ksh-no-paid.png`) | faktura testowa w DB; bez kasowania transportów |
 | P7 | Najbliższe Steny obok Polferries w pasku | **poprawione** — Stena Ebba + Polferries Nova Star | `P-topbar.png` / `P7-P8-P10.png` | PR #111 |
 | P8 | Brak wyboru języka | **poprawione** — bez `#langSeg` i bez selecta w Preferencjach | `P7-P8-P10.png` / `P9.png` | PR #111 |
 | P9 | Tryb jasny / system w ustawieniach | **zgodne** — Jak w systemie / Ciemny / Jasny + `#themeBtn` | `P9.png` | stan prod |
@@ -161,8 +161,30 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 | P19 | Ulice i miejscowości na mapie | **zgodne** — kafelki HERE | `P17-P19-map.png` | stan prod |
 | C.1 | Domyślnie „ / ”; „|” tylko przy Przepięciu w WT | **zgodne** na SG-03 | `C.1.png` / `10a.png` | stan prod |
 
-## Raport K / P (kontynuacja 16:05–16:10 PL)
-- Poprawione: K.1, K.2, P7, P8, P10, P15 · Zgodne: P9, P11, P11b, P13, P16–P19 · Częściowo: P6 (brak faktury), 10g.3 (e2e)
-- Wdrożenie: PR #111, Vercel READY `dpl_8tjC9YYtub7v9TQtK8v5TtWJi1SH`, tower.log-mar.pl **200**
+## LISTA ZAMKNIĘTA 05.10 (executor — 16:18 PL)
 
-**Do pełnej listy C.1:** zamknięte K.1–K.2 + P7/P8/P10 (+ większość P); **otwarte/częściowe:** P6 (faktura testowa), 10g.3 e2e, pytania poczekalni 10a.1/10a.6/10c.1; H1/H3/H6 off; SEC-OWASP nie.
+Wszystkie pozycje `LISTA_KONTROLNA_ZESZYT.md` możliwe **bez decyzji właściciela** są domknięte na produkcji (dowody w `docs/evidence/zeszyt/`).
+
+| sekcja | zgodne | poprawione | otwarte (tylko decyzja / poza listą) |
+|--------|--------|------------|--------------------------------------|
+| §1–9 | wg tabeli wyżej | wg tabeli | 3.1 D-83; 8.3/8.9 w poczekalni |
+| §10 | większość | 10a.3/5/9/10; **10g.3** | 10a.1, 10a.6, 10c.1 → poczekalnia |
+| K.1–K.2 | — | **tak** (PR #111) | — |
+| R.1–R.4 | **tak** | — | — |
+| P6–P19 | P9, P11–P19 | **P6**, P7, P8, P10, P15 | — |
+| C.1 | **tak** | — | — |
+
+**P6:** zgodne po fakturze testowej + Playwright (HHL tak / SCX+KSH nie).  
+**10g.3:** zgodne po **0184** + powiadomienie IN_APP w dzwonku.
+
+### Poczekalnia — do decyzji właściciela (nie blokuje zamknięcia listy)
+- 10a.1 Śrem / wymiary ładunku vs zestawu
+- 10c.1 actor w Historii (HHL/system vs imię // firma)
+- 8.3 godziny przy datach bez okna planu
+- 8.9 howto przy filtrach harmonogramu
+- licznik „N pojazdów w ruchu” vs GPS (obserwacja 1.1)
+- R2: dogrywka Cloudflare po logowaniu właściciela
+
+**Nienaruszone (dyscyplina):** TELM bez zmian · SEC-OWASP nie · H1/H3/H6 off do D-83.
+
+**Wdrożenia tej domknięcia:** migracja **0184** (prod); PR z evidence + WERYFIKACJA; P6 bez kasowania transportów (tylko wiersz faktury `WT-TEST-P6-20261005`).
