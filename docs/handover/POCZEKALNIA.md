@@ -26,3 +26,7 @@
 ## D-1 — wyjaśnienie 2026-10-05 ~16:45
 
 „D-1” na liście czekających w raporcie zeszyt = **pomyłka nazwy**: cennik **D-1 jest ZREALIZOWANY w I-30** (SYMBOL w bazie TEST+PROD). To, co nadal czeka u właściciela przy stawkach/produkcji, to **R-1** (import prawdziwego harmonogramu + akceptacja czyszczenia), nie osobna decyzja cennika D-1.
+
+## 2026-10-05 ~18:40 — właściciel: A/B/C ETA (wzięte do realizacji)
+
+A = scal PR #118; B = znaczniki ETA; C = H-4 z GPS (bez tachografu). Kolejność A→B→C.

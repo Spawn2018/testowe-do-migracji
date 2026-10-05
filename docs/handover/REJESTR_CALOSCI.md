@@ -136,7 +136,7 @@ Rejestr, który wypisuje D-n: `docs/handover/wzorzec/03_REJESTR_DECYZJI.md`. Num
 | D-82 | Opłaty drogowe poza zakresem. Nie liczymy i nie pokazujemy. | docs/handover/wzorzec/03_REJESTR_DECYZJI.md — Decyzje HERE (04.10.2026) — szczegóły w `ZLECENIE_HERE.md` | obowiązuje |
 | D-83 | Wymiary dla każdego transportu poda właściciel. Kontrola trasy nie bierze niczego z dokumentów. Przewoźnik nie wprowadza żadnych wymiarów. | docs/handover/wzorzec/03_REJESTR_DECYZJI.md — Decyzje HERE (04.10.2026) — szczegóły w `ZLECENIE_HERE.md` | obowiązuje |
 | D-84 | Porywy 15 m/s. Silny wiatr na trasie wydłuża ETA (H-10). | docs/handover/wzorzec/03_REJESTR_DECYZJI.md — Decyzje HERE (04.10.2026) — szczegóły w `ZLECENIE_HERE.md` | obowiązuje |
-| D-85 | W pełni automatyczne, zero ręcznego wpisu, także prędkości. | docs/handover/wzorzec/03_REJESTR_DECYZJI.md — Decyzje HERE (04.10.2026) — szczegóły w `ZLECENIE_HERE.md` | obowiązuje |
+| D-85 | W pełni automatyczne; **05.10:** brak tachografu na stałe, GPS naczepy = źródło czasu pracy; H-4 budować teraz. | docs/handover/wzorzec/03_REJESTR_DECYZJI.md — D-85 / H-4 | obowiązuje (uzupełnienie 05.10) |
 
 ## 2. POZYCJE
 

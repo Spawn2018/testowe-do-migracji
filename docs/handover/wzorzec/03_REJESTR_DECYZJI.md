@@ -112,7 +112,7 @@
 | D-82 | myto | Opłaty drogowe poza zakresem. Nie liczymy i nie pokazujemy. | ✅ 04.10.2026 |
 | D-83 | wymiary zestawu | Wymiary dla każdego transportu poda właściciel. Kontrola trasy nie bierze niczego z dokumentów. Przewoźnik nie wprowadza żadnych wymiarów. | ✅ 04.10.2026 |
 | D-84 | próg wiatru | Porywy 15 m/s. Silny wiatr na trasie wydłuża ETA (H-10). | ✅ 04.10.2026 |
-| D-85 | ETA | W pełni automatyczne, zero ręcznego wpisu, także prędkości. Limit km/h w Opcjach nie obowiązuje. H-4 dopiero po emtrack. **20:10:** droga SE z Trafikverket w pełnym zakresie — sytuacje (wypadki, zamknięcia, roboty, ograniczenia dla ciężarówek), nawierzchnia (śnieg, lód, gołoledź), pomiary stacji (wiatr i temperatura nawierzchni; na bieżącym odcinku pomiar, dalej prognoza). Wpływ na prędkość z wytycznych, potem nauka z GPS. Osobna linia ETA „nawierzchnia”. Szczegóły w `ZLECENIE_HERE.md`. | ✅ 04.10.2026 |
+| D-85 | ETA | W pełni automatyczne, zero ręcznego wpisu, także prędkości. Limit km/h w Opcjach nie obowiązuje. **05.10 ~18:40 (właściciel):** dostępu do tachografu **NIE BĘDZIE nigdy** (ani emtrack, ani inne źródło) — rozwiązanie docelowe. Czas jazdy i odpoczynku liczony **wyłącznie z pozycji GPS naczepy**. H-4 budować teraz (nie po emtrack). **20:10:** droga SE z Trafikverket w pełnym zakresie — sytuacje, nawierzchnia, pomiary stacji. Wpływ na prędkość z wytycznych, potem nauka z GPS. Osobna linia ETA „nawierzchnia". Szczegóły w `ZLECENIE_HERE.md`. | ✅ 04.10.2026 / uzupełnienie 05.10 |
 
 ## D-66–D-76 — brak w pliku źródłowym (04.10.2026)
 
@@ -175,3 +175,11 @@ Polecenie kazało przepisać D-66–D-76 dosłownie z `ZLECENIE_POPRAWKI_02_10.m
 | ZAP-NODE | OWASP ZAP bez Dockera | Instalacja ZAP + Java; Baseline pasywny na **produkcji**; skan pełny tylko na **TEST**; wynik do SEC-OWASP | ✅ decyzja / ⏳ uruchomienie |
 | D-3 | retencja dokumentów | CMR/POD/zdjęcia 3 lata; PDF faktur 5 lat; I-7 bez zmian | ✅ 05.10.2026 |
 | KOLEJKA-1353 | nie stój | Buduj pozycje bez czekania na właściciela; czeka tylko D-83→B-3a/H-1/H-3, R-0, D-7/14/16/17/21; GATE-WEEKLY 11.10; SG-03 raport po rozładunku | ✅ |
+
+## Decyzje 05.10.2026 ~18:40 — ETA znaczniki (B) i H-4 z GPS (C)
+
+| ID | Sprawa | Decyzja | Status |
+|---|---|---|---|
+| ETA-MARK | znaczniki przy ETA | zielony „w oknie" (między początkiem a końcem okna); bursztynowy „przed terminem" (przed początkiem — info); czerwony „po terminie" (po końcu — **ten sam warunek** co ryzyko ETA po terminie / L-3, bez drugiego alarmu); „przyjazd nocą" 22:00–06:00 Europe/Warsaw (info). Przed terminem i noc: bez Centrum decyzji i bez SMS. Opis w „Jak działa". | ✅ decyzja 05.10 / ⏳ budowa |
+| H-4 | ETA + czas pracy kierowcy UE | Budować **teraz**. Brak tachografu na stałe (D-85). Czas jazdy/odpoczynku tylko z GPS naczepy. U-31 obsada 1-os.; „A\|B" = przepięcie. Postój ≥9 h = odpoczynek skrócony, ≥11 h regularny; ≥45 min (lub 15+30) = przerwa. Przerwa 45 min po 4,5 h; max 9 h/dzień (10 h 2×/tydzień); odpoczynek 11 h (skrócony 9 h) wstawiany w ETA; prom = odpoczynek (D-9). Brak historii GPS → założenie ostrożne. Przepięcie = nowy kierowca od awizacji. SMS-KSH-1H z tego ETA. II-7b kalibracja po rozładunku. | ✅ decyzja 05.10 / ⏳ budowa |
+
