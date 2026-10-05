@@ -17,9 +17,9 @@ Historia GPS w Tower od **05.10 13:25** (włączenie emtrack). Decyzja właścic
 |---|---|---|---|---|
 | Przed H-4 (~18:30) | 06.10 ~01:02–01:17 | ~2,54 (proporcja) | n/a | odpoczynek ≠ UE |
 | Po 0185 (~19:51) | **05.10 23:47** | **0** | false | jak świeży kierowca — **błędne** |
-| Po 0186 (ta poprawka) | *po deploy + refresh_load_eta* | oczekiwane **11** (+ przerwy) | **true** | limit jazdy może się kończyć; rest najpóźniej wg UE |
+| Po 0186 (~20:46 PL, refresh_load_eta) | **06.10 ~10:27** | **11** (+ breaks 0,75) | **true** | h4_source=cautious · conf ±**184** min (H4_EU_REST 165 + H4_CAUTIOUS 61) — nie „Wysoka” |
 
-*(Wypełnij wiersz „Po 0186” liczbami z prod po wdrożeniu.)*
+Liczby z prod po apply **0186** + `refresh_load_eta` (load SG-03). Przed refresh tego wieczoru ETA ~05.10 22:34 (nadal rest_h=0).
 
 ## Przyjazd rzeczywisty / SMS
 - `actual_delivery_at`: **czekamy na wjazd** (null w raporcie po 0185).
@@ -32,6 +32,6 @@ Historia GPS w Tower od **05.10 13:25** (włączenie emtrack). Decyzja właścic
 3. Brak historii emtrack przed podłączeniem → nie kalibrować rest z „dziury” przed 13:25.
 
 ## Wdrożenie
-- Branch `feat/h4-ostrozne-niepewnosc-05-10` · migracja **0186**
-- Testy `tests/db/h4.sh`: **19/19** (w tym 0186 a/b/c)
-- PR / deploy / domeny: *(uzupełnij po merge)*
+- Branch `feat/h4-ostrozne-niepewnosc-05-10` · migracja **0186** (apply-prod + verify OK)
+- Testy `tests/db/h4.sh`: **19/19** (w tym 0186 a/b/c); brama EXIT:0 (session/l13 soft-skip)
+- PR **#123** → main · Hobby **#124** · domeny: po READY deploy
