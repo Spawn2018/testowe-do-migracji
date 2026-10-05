@@ -7,6 +7,7 @@
  * Formaty odpowiedzi wg dokumentacji dostawców — przy rejestracji kluczy zweryfikować na żywo.
  */
 import type { RiskInput, RiskSeverity } from './sync.ts';
+import { describeCondition, describeDeviation } from '../../../../src/lib/pl/describe.ts';
 
 type LatLon = [number, number];
 /** E4 Nynäshamn → Boden (punkty węzłowe trasy). */
@@ -73,7 +74,11 @@ export function trafikverketWeatherQuery(apiKey: string, radiusM = 30000): strin
   const within = [...CORRIDOR_SE, ...CORRIDOR_SE_E22].map(([la, lo]) => `<WITHIN name="Geometry.WGS84" shape="center" value="${lo} ${la}" radius="${radiusM}m"/>`).join('');
   return `<REQUEST><LOGIN authenticationkey="${xmlEsc(apiKey)}"/><QUERY objecttype="WeatherMeasurepoint" schemaversion="1" limit="200"><FILTER><OR>${within}</OR></FILTER></QUERY></REQUEST>`;
 }
-export interface RoadEvent { id: string; title: string; detail: string; severity: RiskSeverity; lat: number | null; lon: number | null; road: string | null; start: string | null; end: string | null; kind: string }
+export interface RoadEvent {
+  id: string; title: string; detail: string; severity: RiskSeverity;
+  lat: number | null; lon: number | null; road: string | null; start: string | null; end: string | null; kind: string;
+  original?: string | null; note?: string | null; freeText?: string | null; unknownCodes?: string[];
+}
 const wkt = (s: unknown): LatLon | null => {
   const m = typeof s === 'string' ? s.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i) : null;
   return m ? [Number(m[2]), Number(m[1])] : null;
@@ -94,9 +99,10 @@ export function wktCentroid(s: unknown): LatLon | null {
 /** SeverityCode Trafikverket: 1 brak wpływu, 2 mały, 4 duży, 5 bardzo duży. */
 const tvSeverity = (c: unknown): RiskSeverity | null => (c === 5 ? 'HIGH' : c === 4 ? 'MEDIUM' : c === 2 || c === 3 ? 'LOW' : null);
 /** Rodzaj sytuacji na panel i ryzyko. Nie zgadujemy zdarzenia spoza tych czterech. */
-export type SituationKind = 'wypadek' | 'zamkniecie' | 'roboty' | 'przeszkoda';
+export type SituationKind = 'wypadek' | 'zamkniecie' | 'roboty' | 'przeszkoda' | 'inne';
 const CLOSURE_CODES = new Set(['roadClosed', 'carriagewayClosures']);
-const SIT_RANK: Record<SituationKind, number> = { zamkniecie: 4, wypadek: 3, przeszkoda: 2, roboty: 1 };
+const SIT_RANK: Record<SituationKind, number> = { zamkniecie: 4, wypadek: 3, przeszkoda: 2, roboty: 1, inne: 0 };
+const INFO_TYPES = new Set(['Viktig trafikinformation', 'Information', 'Trafikmeddelande']);
 function deviationKind(d: Record<string, unknown>): SituationKind | null {
   if (d.Suspended === true) return null;
   const mt = String(d.MessageType ?? '');
@@ -105,7 +111,8 @@ function deviationKind(d: Record<string, unknown>): SituationKind | null {
   if (mt === 'Olycka' || code === 'accident') return 'wypadek';
   if (mt === 'Hinder') return 'przeszkoda';
   if (mt === 'Vägarbete' || mt === 'MaintenanceWorks' || code === 'roadworks') return 'roboty';
-  return null;
+  if (!mt || INFO_TYPES.has(mt) || d.SeverityCode === 1) return null;
+  return 'inne';
 }
 
 const isRoad = (road: unknown, n: string) => typeof road === 'string' && new RegExp(`^E\\s*${n}$`, 'i').test(road.trim());
@@ -154,17 +161,22 @@ export function parseTrafikverketSituations(json: unknown, bufferKm = 8): RoadEv
     }
     if (!best) continue;
     const d = best.d;
-    const loc = String(d.LocationDescriptor ?? d.Header ?? d.Message ?? d.MessageCode ?? best.kind).replace(/^E4\s+/i, '').trim();
+    const roadNo = (d.RoadNumber as string) ?? 'E4';
+    const pl = describeDeviation(d, best.kind, roadNo);
     out.push({
       id: String(d.Id ?? sit.Id ?? ''),
       kind: best.kind,
       severity: situationSeverity(d.SeverityCode, best.kind),
       lat: best.pt[0], lon: best.pt[1],
-      title: loc || best.kind,
-      detail: String(d.Message ?? d.TrafficRestrictionType ?? d.LocationDescriptor ?? ''),
-      road: (d.RoadNumber as string) ?? 'E4',
+      title: pl.title || 'zdarzenie drogowe',
+      detail: pl.note || pl.detail || 'zdarzenie drogowe',
+      road: roadNo,
       start: (d.StartTime as string) ?? null,
       end: (d.EndTime as string) ?? null,
+      original: pl.original,
+      note: pl.note,
+      freeText: pl.freeText,
+      unknownCodes: pl.unknownCodes,
     });
   }
   return out.filter((e) => e.id);
@@ -186,13 +198,14 @@ export function parseTrafikverketRoadConditions(json: unknown, bufferKm = 8): Ro
     if (!line) continue;
     const pt = wktCentroid((c.Geometry as { WGS84?: string } | undefined)?.WGS84);
     if (!pt || distanceToCorridorKm(pt[0], pt[1], line) > bufferKm) continue;
-    const text = String(c.ConditionText ?? '');
+    const rawText = String(c.ConditionText ?? '');
     const code = typeof c.ConditionCode === 'number' ? c.ConditionCode : Number(c.ConditionCode);
     const codeN = Number.isFinite(code) ? code : null;
-    const adverse = (codeN != null && codeN !== 1) || ADVERSE_RE.test(text);
+    const adverse = (codeN != null && codeN !== 1) || ADVERSE_RE.test(rawText);
+    const pl = describeCondition(codeN, rawText, roadNo, String(c.LocationText ?? ''));
     out.push({
-      id: String(c.Id), code: codeN, text: text || 'stan nawierzchni', road: (c.RoadNumber as string) ?? null,
-      location: String(c.LocationText ?? ''), lat: pt[0], lon: pt[1], adverse, start: (c.StartTime as string) ?? null,
+      id: String(c.Id), code: codeN, text: pl.title || 'stan nawierzchni', road: roadNo,
+      location: '', lat: pt[0], lon: pt[1], adverse, start: (c.StartTime as string) ?? null,
     });
   }
   return out;
@@ -248,7 +261,7 @@ export function seRoadSlowdownMult(args: {
 export function roadConditionRisk(c: RoadConditionReading): RiskInput {
   return {
     kind: 'ROAD_SE', severity: 'MEDIUM',
-    title: `${c.road || 'E4'}: ${c.text}${c.location ? ` · ${c.location}` : ''}`,
+    title: `Warunki drogowe ${c.road || 'E4'}: ${c.text}`,
     titleKey: 'rk_road_se', params: { event: c.text },
     detail: { opis: c.location || c.text, rodzaj: 'RoadCondition', kod: c.code, lat: c.lat, lon: c.lon, od: c.start, zrodlo: 'Trafikverket RoadCondition (CC0)' },
     dedup: `ROAD_SE:RC:${c.id}`, sourceUrl: 'https://www.trafikverket.se/trafikinformation/', validUntil: null,
@@ -258,7 +271,7 @@ export function weatherRisk(w: WeatherReading): RiskInput {
   const event = w.snow ? 'śnieg' : w.rain ? 'deszcz / mróz' : 'ślisko / mróz';
   return {
     kind: 'ROAD_SE', severity: w.snow ? 'HIGH' : 'MEDIUM',
-    title: `E4 ${w.name}: ${event}`,
+    title: `Warunki drogowe E4: ${event}, ${w.name}`,
     titleKey: 'rk_road_se', params: { event },
     detail: {
       opis: `powietrze ${w.airC ?? '—'}°C, nawierzchnia ${w.surfaceC ?? '—'}°C, wiatr ${w.windMs ?? '—'} m/s`,
@@ -297,10 +310,10 @@ export function parseDatexSituations(xml: string, bufferKm = 5): RoadEvent[] {
 export function roadRisk(country: 'SE' | 'PL', e: RoadEvent, sourceUrl: string): RiskInput {
   return {
     kind: country === 'SE' ? 'ROAD_SE' : 'ROAD_PL', severity: e.severity,
-    title: `${country === 'SE' ? 'E4' : 'Trasa PL'}${e.road && country === 'PL' ? ` ${e.road}` : ''}: ${e.title}`,
+    title: country === 'SE' ? `Warunki drogowe ${e.road || 'E4'}: ${e.title}` : `${e.road ? `Trasa PL ${e.road}` : 'Trasa PL'}: ${e.title}`,
     titleKey: country === 'SE' ? 'rk_road_se' : e.road ? 'rk_road_pl_road' : 'rk_road_pl',
     params: { event: e.title, ...(country === 'PL' && e.road ? { road: e.road } : {}) },
-    detail: { opis: e.detail, rodzaj: e.kind, lat: e.lat, lon: e.lon, od: e.start, do: e.end, zrodlo: country === 'SE' ? 'Trafikverket (CC0)' : 'KPD GDDKiA' },
+    detail: { opis: e.detail, rodzaj: e.kind, lat: e.lat, lon: e.lon, od: e.start, do: e.end, oryginal: e.original ?? null, zrodlo: country === 'SE' ? 'Trafikverket (CC0)' : 'KPD GDDKiA' },
     dedup: `${country === 'SE' ? 'ROAD_SE' : 'ROAD_PL'}:${e.id}`, sourceUrl, validUntil: e.end,
   };
 }

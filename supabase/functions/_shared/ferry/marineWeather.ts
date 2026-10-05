@@ -282,7 +282,7 @@ export function marineWeatherRisk(args: {
   return {
     kind: 'FERRY' as const,
     severity: 'HIGH' as const,
-    title: `Pogoda morska: możliwe odwołanie rejsu — fala ${wave} m / porywy ${gust} kn (${args.vessel})`,
+    title: `Pogoda morska: możliwe odwołanie rejsu — fala ${wave} m / porywy ${gust} węzłów (${args.vessel})`,
     titleKey: 'rk_ferry_weather',
     params: {
       vessel: args.vessel,

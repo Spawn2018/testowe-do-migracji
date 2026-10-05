@@ -16,12 +16,12 @@ export interface CorridorConditionRow {
   adverseWeather: number | null;
   zrodlo: string | null;
   /** H-2: sytuacje drogowe z Situation 1.6. Pusta lista = API nic nie zwróciło. */
-  situations: { id: string; kind: string; severity: string; title: string; road: string }[];
+  situations: { id: string; kind: string; severity: string; title: string; road: string; original: string | null; note: string | null }[];
   situationsStatus: 'ok' | 'blad' | null;
 }
 
 
-function parseSituations(v: unknown): { id: string; kind: string; severity: string; title: string; road: string }[] {
+function parseSituations(v: unknown): { id: string; kind: string; severity: string; title: string; road: string; original: string | null; note: string | null }[] {
   if (!Array.isArray(v)) return [];
   const out = [];
   for (const item of v) {
@@ -36,6 +36,8 @@ function parseSituations(v: unknown): { id: string; kind: string; severity: stri
       severity: typeof row.severity === 'string' ? row.severity : 'LOW',
       title,
       road: typeof row.road === 'string' ? row.road : 'E4',
+      original: typeof row.original === 'string' && row.original ? row.original : null,
+      note: typeof row.note === 'string' && row.note ? row.note : null,
     });
   }
   return out;

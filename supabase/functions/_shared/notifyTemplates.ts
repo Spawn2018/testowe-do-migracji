@@ -237,9 +237,21 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
         : locale === 'sv' ? 'Det här meddelandet gäller en kundorganisation.' : 'To powiadomienie dotyczy organizacji klienta.';
       return { subject, body, severity: 'LOW', view: null };
     }
+    case 'ROAD_RISK': {
+      const event = String(p.event ?? 'zdarzenie drogowe');
+      const road = String(p.road ?? 'E4');
+      const subject = `Warunki drogowe ${road}: ${event}`;
+      const body = `Zdarzenie drogowe w Szwecji: ${event}. Treść jest po polsku. Oryginał tylko w panelu, pod przyciskiem „Pokaż oryginał”.`;
+      return { subject, body, severity: 'MEDIUM', view: 'risk' };
+    }
     case 'DECISION_ESCALATED':
     case 'DECISION_OPEN': {
       const title = String(p.title ?? '');
+      if (title.startsWith('Warunki drogowe') || p.title_key === 'rk_road_se' || p.title_key === 'rk_tv_unknown_code') {
+        const subject = title || 'Warunki drogowe';
+        const body = 'Zdarzenie drogowe w Szwecji. Treść jest po polsku. Oryginał tylko w panelu, pod przyciskiem „Pokaż oryginał”.';
+        return { subject, body, severity: row.template === 'DECISION_ESCALATED' ? 'HIGH' : 'MEDIUM', view: 'risk' };
+      }
       const rows = Array.isArray(p.transports) ? p.transports as { order_no?: string }[] : [];
       const orders = rows.map((r) => r?.order_no).filter((x): x is string => Boolean(x));
       const list = orders.length

@@ -1,4 +1,5 @@
 /** Trafikverket Open API v2 Situation client. Live via /api/trafikverket proxy; else seed mock. */
+import { describeDeviation } from './pl/describe';
 
 export type SituationSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
@@ -185,11 +186,13 @@ function parseLivePayload(data: unknown): RoadSituation[] {
             lat = Number(m[2]);
           }
         }
-        const title = String(d.Header ?? d.LocationDescriptor ?? sit.Id ?? 'Situation');
-        const detail = String(d.Message ?? d.TemporaryLimit ?? d.LocationDescriptor ?? '');
+        const pl = describeDeviation(d, 'inne', 'E4');
+        const title = pl.title || 'zdarzenie drogowe';
+        const detail = pl.note || pl.detail || title;
         if (!inBbox(lng, lat) && !String(d.LocationDescriptor ?? '').includes('E4')) continue;
-        const severity = mapSeverity(`${title} ${detail}`);
-        const kind = mapKind(`${title} ${detail}`);
+        const raw = `${String(d.Header ?? '')} ${String(d.Message ?? '')} ${String(d.MessageType ?? '')}`;
+        const severity = mapSeverity(raw);
+        const kind = mapKind(raw);
         situations.push({
           id: `${id}-${situations.length}`,
           title,

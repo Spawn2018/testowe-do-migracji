@@ -96,7 +96,7 @@ const pl: Dict = {
   i2_banner_more: '+{n} ryzyk',
   i2_sea_no_source: 'Pogoda i stan morza: brak źródła danych.',
   i2_sea_source: 'Źródło: {attr}',
-  i2_sea_wave_gust: 'Fala {wave} · porywy {gust} · próg {wave_thr} m / {gust_thr} kn',
+  i2_sea_wave_gust: 'Fala {wave} · porywy {gust} · próg {wave_thr} m / {gust_thr} węzłów',
   i2_sea_observed: 'Odczyt {at}',
   i2_progress_weeks: 'tygodnie {r}',
   i2_progress_empty: 'Brak planowanych dostaw w harmonogramie.',

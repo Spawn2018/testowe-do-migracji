@@ -44,6 +44,7 @@ export default function SystemStatusPanel() {
   const [msg, setMsg] = useState<string | null>(null);
   const [mailBudget, setMailBudget] = useState<{ immediate_n: number; digest_n: number; suppressed_n: number; level: string; suppressed_to?: { recipient: string; n: number }[] | null } | null>(null);
   const [hereBudget, setHereBudget] = useState<{ enabled: boolean; requests: number; estimated_usd: number; level: string } | null>(null);
+  const [deepl, setDeepl] = useState<{ characters: number; monthly_limit: number; queued: number; level: string } | null>(null);
 
   const refresh = useCallback(async () => {
     const sb = await getSupabase();
@@ -77,6 +78,10 @@ export default function SystemStatusPanel() {
       .order('last_seen_at', { ascending: false, nullsFirst: false });
     if (s.error) setSmsDevices([]);
     else setSmsDevices((s.data ?? []) as SmsDeviceRow[]);
+
+    const d = await sb.rpc('deepl_usage_view');
+    if (d.error || !d.data) setDeepl(null);
+    else setDeepl(d.data as { characters: number; monthly_limit: number; queued: number; level: string });
 
     const e = await sb.rpc('email_budget_status');
     if (e.error || e.data == null) setMailBudget(null);
@@ -175,6 +180,16 @@ export default function SystemStatusPanel() {
           n: String(hereBudget?.requests ?? 0),
           usd: String(hereBudget?.estimated_usd ?? 0),
         })}
+      </div>
+      <h4 className="sec" style={{ marginTop: 14 }}>{t(locale, 'pl_deepl_tile')}</h4>
+      <div data-deepl-usage={deepl?.level ?? 'brak'}>
+        {tp(locale, 'pl_deepl_body', {
+          n: String(deepl?.characters ?? 0),
+          limit: String(deepl?.monthly_limit ?? 1000000),
+          q: String(deepl?.queued ?? 0),
+        })}
+        {deepl?.level === 'warn' ? ` ${t(locale, 'pl_deepl_warn')}` : ''}
+        {deepl?.level === 'full' ? ` ${t(locale, 'pl_deepl_full')}` : ''}
       </div>
       <h4 className="sec" style={{ marginTop: 14 }}>{t(locale, 'opt_acc_sys_integ')}</h4>
       {integs.length === 0 ? (

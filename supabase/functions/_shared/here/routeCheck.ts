@@ -398,6 +398,7 @@ export function buildRoutingUrl(args: {
   q.set('vehicle[currentWeight]', String(Math.round(args.dims.weightT * 1000)));
   q.set('vehicle[axleCount]', String(args.dims.axleCount));
   q.set('vehicle[weightPerAxle]', String(Math.round(args.dims.axleLoadT * 1000)));
+  q.set('lang', 'pl-PL');
   q.set('apiKey', args.apiKey);
   return `https://router.hereapi.com/v8/routes?${q.toString()}`;
 }

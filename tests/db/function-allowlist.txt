@@ -163,3 +163,5 @@ authenticated h3_highlighted
 
 # FERRY-STATUS: ręczny komunikat armatora
 authenticated operator_notice_apply
+
+authenticated deepl_usage_view
