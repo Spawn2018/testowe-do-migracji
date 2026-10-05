@@ -78,7 +78,7 @@ check import 66
 check nullguard 593
 check i2 527
 check i30 10
-check i31 6
+check i31 9
 check dec2 26
 check dec3 13
 check dec5 11

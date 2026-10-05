@@ -72,5 +72,17 @@ sys "insert into fuel_index_readings (project_id, index_code, period, reading_da
 val "sefs_week_for_load 2026-10-05 → 1.14" $HHL "select sefs_week_for_load('$P','2026-10-05')->>'applied_mult'" "1.14"
 val "awaria źródła bez odczytów" $HHL "select sefs_week_for_load('$P','2026-11-02')->>'reason'" "SOURCE_FAILURE"
 
+
+# SEFS-KOREKTA (0166): korekta dnia 2026-09-30 SEK 23.05→29.00 — średnia z korektą ≠ średnia z samych oryginałów
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, corrects_id, correction_reason)
+  select r.project_id, r.index_code, r.period, r.reading_date, 29.00, r.source_url, 'korekta test 0166', r.id, 'SEFS-KOREKTA test'
+    from fuel_index_readings r
+   where r.project_id='22222222-0000-0000-0000-000000000001' and r.index_code='SEK' and r.period='2026-09-30' and r.corrects_id is null
+     and not exists (select 1 from fuel_index_readings c where c.corrects_id=r.id)"
+val "korekta: nadal 7 odczytów SEK" $HHL "select (sefs_week_for_load('$P','2026-10-05')->>'n_sek')::int" "7"
+# bez korekty avg=23.05 → 1.14; z korektą 29: (6*23.05+29)/7≈23.90 → inny próg
+val "korekta wchodzi do średniej (mnożnik ≠ 1.14)" $HHL "select case when (sefs_week_for_load('$P','2026-10-05')->>'applied_mult') = '1.14' then 'same' else 'changed' end" "changed"
+val "historia korekty zapisana" $HHL "select count(*)::text from fuel_index_readings where corrects_id is not null and correction_reason='SEFS-KOREKTA test'" "1"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

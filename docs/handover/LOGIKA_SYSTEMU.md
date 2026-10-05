@@ -446,7 +446,7 @@ Cele kliknięć: `docs/handover/CELE_KLIKNIEC.md`.
 - Produkcja 05.10: `fuel_index_readings` ma 0 wierszy, nie ma też żadnego zadania cron dla paliwa. Opłata się więc nie liczy, a decyzje `SEFS_OUT_OF_TABLE` zostają otwarte.
 - Pobieranie WOB istnieje, ale jest wyłączone (D-2) i dotyczy innego indeksu (EUR/l).
 - Propozycja, niezbudowana: automatyczne pobieranie cen OKQ8/ORLEN. Przed budową trzeba sprawdzić regulaminy obu stron (lista STOP).
-- Uwaga do decyzji: `sefs_week_calc` bierze tylko wiersze z `corrects_id is null`. Liczy więc oryginał, a pomija korektę. Poprawienie odczytu korektą nie zmienia średniej. Do decyzji: liczyć ostatnią korektę zamiast oryginału.
+- **SEFS-KOREKTA (0166, decyzja 05.10):** średnia bierze wartość korekty, gdy istnieje (join po `corrects_id`), inaczej oryginał. Po zamknięciu tygodnia zamrożenie migawką przy transporcie (32.3 / `fx_write_fuel` / `fx_snapshot_load`); późniejsza korekta nie zmienia policzonych transportów ani faktur (`invoiced_total_eur`); historia korekty w `fuel_index_readings`.
 
 **Dziennik logowań.**
 - Supabase nie zapisuje już dziennika auth w bazie projektu (`auth.audit_log_entries` na produkcji ma 0 wierszy), więc poprzednie RPC zawsze zwracało pusto.
