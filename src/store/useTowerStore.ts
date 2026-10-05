@@ -1903,7 +1903,17 @@ export const useTowerStore = create<TowerState>()(
           ? state.theme
           : systemTheme();
         if (!state.themeManual && theme !== state.theme) {
-          useTowerStore.setState({ theme });
+          /* B-PERSIST-TOAST (06.10): przy pustym magazynie hydratacja biegnie synchronicznie wewnątrz create(),
+             zanim `useTowerStore` jest przypisany — bezpośrednie setState rzucało TypeError, zustand wołał ten
+             callback ponownie z `error` i każdy nowy użytkownik dostawał toast „stan uszkodzony” (regresja Q-9 B).
+             Aktualizacja stanu w mikrozadaniu; motyw na DOM ustawiamy od razu. */
+          queueMicrotask(() => {
+            try {
+              useTowerStore.setState({ theme });
+            } catch {
+              /* store may be mid-init in tests */
+            }
+          });
         }
         applyThemeToDom(theme);
       },

@@ -47,6 +47,8 @@ echo "[fresh] PW_BASE_URL=$PW_BASE_URL"
 npm run test:visual
 # III-2: zrzuty stanów (najechanie, fokus, wciśnięty, zablokowany, ładowanie, pusty, błąd, walidacja) — próg 0,1%
 npx playwright test tests/visual-states.spec.ts
+# B-PERSIST-TOAST: pierwsze wejście bez toastu „stan uszkodzony”
+npx playwright test tests/persist-toast.spec.ts
 # B-SMOKE-LANG: test:d19 wyłączony (brak #langSeg / PL-only)
 npm run test:deur
 npm run test:etap4
