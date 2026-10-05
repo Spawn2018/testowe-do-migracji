@@ -10,6 +10,7 @@ import { t } from '../i18n/messages';
 import { decText } from '../i18n/decisions';
 import { getAuthProfile } from '../auth/profile';
 import { mayResolveDecision } from '../lib/decisionAccess';
+import { OptionsHowTo } from './settings/OptionsHowTo';
 
 type Opt = { code: string; label_key: string; requires_comment: boolean; effect: string };
 type DecRow = {
@@ -125,6 +126,9 @@ export function DecisionCentre() {
         <h2>{t(locale, 'dec_centre')}</h2>
         <span className="sub">{rows.length}</span>
       </header>
+      <div style={{ margin: '0 12px 8px' }}>
+        <OptionsHowTo locale={locale} k="b6_howto_centre" />
+      </div>
       {msg ? <div className="note" style={{ margin: 8 }}>{msg}</div> : null}
       <ul className="exq">
         {rows.map((r) => (

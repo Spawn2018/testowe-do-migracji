@@ -1071,3 +1071,65 @@ TELM true; H1/H3/H6 false; blokada SMS właściciela zostaje.
 Nie buduj: D-83/B-3a/H-1/H-3/H-6, R-0, D-7/14/16/17/21.
 TELM true; blokada SMS właściciela; bramy; domeny 200.
 
+## Polecenie właściciela 2026-10-05 ~14:29 (czas warszawski) — WERYFIKACJA ZESZYT B/C (lista kontrolna + zrzuty prod)
+
+WERYFIKACJA I DOKOŃCZENIE CAŁEJ CZĘŚCI B I C — WEDŁUG LISTY KONTROLNEJ
+(decyzja właściciela 05.10; plik LISTA_KONTROLNA_ZESZYT.md w załączniku)
+
+Właściciel widzi na produkcji, że wiele pozycji z zeszytu nie jest
+zrobionych, mimo statusów DONE w raportach. Od teraz obowiązuje zasada:
+pozycja jest zrobiona TYLKO wtedy, gdy na produkcji wygląda i działa
+dokładnie tak, jak w słowach właściciela — z dowodem w postaci zrzutu
+ekranu z produkcji.
+
+1. Zapisz LISTA_KONTROLNA_ZESZYT.md w docs/handover/.
+
+2. Dla KAŻDEGO punktu listy (1.1 … C.1):
+   - sprawdź na PRODUKCJI (Playwright, konto właściwej roli: HHL admin,
+     HHL użytkownik, KSH, przewoźnik — przez „Działaj jako"), na
+     komputerze i na telefonie (390 px), gdy punkt dotyczy wyglądu
+   - porównaj z DOSŁOWNYM zdaniem właściciela z części B i C
+     ZLECENIE_POPRAWKI_02_10.md, nie z własną interpretacją
+   - zgodne → zrzut ekranu jako dowód
+   - niezgodne albo brak → zbuduj, wdroż, potem zrzut
+   - punkty ⛔ (3.1 zezwolenia — wymiary D-83) pomiń z adnotacją
+
+3. Szczególnie (dotychczasowe dowody nie odpowiadały słowom właściciela):
+   P7 Stena w górnym pasku obok Polferries; P8 brak wyboru języka nigdzie;
+   P10 brak zegara w prawym górnym rogu; P15 ekran logowania i ładowania
+   wyśrodkowany, bez ramek; cała sekcja 10 (podgląd zlecenia) i 8
+   (harmonogram) punkt po punkcie.
+
+4. Zrzuty zapisz w docs/evidence/zeszyt/<numer>.png. Tabela wyników
+   w docs/handover/WERYFIKACJA_ZESZYT_05_10.md:
+   numer | słowa właściciela | wynik (zgodne / poprawione / ⛔) |
+   zrzut | PR / migracja.
+   Bez zrzutu = niezrobione.
+
+5. KONTA (decyzja właściciela):
+   - sebastian+tower-o3-* (3 konta testowe O3a): usuń z kopią w R2
+     i wpisem w historii; najpierw sprawdź, że nic na nie nie wskazuje
+   - marek@hyzyk.pl, p.duks@…, s.hotowczyc@…: zostają WYŁĄCZONE do R-2;
+     popraw literówkę „scandimavian" → „scandinavian" (przed/po w raporcie);
+     bez wysyłania zaproszeń
+
+6. Kolejność: punkty listy po kolei, sekcja po sekcji. Wdrożenie po
+   każdej zamkniętej sekcji (brama, obie domeny 200). Raport po każdej
+   sekcji: ile zgodnych, ile poprawionych, link do tabeli.
+   TELM-2 i test SG-03 (SMS tylko do właściciela) — bez zmian, w tle.
+   Nie przechodzisz do SEC-OWASP, dopóki cała lista nie ma zrzutów.
+
+Zasady bez zmian: migracje przez lokalną bramę, bez kasowania danych
+poza punktem 5, bez wydatków, bez prawdziwych SMS bez zgody.
+Zapisz polecenie w POLECENIA_KOORDYNATORA.md.
+
+Zasada dowodu: DONE tylko gdy na PRODUKCJI wygląda i działa dokładnie jak DOSŁOWNE słowa właściciela z ZLECENIE_POPRAWKI_02_10.md części B i C — zrzut ekranu. Bez zrzutu = niezrobione.
+TELM/SG-03 bez zmian w tle; SMS tylko właściciel. Bramy; domeny 200; H1/H3/H6 false; bez wydatków/kasowania poza pkt 5.
+
+## Uzupełnienie 2026-10-05 ~14:31 (czas warszawski) — DYSCYPLINA do końca listy kontrolnej
+
+Pracuj **WYŁĄCZNIE** nad listą sekcja po sekcji.
+Nowa uwaga właściciela/koordynatora → dopisz `docs/handover/POCZEKALNIA.md` (data, treść, kto) i **WRÓĆ** do bieżącej pozycji; **NIE** zaczynaj jej.
+Poczekalnię po zamknięciu sekcji; decyzje po całej liście.
+Przerwanie **TYLKO**: awaria prod, bezpieczeństwo, utrata danych, SMS/email do niepowołanych.
+Raporty krótkie; wątpliwość = dosłowne słowa właściciela, pytanie do poczekalni.
