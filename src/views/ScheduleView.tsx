@@ -8,6 +8,7 @@ import { filterLoads } from '../lib/selectors';
 import { StatusPill, formatDelayPill } from '../components/ui/StatusPill';
 import { canImportSchedule, canSeeCost, canSeeMargin, canSeeRevenue, visibleDriverPhone } from '../lib/permissions';
 import { fmtNum, pctText, t, tp } from '../i18n/messages';
+import { formatTowerPair } from '../lib/cSep';
 import { docCategoryLabel } from '../lib/enumLabels';
 import {
   delayMinutesVsPlan,
