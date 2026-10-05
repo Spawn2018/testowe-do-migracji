@@ -9,3 +9,5 @@
 | 2026-10-05 14:49 | executor | TEST DB bez `insurance_policies.approval_status` (0125) — nałożyć 0125+ na TEST przed pełną bramą 0182 | brama TEST |
 | 2026-10-05 15:22 | executor | 8.3: godziny w tabeli tylko gdy jest okno planu/awizacji — wiele wierszy ma samą datę; czy uzupełniać domyślną godziną? | 8.3 |
 | 2026-10-05 15:22 | executor | 8.9: brak rozwijanego „Jak to działa” przy filtrach harmonogramu (są title/aria częściowo) | 8.9 |
+| 2026-10-05 15:25 | executor | 10a.1: „KSH Śrem” w miejscu załadunku — czy to „Śrem z nadawcy” do usunięcia, czy adres OK? | 10a.1 |
+| 2026-10-05 15:25 | executor | 10a.1: „Wymiary L×W×H” ładunku vs „wymiary zestawu” — czy zostawić wymiary ładunku? | 10a.1 |
