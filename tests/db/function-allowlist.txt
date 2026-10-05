@@ -1,175 +1,185 @@
-# ANEKS 5 odp. §6.1 — jawna lista funkcji schematu public, które anon / authenticated mogą wywołać.
-# Test (tests/db/security.sh) porównuje ją z katalogiem: funkcja spoza listy = test czerwony.
-# Format: <rola> <nazwa funkcji>  (wszystkie przeciążenia). Zmiana listy = świadoma decyzja w przeglądzie.
+
 # --- anon: API tokenu kierowcy (2.3), podtrzymanie bazy (PR1). Od 0030 (3.2d) bez pomocniczych RLS.
+# --- authenticated: RPC aplikacji (każda sprawdza rolę w środku)
+# --- authenticated: pomocnicze RLS / widoki / funkcje wywoływane przez funkcje security invoker
+# 0068: blokada wiadomości zewnętrznych przed R-2
+# ADM-10 (0117): Działaj jako
+# ANEKS 5 odp. §6.1 — jawna lista funkcji schematu public, które anon / authenticated mogą wywołać.
+# B-5: kreator reguł — ostrzeżenie o duplikacie i historia zmian (tylko HHL_ADMIN w funkcji)
+# B-MAPA: podkład i geometria trasy, próbka śladu promu dla Q-18
+# D-30 (0125): zatwierdzanie polisy — tylko HHL w ciele; testy insurance.sh
+# DEC-2 (0102): centrum decyzji
+# DEC-4 (0105): macierz powiadomień — tylko HHL_ADMIN
+# DEC-5 (0106): SMS stref — odbiorcy i wyzwalacze (tylko HHL w ciele)
+# DEC-6 (0107): progi ops_thresholds
+# DEC-6 (0110): dziennik Auth + baner
+# FERRY-STATUS: ręczny komunikat armatora
+# Format: <rola> <nazwa funkcji>  (wszystkie przeciążenia). Zmiana listy = świadoma decyzja w przeglądzie.
+# H-1: stan kontroli trasy i kafelek HERE
+# H-3: podświetlenie przeszkód korytarza
+# HIST-11 (0118): historia zmian
+# I-12 (0064): dobór stawki z cennika (HHL)
+# I-18 (0061): KSH potwierdza / zmienia daty planu
+# I-19 (0065): formularz cennika HHL — zapis wersji i dziennik zmian
+# I-2f (0052): formularz BAF/SEFS — tylko HHL (strażnik is_hhl() is not true), null-guard-calls GUARD
+# I-2l (0055): mediana czasu wykrycia — SECURITY INVOKER, zakres = RLS risk_signals (null-guard-calls EMPTY)
+# I-3 (0067): bramka SMS — telefon (anon, token urządzenia), HHL (urządzenia), link kierowcy SMS-em
+# I-31 (0101): SEFS hybrid_min — lookup/tydzień (tylko HHL w ciele funkcji)
+# I-5 (0057): 2FA HHL_ADMIN — stan dla UI (działa przy aal1) i przełącznik wymagania (HHL_ADMIN + aal2)
+# I-6 (0058): błędy przeglądarki — zapis przez RPC (anon: PWA kierowcy i ekran logowania; zalogowany tylko z aktywnym kontem)
+# II-7b (0123): kalibracja ETA
+# L-13: licznik poczty w Stanie systemu
+# OPL-8 (0115): dopłaty wyłącznie ręczne
+# TEL-1 (0111): E.164 tylko przy SMS
+# Test (tests/db/security.sh) porównuje ją z katalogiem: funkcja spoza listy = test czerwony.
+-- I-30 (0100): pomocnicze cennika SYMBOL
+anon auth_email_allowed
 anon driver_get_instructions
 anon driver_post_event
 anon keep_alive
-anon auth_email_allowed
-# --- authenticated: pomocnicze RLS / widoki / funkcje wywoływane przez funkcje security invoker
+anon report_client_error
+anon report_csp_violation
+anon sms_heartbeat
+anon sms_pull
+anon sms_report
+authenticated admin_audit_history
+authenticated admin_auth_login_log
+authenticated admin_broadcast_clear
+authenticated admin_broadcast_set
+authenticated admin_impersonate_start
+authenticated admin_impersonate_stop
+authenticated admin_invite_user
+authenticated admin_notification_matrix_set
+authenticated admin_ops_threshold_set
+authenticated admin_revoke_invite
+authenticated admin_set_eta_calibration_frozen
+authenticated admin_set_external_messaging
+authenticated admin_set_mfa_enforcement
+authenticated admin_set_permit_requirement
+authenticated admin_set_user_active
+authenticated admin_set_user_role
+authenticated admin_sms_zone_recipient_set
+authenticated admin_sms_zone_test
+authenticated admin_sms_zone_trigger_set
+authenticated app_user_mark_password_set
+authenticated apply_eta_calibration_version
+authenticated auth_email_allowed
+authenticated baf_change_log
 authenticated can_see_margin
+authenticated cancel_load
+authenticated carrier_rate_load
+authenticated carrier_rating_detail
+authenticated carrier_scorecard
+authenticated create_document
+authenticated csp_status_view
 authenticated current_app_role
 authenticated current_app_user_id
 authenticated current_org_id
 authenticated current_org_kind
-authenticated is_hhl
-authenticated auth_email_allowed
-authenticated app_user_mark_password_set
-authenticated doc_bucket
-authenticated doc_safe_name
-authenticated invoice_week_local
-authenticated make_circle_fence
-authenticated money_effective_eur
-authenticated money_least_tier
-authenticated permit_fits
-authenticated risk_audience_for
-authenticated storage_upload_allowed
-# --- authenticated: RPC aplikacji (każda sprawdza rolę w środku)
-authenticated admin_invite_user
-authenticated admin_revoke_invite
-authenticated admin_set_user_active
-authenticated admin_set_user_role
-authenticated cancel_load
-authenticated create_document
+authenticated decision_assign
+authenticated decision_expire
+authenticated decision_open
+authenticated decision_resolve
+authenticated decision_snooze
+authenticated deepl_usage_view
+authenticated delete_geofence
 authenticated discard_document
+authenticated doc_bucket
+authenticated doc_requirement_set
+authenticated doc_requirements_status
+authenticated doc_safe_name
+authenticated document_supersede
 authenticated driver_get_instructions
+authenticated driver_phone_e164
 authenticated driver_post_event
 authenticated driver_post_position
+authenticated email_budget_status
+authenticated fee_catalog_hints
+authenticated ferry_track_sample
+authenticated fuel_add_reading
 authenticated fx_rate_before
+authenticated h1_route_check_state
+authenticated h3_corridor_state
+authenticated h3_highlighted
+authenticated here_budget_view
 authenticated import_cancel_loads
 authenticated import_removal_check
 authenticated import_schedule
+authenticated import_template_save
+authenticated insurance_policies_list
+authenticated insurance_policy_approve
+authenticated insurance_policy_save
+authenticated invoice_dispute_reply
+authenticated invoice_week_local
+authenticated is_hhl
 authenticated issue_driver_token
+authenticated issue_driver_token_sms
 authenticated keep_alive
+authenticated kpi_detection_lag
+authenticated kr_convoy_count
+authenticated ksh_confirm_dates
+authenticated l1b_ksh_file_unreadable
+authenticated list_load_messages_ui
+authenticated load_agreed_fee_accept
+authenticated load_agreed_fee_add
+authenticated load_agreed_fee_reject
+authenticated load_driver_contacts
+authenticated load_dwell_info
+authenticated load_escort_contacts
+authenticated load_escort_status
+authenticated load_escorts_set
+authenticated load_insurance_cover
+authenticated load_insurance_cover_one
+authenticated load_message_read_list
+authenticated load_permit_link
+authenticated load_permit_save
+authenticated load_permit_status
+authenticated load_permit_unlink
+authenticated load_track
+authenticated make_circle_fence
+authenticated map_display_state
 authenticated mark_invoice_paid
+authenticated mark_load_message_read
 authenticated mark_notifications_read
+authenticated money_effective_eur
+authenticated money_least_tier
+authenticated my_mfa_status
 authenticated my_profile
 authenticated my_sessions
+authenticated operator_notice_apply
+authenticated permit_fits
+authenticated permit_requirement_state
+authenticated permit_save
+authenticated push_subscribe
+authenticated push_unsubscribe
+authenticated rate_card_change_log
+authenticated rate_card_save
+authenticated rate_match
+authenticated real_app_role
+authenticated real_app_user_id
 authenticated register_invoice
+authenticated report_client_error
+authenticated report_csp_violation
 authenticated report_position
 authenticated revoke_driver_token
 authenticated revoke_user_sessions
-authenticated unmark_invoice_paid
-authenticated delete_geofence
-authenticated upsert_geofence_circle
-# I-2f (0052): formularz BAF/SEFS — tylko HHL (strażnik is_hhl() is not true), null-guard-calls GUARD
-authenticated baf_change_log
-authenticated fuel_add_reading
-authenticated sefs_save_parameters
-# I-2l (0055): mediana czasu wykrycia — SECURITY INVOKER, zakres = RLS risk_signals (null-guard-calls EMPTY)
-authenticated kpi_detection_lag
-# I-5 (0057): 2FA HHL_ADMIN — stan dla UI (działa przy aal1) i przełącznik wymagania (HHL_ADMIN + aal2)
-authenticated my_mfa_status
-authenticated admin_set_mfa_enforcement
-# I-6 (0058): błędy przeglądarki — zapis przez RPC (anon: PWA kierowcy i ekran logowania; zalogowany tylko z aktywnym kontem)
-anon report_client_error
-authenticated report_client_error
-# I-18 (0061): KSH potwierdza / zmienia daty planu
-authenticated ksh_confirm_dates
-# I-12 (0064): dobór stawki z cennika (HHL)
-authenticated rate_match
-# I-19 (0065): formularz cennika HHL — zapis wersji i dziennik zmian
-authenticated rate_card_save
-authenticated rate_card_change_log
--- I-30 (0100): pomocnicze cennika SYMBOL
-authenticated shipment_family
-authenticated kr_convoy_count
-# I-31 (0101): SEFS hybrid_min — lookup/tydzień (tylko HHL w ciele funkcji)
-authenticated sefs_lookup_mult
+authenticated risk_audience_for
 authenticated sefs_compute_hybrid
+authenticated sefs_lookup_mult
+authenticated sefs_save_parameters
 authenticated sefs_week_for_load
-authenticated l1b_ksh_file_unreadable
-# DEC-2 (0102): centrum decyzji
-authenticated decision_open
-authenticated decision_assign
-authenticated decision_snooze
-authenticated decision_resolve
-authenticated decision_expire
-# DEC-4 (0105): macierz powiadomień — tylko HHL_ADMIN
-authenticated admin_notification_matrix_set
-# DEC-5 (0106): SMS stref — odbiorcy i wyzwalacze (tylko HHL w ciele)
-authenticated admin_sms_zone_recipient_set
-authenticated admin_sms_zone_trigger_set
-authenticated admin_sms_zone_test
-# DEC-6 (0107): progi ops_thresholds
-authenticated admin_ops_threshold_set
-# DEC-6 (0110): dziennik Auth + baner
-authenticated admin_auth_login_log
-authenticated admin_broadcast_set
-authenticated admin_broadcast_clear
-authenticated system_broadcast_current
-# TEL-1 (0111): E.164 tylko przy SMS
-authenticated driver_phone_e164
-# I-3 (0067): bramka SMS — telefon (anon, token urządzenia), HHL (urządzenia), link kierowcy SMS-em
-anon sms_pull
-anon sms_report
-anon sms_heartbeat
-authenticated issue_driver_token_sms
+authenticated set_web_push_enabled
+authenticated shipment_family
+authenticated sms_add_test_number
+authenticated sms_external_messaging_state
 authenticated sms_issue_device
 authenticated sms_revoke_device
-authenticated sms_set_paused
-# 0068: blokada wiadomości zewnętrznych przed R-2
-authenticated sms_add_test_number
 authenticated sms_send_test
-authenticated admin_set_external_messaging
-authenticated sms_external_messaging_state
-authenticated admin_set_permit_requirement
-authenticated permit_requirement_state
-authenticated load_driver_contacts
-authenticated import_template_save
-authenticated doc_requirement_set
-authenticated doc_requirements_status
-authenticated document_supersede
-authenticated invoice_dispute_reply
-authenticated load_permit_link
-authenticated load_permit_status
-authenticated permit_save
-authenticated load_permit_save
-authenticated load_permit_unlink
-authenticated load_escorts_set
-authenticated load_escort_status
-authenticated load_escort_contacts
-authenticated load_track
-authenticated carrier_rate_load
-authenticated carrier_scorecard
-authenticated carrier_rating_detail
-authenticated insurance_policy_save
-authenticated insurance_policies_list
-# D-30 (0125): zatwierdzanie polisy — tylko HHL w ciele; testy insurance.sh
-authenticated insurance_policy_approve
-# OPL-8 (0115): dopłaty wyłącznie ręczne
-authenticated load_agreed_fee_add
-authenticated fee_catalog_hints
-authenticated load_dwell_info
-# ADM-10 (0117): Działaj jako
-authenticated real_app_user_id
-authenticated real_app_role
-authenticated admin_impersonate_start
-authenticated admin_impersonate_stop
-# HIST-11 (0118): historia zmian
-authenticated admin_audit_history
-# II-7b (0123): kalibracja ETA
-authenticated admin_set_eta_calibration_frozen
-authenticated apply_eta_calibration_version
-# L-13: licznik poczty w Stanie systemu
-authenticated email_budget_status
-# H-1: stan kontroli trasy i kafelek HERE
-authenticated h1_route_check_state
-authenticated here_budget_view
-
-# H-3: podświetlenie przeszkód korytarza
-authenticated h3_corridor_state
-authenticated h3_highlighted
-
-# FERRY-STATUS: ręczny komunikat armatora
-authenticated operator_notice_apply
-
-authenticated deepl_usage_view
-
-# B-MAPA: podkład i geometria trasy, próbka śladu promu dla Q-18
-authenticated map_display_state
-authenticated ferry_track_sample
-
-# B-5: kreator reguł — ostrzeżenie o duplikacie i historia zmian (tylko HHL_ADMIN w funkcji)
+authenticated sms_set_paused
+authenticated storage_upload_allowed
+authenticated system_broadcast_current
+authenticated truck_ban_holiday_hit
+authenticated unmark_invoice_paid
+authenticated upsert_geofence_circle
 authenticated wf_duplicate_check
 authenticated workflow_rule_history

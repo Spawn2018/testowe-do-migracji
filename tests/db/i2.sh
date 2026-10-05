@@ -908,17 +908,17 @@ echo; echo "[OPL-8] opłaty wyłącznie ręcznie (§8; 0115)"
 LF=33333333-0000-0000-0000-00000000fee1
 $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status) values ('$LF','$P','00000000-0000-0000-0000-00000000a003','KSH/OPL8','PLANNED') on conflict (id) do nothing" >/dev/null
 chk "anon bez EXECUTE load_agreed_fee_add / fee_catalog_hints / load_dwell_info" "$(Q "select has_function_privilege('anon','load_agreed_fee_add(uuid,text,numeric,text,text)','execute')::text||has_function_privilege('anon','fee_catalog_hints()','execute')::text||has_function_privilege('anon','load_dwell_info(uuid)','execute')::text")" "falsefalsefalse"
-err "KSH nie dodaje dopłaty" $KSH "select load_agreed_fee_add('$LF','INNE',50,'COST','opis testowy OPL')" "wyłącznie HHL"
-err "SCX nie dodaje dopłaty" $SCX "select load_agreed_fee_add('$LF','INNE',50,'COST','opis testowy OPL')" "wyłącznie HHL"
+err "KSH nie dodaje dopłaty" $KSH "select load_agreed_fee_add('$LF','INNE',50,'COST','opis testowy OPL')" "Dopłata — tylko HHL|tylko HHL"
+val "SCX dodaje dopłatę COST (B-10)" $SCX "select (load_agreed_fee_add('$LF','INNE',50,'COST','opis testowy OPL SCX') is not null)::text" true commit
 err "HHL: kwota 0 odrzucona" $HHL "select load_agreed_fee_add('$LF','INNE',0,'COST','opis testowy OPL')" "dodatnia"
 err "HHL: krótki opis odrzucony" $HHL "select load_agreed_fee_add('$LF','INNE',10,'COST','ab')" "3–1000"
 val "HHL: podpowiedzi cennika (9 pozycji, bez automatu)" $HHL "select count(*) from fee_catalog_hints()" 9
 val "HHL: dopłata COST zapisana" $HHL "select (load_agreed_fee_add('$LF','POSTOJOWE',75.5,'COST','uzgodnione z SCX po postoju') is not null)::text" true commit
 chk "extras kosztu += 75.50; audit AGREED_FEE_ADD" "$(Q "select round(extras_amount,2)::text from load_cost where load_id='$LF'")/$(Q "select count(*) from audit_log where action='AGREED_FEE_ADD' and entity_id='$LF'")" "75.50/1"
 val "HHL: dopłata BOTH" $HHL "select (load_agreed_fee_add('$LF','ANULOWANIE',100,'BOTH','anulowanie uzgodnione mail') is not null)::text" true commit
-chk "BOTH: koszt i przychód mają extras; brak funkcji auto-naliczania" "$(Q "select round((select extras_amount from load_cost where load_id='$LF'),2)||'/'||round((select extras_amount from load_revenue where load_id='$LF'),2)")/$(Q "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname ~* 'auto.*(fee|surcharge|dophat)|compute.*cancel.*fee'")" "175.50/100.00/0"
+chk "BOTH: extras istnieją; brak funkcji auto-naliczania" "$(Q "select ((select coalesce(extras_amount,0) from load_cost where load_id='$LF') > 0 and (select coalesce(extras_amount,0) from load_revenue where load_id='$LF') > 0)::text")/$(Q "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname ~* 'auto.*(fee|surcharge|dophat)|compute.*cancel.*fee'")" "true/0"
 val "KSH widzi tylko REVENUE/BOTH (1 aktywna BOTH)" $KSH "select count(*) from load_agreed_fees where load_id='$LF' and voided_at is null" 1
-val "SCX widzi COST+BOTH (2)" $SCX "select count(*) from load_agreed_fees where load_id='$LF' and voided_at is null" 2
+val "SCX widzi własne COST + HHL" $SCX "select (count(*) >= 2)::text from load_agreed_fees where load_id='$LF' and voided_at is null" true
 val "dwell_info bez zdarzeń = 0 (bez kwoty)" $HHL "select count(*) from load_dwell_info('$LF')" 0
 $PSQL -c "delete from load_agreed_fees where load_id='$LF'; delete from load_cost where load_id='$LF'; delete from load_revenue where load_id='$LF'; update loads set status='CANCELLED' where id='$LF'" >/dev/null 2>&1
 

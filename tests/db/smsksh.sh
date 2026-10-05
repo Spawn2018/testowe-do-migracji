@@ -52,26 +52,26 @@ place() {
       'TELEMATICS_API', jsonb_build_object('t', '$3')" >/dev/null
 }
 
-place "$L1" SREM 120 "2026-10-05 08:00+02"
+place "$L1" SREM 120 "$(date -u -d '30 minutes ago' +%Y-%m-%dT%H:%M:%SZ)"
 val "120 min do Sremu: czas wlasnego silnika" "select (minutes between 119 and 121 and engine='wlasny')::text from yard_drive_quote('$L1','SREM')" "true"
 val "120 min do Sremu: zero SMS" "select count(*) from sms_outbox where load_id='$L1' and kind='ZONE_APPROACH'" "0"
 
-place "$L1" SREM 40 "2026-10-05 08:05+02"
+place "$L1" SREM 40 "$(date -u -d '25 minutes ago' +%Y-%m-%dT%H:%M:%SZ)"
 val "40 min do Sremu: SMS od razu, dwa numery" "select count(*) from sms_outbox where load_id='$L1' and kind='ZONE_APPROACH' and to_e164 like '+48%'" "2"
 val "tresc: kto, rejestracja, godzina" "select (bool_and(body like '%Jan Kowalski%' and body like '%PO 1234%' and body like '%przyjazd%'))::text from sms_outbox where load_id='$L1' and kind='ZONE_APPROACH'" "true"
 
-place "$L1" SREM 30 "2026-10-05 08:10+02"
+place "$L1" SREM 30 "$(date -u -d '20 minutes ago' +%Y-%m-%dT%H:%M:%SZ)"
 val "kolejna pozycja: bez duplikatu" "select count(*) from sms_outbox where load_id='$L1' and kind='ZONE_APPROACH'" "2"
 
-place "$L2" BODEN 120 "2026-10-05 09:00+02"
+place "$L2" BODEN 120 "$(date -u -d '15 minutes ago' +%Y-%m-%dT%H:%M:%SZ)"
 val "120 min do Boden: zero SMS" "select count(*) from sms_outbox where load_id='$L2' and kind='ZONE_APPROACH'" "0"
 val "GPS przed wyjazdem ze Sremu: ETA pusta" "select (eta_site is null)::text||'/'||(eta_basis->>'pre_load') from loads where id='$L2'" "true/true"
 
-place "$L2" BODEN 40 "2026-10-05 09:05+02"
+place "$L2" BODEN 40 "$(date -u -d '10 minutes ago' +%Y-%m-%dT%H:%M:%SZ)"
 val "40 min do Boden: dwa SMS" "select count(*) from sms_outbox where load_id='$L2' and kind='ZONE_APPROACH' and to_e164 like '+46%'" "2"
 val "Boden: kto i rejestracja" "select (bool_and(body like '%Eva Nilsson%' and body like '%WX 999%'))::text from sms_outbox where load_id='$L2' and kind='ZONE_APPROACH'" "true"
 
-place "$L2" BODEN 20 "2026-10-05 09:10+02"
+place "$L2" BODEN 20 "$(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%SZ)"
 val "Boden: powtorzona pozycja bez duplikatu" "select count(*) from sms_outbox where load_id='$L2' and kind='ZONE_APPROACH'" "2"
 
 sys "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L2','GEOFENCE_EXIT', now(), '{\"geofence_kind\":\"LOADING\"}')" >/dev/null

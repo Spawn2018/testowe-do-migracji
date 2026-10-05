@@ -180,6 +180,6 @@ Polecenie kazało przepisać D-66–D-76 dosłownie z `ZLECENIE_POPRAWKI_02_10.m
 
 | ID | Sprawa | Decyzja | Status |
 |---|---|---|---|
-| ETA-MARK | znaczniki przy ETA | zielony „w oknie" (między początkiem a końcem okna); bursztynowy „przed terminem" (przed początkiem — info); czerwony „po terminie" (po końcu — **ten sam warunek** co ryzyko ETA po terminie / L-3, bez drugiego alarmu); „przyjazd nocą" 22:00–06:00 Europe/Warsaw (info). Przed terminem i noc: bez Centrum decyzji i bez SMS. Opis w „Jak działa". | ✅ decyzja 05.10 / ⏳ budowa |
-| H-4 | ETA + czas pracy kierowcy UE | Budować **teraz**. Brak tachografu na stałe (D-85). Czas jazdy/odpoczynku tylko z GPS naczepy. U-31 obsada 1-os.; „A\|B" = przepięcie. Postój ≥9 h = odpoczynek skrócony, ≥11 h regularny; ≥45 min (lub 15+30) = przerwa. Przerwa 45 min po 4,5 h; max 9 h/dzień (10 h 2×/tydzień); odpoczynek 11 h (skrócony 9 h) wstawiany w ETA; prom = odpoczynek (D-9). Brak historii GPS → założenie ostrożne. Przepięcie = nowy kierowca od awizacji. SMS-KSH-1H z tego ETA. II-7b kalibracja po rozładunku. | ✅ decyzja 05.10 / ⏳ budowa |
+| ETA-MARK | znaczniki przy ETA | zielony „w oknie" (między początkiem a końcem okna); bursztynowy „przed terminem" (przed początkiem — info); czerwony „po terminie" (po końcu — **ten sam warunek** co ryzyko ETA po terminie / L-3, bez drugiego alarmu); „przyjazd nocą" 22:00–06:00 Europe/Warsaw (info). Przed terminem i noc: bez Centrum decyzji i bez SMS. Opis w „Jak działa". | ✅ 05.10 |
+| H-4 | ETA + czas pracy kierowcy UE | **Zrobione 05.10** (0185). Brak tachografu na stałe (D-85). Czas jazdy/odpoczynku tylko z GPS naczepy. U-31; A\|B = przepięcie. Reguły UE w ETA; prom = odpoczynek; ostrożne bez GPS; SMS-KSH-1H z tego ETA; II-7b obserwacja po rozładunku. | ✅ 05.10 |
 
