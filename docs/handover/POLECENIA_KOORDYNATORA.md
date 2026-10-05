@@ -882,3 +882,16 @@ STATUS PLANU I DALSZA PRACA (koordynator 05.10)
 
 Migracje przez lokalną bramę, obie domeny 200. Bez kasowania danych,
 bez wydatków, bez prawdziwych SMS bez zgody.
+
+## Polecenie 2026-10-05 ~12:11 (czas warszawski) — D-78 pule HERE + przebudowa H-3
+
+STOP bieżącej kolejności PLAN. Natychmiast priorytet właściciela 05.10 ~12:11:
+
+1) D-78 HERE: koszt = max(0, queries−free_pool)×rate ponad pulę; budżet 100 USD i 50/80/100% TYLKO od kosztu ponad pule. Kafelki→zapas przy 80%, reszta stop przy 100%. Pule/stawki w tabeli parametrów (usuń TILE_USD, HERE_TRUCK_TX_USD, HERE_ATTRIBUTES_TX_USD z kodu). Przyjmij niższe do potwierdzenia: tiles 30000/mies, routes 5000/mies. Jedna stawka trasy z tabeli. Miesiąc Europe/Warsaw, reset 1. dnia. Przelicz here_usage październik. Stan systemu: per usługa zużycie/pula/koszt ponad/%; suma miesiąca.
+
+2) H-3: usuń Map Attributes; Routing v8 truck+wymiary D-83, alternatives, notices/violations; przepis≠przeszkoda jak H-1. Liczone w puli tras. ZOSTAJE WYŁĄCZONE do D-83. Sprawdź H-6 — ta sama przebudowa jeśli Attributes. Raport: szacunek zapytań tras/transport i /miesiąc dla 94.
+
+Testy jak w poleceniu. Migracja przez bramę, obie domeny 200. Dopisz polecenie do POLECENIA, PLAN, rejestr decyzji.
+
+Dopiero PO tym wróć do raportu stanu + budowy pozycji bez czekania.
+

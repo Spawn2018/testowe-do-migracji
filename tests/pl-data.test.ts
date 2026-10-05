@@ -80,8 +80,10 @@ describe('PL-DATA', () => {
     expect(url).toContain('router.hereapi.com');
     const corridor = buildCorridorRouteUrl('klucz-testowy', {
       leg: 'SE-NYN', origin: [58.9, 17.95] as const, destination: [65.8, 21.7] as const,
-    });
+    }, { heightM: 4.5, widthM: 3.4, lengthM: 28, weightT: 60, axleCount: 8, axleLoadT: 10 });
     expect(corridor).toContain('lang=pl-PL');
+    expect(corridor).toContain('alternatives=3');
+    expect(corridor).not.toContain('attributes');
   });
 
   it('Stena Departed → Wypłynął, porty po polsku', () => {

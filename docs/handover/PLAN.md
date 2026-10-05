@@ -523,7 +523,7 @@ TESTY: dla każdego wzoru — zmiana wartości w Opcjach zmienia moment alarmu; 
 | zaraz po L-13 | H-0 | Test na koncie właściciela, bez zmian w aplikacji. Odcinki Śrem → Gdańsk, Nynäshamn → Boden, Karlskrona → Boden. Raport do właściciela. | DONE 2026-10-04 — uzupełnienie limitów, BK i propozycji H-4 w POSTEP. Kodu aplikacji nie ruszano. |
 | po L-12, przed H-2 | H-1 | Kontrola trasy z wymiarów właściciela. Zbudować, zostawić wyłączone do D-83. | **DONE** (ten commit) — flaga `H1_ROUTE_CHECK` wyłączona, bez crona, bez wymiarów przykładowych. „Wymaga zezwolenia” nie jest przeszkodą. Ryzyko tylko dla wiaduktu, mostu albo tunelu. |
 | zaraz po H-1 | H-2 | Utrudnienia PL/SE oraz B-2b: sytuacje Trafikverket (wypadki, zamknięcia, roboty). Nowe źródło API, panel „Warunki drogowe SE”, ROAD_SE z prawdziwych danych. Nie odkładać na H-4. | **DONE** (B-2b, ten commit) — Situation 1.6 `road.trafficinfo`. Utrudnienia PL (HERE) zostają na później, nie w tym commicie. |
-| zaraz po H-2 | H-3 | Przeszkody wzdłuż korytarza. | **DONE** (ten commit) — zbudowane i wyłączone. `H3_CORRIDOR_OBSTACLES` false, bez crona, do wymiarów D-83. Podświetlenie tylko dla wymiarów, gdy flaga jest włączona. Puste wymiary = „Brak danych”. H-1 zostaje wyłączone. |
+| zaraz po H-2 | H-3 | Przeszkody wzdłuż korytarza. | **DONE** + **przebudowa 05.10 ~12:11** — bez Map Attributes; Routing v8 truck+wymiary, alternatives, notices (przepis≠przeszkoda jak H-1). Pula tras D-78. `H3_CORRIDOR_OBSTACLES` false do D-83. Szacunek: `RAPORT_H3_SZACUNEK_05_10.md`. |
 | w B-MAPA, warstwa wyłączona | H-6 | Zakres zmieniony 05.10 przez B-MAPA. Podkład, etykiety, trasa planowana, ślad i trasa promu są w B-MAPA (Q-17 i Q-19). Z H-6 zostaje warstwa przeszkód HERE dla wymiarów: zbudować i zostawić wyłączoną do D-83. Bez dublowania podkładu. | NIEZACZĘTE — warstwa w B-MAPA, flaga wyłączona do D-83 |
 | po etapie 2 | H-7, H-8, H-10, H-12 | Mapa w e-mailu i PDF, profil trasy, pogoda i wiatr (ryzyko), zakazy czasowe. | NIEZACZĘTE |
 | etap 4 (po emtrack) | H-4, H-5, H-10 ETA | ETA z GPS przez HERE, kontrola po przejeździe, wydłużanie ETA przez wiatr. | NIEZACZĘTE — propozycja H-4 (limit prędkości i przerwy UE) w POSTEP 2026-10-04, bez budowy, do akceptacji właściciela |
@@ -803,7 +803,7 @@ Drugie przejście rejestru całości. Tu tylko pozycje z sekcji 4 rejestru, któ
 | D-6 | już w PLAN jako D-6 | identyfikator jest w PLAN.md |
 | D-7 | już w PLAN jako D-7 | identyfikator jest w PLAN.md |
 | D-77 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| D-78 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
+| D-78 | **doprecyzowanie 05.10 ~12:11** | koszt = max(0, zapytania−pula)×stawka; budżet 100 USD i 50/80/100% tylko od kosztu ponad pule; kafelki→zapas od 80%; pule/stawki w `app_parameters` (tiles 30000, routes 5000 wstępnie); migracja 0170 |
 | D-79 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
 | D-8 | już w PLAN jako D-8 | identyfikator jest w PLAN.md |
 | D-80 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
@@ -1034,3 +1034,6 @@ Budowa bez czekania: pozycje „do zrobienia” spoza listy właściciela/zewnę
 potem H-2-PL, H-7, H-8, H-10, H-12, CLEAN-MAPLIBRE, AUTH-MAIL, I-29, GATE-WEEKLY,
 na końcu SEC-OWASP. Czeka właściciel: D-83→B-3a/H-1/H-3/H-6, R-0, D-3/D-7/D-14/D-16/D-17/D-21.
 Zewnętrzne: TELM-2, II-10-E1.
+
+### Priorytet 2026-10-05 ~12:11 (przed dalszą budową PLAN)
+D-78 pule HERE + przebudowa H-3 (bez Attributes). Potem powrót do raportu stanu i budowy bez czekania.

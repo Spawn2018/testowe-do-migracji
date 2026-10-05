@@ -3,7 +3,8 @@
  * Zapis na 30 dni. Przy pełnym budżecie (100 USD) nie woła HERE.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { decodeFlexiblePolyline, HERE_TRUCK_TX_USD } from '../_shared/here/routeCheck.ts';
+import { decodeFlexiblePolyline } from '../_shared/here/routeCheck.ts';
+import { HERE_BILLING_DEFAULTS } from '../_shared/here/billing.ts';
 import { ROAD_PL, ROAD_SE, looseRoadOk, roadGeometryOk, type LatLng } from '../_shared/map/draw.ts';
 
 const LEGS = [
@@ -29,7 +30,7 @@ Deno.serve(async (req) => {
   if (!user.data.user) return Response.json({ ok: false }, { status: 401 });
   const sb = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
   const spend = await sb.rpc('here_month_spend');
-  if (spend.error || Number(spend.data) >= 100) return Response.json({ ok: false, reason: 'budzet' });
+  if (spend.error || Number(spend.data) >= HERE_BILLING_DEFAULTS.budgetUsd) return Response.json({ ok: false, reason: 'budzet' });
   const key = Deno.env.get('HERE_API_KEY') ?? '';
   if (!key) return Response.json({ ok: false, reason: 'brak' });
   const fresh = await sb.from('here_road_geometry').select('leg,fetched_at,points');
@@ -48,7 +49,7 @@ Deno.serve(async (req) => {
     routeUrl.searchParams.set('apiKey', key);
     const res = await fetch(routeUrl, { headers: { 'User-Agent': 'WatchTower/1' } });
     if (!res.ok) continue;
-    await sb.rpc('here_note_service', { p_service: 'routing', p_n: 1, p_usd: HERE_TRUCK_TX_USD });
+    await sb.rpc('here_note_service', { p_service: 'routing', p_n: 1, p_usd: 0 });
     const body = await res.json();
     const sections = body?.routes?.[0]?.sections ?? [];
     const line: LatLng[] = [];

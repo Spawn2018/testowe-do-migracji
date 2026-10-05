@@ -78,7 +78,13 @@ export default function SystemStatusPanel() {
   const [smsDevices, setSmsDevices] = useState<SmsDeviceRow[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [mailBudget, setMailBudget] = useState<{ immediate_n: number; digest_n: number; suppressed_n: number; level: string; suppressed_to?: { recipient: string; n: number }[] | null } | null>(null);
-  const [hereBudget, setHereBudget] = useState<{ enabled: boolean; requests: number; estimated_usd: number; level: string; tiles_requests?: number; tiles_usd?: number; matching_requests?: number; matching_usd?: number; tiles_open?: boolean } | null>(null);
+  const [hereBudget, setHereBudget] = useState<{
+    enabled: boolean; requests: number; estimated_usd: number; level: string; budget_usd?: number; pct?: number;
+    tiles_requests?: number; tiles_pool?: number; tiles_over_usd?: number; tiles_usd?: number;
+    routing_requests?: number; routing_pool?: number; routing_over_usd?: number;
+    matching_requests?: number; matching_usd?: number; tiles_open?: boolean;
+    services?: { service: string; requests: number; pool: number; over_usd: number; pct_pool: number | null }[];
+  } | null>(null);
   const [deepl, setDeepl] = useState<{ characters: number; monthly_limit: number; queued: number; level: string } | null>(null);
 
   const refresh = useCallback(async () => {
@@ -111,7 +117,7 @@ export default function SystemStatusPanel() {
 
     const h = await sb.rpc('here_budget_view');
     if (h.error || !h.data) setHereBudget({ enabled: false, requests: 0, estimated_usd: 0, level: 'off' });
-    else setHereBudget(h.data as { enabled: boolean; requests: number; estimated_usd: number; level: string; tiles_requests?: number; tiles_usd?: number; matching_requests?: number; matching_usd?: number; tiles_open?: boolean });
+    else setHereBudget(h.data as NonNullable<typeof hereBudget>);
 
     const s = await sb
       .from('sms_devices')
@@ -193,8 +199,14 @@ export default function SystemStatusPanel() {
           v={jobs.length ? tp(locale, 'b6_sys_integ_v', { ok: String(jobs.length - badJobs.length), n: String(jobs.length) }) : t(locale, 'b6_sys_none')}
           d={jobs.length ? (badJobs.length ? tp(locale, 'b6_sys_integ_bad', { jobs: badJobs.map((j) => jobName(j.job)).join(', ') }) : t(locale, 'b6_sys_integ_all_ok')) : t(locale, 'opt_acc_sys_none')} />
         <Tile state={hereState} k={t(locale, 'b6_sys_here')} attrs={{ 'data-here-tile': hereBudget?.level ?? 'off', id: 'here' }}
-          v={`${nf(hereBudget?.estimated_usd)} / 100 USD`}
-          d={tp(locale, 'b6_sys_here_d', { tiles: nf(hereBudget?.tiles_requests), match: nf(hereBudget?.matching_requests), basemap: hereBudget?.tiles_open ? 'HERE' : 'zapas' })} />
+          v={`${nf(hereBudget?.estimated_usd)} / ${nf(hereBudget?.budget_usd ?? 100)} USD`}
+          d={tp(locale, 'b6_sys_here_d', {
+            tiles: `${nf(hereBudget?.tiles_requests)}/${nf(hereBudget?.tiles_pool)}`,
+            routes: `${nf(hereBudget?.routing_requests)}/${nf(hereBudget?.routing_pool)}`,
+            match: nf(hereBudget?.matching_requests),
+            over: nf(hereBudget?.estimated_usd),
+            basemap: hereBudget?.tiles_open ? 'HERE' : 'zapas',
+          })} />
         <Tile state={deeplState} k={t(locale, 'b6_sys_deepl')} attrs={{ 'data-deepl-usage': deepl?.level ?? 'brak' }}
           v={nf(deepl?.characters)}
           d={`${tp(locale, 'b6_sys_deepl_d', { limit: nf(deepl?.monthly_limit ?? 1000000), q: String(deepl?.queued ?? 0) })}${deepl?.level === 'warn' ? ` · ${t(locale, 'pl_deepl_warn')}` : ''}${deepl?.level === 'full' ? ` · ${t(locale, 'pl_deepl_full')}` : ''}`} />

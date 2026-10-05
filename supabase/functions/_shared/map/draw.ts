@@ -3,11 +3,9 @@
  * Bez sieci i bez kluczy. Geometria HERE nie jest tu zaszyta (D-81: najwyżej 30 dni w bazie).
  */
 
-export const HERE_BUDGET_USD = 100;
-/** Kafelki logistics.* to Advanced Raster Tile. Cennik bazowy: 0,0002 USD za transakcję. */
-export const HERE_TILE_USD = 0.0002;
-/** Próg B-MAPA: od 80% budżetu wspólnego mapy schodzą z kafelków HERE do końca miesiąca. */
-export const HERE_TILE_STOP_USD = 80;
+import { HERE_BILLING_DEFAULTS, tilesOpen as billingTilesOpen } from '../here/billing.ts';
+
+export const HERE_BUDGET_USD = HERE_BILLING_DEFAULTS.budgetUsd;
 export const HERE_MAX_ZOOM = 19;
 
 export type ThemeName = 'light' | 'dark';
@@ -46,7 +44,7 @@ export function warsawMonth(now: Date): string {
 export function tilesOpen(spentUsd: number, spentMonth: string, now: Date): boolean {
   const month = spentMonth.slice(0, 7);
   if (month !== warsawMonth(now)) return true;
-  return spentUsd < HERE_TILE_STOP_USD;
+  return billingTilesOpen(spentUsd, HERE_BUDGET_USD);
 }
 
 export function basemapFor(input: {

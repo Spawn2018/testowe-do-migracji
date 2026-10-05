@@ -7,9 +7,16 @@
  * Ryzyko tylko dla konkretnego wiaduktu, mostu albo tunelu, z miejscem.
  * Myto (D-82) nie jest proszone ani pokazywane.
  */
-export const HERE_BUDGET_USD = 100;
-/** Szacunek z cennika Base Plan dla trasy ciężarówki (0,002750 USD), nie stawka z faktury. */
-export const HERE_TRUCK_TX_USD = 0.00275;
+import {
+  HERE_BILLING_DEFAULTS,
+  budgetLevel as billingLevel,
+  marginalOverCost,
+  routingAllows,
+  type HereBillingParams,
+} from './billing.ts';
+
+/** @deprecated stawki w app_parameters (D-78); zostaje alias budżetu do odczytu. */
+export const HERE_BUDGET_USD = HERE_BILLING_DEFAULTS.budgetUsd;
 export const HERE_RAW_DAYS = 30;
 const RECHECK_MS = HERE_RAW_DAYS * 24 * 60 * 60 * 1000;
 
@@ -119,18 +126,22 @@ export function needsRecheck(
   return now.getTime() - at >= RECHECK_MS;
 }
 
-export function budgetAllows(spentUsd: number, moreTx: number): boolean {
-  if (moreTx <= 0) return spentUsd < HERE_BUDGET_USD;
-  return spentUsd + moreTx * HERE_TRUCK_TX_USD <= HERE_BUDGET_USD + 1e-9;
+export function budgetAllows(
+  spentUsd: number,
+  moreTx: number,
+  p: HereBillingParams = HERE_BILLING_DEFAULTS,
+  currentRouteRequests = 0,
+): boolean {
+  if (moreTx <= 0) return spentUsd < p.budgetUsd;
+  return routingAllows(spentUsd, 'routing', currentRouteRequests, moreTx, p);
 }
 
-export function budgetLevel(spentUsd: number, enabled: boolean): 'off' | 'ok' | 'warn' | 'high' | 'stop' {
-  if (!enabled) return 'off';
-  const pct = (spentUsd / HERE_BUDGET_USD) * 100;
-  if (pct >= 100) return 'stop';
-  if (pct >= 80) return 'high';
-  if (pct >= 50) return 'warn';
-  return 'ok';
+export function budgetLevel(
+  spentUsd: number,
+  enabled: boolean,
+  budgetUsd = HERE_BILLING_DEFAULTS.budgetUsd,
+): 'off' | 'ok' | 'warn' | 'high' | 'stop' {
+  return billingLevel(spentUsd, enabled, budgetUsd);
 }
 
 export interface PermitNote {
@@ -437,9 +448,11 @@ export interface RouteCheckDb {
   enabled(): Promise<boolean>;
   loads(): Promise<LoadRow[]>;
   latest(loadId: string, leg: LegName): Promise<{ checkedAt: string; dimsKey: string } | null>;
+  /** Koszt ponad darmowe pule (D-78). */
   monthSpendUsd(): Promise<number>;
+  monthRoutingRequests(): Promise<number>;
   save(row: SaveRow): Promise<void>;
-  noteUsage(requests: number, usd: number): Promise<void>;
+  noteUsage(requests: number): Promise<void>;
 }
 
 const BEZ = 'Bez danych HERE. Zostaje dotychczasowe wyliczenie.';
@@ -449,6 +462,7 @@ export async function runRouteCheck(deps: {
   fetch: typeof fetch;
   apiKey: string | undefined;
   now: () => Date;
+  billing?: HereBillingParams;
 }): Promise<{ ok: true; mode: 'OFF' | 'LIVE' | 'BEZ_HERE'; reason: string; queried: number; skipped: number }> {
   const enabled = await deps.db.enabled();
   if (!enabled) {
@@ -456,7 +470,9 @@ export async function runRouteCheck(deps: {
   }
   const key = deps.apiKey?.trim() ?? '';
   const rows = await deps.db.loads();
+  const billing = deps.billing ?? HERE_BILLING_DEFAULTS;
   let spent = await deps.db.monthSpendUsd();
+  let routeReq = await deps.db.monthRoutingRequests();
   let queried = 0;
   let skipped = 0;
   const now = deps.now();
@@ -480,7 +496,7 @@ export async function runRouteCheck(deps: {
         obstacles: [] as Obstacle[],
         raw: null,
       };
-      if (!key || !budgetAllows(spent, 1)) {
+      if (!key || !budgetAllows(spent, 1, billing, routeReq)) {
         await deps.db.save({ ...base, status: 'bez_here', summary: BEZ });
         continue;
       }
@@ -493,8 +509,9 @@ export async function runRouteCheck(deps: {
         continue;
       }
       queried += 1;
-      spent += HERE_TRUCK_TX_USD;
-      await deps.db.noteUsage(1, HERE_TRUCK_TX_USD);
+      spent += marginalOverCost('routing', routeReq, 1, billing);
+      routeReq += 1;
+      await deps.db.noteUsage(1);
       if (!response.ok) {
         await deps.db.save({ ...base, status: 'bez_here', summary: BEZ });
         continue;
