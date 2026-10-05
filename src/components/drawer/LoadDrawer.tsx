@@ -55,7 +55,7 @@ const CarrierRating = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_
 const EscortPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/EscortPanel')) : null;
 
 /** M8 — poziom, mnożnik paliwowy z datą i kurs strony wyceny. */
-function MoneySideMeta({ side, locale, which }: { side: MoneySideV2; locale: Locale; which: 'cost' | 'rev' }) {
+function MoneySideMeta({ side, locale, which, showFx }: { side: MoneySideV2; locale: Locale; which: 'cost' | 'rev'; showFx: boolean }) {
   return (
     <div data-money-side={which}>
       <div className="mrow">
@@ -66,13 +66,15 @@ function MoneySideMeta({ side, locale, which }: { side: MoneySideV2; locale: Loc
         <span className="lbl">{t(locale, 'fuel_mult')}</span>
         <span className="mono" data-fuel-ref={side.fuel.refDate}>×{side.fuel.applied.toFixed(4)} · {t(locale, 'fuel_ref')} {side.fuel.refDate}</span>
       </div>
-      <div className="mrow">
-        <span className="lbl">{t(locale, 'fx_table')}</span>
-        <span className="mono">
-          {side.fx.tableNo} · {side.fx.mid.toFixed(4)} · {side.fx.date}
-          {side.fx.provisional ? <> <span className="pill p-amber" data-fx-provisional>{t(locale, 'fx_provisional')}</span></> : null}
-        </span>
-      </div>
+      {showFx ? (
+        <div className="mrow" data-fx-row>
+          <span className="lbl">{t(locale, 'fx_table')}</span>
+          <span className="mono">
+            {side.fx.tableNo} · {side.fx.mid.toFixed(4)} · {side.fx.date}
+            {side.fx.provisional ? <> <span className="pill p-amber" data-fx-provisional>{t(locale, 'fx_provisional')}</span></> : null}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -123,6 +125,7 @@ export function LoadDrawer() {
   const triggerGeofence = useTowerStore((s) => s.triggerGeofence);
   const geofences = useTowerStore((s) => s.geofences);
   const sendMessage = useTowerStore((s) => s.sendMessage);
+  const pushToast = useTowerStore((s) => s.pushToast);
   const setOrderNo = useTowerStore((s) => s.setOrderNo);
   const drawerTab = useTowerStore((s) => s.drawerTab);
   const setDrawerTab = useTowerStore((s) => s.setDrawerTab);
@@ -259,8 +262,33 @@ export function LoadDrawer() {
         <div className="dbody">
           {tab === 'overview' && (
             <>
-              <div data-load-map style={{ position: 'relative', height: 220, marginBottom: 12 }}>
+              <div data-load-map style={{ position: 'relative', height: 220, marginBottom: 8 }}>
                 <CorridorMap loads={[load]} embedded />
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  data-action="export-load-pdf-map"
+                  onClick={() => {
+                    void (async () => {
+                      try {
+                        const { exportLoadPdfWithMap } = await import('../../lib/pdfExport');
+                        const r = await exportLoadPdfWithMap(load, locale);
+                        pushToast(
+                          r.mapAttached
+                            ? tp(locale, 'h7_pdf_ok_map', { code: load.code })
+                            : tp(locale, 'h7_pdf_ok_no_map', { code: load.code, reason: r.mapSkipReason ?? '' }),
+                          'MEDIUM',
+                        );
+                      } catch (e) {
+                        pushToast(tp(locale, 'h7_pdf_fail', { msg: e instanceof Error ? e.message : String(e) }), 'CRITICAL');
+                      }
+                    })();
+                  }}
+                >
+                  {t(locale, 'h7_pdf_btn')}
+                </button>
               </div>
               {load.planDates ? <PlanDatesPanel load={load} /> : null}
               <dl className="kv">
@@ -605,7 +633,7 @@ export function LoadDrawer() {
                     <span>{t(locale, 'a6_dr_total')}</span>
                     <span>{formatAppMoney(load.pricing.costTotal, locale, currency)}</span>
                   </div>
-                  {load.pricing.money ? <MoneySideMeta side={load.pricing.money.cost} locale={locale} which="cost" /> : null}
+                  {load.pricing.money ? <MoneySideMeta side={load.pricing.money.cost} locale={locale} which="cost" showFx={role === 'HHL' || currency !== 'EUR'} /> : null}
                 </>
               ) : (
                 <div className="locked">{t(locale, 'no_price')}</div>
@@ -623,11 +651,15 @@ export function LoadDrawer() {
                     <span className="lbl">{t(locale, 'a6_dr_fuel')}</span>
                     <span>{formatAppMoney(load.pricing.revSefs, locale, currency)}</span>
                   </div>
+                  <div className="mrow">
+                    <span className="lbl">{t(locale, 'a6_dr_extras')}</span>
+                    <span>{formatAppMoney(load.pricing.revExtras, locale, currency)}</span>
+                  </div>
                   <div className="mrow total">
                     <span>{t(locale, 'a6_dr_total')}</span>
                     <span>{formatAppMoney(load.pricing.revTotal, locale, currency)}</span>
                   </div>
-                  {load.pricing.money ? <MoneySideMeta side={load.pricing.money.rev} locale={locale} which="rev" /> : null}
+                  {load.pricing.money ? <MoneySideMeta side={load.pricing.money.rev} locale={locale} which="rev" showFx={role === 'HHL' || currency !== 'EUR'} /> : null}
                 </>
               ) : (
                 <div className="locked" style={{ marginTop: 13 }}>
@@ -651,7 +683,7 @@ export function LoadDrawer() {
                   OKQ8
                 </a>
               </div>
-              {role === 'HHL' && isServerId(load.id) ? <AgreedFeeForm loadId={load.id} locale={locale} /> : null}
+              {isServerId(load.id) && (role === 'HHL' || role === 'SCX' || role === 'KSH') ? <AgreedFeeForm loadId={load.id} locale={locale} role={role} /> : null}
             </>
           )}
 

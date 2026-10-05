@@ -50,6 +50,8 @@ describe('O2: build produkcyjny bez makiety', () => {
   it('stripDownloadHeaders usuwa tylko blok /download/*', () => {
     const src = '/download/*\n  Content-Disposition: attachment; filename="tower-makieta.html"\n  Content-Type: text/html\n/assets/*\n  Cache-Control: max-age=1\n'
     expect(stripDownloadHeaders(src)).toBe('/assets/*\n  Cache-Control: max-age=1')
-    expect(stripDownloadHeaders(readFileSync('public/_headers', 'utf8'))).toBe('')
+    const left = stripDownloadHeaders(readFileSync('public/_headers', 'utf8'))
+    expect(left).not.toMatch(/Content-Disposition|attachment|\/download/)
+    expect(left).toMatch(/X-Frame-Options:\s*DENY/)
   })
 })

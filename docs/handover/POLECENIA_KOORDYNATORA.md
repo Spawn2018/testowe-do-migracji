@@ -999,3 +999,7 @@ Migracje przez bramę, obie domeny 200. Zapisz decyzje w rejestrze
 decyzji i w POLECENIA_KOORDYNATORA.md. Potem wróć do pozostałych
 pozycji PLAN.md.
 
+## Polecenie 2026-10-05 ~13:37 (czas warszawski) — propozycje Q-11b i H-8 do akceptacji literami
+
+Właściciel nie dostał treści. Przedstaw obie w jednej wiadomości, bez budowy.
+Do odpowiedzi: dalej B-10 ceny/dopłaty, H-7, SEC. D-83 później.

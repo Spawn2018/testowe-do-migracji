@@ -7,16 +7,23 @@ describe('PR8: przełączenie hostingu Vercel ↔ Cloudflare Pages', () => {
 
   // O2: Vercel dokleja nagłówki z vercel.json także do odpowiedzi 404 — reguła /download/(.*) dawała
   // „404 jako załącznik”. Build produkcyjny nie ma /download/, więc vercel.json nie ma już nagłówków.
-  it('vercel.json: bez nagłówków /download, funkcji, przepisań, cronów (O2)', () => {
+  it('vercel.json: bez nagłówków /download, funkcji, przepisań, cronów (O2); SEC: XFO/XCTO OK', () => {
     expect(Object.keys(vercel)).toEqual(['headers'])
-    expect(vercel.headers).toEqual([])
+    expect(vercel.headers.every((h) => !h.source.includes('download'))).toBe(true)
+    const keys = vercel.headers.flatMap((h) => h.headers.map((x) => x.key))
+    expect(keys).toContain('X-Frame-Options')
+    expect(keys).toContain('X-Content-Type-Options')
+    expect(vercel).not.toHaveProperty('rewrites')
+    expect(vercel).not.toHaveProperty('functions')
+    expect(vercel).not.toHaveProperty('crons')
   })
 
-  it('public/_headers (Cloudflare Pages, tylko tryb demo): /download/* jako załącznik; w buildzie produkcyjnym usuwany', () => {
+  it('public/_headers (Cloudflare Pages): /download/* + SEC; w buildzie produkcyjnym /download usuwany', () => {
     // Windows: CRLF w working tree mimo eol=lf — porównujemy po normalizacji LF
     const lines = readFileSync('public/_headers', 'utf8').replace(/\r\n/g, '\n').trim().split('\n')
     expect(lines[0]).toBe('/download/*')
     expect(lines.join('\n')).toMatch(/Content-Disposition: attachment/)
+    expect(lines.join('\n')).toMatch(/X-Frame-Options:\s*DENY/)
     expect(readFileSync('build/prodStrip.ts', 'utf8')).toMatch(/stripDownloadHeaders/)
   })
 
