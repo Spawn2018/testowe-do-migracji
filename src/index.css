@@ -660,6 +660,9 @@ nav button{padding:8px 14px}
   box-shadow:none}
 .sched-col-menu label{display:flex;gap:7px;align-items:center;padding:3px 0;font-size:12.5px;cursor:pointer}
 .sched-table th{position:relative;user-select:none}
+/* B-8.5 — linie pionowe w tabeli harmonogramu */
+.sched-table th,.sched-table td{border-right:1px solid var(--rule-2)}
+.sched-table th:last-child,.sched-table td:last-child{border-right:0}
 .sched-table th .col-resize{position:absolute;right:0;top:0;bottom:0;width:5px;cursor:col-resize}
 .sched-table th[draggable="true"]{cursor:grab}
 

@@ -105,12 +105,12 @@ describe('M5 — store: każda strona swój numer, GOTOWY bez numeru zablokowany
 
 describe('M5 — kolumny harmonogramu', () => {
   it('trzy numery zaraz za kodem wysyłki', () => {
-    expect(SCHED_COLS.slice(0, 4).map((c) => c.id)).toEqual(['code', 'ord_ksh', 'ord_hhl', 'ord_scx']);
+    expect(SCHED_COLS.slice(0, 3).map((c) => c.id)).toEqual(['code', 'ord_hhl', 'ord_scx']);
   });
   it('zapisane preferencje sprzed M5: nowe kolumny wstawione za kodem, nie na koniec', () => {
     const old = SCHED_COLS.map((c) => c.id).filter((id) => !id.startsWith('ord_'));
     localStorage.setItem('watch-tower-schedule-cols-v1', JSON.stringify({ order: old, hidden: [], widths: {} }));
-    expect(loadSchedPrefs().order.slice(0, 4)).toEqual(['code', 'ord_ksh', 'ord_hhl', 'ord_scx']);
+    expect(loadSchedPrefs().order.slice(0, 3)).toEqual(['code', 'ord_hhl', 'ord_scx']);
     localStorage.removeItem('watch-tower-schedule-cols-v1');
   });
 });

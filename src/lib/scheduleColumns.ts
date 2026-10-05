@@ -2,7 +2,6 @@
 
 export type SchedColId =
   | 'code'
-  | 'ord_ksh'
   | 'ord_hhl'
   | 'ord_scx'
   | 'type'
@@ -31,7 +30,6 @@ export type SchedColDef = {
 export const SCHED_COLS: SchedColDef[] = [
   { id: 'code', labelKey: 'sched_col_code', defaultWidth: 90 },
   /* M5 — trzy numery zleceń obok kodu wysyłki (W12, Q9: widoczne dla wszystkich ról) */
-  { id: 'ord_ksh', labelKey: 'sched_col_ord_ksh', defaultWidth: 104 },
   { id: 'ord_hhl', labelKey: 'sched_col_ord_hhl', defaultWidth: 100 },
   { id: 'ord_scx', labelKey: 'sched_col_ord_scx', defaultWidth: 100 },
   { id: 'type', labelKey: 'sched_col_type', defaultWidth: 70 },

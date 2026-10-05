@@ -9,6 +9,7 @@ import {
   refYearInOps,
   formatTableInZone,
   formatTableDay,
+  formatSchedTableDay,
   formatCompactInZone,
   formatEtaBoden,
   formatEtaBodenCompact,
@@ -103,5 +104,15 @@ describe('D17 table date format — omit redundant year', () => {
 
   it('refYearInOps uses Europe/Warsaw civil year', () => {
     expect(refYearInOps(new Date('2026-09-23T14:32:00Z'))).toBe(2026);
+  });
+});
+
+describe('formatSchedTableDay (B-8)', () => {
+  it('always keeps year', () => {
+    expect(formatSchedTableDay('2026-09-29', null, TZ_LOAD_PL)).toBe('29.09.2026');
+  });
+  it('appends time from window ISO', () => {
+    // 2026-09-29 08:30 Warsaw
+    expect(formatSchedTableDay('2026-09-29', '2026-09-29T06:30:00.000Z', TZ_LOAD_PL)).toMatch(/^29\.09\.2026 08:30$/);
   });
 });
