@@ -957,6 +957,7 @@ img,video{max-width:100%;height:auto}
   height:max(420px, calc(100dvh - 215px));
   min-height:0;
 }
+.mapstage{position:absolute;inset:0}
 @media (max-width:1000px){
   .page-sections[data-page="map"] .mapsplit{grid-template-columns:minmax(0,1fr)}
   .page-sections[data-page="map"] .mapbox{border-right:0;border-bottom:1px solid var(--rule)}
@@ -975,10 +976,11 @@ img,video{max-width:100%;height:auto}
     padding:8px 10px;
   }
   .page-sections[data-page="map"] .maplayers label{padding:4px 0;min-height:32px}
-  /* korzeń mapy ma styl w linii (absolute, 100%) — na telefonie zwykły blok pod pasem warstw */
-  .page-sections[data-page="map"] .mapbox .corridor-map-root{
-    position:relative !important;inset:auto !important;
-    height:max(320px, calc(100dvh - 300px)) !important;
+  /* scena mapy: zwykły blok pod pasem warstw (korzeń mapy wypełnia scenę) */
+  .page-sections[data-page="map"] .mapstage{
+    position:relative;inset:auto;
+    height:max(320px, calc(100vh - 300px));
+    height:max(320px, calc(100dvh - 300px));
     max-height:560px;
     overflow:hidden;
   }

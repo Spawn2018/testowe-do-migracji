@@ -171,7 +171,9 @@ export function MapView() {
               </label>
             ))}
           </div>
-          <CorridorMap loads={list} />
+          <div className="mapstage">
+            <CorridorMap loads={list} />
+          </div>
         </div>
 
         <div className="mlist" style={{ display: 'flex', flexDirection: 'column', background: 'var(--surface)' }}>
