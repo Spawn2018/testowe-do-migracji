@@ -1,15 +1,11 @@
 /** Q-11b — publiczny klucz VAPID (bez sekretu). */
-function cors(): HeadersInit {
-  return {
-    'access-control-allow-origin': '*',
-    'access-control-allow-headers': 'authorization, apikey, content-type',
-  };
-}
+import { corsHeaders, corsPreflight } from '../_shared/cors.ts';
+
 Deno.serve((req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: cors() });
+  if (req.method === 'OPTIONS') return corsPreflight();
   const publicKey = Deno.env.get('VAPID_PUBLIC_KEY') ?? '';
   if (!publicKey) {
-    return Response.json({ error: 'no_vapid' }, { status: 503, headers: cors() });
+    return Response.json({ error: 'no_vapid' }, { status: 503, headers: corsHeaders() });
   }
-  return Response.json({ publicKey }, { headers: cors() });
+  return Response.json({ publicKey }, { headers: corsHeaders() });
 });

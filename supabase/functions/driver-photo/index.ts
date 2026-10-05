@@ -9,18 +9,14 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { checkDriverFile } from '../_shared/fileSignature.ts';
+import { corsHeaders, corsPreflight } from '../_shared/cors.ts';
 
 const MAX_BYTES = 10 * 1024 * 1024; // twardy limit przed odczytem nagłówka
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'content-type, apikey, authorization, x-client-info',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
 const json = (status: number, body: unknown) =>
-  new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } });
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+  if (req.method === 'OPTIONS') return corsPreflight();
   if (req.method !== 'POST') return json(405, { error: 'Metoda niedozwolona' });
   const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   if (!service) return json(500, { error: 'Brak konfiguracji funkcji' });

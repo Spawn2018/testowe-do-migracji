@@ -6,6 +6,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { decodeFlexiblePolyline } from '../_shared/here/routeCheck.ts';
 import { HERE_BILLING_DEFAULTS } from '../_shared/here/billing.ts';
 import { ROAD_PL, ROAD_SE, looseRoadOk, roadGeometryOk, type LatLng } from '../_shared/map/draw.ts';
+import { corsHeaders, corsPreflight } from '../_shared/cors.ts';
 
 const LEGS = [
   { leg: 'PL-GDN', origin: '52.07391,17.0246', destination: '54.40372,18.6813', spec: ROAD_PL, summary: 'Trasa drogowa Śrem–Gdańsk' },
@@ -16,7 +17,7 @@ const LEGS = [
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, apikey, content-type' } });
+    return corsPreflight();
   }
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -27,12 +28,12 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   });
   const user = await userClient.auth.getUser();
-  if (!user.data.user) return Response.json({ ok: false }, { status: 401 });
+  if (!user.data.user) return Response.json({ ok: false }, { status: 401, headers: corsHeaders() });
   const sb = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
   const spend = await sb.rpc('here_month_spend');
-  if (spend.error || Number(spend.data) >= HERE_BILLING_DEFAULTS.budgetUsd) return Response.json({ ok: false, reason: 'budzet' });
+  if (spend.error || Number(spend.data) >= HERE_BILLING_DEFAULTS.budgetUsd) return Response.json({ ok: false, reason: 'budzet' }, { headers: corsHeaders() });
   const key = Deno.env.get('HERE_API_KEY') ?? '';
-  if (!key) return Response.json({ ok: false, reason: 'brak' });
+  if (!key) return Response.json({ ok: false, reason: 'brak' }, { headers: corsHeaders() });
   const fresh = await sb.from('here_road_geometry').select('leg,fetched_at,points');
   const have = new Map<string, { fetched_at: string; points: unknown }>();
   for (const row of fresh.data ?? []) have.set(String(row.leg), { fetched_at: String(row.fetched_at), points: row.points });
@@ -66,5 +67,5 @@ Deno.serve(async (req) => {
     if (save.error) continue;
     stored += 1;
   }
-  return Response.json({ ok: true, stored });
+  return Response.json({ ok: true, stored }, { headers: corsHeaders() });
 });

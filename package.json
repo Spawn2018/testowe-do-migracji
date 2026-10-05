@@ -72,5 +72,8 @@
     "vite": "^8.3.0",
     "vitest": "^5.0.1"
   },
-  "description": "WATCH TOWER interactive makieta — PL→SE oversized corridor (HHL/KSH/SCX)"
+  "description": "WATCH TOWER interactive makieta \u2014 PL\u2192SE oversized corridor (HHL/KSH/SCX)",
+  "overrides": {
+    "uuid": "^11.1.1"
+  }
 }

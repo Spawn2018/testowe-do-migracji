@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getSupabase } from './client';
 import { getAuthProfile } from './profile';
 import { authErrorPl, ROLES_FOR_ORG, type UserRole } from './config';
+import { sendInviteMagicLink } from './sendAuthEmail';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 import './auth.css';
@@ -54,14 +55,11 @@ export default function UsersAdmin() {
     const addr = email.trim().toLowerCase();
     const done = await run(() => sb.rpc('admin_invite_user', { p_email: addr, p_org_code: org, p_role: role }), t(locale, 'a6_ua_saved'));
     if (!done) return;
-    // Zaproszenie: e-mail z linkiem do ustawienia hasła (OTP/invite → strona „Dalej” → ustaw hasło).
+    // Zaproszenie: OTP bez code_challenge (inna przeglądarka niż admin) → Dalej → ustaw hasło.
     // Bez zaproszenia w bazie GoTrue i tak odrzuci przy pierwszym logowaniu (TOWER_NO_INVITE).
-    const { error } = await sb.auth.signInWithOtp({
-      email: addr,
-      options: { shouldCreateUser: true, emailRedirectTo: window.location.origin + window.location.pathname },
-    });
-    setMsg(error
-      ? { ok: false, text: t(locale, 'a6_ua_mail_fail').replace('{err}', authErrorPl(error.message)) }
+    const mail = await sendInviteMagicLink(addr, window.location.origin + window.location.pathname);
+    setMsg(mail.error
+      ? { ok: false, text: t(locale, 'a6_ua_mail_fail').replace('{err}', authErrorPl(mail.error)) }
       : { ok: true, text: t(locale, 'a6_ua_sent').replace('{addr}', addr) });
     setEmail('');
   };
