@@ -1317,3 +1317,12 @@ Test: podłączony 05.10, plan 01.10 → actual pusty, tydzień paliwa 40, mnoż
 Raport BAF: lista 8 bez ceny (86/94) + przyczyna każdego.
 
 > Realizacja (05.10 ~22:50): migracja **0188** `0188_telm_faza_bez_zaladunku.sql` — `telm_infer_phase_from_position` nie ustawia `actual_load_at`; faza w `telm_attach_phase` (adnotacja „faza z pozycji przy podłączeniu”); korekta `telm_fix_attach_actual_load()`. Audyt PROD: ta sama ścieżka tylko **SG-03** (actual 05.10 13:21 → pusty; paliwo tydz. 40 = 1,14). Testy `tests/db/baf.sh` (36).
+
+## 2026-10-06 ~00:12 Europe/Warsaw — BAF prognoza dla przyszłych tygodni
+
+66 transportów z załadunkiem 16.10–15.12 ma mnożnik 1,12 — wynik z niepełnego tygodnia (1 odczyt GoEasy 05.10). Zasada:
+- tydzień załadunku, którego poprzedni tydzień nie jest zamknięty → PROGNOZA = ostatni OSTATECZNY mnożnik (dziś 1,13), oznaczona „prognoza" w Cenach i Finansach
+- po zamknięciu poprzedniego tygodnia → mnożnik ostateczny, migawka
+- każde zamknięcie tygodnia przelicza prognozy pozostałych przyszłych transportów
+Test: dziś przyszłe transporty = 1,13 „prognoza"; symulacja zamknięcia tygodnia 41 → załadunki tygodnia 42 dostają ostateczny, reszta prognozę.
+Potem dalej według PLAN.md.

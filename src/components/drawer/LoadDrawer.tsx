@@ -71,6 +71,7 @@ function MoneySideMeta({ side, locale, which, showFx }: { side: MoneySideV2; loc
       <div className="mrow">
         <span className="lbl">{t(locale, 'fuel_mult')}</span>
         <span className="mono" data-fuel-ref={side.fuel.refDate}>×{side.fuel.applied.toFixed(4)} · {t(locale, 'fuel_ref')} {side.fuel.refDate}
+          {side.fuel.status === 'PROGNOZA' ? <> <span className="pill p-amber" data-fuel-forecast>{t(locale, 'fuel_forecast')}</span></> : null}
           {side.fuel.status === 'WSTEPNY' ? <> <span className="pill p-amber" data-fuel-provisional>{t(locale, 'fuel_provisional')}</span></> : null}</span>
       </div>
       {showFx ? (

@@ -145,31 +145,33 @@ $PSQL -c "insert into sefs_parameters (project_id, version, valid_from, base_sek
   select '$P', 91, '2026-01-01', 1, 1, 'OKQ8', 'ORLEN', 'https://example.com/sek', 'https://example.com/pln', 'WEEKLY',
           '[{\"lte\":100,\"mult\":1}]'::jsonb, '[{\"lte\":100,\"mult\":1}]'::jsonb
    where not exists (select 1 from sefs_parameters where project_id='$P' and version=91)" >/dev/null
-$PSQL -c "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url)
-  select v.project_id, v.index_code, v.period, v.reading_date, v.value, v.source_url
+# 0189: l1b woła sefs_week_calc bez p_today → OSTATECZNY tylko gdy prev tydzień zamknięty względem «dziś».
+# Odczyty w zamkniętym prev tygodniu bieżącego tygodnia ISO (pn–nd przed bieżącym poniedziałkiem).
+$PSQL -c "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, published_on)
+  select v.project_id, v.index_code, v.period, v.reading_date, v.value, v.source_url, v.reading_date
     from (values
-      ('$P'::uuid,'SEK','2026-10-06','2026-10-06'::date,10::numeric,'https://example.com/sek'),
-      ('$P'::uuid,'PLN','2026-10-06','2026-10-06'::date,10::numeric,'https://example.com/pln')
+      ('$P'::uuid,'SEK', to_char((date_trunc('week', (timezone('Europe/Warsaw', now()))::date) - interval '7 days')::date,'YYYY-MM-DD'),
+             (date_trunc('week', (timezone('Europe/Warsaw', now()))::date) - interval '7 days')::date, 10::numeric, 'https://example.com/sek'),
+      ('$P'::uuid,'PLN', to_char((date_trunc('week', (timezone('Europe/Warsaw', now()))::date) - interval '7 days')::date,'YYYY-MM-DD'),
+             (date_trunc('week', (timezone('Europe/Warsaw', now()))::date) - interval '7 days')::date, 10::numeric, 'https://example.com/pln')
     ) as v(project_id, index_code, period, reading_date, value, source_url)
    where not exists (
      select 1 from fuel_index_readings r
       where r.project_id=v.project_id and r.index_code=v.index_code and r.period=v.period and r.corrects_id is null
    )" >/dev/null
-val "SEFS w tabeli → bez decyzji" "select l1b_sefs_note('$P','2026-10-12')" OK
-val "SEFS w tabeli nie otwiera" "select count(*) from decisions where detail->>'event_key' like 'l1b:sefs:$P:2026-10-05:%'" 0
-$PSQL -c "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url)
-  select v.project_id, v.index_code, v.period, v.reading_date, v.value, v.source_url
-    from (values
-      ('$P'::uuid,'SEK','2026-10-13','2026-10-13'::date,150::numeric,'https://example.com/sek'),
-      ('$P'::uuid,'PLN','2026-10-13','2026-10-13'::date,150::numeric,'https://example.com/pln')
-    ) as v(project_id, index_code, period, reading_date, value, source_url)
-   where not exists (
-     select 1 from fuel_index_readings r
-      where r.project_id=v.project_id and r.index_code=v.index_code and r.period=v.period and r.corrects_id is null
-   )" >/dev/null
-val "SEFS ponad tabelę → decyzja" "select l1b_sefs_note('$P','2026-10-19')" OVER
-$PSQL -c "select l1b_sefs_note('$P','2026-10-19')" >/dev/null
-val "SEFS ponad tabelę drugie → jedna" "select count(*) from decisions where detail->>'event_key'='l1b:sefs:$P:2026-10-12:OVER'" 1
+# załadunek w bieżącym tygodniu → prev zamknięty → OSTATECZNY z odczytów powyżej
+$PSQL -c "select set_config('decauto.sefs_load', (date_trunc('week', (timezone('Europe/Warsaw', now()))::date))::date::text, false)" >/dev/null
+val "SEFS w tabeli → bez decyzji" "select l1b_sefs_note('$P', (date_trunc('week', (timezone('Europe/Warsaw', now()))::date))::date)" OK
+val "SEFS w tabeli nie otwiera" "select count(*) from decisions where detail->>'event_key' like 'l1b:sefs:$P:' || (date_trunc('week', (timezone('Europe/Warsaw', now()))::date) - interval '7 days')::date::text || ':%'" 0
+# ponad tabelę: korekta append-only (0166) — value 150 poza tabelą lte:100
+$PSQL -c "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, published_on, corrects_id, correction_reason)
+  select r.project_id, r.index_code, r.period, r.reading_date, 150, r.source_url, r.published_on, r.id, 'dec-auto OVER'
+    from fuel_index_readings r
+   where r.project_id='$P' and r.corrects_id is null and r.source_url like 'https://example.com/%'
+     and r.period = to_char((date_trunc('week', (timezone('Europe/Warsaw', now()))::date) - interval '7 days')::date,'YYYY-MM-DD')" >/dev/null
+val "SEFS ponad tabelę → decyzja" "select l1b_sefs_note('$P', (date_trunc('week', (timezone('Europe/Warsaw', now()))::date))::date)" OVER
+$PSQL -c "select l1b_sefs_note('$P', (date_trunc('week', (timezone('Europe/Warsaw', now()))::date))::date)" >/dev/null
+val "SEFS ponad tabelę drugie → jedna" "select count(*) from decisions where detail->>'event_key'='l1b:sefs:$P:' || (date_trunc('week', (timezone('Europe/Warsaw', now()))::date) - interval '7 days')::date::text || ':OVER'" 1
 
 val "KR bez dnia → bez decyzji" "select (l1b_kr_check('$P', null) is null)" t
 $PSQL -c "insert into loads (id, project_id, order_no, status, plan_load_date) values
