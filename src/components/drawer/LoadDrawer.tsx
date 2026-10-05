@@ -31,10 +31,12 @@ import {
   formatSchedTableDay,
   isoToDatetimeLocalValue,
   wallLocalToIso,
+  etaWindowKind,
+  etaIsNightArrival,
+  delayMinutesVsPlan,
 } from '../../lib/time';
 import { formatAppMoney } from '../../lib/money/demoFx';
 import { formatDelayPill } from '../ui/StatusPill';
-import { delayMinutesVsPlan } from '../../lib/time';
 import { AgreedFeeForm } from './AgreedFeeForm';
 import {
   etaConfidenceLabel,
@@ -381,10 +383,28 @@ export function LoadDrawer() {
                   ) : load.etaBoden ? formatEtaBoden(load.etaBoden) : (
                     <span>{t(locale, 'eta_dash')} <span className="note">{load.etaReasons[0] || t(locale, 'eta_no_gps')}</span></span>
                   )}{' '}
-                  {!load.etaPreLoad && load.etaBoden && load.delayed ? (
-                    <span className="pill p-red">{delayPillText}</span>
-                  ) : !load.etaPreLoad && load.etaBoden ? (
-                    <span className="pill p-go">{t(locale, 'a6_dr_in_window')}</span>
+                  {!load.etaPreLoad && load.etaBoden ? (
+                    <>
+                      {(() => {
+                        const kind = etaWindowKind(
+                          load.etaBoden,
+                          load.plannedDeliverDate,
+                          load.awizacja.unloadWindowStart ?? load.planDates?.deliveryFrom,
+                          load.awizacja.unloadWindowEnd ?? load.planDates?.deliveryTo,
+                        );
+                        /* „po terminie” = ten sam warunek co delayed / L-3 — bez drugiego alarmu */
+                        if (load.delayed || kind === 'after') {
+                          return <span className="pill p-red" data-eta-window="after">{t(locale, 'a6_dr_after_window')}{delayMin != null ? ` · ${formatDelayPill(delayMin)}` : ''}</span>;
+                        }
+                        if (kind === 'before') {
+                          return <span className="pill p-amber" data-eta-window="before">{t(locale, 'a6_dr_before_window')}</span>;
+                        }
+                        return <span className="pill p-go" data-eta-window="in">{t(locale, 'a6_dr_in_window')}</span>;
+                      })()}
+                      {etaIsNightArrival(load.etaBoden) ? (
+                        <span className="pill" data-eta-night="1" style={{ marginLeft: 4 }}>{t(locale, 'a6_dr_night_arrival')}</span>
+                      ) : null}
+                    </>
                   ) : null}
                   {' '}
                   {!load.etaPreLoad && <>

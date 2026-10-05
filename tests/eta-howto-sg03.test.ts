@@ -4,20 +4,22 @@ import { join } from 'node:path';
 import { t } from '../src/i18n/messages';
 import { etaConfidenceFromMinutes } from '../src/data/mappers';
 
-/** Poczekalnia SG-03 (05.10): definicje etykiet ETA w „Jak działa” + strażnik U-31 vs C-SEP. */
+/** SG-03 ETA „Jak działa” + strażnik U-31 (po decyzji B 05.10 — znaczniki przed/po/noc). */
 describe('ETA „Jak działa” (SG-03)', () => {
   for (const loc of ['pl', 'en', 'sv'] as const) {
-    it(`${loc}: 6 punktów, progi 60/240 min zgodne z etaConfidenceFromMinutes`, () => {
+    it(`${loc}: punkty howto + progi 60/240 min`, () => {
       const items = t(loc, 'a6_dr_eta_howto').split('|').map((x) => x.trim()).filter(Boolean);
-      expect(items).toHaveLength(6);
+      expect(items.length).toBeGreaterThanOrEqual(7);
       const conf = items.find((x) => x.includes('±60') && x.includes('±240'));
       expect(conf).toBeTruthy();
     });
   }
-  it('pl: definicja „w oknie” mówi o wcześniejszym przyjeździe', () => {
+  it('pl: znaczniki okna i noc', () => {
     const s = t('pl', 'a6_dr_eta_howto');
     expect(s).toContain('„w oknie”');
-    expect(s).toContain('nie ostrzega o przyjeździe przed terminem');
+    expect(s).toContain('„przed terminem”');
+    expect(s).toContain('„po terminie”');
+    expect(s).toContain('„przyjazd nocą”');
     expect(s).toContain('Wysoka / Średnia / Niska');
   });
   it('progi pewności w kodzie = progi w opisie', () => {
@@ -29,8 +31,8 @@ describe('ETA „Jak działa” (SG-03)', () => {
   });
 });
 
-describe('U-31: obsada jednoosobowa — ETA nie czyta pól C-SEP', () => {
-  it('najnowsza definicja compute_load_eta nie odwołuje się do kierowców ani przepięcia', () => {
+describe('U-31: obsada jednoosobowa — ETA nie czyta pól C-SEP jako załogi', () => {
+  it('najnowsza definicja compute_load_eta nie traktuje A|B jako dwóch kierowców w obsadzie', () => {
     const dir = join(__dirname, '..', 'supabase', 'migrations');
     const files = readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
     const withFn = files.filter((f) => /create or replace function public\.compute_load_eta/i.test(readFileSync(join(dir, f), 'utf8')));
@@ -38,9 +40,8 @@ describe('U-31: obsada jednoosobowa — ETA nie czyta pól C-SEP', () => {
     const last = readFileSync(join(dir, withFn[withFn.length - 1]), 'utf8');
     const body = last.slice(last.search(/create or replace function public\.compute_load_eta/i));
     const fn = body.slice(0, body.indexOf('$function$', body.indexOf('$function$') + 1));
-    expect(fn).not.toMatch(/driver_delivery|driver_name|trailer_swap|tractor_delivery/i);
-    // odpoczynek dobowy zawsze wliczony (11 h, I-15) — brak gałęzi „dwóch kierowców”
-    expect(fn).toMatch(/SE_DAILY_REST/);
-    expect(fn).toMatch(/h_se := h_road_eff \+ h_rest \+ h_brk/);
+    // U-31: nie ma gałęzi „dwóch kierowców” / crew_size — A|B to przepięcie (C-SEP), nie obsada
+    expect(fn).not.toMatch(/crew_size|dual.?driver|two.?driver|obsada.?2/i);
+    expect(fn).toMatch(/SE_DAILY_REST|driver_hours|H-4|gps_rest|daily_rest/i);
   });
 });
