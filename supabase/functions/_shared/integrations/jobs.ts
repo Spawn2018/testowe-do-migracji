@@ -9,6 +9,10 @@ import {
 import {
   dateRangeYmd, parseStenaTimetable, stenaTimetableUrl, STENA_ROUTE_PAGE, type StenaSailing,
 } from '../ferry/stena.ts';
+import {
+  STENA_FREIGHT_AJAX, STENA_FREIGHT_PAGE, STENA_FREIGHT_UA,
+  freightSecurityToken, freightWindow, parseStenaFreightTimetable,
+} from '../ferry/stenaFreight.ts';
 import { DIGITRAFFIC_ATTRIBUTION, interpretFix, parseDigitrafficLocations, aisDepartureDelayMin, type VesselFix } from '../ferry/digitraffic.ts';
 import { collectAisstreamFixes } from '../ferry/aisstream.ts';
 import {
@@ -16,7 +20,7 @@ import {
 } from '../ferry/stenaAis.ts';
 import {
   MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
-  marineWeatherRisk, parseDmiCoverageJson, parseFmiTimeValuePair, parseSmhiOcobs,
+  marinePointsForRoute, marineWeatherRisk, parseDmiCoverageJson, parseFmiTimeValuePair, parseSmhiOcobs,
   samplesInWindow, type MarineSample, type MarinePointCode,
 } from '../ferry/marineWeather.ts';
 import {
@@ -57,7 +61,7 @@ export interface SyncStore {
   latestVesselObserved?(): Promise<{ vesselId: string; observedAt: string }[]>;
   /** II-6: współczynnik spowolnienia SE (E4) dla silnika ETA II-7 */
   saveCorridorCondition?(row: {
-    corridor: 'SE_E4'; slowdownMult: number; reason: string | null; detail: unknown; observedAt: string;
+    corridor: 'SE_E4' | 'SE_E22'; slowdownMult: number; reason: string | null; detail: unknown; observedAt: string;
   }): Promise<void>;
   /** II-6: parametr % spowolnienia (domyślnie 15) — opcjonalne */
   seSlowdownPct?(): Promise<number>;
@@ -65,7 +69,7 @@ export interface SyncStore {
   opsThresholds?(): Promise<{ waveM: number; gustKn: number }>;
   /** II-8: zapis bieżącej pogody morskiej */
   saveMarineCondition?(row: {
-    corridor: 'BALTIC_GDN_NYN';
+    corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA';
     maxWaveM: number | null;
     maxGustKn: number | null;
     risk: 'niskie' | 'podwyższone' | 'wysokie';
@@ -199,6 +203,54 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
   };
 }
 
+
+/** FERRY-STATUS: jedno pobranie strony + jeden POST. Cache 10 min. Przy błędzie bez pętli. */
+let stenaFreightCache: { at: number; sailings: StenaSailing[]; warnings: string[] } | null = null;
+export function resetStenaFreightCache(): void { stenaFreightCache = null; }
+
+export async function fetchStenaFreight(deps: JobDeps): Promise<{
+  sailings: StenaSailing[]; warnings: string[]; ok: boolean;
+}> {
+  const nowMs = deps.now().getTime();
+  if (stenaFreightCache && nowMs - stenaFreightCache.at < 10 * 60_000) {
+    return { sailings: stenaFreightCache.sailings, warnings: [], ok: true };
+  }
+  const page = await readText(deps, STENA_FREIGHT_PAGE, {
+    headers: { 'User-Agent': STENA_FREIGHT_UA, Accept: 'text/html' },
+  });
+  if (!page.ok) return { sailings: [], warnings: [page.warning], ok: false };
+  const token = freightSecurityToken(page.text);
+  if (!token) {
+    return { sailings: [], warnings: ['Struktura strony Stena Freight zmieniona: brak tokenu security.'], ok: false };
+  }
+  const win = freightWindow(deps.now());
+  const body = new URLSearchParams({
+    action: 'timetable',
+    security: token,
+    'data[from]': win.from,
+    'data[to]': win.to,
+    'data[routeCode]': win.routeCode,
+  });
+  const res = await readText(deps, STENA_FREIGHT_AJAX, {
+    method: 'POST',
+    headers: {
+      'User-Agent': STENA_FREIGHT_UA,
+      Accept: 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Referer: STENA_FREIGHT_PAGE,
+    },
+    body: body.toString(),
+  });
+  if (!res.ok) return { sailings: [], warnings: [res.warning], ok: false };
+  const parsed = parseStenaFreightTimetable(res.text);
+  const broken = parsed.warnings.some((w) => /Struktura|nieczytelny JSON|nieznany nagłówek/i.test(w));
+  if (broken || parsed.sailings.length === 0) {
+    return { sailings: [], warnings: parsed.warnings.length ? parsed.warnings : ['Stena Freight: pusta tabela'], ok: false };
+  }
+  stenaFreightCache = { at: nowMs, sailings: parsed.sailings, warnings: parsed.warnings };
+  return { sailings: parsed.sailings, warnings: parsed.warnings.filter((w) => !/brak rejsów/i.test(w)), ok: true };
+}
+
 /** ferry-status — komunikaty Polferries + status Stena z JSON; 403 → NIEZNANY + ryzyko. */
 export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
   const now = deps.now().toISOString();
@@ -238,32 +290,49 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
     unknown += 1; // II-5: 403 = NIEZNANY (bez zmiany rejsów)
   }
 
-  // STENA-3 / II-5: status z tego samego JSON co rozkład (dziś + jutro)
-  const stena = await fetchStenaDays(deps, 2);
-  warnings.push(...stena.warnings);
-  const stFail = stena.http403 || stena.fetchedOk === 0
-    || stena.warnings.some((w) => /Struktura|HTTP|nieczytelny JSON/i.test(w));
-  if (stFail) {
-    const w = [
-      ...stena.warnings,
-      ...(stena.http403 ? ['Cloudflare/HTTP 403 przy odczycie Stena — status NIEZNANY.'] : []),
-    ];
-    await deps.store.raiseRisk(sourceDownRisk('STENA_STATUS', w.length ? w : ['Brak odpowiedzi Stena'], now, STENA_ROUTE_PAGE));
-    risks += 1;
-    if (stena.http403) unknown += 1;
-  } else if (stena.sailings.length > 0) {
-    const incomingS: IncomingSailing[] = stena.sailings.map((s) => ({
+  // FERRY-STATUS: Freight admin-ajax jest głównym źródłem (rzeczywiste godziny i status).
+  // JSON AEM (II-5) jest zapasem. Błąd Freight → ryzyko i jeden odczyt zapasu, bez pętli.
+  const freight = await fetchStenaFreight(deps);
+  let stenaSailings = freight.sailings;
+  let stFail = !freight.ok;
+  if (!freight.ok) {
+    warnings.push(...freight.warnings);
+    warnings.push('Stena Freight niedostępna — przejście na zapas (stenalinetravel JSON).');
+    if (await deps.store.raiseRisk(sourceDownRisk(
+      'STENA_STATUS',
+      freight.warnings.length ? freight.warnings : ['Brak odpowiedzi Stena Freight'],
+      now,
+      STENA_FREIGHT_PAGE,
+    ))) risks += 1;
+    const backup = await fetchStenaDays(deps, 2);
+    warnings.push(...backup.warnings);
+    const backupFail = backup.http403 || backup.fetchedOk === 0
+      || backup.warnings.some((w) => /Struktura|HTTP|nieczytelny JSON/i.test(w));
+    if (backupFail) {
+      stFail = true;
+      if (backup.http403) unknown += 1;
+    } else {
+      stenaSailings = backup.sailings;
+      stFail = false;
+    }
+  } else {
+    warnings.push(...freight.warnings);
+    await deps.store.resolveRisks('SOURCE_DOWN:STENA_STATUS:');
+    stFail = false;
+  }
+  if (stenaSailings.length > 0) {
+    const incomingS: IncomingSailing[] = stenaSailings.map((s) => ({
       route: s.route, vessel: s.vessel, departureUtc: s.departureUtc, arrivalUtc: s.arrivalUtc,
       status: s.status, expectedDepartureUtc: s.expectedDepartureUtc, expectedArrivalUtc: s.expectedArrivalUtc,
     }));
     const { plan, updated: u, manualKept: m } = await applySailings(deps, incomingS, since, 'STENA');
     inserted += plan.inserts.length; updated += u; manualKept += m; unchanged += plan.unchanged; unknown += plan.unknown.length;
-    await deps.store.resolveRisks('SOURCE_DOWN:STENA_STATUS:');
+    if (freight.ok) await deps.store.resolveRisks('SOURCE_DOWN:STENA_STATUS:');
     for (const urow of plan.unknown) {
-      const raw = stena.sailings.find((p) => p.vessel === urow.vessel && p.departureUtc === urow.departureUtc);
+      const raw = stenaSailings.find((p) => p.vessel === urow.vessel && p.departureUtc === urow.departureUtc);
       if (await deps.store.raiseRisk(unknownStatusRisk(urow, raw?.rawStatus ?? '', 'STENA'))) risks++;
     }
-  } else {
+  } else if (freight.ok) {
     await deps.store.resolveRisks('SOURCE_DOWN:STENA_STATUS:');
   }
 
@@ -517,18 +586,44 @@ export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
     if (await deps.store.raiseRisk(risk)) risks++;
   }
   const pct = deps.store.seSlowdownPct ? await deps.store.seSlowdownPct() : 15;
-  const slow = (rcRes.ok || wxRes.ok) ? seRoadSlowdownMult({ conditions, weather, pct }) : null;
+  const onRoad = (road: string | null | undefined, code: 'E4' | 'E22') =>
+    typeof road === 'string' && new RegExp(`^E\\s*${code.slice(1)}$`, 'i').test(road.trim());
+  const sitAll = situations.slice(0, 80).map((e) => ({
+    id: e.id, kind: e.kind, severity: e.severity, title: e.title, road: e.road ?? 'E4',
+  }));
+  const slow = (rcRes.ok || wxRes.ok) ? seRoadSlowdownMult({
+    conditions: conditions.filter((c) => onRoad(c.road, 'E4') || !onRoad(c.road, 'E22')),
+    weather, pct,
+  }) : null;
+  const slow22 = (rcRes.ok || wxRes.ok) ? seRoadSlowdownMult({
+    conditions: conditions.filter((c) => onRoad(c.road, 'E22')),
+    weather: [], pct,
+  }) : null;
   if (slow && deps.store.saveCorridorCondition) {
     await deps.store.saveCorridorCondition({
       corridor: 'SE_E4', slowdownMult: slow.mult, reason: slow.reason, observedAt: now,
       detail: {
-        conditions: conditions.length, weather: weather.length,
+        conditions: conditions.filter((c) => !onRoad(c.road, 'E22')).length,
+        weather: weather.length,
         adverseConditions: slow.adverseConditions, adverseWeather: slow.adverseWeather,
         pct, zrodlo: 'Trafikverket RoadCondition+WeatherMeasurepoint+Situation',
         situationsStatus,
-        situations: situations.slice(0, 60).map((e) => ({
-          id: e.id, kind: e.kind, severity: e.severity, title: e.title, road: e.road ?? 'E4',
-        })),
+        situations: sitAll,
+        drogi: ['E4', 'E22'],
+      },
+    });
+  }
+  if (slow22 && deps.store.saveCorridorCondition) {
+    await deps.store.saveCorridorCondition({
+      corridor: 'SE_E22', slowdownMult: slow22.mult, reason: slow22.reason, observedAt: now,
+      detail: {
+        conditions: conditions.filter((c) => onRoad(c.road, 'E22')).length,
+        weather: 0,
+        adverseConditions: slow22.adverseConditions, adverseWeather: 0,
+        pct, zrodlo: 'Trafikverket E22 Karlskrona–E4',
+        situationsStatus,
+        situations: sitAll.filter((e) => onRoad(e.road, 'E22')),
+        drogi: ['E22', 'E4'],
       },
     });
   }
@@ -669,37 +764,46 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
   }
   await deps.store.resolveRisks('SOURCE_DOWN:MARINE_WEATHER:');
 
-  // Ocena globalna (wszystkie próbki w najbliższym oknie 24 h) + per rejs
-  const near = samplesInWindow(samples, nowIso, new Date(now.getTime() + 24 * 3600_000).toISOString());
-  const globalEval = evaluateMarineWindow(near.length ? near : samples, thr.waveM, thr.gustKn);
-
-  if (deps.store.saveMarineCondition) {
-    await deps.store.saveMarineCondition({
-      corridor: 'BALTIC_GDN_NYN',
-      maxWaveM: globalEval.maxWaveM,
-      maxGustKn: globalEval.maxGustKn,
-      risk: globalEval.risk,
-      waveThrM: thr.waveM,
-      gustThrKn: thr.gustKn,
-      sources: globalEval.sources.join('+'),
-      attribution: globalEval.attribution,
-      windowFrom: fFrom,
-      windowTo: fTo,
-      detail: {
-        fmi: fmiOk, dmi: dmiOk, smhi: smhiOk,
-        samples: samples.length, sailings: upcoming.length,
-        warnings: warnings.slice(0, 8),
-      },
-      observedAt: nowIso,
-    });
+  const nearTo = new Date(now.getTime() + 24 * 3600_000).toISOString();
+  const corridors = ['BALTIC_GDN_NYN', 'BALTIC_GDY_KAA'] as const;
+  const evalByCorridor = new Map<string, ReturnType<typeof evaluateMarineWindow>>();
+  for (const corridor of corridors) {
+    const pts = new Set(marinePointsForRoute(corridor === 'BALTIC_GDY_KAA' ? 'GDY-KAA' : 'GDN-NYN'));
+    const slice = samplesInWindow(samples.filter((s) => pts.has(s.point)), nowIso, nearTo);
+    const ev = evaluateMarineWindow(slice.length ? slice : samples.filter((s) => pts.has(s.point)), thr.waveM, thr.gustKn);
+    evalByCorridor.set(corridor, ev);
+    if (deps.store.saveMarineCondition && (slice.length || ev.sources.length)) {
+      await deps.store.saveMarineCondition({
+        corridor,
+        maxWaveM: ev.maxWaveM,
+        maxGustKn: ev.maxGustKn,
+        risk: ev.risk,
+        waveThrM: thr.waveM,
+        gustThrKn: thr.gustKn,
+        sources: ev.sources.join('+'),
+        attribution: ev.attribution,
+        windowFrom: fFrom,
+        windowTo: fTo,
+        detail: {
+          fmi: fmiOk, dmi: dmiOk, smhi: smhiOk,
+          samples: slice.length, sailings: upcoming.length,
+          warnings: warnings.slice(0, 8),
+          punkty: [...pts],
+        },
+        observedAt: nowIso,
+      });
+    }
   }
+  const globalEval = evalByCorridor.get('BALTIC_GDN_NYN')
+    ?? evaluateMarineWindow(samples, thr.waveM, thr.gustKn);
 
   let risks = 0;
   const breachedIds = new Set<string>();
   for (const s of upcoming) {
+    const pts = new Set(marinePointsForRoute(s.route));
     const winFrom = new Date(Date.parse(s.departure_at) - 6 * 3600_000).toISOString();
     const winTo = new Date(Date.parse(s.departure_at) + 6 * 3600_000).toISOString();
-    const winSamples = samplesInWindow(samples, winFrom, winTo);
+    const winSamples = samplesInWindow(samples.filter((x) => pts.has(x.point)), winFrom, winTo);
     if (!winSamples.length) continue;
     const ev = evaluateMarineWindow(winSamples, thr.waveM, thr.gustKn);
     if (!ev.breached) continue;
@@ -710,9 +814,9 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
       departureUtc: s.departure_at,
       eval: ev,
       nowIso,
+      route: s.route,
     }))) risks++;
   }
-  // zamknij ryzyka pogodowe dla rejsów, które już nie przekraczają progu
   if (breachedIds.size === 0) {
     await deps.store.resolveRisks('FERRY_WEATHER:');
   }
@@ -739,7 +843,7 @@ export type JobName = keyof typeof JOBS;
 
 /** Minimalny odstęp między przebiegami [min] — ferry-status: co 15 min, nie częściej (ZRODLA_DANYCH §1.1). */
 export const MIN_INTERVAL_MIN: Record<JobName, number> = {
-  'ferry-schedule': 60, 'ferry-status': 15, 'ferry-ais': 3, 'ferry-weather': 60,
+  'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-weather': 60,
   'road-se': 15, 'road-pl': 10, 'traffic-flow': 15,
 };
 

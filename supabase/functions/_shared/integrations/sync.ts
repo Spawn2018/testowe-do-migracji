@@ -73,8 +73,11 @@ export function planSailingSync(o: {
     const cands = byKey.get(key(inc.route, inc.departureUtc)) ?? [];
     const cur = cands.find((s) => s.vessel_id === vesselId) ?? cands.find((s) => s.source === 'DANE_STARTOWE');
     const status: DbSailingStatus = inc.status === 'ODWOLANY' ? 'ODWOLANY' : inc.status === 'OPOZNIONY' ? 'OPOZNIONY' : 'ZAPLANOWANY';
-    const delayed = inc.status === 'OPOZNIONY'
-      ? { dep: iso(inc.expectedDepartureUtc ?? inc.departureUtc), arr: iso(inc.expectedArrivalUtc ?? inc.arrivalUtc) }
+    const expDep = iso(inc.expectedDepartureUtc ?? inc.departureUtc);
+    const expArr = iso(inc.expectedArrivalUtc ?? inc.arrivalUtc);
+    const timesDiffer = Boolean(inc.status) && (expDep !== iso(inc.departureUtc) || expArr !== iso(inc.arrivalUtc));
+    const delayed = (inc.status === 'OPOZNIONY' || (inc.status === 'ZAPLANOWANY' && timesDiffer))
+      ? { dep: expDep, arr: expArr }
       : { dep: null, arr: null };
     if (!cur) {
       plan.inserts.push({

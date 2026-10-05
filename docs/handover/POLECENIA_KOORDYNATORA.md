@@ -702,7 +702,7 @@ Krok 3: uzupełnienia z kroku 0 — pogoda w trzech punktach każdej trasy, alar
 
 Testy: odwołany rejs Steny; komunikat ręczny POLSCA; błąd źródła; fala >3,8 m; ETA alternatywy różni się o dojazd, rejs i drogę SE; panel pokazuje E22 i E4.
 
-Kolejka: STD-CLEAN zrobione → SMS-KSH-1H + ETA-PRE-LOAD → AIS-SRC → FERRY-STATUS → VERIFY-13 → PALIWO-33.3 (do 23.10) → część B od B-MAPA z Q-18. FERRY-STATUS nie budować w tym zadaniu.
+Kolejka: STD-CLEAN zrobione → SMS-KSH-1H + ETA-PRE-LOAD → AIS-SRC → FERRY-STATUS → VERIFY-13 → PALIWO-33.3 (do 23.10) → część B od B-MAPA z Q-18. FERRY-STATUS nie budować w tym zapisie dokumentów. Zbudowane następnym krokiem (migracja 0160).
 
 ## Polecenie 2026-10-05 (czas warszawski) — PL-DATA
 

@@ -15,6 +15,14 @@ export const CORRIDOR_SE: LatLon[] = [
   [62.3908, 17.3069], [62.6323, 17.9379], [63.2909, 18.7153], [63.8258, 20.2630], [64.7507, 20.9528],
   [65.3172, 21.4794], [65.5848, 22.1547], [65.8054, 21.7591],
 ];
+/** E22 Karlskrona → Kalmar → Norrköping, potem E4 do Boden. Flagi H-1/H-3 zostają wyłączone. */
+export const CORRIDOR_SE_E22: LatLon[] = [
+  [56.1616, 15.5866], [56.170, 14.862], [56.663, 16.366], [57.758, 16.637],
+  [58.480, 16.320], [58.594, 16.183], [59.3293, 18.0686], [59.8586, 17.6389],
+  [60.6749, 17.1413], [61.7274, 17.1056], [62.3908, 17.3069], [62.6323, 17.9379],
+  [63.2909, 18.7153], [63.8258, 20.2630], [64.7507, 20.9528], [65.3172, 21.4794],
+  [65.5848, 22.1547], [65.8054, 21.7591],
+];
 /** KSH Śrem → Poznań → S5 Bydgoszcz → A1 → Gdańsk Westerplatte. */
 export const CORRIDOR_PL: LatLon[] = [
   [52.0739, 17.0246], [52.4064, 16.9252], [52.8, 17.6], [53.1235, 18.0084], [53.4000, 18.4400],
@@ -44,8 +52,8 @@ export function integrationMode(env: Record<string, string | undefined>, keyName
 /* ---------- Trafikverket ---------- */
 export const TRAFIKVERKET_URL = 'https://api.trafikinfo.trafikverket.se/v2/data.json';
 const xmlEsc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-/** Län wzdłuż E4 Nynäshamn → Boden (Stockholm…Norrbotten). */
-export const CORRIDOR_SE_COUNTIES = [1, 3, 21, 22, 24, 25] as const;
+/** Län E4 (Stockholm…Norrbotten) oraz E22 (Blekinge 10, Kalmar 8, Östergötland 5). */
+export const CORRIDOR_SE_COUNTIES = [1, 3, 5, 8, 10, 21, 22, 24, 25] as const;
 /**
  * Situation — wypadki, zamknięcia, roboty na E4 (H-2 / B-2b).
  * Schemat 1.5 bez przestrzeni nazw: dostawca zwraca „ObjectType does not exist” (01.10.2026).
@@ -53,7 +61,7 @@ export const CORRIDOR_SE_COUNTIES = [1, 3, 21, 22, 24, 25] as const;
  * Filtr drogi po stronie API; bufor korytarza odcina E4 poza Nynäshamn–Boden.
  */
 export function trafikverketSituationQuery(apiKey: string): string {
-  return `<REQUEST><LOGIN authenticationkey="${xmlEsc(apiKey)}"/><QUERY objecttype="Situation" namespace="road.trafficinfo" schemaversion="1.6" limit="400"><FILTER><AND><EQ name="Deviation.RoadNumber" value="E4"/><IN name="Deviation.MessageType" value="Olycka,Vägarbete,Hinder"/></AND></FILTER></QUERY></REQUEST>`;
+  return `<REQUEST><LOGIN authenticationkey="${xmlEsc(apiKey)}"/><QUERY objecttype="Situation" namespace="road.trafficinfo" schemaversion="1.6" limit="400"><FILTER><AND><OR><EQ name="Deviation.RoadNumber" value="E4"/><EQ name="Deviation.RoadNumber" value="E22"/></OR><IN name="Deviation.MessageType" value="Olycka,Vägarbete,Hinder"/></AND></FILTER></QUERY></REQUEST>`;
 }
 /** RoadCondition — stan nawierzchni w länach korytarza (schema 1.2, zweryfikowane live 01.10.2026). */
 export function trafikverketRoadConditionQuery(apiKey: string, counties: readonly number[] = CORRIDOR_SE_COUNTIES): string {
@@ -62,7 +70,7 @@ export function trafikverketRoadConditionQuery(apiKey: string, counties: readonl
 }
 /** WeatherMeasurepoint — stacje pogodowe przy drodze (zastąpiły WeatherStation od 2024). */
 export function trafikverketWeatherQuery(apiKey: string, radiusM = 30000): string {
-  const within = CORRIDOR_SE.map(([la, lo]) => `<WITHIN name="Geometry.WGS84" shape="center" value="${lo} ${la}" radius="${radiusM}m"/>`).join('');
+  const within = [...CORRIDOR_SE, ...CORRIDOR_SE_E22].map(([la, lo]) => `<WITHIN name="Geometry.WGS84" shape="center" value="${lo} ${la}" radius="${radiusM}m"/>`).join('');
   return `<REQUEST><LOGIN authenticationkey="${xmlEsc(apiKey)}"/><QUERY objecttype="WeatherMeasurepoint" schemaversion="1" limit="200"><FILTER><OR>${within}</OR></FILTER></QUERY></REQUEST>`;
 }
 export interface RoadEvent { id: string; title: string; detail: string; severity: RiskSeverity; lat: number | null; lon: number | null; road: string | null; start: string | null; end: string | null; kind: string }
@@ -99,6 +107,14 @@ function deviationKind(d: Record<string, unknown>): SituationKind | null {
   if (mt === 'Vägarbete' || mt === 'MaintenanceWorks' || code === 'roadworks') return 'roboty';
   return null;
 }
+
+const isRoad = (road: unknown, n: string) => typeof road === 'string' && new RegExp(`^E\\s*${n}$`, 'i').test(road.trim());
+function roadLine(road: string | null): LatLon[] | null {
+  if (isRoad(road, '22')) return CORRIDOR_SE_E22;
+  if (isRoad(road, '4')) return CORRIDOR_SE;
+  return null;
+}
+
 function deviationPoint(d: Record<string, unknown>): LatLon | null {
   const g = d.Geometry as { WGS84?: string; Point?: { WGS84?: string }; Line?: { WGS84?: string } } | undefined;
   if (!g) return null;
@@ -131,7 +147,9 @@ export function parseTrafikverketSituations(json: unknown, bufferKm = 8): RoadEv
       const kind = deviationKind(d);
       const pt = deviationPoint(d);
       if (!kind || !pt) continue;
-      if (distanceToCorridorKm(pt[0], pt[1], CORRIDOR_SE) > bufferKm) continue;
+      const roadNo = typeof d.RoadNumber === 'string' ? d.RoadNumber : null;
+      const line = roadLine(roadNo);
+      if (!line || distanceToCorridorKm(pt[0], pt[1], line) > bufferKm) continue;
       if (!best || SIT_RANK[kind] > SIT_RANK[best.kind]) best = { d, kind, pt };
     }
     if (!best) continue;
@@ -153,7 +171,6 @@ export function parseTrafikverketSituations(json: unknown, bufferKm = 8): RoadEv
 }
 
 const ADVERSE_RE = /halka|blixthalka|sn[oö]|isigt|\bis\b|frost|sn[oö]yra|modd|slask|glatt/i;
-const isE4 = (road: unknown) => typeof road === 'string' && /^E\s*4$/i.test(road.trim());
 export interface RoadConditionReading {
   id: string; code: number | null; text: string; road: string | null; location: string;
   lat: number; lon: number; adverse: boolean; start: string | null;
@@ -164,9 +181,11 @@ export function parseTrafikverketRoadConditions(json: unknown, bufferKm = 8): Ro
   const out: RoadConditionReading[] = [];
   for (const r of res) for (const c of r.RoadCondition ?? []) {
     if (c.Deleted === true) continue;
-    if (!isE4(c.RoadNumber)) continue;
+    const roadNo = typeof c.RoadNumber === 'string' ? c.RoadNumber : null;
+    const line = roadLine(roadNo);
+    if (!line) continue;
     const pt = wktCentroid((c.Geometry as { WGS84?: string } | undefined)?.WGS84);
-    if (!pt || distanceToCorridorKm(pt[0], pt[1], CORRIDOR_SE) > bufferKm) continue;
+    if (!pt || distanceToCorridorKm(pt[0], pt[1], line) > bufferKm) continue;
     const text = String(c.ConditionText ?? '');
     const code = typeof c.ConditionCode === 'number' ? c.ConditionCode : Number(c.ConditionCode);
     const codeN = Number.isFinite(code) ? code : null;
@@ -189,7 +208,12 @@ export function parseTrafikverketWeather(json: unknown, bufferKm = 30): WeatherR
   for (const r of res) for (const s of r.WeatherMeasurepoint ?? []) {
     if (s.Deleted === true) continue;
     const pt = wkt((s.Geometry as { WGS84?: string } | undefined)?.WGS84);
-    if (!pt || distanceToCorridorKm(pt[0], pt[1], CORRIDOR_SE) > bufferKm) continue;
+    if (!pt) continue;
+    const near = Math.min(
+      distanceToCorridorKm(pt[0], pt[1], CORRIDOR_SE),
+      distanceToCorridorKm(pt[0], pt[1], CORRIDOR_SE_E22),
+    );
+    if (near > bufferKm) continue;
     const obs = s.Observation as Record<string, unknown> | undefined;
     if (!obs) continue;
     const num = (path: unknown) => (typeof path === 'number' ? path : typeof (path as { Value?: unknown })?.Value === 'number' ? (path as { Value: number }).Value : null);
@@ -224,7 +248,7 @@ export function seRoadSlowdownMult(args: {
 export function roadConditionRisk(c: RoadConditionReading): RiskInput {
   return {
     kind: 'ROAD_SE', severity: 'MEDIUM',
-    title: `E4: ${c.text}${c.location ? ` · ${c.location}` : ''}`,
+    title: `${c.road || 'E4'}: ${c.text}${c.location ? ` · ${c.location}` : ''}`,
     titleKey: 'rk_road_se', params: { event: c.text },
     detail: { opis: c.location || c.text, rodzaj: 'RoadCondition', kod: c.code, lat: c.lat, lon: c.lon, od: c.start, zrodlo: 'Trafikverket RoadCondition (CC0)' },
     dedup: `ROAD_SE:RC:${c.id}`, sourceUrl: 'https://www.trafikverket.se/trafikinformation/', validUntil: null,

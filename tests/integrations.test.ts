@@ -32,6 +32,7 @@ class MemStore implements SyncStore {
   runs: { job: string; at: string; ok: boolean; result: JobResult }[] = [];
   positions: VehiclePos[] = [];
   corridor: { corridor: string; slowdownMult: number; reason: string | null; detail?: unknown } | null = null;
+  corridors: { corridor: string; slowdownMult: number; detail?: unknown }[] = [];
   marine: { maxWaveM: number | null; maxGustKn: number | null; risk: string; sources: string } | null = null;
   thr = { waveM: 3.8, gustKn: 40 };
   n = 0;
@@ -75,12 +76,13 @@ class MemStore implements SyncStore {
     return [...best.entries()].map(([vesselId, observedAt]) => ({ vesselId, observedAt }));
   }
   async seSlowdownPct() { return 15; }
-  async saveCorridorCondition(row: { corridor: 'SE_E4'; slowdownMult: number; reason: string | null; detail?: unknown }) {
-    this.corridor = { corridor: row.corridor, slowdownMult: row.slowdownMult, reason: row.reason, detail: row.detail };
+  async saveCorridorCondition(row: { corridor: 'SE_E4' | 'SE_E22'; slowdownMult: number; reason: string | null; detail?: unknown }) {
+    this.corridors.push({ corridor: row.corridor, slowdownMult: row.slowdownMult, detail: row.detail });
+    if (row.corridor === 'SE_E4') this.corridor = { corridor: row.corridor, slowdownMult: row.slowdownMult, reason: row.reason, detail: row.detail };
   }
   async opsThresholds() { return this.thr; }
   async saveMarineCondition(row: {
-    corridor: 'BALTIC_GDN_NYN'; maxWaveM: number | null; maxGustKn: number | null;
+    corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA'; maxWaveM: number | null; maxGustKn: number | null;
     risk: 'niskie' | 'podwyższone' | 'wysokie'; sources: string;
   }) {
     this.marine = { maxWaveM: row.maxWaveM, maxGustKn: row.maxGustKn, risk: row.risk, sources: row.sources };
@@ -98,6 +100,9 @@ function deps(store: MemStore, pages: Record<string, string | number>, env: Reco
     // STENA-3: domyślnie pusta tablica (testy Polferries nie muszą stubować Steny)
     if (url.includes('_jcr_content.timetable.')) {
       return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (url.includes('stenalinefreight.com')) {
+      return new Response('niedostepne', { status: 503 });
     }
     throw new Error(`nieoczekiwane zapytanie (sieć zabroniona w teście): ${url}`);
   }) as typeof fetch;
@@ -205,9 +210,13 @@ describe('ferry-status — komunikaty (prawdziwa strona 26.09.2026)', () => {
     const st = new MemStore();
     const { d, calls } = deps(st, { 'komunikaty-kursowania': STATUS });
     const r = await runFerryStatus(d);
-    expect(r).toMatchObject({ ok: true, unknown: 0, risks: 0 });
+    expect(r.ok).toBe(true);
+    expect(r.unknown).toBe(0);
     expect(r.inserted).toBe(10);
-    expect(st.sailings.every((s) => s.status === 'ZAPLANOWANY' && s.source === 'POLFERRIES')).toBe(true);
+    expect(st.sailings.filter((s) => s.source === 'POLFERRIES')).toHaveLength(10);
+    expect(st.sailings.filter((s) => s.source === 'POLFERRIES').every((s) => s.status === 'ZAPLANOWANY')).toBe(true);
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:STENA_STATUS:'))).toBe(true);
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:POLFERRIES_STATUS:'))).toBe(false);
     expect(calls.some((c) => c.includes('komunikaty-kursowania'))).toBe(true);
   });
   it('HTTP 403 Cloudflare → NIEZNANY + ryzyko źródła (II-5), bez zapisu rejsów Polferries', async () => {
@@ -249,10 +258,11 @@ describe('ferry-status — komunikaty (prawdziwa strona 26.09.2026)', () => {
     const r = await runFerryStatus(deps(st, { 'komunikaty-kursowania': page }).d);
     expect(r).toMatchObject({ unknown: 1, risks: 1 });
     expect(JSON.stringify(st.sailings)).toBe(before);
-    expect(st.risks[0]).toMatchObject({ kind: 'FERRY', severity: 'MEDIUM', dedup: `FERRY_UNKNOWN:M/F Wawel:${dep26}` });
-    expect(String(st.risks[0].detail.surowy_status)).toContain('diverted');
+    const unknown = st.risks.find((x) => x.dedup === `FERRY_UNKNOWN:M/F Wawel:${dep26}`);
+    expect(unknown).toMatchObject({ kind: 'FERRY', severity: 'MEDIUM' });
+    expect(String(unknown?.detail.surowy_status)).toContain('diverted');
     await runFerryStatus(deps(st, { 'komunikaty-kursowania': page }).d);
-    expect(st.risks).toHaveLength(1);
+    expect(st.risks.filter((x) => String(x.dedup).startsWith('FERRY_UNKNOWN:'))).toHaveLength(1);
   });
   it('HTTP 503 → ryzyko „źródło niedostępne”, bez zapisu; kolejny udany odczyt zamyka ryzyko', async () => {
     const st = new MemStore();
@@ -409,6 +419,9 @@ describe('road-se — Trafikverket (II-6 RoadCondition + WeatherMeasurepoint)', 
     const detail = st.corridor?.detail as { situations?: { id: string; kind: string }[]; situationsStatus?: string };
     expect(detail.situationsStatus).toBe('ok');
     expect(detail.situations?.map((s) => s.kind)).toEqual(['wypadek']);
+    expect(st.corridors.some((c) => c.corridor === 'SE_E22')).toBe(true);
+    const e4 = st.corridor?.detail as { drogi?: string[] };
+    expect(e4.drogi).toEqual(['E4', 'E22']);
   });
 
   it('błąd samych sytuacji nie kasuje współczynnika II-6 i nie zmyśla zdarzeń', async () => {
@@ -609,5 +622,52 @@ describe('AIS-SRC — trzy źródła, bez filtra Q-18', () => {
     await runFerryAis(d);
     expect(st.vesselPositions.some((p) => p.vesselId === NS)).toBe(true);
     expect(st.vesselPositions.find((p) => p.vesselId === NS)?.lat).toBeCloseTo(57.980348, 4);
+  });
+});
+
+describe('FERRY-STATUS — Freight główne, AEM zapas', () => {
+  const FREIGHT_HTML = `<h3>Gdynia – Karlskrona</h3><span class="date">2026-10-05</span><div class="Rtable-cell">18:00</div><div class="Rtable-cell">06:00</div><div class="Rtable-cell">Stena Ebba</div><div class="Rtable-cell">Cancelled</div><h3>Karlskrona – Gdynia</h3><span class="date">2026-10-05</span><div class="Rtable-cell">09:00</div><div class="Rtable-cell">19:00</div><div class="Rtable-cell">Stena Spirit</div><div class="Rtable-cell">Arrived</div>`;
+  class FreightStore extends MemStore {
+    override async vessels() {
+      return [
+        { id: WAW, name: 'M/F Wawel', mmsi: null },
+        { id: 'v-ebba', name: 'M/F Stena Ebba', mmsi: 219031310 },
+        { id: 'v-spirit', name: 'M/F Stena Spirit', mmsi: 219031605 },
+      ];
+    }
+  }
+  it('odwołany rejs z Freight zapisuje się jako ODWOLANY i nie woła zapasu', async () => {
+    const { resetStenaFreightCache } = await import('../supabase/functions/_shared/integrations/jobs');
+    resetStenaFreightCache();
+    const st = new FreightStore();
+    const { d, calls } = deps(st, {
+      'admin-ajax.php': JSON.stringify({ success: true, data: { content: FREIGHT_HTML } }),
+      'timetable/GDKA': '<script>var ajax_object = {"security":"tok123"};</script>',
+      'komunikaty-kursowania': 503,
+    }, {}, new Date('2026-10-05T12:00:00Z'));
+    const r = await runFerryStatus(d);
+    expect(r.ok).toBe(true);
+    expect(calls.some((c) => c.includes('_jcr_content.timetable.'))).toBe(false);
+    expect(st.sailings.find((s) => s.vessel_id === 'v-ebba')).toMatchObject({ status: 'ODWOLANY', source: 'STENA', route: 'GDY-KAA' });
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:STENA_STATUS:'))).toBe(false);
+  });
+  it('błąd Freight → ryzyko i przejście na JSON AEM, bez wyjątku', async () => {
+    const { resetStenaFreightCache } = await import('../supabase/functions/_shared/integrations/jobs');
+    resetStenaFreightCache();
+    const st = new FreightStore();
+    const GDKA = fx('stena-timetable-gdka-2026-10-01.json');
+    const pages: Record<string, string | number> = {
+      'komunikaty-kursowania': 503,
+      'stenalinefreight.com': 503,
+      'timetable.GDKA.2026-09-26': GDKA,
+      'timetable.KAGD.2026-09-26': '[]',
+      'timetable.GDKA.2026-09-27': '[]',
+      'timetable.KAGD.2026-09-27': '[]',
+    };
+    const r = await runFerryStatus(deps(st, pages, {}, new Date('2026-09-26T12:00:00Z')).d);
+    expect(r.ok).toBe(true);
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:STENA_STATUS:'))).toBe(true);
+    expect(st.sailings.some((s) => s.source === 'STENA' && s.route === 'GDY-KAA')).toBe(true);
+    expect(r.warnings?.some((w) => /zapas/i.test(w))).toBe(true);
   });
 });

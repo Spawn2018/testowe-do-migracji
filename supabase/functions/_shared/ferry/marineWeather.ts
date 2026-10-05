@@ -12,10 +12,23 @@ export const MARINE_ATTRIBUTION =
 /** Punkty trasy Gdańsk–Nynäshamn (ZLECENIE II-8) + podejście SE. */
 export const MARINE_POINTS = {
   GDN: { lat: 54.4, lon: 18.67, label: 'Gdańsk' },
-  MID: { lat: 56.5, lon: 18.5, label: 'środek trasy' },
+  MID: { lat: 56.5, lon: 18.5, label: 'środek trasy Gdańsk–Nynäshamn' },
   NYN: { lat: 58.9, lon: 17.95, label: 'podejście Nynäshamn' },
+  GDY: { lat: 54.53, lon: 18.55, label: 'Gdynia' },
+  MID_STENA: { lat: 55.6, lon: 16.6, label: 'środek trasy Gdynia–Karlskrona' },
+  KAA: { lat: 56.16, lon: 15.59, label: 'podejście Karlskrona' },
 } as const;
 export type MarinePointCode = keyof typeof MARINE_POINTS;
+
+/** Punkty oceny rejsu. SMHI Knolls Grund zostaje przy podejściu Nynäshamn. */
+export function marinePointsForRoute(route: string | null | undefined): Array<MarinePointCode | 'SMHI_KNOLLS'> {
+  if (route === 'GDY-KAA' || route === 'KAA-GDY') return ['GDY', 'MID_STENA', 'KAA'];
+  return ['GDN', 'MID', 'NYN', 'SMHI_KNOLLS'];
+}
+
+export function marineCorridorForRoute(route: string | null | undefined): 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA' {
+  return route === 'GDY-KAA' || route === 'KAA-GDY' ? 'BALTIC_GDY_KAA' : 'BALTIC_GDN_NYN';
+}
 
 /** SMHI Knolls Grund — aktywna boja falowa na podejściu SE (obserwacje). */
 export const SMHI_KNOLLS_STATION = '33008';
@@ -262,6 +275,7 @@ export function marineWeatherRisk(args: {
   departureUtc: string;
   eval: MarineEval;
   nowIso: string;
+  route?: string | null;
 }) {
   const wave = args.eval.maxWaveM?.toFixed(1) ?? '—';
   const gust = args.eval.maxGustKn?.toFixed(0) ?? '—';
@@ -286,6 +300,7 @@ export function marineWeatherRisk(args: {
       prog_porywy_kn: args.eval.gustThr,
       odejscie: args.departureUtc,
       sailing_id: args.sailingId,
+      trasa: args.route ?? null,
       czas: args.nowIso,
       progi: 'D-39 potwierdzone (WAVE_M / GUST_KN)',
     },

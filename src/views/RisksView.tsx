@@ -16,6 +16,7 @@ import { isDemoSourceMode, trafikverketSourceNote } from '../lib/demoLabel';
 import { severityLabel } from '../lib/enumLabels';
 import { formatSeaRiskLabel, formatWaveM, formatWindMs } from '../lib/voyageSea';
 import type { MarineConditionRow } from '../lib/marineWeatherDb';
+import { OperatorNoticeForm } from '../components/OperatorNoticeForm';
 import type { CorridorConditionRow } from '../lib/corridorConditionsDb';
 import { knotsToMs } from '../lib/marineUnits';
 import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
@@ -50,7 +51,7 @@ export function RisksView() {
   const [picked, setPicked] = useState(0);
   const [seSituations, setSeSituations] = useState<RoadSituation[]>([]);
   const [seMode, setSeMode] = useState<'live' | 'seed'>('seed');
-  const [marine, setMarine] = useState<MarineConditionRow | null>(null);
+  const [marineRows, setMarineRows] = useState<MarineConditionRow[]>([]);
   const [corridor, setCorridor] = useState<CorridorConditionRow | null>(null);
 
   const list = useMemo(() => {
@@ -114,8 +115,8 @@ export function RisksView() {
     // II-8: produkcja — pogoda morska z marine_conditions (FMI+DMI+SMHI)
     if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return;
     let cancelled = false;
-    void import('../lib/marineWeatherDb').then((m) => m.fetchMarineCondition()).then((row) => {
-      if (!cancelled) setMarine(row);
+    void import('../lib/marineWeatherDb').then((m) => m.fetchMarineConditions()).then((rows) => {
+      if (!cancelled) setMarineRows(rows);
     });
     return () => {
       cancelled = true;
@@ -207,8 +208,11 @@ export function RisksView() {
                     </tbody>
                   </table>
                 )}
-                {marine && (marine.maxWaveM != null || marine.maxGustKn != null) ? (
-                  <div data-source="marine" style={{ marginTop: 8 }}>
+                {marineRows.length > 0 ? marineRows.map((marine) => (
+                  <div key={marine.corridor} data-source="marine" data-corridor={marine.corridor} style={{ marginTop: 8 }}>
+                    <div className="sec">
+                      {marine.corridor === 'BALTIC_GDY_KAA' ? 'Gdynia–Karlskrona' : 'Gdańsk–Nynäshamn'}
+                    </div>
                     <div style={{ display: 'flex', gap: 12, alignItems: 'center', fontSize: 13 }}>
                       <span className="num">
                         {marine.maxWaveM != null ? formatWaveM(marine.maxWaveM, locale) : '—'}
@@ -237,9 +241,10 @@ export function RisksView() {
                         : null}
                     </div>
                   </div>
-                ) : (
+                )) : (
                   <div className="note" data-no-source="sea" style={{ marginTop: 8 }}>{t(locale, 'i2_sea_no_source')}</div>
                 )}
+                <OperatorNoticeForm />
               </div>
               <div data-ferry-alt="db">
                 <h4 className="sec">{t(locale, 'risk_alt_for_day').replace(/\s*$/, '')}</h4>
@@ -357,6 +362,7 @@ export function RisksView() {
         className="panel section-card"
         style={{ margin: 12 }}
         data-panel="road-se"
+        data-roads="E4 E22"
         data-demo={shows('roadSituationsSe') && isDemoSourceMode(seMode) ? 'trafikverket' : undefined}
       >
         <header className="panel-hd">
