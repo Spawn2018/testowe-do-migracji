@@ -48,6 +48,7 @@ import { autoStatusText, effArrival, effDeparture, fmtLocal, sailingStatusLabel 
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { isServerId } from '../../data/registry';
 import { DriverLinkPanel } from './DriverLinkPanel';
+import { OptionsHowTo } from '../settings/OptionsHowTo';
 import type { Load, Locale } from '../../types';
 import { PROD_BUILD, shows } from '../../lib/prodFacade';
 import { delayPillMinutes, permitBannerState } from '../../lib/prodDash';
@@ -416,6 +417,9 @@ export function LoadDrawer() {
                     {load.etaReasons?.length ? ` · ${load.etaReasons.slice(0, 3).join(' · ')}` : ''}
                   </div>
                   </>}
+                  <div data-eta-howto style={{ fontSize: 11.5, marginTop: 4, fontWeight: 400 }}>
+                    <OptionsHowTo locale={locale} k="a6_dr_eta_howto" summaryKey="a6_sch_howto_btn" />
+                  </div>
                 </dd>
                 <dt>{t(locale, 'a6_dr_driver')}</dt>
                 <dd>

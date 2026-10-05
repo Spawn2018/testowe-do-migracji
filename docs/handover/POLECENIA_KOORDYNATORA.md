@@ -1191,3 +1191,20 @@ Wynik: zaktualizowana tabela ASVS (fail → pass) z dowodami.
 Zasady: TELM-2 / SG-03 bez zmian; chmura off; CSP Report-Only bez enforce;
 brama + merge + deploy po zielonym e2e PKCE. Autor: Sebastian Bożek /
 sebastian.bozekq@gmail.com.
+
+## Poczekalnia koordynatora 2026-10-05 ~18:23 (czas warszawski) — SG-03 ETA
+
+POCZEKALNIA (koordynator, SG-03):
+1. Potwierdź znaczenie etykiet przy ETA: „Wysoka" (pewność prognozy?)
+   i „w oknie" (definicja). Wyjaśnienie w „Jak działa".
+2. „w oknie" przy ETA 06.10 01:02, gdy dostawa zaplanowana 07.10 —
+   czy przyjazd wyraźnie PRZED terminem (inny dzień, noc) ma osobny
+   znacznik albo ostrzeżenie? Jeśli nie — propozycja.
+3. ETA zmieniło się z 06.10 07:03 na 06.10 01:02. Rozbij składniki:
+   jazda, odpoczynek kierowcy (D-85), postoje. Czy zapis
+   „kierowca1|kierowca2" (przepięcie, C-SEP) nie jest traktowany jak
+   obsada dwuosobowa? Obsada jest jednoosobowa (U-31).
+
+Zakres: analiza + ewentualna mała poprawka „Jak działa" (braki definicji);
+propozycja early-arrival bez implementacji przed decyzją; bug C-SEP vs U-31 →
+fix + test + deploy.
