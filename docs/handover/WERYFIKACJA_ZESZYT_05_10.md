@@ -28,3 +28,8 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 
 | 3.1 | zezwolenie per firma obok polisy, auto wg wymiarów | **⛔** — czeka na wymiary D-83 | — | — |
 | 3.2 | Ubezpieczenie automatycznie podpina się do każdej trasy | **poprawione** — `load_insurance_cover`: APPROVED polisa SCX → 94/94; notka w szufladzie Dokumenty | `3.2.png` (+ overview) | PR (ten) · migracja **0182** |
+
+## Raport sekcji 3 (Dokumenty)
+- Zgodne: 0 · Poprawione: 1 (3.2) · ⛔: 1 (3.1 D-83)
+- Wdrożenie: PR #99/#100/#101, migracje **0182–0183**, Vercel READY; domeny **200**
+- Polisa startowa SCX `OCP-SCX-2026-WT` (APPROVED) → kompletność **94/94**; notka w szufladzie Dokumenty
