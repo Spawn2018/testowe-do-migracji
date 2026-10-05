@@ -220,6 +220,13 @@ const pl: Dict = {
   a6_dr_ferry_status: 'Status promu',
   a6_dr_fuel: 'Dodatek paliwowy',
   a6_dr_geo_event: 'Zdarzenie strefy',
+  a6_dr_eta_howto:
+    'ETA — przewidywany przyjazd na plac budowy, liczony automatycznie z ostatniej pozycji GPS (czas warszawski). W Szwecji: pozostała jazda + odpoczynek dobowy + przerwy, liczone proporcjonalnie do pozostałej trasy.'
+    + '|„w oknie” — ETA nie później niż koniec terminu dostawy: godzina „do” z planu, a bez niej koniec dnia dostawy (24:00). Przyjazd wcześniejszy niż termin też jest „w oknie” — etykieta nie ostrzega o przyjeździe przed terminem.'
+    + '|Czerwona etykieta opóźnienia — ETA po końcu terminu dostawy; liczba pokazuje spóźnienie.'
+    + '|Wysoka / Średnia / Niska — pewność prognozy według pasma ± minut pod ETA: Wysoka do ±60 min, Średnia do ±240 min, Niska powyżej albo bez pasma.'
+    + '|Pasmo ± min — niepewność odcinków (jazda ±20%, przerwy ±50%, odpoczynek dobowy 0%) łączona pierwiastkiem z sumy kwadratów.'
+    + '|„–” — przed wyjazdem z placu załadunku albo bez świeżej pozycji GPS ETA nie jest pokazywana.',
   a6_dr_in_window: 'w oknie',
   a6_dr_load_place: 'Miejsce załadunku',
   a6_dr_load_window: 'Okno załad.',
@@ -864,6 +871,13 @@ const en: Dict = {
   a6_dr_ferry_status: 'Ferry status',
   a6_dr_fuel: 'Fuel surcharge',
   a6_dr_geo_event: 'Zone event',
+  a6_dr_eta_howto:
+    'ETA — expected arrival at the construction site, calculated automatically from the latest GPS position (Warsaw time). In Sweden: remaining driving + daily rest + breaks, pro rata to the remaining route.'
+    + '|“in window” — ETA no later than the end of the delivery slot: the planned “to” time, or without it the end of the delivery day (24:00). An arrival earlier than planned is also “in window” — the label does not warn about early arrival.'
+    + '|Red delay label — ETA after the end of the delivery slot; the number shows the delay.'
+    + '|High / Medium / Low — forecast confidence from the ± minutes band under the ETA: High up to ±60 min, Medium up to ±240 min, Low above that or without a band.'
+    + '|± min band — segment uncertainty (driving ±20%, breaks ±50%, daily rest 0%) combined as root sum of squares.'
+    + '|“–” — before leaving the loading yard or without a fresh GPS position the ETA is not shown.',
   a6_dr_in_window: 'in window',
   a6_dr_load_place: 'Loading site',
   a6_dr_load_window: 'Loading window',
@@ -1508,6 +1522,13 @@ const sv: Dict = {
   a6_dr_ferry_status: 'Färjestatus',
   a6_dr_fuel: 'Bränsletillägg',
   a6_dr_geo_event: 'Zonhändelse',
+  a6_dr_eta_howto:
+    'ETA — beräknad ankomst till byggplatsen, räknas automatiskt från senaste GPS-position (Warszawa-tid). I Sverige: återstående körning + dygnsvila + raster, proportionellt mot återstående sträcka.'
+    + '|”inom fönstret” — ETA senast vid slutet av leveransfönstret: planerad ”till”-tid, annars slutet av leveransdagen (24:00). Ankomst före planerad tid räknas också som ”inom fönstret” — etiketten varnar inte för tidig ankomst.'
+    + '|Röd förseningsetikett — ETA efter slutet av leveransfönstret; siffran visar förseningen.'
+    + '|Hog / Medel / Lag — prognosens säkerhet enligt ± minuter-intervallet under ETA: Hog upp till ±60 min, Medel upp till ±240 min, Lag över det eller utan intervall.'
+    + '|± min-intervall — osäkerhet per delsträcka (körning ±20 %, raster ±50 %, dygnsvila 0 %) kombinerad som kvadratrotssumma.'
+    + '|”–” — före avfärd från lastplatsen eller utan färsk GPS-position visas ingen ETA.',
   a6_dr_in_window: 'inom fönstret',
   a6_dr_load_place: 'Lastningsplats',
   a6_dr_load_window: 'Lastningsfönster',
