@@ -1,11 +1,13 @@
-# Evidence — ETA SG-03 po 0186 (05.10.2026 ~20:46 Europe/Warsaw)
+# Evidence — ETA SG-03 po 0186 (05.10.2026)
 
 ## Zrzut UI
-Ścieżka PNG (Playwright / przeglądarka równoległa):  
-`docs/evidence/zeszyt/SG03-eta-ostrozne-05-10.png`  
-(jeśli pliku jeszcze nie ma — dodać po zrzucie drawer ETA SG-03).
+Plik: `docs/evidence/zeszyt/SG03-eta-ostrozne-05-10.png`  
+Odczyt z UI (~**21:42** Europe/Warsaw):
+- ETA Boden **06.10.2026 13:16** (live — później niż poranny refresh SQL ~10:27; postęp GPS)
+- znaczniki: **przed terminem** + pewność **Średnia** (nie Wysoka)
+- pasmo **± 184 min** · flaga **przerwa z GPS**
 
-## Dane z prod SQL (zweryfikowane)
+## Dane z prod SQL (~20:46, refresh po 0186)
 | Pole | Wartość |
 |---|---|
 | ETA Boden | **06.10 ~10:27** Europe/Warsaw |
