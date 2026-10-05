@@ -105,7 +105,7 @@ const pl: Dict = {
   rk_src_DMI: 'pogoda morska (DMI)',
   rk_src_SMHI: 'pogoda morska (SMHI)',
   rk_src_MARINE_WEATHER: 'pogoda morska (FMI+DMI+SMHI)',
-  rk_src_HERE_TRAFFIC_PL: 'utrudnienia drogowe PL (HERE Traffic)',
+  rk_src_HERE_TRAFFIC_PL: 'utrudnienia drogowe PL (HERE)',
   rk_src_EMTRACK_WEB: 'telematyka naczep (emtrack web)',
   rk_road_se: 'E4: {event}',
   rk_tv_unknown_code: 'Nieznany kod źródła drogowego — w panelu: zdarzenie drogowe',

@@ -136,7 +136,7 @@ const SOURCE_LABEL: Record<SourceId, string> = {
   KPD_GDDKIA: 'utrudnienia drogowe PL (KPD GDDKiA)', TOMTOM: 'prędkość ruchu (TomTom — wycofane)',
   FMI: 'pogoda morska (FMI)', DMI: 'pogoda morska (DMI)', SMHI: 'pogoda morska (SMHI)',
   MARINE_WEATHER: 'pogoda morska (FMI+DMI+SMHI)',
-  HERE_TRAFFIC_PL: 'utrudnienia drogowe PL (HERE Traffic)',
+  HERE_TRAFFIC_PL: 'utrudnienia drogowe PL (HERE)',
   EMTRACK_WEB: 'telematyka naczep (emtrack web)',
 };
 const SOURCE_KIND: Record<SourceId, RiskKind> = {
