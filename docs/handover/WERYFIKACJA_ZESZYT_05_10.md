@@ -86,3 +86,24 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 - Zgodne: 7 · Poprawione: 7 · Częściowo: 1 (8.3) · Otwarte: 1 (8.14)
 - Wdrożenie: PR #105, Vercel READY `dpl_8ke8GygJ…`, domeny **200**
 
+| 9.1 | Opis filtrów kafelków | **zgodne** — `title` na każdym kafelku (filtruj / zdejmij) + Prom z tipem rejsów | `9-overview.png` | stan prod |
+| 9.2 | Brak cyfr w górnym prostokącie | **poprawione** — `.n` puste; aktywny tylko „×” | `9-overview.png` (+ `9.3.png`) | PR #106 · `dpl_Eq8JgjBU…` |
+| 9.3 | Aktywny filtr z „×” + kafelek Prom | **zgodne** — Prom w spine; aktywny pokazuje × w `.n` i przy nazwie | `9.3.png` | PR #106 |
+
+## Raport sekcji 9 (Górny pasek filtrów)
+- Zgodne: 2 · Poprawione: 1 (9.2) · ⛔: 0
+- Wdrożenie: PR #106, Vercel READY, tower.log-mar.pl **200**
+
+## Sekcja 10 — wstępne (nie zamknięta)
+Obserwacje prod (SG-03) — do domknięcia punkt po punkcie:
+- **10a.1** nadal „KSH Śrem” w miejscu załadunku; „Wymiary L×W×H” ładunku widoczne (czy to „wymiary zestawu”?)
+- **10a.3** przycisk „Edytuj nr HHL” zamiast „Edytuj” / „Dodaj”
+- **10a.5** Pilotaż pokazuje „nie wymagany” zamiast ukryć pole
+- **10a.6** Załadunek/Dostawa w szufladzie bez gg:mm (tabela: rok OK, godziny gdy okno)
+- **10a.10** w Przeglądzie jeden telefon (tabela ma parę)
+- **10c** Historia: wpisy z datą PL i firmą — wygląda OK (`10c.png`)
+- **10e** Polisa OCP auto widoczna (`10e.png`)
+- **10f** Ceny bez POD, EUR (`10f.png`)
+- **10g / 10d** klik zakładki Status/Ustalenia wymaga pewniejszego selektora (treść mieszała się w teście)
+Zrzuty: `10a-overview.png`, `10c.png`, `10d.png`, `10e.png`, `10f.png`, `10g.png`
+
