@@ -1003,3 +1003,23 @@ pozycji PLAN.md.
 
 Właściciel nie dostał treści. Przedstaw obie w jednej wiadomości, bez budowy.
 Do odpowiedzi: dalej B-10 ceny/dopłaty, H-7, SEC. D-83 później.
+
+## Polecenie 2026-10-05 ~13:42 (czas warszawski) — Q-11b A + H-8 A (decyzje właściciela)
+
+Właściciel wybrał litery:
+
+### Q-11b = **A** (Web Push VAPID, 0 zł)
+- Krytyczne: natychmiast na telefon (jak e-mail krytyczny).
+- Niekrytyczne: jeden skrót dziennie (L-13 DIGEST).
+- Włącz/wyłącz w Preferencjach.
+- Widoczność firm: DEC-4 (macierz).
+- iPhone: w Preferencjach instrukcja „Dodaj do ekranu głównego” (iOS 16.4+).
+
+### H-8 = **A** z doprecyzowaniem — **budować TERAZ**
+- Profil wysokości / nachylenia: Routing v8 `return=elevation` dla **standardowego profilu ciężarówki**.
+- **Bez D-83** na start (same elevation + truck default).
+- Naruszenia wymiarów zestawu (jak H-1/H-3) włączają się **automatycznie po D-83** (gdy flagi H1/H3).
+- Koszt: pula tras D-78 → 0 USD ponad przy zużyciu w limicie.
+- H1/H3/H6 zostają **false**; TELM_EMTRACK_WEB **true**; blokada SMS/e-mail właściciela zostaje.
+
+Kontynuować też B-10 / H-7 / SEC z poprzedniej paczki.
