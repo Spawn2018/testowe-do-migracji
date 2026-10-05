@@ -96,6 +96,7 @@ put(['HHL_ORDER_MISSING'], (i) => form(i.loadCode, 'numer-hhl'));
 put(['CARRIER_ORDER_MISSING'], (i) => form(i.loadCode, 'numer-przewoznika'));
 
 put(['ROAD_PL', 'ROAD_SE'], (i) => (i.tab === 'deviation' ? decision(i.decisionId) : transport(i.loadCode, 'status')));
+put(['ROAD_RISK'], () => system('integracje'));
 put(['ROUTE_OBSTACLE'], (i) => transport(i.loadCode, 'status'));
 put(['WEATHER'], (i) => (i.tab === 'storm' ? decision(i.decisionId) : transport(i.loadCode, 'status')));
 

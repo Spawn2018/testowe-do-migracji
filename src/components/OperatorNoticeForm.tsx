@@ -4,17 +4,12 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { getSupabase } from '../auth/client';
-import { canFileOperatorNotice, ferryPortPl } from '../lib/ferryStatusPl';
+import { canFileOperatorNotice, ferryPortPl, noticeKindPl } from '../lib/ferryStatusPl';
 import { effDeparture, fmtLocal } from '../lib/sailings';
 import { useTowerStore } from '../store/useTowerStore';
 
 type Kind = 'ODWOLANY' | 'OPOZNIONY' | 'ZMIANA_GODZINY';
 
-const KIND_PL: Record<Kind, string> = {
-  ODWOLANY: 'Odwołany',
-  OPOZNIONY: 'Opóźniony',
-  ZMIANA_GODZINY: 'Zmiana godziny',
-};
 
 interface NoticeRow {
   id: string;
@@ -113,7 +108,7 @@ export function OperatorNoticeForm() {
         <label>
           Typ
           <select value={kind} onChange={(e) => setKind(e.target.value as Kind)} style={{ width: '100%' }}>
-            {(Object.keys(KIND_PL) as Kind[]).map((k) => <option key={k} value={k}>{KIND_PL[k]}</option>)}
+            {(['ODWOLANY', 'OPOZNIONY', 'ZMIANA_GODZINY'] as Kind[]).map((k) => <option key={k} value={k}>{noticeKindPl(k)}</option>)}
           </select>
         </label>
         {kind !== 'ODWOLANY' ? (
@@ -134,7 +129,7 @@ export function OperatorNoticeForm() {
           <tbody>
             {history.map((h) => (
               <tr key={h.id}>
-                <td>{KIND_PL[h.kind] ?? h.kind}</td>
+                <td>{noticeKindPl(h.kind)}</td>
                 <td>{h.operator === 'STENA' ? 'Stena Line' : 'Polferries'}</td>
                 <td>{h.note ?? '—'}</td>
                 <td className="num">{new Date(h.created_at).toLocaleString('pl-PL')}</td>

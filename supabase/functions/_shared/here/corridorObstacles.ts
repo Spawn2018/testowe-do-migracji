@@ -101,6 +101,7 @@ export function buildCorridorRouteUrl(apiKey: string, leg: CorridorLeg): string 
   q.set('destination', `${leg.destination[0]},${leg.destination[1]}`);
   q.set('return', 'polyline');
   q.set('departureTime', 'any');
+  q.set('lang', 'pl-PL');
   q.set('apiKey', apiKey);
   return `https://router.hereapi.com/v8/routes?${q.toString()}`;
 }

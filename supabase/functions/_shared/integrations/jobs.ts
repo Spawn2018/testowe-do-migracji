@@ -28,6 +28,8 @@ import {
   parseTrafikverketSituations, parseTrafikverketWeather, roadConditionRisk, roadRisk, seRoadSlowdownMult, trafikverketResultError,
   trafikverketRoadConditionQuery, trafikverketSituationQuery, trafikverketWeatherQuery, weatherRisk, TRAFIKVERKET_URL,
 } from './road.ts';
+import { unknownCodeRiskInput } from '../../../../src/lib/pl/describe.ts';
+import { deeplTranslate, translateFreeText, usageLevel, DEEPL_MONTHLY_LIMIT } from '../../../../src/lib/pl/deepl.ts';
 import {
   isSourceFailure, planSailingSync, sourceDownRisk, unknownStatusRisk,
   type AutoSailingSource, type DbSailing, type IncomingSailing, type RiskInput, type SailingInsert, type SailingPatch, type VesselRow,
@@ -82,6 +84,12 @@ export interface SyncStore {
     detail: unknown;
     observedAt: string;
   }): Promise<void>;
+  /** PL-DATA: pamięć tłumaczeń i zużycie DeepL. Brak = bez wywołań DeepL. */
+  translationGet?(hash: string): Promise<string | null>;
+  translationPut?(hash: string, source: string, pl: string, lang: 'SV' | 'EN'): Promise<void>;
+  translationEnqueue?(hash: string, source: string, lang: 'SV' | 'EN', reason: string): Promise<void>;
+  deeplUsage?(): Promise<{ characters: number; limit: number }>;
+  deeplAddUsage?(n: number): Promise<number>;
 }
 export interface JobDeps {
   store: SyncStore;
@@ -527,6 +535,47 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
  * H-2: Situation 1.6 (namespace road.trafficinfo) → wypadki, zamknięcia, roboty, ryzyka ROAD_SE.
  * Pusta lista sytuacji nie jest uzupełniana. Bez klucza: DEMO.
  */
+
+async function polishRoadFreeText(deps: JobDeps, events: { title: string; detail: string; freeText?: string | null; note?: string | null }[], nowIso: string): Promise<void> {
+  const key = deps.env.DEEPL_API_KEY;
+  const store = deps.store;
+  if (!key || !store.translationGet || !store.translationPut || !store.translationEnqueue || !store.deeplUsage || !store.deeplAddUsage) return;
+  let usage = await store.deeplUsage();
+  let warned = false;
+  for (const e of events) {
+    if (!e.freeText || e.note) continue;
+    const result = await translateFreeText({
+      text: e.freeText,
+      source: 'SV',
+      used: usage.characters,
+      limit: usage.limit || DEEPL_MONTHLY_LIMIT,
+      memoryGet: (hash) => store.translationGet!(hash),
+      memoryPut: (hash, source, pl) => store.translationPut!(hash, source, pl, 'SV'),
+      enqueue: (hash, reason) => store.translationEnqueue!(hash, e.freeText || '', 'SV', reason),
+      addUsage: async (n) => { usage = { ...usage, characters: await store.deeplAddUsage!(n) }; return usage.characters; },
+      deepl: (text, source) => deeplTranslate(deps.fetch, key, text, source),
+    });
+    if (result.pl) {
+      e.note = result.pl;
+      e.detail = result.pl;
+    }
+    const level = result.level === 'ok' ? usageLevel(result.used, result.limit) : result.level;
+    if (!warned && (level === 'warn' || level === 'full')) {
+      warned = true;
+      await store.raiseRisk({
+        kind: 'ROAD_SE', severity: level === 'full' ? 'MEDIUM' : 'LOW',
+        title: level === 'full'
+          ? 'Limit tłumaczeń wyczerpany — opisy z kodów, teksty czekają w kolejce'
+          : 'Tłumaczenia komunikatów drogowych powyżej 80% limitu miesięcznego',
+        titleKey: 'rk_deepl_usage',
+        params: { used: result.used, limit: result.limit },
+        detail: { zrodlo: 'DeepL', poziom: level, czas: nowIso },
+        dedup: `DEEPL_USAGE:${nowIso.slice(0, 7)}:${level}`,
+      });
+    }
+  }
+}
+
 export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
   const m = integrationMode(deps.env, 'TRAFIKVERKET_API_KEY');
   if (m.mode === 'DEMO') return { job: 'road-se', mode: 'DEMO', ok: true, reason: m.reason };
@@ -581,8 +630,17 @@ export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveStaleRisks('ROAD_SE:SIT:', situations.map((e) => `ROAD_SE:SIT:${e.id}`));
   }
   for (const e of situations) {
+    for (const code of e.unknownCodes ?? []) {
+      const extra = unknownCodeRiskInput(code, now.slice(0, 10));
+      if (await deps.store.raiseRisk(extra)) risks++;
+    }
+  }
+  try { await polishRoadFreeText(deps, situations, now); }
+  catch { /* DeepL nie przerywa odczytu drogi */ }
+  for (const e of situations) {
     const risk = roadRisk('SE', e, 'https://www.trafikverket.se/trafikinformation/');
     risk.dedup = `ROAD_SE:SIT:${e.id}`;
+    if (e.note) risk.detail = { ...risk.detail, opis: e.note };
     if (await deps.store.raiseRisk(risk)) risks++;
   }
   const pct = deps.store.seSlowdownPct ? await deps.store.seSlowdownPct() : 15;
@@ -590,6 +648,7 @@ export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
     typeof road === 'string' && new RegExp(`^E\\s*${code.slice(1)}$`, 'i').test(road.trim());
   const sitAll = situations.slice(0, 80).map((e) => ({
     id: e.id, kind: e.kind, severity: e.severity, title: e.title, road: e.road ?? 'E4',
+    original: e.original ?? null, note: e.note ?? null,
   }));
   const slow = (rcRes.ok || wxRes.ok) ? seRoadSlowdownMult({
     conditions: conditions.filter((c) => onRoad(c.road, 'E4') || !onRoad(c.road, 'E22')),

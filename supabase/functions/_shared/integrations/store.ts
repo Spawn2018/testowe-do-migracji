@@ -135,5 +135,36 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         observed_at: row.observedAt,
       }, { onConflict: 'corridor' }), 'marine_conditions upsert');
     },
+    async translationGet(hash: string) {
+      const r = await sb.from('translation_memory').select('pl_text').eq('text_hash', hash).maybeSingle();
+      if (r.error || !r.data) return null;
+      return String((r.data as { pl_text: string }).pl_text);
+    },
+    async translationPut(hash: string, source: string, pl: string, lang: 'SV' | 'EN') {
+      must(await sb.from('translation_memory').upsert({
+        text_hash: hash, source_lang: lang, source_text: source, pl_text: pl,
+      }, { onConflict: 'text_hash' }), 'translation_memory');
+    },
+    async translationEnqueue(hash: string, source: string, lang: 'SV' | 'EN', reason: string) {
+      must(await sb.from('translation_queue').upsert({
+        source_hash: hash, source_lang: lang, source_text: source, reason,
+      }, { onConflict: 'source_hash' }), 'translation_queue');
+    },
+    async deeplUsage() {
+      const month = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit' }).format(new Date()) + '-01';
+      const r = await sb.from('deepl_usage').select('characters,monthly_limit').eq('month', month).maybeSingle();
+      const row = r.data as { characters?: number; monthly_limit?: number } | null;
+      return { characters: Number(row?.characters ?? 0), limit: Number(row?.monthly_limit ?? 1000000) };
+    },
+    async deeplAddUsage(n: number) {
+      const month = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit' }).format(new Date()) + '-01';
+      const cur = await sb.from('deepl_usage').select('characters').eq('month', month).maybeSingle();
+      const prev = Number((cur.data as { characters?: number } | null)?.characters ?? 0);
+      const next = prev + n;
+      must(await sb.from('deepl_usage').upsert({
+        month, characters: next, monthly_limit: 1000000,
+      }, { onConflict: 'month' }), 'deepl_usage');
+      return next;
+    },
   };
 }

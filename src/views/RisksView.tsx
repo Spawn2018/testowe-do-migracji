@@ -19,6 +19,7 @@ import type { MarineConditionRow } from '../lib/marineWeatherDb';
 import { OperatorNoticeForm } from '../components/OperatorNoticeForm';
 import type { CorridorConditionRow } from '../lib/corridorConditionsDb';
 import { knotsToMs } from '../lib/marineUnits';
+import { formatGustPl } from '../lib/pl/weatherPl';
 import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
 import { AUTO_RISK_CODES, autoRiskLabel, effDeparture, fmtLocal, nearestCrossingSailings, sailingStatusLabel, sailingStatusPill, type AutoRiskCode } from '../lib/sailings';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
@@ -229,7 +230,7 @@ export function RisksView() {
                     <div className="note" style={{ marginTop: 6, border: 0 }}>
                       {tp(locale, 'i2_sea_wave_gust', {
                         wave: marine.maxWaveM != null ? formatWaveM(marine.maxWaveM, locale) : '—',
-                        gust: marine.maxGustKn != null ? `${Math.round(marine.maxGustKn)} kn` : '—',
+                        gust: marine.maxGustKn != null ? formatGustPl(marine.maxGustKn) : '—',
                         wave_thr: String(marine.waveThrM),
                         gust_thr: String(marine.gustThrKn),
                       })}
@@ -405,7 +406,16 @@ export function RisksView() {
                       ? corridor.situations.map((s) => (
                         <tr key={s.id}>
                           <td style={{ fontWeight: 600 }} data-content>{s.road || 'E4'}</td>
-                          <td data-content>{s.title}</td>
+                          <td data-content>
+                            {s.title}
+                            {s.note ? <div>{s.note}</div> : null}
+                            {s.original ? (
+                              <details>
+                                <summary>{'Pokaż oryginał'}</summary>
+                                <span data-original="road">{s.original}</span>
+                              </details>
+                            ) : null}
+                          </td>
                           <td className="num">—</td>
                           <td style={{ textAlign: 'right' }}>
                             <span className={`pill ${sevPill(s.severity)}`}>

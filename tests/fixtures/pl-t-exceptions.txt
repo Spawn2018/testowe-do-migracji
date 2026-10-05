@@ -76,3 +76,4 @@ OpenStreetMap
 contributors
 docs
 handover
+DeepL
