@@ -855,3 +855,30 @@ Bez kasowania danych, bez wydatków.
 Zapisz decyzje w rejestrze decyzji, w PLAN.md i w POLECENIA_KOORDYNATORA.md.
 
 Kolejność wykonania: (2) SMS fałszywe + (3) porządki → (1) paliwa krok B → (4) część B według PLAN z wyborami (B-7c A, B-8 zakres dat + bez kierowcy/ciągnika + Zmień ciągnik, B-9 C, Q-9 B). B-3a nadal stop na D-83.
+
+## Polecenie 2026-10-05 ~11:43 (czas warszawski) — STATUS PLANU I DALSZA PRACA
+
+STATUS PLANU I DALSZA PRACA (koordynator 05.10)
+
+1. RAPORT STANU — tabela dla KAŻDEJ pozycji części B, C i pozostałych
+   pozycji przed pilotażem z PLAN.md: ID | status | dowód (PR, migracja,
+   test) | na co czeka. Szczególnie: B-1, B-10, B-KSH, B-REJSY, C-SEP,
+   HHL-4a, FAK-9, UI-12, D-31, D-27, Q-11a, Q-11b, Q-17, B-Q.
+   Pozycja bez dowodu = „do zrobienia".
+
+2. DALEJ BEZ CZEKANIA — według kolejności PLAN.md:
+   - wszystkie pozycje z punktu 1 „do zrobienia", które nie czekają
+     na właściciela ani dane zewnętrzne
+   - następnie pozycje po części B z PLAN.md: H-2-PL, H-7, H-8, H-10,
+     H-12, CLEAN-MAPLIBRE, AUTH-MAIL, I-29, GATE-WEEKLY
+   - SEC-OWASP (ASVS poziom 2) jako ostatnia przed pilotażem
+   Nie stajesz, dopóki w PLAN.md jest pozycja, która nie czeka
+   na właściciela.
+
+3. CZEKA NA WŁAŚCICIELA (tylko lista w raporcie, bez budowy):
+   D-83 (wymiary → B-3a, H-1, H-3, H-6), plan czyszczenia R-0
+   do akceptacji, sprawy D-3, D-7, D-14, D-16, D-17, D-21.
+   Czeka na dane zewnętrzne: TELM-2 (emtrack), II-10-E1 (IT KSH).
+
+Migracje przez lokalną bramę, obie domeny 200. Bez kasowania danych,
+bez wydatków, bez prawdziwych SMS bez zgody.
