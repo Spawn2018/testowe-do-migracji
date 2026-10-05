@@ -198,7 +198,8 @@ export function rawGps(fix: { lat: number; lng: number }): { lat: number; lng: n
 export const H6_LAYER_ENABLED = false;
 
 export function h6Requests(flagFromDb: boolean, hasDims: boolean): boolean {
-  return H6_LAYER_ENABLED === true && flagFromDb === true && hasDims === true;
+  const enabled: boolean = H6_LAYER_ENABLED;
+  return enabled && flagFromDb && hasDims;
 }
 
 export interface PortZone {

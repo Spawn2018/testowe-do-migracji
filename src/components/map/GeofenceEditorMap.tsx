@@ -27,7 +27,7 @@ export function GeofenceEditorMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const groupRef = useRef<L.LayerGroup | null>(null);
-  const tilesRef = useRef<L.TileLayer | null>(null);
+  const tilesRef = useRef<L.Layer | null>(null);
   const onMoveRef = useRef(onMove);
   const fittedRef = useRef('');
   onMoveRef.current = onMove;
@@ -63,14 +63,14 @@ export function GeofenceEditorMap({
     let cancelled = false;
     let current: L.Layer | null = tilesRef.current;
     if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
-      tilesRef.current = installFallback(map, current, theme) as L.TileLayer;
+      tilesRef.current = installFallback(map, current, theme);
       return;
     }
     const run = () => {
       void import('./applyBasemap').then(({ applyBasemap }) => applyBasemap(map, current, theme, () => { if (!cancelled) run(); })).then((layer) => {
         if (cancelled) { if (map.hasLayer(layer)) map.removeLayer(layer); return; }
         current = layer;
-        tilesRef.current = layer as L.TileLayer;
+        tilesRef.current = layer;
       });
     };
     run();
