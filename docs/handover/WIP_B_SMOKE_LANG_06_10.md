@@ -24,7 +24,7 @@ Smoke + gate:visual zielone po usunięciu `#langSeg` (8322d02). Tylko testy/wzor
 - Odświeżone wzorce zawierają też zmiany SPOZA listy koordynatora: kokpit „E4 CLOSED→zamknięta” (`7d2b26c`), mapa chipy „Bez GPS/Ryzyko” (`e5ccb96`/`f456153`), stan-zablokowany szuflada (`80a7ad2` B-10a i kolejne) → do decyzji, NIE scalać bez zgody
 - W toku: przypisanie awarii (build `8322d02^` :4181), matryca PL 280 kandydat
 
-## Checkpoint 02:02 CEST — STOP
+## Checkpoint 01:36 CEST — STOP
 - Matryca PL 280 wygenerowana (280/280 OK zrzutów): 279 ponad próg; po wyrównaniu przesunięcia 30 px (niższy pasek korytarza) 75 czystych, 205 z resztą: harmonogram 30, mapa 30, ryzyka 30, ustawienia 20, kokpit 16, dokumenty 12, faktury 12, opcje/rozliczenia/strefy 10, faktury-przych. 9, inne 4.
 - Na KAŻDYM nowym ujęciu toast „stan uszkodzony” → B-PERSIST-TOAST (regresja 05.10 08:12–15:34). Wzorca 280 NIE odświeżono.
 - Cofnięto odświeżenie kokpit×2, mapa×2, stan-zablokowany (przyczyny spoza listy koordynatora).
