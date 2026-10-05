@@ -740,3 +740,7 @@ KOREKTA Q-18, AIS DLA POLFERRIES I DALSZA CZĘŚĆ B (właściciel 05.10)
 ## Polecenie 2026-10-05 07:57 (czas warszawski) — D, potem B; odśwież wzorce map
 
 D, potem B. Najpierw odśwież wzorce 90 ujęć map — zmiana zamierzona (podkład HERE z B-MAPA, stały rozmiar mapy B-7a, warstwy na telefonie B-7b), z opisem przyczyny w commicie. Inaczej brama wizualna będzie czerwona przy każdej kolejnej pozycji. Potem część B od B-1 według PLAN.md, bez zmian kolejności.
+
+## Polecenie 2026-10-05 ~08:35 (czas warszawski) — część B od B-5
+
+Kontynuacja części B od B-5 według PLAN.md (po B-4b). B-3a nadal stop — czeka na wymiary (D-83). B-5: przycisku nowej automatyzacji ma nie być (tylko historia); jeśli już ukryty — potwierdzić testem. Potem B-6a…B-6i w kolejności PLAN.md. Pomijane (tylko propozycja na piśmie): B-7c, filtry i statusy z B-8, B-9, Q-9. B-7a i B-7b już zrobione. Wzorce wizualne odświeżać tylko dla ujęć zmienionych przez B-6, z przyczyną w commicie.

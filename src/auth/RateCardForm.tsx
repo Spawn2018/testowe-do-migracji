@@ -137,10 +137,10 @@ export default function RateCardForm() {
           <label>{t(locale, side === 'COST' ? 'i19_org_carrier' : 'i19_org_client')}<select className="input" value={orgId} onChange={(e) => setOrgId(e.target.value)}>
             {sideOrgs.map((o) => <option key={o.id} value={o.id}>{o.code} — {o.name}</option>)}</select></label>
           <label>{t(locale, 'i19_valid_from')}<input className="input" type="date" required value={validFrom} onChange={(e) => setValidFrom(e.target.value)} /></label>
-          <div className="wide" data-rate-card="rows">
+          <div className="full-row" data-rate-card="rows">
             <h4 className="sec">{t(locale, 'i30_rows_h')}</h4>
             {rows.length === 0 ? <div className="note">{t(locale, 'i30_rows_none')}</div> : (
-              <table className="rate-table">
+              <div className="rate-table-wrap"><table className="rate-table">
                 <thead><tr>
                   <th>{t(locale, 'i30_col_symbol')}</th>
                   <th>{t(locale, 'i30_col_family')}</th>
@@ -166,7 +166,7 @@ export default function RateCardForm() {
                     <td><button className="chipbtn" type="button" onClick={() => setRows((x) => x.filter((_, j) => j !== i))}>{t(locale, 'i19_remove')}</button></td>
                   </tr>
                 ))}</tbody>
-              </table>
+              </table></div>
             )}
             <button className="chipbtn" type="button" onClick={() => setRows((x) => [...x, { ...EMPTY_SYMBOL_ROW }])}>{t(locale, 'i30_add_row')}</button>
           </div>

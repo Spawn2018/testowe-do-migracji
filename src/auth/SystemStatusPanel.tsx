@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getSupabase } from './client';
 import { useTowerStore } from '../store/useTowerStore';
-import { t, tp } from '../i18n/messages';
+import { hasKey, t, tp } from '../i18n/messages';
 import './auth.css';
 
 type BackupRow = {
@@ -34,6 +34,41 @@ type SmsDeviceRow = {
 
 const SILENT_MS = 15 * 60 * 1000;
 
+/** Zadania integracji zapisujące integration_runs (ostatni przebieg każdego — także rzadkich, raz na dobę). */
+export const KNOWN_JOBS = [
+  'send-notifications', 'ferry-ais', 'ferry-ais-listen', 'ferry-status', 'ferry-schedule', 'ferry-weather',
+  'road-se', 'road-pl', 'daily-admin-digest', 'email-budget', 'rodo', 'usage-check', 'fuel-wob',
+] as const;
+
+type TileState = 'ok' | 'warn' | 'bad' | 'off';
+
+/** B-6d — ostatni przebieg każdego zadania (lista posortowana malejąco po ran_at albo dowolnie). */
+export function latestPerJob(rows: readonly IntegRow[]): IntegRow[] {
+  const best = new Map<string, IntegRow>();
+  for (const r of rows) {
+    const cur = best.get(r.job);
+    if (!cur || r.ran_at > cur.ran_at) best.set(r.job, r);
+  }
+  return [...best.values()].sort((a, b) => a.job.localeCompare(b.job));
+}
+
+function levelState(level: string | undefined): TileState {
+  if (!level || level === 'off') return 'off';
+  if (/crit|full|stop|block/i.test(level)) return 'bad';
+  if (/warn/i.test(level)) return 'warn';
+  return 'ok';
+}
+
+function Tile({ state, k, v, d, attrs }: { state: TileState; k: string; v: string; d: string; attrs?: Record<string, string> }) {
+  return (
+    <div className="sys-tile" data-state={state} {...attrs}>
+      <div className="k">{k}</div>
+      <div className="v">{v}</div>
+      {d ? <div className="d">{d}</div> : null}
+    </div>
+  );
+}
+
 export default function SystemStatusPanel() {
   const locale = useTowerStore((s) => s.locale);
   const location = useLocation();
@@ -59,13 +94,20 @@ export default function SystemStatusPanel() {
       setBackups((b.data ?? []) as BackupRow[]);
     }
 
-    const i = await sb
+    const recent = await sb
       .from('integration_runs')
       .select('id,job,ok,ran_at')
       .order('ran_at', { ascending: false })
-      .limit(12);
-    if (i.error) setIntegs([]);
-    else setIntegs((i.data ?? []) as IntegRow[]);
+      .limit(200);
+    const seen = new Set(((recent.data ?? []) as IntegRow[]).map((r) => r.job));
+    const rare = await Promise.all(KNOWN_JOBS.filter((j) => !seen.has(j)).map((j) => sb
+      .from('integration_runs')
+      .select('id,job,ok,ran_at')
+      .eq('job', j)
+      .order('ran_at', { ascending: false })
+      .limit(1)));
+    if (recent.error) setIntegs([]);
+    else setIntegs([...((recent.data ?? []) as IntegRow[]), ...rare.flatMap((r) => (r.data ?? []) as IntegRow[])]);
 
     const h = await sb.rpc('here_budget_view');
     if (h.error || !h.data) setHereBudget({ enabled: false, requests: 0, estimated_usd: 0, level: 'off' });
@@ -118,101 +160,82 @@ export default function SystemStatusPanel() {
     return Date.now() - new Date(seen).getTime() > SILENT_MS;
   };
 
+  // B-6d — pulpit: kafelki ze stanem (ok / uwaga / błąd / brak) zamiast list tekstu
+  const smsState: TileState = smsDevices.length === 0 ? 'off' : smsDevices.some((d) => !smsSilent(d.last_seen_at)) ? 'ok' : 'bad';
+  const lastBackup = backups[0] ?? null;
+  const backupState: TileState = !lastBackup ? 'off' : lastBackup.status === 'OK' ? 'ok' : lastBackup.status === 'ERROR' ? 'bad' : 'warn';
+  const jobs = latestPerJob(integs);
+  const badJobs = jobs.filter((j) => !j.ok);
+  const integState: TileState = jobs.length === 0 ? 'off' : badJobs.length ? 'bad' : 'ok';
+  const mailState: TileState = !mailBudget ? 'off' : mailBudget.level === 'critical_only' ? 'bad' : mailBudget.level === 'warn' || mailBudget.suppressed_n > 0 ? 'warn' : 'ok';
+  const hereState: TileState = !hereBudget || !hereBudget.enabled ? 'off' : levelState(hereBudget.level);
+  const deeplState: TileState = !deepl ? 'off' : levelState(deepl.level);
+  const nf = (n: number | undefined) => Number(n ?? 0).toLocaleString(locale === 'sv' ? 'sv-SE' : locale === 'en' ? 'en-GB' : 'pl-PL');
+  const jobName = (job: string) => {
+    const k = `b6_job_${job.replace(/-/g, '_')}`;
+    return hasKey(locale, k) ? t(locale, k) : job;
+  };
+
   return (
     <div data-panel="system-status">
       {msg ? <div className="note">{msg}</div> : null}
-      <h4 className="sec">{t(locale, 'opt_acc_sys_gateway')}</h4>
-      {smsDevices.length === 0 ? (
-        <div className="muted">{t(locale, 'opt_acc_gateway_none')}</div>
-      ) : (
-        <div className="settings-list">
-          {smsDevices.map((d) => {
-            const silent = smsSilent(d.last_seen_at);
-            return (
-              <div className="settings-row" key={d.id} data-sms-silent={silent ? '1' : '0'}>
-                <div>
-                  <b>{d.label}{d.paused ? ` · ${t(locale, 'i3_device_paused')}` : ''}</b>
-                  <span>
-                    {tp(locale, 'opt_acc_gateway_seen', { d: fmt(d.last_seen_at) })}
-                    {silent ? ` · ${t(locale, 'opt_acc_gateway_risk')}` : ''}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      {mailBudget ? (
-        <div className="note" data-email-budget={mailBudget.level} style={{ marginTop: 14 }}>
-          {tp(locale, 'opt_acc_email_budget', {
-            n: String(mailBudget.immediate_n),
-            d: String(mailBudget.digest_n),
-            s: String(mailBudget.suppressed_n),
-          })}
-          {mailBudget.level === 'warn' ? ` ${t(locale, 'opt_acc_email_warn')}` : ''}
-          {mailBudget.level === 'critical_only' ? ` ${t(locale, 'opt_acc_email_crit')}` : ''}
-          {mailBudget.suppressed_n > 0
-            ? ` ${tp(locale, 'opt_acc_email_held', {
-                s: String(mailBudget.suppressed_n),
-                who: (mailBudget.suppressed_to ?? []).map((x) => `${x.recipient} (${x.n})`).join(', ') || '—',
-              })}`
-            : ''}
+      <div className="sys-dash" data-sys-dash>
+        <Tile state={smsState} k={t(locale, 'b6_sys_gw')} attrs={{ 'data-sms-silent': smsState === 'bad' ? '1' : '0' }}
+          v={t(locale, smsState === 'ok' ? 'b6_sys_sms_ok' : smsState === 'bad' ? 'b6_sys_sms_silent' : 'b6_sys_sms_none')}
+          d={smsDevices.length ? `${smsDevices[0].label}${smsDevices[0].paused ? ` · ${t(locale, 'i3_device_paused')}` : ''} · ${tp(locale, 'opt_acc_gateway_seen', { d: fmt(smsDevices[0].last_seen_at) })}${smsState === 'bad' ? ` · ${t(locale, 'opt_acc_gateway_risk')}` : ''}` : t(locale, 'opt_acc_gateway_none')} />
+        <Tile state={mailState} k={t(locale, 'b6_sys_mail')} attrs={{ 'data-email-budget': mailBudget?.level ?? 'brak' }}
+          v={mailBudget ? String(mailBudget.immediate_n + mailBudget.digest_n) : t(locale, 'b6_sys_none')}
+          d={mailBudget ? `${tp(locale, 'b6_sys_mail_d', { n: String(mailBudget.immediate_n), d: String(mailBudget.digest_n), s: String(mailBudget.suppressed_n) })}${mailBudget.level === 'warn' ? ` · ${t(locale, 'opt_acc_email_warn')}` : ''}${mailBudget.level === 'critical_only' ? ` · ${t(locale, 'opt_acc_email_crit')}` : ''}` : ''} />
+        <Tile state={backupState} k={t(locale, 'b6_sys_backup')}
+          v={lastBackup ? (hasKey(locale, `b6_sys_backup_${lastBackup.status}`) ? t(locale, `b6_sys_backup_${lastBackup.status}`) : lastBackup.status) : t(locale, 'b6_sys_none')}
+          d={lastBackup ? `${fmt(lastBackup.started_at)}${lastBackup.error ? ` · ${lastBackup.error.slice(0, 80)}` : ''}` : t(locale, 'opt_acc_sys_none')} />
+        <Tile state={integState} k={t(locale, 'b6_sys_integ')}
+          v={jobs.length ? tp(locale, 'b6_sys_integ_v', { ok: String(jobs.length - badJobs.length), n: String(jobs.length) }) : t(locale, 'b6_sys_none')}
+          d={jobs.length ? (badJobs.length ? tp(locale, 'b6_sys_integ_bad', { jobs: badJobs.map((j) => jobName(j.job)).join(', ') }) : t(locale, 'b6_sys_integ_all_ok')) : t(locale, 'opt_acc_sys_none')} />
+        <Tile state={hereState} k={t(locale, 'b6_sys_here')} attrs={{ 'data-here-tile': hereBudget?.level ?? 'off', id: 'here' }}
+          v={`${nf(hereBudget?.estimated_usd)} / 100 USD`}
+          d={tp(locale, 'b6_sys_here_d', { tiles: nf(hereBudget?.tiles_requests), match: nf(hereBudget?.matching_requests), basemap: hereBudget?.tiles_open ? 'HERE' : 'zapas' })} />
+        <Tile state={deeplState} k={t(locale, 'b6_sys_deepl')} attrs={{ 'data-deepl-usage': deepl?.level ?? 'brak' }}
+          v={nf(deepl?.characters)}
+          d={`${tp(locale, 'b6_sys_deepl_d', { limit: nf(deepl?.monthly_limit ?? 1000000), q: String(deepl?.queued ?? 0) })}${deepl?.level === 'warn' ? ` · ${t(locale, 'pl_deepl_warn')}` : ''}${deepl?.level === 'full' ? ` · ${t(locale, 'pl_deepl_full')}` : ''}`} />
+      </div>
+      {mailBudget && mailBudget.suppressed_n > 0 ? (
+        <div className="note" style={{ marginTop: 10 }}>
+          {tp(locale, 'opt_acc_email_held', { s: String(mailBudget.suppressed_n), who: (mailBudget.suppressed_to ?? []).map((x) => `${x.recipient} (${x.n})`).join(', ') || '—' })}
         </div>
       ) : null}
-      <h4 className="sec" style={{ marginTop: 14 }} data-backup-list>{t(locale, 'opt_acc_sys_backup')}</h4>
-      {backups.length === 0 ? (
-        <div className="muted">{t(locale, 'opt_acc_sys_none')}</div>
-      ) : (
-        <div className="settings-list" data-backup-list>
-          {backups.map((r) => (
-            <div className="settings-row" key={r.id}>
-              <div>
-                <b>#{r.id} · {r.status}</b>
-                <span>{fmt(r.started_at)} → {fmt(r.finished_at)}{r.error ? ` · ${r.error.slice(0, 80)}` : ''}</span>
-              </div>
-            </div>
-          ))}
+      <div className="sys-cols">
+        <div>
+          <h4 className="sec">{t(locale, 'b6_sys_jobs_h')}</h4>
+          {jobs.length === 0 ? <div className="muted">{t(locale, 'opt_acc_sys_none')}</div> : (
+            <table className="sys-table" data-integ-list>
+              <tbody>{jobs.map((j) => (
+                <tr key={j.job} data-job={j.job}>
+                  <td>{jobName(j.job)}</td>
+                  <td><span className={`pill ${j.ok ? 'p-go' : 'p-red'}`}>{t(locale, j.ok ? 'b6_sys_ok' : 'b6_sys_err')}</span></td>
+                  <td className="sys-when">{fmt(j.ran_at)}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          )}
         </div>
-      )}
-      <h4 className="sec" id="here" style={{ marginTop: 14 }}>{t(locale, 'h1_tile')}</h4>
-      <div data-here-tile>
-        {tp(locale, 'h1_tile_body', {
-          n: String(hereBudget?.requests ?? 0),
-          usd: String(hereBudget?.estimated_usd ?? 0),
-          tiles: String(hereBudget?.tiles_requests ?? 0),
-          tusd: String(hereBudget?.tiles_usd ?? 0),
-          match: String(hereBudget?.matching_requests ?? 0),
-          musd: String(hereBudget?.matching_usd ?? 0),
-          basemap: hereBudget?.tiles_open ? 'HERE' : 'zapas',
-        })}
-      </div>
-      <h4 className="sec" style={{ marginTop: 14 }}>{t(locale, 'pl_deepl_tile')}</h4>
-      <div data-deepl-usage={deepl?.level ?? 'brak'}>
-        {tp(locale, 'pl_deepl_body', {
-          n: String(deepl?.characters ?? 0),
-          limit: String(deepl?.monthly_limit ?? 1000000),
-          q: String(deepl?.queued ?? 0),
-        })}
-        {deepl?.level === 'warn' ? ` ${t(locale, 'pl_deepl_warn')}` : ''}
-        {deepl?.level === 'full' ? ` ${t(locale, 'pl_deepl_full')}` : ''}
-      </div>
-      <h4 className="sec" style={{ marginTop: 14 }}>{t(locale, 'opt_acc_sys_integ')}</h4>
-      {integs.length === 0 ? (
-        <div className="muted">{t(locale, 'opt_acc_sys_none')}</div>
-      ) : (
-        <div className="settings-list">
-          {integs.map((r) => (
-            <div className="settings-row" key={r.id}>
-              <div>
-                <b>{r.job} · {r.ok ? 'OK' : 'ERR'}</b>
-                <span>{fmt(r.ran_at)}</span>
-              </div>
-            </div>
-          ))}
+        <div>
+          <h4 className="sec" data-backup-list>{t(locale, 'b6_sys_backups_h')}</h4>
+          {backups.length === 0 ? <div className="muted">{t(locale, 'opt_acc_sys_none')}</div> : (
+            <table className="sys-table" data-backup-list>
+              <tbody>{backups.map((r) => (
+                <tr key={r.id}>
+                  <td>#{r.id}</td>
+                  <td><span className={`pill ${r.status === 'OK' ? 'p-go' : r.status === 'ERROR' ? 'p-red' : 'p-amber'}`}>{hasKey(locale, `b6_sys_backup_${r.status}`) ? t(locale, `b6_sys_backup_${r.status}`) : r.status}</span></td>
+                  <td className="sys-when">{fmt(r.started_at)}{r.error ? ` · ${r.error.slice(0, 80)}` : ''}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          )}
         </div>
-      )}
+      </div>
       <div className="note option-note">{t(locale, 'opt_acc_sys_note')}</div>
-      <button type="button" className="chipbtn" onClick={() => void refresh()}>{t(locale, 'opt_acc_sys_refresh')}</button>
+      <button type="button" className="chipbtn" style={{ marginTop: 10 }} onClick={() => void refresh()}>{t(locale, 'opt_acc_sys_refresh')}</button>
     </div>
   );
 }

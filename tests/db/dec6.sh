@@ -40,6 +40,21 @@ sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local ro
      select count(*) from admin_auth_login_log(5); commit;" >/dev/null
 ok=$((ok+1)); echo "  OK    admin_auth_login_log wywołanie HHL"
 
+echo; echo "[dec6] B-6e dziennik logowań z auth_login_events (0164)"
+val "wyzwalacz na auth.sessions" "select count(*) from pg_trigger where tgname='tower_on_auth_session_created' and tgrelid='auth.sessions'::regclass" 1
+sys "insert into auth.sessions (id, user_id, created_at, user_agent, ip) values ('55555555-0000-0000-0000-0000000000e1', '$HHL', now() - interval '1 minute', 'Mozilla/5.0 (Windows NT 10.0) Chrome/129', '203.0.113.7')" >/dev/null
+val "nowa sesja = wpis w auth_login_events" "select count(*) from auth_login_events where session_id='55555555-0000-0000-0000-0000000000e1'" 1
+val "wpis ma e-mail z app_users i IP" "select email||' '||ip from auth_login_events where session_id='55555555-0000-0000-0000-0000000000e1'" "hhl@test 203.0.113.7"
+val "HHL_ADMIN widzi logowanie w dzienniku" "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated;
+     select email||'|'||ip_address||'|'||log_type||'|'||(user_agent like '%Chrome%')::text from admin_auth_login_log(5) limit 1; rollback;" "hhl@test|203.0.113.7|SESSION|true"
+err "KSH nie widzi dziennika" "begin; select set_config('request.jwt.claim.sub','11111111-0000-0000-0000-000000000002',true); set local role authenticated;
+     select count(*) from admin_auth_login_log(5); rollback;" "Tylko administrator HHL"
+err "tabela bez dostępu dla authenticated" "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated;
+     select count(*) from auth_login_events; rollback;" "permission denied"
+val "funkcja wyzwalacza bez EXECUTE dla authenticated" "select has_function_privilege('authenticated','public.tower_log_auth_session()','EXECUTE')" f
+sys "insert into auth.sessions (id, user_id) values ('55555555-0000-0000-0000-0000000000e2', '99999999-0000-0000-0000-000000000009')" >/dev/null
+val "nieznane konto nie blokuje sesji" "select count(*) from auth.sessions where id='55555555-0000-0000-0000-0000000000e2'" 1
+
 sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated;
      select admin_broadcast_set('Test DEC-6', now() + interval '2 hours', true, true, false); commit;" >/dev/null
 val "baner aktywny" "select count(*) from system_broadcast where cleared_at is null and expires_at > now()" 1
