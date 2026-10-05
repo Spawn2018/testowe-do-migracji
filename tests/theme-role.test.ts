@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultThemeForRole } from '../src/lib/permissions';
-import { applyThemeToDom } from '../src/lib/theme';
+import { applyThemeToDom, systemTheme } from '../src/lib/theme';
 import { useTowerStore } from '../src/store/useTowerStore';
 
 type ThemeDom = {
@@ -14,9 +14,25 @@ function themeDom(): ThemeDom {
   return (globalThis as unknown as { __wtThemeDom: ThemeDom }).__wtThemeDom;
 }
 
-describe('Fala-1-D16 theme per role + data-theme only', () => {
+function mockPrefersLight(light: boolean) {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn().mockImplementation((query: string) => ({
+      matches: light && query.includes('prefers-color-scheme: light'),
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  );
+}
+
+describe('Q-9 B theme: system + manual override', () => {
   beforeEach(() => {
     themeDom().reset();
+    mockPrefersLight(false); // system dark by default in tests
     useTowerStore.setState({
       role: 'HHL',
       theme: 'dark',
@@ -24,10 +40,17 @@ describe('Fala-1-D16 theme per role + data-theme only', () => {
     });
   });
 
-  it('defaultThemeForRole: KSH light, HHL/SCX dark', () => {
+  it('defaultThemeForRole remains documented (legacy helper)', () => {
     expect(defaultThemeForRole('KSH')).toBe('light');
     expect(defaultThemeForRole('HHL')).toBe('dark');
     expect(defaultThemeForRole('SCX')).toBe('dark');
+  });
+
+  it('systemTheme follows prefers-color-scheme', () => {
+    mockPrefersLight(true);
+    expect(systemTheme()).toBe('light');
+    mockPrefersLight(false);
+    expect(systemTheme()).toBe('dark');
   });
 
   it('applyThemeToDom sets data-theme and strips Tailwind dark class', () => {
@@ -40,17 +63,14 @@ describe('Fala-1-D16 theme per role + data-theme only', () => {
     expect(themeDom().hasDarkClass()).toBe(false);
   });
 
-  it('setRole without themeManual applies role default theme', () => {
-    useTowerStore.getState().setRole('KSH');
+  it('setRole without themeManual applies system theme (not role)', () => {
+    mockPrefersLight(true);
+    useTowerStore.getState().setRole('HHL');
     expect(useTowerStore.getState().theme).toBe('light');
     expect(themeDom().getDataTheme()).toBe('light');
-    expect(themeDom().hasDarkClass()).toBe(false);
 
-    useTowerStore.getState().setRole('HHL');
-    expect(useTowerStore.getState().theme).toBe('dark');
-    expect(themeDom().getDataTheme()).toBe('dark');
-
-    useTowerStore.getState().setRole('SCX');
+    mockPrefersLight(false);
+    useTowerStore.getState().setRole('KSH');
     expect(useTowerStore.getState().theme).toBe('dark');
     expect(themeDom().getDataTheme()).toBe('dark');
   });
@@ -58,16 +78,27 @@ describe('Fala-1-D16 theme per role + data-theme only', () => {
   it('themeManual sticks across setRole', () => {
     useTowerStore.getState().setTheme('dark'); // manual
     expect(useTowerStore.getState().themeManual).toBe(true);
+    mockPrefersLight(true);
     useTowerStore.getState().setRole('KSH');
     expect(useTowerStore.getState().theme).toBe('dark');
     expect(themeDom().getDataTheme()).toBe('dark');
   });
 
-  it('initTheme forces role default when !themeManual (stale persist paint)', () => {
-    useTowerStore.setState({ role: 'KSH', theme: 'dark', themeManual: false });
+  it('initTheme uses system when !themeManual', () => {
+    mockPrefersLight(true);
+    useTowerStore.setState({ role: 'HHL', theme: 'dark', themeManual: false });
     useTowerStore.getState().initTheme();
     expect(useTowerStore.getState().theme).toBe('light');
     expect(themeDom().getDataTheme()).toBe('light');
     expect(themeDom().hasDarkClass()).toBe(false);
+  });
+
+  it('setThemePreference(system) clears manual', () => {
+    mockPrefersLight(true);
+    useTowerStore.getState().setTheme('dark');
+    expect(useTowerStore.getState().themeManual).toBe(true);
+    useTowerStore.getState().setThemePreference('system');
+    expect(useTowerStore.getState().themeManual).toBe(false);
+    expect(useTowerStore.getState().theme).toBe('light');
   });
 });

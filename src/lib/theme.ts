@@ -1,6 +1,12 @@
 /** Document theme signaling — Claude SoT uses `data-theme` on <html> only (Fala-1-D16). */
 export type Theme = 'dark' | 'light';
 
+/** Q-9 B: motyw według ustawień systemu (prefers-color-scheme). */
+export function systemTheme(): Theme {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'dark';
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+
 /**
  * Apply theme to the document. Single signal: `data-theme`.
  * Do NOT toggle Tailwind `class="dark"` — CSS tokens already key off `data-theme` / :root.

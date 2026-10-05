@@ -18,6 +18,7 @@ export function CorridorSpine() {
   const navigateTo = useTowerStore((s) => s.navigateTo);
   const setStageFilter = useTowerStore((s) => s.setStageFilter);
   const locale = useTowerStore((s) => s.locale);
+  const sailings = useTowerStore((s) => s.sailings);
 
   const counts = countLoadsByStage(loads);
 
@@ -31,28 +32,39 @@ export function CorridorSpine() {
           const pressed = stageFilter === stage;
           const fill = Math.round((n / max) * 100);
           const domain = stageDomain(stage);
+          let ferryTip = '';
+          if (stage === 'FERRY' && sailings?.length) {
+            const upcoming = [...sailings]
+              .filter((s) => s.departureAt && new Date(s.departureAt).getTime() > Date.now() - 3600_000)
+              .sort((a, b) => new Date(a.departureAt).getTime() - new Date(b.departureAt).getTime())
+              .slice(0, 2);
+            if (upcoming.length) {
+              ferryTip = ' · ' + upcoming.map((s) => `${s.operator ?? s.vessel ?? 'rejs'} ${new Date(s.departureAt).toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`).join(' / ');
+            }
+          }
           return (
             <button
               key={stage}
               type="button"
               aria-pressed={pressed}
               title={
-                pressed
+                (pressed
                   ? t(locale, 'a6_spine_clear')
-                  : t(locale, 'a6_spine_filter').replace('{stage}', t(locale, `stage_${stage}`))
+                  : t(locale, 'a6_spine_filter').replace('{stage}', t(locale, `stage_${stage}`))) + ferryTip
               }
               onClick={() => {
                 if (stageFilter === stage) {
                   setStageFilter(null);
                   navigateTo({ stage: null });
                 } else {
-                  navigateTo({ view: 'map', stage });
+                  const view = useTowerStore.getState().view;
+                  navigateTo({ view: view === 'sched' ? 'sched' : 'map', stage });
                 }
               }}
-              className={`stage${domain ? ` ${domain}` : ''}`}
+              className={`stage${domain ? ` ${domain}` : ''}${pressed ? ' active' : ''}`}
             >
-              <div className={`n${n === 0 ? ' zero' : ''}`}>{n}</div>
-              <div className="l">{t(locale, `stage_${stage}`)}</div>
+              <div className={`n${n === 0 ? ' zero' : ''}`}>{pressed ? '×' : n}</div>
+              <div className="l">{t(locale, `stage_${stage}`)}{pressed ? ' ×' : ''}</div>
               <div className="bar">
                 <i style={{ width: n ? `${fill}%` : 0 }} />
               </div>

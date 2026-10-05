@@ -51,12 +51,13 @@ function loadMapWidths(): Record<MapColId, number> {
   return base;
 }
 
-type TimingFilter = 'all' | 'ontime' | 'late';
+type TimingFilter = 'all' | 'ontime' | 'late' | 'nogps' | 'risk';
 
 export function MapView() {
   const loads = useTowerStore((s) => s.loads);
   const role = useTowerStore((s) => s.role);
   const stageFilter = useTowerStore((s) => s.stageFilter);
+  const risks = useTowerStore((s) => s.risks);
   const search = useTowerStore((s) => s.search);
   const setSearch = useTowerStore((s) => s.setSearch);
   const hoverLoadId = useTowerStore((s) => s.hoverLoadId);
@@ -109,15 +110,33 @@ export function MapView() {
     [loads, role, stageFilter, search],
   );
 
+  const riskLoadIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const r of risks) {
+      if (r.loadId) ids.add(r.loadId);
+    }
+    return ids;
+  }, [risks]);
+
   const list = useMemo(() => {
     if (timing === 'ontime') return baseList.filter((l) => !l.delayed);
     if (timing === 'late') return baseList.filter((l) => l.delayed);
+    if (timing === 'nogps') {
+      return baseList.filter(
+        (l) => l.status === 'SILENT' || (l.silentMinutes != null && l.silentMinutes >= 30),
+      );
+    }
+    if (timing === 'risk') return baseList.filter((l) => riskLoadIds.has(l.id));
     return baseList;
-  }, [baseList, timing]);
+  }, [baseList, timing, riskLoadIds]);
 
   const inMotion = list.filter((l) => l.progress > 0 && l.progress < 1).length;
   const ontimeCount = baseList.filter((l) => !l.delayed).length;
   const lateCount = baseList.filter((l) => l.delayed).length;
+  const nogpsCount = baseList.filter(
+    (l) => l.status === 'SILENT' || (l.silentMinutes != null && l.silentMinutes >= 30),
+  ).length;
+  const riskCount = baseList.filter((l) => riskLoadIds.has(l.id)).length;
 
   const startResize = (id: MapColId, clientX: number) => {
     const startW = widthsRef.current[id] ?? 80;
@@ -209,6 +228,24 @@ export function MapView() {
               title={t(locale, 'a6_map_late_title')}
             >
               {t(locale, 'map_late')} · {lateCount}
+            </button>
+            <button
+              type="button"
+              className="chipbtn"
+              aria-pressed={timing === 'nogps'}
+              onClick={() => setTiming(timing === 'nogps' ? 'all' : 'nogps')}
+              title={t(locale, 'a6_map_nogps_title')}
+            >
+              {tp(locale, 'a6_map_nogps', { n: String(nogpsCount) })}
+            </button>
+            <button
+              type="button"
+              className="chipbtn"
+              aria-pressed={timing === 'risk'}
+              onClick={() => setTiming(timing === 'risk' ? 'all' : 'risk')}
+              title={t(locale, 'a6_map_risk_title')}
+            >
+              {tp(locale, 'a6_map_risk', { n: String(riskCount) })}
             </button>
           </div>
 

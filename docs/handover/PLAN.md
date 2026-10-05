@@ -394,7 +394,7 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | SEFS-KOREKTA | Korekta ceny od dostawcy wchodzi do średniej SEFS, dopóki tydzień nie jest zamknięty. Po zamknięciu — wartość zamrożona (migawka 32.3); późniejsza korekta nie zmienia policzonych transportów ani faktur; zapis korekty w historii. Decyzja 05.10. | **ZROBIONE 05.10** — migracja 0166 |
 | SMS-SILENT-FIX | Fałszywe SMS_GATEWAY_SILENT (noc 4/5.10): diagnoza heartbeatów, próg ciszy, cooldown jednego alarmu; Resend 200 a status ERROR — naprawa. Zero prawdziwych SMS. | **W TOKU 05.10** |
 | MIG-0159-REG | Dopisz 0159 (i braki ewidencji) do `schema_migrations` na PROD bez ponownego wykonania; lista PROD = repo. | **W TOKU 05.10** |
-| Q-9 | Tryb jasny — **wybór właściciela 05.10 ~10:37: wariant B** (motyw według ustawień systemu + zmiana w ustawieniach użytkownika) | DO ZROBIENIA — B |
+| Q-9 | Tryb jasny — **wybór właściciela 05.10 ~10:37: wariant B** (motyw według ustawień systemu + zmiana w ustawieniach użytkownika) | **ZROBIONE 05.10** — B |
 | B-6a | Opcje: logika i workflow „Powiadomienia i decyzje” | **ZROBIONE 05.10** — rozwijane „Jak to działa” w sekcji (PR #74) |
 | B-6b | Odbiorcy SMS i strefy: po co strefy i co robią | **ZROBIONE 05.10** — „Jak to działa” w sekcji (PR #74) |
 | B-6c | Progi i terminy: jak działa mechanizm | **ZROBIONE 05.10** — „Jak to działa” w sekcji (PR #74) |
@@ -408,11 +408,11 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | PL-PLURAL | P3. Odmiana przez liczby w komunikatach PL. Import: „Pominięto 2 wierszy” ma być „2 wiersze”. Jedna funkcja (1 / 2–4 / 5+; 22–24 = wiersze, 12–14 = wierszy). Test: 1, 2, 5, 12, 22, 25. Źródło: `tests/b8-imp.test.ts`, `standardSkipMessage`. Za B-MAPA i za kolejką nocną. | **ZROBIONE 05.10** — PR #63, `plPlural` w `src/lib/plPlural.ts` |
 | B-7a | Mapa: stały rozmiar, niezależny od wysokości tabeli obok; po otwarciu widoku MAPA widoczna w całości | **ZROBIONE 05.10** — wysokość mapy z wysokości okna (`max(420px, 100dvh − 215px)`), nie z tabeli; `tests/b7-map.spec.ts` (6 rozmiarów). Wzorzec mapy odświeżony 05.10 07:57 (B-MAPA + B-7a + B-7b). |
 | B-7b | Checkboxy warstw mapy zawsze widoczne; na telefonie nie nachodzą na inne elementy | **ZROBIONE 05.10** — komputer: ramka w rogu mapy jak dotąd; ekran ≤ 768 px: osobny pas nad mapą, mapa pod nim, strona nie szersza niż ekran. Test w `tests/b7-map.spec.ts`. |
-| B-7c | Filtry mapy i tabeli — **wybór właściciela 05.10 ~10:37: wariant A** (nowe filtry: brak GPS, ryzyko) | DO ZROBIENIA — A |
-| B-8 | Harmonogram: mapowanie pól, godziny, ciągnik, linie, szerokość kolumn, ETA, statusy, polisa, rok w datach, kierowca/telefon, PDF, filtr dat. **Wybór 05.10 ~10:37:** zakres dat + filtr bez kierowcy/ciągnika + „Zmień ciągnik” (wszystkie trzy). Po B-5 i 2A. | DO ZROBIENIA — po SMS-FIX i paliwach B |
+| B-7c | Filtry mapy i tabeli — **wybór właściciela 05.10 ~10:37: wariant A** (nowe filtry: brak GPS, ryzyko) | **ZROBIONE 05.10** — A |
+| B-8 | Harmonogram: mapowanie pól, godziny, ciągnik, linie, szerokość kolumn, ETA, statusy, polisa, rok w datach, kierowca/telefon, PDF, filtr dat. **Wybór 05.10 ~10:37:** zakres dat + filtr bez kierowcy/ciągnika + „Zmień ciągnik” (wszystkie trzy). Po B-5 i 2A. | **ZROBIONE 05.10** — zakres dat, bez kierowcy/ciągnika, Zmień ciągnik |
 
 | B-8-IMP | Wydzielone z B-8 (D-8, decyzja A). Import: wiersz TYP = STANDARD (kolumna Typ albo „Standard” w wymiarach) jest pomijany, reszta wchodzi. To nie błąd. Komunikat informacyjny: „Zaimportowano X transportów. Pominięto Y wierszy typu STANDARD (ładunki NTG — poza zakresem Watch Tower).” Y w historii importu (`stats.skipped_standard`). Ta sama zasada przy przyszłej synchronizacji SharePoint — nie budować jej teraz. Decyzja właściciela 03.10 (D-8): zapisane STANDARD usunąć. Robi to wyłącznie migracja 0137 — 42 kody i tylko gdy typ = STANDARD, razem z wierszami zależnymi. Innych transportów nie rusza. Import pomijania zostaje (PR #5). | USUNIĘCIE — migracja 0137, po bramie na teście |
-| B-9 | Górny pasek filtrów — **wybór właściciela 05.10 ~10:37: wariant C** (aktywny filtr z „×” + kafelek Prom) | DO ZROBIENIA — C |
+| B-9 | Górny pasek filtrów — **wybór właściciela 05.10 ~10:37: wariant C** (aktywny filtr z „×” + kafelek Prom) | **ZROBIONE 05.10** — C (× + filtr w Harmonogramie + tip Prom) |
 
 | B-10 | Podgląd zlecenia, edycja/awizacja, przepięcie, Status/Historia, dokumenty, ceny, ustalenia, lista KSH, rejsy Steny | NIEZACZĘTE |
 | B-Q | Pytania o logikę 1–19 (powiadomienia, dzwonek, decyzje, statusy, alternatywy, faktury opłacone, Stena w pasku, bez EN/SV, tryb jasny, zegar, responsywność, kokpit, workflow 3 kont, logowanie, strefy, trasy OSM, statki, ulice) | NIEZACZĘTE |

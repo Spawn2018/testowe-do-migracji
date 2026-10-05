@@ -33,8 +33,7 @@ import type {
   WorkflowRun,
 } from '../types';
 import type { NavKey as NK } from '../lib/permissions';
-import { defaultThemeForRole } from '../lib/permissions';
-import { applyThemeToDom, type Theme } from '../lib/theme';
+import { applyThemeToDom, systemTheme, type Theme } from '../lib/theme';
 export type { Theme };
 import {
   STORE_PERSIST_KEY,
@@ -254,6 +253,8 @@ interface TowerState {
   setShowDemoMarks: (v: boolean) => void;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
+  /** Q-9 B: 'system' | light | dark */
+  setThemePreference: (pref: 'system' | Theme) => void;
   /** M4 — ustawienia z serwera (bez write-through). */
   applyUserPrefs: (p: import('../data/provider').UserPrefsPatch) => void;
   setView: (view: ViewKey) => void;
@@ -419,17 +420,16 @@ export const useTowerStore = create<TowerState>()(
 
       initTheme: () => {
         const { theme, themeManual, role } = get();
-        // Fala-1-D16: role default wins until user toggles (themeManual).
-        const next = themeManual ? theme : defaultThemeForRole(role);
+        // Q-9 B: bez ręcznego wyboru — motyw systemu; po przełączeniu zostaje themeManual.
+        const next = themeManual ? theme : systemTheme();
         if (!themeManual && next !== theme) set({ theme: next });
         applyThemeToDom(next);
       },
 
       setRole: (role) => {
         const { themeManual, theme } = get();
-        // VISUAL_BRIEF §8: if user did NOT manually override, apply role default.
-        // Manual toggle wins for rest of session (themeManual stays true).
-        const nextTheme = themeManual ? theme : defaultThemeForRole(role);
+        // Q-9 B: bez ręcznego wyboru — motyw systemu.
+        const nextTheme = themeManual ? theme : systemTheme();
         applyThemeToDom(nextTheme);
         const defaultView = role === 'SCX' ? 'tasks' : 'dash';
         set({ role, theme: nextTheme, view: defaultView as ViewKey });
@@ -457,6 +457,19 @@ export const useTowerStore = create<TowerState>()(
         applyThemeToDom(theme);
         set({ theme, themeManual: true });
         writeThrough({ type: 'prefs.save', prefs: { theme } });
+      },
+
+      setThemePreference: (pref) => {
+        if (pref === 'system') {
+          const next = systemTheme();
+          applyThemeToDom(next);
+          set({ theme: next, themeManual: false });
+          writeThrough({ type: 'prefs.save', prefs: {} }); // system — bez wymuszenia motywu
+          return;
+        }
+        applyThemeToDom(pref);
+        set({ theme: pref, themeManual: true });
+        writeThrough({ type: 'prefs.save', prefs: { theme: pref } });
       },
 
       applyUserPrefs: (p) => {
@@ -1885,7 +1898,7 @@ export const useTowerStore = create<TowerState>()(
         // After persist merge: stale theme must not stick when user never toggled manually.
         const theme = state.themeManual
           ? state.theme
-          : defaultThemeForRole(state.role);
+          : systemTheme();
         if (!state.themeManual && theme !== state.theme) {
           useTowerStore.setState({ theme });
         }

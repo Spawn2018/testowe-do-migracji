@@ -46,6 +46,8 @@ type Quick =
   | 'late'
   | 'nodocs'
   | 'delivered'
+  | 'nodriver'
+  | 'notractor'
   | CorridorStage;
 
 /** A6-T3 — wymiary w języku interfejsu (PL bez zmian). */
@@ -110,10 +112,16 @@ export function ScheduleView() {
   const dragCol = useRef<SchedColId | null>(null);
 
 
-  // Harmonogram has own filters — never apply CorridorSpine stageFilter
+  // B-9 C: ten sam filtr kafelka (stageFilter) działa też w Harmonogramie
+  const stageFilter = useTowerStore((s) => s.stageFilter);
+  const updateResources = useTowerStore((s) => s.updateResources);
+  const [loadFrom, setLoadFrom] = useState('');
+  const [loadTo, setLoadTo] = useState('');
+  const [delivFrom, setDelivFrom] = useState('');
+  const [delivTo, setDelivTo] = useState('');
   const base = useMemo(
-    () => filterLoads(loads, role, null, search),
-    [loads, role, search],
+    () => filterLoads(loads, role, stageFilter, search),
+    [loads, role, stageFilter, search],
   );
 
   const list = useMemo(() => {
@@ -126,6 +134,8 @@ export function ScheduleView() {
       if (quick === 'late') return l.delayed || l.status === 'DELAYED';
       if (quick === 'nodocs') return l.docMissing || l.status === 'DOC_MISSING';
       if (quick === 'delivered') return l.status === 'DELIVERED' || l.stage === 'DELIVERED';
+      if (quick === 'nodriver') return !(l.resources.driverName ?? '').trim();
+      if (quick === 'notractor') return !(l.resources.tractorPlate ?? '').trim();
       if (
         quick === 'LOADING' ||
         quick === 'TO_PORT' ||
@@ -138,8 +148,14 @@ export function ScheduleView() {
         return l.stage === quick;
       }
       return true;
+    }).filter((l) => {
+      if (loadFrom && (l.plannedLoadDate ?? '') < loadFrom) return false;
+      if (loadTo && (l.plannedLoadDate ?? '') > loadTo) return false;
+      if (delivFrom && (l.plannedDeliverDate ?? '') < delivFrom) return false;
+      if (delivTo && (l.plannedDeliverDate ?? '') > delivTo) return false;
+      return true;
     });
-  }, [base, quick]);
+  }, [base, quick, loadFrom, loadTo, delivFrom, delivTo]);
 
   const showCost = canSeeCost(role);
   const showRev = canSeeRevenue(role);
@@ -270,6 +286,8 @@ export function ScheduleView() {
     { id: 'late', labelKey: 'sched_late' },
     { id: 'nodocs', labelKey: 'sched_nodocs' },
     { id: 'delivered', labelKey: 'stage_DELIVERED' },
+    { id: 'nodriver', labelKey: 'a6_sch_nodriver' },
+    { id: 'notractor', labelKey: 'a6_sch_notractor' },
     { id: 'LOADING', labelKey: 's_loading' },
     { id: 'TO_PORT', labelKey: 'stage_TO_PORT' },
     { id: 'GDANSK', labelKey: 'stage_GDANSK' },
@@ -695,6 +713,16 @@ export function ScheduleView() {
           <span className="kbdhint">
             <kbd>/</kbd>
           </span>
+          <label className="muted" style={{ fontSize: 12 }} title={t(locale, 'a6_sch_dates')}>
+            {t(locale, 'a6_sch_dates')}{' '}
+            <input type="date" value={loadFrom} onChange={(e) => setLoadFrom(e.target.value)} aria-label={t(locale, 'a6_sch_dates')} />
+            <input type="date" value={loadTo} onChange={(e) => setLoadTo(e.target.value)} aria-label={t(locale, 'a6_sch_dates')} />
+          </label>
+          <label className="muted" style={{ fontSize: 12 }} title={t(locale, 'a6_sch_deliv_dates')}>
+            {t(locale, 'a6_sch_deliv_dates')}{' '}
+            <input type="date" value={delivFrom} onChange={(e) => setDelivFrom(e.target.value)} />
+            <input type="date" value={delivTo} onChange={(e) => setDelivTo(e.target.value)} />
+          </label>
           {chips.map((c) => (
             <button
               key={c.id}
@@ -720,7 +748,7 @@ export function ScheduleView() {
                 : t(locale, 'iii2_empty_any')}{' '}
               {t(locale, 'iii2_empty_hint')}
             </p>
-            <button type="button" className="btn ghost" data-sched-clear onClick={() => { setSearch(''); setQuick('all'); }}>
+            <button type="button" className="btn ghost" data-sched-clear onClick={() => { setSearch(''); setQuick('all'); setLoadFrom(''); setLoadTo(''); setDelivFrom(''); setDelivTo(''); }}>
               {t(locale, 'iii2_empty_clear')}
             </button>
           </div>
@@ -909,8 +937,21 @@ export function ScheduleView() {
                               {l.resources.tractorPlate ? (
                                 <span className="mono" data-content>{l.resources.tractorPlate}</span>
                               ) : (
-                                '—'
+                                <span className="muted">—</span>
                               )}
+                              <button
+                                type="button"
+                                className="btn ghost"
+                                style={{ fontSize: 11, padding: '2px 6px', marginLeft: 4 }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const next = window.prompt(t(locale, 'a6_sch_change_tractor'), l.resources.tractorPlate ?? '');
+                                  if (next == null) return;
+                                  updateResources(l.id, { tractorPlate: next.trim() || null });
+                                }}
+                              >
+                                {t(locale, 'a6_sch_change_tractor')}
+                              </button>
                             </td>
                           );
                         case 'eta':
