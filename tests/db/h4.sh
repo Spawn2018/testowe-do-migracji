@@ -83,4 +83,50 @@ sys "update loads set trailer_swap=true, trailer_swap_at=now()-interval '1 hour'
 val "po przepięciu: flaga przepięcia w state" \
   "select (flags::text like '%przepięcie%')::text from h4_driver_state_from_gps('$L1', now())" "true"
 
+
+# --- 0186: ostrożne gdy brak last_rest + niepewność + dzień od odpoczynku ---
+
+# (a) brak historii odpoczynku → ostrożne, rest wstawiony, Wysoka niedostępna (conf>60)
+L2=33333333-0000-0000-0000-000000000002
+sys "update loads set hhl_order_no='HHL-H4-2', status='IN_TRANSIT_SE', trailer_swap=false, trailer_swap_at=null where id='$L2'" >/dev/null
+sys "delete from positions where load_id='$L2'" >/dev/null
+sys "delete from load_events where load_id='$L2'" >/dev/null
+sys "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L2','GEOFENCE_EXIT', now()-interval '1 day', '{\"geofence_kind\":\"LOADING\"}')" >/dev/null
+# pozycje w ruchu bez postoju ≥9 h (mid-trip, jak emtrack od 13:25) — NIE świeży kierowca
+sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw) values
+  ('$L2', now()-interval '3 hours', st_setsrid(st_makepoint(17.5, 62.5), 4326), 70, 'TELEMATICS_API', '{}'::jsonb),
+  ('$L2', now()-interval '2 hours', st_setsrid(st_makepoint(17.7, 62.7), 4326), 72, 'TELEMATICS_API', '{}'::jsonb),
+  ('$L2', now()-interval '5 minutes', st_setsrid(st_makepoint(18.0, 63.0), 4326), 68, 'TELEMATICS_API', '{}'::jsonb)" >/dev/null
+val "0186 brak last_rest: cautious=true" \
+  "select cautious::text from h4_driver_state_from_gps('$L2', now())" "true"
+approx "0186 brak last_rest: schedule wstawia rest (rest_h=11 przy 8.5+3)" \
+  "select rest_h::text from h4_schedule_remaining(3.0, 8.5, 0, 4.0)" \
+  11.0 0.01
+val "0186 brak historii: Wysoka niedostępna (conf_min>60)" \
+  "select (coalesce(conf_min,0) > 60)::text from compute_load_eta('$L2', now()) limit 1" "true"
+
+# (c) niepewność odpoczynku > 0 w paśmie — na L2 mid-trip (ostrożne) zanim nadpiszemy GPS
+val "0186 rest uncertainty > 0 w band (H4_EU_REST lub H4_CAUTIOUS)" \
+  "select (exists (
+     select 1 from compute_load_eta('$L2', now()) e,
+     lateral jsonb_array_elements(e.basis->'band'->'components') c
+     where c->>'code' in ('H4_EU_REST','H4_CAUTIOUS') and (c->>'min')::numeric > 0
+   ))::text" "true"
+
+# (b) pełna historia: odpoczynek 11 h rano → dzień jazdy od jego końca (nie ostrożne)
+sys "delete from positions where load_id='$L2'" >/dev/null
+sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw) values
+  ('$L2', date_trunc('day', now() at time zone 'Europe/Warsaw') at time zone 'Europe/Warsaw' - interval '2 hours', st_setsrid(st_makepoint(17.0, 59.0), 4326), 0, 'TELEMATICS_API', '{}'::jsonb),
+  ('$L2', date_trunc('day', now() at time zone 'Europe/Warsaw') at time zone 'Europe/Warsaw' + interval '9 hours', st_setsrid(st_makepoint(17.0, 59.0), 4326), 0, 'TELEMATICS_API', '{}'::jsonb),
+  ('$L2', date_trunc('day', now() at time zone 'Europe/Warsaw') at time zone 'Europe/Warsaw' + interval '10 hours', st_setsrid(st_makepoint(17.3, 59.5), 4326), 75, 'TELEMATICS_API', '{}'::jsonb),
+  ('$L2', date_trunc('day', now() at time zone 'Europe/Warsaw') at time zone 'Europe/Warsaw' + interval '11 hours', st_setsrid(st_makepoint(17.6, 60.0), 4326), 70, 'TELEMATICS_API', '{}'::jsonb)" >/dev/null
+NOW3="(date_trunc('day', now() at time zone 'Europe/Warsaw') at time zone 'Europe/Warsaw' + interval '11 hours 5 minutes')"
+val "0186 z rest 11h: cautious=false" \
+  "select cautious::text from h4_driver_state_from_gps('$L2', $NOW3)" "false"
+val "0186 z rest 11h: last_rest not null" \
+  "select (last_rest_end is not null)::text from h4_driver_state_from_gps('$L2', $NOW3)" "true"
+approx "0186 z rest 11h: driven_since_rest ~2h (dzień od końca rest)" \
+  "select driven_since_rest_h::text from h4_driver_state_from_gps('$L2', $NOW3)" \
+  2.0 0.5
+
 echo "WYNIK: $ok OK, $fail FAIL"
