@@ -77,7 +77,7 @@ function MoneySideMeta({ side, locale, which }: { side: MoneySideV2; locale: Loc
   );
 }
 
-type Tab = 'overview' | 'timeline' | 'docs' | 'pricing' | 'chat';
+type Tab = 'overview' | 'timeline' | 'history' | 'docs' | 'pricing' | 'chat';
 
 /** A6-T3 — wymiary/masa w języku interfejsu (PL bez zmian: 16,50). */
 function fmtDim(n: number, locale: Locale = 'pl'): string {
@@ -135,7 +135,7 @@ export function LoadDrawer() {
   const [awizOpen, setAwizOpen] = useState(false);
 
   useEffect(() => {
-    const allowed: Tab[] = ['overview', 'timeline', 'docs', 'pricing', 'chat'];
+    const allowed: Tab[] = ['overview', 'timeline', 'history', 'docs', 'pricing', 'chat'];
     if (drawerTab && (allowed as string[]).includes(drawerTab)) {
       setTab(drawerTab as Tab);
       if (drawerTab === 'overview') setAwizOpen(true);
@@ -167,6 +167,8 @@ export function LoadDrawer() {
   const showRev = canSeeRevenue(role);
   const showMargin = canSeeMargin(role);
   const canEdit = canEditResources(role);
+  /** B-10: awizację uzupełnia SCX; HHL (nie admin) nie dodaje. */
+  const canAwiz = role === 'SCX';
   const orderSide = editableOrderSide(role);
   /* AN2 — okna planowe zmienia wyłącznie HHL (plan z harmonogramu KSH); przewoźnik widzi je jako tekst */
   const planEditable = role === 'HHL';
@@ -192,6 +194,7 @@ export function LoadDrawer() {
     { id: 'docs', label: t(locale, 'tab_docs') },
     { id: 'pricing', label: t(locale, 'tab_pricing') },
     { id: 'chat', label: t(locale, 'tab_chat') },
+    { id: 'history', label: t(locale, 'tab_history') },
   ];
 
   return (
@@ -210,16 +213,22 @@ export function LoadDrawer() {
           </div>
           <div className="wb-fields">
             <span>
-              <b>{t(locale, 'a6_dr_order')}</b>
-              <em>{!shows('permitNumber') ? (load.hhlOrderNo ?? '—') : (load.permit?.pozycja || `HHL/2026/${1240 + load.sequenceOrder}`)}</em>
-            </span>
-            <span>
-              <b>{t(locale, 'a6_dr_sender')}</b>
-              <em>{SITES.loading.name}</em>
-            </span>
-            <span>
               <b>{t(locale, 'a6_dr_consignee')}</b>
               <em>{t(locale, 'a6_dr_consignee_val')}</em>
+            </span>
+            <span>
+              <b>{t(locale, 'a6_dr_week_load')}</b>
+              <em>
+                {tp(locale, 'a6_dr_week_val', { n: String((() => {
+                  const d = new Date(load.plannedLoadDate);
+                  if (Number.isNaN(d.getTime())) return '—';
+                  const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                  const day = tmp.getUTCDay() || 7;
+                  tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
+                  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+                  return Math.ceil(((tmp.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+                })()) })}
+              </em>
             </span>
             <span>
               <b>{t(locale, 'a6_dr_week')}</b>
@@ -267,13 +276,6 @@ export function LoadDrawer() {
                     <>{fmtDim(load.dims.lengthM, locale)} × {fmtDim(load.dims.widthM, locale)} × {fmtDim(load.dims.heightM, locale)} m</>
                   )}
                 </dd>
-                <dt>{t(locale, 'a6_dr_combo_dims')}</dt>
-                <dd>
-                  {comboL > 16.5 || comboW > 2.55 ? (
-                    <span className="board" title={t(locale, 'a6_dr_oversize')} />
-                  ) : null}
-                  {fmtDim(comboL, locale)} × {fmtDim(comboW, locale)} × {fmtDim(comboH, locale)} m
-                </dd>
                 <dt>{t(locale, 'h1_title')}</dt>
                 <dd data-route-check>
                   <RouteCheckPanel loadId={load.id} locale={locale} />
@@ -288,8 +290,6 @@ export function LoadDrawer() {
                   {fmtDim(load.dims.weightT / Math.max(1, load.qty), locale)} t)
                 </dd>
                 {/* M5 — trzy numery zleceń (W12): KSH z importu, HHL i przewoźnik — każda strona edytuje wyłącznie swój */}
-                <dt>{t(locale, 'a6_dr_ord_ksh')}</dt>
-                <dd className="mono" data-order="ksh">{load.orderNo || '—'}</dd>
                 <dt>{t(locale, 'a6_dr_ord_hhl')}</dt>
                 <dd data-order="hhl">
                   {orderSide === 'HHL' ? (
@@ -307,8 +307,6 @@ export function LoadDrawer() {
                 <dd data-order="scx">
                   <OrderNoField key={`scx-${load.id}`} value={load.carrierOrderNo} editable={orderSide === 'CARRIER'} onSave={(v) => setOrderNo(load.id, 'CARRIER', v)} />
                 </dd>
-                <dt>{t(locale, 'a6_dr_assembly')}</dt>
-                <dd>{tp(locale, 'a6_dr_assembly_pos', { n: String(load.sequenceOrder) })}</dd>
                 <dt>{t(locale, 'a6_dr_load_place')}</dt>
                 <dd>{SITES.loading.name}</dd>
                 <dt>{t(locale, 'a6_dr_loading')}</dt>
@@ -400,13 +398,15 @@ export function LoadDrawer() {
                 <dt>{t(locale, 'a6_dr_ferry')}</dt>
                 <dd>
                   {load.ferry.vessel
-                    ? `${load.ferry.vessel}${load.ferry.bookingRef ? ` · ${load.ferry.bookingRef}` : ''}`
+                    ? (curSailing
+                      ? `${load.ferry.vessel} · ${fmtLocal(effDeparture(curSailing))}`
+                      : load.ferry.vessel)
                     : t(locale, 'a6_dr_no_booking')}
                 </dd>
               </dl>
 
               {/* AWIZ-4 — Dodaj / Edytuj poza Ustalenia */}
-              {canEdit && (
+              {canAwiz && (
                 <div className="awiz-row" data-awiz-actions>
                   <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>{t(locale, 'a6_dr_awi')}</span>
                   <button type="button" className="btn" data-awiz-open onClick={() => setAwizOpen(true)}>
@@ -462,6 +462,39 @@ export function LoadDrawer() {
                   <li key={e.id}>
                     <span className="mk" />
                     <div className="w">
+                      {e.type === 'STATUS_AUTO' ? (
+                        <span data-tl-auto>
+                          <span className="pill p-sea">{t(locale, 'tl_auto')}</span> {autoStatusText(e.payload) ?? ''}
+                        </span>
+                      ) : (
+                        <>
+                          {eventTypeLabel(e.type, locale)}
+                          {e.note ? ` · ${e.note}` : ''}
+                        </>
+                      )}
+                    </div>
+                    <div className="ts">
+                      {e.actor} · {e.at}
+                    </div>
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
+
+          {tab === 'history' && (
+            <ul className="tl" data-history>
+              {loadEvents.length === 0 ? (
+                <li className="future">
+                  <span className="mk" />
+                  <div className="w">{t(locale, 'a6_dr_no_events')}</div>
+                  <div className="ts">—</div>
+                </li>
+              ) : (
+                loadEvents.map((e) => (
+                  <li key={`h-${e.id}`}>
+                    <span className="mk" />
+                    <div className="w" style={{ fontWeight: 700 }}>
                       {e.type === 'STATUS_AUTO' ? (
                         <span data-tl-auto>
                           <span className="pill p-sea">{t(locale, 'tl_auto')}</span> {autoStatusText(e.payload) ?? ''}
@@ -688,7 +721,7 @@ export function LoadDrawer() {
                   </dl>
                 </>
               )}
-              {canEdit && (
+              {canAwiz && (
                 <>
                   <div className="note" style={{ margin: '0 0 12px' }} data-awiz-chat-note>
                     {t(locale, 'awiz_chat_note')}

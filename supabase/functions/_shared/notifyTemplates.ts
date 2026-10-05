@@ -303,6 +303,13 @@ export function renderEmail(row: NotifyRow, appUrl: string, localeOverride?: Not
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const link = emailUrl(appUrl, clickFromPayload(row.template, row.payload, 'email'));
   const text = `${n.body}${link ? `\n\n${link}` : ''}\n\n— Tower · H&H Logistics`;
-  const html = `<p>${esc(n.body)}</p>${link ? `<p><a href="${esc(link)}">${esc(link)}</a></p>` : ''}<p style="color:#666">— Tower · H&amp;H Logistics</p>`;
+  // H-7: opcjonalna mapa statyczna (URL HTTPS, generowany przy wysyłce)
+  const mapUrl = typeof row.payload?.mapImageUrl === 'string' && /^https:\/\//i.test(row.payload.mapImageUrl)
+    ? row.payload.mapImageUrl as string
+    : '';
+  const mapHtml = mapUrl
+    ? `<p><img src="${esc(mapUrl)}" alt="Mapa transportu" width="640" style="max-width:100%;height:auto;border:0" /></p>`
+    : '';
+  const html = `<p>${esc(n.body)}</p>${mapHtml}${link ? `<p><a href="${esc(link)}">${esc(link)}</a></p>` : ''}<p style="color:#666">— Tower · H&amp;H Logistics</p>`;
   return { subject: n.subject, text, html };
 }

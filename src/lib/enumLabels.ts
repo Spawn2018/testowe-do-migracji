@@ -117,7 +117,7 @@ export function readyGateReasonLabel(reason: string, locale: Locale = 'pl'): str
     'Zezwolenie nie pasuje do wymiarow zestawu': dictEntry('a6_map_zezwolenie_nie_pasuje_do_wymiarow_zestawu'),
     'Zezwolenie nie pasuje do wymiarów zestawu': dictEntry('a6_map_zezwolenie_nie_pasuje_do_wymiar_w_zestawu'),
     'Dokument zezwolenia niezgodny z zestawem': dictEntry('a6_map_dokument_zezwolenia_niezgodny_z_zestawem'),
-    'permitFits=false': dictEntry('a6_map_permitfits_false'),
+    'permitfits_false': dictEntry('a6_map_permitfits_false'),
     'MISMATCH document': dictEntry('a6_map_mismatch_document'),
     'docMissing flag': dictEntry('a6_map_docmissing_flag'),
   };
