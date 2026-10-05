@@ -32,7 +32,7 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 | SEFS-KOREKTA | **DONE** | PR #77, 0166 | — |
 | SMS-SILENT-FIX | **DONE** | 0167 | — |
 | MIG-0159-REG | **DONE** | ewidencja 0159 | — |
-| B-10 | **PARTIAL+** | + PDF kierowca (zamiast promu), czat „odczytano” (0177); ceny/dopłaty dalej | — |
+| B-10 | **PARTIAL++** | PDF kierowca; czat odczyty; FX ukryte przy EUR (nie-HHL); revExtras; dopłaty PENDING/akceptacja 0178 | — |
 | B-KSH | **DONE** | PR #82 PlanDatesPanel Edytuj | — |
 | B-REJSY | **DONE** | PR #82 filtr Przyszłe, rok, HHL_ADMIN | — |
 | B-Q | **DONE (dok.)** | `RAPORT_BQ_LOGIKA_05_10.md` | — |
@@ -75,7 +75,7 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 | H-2-PL | **DONE** | 0171, HERE Traffic w `road-pl`, raport `RAPORT_D78_ZGODNOSC_05_10.md` | — |
 | H-3 | **zbudowane, wyłączone** | PR #84 Routing v8, bez Attributes | D-83 |
 | H-6 | **zbudowane, wyłączone** | B-MAPA warstwa | D-83 |
-| H-7 | **PARTIAL+** | map-static + e-mail; `appendMapPage` w pdfExport | mapa w eksporcie 1 transportu |
+| H-7 | **DONE-ish** | PDF 1 transportu + mapa (GPS→map-static); bez mapy gdy brak GPS/budżet | e-mail już było |
 | H-8 | **PROPOZYCJA** | `PROPOZYCJA_H8_PROFIL_TRASY.md` (bez Attributes) | wybór A/B/C |
 | H-10 | **PARTIAL** | ostrzeżenie ≥15 OK; ETA+wiatr **WYŁ.** — `PROPOZYCJA_H10_WIATR_ETA.md` | akceptacja wartości |
 | H-12 | **DONE** | weekend + `truck_ban_holidays` 0177 | — |
@@ -85,15 +85,15 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 | AUTH-MAIL | **DONE** | POSTEP 02.10 | — |
 | I-29 | **DONE** | `I29_BUDGETY_140.md` | — |
 | GATE-WEEKLY | **RYTM** | — | **11.10.2026** |
-| SEC-OWASP | **PARTIAL** | `RAPORT_SEC_OWASP_05_10.md` (audit 0 high; HSTS; ASVS skrót) | ZAP Baseline + CSP decyzja |
+| SEC-OWASP | **PARTIAL+** | audit; HSTS; XFO/XCTO/Referrer; exceljs/uuid udok.; ZAP brak Docker; CSP propozycja | ZAP + CSP preview |
 
 ## 6. Tylko lista — bez budowy
 
 **Czeka właściciel:** D-83 → B-3a, H-1/H-3/H-6; R-0; D-3, D-7, D-14, D-16, D-17, D-21.  
 **Zewnętrzne:** TELM-2 (emtrack); II-10-E1 (IT KSH).
 
-## 7. Kolejka budowy (05.10 ~13:35 PL)
+## 7. Kolejka budowy (05.10 ~13:50 PL)
 
-1. PR #91 **MERGED** `d641810` — H-12 DONE, B-10 PARTIAL+, H-10 ETA OFF, B-Q/Q-11a docs, H-8 propozycja, SEC PARTIAL.
-2. Domknięcie: B-10 ceny/dopłaty; H-7 mapa w eksporcie 1 transportu; Q-11b (FCM); SEC ZAP; GATE-WEEKLY **11.10.2026**.
-3. Nie ruszane: D-83 / B-3a / H-1/H-3/H-6 flags, R-0, D-3/7/14/16/17/21, II-10-E1. TELM flag true + blokada SMS/e-mail właściciela.
+1. B-10 dopłaty akceptacja + H-7 PDF mapa + SEC nagłówki — ta paczka (0178).
+2. Czeka: Q-11b, H-8 A/B/C, D-83…; GATE-WEEKLY **11.10.2026**; ZAP gdy Docker.
+3. TELM true; H1/H3/H6 false; blokada SMS/e-mail właściciela.

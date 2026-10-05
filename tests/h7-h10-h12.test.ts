@@ -51,3 +51,23 @@ describe('H-12 święta', () => {
     expect(holidayBanHit(null)).toBe(false);
   });
 });
+
+import { PDFDocument } from 'pdf-lib';
+import { appendMapPage, buildLoadsPdf } from '../src/lib/pdfExport';
+import { readFileSync } from 'node:fs';
+import { buildSeedLoads } from '../src/data/seed';
+
+describe('H-7 appendMapPage', () => {
+  it('dokłada stronę z PNG', async () => {
+    const font = readFileSync('public/fonts/LiberationSans-Regular.ttf');
+    const base = await buildLoadsPdf(buildSeedLoads().slice(0, 1), font, { title: 'H7' });
+    // 1x1 PNG
+    const png = Uint8Array.from(Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64',
+    ));
+    const out = await appendMapPage(base, png, 'Mapa test', font);
+    const doc = await PDFDocument.load(out);
+    expect(doc.getPageCount()).toBe(2);
+  });
+});

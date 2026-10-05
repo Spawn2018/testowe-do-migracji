@@ -99,7 +99,7 @@ export async function exportLoadsPdf(loads: Load[], filename: string, title: str
 }
 
 /** H-7 — opcjonalna strona z mapą (PNG z Edge map-static) na końcu PDF. */
-export async function appendMapPage(pdfBytes: Uint8Array, mapPng: Uint8Array, caption = 'Mapa pozycji'): Promise<Uint8Array> {
+export async function appendMapPage(pdfBytes: Uint8Array, mapPng: Uint8Array, caption = 'Mapa pozycji', fontBytes?: ArrayBuffer | Uint8Array): Promise<Uint8Array> {
   const doc = await PDFDocument.load(pdfBytes);
   doc.registerFontkit(fontkit);
   const page = doc.addPage([PAGE_W, PAGE_H]);
@@ -109,8 +109,67 @@ export async function appendMapPage(pdfBytes: Uint8Array, mapPng: Uint8Array, ca
   const scale = Math.min(maxW / img.width, maxH / img.height);
   const w = img.width * scale;
   const h = img.height * scale;
-  page.drawText(caption, { x: M, y: PAGE_H - M - 12, size: 11 });
+  let font: PDFFont | undefined;
+  if (fontBytes) {
+    font = await doc.embedFont(fontBytes, { subset: true });
+  } else {
+    // fallback: Helvetica (bez PL) — caller powinien podać Liberation
+    const { StandardFonts } = await import('pdf-lib');
+    font = await doc.embedFont(StandardFonts.Helvetica);
+  }
+  page.drawText(fit(caption, font, 11, maxW), { x: M, y: PAGE_H - M - 12, size: 11, font });
   page.drawImage(img, { x: M, y: PAGE_H - M - 20 - h, width: w, height: h });
   return doc.save();
 }
 
+/** H-7 — PDF jednego transportu + opcjonalna mapa (GPS → Edge map-static). */
+export async function exportLoadPdfWithMap(
+  load: Load,
+  locale: Locale = 'pl',
+): Promise<{ rows: number; bytes: number; mapAttached: boolean; mapSkipReason?: string }> {
+  const res = await fetch(`${import.meta.env.BASE_URL ?? '/'}fonts/LiberationSans-Regular.ttf`);
+  if (!res.ok) throw new Error(`czcionka PDF: HTTP ${res.status}`);
+  const title = tp(locale, 'h7_pdf_title', { code: load.code });
+  const fontBuf = await res.arrayBuffer();
+  let bytes = await buildLoadsPdf([load], fontBuf, { title, locale });
+  let mapAttached = false;
+  let mapSkipReason: string | undefined;
+
+  // Mapa tylko w buildzie supabase — dynamiczny import poza paczką demo (I-2).
+  if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
+    try {
+      const { fetchLatestVehicleFixes } = await import('./vehiclePositions');
+      const fixes = await fetchLatestVehicleFixes([load.id]);
+      const fix = fixes[0];
+      if (!fix) {
+        mapSkipReason = 'no_gps';
+      } else {
+        const { fetchMapStaticPng } = await import('./h7MapPng');
+        const got = await fetchMapStaticPng(fix.lat, fix.lng);
+        if (!got.ok) {
+          mapSkipReason = got.reason;
+        } else {
+          bytes = await appendMapPage(bytes, got.png, tp(locale, 'h7_pdf_map_caption', { code: load.code }), fontBuf);
+          mapAttached = true;
+        }
+      }
+    } catch {
+      mapSkipReason = mapSkipReason ?? 'map_error';
+    }
+  } else {
+    mapSkipReason = 'demo';
+  }
+
+  const ab = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(ab).set(bytes);
+  const url = URL.createObjectURL(new Blob([ab], { type: 'application/pdf' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `WATCH_TOWER_${load.code}.pdf`;
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  window.setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 4000);
+  return { rows: 1, bytes: bytes.byteLength, mapAttached, mapSkipReason };
+}
