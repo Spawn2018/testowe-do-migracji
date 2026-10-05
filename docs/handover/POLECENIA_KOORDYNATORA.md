@@ -1172,3 +1172,22 @@ Przy okazji (krótko, przed SEC-OWASP):
    (cennik D-1 jest zrealizowany w I-30).
 
 TELM-2 i test SG-03 w tle bez zmian. GATE-WEEKLY 11.10.
+
+## Decyzje właściciela 2026-10-05 ~16:55 (czas warszawski) — SEC-OWASP C/D/PKCE/deps
+
+SEC-OWASP — decyzje właściciela:
+C: hasło minimum 12 znaków (ASVS L2); obowiązuje przy nowym haśle
+   i zmianie, istniejące konto właściciela bez wymuszonej zmiany.
+D: CORS zawężony do https://tower.log-mar.pl (funkcje Edge); test,
+   że aplikacja i bramka SMS działają.
+OAuth implicit → PKCE; PRZED wdrożeniem test od początku do końca:
+   zaproszenie (nowe konto testowe), ustawienie hasła, logowanie,
+   reset hasła — bez wysyłki do prawdziwych osób.
+exceljs/uuid: aktualizacja; test importu harmonogramu i eksportu
+   XLSX/PDF.
+B: CSP enforce — decyzja 12.10 po przeglądzie naruszeń.
+Wynik: zaktualizowana tabela ASVS (fail → pass) z dowodami.
+
+Zasady: TELM-2 / SG-03 bez zmian; chmura off; CSP Report-Only bez enforce;
+brama + merge + deploy po zielonym e2e PKCE. Autor: Sebastian Bożek /
+sebastian.bozekq@gmail.com.

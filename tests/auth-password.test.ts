@@ -15,11 +15,13 @@ describe('AUTH-1 hasło', () => {
     const client = readFileSync('src/auth/client.ts', 'utf8');
     expect(gate).toMatch(/signInWithPassword/);
     expect(gate).toMatch(/auth_email_allowed/);
-    expect(gate).toMatch(/resetPasswordForEmail/);
+    expect(gate).toMatch(/sendRecoveryLink/);
+    expect(readFileSync('src/auth/sendAuthEmail.ts', 'utf8')).toMatch(/auth\/v1\/recover/);
     expect(gate).toMatch(/data-auth="link-pending"/);
     expect(gate).toMatch(/data-auth="set-password"/);
     expect(gate).not.toMatch(/signInWithOtp/);
     expect(client).toMatch(/detectSessionInUrl:\s*false/);
+    expect(client).toMatch(/flowType:\s*'pkce'/);
   });
 
   it('0099: auth_email_allowed + must_set_password + mark', () => {

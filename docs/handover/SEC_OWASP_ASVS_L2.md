@@ -8,19 +8,21 @@
 
 | Wynik | Liczba punktów (ta lista L2) |
 |-------|------------------------------|
-| **pass** | 78 |
+| **pass** | 82 |
 | **partial** | 12 |
-| **fail** | 4 |
+| **fail** | 0 |
 | **N/A** | 18 |
-| **High / Critical do naprawy teraz** | **0** (żadna luka high/critical nie wymaga PR w tej turze) |
+| **High / Critical do naprawy teraz** | **0** |
 
 **ZAP pasywny prod 16:47 PL:** High **0**, Medium **2**, Low **1** — `docs/evidence/zap/RAPORT_ZAP_PASSIVE_PROD_05_10_1647.md`.
 
-**npm audit --omit=dev --audit-level=high:** **0** high/critical; 2× moderate (`exceljs`→`uuid` GHSA-w5hq-g745-h8pq).
+**npm audit --omit=dev --audit-level=high:** **0** high/critical; **0** moderate po `overrides.uuid@^11.1.1` (05.10 wieczór).
 
 **RLS PROD:** jedyna tabela `public` bez RLS = `spatial_ref_sys` (PostGIS, N/A).
 
-**CSP:** Report-Only na obu domenach; `csp_violations` = **0** wierszy (zbieranie od 05.10 ~13:53; enforce **nie** włączane).
+**CSP:** Report-Only na obu domenach; `csp_violations` = **0** wierszy (zbieranie od 05.10 ~13:53; enforce **nie** włączane — decyzja B do 12.10).
+
+**Aktualizacja C/D/PKCE/deps 05.10 ~17:00:** fail **4 → 0**; pass **78 → 82**. Hasło 12 (C), CORS Edge (D), PKCE e2e 8/8, uuid override.
 
 ---
 
@@ -29,7 +31,7 @@
 | ID | Wymaganie | Wynik | Dowód |
 |----|-----------|-------|-------|
 | DEP-1 | Brak high/critical w zależnościach produkcyjnych | **pass** | `npm audit --omit=dev --audit-level=high` → 0 (05.10 ~16:46) |
-| DEP-2 | Moderate zależności | **fail** (medium) | exceljs/uuid — lista akceptacji; `npm audit fix --force` = breaking exceljs 3.4.0 — nie robione |
+| DEP-2 | Moderate zależności | **pass** | `package.json` overrides `uuid@^11.1.1`; `npm audit --omit=dev` → 0; testy `xlsx-export-roles` + `pdf-export` + `schedule-import` zielone |
 | ZAP-P | Skan pasywny produkcji | **pass** | baseline-passive-2026-10-05_1647.html; High=0 |
 | ZAP-A | Skan aktywny tylko TEST | **pass** (odłożony) | GATE-WEEKLY 11.10; guard `scripts/zap/prodGuard.mjs` + `tests/zap-prod-guard.test.ts` |
 | GIT-1 | Brak sekretów w repo | **pass** | gitleaks w toolchain; `.gitleaksignore`; sekrety w `.env.local` / Vault |
@@ -47,7 +49,7 @@
 | H-PERM | Permissions-Policy | **pass** | camera/microphone/geolocation = () |
 | H-CSP-RO | CSP Report-Only do 12.10 | **pass** | `vercel.json`, `public/_headers`, curl 05.10 |
 | H-CSP-EN | CSP enforce | **partial** | **celowo wyłączone** do 12.10 + akceptacji listy źródeł |
-| H-CORS | CORS zawężony | **fail** (medium) | Vercel `Access-Control-Allow-Origin: *` na statyce — lista akceptacji |
+| H-CORS | CORS Edge zawężony | **pass** | Edge: `TOWER_ORIGIN=https://tower.log-mar.pl` (`_shared/cors.ts`); deploy driver-photo/here-raster/here-roads/map-static/route-profile/web-push-vapid-public; OPTIONS → ACAO tower. Statyka Vercel nadal `*` (SPA) — poza zakresem decyzji D |
 
 ### Lista dozwolonych źródeł CSP (do akceptacji właściciela przed enforce 12.10+)
 
@@ -89,7 +91,7 @@ Raportowanie: `src/lib/cspReport.ts` → RPC `report_csp_violation` (0180); bez 
 
 | ID | Temat L2 | Wynik | Dowód |
 |----|----------|-------|-------|
-| V2.1.1 | Min. długość hasła ≥12 | **fail** (medium) | `supabase/config.toml` `minimum_password_length = 6` — lista akceptacji / zmiana w panelu Auth |
+| V2.1.1 | Min. długość hasła ≥12 | **pass** | UI `PASSWORD_MIN=12`; `config.toml` 12; Management API `password_min_length=12` (bez force change istniejących); e2e PKCE: GoTrue odrzuca `<12` |
 | V2.1.2–2.1.9 | Złożoność / breach / paste | **partial** | GoTrue defaults; brak własnego zxcvbn |
 | V2.2.1 | Anti-automation logowania | **pass** | Supabase Auth rate_limit (`config.toml` [auth.rate_limit]); komunikaty w `src/auth/config.ts` |
 | V2.3.1 | Wymuszona zmiana po reset | **pass** | przepływ Supabase recovery |
@@ -111,7 +113,7 @@ Raportowanie: `src/lib/cspReport.ts` → RPC `report_csp_violation` (0180); bez 
 | V3.3.1 | Logout unieważnia | **pass** | `signOut` klienta |
 | V3.4.1 | Cookie flags | **N/A** | sesja nie na cookie HTTP sesyjnym apliki; JWT localStorage |
 | V3.5.1 | CSRF | **partial** | API = Bearer JWT (niskie CSRF); OAuth implicit flow |
-| V3.5.3 | PKCE | **fail** (medium) | `flowType: 'implicit'` w `src/auth/client.ts` (komentarz: link zaproszenia) — lista akceptacji vs migracja PKCE |
+| V3.5.3 | PKCE | **pass** | `flowType: 'pkce'`; invite/recovery bez code_challenge (`sendAuthEmail.ts`); AuthGate: hash tokens + `token_hash` + `exchangeCodeForSession`; e2e `scripts/auth/e2e-pkce.mjs` **8/8** (bez wysyłki maili) |
 | V3.7.1 | Idle / absolute timeout | **partial** | autoRefreshToken; brak własnego idle UI timeout |
 
 ---
@@ -240,7 +242,7 @@ Raportowanie: `src/lib/cspReport.ts` → RPC `report_csp_violation` (0180); bez 
 | V14.3.1 | Security headers | **pass** | patrz §2 |
 | V14.3.3 | CSP | **partial** | Report-Only do 12.10 |
 | V14.4.1 | HTTP methods | **pass** | statyczny hosting + API Supabase |
-| V14.5.1 | Wildcard CORS | **fail** (medium) | patrz H-CORS |
+| V14.5.1 | Wildcard CORS Edge | **pass** | Edge bez `*`; patrz H-CORS (statyka Vercel `*` poza D) |
 
 ---
 
@@ -259,11 +261,11 @@ Raportowanie: `src/lib/cspReport.ts` → RPC `report_csp_violation` (0180); bez 
 
 | # | Severity | Temat | Propozycja |
 |---|----------|-------|------------|
-| M1 | Medium | CSP enforce jeszcze nie | Czekaj do **12.10** + przegląd `csp_violations` + akceptacja tabeli źródeł §2 |
-| M2 | Medium | CORS `*` na Vercel static | Akceptuj (SPA+JWT) **lub** zawęż Origin (ryzyko hostingu) |
-| M3 | Medium | Hasło min 6 znaków | Podnieś do **12** w Supabase Auth (wpływ na istniejących użytkowników) |
-| M4 | Medium | OAuth `implicit` zamiast PKCE | Akceptuj (zaproszenia) **lub** migracja PKCE + test zaproszeń |
-| M5 | Medium | `exceljs`→`uuid` advisory | Akceptuj do cyklu **lub** overrides `uuid@11` (bez force exceljs↓) |
+| M1 | Medium | CSP enforce jeszcze nie | **Decyzja B:** czekaj do **12.10** + przegląd naruszeń (NIE enforce teraz) |
+| M2 | Info | CORS `*` na Vercel static | Poza decyzją D (Edge zrobione); SPA+JWT — zostaje |
+| M3 | — | Hasło min 12 | **ZROBIONE (C)** — pass V2.1.1; bez force change właściciela |
+| M4 | — | PKCE | **ZROBIONE** — pass V3.5.3; e2e 8/8 |
+| M5 | — | exceljs/uuid | **ZROBIONE** — pass DEP-2 |
 | L1 | Low | ZAP Out of Date | Upgrade ZAP przy GATE-WEEKLY |
 | L2 | Low/Info | Cache-control / suspicious comments | Akceptuj / przegląd przy kolejnym ZAP |
 | P1 | Partial | MFA HHL_ADMIN wyłączone | Zostaje do D-11 (TOTP u adminów) |
@@ -281,8 +283,10 @@ Raportowanie: `src/lib/cspReport.ts` → RPC `report_csp_violation` (0180); bez 
 
 ## 20. Co dalej (bez blokady medium/low)
 
-1. **12.10** — przegląd naruszeń CSP → akceptacja źródeł → enforce (osobne polecenie).  
+1. **12.10** — przegląd naruszeń CSP → akceptacja źródeł → enforce (osobne polecenie; B).  
 2. **11.10 GATE-WEEKLY** — ZAP Active wyłącznie na TEST.  
-3. Decyzje M2–M5 z tabeli §18.  
-4. TELM-2 / SG-03 — bez zmian.
+3. TELM-2 / SG-03 — bez zmian.
+
+### Aktualizacja decyzji właściciela 05.10 ~16:55
+C/D/PKCE/deps wdrożone; CSP Report-Only bez enforce. Dowody: PR sec/owasp-c-d-pkce-deps; e2e PKCE 8/8; Edge CORS OPTIONS; `password_min_length=12`; `npm audit --omit=dev` 0.
 

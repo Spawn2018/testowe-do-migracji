@@ -11,16 +11,11 @@ import {
   summarizeElevation,
 } from '../_shared/here/routeProfile.ts';
 import { completeDims } from '../_shared/here/routeCheck.ts';
+import { corsHeaders, corsPreflight } from '../_shared/cors.ts';
 
-function cors(): HeadersInit {
-  return {
-    'access-control-allow-origin': '*',
-    'access-control-allow-headers': 'authorization, apikey, content-type',
-  };
-}
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: cors() });
+  if (req.method === 'OPTIONS') return corsPreflight();
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   const anon = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -31,7 +26,7 @@ Deno.serve(async (req) => {
   });
   const user = await userClient.auth.getUser();
   if (!user.data.user) {
-    return Response.json({ error: 'unauthorized' }, { status: 401, headers: cors() });
+    return Response.json({ error: 'unauthorized' }, { status: 401, headers: corsHeaders() });
   }
   const sb = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
@@ -39,27 +34,27 @@ Deno.serve(async (req) => {
   try {
     body = await req.json();
   } catch {
-    return Response.json({ error: 'json' }, { status: 400, headers: cors() });
+    return Response.json({ error: 'json' }, { status: 400, headers: corsHeaders() });
   }
   const loadId = body.loadId;
-  if (!loadId) return Response.json({ error: 'loadId' }, { status: 400, headers: cors() });
+  if (!loadId) return Response.json({ error: 'loadId' }, { status: 400, headers: corsHeaders() });
 
   // dostęp: ten sam co odczyt load (RLS przez user client)
   const loadRes = await userClient.from('loads').select(
     'id,route,combo_height_m,combo_width_m,combo_length_m,combo_weight_t,combo_axle_count,combo_axle_load_t',
   ).eq('id', loadId).maybeSingle();
   if (loadRes.error || !loadRes.data) {
-    return Response.json({ error: 'brak_transportu' }, { status: 404, headers: cors() });
+    return Response.json({ error: 'brak_transportu' }, { status: 404, headers: corsHeaders() });
   }
 
   const spend = await sb.rpc('here_month_spend');
   const budget = 100 * 0.8;
   if (spend.error || Number(spend.data ?? 0) >= budget) {
-    return Response.json({ fallback: true, reason: 'budget' }, { status: 409, headers: cors() });
+    return Response.json({ fallback: true, reason: 'budget' }, { status: 409, headers: corsHeaders() });
   }
 
   const key = Deno.env.get('HERE_API_KEY') ?? '';
-  if (!key) return Response.json({ fallback: true, reason: 'no_key' }, { status: 409, headers: cors() });
+  if (!key) return Response.json({ fallback: true, reason: 'no_key' }, { status: 409, headers: corsHeaders() });
 
   const h1 = await sb.rpc('h1_route_check_enabled').then((r) => r.data === true).catch(() => false);
   const h3 = await sb.rpc('h3_corridor_enabled').then((r) => r.data === true).catch(() => false);
@@ -85,7 +80,7 @@ Deno.serve(async (req) => {
       cached: true,
       dimsMode: cached.data.dims_mode,
       legs: cached.data.payload,
-    }, { headers: cors() });
+    }, { headers: corsHeaders() });
   }
 
   const legNames = pickLegsForRoute(row.route as string | null);
@@ -132,5 +127,5 @@ Deno.serve(async (req) => {
     payload: legsOut,
   }, { onConflict: 'load_id' });
 
-  return Response.json({ ok: true, cached: false, dimsMode, legs: legsOut }, { headers: cors() });
+  return Response.json({ ok: true, cached: false, dimsMode, legs: legsOut }, { headers: corsHeaders() });
 });

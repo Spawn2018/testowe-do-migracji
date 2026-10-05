@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './client';
 import { authErrorPl, passwordOk, PASSWORD_MIN, viewRoleForOrg } from './config';
+import { sendRecoveryLink } from './sendAuthEmail';
 import { t, tp } from '../i18n/messages';
 import { setAuthProfile, AUTH_RELOAD_EVENT, type AuthProfile } from './profile';
 import { useTowerStore } from '../store/useTowerStore';
@@ -36,12 +37,14 @@ function redirectTo(): string {
   return window.location.origin + window.location.pathname;
 }
 
-/** Czy hash/query wygląda na link z e-maila Auth (invite / recovery / magic). */
+/** Czy hash/query wygląda na link z e-maila Auth (invite / recovery / magic / PKCE). */
 function captureAuthLinkFromUrl(): boolean {
   const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
-  const fromHash = hash.includes('access_token=') || /type=(invite|recovery|signup|magiclink|email)/.test(hash);
+  const fromHash = hash.includes('access_token=') || hash.includes('token_hash=')
+    || /type=(invite|recovery|signup|magiclink|email)/.test(hash);
   const q = window.location.search;
-  const fromQuery = /[?&]code=/.test(q) || /[?&]type=(invite|recovery)/.test(q);
+  const fromQuery = /[?&]code=/.test(q) || /[?&]token_hash=/.test(q)
+    || /[?&]type=(invite|recovery|signup|magiclink|email)/.test(q);
   if (!fromHash && !fromQuery) return false;
   sessionStorage.setItem(LINK_KEY, JSON.stringify({ hash: window.location.hash, search: window.location.search }));
   history.replaceState(null, '', window.location.pathname);
@@ -57,21 +60,34 @@ async function consumePendingLink(sb: SupabaseClient): Promise<{ error?: string;
   catch { return { error: 'Uszkodzony link.' }; }
 
   const hash = (pending.hash ?? '').replace(/^#/, '');
-  const params = new URLSearchParams(hash.includes('=') ? hash : '');
-  const access = params.get('access_token');
-  const refresh = params.get('refresh_token');
-  const type = params.get('type') ?? '';
+  const hashParams = new URLSearchParams(hash.includes('=') ? hash : '');
+  const search = pending.search ?? '';
+  const queryParams = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+
+  const access = hashParams.get('access_token');
+  const refresh = hashParams.get('refresh_token');
+  const type = hashParams.get('type') ?? queryParams.get('type') ?? '';
   if (access && refresh) {
     const { error } = await sb.auth.setSession({ access_token: access, refresh_token: refresh });
     if (error) return { error: authErrorPl(error.message) };
     return { recovery: type === 'recovery' };
   }
-  const search = pending.search ?? '';
-  const code = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('code');
+
+  // Cross-browser invite/recovery: token_hash z szablonu ConfirmationURL (bez code_verifier).
+  const tokenHash = queryParams.get('token_hash') ?? hashParams.get('token_hash');
+  if (tokenHash) {
+    const otpType = (type || 'email') as 'invite' | 'recovery' | 'magiclink' | 'signup' | 'email';
+    const { error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type: otpType === 'invite' ? 'invite' : otpType === 'recovery' ? 'recovery' : 'email' });
+    if (error) return { error: authErrorPl(error.message) };
+    return { recovery: otpType === 'recovery' };
+  }
+
+  // PKCE: ?code=… (ta sama przeglądarka, która rozpoczęła flow).
+  const code = queryParams.get('code');
   if (code) {
     const { error } = await sb.auth.exchangeCodeForSession(code);
     if (error) return { error: authErrorPl(error.message) };
-    return { recovery: /type=recovery/.test(search) };
+    return { recovery: type === 'recovery' || /type=recovery/.test(search) };
   }
   return { error: 'Link wygasł lub jest niekompletny.' };
 }
@@ -156,10 +172,10 @@ function LoginScreen({
       setMsg({ ok: false, text: t(locale, 'auth_no_invite') });
       return;
     }
-    const { error } = await sb.auth.resetPasswordForEmail(addr, { redirectTo: redirectTo() });
+    const mail = await sendRecoveryLink(addr, redirectTo());
     setBusy(false);
-    setMsg(error
-      ? { ok: false, text: authErrorPl(error.message) }
+    setMsg(mail.error
+      ? { ok: false, text: authErrorPl(mail.error) }
       : { ok: true, text: t(locale, 'auth_reset_sent') });
   };
 

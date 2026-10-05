@@ -12,3 +12,17 @@ Stan: **W TOKU / PARTIAL** — pasywny ZAP prod High=0; CSP Report-Only do **12.
 | CSP enforce | **NIE** do 12.10 |
 | csp_violations | 0 wierszy |
 | RLS | OK (poza PostGIS `spatial_ref_sys`) |
+
+---
+
+## Aktualizacja 05.10 ~17:00 — decyzje C/D/PKCE/deps
+
+| Punkt | Wynik |
+|-------|-------|
+| C hasło min 12 | pass — UI + config.toml + `password_min_length=12` API; bez force change |
+| D CORS Edge | pass — tylko `https://tower.log-mar.pl`; SMS przez PostgREST (`sms_devices` 200) |
+| PKCE | pass — `flowType: pkce`; e2e 8/8 bez wysyłki maili |
+| exceljs/uuid | pass — overrides uuid@11.1.1; audit prod 0; testy XLSX/PDF/import |
+| B CSP enforce | bez zmian — Report-Only do 12.10 |
+
+ASVS L2: **82 pass / 12 partial / 0 fail / 18 N/A**.
