@@ -1,6 +1,6 @@
 # STATUS PLANU — część B, C i przed pilotażem (05.10.2026 ~12:40 PL)
 
-Źródło: `PLAN.md` + main `4e2d45d` (po D-78/H-3 PR #84, barlow #85, C-SEP #82/#83).  
+Źródło: `PLAN.md` + main `d641810` (PR #91 H-12/B-10/H-10 docs; TELM live PR #90) (po D-78/H-3 PR #84, barlow #85, C-SEP #82/#83).  
 Pozycja bez dowodu = **do zrobienia**.  
 Czeka właściciel / zewnętrzne = **bez budowy**.
 
@@ -80,22 +80,20 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 | H-10 | **PARTIAL** | ostrzeżenie ≥15 OK; ETA+wiatr **WYŁ.** — `PROPOZYCJA_H10_WIATR_ETA.md` | akceptacja wartości |
 | H-12 | **DONE** | weekend + `truck_ban_holidays` 0177 | — |
 | H-4 / H-5 | **czeka zewnętrzne** | — | TELM-2 |
-| TELM-EMTRACK-WEB | **ZBUDOWANE (flaga false)** | 0173+0174 cron, Edge, raport 05.10; fix rk_source_down | włączenie HHL + sekrety Edge |
+| TELM-EMTRACK-WEB | **LIVE** | PR #90, 0176; GD035YX; flaga **true**; orphan + redirect właściciela | monitoring 72h |
 | CLEAN-MAPLIBRE | **DONE** | brak maplibre/mapbox | — |
 | AUTH-MAIL | **DONE** | POSTEP 02.10 | — |
 | I-29 | **DONE** | `I29_BUDGETY_140.md` | — |
 | GATE-WEEKLY | **RYTM** | — | **11.10.2026** |
-| SEC-OWASP | **START** | `RAPORT_SEC_OWASP_05_10.md` | domknięcie ASVS+ZAP |
+| SEC-OWASP | **PARTIAL** | `RAPORT_SEC_OWASP_05_10.md` (audit 0 high; HSTS; ASVS skrót) | ZAP Baseline + CSP decyzja |
 
 ## 6. Tylko lista — bez budowy
 
 **Czeka właściciel:** D-83 → B-3a, H-1/H-3/H-6; R-0; D-3, D-7, D-14, D-16, D-17, D-21.  
 **Zewnętrzne:** TELM-2 (emtrack); II-10-E1 (IT KSH).
 
-## 7. Kolejka budowy (05.10 ~13:20+)
+## 7. Kolejka budowy (05.10 ~13:35 PL)
 
-1. VERIFY-13 **DONE** → B-10 PARTIAL → **B-Q**, **Q-11a**, **Q-11b**  
-2. H-7/H-10/H-12 PARTIAL → **H-8** pełny profil →  
-3. **SEC-OWASP** (ASVS L2)
-
-H1/H3/H6/TELM_EMTRACK_WEB: **false**. `tower.log-mar.pl` 200; www bez DNS.
+1. PR #91 **MERGED** `d641810` — H-12 DONE, B-10 PARTIAL+, H-10 ETA OFF, B-Q/Q-11a docs, H-8 propozycja, SEC PARTIAL.
+2. Domknięcie: B-10 ceny/dopłaty; H-7 mapa w eksporcie 1 transportu; Q-11b (FCM); SEC ZAP; GATE-WEEKLY **11.10.2026**.
+3. Nie ruszane: D-83 / B-3a / H-1/H-3/H-6 flags, R-0, D-3/7/14/16/17/21, II-10-E1. TELM flag true + blokada SMS/e-mail właściciela.
