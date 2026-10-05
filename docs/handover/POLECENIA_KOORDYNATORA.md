@@ -1303,3 +1303,17 @@ Zamiast „Przelicz odczyty SEK od 21.09 z historii GoEasy":
 W raporcie: mnożnik tygodnia **40 = 1,14** i **41 = 1,13**.
 
 > Zapis decyzji (05.10 ~22:05): GoEasy Diesel firmowa + średnia z cen opublikowanych → `wzorzec/03_REJESTR_DECYZJI.md` (wiersz D-2 / D-34), `PLAN.md` (BAF-CENY-05-10). Realizacja: migracja **0187**, testy `tests/db/baf.sh`.
+
+## 2026-10-05 ~22:31 Europe/Warsaw — SG-03 BAF A + zasada TELM mid-trip
+
+SG-03: A — rzeczywisty załadunek **01.10** → tydzień **40** → mnożnik **1,14**.
+
+ZASADA NA STAŁE (poprawka „transport już w trasie" TELM):
+- podłączenie śledzenia w trakcie jazdy NIE ustawia rzeczywistego załadunku na godzinę podłączenia
+- faza z pozycji (np. IN_TRANSIT_SE) osobno, adnotacja „faza z pozycji przy podłączeniu"
+- rzeczywisty załadunek: tylko wyjazd ze strefy załadunku (GPS) albo ręcznie dyspozytor; gdy nieznany — BAF/daty z planu KSH (D-12, fuel_load_date bierze plan gdy brak actual)
+- sprawdź inne transporty z tą samą ścieżką; popraw + lista
+Test: podłączony 05.10, plan 01.10 → actual pusty, tydzień paliwa 40, mnożnik 1,14.
+Raport BAF: lista 8 bez ceny (86/94) + przyczyna każdego.
+
+> Realizacja (05.10 ~22:50): migracja **0188** `0188_telm_faza_bez_zaladunku.sql` — `telm_infer_phase_from_position` nie ustawia `actual_load_at`; faza w `telm_attach_phase` (adnotacja „faza z pozycji przy podłączeniu”); korekta `telm_fix_attach_actual_load()`. Audyt PROD: ta sama ścieżka tylko **SG-03** (actual 05.10 13:21 → pusty; paliwo tydz. 40 = 1,14). Testy `tests/db/baf.sh` (36).

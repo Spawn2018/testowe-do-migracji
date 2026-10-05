@@ -135,5 +135,24 @@ chk "załadunek od 12.10 bierze wersję 2" "$(Q "select sefs_week_calc('$P','202
 sys "select load_price_compute('$LSG', '2026-10-13')"
 chk "stary transport (06.10) bez zmian po nowej wersji" "$(Q "select fuel_applied_mult::numeric(4,2)||'/'||baf_amount from load_cost where load_id='$LSG'")" "1.13/897.00"
 
+# TELM 0188: podłączenie w trasie 05.10, plan załadunku 01.10 → actual pusty, tydzień paliwa 40, 1,14
+LTM=33333333-0000-0000-0000-0000000baf08
+sys "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date) values ('$LTM','$P','$CAR','BAF/TM','2026-10-01')"
+sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, total_weight_t) values ('$P','$LTM','SG-B5','DIMENSIONED',18.21,2.45,2.45,20.0)"
+chk "TELM: faza z pozycji SE przy podłączeniu" "$(Q "select telm_infer_phase_from_position('$LTM', 60.5, 17.2, '2026-10-05 13:21+02')")" "IN_TRANSIT_SE"
+chk "TELM: rzeczywisty załadunek pusty po podłączeniu" "$(Q "select coalesce(actual_load_at::text,'∅') from loads where id='$LTM'")" "∅"
+chk "TELM: faza zapisana osobno z adnotacją" "$(Q "select phase||'/'||note from telm_attach_phase where load_id='$LTM'")" "IN_TRANSIT_SE/faza z pozycji przy podłączeniu"
+chk "TELM: data paliwa = plan KSH 01.10 (tydz. 40)" "$(Q "select fuel_load_date('$LTM')")" "2026-10-01"
+sys "select load_price_compute('$LTM', '2026-10-05')"
+chk "TELM: mnożnik 1,14 OSTATECZNY" "$(Q "select fuel_applied_mult::numeric(4,2)||'/'||fuel_status from load_cost where load_id='$LTM'")" "1.14/OSTATECZNY"
+# Stara ścieżka 0176 (actual = chwila podłączenia) → korekta
+sys "update loads set actual_load_at = '2026-10-05 13:21+02' where id='$LTM'"
+chk "korekta: poprawiono 1 transport (BAF/TM)" "$(Q "select string_agg(order_no, ',') from telm_fix_attach_actual_load()")" "BAF/TM"
+chk "korekta: actual pusty, mnożnik 1,14" "$(Q "select coalesce(l.actual_load_at::text,'∅')||'/'||c.fuel_applied_mult::numeric(4,2) from loads l join load_cost c on c.load_id=l.id where l.id='$LTM'")" "∅/1.14"
+# Rzeczywisty wyjazd ze strefy (niesyntetyczny) nie jest kasowany
+sys "update loads set actual_load_at = '2026-10-05 13:21+02' where id='$LTM'"
+sys "insert into load_events (load_id, event_type, occurred_at, payload) values ('$LTM','GEOFENCE_EXIT','2026-10-01 18:00+02','{\"geofence_kind\":\"LOADING\"}')"
+chk "korekta: rzeczywisty wyjazd GPS zostaje" "$(Q "select count(*) from telm_fix_attach_actual_load()")" "0"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
