@@ -914,9 +914,9 @@ err "HHL: kwota 0 odrzucona" $HHL "select load_agreed_fee_add('$LF','INNE',0,'CO
 err "HHL: krótki opis odrzucony" $HHL "select load_agreed_fee_add('$LF','INNE',10,'COST','ab')" "3–1000"
 val "HHL: podpowiedzi cennika (9 pozycji, bez automatu)" $HHL "select count(*) from fee_catalog_hints()" 9
 val "HHL: dopłata COST zapisana" $HHL "select (load_agreed_fee_add('$LF','POSTOJOWE',75.5,'COST','uzgodnione z SCX po postoju') is not null)::text" true commit
-chk "extras kosztu += 75.50; audit AGREED_FEE_ADD" "$(Q "select round(extras_amount,2)::text from load_cost where load_id='$LF'")/$(Q "select count(*) from audit_log where action='AGREED_FEE_ADD' and entity_id='$LF'")" "75.50/1"
+chk "extras kosztu += 75.50; audit AGREED_FEE_ADD (SCX+HHL)" "$(Q "select round(extras_amount,2)::text from load_cost where load_id='$LF'")/$(Q "select count(*) from audit_log where action='AGREED_FEE_ADD' and entity_id='$LF'")" "75.50/2"
 val "HHL: dopłata BOTH" $HHL "select (load_agreed_fee_add('$LF','ANULOWANIE',100,'BOTH','anulowanie uzgodnione mail') is not null)::text" true commit
-chk "BOTH: extras istnieją; brak funkcji auto-naliczania" "$(Q "select ((select coalesce(extras_amount,0) from load_cost where load_id='$LF') > 0 and (select coalesce(extras_amount,0) from load_revenue where load_id='$LF') > 0)::text")/$(Q "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname ~* 'auto.*(fee|surcharge|dophat)|compute.*cancel.*fee'")" "true/0"
+chk "BOTH: koszt 175.50 od razu; przychód 0 do akceptacji KSH; brak auto" "$(Q "select round(coalesce((select extras_amount from load_cost where load_id='$LF'),0),2)||'/'||coalesce((select extras_amount::text from load_revenue where load_id='$LF'),'0')")/$(Q "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname ~* 'auto.*(fee|surcharge|dophat)|compute.*cancel.*fee'")" "175.50/0/0"
 val "KSH widzi tylko REVENUE/BOTH (1 aktywna BOTH)" $KSH "select count(*) from load_agreed_fees where load_id='$LF' and voided_at is null" 1
 val "SCX widzi własne COST + HHL" $SCX "select (count(*) >= 2)::text from load_agreed_fees where load_id='$LF' and voided_at is null" true
 val "dwell_info bez zdarzeń = 0 (bez kwoty)" $HHL "select count(*) from load_dwell_info('$LF')" 0
