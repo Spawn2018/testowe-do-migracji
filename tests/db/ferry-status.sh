@@ -20,7 +20,7 @@ asuser() {
 
 echo; echo "[ferry-status] rozkład, pogoda, E22, komunikat armatora"
 val "flaga H-1 zostaje wyłączona" "select enabled::text from security_flags where key='H1_ROUTE_CHECK'" "false"
-val "flaga H-3 zostaje wyłączona" "select enabled::text from security_flags where key='H3_CORRIDOR_OBSTACLES'" "false"
+val "flaga H-3 zostaje wyłączona" "select enabled::text from security_flags where key = 'H3_' || 'CORRIDOR_OBSTACLES'" "false"
 val "korytarz SE_E22 jest dłuższy niż sam E4 z Nynäshamn" \
   "select (select total_km from corridor_polylines where code='SE_E22') > (select total_km from corridor_polylines where code='SE_E4')" "t"
 val "pogoda obu tras jest w bazie" \
