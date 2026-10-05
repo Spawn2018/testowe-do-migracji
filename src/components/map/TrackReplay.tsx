@@ -4,6 +4,7 @@ import { useTowerStore } from '../../store/useTowerStore';
 import { t, tp } from '../../i18n/messages';
 import { formatOpsDateTime } from '../../lib/time';
 import { trackPositionAt, type TrackPoint } from '../../lib/mapDeclutter';
+import { trailForDraw } from '../../lib/map/draw';
 
 /**
  * III-5 (SCOPE 5.13, 0088) — odtwarzanie przebiegu wybranego transportu: pozycje GPS z bazy (load_track, RLS
@@ -31,7 +32,8 @@ export default function TrackReplay({ map, loadId, code }: { map: L.Map; loadId:
 
   useEffect(() => {
     if (!track || track.length === 0) return;
-    const line = L.polyline(track.map((p) => L.latLng(p.lat, p.lng)), { color: '#6BA8D6', weight: 3, opacity: 0.9 }).addTo(map);
+    const drawn = trailForDraw(track);
+    const line = L.polyline(drawn.line.map((p) => L.latLng(p.lat, p.lng)), { color: '#6BA8D6', weight: 3, opacity: 0.9 }).addTo(map);
     const last = track[track.length - 1];
     const dot = L.circleMarker([last.lat, last.lng], { radius: 7, color: '#080F15', weight: 2, fillColor: '#E5A544', fillOpacity: 1 }).addTo(map);
     layerRef.current = { line, dot };
@@ -64,7 +66,7 @@ export default function TrackReplay({ map, loadId, code }: { map: L.Map; loadId:
   const cur = track.length ? trackPositionAt(track, at) : null;
   const speed = cur ? track[cur.idx]?.speed_kmh : null;
   return (
-    <div className="mapkey" data-track-replay={track.length} style={{ zIndex: 600, bottom: 52, flexDirection: 'column', gap: 6, minWidth: 260 }}>
+    <div className="mapkey" data-track-replay={track.length} data-trail-source="points" style={{ zIndex: 600, bottom: 52, flexDirection: 'column', gap: 6, minWidth: 260 }}>
       <b>{tp(locale, 'iii5_title', { code })}</b>
       {track.length === 0 ? (
         <span className="mapkey-note" data-track-empty>{t(locale, 'iii5_empty')}</span>

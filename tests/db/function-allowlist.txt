@@ -165,3 +165,7 @@ authenticated h3_highlighted
 authenticated operator_notice_apply
 
 authenticated deepl_usage_view
+
+# B-MAPA: podkład i geometria trasy, próbka śladu promu dla Q-18
+authenticated map_display_state
+authenticated ferry_track_sample
