@@ -1915,3 +1915,5 @@ Wizualnie: 120 ujęć opcje/automatyzacje/ustawienia z B-6 = identyczne z main `
 Stop: B-3a (D-83); propozycje B-7c, filtry/statusy B-8, B-9, Q-9.
 
 Kontrole: H1_ROUTE_CHECK false, H3_CORRIDOR_OBSTACLES false, H6_MAP_OBSTACLES false; 94 transporty aktywne; bez SMS, usunięć, wydatków.
+
+| CSP-RO+D-3 | CSP Report-Only 7 dni + D-3 retencja dokumentów | **DONE** 05.10 | (PR tej paczki) | migracja **0180** PROD+TEST; ZAP Baseline prod High=0 | CSP-RO do 2026-10-12; naruszenia w Stanie systemu; CMR/POD/zdjęcia 3 lata, PDF faktur 5 lat; I-7 bez zmian; TELM true; H1/H3/H6 false |

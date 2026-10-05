@@ -11,7 +11,10 @@ applyThemeToDom(systemTheme());
 
 // I-6: błędy przeglądarki do bazy — wyłącznie build produkcyjny (paczka demo bez tego kodu)
 if (import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED) {
-  void Promise.all([import('./lib/errorReport'), import('./auth/client')]).then(([m, c]) => m.installErrorReporter(c.getSupabase));
+  void Promise.all([import('./lib/errorReport'), import('./lib/cspReport'), import('./auth/client')]).then(([err, csp, c]) => {
+    err.installErrorReporter(c.getSupabase);
+    csp.installCspReporter(c.getSupabase);
+  });
 }
 
 createRoot(document.getElementById('root')!).render(

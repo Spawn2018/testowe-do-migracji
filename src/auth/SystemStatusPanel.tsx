@@ -86,6 +86,7 @@ export default function SystemStatusPanel() {
     services?: { service: string; requests: number; pool: number; over_usd: number; pct_pool: number | null }[];
   } | null>(null);
   const [deepl, setDeepl] = useState<{ characters: number; monthly_limit: number; queued: number; level: string } | null>(null);
+  const [csp, setCsp] = useState<{ mode: string; until: string; violations_7d: number; hits_7d: number; top: string; level: string } | null>(null);
 
   const refresh = useCallback(async () => {
     const sb = await getSupabase();
@@ -134,6 +135,10 @@ export default function SystemStatusPanel() {
     const e = await sb.rpc('email_budget_status');
     if (e.error || e.data == null) setMailBudget(null);
     else setMailBudget(e.data as { immediate_n: number; digest_n: number; suppressed_n: number; level: string; suppressed_to?: { recipient: string; n: number }[] | null });
+
+    const c = await sb.rpc('csp_status_view');
+    if (c.error || !c.data) setCsp(null);
+    else setCsp(c.data as NonNullable<typeof csp>);
   }, []);
 
   useEffect(() => {
@@ -176,6 +181,7 @@ export default function SystemStatusPanel() {
   const mailState: TileState = !mailBudget ? 'off' : mailBudget.level === 'critical_only' ? 'bad' : mailBudget.level === 'warn' || mailBudget.suppressed_n > 0 ? 'warn' : 'ok';
   const hereState: TileState = !hereBudget || !hereBudget.enabled ? 'off' : levelState(hereBudget.level);
   const deeplState: TileState = !deepl ? 'off' : levelState(deepl.level);
+  const cspState: TileState = !csp ? 'off' : csp.level === 'bad' ? 'bad' : csp.level === 'warn' ? 'warn' : 'ok';
   const nf = (n: number | undefined) => Number(n ?? 0).toLocaleString(locale === 'sv' ? 'sv-SE' : locale === 'en' ? 'en-GB' : 'pl-PL');
   const jobName = (job: string) => {
     const k = `b6_job_${job.replace(/-/g, '_')}`;
@@ -210,6 +216,9 @@ export default function SystemStatusPanel() {
         <Tile state={deeplState} k={t(locale, 'b6_sys_deepl')} attrs={{ 'data-deepl-usage': deepl?.level ?? 'brak' }}
           v={nf(deepl?.characters)}
           d={`${tp(locale, 'b6_sys_deepl_d', { limit: nf(deepl?.monthly_limit ?? 1000000), q: String(deepl?.queued ?? 0) })}${deepl?.level === 'warn' ? ` · ${t(locale, 'pl_deepl_warn')}` : ''}${deepl?.level === 'full' ? ` · ${t(locale, 'pl_deepl_full')}` : ''}`} />
+        <Tile state={cspState} k={t(locale, 'b6_sys_csp')} attrs={{ 'data-csp': csp?.level ?? 'off' }}
+          v={csp ? String(csp.violations_7d) : t(locale, 'b6_sys_none')}
+          d={csp ? tp(locale, 'b6_sys_csp_d', { until: csp.until || '—', hits: String(csp.hits_7d), top: csp.top || '—' }) : ''} />
       </div>
       {mailBudget && mailBudget.suppressed_n > 0 ? (
         <div className="note" style={{ marginTop: 10 }}>

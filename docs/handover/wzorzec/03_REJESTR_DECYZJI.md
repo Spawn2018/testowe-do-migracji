@@ -24,7 +24,7 @@
 |---|---|---|---|
 | D-1 | stawki | cenniki SCX i HHL przekazane — 12 pozycji (kwoty w plikach poufnych) | ✅ 29.09 |
 | D-2 | dopłata paliwowa | załącznik SEFS z 28.09; ceny „tak, jak podaje źródło" | ✅ 29.09 |
-| D-3 | retencja dokumentów | CMR, POD, zdjęcia 3 lata; PDF faktur 5 lat — **rekomendacja, czeka na potwierdzenie** | otwarta — czeka na potwierdzenie |
+| D-3 | retencja dokumentów | CMR, POD, zdjęcia **3 lata**; PDF faktur **5 lat** — **zatwierdzone właściciel 05.10 ~13:53**; I-7 kierowca bez zmian | ✅ 05.10.2026 |
 | D-4 | telefon i SIM | **ZAMKNIĘTE 01.10** — telefon Android + SIM są; SMS tylko do KSH (do kierowców — rezygnacja D-37); dokończenie APK = I-3-APK | ✅ 01.10 |
 | D-5 | RODO | **zamknięte** — wszystkie zgody są, temat zakończony | ✅ 29.09 |
 | D-6 | spotkanie z przewoźnikiem | **odbyte 29.09** — decyzje w `ZLECENIE_PO_SPOTKANIU_SCX.md` | ✅ |
@@ -166,3 +166,12 @@ Polecenie kazało przepisać D-66–D-76 dosłownie z `ZLECENIE_POPRAWKI_02_10.m
 
 | Q-11b | push telefon | **A** Web Push VAPID; krytyczne od razu; skrót 1×/dzień; Preferencje; iOS „Dodaj do ekranu głównego” | ✅ 05.10 |
 | H-8 | profil trasy | **A** elevation truck standard teraz; naruszenia wymiarów auto po D-83; pula tras | ✅ 05.10 |
+
+## Decyzje właściciela 2026-10-05 ~13:53 — CSP, ZAP, D-3, kolejka
+
+| ID | Sprawa | Decyzja | Status |
+|---|---|---|---|
+| CSP-RO | Content-Security-Policy | Report-Only **7 dni**; naruszenia → tabela w Stanie systemu; potem lista źródeł do akceptacji; **enforce przed SEC-OWASP i pilotażem** | ✅ decyzja / ⏳ wdrożenie |
+| ZAP-NODE | OWASP ZAP bez Dockera | Instalacja ZAP + Java; Baseline pasywny na **produkcji**; skan pełny tylko na **TEST**; wynik do SEC-OWASP | ✅ decyzja / ⏳ uruchomienie |
+| D-3 | retencja dokumentów | CMR/POD/zdjęcia 3 lata; PDF faktur 5 lat; I-7 bez zmian | ✅ 05.10.2026 |
+| KOLEJKA-1353 | nie stój | Buduj pozycje bez czekania na właściciela; czeka tylko D-83→B-3a/H-1/H-3, R-0, D-7/14/16/17/21; GATE-WEEKLY 11.10; SG-03 raport po rozładunku | ✅ |
