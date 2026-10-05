@@ -1,21 +1,16 @@
-# WIP — BAF PROGNOZA (06.10.2026)
+# BAF PROGNOZA (06.10.2026) — ZAMKNIĘTE
 
-**Status:** implementacja lokalna gotowa; brama → PR → apply 0189 → deploy.
+## Wynik
+- PR **#131** merged → `main` `17942e6`
+- Migracja **0189** na PROD (COMMIT OK)
+- Vercel **READY** `dpl_Atyr86FbxkuqP1R7B8cE8q7mQvZE` (git archive)
+- Domeny: tower.log-mar.pl + watch-tower-makieta.vercel.app **200**
 
-## Polecenie
-66 transportów 16.10–15.12 miało mnożnik **1,12** z niepełnego tygodnia (1 GoEasy 05.10).
-Zasada: prev tydzień niezamknięty → **PROGNOZA = ostatni OSTATECZNY** (dziś **1,13**), etykieta „prognoza” w Cenach; po zamknięciu → OSTATECZNY + migawka; odświeżenie przelicza PROGNOZA.
+## Prod po przeliczeniu
+- Przed: **62** transportów 16.10–15.12 z mnożnikiem **1,12** (WSTEPNY z niepełnego tygodnia)
+- Po: **62** × **1,13 PROGNOZA**
+- tydz. 41 nadal **1,13 OSTATECZNY**; przyszłe = PROGNOZA
 
-## Zmiany
-- Migracja **0189** `supabase/migrations/0189_baf_prognoza.sql`
-  - `sefs_last_ostateczny`, `sefs_week_calc` → PROGNOZA bez częściowej średniej
-  - `sefs_refresh_prognoza`, `load_price_compute` (brak daty → PROGNOZA)
-  - CHECK `fuel_status` + PROGNOZA
-- Testy `tests/db/baf.sh` (46 OK): dziś przyszłe = 1,13 PROGNOZA; symulacja zamknięcia tyg. 41; regresja 40/41/TELM
-- UI: pigułka `fuel_forecast` (pl/en/sv) w szufladzie transportu
-- Skrypt `scripts/m0189-migrate.mjs` (dry-run / apply / verify / fix)
-
-## Po bramie
-1. PR + merge main
-2. `node scripts/m0189-migrate.mjs apply-prod` (przelicza ~66)
-3. Deploy Vercel; obie domeny 200
+## Zasada
+Prev tydzień niezamknięty → PROGNOZA = ostatni OSTATECZNY (bez częściowej średniej).
+Po zamknięciu → OSTATECZNY + migawka. `sefs_refresh_prognoza` / cron.
