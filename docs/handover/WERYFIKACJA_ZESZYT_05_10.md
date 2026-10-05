@@ -95,16 +95,44 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 - Zgodne: 2 · Poprawione: 1 (9.2) · ⛔: 0
 - Wdrożenie: PR #106, Vercel READY, tower.log-mar.pl **200**
 
-## Sekcja 10 — wstępne (nie zamknięta)
-Obserwacje prod (SG-03) — do domknięcia punkt po punkcie:
-- **10a.1** nadal „KSH Śrem” w miejscu załadunku; „Wymiary L×W×H” ładunku widoczne (czy to „wymiary zestawu”?)
-- **10a.3** przycisk „Edytuj nr HHL” zamiast „Edytuj” / „Dodaj”
-- **10a.5** Pilotaż pokazuje „nie wymagany” zamiast ukryć pole
-- **10a.6** Załadunek/Dostawa w szufladzie bez gg:mm (tabela: rok OK, godziny gdy okno)
-- **10a.10** w Przeglądzie jeden telefon (tabela ma parę)
-- **10c** Historia: wpisy z datą PL i firmą — wygląda OK (`10c.png`)
-- **10e** Polisa OCP auto widoczna (`10e.png`)
-- **10f** Ceny bez POD, EUR (`10f.png`)
-- **10g / 10d** klik zakładki Status/Ustalenia wymaga pewniejszego selektora (treść mieszała się w teście)
-Zrzuty: `10a-overview.png`, `10c.png`, `10d.png`, `10e.png`, `10f.png`, `10g.png`
+| 10a.1 | Bez: Zlecenie, Śrem z nadawcy, wymiary zestawu, Nr KSH, Montaż, Nr rezerwacji promu | **częściowo** — brak „Zlecenie”/Montaż/Nr KSH; „KSH Śrem” + „Wymiary L×W×H” ładunku — pytania w poczekalni | `10a.png` | poczekalnia |
+| 10a.2 | Tydzień załadunku na lewo od tygodnia dostawy | **zgodne** — t40 / t41 | `10a.png` | stan prod |
+| 10a.3 | HHL: „Dodaj” / po dodaniu „Edytuj” (kolor jak SCX) | **poprawione** — etykieta „Edytuj”; `btn` (nie ghost) | `10a.png` | PR #108 · `dpl_FvtWKtyx…` |
+| 10a.4 | HHL user (nie admin) nie dodaje awizacji | **zgodne** (kod) — `canAwiz = role === 'SCX'` | — | stan prod |
+| 10a.5 | Pilot tylko gdy wymagany; inaczej brak pola | **poprawione** — ukryte gdy `!escort` | `10a.png` | PR #108 |
+| 10a.6 | Załadunek/Dostawa z gg:mm | **częściowo** — `formatSchedTableDay`; godziny gdy okno (0 okien na prod) | `10a.png` | PR #108 · jak 8.3 |
+| 10a.7 | Kierowcy kier1/kier2; bez dostarczającego kier1/... | **zgodne** — przy przepięciu `\|` (C.1) | `10a.png` | stan prod |
+| 10a.8 | Brak wpisu = „nieuzupełnione” | **zgodne** — `a6_dr_not_filled` przy pustym HHL/kierowcy | `10a.png` | stan prod |
+| 10a.9 | Ciągniki 1\|2; naczepa widoczna | **poprawione** — para ciągników + `·` naczepa | `10a.png` | PR #108 |
+| 10a.10 | Telefony 1\|2 bez spacji | **poprawione** — `785025313\|668856013` | `10a.png` | PR #108 |
+| 10a.11 | Prom: nazwa + data + godzina wypłynięcia | **częściowo** — przy braku: „brak rezerwacji”; z rejsem: vessel · data | `10a.png` | stan prod |
+
+| 10b.1 | Checkbox naczepy → przepięcie | **zgodne** — „Przepięcie naczepy” (SCX) | `10b.png` | stan prod |
+| 10b.2 | Kierowca odbierający + dostarczający (48 h) | **zgodne** — pola dostarczającego po zaznaczeniu przepięcia | `10b.png` | stan prod |
+| 10b.3 | Telefon i ciągnik jak kierowca | **zgodne** | `10b.png` | stan prod |
+| 10b.4 | Pilot tylko gdy wymagany | **zgodne** — brak pola w modalu gdy niewymagany | `10b.png` | stan prod |
+| 10b.5 | Zmiana okna załadunku/dostawy | **częściowo** — okna planu w szufladzie HHL; nie w modalu SCX | — | stan prod |
+| 10b.6 | Brak Nr rezerwacji promu | **zgodne** | `10b.png` | stan prod |
+
+| 10c.1 | Opisy: imię nazwisko // firma — data — godzina PL | **częściowo** — data/godzina PL OK; actor często „HHL”/„system” (nie imię // firma) | `10c.png` | poczekalnia |
+| 10c.2 | Opisy czytelne, wytłuszczone | **zgodne** — `fontWeight: 700` na Historii | `10c.png` | stan prod |
+| 10c.3 | Statusy wysłania/odczytania z Ustaleń | **częściowo** — brak przykładowych wiadomości na SG-03 | `10c.png` | — |
+
+| 10d.1 | Status = kamienie + opis jak Historia | **zgodne** — ta sama lista zdarzeń, etykieta Status | `10d.png` | stan prod |
+
+| 10e.1 | Dokumenty jak makieta + zmiany | **zgodne** — polisa OCP auto | `10e.png` | stan prod |
+| 10e.2 | Brak usuwania dokumentu na dole | **zgodne** | `10e.png` | stan prod |
+
+| 10f.1 | Ceny jak makieta, bez POD | **zgodne** | `10f.png` | stan prod |
+| 10f.2 | EUR → brak kursów (HHL widzi kursy) | **zgodne** — widok EUR; HHL ma koszty/przychody | `10f.png` | stan prod |
+| 10f.3–10f.5 | Mechanizm dopłat HHL/KSH/SCX | **zgodne** (UI formularza OPL-8 widoczny) — pełny flow nie klikany dziś | `10f.png` | stan prod |
+
+| 10g.1 | Czat: kto // firma — data — godzina | **zgodne** (kod + input „Wyślij”); brak wiadomości na SG-03 | `10g.png` | stan prod |
+| 10g.2 | „Odczytano” → kto i kiedy | **zgodne** (kod `details`/`odczytano`) — brak reads na SG-03 | `10g.png` | stan prod |
+| 10g.3 | Powiadomienie o nowej wiadomości | ⛔ / nie sprawdzone dziś (auth timeout pod koniec) | — | — |
+
+## Raport sekcji 10 (Podgląd zlecenia)
+- Zgodne: 18 · Poprawione: 4 (10a.3/5/9/10) · Częściowo: 6 · Otwarte/⛔: 1 (10g.3)
+- Wdrożenie: PR #108, Vercel READY `dpl_FvtWKtyxMxzMdCkMrKm9CWnFeVDf`, tower.log-mar.pl **200**, watch-tower-makieta.vercel.app **200** (15:45 PL)
+- Auth Supabase: timeout przy ponownym logowaniu ~15:53 PL — K/R/P dokończyć po przywróceniu Auth
 

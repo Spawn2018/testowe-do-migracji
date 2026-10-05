@@ -11,3 +11,5 @@
 | 2026-10-05 15:22 | executor | 8.9: brak rozwijanego „Jak to działa” przy filtrach harmonogramu (są title/aria częściowo) | 8.9 |
 | 2026-10-05 15:25 | executor | 10a.1: „KSH Śrem” w miejscu załadunku — czy to „Śrem z nadawcy” do usunięcia, czy adres OK? | 10a.1 |
 | 2026-10-05 15:25 | executor | 10a.1: „Wymiary L×W×H” ładunku vs „wymiary zestawu” — czy zostawić wymiary ładunku? | 10a.1 |
+| 2026-10-05 15:50 | executor | 10c.1: actor w Historii to często „HHL”/„system” zamiast „imię nazwisko // firma” — czy wzbogacić actor z profilu? | 10c.1 |
+| 2026-10-05 15:54 | executor | Auth Supabase: upstream timeout przy password/magiclink — zablokowało dokończenie K/R/P/C na prod | K/R/P |
