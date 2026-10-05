@@ -267,3 +267,18 @@ end $$;
 revoke all on function public.sefs_refresh_prognoza(uuid) from public, anon, authenticated;
 comment on function public.sefs_refresh_prognoza(uuid) is
   'BAF 0189: przelicz wyceny nie-OSTATECZNE (PROGNOZA→nowy ostatni OSTATECZNY; po zamknięciu tygodnia → OSTATECZNY).';
+
+-- HHL: sefs_week_for_load z datą „dziś" (testy / podgląd zamknięcia tygodnia)
+create or replace function public.sefs_week_for_load(p_project uuid, p_load_date date, p_today date)
+returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if (is_hhl()) is not true then
+    raise exception 'SEFS — wyłącznie HHL' using errcode = '42501';
+  end if;
+  return sefs_week_calc(p_project, p_load_date, p_today);
+end $$;
+revoke all on function public.sefs_week_for_load(uuid, date, date) from public, anon;
+grant execute on function public.sefs_week_for_load(uuid, date, date) to authenticated;
+comment on function public.sefs_week_for_load(uuid, date, date) is
+  'BAF 0189: jak sefs_week_calc z p_today; strażnik HHL (do testów zamknięcia tygodnia).';
