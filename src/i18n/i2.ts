@@ -279,7 +279,7 @@ const pl: Dict = {
   e34_saved: "Awizacja pojazdów pilotujących zapisana",
   iii5_title: "Przebieg: {code}",
   iii5_empty: "Brak pozycji GPS dla tego transportu.",
-  iii5_points: "{n} pozycji · {a} – {b}",
+  iii5_points: "{n~pozycja|pozycje|pozycji} · {a} – {b}",
   iii5_play: "Odtwórz",
   iii5_pause: "Pauza",
   iii5_slider: "Chwila przebiegu",
@@ -378,7 +378,7 @@ const pl: Dict = {
   // D-30 — polisy OCP
   d30_h: "Polisa OCP przewoźnika",
   d30_none: "Brak zatwierdzonej polisy OCP w systemie.",
-  d30_note: "Polisa {policy} ({carrier}) ważna do {date} ({days} dni). Przypomnienie wychodzi automatycznie 14 dni przed terminem.",
+  d30_note: "Polisa {policy} ({carrier}) ważna do {date} ({days~dzień|dni|dni}). Przypomnienie wychodzi automatycznie 14 dni przed terminem.",
   d30_add: "Dodaj polisę",
   d30_save: "Zapisz polisę",
   d30_cancel: "Anuluj",

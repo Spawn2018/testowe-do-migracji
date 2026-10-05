@@ -13,6 +13,7 @@ import {
   type FerrySailing,
 } from './ferry';
 import { getNow } from './frozenNow';
+import { plPlural } from './plPlural';
 import {
   formatWaveM,
   formatWindMs,
@@ -150,8 +151,7 @@ export function cockpitFerryBanner(
   const vessel = vesselById(voyage.vessel);
   const onVoyage = loadsOnVoyage(loads, voyage);
   const n = onVoyage.length;
-  const transporty =
-    n === 1 ? '1 transport przypięty' : n < 5 ? `${n} transporty przypięte` : `${n} transportów przypiętych`;
+  const transporty = `${n} ${plPlural(n, 'transport przypięty', 'transporty przypięte', 'transportów przypiętych')}`;
   return {
     title: `Rejs ${day} zagrożony.`,
     body: `Prognoza fali ${formatWaveM(sea.waveM)} i porywy ${formatWindMs(sea.windMs)} w oknie odejścia (${vessel.name}). ${transporty} do tego rejsu. Panel alternatyw w zakładce Ryzyka.`,
@@ -162,7 +162,7 @@ export function cockpitFerryBanner(
     bodyKey: 'rk_banner_body',
     bodyParams: {
       wave: sea.waveM, wind: sea.windMs, vessel: vessel.name,
-      loads: n, loads_key: n === 1 ? 'rk_banner_loads_one' : n < 5 ? 'rk_banner_loads_few' : 'rk_banner_loads_many',
+      loads: n, loads_key: plPlural(n, 'rk_banner_loads_one', 'rk_banner_loads_few', 'rk_banner_loads_many'),
     },
   };
 }

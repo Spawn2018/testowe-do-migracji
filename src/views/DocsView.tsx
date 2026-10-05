@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
-import { pctText, t } from '../i18n/messages';
+import { pctText, t, tp } from '../i18n/messages';
 import type { DocCategory, Document } from '../types';
 import { downloadDocumentsZip } from '../lib/zipDocs';
 import { attachDocumentFile } from '../lib/docFiles';
@@ -143,7 +143,7 @@ export function DocsView() {
           onClick={() => {
             if (!week) return;
             void downloadDocumentsZip(docsForWeek(documents, loads, week), `WATCH_TOWER_dokumenty_${week}.zip`).then((r) => {
-              useTowerStore.getState().pushToast(t(locale, 'a6_docs_zip_toast').replace('{n}', String(r.count)), 'MEDIUM');
+              useTowerStore.getState().pushToast(tp(locale, 'a6_docs_zip_toast', { n: r.count }), 'MEDIUM');
             });
           }}
         >

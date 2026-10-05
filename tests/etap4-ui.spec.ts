@@ -1,3 +1,4 @@
+import { plPlural } from '../src/lib/plPlural'
 /**
  * Etap 4 — ścieżki interfejsu na DemoProvider (świeży build HEAD w pre-push: scripts/ci/fresh-smoke.sh).
  * M5: numery zleceń — trzy kolumny, „każda strona swój”, GOTOWY bez numeru HHL → zrozumiały komunikat,
@@ -409,7 +410,8 @@ test.describe('D26 — import: anulowania za zgodą (ANEKS 3 §2.1)', () => {
     expect(blocked.length).toBeGreaterThan(0)
     expect(blocked.every((b) => /\((od załadunku — anuluje HHL ręcznie, z powodem|na fakturze)\)$/.test(b))).toBe(true)
     await expect(page.locator('[data-import-blocked]')).toContainText(`Nie do anulowania przez import (${blocked.length}):`)
-    await expect(box).toContainText(`Anuluj ${n} pozycji`)
+    const pozycje = plPlural(n, 'pozycję nieobecną', 'pozycje nieobecne', 'pozycji nieobecnych')
+    await expect(box).toContainText(`Anuluj ${n} ${pozycje}`)
     await cb.check()
     await expect(page.locator('[data-import-removed-count]')).toHaveText(`−${n}`)
     await cb.uncheck()

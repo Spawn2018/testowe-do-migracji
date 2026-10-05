@@ -7,7 +7,7 @@ import ExcelJS from 'exceljs';
 import { getSupabase } from './client';
 import { useTowerStore } from '../store/useTowerStore';
 import { exportLoadsXlsx, exportRows } from '../lib/xlsxExport';
-import { t } from '../i18n/messages';
+import { t, tp } from '../i18n/messages';
 import './auth.css';
 
 type Kind = 'loads' | 'audit' | 'decisions';
@@ -57,12 +57,12 @@ export default function DataExportPanel() {
       if (kind === 'loads') {
         if (fmt === 'xlsx') {
           const r = await exportLoadsXlsx(loads, role, 'WATCH_TOWER_transporty.xlsx');
-          setMsg(t(locale, 'opt_acc_export_ok').replace('{n}', String(r.rows)));
+          setMsg(tp(locale, 'opt_acc_export_ok', { n: r.rows }));
         } else {
           const rows = exportRows(loads, role);
           const enc = new TextEncoder().encode('\uFEFF' + toCsv(rows));
           triggerDownload(enc, 'WATCH_TOWER_transporty.csv', 'text/csv;charset=utf-8');
-          setMsg(t(locale, 'opt_acc_export_ok').replace('{n}', String(loads.length)));
+          setMsg(tp(locale, 'opt_acc_export_ok', { n: loads.length }));
         }
         setBusy(false);
         return;
@@ -126,7 +126,7 @@ export default function DataExportPanel() {
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         );
       }
-      setMsg(t(locale, 'opt_acc_export_ok').replace('{n}', String(dataRows.length)));
+      setMsg(tp(locale, 'opt_acc_export_ok', { n: dataRows.length }));
     } catch (e) {
       setMsg(e instanceof Error ? e.message : String(e));
     }

@@ -5,7 +5,7 @@ import { authErrorPl } from './config';
 import { deviceLabel, markManualLogout } from './sessionYear';
 import './auth.css';
 import { useTowerStore } from '../store/useTowerStore';
-import { INTL_LOCALE, t } from '../i18n/messages';
+import { INTL_LOCALE, t, tp } from '../i18n/messages';
 import type { Locale } from '../types';
 
 interface Row { id: string; user_agent: string | null; created_at: string; expires_at: string; last_active_at: string; is_current: boolean }
@@ -38,7 +38,7 @@ export default function MyDevices() {
 
   return (
     <section className="panel option-panel option-wide" data-auth="my-devices">
-      <header className="panel-hd"><h2>{t(locale, 'a6_md_h')}</h2><span className="sub">{t(locale, 'a6_md_sub').replace('{n}', String(rows.length))}</span></header>
+      <header className="panel-hd"><h2>{t(locale, 'a6_md_h')}</h2><span className="sub">{tp(locale, 'a6_md_sub', { n: rows.length })}</span></header>
       <div className="panel-bd flush">
         {rows.map((r) => (
           <div className="auth-admin-row" key={r.id}>

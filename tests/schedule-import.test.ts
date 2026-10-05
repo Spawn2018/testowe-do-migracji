@@ -569,7 +569,7 @@ describe('ANEKS 3 §2.1 — import anuluje, nie kasuje; od załadunku i na faktu
     const after = useTowerStore.getState().loads;
     expect(after.some((l) => l.id === before[0].id)).toBe(true);
     expect(after.filter((l) => l.code !== 'QA-AN3-ADD2')).toHaveLength(1);
-    expect(useTowerStore.getState().toasts.some((t) => /1 pozycji nie do anulowania/.test(t.message))).toBe(true);
+    expect(useTowerStore.getState().toasts.some((t) => /1 pozycja nie do anulowania/.test(t.message))).toBe(true);
   });
 
   it('removalBlock: flagi DELAYED/SILENT (status w bazie nieznany) → blokada; faktura ma pierwszeństwo', () => {
