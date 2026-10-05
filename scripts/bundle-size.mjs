@@ -49,16 +49,25 @@ for (const name of readdirSync(resolve(dist, 'assets'))) {
   const safe = assetName(name)
   if (safe) assetFiles.set(`assets/${safe}`, resolve(dist, 'assets', safe))
 }
+// Barlow i inne fonty w /fonts (poza assets) — też w pierwszym wczytaniu.
+try {
+  for (const name of readdirSync(resolve(dist, 'fonts'))) {
+    const safe = assetName(name)
+    if (safe) assetFiles.set(`fonts/${safe}`, resolve(dist, 'fonts', safe))
+  }
+} catch {
+  /* brak katalogu fonts */
+}
 
 function readRef(rel) {
   const path = assetFiles.get(rel)
-  if (!path) throw new Error(`odczyt poza assets dist: ${rel}`)
+  if (!path) throw new Error(`odczyt poza assets/fonts dist: ${rel}`)
   const buf = readFileSync(path)
   return { file: rel, raw: buf.length, gzip: gzipSync(buf, { level: 9 }).length }
 }
 
 const initial = [{ file: 'index.html', raw: Buffer.byteLength(html), gzip: gzipSync(html, { level: 9 }).length }, ...[...refs].map(readRef)]
-const all = [...assetFiles.keys()]
+const all = [...assetFiles.keys()].filter((f) => f.startsWith('assets/'))
 const lazy = all.filter((f) => !refs.has(f)).map(readRef).sort((a, b) => b.raw - a.raw)
 const sum = (xs, k) => xs.reduce((a, x) => a + x[k], 0)
 const kb = (n) => (n / 1024).toFixed(1)
