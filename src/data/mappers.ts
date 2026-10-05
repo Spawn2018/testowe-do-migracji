@@ -483,9 +483,11 @@ export interface PriceViewRow {
   fx_table_no: string | null; fx_effective_date: string | null; fx_rate_pln: number | string | null; fx_provisional: boolean | null;
 }
 
-export const PRICE_VIEW_COLUMNS =
+/** Kolumny sprzed 0187 (bez fuel_status) — zapas, gdy baza nie ma jeszcze migracji 0187. */
+export const PRICE_VIEW_COLUMNS_LEGACY =
   'load_id,pricing_tier,base_amount,baf_amount,extras_amount,computed_total_eur,invoiced_total_eur,effective_total_eur,' +
-  'fuel_ref_date,fuel_mult_sek,fuel_mult_pln,fuel_applied_mult,fx_table_no,fx_effective_date,fx_rate_pln,fx_provisional,fuel_status';
+  'fuel_ref_date,fuel_mult_sek,fuel_mult_pln,fuel_applied_mult,fx_table_no,fx_effective_date,fx_rate_pln,fx_provisional';
+export const PRICE_VIEW_COLUMNS = PRICE_VIEW_COLUMNS_LEGACY + ',fuel_status';
 
 const TIERS = ['PROGNOZA', 'REALIZACJA', 'FAKTURA'] as const;
 type Tier = (typeof TIERS)[number];

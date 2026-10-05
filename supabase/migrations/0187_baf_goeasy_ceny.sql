@@ -33,37 +33,6 @@ comment on column fuel_index_readings.published_on is
 create index if not exists fuel_index_readings_pub_idx
   on fuel_index_readings (project_id, index_code, published_on);
 
--- Backfill published_on dla istniejących wierszy: zmiana wartości względem poprzedniego
--- dnia (ten sam indeks) = nowa publikacja; ta sama wartość = kopia poprzedniej publikacji.
--- Jednorazowo, poza strażnikiem append-only (zmienia tylko nową kolumnę metadanych).
-alter table fuel_index_readings disable trigger trg_fuel_readings_immutable;
-do $$
-declare r record; v_prev_val numeric; v_prev_pub date; v_prev_key text := '';
-begin
-  for r in
-    select id, project_id, index_code, period, value
-      from fuel_index_readings
-     where corrects_id is null and published_on is null
-       and period ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
-     order by project_id, index_code, period
-  loop
-    if v_prev_key <> r.project_id::text || r.index_code then
-      v_prev_val := null; v_prev_pub := null; v_prev_key := r.project_id::text || r.index_code;
-    end if;
-    if v_prev_val is not null and r.value = v_prev_val then
-      update fuel_index_readings set published_on = v_prev_pub where id = r.id;
-    else
-      update fuel_index_readings set published_on = r.period::date where id = r.id;
-      v_prev_pub := r.period::date;
-    end if;
-    v_prev_val := r.value;
-  end loop;
-  -- korekty dziedziczą datę publikacji oryginału
-  update fuel_index_readings c set published_on = o.published_on
-    from fuel_index_readings o
-   where c.corrects_id = o.id and c.published_on is null;
-end $$;
-alter table fuel_index_readings enable trigger trg_fuel_readings_immutable;
 
 -- Nowe odczyty bez podanej daty publikacji: ta sama reguła (trigger BEFORE INSERT).
 create or replace function public.fuel_reading_set_published_on() returns trigger
@@ -172,6 +141,46 @@ begin
       from sefs_parameters where project_id = v_p order by version desc limit 1;
   end if;
 end $$;
+
+-- Backfill published_on dla istniejących wierszy (PO korektach GoEasy i dopisanych odczytach):
+-- zmiana WARTOŚCI EFEKTYWNEJ (korekta, jeśli jest) względem poprzedniego dnia = nowa publikacja;
+-- ta sama wartość = kopia poprzedniej publikacji. Działa też, gdy automat zapisał już odczyty GoEasy
+-- po 05.10 przed nałożeniem 0187. Jednorazowo, poza strażnikiem append-only (tylko nowa kolumna metadanych).
+alter table fuel_index_readings disable trigger trg_fuel_readings_immutable;
+do $$
+declare r record; v_prev_val numeric; v_prev_pub date; v_prev_key text := '';
+begin
+  for r in
+    select o.id, o.project_id, o.index_code, o.period, o.published_on,
+           coalesce(c.value, o.value) as value, c.published_on as corr_pub
+      from fuel_index_readings o
+      left join fuel_index_readings c on c.corrects_id = o.id
+     where o.corrects_id is null
+       and o.period ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+     order by o.project_id, o.index_code, o.period
+  loop
+    if v_prev_key <> r.project_id::text || r.index_code then
+      v_prev_val := null; v_prev_pub := null; v_prev_key := r.project_id::text || r.index_code;
+    end if;
+    if coalesce(r.corr_pub, r.published_on) is not null then
+      v_prev_pub := coalesce(r.corr_pub, r.published_on);
+      if r.published_on is null then
+        update fuel_index_readings set published_on = v_prev_pub where id = r.id;
+      end if;
+    elsif v_prev_val is not null and r.value = v_prev_val and v_prev_pub is not null then
+      update fuel_index_readings set published_on = v_prev_pub where id = r.id;
+    else
+      update fuel_index_readings set published_on = r.period::date where id = r.id;
+      v_prev_pub := r.period::date;
+    end if;
+    v_prev_val := r.value;
+  end loop;
+  -- korekty bez daty dziedziczą datę publikacji oryginału
+  update fuel_index_readings c set published_on = o.published_on
+    from fuel_index_readings o
+   where c.corrects_id = o.id and c.published_on is null;
+end $$;
+alter table fuel_index_readings enable trigger trg_fuel_readings_immutable;
 
 -- ---------------------------------------------------------------------
 -- 4. Parametry obowiązujące w dniu
