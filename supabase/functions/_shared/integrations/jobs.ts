@@ -34,6 +34,10 @@ import {
   EMTRACK_EXPECTED_VERSION, EMTRACK_UA, fetchTrackingObjectsReadOnly, pollIntervalSec,
 } from '../telematics/emtrackWeb.ts';
 import { matchFixToLoad } from '../telematics/matchTrailer.ts';
+import {
+  WIND_GUST_MS_THRESHOLD, gustExceedsThreshold, windRiskTitle,
+  seWeekendBanHit, plSundayBanHit, banRiskTitle,
+} from '../here/windAndBans.ts';
 import { unknownCodeRiskInput } from '../../../../src/lib/pl/describe.ts';
 import { deeplTranslate, translateFreeText, usageLevel, DEEPL_MONTHLY_LIMIT } from '../../../../src/lib/pl/deepl.ts';
 import {
@@ -83,7 +87,7 @@ export interface SyncStore {
   /** Koszt ponad pule w bieżącym miesiącu (Europe/Warsaw). */
   hereMonthSpend?(): Promise<number>;
   /** TELM: aktywne transporty do dopasowania naczepy. */
-  listActiveLoadsForTelematics?(): Promise<{ id: string; trailer_plate: string | null; telematics_vehicle_id: string | null; status: string | null }[]>;
+  listActiveLoadsForTelematics?(): Promise<{ id: string; trailer_plate: string | null; telematics_vehicle_id: string | null; status: string | null; plannedLoadDate?: string | null; plannedDeliverDate?: string | null }[]>;
   /** TELM: zapis pozycji (process_position). */
   processPosition?(row: {
     loadId: string; lat: number; lon: number; ts: string;
@@ -1044,6 +1048,68 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
  * emtrack-web / TELM-EMTRACK-WEB — odczyt pozycji naczepy (D-36 zapas).
  * Tylko odczyt WS; zero zapisu do emtrack. Wymaga flagi TELM_EMTRACK_WEB + sekretów EMTRACK_*.
  */
+
+/**
+ * H-10 (ryzyko wiatru, próg 15 m/s) + H-12 (zakazy czasowe).
+ * Korekta ETA przez wiatr = etap po TELM (H-4) — tu tylko ryzyko.
+ */
+export async function runRouteHazards(deps: JobDeps): Promise<JobResult> {
+  const nowIso = deps.now().toISOString();
+  let risks = 0;
+  const warnings: string[] = [];
+  const loads = deps.store.listActiveLoadsForTelematics
+    ? await deps.store.listActiveLoadsForTelematics()
+    : [];
+  for (const load of loads) {
+    const loadAt = load.plannedLoadDate ?? undefined;
+    const deliverAt = load.plannedDeliverDate ?? undefined;
+    if (loadAt && plSundayBanHit(loadAt)) {
+      await deps.store.raiseRisk({
+        kind: 'ROAD_PL', severity: 'MEDIUM',
+        title: banRiskTitle('PL', loadAt.slice(0, 10)),
+        titleKey: 'rk_time_ban', params: { where: 'PL', when: loadAt.slice(0, 10) },
+        detail: { zrodlo: 'H-12', loadId: load.id },
+        dedup: `TIME_BAN:PL:${load.id}:${loadAt.slice(0, 10)}`,
+        sourceUrl: null, validUntil: null,
+      });
+      risks++;
+    }
+    if (deliverAt && seWeekendBanHit(deliverAt)) {
+      await deps.store.raiseRisk({
+        kind: 'ROAD_SE', severity: 'MEDIUM',
+        title: banRiskTitle('SE', deliverAt.slice(0, 10)),
+        titleKey: 'rk_time_ban', params: { where: 'SE', when: deliverAt.slice(0, 10) },
+        detail: { zrodlo: 'H-12', loadId: load.id },
+        dedup: `TIME_BAN:SE:${load.id}:${deliverAt.slice(0, 10)}`,
+        sourceUrl: null, validUntil: null,
+      });
+      risks++;
+    }
+  }
+  // H-10: opcjonalny gust z env (test) albo z observations — bez wołania HERE gdy brak danych
+  const gustEnv = deps.env.H10_TEST_GUST_MS;
+  if (gustEnv != null && gustEnv !== '') {
+    const g = Number(gustEnv);
+    if (gustExceedsThreshold(g)) {
+      await deps.store.raiseRisk({
+        kind: 'WEATHER', severity: 'HIGH',
+        title: windRiskTitle(g, 'korytarz (test)'),
+        titleKey: 'rk_wind_gust', params: { gust: String(g), thr: String(WIND_GUST_MS_THRESHOLD) },
+        detail: { zrodlo: 'H-10', gustMs: g },
+        dedup: `WIND_GUST:${nowIso.slice(0, 10)}`,
+        sourceUrl: null, validUntil: null,
+      });
+      risks++;
+    }
+  } else {
+    warnings.push('H-10: brak żywej serii wiatru drogowego w tym przebiegu — próg 15 m/s gotowy; ETA+wiatr po TELM');
+  }
+  return {
+    job: 'route-hazards', mode: 'LIVE', ok: true, risks,
+    warnings, observations: { loads: String(loads.length), thrMs: String(WIND_GUST_MS_THRESHOLD) },
+  };
+}
+
 export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
   const login = deps.env.EMTRACK_LOGIN?.trim();
   const password = deps.env.EMTRACK_PASSWORD?.trim();
@@ -1172,13 +1238,14 @@ export const JOBS = {
   'ferry-weather': runFerryWeather,
   'road-se': runRoadSe, 'road-pl': runRoadPl, 'traffic-flow': runTrafficFlow,
   'emtrack-web': runEmtrackWeb,
+  'route-hazards': runRouteHazards,
 } as const;
 export type JobName = keyof typeof JOBS;
 
 /** Minimalny odstęp między przebiegami [min] — ferry-status: co 15 min, nie częściej (ZRODLA_DANYCH §1.1). */
 export const MIN_INTERVAL_MIN: Record<JobName, number> = {
   'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-ais-listen': 0, 'ferry-weather': 60,
-  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'emtrack-web': 2,
+  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'emtrack-web': 2, 'route-hazards': 60,
 };
 
 /** Przebieg zadania z kontrolą częstotliwości i zapisem do dziennika (integration_runs). */

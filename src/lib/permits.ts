@@ -476,7 +476,7 @@ export function attachmentDocForLoad(load: Load, docs: Document[]): PermitAttach
 
 export function evaluateLoadCover(load: Load, docs: Document[]): { covered: boolean; reason: string; kind: PermitAttachmentKind } {
   const kind = (load.permit?.attachmentKind ?? 'NONE') as PermitAttachmentKind;
-  // MISMATCH / permitFits=false always wins — even when attachmentKind is NONE
+  // MISMATCH / permitFits false always wins — even when attachmentKind is NONE
   // (avoids cover(NONE)·OK contradicting a seeded MISMATCH doc).
   const bad = docs.find(
     (d) =>

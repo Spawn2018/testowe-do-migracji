@@ -107,6 +107,8 @@ const pl: Dict = {
   rk_src_MARINE_WEATHER: 'pogoda morska (FMI+DMI+SMHI)',
   rk_src_HERE_TRAFFIC_PL: 'utrudnienia drogowe PL (HERE)',
   rk_src_EMTRACK_WEB: 'telematyka naczep (emtrack web)',
+  rk_wind_gust: 'Wiatr: porywy {gust} m/s (próg {thr} m/s)',
+  rk_time_ban: 'Zakaz czasowy {where}: plan {when}',
   rk_road_se: 'E4: {event}',
   rk_tv_unknown_code: 'Nieznany kod źródła drogowego — w panelu: zdarzenie drogowe',
   rk_deepl_usage: 'Tłumaczenia komunikatów drogowych: {used} / {limit} znaków',
@@ -155,7 +157,7 @@ const pl: Dict = {
   rk_seed_ferry_cancel_meta: 'Odpowiada: H&H Logistics · status armatora: anulowany',
   rk_seed_e4_closure: 'E4 zamknięta — Luleå północ · objazd +120 min',
   rk_route_obstacle: 'Przeszkoda na trasie: {place}. Limit {limit}, zestaw {value}.',
-  rk_seed_e4_closure_meta: 'Odpowiada: Scandinavian Express · E4 CLOSED · źródło: Trafikverket',
+  rk_seed_e4_closure_meta: 'Odpowiada: Scandinavian Express · E4 zamknięta · źródło: Trafikverket',
 };
 
 const en: Dict = {
@@ -254,6 +256,8 @@ const en: Dict = {
   rk_src_MARINE_WEATHER: 'marine weather (FMI+DMI+SMHI)',
   rk_src_HERE_TRAFFIC_PL: 'road disruptions PL (HERE Traffic)',
   rk_src_EMTRACK_WEB: 'trailer telematics (emtrack web)',
+  rk_wind_gust: 'Wind: gusts {gust} m/s (threshold {thr} m/s)',
+  rk_time_ban: 'Time ban {where}: plan {when}',
   rk_road_se: 'E4: {event}',
   rk_tv_unknown_code: 'Unknown road-source code — panel: road incident',
   rk_deepl_usage: 'Road-message translations: {used} / {limit} characters',
@@ -300,7 +304,7 @@ const en: Dict = {
   rk_seed_ferry_cancel_meta: 'Owner: H&H Logistics · operator status: cancelled',
   rk_seed_e4_closure: 'E4 closed — Luleå north · detour +120 min',
   rk_route_obstacle: 'Obstacle on the route: {place}. Limit {limit}, vehicle {value}.',
-  rk_seed_e4_closure_meta: 'Owner: Scandinavian Express · E4 CLOSED · source: Trafikverket',
+  rk_seed_e4_closure_meta: 'Owner: Scandinavian Express · E4 closed · source: Trafikverket',
 };
 
 const sv: Dict = {
@@ -399,6 +403,8 @@ const sv: Dict = {
   rk_src_MARINE_WEATHER: 'havsväder (FMI+DMI+SMHI)',
   rk_src_HERE_TRAFFIC_PL: 'vägtrafikstörningar PL (HERE Traffic)',
   rk_src_EMTRACK_WEB: 'släptelematik (emtrack web)',
+  rk_wind_gust: 'Vind: byar {gust} m/s (tröskel {thr} m/s)',
+  rk_time_ban: 'Tidsförbud {where}: plan {when}',
   rk_road_se: 'E4: {event}',
   rk_tv_unknown_code: 'Okand vagkod — panelen: trafikhandelse',
   rk_deepl_usage: 'Vagmeddelanden: {used} / {limit} tecken',
@@ -445,7 +451,7 @@ const sv: Dict = {
   rk_seed_ferry_cancel_meta: 'Ansvarig: H&H Logistics · rederiets status: inställd',
   rk_seed_e4_closure: 'E4 avstängd — Luleå norr · omledning +120 min',
   rk_route_obstacle: 'Hinder på vägen: {place}. Gräns {limit}, fordon {value}.',
-  rk_seed_e4_closure_meta: 'Ansvarig: Scandinavian Express · E4 CLOSED · källa: Trafikverket',
+  rk_seed_e4_closure_meta: 'Ansvarig: Scandinavian Express · E4 stängd · källa: Trafikverket',
 };
 
 // I-0: teksty tylko dla danych demo (identyfikatory transportów demo, statyczne banery) — w demoOnly.ts,

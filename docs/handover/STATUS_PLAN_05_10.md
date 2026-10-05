@@ -32,7 +32,7 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 | SEFS-KOREKTA | **DONE** | PR #77, 0166 | — |
 | SMS-SILENT-FIX | **DONE** | 0167 | — |
 | MIG-0159-REG | **DONE** | ewidencja 0159 | — |
-| B-10 | **do zrobienia** | częściowo: C-SEP/B-KSH/B-REJSY (#82) | — (budowa luk) |
+| B-10 | **PARTIAL** | header/tygodnie/Status+Historia/awiz SCX; luki chat/ceny/PDF dalej | — |
 | B-KSH | **DONE** | PR #82 PlanDatesPanel Edytuj | — |
 | B-REJSY | **DONE** | PR #82 filtr Przyszłe, rok, HHL_ADMIN | — |
 | B-Q | **do zrobienia** | część w L-* / Q-17–19; brak zbiorczego dowodu | — (dokumentacja) |
@@ -64,7 +64,7 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 |---|---|---|---|
 | U-3-PALIWO…PALIWO-33.3 | **DONE** | 0155–0161, #59, money tests | — |
 | DIAGNOZA-ETA | **DONE** | `DIAGNOZA_ETA_05_10.md` | — |
-| VERIFY-13 | **do zrobienia** | — | — (raport bez kodu) |
+| VERIFY-13 | **DONE** | `RAPORT_VERIFY_13_05_10.md` | FAIL→B: 13.11/13.13 naprawione w PR kolejki |
 
 ## 5. Po części B
 
@@ -75,10 +75,10 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 | H-2-PL | **DONE** | 0171, HERE Traffic w `road-pl`, raport `RAPORT_D78_ZGODNOSC_05_10.md` | — |
 | H-3 | **zbudowane, wyłączone** | PR #84 Routing v8, bez Attributes | D-83 |
 | H-6 | **zbudowane, wyłączone** | B-MAPA warstwa | D-83 |
-| H-7 | **do zrobienia** | — | — |
-| H-8 | **do zrobienia** | — | — |
-| H-10 | **do zrobienia** (ryzyko); ETA+wiatr po emtrack | — | ETA → TELM-2 |
-| H-12 | **do zrobienia** | — | — |
+| H-7 | **PARTIAL** | Edge `map-static` + e-mail `mapImageUrl`; PDF pełny później | — |
+| H-8 | **do zrobienia** | szkielet w kolejce — Attributes/profil kosztowy | budżet HERE |
+| H-10 | **PARTIAL** (ryzyko, próg 15 m/s); ETA+wiatr po TELM | `route-hazards`, windAndBans | ETA → TELM |
+| H-12 | **PARTIAL** | weekend SE / niedziela PL w `route-hazards` | kalendarz świąt |
 | H-4 / H-5 | **czeka zewnętrzne** | — | TELM-2 |
 | TELM-EMTRACK-WEB | **ZBUDOWANE (flaga false)** | 0173+0174 cron, Edge, raport 05.10; fix rk_source_down | włączenie HHL + sekrety Edge |
 | CLEAN-MAPLIBRE | **DONE** | brak maplibre/mapbox | — |
@@ -92,10 +92,10 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 **Czeka właściciel:** D-83 → B-3a, H-1/H-3/H-6; R-0; D-3, D-7, D-14, D-16, D-17, D-21.  
 **Zewnętrzne:** TELM-2 (emtrack); II-10-E1 (IT KSH).
 
-## 7. Kolejka budowy (po H-2-PL ~12:40+)
+## 7. Kolejka budowy (05.10 ~13:20+)
 
-1. VERIFY-13 (raport) → B-10 (luki) → B-Q (dokumentacja) → Q-11a → Q-11b  
-2. H-7 → H-8 → H-10 (ryzyko wiatru) → H-12  
-3. SEC-OWASP (ASVS L2)
+1. VERIFY-13 **DONE** → B-10 PARTIAL → **B-Q**, **Q-11a**, **Q-11b**  
+2. H-7/H-10/H-12 PARTIAL → **H-8** pełny profil →  
+3. **SEC-OWASP** (ASVS L2)
 
-H1/H3/H6: **false**. Obie domeny 200 po wdrożeniu.
+H1/H3/H6/TELM_EMTRACK_WEB: **false**. `tower.log-mar.pl` 200; www bez DNS.

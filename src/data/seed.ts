@@ -995,7 +995,7 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
       detail: 'Pełne zamknięcie E4 po kolizji; objazd dla zestawów ponadgabarytowych przez drogę 97.',
       loadCode: 'T-17',
       owner: 'SCX',
-      meta: 'Odpowiada: Scandinavian Express · E4 CLOSED · źródło: Trafikverket',
+      meta: 'Odpowiada: Scandinavian Express · E4 zamknięta · źródło: Trafikverket',
       nextAction: 'Potwierdź objazd i nową ETA Boden',
       ageHours: 0.4,
       delayImpactHours: 2,
