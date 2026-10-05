@@ -744,3 +744,9 @@ D, potem B. Najpierw odśwież wzorce 90 ujęć map — zmiana zamierzona (podk�
 ## Polecenie 2026-10-05 ~08:35 (czas warszawski) — część B od B-5
 
 Kontynuacja części B od B-5 według PLAN.md (po B-4b). B-3a nadal stop — czeka na wymiary (D-83). B-5: przycisku nowej automatyzacji ma nie być (tylko historia); jeśli już ukryty — potwierdzić testem. Potem B-6a…B-6i w kolejności PLAN.md. Pomijane (tylko propozycja na piśmie): B-7c, filtry i statusy z B-8, B-9, Q-9. B-7a i B-7b już zrobione. Wzorce wizualne odświeżać tylko dla ujęć zmienionych przez B-6, z przyczyną w commicie.
+
+## Polecenie 2026-10-05 ~09:10 (czas warszawski) — kontynuacja części B (B-8…)
+
+Kontynuacja części B. B-7c skip (propozycja na piśmie). B-8 bez filtrów i statusów (te czekają na właściciela — `PROPOZYCJE_B_05_10.md`). B-9 skip (propozycja). Potem B-10… według PLAN.md. Skip Q-9. B-3a nadal stop — wymiary D-83. B-5 i B-6a…B-6i na prod (PR #74, migracja 0164, dpl_GDQUstA58xFQ1gKxTeKmshnKHeBk). B-7a/B-7b zrobione.
+
+B-8 do zrobienia (zlecenie §8, bez filtrów/statusów i bez zmiany ciągnika bez specyfikacji): mapowanie pól (KSH poza tabelą; HHL/SCX etykiety), godziny przy załadunku/dostawie, linie pionowe, szerokość kolumn, ETA (dni+godz+min / godz+min), polisa w dokumentach, rok w datach, kierowca/telefon (format), PDF (kierowca+telefon zamiast promu). Filtr dat — jeśli część filtrów z propozycji, zostawić. Zmiana ciągnika — STOP podpozycji bez specyfikacji.
