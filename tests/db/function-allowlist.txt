@@ -160,3 +160,6 @@ authenticated here_budget_view
 # H-3: podświetlenie przeszkód korytarza
 authenticated h3_corridor_state
 authenticated h3_highlighted
+
+# FERRY-STATUS: ręczny komunikat armatora
+authenticated operator_notice_apply

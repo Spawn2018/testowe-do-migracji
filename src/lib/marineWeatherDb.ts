@@ -7,7 +7,7 @@ import { PROD_BUILD } from './prodFacade';
 export type MarineRiskLevel = 'niskie' | 'podwyższone' | 'wysokie';
 
 export interface MarineConditionRow {
-  corridor: 'BALTIC_GDN_NYN';
+  corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA';
   maxWaveM: number | null;
   maxGustKn: number | null;
   risk: MarineRiskLevel;
@@ -35,7 +35,7 @@ export async function fetchMarineCondition(): Promise<MarineConditionRow | null>
       .maybeSingle();
     if (error || !data) return null;
     const row = data as {
-      corridor: 'BALTIC_GDN_NYN';
+      corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA';
       max_wave_m: number | null;
       max_gust_kn: number | null;
       risk: MarineRiskLevel;
@@ -65,3 +65,35 @@ export async function fetchMarineCondition(): Promise<MarineConditionRow | null>
     return null;
   }
 }
+
+/** Oba korytarze: Gdańsk–Nynäshamn i Gdynia–Karlskrona. Pusty wiersz zostaje (brak odczytu). */
+export async function fetchMarineConditions(): Promise<MarineConditionRow[]> {
+  if (!PROD_BUILD) return [];
+  try {
+    const sb = await getSupabase();
+    if (!sb) return [];
+    const { data, error } = await sb
+      .from('marine_conditions')
+      .select(
+        'corridor,max_wave_m,max_gust_kn,risk,wave_thr_m,gust_thr_kn,sources,attribution,observed_at,window_from,window_to',
+      )
+      .in('corridor', ['BALTIC_GDN_NYN', 'BALTIC_GDY_KAA']);
+    if (error || !data) return [];
+    return (data as Array<Record<string, unknown>>).map((row) => ({
+      corridor: row.corridor as MarineConditionRow['corridor'],
+      maxWaveM: typeof row.max_wave_m === 'number' ? row.max_wave_m : null,
+      maxGustKn: typeof row.max_gust_kn === 'number' ? row.max_gust_kn : null,
+      risk: (row.risk as MarineConditionRow['risk']) || 'niskie',
+      waveThrM: Number(row.wave_thr_m) || 3.8,
+      gustThrKn: Number(row.gust_thr_kn) || 40,
+      sources: typeof row.sources === 'string' ? row.sources : '',
+      attribution: typeof row.attribution === 'string' ? row.attribution : 'Dane: FMI / DMI / SMHI (CC BY 4.0)',
+      observedAt: String(row.observed_at ?? ''),
+      windowFrom: typeof row.window_from === 'string' ? row.window_from : null,
+      windowTo: typeof row.window_to === 'string' ? row.window_to : null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
