@@ -242,7 +242,7 @@ Przyjęte identyfikatory: **II-10-E1**, **II-10-E2**, **ONE-MECH** (D-29 + D-29t
 | TELM-2 | P1. Szkielet telematyki (§2) — czeka na API emtrack i linki | adapter + GPS z telematyki | CZEKA NA: docs API emtrack, przykłady linków |
 **D-78 pule (05.10):** tiles 30000 Advanced Raster / routes 5000 Routing Truck — źródło: konto HERE właściciela, 05.10 (0172).
 
-| TELM-EMTRACK-WEB | P1. Zapas D-36: pozycje naczepy przez protokół web emtrack.eu/app (tylko odczyt) | WS LOGIN+GET_TRACKING_OBJECTS; PR5 2/15 min; warstwa pod API | **DONE** 05.10 — 0173+0174 cron, Edge `emtrack-web`, flaga false; raport `RAPORT_TELM_EMTRACK_WEB_05_10.md` |
+| TELM-EMTRACK-WEB | P1. Zapas D-36: pozycje naczepy przez protokół web emtrack.eu/app (tylko odczyt) | WS LOGIN+GET_TRACKING_OBJECTS; PR5 2/15 min; warstwa pod API | **LIVE 05.10** — 0173+0174 + **0176** (blokada SMS/e-mail tylko właściciel, sieroty bez alarmów, faza z pozycji); flaga true po teście na sucho; raport `RAPORT_TELM_LIVE_GD035YX_05_10.md` |
 | I-29 | P1. Budżety darmowych planów na 140 transportów | tabela szczyt vs limit | **DONE** (ten commit) — `I29_BUDGETY_140.md`; wszystkie limity OK (Edge ~5%, baza ~14%, Resend ~40%) |
 | UI-12 | P2. Interfejs (§12) | użytkownik/rola/Wyloguj w menu; bez POD/mocowania | **DONE** (ten commit) — Nav session; Docs/Schedule bez POD/LASHING; Driver tylko CMR |
 | D-27 | P2. Kontrast ≥ 4,5:1; ewentualnie #7C909E | tylko kolory tekstu | **DONE** (ten commit) — --ink-3 #5A6B78/#788C9A; --amber-ink; bell #0E1A24; kursor default na thead/tr |
@@ -1040,3 +1040,7 @@ Zewnętrzne: TELM-2, II-10-E1.
 
 ### Priorytet 2026-10-05 ~12:11 (przed dalszą budową PLAN)
 D-78 pule HERE + przebudowa H-3 (bez Attributes). Potem powrót do raportu stanu i budowy bez czekania.
+
+### Priorytet 2026-10-05 ~13:12 — TELM-EMTRACK-WEB włączenie + test GD035YX
+Kolejność: (0) blokada SMS/e-mail tylko właściciel (test na sucho) → (1) zero alarmów bez awizacji + zapis pozycji sierot → (2) flaga true → (3) faza z pozycji (SE/morze) → (4) test live GD035YX → (5) monitoring 72 h → (6) link do transportu + mapa. Potem powrót do PLAN bez czekania.
+

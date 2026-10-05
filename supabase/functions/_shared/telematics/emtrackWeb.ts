@@ -119,7 +119,10 @@ export async function fetchTrackingObjectsReadOnly(
   let frameId = 1;
   const pending = new Map<number, Pending>();
 
-  const ws = new WS(url, { headers: { 'User-Agent': ua, Origin: 'https://emtrack.eu' } } as unknown as string);
+  // Deno/Edge WebSocket = API przeglądarki: 2. arg to protokoły (string[]), NIE nagłówki.
+  // Podanie obiektu headers → „Invalid protocol value". Origin ustawia runtime.
+  void ua;
+  const ws = new WS(url);
 
   const close = () => {
     try { ws.close(); } catch { /* ignore */ }

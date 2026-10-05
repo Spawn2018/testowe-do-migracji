@@ -96,6 +96,15 @@ export interface SyncStore {
   }): Promise<void>;
   lastPositionAt?(loadId: string, source: string): Promise<string | null>;
   telmEmtrackWebEnabled?(): Promise<boolean>;
+  /** TELM: pozycja naczepy bez awizacji — bez alarmów. */
+  saveOrphanPosition?(row: {
+    plate: string; trackingObjectId?: string | null;
+    lat: number; lon: number; ts: string;
+    source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK';
+    speed?: number | null; heading?: number | null; ignition?: boolean | null; raw?: unknown;
+  }): Promise<void>;
+  /** TELM: faza z pozycji (SE/morze) przy podłączeniu w trasie. */
+  inferPhaseFromPosition?(loadId: string, lat: number, lon: number, ts: string): Promise<string | null>;
   /** II-8: zapis bieżącej pogody morskiej */
   saveMarineCondition?(row: {
     corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA';
@@ -1179,12 +1188,35 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
   const stopSec = Number(deps.env.TELM_WEB_STOP_SEC ?? 900);
   let written = 0;
   let matched = 0;
+  let orphans = 0;
+  let phaseInferred = 0;
   let skippedInterval = 0;
   const trailers = objects.filter((o) => String(o.type).toUpperCase() === 'TRAILER');
   for (const fix of trailers) {
     if (fix.lat == null || fix.lon == null || !fix.observedAt) continue;
     const load = matchFixToLoad(fix, loads);
-    if (!load) continue;
+    const raw = {
+      provider: 'EMTRACK_WEB',
+      trackingObjectId: fix.trackingObjectId,
+      textId: fix.textId,
+      name: fix.name,
+      type: fix.type,
+      sentFrameTypes: sentLog.map((s) => s.type),
+    };
+    // Bez awizacji: zapisz pozycję sieroty, ZERO alarmów / powiadomień (decyzja 05.10).
+    if (!load) {
+      if (deps.store.saveOrphanPosition) {
+        await deps.store.saveOrphanPosition({
+          plate: fix.textId || String(fix.trackingObjectId),
+          trackingObjectId: String(fix.trackingObjectId),
+          lat: fix.lat, lon: fix.lon, ts: fix.observedAt,
+          source: 'EMTRACK_WEB',
+          speed: fix.speedKmh, heading: fix.headingDeg, ignition: fix.ignition, raw,
+        });
+        orphans++;
+      }
+      continue;
+    }
     matched++;
     const last = deps.store.lastPositionAt ? await deps.store.lastPositionAt(load.id, 'EMTRACK_WEB') : null;
     const needSec = pollIntervalSec(fix, moveSec, stopSec);
@@ -1205,16 +1237,13 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
         speed: fix.speedKmh,
         heading: fix.headingDeg,
         ignition: fix.ignition,
-        raw: {
-          provider: 'EMTRACK_WEB',
-          trackingObjectId: fix.trackingObjectId,
-          textId: fix.textId,
-          name: fix.name,
-          type: fix.type,
-          sentFrameTypes: sentLog.map((s) => s.type),
-        },
+        raw,
       });
       written++;
+    }
+    if (deps.store.inferPhaseFromPosition) {
+      const phase = await deps.store.inferPhaseFromPosition(load.id, fix.lat, fix.lon, fix.observedAt);
+      if (phase) phaseInferred++;
     }
   }
 
@@ -1225,7 +1254,9 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
       objects: String(objects.length),
       trailers: String(trailers.length),
       matched: String(matched),
+      orphans: String(orphans),
       written: String(written),
+      phaseInferred: String(phaseInferred),
       skippedInterval: String(skippedInterval),
       sentTypes: sentLog.map((s) => s.type).join(','),
     },
