@@ -1893,3 +1893,25 @@ W Faktury i BillsPanel lista/wgrywanie tylko CMR (bez POD). Etykiety PL/EN/SV. T
 Pominięte propozycje: B-7c, filtry/statusy B-8, B-9, Q-9. B-7a/B-7b wcześniej.
 
 Kontrole: H1_ROUTE_CHECK false, H3_CORRIDOR_OBSTACLES false, H6_MAP_OBSTACLES false; 94 transporty aktywne; bez SMS, bez usunięć, bez wydatków.
+
+## 2026-10-05 ~09:05 (czas warszawski) — część B: B-5 i B-6a…B-6i
+
+Polecenie 05.10 ~08:35 (POLECENIA_KOORDYNATORA). PR #74: `8144d8b` (B-5 test), `f9580c6` (B-6a…i), `238247a` (skrypt 0164); merge `afe9f1e`. Wdrożenie Hobby z drzewa main: `dpl_GDQUstA58xFQ1gKxTeKmshnKHeBk`. Obie domeny 200.
+
+| ID | Status | Uwagi |
+|---|---|---|
+| B-5 | zrobione (test) | w produkcji już `historyOnly` od ed59ef8; makieta demo nadal pokazuje kreator (wewnętrzna) |
+| B-6a/b/c | zrobione | „Jak to działa” w sekcjach |
+| B-6d | zrobione | pulpit Stanu systemu |
+| B-6e | zrobione | 0164 na prod (dry-run ROLLBACK → transakcja, `schema_migrations` 0164); 9 wpisów uzupełnionych, wyzwalacz 1, RLS, brak uprawnień anon/authenticated |
+| B-6f | zrobione | „200” = licznik wczytanych wierszy, usunięty |
+| B-6g, B-6i | zrobione | bez rozjazdu w prawo (1440 i 390) |
+| B-6h | opis + odczyt dzienny | ceny nie zbierają się same; prod 0 odczytów; automat = propozycja (regulaminy OKQ8/ORLEN) |
+
+Brama: vitest 755/755; gitleaks 0; npm audit --omit=dev high 0; `tests/db/gate.sh` PG17 :5433 — 33 zestawy OK (dec6 23/23, backup 29/29), 0 FAIL.
+
+Wizualnie: 120 ujęć opcje/automatyzacje/ustawienia z B-6 = identyczne z main `badfe4c`. Wzorców nie odświeżałem. Uwaga: 18 ujęć `opcje__hhl__*` różni się od wzorca z 03.10 już na main (sekcja „Czas wolny i przestój” z 43e41fb, 04.10), nie przez B-6.
+
+Stop: B-3a (D-83); propozycje B-7c, filtry/statusy B-8, B-9, Q-9.
+
+Kontrole: H1_ROUTE_CHECK false, H3_CORRIDOR_OBSTACLES false, H6_MAP_OBSTACLES false; 94 transporty aktywne; bez SMS, usunięć, wydatków.
