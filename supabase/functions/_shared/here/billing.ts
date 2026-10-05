@@ -1,5 +1,5 @@
 /**
- * D-78 — koszt HERE tylko ponad darmową pulę.
+ * D-78 / H-2-PL — koszt HERE tylko ponad darmową pulę (tiles / routing / traffic).
  * koszt = max(0, zapytania − pula) × stawka. Budżet 100 USD i progi 50/80/100%
  * liczą wyłącznie ten koszt ponad pule. Stawki i pule są w app_parameters (nie w kodzie).
  */
@@ -7,20 +7,24 @@ export interface HereBillingParams {
   budgetUsd: number;
   tilesFree: number;
   routesFree: number;
+  trafficFree: number;
   tilesRateUsd: number;
   routesRateUsd: number;
+  trafficRateUsd: number;
 }
 
-/** Wartości wstępne do potwierdzenia właściciela (05.10 ~12:11). */
+/** Wartości wstępne do potwierdzenia właściciela (05.10). */
 export const HERE_BILLING_DEFAULTS: HereBillingParams = {
   budgetUsd: 100,
   tilesFree: 30000,
   routesFree: 5000,
+  trafficFree: 5000,
   tilesRateUsd: 0.0002,
   routesRateUsd: 0.00275,
+  trafficRateUsd: 0.00292,
 };
 
-export type HereService = 'tiles' | 'routing' | 'matching' | 'attributes';
+export type HereService = 'tiles' | 'routing' | 'matching' | 'attributes' | 'traffic';
 
 export function overPoolCost(requests: number, freePool: number, rateUsd: number): number {
   const n = Math.max(0, Number(requests) || 0);
@@ -31,12 +35,14 @@ export function overPoolCost(requests: number, freePool: number, rateUsd: number
 
 export function poolFor(service: HereService, p: HereBillingParams): number {
   if (service === 'tiles') return p.tilesFree;
+  if (service === 'traffic') return p.trafficFree;
   // matching i historyczne attributes liczą się w puli tras (jedna stawka trasy)
   return p.routesFree;
 }
 
 export function rateFor(service: HereService, p: HereBillingParams): number {
   if (service === 'tiles') return p.tilesRateUsd;
+  if (service === 'traffic') return p.trafficRateUsd;
   return p.routesRateUsd;
 }
 

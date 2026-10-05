@@ -87,6 +87,11 @@ class MemStore implements SyncStore {
   }) {
     this.marine = { maxWaveM: row.maxWaveM, maxGustKn: row.maxGustKn, risk: row.risk, sources: row.sources };
   }
+  hereNotes: { service: string; n: number }[] = [];
+  async noteHereUsage(service: 'tiles' | 'routing' | 'matching' | 'attributes' | 'traffic', n: number) {
+    this.hereNotes.push({ service, n });
+  }
+  async hereMonthSpend() { return 0; }
 }
 
 function deps(store: MemStore, pages: Record<string, string | number>, env: Record<string, string> = {}, now = NOW) {
@@ -459,11 +464,56 @@ describe('road-se — Trafikverket (II-6 RoadCondition + WeatherMeasurepoint)', 
     expect(r.observations?.slowdown).toBe('1.15');
   });
 
-describe('road-pl — KPD GDDKiA (DATEX II)', () => {
-  it('bez rejestracji: tryb DEMO', async () => {
+const HERE_TRAFFIC_PL = JSON.stringify({
+  sourceUpdated: '2026-10-05T10:00:00Z',
+  results: [
+    {
+      location: {
+        length: 1200,
+        shape: { links: [{ points: [{ lat: 53.12, lng: 18.01 }, { lat: 53.13, lng: 18.02 }], length: 1200, functionalClass: 2 }] },
+      },
+      incidentDetails: {
+        id: 'inc-pl-1', originalId: 'inc-pl-1',
+        startTime: '2026-10-05T08:00:00Z', endTime: '2026-10-06T20:00:00Z',
+        roadClosed: true, criticality: 'major', type: 'construction',
+        summary: { value: 'Roboty S5 — zwężenie' },
+        description: { value: 'Roboty drogowe przy węźle Bydgoszcz — zwężenie pasa' },
+      },
+    },
+    {
+      location: {
+        length: 500,
+        shape: { links: [{ points: [{ lat: 50.66, lng: 17.92 }, { lat: 50.67, lng: 17.93 }], length: 500, functionalClass: 1 }] },
+      },
+      incidentDetails: {
+        id: 'inc-opole', originalId: 'inc-opole',
+        roadClosed: false, criticality: 'minor', type: 'accident',
+        summary: { value: 'Wypadek A4 Opole — poza korytarzem' },
+        description: { value: 'poza' },
+      },
+    },
+  ],
+});
+
+describe('road-pl — H-2-PL HERE Traffic + zapas KPD', () => {
+  it('bez HERE i KPD: tryb DEMO', async () => {
     expect(await runRoadPl(deps(new MemStore(), {}).d)).toMatchObject({ mode: 'DEMO' });
   });
-  it('rekord na S5 przy trasie → ROAD_PL HIGH z opisem PL; A4 Opole poza trasą pominięte', async () => {
+  it('HERE Traffic: incydent na korytarzu → ROAD_PL; Opole pominięte; 1× note traffic', async () => {
+    const st = new MemStore();
+    const r = await runRoadPl(deps(
+      st,
+      { 'data.traffic.hereapi.com': HERE_TRAFFIC_PL },
+      { HERE_API_KEY: 'test-key' },
+    ).d);
+    expect(r).toMatchObject({ mode: 'LIVE', ok: true, risks: 1 });
+    expect(r.observations?.source).toBe('here_traffic');
+    expect(st.hereNotes).toEqual([{ service: 'traffic', n: 1 }]);
+    expect(st.risks[0]).toMatchObject({ kind: 'ROAD_PL', severity: 'HIGH', dedup: 'ROAD_PL:HERE:inc-pl-1' });
+    expect(String(st.risks[0].detail.opis)).toMatch(/Bydgoszcz/);
+    expect(st.risks).toHaveLength(1);
+  });
+  it('KPD zapas gdy brak HERE_API_KEY', async () => {
     const st = new MemStore();
     const r = await runRoadPl(deps(st, { 'kpd.example': DATEX }, { KPD_DATEX_URL: 'https://kpd.example/datex' }).d);
     expect(r.risks).toBe(1);

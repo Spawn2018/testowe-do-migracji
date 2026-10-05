@@ -35,6 +35,10 @@ sys "update here_road_geometry set fetched_at = now() - interval '31 days' where
 val "geometria starsza niż 30 dni jest kasowana" "select purge_here_road_geometry(now())::text" "1"
 val "podsumowanie zostaje po kasowaniu punktów" "select summary || ':' || coalesce(points::text,'null') from here_road_geometry where leg='PL-GDN'" "trasa drogowa Śrem–Gdańsk:null"
 val "konto nie zapisuje geometrii HERE" "select has_function_privilege('authenticated','here_store_road(text,jsonb,text,timestamptz)','execute')::text" "false"
+# H-2-PL: osobna pula traffic
+val "pula traffic w parametrach" "select value::text from app_parameters where key='HERE_TRAFFIC_FREE'" "5000"
+val "traffic w puli koszt 0" "select here_note_service('traffic', 5000, 0, '2026-10-05 12:00+02'); select estimated_usd::text from here_usage where month='2026-10-01' and service='traffic'" "0.0000"
+val "traffic ponad pulę liczy stawkę" "select here_note_service('traffic', 1, 0, '2026-10-05 12:05+02'); select estimated_usd::text from here_usage where month='2026-10-01' and service='traffic'" "0.0029"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
