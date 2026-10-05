@@ -27,6 +27,7 @@ function emptyDb(over: Partial<RouteCheckDb> = {}): RouteCheckDb {
     loads: async () => { throw new Error('nie wolno czytać transportów'); },
     latest: async () => null,
     monthSpendUsd: async () => 0,
+    monthRoutingRequests: async () => 0,
     save: async () => undefined,
     noteUsage: async () => undefined,
     ...over,
@@ -201,9 +202,10 @@ describe('H-1 kontrola trasy', () => {
     expect(needsRecheck({ checkedAt: '2026-10-01T00:00:00Z', dimsKey: 'inne' }, now, key)).toBe(true);
   });
 
-  it('budżet 100 USD zatrzymuje kolejne zapytanie', () => {
+  it('budżet 100 USD (koszt ponad pule) zatrzymuje kolejne zapytanie', () => {
     expect(budgetAllows(100, 1)).toBe(false);
-    expect(budgetAllows(99.998, 1)).toBe(false);
+    // poza darmową pulą tras stawka z parametrów dolicza się do kosztu
+    expect(budgetAllows(99.998, 1, undefined, 5000)).toBe(false);
     expect(budgetAllows(0, 1)).toBe(true);
     expect(budgetLevel(0, false)).toBe('off');
     expect(budgetLevel(80, true)).toBe('high');

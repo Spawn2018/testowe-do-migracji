@@ -4,8 +4,6 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const TILE_USD = 0.0002;
-
 function cors(): HeadersInit {
   return {
     'access-control-allow-origin': '*',
@@ -47,7 +45,7 @@ Deno.serve(async (req) => {
     { headers: { 'User-Agent': 'WatchTower/1' } },
   );
   if (!upstream.ok) return Response.json({ fallback: true }, { status: 502, headers: cors() });
-  await sb.rpc('here_note_service', { p_service: 'tiles', p_n: 1, p_usd: TILE_USD });
+  await sb.rpc('here_note_service', { p_service: 'tiles', p_n: 1, p_usd: 0 });
   const bytes = new Uint8Array(await upstream.arrayBuffer());
   return new Response(bytes, {
     headers: { 'content-type': 'image/png', 'cache-control': 'private, max-age=3600', ...cors() },

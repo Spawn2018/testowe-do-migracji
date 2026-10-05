@@ -23,9 +23,12 @@ val "zalogowany czyta stan mapy" "select has_function_privilege('authenticated',
 val "anon nie bierze próbki promu" "select has_function_privilege('anon','ferry_track_sample()','execute')::text" "false"
 val "zalogowany bierze próbkę promu" "select has_function_privilege('authenticated','ferry_track_sample()','execute')::text" "true"
 err "zła usługa HERE odrzucona" "select here_note_service('spam', 1, 0, '2026-10-15 12:00+00')" "Zła usługa"
-val "poniżej 80% kafelki są włączone" "select here_note_service('tiles', 2, 10, '2026-10-15 12:00+00'); select here_tiles_open('2026-10-20 12:00+00')::text" "true"
-val "od 80% kafelki gasną do końca miesiąca" "select here_note_service('tiles', 1, 70, '2026-10-16 12:00+00'); select here_tiles_open('2026-10-20 12:00+00')::text" "false"
+# D-78: koszt tylko ponad pulę — w teście zerujemy pulę kafelków i stawiamy stawkę 1 USD
+sys "update app_parameters set value=0 where key='HERE_TILES_FREE'; update app_parameters set value=1 where key='HERE_TILES_RATE_USD'" >/dev/null
+val "poniżej 80% kafelki są włączone" "select here_note_service('tiles', 50, 0, '2026-10-15 12:00+00'); select here_tiles_open('2026-10-20 12:00+00')::text" "true"
+val "od 80% kafelki gasną do końca miesiąca" "select here_note_service('tiles', 30, 0, '2026-10-16 12:00+00'); select here_tiles_open('2026-10-20 12:00+00')::text" "false"
 val "nowy miesiąc wraca na HERE" "select here_tiles_open('2026-11-02 12:00+00')::text" "true"
+sys "update app_parameters set value=30000 where key='HERE_TILES_FREE'; update app_parameters set value=0.0002 where key='HERE_TILES_RATE_USD'" >/dev/null
 val "zapis geometrii" "select here_store_road('PL-GDN', '[[52.07,17.02],[54.40,18.68]]'::jsonb, 'trasa drogowa Śrem–Gdańsk', now())" ""
 val "podsumowanie zostaje w wierszu" "select summary from here_road_geometry where leg='PL-GDN'" "trasa drogowa Śrem–Gdańsk"
 sys "update here_road_geometry set fetched_at = now() - interval '31 days' where leg='PL-GDN'" >/dev/null

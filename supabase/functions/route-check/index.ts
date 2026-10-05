@@ -59,6 +59,11 @@ Deno.serve(async (req: Request) => {
         if (error || data == null) return 0;
         return Number(data);
       },
+      async monthRoutingRequests() {
+        const { data, error } = await sb.rpc('here_month_routing_requests');
+        if (error || data == null) return 0;
+        return Number(data);
+      },
       async save(row) {
         const { error } = await sb.rpc('h1_record_route_check', {
           p_load: row.loadId,
@@ -73,8 +78,8 @@ Deno.serve(async (req: Request) => {
         });
         if (error) throw new Error('zapis kontroli odrzucony');
       },
-      async noteUsage(requests: number, usd: number) {
-        await sb.rpc('here_note_requests', { p_n: requests, p_usd: usd, p_now: new Date().toISOString() });
+      async noteUsage(requests: number) {
+        await sb.rpc('here_note_requests', { p_n: requests, p_usd: 0, p_now: new Date().toISOString() });
       },
     },
   });
