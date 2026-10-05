@@ -2,7 +2,7 @@
  * M6 — faktury v2 (MECHANIZM_PIENIEDZY §6, ZLECENIE §8 / Aneks 1–2). Wzorce makiety: panel / tablewrap / kv / mrow / pill.
  *   HHL — „Faktury kosztowe” (weryfikacja faktur SCX, „Opłacona”) i „Faktury przychodowe” (kreator jak u SCX).
  *   SCX — rejestracja faktury kosztowej (waluta EUR / PLN), lista ze statusami i terminem; bez „Opłacona”.
- *   KSH — wyłącznie faktury HHL → KSH: PDF + CMR + POD, kontrola względem cen KSH (nigdy koszt),
+ *   KSH — wyłącznie faktury HHL → KSH: PDF + CMR, kontrola względem cen KSH (nigdy koszt),
  *         ZGODNA / SPORNA (z uzasadnieniem) / ZAAKCEPTOWANA, termin i status płatności.
  * Kwoty w walucie faktury → `data-deur-exempt="invoice-currency"`.
  */
@@ -258,8 +258,8 @@ function BillDetail({ bill }: { bill: Bill }) {
   const [preview, setPreview] = useState<Document | null>(null);
   const byId = new Map(loads.map((l) => [l.id, l]));
   const lineIds = new Set(bill.lines.map((l) => l.loadId));
-  /* KSH w module faktur: wyłącznie PDF faktury + CMR + POD (lustro invoice_documents_ksh_scope) */
-  const docs = documents.filter((d) => d.loadId && lineIds.has(d.loadId) && (d.category === 'CMR' || d.category === 'POD') && d.status !== 'MISSING');
+  /* B-4b: przy fakturze wyłącznie PDF faktury + CMR (bez POD) */
+  const docs = documents.filter((d) => d.loadId && lineIds.has(d.loadId) && d.category === 'CMR' && d.status !== 'MISSING');
   const pdf: Document | undefined = bill.pdfStoragePath && bill.pdfDocId
     ? {
         id: bill.pdfDocId, loadId: bill.lines[0]?.loadId ?? '', category: 'INVOICE', name: bill.pdfName ?? 'faktura.pdf',
