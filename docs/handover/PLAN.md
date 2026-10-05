@@ -385,7 +385,7 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | B-2b | Ryzyka: brak widoczności warunków drogowych w SE. Sytuacje drogowe Trafikverket (wypadki, zamknięcia, roboty) wchodzą w H-2, zaraz po L-12, nie w H-4: nowe źródło API, panel „Warunki drogowe SE”, ryzyka ROAD_SE z prawdziwych danych. | **DONE** — Situation schemat 1.6, namespace `road.trafficinfo` (1.5 bez przestrzeni nazw nie istnieje). Pusto = „Brak danych”. |
 | B-2c | Centrum decyzji: jak działa i dlaczego puste — opisać logikę, nie zgadywać | **ZROBIONE 05.10** — opis w `LOGIKA_SYSTEMU.md` §1 zaktualizowany (automaty L-1…; 45 otwartych na produkcji); bez zmian UI |
 | B-3a | Dokumenty: zezwolenie per firma obok polisy; auto-podpięcie do trasy wg wymiarów; polisa auto do każdej trasy | NIEZACZĘTE |
-| B-4a | Finanse: przychód — pilotaż i dodatki mają zniknąć | NIEZACZĘTE |
+| B-4a | Finanse: przychód — pilotaż i dodatki mają zniknąć | **ZROBIONE 05.10** — usunięte wiersze KSH/HHL (`exR` / `fin_rev_extra` / `a6_fin_pilot` po stronie przychodu); koszt SCX bez zmian |
 | B-4b | Załącznik: zostaje samo CMR (bez POD) | NIEZACZĘTE |
 | B-5 | Automatyzacje: brak przycisku nowej automatyzacji | NIEZACZĘTE |
 | B-6a | Opcje: logika i workflow „Powiadomienia i decyzje” | NIEZACZĘTE |
