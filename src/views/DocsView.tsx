@@ -41,6 +41,7 @@ export function DocsView() {
   // III-6: wymagalność i terminy z bazy (produkcja) albo wartości startowe (demo)
   const [reqs, setReqs] = useState<DocRequirement[]>(DEFAULT_DOC_REQUIREMENTS);
   const [serverStatus, setServerStatus] = useState<DocStatusRow[] | null>(null);
+  const [insuranceCover, setInsuranceCover] = useState<{ covered: number; total: number } | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [editCat, setEditCat] = useState<DocCategory | null>(null);
   const [editReq, setEditReq] = useState<DocRequirement | null>(null);
@@ -55,6 +56,15 @@ export function DocsView() {
         setProjectId(r.projectId);
         if (r.reqs.length) setReqs(r.reqs);
         setServerStatus(r.status);
+        if (r.projectId) {
+          void import('../data/insuranceCoverServer')
+            .then((ic) => ic.loadInsuranceCover(r.projectId!))
+            .then((rows) => {
+              if (!alive) return;
+              setInsuranceCover({ covered: rows.filter((x) => x.covered).length, total: rows.length });
+            })
+            .catch(() => { if (alive) setInsuranceCover(null); });
+        }
       })
       .catch(() => { /* brak odczytu → wartości startowe, stan liczony lokalnie */ });
     return () => { alive = false; };
@@ -84,14 +94,18 @@ export function DocsView() {
     return CATS.map((c) => {
       const req = reqs.find((r) => r.category === c.key) ?? null;
       const sum = summary.get(c.key);
-      // dokument organizacyjny (polisa) albo brak stanu z bazy: jak dotąd — transporty z dokumentem tej kategorii
+      // 3.2 / 0182: polisa ORG — kompletność z APPROVED insurance_policies (auto-podpięcie), nie z pliku per transport
+      if (c.key === 'INSURANCE' && insuranceCover) {
+        return { ...c, req, n: insuranceCover.covered, total: insuranceCover.total, overdue: 0 };
+      }
+      // dokument organizacyjny albo brak stanu z bazy: transporty z dokumentem tej kategorii
       const legacyOk = loads.filter((l) =>
         documents.some((d) => d.loadId === l.id && d.category === c.key && d.status === 'UPLOADED'),
       ).length;
       const perLoad = req !== null && req.required && req.anchor !== 'ORG';
       return { ...c, req, n: perLoad ? sum?.ok ?? 0 : legacyOk, total: perLoad ? sum?.total ?? nLoads : nLoads, overdue: perLoad ? sum?.overdue ?? 0 : 0 };
     });
-  }, [documents, loads, reqs, summary, nLoads]);
+  }, [documents, loads, reqs, summary, nLoads, insuranceCover]);
 
   const fileRows = useMemo(() => {
     const list = documents.filter((d) => (d.status === 'UPLOADED' || d.status === 'MISMATCH') && !d.superseded);
