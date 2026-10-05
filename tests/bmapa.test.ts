@@ -12,11 +12,12 @@ import {
   basemapFor,
   h6Requests,
   lineHitsLand,
-  markersSailingToSweden,
+  visibleFerryMarkers,
+  ferryPhase,
   metersPerPixel,
   rawGps,
   roadGeometryOk,
-  sailingToSweden,
+  ferryVisible,
   trailForDraw,
   warsawMonth,
 } from '../src/lib/map/draw';
@@ -148,29 +149,70 @@ describe('B-MAPA geometria', () => {
   });
 });
 
-describe('Q-18', () => {
-  const gdn = { id: 'wawel', lat: 54.4, lng: 18.67, ts: '2026-10-05T06:00:00Z' };
-  const sea = { id: 'wawel', lat: 55.5, lng: 18.4, ts: '2026-10-05T10:00:00Z', destination: 'PLGDN' };
-  const nyn = { id: 'wawel', lat: 58.912, lng: 17.955, ts: '2026-10-05T18:00:00Z' };
-  const back = { id: 'wawel', lat: 57.2, lng: 18.2, ts: '2026-10-05T22:00:00Z', destination: 'SENYN' };
+describe('Q-18 — reguła poprawiona 05.10 07:16', () => {
+  const at = (h: number) => new Date(Date.UTC(2026, 9, 5, h, 0, 0)).toISOString();
+  const gdn = { id: 'wawel', lat: 54.4, lng: 18.67, ts: at(6) };
+  const outGdn = { id: 'wawel', lat: 54.62, lng: 18.85, ts: at(8) };
+  const sea = { id: 'wawel', lat: 55.5, lng: 18.4, ts: at(10), destination: 'PLGDN' };
+  const nyn = { id: 'wawel', lat: 58.912, lng: 17.955, ts: at(18) };
+  const outNyn = { id: 'wawel', lat: 58.75, lng: 17.95, ts: at(21) };
+  const back = { id: 'wawel', lat: 57.2, lng: 18.2, ts: at(23), destination: 'SENYN' };
+  const gdnAgain = { id: 'wawel', lat: 54.401, lng: 18.672, ts: new Date(Date.UTC(2026, 9, 6, 8, 0, 0)).toISOString() };
 
-  it('wyjście z Gdańska pokazuje prom, wejście do Nynäshamn chowa', () => {
-    expect(sailingToSweden([gdn])).toBe(false);
-    expect(sailingToSweden([gdn, sea])).toBe(true);
-    expect(sailingToSweden([gdn, sea, nyn])).toBe(false);
+  it('test właściciela krok po kroku: Gdańsk → wypływa → Nynäshamn → wypływa do Polski → Gdańsk', () => {
+    expect(ferryVisible([gdn])).toBe(true); // prom w Gdańsku → widoczny
+    expect(ferryVisible([gdn, outGdn])).toBe(true); // wypływa → widoczny
+    expect(ferryVisible([gdn, outGdn, sea])).toBe(true); // w rejsie do Szwecji → widoczny
+    expect(ferryVisible([gdn, outGdn, sea, nyn])).toBe(true); // w Nynäshamn → widoczny
+    expect(ferryVisible([gdn, outGdn, sea, nyn, outNyn])).toBe(false); // wypływa z Nynäshamn do Polski → znika
+    expect(ferryVisible([gdn, outGdn, sea, nyn, outNyn, back])).toBe(false); // nadal w rejsie do Polski
+    expect(ferryVisible([gdn, outGdn, sea, nyn, outNyn, back, gdnAgain])).toBe(true); // wchodzi w strefę Gdańska → pojawia się
   });
 
-  it('rejs do Polski jest niewidoczny, a pozycja zostaje w zbiorze', () => {
-    const rows = [gdn, sea, nyn, back];
-    expect(sailingToSweden([nyn, back])).toBe(false);
-    expect(markersSailingToSweden(rows)).toEqual([]);
-    expect(rows).toHaveLength(4);
+  it('Gdynia i Karlskrona tak samo', () => {
+    const gdy = { id: 'ebba', lat: 54.533, lng: 18.55, ts: at(6) };
+    const sea2 = { id: 'ebba', lat: 55.3, lng: 17.6, ts: at(9) };
+    const kaa = { id: 'ebba', lat: 56.161, lng: 15.586, ts: at(14) };
+    const out = { id: 'ebba', lat: 56.0, lng: 15.95, ts: at(17) };
+    expect(ferryPhase([gdy])).toBe('pl-port');
+    expect(ferryPhase([gdy, sea2])).toBe('to-se');
+    expect(ferryPhase([gdy, sea2, kaa])).toBe('se-port');
+    expect(ferryPhase([gdy, sea2, kaa, out])).toBe('to-pl');
+    expect(ferryVisible([gdy, sea2, kaa, out])).toBe(false);
+  });
+
+  it('kolejność wierszy nie ma znaczenia (sortowanie po czasie)', () => {
+    expect(ferryVisible([outNyn, gdn, nyn, sea])).toBe(false);
+    expect(ferryVisible([nyn, gdn, sea])).toBe(true);
+  });
+
+  it('rejs do Polski niewidoczny na mapie, a pozycje zostają w zbiorze (obie strony)', () => {
+    const rows = [gdn, outGdn, sea, nyn, outNyn, back];
+    expect(visibleFerryMarkers(rows)).toEqual([]);
+    expect(rows).toHaveLength(6);
+    const two = [...rows, { id: 'nova', lat: 54.40467, lng: 18.67379, ts: at(5) }];
+    expect(visibleFerryMarkers(two).map((m) => m.id)).toEqual(['nova']);
+  });
+
+  it('znacznik to ostatnia pozycja widocznego promu', () => {
+    expect(visibleFerryMarkers([gdn, outGdn, sea])).toEqual([sea]);
   });
 
   it('destination nie odwraca kierunku ze strefy', () => {
-    expect(sailingToSweden([gdn, sea])).toBe(true);
-    expect(sailingToSweden([nyn, back])).toBe(false);
-    expect(sailingToSweden([sea])).toBe(false);
+    expect(ferryVisible([gdn, sea])).toBe(true); // destination PLGDN, ale wyszedł z Gdańska
+    expect(ferryVisible([nyn, back])).toBe(false); // destination SENYN, ale wyszedł z Nynäshamn
+  });
+
+  it('bez strefy w historii: zapas z kursu, bez kursu niewidoczny', () => {
+    expect(ferryVisible([{ ...sea, cog: 350 }])).toBe(true);
+    expect(ferryVisible([{ ...sea, cog: 170 }])).toBe(false);
+    expect(ferryVisible([sea])).toBe(false);
+    expect(ferryVisible([])).toBe(false);
+  });
+
+  it('pozycje z produkcji 05.10: Nova Star w Gdańsku i Wawel w Nynäshamn są widoczne', () => {
+    expect(ferryVisible([{ id: 'ns', lat: 54.40469, lng: 18.67377, ts: at(5) }])).toBe(true);
+    expect(ferryVisible([{ id: 'w', lat: 58.90557, lng: 17.95721, ts: at(5) }])).toBe(true);
   });
 });
 

@@ -1770,3 +1770,7 @@ Kontrola trasy jest w kodzie i zostaje wyłączona. `security_flags.H1_ROUTE_CHE
 ## 2026-10-04 — H-3 przeszkody wzdłuż korytarza, wyłączone
 
 Katalog ograniczeń dla ciężarówek w pasie 3 km wzdłuż korytarza jest w kodzie i zostaje wyłączony. `security_flags.H3_CORRIDOR_OBSTACLES` jest false. Nie ma crona i nic na produkcji nie woła HERE dla tego katalogu. Puste wymiary nie są uzupełniane. Podświetlenie w podglądzie działa dopiero po włączeniu flagi i tylko dla wymiarów tego zestawu. Brak wymiarów albo pusta odpowiedź = „Brak danych”. `H1_ROUTE_CHECK` zostaje false. Surowe dane HERE kasowane po 30 dniach, podsumowanie zostaje. Szacunek kosztu atrybutów mapy to sufit 0,01 USD za zapytanie, bo cennik publiczny tej usługi nie podaje stawki.
+
+## 2026-10-05 07:16 (czas warszawski) — korekta Q-18, AIS dla Polferries, część B
+
+Teraz: AIS-POLF · Zrobione: krok 0 (polecenie zapisane, PLAN.md i rejestr decyzji zaktualizowane) · Następne: Q18-V2 → diagnoza 5 promów → B-7a → B-7b.
