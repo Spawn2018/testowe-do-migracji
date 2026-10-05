@@ -55,7 +55,6 @@ export function AwizacjaModal({ load, onClose }: Props) {
   const [trackingRef, setTrackingRef] = useState(load.resources.trackingRef ?? '');
   const [operator, setOperator] = useState<FerryOperatorId>('POLFERRIES');
   const [sailingId, setSailingId] = useState(load.sailingId ?? '');
-  const [bookingRef, setBookingRef] = useState(load.ferry.bookingRef ?? '');
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
@@ -139,7 +138,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
 
     if (!sailingLock) {
       const sid = sailingId || null;
-      const denied = assignSailing(load.id, sid, bookingRef.trim() || null);
+      const denied = assignSailing(load.id, sid, null); // B-10b: bez nr rezerwacji promu
       if (denied) {
         pushToast(t(locale, `sail_deny_${denied}`), 'HIGH', load.id);
         return;
@@ -286,11 +285,6 @@ export function AwizacjaModal({ load, onClose }: Props) {
             <span>{t(locale, 'awiz_vessel')}</span>
             <span className="mono" data-awiz-vessel>{vesselAuto}</span>
             <small>{t(locale, 'awiz_vessel_auto')}</small>
-          </label>
-
-          <label className="form-field">
-            <span>{t(locale, 'sail_booking')}</span>
-            <input className="input mono" value={bookingRef} onChange={(e) => setBookingRef(e.target.value)} disabled={!!sailingLock} autoComplete="off" />
           </label>
 
           <div className="creator-actions">

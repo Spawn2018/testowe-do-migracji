@@ -310,10 +310,30 @@ export function eventToRow(e: Omit<LoadEvent, 'id'>): Record<string, unknown> {
   };
 }
 
-export interface MessageRow { id: number | string; load_id: string; body: string; created_at: string; author_org: string | null }
+export interface MessageRow {
+  id: number | string; load_id: string; body: string; created_at: string; author_org: string | null;
+  author_display?: string | null;
+  reads?: { userId?: string; user_id?: string; name?: string; org?: string; at?: string }[] | null;
+}
 export function messageFromRow(r: MessageRow): LoadMessage {
   const org = (['HHL', 'KSH', 'SCX'].includes(r.author_org ?? '') ? r.author_org : 'HHL') as OrgKind;
-  return { id: `msg-${r.id}`, loadId: r.load_id, at: r.created_at, author: org, org, text: r.body };
+  const reads = Array.isArray(r.reads)
+    ? r.reads.map((x) => ({
+        userId: String(x.userId ?? x.user_id ?? ''),
+        name: String(x.name ?? ''),
+        org: x.org ? String(x.org) : undefined,
+        at: String(x.at ?? ''),
+      })).filter((x) => x.userId)
+    : undefined;
+  return {
+    id: `msg-${r.id}`,
+    loadId: r.load_id,
+    at: r.created_at,
+    author: (r.author_display && String(r.author_display).trim()) || org,
+    org,
+    text: r.body,
+    ...(reads?.length ? { reads } : {}),
+  };
 }
 
 // ---- strefy ---------------------------------------------------------------

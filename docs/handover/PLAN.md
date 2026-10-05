@@ -239,7 +239,7 @@ Przyjęte identyfikatory: **II-10-E1**, **II-10-E2**, **ONE-MECH** (D-29 + D-29t
 | II-7b | P1. Kalibracja ucząca się (zastępuje III-1) | symulacja 30 transportów | **SZKIELET** (ten commit) — **0123** tabele obserwacji/wersji + freeze HHL_ADMIN; pełna nauka **CZEKA NA TELM-2** (GPS po rozładunku) |
 | II-8 | P1. Pogoda FMI+DMI+SMHI; progi 3,8 m / 40 kn potwierdzone | źródło w UI | **DONE** — **0124**; cron **0131** `tower-ferry-weather` `15 * * * *` (co 1 h; było co 6 h) |
 | II-9 | P1. Opóźnienie wypłynięcia z AIS; brak pozycji ≠ opóźnienie | test | **DONE** (ten commit) — `aisDepartureDelayMin` + ferry-ais przed odejściem; brak pozycji = brak wniosku; Edge wdrożony; ferry testy +3 |
-| TELM-2 | P1. Szkielet telematyki (§2) — czeka na API emtrack i linki | adapter + GPS z telematyki | CZEKA NA: docs API emtrack, przykłady linków |
+| TELM-2 | P1. Szkielet telematyki (§2) — czeka na API emtrack i linki | adapter + GPS z telematyki | **PARTIAL** — LIVE emtrack-web 0173–0176 + `tests/emtrack-web.test.ts` + symulacje `tests/telm2-sim.test.ts`; CZEKA: oficjalne API emtrack |
 **D-78 pule (05.10):** tiles 30000 Advanced Raster / routes 5000 Routing Truck — źródło: konto HERE właściciela, 05.10 (0172).
 
 | TELM-EMTRACK-WEB | P1. Zapas D-36: pozycje naczepy przez protokół web emtrack.eu/app (tylko odczyt) | WS LOGIN+GET_TRACKING_OBJECTS; PR5 2/15 min; warstwa pod API | **LIVE 05.10** — 0173+0174 + **0176** (blokada SMS/e-mail tylko właściciel, sieroty bez alarmów, faza z pozycji); flaga true po teście na sucho; raport `RAPORT_TELM_LIVE_GD035YX_05_10.md` |
@@ -417,7 +417,7 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | B-8-IMP | Wydzielone z B-8 (D-8, decyzja A). Import: wiersz TYP = STANDARD (kolumna Typ albo „Standard” w wymiarach) jest pomijany, reszta wchodzi. To nie błąd. Komunikat informacyjny: „Zaimportowano X transportów. Pominięto Y wierszy typu STANDARD (ładunki NTG — poza zakresem Watch Tower).” Y w historii importu (`stats.skipped_standard`). Ta sama zasada przy przyszłej synchronizacji SharePoint — nie budować jej teraz. Decyzja właściciela 03.10 (D-8): zapisane STANDARD usunąć. Robi to wyłącznie migracja 0137 — 42 kody i tylko gdy typ = STANDARD, razem z wierszami zależnymi. Innych transportów nie rusza. Import pomijania zostaje (PR #5). | **ZROBIONE** — PR #5 import pomija STANDARD; 0137 (`b9505d3`) usunął 42 NTG |
 | B-9 | Górny pasek filtrów — **wybór właściciela 05.10 ~10:37: wariant C** (aktywny filtr z „×” + kafelek Prom) | **ZROBIONE 05.10** — C (× + filtr w Harmonogramie + tip Prom) |
 
-| B-10 | Podgląd zlecenia, edycja/awizacja, przepięcie, Status/Historia, dokumenty, ceny, ustalenia, lista KSH, rejsy Steny | NIEZACZĘTE |
+| B-10 | Podgląd zlecenia, edycja/awizacja, przepięcie, Status/Historia, dokumenty, ceny, ustalenia (lista KSH / rejsy = B-KSH / B-REJSY) | **ZROBIONE 05.10** — zakładki Status/Historia, awizacja SCX, czat+odczyty 0177, dopłaty 0178, PDF+mapa H-7, bez nr rezerwacji promu, godziny okien, notify czatu 0181 |
 | B-Q | Pytania o logikę 1–19 (powiadomienia, dzwonek, decyzje, statusy, alternatywy, faktury opłacone, Stena w pasku, bez EN/SV, tryb jasny, zegar, responsywność, kokpit, workflow 3 kont, logowanie, strefy, trasy OSM, statki, ulice) | NIEZACZĘTE |
 
 Szczegół punktów B-8, B-10 i B-Q jest w zleceniu, słowo w słowo. Tu tylko pozycje kolejki — bez realizacji.

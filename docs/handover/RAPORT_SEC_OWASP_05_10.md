@@ -36,7 +36,9 @@ Po 7 dniach: lista źródeł do akceptacji właściciela → **enforce przed SEC
 
 - **Baseline prod** 05.10: ZAP 2.16 + Java 21 **bez Dockera**. Raport: `docs/evidence/zap/RAPORT_ZAP_BASELINE_PROD_05_10.md` (+ HTML).
 - High **0** / Medium **3** (CSP przed deployem Report-Only; CORS; clickjacking — XFO już w repo).
-- Uwaga: `-quickurl` dołączył Active Scan na prod (niezgodne z „tylko pasywny”) — odnotowane; pełny skan tylko na TEST (GATE-WEEKLY 11.10).
+- **Incydent:** `-quickurl` dołączył **Active Scan** na prod (~13:58 Europe/Warsaw). Audyt: `docs/evidence/zap/AUDYT_ZAP_ACTIVE_PROD_05_10.md` — **0 śmieci DB**, 0 e-mail/SMS/push/banów z ZAP; aktywność = cron TELM/AIS + migracja 0180.
+- **Naprawa skryptów:** `scripts/zap-baseline-passive.sh` (prod TYLKO pasywny); `scripts/zap-full-active.sh` (Active tylko TEST); guard `scripts/zap/prodGuard.mjs` + test `tests/zap-prod-guard.test.ts` (prod odrzuca Active). **Nie używać** `-quickurl` na prod.
+- Pełny Active na TEST: GATE-WEEKLY **11.10**.
 
 ## 5. ASVS L2 — skrót
 

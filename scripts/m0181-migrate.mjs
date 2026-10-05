@@ -1,0 +1,72 @@
+/**
+ * B-10g chat notify + list_load_messages_ui — 0181 PROD / TEST.
+ *   node scripts/m0181-migrate.mjs dry-run-prod | apply-prod | verify-prod | apply-test
+ */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import pg from 'pg';
+
+const ROOT = resolve(import.meta.dirname, '..');
+const SQL = readFileSync(resolve(ROOT, 'supabase/migrations/0181_b10_chat_notify.sql'), 'utf8');
+
+function parseEnv(text) {
+  const map = new Map();
+  for (const line of text.split(/\r?\n/)) {
+    if (!line || /^\s*#/.test(line)) continue;
+    const i = line.indexOf('=');
+    if (i < 0) continue;
+    let v = line.slice(i + 1);
+    if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
+    map.set(line.slice(0, i).trim(), v);
+  }
+  return map;
+}
+const env = parseEnv(readFileSync(resolve(ROOT, '.env.local'), 'utf8'));
+const mode = process.argv[2] || '';
+
+async function withUrl(url, fn) {
+  const c = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
+  await c.connect();
+  try { return await fn(c); } finally { await c.end(); }
+}
+
+async function verify(c) {
+  const q = async (s) => { try { return (await c.query(s)).rows[0]; } catch (e) { return { ok: false, err: e.message }; } };
+  console.log('author_display', await q(`select exists(select 1 from information_schema.columns where table_name='load_messages' and column_name='author_display') as ok`));
+  console.log('notify_fn', await q(`select exists(select 1 from pg_proc where proname='notify_load_chat_message') as ok`));
+  console.log('list_ui', await q(`select exists(select 1 from pg_proc where proname='list_load_messages_ui') as ok`));
+  console.log('trg', await q(`select exists(select 1 from pg_trigger where tgname='trg_load_messages_notify') as ok`));
+  console.log('telm', await q(`select enabled from security_flags where key='TELM_EMTRACK_WEB'`));
+  console.log('h1', await q(`select enabled from security_flags where key='H1_ROUTE_CHECK'`));
+  console.log('mig', await q(`select exists (select 1 from supabase_migrations.schema_migrations where version='0181') as ok`));
+}
+
+async function applyTx(c, commit) {
+  await c.query('begin');
+  try {
+    await c.query(SQL);
+    if (commit) {
+      await c.query(
+        `insert into supabase_migrations.schema_migrations (version, name, statements)
+         values ('0181', 'b10_chat_notify', array[$1::text]) on conflict (version) do nothing`,
+        [SQL.slice(0, 200)],
+      );
+    }
+    await c.query(commit ? 'commit' : 'rollback');
+    console.log(commit ? 'COMMIT OK 0181' : 'dry-run: ROLLBACK OK');
+  } catch (e) {
+    await c.query('rollback').catch(() => {});
+    throw e;
+  }
+}
+
+const pooler = env.get('SUPABASE_DB_POOLER_URL');
+const testUrl = env.get('TEST_DB_URL');
+if (mode === 'dry-run-prod') await withUrl(pooler, (c) => applyTx(c, false));
+else if (mode === 'apply-prod') await withUrl(pooler, (c) => applyTx(c, true));
+else if (mode === 'verify-prod') await withUrl(pooler, verify);
+else if (mode === 'apply-test') await withUrl(testUrl, (c) => applyTx(c, true));
+else {
+  console.error('usage: dry-run-prod | apply-prod | verify-prod | apply-test');
+  process.exit(1);
+}

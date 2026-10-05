@@ -112,7 +112,7 @@ put(['INVOICE_NEW', 'INVOICE_DISPUTED', 'INVOICE_DISPUTE_REPLY', 'INVOICE_DISPUT
 
 put(['FEE_PROPOSED'], (i) => transport(i.loadCode, 'ceny'));
 put(['FEE_DECIDED'], (i) => transport(i.loadCode, 'ceny'));
-put(['MESSAGE', 'USTALENIA'], (i) => transport(i.loadCode, 'ustalenia'));
+put(['MESSAGE', 'USTALENIA', 'LOAD_CHAT_MESSAGE'], (i) => transport(i.loadCode, 'ustalenia'));
 put(['RATE_CHANGE', 'SEFS_CHANGE'], () => ({ kind: 'options', path: '/opcje/cennik' }));
 put(['CLIENT', 'BROADCAST', 'BANNER'], () => entry());
 

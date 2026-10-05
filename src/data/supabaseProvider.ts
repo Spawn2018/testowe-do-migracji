@@ -59,10 +59,11 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
   async function loadSnapshot(): Promise<DataSnapshot> {
     await ensureContext();
     const at = now();
-    const [loads, events, messages, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ] = await Promise.all([
+    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ] = await Promise.all([
       sb.from('loads').select(LOAD_COLUMNS).neq('status', 'CANCELLED').order('plan_load_date', { ascending: true, nullsFirst: false }),
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
+      sb.rpc('list_load_messages_ui'),
       sb.from('v_geofences_circle').select('*').order('sort_order'),
       sb.from('risk_signals').select('id,load_id,kind,severity,title,title_key,detail,detected_at,dedup_key').is('resolved_at', null).order('detected_at', { ascending: false }),
       sb.from('documents').select('id,load_id,category,file_name,mime_type,size_bytes,valid_until,visible_to,uploaded_at,storage_path,version,superseded_at'),
@@ -118,7 +119,20 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         .map((r, i) => applyPriceViews(loadFromRow(r, orgs, i, at), costBy.get(r.id), revBy.get(r.id)))
         .map((l) => (permitOk.has(l.id) ? { ...l, permitFits: permitOk.get(l.id) ?? null } : l)),
       events: (must(events, 'load_events') as EventRow[]).map(eventFromRow),
-      messages: (must(messages, 'load_messages') as MessageRow[]).map(messageFromRow),
+      messages: (() => {
+        const rows = (messagesUi.error ? must(messagesPlain, 'load_messages') : (messagesUi.data ?? [])) as MessageRow[];
+        const mapped = rows.map(messageFromRow);
+        // B-10g: oznacz odczyt (niekrytyczne; bez await w snapshot)
+        void Promise.resolve().then(async () => {
+          try {
+            for (const m of rows.slice(-40)) {
+              const id = Number(m.id);
+              if (Number.isFinite(id) && id > 0) await sb.rpc('mark_load_message_read', { p_message: id });
+            }
+          } catch { /* ignore */ }
+        });
+        return mapped;
+      })(),
       geofences: (must(geos, 'v_geofences_circle') as GeofenceRow[]).map((g) => geofenceFromRow(g, orgs)),
       risks: (must(risks, 'risk_signals') as RiskRow[]).map((r) => riskFromRow(r, at)),
       documents: docRows.map(documentFromRow).filter((d) => d !== null),

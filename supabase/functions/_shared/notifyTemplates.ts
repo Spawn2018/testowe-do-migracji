@@ -279,6 +279,16 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
       const body = list ? `${lead}\n${list}` : lead;
       return { subject, body, severity: row.template === 'DECISION_ESCALATED' ? 'HIGH' : 'MEDIUM', view: 'risk' };
     }
+    case 'LOAD_CHAT_MESSAGE': {
+      const code = String(p.load_code ?? '');
+      const who = String(p.author_display ?? p.author_org ?? '');
+      const preview = String(p.preview ?? '');
+      const subject =
+        locale === 'en' ? `Chat: ${code}` : locale === 'sv' ? `Chatt: ${code}` : `Czat: ${code}`;
+      const body =
+        locale === 'en' ? `${who}: ${preview}` : locale === 'sv' ? `${who}: ${preview}` : `${who}: ${preview}`;
+      return { subject, body, severity: 'MEDIUM', view: null };
+    }
     default:
       return { subject: row.template, body: '', severity: 'LOW', view: null };
   }
