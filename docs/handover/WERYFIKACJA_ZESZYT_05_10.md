@@ -140,7 +140,7 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 
 | numer | słowa właściciela | wynik | zrzut | PR / migracja |
 |-------|-------------------|-------|-------|---------------|
-| K.1 | KSH klik → menu tylko „Edytuj” | **poprawione** — boczne menu `data-ksh-side-menu` tylko przycisk Edytuj | `K.1.png` | PR #111 · `dpl_8tjC9YYtub7v9TQtK8v5TtWJi1SH` |
+| K.1 | KSH klik → menu tylko „Edytuj” | **poprawione** — boczne menu `data-ksh-side-menu` tylko przycisk Edytuj | `K.1.png` | PR #111 · `dpl_8tjC9YYtub7v9TQtK8v5TtWJi1SH → P15 `dpl_HC5UtgVTDm32X2mn3SJKz6sLy6kC`` |
 | K.2 | Edycja dat/godzin załadunku i rozładunku | **poprawione** — formularz dat/okien + Potwierdź daty | `K.2.png` | PR #111 |
 | R.1 | Widać rejsy Steny | **zgodne** — Estelle/Ebba/Spirit | `R.1.png` | stan prod |
 | R.2 | Tylko admin dodaje/edytuje | **zgodne** — „Dodaj rejs” + Opóźnienie/Odwołaj dla HHL admin | `R.1.png` | stan prod |
@@ -163,6 +163,6 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 
 ## Raport K / P (kontynuacja 16:05–16:10 PL)
 - Poprawione: K.1, K.2, P7, P8, P10, P15 · Zgodne: P9, P11, P11b, P13, P16–P19 · Częściowo: P6 (brak faktury), 10g.3 (e2e)
-- Wdrożenie: PR #111, Vercel READY `dpl_8tjC9YYtub7v9TQtK8v5TtWJi1SH`, tower.log-mar.pl **200**
+- Wdrożenie: PR #111, Vercel READY `dpl_8tjC9YYtub7v9TQtK8v5TtWJi1SH → P15 `dpl_HC5UtgVTDm32X2mn3SJKz6sLy6kC``, tower.log-mar.pl **200**
 
 **Do pełnej listy C.1:** zamknięte K.1–K.2 + P7/P8/P10 (+ większość P); **otwarte/częściowe:** P6 (faktura testowa), 10g.3 e2e, pytania poczekalni 10a.1/10a.6/10c.1; H1/H3/H6 off; SEC-OWASP nie.
