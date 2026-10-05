@@ -17,9 +17,13 @@ describe('9.4: mapowanie reguł', () => {
     expect(actionFromText(' notify_hhl ')).toEqual({ type: 'notify', audience: 'HHL' })
     expect(actionFromText('notify_carrier')).toEqual({ type: 'notify', audience: 'CARRIER' })
     expect(actionFromText('risk:delay:high')).toEqual({ type: 'risk', kind: 'DELAY', severity: 'HIGH' })
-    expect(actionFromText('email')).toEqual({ type: 'email' })
+    expect(actionFromText('email')).toEqual({ type: 'email', audience: 'HHL' })
     expect(() => actionFromText('create_task')).toThrow(/Nieznana akcja/)
-    for (const a of [{ type: 'notify', audience: 'KSH' }, { type: 'risk', kind: 'DELAY', severity: 'HIGH' }, { type: 'sms' }])
+    // B-5 (0165): SMS tylko według zasad stref — samo „sms” bez listy odrzucone
+    expect(() => actionFromText('sms')).toThrow(/Nieznana akcja/)
+    for (const a of [{ type: 'notify', audience: 'KSH' }, { type: 'risk', kind: 'DELAY', severity: 'HIGH' },
+      { type: 'decision', decision_type: 'ETA_AFTER_LATEST' }, { type: 'email', audience: 'KSH' }, { type: 'email', audience: 'HHL', critical: true },
+      { type: 'sms', list: 'LOAD_SREM', kind: 'ZONE_APPROACH' }])
       expect(actionFromText(actionToText(a))).toEqual(a)
   })
   it('warunek: pusty → true, JSON → obiekt, błędny → błąd', () => {

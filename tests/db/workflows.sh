@@ -15,7 +15,7 @@ psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/seed.sql
 # 0097 nie re-apply: po 0125 cron tower-polisy istnieje → DO w 0097 rzuca wyjątek.
 # Hosted: TOWER_ALLOW_MIG_REAPPLY=1 — shim inaczej no-opuje pliki migracji.
 export TOWER_ALLOW_MIG_REAPPLY=1
-for f in supabase/migrations/0094_*.sql supabase/migrations/0095_*.sql supabase/migrations/0096_*.sql; do
+for f in supabase/migrations/0094_*.sql supabase/migrations/0095_*.sql supabase/migrations/0096_*.sql supabase/migrations/0165_*.sql; do
   psql "$URL" -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null 2>&1 || { echo "$f ponownie: błąd"; exit 1; }
 done
 unset TOWER_ALLOW_MIG_REAPPLY
@@ -91,12 +91,12 @@ for t in '2026-10-01 11:00+00' '2026-10-01 12:00+00' '2026-10-01 13:00+00' '2026
 chk "po 5 próbach: DEAD, attempts 5" "$(Q "select status||':'||attempts from workflow_runs where event_id=$EB")" "DEAD:5"
 chk "nieudane przebiegi nie zostawiły powiadomień HHL" "$(Q "select count(*) from notifications n join app_users u on u.id=n.user_id where n.template='WORKFLOW_ALERT' and u.auth_id='$HHL'")" 0
 
-echo; echo "[R-2] akcje zewnętrzne zablokowane (EXTERNAL_MESSAGING wyłączone)"
+echo; echo "[R-2 → 0165] e-mail przez kolejkę l13 (bramka 0133), SMS wyłącznie według zasad stref"
 $PSQL -c "delete from notifications where channel='EMAIL'" >/dev/null
-$PSQL -c "insert into workflows (project_id, code, name, trigger_type, condition, actions) values ('$P', 'T-MAIL', 'test e-mail', 'MILESTONE_UNLOADED', 'true', '[{\"type\":\"email\"},{\"type\":\"sms\"}]')" >/dev/null
+$PSQL -c "insert into workflows (project_id, code, name, trigger_type, condition, actions) values ('$P', 'T-MAIL', 'test e-mail', 'MILESTONE_UNLOADED', 'true', '[{\"type\":\"email\"},{\"type\":\"sms\",\"list\":\"UNLOAD_BODEN\"}]')" >/dev/null
 EM=$(EV MILESTONE_UNLOADED '{}')
 Q "select workflow_worker(50, now())" >/dev/null
-chk "e-mail i SMS: ZABLOKOWANE_R2, przebieg OK, 0 wiadomości w kolejkach" "$(Q "select status||':'||(result->'actions'->0->>'status')||':'||(result->'actions'->1->>'status') from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='T-MAIL'")/$(Q "select count(*) from notifications where channel='EMAIL'")/$(Q "select count(*) from sms_outbox")" "OK:ZABLOKOWANE_R2:ZABLOKOWANE_R2/0/0"
+chk "e-mail: wpis w kolejce l13 dla HHL; SMS: tylko odbiorcy listy stref (bez SMS do kierowców)" "$(Q "select status||':'||(result->'actions'->0->>'type')||':'||(result->'actions'->1->>'list') from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='T-MAIL'")/$(Q "select (count(*) > 0)::text from notifications where channel='EMAIL' and template='WORKFLOW_ALERT'")/$(Q "select count(*) from sms_outbox where kind not in ('ZONE_ENTER','ZONE_APPROACH')")" "OK:email:UNLOAD_BODEN/true/0"
 
 echo; echo "[0096] wyzwalacze z kreatora: FERRY_STATUS (zmiana rejsu) i CRON_DAILY_06 (przegląd dzienny)"
 val "HHL_ADMIN zapisuje reguły FERRY_STATUS i CRON_DAILY_06 (dotąd odrzucane)" $HHL "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 'f', 'FERRY_STATUS', 'true', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]'), ('$P', 'd', 'CRON_DAILY_06', 'true', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]'); select 'ok'" ok
@@ -123,4 +123,61 @@ err "KSH nie wywoła wf_enqueue_daily" $KSH "select wf_enqueue_daily(now())" "pe
 
 echo; echo "[odporność] błąd kolejkowania nie blokuje zapisu zdarzenia"
 chk "zdarzenie zapisane mimo reguły, której kolejkowanie się nie uda" "$(Q "alter table workflow_runs add constraint t_blok check (status <> 'QUEUED') not valid; insert into load_events (load_id, event_type, occurred_at) values ('$L1', 'MILESTONE_UNLOADED', now()); alter table workflow_runs drop constraint t_blok; select count(*) from load_events where event_type='MILESTONE_UNLOADED'")" 2
+
+echo; echo "[0165 B-5] kreator: decyzja, e-mail, SMS stref, ZERO dubli, historia, ostrzeżenie"
+# wyzwalacze i akcje z kreatora
+val "HHL_ADMIN zapisuje STATUS_CHANGED i RISK_RAISED" $HHL "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 'st', 'STATUS_CHANGED', 'true', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]'), ('$P', 'rk', 'RISK_RAISED', 'true', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]'); select 'ok'" ok
+val "HHL_ADMIN zapisuje decision + email + sms (zasady stref)" $HHL "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 'dec', 'DELAY_DETECTED', 'true', '[{\"type\":\"decision\",\"decision_type\":\"ETA_AFTER_LATEST\"},{\"type\":\"email\",\"audience\":\"HHL\"},{\"type\":\"sms\",\"list\":\"LOAD_SREM\",\"kind\":\"ZONE_ENTER\"}]') returning 'ok'" ok
+err "sms poza listą stref odrzucone" $HHL "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 'x', 'DELAY_DETECTED', 'true', '[{\"type\":\"sms\",\"list\":\"OTHER\",\"kind\":\"ZONE_ENTER\"}]')" "sms tylko według zasad stref"
+err "decision z nieznanym typem odrzucone" $HHL "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 'x', 'DELAY_DETECTED', 'true', '[{\"type\":\"decision\",\"decision_type\":\"XX\"}]')" "decision wymaga"
+err "START-* nie usuwa się" $HHL "delete from workflows where code='START-1'" "nie usuwa się"
+
+# zdarzenie testowe: reguła CREATED → worker → decyzja; wyłączona → SKIPPED
+$PSQL -c "delete from workflow_runs" -c "delete from notifications" -c "delete from decision_events" -c "delete from decisions" -c "delete from risk_signals where dedup_key like 'WF:%'" >/dev/null
+W1=$(Q "insert into workflows (project_id, code, name, trigger_type, condition, actions, enabled) values ('$P', 'T-B5', 'B5 test', 'DELAY_DETECTED', 'true', '[{\"type\":\"notify\",\"audience\":\"HHL\"},{\"type\":\"decision\",\"decision_type\":\"ETA_AFTER_LATEST\"},{\"type\":\"email\",\"audience\":\"HHL\",\"critical\":true}]', true) returning id")
+E5=$(EV DELAY_DETECTED '{}')
+chk "B5: zdarzenie → QUEUED" "$(Q "select count(*) from workflow_runs where event_id=$E5 and status='QUEUED'")" 1
+chk "B5: worker wykonuje regułę (OK)" "$(Q "select (workflow_worker(50, now())->>'ok')")" 1
+chk "B5: powiadomienie HHL + decyzja ETA_AFTER_LATEST + e-mail krytyczny" "$(Q "select count(*) from notifications n join app_users u on u.id=n.user_id where n.template='WORKFLOW_ALERT' and n.channel='IN_APP' and u.auth_id='$HHL'")/$(Q "select count(*) from decisions where type_code='ETA_AFTER_LATEST' and status='NEW'")/$(Q "select count(*) from notifications where channel='EMAIL' and template='WORKFLOW_ALERT' and status in ('PENDING','DIGEST','SUPPRESSED')")" "1/1/1"
+# druga reguła na to samo zdarzenie — zero podwójnych alarmów
+$PSQL -c "insert into workflows (project_id, code, name, trigger_type, condition, actions, enabled) values ('$P', 'T-B5B', 'B5 dubl', 'DELAY_DETECTED', 'true', '[{\"type\":\"notify\",\"audience\":\"HHL\"},{\"type\":\"decision\",\"decision_type\":\"ETA_AFTER_LATEST\"},{\"type\":\"email\",\"audience\":\"HHL\",\"critical\":true}]', true)" >/dev/null
+E6=$(EV DELAY_DETECTED '{}')
+Q "select workflow_worker(50, now())" >/dev/null
+chk "B5 ZERO dubli: 2 reguły na to samo zdarzenie → 1 powiadomienie, 1 e-mail na odbiorcę; decyzja nie otwiera drugiej" "$(Q "select count(*) from notifications n join app_users u on u.id=n.user_id where n.dedup_key like 'WFN:ev:$E6:%' and u.auth_id='$HHL'")/$(Q "select count(*) from notifications n join app_users u on u.id=n.user_id where n.channel='EMAIL' and n.dedup_key like 'bundle:WF:ev:$E6:%' and u.auth_id='$HHL'")/$(Q "select count(*) from decisions where type_code='ETA_AFTER_LATEST'")/$(Q "select count(*) from workflow_runs where event_id=$E6 and status='OK'")" "1/1/1/2"
+# wyłączona nie wykonuje się
+$PSQL -c "update workflows set enabled=false where code='T-B5'" >/dev/null
+E7=$(EV DELAY_DETECTED '{}')
+Q "select workflow_worker(50, now())" >/dev/null
+chk "B5: wyłączona — nie kolejkuje się i nie wykonuje (0 przebiegów), druga reguła tak" "$(Q "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='T-B5' and r.event_id=$E7")/$(Q "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='T-B5B' and r.event_id=$E7 and r.status='OK'")" "0/1"
+
+# STATUS_CHANGED
+$PSQL -c "insert into workflows (project_id, code, name, trigger_type, condition, actions, enabled) values ('$P', 'T-ST', 'status', 'STATUS_CHANGED', '{\"==\":[{\"var\":\"payload.status\"},\"RESOURCES_PENDING\"]}', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]', true)" >/dev/null
+$PSQL -c "update loads set status='RESOURCES_PENDING' where id='$L1'" >/dev/null
+chk "B5 STATUS_CHANGED: kolejka + worker OK przy RESOURCES_PENDING" "$(Q "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='T-ST' and r.status='QUEUED'")/$(Q "select (workflow_worker(50, now())->>'ok')")" "1/1"
+
+# RISK_RAISED (ryzyko bez klucza WF:)
+$PSQL -c "insert into workflows (project_id, code, name, trigger_type, condition, actions, enabled) values ('$P', 'T-RK', 'risk', 'RISK_RAISED', '{\"==\":[{\"var\":\"payload.kind\"},\"WEATHER\"]}', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]', true)" >/dev/null
+Q "insert into risk_signals (project_id, load_id, kind, severity, title, detail, dedup_key) values ('$P', '$L1', 'WEATHER', 'HIGH', 'test', '{}', 'T:WEATHER:$L1')" >/dev/null
+chk "B5 RISK_RAISED: kolejka + worker OK" "$(Q "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='T-RK' and r.status='QUEUED'")/$(Q "select (workflow_worker(50, now())->>'ok')")" "1/1"
+# ryzyko z reguły (klucz WF:) nie kolejkuje RISK_RAISED
+RK0=$(Q "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='T-RK'")
+Q "select raise_risk('$L1', 'RESOURCE_MISSING', 'MEDIUM', 'z reguły', '{}'::jsonb, 'WF:fake:$L1')" >/dev/null
+chk "B5: ryzyko WF: nie wyzwala RISK_RAISED (bez pętli)" "$(Q "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='T-RK'")" "$RK0"
+
+# ostrzeżenie o duplikacie
+val "B5: ostrzeżenie — reguła o tym samym wyzwalaczu/warunku/akcji" $HHL "select exists (select 1 from jsonb_array_elements(wf_duplicate_check('DELAY_DETECTED', 'true'::jsonb, '[{\"type\":\"notify\",\"audience\":\"HHL\"}]'::jsonb, null)) e where e->>'kind'='RULE')" t
+val "B5: ostrzeżenie — wbudowany alarm ciszy GPS" $HHL "select exists (select 1 from jsonb_array_elements(wf_duplicate_check('SILENT_VEHICLE', 'true'::jsonb, '[{\"type\":\"notify\",\"audience\":\"CARRIER\"}]'::jsonb, null)) e where e->>'kind'='BUILTIN')" t
+err "KSH nie wywoła wf_duplicate_check" $KSH "select wf_duplicate_check('DELAY_DETECTED', 'true'::jsonb, '[{\"type\":\"notify\",\"audience\":\"HHL\"}]'::jsonb, null)" "HHL_ADMIN|permission denied|42501"
+
+# historia
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update workflows set name = name || ' hist' where code='T-B5'; commit" >/dev/null
+val "B5: historia zmian reguły (kto, kiedy, co)" $HHL "select (who is not null and action = 'ZMIENIONO' and changes ? 'po')::text from workflow_rule_history((select id from workflows where code='T-B5'), 5) order by at desc limit 1" true
+
+# START wyłączone (ONE-MECH)
+export TOWER_ALLOW_MIG_REAPPLY=1; psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0165_b5_workflow_creator.sql >/dev/null 2>&1; R165=$?; unset TOWER_ALLOW_MIG_REAPPLY
+chk "B5: 0165 ponownie (idempotentna) wyłącza START-1…7 (ONE-MECH)" "$R165/$(Q "select count(*) filter (where enabled) from workflows where code like 'START-%'")" "0/0"
+if [ "$(Q "select to_regclass('cron.job') is null")" = "t" ]; then CRN=2; else CRN=$(Q "select count(*) from cron.job where jobname in ('tower-reguly','tower-reguly-dzien')"); fi
+chk "B5: zadania tower-reguly i tower-reguly-dzien (gdy pg_cron)" "$CRN" 2
+chk "B5: wf_daily_tick tylko o 06:xx Europe/Warsaw" "$(Q "select wf_daily_tick('2026-10-05 03:30+00')")" 0
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

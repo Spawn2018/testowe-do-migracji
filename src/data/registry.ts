@@ -32,6 +32,7 @@ function targetId(m: DataMutation): string | null {
     case 'loads.importCancel': return m.loadIds.every(isServerId) ? m.loadIds[0] ?? '' : ''; // tylko transporty z serwera
     case 'workflow.create': return null; // 9.4 — nowa reguła (id nadaje baza)
     case 'workflow.update': return m.id; // tylko reguły z serwera (demo wf-1… nigdy)
+    case 'workflow.delete': return m.id; // B-5 — usunięcie tylko reguły z serwera
     default: return m.loadId;
   }
 }

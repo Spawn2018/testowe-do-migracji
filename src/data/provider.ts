@@ -75,7 +75,8 @@ export type DataMutation =
   | { type: 'loads.importCancel'; loadIds: string[]; reason: string }
   /** 9.4 — Automatyzacje (0094): zapis reguł przez API (RLS wf_all — HHL_ADMIN; walidacja wf_validate w bazie) */
   | { type: 'workflow.create'; rule: Omit<WorkflowRule, 'id' | 'runCount'> }
-  | { type: 'workflow.update'; id: string; patch: Partial<Omit<WorkflowRule, 'id' | 'runCount'>> };
+  | { type: 'workflow.update'; id: string; patch: Partial<Omit<WorkflowRule, 'id' | 'runCount'>> }
+  | { type: 'workflow.delete'; id: string };
 
 /** M4 — ustawienia użytkownika (`user_preferences`); motyw null = domyślny dla roli. */
 export interface UserPrefsPatch {

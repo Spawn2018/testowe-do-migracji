@@ -82,7 +82,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       // 0081 (SCOPE 6.5): zgodność powiązanych zezwoleń z wymiarami zestawu — tylko transporty z zezwoleniem
       sb.rpc('load_permit_status'),
       // 9.4 (0094): reguły automatyzacji — RLS wf_all: tylko HHL_ADMIN (pozostali: 0 wierszy); przebiegi — odczyt HHL
-      sb.from('workflows').select('id,name,description,trigger_type,condition,actions,enabled').order('code', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false }),
+      sb.from('workflows').select('id,code,name,description,trigger_type,condition,actions,enabled').order('code', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false }),
       sb.from('workflow_runs').select('id,workflow_id,load_id,status,result,ran_at').order('id', { ascending: false }).limit(1000),
     ]);
     const wfRuns = (wfRunQ.error ? [] : wfRunQ.data ?? []) as WorkflowRunDbRow[];
@@ -294,6 +294,12 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       case 'workflow.update': {
         const res = await sb.from('workflows').update(workflowToDb(m.patch)).eq('id', m.id).select('id');
         if (!(must(res, 'reguła') as { id: string }[]).length) throw new Error('reguła: zmienia wyłącznie administrator HHL');
+        return;
+      }
+      case 'workflow.delete': {
+        // B-5 — usuwa wyłącznie HHL_ADMIN (RLS wf_all); reguł START-* baza nie usuwa (0165); wpis zostaje w audit_log
+        const res = await sb.from('workflows').delete().eq('id', m.id).select('id');
+        if (!(must(res, 'reguła') as { id: string }[]).length) throw new Error('reguła: usuwa wyłącznie administrator HHL');
         return;
       }
       case 'geofence.save': {
