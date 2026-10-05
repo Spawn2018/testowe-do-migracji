@@ -930,3 +930,12 @@ Priorytet właściciela 05.10 — potwierdzone pule HERE:
 Sprawdź seed/inne migracje czy nie nadpisują. Brama, obie domeny 200. Dopisz POLECENIA / PLAN / rejestr.
 Potem dalej TELM-EMTRACK-WEB (rozpoznanie → budowa jak poprzednie polecenie).
 
+---
+
+## Polecenie — TELM build dopisek (05.10 ~12:55)
+
+### Dopisek 05.10 ~12:55 — build + 0174
+- Fix pre-push: `runEmtrackWeb` version-risk → `sourceDownRisk` / `rk_source_down` (nie `rk_generic`).
+- Migracja **0174**: cron `tower-emtrack-web` `*/2 * * * *` (prod=OK). Flaga `TELM_EMTRACK_WEB` nadal **false**.
+- H1/H3/H6 false. Pule HERE 0172 bez zmian.
+

@@ -55,6 +55,7 @@ describe('A6-T1 klucze ryzyk', () => {
       'STENA_STATUS', 'STENA_SCHEDULE',
       'DIGITRAFFIC', 'STENA_IRM', 'TRAFIKVERKET', 'KPD_GDDKIA', 'TOMTOM',
       'FMI', 'DMI', 'SMHI', 'MARINE_WEATHER',
+      'HERE_TRAFFIC_PL', 'EMTRACK_WEB',
     ];
     expect(metrics.length).toBe(4); expect(jobs.length).toBe(4); expect(srcs).toEqual(SOURCE_IDS);
     const need = [...metrics.map((m) => `usage_metric_${m}`), ...jobs.map((j) => `job_label_${j.replace(/-/g, '_')}`), ...srcs.map((x) => `rk_src_${x}`)];

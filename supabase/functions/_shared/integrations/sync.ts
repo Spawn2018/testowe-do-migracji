@@ -30,7 +30,7 @@ export interface SailingInsert {
   project_id: string; vessel_id: string; route: FerryRoute; departure_at: string; arrival_at: string;
   delayed_departure_at: string | null; delayed_arrival_at: string | null; status: DbSailingStatus; source: AutoSailingSource;
 }
-export type RiskKind = 'FERRY' | 'ROAD_SE' | 'ROAD_PL';
+export type RiskKind = 'FERRY' | 'ROAD_SE' | 'ROAD_PL' | 'JOB_FAILURE' | 'SILENT_VEHICLE';
 export type RiskSeverity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export interface RiskInput {
   kind: RiskKind; severity: RiskSeverity; title: string; detail: Record<string, unknown>;
@@ -127,7 +127,8 @@ export type SourceId =
   | 'POLFERRIES_STATUS' | 'POLFERRIES_SCHEDULE'
   | 'STENA_STATUS' | 'STENA_SCHEDULE'
   | 'DIGITRAFFIC' | 'STENA_IRM' | 'TRAFIKVERKET' | 'KPD_GDDKIA' | 'TOMTOM'
-  | 'FMI' | 'DMI' | 'SMHI' | 'MARINE_WEATHER';
+  | 'FMI' | 'DMI' | 'SMHI' | 'MARINE_WEATHER'
+  | 'HERE_TRAFFIC_PL' | 'EMTRACK_WEB';
 const SOURCE_LABEL: Record<SourceId, string> = {
   POLFERRIES_STATUS: 'status promów (Polferries)', POLFERRIES_SCHEDULE: 'rozkład promów (Polferries)',
   STENA_STATUS: 'status promów (Stena Line)', STENA_SCHEDULE: 'rozkład promów (Stena Line)',
@@ -135,12 +136,15 @@ const SOURCE_LABEL: Record<SourceId, string> = {
   KPD_GDDKIA: 'utrudnienia drogowe PL (KPD GDDKiA)', TOMTOM: 'prędkość ruchu (TomTom — wycofane)',
   FMI: 'pogoda morska (FMI)', DMI: 'pogoda morska (DMI)', SMHI: 'pogoda morska (SMHI)',
   MARINE_WEATHER: 'pogoda morska (FMI+DMI+SMHI)',
+  HERE_TRAFFIC_PL: 'utrudnienia drogowe PL (HERE)',
+  EMTRACK_WEB: 'telematyka naczep (emtrack web)',
 };
 const SOURCE_KIND: Record<SourceId, RiskKind> = {
   POLFERRIES_STATUS: 'FERRY', POLFERRIES_SCHEDULE: 'FERRY',
   STENA_STATUS: 'FERRY', STENA_SCHEDULE: 'FERRY',
   DIGITRAFFIC: 'FERRY', STENA_IRM: 'FERRY', TRAFIKVERKET: 'ROAD_SE', KPD_GDDKIA: 'ROAD_PL', TOMTOM: 'ROAD_SE',
   FMI: 'FERRY', DMI: 'FERRY', SMHI: 'FERRY', MARINE_WEATHER: 'FERRY',
+  HERE_TRAFFIC_PL: 'ROAD_PL', EMTRACK_WEB: 'JOB_FAILURE',
 };
 
 /** Awaria źródła albo zmiana struktury → ryzyko widoczne w kolejce (jedno na źródło i dzień), nigdy cicha pustka. */
