@@ -64,7 +64,7 @@ Czeka właściciel / zewnętrzne = **bez budowy** (tylko lista).
 | ID | Status | Dowód | Na co czeka |
 |---|---|---|---|
 | U-3-PALIWO | **DONE** | 0155 | — |
-| DIAGNOZA-ETA | **do zrobienia** | — | — (tylko raport, bez kodu) |
+| DIAGNOZA-ETA | **DONE** | `DIAGNOZA_ETA_05_10.md` — 6/6 ETA z planu, 0 GPS | — |
 | DRV-CLOSE | **DONE** | 0156 | — |
 | STD-CLEAN | **DONE** | 0157 | — |
 | SMS-KSH-1H + ETA-PRE-LOAD | **DONE** | 0158 | — |
@@ -85,7 +85,7 @@ Czeka właściciel / zewnętrzne = **bez budowy** (tylko lista).
 | H-10 | **do zrobienia** (ryzyko wiatru); ETA+wiatr po emtrack | — | wydłużanie ETA → TELM-2 / H-4 |
 | H-12 | **do zrobienia** | — | — |
 | H-4 / H-5 | **czeka zewnętrzne** | propozycja w POSTEP | TELM-2 (emtrack) |
-| CLEAN-MAPLIBRE | **do potwierdzenia** | `package.json` bez maplibre (04.10) | — (potwierdzenie) |
+| CLEAN-MAPLIBRE | **DONE** | brak maplibre/mapbox w package.json i lock (05.10) | — |
 | AUTH-MAIL | **DONE** | POSTEP 02.10 — szablony Auth „Watch Tower” | — |
 | I-29 | **DONE** | `I29_BUDGETY_140.md` | — |
 | GATE-WEEKLY | **RYTM** | brama TEST niedziela | następna: **11.10.2026** |
