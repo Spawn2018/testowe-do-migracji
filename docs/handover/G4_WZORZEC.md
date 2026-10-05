@@ -170,3 +170,7 @@ Zgoda właściciela 05.10 07:57 (czas warszawski): odświeżyć wzorce 90 ujęć
 | strefy, opcje, harmonogram, stany | — | **bez odświeżenia** — różnice stref/stanów nie wynikają z B-MAPA/B-7a/B-7b (strefy: kolumny tabeli, nie mapa) |
 
 **Regresji: 0.** Po odświeżeniu: kandydat mapa 90/90 i kokpit 90/90 identyczne ze wzorcem; smoke visual 4/4 zielone.
+
+## B-4a (05.10.2026) — Finanse bez pilotażu w przychodzie
+
+Zamierzona zmiana UI: usunięte wiersze „Pilotaż i dodatki” / „Przychód — pilotaż i dodatki” w Finanse (KSH, HHL). Odświeżono 30× `shots-baseline/finanse__*`. Innych ujęć nie ruszano.

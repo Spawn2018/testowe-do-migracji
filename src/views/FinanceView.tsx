@@ -31,7 +31,6 @@ export function FinanceView() {
   const cost = done.reduce((s, l) => s + l.pricing.costTotal, 0);
   const baseR = done.reduce((s, l) => s + l.pricing.revBase, 0);
   const bafR = done.reduce((s, l) => s + l.pricing.revSefs, 0);
-  const exR = done.reduce((s, l) => s + (l.pricing.revTotal - l.pricing.revBase - l.pricing.revSefs), 0);
   const baseC = done.reduce((s, l) => s + l.pricing.costBase, 0);
   const bafC = done.reduce((s, l) => s + l.pricing.costSefs, 0);
   const exC = done.reduce((s, l) => s + l.pricing.costExtras, 0);
@@ -158,10 +157,6 @@ export function FinanceView() {
                   <span className="lbl">{PROD_BUILD ? t(locale, 'fin_rev_fuel') : tp(locale, 'a6_fin_fuel_pct', { pct: appliedNum })}</span>
                   <span>{money(bafR)}</span>
                 </div>
-                <div className="mrow">
-                  <span className="lbl">{t(locale, 'a6_fin_pilot')}</span>
-                  <span>{money(exR)}</span>
-                </div>
                 <div className="mrow total">
                   <span>{t(locale, 'a6_fin_total')}</span>
                   <span>{money(rev)}</span>
@@ -181,10 +176,6 @@ export function FinanceView() {
                 <div className="mrow">
                   <span className="lbl">{t(locale, 'fin_rev_fuel')}</span>
                   <span>{money(bafR)}</span>
-                </div>
-                <div className="mrow">
-                  <span className="lbl">{t(locale, 'fin_rev_extra')}</span>
-                  <span>{money(exR)}</span>
                 </div>
                 <div className="mrow">
                   <span className="lbl">{t(locale, 'a6_fin_cost_scx')}</span>

@@ -1863,3 +1863,7 @@ Naprawa: `upcomingOutboundSailings` — obie linie do Szwecji z lookback 3 h; UI
 Opis, nie budowa UI. `LOGIKA_SYSTEMU.md` §1: Centrum ≠ kafelek „Wymaga decyzji”; panel tylko w trybie supabase; od L-1/L-1b/L-3 decyzje otwiera `decision_open_from_event`. Na produkcji 05.10: 45 otwartych (NO_AWIZACJA, DOC_MISSING, SEFS_OUT_OF_TABLE…). Pusty wygląd = demo / rola KSH / RLS przewoźnika / brak otwartych po filtrze statusu — nie awaria odświeżania.
 
 B-2a wdrożone: PR #69, `f77de74`, dpl_YMvYgchmv4QPdnJzhEJA1Ea9SjZ8, obie domeny 200. H1/H3 false, H6_MAP_OBSTACLES false. Następne: B-3a czeka na wymiary D-83 — pomijam; B-4a.
+
+## 2026-10-05 (czas warszawski) — B-4a Finanse bez pilotażu w przychodzie
+
+Usunięte z widoku Finanse wiersze przychodu „Pilotaż i dodatki” / „Przychód — pilotaż i dodatki” (KSH i HHL). Suma przychodu i marży bez zmian (nadal z `revTotal`). Po stronie kosztu SCX wiersz zostaje. Test `tests/b4a-fin-no-pilot.test.ts`. B-3a pominięte — czeka na wymiary D-83.
