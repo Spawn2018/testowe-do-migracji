@@ -129,30 +129,40 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 
 | 10g.1 | Czat: kto // firma — data — godzina | **zgodne** (kod + input „Wyślij”); brak wiadomości na SG-03 | `10g.png` | stan prod |
 | 10g.2 | „Odczytano” → kto i kiedy | **zgodne** (kod `details`/`odczytano`) — brak reads na SG-03 | `10g.png` | stan prod |
-| 10g.3 | Powiadomienie o nowej wiadomości | ⛔ / nie sprawdzone dziś (auth timeout pod koniec) | — | — |
+| 10g.3 | Powiadomienie o nowej wiadomości | **częściowo** — zakładka Ustalenia + chatbar Wyślij na prod; e2e powiadomienia (drugi user) nie odtworzone dziś | `10g.3.png` | otwarte e2e |
 
 ## Raport sekcji 10 (Podgląd zlecenia)
-- Zgodne: 18 · Poprawione: 4 (10a.3/5/9/10) · Częściowo: 6 · Otwarte/⛔: 1 (10g.3)
+- Zgodne: 18 · Poprawione: 4 (10a.3/5/9/10) · Częściowo: 7 (w tym 10g.3) · Otwarte/⛔: 0 nowych poza poczekalnią
 - Wdrożenie: PR #108, Vercel READY `dpl_FvtWKtyxMxzMdCkMrKm9CWnFeVDf`, tower.log-mar.pl **200**, watch-tower-makieta.vercel.app **200** (15:45 PL)
 - Auth Supabase: timeout przy ponownym logowaniu ~15:53 PL — K/R/P dokończyć po przywróceniu Auth
 
-## Raport K / R / P / C (częściowy — 15:57 PL)
+## Raport K / R / P / C (15:57 → 16:10 PL)
 
-| K.1 | KSH klik → menu tylko „Edytuj” | **niezgodne** — KSH widzi pełną szufladę (Przegląd/Status/…) + „Edytuj” w datach planu | `K.1` brak osobnego; obserwacja w sesji | otwarte |
-| K.2 | Edycja dat/godzin załadunku i rozładunku | **częściowo** — panel dat KSH w szufladzie; nie domknięte osobnym zrzutem | — | otwarte |
-
+| numer | słowa właściciela | wynik | zrzut | PR / migracja |
+|-------|-------------------|-------|-------|---------------|
+| K.1 | KSH klik → menu tylko „Edytuj” | **poprawione** — boczne menu `data-ksh-side-menu` tylko przycisk Edytuj | `K.1.png` | PR #111 · `dpl_8tjC9YYtub7v9TQtK8v5TtWJi1SH` |
+| K.2 | Edycja dat/godzin załadunku i rozładunku | **poprawione** — formularz dat/okien + Potwierdź daty | `K.2.png` | PR #111 |
 | R.1 | Widać rejsy Steny | **zgodne** — Estelle/Ebba/Spirit | `R.1.png` | stan prod |
 | R.2 | Tylko admin dodaje/edytuje | **zgodne** — „Dodaj rejs” + Opóźnienie/Odwołaj dla HHL admin | `R.1.png` | stan prod |
 | R.3 | Przyszłe / minione + filtr Przyszłe | **zgodne** — „Przyszłe” / „pokaż minione” | `R.1.png` | stan prod |
 | R.4 | Daty z rokiem | **zgodne** — `05.10.2026` itd. | `R.1.png` | stan prod |
+| P6 | Oznaczanie opłaconych faktur — tylko HHL | **częściowo** — UI HHL + `canMarkPaid`; brak faktur w tyg. 38 do Opłacona | `P6.png` | UI OK · brak faktury testowej |
+| P7 | Najbliższe Steny obok Polferries w pasku | **poprawione** — Stena Ebba + Polferries Nova Star | `P-topbar.png` / `P7-P8-P10.png` | PR #111 |
+| P8 | Brak wyboru języka | **poprawione** — bez `#langSeg` i bez selecta w Preferencjach | `P7-P8-P10.png` / `P9.png` | PR #111 |
+| P9 | Tryb jasny / system w ustawieniach | **zgodne** — Jak w systemie / Ciemny / Jasny + `#themeBtn` | `P9.png` | stan prod |
+| P10 | Brak zegara prawy górny | **poprawione** — w `#ops` tylko data, bez HH:MM | `P-topbar.png` | PR #111 |
+| P11 | Nic się nie rozjeżdża (tel/PC) | **zgodne** — 390px bez overflow | `P11-390.png` | stan prod |
+| P11b | Push na telefonie (Preferencje) | **zgodne** — „Powiadomienia push (telefon)” | `P9.png` | stan prod |
+| P13 | Dzwonek bez „przeczytane”; klik → cel | **zgodne** — „Oznacz wszystkie”; klik → `#/szczegoly-wpisu` | `P13.png` | stan prod |
+| P15 | Login: logo/napisy wyśrodkowane, bez ramek | **poprawione** — `.auth-card` bez border/shadow | `P15.png` | PR #111 |
+| P16 | Kreator stref z mapą | **zgodne** — „rysowane na mapie” + GeofenceEditorMap | `P16.png` | stan prod |
+| P17 | Trasy po drogach; prom po morzu | **zgodne** — warstwa Trasa + HERE/Leaflet | `P17-P19-map.png` | stan prod |
+| P18 | Promy: PL / SE / rejs; znikają do PL | **zgodne** — AIS jak w 1.1 | `P17-P19-map.png` / `1.1.png` | stan prod |
+| P19 | Ulice i miejscowości na mapie | **zgodne** — kafelki HERE | `P17-P19-map.png` | stan prod |
+| C.1 | Domyślnie „ / ”; „|” tylko przy Przepięciu w WT | **zgodne** na SG-03 | `C.1.png` / `10a.png` | stan prod |
 
-| P6 | Oznaczanie opłaconych faktur — tylko HHL | **częściowo** — widok Faktury HHL; brak faktur do kliknięcia „opłacona” dziś | `P6.png` | otwarte |
-| P7 | Najbliższe Steny obok Polferries w pasku | **niezgodne** — pasek: Wawel (Polferries); brak Steny obok | `P-topbar.png` | otwarte |
-| P8 | Brak wyboru języka | **niezgodne** — PL/EN/SV w pasku (już w poczekalni) | `P-topbar.png` | poczekalnia |
-| P9 | Tryb jasny / system | nie sprawdzone dziś | — | otwarte |
-| P10 | Brak zegara Prawy górny | **niezgodne** — widoczna godzina `15:57` | `P-topbar.png` | otwarte |
-| P11–P19 | Responsywność / push / dzwonek / trasy / promy / ulice | nie domknięte dziś (auth timeout + czas) | — | otwarte |
+## Raport K / P (kontynuacja 16:05–16:10 PL)
+- Poprawione: K.1, K.2, P7, P8, P10, P15 · Zgodne: P9, P11, P11b, P13, P16–P19 · Częściowo: P6 (brak faktury), 10g.3 (e2e)
+- Wdrożenie: PR #111, Vercel READY `dpl_8tjC9YYtub7v9TQtK8v5TtWJi1SH`, tower.log-mar.pl **200**
 
-| C.1 | Domyślnie „ / ”; „\|” tylko przy Przepięciu w WT | **zgodne** na SG-03 z `trailer_swap` — telefony/kierowcy `\|` | `C.1.png` / `10a.png` | stan prod |
-
-**Do C.1 listy:** zamknięte 8.14 + §10 (z częściowymi) + R + C.1; **otwarte:** K.1–K.2, P6 (flow), P7, P8, P9, P10, P11–P19, 10g.3, pytania poczekalni 10a.1/10c.1.
+**Do pełnej listy C.1:** zamknięte K.1–K.2 + P7/P8/P10 (+ większość P); **otwarte/częściowe:** P6 (faktura testowa), 10g.3 e2e, pytania poczekalni 10a.1/10a.6/10c.1; H1/H3/H6 off; SEC-OWASP nie.

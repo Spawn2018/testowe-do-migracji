@@ -2,18 +2,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { INTL_LOCALE, t, tp } from '../../i18n/messages';
 import { ROLE_META } from '../../lib/permissions';
-import type { Locale, RoleId } from '../../types';
+import type { RoleId } from '../../types';
 import { NotificationBell } from './NotificationBell';
 import { ClaudeIcon } from './ClaudeIcon';
 import { KeyboardHelp } from './KeyboardHelp';
 import { ferryWidgetLabel, nextLiveSailing } from '../../lib/ferry';
 import { getNow } from '../../lib/frozenNow';
 import { canSwitchView, PROD_BUILD } from '../../lib/prodFacade';
-import { dbFerryWidget, nextDbSailing } from '../../lib/sailings';
+import { dbFerryWidget, nearestCrossingSailings } from '../../lib/sailings';
 
 const ROLES: RoleId[] = ['HHL', 'KSH', 'SCX'];
-const LANGS: Locale[] = ['pl', 'en', 'sv'];
-
 /** ISO week number (Europe/Warsaw local date). */
 function isoWeek(d: Date): number {
   const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -27,16 +25,13 @@ export function Topbar() {
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
   const setRole = useTowerStore((s) => s.setRole);
-  const setLocale = useTowerStore((s) => s.setLocale);
   const toggleTheme = useTowerStore((s) => s.toggleTheme);
   const sailings = useTowerStore((s) => s.sailings);
   const [help, setHelp] = useState(false);
   const [ops, setOps] = useState({
     wk: 0,
-    cd: '0 h 00 min',
-    ferryLine: '—',
-    wave: 'fala —',
-    clock: '00:00',
+    /** P7 — Stena + Polferries obok siebie w pasku */
+    ferryRows: [] as { cd: string; line: string }[],
     date: '',
   });
 
@@ -61,22 +56,28 @@ export function Topbar() {
         hour12: false,
       }).formatToParts(now);
       const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
-      /* I-2e: produkcja — najbliższy rejs z tabeli `sailings`, bez fali (brak źródła danych); demo — rozkład statyczny */
-      const dbw = PROD_BUILD ? dbFerryWidget(nextDbSailing(sailings, now.getTime()), now.getTime()) : null;
-      const fw = PROD_BUILD
-        ? { cd: dbw?.cd ?? '—', line: dbw?.line ?? t(locale, 'i2_no_sailing'), wave: '' }
-        : ferryWidgetLabel(nextLiveSailing(now), locale);
+      /* P7 — produkcja: najbliższe Stena + Polferries; demo — jeden widget jak wcześniej */
+      let ferryRows: { cd: string; line: string }[] = [];
+      if (PROD_BUILD) {
+        const near = nearestCrossingSailings(sailings, now.getTime(), 1);
+        const st = dbFerryWidget(near.stena[0] ?? null, now.getTime());
+        const pf = dbFerryWidget(near.polferries[0] ?? null, now.getTime());
+        if (st) ferryRows.push({ cd: st.cd, line: `Stena · ${st.line}` });
+        else ferryRows.push({ cd: '—', line: `Stena · ${t(locale, 'i2_no_sailing')}` });
+        if (pf) ferryRows.push({ cd: pf.cd, line: `Polferries · ${pf.line}` });
+        else ferryRows.push({ cd: '—', line: `Polferries · ${t(locale, 'i2_no_sailing')}` });
+      } else {
+        const fw = ferryWidgetLabel(nextLiveSailing(now), locale);
+        ferryRows = [{ cd: fw.cd, line: `${fw.line}${fw.wave ? ` · ${fw.wave}` : ''}` }];
+      }
       const y = Number(get('year'));
       const m = Number(get('month'));
       const day = Number(get('day'));
       const localNoon = new Date(y, m - 1, day, 12, 0, 0);
       setOps({
         wk: isoWeek(localNoon),
-        cd: fw.cd,
-        ferryLine: fw.line,
-        wave: fw.wave,
-        clock: `${get('hour')}:${get('minute')}`,
-        /* A6-T3 — data w języku interfejsu (PL bez zmian: DD.MM.RRRR) */
+        ferryRows,
+        /* A6-T3 — data w języku interfejsu (PL bez zmian: DD.MM.RRRR); P10 — bez zegara */
         date: new Intl.DateTimeFormat(INTL_LOCALE[locale], { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', year: 'numeric' }).format(now),
       });
     };
@@ -128,19 +129,7 @@ export function Topbar() {
           ))}
         </div>
       </div> : null}
-      <div className="seg" role="group" aria-label={t(locale, 'a6_top_lang')} id="langSeg">
-        {LANGS.map((l) => (
-          <button
-            key={l}
-            type="button"
-            data-lang={l}
-            aria-pressed={locale === l}
-            onClick={() => setLocale(l)}
-          >
-            {l.toUpperCase()}
-          </button>
-        ))}
-      </div>
+      {/* P8 — brak wyboru języka w UI */}
       <button
         type="button"
         className="iconbtn"
@@ -164,24 +153,24 @@ export function Topbar() {
         ?
       </button>
       <NotificationBell />
-      <div className="ops" id="ops" title={t(locale, 'a6_top_ferry_title')}>
+      <div className="ops" id="ops" title={t(locale, 'a6_top_ferry_title')} data-p7-ferries>
         <span className="wk">{tp(locale, 'a6_top_wk', { n: String(ops.wk) })}</span>
         <span className="sep" />
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--sea)' }}>
           <ClaudeIcon name="ferry" />
         </span>
-        <span>
-          <span className="cd">{ops.cd}</span>
-          <span className="lb" style={{ display: 'block' }}>
-            {ops.ferryLine}{ops.wave ? ' · ' : null}{ops.wave || null}
-          </span>
+        <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+          {ops.ferryRows.map((row, i) => (
+            <span key={i} data-ferry-row={i} style={{ display: 'flex', alignItems: 'baseline', gap: 6, lineHeight: 1.15 }}>
+              <span className="cd" style={{ fontSize: i === 0 ? undefined : 12 }}>{row.cd}</span>
+              <span className="lb">{row.line}</span>
+            </span>
+          ))}
         </span>
         <span className="sep" />
+        {/* P10 — data bez zegara */}
         <span>
-          <span className="cd">{ops.clock}</span>
-          <span className="lb" style={{ display: 'block' }}>
-            {ops.date}
-          </span>
+          <span className="cd" data-ops-date>{ops.date}</span>
         </span>
       </div>
       <KeyboardHelp open={help} onClose={closeHelp} />

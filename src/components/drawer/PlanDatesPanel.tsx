@@ -16,7 +16,16 @@ function datePart(iso: string | null | undefined, fallback: string): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: TZ_OPS, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 }
 
-export function PlanDatesPanel({ load }: { load: Load }) {
+export function PlanDatesPanel({
+  load,
+  forceEditing = false,
+  onCloseEdit,
+}: {
+  load: Load;
+  /** B-K.1 — boczne menu KSH: od razu formularz po „Edytuj”. */
+  forceEditing?: boolean;
+  onCloseEdit?: () => void;
+}) {
   const locale = useTowerStore((s) => s.locale);
   const role = useTowerStore((s) => s.role);
   const [ld, setLd] = useState(load.plannedLoadDate);
@@ -42,12 +51,17 @@ export function PlanDatesPanel({ load }: { load: Load }) {
       : `${load.plannedDeliverDate}T15:00`,
   );
   const [busy, setBusy] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(forceEditing);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const pd = load.planDates;
   if (!pd) return null;
   const confirmed = pd.status === 'POTWIERDZONA';
-  const canConfirm = role === 'KSH' && pd.preLoading;
+  const canConfirm = role === 'KSH' && (pd.preLoading || forceEditing);
+
+  const closeEdit = () => {
+    setEditing(false);
+    onCloseEdit?.();
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +85,7 @@ export function PlanDatesPanel({ load }: { load: Load }) {
       });
       if (r.error) throw new Error(r.error.message);
       setNote({ ok: true, text: t(locale, (r.data as { changed?: boolean })?.changed ? 'i18_saved_changed' : 'i18_saved') });
-      setEditing(false);
+      closeEdit();
       const { refreshFromServer } = await import('../../data/supabaseBridge');
       await refreshFromServer({ keepSelection: true });
     } catch (err) {
@@ -88,7 +102,7 @@ export function PlanDatesPanel({ load }: { load: Load }) {
           ? <small data-plan-dates-by>{t(locale, 'i18_by_ksh').replace('{at}', new Date(pd.confirmedAt).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' }))}</small>
           : <small>{t(locale, 'i18_waiting')}</small>}
       </div>
-      {canConfirm && !editing ? (
+      {canConfirm && !editing && !forceEditing ? (
         <button type="button" className="btn" style={{ marginTop: 10 }} data-ksh-edit onClick={() => setEditing(true)}>
           {t(locale, 'b_ksh_edit')}
         </button>
@@ -114,7 +128,7 @@ export function PlanDatesPanel({ load }: { load: Load }) {
               <input type="datetime-local" className="input" value={delTo} onChange={(e) => setDelTo(e.target.value)} required /></label>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" className="btn ghost" onClick={() => setEditing(false)}>{t(locale, 'a6_dr_close')}</button>
+            <button type="button" className="btn ghost" onClick={closeEdit}>{t(locale, 'a6_dr_close')}</button>
             <button type="submit" className="btn" disabled={busy} data-plan-dates-confirm>{t(locale, 'i18_confirm_btn')}</button>
           </div>
         </form>

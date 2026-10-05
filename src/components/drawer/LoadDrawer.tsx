@@ -47,7 +47,7 @@ import { autoStatusText, effArrival, effDeparture, fmtLocal, sailingStatusLabel 
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { isServerId } from '../../data/registry';
 import { DriverLinkPanel } from './DriverLinkPanel';
-import type { Locale } from '../../types';
+import type { Load, Locale } from '../../types';
 import { PROD_BUILD, shows } from '../../lib/prodFacade';
 import { delayPillMinutes, permitBannerState } from '../../lib/prodDash';
 /* SCOPE 6.4 — formularz zezwoleń: tylko build Supabase, chunk leniwy (paczka demo bez niego) */
@@ -179,6 +179,18 @@ export function LoadDrawer() {
 
 
   if (!load) return null;
+
+  /* B-K.1 — KSH: boczne menu tylko „Edytuj” (nie pełna szuflada HHL). */
+  if (role === 'KSH') {
+    return (
+      <KshSideMenu
+        load={load}
+        locale={locale}
+        onClose={() => selectLoad(null)}
+      />
+    );
+  }
+
   const driverPhone = visibleDriverPhone(role, load);
 
   const showCost = canSeeCost(role);
@@ -585,7 +597,7 @@ export function LoadDrawer() {
                   key={d.id}
                   doc={d}
                   onPreview={setPreviewDoc}
-                  showUpload={canEdit && role !== 'KSH'}
+                  showUpload={canEdit}
                   onUploadClick={() => {
                     setUploadCat(d.category);
                     fileRef.current?.click();
@@ -608,7 +620,7 @@ export function LoadDrawer() {
                 >
                   {t(locale, 'a6_dr_zip_btn')}
                 </button>
-                {role !== 'KSH' ? (
+                {true ? (
                   <button
                     type="button"
                     className="btn"
@@ -718,7 +730,7 @@ export function LoadDrawer() {
                   OKQ8
                 </a>
               </div>
-              {isServerId(load.id) && (role === 'HHL' || role === 'SCX' || role === 'KSH') ? <AgreedFeeForm loadId={load.id} locale={locale} role={role} /> : null}
+              {isServerId(load.id) && (role === 'HHL' || role === 'SCX') ? <AgreedFeeForm loadId={load.id} locale={locale} role={role} /> : null}
             </>
           )}
 
@@ -987,3 +999,56 @@ export function LoadDrawer() {
     </>
   );
 }
+
+/** B-K.1 / B-K.2 — wąskie boczne menu KSH: tylko Edytuj → daty/godziny. */
+function KshSideMenu({
+  load,
+  locale,
+  onClose,
+}: {
+  load: Load;
+  locale: Locale;
+  onClose: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    setEditing(false);
+  }, [load.id]);
+
+  return (
+    <>
+      <button type="button" className="scrim on" aria-label="close" onClick={onClose} />
+      <aside className="drawer" data-drawer-root data-ksh-side-menu role="dialog" aria-modal="true">
+        <div className="drawer-hd">
+          <div>
+            <div className="t">{load.code}</div>
+            <div className="s">{t(locale, 'b_ksh_edit')}</div>
+          </div>
+          <button type="button" className="x" onClick={onClose} aria-label="close">
+            ✕
+          </button>
+        </div>
+        <div className="dbody">
+          {!editing ? (
+            <button
+              type="button"
+              className="btn"
+              data-ksh-edit
+              onClick={() => setEditing(true)}
+              style={{ width: '100%' }}
+            >
+              {t(locale, 'b_ksh_edit')}
+            </button>
+          ) : load.planDates ? (
+            <PlanDatesPanel load={load} forceEditing onCloseEdit={() => setEditing(false)} />
+          ) : (
+            <div className="muted" style={{ fontSize: 13 }}>
+              Brak danych planDates dla tego załadunku.
+            </div>
+          )}
+        </div>
+      </aside>
+    </>
+  );
+}
+
