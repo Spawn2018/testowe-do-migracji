@@ -939,3 +939,63 @@ Potem dalej TELM-EMTRACK-WEB (rozpoznanie → budowa jak poprzednie polecenie).
 - Migracja **0174**: cron `tower-emtrack-web` `*/2 * * * *` (prod=OK). Flaga `TELM_EMTRACK_WEB` nadal **false**.
 - H1/H3/H6 false. Pule HERE 0172 bez zmian.
 
+---
+
+## Polecenie 2026-10-05 ~13:12 (czas warszawski) — TELM-EMTRACK-WEB WŁĄCZENIE I TEST NA ŻYWO
+
+SYTUACJA: właściciel przypisał naczepę GD035YX do transportu w harmonogramie,
+razem z linkiem śledzenia od przewoźnika. Naczepa jest już w Szwecji i jedzie
+na rozładunek. Transport załadował się, zanim system zaczął śledzić naczepę.
+
+### 0. BLOKADA BEZPIECZEŃSTWA (najpierw, przed włączeniem flagi)
+To test na produkcji przed pilotażem (R-0 wyczyści transporty przed R-1).
+Dla TEGO transportu i do odwołania przez właściciela:
+- SMS (w tym SMS-KSH-1H) i e-maile WYŁĄCZNIE na numer i adres właściciela;
+  zero wysyłek do KSH, przewoźnika ani innych odbiorców
+- powiadomienia w aplikacji — normalnie
+Potwierdź w raporcie, że blokada działa (test na sucho), zanim włączysz flagę.
+
+### 1. ALARMY BEZ DOPASOWANIA
+Naczepa bez aktywnej awizacji → pozycje zapisane, ZERO alarmów
+„brak dopasowania" i zero powiadomień. Alarm tylko dla naczepy
+przypisanej do aktywnego transportu. Jeśli trzeba — popraw, test, wdrożenie.
+
+### 2. WŁĄCZENIE
+TELM_EMTRACK_WEB=true na produkcji, po punktach 0 i 1.
+
+### 3. TRANSPORT JUŻ W TRASIE — ROZPOZNANIE FAZY
+Transport podłączony w trakcie jazdy nie ma zarejestrowanego wyjazdu
+ze strefy załadunku. Faza ma wynikać z pozycji naczepy:
+- pozycja w Szwecji albo na morzu → załadunek i przeprawa już były:
+  status zgodny z fazą, ETA dostawy LICZONE (nie „–" z ETA-PRE-LOAD),
+  wpis w historii „faza ustalona z pozycji naczepy przy podłączeniu"
+- ta sama zasada dla każdego przyszłego transportu podłączonego w trasie
+
+### 4. TEST NA ŻYWO — DO RAPORTU
+Dla transportu z GD035YX:
+- dopasowanie naczepa → transport: działa, źródło pozycji zapisane
+- link śledzenia od przewoźnika (warstwa 3, linki podwykonawców):
+  czy da się z niego odczytać pozycję; porównanie z emtrack (aplikacja)
+- ETA do miejsca rozładunku: wartość, składniki (HERE SE, D-85),
+  aktualizacja wraz z pozycją
+- SMS-KSH-1H przy ETA ≤ 60 min do rozładunku — tylko na numer właściciela
+- wjazd w strefę rozładunku → status; wyjazd ze strefy → UNLOADED
+  (data realizacji: faktura, kurs NBP, opłata paliwowa — zapis widoczny)
+- mapa: naczepa na podkładzie HERE, ślad z punktów GPS
+- przerwy w odczytach, ponowne logowania, błędy
+
+### 5. MONITORING 72 h
+Liczba odczytów, przerwy, ponowne logowania, błędy, zgodność pozycji
+z aplikacją emtrack (próbka 3× dziennie). Każdy problem z logowaniem
+albo formatem → stop źródła, alarm w Stanie systemu, e-mail do
+administratora. Raport: po rozładunku tego transportu, po 24 h i po 72 h.
+
+### 6. DOPISEK WŁAŚCICIELA (~13:14)
+Po włączeniu flagi TELM_EMTRACK_WEB podaj właścicielowi bezpośredni link
+do szczegółów tego transportu (GD035YX) i potwierdź, że naczepa jest
+widoczna na mapie (widok Mapa i szczegóły transportu) z czasem ostatniej pozycji.
+
+Migracje przez bramę, obie domeny 200. Zapisz decyzje w rejestrze
+decyzji i w POLECENIA_KOORDYNATORA.md. Potem wróć do pozostałych
+pozycji PLAN.md.
+

@@ -70,7 +70,7 @@
 ## Decyzje po spotkaniu z przewoźnikiem (29.09) — szczegóły w `ZLECENIE_PO_SPOTKANIU_SCX.md`
 | ID | Sprawa | Decyzja |
 |---|---|---|
-| D-36 | telematyka | emtrack.eu przez API + linki od podwykonawców; dokumentacja i przykłady — właściciel dostarczy |
+| D-36 | telematyka | Warstwy: API → **TELM-EMTRACK-WEB** (zapas, LIVE 05.10 GD035YX) → linki podwykonawców. Blokada SMS/e-mail tylko właściciel do odwołania (test prod przed R-0). Dokumentacja oficjalnego API — właściciel | ✅ zapas web 05.10 / ⏳ oficjalne API |
 | D-37 | SMS | do kierowców — rezygnacja; do KSH — **rozszerzenie 04.10.2026**: dla załadunku (Śrem) i rozładunku (Boden) jeden SMS na transport na każdy koniec trasy, gdy wyliczony czas dojazdu z bieżącej pozycji GPS do placu wynosi ≤ 60 min; HERE, gdy dostępne, w przeciwnym razie własny silnik (0122) przy wyłączonej fladze lub wyczerpanym budżecie; pierwsza pozycja bliżej niż 60 min — SMS od razu; brak GPS — brak SMS i ryzyko „brak pozycji”; SMS „wjazd na plac” bez zmian. |
 | D-38 | aplikacja kierowcy | ukryta; CMR wgrywa dyspozytor; POD i zdjęcia mocowania — rezygnacja |
 | D-39 | progi sztormowe | fala 3,8 m, porywy 40 węzłów — potwierdzone |
