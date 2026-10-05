@@ -1266,3 +1266,15 @@ Zapisz decyzje w rejestrze decyzji (przy D-85: brak tachografu na
 stałe, GPS jako źródło czasu pracy), w PLAN.md
 i w POLECENIA_KOORDYNATORA.md.
 
+
+## 2026-10-05 ~20:33 Europe/Warsaw — H-4 / SG-03 poprawki (w ramach C)
+
+Opis „Jak działa” przy ETA — potwierdzony, NIE zmieniać.
+
+1. ZAŁOŻENIE OSTROŻNE przy braku historii GPS: gdy system nie zna ostatniego odpoczynku dobowego — przyjmij, że limit jazdy może się kończyć; odpoczynek dobowy wstaw najpóźniej tam, gdzie wypada wg przepisów. Popraw jeśli dziś „świeży kierowca”. Historia GPS SG-03 od 05.10 13:25 (emtrack).
+2. HISTORIA SPRZED PODŁĄCZENIA: sprawdź czy klient emtrack daje historię naczepy sprzed 13:25 (tylko odczyt). Jeśli tak — przy podłączeniu transportu w trasie użyj do ostatniego odpoczynku i czasu jazdy.
+3. NIEPEWNOŚĆ PROGNOZY: odpoczynek/przerwy z GPS → niepewność NIE może być 0%. Pasmo ± uwzględnia wcześniejszy/późniejszy odpoczynek. „Wysoka” tylko gdy cały rozrzut ≤ 60 min. Zrzut ETA SG-03 po zmianie.
+4. TESTY: (a) brak historii → odpoczynek wstawiony, „Wysoka” niedostępna; (b) pełna historia z odpoczynkiem 11 h rano → dzień jazdy od jego końca; (c) niepewność odpoczynku > 0 w paśmie.
+5. RAPORT PO PRZYJEŹDZIE SG-03: ETA przed H-4 / po H-4 / po tej poprawce vs rzeczywisty wjazd Boden; godzina SMS „1 h przed” (tylko właściciel). Wnioski II-7b.
+
+Migracje: lokalna brama. Obie domeny 200. SMS/e-mail SG-03 tylko do właściciela.
