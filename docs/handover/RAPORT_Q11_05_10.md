@@ -1,11 +1,9 @@
-# Q-11a / Q-11b — raport 05.10
+# Q-11a / Q-11b — raport 05.10 (aktualizacja ~16:45)
 
-## Q-11a — pięć rozmiarów
-Brama wizualna i makieta pokrywają: **390, 768, 1280, 1440, 1920** (`tests/__screenshots__`, `G4_WZORZEC.md`).  
-Smoke CSS: `@media` w `auth.css` i layoutach Nav/Map.  
-**Status:** uznane za spełnione wzorcem wizualnym (bez nowego UI).
+## Q-11a — pięć rozmiarów — **DONE**
+Brama wizualna i makieta pokrywają: **390, 768, 1280, 1440, 1920** (`tests/__screenshots__`, `G4_WZORZEC.md`, RESP-14).  
+Dowód: PR **#91** (`d641810`), `RAPORT_Q11_05_10.md` (wcześniejszy wpis) + wzorzec wizualny.
 
-## Q-11b — push Android / iOS
-W aplikacji: powiadomienia **in-app** + e-mail (Resend) + SMS bramka.  
-**Brak** Web Push / FCM / APNs w repo (0 `serviceWorker` push, 0 FCM).  
-**Status:** wymaga osobnej decyzji (PWA push vs natywna powłoka) — **nie zbudowane**; nie blokuje pilotażu in-app.
+## Q-11b — push Android / iOS — **DONE** (wybór A)
+Web Push VAPID (0 zł): `push_subscriptions`, Preferencje, SW `push`/`notificationclick`, Edge `web-push-send` + `web-push-vapid-public`, DIGEST, iOS hint „Dodaj do ekranu głównego”.  
+Dowód: PR **#94** (`bb1af8a`), migracja **0179**, `PROPOZYCJA_Q11B_PUSH.md`.

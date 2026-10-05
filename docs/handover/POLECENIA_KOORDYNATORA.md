@@ -1152,3 +1152,23 @@ F: napisz, czego brakuje do zapisu kopii w R2 (dostęp/klucz/konfiguracja)
 Każda pozycja ze zrzutem z produkcji, jak na liście kontrolnej.
 Potem: raport, które pozycje PLAN.md NIE czekają na właściciela —
 jeśli żadne, napisz wprost.
+
+## Polecenie właściciela 2026-10-05 ~16:44 (czas warszawski) — A SEC-OWASP + przedtem F/PLAN/D-1
+
+A — **SEC-OWASP** (ASVS poziom 2), teraz. Zasady:
+- ZAP: pasywny na produkcji, aktywny tylko na TEST
+- CSP: Report-Only trwa do 12.10; wymuszanie dopiero po przeglądzie
+  zebranych naruszeń — lista dozwolonych źródeł do akceptacji
+  właściciela; do tego czasu reszta ASVS
+- wynik: lista punktów ASVS z wynikiem i dowodem; luki wysokie
+  i krytyczne naprawiasz od razu, średnie i niskie — lista do akceptacji
+
+Przy okazji (krótko, przed SEC-OWASP):
+1. F: token R2 działa — wgraj kopię kont O3 (`konta/`) do `tower-backup`,
+   potwierdź listą obiektów.
+2. PLAN.md: Q-11a, Q-11b (PR #91/#94) i I-3-APK są zrobione — popraw
+   statusy z dowodem; jeśli czegoś faktycznie brakuje, napisz co.
+3. „D-1" na liście czekających — wyjaśnij jednym zdaniem, czego dotyczy
+   (cennik D-1 jest zrealizowany w I-30).
+
+TELM-2 i test SG-03 w tle bez zmian. GATE-WEEKLY 11.10.
