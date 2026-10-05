@@ -307,6 +307,7 @@ interface TowerState {
   toggleWorkflow: (id: string) => void;
   createWorkflow: (rule: Omit<WorkflowRule, 'id' | 'runCount'>) => string;
   updateWorkflow: (id: string, patch: Partial<WorkflowRule>) => void;
+  deleteWorkflow: (id: string) => void;
   runWorkflowNow: (id: string) => void;
 
   updateRate: (side: 'COST' | 'REVENUE', id: string, baseRate: number) => void;
@@ -1135,6 +1136,14 @@ export const useTowerStore = create<TowerState>()(
         const { runCount: _rc, id: _id, ...dbPatch } = patch as Partial<WorkflowRule>;
         writeThrough({ type: 'workflow.update', id, patch: dbPatch });
         get().pushToast(t(get().locale, 'a6_ts_wf_updated'), 'MEDIUM');
+      },
+
+      deleteWorkflow: (id) => {
+        const cur = get().workflows.find((w) => w.id === id);
+        if (!cur) return;
+        set((s) => ({ workflows: s.workflows.filter((w) => w.id !== id) }));
+        writeThrough({ type: 'workflow.delete', id }); // B-5 — baza: RLS HHL_ADMIN, START-* nieusuwalne, audit_log
+        get().pushToast(tp(get().locale, 'b5_ts_deleted', { name: cur.name }), 'MEDIUM');
       },
 
       runWorkflowNow: (id) => {

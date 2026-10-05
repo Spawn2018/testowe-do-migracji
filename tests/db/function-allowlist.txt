@@ -169,3 +169,7 @@ authenticated deepl_usage_view
 # B-MAPA: podkład i geometria trasy, próbka śladu promu dla Q-18
 authenticated map_display_state
 authenticated ferry_track_sample
+
+# B-5: kreator reguł — ostrzeżenie o duplikacie i historia zmian (tylko HHL_ADMIN w funkcji)
+authenticated wf_duplicate_check
+authenticated workflow_rule_history

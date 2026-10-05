@@ -7,12 +7,12 @@ import type { WorkflowRule, WorkflowRun } from '../types';
 
 export interface WorkflowDbRow {
   id: string; name: string; description: string | null; trigger_type: string;
-  condition: unknown; actions: unknown; enabled: boolean;
+  condition: unknown; actions: unknown; enabled: boolean; code?: string | null;
 }
 export interface WorkflowRunDbRow {
   id: number; workflow_id: string; load_id: string | null; status: string; result: Record<string, unknown> | null; ran_at: string;
 }
-interface DbAction { type: string; audience?: string; kind?: string; severity?: string; title?: string; text?: string }
+interface DbAction { type: string; audience?: string; kind?: string; severity?: string; title?: string; text?: string; decision_type?: string; list?: string; critical?: boolean }
 
 /** Wyzwalacze kreatora (makieta) ↔ typy zdarzeń w bazie. Pozostałe kody przechodzą bez zmian (baza je sprawdza). */
 const UI_TO_DB: Record<string, string> = { POSITION_STALE: 'SILENT_VEHICLE', UNLOADED: 'MILESTONE_UNLOADED' };
@@ -26,18 +26,31 @@ const UI_TO_AUD: Record<string, string> = { notify_hhl: 'HHL', notify_ksh: 'KSH'
 export function actionToText(a: DbAction): string {
   if (a.type === 'notify') return AUD_TO_UI[a.audience ?? ''] ?? `notify_${String(a.audience ?? '').toLowerCase()}`;
   if (a.type === 'risk') return `risk:${a.kind ?? ''}:${a.severity ?? ''}`;
+  if (a.type === 'decision') return `decision:${a.decision_type ?? ''}`;
+  if (a.type === 'email') return `email:${a.audience ?? 'HHL'}${a.critical ? ':critical' : ''}`;
+  if (a.type === 'sms') return `smszone:${a.list ?? ''}:${a.kind ?? 'ZONE_ENTER'}`;
   return a.type;
 }
 
-/** Tekst kreatora → akcja bazy: notify_hhl | notify_ksh | notify_scx | risk:RODZAJ:POZIOM | email | sms. */
+/**
+ * Tekst kreatora → akcja bazy (B-5, 0165): notify_hhl | notify_ksh | notify_scx | risk:RODZAJ:POZIOM |
+ * decision:TYP | email:HHL|KSH|CARRIER[:critical] | smszone:LOAD_SREM|UNLOAD_BODEN:ZONE_APPROACH|ZONE_ENTER.
+ * Stare „email” = e-mail do HHL. Samo „sms” bez listy stref — odrzucone (SMS wyłącznie według zasad stref).
+ */
 export function actionFromText(s: string): DbAction {
   const v = s.trim();
   const low = v.toLowerCase();
   if (UI_TO_AUD[low]) return { type: 'notify', audience: UI_TO_AUD[low] };
-  if (low === 'email' || low === 'sms') return { type: low };
+  if (low === 'email') return { type: 'email', audience: 'HHL' };
   const m = v.match(/^risk:([A-Z_]+):([A-Z]+)$/i);
   if (m) return { type: 'risk', kind: m[1].toUpperCase(), severity: m[2].toUpperCase() };
-  throw new Error(`Nieznana akcja „${v}” (dozwolone: notify_hhl, notify_ksh, notify_scx, risk:RODZAJ:POZIOM, email, sms)`);
+  const d = v.match(/^decision:([A-Z0-9_]+)$/i);
+  if (d) return { type: 'decision', decision_type: d[1].toUpperCase() };
+  const e = v.match(/^email:(HHL|KSH|CARRIER)(:critical)?$/i);
+  if (e) return e[2] ? { type: 'email', audience: e[1].toUpperCase(), critical: true } : { type: 'email', audience: e[1].toUpperCase() };
+  const z = v.match(/^smszone:(LOAD_SREM|UNLOAD_BODEN):(ZONE_APPROACH|ZONE_ENTER)$/i);
+  if (z) return { type: 'sms', list: z[1].toUpperCase(), kind: z[2].toUpperCase() };
+  throw new Error(`Nieznana akcja „${v}” (dozwolone: notify_hhl, notify_ksh, notify_scx, risk:RODZAJ:POZIOM, decision:TYP, email:HHL|KSH|CARRIER, smszone:LOAD_SREM|UNLOAD_BODEN:ZONE_APPROACH|ZONE_ENTER)`);
 }
 
 export function conditionToDb(c: string): unknown {
@@ -56,6 +69,7 @@ export function workflowFromRow(r: WorkflowDbRow, okRuns: number): WorkflowRule 
     actions: acts.map(actionToText),
     enabled: r.enabled,
     runCount: okRuns,
+    ...(r.code ? { code: r.code } : {}),
   };
 }
 

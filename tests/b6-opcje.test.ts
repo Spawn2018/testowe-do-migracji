@@ -36,7 +36,7 @@ describe('B-6a/b/c: „Jak to działa” w Opcjach', () => {
   });
   it('treść zgodna z mechanizmem: macierz, decyzja ostrzeżenie→krytyczne, SMS tylko Śrem i Boden, progi 48/12 h', () => {
     expect(t('pl', 'b6_howto_notif')).toMatch(/Tylko macierz decyduje/);
-    expect(t('pl', 'b6_howto_notif')).toMatch(/Nowych reguł się nie dodaje/);
+    expect(t('pl', 'b6_howto_notif')).toMatch(/Nowa automatyzacja/); // B-5 05.10: kreator reguł zamiast „nie dodaje się”
     expect(t('pl', 'b6_howto_zones')).toMatch(/Śremie i plac w Boden/);
     expect(t('pl', 'b6_howto_thresh')).toMatch(/48 h przed — ostrzeżenie, na 12 h — krytyczne/);
   });

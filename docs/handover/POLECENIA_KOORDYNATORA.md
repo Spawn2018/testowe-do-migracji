@@ -744,3 +744,45 @@ D, potem B. Najpierw odśwież wzorce 90 ujęć map — zmiana zamierzona (podk�
 ## Polecenie 2026-10-05 ~08:35 (czas warszawski) — część B od B-5
 
 Kontynuacja części B od B-5 według PLAN.md (po B-4b). B-3a nadal stop — czeka na wymiary (D-83). B-5: przycisku nowej automatyzacji ma nie być (tylko historia); jeśli już ukryty — potwierdzić testem. Potem B-6a…B-6i w kolejności PLAN.md. Pomijane (tylko propozycja na piśmie): B-7c, filtry i statusy z B-8, B-9, Q-9. B-7a i B-7b już zrobione. Wzorce wizualne odświeżać tylko dla ujęć zmienionych przez B-6, z przyczyną w commicie.
+
+## Polecenie 2026-10-05 ~09:10 (czas warszawski) — kontynuacja części B (B-8…)
+
+Kontynuacja części B. B-7c skip (propozycja na piśmie). B-8 bez filtrów i statusów (te czekają na właściciela — `PROPOZYCJE_B_05_10.md`). B-9 skip (propozycja). Potem B-10… według PLAN.md. Skip Q-9. B-3a nadal stop — wymiary D-83. B-5 i B-6a…B-6i na prod (PR #74, migracja 0164, dpl_GDQUstA58xFQ1gKxTeKmshnKHeBk). B-7a/B-7b zrobione.
+
+B-8 do zrobienia (zlecenie §8, bez filtrów/statusów i bez zmiany ciągnika bez specyfikacji): mapowanie pól (KSH poza tabelą; HHL/SCX etykiety), godziny przy załadunku/dostawie, linie pionowe, szerokość kolumn, ETA (dni+godz+min / godz+min), polisa w dokumentach, rok w datach, kierowca/telefon (format), PDF (kierowca+telefon zamiast promu). Filtr dat — jeśli część filtrów z propozycji, zostawić. Zmiana ciągnika — STOP podpozycji bez specyfikacji.
+
+## Polecenie 2026-10-05 ~09:15 (czas warszawski) — DECYZJE WŁAŚCICIELA 05.10 (ostateczne): B-5 przycisk i kreator, ceny paliw krok A/B, korekta SEFS
+
+Zatrzymuje bieżącą pracę nad B-8/B-10 (WIP odłożony na lokalnej gałęzi `feat/b8-harmonogram`, niescalony). Odwraca wcześniejsze „B-5: przycisku ma nie być” (polecenie ~08:35).
+
+1. B-5 — PRZYCISK „NOWA AUTOMATYZACJA” I KREATOR REGUŁ
+Przycisku nie ma — ma być. Razem z pełną możliwością tworzenia nowych reguł w aplikacji (dziś kreator działa tylko przez API, 9.4).
+- przycisk „Nowa automatyzacja” w widoku Automatyzacje, tylko HHL_ADMIN
+- kreator w oknie: nazwa, wyzwalacz (zdarzenie / status / ryzyko / termin), warunki, akcje (powiadomienie, decyzja, e-mail, SMS według zasad stref), włącz/wyłącz, edycja i usuwanie reguły
+- reguła zapisuje się w tym samym silniku co dziś (0094), bez drugiego mechanizmu; zero podwójnych alarmów (ONE-MECH)
+- historia zmian reguły: kto, kiedy, co
+- test: nowa reguła z kreatora wykonuje się na zdarzeniu testowym; wyłączona — nie wykonuje się; duplikat istniejącego alarmu — ostrzeżenie przed zapisem
+
+2. CENY PALIW — PEŁNY AUTOMAT ZGODNY Z MECHANIZMEM OPŁATY PALIWOWEJ (U-14, D-34, I-31, SEFS)
+KROK A — PRÓBKA DO AKCEPTACJI (najpierw, bez zapisu do bazy produkcyjnej). Dla OKQ8 i Orlen osobno pokaż właścicielowi:
+- dokładny adres strony / narzędzia, z którego pobierasz
+- nazwę produktu dokładnie tak, jak jest na stronie (rodzaj paliwa)
+- pobraną wartość, jednostkę i walutę (np. SEK/l, PLN/m³), netto czy brutto
+- datę i godzinę obowiązywania ceny według źródła
+- odczyty z ostatnich 7 dni, jeśli źródło je udostępnia
+- obok: co w tej samej chwili pokazuje strona w przeglądarce (zrzut albo cytat), żeby właściciel mógł porównać
+Jeśli w regulaminie którejś strony jest KONKRETNY zakaz pobierania — zacytuj zapis i nie pobieraj z tej strony. Właściciel potwierdza rodzaj paliwa i miejsce pobierania na piśmie. Do czasu akceptacji — punkt 1, potem część B według PLAN.md.
+KROK B — AUTOMAT (dopiero po pisemnej akceptacji kroku A)
+- pobieranie codziennie z zaakceptowanych miejsc; User-Agent z nazwą Watch Tower, źródło i czas przy każdym odczycie
+- dalej bez udziału człowieka, według mechanizmu SEFS: średnia PL i SE z poprzedniego tygodnia → indeksy → mnożnik (zasada „niższy”, I-31) → opłata dla transportów według tygodnia daty załadunku (D-34, 0155), czas Europe/Warsaw (33.3)
+- formularz ręczny HHL (I-2f) tylko awaryjnie: brak odczytu w danym dniu → ryzyko w Stanie systemu i e-mail do administratora
+- test: tydzień z pełnymi odczytami → mnożnik zgodny z ręcznym wyliczeniem (wzorzec: 28.09–04.10 = 1,14); brak odczytu jednego dnia → ryzyko, średnia z dostępnych dni zgodnie z mechanizmem
+- cel: odczyty na produkcji przed R-3
+
+3. KOREKTA CENY OD DOSTAWCY (zgoda właściciela)
+Korekta wchodzi do średniej SEFS, dopóki tydzień nie jest zamknięty. Po zamknięciu tygodnia wartość zamrożona (migawka, 32.3) — późniejsza korekta nie zmienia policzonych transportów ani faktur; zapis korekty w historii.
+
+KOLEJNOŚĆ I ZASADY
+Najpierw punkt 1 i krok 2A (próbka do właściciela). Potem część B dalej według PLAN.md. Krok 2B po akceptacji próbki, przed R-3. Migracje przez lokalną bramę, obie domeny 200 po każdym wdrożeniu. Zapisz decyzje w rejestrze decyzji, w PLAN.md i w POLECENIA_KOORDYNATORA.md.
+
+Kolejność wykonania: (1) B-5 kreator → (2) krok 2A próbka paliw do właściciela → (3) korekta SEFS w średniej → część B dalej według PLAN.md (od B-8 bez filtrów/statusów). Krok 2B nie budować do pisemnej akceptacji próbki.

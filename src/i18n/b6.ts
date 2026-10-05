@@ -15,7 +15,7 @@ const pl: Dict = {
     + '|Przewoźnik dostaje tylko swoje transporty, KSH tylko swój projekt, HHL wszystko według macierzy. To samo zdarzenie powtórzone nie tworzy drugiego wpisu.'
     + '|Gdy sprawa wymaga reakcji (np. brak awizacji przed załadunkiem, brak dokumentu, opłata paliwowa poza tabelą), otwiera się decyzja w Centrum decyzji. Ostrzeżenie i stan krytyczny to ta sama decyzja; gdy warunek ustanie, decyzja zamyka się jako nieaktualna.'
     + '|E-mail: sprawy krytyczne od razu, niekrytyczne raz na dobę w jednym skrócie. Po dziennym limicie poczty wpis w aplikacji zostaje.'
-    + '|Automatyzacje to tylko podgląd historii reguł. Nowych reguł się nie dodaje — wszystkim steruje jeden mechanizm w bazie.',
+    + '|Automatyzacje: administrator HHL dodaje własne reguły przyciskiem „Nowa automatyzacja”. Reguły działają w tym samym mechanizmie w bazie — jedno zdarzenie daje jeden alarm na odbiorcę, bez dubli z automatami.',
   b6_notif_filter_note: 'Te przełączniki gaszą tylko powiadomienia tworzone w tej przeglądarce. Nie wyłączają e-maili ani wpisów z bazy — o nich decyduje macierz.',
   b6_howto_zones:
     'Strefa to koło na mapie: środek, promień, zapas i rodzaj (załadunek, port, plac, punkt kontrolny…). Kształt, kraj i „kogo powiadomić” ustawia się w widoku Strefy; tutaj jest tylko włącznik.'

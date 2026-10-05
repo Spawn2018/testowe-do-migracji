@@ -326,6 +326,8 @@ export interface WorkflowRule {
   actions: string[];
   enabled: boolean;
   runCount: number;
+  /** kod reguły z bazy (START-1…7 = reguły startowe 0094; kreator — brak) */
+  code?: string | null;
 }
 
 export interface WorkflowRun {

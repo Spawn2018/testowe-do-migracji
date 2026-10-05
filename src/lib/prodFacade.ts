@@ -42,6 +42,14 @@ export function canSeeWorkflows(prod: boolean = PROD_BUILD, role: string | null 
 }
 
 /**
+ * B-5 (decyzja właściciela 05.10) — przycisk „Nowa automatyzacja”, edycja i usuwanie reguł: w produkcji wyłącznie
+ * konto HHL_ADMIN (RLS `wf_all`). Demo: widok HHL.
+ */
+export function canManageWorkflows(prod: boolean = PROD_BUILD, role: string | null | undefined = getAuthProfile()?.role, demoRole?: string): boolean {
+  return prod ? role === 'HHL_ADMIN' : demoRole === undefined || demoRole === 'HHL';
+}
+
+/**
  * I-2a — przełącznik „Widok HHL/KSH/SCX”: w produkcji wyłącznie dla konta organizacji HHL
  * (podgląd widoku innej strony). Konta KSH i przewoźnika nie widzą przełącznika — rola wynika z konta.
  * Demo (bez logowania) — przełącznik jest sposobem prezentacji.
