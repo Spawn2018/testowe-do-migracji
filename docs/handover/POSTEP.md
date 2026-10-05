@@ -1857,3 +1857,9 @@ PR #66 scalony (`9b77bcb`). Wdrożenie z commita Sebastiana `640a162` (to samo d
 Teraz: B-2a · Przyczyna: panel Ryzyka filtrował wyłącznie `GDN-NYN` (Polferries). Stena (`GDY-KAA`) nie wchodziła do tabeli wypłynięć.
 
 Naprawa: `upcomingOutboundSailings` — obie linie do Szwecji z lookback 3 h; UI: sekcje Gdańsk→Nynäshamn i Gdynia→Karlskrona. Test `tests/b2a-stena-sailings.test.ts`. Bez migracji, bez SMS, bez wydatków.
+
+## 2026-10-05 (czas warszawski) — B-2c Centrum decyzji
+
+Opis, nie budowa UI. `LOGIKA_SYSTEMU.md` §1: Centrum ≠ kafelek „Wymaga decyzji”; panel tylko w trybie supabase; od L-1/L-1b/L-3 decyzje otwiera `decision_open_from_event`. Na produkcji 05.10: 45 otwartych (NO_AWIZACJA, DOC_MISSING, SEFS_OUT_OF_TABLE…). Pusty wygląd = demo / rola KSH / RLS przewoźnika / brak otwartych po filtrze statusu — nie awaria odświeżania.
+
+B-2a wdrożone: PR #69, `f77de74`, dpl_YMvYgchmv4QPdnJzhEJA1Ea9SjZ8, obie domeny 200. H1/H3 false, H6_MAP_OBSTACLES false. Następne: B-3a czeka na wymiary D-83 — pomijam; B-4a.
