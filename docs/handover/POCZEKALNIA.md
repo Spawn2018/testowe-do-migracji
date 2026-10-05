@@ -22,3 +22,7 @@
 
 | 2026-10-05 16:22 | właściciel | Decyzje A–F (10a.1, 10c.1, 8.3, 8.9, licznik GPS, raport R2) — wykonywane | A–F |
 | 2026-10-05 16:40 | executor | **A–F ZAMKNIĘTE** (A–E fix+prod+zrzuty; F = `R2_KOPIA_KONT_O3_BRAKI.md`) | — |
+
+## D-1 — wyjaśnienie 2026-10-05 ~16:45
+
+„D-1” na liście czekających w raporcie zeszyt = **pomyłka nazwy**: cennik **D-1 jest ZREALIZOWANY w I-30** (SYMBOL w bazie TEST+PROD). To, co nadal czeka u właściciela przy stawkach/produkcji, to **R-1** (import prawdziwego harmonogramu + akceptacja czyszczenia), nie osobna decyzja cennika D-1.
