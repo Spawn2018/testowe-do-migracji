@@ -45,6 +45,11 @@ export function AwizacjaModal({ load, onClose }: Props) {
   const [phoneCountry, setPhoneCountry] = useState<'PL' | 'SE' | 'OTHER'>(load.resources.driverPhoneCountry ?? 'PL');
   const [tractorPlate, setTractorPlate] = useState(load.resources.tractorPlate ?? '');
   const [trailerPlate, setTrailerPlate] = useState(load.resources.trailerPlate ?? '');
+  const [trailerSwap, setTrailerSwap] = useState(!!load.resources.trailerSwap);
+  const [driverDeliveryName, setDriverDeliveryName] = useState(load.resources.driverDeliveryName ?? '');
+  const [driverDeliveryPhone, setDriverDeliveryPhone] = useState(load.resources.driverDeliveryPhone ?? '');
+  const [deliveryPhoneCountry, setDeliveryPhoneCountry] = useState<'PL' | 'SE' | 'OTHER'>(load.resources.driverDeliveryPhoneCountry ?? 'PL');
+  const [tractorDeliveryPlate, setTractorDeliveryPlate] = useState(load.resources.tractorDeliveryPlate ?? '');
   const [carrierOrder, setCarrierOrder] = useState(load.carrierOrderNo ?? '');
   const [hhlOrder, setHhlOrder] = useState(load.hhlOrderNo ?? '');
   const [trackingRef, setTrackingRef] = useState(load.resources.trackingRef ?? '');
@@ -104,12 +109,22 @@ export function AwizacjaModal({ load, onClose }: Props) {
       return;
     }
 
+    const phone2 = toNationalPhone(driverDeliveryPhone, deliveryPhoneCountry);
+    if (phone2.national && !isPlausibleNational(phone2.national)) {
+      setErr(t(locale, 'awiz_err_phone'));
+      return;
+    }
     updateResources(load.id, {
       driverName: name,
       driverPhone: phone.national || null,
       driverPhoneCountry: phone.country === 'SE' ? 'SE' : 'PL',
       tractorPlate: plate,
       trailerPlate: trailerPlate.trim().toUpperCase() || null,
+      trailerSwap,
+      driverDeliveryName: driverDeliveryName.trim() || null,
+      driverDeliveryPhone: phone2.national || null,
+      driverDeliveryPhoneCountry: phone2.country === 'SE' ? 'SE' : 'PL',
+      tractorDeliveryPlate: tractorDeliveryPlate.trim().toUpperCase() || null,
       trackingRef: trackingRef.trim() || null,
     });
 
@@ -189,6 +204,35 @@ export function AwizacjaModal({ load, onClose }: Props) {
             <input className="input mono" list="awiz-trailers" value={trailerPlate} onChange={(e) => setTrailerPlate(e.target.value)} autoComplete="off" />
             <datalist id="awiz-trailers">{trailerHints.map((h) => <option key={h} value={h} />)}</datalist>
           </label>
+
+          <label className="form-field" data-c-sep-swap style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input type="checkbox" checked={trailerSwap} onChange={(e) => setTrailerSwap(e.target.checked)} data-awiz-swap />
+            <span>{t(locale, 'awiz_trailer_swap')}</span>
+          </label>
+          <small style={{ display: 'block', marginTop: -6, marginBottom: 8, color: 'var(--ink-3)' }}>{t(locale, 'awiz_trailer_swap_hint')}</small>
+
+          {trailerSwap || driverDeliveryName || driverDeliveryPhone || tractorDeliveryPlate ? (
+            <>
+              <label className="form-field">
+                <span>{t(locale, 'awiz_driver_delivery')}</span>
+                <input className="input" value={driverDeliveryName} onChange={(e) => setDriverDeliveryName(e.target.value)} autoComplete="off" />
+              </label>
+              <label className="form-field">
+                <span>{t(locale, 'awiz_phone_delivery')}</span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <select className="input" style={{ width: 72 }} value={deliveryPhoneCountry === 'OTHER' ? 'PL' : deliveryPhoneCountry} onChange={(e) => setDeliveryPhoneCountry(e.target.value as 'PL' | 'SE')}>
+                    <option value="PL">PL</option>
+                    <option value="SE">SE</option>
+                  </select>
+                  <input className="input mono" style={{ flex: 1 }} type="tel" inputMode="numeric" value={driverDeliveryPhone} onChange={(e) => setDriverDeliveryPhone(e.target.value)} placeholder="601234567" autoComplete="off" />
+                </div>
+              </label>
+              <label className="form-field">
+                <span>{t(locale, 'awiz_tractor_delivery')}</span>
+                <input className="input mono" value={tractorDeliveryPlate} onChange={(e) => setTractorDeliveryPlate(e.target.value)} autoComplete="off" />
+              </label>
+            </>
+          ) : null}
 
           <label className="form-field">
             <span>{t(locale, 'a6_dr_ord_scx')}</span>

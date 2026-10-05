@@ -168,6 +168,11 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
   const resources: LoadResources = {
     driverName: row.driver_name, driverPhone: row.driver_phone,
     driverPhoneCountry: row.driver_phone_country === 'SE' ? 'SE' : 'PL',
+    driverDeliveryName: (row as { driver_delivery_name?: string | null }).driver_delivery_name ?? null,
+    driverDeliveryPhone: (row as { driver_delivery_phone?: string | null }).driver_delivery_phone ?? null,
+    driverDeliveryPhoneCountry: (row as { driver_delivery_phone_country?: string | null }).driver_delivery_phone_country === 'SE' ? 'SE' : 'PL',
+    tractorDeliveryPlate: (row as { tractor_delivery_plate?: string | null }).tractor_delivery_plate ?? null,
+    trailerSwap: !!(row as { trailer_swap?: boolean | null }).trailer_swap,
     tractorPlate: row.tractor_plate, trailerPlate: row.trailer_plate,
     escort: (row.escort_vehicles ?? 0) > 0, escortPlate: null,
     setLengthM: num(row.combo_length_m), setWidthM: num(row.combo_width_m),
@@ -249,6 +254,11 @@ export function resourcesPatchToDb(p: Partial<LoadResources>): Record<string, un
   if ('driverName' in p) out.driver_name = p.driverName;
   if ('driverPhone' in p) out.driver_phone = p.driverPhone;
   if ('driverPhoneCountry' in p) out.driver_phone_country = p.driverPhoneCountry ?? 'PL';
+  if ('driverDeliveryName' in p) out.driver_delivery_name = p.driverDeliveryName;
+  if ('driverDeliveryPhone' in p) out.driver_delivery_phone = p.driverDeliveryPhone;
+  if ('driverDeliveryPhoneCountry' in p) out.driver_delivery_phone_country = p.driverDeliveryPhoneCountry ?? 'PL';
+  if ('tractorDeliveryPlate' in p) out.tractor_delivery_plate = p.tractorDeliveryPlate;
+  if ('trailerSwap' in p) out.trailer_swap = !!p.trailerSwap;
   if ('tractorPlate' in p) out.tractor_plate = p.tractorPlate;
   if ('trailerPlate' in p) out.trailer_plate = p.trailerPlate;
   if ('escort' in p) out.escort_vehicles = p.escort ? 1 : 0;

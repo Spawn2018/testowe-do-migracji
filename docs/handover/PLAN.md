@@ -440,7 +440,7 @@ Feed Aikido wyłączony (400). Pięć średnich, bez numerów CVE. Nie krytyczne
 
 | ID | Opis | Status |
 |---|---|---|
-| C-SEP | Separator „ / ” domyślnie. „\|” tylko w Watch Tower, gdy przy dodawaniu lub edycji awizacji SCX zaznaczy checkbox Przepięcie. Zapis do Excela SharePoint zawsze „ / ”. Brak drugiej wartości: „Kierowca Odbierający / ...” (SharePoint) oraz tabela pięciu sytuacji ze zlecenia | NIEZACZĘTE |
+| C-SEP | Separator „ / ” domyślnie. „\|” tylko w Watch Tower, gdy przy dodawaniu lub edycji awizacji SCX zaznaczy checkbox Przepięcie. Zapis do Excela SharePoint zawsze „ / ”. Brak drugiej wartości: „Kierowca Odbierający / ...” (SharePoint) oraz tabela pięciu sytuacji ze zlecenia | **ZROBIONE 05.10** — 0169 + `cSep.ts` + AwizacjaModal Przepięcie |
 
 ## Część D — na później, nie zaczynać
 
@@ -471,8 +471,8 @@ Kolejność od 04.10 20:23: L-9 → L-10 → L-11 → L-12 → H-1 (zbudować, z
 | L-11 | P1. Górny pasek bez numeru etapu. Usunąć numer etapu (1–9) z kafelków; liczba transportów zostaje. Źródło: B 9, decyzja właściciela 03.10. | Numer etapu znika z kafelka, liczba transportów zostaje. | **W TEJ PACZCE** — z kafelka znika numer 1–9 (`.kb`). Zostaje liczba transportów (`.n`) i polska nazwa etapu. Klik nadal filtruje mapę. |
 | L-12 | P1. Kreator stref z mapą, tylko HHL: ustawianie i przesuwanie środka na mapie, podgląd koła i zapasu, kraj, kogo powiadomić, usuwanie. Nowa strefa nie startuje na środku Bałtyku. Źródło: B 6b, pytanie 16, decyzja właściciela 03.10; LOGIKA §14. | HHL tworzy, przesuwa, edytuje i usuwa strefę na mapie; SMS ze strefy działa według kraju i rodzaju (test). | **W TEJ PACZCE** — kreator na mapie, tylko HHL. Nowa strefa startuje w Śremie (PL), nie na 60°N 18°E. Kraj, odbiorcy, przesuwanie środka, podgląd koła i zapasu, usuwanie. SMS według kraju i rodzaju: test bazy `l12`. |
 | L-13 | P1, po L-5. Zalew powiadomień. Symulacja SIM-1 dała 155 powiadomień dla jednego transportu. Rozbicie według typu, odbiorcy i firmy; łączenie duplikatów. | Ponowna symulacja SIM-1: liczba powiadomień na transport i firmę w raporcie, bez duplikatów tego samego zdarzenia. | **W TEJ PACZCE** — 0148. Ten sam klucz zdarzenia bez zegara. Szacunek poczty przy 94 i przy 10 w ruchu. Skrót niekrytycznych (DIGEST, bez wysyłki). Strażnik 80/95/100. E-mail decyzji automatycznych NIE włączony. |
-| B-KSH | P2. Lista harmonogramu KSH: klik otwiera boczny panel tylko z „Edytuj”. KSH edytuje daty i godziny załadunku i rozładunku. | Klik → panel tylko z Edytuj; zapis dat i godzin. | NIEZACZĘTE |
-| B-REJSY | P2. Rejsy — część B zlecenia, sekcja REJSY, jako osobna pozycja. | Osobna pozycja planu zrealizowana według sekcji REJSY. | NIEZACZĘTE |
+| B-KSH | P2. Lista harmonogramu KSH: klik otwiera boczny panel tylko z „Edytuj”. KSH edytuje daty i godziny załadunku i rozładunku. | Klik → panel tylko z Edytuj; zapis dat i godzin. | **ZROBIONE 05.10** — PlanDatesPanel: Edytuj + daty/godziny (ksh_confirm_dates) |
+| B-REJSY | P2. Rejsy — część B zlecenia, sekcja REJSY, jako osobna pozycja. | Osobna pozycja planu zrealizowana według sekcji REJSY. | **ZROBIONE 05.10** — filtr Przyszłe, rok w `fmtLocal`, edycja HHL_ADMIN |
 | Q-11a | P2. Pięć rozmiarów ekranu. | Pięć rozmiarów sprawdzonych. | NIEZACZĘTE |
 | Q-11b | P2. Powiadomienia na Android i iOS. | Powiadomienia działają na Androidzie i iOS. | NIEZACZĘTE |
 | Q-17 | Pytanie 17. Trasa promu z historii AIS, po torze wodnym, nigdy prosta przez ląd. Decyzja B-MAPA 05.10. | Trasa promu nie przecina lądu. | **ZROBIONE 05.10** — B-MAPA PR #61/#62 (`draw.ts` tory wodne z historii AIS) |

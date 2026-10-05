@@ -34,8 +34,8 @@ Czeka właściciel / zewnętrzne = **bez budowy** (tylko lista).
 | SMS-SILENT-FIX | **DONE** | 0167, `4b562d2` / `79674c8`; próg 30 + cooldown 60 | — |
 | MIG-0159-REG | **DONE** | `79674c8` ewidencja 0159 na PROD | — |
 | B-10 | **do zrobienia** | — | — (budowa) |
-| B-KSH | **do zrobienia** | — | — (budowa) |
-| B-REJSY | **do zrobienia** | — | — (budowa) |
+| B-KSH | **DONE** | PlanDatesPanel Edytuj + godziny (ksh_confirm_dates) | — |
+| B-REJSY | **DONE** | filtr Przyszłe, rok w fmtLocal, HHL_ADMIN | — |
 | B-Q | **do zrobienia** | część pytań zamknięta w L-* (bez pełnego dowodu B-Q) | — (dokumentacja + reszta) |
 | Q-11a | **do zrobienia** | — | — (budowa / test 5 rozmiarów) |
 | Q-11b | **do zrobienia** | — | — (push Android/iOS) |
@@ -47,7 +47,7 @@ Czeka właściciel / zewnętrzne = **bez budowy** (tylko lista).
 
 | ID | Status | Dowód | Na co czeka |
 |---|---|---|---|
-| C-SEP | **do zrobienia** | — | — (budowa; SharePoint zapis = II-10-E2) |
+| C-SEP | **DONE** | 0169, `cSep.ts`, AwizacjaModal Przepięcie | SharePoint zapis = II-10-E2 |
 
 ## 3. Szczególnie wskazane (już poza B/C w PLAN)
 

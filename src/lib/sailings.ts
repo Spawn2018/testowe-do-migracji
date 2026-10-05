@@ -158,13 +158,13 @@ const SAILING_STATUS_LABEL: Record<SailingStatus, Record<Locale, string>> = {
 export const sailingStatusLabel = (s: SailingStatus, locale: Locale): string => SAILING_STATUS_LABEL[s][locale];
 export const sailingStatusPill = (s: SailingStatus): string => (s === 'ODWOLANY' ? 'p-red' : s === 'OPOZNIONY' ? 'p-amber' : 'p-sea');
 
-/** 'DD.MM HH:MM' w czasie PL (rozkład portu Gdańsk). */
+/** 'DD.MM.YYYY HH:MM' w czasie PL (B-REJSY: rok w datach). */
 export function fmtLocal(iso: string, tz = 'Europe/Warsaw'): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
-  const p = new Intl.DateTimeFormat('pl-PL', { timeZone: tz, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d);
+  const p = new Intl.DateTimeFormat('pl-PL', { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d);
   const g = (t: string) => p.find((x) => x.type === t)?.value ?? '';
-  return `${g('day')}.${g('month')} ${g('hour')}:${g('minute')}`;
+  return `${g('day')}.${g('month')}.${g('year')} ${g('hour')}:${g('minute')}`;
 }
 
 /** Oś zdarzeń: zmiana automatyczna z powodem (STATUS_AUTO z bazy: from/to/powod). */
