@@ -28,7 +28,12 @@ export function pdfColumns(locale: Locale = 'pl'): PdfColumn[] {
     { label: t(locale, 'i24_pdf_col_eta'), width: 100, value: (l) => (l.etaPreLoad ? '–' : dash(formatEtaBoden(l.etaBoden))) },
     { label: t(locale, 'i24_pdf_col_tractor'), width: 70, value: (l) => l.resources.tractorPlate ?? '' },
     { label: t(locale, 'i24_pdf_col_trailer'), width: 70, value: (l) => l.resources.trailerPlate ?? '' },
-    { label: t(locale, 'i24_pdf_col_ferry'), width: 90, value: (l) => l.ferry.vessel ?? '' },
+    { label: t(locale, 'i24_pdf_col_driver'), width: 110, value: (l) => {
+      const name = l.resources.driverName ?? '';
+      const phone = l.resources.driverPhone ?? '';
+      if (!name && !phone) return '';
+      return phone ? `${name} ${phone}`.trim() : name;
+    } },
   ];
 }
 
@@ -92,3 +97,20 @@ export async function exportLoadsPdf(loads: Load[], filename: string, title: str
   window.setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 4000);
   return { rows: loads.length, bytes: bytes.byteLength };
 }
+
+/** H-7 — opcjonalna strona z mapą (PNG z Edge map-static) na końcu PDF. */
+export async function appendMapPage(pdfBytes: Uint8Array, mapPng: Uint8Array, caption = 'Mapa pozycji'): Promise<Uint8Array> {
+  const doc = await PDFDocument.load(pdfBytes);
+  doc.registerFontkit(fontkit);
+  const page = doc.addPage([PAGE_W, PAGE_H]);
+  const img = await doc.embedPng(mapPng);
+  const maxW = PAGE_W - 2 * M;
+  const maxH = PAGE_H - 2 * M - 24;
+  const scale = Math.min(maxW / img.width, maxH / img.height);
+  const w = img.width * scale;
+  const h = img.height * scale;
+  page.drawText(caption, { x: M, y: PAGE_H - M - 12, size: 11 });
+  page.drawImage(img, { x: M, y: PAGE_H - M - 20 - h, width: w, height: h });
+  return doc.save();
+}
+

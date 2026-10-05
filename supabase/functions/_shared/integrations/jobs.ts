@@ -1072,23 +1072,27 @@ export async function runRouteHazards(deps: JobDeps): Promise<JobResult> {
   for (const load of loads) {
     const loadAt = load.plannedLoadDate ?? undefined;
     const deliverAt = load.plannedDeliverDate ?? undefined;
-    if (loadAt && plSundayBanHit(loadAt)) {
+    const plHit = loadAt && (plSundayBanHit(loadAt) || (deps.store.truckBanHolidayHit
+      ? await deps.store.truckBanHolidayHit('PL', loadAt) : false));
+    if (plHit && loadAt) {
       await deps.store.raiseRisk({
         kind: 'ROAD_PL', severity: 'MEDIUM',
         title: banRiskTitle('PL', loadAt.slice(0, 10)),
         titleKey: 'rk_time_ban', params: { where: 'PL', when: loadAt.slice(0, 10) },
-        detail: { zrodlo: 'H-12', loadId: load.id },
+        detail: { zrodlo: 'H-12', loadId: load.id, holiday: true },
         dedup: `TIME_BAN:PL:${load.id}:${loadAt.slice(0, 10)}`,
         sourceUrl: null, validUntil: null,
       });
       risks++;
     }
-    if (deliverAt && seWeekendBanHit(deliverAt)) {
+    const seHit = deliverAt && (seWeekendBanHit(deliverAt) || (deps.store.truckBanHolidayHit
+      ? await deps.store.truckBanHolidayHit('SE', deliverAt) : false));
+    if (seHit && deliverAt) {
       await deps.store.raiseRisk({
         kind: 'ROAD_SE', severity: 'MEDIUM',
         title: banRiskTitle('SE', deliverAt.slice(0, 10)),
         titleKey: 'rk_time_ban', params: { where: 'SE', when: deliverAt.slice(0, 10) },
-        detail: { zrodlo: 'H-12', loadId: load.id },
+        detail: { zrodlo: 'H-12', loadId: load.id, holiday: true },
         dedup: `TIME_BAN:SE:${load.id}:${deliverAt.slice(0, 10)}`,
         sourceUrl: null, validUntil: null,
       });

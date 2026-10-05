@@ -1044,3 +1044,6 @@ D-78 pule HERE + przebudowa H-3 (bez Attributes). Potem powrót do raportu stanu
 ### Priorytet 2026-10-05 ~13:12 — TELM-EMTRACK-WEB włączenie + test GD035YX
 Kolejność: (0) blokada SMS/e-mail tylko właściciel (test na sucho) → (1) zero alarmów bez awizacji + zapis pozycji sierot → (2) flaga true → (3) faza z pozycji (SE/morze) → (4) test live GD035YX → (5) monitoring 72 h → (6) link do transportu + mapa. Potem powrót do PLAN bez czekania.
 
+### Paczka PLAN 05.10 ~13:30 (po TELM live)
+H-12 święta 0177; H-10 ETA+wiatr propozycja WYŁ.; H-8 propozycja; B-Q/Q-11a dok.; Q-11b czeka push; B-10 PDF kierowca + odczyty czatu; SEC-OWASP start. TELM_EMTRACK_WEB true; H1/H3/H6 false; blokada SMS właściciela zostaje.
+

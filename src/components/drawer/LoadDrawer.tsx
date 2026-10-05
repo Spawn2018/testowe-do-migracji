@@ -880,6 +880,16 @@ export function LoadDrawer() {
                     {m.author} · {m.org} · {m.at}
                   </div>
                   <div>{m.text}</div>
+                  {m.reads && m.reads.length > 0 ? (
+                    <details style={{ marginTop: 4, fontSize: 11, color: 'var(--ink-3)' }}>
+                      <summary>{locale === 'sv' ? 'läst' : locale === 'en' ? 'read' : 'odczytano'} ({m.reads.length})</summary>
+                      <ul style={{ margin: '4px 0 0', paddingLeft: 16 }}>
+                        {m.reads.map((r) => (
+                          <li key={r.userId + r.at}>{r.name}{r.org ? ` · ${r.org}` : ''} · {r.at}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : null}
                 </div>
               ))}
               <form
