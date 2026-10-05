@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
+import { applyThemeToDom } from './lib/theme';
 import { useTowerStore } from './store/useTowerStore';
 import { Topbar } from './components/shell/Topbar';
 import { CorridorSpine } from './components/shell/CorridorSpine';
@@ -99,6 +100,20 @@ function TowerShell() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Q-9 B: śledź zmianę motywu systemu, póki użytkownik nie ustawi ręcznie
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: light)');
+    const onChange = () => {
+      const s = useTowerStore.getState();
+      if (s.themeManual) return;
+      const next = mq.matches ? 'light' : 'dark';
+      applyThemeToDom(next);
+      useTowerStore.setState({ theme: next });
+    };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
   }, []);
 
   useEffect(() => {
