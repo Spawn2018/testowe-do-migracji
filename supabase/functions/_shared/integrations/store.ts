@@ -186,5 +186,13 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       }, { onConflict: 'month' }), 'deepl_usage');
       return next;
     },
+    async noteHereUsage(service: 'tiles' | 'routing' | 'matching' | 'attributes' | 'traffic', n: number) {
+      must(await sb.rpc('here_note_service', { p_service: service, p_n: n, p_usd: 0 }), 'here_note_service');
+    },
+    async hereMonthSpend() {
+      const r = await sb.rpc('here_month_spend');
+      if (r.error) throw new Error(`here_month_spend: ${r.error.message}`);
+      return Number(r.data ?? 0);
+    },
   };
 }

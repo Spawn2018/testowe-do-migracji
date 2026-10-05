@@ -95,5 +95,5 @@ check h1 14
 check h3 20
 check smsksh 15
 check ferrystatus 8
-check bmapa 17
+check bmapa 20
 [ $ok -eq 1 ]

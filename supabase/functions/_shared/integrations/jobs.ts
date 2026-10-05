@@ -28,6 +28,8 @@ import {
   parseTrafikverketSituations, parseTrafikverketWeather, roadConditionRisk, roadRisk, seRoadSlowdownMult, trafikverketResultError,
   trafikverketRoadConditionQuery, trafikverketSituationQuery, trafikverketWeatherQuery, weatherRisk, TRAFIKVERKET_URL,
 } from './road.ts';
+import { buildTrafficIncidentsUrl, parseHereTrafficIncidents } from '../here/trafficIncidents.ts';
+import { HERE_BILLING_DEFAULTS } from '../here/billing.ts';
 import { unknownCodeRiskInput } from '../../../../src/lib/pl/describe.ts';
 import { deeplTranslate, translateFreeText, usageLevel, DEEPL_MONTHLY_LIMIT } from '../../../../src/lib/pl/deepl.ts';
 import {
@@ -71,6 +73,11 @@ export interface SyncStore {
   seSlowdownPct?(): Promise<number>;
   /** II-8: progi WAVE_M / GUST_KN z ops_thresholds (domyślnie 3.8 / 40) */
   opsThresholds?(): Promise<{ waveM: number; gustKn: number }>;
+
+  /** H-2-PL / D-78: zapis zużycia HERE (service_role → here_note_service). */
+  noteHereUsage?(service: 'tiles' | 'routing' | 'matching' | 'attributes' | 'traffic', n: number): Promise<void>;
+  /** Koszt ponad pule w bieżącym miesiącu (Europe/Warsaw). */
+  hereMonthSpend?(): Promise<number>;
   /** II-8: zapis bieżącej pogody morskiej */
   saveMarineCondition?(row: {
     corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA';
@@ -759,24 +766,88 @@ export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
   };
 }
 
-/** road-pl — KPD GDDKiA DATEX II (wg warunków KPD). Wymaga KPD_DATEX_URL (+ certyfikat klienta po stronie proxy). */
+/**
+ * road-pl / H-2-PL — utrudnienia PL.
+ * 1) HERE Traffic v7 incidents wzdłuż CORRIDOR_PL (gdy HERE_API_KEY) — 1 transakcja / przebieg, pula traffic.
+ * 2) Zapas: KPD GDDKiA DATEX II (KPD_DATEX_URL + certyfikat).
+ * Bez obu → DEMO (D18).
+ */
 export async function runRoadPl(deps: JobDeps): Promise<JobResult> {
-  const m = integrationMode(deps.env, 'KPD_DATEX_URL');
-  if (m.mode === 'DEMO') return { job: 'road-pl', mode: 'DEMO', ok: true, reason: `${m.reason}; KPD wymaga rejestracji i certyfikatu klienta` };
   const now = deps.now().toISOString();
-  const url = deps.env.KPD_DATEX_URL!;
+  const hereKey = deps.env.HERE_API_KEY?.trim();
+  const kpdUrl = deps.env.KPD_DATEX_URL?.trim();
+
+  if (hereKey) {
+    const spend = deps.store.hereMonthSpend ? await deps.store.hereMonthSpend() : 0;
+    const budget = HERE_BILLING_DEFAULTS.budgetUsd;
+    if (spend >= budget - 1e-9) {
+      return {
+        job: 'road-pl', mode: 'LIVE', ok: true, risks: 0, warnings: [],
+        reason: 'HERE Traffic wstrzymany: budżet ponad pule wyczerpany (D-78)',
+        observations: { source: 'here_traffic', skipped: 'budget_stop' },
+      };
+    }
+    const url = buildTrafficIncidentsUrl({ apiKey: hereKey });
+    const r = await readText(deps, url, { headers: { Accept: 'application/json' } });
+    if (!r.ok) {
+      const w = r.warning;
+      await deps.store.raiseRisk(sourceDownRisk('HERE_TRAFFIC_PL', [w], now, HERE_TRAFFIC_ATTR));
+      // zapas KPD gdy dostępny
+      if (kpdUrl) {
+        const kpd = await runRoadPlKpd(deps, now, kpdUrl);
+        return { ...kpd, warnings: [...(kpd.warnings ?? []), `HERE Traffic: ${w}; użyto KPD`], observations: { ...(kpd.observations ?? {}), here: 'down' } };
+      }
+      return { job: 'road-pl', mode: 'LIVE', ok: false, risks: 1, warnings: [w] };
+    }
+    let parsed: unknown;
+    try { parsed = JSON.parse(r.text); } catch {
+      const w = 'HERE Traffic: odpowiedź nie-JSON';
+      await deps.store.raiseRisk(sourceDownRisk('HERE_TRAFFIC_PL', [w], now, HERE_TRAFFIC_ATTR));
+      return { job: 'road-pl', mode: 'LIVE', ok: false, risks: 1, warnings: [w] };
+    }
+    if (deps.store.noteHereUsage) await deps.store.noteHereUsage('traffic', 1);
+    await deps.store.resolveRisks('SOURCE_DOWN:HERE_TRAFFIC_PL:');
+    const events = parseHereTrafficIncidents(parsed);
+    let risks = 0;
+    const keep: string[] = [];
+    for (const e of events) {
+      const risk = roadRisk('PL', e, HERE_TRAFFIC_ATTR);
+      risk.detail = { ...risk.detail, zrodlo: 'HERE Traffic API v7' };
+      risk.dedup = `ROAD_PL:HERE:${e.id.replace(/^HERE:/, '')}`;
+      keep.push(risk.dedup);
+      if (await deps.store.raiseRisk(risk)) risks++;
+    }
+    if (deps.store.resolveStaleRisks) await deps.store.resolveStaleRisks('ROAD_PL:HERE:', keep);
+    return {
+      job: 'road-pl', mode: 'LIVE', ok: true, risks, warnings: [],
+      observations: { source: 'here_traffic', incidents: String(events.length) },
+    };
+  }
+
+  if (!kpdUrl) {
+    return {
+      job: 'road-pl', mode: 'DEMO', ok: true,
+      reason: 'Brak HERE_API_KEY i KPD_DATEX_URL — panel oznaczony jako dane demonstracyjne (D18); H-2-PL = HERE Traffic',
+    };
+  }
+  return runRoadPlKpd(deps, now, kpdUrl);
+}
+
+const HERE_TRAFFIC_ATTR = 'https://www.here.com/docs/bundle/traffic-api-developer-guide-v7';
+
+async function runRoadPlKpd(deps: JobDeps, now: string, url: string): Promise<JobResult> {
   const headers: Record<string, string> = { Accept: 'application/xml' };
   if (deps.env.KPD_AUTH_HEADER) headers.Authorization = deps.env.KPD_AUTH_HEADER;
   const r = await readText(deps, url, { headers });
   if (!r.ok || !/situationRecord|d2LogicalModel|payload/i.test(r.text)) {
     const w = r.ok ? 'KPD: odpowiedź bez rekordów DATEX II (zmiana formatu?)' : r.warning;
     await deps.store.raiseRisk(sourceDownRisk('KPD_GDDKIA', [w], now, url));
-    return { job: 'road-pl', mode: 'LIVE', ok: false, risks: 1, warnings: [w] };
+    return { job: 'road-pl', mode: 'LIVE', ok: false, risks: 1, warnings: [w], observations: { source: 'kpd' } };
   }
   await deps.store.resolveRisks('SOURCE_DOWN:KPD_GDDKIA:');
   let risks = 0;
   for (const e of parseDatexSituations(r.text)) if (await deps.store.raiseRisk(roadRisk('PL', e, 'https://kpd.gddkia.gov.pl'))) risks++;
-  return { job: 'road-pl', mode: 'LIVE', ok: true, risks, warnings: [] };
+  return { job: 'road-pl', mode: 'LIVE', ok: true, risks, warnings: [], observations: { source: 'kpd' } };
 }
 
 /** traffic-flow — TomTom wycofany (CLEAN-TT-HERE / D-28). Cron może wołać; zawsze DEMO. ETA = II-7 OSM. */

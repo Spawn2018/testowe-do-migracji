@@ -42,4 +42,10 @@ describe('D-78 koszt ponad pulę', () => {
     expect(marginalOverCost('routing', 4999, 1, HERE_BILLING_DEFAULTS)).toBe(0);
     expect(marginalOverCost('routing', 5000, 1, HERE_BILLING_DEFAULTS)).toBeCloseTo(0.00275, 8);
   });
+
+  it('traffic ponad pulę: (n−5000)×0.00292', () => {
+    expect(overPoolCost(5000, HERE_BILLING_DEFAULTS.trafficFree, HERE_BILLING_DEFAULTS.trafficRateUsd)).toBe(0);
+    expect(overPoolCost(5001, HERE_BILLING_DEFAULTS.trafficFree, HERE_BILLING_DEFAULTS.trafficRateUsd)).toBeCloseTo(0.00292, 8);
+    expect(marginalOverCost('traffic', 5000, 1, HERE_BILLING_DEFAULTS)).toBeCloseTo(0.00292, 8);
+  });
 });

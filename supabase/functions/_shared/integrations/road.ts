@@ -1,9 +1,9 @@
 /**
  * M12 — ruch drogowy (ZRODLA_DANYCH.md §2). Czyste funkcje: zapytania i parsery odpowiedzi.
  *  - SE: Trafikverket Open API (CC0), klucz TRAFIKVERKET_API_KEY — RoadCondition, WeatherMeasurepoint i Situation 1.6 wzdłuż E4
- *  - PL: KPD GDDKiA, DATEX II (rejestracja + certyfikat klienta) — utrudnienia na trasie Śrem → Gdańsk
+ *  - PL (H-2-PL): HERE Traffic v7 incidents wzdłuż CORRIDOR_PL (HERE_API_KEY); zapas KPD GDDKiA DATEX II
  *  - TomTom Flow: USUNIĘTE (CLEAN-TT-HERE / D-28); ETA = II-7 OSM
- * Bez klucza Trafikverket/GDDKiA funkcja NIE działa na niby: zwraca tryb DEMO (D18).
+ * Bez klucza Trafikverket / HERE / GDDKiA funkcja NIE działa na niby: zwraca tryb DEMO (D18).
  * Formaty odpowiedzi wg dokumentacji dostawców — przy rejestracji kluczy zweryfikować na żywo.
  */
 import type { RiskInput, RiskSeverity } from './sync.ts';

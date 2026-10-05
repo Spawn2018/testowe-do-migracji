@@ -895,3 +895,13 @@ Testy jak w poleceniu. Migracja przez bramę, obie domeny 200. Dopisz polecenie 
 
 Dopiero PO tym wróć do raportu stanu + budowy pozycji bez czekania.
 
+## Polecenie 2026-10-05 ~12:27 (czas warszawski) — uzupełnienie raportu D-78/H-3 + H-2-PL
+
+D-78/H-3 przyjęte, ale BRAKUJE w raporcie:
+
+1) Zgodność z HERE: skąd różnica tras (HERE 26 vs system 4) i źródło 7 zapytań geokodowania. Czy po poprawce KAŻDE wywołanie HERE trafia do licznika? Czy „Advanced Raster Tile" ma pulę 30 000 w cenniku konta HERE?
+2) H-6: czy warstwa przeszkód używała Map Attributes — jeśli tak, czy przebudowana.
+3) H-2-PL (sytuacje drogowe PL): stan — GDDKiA, HERE Traffic, pula Traffic i koszt. Jeśli niezaczęte — WYKONAJ TERAZ według PLAN (punkt 3 poprzedniego: H-2-PL…).
+
+Dopisz polecenie do POLECENIA. Odpowiedź w docs + krótki raport. Potem kontynuuj STATUS/budowę.
+
