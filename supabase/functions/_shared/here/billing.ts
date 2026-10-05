@@ -13,7 +13,7 @@ export interface HereBillingParams {
   trafficRateUsd: number;
 }
 
-/** Wartości wstępne do potwierdzenia właściciela (05.10). */
+/** Pule potwierdzone (D-78 / 0172 — konto HERE właściciela, 05.10). */
 export const HERE_BILLING_DEFAULTS: HereBillingParams = {
   budgetUsd: 100,
   tilesFree: 30000,

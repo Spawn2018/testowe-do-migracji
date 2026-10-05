@@ -905,3 +905,28 @@ D-78/H-3 przyjęte, ale BRAKUJE w raporcie:
 
 Dopisz polecenie do POLECENIA. Odpowiedź w docs + krótki raport. Potem kontynuuj STATUS/budowę.
 
+## Polecenie 2026-10-05 ~12:44 (czas warszawski) — TELM-EMTRACK-WEB (zapas do oficjalnego API)
+
+STOP bieżącej kolejności PLAN. Priorytet właściciela — warstwa zapasowa emtrack (web), zanim dalszy PLAN.
+
+Sekrety: `EMTRACK_LOGIN`, `EMTRACK_PASSWORD` (nigdy w kodzie / logach / raportach).
+Fakty: emtrack.eu/app v6.32.0 AngularJS; `wss://emtrack.eu:443/ws/`; `X-Mtrack-SessionId`; REST `webclient-rest`; reCAPTCHA tylko reset hasła; pozycja **naczepy**.
+
+1) **RAPORT PRZED BUDOWĄ** z publicznego kodu klienta: komunikaty login + lista obiektów z pozycjami. Zaloguj raz, **TYLKO ODCZYT**: lista (nazwa, rejestracja, typ), ostatnia pozycja, czas, częstotliwość. Porównaj z emtrack.eu/app w tej samej chwili.
+2) Zasady: tylko odczyt; jedna sesja; PR5 2 min ruch / 15 min postój; backoff; UA przeglądarki; captcha = stop + alarm; meta version change → ryzyko + e-mail, stop przy niezgodnym formacie.
+3) Warstwy D-36: API → TELM-EMTRACK-WEB → linki podwykonawców; źródło przy pozycji; awaria → następne.
+4) Dopasowanie naczepa→transport jak TELM-2 (awizacja, strefy, przepięcie, prom=AIS, próg postoju).
+5) Testy jak w poleceniu; zero zapisu w emtrack; log wysłanych komunikatów.
+
+Kolejność: **PRZED** dalszym PLAN. Dopisz POLECENIA / PLAN / rejestr D-36. Bramy, obie domeny 200, H1/H3/H6 false, 94, bez wydatków/SMS.
+
+## Polecenie 2026-10-05 ~12:49 (czas warszawski) — D-78 pule potwierdzone
+
+Priorytet właściciela 05.10 — potwierdzone pule HERE:
+- `HERE_TILES_FREE=30000` Advanced Raster Tile
+- `HERE_ROUTES_FREE=5000` Routing Truck
+Źródło obu: „konto HERE właściciela, 05.10". Bez „wstępna".
+**NIE** edytuj 0170. Nowa migracja (0172) ustawia oba wiersze (wartość, opis, źródło) — prod = repo.
+Sprawdź seed/inne migracje czy nie nadpisują. Brama, obie domeny 200. Dopisz POLECENIA / PLAN / rejestr.
+Potem dalej TELM-EMTRACK-WEB (rozpoznanie → budowa jak poprzednie polecenie).
+

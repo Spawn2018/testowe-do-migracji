@@ -70,7 +70,7 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 
 | ID | Status | Dowód | Na co czeka |
 |---|---|---|---|
-| D-78 | **DONE** | PR #84, 0170; pule w `app_parameters` | potwierdzenie stawek/pul |
+| D-78 | **DONE** | PR #84, 0170; **0172** pule potwierdzone (tiles 30000 Advanced Raster / routes 5000 Truck; źródło: konto HERE właściciela, 05.10) | — |
 | H-1 | **zbudowane, wyłączone** | 0153; flaga false | D-83 |
 | H-2-PL | **DONE** | 0171, HERE Traffic w `road-pl`, raport `RAPORT_D78_ZGODNOSC_05_10.md` | — |
 | H-3 | **zbudowane, wyłączone** | PR #84 Routing v8, bez Attributes | D-83 |
@@ -80,6 +80,7 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 | H-10 | **do zrobienia** (ryzyko); ETA+wiatr po emtrack | — | ETA → TELM-2 |
 | H-12 | **do zrobienia** | — | — |
 | H-4 / H-5 | **czeka zewnętrzne** | — | TELM-2 |
+| TELM-EMTRACK-WEB | **RAPORT DONE → budowa** | `RAPORT_TELM_EMTRACK_WEB_05_10.md` | — |
 | CLEAN-MAPLIBRE | **DONE** | brak maplibre/mapbox | — |
 | AUTH-MAIL | **DONE** | POSTEP 02.10 | — |
 | I-29 | **DONE** | `I29_BUDGETY_140.md` | — |

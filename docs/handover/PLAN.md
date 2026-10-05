@@ -240,6 +240,9 @@ Przyjęte identyfikatory: **II-10-E1**, **II-10-E2**, **ONE-MECH** (D-29 + D-29t
 | II-8 | P1. Pogoda FMI+DMI+SMHI; progi 3,8 m / 40 kn potwierdzone | źródło w UI | **DONE** — **0124**; cron **0131** `tower-ferry-weather` `15 * * * *` (co 1 h; było co 6 h) |
 | II-9 | P1. Opóźnienie wypłynięcia z AIS; brak pozycji ≠ opóźnienie | test | **DONE** (ten commit) — `aisDepartureDelayMin` + ferry-ais przed odejściem; brak pozycji = brak wniosku; Edge wdrożony; ferry testy +3 |
 | TELM-2 | P1. Szkielet telematyki (§2) — czeka na API emtrack i linki | adapter + GPS z telematyki | CZEKA NA: docs API emtrack, przykłady linków |
+**D-78 pule (05.10):** tiles 30000 Advanced Raster / routes 5000 Routing Truck — źródło: konto HERE właściciela, 05.10 (0172).
+
+| TELM-EMTRACK-WEB | P1. Zapas D-36: pozycje naczepy przez protokół web emtrack.eu/app (tylko odczyt) | WS LOGIN+GET_TRACKING_OBJECTS; PR5 2/15 min; warstwa pod API | **RAPORT** 05.10 (`RAPORT_TELM_EMTRACK_WEB_05_10.md`); budowa w toku |
 | I-29 | P1. Budżety darmowych planów na 140 transportów | tabela szczyt vs limit | **DONE** (ten commit) — `I29_BUDGETY_140.md`; wszystkie limity OK (Edge ~5%, baza ~14%, Resend ~40%) |
 | UI-12 | P2. Interfejs (§12) | użytkownik/rola/Wyloguj w menu; bez POD/mocowania | **DONE** (ten commit) — Nav session; Docs/Schedule bez POD/LASHING; Driver tylko CMR |
 | D-27 | P2. Kontrast ≥ 4,5:1; ewentualnie #7C909E | tylko kolory tekstu | **DONE** (ten commit) — --ink-3 #5A6B78/#788C9A; --amber-ink; bell #0E1A24; kursor default na thead/tr |
@@ -803,7 +806,7 @@ Drugie przejście rejestru całości. Tu tylko pozycje z sekcji 4 rejestru, któ
 | D-6 | już w PLAN jako D-6 | identyfikator jest w PLAN.md |
 | D-7 | już w PLAN jako D-7 | identyfikator jest w PLAN.md |
 | D-77 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| D-78 | **doprecyzowanie 05.10 ~12:11** | koszt = max(0, zapytania−pula)×stawka; budżet 100 USD i 50/80/100% tylko od kosztu ponad pule; kafelki→zapas od 80%; pule/stawki w `app_parameters` (tiles 30000, routes 5000 wstępnie); migracja 0170 |
+| D-78 | **DONE + pule potwierdzone 05.10 ~12:49** | koszt = max(0, zapytania−pula)×stawka; budżet 100 USD i 50/80/100% tylko od kosztu ponad pule; kafelki→zapas od 80%; **pule potwierdzone**: Advanced Raster Tile 30000, Routing Truck 5000 — źródło „konto HERE właściciela, 05.10" (0170 logika + **0172** etykiety/źródło; bez edycji 0170) |
 | D-79 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
 | D-8 | już w PLAN jako D-8 | identyfikator jest w PLAN.md |
 | D-80 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
