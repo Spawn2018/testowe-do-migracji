@@ -1070,13 +1070,12 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
   }
   const expected = deps.env.EMTRACK_EXPECTED_VERSION?.trim() || EMTRACK_EXPECTED_VERSION;
   if (version && version !== expected) {
-    await deps.store.raiseRisk({
-      kind: 'SOURCE_DOWN', severity: 'HIGH',
-      title: `Emtrack web: zmiana wersji klienta (${version} ≠ ${expected})`,
-      titleKey: 'rk_generic', params: { event: 'emtrack_version' },
-      detail: { previous: expected, current: version, zrodlo: 'TELM-EMTRACK-WEB' },
-      dedup: `TELM_WEB_VERSION:${version}`, sourceUrl: 'https://emtrack.eu/app/', validUntil: null,
-    });
+    await deps.store.raiseRisk(sourceDownRisk(
+      'EMTRACK_WEB',
+      [`meta version ${version} ≠ oczekiwane ${expected}`],
+      deps.now().toISOString(),
+      'https://emtrack.eu/app/',
+    ));
   }
 
   let objects: Awaited<ReturnType<typeof fetchTrackingObjectsReadOnly>>['objects'] = [];
