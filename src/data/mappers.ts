@@ -502,7 +502,7 @@ function sideFromView(r: PriceViewRow): MoneySideV2 {
     fuel: {
       refDate: r.fuel_ref_date ?? '',
       multSek: num(r.fuel_mult_sek) ?? 1, multPln: num(r.fuel_mult_pln) ?? 1, applied: num(r.fuel_applied_mult) ?? 1,
-      ...(r.fuel_status === 'WSTEPNY' || r.fuel_status === 'OSTATECZNY' || r.fuel_status === 'BRAK' ? { status: r.fuel_status } : {}),
+      ...(r.fuel_status === 'PROGNOZA' || r.fuel_status === 'WSTEPNY' || r.fuel_status === 'OSTATECZNY' || r.fuel_status === 'BRAK' ? { status: r.fuel_status as 'PROGNOZA' | 'WSTEPNY' | 'OSTATECZNY' | 'BRAK' } : {}),
     },
     fx: { tableNo: r.fx_table_no ?? '', mid: num(r.fx_rate_pln) ?? 0, date: r.fx_effective_date ?? '', provisional: Boolean(r.fx_provisional) },
   };

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TOWER — BAF 0187: GoEasy + średnia z publikacji + wstępny/ostateczny + wersja parametrów + ceny z wymiarów ładunku.
+# TOWER — BAF 0187+0189: GoEasy + publikacje + OSTATECZNY/PROGNOZA + wersja parametrów + ceny z wymiarów ładunku.
 # Wzorce koordynatora (05.10): tydzień 21–27.09 → tydz. 40 = 1,14; tydzień 28.09–04.10 → tydz. 41 = 1,13.
 # Progi = fragment tabeli z załącznika nr 1 (te same wartości co w bazie produkcyjnej).
 set -e
@@ -21,7 +21,7 @@ Q() { $PSQL -v ON_ERROR_STOP=1 -c "$1" 2>&1 | tail -1 | tr -d '\r'; }
 sys() { $PSQL -v ON_ERROR_STOP=1 -c "$1" >/dev/null 2>&1 || { echo "  (sys błąd) $1" | head -c 300; echo; }; }
 chk() { if [ "$2" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $2, oczekiwano: $3)"; fi; }
 
-echo; echo "[BAF 0187] GoEasy + publikacje + wstępny/ostateczny + ceny"
+echo; echo "[BAF 0187+0189] GoEasy + publikacje + OSTATECZNY/PROGNOZA + ceny"
 
 TS='[{"lte":21.9,"mult":1.09},{"lte":22.2,"mult":1.11},{"lte":22.5,"mult":1.12},{"lte":22.8,"mult":1.13},{"lte":23.1,"mult":1.14},{"lte":23.4,"mult":1.15},{"lte":23.7,"mult":1.16}]'
 TP='[{"lte":6.9,"mult":1.11},{"lte":7.0,"mult":1.12},{"lte":7.1,"mult":1.13},{"lte":7.2,"mult":1.14},{"lte":7.3,"mult":1.15},{"lte":7.4,"mult":1.16},{"lte":7.5,"mult":1.17}]'
@@ -65,10 +65,11 @@ chk "tydzień bez publikacji → ostatnia opublikowana (22,29 z 05.10)" "$(Q "se
 chk "brak odczytów w tygodniu → SOURCE_FAILURE (bez zgadywania)" "$(Q "select sefs_week_calc('$P','2026-12-07','2026-12-07')->>'reason'")" "SOURCE_FAILURE"
 
 # Niepełny tydzień → wstępny; po niedzieli → ostateczny
-chk "tydzień niepełny (dziś 08.10, załadunek 12.10) → WSTEPNY" "$(Q "select sefs_week_calc('$P','2026-10-12','2026-10-08')->>'status'")" "WSTEPNY"
+chk "tydzień niepełny (dziś 08.10, załadunek 12.10) → PROGNOZA" "$(Q "select sefs_week_calc('$P','2026-10-12','2026-10-08')->>'status'")" "PROGNOZA"
+chk "PROGNOZA = ostatni OSTATECZNY 1,13 (nie częściowa średnia)" "$(Q "select sefs_week_calc('$P','2026-10-12','2026-10-08')->>'applied_mult'")" "1.13"
 chk "po niedzieli (dziś 12.10) → OSTATECZNY" "$(Q "select sefs_week_calc('$P','2026-10-12','2026-10-12')->>'status'")" "OSTATECZNY"
 
-chk "tydzień przyszły bez odczytów → WSTEPNY z ostatniej publikacji" "$(Q "select (sefs_week_calc('$P','2026-11-16','2026-10-08')->>'status')||'/'||(sefs_week_calc('$P','2026-11-16','2026-10-08')->>'fallback_last_sek')")" "WSTEPNY/true"
+chk "tydzień przyszły → PROGNOZA 1,13 (ostatni OSTATECZNY)" "$(Q "select (sefs_week_calc('$P','2026-11-16','2026-10-06')->>'status')||'/'||(sefs_week_calc('$P','2026-11-16','2026-10-06')->>'applied_mult')")" "PROGNOZA/1.13"
 
 # Cenniki SYMBOL (stawki z cennika produkcyjnego), transporty bez wymiarów zestawu (combo_* puste)
 sys "insert into rate_cards (id, project_id, side, org_id, currency, valid_from, version, note) values
@@ -111,11 +112,11 @@ LND=33333333-0000-0000-0000-0000000baf07
 sys "insert into loads (id, project_id, carrier_org_id, order_no) values ('$LND','$P','$CAR','BAF/ND')"
 sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, total_weight_t) values ('$P','$LND','SG-B4','DIMENSIONED',18.0,2.4,2.4,19.0)"
 sys "select load_price_compute('$LND', '2026-10-08')"
-chk "bez daty załadunku → cena z mnożnikiem WSTEPNY" "$(Q "select base_amount||'/'||fuel_status||'/'||coalesce(fuel_ref_date::text,'∅') from load_cost where load_id='$LND'")" "6900.00/WSTEPNY/∅"
+chk "bez daty załadunku → cena z mnożnikiem PROGNOZA" "$(Q "select base_amount||'/'||fuel_status||'/'||coalesce(fuel_ref_date::text,'∅') from load_cost where load_id='$LND'")" "6900.00/PROGNOZA/∅"
 
 # Wstępny → ostateczny + migawka
 sys "select load_price_compute('$LNX', '2026-10-08')"
-chk "załadunek 12.10, dziś 08.10 → WSTEPNY" "$(Q "select fuel_status from load_cost where load_id='$LNX'")" "WSTEPNY"
+chk "załadunek 12.10, dziś 08.10 → PROGNOZA" "$(Q "select fuel_status||'/'||fuel_applied_mult::numeric(4,2) from load_cost where load_id='$LNX'")" "PROGNOZA/1.13"
 sys "select load_price_compute('$LNX', '2026-10-12')"
 M1=$(Q "select fuel_applied_mult from load_cost where load_id='$LNX'")
 chk "po niedzieli → OSTATECZNY (migawka)" "$(Q "select fuel_status from load_cost where load_id='$LNX'")" "OSTATECZNY"
@@ -129,11 +130,38 @@ chk "korekta po zamknięciu nie zmienia migawki" "$(Q "select fuel_applied_mult|
 sys "insert into sefs_parameters (project_id, version, valid_from, rule, base_sek, base_pln, index_sek, index_pln, source_url_sek, source_url_pln, cycle, tiers_sek, tiers_pln, agreed_with_carrier, note, applies_to)
   values ('$P', 2, '2026-10-12', 'hybrid_min', 19.47, 5.698, 'OKQ8 GoEasy Diesel firmowa', 'ORLEN_EKODIESEL',
           'https://www.okq8.se/foretag/priser/', 'https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw', 'WEEKLY',
-          '[{\"lte\":99,\"mult\":2.0}]', '[{\"lte\":99,\"mult\":2.0}]', true, 'baf test v2', 'BOTH')"
+          '[{\"lte\":99,\"mult\":1.25}]', '[{\"lte\":99,\"mult\":1.25}]', true, 'baf test v2', 'BOTH')"
 chk "tydz. 41 nadal z wersji 1 (valid_from)" "$(Q "select ($W41->>'params_version')||'/'||($W41->>'applied_mult')")" "1/1.13"
 chk "załadunek od 12.10 bierze wersję 2" "$(Q "select sefs_week_calc('$P','2026-10-13','2026-10-13')->>'params_version'")" "2"
 sys "select load_price_compute('$LSG', '2026-10-13')"
 chk "stary transport (06.10) bez zmian po nowej wersji" "$(Q "select fuel_applied_mult::numeric(4,2)||'/'||baf_amount from load_cost where load_id='$LSG'")" "1.13/897.00"
+
+# 0189 PROGNOZA: dziś 06.10 — przyszłe załadunki = 1,13 prognoza; po zamknięciu tyg. 41 → tyg. 42 ostateczny
+chk "dziś 06.10 załadunek 16.10 → 1,13 PROGNOZA" "$(Q "select (sefs_week_calc('$P','2026-10-16','2026-10-06')->>'applied_mult')||'/'||(sefs_week_calc('$P','2026-10-16','2026-10-06')->>'status')")" "1.13/PROGNOZA"
+chk "dziś 06.10 załadunek 15.12 → 1,13 PROGNOZA" "$(Q "select (sefs_week_calc('$P','2026-12-15','2026-10-06')->>'applied_mult')||'/'||(sefs_week_calc('$P','2026-12-15','2026-10-06')->>'status')")" "1.13/PROGNOZA"
+# niepełny tydzień 41 NIE daje 1,12 z jednego GoEasy 05.10
+chk "niepełny tydzień nie daje częściowej średniej 1,12" "$(Q "select sefs_week_calc('$P','2026-10-16','2026-10-06')->>'applied_mult'")" "1.13"
+W42C="sefs_week_calc('$P','2026-10-13','2026-10-12')"
+chk "po zamknięciu tyg. 41: załadunek tyg. 42 → OSTATECZNY" "$(Q "select $W42C->>'status'")" "OSTATECZNY"
+M42=$(Q "select $W42C->>'applied_mult'")
+chk "po zamknięciu: późniejszy tydzień → PROGNOZA = ostatni OSTATECZNY (tyg. 42)" "$(Q "select (sefs_week_calc('$P','2026-10-20','2026-10-12')->>'status')||'/'||(sefs_week_calc('$P','2026-10-20','2026-10-12')->>'applied_mult')")" "PROGNOZA/$M42"
+LF1=33333333-0000-0000-0000-0000000baf09
+sys "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date) values ('$LF1','$P','$CAR','BAF/F1','2026-10-16')"
+sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, total_weight_t) values ('$P','$LF1','SG-F1','DIMENSIONED',18.21,2.45,2.45,20.0)"
+sys "select load_price_compute('$LF1', '2026-10-06')"
+chk "transport przyszły: 1,13 PROGNOZA w load_cost" "$(Q "select fuel_applied_mult::numeric(4,2)||'/'||fuel_status from load_cost where load_id='$LF1'")" "1.13/PROGNOZA"
+sys "select load_price_compute('$LF1', '2026-10-12')"
+chk "po zamknięciu tyg. 41: ten sam transport → OSTATECZNY" "$(Q "select fuel_status from load_cost where load_id='$LF1'")" "OSTATECZNY"
+LF2=33333333-0000-0000-0000-0000000baf0a
+sys "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date) values ('$LF2','$P','$CAR','BAF/F2','2026-10-20')"
+sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, total_weight_t) values ('$P','$LF2','SG-F2','DIMENSIONED',18.21,2.45,2.45,20.0)"
+sys "select load_price_compute('$LF2', '2026-10-06')"
+chk "F2 przed zamknięciem: PROGNOZA 1,13" "$(Q "select fuel_applied_mult::numeric(4,2)||'/'||fuel_status from load_cost where load_id='$LF2'")" "1.13/PROGNOZA"
+sys "select sefs_refresh_prognoza('$P')" >/dev/null
+# po „zamknięciu" — ręcznie przelicz z dziś=12.10
+sys "select load_price_compute('$LF2', '2026-10-12')"
+M42L=$(Q "select fuel_applied_mult from load_cost where load_id='$LF1'")
+chk "F2 po zamknięciu: PROGNOZA = OSTATECZNY z tyg. 42" "$(Q "select fuel_status||'/'||fuel_applied_mult from load_cost where load_id='$LF2'")" "PROGNOZA/$M42L"
 
 # TELM 0188: podłączenie w trasie 05.10, plan załadunku 01.10 → actual pusty, tydzień paliwa 40, 1,14
 LTM=33333333-0000-0000-0000-0000000baf08
