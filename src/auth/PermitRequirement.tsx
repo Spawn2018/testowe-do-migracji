@@ -37,11 +37,14 @@ export default function PermitRequirement() {
         <span className={`pill ${on ? 'p-go' : 'p-amber'}`}>{t(locale, on ? 'i27_state_on' : 'i27_state_off')}</span>
       </header>
       {msg && <div className={`auth-msg ${msg.ok ? 'ok' : 'err'} auth-admin-row`} role="status">{msg.text}</div>}
-      <div className="panel-bd">
+      <div className="panel-bd permit-body">
         <div className="note option-note">{t(locale, 'i27_note')}</div>
-        <button className="btn" type="button" disabled={busy} data-action="permit-requirement" onClick={() => void toggle()}>
-          {t(locale, on ? 'i27_turn_off' : 'i27_turn_on')}
-        </button>
+        <div className="permit-row">
+          <span className={`pill ${on ? 'p-go' : 'p-amber'}`} data-permit-state>{t(locale, on ? 'i27_state_on' : 'i27_state_off')}</span>
+          <button className="btn" type="button" disabled={busy} data-action="permit-requirement" onClick={() => void toggle()}>
+            {t(locale, on ? 'i27_turn_off' : 'i27_turn_on')}
+          </button>
+        </div>
       </div>
     </section>
   );

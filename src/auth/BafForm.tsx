@@ -4,6 +4,7 @@ import { authErrorPl } from './config';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
 import { lookupMult, type SefsTier } from '../lib/sefs';
+import { prevWeekStatus, warsawDay } from '../lib/sefsWeek';
 import './auth.css';
 
 const PROJECT_CODE = 'STEGRA_BODEN';
@@ -96,6 +97,9 @@ export default function BafForm() {
     return { period: sek.period, ms, mp, applied: Math.min(ms, mp) };
   }, [params, live]);
 
+  // B-6h — czy poprzedni tydzień ma odczyty do opłaty paliwowej (to samo okno co sefs_week_calc)
+  const week = useMemo(() => prevWeekStatus(readings, warsawDay(new Date()), params ? { sek: params.tiers_sek, pln: params.tiers_pln } : null), [readings, params]);
+
   const run = async (fn: () => PromiseLike<{ error: { message: string } | null }>, ok: string) => {
     setBusy(true); setMsg(null);
     const { error } = await fn();
@@ -122,7 +126,8 @@ export default function BafForm() {
     if (!projectId) return;
     const sb = await getSupabase();
     const done = await run(() => sb.rpc('fuel_add_reading', {
-      p_project: projectId, p_index: rf.index_code, p_period: rf.period.trim(), p_reading_date: rf.reading_date,
+      // B-6h: odczyt dzienny — okres = data odczytu (tylko takie wchodzą do średniej tygodnia); korekta zostaje przy okresie wiersza
+      p_project: projectId, p_index: rf.index_code, p_period: rf.corrects ? rf.period.trim() : rf.reading_date, p_reading_date: rf.reading_date,
       p_value: Number(rf.value.replace(',', '.')), p_source_url: rf.source_url.trim(), p_note: rf.note || null,
       p_corrects: rf.corrects ? Number(rf.corrects) : null, p_reason: rf.corrects ? rf.reason : null,
     }), t(locale, rf.corrects ? 'i2_baf_reading_corrected' : 'i2_baf_reading_saved'));
@@ -149,6 +154,13 @@ export default function BafForm() {
           <div className="note" data-no-source="baf-preview" style={{ margin: '8px 0' }}>{t(locale, 'i2_baf_no_preview')}</div>
         )}
 
+        <div className={`note${week.mult !== null ? '' : ' sefs-week-missing'}`} data-sefs-week={week.mult !== null ? 'ok' : 'missing'} style={{ margin: '0 0 8px' }}>
+          {tp(locale, 'b6_sefs_week', { from: week.from, to: week.to, s: String(week.nSek), p: String(week.nPln) })}{' '}
+          {week.mult !== null
+            ? tp(locale, 'b6_sefs_week_ok', { as: (week.avgSek ?? 0).toFixed(2), ap: (week.avgPln ?? 0).toFixed(2), m: week.mult.toFixed(3) })
+            : t(locale, 'b6_sefs_week_missing')}
+        </div>
+
         <h4 className="sec">{t(locale, 'i2_baf_params_h')}</h4>
         <form className="baf-form" onSubmit={saveParams} data-baf="params">
           <label>{t(locale, 'i2_baf_valid_from')}<input className="input" type="date" required value={pf.valid_from} onChange={(e) => P('valid_from', e.target.value)} /></label>
@@ -172,8 +184,7 @@ export default function BafForm() {
         <h4 className="sec">{t(locale, 'i2_baf_readings_h')}</h4>
         <form className="baf-form" onSubmit={addReading} data-baf="reading">
           <label>{t(locale, 'i2_baf_index')}<select className="input" value={rf.index_code} onChange={(e) => R('index_code', e.target.value)}><option value="SEK">SEK (OKQ8)</option><option value="PLN">PLN (ORLEN)</option></select></label>
-          <label>{t(locale, 'i2_baf_period')}<input className="input" required placeholder="2026-10 / 2026-W41" value={rf.period} onChange={(e) => R('period', e.target.value)} /></label>
-          <label>{t(locale, 'i2_baf_reading_date')}<input className="input" type="date" required value={rf.reading_date} onChange={(e) => R('reading_date', e.target.value)} /></label>
+          <label>{t(locale, 'b6_baf_period_daily')}<input className="input" type="date" required value={rf.reading_date} onChange={(e) => R('reading_date', e.target.value)} /></label>
           <label>{t(locale, 'i2_baf_value')}<input className="input" inputMode="decimal" required value={rf.value} onChange={(e) => R('value', e.target.value)} /></label>
           <label className="wide">{t(locale, 'i2_baf_source_url')}<input className="input full" type="url" required value={rf.source_url} onChange={(e) => R('source_url', e.target.value)} /></label>
           <label className="wide">{t(locale, 'i2_baf_source_note')}<input className="input full" value={rf.note} onChange={(e) => R('note', e.target.value)} /></label>

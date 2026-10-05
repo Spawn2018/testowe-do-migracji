@@ -9,6 +9,7 @@ import { DEMO_FX_META } from '../lib/money/demoFx';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
 import { OptionsAccordion, type OptionsSectionDef } from '../components/settings/OptionsAccordion';
+import { OptionsHowTo } from '../components/settings/OptionsHowTo';
 import { SmsFallbackEntry } from '../components/shell/SmsFallbackEntry';
 import { canSeeWorkflows, PROD_BUILD, shows } from '../lib/prodFacade';
 import { parseRoute } from '../lib/routes';
@@ -140,6 +141,7 @@ export function OptionsView() {
       keywords: 'macierz decyzje powiadomienia matrix',
       children: (
         <>
+          <OptionsHowTo locale={locale} k="b6_howto_notif" />
           {NotificationMatrixForm ? <SuspenseBlock><NotificationMatrixForm /></SuspenseBlock> : null}
           <div className="pref-list" style={{ marginTop: 10 }}>
             {([['workflowAlerts', t(locale, 'opt_wf_rules')], ['geofenceAlerts', t(locale, 'opt_geo_alerts')], ['riskAlerts', t(locale, 'opt_risk_alerts')]] as const)
@@ -151,7 +153,7 @@ export function OptionsView() {
                 </label>
               ))}
           </div>
-          <div className="note option-note">{t(locale, 'opt_notif_filter_note')}</div>
+          <div className="note option-note">{t(locale, 'b6_notif_filter_note')}</div>
           <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().markAllNotificationsRead('HHL')}>{t(locale, 'opt_mark_read')}</button>
           {canSeeWorkflows() ? (
             <div style={{ marginTop: 12 }}>
@@ -180,6 +182,7 @@ export function OptionsView() {
       keywords: 'sms strefy geofence bramka recipients',
       children: (
         <>
+          <OptionsHowTo locale={locale} k="b6_howto_zones" />
           {SmsZoneRecipients ? <SuspenseBlock><SmsZoneRecipients /></SuspenseBlock> : null}
           {SmsGateway ? <SuspenseBlock><SmsGateway /></SuspenseBlock> : null}
           <div className="settings-list" style={{ marginTop: 10 }}>
@@ -205,9 +208,14 @@ export function OptionsView() {
       descKey: 'opt_acc_thresh_desc',
       count: '10',
       keywords: 'progi fala wiatr opóźnienie awizacja',
-      children: OpsThresholdsForm
-        ? <SuspenseBlock><OpsThresholdsForm /></SuspenseBlock>
-        : <Soon locale={locale} tipKey="opt_acc_thresh_soon" />,
+      children: (
+        <>
+          <OptionsHowTo locale={locale} k="b6_howto_thresh" />
+          {OpsThresholdsForm
+            ? <SuspenseBlock><OpsThresholdsForm /></SuspenseBlock>
+            : <Soon locale={locale} tipKey="opt_acc_thresh_soon" />}
+        </>
+      ),
     });
 
     list.push({
@@ -319,6 +327,7 @@ export function OptionsView() {
       keywords: 'sefs baf paliwo',
       children: (
         <>
+          <OptionsHowTo locale={locale} k="b6_howto_sefs" />
           {BafForm ? <SuspenseBlock><BafForm /></SuspenseBlock> : (
             <>
               <div className="fuel-grid">

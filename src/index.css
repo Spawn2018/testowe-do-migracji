@@ -986,3 +986,39 @@ img,video{max-width:100%;height:auto}
   }
 }
 
+
+/* B-6a/b/c/h — „Jak to działa” w sekcjach Opcji */
+.opt-howto{margin:0 0 12px;padding:6px 10px;border-left:3px solid var(--sea);background:var(--surface-2)}
+.opt-howto>summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.opt-howto>ol{margin:6px 0 2px;padding-left:18px;font-size:12.5px;line-height:1.45;color:var(--ink-2)}
+.opt-howto>ol>li+li{margin-top:4px}
+
+/* B-6d — Stan systemu jako pulpit */
+.sys-dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:2px 0 6px}
+.sys-tile{min-width:0;padding:10px 12px;border:1px solid var(--rule-2);border-left:3px solid var(--rule);background:var(--surface-2)}
+.sys-tile[data-state="ok"]{border-left-color:var(--go)}
+.sys-tile[data-state="warn"]{border-left-color:var(--amber)}
+.sys-tile[data-state="bad"]{border-left-color:var(--red)}
+.sys-tile .k{font-size:11px;color:var(--ink-3);letter-spacing:.01em}
+.sys-tile .v{font-family:var(--font-cond);font-size:24px;font-weight:700;line-height:1.1;margin-top:2px;overflow-wrap:anywhere}
+.sys-tile[data-state="ok"] .v{color:var(--go)}
+.sys-tile[data-state="warn"] .v{color:var(--amber-ink)}
+.sys-tile[data-state="bad"] .v{color:var(--red)}
+.sys-tile .d{font-size:11.5px;color:var(--ink-3);margin-top:3px;overflow-wrap:anywhere}
+.sys-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-top:6px}
+.sys-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.sys-table td{padding:5px 6px;border-bottom:1px solid var(--rule-2);vertical-align:middle}
+.sys-table td:first-child{padding-left:0}
+.sys-table .sys-when{color:var(--ink-3);font-size:11.5px;text-align:right;white-space:nowrap}
+@media (max-width:760px){.sys-cols{grid-template-columns:1fr}.sys-table .sys-when{white-space:normal}}
+
+/* B-6g / B-6i — w sekcjach Opcji notatka i tabela nie wychodzą w prawo poza sekcję */
+.opt-acc-body .option-note{margin:0 0 10px}
+.baf-form>.full-row{grid-column:1/-1;min-width:0}
+.rate-table-wrap{max-width:100%;overflow-x:auto;margin-bottom:8px}
+.rate-table{border-collapse:collapse;width:100%}
+.rate-table th{text-align:left;font-size:11px;font-weight:600;color:var(--ink-3);padding:4px 6px 4px 0;white-space:nowrap}
+.rate-table td{padding:3px 6px 3px 0}
+.rate-table .input{width:100%;min-width:56px}
+.permit-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.baf-form textarea.input,.baf-form .input.full{width:100%;max-width:100%;box-sizing:border-box}

@@ -25,6 +25,9 @@ type Row = {
   new_value: Record<string, unknown> | null;
 };
 
+/** B-6f — ile wierszy pobiera panel; licznik obok przycisków usunięty (był tylko liczbą pobranych). */
+export const HISTORY_LIMIT = 200;
+
 function fmtJson(v: Record<string, unknown> | null): string {
   if (!v || Object.keys(v).length === 0) return '—';
   try {
@@ -93,7 +96,7 @@ export default function ChangeHistoryPanel() {
       p_entity: entity.trim() || null,
       p_action: action.trim() || null,
       p_q: q.trim() || null,
-      p_limit: 200,
+      p_limit: HISTORY_LIMIT,
       p_offset: 0,
     });
     setBusy(false);
@@ -211,9 +214,9 @@ export default function ChangeHistoryPanel() {
         <button type="button" className="chipbtn" disabled={busy || rows.length === 0} onClick={() => void exportFmt('xlsx')}>
           XLSX
         </button>
-        <span className="note">{rows.length}</span>
       </div>
       {msg ? <div className="note">{msg}</div> : null}
+      {rows.length >= HISTORY_LIMIT ? <div className="note" data-history-capped>{tp(locale, 'b6_hist_capped', { n: String(HISTORY_LIMIT) })}</div> : null}
       {rows.length === 0 && !msg ? (
         <div className="note option-note">{t(locale, 'opt_acc_hist_empty')}</div>
       ) : (

@@ -113,16 +113,15 @@ test('HHL: formularz BAF/SEFS — wersja parametrów, odczyt, korekta, dziennik'
   const r = f.locator('[data-baf="reading"]');
   for (const [idx, val] of [['SEK', '19,20'], ['PLN', '6,40']] as const) {
     await r.getByLabel('Indeks').selectOption(idx);
-    await r.getByLabel(/^Okres/).fill('2026-09');
-    await r.getByLabel('Data odczytu').fill('2026-09-25');
+    await r.getByLabel(/^Dzień odczytu/).fill('2026-09-25');
     await r.getByLabel(/Wartość/).fill(val);
     await r.getByLabel('Adres źródła').fill('https://example.org/odczyt');
     await r.getByRole('button', { name: 'Dodaj odczyt' }).click();
-    await expect(f.locator('[data-baf="readings"]')).toContainText(`${idx} · 2026-09`, { timeout: 15000 });
+    await expect(f.locator('[data-baf="readings"]')).toContainText(`${idx} · 2026-09-25`, { timeout: 15000 });
   }
   await expect(f.locator('[data-baf-preview]')).toContainText('SEK 1.020, PLN 1.010 → stosowany min = 1.010');
-  await f.locator('[data-baf="readings"] [data-reading]', { hasText: 'SEK · 2026-09' }).getByRole('button', { name: 'Koryguj' }).click();
-  await r.getByLabel('Data odczytu').fill('2026-09-26');
+  await f.locator('[data-baf="readings"] [data-reading]', { hasText: 'SEK · 2026-09-25' }).getByRole('button', { name: 'Koryguj' }).click();
+  await r.getByLabel(/^Dzień odczytu/).fill('2026-09-26');
   await r.getByLabel(/Wartość/).fill('18,00');
   await r.getByLabel(/Powód korekty/).fill('pomyłka przy przepisywaniu');
   await r.getByRole('button', { name: 'Zapisz korektę' }).click();

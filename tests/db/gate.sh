@@ -82,7 +82,7 @@ check i31 6
 check dec2 26
 check dec3 13
 check dec5 11
-check dec6 15
+check dec6 23
 check adm10 8
 check hist11 11
 check workflows 47

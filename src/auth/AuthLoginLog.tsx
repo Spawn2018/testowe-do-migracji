@@ -1,10 +1,12 @@
 /**
- * DEC-6 — dziennik logowań Auth (Supabase audit_log_entries) dla HHL_ADMIN.
+ * DEC-6 / B-6e — dziennik logowań dla HHL_ADMIN. Od 0164 z tabeli auth_login_events (wyzwalacz na
+ * auth.sessions); Supabase nie zapisuje już auth.audit_log_entries w bazie projektu.
  */
 import { useCallback, useEffect, useState } from 'react';
 import { getSupabase } from './client';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
+import { uaLabel } from '../lib/userAgent';
 import './auth.css';
 
 type Row = {
@@ -14,6 +16,7 @@ type Row = {
   actor: string;
   log_type: string;
   email: string;
+  user_agent?: string | null;
 };
 
 export default function AuthLoginLog() {
@@ -49,6 +52,7 @@ export default function AuthLoginLog() {
   };
 
   const outcome = (r: Row) => {
+    if (r.log_type === 'SESSION' || r.log_type === 'LAST_SIGN_IN') return t(locale, 'opt_acc_authlog_ok');
     const a = `${r.action} ${r.log_type}`.toLowerCase();
     if (/fail|error|unauthor/.test(a)) return t(locale, 'opt_acc_authlog_fail');
     if (/login|token|user_signed|password/.test(a)) return t(locale, 'opt_acc_authlog_ok');
@@ -61,7 +65,6 @@ export default function AuthLoginLog() {
         <button type="button" className="chipbtn" disabled={busy} onClick={() => void refresh()}>
           {t(locale, 'opt_acc_authlog_refresh')}
         </button>
-        <span className="note">{rows.length}</span>
       </div>
       {msg ? <div className="note">{msg}</div> : null}
       {rows.length === 0 && !msg ? (
@@ -75,6 +78,8 @@ export default function AuthLoginLog() {
                 <span>
                   {fmt(r.created_at)}
                   {r.ip_address ? ` · ${r.ip_address}` : ''}
+                  {r.user_agent ? ` · ${uaLabel(r.user_agent)}` : ''}
+                  {r.log_type === 'LAST_SIGN_IN' ? ` · ${t(locale, 'b6_authlog_last_sign_in')}` : ''}
                 </span>
               </div>
               <small>{outcome(r)}</small>
@@ -82,6 +87,7 @@ export default function AuthLoginLog() {
           ))}
         </div>
       )}
+      <div className="note option-note" style={{ marginTop: 8 }}>{t(locale, 'b6_authlog_note')}</div>
     </div>
   );
 }
