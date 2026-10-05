@@ -1773,4 +1773,40 @@ Katalog ograniczeń dla ciężarówek w pasie 3 km wzdłuż korytarza jest w kod
 
 ## 2026-10-05 07:16 (czas warszawski) — korekta Q-18, AIS dla Polferries, część B
 
-Teraz: AIS-POLF · Zrobione: krok 0 (polecenie zapisane, PLAN.md i rejestr decyzji zaktualizowane) · Następne: Q18-V2 → diagnoza 5 promów → B-7a → B-7b.
+Teraz: — (stop po B-7a/B-7b, raport) · Zrobione: krok 0, Q18-V2, AIS-POLF, diagnoza 5 promów, B-7a, B-7b, propozycje B-7c / B-8 (filtry, statusy) / B-9 / Q-9 · Następne: B-8 (część bez filtrów i statusów).
+
+### 1. Q18-V2 — nowa reguła widoczności (PR #64)
+
+Prom widoczny w strefie portu PL (Gdańsk, Gdynia), w rejsie PL→SE i w strefie portu SE (Nynäshamn, Karlskrona). Znika po wyjściu ze strefy SE, wraca po wejściu w strefę PL. `ferryPhase` / `ferryVisible` / `visibleFerryMarkers` w `supabase/functions/_shared/map/draw.ts` (ten sam kod w aplikacji). Testy kroków właściciela: `tests/bmapa.test.ts` (Gdańsk → wypływa → Nynäshamn → wypływa do Polski → Gdańsk; Gdynia/Karlskrona; kolejność wierszy; pozycje zostają w zbiorze). Brak strefy w 48 h: kierunek z kursu ostatniej pozycji (północ = do Szwecji), bez kursu niewidoczny. Pozycje w bazie bez zmian, ETA / II-9 / L-9 z pełnych danych.
+
+### 2. AIS-POLF — diagnoza i naprawa (PR #64, migracja 0163)
+
+- Cron `tower-ferry-ais` działał co 3 min, funkcja ok. 10 s, klucz był, WebSocket się łączył. W bazie 0 wierszy AISSTREAM dla wszystkich 5 statków (także dla Sten na morzu).
+- **Przyczyna 1:** aisstream wysyła ramki **binarne**. W Deno `ev.data` to Blob, `String(Blob)` = „[object Blob]”, `JSON.parse` padał i kod po cichu odrzucał każdą ramkę. Sprawdzone lokalnie: 14/14 ramek binarnych.
+- **Przyczyna 2:** 8 s nasłuchu. Statek przy nabrzeżu nadaje co 3 min (Wawel 05:19:23 i 05:22:23 UTC), więc 8 s prawie nigdy go nie łapało.
+- Bbox obejmuje Gdańsk i Nynäshamn. Porównanie MMSI (liczba w MetaData → tekst) było poprawne. Filtr `FiltersShipMMSI` działa, gdy MMSI są tekstem (sprawdzone: tylko nasze statki).
+- **Naprawa:** `binaryType = arraybuffer` + dekodowanie UTF-8 (także Blob), jawny parser `time_utc`, subskrypcja z `FiltersShipMMSI`, typy pozycji klasy A i B. Nowa funkcja Edge `ferry-ais-listen`: cron co minutę, nasłuch 50 s (limit ścienny funkcji 150 s), zapis każdej pozycji ze źródłem AISSTREAM. `ferry-ais` (co 3 min) nie otwiera już WebSocket — bierze pozycje AISSTREAM z bazy (≤ 10 min) do „nowsza wygrywa” i ryzyk. Bez wydatków (plus ok. 43 tys. wywołań funkcji miesięcznie; wszystkie crony razem ok. 190 tys., limit planu Free 500 tys.).
+- Dowód: Nova Star AISSTREAM 2026-10-05 05:35:14 UTC, 54,40467 N 18,67377 E (Gdańsk), wiek 1,6 min przy odczycie 05:36:50 UTC. Stena Spirit i Stena Ebba też z AISSTREAM (wiek < 1 min o 05:45 UTC).
+- Wawel: do 05:45 UTC bez pozycji AISSTREAM w bazie. aisstream w tym czasie nie przekazał żadnej ramki Wawel ani Nova Star — sprawdzone osobnym nasłuchem 200 s (05:42–05:45 UTC, tylko te dwa MMSI): 0 ramek. Funkcja produkcyjna w tych minutach też 0. To luka odbioru aisstream przy nabrzeżu, nie błąd zapisu. Digitraffic zostaje zapasem (Wawel 21:19 UTC 4.10, Nynäshamn, znacznik wyszarzony).
+
+### 3. Diagnoza pustej mapy (05.10 ok. 05:40 UTC)
+
+Stara reguła wymagała zobaczenia wyjścia ze strefy portu PL w 48 h. Steny mają pozycje dopiero od 4.10 23:01 UTC (bez wyjścia z PL w historii), Wawel stał w Nynäshamn, Nova Star ostatnio płynęła do Polski. Wynik: 0 z 5 widocznych. Nowa reguła na tych samych danych (ten sam kod co mapa):
+
+| Prom | Ostatnia pozycja (UTC) | Źródło | Strefa | Widoczny wg reguły |
+|---|---|---|---|---|
+| Nova Star | 05.10 05:35:14 | AISSTREAM | port Gdańsk | tak |
+| Wawel | 04.10 21:19:21 | DIGITRAFFIC | port Nynäshamn | tak (znacznik wyszarzony, sygnał > 15 min) |
+| Stena Estelle | 05.10 05:32:59 | STENA | port Karlskrona | tak |
+| Stena Spirit | 05.10 05:44:40 | AISSTREAM | morze, kurs 304° (do Karlskrony) | tak |
+| Stena Ebba | 05.10 05:44:40 | AISSTREAM | morze, kurs 191° (do Gdyni) | nie — rejs do Polski, wróci w strefie Gdyni |
+
+Paczka produkcyjna zawiera nową regułę (`ferryVisible` w `index-*.js`). Mapy po zalogowaniu nie oglądałem (brak konta w tym przebiegu).
+
+### 4. Część B
+
+- **B-7a** zrobione: wysokość mapy z wysokości okna, nie z tabeli. **B-7b** zrobione: na ekranie ≤ 768 px pas warstw nad mapą. Test `tests/b7-map.spec.ts` (6 rozmiarów, 12/12).
+- Zrzuty wizualne mapy się zmienią (90 ujęć `mapa__*` w pełnym wzorcu, 2 w `tests/__screenshots__`). Wzorców nie odświeżono — decyzja właściciela.
+- Propozycje na piśmie: `PROPOZYCJE_B_05_10.md` (B-7c, B-8 filtry i statusy, zmiana ciągnika, B-9, Q-9). B-3a czeka na wymiary.
+
+Kontrole: H1 / H3 / H6 false, 94 transporty, bez SMS, bez usunięć, bez wydatków.
