@@ -1050,3 +1050,24 @@ DECYZJE WŁAŚCICIELA (05.10) I DALSZA PRACA
 Migracje przez lokalną bramę, obie domeny 200. Bez kasowania danych,
 bez wydatków, bez prawdziwych SMS bez zgody.
 TELM true; H1/H3/H6 false; blokada SMS właściciela zostaje.
+
+## Polecenie właściciela 2026-10-05 ~14:12 (czas warszawski) — audyt ZAP Active na PROD + dowody + B-10/TELM-2
+
+1. **AUDYT** skutków ZAP Active Scan na PROD (okno ~13:58 Europe/Warsaw, `-quickurl`):
+   - nowe/zmienione wiersze **wszystkich** tabel;
+   - e-maile / SMS / push;
+   - logowania / blokady / konta / resety;
+   - limity Resend / HERE / DeepL.
+   Wynik: tabela. Śmieci — **LISTA do akceptacji, NIC nie kasuj**.
+   Blokady kont — **zdejmij**.
+   Popraw skrypt: prod **TYLKO pasywny**; aktywny tylko TEST + test że prod odrzuca aktywny.
+
+2. **DOWODY** (tabela): każdy wiersz = PR+migracja lub nazwa testu —
+   HHL-4a, FAK-9 (EUR/PLN przy wystawieniu + kurs D-43; brak=buduj),
+   Q-7, Q-8, Q-10, Q-15, Q-17 osobno, UI-12, D-31, D-27 (kontrast ≥4.5),
+   CLEAN-MAPLIBRE, AUTH-MAIL, I-29. Bez dowodu = buduj wg PLAN.md.
+
+3. Potem kontynuuj **B-10** i **TELM-2** (jak wcześniej).
+Nie buduj: D-83/B-3a/H-1/H-3/H-6, R-0, D-7/14/16/17/21.
+TELM true; blokada SMS właściciela; bramy; domeny 200.
+

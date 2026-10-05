@@ -27,6 +27,7 @@ import {
   formatEtaBoden,
   formatLoadPl,
   formatUnloadSe,
+  formatOpsDateTime,
   isoToDatetimeLocalValue,
   wallLocalToIso,
 } from '../../lib/time';
@@ -160,6 +161,26 @@ export function LoadDrawer() {
     () => (load ? messages.filter((m) => m.loadId === load.id) : []),
     [messages, load],
   );
+
+  useEffect(() => {
+    if (tab !== 'chat' || !load || !SUPABASE_AUTH_ENABLED) return;
+    const ids = loadMsgs
+      .map((m) => Number(String(m.id).replace(/^msg-/, '')))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    if (!ids.length) return;
+    void (async () => {
+      try {
+        const { getSupabase } = await import('../../auth/client');
+        const sb = await getSupabase();
+        for (const id of ids.slice(-30)) {
+          await sb.rpc('mark_load_message_read', { p_message: id });
+        }
+      } catch {
+        /* odczyty niekrytyczne */
+      }
+    })();
+  }, [tab, load?.id, loadMsgs]);
+
 
   if (!load) return null;
   const driverPhone = visibleDriverPhone(role, load);
@@ -343,9 +364,9 @@ export function LoadDrawer() {
                 <dt>{t(locale, 'a6_dr_load_place')}</dt>
                 <dd>{SITES.loading.name}</dd>
                 <dt>{t(locale, 'a6_dr_loading')}</dt>
-                <dd className="cond">{formatLoadPl(load.plannedLoadDate)}</dd>
+                <dd className="cond">{formatLoadPl(load.awizacja.loadWindowStart ?? load.plannedLoadDate)}</dd>
                 <dt>{t(locale, 'a6_dr_delivery')}</dt>
-                <dd className="cond">{formatUnloadSe(load.plannedDeliverDate)}</dd>
+                <dd className="cond">{formatUnloadSe(load.awizacja.unloadWindowStart ?? load.plannedDeliverDate)}</dd>
                 <dt>{t(locale, 'eta')}</dt>
                 <dd className="cond" data-eta={load.etaPreLoad ? 'pre-load' : 'value'}>
                   {load.etaPreLoad ? (
@@ -507,7 +528,7 @@ export function LoadDrawer() {
                       )}
                     </div>
                     <div className="ts">
-                      {e.actor} · {e.at}
+                      {e.actor} — {formatOpsDateTime(e.at)}
                     </div>
                   </li>
                 ))
@@ -540,7 +561,7 @@ export function LoadDrawer() {
                       )}
                     </div>
                     <div className="ts">
-                      {e.actor} · {e.at}
+                      {e.actor} — {formatOpsDateTime(e.at)}
                     </div>
                   </li>
                 ))
@@ -749,8 +770,6 @@ export function LoadDrawer() {
                     </dd>
                     <dt>{t(locale, 'sail_label')}</dt>
                     <dd data-sailing-ro>{sailingText}</dd>
-                    <dt>{t(locale, 'sail_booking')}</dt>
-                    <dd>{load.ferry.bookingRef ?? '—'}</dd>
                     <dt>{t(locale, 'a6_dr_ferry_status')}</dt>
                     <dd>{ferryStatusLabel(load.ferry.status, locale)}</dd>
                     <dt>{t(locale, 'a6_dr_confirmed')}</dt>
@@ -914,7 +933,7 @@ export function LoadDrawer() {
               {loadMsgs.map((m) => (
                 <div key={m.id} className={`msg${m.org === 'HHL' ? ' me' : ''}`}>
                   <div className="who">
-                    {m.author} · {m.org} · {m.at}
+                    {m.author} // {m.org} — {formatOpsDateTime(m.at)}
                   </div>
                   <div>{m.text}</div>
                   {m.reads && m.reads.length > 0 ? (
@@ -922,7 +941,7 @@ export function LoadDrawer() {
                       <summary>{locale === 'sv' ? 'läst' : locale === 'en' ? 'read' : 'odczytano'} ({m.reads.length})</summary>
                       <ul style={{ margin: '4px 0 0', paddingLeft: 16 }}>
                         {m.reads.map((r) => (
-                          <li key={r.userId + r.at}>{r.name}{r.org ? ` · ${r.org}` : ''} · {r.at}</li>
+                          <li key={r.userId + r.at}>{r.name}{r.org ? ` // ${r.org}` : ''} — {formatOpsDateTime(r.at)}</li>
                         ))}
                       </ul>
                     </details>

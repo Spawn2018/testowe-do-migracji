@@ -30,3 +30,9 @@ Pełny skan aktywny na TEST: **odłożony** (TEST bez pełnego schematu / GATE-W
 
 ## Do SEC-OWASP
 Wynik Baseline dołączony. Enforce CSP **po** 7 dniach Report-Only + akceptacji listy źródeł, **przed** domknięciem SEC-OWASP i pilotażem.
+
+
+## Korekta po audycie (~14:12)
+
+Active Scan na prod był błędem metody (`-quickurl`). Audyt DB/Auth/Resend/HERE/DeepL: `AUDYT_ZAP_ACTIVE_PROD_05_10.md`.
+Skrypty: `scripts/zap-baseline-passive.sh` (prod), `scripts/zap-full-active.sh` (tylko TEST) + `tests/zap-prod-guard.test.ts`.
