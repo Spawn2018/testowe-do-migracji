@@ -1871,3 +1871,25 @@ Usunięte z widoku Finanse wiersze przychodu „Pilotaż i dodatki” / „Przyc
 ## 2026-10-05 (czas warszawski) — B-4b załącznik = CMR
 
 W Faktury i BillsPanel lista/wgrywanie tylko CMR (bez POD). Etykiety PL/EN/SV. Test `tests/b4b-cmr-only.test.ts`. Odświeżone ujęcia `faktury*` ze zmianą zamierzoną.
+
+## 2026-10-05 ~08:30 (czas warszawski) — raport: wzorce map + część B do B-4b
+
+### Wzorce map (polecenie 07:57)
+- PR #66 (`640a162` / merge `9b77bcb`), wdrożenie `dpl_CjysPKxU2eLWYkCLm21ne1S4zFhW`
+- 90× mapa__* + 78× kokpit__* + 4 smoke; przyczyna: B-MAPA, B-7a, B-7b
+- smoke visual 4/4; mapa/kokpit 90/90 vs wzorzec
+
+### Część B
+| ID | Status | PR / SHA / deploy |
+|---|---|---|
+| B-1 | już na main (03.10) | PR #4 |
+| B-2a | zrobione | PR #69 `f77de74` / `dpl_YMvYgchmv4QPdnJzhEJA1Ea9SjZ8` |
+| B-2c | zrobione (opis) | PR #70 `62d5c22` / `dpl_GQBM6RLoeUtoLJtUjDPzB38PwaS5` |
+| B-3a | pominięte — czeka na wymiary D-83 | — |
+| B-4a | zrobione | PR #71 `bfc7ed9` / deploy Hobby z tego SHA |
+| B-4b | zrobione | PR #72 `63f6086` / deploy na tower.log-mar.pl |
+| B-5… | następne według PLAN | — |
+
+Pominięte propozycje: B-7c, filtry/statusy B-8, B-9, Q-9. B-7a/B-7b wcześniej.
+
+Kontrole: H1_ROUTE_CHECK false, H3_CORRIDOR_OBSTACLES false, H6_MAP_OBSTACLES false; 94 transporty aktywne; bez SMS, bez usunięć, bez wydatków.
