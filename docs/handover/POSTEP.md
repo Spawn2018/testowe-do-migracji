@@ -1867,3 +1867,7 @@ B-2a wdrożone: PR #69, `f77de74`, dpl_YMvYgchmv4QPdnJzhEJA1Ea9SjZ8, obie domeny
 ## 2026-10-05 (czas warszawski) — B-4a Finanse bez pilotażu w przychodzie
 
 Usunięte z widoku Finanse wiersze przychodu „Pilotaż i dodatki” / „Przychód — pilotaż i dodatki” (KSH i HHL). Suma przychodu i marży bez zmian (nadal z `revTotal`). Po stronie kosztu SCX wiersz zostaje. Test `tests/b4a-fin-no-pilot.test.ts`. B-3a pominięte — czeka na wymiary D-83.
+
+## 2026-10-05 (czas warszawski) — B-4b załącznik = CMR
+
+W Faktury i BillsPanel lista/wgrywanie tylko CMR (bez POD). Etykiety PL/EN/SV. Test `tests/b4b-cmr-only.test.ts`. Odświeżone ujęcia `faktury*` ze zmianą zamierzoną.

@@ -174,3 +174,7 @@ Zgoda właściciela 05.10 07:57 (czas warszawski): odświeżyć wzorce 90 ujęć
 ## B-4a (05.10.2026) — Finanse bez pilotażu w przychodzie
 
 Zamierzona zmiana UI: usunięte wiersze „Pilotaż i dodatki” / „Przychód — pilotaż i dodatki” w Finanse (KSH, HHL). Odświeżono 30× `shots-baseline/finanse__*`. Innych ujęć nie ruszano.
+
+## B-4b (05.10.2026) — Faktury: załącznik tylko CMR
+
+Zamierzona zmiana: bez POD w załącznikach faktury. Odświeżone zmienione ujęcia `faktury__*` / `faktury-przychodowe__*`.

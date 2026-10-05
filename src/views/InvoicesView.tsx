@@ -432,7 +432,7 @@ export function InvoicesView() {
               const docs = documents.filter(
                 (d) =>
                   d.loadId === l.id &&
-                  (d.category === 'CMR' || d.category === 'POD') &&
+                  d.category === 'CMR' &&
                   (d.status === 'UPLOADED' || d.status === 'MISSING'),
               );
               if (docs.length === 0) {
@@ -472,7 +472,8 @@ export function InvoicesView() {
             e.target.value = '';
             if (!f || !attachLoadId) return;
             // BK4: tryb Supabase → Storage; demo → pamięć sesji.
-            void attachDocumentFile(f, attachLoadId, /pod/i.test(f.name) ? 'POD' : 'CMR');
+            // B-4b: załącznik faktury = wyłącznie CMR (bez POD).
+            void attachDocumentFile(f, attachLoadId, 'CMR');
           }}
         />
       </div>
