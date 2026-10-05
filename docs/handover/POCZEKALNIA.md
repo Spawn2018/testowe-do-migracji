@@ -13,3 +13,6 @@
 | 2026-10-05 15:25 | executor | 10a.1: „Wymiary L×W×H” ładunku vs „wymiary zestawu” — czy zostawić wymiary ładunku? | 10a.1 |
 | 2026-10-05 15:50 | executor | 10c.1: actor w Historii to często „HHL”/„system” zamiast „imię nazwisko // firma” — czy wzbogacić actor z profilu? | 10c.1 |
 | 2026-10-05 15:54 | executor | Auth Supabase: upstream timeout przy password/magiclink — zablokowało dokończenie K/R/P/C na prod | K/R/P |
+| 2026-10-05 15:57 | executor | P7: pasek najbliższych — Wawel (Polferries), brak Steny obok | P7 |
+| 2026-10-05 15:57 | executor | P10: zegar `gg:mm` nadal w pasku | P10 |
+| 2026-10-05 15:57 | executor | K.1: KSH ma pełną szufladę zamiast bocznego menu tylko „Edytuj” | K.1 |
