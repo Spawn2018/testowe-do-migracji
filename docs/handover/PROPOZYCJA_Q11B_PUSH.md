@@ -1,22 +1,10 @@
-# Propozycja Q-11b — powiadomienia na telefon (PWA)
+# Q-11b — push — **WYBÓR A** (05.10 ~13:42)
 
-Data: 2026-10-05. Bez budowy do wyboru litery.
+## Decyzja właściciela
+**A:** Web Push VAPID (0 zł). Krytyczne od razu; jeden skrót niekrytycznych dziennie; włącz/wyłącz Preferencje; DEC-4 + L-13; iPhone: instrukcja „Dodaj do ekranu głównego”.
 
-## Jak działa
-Web Push z aplikacji otwartej z przeglądarki (PWA), bez sklepu.
-Android: zawsze (Chrome/Edge). iPhone: tylko po „Dodaj do ekranu głównego”, iOS 16.4+.
-Koszt docelowy: 0 zł (Web Push / VAPID; bez FCM płatnego planu).
-
-## Zdarzenia (DEC-4 + L-13)
-- Krytyczne: natychmiast na telefon (jak e-mail krytyczny — jedno zdarzenie).
-- Niekrytyczne: w skrócie dziennym albo wyłączone z push (zależnie od wariantu).
-- Widoczność firm jak DEC-4 (macierz admina).
-
-## Warianty
-| | Opis |
-|---|---|
-| **A** | Tylko krytyczne natychmiast + skrót niekrytycznych 1×/dzień. Włącz/wyłącz w Preferencjach. |
-| **B** | Krytyczne + wybrane grupy z macierzy DEC-4 (użytkownik wybiera grupy). Bez skrótu push. |
-| **C** | Odłożyć push; zostaje in-app + e-mail + SMS. |
-
-**Rekomendacja: A** — najmniej hałasu (L-13), zero kosztów, działa na Android i iOS PWA.
+## Realizacja
+- `push_subscriptions` + `user_preferences.web_push_enabled`
+- SW `push` / `notificationclick`
+- Kolejka `notifications.channel=WEB_PUSH` (PENDING krytyczne, DIGEST niekrytyczne)
+- Edge `web-push-send` + publiczny VAPID w `web-push-vapid-public`

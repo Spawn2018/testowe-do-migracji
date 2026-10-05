@@ -25,7 +25,7 @@ const templates = new Set<string>();
 for (const { stmt } of inserts) {
   for (const m of stmt.matchAll(/'([A-Z][A-Z0-9_]{5,})'/g)) templates.add(m[1]);
 }
-const NOT_TEMPLATES = new Set(['IN_APP', 'EMAIL', 'HHL_ADMIN', 'HHL_OPS', 'CARRIER_DISPATCH', 'CARRIER_USER', 'FORWARDER', 'CRITICAL', 'CARRIER', 'PAYER', 'PENDING', 'OPLACONA', 'KOSZT', 'PRZYCHOD', 'QUEUED', 'CLAIMED', 'FAILED', 'DIGEST', 'SUPPRESSED']);
+const NOT_TEMPLATES = new Set(['IN_APP', 'EMAIL', 'WEB_PUSH', 'SMS', 'WEBHOOK', 'HHL_ADMIN', 'HHL_OPS', 'CARRIER_DISPATCH', 'CARRIER_USER', 'FORWARDER', 'CRITICAL', 'CARRIER', 'PAYER', 'PENDING', 'OPLACONA', 'KOSZT', 'PRZYCHOD', 'QUEUED', 'CLAIMED', 'FAILED', 'DIGEST', 'SUPPRESSED']);
 
 describe('I-23 odsiewanie duplikatów powiadomień', () => {
   it('co najmniej 8 miejsc w bazie wstawia powiadomienia', () => {

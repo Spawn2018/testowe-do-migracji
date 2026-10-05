@@ -71,3 +71,43 @@ describe('H-7 appendMapPage', () => {
     expect(doc.getPageCount()).toBe(2);
   });
 });
+
+import {
+  buildRouteProfileUrl,
+  extractElevations,
+  summarizeElevation,
+  pickLegsForRoute,
+} from '../supabase/functions/_shared/here/routeProfile.ts';
+
+describe('H-8 routeProfile', () => {
+  it('URL standard truck z elevation, bez vehicle dims', () => {
+    const u = buildRouteProfileUrl({
+      apiKey: 'k',
+      origin: [52.0, 17.0],
+      destination: [54.0, 18.0],
+    });
+    expect(u).toContain('transportMode=truck');
+    expect(u).toContain('elevation');
+    expect(u).not.toContain('vehicle%5Bheight%5D');
+    expect(u).not.toContain('vehicle[height]');
+  });
+  it('z wymiarami gdy withNotices', () => {
+    const u = buildRouteProfileUrl({
+      apiKey: 'k',
+      origin: [52, 17],
+      destination: [54, 18],
+      withNotices: true,
+      dims: { heightM: 4, widthM: 2.5, lengthM: 16, weightT: 40, axleCount: 5, axleLoadT: 10 },
+    });
+    expect(u).toContain('vehicle');
+    expect(u).toContain('notices');
+  });
+  it('pickLegs + summarize', () => {
+    expect(pickLegsForRoute('Gdynia')).toEqual(['PL-GDY', 'SE-NYN']);
+    const s = summarizeElevation([10, 12, 11, 20]);
+    expect(s.minM).toBe(10);
+    expect(s.maxM).toBe(20);
+    expect(s.samples).toBe(4);
+    expect(extractElevations({ routes: [{ sections: [{ elevation: [1, 2] }] }] })).toEqual([1, 2]);
+  });
+});

@@ -37,7 +37,7 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 | B-REJSY | **DONE** | PR #82 filtr Przyszłe, rok, HHL_ADMIN | — |
 | B-Q | **DONE (dok.)** | `RAPORT_BQ_LOGIKA_05_10.md` | — |
 | Q-11a | **DONE** | `RAPORT_Q11_05_10.md` (390–1920) | — |
-| Q-11b | **CZEKA** | brak FCM/APNs; in-app OK — `RAPORT_Q11_05_10.md` | decyzja push |
+| Q-11b | **DONE (A)** | Web Push VAPID; Preferencje; SW; DIGEST; iOS hint; 0179 | — |
 | Q-17 | **DONE** | B-MAPA PR #61/#62 | — |
 | Q-18 | **DONE** | PR #64 | — |
 | Q-19 | **DONE** | B-MAPA logistics tiles | — |
@@ -76,7 +76,7 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 | H-3 | **zbudowane, wyłączone** | PR #84 Routing v8, bez Attributes | D-83 |
 | H-6 | **zbudowane, wyłączone** | B-MAPA warstwa | D-83 |
 | H-7 | **DONE-ish** | PDF 1 transportu + mapa (GPS→map-static); bez mapy gdy brak GPS/budżet | e-mail już było |
-| H-8 | **PROPOZYCJA** | `PROPOZYCJA_H8_PROFIL_TRASY.md` (bez Attributes) | wybór A/B/C |
+| H-8 | **DONE (A)** | elevation standard truck; notices po D-83; `route-profile` | — |
 | H-10 | **PARTIAL** | ostrzeżenie ≥15 OK; ETA+wiatr **WYŁ.** — `PROPOZYCJA_H10_WIATR_ETA.md` | akceptacja wartości |
 | H-12 | **DONE** | weekend + `truck_ban_holidays` 0177 | — |
 | H-4 / H-5 | **czeka zewnętrzne** | — | TELM-2 |
@@ -94,6 +94,6 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 
 ## 7. Kolejka budowy (05.10 ~13:50 PL)
 
-1. B-10 dopłaty akceptacja + H-7 PDF mapa + SEC nagłówki — ta paczka (0178).
-2. Czeka: Q-11b, H-8 A/B/C, D-83…; GATE-WEEKLY **11.10.2026**; ZAP gdy Docker.
-3. TELM true; H1/H3/H6 false; blokada SMS/e-mail właściciela.
+1. H-8 A + Q-11b A + B-10/H-7/SEC (PR #93 + ta paczka 0179).
+2. GATE-WEEKLY **11.10.2026**; SEC ZAP gdy Docker; CSP decyzja.
+3. TELM true; H1/H3/H6 false; blokada SMS właściciela.

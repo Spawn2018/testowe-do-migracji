@@ -163,3 +163,6 @@ Polecenie kazało przepisać D-66–D-76 dosłownie z `ZLECENIE_POPRAWKI_02_10.m
 | B-9 | pasek filtrów | Wariant C | ✅ / ⏳ |
 | Q-9 | motyw | Wariant B | ✅ / ⏳ |
 | Kolejność ~10:37 | — | (2)+(3) najpierw, potem (1) paliwa B, potem (4) część B. | ✅ |
+
+| Q-11b | push telefon | **A** Web Push VAPID; krytyczne od razu; skrót 1×/dzień; Preferencje; iOS „Dodaj do ekranu głównego” | ✅ 05.10 |
+| H-8 | profil trasy | **A** elevation truck standard teraz; naruszenia wymiarów auto po D-83; pula tras | ✅ 05.10 |

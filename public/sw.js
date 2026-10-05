@@ -1,5 +1,5 @@
 /* Watch Tower — PWA (§14). CACHE bump przy każdej zmianie precache / offline. */
-const CACHE = 'wt-static-v2026-10-01b';
+const CACHE = 'wt-static-v2026-10-05-push';
 const PRECACHE = [
   '/',
   '/offline.html',

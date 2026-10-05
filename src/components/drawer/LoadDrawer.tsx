@@ -20,6 +20,7 @@ import { formatTowerPair } from '../../lib/cSep';
 import { AwizacjaModal } from './AwizacjaModal';
 import { RouteCheckPanel } from './RouteCheckPanel';
 import { CorridorObstaclesPanel } from './CorridorObstaclesPanel';
+import { RouteProfilePanel } from './RouteProfilePanel';
 import {
   TZ_LOAD_PL,
   TZ_UNLOAD_SE,
@@ -311,6 +312,10 @@ export function LoadDrawer() {
                 <dt>{t(locale, 'h3_title')}</dt>
                 <dd data-corridor>
                   <CorridorObstaclesPanel loadId={load.id} locale={locale} />
+                </dd>
+                <dt>{t(locale, 'h8_title')}</dt>
+                <dd data-route-profile>
+                  <RouteProfilePanel loadId={load.id} locale={locale} />
                 </dd>
                 <dt>{t(locale, 'a6_dr_mass')}</dt>
                 <dd>
