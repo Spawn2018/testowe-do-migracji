@@ -221,13 +221,18 @@ const pl: Dict = {
   a6_dr_fuel: 'Dodatek paliwowy',
   a6_dr_geo_event: 'Zdarzenie strefy',
   a6_dr_eta_howto:
-    'ETA — przewidywany przyjazd na plac budowy, liczony automatycznie z ostatniej pozycji GPS (czas warszawski). W Szwecji: pozostała jazda + odpoczynek dobowy + przerwy, liczone proporcjonalnie do pozostałej trasy.'
-    + '|„w oknie” — ETA nie później niż koniec terminu dostawy: godzina „do” z planu, a bez niej koniec dnia dostawy (24:00). Przyjazd wcześniejszy niż termin też jest „w oknie” — etykieta nie ostrzega o przyjeździe przed terminem.'
-    + '|Czerwona etykieta opóźnienia — ETA po końcu terminu dostawy; liczba pokazuje spóźnienie.'
-    + '|Wysoka / Średnia / Niska — pewność prognozy według pasma ± minut pod ETA: Wysoka do ±60 min, Średnia do ±240 min, Niska powyżej albo bez pasma.'
-    + '|Pasmo ± min — niepewność odcinków (jazda ±20%, przerwy ±50%, odpoczynek dobowy 0%) łączona pierwiastkiem z sumy kwadratów.'
+    'ETA — przewidywany przyjazd na plac budowy, liczony automatycznie z ostatniej pozycji GPS (czas warszawski). Czas pracy kierowcy szacowany z ruchu i postojów pojazdu, bez danych z tachografu.'
+    + '|„w oknie” (zielony) — ETA między początkiem a końcem okna dostawy (godzina „od”–„do”; bez „od” — początek dnia dostawy, bez „do” — koniec dnia dostawy).'
+    + '|„przed terminem” (bursztynowy) — ETA przed początkiem okna dostawy (inny dzień albo przed godziną „od”); tylko informacja, bez decyzji w Centrum i bez SMS.'
+    + '|„po terminie” (czerwony) — ETA po końcu okna dostawy; ten sam warunek co ryzyko ETA po terminie i próg L-3 — bez drugiego alarmu.'
+    + '|„przyjazd nocą” — ETA między 22:00 a 06:00 czasu polskiego; tylko informacja, bez decyzji i bez SMS.'
+    + '|Wysoka / Średnia / Niska — pewność prognozy według pasma ± minut: Wysoka do ±60 min, Średnia do ±240 min, Niska powyżej albo bez pasma.'
+    + '|Rozbicie ETA — jazda, przerwy, odpoczynek dobowy, prom; pasmo ± min łączy niepewność odcinków pierwiastkiem z sumy kwadratów.'
     + '|„–” — przed wyjazdem z placu załadunku albo bez świeżej pozycji GPS ETA nie jest pokazywana.',
   a6_dr_in_window: 'w oknie',
+  a6_dr_before_window: 'przed terminem',
+  a6_dr_after_window: 'po terminie',
+  a6_dr_night_arrival: 'przyjazd nocą',
   a6_dr_load_place: 'Miejsce załadunku',
   a6_dr_load_window: 'Okno załad.',
   a6_dr_load_window_range: 'Okno załad. (od–do)',
@@ -872,13 +877,18 @@ const en: Dict = {
   a6_dr_fuel: 'Fuel surcharge',
   a6_dr_geo_event: 'Zone event',
   a6_dr_eta_howto:
-    'ETA — expected arrival at the construction site, calculated automatically from the latest GPS position (Warsaw time). In Sweden: remaining driving + daily rest + breaks, pro rata to the remaining route.'
-    + '|“in window” — ETA no later than the end of the delivery slot: the planned “to” time, or without it the end of the delivery day (24:00). An arrival earlier than planned is also “in window” — the label does not warn about early arrival.'
-    + '|Red delay label — ETA after the end of the delivery slot; the number shows the delay.'
-    + '|High / Medium / Low — forecast confidence from the ± minutes band under the ETA: High up to ±60 min, Medium up to ±240 min, Low above that or without a band.'
-    + '|± min band — segment uncertainty (driving ±20%, breaks ±50%, daily rest 0%) combined as root sum of squares.'
+    'ETA — expected arrival at the construction site, calculated automatically from the latest GPS position (Warsaw time). Driver working time is estimated from vehicle movement and stops, without tachograph data.'
+    + '|“in window” (green) — ETA between the start and end of the delivery window (“from”–“to”; without “from” — start of delivery day, without “to” — end of delivery day).'
+    + '|“before schedule” (amber) — ETA before the start of the delivery window (another day or before the “from” time); information only, no Decision Centre entry and no SMS.'
+    + '|“after schedule” (red) — ETA after the end of the delivery window; the same condition as the ETA-after-latest risk and the L-3 threshold — no second alarm.'
+    + '|“night arrival” — ETA between 22:00 and 06:00 Polish time; information only, no decision and no SMS.'
+    + '|High / Medium / Low — forecast confidence from the ± minutes band: High up to ±60 min, Medium up to ±240 min, Low above that or without a band.'
+    + '|ETA breakdown — driving, breaks, daily rest, ferry; the ± min band combines segment uncertainty as root sum of squares.'
     + '|“–” — before leaving the loading yard or without a fresh GPS position the ETA is not shown.',
   a6_dr_in_window: 'in window',
+  a6_dr_before_window: 'before schedule',
+  a6_dr_after_window: 'after schedule',
+  a6_dr_night_arrival: 'night arrival',
   a6_dr_load_place: 'Loading site',
   a6_dr_load_window: 'Loading window',
   a6_dr_load_window_range: 'Loading window (from–to)',
@@ -1523,13 +1533,18 @@ const sv: Dict = {
   a6_dr_fuel: 'Bränsletillägg',
   a6_dr_geo_event: 'Zonhändelse',
   a6_dr_eta_howto:
-    'ETA — beräknad ankomst till byggplatsen, räknas automatiskt från senaste GPS-position (Warszawa-tid). I Sverige: återstående körning + dygnsvila + raster, proportionellt mot återstående sträcka.'
-    + '|”inom fönstret” — ETA senast vid slutet av leveransfönstret: planerad ”till”-tid, annars slutet av leveransdagen (24:00). Ankomst före planerad tid räknas också som ”inom fönstret” — etiketten varnar inte för tidig ankomst.'
-    + '|Röd förseningsetikett — ETA efter slutet av leveransfönstret; siffran visar förseningen.'
-    + '|Hog / Medel / Lag — prognosens säkerhet enligt ± minuter-intervallet under ETA: Hog upp till ±60 min, Medel upp till ±240 min, Lag över det eller utan intervall.'
-    + '|± min-intervall — osäkerhet per delsträcka (körning ±20 %, raster ±50 %, dygnsvila 0 %) kombinerad som kvadratrotssumma.'
+    'ETA — beräknad ankomst till byggplatsen, räknas automatiskt från senaste GPS-position (Warszawa-tid). Förarens arbetstid uppskattas från fordonets rörelse och stopp, utan färdskrivardata.'
+    + '|”inom fönstret” (grön) — ETA mellan början och slutet av leveransfönstret (”från”–”till”; utan ”från” — början av leveransdagen, utan ”till” — slutet av leveransdagen).'
+    + '|”före tid” (bärnsten) — ETA före början av leveransfönstret (annan dag eller före ”från”-tid); endast information, ingen beslutspost och inget SMS.'
+    + '|”efter tid” (röd) — ETA efter slutet av leveransfönstret; samma villkor som risken ETA efter senast-tid och L-3-tröskeln — inget andra larm.'
+    + '|”nattankomst” — ETA mellan 22:00 och 06:00 polsk tid; endast information, inget beslut och inget SMS.'
+    + '|Hog / Medel / Lag — prognosens säkerhet enligt ± minuter-intervallet: Hog upp till ±60 min, Medel upp till ±240 min, Lag över det eller utan intervall.'
+    + '|ETA-uppdelning — körning, raster, dygnsvila, färja; ± min-intervallet kombinerar osäkerhet som kvadratrotssumma.'
     + '|”–” — före avfärd från lastplatsen eller utan färsk GPS-position visas ingen ETA.',
   a6_dr_in_window: 'inom fönstret',
+  a6_dr_before_window: 'före tid',
+  a6_dr_after_window: 'efter tid',
+  a6_dr_night_arrival: 'nattankomst',
   a6_dr_load_place: 'Lastningsplats',
   a6_dr_load_window: 'Lastningsfönster',
   a6_dr_load_window_range: 'Lastningsfönster (från–till)',

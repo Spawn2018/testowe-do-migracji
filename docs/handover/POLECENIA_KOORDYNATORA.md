@@ -1208,3 +1208,61 @@ POCZEKALNIA (koordynator, SG-03):
 Zakres: analiza + ewentualna mała poprawka „Jak działa" (braki definicji);
 propozycja early-arrival bez implementacji przed decyzją; bug C-SEP vs U-31 →
 fix + test + deploy.
+
+## Decyzje właściciela 2026-10-05 ~18:40 (czas warszawski) — SG-03 / ETA A, B, C
+
+SG-03 / ETA — DECYZJE WŁAŚCICIELA (05.10): A, B, C
+
+---------------------------------------------------------------
+A. PR #118 — opis „Jak działa" przy ETA
+---------------------------------------------------------------
+Scal i wdroż.
+
+---------------------------------------------------------------
+B. ZNACZNIKI PRZY ETA — trzy kolory, jedna zasada
+---------------------------------------------------------------
+- zielony „w oknie" — ETA między początkiem a końcem okna dostawy
+- bursztynowy „przed terminem" — ETA przed początkiem okna dostawy
+  (inny dzień albo przed godziną „od"); tylko informacja
+- czerwony „po terminie" — ETA po końcu okna dostawy (godzina „do",
+  a bez niej koniec dnia dostawy); spójny z istniejącym ryzykiem ETA
+  po terminie i progiem opóźnienia z L-3 — ten sam warunek, bez
+  drugiego alarmu
+- dodatkowo „przyjazd nocą", gdy ETA między 22:00 a 6:00 (czas polski);
+  tylko informacja
+- znaczniki „przed terminem" i „przyjazd nocą": bez decyzji w Centrum
+  decyzji i bez SMS
+- opis wszystkich znaczników w „Jak działa"
+
+---------------------------------------------------------------
+C. H-4 — ETA Z CZASEM PRACY KIEROWCY WEDŁUG PRZEPISÓW UE (D-85), TERAZ
+---------------------------------------------------------------
+Dostępu do danych z tachografu NIE BĘDZIE nigdy — ani z emtrack, ani
+z innego źródła. Czas jazdy i odpoczynku liczony wyłącznie z pozycji
+GPS naczepy. To rozwiązanie docelowe, nie przejściowe.
+
+Zasady:
+- obsada jednoosobowa (U-31); zapis „A|B" to przepięcie, nie załoga
+- z pozycji GPS: postój ≥ 9 h = odpoczynek dobowy skrócony, ≥ 11 h =
+  regularny; postój ≥ 45 min (albo 15 + 30 min) = przerwa; czas jazdy
+  liczony od końca ostatniego odpoczynku dobowego
+- reguły: przerwa 45 min po 4,5 h jazdy; maks. 9 h jazdy dziennie
+  (10 h dwa razy w tygodniu); odpoczynek dobowy 11 h (skrócony 9 h)
+  wstawiany w ETA tam, gdzie wypada; odpoczynek na promie (D-9)
+- brak historii GPS od ostatniego odpoczynku → założenie ostrożne,
+  oznaczone w „Jak działa"
+- przepięcie: nowy kierowca od momentu przepięcia z awizacji
+- SMS-KSH-1H liczony z tego ETA
+- kalibracja ucząca się (II-7b): po każdym rozładunku porównanie ETA
+  z rzeczywistym przyjazdem, dostrajanie prędkości, czasu przerw
+  i odpoczynku
+- „Jak działa": rozbicie ETA na jazdę, przerwy, odpoczynek, prom oraz
+  zdanie „czas pracy kierowcy szacowany z ruchu i postojów pojazdu,
+  bez danych z tachografu"
+
+Kolejność: A → B → C. Migracje przez lokalną bramę, obie domeny 200.
+SMS i e-maile SG-03 nadal tylko do właściciela.
+Zapisz decyzje w rejestrze decyzji (przy D-85: brak tachografu na
+stałe, GPS jako źródło czasu pracy), w PLAN.md
+i w POLECENIA_KOORDYNATORA.md.
+

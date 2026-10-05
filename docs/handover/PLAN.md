@@ -529,7 +529,7 @@ TESTY: dla każdego wzoru — zmiana wartości w Opcjach zmienia moment alarmu; 
 | zaraz po H-2 | H-3 | Przeszkody wzdłuż korytarza. | **DONE** + **przebudowa 05.10 ~12:11** — bez Map Attributes; Routing v8 truck+wymiary, alternatives, notices (przepis≠przeszkoda jak H-1). Pula tras D-78. `H3_CORRIDOR_OBSTACLES` false do D-83. Szacunek: `RAPORT_H3_SZACUNEK_05_10.md`. |
 | w B-MAPA, warstwa wyłączona | H-6 | Zakres zmieniony 05.10 przez B-MAPA. Podkład, etykiety, trasa planowana, ślad i trasa promu są w B-MAPA (Q-17 i Q-19). Z H-6 zostaje warstwa przeszkód HERE dla wymiarów: zbudować i zostawić wyłączoną do D-83. Bez dublowania podkładu. | NIEZACZĘTE — warstwa w B-MAPA, flaga wyłączona do D-83 |
 | po etapie 2 | H-7, H-8, H-10, H-12 | Mapa w e-mailu i PDF, profil trasy, pogoda i wiatr (ryzyko), zakazy czasowe. | NIEZACZĘTE |
-| etap 4 (po emtrack) | H-4, H-5, H-10 ETA | ETA z GPS przez HERE, kontrola po przejeździe, wydłużanie ETA przez wiatr. | NIEZACZĘTE — propozycja H-4 (limit prędkości i przerwy UE) w POSTEP 2026-10-04, bez budowy, do akceptacji właściciela |
+| **teraz (05.10 decyzja właściciela)** | H-4 | ETA z czasem pracy kierowcy wg przepisów UE (D-85). **Brak tachografu na stałe** — jazda/odpoczynek wyłącznie z GPS naczepy. U-31 obsada 1-os.; A\|B = przepięcie. Postoje GPS → przerwy/odpoczynki; reguły 4,5 h / 9–10 h / 11 h (9 h skrócony); odpoczynek na promie (D-9); brak historii → założenie ostrożne; SMS-KSH-1H z tego ETA; II-7b kalibracja po rozładunku. H-5 i H-10 ETA osobno. | **DONE 05.10** — migracja 0185; GPS bez tachografu; h4_schedule_remaining + compute_load_eta H-4; II-7b obserwacja po rozładunku |
 
 
 ## Po REJESTR — DOWODY, przed częścią B (04.10)

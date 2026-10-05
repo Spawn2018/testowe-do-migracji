@@ -266,6 +266,15 @@ export function calendarDayNoonMs(day: string, timeZone: CorridorZone): number |
 }
 
 /** Koniec dnia kalendarzowego w strefie (północ następnego dnia) → epoch ms. SCOPE §57: gdy brak okna dostawy — opóźnienie od końca dnia dostawy. */
+export function calendarDayStartMs(day: string, timeZone: CorridorZone): number | null {
+  const m = String(day).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const iso = wallLocalToIso(`${m[1]}-${m[2]}-${m[3]}T00:00:00`, timeZone);
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? t : null;
+}
+
 export function calendarDayEndMs(day: string, timeZone: CorridorZone): number | null {
   const m = String(day).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!m) return null;
@@ -292,4 +301,46 @@ export function delayMinutesVsPlan(
   if (!eta || plan == null) return null;
   if (eta.getTime() <= plan) return null;
   return Math.max(1, Math.round((eta.getTime() - plan) / 60_000));
+}
+
+/** ETA vs okno dostawy (decyzja właściciela 05.10 B): w oknie / przed / po.
+ *  „po” = ten sam warunek co delayMinutesVsPlan / L-3 (ETA po końcu okna). */
+export type EtaWindowKind = 'in_window' | 'before' | 'after';
+
+export function etaWindowKind(
+  etaIso: string | null | undefined,
+  plannedDeliverDay: string | null | undefined,
+  deliveryWindowFrom?: string | null,
+  deliveryWindowTo?: string | null,
+): EtaWindowKind | null {
+  if (!etaIso || (!plannedDeliverDay && !deliveryWindowFrom && !deliveryWindowTo)) return null;
+  const eta = parseInstant(etaIso);
+  if (!eta) return null;
+  const etaMs = eta.getTime();
+
+  const winTo = deliveryWindowTo ? parseInstant(deliveryWindowTo) : null;
+  const endMs = winTo
+    ? winTo.getTime()
+    : plannedDeliverDay
+      ? calendarDayEndMs(plannedDeliverDay, TZ_UNLOAD_SE)
+      : null;
+  if (endMs != null && etaMs > endMs) return 'after';
+
+  const winFrom = deliveryWindowFrom ? parseInstant(deliveryWindowFrom) : null;
+  const startMs = winFrom
+    ? winFrom.getTime()
+    : plannedDeliverDay
+      ? calendarDayStartMs(plannedDeliverDay, TZ_UNLOAD_SE)
+      : null;
+  if (startMs != null && etaMs < startMs) return 'before';
+
+  return 'in_window';
+}
+
+/** „przyjazd nocą”: ETA w godzinach 22:00–06:00 Europe/Warsaw (tylko info). */
+export function etaIsNightArrival(etaIso: string | null | undefined): boolean {
+  const eta = parseInstant(etaIso);
+  if (!eta) return false;
+  const h = partsInZone(eta, TZ_OPS).h;
+  return h >= 22 || h < 6;
 }
