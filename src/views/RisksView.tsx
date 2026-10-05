@@ -21,7 +21,7 @@ import type { CorridorConditionRow } from '../lib/corridorConditionsDb';
 import { knotsToMs } from '../lib/marineUnits';
 import { formatGustPl } from '../lib/pl/weatherPl';
 import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
-import { AUTO_RISK_CODES, autoRiskLabel, effDeparture, fmtLocal, nearestCrossingSailings, sailingStatusLabel, sailingStatusPill, type AutoRiskCode } from '../lib/sailings';
+import { AUTO_RISK_CODES, autoRiskLabel, effDeparture, fmtLocal, nearestCrossingSailings, upcomingOutboundSailings, sailingStatusLabel, sailingStatusPill, type AutoRiskCode } from '../lib/sailings';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
 
 const DecisionCentreLazy = import.meta.env.VITE_AUTH_MODE === 'supabase'
@@ -78,11 +78,10 @@ export function RisksView() {
   const sailRows = voyageSeaTableRows(undefined, undefined, locale);
   const focusDayLabel = formatVoyageDayLabel(sailing.depLocal);
   const ferryLoads = loadsOnVoyage(loads, sailing).slice(0, 8);
-  const dbSailings = useMemo(() => {
-    const now = getNowMs() - 3 * 3600_000;
-    return sailings.filter((x) => x.route === 'GDN-NYN' && Date.parse(effDeparture(x)) >= now)
-      .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b))).slice(0, 6);
-  }, [sailings]);
+  const dbSailings = useMemo(
+    () => upcomingOutboundSailings(sailings, getNowMs()),
+    [sailings],
+  );
 
   const crossingAlts = useMemo(
     () => nearestCrossingSailings(sailings, getNowMs()),
@@ -192,23 +191,30 @@ export function RisksView() {
           <div className="panel-bd">
             <div className="two">
               <div>
-                <h4 className="sec">{t(locale, 'risk_voyage_gdn_nyn')}</h4>
-                {dbSailings.length === 0 ? (
-                  <div className="note" style={{ border: 0 }}>{t(locale, 'i2_no_sailing')}</div>
-                ) : (
-                  <table style={{ width: '100%', fontSize: 13 }}>
-                    <tbody>
-                      {dbSailings.map((x) => (
-                        <tr key={x.id}>
-                          <td><span className="mono">{fmtLocal(effDeparture(x))}</span></td>
-                          <td>{x.vessel}</td>
-                          <td className="num">{loads.filter((l) => l.sailingId === x.id).length}</td>
-                          <td style={{ textAlign: 'right' }}><span className={`pill ${sailingStatusPill(x.status)}`}>{sailingStatusLabel(x.status, locale)}</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
+                {([
+                  ['polferries', dbSailings.polferries, 'risk_voyage_gdn_nyn'],
+                  ['stena', dbSailings.stena, 'risk_voyage_gdy_kaa'],
+                ] as const).map(([line, rows, titleKey]) => (
+                  <div key={line} data-ferry-outbound={line} style={{ marginBottom: 12 }}>
+                    <h4 className="sec">{t(locale, titleKey)}</h4>
+                    {rows.length === 0 ? (
+                      <div className="note" style={{ border: 0 }}>{t(locale, 'i2_no_sailing')}</div>
+                    ) : (
+                      <table style={{ width: '100%', fontSize: 13 }}>
+                        <tbody>
+                          {rows.map((x) => (
+                            <tr key={x.id}>
+                              <td><span className="mono">{fmtLocal(effDeparture(x))}</span></td>
+                              <td>{x.vessel}</td>
+                              <td className="num">{loads.filter((l) => l.sailingId === x.id).length}</td>
+                              <td style={{ textAlign: 'right' }}><span className={`pill ${sailingStatusPill(x.status)}`}>{sailingStatusLabel(x.status, locale)}</span></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                ))}
                 {marineRows.length > 0 ? marineRows.map((marine) => (
                   <div key={marine.corridor} data-source="marine" data-corridor={marine.corridor} style={{ marginTop: 8 }}>
                     <div className="sec">

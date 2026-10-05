@@ -229,6 +229,29 @@ export function nearestCrossingSailings(
   return { polferries: pick('POLFERRIES', 'GDN-NYN'), stena: pick('STENA', 'GDY-KAA') };
 }
 
+/**
+ * B-2a — nadchodzące wypłynięcia do Szwecji w panelu Ryzyka (oba armatorzy).
+ * Polferries: GDN–NYN. Stena: GDY–KAA. Lookback jak w dotychczasowym filtrze (3 h).
+ */
+export function upcomingOutboundSailings(
+  all: readonly Sailing[],
+  nowMs: number,
+  lookbackMs = 3 * 3600_000,
+  limit = 6,
+): { polferries: Sailing[]; stena: Sailing[] } {
+  const from = nowMs - lookbackMs;
+  const pick = (line: 'POLFERRIES' | 'STENA', route: Sailing['route']) =>
+    all
+      .filter((s) => {
+        if (crossingLine(s) !== line || s.route !== route) return false;
+        const dep = Date.parse(effDeparture(s));
+        return Number.isFinite(dep) && dep >= from;
+      })
+      .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b)))
+      .slice(0, limit);
+  return { polferries: pick('POLFERRIES', 'GDN-NYN'), stena: pick('STENA', 'GDY-KAA') };
+}
+
 export function dbFerryWidget(s: Sailing | null, nowMs: number): { cd: string; line: string } | null {
   if (!s) return null;
   const depMs = Date.parse(effDeparture(s));

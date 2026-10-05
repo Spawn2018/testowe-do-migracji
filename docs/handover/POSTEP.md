@@ -1846,3 +1846,14 @@ Przyczyna zamierzona (właściciel 07:57): B-MAPA (podkład HERE / zapas z etyki
 - Po odświeżeniu: mapa 90/90 i kokpit 90/90 identyczne; smoke visual 4/4 zielone.
 
 B-1: już na main (PR #4, 03.10). B-MAPA, PL-PLURAL, B-7a, B-7b: zrobione wcześniej 05.10. Czekają na właściciela: B-7c, filtry/statusy B-8, B-9, Q-9. B-3a czeka na wymiary D-83.
+
+### Wdrożenie wzorców
+
+PR #66 scalony (`9b77bcb`). Wdrożenie z commita Sebastiana `640a162` (to samo drzewo co main): `dpl_CjysPKxU2eLWYkCLm21ne1S4zFhW`. Obie domeny 200 (tower.log-mar.pl, watch-tower-makieta.vercel.app). Pusty commit Hobby: PR #68.
+
+
+## 2026-10-05 (czas warszawski) — B-2a wypłynięcia Steny w Ryzykach
+
+Teraz: B-2a · Przyczyna: panel Ryzyka filtrował wyłącznie `GDN-NYN` (Polferries). Stena (`GDY-KAA`) nie wchodziła do tabeli wypłynięć.
+
+Naprawa: `upcomingOutboundSailings` — obie linie do Szwecji z lookback 3 h; UI: sekcje Gdańsk→Nynäshamn i Gdynia→Karlskrona. Test `tests/b2a-stena-sailings.test.ts`. Bez migracji, bez SMS, bez wydatków.
