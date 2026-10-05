@@ -1810,3 +1810,19 @@ Paczka produkcyjna zawiera nową regułę (`ferryVisible` w `index-*.js`). Mapy 
 - Propozycje na piśmie: `PROPOZYCJE_B_05_10.md` (B-7c, B-8 filtry i statusy, zmiana ciągnika, B-9, Q-9). B-3a czeka na wymiary.
 
 Kontrole: H1 / H3 / H6 false, 94 transporty, bez SMS, bez usunięć, bez wydatków.
+
+## 2026-10-05 07:57 (czas warszawski) — wzorce map (B-MAPA / B-7a / B-7b), potem część B
+
+Teraz: wzorce map → B-2a · Zrobione w tym kroku: dopisek POLECENIA 07:57, odświeżenie 90× `mapa__*` + 2 smoke mapa · Następne: B-2a według PLAN.md (B-1 już na main od PR #4).
+
+### Wzorzec mapy
+
+Przyczyna zamierzona (właściciel 07:57): B-MAPA (podkład HERE / zapas z etykietami), B-7a (stały rozmiar mapy), B-7b (warstwy na telefonie w pasie nad mapą). Opis: `G4_WZORZEC.md` §B-MAPA/B-7a/B-7b.
+
+- `shots-baseline/mapa__*` — 90/90 odświeżone (FILTER=mapa, demo build, port 4189).
+- `shots-baseline/kokpit__*` — 78 ujęć odświeżonych (wbudowana mapa z B-MAPA); pozostałe bez różnicy.
+- `tests/__screenshots__/`: mapa 2 + kokpit 2 odświeżone.
+- Strefy / opcje / harmonogram / stany: bez odświeżenia (różnice stref w kolumnach tabeli, nie z mapy).
+- Po odświeżeniu: mapa 90/90 i kokpit 90/90 identyczne; smoke visual 4/4 zielone.
+
+B-1: już na main (PR #4, 03.10). B-MAPA, PL-PLURAL, B-7a, B-7b: zrobione wcześniej 05.10. Czekają na właściciela: B-7c, filtry/statusy B-8, B-9, Q-9. B-3a czeka na wymiary D-83.
