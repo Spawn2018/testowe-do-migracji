@@ -14,7 +14,7 @@ import {
   freightSecurityToken, freightWindow, parseStenaFreightTimetable,
 } from '../ferry/stenaFreight.ts';
 import { DIGITRAFFIC_ATTRIBUTION, interpretFix, parseDigitrafficLocations, aisDepartureDelayMin, type VesselFix } from '../ferry/digitraffic.ts';
-import { collectAisstreamFixes } from '../ferry/aisstream.ts';
+import { collectAisstreamFixes, type AisstreamStats } from '../ferry/aisstream.ts';
 import {
   STENA_FERRIES_URL, STENA_IMO, STENA_MMSI, isTrackedMmsi, parseStenaFerries, pickNewerFix,
 } from '../ferry/stenaAis.ts';
@@ -61,6 +61,8 @@ export interface SyncStore {
   saveVesselPosition(vesselId: string, fix: VesselFix): Promise<void>;
   /** Ostatni sygnał każdego statku — ryzyko „brak ponad 1 h”. */
   latestVesselObserved?(): Promise<{ vesselId: string; observedAt: string }[]>;
+  /** AIS-POLF: ostatnia pozycja AISSTREAM każdego statku od sinceIso (zapis: ferry-ais-listen co minutę). */
+  latestAisstreamFixes?(sinceIso: string): Promise<{ vesselId: string; fix: VesselFix }[]>;
   /** II-6: współczynnik spowolnienia SE (E4) dla silnika ETA II-7 */
   saveCorridorCondition?(row: {
     corridor: 'SE_E4' | 'SE_E22'; slowdownMult: number; reason: string | null; detail: unknown; observedAt: string;
@@ -96,8 +98,9 @@ export interface JobDeps {
   fetch: typeof fetch;
   env: Record<string, string | undefined>;
   now: () => Date;
-  /** Testy: zamiast żywego WebSocket aisstream. Brak = collectAisstreamFixes. */
-  collectAisstream?: () => Promise<VesselFix[]>;
+  /** Testy: zamiast żywego WebSocket aisstream. ferry-ais bez tego czyta pozycje AISSTREAM z bazy
+   *  (zapisuje je ferry-ais-listen); ferry-ais-listen bez tego słucha WebSocket. */
+  collectAisstream?: (listenMs?: number) => Promise<VesselFix[]>;
 }
 export interface JobResult {
   job: string; mode: 'LIVE' | 'DEMO'; ok: boolean; reason?: string;
@@ -409,18 +412,30 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
     }
   }
 
+  // AIS-POLF (05.10): WebSocket słucha osobna funkcja ferry-ais-listen (co minutę, ~50 s).
+  // Tu tylko jej ostatnie pozycje z bazy (≤ 10 min) — porównanie „nowsza wygrywa” i ryzyka mają pełny obraz.
   const allow = tracked.map((v) => v.mmsi).filter((m): m is number => isTrackedMmsi(m)).map(String);
-  const key = deps.env.AISSTREAM_API_KEY;
-  if (key && allow.length) {
+  if (deps.collectAisstream) {
+    if (deps.env.AISSTREAM_API_KEY && allow.length) {
+      try {
+        const fixes = await deps.collectAisstream();
+        for (const fix of fixes) {
+          if (!isTrackedMmsi(fix.mmsi)) continue;
+          const v = tracked.find((x) => x.mmsi === fix.mmsi);
+          if (v) pushFix(v.id, { ...fix, source: 'AISSTREAM' });
+        }
+      } catch {
+        warnings.push('aisstream niedostępne — zapas Digitraffic');
+      }
+    }
+  } else if (deps.store.latestAisstreamFixes) {
     try {
-      const fixes = deps.collectAisstream ? await deps.collectAisstream() : await collectAisstreamFixes(key, allow);
-      for (const fix of fixes) {
-        if (!isTrackedMmsi(fix.mmsi)) continue;
-        const v = tracked.find((x) => x.mmsi === fix.mmsi);
-        if (v) pushFix(v.id, { ...fix, source: 'AISSTREAM' });
+      const recent = await deps.store.latestAisstreamFixes(new Date(nowD.getTime() - 10 * 60_000).toISOString());
+      for (const r of recent) {
+        if (tracked.some((v) => v.id === r.vesselId)) pushFix(r.vesselId, { ...r.fix, source: 'AISSTREAM' });
       }
     } catch {
-      warnings.push('aisstream niedostępne — zapas Digitraffic');
+      warnings.push('aisstream: odczyt z bazy nieudany — zapas Digitraffic');
     }
   }
 
@@ -511,7 +526,8 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
   for (const v of tracked) {
     if (!v.mmsi) continue;
     const saved = chosen.get(v.id);
-    const obsAt = saved?.timestampUtc ?? latestById.get(v.id) ?? null;
+    const cands = [saved?.timestampUtc, latestById.get(v.id)].filter((x): x is string => !!x && Number.isFinite(Date.parse(x)));
+    const obsAt = cands.length ? cands.reduce((a, b) => (Date.parse(a) >= Date.parse(b) ? a : b)) : null;
     const ageMin = obsAt ? (nowD.getTime() - Date.parse(obsAt)) / 60000 : Infinity;
     if (ageMin > 60) {
       const ok = await deps.store.raiseRisk({
@@ -527,6 +543,51 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
     }
   }
   return { job: 'ferry-ais', mode: 'LIVE', ok: true, risks, warnings, observations };
+}
+
+/** ferry-ais-listen — AIS-POLF (05.10). Nasłuch aisstream co minutę przez ~50 s (limit ścienny funkcji Edge
+ *  150 s; statek przy nabrzeżu nadaje co 3 min, więc 8 s w ferry-ais prawie nigdy go nie łapało).
+ *  Zapis każdej odebranej pozycji pięciu promów ze źródłem AISSTREAM. Bez filtra Q-18, obie strony. */
+export const AIS_LISTEN_DEFAULT_MS = 50_000;
+export function aisListenMs(raw: string | undefined): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return AIS_LISTEN_DEFAULT_MS;
+  return Math.min(55_000, Math.max(5_000, Math.round(n)));
+}
+
+export async function runFerryAisListen(deps: JobDeps): Promise<JobResult> {
+  const vessels = await deps.store.vessels();
+  const tracked = vessels.filter((v) => isTrackedMmsi(v.mmsi));
+  const allow = tracked.map((v) => String(v.mmsi));
+  const key = deps.env.AISSTREAM_API_KEY;
+  if (!key) return { job: 'ferry-ais-listen', mode: 'DEMO', ok: true, reason: 'brak AISSTREAM_API_KEY — nic nie pobrano' };
+  if (!allow.length) return { job: 'ferry-ais-listen', mode: 'LIVE', ok: true, reason: 'brak śledzonych MMSI' };
+  const listenMs = aisListenMs(deps.env.AIS_LISTEN_MS);
+  const stats: AisstreamStats = { opened: false, frames: 0, firstFrameMs: null, error: null };
+  const observations: Record<string, string> = {};
+  const warnings: string[] = [];
+  let fixes: VesselFix[] = [];
+  try {
+    fixes = deps.collectAisstream
+      ? await deps.collectAisstream(listenMs)
+      : await collectAisstreamFixes(key, allow, listenMs, { stopWhenAllSeen: true, stats });
+  } catch {
+    warnings.push(stats.error ?? 'aisstream niedostępne');
+  }
+  let inserted = 0;
+  for (const fix of fixes) {
+    const v = tracked.find((x) => x.mmsi === fix.mmsi);
+    if (!v) continue;
+    await deps.store.saveVesselPosition(v.id, { ...fix, source: 'AISSTREAM' });
+    inserted++;
+    observations[v.name] = fix.timestampUtc;
+  }
+  observations.ramki = String(stats.frames);
+  observations.nasluch_ms = String(listenMs);
+  if (stats.firstFrameMs != null) observations.pierwsza_ramka_ms = String(stats.firstFrameMs);
+  return {
+    job: 'ferry-ais-listen', mode: 'LIVE', ok: warnings.length === 0, inserted, warnings, observations,
+  };
 }
 
 /**
@@ -895,6 +956,7 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
 
 export const JOBS = {
   'ferry-schedule': runFerrySchedule, 'ferry-status': runFerryStatus, 'ferry-ais': runFerryAis,
+  'ferry-ais-listen': runFerryAisListen,
   'ferry-weather': runFerryWeather,
   'road-se': runRoadSe, 'road-pl': runRoadPl, 'traffic-flow': runTrafficFlow,
 } as const;
@@ -902,7 +964,7 @@ export type JobName = keyof typeof JOBS;
 
 /** Minimalny odstęp między przebiegami [min] — ferry-status: co 15 min, nie częściej (ZRODLA_DANYCH §1.1). */
 export const MIN_INTERVAL_MIN: Record<JobName, number> = {
-  'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-weather': 60,
+  'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-ais-listen': 0, 'ferry-weather': 60,
   'road-se': 15, 'road-pl': 10, 'traffic-flow': 15,
 };
 

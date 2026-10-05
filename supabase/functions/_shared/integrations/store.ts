@@ -74,6 +74,26 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       for (const r of rows) if (!best.has(r.vessel_id)) best.set(r.vessel_id, r.observed_at);
       return [...best.entries()].map(([vesselId, observedAt]) => ({ vesselId, observedAt }));
     },
+    async latestAisstreamFixes(sinceIso: string) {
+      const rows = must(await sb.from('vessel_positions')
+        .select('vessel_id,lat,lon,sog_kn,cog,nav_stat,observed_at,vessels(mmsi)')
+        .eq('source', 'AISSTREAM').gte('observed_at', sinceIso)
+        .order('observed_at', { ascending: false }).limit(100), 'vessel_positions aisstream') as unknown as {
+          vessel_id: string; lat: number; lon: number; sog_kn: number | null; cog: number | null; nav_stat: number | null;
+          observed_at: string; vessels: { mmsi: number | null } | null;
+        }[];
+      const seen = new Set<string>();
+      const out: { vesselId: string; fix: VesselFix }[] = [];
+      for (const r of rows) {
+        if (seen.has(r.vessel_id) || r.vessels?.mmsi == null) continue;
+        seen.add(r.vessel_id);
+        out.push({ vesselId: r.vessel_id, fix: {
+          mmsi: r.vessels.mmsi, lat: r.lat, lon: r.lon, sogKn: r.sog_kn, cog: r.cog, navStat: r.nav_stat,
+          timestampUtc: new Date(r.observed_at).toISOString(), source: 'AISSTREAM',
+        } });
+      }
+      return out;
+    },
     async latestPositions(maxAgeMin: number) {
       return must(await sb.rpc('latest_vehicle_positions', { p_max_age_min: maxAgeMin }), 'latest_vehicle_positions') as VehiclePos[];
     },

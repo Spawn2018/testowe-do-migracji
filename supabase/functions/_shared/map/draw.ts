@@ -235,31 +235,47 @@ export interface TrackFix {
   lat: number;
   lng: number;
   ts: string;
+  /** Kurs nad dnem (COG, stopnie). Tylko zapas, gdy w historii nie ma żadnej strefy portu. */
+  cog?: number | null;
   /** Pole destination z AIS. Tylko potwierdzenie, nie przełącza kierunku. */
   destination?: string | null;
 }
 
+export type FerryPhase = 'unknown' | 'pl-port' | 'to-se' | 'se-port' | 'to-pl';
+
 /**
- * Widoczny wyłącznie od wyjścia ze strefy portu w Polsce do wejścia w strefę portu w Szwecji.
- * Kierunek bierze się z wyjścia ze strefy. Postój i rejs do Polski są niewidoczne.
+ * Q-18 (reguła poprawiona 05.10.2026 07:16, zastępuje regułę z 04.10).
+ * WIDOCZNY: w strefie portu w Polsce (Gdańsk, Gdynia), w rejsie z Polski do Szwecji
+ * i w strefie portu w Szwecji (Nynäshamn, Karlskrona).
+ * ZNIKA: po wyjściu ze strefy portu w Szwecji (rejs do Polski); wraca po wejściu w strefę portu w Polsce.
+ * Kierunek z ostatniej strefy, którą prom opuścił. Gdy w historii (48 h) nie ma żadnej strefy:
+ * zapas z kursu ostatniej pozycji (północna połowa róży = do Szwecji), bez kursu — niewidoczny.
  */
-export function sailingToSweden(history: readonly TrackFix[]): boolean {
+export function ferryPhase(history: readonly TrackFix[]): FerryPhase {
   const sorted = [...history].sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
-  if (sorted.length === 0) return false;
-  let phase: 'unknown' | 'to-se' | 'to-pl' | 'in-port' = 'unknown';
-  let prev = zoneAt(sorted[0].lat, sorted[0].lng);
-  if (prev) phase = 'in-port';
-  for (let i = 1; i < sorted.length; i++) {
-    const z = zoneAt(sorted[i].lat, sorted[i].lng);
-    if (prev && prev.country === 'PL' && !z) phase = 'to-se';
-    else if (prev && prev.country === 'SE' && !z) phase = 'to-pl';
-    else if (z) phase = 'in-port';
-    prev = z;
+  let phase: FerryPhase = 'unknown';
+  for (const fix of sorted) {
+    const z = zoneAt(fix.lat, fix.lng);
+    if (z) phase = z.country === 'PL' ? 'pl-port' : 'se-port';
+    else if (phase === 'pl-port') phase = 'to-se';
+    else if (phase === 'se-port') phase = 'to-pl';
   }
-  return phase === 'to-se';
+  if (phase === 'unknown' && sorted.length) {
+    const cog = sorted[sorted.length - 1].cog;
+    if (cog != null && Number.isFinite(cog) && cog >= 0 && cog < 360) {
+      phase = cog >= 270 || cog < 90 ? 'to-se' : 'to-pl';
+    }
+  }
+  return phase;
 }
 
-export function markersSailingToSweden<T extends TrackFix>(rows: readonly T[]): T[] {
+export function ferryVisible(history: readonly TrackFix[]): boolean {
+  const p = ferryPhase(history);
+  return p === 'pl-port' || p === 'to-se' || p === 'se-port';
+}
+
+/** Ostatnia pozycja każdego promu widocznego według Q-18. Wejście (pełna historia) zostaje nietknięte. */
+export function visibleFerryMarkers<T extends TrackFix>(rows: readonly T[]): T[] {
   const byId = new Map<string, T[]>();
   for (const row of rows) {
     const list = byId.get(row.id);
@@ -268,7 +284,7 @@ export function markersSailingToSweden<T extends TrackFix>(rows: readonly T[]): 
   }
   const out: T[] = [];
   for (const list of byId.values()) {
-    if (!sailingToSweden(list)) continue;
+    if (!ferryVisible(list)) continue;
     const latest = [...list].sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts)).at(-1);
     if (latest) out.push(latest);
   }

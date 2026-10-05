@@ -6,7 +6,7 @@
 import { getSupabase } from '../auth/client';
 import type { AisPosition } from './ais';
 import { FERRY_VESSELS } from './ferry';
-import { markersSailingToSweden, type TrackFix } from './map/draw';
+import { visibleFerryMarkers, type TrackFix } from './map/draw';
 
 export interface VesselPositionRow {
   vessel_id: string;
@@ -57,7 +57,7 @@ export async function fetchVesselPositions(): Promise<AisPosition[]> {
   return latestPerVessel((res.data ?? []) as unknown as VesselPositionRow[]);
 }
 
-/** Odświeżanie co 2 min (zadanie ferry-ais zapisuje co 10 min). */
+/** Odświeżanie co 2 min. Q-18 (05.10 07:16): widoczny w porcie PL, w rejsie PL→SE i w porcie SE; znika w rejsie SE→PL. */
 export async function fetchMapFerryMarkers(): Promise<AisPosition[]> {
   const sb = await getSupabase();
   const res = await sb.rpc('ferry_track_sample');
@@ -77,8 +77,9 @@ export async function fetchMapFerryMarkers(): Promise<AisPosition[]> {
     lat: r.lat,
     lng: r.lon,
     ts: r.observed_at,
+    cog: r.cog,
   }));
-  return markersSailingToSweden(fixes).map((v) => {
+  return visibleFerryMarkers(fixes).map((v) => {
     const r = rows.find((x) => x.vessel_id === v.id && x.observed_at === v.ts);
     const mmsi = r?.mmsi != null ? String(r.mmsi) : '';
     const known = FERRY_VESSELS.find((vessel) => vessel.mmsi === mmsi);
