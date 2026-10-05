@@ -7,3 +7,5 @@
 | 2026-10-05 14:31 | executor (obserwacja przy 1.1) | Napis „N pojazdów w ruchu” liczy `progress`, nie GPS — może mylić przy 1.1 | pytanie: czy licznik ma pokazywać tylko pojazdy z prawdziwym GPS? |
 | 2026-10-05 14:46 | executor | Kopia usuniętych kont O3/typo — dograć do R2 po logowaniu Cloudflare | po liście / R2 |
 | 2026-10-05 14:49 | executor | TEST DB bez `insurance_policies.approval_status` (0125) — nałożyć 0125+ na TEST przed pełną bramą 0182 | brama TEST |
+| 2026-10-05 15:22 | executor | 8.3: godziny w tabeli tylko gdy jest okno planu/awizacji — wiele wierszy ma samą datę; czy uzupełniać domyślną godziną? | 8.3 |
+| 2026-10-05 15:22 | executor | 8.9: brak rozwijanego „Jak to działa” przy filtrach harmonogramu (są title/aria częściowo) | 8.9 |

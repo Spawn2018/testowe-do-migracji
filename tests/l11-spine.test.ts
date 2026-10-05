@@ -6,8 +6,8 @@ import { countLoadsByStage } from '../src/lib/corridorKpis';
 import { t } from '../src/i18n/messages';
 import { STAGE_ORDER } from '../src/lib/status';
 import { useTowerStore } from '../src/store/useTowerStore';
-describe('L-11 górny pasek', () => {
-  it('kafelek ma polską nazwę i liczbę transportów, bez numeru etapu 1–9', () => {
+describe('L-11 / B-9 górny pasek', () => {
+  it('kafelek ma polską nazwę; bez cyfr w górnym prostokącie (B-9.2)', () => {
     const state = useTowerStore.getState();
     const counts = countLoadsByStage(state.loads);
     const html = renderToStaticMarkup(createElement(CorridorSpine));
@@ -22,11 +22,9 @@ describe('L-11 górny pasek', () => {
       expect(button).toContain(label);
       const english = t('en', `stage_${stage}`);
       if (english !== label) expect(button).not.toContain(english);
-      const shown = [...button.matchAll(/>(\d+)</g)].map((m) => m[1]);
-      expect(shown).toEqual([String(counts[stage])]);
-      if (counts[stage] !== index + 1) {
-        expect(button).not.toContain(`>${index + 1}<`);
-      }
+      // B-9.2 — górny prostokąt bez liczby transportów
+      const nBlock = button.match(/class="n[^"]*"[^>]*>([^<]*)</);
+      expect(nBlock?.[1] ?? '').toBe('');
     });
 
     const total = STAGE_ORDER.reduce((sum, stage) => sum + counts[stage], 0);

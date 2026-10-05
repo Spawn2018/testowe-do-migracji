@@ -63,7 +63,8 @@ export function CorridorSpine() {
               }}
               className={`stage${domain ? ` ${domain}` : ''}${pressed ? ' active' : ''}`}
             >
-              <div className={`n${n === 0 ? ' zero' : ''}`}>{pressed ? '×' : n}</div>
+              {/* B-9.2: bez cyfr w górnym prostokącie; aktywny filtr = × do zdjęcia */}
+              <div className={`n${pressed ? '' : ' zero'}`}>{pressed ? '×' : ''}</div>
               <div className="l">{t(locale, `stage_${stage}`)}{pressed ? ' ×' : ''}</div>
               <div className="bar">
                 <i style={{ width: n ? `${fill}%` : 0 }} />
