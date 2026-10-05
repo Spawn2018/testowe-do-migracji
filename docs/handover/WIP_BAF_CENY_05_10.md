@@ -1,31 +1,17 @@
-# WIP — BAF i ceny (polecenie 05.10 ~21:48 + uzup. ~21:51)
+# WIP — BAF i ceny (polecenie 05.10 ~21:48 + uzup. ~21:51 + SG-03/TELM ~22:31) — **ZAMKNIĘTE 05.10 ~23:08**
 
-Gałąź `fix/baf-ceny-05-10`. Czas Europe/Warsaw.
+Czas Europe/Warsaw.
 
 | Element | Stan |
 |---|---|
-| Migracja **0187** `0187_baf_goeasy_ceny.sql` | w repo (commit `68c8db9`); **NIE nałożona na PROD**. Próba na PROD w wycofanej transakcji **OK** 22:23 (tydz. 40 = 1,14, tydz. 41 = 1,13; 86/94 wycenione) |
-| Brama lokalna | przebieg 2 (`c654b7f`): wszystko zielone poza dec-auto 60/64 (SEFS L-1b) → poprawione w `68c8db9` (dec-auto 64/64, baf 28/28, i31 9/9, money 135/135 osobno). **Pełna brama na `68c8db9` uruchomiona 22:23** → log `/tmp/gate_baf3.log` (ok. 8 min). session 26/1 = KNOWN-DEBT (niesprawdzane w bramie) |
-| Testy `tests/db/baf.sh` | **28/28** lokalnie (w bramie jako `check baf 28`) |
-| `i31.sh` | dostosowany do średniej z publikacji (9/9) |
-| Edge `fuel-prices` | kod: GoEasy Diesel firmowa + `published_on` (Orlen effective date / OKQ8 „Gäller fr.om”); **do wdrożenia po 0187** |
-| UI | Ceny: pigułka „wstępny”; baner zezwolenia: „Ładunek ma … m” gdy brak wymiarów zestawu |
-| Dokumenty | rejestr decyzji D-2/D-34, PLAN.md (BAF-CENY-05-10), POLECENIA |
-| PR | **#129** (otwarty, scalić po zielonej bramie) |
-| Raport 94 | `RAPORT_BAF_CENY_94_05_10.md` — wersja z próby w wycofanej transakcji; po apply-prod wygenerować ponownie |
+| PR **#129** (`fix/baf-ceny-05-10`, ostatni commit `6e0d584`) | **scalony** → `main` `47594e1` |
+| Brama lokalna | pełna, zielona na `6e0d584` (baf **36/36**, dec-auto 64/64, h4 19/19, i2 535/535 …; session/l13 = KNOWN-DEBT, niesprawdzane). Uwaga: przebieg `/tmp/gate_baf6.log` był fałszywie czerwony — równolegle działała stara brama z przerwanego wątku (skasowała szablon `tower_boot`); powtórka `/tmp/gate_baf7.log` zielona |
+| Migracja **0187** | **na PROD** (dry-run → apply → verify): tydz. 40 = **1,14**, tydz. 41 = **1,13**, published_on 0 pustych, 86/94 wycenione |
+| Migracja **0188** `0188_telm_faza_bez_zaladunku.sql` | **na PROD**: `telm_infer_phase_from_position` nie ustawia `actual_load_at`; faza w `telm_attach_phase` („faza z pozycji przy podłączeniu”); korekta `telm_fix_attach_actual_load()` |
+| Audyt ścieżki TELM (PROD) | tylko **SG-03** 15062/2026/OSL/GDA/P: `actual_load_at` 05.10 13:21 → pusty; data paliwa 01.10 → tydz. 40 → **1,14 OSTATECZNY**; koszt 6 900 + 966 = **7 866,00**, przychód **8 259,30** EUR |
+| Edge `fuel-prices` | wdrożona v4 (GoEasy Diesel firmowa + published_on), bez tokenu → 403 |
+| Vercel | `dpl_ijSQmsw6W16cDt9LBRVn2sHxn7HT` READY z `main` `47594e1`; tower.log-mar.pl 200, watch-tower-makieta.vercel.app 200 |
+| Raport 94 | `RAPORT_BAF_CENY_94_05_10.md` z PROD po 0187+0188; sekcja „Transporty bez ceny: 8/94” |
 
-## Następne kroki (jeśli przerwane)
-1. Sprawdzić `/tmp/gate_baf3.log` (ostatnia linia `[db] baf 28/28 OK`, brak linii `[db] … oczekiwano`); jeśli przerwana — `bash tests/db/gate.sh` ponownie. Zielona → scalić **PR #129** do `main`.
-2. `node scripts/m0187-migrate.mjs dry-run-prod` → `apply-prod` → `verify-prod`.
-3. `node scripts/m0187-migrate.mjs report-prod > /tmp/r.txt && python3 scripts/baf-report-94.py /tmp/r.txt docs/handover/RAPORT_BAF_CENY_94_05_10.md`.
-4. Edge `fuel-prices` (MCP deploy_edge_function, verify_jwt=false, 4 pliki).
-5. Vercel `--prod` z `git archive main` (kopia bez `.git`); `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` → 200.
-
-## Uwagi
-- 8 transportów KR bez daty załadunku: stawka KR zależy od liczby aut w konwoju (data załadunku) → wycena wstrzymana (NO_CONVOY), nie zero.
-- Tygodnie przyszłe: mnożnik WSTEPNY = ostatnia opublikowana cena; cron `tower-load-price-refresh` co 6 h; po zamknięciu tygodnia OSTATECZNY = migawka.
-- Odczyty Q8 Trucks 28.09–05.10 nie są usuwane (append-only): korekta `corrects_id` na GoEasy z powodem.
-
-## Do decyzji koordynatora / właściciela
-- **SG-03 (15062/2026/OSL/GDA/P):** `plan_load_date` = 01.10 (tydz. 40 → **1,14**, jak we wzorcu), ale `actual_load_at` = **05.10 13:21** (moment podłączenia emtrack w trasie, nie rzeczywisty załadunek). Reguła D-34/0155 bierze rzeczywisty załadunek przed planem → dziś SG-03 dostaje tydz. 41 = **1,13**. Nie zmieniałem danych (lista STOP). Do wyboru: poprawić `actual_load_at` SG-03 na rzeczywisty załadunek (01.10) albo potwierdzić 1,13.
-- 8 × KR bez daty załadunku → brak stawki (konwój 1/2/3 auta nieznany).
+## 8 bez ceny
+KR-08 … KR-15 (bez nr zlecenia): `NO_CONVOY` — brak daty załadunku w pliku KSH → nie da się ustalić liczby aut w konwoju (stawka KR 1/2/3 auta). Wycena wstrzymana, nie zero; odblokuje się po wpisaniu daty (trigger przelicza).
