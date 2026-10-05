@@ -1,5 +1,7 @@
 # VERIFY-13 — raport weryfikacji (bez zmian w kodzie w trakcie VERIFY)
 
+> **Zastąpiony** przez `RAPORT_VERIFY_13_06_10.md` (06.10): 13.11 i 13.13 tu oznaczone FAIL — w 06.10 PASS (13.11 fałszywy alarm, 13.13 naprawione w Q-9).
+
 Data: **2026-10-05 ~13:15** · Europe/Warsaw  
 Źródło: `PLAN.md` VERIFY-13; build `npm run build` na `main`/`c2bb800` (+ kolejka).  
 Metoda: dist produkcyjny, stylelint, skrypty bundle, wskazanie testów. **Bez** zrzutów z TEST UI (13.8–13.9 oznaczone do ręcznego / Playwright).

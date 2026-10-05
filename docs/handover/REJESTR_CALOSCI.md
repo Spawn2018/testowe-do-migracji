@@ -1362,7 +1362,7 @@ Drugie szukanie dowodów, 04.10 wieczór. „zrobione” tylko przy istniejącym
 | 10.7 | zrobione przez I-2l | src/lib/detectLag.ts |
 | 10.9 | odłożone po 1.0 | ślad węglowy; rekomendacja 27.09, bez sprzeciwu |
 | 11.5 | zostaje | D-27 (kontrast). III-12 zrobione: docs/handover/III12_LISTA_ETAP_III.md |
-| 11.6 | do zrobienia | brak dowodu I-8 i LOAD-1 (hash albo liczby w POSTEP, bez pliku testu) |
+| 11.6 | zrobione | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): LOAD-1 `scripts/load1-stress.mjs` + liczby w POSTEP; I-8 `642d68f` |
 | 11.8 | zrobione przez I-4 i DOC-ROLE | docs/handover/instrukcje/HHL.md |
 | 12.1 | historia | inwentarz wdrożenia 23.09, nie zadanie |
 | 12.10 | historia | inwentarz wdrożenia 23.09, nie zadanie |
@@ -1378,22 +1378,22 @@ Drugie szukanie dowodów, 04.10 wieczór. „zrobione” tylko przy istniejącym
 | 12.7 | historia | inwentarz wdrożenia 23.09, nie zadanie |
 | 12.8 | historia | inwentarz wdrożenia 23.09, nie zadanie |
 | 12.9 | historia | inwentarz wdrożenia 23.09, nie zadanie |
-| 13.1 | do zrobienia | brak dowodu D2 (nie ma wiersza z plikiem) |
-| 13.10 | do zrobienia | brak dowodu D12 i I-2h (DONE albo hash, bez pliku) |
-| 13.11 | do zrobienia | brak dowodu D11 (w rejestrze tylko DONE, bez pliku) |
-| 13.12 | do zrobienia | brak dowodu D6 i SEC-1 (w rejestrze tylko DONE, bez pliku) |
-| 13.13 | do zrobienia | brak dowodu M4 (w rejestrze tylko DONE, bez pliku) |
+| 13.1 | zrobione | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): 0× `--tw-` w dist i w CSS produkcji |
+| 13.10 | zrobione | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): 0 trafień w dist, w paczce produkcji i w widokach 3 ról |
+| 13.11 | zrobione | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): 0 ciągów debug w widokach 3 ról (Playwright) |
+| 13.12 | zrobione | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): `permissions-phone` 5/5; PROD: brak SELECT kolumn driver_* dla authenticated, SITE_VIEWER 0 wierszy |
+| 13.13 | zrobione | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): `<html lang="pl">` bez data-theme; system light→light, dark→dark |
 | 13.14 | zrobione przez M1 i I-31 | tests/money.test.ts; supabase/migrations/0101_i31_sefs_week.sql |
-| 13.15 | do zrobienia | brak dowodu D13 (w rejestrze tylko DONE, bez pliku) |
-| 13.16 | do zrobienia | brak dowodu D15 (podział paczki; w rejestrze tylko DONE, bez pliku) |
-| 13.2 | do zrobienia | brak dowodu D2 (nie ma wiersza z plikiem) |
-| 13.3 | do zrobienia | brak dowodu D9 (nie ma wiersza z plikiem) |
+| 13.15 | zrobione | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): `npm run lint:css` exit 0 |
+| 13.16 | zrobione | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): pierwsze wczytanie 369,3 kB gz (budżet 400) |
+| 13.2 | zrobione | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): brak systemowego stacku; Barlow + zapas Helvetica Neue/Arial |
+| 13.3 | zrobione | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): kod aplikacji 0 cieni, 0 promieni > 2 px (poza kołami 50%), 0 `!important`; reszta z CSS Leaflet |
 | 13.4 | zastąpione | zastąpione funkcją Edge (II-6, H-2); supabase/functions/road-se/index.ts |
 | 13.5 | zastąpione | demo usunięte (I-0, B-1) |
 | 13.6 | zastąpione | demo usunięte (I-0, B-1) |
 | 13.7 | zrobione przez D10 | src/lib/money/engine.ts (formatMoney) |
-| 13.8 | do zrobienia | brak dowodu F2.6 i D17 (w rejestrze tylko DONE, bez pliku) |
-| 13.9 | do zrobienia | brak dowodu F2.6 i D17 (w rejestrze tylko DONE, bez pliku) |
+| 13.8 | zrobione | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): godziny z okien (08/07/06:00), identyczne w Warsaw/UTC/New York; zrzuty `zrzuty_verify13/` |
+| 13.9 | zrobione | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): `30.09.2026 08:00` — format z rokiem wg B-8.3 (05.10) |
 | 14.1 | historia | ustalenia etapu 0; repozytorium, CI i klucze w etapach 0.5–3 i II-6 |
 | 14.10 | historia | ustalenia etapu 0; repozytorium, CI i klucze w etapach 0.5–3 i II-6 |
 | 14.11 | historia | ustalenia etapu 0; repozytorium, CI i klucze w etapach 0.5–3 i II-6 |
@@ -1412,15 +1412,15 @@ Drugie szukanie dowodów, 04.10 wieczór. „zrobione” tylko przy istniejącym
 | 15.5 | historia | zrobione 23.09 (tag baseline-2026-09-23) |
 | 15.6 | historia | zrobione 23.09 (tag baseline-2026-09-23) |
 | 15.7 | historia | zrobione 23.09 (tag baseline-2026-09-23) |
-| 16.1 | do zrobienia | brak dowodu D-24 (drugie przejście: do zrobienia, bez pliku) |
+| 16.1 | zrobione | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): enum `user_role` bez Stegra; 0 użytkowników/organizacji Stegra na PROD |
 | 16.2 | zastąpione | motyw rozstrzyga Q-9 (tryb jasny, część B) |
 | 16.3 | zastąpione | zastąpione przez I-18 i I-2a |
-| 16.4 | do zrobienia | brak dowodu usunięcia cen z DOM; tests/xlsx-export-roles.test.ts dotyczy eksportu XLSX, nie DOM |
+| 16.4 | zrobione | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): DOM harmonogramu — KSH bez cost/margin, SCX bez rev/margin, 0 blur |
 | 16.5 | historia | ustalenie etapu, nie zadanie |
 | 16.6 | historia | ustalenie etapu, nie zadanie |
 | 16.7 | historia | ustalenie etapu, nie zadanie |
 | 16.8 | historia | ustalenie etapu, nie zadanie |
-| 17.1 | do zrobienia | brak dowodu D23 i D23-S (D23 nie jest wierszem; D23-S tylko DONE) |
+| 17.1 | zrobione | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): `tests/schedule-import.test.ts` (D23-S) zielony |
 | 17.10 | zrobione przez P1-FONT | public/fonts/barlow-400-latin.woff2 |
 | 17.11 | zrobione przez II-7 | supabase/migrations/0122_ii7_eta_osm_corridor.sql |
 | 17.12 | zrobione przez H-2 | supabase/functions/road-se/index.ts |
@@ -1429,12 +1429,12 @@ Drugie szukanie dowodów, 04.10 wieczór. „zrobione” tylko przy istniejącym
 | 17.15 | historia | ustalenie etapu, nie zadanie |
 | 17.16 | historia | ustalenie etapu, nie zadanie |
 | 17.2 | zastąpione | pamięć przeglądarki zastąpiona bazą; aplikacja kierowcy ukryta (D-38, D-79) |
-| 17.3 | do zrobienia | brak dowodu P0.2 (hash w POSTEP, bez pliku kanonu) |
-| 17.4 | do zrobienia | brak dowodu O1 (w rejestrze tylko DONE, bez pliku) |
+| 17.3 | zrobione (uwaga) | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): `design/` = tylko `claude-v2.0`; kopie poza → B-VERIFY-17.3 |
+| 17.4 | do zrobienia | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): O1 `1742b03` (26.09); dziś smoke czerwony po `8322d02` → B-SMOKE-LANG |
 | 17.5 | zastąpione | pamięć przeglądarki zastąpiona bazą; aplikacja kierowcy ukryta (D-38, D-79) |
 | 17.6 | zastąpione | pozycje tylko z telematyki (D-36); link kierowcy: DRV-CLOSE |
 | 17.7 | zostaje | CLEAN-MAPLIBRE (P3). 04.10: brak maplibre w package.json. Pozycja w planie, bez wykonania. |
-| 17.8 | do zrobienia | brak dowodu 0.3 (opis bramy, bez pliku wyniku) |
+| 17.8 | do zrobienia | VERIFY-13 06.10 (`RAPORT_VERIFY_13_06_10.md`): `gate:visual` istnieje (0,1 %); 05.10 FAIL 720/840, smoke czerwony → B-SMOKE-LANG |
 | 17.9 | zrobione | tests/visual-states.spec.ts |
 | 2.7 | zrobione przez I-7 | supabase/migrations/0059_driver_retention.sql; dokumenty: D-3 otwarte |
 | 2.8 | zastąpione | zastąpione przez D-5 |
