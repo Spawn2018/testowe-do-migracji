@@ -18,4 +18,7 @@ describe('status e-maila tylko z odpowiedzi Resend', () => {
   it('pusta odpowiedź nie jest wysłaniem', () => {
     expect(emailOutcome(200, {})).toBe('ERROR');
   });
+  it('name restricted_api_key przy HTTP 200 bez id jest błędem (odpowiedź GET)', () => {
+    expect(emailOutcome(200, { name: 'restricted_api_key', message: 'This API key is restricted to only send emails' })).toBe('ERROR');
+  });
 });

@@ -24,7 +24,9 @@ function text(v: unknown): string {
   return typeof v === 'string' ? v.trim().toLowerCase() : '';
 }
 
-/** SENT tylko gdy odpowiedź Resend niesie status wysłania. Brak statusu przy id = PENDING, nie SENT. */
+/** SENT tylko gdy odpowiedź Resend niesie status wysłania. Brak statusu przy id = PENDING, nie SENT.
+ *  Uwaga: odpowiedź GET z name=restricted_api_key (klucz tylko do wysyłki) obsługuje send-notifications
+ *  osobno — nie oznacza ERROR przy przyjętym POST. */
 export function emailOutcome(httpStatus: number, body: ResendBody): MailOutcome {
   const event = text(body.last_event) || text(body.status);
   if (FAILED.has(event) || text(body.name)) return 'ERROR';

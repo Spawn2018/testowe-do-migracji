@@ -491,11 +491,13 @@ $PSQL -c "update sailings set status='ODWOLANY' where id='$SA'" >/dev/null
 chk "rejs odwołany: SAILING_CANCELLED dla transportu z linkiem" "$(Q "select count(*) from sms_outbox where kind='SAILING_CANCELLED' and load_id='$SL'")" 1
 $PSQL -c "update sms_devices set paused=true" >/dev/null
 chk "pauza urządzenia: pobranie zwraca 0" "$(AN "select count(*) from sms_pull('$DEVTOK', 5)")" 0
-$PSQL -c "update sms_devices set paused=false, last_seen_at = now() - interval '20 minutes'; update sms_outbox set created_at = now() - interval '11 minutes' where status='QUEUED'" >/dev/null
-chk "strażnik: cisza > 15 min → ryzyko JOB_FAILURE HIGH (sms-gateway)" "$(Q "select (sms_watchdog()->>'cisza')") $(Q "select count(*) from risk_signals where dedup_key like 'sms-gateway:%' and resolved_at is null and severity='HIGH'")" "true 1"
+$PSQL -c "update sms_devices set paused=false, last_seen_at = now() - interval '35 minutes'; update sms_heartbeats set at = now() - interval '35 minutes'; update sms_outbox set created_at = now() - interval '11 minutes' where status='QUEUED'" >/dev/null
+chk "strażnik: cisza > 30 min → ryzyko JOB_FAILURE HIGH (sms-gateway)" "$(Q "select (sms_watchdog()->>'cisza')") $(Q "select count(*) from risk_signals where dedup_key like 'sms-gateway:%' and resolved_at is null and severity='HIGH'")" "true 1"
 chk "strażnik: SMS > 10 min → e-mail zastępczy SMS_FALLBACK (bez duplikatu przy drugim przebiegu)" "$(Q "select count(*) filter (where fallback_at is not null) from sms_outbox where status='QUEUED'")/$(Q "select sms_watchdog()->>'fallback'")" "3/0"
 chk "e-mail zastępczy: do HHL (zdarzenia automatyczne), bez cen, ostatnie 3 cyfry numeru" "$(Q "select count(*) > 0 and bool_and(payload->>'to_tail' = '567') from notifications where template='SMS_FALLBACK'")" t
 chk "sygnał wraca: ryzyko zamknięte" "$($PSQL -c "update sms_devices set last_seen_at = now()" >/dev/null; Q "select sms_watchdog()->>'cisza'")/$(Q "select count(*) from risk_signals where dedup_key like 'sms-gateway:%' and resolved_at is null")" "false/0"
+$PSQL -c "update sms_devices set last_seen_at = now() - interval '35 minutes'; update sms_heartbeats set at = now() - interval '35 minutes'" >/dev/null
+chk "cooldown 60 min: ponowna cisza zaraz po zamknięciu → bez nowego ryzyka" "$(Q "select (sms_watchdog()->>'cisza')||'/'||(sms_watchdog()->>'nowe_ryzyka')||'/'||(select count(*) from risk_signals where dedup_key like 'sms-gateway:%' and resolved_at is null)")" "true/0/0"
 $PSQL -c "update sms_outbox set expires_at = now() - interval '1 minute' where kind='SAILING_CHANGE'; update sms_outbox set sent_at = now() - interval '25 hours' where kind='DRIVER_LINK'" >/dev/null
 chk "strażnik: przeterminowany → EXPIRED; body wysłanego SMS bez linku" "$(Q "select (r->>'przeterminowane')||'/'||(r->>'wyczyszczone_linki') from (select sms_watchdog() r) x")/$(Q "select body from sms_outbox where kind='DRIVER_LINK'")" "1/1/[link usunięty]"
 val "HHL: kolejka widoczna" $HHL "select count(*) > 0 from sms_outbox" t

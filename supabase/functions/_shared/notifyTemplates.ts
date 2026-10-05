@@ -195,14 +195,14 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
       return { subject, body, severity: 'HIGH', view: null };
     }
     case 'SMS_GATEWAY_SILENT': {
-      // I-3 (0067): telefon-bramka bez sygnału > 15 min
+      // I-3 (0067): telefon-bramka bez sygnału > 30 min
       const since = String(p.since ?? '—');
       const q = String(p.queued ?? 0);
       const subject = locale === 'en' ? 'SMS gateway silent' : locale === 'sv' ? 'SMS-gatewayen är tyst' : 'Bramka SMS milczy';
       const body = locale === 'en'
-        ? `No signal from the gateway phone since ${since} (threshold 15 min). SMS in queue: ${q}. Check power, Wi-Fi and the Watch Tower SMS app.`
-        : locale === 'sv' ? `Ingen signal från gateway-telefonen sedan ${since} (gräns 15 min). SMS i kö: ${q}. Kontrollera ström, Wi-Fi och appen Watch Tower SMS.`
-        : `Brak sygnału telefonu-bramki od ${since} (próg 15 min). SMS w kolejce: ${q}. Sprawdź zasilanie, Wi-Fi i aplikację Watch Tower SMS.`;
+        ? `No signal from the gateway phone since ${since} (threshold 30 min). SMS in queue: ${q}. Check power, Wi-Fi and the Watch Tower SMS app.`
+        : locale === 'sv' ? `Ingen signal från gateway-telefonen sedan ${since} (gräns 30 min). SMS i kö: ${q}. Kontrollera ström, Wi-Fi och appen Watch Tower SMS.`
+        : `Brak sygnału telefonu-bramki od ${since} (próg 30 min). SMS w kolejce: ${q}. Sprawdź zasilanie, Wi-Fi i aplikację Watch Tower SMS.`;
       return { subject, body, severity: 'HIGH', view: 'risk' };
     }
     case 'SMS_UNDELIVERED': {
