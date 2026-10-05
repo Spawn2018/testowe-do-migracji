@@ -910,8 +910,8 @@ export function ScheduleView() {
                         case 'driver':
                           return (
                             <td key={id} data-col={id}>
-                              {l.resources.driverName ? (
-                                <span data-content>{l.resources.driverName}</span>
+                              {l.resources.driverName || l.resources.driverDeliveryName ? (
+                                <span data-content>{formatTowerPair(l.resources.driverName, l.resources.driverDeliveryName, !!l.resources.trailerSwap)}</span>
                               ) : (
                                 <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_sch_none')}</span>
                               )}
@@ -1016,7 +1016,7 @@ export function ScheduleView() {
                 <div className="meta">
                   {formatTableDay(l.plannedLoadDate, refYear)} → {formatTableDay(l.plannedDeliverDate, refYear)}
                 </div>
-                {l.resources.driverName ? <div className="meta" data-content>{l.resources.driverName}</div> : null}
+                {(l.resources.driverName || l.resources.driverDeliveryName) ? <div className="meta" data-content>{formatTowerPair(l.resources.driverName, l.resources.driverDeliveryName, !!l.resources.trailerSwap)}</div> : null}
               </button>
             );
           })}

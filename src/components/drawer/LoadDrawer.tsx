@@ -15,6 +15,8 @@ import { hasAwizacja } from '../../lib/awizacjaState';
 import { editableOrderSide } from '../../lib/orderNumbers';
 import { DocPreview } from '../ui/DocPreview';
 import { DocFileRow } from '../ui/DocFileRow';
+import { PlanDatesPanel } from './PlanDatesPanel';
+import { formatTowerPair } from '../../lib/cSep';
 import { AwizacjaModal } from './AwizacjaModal';
 import { RouteCheckPanel } from './RouteCheckPanel';
 import { CorridorObstaclesPanel } from './CorridorObstaclesPanel';
@@ -251,6 +253,7 @@ export function LoadDrawer() {
               <div data-load-map style={{ position: 'relative', height: 220, marginBottom: 12 }}>
                 <CorridorMap loads={[load]} embedded />
               </div>
+              {load.planDates ? <PlanDatesPanel load={load} /> : null}
               <dl className="kv">
                 <dt>{t(locale, 'a6_dr_type')}</dt>
                 <dd>
@@ -358,8 +361,8 @@ export function LoadDrawer() {
                 </dd>
                 <dt>{t(locale, 'a6_dr_driver')}</dt>
                 <dd>
-                  {load.resources.driverName ? (
-                    <span data-content>{load.resources.driverName}</span>
+                  {load.resources.driverName || load.resources.driverDeliveryName ? (
+                    <span data-content>{formatTowerPair(load.resources.driverName, load.resources.driverDeliveryName, !!load.resources.trailerSwap)}</span>
                   ) : (
                     <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_dr_not_filled')}</span>
                   )}

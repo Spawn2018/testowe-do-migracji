@@ -12,6 +12,8 @@ import { effArrival, effDeparture, fmtLocal, hasDeparted, sailingStatusLabel, sa
 import { TZ_OPS, isoToDatetimeLocalValue, wallLocalToIso } from '../lib/time';
 import type { Sailing } from '../types';
 import { POLFERRIES_ATTRIBUTION } from '../lib/ferry/polferries';
+import { getAuthProfile } from '../auth/profile';
+import { PROD_BUILD } from '../lib/prodFacade';
 
 const VESSELS = ['Wawel', 'Nova Star', 'Stena Spirit', 'Stena Estelle', 'Stena Ebba'] as const;
 
@@ -24,20 +26,31 @@ export function SailingsPanel() {
   const delaySailing = useTowerStore((s) => s.delaySailing);
   const cancelSailing = useTowerStore((s) => s.cancelSailing);
   const pushToast = useTowerStore((s) => s.pushToast);
-  const isHhl = role === 'HHL';
   const now = getNowIso();
+  // B-REJSY: ręczna edycja tylko administrator (HHL_ADMIN); w demo — rola HHL.
+  const canEditSailings = PROD_BUILD
+    ? getAuthProfile()?.role === 'HHL_ADMIN'
+    : role === 'HHL';
 
   const [showPast, setShowPast] = useState(false);
+  const [onlyFuture, setOnlyFuture] = useState(true);
   const [adding, setAdding] = useState(false);
   const [delayId, setDelayId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   const rows = useMemo(() => {
-    const dayAgo = Date.parse(now) - 864e5;
+    const nowMs = Date.parse(now);
+    const dayAgo = nowMs - 864e5;
     return [...sailings]
-      .filter((s) => showPast || Date.parse(effArrival(s)) >= dayAgo)
+      .filter((s) => {
+        const dep = Date.parse(effDeparture(s));
+        const arr = Date.parse(effArrival(s));
+        if (onlyFuture) return dep >= nowMs;
+        if (showPast) return true;
+        return arr >= dayAgo;
+      })
       .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b)));
-  }, [sailings, showPast, now]);
+  }, [sailings, showPast, onlyFuture, now]);
   const countFor = (s: Sailing) => loads.filter((l) => l.sailingId === s.id).length;
 
   return (
@@ -45,17 +58,20 @@ export function SailingsPanel() {
       <div className="filters">
         <span>{t(locale, 'sail_source_note')}</span>
         <div className="spacer" />
-        <button type="button" className="chipbtn" aria-pressed={showPast} data-sail-past onClick={() => setShowPast((v) => !v)}>
+        <button type="button" className="chipbtn" aria-pressed={onlyFuture} data-sail-future onClick={() => { setOnlyFuture((v) => !v); if (!onlyFuture) setShowPast(false); }}>
+          {t(locale, 'sail_filter_future')}
+        </button>
+        <button type="button" className="chipbtn" aria-pressed={showPast} data-sail-past disabled={onlyFuture} onClick={() => setShowPast((v) => !v)}>
           {t(locale, 'sail_show_past')}
         </button>
-        {isHhl ? (
+        {canEditSailings ? (
           <button type="button" className="btn" data-sail-new onClick={() => { setAdding((v) => !v); setErr(null); }}>
             {t(locale, 'sail_add')}
           </button>
         ) : null}
       </div>
 
-      {isHhl && adding ? (
+      {canEditSailings && adding ? (
         <form
           data-sail-form
           style={{ padding: '10px 13px' }}
@@ -109,7 +125,7 @@ export function SailingsPanel() {
         </form>
       ) : null}
 
-      {isHhl && delayId ? (() => {
+      {canEditSailings && delayId ? (() => {
         const s = sailings.find((x) => x.id === delayId);
         if (!s) return null;
         return (
@@ -151,7 +167,7 @@ export function SailingsPanel() {
               <th>{t(locale, 'sail_col_status')}</th>
               <th>{t(locale, 'sail_col_source')}</th>
               <th className="num">{t(locale, 'sail_col_loads')}</th>
-              {isHhl ? <th /> : null}
+              {canEditSailings ? <th /> : null}
             </tr>
           </thead>
           <tbody>
@@ -179,7 +195,7 @@ export function SailingsPanel() {
                   </td>
                   <td data-sail-source={s.source} style={{ color: 'var(--ink-3)' }}>{t(locale, `sail_src_${s.source}`)}</td>
                   <td className="num">{countFor(s)}</td>
-                  {isHhl ? (
+                  {canEditSailings ? (
                     <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
                       {s.status !== 'ODWOLANY' && !gone ? (
                         <>
@@ -204,7 +220,7 @@ export function SailingsPanel() {
       </div>
 
       <div className="note">
-        {t(locale, isHhl ? 'sail_note_hhl' : 'sail_note_ro')}
+        {t(locale, canEditSailings ? 'sail_note_hhl' : 'sail_note_ro')}
         {sailings.some((s) => s.source === 'POLFERRIES') ? <span data-attribution="polferries"> · {POLFERRIES_ATTRIBUTION}</span> : null}
       </div>
     </div>

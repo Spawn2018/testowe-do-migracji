@@ -81,6 +81,13 @@ export interface LoadResources {
   driverPhoneCountry?: 'PL' | 'SE';
   tractorPlate: string | null;
   trailerPlate: string | null;
+  /** C-SEP — kierowca dostarczający (drugi). */
+  driverDeliveryName?: string | null;
+  driverDeliveryPhone?: string | null;
+  driverDeliveryPhoneCountry?: 'PL' | 'SE';
+  tractorDeliveryPlate?: string | null;
+  /** C-SEP — Przepięcie naczepy → separator „|” w Watch Tower. */
+  trailerSwap?: boolean;
   escort: boolean;
   escortPlate: string | null;
   setLengthM: number | null;
