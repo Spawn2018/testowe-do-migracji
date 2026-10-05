@@ -137,14 +137,29 @@ Polecenie kazało przepisać D-66–D-76 dosłownie z `ZLECENIE_POPRAWKI_02_10.m
 | AIS-SRC (Polferries) | Wawel i Nova Star z aisstream | Wawel i Nova Star nadal na Digitraffic. aisstream widział oba w teście klucza 04.10 22:54–23:04 UTC (Nova Star 54.40469 N 18.67377 E Gdańsk, Wawel 58.90557 N 17.95721 E Nynäshamn). Diagnoza i naprawa; obie jednostki z pozycją AISSTREAM nie starszą niż 5 min. Gdy funkcja Edge nie utrzyma WebSocket: krótki nasłuch co minutę albo inne rozwiązanie bez wydatków. | ✅ decyzja 05.10.2026 07:16 / ⏳ budowa |
 | B-7a | rozmiar mapy | Słowa właściciela z części B wystarczą, bez czekania: mapa ma stały rozmiar, niezależny od wysokości tabeli obok; po otwarciu widoku MAPA widoczna w całości. | ✅ decyzja 05.10.2026 07:16 / ⏳ budowa |
 | B-7b | checkboxy warstw | Słowa właściciela z części B wystarczą, bez czekania: checkboxy warstw zawsze widoczne; na telefonie nie nachodzą na inne elementy. | ✅ decyzja 05.10.2026 07:16 / ⏳ budowa |
-| B-7c, B-8 (filtry i statusy), B-9, Q-9 | — | Czekają na właściciela. Tylko propozycja na piśmie. B-3a czeka na wymiary (D-83). | ⏳ propozycja |
+| B-7c, B-8 (filtry i statusy), B-9, Q-9 | wybór właściciela 05.10 ~10:37 | B-7c: A (brak GPS, ryzyko). B-8: zakres dat + bez kierowcy/ciągnika + „Zmień ciągnik”. B-9: C (filtr z „×” + kafelek Prom). Q-9: B (motyw systemu + zmiana w ustawieniach). B-3a nadal na wymiarach (D-83). | ✅ decyzja 05.10.2026 ~10:37 / ⏳ budowa |
 
 ## Decyzje właściciela 05.10.2026 (ostateczne) — B-5 kreator, ceny paliw, korekta SEFS
 
 | ID | Sprawa | Decyzja | Status |
 |---|---|---|---|
 | B-5 (odwrócenie) | przycisk i kreator automatyzacji | Przycisku nie ma — ma być. Zastępuje zapis z ~08:35 („przycisku ma nie być”). Przycisk „Nowa automatyzacja” w widoku Automatyzacje, tylko HHL_ADMIN. Kreator w oknie: nazwa, wyzwalacz (zdarzenie / status / ryzyko / termin), warunki, akcje (powiadomienie, decyzja, e-mail, SMS według zasad stref), włącz/wyłącz, edycja i usuwanie. Reguła w tym samym silniku co 0094, bez drugiego mechanizmu; zero podwójnych alarmów (ONE-MECH). Historia zmian reguły: kto, kiedy, co. Test: reguła z kreatora wykonuje się na zdarzeniu testowym; wyłączona — nie; duplikat istniejącego alarmu → ostrzeżenie przed zapisem. | ✅ decyzja 05.10.2026 / ⏳ budowa |
-| PALIWO-AUTO (krok A) | próbka cen OKQ8 i Orlen | Najpierw próbka do akceptacji, bez zapisu do bazy produkcyjnej. Dla OKQ8 i Orlen osobno: dokładny adres strony/narzędzia, nazwa produktu jak na stronie, wartość, jednostka, waluta, netto/brutto, data i godzina obowiązywania wg źródła, odczyty 7 dni (jeśli są), obok zrzut lub cytat strony. Konkretny zakaz pobierania w regulaminie → zacytować i nie pobierać z tej strony. Właściciel potwierdza rodzaj paliwa i miejsce pobierania na piśmie. | ✅ decyzja 05.10.2026 / ⏳ próbka |
-| PALIWO-AUTO (krok B) | automat cen paliw (U-14, D-34, I-31, SEFS) | Dopiero po pisemnej akceptacji kroku A. Codziennie z zaakceptowanych miejsc; User-Agent z nazwą Watch Tower; źródło i czas przy każdym odczycie. Bez udziału człowieka: średnia PL i SE z poprzedniego tygodnia → indeksy → mnożnik („niższy”, I-31) → opłata wg tygodnia daty załadunku (D-34, 0155), Europe/Warsaw (33.3). Formularz ręczny HHL (I-2f) tylko awaryjnie: brak odczytu w danym dniu → ryzyko w Stanie systemu i e-mail do administratora. Test: pełny tydzień → mnożnik zgodny z ręcznym (28.09–04.10 = 1,14); brak jednego dnia → ryzyko, średnia z dostępnych dni. Cel: odczyty na produkcji przed R-3. | ⏳ czeka na akceptację kroku A |
+| PALIWO-AUTO (krok A) | próbka cen OKQ8 i Orlen | Orlen: ONEkodiesel / Olej Napędowy Ekodiesel, PLN/m³ netto, hurtowe ceny paliw; klauzula regulaminu nie blokuje (decyzja właściciela). OKQ8: sekcja „Q8 Trucks”, produkt „Diesel”, wartość wprost ze strony bez przeliczania VAT (U-14); wzorzec 05.10 = 22,90. | ✅ zaakceptowane 05.10.2026 ~10:37 (OKQ8 z poprawką) |
+| PALIWO-AUTO (krok B) | automat cen paliw (U-14, D-34, I-31, SEFS) | Budować po potwierdzeniu odczytu Q8 Trucks/Diesel = 22,90 (05.10). Codziennie; User-Agent Watch Tower; źródło i czas. Średnia PL i SE z poprzedniego tygodnia → indeksy → mnożnik „niższy” (I-31) → opłata wg tygodnia daty załadunku (D-34, 0155), Europe/Warsaw (33.3). Korekta do zamknięcia tygodnia, potem migawka (0166). Formularz I-2f tylko awaryjnie. Cel: odczyty na produkcji przed R-3. | ⏳ budowa |
 | SEFS-KOREKTA | korekta ceny od dostawcy | Korekta wchodzi do średniej SEFS, dopóki tydzień nie jest zamknięty. Po zamknięciu tygodnia wartość zamrożona (migawka, 32.3) — późniejsza korekta nie zmienia policzonych transportów ani faktur; zapis korekty w historii. Odpowiada na pytanie z B-6h („czy średnia ma brać korektę zamiast oryginału”). | ✅ decyzja 05.10.2026 / **ZROBIONE** 0166 |
 | Kolejność 05.10 | — | B-5 i krok 2A najpierw; potem część B według PLAN.md (B-8 wznowione po nich); krok 2B po akceptacji próbki, przed R-3. Migracje przez lokalną bramę, obie domeny 200 po każdym wdrożeniu. | ✅ 05.10.2026 |
+
+## Odpowiedzi właściciela 05.10.2026 ~10:37 — paliwa B, SMS, porządki, wybory B
+
+| ID | Sprawa | Decyzja | Status |
+|---|---|---|---|
+| PALIWO-AUTO-A | akceptacja próbki | Orlen OK (ONEkodiesel netto). OKQ8: Q8 Trucks / Diesel = 22,90 wprost, bez VAT. | ✅ 05.10 ~10:37 |
+| PALIWO-AUTO-B | automat | Budować po potwierdzeniu 22,90; mechanizm SEFS bez zmian; korekta 0166. | ⏳ |
+| SMS-SILENT-FIX | fałszywe SMS_GATEWAY_SILENT | Diagnoza + naprawa; jeden alarm bez powtórek; Resend 200≠ERROR; zero prawdziwych SMS. | ⏳ |
+| MIG-0159-REG | ewidencja 0159 | Dopisać do schema_migrations bez ponownego wykonania; PROD = repo. | ⏳ |
+| BARLOW+WZ | smoke + wzorce Automatyzacji | Napraw barlow.css; odśwież automatyzacje__* (przyczyna: B-5). | ⏳ |
+| B-7c | filtry mapy | Wariant A | ✅ / ⏳ |
+| B-8 | filtry/ciągnik | Zakres dat + bez kierowcy/ciągnika + Zmień ciągnik | ✅ / ⏳ |
+| B-9 | pasek filtrów | Wariant C | ✅ / ⏳ |
+| Q-9 | motyw | Wariant B | ✅ / ⏳ |
+| Kolejność ~10:37 | — | (2)+(3) najpierw, potem (1) paliwa B, potem (4) część B. | ✅ |
