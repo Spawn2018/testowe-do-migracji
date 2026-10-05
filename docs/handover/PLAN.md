@@ -383,7 +383,7 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | B-1 | Mapy: pojazdy tylko z prawdziwych pozycji GPS (brak pozycji = brak znacznika). Warstwy stref, portów, korytarza, promów i sytuacji drogowych zostają. Na produkcji brak danych przykładowych. | **ZROBIONE 03.10** — PR #4 (`70d1c95` / `925ef37`), na main |
 | B-2a | Ryzyka: brak wypłynięć Steny | **ZROBIONE 05.10** — panel Ryzyka (produkcja): nadchodzące GDY–KAA obok GDN–NYN; `upcomingOutboundSailings` |
 | B-2b | Ryzyka: brak widoczności warunków drogowych w SE. Sytuacje drogowe Trafikverket (wypadki, zamknięcia, roboty) wchodzą w H-2, zaraz po L-12, nie w H-4: nowe źródło API, panel „Warunki drogowe SE”, ryzyka ROAD_SE z prawdziwych danych. | **DONE** — Situation schemat 1.6, namespace `road.trafficinfo` (1.5 bez przestrzeni nazw nie istnieje). Pusto = „Brak danych”. |
-| B-2c | Centrum decyzji: jak działa i dlaczego puste — opisać logikę, nie zgadywać | NIEZACZĘTE |
+| B-2c | Centrum decyzji: jak działa i dlaczego puste — opisać logikę, nie zgadywać | **ZROBIONE 05.10** — opis w `LOGIKA_SYSTEMU.md` §1 zaktualizowany (automaty L-1…; 45 otwartych na produkcji); bez zmian UI |
 | B-3a | Dokumenty: zezwolenie per firma obok polisy; auto-podpięcie do trasy wg wymiarów; polisa auto do każdej trasy | NIEZACZĘTE |
 | B-4a | Finanse: przychód — pilotaż i dodatki mają zniknąć | NIEZACZĘTE |
 | B-4b | Załącznik: zostaje samo CMR (bez POD) | NIEZACZĘTE |

@@ -1,6 +1,6 @@
 # Logika systemu — zanim cokolwiek zbudujemy
 
-Dokument dla właściciela. Opisuje tylko to, co jest już w kodzie na gałęzi `fix/przejecie-testy-02-10`. Jeśli czegoś nie ma, jest napisane wprost. Ścieżki plików są wskazówką, skąd wzięta jest teza. Nic z tej listy nie zostało zbudowane przy pisaniu tego pliku.
+Dokument dla właściciela. Opisuje to, co jest w kodzie na `main` (aktualizacja B-2c 05.10.2026). Jeśli czegoś nie ma, jest napisane wprost. Ścieżki plików wskazują źródło tezy.
 
 ---
 
@@ -28,11 +28,30 @@ Pokazuje pozycje ze statusem: nowa, przypisana albo odłożona. Najwyżej 50, na
 
 Kliknięcie pozycji otwiera okno: tytuł, przyciski wyboru, pole komentarza, „Odłóż 2 h”, „Zamknij”, a gdy jest transport — „Otwórz transport”. Po wyborze zapis idzie do bazy. Część wyborów tylko dopisuje ślad. Część naprawdę coś robi (niżej). Odłożenie na dwie godziny nie chowa pozycji: nadal jest „otwarta”, tylko z późniejszym terminem.
 
-### Dlaczego może być puste
+### Skąd biorą się pozycje (stan po L-1 / L-1b / L-3, 04–05.10)
 
-Katalog szesnastu typów jest w bazie. Nie ma natomiast niczego, co samo otwiera nową pozycję. Funkcja otwarcia istnieje (`supabase/migrations/0102_dec2_decision_center.sql` i późniejsze poprawki), ale żaden ekran, żaden automat i żaden skrypt jej nie wywołuje. Jedyny zegar w tej okolicy tylko eskaluje pozycje, które już są otwarte i mają przekroczony termin. Skoro nikt ich nie otwiera, eskalować też nie ma czego. Pusty panel jest więc zgodny z kodem, a nie awarią odświeżania.
+Funkcja `decision_open` (ręczne otwarcie) nadal jest w bazie, ale **codzienną pracę robią automaty** przez `decision_open_from_event` (migracje 0138, 0140, 0143, 0145, 0147):
 
-KSH tej listy w ogóle nie widzi: reguła odczytu dla klienta jest wyłączona. Przewoźnik widzi typy przypisane przewoźnikowi i HHL. HHL widzi wszystkie.
+- brak awizacji w terminie,
+- brak dokumentu / zezwolenia przed „gotowy”,
+- ETA po „najpóźniej do”,
+- SEFS poza tabelą / awaria źródła,
+- postój dłuższy niż czas wolny (DWELL),
+- inne typy z L-1b podpięte pod zdarzenia.
+
+Jedno zdarzenie = jedna decyzja (bez duplikatu przy ponownym przebiegu). Eskalacja nadal dotyczy tylko pozycji już otwartych z przekroczonym terminem.
+
+Odczyt produkcji 05.10.2026 (projekt `nglnnrmzmhusvxslousq`): **45** otwartych (`NEW` / `ASSIGNED` / `SNOOZED`), m.in. `NO_AWIZACJA`, `DOC_MISSING`, `SEFS_OUT_OF_TABLE`. Panel nie jest więc „zawsze pusty” w bazie.
+
+### Kiedy panel wygląda na pusty
+
+1. **Podgląd demonstracyjny** — komponent Centrum decyzji w ogóle nie jest montowany (`VITE_AUTH_MODE !== 'supabase'`).
+2. **Rola KSH** — reguła odczytu dla klienta jest wyłączona; listy nie widać.
+3. **Przewoźnik** — widzi tylko typy z `decider_role` dla przewoźnika (i wspólne z HHL według RLS); reszta znika.
+4. **Filtr statusu w UI** — lista bierze wyłącznie `NEW`, `ASSIGNED`, `SNOOZED` (max 50, termin rosnąco). Rozstrzygnięte i wygasłe nie wchodzą.
+5. **Błąd odczytu** — komunikat z Supabase pojawia się nad listą; pusta lista z „Brak otwartych decyzji” oznacza naprawdę 0 wierszy po RLS, nie awarię odświeżania.
+
+HHL widzi wszystkie otwarte, do których ma dostęp RLS.
 
 ### Szesnaście typów i kto ma decydować
 
@@ -392,7 +411,7 @@ Włączenie i wyłączenie istniejącej strefy jest też przełącznikiem w opcj
 
 Można uznać za fakt, bez nowej budowy:
 
-- puste Centrum decyzji jest skutkiem braku automatycznego otwierania, nie błędem listy;
+- Centrum decyzji jest puste tylko w demo, przy roli bez RLS albo gdy naprawdę brak otwartych statusów; od L-1 automaty otwierają decyzje z zdarzeń;
 - „Wymaga decyzji” na kokpicie to kolejka ryzyk, nie to centrum;
 - opłacenie faktury kosztowej i przychodowej jest już przyciskiem u HHL;
 - górny pasek filtruje tylko mapę; cyfra to liczba transportów w etapie;
