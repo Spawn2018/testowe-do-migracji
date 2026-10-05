@@ -15,7 +15,7 @@ const chrome = ['/usr/bin/google-chrome-stable', '/usr/bin/google-chrome', '/usr
 const BASE = (process.env.BASE_URL || 'http://127.0.0.1:4187/').replace(/\/?$/, '/')
 const NOW = process.env.FROZEN_NOW || '2026-09-23T14:32:00Z'
 const REPORT = process.env.REPORT || ''
-const LANGS = (process.env.LANGS || 'pl,en,sv').split(',')
+const LANGS = (process.env.LANGS || 'pl').split(',')
 const VIEWS = {
   HHL: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'wf', 'geo', 'options'],
   KSH: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'settings'],
@@ -93,7 +93,8 @@ async function boot(role, lang) {
   await page.reload({ waitUntil: 'networkidle0', timeout: 120000 })
   await page.waitForSelector('#roleSeg', { timeout: 30000 })
   await page.evaluate((id) => document.querySelector(`#roleSeg button[data-role="${id}"]`)?.click(), role); await sleep(400)
-  await page.evaluate((l) => document.querySelector(`#langSeg button[data-lang="${l}"]`)?.click(), lang); await sleep(300)
+  /* B-SMOKE-LANG: brak #langSeg — PL-only; skip click */
+  if (lang !== "pl") throw new Error("B-SMOKE-LANG: tylko pl"); await sleep(50)
 }
 
 for (const lang of LANGS) {

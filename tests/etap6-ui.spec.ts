@@ -16,7 +16,7 @@ async function fresh(page: Page) {
   })
   await page.reload({ waitUntil: 'networkidle', timeout: 120_000 })
   await page.waitForSelector('#roleSeg', { timeout: 30_000 })
-  await page.evaluate(() => (document.querySelector('#langSeg button[data-lang="pl"]') as HTMLButtonElement | null)?.click())
+  /* B-SMOKE-LANG: bez #langSeg — PL domyślny */
 }
 
 test.describe('O4 — oznaczenie demo zostaje', () => {

@@ -44,3 +44,6 @@ Zasada: **bez zmian w kodzie**. Każdy punkt, który nie przechodzi, trafia do c
   - **B-VERIFY-17.3 (P3)** — usunąć kopie poza `design/` (`docs/watch-tower/claude-v2.0/`, `claude-makieta.html` w `public/` i `docs/watch-tower/`) albo opisać je jako archiwum.
 - **Monitor:** 13.16 — zapas 30,7 kB do budżetu 400 kB gz.
 - **Zmian w kodzie: 0.** PR tylko z dokumentami.
+
+## Dopisek 06.10 ~02:00 — po B-SMOKE-LANG (częściowo)
+- `#langSeg` usunięty z testów i matrycy (PL-only 280). **17.4 i 17.8 nadal FAIL**, teraz z innych przyczyn: B-SMOKE-DRIFT (awarie funkcjonalne istniejące już przed `8322d02`) i B-PERSIST-TOAST (toast „stan uszkodzony” przy pierwszym wejściu, na każdym ujęciu matrycy). Wzorce kokpit/mapa/stan-zablokowany i matryca 280 czekają na zgodę (przyczyny `7d2b26c`, B-7c, B-10a spoza listy).

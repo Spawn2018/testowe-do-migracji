@@ -1,7 +1,7 @@
 /**
  * Etap 5 — Fala 4 (UI, DemoProvider).
  * D14: trasy adresowalne (HashRouter) — link do transportu otwiera szufladę; widok ↔ adres w obie strony;
- *      wstecz zamyka szufladę; rola i język w trwałym ustawieniu; widok spoza roli → zastąpiony dozwolonym;
+ *      wstecz zamyka szufladę; rola w trwałym ustawieniu (język UI usunięty — B-SMOKE-LANG); widok spoza roli → zastąpiony dozwolonym;
  *      query `?now=` zachowane.
  * D15: kawałki leniwe działają — mapa (kokpit, Mapa), eksport XLSX (ExcelJS), paczka ZIP dokumentów (JSZip).
  */
@@ -50,18 +50,17 @@ test.describe('D14 — trasy adresowalne', () => {
     await expect(page.locator('.drawer .wb-code')).toHaveText(code)
   })
 
-  test('adresy /harmonogram, /mapa, /faktury, /ustawienia wchodzą w widok; rola i język przetrwają przeładowanie', async ({ page }) => {
+  test('adresy /harmonogram, /mapa, /faktury, /ustawienia wchodzą w widok; rola przetrwa przeładowanie', async ({ page }) => {
     await fresh(page)
     for (const [path, view] of [['/harmonogram', 'sched'], ['/mapa', 'map'], ['/faktury', 'inv']] as const) {
       await page.goto(url(path), { waitUntil: 'networkidle' })
       await expect(page.locator(`nav button[data-view="${view}"]`)).toHaveAttribute('aria-current', 'page')
     }
     await page.locator('#roleSeg button[data-role="KSH"]').click()
-    await page.locator('#langSeg button[data-lang="en"]').click()
+    /* B-SMOKE-LANG: brak #langSeg (8322d02) — nie sprawdzamy języka */
     await page.goto(url('/ustawienia'), { waitUntil: 'networkidle' })
     await page.reload({ waitUntil: 'networkidle' })
     await expect(page.locator('#roleSeg button[data-role="KSH"]')).toHaveAttribute('aria-pressed', 'true')
-    await expect(page.locator('#langSeg button[data-lang="en"]')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('nav button[data-view="settings"]')).toHaveAttribute('aria-current', 'page')
     expect(hashPath(page)).toBe('/ustawienia')
   })

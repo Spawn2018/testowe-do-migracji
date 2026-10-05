@@ -78,12 +78,8 @@ async function setRole(page: Page, role: 'HHL' | 'KSH' | 'SCX') {
   await page.waitForTimeout(400)
 }
 
-async function setLocalePl(page: Page) {
-  await page.evaluate(() => {
-    const btn = document.querySelector('#langSeg button[data-lang="pl"]') as HTMLButtonElement | null
-    if (btn) btn.click()
-  })
-  await page.waitForTimeout(250)
+async function setLocalePl(_page: Page) {
+  /* B-SMOKE-LANG: #langSeg usunięty — PL jest domyślny, nic nie klikamy */
 }
 
 async function navTo(page: Page, dataView: string) {

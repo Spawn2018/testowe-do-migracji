@@ -16,7 +16,7 @@ async function boot(page: Page, width = 1440) {
   })
   await page.reload({ waitUntil: 'networkidle', timeout: 120_000 })
   await page.waitForSelector('#roleSeg', { timeout: 30_000 })
-  await page.locator('#langSeg button[data-lang="pl"]').click()
+  /* B-SMOKE-LANG: #langSeg usunięty (8322d02) — PL jedyny / domyślny */
 }
 
 async function role(page: Page, r: 'HHL' | 'KSH' | 'SCX') {

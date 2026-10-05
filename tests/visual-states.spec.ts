@@ -24,7 +24,7 @@ async function open(page: Page, theme: 'dark' | 'light') {
   await page.reload({ waitUntil: 'networkidle', timeout: 120_000 })
   await page.waitForSelector('#roleSeg', { timeout: 30_000 })
   await page.evaluate(() => (document.querySelector('#roleSeg button[data-role="HHL"]') as HTMLButtonElement).click())
-  await page.evaluate(() => (document.querySelector('#langSeg button[data-lang="pl"]') as HTMLButtonElement | null)?.click())
+  /* B-SMOKE-LANG: bez #langSeg — PL domyślny */
   await page.waitForTimeout(300)
   const cur = await page.evaluate(() => document.documentElement.getAttribute('data-theme'))
   if (cur !== theme) await page.click('#themeBtn')
@@ -67,9 +67,11 @@ test.describe('III-2 zrzuty stanów (HHL pl 1440)', () => {
 
     test(`stan-fokus (${theme})`, async ({ page }) => {
       await open(page, theme); await sched(page)
-      await page.locator('[data-page="schedule"] .filters input[type="search"]').focus()
-      await page.keyboard.press('Tab')
-      await expect(page.locator('[data-page="schedule"] .filters .chipbtn').first()).toBeFocused()
+      /* B-SMOKE-LANG: między szukajką a chipami są pola dat (B-8.3) — Tab nie trafia już w chip.
+         Cel zrzutu: fokus wizualny na chipie filtra — focus() bezpośrednio. */
+      const chip = page.locator('[data-page="schedule"] .filters .chipbtn').first()
+      await chip.focus()
+      await expect(chip).toBeFocused()
       await expect(page).toHaveScreenshot(`stan-fokus__${theme}.png`, SHOT)
     })
 
@@ -134,16 +136,17 @@ test.describe('III-2 zrzuty stanów (HHL pl 1440)', () => {
     await expect(page).toHaveScreenshot('stan-walidacja__dark.png', SHOT)
   })
 
-  test('tryb systemowy: motyw domyślny roli wygrywa z ustawieniem systemu (SCOPE 17.9)', async ({ page }) => {
+  test('tryb systemowy: Q-9 B — motyw z prefers-color-scheme (bez ręcznego wyboru)', async ({ page }) => {
+    /* Q-9 wariant B (PR #80): bez themeManual motyw = system, niezależnie od roli */
     for (const scheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' })
       await page.goto(FROZEN_URL, { waitUntil: 'networkidle', timeout: 120_000 })
       await page.evaluate(() => { for (const k of Object.keys(localStorage)) if (/watch|tower|wt/i.test(k)) localStorage.removeItem(k) })
       await page.reload({ waitUntil: 'networkidle', timeout: 120_000 })
       await page.waitForSelector('#roleSeg')
-      for (const [role, want] of [['HHL', 'dark'], ['KSH', 'light'], ['SCX', 'dark']] as const) {
+      for (const role of ['HHL', 'KSH', 'SCX'] as const) {
         await page.evaluate((r) => (document.querySelector(`#roleSeg button[data-role="${r}"]`) as HTMLButtonElement).click(), role)
-        await expect(page.locator('html')).toHaveAttribute('data-theme', want)
+        await expect(page.locator('html')).toHaveAttribute('data-theme', scheme)
       }
     }
   })

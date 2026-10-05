@@ -116,7 +116,8 @@ async function collectHits(page: Page, locale: string, view: string): Promise<Hi
   )
 }
 
-test.describe('D19-T EN/SV no Polish diacritics in UI chrome', () => {
+/* B-SMOKE-LANG: przełącznik języka usunięty (8322d02); UI PL-first — suite EN/SV wyłączona */
+test.describe.skip('D19-T EN/SV no Polish diacritics in UI chrome (ARCHIWUM — brak #langSeg)', () => {
   test.describe.configure({ mode: 'serial' })
 
   test('EN + SV views: zero PL diacritics outside [data-content]', async ({ page }) => {
