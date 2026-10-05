@@ -16,6 +16,11 @@ const pl: Dict = {
     + '|Gdy sprawa wymaga reakcji (np. brak awizacji przed załadunkiem, brak dokumentu, opłata paliwowa poza tabelą), otwiera się decyzja w Centrum decyzji. Ostrzeżenie i stan krytyczny to ta sama decyzja; gdy warunek ustanie, decyzja zamyka się jako nieaktualna.'
     + '|E-mail: sprawy krytyczne od razu, niekrytyczne raz na dobę w jednym skrócie. Po dziennym limicie poczty wpis w aplikacji zostaje.'
     + '|Automatyzacje: administrator HHL dodaje własne reguły przyciskiem „Nowa automatyzacja”. Reguły działają w tym samym mechanizmie w bazie — jedno zdarzenie daje jeden alarm na odbiorcę, bez dubli z automatami.',
+  b6_howto_centre:
+    'Lista poniżej to otwarte sprawy wymagające reakcji (brak awizacji, brak dokumentu, opłata paliwowa poza tabelą i inne typy z macierzy).'
+    + '|Kliknięcie otwiera sprawę: osoba z właściwą rolą wybiera rozstrzygnięcie, może dodać komentarz albo odłożyć na 2 h.'
+    + '|Ostrzeżenie i stan krytyczny to ta sama sprawa; po terminie sprawa czerwienieje. Gdy warunek ustanie — sprawa zamyka się jako nieaktualna.'
+    + '|Powiadomienia o sprawach idą według macierzy w Opcjach; rozstrzygnięcie zapisuje się w historii transportu.',
   b6_notif_filter_note: 'Te przełączniki gaszą tylko powiadomienia tworzone w tej przeglądarce. Nie wyłączają e-maili ani wpisów z bazy — o nich decyduje macierz.',
   b6_howto_zones:
     'Strefa to koło na mapie: środek, promień, zapas i rodzaj (załadunek, port, plac, punkt kontrolny…). Kształt, kraj i „kogo powiadomić” ustawia się w widoku Strefy; tutaj jest tylko włącznik.'
@@ -99,6 +104,11 @@ const en: Dict = {
     + '|When action is needed (e.g. missing booking before loading, missing document, fuel surcharge out of table) a decision opens in the Decision centre. Warning and critical are the same decision; when the condition clears it closes as outdated.'
     + '|Email: critical at once, non-critical once a day in one digest. Past the daily mail limit the in-app entry stays.'
     + '|Automations are a history view only. No new rules are added — one mechanism in the database drives everything.',
+  b6_howto_centre:
+    'The list below is open cases that need a response (missing booking, missing document, fuel surcharge outside the table, and other matrix types).'
+    + '|Click a case: the right role picks an outcome, may add a comment, or snooze for 2 h.'
+    + '|Warning and critical are the same case; after the due time it turns red. When the condition clears, the case closes as obsolete.'
+    + '|Notifications follow the Options matrix; the outcome is stored in the transport history.',
   b6_notif_filter_note: 'These switches mute only notifications created in this browser. They do not turn off emails or database entries — the matrix decides those.',
   b6_howto_zones:
     'A zone is a circle on the map: centre, radius, margin and type (loading, port, yard, checkpoint…). Shape, country and who to notify are set in the Zones view; here is only the on/off switch.'
@@ -182,6 +192,11 @@ const sv: Dict = {
     + '|När något kräver åtgärd (t.ex. saknad avisering före lastning, saknat dokument, bränsletillägg utanför tabellen) öppnas ett beslut i beslutscentret. Varning och kritiskt är samma beslut; när villkoret upphör stängs det som inaktuellt.'
     + '|E-post: kritiskt direkt, övrigt en gång per dygn i en sammanfattning. Efter dagens e-postgräns finns posten kvar i appen.'
     + '|Automatiseringar är bara en historikvy. Nya regler läggs inte till — en mekanism i databasen styr allt.',
+  b6_howto_centre:
+    'Listan nedan är öppna ärenden som kräver åtgärd (saknad avisering, saknat dokument, bränsletillägg utanför tabellen m.m.).'
+    + '|Klicka på ett ärende: rätt roll väljer utfall, kan kommentera eller skjuta upp 2 h.'
+    + '|Varning och kritiskt är samma ärende; efter tidsfristen blir det rött. När villkoret försvinner stängs ärendet som inaktuellt.'
+    + '|Aviseringar följer matrisen under Alternativ; utfallet sparas i transporthistoriken.',
   b6_notif_filter_note: 'Dessa reglage tystar bara aviseringar som skapas i den här webbläsaren. De stänger inte av e-post eller poster från databasen — det avgör matrisen.',
   b6_howto_zones:
     'En zon är en cirkel på kartan: mittpunkt, radie, marginal och typ (lastning, hamn, upplag, kontrollpunkt…). Form, land och vem som aviseras ställs in i vyn Zoner; här finns bara på/av.'
