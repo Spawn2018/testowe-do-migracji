@@ -104,6 +104,7 @@ put(['USAGE_LIMIT'], () => system('zuzycie'));
 put(['JOB_FAILURE', 'SOURCE_DOWN', 'SOURCE_DOWN_AIS'], (i) => (
   (i.resource ?? '').toLowerCase() === 'backup' ? decision(i.decisionId) : system('integracje')
 ));
+put(['FUEL_READING_MISSING'], () => ({ kind: 'options', path: '/opcje/cennik' }));
 put(['SMS_GATEWAY_SILENT', 'SMS_UNDELIVERED'], () => system('bramka-sms'));
 put(['ZONE_LIMIT'], () => ({ kind: 'options', path: '/opcje/odbiorcy-sms' }));
 
