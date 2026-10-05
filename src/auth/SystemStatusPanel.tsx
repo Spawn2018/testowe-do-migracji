@@ -43,7 +43,7 @@ export default function SystemStatusPanel() {
   const [smsDevices, setSmsDevices] = useState<SmsDeviceRow[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [mailBudget, setMailBudget] = useState<{ immediate_n: number; digest_n: number; suppressed_n: number; level: string; suppressed_to?: { recipient: string; n: number }[] | null } | null>(null);
-  const [hereBudget, setHereBudget] = useState<{ enabled: boolean; requests: number; estimated_usd: number; level: string } | null>(null);
+  const [hereBudget, setHereBudget] = useState<{ enabled: boolean; requests: number; estimated_usd: number; level: string; tiles_requests?: number; tiles_usd?: number; matching_requests?: number; matching_usd?: number; tiles_open?: boolean } | null>(null);
   const [deepl, setDeepl] = useState<{ characters: number; monthly_limit: number; queued: number; level: string } | null>(null);
 
   const refresh = useCallback(async () => {
@@ -69,7 +69,7 @@ export default function SystemStatusPanel() {
 
     const h = await sb.rpc('here_budget_view');
     if (h.error || !h.data) setHereBudget({ enabled: false, requests: 0, estimated_usd: 0, level: 'off' });
-    else setHereBudget(h.data as { enabled: boolean; requests: number; estimated_usd: number; level: string });
+    else setHereBudget(h.data as { enabled: boolean; requests: number; estimated_usd: number; level: string; tiles_requests?: number; tiles_usd?: number; matching_requests?: number; matching_usd?: number; tiles_open?: boolean });
 
     const s = await sb
       .from('sms_devices')
@@ -179,6 +179,11 @@ export default function SystemStatusPanel() {
         {tp(locale, 'h1_tile_body', {
           n: String(hereBudget?.requests ?? 0),
           usd: String(hereBudget?.estimated_usd ?? 0),
+          tiles: String(hereBudget?.tiles_requests ?? 0),
+          tusd: String(hereBudget?.tiles_usd ?? 0),
+          match: String(hereBudget?.matching_requests ?? 0),
+          musd: String(hereBudget?.matching_usd ?? 0),
+          basemap: hereBudget?.tiles_open ? 'HERE' : 'zapas',
         })}
       </div>
       <h4 className="sec" style={{ marginTop: 14 }}>{t(locale, 'pl_deepl_tile')}</h4>

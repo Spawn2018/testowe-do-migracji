@@ -6,6 +6,7 @@
 import { getSupabase } from '../auth/client';
 import type { AisPosition } from './ais';
 import { FERRY_VESSELS } from './ferry';
+import { markersSailingToSweden, type TrackFix } from './map/draw';
 
 export interface VesselPositionRow {
   vessel_id: string;
@@ -57,10 +58,48 @@ export async function fetchVesselPositions(): Promise<AisPosition[]> {
 }
 
 /** Odświeżanie co 2 min (zadanie ferry-ais zapisuje co 10 min). */
+export async function fetchMapFerryMarkers(): Promise<AisPosition[]> {
+  const sb = await getSupabase();
+  const res = await sb.rpc('ferry_track_sample');
+  if (res.error || !Array.isArray(res.data)) return [];
+  const rows = res.data as Array<{
+    vessel_id: string;
+    name: string | null;
+    mmsi: number | null;
+    lat: number;
+    lon: number;
+    observed_at: string;
+    cog: number | null;
+    sog_kn: number | null;
+  }>;
+  const fixes: TrackFix[] = rows.map((r) => ({
+    id: r.vessel_id,
+    lat: r.lat,
+    lng: r.lon,
+    ts: r.observed_at,
+  }));
+  return markersSailingToSweden(fixes).map((v) => {
+    const r = rows.find((x) => x.vessel_id === v.id && x.observed_at === v.ts);
+    const mmsi = r?.mmsi != null ? String(r.mmsi) : '';
+    const known = FERRY_VESSELS.find((vessel) => vessel.mmsi === mmsi);
+    return {
+      mmsi,
+      vesselId: known?.id ?? FERRY_VESSELS[0].id,
+      name: r?.name ?? known?.name ?? mmsi,
+      lat: v.lat,
+      lng: v.lng,
+      sog: r?.sog_kn ?? undefined,
+      cog: r?.cog ?? undefined,
+      ts: v.ts,
+      source: 'db' as const,
+    };
+  });
+}
+
 export function subscribeAisDb(onUpdate: (pos: AisPosition[]) => void, everyMs = 120_000): () => void {
   let stopped = false;
   const tick = () => {
-    fetchVesselPositions().then(
+    fetchMapFerryMarkers().then(
       (p) => { if (!stopped) onUpdate(p); },
       () => { if (!stopped) onUpdate([]); },
     );

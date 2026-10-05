@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
+import { CorridorMap } from '../map/LazyCorridorMap';
 import { StatusPill } from '../ui/StatusPill';
 import { fmtNum, fmtNumKeepPl, fmtPct, t, tp } from '../../i18n/messages';
 import { canEditResources, canSeeCost, canSeeMargin, canSeeRevenue, visibleDriverPhone } from '../../lib/permissions';
@@ -247,6 +248,9 @@ export function LoadDrawer() {
         <div className="dbody">
           {tab === 'overview' && (
             <>
+              <div data-load-map style={{ position: 'relative', height: 220, marginBottom: 12 }}>
+                <CorridorMap loads={[load]} embedded />
+              </div>
               <dl className="kv">
                 <dt>{t(locale, 'a6_dr_type')}</dt>
                 <dd>

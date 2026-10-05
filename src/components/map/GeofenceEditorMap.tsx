@@ -1,13 +1,8 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { useTowerStore } from '../../store/useTowerStore';
-
-const TILE_DARK =
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
-const TILE_LIGHT =
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
-const ATTR =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> · Esri';
+import { installFallback } from './fallbackTiles';
+import { h6Requests } from '../../lib/map/draw';
 
 const PIN = L.divIcon({
   className: 'gf-pin',
@@ -42,10 +37,7 @@ export function GeofenceEditorMap({
     if (!el || mapRef.current) return;
     const map = L.map(el, { zoomControl: true, attributionControl: true });
     map.setView([lat, lng], 11);
-    const tiles = L.tileLayer(theme === 'dark' ? TILE_DARK : TILE_LIGHT, {
-      maxZoom: 16,
-      attribution: ATTR,
-    }).addTo(map);
+    const tiles = L.layerGroup().addTo(map);
     const group = L.layerGroup().addTo(map);
     map.on('click', (e) => {
       onMoveRef.current(e.latlng.lat, e.latlng.lng);
@@ -66,7 +58,23 @@ export function GeofenceEditorMap({
   }, []);
 
   useEffect(() => {
-    tilesRef.current?.setUrl(theme === 'dark' ? TILE_DARK : TILE_LIGHT);
+    const map = mapRef.current;
+    if (!map) return;
+    let cancelled = false;
+    let current: L.Layer | null = tilesRef.current;
+    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
+      tilesRef.current = installFallback(map, current, theme) as L.TileLayer;
+      return;
+    }
+    const run = () => {
+      void import('./applyBasemap').then(({ applyBasemap }) => applyBasemap(map, current, theme, () => { if (!cancelled) run(); })).then((layer) => {
+        if (cancelled) { if (map.hasLayer(layer)) map.removeLayer(layer); return; }
+        current = layer;
+        tilesRef.current = layer as L.TileLayer;
+      });
+    };
+    run();
+    return () => { cancelled = true; };
   }, [theme]);
 
   useEffect(() => {
@@ -98,12 +106,12 @@ export function GeofenceEditorMap({
     });
     const fitKey = `${Math.round(radius)}:${Math.round(buffer)}`;
     if (fittedRef.current !== fitKey) {
-      map.fitBounds(outer.getBounds(), { padding: [24, 24], maxZoom: 13, animate: false });
+      map.fitBounds(outer.getBounds(), { padding: [24, 24], maxZoom: 18, animate: false });
       fittedRef.current = fitKey;
     } else if (!map.getBounds().pad(-0.15).contains([lat, lng])) {
       map.panTo([lat, lng], { animate: false });
     }
   }, [lat, lng, radiusM, hysteresisM]);
 
-  return <div ref={containerRef} className="gf-editor-map" data-geofence-map />;
+  return <div ref={containerRef} className="gf-editor-map" data-geofence-map data-h6={h6Requests(false, true) ? 'on' : 'off'} />;
 }

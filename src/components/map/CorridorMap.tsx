@@ -3,7 +3,7 @@ import L from 'leaflet';
 
 import { useTowerStore } from '../../store/useTowerStore';
 import { t } from '../../i18n/messages';
-import { CORRIDOR_REF_COORDS, FERRY_LEG_COORDS } from '../../lib/corridor';
+import { CORRIDOR_REF_COORDS } from '../../lib/corridor';
 import { SITES } from '../../lib/status';
 import { fetchSituations, type RoadSituation } from '../../lib/trafikverket';
 import { PROD_BUILD, shows } from '../../lib/prodFacade';
@@ -16,25 +16,14 @@ import { nextLiveSailing } from '../../lib/ferry';
 import { severityLabel } from '../../lib/enumLabels';
 import { getNowIso, isFrozenNow } from '../../lib/frozenNow';
 import { ferryMarkerTone } from '../../lib/ferry/stenaAis';
-import { declutter } from '../../lib/mapDeclutter';
 import { isServerId } from '../../data/registry';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
+import { installFallback } from './fallbackTiles';
+import { WATER_GDN_NYN, WATER_GDY_KAA, h6Requests } from '../../lib/map/draw';
 
 /* III-5 — odtwarzanie przebiegu z bazy: tylko build Supabase (chunk leniwy); demo bez zmian */
 const TrackReplay = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./TrackReplay')) : null;
 
-/** Requested Carto public URLs — CDN now watermarks without key (2026-09). */
-export const CARTO_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
-export const CARTO_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-
-/** Working public no-key rasters (Esri (publiczna)). Esri tile order: z/y/x. */
-const TILE_DARK =
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
-const TILE_LIGHT =
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
-
-const ATTR =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> · Esri';
 
 function statusColor(status: string): string {
   switch (status) {
@@ -77,9 +66,9 @@ const Punkty = [
 ];
 
 type LayerBag = {
-  tiles: L.TileLayer;
-  route: L.Polyline;
-  ferryLeg: L.Polyline;
+  tiles: L.Layer;
+  route: L.LayerGroup;
+  ferryLeg: L.LayerGroup;
   geofences: L.LayerGroup;
   poi: L.LayerGroup;
   fleet: L.LayerGroup;
@@ -196,20 +185,22 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
     });
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    const tiles = L.tileLayer(theme === 'dark' ? TILE_DARK : TILE_LIGHT, {
-      attribution: ATTR,
-      maxZoom: 16,
-    }).addTo(map);
+    const tiles = L.layerGroup().addTo(map);
 
-    const route = L.polyline(
-      CORRIDOR_REF_COORDS.map(([lng, lat]) => L.latLng(lat, lng)),
-      { color: '#E5A544', weight: 3, opacity: 0.85, dashArray: '8 6' },
-    ).addTo(map);
+    const route = L.layerGroup().addTo(map);
+    if (!PROD_BUILD) {
+      L.polyline(
+        CORRIDOR_REF_COORDS.map(([lng, lat]) => L.latLng(lat, lng)),
+        { color: '#E5A544', weight: 3, opacity: 0.85, dashArray: '8 6' },
+      ).addTo(route);
+    }
 
-    const ferryLeg = L.polyline(
-      FERRY_LEG_COORDS.map(([lng, lat]) => L.latLng(lat, lng)),
-      { color: '#6BA8D6', weight: 3, opacity: 0.9 },
-    ).addTo(map);
+    const ferryLeg = L.layerGroup().addTo(map);
+    for (const lane of [WATER_GDN_NYN, WATER_GDY_KAA]) {
+      L.polyline(lane.map(([lng, lat]) => L.latLng(lat, lng)), {
+        color: '#6BA8D6', weight: 3, opacity: 0.9,
+      }).addTo(ferryLeg);
+    }
 
     const geofenceGroup = L.layerGroup().addTo(map);
     const poiGroup = L.layerGroup().addTo(map);
@@ -275,10 +266,50 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
   }, []);
 
   useEffect(() => {
-    const layers = layersRef.current;
-    if (!layers) return;
-    layers.tiles.setUrl(theme === 'dark' ? TILE_DARK : TILE_LIGHT);
-  }, [theme]);
+    const map = mapRef.current;
+    if (!map) return;
+    let cancelled = false;
+    let current: L.Layer | null = layersRef.current?.tiles ?? null;
+    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
+      const layer = installFallback(map, current, theme);
+      if (layersRef.current) layersRef.current.tiles = layer;
+      return;
+    }
+    let switching = false;
+    const run = () => {
+      void import('./applyBasemap').then(({ applyBasemap }) => applyBasemap(map, current, theme, () => {
+        if (cancelled || switching) return;
+        switching = true;
+        run();
+      })).then((layer) => {
+        if (cancelled) {
+          if (map.hasLayer(layer)) map.removeLayer(layer);
+          return;
+        }
+        current = layer;
+        switching = false;
+        if (layersRef.current) layersRef.current.tiles = layer;
+      });
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [theme, mapReady]);
+
+  useEffect(() => {
+    if (!mapReady || import.meta.env.VITE_AUTH_MODE !== 'supabase') return;
+    let cancelled = false;
+    void import('./applyBasemap').then(({ loadRoadLines }) => loadRoadLines()).then((lines) => {
+      const layers = layersRef.current;
+      if (cancelled || !layers || lines.length === 0) return;
+      layers.route.clearLayers();
+      for (const line of lines) {
+        L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), {
+          color: '#E5A544', weight: 3, opacity: 0.9,
+        }).addTo(layers.route);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -347,12 +378,8 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
       /* III-5 (SCOPE 5.10): produkcja — pozycje z bazy/statusu często w tym samym punkcie (np. plac załadunku);
          nakładające się znaczniki rozkładamy na okręgu/spirali (≥ 22 px), by etykiety i kliknięcia nie kolidowały.
          Tryb demo bez zmian (wzorzec zrzutów makiety). */
-      const spread = PROD_BUILD
-        ? declutter(fleet.map((f) => { const p = map.latLngToLayerPoint([f.lat, f.lng]); return { id: f.id, x: p.x, y: p.y }; }), 22)
-        : null;
       for (const f of fleet) {
-        const sp = spread?.get(f.id);
-        const ll = sp ? map.layerPointToLatLng(L.point(sp.x, sp.y)) : L.latLng(f.lat, f.lng);
+        const ll = L.latLng(f.lat, f.lng);
         const m = L.marker(ll, {
           icon: truckDivIcon(f.status, statusColor(f.status)),
           keyboard: false,
@@ -414,6 +441,7 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
     if (mapLayers.ferry) {
       const liveSail = nextLiveSailing();
       for (const p of aisPositions) {
+        if (p.source === 'seed') continue;
         const heading = typeof p.cog === 'number' ? p.cog : (p.vesselId === liveSail.vessel ? (liveSail.depPort === 'GDN' ? 20 : 200) : 20);
         const stale = ferryMarkerTone(p.ts, getNowIso()) === 'stale';
         const when = formatOpsDateTime(p.ts);
@@ -435,6 +463,7 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
   return (
     <div
       className="corridor-map-root"
+      data-h6={h6Requests(false, true) ? 'on' : 'off'}
       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', minHeight: 0 }}
     >
       <div

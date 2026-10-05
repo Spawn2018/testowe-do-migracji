@@ -129,3 +129,5 @@ h3_corridor_state | GUARD | select h3_corridor_state() | Brak aktywnego konta
 h3_highlighted | GUARD | select h3_highlighted('$L1') | Brak aktywnego konta
 operator_notice_apply | GUARD | select operator_notice_apply(gen_random_uuid(), 'ODWOLANY', null, 'test') | wyłącznie administrator
 deepl_usage_view | GUARD | select deepl_usage_view() | wyłącznie HHL
+map_display_state | GUARD | select map_display_state() | Brak aktywnego konta
+ferry_track_sample | GUARD | select count(*) from ferry_track_sample() | Brak aktywnego konta
