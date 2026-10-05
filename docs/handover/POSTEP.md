@@ -1773,7 +1773,7 @@ Katalog ograniczeń dla ciężarówek w pasie 3 km wzdłuż korytarza jest w kod
 
 ## 2026-10-05 07:16 (czas warszawski) — korekta Q-18, AIS dla Polferries, część B
 
-Teraz: B-8 (część bez filtrów i statusów) · Zrobione: krok 0, Q18-V2, AIS-POLF, diagnoza 5 promów, B-7a, B-7b, propozycje B-7c / B-8 (filtry, statusy) / B-9 / Q-9 · Następne: B-8.
+Teraz: — (stop po B-7a/B-7b, raport) · Zrobione: krok 0, Q18-V2, AIS-POLF, diagnoza 5 promów, B-7a, B-7b, propozycje B-7c / B-8 (filtry, statusy) / B-9 / Q-9 · Następne: B-8 (część bez filtrów i statusów).
 
 ### 1. Q18-V2 — nowa reguła widoczności (PR #64)
 
@@ -1785,7 +1785,7 @@ Prom widoczny w strefie portu PL (Gdańsk, Gdynia), w rejsie PL→SE i w strefie
 - **Przyczyna 1:** aisstream wysyła ramki **binarne**. W Deno `ev.data` to Blob, `String(Blob)` = „[object Blob]”, `JSON.parse` padał i kod po cichu odrzucał każdą ramkę. Sprawdzone lokalnie: 14/14 ramek binarnych.
 - **Przyczyna 2:** 8 s nasłuchu. Statek przy nabrzeżu nadaje co 3 min (Wawel 05:19:23 i 05:22:23 UTC), więc 8 s prawie nigdy go nie łapało.
 - Bbox obejmuje Gdańsk i Nynäshamn. Porównanie MMSI (liczba w MetaData → tekst) było poprawne. Filtr `FiltersShipMMSI` działa, gdy MMSI są tekstem (sprawdzone: tylko nasze statki).
-- **Naprawa:** `binaryType = arraybuffer` + dekodowanie UTF-8 (także Blob), jawny parser `time_utc`, subskrypcja z `FiltersShipMMSI`, typy pozycji klasy A i B. Nowa funkcja Edge `ferry-ais-listen`: cron co minutę, nasłuch 50 s (limit ścienny funkcji 150 s), zapis każdej pozycji ze źródłem AISSTREAM. `ferry-ais` (co 3 min) nie otwiera już WebSocket — bierze pozycje AISSTREAM z bazy (≤ 10 min) do „nowsza wygrywa” i ryzyk. Bez wydatków (około 43 tys. wywołań funkcji miesięcznie w limicie planu).
+- **Naprawa:** `binaryType = arraybuffer` + dekodowanie UTF-8 (także Blob), jawny parser `time_utc`, subskrypcja z `FiltersShipMMSI`, typy pozycji klasy A i B. Nowa funkcja Edge `ferry-ais-listen`: cron co minutę, nasłuch 50 s (limit ścienny funkcji 150 s), zapis każdej pozycji ze źródłem AISSTREAM. `ferry-ais` (co 3 min) nie otwiera już WebSocket — bierze pozycje AISSTREAM z bazy (≤ 10 min) do „nowsza wygrywa” i ryzyk. Bez wydatków (plus ok. 43 tys. wywołań funkcji miesięcznie; wszystkie crony razem ok. 190 tys., limit planu Free 500 tys.).
 - Dowód: Nova Star AISSTREAM 2026-10-05 05:35:14 UTC, 54,40467 N 18,67377 E (Gdańsk), wiek 1,6 min przy odczycie 05:36:50 UTC. Stena Spirit i Stena Ebba też z AISSTREAM (wiek < 1 min o 05:45 UTC).
 - Wawel: do 05:45 UTC bez pozycji AISSTREAM w bazie. aisstream w tym czasie nie przekazał żadnej ramki Wawel ani Nova Star — sprawdzone osobnym nasłuchem 200 s (05:42–05:45 UTC, tylko te dwa MMSI): 0 ramek. Funkcja produkcyjna w tych minutach też 0. To luka odbioru aisstream przy nabrzeżu, nie błąd zapisu. Digitraffic zostaje zapasem (Wawel 21:19 UTC 4.10, Nynäshamn, znacznik wyszarzony).
 
