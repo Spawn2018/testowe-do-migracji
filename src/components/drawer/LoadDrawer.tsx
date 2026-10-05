@@ -157,6 +157,27 @@ export function LoadDrawer() {
     () => (load ? documents.filter((d) => d.loadId === load.id) : []),
     [documents, load],
   );
+  const [insAuto, setInsAuto] = useState<{ covered: boolean; policyNo: string | null; validUntil: string | null } | null>(null);
+  useEffect(() => {
+    if (!load || import.meta.env.VITE_AUTH_MODE !== 'supabase') { setInsAuto(null); return; }
+    let alive = true;
+    void import('../../data/insuranceCoverServer')
+      .then(async (m) => {
+        const sb = await import('../../auth/client').then((c) => c.getSupabase());
+        const pr = await sb.from('projects').select('id').limit(1).maybeSingle();
+        const pid = pr.data?.id as string | undefined;
+        if (!pid) return null;
+        const rows = await m.loadInsuranceCover(pid);
+        return rows.find((r) => r.loadId === load.id) ?? null;
+      })
+      .then((row) => {
+        if (!alive) return;
+        if (!row) { setInsAuto(null); return; }
+        setInsAuto({ covered: row.covered, policyNo: row.policyNo, validUntil: row.validUntil });
+      })
+      .catch(() => { if (alive) setInsAuto(null); });
+    return () => { alive = false; };
+  }, [load]);
   const loadMsgs = useMemo(
     () => (load ? messages.filter((m) => m.loadId === load.id) : []),
     [messages, load],
@@ -553,6 +574,11 @@ export function LoadDrawer() {
 
           {tab === 'docs' && (
             <>
+              <div className="note" data-ins-auto style={{ margin: '0 0 10px' }}>
+                {insAuto?.covered && insAuto.policyNo
+                  ? tp(locale, 'b32_ins_auto', { no: insAuto.policyNo, until: insAuto.validUntil ?? '—' })
+                  : t(locale, 'b32_ins_missing')}
+              </div>
               {loadDocs.map((d) => (
                 <DocFileRow
                   key={d.id}

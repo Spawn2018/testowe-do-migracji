@@ -17,3 +17,14 @@ Zasada: DONE tylko gdy na **produkcji** wygląda i działa jak **dosłowne** sł
 ## Raport sekcji 2 (Ryzyka)
 - Zgodne: 2 · Poprawione: 1 (2.3) · ⛔: 0
 - Wdrożenie: PR #97, `git archive` → Vercel READY, tower.log-mar.pl **200**, watch-tower-makieta.vercel.app **200**
+
+## Konta (pkt 5 polecenia 05.10) — wykonane 14:46 PL
+| Akcja | Przed | Po |
+|-------|-------|-----|
+| 3× `sebastian+tower-o3-*` | active=false, 0 FK | **usunięte** z `app_users` + `auth.users`; wpis `audit_log` USER_DELETED_OWNER_05_10 |
+| `s.hotowczyc@scandimavian.com.pl` | literówka, active=false | **usunięte** (poprawne `@scandinavian.com.pl` już było); audit USER_TYPO_REMOVED |
+| marek@hyzyk.pl, p.duks@…, s.hotowczyc@scandinavian… | active=false | **bez zmian** (wyłączone do R-2); bez zaproszeń |
+Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangler wylogowany — dograć gdy właściciel zaloguje Cloudflare (poczekalnia).
+
+| 3.1 | zezwolenie per firma obok polisy, auto wg wymiarów | **⛔** — czeka na wymiary D-83 | — | — |
+| 3.2 | Ubezpieczenie automatycznie podpina się do każdej trasy | **poprawione** — `load_insurance_cover`: APPROVED polisa SCX → 94/94; notka w szufladzie Dokumenty | `3.2.png` (+ overview) | PR (ten) · migracja **0182** |
