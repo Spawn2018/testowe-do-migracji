@@ -437,3 +437,19 @@ ETA na placu nie jest liczona z planu załadunku ani z założonego rejsu. Źró
 Postój ponad czas wolny (decyzja 15) czyta parametry z Opcji, sekcja „Czas wolny i przestój". Domyślne wartości są WSTĘPNE: czas wolny 6 h / 4 h, 75 EUR/h, 750 EUR/doba, start od późniejszego z wjazdu i planu, rozpoczęta godzina w całości, powyżej 24 h stawka dobowa. Przekroczenie otwiera decyzję z podpowiedzią kwoty. Dopłatę wpisuje HHL ręcznie. Brak parametru w Opcjach nie otwiera decyzji.
 
 Cele kliknięć: `docs/handover/CELE_KLIKNIEC.md`.
+
+## SEFS/BAF i dziennik logowań (B-6h, B-6e — 2026-10-05)
+
+**SEFS/BAF — co jest automatyczne, a co nie.**
+- Liczenie jest automatyczne: `sefs_week_calc` (migracja 0155) bierze średnią odczytów SEK i PLN z poprzedniego tygodnia pn–nd (czas warszawski), stosuje `hybrid_min` i zapisuje wynik per ładunek według daty załadunku.
+- Zbieranie cen nie jest automatyczne: nie ma pobierania z OKQ8 ani ORLEN. Odczyty wpisuje ręcznie HHL w Opcje → SEFS/BAF. Odczyt jest dzienny (okres = data odczytu, `YYYY-MM-DD`), bo tylko takie okresy liczy funkcja.
+- Produkcja 05.10: `fuel_index_readings` ma 0 wierszy, nie ma też żadnego zadania cron dla paliwa. Opłata się więc nie liczy, a decyzje `SEFS_OUT_OF_TABLE` zostają otwarte.
+- Pobieranie WOB istnieje, ale jest wyłączone (D-2) i dotyczy innego indeksu (EUR/l).
+- Propozycja, niezbudowana: automatyczne pobieranie cen OKQ8/ORLEN. Przed budową trzeba sprawdzić regulaminy obu stron (lista STOP).
+- Uwaga do decyzji: `sefs_week_calc` bierze tylko wiersze z `corrects_id is null`. Liczy więc oryginał, a pomija korektę. Poprawienie odczytu korektą nie zmienia średniej. Do decyzji: liczyć ostatnią korektę zamiast oryginału.
+
+**Dziennik logowań.**
+- Supabase nie zapisuje już dziennika auth w bazie projektu (`auth.audit_log_entries` na produkcji ma 0 wierszy), więc poprzednie RPC zawsze zwracało pusto.
+- Od 0164 każde nowe logowanie (wiersz w `auth.sessions`) trafia do `public.auth_login_events` przez wyzwalacz. Zapisywane są: czas, e-mail, IP i urządzenie.
+- Wstecz uzupełniono wpisy z istniejących sesji i z `last_sign_in_at`.
+- Nieudane próby logowania nie są rejestrowane.

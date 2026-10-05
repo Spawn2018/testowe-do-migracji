@@ -387,16 +387,16 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 | B-3a | Dokumenty: zezwolenie per firma obok polisy; auto-podpięcie do trasy wg wymiarów; polisa auto do każdej trasy | NIEZACZĘTE |
 | B-4a | Finanse: przychód — pilotaż i dodatki mają zniknąć | **ZROBIONE 05.10** — usunięte wiersze KSH/HHL (`exR` / `fin_rev_extra` / `a6_fin_pilot` po stronie przychodu); koszt SCX bez zmian |
 | B-4b | Załącznik: zostaje samo CMR (bez POD) | **ZROBIONE 05.10** — Faktury i panel faktury: tylko CMR; etykiety bez POD; wzorzec faktury odświeżony |
-| B-5 | Automatyzacje: brak przycisku nowej automatyzacji | NIEZACZĘTE |
-| B-6a | Opcje: logika i workflow „Powiadomienia i decyzje” | NIEZACZĘTE |
-| B-6b | Odbiorcy SMS i strefy: po co strefy i co robią | NIEZACZĘTE |
-| B-6c | Progi i terminy: jak działa mechanizm | NIEZACZĘTE |
-| B-6d | Stan systemu: styl dashboardu (teraz nieczytelne) | NIEZACZĘTE |
-| B-6e | Dziennik logowań nic nie pokazuje | NIEZACZĘTE |
-| B-6f | Historia zmian: „200” obok przycisku — usunąć z wyglądu, jeśli nie pełni roli | NIEZACZĘTE |
-| B-6g | Cennik: rozjazd tabeli w prawo | NIEZACZĘTE |
-| B-6h | SEFS/BAF: czy średnia PL i SE z poprzedniego tygodnia uzupełnia indeksy i liczy opłatę | NIEZACZĘTE |
-| B-6i | Wymóg zezwoleń: rozjazd wizualny w prawo | NIEZACZĘTE |
+| B-5 | Automatyzacje: brak przycisku nowej automatyzacji | **ZROBIONE 05.10** — w produkcji już `historyOnly` (ed59ef8, 01.10): bez „Nowa reguła”, kreatora i „Uruchom”; test `tests/b5-workflows-history-only.test.ts` (PR #74); bez zmian kodu UI |
+| B-6a | Opcje: logika i workflow „Powiadomienia i decyzje” | **ZROBIONE 05.10** — rozwijane „Jak to działa” w sekcji (PR #74) |
+| B-6b | Odbiorcy SMS i strefy: po co strefy i co robią | **ZROBIONE 05.10** — „Jak to działa” w sekcji (PR #74) |
+| B-6c | Progi i terminy: jak działa mechanizm | **ZROBIONE 05.10** — „Jak to działa” w sekcji (PR #74) |
+| B-6d | Stan systemu: styl dashboardu (teraz nieczytelne) | **ZROBIONE 05.10** — kafelki (bramka SMS, poczta, kopia, integracje, HERE, DeepL) + ostatni przebieg każdego zadania + 7 kopii (PR #74) |
+| B-6e | Dziennik logowań nic nie pokazuje | **ZROBIONE 05.10** — przyczyna: `auth.audit_log_entries` na prod = 0 wierszy; migracja 0164 `auth_login_events` + wyzwalacz na `auth.sessions` + uzupełnienie (9 wpisów); nieudane próby nie są rejestrowane (PR #74) |
+| B-6f | Historia zmian: „200” obok przycisku — usunąć z wyglądu, jeśli nie pełni roli | **ZROBIONE 05.10** — „200” = liczba wczytanych wierszy (limit 200), usunięta; podpowiedź przy pełnym wyniku (PR #74) |
+| B-6g | Cennik: rozjazd tabeli w prawo | **ZROBIONE 05.10** — tabela wierszy na pełną szerokość formularza z przewijaniem (PR #74) |
+| B-6h | SEFS/BAF: czy średnia PL i SE z poprzedniego tygodnia uzupełnia indeksy i liczy opłatę | **ZROBIONE 05.10 (opis + odczyt dzienny)** — liczenie automatyczne (`sefs_week_calc`, średnia pn–nd poprzedniego tygodnia), ale ceny OKQ8/ORLEN wpisuje HHL ręcznie; na prod 0 odczytów → opłata się nie liczy. Formularz: okres = data odczytu. Automatyczne pobieranie cen — propozycja (wymaga sprawdzenia regulaminów OKQ8/ORLEN) |
+| B-6i | Wymóg zezwoleń: rozjazd wizualny w prawo | **ZROBIONE 05.10** — notka nie wychodzi poza sekcję ani nie nachodzi na przycisk; stan obok przycisku (PR #74) |
 | B-MAPA | P1 wśród prac nad mapami. Podkład i rysowanie. Zmienia zakres H-6. Obejmuje Q-17 i Q-19. HERE Raster Tile API v3, styl logistyczny, jasny i ciemny, na wszystkich mapach (Mapa, kokpit, szczegóły transportu, kreator stref, odtwarzanie przebiegu). Zoom do placu w Śremie i w Boden. Podpis HERE, w zapasie właściwy dostawca. Usunąć „OpenStreetMap · CARTO” przy kafelkach Esri. Przy 80% budżetu D-78 zapasowy podkład z etykietami, nigdy szary Esri; powrót od 1. dnia miesiąca. Trasa planowana z geometrii HERE. Pozycja auta = surowy GPS. Ślad: HERE Route Matching tylko do rysowania, chyba że pomiar zagrozi budżetowi — wtedy same punkty. Prom: pozycja AIS bez zmian, trasa z historii AIS po wodzie. Warstwa przeszkód H-6 zbudowana i wyłączona do D-83. Przed budową pomiar na TEST i licencja D-81. | **ZROBIONE 05.10** — PR #61/#62; Q-18 wraz z B-MAPA, potem Q18-V2 PR #64 |
 | PL-PLURAL | P3. Odmiana przez liczby w komunikatach PL. Import: „Pominięto 2 wierszy” ma być „2 wiersze”. Jedna funkcja (1 / 2–4 / 5+; 22–24 = wiersze, 12–14 = wierszy). Test: 1, 2, 5, 12, 22, 25. Źródło: `tests/b8-imp.test.ts`, `standardSkipMessage`. Za B-MAPA i za kolejką nocną. | **ZROBIONE 05.10** — PR #63, `plPlural` w `src/lib/plPlural.ts` |
 | B-7a | Mapa: stały rozmiar, niezależny od wysokości tabeli obok; po otwarciu widoku MAPA widoczna w całości | **ZROBIONE 05.10** — wysokość mapy z wysokości okna (`max(420px, 100dvh − 215px)`), nie z tabeli; `tests/b7-map.spec.ts` (6 rozmiarów). Wzorzec mapy odświeżony 05.10 07:57 (B-MAPA + B-7a + B-7b). |
