@@ -786,3 +786,72 @@ KOLEJNOŚĆ I ZASADY
 Najpierw punkt 1 i krok 2A (próbka do właściciela). Potem część B dalej według PLAN.md. Krok 2B po akceptacji próbki, przed R-3. Migracje przez lokalną bramę, obie domeny 200 po każdym wdrożeniu. Zapisz decyzje w rejestrze decyzji, w PLAN.md i w POLECENIA_KOORDYNATORA.md.
 
 Kolejność wykonania: (1) B-5 kreator → (2) krok 2A próbka paliw do właściciela → (3) korekta SEFS w średniej → część B dalej według PLAN.md (od B-8 bez filtrów/statusów). Krok 2B nie budować do pisemnej akceptacji próbki.
+
+## Polecenie 2026-10-05 ~10:37 (czas warszawski) — ODPOWIEDZI WŁAŚCICIELA 05.10
+
+ODPOWIEDZI WŁAŚCICIELA 05.10
+
+---------------------------------------------------------------
+1. PALIWA — krok A zaakceptowany z poprawką, buduj krok B
+---------------------------------------------------------------
+- ORLEN: zaakceptowany — ONEkodiesel / Olej Napędowy Ekodiesel,
+  PLN/m³ netto, ze strony hurtowe ceny paliw. Klauzula regulaminu
+  nie blokuje (decyzja właściciela).
+- OKQ8: BŁĄD w próbce. Cena z sekcji „Q8 Trucks", produkt „Diesel".
+  Wzorzec od właściciela: 05.10 = 22,90. Wartość wprost ze strony,
+  bez przeliczania VAT (U-14).
+  Przed włączeniem automatu potwierdź w raporcie: odczyt z Q8 Trucks /
+  Diesel = 22,90 (05.10).
+- Krok B bez zmian: pobieranie codziennie, mechanizm SEFS (średnia PL
+  i SE z poprzedniego tygodnia → indeksy → mnożnik „niższy", I-31),
+  tydzień według daty załadunku (D-34), czas Europe/Warsaw (33.3),
+  korekta do zamknięcia tygodnia, potem migawka (0166). Formularz
+  ręczny HHL tylko awaryjnie: brak odczytu → ryzyko w Stanie systemu
+  i e-mail do administratora.
+
+---------------------------------------------------------------
+2. BRAMKA SMS — FAŁSZYWE ALARMY (przed dalszą częścią B)
+---------------------------------------------------------------
+Właściciel: telefon bramki jest włączony, a bramka działała cały czas.
+8 alarmów SMS_GATEWAY_SILENT w nocy to więc fałszywe alarmy albo
+heartbeat nie dociera do bazy.
+- diagnoza: ostatnie heartbeaty bramki z bazy (czas, wynik) w nocy
+  4/5.10; próg ciszy, który wywołał alarm; czy aplikacja wysyła
+  heartbeat, a baza go odrzuca lub nie zapisuje (token, uprawnienia,
+  funkcja sms_heartbeat, zmiany z ostatnich migracji)
+- napraw przyczynę; test: heartbeat co ustalony interwał → zero alarmów;
+  brak heartbeatu dłużej niż próg → jeden alarm, bez powtórek co cykl
+- błąd zapisu statusu powiadomienia: Resend zwraca 200, a status
+  w bazie „błąd" — napraw, test na e-mailu testowym
+- nie wysyłaj prawdziwego SMS bez zgody właściciela; test bramki tylko
+  przez heartbeat i tryb testowy
+
+---------------------------------------------------------------
+3. PORZĄDKI
+---------------------------------------------------------------
+- migracja 0159: dopisz do ewidencji migracji na produkcji (bez
+  ponownego wykonania); sprawdź, że lista PROD = repozytorium
+- smoke wizualny: napraw ładowanie barlow.css, potem odśwież wzorce
+  Automatyzacji (zmiana zamierzona: B-5, przycisk i kreator)
+
+---------------------------------------------------------------
+4. PROPOZYCJE CZĘŚCI B — wybór właściciela
+---------------------------------------------------------------
+- B-7c: A (nowe filtry: brak GPS, ryzyko)
+- B-8: wszystkie trzy (zakres dat, filtr bez kierowcy/ciągnika,
+  „Zmień ciągnik")
+- B-9: C (aktywny filtr z „×" + kafelek Prom)
+- Q-9: B (motyw według ustawień systemu + zmiana w ustawieniach
+  użytkownika)
+Buduj w kolejności z PLAN.md.
+
+---------------------------------------------------------------
+KOLEJNOŚĆ I ZASADY
+---------------------------------------------------------------
+Punkty 2 i 3 najpierw. Potem krok B paliw (punkt 1) i część B
+według PLAN.md, z wyborami z punktu 4.
+Migracje przez lokalną bramę, obie domeny 200 po każdym wdrożeniu.
+Bez kasowania danych, bez wydatków.
+Zapisz decyzje w rejestrze decyzji, w PLAN.md i w POLECENIA_KOORDYNATORA.md.
+
+Kolejność wykonania: (2) SMS fałszywe + (3) porządki → (1) paliwa krok B → (4) część B według PLAN z wyborami (B-7c A, B-8 zakres dat + bez kierowcy/ciągnika + Zmień ciągnik, B-9 C, Q-9 B). B-3a nadal stop na D-83.

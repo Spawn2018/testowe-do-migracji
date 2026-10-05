@@ -43,7 +43,8 @@ Deno.serve(async (req) => {
     let body = asResendBody(null);
     try { body = asResendBody(JSON.parse(raw)); } catch { body = {}; }
     let outcome = emailOutcome(res.status, body);
-    // Samo id przy HTTP 200 nie wystarcza: dopytaj last_event. Klucz nie wchodzi do błędu.
+    // Samo id przy HTTP 200: dopytaj last_event. Klucz send-only (restricted_api_key)
+    // przy GET nie może oznaczyć wysłanego e-maila jako ERROR (SMS-SILENT-FIX 05.10).
     if (outcome === 'PENDING' && typeof body.id === 'string') {
       const look = await fetch(`https://api.resend.com/emails/${encodeURIComponent(body.id)}`, {
         headers: { Authorization: `Bearer ${key}` },
@@ -51,8 +52,14 @@ Deno.serve(async (req) => {
       const lookRaw = await look.text();
       let lookBody = asResendBody(null);
       try { lookBody = asResendBody(JSON.parse(lookRaw)); } catch { lookBody = {}; }
-      outcome = emailOutcome(look.status, lookBody);
-      if (outcome !== 'SENT') body = lookBody;
+      const lookName = typeof lookBody.name === 'string' ? lookBody.name.trim().toLowerCase() : '';
+      if (lookName === 'restricted_api_key' || look.status === 401 || look.status === 403) {
+        // POST przyjął wiadomość (id), odczyt statusu niedostępny dla tego klucza → SENT.
+        outcome = 'SENT';
+      } else {
+        outcome = emailOutcome(look.status, lookBody);
+        if (outcome !== 'SENT') body = lookBody;
+      }
     }
     if (outcome === 'SENT') {
       sent++;
