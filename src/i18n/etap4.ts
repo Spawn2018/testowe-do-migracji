@@ -183,8 +183,8 @@ const pl: Dict = {
   settings_subtitle: 'Twoje ustawienia: język, waluta wyświetlania i motyw. Zapisywane dla Twojego konta.',
   settings_prefs_sub: 'Twoje konto',
   sched_col_ord_ksh: 'Zlec. KSH',
-  sched_col_ord_hhl: 'Zlec. HHL',
-  sched_col_ord_scx: 'Zlec. SCX',
+  sched_col_ord_hhl: 'Nr zlecenia HHL-KSH',
+  sched_col_ord_scx: 'Nr zlecenia HHL-SCAN',
   settings_prefs_note: 'Waluta wyświetlania przelicza wszystkie kwoty (źródłem jest zawsze EUR). Kwoty na fakturach pokazywane są w walucie faktury.',
   // odp. właściciela §5 — banery kokpitu (dotąd na sztywno po polsku we wszystkich językach)
 };
@@ -367,8 +367,8 @@ const en: Dict = {
   settings_subtitle: 'Your settings: language, display currency and theme. Saved for your account.',
   settings_prefs_sub: 'Your account',
   sched_col_ord_ksh: 'KSH order',
-  sched_col_ord_hhl: 'HHL order',
-  sched_col_ord_scx: 'SCX order',
+  sched_col_ord_hhl: 'HHL-KSH order no.',
+  sched_col_ord_scx: 'HHL-SCAN order no.',
   settings_prefs_note: 'Display currency converts all amounts (the source is always EUR). Invoice amounts are shown in the invoice currency.',
   // odp. właściciela §5 — banery kokpitu (dotąd na sztywno po polsku we wszystkich językach)
 };
@@ -551,8 +551,8 @@ const sv: Dict = {
   settings_subtitle: 'Dina inställningar: språk, visningsvaluta och tema. Sparas för ditt konto.',
   settings_prefs_sub: 'Ditt konto',
   sched_col_ord_ksh: 'KSH-order',
-  sched_col_ord_hhl: 'HHL-order',
-  sched_col_ord_scx: 'SCX-order',
+  sched_col_ord_hhl: 'HHL-KSH-order',
+  sched_col_ord_scx: 'HHL-SCAN-order',
   settings_prefs_note: 'Visningsvalutan räknar om alla belopp (källan är alltid EUR). Fakturabelopp visas i fakturans valuta.',
   // odp. właściciela §5 — banery kokpitu (dotąd na sztywno po polsku we wszystkich językach)
 };

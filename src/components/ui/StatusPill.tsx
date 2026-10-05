@@ -14,11 +14,16 @@ const TONE_PILL: Record<ReturnType<typeof statusTone>, string> = {
   done: 'p-go',
 };
 
-/** Claude table delay pill: +1h35 */
+/** B-8.8 — opóźnienie ETA: ≥24 h → dni+godz+min; poniżej → godz+min */
 export function formatDelayPill(delayMin: number): string {
-  const h = Math.floor(delayMin / 60);
-  const m = delayMin % 60;
-  return `+${h}h${String(m).padStart(2, '0')}`;
+  const abs = Math.abs(Math.trunc(delayMin));
+  const sign = delayMin < 0 ? '-' : '+';
+  const d = Math.floor(abs / (60 * 24));
+  const h = Math.floor((abs % (60 * 24)) / 60);
+  const m = abs % 60;
+  const mm = String(m).padStart(2, '0');
+  if (d > 0) return `${sign}${d}d ${h}h ${mm}m`;
+  return `${sign}${h}h${mm}`;
 }
 
 export function StatusPill({

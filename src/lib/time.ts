@@ -144,6 +144,22 @@ export function formatTableDay(
   return y === refYear ? core : `${core}.${m[1]}`;
 }
 
+
+/** B-8.3 / B-8.11 — data w harmonogramie zawsze z rokiem; godzina z okna planu/awizacji gdy jest. */
+export function formatSchedTableDay(
+  day: string | null | undefined,
+  windowIso: string | null | undefined,
+  timeZone: CorridorZone,
+): string {
+  if (!day) return '—';
+  const datePart = formatCalendarDay(day);
+  if (!windowIso) return datePart;
+  const d = parseInstant(windowIso);
+  if (!d) return datePart;
+  const p = partsInZone(d, timeZone);
+  return `${datePart} ${pad(p.h)}:${pad(p.mi)}`;
+}
+
 /**
  * Instant or calendar day for table cells — same year rule as formatTableDay.
  * Default withTime=true for ISO instants; date-only never shows time.

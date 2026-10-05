@@ -6,16 +6,18 @@ import { MAP_FIELDS as MAP_FIELDS_UI, REQUIRED_FIELDS as REQUIRED_FIELDS_UI, typ
 import { useTowerStore } from '../store/useTowerStore';
 import { filterLoads } from '../lib/selectors';
 import { StatusPill, formatDelayPill } from '../components/ui/StatusPill';
-import { canImportSchedule, canSeeCost, canSeeMargin, canSeeRevenue, visibleDriverPhone } from '../lib/permissions';
+import { canImportSchedule, canSeeCost, canSeeMargin, canSeeRevenue } from '../lib/permissions';
 import { fmtNum, pctText, t, tp } from '../i18n/messages';
 import { formatTowerPair } from '../lib/cSep';
 import { docCategoryLabel } from '../lib/enumLabels';
 import {
   delayMinutesVsPlan,
   formatTableDay,
+  formatSchedTableDay,
+  TZ_LOAD_PL,
+  TZ_UNLOAD_SE,
   formatTableInZone,
   refYearInOps,
-  TZ_UNLOAD_SE,
 } from '../lib/time';
 import { getNow } from '../lib/frozenNow';
 // D15: ExcelJS (~1 MB) tylko przy imporcie/eksporcie — dynamiczny import.
@@ -856,13 +858,12 @@ export function ScheduleView() {
                               <span className="code" data-content>{l.code}</span>
                             </td>
                           );
-                        case 'ord_ksh':
                         case 'ord_hhl':
                         case 'ord_scx': {
-                          const v = id === 'ord_ksh' ? l.orderNo : id === 'ord_hhl' ? l.hhlOrderNo : l.carrierOrderNo;
+                          const v = id === 'ord_hhl' ? l.hhlOrderNo : l.carrierOrderNo;
                           return (
                             <td key={id} data-col={id}>
-                              {v ? <span className="mono">{v}</span> : id === 'ord_ksh' ? '—' : <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_sch_none')}</span>}
+                              {v ? <span className="mono">{v}</span> : <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_sch_none')}</span>}
                             </td>
                           );
                         }
@@ -894,10 +895,14 @@ export function ScheduleView() {
                               {fmtDim(l.dims.weightT, locale)} t
                             </td>
                           );
-                        case 'load':
-                          return <td key={id} data-col={id}>{formatTableDay(l.plannedLoadDate, refYear)}</td>;
-                        case 'deliver':
-                          return <td key={id} data-col={id}>{formatTableDay(l.plannedDeliverDate, refYear)}</td>;                        case 'status':
+                        case 'load': {
+                          const win = l.planDates?.loadFrom ?? l.awizacja?.loadWindowStart ?? null;
+                          return <td key={id} data-col={id}>{formatSchedTableDay(l.plannedLoadDate, win, TZ_LOAD_PL)}</td>;
+                        }
+                        case 'deliver': {
+                          const win = l.planDates?.deliveryFrom ?? l.awizacja?.unloadWindowStart ?? null;
+                          return <td key={id} data-col={id}>{formatSchedTableDay(l.plannedDeliverDate, win, TZ_UNLOAD_SE)}</td>;
+                        }                        case 'status':
                           return (
                             <td key={id} data-col={id}>
                               <StatusPill status={l.status} stage={l.stage} />
@@ -911,23 +916,23 @@ export function ScheduleView() {
                         case 'driver':
                           return (
                             <td key={id} data-col={id}>
-                              {l.resources.driverName || l.resources.driverDeliveryName ? (
-                                <span data-content>{formatTowerPair(l.resources.driverName, l.resources.driverDeliveryName, !!l.resources.trailerSwap)}</span>
-                              ) : (
-                                <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_sch_none')}</span>
-                              )}
+                              <span data-content>{formatTowerPair(l.resources.driverName, l.resources.driverDeliveryName, !!l.resources.trailerSwap)}</span>
                             </td>
                           );
                         case 'phone': {
-                          const phone = visibleDriverPhone(role, l);
+                          const see = role === 'HHL' || role === 'SCX' || role === 'KSH';
+                          const paired = see
+                            ? formatTowerPair(l.resources.driverPhone, l.resources.driverDeliveryPhone, !!l.resources.trailerSwap)
+                            : '–';
+                          const telHref = (l.resources.driverPhone || l.resources.driverDeliveryPhone || '').replace(/\s+/g, '');
                           return (
                             <td key={id} data-col={id}>
-                              {phone ? (
-                                <a href={`tel:${phone}`} className="mono" data-content onClick={(e) => e.stopPropagation()}>
-                                  {phone}
+                              {paired !== '–' && telHref ? (
+                                <a href={`tel:${telHref}`} className="mono" data-content onClick={(e) => e.stopPropagation()}>
+                                  {paired}
                                 </a>
                               ) : (
-                                '—'
+                                <span className="mono" data-content>{paired}</span>
                               )}
                             </td>
                           );
