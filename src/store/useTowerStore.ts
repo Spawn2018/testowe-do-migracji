@@ -68,6 +68,7 @@ import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
 import { applyEtaToLoad } from '../lib/eta';
 import { isReadyBlocked } from '../lib/permits';
+import { currentActorLabel } from '../lib/historyActor';
 
 export type ViewKey = NK;
 
@@ -716,6 +717,8 @@ export const useTowerStore = create<TowerState>()(
       },
 
       setLoadStatus: (loadId, status, actor = 'system', note) => {
+        const systemActors = new Set(['system', 'import', 'geofence-engine', 'driver-pwa', 'DRIVER', 'auto']);
+        const actorLabel = systemActors.has(actor) ? actor : currentActorLabel(actor);
         {
           /* M5 — lustro enforce_order_numbers(): bez numeru HHL nie ma GOTOWY, bez numeru przewoźnika nie ma załadunku */
           const load = get().loads.find((l) => l.id === loadId);
@@ -723,7 +726,7 @@ export const useTowerStore = create<TowerState>()(
           if (reason) {
             const msg = orderGateMessage(reason, get().locale);
             get().pushToast(msg, 'CRITICAL', loadId);
-            get().appendEvent({ loadId, type: 'READY_BLOCKED', at: nowIso(), actor, note: msg });
+            get().appendEvent({ loadId, type: 'READY_BLOCKED', at: nowIso(), actor: actorLabel, note: msg });
             return;
           }
         }
@@ -738,7 +741,7 @@ export const useTowerStore = create<TowerState>()(
                 loadId,
                 type: 'READY_BLOCKED',
                 at: nowIso(),
-                actor,
+                actor: actorLabel,
                 note: `${label}: ${gate.reason}`,
               });
               return;
@@ -771,7 +774,7 @@ export const useTowerStore = create<TowerState>()(
           }),
         }));
         writeThrough(unloading ? { type: 'load.status', loadId, status, unloadedAt: at } : { type: 'load.status', loadId, status });
-        get().appendEvent({ loadId, type: `STATUS_${status}`, at, actor, note });
+        get().appendEvent({ loadId, type: `STATUS_${status}`, at, actor: actorLabel, note });
         if (status === 'UNLOADING' || note?.includes('UNLOADED')) {
           get().pushNotification({
             title: 'Zadanie POD 24h',
@@ -809,7 +812,7 @@ export const useTowerStore = create<TowerState>()(
         if (raised) for (const n of orderNoReminders([raised], getNowIso())) get().pushNotification(n);
         writeThrough({ type: 'load.orderNo', loadId, side, value: v });
         get().appendEvent({
-          loadId, type: 'ORDER_NO_UPDATED', at: nowIso(), actor: role,
+          loadId, type: 'ORDER_NO_UPDATED', at: nowIso(), actor: currentActorLabel(role),
           note: `${side === 'HHL' ? 'Nr zlecenia HHL' : 'Nr zlecenia przewoźnika'}: ${v ?? '—'}`,
         });
         get().pushToast(v ? tp(get().locale, 'a6_ts_order_saved', { v }) : t(get().locale, 'a6_ts_order_removed'), 'MEDIUM', loadId);
@@ -834,7 +837,7 @@ export const useTowerStore = create<TowerState>()(
           loadId,
           type: 'RESOURCES_UPDATED',
           at,
-          actor: role,
+          actor: currentActorLabel(role),
           payload: patch as Record<string, unknown>,
         });
         get().pushToast(t(get().locale, 'a6_ts_res_saved'), 'MEDIUM', loadId);
@@ -880,7 +883,7 @@ export const useTowerStore = create<TowerState>()(
           loadId,
           type: 'AWIZACJA_UPDATED',
           at,
-          actor: role,
+          actor: currentActorLabel(role),
           payload: patch as Record<string, unknown>,
         });
         get().pushToast(t(get().locale, 'a6_ts_awiz_saved'), 'MEDIUM', loadId);
@@ -924,7 +927,7 @@ export const useTowerStore = create<TowerState>()(
           }),
         }));
         writeThrough({ type: 'load.ferry', loadId, patch });
-        get().appendEvent({ loadId, type: 'FERRY_UPDATED', at, actor: get().role });
+        get().appendEvent({ loadId, type: 'FERRY_UPDATED', at, actor: currentActorLabel(get().role) });
       },
 
       sendMessage: (loadId, text) => {
@@ -975,7 +978,7 @@ export const useTowerStore = create<TowerState>()(
           loadId,
           type: mismatch ? 'PERMIT_MISMATCH' : 'DOC_UPLOADED',
           at: nowIso(),
-          actor: get().role,
+          actor: currentActorLabel(get().role),
           note: dataUrl ? `${name} (${opts?.bytes ?? 0} B)` : name,
           payload: { category, hasDataUrl: !!dataUrl, documentId: doc.id },
         });
@@ -996,7 +999,7 @@ export const useTowerStore = create<TowerState>()(
           loadId,
           type: 'DOC_UPLOADED',
           at: doc.uploadedAt ?? nowIso(),
-          actor: actor ?? get().role,
+          actor: actor ?? currentActorLabel(get().role),
           note: `${doc.name} (${doc.bytes ?? 0} B)`,
           payload: { category, documentId: doc.id, stored: true },
         });
@@ -1059,7 +1062,7 @@ export const useTowerStore = create<TowerState>()(
           loadId,
           type: 'SCX_ASSIGNED',
           at,
-          actor: get().role,
+          actor: currentActorLabel(get().role),
           note: rateNote ?? 'SCX + cennik',
           payload: { carrierId: 'org-scx', rateNote: rateNote ?? null },
         });
@@ -1497,7 +1500,7 @@ export const useTowerStore = create<TowerState>()(
         }));
         writeThrough({ type: 'load.sailing', loadId, sailingId: target?.id ?? null, bookingRef: ref });
         get().appendEvent({
-          loadId, type: 'SAILING_ASSIGNED', at: nowIso(), actor: st.role,
+          loadId, type: 'SAILING_ASSIGNED', at: nowIso(), actor: currentActorLabel(st.role),
           note: target ? `${target.vessel} · ${fmtLocal(target.departureAt)}${ref ? ` · ${ref}` : ''}` : 'rejs usunięty',
         });
         return null;
@@ -1755,7 +1758,7 @@ export const useTowerStore = create<TowerState>()(
             loadId,
             type: 'PLAN_B_ACTIVATED',
             at,
-            actor: get().role,
+            actor: currentActorLabel(get().role),
             note: option,
             payload: {
               riskId,
@@ -1827,7 +1830,7 @@ export const useTowerStore = create<TowerState>()(
           loadId,
           type: 'NOTE',
           at,
-          actor: get().role,
+          actor: currentActorLabel(get().role),
           note: `Alternatywa SE: ${alt.title}`,
           payload: { altId: alt.id, altIndex: idx, delayMin: alt.delayMin },
         });

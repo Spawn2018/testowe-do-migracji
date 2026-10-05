@@ -19,3 +19,6 @@
 
 | 2026-10-05 16:10 | executor | **ZAMKNIĘTE na prod (PR #111):** P8 język, P10 zegar, K.1–K.2 menu KSH | — |
 | 2026-10-05 16:18 | executor | **P6 + 10g.3 ZAMKNIĘTE** (faktura testowa; 0184 chat notify). Lista kontrolna zamknięta poza pozycjami do decyzji. | — |
+
+| 2026-10-05 16:22 | właściciel | Decyzje A–F (10a.1, 10c.1, 8.3, 8.9, licznik GPS, raport R2) — wykonywane | A–F |
+| 2026-10-05 16:40 | executor | **A–F ZAMKNIĘTE** (A–E fix+prod+zrzuty; F = `R2_KOPIA_KONT_O3_BRAKI.md`) | — |
