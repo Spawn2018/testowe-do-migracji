@@ -281,6 +281,25 @@ begin
 end $$;
 revoke all on function public.sefs_pub_avg(uuid, text, date, date) from public, anon, authenticated;
 
+-- Ostatnia opublikowana cena do dnia p_to (szacunek wstępny dla tygodnia jeszcze niezamkniętego).
+create or replace function public.sefs_last_published(p_project uuid, p_code text, p_to date)
+returns jsonb
+language sql stable security definer set search_path = public as $$
+  select coalesce((
+    select jsonb_build_object('avg', coalesce(c.value, r.value), 'n', 0,
+             'pubs', jsonb_build_array(jsonb_build_object('published_on', coalesce(c.published_on, r.published_on), 'value', coalesce(c.value, r.value))),
+             'fallback_last', true)
+      from fuel_index_readings r
+      left join fuel_index_readings c on c.corrects_id = r.id
+     where r.project_id = p_project and r.index_code = p_code and r.corrects_id is null
+       and r.period ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+       and coalesce(c.published_on, r.published_on) <= p_to
+     order by coalesce(c.published_on, r.published_on) desc, r.period desc
+     limit 1),
+    jsonb_build_object('avg', null, 'n', 0, 'pubs', '[]'::jsonb, 'fallback_last', false))
+$$;
+revoke all on function public.sefs_last_published(uuid, text, date) from public, anon, authenticated;
+
 -- ---------------------------------------------------------------------
 -- 3. Tydzień: wstępny / ostateczny
 -- ---------------------------------------------------------------------
@@ -303,6 +322,9 @@ begin
 
   s := sefs_pub_avg(p_project, 'SEK', v_prev_start, least(v_prev_end, v_today));
   p := sefs_pub_avg(p_project, 'PLN', v_prev_start, least(v_prev_end, v_today));
+  -- tydzień jeszcze niezamknięty (lub przyszły): szacunek wstępny z ostatniej opublikowanej ceny
+  if not v_final and (s->>'avg') is null then s := sefs_last_published(p_project, 'SEK', v_today); end if;
+  if not v_final and (p->>'avg') is null then p := sefs_last_published(p_project, 'PLN', v_today); end if;
 
   if ((s->>'avg') is not null and (p->>'avg') is not null) is not true then
     return jsonb_build_object(
@@ -548,7 +570,11 @@ begin
   if v_fuel is not null then
     v_w := sefs_week_calc(l.project_id, v_fuel, p_today);
   else
-    v_w := jsonb_build_object('ok', false, 'reason', 'NO_LOAD_DATE');
+    -- brak daty załadunku: szacunek WSTEPNY z bieżących publikacji (jak załadunek w przyszłym tygodniu)
+    v_w := sefs_week_calc(l.project_id, coalesce(p_today, (timezone('Europe/Warsaw', now()))::date) + 7, p_today);
+    if coalesce(v_w->>'ok', '') = 'true' then
+      v_w := v_w || jsonb_build_object('status', 'WSTEPNY', 'final', false, 'no_load_date', true);
+    end if;
   end if;
   v_w_ok := coalesce(v_w->>'ok', '') = 'true';
 

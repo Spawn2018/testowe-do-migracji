@@ -68,6 +68,8 @@ chk "brak odczytów w tygodniu → SOURCE_FAILURE (bez zgadywania)" "$(Q "select
 chk "tydzień niepełny (dziś 08.10, załadunek 12.10) → WSTEPNY" "$(Q "select sefs_week_calc('$P','2026-10-12','2026-10-08')->>'status'")" "WSTEPNY"
 chk "po niedzieli (dziś 12.10) → OSTATECZNY" "$(Q "select sefs_week_calc('$P','2026-10-12','2026-10-12')->>'status'")" "OSTATECZNY"
 
+chk "tydzień przyszły bez odczytów → WSTEPNY z ostatniej publikacji" "$(Q "select (sefs_week_calc('$P','2026-11-16','2026-10-08')->>'status')||'/'||(sefs_week_calc('$P','2026-11-16','2026-10-08')->>'fallback_last_sek')")" "WSTEPNY/true"
+
 # Cenniki SYMBOL (stawki z cennika produkcyjnego), transporty bez wymiarów zestawu (combo_* puste)
 sys "insert into rate_cards (id, project_id, side, org_id, currency, valid_from, version, note) values
   ('44444444-0000-0000-0000-0000000bafc1','$P','COST','$CAR','EUR','2026-09-28',1,'baf test'),
@@ -104,6 +106,12 @@ chk "postojowe 500 bez dopłaty: 6900+897+500" "$(Q "select baf_amount||'/'||tot
 sys "update loads set status='CANCELLED' where id='$LCX'"
 sys "select load_price_compute('$LCX', '2026-10-05')"
 chk "anulowany: brak dopłaty paliwowej" "$(Q "select coalesce(baf_amount::text,'∅')||'/'||baf_pct::numeric(6,2) from load_cost where load_id='$LCX'")" "0.00/0.00"
+
+LND=33333333-0000-0000-0000-0000000baf07
+sys "insert into loads (id, project_id, carrier_org_id, order_no) values ('$LND','$P','$CAR','BAF/ND')"
+sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, total_weight_t) values ('$P','$LND','SG-B4','DIMENSIONED',18.0,2.4,2.4,19.0)"
+sys "select load_price_compute('$LND', '2026-10-08')"
+chk "bez daty załadunku → cena z mnożnikiem WSTEPNY" "$(Q "select base_amount||'/'||fuel_status||'/'||coalesce(fuel_ref_date::text,'∅') from load_cost where load_id='$LND'")" "6900.00/WSTEPNY/∅"
 
 # Wstępny → ostateczny + migawka
 sys "select load_price_compute('$LNX', '2026-10-08')"
