@@ -1,5 +1,6 @@
 -- 0182 B-3a (część polisy) / lista 3.2: polisa OCP APPROVED przewoźnika automatycznie pokrywa każdy jego transport.
 -- Zezwolenia per wymiary (3.1) — nadal ⛔ D-83.
+-- SECURITY DEFINER: insurance_policies bez SELECT dla authenticated (jak 0097/0125).
 
 create or replace function public.load_insurance_cover(p_project uuid)
 returns table (
@@ -10,11 +11,17 @@ returns table (
   insurer text,
   valid_until date
 )
-language sql
+language plpgsql
 stable
-security invoker
+security definer
 set search_path = public
 as $$
+begin
+  if (current_app_user_id() is not null) is not true then
+    raise exception 'Brak aktywnego konta' using errcode = '42501';
+  end if;
+  -- HHL / przewoźnik / KSH: widzą cover transportów, które i tak widzą przez RLS na loads
+  return query
   select
     l.id as load_id,
     (p.id is not null) as covered,
@@ -35,10 +42,11 @@ as $$
   ) p on true
   where l.project_id = p_project
     and l.status <> 'CANCELLED';
+end;
 $$;
 
 revoke all on function public.load_insurance_cover(uuid) from public, anon;
 grant execute on function public.load_insurance_cover(uuid) to authenticated;
 
 comment on function public.load_insurance_cover(uuid) is
-  '0182: dla każdego transportu projektu — czy ma APPROVED polisę OCP przewoźnika ważną w dniu załadunku (auto-podpięcie, lista 3.2).';
+  '0182: cover polisą OCP APPROVED przewoźnika (DEFINER — tabela polis bez SELECT dla API).';
