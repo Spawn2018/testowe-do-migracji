@@ -867,6 +867,16 @@ chk "nieznany projekt odrzucony" "$(SR "select fuel_wob_ingest(gen_random_uuid()
 chk "wpis w audit_log (system) widoczny w baf_change_log dla HHL" "$($PSQL -c "begin; set local role service_role; select fuel_wob_ingest('$P',$WROWS,$WURL); set local role authenticated; set local request.jwt.claim.sub='$HHL'; select count(*) from baf_change_log('$P') where actor='system' and action='FUEL_READING_ADD'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)" 2
 chk "stary kod spoza listy nadal odrzucany przez tabelę" "$($PSQL -c "insert into fuel_index_readings (project_id,index_code,period,reading_date,value,source_url) values ('$P','EUR','2026-W39',current_date,1,'https://x')" 2>&1 | grep -c 'index_code_check')" 1
 $PSQL -c "update security_flags set enabled=false where key='FUEL_WOB_INGEST'" >/dev/null
+
+# --- PALIWO-AUTO-B (0168) ---
+chk "przełącznik FUEL_SE_PL_INGEST istnieje i jest włączony" "$(Q "select enabled::text from security_flags where key='FUEL_SE_PL_INGEST'")" "true"
+chk "anon/authenticated: brak EXECUTE fuel_se_pl_ingest; service_role ma" "$(Q "select has_function_privilege('anon','fuel_se_pl_ingest(uuid,jsonb)','execute')::text||has_function_privilege('authenticated','fuel_se_pl_ingest(uuid,jsonb)','execute')::text||has_function_privilege('service_role','fuel_se_pl_ingest(uuid,jsonb)','execute')::text")" "falsefalsetrue"
+SEPL="'[{\"index_code\":\"SEK\",\"period\":\"2026-09-01\",\"reading_date\":\"2026-09-01\",\"value\":22.9,\"source_url\":\"https://www.okq8.se/foretag/priser/\",\"source_note\":\"test\"},{\"index_code\":\"PLN\",\"period\":\"2026-09-01\",\"reading_date\":\"2026-09-01\",\"value\":6.943,\"source_url\":\"https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw\",\"source_note\":\"test\"}]'::jsonb"
+chk "fuel_se_pl_ingest: 2 odczyty" "$(SR "select fuel_se_pl_ingest('$P',$SEPL)->>'inserted'")" 2
+chk "fuel_se_pl_ingest: powtórka pomija" "$($PSQL -c "begin; set local role service_role; select fuel_se_pl_ingest('$P',$SEPL); select fuel_se_pl_ingest('$P',$SEPL)->>'skipped'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)" 2
+chk "SEK ze złego hosta odrzucony" "$(SR "select fuel_se_pl_ingest('$P','[{\"index_code\":\"SEK\",\"period\":\"2026-09-02\",\"reading_date\":\"2026-09-02\",\"value\":22.9,\"source_url\":\"https://example.com/x\",\"source_note\":\"t\"}]'::jsonb)" | grep -c 'okq8')" 1
+chk "brak odczytu dnia → missing" "$(SR "select fuel_se_pl_missing_watch('$P','2026-09-03'::date)->>'ok'")" false
+chk "po odczytach dnia → ok" "$($PSQL -c "begin; set local role service_role; select fuel_se_pl_ingest('$P',$SEPL); select fuel_se_pl_missing_watch('$P','2026-09-01'::date)->>'ok'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)" true
 chk "I-28: load_delivery_day_end usunięta (0085), load_delivery_deadline zostaje" "$(Q "select (to_regprocedure('load_delivery_day_end(date,timestamptz)') is null)::text||'/'||(to_regprocedure('load_delivery_deadline(date,timestamptz)') is not null)::text")" "true/true"
 echo; echo "[I-27] brak zezwolenia blokuje Gotowy dla klasy ≠ STANDARD (0084, przełącznik)"
 LD=33333333-0000-0000-0000-0000000027d1; LS=33333333-0000-0000-0000-0000000027a1

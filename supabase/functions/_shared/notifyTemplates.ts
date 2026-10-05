@@ -194,6 +194,16 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
         : `Bramka SMS nie wysłała tej wiadomości w ciągu 10 minut. Zadzwoń do kierowcy albo przekaż treść:\n\n${text}`);
       return { subject, body, severity: 'HIGH', view: null };
     }
+    case 'FUEL_READING_MISSING': {
+      const day = String(p.day ?? '—');
+      const missing = String(p.missing ?? 'SEK/PLN');
+      const subject = locale === 'en' ? `Fuel index missing (${missing})` : locale === 'sv' ? `Bränsleindex saknas (${missing})` : `Brak odczytu paliwa (${missing})`;
+      const body = locale === 'en'
+        ? `No automatic SEFS fuel reading for ${day}: missing ${missing}. Enter the reading manually (Options → SEFS) or check OKQ8 / Orlen sources.`
+        : locale === 'sv' ? `Ingen automatisk SEFS-bränsleavläsning för ${day}: saknas ${missing}. Ange avläsningen manuellt (Alternativ → SEFS) eller kontrollera OKQ8 / Orlen.`
+        : `Brak automatycznego odczytu indeksu paliwa SEFS za ${day}: brakuje ${missing}. Wprowadź odczyt ręcznie (Opcje → SEFS) albo sprawdź źródła OKQ8 / Orlen.`;
+      return { subject, body, severity: 'HIGH', view: 'risk' };
+    }
     case 'SMS_GATEWAY_SILENT': {
       // I-3 (0067): telefon-bramka bez sygnału > 30 min
       const since = String(p.since ?? '—');
