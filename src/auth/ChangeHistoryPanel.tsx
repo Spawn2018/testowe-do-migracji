@@ -25,7 +25,7 @@ type Row = {
   new_value: Record<string, unknown> | null;
 };
 
-/** B-6f — ile wierszy pobiera panel; licznik obok przycisków usunięty (był tylko liczbą pobranych). */
+/** B-6f — limit pobrania; bez „200” w UI (ani licznik przy przyciskach, ani notka z liczbą). */
 export const HISTORY_LIMIT = 200;
 
 function fmtJson(v: Record<string, unknown> | null): string {
@@ -216,7 +216,6 @@ export default function ChangeHistoryPanel() {
         </button>
       </div>
       {msg ? <div className="note">{msg}</div> : null}
-      {rows.length >= HISTORY_LIMIT ? <div className="note" data-history-capped>{tp(locale, 'b6_hist_capped', { n: String(HISTORY_LIMIT) })}</div> : null}
       {rows.length === 0 && !msg ? (
         <div className="note option-note">{t(locale, 'opt_acc_hist_empty')}</div>
       ) : (

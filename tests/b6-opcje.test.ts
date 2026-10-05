@@ -87,11 +87,12 @@ describe('B-6e: dziennik logowań', () => {
 });
 
 describe('B-6f: Historia zmian bez „200” obok przycisku', () => {
-  it('goły licznik usunięty; przy pełnej porcji podpowiedź o filtrze', () => {
+  it('goły licznik i notka z liczbą usunięte; limit pobrania zostaje', () => {
     const src = read('src/auth/ChangeHistoryPanel.tsx');
     expect(src).not.toContain('<span className="note">{rows.length}</span>');
+    expect(src).not.toContain("tp(locale, 'b6_hist_capped'");
+    expect(src).not.toContain('data-history-capped');
     expect(src).toContain('p_limit: HISTORY_LIMIT');
-    expect(src).toContain("tp(locale, 'b6_hist_capped'");
   });
 });
 
