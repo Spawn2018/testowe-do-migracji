@@ -20,9 +20,10 @@ describe('I-24 eksport PDF', () => {
     expect(w).toBeGreaterThan(h);
     expect(doc.getTitle()).toContain('zażółć');
   });
-  it('kolumny bez danych osobowych kierowcy i bez kwot', () => {
+  it('kolumny: kierowca (B-8) zamiast promu; bez kwot', () => {
     const labels = PDF_COLUMNS.map((c) => c.label.toLowerCase()).join('|');
-    expect(labels).not.toMatch(/kierowca|telefon|koszt|przych|marż|pln|eur/);
+    expect(labels).toMatch(/kierowca/);
+    expect(labels).not.toMatch(/prom|koszt|przych|marż|\beur\b|\bpln\b/);
   });
   it('pusta lista → jedna strona z nagłówkiem', async () => {
     const doc = await PDFDocument.load(await buildLoadsPdf([], font, { title: 'pusty' }));

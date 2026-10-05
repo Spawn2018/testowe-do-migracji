@@ -5,6 +5,7 @@ import {
   gustExceedsThreshold,
   seWeekendBanHit,
   plSundayBanHit,
+  holidayBanHit,
 } from '../supabase/functions/_shared/here/windAndBans.ts';
 
 describe('H-7 mapImage', () => {
@@ -40,5 +41,13 @@ describe('H-12 zakazy', () => {
     // Sunday PL
     expect(plSundayBanHit('2026-10-11T12:00:00Z')).toBe(true);
     expect(plSundayBanHit('2026-10-05T12:00:00Z')).toBe(false);
+  });
+});
+
+describe('H-12 święta', () => {
+  it('holidayBanHit z bazy', () => {
+    expect(holidayBanHit(true)).toBe(true);
+    expect(holidayBanHit(false)).toBe(false);
+    expect(holidayBanHit(null)).toBe(false);
   });
 });

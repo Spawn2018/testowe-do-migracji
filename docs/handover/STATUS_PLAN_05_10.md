@@ -32,12 +32,12 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 | SEFS-KOREKTA | **DONE** | PR #77, 0166 | — |
 | SMS-SILENT-FIX | **DONE** | 0167 | — |
 | MIG-0159-REG | **DONE** | ewidencja 0159 | — |
-| B-10 | **PARTIAL** | header/tygodnie/Status+Historia/awiz SCX; luki chat/ceny/PDF dalej | — |
+| B-10 | **PARTIAL+** | + PDF kierowca (zamiast promu), czat „odczytano” (0177); ceny/dopłaty dalej | — |
 | B-KSH | **DONE** | PR #82 PlanDatesPanel Edytuj | — |
 | B-REJSY | **DONE** | PR #82 filtr Przyszłe, rok, HHL_ADMIN | — |
-| B-Q | **do zrobienia** | część w L-* / Q-17–19; brak zbiorczego dowodu | — (dokumentacja) |
-| Q-11a | **do zrobienia** | — | — (5 rozmiarów) |
-| Q-11b | **do zrobienia** | — | — (push Android/iOS) |
+| B-Q | **DONE (dok.)** | `RAPORT_BQ_LOGIKA_05_10.md` | — |
+| Q-11a | **DONE** | `RAPORT_Q11_05_10.md` (390–1920) | — |
+| Q-11b | **CZEKA** | brak FCM/APNs; in-app OK — `RAPORT_Q11_05_10.md` | decyzja push |
 | Q-17 | **DONE** | B-MAPA PR #61/#62 | — |
 | Q-18 | **DONE** | PR #64 | — |
 | Q-19 | **DONE** | B-MAPA logistics tiles | — |
@@ -75,17 +75,17 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 | H-2-PL | **DONE** | 0171, HERE Traffic w `road-pl`, raport `RAPORT_D78_ZGODNOSC_05_10.md` | — |
 | H-3 | **zbudowane, wyłączone** | PR #84 Routing v8, bez Attributes | D-83 |
 | H-6 | **zbudowane, wyłączone** | B-MAPA warstwa | D-83 |
-| H-7 | **PARTIAL** | Edge `map-static` + e-mail `mapImageUrl`; PDF pełny później | — |
-| H-8 | **do zrobienia** | szkielet w kolejce — Attributes/profil kosztowy | budżet HERE |
-| H-10 | **PARTIAL** (ryzyko, próg 15 m/s); ETA+wiatr po TELM | `route-hazards`, windAndBans | ETA → TELM |
-| H-12 | **PARTIAL** | weekend SE / niedziela PL w `route-hazards` | kalendarz świąt |
+| H-7 | **PARTIAL+** | map-static + e-mail; `appendMapPage` w pdfExport | mapa w eksporcie 1 transportu |
+| H-8 | **PROPOZYCJA** | `PROPOZYCJA_H8_PROFIL_TRASY.md` (bez Attributes) | wybór A/B/C |
+| H-10 | **PARTIAL** | ostrzeżenie ≥15 OK; ETA+wiatr **WYŁ.** — `PROPOZYCJA_H10_WIATR_ETA.md` | akceptacja wartości |
+| H-12 | **DONE** | weekend + `truck_ban_holidays` 0177 | — |
 | H-4 / H-5 | **czeka zewnętrzne** | — | TELM-2 |
 | TELM-EMTRACK-WEB | **ZBUDOWANE (flaga false)** | 0173+0174 cron, Edge, raport 05.10; fix rk_source_down | włączenie HHL + sekrety Edge |
 | CLEAN-MAPLIBRE | **DONE** | brak maplibre/mapbox | — |
 | AUTH-MAIL | **DONE** | POSTEP 02.10 | — |
 | I-29 | **DONE** | `I29_BUDGETY_140.md` | — |
 | GATE-WEEKLY | **RYTM** | — | **11.10.2026** |
-| SEC-OWASP | **do zrobienia** | — | ostatnia przed pilotażem |
+| SEC-OWASP | **START** | `RAPORT_SEC_OWASP_05_10.md` | domknięcie ASVS+ZAP |
 
 ## 6. Tylko lista — bez budowy
 

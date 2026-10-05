@@ -230,7 +230,12 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (r.error || !r.data) return null;
       return String((r.data as { ts: string }).ts);
     },
-    async telmEmtrackWebEnabled() {
+    async truckBanHolidayHit(country: 'PL' | 'SE', isoUtc: string) {
+      const r = await sb.rpc('truck_ban_holiday_hit', { p_country: country, p_ts: isoUtc });
+      if (r.error) return false;
+      return r.data === true;
+    },
+        async telmEmtrackWebEnabled() {
       const r = await sb.rpc('telm_emtrack_web_enabled');
       if (r.error) throw new Error(`telm_emtrack_web_enabled: ${r.error.message}`);
       return r.data === true;

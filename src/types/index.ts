@@ -199,6 +199,8 @@ export interface LoadMessage {
   author: string;
   org: OrgKind;
   text: string;
+  /** B-10g: kto odczytał (podgląd); puste = jeszcze nikt poza autorem */
+  reads?: { userId: string; name: string; org?: string; at: string }[];
 }
 
 export interface Document {
