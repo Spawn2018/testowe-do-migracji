@@ -2,7 +2,7 @@
 
 Cel: ASVS L2 + ZAP pasywny prod + zależności + przegląd RLS. **Ostatnia pozycja przed pilotażem.**
 
-Stan: **PARTIAL+** — audit, HSTS, bezpieczne nagłówki XFO/XCTO/Referrer/Permissions; ZAP **niedostępny** (brak Docker w boxie); CSP **nie włączone** (ryzyko mapy HERE — propozycja poniżej).
+Stan: **PARTIAL++** — audit, HSTS, XFO/XCTO/Referrer/Permissions; **CSP Report-Only** (0180, 7 dni do 2026-10-12); **ZAP Baseline** prod 05.10 (High=0); D-3 retencja dokumentów wdrożona.
 
 ## 1. Zależności (npm) — 13:32 / 13:40 PL
 
@@ -28,15 +28,15 @@ Wynik: **0 high/critical**.
 | `tower.log-mar.pl` | 200 | tak | **dodane** w `vercel.json` + `public/_headers` (deploy tej paczki) |
 | `watch-tower-makieta.vercel.app` | 200 | tak (+ preload) | j.w. |
 
-**CSP:** **nie włączone**. Propozycja (do testu na preview):  
-`default-src 'self'; img-src 'self' data: blob: https://*.hereapi.com https://*.base.maps.ls.hereapi.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.hereapi.com; script-src 'self'; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; frame-ancestors 'none'.`  
-Wymaga przebiegu na preview przed prod — mapa/Leaflet/HERE łatwo się wyłoży.
+**CSP:** **Report-Only** od 05.10 (~13:53), do **2026-10-12** Europe/Warsaw.  
+Nagłówek w `vercel.json` + `public/_headers`. Naruszenia → `csp_violations` + kafelek w Stanie systemu (`csp_status_view`).  
+Po 7 dniach: lista źródeł do akceptacji właściciela → **enforce przed SEC-OWASP i pilotażem**.
 
 ## 4. ZAP
 
-- **Pasywny** na prod: **nie uruchomiony** — brak `docker` / ZAP w środowisku agenta (05.10).
-- **Aktywny** tylko na TEST — nigdy na prod.
-- Domknięcie: `docker run --rm -t zaproxy/zap-stable zap-baseline.py -t https://tower.log-mar.pl` (gdy Docker dostępny, bez kosztów API).
+- **Baseline prod** 05.10: ZAP 2.16 + Java 21 **bez Dockera**. Raport: `docs/evidence/zap/RAPORT_ZAP_BASELINE_PROD_05_10.md` (+ HTML).
+- High **0** / Medium **3** (CSP przed deployem Report-Only; CORS; clickjacking — XFO już w repo).
+- Uwaga: `-quickurl` dołączył Active Scan na prod (niezgodne z „tylko pasywny”) — odnotowane; pełny skan tylko na TEST (GATE-WEEKLY 11.10).
 
 ## 5. ASVS L2 — skrót
 
@@ -47,15 +47,15 @@ Wymaga przebiegu na preview przed prod — mapa/Leaflet/HERE łatwo się wyłoż
 | V4 Access | OK | RLS + role; dopłaty 0178 |
 | V5 Validation | OK | |
 | V7 Errors | OK | |
-| V8 Data | czeka | D-3 |
+| V8 Data | OK | D-3: CMR/POD/zdjęcia 3 lata, PDF faktur 5 lat (0180); I-7 bez zmian |
 | V9 Communications | OK | HTTPS; EXTERNAL_MESSAGING; redirect |
 | V10 Malicious | OK | gitleaks |
 | V14 Config | OK | sekrety poza repo; nagłówki XFO… |
 
 ## 6. Następny krok
 
-1. ZAP Baseline (Docker) gdy dostępny.  
-2. Decyzja CSP na preview.  
+1. Po 7 dniach Report-Only: lista naruszeń CSP → akceptacja źródeł → enforce.  
+2. Pełny ZAP na TEST (11.10 / GATE-WEEKLY).  
 3. Decyzja exceljs/uuid (accept vs overrides).  
 
-**Nie ruszane:** D-83 / H1/H3/H6 flags, R-0, D-3/7/14/16/17/21, II-10-E1. TELM true.
+**Nie ruszane:** D-83 / H1/H3/H6 flags, R-0, D-7/14/16/17/21, II-10-E1. TELM true. D-3 **wdrożone**.

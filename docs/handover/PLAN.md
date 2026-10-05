@@ -339,7 +339,7 @@ Wpisujesz tu każde pytanie i idziesz dalej.
 |---|---|---|
 | D-1 | **ZREALIZOWANE** (I-30): cennik SYMBOL w bazie (TEST+PROD), kwoty wyłącznie skryptem z `D:\Watch Tower\dane` | R-1, I-30 |
 | D-2 | **ZREALIZOWANE** (I-31): SEFS hybrid_min w bazie; III-10 WOB wyłączone (niezgodne z umową). Potwierdzenie SCX (pyt. 9) nie blokuje | I-31 |
-| D-3 | retencja zdjęć, CMR, POD | część I-7 |
+| D-3 | **ZATWIERDZONE 05.10 ~13:53:** CMR, POD, zdjęcia **3 lata**; PDF faktur **5 lat**; I-7 kierowca bez zmian | retencja dokumentów |
 | D-4 | ~~telefon i SIM~~ — **ZAMKNIĘTE 01.10:** telefon Android + karta SIM są (koordynator). Dokończenie = I-3-APK | I-3-APK |
 | D-5 | **DONE 02.10** (właściciel): umowy RODO / zgody załatwione — odblokowanie zaproszeń i e-maili do kont dodanych w aplikacji (0133); pełne EXTERNAL_MESSAGING nadal osobna decyzja | R-2 |
 | D-6 | spotkanie ze Scandinavian Express | etap II |
@@ -1047,3 +1047,11 @@ Kolejność: (0) blokada SMS/e-mail tylko właściciel (test na sucho) → (1) z
 ### Paczka PLAN 05.10 ~13:30 (po TELM live)
 H-12 święta 0177; H-10 ETA+wiatr propozycja WYŁ.; H-8 propozycja; B-Q/Q-11a dok.; Q-11b czeka push; B-10 PDF kierowca + odczyty czatu; SEC-OWASP start. TELM_EMTRACK_WEB true; H1/H3/H6 false; blokada SMS właściciela zostaje.
 
+## Polecenie właściciela 2026-10-05 ~13:53 — CSP Report-Only, ZAP, D-3, raport, nie stój
+
+1. **CSP:** Report-Only 7 dni → naruszenia w tabeli Stan systemu → lista źródeł do akceptacji → enforce **przed** SEC-OWASP i pilotażem.
+2. **ZAP:** instalacja bez Dockera (Java); Baseline pasywny **prod**; pełny tylko **TEST**; wynik do SEC-OWASP.
+3. **D-3 zatwierdzone:** CMR/POD/zdjęcia **3 lata**, PDF faktur **5 lat**; I-7 kierowca bez zmian → wdrożyć retencję.
+4. Raport stanu (ID|status|dowód): B-KSH, HHL-4a, C-SEP, B-REJSY, FAK-9, Q-7, Q-8, Q-10, Q-15, Q-17, UI-12, D-31, D-27, CLEAN-MAPLIBRE, AUTH-MAIL, I-29, TELM-2 (symulacje), B-10, H-7. Bez dowodu = buduj wg PLAN. Czeka właściciel: D-83→B-3a/H-1/H-3, R-0, D-7/14/16/17/21. GATE-WEEKLY **11.10**.
+5. SG-03: raport po rozładunku (SMS 1 h tylko właściciel).
+Nie stój. TELM true; H1/H3/H6 false; blokada SMS właściciela.

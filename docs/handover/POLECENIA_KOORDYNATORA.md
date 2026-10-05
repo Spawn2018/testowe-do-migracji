@@ -1023,3 +1023,30 @@ Właściciel wybrał litery:
 - H1/H3/H6 zostają **false**; TELM_EMTRACK_WEB **true**; blokada SMS/e-mail właściciela zostaje.
 
 Kontynuować też B-10 / H-7 / SEC z poprzedniej paczki.
+
+## Polecenie właściciela 2026-10-05 ~13:53 (czas warszawski) — CSP, ZAP, D-3, raport stanu, nie stój
+
+DECYZJE WŁAŚCICIELA (05.10) I DALSZA PRACA
+
+1. CSP: tryb Report-Only przez 7 dni, zbieranie naruszeń do tabeli
+   w Stanie systemu; potem lista dozwolonych źródeł do akceptacji
+   właściciela i włączenie wymuszania PRZED SEC-OWASP i pilotażem.
+2. ZAP: nie czekaj na Dockera — instalacja ZAP bez Dockera (pakiet
+   z Javą); Baseline pasywny na produkcji, pełny tylko na TEST. Wynik
+   do SEC-OWASP.
+3. D-3: zatwierdzone — CMR, POD i zdjęcia 3 lata, PDF faktur 5 lat;
+   wdroż retencję (I-7 dla danych kierowcy bez zmian).
+
+4. NIE STAJESZ. Najpierw raport stanu (tabela ID | status | dowód)
+   dla: B-KSH, HHL-4a, C-SEP, B-REJSY, FAK-9, Q-7, Q-8, Q-10, Q-15,
+   Q-17, UI-12, D-31, D-27, CLEAN-MAPLIBRE, AUTH-MAIL, I-29, TELM-2
+   (symulacje naczepy), B-10, H-7. Każda pozycja bez dowodu = do
+   zrobienia — budujesz w kolejności PLAN.md.
+   Czekają na właściciela tylko: D-83 (B-3a, H-1, H-3), R-0, D-7, D-14,
+   D-16, D-17, D-21. GATE-WEEKLY 11.10 bez zmian.
+5. SG-03: raport po rozładunku jak ustalono (SMS 1 h przed — tylko
+   do właściciela).
+
+Migracje przez lokalną bramę, obie domeny 200. Bez kasowania danych,
+bez wydatków, bez prawdziwych SMS bez zgody.
+TELM true; H1/H3/H6 false; blokada SMS właściciela zostaje.
