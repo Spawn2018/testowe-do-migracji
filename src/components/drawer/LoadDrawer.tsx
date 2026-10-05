@@ -70,7 +70,8 @@ function MoneySideMeta({ side, locale, which, showFx }: { side: MoneySideV2; loc
       </div>
       <div className="mrow">
         <span className="lbl">{t(locale, 'fuel_mult')}</span>
-        <span className="mono" data-fuel-ref={side.fuel.refDate}>×{side.fuel.applied.toFixed(4)} · {t(locale, 'fuel_ref')} {side.fuel.refDate}</span>
+        <span className="mono" data-fuel-ref={side.fuel.refDate}>×{side.fuel.applied.toFixed(4)} · {t(locale, 'fuel_ref')} {side.fuel.refDate}
+          {side.fuel.status === 'WSTEPNY' ? <> <span className="pill p-amber" data-fuel-provisional>{t(locale, 'fuel_provisional')}</span></> : null}</span>
       </div>
       {showFx ? (
         <div className="mrow" data-fx-row>
@@ -523,12 +524,12 @@ export function LoadDrawer() {
                   </div>
                 ) : (
                   <div className="banner red" data-permit="missing" style={{ margin: '13px 0 0' }}>
-                    <b>{t(locale, 'a6_dr_permit_missing_b')}</b> {tp(locale, 'a6_dr_permit_missing', { l: fmtDim(comboL, locale) })}
+                    <b>{t(locale, 'a6_dr_permit_missing_b')}</b> {tp(locale, load.resources.setLengthM != null ? 'a6_dr_permit_missing' : 'a6_dr_permit_missing_cargo', { l: fmtDim(comboL, locale) })}
                   </div>
                 )
               ) : readyUiBlocked ? (
                 <div className="banner red" style={{ margin: '13px 0 0' }}>
-                  <b>{t(locale, 'a6_dr_permit_missing_b')}</b> {tp(locale, 'a6_dr_permit_missing', { l: fmtDim(comboL, locale) })}
+                  <b>{t(locale, 'a6_dr_permit_missing_b')}</b> {tp(locale, load.resources.setLengthM != null ? 'a6_dr_permit_missing' : 'a6_dr_permit_missing_cargo', { l: fmtDim(comboL, locale) })}
                 </div>
               ) : (
                 <div

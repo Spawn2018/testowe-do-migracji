@@ -16,7 +16,9 @@ import {
 } from './engine';
 import { DEMO_NBP_RATES } from './demoFx';
 
-export interface MoneyFuelSnap { refDate: string; multSek: number; multPln: number; applied: number }
+/** status (0187): WSTEPNY do zamknięcia poprzedniego tygodnia (po niedzieli, Europe/Warsaw), OSTATECZNY = migawka. */
+export type FuelMultStatus = 'WSTEPNY' | 'OSTATECZNY' | 'BRAK';
+export interface MoneyFuelSnap { refDate: string; multSek: number; multPln: number; applied: number; status?: FuelMultStatus }
 export interface MoneyFxSnap { tableNo: string; mid: number; date: string; provisional: boolean }
 
 export interface MoneySideV2 {

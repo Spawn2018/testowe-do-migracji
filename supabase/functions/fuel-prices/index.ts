@@ -1,5 +1,5 @@
 /**
- * PALIWO-AUTO-B — codzienne odczyty OKQ8 (Q8 Trucks / Diesel, SEK/l wprost) i Orlen
+ * PALIWO-AUTO-B — codzienne odczyty OKQ8 (GoEasy Diesel, cena listowa firmowa, SEK/l wprost; 0187) i Orlen
  * (ONEkodiesel, PLN/m³ netto → PLN/l) do fuel_index_readings. Przełącznik FUEL_SE_PL_INGEST.
  * Wywołanie: pg_cron → pg_net, klucz service role. User-Agent: Watch Tower.
  */
@@ -13,7 +13,7 @@ import {
   pickOnEkodiesel,
   type OrlenRow,
 } from '../_shared/fuel/orlen.ts';
-import { OKQ8_PRICES_URL, OKQ8_UA, parseOkq8Q8TrucksDiesel } from '../_shared/fuel/okq8.ts';
+import { OKQ8_PRICES_URL, OKQ8_UA, parseOkq8GoEasyDiesel } from '../_shared/fuel/okq8.ts';
 
 function warsawToday(d = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
 
     const okq8Res = await fetch(OKQ8_PRICES_URL, { headers: { 'User-Agent': OKQ8_UA } });
     if (!okq8Res.ok) throw new Error(`OKQ8: HTTP ${okq8Res.status}`);
-    const okq8 = parseOkq8Q8TrucksDiesel(await okq8Res.text());
+    const okq8 = parseOkq8GoEasyDiesel(await okq8Res.text());
 
     const rows = [
       {
@@ -62,6 +62,7 @@ Deno.serve(async (req) => {
         reading_date: period,
         value: orlenM3ToLitre(orlen.value),
         source_url: ORLEN_SOURCE_PAGE,
+        published_on: String(orlen.effectiveDate ?? '').slice(0, 10) || null,
         source_note: `ORLEN ONEkodiesel ${orlen.value} PLN/m³ netto (effective ${orlen.effectiveDate}); zapis ${orlenM3ToLitre(orlen.value)} PLN/l`,
       },
       {
@@ -70,7 +71,8 @@ Deno.serve(async (req) => {
         reading_date: period,
         value: okq8.valueSek,
         source_url: OKQ8_PRICES_URL,
-        source_note: `OKQ8 Q8Trucks / Diesel ${okq8.rawPriceText} (asOf ${okq8.asOf ?? period}); wartość wprost, bez VAT`,
+        published_on: okq8.publishedOn,
+        source_note: `OKQ8 GoEasy Diesel, cena listowa firmowa ${okq8.rawPriceText} (gäller fr.om ${okq8.publishedOn ?? period}, zmiana ${okq8.changeText ?? '?'}); wartość wprost`,
       },
     ];
 

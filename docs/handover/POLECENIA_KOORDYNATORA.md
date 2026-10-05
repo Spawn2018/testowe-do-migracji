@@ -1278,3 +1278,42 @@ Opis „Jak działa” przy ETA — potwierdzony, NIE zmieniać.
 5. RAPORT PO PRZYJEŹDZIE SG-03: ETA przed H-4 / po H-4 / po tej poprawce vs rzeczywisty wjazd Boden; godzina SMS „1 h przed” (tylko właściciel). Wnioski II-7b.
 
 Migracje: lokalna brama. Obie domeny 200. SMS/e-mail SG-03 tylko do właściciela.
+
+## 2026-10-05 ~21:48 Europe/Warsaw — CENY I OPŁATA PALIWOWA BAF (po H-4/SG-03)
+
+Właściciel: mnożnik tydzień 41 (załadunki 05–11.10) = **1,13**.
+
+1. BAF SEK = OKQ8 **GoEasy Diesel** firmowa (nie Q8 Trucks). Kontrola 05.10 = **22,29**. Decyzja Q8 Trucks z 05.10 rano — zastąpiona.
+2. Średnia z cen **opublikowanych** w pełnym poprzednim tygodniu (pon–niedz), nie z każdego dnia; tydzień bez publikacji → ostatnia opublikowana. Wzorzec 28.09–04.10 → tydzień 41: SEK 22,63→1,13; PLN Orlen 7,22→1,15; wynik **1,13**. Przelicz SEK od 21.09 z GoEasy; data publikacji przy odczycie.
+3. Mnożnik ostateczny dopiero po zamknięciu poprzedniego tygodnia (po niedzieli PL); wcześniej „wstępny” w Cenach; ostateczny jako migawka (0166).
+4. `sefs_compute_hybrid_sys`: wersja tabeli wg `valid_from` tygodnia załadunku; nazwa indeksu SEK = GoEasy Diesel firmowa.
+5. **KRYTYCZNE:** 94 transporty bez ceny — `rate_match` z wymiarów **ładunku** (shipment_items), nie combo_* (D-83). Przelicz koszt/przychód ×94. Komunikat SG-03 18,21 m = długość ładunku.
+6. Testy: tydz.41→1,13; bez publikacji; niepełny→wstępny; wersja tabeli; SG/PL/KR + dopłata; raport 94.
+
+Migracje: lokalna brama. Domeny 200. Decyzja GoEasy+średnia z publikacji → rejestr D-2/D-34, PLAN.md, tu.
+
+## 2026-10-05 ~21:51 Europe/Warsaw — UZUPEŁNIENIE BAF pkt 2
+
+Zamiast „Przelicz odczyty SEK od 21.09 z historii GoEasy":
+- uzupełnij odczyty od 21.09 dla **OBU** źródeł (GoEasy z historii OKQ8, Orlen z archiwum cennika); data publikacji przy każdym;
+- drugi wzorzec (tydzień 21–27.09 → załadunki tygodnia 40):
+  SEK 23,34 / 22,54 / 22,94 / 23,34 → 23,04 → 1,14
+  PLN 7,440 / 7,347 / 7,342 / 7,483 / 7,442 → 7,41 → 1,17
+  wynik **1,14** (m.in. SG-03, załadunek 01.10)
+W raporcie: mnożnik tygodnia **40 = 1,14** i **41 = 1,13**.
+
+> Zapis decyzji (05.10 ~22:05): GoEasy Diesel firmowa + średnia z cen opublikowanych → `wzorzec/03_REJESTR_DECYZJI.md` (wiersz D-2 / D-34), `PLAN.md` (BAF-CENY-05-10). Realizacja: migracja **0187**, testy `tests/db/baf.sh`.
+
+## 2026-10-05 ~22:31 Europe/Warsaw — SG-03 BAF A + zasada TELM mid-trip
+
+SG-03: A — rzeczywisty załadunek **01.10** → tydzień **40** → mnożnik **1,14**.
+
+ZASADA NA STAŁE (poprawka „transport już w trasie" TELM):
+- podłączenie śledzenia w trakcie jazdy NIE ustawia rzeczywistego załadunku na godzinę podłączenia
+- faza z pozycji (np. IN_TRANSIT_SE) osobno, adnotacja „faza z pozycji przy podłączeniu"
+- rzeczywisty załadunek: tylko wyjazd ze strefy załadunku (GPS) albo ręcznie dyspozytor; gdy nieznany — BAF/daty z planu KSH (D-12, fuel_load_date bierze plan gdy brak actual)
+- sprawdź inne transporty z tą samą ścieżką; popraw + lista
+Test: podłączony 05.10, plan 01.10 → actual pusty, tydzień paliwa 40, mnożnik 1,14.
+Raport BAF: lista 8 bez ceny (86/94) + przyczyna każdego.
+
+> Realizacja (05.10 ~22:50): migracja **0188** `0188_telm_faza_bez_zaladunku.sql` — `telm_infer_phase_from_position` nie ustawia `actual_load_at`; faza w `telm_attach_phase` (adnotacja „faza z pozycji przy podłączeniu”); korekta `telm_fix_attach_actual_load()`. Audyt PROD: ta sama ścieżka tylko **SG-03** (actual 05.10 13:21 → pusty; paliwo tydz. 40 = 1,14). Testy `tests/db/baf.sh` (36).

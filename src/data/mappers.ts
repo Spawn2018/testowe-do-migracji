@@ -479,12 +479,15 @@ export interface PriceViewRow {
   base_amount: number | string | null; baf_amount: number | string | null; extras_amount: number | string | null;
   computed_total_eur: number | string | null; invoiced_total_eur: number | string | null; effective_total_eur: number | string | null;
   fuel_ref_date: string | null; fuel_mult_sek: number | string | null; fuel_mult_pln: number | string | null; fuel_applied_mult: number | string | null;
+  fuel_status?: string | null;
   fx_table_no: string | null; fx_effective_date: string | null; fx_rate_pln: number | string | null; fx_provisional: boolean | null;
 }
 
-export const PRICE_VIEW_COLUMNS =
+/** Kolumny sprzed 0187 (bez fuel_status) — zapas, gdy baza nie ma jeszcze migracji 0187. */
+export const PRICE_VIEW_COLUMNS_LEGACY =
   'load_id,pricing_tier,base_amount,baf_amount,extras_amount,computed_total_eur,invoiced_total_eur,effective_total_eur,' +
   'fuel_ref_date,fuel_mult_sek,fuel_mult_pln,fuel_applied_mult,fx_table_no,fx_effective_date,fx_rate_pln,fx_provisional';
+export const PRICE_VIEW_COLUMNS = PRICE_VIEW_COLUMNS_LEGACY + ',fuel_status';
 
 const TIERS = ['PROGNOZA', 'REALIZACJA', 'FAKTURA'] as const;
 type Tier = (typeof TIERS)[number];
@@ -499,6 +502,7 @@ function sideFromView(r: PriceViewRow): MoneySideV2 {
     fuel: {
       refDate: r.fuel_ref_date ?? '',
       multSek: num(r.fuel_mult_sek) ?? 1, multPln: num(r.fuel_mult_pln) ?? 1, applied: num(r.fuel_applied_mult) ?? 1,
+      ...(r.fuel_status === 'WSTEPNY' || r.fuel_status === 'OSTATECZNY' || r.fuel_status === 'BRAK' ? { status: r.fuel_status } : {}),
     },
     fx: { tableNo: r.fx_table_no ?? '', mid: num(r.fx_rate_pln) ?? 0, date: r.fx_effective_date ?? '', provisional: Boolean(r.fx_provisional) },
   };

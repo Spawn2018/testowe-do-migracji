@@ -13,7 +13,7 @@ import { safeStorageTarget } from './storagePath';
 import { workflowFromRow, workflowRunFromRow, workflowToDb, type WorkflowDbRow, type WorkflowRunDbRow } from './workflowMap';
 import {
   awizacjaPatchToDb, documentFromRow, eventFromRow, eventToRow, ferryPatchToDb, geofenceFromRow, geofenceToRpc,
-  PRICE_VIEW_COLUMNS, applyPriceViews, type PriceViewRow,
+  PRICE_VIEW_COLUMNS, PRICE_VIEW_COLUMNS_LEGACY, applyPriceViews, type PriceViewRow,
   BILL_COLUMNS, billFromRow, billToRpc, type BillRow, notificationFromRow, type NotificationRow,
   loadFromRow, messageFromRow, resourcesPatchToDb, riskFromRow, statusToDb, vesselToDb,
   type DocumentRow, type EventRow, type GeofenceRow, type LoadRow, type MessageRow, type OrgRow, type RiskRow,
@@ -59,6 +59,12 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
   async function loadSnapshot(): Promise<DataSnapshot> {
     await ensureContext();
     const at = now();
+    // 0187: fuel_status (wstępny/ostateczny); przed nałożeniem migracji widok nie ma kolumny → zapas bez niej
+    const selectPriceView = async (view: string) => {
+      const r = await sb.from(view).select(PRICE_VIEW_COLUMNS);
+      if (r.error && /fuel_status/.test(r.error.message ?? '')) return sb.from(view).select(PRICE_VIEW_COLUMNS_LEGACY);
+      return r;
+    };
     const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ] = await Promise.all([
       sb.from('loads').select(LOAD_COLUMNS).neq('status', 'CANCELLED').order('plan_load_date', { ascending: true, nullsFirst: false }),
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
@@ -68,8 +74,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.from('risk_signals').select('id,load_id,kind,severity,title,title_key,detail,detected_at,dedup_key').is('resolved_at', null).order('detected_at', { ascending: false }),
       sb.from('documents').select('id,load_id,category,file_name,mime_type,size_bytes,valid_until,visible_to,uploaded_at,storage_path,version,superseded_at'),
       // M2: ceny wyłącznie z widoków rolowych v2 (0010) — koszt: HHL + przewoźnik, przychód: HHL + klient
-      sb.from('v_load_price_carrier').select(PRICE_VIEW_COLUMNS),
-      sb.from('v_load_price_client').select(PRICE_VIEW_COLUMNS),
+      selectPriceView('v_load_price_carrier'),
+      selectPriceView('v_load_price_client'),
       // M6: faktury v2 (RLS invoices_read: strony faktury; HHL wszystko)
       sb.from('invoices').select(BILL_COLUMNS).not('direction', 'is', null).order('issue_date', { ascending: false }),
       // M7: centrum powiadomień — własne wiersze IN_APP (RLS notifications_read_own), treść w języku odbiorcy
