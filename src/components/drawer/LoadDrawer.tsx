@@ -162,24 +162,6 @@ export function LoadDrawer() {
     [messages, load],
   );
 
-  useEffect(() => {
-    if (tab !== 'chat' || !load || !SUPABASE_AUTH_ENABLED) return;
-    const ids = loadMsgs
-      .map((m) => Number(String(m.id).replace(/^msg-/, '')))
-      .filter((n) => Number.isFinite(n) && n > 0);
-    if (!ids.length) return;
-    void (async () => {
-      try {
-        const { getSupabase } = await import('../../auth/client');
-        const sb = await getSupabase();
-        for (const id of ids.slice(-30)) {
-          await sb.rpc('mark_load_message_read', { p_message: id });
-        }
-      } catch {
-        /* odczyty niekrytyczne */
-      }
-    })();
-  }, [tab, load?.id, loadMsgs]);
 
 
   if (!load) return null;
