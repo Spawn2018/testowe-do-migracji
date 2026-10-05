@@ -87,7 +87,7 @@ Rejestr, który wypisuje D-n: `docs/handover/wzorzec/03_REJESTR_DECYZJI.md`. Num
 | D-33 | kierowca, telefon, nr zlecenia, nr rejestracyjny | docs/handover/wzorzec/03_REJESTR_DECYZJI.md — Decyzje numerowane | obowiązuje |
 | D-34 | według mechanizmu BAF — data załadunku | docs/handover/wzorzec/03_REJESTR_DECYZJI.md — Decyzje numerowane | obowiązuje |
 | D-35 | **bez zmiany — ryzyko przyjęte**; unieważnienie tokenów Groka | docs/handover/wzorzec/03_REJESTR_DECYZJI.md — Decyzje numerowane | obowiązuje |
-| D-36 | emtrack.eu przez API + linki od podwykonawców; dokumentacja i przykłady — właściciel dostarczy | docs/handover/wzorzec/03_REJESTR_DECYZJI.md — Decyzje po spotkaniu z przewoźnikiem (29.09) — szczegóły w `ZLECENIE_PO_SPOTKANIU_SCX.md` | obowiązuje |
+| D-36 | emtrack.eu: **API → TELM-EMTRACK-WEB (zapas web) → linki podwykonawców**; źródło przy pozycji; awaria → następne. Raport web 05.10. Dokumentacja oficjalnego API — właściciel | docs/handover/wzorzec/03_REJESTR_DECYZJI.md; `RAPORT_TELM_EMTRACK_WEB_05_10.md` | obowiązuje |
 | D-37 | do kierowców — rezygnacja; do KSH — 1 h przed przyjazdem na załadunek | docs/handover/wzorzec/03_REJESTR_DECYZJI.md — Decyzje po spotkaniu z przewoźnikiem (29.09) — szczegóły w `ZLECENIE_PO_SPOTKANIU_SCX.md` | obowiązuje |
 | D-38 | ukryta; CMR wgrywa dyspozytor; POD i zdjęcia mocowania — rezygnacja | docs/handover/wzorzec/03_REJESTR_DECYZJI.md — Decyzje po spotkaniu z przewoźnikiem (29.09) — szczegóły w `ZLECENIE_PO_SPOTKANIU_SCX.md` | obowiązuje |
 | D-39 | fala 3,8 m, porywy 40 węzłów — potwierdzone | docs/handover/wzorzec/03_REJESTR_DECYZJI.md — Decyzje po spotkaniu z przewoźnikiem (29.09) — szczegóły w `ZLECENIE_PO_SPOTKANIU_SCX.md` | obowiązuje |

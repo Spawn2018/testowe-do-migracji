@@ -34,7 +34,7 @@ Ręczny ruch w portalu / Postman **nie** przechodzi przez Edge → nie trafia do
 ### Advanced Raster Tile — pula 30 000?
 **Tak (cennik HERE / kalkulator):** warstwa darmowa **0–30 000** dla Raster Tile i **Advanced Raster Tile** (ta sama półka „General ≤30K”).  
 Aplikacja używa `logistics.day/night` → kategoria **Advanced Raster Tile**.  
-Parametr `HERE_TILES_FREE=30000` w `app_parameters` jest zgodny z tą półką (do potwierdzenia na koncie właściciela).
+Parametr `HERE_TILES_FREE=30000` w `app_parameters` jest zgodny z tą półką (potwierdzone: konto HERE właściciela, 05.10).
 
 ---
 
