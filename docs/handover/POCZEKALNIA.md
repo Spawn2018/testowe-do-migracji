@@ -16,3 +16,5 @@
 | 2026-10-05 15:57 | executor | P7: pasek najbliższych — Wawel (Polferries), brak Steny obok | P7 |
 | 2026-10-05 15:57 | executor | P10: zegar `gg:mm` nadal w pasku | P10 |
 | 2026-10-05 15:57 | executor | K.1: KSH ma pełną szufladę zamiast bocznego menu tylko „Edytuj” | K.1 |
+
+| 2026-10-05 16:10 | executor | **ZAMKNIĘTE na prod (PR #111):** P8 język, P10 zegar, K.1–K.2 menu KSH | — |
