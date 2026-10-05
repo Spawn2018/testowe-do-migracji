@@ -645,6 +645,37 @@ begin
 end $$;
 revoke all on function public.load_price_compute(uuid, date) from public, anon, authenticated;
 
+
+-- „wstępny” w Cenach: status mnożnika w widokach rolowych (kolumna dopisana na końcu)
+create or replace view v_load_price_carrier with (security_invoker = false, security_barrier = true) as
+select l.id as load_id, l.project_id, l.order_no, l.hhl_order_no, l.carrier_order_no,
+       c.currency, c.pricing_tier,
+       c.base_amount, c.baf_pct, c.baf_amount, c.extras, c.extras_amount, c.total_amount,
+       c.computed_total_eur, c.invoiced_total_eur,
+       money_effective_eur(c.invoiced_total_eur, c.computed_total_eur, c.total_amount) as effective_total_eur,
+       c.fuel_ref_date, c.fuel_mult_sek, c.fuel_mult_pln, c.fuel_applied_mult,
+       c.fx_table_no, c.fx_effective_date, c.fx_rate_pln, c.fx_provisional,
+       c.fuel_status
+from loads l join load_cost c on c.load_id = l.id
+where is_hhl()
+   or (current_org_kind() = 'CARRIER'
+       and l.carrier_org_id = current_org_id()
+       and current_app_role() = 'CARRIER_DISPATCH');
+
+create or replace view v_load_price_client with (security_invoker = false, security_barrier = true) as
+select l.id as load_id, l.project_id, l.order_no, l.hhl_order_no, l.carrier_order_no,
+       r.currency, r.pricing_tier,
+       r.base_amount, r.baf_pct, r.baf_amount, r.extras, r.extras_amount, r.total_amount,
+       r.computed_total_eur, r.invoiced_total_eur,
+       money_effective_eur(r.invoiced_total_eur, r.computed_total_eur, r.total_amount) as effective_total_eur,
+       r.fuel_ref_date, r.fuel_mult_sek, r.fuel_mult_pln, r.fuel_applied_mult,
+       r.fx_table_no, r.fx_effective_date, r.fx_rate_pln, r.fx_provisional,
+       r.fuel_status
+from loads l join load_revenue r on r.load_id = l.id
+join projects p on p.id = l.project_id
+where is_hhl()
+   or (current_org_kind() = 'CLIENT' and p.client_org_id = current_org_id());
+
 -- fx_write_fuel (rozładunek / zmiana daty) = ta sama wycena z migawką
 create or replace function public.fx_write_fuel(p_load uuid)
 returns void
