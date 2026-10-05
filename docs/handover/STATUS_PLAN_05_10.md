@@ -80,7 +80,7 @@ Czeka właściciel / zewnętrzne = **bez budowy**.
 | H-10 | **do zrobienia** (ryzyko); ETA+wiatr po emtrack | — | ETA → TELM-2 |
 | H-12 | **do zrobienia** | — | — |
 | H-4 / H-5 | **czeka zewnętrzne** | — | TELM-2 |
-| TELM-EMTRACK-WEB | **RAPORT DONE → budowa** | `RAPORT_TELM_EMTRACK_WEB_05_10.md` | — |
+| TELM-EMTRACK-WEB | **ZBUDOWANE (flaga false)** | 0173, `emtrack-web` Edge, raport 05.10 | włączenie HHL + sekrety |
 | CLEAN-MAPLIBRE | **DONE** | brak maplibre/mapbox | — |
 | AUTH-MAIL | **DONE** | POSTEP 02.10 | — |
 | I-29 | **DONE** | `I29_BUDGETY_140.md` | — |

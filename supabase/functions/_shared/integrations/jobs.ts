@@ -30,6 +30,10 @@ import {
 } from './road.ts';
 import { buildTrafficIncidentsUrl, parseHereTrafficIncidents } from '../here/trafficIncidents.ts';
 import { HERE_BILLING_DEFAULTS } from '../here/billing.ts';
+import {
+  EMTRACK_EXPECTED_VERSION, EMTRACK_UA, fetchTrackingObjectsReadOnly, pollIntervalSec,
+} from '../telematics/emtrackWeb.ts';
+import { matchFixToLoad } from '../telematics/matchTrailer.ts';
 import { unknownCodeRiskInput } from '../../../../src/lib/pl/describe.ts';
 import { deeplTranslate, translateFreeText, usageLevel, DEEPL_MONTHLY_LIMIT } from '../../../../src/lib/pl/deepl.ts';
 import {
@@ -78,6 +82,16 @@ export interface SyncStore {
   noteHereUsage?(service: 'tiles' | 'routing' | 'matching' | 'attributes' | 'traffic', n: number): Promise<void>;
   /** Koszt ponad pule w bieżącym miesiącu (Europe/Warsaw). */
   hereMonthSpend?(): Promise<number>;
+  /** TELM: aktywne transporty do dopasowania naczepy. */
+  listActiveLoadsForTelematics?(): Promise<{ id: string; trailer_plate: string | null; telematics_vehicle_id: string | null; status: string | null }[]>;
+  /** TELM: zapis pozycji (process_position). */
+  processPosition?(row: {
+    loadId: string; lat: number; lon: number; ts: string;
+    source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK';
+    speed?: number | null; heading?: number | null; ignition?: boolean | null; raw?: unknown;
+  }): Promise<void>;
+  lastPositionAt?(loadId: string, source: string): Promise<string | null>;
+  telmEmtrackWebEnabled?(): Promise<boolean>;
   /** II-8: zapis bieżącej pogody morskiej */
   saveMarineCondition?(row: {
     corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA';
@@ -1025,18 +1039,147 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
   };
 }
 
+
+/**
+ * emtrack-web / TELM-EMTRACK-WEB — odczyt pozycji naczepy (D-36 zapas).
+ * Tylko odczyt WS; zero zapisu do emtrack. Wymaga flagi TELM_EMTRACK_WEB + sekretów EMTRACK_*.
+ */
+export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
+  const login = deps.env.EMTRACK_LOGIN?.trim();
+  const password = deps.env.EMTRACK_PASSWORD?.trim();
+  if (!login || !password) {
+    return {
+      job: 'emtrack-web', mode: 'DEMO', ok: true,
+      reason: 'Brak EMTRACK_LOGIN/PASSWORD — warstwa web wyłączona (D18)',
+    };
+  }
+  const enabled = deps.store.telmEmtrackWebEnabled ? await deps.store.telmEmtrackWebEnabled() : false;
+  if (!enabled) {
+    return {
+      job: 'emtrack-web', mode: 'LIVE', ok: true,
+      reason: 'Flaga TELM_EMTRACK_WEB wyłączona — bez zapisu pozycji',
+      observations: { flag: 'false' },
+    };
+  }
+
+  let version = '';
+  const verRes = await readText(deps, 'https://emtrack.eu/app/', { headers: { 'User-Agent': EMTRACK_UA } });
+  if (verRes.ok) {
+    const m = verRes.text.match(/<meta\s+name=["']version["']\s+content=["']([^"']+)["']/i);
+    version = m?.[1] ?? '';
+  }
+  const expected = deps.env.EMTRACK_EXPECTED_VERSION?.trim() || EMTRACK_EXPECTED_VERSION;
+  if (version && version !== expected) {
+    await deps.store.raiseRisk({
+      kind: 'SOURCE_DOWN', severity: 'HIGH',
+      title: `Emtrack web: zmiana wersji klienta (${version} ≠ ${expected})`,
+      titleKey: 'rk_generic', params: { event: 'emtrack_version' },
+      detail: { previous: expected, current: version, zrodlo: 'TELM-EMTRACK-WEB' },
+      dedup: `TELM_WEB_VERSION:${version}`, sourceUrl: 'https://emtrack.eu/app/', validUntil: null,
+    });
+  }
+
+  let objects: Awaited<ReturnType<typeof fetchTrackingObjectsReadOnly>>['objects'] = [];
+  let sentLog: Awaited<ReturnType<typeof fetchTrackingObjectsReadOnly>>['sentLog'] = [];
+  let loginOk = false;
+  try {
+    const r = await fetchTrackingObjectsReadOnly({
+      login,
+      password,
+      auth: (deps.env.EMTRACK_AUTH_TYPE as 'INTERNAL' | 'DIRECT' | undefined) ?? 'INTERNAL',
+      WebSocketImpl: (deps as JobDeps & { WebSocketImpl?: typeof WebSocket }).WebSocketImpl,
+    });
+    objects = r.objects;
+    sentLog = r.sentLog;
+    loginOk = r.loginOk;
+  } catch (e) {
+    const w = e instanceof Error ? e.message : String(e);
+    await deps.store.raiseRisk(sourceDownRisk('EMTRACK_WEB', [w], deps.now().toISOString(), 'https://emtrack.eu/app/'));
+    return {
+      job: 'emtrack-web', mode: 'LIVE', ok: false, risks: 1, warnings: [w],
+      observations: { sentTypes: sentLog.map((s) => s.type).join(',') },
+    };
+  }
+  if (!loginOk) {
+    await deps.store.raiseRisk(sourceDownRisk('EMTRACK_WEB', ['login_failed'], deps.now().toISOString(), 'https://emtrack.eu/app/'));
+    return {
+      job: 'emtrack-web', mode: 'LIVE', ok: false, risks: 1, warnings: ['login_failed'],
+      observations: { sentTypes: sentLog.map((s) => s.type).join(',') },
+    };
+  }
+  await deps.store.resolveRisks('SOURCE_DOWN:EMTRACK_WEB:');
+
+  const loads = deps.store.listActiveLoadsForTelematics ? await deps.store.listActiveLoadsForTelematics() : [];
+  const moveSec = Number(deps.env.TELM_WEB_MOVE_SEC ?? 120);
+  const stopSec = Number(deps.env.TELM_WEB_STOP_SEC ?? 900);
+  let written = 0;
+  let matched = 0;
+  let skippedInterval = 0;
+  const trailers = objects.filter((o) => String(o.type).toUpperCase() === 'TRAILER');
+  for (const fix of trailers) {
+    if (fix.lat == null || fix.lon == null || !fix.observedAt) continue;
+    const load = matchFixToLoad(fix, loads);
+    if (!load) continue;
+    matched++;
+    const last = deps.store.lastPositionAt ? await deps.store.lastPositionAt(load.id, 'EMTRACK_WEB') : null;
+    const needSec = pollIntervalSec(fix, moveSec, stopSec);
+    if (last) {
+      const ageSec = (deps.now().getTime() - Date.parse(last)) / 1000;
+      if (ageSec < needSec - 5) {
+        skippedInterval++;
+        continue;
+      }
+    }
+    if (deps.store.processPosition) {
+      await deps.store.processPosition({
+        loadId: load.id,
+        lat: fix.lat,
+        lon: fix.lon,
+        ts: fix.observedAt,
+        source: 'EMTRACK_WEB',
+        speed: fix.speedKmh,
+        heading: fix.headingDeg,
+        ignition: fix.ignition,
+        raw: {
+          provider: 'EMTRACK_WEB',
+          trackingObjectId: fix.trackingObjectId,
+          textId: fix.textId,
+          name: fix.name,
+          type: fix.type,
+          sentFrameTypes: sentLog.map((s) => s.type),
+        },
+      });
+      written++;
+    }
+  }
+
+  return {
+    job: 'emtrack-web', mode: 'LIVE', ok: true,
+    observations: {
+      version,
+      objects: String(objects.length),
+      trailers: String(trailers.length),
+      matched: String(matched),
+      written: String(written),
+      skippedInterval: String(skippedInterval),
+      sentTypes: sentLog.map((s) => s.type).join(','),
+    },
+  };
+}
+
 export const JOBS = {
   'ferry-schedule': runFerrySchedule, 'ferry-status': runFerryStatus, 'ferry-ais': runFerryAis,
   'ferry-ais-listen': runFerryAisListen,
   'ferry-weather': runFerryWeather,
   'road-se': runRoadSe, 'road-pl': runRoadPl, 'traffic-flow': runTrafficFlow,
+  'emtrack-web': runEmtrackWeb,
 } as const;
 export type JobName = keyof typeof JOBS;
 
 /** Minimalny odstęp między przebiegami [min] — ferry-status: co 15 min, nie częściej (ZRODLA_DANYCH §1.1). */
 export const MIN_INTERVAL_MIN: Record<JobName, number> = {
   'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-ais-listen': 0, 'ferry-weather': 60,
-  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15,
+  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'emtrack-web': 2,
 };
 
 /** Przebieg zadania z kontrolą częstotliwości i zapisem do dziennika (integration_runs). */

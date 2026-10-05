@@ -194,5 +194,39 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (r.error) throw new Error(`here_month_spend: ${r.error.message}`);
       return Number(r.data ?? 0);
     },
+    async listActiveLoadsForTelematics() {
+      const r = await sb.from('loads').select('id,trailer_plate,telematics_vehicle_id,status')
+        .not('status', 'in', '("DONE","CANCELLED","CANCELED","ARCHIVED")');
+      if (r.error) throw new Error(`loads telematics: ${r.error.message}`);
+      return (r.data ?? []) as { id: string; trailer_plate: string | null; telematics_vehicle_id: string | null; status: string | null }[];
+    },
+    async processPosition(row: {
+      loadId: string; lat: number; lon: number; ts: string;
+      source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK';
+      speed?: number | null; heading?: number | null; ignition?: boolean | null; raw?: unknown;
+    }) {
+      must(await sb.rpc('process_position', {
+        p_load_id: row.loadId,
+        p_lat: row.lat,
+        p_lon: row.lon,
+        p_ts: row.ts,
+        p_source: row.source,
+        p_speed: row.speed ?? null,
+        p_heading: row.heading ?? null,
+        p_ignition: row.ignition ?? null,
+        p_raw: row.raw ?? {},
+      }), 'process_position');
+    },
+    async lastPositionAt(loadId: string, source: string) {
+      const r = await sb.from('positions').select('ts').eq('load_id', loadId).eq('source', source)
+        .order('ts', { ascending: false }).limit(1).maybeSingle();
+      if (r.error || !r.data) return null;
+      return String((r.data as { ts: string }).ts);
+    },
+    async telmEmtrackWebEnabled() {
+      const r = await sb.rpc('telm_emtrack_web_enabled');
+      if (r.error) throw new Error(`telm_emtrack_web_enabled: ${r.error.message}`);
+      return r.data === true;
+    },
   };
 }
