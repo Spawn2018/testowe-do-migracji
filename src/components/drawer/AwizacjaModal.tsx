@@ -245,7 +245,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
           <label className="form-field">
             <span>{t(locale, 'a6_dr_ord_hhl')}</span>
             {orderSide === 'HHL' ? (
-              <input className="input mono" value={hhlOrder} onChange={(e) => setHhlOrder(e.target.value)} autoComplete="off" />
+              <input className="input mono" value={hhlOrder} onChange={(e) => setHhlOrder(e.target.value)} autoComplete="off" data-awiz-hhl-order />
             ) : (
               <span className="mono" data-hhl-ro>{load.hhlOrderNo || '—'}</span>
             )}
@@ -265,7 +265,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
           </label>
 
           {sailingLock ? (
-            <div className="note">{t(locale, `sail_deny_${sailingLock}`)}</div>
+            <div className="note" data-sailing-locked>{t(locale, `sail_deny_${sailingLock}`)}</div>
           ) : (
             <label className="form-field">
               <span>{t(locale, 'sail_label')}</span>

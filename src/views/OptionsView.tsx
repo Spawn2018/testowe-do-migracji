@@ -304,6 +304,8 @@ export function OptionsView() {
       titleKey: 'opt_acc_rates_title',
       descKey: 'opt_acc_rates_desc',
       keywords: 'cennik rate card',
+      /* O4/D18: stawki demo oznaczone (zgubione przy akordeonie DEC-6 5685099) */
+      mark: PROD_BUILD ? undefined : <DemoMark />,
       children: PROD_BUILD ? (
         RateCardForm ? <SuspenseBlock><RateCardForm /></SuspenseBlock> : (
           <div className="note option-note">{t(locale, 'i2_rates_no_source')}</div>
@@ -314,7 +316,7 @@ export function OptionsView() {
             <RateEditor side="COST" rules={rateCost} currency="EUR" locale={locale} onChange={(id, value) => updateRate('COST', id, value)} onSave={() => saveMark('cennik')} />
             <RateEditor side="REVENUE" rules={rateRev} currency="EUR" locale={locale} onChange={(id, value) => updateRate('REVENUE', id, value)} onSave={() => saveMark('cennik')} />
           </div>
-          <div className="note option-note">{t(locale, 'opt_rates_note')} {` · ${t(locale, 'opt_fx_demo')} ${DEMO_FX_META.tableLabel} · ${DEMO_FX_META.effectiveDate} · ${DEMO_FX_META.mid.toFixed(4).replace('.', ',')}.`}</div>
+          <div className="note option-note" data-fx-note="demo">{t(locale, 'opt_rates_note')} {` · ${t(locale, 'opt_fx_demo')} ${DEMO_FX_META.tableLabel} · ${DEMO_FX_META.effectiveDate} · ${DEMO_FX_META.mid.toFixed(4).replace('.', ',')}.`}</div>
           {RateCardForm ? <SuspenseBlock><RateCardForm /></SuspenseBlock> : null}
         </>
       ),
@@ -325,6 +327,8 @@ export function OptionsView() {
       titleKey: 'opt_acc_sefs_title',
       descKey: 'opt_acc_sefs_desc',
       keywords: 'sefs baf paliwo',
+      /* O4/D18: opłata paliwowa (fasada demo) oznaczona; z prawdziwym formularzem BAF — bez oznaczenia */
+      mark: BafForm ? undefined : <DemoMark />,
       children: (
         <>
           <OptionsHowTo locale={locale} k="b6_howto_sefs" />

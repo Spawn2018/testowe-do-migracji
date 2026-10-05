@@ -10,6 +10,8 @@ export type OptionsSectionDef = {
   count?: string;
   /** Tekst do wyszukiwania (oprócz tytułu/opisu). */
   keywords?: string;
+  /** B-SMOKE-DRIFT (O4/D18): oznaczenie w nagłówku sekcji (np. DemoMark) — widoczne także po zwinięciu. */
+  mark?: ReactNode;
   children: ReactNode;
 };
 
@@ -104,6 +106,7 @@ export function OptionsAccordion({ locale, sections, forceOpen }: Props) {
                   <h2>{t(locale, s.titleKey)}</h2>
                   <span className="sub">{t(locale, s.descKey)}</span>
                 </div>
+                {s.mark ?? null}
                 {s.count ? <span className="opt-acc-count">{s.count}</span> : null}
                 <span className="opt-acc-chevron" aria-hidden>
                   {isOpen ? '▾' : '▸'}

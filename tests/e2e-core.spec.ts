@@ -15,7 +15,8 @@ async function boot(page: Page, width = 1440) {
     for (const k of Object.keys(localStorage)) if (/watch|tower|wt/i.test(k)) localStorage.removeItem(k)
   })
   await page.reload({ waitUntil: 'networkidle', timeout: 120_000 })
-  await page.waitForSelector('#roleSeg', { timeout: 30_000 })
+  /* B-SMOKE-DRIFT: na 390 px przełącznik roli ukryty celowo (D-31, index.css) — czekamy na obecność w DOM */
+  await page.waitForSelector('#roleSeg', { state: 'attached', timeout: 30_000 })
   /* B-SMOKE-LANG: #langSeg usunięty (8322d02) — PL jedyny / domyślny */
 }
 
@@ -100,12 +101,15 @@ test.describe('E2E core (demo)', () => {
     await role(page, 'HHL')
     await page.locator('button.bell-trigger').click()
     await expect(page.locator('.bell-pop[role="dialog"]')).toBeVisible()
-    const item = page.locator('.bell-pop button').filter({ hasNotText: /Przeczyt|Mark|Läs/ }).first()
-    if ((await item.count()) === 0) {
-      test.skip(true, 'brak powiadomień w seed')
-    }
+    /* B-SMOKE-DRIFT: L-5 (2af2e46) — bez „przeczytane”; „Oznacz wszystkie” to .btn, pozycje to przyciski bez klasy .btn.
+       Klik w pozycję: znika z listy, licznik maleje o 1, otwiera cel (L-4). */
+    const badge = async () => Number(((await page.locator('button.bell-trigger').textContent()) ?? '').replace(/\D/g, '') || 0)
+    const before = await badge()
+    expect(before, 'seed HHL ma nieprzeczytane powiadomienia').toBeGreaterThan(0)
+    const item = page.locator('.bell-pop button:not(.btn)').first()
     await item.click()
     await page.waitForTimeout(400)
+    expect(await badge()).toBe(before - 1)
     const stillOpen = await page.locator('.bell-pop[role="dialog"]').count()
     const drawer = await page.locator('.drawer').count()
     expect(stillOpen === 0 || drawer > 0).toBeTruthy()
@@ -113,7 +117,9 @@ test.describe('E2E core (demo)', () => {
 
   test('telefon 390 px: kokpit + menu bez poziomego scrolla', async ({ page }) => {
     await boot(page, 390)
-    await role(page, 'HHL')
+    /* przełącznik ukryty na 390 px (D-31) — rola przez DOM */
+    await page.evaluate(() => (document.querySelector('#roleSeg button[data-role="HHL"]') as HTMLButtonElement).click())
+    await expect(page.locator('#roleSeg button[data-role="HHL"]')).toHaveAttribute('aria-pressed', 'true')
     const overflow = await page.evaluate(() => {
       const de = document.documentElement
       return { sx: window.scrollX, scrollW: de.scrollWidth, clientW: de.clientWidth }
