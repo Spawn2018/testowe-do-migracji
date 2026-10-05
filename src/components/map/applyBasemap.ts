@@ -95,7 +95,8 @@ export function hereRasterLayer(choice: BasemapChoice, onClosed: () => void): L.
       return img;
     },
   });
-  return new Grid({ attribution: choice.attribution, maxZoom: choice.maxZoom, tileSize: 256 });
+  const Ctor = Grid as new (opts: L.GridLayerOptions) => L.GridLayer;
+  return new Ctor({ attribution: choice.attribution, maxZoom: choice.maxZoom, tileSize: 256 });
 }
 
 export async function applyBasemap(
