@@ -33,3 +33,29 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 - Zgodne: 0 · Poprawione: 1 (3.2) · ⛔: 1 (3.1 D-83)
 - Wdrożenie: PR #99/#100/#101, migracje **0182–0183**, Vercel READY; domeny **200**
 - Polisa startowa SCX `OCP-SCX-2026-WT` (APPROVED) → kompletność **94/94**; notka w szufladzie Dokumenty
+
+| 4.1 | Finanse HHL — bez „pilotaż”; paliwo OK | **zgodne** — przychód HHL bez słowa „pilotaż”; linia paliwowa widoczna | `4.1.png` (+ `4-overview.png`) | stan prod |
+| 4.2 | Faktury — załączniki CMR (nie POD) | **zgodne** — „Załączniki CMR”; upload wymusza CMR | `4.2.png` | stan prod |
+
+## Raport sekcji 4 (Finanse)
+- Zgodne: 2 · Poprawione: 0 · ⛔: 0 · Wdrożenie: nie wymagane
+
+| 5.1 | Przycisk „Nowa automatyzacja” + utworzenie reguły | **zgodne** — przycisk otwiera kreator (Nazwa / Zdarzenie / Zapisz / Anuluj) | `5.1.png` (+ `5.1-kreator.png`) | stan prod |
+
+## Raport sekcji 5 (Automatyzacje)
+- Zgodne: 1 · Poprawione: 0 · ⛔: 0 · Wdrożenie: nie wymagane
+
+| 6.1 | „Jak działa” przy Powiadomieniach i decyzjach | **zgodne** — `b6_howto_notif` + macierz widoczności | `6.1.png` | stan prod |
+| 6.2 | Odbiorcy SMS i strefy — opis | **zgodne** — howto + listy stref / SMS | `6.2.png` | stan prod |
+| 6.3 | Progi i terminy — opis mechanizmu | **zgodne** — howto + progi (fala, wiatr, opóźnienie, awizacja) | `6.3.png` | stan prod |
+| 6.4 | Stan systemu jak pulpit | **zgodne** — bramka SMS, Resend, DeepL, kopia zapasowa | `6.4.png` | stan prod |
+| 6.5 | Dziennik logowań pokazuje wpisy | **zgodne** — wpisy z datą, IP, UA | `6.5.png` | stan prod |
+| 6.6 | Historia zmian — nie ma „200” obok przycisku | **poprawione** — usunięta notka z liczbą; limit pobrania zostaje | `6.6.png` | PR #103 · `dpl_2ZH73rHhUHBwQcwqeukpMfqmRdjN` |
+| 6.7 | Cennik — tabela nie przesunięta w prawo | **zgodne** — tabela w `.rate-table-wrap`, offset ~13 px (padding) | `6.7.png` | stan prod |
+| 6.8 | SEFS/BAF — średnie PL/SE z poprzedniego tygodnia same | **zgodne** — tydzień 28.09–04.10: SEK 7 / PLN 6 odczytów → średnie + mnożnik; `data-sefs-week=ok` | `6.8.png` | stan prod |
+| 6.9 | Wymóg zezwoleń — nie przesunięty w prawo | **zgodne** — body left ≈ panel | `6.9.png` | stan prod |
+
+## Raport sekcji 6 (Opcje)
+- Zgodne: 8 · Poprawione: 1 (6.6) · ⛔: 0
+- Wdrożenie: PR #103, `git archive` → Vercel READY `dpl_2ZH73rHh…`, tower.log-mar.pl **200**, watch-tower-makieta.vercel.app **200**
+
