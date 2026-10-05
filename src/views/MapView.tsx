@@ -157,9 +157,9 @@ export function MapView() {
         </button>
       </header>
 
-      <div className="mapsplit" style={{ flex: '1 1 auto', minHeight: 420 }}>
-        <div className="mapbox" style={{ minHeight: 420 }}>
-          <div className="maplayers">
+      <div className="mapsplit" data-b7="fixed-map">
+        <div className="mapbox">
+          <div className="maplayers" role="group" aria-label={t(locale, 'nav_map')}>
             {LAYER_ORDER.map(({ key, labelKey }) => (
               <label key={key}>
                 <input
