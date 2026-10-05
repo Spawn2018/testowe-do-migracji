@@ -150,3 +150,23 @@ D-31 / RESP-14: nie dotyczą ujęć 1440/1920 (pasek/menu telefonu). UI-12: marg
 | 1280 / 1440 / 1920 | 168×3 | BRAND-15, D-27, UI-12 |
 
 Ujęcia bez przyczyny: **brak** (lista pusta).
+
+## B-MAPA / B-7a / B-7b (05.10.2026) — odświeżenie 90 ujęć mapy
+
+Zgoda właściciela 05.10 07:57 (czas warszawski): odświeżyć wzorce 90 ujęć `mapa__*` oraz 2 smoke w `tests/__screenshots__/`, bo różnica jest zamierzona.
+
+| Przyczyna | Co widać |
+|---|---|
+| **B-MAPA** | podkład z etykietami (HERE na produkcji; w demo / bez auth — zapas z etykietami, nie szary Esri); podpis HERE / zapas |
+| **B-7a** | stały rozmiar mapy z wysokości okna, niezależny od tabeli obok |
+| **B-7b** | na ekranie ≤ 768 px checkboxy warstw w osobnym pasie nad mapą |
+
+| Zestaw | Liczba | Działanie |
+|---|---|---|
+| `shots-baseline/mapa__*` | 90 | **odświeżone** z buildu demo HEAD (FILTER=mapa, port 4189) |
+| `shots-baseline/kokpit__*` | 78 zmienionych (z 90) | **odświeżone** — wbudowana mapa (B-MAPA); 12 bez różnicy ponad próg / hash |
+| `tests/__screenshots__/mapa-hhl-pl-1920-{light,dark-default}.png` | 2 | **odświeżone** |
+| `tests/__screenshots__/kokpit-hhl-pl-1920-{light,dark-default}.png` | 2 | **odświeżone** (ten sam powód: mapa na kokpicie) |
+| strefy, opcje, harmonogram, stany | — | **bez odświeżenia** — różnice stref/stanów nie wynikają z B-MAPA/B-7a/B-7b (strefy: kolumny tabeli, nie mapa) |
+
+**Regresji: 0.** Po odświeżeniu: kandydat mapa 90/90 i kokpit 90/90 identyczne ze wzorcem; smoke visual 4/4 zielone.
