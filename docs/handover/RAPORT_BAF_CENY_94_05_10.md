@@ -1,26 +1,28 @@
 # Raport BAF 0187 — 94 transporty: stawka, mnożnik, koszt, przychód
 
-Źródło: **próba na produkcji w wycofanej transakcji** (`REPORT=1 node scripts/m0187-migrate.mjs dry-run-prod`, 05.10 ~22:23 Europe/Warsaw, commit z 0187 wersja końcowa) — po `apply-prod` wygenerować ponownie z `report-prod`.
+Źródło: produkcja `nglnnrmzmhusvxslousq` po migracjach 0187 + 0188 (`scripts/m0187-migrate.mjs report-prod`), czas Europe/Warsaw.
 
 - Mnożnik tygodnia **40** (załadunki 28.09–04.10, średnia z publikacji 21–27.09): **1,14** (SEK 23,04 → 1,14; PLN 7,41 → 1,17)
 - Mnożnik tygodnia **41** (załadunki 05–11.10, średnia z publikacji 28.09–04.10): **1,13** (SEK 22,63 → 1,13; PLN 7,22 → 1,15)
 - Dopłata = stawka drogowa × (mnożnik − 1); bez dopłaty na anulowaniu i postojach. Stawka z wymiarów **ładunku** (shipment_items).
 - OSTATECZNY = tydzień poprzedni zamknięty (migawka); WSTEPNY = szacunek z ostatniej publikacji, przeliczany co 6 h do zamknięcia tygodnia.
 
-Wycenione: **86/94**; koszt razem **652 738,40 EUR**, przychód razem **685 375,33 EUR**.
+- **SG-03** (15062/2026/OSL/GDA/P): rzeczywisty załadunek **01.10** (decyzja A, 05.10 ~22:31) → tydzień **40** → **1,14**. Migracja 0188: podłączenie śledzenia w trasie (05.10 13:21) nie jest rzeczywistym załadunkiem — `actual_load_at` wyczyszczony, data paliwa = plan KSH (D-12); faza IN_TRANSIT_SE zapisana osobno („faza z pozycji przy podłączeniu”). Ta sama ścieżka na PROD: tylko SG-03.
+
+Wycenione: **86/94**; koszt razem **652 807,40 EUR**, przychód razem **685 447,78 EUR**.
 
 | # | Zlecenie | Wysyłka | Wymiary ładunku L×W×H m / t | Załadunek | Symbol | Stawka koszt | Stawka przychód | Mnożnik | Status | Koszt (z BAF) | Przychód (z BAF) | Uwagi |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | 15048/2026/OSL/GDA/P | SG-01 | 18,21×2,45×2,45 / 20,7 | 2026-09-29 | SG | 6 900,00 | 7 245,00 | 1,14 | OSTATECZNY | 7 866,00 | 8 259,30 |  |
 | 2 | 15060/2026/OSL/GDA/P | SG-02 | 18,21×2,45×2,45 / 20,7 | 2026-09-30 | SG | 6 900,00 | 7 245,00 | 1,14 | OSTATECZNY | 7 866,00 | 8 259,30 |  |
 | 3 | 15061/2026/OSL/GDA/P | T-01 | 14,62×2,45×2,45 / 20,2 | 2026-09-30 | T | 5 510,00 | 5 785,50 | 1,14 | OSTATECZNY | 6 281,40 | 6 595,47 |  |
-| 4 | 15063/2026/OSL/GDA/P | SG-04 | 18,21×2,45×2,45 / 19,1 | 2026-10-01 | SG | 6 900,00 | 7 245,00 | 1,14 | OSTATECZNY | 7 866,00 | 8 259,30 |  |
-| 5 | 15064/2026/OSL/GDA/P | T-02 | 14,62×2,45×2,45 / 19,7 | 2026-10-02 | T | 5 510,00 | 5 785,50 | 1,14 | OSTATECZNY | 6 281,40 | 6 595,47 |  |
-| 6 | 15065/2026/OSL/GDA/P | SG-05 | 18,21×2,45×2,45 / 20,4 | 2026-10-02 | SG | 6 900,00 | 7 245,00 | 1,14 | OSTATECZNY | 7 866,00 | 8 259,30 |  |
-| 7 | 15066/2026/OSL/GDA/P | SG-06 | 18,21×2,45×2,45 / 19,1 | 2026-10-02 | SG | 6 900,00 | 7 245,00 | 1,14 | OSTATECZNY | 7 866,00 | 8 259,30 |  |
-| 8 | — | SG-08 | 18,21×2,45×2,45 / 19,1 | 2026-10-03 | SG | 6 900,00 | 7 245,00 | 1,14 | OSTATECZNY | 7 866,00 | 8 259,30 |  |
+| 4 | 15062/2026/OSL/GDA/P | SG-03 | 18,21×2,45×2,45 / 19,1 | 2026-10-01 | SG | 6 900,00 | 7 245,00 | 1,14 | OSTATECZNY | 7 866,00 | 8 259,30 |  |
+| 5 | 15063/2026/OSL/GDA/P | SG-04 | 18,21×2,45×2,45 / 19,1 | 2026-10-01 | SG | 6 900,00 | 7 245,00 | 1,14 | OSTATECZNY | 7 866,00 | 8 259,30 |  |
+| 6 | 15064/2026/OSL/GDA/P | T-02 | 14,62×2,45×2,45 / 19,7 | 2026-10-02 | T | 5 510,00 | 5 785,50 | 1,14 | OSTATECZNY | 6 281,40 | 6 595,47 |  |
+| 7 | 15065/2026/OSL/GDA/P | SG-05 | 18,21×2,45×2,45 / 20,4 | 2026-10-02 | SG | 6 900,00 | 7 245,00 | 1,14 | OSTATECZNY | 7 866,00 | 8 259,30 |  |
+| 8 | 15066/2026/OSL/GDA/P | SG-06 | 18,21×2,45×2,45 / 19,1 | 2026-10-02 | SG | 6 900,00 | 7 245,00 | 1,14 | OSTATECZNY | 7 866,00 | 8 259,30 |  |
 | 9 | — | SG-07 | 18,21×2,45×2,45 / 19,1 | 2026-10-03 | SG | 6 900,00 | 7 245,00 | 1,14 | OSTATECZNY | 7 866,00 | 8 259,30 |  |
-| 10 | 15062/2026/OSL/GDA/P | SG-03 | 18,21×2,45×2,45 / 19,1 | 2026-10-05 | SG | 6 900,00 | 7 245,00 | 1,13 | OSTATECZNY | 7 797,00 | 8 186,85 |  |
+| 10 | — | SG-08 | 18,21×2,45×2,45 / 19,1 | 2026-10-03 | SG | 6 900,00 | 7 245,00 | 1,14 | OSTATECZNY | 7 866,00 | 8 259,30 |  |
 | 11 | 15069/2026/OSL/GDA/P | SG-09 | 18,21×2,45×2,45 / 20,4 | 2026-10-05 | SG | 6 900,00 | 7 245,00 | 1,13 | OSTATECZNY | 7 797,00 | 8 186,85 |  |
 | 12 | 15071/2026/OSL/GDA/P | SG-10 | 18,21×2,45×2,45 / 19,1 | 2026-10-05 | SG | 6 900,00 | 7 245,00 | 1,13 | OSTATECZNY | 7 797,00 | 8 186,85 |  |
 | 13 | — | SG-11 | 18,21×2,45×2,45 / 20,7 | 2026-10-06 | SG | 6 900,00 | 7 245,00 | 1,13 | OSTATECZNY | 7 797,00 | 8 186,85 |  |
@@ -29,25 +31,25 @@ Wycenione: **86/94**; koszt razem **652 738,40 EUR**, przychód razem **685 375,
 | 16 | — | SG-14 | 18,21×2,45×2,45 / 19,1 | 2026-10-07 | SG | 6 900,00 | 7 245,00 | 1,13 | OSTATECZNY | 7 797,00 | 8 186,85 |  |
 | 17 | — | SG-13 | 18,21×2,45×2,45 / 19,1 | 2026-10-07 | SG | 6 900,00 | 7 245,00 | 1,13 | OSTATECZNY | 7 797,00 | 8 186,85 |  |
 | 18 | — | T-07 | 14,62×2,45×2,45 / 19,7 | 2026-10-07 | T | 5 510,00 | 5 785,50 | 1,13 | OSTATECZNY | 6 226,30 | 6 537,62 |  |
-| 19 | — | SG-15 | 18,21×2,45×2,45 / 20,4 | 2026-10-08 | SG | 6 900,00 | 7 245,00 | 1,13 | OSTATECZNY | 7 797,00 | 8 186,85 |  |
-| 20 | — | SG-16 | 18,21×2,45×2,45 / 19,1 | 2026-10-08 | SG | 6 900,00 | 7 245,00 | 1,13 | OSTATECZNY | 7 797,00 | 8 186,85 |  |
-| 21 | — | SG-19 | 18,21×2,45×2,45 / 20,4 | 2026-10-16 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
+| 19 | — | SG-16 | 18,21×2,45×2,45 / 19,1 | 2026-10-08 | SG | 6 900,00 | 7 245,00 | 1,13 | OSTATECZNY | 7 797,00 | 8 186,85 |  |
+| 20 | — | SG-15 | 18,21×2,45×2,45 / 20,4 | 2026-10-08 | SG | 6 900,00 | 7 245,00 | 1,13 | OSTATECZNY | 7 797,00 | 8 186,85 |  |
+| 21 | — | SG-18 | 18,21×2,45×2,45 / 19,1 | 2026-10-16 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
 | 22 | — | SG-17 | 18,21×2,45×2,45 / 19,1 | 2026-10-16 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
-| 23 | — | SG-18 | 18,21×2,45×2,45 / 19,1 | 2026-10-16 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
+| 23 | — | SG-19 | 18,21×2,45×2,45 / 20,4 | 2026-10-16 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
 | 24 | — | SG-20 | 18,21×2,45×2,45 / 19,1 | 2026-10-17 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
 | 25 | — | SG-21 | 18,21×2,45×2,45 / 20,7 | 2026-10-19 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
 | 26 | — | SG-22 | 18,21×2,45×2,45 / 20,7 | 2026-10-19 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
 | 27 | — | T-11 | 14,62×2,45×2,45 / 20,2 | 2026-10-20 | T | 5 510,00 | 5 785,50 | 1,12 | WSTEPNY | 6 171,20 | 6 479,76 |  |
-| 28 | — | T-12 | 14,62×2,45×2,45 / 19,7 | 2026-10-21 | T | 5 510,00 | 5 785,50 | 1,12 | WSTEPNY | 6 171,20 | 6 479,76 |  |
+| 28 | — | SG-23 | 18,21×2,45×2,45 / 19,1 | 2026-10-21 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
 | 29 | Tx/1/2026 | SG-24 | 18,21×2,45×2,45 / 19,1 | 2026-10-21 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
-| 30 | — | SG-23 | 18,21×2,45×2,45 / 19,1 | 2026-10-21 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
-| 31 | — | SG-26 | 18,21×2,45×2,45 / 19,1 | 2026-10-22 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
+| 30 | — | T-12 | 14,62×2,45×2,45 / 19,7 | 2026-10-21 | T | 5 510,00 | 5 785,50 | 1,12 | WSTEPNY | 6 171,20 | 6 479,76 |  |
+| 31 | — | SG-25 | 18,21×2,45×2,45 / 20,4 | 2026-10-22 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
 | 32 | — | KR-01 | 20,20×3,52×2,60 / 28,3 | 2026-10-22 | KR | 12 745,00 | 13 382,25 | 1,12 | WSTEPNY | 14 274,40 | 14 988,12 | konwój KR 1 |
-| 33 | — | SG-25 | 18,21×2,45×2,45 / 20,4 | 2026-10-22 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
+| 33 | — | SG-26 | 18,21×2,45×2,45 / 19,1 | 2026-10-22 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
 | 34 | — | SG-27 | 18,21×2,45×2,45 / 19,1 | 2026-10-23 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
 | 35 | — | SG-28 | 18,21×2,45×2,45 / 19,1 | 2026-10-23 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
-| 36 | — | SG-29 | 18,21×2,45×2,45 / 20,4 | 2026-10-24 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
-| 37 | — | SG-30 | 18,21×2,45×2,45 / 19,1 | 2026-10-24 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
+| 36 | — | SG-30 | 18,21×2,45×2,45 / 19,1 | 2026-10-24 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
+| 37 | — | SG-29 | 18,21×2,45×2,45 / 20,4 | 2026-10-24 | SG | 6 900,00 | 7 245,00 | 1,12 | WSTEPNY | 7 728,00 | 8 114,40 |  |
 | 38 | — | KR-02 | 20,20×3,52×2,60 / 25,3 | 2026-10-25 | KR | 12 745,00 | 13 382,25 | 1,12 | WSTEPNY | 14 274,40 | 14 988,12 | konwój KR 1 |
 | 39 | — | SS-01 | 18,21×3,00×2,50 / 21,2 | 2026-10-28 | SS | 7 950,00 | 8 347,50 | 1,12 | WSTEPNY | 8 904,00 | 9 349,20 |  |
 | 40 | — | BS-01 | 14,95×2,45×1,80 / 31,0 | 2026-10-29 | BS-B | 6 030,00 | 6 331,50 | 1,12 | WSTEPNY | 6 753,60 | 7 091,28 |  |
@@ -105,3 +107,16 @@ Wycenione: **86/94**; koszt razem **652 738,40 EUR**, przychód razem **685 375,
 | 92 | — | PL-21 | 14,70×2,45×2,45 / 21,7 | — | PL-A | 5 510,00 | 5 785,50 | 1,12 | WSTEPNY | 6 171,20 | 6 479,76 |  |
 | 93 | — | PL-13 | 14,70×2,45×2,45 / 21,7 | — | PL-A | 5 510,00 | 5 785,50 | 1,12 | WSTEPNY | 6 171,20 | 6 479,76 |  |
 | 94 | — | PL-17 | 14,70×2,45×2,45 / 17,8 | — | PL-A | 5 510,00 | 5 785,50 | 1,12 | WSTEPNY | 6 171,20 | 6 479,76 |  |
+
+## Transporty bez ceny: 8/94
+
+| # | Zlecenie | Wysyłka | Rodzina | Wymiary ładunku L×W×H m / t | Kod przyczyny | Przyczyna | Co odblokuje |
+|---|---|---|---|---|---|---|---|
+| 1 | — (bez nr zlecenia) | KR-12 | KR | 20,20×3,52×2,60 / 24,9 | NO_CONVOY | brak daty załadunku w pliku KSH (plan_load_date pusty) | stawka KR zależy od liczby aut w konwoju tego samego dnia załadunku (1 auto 12 745 / 2 auta 12 290 / 3 auta 11 380 EUR koszt) — bez daty nie da się ustalić konwoju; wycena wstrzymana, nie zero. Odblokuje się sama po wpisaniu daty załadunku (import KSH / dyspozytor), trigger przelicza. |
+| 2 | — (bez nr zlecenia) | KR-11 | KR | 20,20×3,52×2,60 / 27,9 | NO_CONVOY | brak daty załadunku w pliku KSH (plan_load_date pusty) | stawka KR zależy od liczby aut w konwoju tego samego dnia załadunku (1 auto 12 745 / 2 auta 12 290 / 3 auta 11 380 EUR koszt) — bez daty nie da się ustalić konwoju; wycena wstrzymana, nie zero. Odblokuje się sama po wpisaniu daty załadunku (import KSH / dyspozytor), trigger przelicza. |
+| 3 | — (bez nr zlecenia) | KR-10 | KR | 20,20×3,52×2,60 / 24,9 | NO_CONVOY | brak daty załadunku w pliku KSH (plan_load_date pusty) | stawka KR zależy od liczby aut w konwoju tego samego dnia załadunku (1 auto 12 745 / 2 auta 12 290 / 3 auta 11 380 EUR koszt) — bez daty nie da się ustalić konwoju; wycena wstrzymana, nie zero. Odblokuje się sama po wpisaniu daty załadunku (import KSH / dyspozytor), trigger przelicza. |
+| 4 | — (bez nr zlecenia) | KR-09 | KR | 20,20×3,52×2,60 / 24,9 | NO_CONVOY | brak daty załadunku w pliku KSH (plan_load_date pusty) | stawka KR zależy od liczby aut w konwoju tego samego dnia załadunku (1 auto 12 745 / 2 auta 12 290 / 3 auta 11 380 EUR koszt) — bez daty nie da się ustalić konwoju; wycena wstrzymana, nie zero. Odblokuje się sama po wpisaniu daty załadunku (import KSH / dyspozytor), trigger przelicza. |
+| 5 | — (bez nr zlecenia) | KR-13 | KR | 20,20×3,52×2,60 / 26,4 | NO_CONVOY | brak daty załadunku w pliku KSH (plan_load_date pusty) | stawka KR zależy od liczby aut w konwoju tego samego dnia załadunku (1 auto 12 745 / 2 auta 12 290 / 3 auta 11 380 EUR koszt) — bez daty nie da się ustalić konwoju; wycena wstrzymana, nie zero. Odblokuje się sama po wpisaniu daty załadunku (import KSH / dyspozytor), trigger przelicza. |
+| 6 | — (bez nr zlecenia) | KR-14 | KR | 20,20×3,52×2,60 / 24,9 | NO_CONVOY | brak daty załadunku w pliku KSH (plan_load_date pusty) | stawka KR zależy od liczby aut w konwoju tego samego dnia załadunku (1 auto 12 745 / 2 auta 12 290 / 3 auta 11 380 EUR koszt) — bez daty nie da się ustalić konwoju; wycena wstrzymana, nie zero. Odblokuje się sama po wpisaniu daty załadunku (import KSH / dyspozytor), trigger przelicza. |
+| 7 | — (bez nr zlecenia) | KR-08 | KR | 20,20×3,52×2,60 / 26,4 | NO_CONVOY | brak daty załadunku w pliku KSH (plan_load_date pusty) | stawka KR zależy od liczby aut w konwoju tego samego dnia załadunku (1 auto 12 745 / 2 auta 12 290 / 3 auta 11 380 EUR koszt) — bez daty nie da się ustalić konwoju; wycena wstrzymana, nie zero. Odblokuje się sama po wpisaniu daty załadunku (import KSH / dyspozytor), trigger przelicza. |
+| 8 | — (bez nr zlecenia) | KR-15 | KR | 20,20×3,52×2,60 / 24,9 | NO_CONVOY | brak daty załadunku w pliku KSH (plan_load_date pusty) | stawka KR zależy od liczby aut w konwoju tego samego dnia załadunku (1 auto 12 745 / 2 auta 12 290 / 3 auta 11 380 EUR koszt) — bez daty nie da się ustalić konwoju; wycena wstrzymana, nie zero. Odblokuje się sama po wpisaniu daty załadunku (import KSH / dyspozytor), trigger przelicza. |
