@@ -1301,3 +1301,5 @@ Zamiast „Przelicz odczyty SEK od 21.09 z historii GoEasy":
   PLN 7,440 / 7,347 / 7,342 / 7,483 / 7,442 → 7,41 → 1,17
   wynik **1,14** (m.in. SG-03, załadunek 01.10)
 W raporcie: mnożnik tygodnia **40 = 1,14** i **41 = 1,13**.
+
+> Zapis decyzji (05.10 ~22:05): GoEasy Diesel firmowa + średnia z cen opublikowanych → `wzorzec/03_REJESTR_DECYZJI.md` (wiersz D-2 / D-34), `PLAN.md` (BAF-CENY-05-10). Realizacja: migracja **0187**, testy `tests/db/baf.sh`.
