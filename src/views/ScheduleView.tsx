@@ -34,6 +34,7 @@ import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import type { ServerImportDraft } from '../data/scheduleImportServer';
 import { clickableRow } from '../lib/clickableRow';
 import { standardSkipMessage } from '../lib/standardSkipMessage';
+import { plPlural } from '../lib/plPlural';
 
 /** I-1: import w produkcji przez import_schedule() w bazie (podgląd i zapis w jednej transakcji). */
 const SERVER_IMPORT = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED;
@@ -145,7 +146,7 @@ export function ScheduleView() {
   const showMargin = canSeeMargin(role);
   const ver = scheduleVersions[0];
   const skippedNote = ver?.skippedStandard
-    ? ` · pominięto ${ver.skippedStandard} wierszy typu STANDARD`
+    ? ` · pominięto ${ver.skippedStandard} ${plPlural(ver.skippedStandard, 'wiersz', 'wiersze', 'wierszy')} typu STANDARD`
     : '';
   const verLine = (SERVER_IMPORT
     ? ver
@@ -553,7 +554,7 @@ export function ScheduleView() {
                       data-import-allow-removals
                       onChange={(e) => setAllowRemovals(e.target.checked)}
                     />
-                    <span>{t(locale, 'd26_allow').replace('{n}', String(dryRun.removalCandidates.length))}</span>
+                    <span>{tp(locale, 'd26_allow', { n: dryRun.removalCandidates.length })}</span>
                   </label>
                   <div className="mono" style={{ color: 'var(--ink-3)', marginTop: 4 }} data-import-removal-codes>
                     {dryRun.removalCandidates.map((c) => c.code).join(', ')}

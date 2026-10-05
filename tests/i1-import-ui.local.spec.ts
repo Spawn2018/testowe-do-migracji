@@ -44,7 +44,7 @@ test('HHL importuje pełny harmonogram przez interfejs (podgląd z bazy, zapis, 
   await page.getByRole('button', { name: 'Zatwierdź' }).click();
   await expect(page.locator('[data-import-server]')).toContainText('Zapisano w bazie: wersja 1', { timeout: 20000 });
   await expect(page.locator('tr[data-load]')).toHaveCount(5, { timeout: 20000 });
-  await expect(page.locator('[data-import-standard]')).toContainText('Pominięto 3 wierszy typu STANDARD');
+  await expect(page.locator('[data-import-standard]')).toContainText('Pominięto 3 wiersze typu STANDARD');
   await expect(page.locator('tr[data-load]', { hasText: 'STD-01' })).toHaveCount(0);
   await expect(page.getByText(/wersja 1 · .* · ksh-harmonogram-synthetic\.xlsx/)).toBeVisible();
   expect(psql(`select count(*)||'/'||(select count(*) from shipment_items)||'/'||(select count(*) from schedule_imports where file_path like 'harmonogramy/%' and length(file_hash)=64) from loads`)).toBe('5/5/1');

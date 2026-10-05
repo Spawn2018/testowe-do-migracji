@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import ExcelJS from 'exceljs';
 import { getSupabase } from './client';
 import { useTowerStore } from '../store/useTowerStore';
-import { t } from '../i18n/messages';
+import { t, tp } from '../i18n/messages';
 import './auth.css';
 
 type Row = {
@@ -159,7 +159,7 @@ export default function ChangeHistoryPanel() {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       );
     }
-    setMsg(t(locale, 'opt_acc_hist_export_ok').replace('{n}', String(rows.length)));
+    setMsg(tp(locale, 'opt_acc_hist_export_ok', { n: rows.length }));
   }
 
   return (

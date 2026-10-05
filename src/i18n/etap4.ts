@@ -81,7 +81,7 @@ const pl: Dict = {
   m11_PROGNOZA: 'Marża prognozowana',
   m11_total: 'Marża łączna · wszystkie transporty',
   m11_skipped: 'poza sumą (brak wyceny)',
-  d26_allow: 'Anuluj {n} pozycji nieobecnych w pliku',
+  d26_allow: 'Anuluj {n~pozycję nieobecną|pozycje nieobecne|pozycji nieobecnych} w pliku',
   d26_off: 'Bez zaznaczenia import tylko dopisuje i zmienia — nic nie zostanie anulowane.',
   d26_on: 'Zaznaczone: po zatwierdzeniu powyższe pozycje zostaną anulowane — historia zostaje.',
   an3_blocked: 'Nie do anulowania przez import ({n}):',

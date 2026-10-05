@@ -1,3 +1,4 @@
+import { plPlural } from '../lib/plPlural';
 import type { Locale } from '../types';
 import type { NavKey } from '../lib/permissions';
 import { D19_EXTRA } from './d19Extra';
@@ -144,7 +145,7 @@ const pl: Dict = {
   opt_acc_hist_is: 'Jest',
   opt_acc_hist_auto: 'automat',
   opt_acc_hist_note: 'Zmiany automatyczne oznaczone źródłem. Przy „Działaj jako”: admin → konto docelowe.',
-  opt_acc_hist_export_ok: 'Wyeksportowano {n} wierszy historii.',
+  opt_acc_hist_export_ok: 'Wyeksportowano {n~wiersz|wiersze|wierszy} historii.',
   opt_acc_export_title: 'Eksport danych',
   opt_acc_export_desc: 'Transporty, historia, decyzje — CSV/XLSX',
   opt_acc_export_soon: 'Eksport z zasadami widoczności — w toku (DEC-6).',
@@ -153,7 +154,7 @@ const pl: Dict = {
   opt_acc_export_decisions: 'Decyzje',
   opt_acc_export_note: 'Kolumny według roli (widoczność). Bez danych osobowych poza zakresem roli.',
   opt_acc_export_run: 'Pobierz',
-  opt_acc_export_ok: 'Wyeksportowano {n} wierszy.',
+  opt_acc_export_ok: 'Wyeksportowano {n~wiersz|wiersze|wierszy}.',
   opt_acc_rates_title: 'Cennik',
   opt_acc_rates_desc: 'Stawki według symboli (I-30)',
   opt_acc_sefs_title: 'SEFS / BAF',
@@ -898,11 +899,26 @@ export function fmtPct(locale: Locale, ratio: number, fd = 1): string {
  * A6-T1 — tekst ze słownika z parametrami: `{nazwa}`; `{nazwa:1}` = liczba z tyloma miejscami po przecinku;
  * liczby formatowane Intl w aktywnym języku; parametr `nazwa_key` (klucz słownika) ma pierwszeństwo przed `nazwa`.
  */
+function finiteParam(v: unknown): number | null {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))) return Number(v);
+  return null;
+}
+
 export function tp(locale: Locale, key: string, params: TParams = {}): string {
-  return t(locale, key).replace(/\{(\w+)(?::(\d))?\}/g, (m, name: string, fd?: string) => {
+  return t(locale, key).replace(/\{(\w+)~([^|{}]+)\|([^|{}]+)\|([^|{}]+)\}|\{(\w+)(?::(\d))?\}/g, (m, pName?: string, one?: string, few?: string, many?: string, name?: string, fd?: string) => {
+    if (pName) {
+      const n = finiteParam(params[pName]);
+      if (n == null) return m;
+      if (locale !== 'pl') return String(params[pName]);
+      const shown = typeof params[pName] === 'number'
+        ? new Intl.NumberFormat(INTL_LOCALE[locale], { maximumFractionDigits: 3 }).format(n)
+        : String(params[pName]);
+      return `${shown} ${plPlural(n, one!.trim(), few!.trim(), many!.trim())}`;
+    }
     const k = params[`${name}_key`];
     if (typeof k === 'string' && hasKey(locale, k)) return t(locale, k);
-    const v = params[name];
+    const v = params[name!];
     if (v === undefined || v === null) return m;
     const n = typeof v === 'number' ? v : typeof v === 'string' && fd != null && v.trim() !== '' && !Number.isNaN(Number(v)) ? Number(v) : null;
     if (n != null) {

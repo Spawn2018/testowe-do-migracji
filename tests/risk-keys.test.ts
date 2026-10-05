@@ -33,7 +33,7 @@ describe('A6-T1 klucze ryzyk', () => {
     expect(Object.keys(RISK_I18N.sv).sort()).toEqual(pl);
   });
   it('te same parametry {x} we wszystkich językach', () => {
-    const ps = (s: string) => [...s.matchAll(/\{([a-z_]+)(?::\d)?\}/g)].map((m) => m[1]).sort().join(',');
+    const ps = (s: string) => [...s.matchAll(/\{([a-z_]+)(?::\d)?(?:~[^}]*)?\}/g)].map((m) => m[1]).sort().join(',');
     for (const k of Object.keys(RISK_I18N.pl)) {
       expect(ps(RISK_I18N.en[k]), k).toBe(ps(RISK_I18N.pl[k]));
       expect(ps(RISK_I18N.sv[k]), k).toBe(ps(RISK_I18N.pl[k]));

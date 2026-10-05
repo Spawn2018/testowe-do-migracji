@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './client';
 import { authErrorPl, passwordOk, PASSWORD_MIN, viewRoleForOrg } from './config';
-import { t } from '../i18n/messages';
+import { t, tp } from '../i18n/messages';
 import { setAuthProfile, AUTH_RELOAD_EVENT, type AuthProfile } from './profile';
 import { useTowerStore } from '../store/useTowerStore';
 import { markManualLogout, rememberLogin, sessionEndReason, SESSION_END_MSG, type SessionEnd } from './sessionYear';
@@ -220,7 +220,7 @@ function SetPasswordScreen({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwordOk(pw)) {
-      setMsg({ ok: false, text: t(locale, 'auth_pw_short').replace('{n}', String(PASSWORD_MIN)) });
+      setMsg({ ok: false, text: tp(locale, 'auth_pw_short', { n: PASSWORD_MIN }) });
       return;
     }
     if (pw !== pw2) {
@@ -251,7 +251,7 @@ function SetPasswordScreen({
         <div className="panel-bd">
           <form className="auth-form" onSubmit={submit}>
             <b>{t(locale, reason === 'recovery' ? 'auth_set_pw_recovery' : 'auth_set_pw')}</b>
-            <p className="auth-msg">{t(locale, 'auth_set_pw_hint').replace('{n}', String(PASSWORD_MIN))}</p>
+            <p className="auth-msg">{tp(locale, 'auth_set_pw_hint', { n: PASSWORD_MIN })}</p>
             <PasswordField id="auth-new-pw" label={t(locale, 'auth_password')} value={pw} onChange={setPw} autoComplete="new-password" />
             <PasswordField id="auth-new-pw2" label={t(locale, 'auth_password_repeat')} value={pw2} onChange={setPw2} autoComplete="new-password" />
             <button className="btn" type="submit" disabled={busy || !pw || !pw2}>{t(locale, busy ? 'auth_saving' : 'auth_set_pw_save')}</button>
