@@ -726,3 +726,13 @@ Kolejka: zaraz po FERRY-STATUS, przed VERIFY-13. STD-CLEAN zrobione → SMS-KSH-
 Dopisek do punktu 3. Bez budowy. Nie przerywa AIS-SRC.
 
 Nazwa DEEPL_API_KEY jest już w sekretach Edge produkcji i w .env.local. Wartości nie wypisywać. Test właściciela 04.10: działa, zużycie 38 / 1 000 000 znaków. Punkt 3 realizuje się razem z resztą PL-DATA, bez odkładania. Budowa PL-DATA czeka, aż skończy się AIS-SRC.
+
+## Polecenie 2026-10-05 07:16 (czas warszawski) — KOREKTA Q-18, AIS DLA POLFERRIES I DALSZA CZĘŚĆ B
+
+Zgoda właściciela na wszystkie kroki poniżej bez pytania: scalenia, migracje przez bramę, wdrożenia. Obie domeny 200 po każdym wdrożeniu.
+
+KOREKTA Q-18, AIS DLA POLFERRIES I DALSZA CZĘŚĆ B (właściciel 05.10)
+1. Q-18 — POPRAWIONA REGUŁA WIDOCZNOŚCI PROMÓW (zastępuje poprzednią): prom WIDOCZNY w strefie portu w Polsce (Gdańsk, Gdynia), w rejsie z Polski do Szwecji oraz w strefie portu w Szwecji (Nynäshamn, Karlskrona). Prom ZNIKA, gdy wypływa ze Szwecji do Polski (wyjście ze strefy portu w Szwecji); pojawia się ponownie po wejściu w strefę portu w Polsce. Wszystkie mapy; pozycje w bazie bez zmian, w obie strony. Test: prom w Gdańsku → widoczny; wypływa → widoczny; w Nynäshamn → widoczny; wypływa z Nynäshamn do Polski → znika; wchodzi w strefę portu w Gdańsku → pojawia się.
+2. AIS-SRC — DOKOŃCZENIE DLA POLFERRIES: Wawel i Nova Star nadal na starym sygnale z Digitraffic. W teście klucza (04.10 22:54–23:04 UTC) aisstream widział oba: Nova Star 54.40469 N 18.67377 E (Gdańsk), Wawel 58.90557 N 17.95721 E (Nynäshamn). Diagnoza: dlaczego funkcja nie zapisuje pozycji z aisstream (połączenie, subskrypcja MMSI 311852000 i 311000787, zapis, czas działania funkcji przy WebSocket). Napraw i potwierdź: obie jednostki mają w bazie pozycję z aisstream nie starszą niż 5 minut. Jeśli funkcja Edge nie utrzyma WebSocket — krótki nasłuch co minutę albo inne rozwiązanie bez wydatków; opisz w raporcie.
+3. DIAGNOZA PUSTEJ MAPY: dla każdego z 5 promów: ostatnia pozycja w bazie (czas UTC, źródło), strefa, w której jest, i czy według reguły z punktu 1 powinien być widoczny. Po punktach 1–2 mapa musi pokazywać każdy prom zgodnie z regułą.
+4. CZĘŚĆ B — KONTYNUACJA (po punktach 1–3): kontynuuj część B w kolejności z PLAN.md, bez zmian kolejności. B-7a i B-7b NIE czekają na decyzję: B-7a: mapa ma stały rozmiar, niezależny od wysokości tabeli obok; po otwarciu widoku MAPA widoczna w całości. B-7b: checkboxy warstw zawsze widoczne; na telefonie nie nachodzą na inne elementy. Czekają na właściciela (tylko propozycja na piśmie): B-7c, filtry i statusy z B-8, B-9, Q-9. Czeka na wymiary: B-3a.
