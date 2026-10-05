@@ -296,7 +296,8 @@ val "stawka z tygodnia załadunku N, nie z tygodnia rozładunku N+1; obie strony
 sys "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date) values ('$LW','$P','$CAR','KSH/ZIMA', date '2026-11-29')"
 sys "insert into load_cost (load_id, base_amount, computed_total_eur) values ('$LW', 1000, 1000); insert into load_revenue (load_id, base_amount, computed_total_eur) values ('$LW', 1300, 1300)"
 sys "update loads set actual_load_at='2026-11-29T23:30:00Z', actual_delivery_at='2026-12-07T10:00:00Z' where id='$LW'"
-val "zima: 29.11 23:30Z = 30.11 lokalnie; brak odczytów nie zgaduje mnożnika" $HHL "select fuel_ref_date::text||' '||coalesce(cost_fuel_mult::text,'brak') from v_load_financials_hhl where load_id='$LW'" "2026-11-30 brak"
+# 0187: tydzień niezamknięty → mnożnik oznaczony WSTEPNY (szacunek z ostatniej publikacji), nie ostateczny
+val "zima: 29.11 23:30Z = 30.11 lokalnie; tydzień niezamknięty → mnożnik WSTEPNY" $HHL "select v.fuel_ref_date::text||' '||c.fuel_status from v_load_financials_hhl v join v_load_price_carrier c using (load_id) where load_id='$LW'" "2026-11-30 WSTEPNY"
 
 echo
 echo "WYNIK: $ok OK, $fail FAIL"

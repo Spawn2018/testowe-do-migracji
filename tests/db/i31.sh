@@ -70,7 +70,8 @@ sys "insert into fuel_index_readings (project_id, index_code, period, reading_da
   on conflict do nothing"
 
 val "sefs_week_for_load 2026-10-05 → 1.14" $HHL "select sefs_week_for_load('$P','2026-10-05')->>'applied_mult'" "1.14"
-val "awaria źródła bez odczytów" $HHL "select sefs_week_for_load('$P','2026-11-02')->>'reason'" "SOURCE_FAILURE"
+# 0187: tydzień już zamknięty bez odczytów = awaria źródła (tydzień przyszły → szacunek WSTEPNY z ostatniej publikacji)
+ROLE=postgres val "awaria źródła bez odczytów (tydzień zamknięty)" $HHL "select sefs_week_calc('$P','2026-11-02','2026-11-03')->>'reason'" "SOURCE_FAILURE"
 
 
 # SEFS-KOREKTA (0166): korekta publikacji 2026-09-28 (0187: średnia z publikacji; dni 29.09–04.10 to kopie) SEK 23.05→29.00 — średnia z korektą ≠ średnia z samych oryginałów

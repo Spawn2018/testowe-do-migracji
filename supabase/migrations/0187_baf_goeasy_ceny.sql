@@ -323,8 +323,8 @@ begin
   s := sefs_pub_avg(p_project, 'SEK', v_prev_start, least(v_prev_end, v_today));
   p := sefs_pub_avg(p_project, 'PLN', v_prev_start, least(v_prev_end, v_today));
   -- tydzień jeszcze niezamknięty (lub przyszły): szacunek wstępny z ostatniej opublikowanej ceny
-  if not v_final and (s->>'avg') is null then s := sefs_last_published(p_project, 'SEK', v_today); end if;
-  if not v_final and (p->>'avg') is null then p := sefs_last_published(p_project, 'PLN', v_today); end if;
+  if (v_final or (s->>'avg') is not null) is not true then s := sefs_last_published(p_project, 'SEK', v_today); end if;
+  if (v_final or (p->>'avg') is not null) is not true then p := sefs_last_published(p_project, 'PLN', v_today); end if;
 
   if ((s->>'avg') is not null and (p->>'avg') is not null) is not true then
     return jsonb_build_object(
