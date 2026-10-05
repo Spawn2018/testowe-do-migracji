@@ -1,4 +1,5 @@
 import { PROD_BUILD } from '../lib/prodFacade';
+import { OptionsHowTo } from '../components/settings/OptionsHowTo';
 import { delayPillMinutes } from '../lib/prodDash';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { invoicedLoadIds } from '../lib/importRemoval';
@@ -706,7 +707,8 @@ export function ScheduleView() {
       )}
 
       <div className="panel-bd flush" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <div className="filters">
+        <div className="filters" data-sched-filters>
+          <OptionsHowTo locale={locale} k="a6_sch_howto_filters" summaryKey="a6_sch_howto_btn" />
           <input
             type="search"
             placeholder={t(locale, 'search')}

@@ -467,6 +467,14 @@ const pl: Dict = {
   a6_sch_nodriver: 'Bez kierowcy',
   a6_sch_notractor: 'Bez ciągnika',
   a6_sch_dates: 'Załadunek od–do',
+  a6_sch_howto_btn: 'Jak działa',
+  a6_sch_howto_filters:
+    'Wyszukiwarka — filtruje wiersze po kodzie transportu, kierowcy, tablicach i numerach zleceń.'
+    + '|Załadunek od–do — pokazuje tylko transporty z planowaną datą załadunku w wybranym zakresie.'
+    + '|Dostawa od–do — to samo dla planowanej daty dostawy.'
+    + '|Wszystkie / W drodze / Opóźnione / Bez dokumentów / Dostarczone — szybkie filtry statusu i kompletności.'
+    + '|Bez kierowcy / Bez ciągnika — braki zasobów do uzupełnienia.'
+    + '|Kafelki etapów (Załadunek, Droga PL, Prom…) — ten sam filtr co na mapie i kokpicie; × na kafelku zdejmuje filtr.',
   a6_sch_deliv_dates: 'Rozładunek od–do',
   a6_sch_change_tractor: 'Zmień ciągnik',
   a6_sch_none: '— brak —',
@@ -1103,6 +1111,14 @@ const en: Dict = {
   a6_sch_nodriver: 'No driver',
   a6_sch_notractor: 'No tractor',
   a6_sch_dates: 'Load from–to',
+  a6_sch_howto_btn: 'How it works',
+  a6_sch_howto_filters:
+    'Search — filters rows by load code, driver, plates and order numbers.'
+    + '|Load from–to — only loads whose planned load date is in the range.'
+    + '|Delivery from–to — same for planned delivery date.'
+    + '|All / On the road / Late / No documents / Delivered — quick status filters.'
+    + '|No driver / No tractor — missing resources.'
+    + '|Stage chips (Loading, PL road, Ferry…) — same filter as map and dashboard; × clears it.',
   a6_sch_deliv_dates: 'Unload from–to',
   a6_sch_change_tractor: 'Change tractor',
   a6_sch_none: '— none —',
@@ -1739,6 +1755,14 @@ const sv: Dict = {
   a6_sch_nodriver: 'Utan förare',
   a6_sch_notractor: 'Utan dragbil',
   a6_sch_dates: 'Lastning från–till',
+  a6_sch_howto_btn: 'Så fungerar det',
+  a6_sch_howto_filters:
+    'Sök — filtrerar rader på lastkod, förare, skyltar och ordernummer.'
+    + '|Lastning från–till — endast laster med planerat lastningsdatum i intervallet.'
+    + '|Leverans från–till — samma för planerat leveransdatum.'
+    + '|Alla / På väg / Försenade / Utan dokument / Levererade — snabba statusfilter.'
+    + '|Utan förare / Utan dragbil — saknade resurser.'
+    + '|Etappknappar (Lastning, PL-väg, Färja…) — samma filter som karta och dashboard; × tar bort filtret.',
   a6_sch_deliv_dates: 'Lossning från–till',
   a6_sch_change_tractor: 'Byt dragbil',
   a6_sch_none: '— saknas —',

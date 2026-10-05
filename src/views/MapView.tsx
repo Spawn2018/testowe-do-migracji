@@ -75,6 +75,7 @@ export function MapView() {
   const [aisReadAt, setAisReadAt] = useState<string | null>(null);
   const [timing, setTiming] = useState<TimingFilter>('all');
   const [widths, setWidths] = useState<Record<MapColId, number>>(() => loadMapWidths());
+  const [gpsWithFix, setGpsWithFix] = useState(0);
   const widthsRef = useRef(widths);
   widthsRef.current = widths;
 
@@ -130,7 +131,30 @@ export function MapView() {
     return baseList;
   }, [baseList, timing, riskLoadIds]);
 
-  const inMotion = list.filter((l) => l.progress > 0 && l.progress < 1).length;
+  /* E: licznik „N pojazdów” = tylko pojazdy z prawdziwą pozycją GPS (prod); demo = progress w ruchu. */
+  useEffect(() => {
+    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
+      setGpsWithFix(list.filter((l) => l.progress > 0 && l.progress < 1).length);
+      return undefined;
+    }
+    let cancelled = false;
+    const ids = list.map((l) => l.id);
+    const run = () => {
+      void import('../lib/vehiclePositions').then(({ fetchLatestVehicleFixes }) => fetchLatestVehicleFixes(ids)).then(
+        (rows) => {
+          if (cancelled) return;
+          const want = new Set(ids);
+          setGpsWithFix(rows.filter((r) => want.has(r.loadId)).length);
+        },
+        () => { if (!cancelled) setGpsWithFix(0); },
+      );
+    };
+    run();
+    const id = window.setInterval(run, 60_000);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [list]);
+
+
   const ontimeCount = baseList.filter((l) => !l.delayed).length;
   const lateCount = baseList.filter((l) => l.delayed).length;
   const nogpsCount = baseList.filter(
@@ -168,7 +192,7 @@ export function MapView() {
       <header className="panel-hd">
         <h2>{t(locale, 'nav_map')}</h2>
         <span className="sub">
-          {inMotion || list.length} {t(locale, 'map_vehicles_sub')}
+          {gpsWithFix} {t(locale, 'map_vehicles_sub')}
         </span>
         <div className="spacer" />
         <button type="button" className="chipbtn" onClick={() => setView('geo')}>

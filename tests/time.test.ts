@@ -109,7 +109,7 @@ describe('D17 table date format — omit redundant year', () => {
 
 describe('formatSchedTableDay (B-8)', () => {
   it('always keeps year', () => {
-    expect(formatSchedTableDay('2026-09-29', null, TZ_LOAD_PL)).toBe('29.09.2026');
+    expect(formatSchedTableDay('2026-09-29', null, TZ_LOAD_PL)).toBe('29.09.2026 –');
   });
   it('appends time from window ISO', () => {
     // 2026-09-29 08:30 Warsaw

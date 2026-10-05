@@ -1133,3 +1133,22 @@ Nowa uwaga właściciela/koordynatora → dopisz `docs/handover/POCZEKALNIA.md` 
 Poczekalnię po zamknięciu sekcji; decyzje po całej liście.
 Przerwanie **TYLKO**: awaria prod, bezpieczeństwo, utrata danych, SMS/email do niepowołanych.
 Raporty krótkie; wątpliwość = dosłowne słowa właściciela, pytanie do poczekalni.
+
+## Decyzje właściciela 2026-10-05 ~16:22 (czas warszawski) — POCZEKALNIA A–F
+
+POCZEKALNIA — decyzje właściciela:
+A 10a.1: dosłownie — z GÓRNEGO PASKA podglądu usuwamy: „Zlecenie",
+  „Śrem" jako nadawcę, wymiary zestawu, Nr zlecenia KSH, Montaż,
+  Nr rezerwacji promu. Śrem zostaje w sekcji Załadunek; wymiary
+  ładunku zostają w szczegółach.
+B 10c.1: „imię nazwisko // firma"; zdarzenia automatyczne:
+  „System // Watch Tower".
+C 8.3: brak godziny od KSH → przy dacie „–", bez zgadywania godziny.
+D 8.9: przycisk „Jak działa" przy filtrach (jak w Opcjach), krótki
+  opis każdego filtra.
+E: licznik „N pojazdów" = tylko pojazdy z prawdziwą pozycją GPS.
+F: napisz, czego brakuje do zapisu kopii w R2 (dostęp/klucz/konfiguracja)
+  — bez zgadywania; konta były testowe.
+Każda pozycja ze zrzutem z produkcji, jak na liście kontrolnej.
+Potem: raport, które pozycje PLAN.md NIE czekają na właściciela —
+jeśli żadne, napisz wprost.

@@ -68,13 +68,13 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 
 | 8.1 | Brak kolumny „Zlecenie KSH” | **poprawione** — usunięte `ord_ksh` | `8.1.png` | PR #105 · `dpl_8ke8GygJ…` |
 | 8.2 | Kolumny HHL-KSH i HHL-SCAN | **poprawione** — etykiety „Nr zlecenia HHL-KSH/SCAN” | `8.1.png` | PR #105 |
-| 8.3 | Godziny przy datach załadunku/dostawy | **częściowo** — rok zawsze; godzina gdy jest okno planu/awizacji (wiele wierszy bez okna → tylko data) | `8-overview.png` | PR #105 · pytanie poczekalnia |
+| 8.3 | Przy datach załadunku i dostawy są godziny | **poprawione (decyzja C)** — brak godziny KSH → data + „–” (bez zgadywania) | `C-8.3.png` | PR poczekalnia A–F |
 | 8.4 | Mechanizm „Zmień ciągnik” | **zgodne** — przycisk w komórce Nr rej. | `8-overview.png` | stan prod |
 | 8.5 | Linie pionowe w tabeli | **poprawione** — `border-right` na th/td | `8-overview.png` | PR #105 |
 | 8.6 | Zwężanie kolumn chowa tekst | **zgodne** — resize min 0, `cell-clip` / fixed layout | `8-overview.png` | stan prod |
 | 8.7 | Brak transportów STANDARD | **zgodne** — w tabeli brak TYP STANDARD (import B-8-IMP) | `8-overview.png` | stan prod |
 | 8.8 | ETA delay ≥24h → dni+godz+min | **poprawione** — np. `+1d 18h 00m` | `8-overview.png` | PR #105 |
-| 8.9 | Statusy/filtry + nowe (daty, bez kierowcy/ciągnika) | **zgodne** — filtry dat + Bez kierowcy/ciągnika; brak osobnego howto (title częściowy) | `8-overview.png` | stan prod · howto → poczekalnia |
+| 8.9 | Statusy i filtry — opis znaczenia + nowe filtry | **poprawione (decyzja D)** — „Jak działa” przy filtrach (jak Opcje) | `D-8.9.png` | PR poczekalnia A–F |
 | 8.10 | Polisa w dokumentach podpięta | **zgodne** — kolumna Dok. pokazuje m.in. Z/C; auto OCP z 3.2 | `8-overview.png` | stan prod (§3.2) |
 | 8.11 | Daty z rokiem | **poprawione** — `formatSchedTableDay` zawsze `dd.MM.yyyy` | `8-overview.png` | PR #105 |
 | 8.12 | Kierowca: pusty „–”; dwóch z separatorem | **poprawione** — puste „–”; para przez `formatTowerPair` | `8-overview.png` | PR #105 |
@@ -95,7 +95,7 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 - Zgodne: 2 · Poprawione: 1 (9.2) · ⛔: 0
 - Wdrożenie: PR #106, Vercel READY, tower.log-mar.pl **200**
 
-| 10a.1 | Bez: Zlecenie, Śrem z nadawcy, wymiary zestawu, Nr KSH, Montaż, Nr rezerwacji promu | **częściowo** — brak „Zlecenie”/Montaż/Nr KSH; „KSH Śrem” + „Wymiary L×W×H” ładunku — pytania w poczekalni | `10a.png` | poczekalnia |
+| 10a.1 | Bez: Zlecenie, Śrem z nadawcy, wymiary zestawu, Nr KSH, Montaż, Nr rezerwacji promu | **poprawione/zgodne (decyzja A)** — górny pasek: kod+status+odbiorca+tygodnie; Śrem w Załadunku; wymiary ładunku w szczegółach | `A-10a.1.png` | PR poczekalnia A–F |
 | 10a.2 | Tydzień załadunku na lewo od tygodnia dostawy | **zgodne** — t40 / t41 | `10a.png` | stan prod |
 | 10a.3 | HHL: „Dodaj” / po dodaniu „Edytuj” (kolor jak SCX) | **poprawione** — etykieta „Edytuj”; `btn` (nie ghost) | `10a.png` | PR #108 · `dpl_FvtWKtyx…` |
 | 10a.4 | HHL user (nie admin) nie dodaje awizacji | **zgodne** (kod) — `canAwiz = role === 'SCX'` | — | stan prod |
@@ -114,7 +114,7 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 | 10b.5 | Zmiana okna załadunku/dostawy | **częściowo** — okna planu w szufladzie HHL; nie w modalu SCX | — | stan prod |
 | 10b.6 | Brak Nr rezerwacji promu | **zgodne** | `10b.png` | stan prod |
 
-| 10c.1 | Opisy: imię nazwisko // firma — data — godzina PL | **częściowo** — data/godzina PL OK; actor często „HHL”/„system” (nie imię // firma) | `10c.png` | poczekalnia |
+| 10c.1 | Opisy: imię nazwisko // firma — data — godzina PL | **poprawione (decyzja B)** — auto: „System // Watch Tower”; ludzie: profil „imię // firma” | `B-10c.1.png` | PR poczekalnia A–F |
 | 10c.2 | Opisy czytelne, wytłuszczone | **zgodne** — `fontWeight: 700` na Historii | `10c.png` | stan prod |
 | 10c.3 | Statusy wysłania/odczytania z Ustaleń | **częściowo** — brak przykładowych wiadomości na SG-03 | `10c.png` | — |
 
@@ -188,3 +188,17 @@ Wszystkie pozycje `LISTA_KONTROLNA_ZESZYT.md` możliwe **bez decyzji właścicie
 **Nienaruszone (dyscyplina):** TELM bez zmian · SEC-OWASP nie · H1/H3/H6 off do D-83.
 
 **Wdrożenia tej domknięcia:** migracja **0184** (prod); PR z evidence + WERYFIKACJA; P6 bez kasowania transportów (tylko wiersz faktury `WT-TEST-P6-20261005`).
+
+
+## Poczekalnia A–F (decyzje właściciela 05.10 ~16:22) — zamknięte
+
+| ID | decyzja | wynik | zrzut | PR |
+|----|---------|-------|-------|-----|
+| A 10a.1 | usunąć z górnego paska zakazane pola; Śrem w Załadunku; wymiary ładunku w szczegółach | **zgodne** (pasek już bez zakazanych; potwierdzone decyzją) | `A-10a.1.png` | ten PR |
+| B 10c.1 | imię nazwisko // firma; auto: System // Watch Tower | **poprawione** | `B-10c.1.png` | ten PR |
+| C 8.3 | brak godziny → „–” przy dacie | **poprawione** | `C-8.3.png` | ten PR |
+| D 8.9 | „Jak działa” przy filtrach | **poprawione** | `D-8.9.png` | ten PR |
+| E licznik | N pojazdów = tylko GPS | **poprawione** | `E-licznik.png` | ten PR |
+| F R2 | raport braków (bez wgrania) | **raport** | `docs/handover/R2_KOPIA_KONT_O3_BRAKI.md` | ten PR |
+
+**Nienaruszone:** TELM/SG-03 · SEC-OWASP nie · H1/H3/H6 off · bez wydatków/SMS.

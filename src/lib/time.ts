@@ -145,7 +145,7 @@ export function formatTableDay(
 }
 
 
-/** B-8.3 / B-8.11 — data w harmonogramie zawsze z rokiem; godzina z okna planu/awizacji gdy jest. */
+/** B-8.3 / B-8.11 — data w harmonogramie zawsze z rokiem; godzina z okna KSH gdy jest; brak godziny → „–” (bez zgadywania). */
 export function formatSchedTableDay(
   day: string | null | undefined,
   windowIso: string | null | undefined,
@@ -153,9 +153,9 @@ export function formatSchedTableDay(
 ): string {
   if (!day) return '—';
   const datePart = formatCalendarDay(day);
-  if (!windowIso) return datePart;
+  if (!windowIso) return `${datePart} –`;
   const d = parseInstant(windowIso);
-  if (!d) return datePart;
+  if (!d) return `${datePart} –`;
   const p = partsInZone(d, timeZone);
   return `${datePart} ${pad(p.h)}:${pad(p.mi)}`;
 }

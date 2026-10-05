@@ -16,6 +16,7 @@ import { DocPreview } from '../ui/DocPreview';
 import { DocFileRow } from '../ui/DocFileRow';
 import { PlanDatesPanel } from './PlanDatesPanel';
 import { formatTowerPair } from '../../lib/cSep';
+import { formatHistoryActor } from '../../lib/historyActor';
 import { AwizacjaModal } from './AwizacjaModal';
 import { RouteCheckPanel } from './RouteCheckPanel';
 import { CorridorObstaclesPanel } from './CorridorObstaclesPanel';
@@ -544,7 +545,7 @@ export function LoadDrawer() {
                       )}
                     </div>
                     <div className="ts">
-                      {e.actor} — {formatOpsDateTime(e.at)}
+                      {formatHistoryActor(e.actor)} — {formatOpsDateTime(e.at)}
                     </div>
                   </li>
                 ))
@@ -577,7 +578,7 @@ export function LoadDrawer() {
                       )}
                     </div>
                     <div className="ts">
-                      {e.actor} — {formatOpsDateTime(e.at)}
+                      {formatHistoryActor(e.actor)} — {formatOpsDateTime(e.at)}
                     </div>
                   </li>
                 ))
