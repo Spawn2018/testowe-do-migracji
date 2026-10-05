@@ -43,3 +43,8 @@ tests/db/h3.sh:generic-api-key:67
 # Nie sekret. Ta sama nazwa flagi H3_CORRIDOR_OBSTACLES w teście SMS-KSH-1H.
 # generic-api-key łapie kolumnę key. To przełącznik w bazie, nie klucz dostępu.
 tests/db/smsksh.sh:generic-api-key:21
+
+# Nie sekret. Nazwa flagi H3_CORRIDOR_OBSTACLES w teście FERRY-STATUS (zostaje false).
+# Reguła generic-api-key łapie długi identyfikator. Nie daje dostępu do żadnej usługi.
+# Bieżący test składa nazwę z dwóch kawałków, ten odcisk dotyczy tylko commitu, który miał ją w całości.
+3a48097fa80eaa5f72d2661933d49ee9a1c47680:tests/db/ferry-status.sh:generic-api-key:23
