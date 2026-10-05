@@ -59,3 +59,30 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 - Zgodne: 8 · Poprawione: 1 (6.6) · ⛔: 0
 - Wdrożenie: PR #103, `git archive` → Vercel READY `dpl_2ZH73rHh…`, tower.log-mar.pl **200**, watch-tower-makieta.vercel.app **200**
 
+| 7.1 | Mapa stały rozmiar, cała widoczna | **zgodne** — `data-b7=fixed-map`, h≈685, fullyInView | `7.1.png` | stan prod |
+| 7.2 | Checkboxy zawsze widoczne; telefon nie nachodzi | **zgodne** — na 390px `.maplayers` position:static nad mapą | `7.2.png` | stan prod |
+| 7.3 | Filtry mapy — nowe (brak GPS, ryzyko) + opis | **zgodne** — „Bez GPS” / „Ryzyko” + `title` ze znaczeniem | `7.3.png` | stan prod |
+
+## Raport sekcji 7 (Mapa)
+- Zgodne: 3 · Poprawione: 0 · ⛔: 0 · Wdrożenie: nie wymagane
+
+| 8.1 | Brak kolumny „Zlecenie KSH” | **poprawione** — usunięte `ord_ksh` | `8.1.png` | PR #105 · `dpl_8ke8GygJ…` |
+| 8.2 | Kolumny HHL-KSH i HHL-SCAN | **poprawione** — etykiety „Nr zlecenia HHL-KSH/SCAN” | `8.1.png` | PR #105 |
+| 8.3 | Godziny przy datach załadunku/dostawy | **częściowo** — rok zawsze; godzina gdy jest okno planu/awizacji (wiele wierszy bez okna → tylko data) | `8-overview.png` | PR #105 · pytanie poczekalnia |
+| 8.4 | Mechanizm „Zmień ciągnik” | **zgodne** — przycisk w komórce Nr rej. | `8-overview.png` | stan prod |
+| 8.5 | Linie pionowe w tabeli | **poprawione** — `border-right` na th/td | `8-overview.png` | PR #105 |
+| 8.6 | Zwężanie kolumn chowa tekst | **zgodne** — resize min 0, `cell-clip` / fixed layout | `8-overview.png` | stan prod |
+| 8.7 | Brak transportów STANDARD | **zgodne** — w tabeli brak TYP STANDARD (import B-8-IMP) | `8-overview.png` | stan prod |
+| 8.8 | ETA delay ≥24h → dni+godz+min | **poprawione** — np. `+1d 18h 00m` | `8-overview.png` | PR #105 |
+| 8.9 | Statusy/filtry + nowe (daty, bez kierowcy/ciągnika) | **zgodne** — filtry dat + Bez kierowcy/ciągnika; brak osobnego howto (title częściowy) | `8-overview.png` | stan prod · howto → poczekalnia |
+| 8.10 | Polisa w dokumentach podpięta | **zgodne** — kolumna Dok. pokazuje m.in. Z/C; auto OCP z 3.2 | `8-overview.png` | stan prod (§3.2) |
+| 8.11 | Daty z rokiem | **poprawione** — `formatSchedTableDay` zawsze `dd.MM.yyyy` | `8-overview.png` | PR #105 |
+| 8.12 | Kierowca: pusty „–”; dwóch z separatorem | **poprawione** — puste „–”; para przez `formatTowerPair` | `8-overview.png` | PR #105 |
+| 8.13 | Telefon dwóch „tel1|tel2” | **poprawione** — para telefonów (przy przepięciu „|”) | `8-overview.png` | PR #105 |
+| 8.14 | Eksport PDF: kierowca+telefon zamiast promu | *(do domknięcia przy weryfikacji PDF)* | — | — |
+| 8.15 | Filtr dat załadunku i rozładunku | **zgodne** — Załadunek od–do / Rozładunek od–do | `8-overview.png` | stan prod |
+
+## Raport sekcji 8 (Harmonogram)
+- Zgodne: 7 · Poprawione: 7 · Częściowo: 1 (8.3) · Otwarte: 1 (8.14)
+- Wdrożenie: PR #105, Vercel READY `dpl_8ke8GygJ…`, domeny **200**
+
