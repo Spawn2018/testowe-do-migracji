@@ -133,6 +133,30 @@ describe('U-3-PALIWO — tydzień od daty załadunku (D-34)', () => {
     expect(isoWeekKeyLocal('2026-11-29T12:00:00Z')).not.toBe('2026-W49');
   });
 
+  it('zmiana czasu 25.10.2026: niedziela przed 03:00, druga 02:xx i poniedziałek', () => {
+    // PALIWO-33.3. Granica lato/zima z 04.10 i 29.11 tego nie pokrywa.
+    // Chwile są w UTC, bo tak leży actual_load_at. Dzień bierze localDateOf
+    // (Europe/Warsaw), tydzień bierze isoWeekKeyLocal z tej daty cywilnej:
+    // dzień tygodnia tej daty, czwartek ISO, ceil((dzień roku czwartku)/7).
+    // 25.10.2026 to niedziela → czwartek 22.10 → 2026-W43 (pon 19.10–niedz 25.10).
+    // 26.10.2026 to poniedziałek → czwartek 29.10 → 2026-W44 (pon 26.10–niedz 01.11).
+    // Stawki nie ustalamy: oba załadunki z niedzieli mają ten sam tydzień,
+    // poniedziałek następny. Cofnięcie zegara 03:00→02:00 zostawia niedzielę.
+    const przed = '2026-10-25T00:30:00Z'; // 25.10 02:30 CEST, UTC+2, przed 03:00
+    const druga = '2026-10-25T01:30:00Z'; // 25.10 02:30 CET, UTC+1, druga 02:xx
+    const pon = '2026-10-25T23:30:00Z';   // 26.10 00:30 CET, w UTC nadal niedziela
+
+    expect(fuelLocalDate({ loadedAtUtc: przed })).toBe('2026-10-25');
+    expect(fuelLocalDate({ loadedAtUtc: druga })).toBe('2026-10-25');
+    expect(fuelLocalDate({ loadedAtUtc: pon })).toBe('2026-10-26');
+
+    expect(isoWeekKeyLocal(przed)).toBe('2026-W43');
+    expect(isoWeekKeyLocal(druga)).toBe('2026-W43');
+    expect(isoWeekKeyLocal(pon)).toBe('2026-W44');
+    expect(isoWeekKeyLocal(przed)).toBe(isoWeekKeyLocal(druga));
+    expect(isoWeekKeyLocal(pon)).not.toBe(isoWeekKeyLocal(przed));
+  });
+
   it('wyliczenie transportu: data paliwa z załadunku, kurs z rozładunku, ten sam mnożnik po obu stronach', () => {
     const delivered = buildDemoSnapshot().loads.find((l) => l.status === 'DELIVERED')!;
     const load = {
