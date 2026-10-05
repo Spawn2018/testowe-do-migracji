@@ -1670,6 +1670,26 @@ Tydzień od poniedziałku 2026-09-28 (liczony do niedzieli 2026-10-04). Wiersze 
 
 Od następnego tygodnia ten sam odczyt ma iść tu co tydzień, już ze skrótem i z krytycznymi, obok 34.
 
+### 2026-10-05 08:11 — poczta, tydzień produkcji 28.09–04.10 (licznik tygodniowy)
+
+Odczyt z produkcji 2026-10-05 08:11 czasu warszawskiego, transakcja tylko do odczytu. Tabela `notifications`, kanał EMAIL, dzień według czasu warszawskiego. „Od razu” to PENDING+SENT bez zaproszeń i resetu hasła, tak jak liczy `l13_email_counts`. „Krytyczne” to część „od razu”, dla której `l13_email_is_critical` zwraca prawdę. Wysyłki nie ruszano.
+
+| Dzień | od razu | w tym krytyczne | skrót | wstrzymane (SUPPRESSED) | błąd (ERROR) | wiersze e-mail |
+|---|---|---|---|---|---|---|
+| 2026-09-28 – 2026-09-30 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 2026-10-01 | 37 | 0 | 0 | 0 | 0 | 37 |
+| 2026-10-02 | 20 | 20 | 0 | 0 | 0 | 20 |
+| 2026-10-03 | 55 | 0 | 0 | 0 | 0 | 55 |
+| 2026-10-04 | 268 | 130 | 0 | 15 | 58 | 341 |
+
+Średnia na dobę: 54,3 od razu w całym tygodniu (380 / 7), 95,0 w czterech dniach z pocztą. Maksimum: 268 (04.10). Krytyczne razem: 150 (02.10: 20 RISK_SEVERITY; 04.10: 110 RISK_OPEN i 20 RISK_SEVERITY). Skróty w tym tygodniu: 0, bo skrót działa od 04.10 17:06 i pierwsze wiersze DIGEST są z 05.10. Szacunek szczytu po skrócie: 34. Średnia tygodnia jest 1,6 razy wyższa od szacunku, maksimum 7,9 razy. Cały ten tydzień to stan sprzed skrótu, więc porównanie z 34 da się zrobić uczciwie dopiero za tydzień.
+
+Strażnik 80 (`integration_runs`, job `email-budget`, jeden wpis na dobę): w tym tygodniu 1 raz, 04.10 o 18:00, poziom `critical_only`, 267 operacyjnych. Próg „więcej niż dwa razy w tygodniu” nie zapalił się. Poprawka do wpisu 04.10 17:06: tamten odczyt (17:20) był przed zapaleniem strażnika, stąd tam 0, a 04.10 domknął się na 268 od razu zamiast 267.
+
+Błędy wysyłki w tym tygodniu: 58 × RISK_OPEN 04.10 o 13:10, Resend 429 `daily_quota_exceeded` (dzienny limit darmowego planu).
+
+Poniedziałek 05.10 do 08:11: od razu 0, skrót 4 (RISK_OPEN), błąd 8. Te 8 to SMS_GATEWAY_SILENT między 03:55 a 06:43, wszystkie z błędem „Resend 200 restricted_api_key: This API key is restricted to only send emails”. Resend odpowiedział 200, a wiersz dostał ERROR, więc nie wiadomo, czy te e-maile doszły. Do sprawdzenia w `send-notifications`, bez zmiany wysyłki w tym kroku.
+
 2026-10-04 — HERE_API_KEY dodany do sekretów Supabase produkcji (projekt nglnnrmzmhusvxslousq) i do .env.local. Wartość nie jest zapisana w repozytorium.
 
 ### 2026-10-04 19:29 — H-0 uzupełnienie (bez zmian aplikacji)
