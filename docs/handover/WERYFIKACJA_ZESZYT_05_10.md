@@ -79,12 +79,13 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 | 8.11 | Daty z rokiem | **poprawione** — `formatSchedTableDay` zawsze `dd.MM.yyyy` | `8-overview.png` | PR #105 |
 | 8.12 | Kierowca: pusty „–”; dwóch z separatorem | **poprawione** — puste „–”; para przez `formatTowerPair` | `8-overview.png` | PR #105 |
 | 8.13 | Telefon dwóch „tel1|tel2” | **poprawione** — para telefonów (przy przepięciu „|”) | `8-overview.png` | PR #105 |
-| 8.14 | Eksport PDF: kierowca+telefon zamiast promu | *(do domknięcia przy weryfikacji PDF)* | — | — |
+| 8.14 | Eksport PDF: kierowca+telefon zamiast promu | **zgodne** — kolumna „Kierowca” (imię+telefon, np. ROBERT PREIHS / Sebastian Bożek); brak kolumny Prom | `8.14.png` (+ PDF) | stan prod |
 | 8.15 | Filtr dat załadunku i rozładunku | **zgodne** — Załadunek od–do / Rozładunek od–do | `8-overview.png` | stan prod |
 
 ## Raport sekcji 8 (Harmonogram)
-- Zgodne: 7 · Poprawione: 7 · Częściowo: 1 (8.3) · Otwarte: 1 (8.14)
-- Wdrożenie: PR #105, Vercel READY `dpl_8ke8GygJ…`, domeny **200**
+- Zgodne: 8 · Poprawione: 7 · Częściowo: 1 (8.3) · Otwarte: 0
+- Wdrożenie: PR #105 (wcześniej); 8.14 potwierdzone na prod 15:30 PL — `8.14.png` / `8.14-harmonogram.pdf`
+- Vercel READY `dpl_8ke8GygJ…`, domeny **200**
 
 | 9.1 | Opis filtrów kafelków | **zgodne** — `title` na każdym kafelku (filtruj / zdejmij) + Prom z tipem rejsów | `9-overview.png` | stan prod |
 | 9.2 | Brak cyfr w górnym prostokącie | **poprawione** — `.n` puste; aktywny tylko „×” | `9-overview.png` (+ `9.3.png`) | PR #106 · `dpl_Eq8JgjBU…` |

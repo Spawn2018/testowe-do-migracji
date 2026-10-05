@@ -4,7 +4,6 @@ import { CorridorMap } from '../map/LazyCorridorMap';
 import { StatusPill } from '../ui/StatusPill';
 import { fmtNum, fmtNumKeepPl, fmtPct, t, tp } from '../../i18n/messages';
 import { canEditResources, canSeeCost, canSeeMargin, canSeeRevenue, visibleDriverPhone } from '../../lib/permissions';
-import { toE164 } from '../../lib/phoneNational';
 import { SITES } from '../../lib/status';
 import { SEFS_SOURCES } from '../../lib/sefs';
 import { isReadyBlocked, evaluateLoadCover } from '../../lib/permits';
@@ -28,6 +27,7 @@ import {
   formatLoadPl,
   formatUnloadSe,
   formatOpsDateTime,
+  formatSchedTableDay,
   isoToDatetimeLocalValue,
   wallLocalToIso,
 } from '../../lib/time';
@@ -180,9 +180,6 @@ export function LoadDrawer() {
 
   if (!load) return null;
   const driverPhone = visibleDriverPhone(role, load);
-  const driverTel = driverPhone
-    ? (toE164(driverPhone, load.resources.driverPhoneCountry ?? 'PL') ?? driverPhone)
-    : null;
 
   const showCost = canSeeCost(role);
   const showRev = canSeeRevenue(role);
@@ -345,7 +342,7 @@ export function LoadDrawer() {
                   {orderSide === 'HHL' ? (
                     <div className="awiz-row" style={{ margin: 0 }}>
                       {load.hhlOrderNo ? <span className="mono">{load.hhlOrderNo}</span> : <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_dr_not_filled')}</span>}
-                      <button type="button" className="btn ghost" data-hhl-order-btn onClick={() => setAwizOpen(true)}>
+                      <button type="button" className="btn" data-hhl-order-btn onClick={() => setAwizOpen(true)}>
                         {load.hhlOrderNo ? t(locale, 'awiz_hhl_edit') : t(locale, 'awiz_hhl_add')}
                       </button>
                     </div>
@@ -360,9 +357,9 @@ export function LoadDrawer() {
                 <dt>{t(locale, 'a6_dr_load_place')}</dt>
                 <dd>{SITES.loading.name}</dd>
                 <dt>{t(locale, 'a6_dr_loading')}</dt>
-                <dd className="cond">{formatLoadPl(load.awizacja.loadWindowStart ?? load.plannedLoadDate)}</dd>
+                <dd className="cond" data-load-when>{formatSchedTableDay(load.plannedLoadDate, load.awizacja.loadWindowStart, TZ_LOAD_PL)}</dd>
                 <dt>{t(locale, 'a6_dr_delivery')}</dt>
-                <dd className="cond">{formatUnloadSe(load.awizacja.unloadWindowStart ?? load.plannedDeliverDate)}</dd>
+                <dd className="cond" data-deliver-when>{formatSchedTableDay(load.plannedDeliverDate, load.awizacja.unloadWindowStart, TZ_UNLOAD_SE)}</dd>
                 <dt>{t(locale, 'eta')}</dt>
                 <dd className="cond" data-eta={load.etaPreLoad ? 'pre-load' : 'value'}>
                   {load.etaPreLoad ? (
@@ -418,33 +415,44 @@ export function LoadDrawer() {
                 <dt>{t(locale, 'a6_dr_phone')}</dt>
                 <dd>
                   {driverPhone ? (
-                    <a href={`tel:${driverTel}`} className="mono" data-content>
-                      {driverPhone}
+                    <a
+                      href={`tel:${(load.resources.driverPhone || load.resources.driverDeliveryPhone || '').replace(/\s+/g, '')}`}
+                      className="mono"
+                      data-content
+                      data-phone-pair
+                    >
+                      {formatTowerPair(
+                        load.resources.driverPhone,
+                        load.resources.driverDeliveryPhone,
+                        !!load.resources.trailerSwap,
+                      )}
                     </a>
                   ) : (
                     '—'
                   )}
                 </dd>
                 <dt>{t(locale, 'a6_dr_tractor_trailer')}</dt>
-                <dd>
-                  {load.resources.tractorPlate ? (
+                <dd data-tractor-pair>
+                  {load.resources.tractorPlate || load.resources.tractorDeliveryPlate ? (
                     <>
-                      <span className="mono">{load.resources.tractorPlate}</span>
-                      {' / '}
+                      <span className="mono">{formatTowerPair(load.resources.tractorPlate, load.resources.tractorDeliveryPlate, !!load.resources.trailerSwap)}</span>
+                      {' · '}
                       <span className="mono">{load.resources.trailerPlate ?? '—'}</span>
                     </>
                   ) : (
                     '—'
                   )}
                 </dd>
-                <dt>{t(locale, 'a6_dr_escort')}</dt>
-                <dd>
-                  {load.resources.escort
-                    ? load.resources.escortPlate
-                      ? tp(locale, 'a6_dr_escort_one_plate', { plate: load.resources.escortPlate })
-                      : t(locale, 'a6_dr_escort_one')
-                    : t(locale, 'a6_dr_escort_none')}
-                </dd>
+                {load.resources.escort ? (
+                  <>
+                    <dt>{t(locale, 'a6_dr_escort')}</dt>
+                    <dd data-escort="required">
+                      {load.resources.escortPlate
+                        ? tp(locale, 'a6_dr_escort_one_plate', { plate: load.resources.escortPlate })
+                        : t(locale, 'a6_dr_escort_one')}
+                    </dd>
+                  </>
+                ) : null}
                 <dt>{t(locale, 'a6_dr_ferry')}</dt>
                 <dd>
                   {load.ferry.vessel
@@ -728,8 +736,17 @@ export function LoadDrawer() {
                     <dt>{t(locale, 'a6_dr_phone')}</dt>
                     <dd>
                       {driverPhone ? (
-                        <a href={`tel:${driverTel}`} className="mono" data-content>
-                          {driverPhone}
+                        <a
+                          href={`tel:${(load.resources.driverPhone || load.resources.driverDeliveryPhone || '').replace(/\s+/g, '')}`}
+                          className="mono"
+                          data-content
+                          data-phone-pair
+                        >
+                          {formatTowerPair(
+                            load.resources.driverPhone,
+                            load.resources.driverDeliveryPhone,
+                            !!load.resources.trailerSwap,
+                          )}
                         </a>
                       ) : (
                         '—'
@@ -737,20 +754,18 @@ export function LoadDrawer() {
                     </dd>
                     <dt>{t(locale, 'a6_dr_tractor')}</dt>
                     <dd>
-                      <span className="mono" data-content>{load.resources.tractorPlate ?? '—'}</span>
+                      <span className="mono" data-content>{formatTowerPair(load.resources.tractorPlate, load.resources.tractorDeliveryPlate, !!load.resources.trailerSwap)}</span>
                     </dd>
                     <dt>{t(locale, 'a6_dr_trailer')}</dt>
                     <dd>
                       <span className="mono">{load.resources.trailerPlate ?? '—'}</span>
                     </dd>
-                    {!(EscortPanel && isServerId(load.id)) && (<>
+                    {!(EscortPanel && isServerId(load.id)) && load.resources.escort && (<>
                     <dt>{t(locale, 'a6_dr_escort')}</dt>
-                    <dd>
-                      {load.resources.escort
-                        ? load.resources.escortPlate
-                          ? tp(locale, 'a6_dr_escort_one_plate', { plate: load.resources.escortPlate })
-                          : t(locale, 'a6_dr_escort_one')
-                        : t(locale, 'a6_dr_escort_none')}
+                    <dd data-escort="required">
+                      {load.resources.escortPlate
+                        ? tp(locale, 'a6_dr_escort_one_plate', { plate: load.resources.escortPlate })
+                        : t(locale, 'a6_dr_escort_one')}
                     </dd>
                     </>)}
                     <dt>{t(locale, 'a6_dr_combo')}</dt>
