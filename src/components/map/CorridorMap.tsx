@@ -3,8 +3,6 @@ import L from 'leaflet';
 
 import { useTowerStore } from '../../store/useTowerStore';
 import { t } from '../../i18n/messages';
-import { CORRIDOR_REF_COORDS } from '../../lib/corridor';
-import { SITES } from '../../lib/status';
 import { fetchSituations, type RoadSituation } from '../../lib/trafikverket';
 import { PROD_BUILD, shows } from '../../lib/prodFacade';
 import { demoFleetMarkers, prodFleetMarkers, type VehicleMarkerIn } from '../../lib/vehicleMarkers';
@@ -18,8 +16,8 @@ import { getNowIso, isFrozenNow } from '../../lib/frozenNow';
 import { ferryMarkerTone } from '../../lib/ferry/stenaAis';
 import { isServerId } from '../../data/registry';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
-import { installFallback } from './fallbackTiles';
-import { WATER_GDN_NYN, WATER_GDY_KAA, h6Requests } from '../../lib/map/draw';
+import { h6Requests } from '../../lib/map/draw';
+import { acquireMap, ensureBasemap, releaseMap, type LayerBag, type MapSlot, type PoolEntry } from './mapPool';
 
 /* III-5 — odtwarzanie przebiegu z bazy: tylko build Supabase (chunk leniwy); demo bez zmian */
 const TrackReplay = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./TrackReplay')) : null;
@@ -58,28 +56,11 @@ function severityColor(severity: string): string {
   return '#7E93A1';
 }
 
-const Punkty = [
-  { name: SITES.loading.name, lat: SITES.loading.lat, lng: SITES.loading.lng },
-  { name: SITES.portOut.name, lat: SITES.portOut.lat, lng: SITES.portOut.lng },
-  { name: SITES.portIn.name, lat: SITES.portIn.lat, lng: SITES.portIn.lng },
-  { name: SITES.site.name, lat: SITES.site.lat, lng: SITES.site.lng },
-];
-
-type LayerBag = {
-  tiles: L.Layer;
-  route: L.LayerGroup;
-  ferryLeg: L.LayerGroup;
-  geofences: L.LayerGroup;
-  poi: L.LayerGroup;
-  fleet: L.LayerGroup;
-  situations: L.LayerGroup;
-  ais: L.LayerGroup;
-};
-
-export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedded?: boolean }) {
+export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit' : 'map' }: { loads: Load[]; embedded?: boolean; slot?: MapSlot }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layersRef = useRef<LayerBag | null>(null);
+  const entryRef = useRef<PoolEntry | null>(null);
   const theme = useTowerStore((s) => s.theme);
   const locale = useTowerStore((s) => s.locale);
   const mapLayers = useTowerStore((s) => s.mapLayers);
@@ -180,88 +161,39 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-
-    const map = L.map(containerRef.current, {
-      center: [58.5, 18.5],
-      zoom: 4.2,
-      zoomControl: false,
-      attributionControl: true,
-    });
-    L.control.zoom({ position: 'topright' }).addTo(map);
-
-    const tiles = L.layerGroup().addTo(map);
-
-    const route = L.layerGroup().addTo(map);
-    if (!PROD_BUILD) {
-      L.polyline(
-        CORRIDOR_REF_COORDS.map(([lng, lat]) => L.latLng(lat, lng)),
-        { color: '#E5A544', weight: 3, opacity: 0.85, dashArray: '8 6' },
-      ).addTo(route);
-    }
-
-    const ferryLeg = L.layerGroup().addTo(map);
-    for (const lane of [WATER_GDN_NYN, WATER_GDY_KAA]) {
-      L.polyline(lane.map(([lng, lat]) => L.latLng(lat, lng)), {
-        color: '#6BA8D6', weight: 3, opacity: 0.9,
-      }).addTo(ferryLeg);
-    }
-
-    const geofenceGroup = L.layerGroup().addTo(map);
-    const poiGroup = L.layerGroup().addTo(map);
-    const fleetGroup = L.layerGroup().addTo(map);
-    const sitGroup = L.layerGroup().addTo(map);
-    const aisGroup = L.layerGroup().addTo(map);
-
-    for (const p of Punkty) {
-      L.circleMarker([p.lat, p.lng], {
-        radius: 6,
-        color: '#080F15',
-        weight: 1,
-        fillColor: '#E5A544',
-        fillOpacity: 1,
-      })
-        .bindTooltip(p.name, { direction: 'top', offset: [0, -8] })
-        .addTo(poiGroup);
-    }
-
-    layersRef.current = {
-      tiles,
-      route,
-      ferryLeg,
-      geofences: geofenceGroup,
-      poi: poiGroup,
-      fleet: fleetGroup,
-      situations: sitGroup,
-      ais: aisGroup,
-    };
+    /* AUD-01e: jedna mapa na sesję — wpinana do kontenera widoku, przy zamknięciu odkładana (nie niszczona). */
+    const pooled = acquireMap(containerRef.current, slot);
+    const { map } = pooled;
+    entryRef.current = pooled;
+    layersRef.current = pooled.layers;
     mapRef.current = map;
-    map.on('zoomend', () => setZoom(map.getZoom()));
+    const onZoom = () => setZoom(map.getZoom());
+    map.on('zoomend', onZoom);
     setMapReady(map);
 
     let alive = true;
-    const safeInvalidate = (opts?: boolean | { animate?: boolean }) => {
+    const safeInvalidate = () => {
       if (!alive) return;
       try {
         if (!map.getPane('mapPane')) return;
-        map.invalidateSize(opts);
+        map.invalidateSize({ animate: false });
       } catch {
         /* mapa już usunięta / panel niegotowy */
       }
     };
-    requestAnimationFrame(() => safeInvalidate());
+    const raf = requestAnimationFrame(() => safeInvalidate());
     const t = window.setTimeout(() => safeInvalidate(), 250);
-    const ro = typeof ResizeObserver !== 'undefined'
-      ? new ResizeObserver(() => {
-          safeInvalidate({ animate: false });
-        })
-      : null;
-    if (ro && containerRef.current) ro.observe(containerRef.current);
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => safeInvalidate()) : null;
+    if (ro) ro.observe(pooled.el);
 
     return () => {
       alive = false;
+      cancelAnimationFrame(raf);
       clearTimeout(t);
       ro?.disconnect();
-      map.remove();
+      map.off('zoomend', onZoom);
+      releaseMap(pooled, slot);
+      entryRef.current = null;
       mapRef.current = null;
       layersRef.current = null;
       setMapReady(null);
@@ -270,35 +202,19 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
   }, []);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
+    const pooled = entryRef.current;
+    if (!pooled || !mapReady) return;
     let cancelled = false;
-    let current: L.Layer | null = layersRef.current?.tiles ?? null;
-    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
-      const layer = installFallback(map, current, theme);
-      if (layersRef.current) layersRef.current.tiles = layer;
-      return;
-    }
-    let switching = false;
-    const run = () => {
-      void import('./applyBasemap').then(({ applyBasemap }) => applyBasemap(map, current, theme, () => {
-        if (cancelled || switching) return;
-        switching = true;
-        run();
-      })).then((layer) => {
-        if (cancelled) {
-          if (map.hasLayer(layer)) map.removeLayer(layer);
-          return;
-        }
-        current = layer;
-        switching = false;
-        if (layersRef.current) layersRef.current.tiles = layer;
-        layer.once('load', () => { if (!cancelled) setBasemapReady(true); });
-      });
-    };
-    run();
+    let off: (() => void) | null = null;
+    void ensureBasemap(pooled, theme).then((layer) => {
+      if (cancelled) return;
+      if (pooled.tilesLoaded) { setBasemapReady(true); return; }
+      const done = () => { if (!cancelled) setBasemapReady(true); };
+      layer.once('load', done);
+      off = () => { layer.off('load', done); };
+    });
     const readyTimer = window.setTimeout(() => { if (!cancelled) setBasemapReady(true); }, 1500);
-    return () => { cancelled = true; window.clearTimeout(readyTimer); };
+    return () => { cancelled = true; off?.(); window.clearTimeout(readyTimer); };
   }, [theme, mapReady]);
 
   useEffect(() => {
@@ -472,9 +388,10 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
       data-h6={h6Requests(false, true) ? 'on' : 'off'}
       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', minHeight: 0 }}
     >
+      {/* AUD-01e: gniazdo — tu wpinany jest element `.corridor-map-el` wspólnej mapy (mapPool) */}
       <div
         ref={containerRef}
-        className="corridor-map-el"
+        className="corridor-map-host"
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 0 }}
       />
       {TrackReplay && !embedded && mapReady && mapLayers.trail && replayId ? (

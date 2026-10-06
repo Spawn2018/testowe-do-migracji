@@ -296,7 +296,7 @@ export function LoadDrawer() {
           {tab === 'overview' && (
             <>
               <div data-load-map style={{ position: 'relative', height: 220, marginBottom: 8 }}>
-                <CorridorMap loads={[load]} embedded />
+                <CorridorMap loads={[load]} embedded slot="drawer" />
               </div>
               <div style={{ marginBottom: 12 }}>
                 <button
