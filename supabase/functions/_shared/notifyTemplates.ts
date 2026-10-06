@@ -51,6 +51,13 @@ function digestLine(p: Record<string, unknown>, locale: NotifyLocale): RenderedN
   return { subject, body: `${lead}\n${list}`, severity: 'LOW', view: 'risk' };
 }
 
+/** Pierwsza linia treści e-maila decyzji — w dzwonku pomijana (AUD-02). */
+export const DECISION_LEAD: Record<NotifyLocale, string> = {
+  en: 'One event, one e-mail. The list is every affected transport.',
+  sv: 'En händelse, ett e-postmeddelande. Listan är alla berörda transporter.',
+  pl: 'Jedno zdarzenie, jeden e-mail. Lista to wszystkie dotknięte transporty.',
+};
+
 /** AUD-02: statusy transportu w treści powiadomień (enum load_status, 0001). */
 const STATUS_TXT: Record<NotifyLocale, Record<string, string>> = {
   pl: {
@@ -308,10 +315,7 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
       const subject = row.template === 'DECISION_ESCALATED'
         ? (locale === 'en' ? `Decision is now critical: ${title}` : locale === 'sv' ? `Beslutet är nu kritiskt: ${title}` : `Decyzja jest teraz krytyczna: ${title}`)
         : (locale === 'en' ? `Decision needed: ${title}` : locale === 'sv' ? `Beslut krävs: ${title}` : `Do decyzji: ${title}`);
-      const lead = locale === 'en'
-        ? 'One event, one e-mail. The list is every affected transport.'
-        : locale === 'sv' ? 'En händelse, ett e-postmeddelande. Listan är alla berörda transporter.'
-        : 'Jedno zdarzenie, jeden e-mail. Lista to wszystkie dotknięte transporty.';
+      const lead = DECISION_LEAD[locale];
       const body = list ? `${lead}\n${list}` : lead;
       return { subject, body, severity: row.template === 'DECISION_ESCALATED' ? 'HIGH' : 'MEDIUM', view: 'risk' };
     }
@@ -335,7 +339,7 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
         ? (locale === 'en' ? `New risk: ${title}` : locale === 'sv' ? `Ny risk: ${title}` : `Nowe ryzyko: ${title}`)
         : row.template === 'RISK_RESOLVED'
           ? (locale === 'en' ? `Risk closed: ${title}` : locale === 'sv' ? `Risk stängd: ${title}` : `Ryzyko zamknięte: ${title}`)
-          : (locale === 'en' ? `Risk now ${sev}: ${title}` : locale === 'sv' ? `Risken är nu ${sev}: ${title}` : `Ryzyko teraz ${sev}: ${title}`);
+          : (locale === 'en' ? `Risk severity now ${sev}: ${title}` : locale === 'sv' ? `Riskens allvarlighet nu ${sev}: ${title}` : `Zmiana wagi ryzyka (${sev}): ${title}`);
       const body = locale === 'en' ? `Severity: ${sev}.` : locale === 'sv' ? `Allvarlighet: ${sev}.` : `Waga: ${sev}.`;
       return { subject, body, severity: row.template === 'RISK_RESOLVED' ? 'LOW' : asSev(p.severity), view: 'risk' };
     }

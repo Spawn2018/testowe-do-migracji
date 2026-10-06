@@ -1,0 +1,14 @@
+RISK_OPEN	SG-11 · Nowe ryzyko: Warunki drogowe E4: wypadek, bardzo duży wpływ na ruch	Waga: wysoka.	15 min temu	/transport/brak?zakladka=status
+RISK_RESOLVED	SG-11 · Ryzyko zamknięte: Warunki drogowe E4: roboty drogowe	Waga: średnia.	16 min temu	/transport/brak?zakladka=status
+RISK_SEVERITY	SG-03 · Zmiana wagi ryzyka (krytyczna): brak awizacji przed załadunkiem	Waga: krytyczna.	17 min temu	/transport/brak?zakladka=awizacja
+DECISION_OPEN	SG-11 · Do decyzji: Brak pozycji pojazdu WGM00653 od 15 min		18 min temu	/decyzje/d1
+DECISION_ESCALATED	SG-03 · Decyzja jest teraz krytyczna: brak awizacji przed załadunkiem		19 min temu	/decyzje/d2
+DECISION_RESOLVED	SG-11 · Decyzja zamknięta: Opóźnienie 3960 min wobec planu dostawy (próg 30)		20 min temu	/decyzje/d3
+RESOURCE_DEADLINE	SG-03 · brak — tablice ciągnika lub naczepy	Uzupełnij przed załadunkiem 04.10.2026.	21 min temu	/transport/SG-03?zakladka=awizacja
+ORDER_NO_MISSING	SG-03 · brak numeru zlecenia HHL	Uzupełnij numer zlecenia przed 07.10.2026.	22 min temu	/transport/SG-03?zakladka=numer-hhl
+LOAD_CHAT_MESSAGE	SG-11 · Czat: 0005/09/S/2026	x@y.pl: A teraz zobaczymy jak nam pójdzie.	23 min temu	/transport/brak?zakladka=ustalenia
+ZONE_ENTER	SG-11 · Wjazd do strefy Bufor 50 km przed Boden		24 min temu	/transport/brak?zakladka=status
+ZONE_EXIT	SG-11 · Wyjazd ze strefy		25 min temu	/transport/brak?zakladka=status
+LOAD_STATUS_CHANGED	SG-11 · Status: gotowy → w drodze SE		26 min temu	/transport/brak?zakladka=status
+WORKFLOW_ALERT	SG-11 · 15062/2026/OSL/GDA/P: reguła automatyzacji „Dojazd na plac”	Reguła „Dojazd na plac” zadziałała dla transportu 15062/2026/OSL/GDA/P.	27 min temu	/transport/15062%2F2026%2FOSL%2FGDA%2FP?zakladka=status
+INVOICE_DISPUTED	Faktura WT-TEST-P6-20261005 w sporze	Uzasadnienie odbiorcy: błędna wartość frachtu	28 min temu	/finanse/faktury/i1

@@ -1,3 +1,4 @@
+import { withLoadCode } from '../lib/bellList';
 import { create } from 'zustand';
 import { paymentBlockedByDispute } from '../lib/invoiceDispute';
 import { standardSkipMessage } from '../lib/standardSkipMessage';
@@ -542,7 +543,9 @@ export const useTowerStore = create<TowerState>()(
         const n = get().notifications.find((x) => x.id === id);
         if (!n) return;
         const href = n.href;
-        const path = href?.path;
+        // AUD-02: kod transportu z load_id (ładunki ryzyk/stref nie niosą kodu → było `/transport/brak`)
+        const loadCode = n.loadId ? get().loads.find((l) => l.id === n.loadId)?.code : undefined;
+        const path = href?.path ? withLoadCode(href.path, loadCode) : undefined;
         if (path) {
           const allowed = href?.allowed !== false;
           set({
