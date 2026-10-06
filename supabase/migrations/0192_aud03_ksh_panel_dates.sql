@@ -124,7 +124,7 @@ begin
   end if;
   v_changed := (v_ld, v_dd, v_lf, v_lt, v_df, v_dt)
                is distinct from (l.plan_load_date, l.plan_delivery_date, l.plan_load_from, l.plan_load_to, l.plan_delivery_from, l.plan_delivery_to);
-  if not v_changed then
+  if v_changed is not true then
     return jsonb_build_object('changed', false);
   end if;
 
