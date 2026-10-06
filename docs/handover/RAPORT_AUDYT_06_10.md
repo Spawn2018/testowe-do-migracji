@@ -110,3 +110,26 @@ Wniosek: HERE pozwala na tyle, ile mówi nagłówek (dziś 24 h) — `s-maxage` 
 5. Po wdrożeniu: na mapie `data-tile-path="here-direct"`, kafelki z `maps.hereapi.com`, licznik `here_usage.tiles` rośnie co ≤ 60 s.
 
 Pomiar właściciela (pierwsze otwarcie dnia ≤ 2 s, kolejne ≤ 0,3 s, 1366/390 px) — po włączeniu klucza; cel „kolejne ≤ 0,3 s” wymaga też jednej instancji mapy na sesję (nie ma jej w kodzie, patrz pkt 4).
+
+### AUD-01d — klucz przeglądarkowy HERE włączony (06.10 ~18:00)
+
+Właściciel utworzył klucz (osobna aplikacja HERE, Trusted domains), koordynator dodał `VITE_HERE_BROWSER_KEY` (Vercel Production). Ponowne wdrożenie `main` (`b2051b0`) z `git archive` → alias tower.log-mar.pl, pakiet `index-CV7Mungi.js`. Sprawdzenie: pakiet zawiera drogę HERE wprost (`maps.hereapi.com` ×1), klucz wbudowany (zgodność z wartością w środowisku, bez wypisywania), RPC `here_tiles_report`; CSP `img-src` z `https://maps.hereapi.com` na obu domenach; klucz z Referer `https://tower.log-mar.pl/` → 200 image/png, `https://watch-tower-makieta.vercel.app/` → 200 image/png, obca domena → 401. `watch-tower-makieta.vercel.app/` 200. `tower.log-mar.pl/` z adresu IP skrzynki → 403 `x-vercel-mitigated: deny` (zapora Vercel po serii pobrań kawałków pakietu; z zewnątrz strona odpowiada — WebFetch OK). `here_usage.tiles` 10.2026 = 4 309, `here_tile_reports` 0 wierszy do 18:12 — nikt zalogowany nie otworzył mapy; zgłoszenie z przeglądarki do potwierdzenia sesją zalogowaną (koordynator).
+
+## AUD-01e — jedna mapa na sesję (decyzja koordynatora z polecenia właściciela AUD-01d)
+
+**Przyczyna.** Każdy widok (Mapa, mini-mapa kokpitu, panel zlecenia) montował własną mapę Leaflet i niszczył ją przy wyjściu (`L.map` / `map.remove()` w `CorridorMap`): przy każdym powrocie nowa mapa, nowy podkład (`applyBasemap`), 32 nowe kafelki `<img>` na widok Mapa 1366 px, dane mapy dopiero po narysowaniu podkładu.
+
+**Poprawka.** `src/components/map/mapPool.ts`: jedna mapa na kartę. Widok wpina element `.corridor-map-el` do swojego gniazda (`.corridor-map-host`), przy zamknięciu odkłada go do ukrytego schowka o tym samym rozmiarze (Leaflet nie przycina kafelków) — mapa, podkład i warstwy zostają. Widok (środek/zoom/rozmiar) zapamiętany per miejsce (`map` / `kokpit` / `drawer`): powrót bez zmian → nic (zero kafelków); inne miejsce/rozmiar → `setView(reset)` + nowy renderer SVG i warstwy wektorowe (piksel w piksel jak świeża mapa — wzorce wizualne bez zmian). Podkład zakładany raz na motyw (`ensureBasemap`), przełączenie zapasu D-78 działa niezależnie od widoku. Gdy mapa jest zajęta (panel zlecenia nad widokiem Mapa) — mapa jednorazowa, niszczona przy zamknięciu. Słuchacze (`zoomend`), `ResizeObserver`, `requestAnimationFrame`, `setTimeout`, `load` zdejmowane przy zamknięciu. Bez pobierania z wyprzedzeniem.
+
+**Testy.** `tests/aud01e-map-pool.spec.ts` (Playwright, przeglądarka): `created`=1 po kokpit→Mapa→Harmonogram→Mapa×3→kokpit→Mapa, ten sam element DOM, 1 `.leaflet-container`, 0 nowych żądań i 0 nowych `<img>` kafelków przy powrocie, liczba słuchaczy `zoomend`/`moveend` stała, panel zlecenia nad Mapą → mapa jednorazowa zniszczona po zamknięciu, powrót ≤ 300 ms. `tests/aud01e-map-pool.test.ts` 4/4 (źródło). Brama: vitest 863/0, tsc, lint 0 błędów, gate:visual OK (smoke+stany ok, matryca 280/280, 0 zmienionych), etap5/b7/e2e-core 22/22 (jeden niestabilny przebieg etap5 D14 — 15/15 przy 3× powtórzeniu, także na `main`), fresh-smoke OK.
+
+**Pomiar lokalny (podgląd demo, 1366×900, Chromium; czas klik → mapa ma rozmiar i wszystkie kafelki widoku wczytane):**
+
+| przejście | PRZED (`main`) | PO |
+|---|---|---|
+| kokpit → Mapa (pierwsze) | 304–502 ms, 32 nowe `<img>` | 278–324 ms, 10 nowych `<img>` |
+| Harmonogram → Mapa (powrót, ×3) | 35–40 ms, **32 nowe `<img>`** za każdym razem | 33–42 ms, **0 nowych `<img>`**, 0 żądań |
+| Mapa → kokpit | 35–48 ms, 12 nowych `<img>` | 34–42 ms, 0* |
+| kokpit → Mapa | 36–46 ms, 32 nowe `<img>` | 34–51 ms, 0* |
+
+*pierwszy pomiar przed dodaniem `reset` przy zmianie miejsca; po `reset` kafelki kokpit↔Mapa są tworzone ponownie z pamięci przeglądarki (cena zgodności wzorców), powrót do tego samego widoku nadal 0. Lokalnie kafelki są w pamięci przeglądarki, więc czasy PRZED też są krótkie; na produkcji różnica to brak ponownego tworzenia mapy, podkładu (`applyBasemap`, odczyt budżetu) i opóźnienia danych do 1,5 s. Pomiar prod (konto testowe, 1366/390 px) — koordynator.
