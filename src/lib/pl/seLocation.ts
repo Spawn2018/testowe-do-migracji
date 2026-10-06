@@ -39,9 +39,10 @@ export const SE_LOCATION_RE = new RegExp(`(?<![${L}])(från|till|mellan|båda|ri
 export function plSeLocation(text: string): string {
   if (!text || !SE_LOCATION_RE.test(text)) return text;
   let s = text;
-  /* „E 4” → „E4”; podwójny numer drogi „E4: E 4 vid …” → „E4: przy …” */
+  /* „E 4” → „E4” */
   s = s.replace(/(?<![\p{L}\d])E\s+(\d{1,3})(?!\d)/gu, 'E$1');
-  s = s.replace(/^(E\d{1,3}):\s*E\d{1,3}\s+/u, '$1: ');
+  /* „E4: E4 …” → „E4: …”; inny numer w środku („E4: E22 från …”) wygrywa — to droga zdarzenia („E22: od …”) */
+  s = s.replace(/^(E\d{1,3}):\s*(E\d{1,3})(?![\d.])\s+/u, (_m, a: string, b: string) => `${a === b ? a : b}: `);
   /* granica regionów: „Länsgr. Västerbottens/Norrbottens län” → „granica regionów Västerbotten/Norrbotten” */
   s = s.replace(new RegExp(`länsgr(?:\\.|äns)?\\s+(${NAME})\\s*\\/\\s*(${NAME})\\s+län`, 'giu'),
     (_m, a: string, b: string) => `granica regionów ${genitiveToBase(a)}/${genitiveToBase(b)}`);
