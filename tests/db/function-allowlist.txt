@@ -119,6 +119,7 @@ authenticated kpi_detection_lag
 authenticated kr_convoy_count
 authenticated ksh_confirm_dates
 authenticated l1b_ksh_file_unreadable
+authenticated latest_vehicle_fixes
 authenticated list_load_messages_ui
 authenticated load_agreed_fee_accept
 authenticated load_agreed_fee_add

@@ -4,7 +4,7 @@ export const TOWER_ORIGIN = 'https://tower.log-mar.pl';
 export function corsHeaders(extra: HeadersInit = {}): HeadersInit {
   return {
     'access-control-allow-origin': TOWER_ORIGIN,
-    'access-control-allow-headers': 'authorization, apikey, content-type, x-client-info',
+    'access-control-allow-headers': 'authorization, apikey, content-type, x-client-info, x-wt-token',
     'access-control-allow-methods': 'GET, POST, OPTIONS',
     vary: 'Origin',
     ...extra,
