@@ -875,6 +875,8 @@ img,video{max-width:100%;height:auto}
 [hidden]:where(:not([hidden="until-found"])){display:none}
 /* pin Leaflet against img{max-width/height:auto} (mirrors TW+leaflet.css coexistence) */
 .leaflet-container img.leaflet-tile{max-width:none;max-height:none;width:256px;height:256px}
+/* AUD-01c: ciemny zapas bez klucza (Esri ulice z filtrem) */
+.wt-tiles-dark{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.6)}
 .leaflet-container img.leaflet-marker-icon,.leaflet-container img.leaflet-marker-shadow{max-width:none;height:auto}
 
 .gf-editor-map{height:280px;border:1px solid var(--rule);border-radius:2px;margin-top:8px}

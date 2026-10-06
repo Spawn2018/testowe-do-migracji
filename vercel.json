@@ -24,21 +24,19 @@
           "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://server.arcgisonline.com https://*.basemaps.cartocdn.com; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.hereapi.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
         }
       ]
-    },
-    {
-      "source": "/tiles/(.*)",
-      "headers": [
-        {
-          "key": "x-vercel-enable-rewrite-caching",
-          "value": "1"
-        }
-      ]
     }
   ],
   "rewrites": [
     {
-      "source": "/tiles/:theme(light|dark)/:z(\\d+)/:x(\\d+)/:y(\\d+)",
-      "destination": "https://nglnnrmzmhusvxslousq.supabase.co/functions/v1/here-raster?theme=:theme&z=:z&x=:x&y=:y&forceFunctionRegion=eu-west-1"
+      "source": "/tiles/:style/:z(\\d+)/:x(\\d+)/:y(\\d+).png",
+      "destination": "/api/tiles?style=:style&z=:z&x=:x&y=:y"
+    },
+    {
+      "source": "/tiles/:style/:z(\\d+)/:x(\\d+)/:y(\\d+)",
+      "destination": "/api/tiles?style=:style&z=:z&x=:x&y=:y"
     }
+  ],
+  "regions": [
+    "fra1"
   ]
 }

@@ -11,22 +11,27 @@ export const HERE_MAX_ZOOM = 19;
 export type ThemeName = 'light' | 'dark';
 
 export interface BasemapChoice {
-  provider: 'here' | 'esri-streets' | 'carto';
+  provider: 'here' | 'esri-streets' | 'esri-streets-dark';
   theme: ThemeName;
   style: 'logistics.day' | 'logistics.night' | null;
   url: string | null;
   attribution: string;
   maxZoom: number;
   hereRequests: boolean;
+  /** Klasa CSS warstwy (ciemny filtr zapasu). */
+  className?: string;
+  maxNativeZoom?: number;
 }
 
 const ESRI_STREETS =
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
 const ESRI_STREETS_ATTR =
   'Tiles &copy; Esri — Esri, HERE, Garmin, FAO, NOAA, USGS, &copy; OpenStreetMap contributors';
-const CARTO_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
-const CARTO_DARK_ATTR =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+/**
+ * AUD-01c: CARTO `dark_all`/`light_all` bez klucza zwraca dziś obraz „API KEY REQUIRED” (CARTO wymaga klucza od 09.2026),
+ * więc ciemny zapas = ten sam Esri World_Street_Map (z etykietami, bez klucza, w CSP) z ciemnym filtrem CSS.
+ */
+export const DARK_FALLBACK_CLASS = 'wt-tiles-dark';
 const HERE_ATTR = '&copy; HERE';
 
 export function warsawMonth(now: Date): string {
@@ -69,13 +74,14 @@ export function basemapFor(input: {
   }
   if (theme === 'dark') {
     return {
-      provider: 'carto',
+      provider: 'esri-streets-dark',
       theme,
       style: null,
-      url: CARTO_DARK,
-      attribution: CARTO_DARK_ATTR,
+      url: ESRI_STREETS,
+      attribution: ESRI_STREETS_ATTR,
       maxZoom: HERE_MAX_ZOOM,
       hereRequests: false,
+      className: DARK_FALLBACK_CLASS,
     };
   }
   return {

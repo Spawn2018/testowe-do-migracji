@@ -1351,3 +1351,17 @@ Potem dalej według PLAN.md.
 18. **Separator (D)** — SG-03 „ROBERT PREIHS|MICHAŁ MADEJ”: przepięcie („|”) czy dwóch kierowców („ / ”) — potwierdzić.
 
 Zasady: przy każdym punkcie przyczyna / poprawka / test / dowód (zrzut z produkcji Playwright, pomiar albo zapytanie SQL); sekcja w `docs/handover/RAPORT_AUDYT_06_10.md`, zrzuty w `docs/handover/audyt-06-10/`; migracje przez lokalną bramę (migracja w repo przed PROD); lokalna brama (testy, fresh-smoke, gate:visual — wzorce tylko dla zmian zamierzonych z commitem przyczyny; gitleaks 0; npm audit prod high 0); scalenie, Vercel prod, obie domeny 200; raport po każdym punkcie ze zrzutem.
+
+## 2026-10-06 15:11 Europe/Warsaw — POLECENIE WŁAŚCICIELA 06.10 13:45: AUD-01 AWARIA PRODUKCYJNA — NAPRAWIĆ NATYCHMIAST (AUD-01c)
+
+Stan zastany 15:11: PR #139 (AUD-01b) scalony (`ebec592`), wdrożony — Vercel `dpl_CPmwRuXGv1Vnj2GsBAgRcF4XSWyJ` (pakiet `index-BEu6Qsky.js`, kawałek `applyBasemap` z `forceFunctionRegion`), `here-raster` z `ebec592`; #139 bez migracji.
+
+1. `/tiles/<styl>/<z>/<x>/<y>` daje 404 HTML dla nazw stylów HERE `logistics.day` / `logistics.night` (curl właściciela 13:45; potwierdzone 15:11 na obu domenach) — przepisane jest tylko `light|dark`. Obsłużyć `logistics.day` / `logistics.night` (light→logistics.day, dark→logistics.night), light/dark nadal działa. Test: 200 + prawdziwy obraz (content-type image/png lub jpeg, poprawne bajty magiczne) dla 5 kafelków na OBU domenach, curl.
+2. Region funkcji kafelków: Frankfurt albo Sztokholm (właściciel: fra1/arn1 → Supabase eu-central-1 / eu-north-1), bliżej bazy; NIE eu-west-1 ani us-east-2. Jeśli po stronie Vercel jest funkcja — fra1/arn1. Dowód: nagłówek `X-Sb-Edge-Region`.
+3. Pamięć brzegu: `Cache-Control: public, s-maxage=604800, stale-while-revalidate=86400`; bez Vary na ciasteczkach, BEZ nagłówka autoryzacji przy kafelkach (kafelki publiczne — decyzja właściciela). Ochrona bez autoryzacji: tylko poprawna siatka z/x/y i dozwolone style, D-78 liczy każde prawdziwe pobranie z HERE, budżet zamyka przy limicie (zapas), najlepiej Referer/Origin tylko dwie domeny + limit częstości. Błędów nie pamiętać, poza 404 spoza siatki. Test: pierwsze MISS, drugie żądanie z innego klienta (świeży curl bez ciasteczek) `x-vercel-cache: HIT`.
+4. `latest_vehicle_fixes`: 500 po 13 s w kokpicie — przyczyna z logów Supabase (timeout? plan?), poprawka (indeks/plan, EXPLAIN ANALYZE na PROD tylko odczyt), test 94 transporty < 1 s z dowodem EXPLAIN.
+5. Ciemny podkład zapasowy pokazuje „API KEY REQUIRED” — zamienić na podkład bez klucza: CARTO `light_all` / `dark_all` z `basemaps.cartocdn.com` (już w CSP); sprawdzić dokładne adresy (obraz bez klucza). Test przełączenia przy 80% budżetu.
+6. Pomiar po poprawce: koordynator — przeglądarka po zalogowaniu kontem TEST; wykonawca — curl/Playwright bez logowania: zimne MISS i ciepłe HIT dla 24 kafelków, nagłówki.
+7. Pamięć 7 dni: znaleźć i ZACYTOWAĆ warunki HERE o przechowywaniu kafelków (Service Terms / Acceptable Use / dokumentacja Raster Tile API); jeśli HERE pozwala na krócej — skrócić s-maxage. Cytat z adresem w RAPORT.
+
+Zasady: sekcja „AUD-01c” w `RAPORT_AUDYT_06_10.md`, lokalna bramka, scalenie, wdrożenie, obie domeny 200, PLAN/POSTEP, commit+push co ≤ 30 min. Bez AUD-02. Bez konta właściciela i bez podszywania się.
