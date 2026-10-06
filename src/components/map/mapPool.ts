@@ -120,6 +120,8 @@ export function acquireMap(root: HTMLElement, slot: MapSlot): PoolEntry {
     const { route, ferryLeg, geofences, poi, fleet, situations, ais } = e.layers;
     const on = [route, ferryLeg, geofences, poi, fleet, situations, ais].filter((l) => e.map.hasLayer(l));
     for (const l of on) e.map.removeLayer(l);
+    const m = e.map as unknown as { _renderer?: L.Renderer; _paneRenderers?: Record<string, L.Renderer> };
+    if (m._renderer) { e.map.removeLayer(m._renderer); m._renderer = undefined; m._paneRenderers = {}; }
     for (const l of on) l.addTo(e.map);
   }
   return e;
