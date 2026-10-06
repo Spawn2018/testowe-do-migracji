@@ -37,7 +37,7 @@ export type PoolEntry = {
   tilesTheme: ThemeName | null;
   tilesLoaded: boolean;
   basemapSeq: number;
-  views: Map<MapSlot, { center: L.LatLng; zoom: number }>;
+  views: Map<MapSlot, { center: L.LatLng; zoom: number; w: number; h: number }>;
 };
 
 export const DEFAULT_CENTER: L.LatLngTuple = [58.5, 18.5];
@@ -52,10 +52,12 @@ let holder: HTMLDivElement | null = null;
 
 const POINTS = [SITES.loading, SITES.portOut, SITES.portIn, SITES.site];
 
-function build(pooled: boolean): PoolEntry {
+/** Mapa tworzona już w kontenerze widoku (rozmiar od początku) — piksel w piksel jak przed AUD-01e. */
+function build(pooled: boolean, root: HTMLElement): PoolEntry {
   const el = document.createElement('div');
   el.className = 'corridor-map-el';
   Object.assign(el.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', zIndex: '0' });
+  root.appendChild(el);
   const map = L.map(el, { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl: false, attributionControl: true });
   L.control.zoom({ position: 'topright' }).addTo(map);
   const tiles = L.layerGroup().addTo(map);
@@ -97,22 +99,28 @@ function safeInvalidate(map: L.Map): void {
 
 /** Wpina mapę do kontenera widoku. Ten sam widok co ostatnio w tym miejscu → bez `setView` (zero nowych kafelków). */
 export function acquireMap(root: HTMLElement, slot: MapSlot): PoolEntry {
-  let e: PoolEntry;
-  if (!inUse) {
-    if (entry) poolStats.reused += 1;
-    else entry = build(true);
-    inUse = true;
-    e = entry;
-  } else {
-    e = build(false);
+  if (inUse) return build(false, root);
+  inUse = true;
+  if (!entry) {
+    entry = build(true, root);
+    return entry;
   }
+  poolStats.reused += 1;
+  const e = entry;
   root.appendChild(e.el);
   safeInvalidate(e.map);
   const saved = e.views.get(slot);
-  const center = saved?.center ?? L.latLng(DEFAULT_CENTER);
-  const zoom = saved?.zoom ?? Math.round(DEFAULT_ZOOM);
-  if (e.map.getZoom() !== zoom || !e.map.getCenter().equals(center, 1e-9)) {
-    e.map.setView(center, zoom, { animate: false });
+  const untouched = !!saved && saved.w === e.el.clientWidth && saved.h === e.el.clientHeight
+    && e.map.getZoom() === saved.zoom && e.map.getCenter().equals(saved.center, 0);
+  // Powrót do tego samego miejsca bez zmiany rozmiaru i widoku → nic (zero nowych kafelków). Inaczej widok ustawiany
+  // od nowa (`reset`) — piksel w piksel jak świeżo utworzona mapa (wzorce wizualne), kafelki z pamięci przeglądarki.
+  if (!untouched) {
+    e.map.setView(saved?.center ?? L.latLng(DEFAULT_CENTER), saved?.zoom ?? DEFAULT_ZOOM, { reset: true } as L.ZoomPanOptions);
+    // Warstwy wektorowe od nowa w tej samej kolejności (obcięcie linii i wzór kresek jak w świeżej mapie). Bez kafelków.
+    const { route, ferryLeg, geofences, poi, fleet, situations, ais } = e.layers;
+    const on = [route, ferryLeg, geofences, poi, fleet, situations, ais].filter((l) => e.map.hasLayer(l));
+    for (const l of on) e.map.removeLayer(l);
+    for (const l of on) l.addTo(e.map);
   }
   return e;
 }
@@ -125,9 +133,9 @@ export function releaseMap(e: PoolEntry, slot: MapSlot): void {
     poolStats.destroyed += 1;
     return;
   }
-  e.views.set(slot, { center: e.map.getCenter(), zoom: e.map.getZoom() });
-  const w = e.el.clientWidth;
-  const h = e.el.clientHeight;
+  // Element jest już odpięty przez React (sprzątanie efektów po usunięciu DOM) — rozmiar z pamięci Leaflet.
+  const { x: w, y: h } = e.map.getSize();
+  e.views.set(slot, { center: e.map.getCenter(), zoom: e.map.getZoom(), w, h });
   if (!holder) {
     holder = document.createElement('div');
     holder.setAttribute('aria-hidden', 'true');
