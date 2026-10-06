@@ -36,3 +36,19 @@ Smoke + gate:visual zielone po usunięciu `#langSeg` (8322d02). Tylko testy/wzor
 - Świeży build demo HEAD `55eccc4` → :4179; persist-toast **3/3**; na buildzie `c1d23e2^` test „system light” **FAIL** (toast) → test wykrywa regresję, poprawka działa
 - Prod (świeży kontekst, light/dark, obie domeny): ekran logowania bez toastu, bez pageerror; zalogowany użytkownik — niesprawdzone (brak konta testowego w tym przebiegu), wadliwa ścieżka jest w paczce prod → poprawka idzie na prod
 - W toku: matryca PL 280 → tmp-cand-pl, klasyfikacja z wyrównaniem przesunięcia 30 px
+
+## Checkpoint 10:02 CEST — matryca PL 280 odświeżona (wszystkie różnice z przyczyną)
+- Świeży build demo `55eccc4` (:4179) → `tmp-cand-pl` 280/280 OK; deterministyczne (14 ujęć kontrolnych z osobnego buildu = 0 px różnicy)
+- Klasyfikacja: 42 identyczne surowo; po wyrównaniu przesunięcia 30 px (niższy pasek korytarza) reszta poza nagłówkiem i dolnym pasem 30 px tylko w: harmonogram, mapa, ryzyka, strefy, opcje, ustawienia, rozliczenia, faktury-przychodowe
+- Bisekcja (14 ujęć × 41 buildów, od `fd5f8e2` = ostatnia zielona brama 04.10 840/840 do HEAD) — przyczyna każdej grupy:
+  - wszystkie widoki: `8322d02` (bez PL/EN/SV i zegara) + `6fc3037` B-9.2 (kafelki korytarza bez cyfr → pasek niższy o 30 px)
+  - harmonogram: `e5ccb96` B-8 (pola dat), `50ba5d6` B-8 (kolumny HHL-KSH/SCAN, daty z rokiem), `f456153` „Jak działa”; (`fec7387` pusty harmonogram — brak importu, naprawione `9e17008`, bez zmiany netto)
+  - mapa: `e5ccb96` B-7c (chipy „Bez GPS”/„Ryzyko”)
+  - ustawienia: `8322d02` (bez wyboru języka) + `e5ccb96` Q-9 B („Domyślnie według ustawień systemu”)
+  - opcje: `43e41fb` (04.10, L-4: sekcja „Czas wolny i przestój”, DWELL_OVER_FREE)
+  - strefy: `4126b39` (04.10, L-12 kreator stref: kolumna „Kraj”, powiązania HHL/SCX)
+  - ryzyka: `3a48097` (05.10 02:34, FERRY-STATUS: „Warunki drogowe SE · E4 i E22”, Karlskrona → Boden; na 390 px przesunięcie treści)
+  - rozliczenia (KSH): `bfc7ed9` B-4a (bez „Fracht — stawka bazowa”/„Pilotaż i dodatki”)
+  - faktury-przychodowe, faktury, dokumenty, finanse, kokpit, automatyzacje, moje-*: tylko `8322d02` + `6fc3037`
+  - toast „stan uszkodzony”: pojawia się w `e5ccb96`, znika w `c1d23e2` (~0,2 % ujęcia; 390 px ~1,7 %)
+- Grupy poza listą koordynatora, ale z jednoznaczną zamierzoną przyczyną: `43e41fb` (opcje), `4126b39` (strefy), `3a48097` (ryzyka), `bfc7ed9` (rozliczenia) — odświeżone z wpisem; różnic bez przyczyny: 0
