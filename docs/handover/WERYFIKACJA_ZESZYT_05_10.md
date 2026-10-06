@@ -140,8 +140,8 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 
 | numer | słowa właściciela | wynik | zrzut | PR / migracja |
 |-------|-------------------|-------|-------|---------------|
-| K.1 | KSH klik → ten sam panel co pozostali + „Edytuj” w Przeglądzie | **poprawione 06.10 (AUD-03)** — odczytanie z 05.10 („boczne menu tylko Edytuj”, PR #111) było błędne wg decyzji właściciela „KSH — PANEL ZLECENIA”; `KshSideMenu` usunięte, KSH ma pełny panel (6 zakładek, bez kosztu i marży) i „Edytuj” w Przeglądzie | `audyt-06-10/aud03-ksh-panel-*.png` | AUD-03 (PR i wdrożenie w RAPORT_AUDYT_06_10.md) |
-| K.2 | Edycja dat/godzin załadunku i rozładunku | **poprawione 06.10 (AUD-03)** — okno (pop-up) jak u przewoźnika, tylko 4 pola daty i godziny; RPC `ksh_confirm_dates` (0192), Historia „imię nazwisko // KSH”, odmowa innych pól przez API | `audyt-06-10/aud03-ksh-okno-*.png`, `aud03-ksh-historia-*.png` | AUD-03 |
+| K.1 | KSH klik → ten sam panel co pozostali + „Edytuj” w Przeglądzie | **poprawione 06.10 (AUD-03)** — odczytanie z 05.10 („boczne menu tylko Edytuj”, PR #111) było błędne wg decyzji właściciela „KSH — PANEL ZLECENIA”; `KshSideMenu` usunięte, KSH ma pełny panel (6 zakładek, bez kosztu i marży) i „Edytuj” w Przeglądzie | Playwright `tests/aud03-ksh-panel.spec.ts` (rola KSH, 1366/390 px) | AUD-03 (PR i wdrożenie w RAPORT_AUDYT_06_10.md) |
+| K.2 | Edycja dat/godzin załadunku i rozładunku | **poprawione 06.10 (AUD-03)** — okno (pop-up) jak u przewoźnika, tylko 4 pola daty i godziny; RPC `ksh_confirm_dates` (0192), Historia „imię nazwisko // KSH”, odmowa innych pól przez API | Playwright `tests/aud03-ksh-panel.spec.ts` + baza `tests/db/aud03.sh` | AUD-03 |
 | R.1 | Widać rejsy Steny | **zgodne** — Estelle/Ebba/Spirit | `R.1.png` | stan prod |
 | R.2 | Tylko admin dodaje/edytuje | **zgodne** — „Dodaj rejs” + Opóźnienie/Odwołaj dla HHL admin | `R.1.png` | stan prod |
 | R.3 | Przyszłe / minione + filtr Przyszłe | **zgodne** — „Przyszłe” / „pokaż minione” | `R.1.png` | stan prod |

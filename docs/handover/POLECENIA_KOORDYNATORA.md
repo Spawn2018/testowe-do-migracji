@@ -1401,3 +1401,13 @@ Popraw B-KSH / K.1 w LISTA_KONTROLNA_ZESZYT.md i WERYFIKACJA_ZESZYT_05_10.md.
 DODATKOWO — E-MAILE (do punktu 8 audytu): teksty e-maili z powiadomień jak w dzwonku: tytuł „SG-xx · co się stało" po polsku, bez kodów szablonów, z linkiem do celu z L-4. Funkcja wysyłki może być zmieniona.
 ```
 
+---
+
+## 06.10 ~20:20 — ZASADA DOWODÓW (właściciel; obowiązuje od teraz i w każdej kolejnej pracy)
+
+- ŻADNYCH zrzutów ekranu — ani robienia, ani oglądania jako dowodu — chyba że właściciel albo koordynator wprost o zrzut poprosi.
+- Dowód = test automatyczny (Playwright z asercjami: element istnieje, tekst, brak przewijania w poziomie, rola itd.) — nazwa testu i wynik w raporcie — albo zapytanie do bazy.
+- Po każdym wdrożeniu raport ma sekcję **„DO SPRAWDZENIA PRZEZ WŁAŚCICIELA”**: 2–5 punktów — gdzie kliknąć i co powinno być widać.
+- Brama wizualna (porównanie obrazów przez program) zostaje bez zmian.
+- AUD-03 pkt 6: zamiast zrzutów — testy Playwright w roli KSH (`tests/aud03-ksh-panel.spec.ts`) i test odmowy przez API (`tests/db/aud03.sh`).
+

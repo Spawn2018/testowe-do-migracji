@@ -3,12 +3,11 @@
  * KSH: ten sam panel (6 zakładek, dane), bez kosztu przewoźnika i marży, „Edytuj” w Przeglądzie → okno
  * z WYŁĄCZNIE datą i godziną załadunku / rozładunku; zapis zmienia daty i dodaje wpis w Historii.
  * „Zmień ciągnik” i przyciski przewoźnika/HHL niewidoczne dla KSH (blokada w bazie: tests/db/aud03.sh).
- * Zrzuty (demo, AUD_SHOTS=1): docs/handover/audyt-06-10/aud03-*.png — komputer 1366 i telefon 390.
+ * Dowód = asercje (zasada właściciela 06.10: bez zrzutów) — komputer 1366 i telefon 390 px.
  */
 import { test, expect, type Page } from '@playwright/test'
 
 const FROZEN_URL = `/#/?now=${encodeURIComponent('2026-09-23T14:32:00Z')}`
-const SHOTS = process.env.AUD_SHOTS === '1'
 
 async function boot(page: Page, w = 1366, h = 900, r: 'HHL' | 'KSH' | 'SCX' = 'HHL') {
   await page.setViewportSize({ width: 1366, height: 900 })
@@ -61,7 +60,6 @@ for (const vp of [{ w: 1366, h: 900, tag: 'komputer' }, { w: 390, h: 844, tag: '
     await expect(page.locator('.drawer [data-order]')).toHaveCount(2)
     await expect(page.locator('.drawer [data-load-when]')).toHaveText(/\d/)
     await expect(page.locator('.drawer [data-ksh-actions] [data-ksh-edit]')).toHaveText('Edytuj')
-    if (SHOTS) await page.screenshot({ path: `docs/handover/audyt-06-10/aud03-ksh-panel-${vp.tag}.png` })
     /* Ceny: przychód tak, koszt przewoźnika i marża — nie */
     await page.locator('.drawer button[aria-selected]').nth(3).click()
     await expect(page.locator('.drawer [data-money-side="cost"]')).toHaveCount(0)
@@ -78,7 +76,6 @@ for (const vp of [{ w: 1366, h: 900, tag: 'komputer' }, { w: 390, h: 844, tag: '
     await expect(modal.locator('input, select, textarea')).toHaveCount(4)
     await expect(modal.locator('input[type="datetime-local"]')).toHaveCount(4)
     const code = (await page.locator('.drawer .wb-code').textContent())?.trim() ?? ''
-    if (SHOTS) await page.screenshot({ path: `docs/handover/audyt-06-10/aud03-ksh-okno-${vp.tag}.png` })
     const lf = await modal.locator('input[name="ksh_load_from"]').inputValue()
     const day = lf.slice(0, 10)
     const next = new Date(`${day}T12:00:00Z`); next.setUTCDate(next.getUTCDate() + 1)
@@ -99,7 +96,6 @@ for (const vp of [{ w: 1366, h: 900, tag: 'komputer' }, { w: 390, h: 844, tag: '
     const entry = page.locator('.drawer [data-history] li').first()
     await expect(entry).toContainText('Zmiana dat i godzin planu')
     await expect(entry).toContainText('// KSH')
-    if (SHOTS) await page.screenshot({ path: `docs/handover/audyt-06-10/aud03-ksh-historia-${vp.tag}.png` })
     expect(code).toMatch(/^SG-/)
   })
 }
