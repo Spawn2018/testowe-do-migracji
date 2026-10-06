@@ -27,7 +27,7 @@ async function boot(page: Page) {
   })
   await page.reload({ waitUntil: 'networkidle', timeout: 120_000 })
   await page.waitForSelector('#roleSeg', { timeout: 30_000 })
-  await page.evaluate(() => (document.querySelector('#langSeg button[data-lang="pl"]') as HTMLButtonElement | null)?.click())
+  /* B-SMOKE-LANG: bez #langSeg — PL domyślny */
 }
 async function role(page: Page, r: 'HHL' | 'KSH' | 'SCX') {
   await page.locator(`#roleSeg button[data-role="${r}"]`).click()
@@ -51,6 +51,20 @@ async function openLoad(page: Page, code: string) {
   await page.waitForSelector('.drawer')
   await page.locator('.drawer button[aria-selected]').nth(0).click()
   await page.waitForSelector('.drawer [data-order="hhl"]')
+}
+/** B-SMOKE-DRIFT: KSH ma wąskie menu „Edytuj” zamiast pełnej szuflady (B-K.1, 8322d02). */
+async function openLoadKsh(page: Page, code: string) {
+  await page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: new RegExp(`^${code}$`) }) }).first().click()
+  await page.waitForSelector('.drawer[data-ksh-side-menu]')
+}
+/** B-SMOKE-DRIFT: nr HHL edytowany w oknie awizacji (AWIZ-4 / HHL-4a, 13ace35), nie w polu szuflady. */
+async function setHhlOrder(page: Page, v: string) {
+  await page.locator('.drawer button[aria-selected]').nth(0).click()
+  await page.locator('.drawer [data-hhl-order-btn]').click()
+  const modal = page.locator('[data-awiz-modal]')
+  await modal.locator('[data-awiz-hhl-order]').fill(v)
+  await modal.locator('[data-awiz-save]').click()
+  await expect(modal).toHaveCount(0)
 }
 
 test.describe('M5 — numery zleceń', () => {
@@ -86,10 +100,8 @@ test.describe('M5 — numery zleceń', () => {
     expect(code, 'transport z odblokowanym GOTOWY').not.toBe('')
     await page.locator('.drawer button[aria-selected]').nth(0).click()
     await expect(page.locator('.drawer [data-order="scx"] input')).toHaveCount(0)
-    const hhl = page.locator('.drawer [data-order="hhl"] input')
-    await expect(hhl).toHaveValue(/^HHL\/2026\//)
-    await hhl.fill('')
-    await page.locator('.drawer [data-order="hhl"] button[type="submit"]').click()
+    await expect(page.locator('.drawer [data-order="hhl"] .mono')).toHaveText(/^HHL\/2026\//)
+    await setHhlOrder(page, '')
     await closeDrawer(page)
     const row0 = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: new RegExp(`^${code}$`) }) })
     await expect(row0.locator('td[data-col="ord_hhl"]')).toHaveText('— brak —')
@@ -97,9 +109,7 @@ test.describe('M5 — numery zleceń', () => {
     await actionsTab(page)
     await page.locator('.drawer button', { hasText: 'Oznacz jako gotowy' }).click()
     await expect(page.getByText('Nie można oznaczyć jako gotowy — brak numeru zlecenia HHL', { exact: false }).first()).toBeVisible()
-    await page.locator('.drawer button[aria-selected]').nth(0).click()
-    await hhl.fill('HHL/2026/9001')
-    await page.locator('.drawer [data-order="hhl"] button[type="submit"]').click()
+    await setHhlOrder(page, 'HHL/2026/9001')
     await closeDrawer(page)
     const row = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: new RegExp(`^${code}$`) }) })
     await expect(row.locator('td[data-col="ord_hhl"]')).toHaveText('HHL/2026/9001')
@@ -114,12 +124,16 @@ test.describe('M5 — numery zleceń', () => {
     await expect(page.locator('.drawer [data-order="scx"] input')).toHaveCount(1)
     await actionsTab(page)
     await expect(page.locator('.drawer input[name="loadWindowStart"], .drawer input[name="loadWindowEnd"], .drawer input[name="unloadWindowStart"]')).toHaveCount(0)
-    await expect(page.locator('.drawer [data-plan-readonly]')).toHaveCount(1)
+    /* AN2 po AWIZ-4 (13ace35): blok „okna planowe (odczyt)” z zakładki działań usunięty — okno załadunku przewoźnik widzi jako tekst w Przeglądzie */
+    await page.locator('.drawer button[aria-selected]').nth(0).click()
+    await expect(page.locator('.drawer [data-load-when]')).toHaveText(/\d/)
+    await expect(page.locator('.drawer [data-load-when] input')).toHaveCount(0)
     await closeDrawer(page)
     await role(page, 'KSH')
     await nav(page, 'sched')
-    await openLoad(page, 'SG-11')
-    await expect(page.locator('.drawer [data-order] input')).toHaveCount(0)
+    await openLoadKsh(page, 'SG-11')
+    await expect(page.locator('.drawer [data-order]')).toHaveCount(0)
+    await expect(page.locator('.drawer input')).toHaveCount(0)
   })
 })
 
@@ -243,11 +257,14 @@ test.describe('M8 — poziom wyceny i kurs tymczasowy', () => {
 
     await role(page, 'KSH')
     await nav(page, 'sched')
-    await openLoad(page, 'SG-34')
-    await page.locator('.drawer button[aria-selected]').nth(3).click()
-    await expect(page.locator('.drawer [data-money-side="cost"]')).toHaveCount(0)
-    await expect(page.locator('.drawer [data-money-side="rev"] [data-tier]')).toHaveCount(1)
-    await closeDrawer(page)
+    /* B-K.1 (8322d02): KSH bez zakładki „Ceny” — swoją cenę widzi w harmonogramie, koszt przewoźnika nigdzie */
+    const kshRow = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: /^SG-34$/ }) })
+    await expect(kshRow.locator('td[data-col="rev"]')).toHaveText(/\d/)
+    await expect(page.locator('table.sched-table [data-col="cost"]')).toHaveCount(0)
+    await openLoadKsh(page, 'SG-34')
+    await expect(page.locator('.drawer [data-money-side]')).toHaveCount(0)
+    await page.locator('.drawer .drawer-hd button.x').click()
+    await page.waitForSelector('.drawer', { state: 'detached' })
 
     await role(page, 'HHL')
     await nav(page, 'fin')
@@ -272,10 +289,13 @@ test.describe('M11 — rozbicie marży', () => {
     expect(total).toBe(72)
     expect((await n('FAKTURA')) + (await n('REALIZACJA')) + (await n('PROGNOZA'))).toBe(total)
     await nav(page, 'options')
+    /* DEC-6 (5685099): preferencje w zwiniętym akordeonie */
+    await page.locator('[data-section="prefs"] > summary').click()
     await page.locator('[data-deur-exempt="currency-pref"] select').selectOption('PLN')
     await nav(page, 'fin')
     await expect(split.locator('[data-margin-total]')).toContainText('PLN')
     await nav(page, 'options')
+    if (!(await page.locator('[data-section="prefs"]').evaluate((d) => (d as HTMLDetailsElement).open))) await page.locator('[data-section="prefs"] > summary').click()
     await page.locator('[data-deur-exempt="currency-pref"] select').selectOption('EUR')
     await nav(page, 'fin')
     await expect(split.locator('[data-margin-total]')).toContainText(/€|EUR/)
@@ -288,32 +308,17 @@ test.describe('M11 — rozbicie marży', () => {
 })
 
 test.describe('M9 — aplikacja kierowcy', () => {
-  test('zgoda w języku telefonu; bez zgody tylko przyciski etapów; ze zgodą pozycja ciągła', async ({ page, context }) => {
+  /* B-SMOKE-DRIFT: DRV-CLOSE (4399a18, U-38/D-36, PLAN: DONE 05.10) — trasa #/driver/:token pokazuje „Link nieaktywny”,
+     zgoda/pozycja z telefonu wyłączone (pozycje tylko z telematyki). Kod PWA zostaje w repo, ale się nie renderuje. */
+  test('DRV-CLOSE: link kierowcy nieaktywny — bez zgody na lokalizację i bez wysyłania pozycji', async ({ page, context }) => {
     await page.setViewportSize({ width: 412, height: 915 })
-    await page.goto(`/#/driver/demo-active`, { waitUntil: 'networkidle', timeout: 120_000 })
-    await page.evaluate(() => localStorage.removeItem('wt-driver-geo-consent'))
-    await page.reload({ waitUntil: 'networkidle' })
-    const lang = await page.evaluate(() => navigator.language.slice(0, 2))
-    const consent = page.locator('[data-driver-consent]')
-    await expect(consent).toBeVisible()
-    if (lang === 'en') await expect(consent.locator('h2')).toHaveText('Location consent')
-    // odmowa: panel znika, przyciski etapów działają, brak pozycji
-    await consent.locator('[data-consent="deny"]').click()
-    await expect(page.locator('[data-tracking="off"]')).toBeVisible()
-    await expect(page.locator('[data-tracking="on"]')).toHaveCount(0)
-    const stage = page.locator('main button.driver-btn-block').first()
-    await expect(stage).toBeEnabled()
-    // zgoda: pozycja z telefonu (atrapa GPS) → „ostatnia pozycja”
     await context.grantPermissions(['geolocation'])
     await context.setGeolocation({ latitude: 54.40372, longitude: 18.6813, accuracy: 12 })
-    await page.locator('[data-tracking="off"] [data-consent="allow"]').click()
-    await expect(page.locator('[data-tracking="on"] [data-last-fix]')).toContainText('54.4037, 18.6813')
-    // zgoda zapamiętana — bez ponownego pytania
-    await page.reload({ waitUntil: 'networkidle' })
+    await page.goto(`/#/driver/demo-active`, { waitUntil: 'networkidle', timeout: 120_000 })
+    await expect(page.locator('[data-driver-link-closed]')).toContainText('Link nieaktywny')
     await expect(page.locator('[data-driver-consent]')).toHaveCount(0)
-    await expect(page.locator('[data-tracking="on"]')).toBeVisible()
-    await page.locator('[data-consent="withdraw"]').click()
-    await expect(page.locator('[data-tracking="off"]')).toBeVisible()
+    await expect(page.locator('[data-tracking]')).toHaveCount(0)
+    await expect(page.locator('main button.driver-btn-block')).toHaveCount(0)
   })
 })
 
@@ -350,23 +355,29 @@ test.describe('M10 — rejsy i automat statusów', () => {
     await role(page, 'SCX')
     await nav(page, 'sched')
     await page.locator('[data-sched-tab="loads"]').click()
+    /* AWIZ-4 (13ace35): rejs wybierany w oknie awizacji (armator → rejs → statek); B-10b: bez nr rezerwacji promu */
     await openLoad(page, 'SG-34')
     await actionsTab(page)
-    const sf = page.locator('.drawer [data-sailing-form]')
-    await expect(sf).toBeVisible()
-    const opt = await sf.locator('select[name="sailingId"] option').nth(1).getAttribute('value')
-    await sf.locator('select[name="sailingId"]').selectOption(opt!)
-    await sf.locator('input[name="bookingRef"]').fill('PF-TEST-1')
-    await sf.locator('[data-sailing-submit]').click()
-    await actionsTab(page)
-    await expect(page.locator('.drawer [data-sailing-form] select[name="sailingId"]')).toHaveValue(opt!)
+    await page.locator('.drawer [data-awiz-chat-note] + .awiz-row button').click()
+    const modal = page.locator('[data-awiz-modal]')
+    const sel = modal.locator('select[data-awiz-sailing]')
+    await expect(sel).toBeVisible()
+    const opt = await sel.locator('option').nth(1).getAttribute('value')
+    await sel.selectOption(opt!)
+    await modal.locator('[data-awiz-save]').click()
+    await expect(modal).toHaveCount(0)
+    await page.locator('.drawer [data-awiz-chat-note] + .awiz-row button').click()
+    await expect(modal.locator('select[data-awiz-sailing]')).toHaveValue(opt!)
+    await modal.locator('.panel-hd .iconbtn').click()
     await closeDrawer(page)
     // SCX: transport na promie — rejs tylko do odczytu
     const onFerry = 'SG-06' // status PROM w danych demo
     await openLoad(page, onFerry)
     await actionsTab(page)
-    await expect(page.locator('.drawer [data-sailing-locked]')).toBeVisible()
-    await expect(page.locator('.drawer [data-sailing-form]')).toHaveCount(0)
+    await page.locator('.drawer [data-awiz-chat-note] + .awiz-row button').click()
+    await expect(page.locator('[data-awiz-modal] [data-sailing-locked]')).toBeVisible()
+    await expect(page.locator('[data-awiz-modal] select[data-awiz-sailing]')).toHaveCount(0)
+    await page.locator('[data-awiz-modal] .panel-hd .iconbtn').click()
     await closeDrawer(page)
     // KSH: rozkład bez przycisków, szuflada bez formularza rejsu
     await role(page, 'KSH')

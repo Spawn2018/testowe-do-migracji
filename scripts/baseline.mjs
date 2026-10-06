@@ -1,7 +1,7 @@
 /**
  * Etap C2.2 — visual baseline shot generator (tooling only).
  *
- * Filename: widok__rola__jezyk__szerokosc__motyw.png
+ * Filename: widok__rola__jezyk__szerokosc__motyw.png (język zawsze pl)
  *   motyw = light | dark | light-default | dark-default
  *   (acceptance #12: HHL+SCX default dark, KSH default light)
  *
@@ -26,7 +26,7 @@
  *   gotoFrozen CLEARS persist keys (watch-tower-ui-v6-ready-gate + /watch|tower|wt/i)
  *   then reloads → app boots from in-code seed defaults (data/seed.ts), NOT leftover
  *   localStorage from a prior run. A store migration wipe therefore cannot empty the
- *   840-shot matrix (G4; 720 do Fali 3A): baseline never depends on migrated user state.
+ *   280-shot matrix (PL-only; was 840) (G4; 720 do Fali 3A): baseline never depends on migrated user state.
  */
 import puppeteer from 'puppeteer-core'
 import { createHash } from 'crypto'
@@ -38,7 +38,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 
 /** Bump when nav/role selectors or matrix semantics change. */
-const SCRIPT_VERSION = '2026-09-26-g4-fala3b-views'
+const SCRIPT_VERSION = '2026-09-26-g4-fala3b-views+pl-only'
 
 const chromeCandidates = [
   process.env.CHROME_PATH,
@@ -104,10 +104,9 @@ const ROLES = [
   { id: 'SCX', defaultTheme: 'dark' },
 ]
 
+/* B-SMOKE-LANG (06.10): UI PL-only po 8322d02 — matryca 280 (było 840 = pl×en×sv) */
 const LANGS = [
   { id: 'pl', label: 'PL', dataLang: 'pl' },
-  { id: 'en', label: 'EN', dataLang: 'en' },
-  { id: 'sv', label: 'SV', dataLang: 'sv' },
 ]
 
 const WIDTHS = [1920, 1440, 1280, 768, 390]
@@ -261,12 +260,8 @@ async function setRole(roleId) {
 }
 
 async function setLocale(lang) {
-  await page.evaluate((dataLang) => {
-    const btn = document.querySelector(`#langSeg button[data-lang="${dataLang}"]`)
-    if (!btn) throw new Error('lang btn not found: data-lang=' + dataLang)
-    btn.click()
-  }, lang.dataLang)
-  await sleep(300)
+  /* B-SMOKE-LANG: brak #langSeg — PL domyślny; nie klikamy */
+  if (lang.dataLang !== 'pl') throw new Error('B-SMOKE-LANG: tylko pl, dostano ' + lang.dataLang)
 }
 
 /**

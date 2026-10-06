@@ -1,10 +1,10 @@
 {
-  "ok": 840,
+  "ok": 280,
   "fail": 0,
-  "total": 840,
-  "scriptVersion": "2026-09-26-g4-fala3b-views",
+  "total": 280,
+  "scriptVersion": "2026-09-26-g4-fala3b-views+pl-only",
   "frozenNow": "2026-09-23T14:32:00Z",
-  "appChecksum": "40e7dc13f8c1c88c7e56e1e3f8f0a8d330f29ff8ce7e5c262ab2f018ea1e7bd9",
-  "url": "http://127.0.0.1:4182/#/?now=2026-09-23T14%3A32%3A00Z",
+  "appChecksum": "30eec6ca429f92b8b53c1d4f3226da33f95f525371e641345f2d6dc1d662c357",
+  "url": "http://127.0.0.1:4179/#/?now=2026-09-23T14%3A32%3A00Z",
   "errors": []
 }

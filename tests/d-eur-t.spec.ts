@@ -78,12 +78,8 @@ async function setRole(page: Page, role: 'HHL' | 'KSH' | 'SCX') {
   await page.waitForTimeout(400)
 }
 
-async function setLocalePl(page: Page) {
-  await page.evaluate(() => {
-    const btn = document.querySelector('#langSeg button[data-lang="pl"]') as HTMLButtonElement | null
-    if (btn) btn.click()
-  })
-  await page.waitForTimeout(250)
+async function setLocalePl(_page: Page) {
+  /* B-SMOKE-LANG: #langSeg usunięty — PL jest domyślny, nic nie klikamy */
 }
 
 async function navTo(page: Page, dataView: string) {
@@ -145,7 +141,9 @@ async function collectHits(
           const el = node.parentElement
           if (el && !el.closest('[data-deur-exempt]') && !el.closest('[data-content]')) {
             const style = el.ownerDocument.defaultView?.getComputedStyle(el)
-            if (style && style.visibility !== 'hidden' && style.display !== 'none') {
+            /* B-SMOKE-DRIFT: treść zwiniętych sekcji <details> (Opcje DEC-6) nie jest widoczna — checkVisibility */
+            const visible = typeof el.checkVisibility === 'function' ? el.checkVisibility() : true
+            if (visible && style && style.visibility !== 'hidden' && style.display !== 'none') {
               const key = `${view}::${text}`
               if (!seen.has(key)) {
                 seen.add(key)
@@ -211,7 +209,8 @@ test.describe('D-EUR-T display currency EUR vs PLN', () => {
 
     // Options FX note should mention demo mid (Polish decimal comma)
     await navTo(page, 'options')
-    const note = await page.locator('.pricing-panel .option-note, .pricing-panel .note').first().textContent()
+    /* B-SMOKE-DRIFT: Opcje w akordeonie DEC-6 (5685099) — nota FX w sekcji „Cennik” (data-fx-note), bez .pricing-panel */
+    const note = await page.locator('[data-section="rates"] [data-fx-note="demo"]').first().textContent()
     expect(note || '').toMatch(/4[,.]3900/)
     expect(note || '').toMatch(/186\/A\/NBP\/2026/)
 

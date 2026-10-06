@@ -16,7 +16,7 @@ async function fresh(page: Page) {
   })
   await page.reload({ waitUntil: 'networkidle', timeout: 120_000 })
   await page.waitForSelector('#roleSeg', { timeout: 30_000 })
-  await page.evaluate(() => (document.querySelector('#langSeg button[data-lang="pl"]') as HTMLButtonElement | null)?.click())
+  /* B-SMOKE-LANG: bez #langSeg — PL domyślny */
 }
 
 test.describe('O4 — oznaczenie demo zostaje', () => {
@@ -33,6 +33,8 @@ test.describe('O4 — oznaczenie demo zostaje', () => {
     await expect(se.locator('.note')).toContainText('demonstracyjne')
     // przełącznik w Opcjach ukrywa oznaczenia, ponowne włączenie przywraca
     await page.goto(url('/opcje'), { waitUntil: 'networkidle' })
+    /* B-SMOKE-DRIFT: Opcje w akordeonie DEC-6 — przełącznik w zwiniętej sekcji „Preferencje” */
+    await page.locator('[data-section="prefs"] > summary').click()
     const sw = page.locator('xpath=//dt[normalize-space()="Oznaczenia demonstracyjne"]/following-sibling::dd[1]//input[@type="checkbox"]')
     await sw.uncheck()
     await expect(page.locator('[data-demo-mark]')).toHaveCount(0)

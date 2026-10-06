@@ -48,3 +48,19 @@ tests/db/smsksh.sh:generic-api-key:21
 # Reguła generic-api-key łapie długi identyfikator. Nie daje dostępu do żadnej usługi.
 # Bieżący test składa nazwę z dwóch kawałków, ten odcisk dotyczy tylko commitu, który miał ją w całości.
 3a48097fa80eaa5f72d2661933d49ee9a1c47680:tests/db/ferry-status.sh:generic-api-key:23
+
+# Nie sekret (B-SMOKE-LANG 06.10). Nazwy flag security_flags H3_CORRIDOR_OBSTACLES i H10_… (H-3/H-10, wyłączone)
+# w skryptach migracji 0170/0176/0177 i migracji 0170. generic-api-key łapie porównanie key = 'NAZWA_FLAGI'.
+# Wartość = identyfikator przełącznika (WIELKIE_LITERY_Z_PODKREŚLNIKIEM), nie klucz HERE, Supabase, Resend ani Trafikverket.
+e4dbf9f2af11929186a98cb85d2ca48d330eec7d:scripts/m0177-migrate.mjs:generic-api-key:37
+d6418105e19175ec315f15917d22163e3dfe18cb:scripts/m0177-migrate.mjs:generic-api-key:37
+ad5e942a5f3cb01cf49299ccbac1f745dbb20618:scripts/m0176-migrate.mjs:generic-api-key:41
+bd51149d77ef3d0ce682a1a27e3f172ff388fcf8:scripts/m0176-migrate.mjs:generic-api-key:41
+2bed1f2a0830123b03bcb24d3a411de49418a811:scripts/m0170-migrate.mjs:generic-api-key:40
+2bed1f2a0830123b03bcb24d3a411de49418a811:supabase/migrations/0170_d78_here_pools_h3_routing.sql:generic-api-key:316
+b37945e31d96a7cdb9349415725ceed1c6f1dcba:scripts/m0170-migrate.mjs:generic-api-key:40
+b37945e31d96a7cdb9349415725ceed1c6f1dcba:supabase/migrations/0170_d78_here_pools_h3_routing.sql:generic-api-key:316
+scripts/m0177-migrate.mjs:generic-api-key:37
+scripts/m0176-migrate.mjs:generic-api-key:41
+scripts/m0170-migrate.mjs:generic-api-key:40
+supabase/migrations/0170_d78_here_pools_h3_routing.sql:generic-api-key:316

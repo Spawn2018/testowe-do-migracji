@@ -101,19 +101,9 @@ async function setRole(page: Page, roleId: string) {
   await page.waitForTimeout(500)
 }
 
-async function setLocale(page: Page, label: string) {
-  await page.evaluate((lab) => {
-    const code = lab.toLowerCase()
-    let btn = document.querySelector(`#langSeg button[data-lang="${code}"]`)
-    if (!btn) {
-      btn = [...document.querySelectorAll('#langSeg button')].find(
-        (b) => (b.textContent || '').trim().toUpperCase() === lab,
-      )
-    }
-    if (!btn) throw new Error('lang btn not found: ' + lab)
-    ;(btn as HTMLButtonElement).click()
-  }, label)
-  await page.waitForTimeout(300)
+async function setLocale(_page: Page, label: string) {
+  /* B-SMOKE-LANG: #langSeg usunięty (8322d02) — UI PL-only; smoke tylko PL */
+  if (label.toUpperCase() !== 'PL') throw new Error('B-SMOKE-LANG: tylko PL, dostano ' + label)
 }
 
 async function setTheme(page: Page, theme: 'light' | 'dark', roleDefault: 'light' | 'dark') {

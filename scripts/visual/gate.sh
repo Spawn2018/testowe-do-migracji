@@ -3,14 +3,14 @@
 # 1) git archive HEAD → katalog tymczasowy, build demo (nie dist/ repo),
 # 2) vite preview na własnym porcie (domyślnie 4188; 4177 = podgląd właściciela — odmowa),
 # 3) smoke 4 ujęć (tests/visual.spec.ts) + zrzuty stanów (tests/visual-states.spec.ts, próg 0,1%),
-# 4) pełna matryca 840 ujęć (scripts/baseline.mjs) → porównanie z shots-baseline/ (scripts/compare-baseline.mjs),
+# 4) pełna matryca 280 ujęć (PL-only; B-SMOKE-LANG) (scripts/baseline.mjs) → porównanie z shots-baseline/ (scripts/compare-baseline.mjs),
 #    próg 0,1% pikseli na ujęcie (RATIO_THR=0.001, tolerancja koloru 0.28 jak smoke).
 # Wynik ZAWSZE (także przy błędzie) jako jedna linia w $GATE_OUT/last.txt (domyślnie /workspace/wt-gate-visual/last.txt)
 # i dopisana do $GATE_OUT/history.log; raport JSON: $GATE_OUT/last-report.json; log: $GATE_OUT/last.log.
 # Linia: „<czas ISO> <OK|FAIL> HEAD=<sha> smoke=<ok|fail> stany=<ok|fail> matryca=<zgodne>/<ogółem> zmienione=<n> [powód=…] czas=<s>s”
 # Kod wyjścia: 0 OK · 1 różnice ponad próg · 2 port zajęty/zarezerwowany albo trwa inny przebieg · 3 błąd ujęć matrycy ·
 #              4 smoke/stany czerwone · 5 podgląd nie wstał / build nieudany.
-# Czas: ~70 min (matryca ~12–20 ujęć/min). Użycie: npm run gate:visual  (VIS_PORT, GATE_OUT, KEEP=1, SKIP_MATRIX=1)
+# Czas: ~25–35 min (matryca PL 280, ~12–20 ujęć/min). Użycie: npm run gate:visual  (VIS_PORT, GATE_OUT, KEEP=1, SKIP_MATRIX=1)
 set -uo pipefail
 ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 cd "$ROOT"
