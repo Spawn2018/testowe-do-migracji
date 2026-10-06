@@ -133,3 +133,13 @@ Właściciel utworzył klucz (osobna aplikacja HERE, Trusted domains), koordynat
 | kokpit → Mapa | 36–46 ms, 32 nowe `<img>` | 34–51 ms, 0* |
 
 *pierwszy pomiar przed dodaniem `reset` przy zmianie miejsca; po `reset` kafelki kokpit↔Mapa są tworzone ponownie z pamięci przeglądarki (cena zgodności wzorców), powrót do tego samego widoku nadal 0. Lokalnie kafelki są w pamięci przeglądarki, więc czasy PRZED też są krótkie; na produkcji różnica to brak ponownego tworzenia mapy, podkładu (`applyBasemap`, odczyt budżetu) i opóźnienia danych do 1,5 s. Pomiar prod (konto testowe, 1366/390 px) — koordynator.
+
+### AUD-01d/e — wdrożenie produkcyjne (06.10 18:29)
+
+| zmiana | commit `main` | wdrożenie Vercel (Production) |
+|---|---|---|
+| AUD-01d (podkład `private`, HERE wprost, licznik D-78) | `55849da` (#142) | `dpl_C56cUTUKuXjSAcAARfRLvBk2FMuz` (17:25) |
+| AUD-01d — klucz `VITE_HERE_BROWSER_KEY` wbudowany | `b2051b0` | `dpl_4axsYajGyaxNag2zZgHvYvHBuQ4c` (~17:58) |
+| AUD-01e — jedna mapa na sesję (#144) | `e9d8bf7` | **`dpl_7q3eE1oPS5bmitnHkUHcJS5NRJ6N`** (18:29, `git archive`; aliasy tower.log-mar.pl, watch-tower-makieta.vercel.app) |
+
+Sprawdzenie po `dpl_7q3eE1oPS5bmitnHkUHcJS5NRJ6N`: `watch-tower-makieta.vercel.app/` 200; `tower.log-mar.pl/` odpowiada z zewnątrz (WebFetch: „Watch Tower — Stegra Boden”), z IP skrzynki nadal 403 zapory Vercel (nie obchodzone). Pakiet `index-BcYY9RHN.js` + kawałki: `maps.hereapi.com` ×1, `__wtMapPool` ×1 (mapPool), klucz wbudowany ×1 (bez wypisywania), `here_tiles_report` ×1. Kafelek HERE z kluczem przeglądarkowym: Referer `https://tower.log-mar.pl/` → 200, obca domena → 401. RPC `here_tiles_report` (tylko `authenticated`, anon bez EXECUTE): pierwsze zgłoszenie z zalogowanej przeglądarki 18:13 (n=42) → `here_usage.tiles` 10.2026: 4 309 → 4 392 — licznik D-78 z przeglądarki działa na produkcji.
