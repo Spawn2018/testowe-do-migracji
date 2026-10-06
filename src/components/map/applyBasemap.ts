@@ -76,12 +76,19 @@ export function tileUrl(
   host: string = typeof location !== 'undefined' ? location.hostname : '',
 ): { url: string; viaEdge: boolean } {
   const local = !host || host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local');
-  if (!local) return { url: `/tiles/${theme}/${coords.z}/${coords.x}/${coords.y}`, viaEdge: true };
+  if (!local && !edgeMissing) return { url: `/tiles/${theme}/${coords.z}/${coords.x}/${coords.y}`, viaEdge: true };
   return {
     url: `${SUPABASE_URL}/functions/v1/here-raster?z=${coords.z}&x=${coords.x}&y=${coords.y}&theme=${theme}`,
     viaEdge: false,
   };
 }
+
+/**
+ * Hosting zapasowy bez przepisania `/tiles` (PR8: Cloudflare Pages) odpowiada 404/HTML — wtedy do końca strony
+ * kafelki idą wprost do funkcji (jak przed AUD-01).
+ */
+let edgeMissing = false;
+export function __setEdgeMissing(v: boolean): void { edgeMissing = v; }
 
 let tokenCache: { at: number; token: string | null } | null = null;
 async function sessionToken(): Promise<string | null> {
@@ -115,7 +122,12 @@ export function hereRasterLayer(choice: BasemapChoice, onClosed: () => void): L.
           const headers: Record<string, string> = viaEdge
             ? { 'x-wt-token': token }
             : { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY, 'x-wt-token': token };
-          const res = await fetch(url, { headers });
+          let res = await fetch(url, { headers });
+          if (viaEdge && (res.status === 404 || !(res.headers.get('content-type') ?? '').startsWith('image/')) && res.status !== 409 && res.status !== 401) {
+            edgeMissing = true;
+            const direct = tileUrl(coords, choice.theme === 'dark' ? 'dark' : 'light');
+            res = await fetch(direct.url, { headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY, 'x-wt-token': token } });
+          }
           if (res.status === 409) {
             rememberTilesOff();
             onClosed();

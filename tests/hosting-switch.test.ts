@@ -7,13 +7,20 @@ describe('PR8: przełączenie hostingu Vercel ↔ Cloudflare Pages', () => {
 
   // O2: Vercel dokleja nagłówki z vercel.json także do odpowiedzi 404 — reguła /download/(.*) dawała
   // „404 jako załącznik”. Build produkcyjny nie ma /download/, więc vercel.json nie ma już nagłówków.
-  it('vercel.json: bez nagłówków /download, funkcji, przepisań, cronów (O2); SEC: XFO/XCTO OK', () => {
-    expect(Object.keys(vercel)).toEqual(['headers'])
+  // AUD-01 (06.10): jedyne przepisanie = kafelki `/tiles/...` → funkcja here-raster z pamięcią brzegu Vercel.
+  // Cloudflare Pages go nie ma (`_redirects` nie przekazuje do obcych hostów) — klient po 404/HTML przechodzi
+  // wtedy wprost na funkcję (`edgeMissing` w applyBasemap.ts), więc przełączenie hostingu dalej działa.
+  it('vercel.json: bez nagłówków /download, funkcji, cronów (O2); jedyne przepisanie = /tiles (AUD-01); SEC: XFO/XCTO OK', () => {
+    expect(Object.keys(vercel)).toEqual(['headers', 'rewrites'])
     expect(vercel.headers.every((h) => !h.source.includes('download'))).toBe(true)
     const keys = vercel.headers.flatMap((h) => h.headers.map((x) => x.key))
     expect(keys).toContain('X-Frame-Options')
     expect(keys).toContain('X-Content-Type-Options')
-    expect(vercel).not.toHaveProperty('rewrites')
+    const rewrites = vercel.rewrites as { source: string; destination: string }[]
+    expect(rewrites).toHaveLength(1)
+    expect(rewrites[0].source.startsWith('/tiles/')).toBe(true)
+    expect(rewrites[0].destination).toMatch(/\/functions\/v1\/here-raster\?/)
+    expect(readFileSync('src/components/map/applyBasemap.ts', 'utf8')).toMatch(/edgeMissing = true/)
     expect(vercel).not.toHaveProperty('functions')
     expect(vercel).not.toHaveProperty('crons')
   })
