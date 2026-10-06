@@ -139,6 +139,7 @@ authenticated load_permit_unlink
 authenticated load_track
 authenticated make_circle_fence
 authenticated map_display_state
+authenticated here_tiles_report
 authenticated mark_invoice_paid
 authenticated mark_load_message_read
 authenticated mark_notifications_read

@@ -10,7 +10,7 @@
  *  - limit częstości pobrań z HERE: na adres IP i łącznie na proces (429, bez pamięci),
  *  - budżet D-78 `here_tiles_open` (odczyt raz na 60 s; zamknięty → 409, klient przełącza na zapas),
  *  - licznik D-78: każde prawdziwe pobranie z HERE liczone, zapis zbiorczy co ≤ 2 s (`here_note_service(p_n)`).
- * Pamięć: 200 → `public, s-maxage=<max-age z nagłówka HERE, najwyżej 7 dni>`; 404 spoza siatki → 1 h;
+ * Pamięć (AUD-01d): 200 → `private, max-age=<max-age z nagłówka HERE, ≤ 24 h>` (tylko przeglądarka); 404 spoza siatki → 1 h;
  * inne błędy → `no-store`.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -19,7 +19,7 @@ import { corsHeaders, corsPreflight } from '../_shared/cors.ts';
 import { STYLE, gridOk, rateLimiter, refererOk, tileCacheControl } from '../_shared/map/tilePolicy.ts';
 
 const NO_STORE = { 'cache-control': 'no-store' };
-const BAD_TILE_CACHE = { 'cache-control': 'public, max-age=3600, s-maxage=3600' };
+const BAD_TILE_CACHE = { 'cache-control': 'private, max-age=3600' };
 const rateOk = rateLimiter();
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined;

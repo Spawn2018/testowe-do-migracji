@@ -1,5 +1,6 @@
 /**
- * AUD-01c — kafelki mapy z pamięci brzegu Vercel.
+ * AUD-01c/AUD-01d — kafelki przez pośrednika; AUD-01d: tylko zapas (brak klucza przeglądarkowego HERE) i BEZ wspólnej
+ * pamięci brzegu (HERE §1.3, §6.4 l) — `Cache-Control: private, max-age ≤ 86400` przekazane z `here-raster`.
  * `/tiles/<styl>/<z>/<x>/<y>` (vercel.json) → ta funkcja (region fra1, vercel.json `regions`) → Supabase `here-raster`
  * w eu-central-1 (Frankfurt; baza eu-west-1). Bezpośrednie przepisanie na Supabase nie trafiało do pamięci brzegu:
  * odpowiedź Supabase niesie `set-cookie: __cf_bm` (Cloudflare), a Vercel nie trzyma odpowiedzi z `set-cookie`.
@@ -17,6 +18,13 @@ function json(body, status, cache) {
   });
 }
 
+/** AUD-01d: zawsze `private, max-age ≤ 86400` — nawet gdy `here-raster` (stara wersja) poda `public`/`s-maxage`. */
+export function privateCache(upstream) {
+  const m = /max-age=(\d+)/i.exec(upstream ?? '');
+  const s = Math.max(0, Math.min(86400, m ? Number(m[1]) : 3600));
+  return `private, max-age=${s}`;
+}
+
 export function parseTile(url) {
   const u = new URL(url);
   const style = u.searchParams.get('style') ?? '';
@@ -32,7 +40,7 @@ export function parseTile(url) {
 export async function GET(request) {
   const t = parseTile(request.url);
   if (t.error === 'styl') return json({ error: 'styl' }, 404, 'no-store');
-  if (t.error) return json({ error: 'zly kafel' }, 404, 'public, max-age=3600, s-maxage=3600');
+  if (t.error) return json({ error: 'zly kafel' }, 404, 'private, max-age=3600');
   const ip = (request.headers.get('x-real-ip') ?? request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim();
   const ref = request.headers.get('referer') ?? request.headers.get('origin') ?? '';
   const started = Date.now();
@@ -57,7 +65,7 @@ export async function GET(request) {
     status: 200,
     headers: {
       'content-type': type,
-      'cache-control': res.headers.get('cache-control') ?? 'public, max-age=3600, s-maxage=3600',
+      'cache-control': privateCache(res.headers.get('cache-control')),
       'x-here-cache-control': res.headers.get('x-here-cache-control') ?? '',
       ...diag,
     },

@@ -11,6 +11,7 @@ import {
   type LatLng,
   type ThemeName,
 } from '../../lib/map/draw';
+import { HERE_BROWSER_KEY, directTileTemplate, servedFromCache, sharedTileMeter } from './hereTileMeter';
 
 /** AUD-01b: funkcje Edge w regionie bazy (eu-west-1), nie w regionie najbliższym przeglądarce. */
 export const FUNCTION_REGION = 'eu-west-1';
@@ -71,9 +72,9 @@ export const TILE_REGION = 'eu-central-1';
 export const HERE_STYLE = { light: 'logistics.day', dark: 'logistics.night' } as const;
 
 /**
- * AUD-01c: kafelki HERE są publiczne (decyzja właściciela 06.10) — zwykły `<img>` bez nagłówków i bez sesji, z adresu
+ * AUD-01c/01d (ZAPAS, gdy brak klucza przeglądarkowego): zwykły `<img>` bez nagłówków i bez sesji, z adresu
  * `/tiles/logistics.day|logistics.night/<z>/<x>/<y>` na domenie aplikacji (Vercel `api/tiles` → `here-raster`,
- * pamięć brzegu Vercel). Lokalnie (localhost, podgląd) albo na hostingu bez `/tiles` — wprost do funkcji.
+ * bez wspólnej pamięci brzegu — `private`). Lokalnie (localhost, podgląd) albo na hostingu bez `/tiles` — wprost do funkcji.
  */
 export function tileTemplate(
   theme: 'light' | 'dark',
@@ -125,24 +126,55 @@ export async function probeTileError(
   }
 }
 
-/** Leaflet TileLayer z kafelkiem HERE przez funkcję, bez klucza i bez sesji w przeglądarce. */
-export function hereRasterLayer(choice: BasemapChoice, onClosed: () => void): L.TileLayer {
+/** AUD-01d: po 3 błędach kafelków HERE wprost (np. zła domena klucza) — do końca strony pośrednik `/tiles`. */
+let directFailed = false;
+export function __setDirectFailed(v: boolean): void { directFailed = v; }
+export function directTilesOn(key: string = HERE_BROWSER_KEY): boolean { return !!key && !directFailed; }
+
+/**
+ * Leaflet TileLayer HERE. AUD-01d: z kluczem przeglądarkowym (`VITE_HERE_BROWSER_KEY`) — wprost z maps.hereapi.com,
+ * licznik D-78 w przeglądarce; bez klucza — pośrednik `/tiles` (zapas, licznik po stronie `here-raster`).
+ * Bez pobierania kafelków z wyprzedzeniem (HERE §1.3): Leaflet pobiera tylko kafelki widoku.
+ */
+export function hereRasterLayer(choice: BasemapChoice, onClosed: () => void, key: string = HERE_BROWSER_KEY): L.TileLayer {
   const theme = choice.theme === 'dark' ? 'dark' : 'light';
-  const first = tileTemplate(theme);
-  const layer = L.tileLayer(first.url, { attribution: choice.attribution, maxZoom: choice.maxZoom, tileSize: 256 });
+  let direct = directTilesOn(key);
+  const first = direct ? directTileTemplate(theme, key) : tileTemplate(theme).url;
+  const layer = L.tileLayer(first, { attribution: choice.attribution, maxZoom: choice.maxZoom, tileSize: 256 });
   let probing = false;
   let closed = false;
+  const closeHere = () => {
+    if (closed) return;
+    closed = true;
+    rememberTilesOff();
+    onClosed();
+  };
+  if (direct) {
+    const meter = sharedTileMeter();
+    const off = meter.onClosed(closeHere);
+    let errors = 0;
+    layer.on('tileload', (e: L.TileEvent) => {
+      if (!direct) return;
+      const src = (e.tile as HTMLImageElement).src;
+      if (servedFromCache(src) !== true) meter.add(1);
+    });
+    layer.on('tileerror', () => {
+      if (!direct || ++errors < 3) return;
+      direct = false;
+      directFailed = true;
+      layer.setUrl(tileTemplate(theme).url);
+    });
+    layer.on('remove', () => { off(); });
+  }
   layer.on('tileerror', (e: L.TileErrorEvent) => {
-    if (probing || closed) return;
+    if (direct || probing || closed) return;
     probing = true;
     const t = tileTemplate(theme);
     const url = tileUrl(e.coords, theme).url;
     void probeTileError(url, t.viaEdge).then((r) => {
       probing = false;
       if (r === 'closed') {
-        closed = true;
-        rememberTilesOff();
-        onClosed();
+        closeHere();
       } else if (r === 'edge-missing') {
         edgeMissing = true;
         layer.setUrl(tileTemplate(theme).url);
@@ -179,6 +211,7 @@ export async function applyBasemap(
   el.dataset.basemap = choice.provider;
   el.dataset.hereRequests = choice.hereRequests ? '1' : '0';
   el.dataset.h6 = 'off';
+  el.dataset.tilePath = choice.hereRequests ? (directTilesOn() ? 'here-direct' : 'proxy') : 'fallback';
   return layer;
 }
 

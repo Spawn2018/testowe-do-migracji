@@ -75,7 +75,7 @@ check watchdog 27
 check invite 48
 check risks 23
 check import 66
-check nullguard 597
+check nullguard 602
 check i2 540
 check i30 10
 check i31 9
@@ -96,6 +96,6 @@ check h3 20
 check smsksh 16
 check ferrystatus 8
 check h4 19
-check bmapa 23
+check bmapa 33
 check baf 46
 [ $ok -eq 1 ]

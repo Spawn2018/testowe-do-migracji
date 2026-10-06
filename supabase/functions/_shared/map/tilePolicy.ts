@@ -1,7 +1,8 @@
 /**
  * AUD-01c — zasady publicznych kafelków HERE (bez sesji). Czyste funkcje: używa ich `here-raster` (Deno) i testy.
  */
-export const MAX_EDGE_S = 604800;
+/** AUD-01d: pamięć tylko w przeglądarce, ≤ 24 h (HERE Platform Terms §1.3, §6.4 l) — bez wspólnej pamięci brzegu. */
+export const MAX_BROWSER_S = 86400;
 export const STYLE: Record<string, 'logistics.day' | 'logistics.night'> = {
   light: 'logistics.day',
   dark: 'logistics.night',
@@ -27,16 +28,16 @@ export function refererOk(value: string | null): boolean {
   }
 }
 
-/** s-maxage = max-age z odpowiedzi HERE (warunki HERE: pamięć tylko na tyle, na ile pozwalają nagłówki), ≤ 7 dni. */
-export function edgeSeconds(hereCacheControl: string | null): number {
+/** max-age z odpowiedzi HERE (warunki HERE: pamięć tylko na tyle, na ile pozwalają nagłówki), ≤ 24 h. */
+export function browserSeconds(hereCacheControl: string | null): number {
   const m = /max-age=(\d+)/i.exec(hereCacheControl ?? '');
   const s = m ? Number(m[1]) : 3600;
-  return Math.max(0, Math.min(MAX_EDGE_S, s));
+  return Math.max(0, Math.min(MAX_BROWSER_S, s));
 }
 
+/** AUD-01d: `private` — CDN/Vercel nie przechowuje kafelka dla wielu użytkowników; bez s-maxage. */
 export function tileCacheControl(hereCacheControl: string | null): string {
-  const s = edgeSeconds(hereCacheControl);
-  return `public, max-age=${Math.min(s, 86400)}, s-maxage=${s}`;
+  return `private, max-age=${browserSeconds(hereCacheControl)}`;
 }
 
 /** Okno 60 s: najwyżej `perIp` pobrań z HERE na IP i `total` na proces (zwykła mapa: 20–60 kafelków na widok). */
