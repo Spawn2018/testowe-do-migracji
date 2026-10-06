@@ -3,6 +3,7 @@
  * Czyste funkcje (bez klienta Supabase) — testowane jednostkowo.
  */
 import { mechanismIssue, type MoneySideV2 } from '../lib/money/loadMoney';
+import { plSeLocation } from '../lib/pl/seLocation';
 import type {
   Awizacja, Bill, BillFlag, BillPayment, BillVerification, CorridorStage, DocCategory, Document, FerryBooking, Geofence, GeofenceType, Load,
   LoadEvent, LoadMessage, LoadResources, LoadStatus, Notification, OrgKind, Risk, RiskType, Severity,
@@ -384,9 +385,11 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
   const d = (r.detail ?? {}) as Record<string, unknown>;
   const owner = (['HHL', 'KSH', 'SCX'].includes(String(d.owner)) ? d.owner : 'HHL') as OrgKind;
   const str = (v: unknown) => (typeof v === 'string' ? v : '');
-  const params = (d.params && typeof d.params === 'object' ? d.params : {}) as Record<string, unknown>;
+  const rawParams = (d.params && typeof d.params === 'object' ? d.params : {}) as Record<string, unknown>;
+  /* AUD-04: tytuły sytuacji Trafikverket zapisane wcześniej po szwedzku → po polsku ze słownika (bez DeepL) */
+  const params = Object.fromEntries(Object.entries(rawParams).map(([k, v]) => [k, typeof v === 'string' ? plSeLocation(v) : v]));
   return {
-    id: r.id, type: RISK_TYPE[r.kind] ?? 'OPS', severity: SEVERITY[r.severity] ?? 'LOW', title: r.title,
+    id: r.id, type: RISK_TYPE[r.kind] ?? 'OPS', severity: SEVERITY[r.severity] ?? 'LOW', title: plSeLocation(r.title),
     /* M12 — ryzyka z funkcji Edge: opis / ostrzeżenia źródła i atrybucja (Digitraffic CC BY 4.0) */
     detail: [str(d.text) || str(d.detail) || str(d.opis) || (Array.isArray(d.ostrzezenia) ? d.ostrzezenia.map(String).join(' · ') : ''), str(d.atrybucja)].filter(Boolean).join(' · '),
     loadId: r.load_id ?? undefined, owner,

@@ -5,6 +5,7 @@
  */
 import { PANEL_FALLBACK, translateTvCode, type TvDomain } from './codes.ts';
 import { applyPhrases, hasSwedishWords } from './phrases.ts';
+import { plSeLocation } from './seLocation.ts';
 
 export interface RoadPolish {
   title: string;
@@ -43,7 +44,8 @@ function known(domain: TvDomain, code: unknown, unknown: string[]): string | nul
 function placePl(raw: unknown): string {
   if (typeof raw !== 'string' || !raw.trim()) return '';
   const cleaned = raw.replace(/^E\s*4\s+/i, '').replace(/^E\s*22\s+/i, '').trim();
-  const phrased = applyPhrases(cleaned);
+  // AUD-04: „från X till Y båda riktningarna i Z län (AC)” → „od X do Y, oba kierunki, region Z” (słownik, bez DeepL)
+  const phrased = applyPhrases(plSeLocation(cleaned));
   if (!phrased.covered || hasSwedishWords(phrased.pl)) return '';
   return phrased.pl;
 }

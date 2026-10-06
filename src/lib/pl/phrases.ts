@@ -44,7 +44,7 @@ const PAIRS: [string, string][] = [
   ['vägen', 'droga'],
 ];
 
-const SWEDISH_WORD = /\b(och|ett|en|av|på|for|för|med|som|vid|norr|söder|öster|väster|vägen|väg|körfält|avstängt|avstängd|kö|kan|uppstå|halka|olycka|vägarbete|trafikolycka|riktning|södergående|norrgående|besvärligt|normalt|snö|isigt|modd|slask|blixthalka|arbete|om|avstängning|påfarten|tillfällig)\b/i;
+const SWEDISH_WORD = /\b(och|ett|en|av|på|for|för|med|som|vid|norr|söder|öster|väster|vägen|väg|körfält|avstängt|avstängd|kö|kan|uppstå|halka|olycka|vägarbete|trafikolycka|riktning|södergående|norrgående|besvärligt|normalt|snö|isigt|modd|slask|blixthalka|arbete|om|avstängning|påfarten|tillfällig|från|till|mellan|båda|riktningarna|län|mot|kommun|trafikplats|cirkulationsplats)\b/i;
 
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

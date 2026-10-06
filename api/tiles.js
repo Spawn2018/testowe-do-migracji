@@ -10,6 +10,8 @@
 export const SUPABASE_FN = 'https://nglnnrmzmhusvxslousq.supabase.co/functions/v1/here-raster';
 export const TILE_REGION = 'eu-central-1';
 export const STYLES = new Set(['light', 'dark', 'logistics.day', 'logistics.night']);
+/** AUD-04: język napisów kafelków (HERE Raster v3 `lang`) — tylko polski. */
+export const TILE_LANG = 'pl';
 
 function json(body, status, cache) {
   return new Response(JSON.stringify(body), {
@@ -47,7 +49,7 @@ export async function GET(request) {
   let res;
   try {
     res = await fetch(
-      `${SUPABASE_FN}?style=${encodeURIComponent(t.style)}&z=${t.z}&x=${t.x}&y=${t.y}&forceFunctionRegion=${TILE_REGION}`,
+      `${SUPABASE_FN}?style=${encodeURIComponent(t.style)}&z=${t.z}&x=${t.x}&y=${t.y}&lang=${TILE_LANG}&forceFunctionRegion=${TILE_REGION}`,
       { headers: { 'x-wt-client-ip': ip, ...(ref ? { 'x-wt-referer': ref } : {}) } },
     );
   } catch {

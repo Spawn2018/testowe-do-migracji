@@ -3,6 +3,7 @@
  */
 import { getSupabase } from '../auth/client';
 import { PROD_BUILD } from './prodFacade';
+import { plSeLocation } from './pl/seLocation';
 
 export interface CorridorConditionRow {
   corridor: 'SE_E4';
@@ -34,7 +35,7 @@ function parseSituations(v: unknown): { id: string; kind: string; severity: stri
       id,
       kind: typeof row.kind === 'string' ? row.kind : 'roboty',
       severity: typeof row.severity === 'string' ? row.severity : 'LOW',
-      title,
+      title: plSeLocation(title),
       road: typeof row.road === 'string' ? row.road : 'E4',
       original: typeof row.original === 'string' && row.original ? row.original : null,
       note: typeof row.note === 'string' && row.note ? row.note : null,

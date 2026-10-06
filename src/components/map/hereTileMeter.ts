@@ -7,14 +7,15 @@
  * minutę (odpowiedź tego samego wywołania); `tiles_open=false` (≥ 80% budżetu) → podkład zapasowy do końca sesji.
  */
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../auth/config';
+import { TILE_LANG } from '../../../supabase/functions/_shared/map/tilePolicy';
 
 export const HERE_BROWSER_KEY = String(import.meta.env.VITE_HERE_BROWSER_KEY ?? '').trim();
 export const HERE_TILE_HOST = 'https://maps.hereapi.com';
 const STYLE = { light: 'logistics.day', dark: 'logistics.night' } as const;
 
-/** Raster v3 — te same parametry co `here-raster` (png, 256 px), ale wprost z sieci HERE. */
+/** Raster v3 — te same parametry co `here-raster` (png, 256 px, AUD-04: napisy po polsku `lang=pl`), ale wprost z sieci HERE. */
 export function directTileTemplate(theme: 'light' | 'dark', key: string): string {
-  return `${HERE_TILE_HOST}/v3/base/mc/{z}/{x}/{y}/png?style=${STYLE[theme]}&size=256&apiKey=${encodeURIComponent(key)}`;
+  return `${HERE_TILE_HOST}/v3/base/mc/{z}/{x}/{y}/png?style=${STYLE[theme]}&size=256&lang=${TILE_LANG}&apiKey=${encodeURIComponent(key)}`;
 }
 
 /**

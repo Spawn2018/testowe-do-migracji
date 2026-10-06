@@ -3,6 +3,15 @@
  */
 /** AUD-01d: pamięć tylko w przeglądarce, ≤ 24 h (HERE Platform Terms §1.3, §6.4 l) — bez wspólnej pamięci brzegu. */
 export const MAX_BROWSER_S = 86400;
+/**
+ * AUD-04 (PL-DATA, A4): język napisów kafelków HERE Raster Tile API v3 — parametr `lang` (BCP47: ISO 639-1,
+ * opcjonalnie skrypt ISO 15924). Polski; inne wartości spoza listy → polski (bez dowolnych parametrów do HERE).
+ */
+export const TILE_LANG = 'pl';
+const TILE_LANGS = new Set(['pl']);
+export function tileLang(v: string | null | undefined): string {
+  return v && TILE_LANGS.has(v) ? v : TILE_LANG;
+}
 export const STYLE: Record<string, 'logistics.day' | 'logistics.night'> = {
   light: 'logistics.day',
   dark: 'logistics.night',

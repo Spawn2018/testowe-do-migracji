@@ -1,4 +1,5 @@
 import { clickFromPayload, emailUrl } from './clickTargets.ts';
+import { plSeLocation } from '../../../src/lib/pl/seLocation.ts';
 /**
  * M7 — treść powiadomień (e-mail + centrum powiadomień) w języku odbiorcy.
  * Jedno źródło dla funkcji `send-notifications` (Deno) i aplikacji (SupabaseProvider).
@@ -90,7 +91,8 @@ const SEV_TXT: Record<NotifyLocale, Record<string, string>> = {
 };
 /** Tytuł ryzyka bez technicznego przedrostka „f34bf056: ” (początek identyfikatora transportu). */
 export function cleanRiskTitle(v: unknown): string {
-  return String(v ?? '').replace(/^[0-9a-f]{8}:\s*/i, '').trim();
+  // AUD-04: tytuły sytuacji Trafikverket zapisane po szwedzku (från… till… län) — po polsku ze słownika
+  return plSeLocation(String(v ?? '').replace(/^[0-9a-f]{8}:\s*/i, '').trim());
 }
 const asSev = (v: unknown): RenderedNotice['severity'] => (v === 'CRITICAL' || v === 'HIGH' || v === 'MEDIUM' ? v : 'LOW');
 
