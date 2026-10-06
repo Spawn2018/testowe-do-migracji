@@ -48,6 +48,9 @@ async function openEditable(page: Page) {
   return modal
 }
 
+const noHScroll = (page: Page) =>
+  page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)
+
 for (const vp of [{ w: 1366, h: 900, tag: 'komputer' }, { w: 390, h: 844, tag: 'telefon' }]) {
   test(`AUD-03 KSH: pełny panel, „Edytuj” → okno dat, zapis + Historia (${vp.tag})`, async ({ page }) => {
     test.setTimeout(90_000)
@@ -56,6 +59,7 @@ for (const vp of [{ w: 1366, h: 900, tag: 'komputer' }, { w: 390, h: 844, tag: '
     await page.locator(ROW).first().click()
     await page.waitForSelector('.drawer [data-ksh-edit]')
     await expect(page.locator('.drawer[data-ksh-side-menu]')).toHaveCount(0)
+    expect(await noHScroll(page), 'panel KSH bez przewijania w poziomie').toBe(true)
     await expect(page.locator('.drawer button[aria-selected]')).toHaveCount(6)
     await expect(page.locator('.drawer [data-order]')).toHaveCount(2)
     await expect(page.locator('.drawer [data-load-when]')).toHaveText(/\d/)
@@ -75,6 +79,7 @@ for (const vp of [{ w: 1366, h: 900, tag: 'komputer' }, { w: 390, h: 844, tag: '
     /* okno: wyłącznie 4 pola daty i godziny */
     await expect(modal.locator('input, select, textarea')).toHaveCount(4)
     await expect(modal.locator('input[type="datetime-local"]')).toHaveCount(4)
+    expect(await noHScroll(page), 'okno dat bez przewijania w poziomie').toBe(true)
     const code = (await page.locator('.drawer .wb-code').textContent())?.trim() ?? ''
     const lf = await modal.locator('input[name="ksh_load_from"]').inputValue()
     const day = lf.slice(0, 10)

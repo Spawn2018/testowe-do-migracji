@@ -372,7 +372,7 @@ dane do edycji to data + godzina załadunku oraz rozładunku."
 6. Testy (konto testowe, nie konto właściciela): wszystkie zakładki
    i dane; brak kosztu i marży; Edytuj w Przeglądzie; okno z datami
    i godzinami; zapis + wpis w Historii; odmowa innych pól przez API.
-   Zrzuty: komputer i 390 px.
+   ~~Zrzuty: komputer i 390 px.~~ Zmiana 06.10 (zasada dowodów właściciela): testy Playwright w roli KSH z asercjami, komputer i 390 px (`tests/aud03-ksh-panel.spec.ts`), + odmowa przez API (`tests/db/aud03.sh`).
 Popraw B-KSH / K.1 w LISTA_KONTROLNA_ZESZYT.md i WERYFIKACJA_ZESZYT_05_10.md.
 
 E-MAILE (do punktu 8): teksty jak w dzwonku — „SG-xx · co się stało",
