@@ -1,4 +1,4 @@
-# B-SMOKE-LANG (06.10.2026) — CZĘŚCIOWO (stop: wzorzec poza zakresem + regresja)
+# B-SMOKE-LANG (06.10.2026) — ZAMKNIĘTE (PR #134)
 
 ## Cel
 Smoke + gate:visual zielone po usunięciu `#langSeg` (8322d02). Tylko testy/wzorzec — bez przywracania UI języka.
@@ -52,3 +52,11 @@ Smoke + gate:visual zielone po usunięciu `#langSeg` (8322d02). Tylko testy/wzor
   - faktury-przychodowe, faktury, dokumenty, finanse, kokpit, automatyzacje, moje-*: tylko `8322d02` + `6fc3037`
   - toast „stan uszkodzony”: pojawia się w `e5ccb96`, znika w `c1d23e2` (~0,2 % ujęcia; 390 px ~1,7 %)
 - Grupy poza listą koordynatora, ale z jednoznaczną zamierzoną przyczyną: `43e41fb` (opcje), `4126b39` (strefy), `3a48097` (ryzyka), `bfc7ed9` (rozliczenia) — odświeżone z wpisem; różnic bez przyczyny: 0
+
+## Checkpoint 10:20 CEST — ZAMKNIĘCIE
+- Wzorce smoke bez zmian (visual 4/4, stany 12/12 na świeżym buildzie)
+- `fresh-smoke.sh` OK (HEAD `1505ce2`): visual 4/4, stany 12/12, persist-toast 3/3, d-eur-t 2/2, etap4 12/12, etap5 5/5, etap6 1/1; e2e-core 5/5
+- `gate:visual` 10:18: OK HEAD=1505ce2 smoke+stany=ok matryca=280/280 zmienione=0 czas=744s kod=0
+- vitest 836 passed / 35 skip; gitleaks historia 0 (dopisane 4 fałszywe alarmy: nazwy flag H3_CORRIDOR_OBSTACLES/H10_… w m0170/m0176/m0177 i 0170 — z main 05.10, nie z tej gałęzi); katalog: tylko `.env.local` (nieśledzony, lokalne sekrety); `npm audit --omit=dev --audit-level=high` 0
+- Posprzątane: stare podglądy, /tmp/wt-dbg-dist, /tmp/wt-smoke-dist, buildy bisekcji; `tmp-cand-pl` usunięty po odświeżeniu
+- Następny: PR #134 ready → scalenie → zamknięcie #133 → Vercel prod → obie domeny 200

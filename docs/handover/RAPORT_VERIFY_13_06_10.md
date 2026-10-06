@@ -47,3 +47,9 @@ Zasada: **bez zmian w kodzie**. Każdy punkt, który nie przechodzi, trafia do c
 
 ## Dopisek 06.10 ~01:36 — po B-SMOKE-LANG (częściowo)
 - `#langSeg` usunięty z testów i matrycy (PL-only 280). **17.4 i 17.8 nadal FAIL**, teraz z innych przyczyn: B-SMOKE-DRIFT (awarie funkcjonalne istniejące już przed `8322d02`) i B-PERSIST-TOAST (toast „stan uszkodzony” przy pierwszym wejściu, na każdym ujęciu matrycy). Wzorce kokpit/mapa/stan-zablokowany i matryca 280 czekają na zgodę (przyczyny `7d2b26c`, B-7c, B-10a spoza listy).
+
+
+## Aktualizacja 06.10 10:18 — 17.4 i 17.8 PASS
+- **17.4** `scripts/ci/fresh-smoke.sh` na świeżym buildzie `1505ce2` (PR #134): **OK** — visual 4/4, stany 12/12, persist-toast 3/3, d-eur-t 2/2, etap4 12/12, etap5 5/5, etap6 1/1 (d19-i18n wyłączony — PL-first); e2e-core 5/5.
+- **17.8** `npm run gate:visual`: `OK HEAD=1505ce2 smoke+stany=ok matryca=280/280 zmienione=0 kod=0` (matryca PL-only 280; wzorzec odświeżony z przyczyną każdej grupy — B-SMOKE-LANG).
+- B-SMOKE-LANG, B-PERSIST-TOAST, B-SMOKE-DRIFT → ZROBIONE. Otwarte z VERIFY-13: B-VERIFY-17.3 (P3).
