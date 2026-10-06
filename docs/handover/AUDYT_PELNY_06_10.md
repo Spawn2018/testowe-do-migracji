@@ -31,7 +31,7 @@
 
 ### A3. Panel zlecenia w widoku KSH — potwierdzone zrzutem
 
-Po kliknięciu w transport w roli KSH otwiera się panel z gołym tekstem „SG-03 / Edytuj / ✕” i czarnym przyciskiem „Edytuj”, bez stylów, zakładek i danych. Przyczyna w kodzie: `if (rola === KSH) return <KshSideMenu/>`. Poprawka już zlecona („KSH — PANEL ZLECENIA”). Tu tylko potwierdzam i dodaję: KSH w swoim harmonogramie widzi też kolumnę „Zmień ciągnik” — przycisk zmiany ciągnika nie powinien być dostępny dla KSH.
+Po kliknięciu w transport w roli KSH otwiera się panel z gołym tekstem „SG-03 / Edytuj / ✕” i czarnym przyciskiem „Edytuj”, bez stylów, zakładek i danych. Przyczyna w kodzie: `if (rola === KSH) return <KshSideMenu/>`. Pełna treść polecenia „KSH — PANEL ZLECENIA” jest w załączniku na końcu tego pliku. Tu tylko potwierdzam i dodaję: KSH w swoim harmonogramie widzi też kolumnę „Zmień ciągnik” — przycisk zmiany ciągnika nie powinien być dostępny dla KSH.
 
 ### A4. Sytuacje drogowe w Szwecji wyświetlają się po szwedzku
 
@@ -259,7 +259,7 @@ w docs/handover/.
    czas „15 min temu", klik → cel z L-4; bez kodów szablonów.
    Grupowanie wielu zdarzeń tego samego typu dla jednego transportu.
 
-3. PANEL KSH (A3) — zgodnie z poleceniem „KSH — PANEL ZLECENIA";
+3. PANEL KSH (A3) — według załącznika „KSH — PANEL ZLECENIA" na końcu pliku;
    dodatkowo: „Zmień ciągnik" niewidoczny dla KSH.
 
 4. PL-DATA (A4): tytuły sytuacji Trafikverket po polsku („E4: od X do Y,
@@ -341,4 +341,40 @@ w docs/handover/.
 
 Zasady: migracje przez lokalną bramę, obie domeny 200, raport po każdym
 punkcie ze zrzutem. Zapisz w PLAN.md i POLECENIA_KOORDYNATORA.md.
+```
+
+
+---
+
+# ZAŁĄCZNIK — POLECENIE „KSH — PANEL ZLECENIA” (pełna treść)
+
+```
+KSH — PANEL ZLECENIA (decyzja właściciela 05.10; zastępuje dosłowne
+odczytanie B-KSH / punktu K.1 listy kontrolnej).
+
+Słowa właściciela: „KSH powinno widzieć to, co każdy. W zakładce
+Przegląd powinien być przycisk Edytuj — taki sam jak dla SCX.
+Po kliknięciu powinno otwierać się okienko pop-up — jak SCX. Jedyne
+dane do edycji to data + godzina załadunku oraz rozładunku."
+
+1. Usuń osobny panel KshSideMenu. KSH widzi TEN SAM panel zlecenia co
+   pozostali: wszystkie zakładki i dane — w granicach zasad widoczności
+   KSH (bez kosztu przewoźnika i marży; faktura SCX niewidoczna — U-8;
+   dane kierowcy widoczne — U-29; dopłaty: tylko akceptacja — 10f.4).
+2. W Przeglądzie przycisk „Edytuj" — wygląd i miejsce jak u SCX.
+3. „Edytuj" otwiera pop-up jak u SCX; do edycji WYŁĄCZNIE data i godzina
+   załadunku oraz rozładunku (okna od–do). Blokada także w bazie.
+4. Zapis: wpis w Historii („imię nazwisko // KSH"), powiadomienia wg
+   DEC-4, przeliczenie ETA i opłaty paliwowej, alarm zmiany daty (I-10).
+   Zapis do SharePoint dopiero w II-10-E2.
+5. „Zmień ciągnik" i inne przyciski przewoźnika/HHL niewidoczne dla KSH,
+   z blokadą w bazie.
+6. Testy (konto testowe, nie konto właściciela): wszystkie zakładki
+   i dane; brak kosztu i marży; Edytuj w Przeglądzie; okno z datami
+   i godzinami; zapis + wpis w Historii; odmowa innych pól przez API.
+   Zrzuty: komputer i 390 px.
+Popraw B-KSH / K.1 w LISTA_KONTROLNA_ZESZYT.md i WERYFIKACJA_ZESZYT_05_10.md.
+
+E-MAILE (do punktu 8): teksty jak w dzwonku — „SG-xx · co się stało",
+po polsku, bez kodów, z linkiem do celu z L-4.
 ```
