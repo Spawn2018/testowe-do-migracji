@@ -7,7 +7,7 @@ vi.mock('leaflet', () => ({ default: {} }));
 describe('AUD-01d podkład: HERE wprost z przeglądarki, licznik D-78, bez wspólnej pamięci brzegu', () => {
   it('adres kafelka wprost: maps.hereapi.com raster v3, styl logistyczny, klucz przeglądarkowy', () => {
     const u = directTileTemplate('dark', 'brow ser');
-    expect(u).toBe('https://maps.hereapi.com/v3/base/mc/{z}/{x}/{y}/png?style=logistics.night&size=256&apiKey=brow%20ser');
+    expect(u).toBe('https://maps.hereapi.com/v3/base/mc/{z}/{x}/{y}/png?style=logistics.night&size=256&lang=pl&apiKey=brow%20ser');
     expect(directTileTemplate('light', 'k')).toContain('style=logistics.day');
   });
 

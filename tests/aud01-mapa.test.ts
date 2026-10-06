@@ -71,13 +71,13 @@ describe('AUD-01 pozycje GPS: jedno zapytanie', () => {
 
 describe('AUD-01c kafelki: publiczne, /tiles/<styl HERE>, brzeg Vercel (fra1) → here-raster (eu-central-1)', () => {
   it('produkcja → /tiles/logistics.day|logistics.night/<z>/<x>/<y> na domenie aplikacji', () => {
-    expect(tileUrl({ z: 5, x: 17, y: 9 }, 'dark', 'tower.log-mar.pl')).toEqual({ url: '/tiles/logistics.night/5/17/9', viaEdge: true });
-    expect(tileUrl({ z: 5, x: 17, y: 9 }, 'light', 'watch-tower-makieta.vercel.app')).toEqual({ url: '/tiles/logistics.day/5/17/9', viaEdge: true });
+    expect(tileUrl({ z: 5, x: 17, y: 9 }, 'dark', 'tower.log-mar.pl')).toEqual({ url: '/tiles/logistics.night/5/17/9?lang=pl', viaEdge: true });
+    expect(tileUrl({ z: 5, x: 17, y: 9 }, 'light', 'watch-tower-makieta.vercel.app')).toEqual({ url: '/tiles/logistics.day/5/17/9?lang=pl', viaEdge: true });
   });
   it('localhost → wprost do funkcji, region eu-central-1', () => {
     const r = tileUrl({ z: 1, x: 0, y: 1 }, 'light', '127.0.0.1');
     expect(r.viaEdge).toBe(false);
-    expect(r.url).toMatch(/\/functions\/v1\/here-raster\?style=logistics\.day&z=1&x=0&y=1&forceFunctionRegion=eu-central-1$/);
+    expect(r.url).toMatch(/\/functions\/v1\/here-raster\?style=logistics\.day&z=1&x=0&y=1&lang=pl&forceFunctionRegion=eu-central-1$/);
   });
   it('vercel.json: /tiles/<styl>/… → api/tiles; region fra1; bez przepisania na Supabase', () => {
     const v = JSON.parse(read('vercel.json')) as { regions: string[]; rewrites: { source: string; destination: string }[] };
@@ -110,7 +110,7 @@ describe('AUD-01c kafelki: publiczne, /tiles/<styl HERE>, brzeg Vercel (fra1) �
       expect(ok.headers.get('cache-control')).toBe('private, max-age=3600');
       expect(ok.headers.get('set-cookie')).toBeNull();
       expect(ok.headers.get('x-sb-edge-region')).toBe('eu-central-1');
-      expect(String((globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0])).toMatch(/style=logistics\.day&z=6&x=35&y=21&forceFunctionRegion=eu-central-1$/);
+      expect(String((globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0])).toMatch(/style=logistics\.day&z=6&x=35&y=21&lang=pl&forceFunctionRegion=eu-central-1$/);
       globalThis.fetch = vi.fn(async () => Response.json({ fallback: true }, { status: 409 })) as typeof fetch;
       const closed = await t.GET(new Request('https://tower.log-mar.pl/api/tiles?style=light&z=6&x=35&y=21'));
       expect(closed.status).toBe(409);

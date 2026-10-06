@@ -16,7 +16,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders, corsPreflight } from '../_shared/cors.ts';
 
-import { STYLE, gridOk, rateLimiter, refererOk, tileCacheControl } from '../_shared/map/tilePolicy.ts';
+import { STYLE, gridOk, rateLimiter, refererOk, tileCacheControl, tileLang } from '../_shared/map/tilePolicy.ts';
 
 const NO_STORE = { 'cache-control': 'no-store' };
 const BAD_TILE_CACHE = { 'cache-control': 'private, max-age=3600' };
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
   const ip = (req.headers.get('x-wt-client-ip') ?? req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || '?';
   if (!rateOk(ip)) return reply({ error: 'limit' }, 429, { ...NO_STORE, 'retry-after': '60' });
   const upstream = await fetch(
-    `https://maps.hereapi.com/v3/base/mc/${z}/${x}/${y}/png?style=${style}&size=256&apiKey=${encodeURIComponent(key)}`,
+    `https://maps.hereapi.com/v3/base/mc/${z}/${x}/${y}/png?style=${style}&size=256&lang=${tileLang(url.searchParams.get('lang'))}&apiKey=${encodeURIComponent(key)}`,
     { headers: { 'User-Agent': 'WatchTower/1' } },
   );
   noteHereFetch();

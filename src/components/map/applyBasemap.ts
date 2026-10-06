@@ -12,6 +12,7 @@ import {
   type ThemeName,
 } from '../../lib/map/draw';
 import { HERE_BROWSER_KEY, directTileTemplate, servedFromCache, sharedTileMeter } from './hereTileMeter';
+import { TILE_LANG } from '../../../supabase/functions/_shared/map/tilePolicy';
 
 /** AUD-01b: funkcje Edge w regionie bazy (eu-west-1), nie w regionie najbliższym przeglądarce. */
 export const FUNCTION_REGION = 'eu-west-1';
@@ -82,9 +83,10 @@ export function tileTemplate(
 ): { url: string; viaEdge: boolean } {
   const style = HERE_STYLE[theme];
   const local = !host || host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local');
-  if (!local && !edgeMissing) return { url: `/tiles/${style}/{z}/{x}/{y}`, viaEdge: true };
+  /* AUD-04: `lang=pl` także w adresie zapasu — nowy klucz pamięci przeglądarki (stare kafelki bez polskiego nie wracają) */
+  if (!local && !edgeMissing) return { url: `/tiles/${style}/{z}/{x}/{y}?lang=${TILE_LANG}`, viaEdge: true };
   return {
-    url: `${SUPABASE_URL}/functions/v1/here-raster?style=${style}&z={z}&x={x}&y={y}&forceFunctionRegion=${TILE_REGION}`,
+    url: `${SUPABASE_URL}/functions/v1/here-raster?style=${style}&z={z}&x={x}&y={y}&lang=${TILE_LANG}&forceFunctionRegion=${TILE_REGION}`,
     viaEdge: false,
   };
 }
