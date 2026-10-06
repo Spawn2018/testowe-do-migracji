@@ -22,6 +22,34 @@ function tilesForcedOff(): boolean {
   try { return sessionStorage.getItem(offKey()) === '1'; } catch { return false; }
 }
 
+/**
+ * AUD-01: jeden odczyt `map_display_state` na stronę (TTL 60 s) — wspólny dla podkładu i geometrii trasy.
+ * Wcześniej dwa osobne wywołania przy każdym zamontowaniu mapy.
+ */
+type DisplayState = { tiles_open?: boolean; month?: string; roads?: unknown } | null;
+let displayState: { at: number; p: Promise<DisplayState> } | null = null;
+export function readMapDisplayState(force = false): Promise<DisplayState> {
+  const now = Date.now();
+  if (!force && displayState && now - displayState.at < 60_000) return displayState.p;
+  const p = (async (): Promise<DisplayState> => {
+    try {
+      const { getSupabase } = await import('../../auth/client');
+      const sb = await getSupabase();
+      const { data, error } = await sb.rpc('map_display_state');
+      return error ? null : (data as DisplayState);
+    } catch {
+      return null;
+    }
+  })();
+  displayState = { at: now, p };
+  return p;
+}
+
+/**
+ * AUD-01: podkład bez czekania na bazę. Budżet D-78 sprawdza funkcja `here-raster` przy każdym pobraniu z HERE
+ * (409 = zamknięty → `onClosed` przełącza na podkład zapasowy i zapamiętuje to do końca sesji), więc przeglądarka
+ * nie odpytuje `map_display_state` przed pierwszym kafelkiem.
+ */
 export async function resolveBasemap(theme: ThemeName): Promise<BasemapChoice> {
   const now = new Date();
   const closed = basemapFor({
@@ -32,22 +60,45 @@ export async function resolveBasemap(theme: ThemeName): Promise<BasemapChoice> {
     allowHere: false,
   });
   if (!SUPABASE_AUTH_ENABLED || tilesForcedOff()) return closed;
-  try {
-    const { getSupabase } = await import('../../auth/client');
-    const sb = await getSupabase();
-    const { data, error } = await sb.rpc('map_display_state');
-    const row = data as { tiles_open?: boolean; month?: string } | null;
-    if (error || !row || row.tiles_open !== true) return closed;
-    return basemapFor({
-      theme,
-      spentUsd: 0,
-      spentMonth: String(row.month ?? ''),
-      now,
-      allowHere: true,
-    });
-  } catch {
-    return closed;
-  }
+  return basemapFor({ theme, spentUsd: 0, spentMonth: `${warsawMonth(now)}-01`, now, allowHere: true });
+}
+
+/**
+ * AUD-01: kafelki HERE przez `/tiles/<motyw>/<z>/<x>/<y>` na domenie aplikacji (Vercel) — przepisanie do funkcji
+ * `here-raster` z pamięcią podręczną na brzegu Vercel. Kafelek trafia na inne połączenie niż dane (Supabase) i po
+ * pierwszym pobraniu jest serwowany z brzegu bez wywołania HERE. Token sesji idzie w `x-wt-token`, nie w
+ * `Authorization` (żądanie z `Authorization` Vercel zawsze pomija pamięć). Lokalnie (localhost, podgląd) — wprost
+ * do funkcji.
+ */
+export function tileUrl(
+  coords: { z: number; x: number; y: number },
+  theme: 'light' | 'dark',
+  host: string = typeof location !== 'undefined' ? location.hostname : '',
+): { url: string; viaEdge: boolean } {
+  const local = !host || host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local');
+  if (!local && !edgeMissing) return { url: `/tiles/${theme}/${coords.z}/${coords.x}/${coords.y}`, viaEdge: true };
+  return {
+    url: `${SUPABASE_URL}/functions/v1/here-raster?z=${coords.z}&x=${coords.x}&y=${coords.y}&theme=${theme}`,
+    viaEdge: false,
+  };
+}
+
+/**
+ * Hosting zapasowy bez przepisania `/tiles` (PR8: Cloudflare Pages) odpowiada 404/HTML — wtedy do końca strony
+ * kafelki idą wprost do funkcji (jak przed AUD-01).
+ */
+let edgeMissing = false;
+export function __setEdgeMissing(v: boolean): void { edgeMissing = v; }
+
+let tokenCache: { at: number; token: string | null } | null = null;
+async function sessionToken(): Promise<string | null> {
+  const now = Date.now();
+  if (tokenCache && now - tokenCache.at < 30_000) return tokenCache.token;
+  const { getSupabase } = await import('../../auth/client');
+  const sb = await getSupabase();
+  const { data } = await sb.auth.getSession();
+  tokenCache = { at: now, token: data.session?.access_token ?? null };
+  return tokenCache.token;
 }
 
 /** Leaflet GridLayer z kafelkiem HERE przez funkcję, bez klucza w przeglądarce. */
@@ -58,22 +109,25 @@ export function hereRasterLayer(choice: BasemapChoice, onClosed: () => void): L.
       img.alt = '';
       img.width = 256;
       img.height = 256;
-      const url = `${SUPABASE_URL}/functions/v1/here-raster?z=${coords.z}&x=${coords.x}&y=${coords.y}&theme=${choice.theme}`;
+      const { url, viaEdge } = tileUrl(coords, choice.theme === 'dark' ? 'dark' : 'light');
       void (async () => {
         try {
-          const { getSupabase } = await import('../../auth/client');
-          const sb = await getSupabase();
-          const { data } = await sb.auth.getSession();
-          const token = data.session?.access_token;
+          const token = await sessionToken();
           if (!token) {
             rememberTilesOff();
             onClosed();
             done(new Error('brak sesji'), img);
             return;
           }
-          const res = await fetch(url, {
-            headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY },
-          });
+          const headers: Record<string, string> = viaEdge
+            ? { 'x-wt-token': token }
+            : { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY, 'x-wt-token': token };
+          let res = await fetch(url, { headers });
+          if (viaEdge && (res.status === 404 || !(res.headers.get('content-type') ?? '').startsWith('image/')) && res.status !== 409 && res.status !== 401) {
+            edgeMissing = true;
+            const direct = tileUrl(coords, choice.theme === 'dark' ? 'dark' : 'light');
+            res = await fetch(direct.url, { headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY, 'x-wt-token': token } });
+          }
           if (res.status === 409) {
             rememberTilesOff();
             onClosed();
@@ -157,11 +211,7 @@ export async function loadRoadLines(): Promise<LatLng[][]> {
   try {
     const { getSupabase } = await import('../../auth/client');
     const sb = await getSupabase();
-    const read = async () => {
-      const res = await sb.rpc('map_display_state');
-      const data = res.data as { roads?: unknown; tiles_open?: boolean } | null;
-      return acceptedRoads(data?.roads);
-    };
+    const read = async (force = false) => acceptedRoads((await readMapDisplayState(force))?.roads);
     let lines = await read();
     if (lines.length >= 2) return lines;
     const { data } = await sb.auth.getSession();
@@ -176,7 +226,7 @@ export async function loadRoadLines(): Promise<LatLng[][]> {
       },
       body: '{}',
     });
-    lines = await read();
+    lines = await read(true);
     return lines;
   } catch {
     return [];

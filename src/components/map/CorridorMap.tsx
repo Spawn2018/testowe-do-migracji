@@ -99,6 +99,8 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
   const [gpsReady, setGpsReady] = useState(false);
   const [zoom, setZoom] = useState(0);
   const [mapReady, setMapReady] = useState<L.Map | null>(null);
+  /* AUD-01: produkcja — dane mapy (pozycje, trasa, sytuacje, AIS) dopiero po narysowaniu podkładu (albo po 1,5 s). */
+  const [basemapReady, setBasemapReady] = useState(import.meta.env.VITE_AUTH_MODE !== 'supabase');
   /* III-5: odtwarzany transport = ostatnio wybrany (zostaje po zamknięciu szuflady, znika po wyłączeniu warstwy „Ślad”) */
   const [replayId, setReplayId] = useState<string | null>(null);
   useEffect(() => { if (selectedLoadId && isServerId(selectedLoadId)) setReplayId(selectedLoadId); }, [selectedLoadId]);
@@ -118,6 +120,7 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
 
   useEffect(() => {
     if (!shows('roadSituationsSe')) return; // I-2e: produkcja — bez źródła nie rysujemy zdarzeń przykładowych
+    if (!basemapReady) return;
     let cancelled = false;
     fetchSituations().then((r) => {
       if (!cancelled) {
@@ -127,9 +130,10 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [basemapReady]);
 
   useEffect(() => {
+    if (!basemapReady) return undefined;
     return subscribeFerryPositions({
       prod: PROD_BUILD,
       onUpdate: (pos, mode) => {
@@ -138,10 +142,10 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
         setAisPositions(pos);
       },
     });
-  }, []);
+  }, [basemapReady]);
 
   useEffect(() => {
-    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return undefined;
+    if (import.meta.env.VITE_AUTH_MODE !== 'supabase' || !basemapReady) return undefined;
     let cancelled = false;
     const ids = loads.map((l) => l.id);
     const run = () => {
@@ -164,7 +168,7 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [loads]);
+  }, [loads, basemapReady]);
 
   useEffect(() => {
     // D15/G5: przy zamrożonym czasie (?now=, VITE_FROZEN_NOW) bez dryfu pozycji — ujęcia deterministyczne
@@ -289,14 +293,16 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
         current = layer;
         switching = false;
         if (layersRef.current) layersRef.current.tiles = layer;
+        layer.once('load', () => { if (!cancelled) setBasemapReady(true); });
       });
     };
     run();
-    return () => { cancelled = true; };
+    const readyTimer = window.setTimeout(() => { if (!cancelled) setBasemapReady(true); }, 1500);
+    return () => { cancelled = true; window.clearTimeout(readyTimer); };
   }, [theme, mapReady]);
 
   useEffect(() => {
-    if (!mapReady || import.meta.env.VITE_AUTH_MODE !== 'supabase') return;
+    if (!mapReady || !basemapReady || import.meta.env.VITE_AUTH_MODE !== 'supabase') return;
     let cancelled = false;
     void import('./applyBasemap').then(({ loadRoadLines }) => loadRoadLines()).then((lines) => {
       const layers = layersRef.current;
@@ -309,7 +315,7 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
       }
     });
     return () => { cancelled = true; };
-  }, [mapReady]);
+  }, [mapReady, basemapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -473,7 +479,7 @@ export function CorridorMap({ loads, embedded = false }: { loads: Load[]; embedd
       />
       {TrackReplay && !embedded && mapReady && mapLayers.trail && replayId ? (
         <Suspense fallback={null}>
-          <TrackReplay key={replayId} map={mapReady} loadId={replayId} code={loads.find((l) => l.id === replayId)?.code ?? ''} />
+          <TrackReplay key={replayId} map={mapReady} loadId={replayId} code={loads.find((l) => l.id === replayId)?.code ?? ''} noFix={gpsReady && !gpsFixes.has(replayId)} />
         </Suspense>
       ) : null}
       {PROD_BUILD && mapLayers.vehicles && gpsReady && !loads.some((l) => gpsFixes.has(l.id)) ? (

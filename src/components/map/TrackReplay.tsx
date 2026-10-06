@@ -12,15 +12,19 @@ import { trailForDraw } from '../../lib/map/draw';
  * Tylko build Supabase, warstwa „Ślad” włączona i wybrany transport. Bez danych — „brak pozycji GPS”, nigdy trasa przykładowa.
  */
 const STEPS = 1000;
-export default function TrackReplay({ map, loadId, code }: { map: L.Map; loadId: string; code: string }) {
+const NO_TRACK: TrackPoint[] = [];
+export default function TrackReplay({ map, loadId, code, noFix = false }: { map: L.Map; loadId: string; code: string; noFix?: boolean }) {
   const locale = useTowerStore((s) => s.locale);
-  const [track, setTrack] = useState<TrackPoint[] | null>(null);
+  const [fetched, setTrack] = useState<TrackPoint[] | null>(null);
+  /* AUD-01: transport bez żadnej pozycji GPS (wynik latest_vehicle_fixes) — bez zapytania o przebieg. */
+  const track = noFix ? NO_TRACK : fetched;
   const [pos, setPos] = useState(STEPS);
   const [playing, setPlaying] = useState(false);
   const layerRef = useRef<{ line: L.Polyline; dot: L.CircleMarker } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    if (noFix) return () => { cancelled = true; };
     void (async () => {
       const { getSupabase } = await import('../../auth/client');
       const sb = await getSupabase();
@@ -28,7 +32,7 @@ export default function TrackReplay({ map, loadId, code }: { map: L.Map; loadId:
       if (!cancelled) { setTrack(((r.data ?? []) as TrackPoint[]).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))); setPos(STEPS); setPlaying(false); }
     })();
     return () => { cancelled = true; };
-  }, [loadId]);
+  }, [loadId, noFix]);
 
   useEffect(() => {
     if (!track || track.length === 0) return;

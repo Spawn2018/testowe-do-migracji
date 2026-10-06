@@ -795,6 +795,15 @@ val "KSH (klient projektu) widzi przebieg transportu projektu" $KSH "select coun
 val "limit 2 → dwa najnowsze punkty, nadal rosnąco" $HHL "select string_agg(lng::text, ',' order by ts) from load_track('$LT', 2)" "17.51,18.2"
 $PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER') on conflict do nothing; insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH') on conflict do nothing" >/dev/null
 val "inny przewoźnik: 0 punktów (RLS positions_read)" 11111111-0000-0000-0000-00000000000b "select count(*) from load_track('$LT')" 0
+echo; echo "[AUD-01] latest_vehicle_fixes (0190): ostatnia pozycja wielu transportów jednym zapytaniem"
+LN=33333333-0000-0000-0000-0000000035a2
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status) values ('$LN','$P','00000000-0000-0000-0000-00000000a003','KSH/T35B','PLANNED')" >/dev/null 2>&1
+chk "anon bez EXECUTE latest_vehicle_fixes, authenticated z EXECUTE" "$(Q "select has_function_privilege('anon','latest_vehicle_fixes(uuid[])','execute')::text||'/'||has_function_privilege('authenticated','latest_vehicle_fixes(uuid[])','execute')::text")" "false/true"
+val "SCX: z dwóch transportów tylko ten z pozycjami, ostatni punkt" $SCX "select count(*)||'/'||string_agg(load_id::text||':'||lng::text, ',') from latest_vehicle_fixes(array['$LT','$LN']::uuid[])" "1/$LT:18.2"
+val "duplikaty i NULL w tablicy → jeden wiersz" $HHL "select count(*) from latest_vehicle_fixes(array['$LT','$LT',null]::uuid[])" 1
+val "pusta tablica / NULL → 0 wierszy" $HHL "select (select count(*) from latest_vehicle_fixes('{}'::uuid[]))||'/'||(select count(*) from latest_vehicle_fixes(null))" "0/0"
+val "inny przewoźnik: 0 wierszy (RLS positions_read)" 11111111-0000-0000-0000-00000000000b "select count(*) from latest_vehicle_fixes(array['$LT','$LN']::uuid[])" 0
+$PSQL -c "update loads set status='CANCELLED' where id='$LN'" >/dev/null 2>&1
 $PSQL -c "delete from app_users where email='cx3@test'; delete from organizations where code='CX3'; update loads set status='CANCELLED' where id='$LT'" >/dev/null 2>&1
 fi # tower-i2-part 4
 

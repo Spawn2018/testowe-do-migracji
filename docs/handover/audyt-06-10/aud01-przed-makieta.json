@@ -1,0 +1,142 @@
+[
+  {
+    "label": "przed-makieta",
+    "width": 1366,
+    "mode": "mock",
+    "firstTileMs": 695,
+    "allTilesMs": 695,
+    "dbRequests12s": 195,
+    "loadTrack": 188,
+    "latestVehicleFixes": 0,
+    "tilesFinished": 36,
+    "tilePaths": [
+      "/functions/v1/here-raster"
+    ],
+    "dbByName": {
+      "rpc/ferry_track_sample": 2,
+      "rpc/load_track": 188,
+      "corridor_conditions": 1,
+      "rpc/map_display_state": 4
+    },
+    "screenshot": "/workspace/aud01-shots/przed-makieta-1366.png",
+    "kokpit": {
+      "total": 123,
+      "loadTrack": 94,
+      "latestVehicleFixes": 0,
+      "byName": {
+        "rpc/my_profile": 1,
+        "rpc/my_mfa_status": 1,
+        "organizations": 1,
+        "projects": 1,
+        "v_load_price_carrier": 1,
+        "v_load_price_client": 1,
+        "loads": 1,
+        "load_events": 1,
+        "load_messages": 1,
+        "rpc/list_load_messages_ui": 1,
+        "v_geofences_circle": 1,
+        "risk_signals": 1,
+        "documents": 1,
+        "invoices": 1,
+        "notifications": 1,
+        "sailings": 1,
+        "schedule_imports": 1,
+        "rpc/load_driver_contacts": 1,
+        "rpc/load_permit_status": 1,
+        "workflows": 1,
+        "workflow_runs": 1,
+        "user_preferences": 1,
+        "rpc/system_broadcast_current": 1,
+        "rpc/kpi_detection_lag": 1,
+        "rpc/ferry_track_sample": 1,
+        "rpc/load_track": 94,
+        "rpc/map_display_state": 4
+      }
+    },
+    "panel": {
+      "total": 12,
+      "loadTrack": 2,
+      "latestVehicleFixes": 0,
+      "byName": {
+        "rpc/h1_route_check_state": 1,
+        "rpc/h3_corridor_state": 1,
+        "rpc/ferry_track_sample": 1,
+        "rpc/load_track": 2,
+        "rpc/load_insurance_cover_one": 1,
+        "rpc/map_display_state": 4,
+        "loads": 1,
+        "rpc/carrier_rating_detail": 1
+      }
+    }
+  },
+  {
+    "label": "przed-makieta",
+    "width": 390,
+    "mode": "mock",
+    "firstTileMs": 701,
+    "allTilesMs": 701,
+    "dbRequests12s": 195,
+    "loadTrack": 188,
+    "latestVehicleFixes": 0,
+    "tilesFinished": 20,
+    "tilePaths": [
+      "/functions/v1/here-raster"
+    ],
+    "dbByName": {
+      "rpc/ferry_track_sample": 2,
+      "rpc/load_track": 188,
+      "corridor_conditions": 1,
+      "rpc/map_display_state": 4
+    },
+    "screenshot": "/workspace/aud01-shots/przed-makieta-390.png",
+    "kokpit": {
+      "total": 123,
+      "loadTrack": 94,
+      "latestVehicleFixes": 0,
+      "byName": {
+        "rpc/my_profile": 1,
+        "rpc/my_mfa_status": 1,
+        "organizations": 1,
+        "projects": 1,
+        "v_load_price_carrier": 1,
+        "v_load_price_client": 1,
+        "loads": 1,
+        "load_events": 1,
+        "load_messages": 1,
+        "rpc/list_load_messages_ui": 1,
+        "v_geofences_circle": 1,
+        "risk_signals": 1,
+        "documents": 1,
+        "invoices": 1,
+        "notifications": 1,
+        "sailings": 1,
+        "schedule_imports": 1,
+        "rpc/load_driver_contacts": 1,
+        "rpc/load_permit_status": 1,
+        "workflows": 1,
+        "workflow_runs": 1,
+        "user_preferences": 1,
+        "rpc/system_broadcast_current": 1,
+        "rpc/kpi_detection_lag": 1,
+        "rpc/ferry_track_sample": 1,
+        "rpc/load_track": 94,
+        "rpc/map_display_state": 4
+      }
+    },
+    "panel": {
+      "total": 12,
+      "loadTrack": 2,
+      "latestVehicleFixes": 0,
+      "byName": {
+        "rpc/h1_route_check_state": 1,
+        "rpc/h3_corridor_state": 1,
+        "rpc/ferry_track_sample": 1,
+        "rpc/load_track": 2,
+        "rpc/load_insurance_cover_one": 1,
+        "rpc/map_display_state": 4,
+        "loads": 1,
+        "rpc/carrier_rating_detail": 1
+      }
+    }
+  }
+]
