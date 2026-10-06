@@ -1,0 +1,23 @@
+# AUD-01c curl PO wdrożeniu — dpl_GWYpijKvAdJhBjKefkm8z81w1BWJ, here-raster z 6e93d2d — 2026-10-06 16:15 CEST (box, wyjście z USA; Referer domeny, bez ciasteczek, każde żądanie osobny proces curl)
+## tower.log-mar.pl — 5 kafelków (style HERE i light/dark)
+logistics.day/11/1121/677 #1 200 image/png ttfb=0.806375 total=0.998735 magic=89504e47 cache=MISS sb_region=eu-central-1 origin_ms=416
+logistics.day/11/1121/677 #2 200 image/png ttfb=0.308450 total=0.315509 magic=89504e47 cache=HIT sb_region=eu-central-1 origin_ms=416
+logistics.day/11/1122/677 #1 200 image/png ttfb=0.775570 total=0.965301 magic=89504e47 cache=MISS sb_region=eu-central-1 origin_ms=407
+logistics.day/11/1122/677 #2 200 image/png ttfb=0.214844 total=0.310691 magic=89504e47 cache=HIT sb_region=eu-central-1 origin_ms=407
+logistics.night/11/1123/677 #1 200 image/png ttfb=0.924840 total=1.030775 magic=89504e47 cache=MISS sb_region=eu-central-1 origin_ms=562
+logistics.night/11/1123/677 #2 200 image/png ttfb=0.278345 total=0.316114 magic=89504e47 cache=HIT sb_region=eu-central-1 origin_ms=562
+light/11/1124/677 #1 200 image/png ttfb=0.655126 total=0.661731 magic=89504e47 cache=MISS sb_region=eu-central-1 origin_ms=338
+light/11/1124/677 #2 200 image/png ttfb=0.284979 total=0.293197 magic=89504e47 cache=HIT sb_region=eu-central-1 origin_ms=338
+dark/11/1125/677 #1 200 image/png ttfb=0.908513 total=1.007575 magic=89504e47 cache=MISS sb_region=eu-central-1 origin_ms=551
+dark/11/1125/677 #2 200 image/png ttfb=0.226040 total=0.290687 magic=89504e47 cache=HIT sb_region=eu-central-1 origin_ms=551
+## watch-tower-makieta.vercel.app — 5 kafelków (style HERE i light/dark)
+logistics.day/11/1121/677 #1 200 image/png ttfb=0.513189 total=0.673338 magic=89504e47 cache=MISS sb_region=eu-central-1 origin_ms=279
+logistics.day/11/1121/677 #2 200 image/png ttfb=0.063997 total=0.065075 magic=89504e47 cache=HIT sb_region=eu-central-1 origin_ms=279
+logistics.day/11/1122/677 #1 200 image/png ttfb=0.439290 total=0.534567 magic=89504e47 cache=MISS sb_region=eu-central-1 origin_ms=288
+logistics.day/11/1122/677 #2 200 image/png ttfb=0.067105 total=0.068490 magic=89504e47 cache=HIT sb_region=eu-central-1 origin_ms=288
+logistics.night/11/1123/677 #1 200 image/png ttfb=0.541850 total=0.724425 magic=89504e47 cache=MISS sb_region=eu-central-1 origin_ms=393
+logistics.night/11/1123/677 #2 200 image/png ttfb=0.058497 total=0.058906 magic=89504e47 cache=HIT sb_region=eu-central-1 origin_ms=393
+light/11/1124/677 #1 200 image/png ttfb=0.435513 total=0.617850 magic=89504e47 cache=MISS sb_region=eu-central-1 origin_ms=287
+light/11/1124/677 #2 200 image/png ttfb=0.265626 total=0.267132 magic=89504e47 cache=HIT sb_region=eu-central-1 origin_ms=287
+dark/11/1125/677 #1 200 image/png ttfb=0.557314 total=0.558624 magic=89504e47 cache=MISS sb_region=eu-central-1 origin_ms=320
+dark/11/1125/677 #2 200 image/png ttfb=0.039269 total=0.041532 magic=89504e47 cache=HIT sb_region=eu-central-1 origin_ms=320
