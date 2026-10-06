@@ -39,4 +39,23 @@
 
 Kryterium „zapytań przy otwarciu Mapy ≤ 20”: **4** ✔. „Zero zapytań dla transportów bez pozycji”: ✔ (1 zapytanie zbiorcze, zwraca 1 transport). Zrzuty: `audyt-06-10/aud01-przed-makieta-1366.png`, `aud01-przed-makieta-390.png`, `aud01-po-makieta-1366.png`, `aud01-po-makieta-390.png`, `aud01-po-makieta-1366-panel.png`; surowe wyniki `aud01-przed-makieta.json`, `aud01-po-makieta.json`.
 
-**Produkcja.** (uzupełniane po wdrożeniu — sekcja niżej)
+**Produkcja:** sekcja „AUD-01 — wdrożenie” niżej.
+
+### AUD-01 — wdrożenie (06.10)
+
+| krok | wynik |
+|---|---|
+| PR | #137 scalony → `f291c84` (11:16) |
+| migracja 0190 na PROD | funkcja jest; anon EXECUTE false, authenticated true; `schema_migrations` 0190 `aud01_latest_vehicle_fixes` (jak 0185–0189) |
+| funkcja `here-raster` | wdrożona z `--no-verify-jwt` (`--use-api`); bez sesji → 401 `{"fallback":true}` z funkcji |
+| Vercel prod | `dpl_Hv5CtFjKrs3TDbtnMAVRW36MsJmJ`, alias tower.log-mar.pl; **tower.log-mar.pl 200, watch-tower-makieta.vercel.app 200** (ta sama paczka `index-CrEe5lT7.js`) |
+| paczka prod | `latest_vehicle_fixes` ✔, `x-wt-token` ✔, `/tiles/` ✔, `service_role` 0, `load_track(…, p_limit:1)` 0 |
+| `/tiles/light/4/8/4` na obu domenach bez sesji | 401, `cache-control: no-store`, `x-vercel-cache: MISS` — przepisanie działa, odpowiedzi bez sesji nie trafiają do pamięci |
+| SQL prod | 94 transporty aktywne, **1** z pozycją GPS, 217 wierszy `positions`; `latest_vehicle_fixes(94 id)` jako HHL → 1 wiersz, 214 ms |
+
+**Czego nie zmierzyłem na produkcji:** pierwszy kafelek ≤ 2 s / komplet ≤ 5 s / zapytania ≤ 20 po zalogowaniu i trafienie `x-vercel-cache: HIT` dla kafelka. Wymaga zalogowanej sesji (konto testowe HHL); wykonawca nie ma danych logowania i nie tworzy sobie dostępu. Do wykonania przez osobę z kontem testowym:
+`APP=https://tower.log-mar.pl STORAGE=<storageState.json zalogowanej sesji> LABEL=prod-po node scripts/audyt/aud01-measure.mjs` (1366 i 390 px, wynik JSON + zrzuty). Drugi przebieg w nowym kontekście powinien mieć kafelki z `x-vercel-cache: HIT`.
+
+**Do potwierdzenia przez właściciela:** pamięć kafelków HERE na brzegu Vercel 7 dni (przeglądarka 1 dzień) — zgodność z warunkami licencji HERE; w razie potrzeby skrócić `vercel-cdn-cache-control` w `here-raster`.
+
+**Znalezisko przy okazji (P2-TILES):** podkład zapasowy ciemny (CARTO `dark_all` bez klucza) zwraca dziś kafelek „API KEY REQUIRED” — widoczny, gdy budżet HERE jest zamknięty i motyw ciemny.
