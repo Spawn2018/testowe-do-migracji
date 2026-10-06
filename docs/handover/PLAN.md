@@ -55,6 +55,31 @@ Kryterium odbioru: …
 
 Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
 
+## AUDYT PEŁNY 06.10 — NAJWYŻSZY PRIORYTET (polecenie właściciela 06.10 10:34)
+
+Źródło: `AUDYT_PELNY_06_10.md`, `POLECENIA_KOORDYNATORA.md` (2026-10-06 10:34). Kolejność stała, punkt po punkcie; przy każdym: przyczyna, poprawka, test, dowód (zrzut z produkcji / pomiar / SQL) → sekcja w `RAPORT_AUDYT_06_10.md`, zrzuty `audyt-06-10/`. Lokalna brama, scalenie, Vercel prod, obie domeny 200. P2-TILES odłożone.
+
+| ID | Punkt | Kryterium odbioru | Status |
+|---|---|---|---|
+| AUD-01 | Mapa — czas ładowania (A1) | Ślady/trasy jednym zapytaniem tylko dla widocznych transportów z pozycjami GPS (bez pozycji: 0 zapytań; dziś 188 × `load_track`); kafelki inną drogą niż dane (cache na brzegu Vercel/Cloudflare albo HERE z kluczem ograniczonym do domeny), licznik D-78 nadal liczy; podkład przed danymi; to samo w kokpicie i panelu zlecenia. Playwright, świeże otwarcie 1366 i 390 px: pierwszy kafelek ≤ 2 s, komplet ≤ 5 s, zapytań do bazy przy otwarciu Mapy ≤ 20 — pomiar przed i po, na produkcji po wdrożeniu. | **W TOKU** 06.10 |
+| AUD-02 | Dzwonek (A2) | Pozycje z tytułem PL (transport · co się stało), czas „15 min temu”, klik → cel L-4, zero kodów szablonów (`RISK_OPEN` itp.), grupowanie zdarzeń tego samego typu dla transportu. | DO ZROBIENIA |
+| AUD-03 | Panel KSH (A3) | Panel zlecenia KSH wg polecenia „KSH — PANEL ZLECENIA” (style, zakładki, dane — nie goły „Edytuj”); „Zmień ciągnik” niewidoczny dla KSH. | DO ZROBIENIA |
+| AUD-04 | PL-DATA Trafikverket i kafelki (A4) | Tytuły sytuacji SE po polsku ze słownika stałych słów („E4: od X do Y, oba kierunki, region Z”), bez DeepL, nazwy miejscowości oryginalne; kafelki HERE z językiem polskim. | DO ZROBIENIA |
+| AUD-05 | Stare ETA (A5) | Wyczyszczone `eta_site`/`eta_basis` dla 93 transportów przed wyjazdem ze Śremu (polecenie właściciela) i zamknięte wynikające ryzyka; „–” przed wyjazdem we wszystkich miejscach (harmonogram, lista przy mapie, PDF/XLSX, kokpit — terminowość tylko z transportów w drodze). | DO ZROBIENIA |
+| AUD-06 | Finanse (A6) | Jedno źródło liczb kokpit/Finanse; „Od przychodu do marży” z `load_cost`/`load_revenue`; marża % = marża/przychód (SQL 4,76 % = UI); bez komunikatu „brak dopłaty”; „Kurs NBP” = kurs z datą albo „kurs po rozładunku”. | DO ZROBIENIA |
+| AUD-07 | Waluta (A7) | Domyślnie EUR dla każdego konta (U-5), PLN tylko po przełączeniu; raport ustawienia konta testowego i źródła PLN. | DO ZROBIENIA |
+| AUD-08 | Ustalenia / Status / Historia (B1–B2) | Ustalenia = tylko czat; ręczne statusy w Status; brak przycisków linku kierowcy i „Wymiary zestawu” u przewoźnika; Status (statusy i kamienie milowe) ≠ Historia (wszystkie zmiany); wpisy PL bez kodów, duplikatów i „READY → READY”; autor „imię nazwisko // firma”, automat „System // Watch Tower”. | DO ZROBIENIA |
+| AUD-09 | Centrum decyzji (B3) | Kod transportu (SG-03) zamiast numeru SCX/identyfikatora; typy PL; jeden licznik (kokpit = Centrum = baner); brak numeru HHL i SCX = jedna decyzja z dwoma odpowiedzialnymi; klik → karta decyzji. | DO ZROBIENIA |
+| AUD-10 | security_flags 403 (B4) | Odczyt `security_flags` dla zalogowanych przez RLS tylko HHL_ADMIN; zero 403 w Opcjach; przełączniki SMS pokazują stan; migracja przez lokalną bramę. | DO ZROBIENIA |
+| AUD-11 | Opcje — ładowanie sekcji (B5) | Sekcje Opcji (Stan systemu, Dziennik logowań…) ładują dane przy rozwinięciu, „ładowanie…” zamiast „Brak”/„—”/„podkład zapas”. | DO ZROBIENIA |
+| AUD-12 | Drobne z logiki (B6–B9) | „Czas wykrycia odchylenia” = „za mało danych” przy < 5 zdarzeniach; „Ryzyko promowe” przewoźnika z II-8; „Przychód tygodnia” jak tabela; H-8 profil trasy — przyczyna i naprawa; Rejsy domyślnie „Przyszłe” (3 tygodnie), reszta po rozwinięciu. | DO ZROBIENIA |
+| AUD-13 | Dane testowe poza R-0 (B10) | Lista do akceptacji właściciela dopisana do planu R-0 (polisa „Test OCP”, faktura WT-TEST-P6, testowe urządzenia bramki, konta testowe). **Nic nie kasować.** | DO ZROBIENIA |
+| AUD-14 | Błąd JS appendChild (B11) | Przyczyna znaleziona i naprawiona; test: zero błędów konsoli w 10 widokach × 3 role × 2 szerokości. | DO ZROBIENIA |
+| AUD-15 | Telefon 390 px (C1) | Kokpit 1–2 kolumny bez obcięcia; tabele (Ryzyka, Dokumenty, Finanse, Faktury, Strefy, Opcje) karty albo przewijanie w sekcji; legenda nie zasłania mapy; plakietka dzwonka w nagłówku; cele dotyku ≥ 44 px; czcionka ≥ 12 px; test 10 widoków × 3 role: scrollWidth = szerokość ekranu, zero elementów poza prawą krawędzią. | DO ZROBIENIA |
+| AUD-16 | Komputer (C2) | Przyklejona Marża nie zakrywa Statusu (1280 i 1366 px); logo w jednej linii przy 1366 px; pasek etapów z liczbami i aktywnym etapem albo usunięty; tytuł logowania kontrast ≥ 4,5:1. | DO ZROBIENIA |
+| AUD-17 | Teksty (C3) | JSON w Automatyzacjach → opis PL; bez reguły „wgraj POD”; rozdzielone „Pobierz paczkę ZIP”/„Wgraj dokument”; „×1,14”, „4,8 %” jednolicie; daty z zerem wiodącym; „przerwa z GPS” bez duplikatu; „1 pojazd” (PL-PLURAL); Strefy „Powiadamia” z odbiorcami; brak wyceny „—”; nagłówek widoku = menu; liczniki mapy spójne (komputer = telefon). | DO ZROBIENIA |
+| AUD-18 | Separator (D) | SG-03 „ROBERT PREIHS|MICHAŁ MADEJ”: ustalić, czy przepięcie („|” poprawne), czy dwóch kierowców („ / ”); poprawka danych/wyświetlania wg ustalenia. | DO ZROBIENIA |
+
 ## ETAP I — przed pilotażem (w tej kolejności)
 
 | ID | Opis | Kryterium | Status |
@@ -437,7 +462,7 @@ Feed Aikido wyłączony (400). Pięć średnich, bez numerów CVE. Nie krytyczne
 |---|---|---|
 | P1-FONT | Czcionki z repozytorium (Barlow 400/500/600/700, Barlow Condensed 500/600/700, woff2 + OFL), zero fonts.googleapis.com i fonts.gstatic.com, także w CSP. W tej samej gałęzi P1-LINT. Wzorce odświeżone w środowisku bramy. | **DO SCALENIA** — `fix/p1-font` |
 | P1-LINT | 9 błędów stylelint w `src/index.css` (`clip`, `#brandSub`, `#roleLbl`, siedem `!important`) naprawione bez wyłączania reguł. Ta sama gałąź co P1-FONT. | **DO SCALENIA** — `fix/p1-font` |
-| P2-TILES | W testach wizualnych mapa korzysta z kafelków zapisanych lokalnie w repozytorium (bez pobierania z sieci), żeby aktualizacje u dostawcy nie psuły bramy. Na produkcji bez zmian. | NIEZACZĘTE |
+| P2-TILES | W testach wizualnych mapa korzysta z kafelków zapisanych lokalnie w repozytorium (bez pobierania z sieci), żeby aktualizacje u dostawcy nie psuły bramy. Na produkcji bez zmian. | **ODŁOŻONE — audyt 06.10** (gałąź `feat/p2-tiles-06-10`, `3deb252`, bez scalenia): kafelki CARTO+Esri w `tests/fixtures/tiles`, `scripts/visual/tiles.mjs` (replay/record/live); mapa×30 replay = 30/30 z wzorcem, smoke 16/16, vitest 4/4; pełna brama przerwana przy odłożeniu (10:36). Znalezisko: CARTO `dark_all` bez klucza = „API KEY REQUIRED” (podkład zapasowy ciemny na prod). WIP: `WIP_P2_TILES_06_10.md` (na gałęzi) |
 | P3-AND | Dwa eksportowane komponenty Androida w manifeście bramki SMS (score 60) | NIEZACZĘTE |
 | P3-SW | Dwa trafienia SSRF w `public/sw.js` | NIEZACZĘTE |
 | P3-ZIP | Trafienie SSRF w `src/lib/zipDocs.ts` | NIEZACZĘTE |
