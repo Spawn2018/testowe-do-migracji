@@ -1326,3 +1326,28 @@ Raport BAF: lista 8 bez ceny (86/94) + przyczyna każdego.
 - każde zamknięcie tygodnia przelicza prognozy pozostałych przyszłych transportów
 Test: dziś przyszłe transporty = 1,13 „prognoza"; symulacja zamknięcia tygodnia 41 → załadunki tygodnia 42 dostają ostateczny, reszta prognozę.
 Potem dalej według PLAN.md.
+
+## 2026-10-06 10:34 Europe/Warsaw — AUDYT PEŁNY KOORDYNATORA 06.10 — POPRAWKI
+
+Źródło: `docs/handover/AUDYT_PELNY_06_10.md` (każdy punkt: opis, zrzut, pomiar). Priorytet właściciela — przed resztą PLAN; P2-TILES odłożone (gałąź `feat/p2-tiles-06-10`, bez scalenia). Kolejność stała, punkt po punkcie:
+
+1. **Mapa — czas ładowania (A1)** — pierwszy kafelek po 22–30 s; 188 × rpc `load_track` (2 na transport), kafelki `here-raster` przez ten sam host co dane. Ślady/trasy jednym zapytaniem, tylko dla transportów z pozycjami GPS (dziś 1 z 94; bez pozycji zero zapytań); kafelki inną drogą niż dane (HERE z kluczem ograniczonym do domeny albo cache na brzegu Vercel/Cloudflare), licznik D-78 nadal liczy; podkład przed danymi; to samo w kokpicie i panelu zlecenia. Test Playwright (świeże otwarcie, 1366 i 390 px): pierwszy kafelek ≤ 2 s, komplet ≤ 5 s, zapytań do bazy przy otwarciu Mapy ≤ 20.
+2. **Dzwonek (A2)** — tytuł po polsku (transport · co się stało), „15 min temu”, klik → cel L-4, bez kodów szablonów, grupowanie zdarzeń tego samego typu dla transportu.
+3. **Panel KSH (A3)** — wg polecenia „KSH — PANEL ZLECENIA”; „Zmień ciągnik” niewidoczny dla KSH.
+4. **PL-DATA (A4)** — tytuły sytuacji Trafikverket po polsku ze słownika („E4: od X do Y, oba kierunki, region Z”), nie DeepL; kafelki HERE z językiem polskim.
+5. **Stare ETA (A5)** — wyczyścić `eta_site`/`eta_basis` dla 93 transportów przed wyjazdem ze Śremu (polecenie właściciela, dozwolone), zamknąć wynikające ryzyka; „–” wszędzie (tabela, lista przy mapie, eksporty, liczniki kokpitu — terminowość tylko z transportów w drodze).
+6. **Finanse (A6)** — jedno źródło liczb kokpit/Finanse; „Od przychodu do marży” z `load_cost`/`load_revenue`; marża % = marża/przychód (dziś 4,76 %, kokpit 4,4 %); usunąć nieaktualny „brak dopłaty”; „Kurs NBP · 0.0000 ·” → kurs z datą albo „kurs po rozładunku”.
+7. **Waluta (A7)** — domyślnie EUR dla każdego konta (U-5), PLN tylko po przełączeniu; sprawdzić konto testowe i skąd PLN.
+8. **Ustalenia / Status / Historia (B1–B2)** — Ustalenia = tylko czat; ręczne statusy → Status; bez przycisków linku kierowcy (D-79, DRV-CLOSE); bez „Wymiary zestawu” u przewoźnika (D-83); Status ≠ Historia; wpisy po polsku bez kodów/duplikatów/„READY → READY”; autor „imię nazwisko // firma”, automat „System // Watch Tower”.
+9. **Centrum decyzji (B3)** — kod transportu zamiast numeru SCX/identyfikatora; typy po polsku; jeden licznik w kokpicie, Centrum i banerze; brak numeru HHL i SCX = jedna decyzja z dwoma odpowiedzialnymi; klik → karta decyzji.
+10. **security_flags 403 (B4)** — odczyt dla zalogowanych (RLS: tylko HHL_ADMIN); przełączniki SMS w Opcjach pokazują stan.
+11. **Opcje — ładowanie sekcji (B5)** — dane przy rozwinięciu, „ładowanie…” zamiast „Brak”/„—”/„podkład zapas”.
+12. **Drobne z logiki (B6–B9)** — „za mało danych” poniżej 5 zdarzeń; „Ryzyko promowe” u przewoźnika z II-8; „Przychód tygodnia” jak tabela; H-8 profil trasy — przyczyna i naprawa; Rejsy domyślnie „Przyszłe”, 3 tygodnie.
+13. **Dane testowe poza R-0 (B10)** — tylko lista do akceptacji właściciela (polisa „Test OCP”, faktura WT-TEST-P6, testowe urządzenia bramki, konta testowe); **nic nie kasować**.
+14. **Błąd JS appendChild (B11)** — znaleźć i naprawić; zero błędów konsoli w 10 widokach × 3 role × 2 szerokości.
+15. **Telefon 390 px (C1)** — kokpit 1–2 kolumny bez obcięcia; tabele (Ryzyka, Dokumenty, Finanse, Faktury, Strefy, Opcje) karty albo przewijanie w sekcji; legenda nie zasłania mapy; plakietka dzwonka w nagłówku; cele dotyku ≥ 44 px; czcionka ≥ 12 px; test scrollWidth = ekran w 10 widokach × 3 role.
+16. **Komputer (C2)** — przyklejona Marża nie zakrywa Statusu (1280/1366); logo w jednej linii przy 1366; pasek etapów z liczbami i aktywnym etapem albo usunąć; tytuł logowania kontrast ≥ 4,5:1.
+17. **Teksty (C3)** — JSON w Automatyzacjach → opis PL; bez reguły „wgraj POD”; rozdzielone „Pobierz paczkę ZIP”/„Wgraj dokument”; „×1,14”, „4,8 %” jednolicie; daty z zerem wiodącym; „przerwa z GPS” bez duplikatu; odmiana „1 pojazd”; Strefy „Powiadamia” z odbiorcami; brak wyceny „—”; nagłówek widoku = nazwa w menu; liczniki mapy spójne.
+18. **Separator (D)** — SG-03 „ROBERT PREIHS|MICHAŁ MADEJ”: przepięcie („|”) czy dwóch kierowców („ / ”) — potwierdzić.
+
+Zasady: przy każdym punkcie przyczyna / poprawka / test / dowód (zrzut z produkcji Playwright, pomiar albo zapytanie SQL); sekcja w `docs/handover/RAPORT_AUDYT_06_10.md`, zrzuty w `docs/handover/audyt-06-10/`; migracje przez lokalną bramę (migracja w repo przed PROD); lokalna brama (testy, fresh-smoke, gate:visual — wzorce tylko dla zmian zamierzonych z commitem przyczyny; gitleaks 0; npm audit prod high 0); scalenie, Vercel prod, obie domeny 200; raport po każdym punkcie ze zrzutem.
