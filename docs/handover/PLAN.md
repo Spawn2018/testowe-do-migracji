@@ -437,7 +437,7 @@ Feed Aikido wyłączony (400). Pięć średnich, bez numerów CVE. Nie krytyczne
 |---|---|---|
 | P1-FONT | Czcionki z repozytorium (Barlow 400/500/600/700, Barlow Condensed 500/600/700, woff2 + OFL), zero fonts.googleapis.com i fonts.gstatic.com, także w CSP. W tej samej gałęzi P1-LINT. Wzorce odświeżone w środowisku bramy. | **DO SCALENIA** — `fix/p1-font` |
 | P1-LINT | 9 błędów stylelint w `src/index.css` (`clip`, `#brandSub`, `#roleLbl`, siedem `!important`) naprawione bez wyłączania reguł. Ta sama gałąź co P1-FONT. | **DO SCALENIA** — `fix/p1-font` |
-| P2-TILES | W testach wizualnych mapa korzysta z kafelków zapisanych lokalnie w repozytorium (bez pobierania z sieci), żeby aktualizacje u dostawcy nie psuły bramy. Na produkcji bez zmian. | NIEZACZĘTE |
+| P2-TILES | W testach wizualnych mapa korzysta z kafelków zapisanych lokalnie w repozytorium (bez pobierania z sieci), żeby aktualizacje u dostawcy nie psuły bramy. Na produkcji bez zmian. | **ODŁOŻONE — audyt 06.10** (gałąź `feat/p2-tiles-06-10`, `1024867`, bez scalenia): `scripts/visual/tiles.mjs` (TILES=replay/record/live), puppeteer w `baseline.mjs`, Playwright w `visual`/`visual-states`; 40 kafelków CARTO+Esri w `tests/fixtures/tiles`; mapa×30 replay = 30/30 z wzorcem, smoke 16/16, vitest 4/4; brak pełnej bramy przed scaleniem. Znalezisko: CARTO `dark_all` bez klucza = „API KEY REQUIRED” (podkład zapasowy ciemny na prod). WIP: `WIP_P2_TILES_06_10.md` |
 | P3-AND | Dwa eksportowane komponenty Androida w manifeście bramki SMS (score 60) | NIEZACZĘTE |
 | P3-SW | Dwa trafienia SSRF w `public/sw.js` | NIEZACZĘTE |
 | P3-ZIP | Trafienie SSRF w `src/lib/zipDocs.ts` | NIEZACZĘTE |
