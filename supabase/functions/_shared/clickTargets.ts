@@ -115,6 +115,9 @@ put(['FEE_DECIDED'], (i) => transport(i.loadCode, 'ceny'));
 put(['MESSAGE', 'USTALENIA', 'LOAD_CHAT_MESSAGE'], (i) => transport(i.loadCode, 'ustalenia'));
 put(['RATE_CHANGE', 'SEFS_CHANGE'], () => ({ kind: 'options', path: '/opcje/cennik' }));
 put(['CLIENT', 'BROADCAST', 'BANNER'], () => entry());
+// AUD-02: szablony powiadomień bez rozpoznanego zdarzenia źródłowego (noticeType) — karta transportu / decyzji.
+put(['RISK_OPEN', 'RISK_RESOLVED', 'RISK_SEVERITY', 'ZONE_ENTER', 'ZONE_EXIT', 'LOAD_STATUS_CHANGED'], (i) => transport(i.loadCode, 'status'));
+put(['DECISION_RESOLVED'], (i) => decision(i.decisionId));
 
 function realCode(code?: string | null): string {
   const c = (code ?? '').trim();
