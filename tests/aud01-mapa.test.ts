@@ -36,11 +36,22 @@ describe('AUD-01 pozycje GPS: jedno zapytanie', () => {
     expect(rpc).toHaveBeenCalledTimes(2);
   });
 
-  it('brak transportów z serwera → zero zapytań; błąd → brak pozycji', async () => {
-    expect(await fetchLatestVehicleFixes(['demo-1', 'x'])).toEqual([]);
+  it('brak transportów z serwera → zero zapytań; błąd → jedna ponowna próba, potem brak pozycji (bez zapamiętania)', async () => {
+    const wait = vi.fn(async () => {});
+    expect(await fetchLatestVehicleFixes(['demo-1', 'x'], 0, wait)).toEqual([]);
     expect(rpc).not.toHaveBeenCalled();
-    rpc.mockResolvedValue({ data: null, error: { message: 'x' } });
-    expect(await fetchLatestVehicleFixes([id(1)])).toEqual([]);
+    rpc.mockResolvedValue({ data: null, error: { message: 'canceling statement due to statement timeout' } });
+    expect(await fetchLatestVehicleFixes([id(1)], 0, wait)).toEqual([]);
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(wait).toHaveBeenCalledWith(1500);
+    rpc.mockReset();
+    rpc.mockResolvedValue({ data: [{ load_id: id(1), lat: 1, lng: 2 }], error: null });
+    expect(await fetchLatestVehicleFixes([id(1)], 1, wait)).toEqual([{ loadId: id(1), lat: 1, lng: 2 }]);
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+  it('AUD-01b: 500 (statement timeout) w pierwszej próbie, 200 w drugiej → pozycje są', async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { message: 'timeout' } }).mockResolvedValueOnce({ data: [{ load_id: id(7), lat: 3, lng: 4 }], error: null });
+    expect(await fetchLatestVehicleFixes([id(7)], 0, async () => {})).toEqual([{ loadId: id(7), lat: 3, lng: 4 }]);
   });
 
   it('parseFixRows odrzuca puste i nienumeryczne współrzędne; fixIds sortuje i usuwa duplikaty', () => {
@@ -66,12 +77,12 @@ describe('AUD-01 kafelki: brzeg Vercel, nie host danych', () => {
   it('localhost → wprost do funkcji', () => {
     const r = tileUrl({ z: 1, x: 0, y: 1 }, 'light', '127.0.0.1');
     expect(r.viaEdge).toBe(false);
-    expect(r.url).toMatch(/\/functions\/v1\/here-raster\?z=1&x=0&y=1&theme=light$/);
+    expect(r.url).toMatch(/\/functions\/v1\/here-raster\?z=1&x=0&y=1&theme=light&forceFunctionRegion=eu-west-1$/);
   });
   it('vercel.json: przepisanie /tiles → here-raster z pamięcią brzegu', () => {
     const v = JSON.parse(read('vercel.json')) as { rewrites: { source: string; destination: string }[]; headers: { source: string; headers: { key: string; value: string }[] }[] };
     const rw = v.rewrites.find((r) => r.source.startsWith('/tiles/'));
-    expect(rw?.destination).toMatch(/^https:\/\/nglnnrmzmhusvxslousq\.supabase\.co\/functions\/v1\/here-raster\?theme=:theme&z=:z&x=:x&y=:y$/);
+    expect(rw?.destination).toMatch(/^https:\/\/nglnnrmzmhusvxslousq\.supabase\.co\/functions\/v1\/here-raster\?theme=:theme&z=:z&x=:x&y=:y&forceFunctionRegion=eu-west-1$/);
     const h = v.headers.find((x) => x.source === '/tiles/(.*)');
     expect(h?.headers).toContainEqual({ key: 'x-vercel-enable-rewrite-caching', value: '1' });
   });
@@ -79,9 +90,20 @@ describe('AUD-01 kafelki: brzeg Vercel, nie host danych', () => {
     const f = read('supabase/functions/here-raster/index.ts');
     expect(f).toMatch(/x-wt-token/);
     expect(f).toMatch(/'vercel-cdn-cache-control': 'max-age=604800'/);
-    expect(f).toMatch(/here_note_service', \{ p_service: 'tiles', p_n: 1/);
+    expect(f).toMatch(/here_note_service', \{ p_service: 'tiles', p_n: n/);
+    expect(f).toMatch(/pending \+= 1/);
     expect(f).not.toMatch(/private, max-age/);
     expect(f).toMatch(/headers\.delete\('vary'\)/);
+  });
+  it('AUD-01b here-raster: sesja bez bazy (JWKS), budżet raz na 60 s, 404 spoza siatki w pamięci brzegu', () => {
+    const f = read('supabase/functions/here-raster/index.ts');
+    expect(f).toMatch(/createRemoteJWKSet\(new URL\(`\$\{supabaseUrl\}\/auth\/v1\/\.well-known\/jwks\.json`\)/);
+    expect(f).toMatch(/audience: 'authenticated'/);
+    expect(f).toMatch(/now - openCache\.at < 60_000/);
+    expect(f).toMatch(/status: 404, headers: h/);
+    const serve = f.slice(f.indexOf('Deno.serve'));
+    expect(serve).not.toMatch(/auth\.getUser|rpc\('here_tiles_open'\)|rpc\('here_note_service'/);
+    expect(read('src/components/map/applyBasemap.ts')).toMatch(/here-roads\?forceFunctionRegion=\$\{FUNCTION_REGION\}/);
   });
   it('podkład bez czekania na map_display_state; jeden odczyt stanu na stronę', () => {
     const b = read('src/components/map/applyBasemap.ts');

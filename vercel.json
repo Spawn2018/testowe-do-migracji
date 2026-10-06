@@ -38,7 +38,7 @@
   "rewrites": [
     {
       "source": "/tiles/:theme(light|dark)/:z(\\d+)/:x(\\d+)/:y(\\d+)",
-      "destination": "https://nglnnrmzmhusvxslousq.supabase.co/functions/v1/here-raster?theme=:theme&z=:z&x=:x&y=:y"
+      "destination": "https://nglnnrmzmhusvxslousq.supabase.co/functions/v1/here-raster?theme=:theme&z=:z&x=:x&y=:y&forceFunctionRegion=eu-west-1"
     }
   ]
 }

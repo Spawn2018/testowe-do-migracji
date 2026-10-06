@@ -12,6 +12,9 @@ import {
   type ThemeName,
 } from '../../lib/map/draw';
 
+/** AUD-01b: funkcje Edge w regionie bazy (eu-west-1), nie w regionie najbliższym przeglądarce. */
+export const FUNCTION_REGION = 'eu-west-1';
+
 const offKey = () => `wt-here-tiles-off-${warsawMonth(new Date())}`;
 
 function rememberTilesOff(): void {
@@ -78,7 +81,7 @@ export function tileUrl(
   const local = !host || host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local');
   if (!local && !edgeMissing) return { url: `/tiles/${theme}/${coords.z}/${coords.x}/${coords.y}`, viaEdge: true };
   return {
-    url: `${SUPABASE_URL}/functions/v1/here-raster?z=${coords.z}&x=${coords.x}&y=${coords.y}&theme=${theme}`,
+    url: `${SUPABASE_URL}/functions/v1/here-raster?z=${coords.z}&x=${coords.x}&y=${coords.y}&theme=${theme}&forceFunctionRegion=${FUNCTION_REGION}`,
     viaEdge: false,
   };
 }
@@ -217,7 +220,7 @@ export async function loadRoadLines(): Promise<LatLng[][]> {
     const { data } = await sb.auth.getSession();
     const token = data.session?.access_token;
     if (!token) return lines;
-    await fetch(`${SUPABASE_URL}/functions/v1/here-roads`, {
+    await fetch(`${SUPABASE_URL}/functions/v1/here-roads?forceFunctionRegion=${FUNCTION_REGION}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
