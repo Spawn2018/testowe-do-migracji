@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     return Response.json({ error: 'zly kafel' }, { status: 400, headers: corsHeaders(NO_STORE) });
   }
   const token = tileToken(req);
-  if (!token) return Response.json({ fallback: true }, { status: 401, headers: corsHeaders(NO_STORE) });
+  if (!token || token.split('.').length !== 3) return Response.json({ fallback: true }, { status: 401, headers: corsHeaders(NO_STORE) });
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   const sb = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });

@@ -44,7 +44,7 @@ const LOADS = Array.from({ length: 94 }, (_, i) => ({
   sailings: null,
 }));
 const FIX = { load_id: LOADS[0].id, ts: '2026-10-06T08:00:00Z', lat: 53.1, lng: 18.0 };
-const PNG = readFileSync(new URL('../../public/brand/watchtower-logo-full.png', import.meta.url));
+const PNG = readFileSync(process.env.TILE_PNG ?? new URL('../../public/brand/watchtower-logo-full.png', import.meta.url));
 
 function jwt() {
   const b = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -106,6 +106,12 @@ async function mockRoutes(ctx, stats) {
   });
 }
 
+function summarize(list) {
+  const byName = {};
+  for (const r of list) byName[r.name] = (byName[r.name] ?? 0) + 1;
+  return { total: list.length, loadTrack: byName['rpc/load_track'] ?? 0, latestVehicleFixes: byName['rpc/latest_vehicle_fixes'] ?? 0, byName };
+}
+
 function startPreview() {
   const proc = spawn('npx', ['vite', 'preview', '--outDir', BUILD, '--host', '127.0.0.1', '--port', String(PORT), '--strictPort'], { stdio: 'ignore', detached: true });
   return proc;
@@ -140,7 +146,8 @@ async function measure(browser, width) {
   const base = MOCK ? `http://wt-aud01.test:${PORT}/` : APP;
   await page.goto(base + '#/?lang=pl', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('[data-auth="session"], .app-shell, [data-page]', { timeout: 60000 }).catch(() => undefined);
-  await sleep(6000); // kokpit załadowany, ruch ucichł
+  await sleep(8000); // kokpit załadowany, ruch ucichł
+  const kokpit = summarize(stats.db);
   stats.db.length = 0; stats.tiles.length = 0;
   t0 = Date.now();
   await page.keyboard.press('m');
@@ -159,13 +166,21 @@ async function measure(browser, width) {
   if (rest > 0) await sleep(rest);
   const shot = `${OUT}/${LABEL}-${width}.png`;
   await page.screenshot({ path: shot });
-  const byName = {};
-  for (const r of stats.db) byName[r.name] = (byName[r.name] ?? 0) + 1;
+  const byName = summarize(stats.db).byName;
+  // panel zlecenia (szuflada z mapą) — klik w pierwszy wiersz listy przy mapie
+  stats.db.length = 0;
+  let panel = null;
+  try {
+    await page.locator('[data-page="map"] tbody tr').nth(2).click({ timeout: 5000 });
+    await sleep(8000);
+    panel = summarize(stats.db);
+    await page.screenshot({ path: `${OUT}/${LABEL}-${width}-panel.png` });
+  } catch { panel = { error: 'brak wiersza' }; }
   const res = {
     label: LABEL, width, mode: MOCK ? 'mock' : 'prod', firstTileMs: ft, allTilesMs: at,
     dbRequests12s: stats.db.length, loadTrack: byName['rpc/load_track'] ?? 0, latestVehicleFixes: byName['rpc/latest_vehicle_fixes'] ?? 0,
     tilesFinished: stats.tiles.length, tilePaths: [...new Set(stats.tiles.map((x) => x.url.replace(/\/\d+\/\d+\/\d+$/, '/z/x/y').replace(/^https?:\/\/[^/]+/, '')))],
-    dbByName: byName, screenshot: shot,
+    dbByName: byName, screenshot: shot, kokpit, panel,
   };
   await ctx.close();
   return res;
