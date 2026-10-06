@@ -8,7 +8,7 @@ import type {
   LoadEvent, LoadMessage, LoadResources, LoadStatus, Notification, OrgKind, Risk, RiskType, Severity,
 } from '../types';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
-import { renderNotice, asLocale } from '../../supabase/functions/_shared/notifyTemplates';
+import { renderNotice, asLocale, DECISION_LEAD } from '../../supabase/functions/_shared/notifyTemplates';
 import { clickFromPayload, clickTarget } from '../../supabase/functions/_shared/clickTargets';
 import { shows } from '../lib/prodFacade';
 import { autoRiskCode } from '../lib/sailings';
@@ -606,15 +606,32 @@ export interface NotificationRow {
   created_at: string; read_at: string | null;
 }
 export const NOTIFICATION_PREFIX = 'srv-';
+/** AUD-02: w dzwonku bez zdania przeznaczonego dla e-maila („Jedno zdarzenie, jeden e-mail…”). */
+function bellBody(body: string): string {
+  const leads = new Set(Object.values(DECISION_LEAD));
+  return body.split('\n').filter((l) => !leads.has(l.trim())).join(' ').trim();
+}
+
+/** AUD-02: kod transportu z ładunku (SG-xx / numer zlecenia), jeśli jest. */
+function payloadCode(p: Record<string, unknown>): string | undefined {
+  for (const k of ['code', 'load_code', 'hhl_order_no', 'order_no']) {
+    const v = p[k];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+  }
+  return undefined;
+}
+
 export function notificationFromRow(r: NotificationRow, locale?: string): Notification {
   const n = renderNotice({ template: r.template, payload: r.payload ?? {} }, locale ? asLocale(locale) : undefined);
   const payload = r.payload ?? {};
   const inv = payload.invoice_id;
   const target = clickTarget(clickFromPayload(r.template, payload, 'bell'));
   return {
-    id: `${NOTIFICATION_PREFIX}${r.id}`, at: r.created_at, title: n.subject, body: n.body, severity: n.severity,
+    id: `${NOTIFICATION_PREFIX}${r.id}`, at: r.created_at, title: n.subject, body: bellBody(n.body), severity: n.severity,
     loadId: r.load_id ?? undefined, read: Boolean(r.read_at),
     roleScope: r.template === 'SMS_FALLBACK' ? ['HHL'] : undefined,
+    kind: r.template,
+    code: payloadCode(payload),
     href: {
       view: n.view ?? undefined,
       entityId: typeof inv === 'string' ? inv : undefined,

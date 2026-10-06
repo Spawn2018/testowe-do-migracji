@@ -3,20 +3,12 @@ import { useTowerStore } from '../../store/useTowerStore';
 import { t } from '../../i18n/messages';
 import type { Severity } from '../../types';
 import { getNowMs } from '../../lib/frozenNow';
-import { bellVisible } from '../../lib/bellList';
+import { bellAge, bellGroups, type BellLocale } from '../../lib/bellList';
 
 function gut(s: Severity) {
   if (s === 'CRITICAL' || s === 'HIGH') return 'var(--red)';
   if (s === 'MEDIUM') return 'var(--amber)';
   return 'var(--plan)';
-}
-
-function relTime(iso: string) {
-  const ms = getNowMs() - Date.parse(iso);
-  const h = ms / 3600000;
-  if (h < 1) return `${Math.max(1, Math.round(h * 60))}m`;
-  if (h < 48) return `${h.toFixed(1)}h`;
-  return `${Math.round(h / 24)}d`;
 }
 
 export function NotificationBell() {
@@ -25,11 +17,17 @@ export function NotificationBell() {
   const notifications = useTowerStore((s) => s.notifications);
   const markAllNotificationsRead = useTowerStore((s) => s.markAllNotificationsRead);
   const openNotification = useTowerStore((s) => s.openNotification);
+  const markNotificationRead = useTowerStore((s) => s.markNotificationRead);
+  const loads = useTowerStore((s) => s.loads);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const visible = bellVisible(notifications, role).slice(0, 40);
+  // AUD-02: grupy (transport + rodzaj), tytuł „SG-xx · co się stało”, czas „15 min temu”
+  const lang: BellLocale = locale === 'en' || locale === 'sv' ? locale : 'pl';
+  const codeById = new Map(loads.map((l) => [l.id, l.code]));
+  const visible = bellGroups(notifications, role, (id) => codeById.get(id), lang).slice(0, 40);
   const unread = visible.length;
+  const nowMs = getNowMs();
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -97,9 +95,10 @@ export function NotificationBell() {
             {visible.length === 0 ? (
               <div className="panel-bd" style={{ color: 'var(--ink-3)' }}>{t(locale, 'no_notifications')}</div>
             ) : (
-              visible.map((n) => (
+              visible.map((g) => (
                 <div
-                  key={n.id}
+                  key={g.key}
+                  data-bell-count={g.count}
                   style={{
                     display: 'flex',
                     gap: 10,
@@ -110,20 +109,22 @@ export function NotificationBell() {
                   onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'var(--surface-2)' }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
                 >
-                  <span style={{ width: 3, alignSelf: 'stretch', flex: '0 0 3px', background: gut(n.severity) }} />
+                  <span style={{ width: 3, alignSelf: 'stretch', flex: '0 0 3px', background: gut(g.severity as Severity) }} />
                   <button
                     type="button"
                     style={{ flex: 1, textAlign: 'left', minWidth: 0, background: 'transparent', border: 0, padding: 0, cursor: 'pointer', color: 'var(--ink)', font: 'inherit' }}
                     onClick={() => {
-                      openNotification(n.id);
+                      openNotification(g.latest.id);
+                      for (const id of g.ids.slice(1)) markNotificationRead(id);
                       setOpen(false);
                     }}
                   >
-                    <div style={{ fontWeight: 500, lineHeight: 1.3 }}>{n.title}</div>
-                    <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.body}</div>
+                    <div style={{ fontWeight: 500, lineHeight: 1.3 }}>{g.title}</div>
+                    <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.body}</div>
                   </button>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                    <span className="age">{relTime(n.at)}</span>
+                    <span className="age">{bellAge(g.latest.at, nowMs, lang)}</span>
+                    {g.count > 1 ? <span className="age tabular" aria-label={`${g.count}`}>×{g.count}</span> : null}
                   </div>
                 </div>
               ))

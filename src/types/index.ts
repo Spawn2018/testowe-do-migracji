@@ -369,6 +369,10 @@ export interface Notification {
   /** Roles that see this notification; empty/undefined = all */
   roleScope?: RoleId[];
   href?: NotificationHref;
+  /** AUD-02: rodzaj zdarzenia (szablon) — tylko do grupowania w dzwonku, nigdy nie wyświetlany. */
+  kind?: string;
+  /** AUD-02: kod transportu z ładunku powiadomienia (gdy brak transportu w magazynie). */
+  code?: string;
 }
 
 export interface Risk {
