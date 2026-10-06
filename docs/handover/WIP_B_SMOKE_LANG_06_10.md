@@ -60,3 +60,8 @@ Smoke + gate:visual zielone po usunięciu `#langSeg` (8322d02). Tylko testy/wzor
 - vitest 836 passed / 35 skip; gitleaks historia 0 (dopisane 4 fałszywe alarmy: nazwy flag H3_CORRIDOR_OBSTACLES/H10_… w m0170/m0176/m0177 i 0170 — z main 05.10, nie z tej gałęzi); katalog: tylko `.env.local` (nieśledzony, lokalne sekrety); `npm audit --omit=dev --audit-level=high` 0
 - Posprzątane: stare podglądy, /tmp/wt-dbg-dist, /tmp/wt-smoke-dist, buildy bisekcji; `tmp-cand-pl` usunięty po odświeżeniu
 - Następny: PR #134 ready → scalenie → zamknięcie #133 → Vercel prod → obie domeny 200
+
+## 10:25 CEST — WDROŻONE
+- PR #134 scalony (`a78e876`, merge commit); #133 zamknięty z komentarzem (wiersz POSTEP w #134)
+- Vercel `dpl_DcRvzniRJvFTo1siEZ4B2SyKPfyz` READY, alias tower.log-mar.pl; obie domeny 200; poprawka B-PERSIST-TOAST w paczce prod
+- WIP zamknięty
