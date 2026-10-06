@@ -37,24 +37,40 @@ export function parseFixRows(data: unknown): VehicleFix[] {
   return out;
 }
 
-async function query(ids: string[]): Promise<VehicleFix[]> {
+/** AUD-01b: błąd (np. 500 po statement timeout przy zimnym starcie) — jedna ponowna próba po 1,5 s; wynik z błędem nie jest pamiętany. */
+export const FIX_RETRY_MS = 1500;
+async function query(ids: string[], wait: (ms: number) => Promise<void>): Promise<{ fixes: VehicleFix[]; failed: boolean }> {
   const sb = await getSupabase();
   const out: VehicleFix[] = [];
+  let failed = false;
   for (let i = 0; i < ids.length; i += FIX_BATCH_MAX) {
-    const res = await sb.rpc('latest_vehicle_fixes', { p_loads: ids.slice(i, i + FIX_BATCH_MAX) });
-    if (res.error) continue;
+    const args = { p_loads: ids.slice(i, i + FIX_BATCH_MAX) };
+    let res = await sb.rpc('latest_vehicle_fixes', args);
+    if (res.error) {
+      await wait(FIX_RETRY_MS);
+      res = await sb.rpc('latest_vehicle_fixes', args);
+    }
+    if (res.error) { failed = true; continue; }
     out.push(...parseFixRows(res.data));
   }
-  return out;
+  return { fixes: out, failed };
 }
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-export function fetchLatestVehicleFixes(loadIds: readonly string[], now: number = Date.now()): Promise<VehicleFix[]> {
+export function fetchLatestVehicleFixes(
+  loadIds: readonly string[],
+  now: number = Date.now(),
+  wait: (ms: number) => Promise<void> = sleep,
+): Promise<VehicleFix[]> {
   const ids = fixIds(loadIds);
   if (!ids.length) return Promise.resolve([]);
   const key = ids.join(',');
   const hit = cache.get(key);
   if (hit && now - hit.at < FIX_TTL_MS) return hit.p;
-  const p = query(ids).catch(() => [] as VehicleFix[]);
+  const p = query(ids, wait).then(
+    (r) => { if (r.failed) cache.delete(key); return r.fixes; },
+    () => { cache.delete(key); return [] as VehicleFix[]; },
+  );
   cache.set(key, { at: now, p });
   if (cache.size > 20) cache.delete(cache.keys().next().value as string);
   return p;
