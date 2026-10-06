@@ -10,6 +10,12 @@
  * Wzorzec = aktualny stan UI (dryf od dziś), nie HTML SoT.
  */
 import { test, expect, type Page } from '@playwright/test'
+// P2-TILES: kafelki mapy z repozytorium (tests/fixtures/tiles), bez sieci
+import { installPlaywrightTiles } from '../scripts/visual/tiles.mjs'
+
+test.beforeEach(async ({ page }) => {
+  await installPlaywrightTiles(page)
+})
 
 const FROZEN_NOW = '2026-09-23T14:32:00Z'
 const FROZEN_URL = `/#/?now=${encodeURIComponent(FROZEN_NOW)}`

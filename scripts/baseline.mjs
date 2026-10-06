@@ -29,6 +29,7 @@
  *   280-shot matrix (PL-only; was 840) (G4; 720 do Fali 3A): baseline never depends on migrated user state.
  */
 import puppeteer from 'puppeteer-core'
+import { installPuppeteerTiles, tileSummary, stats as tileStats } from './visual/tiles.mjs'
 import { createHash } from 'crypto'
 import { existsSync, mkdirSync, writeFileSync, readdirSync, readFileSync, statSync } from 'fs'
 import { join, dirname, relative } from 'path'
@@ -224,6 +225,8 @@ const browser = await puppeteer.launch({
 })
 
 const page = await browser.newPage()
+/* P2-TILES: kafelki podkładu z tests/fixtures/tiles (TILES=replay|record|live) */
+await installPuppeteerTiles(page)
 await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }])
 
 async function gotoFrozen(width) {
@@ -411,6 +414,7 @@ for (const job of jobs) {
 }
 
 await browser.close()
+console.log(tileSummary())
 if (RECTS_SEL.length) writeFileSync(join(OUT, '_rects.json'), JSON.stringify(rects, null, 1))
 
 const appChecksum = computeAppChecksum()
@@ -426,6 +430,7 @@ writeFileSync(
       frozenNow: FROZEN_NOW,
       appChecksum,
       url: frozenUrl(),
+      tiles: { mode: process.env.TILES || 'replay', served: tileStats.served, missing: tileStats.missing, recorded: tileStats.recorded },
       errors,
     },
     null,
@@ -434,3 +439,8 @@ writeFileSync(
 )
 console.log(`baseline done: ok=${ok} fail=${fail} / ${jobs.length} scriptVersion=${SCRIPT_VERSION}`)
 if (fail) process.exitCode = 1
+/* P2-TILES: brak kafelka w repozytorium = szary zastępnik w ujęciu → błąd (nie wolno go zapisać jako wzorca) */
+if ((process.env.TILES || 'replay') === 'replay' && tileStats.missing > 0) {
+  console.error(`baseline: brak ${tileStats.missing} kafelków w tests/fixtures/tiles — uzupełnij: TILES=record node scripts/baseline.mjs (z przyczyną)`)
+  process.exitCode = 1
+}

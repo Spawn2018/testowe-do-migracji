@@ -6,6 +6,12 @@
  * Wzorce: tests/__screenshots__/stan-*.png — odśwież tylko świadomie: npm run test:visual:update -- tests/visual-states.spec.ts
  */
 import { test, expect, type Page } from '@playwright/test'
+// P2-TILES: kafelki mapy z repozytorium (tests/fixtures/tiles), bez sieci
+import { installPlaywrightTiles } from '../scripts/visual/tiles.mjs'
+
+test.beforeEach(async ({ page }) => {
+  await installPlaywrightTiles(page)
+})
 import ExcelJS from 'exceljs'
 
 const FROZEN_URL = `/#/?now=${encodeURIComponent('2026-09-23T14:32:00Z')}`
