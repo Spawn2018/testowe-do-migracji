@@ -80,6 +80,7 @@ load_escorts_set | GUARD | select load_escorts_set('$L1', '[]'::jsonb) | HHL alb
 carrier_rate_load | GUARD | select carrier_rate_load('$L1', 5) | wyłącznie HHL
 carrier_scorecard | GUARD | select count(*) from carrier_scorecard() | wyłącznie dla HHL
 load_track | EMPTY | select count(*) from load_track('$L1') | 0
+latest_vehicle_fixes | EMPTY | select count(*) from latest_vehicle_fixes(array['$L1']::uuid[]) | 0
 load_escort_status | EMPTY | select count(*) from load_escort_status() | 0
 load_permit_save | GUARD | select load_permit_save('$L1', 'PL', 'X-1', current_date, current_date + 30, 30, 4, 4.5, 60) | HHL albo przewoźnik transportu
 load_permit_unlink | GUARD | select load_permit_unlink('$L1', '$PERMIT') | HHL albo przewoźnik transportu
