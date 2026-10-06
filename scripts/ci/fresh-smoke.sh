@@ -54,4 +54,5 @@ npm run test:deur
 npm run test:etap4
 npm run test:etap5
 npm run test:etap6
+npm run test:aud03
 echo "[fresh] OK"

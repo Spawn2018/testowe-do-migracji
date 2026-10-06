@@ -1377,3 +1377,37 @@ Polecenie koordynatora: AUD-02 odłożone jako WIP (`fix/aud-02-dzwonek`, `1fce0
 ## 2026-10-06 17:28 Europe/Warsaw — DECYZJA KOORDYNATORA (z polecenia właściciela AUD-01d): AUD-01e jedna mapa na sesję
 
 Cel właściciela AUD-01d („kolejne otwarcia i przejścia między widokami ≤ 0,3 s”) wymaga jednej instancji mapy na sesję — budować teraz w ramach AUD-01d (wiersz PLAN AUD-01e). Jedna trwała instancja mapy (Leaflet) dla widoku Mapa, mini-mapy kokpitu i panelu zlecenia: przenoszenie kontenera albo ukrycie, zmiana tylko warstw/widoku. Bez pobierania kafelków z wyprzedzeniem. Uwaga na wycieki pamięci i podwójnych słuchaczy. Testy: jedna instancja przy przejściach, brak ponownego tworzenia, brak nowych żądań kafelków przy powrocie przy niezmienionym widoku. Pomiar lokalny czasu do widocznej mapy przy powrocie (cel ≤ 0,3 s). Brama (z gate:visual, jeśli coś wygląda inaczej), scalenie, wdrożenie (git archive, jeśli Vercel blokuje), obie domeny 200, RAPORT/PLAN/POSTEP. Potem AUD-02 (WIP `fix/aud-02-dzwonek` `1fce0e9`).
+
+---
+
+## 06.10 — KSH — PANEL ZLECENIA (decyzja właściciela 05.10; treść przekazana 06.10 ~19:50, AUD-03)
+
+```
+KSH — PANEL ZLECENIA (decyzja właściciela 05.10; zastępuje dosłowne odczytanie B-KSH / punktu K.1 listy kontrolnej). Zapisz w POLECENIA_KOORDYNATORA.md.
+
+Słowa właściciela: „KSH powinno widzieć to, co każdy. W zakładce Przegląd powinien być przycisk Edytuj — taki sam jak dla SCX. Po kliknięciu powinno otwierać się okienko pop-up — jak SCX. Jedyne dane do edycji to data + godzina załadunku oraz rozładunku."
+
+Przyczyna (kod produkcyjny): w panelu zlecenia warunek „if (rola === KSH) return <KshSideMenu />" — KSH dostaje osobny, okrojony panel bez zakładek i danych. B-KSH „boczne menu tylko z Edytuj" znaczyło: jedynym PRZYCISKIEM zmian jest Edytuj, nie: panel zawiera tylko przycisk.
+
+1. Usuń osobny panel KshSideMenu. KSH widzi TEN SAM panel zlecenia co pozostali: wszystkie zakładki (Przegląd, Status, Dokumenty, Ceny, Ustalenia, Historia) i dane — w granicach dotychczasowych zasad widoczności dla KSH (bez kosztu przewoźnika i marży; faktura SCX niewidoczna — U-8; dane kierowcy widoczne — U-29; dopłaty: tylko akceptacja — 10f.4).
+2. W zakładce Przegląd przycisk „Edytuj" — taki sam wygląd i miejsce jak u przewoźnika (SCX).
+3. „Edytuj" otwiera okno (pop-up) jak u przewoźnika. Do edycji WYŁĄCZNIE: data i godzina załadunku oraz data i godzina rozładunku (okna od–do, jeśli plan je ma). Żadnych innych pól. Blokada także w bazie: KSH zmienia tylko te pola (test odmowy przez API).
+4. Zapis: wpis w Historii („imię nazwisko // KSH"), powiadomienia według macierzy DEC-4, przeliczenie ETA i opłaty paliwowej (tydzień załadunku), alarm zmiany daty na transporcie awizowanym (I-10). Zapis do pliku SharePoint — dopiero w II-10-E2 (bez zmian).
+5. „Zmień ciągnik" i inne przyciski przewoźnika/HHL niewidoczne dla KSH, z blokadą w bazie.
+6. Testy (rola KSH, konto testowe albo „Działaj jako" z konta testowego — nie z konta właściciela): panel ma wszystkie zakładki i dane; brak kosztu przewoźnika i marży; przycisk „Edytuj" w Przeglądzie; okno z polami dat i godzin; zapis zmienia daty i dodaje wpis w Historii; inne pola niedostępne (także przez API). ~~Zrzuty: panel KSH, okno edycji, wpis w Historii — komputer i 390 px.~~ **Zmiana 06.10 (zasada dowodów właściciela): zamiast zrzutów — testy Playwright w roli KSH z asercjami (komputer 1366 i 390 px: zakładki, brak kosztu/marży, „Edytuj”, pola okna, zapis + wpis w Historii, brak „Zmień ciągnik”, brak przewijania w poziomie) i test odmowy przez API (`tests/db/aud03.sh`).**
+
+Popraw B-KSH / K.1 w LISTA_KONTROLNA_ZESZYT.md i WERYFIKACJA_ZESZYT_05_10.md.
+
+DODATKOWO — E-MAILE (do punktu 8 audytu): teksty e-maili z powiadomień jak w dzwonku: tytuł „SG-xx · co się stało" po polsku, bez kodów szablonów, z linkiem do celu z L-4. Funkcja wysyłki może być zmieniona.
+```
+
+---
+
+## 06.10 ~20:20 — ZASADA DOWODÓW (właściciel; obowiązuje od teraz i w każdej kolejnej pracy)
+
+- ŻADNYCH zrzutów ekranu — ani robienia, ani oglądania jako dowodu — chyba że właściciel albo koordynator wprost o zrzut poprosi.
+- Dowód = test automatyczny (Playwright z asercjami: element istnieje, tekst, brak przewijania w poziomie, rola itd.) — nazwa testu i wynik w raporcie — albo zapytanie do bazy.
+- Po każdym wdrożeniu raport ma sekcję **„DO SPRAWDZENIA PRZEZ WŁAŚCICIELA”**: 2–5 punktów — gdzie kliknąć i co powinno być widać.
+- Brama wizualna (porównanie obrazów przez program) zostaje bez zmian.
+- AUD-03 pkt 6: zamiast zrzutów — testy Playwright w roli KSH (`tests/aud03-ksh-panel.spec.ts`) i test odmowy przez API (`tests/db/aud03.sh`).
+

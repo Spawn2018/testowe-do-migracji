@@ -140,8 +140,8 @@ Kopia JSON: lokalnie poza repo (`agent-data/.../konta-backup/`). **R2:** wrangle
 
 | numer | słowa właściciela | wynik | zrzut | PR / migracja |
 |-------|-------------------|-------|-------|---------------|
-| K.1 | KSH klik → menu tylko „Edytuj” | **poprawione** — boczne menu `data-ksh-side-menu` tylko przycisk Edytuj | `K.1.png` | PR #111 · `dpl_8tjC9YYtub7v9TQtK8v5TtWJi1SH` |
-| K.2 | Edycja dat/godzin załadunku i rozładunku | **poprawione** — formularz dat/okien + Potwierdź daty | `K.2.png` | PR #111 |
+| K.1 | KSH klik → ten sam panel co pozostali + „Edytuj” w Przeglądzie | **poprawione 06.10 (AUD-03)** — odczytanie z 05.10 („boczne menu tylko Edytuj”, PR #111) było błędne wg decyzji właściciela „KSH — PANEL ZLECENIA”; `KshSideMenu` usunięte, KSH ma pełny panel (6 zakładek, bez kosztu i marży) i „Edytuj” w Przeglądzie | Playwright `tests/aud03-ksh-panel.spec.ts` (rola KSH, 1366/390 px) | AUD-03 (PR i wdrożenie w RAPORT_AUDYT_06_10.md) |
+| K.2 | Edycja dat/godzin załadunku i rozładunku | **poprawione 06.10 (AUD-03)** — okno (pop-up) jak u przewoźnika, tylko 4 pola daty i godziny; RPC `ksh_confirm_dates` (0192), Historia „imię nazwisko // KSH”, odmowa innych pól przez API | Playwright `tests/aud03-ksh-panel.spec.ts` + baza `tests/db/aud03.sh` | AUD-03 |
 | R.1 | Widać rejsy Steny | **zgodne** — Estelle/Ebba/Spirit | `R.1.png` | stan prod |
 | R.2 | Tylko admin dodaje/edytuje | **zgodne** — „Dodaj rejs” + Opóźnienie/Odwołaj dla HHL admin | `R.1.png` | stan prod |
 | R.3 | Przyszłe / minione + filtr Przyszłe | **zgodne** — „Przyszłe” / „pokaż minione” | `R.1.png` | stan prod |
@@ -169,7 +169,7 @@ Wszystkie pozycje `LISTA_KONTROLNA_ZESZYT.md` możliwe **bez decyzji właścicie
 |--------|--------|------------|--------------------------------------|
 | §1–9 | wg tabeli wyżej | wg tabeli | 3.1 D-83; 8.3/8.9 w poczekalni |
 | §10 | większość | 10a.3/5/9/10; **10g.3** | 10a.1, 10a.6, 10c.1 → poczekalnia |
-| K.1–K.2 | — | **tak** (PR #111) | — |
+| K.1–K.2 | — | **tak** (AUD-03 06.10; PR #111 zastąpiony) | — |
 | R.1–R.4 | **tak** | — | — |
 | P6–P19 | P9, P11–P19 | **P6**, P7, P8, P10, P15 | — |
 | C.1 | **tak** | — | — |

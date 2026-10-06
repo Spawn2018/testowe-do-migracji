@@ -22,6 +22,7 @@
     "test:etap5": "playwright test tests/etap5-ui.spec.ts",
     "size": "node scripts/bundle-size.mjs dist",
     "test:etap6": "playwright test tests/etap6-ui.spec.ts",
+    "test:aud03": "playwright test tests/aud03-ksh-panel.spec.ts",
     "test:plt": "vitest run tests/pl-t.test.ts",
     "audit:a11y": "node scripts/a11y/audit.mjs",
     "test:db:hosted": "node scripts/test-db-gate.mjs",

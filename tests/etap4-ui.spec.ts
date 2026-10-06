@@ -52,10 +52,10 @@ async function openLoad(page: Page, code: string) {
   await page.locator('.drawer button[aria-selected]').nth(0).click()
   await page.waitForSelector('.drawer [data-order="hhl"]')
 }
-/** B-SMOKE-DRIFT: KSH ma wąskie menu „Edytuj” zamiast pełnej szuflady (B-K.1, 8322d02). */
+/** AUD-03 (KSH — PANEL ZLECENIA): KSH ma ten sam panel co pozostali; jedyny przycisk zmian = „Edytuj” w Przeglądzie. */
 async function openLoadKsh(page: Page, code: string) {
-  await page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: new RegExp(`^${code}$`) }) }).first().click()
-  await page.waitForSelector('.drawer[data-ksh-side-menu]')
+  await openLoad(page, code)
+  await page.waitForSelector('.drawer [data-ksh-edit]')
 }
 /** B-SMOKE-DRIFT: nr HHL edytowany w oknie awizacji (AWIZ-4 / HHL-4a, 13ace35), nie w polu szuflady. */
 async function setHhlOrder(page: Page, v: string) {
@@ -132,7 +132,9 @@ test.describe('M5 — numery zleceń', () => {
     await role(page, 'KSH')
     await nav(page, 'sched')
     await openLoadKsh(page, 'SG-11')
-    await expect(page.locator('.drawer [data-order]')).toHaveCount(0)
+    /* AUD-03: KSH widzi numery zleceń (odczyt), bez pól edycji */
+    await expect(page.locator('.drawer [data-order]')).toHaveCount(2)
+    await expect(page.locator('.drawer [data-order] input')).toHaveCount(0)
     await expect(page.locator('.drawer input')).toHaveCount(0)
   })
 })
@@ -263,8 +265,7 @@ test.describe('M8 — poziom wyceny i kurs tymczasowy', () => {
     await expect(page.locator('table.sched-table [data-col="cost"]')).toHaveCount(0)
     await openLoadKsh(page, 'SG-34')
     await expect(page.locator('.drawer [data-money-side]')).toHaveCount(0)
-    await page.locator('.drawer .drawer-hd button.x').click()
-    await page.waitForSelector('.drawer', { state: 'detached' })
+    await closeDrawer(page)
 
     await role(page, 'HHL')
     await nav(page, 'fin')

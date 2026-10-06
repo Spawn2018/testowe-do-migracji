@@ -178,3 +178,7 @@ Zamierzona zmiana UI: usunięte wiersze „Pilotaż i dodatki” / „Przychód 
 ## B-4b (05.10.2026) — Faktury: załącznik tylko CMR
 
 Zamierzona zmiana: bez POD w załącznikach faktury. Odświeżone zmienione ujęcia `faktury__*` / `faktury-przychodowe__*`.
+
+## AUD-03 (06.10.2026) — Harmonogram KSH bez „Zmień ciągnik”
+
+Zamierzona zmiana UI (polecenie AUD-03: „Zmień ciągnik” niewidoczny dla roli KSH; baza i tak odmawia — `tests/db/aud03.sh`). gate:visual na `b52dcc5`: 274/280, zmienione wyłącznie `harmonogram__ksh__pl__{1280,1440,1920}__{dark,light-default}` (6). Odświeżono te 6 ujęć z przebiegu bramy (kolejność pełnej matrycy). Innych ujęć nie ruszano.

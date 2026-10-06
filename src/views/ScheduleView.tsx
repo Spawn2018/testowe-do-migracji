@@ -7,7 +7,7 @@ import { MAP_FIELDS as MAP_FIELDS_UI, REQUIRED_FIELDS as REQUIRED_FIELDS_UI, typ
 import { useTowerStore } from '../store/useTowerStore';
 import { filterLoads } from '../lib/selectors';
 import { StatusPill, formatDelayPill } from '../components/ui/StatusPill';
-import { canImportSchedule, canSeeCost, canSeeMargin, canSeeRevenue } from '../lib/permissions';
+import { canEditResources, canImportSchedule, canSeeCost, canSeeMargin, canSeeRevenue } from '../lib/permissions';
 import { fmtNum, pctText, t, tp } from '../i18n/messages';
 import { formatTowerPair } from '../lib/cSep';
 import { docCategoryLabel } from '../lib/enumLabels';
@@ -843,6 +843,7 @@ export function ScheduleView() {
                   <tr
                     key={l.id}
                     data-load={l.id}
+                    data-status={l.status}
                     className={`${l.status === 'DELIVERED' ? 'done' : ''} ${hoverLoadId === l.id || selectedLoadId === l.id ? 'hl' : ''}`}
                     onMouseEnter={() => setHoverLoad(l.id)}
                     onMouseLeave={() => setHoverLoad(null)}
@@ -947,9 +948,12 @@ export function ScheduleView() {
                               ) : (
                                 <span className="muted">—</span>
                               )}
+                              {/* AUD-03: „Zmień ciągnik” tylko przewoźnik i HHL (KSH — brak przycisku; baza też odmawia) */}
+                              {canEditResources(role) ? (
                               <button
                                 type="button"
                                 className="btn ghost"
+                                data-change-tractor
                                 style={{ fontSize: 11, padding: '2px 6px', marginLeft: 4 }}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -960,6 +964,7 @@ export function ScheduleView() {
                               >
                                 {t(locale, 'a6_sch_change_tractor')}
                               </button>
+                              ) : null}
                             </td>
                           );
                         case 'eta':
@@ -1013,6 +1018,7 @@ export function ScheduleView() {
                 type="button"
                 className={`sched-card${hoverLoadId === l.id || selectedLoadId === l.id ? ' hl' : ''}`}
                 data-load={l.id}
+                data-status={l.status}
                 onClick={() => selectLoad(l.id)}
               >
                 <div className="r1">

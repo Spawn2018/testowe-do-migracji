@@ -106,8 +106,9 @@ Przejdź w aplikacji tower.log-mar.pl. Odpisz tylko numery, które **NIE działa
 - **10g.3** Powiadomienie o nowej wiadomości
 
 ## Lista harmonogramu KSH (zaloguj się jako KSH albo „Działaj jako”)
-- **K.1** Kliknięcie → boczne menu tylko z „Edytuj”
-- **K.2** Edycja dat i godzin załadunku i rozładunku
+- **K.1** Kliknięcie → TEN SAM panel zlecenia co pozostali (zakładki Przegląd, Status, Dokumenty, Ceny, Ustalenia, Historia i dane — bez kosztu przewoźnika i marży); jedynym przyciskiem zmian jest „Edytuj” w Przeglądzie (jak u przewoźnika). *(KSH — PANEL ZLECENIA, decyzja właściciela 05.10 — zastępuje „boczne menu tylko z Edytuj”)*
+- **K.2** „Edytuj” otwiera okno (pop-up) jak u przewoźnika: WYŁĄCZNIE data i godzina załadunku oraz rozładunku (okna od–do); zapis → wpis w Historii „imię nazwisko // KSH”. Inne pola niedostępne, także przez API.
+- **K.3** „Zmień ciągnik” i inne przyciski przewoźnika/HHL niewidoczne dla KSH (blokada także w bazie)
 
 ## Rejsy
 - **R.1** Widać rejsy Steny
