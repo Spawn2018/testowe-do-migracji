@@ -53,6 +53,8 @@ Kryterium „zapytań przy otwarciu Mapy ≤ 20”: **4** ✔. „Zero zapytań 
 | `/tiles/light/4/8/4` na obu domenach bez sesji | 401, `cache-control: no-store`, `x-vercel-cache: MISS` — przepisanie działa, odpowiedzi bez sesji nie trafiają do pamięci |
 | SQL prod | 94 transporty aktywne, **1** z pozycją GPS, 217 wierszy `positions`; `latest_vehicle_fixes(94 id)` jako HHL → 1 wiersz, 214 ms |
 
+**Pomiar prod po zalogowaniu — dopisze koordynator** (czasy kafelków 1366/390, zapytania przy otwarciu Mapy, `x-vercel-cache: HIT`).
+
 **Czego nie zmierzyłem na produkcji:** pierwszy kafelek ≤ 2 s / komplet ≤ 5 s / zapytania ≤ 20 po zalogowaniu i trafienie `x-vercel-cache: HIT` dla kafelka. Wymaga zalogowanej sesji (konto testowe HHL); wykonawca nie ma danych logowania i nie tworzy sobie dostępu. Do wykonania przez osobę z kontem testowym:
 `APP=https://tower.log-mar.pl STORAGE=<storageState.json zalogowanej sesji> LABEL=prod-po node scripts/audyt/aud01-measure.mjs` (1366 i 390 px, wynik JSON + zrzuty). Drugi przebieg w nowym kontekście powinien mieć kafelki z `x-vercel-cache: HIT`.
 
