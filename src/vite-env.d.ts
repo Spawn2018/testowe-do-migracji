@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
+  /** AUD-01d: klucz HERE dla przeglądarki, ograniczony w panelu HERE (Trusted domains) do domen aplikacji. Brak → pośrednik /tiles. */
+  readonly VITE_HERE_BROWSER_KEY?: string;
   readonly VITE_MAPTILER_KEY?: string;
   readonly VITE_PSEUDO?: string;
   readonly VITE_AIS_WS_URL?: string;

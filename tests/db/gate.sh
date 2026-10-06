@@ -96,6 +96,6 @@ check h3 20
 check smsksh 16
 check ferrystatus 8
 check h4 19
-check bmapa 23
+check bmapa 33
 check baf 46
 [ $ok -eq 1 ]

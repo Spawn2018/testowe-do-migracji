@@ -43,5 +43,24 @@ val "pula traffic w parametrach" "select value::text from app_parameters where k
 val "traffic w puli koszt 0" "select here_note_service('traffic', 5000, 0, '2026-10-05 12:00+02'); select estimated_usd::text from here_usage where month='2026-10-01' and service='traffic'" "0.0000"
 val "traffic ponad pulę liczy stawkę" "select here_note_service('traffic', 1, 0, '2026-10-05 12:05+02'); select estimated_usd::text from here_usage where month='2026-10-01' and service='traffic'" "0.0029"
 
+# AUD-01d: przeglądarka zgłasza zbiorczo kafelki HERE (klucz przeglądarkowy) → here_usage.tiles
+KSH=11111111-0000-0000-0000-000000000002
+asu() { $PSQL -v ON_ERROR_STOP=1 -c "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; $2; commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT|ROLLBACK|CONTEXT:.*)$' | tail -1; }
+val "anon nie zgłasza kafelków" "select has_function_privilege('anon','here_tiles_report(integer)','execute')::text" "false"
+val "zalogowany zgłasza kafelki" "select has_function_privilege('authenticated','here_tiles_report(integer)','execute')::text" "true"
+val "okno zgłoszeń niedostępne dla konta" "select has_table_privilege('authenticated','here_tile_reports','select')::text" "false"
+sys "update app_parameters set value=100000000 where key='HERE_TILES_FREE'" >/dev/null
+b=$(sys "select coalesce((select requests from here_usage where month=(date_trunc('month', now() at time zone 'Europe/Warsaw'))::date and service='tiles'),0)")
+o=$(asu "$KSH" "select here_tiles_report(40)->>'tiles_open'")
+a=$(sys "select requests from here_usage where month=(date_trunc('month', now() at time zone 'Europe/Warsaw'))::date and service='tiles'")
+if [ "$o" = "true" ] && [ "$a" = "$((b+40))" ]; then ok=$((ok+1)); echo "  OK    zgłoszenie 40 kafelków → here_usage.tiles +40, tiles_open"; else fail=$((fail+1)); echo "  FAIL  zgłoszenie kafelków ($b → $a, $o)"; fi
+o=$(asu "$KSH" "select here_tiles_report(0)->>'tiles_open'"); [ "$o" = "true" ] && { ok=$((ok+1)); echo "  OK    zgłoszenie 0 → stan budżetu"; } || { fail=$((fail+1)); echo "  FAIL  zgłoszenie 0 → $o"; }
+o=$(asu "$KSH" "select here_tiles_report(5001)"); echo "$o" | grep -q "Zła liczba" && { ok=$((ok+1)); echo "  OK    > 5000 na wywołanie odrzucone"; } || { fail=$((fail+1)); echo "  FAIL  > 5000 → $o"; }
+o=$(asu "$KSH" "select here_tiles_report(-1)"); echo "$o" | grep -q "Zła liczba" && { ok=$((ok+1)); echo "  OK    ujemne odrzucone"; } || { fail=$((fail+1)); echo "  FAIL  ujemne → $o"; }
+o=$(asu "$KSH" "select here_tiles_report(5000); select here_tiles_report(5000); select here_tiles_report(5000); select here_tiles_report(5000)"); echo "$o" | grep -q "Za dużo" && { ok=$((ok+1)); echo "  OK    > 20000 na minutę na konto odrzucone"; } || { fail=$((fail+1)); echo "  FAIL  limit minutowy → $o"; }
+o=$(asu "99999999-0000-0000-0000-000000000009" "select here_tiles_report(1)"); echo "$o" | grep -q "Brak aktywnego konta" && { ok=$((ok+1)); echo "  OK    bez konta odmowa"; } || { fail=$((fail+1)); echo "  FAIL  bez konta → $o"; }
+sys "update app_parameters set value=0 where key='HERE_TILES_FREE'; update app_parameters set value=1 where key='HERE_TILES_RATE_USD'" >/dev/null
+o=$(asu "11111111-0000-0000-0000-000000000003" "select here_tiles_report(1)->>'tiles_open'"); [ "$o" = "false" ] && { ok=$((ok+1)); echo "  OK    od 80% budżetu zgłoszenie zwraca tiles_open=false (zapas)"; } || { fail=$((fail+1)); echo "  FAIL  80% → $o"; }
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

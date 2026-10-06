@@ -99,7 +99,7 @@ describe('AUD-01c kafelki: publiczne, /tiles/<styl HERE>, brzeg Vercel (fra1) �
     const src = read('api/tiles.js');
     expect(src).not.toMatch(/'set-cookie'|Authorization|'vary'/);
   });
-  it('api/tiles GET: obraz → 200 z pamięcią z here-raster; błąd → no-store; 404 spoza siatki → 1 h', async () => {
+  it('api/tiles GET (AUD-01d): obraz → 200 private (bez s-maxage, nawet gdy upstream poda public); błąd → no-store; 404 spoza siatki → private 1 h', async () => {
     const t = await import('../api/tiles.js');
     const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
     const real = globalThis.fetch;
@@ -107,7 +107,7 @@ describe('AUD-01c kafelki: publiczne, /tiles/<styl HERE>, brzeg Vercel (fra1) �
       globalThis.fetch = vi.fn(async () => new Response(png, { headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=3600, s-maxage=3600', 'set-cookie': 'a=b', 'x-sb-edge-region': 'eu-central-1' } })) as typeof fetch;
       const ok = await t.GET(new Request('https://tower.log-mar.pl/api/tiles?style=logistics.day&z=6&x=35&y=21'));
       expect(ok.status).toBe(200);
-      expect(ok.headers.get('cache-control')).toBe('public, max-age=3600, s-maxage=3600');
+      expect(ok.headers.get('cache-control')).toBe('private, max-age=3600');
       expect(ok.headers.get('set-cookie')).toBeNull();
       expect(ok.headers.get('x-sb-edge-region')).toBe('eu-central-1');
       expect(String((globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0])).toMatch(/style=logistics\.day&z=6&x=35&y=21&forceFunctionRegion=eu-central-1$/);
@@ -117,23 +117,25 @@ describe('AUD-01c kafelki: publiczne, /tiles/<styl HERE>, brzeg Vercel (fra1) �
       expect(closed.headers.get('cache-control')).toBe('no-store');
       const bad = await t.GET(new Request('https://tower.log-mar.pl/api/tiles?style=light&z=4&x=99&y=0'));
       expect(bad.status).toBe(404);
-      expect(bad.headers.get('cache-control')).toMatch(/s-maxage=3600/);
+      expect(bad.headers.get('cache-control')).toBe('private, max-age=3600');
+      expect(t.privateCache('public, max-age=99999, s-maxage=99999')).toBe('private, max-age=86400');
     } finally {
       globalThis.fetch = real;
     }
   });
-  it('zasady kafelków: Referer tylko dwie domeny, s-maxage z nagłówka HERE (≤ 7 dni), limit częstości', async () => {
+  it('zasady kafelków: Referer tylko dwie domeny, AUD-01d private max-age z nagłówka HERE (≤ 24 h), limit częstości', async () => {
     const p = await import('../supabase/functions/_shared/map/tilePolicy');
     expect(p.refererOk(null)).toBe(true);
     expect(p.refererOk('https://tower.log-mar.pl/#/mapa')).toBe(true);
     expect(p.refererOk('https://watch-tower-makieta.vercel.app/')).toBe(true);
     expect(p.refererOk('https://evil.example/')).toBe(false);
     expect(p.refererOk('https://tower.log-mar.pl.evil.example/')).toBe(false);
-    expect(p.edgeSeconds('max-age=3600')).toBe(3600);
-    expect(p.edgeSeconds('public, max-age=86400')).toBe(86400);
-    expect(p.edgeSeconds('max-age=99999999')).toBe(604800);
-    expect(p.edgeSeconds(null)).toBe(3600);
-    expect(p.tileCacheControl('max-age=3600')).toBe('public, max-age=3600, s-maxage=3600');
+    expect(p.browserSeconds('max-age=3600')).toBe(3600);
+    expect(p.browserSeconds('public, max-age=86400')).toBe(86400);
+    expect(p.browserSeconds('max-age=99999999')).toBe(86400);
+    expect(p.browserSeconds(null)).toBe(3600);
+    expect(p.tileCacheControl('max-age=3600')).toBe('private, max-age=3600');
+    expect(p.tileCacheControl('public, max-age=604800')).not.toMatch(/s-maxage|public/);
     expect(p.STYLE.light).toBe('logistics.day');
     expect(p.STYLE.dark).toBe('logistics.night');
     expect(p.gridOk(19, 2 ** 19 - 1, 0)).toBe(true);
