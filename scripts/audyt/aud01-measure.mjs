@@ -166,7 +166,8 @@ async function measure(browser, width) {
   if (rest > 0) await sleep(rest);
   const shot = `${OUT}/${LABEL}-${width}.png`;
   await page.screenshot({ path: shot });
-  const byName = summarize(stats.db).byName;
+  const mapa = summarize(stats.db);
+  const byName = mapa.byName;
   // panel zlecenia (szuflada z mapą) — klik w pierwszy wiersz listy przy mapie
   stats.db.length = 0;
   let panel = null;
@@ -178,7 +179,7 @@ async function measure(browser, width) {
   } catch { panel = { error: 'brak wiersza' }; }
   const res = {
     label: LABEL, width, mode: MOCK ? 'mock' : 'prod', firstTileMs: ft, allTilesMs: at,
-    dbRequests12s: stats.db.length, loadTrack: byName['rpc/load_track'] ?? 0, latestVehicleFixes: byName['rpc/latest_vehicle_fixes'] ?? 0,
+    dbRequests12s: mapa.total, loadTrack: byName['rpc/load_track'] ?? 0, latestVehicleFixes: byName['rpc/latest_vehicle_fixes'] ?? 0,
     tilesFinished: stats.tiles.length, tilePaths: [...new Set(stats.tiles.map((x) => x.url.replace(/\/\d+\/\d+\/\d+$/, '/z/x/y').replace(/^https?:\/\/[^/]+/, '')))],
     dbByName: byName, screenshot: shot, kokpit, panel,
   };
