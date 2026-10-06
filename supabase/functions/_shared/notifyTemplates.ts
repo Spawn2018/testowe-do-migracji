@@ -51,6 +51,42 @@ function digestLine(p: Record<string, unknown>, locale: NotifyLocale): RenderedN
   return { subject, body: `${lead}\n${list}`, severity: 'LOW', view: 'risk' };
 }
 
+/** AUD-02: statusy transportu w treści powiadomień (enum load_status, 0001). */
+const STATUS_TXT: Record<NotifyLocale, Record<string, string>> = {
+  pl: {
+    PLANNED: 'zaplanowany', RESOURCES_PENDING: 'czeka na zasoby', DOCS_PENDING: 'czeka na dokumenty', READY: 'gotowy',
+    AT_LOADING: 'na załadunku', IN_TRANSIT_PL: 'w drodze PL', AT_PORT_GDANSK: 'w porcie Gdańsk', FERRY: 'na promie',
+    AT_PORT_NYNASHAMN: 'w porcie Nynäshamn', IN_TRANSIT_SE: 'w drodze SE', AT_SITE: 'na placu', UNLOADED: 'rozładowany',
+    DELIVERED: 'dostarczony', CANCELLED: 'anulowany',
+  },
+  en: {
+    PLANNED: 'planned', RESOURCES_PENDING: 'awaiting resources', DOCS_PENDING: 'awaiting documents', READY: 'ready',
+    AT_LOADING: 'loading', IN_TRANSIT_PL: 'in transit PL', AT_PORT_GDANSK: 'at port Gdańsk', FERRY: 'on ferry',
+    AT_PORT_NYNASHAMN: 'at port Nynäshamn', IN_TRANSIT_SE: 'in transit SE', AT_SITE: 'on site', UNLOADED: 'unloaded',
+    DELIVERED: 'delivered', CANCELLED: 'cancelled',
+  },
+  sv: {
+    PLANNED: 'planerad', RESOURCES_PENDING: 'väntar på resurser', DOCS_PENDING: 'väntar på dokument', READY: 'klar',
+    AT_LOADING: 'lastas', IN_TRANSIT_PL: 'på väg PL', AT_PORT_GDANSK: 'i hamn Gdańsk', FERRY: 'på färja',
+    AT_PORT_NYNASHAMN: 'i hamn Nynäshamn', IN_TRANSIT_SE: 'på väg SE', AT_SITE: 'på plats', UNLOADED: 'lossad',
+    DELIVERED: 'levererad', CANCELLED: 'avbokad',
+  },
+};
+export function statusText(code: unknown, locale: NotifyLocale): string {
+  const c = String(code ?? '').toUpperCase();
+  return STATUS_TXT[locale][c] ?? (locale === 'en' ? 'other status' : locale === 'sv' ? 'annan status' : 'inny status');
+}
+const SEV_TXT: Record<NotifyLocale, Record<string, string>> = {
+  pl: { LOW: 'niska', MEDIUM: 'średnia', HIGH: 'wysoka', CRITICAL: 'krytyczna' },
+  en: { LOW: 'low', MEDIUM: 'medium', HIGH: 'high', CRITICAL: 'critical' },
+  sv: { LOW: 'låg', MEDIUM: 'medel', HIGH: 'hög', CRITICAL: 'kritisk' },
+};
+/** Tytuł ryzyka bez technicznego przedrostka „f34bf056: ” (początek identyfikatora transportu). */
+export function cleanRiskTitle(v: unknown): string {
+  return String(v ?? '').replace(/^[0-9a-f]{8}:\s*/i, '').trim();
+}
+const asSev = (v: unknown): RenderedNotice['severity'] => (v === 'CRITICAL' || v === 'HIGH' || v === 'MEDIUM' ? v : 'LOW');
+
 export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): RenderedNotice {
   const p = row.payload ?? {};
   const locale = localeOverride ?? asLocale(p.locale);
@@ -289,8 +325,47 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
         locale === 'en' ? `${who}: ${preview}` : locale === 'sv' ? `${who}: ${preview}` : `${who}: ${preview}`;
       return { subject, body, severity: 'MEDIUM', view: null };
     }
-    default:
-      return { subject: row.template, body: '', severity: 'LOW', view: null };
+    case 'RISK_OPEN':
+    case 'RISK_RESOLVED':
+    case 'RISK_SEVERITY': {
+      // AUD-02: zdarzenia ryzyka (dziś 1 254 + 594 + 62 wpisów w dzwonku na produkcji) — wcześniej gałąź default = kod szablonu
+      const title = cleanRiskTitle(p.title) || (locale === 'en' ? 'risk' : locale === 'sv' ? 'risk' : 'ryzyko');
+      const sev = SEV_TXT[locale][asSev(p.severity)];
+      const subject = row.template === 'RISK_OPEN'
+        ? (locale === 'en' ? `New risk: ${title}` : locale === 'sv' ? `Ny risk: ${title}` : `Nowe ryzyko: ${title}`)
+        : row.template === 'RISK_RESOLVED'
+          ? (locale === 'en' ? `Risk closed: ${title}` : locale === 'sv' ? `Risk stängd: ${title}` : `Ryzyko zamknięte: ${title}`)
+          : (locale === 'en' ? `Risk now ${sev}: ${title}` : locale === 'sv' ? `Risken är nu ${sev}: ${title}` : `Ryzyko teraz ${sev}: ${title}`);
+      const body = locale === 'en' ? `Severity: ${sev}.` : locale === 'sv' ? `Allvarlighet: ${sev}.` : `Waga: ${sev}.`;
+      return { subject, body, severity: row.template === 'RISK_RESOLVED' ? 'LOW' : asSev(p.severity), view: 'risk' };
+    }
+    case 'DECISION_RESOLVED': {
+      const title = String(p.title ?? '').trim();
+      const subject = locale === 'en' ? `Decision closed: ${title}` : locale === 'sv' ? `Beslut stängt: ${title}` : `Decyzja zamknięta: ${title}`;
+      return { subject, body: '', severity: 'LOW', view: 'risk' };
+    }
+    case 'ZONE_ENTER':
+    case 'ZONE_EXIT': {
+      const name = String(p.geofence_name ?? '').trim();
+      const enter = row.template === 'ZONE_ENTER';
+      const subject = locale === 'en'
+        ? `${enter ? 'Entered' : 'Left'} zone${name ? ` ${name}` : ''}`
+        : locale === 'sv' ? `${enter ? 'Körde in i' : 'Lämnade'} zon${name ? ` ${name}` : ''}`
+        : `${enter ? 'Wjazd do strefy' : 'Wyjazd ze strefy'}${name ? ` ${name}` : ''}`;
+      return { subject, body: '', severity: 'LOW', view: null };
+    }
+    case 'LOAD_STATUS_CHANGED': {
+      const from = statusText(p.from, locale);
+      const to = statusText(p.to, locale);
+      const subject = locale === 'en' ? `Status: ${from} → ${to}` : locale === 'sv' ? `Status: ${from} → ${to}` : `Status: ${from} → ${to}`;
+      return { subject, body: '', severity: 'LOW', view: null };
+    }
+    default: {
+      // AUD-02: nigdy kod szablonu w treści dla użytkownika
+      const title = String(p.title ?? '').trim();
+      const subject = title || (locale === 'en' ? 'System event' : locale === 'sv' ? 'Systemhändelse' : 'Zdarzenie w systemie');
+      return { subject, body: '', severity: 'LOW', view: null };
+    }
   }
 }
 

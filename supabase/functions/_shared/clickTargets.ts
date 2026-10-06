@@ -175,6 +175,22 @@ export function clickTarget(input: ClickInput): ClickTarget {
   return base;
 }
 
+/**
+ * AUD-02: szablony powiadomień, które nie są typem zdarzenia z tabeli CELE — cel jak dla zdarzenia źródłowego
+ * (ryzyko → jego rodzaj, wjazd/wyjazd ze strefy → GEOFENCE_*, zmiana statusu → STATUS_CHANGE, decyzja → karta decyzji).
+ */
+export function noticeType(template: string, p: Record<string, unknown>): string {
+  if (template === 'RISK_OPEN' || template === 'RISK_RESOLVED' || template === 'RISK_SEVERITY') {
+    const kind = typeof p.kind === 'string' ? p.kind : '';
+    return kind && TABLE[kind] ? kind : template;
+  }
+  if (template === 'ZONE_ENTER') return 'GEOFENCE_ENTER';
+  if (template === 'ZONE_EXIT') return 'GEOFENCE_EXIT';
+  if (template === 'LOAD_STATUS_CHANGED') return 'STATUS_CHANGE';
+  if (template === 'DECISION_RESOLVED') return 'DECISION';
+  return template;
+}
+
 /** Ten sam zestaw pól z kokpitu, listy ryzyk, dzwonka i e-maila. */
 export function clickFromPayload(
   template: string,
@@ -185,7 +201,7 @@ export function clickFromPayload(
   const code = typeof p.code === 'string' ? p.code : null;
   return {
     source,
-    type: template,
+    type: noticeType(template, p),
     decisionId: typeof p.decision_id === 'string' ? p.decision_id : null,
     loadCode: code,
     invoiceId: typeof p.invoice_id === 'string' ? p.invoice_id : null,
