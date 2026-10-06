@@ -1,0 +1,17 @@
+# AUD-01b curl PRZED wdrożeniem — 2026-10-06 11:35 CEST (box, wyjście z USA)
+tower.log-mar.pl /tiles/light/4/99/0 try1 code=400 ttfb=0.945682s
+  cache-control: no-store
+  x-sb-edge-region: us-east-2
+  x-vercel-cache: MISS
+tower.log-mar.pl /tiles/light/4/99/0 try2 code=400 ttfb=0.481237s
+  cache-control: no-store
+  x-sb-edge-region: us-east-2
+  x-vercel-cache: MISS
+watch-tower-makieta.vercel.app /tiles/light/4/99/0 try1 code=400 ttfb=0.208321s
+  cache-control: no-store
+  x-sb-edge-region: us-east-1
+  x-vercel-cache: MISS
+watch-tower-makieta.vercel.app /tiles/light/4/99/0 try2 code=400 ttfb=0.244912s
+  cache-control: no-store
+  x-sb-edge-region: us-east-1
+  x-vercel-cache: MISS

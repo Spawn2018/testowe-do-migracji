@@ -48,6 +48,8 @@ const anon = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const sb = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 const JWKS = createRemoteJWKSet(new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`), { cooldownDuration: 60_000, cacheMaxAge: 3_600_000 });
 
+/** Token zły sam w sobie — odmowa bez Auth (sfałszowany podpis, wygasły, zła forma, zły wystawca/odbiorca). */
+const REJECT = new Set(['ERR_JWT_EXPIRED', 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED', 'ERR_JWT_CLAIM_VALIDATION_FAILED', 'ERR_JWS_INVALID', 'ERR_JWT_INVALID']);
 async function sessionOk(token: string): Promise<boolean> {
   try {
     const { payload } = await jwtVerify(token, JWKS, { issuer: `${supabaseUrl}/auth/v1`, audience: 'authenticated' });
@@ -55,7 +57,7 @@ async function sessionOk(token: string): Promise<boolean> {
   } catch (e) {
     const code = (e as { code?: string }).code ?? '';
     // podpis/wygaśnięcie/wystawca złe → odmowa bez sieci; brak klucza (np. HS256) → zapasowo Auth
-    if (code === 'ERR_JWT_EXPIRED' || code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED' || code === 'ERR_JWT_CLAIM_VALIDATION_FAILED') return false;
+    if (REJECT.has(code)) return false;
     const user = await createClient(supabaseUrl, anon, { auth: { persistSession: false } }).auth.getUser(token);
     return Boolean(user.data.user);
   }
