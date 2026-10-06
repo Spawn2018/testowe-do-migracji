@@ -59,9 +59,12 @@ describe('B-MAPA podkład', () => {
     expect(light.url).not.toContain('World_Light_Gray');
     expect(light.attribution).toContain('Esri');
     expect(light.attribution).not.toContain('CARTO');
-    expect(dark.url).toContain('dark_all');
+    // AUD-01c: CARTO bez klucza = obraz „API KEY REQUIRED” → ciemny zapas = Esri ulice z ciemnym filtrem (bez klucza)
+    expect(dark.url).toContain('World_Street_Map');
+    expect(dark.url).not.toContain('cartocdn');
     expect(dark.url).not.toContain('World_Dark_Gray');
-    expect(dark.attribution).toContain('CARTO');
+    expect(dark.className).toBe('wt-tiles-dark');
+    expect(dark.attribution).toContain('Esri');
     expect(dark.attribution).toContain('OpenStreetMap');
     const back = basemapFor({
       theme: 'light',

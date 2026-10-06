@@ -66,94 +66,100 @@ export async function resolveBasemap(theme: ThemeName): Promise<BasemapChoice> {
   return basemapFor({ theme, spentUsd: 0, spentMonth: `${warsawMonth(now)}-01`, now, allowHere: true });
 }
 
+/** AUD-01c: region funkcji kafelków — Frankfurt (eu-central-1); Vercel `api/tiles` w fra1. */
+export const TILE_REGION = 'eu-central-1';
+export const HERE_STYLE = { light: 'logistics.day', dark: 'logistics.night' } as const;
+
 /**
- * AUD-01: kafelki HERE przez `/tiles/<motyw>/<z>/<x>/<y>` na domenie aplikacji (Vercel) — przepisanie do funkcji
- * `here-raster` z pamięcią podręczną na brzegu Vercel. Kafelek trafia na inne połączenie niż dane (Supabase) i po
- * pierwszym pobraniu jest serwowany z brzegu bez wywołania HERE. Token sesji idzie w `x-wt-token`, nie w
- * `Authorization` (żądanie z `Authorization` Vercel zawsze pomija pamięć). Lokalnie (localhost, podgląd) — wprost
- * do funkcji.
+ * AUD-01c: kafelki HERE są publiczne (decyzja właściciela 06.10) — zwykły `<img>` bez nagłówków i bez sesji, z adresu
+ * `/tiles/logistics.day|logistics.night/<z>/<x>/<y>` na domenie aplikacji (Vercel `api/tiles` → `here-raster`,
+ * pamięć brzegu Vercel). Lokalnie (localhost, podgląd) albo na hostingu bez `/tiles` — wprost do funkcji.
  */
-export function tileUrl(
-  coords: { z: number; x: number; y: number },
+export function tileTemplate(
   theme: 'light' | 'dark',
   host: string = typeof location !== 'undefined' ? location.hostname : '',
 ): { url: string; viaEdge: boolean } {
+  const style = HERE_STYLE[theme];
   const local = !host || host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local');
-  if (!local && !edgeMissing) return { url: `/tiles/${theme}/${coords.z}/${coords.x}/${coords.y}`, viaEdge: true };
+  if (!local && !edgeMissing) return { url: `/tiles/${style}/{z}/{x}/{y}`, viaEdge: true };
   return {
-    url: `${SUPABASE_URL}/functions/v1/here-raster?z=${coords.z}&x=${coords.x}&y=${coords.y}&theme=${theme}&forceFunctionRegion=${FUNCTION_REGION}`,
+    url: `${SUPABASE_URL}/functions/v1/here-raster?style=${style}&z={z}&x={x}&y={y}&forceFunctionRegion=${TILE_REGION}`,
     viaEdge: false,
   };
 }
 
+/** Adres jednego kafelka (testy, sonda). */
+export function tileUrl(
+  coords: { z: number; x: number; y: number },
+  theme: 'light' | 'dark',
+  host?: string,
+): { url: string; viaEdge: boolean } {
+  const t = tileTemplate(theme, host);
+  return { url: t.url.replace('{z}', String(coords.z)).replace('{x}', String(coords.x)).replace('{y}', String(coords.y)), viaEdge: t.viaEdge };
+}
+
 /**
- * Hosting zapasowy bez przepisania `/tiles` (PR8: Cloudflare Pages) odpowiada 404/HTML — wtedy do końca strony
- * kafelki idą wprost do funkcji (jak przed AUD-01).
+ * Hosting zapasowy bez `/tiles` (PR8: Cloudflare Pages) odpowiada 404/HTML — wtedy do końca strony kafelki idą
+ * wprost do funkcji.
  */
 let edgeMissing = false;
 export function __setEdgeMissing(v: boolean): void { edgeMissing = v; }
 
-let tokenCache: { at: number; token: string | null } | null = null;
-async function sessionToken(): Promise<string | null> {
-  const now = Date.now();
-  if (tokenCache && now - tokenCache.at < 30_000) return tokenCache.token;
-  const { getSupabase } = await import('../../auth/client');
-  const sb = await getSupabase();
-  const { data } = await sb.auth.getSession();
-  tokenCache = { at: now, token: data.session?.access_token ?? null };
-  return tokenCache.token;
+/**
+ * Sonda po błędzie kafelka (najwyżej jedna naraz): 409 = budżet D-78 zamknięty → `onClosed` (zapas do końca sesji);
+ * 404 bez obrazu z `/tiles` → hosting bez przepisania → wprost do funkcji.
+ */
+export async function probeTileError(
+  url: string,
+  viaEdge: boolean,
+  fetcher: typeof fetch = fetch,
+): Promise<'closed' | 'edge-missing' | 'other'> {
+  try {
+    const res = await fetcher(url, { cache: 'no-store' });
+    if (res.status === 409) return 'closed';
+    const type = res.headers.get('content-type') ?? '';
+    if (viaEdge && res.status === 404 && !type.startsWith('application/json') && !type.startsWith('image/')) return 'edge-missing';
+    return 'other';
+  } catch {
+    return 'other';
+  }
 }
 
-/** Leaflet GridLayer z kafelkiem HERE przez funkcję, bez klucza w przeglądarce. */
-export function hereRasterLayer(choice: BasemapChoice, onClosed: () => void): L.GridLayer {
-  const Grid = L.GridLayer.extend({
-    createTile(coords: L.Coords, done: (err: Error | undefined, tile: HTMLElement) => void) {
-      const img = document.createElement('img');
-      img.alt = '';
-      img.width = 256;
-      img.height = 256;
-      const { url, viaEdge } = tileUrl(coords, choice.theme === 'dark' ? 'dark' : 'light');
-      void (async () => {
-        try {
-          const token = await sessionToken();
-          if (!token) {
-            rememberTilesOff();
-            onClosed();
-            done(new Error('brak sesji'), img);
-            return;
-          }
-          const headers: Record<string, string> = viaEdge
-            ? { 'x-wt-token': token }
-            : { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY, 'x-wt-token': token };
-          let res = await fetch(url, { headers });
-          if (viaEdge && (res.status === 404 || !(res.headers.get('content-type') ?? '').startsWith('image/')) && res.status !== 409 && res.status !== 401) {
-            edgeMissing = true;
-            const direct = tileUrl(coords, choice.theme === 'dark' ? 'dark' : 'light');
-            res = await fetch(direct.url, { headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY, 'x-wt-token': token } });
-          }
-          if (res.status === 409) {
-            rememberTilesOff();
-            onClosed();
-            done(new Error('budzet'), img);
-            return;
-          }
-          if (!res.ok) {
-            done(new Error('kafel'), img);
-            return;
-          }
-          const blob = await res.blob();
-          img.onload = () => done(undefined, img);
-          img.onerror = () => done(new Error('obraz'), img);
-          img.src = URL.createObjectURL(blob);
-        } catch {
-          done(new Error('siec'), img);
-        }
-      })();
-      return img;
-    },
+/** Leaflet TileLayer z kafelkiem HERE przez funkcję, bez klucza i bez sesji w przeglądarce. */
+export function hereRasterLayer(choice: BasemapChoice, onClosed: () => void): L.TileLayer {
+  const theme = choice.theme === 'dark' ? 'dark' : 'light';
+  const first = tileTemplate(theme);
+  const layer = L.tileLayer(first.url, { attribution: choice.attribution, maxZoom: choice.maxZoom, tileSize: 256 });
+  let probing = false;
+  let closed = false;
+  layer.on('tileerror', (e: L.TileErrorEvent) => {
+    if (probing || closed) return;
+    probing = true;
+    const t = tileTemplate(theme);
+    const url = tileUrl(e.coords, theme).url;
+    void probeTileError(url, t.viaEdge).then((r) => {
+      probing = false;
+      if (r === 'closed') {
+        closed = true;
+        rememberTilesOff();
+        onClosed();
+      } else if (r === 'edge-missing') {
+        edgeMissing = true;
+        layer.setUrl(tileTemplate(theme).url);
+      }
+    });
   });
-  const Ctor = Grid as new (opts: L.GridLayerOptions) => L.GridLayer;
-  return new Ctor({ attribution: choice.attribution, maxZoom: choice.maxZoom, tileSize: 256 });
+  return layer;
+}
+
+/** Podkład zapasowy (bez HERE, bez klucza). AUD-01c: ciemny = Esri World_Street_Map z filtrem ciemnym (CARTO wymaga dziś klucza). */
+export function fallbackTileLayer(choice: BasemapChoice): L.TileLayer {
+  return L.tileLayer(choice.url ?? '', {
+    attribution: choice.attribution,
+    maxZoom: choice.maxZoom,
+    ...(choice.maxNativeZoom ? { maxNativeZoom: choice.maxNativeZoom } : {}),
+    ...(choice.className ? { className: choice.className } : {}),
+  });
 }
 
 export async function applyBasemap(
@@ -167,11 +173,7 @@ export async function applyBasemap(
   map.setMaxZoom(choice.maxZoom);
   const layer = choice.hereRequests
     ? hereRasterLayer(choice, onClosed)
-    : L.tileLayer(choice.url ?? '', {
-        attribution: choice.attribution,
-        maxZoom: choice.maxZoom,
-        subdomains: 'abcd',
-      });
+    : fallbackTileLayer(choice);
   layer.addTo(map);
   const el = map.getContainer();
   el.dataset.basemap = choice.provider;

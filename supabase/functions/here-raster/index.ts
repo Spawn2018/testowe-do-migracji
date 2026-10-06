@@ -1,67 +1,35 @@
 /**
- * B-MAPA — kafelek HERE Raster Tile API v3 (logistics.day / logistics.night).
- * Klucz zostaje na serwerze. Od 80% budżetu funkcja nie woła HERE.
+ * B-MAPA — kafelek HERE Raster Tile API v3 (logistics.day / logistics.night). Klucz zostaje na serwerze.
  *
- * AUD-01 (audyt 06.10, A1): przeglądarka pobiera kafelki z `/tiles/<motyw>/<z>/<x>/<y>` na domenie aplikacji;
- * Vercel przepisuje to tutaj (region funkcji przypięty: `forceFunctionRegion=eu-west-1`, jak baza) i trzyma
- * odpowiedź w pamięci brzegu (`Vercel-CDN-Cache-Control`). Żądanie z `Authorization` Vercel zawsze pomija
- * pamięć, więc token sesji przychodzi w `x-wt-token` (lokalnie może przyjść w `Authorization`).
- * Wdrożenie z `--no-verify-jwt` (jak driver-photo) — sesję sprawdza funkcja.
- *
- * AUD-01b (06.10 11:30): pomiar po zalogowaniu — każdy kafelek robił `auth/v1/user` + `here_tiles_open` +
- * `here_note_service` (3 wywołania bazy/Auth na kafelek, 24 kafelki = 72); w zimnym starcie kolejka do bazy
- * dochodziła do 14 s i dusiła zapytania aplikacji (latest_vehicle_fixes → statement timeout 8 s → 500). Teraz:
- *  - sesja: podpis JWT sprawdzany lokalnie kluczem publicznym Auth (JWKS, ES256; pamięć klucza w procesie) —
- *    zero wywołań bazy; zapasowo `auth.getUser` (np. starszy klucz HS256),
- *  - budżet `here_tiles_open`: odczyt raz na 60 s na proces,
- *  - licznik D-78: każde pobranie z HERE liczone, zapis zbiorczy co ≤ 2 s (`here_note_service(p_n)`) w tle.
- * Do pamięci brzegu trafia tylko 200 (kafelek) i 404 (kafelek spoza siatki); 401/409/502 — `no-store`.
+ * AUD-01c (polecenie właściciela 06.10 13:45): kafelki są PUBLICZNE (decyzja właściciela) — bez sesji i bez
+ * nagłówka autoryzacji, żeby brzeg Vercel mógł je trzymać. Przeglądarka woła `/tiles/<styl>/<z>/<x>/<y>` na domenie
+ * aplikacji → funkcja Vercel `api/tiles` (fra1, zdejmuje ciasteczko `__cf_bm` Supabase, które blokowało pamięć
+ * brzegu) → ta funkcja w eu-central-1 (Frankfurt) → HERE. Ochrona bez autoryzacji:
+ *  - tylko poprawna siatka z/x/y (0 ≤ z ≤ 19) i dozwolone style (light|dark|logistics.day|logistics.night),
+ *  - Referer/Origin, jeśli jest, musi być jedną z dwóch domen (albo localhost przy pracy lokalnej),
+ *  - limit częstości pobrań z HERE: na adres IP i łącznie na proces (429, bez pamięci),
+ *  - budżet D-78 `here_tiles_open` (odczyt raz na 60 s; zamknięty → 409, klient przełącza na zapas),
+ *  - licznik D-78: każde prawdziwe pobranie z HERE liczone, zapis zbiorczy co ≤ 2 s (`here_note_service(p_n)`).
+ * Pamięć: 200 → `public, s-maxage=<max-age z nagłówka HERE, najwyżej 7 dni>`; 404 spoza siatki → 1 h;
+ * inne błędy → `no-store`.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { createRemoteJWKSet, jwtVerify } from 'npm:jose@5.9.6';
 import { corsHeaders, corsPreflight } from '../_shared/cors.ts';
 
-const NO_STORE = { 'cache-control': 'no-store' };
-/** Pamięć brzegu Vercel: 7 dni; przeglądarka: 1 dzień. */
-export const TILE_CACHE = {
-  'cache-control': 'public, max-age=86400',
-  'vercel-cdn-cache-control': 'max-age=604800',
-};
-/** Kafelek spoza siatki (z/x/y) — stała odpowiedź, też w pamięci brzegu (1 h). */
-const BAD_TILE_CACHE = { 'cache-control': 'public, max-age=3600', 'vercel-cdn-cache-control': 'max-age=3600' };
+import { STYLE, gridOk, rateLimiter, refererOk, tileCacheControl } from '../_shared/map/tilePolicy.ts';
 
-export function tileToken(req: Request): string {
-  const own = (req.headers.get('x-wt-token') ?? '').trim();
-  if (own) return own;
-  const auth = req.headers.get('Authorization') ?? '';
-  return auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : '';
-}
+const NO_STORE = { 'cache-control': 'no-store' };
+const BAD_TILE_CACHE = { 'cache-control': 'public, max-age=3600, s-maxage=3600' };
+const rateOk = rateLimiter();
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined;
 const later = (p: Promise<unknown>) => {
   if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) EdgeRuntime.waitUntil(p);
 };
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const anon = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-const sb = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
-const JWKS = createRemoteJWKSet(new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`), { cooldownDuration: 60_000, cacheMaxAge: 3_600_000 });
-
-/** Token zły sam w sobie — odmowa bez Auth (sfałszowany podpis, wygasły, zła forma, zły wystawca/odbiorca). */
-const REJECT = new Set(['ERR_JWT_EXPIRED', 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED', 'ERR_JWT_CLAIM_VALIDATION_FAILED', 'ERR_JWS_INVALID', 'ERR_JWT_INVALID']);
-async function sessionOk(token: string): Promise<boolean> {
-  try {
-    const { payload } = await jwtVerify(token, JWKS, { issuer: `${supabaseUrl}/auth/v1`, audience: 'authenticated' });
-    return payload.role === 'authenticated' && typeof payload.sub === 'string' && payload.sub.length > 0;
-  } catch (e) {
-    const code = (e as { code?: string }).code ?? '';
-    // podpis/wygaśnięcie/wystawca złe → odmowa bez sieci; brak klucza (np. HS256) → zapasowo Auth
-    if (REJECT.has(code)) return false;
-    const user = await createClient(supabaseUrl, anon, { auth: { persistSession: false } }).auth.getUser(token);
-    return Boolean(user.data.user);
-  }
-}
+const sb = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', {
+  auth: { persistSession: false },
+});
 
 let openCache: { at: number; open: boolean } | null = null;
 async function tilesOpen(): Promise<boolean> {
@@ -88,36 +56,44 @@ function noteHereFetch(): void {
   later(flushing);
 }
 
+function reply(body: unknown, status: number, extra: Record<string, string>): Response {
+  const h = new Headers(corsHeaders(extra));
+  h.delete('vary');
+  return Response.json(body, { status, headers: h });
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return corsPreflight();
   const url = new URL(req.url);
+  const style = STYLE[url.searchParams.get('style') ?? url.searchParams.get('theme') ?? ''];
+  if (!style) return reply({ error: 'styl' }, 404, NO_STORE);
   const z = Number(url.searchParams.get('z'));
   const x = Number(url.searchParams.get('x'));
   const y = Number(url.searchParams.get('y'));
-  const theme = url.searchParams.get('theme') === 'dark' ? 'dark' : 'light';
-  const max = 2 ** z;
-  if (!Number.isInteger(z) || z < 0 || z > 19 || !Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= max || y >= max) {
-    const h = new Headers(corsHeaders(BAD_TILE_CACHE));
-    h.delete('vary');
-    return Response.json({ error: 'zly kafel' }, { status: 404, headers: h });
+  if (!gridOk(z, x, y)) {
+    return reply({ error: 'zly kafel' }, 404, BAD_TILE_CACHE);
   }
-  const token = tileToken(req);
-  if (!token || token.split('.').length !== 3) return Response.json({ fallback: true }, { status: 401, headers: corsHeaders(NO_STORE) });
-  const [ok, open] = await Promise.all([sessionOk(token), tilesOpen()]);
-  if (!ok) return Response.json({ fallback: true }, { status: 401, headers: corsHeaders(NO_STORE) });
-  if (!open) return Response.json({ fallback: true }, { status: 409, headers: corsHeaders(NO_STORE) });
+  const ref = req.headers.get('x-wt-referer') ?? req.headers.get('referer') ?? req.headers.get('origin');
+  if (!refererOk(ref)) return reply({ error: 'domena' }, 403, NO_STORE);
+  if (!(await tilesOpen())) return reply({ fallback: true }, 409, NO_STORE);
   const key = Deno.env.get('HERE_API_KEY') ?? '';
-  if (!key) return Response.json({ fallback: true }, { status: 409, headers: corsHeaders(NO_STORE) });
-  const style = theme === 'dark' ? 'logistics.night' : 'logistics.day';
+  if (!key) return reply({ fallback: true }, 409, NO_STORE);
+  const ip = (req.headers.get('x-wt-client-ip') ?? req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || '?';
+  if (!rateOk(ip)) return reply({ error: 'limit' }, 429, { ...NO_STORE, 'retry-after': '60' });
   const upstream = await fetch(
     `https://maps.hereapi.com/v3/base/mc/${z}/${x}/${y}/png?style=${style}&size=256&apiKey=${encodeURIComponent(key)}`,
     { headers: { 'User-Agent': 'WatchTower/1' } },
   );
-  if (!upstream.ok) return Response.json({ fallback: true }, { status: 502, headers: corsHeaders(NO_STORE) });
   noteHereFetch();
+  const type = upstream.headers.get('content-type') ?? '';
+  if (!upstream.ok || !type.startsWith('image/')) return reply({ fallback: true }, 502, NO_STORE);
   const bytes = new Uint8Array(await upstream.arrayBuffer());
-  // Stały origin w CORS — bez `Vary: Origin`, żeby brzeg Vercel trzymał jeden wpis na kafelek.
-  const headers = new Headers(corsHeaders({ 'content-type': 'image/png', ...TILE_CACHE }));
+  const hereCc = upstream.headers.get('cache-control');
+  const headers = new Headers(corsHeaders({
+    'content-type': type,
+    'cache-control': tileCacheControl(hereCc),
+    'x-here-cache-control': hereCc ?? '',
+  }));
   headers.delete('vary');
   return new Response(bytes, { headers });
 });

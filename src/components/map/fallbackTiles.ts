@@ -1,5 +1,6 @@
 import L from 'leaflet';
 import { basemapFor, type ThemeName } from '../../lib/map/draw';
+import { fallbackTileLayer } from './applyBasemap';
 
 /** Podkład zapasowy z etykietami. Bez HERE i bez adresu funkcji. */
 export function installFallback(map: L.Map, prev: L.Layer | null, theme: ThemeName): L.Layer {
@@ -12,11 +13,7 @@ export function installFallback(map: L.Map, prev: L.Layer | null, theme: ThemeNa
   });
   if (prev && map.hasLayer(prev)) map.removeLayer(prev);
   map.setMaxZoom(choice.maxZoom);
-  const layer = L.tileLayer(choice.url ?? '', {
-    attribution: choice.attribution,
-    maxZoom: choice.maxZoom,
-    subdomains: 'abcd',
-  });
+  const layer = fallbackTileLayer(choice);
   layer.addTo(map);
   const el = map.getContainer();
   el.dataset.basemap = choice.provider;
