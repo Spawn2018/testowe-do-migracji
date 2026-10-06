@@ -18,6 +18,7 @@ import { PlanDatesPanel } from './PlanDatesPanel';
 import { formatTowerPair } from '../../lib/cSep';
 import { formatHistoryActor } from '../../lib/historyActor';
 import { AwizacjaModal } from './AwizacjaModal';
+import { KshDatesModal } from './KshDatesModal';
 import { RouteCheckPanel } from './RouteCheckPanel';
 import { CorridorObstaclesPanel } from './CorridorObstaclesPanel';
 import { RouteProfilePanel } from './RouteProfilePanel';
@@ -144,6 +145,7 @@ export function LoadDrawer() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadCat, setUploadCat] = useState<import('../../types').Document['category'] | null>(null);
   const [awizOpen, setAwizOpen] = useState(false);
+  const [kshDatesOpen, setKshDatesOpen] = useState(false);
 
   useEffect(() => {
     const allowed: Tab[] = ['overview', 'timeline', 'history', 'docs', 'pricing', 'chat'];
@@ -186,17 +188,7 @@ export function LoadDrawer() {
 
   if (!load) return null;
 
-  /* B-K.1 — KSH: boczne menu tylko „Edytuj” (nie pełna szuflada HHL). */
-  if (role === 'KSH') {
-    return (
-      <KshSideMenu
-        load={load}
-        locale={locale}
-        onClose={() => selectLoad(null)}
-      />
-    );
-  }
-
+  /* AUD-03 (KSH — PANEL ZLECENIA): KSH widzi ten sam panel co pozostali; jedyny przycisk zmian = „Edytuj” (daty i godziny). */
   const driverPhone = visibleDriverPhone(role, load);
 
   const showCost = canSeeCost(role);
@@ -503,6 +495,14 @@ export function LoadDrawer() {
               </dl>
 
               {/* AWIZ-4 — Dodaj / Edytuj poza Ustalenia */}
+              {role === 'KSH' && (
+                <div className="awiz-row" data-ksh-actions>
+                  <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>{t(locale, 'b_ksh_dates_row')}</span>
+                  <button type="button" className="btn" data-ksh-edit onClick={() => setKshDatesOpen(true)}>
+                    {t(locale, 'b_ksh_edit')}
+                  </button>
+                </div>
+              )}
               {canAwiz && (
                 <div className="awiz-row" data-awiz-actions>
                   <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>{t(locale, 'a6_dr_awi')}</span>
@@ -757,7 +757,8 @@ export function LoadDrawer() {
                   OKQ8
                 </a>
               </div>
-              {isServerId(load.id) && (role === 'HHL' || role === 'SCX') ? <AgreedFeeForm loadId={load.id} locale={locale} role={role} /> : null}
+              {/* AUD-03: KSH widzi dopłaty z akceptacją (10f.4 — bez dodawania; AgreedFeeForm.canAdd) */}
+              {isServerId(load.id) ? <AgreedFeeForm loadId={load.id} locale={locale} role={role} /> : null}
             </>
           )}
 
@@ -928,7 +929,9 @@ export function LoadDrawer() {
               {import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED && canEdit && isServerId(load.id) && <DriverLinkPanel loadId={load.id} />}
 
               <div className="hr" />
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              {/* AUD-03: przyciski przewoźnika/HHL (statusy, przypisanie) — niewidoczne dla KSH */}
+              {canEdit && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }} data-carrier-actions>
                 {role === 'HHL' && (
                   <button
                     type="button"
@@ -984,6 +987,7 @@ export function LoadDrawer() {
                   {t(locale, 'a6_dr_mark_unloaded')}
                 </button>
               </div>
+              )}
 
               {loadMsgs.map((m) => (
                 <div key={m.id} className={`msg${m.org === 'HHL' ? ' me' : ''}`}>
@@ -1023,59 +1027,7 @@ export function LoadDrawer() {
       </aside>
       <DocPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
       {awizOpen ? <AwizacjaModal load={load} onClose={() => setAwizOpen(false)} /> : null}
+      {kshDatesOpen && role === 'KSH' ? <KshDatesModal load={load} onClose={() => setKshDatesOpen(false)} /> : null}
     </>
   );
 }
-
-/** B-K.1 / B-K.2 — wąskie boczne menu KSH: tylko Edytuj → daty/godziny. */
-function KshSideMenu({
-  load,
-  locale,
-  onClose,
-}: {
-  load: Load;
-  locale: Locale;
-  onClose: () => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  useEffect(() => {
-    setEditing(false);
-  }, [load.id]);
-
-  return (
-    <>
-      <button type="button" className="scrim on" aria-label="close" onClick={onClose} />
-      <aside className="drawer" data-drawer-root data-ksh-side-menu role="dialog" aria-modal="true">
-        <div className="drawer-hd">
-          <div>
-            <div className="t">{load.code}</div>
-            <div className="s">{t(locale, 'b_ksh_edit')}</div>
-          </div>
-          <button type="button" className="x" onClick={onClose} aria-label="close">
-            ✕
-          </button>
-        </div>
-        <div className="dbody">
-          {!editing ? (
-            <button
-              type="button"
-              className="btn"
-              data-ksh-edit
-              onClick={() => setEditing(true)}
-              style={{ width: '100%' }}
-            >
-              {t(locale, 'b_ksh_edit')}
-            </button>
-          ) : load.planDates ? (
-            <PlanDatesPanel load={load} forceEditing onCloseEdit={() => setEditing(false)} />
-          ) : (
-            <div className="muted" style={{ fontSize: 13 }}>
-              Brak danych planDates dla tego załadunku.
-            </div>
-          )}
-        </div>
-      </aside>
-    </>
-  );
-}
-

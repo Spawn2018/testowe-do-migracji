@@ -583,3 +583,13 @@ export interface AppToast {
   severity: Severity;
   loadId?: string;
 }
+
+/** AUD-03 — KSH: jedyne pola edycji w panelu zlecenia (data + okno załadunku i rozładunku, ISO). */
+export interface KshPlanDatesPatch {
+  loadDate: string;
+  deliveryDate: string;
+  loadFrom: string;
+  loadTo: string;
+  deliveryFrom: string;
+  deliveryTo: string;
+}

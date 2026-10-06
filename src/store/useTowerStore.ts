@@ -23,6 +23,7 @@ import type {
   LoadEvent,
   LoadMessage,
   LoadResources,
+  KshPlanDatesPatch,
   LoadStatus,
   Locale,
   Notification,
@@ -34,6 +35,7 @@ import type {
   WorkflowRun,
 } from '../types';
 import type { NavKey as NK } from '../lib/permissions';
+import { canEditResources } from '../lib/permissions';
 import { applyThemeToDom, systemTheme, type Theme } from '../lib/theme';
 export type { Theme };
 import {
@@ -287,6 +289,8 @@ interface TowerState {
   ensureRiskFromSituation: (situation: import('../lib/trafikverket').RoadSituation, loadId?: string) => string;
 
   updateResources: (loadId: string, patch: Partial<LoadResources>) => void;
+  /** AUD-03 (tryb demo): KSH zmienia wyłącznie daty i godziny załadunku/rozładunku (prod: RPC ksh_confirm_dates). */
+  kshEditPlanDates: (loadId: string, p: KshPlanDatesPatch) => boolean;
   updateAwizacja: (loadId: string, patch: Partial<Awizacja>) => void;
   updateFerry: (loadId: string, patch: Partial<FerryBooking>) => void;
   setLoadStatus: (loadId: string, status: LoadStatus, actor?: string, note?: string) => void;
@@ -822,8 +826,36 @@ export const useTowerStore = create<TowerState>()(
         return true;
       },
 
+      kshEditPlanDates: (loadId, p) => {
+        if (get().role !== 'KSH') return false;
+        const load = get().loads.find((l) => l.id === loadId);
+        if (!load || !p.loadDate || !p.deliveryDate || p.deliveryDate < p.loadDate) return false;
+        if (p.loadFrom > p.loadTo || p.deliveryFrom > p.deliveryTo) return false;
+        const at = nowIso();
+        set((s) => ({
+          loads: s.loads.map((l) => l.id !== loadId ? l : {
+            ...l,
+            plannedLoadDate: p.loadDate,
+            plannedDeliverDate: p.deliveryDate,
+            awizacja: { ...l.awizacja, loadWindowStart: p.loadFrom, loadWindowEnd: p.loadTo, unloadWindowStart: p.deliveryFrom, unloadWindowEnd: p.deliveryTo },
+            ...(l.planDates ? { planDates: { ...l.planDates, status: 'POTWIERDZONA' as const, confirmedAt: at, loadFrom: p.loadFrom, loadTo: p.loadTo, deliveryFrom: p.deliveryFrom, deliveryTo: p.deliveryTo } } : {}),
+          }),
+        }));
+        get().appendEvent({
+          loadId,
+          type: 'PLAN_DATES_CHANGED',
+          at,
+          actor: currentActorLabel('KSH'),
+          payload: { by: 'KSH', load_date: p.loadDate, delivery_date: p.deliveryDate, before_load_date: load.plannedLoadDate, before_delivery_date: load.plannedDeliverDate },
+        });
+        get().pushToast(t(get().locale, 'b_ksh_saved'), 'MEDIUM', loadId);
+        return true;
+      },
+
       updateResources: (loadId, patch) => {
         const role = get().role;
+        /* AUD-03: zasoby („Zmień ciągnik”, awizacja) — tylko przewoźnik i HHL; KSH nic nie zapisuje (baza też odmawia) */
+        if (!canEditResources(role)) return;
         const at = nowIso();
         set((s) => {
           const loads = s.loads.map((l) =>

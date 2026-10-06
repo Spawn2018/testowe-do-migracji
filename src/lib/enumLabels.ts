@@ -62,6 +62,9 @@ const EVENT_TYPE: Record<string, Record<Locale, string>> = {
   STATUS_CHANGED: dictEntry('a6_event_type_status_changed'),
   GEOFENCE: dictEntry('a6_event_type_geofence'),
   NOTE: dictEntry('a6_event_type_note'),
+  /* AUD-03: edycja dat przez KSH */
+  PLAN_DATES_CHANGED: dictEntry('b_ksh_ev_dates'),
+  SCHEDULE_DATE_CRITICAL: dictEntry('b_ksh_ev_crit'),
 };
 
 export function ferryStatusLabel(status: string, locale: Locale = 'pl'): string {
