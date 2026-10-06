@@ -30,3 +30,9 @@ Smoke + gate:visual zielone po usunięciu `#langSeg` (8322d02). Tylko testy/wzor
 - Cofnięto odświeżenie kokpit×2, mapa×2, stan-zablokowany (przyczyny spoza listy koordynatora).
 - Dryf funkcjonalny sprzed 8322d02 → B-SMOKE-DRIFT.
 - Następny krok po decyzji: naprawa B-PERSIST-TOAST → zgoda na 7d2b26c/B-7c/B-10a → regeneracja 280 + smoke → `npm run gate:visual`.
+
+## Checkpoint 09:25 CEST — wznowienie (nowy executor)
+- Zabite stare podglądy (4178/4179/4182/4183/4191 z 03–06.10); usunięte tmp-cand-pl*, /tmp/wt-dbg-dist, /tmp/wt-smoke-dist
+- Świeży build demo HEAD `55eccc4` → :4179; persist-toast **3/3**; na buildzie `c1d23e2^` test „system light” **FAIL** (toast) → test wykrywa regresję, poprawka działa
+- Prod (świeży kontekst, light/dark, obie domeny): ekran logowania bez toastu, bez pageerror; zalogowany użytkownik — niesprawdzone (brak konta testowego w tym przebiegu), wadliwa ścieżka jest w paczce prod → poprawka idzie na prod
+- W toku: matryca PL 280 → tmp-cand-pl, klasyfikacja z wyrównaniem przesunięcia 30 px
