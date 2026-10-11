@@ -44,9 +44,18 @@ curl -fsS -o /dev/null "http://127.0.0.1:$PORT/" || { echo "[fresh] podgląd nie
 
 export PW_BASE_URL="http://127.0.0.1:$PORT"
 echo "[fresh] PW_BASE_URL=$PW_BASE_URL"
-npm run test:visual
+# PW_UPDATE=1 → --update-snapshots tylko dla visual.spec.ts i visual-states.spec.ts (D-87)
+if [ "${PW_UPDATE:-}" = "1" ]; then
+  npx playwright test tests/visual.spec.ts --update-snapshots
+else
+  npm run test:visual
+fi
 # III-2: zrzuty stanów (najechanie, fokus, wciśnięty, zablokowany, ładowanie, pusty, błąd, walidacja) — próg 0,1%
-npx playwright test tests/visual-states.spec.ts
+if [ "${PW_UPDATE:-}" = "1" ]; then
+  npx playwright test tests/visual-states.spec.ts --update-snapshots
+else
+  npx playwright test tests/visual-states.spec.ts
+fi
 # B-PERSIST-TOAST: pierwsze wejście bez toastu „stan uszkodzony”
 npx playwright test tests/persist-toast.spec.ts
 # B-SMOKE-LANG: test:d19 wyłączony (brak #langSeg / PL-only)
