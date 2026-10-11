@@ -39,6 +39,8 @@ jobs:
           sudo pg_createcluster 17 main --port 5433 --start -- --auth=trust
           pg_lsclusters
           psql postgres://postgres@localhost:5433/postgres -Atc "select version()"
+          # Jak tests/db/boot.sh: rola service_role w klastrze przed szablonem tower_boot (gate.sh).
+          psql postgres://postgres@localhost:5433/postgres -v ON_ERROR_STOP=1 -c "do \$\$ begin if not exists (select 1 from pg_roles where rolname='service_role') then create role service_role nologin bypassrls; end if; end \$\$;"
       - name: Brama bazy
         env:
           PGADMIN: postgres://postgres@localhost:5433/postgres
