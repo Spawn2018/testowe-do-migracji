@@ -75,7 +75,13 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
     const sealed = await sealTable(new TextEncoder().encode(csv), async (p) => { const e = new Encrypter(); e.addRecipient(recipient); return await e.encrypt(p); });
     expect(Buffer.from(sealed).includes(Buffer.from('KSH/1'))).toBe(false);
     writeFileSync(join(dir, 't.csv.gz.age'), sealed);
-    const out = execFileSync('bash', ['-c', `age -d -i ${dir}/k.txt ${dir}/t.csv.gz.age | gunzip`]).toString();
+    const out = execFileSync('bash', [
+      '-c',
+      'age -d -i "$1" "$2" | gunzip',
+      '_',
+      join(dir, 'k.txt'),
+      join(dir, 't.csv.gz.age'),
+    ]).toString();
     expect(out).toBe(csv);
     execFileSync('age-keygen', ['-o', join(dir, 'zly.txt')], { stdio: 'ignore' });
     expect(() => execFileSync('age', ['-d', '-i', join(dir, 'zly.txt'), join(dir, 't.csv.gz.age')], { stdio: 'pipe' })).toThrow();

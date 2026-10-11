@@ -20,6 +20,10 @@ ok=0; fail=0
 Q() { $PSQL -v ON_ERROR_STOP=1 -c "$1" 2>&1 | tail -1 | tr -d '\r'; }
 sys() { $PSQL -v ON_ERROR_STOP=1 -c "$1" >/dev/null 2>&1 || { echo "  (sys błąd) $1" | head -c 300; echo; }; }
 chk() { if [ "$2" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $2, oczekiwano: $3)"; fi; }
+# Triggery cen (trg_loads_price, trg_shipment_items_price) i sefs_refresh_prognoza liczą z PRAWDZIWĄ datą (Europe/Warsaw).
+# Zestaw symuluje „dziś” jawnym p_today, więc przed pierwszym przeliczeniem z datą testu kasuje wycenę zapisaną z prawdziwej daty
+# (inaczej migawka OSTATECZNY z prawdziwej daty zostaje i wynik zależy od dnia uruchomienia).
+fresh_price() { local id; for id in "$@"; do sys "delete from load_cost where load_id='$id'"; sys "delete from load_revenue where load_id='$id'"; done; }
 
 echo; echo "[BAF 0187+0189] GoEasy + publikacje + OSTATECZNY/PROGNOZA + ceny"
 
@@ -92,6 +96,7 @@ sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class
   ('$P','$LSG','SG-B1','DIMENSIONED',18.21,2.45,2.45,20.0), ('$P','$LPL','PL-1','DIMENSIONED',14.7,3.4,2.6,14.0),
   ('$P','$LK1','KR-B1','DIMENSIONED',20.0,3.5,2.5,28.0), ('$P','$LK2','KR-B2','DIMENSIONED',20.0,3.5,2.5,28.0),
   ('$P','$LCX','SG-B2','DIMENSIONED',18.0,2.4,2.4,19.0), ('$P','$LNX','SG-B3','DIMENSIONED',18.0,2.4,2.4,19.0)"
+fresh_price "$LSG" "$LPL" "$LK1" "$LK2" "$LCX" "$LNX"
 
 chk "combo_* puste — stawka z wymiarów ładunku" "$(Q "select count(*) from loads where id in ('$LSG','$LPL','$LK1','$LK2') and combo_length_m is null")" "4"
 sys "select load_price_compute(id, '2026-10-05') from loads where id in ('$LSG','$LPL','$LK1','$LK2','$LCX')"
@@ -148,6 +153,7 @@ chk "po zamknięciu: późniejszy tydzień → PROGNOZA = ostatni OSTATECZNY (ty
 LF1=33333333-0000-0000-0000-0000000baf09
 sys "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date) values ('$LF1','$P','$CAR','BAF/F1','2026-10-16')"
 sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, total_weight_t) values ('$P','$LF1','SG-F1','DIMENSIONED',18.21,2.45,2.45,20.0)"
+fresh_price "$LF1"
 sys "select load_price_compute('$LF1', '2026-10-06')"
 chk "transport przyszły: 1,13 PROGNOZA w load_cost" "$(Q "select fuel_applied_mult::numeric(4,2)||'/'||fuel_status from load_cost where load_id='$LF1'")" "1.13/PROGNOZA"
 sys "select load_price_compute('$LF1', '2026-10-12')"
@@ -155,9 +161,11 @@ chk "po zamknięciu tyg. 41: ten sam transport → OSTATECZNY" "$(Q "select fuel
 LF2=33333333-0000-0000-0000-0000000baf0a
 sys "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date) values ('$LF2','$P','$CAR','BAF/F2','2026-10-20')"
 sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, total_weight_t) values ('$P','$LF2','SG-F2','DIMENSIONED',18.21,2.45,2.45,20.0)"
+fresh_price "$LF2"
 sys "select load_price_compute('$LF2', '2026-10-06')"
 chk "F2 przed zamknięciem: PROGNOZA 1,13" "$(Q "select fuel_applied_mult::numeric(4,2)||'/'||fuel_status from load_cost where load_id='$LF2'")" "1.13/PROGNOZA"
 sys "select sefs_refresh_prognoza('$P')" >/dev/null
+fresh_price "$LF2"
 # po „zamknięciu" — ręcznie przelicz z dziś=12.10
 sys "select load_price_compute('$LF2', '2026-10-12')"
 M42L=$(Q "select fuel_applied_mult from load_cost where load_id='$LF1'")

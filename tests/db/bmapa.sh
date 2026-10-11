@@ -60,6 +60,8 @@ o=$(asu "$KSH" "select here_tiles_report(-1)"); echo "$o" | grep -q "Zła liczba
 o=$(asu "$KSH" "select here_tiles_report(5000); select here_tiles_report(5000); select here_tiles_report(5000); select here_tiles_report(5000)"); echo "$o" | grep -q "Za dużo" && { ok=$((ok+1)); echo "  OK    > 20000 na minutę na konto odrzucone"; } || { fail=$((fail+1)); echo "  FAIL  limit minutowy → $o"; }
 o=$(asu "99999999-0000-0000-0000-000000000009" "select here_tiles_report(1)"); echo "$o" | grep -q "Brak aktywnego konta" && { ok=$((ok+1)); echo "  OK    bez konta odmowa"; } || { fail=$((fail+1)); echo "  FAIL  bez konta → $o"; }
 sys "update app_parameters set value=0 where key='HERE_TILES_FREE'; update app_parameters set value=1 where key='HERE_TILES_RATE_USD'" >/dev/null
+# Wydatek bieżącego miesiąca ≥ 80% budżetu niezależnie od daty uruchomienia (wcześniejsze zapisy mają daty z października 2026).
+sys "select here_note_service('tiles', 80, 0, now())" >/dev/null
 o=$(asu "11111111-0000-0000-0000-000000000003" "select here_tiles_report(1)->>'tiles_open'"); [ "$o" = "false" ] && { ok=$((ok+1)); echo "  OK    od 80% budżetu zgłoszenie zwraca tiles_open=false (zapas)"; } || { fail=$((fail+1)); echo "  FAIL  80% → $o"; }
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

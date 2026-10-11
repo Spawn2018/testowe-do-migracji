@@ -1,0 +1,43 @@
+name: visual
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      update:
+        description: 'Odśwież migawki (PW_UPDATE=1 → --update-snapshots)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  visual:
+    name: visual
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: fresh-smoke
+        env:
+          PW_UPDATE: ${{ github.event_name == 'workflow_dispatch' && inputs.update == 'true' && '1' || '' }}
+        run: bash scripts/ci/fresh-smoke.sh
+      - uses: actions/upload-artifact@v4
+        if: failure() || (github.event_name == 'workflow_dispatch' && inputs.update == 'true')
+        with:
+          name: visual-artifacts
+          path: |
+            test-results/
+            tests/__screenshots__/
+          retention-days: 3
+          if-no-files-found: ignore

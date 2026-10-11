@@ -4,12 +4,102 @@
  * i otwiera/zamyka szufladę transportu po kodzie. Sklep → URL: zmiana widoku lub szuflady dopisuje
  * wpis historii (zachowuje query, np. `?now=`). Nieznane ścieżki (np. fragment powrotu z logowania)
  * nie są przepisywane.
+ *
+ * HashRouter RR7 domyślnie owija setState lokacji w startTransition; przy ciężkim renderze szuflady
+ * (mapa) useLocation bywa spóźnione względem window.location.hash — wtedy „wstecz” zmienia adres,
+ * a selectedLoadId zostaje. Dlatego URL → sklep czyta też hashchange z okna (oraz useLayoutEffect).
  */
-import { useEffect, useLayoutEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from 'react';
+import { useLocation, useNavigate, type Location } from 'react-router-dom';
 import { useTowerStore } from '../store/useTowerStore';
 import { navForRole } from '../lib/permissions';
 import { buildRoute, parseRoute } from '../lib/routes';
+
+function readWindowHash(): Pick<Location, 'pathname' | 'search'> {
+  const raw = window.location.hash.replace(/^#/, '') || '/';
+  const q = raw.indexOf('?');
+  if (q < 0) return { pathname: raw || '/', search: '' };
+  return { pathname: raw.slice(0, q) || '/', search: raw.slice(q) };
+}
+
+function applyUrlToStore(
+  pathname: string,
+  search: string,
+  pendingCode: MutableRefObject<string | null>,
+) {
+  const r = parseRoute(pathname);
+  const st = useTowerStore.getState();
+  const tab = new URLSearchParams(search).get('zakladka');
+  const tabMap: Record<string, string> = {
+    status: 'timeline', dokumenty: 'docs', ceny: 'pricing', ustalenia: 'chat', awizacja: 'overview',
+    'awizacja-pilot': 'overview', 'numer-hhl': 'overview', 'numer-przewoznika': 'overview',
+  };
+  if (r.kind !== 'sms' && st.smsEntry) st.setSmsEntry(null);
+  if (r.kind !== 'workflow' && st.workflowFocus) st.setWorkflowFocus(null);
+  if (r.kind === 'view') {
+    if (navForRole(st.role).includes(r.view) && st.view !== r.view) st.setView(r.view);
+    if (st.selectedLoadId) st.selectLoad(null);
+    pendingCode.current = null;
+  } else if (r.kind === 'transport') {
+    const l = st.loads.find((x) => x.code.toUpperCase() === r.code);
+    if (l) {
+      pendingCode.current = null;
+      if (st.selectedLoadId !== l.id) st.selectLoad(l.id);
+      if (tab && tabMap[tab]) st.setDrawerTab(tabMap[tab]);
+    } else if (st.loads.length) {
+      pendingCode.current = null;
+      st.setAccessMessage('Brak dostępu');
+    } else {
+      pendingCode.current = r.code;
+    }
+  } else if (r.kind === 'decision') {
+    if (st.view !== 'risk') st.setView('risk');
+    st.setOpenDecisionId(r.id);
+  } else if (r.kind === 'invoice') {
+    if (navForRole(st.role).includes('inv')) st.setView('inv');
+    else st.setAccessMessage('Brak dostępu');
+    st.setOpenInvoiceId(r.id);
+  } else if (r.kind === 'system' || r.kind === 'options') {
+    if (navForRole(st.role).includes('options')) st.setView('options');
+    else st.setAccessMessage('Brak dostępu');
+  } else if (r.kind === 'denied') {
+    st.setAccessMessage('Brak dostępu');
+  } else if (r.kind === 'entry') {
+    st.setEntryOpen(true);
+    st.setSmsEntry(null);
+    st.setWorkflowFocus(null);
+  } else if (r.kind === 'sms') {
+    st.setEntryOpen(false);
+    st.setWorkflowFocus(null);
+    if (st.role !== 'HHL') {
+      st.setSmsEntry(null);
+      st.setAccessMessage('Brak dostępu');
+    } else {
+      const q = new URLSearchParams(search);
+      if (st.view !== 'options') st.setView('options');
+      st.setSmsEntry({
+        id: r.id,
+        status: q.get('status') ?? '',
+        recipient: q.get('odbiorca') ?? '',
+        email: q.get('email') ?? '',
+        transport: q.get('transport') ?? '',
+      });
+    }
+  } else if (r.kind === 'workflow') {
+    st.setEntryOpen(false);
+    st.setSmsEntry(null);
+    if (!navForRole(st.role).includes('wf')) {
+      st.setWorkflowFocus(null);
+      st.setAccessMessage('Brak dostępu');
+    } else {
+      if (st.view !== 'wf') st.setView('wf');
+      st.setWorkflowFocus(r.id);
+    }
+  } else {
+    st.setSmsEntry(null);
+    st.setWorkflowFocus(null);
+  }
+}
 
 export function useRouteSync() {
   const location = useLocation();
@@ -19,85 +109,23 @@ export function useRouteSync() {
   const loads = useTowerStore((s) => s.loads);
   const pendingCode = useRef<string | null>(null);
   const loc = useRef(location);
+
+  // URL → sklep: synchronicznie przy commitcie lokacji RR (gdy startTransition zdąży).
   useLayoutEffect(() => {
     loc.current = location;
-  }, [location]);
-
-  // URL → sklep (tylko przy zmianie ścieżki).
-  useEffect(() => {
-    const r = parseRoute(location.pathname);
-    const st = useTowerStore.getState();
-    const tab = new URLSearchParams(location.search).get('zakladka');
-    const tabMap: Record<string, string> = {
-      status: 'timeline', dokumenty: 'docs', ceny: 'pricing', ustalenia: 'chat', awizacja: 'overview',
-      'awizacja-pilot': 'overview', 'numer-hhl': 'overview', 'numer-przewoznika': 'overview',
-    };
-    if (r.kind !== 'sms' && st.smsEntry) st.setSmsEntry(null);
-    if (r.kind !== 'workflow' && st.workflowFocus) st.setWorkflowFocus(null);
-    if (r.kind === 'view') {
-      if (navForRole(st.role).includes(r.view) && st.view !== r.view) st.setView(r.view);
-      if (st.selectedLoadId) st.selectLoad(null);
-      pendingCode.current = null;
-    } else if (r.kind === 'transport') {
-      const l = st.loads.find((x) => x.code.toUpperCase() === r.code);
-      if (l) {
-        pendingCode.current = null;
-        if (st.selectedLoadId !== l.id) st.selectLoad(l.id);
-        if (tab && tabMap[tab]) st.setDrawerTab(tabMap[tab]);
-      } else if (st.loads.length) {
-        pendingCode.current = null;
-        st.setAccessMessage('Brak dostępu');
-      } else {
-        pendingCode.current = r.code;
-      }
-    } else if (r.kind === 'decision') {
-      if (st.view !== 'risk') st.setView('risk');
-      st.setOpenDecisionId(r.id);
-    } else if (r.kind === 'invoice') {
-      if (navForRole(st.role).includes('inv')) st.setView('inv');
-      else st.setAccessMessage('Brak dostępu');
-      st.setOpenInvoiceId(r.id);
-    } else if (r.kind === 'system' || r.kind === 'options') {
-      if (navForRole(st.role).includes('options')) st.setView('options');
-      else st.setAccessMessage('Brak dostępu');
-    } else if (r.kind === 'denied') {
-      st.setAccessMessage('Brak dostępu');
-    } else if (r.kind === 'entry') {
-      st.setEntryOpen(true);
-      st.setSmsEntry(null);
-      st.setWorkflowFocus(null);
-    } else if (r.kind === 'sms') {
-      st.setEntryOpen(false);
-      st.setWorkflowFocus(null);
-      if (st.role !== 'HHL') {
-        st.setSmsEntry(null);
-        st.setAccessMessage('Brak dostępu');
-      } else {
-        const q = new URLSearchParams(location.search);
-        if (st.view !== 'options') st.setView('options');
-        st.setSmsEntry({
-          id: r.id,
-          status: q.get('status') ?? '',
-          recipient: q.get('odbiorca') ?? '',
-          email: q.get('email') ?? '',
-          transport: q.get('transport') ?? '',
-        });
-      }
-    } else if (r.kind === 'workflow') {
-      st.setEntryOpen(false);
-      st.setSmsEntry(null);
-      if (!navForRole(st.role).includes('wf')) {
-        st.setWorkflowFocus(null);
-        st.setAccessMessage('Brak dostępu');
-      } else {
-        if (st.view !== 'wf') st.setView('wf');
-        st.setWorkflowFocus(r.id);
-      }
-    } else {
-      st.setSmsEntry(null);
-      st.setWorkflowFocus(null);
-    }
+    applyUrlToStore(location.pathname, location.search, pendingCode);
   }, [location.pathname, location.search]);
+
+  // Gdy przeglądarka już zmieniła hash (wstecz/dalej), a RR jeszcze trzyma starą lokację w transition.
+  useEffect(() => {
+    const onHash = () => {
+      const w = readWindowHash();
+      loc.current = { ...loc.current, pathname: w.pathname, search: w.search };
+      applyUrlToStore(w.pathname, w.search, pendingCode);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
 
   // Sklep → URL (także gdy dojadą transporty dla linku wprowadzonego przed ich wczytaniem).
   useEffect(() => {

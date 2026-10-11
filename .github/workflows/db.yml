@@ -1,0 +1,50 @@
+name: db
+
+# III-3: pełna brama testów bazy (tests/db/gate.sh) w CI — to samo, co lokalny hook pre-push.
+# Baza: lokalny PostgreSQL 17 + PostGIS na maszynie CI (bez sekretów, bez połączenia z produkcją Supabase;
+# tests/db/local-only.sh odmawia uruchomienia na innym hoście niż lokalny).
+
+on:
+  pull_request:
+    paths: ['supabase/**', 'tests/db/**', 'scripts/lib/gate-suites.mjs', '**/*.sql', '.github/workflows/db.yml']
+  push:
+    branches: [main]
+    paths: ['supabase/**', 'tests/db/**', 'scripts/lib/gate-suites.mjs', '**/*.sql', '.github/workflows/db.yml']
+  workflow_dispatch:
+    inputs:
+      suites:
+        description: 'Zestawy (SUITES), puste = wszystkie'
+        required: false
+        default: ''
+
+jobs:
+  db-gate:
+    name: tests/db/gate.sh
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: PostgreSQL 17 + PostGIS (PGDG), age
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q postgresql-17 postgresql-17-postgis-3 age
+          sudo pg_dropcluster --stop 17 main 2>/dev/null || true
+          sudo pg_createcluster 17 main --port 5433 --start -- --auth=trust
+          pg_lsclusters
+          psql postgres://postgres@localhost:5433/postgres -Atc "select version()"
+          # Jak tests/db/boot.sh: rola service_role w klastrze przed szablonem tower_boot (gate.sh).
+          psql postgres://postgres@localhost:5433/postgres -v ON_ERROR_STOP=1 -c "do \$\$ begin if not exists (select 1 from pg_roles where rolname='service_role') then create role service_role nologin bypassrls; end if; end \$\$;"
+      - name: Brama bazy
+        env:
+          PGADMIN: postgres://postgres@localhost:5433/postgres
+          SUITES: ${{ inputs.suites }}
+          TZ: Europe/Warsaw
+          PGTZ: Europe/Warsaw
+        run: bash tests/db/gate.sh
