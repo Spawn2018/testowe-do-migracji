@@ -45,4 +45,6 @@ jobs:
         env:
           PGADMIN: postgres://postgres@localhost:5433/postgres
           SUITES: ${{ inputs.suites }}
+          TZ: Europe/Warsaw
+          PGTZ: Europe/Warsaw
         run: bash tests/db/gate.sh
