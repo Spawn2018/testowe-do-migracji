@@ -1973,3 +1973,10 @@ Gałąź `pakiet/P0a-komplet`. Tylko dokumenty (bez `src/`, `supabase/`, `script
 | SG-01 driver_token usunięcie | do P1 | PLAN §7; nie potwierdzono usunięcia wiersza w P0a |
 
 Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum i audyt). `PLAN.md` §4 P0a → „NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji”.
+
+## 2026-10-12 — P3-APK — uzupełnienie W21 (pin SHA)
+
+- **W21 dostarczone 12.10.2026, 02:38** — token GitHub ma uprawnienie `workflow` (sprawdzone 11.10 w P0-CI; `gh auth status`: gist, read:org, repo, workflow).
+- Gałąź `pakiet/P3-APK-uzupelnienie-W21` (po bieżącym commicie P0b, PLAN §3).
+- `.github/workflows/sms-gateway-apk.yml`: pin SHA — `actions/checkout` `11d5960a…` (v4), `actions/setup-java` `cf277c60…` (v4), `android-actions/setup-android` `9fc6c4e9…` (v3), `gradle/actions/setup-gradle` `ed408507…` (v4), `actions/upload-artifact` `ea165f8d…` (v4).
+- Bez migracji, bez wdrożenia aplikacji (tylko CI + dokumenty). Po scaleniu powrót do P0b.

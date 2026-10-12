@@ -153,6 +153,10 @@ Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODU
 - Tylko dokumenty. Bez zmian w `src/`, `supabase/`, `scripts/`, `tests/`.
 - **Odbiór:** zmiany tylko w `AGENTS.md`, `.cursor/rules/**`, `docs/**` oraz przeniesienia plików z katalogu głównego i `design/claude-v2.0/CLAUDE_V2_SOT.md` do `docs/archiwum/2026-10-08/`; w `AGENTS.md` i `.cursor/rules/` nazwy starych plików (`SCOPE.md`, `ZLECENIE_*`) występują tylko w zdaniach, które nazywają je archiwalnymi.
 
+### P3-APK — uzupełnienie W21 · Pin SHA w workflow APK — W TOKU (`pakiet/P3-APK-uzupelnienie-W21`)
+- Po W21 (dostarczone 12.10.2026, 02:38): w `.github/workflows/sms-gateway-apk.yml` akcje przypięte do pełnego SHA zamiast `@v3`/`@v4` (stary PLAN: P3-APK).
+- Bez zmian w aplikacji i bez migracji. Scalenie `gh pr merge --merge` po zielonych checkach.
+
 ### P0b · Narzędzia bramy — DO ZROBIENIA
 Tylko `tests/`, `scripts/`, `.githooks/`; bez aplikacji i bez migracji.
 1. `scripts/lib/gate-suites.mjs`: oczekiwane liczby zgodne z `tests/db/gate.sh` (dziś rozbieżne m.in.: nullguard 533/602, i2 526/540, money 131/135, dec6 15/23, workflows 47/67, i31 6/9, dec2 24/26). Dodać brakujące zestawy: dwell, l12, l13, h1, h3, smsksh, ferry-status, bmapa, h4, aud03, baf, backup. **Jedno źródło liczb:** `gate.sh` czyta oczekiwane z `gate-suites.mjs`; dla TEST osobna kolumna z udokumentowanymi różnicami (security −4 i risks −2: SKIP na TEST, `spatial_ref_sys`); `session` i `l13` — znany dług, jak dziś.
