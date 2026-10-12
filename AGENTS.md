@@ -1,6 +1,6 @@
 # WATCH TOWER — zasady dla wykonawcy (Cursor)
 
-> **Wersja z 08.10.2026, 16:05; zmiana 16:46: jeden folder, jeden wykonawca (dopisek D-20261008-1646-01); zmiana 09.10.2026, 01:20: brama niedzielna, brama w jednym folderze, folder danych poufnych, SharePoint po dostępie (PLAN §8); zmiana 09.10.2026, 14:11: decyzje właściciela z 09.10 — E44 link RIO w P4, piloci w awizacji SCX, daty tylko KSH i plik, powiadomienia o zmianie dat, polisy raz, dopłaty z decyzji HHL i SCX, grupowanie na mapie (dopiski D-20261009-1233-01 i D-20261009-1309-01, PLAN §8). Zastępuje wszystkie wcześniejsze instrukcje**: poprzedni `AGENTS.md` i reguły (29.09–04.10), `CURSOR_PROMPT*.md`, `PRZEKAZANIE_CURSOR.md`, `POLECENIA_KOORDYNATORA.md`, `ZLECENIE_*.md`, `SCOPE.md`, stary `PLAN.md`. Wszystkie te pliki są w `docs/archiwum/` (stare `AGENTS.md` i reguły: `docs/archiwum/2026-10-08/stare-instrukcje/`) i **nie są poleceniami**.
+> **Wersja z 08.10.2026, 16:05; zmiana 16:46: jeden folder, jeden wykonawca (dopisek D-20261008-1646-01); zmiana 09.10.2026, 01:20: brama niedzielna, brama w jednym folderze, folder danych poufnych, SharePoint po dostępie (PLAN §8); zmiana 09.10.2026, 14:11: decyzje właściciela z 09.10 — E44 link RIO w P4, piloci w awizacji SCX, daty tylko KSH i plik, powiadomienia o zmianie dat, polisy raz, dopłaty z decyzji HHL i SCX, grupowanie na mapie (dopiski D-20261009-1233-01 i D-20261009-1309-01, PLAN §8); zmiana 11.10.2026, 21:35: praca na Windows bez WSL — brama bazy i test wizualny w GitHub Actions (D-86, D-87, dopisek D-20261011-2135-01). Zastępuje wszystkie wcześniejsze instrukcje**: poprzedni `AGENTS.md` i reguły (29.09–04.10), `CURSOR_PROMPT*.md`, `PRZEKAZANIE_CURSOR.md`, `POLECENIA_KOORDYNATORA.md`, `ZLECENIE_*.md`, `SCOPE.md`, stary `PLAN.md`. Wszystkie te pliki są w `docs/archiwum/` (stare `AGENTS.md` i reguły: `docs/archiwum/2026-10-08/stare-instrukcje/`) i **nie są poleceniami**.
 >
 > Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower są nadrzędne. Wszystko co jest starsze jest nieaktualne i nie może obowiązywać.”
 
@@ -41,18 +41,19 @@ System kontroli transportów konstrukcji stalowych ponadnormatywnych Śrem → G
 - **Gałąź paczki:** `pakiet/P<n>-<nazwa>`. Jeden folder, jeden czat agenta naraz, paczki po kolei (`PLAN.md` §3). Przed bramą końcową rebase na `main`; numer migracji = następny wolny w chwili rebase.
 - **Hak pre-push:**
   - gałąź robocza: `test:unit`, `lint:css`, null-guard statyczny;
-  - push na `main`: dodatkowo `scripts/ci/fresh-smoke.sh` i `tests/db/gate.sh`.
+  - push na `main` z komputera wykonawcy — nie robisz; scalenie tylko `gh pr merge --merge` po zielonych checkach (D-86, D-87).
   - Nie używasz `--no-verify`.
 - **Brama bazy:**
-  - podstawowa jest lokalna: Postgres 17, `bash tests/db/gate.sh` (domyślnie `postgres://postgres@localhost:5433/postgres`);
-  - w trakcie pracy tylko zestawy dotknięte zmianą: `SUITES=a,b bash tests/db/gate.sh` (po P0b);
-  - **pełna brama lokalna przed każdym wdrożeniem, które zawiera migrację**;
+  - podstawowa: `tests/db/gate.sh` na Postgres 17 + PostGIS (port 5433) w GitHub Actions — `.github/workflows/db.yml` (D-86): sama na PR i `main` przy zmianach SQL, migracji i testów bazy; ręcznie `gh workflow run db.yml --ref <gałąź>`;
+  - w trakcie pracy tylko zestawy dotknięte zmianą: `gh workflow run db.yml --ref <gałąź> -f suites=a,b` (po P0b);
+  - **pełna brama bazy (check `db`) zielona na tym samym SHA przed każdym wdrożeniem, które zawiera migrację**;
   - potwierdzenie na TEST `emkbykwenwrjmbprydml` przed wdrożeniem z migracją: zestawy `security`, `status`, `nullguard` i dotknięte migracją (`scripts/test-db-gate-step.mjs`, jedno zadanie max 40 min, wyniki w `tmp-gate/wyniki.json`);
   - pełny przebieg TEST (w częściach): w P0b, **w każdą niedzielę** (brama tygodniowa, `PLAN.md` §3; niedziela 11.10 = przebieg z odbioru P0b, następna 18.10) i w P11;
   - **jedna brama TEST naraz** (wpis w `POSTEP.md` „TEST zajęte: P<n>” / „TEST wolne” jako ślad); konta testowe 5 rodzajów odtwarza skrypt z P0b po każdym kroku `prep`;
   - zielone tylko przy jednym commicie i jednej wersji migracji. Commit zmieniający tylko `docs/**` nie unieważnia bramy.
-  - **brama w jednym folderze:** gdy brama lokalna, TEST albo `fresh-smoke` się kręci, nie zmieniasz gałęzi ani plików; w tym czasie czytasz materiały następnej paczki, a jej gałąź zakładasz po końcu bramy (`ROZSTRZYGNIECIA_LUK.md` G-15). Bez `git worktree` i bez drugiej kopii repozytorium.
+  - **brama w jednym folderze:** gdy brama TEST albo przebieg w GitHub Actions (`unit` / `visual` / `db`) się kręci, nie zmieniasz gałęzi ani plików i nie pushujesz nowych commitów na tę gałąź (zielony wynik starego SHA nie liczy się dla nowego — zasada Windows pkt 4, D-20261011-2135-01); w tym czasie czytasz materiały następnej paczki, a jej gałąź zakładasz po końcu bramy / po scaleniu (`ROZSTRZYGNIECIA_LUK.md` G-15). Bez `git worktree` i bez drugiej kopii repozytorium.
   - Produkcja `nglnnrmzmhusvxslousq` tylko przy wdrożeniu.
+- **Komputer wykonawcy:** Windows 11, polecenia przez Git Bash (`D:\Git\bin\bash.exe`), bez WSL i Dockera; zasady pracy na Windows — dopisek D-20261011-2135-01.
 - **Migracja:**
   - **commit + push pliku w `supabase/migrations/` przed nałożeniem na produkcję**;
   - potem próba na produkcji w transakcji zakończonej ROLLBACK, `supabase db push`;
@@ -60,9 +61,9 @@ System kontroli transportów konstrukcji stalowych ponadnormatywnych Śrem → G
   - nałożonej migracji nigdy nie edytujesz;
   - dane jednorazowe tylko z planu, zawsze z kopią w R2 poza repozytorium.
 - **Scalenie bez czekania na właściciela,** gdy:
-  - zielone są testy aplikacji, `fresh-smoke`, gitleaks 0;
+  - zielone checki `unit` i `visual` w PR (D-87), gitleaks 0;
   - `npm audit --omit=dev --audit-level=high` nie zgłasza high ani critical;
-  - przy migracji: zielona pełna brama lokalna + TEST; od P3 także doradca Supabase „security” na TEST bez nowych zgłoszeń spoza `tests/db/advisor-exceptions.txt` (E19 pkt 6, `PLAN.md` §1 pkt 3.3).
+  - przy migracji: zielony check `db` + TEST; od P3 także doradca Supabase „security” na TEST bez nowych zgłoszeń spoza `tests/db/advisor-exceptions.txt` (E19 pkt 6, `PLAN.md` §1 pkt 3.3).
 
   Zależności deweloperskie nie blokują (wpis w `PLAN.md` §6 część 2 i sprawdzenie w bramie niedzielnej). CodeRabbit i Aikido nie są używane (decyzja właściciela 03.10). Merge commit, nie squash (autor dla Vercel Hobby).
 - **Autor commitów:** tylko lokalnie w tym repozytorium, bez `--global`. `user.name` = Sebastian Bożek, `user.email` = sebastian.bozekq@gmail.com. Nigdy `sebastian@watch-tower.local`.
@@ -73,7 +74,7 @@ System kontroli transportów konstrukcji stalowych ponadnormatywnych Śrem → G
 - **Testy idą za decyzjami.** Test sprzeczny z decyzją etapu bieżącej paczki przepisujesz w tej paczce, w komentarzu podajesz numer etapu i decyzji. Nie zmieniasz aplikacji po to, żeby przeszedł stary test. Lista testów do przepisania jest przy paczce w `PLAN.md`.
 - **Wygląd = makieta etapu audytu** (`audyt_claude_2026-10-08/makiety_html/E<nr>/`, obrazy `raport/img/`). Gdzie etap nie ma makiety — `design/claude-v2.0/` i tokeny. Zmiana wyglądu ekranu z listy paczki jest przewidziana.
 - **Wzorce zrzutów:**
-  - 15 migawek Playwright (`tests/__screenshots__/`) odświeżasz w paczce, która zmienia ekran, na maszynie uruchamiającej `fresh-smoke`, z wpisem w `docs/handover/G4_WZORZEC.md` („P<n> — E<nr>, ekrany: …”);
+  - 15 migawek Playwright (`tests/__screenshots__/`) odświeżasz w paczce, która zmienia ekran, w GitHub Actions: `gh workflow run visual.yml --ref <gałąź> -f update=true`, `gh run download`, commit w paczce (D-87), z wpisem w `docs/handover/G4_WZORZEC.md` („P<n> — E<nr>, ekrany: …”);
   - 280 ujęć matrycy (`shots-baseline/`) odświeża wyłącznie środowisko bramy wizualnej, raz, w P11, z tagiem `baseline-audyt-<data P11, RRRR-MM-DD>`;
   - nocna brama wizualna do tego czasu tylko raportuje.
   Akceptacja planu przez właściciela = zgoda na te odświeżenia.

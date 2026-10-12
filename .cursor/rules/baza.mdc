@@ -5,14 +5,14 @@ alwaysApply: false
 ---
 - Nowa zmiana = nowa migracja z następnym wolnym numerem (ustalanym przy rebase przed bramą końcową). Nałożonej migracji nigdy nie edytujesz.
 - **Kolejność:**
-  1. zestawy bazy dotknięte zmianą (`SUITES=a,b bash tests/db/gate.sh`);
-  2. przed wdrożeniem pełna brama lokalna `bash tests/db/gate.sh` (Postgres 17, `localhost:5433`);
+  1. zestawy bazy dotknięte zmianą (`gh workflow run db.yml --ref <gałąź> -f suites=a,b`, D-86);
+  2. przed wdrożeniem check `db` (GitHub Actions, Postgres 17 + PostGIS) zielony na tym samym SHA (D-86; zastępuje lokalną bramę);
   3. potwierdzenie na TEST `emkbykwenwrjmbprydml` (zestawy `security`, `status`, `nullguard` + dotknięte; `scripts/test-db-gate-step.mjs`, jedno zadanie max 40 min);
-  4. **commit + push pliku migracji**;
-  5. próba na produkcji w transakcji z ROLLBACK;
-  6. `supabase db push`;
+  4. **commit + push pliku migracji**; scalenie `gh pr merge --merge` (nigdy `git push` na `main`);
+  5. próba na produkcji w transakcji z ROLLBACK (Windows: D-20261012-0105-01 R8);
+  6. `supabase db push` (Windows: D-20261012-0105-01 R8);
   7. lista migracji w repozytorium = `schema_migrations` (numery, nie znaczniki czasu).
-- Nie uruchamiasz `node scripts/test-db-gate.mjs` bez filtra. Pełny przebieg TEST (w częściach) — w P0b, w każdą niedzielę (brama tygodniowa, `PLAN.md` §3) i w P11. Na czas bramy bez zmiany gałęzi i plików (G-15). Jedna brama TEST naraz (wpis „TEST zajęte / wolne” w `POSTEP.md` jako ślad); konta testowe odtwarzane po każdym `prep`.
+- Nie uruchamiasz `node scripts/test-db-gate.mjs` bez filtra. Pełny przebieg TEST (w częściach) — w P0b, w każdą niedzielę (brama tygodniowa, `PLAN.md` §3) i w P11. Na czas bramy TEST albo przebiegu GitHub Actions bez zmiany gałęzi, plików i bez nowych pushy na tę gałąź (G-15, D-86/D-87). Jedna brama TEST naraz (wpis „TEST zajęte / wolne” w `POSTEP.md` jako ślad); konta testowe odtwarzane po każdym `prep`.
 - Bezpiecznik: skrypty `tests/db/*` odmawiają adresu z ref produkcji `nglnnrmzmhusvxslousq` (`tests/db/refuse-prod.sh`).
 - Każda nowa tabela: `enable row level security`, reguły dla ról, zero uprawnień dla `anon`, test w zestawie bezpieczeństwa, wpis w liście kopii (`_shared/backup/core.ts`).
 - Nowa kolumna w `loads` wymaga osobnego nadania uprawnień.
