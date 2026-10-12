@@ -3,9 +3,10 @@
  * Windows psql: zawsze -d URI.
  * 0031: na free test trigger na spatial_ref_sys bywa bez uprawnień — funkcja i tak powstaje.
  */
-import { readdirSync } from 'node:fs';
+import { readdirSync, writeFileSync, unlinkSync, readFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import pg from 'pg';
 
 const PROD = 'nglnnrmzmhusvxslousq';
@@ -34,9 +35,39 @@ export function refuseProdUrl(url) {
 }
 
 function psqlFile(psqlBin, url, file, { stopOnError = true } = {}) {
-  const args = ['-d', url, '-q', '-f', file];
+  const hosted = /supabase\.(co|com)/i.test(url) || url.includes('emkbykwenwrjmbprydml');
+  let runFile = file;
+  let tmp = null;
+  if (hosted) {
+    // PGOPTIONS bywa za słabe dla CREATE FUNCTION … geometry; SET w tym samym pliku -f działa.
+    tmp = join(tmpdir(), `tower-mig-${process.pid}-${Date.now()}.sql`);
+    writeFileSync(
+      tmp,
+      `SET search_path TO public, extensions;\n${readFileSync(file, 'utf8')}`,
+      'utf8',
+    );
+    runFile = tmp;
+  }
+  const args = ['-d', url, '-q', '-f', runFile];
   if (stopOnError) args.splice(3, 0, '-v', 'ON_ERROR_STOP=1');
-  return spawnSync(psqlBin, args, { encoding: 'utf8' });
+  try {
+    return spawnSync(psqlBin, args, {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PGOPTIONS: `${process.env.PGOPTIONS || ''} -c search_path=public,extensions`.trim(),
+        PGTZ: process.env.PGTZ || 'Europe/Warsaw',
+      },
+    });
+  } finally {
+    if (tmp) {
+      try {
+        unlinkSync(tmp);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
 }
 
 export async function resetPublic(url) {
@@ -59,9 +90,9 @@ export async function resetPublic(url) {
     await client.query(`drop schema ${name} cascade`);
     console.log(`reset: DROP SCHEMA ${name} CASCADE`);
   }
-  // Hosted: citext/btree_gist/postgis bywają w public. DROP public CASCADE
-  // zostawia sieroty w pg_extension (extnamespace bez nspname) → „type citext does not exist”.
-  for (const ext of ['postgis', 'citext', 'btree_gist']) {
+  // P0b: citext/btree_gist w public → DROP robi sieroty. PostGIS zostaje w public:
+  // funkcje z „SET search_path = public” (np. process_position) wymagają geometry w public.
+  for (const ext of ['citext', 'btree_gist']) {
     const loc = await client.query(
       `select n.nspname
          from pg_extension e
@@ -82,11 +113,21 @@ export async function resetPublic(url) {
   console.log('reset: DROP SCHEMA public CASCADE');
   await client.query('DROP SCHEMA IF EXISTS public CASCADE');
   await client.query('CREATE SCHEMA public');
-  await client.query('ALTER SCHEMA public OWNER TO postgres').catch(() => {});
-  await client.query(`SET search_path TO public, extensions`);
   await client.query('GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role');
   await client.query('GRANT ALL ON SCHEMA public TO postgres, service_role');
   await client.query('GRANT USAGE ON SCHEMA public TO anon, authenticated');
+  // Po DROP public: postgis musi być w public (SET search_path = public w funkcjach).
+  // „IF NOT EXISTS” nie przenosi z extensions — drop + create.
+  const pgLoc = await client.query(
+    `select n.nspname from pg_extension e
+     left join pg_namespace n on n.oid = e.extnamespace where e.extname = 'postgis'`,
+  );
+  if (pgLoc.rowCount > 0 && pgLoc.rows[0].nspname !== 'public') {
+    await client.query('drop extension postgis cascade');
+    console.log(`reset: drop postgis (było ${pgLoc.rows[0].nspname})`);
+  }
+  await client.query('create extension if not exists postgis with schema public');
+  console.log('reset: postgis w schema public');
   await client.query(
     'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO postgres, service_role, anon, authenticated',
   );
