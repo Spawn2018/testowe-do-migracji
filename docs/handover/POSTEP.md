@@ -2031,6 +2031,11 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 ## 2026-10-12 — R1 D-20261012-2210-01: przerwana pętla bramy TEST
 
-- 12.10 22:02–22:20: pętla bramy TEST po komplecie na `832cca5a` ruszyła ponownie od `prep` na zmienionym HEAD; przerwana (D-20261012-2210-01 R1); wyniki tego przebiegu nieważne; odbiór P0b bez zmian; TEST wolne od 22:32.
+- 12.10 22:02–ok. 22:20: pętla bramy TEST po komplecie na `832cca5a` ruszyła ponownie od `prep` na zmienionym HEAD; przerwana (D-20261012-2210-01 R1); ostatnie czyszczenie TEST 22:19:33; wyniki tego przebiegu nieważne; odbiór P0b bez zmian; TEST wolne od 22:32.
 - Pętla (`run-loop.pid` 15116) i monitor (`chat-status.pid` 19670) martwe; `test-db-gate-step` nie działa. Odczyty `pg_stat_activity` (postgres, active, bez własnego pid): 22:27 = 0, 22:32 = 0.
+
+## 2026-10-12 — P1 · zestaw e18 16/16
+
+- 12.10 **22:20:05**, baza **TEST** (hosted): `[db] e18 16/16 OK`, migracja `0193_e18_porzadki.sql`, krok `node scripts/test-db-gate-step.mjs e18` (log `tmp-gate/e18-full.log`). Nie GitHub Actions i nie lokalny Postgres.
+- Gałąź `pakiet/P1-e18`, HEAD wtedy `b3da6dbc`. Pliki `0193_e18_porzadki.sql` i `tests/db/e18.sh` były tylko w drzewie roboczym, bez commita. Ten wynik nie jest bramą do scalenia.
 

@@ -11,7 +11,7 @@
  * (service role wyłącznie do fixture/sprzątania). Bez wysyłki e-maili (generate_link).
  */
 import { test, expect, request as pwRequest, type APIRequestContext } from '@playwright/test';
-import { loadEnvLocal } from '../scripts/auth/env.mjs';
+import { loadEnvLocal, ensureLiveFiveRoles, accountEmail, TEST_ACCOUNTS } from '../scripts/auth/env.mjs';
 
 const LIVE = process.env.SUPABASE_LIVE === '1';
 const APP = process.env.BK5_BASE ?? 'http://127.0.0.1:4178/';
@@ -64,8 +64,13 @@ async function registerAndUpload(org: Org, category: string, name: string, proje
 
 test.beforeAll(async () => {
   env = loadEnvLocal();
-  base = env.VITE_SUPABASE_URL.replace(/\/$/, '');
-  const SR = env.SUPABASE_SERVICE_ROLE_KEY;
+  const host = await ensureLiveFiveRoles(env);
+  base = host.url;
+  env.VITE_SUPABASE_URL = host.url;
+  env.VITE_SUPABASE_ANON_KEY = host.anonKey;
+  env.SUPABASE_SERVICE_ROLE_KEY = host.serviceKey;
+  for (const a of TEST_ACCOUNTS) env[a.key] = accountEmail(env, a);
+  const SR = host.serviceKey;
   admin = await pwRequest.newContext({ extraHTTPHeaders: { apikey: SR, Authorization: `Bearer ${SR}` } });
 
   for (const o of ORGS) {

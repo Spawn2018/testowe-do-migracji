@@ -1,4 +1,13 @@
 export function loadEnvLocal(path?: string): Record<string, string>;
 export function need(env: Record<string, string>, keys: string[]): void;
 export function maskEmail(e: string): string;
-export const TEST_ACCOUNTS: { key: string; org: string; role: string; name: string }[];
+export const PROD_REF: string;
+export const TEST_REF: string;
+export function refuseProdUrl(url: string): void;
+export function refuseProdUrls(env?: Record<string, string>): void;
+export function assertTestProjectUrl(url: string): string;
+export function testHost(env?: Record<string, string>): { url: string; serviceKey: string; anonKey: string };
+export function ensureLiveFiveRoles(env?: Record<string, string>): Promise<{ url: string; serviceKey: string; anonKey: string }>;
+export function accountEmail(env: Record<string, string>, account: { key: string; org: string; fallback?: string }): string;
+export const TEST_ACCOUNTS: { key: string; org: string; role: string; name: string; fallback: string }[];
+export const FIVE_ROLE_ACCOUNTS: { key: string; org: string; role: string; name: string; fallback: string }[];

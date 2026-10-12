@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # TOWER — brama bazy lokalnej. Oczekiwane OK z scripts/lib/gate-suites.mjs (EXPECTED_LOCAL).
+# P1: zestaw e18 jest na liście LOCAL_ORDER; liczba OK tylko w EXPECTED_LOCAL (gate-suites.mjs).
 # Użycie: PGADMIN=postgres://postgres@localhost:5433/postgres bash tests/db/gate.sh
 #         SUITES=security,status bash tests/db/gate.sh   # tylko wskazane (P0b)
 set -u

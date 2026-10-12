@@ -48,6 +48,7 @@ export const EXPECTED_LOCAL = {
   h4: 19,
   aud03: 25,
   baf: 46,
+  e18: 16, // P1 — porządki E18 (0193)
 };
 
 /**
@@ -108,6 +109,7 @@ export const SUITE_FILE = {
   h4: 'h4.sh',
   aud03: 'aud03.sh',
   baf: 'baf.sh',
+  e18: 'e18.sh',
 };
 
 /** Jak uruchamiać lokalnie: boot = własna baza, tower = kopia tower_boot, pair = run.sh. */
@@ -148,6 +150,7 @@ export const LOCAL_RUN = {
   h4: 'tower',
   aud03: 'tower',
   baf: 'boot',
+  e18: 'boot',
 };
 
 /** Kolejność lokalnej bramy (jak dawny gate.sh). */
@@ -155,7 +158,7 @@ export const LOCAL_ORDER = [
   'security', 'status', 'storage', 'money', 'release', 'backup', 'session', 'archive',
   'watchdog', 'invite', 'risks', 'import', 'nullguard', 'i2', 'i30', 'i31', 'dec2', 'dec3',
   'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto', 'dwell', 'l13',
-  'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'baf',
+  'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'baf', 'e18',
 ];
 
 const NEED_SEED_BASE = new Set(['session']);
@@ -250,7 +253,7 @@ export function gateSteps() {
   }
   const rest = [
     'i30', 'i31', 'dec2', 'dec3', 'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto',
-    'dwell', 'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'baf', 'backup',
+    'dwell', 'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'baf', 'e18', 'backup',
   ];
   for (const name of rest) {
     if (!SUITE_FILE[name] || EXPECTED_TEST[name] == null) {

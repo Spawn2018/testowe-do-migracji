@@ -30,9 +30,14 @@ describe.runIf(LIVE)('BK3 SupabaseProvider (live, RLS)', () => {
   const tag = `bk3-${Date.now()}`;
 
   beforeAll(async () => {
-    const { loadEnvLocal } = await import('../scripts/auth/env.mjs');
+    const { loadEnvLocal, ensureLiveFiveRoles, accountEmail, TEST_ACCOUNTS } = await import('../scripts/auth/env.mjs');
     env = loadEnvLocal();
-    admin = createClient(env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+    const host = await ensureLiveFiveRoles(env);
+    env.VITE_SUPABASE_URL = host.url;
+    env.VITE_SUPABASE_ANON_KEY = host.anonKey;
+    env.SUPABASE_SERVICE_ROLE_KEY = host.serviceKey;
+    for (const a of TEST_ACCOUNTS) env[a.key] = accountEmail(env, a);
+    admin = createClient(host.url, host.serviceKey, { auth: { persistSession: false } });
     const { data: orgs } = await admin.from('organizations').select('id,code');
     const org = Object.fromEntries((orgs ?? []).map((o) => [o.code, o.id]));
     const { data: proj } = await admin.from('projects').select('id').eq('code', 'STEGRA_BODEN').single();

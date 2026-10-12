@@ -3,13 +3,13 @@
 // Magic link: generate_link (admin, nie wysyła) → Location z #access_token → otwarcie w aplikacji.
 // Użycie: node scripts/auth/e2e-browser.mjs   (zrzuty do /tmp/bk2-e2e-*.png; nie commitować)
 import { chromium } from '@playwright/test';
-import { loadEnvLocal, need, TEST_ACCOUNTS } from './env.mjs';
+import { loadEnvLocal, TEST_ACCOUNTS, ensureLiveFiveRoles, accountEmail } from './env.mjs';
 
 const env = loadEnvLocal();
-need(env, ['VITE_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', ...TEST_ACCOUNTS.map((a) => a.key)]);
+const host = await ensureLiveFiveRoles(env);
 const BASE = process.env.BK2_BASE ?? 'http://127.0.0.1:4178/';
-const sb = env.VITE_SUPABASE_URL.replace(/\/$/, '');
-const SR = env.SUPABASE_SERVICE_ROLE_KEY;
+const sb = host.url;
+const SR = host.serviceKey;
 let pass = 0, fail = 0;
 const check = (n, c) => { c ? pass++ : fail++; console.log(`${c ? 'PASS' : 'FAIL'}  ${n}`); };
 
@@ -40,7 +40,7 @@ try {
   for (const a of TEST_ACCOUNTS) {
     const ctx = await browser.newContext();
     const page = await ctx.newPage();
-    const frag = await magicFragment(env[a.key].toLowerCase());
+    const frag = await magicFragment(accountEmail(env, a));
     check(`${a.org}: link zawiera token (implicit)`, frag.includes('access_token='));
     await page.goto(BASE + frag);
     await page.waitForSelector('[data-auth="session"]', { timeout: 20000 });
