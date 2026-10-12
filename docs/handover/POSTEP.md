@@ -2015,3 +2015,5 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - **Przyczyna:** przy `TOWER_I2_PART=4` pomijana jest część 1, która wstawia pierwszą pozycję GPS dla L2; INSERT w I-25 kopiuje `source` z `positions` L2 → 0 wierszy (ten sam wzorzec co część 2, linie 234–243).
 - **TEST wolne** (brama na `f834217a` niekompletna / czerwona na i2-4).
 - Poprawka: `tests/db/i2.sh` — bootstrap pozycji w części 4 gdy brak wierszy (jak część 2; `DRIVER_PWA` przy `TOWER_HOSTED_READY`). Gałąź `pakiet/P0b-i2-part4-bootstrap`.
+- Merge poprawki: **`a5b46607`** (PR #159).
+- **TEST zajęte: P0b, od 09:38** (pełna brama w częściach na `a5b46607`; = odbiór P0b / brama z Dnia 1).
