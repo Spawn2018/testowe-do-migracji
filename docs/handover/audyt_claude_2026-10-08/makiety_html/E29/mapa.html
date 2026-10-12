@@ -1,0 +1,158 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+.facts{margin:0;padding:10px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.facts b{font-weight:600}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 9px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+table.r tr.sel td{background:var(--sea-bg)}
+.code{font-weight:700;white-space:nowrap}
+.note{font-size:12.5px;color:var(--ink-3)}
+.red{color:var(--red);font-weight:600}.grey{color:var(--ink-3)}
+.chip{height:32px;padding:0 11px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.inp{height:32px;border:1px solid var(--rule);padding:0 10px;display:inline-flex;align-items:center;color:var(--ink-3);font-size:13px;background:#fff;flex:1;min-width:150px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tiles{display:flex;gap:0;border-bottom:1px solid var(--rule)}
+.tiles div{flex:1;padding:7px 10px 8px;border-right:1px solid var(--rule-2);font-size:12.5px;color:var(--ink-2)}
+.tiles div b{display:block;font:700 20px var(--font-cond);color:var(--ink)}
+.tiles div.z b{color:#A8B6C1}
+.tiles div.on{box-shadow:inset 0 -3px 0 var(--amber)}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;position:relative}
+.phone .h b{font-size:20px}
+.pc{margin:6px 12px 0;border:1px solid var(--rule);padding:8px 11px;display:flex;flex-direction:column;gap:2px}
+.pc .t{font:700 17px var(--font-cond);display:flex;gap:8px;align-items:center}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto;background:#fff}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.ptiles{display:flex;gap:6px;padding:8px 12px;overflow:hidden;border-bottom:1px solid var(--rule-2)}
+.ptiles span{border:1px solid var(--rule);padding:4px 8px;font-size:12px;white-space:nowrap;min-height:44px;display:flex;flex-direction:column;justify-content:center}
+.ptiles span b{font:700 16px var(--font-cond)}
+.sheetb{position:absolute;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--rule);box-shadow:0 -10px 24px rgba(14,26,36,.18);padding:10px 14px 14px;display:flex;flex-direction:column;gap:7px}
+.grab{width:42px;height:4px;border-radius:2px;background:#C9D5DD;align-self:center}
+.btn{height:44px;padding:0 14px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-size:14px;background:#fff;white-space:nowrap}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.cb{display:flex;align-items:center;gap:10px;min-height:44px;border-bottom:1px solid var(--rule-2);font-size:14.5px}
+.cb i{width:20px;height:20px;border:2px solid var(--ink-2);display:inline-block}.cb i.on{background:var(--ink);border-color:var(--ink);box-shadow:inset 0 0 0 3px #fff}
+.lg{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12.5px}.lg span{display:inline-flex;align-items:center;gap:5px}.lg s{display:inline-block;width:11px;height:11px;border-radius:50%}
+.dim{position:absolute;inset:0;background:rgba(14,26,36,.28)}
+</style></head><body>
+<div class="sheet">
+  <div class="top"><h1>E29 · Mapa: warstwy, lista, filtry, legenda · komputer i telefon</h1>
+    <span class="ex">„Dziś” — zrzuty 08.10, 00:1x i dane z bazy · „po zmianie” — Przykład: pozycje, opóźnienia, ETA i rejs zmyślone; kody transportów, trasa drogowa HERE i podkład prawdziwe</span></div>
+
+  <div class="sec">Dziś</div>
+  <div class="card" style="width:842px">
+    <div class="h"><b>Mapa · komputer 1366 px</b><span class="pill rd">lista 94 · tabela ucięta</span></div>
+    <img src="now-d.png" width="840" height="533" alt="">
+    <div class="cap">Jedyny znacznik to SG-03, opisany jako „Na placu”. Stoi w okolicach Hudiksvall, 496 km od placu. Pomarańczowe kropki usuwa E45. Z 7 kolumn tabeli widać 4,5, a ETA i Okno są poza ekranem.</div>
+  </div>
+  <div class="card" style="width:262px">
+    <div class="h"><b>Telefon 390 px</b></div>
+    <img src="now-m.png" width="260" height="563" alt="">
+    <div class="cap">Menu ☰ zamiast dolnego paska (E8). Checkboxy i legenda zajmują 2 rzędy. Tabela ma 7 kolumn przewijanych w bok.</div>
+  </div>
+  <div class="card" style="width:292px">
+    <div class="h"><b>Fakty 08.10</b></div>
+    <ul class="facts">
+      <li><b>„1 pojazdów w ruchu”</b> to SG-03 po dostawie. Ostatnia pozycja 07.10, 21:23, a status nadal „Na placu” (E26, E27).</li>
+      <li><b>„pozycje co 5 min”</b>: SG-03 nadawało co 2,4 min w ruchu (mediana z 307 pozycji) i co 15 min na postoju (76).</li>
+      <li><b>„Bez GPS · 0”</b> jest zawsze 0. Aplikacja nie wypełnia czasu ciszy GPS.</li>
+      <li><b>„Spóźnione · 6”</b> liczy też transporty przed wyjazdem (4 planowane, 1 gotowy).</li>
+      <li><b>Warstwa „Ryzyka”</b> to utrudnienia drogowe z Trafikverket, a nie ryzyka.</li>
+      <li><b>Legenda</b> ma kolory „opóźniony” i „brak sygnału” dla statusów, których baza nie ma.</li>
+      <li><b>Podpis znacznika</b> pokazuje ciągnik z odcinka PL (WGM00653), choć w Szwecji jechał inny ciągnik.</li>
+      <li><b>Dopisek</b> „Schemat korytarza… z zezwolenia, nie wynik routera” jest nieaktualny po E45.</li>
+    </ul>
+  </div>
+
+  <div class="sec">Po zmianie · komputer · HHL</div>
+  <div class="card" style="width:1428px">
+    <div class="tiles">
+      <div>Przygotowanie<b>88</b></div><div class="z">Załadunek<b>0</b></div><div>Droga PL<b>1</b></div><div class="z">Port PL<b>0</b></div><div>Prom<b>1</b></div><div class="z">Port SE<b>0</b></div><div>Droga SE<b>1</b></div><div>Plac Boden<b>1</b></div><div>Dostarczone<b>2</b></div><div class="z">Rozliczenie<b>0</b></div>
+    </div>
+    <div class="h"><b>Mapa</b><span class="sub">W oknie śledzenia 6 · z pozycją 4 · bez pozycji 2 — od 03:00 w dniu załadunku do „Dostarczone”</span><span style="flex:1"></span><span class="chip">Strefy</span><span class="ex">Przykład</span></div>
+    <div style="display:flex">
+      <div style="width:840px;border-right:1px solid var(--rule)"><img src="map-d.webp" width="840" height="660" alt="">
+        <div class="note" style="padding:6px 12px">Podkład i trasy: HERE · utrudnienia: Trafikverket (SE), HERE (PL, E2) · statki: AIS Fintraffic / digitraffic.fi, CC BY 4.0, ostatni odczyt 00:14. W makiecie bez linii promu — rysuje ją E45 z HERE.</div></div>
+      <div style="flex:1;display:flex;flex-direction:column">
+        <div class="row" style="padding:10px 12px;border-bottom:1px solid var(--rule)">
+          <span class="inp">Szukaj: kod, nr zlecenia, tablice</span>
+          <span class="chip on">W oknie · 6</span><span class="chip">Opóźnione · 1</span><span class="chip">Brak GPS · 1</span><span class="chip">Bez pozycji · 2</span>
+        </div>
+        <table class="r">
+          <tr><th>Transport</th><th>Etap</th><th>Pozycja</th><th>ETA Boden</th></tr>
+          <tr class="sel"><td class="code">SG-13</td><td>Droga SE</td><td>00:19</td><td>09.10, 13:05<div class="red">+1 h 10 min po oknie</div></td></tr>
+          <tr><td class="code">SG-14</td><td>Droga PL</td><td><span class="red">brak GPS od 22:40</span><div class="grey">próg 30 min w ruchu (E15)</div></td><td class="grey">10.10, 06:10<div>z ostatniej pozycji</div></td></tr>
+          <tr><td class="code">SG-12</td><td>Prom<div class="grey">Wawel · Gdańsk → Nynäshamn</div></td><td>00:14<div class="grey">statek (AIS)</div></td><td>09.10, 21:40</td></tr>
+          <tr><td class="code">SG-11</td><td>Plac Boden</td><td>00:12</td><td class="grey">na placu od 23:05</td></tr>
+          <tr><td class="code">SG-15</td><td>Przygotowanie<div class="grey">dzień załadunku 08.10</div></td><td class="red">brak pozycji<div class="grey" style="font-weight:400">brak linku śledzenia · Do zrobienia SCX</div></td><td class="grey">–</td></tr>
+          <tr><td class="code">SG-16</td><td>Przygotowanie<div class="grey">dzień załadunku 08.10</div></td><td class="red">brak pozycji<div class="grey" style="font-weight:400">brak linku śledzenia · Do zrobienia SCX</div></td><td class="grey">–</td></tr>
+        </table>
+        <div class="cap">Tabela pokazuje to samo co mapa: transporty w oknie śledzenia. Kafelek z paska (E28) zmienia zakres, np. „Przygotowanie” pokaże 88 transportów bez pozycji — mapa ich nie rysuje, a tabela mówi dlaczego. Najechanie na wiersz podświetla znacznik, kliknięcie otwiera panel. Nazwa według firmy (E41): HHL „SG-13 · nr HHL”, gdy jest wpisany.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">Po zmianie · telefon</div>
+  <div class="phone" style="height:760px">
+    <div class="h"><b>Mapa</b><span class="sub">w oknie 6 · bez pozycji 2</span></div>
+    <div class="ptiles"><span>Przygotowanie<b>88</b></span><span>Droga PL<b>1</b></span><span>Prom<b>1</b></span><span>Droga SE<b>1</b></span><span>Plac<b>1</b></span></div>
+    <img src="map-m.webp" width="372" height="370" alt="">
+    <div class="row" style="padding:8px 12px 2px"><span class="chip on" style="height:36px">W oknie · 6</span><span class="chip" style="height:36px">Opóźnione · 1</span><span class="chip" style="height:36px">Brak GPS · 1</span></div>
+    <div class="pc"><div class="t">SG-13 <span class="pill rd">opóźniony 1 h 10</span></div><div class="note">Droga SE · pozycja 00:19 · ETA 09.10, 13:05</div></div>
+    <div class="pc"><div class="t">SG-14 <span class="pill rd">brak GPS od 22:40</span></div><div class="note">Droga PL · ETA 10.10, 06:10 z ostatniej pozycji</div></div>
+    <div class="nav"><span>Kokpit</span><span>Harmonogram</span><span>Ryzyka</span><span>Dokumenty</span><span class="on">Więcej</span></div>
+  </div>
+  <div class="phone" style="height:760px">
+    <div class="h"><b>Mapa</b><span class="sub">w oknie 6 · bez pozycji 2</span></div>
+    <img src="map-m.webp" width="372" height="370" alt="" style="margin-top:61px">
+    <div class="dim"></div>
+    <div class="sheetb">
+      <div class="grab"></div>
+      <div style="display:flex;gap:8px;align-items:center"><b style="font:700 22px var(--font-cond)">SG-13</b><span class="pill sea">Droga SE</span><span class="pill rd">opóźniony</span></div>
+      <div style="font-size:14px">ETA Boden <b>09.10, 13:05</b> · <span class="red">1 h 10 min po oknie KSH</span></div>
+      <div class="note">Ostatnia pozycja 00:19 · kierowca i zestaw odcinka SE</div>
+      <span class="btn pri">Otwórz panel transportu</span>
+      <span class="btn">Pokaż przebieg na mapie</span>
+    </div>
+  </div>
+  <div class="phone" style="height:760px">
+    <div class="h"><b>Mapa</b><span class="sub">w oknie 6 · bez pozycji 2</span></div>
+    <img src="map-m.webp" width="372" height="370" alt="" style="margin-top:61px">
+    <div class="dim"></div>
+    <div class="sheetb">
+      <div class="grab"></div>
+      <b style="font:700 19px var(--font-cond)">Warstwy</b>
+      <div class="cb"><i class="on"></i>Pojazdy i statki</div>
+      <div class="cb"><i class="on"></i>Trasa (droga i prom)</div>
+      <div class="cb"><i></i>Strefy</div>
+      <div class="cb"><i></i>Utrudnienia drogowe</div>
+      <div class="cb"><i></i>Przebieg wybranego transportu</div>
+      <div class="lg" style="margin-top:6px"><span><s style="background:#C97E12"></s>załadunek</span><span><s style="background:#245C87"></s>w drodze</span><span><s style="background:#1B6E5D"></s>na placu</span><span><s style="box-shadow:0 0 0 2px #B32639 inset"></s>opóźniony</span><span><s style="background:#9DB3C6"></s>brak GPS</span><span><s style="background:#245C87;border:2px solid #DCE7EE"></s>statek z liczbą aut</span></div>
+    </div>
+  </div>
+  <div class="card" style="width:262px">
+    <div class="h"><b>Każda firma</b></div>
+    <ul class="facts">
+      <li>Ta sama mapa i lista. Każda firma widzi swoje transporty (dziś wszystkie 94).</li>
+      <li>Nazwy według E41. KSH widzi „SG-13”, SCX „SG-13 · nr SCX”.</li>
+      <li>Przycisk „Strefy” ma tylko HHL, bo tylko HHL ma tę stronę w menu.</li>
+      <li>„Do zrobienia” przy braku pozycji widzi firma, która ma to uzupełnić (E7).</li>
+    </ul>
+  </div>
+</div>
+</body></html>

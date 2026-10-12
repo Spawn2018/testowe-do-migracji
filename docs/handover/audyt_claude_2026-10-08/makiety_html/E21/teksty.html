@@ -1,0 +1,219 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.h3{padding:9px 14px 4px;font:700 16px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+.facts{margin:0;padding:10px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:5px}
+.facts b{font-weight:600}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 9px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+table.r td.n,table.r th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.code{font-weight:700;white-space:nowrap}
+.note{font-size:12.5px;color:var(--ink-3)}
+.red{color:var(--red);font-weight:600}.grey{color:var(--ink-3)}.ok{color:var(--go);font-weight:600}
+.chip{height:32px;padding:0 11px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn{height:34px;padding:0 13px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-size:13.5px;background:#fff;white-space:nowrap}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn.sm{height:28px;font-size:12.5px;padding:0 9px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;position:relative}
+.phone .h b{font-size:20px}
+.pc{margin:6px 12px 0;border:1px solid var(--rule);padding:8px 11px;display:flex;flex-direction:column;gap:2px}
+.pc .t{font:700 16px var(--font-cond);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto;background:#fff}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.drow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--rule-2)}
+.drow .l b{font-weight:600}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field .lbl{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.inp{min-height:38px;border:1px solid var(--rule);padding:8px 10px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;background:#fff}
+.drop{border:1.5px dashed #9AAAB6;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;background:var(--surface-2)}
+.ph{font:700 26px var(--font-cond);display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:18px;padding:0 14px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3)}
+.tabs span{padding:9px 0}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+
+
+.ph .no{color:var(--amber);font-size:18px}.ph .nr{font:600 18px var(--font-cond);color:var(--ink-2)}.ph .miss{font:600 15px var(--font-cond);color:var(--red);letter-spacing:.02em}
+.wb{display:flex;gap:0;padding:4px 14px 10px;font-size:13px}.wb span{padding-right:14px;margin-right:14px;border-right:1px solid var(--rule-2)}.wb span:last-child{border:0}.wb b{display:block;font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.todo{margin:12px 14px 4px;border:1px solid var(--rule);border-left:4px solid var(--red);background:#fff}
+.todo .tt{padding:7px 11px;font:700 15px var(--font-cond);display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--rule-2)}
+.todo .it{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 11px;border-bottom:1px solid var(--rule-2);font-size:13px;align-items:center}
+.todo .it:last-child{border-bottom:0}.todo .it .w{font-size:12px;color:var(--ink-3)}
+.todo.am{border-left-color:var(--amber)}
+.mapbox{position:relative;margin:12px 14px 0;border:1px solid var(--rule);height:220px;overflow:hidden}
+.mapbox img{width:100%;height:100%;object-fit:cover}
+.ov{position:absolute;background:#fff;border:1px solid #9AAAB6;padding:6px 9px;font-size:12.5px;line-height:1.4;box-shadow:0 3px 10px rgba(14,26,36,.15)}
+.ov b{font:700 14px var(--font-cond)}
+.zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;border:1px solid #9AAAB6;background:#fff}.zoom span{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:16px;border-bottom:1px solid var(--rule-2)}.zoom span:last-child{border:0}
+.st{margin:14px 14px 4px;font:700 15px var(--font-cond);letter-spacing:.02em;display:flex;gap:8px;align-items:center}
+.st .who{font:500 13px var(--font-sans);color:var(--ink-3)}
+.kv{display:grid;grid-template-columns:128px 1fr;gap:5px 12px;padding:2px 14px 4px;font-size:13.5px}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0}
+.mono{font-family:var(--font-cond);font-weight:600;letter-spacing:.02em}
+.leg{margin:4px 14px;border:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:7px 10px;gap:10px}
+.leg .lt{font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.leg.now{border-left:4px solid var(--go);background:var(--go-bg)}
+.btn.call{color:var(--go);border-color:var(--go);font-weight:600}.btn.call.f{background:var(--go);color:#fff}
+.form{padding:10px 14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.grp{border:1px solid var(--rule);padding:8px 10px 0;margin-bottom:10px}
+.grp .gt{font:600 12px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+.inp.e{color:#9AAAB6}.inp.bad{border-color:var(--red);box-shadow:inset 3px 0 0 var(--red)}
+.chk{display:flex;gap:8px;align-items:center;font-size:13.5px;margin-bottom:4px}.chk i{width:16px;height:16px;border:1.5px solid var(--ink-2);display:inline-block}
+.bar{margin:0 14px;padding:8px 10px;font-size:13px;border:1px solid var(--red);background:var(--red-bg);color:var(--ink)}
+.bar b{color:var(--red)}
+ul.cmp{margin:0;padding:6px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.mbar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.mtabs{display:flex;gap:16px;padding:0 12px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden}
+.mtabs span{padding:10px 0}.mtabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+.acc{margin:6px 12px 0;border:1px solid var(--rule);padding:9px 11px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;min-height:44px}
+.acc b{font:700 15px var(--font-cond)}
+</style><style>
+table.m{border-collapse:collapse;width:100%;font-size:13.5px}
+table.m td,table.m th{padding:6px 14px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:top}
+table.m th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+table.m .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.m tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0}
+.fuel{margin:8px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:12.5px;background:var(--surface-2)}
+.fuel b{font:700 14px var(--font-cond)}
+.fee{margin:6px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.fee .k{font:700 14px var(--font-cond)}
+.rules{margin:6px 14px 12px;font-size:12.5px}
+.rules td{padding:3px 8px 3px 0;border-bottom:1px dotted var(--rule-2)}
+.calc{font-size:13px;background:var(--surface-2);border:1px solid var(--rule);padding:8px 10px;margin-bottom:10px;line-height:1.55}
+.calc b{font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.two div{border:1px solid var(--rule);padding:7px 9px;font-size:13px}
+.two div b{display:block;font:700 18px var(--font-cond)}
+</style>
+<style>
+.zg{padding:6px 14px 2px;font:700 13px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);background:var(--surface-2);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule-2)}
+.zr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 14px;border-bottom:1px solid var(--rule-2);font-size:13px}
+.zr .nm{font-weight:600}.zr .d{color:var(--ink-3);font-size:12.5px}
+.zr.sel{background:var(--go-bg);box-shadow:inset 4px 0 0 var(--go)}
+.hist{margin:0;padding:0 14px 10px;list-style:none;font-size:13px}
+.hist li{padding:6px 0;border-bottom:1px dotted var(--rule-2)}
+.hist b{font-weight:600}
+</style>
+<style>
+table.r td.b{font-weight:600}
+td.old{color:var(--red);font-family:var(--font-sans)}
+td.new{color:var(--go);font-weight:600}
+.big{font:700 34px var(--font-cond)}
+.k{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:8px 14px;font-size:13px}
+.k span:nth-child(2n){text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.rk{border:1px solid var(--rule);border-left:4px solid var(--red);margin:8px 14px;padding:7px 10px;background:#fff}
+.rk .t{font-weight:600;font-size:13.5px}.rk .m{font-size:12.5px;color:var(--ink-3)}
+.rk.ok{border-left-color:var(--go)}
+.arrow{text-align:center;color:var(--ink-3);font-size:13px;margin:-2px 0}
+</style>
+</head><body>
+<div class="sheet">
+  <div class="top"><h1>E21 · Teksty, liczby i daty w całej aplikacji</h1>
+    <span class="ex">„Dziś” — przegląd widocznych tekstów produkcji 08.10, 02:2x (konto Operacje HHL, 1366 px, wszystkie strony, zakładki panelu SG-03, dzwonek) i kod · „po zmianie” — te same teksty zapisane według zasad; dane z bazy</span></div>
+
+  <div class="sec">Dziś · gdzie są kody, kropki, daty z sekundami i szwedzki</div>
+  <div class="card" style="width:900px">
+    <table class="r">
+      <tr><th>Miejsce</th><th class="n">Trafień</th><th>Co (przykład z ekranu)</th><th>Etap</th></tr>
+      <tr><td class="b">Ryzyka</td><td class="n">158</td><td>„NO_AWIZACJA · 2.10.2026, 12:00:00”, „5c77d4d7: brak awizacji”, „plan 2026-10-10”, „fala 3.4 m”, „READY → IN_TRANSIT_SE … Transport 963e19dd-…”, 20 × szwedzki („Vägarbete mellan trafikplatserna…”)</td><td>E21, E41, E7</td></tr>
+      <tr><td class="b">Opcje</td><td class="n">303</td><td>„2026-10-07”, „8.10.2026, 02:28:30”, „mnożnik SEK 1.120”, „22.49 SEK/l”, „(NOTIFICATION_MATRIX_SET)”, „docs/handover/INSTRUKCJA_BRAMKA_SMS_ANDROID.md”</td><td>E21, E12</td></tr>
+      <tr><td class="b">Finanse</td><td class="n">86</td><td>„Realizacja 4.8% · 1726,59 PLN” (86 wierszy); w tabeli „51 464,41” obok „8239,15”</td><td>E21, E16</td></tr>
+      <tr><td class="b">Panel SG-03</td><td class="n">47</td><td>Ceny „1.1400”, „0.0000”, „4.8%”, „2026-10-01”; Status i Historia „GEOFENCE_EXIT”, „IN_TRANSIT_SE → AT_SITE”; Przegląd „1.10.2026, 21:43”</td><td>E21, E17, E33, E39</td></tr>
+      <tr><td class="b">Dokumenty</td><td class="n">5</td><td>„ważna do 2027-03-29”</td><td>E21, E31</td></tr>
+      <tr><td class="b">Strefy</td><td class="n">5</td><td>„0.8 km”</td><td>E21, E34</td></tr>
+      <tr><td class="b">Mapa</td><td class="n">1</td><td>„1 pojazdów w ruchu”</td><td>E21, E29</td></tr>
+      <tr><td class="b">Dzwonek</td><td class="n">1 + 3</td><td>„fala 3.4 m”; 3 wpisy w dobę „Nowe ryzyko: Nieznany kod źródła drogowego — w panelu: zdarzenie drogowe” (otwartych 16)</td><td>E21, E5</td></tr>
+      <tr><td class="b">Kokpit, Harmonogram, Faktury, pasek</td><td class="n">0</td><td class="grey">bez trafień w tych rodzajach</td><td></td></tr>
+      <tr><td class="b">Razem</td><td class="n b">606 + 3</td><td colspan="2" class="grey">tylko konto Operacje HHL; KSH i SCX korzystają z tych samych ekranów</td></tr>
+    </table>
+  </div>
+  <div class="card" style="width:512px">
+    <div class="h"><b>Kod — skąd to się bierze</b></div>
+    <ul class="facts">
+      <li><b>Nie ma jednego modułu formatów.</b> 33 × <code>toFixed</code> w 17 plikach widoków (kropka dziesiętna), 16 × <code>toLocale…</code> w 15 plikach (różnie: z sekundami, bez zera, bez języka), 25 × <code>Intl</code>.</li>
+      <li><b>Ten sam plik, dwa formaty</b>: <code>FinanceView.tsx</code> l. 15 zamienia kropkę na przecinek, l. 294 już nie („4.8%”).</li>
+      <li><b>Teksty z funkcji serwera</b>: <code>marineWeather.ts</code> l. 280–285 „fala ${toFixed(1)} m” → „3.4 m”; <code>windAndBans.ts</code> l. 38 data ISO; tytuły spraw z bazy z 8 znakami numeru wewnętrznego (E41).</li>
+      <li><b>Odmiana jest</b> w słowniku („{n~znak|znaki|znaków}”), ale „pojazdów w ruchu” jej nie używa (<code>d19Extra.ts</code> l. 152).</li>
+      <li><b>Liczby 4-cyfrowe</b>: format polski przeglądarki nie wstawia spacji („8239,15”), a 5-cyfrowe tak („51 464,41”) — w jednej kolumnie.</li>
+      <li><b>Szwedzki</b>: 16 otwartych spraw drogowych SE z tytułem po szwedzku, choć decyzja PL-DATA (05.10) mówi „nigdy surowy szwedzki”.</li>
+    </ul>
+  </div>
+
+  <div class="sec">Po zmianie · zasady (jedne dla aplikacji, e-maili, SMS i plików)</div>
+  <div class="card" style="width:900px">
+    <table class="r">
+      <tr><th>Co</th><th>Dziś (z ekranu)</th><th>Po zmianie</th></tr>
+      <tr><td class="b">Data</td><td class="old">2026-10-07 · 8.10.2026 · 1.10.2026, 21:43</td><td class="new">07.10.2026 · w listach bieżącego roku 07.10</td></tr>
+      <tr><td class="b">Godzina</td><td class="old">2.10.2026, 12:00:00</td><td class="new">02.10, 12:00 (bez sekund, czas warszawski)</td></tr>
+      <tr><td class="b">Data z dniem tygodnia</td><td class="old">plan 2026-10-10</td><td class="new">sobota 10.10.2026</td></tr>
+      <tr><td class="b">Kwota</td><td class="old">1726,59 PLN · 8239,15</td><td class="new">1 726,59 PLN · 8 239,15 (spacja zawsze od 1 000)</td></tr>
+      <tr><td class="b">Procent</td><td class="old">4.8%</td><td class="new">4,8%</td></tr>
+      <tr><td class="b">Mnożnik paliwowy</td><td class="old">1.1400 · mnożnik SEK 1.120</td><td class="new">×1,14 · ×1,12</td></tr>
+      <tr><td class="b">Cena paliwa</td><td class="old">22.49 SEK/l</td><td class="new">22,49 SEK/l</td></tr>
+      <tr><td class="b">Odległość, fala</td><td class="old">0.8 km · fala 3.4 m</td><td class="new">800 m · fala 3,4 m</td></tr>
+      <tr><td class="b">Odmiana</td><td class="old">1 pojazdów w ruchu</td><td class="new">1 pojazd · 2 pojazdy · 5 pojazdów w ruchu</td></tr>
+      <tr><td class="b">Transport</td><td class="old">5c77d4d7 · 15064/2026/OSL/GDA/P · Transport 963e19dd-fe83-…</td><td class="new">SG-07 (nazwa według firmy — E41)</td></tr>
+      <tr><td class="b">Status i zdarzenia</td><td class="old">IN_TRANSIT_SE → AT_SITE · GEOFENCE_EXIT</td><td class="new">Droga SE → Plac Boden · wyjazd ze strefy (E25, E17)</td></tr>
+      <tr><td class="b">Rodzaj sprawy</td><td class="old">NO_AWIZACJA · SEFS_OUT_OF_TABLE</td><td class="new">brak awizacji · brak wskaźnika opłaty paliwowej</td></tr>
+      <tr><td class="b">Opisy techniczne</td><td class="old">(NOTIFICATION_MATRIX_SET) · docs/handover/…md</td><td class="new">„zapis w Historii zmian” · instrukcja w Pomocy (E37)</td></tr>
+      <tr><td class="b">Język</td><td class="old">Vägarbete mellan trafikplatserna…</td><td class="new">po polsku; oryginał tylko pod „Pokaż oryginał” (PL-DATA)</td></tr>
+    </table>
+    <div class="cap">Wszystko z jednego modułu formatów: ten sam w aplikacji, w funkcjach serwera (e-maile, dzwonek, tytuły spraw) i w eksporcie XLSX/PDF. SMS bez polskich znaków zostaje według E43.</div>
+  </div>
+
+  <div class="card" style="width:512px">
+    <div class="h"><b>Ryzyka · dziś i po zmianie</b><span class="sub">tytuły z bazy 08.10</span></div>
+    <div class="rk"><div class="t">5c77d4d7: brak awizacji przed załadunkiem</div><div class="m">NO_AWIZACJA · 2.10.2026, 12:00:00 · po terminie</div></div>
+    <div class="arrow">↓</div>
+    <div class="rk ok"><div class="t">SG-07: brak awizacji przed załadunkiem</div><div class="m">termin 02.10, 12:00 · po terminie · uzupełnia SCX</div></div>
+    <div class="rk"><div class="t">Pogoda morska: możliwe odwołanie — fala 3.4 m / porywy 41 węzłów (M/F Stena Estelle; progi 3,8 m / 40 węzłów)</div></div>
+    <div class="arrow">↓</div>
+    <div class="rk ok"><div class="t">Stena Estelle: możliwe odwołanie rejsu — fala 3,4 m, porywy 41 węzłów</div><div class="m">progi: 3,8 m i 40 węzłów</div></div>
+    <div class="rk"><div class="t">Automatyczna zmiana statusu READY → IN_TRANSIT_SE zablokowana: Transport 963e19dd-fe83-4690-9306-5c7fc4b95468 bez numeru zlecenia przewoźnika…</div></div>
+    <div class="arrow">↓</div>
+    <div class="rk ok"><div class="t">SG-03: status „Droga SE” nie ustawił się sam</div><div class="m">brak numeru zlecenia SCX · uzupełnia SCX</div></div>
+    <div class="rk"><div class="t">Zakaz czasowy SE: plan 2026-10-10</div></div>
+    <div class="arrow">↓</div>
+    <div class="rk ok"><div class="t">Zakaz ruchu ciężarówek w Szwecji: sobota 10.10.2026</div><div class="m">informacja przy transporcie (E7 15:55)</div></div>
+  </div>
+
+  <div class="sec">Po zmianie · strażnik tekstów w bramie wizualnej</div>
+  <div class="card" style="width:900px">
+    <div class="h"><b>Strażnik tekstów</b><span class="sub">przy każdym wdrożeniu · 3 firmy × 5 rodzajów kont · wszystkie strony, zakładki panelu, dzwonek, e-maile próbne</span></div>
+    <table class="r">
+      <tr><th>Szuka</th><th>Przykład, który zatrzymuje wdrożenie</th><th class="n">Dziś</th><th class="n">Wymagane</th></tr>
+      <tr><td>kodów z podkreśleniem</td><td>NO_AWIZACJA, IN_TRANSIT_SE, OPS_THRESHOLD_SET</td><td class="n red">79</td><td class="n">0</td></tr>
+      <tr><td>numerów wewnętrznych</td><td>5c77d4d7, 963e19dd-fe83-…</td><td class="n red">32</td><td class="n">0</td></tr>
+      <tr><td>kropki dziesiętnej</td><td>4.8%, 1.1400, 3.4 m, 0.8 km</td><td class="n red">152</td><td class="n">0</td></tr>
+      <tr><td>dat ISO</td><td>2026-10-07</td><td class="n red">105</td><td class="n">0</td></tr>
+      <tr><td>sekund i dat bez zera</td><td>8.10.2026, 02:28:30</td><td class="n red">217</td><td class="n">0</td></tr>
+      <tr><td>szwedzkich słów</td><td>Vägarbete, körfält, från … till</td><td class="n red">20</td><td class="n">0</td></tr>
+      <tr><td>złej odmiany</td><td>1 pojazdów</td><td class="n red">1</td><td class="n">0</td></tr>
+      <tr><td>pustych wartości</td><td>undefined, NaN, Invalid Date</td><td class="n">0</td><td class="n">0</td></tr>
+    </table>
+    <div class="cap">Ten sam przegląd, którym policzono „dziś”, staje się testem. Wyjątki (np. numer polisy, tablice rejestracyjne) są na liście dozwolonych. Szczegóły techniczne zostają w Stanie systemu, dla Administratora.</div>
+  </div>
+  <div class="card" style="width:512px">
+    <div class="h"><b>Dzwonek · techniczny wpis</b></div>
+    <div class="rk"><div class="t">Nowe ryzyko: Nieznany kod źródła drogowego — w panelu: zdarzenie drogowe</div><div class="m">Waga: niska · 3 wpisy w dobę u każdego · 16 otwartych</div></div>
+    <div class="arrow">↓</div>
+    <div class="rk ok"><div class="t">Nie trafia do dzwonka ani na Ryzyka</div><div class="m">Stan systemu (Administrator HHL): „Trafikverket: nieznany kod X — 1 zdarzenie, opis zastępczy »zdarzenie drogowe«”</div></div>
+    <div class="cap">Tytuł to dosłownie zdanie z decyzji PL-DATA (05.10), która kazała takie przypadki pokazywać w Stanie systemu.</div>
+  </div>
+</div>
+</body></html>

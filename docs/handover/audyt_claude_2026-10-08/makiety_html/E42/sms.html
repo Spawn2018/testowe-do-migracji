@@ -1,0 +1,161 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:12px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 20px var(--font-cond)}.h .no{color:var(--ink-2);font:600 15px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}
+.bd{padding:14px;display:flex;flex-direction:column;gap:12px}
+.note{font-size:12.5px;color:var(--ink-3)}
+table.r{border-collapse:collapse;width:100%;font-size:13px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 8px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+table.r td.t{white-space:nowrap;font-weight:600}
+.y{color:var(--go);font-weight:700}.n{color:var(--red);font-weight:700}.mu{color:var(--ink-3)}
+.sms{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:var(--surface-2);border:1px solid var(--rule-2);padding:3px 6px;display:inline-block;margin-top:3px}
+.k{font:700 13px var(--font-cond);letter-spacing:.04em;display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;border:1px solid var(--ink-2);margin-right:6px}
+.warn{color:var(--amber-ink);font-weight:600}
+.place{border:1px solid var(--rule);display:flex;flex-direction:column}
+.place .ph{padding:9px 12px;background:var(--surface-2);border-bottom:1px solid var(--rule);display:flex;gap:8px;align-items:center}
+.place .ph b{font:700 16px var(--font-cond)}
+.prow{display:grid;grid-template-columns:200px 54px 150px 1fr;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--rule-2);font-size:13px}
+.prow:last-child{border-bottom:0}
+.in{height:34px;border:1px solid var(--rule);display:flex;align-items:center;padding:0 9px;background:#fff;white-space:nowrap;overflow:hidden}
+.in.ph2{color:var(--ink-3)}
+.ticks{display:flex;gap:6px;flex-wrap:wrap}
+.tk{height:30px;padding:0 8px;border:1px solid var(--rule);display:inline-flex;align-items:center;gap:5px;font-size:12.5px;white-space:nowrap}
+.tk i{width:14px;height:14px;border:1.5px solid var(--ink-2);display:inline-block}
+.tk.on{border-color:var(--go);background:var(--go-bg)}.tk.on i{background:var(--go);border-color:var(--go)}
+.tk.na{opacity:.45}
+.alert{padding:8px 12px;background:var(--amber-bg);border-bottom:1px solid var(--amber);color:var(--amber-ink);font-weight:600;font-size:13px}
+.set{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.set div{border:1px solid var(--rule);padding:8px 10px;font-size:13px}.set div b{display:block;font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.set .off{border-color:var(--amber);background:var(--amber-bg)}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column}
+.phone .h b{font-size:20px}
+.thread{padding:12px;display:flex;flex-direction:column;gap:10px;background:#F2F4F6}
+.day{align-self:center;font-size:11.5px;color:var(--ink-3)}
+.bub{align-self:flex-start;max-width:290px;background:#fff;border:1px solid var(--rule-2);border-radius:14px 14px 14px 4px;padding:8px 11px;font-size:13.5px;line-height:1.35}
+.bub small{display:block;color:var(--ink-3);font-size:11px;margin-top:3px}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.hist li{list-style:none;padding:7px 0;border-bottom:1px solid var(--rule-2);font-size:13px}.hist{margin:0;padding:0}.hist li:last-child{border-bottom:0}
+.hist .tm{font-weight:600;margin-right:6px}
+</style></head><body>
+<div class="sheet">
+  <div class="top"><h1>E42 · SMS przed załadunkiem i rozładunkiem · komputer</h1>
+    <span class="ex">SG-03: pozycje i godziny z bazy 06–07.10 · godziny SMS „po zmianie” policzone z tych pozycji · Śrem i wpisy w Historii to przykład · numery zamaskowane</span></div>
+
+  <!-- ODTWORZENIE SG-03 -->
+  <div class="card" style="width:1460px">
+    <div class="h"><b>SG-03 w Boden: co wyszłoby dziś, a co po zmianie</b><span class="no">● plan dostawy 07.10 (cały dzień, bez godzin)</span><span style="flex:1"></span><span class="note">dziś faktycznie: 0 SMS, bo lista Boden jest pusta</span></div>
+    <table class="r">
+      <tr><th style="width:110px">Chwila</th><th style="width:300px">Co pokazuje GPS</th><th style="width:330px">Dziś (gdyby Boden miał odbiorców)</th><th>Po zmianie</th></tr>
+      <tr><td class="t">06.10, 11:45</td><td>51 km korytarza przed końcem, 76 km/h. Do placu ok. 60 min jazdy.</td><td>„przyjazd 12:45”<br><span class="sms">KTO, rej. GD035YX, przyjazd 12:45</span><br><span class="mu">Nie mówi, że to dzień przed planem.</span></td><td><span class="k">B</span><b>Wcześniejszy przyjazd</b><br><span class="sms">SG-03: auto GD035YX bedzie przy placu Stegra Boden ok. 12:45, dzien przed planem (dostawa 07.10).</span></td></tr>
+      <tr><td class="t">12:25 – 12:35</td><td>12:25: 26 m od strefy placu, 9 km/h. 12:35: 8,7 m, 0 km/h, „zapłon: nie”. To ostatnia pozycja.</td><td class="mu">—</td><td class="mu">— (czeka 30 min, czy auto ruszy)</td></tr>
+      <tr><td class="t">13:05</td><td>30 min bez ruchu tuż przy placu, nowych pozycji brak (lokalizator w naczepie bez zasilania).</td><td class="mu">— nic. Przez 20 h nikt nie wie, że auto stoi przy wjeździe.</td><td><span class="k">C</span><b>Auto czeka</b><br><span class="sms">SG-03: auto GD035YX stoi przy placu Stegra Boden od 12:35. Plan dostawy: 07.10.</span></td></tr>
+      <tr><td class="t">07.10, 06:00</td><td>Dzień dostawy, koniec ciszy nocnej. Auto nadal bez ruchu.</td><td class="mu">—</td><td><span class="k">C</span><b>Przypomnienie</b><br><span class="sms">SG-03: auto GD035YX nadal czeka przy placu Stegra Boden (od 06.10 12:35). Dostawa dzis.</span></td></tr>
+      <tr><td class="t">08:35</td><td>Wjazd w strefę placu (o 08:33 pozycja już w strefie, 20 km/h).</td><td>„wjechało na plac”</td><td><span class="k">D</span><b>Wjazd</b><br><span class="sms">SG-03: auto GD035YX wjechalo na plac Stegra Boden o 08:35.</span></td></tr>
+      <tr><td class="t">12:19</td><td>Wyjazd z placu → „Dostarczone” (E26).</td><td class="mu">— (ale pozycje lecą dalej, E27)</td><td class="mu">Koniec śledzenia i SMS (E27).</td></tr>
+    </table>
+    <div class="bd" style="padding-top:8px"><div class="note">ETA o 11:45 = 17 h × pozostała część korytarza (0,0588) = 60 min, tak samo w obecnym wzorze i po poprawce odpoczynku (E15). Auto było przy placu o 12:25–12:35, czyli 10–20 min wcześniej niż „ok. 12:45”. „KTO” to dziś nazwisko kierowcy albo numer zlecenia (szablon 0161).</div></div>
+  </div>
+
+  <!-- RODZAJE -->
+  <div class="card" style="width:1460px">
+    <div class="h"><b>4 rodzaje SMS i warunki, które blokują fałszywe</b></div>
+    <table class="r">
+      <tr><th style="width:190px">Rodzaj</th><th style="width:70px">Śrem</th><th style="width:70px">Boden</th><th style="width:300px">Kiedy</th><th>Warunki (wszystkie muszą być spełnione)</th></tr>
+      <tr><td><span class="k">A</span><b>Przyjazd za ok. 60 min</b></td><td class="y">tak</td><td class="y">tak</td><td>ETA (E15) do miejsca ≤ 60 min, w dniu planu.</td><td>Ostatnia pozycja ma ≤ 10 min i auto jedzie (> 5 km/h). Śrem: tylko przed „Załadunek”. Boden: tylko po promie („Port SE”, „Droga SE”). Gdy ETA później o > 30 min — jedna korekta.<br><span class="sms">SG-xx: auto AB 12345 bedzie w KSH Srem ok. 07:40 (za ok. 60 min).</span> <span class="ex">Przykład</span></td></tr>
+      <tr><td><span class="k">B</span><b>Wcześniejszy przyjazd</b></td><td class="n">nie</td><td class="y">tak</td><td>Jak A, ale przed dniem planu dostawy.</td><td>Jak A. W Śremie niemożliwe: przed 03:00 w dniu załadunku śledzenie jest wyłączone (E27).</td></tr>
+      <tr><td><span class="k">C</span><b>Auto czeka</b></td><td class="y">tak</td><td class="y">tak</td><td>30 min bez ruchu w promieniu 2 km od strefy, przed wjazdem. Śrem: także auto w strefie przy starcie śledzenia o 03:00.</td><td>Ostatnia pozycja < 5 km/h. Brak nowych pozycji to nie błąd (lokalizator w naczepie). Jedno przypomnienie o 06:00 w dniu planu, jeśli auto nadal czeka.</td></tr>
+      <tr><td><span class="k">D</span><b>Wjazd</b></td><td class="y">tak</td><td class="y">tak</td><td>Wjazd w strefę (jak dziś).</td><td>Status zgodny z miejscem (Śrem przed „Załadunek”, Boden po promie).</td></tr>
+      <tr><td colspan="5" style="background:var(--surface-2)"><b>Dla wszystkich:</b> tylko w oknie śledzenia (03:00 w dniu załadunku → „Dostarczone”, E27). Każdy SMS raz na transport × miejsce × rodzaj × numer. Cisza nocna 20:00–06:00 (decyzja 22:15): SMS z tych godzin wychodzi o 06:00, jeśli nadal jest aktualny (A przeliczony, C i D z prawdziwą godziną). Po „Dostarczone” i „Anulowany” — nic. Kod transportu jak dla KSH: „SG-03” (E41). Bez polskich znaków, do 160 znaków. Treści zmienia administrator w E43.</td></tr>
+    </table>
+  </div>
+
+  <div class="sec">Opcje › Powiadomienia › SMS przy miejscach · Historia transportu</div>
+
+  <!-- OPCJE -->
+  <div class="card" style="width:940px">
+    <div class="h"><b>SMS przy miejscach</b><span class="pill gr">zmienia tylko Administrator HHL</span><span style="flex:1"></span><span class="note">Operacje HHL: podgląd (E9)</span></div>
+    <div class="bd">
+      <div class="set">
+        <div class="off"><b>Wysyłka do odbiorców</b>Wyłączona · tryb testowy: wszystko na …907</div>
+        <div><b>Wyprzedzenie</b>60 min przed przyjazdem</div>
+        <div><b>„Auto czeka”</b>30 min bez ruchu, do 2 km od strefy</div>
+        <div><b>Cisza nocna</b>20:00–06:00</div>
+      </div>
+      <div class="place">
+        <div class="ph"><b>Załadunek · KSH Śrem</b><span class="pill go">1 z 2 osób</span></div>
+        <div class="prow"><div class="in">Sebastian Bożek</div><div class="in">PL</div><div class="in">+48 ••• ••• 907</div><div class="ticks"><span class="tk on"><i></i>A przyjazd</span><span class="tk na"><i></i>B nie dotyczy</span><span class="tk on"><i></i>C czeka</span><span class="tk on"><i></i>D wjazd</span></div></div>
+        <div class="prow"><div class="in ph2">Wybierz z użytkowników ▾</div><div class="in ph2">PL</div><div class="in ph2">albo wpisz numer</div><div class="ticks"><span class="tk"><i></i>A</span><span class="tk na"><i></i>B</span><span class="tk"><i></i>C</span><span class="tk"><i></i>D</span></div></div>
+      </div>
+      <div class="place">
+        <div class="ph"><b>Rozładunek · plac Stegra Boden</b><span class="pill rd">0 z 2 osób</span></div>
+        <div class="alert">Brak odbiorców — SMS dla Boden nie wyjdą. Dziś to dotyczy też SG-03.</div>
+        <div class="prow"><div class="in ph2">Wybierz z użytkowników ▾</div><div class="in ph2">PL</div><div class="in ph2">albo wpisz numer</div><div class="ticks"><span class="tk"><i></i>A</span><span class="tk"><i></i>B</span><span class="tk"><i></i>C</span><span class="tk"><i></i>D</span></div></div>
+        <div class="prow"><div class="in ph2">Wybierz z użytkowników ▾</div><div class="in ph2">PL</div><div class="in ph2">albo wpisz numer</div><div class="ticks"><span class="tk"><i></i>A</span><span class="tk"><i></i>B</span><span class="tk"><i></i>C</span><span class="tk"><i></i>D</span></div></div>
+      </div>
+      <div class="note">Bramka SMS: aktywna · ostatni sygnał 07.10, 21:57 · dziś 0 / 150. Gdy SMS nie wyjdzie w 10 min, e-mail do Operacji HHL: „SMS do Boden (2 osoby) niewysłany: …” (dziś e-mail mówi „Zadzwoń do kierowcy”).</div>
+    </div>
+  </div>
+
+  <!-- HISTORIA -->
+  <div class="card" style="width:472px">
+    <div class="h"><b>Panel SG-03 › Historia</b><span class="ex">Przykład</span></div>
+    <div class="bd">
+      <ul class="hist">
+        <li><span class="tm">06.10, 11:45</span>SMS B do Boden · 2 osoby · doręczony 11:46</li>
+        <li><span class="tm">13:05</span>SMS C do Boden · 2 osoby · doręczony 13:05</li>
+        <li><span class="tm">07.10, 06:00</span>SMS C (przypomnienie) · 2 osoby · doręczony 06:01</li>
+        <li><span class="tm">08:35</span>SMS D do Boden · 2 osoby · doręczony 08:36</li>
+      </ul>
+      <div class="note">Każdy SMS ma wpis w Historii (E17) z treścią i stanem doręczenia. Widzą HHL i KSH.</div>
+    </div>
+  </div>
+
+  <div class="sec">Telefon</div>
+
+  <div class="phone" style="min-height:640px">
+    <div class="h"><b>Watch Tower SMS</b><span style="flex:1"></span><span class="note">odbiorca w Boden</span></div>
+    <div class="thread">
+      <span class="day">wt. 06.10</span>
+      <div class="bub">SG-03: auto GD035YX bedzie przy placu Stegra Boden ok. 12:45, dzien przed planem (dostawa 07.10).<small>11:45</small></div>
+      <div class="bub">SG-03: auto GD035YX stoi przy placu Stegra Boden od 12:35. Plan dostawy: 07.10.<small>13:05</small></div>
+      <span class="day">śr. 07.10</span>
+      <div class="bub">SG-03: auto GD035YX nadal czeka przy placu Stegra Boden (od 06.10 12:35). Dostawa dzis.<small>06:00</small></div>
+      <div class="bub">SG-03: auto GD035YX wjechalo na plac Stegra Boden o 08:35.<small>08:35</small></div>
+    </div>
+    <div class="note" style="padding:10px 12px">Cztery SMS w dwa dni zamiast jednego mylącego „przyjazd 12:45”.</div>
+  </div>
+
+  <div class="phone" style="min-height:640px">
+    <div class="h"><span style="font:600 20px var(--font-sans);color:var(--ink-2)">←</span><b>SMS przy miejscach</b></div>
+    <div class="bd">
+      <div class="set" style="grid-template-columns:1fr 1fr"><div class="off"><b>Wysyłka</b>Tryb testowy</div><div><b>Cisza nocna</b>20–06</div></div>
+      <div class="place">
+        <div class="ph"><b>Plac Stegra Boden</b><span class="pill rd">0 z 2</span></div>
+        <div class="alert">Brak odbiorców — SMS nie wyjdą.</div>
+        <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+          <div class="in ph2">Osoba 1 · wybierz z użytkowników ▾</div>
+          <div class="ticks"><span class="tk"><i></i>A</span><span class="tk"><i></i>B</span><span class="tk"><i></i>C</span><span class="tk"><i></i>D</span></div>
+          <div class="in ph2">Osoba 2 · wybierz z użytkowników ▾</div>
+        </div>
+      </div>
+      <div class="place">
+        <div class="ph"><b>KSH Śrem</b><span class="pill go">1 z 2</span></div>
+        <div style="padding:10px 12px" class="note">Sebastian Bożek · PL · …907 · A, C, D</div>
+      </div>
+    </div>
+    <div class="nav"><span>Kokpit</span><span>Harmonogram</span><span>Ryzyka</span><span>Dokumenty</span><span class="on">Więcej</span></div>
+  </div>
+</div>
+</body></html>

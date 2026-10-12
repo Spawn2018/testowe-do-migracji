@@ -1,0 +1,99 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--surface-3:#EAEFF3;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;
+--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F8DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.wrap{padding:18px;display:grid;grid-template-columns:420px 300px 1fr;gap:18px;align-items:start;max-width:1240px}
+.cap{font:600 12px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px;display:inline-block;margin-bottom:10px}
+.bell{background:var(--surface);border:1px solid var(--rule);box-shadow:0 8px 24px rgba(14,26,36,.12)}
+.bell-hd{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.bell-hd b{font:700 17px var(--font-cond)}
+.bell-hd .sp{flex:1}
+.lnk{color:var(--sea);font-size:12.5px;text-decoration:underline}
+.grp{padding:8px 12px 2px;font:700 12px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);display:flex;justify-content:space-between}
+.grp .n{color:var(--ink-3)}
+.it{display:grid;grid-template-columns:4px 1fr auto;gap:10px;padding:9px 12px;border-bottom:1px solid var(--rule-2);align-items:start}
+.it .bar{align-self:stretch;background:var(--rule)}
+.it.crit .bar{background:var(--red)}.it.warn .bar{background:var(--amber)}.it.info .bar{background:var(--sea)}
+.it .t{font-weight:600;font-size:13.5px}
+.it .d{font-size:12.5px;color:var(--ink-2)}
+.it .go{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;color:var(--sea);white-space:nowrap}
+.it.unread .t::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sea);margin-right:6px;vertical-align:1px}
+.calls{display:flex;gap:6px;margin-top:5px}
+.call{font:600 12px var(--font-sans);border:1px solid var(--go);color:var(--go);background:var(--go-bg);padding:3px 8px}
+.foot{padding:9px 12px;font-size:12.5px;color:var(--ink-2);background:var(--surface-2)}
+/* telefon */
+.phone{width:300px;border:10px solid #111;border-radius:34px;background:linear-gradient(160deg,#1d3b4f,#0e1a24);padding:44px 10px 16px;min-height:560px;position:relative;color:#fff}
+.phone .time{text-align:center;font:600 46px var(--font-cond);letter-spacing:.02em}
+.phone .date{text-align:center;font-size:13px;opacity:.8;margin-bottom:22px}
+.push{background:rgba(255,255,255,.93);color:var(--ink);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
+.push .app{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-3)}
+.push .app i{width:16px;height:16px;border-radius:4px;background:var(--go);display:inline-block}
+.push .t{font-weight:700;font-size:13.5px}
+.push .d{font-size:12.5px}
+.push .act{display:flex;gap:6px;margin-top:5px}
+.push .act span{flex:1;text-align:center;font:600 12px var(--font-sans);padding:5px;border-radius:8px;background:var(--surface-3)}
+.arrow{font-size:12px;opacity:.85;margin:4px 4px 0}
+/* iphone */
+.steps{background:var(--surface);border:1px solid var(--rule);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.steps h3{margin:0;font:700 17px var(--font-cond)}
+.st{display:grid;grid-template-columns:28px 1fr;gap:8px;align-items:start}
+.st b{font:700 18px/1 var(--font-cond);color:var(--sea);border:1px solid var(--sea);width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+.st span{font-size:13px}
+.dev{border-top:1px solid var(--rule-2);padding-top:10px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.dev .r{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.btn{font:600 13px var(--font-sans);padding:6px 11px;border:1px solid var(--ink);background:var(--ink);color:#fff}
+.btn.ghost{background:var(--surface);color:var(--ink)}
+.ok{color:var(--go);font-weight:600}
+body.m .wrap{grid-template-columns:1fr;max-width:390px;padding:10px}
+body.m .bell{box-shadow:none}
+body.m .phone{margin:0 auto}
+</style></head><body>
+<div class="wrap">
+  <div>
+    <div class="cap">Dzwonek · konto HHL</div>
+    <span class="ex">Układ proponowany · wpisy z bazy z 05–07.10</span>
+    <div class="bell">
+      <div class="bell-hd"><b>Powiadomienia</b><span class="sp"></span><span class="lnk">Oznacz wszystkie jako przeczytane</span></div>
+      <div class="grp"><span>Do zrobienia</span><span class="n">3</span></div>
+      <div class="it crit unread"><span class="bar"></span><div><div class="t">Brak awizacji przed załadunkiem</div><div class="d">15060/2026/OSL/GDA/P · po terminie od 04.10 · eskalowana</div><div class="calls"><span class="call">☎ Dyspozytor SCX</span></div></div><span class="go">Decyzja ›</span></div>
+      <div class="it crit unread"><span class="bar"></span><div><div class="t">Brak wymaganego dokumentu przed załadunkiem</div><div class="d">15069/2026/OSL/GDA/P · po terminie od 04.10</div></div><span class="go">Dokumenty ›</span></div>
+      <div class="it warn unread"><span class="bar"></span><div><div class="t">Nowa wiadomość w czacie</div><div class="d">15060/2026/OSL/GDA/P · 06.10, 23:16</div></div><span class="go">Czat ›</span></div>
+      <div class="grp"><span>Moje transporty</span><span class="n">2</span></div>
+      <div class="it info"><span class="bar"></span><div><div class="t">15062/2026/OSL/GDA/P · wjazd na plac budowy Stegra Boden</div><div class="d">07.10, 08:36 · strefa i status w jednym wpisie</div></div><span class="go">Transport ›</span></div>
+      <div class="it info"><span class="bar"></span><div><div class="t">15048/2026/OSL/GDA/P · 3 zmiany statusu</div><div class="d">06.10, 22:57–23:05 · zgrupowane w jeden wpis</div></div><span class="go">Historia ›</span></div>
+      <div class="foot">Sytuacja ogólna nie trafia do dzwonka: 36 komunikatów promowych i 38 drogowych SE z ostatniej doby jest na stronie <span class="lnk">Ryzyka</span>. Do dzwonka trafia tylko to, co dotyczy Twojego transportu.</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cap">Powiadomienie na telefonie</div>
+    <div class="phone">
+      <div class="time">12:04</div><div class="date">środa, 7 października</div>
+      <div class="push"><div class="app"><i></i>Watch Tower · teraz</div><div class="t">Decyzja: brak awizacji</div><div class="d">15060/2026/OSL/GDA/P · po terminie od 04.10</div><div class="act"><span>Otwórz</span><span>Zadzwoń do SCX</span></div></div>
+      <div class="arrow">Dotknięcie → Centrum decyzji, dokładnie ta decyzja. Nie strona główna.</div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <h3>Powiadomienia na telefonie</h3>
+    <div class="cap" style="margin:0">iPhone · tylko z aplikacji na ekranie początkowym</div>
+    <div class="st"><b>1</b><span>Otwórz tower.log-mar.pl w Safari.</span></div>
+    <div class="st"><b>2</b><span>Udostępnij → „Do ekranu początkowego” → Dodaj.</span></div>
+    <div class="st"><b>3</b><span>Uruchom Watch Tower z ikony na ekranie, nie z Safari.</span></div>
+    <div class="st"><b>4</b><span>Opcje → Preferencje → „Włącz powiadomienia” → Zezwól.</span></div>
+    <div class="cap" style="margin:4px 0 0">Android · Chrome</div>
+    <div class="st"><b>1</b><span>Opcje → Preferencje → „Włącz powiadomienia” → Zezwól. Instalacja na ekranie jest zalecana, ale nie wymagana.</span></div>
+    <div class="dev">
+      <div class="cap" style="margin:0">Twoje urządzenia</div>
+      <div class="r"><span>Android · Chrome · od 05.10</span><span class="ok">aktywne</span></div>
+      <div class="r"><button class="btn">Wyślij powiadomienie testowe</button><button class="btn ghost">Usuń urządzenie</button></div>
+    </div>
+  </div>
+</div>
+<script>if(location.search.includes('phone'))document.body.classList.add('m');</script>
+</body></html>

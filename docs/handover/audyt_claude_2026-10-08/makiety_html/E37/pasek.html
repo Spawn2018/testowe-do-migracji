@@ -1,0 +1,361 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.h3{padding:9px 14px 4px;font:700 16px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+.facts{margin:0;padding:10px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:5px}
+.facts b{font-weight:600}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 9px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+table.r td.n,table.r th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.code{font-weight:700;white-space:nowrap}
+.note{font-size:12.5px;color:var(--ink-3)}
+.red{color:var(--red);font-weight:600}.grey{color:var(--ink-3)}.ok{color:var(--go);font-weight:600}
+.chip{height:32px;padding:0 11px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn{height:34px;padding:0 13px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-size:13.5px;background:#fff;white-space:nowrap}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn.sm{height:28px;font-size:12.5px;padding:0 9px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;position:relative}
+.phone .h b{font-size:20px}
+.pc{margin:6px 12px 0;border:1px solid var(--rule);padding:8px 11px;display:flex;flex-direction:column;gap:2px}
+.pc .t{font:700 16px var(--font-cond);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto;background:#fff}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.drow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--rule-2)}
+.drow .l b{font-weight:600}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field .lbl{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.inp{min-height:38px;border:1px solid var(--rule);padding:8px 10px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;background:#fff}
+.drop{border:1.5px dashed #9AAAB6;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;background:var(--surface-2)}
+.ph{font:700 26px var(--font-cond);display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:18px;padding:0 14px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3)}
+.tabs span{padding:9px 0}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+
+
+.ph .no{color:var(--amber);font-size:18px}.ph .nr{font:600 18px var(--font-cond);color:var(--ink-2)}.ph .miss{font:600 15px var(--font-cond);color:var(--red);letter-spacing:.02em}
+.wb{display:flex;gap:0;padding:4px 14px 10px;font-size:13px}.wb span{padding-right:14px;margin-right:14px;border-right:1px solid var(--rule-2)}.wb span:last-child{border:0}.wb b{display:block;font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.todo{margin:12px 14px 4px;border:1px solid var(--rule);border-left:4px solid var(--red);background:#fff}
+.todo .tt{padding:7px 11px;font:700 15px var(--font-cond);display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--rule-2)}
+.todo .it{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 11px;border-bottom:1px solid var(--rule-2);font-size:13px;align-items:center}
+.todo .it:last-child{border-bottom:0}.todo .it .w{font-size:12px;color:var(--ink-3)}
+.todo.am{border-left-color:var(--amber)}
+.mapbox{position:relative;margin:12px 14px 0;border:1px solid var(--rule);height:220px;overflow:hidden}
+.mapbox img{width:100%;height:100%;object-fit:cover}
+.ov{position:absolute;background:#fff;border:1px solid #9AAAB6;padding:6px 9px;font-size:12.5px;line-height:1.4;box-shadow:0 3px 10px rgba(14,26,36,.15)}
+.ov b{font:700 14px var(--font-cond)}
+.zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;border:1px solid #9AAAB6;background:#fff}.zoom span{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:16px;border-bottom:1px solid var(--rule-2)}.zoom span:last-child{border:0}
+.st{margin:14px 14px 4px;font:700 15px var(--font-cond);letter-spacing:.02em;display:flex;gap:8px;align-items:center}
+.st .who{font:500 13px var(--font-sans);color:var(--ink-3)}
+.kv{display:grid;grid-template-columns:128px 1fr;gap:5px 12px;padding:2px 14px 4px;font-size:13.5px}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0}
+.mono{font-family:var(--font-cond);font-weight:600;letter-spacing:.02em}
+.leg{margin:4px 14px;border:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:7px 10px;gap:10px}
+.leg .lt{font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.leg.now{border-left:4px solid var(--go);background:var(--go-bg)}
+.btn.call{color:var(--go);border-color:var(--go);font-weight:600}.btn.call.f{background:var(--go);color:#fff}
+.form{padding:10px 14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.grp{border:1px solid var(--rule);padding:8px 10px 0;margin-bottom:10px}
+.grp .gt{font:600 12px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+.inp.e{color:#9AAAB6}.inp.bad{border-color:var(--red);box-shadow:inset 3px 0 0 var(--red)}
+.chk{display:flex;gap:8px;align-items:center;font-size:13.5px;margin-bottom:4px}.chk i{width:16px;height:16px;border:1.5px solid var(--ink-2);display:inline-block}
+.bar{margin:0 14px;padding:8px 10px;font-size:13px;border:1px solid var(--red);background:var(--red-bg);color:var(--ink)}
+.bar b{color:var(--red)}
+ul.cmp{margin:0;padding:6px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.mbar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.mtabs{display:flex;gap:16px;padding:0 12px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden}
+.mtabs span{padding:10px 0}.mtabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+.acc{margin:6px 12px 0;border:1px solid var(--rule);padding:9px 11px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;min-height:44px}
+.acc b{font:700 15px var(--font-cond)}
+</style><style>
+table.m{border-collapse:collapse;width:100%;font-size:13.5px}
+table.m td,table.m th{padding:6px 14px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:top}
+table.m th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+table.m .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.m tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0}
+.fuel{margin:8px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:12.5px;background:var(--surface-2)}
+.fuel b{font:700 14px var(--font-cond)}
+.fee{margin:6px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.fee .k{font:700 14px var(--font-cond)}
+.rules{margin:6px 14px 12px;font-size:12.5px}
+.rules td{padding:3px 8px 3px 0;border-bottom:1px dotted var(--rule-2)}
+.calc{font-size:13px;background:var(--surface-2);border:1px solid var(--rule);padding:8px 10px;margin-bottom:10px;line-height:1.55}
+.calc b{font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.two div{border:1px solid var(--rule);padding:7px 9px;font-size:13px}
+.two div b{display:block;font:700 18px var(--font-cond)}
+</style>
+<style>
+.zg{padding:6px 14px 2px;font:700 13px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);background:var(--surface-2);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule-2)}
+.zr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 14px;border-bottom:1px solid var(--rule-2);font-size:13px}
+.zr .nm{font-weight:600}.zr .d{color:var(--ink-3);font-size:12.5px}
+.zr.sel{background:var(--go-bg);box-shadow:inset 4px 0 0 var(--go)}
+.hist{margin:0;padding:0 14px 10px;list-style:none;font-size:13px}
+.hist li{padding:6px 0;border-bottom:1px dotted var(--rule-2)}
+.hist b{font-weight:600}
+</style>
+<style>
+.tb{display:flex;align-items:center;gap:12px;height:56px;padding:0 14px;background:#fff;border-bottom:1px solid var(--rule);white-space:nowrap}
+.tb .logo{display:flex;align-items:center;gap:8px;font:700 22px var(--font-cond);letter-spacing:.04em}
+.tb .logo i{width:22px;height:26px;background:linear-gradient(160deg,#1B6E5D,#2BB38F);clip-path:polygon(50% 0,100% 100%,0 100%);display:inline-block}
+.tb .proj{color:var(--ink-3);font-size:14px}
+.tb .sp{flex:1}
+.seg{display:flex;border:1px solid var(--rule)}.seg span{padding:5px 10px;font-size:13px;border-right:1px solid var(--rule)}.seg span:last-child{border:0}.seg span.on{background:var(--ink);color:#fff;font-weight:600}
+.tb .lbl2{font-size:12px;color:var(--ink-3)}
+.ib{width:36px;height:36px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font:700 15px var(--font-cond);position:relative;background:#fff}
+.ib .bd{position:absolute;top:-7px;right:-8px;background:var(--red);color:#fff;font:700 11px var(--font-cond);padding:0 4px;min-width:17px;text-align:center}
+.ops2{display:flex;align-items:center;gap:10px;font-size:12.5px}
+.ops2 .wk{font:700 18px var(--font-cond)}
+.ops2 .cd{font:700 15px var(--font-cond)}
+.ops2 .vs{border-left:1px solid var(--rule);height:30px}
+.av{display:flex;align-items:center;gap:8px;border:1px solid var(--rule);padding:3px 9px 3px 4px;height:40px}
+.av .ini{width:30px;height:30px;background:var(--sea);color:#fff;font:700 13px var(--font-cond);display:flex;align-items:center;justify-content:center;border-radius:50%}
+.av .nm2{display:flex;flex-direction:column;line-height:1.15}.av .nm2 b{font-weight:600;font-size:13px}.av .nm2 span{font-size:11.5px;color:var(--ink-3)}
+.strip{display:flex;align-items:center;gap:10px;padding:8px 14px;font-size:13.5px;border-bottom:1px solid var(--rule)}
+.strip.pv{background:var(--sea-bg);box-shadow:inset 4px 0 0 var(--sea)}
+.strip.as{background:var(--amber-bg);box-shadow:inset 4px 0 0 var(--amber)}
+.strip.bc{background:#fff;box-shadow:inset 4px 0 0 var(--ink)}
+.strip.bc.imp{background:var(--red-bg);box-shadow:inset 4px 0 0 var(--red)}
+.menu{width:300px;border:1px solid #9AAAB6;background:#fff;box-shadow:0 6px 18px rgba(14,26,36,.16)}
+.menu .who{padding:12px 14px;border-bottom:1px solid var(--rule-2)}
+.menu .who b{font:700 17px var(--font-cond);display:block}
+.menu .mi{padding:10px 14px;border-bottom:1px solid var(--rule-2);font-size:13.5px;display:flex;justify-content:space-between;align-items:center;min-height:44px}
+.menu .mi:last-child{border:0}
+.help{width:470px;border:1px solid #9AAAB6;background:#fff;box-shadow:0 6px 18px rgba(14,26,36,.16)}
+ol.steps2{margin:0;padding:8px 14px 10px 32px;font-size:13.5px;display:flex;flex-direction:column;gap:7px}
+ol.steps2 b{font-weight:600}
+.scr{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.scr .tt{font:700 22px var(--font-cond)}
+.dots{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--ink-3)}.dots i{width:22px;height:4px;background:var(--rule);display:inline-block}.dots i.on{background:var(--ink)}
+.bnav{display:flex;border-top:1px solid var(--rule);margin-top:auto;background:#fff}.bnav span{flex:1;text-align:center;padding:8px 0 10px;font-size:11px;color:var(--ink-3);position:relative}.bnav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.bnav span .bd{position:absolute;top:2px;left:58%;background:var(--red);color:#fff;font:700 10.5px var(--font-cond);padding:0 4px}
+.mtb{display:flex;align-items:center;gap:8px;height:56px;padding:0 10px;border-bottom:1px solid var(--rule);background:#fff}
+.mtb .logo{font:700 18px var(--font-cond);letter-spacing:.04em;display:flex;gap:6px;align-items:center}
+.mtb .logo i{width:18px;height:22px;background:linear-gradient(160deg,#1B6E5D,#2BB38F);clip-path:polygon(50% 0,100% 100%,0 100%);display:inline-block}
+.fchip{border:1px solid var(--rule);padding:4px 8px;font-size:12px;line-height:1.15}
+.fchip b{font:700 14px var(--font-cond)}
+.cmp2 td:first-child{color:var(--ink-3);width:46%}
+.imgbox{border-top:1px solid var(--rule)}
+.inv{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:8px 14px;border-bottom:1px solid var(--rule-2);font-size:13px;align-items:center}
+.inv .nm{font-weight:600}.inv .d{color:var(--ink-3);font-size:12.5px}
+.inv .acts{display:flex;gap:6px}
+</style>
+</head><body>
+<div class="sheet">
+  <div class="top"><h1>E37 · Pasek górny, pomoc, komunikaty, logowanie, zaproszenie, pierwsze wejście</h1>
+    <span class="ex">„Dziś” — zrzuty produkcji 08.10, 01:47 (konto Operacje HHL; ekran logowania bez logowania) i dane z bazy · „Po zmianie” — rejsy, liczby kont i daty z bazy; osoby, telefony i treści komunikatów oznaczone „Przykład” są zmyślone</span></div>
+
+  <div class="sec">Dziś · komputer · pasek górny i przycisk „?”</div>
+  <div class="card" style="width:1428px">
+    <img src="now-top-d.png" width="1428" height="408" alt="">
+    <div class="cap">Pasek: logo i „Stegra Boden · H&amp;H Logistics”, przełącznik „Widok”, motyw, „?”, dzwonek 40, tydzień t41, dwa najbliższe rejsy z odliczaniem, data. „?” otwiera listę 10 skrótów klawiszowych, w tym „Zmień rolę Shift + R”. E-mail konta, rodzaj konta i „Wyloguj” są na dole lewego menu.</div>
+  </div>
+
+  <div class="sec">Dziś · telefon, logowanie i fakty z bazy</div>
+  <div class="card" style="width:372px">
+    <div class="h"><b>Telefon · pasek</b></div>
+    <img src="now-top-m.png" width="370" height="218" alt="">
+    <div class="cap">☰, logo, motyw, „?” (skróty klawiszowe), dzwonek. Bez tygodnia, rejsów, daty, firmy i „Widoku”.</div>
+    <div class="h" style="border-top:1px solid var(--rule)"><b>„Nie pamiętam hasła”</b></div>
+    <img src="now-forgot-d.png" width="300" height="377" alt="" style="margin:8px auto">
+    <div class="cap">Przed wysłaniem sprawdza adres. Gdy adresu nie ma — „Brak zaproszenia — skontaktuj się z HHL”. Po wysłaniu — „Otwórz go w tej przeglądarce”, choć link działa w każdej (<code>sendAuthEmail.ts</code> l. 38).</div>
+  </div>
+  <div class="card" style="width:300px">
+    <div class="h"><b>Telefon · logowanie</b></div>
+    <img src="now-login-m.png" width="298" height="489" alt="">
+    <div class="cap">E-mail i hasło (min. 12 znaków), „Pokaż”, „Nie pamiętam hasła”, „Dostęp wyłącznie na zaproszenie administratora HHL”.</div>
+  </div>
+  <div class="card" style="width:724px">
+    <div class="h"><b>Fakty 08.10</b></div>
+    <ul class="facts">
+      <li><b>Instrukcja</b> to zwinięty panel na końcu Opcji › „Preferencje i pozostałe” (HHL) i Ustawień (KSH, SCX). Treść jest sprzeczna z decyzjami: „CMR i POD” (bez POD — 19:51), „Moje zadania” (→ Do zrobienia — 19:11), „Decyzje” (E7), „Importuj XLSX” (automatycznie — E38), „utwórz link kierowcy” (link kierowcy wyłączony w bazie od 03.10).</li>
+      <li><b>Komunikat HHL</b> (Opcje › „Komunikat dla wszystkich”): baner nad treścią strony. Aplikacja czyta go tylko przy wejściu, więc zalogowani zobaczą go dopiero po przeładowaniu. Nie da się go zamknąć. W bazie są 2 próbne z 01.10 (22:03 i 22:04), dziś nie ma żadnego.</li>
+      <li><b>Komunikaty błędów:</b> „Brak dostępu · OK” przy linku do zamkniętej sprawy; „Wysyłka e-maili nie jest jeszcze skonfigurowana (SMTP Resend — krok właściciela)”, choć poczta działa od 26.09; po końcu sesji „zaloguj się ponownie linkiem z e-maila”, choć logowanie jest hasłem.</li>
+      <li><b>Weryfikacja dwuetapowa:</b> wymaganie dla administratorów wyłączone od 27.09, 0 z 15 kont ma zapisany kod z aplikacji.</li>
+      <li><b>Zaproszenie</b> (tylko Administrator): e-mail, firma, rodzaj konta (z „KSH — administrator”); bez imienia, nazwiska i telefonu. Wysyłany jest link logowania, nie e-mail „zaproszenie”: 0 z 15 kont ma znacznik zaproszenia, 3 konta z 29.09 dostały e-mail „potwierdź adres”. Zaproszenie w bazie jest ważne 7 dni, a link w e-mailu najwyżej 24 h (limit Supabase). Na liście jest tylko „zaproszenie oczekuje” i „Cofnij”, bez daty i bez „Wyślij ponownie”.</li>
+      <li><b>Konta:</b> 15, w tym 13 aktywnych; 8 bez ustawionego hasła. Konto dyspozytora SCX z domeny przewoźnika: link otwarty 29.09, hasła nie ustawił, dziś 0 sesji. Konta KSH są tylko testowe (3 bez konta logowania).</li>
+      <li><b>„Działaj jako”:</b> zmiany SG-01 i SG-02 z 06.10, 23:00–23:07 (statusy, numery, wymiary, rejs) są zapisane pod nazwą dyspozytora SCX. Zrobił je Administrator HHL („Działaj jako” 22:59–23:08). Tak samo zmiany numeru SG-02 z 23:11–23:14 pod dwoma kontami Operacji HHL. Historia transportu tego nie pokazuje.</li>
+      <li><b>Pierwsze wejście:</b> link z e-maila → „Dalej” → hasło → od razu Kokpit. Nie ma powitania, prośby o telefon (E6), powiadomień ani wskazówki instalacji na telefonie (ta jest tylko w Opcjach przy włączaniu push na iPhonie). Próba 07.10: zaproszenie 14:10:11, link 14:10:34, hasło 14:11:00.</li>
+    </ul>
+  </div>
+
+  <div class="sec">Po zmianie · komputer · pasek górny, konto, pomoc</div>
+  <div class="card" style="width:1428px">
+    <div class="tb">
+      <span class="logo"><i></i>WATCH TOWER</span><span class="proj">Stegra Boden</span>
+      <span class="sp"></span>
+      <span class="lbl2">Podgląd</span><span class="seg"><span class="on">HHL</span><span>KSH</span><span>SCX</span></span>
+      <span class="ops2"><span class="vs"></span><span class="wk">t41</span><span>⛴</span><span style="display:flex;flex-direction:column;line-height:1.2"><span><span class="cd">6 h 13 min</span> Stena Estelle · 08:00 · Gdynia → Karlskrona</span><span><span class="cd" style="font-size:13px">16 h 13 min</span> Wawel · 18:00 · Gdańsk → Nynäshamn</span></span><span class="vs"></span><span class="cd" style="font-size:17px">08.10.2026</span></span>
+      <span class="ib" title="Pomoc">?</span>
+      <span class="ib">🔔<span class="bd">40</span></span>
+      <span class="av"><span class="ini">AN</span><span class="nm2"><b>Anna Nowak</b><span>HHL · Operacje</span></span><span class="grey">▾</span></span>
+    </div>
+    <div class="strip pv"><b>Podgląd: tak widzi KSH Użytkownik.</b> Nic tu nie zapiszesz. <span class="sp" style="flex:1"></span><span class="btn sm">Wróć do HHL</span></div>
+    <div class="strip as"><b>Działasz jako: dyspozytor SCX</b> <span class="ex">Przykład</span> Każda zmiana zapisze się w historii jako „[imię i nazwisko administratora] (HHL) jako dyspozytor SCX”. <span style="flex:1"></span><span class="btn sm">Zakończ</span></div>
+    <div class="strip bc"><span class="pill gr">Komunikat HHL</span><b>Prom Stena Estelle 09.10 wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.</b> <span class="ex">Przykład</span><span class="grey">· do 09.10, 12:00</span><span style="flex:1"></span><span class="btn sm">Zamknij</span></div>
+    <div class="cap">Kolejność pasków pod paskiem górnym: podgląd albo „Działaj jako” (tylko HHL), potem komunikat HHL. Konto (imię, nazwisko, firma, rodzaj) jest po prawej, nie na dole lewego menu. „Motyw” przechodzi do menu konta. Projekt bez nazwy firmy — firma jest przy nazwisku. „Podgląd” widzi tylko HHL (E9).</div>
+  </div>
+
+  <div class="menu">
+    <div class="who"><b>Anna Nowak</b><span class="grey">H&amp;H Logistics · Operacje HHL</span> <span class="ex">Przykład</span><div class="grey" style="font-size:12.5px;margin-top:3px">tel. +48 ••• ••• 123 · ostatnie logowanie: dziś, 07:58</div></div>
+    <div class="mi"><span>Moje konto</span><span class="grey">imię, nazwisko, telefon, hasło, 2FA, urządzenia</span></div>
+    <div class="mi"><span>Dla mnie</span><span class="grey">co dostaję (E11)</span></div>
+    <div class="mi"><span>Pomoc</span><span class="grey">?</span></div>
+    <div class="mi"><span>Jasny / ciemny</span><span class="grey">T</span></div>
+    <div class="mi"><span><b>Wyloguj</b></span><span></span></div>
+  </div>
+
+  <div class="help">
+    <div class="h"><b>Pomoc</b><span class="sub">Operacje HHL</span><span style="flex:1"></span><span class="grey">✕</span></div>
+    <div class="tabs"><span class="on">Jak pracuję</span><span>Co nowego</span><span>Kontakt</span><span>Skróty</span></div>
+    <ol class="steps2">
+      <li><b>Kokpit</b> — co jest w trasie, Twoje sprawy w Do zrobienia, załadunki w 7 dni.</li>
+      <li><b>Ryzyka › Do zrobienia</b> — sprawy HHL: numer zlecenia HHL, wymiary zestawu, daty KSH bliżej niż 5 dni.</li>
+      <li><b>Harmonogram</b> aktualizuje się sam z pliku KSH (po E38). Numer zlecenia HHL wpisujesz w panelu transportu.</li>
+      <li><b>Dokumenty</b> — zezwolenia, polisy i podpisany CMR z terminami.</li>
+      <li><b>Faktury</b> — sprawdzasz faktury SCX, wystawiasz faktury HHL dla KSH, oznaczasz „Opłacona”.</li>
+      <li><b>Opcje</b> masz w podglądzie. Zmiany robi Administrator HHL.</li>
+    </ol>
+    <div class="cap">Treść zależy od firmy i rodzaju konta (5 wersji) i zmienia się razem z menu. Kroki to skróty — kliknięcie otwiera to miejsce.</div>
+    <div class="h" style="border-top:1px solid var(--rule)"><b style="font-size:15px">Kontakt</b><span class="ex">Przykład</span></div>
+    <div class="drow"><div class="l"><b>Operacje HHL</b> · Anna Nowak<div class="grey" style="font-size:12.5px">+48 ••• ••• 123 · operacje@… </div></div><span class="btn sm call">Zadzwoń</span></div>
+    <div class="cap">Kontakt bierze się z kont Operacji HHL z telefonem (E6) — bez wpisywania osobno.</div>
+  </div>
+
+  <div class="card" style="width:640px">
+    <div class="h"><b>Komunikaty — dziś i po zmianie</b></div>
+    <table class="r cmp2">
+      <tr><th>Dziś</th><th>Po zmianie</th></tr>
+      <tr><td>„Brak dostępu · OK” — link do sprawy, która wygasła</td><td>„Ta sprawa jest już zamknięta (wygasła 06.10).” + „Otwórz transport”</td></tr>
+      <tr><td>„Tę decyzję rozstrzyga inna firma.” — sprawa innej firmy</td><td>„Tę sprawę prowadzi SCX. Możesz ją tylko podejrzeć.”</td></tr>
+      <tr><td>„Wysyłka e-maili nie jest jeszcze skonfigurowana (SMTP Resend — krok właściciela)”</td><td>„Nie udało się wysłać e-maila. Spróbuj za kilka minut.” Szczegóły trafiają do Stanu systemu.</td></tr>
+      <tr><td>„Sesja … została zakończona — zaloguj się ponownie linkiem z e-maila”</td><td>„Sesja na tym urządzeniu została zakończona. Zaloguj się e-mailem i hasłem.”</td></tr>
+      <tr><td>Reset: „Brak zaproszenia — skontaktuj się z HHL” albo „… Otwórz go w tej przeglądarce”</td><td>Zawsze: „Jeśli adres ma konto, wysłaliśmy link. Działa na każdym urządzeniu przez 1 h.”</td></tr>
+      <tr><td>„Link wygasł lub został już użyty. Poproś o nowy.”</td><td>„Link wygasł.” + przycisk „Wyślij nowy link na ten adres” (gdy konto albo zaproszenie jest ważne)</td></tr>
+      <tr><td>Komunikat HHL widoczny dopiero po przeładowaniu, bez zamknięcia</td><td>Pojawia się w ciągu minuty, z „Zamknij” (zapamiętane dla osoby) i datą końca</td></tr>
+    </table>
+    <div class="cap">Czas ważności linku pochodzi z ustawień logowania: w repozytorium 1 h, na produkcji do sprawdzenia przy budowie. Bez kodów i nazw usług w treści.</div>
+  </div>
+
+  <div class="card" style="width:772px">
+    <div class="h"><b>Opcje › Komunikat HHL</b><span class="sub">zmienia Administrator HHL · Operacje HHL podgląd</span></div>
+    <div class="form">
+      <div class="field"><span class="lbl">Treść</span><div class="inp" style="min-height:58px;align-items:flex-start">Prom Stena Estelle 09.10 wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.</div><span class="note">72 / 500 znaków · <span class="ex">Przykład</span></span></div>
+      <div class="grid2"><div class="field"><span class="lbl">Dla</span><div class="row"><span class="chip on">HHL</span><span class="chip on">KSH</span><span class="chip on">SCX</span></div></div><div class="field"><span class="lbl">Widoczny do</span><div class="inp"><span>09.10.2026, 12:00</span><span class="grey">▾</span></div></div></div>
+      <div class="field"><span class="lbl">Wysyłka</span><div class="row"><span class="chip on">baner w aplikacji</span><span class="chip">+ e-mail do wybranych firm (pytanie 2)</span></div></div>
+      <div class="row" style="justify-content:flex-end"><span class="btn">Podgląd</span><span class="btn pri">Opublikuj</span></div>
+    </div>
+    <div class="zg">Historia · z bazy</div>
+    <div class="zr"><div><span class="nm">01.10, 22:04 · Administrator HHL</span><div class="d">„Witamy w Onmi Watch Tower. To jest komunikat testowy.” · HHL, KSH, SCX · zdjęty 02.10, 14:50</div></div><span class="d">próbny</span></div>
+    <div class="zr"><div><span class="nm">01.10, 22:03 · Administrator HHL</span><div class="d">„Witamy w Omnie Watch Tower…” · zdjęty po 5 s</div></div><span class="d">próbny</span></div>
+  </div>
+
+  <div class="sec">Po zmianie · zaproszenie i lista kont (Opcje › Użytkownicy)</div>
+  <div class="card" style="width:640px">
+    <div class="h"><b>Zaproś osobę</b><span class="sub">tylko Administrator HHL</span><span class="ex">Przykład</span></div>
+    <div class="form">
+      <div class="grid2"><div class="field"><span class="lbl">Imię</span><div class="inp">Anna</div></div><div class="field"><span class="lbl">Nazwisko</span><div class="inp">Nowak</div></div></div>
+      <div class="grid2"><div class="field"><span class="lbl">Telefon</span><div class="inp">+48 ••• ••• 123</div></div><div class="field"><span class="lbl">E-mail</span><div class="inp">anna.nowak@…</div></div></div>
+      <div class="field"><span class="lbl">Firma i rodzaj konta</span><div class="row"><span class="chip">HHL Administrator</span><span class="chip">HHL Operacje</span><span class="chip on">KSH Użytkownik</span><span class="chip">SCX Dyspozytor</span><span class="chip">SCX Użytkownik</span></div></div>
+      <div class="calc">E-mail <b>„Watch Tower — zaproszenie”</b> z szablonu (E43): kto zaprasza, firma, rodzaj konta, przycisk „Dołącz”. Link w e-mailu działa 24 h. Zaproszenie jest ważne 7 dni — po wygaśnięciu linku osoba sama prosi o nowy jednym przyciskiem.</div>
+      <div class="row" style="justify-content:flex-end"><span class="btn">Anuluj</span><span class="btn pri">Wyślij zaproszenie</span></div>
+    </div>
+  </div>
+  <div class="card" style="width:772px">
+    <div class="h"><b>Konta i zaproszenia</b><span class="sub">15 kont · 13 aktywnych · 8 bez hasła (z bazy)</span></div>
+    <div class="inv"><div><span class="nm">Dyspozytor SCX</span> <span class="grey">· @scandinavian.com.pl</span><div class="d">link otwarty 29.09, hasła nie ustawił · 0 aktywnych sesji</div></div><div class="acts"><span class="pill am">niedokończone</span><span class="btn sm">Wyślij link do hasła</span></div></div>
+    <div class="inv"><div><span class="nm">Anna Nowak</span> <span class="grey">· KSH Użytkownik</span> <span class="ex">Przykład</span><div class="d">zaproszenie wysłane 09.10, 10:15 · ważne do 16.10 · e-mail doręczony</div></div><div class="acts"><span class="pill sea">wysłane</span><span class="btn sm">Wyślij ponownie</span><span class="btn sm">Cofnij</span></div></div>
+    <div class="inv"><div><span class="nm">Jan Kowalski</span> <span class="grey">· SCX Użytkownik</span> <span class="ex">Przykład</span><div class="d">zaproszenie z 01.10 wygasło 08.10</div></div><div class="acts"><span class="pill gr">wygasło</span><span class="btn sm">Zaproś ponownie</span></div></div>
+    <div class="inv"><div><span class="nm">Operacje HHL</span> <span class="grey">· @hhlogistics.pl</span><div class="d">aktywne · ostatnie logowanie 05.10 · bez imienia i telefonu</div></div><div class="acts"><span class="pill rd">brak telefonu</span><span class="btn sm">Zmień</span></div></div>
+    <div class="cap">Stan przy każdej osobie zdaniem: wysłane / niedokończone / wygasło / aktywne. Daty z bazy. Konto bez telefonu na czerwono (E6). Zmiana rodzaju konta zgodnie z E14.</div>
+  </div>
+
+  <div class="sec">Po zmianie · telefon · zaproszona osoba (link → hasło → pierwsze wejście) i pasek</div>
+  <div class="phone" style="width:300px">
+    <div class="scr">
+      <div class="dots"><i class="on"></i><i></i><i></i><i></i><span>1 z 4</span></div>
+      <span class="tt">Zaproszenie do Watch Tower</span>
+      <span>Sebastian Bożek z <b>H&amp;H Logistics</b> zaprasza Cię do systemu kontroli transportów Śrem → Boden.</span>
+      <div class="kv" style="padding:0;grid-template-columns:96px 1fr"><dt>Osoba</dt><dd>Anna Nowak</dd><dt>Firma</dt><dd>KSH</dd><dt>Konto</dt><dd>Użytkownik</dd></div>
+      <span class="ex" style="align-self:flex-start">Przykład</span>
+      <span class="btn pri" style="height:44px">Dalej — ustaw hasło</span>
+      <span class="note">„Dalej” chroni link przed skanerami poczty (jak dziś).</span>
+    </div>
+  </div>
+  <div class="phone" style="width:300px">
+    <div class="scr">
+      <div class="dots"><i class="on"></i><i class="on"></i><i></i><i></i><span>2 z 4</span></div>
+      <span class="tt">Ustaw hasło</span>
+      <div class="field"><span class="lbl">Hasło</span><div class="inp"><span>••••••••••••••</span><span class="grey">Pokaż</span></div><span class="note ok">14 znaków — dobrze (min. 12)</span></div>
+      <div class="field"><span class="lbl">Powtórz hasło</span><div class="inp"><span>••••••••••••••</span><span class="ok">✓</span></div></div>
+      <span class="btn pri" style="height:44px">Zapisz hasło</span>
+      <span class="note">Dalej logujesz się e-mailem i hasłem. Sesja na tym urządzeniu trwa do roku.</span>
+    </div>
+  </div>
+  <div class="phone" style="width:300px">
+    <div class="scr">
+      <div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><span>3 z 4</span></div>
+      <span class="tt">Twoje dane</span>
+      <div class="field"><span class="lbl">Imię i nazwisko</span><div class="inp">Anna Nowak</div></div>
+      <div class="field"><span class="lbl">Telefon (wymagany)</span><div class="inp bad"><span class="grey">+48</span></div><span class="note">Widzą go osoby, które prowadzą Twoje sprawy (E6).</span></div>
+      <span class="btn pri" style="height:44px">Dalej</span>
+    </div>
+  </div>
+  <div class="phone" style="width:300px">
+    <div class="scr">
+      <div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><span>4 z 4</span></div>
+      <span class="tt">Powiadomienia i telefon</span>
+      <span style="font-size:13px">Dostajesz: zmiany dat, dostawy na plac, faktury do sprawdzenia (Dla mnie, E11).</span>
+      <span class="btn" style="height:44px">Włącz powiadomienia na tym telefonie</span>
+      <div class="calc" style="margin:0">iPhone: najpierw <b>Udostępnij → Dodaj do ekranu głównego</b>, potem otwórz Watch Tower z ikony.<br>Android: <b>Zainstaluj aplikację</b>.</div>
+      <span class="btn pri" style="height:44px">Zaczynam</span>
+      <span class="note">Kroki 4 i pomoc można pominąć — wracają w „Pomoc” i „Moje konto”. Krok 3 (telefon) jest wymagany.</span>
+    </div>
+  </div>
+
+  <div class="phone" style="width:372px">
+    <div class="mtb"><span class="logo"><i></i>WATCH TOWER</span><span style="flex:1"></span><span class="fchip"><b>⛴ 6 h 13 min</b><br>Stena 08:00</span><span class="ib" style="width:44px;height:44px">🔔<span class="bd">40</span></span><span class="av" style="height:44px;padding:0 6px"><span class="ini">AN</span></span></div>
+    <div class="strip bc" style="font-size:12.5px"><span><b>Komunikat HHL:</b> Prom Stena Estelle 09.10 wypływa o 10:00. <span class="ex">Przykład</span></span><span class="grey">✕</span></div>
+    <div class="menu" style="width:auto;margin:10px 12px;box-shadow:none">
+      <div class="who"><b>Anna Nowak</b><span class="grey">H&amp;H Logistics · Operacje HHL</span></div>
+      <div class="mi"><span>Moje konto</span><span class="grey">›</span></div>
+      <div class="mi"><span>Pomoc</span><span class="grey">›</span></div>
+      <div class="mi"><span>Podgląd: HHL · KSH · SCX</span><span class="grey">›</span></div>
+      <div class="mi"><span>Jasny / ciemny</span><span class="grey">›</span></div>
+      <div class="mi"><span><b>Wyloguj</b></span><span></span></div>
+    </div>
+    <div class="cap">Telefon: logo, najbliższy prom (dotknięcie → oba rejsy, tydzień, data), dzwonek, konto. „?” i motyw w menu konta, skrótów klawiszowych nie ma. Menu stron — dolny pasek (E8).</div>
+    <div class="bnav"><span class="on">Kokpit</span><span>Harmonogram</span><span>Ryzyka</span><span>Dokumenty</span><span>Więcej</span></div>
+  </div>
+  <div class="phone" style="width:300px">
+    <div class="scr">
+      <span class="tt">Link wygasł</span>
+      <span>Link w e-mailu działa 24 h. Twoje zaproszenie jest ważne do <b>16.10</b>.</span>
+      <span class="btn pri" style="height:44px">Wyślij nowy link na anna.nowak@…</span>
+      <span class="note">Nowy link przychodzi w ciągu minuty. Problem? Zadzwoń do Operacji HHL.</span>
+      <span class="ex" style="align-self:flex-start">Przykład</span>
+    </div>
+    <div class="h" style="border-top:1px solid var(--rule)"><b>Logowanie · 2FA</b><span class="sub">pytanie 1</span></div>
+    <div class="scr">
+      <span>Wpisz 6 cyfr z aplikacji w telefonie (np. Google Authenticator).</span>
+      <div class="inp" style="font:700 22px var(--font-cond);letter-spacing:.3em;justify-content:center">• • • • • •</div>
+      <span class="btn pri" style="height:44px">Potwierdź</span>
+    </div>
+  </div>
+</div>
+</body></html>

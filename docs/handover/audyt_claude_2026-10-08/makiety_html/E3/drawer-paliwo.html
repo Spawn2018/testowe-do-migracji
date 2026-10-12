@@ -1,0 +1,38 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--surface-3:#EAEFF3;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639}
+*{box-sizing:border-box}body{margin:0;background:var(--surface);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.w{padding:14px 15px;display:flex;flex-direction:column;gap:10px}
+.tabs{display:flex;gap:16px;border-bottom:1px solid var(--rule);font:600 13px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.tabs span{padding:6px 0}.tabs .on{color:var(--ink);border-bottom:2px solid var(--ink)}
+h4{margin:6px 0 0;font:700 13px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.mrow{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--rule-2);font-variant-numeric:tabular-nums}
+.mrow .lbl{color:var(--ink-2)}.mrow.total{font-weight:700;border-bottom:2px solid var(--ink)}
+.fuel{border:1px solid var(--sea);background:var(--sea-bg);padding:10px 12px;display:flex;flex-direction:column;gap:5px;font-size:13px}
+.fuel .t{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.fuel .t b{font:700 16px var(--font-cond);letter-spacing:.02em}
+.pill{font:600 11px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border:1px solid var(--go);color:var(--go);background:var(--go-bg)}
+.grid{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;font-variant-numeric:tabular-nums}
+.grid .r{text-align:right;font-family:var(--font-cond);font-size:14.5px}
+.muted{color:var(--ink-3);font-size:12px}
+.lnk{color:var(--sea);text-decoration:underline;font-size:12.5px}
+</style></head><body><div class="w">
+<div class="tabs"><span>Przegląd</span><span>Status</span><span>Dokumenty</span><span class="on">Ceny</span><span>Czat</span><span>Historia</span></div>
+<h4>Przychód — KSH</h4>
+<div class="mrow"><span class="lbl">Stawka bazowa · SG</span><span>7 245,00 EUR</span></div>
+<div class="mrow"><span class="lbl">Opłata paliwowa · 13 %</span><span>941,85 EUR</span></div>
+<div class="mrow"><span class="lbl">Dopłaty uzgodnione</span><span>0,00 EUR</span></div>
+<div class="mrow total"><span>Razem netto</span><span>8 186,85 EUR</span></div>
+<div class="fuel">
+  <div class="t"><b>Opłata paliwowa +13 % (× 1,13)</b><span class="pill">Ostateczna</span></div>
+  <div>Załadunek 07.10 → tydzień 05–11.10. Liczona z cen z tygodnia <b>28.09–04.10</b>:</div>
+  <div class="grid">
+    <span>OKQ8, Szwecja</span><span>średnia z 4 publikacji 22,63 SEK/l</span><span class="r">× 1,13</span>
+    <span>Orlen, Polska</span><span>średnia z 5 publikacji 7,22 PLN/l</span><span class="r">× 1,15</span>
+    <span><b>Stosujemy niższy</b></span><span></span><span class="r"><b>× 1,13</b></span>
+  </div>
+  <div class="muted">Ten sam mnożnik dla kosztu przewoźnika i przychodu KSH. <span class="lnk">Jak liczymy</span></div>
+</div>
+</div></body></html>

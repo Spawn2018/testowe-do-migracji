@@ -1,0 +1,41 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../e45/vendor/package/dist/leaflet.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<style>html,body{margin:0;font-family:Barlow,Arial}#m{position:absolute;inset:0}
+.mk{width:26px;height:26px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);position:relative}
+.mk:after{content:"";position:absolute;left:6px;top:4px;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:10px solid #fff}
+.mk.late{box-shadow:0 0 0 3px #B32639,0 1px 4px rgba(0,0,0,.35)}
+.mk.silent{background:#9DB3C6!important}
+.ship{width:30px;height:30px;border-radius:50%;background:#245C87;border:3px solid #DCE7EE;box-shadow:0 2px 6px rgba(0,0,0,.3);position:relative}
+.ship:after{content:"";position:absolute;left:9px;top:6px;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:12px solid #fff;transform:rotate(-15deg)}
+.badge{position:absolute;right:-11px;top:-11px;min-width:20px;height:20px;border-radius:10px;background:#C97E12;color:#fff;font:700 12px Barlow;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+.lb{position:absolute;white-space:nowrap;font:700 13px 'Barlow Condensed';color:#0E1A24;background:#fff;border:1px solid #9AAAB6;padding:0 4px;left:26px;top:2px;z-index:2}
+.tip{position:absolute;left:24px;top:-118px;background:#fff;border:1px solid #9AAAB6;padding:8px 10px;font-size:13px;line-height:1.45;box-shadow:0 6px 18px rgba(14,26,36,.18);white-space:nowrap;color:#0E1A24}
+.tip b{font:700 15px 'Barlow Condensed'}.tip .r{color:#B32639;font-weight:600}.tip .g{color:#5A6B78}
+.layers{position:absolute;left:10px;top:10px;z-index:900;background:#fff;border:1px solid #C9D5DD;padding:6px 10px;font-size:13.5px;line-height:1.7;color:#0E1A24}
+.layers i{display:inline-block;width:13px;height:13px;border:1.5px solid #3C4E5C;margin-right:6px;vertical-align:-2px;background:#fff}
+.layers i.on{background:#0E1A24;border-color:#0E1A24;box-shadow:inset 0 0 0 2px #fff}
+.legend{position:absolute;left:10px;bottom:10px;z-index:900;background:#fff;border:1px solid #C9D5DD;padding:5px 10px;font-size:12.5px;color:#0E1A24;display:flex;gap:12px;flex-wrap:wrap;max-width:calc(100% - 40px)}
+.legend span{display:inline-flex;align-items:center;gap:5px}.legend s{display:inline-block;width:11px;height:11px;border-radius:50%;text-decoration:none}
+.btnl{position:absolute;left:10px;top:10px;z-index:900;background:#fff;border:1px solid #C9D5DD;padding:6px 12px;font:600 14px Barlow;color:#0E1A24}
+.zoom{position:absolute;right:10px;top:10px;z-index:900;display:flex;flex-direction:column;border:1px solid #C9D5DD;background:#fff}.zoom span{width:34px;height:34px;display:flex;align-items:center;justify-content:center;font:600 20px Barlow;border-bottom:1px solid #DEE6EB}
+</style></head><body><div id="m"></div>
+<script src="../e45/vendor/package/dist/leaflet.js"></script><script src="routes.js"></script>
+<script>
+const q=new URLSearchParams(location.search); const phone=q.get('mode')==='phone';
+const map=L.map('m',{zoomControl:false,attributionControl:false,zoomSnap:1});
+L.tileLayer('https://tower.log-mar.pl/tiles/logistics.day/{z}/{x}/{y}',{maxZoom:18}).addTo(map);
+for(const l of [PL,SE]) L.polyline(l,{color:'#E5A544',weight:4,opacity:.95}).addTo(map);
+const mk=(ll,color,cls,label)=>L.marker(ll,{icon:L.divIcon({className:'',html:`<div class="mk ${cls}" style="background:${color}">${label?`<span class="lb">${label}</span>`:''}</div>`,iconSize:[26,26],iconAnchor:[13,13]})}).addTo(map);
+mk([53.12,17.88],'#245C87','silent','SG-14');
+mk([60.70,17.09],'#245C87','late','SG-13');
+mk([65.795,21.75],'#1B6E5D','','SG-11');
+L.marker([55.95,18.05],{icon:L.divIcon({className:'',html:'<div class="ship"><span class="badge">1</span><span class="lb" style="left:34px;top:4px">prom Wawel · SG-12</span></div>',iconSize:[30,30],iconAnchor:[15,15]})}).addTo(map);
+if(!phone){
+ L.marker([60.70,17.09],{icon:L.divIcon({className:'',html:'<div class="tip"><b>SG-13</b> · Droga SE<br><span class="r">opóźniony 1 h 10 min</span> · ETA Boden 09.10, 13:05<br><span class="g">ostatnia pozycja 00:19 · kierowca odcinka SE</span><br><span class="g">kliknij: panel transportu</span></div>',iconSize:[0,0]})}).addTo(map);
+ document.body.insertAdjacentHTML('beforeend','<div class="layers"><div><i class="on"></i>Pojazdy i statki</div><div><i class="on"></i>Trasa (droga i prom)</div><div><i></i>Strefy</div><div><i></i>Utrudnienia drogowe</div><div><i></i>Przebieg wybranego</div></div><div class="zoom"><span>+</span><span>−</span></div>');
+ document.body.insertAdjacentHTML('beforeend','<div class="legend"><span><s style="background:#C97E12"></s>załadunek</span><span><s style="background:#245C87"></s>w drodze (PL, port, prom, SE)</span><span><s style="background:#1B6E5D"></s>na placu</span><span><s style="background:#fff;box-shadow:0 0 0 3px #B32639"></s>opóźniony</span><span><s style="background:#245C87;opacity:.5"></s>brak GPS</span><span><s style="background:#245C87;border:2px solid #DCE7EE"></s>statek (AIS) z liczbą aut</span></div>');
+} else {
+ document.body.insertAdjacentHTML('beforeend','<div class="btnl">Warstwy ▾</div><div class="zoom"><span>+</span><span>−</span></div>');
+}
+const c=q.get('c').split(',').map(Number); map.setView([c[0],c[1]],c[2]);
+</script></body></html>

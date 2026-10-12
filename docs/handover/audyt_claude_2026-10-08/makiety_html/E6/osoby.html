@@ -1,0 +1,171 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--surface-3:#EAEFF3;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;
+--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F8DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px;display:inline-block}
+.cap{font:600 12px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.desk{padding:16px;display:grid;grid-template-columns:560px 1fr;gap:16px;align-items:start;max-width:1280px}
+.top{grid-column:1/-1;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.top h1{margin:0;font:700 24px var(--font-cond)}
+.pn{background:var(--surface);border:1px solid var(--rule)}
+.pn>.hd{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.pn>.hd b{font:700 18px var(--font-cond)}
+.pn>.hd .n{color:var(--ink-3);font-size:13px}
+.pn>.hd .sp{flex:1}
+.row{display:grid;grid-template-columns:4px 1fr auto;gap:10px;padding:9px 12px;border-bottom:1px solid var(--rule-2);align-items:center}
+.row i{align-self:stretch;background:var(--red)}
+.row b{font-weight:600}
+.row small{display:block;color:var(--ink-3);font-size:12.5px}
+.dc{border:2px solid var(--sea);margin:8px;background:var(--surface)}
+.dc .h{padding:10px 12px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;border-bottom:1px solid var(--rule-2)}
+.dc .h b{font:700 18px var(--font-cond)}
+.pill{font:600 11.5px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border:1px solid}
+.pill.red{color:var(--red);border-color:var(--red);background:var(--red-bg)}
+.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.dc .b{padding:10px 12px;display:flex;flex-direction:column;gap:9px}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:4px 10px;font-size:13.5px}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0}
+.who{border:1px solid var(--rule);background:var(--surface-2)}
+.who .t{padding:7px 10px;border-bottom:1px solid var(--rule-2)}
+.person{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--rule-2);font-size:13.5px}
+.person:last-child{border-bottom:0}
+.person b{font-weight:600}.person small{display:block;color:var(--ink-3);font-size:12px}
+.tel{font-variant-numeric:tabular-nums;color:var(--ink-2);font-size:13px}
+.call{font:600 13px var(--font-sans);padding:6px 11px;border:1px solid var(--go);background:var(--go);color:#fff;white-space:nowrap}
+.call.ghost{background:var(--surface);color:var(--go)}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:600 13px var(--font-sans);padding:7px 12px;border:1px solid var(--ink);background:var(--ink);color:#fff}
+.btn.ghost{background:var(--surface);color:var(--ink)}
+.note{font-size:12.5px;color:var(--ink-3)}
+.hist{border-top:1px solid var(--rule-2);padding-top:8px;font-size:12.5px;color:var(--ink-2)}
+.hist div{padding:2px 0}
+/* użytkownicy */
+.stats{display:flex;gap:8px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.stat{border:1px solid var(--rule);padding:6px 10px;background:var(--surface-2)}
+.stat b{font:700 18px var(--font-cond);margin-right:5px}
+.stat.bad{border-color:var(--red);background:var(--red-bg);color:var(--red)}
+.grp{padding:8px 12px 4px;font:700 12px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);background:var(--surface-3)}
+table{border-collapse:collapse;width:100%}
+td,th{padding:7px 10px;border-bottom:1px solid var(--rule-2);text-align:left;font-size:13.5px;vertical-align:middle}
+th{font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+td small{display:block;color:var(--ink-3);font-size:12px}
+.miss{color:var(--red);font-weight:600}
+.ok{color:var(--go);font-weight:600}
+.form{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;padding:10px 12px;border-top:1px solid var(--rule);background:var(--surface-2);align-items:end}
+.form label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink-3)}
+.inp{border:1px solid var(--rule);background:var(--surface);padding:6px 8px;font:14px var(--font-sans);color:var(--ink)}
+/* telefon */
+.phones{display:none;flex-direction:column;align-items:center;gap:16px;padding:12px}
+body.m .desk{display:none}body.m .phones{display:flex}
+.ph{width:366px;background:var(--page);border:1px solid var(--rule)}
+.ph .tb{background:var(--ink);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px}
+.ph .tb b{font:700 19px var(--font-cond)}
+.ph .bd{padding:10px;display:flex;flex-direction:column;gap:8px}
+.ph .call{padding:11px 12px;font-size:15px;width:100%;text-align:center}
+.ph .person{grid-template-columns:1fr auto}
+.ph .form{grid-template-columns:1fr}
+.banner{border:1px solid var(--amber);background:var(--amber-bg);padding:9px 11px;font-size:13.5px}
+</style></head><body>
+
+<div class="desk">
+  <div class="top"><h1>Osoba i telefon przy każdej sprawie</h1><span class="ex">Przykład · osoby, telefony, logowania i wpis „Biorę tę sprawę” zmyślone · decyzje, terminy i daty otwarcia z bazy 07.10</span></div>
+
+  <section class="pn">
+    <div class="hd"><b>Centrum decyzji</b><span class="n">30</span><span class="sp"></span><span class="cap">Zakres: moje · wszystkie</span></div>
+    <div class="dc">
+      <div class="h"><b>15061/2026/OSL/GDA/P · Brak awizacji w terminie</b><span class="pill red">Po terminie od 29.09, 12:00</span></div>
+      <div class="b">
+        <dl class="kv">
+          <dt>Transport</dt><dd>Zaplanowany · przed załadunkiem w Śremie</dd>
+          <dt>Decyduje</dt><dd>Scandinavian Express · Dyspozytor (albo administrator HHL)</dd>
+          <dt>Przypisana do</dt><dd><b>Jan Nowak</b> · <u style="color:var(--sea)">zmień</u></dd>
+        </dl>
+        <div class="who">
+          <div class="t cap">Zadzwoń w tej sprawie</div>
+          <div class="person"><span><b>Jan Nowak</b><small>Dyspozytor · Scandinavian Express · przypisany</small></span><span class="tel">+48 600 000 001</span><span class="call">☎ Zadzwoń</span></div>
+          <div class="person"><span><b>Ewa Kowal</b><small>Dyspozytor · Scandinavian Express</small></span><span class="tel">+48 600 000 002</span><span class="call ghost">☎ Zadzwoń</span></div>
+          <div class="person"><span><b>Marek Lis</b><small>Operacje · H&amp;H Logistics · gdy przewoźnik nie odbiera</small></span><span class="tel">+48 600 000 003</span><span class="call ghost">☎ Zadzwoń</span></div>
+        </div>
+        <div class="acts"><span class="btn">Dodaj awizację</span><span class="btn ghost">Zgłoś problem</span></div>
+        <div class="hist">
+          <div class="cap" style="margin-bottom:3px">Historia decyzji</div>
+          <div>04.10, 13:07 · System // Watch Tower · decyzja otwarta (termin 29.09, 12:00 już minął)</div>
+          <div>04.10, 13:10 · System // Watch Tower · przekazana wyżej do HHL</div>
+          <div>07.10, 09:15 · <b>Jan Nowak // Scandinavian Express</b> · „Biorę tę sprawę”</div>
+        </div>
+      </div>
+    </div>
+    <div class="row"><i></i><span><b>15063/2026/OSL/GDA/P · Brak awizacji w terminie</b><small>Scandinavian Express · Ewa Kowal · po terminie od 30.09</small></span><span class="call ghost">☎</span></div>
+    <div class="row"><i></i><span><b>15064/2026/OSL/GDA/P · Brak awizacji w terminie</b><small>Scandinavian Express · nikt nie wziął · po terminie od 01.10</small></span><span class="call ghost">☎</span></div>
+    <div class="row"><i style="background:var(--amber)"></i><span><b>SEFS: brak źródła indeksu</b><small>Decyduje HHL · Anna Wiśniewska · termin 18.10 · w bazie 12 takich samych, łączy je E7</small></span><span class="call ghost">☎</span></div>
+  </section>
+
+  <section class="pn">
+    <div class="hd"><b>Opcje › Użytkownicy</b><span class="sp"></span><span class="cap">Zmienia tylko administrator HHL</span></div>
+    <div class="stats">
+      <span class="stat"><b>14</b>kont</span><span class="stat"><b>12</b>aktywnych</span><span class="stat bad"><b>0</b>z telefonem</span><span class="stat"><b>7</b>z imieniem i nazwiskiem</span>
+      <span class="note" style="align-self:center">liczby z bazy 07.10 · lista poniżej to przykład</span>
+    </div>
+    <table>
+      <thead><tr><th>Osoba</th><th>Rodzaj konta</th><th>Telefon</th><th>Ostatnie logowanie</th><th>2FA</th><th></th></tr></thead>
+      <tbody>
+        <tr><td colspan="6" class="grp">H&amp;H Logistics</td></tr>
+        <tr><td><b>Anna Wiśniewska</b><small>a.wisniewska@…</small></td><td>Administrator</td><td>+48 600 000 010</td><td>dziś, 08:12</td><td class="ok">tak</td><td><span class="call ghost">☎</span></td></tr>
+        <tr><td><b>Marek Lis</b><small>m.lis@…</small></td><td>Operacje</td><td>+48 600 000 003</td><td>dziś, 07:55</td><td>nie</td><td><span class="call ghost">☎</span></td></tr>
+        <tr><td colspan="6" class="grp">KSH</td></tr>
+        <tr><td><b>Piotr Zając</b><small>p.zajac@…</small></td><td>Użytkownik</td><td class="miss">brak — uzupełnij</td><td>06.10, 16:40</td><td>nie</td><td></td></tr>
+        <tr><td colspan="6" class="grp">Scandinavian Express</td></tr>
+        <tr><td><b>Jan Nowak</b><small>j.nowak@…</small></td><td>Dyspozytor</td><td>+48 600 000 001</td><td>dziś, 06:30</td><td>nie</td><td><span class="call ghost">☎</span></td></tr>
+        <tr><td><b>Ewa Kowal</b><small>e.kowal@…</small></td><td>Dyspozytor</td><td>+48 600 000 002</td><td>05.10, 11:09</td><td>nie</td><td><span class="call ghost">☎</span></td></tr>
+      </tbody>
+    </table>
+    <div class="form">
+      <label>Imię<input class="inp" value="Tomasz"></label>
+      <label>Nazwisko<input class="inp" value="Krawczyk"></label>
+      <label>Telefon<input class="inp" value="+46 70 000 00 01"></label>
+      <label>E-mail<input class="inp" value="t.krawczyk@…"></label>
+      <label>Firma i rodzaj konta<select class="inp"><option>Scandinavian Express · Użytkownik</option></select></label>
+      <span class="btn" style="text-align:center">Zaproś</span>
+    </div>
+    <div class="note" style="padding:8px 12px">Rodzaje kont: HHL Administrator, HHL Operacje, KSH Użytkownik, SCX Dyspozytor, SCX Użytkownik. Imię, nazwisko i telefon są wymagane. Telefon zapisany w formacie międzynarodowym, wyświetlany „+48 600 000 001”.</div>
+  </section>
+</div>
+
+<div class="phones">
+  <div class="ph">
+    <div class="tb"><b>Centrum decyzji</b><span style="flex:1"></span><span class="ex" style="background:transparent;color:#fff;border-color:#ffffff80">Przykład</span></div>
+    <div class="bd">
+      <div class="dc" style="margin:0">
+        <div class="h"><b>15061 · Brak awizacji</b><span class="pill red">Po terminie od 29.09</span></div>
+        <div class="b">
+          <div class="note">Decyduje Scandinavian Express · przypisana: <b style="color:var(--ink)">Jan Nowak</b></div>
+          <div class="who">
+            <div class="person"><span><b>Jan Nowak</b><small>Dyspozytor SCX · +48 600 000 001</small></span><span class="call">☎</span></div>
+            <div class="person"><span><b>Marek Lis</b><small>Operacje HHL · +48 600 000 003</small></span><span class="call ghost">☎</span></div>
+          </div>
+          <span class="call">☎ Zadzwoń do Jana Nowaka</span>
+          <div class="acts"><span class="btn" style="flex:1;text-align:center">Dodaj awizację</span><span class="btn ghost" style="flex:1;text-align:center">Zgłoś problem</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="ph">
+    <div class="tb"><b>Moje konto</b></div>
+    <div class="bd">
+      <div class="banner"><b>Uzupełnij telefon.</b> Bez niego nikt nie zadzwoni do Ciebie z decyzji, a Twoje nazwisko nie pojawi się przy zmianach.</div>
+      <div class="pn"><div class="form">
+        <label>Imię<input class="inp" value="Jan"></label>
+        <label>Nazwisko<input class="inp" value="Nowak"></label>
+        <label>Telefon<input class="inp" value="+48 600 000 001"></label>
+        <label>E-mail<input class="inp" value="j.nowak@… (zmienia administrator HHL)" disabled></label>
+        <span class="btn" style="text-align:center">Zapisz</span>
+      </div></div>
+    </div>
+  </div>
+</div>
+<script>if(location.search.includes('phone'))document.body.classList.add('m');</script>
+</body></html>

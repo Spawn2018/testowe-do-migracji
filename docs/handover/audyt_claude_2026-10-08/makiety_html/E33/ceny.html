@@ -1,0 +1,239 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.h3{padding:9px 14px 4px;font:700 16px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+.facts{margin:0;padding:10px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:5px}
+.facts b{font-weight:600}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 9px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+table.r td.n,table.r th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.code{font-weight:700;white-space:nowrap}
+.note{font-size:12.5px;color:var(--ink-3)}
+.red{color:var(--red);font-weight:600}.grey{color:var(--ink-3)}.ok{color:var(--go);font-weight:600}
+.chip{height:32px;padding:0 11px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn{height:34px;padding:0 13px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-size:13.5px;background:#fff;white-space:nowrap}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn.sm{height:28px;font-size:12.5px;padding:0 9px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;position:relative}
+.phone .h b{font-size:20px}
+.pc{margin:6px 12px 0;border:1px solid var(--rule);padding:8px 11px;display:flex;flex-direction:column;gap:2px}
+.pc .t{font:700 16px var(--font-cond);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto;background:#fff}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.drow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--rule-2)}
+.drow .l b{font-weight:600}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field .lbl{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.inp{min-height:38px;border:1px solid var(--rule);padding:8px 10px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;background:#fff}
+.drop{border:1.5px dashed #9AAAB6;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;background:var(--surface-2)}
+.ph{font:700 26px var(--font-cond);display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:18px;padding:0 14px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3)}
+.tabs span{padding:9px 0}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+</head><body>
+
+.ph .no{color:var(--amber);font-size:18px}.ph .nr{font:600 18px var(--font-cond);color:var(--ink-2)}.ph .miss{font:600 15px var(--font-cond);color:var(--red);letter-spacing:.02em}
+.wb{display:flex;gap:0;padding:4px 14px 10px;font-size:13px}.wb span{padding-right:14px;margin-right:14px;border-right:1px solid var(--rule-2)}.wb span:last-child{border:0}.wb b{display:block;font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.todo{margin:12px 14px 4px;border:1px solid var(--rule);border-left:4px solid var(--red);background:#fff}
+.todo .tt{padding:7px 11px;font:700 15px var(--font-cond);display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--rule-2)}
+.todo .it{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 11px;border-bottom:1px solid var(--rule-2);font-size:13px;align-items:center}
+.todo .it:last-child{border-bottom:0}.todo .it .w{font-size:12px;color:var(--ink-3)}
+.todo.am{border-left-color:var(--amber)}
+.mapbox{position:relative;margin:12px 14px 0;border:1px solid var(--rule);height:220px;overflow:hidden}
+.mapbox img{width:100%;height:100%;object-fit:cover}
+.ov{position:absolute;background:#fff;border:1px solid #9AAAB6;padding:6px 9px;font-size:12.5px;line-height:1.4;box-shadow:0 3px 10px rgba(14,26,36,.15)}
+.ov b{font:700 14px var(--font-cond)}
+.zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;border:1px solid #9AAAB6;background:#fff}.zoom span{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:16px;border-bottom:1px solid var(--rule-2)}.zoom span:last-child{border:0}
+.st{margin:14px 14px 4px;font:700 15px var(--font-cond);letter-spacing:.02em;display:flex;gap:8px;align-items:center}
+.st .who{font:500 13px var(--font-sans);color:var(--ink-3)}
+.kv{display:grid;grid-template-columns:128px 1fr;gap:5px 12px;padding:2px 14px 4px;font-size:13.5px}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0}
+.mono{font-family:var(--font-cond);font-weight:600;letter-spacing:.02em}
+.leg{margin:4px 14px;border:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:7px 10px;gap:10px}
+.leg .lt{font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.leg.now{border-left:4px solid var(--go);background:var(--go-bg)}
+.btn.call{color:var(--go);border-color:var(--go);font-weight:600}.btn.call.f{background:var(--go);color:#fff}
+.form{padding:10px 14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.grp{border:1px solid var(--rule);padding:8px 10px 0;margin-bottom:10px}
+.grp .gt{font:600 12px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+.inp.e{color:#9AAAB6}.inp.bad{border-color:var(--red);box-shadow:inset 3px 0 0 var(--red)}
+.chk{display:flex;gap:8px;align-items:center;font-size:13.5px;margin-bottom:4px}.chk i{width:16px;height:16px;border:1.5px solid var(--ink-2);display:inline-block}
+.bar{margin:0 14px;padding:8px 10px;font-size:13px;border:1px solid var(--red);background:var(--red-bg);color:var(--ink)}
+.bar b{color:var(--red)}
+ul.cmp{margin:0;padding:6px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.mbar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.mtabs{display:flex;gap:16px;padding:0 12px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden}
+.mtabs span{padding:10px 0}.mtabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+.acc{margin:6px 12px 0;border:1px solid var(--rule);padding:9px 11px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;min-height:44px}
+.acc b{font:700 15px var(--font-cond)}
+</style><style>
+table.m{border-collapse:collapse;width:100%;font-size:13.5px}
+table.m td,table.m th{padding:6px 14px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:top}
+table.m th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+table.m .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.m tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0}
+.fuel{margin:8px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:12.5px;background:var(--surface-2)}
+.fuel b{font:700 14px var(--font-cond)}
+.fee{margin:6px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.fee .k{font:700 14px var(--font-cond)}
+.rules{margin:6px 14px 12px;font-size:12.5px}
+.rules td{padding:3px 8px 3px 0;border-bottom:1px dotted var(--rule-2)}
+.calc{font-size:13px;background:var(--surface-2);border:1px solid var(--rule);padding:8px 10px;margin-bottom:10px;line-height:1.55}
+.calc b{font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.two div{border:1px solid var(--rule);padding:7px 9px;font-size:13px}
+.two div b{display:block;font:700 18px var(--font-cond)}
+</style>
+</head><body>
+<div class="sheet">
+  <div class="top"><h1>E33 · Panel transportu › Ceny i dopłaty · komputer i telefon</h1>
+    <span class="ex">„Dziś” — zrzuty 08.10, 01:02 i 01:11, konto Operacje HHL i podgląd „Widok KSH” · „po zmianie” — kwoty, kurs, pomiar postoju i cennik z bazy 08.10; przykłady postoju i anulowania oznaczone</span></div>
+
+  <div class="sec">Dziś</div>
+  <div class="card" style="width:562px">
+    <div class="h"><b>SG-03 › Ceny · Operacje HHL</b><span class="pill rd">PLN kursem 4,39 · „0.0000”</span></div>
+    <img src="now-top.png" width="560" height="880" alt="">
+  </div>
+  <div class="card" style="width:562px">
+    <div class="h"><b>Dół zakładki: dopłaty i podpowiedzi</b><span class="pill rd">bez kwot</span></div>
+    <img src="now-bot.png" width="560" height="750" alt="">
+  </div>
+  <div class="card" style="width:262px">
+    <div class="h"><b>Telefon 390 px</b></div>
+    <img src="now-m.png" width="260" height="563" alt="">
+    <div class="cap">Dwie pełne kolumny kwot jedna pod drugą. Do dopłat trzeba przewinąć 2 ekrany.</div>
+  </div>
+  <div class="card" style="width:562px">
+    <div class="h"><b>Podgląd „Widok KSH”</b><span class="pill am">napis o cudzej cenie</span></div>
+    <img src="now-ksh.png" width="560" height="620" alt="">
+  </div>
+  <div class="card" style="width:850px">
+    <div class="h"><b>Fakty 08.10</b><span class="sub">kod, baza produkcji (tylko odczyt), zrzuty</span></div>
+    <ul class="facts">
+      <li><b>Kwoty:</b> SG-03 w bazie (EUR) — koszt 6 900,00 + 966,00 = 7 866,00, przychód 7 245,00 + 1 014,30 = 8 259,30, marża 393,30 (4,76 %). Na ekranie są w PLN stałym kursem 4,39, wiersz „Kurs NBP · 0.0000 ·”, a marża na czerwono „4.8%”. Rozwiązanie jest w E16 i E39.</li>
+      <li><b>Podpowiedzi cennika</b> (tylko HHL, zwinięte) pokazują same napisy, np. „Czas wolny załadunek: WSTĘPNE — z Opcji”, bez liczb 6 h, 4 h, 75 EUR i 750 EUR. Nie wypełniają okna dopłaty. To uwaga E3-2. Stawki są „WSTĘPNE”, choć 12:23 i 12:35 są ostateczne.</li>
+      <li><b>Anulowanie:</b> procenty (≥ 5 dni 0 %, 4 dni 15 %, 3 dni 25 %, 1 dzień 50 %, dzień załadunku 100 %) są wpisane na stałe w funkcji bazy, a nie w cenniku. Dla 2 dni nie ma wartości. Dopłata „Obie strony” ma jedną kwotę, a fracht KSH i SCX jest różny (7 245 i 6 900 EUR). Ten sam procent daje więc różne kwoty.</li>
+      <li><b>Rodzaje:</b> Postojowe, Anulowanie i Inne. Według decyzji 12:23 pkt 5 poza postojem jest tylko % frachtu przy anulowaniu. Okno nie ma wyglądu aplikacji, pokazuje kod „OPL-8”, a przycisk SCX ma napis „Zaproponuj dopłatę (HHL)”.</li>
+      <li><b>Postój:</b> baza mierzy go ze stref i przy przekroczeniu tworzy sprawę dla HHL z kwotą podpowiedzi. SG-03 był w strefie placu Boden 07.10 08:35–12:19 (3 h 44 min przy 4 h czasu wolnego), więc 0 EUR. Załadunku w Śremie nie zmierzono, bo śledzenie podłączono dopiero w Szwecji. Dopłat w bazie 0, spraw o postój 0.</li>
+      <li><b>Bez ceny</b> jest 8 Kratownic bez daty (KR-08…KR-15), bo stawka KR zależy od liczby aut w konwoju, liczonej z tej samej daty załadunku. Decyzja 12:23 pkt 4: cena jako prognoza.</li>
+      <li><b>Inne firmy:</b> KSH widzi na górze „Ta cena nie jest widoczna w Twojej roli”, a SCX ten sam napis zamiast przychodu. SCX Użytkownik ma ceny 0 (E9). Cennik KSH ma dwie wersje ważne od 28.09 bez daty końca.</li>
+    </ul>
+  </div>
+
+  <div class="sec">Po zmianie · komputer · Operacje HHL</div>
+  <div class="card" style="width:560px">
+    <div style="padding:12px 14px 2px"><div class="ph">SG-03 <span style="color:var(--amber);font-size:18px">·</span> <span class="nr">0005/09/S/2026</span> <span class="pill go">Na placu</span><span style="flex:1"></span><span class="grey" style="font-size:18px">✕</span></div></div>
+    <div class="tabs"><span>Przegląd</span><span>Status</span><span>Dokumenty</span><span class="on">Ceny</span><span>Czat</span><span>Historia</span></div>
+    <div class="st" style="margin-top:12px">Cena transportu <span class="pill gr">Prognoza</span><span class="who">do rozładunku (E16)</span></div>
+    <table class="m">
+      <tr><th></th><th class="n">Koszt · SCX</th><th class="n">Przychód · KSH</th></tr>
+      <tr><td>Fracht z cennika <span class="grey">· SG</span></td><td class="n">6 900,00</td><td class="n">7 245,00</td></tr>
+      <tr><td>Opłata paliwowa <span class="grey">t40 · ×1,14</span></td><td class="n">966,00</td><td class="n">1 014,30</td></tr>
+      <tr><td>Dopłaty <span class="grey">· postój, anulowanie</span></td><td class="n">0,00</td><td class="n">0,00</td></tr>
+      <tr class="tot"><td>Razem EUR</td><td class="n">7 866,00</td><td class="n">8 259,30</td></tr>
+    </table>
+    <div style="padding:6px 14px 0;display:flex;justify-content:space-between;font-size:14px"><b>Marża</b><b>393,30 EUR · 4,76 %</b></div>
+    <div class="note" style="padding:2px 14px 0">W PLN (kurs bieżący 195/A z 07.10 · 4,3797): koszt 34 450,72 · przychód 36 173,26 · marża 1 722,54. Po rozładunku kurs z dnia roboczego przed rozładunkiem, na stałe.</div>
+    <div class="fuel"><b>Opłata paliwowa t40 · 28.09–04.10</b> · wskaźniki t39 (21–27.09): OKQ8 23,04 SEK/l → ×1,14 · Orlen 7,41 PLN/l → ×1,17 · stosowany niższy ×1,14 · ostateczna <span class="grey">▸ publikacje (E39)</span></div>
+    <div class="st">Dopłaty<span style="flex:1"></span><span class="btn sm pri">+ Dopłata</span></div>
+    <div class="fee"><div><div class="k">Postój · rozładunek Boden</div>07.10, 08:35–12:19 · 3 h 44 min · czas wolny 4 h<br><span class="grey">zmierzone ze strefy „Plac budowy Stegra Boden”</span></div><span class="pill go">0 EUR</span></div>
+    <div class="fee"><div><div class="k">Postój · załadunek Śrem</div><span class="grey">brak pomiaru — śledzenie od Szwecji</span></div><span class="pill gr">—</span></div>
+    <div class="fee"><div><div class="k">Anulowanie</div><span class="grey">nie dotyczy</span></div><span class="pill gr">—</span></div>
+    <div class="st">Zasady z cennika <span class="who">· te same dla KSH i SCX (12:35)</span></div>
+    <table class="rules">
+      <tr><td>Czas wolny</td><td>załadunek 6 h · rozładunek 4 h, od późniejszego z: wjazd do strefy, plan</td></tr>
+      <tr><td>Ponad czas wolny</td><td>75 EUR za każdą rozpoczętą godzinę</td></tr>
+      <tr><td>Powyżej 24 h</td><td>750 EUR za każdą rozpoczętą dobę</td></tr>
+      <tr><td>Anulowanie</td><td>% frachtu bez opłaty paliwowej: ≥ 5 dni 0 · 4 dni 15 · 3 dni 25 · 2 dni <span class="red">pytanie 1</span> · 1 dzień 50 · dzień załadunku 100</td></tr>
+    </table>
+    <div class="cap" style="padding-top:0">Zasady zmienia Administrator HHL w Opcjach › Cennik i opłaty (E12). Bez napisów „WSTĘPNE” i „OPL-8”.</div>
+  </div>
+
+  <div class="card" style="width:460px">
+    <div class="h"><b>Dopłata · okno HHL · podpowiedź systemu</b><span class="ex">Przykład</span><span style="flex:1"></span><span class="grey">✕</span></div>
+    <div class="form">
+      <div class="field"><span class="lbl">Rodzaj</span><div class="row"><span class="chip on">Postój</span><span class="chip">Anulowanie</span></div></div>
+      <div class="calc"><b>SG-15 · załadunek Śrem</b> · wjazd 08.10, 07:10 · wyjazd 15:20<br>postój 8 h 10 min − czas wolny 6 h = 2 h 10 min<br>→ 3 rozpoczęte godziny × 75 EUR = <b>225,00 EUR</b></div>
+      <div class="two"><div><span class="lbl">Przychód · KSH (Twoja strona)</span><b>225,00 EUR</b>po „Dodaj” czeka na akceptację KSH</div><div><span class="lbl">Koszt · SCX</span><b>225,00 EUR</b>decyduje SCX; dodaną akceptujesz Ty</div></div>
+      <div class="field" style="margin-top:10px"><span class="lbl">Opis</span><div class="inp e">uzupełnia się sam: miejsce, godziny, zasada</div></div>
+      <div class="row" style="justify-content:flex-end"><span class="btn">Nie dodaję</span><span class="btn pri">Dodaj</span></div>
+      <div class="note" style="margin-top:6px">System policzył i podpowiada — nic nie wchodzi do ceny samo. Czy dodać, decyduje HHL po swojej stronie i SCX po swojej (decyzja 09.10 13:09).</div>
+    </div>
+    <div style="border-top:1px solid var(--rule);padding:10px 14px">
+      <div class="lbl" style="font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px">Anulowanie · SG-15 · przykład</div>
+      <div class="calc">Anulowano 04.10, załadunek 08.10 → <b>4 dni</b> → 15 % frachtu</div>
+      <div class="two"><div><span class="lbl">Koszt · SCX</span><b>1 035,00 EUR</b>15 % × 6 900,00</div><div><span class="lbl">Przychód · KSH</span><b>1 086,75 EUR</b>15 % × 7 245,00</div></div>
+      <div class="note" style="margin-top:8px">Ten sam procent po obu stronach, więc różne kwoty (12:35 pkt 4). Kwoty liczy system i podpowiada obu firmom. HHL decyduje o swojej części (potem akceptuje KSH), SCX o swojej (potem akceptuje HHL).</div>
+    </div>
+  </div>
+
+  <div class="card" style="width:376px">
+    <div class="h"><b>Kto co widzi i robi</b></div>
+    <ul class="facts">
+      <li><b>HHL</b> widzi obie strony, marżę i kurs. Decyduje, czy dodać dopłatę po swojej stronie („Dodaj” / „Nie dodaję”), i akceptuje albo odrzuca dopłatę dodaną przez SCX. Administrator i Operacje (E9).</li>
+      <li><b>KSH</b> widzi tylko „Twoja cena”: fracht, opłatę paliwową, dopłaty i razem. Akceptuje albo odrzuca dopłaty po swojej stronie. Nie widzi kosztu, marży ani napisu o cudzej cenie.</li>
+      <li><b>SCX</b> (Dyspozytor i Użytkownik, E9) widzi tylko „Twoja stawka”. Dostaje podpowiedź z gotowym wyliczeniem i decyduje, czy dodać dopłatę; dodana czeka na akceptację HHL. Nie widzi ceny KSH ani marży.</li>
+      <li><b>Postój</b> liczy system ze stref i od razu podpowiada kwotę obu firmom — pozycja w Do zrobienia HHL i SCX. Nic nie wchodzi do ceny bez „Dodaj” i akceptacji (OPL-8 zostaje).</li>
+      <li><b>Anulowanie</b> po statusie „Anulowany” z datą (E25): dni do załadunku → % z cennika → dwie kwoty.</li>
+      <li><b>Kratownice bez daty</b> dostają prognozę ceny według pytania 2 i napis „konwój nieznany”.</li>
+      <li><b>Wersje cennika:</b> nowa wersja kończy poprzednią, a przy cenie jest „cennik KSH v2”.</li>
+    </ul>
+  </div>
+
+  <div class="sec">Po zmianie · KSH, SCX, telefon</div>
+  <div class="card" style="width:420px">
+    <div style="padding:12px 14px 2px"><div class="ph">SG-15 <span class="pill gr">Planowany</span></div></div>
+    <div class="tabs"><span>Przegląd</span><span>Status</span><span>Dokumenty</span><span class="on">Ceny</span><span>Czat</span></div>
+    <div class="st" style="margin-top:12px">Twoja cena <span class="pill gr">Prognoza</span></div>
+    <table class="m">
+      <tr><td>Fracht z cennika</td><td class="n">7 245,00</td></tr>
+      <tr><td>Opłata paliwowa <span class="grey">t41 · ×1,13</span></td><td class="n">941,85</td></tr>
+      <tr><td>Dopłaty</td><td class="n">0,00</td></tr>
+      <tr class="tot"><td>Razem EUR</td><td class="n">8 186,85</td></tr>
+    </table>
+    <div class="fee" style="margin-top:10px;border-left:4px solid var(--amber)"><div><div class="k">Postój · załadunek Śrem <span class="ex">Przykład z okna HHL</span></div>225,00 EUR · 3 rozpoczęte godziny ponad 6 h<br><span class="grey">czeka na Twoją akceptację · po akceptacji wchodzi do „Razem”</span></div><div class="row" style="flex-direction:column"><span class="btn sm pri">Akceptuj</span><span class="btn sm">Odrzuć</span></div></div>
+    <div class="cap">KSH nie widzi kosztu, marży ani napisu o cudzej cenie. Kwoty są w EUR, a PLN po przełączeniu w „Moje konto” (E16).</div>
+  </div>
+  <div class="card" style="width:420px">
+    <div style="padding:12px 14px 2px"><div class="ph">SG-03 <span style="color:var(--amber);font-size:18px">·</span> <span class="nr" style="font-size:16px">15062/2026/OSL/GDA/P</span></div></div>
+    <div class="tabs"><span>Przegląd</span><span>Status</span><span>Dokumenty</span><span class="on">Ceny</span><span>Czat</span></div>
+    <div class="st" style="margin-top:12px">Twoja stawka <span class="pill gr">Prognoza</span></div>
+    <table class="m">
+      <tr><td>Fracht z cennika</td><td class="n">6 900,00</td></tr>
+      <tr><td>Opłata paliwowa <span class="grey">t40 · ×1,14</span></td><td class="n">966,00</td></tr>
+      <tr><td>Dopłaty</td><td class="n">0,00</td></tr>
+      <tr class="tot"><td>Razem EUR</td><td class="n">7 866,00</td></tr>
+    </table>
+    <div class="fee" style="margin-top:10px"><div><div class="k">Postój · rozładunek Boden</div>3 h 44 min · czas wolny 4 h<br><span class="grey">nic do zaproponowania</span></div><span class="btn sm" style="color:#9AAAB6">Dodaj dopłatę</span></div>
+    <div class="cap">Przycisk jest aktywny, gdy pomiar przekroczy czas wolny. System podpowiada wyliczenie, a Ty decydujesz: „Dodaj” albo „Nie dodaję”. Dodana dopłata czeka na akceptację HHL.</div>
+  </div>
+  <div class="phone">
+    <div class="mbar"><span style="font-size:20px">←</span><span class="ph" style="font-size:22px">SG-03</span><span style="flex:1"></span><span class="pill go">Na placu</span></div>
+    <div class="mtabs"><span>Przegląd</span><span>Status</span><span>Dokumenty</span><span class="on">Ceny</span><span>Czat</span><span>Historia</span></div>
+    <div class="acc" style="margin-top:10px"><span><b>Koszt · SCX</b></span><b>7 866,00 EUR</b></div>
+    <div class="acc"><span><b>Przychód · KSH</b></span><b>8 259,30 EUR</b></div>
+    <div class="acc" style="background:var(--surface-2)"><span><b>Marża</b></span><b>393,30 · 4,76 %</b></div>
+    <div class="acc"><span><b>Opłata paliwowa</b> t40 · ×1,14</span><span class="grey">▾</span></div>
+    <div class="acc"><span><b>Dopłaty</b> · postój 0 EUR</span><span class="grey">▾</span></div>
+    <div class="acc"><span><b>Zasady z cennika</b></span><span class="grey">▾</span></div>
+    <div style="padding:10px 12px"><span class="btn pri" style="width:100%;height:44px">+ Dopłata</span></div>
+    <div class="cap">Kwoty jako karty (E8). Szczegóły po stuknięciu, a każda firma widzi tylko swoje karty.</div>
+  </div>
+</div>
+</body></html>

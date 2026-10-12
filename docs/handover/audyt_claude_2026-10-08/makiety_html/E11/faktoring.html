@@ -1,0 +1,99 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--surface-3:#EAEFF3;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;
+--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.wrap{padding:16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;max-width:1260px;align-items:start}
+.top{grid-column:1/-1;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.top h1{margin:0;font:700 24px var(--font-cond)}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px;display:inline-block}
+.cap{font:600 12px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.pn{background:var(--surface);border:1px solid var(--rule);display:flex;flex-direction:column}
+.pn .hd{padding:10px 12px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:2px}
+.pn .hd b{font:700 18px var(--font-cond)}
+.pn .bd{padding:10px 12px;display:flex;flex-direction:column;gap:9px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center;font-size:13.5px}
+.kv dt{color:var(--ink-3)}
+.kv dd{margin:0;font-weight:600}
+.sw{display:inline-block;width:36px;height:20px;border-radius:10px;background:var(--go);position:relative;vertical-align:middle;margin-right:6px}
+.sw::after{content:"";position:absolute;top:3px;right:3px;width:14px;height:14px;border-radius:50%;background:#fff}
+.calc{background:var(--surface-2);border:1px solid var(--rule-2);padding:8px 10px;font-variant-numeric:tabular-nums;display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:13px}
+.calc .r{text-align:right;font-family:var(--font-cond);font-size:15px}
+.calc .t{font-weight:700;border-top:1px solid var(--rule);padding-top:3px}
+.calc .t.r{border-top:1px solid var(--rule)}
+.hist{font-size:12.5px;color:var(--ink-2);border-top:1px solid var(--rule-2);padding-top:7px}
+.opt{border:1px solid var(--rule);padding:9px 11px;display:grid;grid-template-columns:20px 1fr auto;gap:2px 8px;align-items:start}
+.opt.on{border:2px solid var(--sea);background:var(--sea-bg);padding:8px 10px}
+.opt .rd{width:16px;height:16px;border-radius:50%;border:2px solid var(--ink-3);margin-top:2px}
+.opt.on .rd{border-color:var(--sea);box-shadow:inset 0 0 0 3px #fff;background:var(--sea)}
+.opt b{font-size:14px}
+.opt .amt{font:700 17px var(--font-cond);text-align:right;white-space:nowrap}
+.opt span{grid-column:2/4;font-size:12.5px;color:var(--ink-2)}
+.opt span.amt{grid-column:3;grid-row:1;color:var(--ink);font-size:17px}
+.inv{font-size:13px;color:var(--ink-2)}
+.inv b{color:var(--ink)}
+.due{border:1px solid var(--amber);background:var(--amber-bg);padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.due .v{font:700 22px var(--font-cond)}
+.btn{font:600 13px var(--font-sans);padding:7px 12px;border:1px solid var(--ink);background:var(--ink);color:#fff;align-self:flex-start}
+.tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0}
+.tl li{display:grid;grid-template-columns:14px 1fr;gap:8px;font-size:13px;padding-bottom:8px;position:relative}
+.tl li::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--go);margin-top:4px}
+.tl li.now::before{background:var(--amber)}
+.tl li.next::before{background:var(--surface);border:2px solid var(--rule)}
+.tl li small{display:block;color:var(--ink-3);font-size:12px}
+.note{font-size:12.5px;color:var(--ink-3)}
+body.m .wrap{grid-template-columns:1fr;max-width:392px;padding:10px}
+</style></head><body>
+<div class="wrap">
+  <div class="top"><h1>Faktoring dla przewoźnika</h1><span class="ex">Układ proponowany · faktura i daty przykładowe · warunki z Twojej decyzji 07.10</span></div>
+
+  <section class="pn">
+    <div class="hd"><span class="cap">HHL · Opcje › Pieniądze › Faktoring</span><b>Oferta HHL</b></div>
+    <div class="bd">
+      <dl class="kv">
+        <dt>Faktoring</dt><dd><i class="sw"></i>Włączony</dd>
+        <dt>Kto wypłaca</dt><dd>HHL, przed terminem płatności</dd>
+        <dt>Prowizja</dt><dd>1 % od kwoty netto faktury</dd>
+        <dt>Wypłata</dt><dd>48 h od akceptacji faktury przez HHL</dd>
+        <dt>Dla kogo</dt><dd>Scandinavian Express</dd>
+        <dt>Obowiązuje od</dt><dd>07.10.2026 · wersja 1</dd>
+      </dl>
+      <span class="cap">Przykład wyliczenia</span>
+      <div class="calc">
+        <span>Faktura brutto</span><span class="r">19 350,36 EUR</span>
+        <span>Prowizja: 1 % × 15 732,00 netto</span><span class="r">− 157,32 EUR</span>
+        <span class="t">HHL wypłaca przewoźnikowi</span><span class="t r">19 193,04 EUR</span>
+      </div>
+      <div class="hist">Zmiana oferty tworzy nową wersję. Faktura zostaje przy warunkach z dnia, w którym przewoźnik wybrał faktoring.</div>
+    </div>
+  </section>
+
+  <section class="pn">
+    <div class="hd"><span class="cap">SCX · Nowa faktura · tydzień 40</span><b>Sposób zapłaty</b></div>
+    <div class="bd">
+      <div class="inv"><b>SCX/2026/10/118</b> · wystawiona 05.10 · 2 transporty<br>netto 15 732,00 · VAT 23 % 3 618,36 · <b>brutto 19 350,36 EUR</b></div>
+      <div class="opt"><i class="rd"></i><b>Standardowo</b><span class="amt">19 350,36 EUR</span><span>Termin 09.11 · 35 dni od wystawienia</span></div>
+      <div class="opt on"><i class="rd"></i><b>Faktoring HHL</b><span class="amt">19 193,04 EUR</span><span>48 h po akceptacji faktury przez HHL · prowizja 1 % od netto: 157,32 EUR</span></div>
+      <div class="note">Wybór zapisuje się na fakturze i widzi go HHL. KSH tej faktury nie widzi.</div>
+    </div>
+  </section>
+
+  <section class="pn">
+    <div class="hd"><span class="cap">HHL · Faktury · zadanie</span><b>Wypłata faktoringu</b></div>
+    <div class="bd">
+      <div class="due"><span class="cap" style="color:var(--amber-ink)">Do wypłaty do 14.10, 10:00 · zostało 47 h</span><span class="v">19 193,04 EUR</span><span class="inv">SCX/2026/10/118 · Scandinavian Express</span></div>
+      <button class="btn">Oznacz jako wypłaconą</button>
+      <ol class="tl">
+        <li><span>Wystawiona przez SCX, wybrany faktoring<small>05.10</small></span></li>
+        <li><span>Zaakceptowana przez HHL, kwota zgodna co do grosza<small>12.10, 10:00 · start 48 h</small></span></li>
+        <li class="now"><span>Wypłata faktoringu<small>do 14.10, 10:00 · po terminie: ryzyko i dzwonek HHL</small></span></li>
+        <li class="next"><span>Wypłacona · SCX widzi status<small>prowizja 157,32 EUR zostaje w HHL</small></span></li>
+      </ol>
+    </div>
+  </section>
+</div>
+<script>if(location.search.includes('phone'))document.body.classList.add('m');</script>
+</body></html>

@@ -1932,3 +1932,44 @@ Kontrole: H1_ROUTE_CHECK false, H3_CORRIDOR_OBSTACLES false, H6_MAP_OBSTACLES fa
 | AUD-02 | Dzwonek (A2) | **ZROBIONE** 06.10 19:43 (prod `dpl_HDXx6Teob8JTLRRobwtfDstxS4UX`) | #146 → `e658d11` | vitest 869/0, aud02 6/6; tsc; lint 0 błędów; gate:visual OK 280/280, 0 zmienionych; fresh-smoke OK; gitleaks 0; audit 0 | 1 812 pozycji z kodem szablonu → 0; 2 539 nieprzeczytanych → 1 974 pozycji po grupowaniu |
 | AUD-03 | KSH — panel zlecenia (A3) | **ZROBIONE** 07.10 00:27 (prod `dpl_6d2fJgQAiCDsJ3D4ZoQ6E8fCbEHz`) | #148 → `151754d`; 0192 PROD | vitest 879/0 (aud03 9/9); Playwright aud03 4/4; DB aud03 25/25 (gate OK, session/l13 dług); tsc; lint 0 błędów; gate:visual OK 280/280, 0 zmienionych; fresh-smoke OK; gitleaks 0; audit 0 | KshSideMenu usunięty; „Edytuj” → 4 pola dat; Historia „// KSH”, DEC-4, ETA/BAF, I-10; „Zmień ciągnik” ukryty; prod SQL: RPC bez konta → 42501; obie domeny 200; test kontem KSH na prod niewykonany (brak logowania bez przeglądarki) |
 | P0-CI | narzędzia na Windows (D-86, D-87; dopiski D-20261011-2135-01, D-20261011-2254-01, D-20261012-0105-01; R1–R6) | **DONE** 12.10.2026 ~01:33 | PR #152 → HEAD `07c99696` (df975e88 workflows+backup-core; e50c4a48 R1 service_role; b16a9108 R2 D14; ac92c785 R3 maxWorkers win32; 07c99696 R4 TZ/PGTZ + R5 baf + R6 bmapa) | unit 901/35 skip (Windows hak + CI); unit CI https://github.com/Spawn2018/testowe-do-migracji/actions/runs/38184171848 (1 m 2 s) + https://github.com/Spawn2018/testowe-do-migracji/actions/runs/38184173964 (53 s); db https://github.com/Spawn2018/testowe-do-migracji/actions/runs/38184173968 (8 m 15 s) — `[db] i2 540/540 OK`, `[db] insurance 42/42 OK`, `[db] baf 46/46 OK`, `[db] bmapa 33/33 OK`; visual https://github.com/Spawn2018/testowe-do-migracji/actions/runs/38184176295 (5 m 46 s); etap5-ui `--repeat-each=20` 100/100; gitleaks 0; npm audit --omit=dev high 0 | R2: `useRouteSync` — HashRouter w `startTransition` odkładał lokację; URL→sklep przez `useLayoutEffect` + `hashchange` (wstecz zamyka szufladę). R4: `TZ`/`PGTZ=Europe/Warsaw` w `db.yml`. R5/R6: `fresh_price` w baf; `here_note_service` w bmapa. Krok 8: nocna brama wizualna na tym komputerze **nie** (brak `/workspace/wt-gate-visual/history.log` i zadań Harmonogramu); psql OMNIROUTE 16.15; gh auth Spawn2018 (gist, read:org, repo, workflow). Dopiski w `docs/handover/dopiski/` (3 pliki). |
+
+## 2026-10-12 — P0a — komplet dokumentów z 08–09.10.2026
+
+Gałąź `pakiet/P0a-komplet`. Tylko dokumenty (bez `src/`, `supabase/`, `scripts/`, `tests/`). Hash scalenia wpisze pierwszy commit P0b.
+
+### Przeniesienia
+- skrypt `P0a_przeniesienia.sh`: **279** plików do `docs/archiwum/2026-10-08/` (brakujących: 0) + `stare-instrukcje/` (5: `AGENTS.md.txt` + 4 reguły `.mdc.txt`); łącznie **284** pliki w archiwum;
+- 3 pliki z kwotami poza repozytorium: `D:\Watch Tower\dane\archiwum-2026-10-08\` (`RAPORT_BAF_CENY_94_05_10.md`, `WIP_BAF_CENY_05_10.md`, `BAF_SPEC.txt`);
+- na miejsca: `AGENTS.md`, 4 reguły `.cursor/rules/*.mdc`, `PLAN.md`, konstytucja, rejestr, inwentarz, indeks, 7 procedur `08_SKILLE/`, folder audytu, 4 dopiski z kompletu;
+- w `docs/handover/dopiski/` **7** plików D-* (4 z kompletu włączone do planu; D-20261011-2135-01, D-20261011-2254-01, D-20261012-0105-01 — włączy Sesja 1 / P0b).
+
+### Testy przed PR
+- `npm run test:unit` — 901 passed / 35 skipped;
+- `npm run lint:css` — zielone;
+- gitleaks (zmiany w gicie) — 0; `npm audit --omit=dev --audit-level=high` — 0;
+- przed scaleniem: check `visual` w PR (D-87); `db` nie startuje (bez SQL).
+
+### Stan dawnych pozycji (P0a pkt 5)
+| ID | Stan | Dowód |
+|---|---|---|
+| L-1b | zrobione | PR #18 `edd2509b` / merge `6cbc72b4`; migracja `0021_driver_token.sql`; POSTEP „dec-auto L-1b” |
+| L-4 | zrobione | PR #20 `43e41fb1`; cele kliknięć; AUD-02 `e658d11f` (cel L-4) |
+| L-5 | zrobione | PR #21 `2af2e469` (dzwonek L-5); smoke B-SMOKE-DRIFT `55eccc4b` |
+| L-9 | zrobione (część); reszta P6 E7-5 | PR #32 `6ba8d01d` (rejsy z bazy); FERRY-STATUS PR #58 `63de6190` |
+| L-13 | zrobione | PR #22 `e143dd57` / merge `94efe0b6`; POSTEP „L-13 na produkcji” 04.10 |
+| L-12 | zrobione | PR #35 `4126b39c` / merge `cd870897` (kreator stref) |
+| TELM-EMTRACK-WEB 5–6 | części pokryte E23/E27/E32; monitoring 72 h — do sprawdzenia przy P10a/P4 | PR #88 `c2bb800d`, #90 `ad5e942a` (LIVE); flaga/API — W15 |
+| P1-LINT | zrobione | `npm run lint:css` zielone 12.10; PR #3 `fix/p1-font` |
+| P1-FONT | zrobione | PR #3 `141c917d`; `public/fonts/barlow*.woff2` + `barlow.css` w repo |
+| AUD-04 | zrobione | PR #150 `5f6111cc`, #151 `90c5df40` |
+| SG-03 raport po rozładunku | zastąpione audytem | PLAN §7 → testy E15/E26/E42 (P4, P8) |
+| SMS-KSH-1H | docs/STOP — strefa Śrem ≠ D-37 | PR #42 `027e0b47`; do sprawdzenia przy P8 |
+| H-2-PL | zrobione | PR #86 `98200036` (HERE Traffic PL) |
+| ZEZW-13 | czeka na właściciela (wymiary) | POSTEP: W / D-83; B-3a pominięte |
+| B-3a | niezrobione — czeka D-83 | POSTEP 05.10: pominięte |
+| H-6 | flaga false; do sprawdzenia przy paczce mapy | H6_MAP_OBSTACLES false (POSTEP 05.10) |
+| D-83 | czeka na właściciela | wymiary zestawów — STOP B-3a/H-* |
+| pozycje D4–D12 audytu | zamknięte | brak treści w starym planie (P0a_WGRANIE pkt 5) |
+| SG-01 driver_token usunięcie | do P1 | PLAN §7; nie potwierdzono usunięcia wiersza w P0a |
+
+Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum i audyt). `PLAN.md` §4 P0a → „NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji”.

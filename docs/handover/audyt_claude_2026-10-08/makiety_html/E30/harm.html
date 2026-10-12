@@ -1,0 +1,162 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+.facts{margin:0;padding:10px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.facts b{font-weight:600}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 9px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+table.r td.n,table.r th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.code{font-weight:700;white-space:nowrap}
+.note{font-size:12.5px;color:var(--ink-3)}
+.red{color:var(--red);font-weight:600}.grey{color:var(--ink-3)}
+.chip{height:32px;padding:0 11px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.inp{height:32px;border:1px solid var(--rule);padding:0 10px;display:inline-flex;align-items:center;color:var(--ink-3);font-size:13px;background:#fff;white-space:nowrap}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tiles{display:flex;border-bottom:1px solid var(--rule)}
+.tiles div{flex:1;padding:7px 10px 8px;border-right:1px solid var(--rule-2);font-size:12.5px;color:var(--ink-2)}
+.tiles div b{display:block;font:700 20px var(--font-cond);color:var(--ink)}
+.tiles div.z b{color:#A8B6C1}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;position:relative}
+.phone .h b{font-size:20px}
+.pc{margin:6px 12px 0;border:1px solid var(--rule);padding:8px 11px;display:flex;flex-direction:column;gap:2px}
+.pc .t{font:700 17px var(--font-cond);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto;background:#fff}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.ptiles{display:flex;gap:6px;padding:8px 12px;overflow:hidden;border-bottom:1px solid var(--rule-2)}
+.ptiles span{border:1px solid var(--rule);padding:4px 8px;font-size:12px;white-space:nowrap;min-height:44px;display:flex;flex-direction:column;justify-content:center}
+.ptiles span b{font:700 16px var(--font-cond)}
+.sheetb{position:absolute;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--rule);box-shadow:0 -10px 24px rgba(14,26,36,.18);padding:10px 14px 14px;display:flex;flex-direction:column;gap:8px}
+.grab{width:42px;height:4px;border-radius:2px;background:#C9D5DD;align-self:center}
+.btn{height:44px;padding:0 14px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-size:14px;background:#fff;white-space:nowrap}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.dim{position:absolute;inset:0;background:rgba(14,26,36,.28)}
+.lbl{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.menu{position:absolute;right:14px;top:46px;background:#fff;border:1px solid var(--rule);box-shadow:0 8px 20px rgba(14,26,36,.15);z-index:3;min-width:230px}
+.menu div{padding:9px 12px;border-bottom:1px solid var(--rule-2);font-size:13.5px}
+</style></head><body>
+<div class="sheet">
+  <div class="top"><h1>E30 · Harmonogram: kolumny, filtry, eksport, Rejsy · komputer i telefon</h1>
+    <span class="ex">„Dziś” — zrzuty 08.10, 00:2x · „po zmianie” — kody, typy, wymiary, daty, tablice, kwoty i rejsy z bazy; kierowcy ukryci</span></div>
+
+  <div class="sec">Dziś</div>
+  <div class="card" style="width:703px">
+    <div class="h"><b>Komputer 1366 px · lewa część</b><span class="pill rd">5 przycisków · 14 filtrów</span></div>
+    <img src="now-left.png" width="701" height="440" alt="">
+  </div>
+  <div class="card" style="width:703px">
+    <div class="h"><b>Ta sama tabela po przewinięciu w prawo</b><span class="pill rd">17 kolumn · 2013 px</span></div>
+    <img src="now-right.png" width="701" height="260" alt="">
+    <div class="cap">„Zmień ciągnik” jest w każdym wierszu (okno przeglądarki). „Dok.” pokazuje tylko „Z” i „C”. Marża jest czerwona przy każdym transporcie (próg 18%). Dopisek pod tabelą mówi o kursie NBP, a kwoty liczy stały kurs 4,39 (E16).</div>
+  </div>
+  <div class="card" style="width:262px">
+    <div class="h"><b>Telefon 390 px</b></div>
+    <img src="now-m.png" width="260" height="563" alt="">
+    <div class="cap">Pierwsza karta jest dopiero pod przyciskami, 4 polami dat i 14 filtrami.</div>
+  </div>
+  <div class="card" style="width:862px">
+    <div class="h"><b>Rejsy</b><span class="pill rd">sail_src_STENA</span></div>
+    <img src="now-rejsy.png" width="860" height="294" alt="">
+    <div class="cap">Tytuł „Rozkład Gdańsk ⇄ Nynäshamn”, a lista ma też Gdynię i Karlskronę oraz rejsy powrotne. W kolumnie „Transporty” wszędzie jest 0.</div>
+  </div>
+  <div class="card" style="width:270px">
+    <div class="h"><b>Fakty 08.10</b></div>
+    <ul class="facts">
+      <li><b>Rejsy w bazie:</b> 250. Polferries ma rozkład do 09.01.2027, a Stena do 18.10.</li>
+      <li><b>Rejs przypisany</b> ma 1 transport (SG-24, wpis próbny z 01.10). SG-01 i SG-03 nie mają rejsu.</li>
+      <li><b>Eksport XLSX i PDF</b> zawsze zawiera 94 transporty, bez filtrów i bez wyboru kolumn. XLSX ma statusy po angielsku („PLANNED”) i nagłówki „L_m”, „Masa_t”. PDF pokazuje telefon kierowcy każdej firmie.</li>
+      <li><b>Układ kolumn</b> zapisuje się w przeglądarce. Na innym komputerze wraca układ domyślny.</li>
+    </ul>
+  </div>
+
+  <div class="sec">Po zmianie · komputer 1366 px · HHL (obszar treści 1154 px obok menu)</div>
+  <div class="card" style="width:1156px">
+    <div class="tiles">
+      <div>Przygotowanie<b>92</b></div><div class="z">Załadunek<b>0</b></div><div class="z">Droga PL<b>0</b></div><div class="z">Port PL<b>0</b></div><div class="z">Prom<b>0</b></div><div class="z">Port SE<b>0</b></div><div class="z">Droga SE<b>0</b></div><div class="z">Plac Boden<b>0</b></div><div>Dostarczone<b>2</b></div><div class="z">Rozliczenie<b>0</b></div>
+    </div>
+    <div class="h"><b>Harmonogram</b><span class="sub">Plik KSH: wersja 1 z 01.10, 21:43 · pominięto wiersze STANDARD</span><span style="flex:1"></span><span class="chip on">Transporty</span><span class="chip">Rejsy</span><span class="chip">Kolumny</span><span class="chip">Więcej ▾</span></div>
+    <div class="row" style="padding:10px 14px;border-bottom:1px solid var(--rule)">
+      <span class="inp" style="width:270px">Szukaj: kod, nr zlecenia, kierowca, tablice</span>
+      <span class="inp">Załadunek: t40–t41 ▾</span><span class="inp">Dostawa: wszystkie ▾</span>
+      <span class="chip">Opóźnione · 0</span><span class="chip">Bez dokumentów · 92</span><span class="chip">Bez kierowcy · 90</span><span class="chip">Bez ciągnika · 90</span><span class="chip">Anulowane · 0</span>
+      <span style="flex:1"></span><span class="note">20 z 94 · poniżej fragment</span>
+    </div>
+    <table class="r">
+      <tr><th>Transport</th><th>Ładunek</th><th>Załadunek → dostawa</th><th>Status</th><th>Kierowca i zestaw</th><th>ETA Boden</th><th>Dokumenty</th><th class="n">Przychód (EUR)</th></tr>
+      <tr><td class="code">SG-01 <span style="color:var(--amber)">·</span> <span style="font-weight:500">0002/09/S/2026</span></td><td>Słupy główne · 7 szt.<div class="grey">18,21 × 2,45 × 2,45 m · 20,74 t</div></td><td>29.09 → 05.10</td><td><span class="pill go">Dostarczone</span><div class="grey">06.10</div></td><td>A. C. ☎<div class="grey">WPR6303P · GD9792X</div></td><td class="grey">dostarczono</td><td class="red">brak CMR z podpisem<div class="grey" style="font-weight:400">wgrywa SCX</div></td><td class="n">8 259,30<div class="grey">marża 393,30 · 4,8%</div></td></tr>
+      <tr><td class="code">SG-03 <span style="color:var(--amber)">·</span> <span style="font-weight:500">0005/09/S/2026</span></td><td>Słupy główne · 7 szt.<div class="grey">18,21 × 2,45 × 2,45 m · 19,10 t</div></td><td>01.10 → 07.10</td><td><span class="pill go">Dostarczone</span><div class="grey">07.10</div></td><td>R. P. ☎ → M. M. ☎<div class="grey">WGM00653 → CTR44190 · GD035YX</div></td><td class="grey">dostarczono</td><td class="red">brak CMR z podpisem<div class="grey" style="font-weight:400">wgrywa SCX</div></td><td class="n">8 259,30<div class="grey">marża 393,30 · 4,8%</div></td></tr>
+      <tr><td class="code">SG-15 <span class="pill rd">brak nr HHL</span></td><td>Słupy główne · 7 szt.<div class="grey">18,21 × 2,45 × 2,45 m · 20,44 t</div></td><td>08.10 → 14.10</td><td><span class="pill gr">Brak zasobów</span></td><td class="red">brak kierowcy i zestawu<div class="grey" style="font-weight:400">uzupełnia SCX</div></td><td class="grey">–</td><td class="red">brak: zezwolenie PL, zezwolenie SE</td><td class="n">8 186,85<div class="grey">marża 389,85 · 4,8%</div></td></tr>
+      <tr><td class="code">SG-16 <span class="pill rd">brak nr HHL</span></td><td>Słupy główne · 7 szt.<div class="grey">18,21 × 2,45 × 2,45 m · 19,08 t</div></td><td>08.10 → 14.10</td><td><span class="pill gr">Brak zasobów</span></td><td class="red">brak kierowcy i zestawu<div class="grey" style="font-weight:400">uzupełnia SCX</div></td><td class="grey">–</td><td class="red">brak: zezwolenie PL, zezwolenie SE</td><td class="n">8 186,85<div class="grey">marża 389,85 · 4,8%</div></td></tr>
+    </table>
+    <div class="cap">8 kolumn mieści się w 1154 px bez przewijania w bok. Kwoty w EUR: przychód i pod nim marża. Marża nie jest czerwona, dopóki nie wpiszesz progu w Opcjach (E16). Zestaw zmienia się w oknie Awizacja (E32), a nie w tabeli. ☎ = zadzwoń (E6).</div>
+  </div>
+  <div class="card" style="width:256px">
+    <div class="h"><b>Kolumny i „Więcej”</b></div>
+    <ul class="facts">
+      <li><b>Domyślnie</b> 8 kolumn jak obok.</li>
+      <li><b>„Kolumny”</b> dodaje: numery zleceń osobno, telefon, ciągnik i naczepę osobno, rejs i koszt. Układ zapisuje się na koncie użytkownika.</li>
+      <li><b>„Więcej ▾”</b>:
+        <ul>
+          <li>Eksport XLSX (to, co widać);</li>
+          <li>Eksport PDF (to, co widać);</li>
+          <li>Wgraj plik KSH ręcznie (zapas, E38);</li>
+          <li>Przywróć kolumny domyślne.</li>
+        </ul></li>
+      <li><b>KSH</b> widzi „SG-01” i „Twoja cena”. <b>SCX</b> widzi „SG-01 · 15048/2026/OSL/GDA/P” i „Moja stawka”.</li>
+    </ul>
+  </div>
+
+  <div class="sec">Po zmianie · telefon i Rejsy</div>
+  <div class="phone" style="height:760px">
+    <div class="h"><b>Harmonogram</b><span class="sub">20 z 94</span></div>
+    <div class="ptiles"><span>Przygotowanie<b>92</b></span><span>Dostarczone<b>2</b></span><span>Rozliczenie<b>0</b></span></div>
+    <div class="row" style="padding:8px 12px"><span class="inp" style="flex:1;height:44px">Szukaj</span><span class="btn">Filtry · 1</span></div>
+    <div class="pc"><div class="t">SG-01 <span style="color:var(--amber)">·</span> <span style="font-weight:600;color:var(--ink-2)">0002/09/S/2026</span></div><div><span class="pill go">Dostarczone 06.10</span> <span class="pill rd">brak CMR</span></div><div class="note">Słupy główne · 29.09 → 05.10 · A. C.</div></div>
+    <div class="pc"><div class="t">SG-03 <span style="color:var(--amber)">·</span> <span style="font-weight:600;color:var(--ink-2)">0005/09/S/2026</span></div><div><span class="pill go">Dostarczone 07.10</span> <span class="pill rd">brak CMR</span></div><div class="note">Słupy główne · 01.10 → 07.10 · R. P. → M. M.</div></div>
+    <div class="pc"><div class="t">SG-15 <span class="pill rd">brak nr HHL</span></div><div><span class="pill gr">Brak zasobów</span> <span class="pill rd">brak zezwoleń</span></div><div class="note">Słupy główne · 08.10 → 14.10 · kierowca: brak</div></div>
+    <div class="nav"><span>Kokpit</span><span class="on">Harmonogram</span><span>Ryzyka</span><span>Dokumenty</span><span>Więcej</span></div>
+  </div>
+  <div class="phone" style="height:760px">
+    <div class="h"><b>Harmonogram</b><span class="sub">20 z 94</span></div>
+    <div class="dim"></div>
+    <div class="sheetb">
+      <div class="grab"></div>
+      <b style="font:700 19px var(--font-cond)">Filtry</b>
+      <div class="lbl">Tydzień załadunku</div>
+      <div class="row"><span class="chip">t40</span><span class="chip on">t40–t41</span><span class="chip">t42</span><span class="chip">własny zakres</span></div>
+      <div class="lbl">Tydzień dostawy</div>
+      <div class="row"><span class="chip on">wszystkie</span><span class="chip">t41</span><span class="chip">t42</span></div>
+      <div class="lbl">Stan</div>
+      <div class="row"><span class="chip">Opóźnione · 0</span><span class="chip">Bez dokumentów · 92</span><span class="chip">Bez kierowcy · 90</span><span class="chip">Bez ciągnika · 90</span><span class="chip">Anulowane · 0</span></div>
+      <div class="row" style="margin-top:6px"><span class="btn" style="flex:1">Wyczyść</span><span class="btn pri" style="flex:1">Pokaż 20</span></div>
+    </div>
+  </div>
+  <div class="card" style="width:652px">
+    <div class="h"><b>Rejsy</b><span class="sub">Gdańsk → Nynäshamn i Gdynia → Karlskrona</span><span style="flex:1"></span><span class="chip on">Przyszłe</span><span class="chip">Pokaż powroty</span></div>
+    <table class="r">
+      <tr><th>Odejście</th><th>Statek</th><th>Trasa</th><th>Przypłynięcie</th><th>Źródło</th><th>Transporty</th></tr>
+      <tr><td>08.10, 08:00</td><td>Stena Estelle</td><td>GDY → KAA</td><td>08.10, 17:45</td><td>Stena Line</td><td class="grey">—</td></tr>
+      <tr><td>08.10, 10:00</td><td>Stena Spirit</td><td>GDY → KAA</td><td>08.10, 20:30</td><td>Stena Line</td><td class="grey">—</td></tr>
+      <tr><td>08.10, 18:00</td><td>Wawel</td><td>GDN → NYN</td><td>09.10, 12:00</td><td>Polferries</td><td class="grey">—</td></tr>
+      <tr><td>08.10, 20:00</td><td>Stena Ebba</td><td>GDY → KAA</td><td>09.10, 08:30</td><td>Stena Line</td><td class="grey">—</td></tr>
+      <tr><td>09.10, 08:00</td><td>Stena Estelle</td><td>GDY → KAA</td><td>09.10, 20:30</td><td>Stena Line</td><td class="grey">—</td></tr>
+      <tr><td>09.10, 18:00</td><td>Nova Star</td><td>GDN → NYN</td><td>10.10, 12:00</td><td>Polferries</td><td class="grey">—</td></tr>
+    </table>
+    <div class="cap">Domyślnie tylko rejsy do Szwecji. W kolumnie „Transporty” są kody, np. „SG-15, SG-16”, a kliknięcie filtruje Harmonogram. Pod tabelą: „Rozkład Stena w bazie do 18.10, Polferries do 09.01.2027”. Rejsy zmienia tylko Administrator HHL (19:11), pozostali tylko podgląd.</div>
+  </div>
+</div>
+</body></html>

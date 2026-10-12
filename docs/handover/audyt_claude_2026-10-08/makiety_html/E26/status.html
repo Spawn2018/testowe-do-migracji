@@ -1,0 +1,58 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F8DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.dr{width:540px;background:var(--surface);border:1px solid var(--rule)}
+.dr .h{padding:12px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center}
+.dr .h b{font:700 24px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}
+.tabs{display:flex;border-bottom:1px solid var(--rule)}.tabs span{padding:10px 12px;color:var(--ink-3)}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+.tl{list-style:none;margin:0;padding:12px 14px;display:flex;flex-direction:column}
+.tl li{display:grid;grid-template-columns:86px 16px 1fr;gap:8px;padding-bottom:12px;position:relative}
+.tl li .d{font-size:12.5px;color:var(--ink-3);text-align:right;font-variant-numeric:tabular-nums}
+.tl li .dot{width:12px;height:12px;border-radius:50%;background:var(--sea);margin-top:4px;position:relative}
+.tl li:not(:last-child) .dot::after{content:"";position:absolute;left:5px;top:12px;width:2px;height:44px;background:var(--rule)}
+.tl li.st .dot{background:var(--go)}.tl li.new .dot{background:var(--go);box-shadow:0 0 0 3px var(--go-bg)}
+.tl li b{font-weight:600}.tl li small{display:block;color:var(--ink-3);font-size:12.5px}
+.tag{font:600 11px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--go);margin-left:4px}
+.new b{color:var(--go)}
+.tl li.next{opacity:.6}.tl li.next .dot{background:transparent;border:2px dashed var(--ink-3)}
+.foot{padding:10px 14px;border-top:1px solid var(--rule-2);font-size:12.5px;color:var(--ink-3);display:flex;justify-content:space-between;gap:8px;align-items:center}
+.btn{height:40px;padding:0 12px;border:1px solid var(--ink);background:var(--surface);color:var(--ink);font:600 13.5px var(--font-sans);display:inline-flex;align-items:center;white-space:nowrap;flex:none}
+.ph{width:360px;border:1px solid #9AAAB6;border-radius:18px;overflow:hidden;background:var(--surface)}
+.ph .tl li{grid-template-columns:70px 14px 1fr}
+</style></head><body>
+<div class="sheet">
+  <div class="top"><h1>SG-03 · Status po zmianie</h1><span class="ex">Przykład · zdarzenia i godziny z bazy 07.10 · wiersz „Dostarczone” to nowa reguła (decyzja 16:48)</span></div>
+  <div class="dr">
+    <div class="h"><b>SG-03</b><span class="pill go">Dostarczone</span><span style="flex:1"></span><span style="color:var(--ink-3)">15062/2026/OSL/GDA/P</span></div>
+    <div class="tabs"><span>Przegląd</span><span class="on">Status</span><span>Dokumenty</span><span>Ceny</span><span>Czat</span><span>Historia</span></div>
+    <ul class="tl">
+      <li class="next"><span class="d">po CMR</span><span class="dot"></span><span><b>Gotowe do fakturowania</b><small>gdy SCX wgra CMR · potem „Zafakturowano”</small></span></li>
+      <li class="new st"><span class="d">07.10, 12:19</span><span class="dot"></span><span><b>Dostarczone</b><span class="tag">automatycznie</span><small>Wyjazd z „Plac budowy Stegra Boden” po 3 h 44 min na placu · śledzenie wyłączone, auto znika z map</small></span></li>
+      <li><span class="d">07.10, 08:49</span><span class="dot"></span><span>Na placu ponad 10 min<small>postój potwierdzony</small></span></li>
+      <li class="st"><span class="d">07.10, 08:35</span><span class="dot"></span><span><b>Na placu</b><span class="tag">automatycznie</span><small>Wjazd na „Plac budowy Stegra Boden”</small></span></li>
+      <li><span class="d">06.10, 11:22</span><span class="dot"></span><span>Wjazd w strefę „Bufor 50 km przed Boden”<small>bez zmiany statusu</small></span></li>
+      <li class="st"><span class="d">05.10, 13:21</span><span class="dot"></span><span><b>Droga SE</b><span class="tag">automatycznie</span><small>Naczepa GD035YX podłączona w Szwecji, etap z jej pozycji</small></span></li>
+      <li class="st"><span class="d">05.10, 13:10</span><span class="dot"></span><span><b>Gotowy</b><small>H&amp;H Logistics · zasoby uzupełnione · godzina poprawiona o 2 h (E25)</small></span></li>
+    </ul>
+    <div class="foot"><span>Ruch po 12:19 nie jest już zapisywany przy SG-03. Ręczna zmiana z datą: E25.</span><span class="btn">Zmień status</span></div>
+  </div>
+  <div class="ph">
+    <div class="h" style="padding:12px 14px;border-bottom:1px solid var(--rule);display:flex;gap:8px;align-items:center"><b style="font:700 22px var(--font-cond)">SG-03</b><span class="pill go">Dostarczone</span></div>
+    <ul class="tl">
+      <li class="next"><span class="d">po CMR</span><span class="dot"></span><span><b>Gotowe do fakturowania</b><small>gdy SCX wgra CMR</small></span></li>
+      <li class="new st"><span class="d">07.10<br>12:19</span><span class="dot"></span><span><b>Dostarczone</b><span class="tag">auto</span><small>Wyjazd z placu po 3 h 44 min · śledzenie wyłączone</small></span></li>
+      <li class="st"><span class="d">07.10<br>08:35</span><span class="dot"></span><span><b>Na placu</b><span class="tag">auto</span><small>Wjazd na plac w Boden</small></span></li>
+      <li><span class="d">06.10<br>11:22</span><span class="dot"></span><span>50 km przed Boden<small>bez zmiany statusu</small></span></li>
+      <li class="st"><span class="d">05.10<br>13:21</span><span class="dot"></span><span><b>Droga SE</b><span class="tag">auto</span><small>Naczepa podłączona w Szwecji</small></span></li>
+    </ul>
+  </div>
+</div>
+</body></html>

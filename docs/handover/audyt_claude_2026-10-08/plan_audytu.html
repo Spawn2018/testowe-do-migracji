@@ -1,0 +1,961 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}</style><style>:root{color-scheme:light dark;--md-bg:#fff;--md-text:rgba(0,0,0,.8);--md-muted:rgba(0,0,0,.6);--md-fill:rgba(0,0,0,.04);--md-fill-strong:rgba(0,0,0,.06);--md-rule:rgba(0,0,0,.1);--md-rule-strong:rgba(0,0,0,.16);--md-link:hsl(210 100% 45%)}@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){--md-bg:#0d0d0d;--md-text:rgba(255,255,255,.85);--md-muted:rgba(255,255,255,.6);--md-fill:rgba(255,255,255,.06);--md-fill-strong:rgba(255,255,255,.09);--md-rule:rgba(255,255,255,.14);--md-rule-strong:rgba(255,255,255,.22);--md-link:hsl(210 100% 72%)}}:root[data-theme="dark"]{color-scheme:dark;--md-bg:#0d0d0d;--md-text:rgba(255,255,255,.85);--md-muted:rgba(255,255,255,.6);--md-fill:rgba(255,255,255,.06);--md-fill-strong:rgba(255,255,255,.09);--md-rule:rgba(255,255,255,.14);--md-rule-strong:rgba(255,255,255,.22);--md-link:hsl(210 100% 72%)}:root[data-theme="light"]{color-scheme:light}@media print{:root,:root[data-theme="dark"]{color-scheme:light;--md-bg:#fff;--md-text:rgba(0,0,0,.8);--md-muted:rgba(0,0,0,.6);--md-fill:rgba(0,0,0,.04);--md-fill-strong:rgba(0,0,0,.06);--md-rule:rgba(0,0,0,.1);--md-rule-strong:rgba(0,0,0,.16);--md-link:hsl(210 100% 45%)}}body{background:var(--md-bg);color:var(--md-text);max-width:720px;margin:0 auto;padding:32px;display:flex;flex-direction:column;gap:10px;font:14px/1.55 -apple-system,BlinkMacSystemFont,'SF Pro','Segoe UI',sans-serif;overflow-wrap:break-word}body>:first-child{margin-top:0}h1,h2,h3,h4,h5,h6{margin:6px 0 0;line-height:1.25;font-weight:600;text-wrap:balance}h1{font-size:1.35em}h2{font-size:1.15em;color:var(--md-muted)}h3,h4,h5,h6{font-size:1em}p,ul,ol,blockquote,table,pre,hr{margin:0}strong{font-weight:600}a{color:var(--md-link);text-decoration:none}a:hover{text-decoration:underline}ul,ol{display:flex;flex-direction:column;gap:6px;padding-left:22px}ul{list-style:disc}ol{list-style:decimal}:is(li,td,th)>*+:is(p,ul,ol,blockquote){margin-top:6px}blockquote{display:flex;flex-direction:column;gap:10px;border-left:2px solid var(--md-rule);padding-left:10px;color:var(--md-muted)}:not(pre)>code{background:var(--md-fill);padding:1px 3px;border-radius:4px;font:.92em 'SF Mono',ui-monospace,Menlo,Consolas,monospace}a>code{background:none;color:inherit}pre{background:var(--md-fill);padding:10px 12px;border-radius:6px;overflow-x:auto;font:12px/1.5 'SF Mono',ui-monospace,Menlo,Consolas,monospace;margin-block:4px}pre code{background:none;padding:0;font:inherit}table{width:100%;border-collapse:separate;border-spacing:2px;font:inherit}th,td{padding:6px 8px;border-radius:3px;text-align:left;vertical-align:top}th{background:var(--md-fill-strong);font-weight:600}td{background:var(--md-fill)}:is(th,td) :not(pre)>code{background:transparent}hr{border:0;border-top:1px solid var(--md-rule-strong);margin-block:10px}img{max-width:100%;height:auto;border-radius:4px}</style>
+</head><body>
+<div style="border:2px solid #b32639;padding:10px 14px;margin:0 0 14px;border-radius:6px;background:#fff4f4;color:#141413"><b>DOKUMENT HISTORYCZNY</b> — kopia artefaktu „plan audytu” (stan 08.10.2026, po 16:05). Tytuł „aktualny plan pracy Groka” i numery paczek P0–P10 są nieaktualne. Obowiązuje <code>docs/handover/PLAN.md</code> (paczki P0a–P11). Wykonawca nie traktuje tej strony jako polecenia.</div><h1>Watch Tower — aktualny plan pracy Groka</h1>
+<p><strong>Stan na:</strong> 07.10.2026 (dopisany ETAP 3 po Twoim przeglądzie; stan techniczny z 05.10) · <strong>Produkcja:</strong> migracje do <strong>0184</strong>, ostatnie wdrożenie PR #117 · <code>tower.log-mar.pl</code> działa · flagi H-1, H-3, H-6 <strong>wyłączone</strong> do wymiarów · <code>TELM_EMTRACK_WEB</code> <strong>włączona</strong>, SMS i e-maile testowego transportu tylko do Ciebie<br>
+<strong>Klucze w sekretach</strong> (bezpieczne okno): HERE, aisstream, DeepL, emtrack (login i hasło) · gitleaks: 4 fałszywe trafienia (nazwa flagi <code>H3_…</code>) — wyjątek w toku<br>
+<strong>Źródła w repozytorium:</strong> <code>PLAN.md</code>, <code>POLECENIA_KOORDYNATORA.md</code>, <code>REJESTR_CALOSCI.md</code>, <code>USTALENIA_Z_ROZMOW.md</code>, <code>TRIAGE_REJESTRU.md</code>, <code>ZLECENIE_POPRAWKI_02_10.md</code>, <code>ZLECENIE_HERE.md</code></p>
+<p><strong>Statusy:</strong> ✅ na produkcji · 🔧 zbudowane, wyłączone · 🔄 w toku · ⏳ w kolejce · ⛔ czeka na Ciebie albo dane zewnętrzne · ❓ brak potwierdzenia w raporcie · ✖ usunięte</p>
+<hr>
+<h2>Jak pracuje Grok</h2>
+<table>
+<thead>
+<tr>
+<th>Zasada</th>
+<th>W praktyce</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jedna lista pracy</td>
+<td>Kolejność wyłącznie z <code>PLAN.md</code>. Nowe polecenie najpierw do <code>POLECENIA_KOORDYNATORA.md</code>.</td>
+</tr>
+<tr>
+<td>Samodzielnie</td>
+<td>Scala i wdraża bez pytania (Twoja zgoda). Nie staje, dopóki w planie jest pozycja niezależna od Ciebie.</td>
+</tr>
+<tr>
+<td>Brama lokalna ~5 min</td>
+<td>Każda migracja przez bramę; czerwona brama = stop tej pozycji, nie obchodzić.</td>
+</tr>
+<tr>
+<td>Wdrożenie</td>
+<td>Tylko z <code>main</code>; po każdym obie domeny 200.</td>
+</tr>
+<tr>
+<td>Dwóch agentów</td>
+<td>Drugi agent tylko bez zmian w repozytorium: klucze, analizy. Kod i migracje — wyłącznie główny.</td>
+</tr>
+<tr>
+<td>Zawsze STOP</td>
+<td>Kasowanie danych poza planem, wydatki ponad budżety, prawdziwe SMS i e-maile poza zasadami, R-0 bez pisemnej zgody.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>ETAP 0 i 1 — przejęcie i logika systemu ✅</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Co</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PB-1–4, P1-FONT, B-1, DOC, SEC-GL</td>
+<td>Przejęcie, brama 5 min, zero danych przykładowych na produkcji, dokumenty</td>
+</tr>
+<tr>
+<td>L-1, L-1b, L-2, L-3</td>
+<td>Decyzje automatyczne (16 typów), kto decyduje, progi z Opcji</td>
+</tr>
+<tr>
+<td>ETA-GPS, DWELL</td>
+<td>ETA tylko z GPS i AIS; czas wolny 6 h / 4 h, 75 EUR/h, 750 EUR/doba</td>
+</tr>
+<tr>
+<td>L-4, L-5, L-13</td>
+<td>Cele kliknięć, dzwonek, zalew powiadomień (e-maile decyzji włączone)</td>
+</tr>
+<tr>
+<td>L-6–L-12</td>
+<td>Ponów kopię, statusy „Opóźniony”/„Cichy”, kafelki kokpitu, alternatywy rejsu, opis 3 ścieżek pracy, pasek bez numerów etapów, kreator stref</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Rejestr całości i poprawki po audycie ✅</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Co</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>REJESTR, U-1–U-50</td>
+<td>Rejestr decyzji i pozycji + 50 Twoich ustaleń z rozmów; D-66–D-76 = numery nieużyte</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>TRIAGE</td>
+<td>303 pozycje rozstrzygnięte: duplikaty, historia, zrobione pod inną nazwą; zostało ok. 45 prawdziwych</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>U-3-PALIWO</td>
+<td>Tydzień opłaty paliwowej od daty załadunku (kurs NBP od rozładunku) — 0155</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>PALIWO-33.3</td>
+<td>Test zmiany czasu 25.10 — tydzień 43/44 poprawnie</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>DRV-CLOSE</td>
+<td>Stary link kierowcy zamknięty, anonim dostaje odmowę — 0156</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>STD-CLEAN</td>
+<td>Resztki klasy Standard usunięte; import nadal pomija Standard/NTG — 0157</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>VERIFY-13</td>
+<td>Sprawdzenie 13 starych pozycji; luki → propozycje; poprawki w PR #89</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>PL-PLURAL</td>
+<td>Polska odmiana liczb („2 wiersze”)</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>SMS, ETA, paliwa ✅</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Co</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SMS-KSH-1H</td>
+<td>SMS do KSH ~1 h przed przyjazdem (Śrem i Boden) z ETA dojazdu; zastępuje SMS przy kole 50 km; wjazd na plac zostaje — 0158</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>ETA-PRE-LOAD</td>
+<td>Przed wyjazdem ze Śremu w polu ETA tylko „–” — 0158</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>SMS-SILENT-FIX</td>
+<td>Fałszywe alarmy bramki: próg 30 min, przerwa 60 min; status e-maila z Resend poprawny — 0167</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>PALIWA</td>
+<td>Automat codziennie 7:15: Orlen ONEkodiesel (PLN/m³ netto) i OKQ8 Q8 Trucks Diesel (22,90 na 05.10); mechanizm SEFS, wzorzec 1,14 — 0168</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>SEFS-KOREKTA</td>
+<td>Korekta ceny do zamknięcia tygodnia, potem migawka — 0166</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Promy, AIS, dane zewnętrzne ✅</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Co</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AIS-SRC</td>
+<td>Polferries: aisstream (nasłuch co minutę) + Digitraffic jako zapas; Steny: pozycje z mapy armatora</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>FERRY-STATUS</td>
+<td>Stena: rozkład na żywo (rzeczywiste godziny, statusy); Polferries: AIS + pogoda + formularz „Komunikat armatora” (strona blokuje automaty); alarmy pogody 3,8 m / 40 kn; Karlskrona–Boden (E22→E4); alternatywa liczy całą trasę</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Q-18</td>
+<td>Prom widoczny: w porcie PL, w rejsie do SE, w porcie SE; znika przy wypłynięciu do PL; pozycje w bazie zawsze</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>PL-DATA</td>
+<td>Wszystko po polsku: kody Trafikverket → słownik, tekst wolny → DeepL (pamięć tłumaczeń), HERE pl-PL, statusy Steny</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Zezwolenia</td>
+<td>Obejmują obie trasy (Gdańsk–Nynäshamn i Gdynia–Karlskrona) — przesiadka bez nowego zezwolenia</td>
+<td>decyzja</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>HERE</h2>
+<p>D-77 HERE w systemie · D-78 budżet 100 USD/mies. · D-79 zero aplikacji dla kierowców · D-80 ETA z GPS i AIS · D-81 dane HERE max 30 dni · D-82 myto poza zakresem · D-83 wymiary podajesz Ty · D-84 wiatr 15 m/s · D-85 ETA w pełni automatyczne</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Co</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H-0, H-0b</td>
+<td>Test na Twoim koncie i uzupełnienie</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>H-1</td>
+<td>Kontrola trasy (przepis ≠ przeszkoda) — 0153</td>
+<td>🔧 do wymiarów</td>
+</tr>
+<tr>
+<td>H-2</td>
+<td>Sytuacje drogowe SE z Trafikverket (schemat 1.6), panel „Warunki drogowe SE”</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>H-2-PL</td>
+<td>Sytuacje drogowe PL: HERE Traffic na korytarzu, KPD GDDKiA jako zapas, panel „Warunki drogowe PL”, ryzyka ROAD_PL; ok. 4 320 / 5 000 zapytań, 0 USD — 0171</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>H-3</td>
+<td>Przeszkody w korytarzu — przebudowane na Routing v8 (trasa główna + alternatywy), bez Map Attributes (niedostępne w planie Base); ok. 192 zapytań/mies. — 0154, 0170</td>
+<td>🔧 do wymiarów</td>
+</tr>
+<tr>
+<td>B-MAPA / H-6</td>
+<td>Podkład HERE (jasny i ciemny) na wszystkich mapach, trasy z geometrii HERE, ślad auta z surowych punktów GPS; warstwa przeszkód zbudowana (korzysta z H-3, bez Map Attributes)</td>
+<td>✅ / 🔧</td>
+</tr>
+<tr>
+<td>HERE-PULE</td>
+<td>Licznik liczy tylko koszt ponad darmowe pule, potwierdzone z Twojego konta: Advanced Raster Tile 30 000, Routing Truck 5 000, Traffic 5 000; październik 0 USD ponad pulę — 0170</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>H-12</td>
+<td>Zakazy czasowe (weekendy, święta, pory dnia) — PR #91/#92</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>H-7</td>
+<td>Mapa w eksporcie PDF i e-mailach</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>H-10</td>
+<td>Ostrzeżenie przy porywach ≥ 15 m/s działa; wydłużanie ETA przez wiatr wyłączone (propozycja do Twojej akceptacji)</td>
+<td>🔧 częściowo</td>
+</tr>
+<tr>
+<td>H-8</td>
+<td>Profil trasy, wariant A: wysokość i nachylenie w szufladzie transportu (standardowa ciężarówka); naruszenia dla zestawu po D-83 — PR #94, 0178–0179</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>H-4, H-5</td>
+<td>ETA automatyczne D-85, kontrola po przejeździe</td>
+<td>⛔ emtrack</td>
+</tr>
+<tr>
+<td>H-9, H-11</td>
+<td>Najlepsza godzina wyjazdu, myto</td>
+<td>✖</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Telematyka (emtrack)</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Co</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TELM-EMTRACK-WEB</td>
+<td>Pozycje naczep z aplikacji emtrack (tylko odczyt), zapas do czasu API; Edge <code>emtrack-web</code> — 0173/0174. Rozpoznanie: klient v6.32.0, naczepa GD035YX, pozycja zgodna z aplikacją. Flaga <code>TELM_EMTRACK_WEB</code> jeszcze wyłączona</td>
+<td>✅ włączona</td>
+</tr>
+<tr>
+<td>TEST-GD035YX</td>
+<td>Test na żywo (flaga włączona; transport <a href="https://tower.log-mar.pl/#/transport/SG-03">SG-03</a>, naczepa widoczna na mapie, faza IN_TRANSIT_SE, ETA 06.10 07:03 czasu polskiego): naczepa GD035YX przypisana przez Ciebie do transportu (z linkiem przewoźnika), w Szwecji, w drodze na rozładunek. Najpierw blokada: SMS i e-maile tylko do Ciebie; brak alarmów dla naczep bez awizacji; faza transportu z pozycji naczepy (ETA liczone, mimo braku wyjazdu ze Śremu); wjazd/wyjazd ze strefy rozładunku, SMS 1 h przed; monitoring 24 h (6.10) i 72 h (8.10); link do transportu po włączeniu</td>
+<td>🔄 priorytet</td>
+</tr>
+<tr>
+<td>TELM-2</td>
+<td>Dopasowanie naczepa → transport, przepięcie, prom (AIS), rzadsze pozycje na postoju; symulacje w testach (PR #96), dalej w tle</td>
+<td>🔄 w tle</td>
+</tr>
+<tr>
+<td>EMTRACK-API</td>
+<td>Oficjalne API emtrack — prośba wysłana do Ekosystem</td>
+<td>⛔ odpowiedź emtrack</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>ETAP 2 — Twoje poprawki z zeszytu (część B i C)</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Co</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B-2a, B-2b, B-2c</td>
+<td>Stena i drogi SE w ryzykach, centrum decyzji</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>B-4a, B-4b</td>
+<td>Przychód bez pilotażu i dodatków; załącznik tylko CMR</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>B-5</td>
+<td>Przycisk „Nowa automatyzacja” + kreator reguł (HHL_ADMIN) — 0165</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>B-6a–B-6i</td>
+<td>Opcje: jak działa, strefy, progi, Stan systemu jako pulpit, dziennik logowań, bez „200”, cennik i zezwolenia bez rozjazdu, SEFS — 0164</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>B-7a, B-7b</td>
+<td>Mapa o stałym rozmiarze; warstwy na telefonie nad mapą (PR #65)</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>B-7c</td>
+<td>Nowe filtry: brak GPS, ryzyko (wybór A)</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>B-8</td>
+<td>Harmonogram: kolumny, godziny, rok, ETA, polisa, PDF + zakres dat, filtr bez kierowcy/ciągnika, „Zmień ciągnik”</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>B-9</td>
+<td>Aktywny filtr z „×” + kafelek Prom (wybór C)</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Q-9</td>
+<td>Motyw według systemu + zmiana w ustawieniach (wybór B)</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Q-6</td>
+<td>Opłacone faktury — tylko HHL</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Q-19</td>
+<td>Ulice i miejscowości na mapie (podkład HERE)</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>B-10</td>
+<td>Podgląd zlecenia: edycja, awizacja, przepięcie, Status, Historia, Dokumenty, Ceny, Ustalenia — częściowo (PR #89; dopłaty PR #93)</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>B-Q</td>
+<td>Pytania o logikę z zeszytu — odpowiedzi w aplikacji i dokumentach (PR #91/#92)</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>B-KSH, HHL-4a</td>
+<td>Lista KSH (tylko „Edytuj”), numer zlecenia HHL</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>C-SEP</td>
+<td>Separator „ / ”, „|” tylko przy przepięciu</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>B-REJSY, FAK-9</td>
+<td>Rejsy (tylko admin), faktury EUR/PLN</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Q-7, Q-8, Q-10, Q-15</td>
+<td>Stena w pasku, tylko polski, bez zegara, ekran logowania</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Q-11a</td>
+<td>5 rozmiarów ekranu — PR #91/#92</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Q-11b</td>
+<td>Powiadomienia na telefon, wariant A: Web Push 0 zł, krytyczne od razu + skrót dzienny, włącz/wyłącz w Preferencjach, instrukcja dla iPhone'a — PR #94</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Q-17, UI-12, D-31, D-27</td>
+<td>Trasa promu po morzu, interfejs, pasek 390 px, kontrast</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>B-3a</td>
+<td>Zezwolenie per firma, automatycznie według wymiarów</td>
+<td>⛔ wymiary</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Weryfikacja 05.10:</strong> cała część B i C sprawdzona na produkcji punkt po punkcie według <code>LISTA_KONTROLNA_ZESZYT.md</code> (ok. 90 punktów), każdy ze zrzutem ekranu (<code>docs/evidence/zeszyt/</code>, tabela <code>WERYFIKACJA_ZESZYT_05_10.md</code>). Poczekalnia rozstrzygnięta: 10a.1 dosłownie z zeszytu, Historia „imię nazwisko // firma” (automaty: „System // Watch Tower”), brak godziny = „–”, „Jak działa” przy filtrach, licznik pojazdów tylko z GPS. Wyjątek: B-3a czeka na wymiary.</p>
+<hr>
+<h2>ETAP 3 — Twoje uwagi z przeglądu 07.10 (wykonawca: Cursor)</h2>
+<p><strong>To zapisy ogólne.</strong> Szczegóły, co i jak zmienić, podajesz w trakcie budowy przez Cursora. Do tego czasu nikt nie projektuje rozwiązań dla tych pozycji. Grok ich nie dostaje.</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Twoja uwaga</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E3-1</td>
+<td>Podgląd zlecenia na prawym pasku — wszystkie zakładki (wygląd i logika)</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-2</td>
+<td>Na podglądzie zlecenia, w instrukcji o opłatach, nie podpowiadają się opłaty dodatkowe z cennika z Ustawień</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-3</td>
+<td>Lista w harmonogramie</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-4</td>
+<td>Środkowanie się map</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-5</td>
+<td>Moduł faktur — źle działa i brak logiki; ma sam liczyć VAT 23%; wygląd i obieg faktur</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-6</td>
+<td>Wygląd aplikacji na telefonie — praktycznie cały; responsywność i skalowanie elementów, szczególnie w menu Kokpit</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-7</td>
+<td>Powiadomienia nie działają; obieg powiadomień i działanie dzwonka</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-8</td>
+<td>Polskie warunki drogowe z HERE — do dodania (w planie H-2-PL oznaczone ✅)</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-9</td>
+<td>Logika zagrożeń i ryzyk</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-10</td>
+<td>Workflow w każdej z firm osobno</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-11</td>
+<td>Opcje → Stan systemu: dalej pokazuje, że e-maile nie działają</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-12</td>
+<td>Opłata paliwowa liczy się błędnie</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-13</td>
+<td>Ceny nie zaciągają się przy każdej firmie</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-14</td>
+<td>Co widzi, a czego nie widzi każda firma</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-15</td>
+<td>Użytkownicy: dodać imię, nazwisko i numer telefonu</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-16</td>
+<td>Spisać, co może robić dany rodzaj konta w każdej firmie</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-17</td>
+<td>Kokpit: dodać kafelki przydatne dla każdej firmy osobno</td>
+<td>szczegóły podasz</td>
+</tr>
+<tr>
+<td>E3-18</td>
+<td>I wiele innych</td>
+<td>szczegóły podasz</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Ustalone:</strong> VAT na fakturach 23% (07.10).</p>
+<hr>
+<h2>ETAP 3 — audyt i rozwiązania Claude (07.10, przed budową w Cursorze)</h2>
+<p>Claude sprawdza aplikację (baza tylko do odczytu, kod, zrzuty na telefonie i komputerze) i do każdej uwagi z ETAPU 3 przygotowuje fakty, rozwiązanie i makietę do Twojej akceptacji. Szczegóły i makiety: artefakt „Audyt Watch Tower”. Notatki: projekt „KSH projekt Stegra”, pliki <code>claude/AUDYT_CLAUDE_DZIENNIK.md</code> i <code>claude/audyt/</code>. Kolejność od 07.10, 21:50: E24, E25, E26, E9, E28, E17 i E27 zdecydowane; E15 ETA do akceptacji; E15 i E42 zdecydowane 22:15, E43 (szablony: tylko po polsku, e-maile logowania w tym samym ekranie) i E45 (mapa: promy, ostatni odcinek) zdecydowane 22:42; E16 (finanse) zdecydowane 23:12; E39 (opłata paliwowa) i E40 (paczka tygodnia) zdecydowane 23:41; E41 (nazwa transportu) do akceptacji 08.10 00:09; E29 (mapa) do akceptacji 00:20; E30 (harmonogram) do akceptacji 00:29; E31 (dokumenty) do akceptacji 00:40; E32 (Przegląd i awizacja) do akceptacji 01:00; E33 (Ceny i dopłaty) do akceptacji 01:17; E34 (Strefy) do akceptacji 01:28; E35 (Automatyzacje) do akceptacji 01:36; E37 (Pasek górny, pomoc, logowanie, zaproszenie) do akceptacji 01:57; E38 czeka na dostęp do pliku; E20 (komputer 1280–1920 px) do akceptacji 02:16, bez pytań; E21 (teksty, liczby, daty) do akceptacji 02:33, bez pytań; E22 (przeładowania) do akceptacji 02:45, bez pytań; E23 (integracje) do akceptacji 02:59, 1 pytanie; E19 (bezpieczeństwo bazy) do akceptacji 03:15, 1 pytanie; E18 (porządki) do akceptacji 03:23, lista 18 pozycji; E12 (Opcje) do akceptacji 03:30, 1 pytanie; E10 (niezależne sprawdzenie) gotowe 03:47; 08.10 12:14 decyzje właściciela: E41, E29–E35, E37, E20–E23, E19, E18, E12, E10 zdecydowane (E41 z kropką „·”, E31 z doprecyzowaniem zezwoleń, E20 z układem pliku); E38 (plik SharePoint) zdecydowane 12:50 (układ pliku, numery do pliku, KR-03 nie odrzucać); plan Supabase Pro 12:50; nie ma etapu z otwartym pytaniem — czekają dane: dostęp do pliku SharePoint (dział IT KSH, E38), linki do E44; próg marży E16 = 4 % (12:58); 14:10: uzgodnienie repozytorium z decyzjami (paczki P0–P10) i E46–E48 do akceptacji; E44 (linki podwykonawców SCX), gdy właściciel dostarczy linki. Bez POD — zostaje tylko CMR (19:51).</p>
+<table>
+<thead>
+<tr>
+<th>Etap</th>
+<th>Co</th>
+<th>Uwaga z ETAPU 3</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E1</td>
+<td>Mapy: kadr i środek (Kokpit, Mapa, Przegląd)</td>
+<td>E3-4</td>
+<td>✅ zdecydowane 12:23</td>
+</tr>
+<tr>
+<td>E2</td>
+<td>Drogi PL z HERE co 15 min, panel PL</td>
+<td>E3-8</td>
+<td>✅ zdecydowane 12:23</td>
+</tr>
+<tr>
+<td>E3</td>
+<td>Opłata paliwowa: ceny, 3 próby, jedna liczba</td>
+<td>E3-12</td>
+<td>✅ zdecydowane</td>
+</tr>
+<tr>
+<td>E4 / E4b</td>
+<td>Faktury: obieg, VAT 23 %, co do grosza; faktoring 1 % netto, 48 h</td>
+<td>E3-5</td>
+<td>✅ zdecydowane</td>
+</tr>
+<tr>
+<td>E5</td>
+<td>Powiadomienia na telefon, dzwonek w grupach, e-maile w aplikacji</td>
+<td>E3-7, E3-11</td>
+<td>✅ zdecydowane</td>
+</tr>
+<tr>
+<td>E6</td>
+<td>Imię, nazwisko, telefon; „Biorę tę sprawę”; kierowcy PL / SE</td>
+<td>E3-15</td>
+<td>✅ zdecydowane 15:13</td>
+</tr>
+<tr>
+<td>E7</td>
+<td>Ryzyka: jedna lista „Do zrobienia”, sytuacja na trasie bez dzwonka</td>
+<td>E3-9</td>
+<td>✅ zdecydowane 15:55</td>
+</tr>
+<tr>
+<td>E8</td>
+<td>Telefon: nic uciętego, karty, 44 px, dolny pasek</td>
+<td>E3-6</td>
+<td>✅ zdecydowane 16:20</td>
+</tr>
+<tr>
+<td>E11</td>
+<td>Opcje: 6 grup, 5 rodzajów kont, kto co dostaje</td>
+<td>E3-16</td>
+<td>✅ zdecydowane 13:21</td>
+</tr>
+<tr>
+<td>E13 / E14</td>
+<td>Dzwonek na telefonie; zmiana rodzaju konta</td>
+<td>—</td>
+<td>✅ rozwiązanie gotowe</td>
+</tr>
+<tr>
+<td>E24</td>
+<td>Mapa bez podkładu: adres zapasowy tower-hhl.pages.dev bez dostępu do kafelków (na tower.log-mar.pl działa)</td>
+<td>—</td>
+<td>✅ zdecydowane 17:46: tower-hhl.pages.dev zawsze przekierowuje na tower.log-mar.pl</td>
+</tr>
+<tr>
+<td>E26</td>
+<td>SG-03: wyjazd z placu → automatycznie „Dostarczone”, koniec śledzenia</td>
+<td>—</td>
+<td>✅ zdecydowane 16:48</td>
+</tr>
+<tr>
+<td>E25</td>
+<td>Statusy, cała logika: 14 statusów w 3 grupach + Anulowany; automaty, skutki w całej aplikacji; ręcznie z datą (SCX Dyspozytor i Użytkownik, HHL Administrator; Operacje HHL tylko podgląd); „Dostarczone” → podpisany CMR od SCX → „Gotowe do fakturowania” → obie faktury → „Zafakturowano”</td>
+<td>E3-1</td>
+<td>✅ zdecydowane 17:46</td>
+</tr>
+<tr>
+<td>E9</td>
+<td>Kto co widzi i robi: firma × rola × miejsce; workflow; kafelki Kokpitu</td>
+<td>E3-10, E3-14, E3-16, E3-17</td>
+<td>✅ zdecydowane 19:11 · 2 pytania o SharePoint (E38)</td>
+</tr>
+<tr>
+<td>E28</td>
+<td>Pasek etapów: 10 kafelków według spisu E25, tylko liczba (bez linii podpowiedzi), jeden filtr; klik w Harmonogramie filtruje na miejscu, z innych stron prowadzi na Mapę; pasek na telefonie</td>
+<td>E3-3</td>
+<td>✅ zdecydowane 20:57 (ze zmianami)</td>
+</tr>
+<tr>
+<td>E17</td>
+<td>Panel transportu: Status jako oś czasu, Historia po polsku z autorem, zakładka „Czat” (dawniej Ustalenia): HHL i SCX mogą pisać „tylko HHL i SCX”, KSH zawsze do wszystkich; profil trasy ukryty</td>
+<td>E3-1</td>
+<td>✅ zdecydowane 20:57</td>
+</tr>
+<tr>
+<td>E27</td>
+<td>Śledzenie od 03:00 w dniu załadunku do „Dostarczone”; potem auto znika z map. Dopasowanie pozycji jak dziś (pole „Link śledzenia”, potem rejestracja naczepy), tylko w oknie; spóźnione auto śledzone do dostawy; postój bez sygnału = informacja</td>
+<td>—</td>
+<td>✅ zdecydowane 21:43 i 21:51: start 03:00 w dniu załadunku (A); dopasowanie jak dziś, bez wyboru z listy; dwa linki zawieszone do rozmowy z SCX</td>
+</tr>
+<tr>
+<td>E15</td>
+<td>ETA przed wyjazdem i na trasie; sprawdzenie i kalibracja ETA SG-03 (zły wynik na końcu; postój przed strefą)</td>
+<td>—</td>
+<td>✅ zdecydowane 22:15 (propozycja przyjęta)</td>
+</tr>
+<tr>
+<td>E42</td>
+<td>SMS przed załadunkiem i rozładunkiem: 4 rodzaje — A przyjazd za ok. 60 min, B wcześniejszy przyjazd (Boden), C auto czeka przy miejscu, D wjazd; tylko w oknie śledzenia, świeża pozycja, status zgodny z miejscem, raz na numer, cisza nocna; tryb testowy do decyzji właściciela</td>
+<td>—</td>
+<td>✅ zdecydowane 22:15: 4 rodzaje A–D, cisza nocna 20:00–06:00, 3 transporty w trybie testowym</td>
+</tr>
+<tr>
+<td>E44</td>
+<td>Linki podwykonawców SCX: odczyt pozycji od innych dostawców niż emtrack. Dla naczep SCX zostaje obecne rozwiązanie (21:51). Dwa linki (odbiór PL / dostawa SE) zawieszone (21:43). Lokalizator w naczepie bez zasilania przy wyłączonym zapłonie</td>
+<td>—</td>
+<td>⏳ czeka na linki podwykonawców od właściciela · 21:51: wybór naczepy z listy odrzucony, zostaje obecne rozwiązanie</td>
+</tr>
+<tr>
+<td>E43</td>
+<td>Szablony SMS i e-maili: administrator HHL zmienia treść, dane transportu wstawiane przyciskami, podgląd na prawdziwym transporcie; prosto dla osoby nietechnicznej</td>
+<td>—</td>
+<td>✅ zdecydowane 22:42 · tylko po polsku · e-maile logowania (zaproszenie, reset hasła i 3 inne) edytowalne w tym samym ekranie</td>
+</tr>
+<tr>
+<td>E45</td>
+<td>Mapa: trasy promów zgodne z podkładem HERE; checkbox ukrywa trasę promu jak lądową; bez kropek portów, załadunku i rozładunku; ostatni odcinek w Boden według prawdziwego przejazdu SG-03; grupowanie znaczników aut na promie</td>
+<td>—</td>
+<td>✅ zdecydowane 22:42 · „Trasa” chowa drogę i prom razem, statki z AIS pod „Pojazdy”</td>
+</tr>
+<tr>
+<td>E16</td>
+<td>Finanse: jedna marża, EUR, kurs NBP, widok firm (A6, A7). Dziś marża ma 6 wartości (baza 32 891,26 EUR · 4,77%; Kokpit 144 392,63 PLN · 4,4%; Finanse 0,00 i 1724,82 PLN; panel SG-01 1726,59 PLN): stały kurs 4,39 z makiety, Finanse liczą status „DELIVERED”, Kokpit średnią procentów; 13 z 15 kont widzi PLN</td>
+<td>E3-13</td>
+<td>✅ zdecydowane 23:12 · flaga marży: próg w Opcjach — <b>4 %</b> (08.10 12:58; dziś 86 transportów z ceną, marża 4,76–4,77 %, 0 poniżej progu) · PLN przed rozładunkiem: kurs bieżący NBP z dopiskiem</td>
+</tr>
+<tr>
+<td>E39</td>
+<td>Opłata paliwowa: zawsze tydzień obowiązywania i wskaźniki z tygodnia poprzedniego; naliczanie według tygodnia załadunku; tydzień pon–nd</td>
+<td>E3-12</td>
+<td>✅ zdecydowane 23:41 · KSH i SCX widzą te same dane co HHL (tydzień obowiązywania, tydzień wskaźników, średnie OKQ8 i Orlen, oba mnożniki, stosowany), każda firma swoją stronę kwoty · baza liczy zgodnie z regułą; zmiana tylko w tym, co widać (tydzień obowiązywania + tydzień wskaźników wszędzie, jedna nazwa „Opłata paliwowa”) i zapis rzeczywistej daty załadunku (E25, E27)</td>
+</tr>
+<tr>
+<td>E40</td>
+<td>Paczka tygodnia dla księgowości (Finanse, tylko HHL): faktura + CMR; mail do księgowości KSH (faktura przychodowa) i HHL (faktura kosztowa), adresy w Opcjach; pobranie obu paczek</td>
+<td>E3-5</td>
+<td>✅ zdecydowane 23:29 i 23:41 · obie paczki z fakturą: KSH — faktura HHL → KSH, CMR, zestawienie (kod, rozładunek, netto); HHL — tylko faktura SCX → HHL, wysyłka dopiero po akceptacji HHL, te same CMR, zestawienie bez przychodu (kod, nr zlecenia HHL, nr zlecenia SCX, rozładunek, koszt) · brak CMR z podpisem blokuje wysyłkę · każdy plik osobno w załącznikach, ZIP do pobrania · blokada też przy braku PDF lub adresu, adresy w Opcjach, ślad w Historii</td>
+</tr>
+<tr>
+<td>E41</td>
+<td>Nazwa transportu wszędzie: HHL „SG-03 · nr zlecenia HHL”, SCX „SG-03 · nr zlecenia SCX”, KSH „SG-03”</td>
+<td>E3-18</td>
+<td>✅ zdecydowane 08.10 12:14 · KSH tylko kod (1A); SCX widzi nr HHL do odczytu (2B); pyt. 3 rozstrzygnięte mapowaniem E38 (HHL-Scan = nr SCX, HHL-KSH = nr HHL); całość + kropka „·” zamiast „●”</td>
+</tr>
+<tr>
+<td>E29</td>
+<td>Mapa: warstwy, lista pod mapą, filtry, legenda, podpis znacznika, telefon</td>
+<td>E3-18 (polecenie 16:20 pkt 8)</td>
+<td>✅ zdecydowane 08.10 12:14 · tabela pod mapą = okno śledzenia (1A); całość</td>
+</tr>
+<tr>
+<td>E30</td>
+<td>Harmonogram: kolumny, filtry, eksport, Rejsy, telefon</td>
+<td>E3-3, E3-18</td>
+<td>✅ zdecydowane 08.10 12:14 · całość; układ kolumn wg pliku SharePoint (decyzja 24) — pytanie 1 w E38</td>
+</tr>
+<tr>
+<td>E31</td>
+<td>Dokumenty: strona i zakładka w panelu, zezwolenia, polisy, wgrywanie</td>
+<td>E3-18 (polecenia 16:20 pkt 8, 19:51)</td>
+<td>✅ zdecydowane 08.10 12:14 · tylko CMR z rozładunku, bez CMR z załadunku (1B); paczka tygodnia zostaje (2A); polisy: KSH tylko HHL, SCX swoja (3B); całość + zezwolenie SE obowiązkowe tylko na trasę, zezwolenie na firmę podpina się samo</td>
+</tr>
+<tr>
+<td>E32</td>
+<td>Panel transportu › Przegląd i awizacja</td>
+<td>E3-1, E3-18 (polecenie 16:20 pkt 8)</td>
+<td>✅ zdecydowane 08.10 12:14 · wysokość zestawu płatwi 3,75 m (1B); całość</td>
+</tr>
+<tr>
+<td>E33</td>
+<td>Panel transportu › Ceny i dopłaty</td>
+<td>E3-2, E3-13, E3-18</td>
+<td>✅ zdecydowane 08.10 12:14 · anulowanie 2 dni = 25 % (1A); Kratownice bez daty: stawka 1 auta (2A); całość</td>
+</tr>
+<tr>
+<td>E34</td>
+<td>Strefy</td>
+<td>E3-18 (polecenie 16:20 pkt 8)</td>
+<td>✅ zdecydowane 08.10 12:14 · po zmianie strefy od razu sprawdzenie ostatniej pozycji, bez SMS (1B); całość</td>
+</tr>
+<tr>
+<td>E35</td>
+<td>Automatyzacje</td>
+<td>E3-18 (polecenie 16:20 pkt 8)</td>
+<td>✅ zdecydowane 08.10 12:14 · kreator wysyła SMS z zasadami E42 (1B); całość</td>
+</tr>
+<tr>
+<td>E37</td>
+<td>Pasek górny, pomoc, komunikaty, logowanie, zaproszenie, pierwsze wejście (E36 „Zadania przewoźnika” zamknięty w E9; aplikacji kierowcy nie zmieniamy)</td>
+<td>E3-18 (polecenie 16:20 pkt 8)</td>
+<td>✅ zdecydowane 08.10 12:14 · 2FA dobrowolne (1C); komunikat tylko baner (2A); całość</td>
+</tr>
+<tr>
+<td>E38</td>
+<td>Harmonogram ↔ plik Excel KSH na SharePoint, w obie strony; mapowanie kolumn (12:14), Harmonogram w układzie pliku (decyzja 24)</td>
+<td>polecenia 19:51 i 08.10 12:14</td>
+<td>✅ zdecydowane 08.10 12:50 · Harmonogram domyślnie w układzie pliku, 8 kolumn E30 jako „Widok skrócony” (1A) · Watch Tower wpisuje numery SCX i HHL do pliku (2A) · KR-03 i każdy transport z dostawą przed załadunkiem: nie odrzucać, sprawa „Daty KSH do sprawdzenia” · całość: 21 kolumn (plan z pliku; kierowcy, telefony, ciągniki, naczepa, numery z Watch Tower), reguły importu, pierwsza synchronizacja na TEST z raportem, różnice → sprawa HHL, źródło w Stanie systemu, ręczne wgranie jako zapas · teraz: mapowanie + ręczne wgranie + układ Harmonogramu; ⏳ automatyczna synchronizacja po dostępie od działu IT KSH</td>
+</tr>
+<tr>
+<td>E20</td>
+<td>Komputer 1280–1920 px: Harmonogram (przyklejona kwota) i pasek górny (audyt 06.10 C2, F1)</td>
+<td>E3-18</td>
+<td>✅ zdecydowane 08.10 12:14 · całość + Harmonogram w układzie pliku SharePoint (E38)</td>
+</tr>
+<tr>
+<td>E21</td>
+<td>Teksty, liczby i daty w całej aplikacji (audyt 06.10 C3, F, P4.4)</td>
+<td>E3-18</td>
+<td>✅ zdecydowane 08.10 12:14 · całość</td>
+</tr>
+<tr>
+<td>E22</td>
+<td>Aplikacja nie przeładowuje się sama: powrót do karty, odświeżanie danych, wdrożenia (propozycje 06.10 pkt 2)</td>
+<td>E3-18</td>
+<td>✅ zdecydowane 08.10 12:14 · całość</td>
+</tr>
+<tr>
+<td>E23</td>
+<td>Integracje: zdrowie i świeżość danych (propozycje 06.10 pkt 5, koordynator pkt 8)</td>
+<td>E3-18</td>
+<td>✅ zdecydowane 08.10 12:14 · alarm: Administratorzy HHL e-mail + push (1A); całość</td>
+</tr>
+<tr>
+<td>E19</td>
+<td>Bezpieczeństwo bazy (audyt 06.10 B12, koordynator 05.10 pkt 7)</td>
+<td>—</td>
+<td>✅ zdecydowane 08.10 12:14 · plan Pro + ochrona haseł, min. 12 znaków (1A; zmiana planu — właściciel); całość · 12:50 plan Pro zmieniony (sprawdzone: OmniRoute = pro); ochrona haseł przy wdrożeniu</td>
+</tr>
+<tr>
+<td>E18</td>
+<td>Porządki: dane i konta testowe (audyt 06.10 B10 + odesłania z E15, E17, E21, E23, E27, E31, E32, E37, E41)</td>
+<td>—</td>
+<td>✅ zdecydowane 08.10 12:14 · P1–P17 tak, P3 A, P5 A, P9 A; sposób zaakceptowany</td>
+</tr>
+<tr>
+<td>E12</td>
+<td>Opcje: pozostałe 13 ekranów, Ustawienia KSH i SCX (E11; audyt 06.10 B4, B5)</td>
+<td>E3-16</td>
+<td>✅ zdecydowane 08.10 12:14 · Operacje HHL: tylko odczyt + „Dla mnie” + eksport (1A); całość</td>
+</tr>
+<tr>
+<td>E10</td>
+<td>Niezależne sprawdzenie całości</td>
+<td>—</td>
+<td>✅ zdecydowane 08.10 12:14 · całość</td>
+</tr>
+<tr>
+<td>Uzg.</td>
+<td>Uzgodnienie repozytorium z decyzjami audytu: rejestr decyzji (32 wpisy zastąpione albo zamknięte), PLAN.md (110 otwartych pozycji: 54 objęte audytem, 6 sprzecznych, 48 poza audytem, 2 niejasne), R-0 nieaktualne, paczki P0–P10 dla Cursora</td>
+<td>polecenie 08.10 13:26</td>
+<td>🟡 do akceptacji 08.10 14:10 · 3 punkty (zastąpienia i R-0; E46–E48; kolejność paczek i nazwa polisy HHL „OC przewoźnika — PZU”) · dane właściciela 13:26: zezwolenie GDDKiA kat. IV 13/GD/2026 (25.01.2026–25.01.2028), polisa SCX w systemie (literówka „Hstia”), polisa HHL PZU 1106707356 do wgrania, adresy księgowości HHL i KSH, D-15/D-16/D-17 zamknięte · E18 = paczka P1 · niezależne sprawdzenie 206 twierdzeń, 2 poprawione · 16:05 ZASTĄPIONE kompletem dla Cursora (polecenie 14:43): nowe AGENTS.md, reguły, konstytucja (zmiany 08.10), PLAN.md P0a–P11 w 3 liniach na 4 dni (do 12.10), 156 luk rozstrzygniętych, protokół dopisków, 279 starych plików do archiwum; wcześniej 14:20 prompty P0 i P1: P1 = E18 P2, P3, P6–P11, P13 + „ERGO Hestia”; E18 P12/P14/P15/P16 z paczkami P5/P9/P2, próg marży 4 % i adresy księgowości w P6; konta testowe zostają jako nieaktywne (dziennik bezpieczeństwa, 11 wpisów)</td>
+</tr>
+<tr>
+<td>E46</td>
+<td>Test wydajności na TEST (3 × skala: 420 transportów)</td>
+<td>polecenie 08.10 13:26</td>
+<td>🟡 do akceptacji 08.10 14:10 · bez pytań · strony LCP ≤ 2,5 s, CLS ≤ 0,1, TBT ≤ 300 ms; listy w bazie p95 ≤ 500 ms; 20 sesji przez 10 min bez błędów; potem co tydzień w GATE-WEEKLY</td>
+</tr>
+<tr>
+<td>E47</td>
+<td>Monitoring błędów aplikacji w Stanie systemu</td>
+<td>polecenie 08.10 13:26</td>
+<td>🟡 do akceptacji 08.10 14:10 · bez pytań · grupowanie po treści (dziś 79 wpisów = 3 rodzaje), alarm do Administratorów HHL (≥ 3 wystąpienia albo ≥ 2 osoby w 1 h, ścieżki krytyczne, funkcje serwerowe i zadania cykliczne), raport tygodniowy; bez płatnych narzędzi</td>
+</tr>
+<tr>
+<td>E48</td>
+<td>Testy bezpieczeństwa OWASP po zbudowaniu wszystkich paczek</td>
+<td>polecenie 08.10 13:26; decyzja 03.10</td>
+<td>🟡 do akceptacji 08.10 14:10 · bez pytań · P3-SW, P3-ZIP, P3-AND; CSP enforce; ZAP aktywny na TEST i pasywny na produkcji (0 High); ASVS L2 ponownie; testy ról przez API (E41, E31, E33); ochrona haseł (Pro)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Ustalone 07.10 (wybór):</strong> zoom 11 w Przeglądzie · postój 750 EUR/doba, 6 h / 4 h wolne · faktoring HHL 1 % netto, 48 h · e-maile przełączane w aplikacji przez administratora HHL · 5 rodzajów kont · decyzję bierze jedna osoba („Biorę tę sprawę”) · zakaz ruchu w dniu przejazdu = informacja przy transporcie · dolny pasek na telefonie.</p>
+<hr>
+<h2>Przed pilotażem</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Co</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CLEAN-MAPLIBRE, AUTH-MAIL, I-29</td>
+<td>Sprzątanie mapy, szablony e-mail logowania, budżety darmowych planów</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>KONTA</td>
+<td>3 konta testowe O3a usunięte (kopia w R2); 3 konta osób wyłączone do R-2, poprawiona literówka w domenie</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>GATE-WEEKLY</td>
+<td>Niedzielna pełna brama — najbliższa 11.10</td>
+<td>⏳</td>
+</tr>
+<tr>
+<td>CSP</td>
+<td>Tryb „tylko raportuj” od 05.10 (zero naruszeń); decyzja o wymuszaniu 12.10</td>
+<td>🔄 do 12.10</td>
+</tr>
+<tr>
+<td>SEC-OWASP</td>
+<td>ASVS poziom 2: 82 pass, 0 fail (PR #116/#117): hasło min. 12 znaków, CORS tylko tower.log-mar.pl, logowanie z linków PKCE (test 8/8), aktualizacje bibliotek; ZAP: pasywnie na produkcji, aktywnie tylko na TEST; audyt przypadkowego aktywnego skanu: zero skutków. Świadomie poza: 2FA admina (D-11), wylogowanie po bezczynności, nagłówek statycznych plików Vercel</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<h2>Pilotaż</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Co</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R-0</td>
+<td>Czyszczenie: tylko transporty i to, co z nimi związane; kopia, test odtworzenia; wyłącznie po Twojej pisemnej akceptacji, tuż przed R-1</td>
+<td>⏳ plan</td>
+</tr>
+<tr>
+<td>R-1</td>
+<td>Start produkcji = import harmonogramu z SharePoint</td>
+<td>⛔ IT KSH</td>
+</tr>
+<tr>
+<td>R-2</td>
+<td>Zaproszenia: HHL → KSH → przewoźnik (dodajesz sam)</td>
+<td>Ty</td>
+</tr>
+<tr>
+<td>R-3</td>
+<td>Pierwszy prawdziwy transport od importu do faktury</td>
+<td>po R-1</td>
+</tr>
+<tr>
+<td>R-4</td>
+<td>Raport końcowy i oznaczenie wersji</td>
+<td>po R-3</td>
+</tr>
+</tbody>
+</table>
+<h2>Po danych zewnętrznych ⛔</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Co</th>
+<th>Czeka na</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>II-10 (D-SP)</td>
+<td>SharePoint: odczyt, potem zapis po Twojej akceptacji</td>
+<td>IT KSH</td>
+</tr>
+<tr>
+<td>TELM-2</td>
+<td>Telematyka, H-4, H-5, II-7b (uczenie ETA); emtrack podaje pozycję NACZEPY — dopasowanie po numerze naczepy z awizacji, w oknie załadunek–rozładunek</td>
+<td>oficjalne API emtrack (prośba wysłana)</td>
+</tr>
+<tr>
+<td>II-2, II-3</td>
+<td>Kody opóźnień, parametry operacyjne</td>
+<td>przewoźnik</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Czeka na Ciebie</h2>
+<p><strong>Zamknięte 07.10:</strong> D-VAT — stawka 23% na fakturach (potwierdzone) · D-7 — zgoda na trenowanie modeli w Vercel wyłączona · D-14 — kurs NBP, tabela A, z dnia roboczego poprzedzającego dzień rozładunku (potwierdzone)</p>
+<p><strong>Do pilotażu brakuje: ETAPU 3 (Cursor) oraz spraw po Twojej stronie i po stronie partnerów (IT KSH, emtrack).</strong></p>
+<ol>
+<li><strong>Wymiary zestawów</strong> dla każdego transportu (D-83) — odblokują B-3a, H-1, H-3, warstwę przeszkód</li>
+<li><strong>Hasło emtrack</strong> — jeśli w sekretach jest hasło podane w czacie: zmień w emtrack i wpisz nowe przez bezpieczne okno</li>
+<li><strong>Akceptacja planu R-0</strong> — tuż przed startem z SharePoint</li>
+<li><strong>IT KSH</strong> (SharePoint = start produkcji) i <strong>odpowiedź emtrack w sprawie API</strong> (<a href="mailto:pomoc@emtrack.eu">pomoc@emtrack.eu</a>)</li>
+<li><strong>Wartości wpływu wiatru na ETA (H-10)</strong> — Grok przedstawi propozycję ze źródłem; do Twojej akceptacji</li>
+<li><strong>D-11</strong> — 2FA dla administratora: drugie urządzenie i włączenie przed zaproszeniami (R-2)</li>
+<li><strong>D-16</strong> — lista osób do zaproszenia (imię, e-mail, firma, rola)</li>
+<li><strong>D-17</strong> — rejestracja w KPD GDDKiA (zapasowe źródło sytuacji drogowych PL)</li>
+<li><strong>D-21</strong> — włączenie „brak zezwolenia blokuje Gotowy” przed pierwszym prawdziwym transportem, po wymiarach</li>
+<li><strong>CSP</strong> — decyzja o wymuszaniu 12.10 (na razie zero naruszeń)</li>
+<li><strong>SG-03</strong> — SMS „1 h przed” około 6:00 jutro i rozładunek w Boden: wklej, co zobaczysz</li>
+</ol>
+
+</body></html>
+</body></html>

@@ -1,0 +1,156 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--surface-3:#EAEFF3;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;
+--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F8DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1;--plan:#6C7D8A;--plan-bg:#E6ECF0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.page{padding:18px;display:flex;flex-direction:column;gap:14px;max-width:1240px}
+.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px}
+.top h1{margin:0;font:700 24px var(--font-cond);letter-spacing:.02em}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.tabs{display:flex;gap:0;border:1px solid var(--rule);background:var(--surface);width:max-content;max-width:100%}
+.tabs span{padding:8px 14px;font:600 13px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);border-right:1px solid var(--rule)}
+.tabs span:last-child{border-right:0}.tabs .on{background:var(--ink);color:#fff}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tile{background:var(--surface);border:1px solid var(--rule);padding:11px 13px;display:flex;flex-direction:column;gap:3px}
+.tile .k{font:600 12px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.tile .v{font:700 28px/1.05 var(--font-cond)}
+.tile .s{font-size:12.5px;color:var(--ink-2)}
+.tile.warn{border-color:var(--amber);background:var(--amber-bg)}
+.tile.act{border-color:var(--sea);background:var(--sea-bg)}
+.panel{background:var(--surface);border:1px solid var(--rule)}
+.panel-hd{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;padding:11px 14px;border-bottom:1px solid var(--rule)}
+.panel-hd h2{margin:0;font:700 18px var(--font-cond);letter-spacing:.02em}
+.panel-hd .sub{color:var(--ink-3);font-size:13px}
+.spacer{flex:1}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;border-bottom:1px solid var(--rule-2);text-align:left;font-size:13.5px;vertical-align:middle}
+th{font:600 11.5px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+td.n,th.n{text-align:right}
+td.n{font-family:var(--font-cond);font-size:15px}
+.pill{display:inline-block;font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border:1px solid;white-space:nowrap}
+.p-go{color:var(--go);background:var(--go-bg);border-color:var(--go)}
+.p-amber{color:var(--amber-ink);background:var(--amber-bg);border-color:var(--amber)}
+.p-red{color:var(--red);background:var(--red-bg);border-color:var(--red)}
+.p-sea{color:var(--sea);background:var(--sea-bg);border-color:var(--sea)}
+.p-plan{color:var(--ink-2);background:var(--surface-3);border-color:var(--rule)}
+.btn{font:600 13px var(--font-sans);padding:6px 11px;border:1px solid var(--ink);background:var(--ink);color:#fff;white-space:nowrap}
+.btn.ghost{background:var(--surface);color:var(--ink)}
+.who{color:var(--ink-3);font-size:12px}
+/* przepływ */
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border:1px solid var(--rule);background:var(--surface)}
+.flow div{padding:10px 12px;border-right:1px solid var(--rule-2);display:flex;flex-direction:column;gap:4px;position:relative}
+.flow div:last-child{border-right:0}
+.flow b{font:700 14px var(--font-cond);letter-spacing:.04em}
+.flow .w{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.flow span{font-size:12.5px;color:var(--ink-2)}
+/* formularz */
+.form{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;padding:14px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;align-content:start}
+label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--ink-2)}
+.inp{border:1px solid var(--rule);padding:7px 9px;font:500 14px var(--font-sans);background:var(--surface);color:var(--ink)}
+.inp.auto{background:var(--go-bg);border-color:var(--go);font-family:var(--font-cond);font-size:16px;font-weight:700}
+.sum{border:1px solid var(--rule);background:var(--surface-2);padding:10px 12px;display:flex;flex-direction:column;gap:4px;font-variant-numeric:tabular-nums}
+.sum .r{display:flex;justify-content:space-between;font-size:13.5px}
+.sum .r.t{font-weight:700;border-top:1px solid var(--rule);padding-top:5px}
+.chk{color:var(--go);font-weight:700}
+.vis{font-size:13px}
+.vis td{font-size:13px}
+.vis td.y{color:var(--go);font-weight:600}.vis td.x{color:var(--ink-3)}
+/* telefon */
+body.phone .page{max-width:390px;padding:10px}
+body.phone .tiles{grid-template-columns:1fr 1fr}
+body.phone .desk{display:none}
+.mob{display:none}
+body.phone .mob{display:flex;flex-direction:column;gap:8px;padding:10px}
+.card{border:1px solid var(--rule);padding:10px 12px;display:flex;flex-direction:column;gap:6px;background:var(--surface)}
+.card .l1{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.card .l1 b{font:700 16px var(--font-cond)}
+.card .amt{font:700 20px var(--font-cond)}
+.card .meta{font-size:12.5px;color:var(--ink-2)}
+body.phone .tabs span{padding:7px 10px;font-size:12px}
+</style></head><body>
+<div class="page">
+  <div class="top"><h1>Faktury</h1><span class="ex">Przykład · stan na 12.10 · numery faktur i transporty zmyślone do podglądu, stawki i opłata paliwowa z cennika</span></div>
+  <div class="tabs"><span class="on">Od przewoźnika · koszt</span><span>Do KSH · przychód</span></div>
+
+  <div class="tiles">
+    <div class="tile act"><span class="k">Czeka na wystawienie</span><span class="v">Tydz. 41</span><span class="s">3 transporty dostarczone 05–11.10 · wg cennika 21&nbsp;820,30&nbsp;EUR netto · <b>wystawia SCX</b></span></div>
+    <div class="tile warn"><span class="k">Do Twojej weryfikacji</span><span class="v">1</span><span class="s">SCX/2026/10/118 · różnica 0,00&nbsp;EUR · <b>weryfikuje HHL</b></span></div>
+    <div class="tile"><span class="k">Do zapłaty w 7 dni</span><span class="v">0</span><span class="s">najbliższy termin 09.11</span></div>
+    <div class="tile"><span class="k">Po terminie</span><span class="v">0</span><span class="s">przypomnienie przed terminem</span></div>
+  </div>
+
+  <div class="flow desk">
+    <div><span class="w">System · niedziela 24:00</span><b>Do wystawienia</b><span>Tydzień zamknięty → zadanie dla wystawcy z listą dostarczonych transportów i kwotą z cennika</span></div>
+    <div><span class="w">Wystawca · SCX</span><b>Do weryfikacji</b><span>Numer, data, waluta, netto, PDF. VAT 23 % i brutto liczy system. Termin 35 dni od wystawienia</span></div>
+    <div><span class="w">System · od razu</span><b>Sprawdzenie</b><span>Czy transporty dostarczone w tym tygodniu, czy netto zgadza się z cennikiem i opłatą paliwową, kurs NBP</span></div>
+    <div><span class="w">Odbiorca · HHL</span><b>Zaakceptowana / Sporna</b><span>Akceptacja → kwoty z faktury stają się kosztem transportów. Sporna → powód, zadanie dla SCX: korekta</span></div>
+    <div><span class="w">HHL</span><b>Opłacona</b><span>Data zapłaty. Po terminie bez zapłaty → status „Po terminie” i ryzyko</span></div>
+  </div>
+
+  <section class="panel desk">
+    <header class="panel-hd"><h2>Faktury od Scandinavian Express</h2><span class="sub">widzi: HHL i SCX · KSH nie widzi</span><span class="spacer"></span></header>
+    <table>
+      <thead><tr><th>Tydzień</th><th>Faktura</th><th>Transporty</th><th class="n">Netto</th><th class="n">VAT 23 %</th><th class="n">Brutto</th><th>Termin</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>41 · 05–11.10</td><td><span class="who">jeszcze nie wystawiona</span></td><td>3</td><td class="n">21 820,30</td><td class="n">5 018,67</td><td class="n">26 838,97</td><td>—</td><td><span class="pill p-sea">Do wystawienia</span></td><td><span class="who">czeka na SCX</span></td></tr>
+        <tr><td>40 · 28.09–04.10</td><td>SCX/2026/10/118<br><span class="who">wyst. 05.10 · PDF</span></td><td>2</td><td class="n">15 732,00</td><td class="n">3 618,36</td><td class="n">19 350,36</td><td>09.11</td><td><span class="pill p-amber">Do weryfikacji</span></td><td><button class="btn">Akceptuj</button> <button class="btn ghost">Sporna</button></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel desk">
+    <header class="panel-hd"><h2>Nowa faktura · tydzień 41</h2><span class="sub">ekran przewoźnika (SCX)</span></header>
+    <div class="form">
+      <div>
+        <table>
+          <thead><tr><th style="width:28px"></th><th>Transport</th><th>Dostarczony</th><th class="n">Stawka</th><th class="n">Paliwo 13 %</th><th class="n">Razem</th></tr></thead>
+          <tbody>
+            <tr><td class="chk">✓</td><td>SG · 15071</td><td>08.10</td><td class="n">6 900,00</td><td class="n">897,00</td><td class="n">7 797,00</td></tr>
+            <tr><td class="chk">✓</td><td>PL-A · 15072</td><td>09.10</td><td class="n">5 510,00</td><td class="n">716,30</td><td class="n">6 226,30</td></tr>
+            <tr><td class="chk">✓</td><td>SG · 15073</td><td>10.10</td><td class="n">6 900,00</td><td class="n">897,00</td><td class="n">7 797,00</td></tr>
+          </tbody>
+        </table>
+        <p class="who" style="margin:8px 0 0">Lista = transporty tego przewoźnika dostarczone w tygodniu 41. Transport z innego tygodnia lub niedostarczony nie da się zaznaczyć.</p>
+      </div>
+      <div class="fields">
+        <label>Numer faktury<input class="inp" value="SCX/2026/10/131"></label>
+        <label>Data wystawienia<input class="inp" value="12.10.2026"></label>
+        <label>Waluta<input class="inp" value="EUR"></label>
+        <label>Kwota netto z faktury<input class="inp" value="21 820,30"></label>
+        <label>VAT 23 % · liczy system<input class="inp auto" value="5 018,67" readonly></label>
+        <label>Brutto · liczy system<input class="inp auto" value="26 838,97" readonly></label>
+        <label style="grid-column:1/-1">PDF faktury<input class="inp" value="SCX_2026_10_131.pdf ✓"></label>
+        <div class="sum" style="grid-column:1/-1">
+          <div class="r"><span>Wg cennika i opłaty paliwowej</span><span>21 820,30 EUR</span></div>
+          <div class="r"><span>Na fakturze</span><span>21 820,30 EUR</span></div>
+          <div class="r t"><span>Różnica</span><span class="chk">0,00 EUR · zgodna</span></div>
+          <div class="r"><span>Termin płatności (35 dni)</span><span>16.11.2026</span></div>
+        </div>
+        <button class="btn" style="grid-column:1/-1">Wyślij do weryfikacji HHL</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel desk">
+    <header class="panel-hd"><h2>Kto co widzi i co robi</h2></header>
+    <table class="vis">
+      <thead><tr><th></th><th>HHL</th><th>KSH</th><th>Scandinavian Express</th></tr></thead>
+      <tbody>
+        <tr><td><b>Faktura SCX → HHL</b></td><td class="y">widzi, weryfikuje, oznacza opłaconą</td><td class="x">nie widzi</td><td class="y">wystawia swoją, odpowiada na spór</td></tr>
+        <tr><td><b>Faktura HHL → KSH</b></td><td class="y">wystawia, oznacza opłaconą</td><td class="y">widzi z CMR, akceptuje albo zgłasza spór</td><td class="x">nie widzi</td></tr>
+        <tr><td><b>Kwoty na transporcie</b></td><td class="y">koszt, przychód, marża</td><td class="y">tylko swoja cena</td><td class="y">tylko swoja cena</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="mob panel">
+    <div class="card" style="border-color:var(--sea);background:var(--sea-bg)"><div class="l1"><b>Tydzień 41 · 05–11.10</b><span class="pill p-sea">Do wystawienia</span></div><span class="amt">21 820,30 EUR netto</span><span class="meta">3 transporty dostarczone · czeka na SCX</span></div>
+    <div class="card"><div class="l1"><b>SCX/2026/10/118</b><span class="pill p-amber">Do weryfikacji</span></div><span class="amt">19 350,36 EUR brutto</span><span class="meta">Tydzień 40 · 2 transporty · netto 15 732,00 · VAT 3 618,36 · termin 09.11</span><div style="display:flex;gap:8px"><button class="btn" style="flex:1">Akceptuj</button><button class="btn ghost" style="flex:1">Sporna</button></div></div>
+  </div>
+</div>
+<script>if(location.search.includes('phone'))document.body.classList.add('phone');</script>
+</body></html>

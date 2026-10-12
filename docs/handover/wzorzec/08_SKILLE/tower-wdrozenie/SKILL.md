@@ -1,14 +1,14 @@
 ---
 name: tower-wdrozenie
-description: Wdraża front TOWER i sprawdza, że produkcja działa. Użyj po każdej zmianie w src/ po przejściu testów.
+description: Wdraża Watch Tower z main po scaleniu paczki i sprawdza, że produkcja działa. Użyj po każdym scaleniu paczki.
 ---
 
-# tower-wdrozenie
+# tower-wdrozenie (wersja 08.10.2026)
 
-1. `git status` czysty; vitest, testy bazy i szybka brama wizualna zielone
-2. Build produkcyjny + strażnik paczki (bez kwot, danych osobowych, xlsx, demo)
-3. Push — hak przed pushem musi przejść
-4. Wdrożenie na Vercel; odczekaj koniec budowy
-5. `tower.log-mar.pl` i `tower-hhl.pages.dev` → kod 200
-6. Lokalny HEAD = zdalny HEAD
-7. Raport: commit, wersja na Vercel, wynik testów
+1. Paczka scalona do `main` (merge commit, autor Sebastian Bożek); brama paczki zielona (`PLAN.md` §1 pkt 3).
+2. `git checkout main && git pull`; `git status` czysty; build produkcyjny `VITE_AUTH_MODE=supabase` + strażnik paczki (bez kwot, danych osobowych, xlsx, demo, przykładów z seeda).
+3. Wdrożenie wyłącznie z `main` (nigdy z gałęzi roboczej).
+4. Migracja paczki według `tower-migracja-bazy` kroki 8–10.
+5. `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` → kod 200; po P9 (E24) `tower-hhl.pages.dev` → 301 na `tower.log-mar.pl` z tą samą ścieżką.
+6. Lokalny HEAD = zdalny HEAD.
+7. `POSTEP.md`: commit, wersja na Vercel, migracje, testy liczbami, czas na plan i na poprawki; status paczki w `PLAN.md` → „NA PRODUKCJI”.

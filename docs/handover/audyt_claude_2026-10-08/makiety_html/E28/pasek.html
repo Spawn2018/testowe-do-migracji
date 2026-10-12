@@ -1,0 +1,105 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.desk{width:1366px;background:var(--page);border:1px solid #9AAAB6}
+.bar{display:grid;grid-template-columns:repeat(10,1fr);background:var(--surface);border-bottom:1px solid var(--rule)}
+.tile{padding:9px 12px 8px;border-right:1px solid var(--rule-2);display:flex;flex-direction:column;gap:1px;min-height:62px;position:relative}
+.tile:last-child{border-right:0}
+.tile .nm{font-size:12.5px;color:var(--ink-2);display:flex;justify-content:space-between;gap:4px}
+.tile .n{font:700 28px/1 var(--font-cond)}
+.tile .s{font-size:11.5px;color:var(--ink-3);line-height:1.3}
+.tile.zero .n{color:#9AAAB6}
+.tile .s.red{color:var(--red);font-weight:600}
+.tile.on{background:var(--ink);color:#fff}.tile.on .nm,.tile.on .s{color:#D7E1E8}.tile.on .x{font-weight:700;color:#fff}
+.tile.sea{box-shadow:inset 0 3px 0 var(--sea)}.tile.site{box-shadow:inset 0 3px 0 var(--go)}.tile.pre{box-shadow:inset 0 3px 0 #9AAAB6}.tile.acc{box-shadow:inset 0 3px 0 var(--amber)}
+.grp{display:grid;grid-template-columns:1fr 7fr 2fr;background:var(--surface-2);border-bottom:1px solid var(--rule);font:600 11px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.grp span{padding:3px 12px;border-right:1px solid var(--rule-2)}
+.panel{margin:14px;background:var(--surface);border:1px solid var(--rule)}
+.ph{padding:12px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ph b{font:700 20px var(--font-cond)}
+.chip{height:36px;padding:0 12px;border:1px solid var(--rule);background:var(--surface);display:inline-flex;align-items:center;gap:6px;font-size:13.5px;white-space:nowrap}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chip.f{background:var(--sea-bg);border-color:var(--sea);color:var(--sea);font-weight:600}
+.chip em{font-style:normal;color:var(--ink-3);font-size:12.5px}
+table{border-collapse:collapse;width:100%}th,td{padding:9px 12px;border-bottom:1px solid var(--rule-2);text-align:left;font-size:13.5px}th{font-size:12.5px;color:var(--ink-3);font-weight:600;background:var(--surface-2)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid var(--go);color:var(--go);background:var(--go-bg)}
+.note{padding:8px 14px;font-size:12.5px;color:var(--ink-3)}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--page)}
+.pbar{height:52px;background:var(--surface);border-bottom:1px solid var(--rule);display:flex;align-items:center;padding:0 12px;font:700 18px var(--font-cond)}
+.scroll{display:flex;gap:8px;overflow:hidden;padding:10px 12px;background:var(--surface);border-bottom:1px solid var(--rule)}
+.sc{flex:none;border:1px solid var(--rule);padding:6px 10px;min-width:92px;display:flex;flex-direction:column}
+.sc b{font:700 22px/1 var(--font-cond)}.sc span{font-size:12px;color:var(--ink-2)}
+.sc.on{background:var(--ink);color:#fff;border-color:var(--ink)}.sc.on span{color:#D7E1E8}
+.sc.zero b{color:#9AAAB6}
+.card{margin:10px 12px;background:var(--surface);border:1px solid var(--rule);padding:12px}
+.card .r{display:flex;justify-content:space-between;align-items:center}
+.card b{font:700 20px var(--font-cond)}
+.card small{display:block;color:var(--ink-3);font-size:12.5px;margin-top:4px}
+.fchip{margin:10px 12px 0;display:flex;gap:8px;flex-wrap:wrap}
+</style></head><body>
+<div class="sheet">
+  <div class="top"><h1>Pasek etapów · komputer (Harmonogram z włączonym filtrem) · po decyzji 20:57</h1><span class="ex">Przykład · liczby z bazy 07.10, 20:00 według przypisania z E25 (SG-03 jeszcze „Na placu”, SG-01 „Rozładowany” → „Dostarczone”) · na kafelkach tylko liczba, bez linii podpowiedzi</span></div>
+  <div class="desk">
+    <div class="grp"><span>Przygotowanie</span><span>W trasie · śledzenie</span><span>Po dostawie</span></div>
+    <div class="bar">
+      <div class="tile pre"><span class="nm">Przygotowanie</span><span class="n">92</span></div>
+      <div class="tile zero"><span class="nm">Załadunek</span><span class="n">0</span></div>
+      <div class="tile zero"><span class="nm">Droga PL</span><span class="n">0</span></div>
+      <div class="tile zero"><span class="nm">Port PL</span><span class="n">0</span></div>
+      <div class="tile zero sea"><span class="nm">Prom</span><span class="n">0</span></div>
+      <div class="tile zero"><span class="nm">Port SE</span><span class="n">0</span></div>
+      <div class="tile zero"><span class="nm">Droga SE</span><span class="n">0</span></div>
+      <div class="tile on site"><span class="nm">Plac Boden <span class="x">✕</span></span><span class="n">1</span></div>
+      <div class="tile site"><span class="nm">Dostarczone</span><span class="n">1</span></div>
+      <div class="tile zero acc"><span class="nm">Rozliczenie</span><span class="n">0</span></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><b>Harmonogram</b><span style="flex:1"></span><span class="chip f">Etap: Plac Boden ✕</span><span class="chip">Opóźnione <em>5</em></span><span class="chip">Bez dokumentów</span><span class="chip">Bez kierowcy</span><span class="chip">Bez ciągnika</span></div>
+      <table><thead><tr><th>Transport</th><th>Typ</th><th>Załadunek</th><th>Dostawa</th><th>Status</th><th>Kierowca</th><th>ETA Boden</th></tr></thead>
+      <tbody><tr><td><b>SG-03</b> · 0005/09/S/2026</td><td>Słupy główne</td><td>01.10.2026</td><td>07.10.2026</td><td><span class="pill">Na placu</span></td><td>R. P. | M. M.</td><td>07.10, 08:35</td></tr></tbody></table>
+      <div class="note">1 z 94 · w Harmonogramie kafelek filtruje Harmonogram na miejscu; z każdej innej strony prowadzi na Mapę i filtruje mapę i tabelę pod nią. Drugi klik w kafelek albo „✕” zdejmuje filtr. Nazwa transportu według E41 (HHL: SG-03 · numer zlecenia HHL).</div>
+    </div>
+  </div>
+  <div class="desk" style="width:1366px;background:var(--surface)">
+    <div class="ph"><b>Kliknięcie kafelka poza Harmonogramem (np. w Kokpicie)</b></div>
+    <table><thead><tr><th style="width:24%">Gdzie jestem</th><th style="width:28%">Klikam „Plac Boden”</th><th>Co widzę</th></tr></thead><tbody>
+      <tr><td>Harmonogram</td><td>zostaję w Harmonogramie</td><td>lista przefiltrowana: chip „Etap: Plac Boden ✕”, 1 z 94</td></tr>
+      <tr><td>Kokpit, Ryzyka, Dokumenty, Finanse, Faktury, Strefy, Opcje</td><td>przejście na Mapę</td><td>Mapa z tym samym filtrem: znaczniki tylko z etapu „Plac Boden” (auta w oknie śledzenia, E27) i tabela pod mapą z chipem „Etap: Plac Boden ✕”, 1 z 94</td></tr>
+      <tr><td>Mapa</td><td>zostaję na Mapie</td><td>mapa i tabela przefiltrowane na miejscu</td></tr>
+      <tr><td>Etap bez aut w trasie (np. „Przygotowanie”)</td><td>przejście na Mapę</td><td>mapa bez znaczników („W trasie: 0”), tabela pod mapą: 92 transporty w przygotowaniu</td></tr>
+    </tbody></table>
+  </div>
+  <div style="width:100%;font:700 18px var(--font-cond)">Telefon · ten sam pasek nad listą Harmonogramu i Mapy, przewijany w bok</div>
+  <div class="phone">
+    <div class="pbar">Harmonogram</div>
+    <div class="scroll">
+      <div class="sc"><b>92</b><span>Przygotowanie</span></div>
+      <div class="sc zero"><b>0</b><span>Załadunek</span></div>
+      <div class="sc zero"><b>0</b><span>Droga PL</span></div>
+      <div class="sc zero"><b>0</b><span>Port PL</span></div>
+    </div>
+    <div class="fchip"><span class="chip">Opóźnione <em>5</em></span><span class="chip">Bez dokumentów</span><span class="chip">Filtry ▾</span></div>
+    <div class="card"><div class="r"><b>SG-01 · 0002/09/S/2026</b><span class="pill">Dostarczone</span></div><small>Plan dostawy 05.10 · dostawa 06.10 · czeka na podpisany CMR</small></div>
+    <div class="card"><div class="r"><b>SG-03 · 0005/09/S/2026</b><span class="pill">Na placu</span></div><small>Na placu w Boden od 07.10, 08:35</small></div>
+    <div class="note">Przewinięcie w bok pokazuje Prom, Port SE, Drogę SE, Plac Boden, Dostarczone i Rozliczenie.</div>
+  </div>
+  <div class="phone">
+    <div class="pbar">Harmonogram</div>
+    <div class="scroll">
+      <div class="sc zero"><b>0</b><span>Droga SE</span></div>
+      <div class="sc on"><b>1</b><span>Plac Boden ✕</span></div>
+      <div class="sc"><b>1</b><span>Dostarczone</span></div>
+      <div class="sc zero"><b>0</b><span>Rozliczenie</span></div>
+    </div>
+    <div class="fchip"><span class="chip f">Etap: Plac Boden ✕</span><span class="chip">Filtry ▾</span></div>
+    <div class="card"><div class="r"><b>SG-03 · 0005/09/S/2026</b><span class="pill">Na placu</span></div><small>Na placu w Boden od 07.10, 08:35 · kierowca SE: M. M. · ☎</small></div>
+    <div class="note">1 z 94</div>
+  </div>
+</div>
+</body></html>

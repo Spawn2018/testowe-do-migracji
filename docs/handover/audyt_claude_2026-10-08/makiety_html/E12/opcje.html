@@ -1,0 +1,282 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.h3{padding:9px 14px 4px;font:700 16px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+.facts{margin:0;padding:10px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:5px}
+.facts b{font-weight:600}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 9px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+table.r td.n,table.r th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.code{font-weight:700;white-space:nowrap}
+.note{font-size:12.5px;color:var(--ink-3)}
+.red{color:var(--red);font-weight:600}.grey{color:var(--ink-3)}.ok{color:var(--go);font-weight:600}
+.chip{height:32px;padding:0 11px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn{height:34px;padding:0 13px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-size:13.5px;background:#fff;white-space:nowrap}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn.sm{height:28px;font-size:12.5px;padding:0 9px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;position:relative}
+.phone .h b{font-size:20px}
+.pc{margin:6px 12px 0;border:1px solid var(--rule);padding:8px 11px;display:flex;flex-direction:column;gap:2px}
+.pc .t{font:700 16px var(--font-cond);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto;background:#fff}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.drow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--rule-2)}
+.drow .l b{font-weight:600}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field .lbl{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.inp{min-height:38px;border:1px solid var(--rule);padding:8px 10px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;background:#fff}
+.drop{border:1.5px dashed #9AAAB6;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;background:var(--surface-2)}
+.ph{font:700 26px var(--font-cond);display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:18px;padding:0 14px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3)}
+.tabs span{padding:9px 0}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+
+
+.ph .no{color:var(--amber);font-size:18px}.ph .nr{font:600 18px var(--font-cond);color:var(--ink-2)}.ph .miss{font:600 15px var(--font-cond);color:var(--red);letter-spacing:.02em}
+.wb{display:flex;gap:0;padding:4px 14px 10px;font-size:13px}.wb span{padding-right:14px;margin-right:14px;border-right:1px solid var(--rule-2)}.wb span:last-child{border:0}.wb b{display:block;font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.todo{margin:12px 14px 4px;border:1px solid var(--rule);border-left:4px solid var(--red);background:#fff}
+.todo .tt{padding:7px 11px;font:700 15px var(--font-cond);display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--rule-2)}
+.todo .it{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 11px;border-bottom:1px solid var(--rule-2);font-size:13px;align-items:center}
+.todo .it:last-child{border-bottom:0}.todo .it .w{font-size:12px;color:var(--ink-3)}
+.todo.am{border-left-color:var(--amber)}
+.mapbox{position:relative;margin:12px 14px 0;border:1px solid var(--rule);height:220px;overflow:hidden}
+.mapbox img{width:100%;height:100%;object-fit:cover}
+.ov{position:absolute;background:#fff;border:1px solid #9AAAB6;padding:6px 9px;font-size:12.5px;line-height:1.4;box-shadow:0 3px 10px rgba(14,26,36,.15)}
+.ov b{font:700 14px var(--font-cond)}
+.zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;border:1px solid #9AAAB6;background:#fff}.zoom span{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:16px;border-bottom:1px solid var(--rule-2)}.zoom span:last-child{border:0}
+.st{margin:14px 14px 4px;font:700 15px var(--font-cond);letter-spacing:.02em;display:flex;gap:8px;align-items:center}
+.st .who{font:500 13px var(--font-sans);color:var(--ink-3)}
+.kv{display:grid;grid-template-columns:128px 1fr;gap:5px 12px;padding:2px 14px 4px;font-size:13.5px}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0}
+.mono{font-family:var(--font-cond);font-weight:600;letter-spacing:.02em}
+.leg{margin:4px 14px;border:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:7px 10px;gap:10px}
+.leg .lt{font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.leg.now{border-left:4px solid var(--go);background:var(--go-bg)}
+.btn.call{color:var(--go);border-color:var(--go);font-weight:600}.btn.call.f{background:var(--go);color:#fff}
+.form{padding:10px 14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.grp{border:1px solid var(--rule);padding:8px 10px 0;margin-bottom:10px}
+.grp .gt{font:600 12px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+.inp.e{color:#9AAAB6}.inp.bad{border-color:var(--red);box-shadow:inset 3px 0 0 var(--red)}
+.chk{display:flex;gap:8px;align-items:center;font-size:13.5px;margin-bottom:4px}.chk i{width:16px;height:16px;border:1.5px solid var(--ink-2);display:inline-block}
+.bar{margin:0 14px;padding:8px 10px;font-size:13px;border:1px solid var(--red);background:var(--red-bg);color:var(--ink)}
+.bar b{color:var(--red)}
+ul.cmp{margin:0;padding:6px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.mbar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.mtabs{display:flex;gap:16px;padding:0 12px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden}
+.mtabs span{padding:10px 0}.mtabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+.acc{margin:6px 12px 0;border:1px solid var(--rule);padding:9px 11px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;min-height:44px}
+.acc b{font:700 15px var(--font-cond)}
+</style><style>
+table.m{border-collapse:collapse;width:100%;font-size:13.5px}
+table.m td,table.m th{padding:6px 14px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:top}
+table.m th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+table.m .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.m tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0}
+.fuel{margin:8px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:12.5px;background:var(--surface-2)}
+.fuel b{font:700 14px var(--font-cond)}
+.fee{margin:6px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.fee .k{font:700 14px var(--font-cond)}
+.rules{margin:6px 14px 12px;font-size:12.5px}
+.rules td{padding:3px 8px 3px 0;border-bottom:1px dotted var(--rule-2)}
+.calc{font-size:13px;background:var(--surface-2);border:1px solid var(--rule);padding:8px 10px;margin-bottom:10px;line-height:1.55}
+.calc b{font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.two div{border:1px solid var(--rule);padding:7px 9px;font-size:13px}
+.two div b{display:block;font:700 18px var(--font-cond)}
+</style>
+<style>
+.zg{padding:6px 14px 2px;font:700 13px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);background:var(--surface-2);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule-2)}
+.zr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 14px;border-bottom:1px solid var(--rule-2);font-size:13px}
+.zr .nm{font-weight:600}.zr .d{color:var(--ink-3);font-size:12.5px}
+.zr.sel{background:var(--go-bg);box-shadow:inset 4px 0 0 var(--go)}
+.hist{margin:0;padding:0 14px 10px;list-style:none;font-size:13px}
+.hist li{padding:6px 0;border-bottom:1px dotted var(--rule-2)}
+.hist b{font-weight:600}
+</style>
+<style>
+.shot{padding:10px 14px}.shot img{border:1px solid var(--rule);display:block}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.dot.go{background:var(--go)}.dot.rd{background:var(--red)}.dot.am{background:var(--amber)}.dot.gr{background:#9AAAB6}
+.frame{display:flex;border-top:1px solid var(--rule)}
+.omenu{width:236px;border-right:1px solid var(--rule);background:var(--surface-2);padding:10px 0;font-size:13.5px;flex:none}
+.omenu .g{font:600 11.5px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);padding:10px 16px 4px}
+.omenu .i{padding:6px 16px 6px 22px;display:flex;justify-content:space-between;gap:6px}
+.omenu .i.on{background:#fff;box-shadow:inset 3px 0 0 var(--amber);font-weight:600}
+.omenu .i small{color:var(--ink-3);font-size:11px}
+.ocont{flex:1;padding:14px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.ocont h4{margin:0;font:700 22px var(--font-cond)}
+.sw{display:inline-block;width:34px;height:18px;border-radius:9px;background:#C9D5DD;position:relative;vertical-align:middle}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff}
+.sw.on{background:var(--go)}.sw.on::after{left:18px}
+.mtile{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--rule-2);font-size:13px}
+.mtile .w{flex:1;display:flex;flex-direction:column;gap:2px}.mtile .w span{color:var(--ink-3);font-size:12px}
+.hrow{padding:7px 0;border-bottom:1px solid var(--rule-2);font-size:13px}
+.flt{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px}
+.flt .inp{padding:5px 8px}
+</style>
+</head><body>
+<div class="sheet">
+  <div class="top"><h1>E12 · Opcje: 13 ekranów w 6 grupach, prawa Administratora i Operacji HHL, bez błędów 403</h1>
+    <span class="ex">„Dziś” — produkcja 08.10, 02:51–03:25 (konto Operacje HHL, 1366 px) i baza · „Po zmianie” — przełączniki, progi i wpisy historii z bazy; nazwy i zdania to propozycja</span></div>
+
+  <div class="sec">Dziś · Opcje (konto Operacje HHL)</div>
+  <div class="card" style="width:630px">
+    <div class="h"><b>14 zwijanych zakładek</b><span class="sub">nagłówek „HHL · ADMIN” także dla Operacji</span></div>
+    <div class="shot"><img src="now-opcje.png" width="600" height="257" alt=""></div>
+    <div class="cap">Kolejne zakładki: Stan systemu, Użytkownicy i sesje, Dziennik logowań, Komunikat dla wszystkich, Historia zmian, Eksport danych, Cennik, SEFS / BAF, Wymóg zezwoleń, Preferencje i pozostałe. Liczba „82” albo „87” przy Powiadomieniach to nieprzeczytane wpisy dzwonka.</div>
+  </div>
+  <div class="card" style="width:782px">
+    <div class="h"><b>Co pokazuje przegląd</b><span class="sub">sieć, baza, 08.10</span></div>
+    <table class="r">
+      <tr><td style="width:190px"><b>4 × błąd 403</b> przy wejściu</td><td>Konto Operacje HHL przy samym otwarciu Opcji dostaje odmowę: przełączniki bezpieczeństwa (B4), Historia zmian, Dziennik logowań, stan CSP. W konsoli są 4 błędy.</td></tr>
+      <tr><td><b>Przyciski bez prawa</b></td><td>Operacje widzi „Opublikuj” komunikat, progi, odbiorców SMS i „Włącz wymóg”. Baza je odrzuci, bo to funkcje tylko dla Administratora.</td></tr>
+      <tr><td><b>Prawa w bazie</b></td><td>Operacje <b>może</b> zapisać nową wersję cennika, parametry opłaty paliwowej, odczyt paliwa i wydać albo odwołać telefon bramki SMS (sprawdzenie „HHL”). <b>Nie może</b>: progi, komunikat, odbiorcy SMS, wymóg zezwoleń, macierz powiadomień, konta (sprawdzenie „Administrator HHL”). E33 i E40: cennik i adresy zmienia Administrator.</td></tr>
+      <tr><td><b>Przełączniki</b></td><td>13 w bazie, w Opcjach da się zmienić 4. 12 z 13 ostatnio zmienione poleceniem w bazie (pole „kto” puste). Tylko „Wymóg zezwoleń” zmieniony w aplikacji (05.10, 19:38).</td></tr>
+      <tr><td><b>Historia zmian</b></td><td>2 903 wpisy, z tego 2 713 (93%) to techniczne zmiany wierszy. Wszystkie 20 zmian roli (02.10–07.10) mają tę samą rolę w „było” i „jest”.</td></tr>
+      <tr><td><b>Stan systemu (B5)</b></td><td class="ok">Naprawione: po rozwinięciu dane są bez „Odśwież” (02:51 i 03:25).</td></tr>
+    </table>
+  </div>
+
+  <div class="sec">Po zmianie · komputer · Opcje › System › Przełączniki bezpieczeństwa · Administrator HHL</div>
+  <div class="card" style="width:1428px">
+    <div class="frame">
+      <div class="omenu">
+        <div class="g">Ludzie i dostęp</div>
+        <div class="i">Użytkownicy <small>E6</small></div>
+        <div class="i">Logowania <small>E37</small></div>
+        <div class="g">Powiadomienia</div>
+        <div class="i">Kto co dostaje <small>E11</small></div>
+        <div class="i">SMS przy strefach <small>E42</small></div>
+        <div class="i">Komunikat dla wszystkich <small>E37</small></div>
+        <div class="i">Szablony <small>E43</small></div>
+        <div class="g">Pieniądze</div>
+        <div class="i">Cennik <small>E33</small></div>
+        <div class="i">Dopłaty <small>E33</small></div>
+        <div class="i">Opłata paliwowa <small>E39</small></div>
+        <div class="i">Terminy płatności i adresy <small>E40</small></div>
+        <div class="g">Zasady transportu</div>
+        <div class="i">Progi alarmów <small>E12</small></div>
+        <div class="i">Zezwolenia i dokumenty <small>E31</small></div>
+        <div class="g">System</div>
+        <div class="i">Stan systemu <small>E23 · E19</small></div>
+        <div class="i on">Przełączniki bezpieczeństwa <small>E12</small></div>
+        <div class="i">Historia zmian <small>E12</small></div>
+        <div class="i">Eksport danych <small>E12</small></div>
+        <div class="g">Dla mnie</div>
+        <div class="i">Moje dane, 2FA, urządzenia <small>E11</small></div>
+      </div>
+      <div class="ocont">
+        <h4>Przełączniki bezpieczeństwa</h4>
+        <span class="grey" style="font-size:13px">13 przełączników. Zmienia tylko Administrator HHL, po potwierdzeniu, z wpisem w Historii zmian. Każda zmiana zapisuje, kto ją zrobił, także ta zrobiona poleceniem w bazie.</span>
+        <table class="r">
+          <tr><th style="width:280px">Przełącznik</th><th style="width:60px">Stan</th><th>Co robi</th><th style="width:250px">Ostatnia zmiana</th></tr>
+          <tr><td><b>Wiadomości na zewnątrz</b></td><td><span class="sw"></span></td><td>SMS do kierowców i e-maile poza log-mar.pl. Wyłączone do umów RODO.</td><td>02.10, 18:43 · polecenie w bazie</td></tr>
+          <tr><td><b>2FA wymagane dla Administratorów HHL</b></td><td><span class="sw"></span></td><td>Bez drugiego składnika Administrator nie wejdzie (E37, pytanie 1).</td><td>27.09, 21:25 · polecenie w bazie</td></tr>
+          <tr><td><b>Bez zezwolenia nie ma „Gotowy”</b></td><td><span class="sw"></span></td><td>Transport innej klasy niż STANDARD nie przejdzie do „Gotowy” bez zezwolenia PL i SE.</td><td>05.10, 19:38 · Administrator HHL</td></tr>
+          <tr><td><b>SMS przy zbliżaniu do strefy</b></td><td><span class="sw on"></span></td><td>SMS do osób ze Śremu i Boden przed przyjazdem (E42).</td><td>01.10, 23:01 · polecenie w bazie</td></tr>
+          <tr><td><b>SMS przy wjeździe na teren</b></td><td><span class="sw on"></span></td><td>SMS przy wjeździe na załadunek i rozładunek (E42).</td><td>01.10, 23:01 · polecenie w bazie</td></tr>
+          <tr><td><b>E-mail o decyzjach automatycznych</b></td><td><span class="sw on"></span></td><td>E-mail o decyzjach od razu, niepilne w skrócie dnia.</td><td>04.10, 17:36 · polecenie w bazie</td></tr>
+          <tr><td><b>Odczyt pozycji z emtrack</b></td><td><span class="sw on"></span></td><td>Pozycje naczep co 2 min (E23, E27).</td><td>05.10, 13:18 · polecenie w bazie</td></tr>
+          <tr><td><b>Stary link kierowcy</b></td><td><span class="sw"></span></td><td>Wejście kierowcy z linku. Aplikacji kierowcy nie zmieniamy.</td><td>03.10, 23:52 · polecenie w bazie</td></tr>
+          <tr><td><b>Codzienne ceny paliwa</b></td><td><span class="sw on"></span></td><td>Odczyt OKQ8 i Orlen raz dziennie do opłaty paliwowej (E39).</td><td>05.10, 11:07 · polecenie w bazie</td></tr>
+          <tr><td><b>Tygodniowy biuletyn paliw UE</b></td><td><span class="sw"></span></td><td>Cotygodniowy biuletyn UE (olej napędowy PL i SE).</td><td>28.09, 09:58 · polecenie w bazie</td></tr>
+          <tr><td><b>Kontrola trasy HERE</b></td><td><span class="sw"></span></td><td>Sprawdzenie trasy dla wymiarów zestawu. Czeka na wymiary.</td><td>04.10, 22:05 · polecenie w bazie</td></tr>
+          <tr><td><b>Przeszkody wzdłuż korytarza</b></td><td><span class="sw"></span></td><td>Przeszkody dla zestawu wzdłuż korytarza (HERE). Czeka na wymiary.</td><td>04.10, 23:16 · polecenie w bazie</td></tr>
+          <tr><td><b>Warstwa przeszkód na mapie</b></td><td><span class="sw"></span></td><td>Przeszkody jako warstwa Mapy. Czeka na wymiary.</td><td>05.10, 03:58 · polecenie w bazie</td></tr>
+        </table>
+        <span class="grey" style="font-size:12.5px">Kliknięcie przełącznika otwiera okno: „Wyłączyć SMS przy zbliżaniu do strefy? Skutek: …” → „Tak, zmień”. Operacje HHL widzi listę tylko do odczytu (według pytania 1).</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="width:470px">
+    <div class="h"><b>System › Historia zmian</b></div>
+    <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+      <div class="flt"><span class="inp">01.10 – 08.10</span><span class="inp">Kto: wszyscy</span><span class="inp">Co: konta, ustawienia, ceny…</span></div>
+      <div class="flt"><span class="sw"></span><span>Pokaż zmiany techniczne (2 713)</span></div>
+      <div class="hrow"><b>07.10, 14:10</b> · Administrator HHL<br>Zaproszenie: nowe konto Operacje HHL</div>
+      <div class="hrow"><b>07.10, 14:08</b> · Administrator HHL<br>Konto włączone</div>
+      <div class="hrow"><b>06.10, 16:02</b> · Administrator HHL<br>Cennik KSH: wersja 2 · „Poprawa cen do pełnej liczby”</div>
+      <div class="hrow"><b>05.10, 19:38</b> · Administrator HHL<br>Bez zezwolenia nie ma „Gotowy”: → wyłączony</div>
+    </div>
+    <div class="cap">Filtry po polsku zamiast „loads” i „ROW_UPDATE”. „Było” to zawsze stan sprzed zmiany, a wpis bez zmiany nie powstaje. Eksport CSV i XLSX zostaje. Tylko Administrator.</div>
+  </div>
+  <div class="card" style="width:470px">
+    <div class="h"><b>System › Eksport danych</b></div>
+    <table class="r">
+      <tr><td style="width:120px"><b>Co</b></td><td>Transporty · Historia zmian · Sprawy · Faktury i finanse (tylko HHL)</td></tr>
+      <tr><td><b>Zakres</b></td><td>od – do (data załadunku albo data zdarzenia)</td></tr>
+      <tr><td><b>Kolumny</b></td><td>nazwy po polsku, nazwa transportu (E41), osoby i firmy zamiast identyfikatorów, formaty z E21</td></tr>
+      <tr><td><b>Kto widzi co</b></td><td>kolumny według roli, jak dziś (KSH bez kosztów, SCX bez przychodów)</td></tr>
+      <tr><td><b>Plik</b></td><td>„WatchTower_Transporty_01.10–08.10.xlsx” · bez limitu 2 000 wierszy</td></tr>
+    </table>
+    <div class="cap">Dziś: do 2 000 wierszy, bez zakresu dat, kolumny z bazy („created_at”, „user_id”), bez faktur i finansów (E11).</div>
+  </div>
+  <div class="card" style="width:456px">
+    <div class="h"><b>Zasady transportu › Progi alarmów</b></div>
+    <table class="r">
+      <tr><td style="width:150px">Fala</td><td><b>3,8 m</b> — wyżej sprawa „możliwe odwołanie rejsu”</td></tr>
+      <tr><td>Porywy wiatru</td><td><b>40 węzłów</b> — jak wyżej</td></tr>
+      <tr><td>Opóźnienie</td><td><b>30 min</b> — ETA po końcu okna o więcej niż 30 min</td></tr>
+      <tr><td>Potwierdzenie daty</td><td><b>5 dni</b> przed załadunkiem KSH potwierdza datę</td></tr>
+      <tr><td>Awizacja</td><td><b>48 h</b> ostrzeżenie, <b>12 h</b> pilne (E32)</td></tr>
+      <tr><td>Dokumenty</td><td><b>24 h</b> ostrzeżenie, <b>6 h</b> pilne (E31)</td></tr>
+      <tr><td>Brak pozycji</td><td><b>15 min</b> w ruchu (E15)</td></tr>
+      <tr><td>Zjazd z trasy</td><td><b>2 km</b></td></tr>
+      <tr><td>Źródła danych</td><td>progi z E23</td></tr>
+    </table>
+    <div class="cap">Każda wartość ma zdanie o skutku. Bez kodów „D-39”. Zmiana z potwierdzeniem i wpisem w historii.</div>
+  </div>
+
+  <div class="card" style="width:1010px">
+    <div class="h"><b>13 ekranów — skąd treść i kto co może</b><span class="sub">„zmienia” według pytania 1, wariant A</span></div>
+    <table class="r">
+      <tr><th style="width:250px">Ekran</th><th style="width:170px">Dziś (zakładka)</th><th>Treść według</th><th style="width:110px">Administrator</th><th style="width:110px">Operacje</th></tr>
+      <tr><td>Powiadomienia › SMS przy strefach</td><td>Odbiorcy SMS i strefy</td><td>E42 (SMS A–D), bramka → Stan systemu (E23)</td><td>zmienia</td><td>widzi</td></tr>
+      <tr><td>Zasady › Progi alarmów</td><td>Progi i terminy</td><td>E12, E15, E23, E31, E32</td><td>zmienia</td><td>widzi</td></tr>
+      <tr><td>Pieniądze › Dopłaty</td><td>Czas wolny i przestój</td><td>E33 (bez „WSTĘPNE”, wybory przyciskami)</td><td>zmienia</td><td>widzi</td></tr>
+      <tr><td>Pieniądze › Terminy płatności i adresy</td><td>—</td><td>E40 (adresy księgowości, terminy)</td><td>zmienia</td><td>widzi</td></tr>
+      <tr><td>System › Stan systemu</td><td>Stan systemu</td><td>E23 (Źródła danych), E19 (Bezpieczeństwo)</td><td>widzi</td><td>widzi</td></tr>
+      <tr><td>Ludzie › Użytkownicy</td><td>Użytkownicy i sesje</td><td>E6, E37 (lista ze stanem, zaproszenie)</td><td>zmienia</td><td>—</td></tr>
+      <tr><td>Ludzie › Logowania</td><td>Dziennik logowań</td><td>E37</td><td>widzi</td><td>—</td></tr>
+      <tr><td>Powiadomienia › Komunikat dla wszystkich</td><td>Komunikat dla wszystkich</td><td>E37</td><td>zmienia</td><td>widzi</td></tr>
+      <tr><td>System › Historia zmian</td><td>Historia zmian</td><td>E12, E17 (było → jest), E37 („jako”)</td><td>widzi</td><td>—</td></tr>
+      <tr><td>System › Eksport danych</td><td>Eksport danych</td><td>E12, E21, E41</td><td>pobiera</td><td>pobiera</td></tr>
+      <tr><td>Pieniądze › Cennik</td><td>Cennik</td><td>E33 (wersje, procenty anulowania)</td><td>zmienia</td><td>widzi</td></tr>
+      <tr><td>Zasady › Zezwolenia i dokumenty</td><td>Wymóg zezwoleń</td><td>E31 (wymagane dokumenty, terminy)</td><td>zmienia</td><td>widzi</td></tr>
+      <tr><td>Dla mnie</td><td>Preferencje i pozostałe; u KSH i SCX „Ustawienia”</td><td>E11, E16 (waluta), E37 (2FA, urządzenia)</td><td>zmienia swoje</td><td>zmienia swoje</td></tr>
+      <tr><td>System › Przełączniki bezpieczeństwa</td><td>—</td><td>E12 (13 przełączników), E19, E37</td><td>zmienia</td><td>widzi</td></tr>
+    </table>
+    <div class="cap">„—” = ekranu nie ma w menu i nic się nie ładuje (bez 403). Opłata paliwowa (E39) i Kto co dostaje (E11) są już zaprojektowane. Ocena przewoźnika przechodzi do Kokpitu (E9).</div>
+  </div>
+  <div class="card" style="width:402px">
+    <div class="h"><b>Telefon</b><span class="sub">Administrator HHL, 360 px</span></div>
+    <div style="padding:12px 14px"><div class="phone" style="width:360px">
+      <div class="h" style="padding:10px 12px"><b>Opcje</b></div>
+      <div class="mtile"><div class="w"><b>Ludzie i dostęp</b><span>15 kont · 0 z 2FA</span></div>›</div>
+      <div class="mtile"><div class="w"><b>Powiadomienia</b><span>SMS przy strefach: wł.</span></div>›</div>
+      <div class="mtile"><div class="w"><b>Pieniądze</b><span>Cennik KSH v2 · paliwo 1,110</span></div>›</div>
+      <div class="mtile"><div class="w"><b>Zasady transportu</b><span>10 progów · wymóg zezwoleń wył.</span></div>›</div>
+      <div class="mtile"><span class="dot rd"></span><div class="w"><b>System</b><span>1 źródło nie działa · 13 przełączników</span></div>›</div>
+      <div class="mtile"><div class="w"><b>Dla mnie</b><span>motyw, waluta, 2FA</span></div>›</div>
+    </div></div>
+    <div class="cap">Kafelki z najważniejszym stanem. Po dotknięciu osobny ekran, a tabele jako karty (E11).</div>
+  </div>
+</div>
+</body></html>

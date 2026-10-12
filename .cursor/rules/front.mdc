@@ -1,18 +1,22 @@
 ---
-description: Front TOWER — wygląd, teksty, paczka produkcyjna
+description: Front Watch Tower — wygląd, teksty, telefon, paczka produkcyjna
 globs: src/**
 alwaysApply: false
 ---
-- **wygląd = makieta w 100%**; odstępstwo tylko z decyzji w rejestrze (D-27, D-31)
-- każdy tekst przez słownik PL/EN/SV — żadnych napisów na sztywno
-- daty ze strefą: Warszawa lub Sztokholm, oznaczone
-- kwoty w EUR; PLN tylko jako widok z ustawień użytkownika
-- brak danych = „brak źródła danych", brak ceny = ostrzeżenie — nigdy zero ani demo
-- przed pushem: vitest + szybka brama wizualna; zmiana wzorca zrzutów tylko
-  z opisem przyczyny w `G4_WZORZEC.md`
-- strażnik paczki: żadnych kwot cennika, danych osobowych, xlsx, danych demo
-- moduł niegotowy lub niezatwierdzony (np. Automatyzacje przed D-29) — ukryty w produkcji
-- **każdy widok działa na telefonie (360–430 px) i tablecie (768 px)**: tabela → karty,
-  panel boczny → pełny ekran, cele dotyku ≥ 44 px, pola ≥ 16 px, bez przewijania
-  strony w poziomie; każda zmiana widoku sprawdzona w ujęciach 390 i 768 px
-- service worker: pamięć podręczna tylko plików statycznych — nigdy API, danych, logowania
+- **Wygląd = makieta etapu audytu** (`docs/handover/audyt_claude_2026-10-08/makiety_html/E<nr>/`, obrazy w `raport/img/`). Bez makiety etapu — `design/claude-v2.0/` i tokeny. Teksty oznaczone „Przykład” to przykłady, nie dane.
+- Nazwa transportu tylko z jednej funkcji (E41: „SG-03 · 0005/09/S/2026”, KSH sam kod). Formaty tylko z jednego modułu (E21).
+- Każdy tekst przez słownik, **tylko PL** (nowe klucze bez EN i SV, E43).
+- Daty ze strefą: Warszawa lub Sztokholm, oznaczone. Kwoty w EUR; PLN jako widok z ustawień użytkownika (w bazie).
+- Brak danych = „brak źródła danych”; brak ceny = ostrzeżenie — nigdy zero ani demo.
+- **Telefon (E8):**
+  - każdy widok działa na 360–430 px i 768 px;
+  - dolny pasek 5 przycisków; tabela → karty; panel boczny → pełny ekran;
+  - cele dotyku ≥ 44 px, pola ≥ 16 px, tekst ≥ 12 px;
+  - bez przewijania strony w poziomie;
+  - zrzuty 390 i 768 px przy każdej zmianie widoku.
+- Przed pushem: vitest (hak). Migawki Playwright odświeżasz w paczce zmieniającej ekran, z wpisem w `G4_WZORZEC.md`.
+- Zmiana CSS według etapu → wpis w `ODSTEPSTWA`; cień i zaokrąglenie tylko przez tokeny.
+- Uchwyty testów (`#roleSeg`, `#themeBtn`, `nav button[data-view]`, `[data-panel="ferry"]`, `[data-bill-section]`) zostają.
+- Strażnik paczki: bez kwot cennika, danych osobowych, xlsx, danych demo i przykładów z seeda (G-09). Nowe moduły ładowane leniwie (budżet 400 kB gzip).
+- Moduł niegotowy — ukryty w produkcji.
+- Service worker: pamięć podręczna tylko plików statycznych — nigdy API, danych, logowania.

@@ -1,21 +1,83 @@
 # REJESTR DECYZJI — STAN KOŃCOWY
 
+## Decyzje audytu 07–08.10.2026 — nadrzędne (dopisane 08.10.2026)
+Właściciel, 08.10.2026 13:26: „Najświeższe ustalenia poczynione w tym czacie od samego początku są obowiązujące i nadpisują wszelkie starsze decyzje i rozwiązania.” Właściciel, 14:43: „nasze postanowienia i plik audyt watch tower są nadrzędne. Wszystko co jest starsze jest nieaktualne i nie może obowiązywać.”
+
+- Decyzje: `docs/handover/audyt_claude_2026-10-08/DECYZJE_08_10.md` i pola „Twoje decyzje” w raporcie (`raport/index.html`); rozstrzygnięcia luk: `ROZSTRZYGNIECIA_LUK.md`; etapy: `etapy/E<nr>.md`.
+- Poniższe wpisy rejestru obowiązują **tylko tam, gdzie audyt ich nie zmienia**. Wpisy zmienione mają w pierwszej kolumnie „🔁 zastąpione 08.10.2026”, zamknięte — „✅ zamknięte 08.10.2026”. Treść historyczna zostaje bez zmian.
+- Odesłania w starszych wpisach do plików `ZLECENIE_*`, `SCOPE.md` i innych przeniesionych 08.10.2026 do `docs/archiwum/2026-10-08/` — tylko wiedza historyczna, nie polecenie.
+- Dodatkowo od 08.10.2026: Supabase Pro (12:50), próg marży 4 % (12:58), VAT 23 % (07.10), interfejs i wiadomości tylko po polsku (E43), weryfikacja dwuetapowa dobrowolna (E37), KPD GDDKiA — rezygnacja (13:26), adresy księgowości HHL `ksiegowosc@hhlogistics.pl` i KSH `faktury@ksh.pl` (13:26).
+
+### Zmiany 09.10.2026 (decyzje właściciela 10:34–11:19, 12:33, 13:09; nadrzędne wobec wierszy niżej)
+| Wpis | Było | Obowiązuje od 09.10.2026 |
+|---|---|---|
+| D-12, D-33 | daty KSH z pliku; do pliku tylko zasoby i numery („planu … nie zmienia”) | daty i godziny załadunku i rozładunku zmienia i potwierdza tylko KSH (w Watch Tower) i plik; synchronizacja w obie strony po dostępie W13 (`ROZSTRZYGNIECIA_LUK.md` G-20); każda zmiana z pliku → powiadomienie HHL i SCX (G-18) |
+| D-18 | e-mail do armatora ⏳ | ✅ zamknięte 09.10.2026: właściciel ma zgody wszystkich armatorów |
+| D-30 | polisy (E31 3B) | + dodawane raz, podpinają się same do dokumentów każdego transportu, przy którym są ważne w dniu transportu (G-21) |
+| D-42 | E33: system liczy, HHL dodaje i zatwierdza | system liczy i podpowiada; HHL i SCX same decydują, czy dodać; dopłatę SCX akceptuje HHL; część przychodową akceptuje KSH (G-22) |
+| piloci (E32, E9), D-22 | wpisuje HHL; pola: firma, rejestracja, kierowca, telefon; D-22 „kierowca pilota: tak” | wpisuje SCX w awizacji; pola: numer rejestracyjny, imię i nazwisko; tylko przy „PL + SE”; konwój KR — ci sami piloci (G-23) |
+| E44 / D-TELM-ETA — część „linki podwykonawców” | czeka na linki | link RIO jest; odczyt automatyczny według E44 w P4 (G-24). Część D-TELM-ETA „oficjalne API emtrack” nadal czeka (`PLAN.md` §5 W15) |
+| grupowanie na mapie | tylko auta na promie (E45) | także auta w jednej lokalizacji (G-19) |
+
+### Wpisy zastąpione albo zamknięte (z `UZGODNIENIE_08_10.md` pkt 2; numery linii dotyczą wersji rejestru z 07.10.2026)
+| Wpis (linia) | Dziś w rejestrze | Obowiązuje |
+|---|---|---|
+| Wygląd (l. 8) | identyczny z makietą w 100% | makieta etapu audytu (raport v62) ma pierwszeństwo przed `claude-v2.0`; wzorce bramy wizualnej odświeżane po akceptacji właściciela |
+| Koszt (l. 16) | wszystko za darmo, nigdy plan płatny | wyjątki: HERE do 100 USD/mies. (D-77, D-78), **Supabase Pro** (08.10 12:50) |
+| Marża (l. 13) | z daty dostawy; faktura nadrzędna | + flaga zbyt niskiej marży: **próg 4 %** w Opcjach (E16, 08.10 12:58); progi 12 % i 18 % z kodu znikają |
+| D-3 (l. 27, 178) | CMR, POD, zdjęcia 3 lata; PDF faktur 5 lat | CMR 3 lata, PDF faktur 5 lat; **POD i zdjęć nie ma** (07.10 19:51, D-38) |
+| D-7 (l. 31) | ⏳ wyłączyć trening Vercel | **zamknięte** — wyłączone (właściciel 07.10) |
+| D-11 (l. 35) | 2FA administratora ⏳ | **dobrowolne** dla wszystkich (E37 1C) |
+| D-12 (l. 36) | daty KSH, wyprzedzenie 5 dni | bez zmian; próg nazywa się „Potwierdzenie daty — 5 dni przed załadunkiem” (E12) |
+| D-14 (l. 38) | kurs NBP — otwarta | **zamknięte**: NBP tabela A z dnia roboczego przed rozładunkiem (07.10); przed rozładunkiem ostatni kurs z dopiskiem „kurs bieżący” (E16) |
+| D-15 (l. 39) | limity — otwarta | **zamknięte** (tabela wymiarów 07.10) |
+| D-17 (l. 41) | KPD GDDKiA ⏳ | **rezygnacja** (08.10 13:26) |
+| D-21 (l. 44) | włączyć wymóg zezwoleń przed pierwszym transportem | E31: zezwolenie „Firma” podpina się samo do każdego transportu i nie ma dalszych wymagań; zezwolenie SE obowiązkowe tylko „na trasę” (KR) |
+| D-30 (l. 53) | polisy tak | E31 3B: KSH widzi tylko polisę HHL, SCX tylko swoją, HHL obie |
+| D-32 (l. 55) | zgoda IT KSH ⏳ | bez zmian — czeka (dostęp nada dział IT KSH); zakres według E38 |
+| D-33 (l. 56) | do pliku KSH: kierowca, telefon, nr zlecenia, nr rejestracyjny | E38: kierowcy, telefony, ciągniki (PL / SE jako „A / B”), naczepa, numer SCX („HHL-Scan”), numer HHL („HHL-KSH”); bez nowej kolumny; planu i komórek z formułą nie zmienia |
+| D-37, D-64 (l. 76, 103) | SMS 1 h przed przyjazdem, 2 + 2 osoby | E42: 4 rodzaje A–D, cisza nocna 20:00–06:00, raz na numer, tryb testowy (3 transporty); E35: kreator może wysyłać SMS tylko z tymi zasadami |
+| D-42 (l. 81) | opłaty dodatkowe wyłącznie ręcznie | E33: system liczy i podpowiada kwotę, HHL dodaje i zatwierdza (część przychodową akceptuje KSH); postój 750 EUR/doba albo 75 EUR/h (6 h / 4 h wolne); anulowanie % frachtu bez opłaty paliwowej, 2 dni = 25 % |
+| D-44 (l. 83) | „Nr zlecenia” = przewoźnik, „Nr zlecenia HHL” = HHL | E38: „Nr zlecenia HHL-Scan” = SCX, „Nr zlecenia HHL-KSH” = HHL; E41: KSH bez numerów, SCX widzi numer HHL tylko do odczytu, nazwa „kod · numer” |
+| D-50 (l. 90) | pasek użytkownika w lewym menu z „Wyloguj” | E37: konto, Moje konto i Wyloguj po prawej w pasku górnym |
+| D-54 (l. 94) | zezwolenia automatyczne według wymiarów + ręczne na trasę | E31: rodzaj według tabeli wymiarów (Firma / Trasa); zezwolenie na firmę podpina się samo do każdego transportu; zezwolenie SE obowiązkowe tylko wtedy, gdy wydawane jest na trasę |
+| D-57 (l. 96) | numer zlecenia HHL: dodaje HHL; przewoźnik i KSH — odczyt | E41: KSH nie widzi żadnego numeru (baza nic mu nie wysyła); SCX widzi numer HHL tylko do odczytu; edytuje HHL |
+| D-56 (l. 95) | wzór pliku KSH, 20 kolumn | E38: plik z SharePoint 08.10, 21 kolumn, mapowanie i kierunki według E38 |
+| D-58 (l. 97) | telefon w pliku jako liczba | E38: zapis w formacie pliku; przy przepięciu dwa numery jako „A / B” |
+| D-60 (l. 99) | telefony zawsze bez kierunkowego | konta użytkowników: format międzynarodowy (E6); kierowcy: numer + kraj jak dziś w Awizacji |
+| D-61 (l. 100) | proces decyzji, 16 typów | E7: jedna lista „Do zrobienia”, katalog po polsku, „Decyzja po terminie” nie jako awaria techniczna (E7 pkt 10); E6: karta decyzji, „Biorę tę sprawę”, „Zadzwoń” |
+| D-62 (l. 101) | każde zdarzenie i ryzyko w centrum powiadomień | E5 (07.10 13:21) i E7 pkt 5: promy i drogi bez transportu tylko na stronie Ryzyka, bez dzwonka; przy transporcie tylko to, co przed pojazdem |
+| D-63 (l. 102) | administrator wybiera firmy dla każdego typu | doprecyzowane E11 („Kto co dostaje”: zdarzenie × 5 rodzajów kont × kanał) i E31 3B (polisy) |
+| D-65 (l. 104) | ustawienia: sekcje zwijane | E11/E12: 6 grup, menu boczne, 13 ekranów; Operacje HHL tylko odczyt + „Dla mnie” + eksport |
+| B-7c (l. 142, 163) | filtry mapy: brak GPS, ryzyko | E29: Opóźnione, Brak GPS, Bez pozycji; tabela pod mapą = transporty w oknie śledzenia |
+| B-8 (l. 142, 164) | zakres dat, bez kierowcy/ciągnika, „Zmień ciągnik” | E30: filtry E28 + tydzień; zmiana zestawu **tylko w oknie Awizacja** (E32); Harmonogram w układzie pliku (E38 1A) |
+| B-9 (l. 142, 165) | pasek filtrów, kafelek Prom | E28: 10 kafelków według statusów E25, jeden filtr |
+| B-5 (l. 148) | kreator, SMS według zasad stref | E35 1B: SMS z zasadami E42 |
+| H-8 (l. 170) | profil trasy teraz | E17: profil ukryty; E18 P16: `route-profile` i `load_route_profiles` do usunięcia |
+| PALIWO-AUTO krok A (l. 149, 158) | OKQ8 „Q8 Trucks” 22,90 | już zastąpione w samym rejestrze (l. 59: OKQ8 GoEasy Diesel firmowa) → usunąć sprzeczne wiersze; E39 bez zmian |
+| Ustalenia 29.09 (l. 63, 67) | import tylko HH; błędne daty kratownic zostają | E38: filtr „Przewoźnik = HH”; transport z dostawą przed załadunkiem (KR-03) **nie jest odrzucany**, dostaje sprawę „Daty KSH do sprawdzenia” (12:50) |
+
+Wpisy nie wymienione obowiązują bez zmian (m.in. D-9, D-34 z doprecyzowaniami, D-36, D-38–D-41, D-43, D-45–D-49, D-52, D-53, D-55, D-59, D-77–D-85, AIS-SRC, FERRY-STATUS, PL-DATA, Q-18 korekta, Q-9, Q-11b, CSP-RO, ZAP-NODE, ETA-MARK, H-4).
+
+---
+
+
 > Jedno miejsce z każdą decyzją. Status: ✅ rozstrzygnięta · ⏳ czeka · 🔁 zmieniona.
 
 ## Decyzje podstawowe (22–27.09)
 | Sprawa | Decyzja | Data |
 |---|---|---|
-| Wygląd | identyczny z makietą w 100%, bez „AI" | 22.09 |
+| Wygląd — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | identyczny z makietą w 100%, bez „AI" | 22.09 |
 | Waluta | EUR wszędzie; PLN tylko w ustawieniach użytkownika | 24.09 |
 | Kurs | NBP A, dzień roboczy przed rozładunkiem, każdy transport osobno | 24.09 |
 | Realizacja usługi | rozładunek | 24.09 |
 | Faktury | tygodniowe; HHL→KSH widzą HHL i KSH; SCX→HHL widzą HHL i SCX (wystawca); KSH nie widzi faktur SCX; terminy 30/35 dni od wystawienia. Doprecyzowane 04.10 (U-8). | 24.09 |
-| Marża | z daty dostawy w harmonogramie; faktura nadrzędna | 24.09 |
+| Marża — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | z daty dostawy w harmonogramie; faktura nadrzędna | 24.09 |
 | Statusy | z GPS, strefy portów PL i SE; prom = strefa + czas odejścia rejsu | 24.09 |
 | Okna planu | przewoźnik nie zmienia okien planowanych | 25.09 |
-| Koszt | wszystko za darmo, nigdy plan płatny | 26.09 |
+| Koszt — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | wszystko za darmo, nigdy plan płatny | 26.09 |
 | Sesja | użytkownik 365 dni, kierowca 14 dni | 26.09 |
-| Domena | `tower.log-mar.pl`, zapas `tower-hhl.pages.dev` | 27.09 |
+| Domena — 🔁 zastąpione 08.10.2026 (E24, 07.10 17:46: `tower-hhl.pages.dev` przekierowuje na `tower.log-mar.pl`) | `tower.log-mar.pl`, zapas `tower-hhl.pages.dev` | 27.09 |
 | SMS | własna bramka na telefonie z Androidem | 27.09 |
 | KSeF | poza systemem na stałe | 27.09 |
 
@@ -24,25 +86,25 @@
 |---|---|---|---|
 | D-1 | stawki | cenniki SCX i HHL przekazane — 12 pozycji (kwoty w plikach poufnych) | ✅ 29.09 |
 | D-2 | dopłata paliwowa | załącznik SEFS z 28.09; ceny „tak, jak podaje źródło" | ✅ 29.09 |
-| D-3 | retencja dokumentów | CMR, POD, zdjęcia **3 lata**; PDF faktur **5 lat** — **zatwierdzone właściciel 05.10 ~13:53**; I-7 kierowca bez zmian | ✅ 05.10.2026 |
+| D-3 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | retencja dokumentów | CMR, POD, zdjęcia **3 lata**; PDF faktur **5 lat** — **zatwierdzone właściciel 05.10 ~13:53**; I-7 kierowca bez zmian | ✅ 05.10.2026 |
 | D-4 | telefon i SIM | **ZAMKNIĘTE 01.10** — telefon Android + SIM są; SMS tylko do KSH (do kierowców — rezygnacja D-37); dokończenie APK = I-3-APK | ✅ 01.10 |
 | D-5 | RODO | **zamknięte** — wszystkie zgody są, temat zakończony | ✅ 29.09 |
 | D-6 | spotkanie z przewoźnikiem | **odbyte 29.09** — decyzje w `ZLECENIE_PO_SPOTKANIU_SCX.md` | ✅ |
-| D-7 | trenowanie modeli Vercel | wyłączyć | ⏳ |
+| D-7 — ✅ zamknięte 08.10.2026 | trenowanie modeli Vercel | wyłączyć | ⏳ |
 | D-8 | stawka STANDARD | „Standard" = transporty NTG, nie tężniki. Osobna stawka tężników nie obowiązuje. | obowiązuje — «Standard» = transporty NTG (potwierdzenie właściciela 04.10) |
 | D-9 | czasy odcinków ETA | 7,5 h / 3 h / 18 h / 17 h / 13 h; obsada jednoosobowa; odpoczynek na promie | czasy = start kalibracji (D-85); ETA z planu usunięte (D-80) |
 | D-10 | przewoźnik widzi SEFS | tak, odczyt, tylko wersje uzgodnione | ✅ |
-| D-11 | 2FA administratora | włącza właściciel, dwa urządzenia | ⏳ |
-| D-12 | źródło dat planu | KSH — **data i godzina** w pliku SharePoint; wyprzedzenie 5 dni | ✅ |
+| D-11 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | 2FA administratora | włącza właściciel, dwa urządzenia | ⏳ |
+| D-12 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | źródło dat planu | KSH — **data i godzina** w pliku SharePoint; wyprzedzenie 5 dni | ✅ |
 | D-13 | podglądy wdrożeń | zamknięte zamiennikiem | ✅ |
-| D-14 | kurs NBP | pytanie do księgowej (tabela A, dzień roboczy przed rozładunkiem) | otwarta — czeka na potwierdzenie |
-| D-15 | limity ponadnormatywności | zebrane, do potwierdzenia z przewoźnikiem | otwarta — czeka na potwierdzenie |
+| D-14 — ✅ zamknięte 08.10.2026 | kurs NBP | pytanie do księgowej (tabela A, dzień roboczy przed rozładunkiem) | otwarta — czeka na potwierdzenie |
+| D-15 — ✅ zamknięte 08.10.2026 | limity ponadnormatywności | zebrane, do potwierdzenia z przewoźnikiem | otwarta — czeka na potwierdzenie |
 | D-16 | konta użytkowników | **zakłada właściciel w aplikacji** (partiami — limit e-maili) | ✅ 29.09 |
-| D-17 | rejestracja KPD GDDKiA | rejestracja w KPD GDDKiA: najpierw firma, potem użytkownik z certyfikatem (źródło: PLAN.md §4) | ⏳ |
-| D-18 | e-mail do armatora | informacja; odczyt ruszył bez zgody (decyzja 29.09) | ⏳ |
+| D-17 — ✅ zamknięte 08.10.2026 | rejestracja KPD GDDKiA | rejestracja w KPD GDDKiA: najpierw firma, potem użytkownik z certyfikatem (źródło: PLAN.md §4) | ⏳ |
+| D-18 — ✅ zamknięte 09.10.2026 (zgody wszystkich armatorów są) | e-mail do armatora | informacja; odczyt ruszył bez zgody (decyzja 29.09) | ✅ |
 | D-19 | numer nieużyty | W rejestrze decyzji numer nie ma treści. Wzmianki „D-19" przy SMS (DEC-5, zakres pilotażu) to inna, starsza numeracja — nie ta decyzja. | numer nieużyty |
-| D-21 | wymóg zezwoleń | włączyć przed pierwszym transportem | ⏳ |
-| D-22 | kierowca pilota | tak | ✅ |
+| D-21 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | wymóg zezwoleń | włączyć przed pierwszym transportem | ⏳ |
+| D-22 | kierowca pilota | tak *[09.10.2026: pola pilota tylko numer rejestracyjny oraz imię i nazwisko — D-20261009-1233-01; wyżej „Zmiany 09.10.2026”]* | ✅ |
 | D-23 | przewoźnik widzi oceny | tak, bez uwag HHL | ✅ |
 | D-24 | widok placu | zamknięte decyzją 16.1 — Stegra nie jest rolą | ✅ |
 | D-25 | wzorzec zrzutów | zatwierdzony z warunkiem | ✅ |
@@ -50,21 +112,21 @@
 | D-27 | kontrast | zatwierdzony, test ≥ 4,5:1 | ✅ |
 | D-28 | serwis tras | 🔁 TomTom → HERE → własny silnik + kalibracja ucząca się. Zapis „bez HERE" nie obowiązuje. | zmieniona przez D-77 (własny silnik = zapas) |
 | D-29 | reguły automatyzacji | ONE-MECH: tabela D-29t **zaakceptowana 01.10** (warunek: każdy alarm ma zastępnik); scalenie kodu w toku | ✅ tabela / ⏳ kod |
-| D-30 | polisy | tak | ✅ |
+| D-30 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | polisy | tak | ✅ |
 | D-31 | pasek 390 px | naprawić | ✅ |
-| D-32 | zgoda IT KSH (SharePoint) | Zgoda IT KSH (Graph, `Sites.Selected`, witryna STEGRABODEN). Po odpowiedzi IT: Tenant ID, Client ID i sekret do `.env.local`. Do E2: odczyt STEGRABODEN i zapis tylko do pliku testowego (źródło: PLAN.md §4) | ⏳ |
-| D-33 | zapis do pliku KSH | kierowca, telefon, nr zlecenia, nr rejestracyjny | ✅ |
+| D-32 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | zgoda IT KSH (SharePoint) | Zgoda IT KSH (Graph, `Sites.Selected`, witryna STEGRABODEN). Po odpowiedzi IT: Tenant ID, Client ID i sekret do `.env.local`. Do E2: odczyt STEGRABODEN i zapis tylko do pliku testowego (źródło: PLAN.md §4) | ⏳ |
+| D-33 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | zapis do pliku KSH | kierowca, telefon, nr zlecenia, nr rejestracyjny | ✅ |
 | D-35 | hasło bazy | **bez zmiany — ryzyko przyjęte**; unieważnienie tokenów Groka | ✅ 29.09 |
 | D-34 | tydzień dopłaty paliwowej | **według mechanizmu BAF — data załadunku**. Numer w PLAN.md §4 przy kluczu Trafikverket był inną numeracją i został zmieniony na nazwę opisową. | obowiązuje |
 | D-2 / D-34 (05.10 ~21:48, uzup. ~21:51) | BAF — produkt i średnia (zał. 1 pkt 3 SEFS_KSH_Stegra_v2) | **SEK = OKQ8 GoEasy Diesel, cena listowa dla klientów firmowych** (kolumna „Diesel” w foretagspriser-RRRR-MM-DD.xlsx, okq8.se/foretag/priser/; wartość wprost; kontrola 05.10 = 22,29). **NIE Q8 Trucks** — decyzja z 05.10 rano zastąpiona. **Średnia = średnia arytmetyczna z cen OPUBLIKOWANYCH** w pełnym poprzednim tygodniu pn–nd (każda publikacja raz; kopie z dni bez publikacji nie wchodzą); tydzień bez publikacji → ostatnia opublikowana cena; zaokrąglenie 2 miejsca, „do X” włącznie, niższy z dwóch. Data publikacji przy każdym odczycie (SEK i PLN od 21.09). Mnożnik **ostateczny** dopiero po zamknięciu poprzedniego tygodnia (po niedzieli, Europe/Warsaw), wcześniej **wstępny**; ostateczny = migawka przy transporcie (0166). Parametry z wersji obowiązującej w tygodniu załadunku (valid_from). Wzorce: tydz. 40 (21–27.09) = **1,14**, tydz. 41 (28.09–04.10) = **1,13** (właściciel). Migracja 0187. | obowiązuje |
 | D-2 / D-34 (06.10 ~00:12) | BAF — PROGNOZA przyszłych tygodni | Gdy poprzedni tydzień załadunku **nie jest zamknięty** (po niedzieli Europe/Warsaw): mnożnik = **ostatni OSTATECZNY** (nie średnia z niepełnych publikacji), status **PROGNOZA**, etykieta „prognoza” w Cenach i Finansach. Po zamknięciu → OSTATECZNY + migawka (0166). Każde zamknięcie/odświeżenie przelicza PROGNOZA. Migracja **0189**. | obowiązuje |
 
 ## Ustalenia z 29.09 bez numeru
-- import tylko HH z wymiarami; NTG „Standard" pomijany ✅
+- 🔁 zastąpione 08.10.2026 (E38): import tylko HH z wymiarami; NTG „Standard" pomijany ✅
 - konwój = liczba aut z kratownicami z tą samą datą załadunku ✅
 - KSH ma identyczną dopłatę paliwową ✅
 - PL o wysokości 2,60 m wyceniane jak przy 2,45 m (PL-B) ✅
-- błędne daty kratownic zostają — test wykrywania zmian ✅
+- 🔁 zastąpione 08.10.2026 (E38): błędne daty kratownic zostają — test wykrywania zmian ✅
 - odczyt komunikatów armatora — włączyć od razu ✅
 - SharePoint — integracja w obie strony ✅
 - przejęcie pracy przez Cursora ✅
@@ -73,35 +135,35 @@
 | ID | Sprawa | Decyzja |
 |---|---|---|
 | D-36 | telematyka | Warstwy: API → **TELM-EMTRACK-WEB** (zapas, LIVE 05.10 GD035YX) → linki podwykonawców. Blokada SMS/e-mail tylko właściciel do odwołania (test prod przed R-0). Dokumentacja oficjalnego API — właściciel | ✅ zapas web 05.10 / ⏳ oficjalne API |
-| D-37 | SMS | do kierowców — rezygnacja; do KSH — **rozszerzenie 04.10.2026**: dla załadunku (Śrem) i rozładunku (Boden) jeden SMS na transport na każdy koniec trasy, gdy wyliczony czas dojazdu z bieżącej pozycji GPS do placu wynosi ≤ 60 min; HERE, gdy dostępne, w przeciwnym razie własny silnik (0122) przy wyłączonej fladze lub wyczerpanym budżecie; pierwsza pozycja bliżej niż 60 min — SMS od razu; brak GPS — brak SMS i ryzyko „brak pozycji”; SMS „wjazd na plac” bez zmian. |
+| D-37 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | SMS | do kierowców — rezygnacja; do KSH — **rozszerzenie 04.10.2026**: dla załadunku (Śrem) i rozładunku (Boden) jeden SMS na transport na każdy koniec trasy, gdy wyliczony czas dojazdu z bieżącej pozycji GPS do placu wynosi ≤ 60 min; HERE, gdy dostępne, w przeciwnym razie własny silnik (0122) przy wyłączonej fladze lub wyczerpanym budżecie; pierwsza pozycja bliżej niż 60 min — SMS od razu; brak GPS — brak SMS i ryzyko „brak pozycji”; SMS „wjazd na plac” bez zmian. |
 | D-38 | aplikacja kierowcy | ukryta; CMR wgrywa dyspozytor; POD i zdjęcia mocowania — rezygnacja |
 | D-39 | progi sztormowe | fala 3,8 m, porywy 40 węzłów — potwierdzone |
 | D-40 | promy | rezerwuje i opłaca przewoźnik |
 | D-41 | tranzyt | 4 dni; 5 przy ciężkiej pogodzie w Szwecji |
-| D-42 | opłaty dodatkowe | wyłącznie ręcznie po uzgodnieniu; pusty przebieg — nie dotyczy |
+| D-42 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | opłaty dodatkowe | wyłącznie ręcznie po uzgodnieniu; pusty przebieg — nie dotyczy |
 | D-43 | faktury | EUR albo PLN, wybór przy wystawieniu; osobny kurs dla każdego transportu |
-| D-44 | numery zleceń | plik KSH: **„Nr zlecenia" = przewoźnik**, **„Nr zlecenia HHL" = HHL**; przewoźnik wpisuje swój w awizacji |
+| D-44 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | numery zleceń | plik KSH: **„Nr zlecenia" = przewoźnik**, **„Nr zlecenia HHL" = HHL**; przewoźnik wpisuje swój w awizacji |
 | D-45 | Stena Line Gdynia – Karlskrona | pełna obsługa jak Polferries + trasa alternatywna w ryzykach. **Doprecyzowanie FERRY-STATUS 05.10.2026 (decyzja właściciela 04.10):** zezwolenia na transport ponadnormatywny obejmują dwie trasy (Gdańsk–Nynäshamn i Gdynia–Karlskrona). Przesiadka na drugą przeprawę nie wymaga nowego zezwolenia. Szczegóły: wiersz FERRY-STATUS. |
 | D-46 | wybór rejsu | przewoźnik: armator → rejs → statek, listy zależne |
 | D-47 | awizacja | przycisk „Dodaj" w panelu → osobne okno; **po zapisie „Edytuj"** — to samo okno z danymi |
 | D-48 | godzina dostawy KSH | „najpóźniej do" |
 | D-49 | logowanie | 🔁 **hasłem** (zmiana decyzji 29.09); e-mail tylko do zaproszenia i odzyskania hasła; bez e-maili dla adresów bez zaproszenia |
 | D-55 | telefon | **pełna responsywność + instalacja z Chrome jako aplikacja**; czytelna i wygodna praca na telefonie |
-| D-50 | pasek użytkownika | do lewego menu, z „Wyloguj" |
+| D-50 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | pasek użytkownika | do lewego menu, z „Wyloguj" |
 | D-51 | załadunki KSH | powiadomienia i strefy jak dla dostaw do Stegry |
 | D-52 | administrator | wykonuje wszystko za każde konto; „Działaj jako" |
 | D-53 | historia zmian | każda zmiana zapisana, szybkie śledzenie kto i co |
-| D-54 | zezwolenia | automatyczne według wymiarów + ręczne na trasę. Status: część «wymiary od przewoźnika» zastąpiona przez D-83 i D-68. |
-| D-56 | wzór pliku KSH | `SCRAP_transporty_…_REV_01.xlsx` — 20 kolumn, mapowanie po nazwach; transporty sprzed uruchomienia jako historyczne |
-| D-57 | numer zlecenia HHL | HHL i administrator dodają i edytują samodzielnie; przewoźnik i KSH — odczyt |
-| D-58 | formaty kolumn w pliku KSH | kierowca, rejestracje, oba numery zleceń — **tekst**; telefon — **liczba** |
+| D-54 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | zezwolenia | automatyczne według wymiarów + ręczne na trasę. Status: część «wymiary od przewoźnika» zastąpiona przez D-83 i D-68. |
+| D-56 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | wzór pliku KSH | `SCRAP_transporty_…_REV_01.xlsx` — 20 kolumn, mapowanie po nazwach; transporty sprzed uruchomienia jako historyczne |
+| D-57 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | numer zlecenia HHL | HHL i administrator dodają i edytują samodzielnie; przewoźnik i KSH — odczyt |
+| D-58 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | formaty kolumn w pliku KSH | kierowca, rejestracje, oba numery zleceń — **tekst**; telefon — **liczba** |
 | D-59 | nazwa i logo | **„WATCH TOWER"**; nowe logo na ekranie ładowania, favicon i ikona aplikacji na telefonie |
-| D-60 | telefony | 🔁 **zawsze bez kierunkowego** (zastępuje „pełny numer międzynarodowy"); kraj numeru tylko dla bramki SMS |
-| D-61 | decyzje | pełny proces: katalog 16 typów, kto decyduje, opcje ze skutkiem, terminy, eskalacja, historia |
-| D-62 | powiadomienia | każde zdarzenie, zmiana statusu, ryzyko i decyzja w centrum powiadomień |
-| D-63 | widoczność | administrator wybiera firmy (HHL / przewoźnik / KSH — jedna, dwie, trzy) dla każdego typu; blokady danych finansowych |
-| D-64 | SMS | 2 osoby na załadunku (Śrem) i 2 na rozładunku (Boden); odbiorców wpisuje administrator. **Rozszerzenie 04.10.2026 (wspólnie z D-37):** strefa zbliżania (koło 50 km) zastąpiona SMS-em 1 h przed przyjazdem; jeden SMS na transport na każdy koniec trasy; treść: kto, nr rejestracyjny, przewidywana godzina przyjazdu. Testy SIM-1 na TEST (nie wykonywać teraz): 120 min → jeden SMS przy ≤ 60, start w 40 min → SMS od razu, brak GPS → brak SMS, powtórne pozycje → bez duplikatu; analogicznie dla Boden. |
-| D-65 | ustawienia administratora | sekcje zwijane, domyślnie zwinięte; nowe: widoczność, SMS i strefy, progi, stan systemu, użytkownicy i sesje, dziennik logowań, komunikat, eksport |
+| D-60 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | telefony | 🔁 **zawsze bez kierunkowego** (zastępuje „pełny numer międzynarodowy"); kraj numeru tylko dla bramki SMS |
+| D-61 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | decyzje | pełny proces: katalog 16 typów, kto decyduje, opcje ze skutkiem, terminy, eskalacja, historia |
+| D-62 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | powiadomienia | każde zdarzenie, zmiana statusu, ryzyko i decyzja w centrum powiadomień |
+| D-63 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | widoczność | administrator wybiera firmy (HHL / przewoźnik / KSH — jedna, dwie, trzy) dla każdego typu; blokady danych finansowych |
+| D-64 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | SMS | 2 osoby na załadunku (Śrem) i 2 na rozładunku (Boden); odbiorców wpisuje administrator. **Rozszerzenie 04.10.2026 (wspólnie z D-37):** strefa zbliżania (koło 50 km) zastąpiona SMS-em 1 h przed przyjazdem; jeden SMS na transport na każdy koniec trasy; treść: kto, nr rejestracyjny, przewidywana godzina przyjazdu. Testy SIM-1 na TEST (nie wykonywać teraz): 120 min → jeden SMS przy ≤ 60, start w 40 min → SMS od razu, brak GPS → brak SMS, powtórne pozycje → bez duplikatu; analogicznie dla Boden. |
+| D-65 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | ustawienia administratora | sekcje zwijane, domyślnie zwinięte; nowe: widoczność, SMS i strefy, progi, stan systemu, użytkownicy i sesje, dziennik logowań, komunikat, eksport |
 
 ## Decyzje HERE (04.10.2026) — szczegóły w `ZLECENIE_HERE.md`
 | ID | Sprawa | Decyzja | Status |
@@ -139,14 +201,14 @@ Polecenie kazało przepisać D-66–D-76 dosłownie z `ZLECENIE_POPRAWKI_02_10.m
 | AIS-SRC (Polferries) | Wawel i Nova Star z aisstream | Wawel i Nova Star nadal na Digitraffic. aisstream widział oba w teście klucza 04.10 22:54–23:04 UTC (Nova Star 54.40469 N 18.67377 E Gdańsk, Wawel 58.90557 N 17.95721 E Nynäshamn). Diagnoza i naprawa; obie jednostki z pozycją AISSTREAM nie starszą niż 5 min. Gdy funkcja Edge nie utrzyma WebSocket: krótki nasłuch co minutę albo inne rozwiązanie bez wydatków. | ✅ decyzja 05.10.2026 07:16 / ⏳ budowa |
 | B-7a | rozmiar mapy | Słowa właściciela z części B wystarczą, bez czekania: mapa ma stały rozmiar, niezależny od wysokości tabeli obok; po otwarciu widoku MAPA widoczna w całości. | ✅ decyzja 05.10.2026 07:16 / ⏳ budowa |
 | B-7b | checkboxy warstw | Słowa właściciela z części B wystarczą, bez czekania: checkboxy warstw zawsze widoczne; na telefonie nie nachodzą na inne elementy. | ✅ decyzja 05.10.2026 07:16 / ⏳ budowa |
-| B-7c, B-8 (filtry i statusy), B-9, Q-9 | wybór właściciela 05.10 ~10:37 | B-7c: A (brak GPS, ryzyko). B-8: zakres dat + bez kierowcy/ciągnika + „Zmień ciągnik”. B-9: C (filtr z „×” + kafelek Prom). Q-9: B (motyw systemu + zmiana w ustawieniach). B-3a nadal na wymiarach (D-83). | ✅ decyzja 05.10.2026 ~10:37 / ⏳ budowa |
+| B-7c, B-8 (filtry i statusy), B-9, Q-9 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | wybór właściciela 05.10 ~10:37 | B-7c: A (brak GPS, ryzyko). B-8: zakres dat + bez kierowcy/ciągnika + „Zmień ciągnik”. B-9: C (filtr z „×” + kafelek Prom). Q-9: B (motyw systemu + zmiana w ustawieniach). B-3a nadal na wymiarach (D-83). | ✅ decyzja 05.10.2026 ~10:37 / ⏳ budowa |
 
 ## Decyzje właściciela 05.10.2026 (ostateczne) — B-5 kreator, ceny paliw, korekta SEFS
 
 | ID | Sprawa | Decyzja | Status |
 |---|---|---|---|
-| B-5 (odwrócenie) | przycisk i kreator automatyzacji | Przycisku nie ma — ma być. Zastępuje zapis z ~08:35 („przycisku ma nie być”). Przycisk „Nowa automatyzacja” w widoku Automatyzacje, tylko HHL_ADMIN. Kreator w oknie: nazwa, wyzwalacz (zdarzenie / status / ryzyko / termin), warunki, akcje (powiadomienie, decyzja, e-mail, SMS według zasad stref), włącz/wyłącz, edycja i usuwanie. Reguła w tym samym silniku co 0094, bez drugiego mechanizmu; zero podwójnych alarmów (ONE-MECH). Historia zmian reguły: kto, kiedy, co. Test: reguła z kreatora wykonuje się na zdarzeniu testowym; wyłączona — nie; duplikat istniejącego alarmu → ostrzeżenie przed zapisem. | ✅ decyzja 05.10.2026 / ⏳ budowa |
-| PALIWO-AUTO (krok A) | próbka cen OKQ8 i Orlen | Orlen: ONEkodiesel / Olej Napędowy Ekodiesel, PLN/m³ netto, hurtowe ceny paliw; klauzula regulaminu nie blokuje (decyzja właściciela). OKQ8: sekcja „Q8 Trucks”, produkt „Diesel”, wartość wprost ze strony bez przeliczania VAT (U-14); wzorzec 05.10 = 22,90. | ✅ zaakceptowane 05.10.2026 ~10:37 (OKQ8 z poprawką) |
+| B-5 (odwrócenie) — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | przycisk i kreator automatyzacji | Przycisku nie ma — ma być. Zastępuje zapis z ~08:35 („przycisku ma nie być”). Przycisk „Nowa automatyzacja” w widoku Automatyzacje, tylko HHL_ADMIN. Kreator w oknie: nazwa, wyzwalacz (zdarzenie / status / ryzyko / termin), warunki, akcje (powiadomienie, decyzja, e-mail, SMS według zasad stref), włącz/wyłącz, edycja i usuwanie. Reguła w tym samym silniku co 0094, bez drugiego mechanizmu; zero podwójnych alarmów (ONE-MECH). Historia zmian reguły: kto, kiedy, co. Test: reguła z kreatora wykonuje się na zdarzeniu testowym; wyłączona — nie; duplikat istniejącego alarmu → ostrzeżenie przed zapisem. | ✅ decyzja 05.10.2026 / ⏳ budowa |
+| PALIWO-AUTO (krok A) — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | próbka cen OKQ8 i Orlen | Orlen: ONEkodiesel / Olej Napędowy Ekodiesel, PLN/m³ netto, hurtowe ceny paliw; klauzula regulaminu nie blokuje (decyzja właściciela). OKQ8: sekcja „Q8 Trucks”, produkt „Diesel”, wartość wprost ze strony bez przeliczania VAT (U-14); wzorzec 05.10 = 22,90. | ✅ zaakceptowane 05.10.2026 ~10:37 (OKQ8 z poprawką) |
 | PALIWO-AUTO (krok B) | automat cen paliw (U-14, D-34, I-31, SEFS) | ~~Q8 Trucks/Diesel = 22,90 (05.10 rano)~~ → **zastąpione 05.10 ~21:48: OKQ8 GoEasy Diesel firmowa** (D-2/D-34, 0187). Codziennie; User-Agent Watch Tower; źródło i czas. Średnia PL i SE z poprzedniego tygodnia → indeksy → mnożnik „niższy” (I-31) → opłata wg tygodnia daty załadunku (D-34, 0155), Europe/Warsaw (33.3). Korekta do zamknięcia tygodnia, potem migawka (0166). Formularz I-2f tylko awaryjnie. Cel: odczyty na produkcji przed R-3. | ⏳ budowa |
 | SEFS-KOREKTA | korekta ceny od dostawcy | Korekta wchodzi do średniej SEFS, dopóki tydzień nie jest zamknięty. Po zamknięciu tygodnia wartość zamrożona (migawka, 32.3) — późniejsza korekta nie zmienia policzonych transportów ani faktur; zapis korekty w historii. Odpowiada na pytanie z B-6h („czy średnia ma brać korektę zamiast oryginału”). | ✅ decyzja 05.10.2026 / **ZROBIONE** 0166 |
 | Kolejność 05.10 | — | B-5 i krok 2A najpierw; potem część B według PLAN.md (B-8 wznowione po nich); krok 2B po akceptacji próbki, przed R-3. Migracje przez lokalną bramę, obie domeny 200 po każdym wdrożeniu. | ✅ 05.10.2026 |
@@ -155,19 +217,19 @@ Polecenie kazało przepisać D-66–D-76 dosłownie z `ZLECENIE_POPRAWKI_02_10.m
 
 | ID | Sprawa | Decyzja | Status |
 |---|---|---|---|
-| PALIWO-AUTO-A | akceptacja próbki | Orlen OK (ONEkodiesel netto). OKQ8: Q8 Trucks / Diesel = 22,90 wprost, bez VAT. | ✅ 05.10 ~10:37 |
+| PALIWO-AUTO-A — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | akceptacja próbki | Orlen OK (ONEkodiesel netto). OKQ8: Q8 Trucks / Diesel = 22,90 wprost, bez VAT. | ✅ 05.10 ~10:37 |
 | PALIWO-AUTO-B | automat | Budować po potwierdzeniu 22,90; mechanizm SEFS bez zmian; korekta 0166. | ⏳ |
 | SMS-SILENT-FIX | fałszywe SMS_GATEWAY_SILENT | Diagnoza + naprawa; jeden alarm bez powtórek; Resend 200≠ERROR; zero prawdziwych SMS. | ⏳ |
 | MIG-0159-REG | ewidencja 0159 | Dopisać do schema_migrations bez ponownego wykonania; PROD = repo. | ⏳ |
 | BARLOW+WZ | smoke + wzorce Automatyzacji | Napraw barlow.css; odśwież automatyzacje__* (przyczyna: B-5). | ⏳ |
-| B-7c | filtry mapy | Wariant A | ✅ / ⏳ |
-| B-8 | filtry/ciągnik | Zakres dat + bez kierowcy/ciągnika + Zmień ciągnik | ✅ / ⏳ |
-| B-9 | pasek filtrów | Wariant C | ✅ / ⏳ |
+| B-7c — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | filtry mapy | Wariant A | ✅ / ⏳ |
+| B-8 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | filtry/ciągnik | Zakres dat + bez kierowcy/ciągnika + Zmień ciągnik | ✅ / ⏳ |
+| B-9 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | pasek filtrów | Wariant C | ✅ / ⏳ |
 | Q-9 | motyw | Wariant B | ✅ / ⏳ |
 | Kolejność ~10:37 | — | (2)+(3) najpierw, potem (1) paliwa B, potem (4) część B. | ✅ |
 
 | Q-11b | push telefon | **A** Web Push VAPID; krytyczne od razu; skrót 1×/dzień; Preferencje; iOS „Dodaj do ekranu głównego” | ✅ 05.10 |
-| H-8 | profil trasy | **A** elevation truck standard teraz; naruszenia wymiarów auto po D-83; pula tras | ✅ 05.10 |
+| H-8 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | profil trasy | **A** elevation truck standard teraz; naruszenia wymiarów auto po D-83; pula tras | ✅ 05.10 |
 
 ## Decyzje właściciela 2026-10-05 ~13:53 — CSP, ZAP, D-3, kolejka
 
@@ -175,7 +237,7 @@ Polecenie kazało przepisać D-66–D-76 dosłownie z `ZLECENIE_POPRAWKI_02_10.m
 |---|---|---|---|
 | CSP-RO | Content-Security-Policy | Report-Only **7 dni**; naruszenia → tabela w Stanie systemu; potem lista źródeł do akceptacji; **enforce przed SEC-OWASP i pilotażem** | ✅ decyzja / ⏳ wdrożenie |
 | ZAP-NODE | OWASP ZAP bez Dockera | Instalacja ZAP + Java; Baseline pasywny na **produkcji**; skan pełny tylko na **TEST**; wynik do SEC-OWASP | ✅ decyzja / ⏳ uruchomienie |
-| D-3 | retencja dokumentów | CMR/POD/zdjęcia 3 lata; PDF faktur 5 lat; I-7 bez zmian | ✅ 05.10.2026 |
+| D-3 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | retencja dokumentów | CMR/POD/zdjęcia 3 lata; PDF faktur 5 lat; I-7 bez zmian | ✅ 05.10.2026 |
 | KOLEJKA-1353 | nie stój | Buduj pozycje bez czekania na właściciela; czeka tylko D-83→B-3a/H-1/H-3, R-0, D-7/14/16/17/21; GATE-WEEKLY 11.10; SG-03 raport po rozładunku | ✅ |
 
 ## Decyzje 05.10.2026 ~18:40 — ETA znaczniki (B) i H-4 z GPS (C)
