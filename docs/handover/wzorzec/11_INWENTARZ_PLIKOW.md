@@ -1,83 +1,57 @@
-# INWENTARZ PLIKÓW PROJEKTU
+# INWENTARZ PLIKÓW PROJEKTU (stan 08.10.2026)
 
-> Każdy dokument z historii projektu i jego status. **Wykonawca czyta tylko
-> „aktualne"; „częściowo zastąpione" — razem z `03_REJESTR_DECYZJI.md`;
-> „archiwalne" — nigdy jako polecenia.**
+> Zastępuje inwentarz z 29.09.2026. **Wykonawca stosuje jako polecenia wyłącznie pliki z części 1.** Część 2 to dzienniki (dopisujesz, nie wykonujesz). Część 3 to wiedza techniczna o istniejącym kodzie: pomaga zrozumieć stan, ale nie jest wzorem docelowym; tam, gdzie jest sprzeczna z częścią 1, nie obowiązuje. Część 4 — nigdy jako polecenie.
 
-## Aktualny — praca bieżąca
-- `PLAN.md`
-- `SCOPE.md`
-- `MOJE_ZADANIA.md`
-- `SPOTKANIE_SCX.md`
-- `PACZKA_DECYZJI_30_09.md`
-- `ZLECENIE_CENNIK_SEFS.md`
-- `ZLECENIE_POGODA_DROGI_ETA.md`
-- `ZLECENIE_SHAREPOINT.md`
-- `ZLECENIE_PO_SPOTKANIU_SCX.md`
-- `ZLECENIE_DECYZJE_POWIADOMIENIA.md`
-- `NARZEDZIA_CURSOR.md`
-- `PRZEKAZANIE_CURSOR.md`
-- `PRZEKAZANIE_GROK_CURSOR.md`
-- `tower.mdc`
-- `PACZKA_GROK_30_09.zip` — poufne
-- `CENNIK_STEGRA.json` — poufne
+## 1. Aktualne — polecenia (w tej kolejności przy sprzeczności)
+1. `docs/handover/wzorzec/01_KONSTYTUCJA.md` (ze zmianami z 08.10.2026)
+2. `docs/handover/audyt_claude_2026-10-08/` — cały folder:
+   - `README.md`
+   - `DECYZJE_08_10.md`
+   - `ROZSTRZYGNIECIA_LUK.md`
+   - `UZGODNIENIE_08_10.md` (pkt 6 historyczny — kolejność paczek w `PLAN.md`)
+   - `PLAN_OTWARTE_08_10.md`
+   - `WYMIARY_PILOT_ZEZWOLENIA.md`
+   - `etapy/`, `makiety_html/`, `raport/`, `paczki/`
+3. `docs/handover/PLAN.md` (08.10.2026) i `docs/handover/dopiski/`
+4. `docs/handover/wzorzec/03_REJESTR_DECYZJI.md` — wpisy bez znaku „🔁 zastąpione 08.10.2026”
+5. `AGENTS.md`, `.cursor/rules/*.mdc` (08.10.2026)
+6. `docs/handover/wzorzec/08_SKILLE/` — procedury (08.10.2026)
+7. `docs/handover/wzorzec/00_INDEKS.md`, ten plik
 
-## Aktualny — odniesienie
-- `AUDYT_ZAKRESU.md` — audyt 27.09 — podstawa etapu I
-- `ANEKS_4_PRODUKCJA_ZA_DARMO.md`
-- `ANEKS_5_JEDEN_PROJEKT.md`
-- `STATUSY_AUTOMATYCZNE.md`
-- `DESIGN_SYSTEM.md`
-- `tower-makieta.html` — wzorzec wyglądu
-- `tower-makieta.zip`
+## 2. Dzienniki (dopisujesz)
+- `docs/handover/POSTEP.md` — co zrobione (starsze wpisy cytują stare zlecenia — to historia, nie polecenie)
+- `docs/handover/G4_WZORZEC.md` — odświeżenia wzorców zrzutów
 
-## Częściowo zastąpiony — czytać z rejestrem decyzji
-- `MECHANIZM_PIENIEDZY.md` — cennik: teraz symbol + wariant + konwój; SEFS: załącznik z 28.09
-- `ZRODLA_DANYCH.md` — HERE, TomTom, Open-Meteo — odrzucone
-- `ZLECENIE_FINAL.md` — częściowo; wygrywa rejestr i zlecenia z 29.09
-- `DECYZJE_WYDANIE_1_0.md`
-- `PYTANIA_SCANDINAVIAN_EXPRESS.md` — zastąpione przez SPOTKANIE_SCX.md (teraz w `docs/archiwum/`)
-- `ZLECENIE_ETAP_I.md` — wykonane
+## 3. Wiedza techniczna i instrukcje obsługi (nie polecenia)
+| Plik | Do czego | Uwaga |
+|---|---|---|
+| `docs/handover/KOPIE_ZAPASOWE.md` | kopie R2, odtwarzanie | aktualny |
+| `docs/handover/INSTRUKCJA_BRAMKA_SMS_ANDROID.md` | bramka SMS Android | aktualny; ścieżkę cytuje aplikacja (`src/i18n/i2.ts`) — nie przenosić |
+| `docs/handover/PRZELACZENIE_HOSTINGU.md` | Vercel ↔ Cloudflare Pages | aktualny |
+| `docs/handover/NARZEDZIA_CURSOR.md` | wtyczki MCP | aktualny w zakresie zgodnym z `AGENTS.md` §6 |
+| `docs/handover/CI.md` | hak i testy bazy | częściowo nieaktualny — obowiązuje `AGENTS.md` §3 |
+| `docs/handover/DESIGN_SYSTEM.md` | tokeny, kroje | wzorem jest makieta etapu audytu; kontrast według E10 |
+| `docs/handover/CELE_KLIKNIEC.md` | cele kliknięć L-4 | zmiany według E5 i E7 |
+| `docs/handover/SECURITY.md` | zabezpieczenia bazy | §1 „zakaz security_invoker” i §3 zastępuje E19 |
+| `docs/handover/LIMITY_PLANU_DARMOWEGO.md` | usage-check | od 08.10 plan Supabase Pro |
+| `docs/handover/RAPORT_HERE_REGULAMIN.md` | cytaty regulaminu HERE | wniosek „Base Plan nie pozwala” zastąpiony przez D-77, D-78 |
+| `docs/handover/RAPORT_KALIBRACJI_ETA.md` | szablon raportu kalibracji | kalibracja według E15 |
+| `docs/handover/RAPORT_POGODA_MORSKA.md`, `RAPORT_TELM_EMTRACK_WEB_05_10.md`, `EMTRACK_HISTORIA_SPRZED_05_10.md`, `PROPOZYCJA_H10_WIATR_ETA.md` | źródła danych, protokoły | wiedza |
+| `docs/handover/SEC_OWASP_ASVS_L2.md`, `docs/evidence/zap/*` | stan bezpieczeństwa 05.10 | punkt wyjścia E48 |
+| `docs/handover/wzorzec/04_KONEKTORY.md` | katalog usług | wpisy „Supabase Free”, „jeden projekt” i „HERE odrzucone” nie obowiązują (Pro, TEST, D-77/D-78) |
+| `docs/watch-tower/ADDRESSES.md`, `docs/watch-tower/permits-research/*` | adresy, źródła prawne | dane referencyjne |
+| `design/claude-v2.0/*` | makieta v2.0 | wzór wyglądu tylko tam, gdzie etap audytu nie ma makiety |
+| `docs/claude/referencje/tower.css` | arkusz referencyjny testu `stylesheet-mockup` | nie zmieniać; odstępstwa w `ODSTEPSTWA` |
+| `public/download/tower-makieta.html` i inne makiety w `public/` | wymagane przez test `o2-prod-strip` w buildzie demo | nie są wzorem wyglądu |
+| `README.md` | odsyłacz | — |
 
-## Archiwalny — wykonany, nie czytać jako polecenia
-> **Jedno miejsce:** `docs/archiwum/` (od 29.09.2026).
-> **Sprzeczne ze stanem faktycznym — groźne, jeśli agent je wykona:**
-> `CURSOR_PROMPT_UI.md` (przeniesienie na Next.js), `CURSOR_PROMPT.md`
-> (Next.js, Tailwind, shadcn/ui, MapLibre, „nie pisz kodu"). Aplikacja jest
-> na Vite + React; Tailwind i MapLibre usunięte (D9, D21).
-> `AGENTS.md` z 25.09 zastąpiony przez `07_ZASADY_CURSOR/AGENTS.md`.
-- `docs/archiwum/` — pełne archiwum instrukcji i promptów sprzed 29.09
-- `AGENTS.md` (stara treść; bieżący root `AGENTS.md` = aktualny)
-- `CURSOR_PROMPT.md`
-- `CURSOR_PROMPT_UI.md`
-- `ZLECENIE_DLA_GROKA.md`
-- `PROMPT_FINALNY_GROK.md`
-- `ANEKS_1_DLA_GROKA.md`
-- `ANEKS_2_DLA_GROKA.md`
-- `ETAP_C.md`
-- `ETAP_D.md`
-- `GO_FALA1.md`
-- `GO_FALA2.md`
-- `FALA2_PRZEGLAD.md`
-- `D7_CZAS.md`
-- `D7_DECYZJA.md`
-- `D9_STYLELINT.md`
-- `KOREKTA_C23.md`
-- `KOREKTA_KOLEJNOSCI.md`
-- `TLUMACZENIA_T1_T3.md`
-- `UZUPELNIENIE_WERYFIKACJI.md`
-- `ODPOWIEDZ_GROK_ANEKS5.md`
-- `ODPOWIEDZ_GROK_WERYFIKACJA.md`
-- `POTWIERDZENIE_ETAP0.md`
-- `PR1_ODPOWIEDZ.md`
-- `PRZEJECIE_MOCKUPU.md`
-- `DO_WKLEJENIA_TERAZ.md`
-- `README.md` (stary → `docs/archiwum/README_2026-09-22.md`)
-- `docs_przekazanie_agenci_WT.txt`
-- `TOWER-pakiet-aneks1.zip`
-- `TOWER-pakiet-aneks2.zip`
-- `TOWER-pakiet-final.zip`
-- `app/, lib/, supabase/, tests/` — wczesny kod — źródłem prawdy jest repozytorium
-
-## Zapisy rozmów
-- `/mnt/transcripts/` — trzy pełne zapisy (22–28.09) + bieżąca sesja; podstawa tego audytu
+## 4. Archiwum — nigdy jako polecenie
+- `docs/archiwum/` — archiwum sprzed 29.09.2026.
+- `docs/archiwum/2026-10-08/` — 279 plików przeniesionych 08.10.2026 z zachowaniem ścieżek (lista 279 pozycji) oraz `stare-instrukcje/` (poprzednie `AGENTS.md` i reguły `.mdc` jako `.txt`). Lista: `docs/handover/audyt_claude_2026-10-08/paczki/P0a_lista_archiwum.txt`. Są tam m.in.:
+  - stary `PLAN.md`, `SCOPE.md`, wszystkie `ZLECENIE_*.md`, `PACZKA_DECYZJI_*.md`;
+  - `POLECENIA_KOORDYNATORA.md`, `PRZEKAZANIE_CURSOR.md`, `LOGIKA_SYSTEMU.md`, `REJESTR_CALOSCI.md`, `TRIAGE_REJESTRU.md`;
+  - `wzorzec/02_AUDYT.md`, `05_KONTRAKTY_HANDLOWE.md`, `06_KONTRAKTY_TECHNICZNE.md`, `07_ZASADY_CURSOR/`, `09_WIZUALIZACJE.*`, `10_WZOR_NOWEGO_PROJEKTU.md`, `STAN/`;
+  - `docs/watch-tower/**` (poza adresami i źródłami prawnymi), `docs/qa-start/**`;
+  - pliki z katalogu głównego: `ACCEPTANCE.md`, `AUDIT_FULL_CHAT.md`, `FIX_*.md`, `PUNKT*.md`, `IDENTICAL_CLAUDE_FULL.md`, `FROM_CLAUDE_V2.md`, `FUNCTIONS_UNDER_CLAUDE.md`, `CURRENT_MOCKUP_CLOSEOUT.md`, `QA_RE_SHIP_FROZEN.md`, `SE_ROAD_AND_FORCE_MAJEURE.md` i ich kopie w `docs/`.
+- Pliki z kwotami cenników (`RAPORT_BAF_CENY_94_05_10.md`, `WIP_BAF_CENY_05_10.md`, `BAF_SPEC.txt`) usunięte z repozytorium do `D:\Watch Tower\dane\archiwum-2026-10-08\` (folder `dane` obok folderu repozytorium) (zasada: pliki poufne poza repozytorium). Historia git ich nie usuwa — decyzja o czyszczeniu historii należy do właściciela.
+- Komentarze w kodzie i w nałożonych migracjach, które cytują przeniesione pliki, zostają (migracji nałożonych nie zmieniamy). Nie są poleceniem.

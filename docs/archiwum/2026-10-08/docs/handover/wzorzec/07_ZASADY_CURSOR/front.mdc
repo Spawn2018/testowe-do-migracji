@@ -1,0 +1,18 @@
+---
+description: Front TOWER — wygląd, teksty, paczka produkcyjna
+globs: src/**
+alwaysApply: false
+---
+- **wygląd = makieta w 100%**; odstępstwo tylko z decyzji w rejestrze (D-27, D-31)
+- każdy tekst przez słownik PL/EN/SV — żadnych napisów na sztywno
+- daty ze strefą: Warszawa lub Sztokholm, oznaczone
+- kwoty w EUR; PLN tylko jako widok z ustawień użytkownika
+- brak danych = „brak źródła danych", brak ceny = ostrzeżenie — nigdy zero ani demo
+- przed pushem: vitest + szybka brama wizualna; zmiana wzorca zrzutów tylko
+  z opisem przyczyny w `G4_WZORZEC.md`
+- strażnik paczki: żadnych kwot cennika, danych osobowych, xlsx, danych demo
+- moduł niegotowy lub niezatwierdzony (np. Automatyzacje przed D-29) — ukryty w produkcji
+- **każdy widok działa na telefonie (360–430 px) i tablecie (768 px)**: tabela → karty,
+  panel boczny → pełny ekran, cele dotyku ≥ 44 px, pola ≥ 16 px, bez przewijania
+  strony w poziomie; każda zmiana widoku sprawdzona w ujęciach 390 i 768 px
+- service worker: pamięć podręczna tylko plików statycznych — nigdy API, danych, logowania

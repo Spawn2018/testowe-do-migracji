@@ -1,0 +1,197 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:12px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 20px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.bd{padding:14px;display:flex;flex-direction:column;gap:12px}
+.note{font-size:12.5px;color:var(--ink-3)}
+table.r{border-collapse:collapse;width:100%;font-size:13px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 8px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+.code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:var(--surface-2);border:1px solid var(--rule-2);padding:2px 5px}
+.bad{color:var(--red);font-weight:600}
+.split{display:grid;grid-template-columns:330px 1fr;min-height:560px}
+.list{border-right:1px solid var(--rule);background:var(--surface-2)}
+.grp{font:600 12px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);padding:10px 12px 4px}
+.it{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:7px 12px;font-size:13.5px;border-left:3px solid transparent}
+.it.on{background:#fff;border-left-color:var(--amber);font-weight:600}
+.it small{color:var(--ink-3);font-size:11.5px;white-space:nowrap}
+.ch{display:inline-flex;gap:3px}.ch i{font:600 10.5px var(--font-cond);letter-spacing:.04em;font-style:normal;border:1px solid var(--rule);padding:0 4px;color:var(--ink-2);background:#fff}
+.ed{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.tabs{display:flex;border-bottom:1px solid var(--rule)}.tabs span{padding:8px 14px;font-size:13.5px;color:var(--ink-3)}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+.area{border:1px solid var(--ink-3);padding:12px;font-size:15px;line-height:2;min-height:96px;background:#fff}
+.tok{display:inline-block;background:var(--sea-bg);border:1px solid #9FC0D8;color:var(--sea);font:600 13px var(--font-sans);padding:0 7px;line-height:22px;border-radius:3px;margin:0 1px}
+.ins{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.ins b{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-right:4px}
+.btn{height:34px;padding:0 12px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.btn.add{border-color:#9FC0D8;color:var(--sea)}.btn.add:before{content:"+ ";font-weight:700;margin-right:3px}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.meter{display:flex;gap:16px;flex-wrap:wrap;font-size:13px}.meter .ok{color:var(--go);font-weight:600}
+.prev{border:1px solid var(--rule);background:var(--surface-2);padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.prev .lbl{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--ink-3)}
+.sel{height:30px;border:1px solid var(--rule);padding:0 8px;display:inline-flex;align-items:center;background:#fff;font-size:13px;color:var(--ink)}
+.smsb{background:#fff;border:1px solid var(--rule-2);border-radius:14px 14px 14px 4px;padding:8px 11px;font-size:14px;max-width:560px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mail{border:1px solid var(--rule);background:#fff}.mail .mh{padding:8px 10px;border-bottom:1px solid var(--rule-2);font-size:13px}.mail .mh b{display:block;font-size:14.5px}.mail .mb{padding:10px;font-size:13.5px;min-height:66px}
+.mail.old{border-color:var(--red)}.mail.old .mh{background:var(--red-bg)}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column}
+.phone .h b{font-size:20px}
+.scrollx{display:flex;gap:6px;overflow:hidden;white-space:nowrap}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+</style></head><body>
+<div class="sheet">
+  <div class="top"><h1>E43 · Treści SMS i e-maili do zmiany przez administratora · komputer</h1>
+    <span class="ex">„Dziś” — teksty z kodu i e-mail z bazy 05.10 · podglądy na SG-03 i SG-11 z danymi z bazy · treści „po zmianie” to propozycja · osoba w zaproszeniu to przykład</span><span class="pill go">zdecydowane 07.10, 22:42 · tylko po polsku · e-maile logowania w tym ekranie</span></div>
+
+  <!-- DZIŚ -->
+  <div class="card" style="width:1460px">
+    <div class="h"><b>Dziś: każda treść jest w kodzie programu</b><span class="pill am">zmiana = programista + wdrożenie</span></div>
+    <table class="r">
+      <tr><th style="width:230px">Wiadomość</th><th style="width:110px">Kanał</th><th style="width:560px">Treść dziś (dokładnie)</th><th>Problem</th></tr>
+      <tr><td>Przy zbliżaniu (do Śremu i Boden)</td><td>SMS</td><td><span class="code">{kto}, rej. {rej}, przyjazd {eta}</span></td><td>Bez kodu transportu i nazwy miejsca. Jedyne próby z 05.10: „TEST, rej. GD035YX, przyjazd —”.</td></tr>
+      <tr><td>Zmiana wagi ryzyka (05.10, 12:07)</td><td>E-mail, dzwonek</td><td>Temat: <b>Zmiana wagi ryzyka (krytyczna): f34bf056: brak awizacji przed załadunkiem</b><br>Treść: <b>Waga: krytyczna.</b></td><td class="bad">„f34bf056” to wewnętrzny numer transportu SG-11 (nie ma numerów zleceń). Treść nic nie mówi.</td></tr>
+      <tr><td>SMS niewysłany</td><td>E-mail</td><td>Temat: <span class="code">{kod}: SMS do kierowcy niewysłany (…{numer}) — przekaż treść</span></td><td>Ten sam tekst przy SMS do Śremu i Boden (E42).</td></tr>
+      <tr><td>Wszystkie rodzaje</td><td>—</td><td>SMS: 11 rodzajów × 3 języki w bazie. E-mail i dzwonek: 28 rodzajów × 3 języki w kodzie aplikacji.</td><td>Administrator nie może zmienić ani słowa.</td></tr>
+      <tr><td>E-maile logowania (zaproszenie, reset hasła i 3 inne)</td><td>E-mail</td><td>Temat: <b>Watch Tower — zaproszenie</b><br>Treść: <b>Watch Tower · Zaproszenie do systemu: · Dołącz</b> (link)</td><td>Ustawiane skryptem przez API Supabase (repozytorium, 05.10). Na produkcji nie sprawdzone. Administrator nie zmieni.</td></tr>
+    </table>
+  </div>
+
+  <div class="sec">Opcje › Powiadomienia › Treści wiadomości</div>
+
+  <!-- EDYTOR SMS -->
+  <div class="card" style="width:1460px">
+    <div class="h"><b>Treści wiadomości</b><span class="pill gr">zmienia tylko Administrator HHL</span><span style="flex:1"></span><span class="note">Kto co dostaje — Powiadomienia › Kto co dostaje (E11)</span></div>
+    <div class="split">
+      <div class="list">
+        <div class="grp">SMS do Śremu i Boden (E42)</div>
+        <div class="it"><span>A · Przyjazd za ok. 60 min</span><span class="ch"><i>SMS</i></span></div>
+        <div class="it"><span>B · Wcześniejszy przyjazd</span><span class="ch"><i>SMS</i></span></div>
+        <div class="it on"><span>C · Auto czeka</span><span class="ch"><i>SMS</i></span></div>
+        <div class="it"><span>D · Wjazd</span><span class="ch"><i>SMS</i></span></div>
+        <div class="grp">Ryzyka i decyzje</div>
+        <div class="it"><span>Nowe ryzyko</span></div>
+        <div class="it"><span>Zmiana wagi ryzyka</span></div>
+        <div class="it"><span>Do decyzji · Decyzja krytyczna</span></div>
+        <div class="grp">Transport</div>
+        <div class="it"><span>Zmiana statusu</span></div>
+        <div class="it"><span>Czat</span></div>
+        <div class="it"><span>Zmiana dat planu · Brak numeru zlecenia</span></div>
+        <div class="grp">Faktury · System</div>
+        <div class="it"><span>Nowa faktura · Przypomnienie o płatności</span></div>
+        <div class="it"><span>SMS niewysłany · Bramka SMS milczy</span></div>
+        <div class="grp">Logowanie</div>
+        <div class="it"><span>Zaproszenie · Reset hasła</span><span class="ch"><i>E-MAIL</i></span></div>
+        <div class="it"><span>Link logowania · Potwierdzenie adresu · Zmiana e-maila</span></div>
+        <div class="note" style="padding:8px 12px">Pełna lista: 4 SMS + 28 rodzajów e-maili i powiadomień w dzwonku + 5 e-maili logowania. Wszystko tylko po polsku. Każda pozycja ma „domyślna” albo „zmieniono [data] · [osoba]”. Kanały i odbiorców ustawia się w „Kto co dostaje” (E11).</div>
+      </div>
+      <div class="ed">
+        <div class="row"><b style="font:700 20px var(--font-cond)">C · Auto czeka</b><span class="pill sea">SMS</span><span class="note">Do: odbiorcy w Śremie i Boden z zaznaczonym „C” (E42)</span></div>
+        <div class="note">Treść tylko po polsku — każdy odbiorca, także w Boden, dostaje tę samą wersję (decyzja 22:42).</div>
+        <div class="area"><span class="tok">Kod transportu</span>: auto <span class="tok">Rejestracja naczepy</span> stoi przy <span class="tok">Miejsce</span> od <span class="tok">Godzina postoju</span>. Plan dostawy: <span class="tok">Data planu</span>.</div>
+        <div class="ins"><b>Wstaw dane</b><span class="btn add">Kod transportu</span><span class="btn add">Rejestracja naczepy</span><span class="btn add">Rejestracja ciągnika</span><span class="btn add">Miejsce</span><span class="btn add">Godzina postoju</span><span class="btn add">Godzina przyjazdu</span><span class="btn add">Data planu</span><span class="btn add">Link do transportu</span></div>
+        <div class="meter"><span class="ok">✓ 79 / 160 znaków</span><span>Polskie litery zostaną zamienione (ą → a), bo SMS ma 160 znaków tylko bez nich.</span></div>
+        <div class="prev">
+          <div class="lbl">Podgląd na prawdziwym transporcie <span class="sel">SG-03 · 06.10, 13:05 ▾</span></div>
+          <div class="smsb">SG-03: auto GD035YX stoi przy placu Stegra Boden od 12:35. Plan dostawy: 07.10.</div>
+        </div>
+        <div class="row"><span class="btn pri">Zapisz</span><span class="btn">Wyślij próbny SMS na mój numer</span><span class="btn">Przywróć domyślną treść</span><span style="flex:1"></span><span class="note">Zmiana trafia do Historii zmian (kto, kiedy, było → jest)</span></div>
+        <div class="note">Dane wstawia się przyciskami. Każde pole jest jednym klockiem: nie da się go popsuć, a Backspace usuwa cały klocek. Lista przycisków zależy od wiadomości, np. przy fakturze są Numer faktury, Kwota i Termin. Gdy danej brakuje (np. naczepy), w SMS jest „—”, a podgląd to pokazuje.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- E-MAIL -->
+  <div class="card" style="width:1460px">
+    <div class="h"><b>Przykład e-maila: Zmiana wagi ryzyka</b><span class="pill sea">E-mail · ten sam tekst w dzwonku</span></div>
+    <div class="bd">
+      <div class="cmp">
+        <div>
+          <div class="note" style="margin-bottom:6px">Temat</div>
+          <div class="area" style="min-height:50px;line-height:1.9"><span class="tok">Kod transportu</span>: <span class="tok">Nazwa ryzyka</span> — waga <span class="tok">Waga</span></div>
+          <div class="note" style="margin:10px 0 6px">Treść</div>
+          <div class="area" style="line-height:1.9">Waga ryzyka: <span class="tok">Waga</span>. Załadunek: <span class="tok">Data planu</span>. Otwórz transport: <span class="tok">Link do transportu</span></div>
+          <div class="ins" style="margin-top:8px"><b>Wstaw dane</b><span class="btn add">Kod transportu</span><span class="btn add">Nr zlecenia</span><span class="btn add">Nazwa ryzyka</span><span class="btn add">Waga</span><span class="btn add">Data planu</span><span class="btn add">Link do transportu</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="note">Podgląd na transporcie <span class="sel">SG-11 ▾</span></div>
+          <div class="mail old"><div class="mh">Dziś (05.10, 12:07)<b>Zmiana wagi ryzyka (krytyczna): f34bf056: brak awizacji przed załadunkiem</b></div><div class="mb">Waga: krytyczna.</div></div>
+          <div class="mail"><div class="mh">Po zmianie<b>SG-11: brak awizacji przed załadunkiem — waga krytyczna</b></div><div class="mb">Waga ryzyka: krytyczna. Załadunek: 06.10. Otwórz transport: tower.log-mar.pl/#/transport/SG-11<br><span class="note">— Tower · H&amp;H Logistics</span></div></div>
+          <div class="note">Kod transportu w każdej firmie jak w E41: HHL „SG-11 · nr zlecenia HHL”, SCX „SG-11 · nr SCX”, KSH „SG-11”. SG-11 nie ma jeszcze numerów, więc widać „SG-11”.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGOWANIE -->
+  <div class="card" style="width:1460px">
+    <div class="h"><b>E-mail logowania: Zaproszenie</b><span class="pill sea">E-mail</span><span class="note">Także: Reset hasła, Link logowania, Potwierdzenie adresu, Zmiana e-maila</span></div>
+    <div class="bd">
+      <div class="cmp">
+        <div>
+          <div class="note" style="margin-bottom:6px">Temat</div>
+          <div class="area" style="min-height:50px;line-height:1.9">Watch Tower — zaproszenie · <span class="tok">Imię i nazwisko</span></div>
+          <div class="note" style="margin:10px 0 6px">Treść</div>
+          <div class="area" style="line-height:1.9">Dzień dobry,<br><span class="tok">Kto zaprasza</span> zaprasza do Watch Tower — systemu kontroli transportów Śrem → Boden.<br>Osoba: <span class="tok">Imię i nazwisko</span> · Firma: <span class="tok">Firma</span> · Konto: <span class="tok">Rodzaj konta</span><br><span class="tok" style="background:var(--ink);color:#fff;border-color:var(--ink)">Przycisk „Dołącz”</span><br>Link jest ważny <span class="tok">Ważność linku</span>.</div>
+          <div class="ins" style="margin-top:8px"><b>Wstaw dane</b><span class="btn add">Imię i nazwisko</span><span class="btn add">Firma</span><span class="btn add">Rodzaj konta</span><span class="btn add">Kto zaprasza</span><span class="btn add">Ważność linku</span></div>
+          <div class="note" style="margin-top:8px">Przycisk z linkiem jest zawsze w treści i nie da się go usunąć — bez niego zapis jest zablokowany, bo osoba nie mogłaby się zalogować. Klocki wstawiają dane bez odmiany (np. „Anna Nowak”), więc tekst wokół pisze się tak, żeby pasował.</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="note">Podgląd <span class="ex">Przykład</span></div>
+          <div class="mail old"><div class="mh">Dziś (treść ze skryptu w repozytorium)<b>Watch Tower — zaproszenie</b></div><div class="mb"><b>Watch Tower</b><br>Zaproszenie do systemu:<br><u>Dołącz</u></div></div>
+          <div class="mail"><div class="mh">Po zmianie<b>Watch Tower — zaproszenie · Anna Nowak</b></div><div class="mb">Dzień dobry,<br>Sebastian Bożek zaprasza do Watch Tower — systemu kontroli transportów Śrem → Boden.<br>Osoba: Anna Nowak · Firma: KSH · Konto: KSH Użytkownik<br><span style="display:inline-block;margin:6px 0;padding:6px 14px;background:var(--ink);color:#fff;font-weight:600">Dołącz</span><br>Link jest ważny 1 h.</div></div>
+          <div class="note">„Anna Nowak” to osoba zmyślona. Ważność linku z ustawień logowania (w repozytorium 1 h; produkcja do sprawdzenia przy budowie). Próbny e-mail idzie tylko na adres administratora.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">Telefon</div>
+
+  <div class="phone" style="min-height:640px">
+    <div class="h"><span style="font:600 20px var(--font-sans);color:var(--ink-2)">←</span><b>C · Auto czeka</b><span class="pill sea">SMS</span></div>
+    <div class="bd">
+      <div class="area" style="font-size:14px"><span class="tok">Kod transportu</span>: auto <span class="tok">Rejestracja naczepy</span> stoi przy <span class="tok">Miejsce</span> od <span class="tok">Godzina postoju</span>. Plan dostawy: <span class="tok">Data planu</span>.</div>
+      <div class="note">Wstaw dane (przewiń w bok)</div>
+      <div class="scrollx"><span class="btn add">Kod transportu</span><span class="btn add">Rejestracja naczepy</span><span class="btn add">Miejsce</span><span class="btn add">Godzina…</span></div>
+      <div class="meter"><span class="ok">✓ 79 / 160 znaków</span></div>
+      <div class="prev"><div class="lbl">Podgląd · <span class="sel">SG-03 ▾</span></div><div class="smsb" style="font-size:13.5px">SG-03: auto GD035YX stoi przy placu Stegra Boden od 12:35. Plan dostawy: 07.10.</div></div>
+      <div class="row"><span class="btn pri" style="flex:1;justify-content:center;height:44px">Zapisz</span><span class="btn" style="height:44px">Próbny SMS</span></div>
+    </div>
+    <div class="nav"><span>Kokpit</span><span>Harmonogram</span><span>Ryzyka</span><span>Dokumenty</span><span class="on">Więcej</span></div>
+  </div>
+
+  <div class="phone" style="min-height:640px">
+    <div class="h"><span style="font:600 20px var(--font-sans);color:var(--ink-2)">←</span><b>Treści wiadomości</b></div>
+    <div class="list" style="border-right:0">
+      <div class="grp">SMS do Śremu i Boden</div>
+      <div class="it"><span>A · Przyjazd za ok. 60 min</span><small>domyślna</small></div>
+      <div class="it"><span>B · Wcześniejszy przyjazd</span><small>domyślna</small></div>
+      <div class="it on"><span>C · Auto czeka</span><small>zmieniono 07.10</small></div>
+      <div class="it"><span>D · Wjazd</span><small>domyślna</small></div>
+      <div class="grp">Ryzyka i decyzje</div>
+      <div class="it"><span>Nowe ryzyko</span><small>domyślna</small></div>
+      <div class="it"><span>Zmiana wagi ryzyka</span><small>domyślna</small></div>
+      <div class="it"><span>Do decyzji</span><small>domyślna</small></div>
+      <div class="grp">Transport · Faktury · System</div>
+      <div class="it"><span>Czat</span><small>domyślna</small></div>
+      <div class="it"><span>Nowa faktura</span><small>domyślna</small></div>
+      <div class="it"><span>SMS niewysłany</span><small>domyślna</small></div>
+      <div class="grp">Logowanie</div>
+      <div class="it"><span>Zaproszenie</span><small>domyślna</small></div>
+      <div class="it"><span>Reset hasła</span><small>domyślna</small></div>
+    </div>
+    <div class="note" style="padding:8px 12px">„zmieniono 07.10” — przykład.</div>
+    <div class="nav"><span>Kokpit</span><span>Harmonogram</span><span>Ryzyka</span><span>Dokumenty</span><span class="on">Więcej</span></div>
+  </div>
+</div>
+</body></html>

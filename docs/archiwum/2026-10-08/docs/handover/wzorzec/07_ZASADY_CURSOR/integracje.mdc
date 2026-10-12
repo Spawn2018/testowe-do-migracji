@@ -1,0 +1,15 @@
+---
+description: Integracje zewnętrzne TOWER — funkcje Edge i źródła danych
+globs: supabase/functions/**
+alwaysApply: false
+---
+- **przed pierwszym wywołaniem nowej usługi:** regulamin — użytek komercyjny,
+  śledzenie pojazdów, przechowywanie wyników, podanie źródła. Cytat klauzul
+  w raporcie. Wykluczenie = STOP i do właściciela
+- tylko darmowe plany; limit w kodzie poniżej darmowego progu
+- klucze wyłącznie w sekretach funkcji Edge
+- uczciwy nagłówek User-Agent; nie obchodzimy zabezpieczeń stron
+- blokada, zmiana formatu, brak danych → ryzyko HHL, nigdy cicha awaria
+- każdy odczyt zapisany: źródło, adres, wartość surowa, jednostka, czas
+- wymagane podanie źródła w interfejsie (CC BY, ODbL)
+- katalog usług i odrzuconych z powodem: `04_KONEKTORY.md`

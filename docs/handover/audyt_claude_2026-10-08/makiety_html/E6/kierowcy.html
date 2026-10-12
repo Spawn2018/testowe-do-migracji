@@ -1,0 +1,131 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--surface-3:#EAEFF3;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;
+--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F8DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px;display:inline-block}
+.cap{font:600 12px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.desk{padding:16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start;max-width:1280px}
+.top{grid-column:1/-1;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.top h1{margin:0;font:700 24px var(--font-cond)}
+.pn{background:var(--surface);border:1px solid var(--rule)}
+.pn>.hd{display:flex;align-items:baseline;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.pn>.hd b{font:700 18px var(--font-cond)}
+.pn>.bd{padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.pill{font:600 11.5px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid}
+.pill.amber{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}
+.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}
+.pill.grey{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}
+.drv{border:1px solid var(--rule);background:var(--surface-2)}
+.drv .t{padding:7px 10px;border-bottom:1px solid var(--rule-2);display:flex;gap:8px;align-items:center}
+.seg{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:9px 10px;border-bottom:1px solid var(--rule-2)}
+.seg:last-child{border-bottom:0}
+.seg.now{background:var(--go-bg);box-shadow:inset 4px 0 0 var(--go)}
+.seg .lbl{display:block;font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.seg b{font-weight:600}
+.seg small{display:block;color:var(--ink-2);font-size:13px;font-variant-numeric:tabular-nums}
+.call{font:600 13px var(--font-sans);padding:7px 12px;border:1px solid var(--go);background:var(--go);color:#fff;white-space:nowrap}
+.call.ghost{background:var(--surface);color:var(--go)}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:13.5px}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0}
+.mono{font-variant-numeric:tabular-nums}
+.note{font-size:12.5px;color:var(--ink-3)}
+.chk{display:flex;gap:8px;align-items:center;font-weight:600}
+.chk i{width:16px;height:16px;border:2px solid var(--sea);background:var(--sea);display:inline-block;position:relative}
+.chk i::after{content:"";position:absolute;left:3px;top:0;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.grp{border:1px solid var(--rule);padding:8px 10px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grp .gt{grid-column:1/-1;font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.grp label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink-3)}
+.grp label.w{grid-column:1/-1}
+.inp{border:1px solid var(--rule);background:var(--surface);padding:6px 8px;font:14px var(--font-sans);color:var(--ink)}
+.phones{display:none;flex-direction:column;align-items:center;gap:16px;padding:12px}
+body.m .desk{display:none}body.m .phones{display:flex}
+.ph{width:366px;background:var(--page);border:1px solid var(--rule)}
+.ph .tb{background:var(--ink);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px}
+.ph .tb b{font:700 19px var(--font-cond)}
+.ph .bd{padding:10px;display:flex;flex-direction:column;gap:8px}
+.ph .seg{grid-template-columns:1fr 64px}
+.ph .call{padding:12px 0;font-size:16px;width:64px;text-align:center}
+</style></head><body>
+
+<div class="desk">
+  <div class="top"><h1>Dwóch kierowców przy przepięciu naczepy</h1><span class="ex">Przykład · nazwiska i numery ukryte · przepięcie, rejestracje i etapy z bazy 07.10</span></div>
+
+  <section class="pn">
+    <div class="hd"><b>SG-03 · 15062/2026/OSL/GDA/P</b><span class="pill amber">Na placu</span></div>
+    <div class="bd">
+      <div class="drv">
+        <div class="t"><span class="cap">Kierowcy</span><span class="pill grey">przepięcie naczepy</span></div>
+        <div class="seg"><span><span class="lbl">Odcinek PL · Śrem → prom</span><b>R. P.</b><small>+48 ••• ••• 313 · ciągnik WGM00653</small></span><span class="call ghost">☎ Zadzwoń</span></div>
+        <div class="seg now"><span><span class="lbl">Odcinek SE · prom → Boden · teraz</span><b>M. M.</b><small>+48 ••• ••• 013 · ciągnik CTR44190</small></span><span class="call">☎ Zadzwoń</span></div>
+      </div>
+      <dl class="kv"><dt>Naczepa</dt><dd class="mono">GD035YX</dd><dt>Prom</dt><dd>brak rezerwacji</dd></dl>
+      <div class="note">Wyróżniony jest kierowca odcinka, na którym jest ładunek: PL do przyjazdu do portu w Polsce, SE od portu w Szwecji. Na promie żaden nie jest wyróżniony. Oba przyciski działają zawsze.</div>
+    </div>
+  </section>
+
+  <section class="pn">
+    <div class="hd"><b>SG-01 · 15048/2026/OSL/GDA/P</b><span class="pill go">Rozładowany</span></div>
+    <div class="bd">
+      <div class="drv">
+        <div class="t"><span class="cap">Kierowca</span><span class="pill grey">odbiór i dostawa</span></div>
+        <div class="seg"><span><span class="lbl">Śrem → Boden</span><b>Kierowca SG-01</b><small>+48 ••• ••• 392</small></span><span class="call ghost">☎ Zadzwoń</span></div>
+      </div>
+      <div class="note">Bez przepięcia naczepy jeden kierowca odbiera i dostarcza. Dziś obok numeru stoi „/ …”, jakby brakowało drugiego. Po zmianie znika.</div>
+      <span class="cap" style="margin-top:6px">Harmonogram · kolumna Kierowca</span>
+      <div class="drv">
+        <div class="seg"><span><b>R. P.</b> <span class="note">PL</span> · <b>M. M.</b> <span class="note">SE</span><small>SG-03 · przepięcie</small></span><span style="display:flex;gap:6px"><span class="call ghost">☎ PL</span><span class="call">☎ SE</span></span></div>
+        <div class="seg"><span><b>Kierowca SG-01</b><small>SG-01 · jeden kierowca</small></span><span class="call ghost">☎</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pn">
+    <div class="hd"><b>Awizacja · zasoby</b><span class="note">przewoźnik wpisuje</span></div>
+    <div class="bd">
+      <div class="chk"><i></i>Przepięcie naczepy</div>
+      <div class="grp">
+        <span class="gt">Odcinek PL · odbiór w Śremie, do promu</span>
+        <label class="w">Kierowca<input class="inp" value="R. P."></label>
+        <label>Telefon<input class="inp mono" value="+48 ••• ••• 313"></label>
+        <label>Ciągnik<input class="inp mono" value="WGM00653"></label>
+      </div>
+      <div class="grp">
+        <span class="gt">Odcinek SE · od promu do Boden</span>
+        <label class="w">Kierowca<input class="inp" value="M. M."></label>
+        <label>Telefon<input class="inp mono" value="+48 ••• ••• 013"></label>
+        <label>Ciągnik<input class="inp mono" value="CTR44190"></label>
+      </div>
+      <label style="display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink-3)">Naczepa (jedna na całą trasę)<input class="inp mono" value="GD035YX"></label>
+      <div class="note">Bez zaznaczenia: jedna grupa „Kierowca · odbiór i dostawa”. Pola odcinka SE znikają i nie są zapisywane.</div>
+    </div>
+  </section>
+</div>
+
+<div class="phones">
+  <div class="ph">
+    <div class="tb"><b>SG-03</b><span class="pill amber" style="background:transparent;color:#F3C77A;border-color:#F3C77A">Na placu</span><span style="flex:1"></span><span class="ex" style="background:transparent;color:#fff;border-color:#ffffff80">Przykład</span></div>
+    <div class="bd">
+      <div class="drv">
+        <div class="t"><span class="cap">Kierowcy</span><span class="pill grey">przepięcie naczepy</span></div>
+        <div class="seg"><span><span class="lbl">Odcinek PL · Śrem → prom</span><b>R. P.</b><small>+48 ••• ••• 313</small></span><span class="call ghost">☎</span></div>
+        <div class="seg now"><span><span class="lbl">Odcinek SE · teraz</span><b>M. M.</b><small>+48 ••• ••• 013</small></span><span class="call">☎</span></div>
+      </div>
+      <dl class="kv"><dt>Ciągniki</dt><dd class="mono">WGM00653 (PL) · CTR44190 (SE)</dd><dt>Naczepa</dt><dd class="mono">GD035YX</dd></dl>
+    </div>
+  </div>
+  <div class="ph">
+    <div class="tb"><b>SG-01</b><span class="pill go" style="background:transparent;color:#9FD8C8;border-color:#9FD8C8">Rozładowany</span></div>
+    <div class="bd">
+      <div class="drv">
+        <div class="t"><span class="cap">Kierowca</span><span class="pill grey">odbiór i dostawa</span></div>
+        <div class="seg"><span><span class="lbl">Śrem → Boden</span><b>Kierowca SG-01</b><small>+48 ••• ••• 392</small></span><span class="call ghost">☎</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>if(location.search.includes('phone'))document.body.classList.add('m');</script>
+</body></html>

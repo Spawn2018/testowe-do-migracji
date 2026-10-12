@@ -1,0 +1,276 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.h3{padding:9px 14px 4px;font:700 16px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+.facts{margin:0;padding:10px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:5px}
+.facts b{font-weight:600}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 9px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+table.r td.n,table.r th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.code{font-weight:700;white-space:nowrap}
+.note{font-size:12.5px;color:var(--ink-3)}
+.red{color:var(--red);font-weight:600}.grey{color:var(--ink-3)}.ok{color:var(--go);font-weight:600}
+.chip{height:32px;padding:0 11px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn{height:34px;padding:0 13px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-size:13.5px;background:#fff;white-space:nowrap}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn.sm{height:28px;font-size:12.5px;padding:0 9px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;position:relative}
+.phone .h b{font-size:20px}
+.pc{margin:6px 12px 0;border:1px solid var(--rule);padding:8px 11px;display:flex;flex-direction:column;gap:2px}
+.pc .t{font:700 16px var(--font-cond);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto;background:#fff}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.drow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--rule-2)}
+.drow .l b{font-weight:600}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field .lbl{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.inp{min-height:38px;border:1px solid var(--rule);padding:8px 10px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;background:#fff}
+.drop{border:1.5px dashed #9AAAB6;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;background:var(--surface-2)}
+.ph{font:700 26px var(--font-cond);display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:18px;padding:0 14px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3)}
+.tabs span{padding:9px 0}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+</head><body>
+
+.ph .no{color:var(--amber);font-size:18px}.ph .nr{font:600 18px var(--font-cond);color:var(--ink-2)}.ph .miss{font:600 15px var(--font-cond);color:var(--red);letter-spacing:.02em}
+.wb{display:flex;gap:0;padding:4px 14px 10px;font-size:13px}.wb span{padding-right:14px;margin-right:14px;border-right:1px solid var(--rule-2)}.wb span:last-child{border:0}.wb b{display:block;font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.todo{margin:12px 14px 4px;border:1px solid var(--rule);border-left:4px solid var(--red);background:#fff}
+.todo .tt{padding:7px 11px;font:700 15px var(--font-cond);display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--rule-2)}
+.todo .it{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 11px;border-bottom:1px solid var(--rule-2);font-size:13px;align-items:center}
+.todo .it:last-child{border-bottom:0}.todo .it .w{font-size:12px;color:var(--ink-3)}
+.todo.am{border-left-color:var(--amber)}
+.mapbox{position:relative;margin:12px 14px 0;border:1px solid var(--rule);height:220px;overflow:hidden}
+.mapbox img{width:100%;height:100%;object-fit:cover}
+.ov{position:absolute;background:#fff;border:1px solid #9AAAB6;padding:6px 9px;font-size:12.5px;line-height:1.4;box-shadow:0 3px 10px rgba(14,26,36,.15)}
+.ov b{font:700 14px var(--font-cond)}
+.zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;border:1px solid #9AAAB6;background:#fff}.zoom span{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:16px;border-bottom:1px solid var(--rule-2)}.zoom span:last-child{border:0}
+.st{margin:14px 14px 4px;font:700 15px var(--font-cond);letter-spacing:.02em;display:flex;gap:8px;align-items:center}
+.st .who{font:500 13px var(--font-sans);color:var(--ink-3)}
+.kv{display:grid;grid-template-columns:128px 1fr;gap:5px 12px;padding:2px 14px 4px;font-size:13.5px}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0}
+.mono{font-family:var(--font-cond);font-weight:600;letter-spacing:.02em}
+.leg{margin:4px 14px;border:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:7px 10px;gap:10px}
+.leg .lt{font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.leg.now{border-left:4px solid var(--go);background:var(--go-bg)}
+.btn.call{color:var(--go);border-color:var(--go);font-weight:600}.btn.call.f{background:var(--go);color:#fff}
+.form{padding:10px 14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.grp{border:1px solid var(--rule);padding:8px 10px 0;margin-bottom:10px}
+.grp .gt{font:600 12px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+.inp.e{color:#9AAAB6}.inp.bad{border-color:var(--red);box-shadow:inset 3px 0 0 var(--red)}
+.chk{display:flex;gap:8px;align-items:center;font-size:13.5px;margin-bottom:4px}.chk i{width:16px;height:16px;border:1.5px solid var(--ink-2);display:inline-block}
+.bar{margin:0 14px;padding:8px 10px;font-size:13px;border:1px solid var(--red);background:var(--red-bg);color:var(--ink)}
+.bar b{color:var(--red)}
+ul.cmp{margin:0;padding:6px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.mbar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.mtabs{display:flex;gap:16px;padding:0 12px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden}
+.mtabs span{padding:10px 0}.mtabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+.acc{margin:6px 12px 0;border:1px solid var(--rule);padding:9px 11px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;min-height:44px}
+.acc b{font:700 15px var(--font-cond)}
+</style></head><body>
+<div class="sheet">
+  <div class="top"><h1>E32 · Panel transportu › Przegląd i awizacja · komputer i telefon</h1>
+    <span class="ex">„Dziś” — zrzuty 08.10, 00:42 i 00:48, konto Operacje HHL · „po zmianie” — dane z bazy 08.10; SG-03 w chwili 07.10, 09:22; kierowcy ukryci; zestaw i piloci z Twojej tabeli 07.10</span></div>
+
+  <div class="sec">Dziś</div>
+  <div class="card" style="width:562px">
+    <div class="h"><b>SG-03 › Przegląd</b><span class="pill am">Na placu</span><span class="pill rd">„nie może ruszyć”</span></div>
+    <img src="now-sg03.png" width="560" height="750" alt="">
+  </div>
+  <div class="card" style="width:562px">
+    <div class="h"><b>SG-15 › Przegląd</b><span class="pill gr">załadunek dziś</span><span class="pill rd">3 braki bez podsumowania</span></div>
+    <img src="now-sg15.png" width="560" height="750" alt="">
+  </div>
+  <div class="card" style="width:262px">
+    <div class="h"><b>Telefon 390 px</b></div>
+    <img src="now-m.png" width="260" height="563" alt="">
+    <div class="cap">SG-03: 1409 px treści. Zakładka „Historia” ucięta. Do numerów i kierowcy trzeba przewinąć 2 ekrany.</div>
+  </div>
+  <div class="card" style="width:1428px">
+    <div class="h"><b>Fakty 08.10</b><span class="sub">kod, baza produkcji (tylko odczyt), zrzuty</span></div>
+    <ul class="facts">
+      <li><b>Kolejność dziś:</b> mapa całego regionu, PDF, „Daty planu (KSH)”, typ i wymiary, „Kontrola trasy” i „Przeszkody” (dwa długie teksty „wyłączone”), „Profil trasy: Nie udało się pobrać profilu”, masa, numery, daty, ETA, kierowca, prom i czerwony baner. SG-03 ma 893 px treści przy 1366 px.</li>
+      <li><b>„potwierdził KSH · 1.10.2026, 21:43”</b> jest przy 94 z 94 transportów. To godzina importu pliku, a osoby potwierdzającej nie ma w żadnym. Tak samo jest przy 12 transportach bez daty załadunku i 17 bez daty dostawy. Od DATY-67 (0113) źródłem dat jest plik KSH, a „Potwierdź daty” usunięto. Plik nie ma godzin (0/94), stąd „01.10.2026 –”.</li>
+      <li><b>Baner „Brak zezwolenia … transport nie może ruszyć”</b> jest przy wszystkich 94, bo zezwoleń PL w bazie jest 0. Widać go też przy SG-03 („Na placu”) i SG-01 („Rozładowany”). Sprawdza tylko zezwolenie PL, bez SE i bez zezwoleń „Firma” (E31).</li>
+      <li><b>SG-15 ma załadunek dziś (czw 08.10).</b> Brakuje awizacji (pilne od 07.10, 12:00), numeru HHL i numeru SCX, a sprawa „Brak awizacji” ma status „nowa”. Przegląd pokazuje trzy czerwone „nie uzupełniono” w różnych miejscach. Nie ma podsumowania ani informacji, kto ma to uzupełnić. Przed wyjazdem jest ETA „11.10, 18:00 · przed terminem · Niska · ± 433 min”, a według E15 powinna być „–”.</li>
+      <li><b>Awizacja:</b> przycisk ma tylko SCX (`LoadDrawer.tsx` l. 199). Okno wymaga kierowcy i ciągnika, a telefon i naczepa są dobrowolne. Alarm w bazie (L3_AWIZ, 0143) wymaga kierowcy, telefonu, ciągnika i naczepy, więc zapisana awizacja może dalej liczyć się jako brak. Odcinka SE baza nie sprawdza.</li>
+      <li><b>Jeden brak, kilka alarmów:</b> 20 transportów bez awizacji daje 48 otwartych sygnałów. L3_AWIZ (48 h / 12 h przed załadunkiem) ma 18, a starszy RESOURCE_DEADLINE 15 dla kierowcy i 15 dla pojazdu. 13 transportów ma oba rodzaje.</li>
+      <li><b>Piloci:</b> baza ma tabelę pilotów (firma, rejestracja, odcinek PL / SE, kierowca, telefon), ale ma 0 wpisów, a panel jest w „Ustaleniach”. Wymóg liczy się z zezwoleń, których jest 0, więc wszędzie wychodzi „0 wymaganych”. Według Twojej tabeli pilota PL + SE potrzebują Kratownice (14 transportów, pierwszy KR-01 22.10) i PL-B (3, od 22.11). Symbol „PL” w pliku nie odróżnia PL-A od PL-B, robi to tylko szerokość 3,40 m. PL-1, PL-10.1 i PL-17.1 mają 2,60 m, a tabela PL-B 2,45 m. Cena jak przy 2,45 m jest już ustalona (30.09), a wysokość zestawu to pytanie 1.</li>
+      <li><b>Wymiary zestawu</b> ma 1 z 94 transportów (SG-01). Twoja tabela podaje je dla każdego symbolu (SG: 21,69 × 2,45 × 3,75 m), ale w aplikacji ich nie ma, a od nich zależą „Kontrola trasy” i „Przeszkody”. We wszystkich wierszach tabeli zestaw jest o 1,30 m wyższy od ładunku.</li>
+      <li><b>Kierowcy:</b> „R. P.|M. M.”, oba telefony w jednym linku (dzwoni tylko pierwszy), ciągnik „WGM00653|CTR44190”. Rozwiązanie jest w E6 (15:13). Prom „brak rezerwacji”: rejs ma 1 z 94 transportów (SG-24), a SG-03 przepłynął bez rejsu w systemie.</li>
+      <li><b>Daty z pliku do sprawdzenia:</b> KR-01 22.10 → 22.11 i KR-02 25.10 → 25.11 (31 dni). KR-04, KR-05, KR-06 i KR-07 mają załadunek i dostawę tego samego dnia. 70 transportów ma 4–8 dni. Mapa jest w skali regionu (zoom 11 z E1 niewdrożony), a przy SG-15 pisze „Brak danych — pozycji pojazdów”.</li>
+    </ul>
+  </div>
+
+  <div class="sec">Po zmianie · komputer · Operacje HHL</div>
+  <!-- PANEL A: SG-15 -->
+  <div class="card" style="width:560px">
+    <div style="padding:12px 14px 2px"><div class="ph">SG-15 <span class="miss">brak nr HHL</span> <span class="pill gr">Planowany</span><span style="flex:1"></span><span class="grey" style="font-size:18px">✕</span></div></div>
+    <div class="wb"><span><b>Odbiorca</b>Stegra, Boden</span><span><b>Załadunek</b>czw 08.10 · t41</span><span><b>Dostawa</b>śr 14.10 · t42</span></div>
+    <div class="tabs"><span class="on">Przegląd</span><span>Status</span><span>Dokumenty</span><span>Ceny</span><span>Czat</span><span>Historia</span></div>
+    <div class="todo">
+      <div class="tt">Do zrobienia przy tym transporcie · 4<span style="flex:1"></span><span class="pill rd">załadunek dziś</span></div>
+      <div class="it"><div><b>Awizacja</b> — kierowca, telefon, ciągnik, naczepa<div class="w">SCX · pilne od 07.10, 12:00</div></div><span class="pill gr">SCX</span></div>
+      <div class="it"><div><b>Nr zlecenia HHL</b><div class="w">HHL</div></div><span class="btn sm pri">Dodaj</span></div>
+      <div class="it"><div><b>Nr zlecenia SCX</b><div class="w">SCX</div></div><span class="pill gr">SCX</span></div>
+      <div class="it"><div><b>Zezwolenie PL i SE</b> — firmowe na „Słupy główne”<div class="w">SCX · raz dla wszystkich SG (E31) · po terminie</div></div><span class="pill gr">SCX</span></div>
+    </div>
+    <div class="mapbox"><img src="map-route-s.png" alt=""><div class="zoom"><span>+</span><span>−</span></div>
+      <div class="ov" style="right:40px;top:40px;width:178px"><b>Brak pozycji</b><br>Śledzenie od 08.10, 03:00<br><span class="red">Brak linku śledzenia — SCX</span></div></div>
+    <div class="st">Plan i ETA</div>
+    <dl class="kv">
+      <dt>Załadunek</dt><dd><b>czw 08.10.2026</b> · godzina nie podana<br><span class="grey">KSH Śrem · Grunwaldzka 27C</span></dd>
+      <dt>Dostawa</dt><dd><b>śr 14.10.2026</b> · godzina nie podana<br><span class="grey">Stegra, Boden</span></dd>
+      <dt>Daty</dt><dd>z harmonogramu KSH · import 01.10, 21:43<br><span class="grey">KSH może zmienić do wjazdu na załadunek</span></dd>
+      <dt>ETA Boden</dt><dd><b>–</b> <span class="grey">do wyjazdu ze Śremu (E15)</span></dd>
+    </dl>
+    <div class="st">Awizacja <span class="who">· uzupełnia SCX</span><span class="pill rd">brak</span></div>
+    <dl class="kv">
+      <dt>Kierowca</dt><dd class="red">—</dd>
+      <dt>Ciągnik · naczepa</dt><dd class="red">— · —</dd>
+      <dt>Link śledzenia</dt><dd class="red">—</dd>
+      <dt>Rejs</dt><dd class="grey">wybiera SCX z rozkładu w awizacji</dd>
+    </dl>
+    <div class="st">Ładunek i zestaw</div>
+    <dl class="kv">
+      <dt>Ładunek</dt><dd>Słupy główne · SG · 7 szt. · 20,44 t</dd>
+      <dt>Wymiary ładunku</dt><dd>18,21 × 2,45 × 2,45 m</dd>
+      <dt>Zestaw z ładunkiem</dt><dd><b>21,69 × 2,45 × 3,75 m</b> <span class="btn sm">Zmień</span><br><span class="grey">z Twojej tabeli (SG) · zmienia HHL</span></dd>
+      <dt>Zezwolenie</dt><dd><span class="pill sea">Firma</span> podpina się samo</dd>
+    </dl>
+    <div class="st">Numery zleceń</div>
+    <dl class="kv">
+      <dt>HHL</dt><dd class="red">brak <span class="btn sm pri" style="margin-left:6px">Dodaj</span></dd>
+      <dt>SCX</dt><dd class="red">brak <span class="grey" style="font-weight:400">· wpisuje SCX</span></dd>
+    </dl>
+    <div class="st">Dokumenty<span style="flex:1"></span><span class="note" style="font-weight:400">Dokumenty →</span></div>
+    <dl class="kv">
+      <dt>Zezwolenie PL, SE</dt><dd class="red">brak · po terminie</dd>
+      <dt>CMR z załadunku</dt><dd>do 2 h po załadunku</dd>
+      <dt>Polisa SCX</dt><dd class="ok">436000430439 · do 29.03.2027</dd>
+    </dl>
+    <div class="row" style="padding:12px 14px 14px"><span class="btn">PDF transportu (+ mapa)</span></div>
+  </div>
+
+  <!-- PANEL B: SG-03 -->
+  <div class="card" style="width:560px">
+    <div style="padding:12px 14px 2px"><div class="ph">SG-03 <span style="color:var(--amber);font-size:18px">·</span> <span class="nr">0005/09/S/2026</span> <span class="pill go">Na placu</span><span style="flex:1"></span><span class="grey" style="font-size:18px">✕</span></div></div>
+    <div class="wb"><span><b>Odbiorca</b>Stegra, Boden</span><span><b>Załadunek</b>czw 01.10 · t40</span><span><b>Dostawa</b>śr 07.10 · t41</span></div>
+    <div class="tabs"><span class="on">Przegląd</span><span>Status</span><span>Dokumenty</span><span>Ceny</span><span>Czat</span><span>Historia</span></div>
+    <div class="todo am">
+      <div class="tt">Do zrobienia przy tym transporcie · 2</div>
+      <div class="it"><div><b>CMR z załadunku</b><div class="w">SCX · po terminie</div></div><span class="pill gr">SCX</span></div>
+      <div class="it"><div><b>Zezwolenie PL i SE</b> — firmowe na „Słupy główne”<div class="w">SCX · brak pliku w systemie</div></div><span class="pill gr">SCX</span></div>
+    </div>
+    <div class="mapbox"><img src="map-site.png" alt=""><div class="zoom"><span>+</span><span>−</span></div>
+      <div class="ov" style="left:10px;bottom:10px"><b>Na placu od 07.10, 08:35</b><br>ostatnia pozycja 09:22 · postój<br><span class="grey">strefa „Plac budowy Stegra Boden” · zoom 11</span></div></div>
+    <div class="st">Plan i ETA</div>
+    <dl class="kv">
+      <dt>Załadunek</dt><dd><b>czw 01.10.2026</b> · godzina nie podana</dd>
+      <dt>Dostawa</dt><dd><b>śr 07.10.2026</b> · godzina nie podana</dd>
+      <dt>ETA Boden</dt><dd><b>Na placu od 07.10, 08:35</b> <span class="pill go">w planie</span></dd>
+    </dl>
+    <div class="st">Kierowcy i zestaw <span class="who">· przepięcie naczepy</span></div>
+    <div class="leg"><div><div class="lt">Odcinek PL · Śrem → prom</div><b>R. P.</b> · +48 ••• ••• 313 · ciągnik <span class="mono">WGM00653</span></div><span class="btn call">☎ Zadzwoń</span></div>
+    <div class="leg now"><div><div class="lt">Odcinek SE · prom → Boden · teraz</div><b>M. M.</b> · +48 ••• ••• 013 · ciągnik <span class="mono">CTR44190</span></div><span class="btn call f">☎ Zadzwoń</span></div>
+    <dl class="kv" style="margin-top:6px">
+      <dt>Naczepa</dt><dd class="mono">GD035YX</dd>
+      <dt>Link śledzenia</dt><dd class="ok">wpisany</dd>
+      <dt>Rejs</dt><dd class="grey">nie przypisano</dd>
+      <dt>Ładunek</dt><dd>Słupy główne · 7 szt. · 19,10 t · zestaw 21,69 × 2,45 × 3,75 m</dd>
+    </dl>
+    <div class="st">Numery zleceń</div>
+    <dl class="kv">
+      <dt>HHL</dt><dd class="mono">0005/09/S/2026 <span class="btn sm" style="margin-left:6px">Edytuj</span></dd>
+      <dt>SCX</dt><dd class="mono">15062/2026/OSL/GDA/P</dd>
+    </dl>
+    <div class="st">Dokumenty<span style="flex:1"></span><span class="note" style="font-weight:400">Dokumenty →</span></div>
+    <dl class="kv">
+      <dt>Zezwolenie PL, SE</dt><dd class="red">brak pliku</dd>
+      <dt>CMR z załadunku</dt><dd class="red">brak · po terminie</dd>
+      <dt>Polisa SCX</dt><dd class="ok">436000430439 · do 29.03.2027</dd>
+    </dl>
+    <div class="cap">Po wyjeździe nie ma baneru „nie może ruszyć”. Braki zostają w Do zrobienia SCX.</div>
+  </div>
+
+  <div class="card" style="width:276px">
+    <div class="h"><b>Kto co widzi i zmienia</b></div>
+    <ul class="facts">
+      <li><b>HHL Administrator</b> widzi wszystko. Zmienia numer HHL i zestaw. Może poprawić awizację (z pilotami, gdy transport ich wymaga), co zapisuje się w Historii. Dat i godzin nie zmienia.</li>
+      <li><b>HHL Operacje</b> zmienia numer HHL i zestaw (E9). Awizację i pilotów tylko ogląda. Dat i godzin nie zmienia.</li>
+      <li><b>SCX</b> (obie role) robi awizację: kierowców, ciągniki, naczepę, przepięcie, link śledzenia, rejs i — gdy transport ich wymaga — pilotów PL i SE. Wpisuje numer SCX. Zestaw tylko ogląda. Dat i godzin nie zmienia.</li>
+      <li><b>KSH</b> tylko ogląda. Ma „Edytuj daty” do wjazdu na załadunek (jak dziś) — daty i godziny zmienia i potwierdza tylko KSH i plik KSH (09.10). Nie ma „Do zrobienia”, tylko linię stanu, np. „Awizacja: przewoźnik uzupełnia”. Numery według E41.</li>
+      <li><b>Znika:</b> „Kontrola trasy” i „Przeszkody” (wrócą jedną linią, gdy powstanie lista przeszkód), „Profil trasy” (E17), czerwony baner zezwolenia i „potwierdził KSH” bez osoby.</li>
+      <li><b>„Ocena przewoźnika”</b> zostaje dla HHL po rozładunku, na dole.</li>
+    </ul>
+  </div>
+
+  <div class="sec">Po zmianie · okno Awizacja (SCX, z pilotami przy „PL + SE”), telefon</div>
+  <div class="card" style="width:560px">
+    <div class="h"><b>Awizacja · SG-15</b><span class="miss" style="font:600 15px var(--font-cond);color:var(--red)">brak nr SCX</span><span class="sub">załadunek czw 08.10 · Śrem</span><span style="flex:1"></span><span class="grey">✕</span></div>
+    <div class="bar" style="margin-top:10px"><b>Brakuje: kierowca, telefon, ciągnik, naczepa.</b> Pilne od 07.10, 12:00 (12 h przed dniem załadunku).</div>
+    <div class="form">
+      <div class="grp"><div class="gt">Kierowca · odbiór i dostawa · Śrem → Boden</div>
+        <div class="field"><span class="lbl">Imię i nazwisko</span><div class="inp bad"></div></div>
+        <div class="grid2"><div class="field"><span class="lbl">Telefon</span><div class="inp bad"><span class="grey">PL ▾ &nbsp; 601 234 567</span></div></div>
+        <div class="field"><span class="lbl">Ciągnik</span><div class="inp bad"></div></div></div>
+      </div>
+      <div class="field"><span class="lbl">Naczepa (jedna na całą trasę)</span><div class="inp bad"></div></div>
+      <div class="chk"><i></i>Przepięcie naczepy <span class="note">— po zaznaczeniu pojawia się „Odcinek SE · prom → Boden” (E6)</span></div>
+      <div class="field" style="margin-top:8px"><span class="lbl">Link śledzenia</span><div class="inp e">link z systemu GPS przewoźnika (pole jak dziś, E27; link RIO rozpoznawany sam — E44)</div></div>
+      <div class="grid2"><div class="field"><span class="lbl">Armator</span><div class="inp"><span>Polferries</span><span class="grey">▾</span></div></div>
+      <div class="field"><span class="lbl">Rejs do Szwecji</span><div class="inp"><span class="grey">rejsy po 08.10 z Gdańska</span><span class="grey">▾</span></div></div></div>
+      <div class="grid2"><div class="field"><span class="lbl">Nr zlecenia SCX</span><div class="inp bad"></div></div>
+      <div class="field"><span class="lbl">Nr zlecenia HHL</span><div class="inp" style="background:var(--surface-2)"><span class="grey">wpisuje HHL · E41 pyt. 2</span></div></div></div>
+      <div class="row" style="justify-content:space-between;margin-top:6px"><span class="note" style="max-width:330px">Można zapisać część. Sprawa w Do zrobienia zostaje, dopóki awizacja nie jest kompletna. Każda zmiana trafia do Historii jako „było → jest”.</span><span class="row"><span class="btn">Anuluj</span><span class="btn pri">Zapisz</span></span></div>
+    </div>
+  </div>
+  <div class="card" style="width:462px">
+    <div class="h"><b>Awizacja · KR-01 · Piloci</b><span class="sub">uzupełnia SCX w oknie Awizacja</span><span style="flex:1"></span><span class="pill am">2 brakują</span></div>
+    <div style="padding:8px 14px 0;font-size:13px">Kratownice: zestaw 23,69 × 3,52 × 3,9 m. Twoja tabela: „PL + SE” — wymagany <b>pilot PL i pilot SE</b> (dwóch różnych). Załadunek czw 22.10.</div>
+    <div class="bar" style="margin:8px 14px 0"><b>Brakuje: pilot PL — numer rejestracyjny, imię i nazwisko; pilot SE — numer rejestracyjny, imię i nazwisko.</b></div>
+    <div style="padding:6px 14px 0;font-size:13px">Konwój czw 22.10: <span class="grey">{kody transportów KR z tą datą załadunku}</span> — ci sami piloci dla całego konwoju</div>
+    <div class="form">
+      <div class="grp"><div class="gt">Pilot PL · Śrem → Gdańsk</div>
+        <div class="grid2"><div class="field"><span class="lbl">Numer rejestracyjny</span><div class="inp bad"></div></div><div class="field"><span class="lbl">Imię i nazwisko</span><div class="inp bad"></div></div></div>
+      </div>
+      <div class="grp"><div class="gt">Pilot SE · Nynäshamn → Boden</div>
+        <div class="grid2"><div class="field"><span class="lbl">Numer rejestracyjny</span><div class="inp bad"></div></div><div class="field"><span class="lbl">Imię i nazwisko</span><div class="inp bad"></div></div></div>
+      </div>
+      <div class="note">Wymóg pochodzi z symbolu („PL + SE” w Twojej tabeli: KR, PL-B), nie z zezwoleń. Przy „BRAK” sekcji „Piloci” nie ma w żadnej roli i na żadnym ekranie, a baza odrzuca zapis. Pola pilota: tylko numer rejestracyjny oraz imię i nazwisko. Termin to 48 h i 12 h przed załadunkiem, jak w bazie („propozycja — do potwierdzenia z SCX”); brak pilotów = pozycja w Do zrobienia SCX. HHL Administrator może poprawić; HHL Operacje i KSH tylko oglądają. Dziś to dotyczy 17 transportów: KR 14 i PL-B 3 (decyzje 09.10, 12:33 i 13:09).</div>
+    </div>
+  </div>
+  <div class="phone" style="height:760px">
+    <div class="mbar"><span style="font-size:20px">←</span><span class="ph" style="font-size:22px">SG-15</span><span class="miss" style="font:600 13px var(--font-cond);color:var(--red)">brak nr HHL</span><span style="flex:1"></span><span class="pill gr">Planowany</span></div>
+    <div class="mtabs"><span class="on">Przegląd</span><span>Status</span><span>Dokumenty</span><span>Ceny</span><span>Czat</span><span>Historia</span></div>
+    <div class="todo" style="margin:10px 12px 0">
+      <div class="tt" style="font-size:14px">Do zrobienia · 4<span style="flex:1"></span><span class="pill rd">załadunek dziś</span></div>
+      <div class="it"><div><b>Awizacja</b><div class="w">SCX · pilne od 07.10, 12:00</div></div><span class="pill gr">SCX</span></div>
+      <div class="it"><div><b>Nr zlecenia HHL</b></div><span class="btn sm pri" style="height:36px">Dodaj</span></div>
+      <div class="it"><div><b>Nr SCX · Zezwolenia</b><div class="w">SCX</div></div><span class="pill gr">SCX</span></div>
+    </div>
+    <div class="mapbox" style="margin:10px 12px 0;height:150px"><img src="map-route-s.png" alt=""><div class="ov" style="right:6px;top:6px;font-size:11.5px"><b style="font-size:13px">Brak pozycji</b><br>śledzenie od 08.10, 03:00</div></div>
+    <div class="acc"><span><b>Plan</b> · czw 08.10 → śr 14.10</span><span class="grey">ETA – ▾</span></div>
+    <div class="acc"><span><b>Awizacja</b> <span class="red">brak</span></span><span class="grey">▾</span></div>
+    <div class="acc"><span><b>Ładunek i zestaw</b> · SG · 21,69 m</span><span class="grey">▾</span></div>
+    <div class="acc"><span><b>Numery</b> <span class="red">brak obu</span></span><span class="grey">▾</span></div>
+    <div class="acc"><span><b>Dokumenty</b> <span class="red">1 brak</span></span><span class="grey">▾</span></div>
+    <div class="cap" style="padding-top:10px">Panel na cały ekran ze strzałką (E17). Zakładki przewija się w bok. Sekcje są zwinięte, a „Zadzwoń” przy kierowcy ma 44 px.</div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,181 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--surface-3:#EAEFF3;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;
+--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F8DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px;display:inline-block}
+.cap{font:600 12px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.note{font-size:12.5px;color:var(--ink-3)}
+.pill{font:600 11.5px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.red{color:var(--red);border-color:var(--red);background:var(--red-bg)}
+.pill.amber{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}
+.pill.grey{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}
+.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.btn{font:600 13px var(--font-sans);padding:6px 11px;border:1px solid var(--ink);background:var(--ink);color:#fff;white-space:nowrap}
+.btn.ghost{background:var(--surface);color:var(--ink)}
+.call{font:600 13px var(--font-sans);padding:6px 11px;border:1px solid var(--go);background:var(--surface);color:var(--go);white-space:nowrap}
+/* układ komputera */
+.app{display:grid;grid-template-columns:168px 1fr;min-height:100vh;max-width:1280px}
+.side{background:var(--surface);border-right:1px solid var(--rule);padding:12px 0}
+.side a{display:flex;justify-content:space-between;padding:7px 14px;color:var(--ink-2);text-decoration:none;font-size:14px}
+.side a.on{background:var(--amber-bg);box-shadow:inset 3px 0 0 var(--amber);color:var(--ink);font-weight:600}
+.side .b{font:600 12px var(--font-cond);padding:0 6px;border:1px solid var(--rule);background:var(--surface-2)}
+.side a.on .b{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+.main{padding:14px 16px}
+.top{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.top h1{margin:0;font:700 24px var(--font-cond)}
+.cols{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:14px;align-items:start}
+.pn{background:var(--surface);border:1px solid var(--rule)}
+.pn>.hd{display:flex;align-items:baseline;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.pn>.hd b{font:700 18px var(--font-cond)}
+.pn>.hd .n{font:700 18px var(--font-cond);color:var(--red)}
+.pn>.hd .sp{flex:1}
+.chips{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--rule-2);flex-wrap:wrap}
+.chip{font-size:12.5px;padding:3px 9px;border:1px solid var(--rule);background:var(--surface)}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+/* karta transportu */
+.card{border-bottom:1px solid var(--rule-2)}
+.card .ch{display:grid;grid-template-columns:4px 1fr auto;gap:10px;padding:9px 12px;align-items:center}
+.card .ch i{align-self:stretch;background:var(--red)}
+.card .ch i.a{background:var(--amber)}
+.card .ch b{font:700 16px var(--font-cond)}
+.card .ch small{display:block;color:var(--ink-2);font-size:13px}
+.card.open{background:var(--surface-2);border:2px solid var(--sea);margin:6px}
+.item{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:8px 12px 8px 26px;border-top:1px solid var(--rule-2);align-items:center}
+.item .t{font-weight:600}
+.item .m{grid-column:1;color:var(--ink-3);font-size:12.5px}
+.item .acts{grid-column:2;grid-row:1/3;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.foot{padding:6px 12px 9px 26px;font-size:12px;color:var(--ink-3);border-top:1px dashed var(--rule)}
+/* sytuacja */
+.sec{padding:9px 12px;border-bottom:1px solid var(--rule-2)}
+.sec h4{margin:0 0 6px;font:700 15px var(--font-cond);display:flex;gap:8px;align-items:baseline}
+.sit{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;padding:5px 0;border-top:1px solid var(--rule-2);font-size:13px}
+.sit:first-of-type{border-top:0}
+.sit .r{font:700 13px var(--font-cond);padding:0 5px;border:1px solid var(--ink-3);height:fit-content}
+.sit .x{grid-column:2;color:var(--ink-3);font-size:12px}
+.sev{font:600 11px var(--font-cond);letter-spacing:.04em;text-transform:uppercase}
+.sev.h{color:var(--red)}.sev.m{color:var(--amber-ink)}
+.ex-card{border:1px dashed var(--amber);background:#FFFDF7;margin:10px 12px;padding:8px 10px}
+/* telefon */
+.phones{display:none;gap:16px;padding:12px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+body.m .app{display:none}body.m .phones{display:flex}
+.ph{width:366px;background:var(--page);border:1px solid var(--rule)}
+.ph .tb{background:var(--ink);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px}
+.ph .tb b{font:700 19px var(--font-cond)}
+.tabs{display:grid;grid-template-columns:1.3fr 1fr .8fr;background:var(--surface);border-bottom:1px solid var(--rule)}
+.tabs span{padding:10px 6px;text-align:center;font:600 14px var(--font-cond);letter-spacing:.03em;color:var(--ink-3)}
+.tabs span.on{color:var(--ink);box-shadow:inset 0 -3px 0 var(--ink)}
+.tabs span em{font-style:normal;color:var(--red);margin-left:3px}
+.ph .bd{padding:8px;display:flex;flex-direction:column;gap:8px}
+.ph .item{padding-left:12px;grid-template-columns:1fr}
+.ph .item .acts{grid-column:1;grid-row:auto;justify-content:flex-start;margin-top:4px}
+.ph .item .acts .btn,.ph .item .acts .call{padding:9px 12px;font-size:14px}
+.ph .foot{padding-left:12px}
+</style></head><body>
+
+<div class="app">
+  <nav class="side">
+    <a>Kokpit</a><a>Mapa</a><a>Harmonogram <span class="b">94</span></a>
+    <a class="on">Ryzyka <span class="b">23</span></a><a>Dokumenty</a><a>Finanse</a><a>Faktury <span class="b">1</span></a><a>Strefy</a><a>Opcje</a>
+  </nav>
+  <div class="main">
+    <div class="top"><h1>Ryzyka</h1><span class="ex">Przykład układu · sprawy, terminy, promy i drogi z bazy 07.10 · liczba 23 wyliczona z bazy wg zasad z raportu</span></div>
+    <div class="cols">
+      <section class="pn">
+        <div class="hd"><b>Do zrobienia</b><span class="n">23</span><span class="sp"></span><span class="cap">ta sama liczba w menu, w Kokpicie i w dzwonku</span></div>
+        <div class="chips"><span class="chip">Moje</span><span class="chip">Moja firma</span><span class="chip on">Wszystkie 23</span><span class="chip" style="margin-left:auto">Najpilniejsze najpierw</span></div>
+
+        <div class="card open">
+          <div class="ch"><i></i><span><b>SG-05 · 15065/2026/OSL/GDA/P</b><small>Zaplanowany · załadunek 02.10 minął · dostawa 08.10</small></span><span class="pill red">2 sprawy</span></div>
+          <div class="item"><span class="t">Awizacja po terminie od 01.10, 12:00</span><span class="m">Brak kierowcy, tablic i numeru zlecenia SCX · decyduje Scandinavian Express · nikt nie wziął</span><span class="acts"><span class="call">☎ SCX</span><span class="btn ghost">Otwórz awizację</span></span></div>
+          <div class="item"><span class="t">Brak numeru zlecenia HHL</span><span class="m">Uzupełnia H&amp;H Logistics</span><span class="acts"><span class="btn">Biorę tę sprawę</span><span class="btn ghost">Uzupełnij</span></span></div>
+          <div class="foot">Dziś to 7 osobnych wpisów: brak kierowcy, brak tablic, brak nr SCX, brak nr HHL, brak awizacji i 2 × „Decyzja po terminie”.</div>
+        </div>
+
+        <div class="card"><div class="ch"><i></i><span><b>SG-09 · 15069/2026/OSL/GDA/P</b><small>Awizacja po terminie od 04.10, 12:00 · brak nr HHL<br><span style="color:var(--sea)">ⓘ Informacja: zakaz ruchu w SE w dniu przejazdu 10.10 (nie liczy się)</span></small></span><span class="pill red">2 sprawy</span></div></div>
+        <div class="card"><div class="ch"><i></i><span><b>SG-10 · 15071/2026/OSL/GDA/P</b><small>Awizacja po terminie od 04.10, 12:00 · brak nr HHL<br><span style="color:var(--sea)">ⓘ Informacja: zakaz ruchu w SE w dniu przejazdu 10.10 (nie liczy się)</span></small></span><span class="pill red">2 sprawy</span></div></div>
+        <div class="card"><div class="ch"><i class="a"></i><span><b>Opłata paliwowa SEFS: brak źródła indeksu</b><small>Decyduje H&amp;H Logistics · termin 18.10, 14:45 · 12 jednakowych zgłoszeń z 04.10 połączone w jedno</small></span><span class="btn">Biorę tę sprawę</span></div></div>
+        <div class="card"><div class="ch"><i class="a"></i><span><b>… 19 kolejnych transportów</b><small>każdy jako jedna karta, rozwijana kliknięciem w tym samym miejscu</small></span><span class="pill grey">rozwiń</span></div></div>
+
+        <div class="ex-card">
+          <div class="cap" style="color:var(--amber-ink)">Przykład · gdy transport jest w drodze (dziś żaden nie jest)</div>
+          <div style="margin-top:4px"><b>SG-xx · w drodze po E4, za Sundsvall</b></div>
+          <div class="note" style="color:var(--ink-2)">Przed pojazdem: roboty drogowe Ostvik – Kinnbäck, duży wpływ, za ok. 300 km.</div>
+          <div class="note">Prom, z którego zjechał, i roboty przy Axmartavlan, które minął, znikają z tej karty i z dzwonka. Zostają tylko w „Sytuacja na trasie”.</div>
+        </div>
+      </section>
+
+      <section class="pn">
+        <div class="hd"><b>Sytuacja na trasie</b><span class="sp"></span><span class="cap">bez dzwonka</span></div>
+        <div class="sec">
+          <h4>Promy dziś <span class="note">na pokładzie: 0 transportów</span></h4>
+          <div class="sit"><span class="r">GDN</span><span><b>Nova Star · 18:00 Gdańsk → Nynäshamn</b></span><span class="x"><span class="sev h">możliwe odwołanie</span> · fala 3,2 m, porywy 42 węzły (progi 3,8 m / 40 węzłów) · 11:16</span></div>
+          <div class="sit"><span class="r">GDY</span><span><b>Stena Ebba · 20:00 Gdynia → Karlskrona</b></span><span class="x"><span class="sev h">możliwe odwołanie</span> · fala 3,2 m, porywy 40 węzłów · 08:15</span></div>
+          <div class="note" style="margin-top:4px">Jeden wiersz na rejs, najnowszy pomiar. 18 informacji „statek w porcie” trafia do historii rejsu, nie na tę listę.</div>
+        </div>
+        <div class="sec">
+          <h4>Drogi PL <span class="note">HERE</span></h4>
+          <div class="note">Brak danych: pobieranie z HERE nie działa (etap E2). Po wdrożeniu E2: odświeżanie co 15 min, ten sam układ co drogi SE.</div>
+        </div>
+        <div class="sec">
+          <h4>Drogi SE <span class="note">E4: 34 · E22: 6 · Trafikverket</span></h4>
+          <div class="sit"><span class="r">E22</span><span>Wypadek, od węzła Åryd (54) do węzła Bräkne Hoby (55), oba kierunki, Blekinge</span><span class="x"><span class="sev m">duży wpływ</span> · 07.10, 15:28 – 16:45</span></div>
+          <div class="sit"><span class="r">E4</span><span>Zamknięcie drogi, od węzła Gävle N (200) do Axmartavlan (202), oba kierunki, Gävleborg</span><span class="x"><span class="sev h">bardzo duży wpływ</span> · od 12.10 · przetłumaczone ze szwedzkiego</span></div>
+          <div class="sit"><span class="r">E4</span><span>Roboty drogowe, od Axmartavlan (202) do Högbacka, w kierunku Sundsvall, Gävleborg</span><span class="x"><span class="sev m">duży wpływ</span> · 07.10, 07:29 – 16.10, 16:00</span></div>
+          <div class="sit"><span class="r">E4</span><span>Roboty drogowe, od węzła Ostvik do granicy Västerbotten / Norrbotten przy Kinnbäck, oba kierunki</span><span class="x"><span class="sev m">duży wpływ</span></span></div>
+          <div class="note" style="margin-top:4px">Najpierw bardzo duży i duży wpływ. Pokaż wszystkie 40. Zakazy ruchu w dniu przejazdu (9) są informacją przy swoim transporcie, nie liczą się do „Do zrobienia”.</div>
+        </div>
+        <div class="sec" style="border-bottom:0">
+          <h4>System <span class="note">tylko HHL</span></h4>
+          <div class="note" style="color:var(--ink-2)">4 testowe SMS z 01.10 bez potwierdzenia, 1 błąd przeglądarki z 03.10. Przeniesione do Opcje › Stan systemu.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="phones">
+  <div class="ph">
+    <div class="tb"><b>Ryzyka</b><span style="flex:1"></span><span class="ex" style="background:transparent;color:#fff;border-color:#ffffff80">Przykład</span></div>
+    <div class="tabs"><span class="on">Do zrobienia<em>23</em></span><span>Na trasie</span><span>System</span></div>
+    <div class="bd">
+      <div class="pn">
+        <div class="card open" style="margin:0;border-width:0 0 0 0;background:var(--surface)">
+          <div class="ch"><i></i><span><b>SG-05 · 15065</b><small>Załadunek 02.10 minął · dostawa 08.10</small></span><span class="pill red">2</span></div>
+          <div class="item"><span class="t">Awizacja po terminie od 01.10, 12:00</span><span class="m">Brak kierowcy, tablic, nr SCX · decyduje Scandinavian Express</span><span class="acts"><span class="call">☎ SCX</span><span class="btn ghost">Awizacja</span></span></div>
+          <div class="item"><span class="t">Brak numeru zlecenia HHL</span><span class="m">Uzupełnia H&amp;H Logistics</span><span class="acts"><span class="btn">Biorę tę sprawę</span><span class="btn ghost">Uzupełnij</span></span></div>
+        </div>
+      </div>
+      <div class="pn">
+        <div class="card"><div class="ch"><i></i><span><b>SG-09 · 15069</b><small>Awizacja po terminie od 04.10 · brak nr HHL<br><span style="color:var(--sea)">ⓘ zakaz ruchu SE 10.10</span></small></span><span class="pill red">2</span></div></div>
+        <div class="card"><div class="ch"><i></i><span><b>SG-10 · 15071</b><small>Awizacja po terminie od 04.10 · brak nr HHL<br><span style="color:var(--sea)">ⓘ zakaz ruchu SE 10.10</span></small></span><span class="pill red">2</span></div></div>
+        <div class="card" style="border-bottom:0"><div class="ch"><i class="a"></i><span><b>SEFS: brak źródła indeksu</b><small>HHL · termin 18.10 · 12 zgłoszeń w jednym</small></span><span class="pill amber">1</span></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="ph">
+    <div class="tb"><b>Ryzyka</b><span style="flex:1"></span><span class="ex" style="background:transparent;color:#fff;border-color:#ffffff80">Przykład</span></div>
+    <div class="tabs"><span>Do zrobienia<em>23</em></span><span class="on">Na trasie</span><span>System</span></div>
+    <div class="bd">
+      <div class="pn">
+        <div class="sec">
+          <h4>Promy dziś</h4>
+          <div class="sit"><span class="r">GDN</span><span><b>Nova Star · 18:00</b></span><span class="x"><span class="sev h">możliwe odwołanie</span> · porywy 42 węzły</span></div>
+          <div class="sit"><span class="r">GDY</span><span><b>Stena Ebba · 20:00</b></span><span class="x"><span class="sev h">możliwe odwołanie</span> · porywy 40 węzłów</span></div>
+        </div>
+        <div class="sec"><h4>Drogi PL</h4><div class="note">Brak danych do czasu wdrożenia E2.</div></div>
+        <div class="sec" style="border-bottom:0">
+          <h4>Drogi SE <span class="note">40</span></h4>
+          <div class="sit"><span class="r">E22</span><span>Wypadek, Åryd – Bräkne Hoby</span><span class="x"><span class="sev m">duży wpływ</span> · do 16:45</span></div>
+          <div class="sit"><span class="r">E4</span><span>Zamknięcie, Gävle N – Axmartavlan</span><span class="x"><span class="sev h">bardzo duży wpływ</span> · od 12.10</span></div>
+          <div class="sit"><span class="r">E4</span><span>Roboty, Axmartavlan – Högbacka</span><span class="x"><span class="sev m">duży wpływ</span> · do 16.10</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>if(location.search.includes('phone'))document.body.classList.add('m');</script>
+</body></html>

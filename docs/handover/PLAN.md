@@ -1,1091 +1,543 @@
-# PLAN CIĄGŁY — TOWER
+# PLAN PRACY WATCH TOWER — jedyna lista pracy
 
-> Zapisz jako `docs/handover/PLAN.md`. **Od teraz to jedyna lista pracy.**
-> `POSTEP.md` zostaje dziennikiem wykonanego. `SCOPE.md` — rejestrem zakresu.
+**Wersja: 08.10.2026, 16:05 (koordynator Claude, na polecenie właściciela 08.10 14:43); zmiana 16:46: jeden folder, jeden wykonawca, paczki po kolei (§3, dopisek D-20261008-1646-01); zmiana 09.10.2026, 01:20: audyt kompletu — termin liczony od startu, brama niedzielna, przywrócone decyzje właściciela, nowe pozycje §5 i §6, treści „Jak pracuję” (§8); zmiana 09.10.2026, 14:11: decyzje właściciela z 09.10 (E44 link RIO 10:34–11:19, piloci 12:33, konwój KR, W20, W22 i aktualizacje 1–5 z 13:09) — E44 w P4, zmiany w P1, P3, P5, P6, P7, P9, P10a, P10b, W14 i W20 zamknięte, W22 rozstrzygnięte, nowe W26–W31; dopiski D-20261009-1233-01 i D-20261009-1309-01 (§8).** Zastępuje cały poprzedni `PLAN.md` (przeniesiony do `docs/archiwum/2026-10-08/docs/handover/PLAN.md`). Nic z poprzedniego planu nie obowiązuje, jeśli nie jest wpisane tutaj.
 
----
-
-# 1. ZASADY PRACY CIĄGŁEJ
-
-1. **Realizujesz kolejkę z sekcji 3 od góry, bez przerw.** Po zakończeniu
-   pozycji: wpis w `POSTEP.md` z liczbami, status w tym pliku, **od razu
-   następna pozycja**. Nie pytasz, czy iść dalej. Nie czekasz na akceptację.
-2. **Zmiany tylko dopisujemy.** Koordynator przysyła bloki `DOPISZ` (sekcja 2).
-   Istniejących pozycji nie przepisujemy — najwyżej oznaczamy
-   `ZASTĄPIONA PRZEZ <ID>`.
-3. **Pytanie do właściciela nie zatrzymuje kolejki.** Wpisujesz je do
-   sekcji 4 (Decyzje oczekujące) i **przechodzisz do następnej pozycji,
-   która od niego nie zależy**. Kolejka nigdy nie stoi przez jedno pytanie.
-4. **STOP — wyłącznie w tych sytuacjach:**
-   - usunięcie albo zmiana prawdziwych danych na produkcji
-   - wydanie pieniędzy albo zmiana planu usług
-   - wysłanie czegokolwiek do prawdziwych użytkowników z zewnątrz
-   - wzorzec zrzutów zmienia się poza zakresem przewidzianym w pozycji
-   - dane, które może dać tylko właściciel (stawki, umowy)
-5. **Znaleziona luka bezpieczeństwa wysokiej wagi:** naprawiasz od razu,
-   jako następną pozycję, bez pytania — i zgłaszasz w raporcie.
-6. **Raport:** jeden krótki po każdej zakończonej pozycji (ID, wynik
-   liczbami, commit). Właściciel przekazuje raporty koordynatorowi
-   w dogodnym momencie — nie po każdym.
-7. **Nic nie ginie:** każda pozycja z `SCOPE.md` o statusie innym niż
-   DONE musi mieć swoje miejsce w kolejce albo w dzienniku odłożeń.
+Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower są nadrzędne. Wszystko co jest starsze jest nieaktualne i nie może obowiązywać.” Właściciel, 13:26: „Najświeższe ustalenia … nadpisują wszelkie starsze decyzje i rozwiązania.”
 
 ---
 
-# 2. PROTOKÓŁ DOPISYWANIA
+## §0. Cel, termin, źródła
 
-Koordynator przysyła wyłącznie bloki w tej formie:
+- **Cel:** kompletna aplikacja Watch Tower według audytu 07–08.10.2026, na produkcji `tower.log-mar.pl`, gotowa do pierwszego prawdziwego transportu od importu do faktury (R-3) i wydania `release-1.0`.
+- **Termin: 4 dni pracy** (właściciel 08.10 14:43: 4 dni na zbudowanie kompletnej aplikacji). **Dzień 1 = dzień, w którym właściciel uruchamia sesję 0** (zapowiedziany start: niedziela 11.10.2026). Przy starcie 11.10: Dzień 1 = niedziela 11.10, Dzień 2 = poniedziałek 12.10, Dzień 3 = wtorek 13.10, Dzień 4 = środa 14.10. **Wydanie `release-1.0`: koniec Dnia 4, 20:00** (przy starcie 11.10: 14.10.2026, 20:00); granica terminu: koniec Dnia 4, 23:59 (4 h zapasu). Datę wydania potwierdza właściciel (§5 W17); do jego odpowiedzi obowiązuje koniec Dnia 4, 20:00. Punkty kontrolne w §3.
+- **Źródła, w tej kolejności przy sprzeczności:**
+  1. `docs/handover/wzorzec/01_KONSTYTUCJA.md` (ze zmianami z 08.10.2026);
+  2. `docs/handover/audyt_claude_2026-10-08/`:
+     - `DECYZJE_08_10.md` — decyzje właściciela;
+     - `ROZSTRZYGNIECIA_LUK.md` — wiążące rozstrzygnięcia 156 luk;
+     - `etapy/E<nr>.md` — co zbudować;
+     - `makiety_html/E<nr>/` i `raport/img/` — wygląd;
+     - `paczki/` — szczegółowe zlecenia paczek;
+     - razem z dopiskami włączonymi do planu (`docs/handover/dopiski/`: D-20261008-1646-01, D-20261009-0015-01, D-20261009-1233-01, D-20261009-1309-01) — przy sprzeczności ze starszym zapisem obowiązuje nowsza decyzja właściciela (08.10 13:26, 14:43);
+  3. ten plik — kolejność pracy, zakres paczek, sposób;
+  4. `docs/handover/wzorzec/03_REJESTR_DECYZJI.md` — starsze decyzje, tylko tam, gdzie audyt milczy;
+  5. kod w repozytorium — opis stanu dzisiejszego, nie wzór docelowy.
+- **Nigdy jako polecenie:** `docs/archiwum/**` (w tym wszystko przeniesione 08.10), stare zlecenia, plany, prompty, raporty.
 
-```
-DOPISZ
-ID: <etap>-<numer>
-Priorytet: P0 | P1 | P2
-Opis: …
-Kryterium odbioru: …
-```
+## §1. Zasady wykonania (szczegóły w `AGENTS.md`)
 
-- **P0** — bezpieczeństwo albo bloker: wchodzi jako następna pozycja
-  po bieżącej; bieżącej nie przerywasz
-- **P1** — bieżący etap, na koniec jego listy
-- **P2** — etap późniejszy, na koniec tamtego etapu
+1. **Pracujesz paczkami z §4, w kolejności z §3.** Po zamknięciu paczki bierzesz następną z kolejności, bez pytania.
+2. **Jedna paczka = jedna gałąź `pakiet/P<n>-<nazwa>`, jedna brama, jedno wdrożenie.** Commity w trakcie mogą być małe; pełna brama tylko na końcu paczki.
+3. **Brama paczki (kolejno):**
+   1. szybkie testy przy każdym pushu (hak);
+   2. zestawy bazy dotknięte zmianą (`SUITES=… bash tests/db/gate.sh` po P0b);
+   3. przed scaleniem:
+      - rebase na `main`;
+      - numer migracji = następny wolny w chwili rebase;
+      - pełna brama lokalna `bash tests/db/gate.sh`, jeśli jest migracja;
+      - `scripts/ci/fresh-smoke.sh`;
+      - od P3, gdy paczka ma migrację: doradca Supabase „security” na TEST po potwierdzeniu TEST bez nowych zgłoszeń spoza `tests/db/advisor-exceptions.txt` (E19 pkt 6 — nowe zgłoszenie blokuje wdrożenie); ostrzeżenie o ochronie przed wyciekniętymi hasłami na TEST (plan darmowy, funkcja planu Pro) jest wyjątkiem tylko dla TEST; po wdrożeniu ten sam doradca na produkcji (odczyt);
+      - potwierdzenie na TEST, gdy paczka ma migrację (zestawy `security`, `status`, `nullguard` i dotknięte migracją). **Jedna brama TEST naraz** — przed startem wpis w `POSTEP.md` „TEST zajęte: P<n>, od GG:MM”, po końcu „TEST wolne” (ślad dla koordynatora);
+      - gitleaks 0;
+      - `npm audit --omit=dev --audit-level=high` bez high i critical;
+   4. PR → scalenie do `main` (merge commit, autor Sebastian Bożek);
+   5. wdrożenie z `main`;
+   6. migracja na produkcji (najpierw próba w transakcji z ROLLBACK, potem `supabase db push`, lista migracji = `schema_migrations`);
+   7. `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` zwracają 200;
+   8. wpis w `POSTEP.md`.
+4. **Testy idą za decyzjami.** Test sprzeczny z decyzją etapu bieżącej paczki przepisujesz w tej paczce według decyzji; w komentarzu podajesz numer etapu i decyzji. Nigdy nie zmieniasz aplikacji po to, żeby przeszedł stary test. Lista testów do przepisania jest przy każdej paczce.
+5. **Wygląd według makiety etapu.** Zmiana wyglądu ekranu z listy paczki jest przewidziana i nie jest powodem do zatrzymania. Wzorce zrzutów:
+   - 15 migawek Playwright (`tests/__screenshots__/`) odświeżasz w tej samej paczce na maszynie, która uruchamia `fresh-smoke`; wpis do `G4_WZORZEC.md`: „P<n> — E<nr>, ekrany: …”;
+   - 280 ujęć matrycy (`shots-baseline/`) odświeża środowisko bramy wizualnej raz, w P11, z tagiem `baseline-audyt-<data P11 w formacie RRRR-MM-DD>`. Do tego czasu nocna brama wizualna tylko raportuje; jej różnice nie są powodem zatrzymania ani odświeżania.
+   Akceptacja planu przez właściciela (08.10) = zgoda na te odświeżenia.
+6. **CSS:** zmiana według makiety etapu → wpis w `ODSTEPSTWA` w `tests/stylesheet-mockup.test.ts`: `'<selektor>|<właściwość>': 'AUDYT 08.10 E<nr> (P<n>)'`. Pliku `docs/claude/referencje/tower.css` i `SUMA_REF` nie zmieniasz. Cień i zaokrąglenie tylko przez tokeny w `:root`; reguł stylelint nie zmieniasz.
+7. **Uchwyty testów zostają:** `#roleSeg button[data-role]`, `#themeBtn`, `nav button[data-view]`, `[data-panel="ferry"]`, `[data-bill-section]`, także gdy element zmienia miejsce (menu konta, dolny pasek, „Podgląd”). Jeśli etap usuwa widok albo uchwyt, w tej samej paczce zmieniasz `scripts/baseline.mjs` (VIEWS, `SCRIPT_VERSION`) i specyfikacje Playwright.
+8. **Zawsze w tym samym commicie:**
+   - nowa albo usunięta tabela → lista w `supabase/functions/_shared/backup/core.ts` i liczba w bramie;
+   - nowa funkcja dla `authenticated` → wpisy w `tests/db/function-allowlist.txt` i `null-guard-calls.txt`;
+   - nowe słowo spoza słownika → `tests/fixtures/pl-t-exceptions.txt`;
+   - zmiana liczby testów bazy → `tests/db/gate.sh` i `scripts/lib/gate-suites.mjs` (po P0b jedno źródło).
+9. **Teksty:** tylko po polsku (bez EN/SV); formaty z jednego modułu (E21); nazwa transportu z jednej funkcji (E41); w produkcji bez przykładów z danych demo (`ROZSTRZYGNIECIA_LUK.md` G-09).
+10. **Nowe moduły ładowane leniwie** (budżet pierwszego wczytania 400 kB gzip; budżetu nie podnosisz).
+11. **Pliki poufne** (polisy, zezwolenia, plik KSH, cenniki) poza repozytorium; kwoty cennika tylko z bazy.
+12. **STOP — wyłącznie gdy:**
+    1. zmiana prawdziwych danych na produkcji, której nie opisuje bieżąca paczka (opisane: porządki P1, faza z pozycji P4, wgranie pliku R-1 w P7, wpisy jednorazowe z etapów — zawsze z kopią, bramą i TEST);
+    2. wydatek ponad decyzje (wyjątki: Supabase Pro, HERE ≤ 100 USD/mies.);
+    3. wysyłka do prawdziwych odbiorców, której nie przewiduje etap (testowo tylko adres i numer właściciela);
+    4. zmiana wyglądu ekranu, którego nie ma na liście bieżącej paczki (wspólne elementy z E8, E10, E37, E41 są przewidziane wszędzie);
+    5. potrzebne dane, które zna tylko właściciel;
+    6. regulamin usługi wyklucza użycie.
 
----
+    Przy STOP: wpis w §5 „Czeka na właściciela” i **dalej następna pozycja**. Nie czekasz.
 
-# 3. KOLEJKA
+## §2. Wprowadzanie zmian i poprawek do planu (obowiązkowe)
 
-Statusy: `W TOKU` · `DO ZROBIENIA` · `CZEKA NA: <co>` · `DONE <commit>`
+Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie mogą zastąpić realizacji planu.
 
-## AUDYT PEŁNY 06.10 — NAJWYŻSZY PRIORYTET (polecenie właściciela 06.10 10:34)
+1. **Jedno wejście.** Każda zmiana, poprawka, nowe polecenie właściciela albo uwaga koordynatora trafia do planu jako **dopisek**: plik `docs/handover/dopiski/D-RRRRMMDD-GGMM-<nr>.md`.
+2. **Format dopisku:**
+   - numer, data i godzina, autor (właściciel / koordynator / wykonawca);
+   - rodzaj: **BLOKER** · **DO PACZKI P<n>** · **NOWA POZYCJA** · **PO 1.0** (tylko gdy przeniesienie zdecydował właściciel — §6 część 3);
+   - powód;
+   - dokładna zmiana (co, gdzie, dosłowne teksty);
+   - przykład liczbowy (dla reguł warunkowych);
+   - test odbioru;
+   - szacowany czas;
+   - co zastępuje (jeśli zmienia decyzję albo rozstrzygnięcie).
+3. **Kto pisze:**
+   - koordynator przekazuje dopiski plikami;
+   - polecenie właściciela wydane wprost wykonawcy: wykonawca najpierw zapisuje je jako dopisek, z dosłownymi słowami właściciela i godziną, a potem je wykonuje;
+   - błąd zauważony przez wykonawcę poza bieżącą paczką: wykonawca pisze dopisek i **nie** naprawia go od razu.
+4. **Kiedy wykonawca włącza dopisek:**
+   - po zakończeniu bieżącego commita, nigdy w połowie pozycji;
+   - wpisuje go do §4 (do wskazanej paczki jako pozycję `D<nr>`) albo do §6 (część 1, 3 albo 4) i do §8 (dziennik planu);
+   - commit `plan: dopisek D-…`. Commit tylko w `docs/**` nie unieważnia zielonej bramy gałęzi.
+5. **BLOKER przerywa kolejkę, ale tylko gdy:** produkcja nie działa; ryzyko utraty danych; luka bezpieczeństwa; wysyłka do złych odbiorców; zła kwota na fakturze. Wszystko inne czeka na swoją paczkę.
+6. **Poprawki do zamkniętej paczki:**
+   - trafiają jako pozycja „Poprawki P<n>” na początek **następnej** paczki z kolejności §3, z limitem 1 h;
+   - większa poprawka = osobna pozycja w planie z czasem, ustawiona przez koordynatora;
+   - wykonawca nie otwiera zamkniętej paczki sam.
+7. **Sprawdzenie koordynatora:**
+   - po każdym wdrożeniu koordynator sprawdza produkcję niezależnie;
+   - wynik przychodzi jako **jeden** zbiorczy dopisek na paczkę, nie seria uwag;
+   - sprawdzenie nie wstrzymuje następnej paczki.
+8. **Pilnowanie proporcji:** w `POSTEP.md` przy każdej paczce wpisujesz czas na pracę z planu i czas na poprawki. Gdy poprawki przekroczą 25 % czasu w ciągu doby, koordynator zmienia plan dopiskiem (zwykle przesuwa poprawki do P11; do PO 1.0 tylko po decyzji właściciela).
+9. **Decyzje rozstrzygnięte nie wracają.** Pytanie, które ma rozstrzygnięcie w `ROZSTRZYGNIECIA_LUK.md`, nie jest dopiskiem; stosujesz rozstrzygnięcie.
 
-Źródło: `AUDYT_PELNY_06_10.md`, `POLECENIA_KOORDYNATORA.md` (2026-10-06 10:34). Kolejność stała, punkt po punkcie; przy każdym: przyczyna, poprawka, test, dowód (zrzut z produkcji / pomiar / SQL) → sekcja w `RAPORT_AUDYT_06_10.md`, zrzuty `audyt-06-10/`. Lokalna brama, scalenie, Vercel prod, obie domeny 200. P2-TILES odłożone.
+## §3. Kolejność pracy i harmonogram
 
-| ID | Punkt | Kryterium odbioru | Status |
+Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
+
+**Kolejność:** P0a → P0b → P1 → P2 → P3 → P4 → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11
+
+- Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
+- Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
+- Gdy paczka czeka na dane właściciela (§5): część, która tych danych nie wymaga, przechodzi pełny cykl (brama, scalenie, wdrożenie); status w §4: „NA PRODUKCJI — bez <pozycja>, czeka W<nr>”; wpis w §5; bierzesz następną paczkę z kolejności, której zależności są spełnione. Gdy właściciel napisze „W<nr> gotowe”, brakująca pozycja wchodzi po bieżącym commicie jako osobna pozycja „P<n> — uzupełnienie W<nr>” z własną bramą i wdrożeniem (wyjątek od §2 pkt 6), a potem wracasz do przerwanej paczki.
+
+Zależności (kolejność je spełnia; lista do kontroli): wszystkie paczki po P0a; bramę końcową P1, P2 i P3 robisz po scaleniu P0b (kodować możesz wcześniej) · P3 scalasz po P2 (wspólne pliki paska, nazwy E41 i formatów E21 — rebase przed bramą końcową) · P4 po P2 i P3 · P5 po P4 · P6 po P3 i P4 · P7 po P5 i P6 · P8 po P3 i P4 · P9 po P2 i P4 · P10a po P0b (push alarmów podłączasz po scaleniu P3) · P10b po P3 i P10a · P11 po wszystkich.
+
+**Punkty kontrolne (czas polski; Dzień 1 według §0):**
+| Kiedy | Ma być |
+|---|---|
+| koniec Dnia 1, 23:59 (przy starcie 11.10: niedziela 11.10) | P0a i P0b scalone; pełna brama TEST z odbioru P0b zielona (= brama niedzielna 11.10); P1 z zieloną bramą lokalną |
+| po wdrożeniu P2 | koordynator liczy z czasów w `POSTEP.md` prognozę dla P3–P11 i ustala dopiskiem kolejne punkty kontrolne |
+| koniec Dnia 4, 20:00 (przy starcie 11.10: środa 14.10) | P11, pełna brama TEST, regeneracja 280 ujęć, `release-1.0` (data według W17) |
+
+**Reguła cięcia:** gdy punkt kontrolny jest spóźniony o ponad 4 h albo prognoza po P2 pokazuje, że P11 nie zmieści się do końca Dnia 4, 20:00 (albo do daty z W17), koordynator przedstawia właścicielowi pozycje do przeniesienia do PO 1.0 (najpierw lista „Rezerwa”, §6 część 4). Decyduje właściciel; po jego decyzji koordynator wysyła dopisek. Wykonawca sam nie tnie zakresu.
+
+**Brama niedzielna (GATE-WEEKLY, zasada z 04.10 — obowiązuje):**
+- W każdą niedzielę, na `main`, pełna brama TEST w częściach: `scripts/test-db-gate-step.mjs` (jedno zadanie max 40 min) + `scripts/test-db-gate-summary.mjs`, wyniki w `tmp-gate/wyniki.json`; zielone tylko przy jednym commicie i jednej wersji migracji.
+- W tej samej bramie:
+  - `npm audit` zależności deweloperskich — czy wyszła poprawka (P3-BRACES i każda nowa pozycja z §6 część 2);
+  - E-MAIL-TYG: liczba e-maili produkcji z ostatnich 7 dni w `POSTEP.md` wobec szacunku 34 tygodniowo; strażnik limitu poczty 80 % (`email-budget`);
+  - od ich wdrożenia: raport tygodniowy błędów aplikacji (E47, P10a) i pomiar wydajności w skali 1× (E46, P11; `UZGODNIENIE_08_10.md` pkt 5);
+  - od P3: doradca Supabase „security” wobec listy wyjątków (E19 pkt 6).
+- **Gdy w niedzielę agent nie pracuje** (np. po wydaniu): właściciel otwiera nowy czat i wkleja blok „Brama niedzielna” z `PROMPT_START_CURSOR.md`.
+- Gdy agent pracuje nad paczką: przed bramą niedzielną zapisujesz bieżącą pracę commitem na gałęzi paczki i przechodzisz na `main`; po bramie wracasz na gałąź paczki, a wynik bramy wpisujesz w `POSTEP.md` w następnym commicie paczki.
+- **Przy starcie 11.10:** bramą niedzielną 11.10 jest pełna brama TEST z odbioru P0b (na `main` po scaleniu P0b), także gdy skończy się po północy. **Następna: niedziela 18.10** i dalej co tydzień, także po wydaniu.
+- Bramę niedzielną zaczynasz po bieżącym commicie, przed następną pozycją; przez czas jej trwania obowiązuje G-15 (`ROZSTRZYGNIECIA_LUK.md`): bez zmiany gałęzi i plików.
+
+**Brama a jeden folder (G-15):** gdy brama lokalna, TEST albo `fresh-smoke` się kręci, nie zmieniasz gałęzi ani plików. W tym czasie czytasz materiały następnej paczki i spisujesz w czacie listę zmian. Gałąź następnej paczki zakładasz po końcu bramy.
+
+## §4. Paczki
+
+Każda paczka:
+- **zakres** = wymienione etapy w całości (punkty „Rozwiązanie / Propozycja / Do wykonania” w `etapy/E<nr>.md`), z decyzjami i rozstrzygnięciami — **chyba że przy etapie podano część** (wtedy reszta etapu jest w paczce wskazanej przy nim);
+- **wygląd** = `makiety_html/E<nr>/` (telefon tam, gdzie jest; inaczej zasady E8);
+- **odbiór** = sekcja „Test” etapu + punkty „Odbiór” paczki + brama.
+
+Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODUKCJI (commit, godzina)` → `SPRAWDZONE (dopisek koordynatora)`. P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji`, a hash scalenia P0a wpisujesz w pierwszym wpisie P0b w `POSTEP.md`.
+
+### P0a · Wgranie kompletu dokumentów — NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji
+- Według `docs/handover/audyt_claude_2026-10-08/paczki/P0a_WGRANIE.md`: pliki z kompletu na swoje miejsca, przeniesienie starych dokumentów do `docs/archiwum/2026-10-08/` skryptem `paczki/P0a_przeniesienia.sh`, wpis w `POSTEP.md`.
+- Tylko dokumenty. Bez zmian w `src/`, `supabase/`, `scripts/`, `tests/`.
+- **Odbiór:** zmiany tylko w `AGENTS.md`, `.cursor/rules/**`, `docs/**` oraz przeniesienia plików z katalogu głównego i `design/claude-v2.0/CLAUDE_V2_SOT.md` do `docs/archiwum/2026-10-08/`; w `AGENTS.md` i `.cursor/rules/` nazwy starych plików (`SCOPE.md`, `ZLECENIE_*`) występują tylko w zdaniach, które nazywają je archiwalnymi.
+
+### P0b · Narzędzia bramy — DO ZROBIENIA
+Tylko `tests/`, `scripts/`, `.githooks/`; bez aplikacji i bez migracji.
+1. `scripts/lib/gate-suites.mjs`: oczekiwane liczby zgodne z `tests/db/gate.sh` (dziś rozbieżne m.in.: nullguard 533/602, i2 526/540, money 131/135, dec6 15/23, workflows 47/67, i31 6/9, dec2 24/26). Dodać brakujące zestawy: dwell, l12, l13, h1, h3, smsksh, ferry-status, bmapa, h4, aud03, baf, backup. **Jedno źródło liczb:** `gate.sh` czyta oczekiwane z `gate-suites.mjs`; dla TEST osobna kolumna z udokumentowanymi różnicami (security −4 i risks −2: SKIP na TEST, `spatial_ref_sys`); `session` i `l13` — znany dług, jak dziś.
+2. `tests/db/gate.sh`: zmienna `SUITES=a,b` uruchamia tylko wskazane zestawy (z szablonem `tower`); bez zmiennej — wszystkie.
+3. Konta testowe 5 rodzajów (HHL Administrator, HHL Operacje, KSH Użytkownik, SCX Dyspozytor, SCX Użytkownik) na bazie TEST `emkbykwenwrjmbprydml`; skrypt odmawia uruchomienia dla `nglnnrmzmhusvxslousq` i jest wywoływany po każdym kroku `prep` bramy TEST (krok czyści schemat).
+4. Sprawdzić `git lfs version` i `git config core.hooksPath` (= `.githooks`). Brak = wpis w §5, bez `--no-verify`.
+5. Pomiar i wpis w `POSTEP.md`: czas haka gałęzi, `fresh-smoke`, pełnej bramy lokalnej, potwierdzenia TEST.
+- **Odbiór:** pełna brama TEST (w częściach) zielona na `main` z oczekiwanymi liczbami TEST; lokalna pełna brama zielona; `SUITES=security bash tests/db/gate.sh` działa; konta testowe istnieją na TEST po przebiegu.
+
+### P1 · E18 porządki danych testowych + „ERGO Hestia” — DO ZROBIENIA
+- Według `paczki/P1_E18.md` (sprawdzone na produkcji 08.10 14:19–14:27). Warunek startu: P0a scalone (akceptacja planu = akceptacja P1).
+- Zakres: E18 P2, P3, P6–P11, P13, token kierowcy SG-01 + nazwa ubezpieczyciela SCX. Poza P1: E18 P12 → P7, E18 P16 → P6, E18 P14 → P10a, E18 P15 → P2.
+- **W22 rozstrzygnięte (właściciel 09.10.2026, 13:09: „usunąć z odpięciem 11 wpisów dziennika”):** wiersze `app_users` 6 kont „+tower-*” usuwasz, a 11 wpisów `audit_log`, które na nie wskazują, odpinasz (nie kasujesz) — kolejność, progi i STOP w `paczki/P1_E18.md` („Wspólne dla kont E18 P2 i P3”) i w dopisku D-20261009-1309-01 R3.
+- **Odbiór:** „Odbiór” w `paczki/P1_E18.md`.
+
+### P2 · Fundament ekranów — DO ZROBIENIA
+- **E41** nazwa transportu:
+  - jedna funkcja „kod · numer HHL” dla HHL i SCX; KSH widzi tylko kod, a baza nie wysyła KSH numerów;
+  - tytuł sprawy: „nazwa — co się stało”;
+  - SMS sam kod.
+- **E21** jeden moduł formatów (daty „01.10, 12:00”, liczby, „4,8%”, waluty). Strażnik tekstów według `ROZSTRZYGNIECIA` E21-1: od P2 blokuje na ekranach i kategoriach poprawionych przez E21 i przez zamknięte paczki; reszta w raporcie do swojej paczki.
+- **E10** kontrast: `--amber-ink`, biała liczba w dzwonku; ta sama zasada na wszystkich ekranach. Axe w obu motywach jako raport.
+- **E8** telefon:
+  - dolny pasek 5 przycisków (Kokpit, Harmonogram, Ryzyka z liczbą, Dokumenty, Więcej) zamiast ☰;
+  - tabele → karty; cele ≥ 44 px; tekst ≥ 12 px;
+  - od P2 każda paczka spełnia te zasady.
+- **E18 P15** nowe tytuły otwartych spraw, jednorazowo, migracją danych z kopią: numery wewnętrzne → nazwa E41; szwedzkie tytuły ROAD_SE → po polsku. 16 spraw „Nieznany kod źródła drogowego” zostaje do P10a (Stan systemu).
+- **Testy do przepisania:** `etap4-ui.spec.ts` l.71–86 i 135–136; `aud03-ksh-panel.spec.ts` l.64; `etap5-ui.spec.ts` (`.wb-code`); `aud02-dzwonek.test.ts`; `order-numbers.test.ts`; `stylesheet-mockup.test.ts` (ODSTEPSTWA E10); migawki `visual.spec.ts`, `visual-states.spec.ts`; zestawy `security`, `aud03`.
+- **Ekrany:** wszystkie (nazwa, formaty, dzwonek, dolny pasek telefonu).
+- **Odbiór:** KSH przez API nie dostaje żadnego numeru (test bazy na TEST); 0 „●” w aplikacji; strażnik tekstów: 0 trafień w zakresie blokującym (E21-1), raport reszty w PR; zrzuty 1440 i 390 Kokpitu, Harmonogramu i panelu porównane z makietami E41, E21, E10, E8.
+
+### P3 · Uprawnienia, konta, Opcje, pasek górny — DO ZROBIENIA
+- **E9** prawa ról (z E36, zamkniętym w E9):
+  - 5 rodzajów kont, bez CLIENT_ADMIN i SITE_VIEWER;
+  - menu według roli; „Moje zadania” SCX znika;
+  - tabela uprawnień z poprawkami E9-1 do E9-4;
+  - „Podgląd” według E9-7 i G-07;
+  - **daty i godziny załadunku i rozładunku (decyzja 09.10 13:09 pkt 3, G-20):** zmienia i potwierdza tylko KSH Użytkownik; HHL Administrator, HHL Operacje, SCX Dyspozytor i SCX Użytkownik — tylko odczyt (przyciski zmiany i potwierdzenia dat tylko u KSH); baza odrzuca zapis tych pól z innych ról; ścieżka wgrania pliku KSH (E38) nadal zmienia daty; „Działaj jako” konto KSH — zapis dozwolony jako konto KSH, z prawdziwym wykonawcą w dzienniku i Historii (konstytucja VI.5; pytanie W30; D-20261009-1309-01 R6 pkt 3).
+- **E14** lista zmiany rodzaju konta (błąd `UsersAdmin.tsx` l. 84).
+- **E6** konta: imię i nazwisko (2 pola), telefon E.164, „Zadzwoń”.
+- **E12** Opcje: 6 grup, prawa, 0 × 403; Operacje HHL tylko odczyt + „Dla mnie” + eksport; Historia zmian; przełączniki.
+- **E11** Opcje: menu boczne, ekrany według E12 pkt 1 i G-11, „Dla mnie”, „Kto co dostaje” (zdarzenie × 5 rodzajów kont × kanał). Wiersz rodzaju `PLAN_DATES_CHANGED` dla HHL Administrator, HHL Operacje, SCX Dyspozytor i SCX Użytkownik: w aplikacji (dzwonek) stały, nie do wyłączenia, opis „zawsze — decyzja właściciela 09.10”; e-mail i push według matrycy (G-18, D-20261009-1309-01 R4).
+- **E5** logika powiadomień:
+  - matryca, cele kliknięć, push tylko dla krytycznych;
+  - wartości startowe = dzisiejsze, e-mail wyłączony (E5-1).
+- **E19** bezpieczeństwo bazy:
+  - `security_invoker` dla 3 widoków;
+  - `admin_security_flag_set`;
+  - zadanie zapisujące raz dziennie wynik doradcy „security” i stan ustawień (E19-4); kafelek „Bezpieczeństwo” na ekranie Stanu systemu — w P10b;
+  - **bez** zawężenia `events_insert` (to P6).
+  - Instrukcja ustawień logowania dla właściciela → §5.
+- **E37 (część: pasek górny; reszta E37 w P10b)** konto, „Moje konto” i „Wyloguj” po prawej; „Podgląd: HHL · KSH · SCX”; motyw w menu konta.
+- **E13** dzwonek na telefonie (`.bell-pop` fixed, `.topbar` overflow).
+- **Testy do przepisania:**
+  - `auth-config.test.ts` l.17, 22;
+  - `d-eur-t.spec.ts` (`tasks`, `settings`); `scripts/baseline.mjs` VIEWS (moje-zadania);
+  - `persist-toast.spec.ts`; `permissions-phone.test.ts`, `decision-access.test.ts`, `historyActor.test.ts`;
+  - `etap4-ui.spec.ts` l.292–300, `etap6-ui.spec.ts` l.35–42 (akordeon → menu boczne); `etap5-ui.spec.ts` l.53–75;
+  - `i5-mfa.test.ts`, `theme-role.test.ts`;
+  - migawki;
+  - zestawy `security`, `invite`, `adm10`, `hist11`, `nullguard`.
+- **Ekrany:** pasek górny (wszystkie), Opcje (wszystkie), Kokpit i menu według roli.
+- **Odbiór:**
+  - test ról na TEST: 5 kont × tabela E9 przez API i przez ekran;
+  - 0 odpowiedzi 403 w konsoli dla każdej roli;
+  - Operacje HHL nie mogą zapisać ustawień (odmowa w bazie);
+  - zapis daty albo godziny załadunku / rozładunku przez API: HHL Administrator, HHL Operacje, SCX Dyspozytor, SCX Użytkownik → odmowa bazy; KSH Użytkownik → przyjęty, wpis w Historii; wgranie pliku przez Administratora HHL nadal zmienia daty; „Działaj jako” KSH → zapis przyjęty, w dzienniku prawdziwy wykonawca (W30);
+  - zrzuty porównane z makietami E9, E11, E12, E37 (pasek), E6, E13.
+
+### P4 · Statusy, śledzenie, ETA — DO ZROBIENIA
+- **E25** statusy (automat „Gotowe do fakturowania” opierasz na dzisiejszym dokumencie CMR po dostawie; P5 podmienia na wymóg z E31):
+  - nowe kody „Gotowe do fakturowania”, „Zafakturowano”; UNLOADED scalony z DELIVERED;
+  - okno „Zmień status” (role według decyzji 17:46); jedna funkcja w bazie;
+  - poprawka −2 h dla nowych zapisów;
+  - oznaczenia Opóźniony / Brak GPS / Brak dokumentów obok statusu (L7);
+  - „Gotowy” według L6 (awizacja kompletna z pilotami, gdy wymagani — L29) i L9; powiadomienia według L8.
+- **E26** reguły stref: wyjazd ze Śremu, wjazd i wyjazd z placu, sprawa „czy dostarczono” (L14), lista reguł w Opcjach według L13 (zmienia Administrator HHL przez E34 i E35).
+- **E28** pasek etapów: 10 kafelków, tylko liczba, jeden filtr, kliknięcie (Harmonogram filtruje, inne strony → Mapa).
+- **E27** okno śledzenia:
+  - 03:00 w dniu załadunku (dzień z planu KSH — L15; godzina — L16) do „Dostarczone”; zmiana daty przed startem przesuwa start;
+  - pasek w panelu (E1-2); poza oknem brak przypisania pozycji;
+  - bezpiecznik według L17.
+- **E44** odczyt pozycji z linku RIO (decyzje właściciela 09.10 10:34, 10:54, 11:19; `etapy/E44.md` w całości — pkt 1–9; G-24):
+  - **najpierw regulamin RIO** (`AGENTS.md` §6 „Nowa usługa zewnętrzna”): strona `public.position-sharing.rio.cloud` w robots.txt zakazuje automatów, API nie ma publicznej dokumentacji (E44 „Fakty”); zgoda SCX i podwykonawcy na automatyczny odczyt jest na piśmie (11:19). Wynik sprawdzenia (adres warunków, data, cytat punktu o automatycznym dostępie) wpisujesz w PR. Jeśli warunki RIO wykluczają automatyczny odczyt — STOP §1 pkt 12.6: wpis w §5, sygnał w czacie i dalej następna pozycja P4 (bez E44);
+  - rozpoznanie linku w polu „Link śledzenia” w dzisiejszym oknie awizacji (`AwizacjaModal.tsx`), `rio_tracking_id` i `rio_secret` tylko po stronie serwera, zapytanie testowe po zapisie (pkt 1); P7 przenosi to działanie do nowego okna Awizacja bez zmian;
+  - adapter `_shared/telematics/rioPositionSharing.ts`, cron `tower-rio-links` co 2 min — tylko transporty w oknie śledzenia E27 i tylko w czasie `start`–`end` linku (pkt 2);
+  - zapis pozycji do tej samej tabeli co emtrack, `position_source = SUBCONTRACTOR_LINK`, bez duplikatów, prędkość z odległości i czasu (pkt 3); dalej jak dla emtrack (pkt 4) — SMS Śrem / Boden z E42 działają po P8 na tych samych pozycjach;
+  - ważność linku i nowy link na każdy przejazd (pkt 5), rozpoznanie ciągnik / naczepa (pkt 6), bezpieczeństwo `secret` (pkt 8);
+  - testy na TEST na zmyślonym identyfikatorze, kluczu i rejestracji (G-17), nie na linku i rejestracji z przykładu w E44; adres zapytania w dzienniku `integration_runs` bez `secret` (pkt 8);
+  - błędy (pkt 7): „Link RIO nieprawidłowy” — sprawa dla SCX; 3 błędy pod rząd — wpis w `integration_runs` (`rio-links`) i sprawa „Źródło danych nie działa · RIO” dla HHL, tak jak dziś dla emtrack (`SOURCE_DOWN`, E23 „Fakty”); e-mail i push do Administratorów HHL — od P10a (RIO na liście źródeł E23);
+  - pole „Link śledzenia” a kompletność awizacji: L19 (nie blokuje) i pytanie W27.
+- **E15** ETA:
+  - poprawka odpoczynku, „czeka przed placem” (E15-2), przeliczanie co 5 min;
+  - cisza GPS 30 min w ruchu / 3 h na postoju; geometria HERE (E15-1);
+  - „–” przed wyjazdem, słowa pewności (E15-3), kalibracja po 5 dostawach.
+- **H-10** wiatr na drodze (D-84: porywy 15 m/s, silny wiatr na trasie wydłuża ETA): sprawdzasz, skąd wziąć żywą serię porywów na trasie (od 05.10 `route-hazards` pisze „H-10: brak żywej serii wiatru drogowego”) — HERE w limicie 100 USD/mies. albo źródło darmowe, po sprawdzeniu regulaminu (`AGENTS.md` §6). Wynik i propozycję wpisujesz w §5 W19. Wydłużenia ETA nie włączasz, dopóki właściciel nie poda, o ile wydłużać (W19).
+- **Dane jednorazowe** (migracja danych z kopią):
+  - faza z pozycji: SG-03 → „Dostarczone” 07.10 12:19:54 i usunięcie pozycji po dostawie (L11);
+  - SG-01 UNLOADED → DELIVERED; datę potwierdza Administrator HHL (§5).
+- **Testy do przepisania:**
+  - `etap4-ui.spec.ts` l.88–116 („Oznacz jako gotowy”); `visual-states.spec.ts` (`mark-ready`, chipy);
+  - `status-label.test.ts`, `status-pill.test.ts`, `money-v2.test.ts` l.63, `telm2-sim.test.ts`, `l11-spine.test.ts`, `eta-*.test.ts`, `i15-eta-band.test.ts`, `corridor-eta.test.ts`;
+  - zestawy `status`, `release`, `i2`, `h4`, `dwell`.
+- **Ekrany:** panel transportu (Status), pasek etapów (Kokpit, Harmonogram, Mapa), znaczniki statusów; pole „Link śledzenia” w oknie awizacji i opis lokalizatora w panelu (E44).
+- **Odbiór:**
+  - sekcje „Test” E25, E26, E27, E28, E15 i E44 (pkt 9; `secret` w żadnym logu ani eksporcie — grep po testach);
+  - na TEST przejazd SG-03 kończy się „Dostarczone 12:19” — na śladzie zmyślonym (G-17), a po zgodzie W25 także na prawdziwych pozycjach;
+  - pełna trasa Śrem → Boden z symulowanymi pozycjami: każdy status raz, właściwy kafelek, prawdziwa godzina.
+
+### P5 · Pieniądze i dokumenty — DO ZROBIENIA
+- **E31** dokumenty, zezwolenia, polisy:
+  - CMR tylko z rozładunku, usunięcie wymogu CMR z załadunku i jego alarmów;
+  - „Firma” podpięte samo, „Trasa” (KR) ręcznie;
+  - polisy: KSH widzi tylko polisę HHL, SCX tylko swoją, HHL obie; nazwa polisy HHL „OC przewoźnika — PZU”;
+  - termin CMR z podpisem odbiorcy (L26); przypomnienie o polisie HHL (L27);
+  - **polisy SCX i HHL dodawane raz** — podpinają się same do dokumentów każdego transportu, przy którym polisa jest ważna w dniu transportu (E31; polisa SCX od zatwierdzenia przez HHL); bez wgrywania polisy przy pojedynczym transporcie (decyzja 09.10 13:09 pkt 4, G-21, D-20261009-1309-01 R7).
+- **E33** ceny i dopłaty:
+  - **system liczy, nie wprowadza** (decyzja 09.10 13:09 pkt 5, G-22, D-20261009-1309-01 R8): podpowiedź po stronie HHL (część przychodowa) i SCX (część kosztowa) w oknie „Dopłata” z przyciskami „Dodaj” i „Nie dodaję”; dopłata dodana przez SCX → „czeka na HHL” → HHL „Akceptuję” / „Odrzucam”; dopłata dodana przez HHL → „czeka na KSH” → akceptuje KSH; do ceny trafia tylko dopłata dodana i zaakceptowana (pozycje „Do zrobienia” tych podpowiedzi — P6);
+  - postój 750 EUR za dobę albo 75 EUR za godzinę (wolne: 6 h na załadunku, 4 h na rozładunku);
+  - anulowanie: % frachtu bez opłaty paliwowej, 2 dni przed załadunkiem = 25 %;
+  - Kratownice bez daty = stawka dla 1 auta.
+- **E3, E3b, E39** opłata paliwowa: źródła, godziny czasu polskiego (E3-2), wpis Orlen z 06.10 (E3-4); KSH i SCX widzą to samo co HHL.
+- **E16** Finanse:
+  - marża, **próg 4 %** (wartość startowa), kurs NBP i „kurs bieżący”;
+  - waluta w bazie; próg w „Cennik i opłaty” (E12-2).
+- **E4** faktury: zakładki według firmy, VAT 23 %, akceptacja, kwoty „co do grosza” (E4-3), spóźniony CMR (E4-1).
+- **E4b** faktoring: 1 % netto, wypłata 48 h kalendarzowych po akceptacji, ekran „Faktoring” w grupie „Pieniądze” (E4b-1, E4b-2).
+- **E40** paczka tygodnia:
+  - adresy startowe: HHL `ksiegowosc@hhlogistics.pl`, KSH `faktury@ksh.pl`;
+  - wysyłka dopiero po akceptacji; pierwsza wysyłka na produkcji — właściciel (L47).
+- **Testy do przepisania:**
+  - `etap4-ui.spec.ts` l.144–308 (M6 VAT, M8, M11); `d-eur-t.spec.ts` l.213; `etap6-ui.spec.ts` (O4 → G-08); `etap5-ui.spec.ts` l.88–90;
+  - `doc-requirements.test.ts` l.17–18;
+  - `money*`, `invoices3`, `invoice-*`, `payment-reminders`, `b32-insurance-cover`, `i2k-doc-week`, `paliwo-auto-b`, `i31-sefs`, `i30-*`, `b4b-cmr-only`;
+  - zestawy `money`, `insurance`, `storage`, `baf`, `i30`, `i31`.
+- **Ekrany:** Finanse, Faktury, Dokumenty, Opcje › Pieniądze, panel (dokumenty, kwoty, okno „Dopłata”).
+- **Odbiór:** sekcje „Test” E31, E33, E39, E16, E40; testy R7 i R8 z D-20261009-1309-01; faktura testowa na TEST zgodna z wyliczeniem co do grosza; KSH nie widzi kosztu ani marży, SCX nie widzi ceny KSH (test na TEST).
+- **Po wdrożeniu (§5):** SCX wgrywa zezwolenie 13/GD/2026, HHL wgrywa polisę PZU 1106707356 (raz — podpina się sama, G-21).
+
+### P6 · Do zrobienia, ryzyka, panel i historia — DO ZROBIENIA
+- **E7** „Do zrobienia”:
+  - karta na transport, sprawy z firmą i osobą, przyciski;
+  - filtry „Moje / Moja firma / Wszystkie”, jedna liczba (E7-2), samozamykanie;
+  - „Sytuacja na trasie”; zakazy jako informacja; sprawy techniczne → Stan systemu (E7-3);
+  - nazwy spraw (E7-4); kliknięcie rozwija kartę w miejscu;
+  - **podpowiedzi dopłat** (G-22, D-20261009-1309-01 R8): pozycja „Do zrobienia” dla HHL (część przychodowa) i dla SCX (część kosztowa) otwiera okno „Dopłata” z P5; „Nie dodaję” zamyka pozycję tej firmy z wpisem w Historii; dopłata dodana przez SCX → pozycja HHL „Akceptuję / Odrzucam”.
+- **8.4 alternatywne przeprawy** w „Sytuacji na trasie” według `ROZSTRZYGNIECIA` E7-5 (D-45, L-9, FERRY-STATUS). Najpierw sprawdzasz, co z L-9 już działa (`RisksView`, `sailings`); brakującą część budujesz.
+- **E6 (karta decyzji):** „Biorę tę sprawę”, „Oddaj”, „Przejmij” (E6-5), „Zadzwoń”.
+- **E2** drogi PL z HERE:
+  - panel PL w „Sytuacji na trasie”, odświeżanie co 15 min;
+  - usunięcie KPD (E2-1); próg jak dla dróg SE (E2-2).
+- **E17** panel transportu (Historia dopłat — wyzwalacz na `load_agreed_fees` buduje P5 z E33; P6 tylko wyświetla):
+  - Status / Historia / Czat (Czat HHL–SCX; KSH pisze do wszystkich);
+  - profil trasy ukryty; nazwy zdarzeń (E17-2);
+  - zawężenie `events_insert` (E17-1, E19-1).
+- **E18 P16** usunięcie `route-profile` i `load_route_profiles` (0 wierszy) z listą kopii.
+- **Testy do przepisania:**
+  - matryca `ryzyka` (uchwyt `[data-panel="ferry"]` zostaje); `etap6-ui.spec.ts` l.29–33;
+  - `notify-dedup`, `click-targets`, `risk-keys`, `l8-cockpit-tiles`, `decision-access`, `i2-facade`;
+  - zestawy `risks`, `dec2`, `dec3`, `dec5`, `dec6`, `dec-auto`, `backup`.
+- **Ekrany:** Ryzyka / Do zrobienia (komputer i telefon), panel transportu (Historia, Czat), Kokpit (liczba).
+- **Odbiór:**
+  - sekcja „Test” E17; testy z punktów E7 (G-02);
+  - liczba „Do zrobienia” z reguł E7 na danych testowych; ta sama liczba w menu, Kokpicie i na dzwonku (E7-2);
+  - pozycje dopłat według testu R8 (D-20261009-1309-01): postój 8 h 10 min → pozycja u HHL i u SCX; SCX „Dodaj” → pozycja HHL;
+  - 8.4: odwołany rejs na jednej przeprawie → propozycja najbliższych rejsów drugiej; przy sztormie na obu → brak propozycji; brak rozkładów → „Brak danych” (test na TEST);
+  - wszystko, co dziś zapisuje przeglądarka, działa po zawężeniu `events_insert` (test e2e).
+
+### P7 · Harmonogram, import pliku KSH, panel i Awizacja — DO ZROBIENIA
+- **E38** import ręczny pliku SharePoint:
+  - mapowanie 21 kolumn; filtr „Przewoźnik = HH”; „Standard” → sprawa;
+  - KR-03 nie odrzucany, sprawa „Daty KSH do sprawdzenia” (L31);
+  - aktualizacja po kodzie; zmiana z panelu KSH według E9-6 (do synchronizacji W13); daty i godziny zmienia i potwierdza tylko KSH i plik (G-20; prawa i ochrona w bazie — P3);
+  - **zmiana dat lub godzin przy wgraniu pliku** (decyzja 09.10 13:09 pkt 1, G-18, D-20261009-1309-01 R4): porównanie 4 pól („Data załadunku”, „Godzina (załadunek)”, „Data dostawy na budowę”, „Godzina (rozładunek)”) → powiadomienie `PLAN_DATES_CHANGED` do HHL Administrator, HHL Operacje, SCX Dyspozytor, SCX Użytkownik, jedno na transport na wgranie, z „było → jest”, wpis w Historii; to samo przy zmianie KSH w Watch Tower; sprawy D-12 i L31, przesunięcie startu śledzenia (E27 pkt 1), E39, E16 i workflow E9 bez zmian;
+  - Harmonogram domyślnie w układzie pliku (nazwy kolumn z makiety, L42); 8 kolumn jako „Widok skrócony”.
+  - Synchronizacja z SharePoint w obie strony i zapis do pliku — po dostępie od działu IT KSH (§5 W13, L41) jako pozycja „P7 — uzupełnienie W13”; w niej także zapis dat i godzin zmienionych przez KSH w Watch Tower do pliku (do 1 min), plik → Watch Tower co 5 min, komórki i konflikt według D-20261009-1309-01 R6 pkt 4–6 (G-20, W29, W31).
+- **E30** Harmonogram: filtry E28 + tydzień; zmiana zestawu tylko w oknie Awizacja.
+- **E20** pełny zakres poza paskiem górnym (pasek w P3): szerokości, przyklejone kolumny (E20-1, E20-2).
+- **E32** panel i okno Awizacja (mapa Przeglądu w panelu — z P9 / E1; P7 jej nie zmienia):
+  - SCX robi, Administrator HHL poprawia;
+  - **piloci według D-20261009-1233-01** (decyzja 09.10 12:33, G-23, L29): wpisuje SCX w oknie Awizacja (HHL Administrator może poprawić; HHL Operacje i KSH bez zapisu); sekcja „Piloci” tylko przy „PL + SE” (KR, PL-B): pilot PL i pilot SE, pola tylko numer rejestracyjny oraz imię i nazwisko; przy „BRAK” piloci nie pojawiają się w transporcie w żadnej roli i na żadnym ekranie, a baza odrzuca zapis; kompletna awizacja z obydwoma pilotami; brak = pozycja „Do zrobienia” **SCX** w sprawie awizacji; zmiana symbolu po wpisaniu pilotów — W26;
+  - **konwój KR** (decyzja 09.10 13:09, D-20261009-1309-01 R1): transporty KR z tą samą datą załadunku — piloci wpisani raz, obowiązują dla całego konwoju, zmiana przy jednym zmienia przy wszystkich, linia „Konwój …” w oknie Awizacja;
+  - pole „Link śledzenia” z działaniem z E44 (P4) w nowym oknie Awizacja bez zmian (rozpoznanie RIO, test linku, ostrzeżenia, „RIO · … · ••••”, „Otwórz w RIO”);
+  - kierowcy PL / SE (E6, dwa numery, przepięcie naczepy);
+  - „Do zrobienia przy transporcie” = lista E7; kwoty z E16; dokumenty z E31.
+- **E18 P12** zamknięcie 30 starych spraw zasobów (`RES:DRIVER`, `RES:VEHICLE`) po wyłączeniu starego mechanizmu.
+- **R-1** pierwsze wgranie pliku KSH z 08.10 (od właściciela, poza repozytorium):
+  - najpierw na TEST: plik z zamienionymi danymi osobowymi, raport według testu E38 pkt 6 (G-17 pkt 1);
+  - w oknie wdrożenia P7: próba na produkcji w transakcji zakończonej ROLLBACK z prawdziwym plikiem i raportem „ile nowych, zmienionych, pominiętych, spraw” (G-17 pkt 2);
+  - potem wgranie na produkcji (zmiana danych opisana w planie, z kopią).
+- **Testy do przepisania:**
+  - `etap4-ui.spec.ts` l.60–86, 355–382, 392–433; `aud03-ksh-panel.spec.ts` l.108–119; `visual-states.spec.ts` l.113–137;
+  - `c-sep`, `historyActor`, `schedule-import*`, `import-mapping`, `i18-plan-dates`, `b8-imp`, `xlsx-export-roles`, `pdf-export`;
+  - `stylesheet-mockup.test.ts` (`th.stick`, `td.stick`);
+  - zestawy `import`, `aud03`.
+- **Ekrany:** Harmonogram (oba układy), panel transportu, okno Awizacja, wgrywanie pliku.
+- **Odbiór:** sekcje „Test” E38, E30, E20, E32; test odbioru D-20261009-1233-01; testy R1, R4 i R6 (bez części po W13) z D-20261009-1309-01; raport z TEST zgodny z testem E38 pkt 6 (plik z 08.10: 95 HH, 43 NTG, 15 pustych pominiętych, 0 błędów); raport próby z ROLLBACK na produkcji: 94 transporty z bazy + KR-03 nowy ze sprawą, różnice wyjaśnione.
+
+### P8 · Komunikacja i automatyzacje — DO ZROBIENIA
+- **E42** SMS:
+  - 4 rodzaje A–D (treść A według L50), cisza nocna 20:00–06:00, raz na transport × miejsce × rodzaj × numer;
+  - tryb testowy przez 3 transporty; odbiorcy 2 + 2 bez wyboru języka;
+  - e-mail zastępczy, wpis w Historii.
+  - Przełącznik „Wysyłka do odbiorców” włącza właściciel (§5).
+- **E43** „Treści wiadomości”: tylko PL; edytor; 28 rodzajów (L53); link 24 h (L37). E-maile logowania według L54 (§5).
+- **E35** Automatyzacje: kreator z akcją SMS (L35); „Działa samo” według E35 pkt 1 i L13.
+- **H-7** mapa w e-mailach i PDF (zlecenie HERE z 04.10; w starym planie „do decyzji koordynatora” — koordynator 09.10: P8). Najpierw stan (B-10 z 05.10: „PDF+mapa H-7”). Brakującą część budujesz przy treściach wiadomości (E43): mapa trasy transportu (droga i prom jak na Przeglądzie — E1, E45) jako obraz w e-mailu o transporcie i w PDF; HERE w limicie 100 USD/mies.
+- **E34** strefy: edycja; po zmianie od razu sprawdzenie ostatniej pozycji transportów w oknie śledzenia, wpis „zmiana strefy”, statusy jak przy zwykłym wjeździe i wyjeździe, bez SMS (E34 pyt. 1 B, L33).
+- Stare pozycje „SMS 6, 7, 10, 11” zamknięte (L51).
+- **Testy do przepisania:** `b5-workflow-creator`, `workflow-map`, `l12-geofence`; zestawy `smsksh`, `workflows`, `l12`, `dec-auto`.
+- **Ekrany:** Opcje › Powiadomienia (SMS przy miejscach, Treści wiadomości), Automatyzacje, Strefy.
+- **Odbiór:** sekcje „Test” E42, E43, E35, E34; e-mail próbny o transporcie i PDF z mapą trasy (H-7) na TEST, wysłany tylko na adres właściciela (G-14); na TEST odtworzenie SG-03 daje SMS 11:45 B, 13:05 C, 06:00 C, 08:35 D i nic po 12:19 — na śladzie zmyślonym (G-17), a po zgodzie W25 także na prawdziwych pozycjach; tryb testowy wysyła tylko na numer właściciela.
+
+### P9 · Mapy — DO ZROBIENIA
+- **E1** Kokpit i Mapa: kadr całej trasy (fitBounds), bez zapamiętywania przesunięcia; Przegląd: zoom 11 na pojeździe, co 60 s.
+- **E29** Mapa:
+  - tabela = transporty w oknie śledzenia; filtry „Opóźnione”, „Brak GPS”, „Bez pozycji” (L22);
+  - kafelek zmienia zakres; bez deklaracji częstotliwości (L20).
+- **E45** trasy:
+  - promy z HERE (L56: najpierw sprawdzenie na TEST; brak odcinka promowego = wpis W, pkt 1 czeka na właściciela, pkt 2–5 idą dalej); bez kropek;
+  - checkbox „Trasa” chowa drogę i prom; statki AIS pod „Pojazdy”;
+  - ostatni odcinek SE jak SG-03, z geometrią zapisaną w bazie (L57);
+  - grupowanie aut na promie;
+  - **grupowanie aut w jednej lokalizacji** (decyzja 09.10 13:09 pkt 2, G-19, D-20261009-1309-01 R5): tak samo jak na promie, na Mapie i w Kokpicie; lokalizacja = strefa E34 (załadunek, port PL, port SE, plac), bez buforów; auta na promie grupuje rejs; poza strefami — W28.
+- **E24** (decyzja 07.10 17:46):
+  - każdy adres `tower-hhl.pages.dev` → 301 na `tower.log-mar.pl` z tą samą ścieżką — plik przekierowań tylko w buildzie Cloudflare Pages (Vercel go nie dostaje);
+  - rejestr: wpis „zapas `tower-hhl.pages.dev`” → „przekierowuje na tower.log-mar.pl (07.10)”; `PRZELACZENIE_HOSTINGU.md` zaczyna się od zdjęcia przekierowania;
+  - procedura wdrożenia: `tower-hhl.pages.dev` → 301;
+  - usunięcie pages.dev z Redirect URLs Supabase — właściciel (§5 W12);
+  - komunikat zamiast szarej mapy (E24-1, rezerwa).
+- **Testy do przepisania:** migawki mapy i Kokpitu; `aud01-mapa`, `aud01e-*`, `map-declutter`, `b1-vehicle-markers`, `bmapa`; zestawy `bmapa`, `h1`, `h3`.
+- **Ekrany:** Kokpit (mapa), Mapa, Przegląd w panelu.
+- **Odbiór:** sekcje „Test” E29, E45, E24; test R5 z D-20261009-1309-01; zrzuty 1440 i 390 porównane z makietami E1, E29, E45.
+
+### P10a · Przeładowania, stan źródeł i błędy aplikacji — część bazy i funkcji — DO ZROBIENIA
+Bez ekranów Opcji (te w P10b, po P3).
+- **E22** przeładowania: pasek „Jest nowa wersja”, brak błędów „stara wersja”; kryterium „tydzień bez nowych błędów” liczone od wdrożenia P10a (E22-2).
+- **E23 (baza i funkcje):**
+  - stan źródeł danych i progi (E23-1, E23-2);
+  - alarm do Administratorów HHL (e-mail i push — decyzja 27 A), przypomnienie po 2 h, „Wróciło”; wysyłka tylko na konta HHL_ADMIN;
+  - źródło RIO (E44 pkt 7, z P4) na liście źródeł: 3 błędy pod rząd → alarm „Źródło danych nie działa · RIO” e-mailem i push;
+  - **E18 P14** klucz emtrack bez daty UTC i zamknięcie duplikatu;
+  - **ferry-weather** (E23-4): przyczyna 8/24 przebiegów bez wyniku i odmów DMI z dziennika funkcji, opis w PR, poprawka według E23 pkt 2–4;
+  - **AIS-SRC** (rejestr, stary plan: „zbudowane — pomiar 24 h nie zrobiony”): pomiar 24 h świeżości pozycji 5 promów (cel ≤ 5 min na mapie) z wynikiem w PR; odstępstwa jako źródło „Częściowo” według E23;
+  - 16 spraw „Nieznany kod źródła drogowego” przeniesione do Stanu systemu (dane jednorazowe z kopią).
+- **E47 (baza i funkcje):** grupowanie błędów po treści (nie po buildzie), bez przeglądarek testowych, reguła alarmu (`UZGODNIENIE_08_10.md` pkt 5), raport tygodniowy.
+- **Testy do przepisania:** zestaw `watchdog`; testy przeładowań (`routes`, `session-year` — jeśli dotknięte).
+- **Odbiór:** sekcje „Test” E22 (bez punktu „tydzień” — E22-2) i E23 (część bazy); ferry-weather: każdy przebieg z doby ma wynik w `integration_runs` albo stan „Częściowo” z przyczyną; E47 na TEST: wymuszony błąd → wpis i alarm ≤ 5 min; ten sam błąd 10 razy = 1 grupa; zero alarmów z przeglądarek testowych.
+
+### P10b · Konto, pomoc, ekrany Stanu systemu — DO ZROBIENIA
+- **E37 (reszta; pasek górny w P3):**
+  - zaproszenie czyta treść z „Treści wiadomości” (E43, klucz zaproszenia), a gdy jej nie ma — domyślną z E37; P8 dodaje ją do E43 (kolejność scalenia dowolna);
+  - logowanie: komunikaty, „Nie pamiętam hasła”, link 24 h;
+  - zaproszenia: lista stanów, „Wyślij ponownie”, „Cofnij”;
+  - Pomoc „Jak pracuję” w 5 wersjach — treści i test odbioru z dopisku `D-20261009-0015-01` (L38; z poprawkami z 09.10 naniesionymi w tym pliku: piloci — D-20261009-1233-01, daty, grupowanie, polisy, dopłaty, konwój — D-20261009-1309-01) — i „Co nowego”;
+  - komunikat HHL tylko jako baner; 2FA dobrowolne.
+- **E23 i E47 (ekrany):** Opcje › System › Stan systemu (źródła danych, „Sprawdź teraz”, kafelek Bezpieczeństwo z E19) i „Błędy aplikacji” według makiet E23 i E46.
+- **Testy do przepisania:** `i4-guide`, `auth-password`, `resp14-phone.spec.ts`, `e2e-core.spec.ts`; zestawy `dec6`, `adm10`.
+- **Ekrany:** logowanie, Pomoc, Opcje › Ludzie i dostęp, Opcje › System.
+- **Odbiór:** sekcja „Test” E37; „Test odbioru (w P10b)” z dopisku `D-20261009-0015-01`; ekrany E23 i E47 zgodne z makietami; zrzuty 1440 i 390.
+
+### P11 · Jakość, bezpieczeństwo, wydanie (koniec Dnia 4 albo data z W17) — DO ZROBIENIA
+1. **E46** wydajność (`UZGODNIENIE` pkt 5):
+   - Lighthouse: LCP ≤ 2,5 s, CLS ≤ 0,1, TBT ≤ 300 ms na telefonie;
+   - baza: p95 ≤ 500 ms przy 420 transportach na TEST;
+   - 20 sesji przez 10 min.
+2. **E48** OWASP:
+   - naprawa P3-SW, P3-ZIP (SSRF), P3-AND;
+   - ZAP aktywny na TEST i pasywny na produkcji (0 High);
+   - ASVS L2 ponownie;
+   - testy ról przez API dla 5 kont jako zestaw bramy bazy;
+   - doradca Supabase „security” bez błędów;
+   - CSP enforce po akceptacji listy źródeł (§5).
+3. **Bramy na stałe:**
+   - strażnik tekstów E21 blokujący na wszystkich ekranach (0 trafień, E21 pkt 8);
+   - axe kontrast E10;
+   - szerokości 1280 / 1366 / 1440 / 1920 bez nakładania kolumn (E20, brama wizualna robi zrzuty 4 szerokości);
+   - elementy poza ekranem E8.
+4. **Pozycje produkcyjne spoza audytu:**
+   - PR2 kopie do R2 (sprawdzić, czy cron działa; włączyć);
+   - PR1 podtrzymanie;
+   - retencja D-3 (CMR 3 lata, PDF faktur 5 lat, bez POD i zdjęć);
+   - AUD-01d (klucz przeglądarkowy HERE — §5); AUD-01e — wdrożone 06.10 (PR #144), tylko status w `POSTEP.md`;
+   - I-0b; 17.13 (współrzędne terminali);
+   - **PR7** kompresja i archiwizacja plików, gdy zajętość miejsca na pliki przekroczy 70 % (stary plan: „do decyzji koordynatora”, czekało na R2) — po PR2, archiwum w R2;
+   - **P2-TILES** (gałąź `feat/p2-tiles-06-10`, commit `3deb252`, bez scalenia): kafelki zapisane w repozytorium dla testów wizualnych; rebase, brama, scalenie — **przed** regeneracją 280 ujęć (pkt 6); na produkcji bez zmian;
+   - **B-VERIFY-17.3**: jeden kanon wyglądu poza audytem = `design/claude-v2.0/`. Kopie z `docs/watch-tower/` (`claude-v2.0/`, `claude-makieta.html`, `claude-visual-ref/`) przeniósł już P0a do archiwum. Zostaje `public/claude-makieta.html` (w produkcji 404) — usunąć albo oznaczyć jako archiwum; najpierw `grep`, czy używa go test, brama wizualna, build (`build/prodStrip.ts`) albo `watch-tower-makieta.vercel.app`; używanego nie usuwasz, tylko oznaczasz;
+   - **KOPIA-D**: kopia `usuniete_standard_2026-10-03` z R2 do `D:\Watch Tower\dane\` (poza repozytorium) i suma SHA-256 zgodna z kopią w R2. Brak dostępu do R2 z komputera = wpis w §5.
+5. **Pełna brama TEST** na commicie wydania (niezależnie od bram niedzielnych, §3).
+6. **Regeneracja 280 ujęć** w środowisku bramy wizualnej (cron właściciela), tag `baseline-audyt-<data P11, RRRR-MM-DD>` — §5 W11.
+7. **R-4** raport końcowy (co zbudowane, liczby testów, co czeka na właściciela — §5, co odłożył właściciel — §6 część 3), tag `release-1.0`.
+8. **R-3** pierwszy prawdziwy transport od importu do faktury — z właścicielem, po wpisaniu użytkowników (§5). W R-3 także 11.3 (testy ścieżek użytkownika; stary plan: „do decyzji koordynatora → R-3”): przejście ścieżki każdej z 5 ról według workflow E9, wynik w R-4.
+
+## §5. Czeka na właściciela (wykonawca wpisuje i idzie dalej)
+| Nr | Co | Kiedy potrzebne | Stan |
 |---|---|---|---|
-| AUD-01e | **Jedna mapa na sesję** (decyzja koordynatora z polecenia właściciela AUD-01d): jedna instancja Leaflet dla Mapa / kokpit / panel zlecenia, przenoszona między widokami; bez prefetchu; testy jednej instancji i zera nowych kafelków przy powrocie; pomiar powrotu ≤ 0,3 s | **GOTOWE 06.10 18:30** — `fix/aud-01e-mapa`; powrót 33–42 ms, 0 nowych kafelków; gate:visual 280/280 |
-| AUD-01d | **PODKŁAD — decyzja właściciela 06.10 16:28** (HERE §1.3, §6.4 l): bez wspólnej pamięci kafelków na brzegu Vercel; pamięć tylko w przeglądarce ≤ 24 h (nagłówki HERE); kafelki wprost z HERE kluczem przeglądarkowym ograniczonym do tower.log-mar.pl; licznik D-78 z przeglądarki zbiorczo do here_usage; pośrednik tylko jako zapas; bez pobierania z wyprzedzeniem; jedna instancja mapy zostaje. Pomiar: pierwsze otwarcie dnia ≤ 2 s, kolejne ≤ 0,3 s | **WDROŻONE 06.10 17:25** (PR #142 `55849da`, 0191 PROD, `here-raster` v8, Vercel z `git archive`); private bez s-maxage, drugi klient MISS. **Czeka na właściciela:** klucz przeglądarkowy HERE (`VITE_HERE_BROWSER_KEY`, kroki w RAPORT § AUD-01d) — do tego czasu pośrednik. Jedna instancja mapy na sesję — brak w kodzie, do zlecenia |
-| AUD-01c | **AWARIA PRODUKCYJNA (polecenie właściciela 06.10 13:45)** — `/tiles/logistics.day|logistics.night/…` 404 HTML; region kafelków eu-central-1/eu-north-1; kafelki publiczne z pamięcią brzegu (HIT z drugiego klienta); `latest_vehicle_fixes` 500 po 13 s; zapas bez klucza zamiast „API KEY REQUIRED”; cytat warunków HERE o pamięci kafelków | **ZROBIONE 06.10 16:20** — PR #140 (`6e93d2d`), Vercel `dpl_GWYpijKvAdJhBjKefkm8z81w1BWJ`, `here-raster` eu-central-1 + `api/tiles` fra1; 5 kafelków × 2 domeny 200 PNG, 24/24 MISS→HIT; `latest_vehicle_fixes` 94 id 37 ms; s-maxage 24 h (nagłówek HERE); ciemny zapas Esri + filtr (CARTO wymaga klucza). **Do decyzji właściciela:** klauzula HERE „scaling one Request to serve multiple End Users” a wspólna pamięć brzegu. `RAPORT_AUDYT_06_10.md` § AUD-01c |
-| AUD-01 | Mapa — czas ładowania (A1) | Ślady/trasy jednym zapytaniem tylko dla widocznych transportów z pozycjami GPS (bez pozycji: 0 zapytań; dziś 188 × `load_track`); kafelki inną drogą niż dane (cache na brzegu Vercel/Cloudflare albo HERE z kluczem ograniczonym do domeny), licznik D-78 nadal liczy; podkład przed danymi; to samo w kokpicie i panelu zlecenia. Playwright, świeże otwarcie 1366 i 390 px: pierwszy kafelek ≤ 2 s, komplet ≤ 5 s, zapytań do bazy przy otwarciu Mapy ≤ 20 — pomiar przed i po, na produkcji po wdrożeniu. | **ZROBIONE 06.10 11:20** — PR #137 (`f291c84`), migracja 0190 na PROD, `here-raster` `--no-verify-jwt`, Vercel `dpl_Hv5CtFjKrs3TDbtnMAVRW36MsJmJ`; makieta: zapytania przy otwarciu Mapy 195 → 4 (`load_track` 188 → 0), kafelki `/tiles/…`. **Pomiar prod po zalogowaniu — dopisze koordynator**. `RAPORT_AUDYT_06_10.md` |
-| AUD-02 | Dzwonek (A2) | Pozycje z tytułem PL (transport · co się stało), czas „15 min temu”, klik → cel L-4, zero kodów szablonów (`RISK_OPEN` itp.), grupowanie zdarzeń tego samego typu dla transportu. | **ZROBIONE** 06.10 19:43 — #146 (`e658d11`), prod `dpl_HDXx6Teob8JTLRRobwtfDstxS4UX` |
-| AUD-03 | Panel KSH (A3) | Panel zlecenia KSH wg polecenia „KSH — PANEL ZLECENIA” (style, zakładki, dane — nie goły „Edytuj”); „Zmień ciągnik” niewidoczny dla KSH. | **ZROBIONE** 07.10 00:27 — PR #148 (`151754d`), 0192 PROD, `dpl_6d2fJgQAiCDsJ3D4ZoQ6E8fCbEHz` |
-| AUD-04 | PL-DATA Trafikverket i kafelki (A4) | Tytuły sytuacji SE po polsku ze słownika stałych słów („E4: od X do Y, oba kierunki, region Z”), bez DeepL, nazwy miejscowości oryginalne; kafelki HERE z językiem polskim. | DO ZROBIENIA |
-| AUD-05 | Stare ETA (A5) | Wyczyszczone `eta_site`/`eta_basis` dla 93 transportów przed wyjazdem ze Śremu (polecenie właściciela) i zamknięte wynikające ryzyka; „–” przed wyjazdem we wszystkich miejscach (harmonogram, lista przy mapie, PDF/XLSX, kokpit — terminowość tylko z transportów w drodze). | DO ZROBIENIA |
-| AUD-06 | Finanse (A6) | Jedno źródło liczb kokpit/Finanse; „Od przychodu do marży” z `load_cost`/`load_revenue`; marża % = marża/przychód (SQL 4,76 % = UI); bez komunikatu „brak dopłaty”; „Kurs NBP” = kurs z datą albo „kurs po rozładunku”. | DO ZROBIENIA |
-| AUD-07 | Waluta (A7) | Domyślnie EUR dla każdego konta (U-5), PLN tylko po przełączeniu; raport ustawienia konta testowego i źródła PLN. | DO ZROBIENIA |
-| AUD-08 | Ustalenia / Status / Historia (B1–B2) | Ustalenia = tylko czat; ręczne statusy w Status; brak przycisków linku kierowcy i „Wymiary zestawu” u przewoźnika; Status (statusy i kamienie milowe) ≠ Historia (wszystkie zmiany); wpisy PL bez kodów, duplikatów i „READY → READY”; autor „imię nazwisko // firma”, automat „System // Watch Tower”. | DO ZROBIENIA |
-| AUD-09 | Centrum decyzji (B3) | Kod transportu (SG-03) zamiast numeru SCX/identyfikatora; typy PL; jeden licznik (kokpit = Centrum = baner); brak numeru HHL i SCX = jedna decyzja z dwoma odpowiedzialnymi; klik → karta decyzji. | DO ZROBIENIA |
-| AUD-10 | security_flags 403 (B4) | Odczyt `security_flags` dla zalogowanych przez RLS tylko HHL_ADMIN; zero 403 w Opcjach; przełączniki SMS pokazują stan; migracja przez lokalną bramę. | DO ZROBIENIA |
-| AUD-11 | Opcje — ładowanie sekcji (B5) | Sekcje Opcji (Stan systemu, Dziennik logowań…) ładują dane przy rozwinięciu, „ładowanie…” zamiast „Brak”/„—”/„podkład zapas”. | DO ZROBIENIA |
-| AUD-12 | Drobne z logiki (B6–B9) | „Czas wykrycia odchylenia” = „za mało danych” przy < 5 zdarzeniach; „Ryzyko promowe” przewoźnika z II-8; „Przychód tygodnia” jak tabela; H-8 profil trasy — przyczyna i naprawa; Rejsy domyślnie „Przyszłe” (3 tygodnie), reszta po rozwinięciu. | DO ZROBIENIA |
-| AUD-13 | Dane testowe poza R-0 (B10) | Lista do akceptacji właściciela dopisana do planu R-0 (polisa „Test OCP”, faktura WT-TEST-P6, testowe urządzenia bramki, konta testowe). **Nic nie kasować.** | DO ZROBIENIA |
-| AUD-14 | Błąd JS appendChild (B11) | Przyczyna znaleziona i naprawiona; test: zero błędów konsoli w 10 widokach × 3 role × 2 szerokości. | DO ZROBIENIA |
-| AUD-15 | Telefon 390 px (C1) | Kokpit 1–2 kolumny bez obcięcia; tabele (Ryzyka, Dokumenty, Finanse, Faktury, Strefy, Opcje) karty albo przewijanie w sekcji; legenda nie zasłania mapy; plakietka dzwonka w nagłówku; cele dotyku ≥ 44 px; czcionka ≥ 12 px; test 10 widoków × 3 role: scrollWidth = szerokość ekranu, zero elementów poza prawą krawędzią. | DO ZROBIENIA |
-| AUD-16 | Komputer (C2) | Przyklejona Marża nie zakrywa Statusu (1280 i 1366 px); logo w jednej linii przy 1366 px; pasek etapów z liczbami i aktywnym etapem albo usunięty; tytuł logowania kontrast ≥ 4,5:1. | DO ZROBIENIA |
-| AUD-17 | Teksty (C3) | JSON w Automatyzacjach → opis PL; bez reguły „wgraj POD”; rozdzielone „Pobierz paczkę ZIP”/„Wgraj dokument”; „×1,14”, „4,8 %” jednolicie; daty z zerem wiodącym; „przerwa z GPS” bez duplikatu; „1 pojazd” (PL-PLURAL); Strefy „Powiadamia” z odbiorcami; brak wyceny „—”; nagłówek widoku = menu; liczniki mapy spójne (komputer = telefon). | DO ZROBIENIA |
-| AUD-18 | Separator (D) | SG-03 „ROBERT PREIHS|MICHAŁ MADEJ”: ustalić, czy przepięcie („|” poprawne), czy dwóch kierowców („ / ”); poprawka danych/wyświetlania wg ustalenia. | DO ZROBIENIA |
+| W1 | Ustawienia logowania Supabase: ochrona przed wyciekniętymi hasłami, minimum 12 znaków, „litery i cyfry” (instrukcja od wykonawcy w P3) | po P3 | czeka |
+| W2 | Użytkownicy (imię, nazwisko, telefon) i numery SMS Śrem / Boden — wpisuje właściciel w programie | po P3 i P8 | czeka |
+| W3 | SG-01: potwierdzenie daty rozładunku w oknie „Zmień status” | po P4 | czeka |
+| W4 | SCX wgrywa zezwolenie 13/GD/2026; HHL wgrywa polisę PZU 1106707356 | po P5 | czeka |
+| W5 | Plik KSH z 08.10 (`SCRAP_transporty_2026.09.23_REV.01_3.xlsx`, wiadomość właściciela 08.10 12:14) do wgrania (R-1) — przekazanie wykonawcy poza repozytorium, w `D:\Watch Tower\dane\`. Inny (nowszy) plik tylko dopiskiem koordynatora | przed P7 | czeka |
+| W6 | Włączenie wysyłki: SMS do odbiorców (po 3 transportach w trybie testowym), e-maile w „Kto co dostaje”, pierwsza paczka tygodnia na adresy księgowości (alarmy E23 i E47 do Administratorów HHL działają od razu — decyzja 27 A) | po P8 / P5 | czeka |
+| W7 | Klucz Management API dla „Send Email Hook” albo wklejenie treści e-maili logowania w panelu Supabase (L54) | po P8 | czeka |
+| W8 | Akceptacja listy źródeł CSP i 12 wyników ASVS „częściowo” (E48) | P11 | czeka |
+| W9 | Klucz przeglądarkowy HERE ograniczony do domeny (AUD-01d) | P11 | czeka |
+| W10 | Konto testowe Claude (interia.pl) — usunięcie po wszystkich pracach (E18 P1) | po R-4 | czeka |
+| W11 | Regeneracja 280 ujęć i tag `baseline-audyt-<data P11>` na maszynie z nocną bramą wizualną (cron właściciela, `scripts/visual/gate.sh`) — wykonawca przygotowuje polecenie w P11 | P11 | czeka |
+| W12 | Usunięcie `tower-hhl.pages.dev` z Redirect URLs w panelu Supabase (E24 pkt 3) | po P9 | czeka |
+| W13 | Dostęp do pliku harmonogramu KSH na SharePoint od działu IT KSH (decyzja 12:50 „czekamy”) — potem synchronizacja w obie strony według E38 (L41) i według decyzji 09.10 13:09: daty i godziny zmienione przez KSH w Watch Tower trafiają do pliku (G-20) | gdy będzie | czeka |
+| W14 | Linki śledzenia od podwykonawców SCX (E44, L55) | — | **ZAMKNIĘTE 09.10.2026**: link RIO jest (10:34), dane automatycznie (10:54), zgody na piśmie i nowy link na każdy przejazd (11:19) — E44 w P4 (G-24) |
+| W15 | Oficjalne API emtrack (TELM-2, II-4, D-TELM-ETA) i API Stena (D-LATER); do tego czasu odczyt jak dziś (`emtrack-web`, źródło STENA) | gdy będzie | czeka |
+| W16 | Kody opóźnień uzgodnione z SCX (II-2) — po spotkaniu z SCX | gdy będą | czeka |
+| W17 | Data wydania `release-1.0`: koniec Dnia 4 (przy starcie 11.10 — 14.10.2026) czy inna. Test E22 („tydzień bez nowych błędów »stara wersja«”) kończy się 7 dni po wdrożeniu P10a; przy wcześniejszym wydaniu jego wynik koordynator dopisuje do R-4 po 7 dniach (E22-2) | przed P11 | czeka |
+| W18 | Decyzja: e-CMR (6.9), kanał zespołowy Slack/Teams (9.9), kalendarz do subskrypcji (9.10), raport śladu węglowego (10.9), retencja `files/` w R2 (lista „Etap III” starego planu) — w 1.0 czy po 1.0. Od 27.09 „do decyzji właściciela”, decyzji nie było; do decyzji nie są budowane | gdy zdecydujesz | czeka |
+| W19 | H-10 (D-84: porywy 15 m/s, silny wiatr wydłuża ETA): o ile wydłużać ETA i które źródło serii wiatru drogowego przyjąć (wykonawca w P4 wpisuje tu, co sprawdził) | po P4 | czeka |
+| W20 | D-18: czy wysłać armatorom e-mail z prośbą o zgodę na odczyt komunikatów (odczyt działa bez zgody od 29.09) | — | **ZAMKNIĘTE 09.10.2026, 13:09**: „mamy wszystkie zgody każdego z armatorów” — nic nie przygotowujesz i nie wysyłasz (D-18 ✅, D-20261009-1309-01 R2) |
+| W21 | P3-APK: uprawnienie `workflow` dla tokenu GitHub — potem wykonawca przypina akcje (SHA) w workflow APK | gdy będzie | czeka |
+| W22 | E18 P3 (decyzja „A: usunąć konta +tower-test z zaproszeniami”) i P2: wiersze 6 kont „+tower-*” wskazuje 11 wpisów dziennika bezpieczeństwa (klucz bez kaskady) | — | **ROZSTRZYGNIĘTE 09.10.2026, 13:09**: „usunąć z odpięciem 11 wpisów dziennika” — robi P1 (`paczki/P1_E18.md`, D-20261009-1309-01 R3) |
+| W23 | Kwoty w dokumentach audytu (E3, E16, E33, E40, `DECYZJE_08_10.md`): zostają w repozytorium (prywatnym) czy usunąć je z dokumentów (G-16) | gdy zdecydujesz | czeka |
+| W24 | Sprawdzenie na iPhonie i Androidzie (E8 pkt 8, E13): dolny pasek, karty, dzwonek, instalacja — wynik do koordynatora | po P2 i po P3 | czeka |
+| W25 | Zgoda na jednorazową kopię prawdziwych pozycji SG-03 (czas, współrzędne, prędkość, zapłon; bez nazwisk i tablic) z produkcji na TEST na czas testów P4 i P8, z usunięciem po teście (G-17 pkt 3). Bez zgody testy idą na śladzie zmyślonym | przed P4 | czeka |
+| W26 | Piloci: zmiana symbolu ładunku z „PL + SE” na „BRAK” po wpisaniu pilotów — usunąć zapisane wiersze pilotów czy zostawić je ukryte w bazie (D-20261009-1233-01 pyt. 2). Do odpowiedzi: wiersze zostają w bazie, niewyświetlane | przed P7 | czeka |
+| W27 | Link śledzenia: decyzja 07.10 20:57 „SCX zawsze musi dodać link”, E44 pkt 5 „pole wymagane przy każdej awizacji transportu podwykonawcy”, a kompletna awizacja w E32 pkt 6 (akceptacja 08.10 12:14) nie zawiera linku. Czy brak linku ma blokować kompletną awizację i „Gotowy”; jeśli tylko u podwykonawcy — po czym rozpoznać transport podwykonawcy SCX. Do odpowiedzi: według E32 pkt 6 nie blokuje; sprawa „Dodaj link śledzenia” dla SCX otwarta do wklejenia linku (L19) | przed P4 | czeka |
+| W28 | Grupowanie na mapie: czy także auta blisko siebie poza strefami E34 (np. parking), a jeśli tak — w jakiej odległości. Do odpowiedzi: tylko strefy (D-20261009-1309-01 R5) | przed P9 | czeka |
+| W29 | Ta sama data lub godzina zmieniona w pliku KSH i w Watch Tower między synchronizacjami — co wygrywa. Do odpowiedzi: plik; KSH dostaje informację w dzwonku (D-20261009-1309-01 R6 pkt 6) | przed „P7 — uzupełnienie W13” | czeka |
+| W30 | Czy zablokować Administratorowi HHL zmianę dat i godzin w „Działaj jako” konto KSH (decyzja 13:09 „tylko KSH” a konstytucja VI.5 „może wykonać każdą czynność za każde konto”). Do odpowiedzi: nie blokujemy — zapis jako konto KSH, w dzienniku prawdziwy wykonawca (D-20261009-1309-01 R6 pkt 3) | przed P3 | czeka |
+| W31 | „Data załadunku” w pliku KSH jest w 28 wierszach formułą „dostawa − 5 dni” (plik z 08.10). Gdy KSH zmieni w Watch Tower datę załadunku takiego transportu: nadpisać formułę wartością czy zostawić formułę (wtedy zmiana nie trafi do pliku). Do odpowiedzi: wartość zastępuje formułę — decyzja 13:09 jest nowsza niż „formuł nie zmienia” z 12:50 (D-20261009-1309-01 R6 pkt 5) | przed „P7 — uzupełnienie W13” | czeka |
 
-## ETAP I — przed pilotażem (w tej kolejności)
+## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0, rezerwa
+**Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
+- synchronizacja SharePoint w obie strony (E38, L41) — W13;
+- oficjalne API emtrack: TELM-2, II-4, D-TELM-ETA; API Stena (D-LATER) — W15;
+- II-2 kody opóźnień z SCX — W16;
+- 6.9 e-CMR, 9.9 kanał zespołowy, 9.10 kalendarz, 10.9 ślad węglowy, retencja `files/` w R2 — W18;
+- H-10 wydłużenie ETA przy wietrze — W19 (sprawdzenie źródeł w P4);
+- P3-APK — W21;
+- kwoty w dokumentach — W23;
+- prawdziwy ślad SG-03 na TEST — W25;
+- W26–W31 (pytania z 09.10, D-20261009-1309-01): praca idzie według „Do odpowiedzi” z §5; odpowiedź właściciela zmienia pozycję dopiskiem koordynatora.
+Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armatorów są), W22 (rozstrzygnięte — P1).
 
-| ID | Opis | Kryterium | Status |
-|---|---|---|---|
-| I-0 | wyciek plików | stare wdrożenia usunięte, ocena ekspozycji | DONE |
-| I-0b | usunięcie poprzednich wdrożeń Pages przy najbliższym logowaniu | lista wdrożeń = 1 | DO ZROBIENIA (przy okazji) |
-| I-1 | import w produkcji zapisuje transporty | 41/41 lokalnie, powtórka 0 zmian | DONE |
-| I-SEC | strażniki odporne na NULL (`is not true`), `is_hhl()`/`can_see_margin()` tylko true/false | nieaktywne konto każdej roli × każda funkcja z listy dozwolonych = odmowa; test statyczny migracji | DONE 5d375f5 |
-| I-BK | kopia zapasowa: tabele wyliczane z katalogu, jawne wykluczenia | tabela spoza kopii i spoza wykluczeń = test czerwony | DONE d2a8219 |
-| I-1b | klasa STANDARD dla 9 transportów | import 50/50 | DONE 0c247b3 |
-| I-2a | przełącznik ról tylko dla HHL. Import harmonogramu też tylko HHL (2026-10-04 20:52 — wygrywa; KSH harmonogramu nie wgrywa). | KSH i SCX go nie widzą | DONE 16638cb |
-| I-2c | moduł Workflows ukryty w produkcji | niewidoczny poza trybem demo | DONE 16638cb; od 28.09 (9.4) w produkcji widoczny dla HHL_ADMIN na danych z bazy |
-| I-2d | ETA v1 w bazie: odcinek + czasy odcinków + rejs z `sailings`, przeliczana przy zdarzeniu | test na symulacji 11 transportów ze `status.sh` | DONE 16638cb (tests/db/i2.sh 51/51) |
-| I-2e | pogoda, przeprawy alternatywne, objazdy SE — ukryte albo „brak źródła danych" | zero danych statycznych w produkcji | DONE a4ff639 |
-| I-2f | Opcje BAF — prawdziwy formularz parametrów SEFS i odczytów indeksu, ze źródłem, datą i dziennikiem | zapis i odczyt w produkcji | DONE d912df7 (0052 na produkcji, weryfikacja w wycofanej transakcji) |
-| I-2g | kody opóźnień ukryte do uzgodnienia z przewoźnikiem | — | DONE 16638cb |
-| I-2h | telefony demo: pula PTS (SE), nieprzydzielalne (PL, LT); SMS i e-mail nigdy w trybie demo | test | DONE 16638cb |
-| I-2i | przegląd 37 pozycji „częściowo" — każda działająca tylko w demo trafia tu jako nowa pozycja I-2* | lista w raporcie | DONE (POSTEP § I-2i) |
-| I-2j | pozycje promów z bazy (AIS z `ferry-ais`) na mapie zamiast pozycji przykładowych — z I-2i (5.10) | mapa w produkcji pokazuje pozycję z bazy z czasem odczytu albo „brak źródła danych” | DONE 5ed7dd0 |
-| I-D9 | (P0, decyzja D-9) nowe wartości `eta_segment_params`: PL 7,5 h ±25%, check-in 3 h, SE 17 h ±20%, przerwy SE 13 h ±30%, przeprawa 18 h bez zmian; odpoczynek dobowy na promie | pasmo i opóźnienie transportu wzorcowego przed/po (transakcja wycofana) | DONE 8d69a40 (±747 → ±1013 min, opóźnienie 390 → 1080 min) |
-| I-2k | paczka dokumentów „tydzień” — tylko dokumenty transportów z wybranego tygodnia ISO — z I-2i (6.8) | test: paczka zawiera wyłącznie dokumenty tygodnia | DONE e4b393d |
-| I-2l | czas wykrycia odchylenia liczony z `risk_signals` (wykrycie − zdarzenie) zamiast „8 min” — z I-2i (10.7) | kafelek z bazy albo „—” | DONE 825da20 |
-| I-10 | e-mail o zmianie daty awizowanego transportu | dostarczenie na adres z plusem | DONE a0d21bc (SENT 21:20) |
-| I-3 | bramka SMS według `PROPOZYCJA_SMS.md` + decyzje z `ZLECENIE_ETAP_I.md` | testy z propozycji; 24 h pracy telefonu | CZĘŚĆ BAZOWA DONE (0067–0069) + DEC-5 (0106). **D-4 ZAMKNIĘTE 01.10** (telefon+SIM są). DO ZROBIENIA: aplikacja Android → **I-3-APK** |
-| I-5 | 2FA TOTP, wymagane dla HHL_ADMIN (`aal2`) | administrator bez drugiego składnika = odmowa | DONE a548eba (wymaganie wyłączone do D-11) |
-| I-4 | instrukcje: kierowca PL/EN/SV, KSH, przewoźnik | dostępne w aplikacji | DONE 3dac401 |
-| I-6 | monitoring błędów przeglądarki do własnej tabeli, alarm | błąd testowy widoczny w tabeli | DONE 642d68f |
-| I-7 | retencja: dane kierowcy 90 dni | test | DONE 642d68f; dokumenty — decyzja D-3 |
-| I-8 | wydajność: cały harmonogram + GPS według PR5, trzy role | czasy liczbami | DONE 642d68f |
-| I-9 | `SCOPE.md` koordynatora w repo; Twoje statusy jako §53 | jeden rejestr | DONE (ten commit) — SCOPE = plik koordynatora §0–55 bez zmian + §56 (statusy wykonawcy; §53–55 zajęte przez koordynatora) |
-| I-11 | każda pozycja SCOPE 0–11 inna niż DONE ma miejsce w tej kolejce albo w dzienniku odłożeń | zasada 7 spełniona | DONE (ten commit) — SCOPE §56.1: 65 pozycji → miejsce w PLAN albo dzienniku; nowe I-20…I-24, III-2…III-9, D-13…D-15 |
-| I-19 | (P1, właściciel 27.09 — luka z I-12) formularz cennika dla HHL w aplikacji: stawki koszt (przewoźnik) i przychód (KSH), przedziały wymiarów i pozycja STANDARD, wersjonowanie (nowa wersja zamiast nadpisania) z dziennikiem zmian, interfejs po polsku; dziś cennik da się zapisać tylko SQL, a od niego zależy R-1. Kwot nie wpisujemy (D-1) | HHL zapisuje wersję cennika w aplikacji, dziennik pokazuje kto/co; KSH i przewoźnik nie zapisują; test bazy + e2e | DONE (ten commit) — 0065: rate_card_save (tylko HHL, nowa wersja per strona+organizacja, walidacja nakładania przedziałów, powód od v2), rate_card_change_log, tylko dopisywanie, RLS odczytu tylko HHL; Opcje → „Cennik HHL” (build produkcyjny); kwot nie wpisano (D-1) |
-| I-12 | (P1, D-8, blok właściciela 27.09) cennik — pozycja STANDARD: stała stawka, koszt i przychód osobno, ten sam mechanizm paliwa i kursu; `cargo_class = STANDARD` → pozycja STANDARD; brak stawki = wyraźne ostrzeżenie, nie zero; kwot nie wymyślamy (D-1) | brak stawki → ostrzeżenie; test mechanizmu na stawce testowej | DONE a14a2ac — 0064; kwoty STANDARD czekają na D-1 |
-| I-13 | (P1, kolejność P1: 5.; obejmuje D-10) `sefs_parameters.applies_to` (COST / REVENUE / BOTH, domyślnie BOTH); RLS: przewoźnik COST+BOTH, KSH REVENUE+BOTH, HHL wszystko | test bazy: przewoźnik nie widzi wiersza REVENUE, KSH nie widzi wiersza COST | DONE 1d05ea4 — 0063; D-10 zrealizowane tutaj |
-| I-15 (stara, D-10) | (P1, decyzja D-10) przewoźnik widzi parametry SEFS tylko do odczytu, wyłącznie wersje `agreed_with_carrier = true` | RLS + test bazy | ZASTĄPIONA PRZEZ I-13 (właściciel 27.09: D-10 w I-13; ID I-15 przejęte przez pasmo ETA niżej) |
-| I-17 | (P1, kolejność P1: 1.) 2FA: drugie urządzenie uwierzytelniające w „Weryfikacja dwuetapowa” | dwa składniki, każdy działa niezależnie | DONE 642d68f |
-| I-18 | (P1, kolejność P1: 2.; D-12) status daty planu: WSTĘPNA \| POTWIERDZONA (autor, czas). KSH: „Potwierdź daty” na transporcie, z możliwością zmiany; zmiana daty potwierdzonej = zdarzenie + powiadomienie HHL i przewoźnika. Import HHL nie nadpisuje daty potwierdzonej bez osobnego ostrzeżenia i zgody. Ryzyko: brak potwierdzenia N dni przed załadunkiem (N w tabeli parametrów, domyślnie 5). Interfejs odróżnia datę wstępną od potwierdzonej. ANEKS 2 bez zmian (przewoźnik nadal nie zmienia okien KSH) | test bazy + widoki trzech ról | DONE cdbb696 — 0061; SCOPE 16.3 ZASTĄPIONA PRZEZ I-18 |
-| I-16 | (P1, kolejność P1: 3.) walidacja ETA na 50 prawdziwych transportach: zapas w godzinach względem planu 5 dni (min, mediana, maks.) + rozbicie transportu testowego D-9 (planowany załadunek, planowana dostawa, rejs, ETA na odcinek); ujemny zapas = najpierw sprawdzić model i rejs | liczby min/mediana/maks. + rozbicie | DONE 4e40ca5 — 30 / 54 / 55 h, 0 ujemnych |
-| I-15 | (P1, kolejność P1: 4.) pasmo ETA: odpoczynek dobowy 11 h jako osobny odcinek ±0%, przerwy 2 h ±50%; łączenie niepewności pierwiastkiem z sumy kwadratów zamiast sumy | pasmo przed i po | DONE bfbc974 — 0062; rejs założony 1013 → 433 min |
-| I-14 | (P2) `baf_definitions` + `baf_index_values` (0 wierszy) obok `sefs_parameters`/`fuel_index_readings` = dwa źródła prawdy dopłaty paliwowej — wybrać jedno, drugie usunąć (tylko przy 0 wierszy na produkcji) albo opisać | jedno miejsce na parametry, jedno na odczyty | DONE (ten commit) — 0066: jedyne źródło = `sefs_parameters` (parametry) + `fuel_index_readings` (odczyty); `baf_definitions`, `baf_index_values` i `rate_cards.baf_id` usunięte (produkcja: 0/0/0 wierszy; strażnik przerywa migrację przy danych) |
-| I-20 | (P2, z I-11: SCOPE 2.6) ogólny dziennik audytu: wyzwalacz na tabelach biznesowych (loads, shipment_items, invoices, rate_*, sefs_*) — kto, kiedy, stara/nowa wartość | test bazy: zmiana każdej tabeli = wiersz w audit_log | DONE 28.09 (0072) — wyzwalacz `trg_audit_row` na 7 tabelach: ROW_INSERT/UPDATE/DELETE, kto, stara/nowa wartość tylko zmienionych kolumn; bez wpisu przy przeliczeniu ETA; dane osobowe kierowcy jako „[dane osobowe]”; odczyt tylko HHL_ADMIN |
-| I-21 | (P2, z I-11: SCOPE 4.3) terminy uzupełnienia zasobów (kierowca, pojazd, dokumenty) przed załadunkiem i eskalacja (ryzyko + powiadomienie) | test bazy: brak zasobów N h przed załadunkiem → ryzyko | DONE 28.09 (0073) — `resource_deadlines` (kierowca 48/12 h, pojazd 48/12 h, dokumenty 24/6 h — propozycja do potwierdzenia z SCX, II-3), `detect_resource_deadlines` co 15 min: RESOURCE_MISSING HIGH → CRITICAL, IN_APP przewoźnik (+ HHL przy CRITICAL), auto-zamknięcie po uzupełnieniu |
-| I-22 | (P2, z I-11: SCOPE 3.2) kreator mapowania kolumn importu z zapisem szablonu w bazie (HHL) | nowy układ pliku zmapowany i zapamiętany; import 50/50 | **DONE** 28.09 (0077) |
-| I-23 | (P2, z I-11: SCOPE 9.8) test odsiewania duplikatów powiadomień (dedup_key) dla wszystkich szablonów | test bazy | DONE 28.09 — `tests/notify-dedup.test.ts` (każdy INSERT do notifications w bazie: dedup_key + on conflict do nothing; 8 szablonów z własnym tekstem PL/EN/SV) + i2 „[I-23]” (unikalny indeks, duplikat odrzucony) |
-| I-24 | (P2, z I-11: SCOPE 10.8) eksport raportów do PDF (obok XLSX) | plik PDF z harmonogramu | DONE 28.09 — przycisk „Eksport PDF” obok XLSX w harmonogramie (`src/lib/pdfExport.ts`, pdf-lib + Liberation Sans OFL, ładowane leniwie); A4 poziomo, stronicowanie, bez danych kierowcy i kwot |
-| I-25 | (P0, właściciel 28.09) cofnięcie reguły opóźnienia z 0070 (błąd w komunikacie koordynatora): opóźnienie od końca okna dostawy (`plan_delivery_to`, tylko od KSH), a bez okna — od końca dnia dostawy (Europe/Stockholm); import nie ustawia okna | okno 08–12, ETA 18:00 → 360; bez okna ETA 18:00 → 0; bez okna ETA 06:00 nast. dnia → 360; import bez godzin → okno puste (baza i UI identycznie) | **DONE** 28.09 (0080) |
-| I-26 | (P1, właściciel 28.09) anon ma INSERT/UPDATE/DELETE na ~20 tabelach `public` (m.in. loads, invoices, invoice_lines, organizations, projects, documents) — blokuje tylko RLS (wzorzec jak `permits` przed 0081): odebrać anon wszystkie uprawnienia tabel (i sekwencji) w `public` + `ALTER DEFAULT PRIVILEGES`; aplikacja kierowcy działa przez funkcje — sprawdzić; przegląd TRUNCATE/REFERENCES/TRIGGER dla authenticated | anon: 0 uprawnień do tabel w `public` (poza `spatial_ref_sys` — chroni wyzwalacz); przebieg kierowcy z linku przechodzi; test w zestawie security | **DONE** 28.09 (0083) |
-| I-27 | (P1, właściciel 28.09, przed R-3) brak zezwolenia dla transportu o klasie innej niż STANDARD blokuje przejście do READY („Gotowy”) — przełącznik w tabeli parametrów; włącza właściciel przed pierwszym prawdziwym transportem (D-21). STANDARD bez zezwolenia przechodzi | test: DIMENSIONED bez zezwolenia nie osiąga READY przy włączonym przełączniku | **DONE** 28.09 (0084; przełącznik WYŁĄCZONY — włącza właściciel, D-21) |
-| I-28 | (P2, właściciel 28.09) usunąć `load_delivery_day_end` — nieużywana, ignoruje okno dostawy (najpierw sprawdzić brak odwołań) | funkcja usunięta, brama bazy zielona | **DONE** 28.09 (0085) |
-| SEC-OWASP | (P1) Na końcu, przed pilotażem. OWASP ASVS poziom 2: lista z wynikiem każdego punktu. OWASP ZAP: skan pasywny produkcji; skan aktywny wyłącznie na teście, nigdy aktywnie na produkcji. Zależności wg OWASP (Dependency-Check albo odpowiednik). Przegląd OWASP Top 10 dla bazy (uprawnienia, RLS, funkcje). Raport z wynikami i planem napraw do właściciela. Nie zaczynać przed kolejką P1-FONT, B-1, B-8-IMP, L-1. | raport u właściciela | **DONE** 05.10 (C/D/PKCE/deps) — ASVS L2 82 pass / 0 fail; ZAP pasywny High=0; hasło 12; CORS Edge tower; PKCE e2e 8/8; uuid@11; CSP RO do **12.10** (B); Active TEST 11.10 |
+**Część 2 — Przeniesione do paczek 09.10 (dawna lista „PO 1.0”, której właściciel nie zdecydował):**
+- 8.4 alternatywne przeprawy → P6 (E7-5);
+- H-7 mapa w e-mailach i PDF → P8;
+- ferry-weather → P10a (E23-4);
+- PR7, P2-TILES, B-VERIFY-17.3, KOPIA-D → P11 pkt 4;
+- E-MAIL-TYG, P3-BRACES i zależności deweloperskie z lukami (nie blokują scalenia) → brama niedzielna (§3).
 
-## PILOTAŻ I WYDANIE
+**Część 3 — PO 1.0:** tylko pozycje, które właściciel przeniósł swoją decyzją (reguła cięcia §3, W18). Stan 09.10: brak.
 
-| ID | Opis | Status |
+**Część 4 — Rezerwa (pierwsze propozycje przy regule cięcia; przenosi się do części 3 tylko decyzją właściciela, §3):**
+- E46 obciążenie w skali 3× (zostaje Lighthouse i pomiar bazy w skali 1×);
+- E35 akcja SMS w kreatorze;
+- E37 „Co nowego”;
+- E24 komunikat zamiast szarej mapy;
+- E15 kalibracja po 5 dostawach (zostaje sam zapis pomiarów).
+
+## §7. Stary plan — co się z nim stało
+- Wszystkie pozycje starego `PLAN.md` (do 07.10) są zamknięte jako „zastąpione planem z 08.10” albo wpisane wyżej. Pełny inwentarz 110 pozycji: `docs/handover/audyt_claude_2026-10-08/PLAN_OTWARTE_08_10.md`.
+- **Objęte audytem (54):** w paczkach P1–P10b według etapu.
+- **Sprzeczne (6):** obowiązuje audyt.
+- **R-0:** NIEAKTUALNE (transporty są prawdziwe od 01.10).
+- **Spoza audytu potrzebne do produkcji:** P11 pkt 4. Reszta w §6 (części 1 i 2).
+- **Pozostałe pozycje inwentarza (przypisanie 09.10, po niezależnym przeglądzie):**
+  - TELM-EMTRACK-WEB kroki 5–6 (monitoring 72 h; link do transportu i mapa) → objęte E23 (P10a: stan źródła emtrack) i E27 / E32 (P4, P7); stan sprawdzasz w P0a;
+  - P1-LINT (9 błędów stylelint w `src/index.css`, gałąź `fix/p1-font`) → stan w P0a; jeśli `npm run lint:css` nie jest zielone, poprawka w P2 (E10);
+  - D-LATER (API Stena, telematyka, SharePoint) → §5 W15 i W13;
+  - AIS-SRC pomiar 24 h → P10a;
+  - 11.3 testy ścieżek użytkownika → P11 pkt 8 (R-3);
+  - retencja `files/` w R2 → §5 W18;
+  - SG-03 raport po rozładunku (polecenie 05.10 13:53) → objęty sekcjami „Test” E15, E26 i E42 dla SG-03 (P4, P8); w P0a wpis „zastąpione audytem” z odesłaniem.
+- **Kolejka L-1b, L-4, L-5, L-13 z dawnego `AGENTS.md`:**
+  - stan sprawdzasz w P0a (migracje, scalone PR-y, `POSTEP.md`);
+  - zrobione oznaczasz z dowodem w `POSTEP.md`;
+  - niezrobione wchodzą do paczki etapu, który obejmuje temat: decyzje i „Do zrobienia” → P6, powiadomienia i cele kliknięć → P3, SMS → P8;
+  - jeśli nie da się ustalić, co to jest, piszesz dopisek do koordynatora.
+- **Usunięcie pozycji SG-01 `driver_token` (z dawnego `AGENTS.md`):** robisz w P1 razem z porządkami, tym samym sposobem (kopia R2, tylko ten wiersz). Jeśli już zrobione, wpisujesz dowód.
+
+## §8. Dziennik planu
+| Data | Zmiana | Źródło |
 |---|---|---|
-| R-0 | Plan czyszczenia przed R-1. Tylko plan, do akceptacji. Kasowane wyłącznie transporty i wiersze związane kluczem obcym. Reszta zostaje. Wykonanie dopiero tuż przed R-1, po pisemnej akceptacji. Nic nie kasować wcześniej. | PLAN — liczby z produkcji 04.10 20:30, bez kasowania |
-| R-1 | import prawdziwego harmonogramu na produkcję. Start produkcji = import ze SharePoint po D-SP (w planie już II-10-E1 i II-10-E2, bez drugiej kopii). Przed tym importem, i tylko po pisemnej akceptacji, czyszczenie z R-0. | **otwarte** — RODO/zgody OK; import + stawki (D-1 SYMBOL w bazie) — właściciel. Status bez zmiany. 94 transporty zostają do akceptacji czyszczenia |
-| R-2 | zaproszenie pracowników HHL, potem KSH, potem przewoźnika | **CZĘŚCIOWO** — właściciel sam dodaje użytkowników w aplikacji; zaproszenia/e-maile do tych kont mogą wychodzić (0133). Lista D-16 nadal u właściciela |
-| R-3 | O3b — pierwszy prawdziwy transport od importu do faktury | CZEKA NA: R-2 |
-| R-4 | raport końcowy, tag `release-1.0` | CZEKA NA: R-3 |
-
-## ETAP II — po spotkaniu z przewoźnikiem
-
-| ID | Opis | Status |
-|---|---|---|
-| II-1 | wartości SEFS i ich wprowadzenie | CZEKA NA: D-2 |
-| II-2 | kody opóźnień uzgodnione — włączenie w interfejsie | CZEKA NA: spotkanie |
-| II-3 | parametry operacyjne: cutoff promu, progi fal, prędkość; potwierdzenie z SCX czasów odcinków D-9 (PL 7,5 h, check-in 3 h, SE 17 h — „szacunek koordynatora”) oraz najpóźniejszej godziny końca załadunku (model: 07:30 dla rejsu 18:00 — POSTEP I-D9-a); odpoczynek na promie NIE jest do potwierdzenia — zamknięty decyzją właściciela (D-9); **pytania do SCX/KSH (propozycje w bazie, HHL zmienia w UI):** (a) terminy zasobów z I-21 — kierowca 48/12 h, pojazd 48/12 h, dokumenty 24/6 h przed załadunkiem; (b) terminy dokumentów z III-6 (`doc_requirements`, widok Dokumenty) — zezwolenie PL 24 h przed załadunkiem, zezwolenie SE 24 h przed promem, CMR i zdjęcia mocowania do 2 h po załadunku, POD do 24 h po rozładunku, rysunek KSH 72 h przed załadunkiem (KSH), polisa — dokument organizacyjny przewoźnika; czy któryś dokument jest nieobowiązkowy; (c) termin awizacji pojazdów pilotujących z III-4 — 48 h przed załadunkiem, alarm krytyczny 12 h (liczba wymagana = maks. z powiązanych zezwoleń) | CZEKA NA: spotkanie |
-| II-4 | adapter telematyki przewoźnika | CZEKA NA: spotkanie |
-| II-5 | komunikaty armatora w harmonogramie | **DONE** 01.10 (parser + 403=NIEZNANY; D-18 e-mail informacyjny zostaje) |
-| II-6 | Trafikverket, ~~TomTom~~ (zastąpiony przez HERE — II-7), KPD — zadania i klucze | **DONE** Trafikverket (01.10); TomTom/KPD nadal bez kluczy/cert |
-| II-7 | (decyzja właściciela 28.09 — zmiana) serwis tras = **HERE Routing API v8** zamiast TomTom: `transportMode=truck`, trasa przez punkty pośrednie z zezwolenia | **ZABLOKOWANE przez D-28** (regulamin HERE — `RAPORT_HERE_REGULAMIN.md`); nic z HERE nie implementujemy. Poprawione 04.10: blokada dotyczyła starego planu HERE. Wykonanie korytarza OSM: 0122. HERE od D-77, osobno od tej blokady. |
-| II-7a | (P1, decyzja właściciela 28.09) **warunek włączenia II-7:** twardy limit w kodzie **25 000 transakcji HERE / miesiąc** — po limicie zero zapytań do końca miesiąca, ETA v1, ryzyko dla HHL + e-mail; alarm przy 80%; przeliczenie najwyżej co 15 min i tylko dla jadących transportów. Przed podpięciem GPS — sprawdzenie dosłownego regulaminu HERE: (a) czy plan podstawowy wyklucza śledzenie pojazdów / telematykę, (b) zakaz przechowywania wyników — zapisujemy tylko ETA, bez trasy, (c) podanie źródła w szczegółach ETA; cytaty klauzul w raporcie; **jeśli (a) wyklucza użycie — STOP i do właściciela.** Klucz HERE wyłącznie w sekretach funkcji Edge. Analiza regulaminu — osobny wątek (`RAPORT_HERE_REGULAMIN.md`); implementacji nie zaczynać przed tym raportem | **ZABLOKOWANE przez D-28** — wynik regulaminu 28.09: STOP, plan podstawowy HERE wyklucza „Asset Management” (śledzenie + wyznaczanie tras dla pojazdu); potrzebny plan Enterprise lub asset-based ([RAPORT_HERE_REGULAMIN.md](RAPORT_HERE_REGULAMIN.md)) |
-
-## ETAP III — po pilotażu
-
-**III-1** (P2) kalibracja czasów odcinków ETA po 5 transportach — mediana i rozrzut każdego odcinka z wjazdów/wyjazdów stref; PROPOZYCJA zmian do zatwierdzenia przez HHL, nigdy cicha zmiana (odbiór: raport odcinków z liczbami i propozycją) — SZKIELET GOTOWY (ten commit): `scripts/iii1/calibration.sql` (tylko odczyt, produkcja: n = 0), samotest `scripts/iii1/selftest.sql`, szablon `RAPORT_KALIBRACJI_ETA.md`; dane — po 5 transportach ·
-**III-2** (P2, z I-11: SCOPE 0.1, 0.3, 0.7–0.10, 11.4) domknięcie wierności wizualnej — 0.1, 0.7 DONE 28.09 (`tests/stylesheet-mockup.test.ts`, naprawiony dryf `kbd`, DESIGN_SYSTEM §7a); 0.8–0.10 DONE 28.09 (`tests/visual-states.spec.ts`: 11 zrzutów stanów, próg 0,1%, w pre-push; szkielet i stan pusty harmonogramu jak w makiecie; tryb systemowy = motyw roli wg 17.9); 0.3/11.4 **DONE 28.09 (wariant lokalny)**: pełna brama `OK 840/840 kod 0` na `42a72c7` (po naprawie `gate.sh`, uodpornieniu narzędzia i klasyfikacji 162 ujęć — `G4_WZORZEC.md`); historia: `npm run gate:visual` (własny build i port 4188, 840 ujęć, próg 0,1%, ~70 min — poza pre-push) = 665/840, 175 ujęć Dokumenty + Harmonogram to dryf funkcji dodanych po wzorcu 27.09 (III-6, I-22/I-24), nie III-2 → D-25 wykonane (139), 36 ujęć → III-13 ·
-**III-3** (P2, z I-11: SCOPE 1.1) osobne środowisko testowe Supabase i testy bazy w GitHub Actions (dziś tylko lokalny hook) — DONE 28.09 (wariant lokalny): pełna brama `tests/db/gate.sh` w hooku pre-push na lokalnym Postgresie + bezpiecznik `local-only.sh`; drugi projekt Supabase i Actions odrzucone (slot/usypianie, PLAN §1.4, rozliczenia) — decyzja w POSTEP; `docs/ci/db.yml` gotowy, gdyby właściciel włączył Actions ·
-**III-4** (P2, z I-11: SCOPE 4.5) pojazdy pilotujące: dane i awizacja — DONE 28.09 (0087: `load_escorts` + `load_escorts_set` / `load_escort_status`, termin ESCORT 48/12 h w awizacji — PROPOZYCJA do II-3; dane osobowe pilota — D-22) ·
-**III-5** (P2, z I-11: SCOPE 5.10, 5.13) mapa: unikanie kolizji etykiet, odtwarzanie przebiegu w czasie — DONE 28.09 (0088 `load_track`; rozkładanie nakładających się znaczników ≥ 22 px w buildzie produkcyjnym; warstwa „Ślad” = odtwarzanie przebiegu GPS z bazy) ·
-**III-6** (P2, z I-11: SCOPE 6.1, 6.2) dokumenty: wymagalność i terminy per kategoria w bazie, wersjonowanie dokumentu — DONE 28.09 (0078; terminy startowe = PROPOZYCJA do potwierdzenia z SCX/KSH) ·
-**III-7** (P2, z I-11: SCOPE 7.10) pełna ścieżka sporu i akceptacji faktury — DONE 28.09 (0079; korekta z załączonym PDF w UI — 0082) ·
-**III-8** — (numer zarezerwowany, nieużyty) ·
-**III-9** (P2, z I-11: SCOPE 10.4, 10.6) widok placu budowy tylko do odczytu (opcjonalny), ocena przewoźnika — 10.6 DONE 28.09 (0089: `carrier_ratings`, `carrier_rate_load` tylko HHL po rozładunku 1–5, `carrier_scorecard` — karta w Opcjach, ocena w szufladzie; widoczność dla przewoźnika — D-23); 10.4 (widok placu budowy, opcjonalny) → D-24 ·
-**III-10** (P2, decyzja właściciela 28.09) pobieranie odczytów EU Weekly Oil Bulletin (publiczne, bezpłatne) do `fuel_index_readings` — gotowe, ale WYŁĄCZONE do D-2 (który indeks wybierze przewoźnik) — **ZROBIONE 28.09** (0092, funkcja Edge `fuel-wob`, przełącznik `FUEL_WOB_INGEST` wyłączony; włączenie po D-2 — patrz POSTEP III-10) ·
-**III-11** (P2, decyzja właściciela 28.09) źródło pogody morskiej dla trasy Gdańsk–Nynäshamn: porównanie otwartych danych (np. FMI, SMHI) — licencja do użytku komercyjnego, zasięg, częstotliwość. Tylko raport, nic w UI — **ZROBIONE 28.09** (`RAPORT_POGODA_MORSKA.md`: propozycja FMI WAM + DMI WAM, CC BY 4.0, bez klucza; Open-Meteo i IMGW odpadają — komercyjnie płatne) ·
-**III-12** (P2, decyzja właściciela 28.09) lista otwartych pozycji Etapu III niezależnych od właściciela; jeśli istnieje audyt dostępności — wykonać — **ZROBIONE 28.09** (lista: `III12_LISTA_ETAP_III.md`; audyt: `RAPORT_DOSTEPNOSC.md` — pola bez nazw 36 → 0, klawiatura 1402 → 362, kontrast → D-27) ·
-**III-13** (P2, korekta właściciela 28.09 — NIE decyzja właściciela, pozycja robocza) 36 ujęć wypisanych w D-25 (12 × Harmonogram 1920, 18 × Dokumenty HHL 1280–1920, 6 × Harmonogram HHL sv 390/768/1280): dla każdego ujęcia znaleźć commit, który wprowadził różnicę; pogrupować; każdą grupę zaklasyfikować jako zamierzoną (opis w `G4_WZORZEC.md`: ujęcia, commit, powód) albo regresję (naprawa w kodzie + test); dopiero potem odświeżyć wzorzec tych ujęć — tak jak 13 ujęć kokpitu — **ZROBIONE 28.09** (3 grupy, commity `16638cb`, `f7bda8b`, `bc31ac1`, `db3d5e3`; wszystkie zamierzone, regresji 0; wzorzec 36 ujęć odświeżony — `G4_WZORZEC.md` §III-13) ·
-Silnik Workflows · źródło pogody morskiej · polisy z przypomnieniem o wygaśnięciu (SCOPE 6.6 — część bazowa DONE 28.09, 0097; harmonogram, formularz i notka → D-30) · walidator zezwoleń i wymiarów (DONE 28.09, 0081 — SCOPE 6.5; formularz zezwoleń w UI = SCOPE 6.4 — **DONE 28.09 (0086)**: szuflada → Dokumenty → „Zezwolenia transportu”, HHL i przewoźnik transportu, KSH tylko odczyt) ·
-pozycje D4–D12 audytu · integracja SharePoint (zgoda IT KSH) · kalendarz ·
-e-CMR · ślad węglowy · SMS 6, 7, 10, 11 · retencja `files/` w R2 ·
-audyt dostępności (**wykonany 28.09**, kontrast → D-27) · przekazanie Cursorowi.
-
----
-
-
-## PACZKA 30.09 — kolejka (dopisana 29.09, rozszerzona 30.09 po odbiorze zleceń)
-
-Źródła w `docs/handover/`: `PACZKA_DECYZJI_30_09.md`, `ZLECENIE_CENNIK_SEFS.md`,
-`ZLECENIE_SHAREPOINT.md`, `ZLECENIE_POGODA_DROGI_ETA.md`,
-`ZLECENIE_PO_SPOTKANIU_SCX.md`, `ZLECENIE_DECYZJE_POWIADOMIENIA.md`.
-Pliki cen / SEFS / harmonogram: `D:\Watch Tower\dane\` (poza gitem).
-**Nowsze wygrywa** ze sprzecznymi wcześniejszymi (§0 każdego zlecenia).
-
-### Potwierdzenie odbioru (30.09) — lista identyfikatorów
-
-**PACZKA_DECYZJI_30_09:** D-1, D-2, D-8 (nieaktualne), D-27, D-28, D-29, D-29t,
-D-30, D-31, D-32, D-33, D-34 (SEFS=załadunek — zamknięte w PO_SPOTKANIU §0),
-D-35, I-29, I-30, I-31, I-32, I-33, I-7a, II-5, II-6, II-7, II-7b, II-8, II-9, II-10.
-
-**ZLECENIE_PO_SPOTKANIU_SCX:** §0 (zastąpienia), §1 logowanie hasłem, §2 telematyka,
-§3 Stena Line, §4 awizacja Dodaj/Edytuj, §4a numer HHL, §5 powiadomienia KSH,
-§6 opóźnienie/czas, §7 daty z pliku KSH, §8 opłaty ręczne (zastępuje auto I-32),
-§9 faktury EUR/PLN, §10 administrator, §11 historia zmian, §12 interfejs,
-§13 zezwolenia (czeka na dane), §14 telefon/instalacja, §15 nazwa i logo.
-
-**ZLECENIE_DECYZJE_POWIADOMIENIA:** §0, §1 telefony bez kierunkowego, §2 centrum
-decyzji, §3 powiadomienia, §4 widoczność, §5 SMS strefy, §6 ustawienia admina.
-
-**ZLECENIE_CENNIK_SEFS:** I-30, I-31, I-32 (auto → zastąpione przez §8 ręczne).
-
-**ZLECENIE_SHAREPOINT:** II-10, I-7a, D-32, D-33.
-
-**ZLECENIE_POGODA_DROGI_ETA:** II-5, II-6, II-7, II-7b, II-8, II-9, I-29.
-
-### Potwierdzenie uzupełnienia (01.10) — od koordynatora
-
-Przyjęte identyfikatory: **II-10-E1**, **II-10-E2**, **ONE-MECH** (D-29 + D-29t),
-**I-7a** (SHAREPOINT §1a — bez mechanizmu wycofania zgody), **CLEAN-TT-HERE** (P2).
-
-1. **II-10 — dwa etapy.** Etap 1: witryna STEGRABODEN **tylko ODCZYT**; wszystkie
-   testy zapisu wyłącznie na kopii `harmonogram_TEST_WatchTower.xlsx` w osobnej
-   witrynie/bibliotece testowej; identyfikator pliku testowego **na sztywno**
-   w konfiguracji — zapis do innego pliku = błąd. Etap 2 (zapis do pliku
-   produkcyjnego) **dopiero po pisemnej akceptacji właściciela**. Dane dostępu
-   (Tenant ID, Client ID, sekret) — właściciel wpisze do `.env.local` po
-   odpowiedzi IT KSH (D-32).
-2. **ONE-MECH.** Centrum decyzji (DECYZJE §2), ryzyka, reguły automatyzacji
-   i powiadomienia (§3) — **jeden przepływ**, zero podwójnych alarmów.
-   Tabela D-29 pokazuje, co zastępuje co (D-29t = treść tabeli w planie).
-3. **I-7a (P1).** Pełne dane kierowcy i auta dla KSH **na stałe**
-   (SHAREPOINT §1a). Mechanizmu wycofania zgody **nie budujemy**.
-4. **CLEAN-TT-HERE (P2).** Usunąć martwy kod i zmienne TomTom i HERE
-   (`TOMTOM_API_KEY` itd.) — silnik ETA jest własny (II-7 / D-28).
-
-| ID | Opis | Kryterium | Status |
-|---|---|---|---|
-| I-33 | P0. Kopia 29.09 zawieszona (RUNNING, finished_at puste). Przyczyna, ponowienie, strażnik RUNNING > 30 min → ERROR + e-mail. Sprawdź nocną | strażnik w cronie; test; nocna OK | DONE (ten commit, 0098) |
-| ENV-0a | .gitattributes `* text=auto eol=lf` + renormalize | commit | DONE a2b38f18 |
-| ENV-0b | vitest: CRLF / suma makiety / hunspell skip Windows | 0 failed | DONE a2b38f18 (530 passed / 36 skip) |
-| ENV-0c | baza testowa watch-tower-test (emkbykwenwrjmbprydml) | brama hosted zielona | DONE 894a684e — pominięte w tej sesji |
-| ENV-0e | usuń VITE_TRAFIKVERKET_API_KEY — tylko TRAFIKVERKET_API_KEY | brak VITE_ w vite/env | DONE a2b38f18 |
-| AUTH-1 | P0. Logowanie hasłem (PO_SPOTKANIU §1): zaproszenie→ustaw hasło; e-mail+hasło; reset; strona pośrednia „Dalej”; bez zaproszenia zero e-maili | 20 kont / 5 min bez e-maila; skaner nie zużywa tokenu | DONE (ten commit, 0099) — live 20 kont przy R-2 |
-| I-30 | P0. Cennik według symboli (zastępuje I-12/I-19). Transkrypcja vs JSON — różnica=STOP. Kwoty skryptem z `D:\Watch Tower\dane` | test pozycji; strażnik kwot; 95 HH | **DONE** (ten commit) — 0100 SYMBOL; verify OK; map HH 87/95 (8× KR bez daty=NO_CONVOY); load TEST+PROD |
-| I-31 | P0. SEFS: OKQ8 + Orlen; mnożnik=niższy; tydzień 28.09–04.10 = **1,14** | test 1,14; progi; awaria | **DONE** (ten commit) — 0101; unit+db 1,14; load tabel TEST+PROD |
-| DEC-2 | P0. Centrum decyzji — pełny proces (DECYZJE §2) | katalog decyzji + akcje + eskalacja | **DONE** (ten commit) — 0102/0103 + **0126** skutki opcji (`decision_apply_effect`); UI hint → szuflada |
-| DEC-3 | P0. Powiadomienia — każde zdarzenie/status/ryzyko/decyzja (DECYZJE §3) | macierz + kanały | **DONE** (ten commit) — 0104 decyzje; **0126** status/ryzyko/strefy przez `matrix_notify`; **0127** mapowanie kind→grupa (RESOURCE_MISSING ≠ RISK_FERRY_WEATHER) |
-| DEC-4 | P0. Widoczność — admin wybiera firmy (DECYZJE §4) | macierz per typ | **DONE** (ten commit) — 0105 UI + egzekwowanie w `matrix_notify` (IN_APP/EMAIL × firma) |
-| BRAND-15 | P1. Nazwa i logo Watch Tower (PO_SPOTKANIU §15, `public/brand`) | favicon, splash, manifest, zero „TOWER” w UI | **DONE** 57527034 — e-mail Auth (nadawca) = dashboard Supabase |
-| AWIZ-4 | P1. Awizacja „Dodaj"/„Edytuj" + okno (PO_SPOTKANIU §4) | przebieg HHL/SCX | **DONE** (ten commit) — modal; Ustalenia bez formularza awizacji; rejsy „zdąży”; tracking→telematics_vehicle_id; zapis zwrotny KSH = II-10 |
-| HHL-4a | P1. Numer HHL — dodawanie/edycja przez HHL (§4a) | test bazy + UI | **DONE** — Dodaj/Edytuj + pole w awizacji/szufladzie; zapis SharePoint = II-10-E2 / D-33 |
-| RESP-14 | P1. Telefon i instalacja PWA (§14) | ujęcia 390/768; Lighthouse | **DONE** — SW+offline+menu; brama `tests/resp14-phone.spec.ts` 390/768 OK; LH viewport+a11y; §12 user w menu (UI-12). Pełny installable = HTTPS prod |
-| DEC-5 | P1. SMS przy strefach — 2+2 osoby (DECYZJE §5); brak SMS do kierowców | test bramki | **DONE** (ten commit) — 0106; dec5 **11/11**; UI Opcje; bufor Śrem; wyzwalacze |
-| DEC-6 | P1. Ustawienia administratora (DECYZJE §6) | sekcje zwijane | **DONE** — układ + **0107** progi + **0110** dziennik Auth + baner + eksport CSV/XLSX; stan systemu (kopie/integracje/bramka SMS) |
-| I-3-APK | P0 (akceptacja 01.10). Aplikacja bramki Android: PULL `sms_pull`/`sms_report`/`sms_heartbeat`, APK + instrukcja instalacji; token parowania w Opcjach (nigdy w repo/logach); numer SIM w ustawieniach app; SMS test → właściciel → potem wyzwalacze §5; stan w „Stanie systemu” | APK + instrukcja; parowanie; test SMS; cisza >15 min w UI | **DONE** — APK 1.0.3; burst **10/10 DELIVERED**; strefy ON (**0116**). Zamknięte decyzją koordynatora 02.10 |
-| SMS-DELIV | P0. Burst 10/10 DELIVERED → włączenie wyzwalaczy stref §5 | 10/10 DELIVERED; SMS_ZONE_APPROACH+ENTER = true | **DONE** — burst 10/10; migracja **0116** PROD+TEST: strefy **ON** |
-| TEL-1 | P1. Telefony zawsze bez kierunkowego (DECYZJE §1) | zapis/odczyt | **DONE** — `toNationalPhone` + awizacja + import + eksport + SMS (E.164 dopiero przy enqueue); **0111** `driver_phone_country` |
-| DATY-67 | P1. Daty z pliku KSH + opóźnienie (§6–7); usunąć „Potwierdź daty" (I-18) | UI + powiadomienia | **DONE** (ten commit) — 0113 |
-| II-10-E1 | P1. SharePoint etap 1: STEGRABODEN **tylko odczyt**; zapis testowy wyłącznie do `harmonogram_TEST_WatchTower.xlsx` (ID pliku na sztywno — inny plik = błąd). Tylko HH; NTG nie. Creds po D-32 → `.env.local` | 95 HH odczyt; zapis tylko test; strażnik ID | DO ZROBIENIA — **zastępuje** wcześniejszy wiersz II-10 do czasu E2 |
-| II-10-E2 | P1. SharePoint etap 2: zapis do pliku produkcyjnego — **tylko po pisemnej akceptacji właściciela** | akceptacja na piśmie + test pętli | CZEKA NA: akceptację właściciela po E1 |
-| I-7a | P1. KSH widzi na stałe pełne dane kierowcy i auta (SHAREPOINT §1a). **Bez** mechanizmu wycofania zgody | test widoczności KSH + eksport | **DONE** (ten commit) — 0114 |
-| ONE-MECH | P1. Jeden przepływ: decyzje (§2) + ryzyka + reguły + powiadomienia (§3); zero podwójnych alarmów. Tabela D-29t **zaakceptowana 01.10** (warunek: żaden alarm bez zastępnika — lista było→jest w POSTEP) | tabela zaakceptowana; brak dubli w testach | **DONE** (seed) — wf-1…12 wyłączone z mapowaniem D-29t (MONEY/SYSTEM dla 7/10–12); auto-run usunięty; klik strefy→Transport; wf w prod = podgląd. Silnik START/cron — poza zakresem (macierz) |
-| OPL-8 | P1. Opłaty wyłącznie ręcznie (§8; zastępuje auto I-32) | brak auto-dopłat | **DONE** (ten commit) — 0115 |
-| FAK-9 | P1. Faktury EUR lub PLN przy wystawieniu (§9) | wybór waluty | **DONE** (ten commit) — weryfikacja M6/invoices3 |
-| ADM-10 | P1. Administrator może wszystko (§10) | impersonacja/override z audytem | **DONE** (ten commit) — **0117**; adm10 **8/8**; „Działaj jako” + pasek + audit acting_as |
-| HIST-11 | P1. Pełna historia zmian (§11) | UI historii | **DONE** (ten commit) — **0118**; hist11 **11/11**; Opcje „Historia zmian” |
-| STENA-3 | P1. Stena Line Gdynia–Karlskrona jak Polferries (§3) | słowniki, strefy, ETA | **DONE** (ten commit) — 0119/0120 + rozkład/status JSON AEM w `ferry-schedule`/`ferry-status` (źródło `STENA`); AIS Digitraffic z portem Karlskrona. **Luki → II-7/8/9:** ETA odcinki, pogoda, opóźnienie AIS; Digitraffic 01.10: 0 pozycji Spirit/Estelle/Ebba (brak ≠ opóźnienie); współrzędne terminali do potwierdzenia mapą |
-| II-5 | P1. Komunikaty armatorów — włączyć odczyt teraz | parser; 403=NIEZNANY | **DONE** (ten commit) — Polferries 403→NIEZNANY+ryzyko; Stena status z JSON; testy ferry+integrations |
-| II-6 | P1. Trafikverket — LIVE (klucz w sekretach Edge; RoadCondition+WeatherMeasurepoint; Situation usunięty z Open API) | `corridor_conditions.SE_E4.slowdown_mult` (+15% śnieg/śliskość → II-7) | **DONE** — **0121** + cron **0131** `tower-road-se` `*/15`; panel SE czyta bazę (nie fasadę) |
-| II-7 | P1. Własny silnik ETA na OSM (ODbL). HERE nie | postęp GPS, odpoczynek, prom | **DONE** (ten commit) — **0122** PROD+TEST; `corridor_polylines` + `compute_load_eta` v2 (OSM locate, SE×II-6, rejs GDN-NYN/GDY-KAA, odpoczynek I-15); ryzyko OFF_CORRIDOR + ETA_BREACH; UI attribution ODbL |
-| II-7b | P1. Kalibracja ucząca się (zastępuje III-1) | symulacja 30 transportów | **SZKIELET** (ten commit) — **0123** tabele obserwacji/wersji + freeze HHL_ADMIN; pełna nauka **CZEKA NA TELM-2** (GPS po rozładunku) |
-| II-8 | P1. Pogoda FMI+DMI+SMHI; progi 3,8 m / 40 kn potwierdzone | źródło w UI | **DONE** — **0124**; cron **0131** `tower-ferry-weather` `15 * * * *` (co 1 h; było co 6 h) |
-| II-9 | P1. Opóźnienie wypłynięcia z AIS; brak pozycji ≠ opóźnienie | test | **DONE** (ten commit) — `aisDepartureDelayMin` + ferry-ais przed odejściem; brak pozycji = brak wniosku; Edge wdrożony; ferry testy +3 |
-| TELM-2 | P1. Szkielet telematyki (§2) — czeka na API emtrack i linki | adapter + GPS z telematyki | **PARTIAL** — LIVE emtrack-web 0173–0176 + `tests/emtrack-web.test.ts` + symulacje `tests/telm2-sim.test.ts`; CZEKA: oficjalne API emtrack |
-**D-78 pule (05.10):** tiles 30000 Advanced Raster / routes 5000 Routing Truck — źródło: konto HERE właściciela, 05.10 (0172).
-
-| TELM-EMTRACK-WEB | P1. Zapas D-36: pozycje naczepy przez protokół web emtrack.eu/app (tylko odczyt) | WS LOGIN+GET_TRACKING_OBJECTS; PR5 2/15 min; warstwa pod API | **LIVE 05.10** — 0173+0174 + **0176** (blokada SMS/e-mail tylko właściciel, sieroty bez alarmów, faza z pozycji); flaga true po teście na sucho; raport `RAPORT_TELM_LIVE_GD035YX_05_10.md` |
-| I-29 | P1. Budżety darmowych planów na 140 transportów | tabela szczyt vs limit | **DONE** (ten commit) — `I29_BUDGETY_140.md`; wszystkie limity OK (Edge ~5%, baza ~14%, Resend ~40%) |
-| UI-12 | P2. Interfejs (§12) | użytkownik/rola/Wyloguj w menu; bez POD/mocowania | **DONE** (ten commit) — Nav session; Docs/Schedule bez POD/LASHING; Driver tylko CMR |
-| D-27 | P2. Kontrast ≥ 4,5:1; ewentualnie #7C909E | tylko kolory tekstu | **DONE** (ten commit) — --ink-3 #5A6B78/#788C9A; --amber-ink; bell #0E1A24; kursor default na thead/tr |
-| D-30 | P2. Polisy: cron + formularz HHL/przewoźnik (bazowa 0097 DONE) | UI + detect dzienny | **DONE** (ten commit) — **0125**; formularz Dokumenty; cron `tower-polisy` |
-| D-31 | P2. Pasek górny 390 px — naprawa | wzorzec tylko 390 | **DONE** (ten commit) — CSS ≤430: bez lang/roleswitch, overflow clip; test RESP-14 390 OK. **Wzorzec 390 → G4-WZORZEC (decyzja właściciela)** |
-| D-29t | P2. Tabela nakładania reguł START → **część ONE-MECH / D-29** (nie osobny tor) | tabela w planie przed włączaniem | ZASTĄPIONA PRZEZ ONE-MECH |
-| CLEAN-TT-HERE | P2. Usunąć martwy kod/zmienne TomTom i HERE (TOMTOM_API_KEY, job traffic-flow TomTom, i18n źródła itd.). ETA = II-7 | zero aktywnego TOMTOM/HERE w kodzie i env | **DONE** (ten commit) — traffic-flow DEMO; parsery TomTom usunięte; i18n wycofane; ZRODLA §2.3 |
-| ZEZW-13 | P2. Zezwolenia (§13) | — | CZEKA NA: wymiary aut |
-| GATE-WEEKLY | P1. Co niedzielę: brama TEST (`emkbykwenwrjmbprydml`) w częściach, nie jednym procesem. Podstawowa brama na co dzień jest lokalna (`tests/db/gate.sh`, Postgres 17). TEST także jako ostateczne potwierdzenie przed wdrożeniem. | exit 0; wynik liczbami w POSTEP.md | **RYTM** — najbliższa niedziela: **11.10.2026** (4.10 brama TEST poszła przy 0143) |
-| GATE-I30-I31 | P0. EXPECTED i30=10, i31=6 w `test-db-gate.mjs` + subset — brama kończy kodem 0 | subset i30+i31 exit 0 | **DONE** `b34a2236` (potwierdzenie exit 0: 02.10) |
-
-### Przed pilotażem (P1, kolejność 02.10) — dopisane zleceniem właściciela
-
-| ID | Opis | Kryterium | Status |
-|---|---|---|---|
-| DR-TEST | Odtworzenie ostatniej kopii z R2 na projekt TEST (`emkbykwenwrjmbprydml`). Klucz age tylko lokalnie na czas próby (nigdy repo/logi) | wiersze tabel = kopia; czas odtworzenia w POSTEP | **DONE** — 67 tabel / 4920 wierszy / 20 s (`restore_20261002`) |
-| SIM-1 | Symulacja pełnego transportu na TEST — zmyślony GPS Śrem→Gdańsk→prom→Nynäshamn→Boden: statusy, ETA, decyzje, powiadomienia; SMS tylko na numer właściciela | raport krok po kroku w POSTEP | **DONE** — pełny tor → AT_SITE; SMS OWNER; e-mail BLOCKED_R2 (oczekiwane) |
-| LOAD-1 | Test obciążenia na TEST — 140 transportów, 20 jednoczesnych użytkowników (3 role); czasy kokpitu, harmonogramu, mapy | liczby w POSTEP | **DONE** — seed 140/570 ms; kokpit p50 386 ms, harmonogram 319, mapa 88 |
-| DOC-ROLE | 1-stronicowe instrukcje dla KSH, przewoźnika i HHL (PL); także w aplikacji (panel „Instrukcja”) | 3 PDF/teksty + panel UI | **DONE** — `docs/handover/instrukcje/{HHL,KSH,SCX}.md`; panel Guide (`i4_*`) w Opcjach/Ustawieniach |
-| DAILY-1 | Codzienny e-mail o 7:00 tylko do administratora — kopie, integracje, bramka SMS, błędy z ostatniej doby | cron + treść; test na adres właściciela | **DONE** — 0129+0130; okno 24 h OK; sms_failed=seria anulowana 01.10; Leaflet+lazyRetry |
-
-### Stan kolejki (02.10)
-
-Aktywna kolejka przed pilotażem: **DR-TEST → SIM-1 → LOAD-1 → DOC-ROLE → DAILY-1**.
-Bez nowych funkcji poza tą listą. Blokery danych (IT KSH, emtrack, wymiary, OCP) zostają w sekcji 4.
-
-### Kolejność po PR #2 (03.10)
-
-Po scaleniu PR #2: **P1-FONT → B-1 → B-8-IMP → L-1**. **SEC-OWASP** jest na końcu planu, przed pilotażem (nie zaczynać wcześniej). Aikido i CodeRabbit nie blokują scalenia.
-
-### Potwierdzenie akceptacji koordynatora (01.10 — popołudnie)
-
-Przyjęte identyfikatory: **DEC-CLICK** (a/b/c), **D-29t** (z warunkiem zastępników),
-**D-4** (telefon+SIM — zamknięte), **PUSH+PROD** (0105–0107 + brama + vercel --prod),
-**I-3-APK** (dokończenie bramki Android).
-
-1. **DEC-CLICK — zaakceptowana.** (a) LOADING_UNCONFIRMED, SEQUENCE,
-   DATES_UNCONFIRMED, USAGE_LIMIT, JOB_FAILURE (poza kopią) → grupa C, bez nowych
-   typów decyzji. (b) klik w czyste zdarzenie statusu/strefy → zawsze Transport,
-   bez mini-akcji. (c) grupa D: usunąć odwołania do „driver PWA” (D-38 — ukryta).
-2. **D-29t — zaakceptowana** pod warunkiem: żaden obecny alarm nie znika bez
-   zastępnika; lista „było → jest” w POSTEP.md.
-3. **I-3 / D-4:** telefon Android + SIM są — dokończyć APK, token parowania,
-   numer w ustawieniach app, SMS test na numer właściciela, stan w SystemStatus.
-
-### ONE-MECH / D-29t — tabela nakładania (**zaakceptowana 01.10**, warunek zastępników)
-
-Cel: **jeden przepływ** (decyzja ↔ ryzyko ↔ powiadomienie). Reguły seed `wf-*`
-i crony DB nie mogą dublować centrum decyzji / macierzy / SMS.
-Silnik START / cron reguł — dopiero po scaleniu ONE-MECH (lista było→jest w POSTEP).
-
-| Reguła / mechanizm | Warunek → akcja dziś | Nakłada się z | Propozycja |
-|---|---|---|---|
-| START/wf-3 „Cichy pojazd” + `detect_silent_vehicles` | brak GPS > N min → ryzyko + mail | ryzyko `SILENT` + powiadomienia RISK + ewentualnie decyzja | **zostawić DB** `detect_silent_vehicles` jako źródło ryzyka; **wyłączyć** wf-3; decyzja tylko gdy eskalacja (katalog DEC) |
-| START/wf-1 Bufor 50 km Boden | wejście PRE_ARRIVAL → status + notify | geofence engine + DEC-5 SMS stref + macierz LOAD_STATUS | **zostawić silnik stref**; powiadomienia tylko przez macierz §3/§4; **nie** osobny wf-1 |
-| START/wf-8 Bufor przed portem / Plan B | PRE_PORT + cutoff → ryzyko prom | ryzyko FERRY + decyzja plan B + powiadomienia | **ryzyko + decyzja**; wyłączyć osobny wf-8 jako drugi alarm |
-| START/wf-4 Ryzyko promowe | status rejsu ≠ ON_TIME → notify | to samo ryzyko FERRY + DEC | **jedno** zdarzenie ryzyka → macierz + decyzja; wf-4 wyłączyć |
-| START/wf-5 Zmiana daty awizowanej | import zmienia datę → mail + ack | I-10/I-18 / DATY-67 + decyzja potwierdzenia dat | **DATY-67 + decyzja**; wf-5 wyłączyć |
-| START/wf-2 Brak zezwolenia 48 h | cron → mail SCX + eskalacja HHL | I-27 wymóg zezwoleń + decyzja / powiadomienie | **decyzja + macierz**; wf-2 wyłączyć po podpięciu DEC |
-| START/wf-6 POD po rozładunku | UNLOADED → task 24 h | dokumenty + SMS 9 + decyzja | **jedna** ścieżka dokumentów/SMS 9; wf-6 nie dubluje |
-| SMS 5 / 9 (DEC-5 + D-19) | strefy / brak GPS / POD | ryzyka + decyzje | SMS **tylko** z macierzy/wyzwalaczy §5; bez drugiego toru z wf |
-| Opóźnienie z ETA (II-7) | ETA > plan + próg | ryzyko DELAY + decyzja opóźnienia | **ryzyko → decyzja**; bez osobnego maila z wf |
-| START/wf-9 Trafikverket | sytuacja HIGH/CRIT na SE | ryzyko ROAD_SE + powiadomienia | ryzyko + macierz; wf-9 wyłączyć |
-| START/wf-7…12 (faktury, factoring, PERIOD, marża) | crony / snapshoty | MONEY / SYSTEM w macierzy | po ONE-MECH: albo macierz SYSTEM/MONEY, albo zostawić wyłączone do osobnej decyzji |
-
-Po akceptacji: kod scala ścieżki (ONE-MECH), `canSeeWorkflows` / fasada wf → tylko podgląd historyczny lub usunięcie UI kreatora do SCOPE 9.4.
-
-**Czeka na dane właściciela:** API emtrack, linki podwykonawców, wymiary aut, polisy OCP (dane od przewoźnika), zgoda IT KSH (D-32) + wpis creds SharePoint do `.env.local`; certyfikat KPD GDDKiA (D-17).
-
-Pliki cen, umowa i harmonogram: `D:\Watch Tower\dane\` (poza gitem).
-Przekazanie 29.09 przerwało pracę **przed pierwszym commitem** I-30; kolejka niżej = obowiązująca.
-
-| ID | Opis | Kryterium | Status |
-|---|---|---|---|
-| I-30 | P0. Cennik według symboli (zastępuje model I-12/I-19). Niezależna transkrypcja xlsx/docx vs `CENNIK_STEGRA.json` — każda różnica = STOP. Kwoty skryptem z pliku lokalnego, nie migracją. PL-1/PL-10.1/PL-17.1 jak PL-B. Konwój = liczba KR z tą samą datą załadunku | test każdej pozycji; strażnik: żadnej kwoty cennika we froncie; mapowanie 95 HH | ZASTĄPIONA PRZEZ tabelę powyżej (ta sama treść, status DO ZROBIENIA) |
-| I-31 | P0. SEFS … | … | ZASTĄPIONA PRZEZ tabelę powyżej |
-| I-7a | P1. KSH widzi… | … | ZASTĄPIONA PRZEZ tabelę powyżej (uzupełnienie 01.10: bez wycofania zgody) |
-| II-5 | P1. Odczyt komunikatów… | … | ZASTĄPIONA PRZEZ tabelę powyżej |
-| II-10 | P1. SharePoint… | … | ZASTĄPIONA PRZEZ II-10-E1 / II-10-E2 |
-| II-7 | P1. Własny silnik ETA… | … | ZASTĄPIONA PRZEZ tabelę powyżej |
-| II-7b | P1. Kalibracja… | … | ZASTĄPIONA PRZEZ tabelę powyżej |
-| II-8 | P1. Pogoda… | … | ZASTĄPIONA PRZEZ tabelę powyżej |
-| II-9 | P1. Opóźnienie AIS… | … | ZASTĄPIONA PRZEZ tabelę powyżej |
-| I-32 | P1. Opłaty auto… | … | ZASTĄPIONA PRZEZ OPL-8 (ręczne §8) |
-| I-29 | P1. Budżety… | … | ZASTĄPIONA PRZEZ tabelę powyżej |
-| D-29t | P1. Tabela START… | … | ZASTĄPIONA PRZEZ ONE-MECH |
-| II-6 | P1. Trafikverket | — | ZASTĄPIONA PRZEZ tabelę powyżej |
-
-# 4. DECYZJE OCZEKUJĄCE — WŁAŚCICIEL
-
-Wpisujesz tu każde pytanie i idziesz dalej.
-
-| ID | Sprawa | Blokuje |
-|---|---|---|
-| D-1 | **ZREALIZOWANE** (I-30): cennik SYMBOL w bazie (TEST+PROD), kwoty wyłącznie skryptem z `D:\Watch Tower\dane`. **Uwaga 05.10:** wpis „D-1” na liście *czekających* w raporcie zeszyt = **pomyłka** (skojarzenie z R-1 importem); sam cennik D-1 ≠ czekający — nie blokuje nic poza R-1/importem u właściciela. | R-1 (import), I-30 DONE |
-| D-2 | **ZREALIZOWANE** (I-31): SEFS hybrid_min w bazie; III-10 WOB wyłączone (niezgodne z umową). Potwierdzenie SCX (pyt. 9) nie blokuje | I-31 |
-| D-3 | **ZATWIERDZONE 05.10 ~13:53:** CMR, POD, zdjęcia **3 lata**; PDF faktur **5 lat**; I-7 kierowca bez zmian | retencja dokumentów |
-| D-4 | ~~telefon i SIM~~ — **ZAMKNIĘTE 01.10:** telefon Android + karta SIM są (koordynator). Dokończenie = I-3-APK | I-3-APK |
-| D-5 | **DONE 02.10** (właściciel): umowy RODO / zgody załatwione — odblokowanie zaproszeń i e-maili do kont dodanych w aplikacji (0133); pełne EXTERNAL_MESSAGING nadal osobna decyzja | R-2 |
-| D-6 | spotkanie ze Scandinavian Express | etap II |
-| D-7 | Vercel: wyłączenie trenowania modeli (panel) | — |
-| D-8 | ~~wycena ładunków STANDARD~~ — **ROZSTRZYGNIĘTE 27.09**, potem **NIEAKTUALNE 30.09:** transporty „Standard” należą do NTG (inna firma) i nie są importowane. Osobna stawka STANDARD niepotrzebna. Klasa zostaje tylko jako obrona (HH + Standard = ostrzeżenie) | — |
-| D-9 | ~~parametry odcinków ETA v1~~ — **ROZSTRZYGNIĘTE 27.09:** wartości wpisane (I-D9, 0054); obsada jednoosobowa, przeprawa = dobowy odpoczynek na promie (potwierdzone przez właściciela, bez postoju w Nynäshamn); czasy PL/check-in/SE do potwierdzenia z SCX w II-3. Wartości 0054 zostają; opóźnienie 390 → 1080 min wynika z nowych czasów (+3 h jazdy + 8,5 h odpoczynku = 690 min) — NIE błąd (POSTEP I-D9-a) | — |
-| D-10 | ~~widoczność SEFS dla przewoźnika~~ — **ROZSTRZYGNIĘTE 27.09:** przewoźnik widzi parametry tylko do odczytu, wyłącznie wersje uzgodnione (`agreed_with_carrier = true`) → **I-13** (właściciel 27.09; pierwotnie I-15) | I-13 |
-| D-11 | **ROZSTRZYGNIĘTE 27.09:** właściciel włącza wymaganie dopiero po I-17 (drugie urządzenie). 2FA (I-5): właściciel zapisuje TOTP (Opcje → „Weryfikacja dwuetapowa” → kod QR → kod) i klika „Włącz wymaganie”; do tego czasu egzekwowanie `aal2` dla HHL_ADMIN jest wyłączone (`security_flags.MFA_HHL_ADMIN = false`) | I-5 |
-| D-12 | **ROZSTRZYGNIĘTE 27.09:** ostateczne daty załadunku i rozładunku podaje KSH (→ I-18). Termin potwierdzenia N — do uzgodnienia, domyślnie 5 dni. INFO: plan KSH = 5 dni od odbioru do dostawy — poprawione 04.10 (U-32): cel tranzytu to D-41 (4 dni; 5 przy ciężkiej pogodzie w SE), nie stałe 5 dni. Piątka zostaje tylko jako wyprzedzenie potwierdzenia dat. | I-18 |
-| D-13 | ~~podglądy wdrożeń~~ — **ZAMKNIĘTE 28.09 (zastąpione):** podglądy Vercel za Vercel Authentication i wyłącznie na danych demo; podglądy Pages wyłączone. SCOPE 1.6 = zamknięte przez zastąpienie (stan paneli: POSTEP, wpis D-13) | SCOPE 1.6 |
-| D-14 | (z I-11: SCOPE 7.5) konwencja kursu NBP (tabela A z dnia roboczego przed rozładunkiem) — **CZEKA:** właściciel pyta księgowość | SCOPE 7.5 |
-| D-15 | (z I-11: SCOPE 3.8) limity ponadnormatywności PL i SE — zebrane z podstawą prawną w [LIMITY_PONADNORMATYWNOSC.md](LIMITY_PONADNORMATYWNOSC.md) (zebrane 28.09), **do potwierdzenia z przewoźnikiem** | SCOPE 3.8 |
-| D-16 | lista użytkowników do zaproszenia: imię i nazwisko, e-mail, firma, rola | R-2 |
-| D-17 | rejestracja w KPD GDDKiA: najpierw firma, potem użytkownik z certyfikatem | II-6 (Polska) |
-| D-18 | e-mail do armatora z prośbą o zgodę na odczyt komunikatów (informacja — odczyt II-5 już włączony) | II-5 DONE; oficjalny kanał |
-| klucz Trafikverket (II-6) | **ROZSTRZYGNIĘTE 01.10:** klucz Trafikverket w sekretach Edge + `.env.local` — II-6 LIVE (RoadCondition + WeatherMeasurepoint). Situation usunięty z Open API dostawcy. To nie jest decyzja D-34 (tydzień dopłaty paliwowej, data załadunku). | II-6 DONE |
-| D-STENA-COORDS | **DONE 02.10** (właściciel potwierdził terminale). Współrzędne: Gdynia 54.53321, 18.54425; Karlskrona 56.16460, 15.63080 — obowiązują w geofence STENA-3 | STENA-3 geofence |
-| poczta zewnętrzna (EXTERNAL_MESSAGING) | **CZĘŚCIOWO 02.10:** RODO/zgody załatwione (R-1/R-2, decyzja D-5). **0133:** e-mail do kont `app_users` + aktywnych zaproszeń `user_invites` = PENDING (nie BLOCKED_R2); SMS do kierowców nadal zablokowane (`EXTERNAL_MESSAGING` = false). Pełne włączenie: `admin_set_external_messaging(true)` gdy HHL zdecyduje. Numer D-20 w tej tabeli nie był numerem z rejestru decyzji. | R-2 |
-| D-21 | **POTWIERDZONE 28.09 (właściciel): właściciel włącza przed pierwszym transportem.** **DZIAŁANIE WŁAŚCICIELA przed pierwszym prawdziwym transportem (R-3):** włączyć przełącznik I-27 „brak zezwolenia blokuje Gotowy” dla klas innych niż STANDARD — Opcje → „Wymóg zezwoleń (transporty ponadnormatywne)” → „Włącz wymóg” (konto HHL_ADMIN; wpis w audit_log). Stan na 28.09: przełącznik jest, **WYŁĄCZONY** (produkcja nie ma jeszcze zezwoleń w bazie) | R-3 |
-| D-22 | ~~dane kierowcy pojazdu pilotującego~~ — **ROZSTRZYGNIĘTE 28.09 (właściciel): TAK** imię i telefon, te same zasady co kierowca: retencja 90 dni, dostęp przez funkcję danych kontaktowych, KSH nie widzi, nie ma w eksporcie KSH | III-4 → **DONE 28.09 (0090)** |
-| D-23 | ~~widoczność ocen dla przewoźnika~~ — **ROZSTRZYGNIĘTE 28.09 (właściciel): TAK** przewoźnik widzi swoje oceny i punktualność; wewnętrzne notatki HHL (komentarz) niewidoczne | III-9 → **DONE 28.09 (0091)** |
-| D-24 | ~~widok placu budowy~~ — **ZAMKNIĘTE 28.09 (właściciel) przez SCOPE 16.1:** Stegra nie jest rolą, tylko strefą/POI. Bez nowej roli; SCOPE 10.4 nie będzie realizowany | — |
-| D-25 | ~~odświeżenie wzorca Dokumenty/Harmonogram~~ — **ZATWIERDZONE WARUNKOWO 28.09 (właściciel):** każde ze 175 ujęć sprawdzić — różnica wyłącznie w miejscu nowych elementów (terminy, „Zmień”, wybór tygodnia, „Wgraj aktualizację”, „Eksport PDF”) → do wzorca; różnica poza tymi obszarami → wypisać, NIE aktualizować. `gate:visual` ma działać bez nadzoru (jeden skrypt, kod wyjścia, linia podsumowania w `/workspace/wt-gate-visual/last.txt`), właściciel uruchamia go co noc, wynik trafia do POSTEP | III-2 (0.3) → **WYKONANE 28.09:** 139 ujęć odświeżonych, 36 wypisanych (niezaktualizowanych); `gate:visual` bez nadzoru → `last.txt` |
-| D-27 | **ZATWIERDZONE 30.09 · DONE (ten commit):** każdy kolor tekstu na każdym tle obu motywów ≥ 4,5:1; jeśli #788C9A nie przejdzie na panelu ciemnym — #7C909E. Wzorzec: zmieniają się wyłącznie kolory tekstu, zero przesunięć. Reszta z audytu 28.09 (`RAPORT_DOSTEPNOSC.md`): `--ink-3`, ostrzeżenia, kursor bez akcji | SCOPE 11.5 |
-| D-28 | **ROZSTRZYGNIĘTE 30.09: HERE — nie**. II-7 DONE (0122, OSM). II-7b szkielet 0123; nauka CZEKA NA TELM-2. Poprawione 04.10: zapis „HERE — nie” zastąpiony przez D-77. HERE wchodzi w budżecie; własny silnik zostaje zapasem. | II-7 DONE; II-7b częściowo |
-| D-TELM-ETA | **CZEKA.** API emtrack + przykłady linków podwykonawców (TELM-2) — bez GPS po rozładunku nie domykamy II-7b (symulacja 30 / uczenie tempa) | II-7b, TELM-2 |
-| D-29 | **AKCEPTACJA 01.10 (D-29t + warunek zastępników).** Tabela w PLAN zaakceptowana; żaden alarm bez zastępnika (lista w POSTEP). Scalenie kodu = pozycja ONE-MECH. START-1…7 nadal 0/7 do scalenia | ONE-MECH |
-| D-30 | **DONE (ten commit).** Część bazowa 0097 + **0125**: cron `tower-polisy` 04:10 UTC, zatwierdzanie HHL (`insurance_policy_approve`), formularz w Dokumentach (HHL/SCX), notka z bazy. Dane polisy od przewoźnika — po spotkaniu | 6.6 |
-| D-31 | **DONE (ten commit).** Pasek górny ≤430 px: bez wystawania (ukryty lang+roleswitch, brand ściśnięty, overflow clip). Test `resp14-phone` 390 OK. **Odświeżenie ujęć 390 w shots-baseline — tylko po G4_WZORZEC + zgodzie właściciela (G4-D27-D31)** | wygląd 390 px |
-| D-32 | **CZEKA.** Zgoda IT KSH (Graph, `Sites.Selected`, witryna STEGRABODEN). Po odpowiedzi IT: właściciel wpisuje Tenant ID / Client ID / sekret do `.env.local`. Do E2: odczyt STEGRABODEN + zapis tylko do pliku testowego (II-10-E1) | II-10-E1 |
-| G4-D27-D31 | **DONE** 02.10 (zgoda koordynatora). Odświeżono: 11× `stan-*` + 4× smoke Playwright oraz **840/840** `shots-baseline` — wyłącznie przyczyny D-27/D-31/BRAND-15/RESP-14/UI-12; bez przyczyny = 0. Opis: `G4_WZORZEC.md` | gate:visual |
-
-| D-33 | **ROZSTRZYGNIĘTE 30.09, NIE ZROBIONE.** TOWER wpisuje do pliku KSH: kierowca, telefon, nr zlecenia, nr rejestracyjny (nowa kolumna „Nr rejestracyjny (TOWER)”). Godzin załadunku i rozładunku nie wpisuje. Realizacja w II-10-E2 (po akceptacji) | II-10-E2 |
-| DEC-CLICK | **AKCEPTACJA 01.10.** (a) grupy C bez nowych typów: LOADING_UNCONFIRMED, SEQUENCE, DATES_UNCONFIRMED, USAGE_LIMIT, JOB_FAILURE (poza kopią). (b) status/strefa → zawsze Transport, bez mini-akcji. (c) grupa D bez „driver PWA” (D-38). Routing klików w ONE-MECH / DEC-3 | ONE-MECH / DEC-3 |
-
-# 5. ZLECENIE 02.10 — POPRAWKI (NIEZACZĘTE)
-
-Źródło: `docs/handover/ZLECENIE_POPRAWKI_02_10.md`. Dopisane przy przejęciu (część A). **Nie realizować**, dopóki właściciel nie zaakceptuje. Część C wygrywa z zapisami separatorów w części B.
-
-## Część B — NIEZACZĘTE
-
-| ID | Opis | Status |
-|---|---|---|
-| B-1 | Mapy: pojazdy tylko z prawdziwych pozycji GPS (brak pozycji = brak znacznika). Warstwy stref, portów, korytarza, promów i sytuacji drogowych zostają. Na produkcji brak danych przykładowych. | **ZROBIONE 03.10** — PR #4 (`70d1c95` / `925ef37`), na main |
-| B-2a | Ryzyka: brak wypłynięć Steny | **ZROBIONE 05.10** — panel Ryzyka (produkcja): nadchodzące GDY–KAA obok GDN–NYN; `upcomingOutboundSailings` |
-| B-2b | Ryzyka: brak widoczności warunków drogowych w SE. Sytuacje drogowe Trafikverket (wypadki, zamknięcia, roboty) wchodzą w H-2, zaraz po L-12, nie w H-4: nowe źródło API, panel „Warunki drogowe SE”, ryzyka ROAD_SE z prawdziwych danych. | **DONE** — Situation schemat 1.6, namespace `road.trafficinfo` (1.5 bez przestrzeni nazw nie istnieje). Pusto = „Brak danych”. |
-| B-2c | Centrum decyzji: jak działa i dlaczego puste — opisać logikę, nie zgadywać | **ZROBIONE 05.10** — opis w `LOGIKA_SYSTEMU.md` §1 zaktualizowany (automaty L-1…; 45 otwartych na produkcji); bez zmian UI |
-| B-3a | Dokumenty: zezwolenie per firma obok polisy; auto-podpięcie do trasy wg wymiarów; polisa auto do każdej trasy | CZĘŚCIOWO — polisa auto (0182, lista 3.2); zezwolenia ⛔ D-83 |
-| B-4a | Finanse: przychód — pilotaż i dodatki mają zniknąć | **ZROBIONE 05.10** — usunięte wiersze KSH/HHL (`exR` / `fin_rev_extra` / `a6_fin_pilot` po stronie przychodu); koszt SCX bez zmian |
-| B-4b | Załącznik: zostaje samo CMR (bez POD) | **ZROBIONE 05.10** — Faktury i panel faktury: tylko CMR; etykiety bez POD; wzorzec faktury odświeżony |
-| B-5 | Automatyzacje: przycisk „Nowa automatyzacja” (tylko HHL_ADMIN) i kreator reguł w oknie — **decyzja właściciela 05.10 (ostateczna), odwraca „brak przycisku”**. Kreator: nazwa, wyzwalacz (zdarzenie / status / ryzyko / termin), warunki, akcje (powiadomienie, decyzja, e-mail, SMS wg zasad stref), włącz/wyłącz, edycja i usuwanie. Ten sam silnik co 0094 (ONE-MECH), zero podwójnych alarmów. Historia zmian reguły (kto, kiedy, co). Test: reguła z kreatora wykonuje się na zdarzeniu testowym; wyłączona — nie; duplikat istniejącego alarmu → ostrzeżenie przed zapisem. | **ZROBIONE 05.10** — PR #76, migracja 0165, dpl_8m39851J3SY5MFcdUJq8CfDj2k96 |
-| PALIWO-AUTO-A | Ceny paliw — krok A: próbka OKQ8 i Orlen do akceptacji właściciela (URL, nazwa produktu jak na stronie, wartość, jednostka, waluta, netto/brutto, data obowiązywania, 7 dni wstecz, cytat/zrzut strony). Konkretny zakaz w regulaminie → cytat i nie pobierać. Bez zapisu do bazy produkcyjnej. Decyzja 05.10. | **ZROBIONE 05.10** — raport `PALIWO_PROBKA_2A_05_10.md`; **zaakceptowane 05.10 ~10:37** z poprawką OKQ8 (Q8 Trucks / Diesel = 22,90 wprost, bez VAT) |
-| PALIWO-AUTO-B | Ceny paliw — krok B: automat codzienny z zaakceptowanych miejsc (User-Agent Watch Tower, źródło i czas przy odczycie) → średnia PL i SE z poprzedniego tygodnia → indeksy → mnożnik „niższy” (I-31) → opłata wg tygodnia załadunku (D-34, 0155), Europe/Warsaw (33.3). Formularz I-2f tylko awaryjnie: brak odczytu dnia → ryzyko w Stanie systemu + e-mail do administratora. Test: pełny tydzień → mnożnik = ręczny (28.09–04.10 = 1,14); brak jednego dnia → ryzyko, średnia z dostępnych dni. Cel: odczyty na produkcji przed R-3. Orlen ONEkodiesel PLN/m³ netto; OKQ8 Q8 Trucks Diesel wartość wprost (U-14). | **ZROBIONE 05.10** — 0168 + Edge `fuel-prices`; OKQ8 Q8 Trucks Diesel 22,90 potwierdzone; SEFS test 28.09–04.10 → 1,14 |
-| BAF-CENY-05-10 | BAF i ceny (05.10 + PROGNOZA 06.10): GoEasy, średnia z publikacji, OSTATECZNY po zamknięciu tygodnia; **PROGNOZA** = ostatni OSTATECZNY gdy prev tydzień niezamknięty (bez częściowej średniej). Wzorce: tydz. 40 = 1,14, 41 = 1,13. | **ZROBIONE 06.10** — 0187+0188+**0189**, `tests/db/baf.sh` |
-| BAF-PROGNOZA-06-10 | Przyszłe załadunki (prev tydzień niezamknięty) → mnożnik PROGNOZA = ostatni OSTATECZNY + etykieta „prognoza” w Cenach; po zamknięciu → OSTATECZNY; `sefs_refresh_prognoza` przy odświeżeniu. | **ZROBIONE 06.10** — migracja **0189**, testy w `baf.sh` |
-| B-SMOKE-LANG | P1 (z VERIFY-13, 17.4/17.8). Przełącznik języka usunięty w `8322d02` (05.10 16:03), a 8 specyfikacji Playwright (`visual`, `visual-states`, `e2e-core`, `etap4/5/6-ui`, `d19-i18n`, `d-eur-t`) klika `#langSeg` → `fresh-smoke.sh` i `gate:visual` zawsze czerwone. Naprawa tylko w testach: boot bez klikania języka (PL jedyny), `d19-i18n` i warianty `sv`/`en` matrycy 840 usunąć albo wyłączyć, wzorzec odświeżyć wyłącznie z przyczyną (G4); potem pełny przebieg + nocna brama (05.10: FAIL 720/840 do klasyfikacji). | **ZROBIONE 06.10** (PR #134) — zero `#langSeg` w testach/narzędziach; `d19-i18n` → `describe.skip` (PL-first, Q-9), poza `fresh-smoke.sh`; matryca PL-only **280** (−560 ujęć en/sv). Wzorzec 280 odświeżony na świeżym buildzie `55eccc4` po B-PERSIST-TOAST, każda grupa z przyczyną z bisekcji (14 ujęć × 41 buildów od `fd5f8e2` — ostatnia zielona brama 04.10): wszystkie widoki `8322d02` (bez języka i zegara) + `6fc3037` B-9.2 (pasek korytarza niższy o 30 px); harmonogram `e5ccb96`/`50ba5d6` B-8 + `f456153` „Jak działa”; mapa `e5ccb96` B-7c; ustawienia `8322d02` + `e5ccb96` Q-9 B; kokpit `7d2b26c`; opcje `43e41fb` (L-4 „Czas wolny i przestój”); strefy `4126b39` (L-12, kolumna „Kraj”); ryzyka `3a48097` (FERRY-STATUS, „E4 i E22”); rozliczenia KSH `bfc7ed9` (B-4a). Różnic bez przyczyny: 0. Smoke `kokpit`/`mapa` ×2 + `stan-zablokowany` (`7d2b26c`, B-7c, B-10a `80a7ad2`) i 10× `stan-*` odświeżone z przyczyną. Dowód: brama `npm run gate:visual` 06.10 10:18: **OK HEAD=1505ce2 smoke+stany=ok matryca=280/280 zmienione=0 kod=0**; `fresh-smoke.sh` OK (visual 4/4, stany 12/12, persist-toast 3/3, d-eur-t 2/2, etap4 12/12, etap5 5/5, etap6 1/1); e2e-core 5/5; vitest 836/836 (35 skip). Szczegóły: `WIP_B_SMOKE_LANG_06_10.md`. |
-| B-VERIFY-17.3 | P3 (z VERIFY-13). Jeden kanon `design/claude-v2.0/`. Kopie poza nim: `docs/watch-tower/claude-v2.0/` (identyczna), `claude-makieta.html` w `public/` i `docs/watch-tower/` (produkcja 404) — usunąć albo oznaczyć jako archiwum. | NIEZACZĘTE |
-| B-PERSIST-TOAST | P1 (z B-SMOKE-LANG, 06.10). Regresja: przy **pierwszym czystym wejściu** (pusty localStorage) demo pokazuje toast „Zapisany stan aplikacji był uszkodzony lub niekompatybilny. Przywrócono dane startowe.”. Flaga `wt-persist-wipe-notice` NIE jest ustawiana, odczyt stanu = `null` → toast idzie ścieżką `error` w `onRehydrateStorage` (`useTowerStore.ts` ~1890; wyjątek przy hydratacji). Okno: wzorzec `640a162` (05.10 08:12) bez toastu, build `8322d02^` (05.10 15:34) z toastem; podejrzany `e5ccb96` (Q-9 B, 11:13: `systemTheme()` + `useTowerStore.setState` w callbacku) — niepotwierdzone (toast przy systemie jasnym i ciemnym w puppeteer; w Playwright colorScheme dark nie widać). Widoczne na każdym ujęciu matrycy 280 → wzorca nie można odświeżyć przed naprawą. Sprawdzić też prod (klucz `-supabase`). | **ZROBIONE 06.10** (`c1d23e2`, PR #134) — przyczyna potwierdzona: `e5ccb96` (Q-9 B). Przy pustym magazynie hydratacja zustand biegnie synchronicznie wewnątrz `create()`; gdy motyw systemu (jasny) ≠ startowy (ciemny), `onRehydrateStorage` wołał `useTowerStore.setState` zanim store był przypisany → TypeError → zustand wołał callback z `error` → toast. Naprawa: `setState` w `queueMicrotask`, motyw na `<html>` od razu. Test `tests/persist-toast.spec.ts` (w `fresh-smoke`): pusty magazyn light/dark bez toastu i bez pageerror, zły JSON = toast zostaje — **3/3** na HEAD; na buildzie `c1d23e2^` „system light” **FAIL** (test łapie regresję). Bisekcja matrycy: toast pojawia się w `e5ccb96`, znika w `c1d23e2`. Prod (świeży kontekst, light/dark, obie domeny, 06.10 ~09:20): ekran logowania bez toastu i bez błędów; wadliwa ścieżka była w paczce prod (zalogowany użytkownik bez ręcznego motywu z systemem jasnym — prawdopodobnie widział toast po przeładowaniu; niesprawdzone kontem) → poprawka wdrożona z PR #134. |
-| B-SMOKE-DRIFT | P1 (z B-SMOKE-LANG, 06.10). Awarie funkcjonalne ukryte pod `#langSeg` — **istniały już na `8322d02^`** (build z przełącznikiem, :4181): etap6 O4 0/1 (`[data-demo-mark]` w Opcjach = 0 — akordeon B-6a), e2e-core 2/5 (powiadomienie→klik; 390 px `#roleSeg` ukryty CSS D-31), etap4 5/12 (M5 nr HHL / `data-plan-readonly`, M11 marża `selectOption` timeout, M9 `[data-driver-consent]`, M10 `[data-sailing-form]`). Nowe po `8322d02`: etap4 M8 (szuflada „Ceny” — BAF `3be53e9`/`4c598c4`). d-eur-t: nota FX `.pricing-panel .note` w Opcjach nie istnieje (timeout 6 min). Dla każdej: zmiana zamierzona → poprawić test; regresja → naprawić aplikację. | **ZROBIONE 06.10** (`55eccc4`, PR #134) — jedna regresja aplikacji naprawiona: O4 `DemoMark` zgubiony przy akordeonie Opcji DEC-6 (`5685099`) → `OptionsAccordion` pole `mark`, stawki/BAF znowu z oznaczeniem demo (etap6 1/1). Reszta = zamierzone zmiany UI, testy przepięte bez usuwania sprawdzeń (każde zastąpione odpowiednikiem): etap4 — nr HHL i rejs w oknie awizacji (AWIZ-4 `13ace35`), KSH wąskie menu „Edytuj” bez zakładki Ceny (B-K.1 `8322d02`; M8: cena KSH w harmonogramie, koszt nigdzie), M9 = „Link nieaktywny” (DRV-CLOSE `4399a18`), preferencje w akordeonie (DEC-6); e2e-core — klik w powiadomienie zdejmuje je i zmniejsza licznik o 1 (L-5 `2af2e46`; zamiast `skip` twarde `expect`), 390 px `#roleSeg` ukryty celowo (D-31) → czekanie na obecność w DOM; d-eur-t — nota FX w sekcji „Cennik” (`[data-fx-note]`); **uwaga:** skan EUR w d-eur-t pomija teraz tekst niewidoczny (zwinięte sekcje `<details>`, `checkVisibility`) — treść zwiniętych sekcji Opcji nie jest skanowana. Wynik na świeżym buildzie: etap4 **12/12**, e2e-core **5/5**, etap6 **1/1**, d-eur-t **2/2**, etap5 **5/5**. |
-
-| SEFS-KOREKTA | Korekta ceny od dostawcy wchodzi do średniej SEFS, dopóki tydzień nie jest zamknięty. Po zamknięciu — wartość zamrożona (migawka 32.3); późniejsza korekta nie zmienia policzonych transportów ani faktur; zapis korekty w historii. Decyzja 05.10. | **ZROBIONE 05.10** — migracja 0166 |
-| SMS-SILENT-FIX | Fałszywe SMS_GATEWAY_SILENT (noc 4/5.10): diagnoza heartbeatów, próg ciszy, cooldown jednego alarmu; Resend 200 a status ERROR — naprawa. Zero prawdziwych SMS. | **ZROBIONE 05.10** — 0167, `4b562d2`/`79674c8`; próg 30 min + cooldown 60; Resend 200→SENT |
-| MIG-0159-REG | Dopisz 0159 (i braki ewidencji) do `schema_migrations` na PROD bez ponownego wykonania; lista PROD = repo. | **ZROBIONE 05.10** — `79674c8`; lista PROD = repo |
-| Q-9 | Tryb jasny — **wybór właściciela 05.10 ~10:37: wariant B** (motyw według ustawień systemu + zmiana w ustawieniach użytkownika) | **ZROBIONE 05.10** — B |
-| B-6a | Opcje: logika i workflow „Powiadomienia i decyzje” | **ZROBIONE 05.10** — rozwijane „Jak to działa” w sekcji (PR #74) |
-| B-6b | Odbiorcy SMS i strefy: po co strefy i co robią | **ZROBIONE 05.10** — „Jak to działa” w sekcji (PR #74) |
-| B-6c | Progi i terminy: jak działa mechanizm | **ZROBIONE 05.10** — „Jak to działa” w sekcji (PR #74) |
-| B-6d | Stan systemu: styl dashboardu (teraz nieczytelne) | **ZROBIONE 05.10** — kafelki (bramka SMS, poczta, kopia, integracje, HERE, DeepL) + ostatni przebieg każdego zadania + 7 kopii (PR #74) |
-| B-6e | Dziennik logowań nic nie pokazuje | **ZROBIONE 05.10** — przyczyna: `auth.audit_log_entries` na prod = 0 wierszy; migracja 0164 `auth_login_events` + wyzwalacz na `auth.sessions` + uzupełnienie (9 wpisów); nieudane próby nie są rejestrowane (PR #74) |
-| B-6f | Historia zmian: „200” obok przycisku — usunąć z wyglądu, jeśli nie pełni roli | **ZROBIONE 05.10** — „200” = liczba wczytanych wierszy (limit 200), usunięta; podpowiedź przy pełnym wyniku (PR #74) |
-| B-6g | Cennik: rozjazd tabeli w prawo | **ZROBIONE 05.10** — tabela wierszy na pełną szerokość formularza z przewijaniem (PR #74) |
-| B-6h | SEFS/BAF: czy średnia PL i SE z poprzedniego tygodnia uzupełnia indeksy i liczy opłatę | **ZROBIONE 05.10 (opis + odczyt dzienny)** — liczenie automatyczne (`sefs_week_calc`, średnia pn–nd poprzedniego tygodnia), ale ceny OKQ8/ORLEN wpisuje HHL ręcznie; na prod 0 odczytów → opłata się nie liczy. Formularz: okres = data odczytu. Automatyczne pobieranie cen — propozycja (wymaga sprawdzenia regulaminów OKQ8/ORLEN) |
-| B-6i | Wymóg zezwoleń: rozjazd wizualny w prawo | **ZROBIONE 05.10** — notka nie wychodzi poza sekcję ani nie nachodzi na przycisk; stan obok przycisku (PR #74) |
-| B-MAPA | P1 wśród prac nad mapami. Podkład i rysowanie. Zmienia zakres H-6. Obejmuje Q-17 i Q-19. HERE Raster Tile API v3, styl logistyczny, jasny i ciemny, na wszystkich mapach (Mapa, kokpit, szczegóły transportu, kreator stref, odtwarzanie przebiegu). Zoom do placu w Śremie i w Boden. Podpis HERE, w zapasie właściwy dostawca. Usunąć „OpenStreetMap · CARTO” przy kafelkach Esri. Przy 80% budżetu D-78 zapasowy podkład z etykietami, nigdy szary Esri; powrót od 1. dnia miesiąca. Trasa planowana z geometrii HERE. Pozycja auta = surowy GPS. Ślad: HERE Route Matching tylko do rysowania, chyba że pomiar zagrozi budżetowi — wtedy same punkty. Prom: pozycja AIS bez zmian, trasa z historii AIS po wodzie. Warstwa przeszkód H-6 zbudowana i wyłączona do D-83. Przed budową pomiar na TEST i licencja D-81. | **ZROBIONE 05.10** — PR #61/#62; Q-18 wraz z B-MAPA, potem Q18-V2 PR #64 |
-| PL-PLURAL | P3. Odmiana przez liczby w komunikatach PL. Import: „Pominięto 2 wierszy” ma być „2 wiersze”. Jedna funkcja (1 / 2–4 / 5+; 22–24 = wiersze, 12–14 = wierszy). Test: 1, 2, 5, 12, 22, 25. Źródło: `tests/b8-imp.test.ts`, `standardSkipMessage`. Za B-MAPA i za kolejką nocną. | **ZROBIONE 05.10** — PR #63, `plPlural` w `src/lib/plPlural.ts` |
-| B-7a | Mapa: stały rozmiar, niezależny od wysokości tabeli obok; po otwarciu widoku MAPA widoczna w całości | **ZROBIONE 05.10** — wysokość mapy z wysokości okna (`max(420px, 100dvh − 215px)`), nie z tabeli; `tests/b7-map.spec.ts` (6 rozmiarów). Wzorzec mapy odświeżony 05.10 07:57 (B-MAPA + B-7a + B-7b). |
-| B-7b | Checkboxy warstw mapy zawsze widoczne; na telefonie nie nachodzą na inne elementy | **ZROBIONE 05.10** — komputer: ramka w rogu mapy jak dotąd; ekran ≤ 768 px: osobny pas nad mapą, mapa pod nim, strona nie szersza niż ekran. Test w `tests/b7-map.spec.ts`. |
-| B-7c | Filtry mapy i tabeli — **wybór właściciela 05.10 ~10:37: wariant A** (nowe filtry: brak GPS, ryzyko) | **ZROBIONE 05.10** — A |
-| B-8 | Harmonogram: mapowanie pól, godziny, ciągnik, linie, szerokość kolumn, ETA, statusy, polisa, rok w datach, kierowca/telefon, PDF, filtr dat. **Wybór 05.10 ~10:37:** zakres dat + filtr bez kierowcy/ciągnika + „Zmień ciągnik” (wszystkie trzy). Po B-5 i 2A. | **ZROBIONE 05.10** — zakres dat, bez kierowcy/ciągnika, Zmień ciągnik |
-
-| B-8-IMP | Wydzielone z B-8 (D-8, decyzja A). Import: wiersz TYP = STANDARD (kolumna Typ albo „Standard” w wymiarach) jest pomijany, reszta wchodzi. To nie błąd. Komunikat informacyjny: „Zaimportowano X transportów. Pominięto Y wierszy typu STANDARD (ładunki NTG — poza zakresem Watch Tower).” Y w historii importu (`stats.skipped_standard`). Ta sama zasada przy przyszłej synchronizacji SharePoint — nie budować jej teraz. Decyzja właściciela 03.10 (D-8): zapisane STANDARD usunąć. Robi to wyłącznie migracja 0137 — 42 kody i tylko gdy typ = STANDARD, razem z wierszami zależnymi. Innych transportów nie rusza. Import pomijania zostaje (PR #5). | **ZROBIONE** — PR #5 import pomija STANDARD; 0137 (`b9505d3`) usunął 42 NTG |
-| B-9 | Górny pasek filtrów — **wybór właściciela 05.10 ~10:37: wariant C** (aktywny filtr z „×” + kafelek Prom) | **ZROBIONE 05.10** — C (× + filtr w Harmonogramie + tip Prom) |
-
-| B-10 | Podgląd zlecenia, edycja/awizacja, przepięcie, Status/Historia, dokumenty, ceny, ustalenia (lista KSH / rejsy = B-KSH / B-REJSY) | **ZROBIONE 05.10** — zakładki Status/Historia, awizacja SCX, czat+odczyty 0177, dopłaty 0178, PDF+mapa H-7, bez nr rezerwacji promu, godziny okien, notify czatu 0181 |
-| B-Q | Pytania o logikę 1–19 (powiadomienia, dzwonek, decyzje, statusy, alternatywy, faktury opłacone, Stena w pasku, bez EN/SV, tryb jasny, zegar, responsywność, kokpit, workflow 3 kont, logowanie, strefy, trasy OSM, statki, ulice) | NIEZACZĘTE |
-
-Szczegół punktów B-8, B-10 i B-Q jest w zleceniu, słowo w słowo. Tu tylko pozycje kolejki — bez realizacji.
-
-
-### P3 — średnie z lokalnego skanu 03.10 (nie blokują kolejki)
-
-Feed Aikido wyłączony (400). Pięć średnich, bez numerów CVE. Nie krytyczne i nie wysokie.
-
-| ID | Opis | Status |
-|---|---|---|
-| P1-FONT | Czcionki z repozytorium (Barlow 400/500/600/700, Barlow Condensed 500/600/700, woff2 + OFL), zero fonts.googleapis.com i fonts.gstatic.com, także w CSP. W tej samej gałęzi P1-LINT. Wzorce odświeżone w środowisku bramy. | **DO SCALENIA** — `fix/p1-font` |
-| P1-LINT | 9 błędów stylelint w `src/index.css` (`clip`, `#brandSub`, `#roleLbl`, siedem `!important`) naprawione bez wyłączania reguł. Ta sama gałąź co P1-FONT. | **DO SCALENIA** — `fix/p1-font` |
-| P2-TILES | W testach wizualnych mapa korzysta z kafelków zapisanych lokalnie w repozytorium (bez pobierania z sieci), żeby aktualizacje u dostawcy nie psuły bramy. Na produkcji bez zmian. | **ODŁOŻONE — audyt 06.10** (gałąź `feat/p2-tiles-06-10`, `3deb252`, bez scalenia): kafelki CARTO+Esri w `tests/fixtures/tiles`, `scripts/visual/tiles.mjs` (replay/record/live); mapa×30 replay = 30/30 z wzorcem, smoke 16/16, vitest 4/4; pełna brama przerwana przy odłożeniu (10:36). Znalezisko: CARTO `dark_all` bez klucza = „API KEY REQUIRED” (podkład zapasowy ciemny na prod). WIP: `WIP_P2_TILES_06_10.md` (na gałęzi) |
-| P3-AND | Dwa eksportowane komponenty Androida w manifeście bramki SMS (score 60) | NIEZACZĘTE |
-| P3-SW | Dwa trafienia SSRF w `public/sw.js` | NIEZACZĘTE |
-| P3-ZIP | Trafienie SSRF w `src/lib/zipDocs.ts` | NIEZACZĘTE |
-| P3-BRACES | Osiem high w devDependencies łańcucha stylelint: braces, fast-glob, globby, micromatch, stylelint, stylelint-config-recommended, stylelint-config-standard, stylelint-declaration-strict-value. GHSA-vfj7-8cjw-p6xm. Nie trafiają do aplikacji. Najnowszy braces na npm to 3.0.3, poprawka niewydana. | czeka na wydanie poprawki; sprawdzenie w niedzielnej bramie |
-| P3-APK | Pin akcji w `.github/workflows/sms-gateway-apk.yml` (SHA zamiast @v3/@v4). Czy w ogóle potrzebny, skoro APK budujemy lokalnie. Dobra zmiana bezpieczeństwa. Zostaje. Wraca, gdy token dostanie uprawnienie workflow. | ZOSTAJE |
-
-
-## Część C — NIEZACZĘTE (wygrywa z separatorami w B)
-
-| ID | Opis | Status |
-|---|---|---|
-| C-SEP | Separator „ / ” domyślnie. „\|” tylko w Watch Tower, gdy przy dodawaniu lub edycji awizacji SCX zaznaczy checkbox Przepięcie. Zapis do Excela SharePoint zawsze „ / ”. Brak drugiej wartości: „Kierowca Odbierający / ...” (SharePoint) oraz tabela pięciu sytuacji ze zlecenia | **ZROBIONE 05.10** — 0169 + `cSep.ts` + AwizacjaModal Przepięcie |
-
-## Część D — na później, nie zaczynać
-
-| ID | Opis | Status |
-|---|---|---|
-| D-LATER | API Stena + telematyka + SharePoint (notatki właściciela) | na później, nie zaczynać |
-
-
-## Kolejka L i pozostałe polecenia koordynatora (03.10)
-
-Źródło: `docs/handover/POLECENIA_KOORDYNATORA.md` i `docs/handover/LOGIKA_SYSTEMU.md`. Istniejących wierszy nie ruszano. P2-TILES, P3-APK i SEC-OWASP już są w planie — tu tylko odesłanie, bez drugiej kopii.
-
-Kolejność od 04.10 20:23: L-9 → L-10 → L-11 → L-12 → H-1 (zbudować, zostaje wyłączone do wymiarów D-83) → H-2 od razu (w tym B-2b: sytuacje drogowe Trafikverket) → H-3 od razu → dopiero potem część B od początku (pozycje zrobione w L oznacz „zrobione w ramach L-x”) → SEC-OWASP → część D po danych od właściciela. L-6 jest już na produkcji, nie wraca. P2-TILES i P3-APK zostają w tle, nie teraz. SEC-OWASP i część D nie startują w tym przebiegu. H-2 nie startuje przed końcem L-12. Kolejność po H-3 zastąpiona decyzją właściciela 04.10, a 05.10 dopisuje AIS-SRC i FERRY-STATUS: U-3-PALIWO → diagnoza ETA (SG-01, SG-24, KR-04, KR-05, KR-06, KR-07, bez zmian w kodzie) → DRV-CLOSE → STD-CLEAN → SMS-KSH-1H + ETA-PRE-LOAD (jeden PR) → AIS-SRC → FERRY-STATUS → PL-DATA → VERIFY-13 → PALIWO-33.3. Część B dopiero po tej kolejce i zaczyna od B-MAPA razem z Q-18, przed B-7a, B-7b i B-7c. PL-PLURAL (P3) jest w części B za B-MAPA, nie w kolejce nocnej.
-
-| ID | Opis | Kryterium | Status |
-|---|---|---|---|
-| L-1 | P1. Automatyczne otwieranie decyzji. Każde ryzyko, które w tabeli DEC-CLICK (część B) ma typ decyzji, otwiera decyzję z katalogu 16 typów. Jedno zdarzenie = jedna decyzja (bez duplikatu przy ponownym wykryciu tego samego ryzyka). Zamknięcie ryzyka nie kasuje decyzji — decyzja ma własny status. ETA po terminie nie otwiera się z samego planu: potrzebna pozycja albo awizacja. Źródło: B 2c, pytanie 3; LOGIKA §1. | Test dla typów, które mają zdarzenie w kodzie: zdarzenie → decyzja otwarta, drugie wykrycie → brak drugiej decyzji; brak danych → bez decyzji. Na TEST centrum decyzji pokazuje decyzje z symulacji SIM-1. | **DOMKNIĘCIE** — 9 typów ze zdarzeniem w kodzie działa (0138 + 0140, zestaw `dec-auto` 24/24 na 1a3a96f). Nie blokuje reszty. Siedem typów bez zdarzenia w kodzie nie jest wymyślonych: pozycja L-1b, zaraz po L-3. Scalenie i wdrożenie 0140 w tym poleceniu. |
-| L-2 | P1. Kto decyduje. Rozstrzygnąć decyzję może tylko firma wskazana w katalogu (kolumna „kto decyduje”) oraz administrator. Odmowa w bazie (funkcja), nie tylko ukryty przycisk. Źródło: B 2c; LOGIKA §1. | Test: właściwa firma może, inna dostaje odmowę z bazy. | **ZROBIONE** — migracja 0139. Przewoźnik rozstrzyga typ CARRIER, operacje HHL typ HHL, administrator HHL każdy typ. Inna firma i KSH dostają odmowę z `decision_resolve`. |
-| L-3 | P1. Osiem progów podłączonych do alarmów: próg opóźnienia, wyprzedzenie dat KSH, awizacja ostrzeżenie/krytyczne, dokumenty ostrzeżenie/krytyczne, brak pozycji GPS, zjazd z trasy. Źródło: B 6c; LOGIKA §4. NO_AWIZACJA (próg awizacji 48/12 h) jest w tym zakresie i zasila L-1b. Wzory właściciela 2026-10-04 00:07 są w LOGIKA §4 i poniżej tej tabeli (w PLAN nie ma sekcji 5; L-3 jest w kolejce L). | Dla każdego wzoru: zmiana wartości w Opcjach zmienia moment alarmu; brak danych = brak alarmu; ostrzeżenie → krytyczne = ta sama decyzja. | **NA PRODUKCJI** — migracja 0143. Wzór A dla dostawy nadal bez alarmu (brak kolumny kierowcy dostarczającego, C-SEP). Reszta wzorów A (załadunek), B–F jest w 0143. |
-| L-1b | P1, zaraz po L-3. Siedem typów decyzji z katalogu (ZLECENIE_DECYZJE_POWIADOMIENIA.md §2, tabela DEC-CLICK), których wyzwalacze nie były w kodzie. Nie wymyślać alarmów spoza katalogu. NO_AWIZACJA → w ramach L-3 (próg awizacji 48/12 h). KSH_ROW_GONE, TOWER_KSH_CONFLICT, KSH_FILE_ERROR → przy obecnym imporcie Excela: wiersz zniknął względem poprzedniego importu; pole zmienione w Watch Tower różni się od pliku; pliku nie da się odczytać. SharePoint później użyje tego samego. SEFS_OUT_OF_TABLE → indeks poza tabelą 51 progów albo brak źródła. KR_OVER_3 → więcej niż 3 ładunki KR jednego dnia. DWELL_OVER_FREE → postój w strefie ponad czas wolny (gdy będą prawdziwe pozycje GPS). | Zestaw bramy `dec-auto`: test dla każdego z tych siedmiu typów (zdarzenie → decyzja, drugie wykrycie → bez duplikatu). | **W TRAKCIE TEJ PACZKI** — 0144 usuwa jedną pozycję testową SG-01. 0145 otwiera KSH_ROW_GONE, TOWER_KSH_CONFLICT (tylko numer HHL), KSH_FILE_ERROR (plik nieczytelny), SEFS_OUT_OF_TABLE, KR_OVER_3. NO_AWIZACJA zostaje w 0143. DWELL_OVER_FREE: parametry w Opcjach (sekcja „Czas wolny i przestój", WSTĘPNE), decyzja 15 z podpowiedzią, bez automatycznej dopłaty (0147). |
-| L-4 | P1. Cele kliknięć i link w e-mailu. | Test: ten sam cel z kokpitu, listy ryzyk, dzwonka i e-maila; typ bez celu odrzucony. | **DOMKNIĘTE** — `CELE_KLIKNIEC.md` sekcja E (15:47): SMS_FALLBACK → wpis bramki SMS (tylko HHL i administrator); WORKFLOW_ALERT → Status transportu albo podgląd reguły. Typ spoza tabeli nadal Szczegóły wpisu i błąd testu. |
-| L-5 | P1. Dzwonek. Bez napisu „przeczytane”. Pozycja znika z listy po kliknięciu i prowadzi do celu z L-4. Źródło: pytanie 13. | Test: klik → pozycja znika, licznik maleje, otwiera cel. | **ZROBIONE** — bez napisu „przeczytane”; klik oznacza pozycję i zdejmuje ją z listy; licznik to długość listy; cel z L-4. |
-| L-6 | P1. „Ponów kopię” uruchamia kopię zapasową (dziś tylko zapisuje prośbę, LOGIKA §1). | Klik uruchamia kopię, a wynik (udana/nieudana) widać w Stanie systemu. | **NA PRODUKCJI** — 0151 `l6_backup_retry`, wdrożenie `dpl_DzV56mBDm5K1vCrjuwoiBNL6rq55` (04.10.2026, `main` 419c5bb). Ten sam start co cron. Brak pg_net albo Vault zostawia ERROR na liście kopii. |
-| L-7 | P1. Nazwy statusów „opóźniony” i „cichy”. Na liście harmonogramu oba mają własną polską nazwę. Źródło: B 8, pytanie 4; LOGIKA §5. | Na liście harmonogramu oba statusy mają własną polską nazwę. | **NA PRODUKCJI** — PR #29, `main` 163ecf8, wdrożenie `dpl_EmxNgLKUy16bNEt25ZgD4J82BbWj`. |
-| L-8 | P1. Kafelki kokpitu. Kafelek KSH „Wymaga decyzji” liczy tylko to, co KSH widzi. Kafelek przewoźnika pokazuje bieżący tydzień zamiast stałego „tydzień 38”. Źródło: pytanie 12; LOGIKA §11. | Test liczb dla każdej firmy. | **NA PRODUKCJI** — PR #30, `main` e9eb6ae, wdrożenie `dpl_3jRbftYi8YXHRyuH3ecNdc1NbVxu`. |
-| L-9 | P1. Alternatywy dla rejsu. Na produkcji lista z prawdziwych rozkładów w bazie — najbliższe rejsy Polferries i Stena. Bez danych zmyślonych. Objazdy w Szwecji zostają ukryte. Źródło: pytanie 5; LOGIKA §9. | Lista z bazy; brak rozkładów = komunikat „Brak danych”. | **W TEJ PACZCE** — z `sailings`: do trzech najbliższych odejść do Szwecji, Polferries (Gdańsk–Nynäshamn) i Stena (Gdynia–Karlskrona). Pusty rozkład armatora = „Brak danych”. Objazdy SE zostają ukryte. |
-| L-10 | P1. Opis trzech ścieżek pracy. Plik `docs/handover/WORKFLOW_FIRM.md`: trzy schematy krok po kroku (HHL, KSH, Scandinavian Express), od zaproszenia do zamknięcia transportu, prostym językiem, ze schematami Mermaid. To opis, nie automat. Źródło: pytanie 14. | Plik w repozytorium. | **ZROBIONE** 2026-10-04 — `WORKFLOW_FIRM.md`. Jedna ścieżka, trzy widoki. Trzy momenty (UNLOADED = data usługi, DELIVERED = zamknięcie po CMR, faktura opłacona tylko HHL) wygrywają ze starszym „rozładunek nigdy automatycznie” w `STATUSY_AUTOMATYCZNE.md` §2 zasada 3 i §3.3. Import tylko HHL (I-2a). KSH nie rozstrzyga 16 decyzji. |
-| L-11 | P1. Górny pasek bez numeru etapu. Usunąć numer etapu (1–9) z kafelków; liczba transportów zostaje. Źródło: B 9, decyzja właściciela 03.10. | Numer etapu znika z kafelka, liczba transportów zostaje. | **W TEJ PACZCE** — z kafelka znika numer 1–9 (`.kb`). Zostaje liczba transportów (`.n`) i polska nazwa etapu. Klik nadal filtruje mapę. |
-| L-12 | P1. Kreator stref z mapą, tylko HHL: ustawianie i przesuwanie środka na mapie, podgląd koła i zapasu, kraj, kogo powiadomić, usuwanie. Nowa strefa nie startuje na środku Bałtyku. Źródło: B 6b, pytanie 16, decyzja właściciela 03.10; LOGIKA §14. | HHL tworzy, przesuwa, edytuje i usuwa strefę na mapie; SMS ze strefy działa według kraju i rodzaju (test). | **W TEJ PACZCE** — kreator na mapie, tylko HHL. Nowa strefa startuje w Śremie (PL), nie na 60°N 18°E. Kraj, odbiorcy, przesuwanie środka, podgląd koła i zapasu, usuwanie. SMS według kraju i rodzaju: test bazy `l12`. |
-| L-13 | P1, po L-5. Zalew powiadomień. Symulacja SIM-1 dała 155 powiadomień dla jednego transportu. Rozbicie według typu, odbiorcy i firmy; łączenie duplikatów. | Ponowna symulacja SIM-1: liczba powiadomień na transport i firmę w raporcie, bez duplikatów tego samego zdarzenia. | **W TEJ PACZCE** — 0148. Ten sam klucz zdarzenia bez zegara. Szacunek poczty przy 94 i przy 10 w ruchu. Skrót niekrytycznych (DIGEST, bez wysyłki). Strażnik 80/95/100. E-mail decyzji automatycznych NIE włączony. |
-| B-KSH | P2. Lista harmonogramu KSH: klik otwiera boczny panel tylko z „Edytuj”. KSH edytuje daty i godziny załadunku i rozładunku. | Klik → panel tylko z Edytuj; zapis dat i godzin. | **ZROBIONE 05.10** — PlanDatesPanel: Edytuj + daty/godziny (ksh_confirm_dates) |
-| B-REJSY | P2. Rejsy — część B zlecenia, sekcja REJSY, jako osobna pozycja. | Osobna pozycja planu zrealizowana według sekcji REJSY. | **ZROBIONE 05.10** — filtr Przyszłe, rok w `fmtLocal`, edycja HHL_ADMIN |
-| Q-11a | P2. Pięć rozmiarów ekranu. | Pięć rozmiarów sprawdzonych. | **DONE** 05.10 — PR #91 (`d641810`); `RAPORT_Q11_05_10.md`: 390/768/1280/1440/1920 (`G4_WZORZEC`, `tests/__screenshots__`, RESP-14) |
-| Q-11b | P2. Powiadomienia na Android i iOS. | Powiadomienia działają na Androidzie i iOS. | **DONE** 05.10 — PR #94 (`bb1af8a`); migracja **0179** Web Push VAPID + SW + Preferencje + DIGEST; `PROPOZYCJA_Q11B_PUSH.md` wybór A; iOS = „Dodaj do ekranu głównego” |
-| Q-17 | Pytanie 17. Trasa promu z historii AIS, po torze wodnym, nigdy prosta przez ląd. Decyzja B-MAPA 05.10. | Trasa promu nie przecina lądu. | **ZROBIONE 05.10** — B-MAPA PR #61/#62 (`draw.ts` tory wodne z historii AIS) |
-| Q-18 | Pytanie 18. **Reguła poprawiona 05.10 07:16 (zastępuje poprzednią):** prom WIDOCZNY w strefie portu w Polsce (Gdańsk, Gdynia), w rejsie z Polski do Szwecji oraz w strefie portu w Szwecji (Nynäshamn, Karlskrona). Prom ZNIKA, gdy wypływa ze Szwecji do Polski (wyjście ze strefy portu w Szwecji); pojawia się ponownie po wejściu w strefę portu w Polsce. Wszystkie mapy. Filtr tylko wyświetlania; baza zapisuje wszystkie 5 w obie strony; ETA, II-9 i L-9 z pełnych danych. Odświeżanie: nie starsze niż 5 min; powyżej 15 min wyszarzony znacznik z godziną; brak ponad 1 h — ryzyko w Stanie systemu. (Poprzednia reguła z 04.10, zbudowana w PR #61 / migracja 0162: widoczny tylko od wyjścia ze strefy PL do wejścia w strefę SE — zastąpiona.) | Test: Gdańsk → widoczny; wypływa → widoczny; Nynäshamn → widoczny; wypływa z Nynäshamn do Polski → znika; wchodzi w strefę Gdańska → pojawia się. Testy automatyczne. | **ZROBIONE 05.10** — PR #64, `ferryPhase`/`ferryVisible`/`visibleFerryMarkers` w `_shared/map/draw.ts`, testy kroków właściciela w `tests/bmapa.test.ts`. Gdy w 48 h nie ma żadnej strefy portu: kierunek z kursu ostatniej pozycji (północ = do Szwecji), bez kursu — niewidoczny. |
-| Q-19 | Pytanie 19. Na mapie widać ulice, miejscowości i numery dróg. Decyzja B-MAPA 05.10: podkład HERE z etykietami, na wszystkich mapach, nie tylko w widoku Mapa. | Ulice i miejscowości widać na mapie. | **ZROBIONE 05.10** — B-MAPA PR #61/#62 (HERE logistics.day/night + Esri Street zapas) |
-| KOPIA-D | P3. Dograć kopię `usuniete_standard_2026-10-03` na `D:\Watch Tower\dane\`, gdy komputer domowy będzie włączony. | Plik na dysku D: i suma SHA-256 zgodna z kopią. | NIEZACZĘTE — komputer Domowy był offline 03.10; kopia jest w R2 |
-| AUDIT-PROD | Zasada: blokują tylko luki wysokie i krytyczne w zależnościach produkcyjnych (`npm audit --omit=dev --audit-level=high`). Zależności deweloperskie to P3, sprawdzane w niedzielnej bramie. | Brama odrzuca tylko high/critical w prod. | OBOWIĄZUJE |
-
-
-
-### Tempo i kolejka (polecenia 13:31, 13:35 i 13:47)
-
-Wdrożenie idzie od razu po scaleniu, także kilka razy dziennie, gdy brama jest zielona. Paczki dzienne są WYŁĄCZONE. Pomiar 4.10.2026: jeden pełny przebieg `tests/db/gate.sh` na Postgres 17 trwał 4 min 29 s (269 s) i skończył się kodem 1. 4,5 min nie jest wolne — nie zbieramy dnia w jedną paczkę.
-
-Kolejka bez dni tygodnia. Pozycja za pozycją, wdrożenie po każdej zielonej bramie lokalnej. Najpierw domknięcie bramy (age, baza `tower`, liczby z wyjaśnieniem). Dopiero gdy ta brama jest zielona i scalona: L-1b razem z usunięciem pozycji SG-01 (jedna pozycja `driver_token`, 1.10.2026 22:08 czasu warszawskiego, kopia w R2 poza repozytorium: ścieżka i sha256, tylko ten wiersz, warunek po źródle i czasie, przelicz ETA). Potem L-4, L-5, L-13. Nowa migracja = pełna brama lokalna przed produkcją. Supabase TEST `emkbykwenwrjmbprydml` tylko w niedzielę i jako ostateczne potwierdzenie przed wdrożeniem.
-
-Nie zaczynać SEC-OWASP, P2-TILES ani części D.
-
-### Wzory progów L-3 (polecenie 2026-10-04 00:07, czas warszawski)
-
-Sekcja 5 planu nie zawiera L-3. Wzory są przy kolejce L, dosłownie jak w poleceniu. Pełny opis: LOGIKA §4.
-
-ZASADY OGÓLNE
-
-1. Jedno źródło: wszystkie progi czytane WYŁĄCZNIE z tabeli Opcji. Kod czytający inną tabelę — przepnij migracją, duplikaty usuń.
-2. Ostrzeżenie i próg krytyczny to JEDEN alarm, który rośnie (ostrzeżenie → krytyczne), nie dwa osobne. Jedna decyzja: otwiera się przy ostrzeżeniu, termin = moment krytyczny; przy krytycznym ta sama decyzja czerwienieje i idą powiadomienia według macierzy.
-3. Warunek ustał (np. awizacja uzupełniona) → alarm zamknięty, decyzja ze statusem „nieaktualna — warunek ustał" (zapis systemu w Historii). To nie jest rozstrzygnięcie — rozstrzyga tylko firma (L-2).
-4. Czas: Europe/Warsaw. Brak godziny w pliku KSH → liczymy od 00:00 tego dnia (wcześniejsze ostrzeżenie).
-5. Brak prawdziwych danych → brak alarmu (tak jak przy L-1).
-
-WZORY
-
-A. Awizacja (NO_AWIZACJA, w ramach L-3): kierowca odbierający, ciągnik, naczepa, telefon — liczone od planowanego ZAŁADUNKU (data + godzina z pliku KSH). Kierowca dostarczający z telefonem i ciągnikiem — od planowanej DOSTAWY (48 h przed dostawą). Brak na 48 h przed → ostrzeżenie; brak na 12 h przed → krytyczne.
-B. Dokumenty (DOC_MISSING): brak wymaganego dokumentu (zezwolenie, gdy wymagane; polisa) na 24 h przed planowanym załadunkiem → ostrzeżenie; na 6 h → krytyczne.
-C. Wyprzedzenie KSH (KSH_DATE_LT_5D, D-12): zmiana daty albo nowy transport w pliku KSH, gdy od chwili zmiany do wcześniejszej z dat (stara/nowa data załadunku) zostało mniej niż 5 dni.
-D. Opóźnienie (ETA_AFTER_LATEST): ETA > koniec okna dostawy + próg z Opcji. ETA tylko z prawdziwych danych (GPS albo potwierdzony status). Sam plan → bez alarmu.
-E. Brak GPS: ostatnia pozycja starsza niż próg (15 min) — tylko gdy pojazd ma podłączone źródło pozycji i status jest w ruchu (IN_TRANSIT_PL, AT_PORT_*, IN_TRANSIT_SE). Bez alarmu: READY, FERRY (na promie pozycja z AIS), AT_SITE, DELIVERED.
-F. Zjazd z trasy (ROUTE_DEVIATION): odległość od trasy korytarza > próg z Opcji przez co najmniej 2 kolejne pozycje i co najmniej 10 min. Bez alarmu na promie i w strefach portów oraz placów.
-
-TESTY: dla każdego wzoru — zmiana wartości w Opcjach zmienia moment alarmu; brak danych = brak alarmu; ostrzeżenie → krytyczne = ta sama decyzja.
-
-## Zlecenie HERE (04.10.2026) — kolejność z sekcji 5
-
-Źródło: `docs/handover/ZLECENIE_HERE.md`. Zasada: wyłącznie funkcje oparte na HERE. Innych mechanizmów nie zmieniamy. II-7 i II-7a zostają w historii; zapis „bez HERE" z D-28 zastępuje D-77. Po L-12 kolejność to H-1, potem H-2, potem H-3, i dopiero część B. Doprecyzowanie 04.10 (decyzja właściciela przyjęta) i 05.10 (AIS-SRC): po H-3 kolejno U-3-PALIWO, diagnoza ETA dla SG-01, SG-24, KR-04, KR-05, KR-06 i KR-07 (bez zmian w kodzie), DRV-CLOSE, STD-CLEAN, SMS-KSH-1H + ETA-PRE-LOAD w jednym PR, AIS-SRC, FERRY-STATUS, PL-DATA, VERIFY-13 oraz PALIWO-33.3, a część B dopiero po tej kolejce. H-2 i H-3 startują od razu, gdy przyjdzie ich kolej. H-1 powstaje, ale zostaje wyłączone, aż właściciel poda wymiary (D-83). B-MAPA (05.10) zmienia zakres H-6 i obejmuje Q-17 oraz Q-19. Q-18 idzie razem z B-MAPA. H-6 nie dubluje podkładu ani trasy promu.
-
-| Kiedy | ID | Opis | Status |
-|---|---|---|---|
-| zaraz po L-13 | H-0 | Test na koncie właściciela, bez zmian w aplikacji. Odcinki Śrem → Gdańsk, Nynäshamn → Boden, Karlskrona → Boden. Raport do właściciela. | DONE 2026-10-04 — uzupełnienie limitów, BK i propozycji H-4 w POSTEP. Kodu aplikacji nie ruszano. |
-| po L-12, przed H-2 | H-1 | Kontrola trasy z wymiarów właściciela. Zbudować, zostawić wyłączone do D-83. | **DONE** (ten commit) — flaga `H1_ROUTE_CHECK` wyłączona, bez crona, bez wymiarów przykładowych. „Wymaga zezwolenia” nie jest przeszkodą. Ryzyko tylko dla wiaduktu, mostu albo tunelu. |
-| zaraz po H-1 | H-2 | Utrudnienia PL/SE oraz B-2b: sytuacje Trafikverket (wypadki, zamknięcia, roboty). Nowe źródło API, panel „Warunki drogowe SE”, ROAD_SE z prawdziwych danych. Nie odkładać na H-4. | **DONE** (B-2b, ten commit) — Situation 1.6 `road.trafficinfo`. Utrudnienia PL (HERE) zostają na później, nie w tym commicie. |
-| zaraz po H-2 | H-3 | Przeszkody wzdłuż korytarza. | **DONE** + **przebudowa 05.10 ~12:11** — bez Map Attributes; Routing v8 truck+wymiary, alternatives, notices (przepis≠przeszkoda jak H-1). Pula tras D-78. `H3_CORRIDOR_OBSTACLES` false do D-83. Szacunek: `RAPORT_H3_SZACUNEK_05_10.md`. |
-| w B-MAPA, warstwa wyłączona | H-6 | Zakres zmieniony 05.10 przez B-MAPA. Podkład, etykiety, trasa planowana, ślad i trasa promu są w B-MAPA (Q-17 i Q-19). Z H-6 zostaje warstwa przeszkód HERE dla wymiarów: zbudować i zostawić wyłączoną do D-83. Bez dublowania podkładu. | NIEZACZĘTE — warstwa w B-MAPA, flaga wyłączona do D-83 |
-| po etapie 2 | H-7, H-8, H-10, H-12 | Mapa w e-mailu i PDF, profil trasy, pogoda i wiatr (ryzyko), zakazy czasowe. | NIEZACZĘTE |
-| **teraz (05.10 decyzja właściciela)** | H-4 | ETA z czasem pracy kierowcy wg przepisów UE (D-85). **Brak tachografu na stałe** — jazda/odpoczynek wyłącznie z GPS naczepy. U-31 obsada 1-os.; A\|B = przepięcie. Postoje GPS → przerwy/odpoczynki; reguły 4,5 h / 9–10 h / 11 h (9 h skrócony); odpoczynek na promie (D-9); brak historii → założenie ostrożne; SMS-KSH-1H z tego ETA; II-7b kalibracja po rozładunku. H-5 i H-10 ETA osobno. | **DONE 05.10** — migracja 0185; GPS bez tachografu; h4_schedule_remaining + compute_load_eta H-4; II-7b obserwacja po rozładunku |
-
-
-## Po REJESTR — DOWODY, przed częścią B (04.10)
-
-Tabela dowodów jest przyjęta (triage 04.10, `TRIAGE_REJESTRU.md`). H-3 jest już na main (PR #40) i zostaje wyłączone do wymiarów. Następna kolejność (05.10, AIS-SRC): U-3-PALIWO → diagnoza ETA dla SG-01, SG-24, KR-04, KR-05, KR-06 i KR-07 (bez zmian w kodzie) → DRV-CLOSE → STD-CLEAN → SMS-KSH-1H + ETA-PRE-LOAD w jednym PR → AIS-SRC → FERRY-STATUS → PL-DATA → VERIFY-13 → PALIWO-33.3. Część B rusza dopiero po całej tej kolejce i zaczyna od B-MAPA razem z Q-18. PL-PLURAL jest w części B za B-MAPA, nie w tej kolejce. Pozycji nie wykonywać w przebiegu dokumentów.
-
-| ID | Priorytet | Kiedy | Opis | Status |
-|---|---|---|---|---|
-| H-3 | — | zakończone przed bieżącą kolejką | Przeszkody wzdłuż korytarza. | **DONE** na main (PR #40) — flaga `H3_CORRIDOR_OBSTACLES` wyłączona, do wymiarów D-83. Nie w tym PR. |
-| U-3-PALIWO | P1 | 1. po H-3 | Tydzień opłaty paliwowej liczy się od rozładunku (`fuel_ref_date` z `actual_delivery_at`, migracja 0011; `referenceUtc` w `src/lib/money/engine.ts`), a D-34 każe liczyć od daty załadunku. Test: transport z załadunkiem w tygodniu N i rozładunkiem w N+1 dostaje stawkę z tygodnia N. Przy naprawie sprawdzić i wpisać dowód dla SCOPE §32–§33 (punkt 4 triage): 32.3 ta sama data mnożnika dla kosztu i przychodu, migawka przy transporcie; 32.4 test niezmiennika (M8); 33.1 trzy wartości ze źródłem i migawką (M2); 33.2 faktura nadpisuje, ale nie kasuje wartości wyliczonej; 33.3 tydzień w czasie Europe/Warsaw, nie UTC; 33.5 testy granicy tygodnia i zmiany czasu; 33.6 zrobione przez M11 (`tests/money-m11.test.ts`). 32.1, 32.2, 32.5 i 33.4 to dokumentacja: jeden opis mechanizmu, tabela zgodności w `03_PARAMETRY_BIZNESOWE.md`, pola Opcji bez skutku w `computeSefs`, oraz który odczyt indeksu obowiązuje w danej dacie. Nie zakładać milczącej reguły. | **DONE** 2026-10-04 — migracja 0155. `fuel_ref_date` i `referenceUtc` / `fuelLocalDate` od załadunku. Kurs NBP nadal od rozładunku. Test N/N+1: `tests/money.test.ts`, `tests/db/money.sh`. 32.3 obie strony w 0155 (`fx_write_fuel`). 32.4 `tests/money-m8.test.ts`. 33.1 `tests/money-v2.test.ts`. 33.2 Z1 w `tests/db/money.sh` i `tests/money-v2.test.ts`. 33.5 granica tygodnia lato/zima w `tests/money.test.ts` i `tests/db/money.sh`. 33.3: zmiana czasu 25.10.2026 w `tests/money.test.ts` (przed 03:00 i druga 02:xx → 2026-W43, poniedziałek 26.10 → 2026-W44). Pozycja PALIWO-33.3. 33.6 `tests/money-m11.test.ts`. 32.1, 32.2, 32.5, 33.4: `03_PARAMETRY_BIZNESOWE.md` §2. |
-| DIAGNOZA-ETA | — | 2. po U-3-PALIWO | Diagnoza bez zmian w kodzie: dla SG-01, SG-24, KR-04, KR-05, KR-06 i KR-07 ustalić, skąd właściciel widzi ETA — ostatnia pozycja GPS i jej data, wartość zapisana przed 0146 albo wartość liczona z planu. Wartość z planu = błąd P1; wskazać miejsce w kodzie. Wartości sprzed 0146 tylko zgłosić; posprząta R-0. | **DONE 05.10** — `DIAGNOZA_ETA_05_10.md` (6/6 ETA z planu, 0 GPS) |
-| DRV-CLOSE | P1 | 3. po diagnozie ETA | Zamknąć stary link kierowcy (U-38, D-36). Odebrać anonimowi dostęp do `driver_post_position` (migracja). Unieważnić wszystkie wydane tokeny kierowców. Trasa `#/driver/:token` pokazuje „Link nieaktywny”. Kodu nie usuwać. Test: anonim z ważnym tokenem dostaje odmowę i pozycja się nie zapisuje. Pozycje tylko z telematyki. | **DONE** 2026-10-05 — migracja 0156. Anonim bez EXECUTE na `driver_post_position`. Tokeny z `revoked_at` pustym dostają datę odwołania. `#/driver/:token` pokazuje „Link nieaktywny”, kod PWA zostaje. Test w `tests/db/release.sh`. |
-| STD-CLEAN | — | 4. po DRV-CLOSE | U-17. Usunąć resztki klasy STANDARD: cennik 0100 i `src/lib/rateCard.ts`, typ wiersza, szuflada ładunku, pomijanie zezwolenia dla STANDARD. Import pomijania TYP = STANDARD zostaje (B-8-IMP). | **DONE** 2026-10-05 — migracja 0157. `rate_card_save` odrzuca STANDARD, `rate_match` nie daje stawki (nie zero), `load_needs_permit` nie zwalnia klasy. Szuflada i wiersz harmonogramu nie pokazują etykiety STANDARD. |
-| SMS-KSH-1H + ETA-PRE-LOAD | — | 5. po STD-CLEAN; jeden PR | D-37 i D-64 (rozszerzenie 04.10): dla załadunku (Śrem) i rozładunku (Boden) SMS „strefa zbliżania” (koło 50 km) jest zastąpiony jednym SMS-em na transport na każdy koniec trasy, wysyłanym, gdy wyliczony czas dojazdu z bieżącej pozycji GPS do placu wynosi ≤ 60 min. HERE, gdy dostępne; własny silnik (0122), gdy flaga wyłączona albo budżet wyczerpany. Pierwsza pozycja bliżej niż 60 min — SMS od razu; brak GPS — brak SMS i ryzyko „brak pozycji”; SMS „wjazd na plac” bez zmian. Odbiorcy: 2 osoby na załadunku i 2 na rozładunku, wpisuje administrator. Treść: kto, nr rejestracyjny, przewidywana godzina przyjazdu. Kryterium testowe (SIM-1 na TEST, numer właściciela; nie wykonywać teraz): 120 min → jeden SMS przy ≤ 60; start w 40 min → SMS od razu; brak GPS → brak SMS; powtórne pozycje → bez duplikatu; analogicznie dla Boden. Dotychczasowy kod oparty na `GEOFENCE_ENTER` i kole 50 km nie spełnia decyzji. ETA-PRE-LOAD: ETA dostawy pokazuje się dopiero po załadunku, czyli po wyjeździe ze strefy placu w Śremie; przed załadunkiem we wszystkich widokach, eksporcie i e-mailach jest „–” bez tekstu, a SMS-KSH-1H nadal liczy dojazd do Śremu w tle. Wykonane w migracji 0158. Test `tests/db/smsksh.sh`: 120 min bez SMS, 40 min SMS od razu, brak GPS bez SMS, powtórzenie bez duplikatu, to samo dla Boden. Przed wyjazdem ze Śremu `eta_site` puste i `pre_load`; po `GEOFENCE_EXIT` LOADING ETA jest. H1 i H3 zostają wyłączone. Bez wysyłki na telefon. | **W TEJ PACZCE** — migracja 0158 |
-| AIS-SRC | — | 6. po SMS-KSH-1H + ETA-PRE-LOAD | Drugie źródło pozycji promów: aisstream.io obok Digitraffic. Pięć promów (Wawel 311852000, Nova Star 311000787, Stena Spirit, Stena Estelle, Stena Ebba). MMSI Sten z danych aisstream, bez zgadywania. Digitraffic zostaje zapasem. Nowsza pozycja wygrywa, źródło jest zapisane. Diagnoza przed budową: ostatnia pozycja w bazie wobec źródła oraz widoczność wszystkich 5 w portach Gdańsk, Gdynia, Nynäshamn, Karlskrona i na morzu. Klucza AISSTREAM_API_KEY nie wypisywać (jest w sekretach Edge i w .env.local). Śledzenie w obie strony bez zmian. Odświeżanie: mapa ≤ 5 min, powyżej 15 min znacznik wyszarzony z godziną, brak ponad 1 h — ryzyko w Stanie systemu. Q-18 nie jest w tym punkcie. Doprecyzowanie 05.10.2026, źródło Sten znalezione 04.10.2026 23:12 UTC, bez budowy w paczce SMS: GET https://irm.stenalinefreight.com/ferries?imos=7907661,9862994,9863003 (Stena Spirit, Stena Estelle, Stena Ebba), bez klucza, źródło TER. Współrzędne tylko z properties.latitude i properties.longitude (geometry.coordinates jest lat, lon — nie używać). Czas properties.dt_pos_utc (UTC). Co 3 min jedno zapytanie na trzy statki, User-Agent Watch Tower, cache, przy błędzie odczekać bez pętli ponowień. Priorytet Sten: Stena, potem aisstream, potem Digitraffic; nowsza pozycja wygrywa. properties.eta zapisać do ETA promu (D-85). Błąd albo zmiana formatu adresu: ryzyko w Stanie systemu i przejście na zapas, bez błędu aplikacji. Polferries: aisstream i Digitraffic. Test: pozycje trzech Sten nie starsze niż 5 min przez 24 h; symulacja błędu adresu → zapas. **AIS-POLF 05.10 07:16:** aisstream nie zapisywał nic (ramki binarne → Blob w Deno → odrzucone w JSON.parse; 8 s nasłuchu). Naprawa w PR #64: dekodowanie ramek, FiltersShipMMSI jako tekst, funkcja `ferry-ais-listen` co minutę ~50 s (migracja 0163). | ZBUDOWANE (PR #56, #64) — pomiar 24 h nie zrobiony |
-| FERRY-STATUS | — | 7. po AIS-SRC | Przy D-45. Decyzja właściciela 04.10, zapis 05.10.2026: zezwolenia na transport ponadnormatywny obejmują dwie trasy (Gdańsk–Nynäshamn i Gdynia–Karlskrona). Przesiadka na drugą przeprawę nie wymaga nowego zezwolenia. Krok 0 (raport bez budowania; wykona go następny krok kolejki, nie ta paczka): (a) pogoda morska II-8 dla Stena (Gdynia, środek, Karlskrona) i Gdańsk–Nynäshamn, ostatni odczyt ze źródłem FMI/DMI/SMHI; (b) alarmy fala 3,8 m i porywy 40 kn (D-39), jeśli wyłączone od 02.10 „do II-3”, włączyć w kroku 3 (progi potwierdzone 29.09); (c) czy korytarz 0122, HERE H-1/H-3 i Trafikverket obejmują E22 aż do E4 oraz czy panel Warunki drogowe SE pokazuje obie trasy; (d) czy L-9 przy FERRY_CANCELLED liczy ETA całej nowej trasy; (e) skąd II-5 bierze status Steny i co zwraca. Krok 1: żywy rozkład Steny. Strona https://stenalinefreight.com/timetable/GDKA. POST https://stenalinefreight.com/wp/wp-admin/admin-ajax.php, action=timetable, data[from], data[to], data[routeCode]=GDKA, security = świeży token z ajax_object na tej stronie przed każdym odczytem. Planowy i rzeczywisty odjazd oraz przyjazd, statek, status. Porównanie z II-5: lepsze źródło główne, drugie zapas. Co 10 min, dziś i 6 dni, oba kierunki. User-Agent Watch Tower, cache, przy błędzie odczekać bez pętli. Rzeczywiste godziny wchodzą do D-85 i II-9. Odwołanie daje FERRY_CANCELLED. Błąd formatu: ryzyko w Stanie systemu i zapas. Krok 2: nie obchodzić 403 polferries.pl ani 503 polsca.com. Warstwy: opóźnienie z AIS (II-9), pogoda II-8 jako ostrzeżenie, formularz „Komunikat armatora” (administrator i dyspozytor przewoźnika: armator, rejs, typ odwołany/opóźniony/zmiana godziny, nowa godzina, treść) ze skutkami jak status automatyczny i historią kto oraz kiedy. W raporcie: czy POLSCA ma e-mail dla frachtu albo inne oficjalne źródło. Krok 3: uzupełnienia z kroku 0. Pogoda w trzech punktach każdej trasy. Alarmy D-39 włączone. Karlskrona–Boden E22 do E4 w korytarzu, w ETA, w H-1/H-3 i w Trafikverket. Panel pokazuje obie trasy. Alternatywa L-9 liczy całą trasę (dojazd, rejs, droga SE, czas pracy D-85), bez ostrzeżenia o zezwoleniu przy przesiadce. Testy: odwołany rejs Steny; komunikat ręczny POLSCA; błąd źródła; fala powyżej 3,8 m; ETA alternatywy różni się o dojazd, rejs i drogę SE; panel pokazuje E22 i E4. Zrobione w migracji 0160 (brama zielona). H1 i H3 zostają wyłączone. | ZROBIONE |
-| PL-DATA | — | 8. po FERRY-STATUS, przed VERIFY-13 | Tylko język polski tam, gdzie widzi użytkownik: panele, ryzyka, powiadomienia, e-maile, SMS, PDF. Także dane z Trafikverket, HERE, Steny, AIS i pogody. 1) HERE: język pl-PL tam, gdzie API przyjmuje; brak tłumaczenia idzie do punktu 3. 2) Trafikverket: opis po polsku z pól kodowych, nie ze szwedzkiego tekstu. Pełny słownik kod→polski w repozytorium. Test: każdy kod z API ma tłumaczenie. Nieznany kod → ryzyko w Stanie systemu, w panelu „zdarzenie drogowe” po polsku, nigdy surowy szwedzki. 3) DeepL od razu, bez czekania na pomiar znaków. Klucz DEEPL_API_KEY zapisuje osobny agent (sekrety Edge i .env.local). Nie prosić właściciela i nie wypisywać wartości. Nazwa DEEPL_API_KEY jest w sekretach Edge produkcji i w .env.local (sprawdzone 05.10.2026; wartości nie wypisywać). Test właściciela 04.10: działa, zużycie 38 / 1 000 000 znaków. Punkt 3 idzie razem z resztą PL-DATA, bez odkładania. Tekst wolny z Trafikverket i HERE, którego nie da się złożyć po polsku z kodów: najpierw słownik zwrotów, potem pamięć tłumaczeń, potem DeepL API Free (SV/EN → PL). Każde tłumaczenie z DeepL trafia do pamięci; ten sam tekst nigdy drugi raz. Zużycie w Stanie systemu, ostrzeżenie przy 80% limitu miesięcznego. Przy 100% albo błędzie: opis z kodów, tekst w kolejce, bez szwedzkiego w głównej treści. Oryginał tylko pod „Pokaż oryginał”. Do DeepL wyłącznie publiczne komunikaty drogowe, nigdy dane transportów, kierowców ani firm. 4) Stena i AIS: Arrived → Przypłynął, Departed → Wypłynął, odwołanie → Odwołany. Porty: PLGDY Gdynia, SEKAA Karlskrona, PLGDN Gdańsk, SENYN Nynäshamn. Nazwy statków bez zmian. 5) Pogoda FMI/DMI/SMHI: opisy i jednostki po polsku (m, węzły, m/s, °C), kierunki wiatru po polsku. 6) Przegląd UI i szablonów: lista miejsc bez tłumaczenia w raporcie, poprawki w tym samym PR. Testy: roboty drogowe po polsku bez szwedzkich słów; nieznany kod; HERE pl-PL; Departed → Wypłynął; e-mail i SMS ryzyka drogowego tylko po polsku; szwedzki → polski w panelu; drugi raz z pamięci (0 zapytań DeepL); błąd DeepL → opis z kodów, bez błędu aplikacji. Bez budowy w zapisie dokumentów. | **ZROBIONE 05.10** — PR #59, migracja 0161 |
-| VERIFY-13 | — | 9. po PL-DATA | Weryfikacja bez zmian w kodzie: 13.1–13.3 — build produkcyjny, zero `--tw-`, zero systemowego stacku czcionek oraz liczba `box-shadow` / promieni > 2 px / `!important`; 13.8–13.9 — format daty i godzina załadunku w harmonogramie (zrzut z TEST, Europe/Warsaw); 13.10–13.12 — zero „Driver 1”, „+48 600 000 000” i ciągów debug, telefon kierowcy niewidoczny dla roli bez uprawnienia (test ról); 13.13 — brak `data-theme` zaszytego w `<html>`; 13.15 — stylelint 0; 13.16 — rozmiar paczki JS; 16.1 — brak roli Stegra w bazie; 16.4 — ceny usuwane z DOM per rola (test); 17.1, 17.4, 17.8, 11.6 — wskazać test lub przebieg (D23-S, O1, gate:visual, LOAD-1); 17.3 — jeden kanon w `design/`. Wynik do rejestru; każda pozycja, która nie przejdzie, trafia do części B. Bez zmian w kodzie i bez wykonywania teraz. | **ZROBIONE 06.10** — `RAPORT_VERIFY_13_06_10.md` (main `e5d4eba`, bez zmian w kodzie). PASS: 13.1–13.3, 13.8, 13.9 (wg B-8.3: data z rokiem), 13.10–13.13, 13.15, 13.16 (369,3 kB gz / 400), 16.1, 16.4 (DOM: KSH bez kosztu/marży, SCX bez przychodu/marży), 17.1, 17.3, 11.6. FAIL obecnie: 17.4/17.8 — smoke Playwright czerwony po usunięciu `#langSeg` (`8322d02`) → **B-SMOKE-LANG**; 17.3 kopie poza `design/` → **B-VERIFY-17.3** · **06.10 10:18: 17.4 i 17.8 PASS** po B-SMOKE-LANG/B-PERSIST-TOAST/B-SMOKE-DRIFT (PR #134): `fresh-smoke.sh` OK, `gate:visual` OK 280/280, zmienione 0 |
-| PALIWO-33.3 | — | 10. po VERIFY-13, przed częścią B | 33.3: tydzień opłaty paliwowej w Europe/Warsaw. Jest granica niedziela/poniedziałek latem (`2026-10-04T22:30:00Z` → lokalnie 2026-10-05) i zimą (`2026-11-29T23:30:00Z` → lokalnie 2026-11-30) w `tests/money.test.ts` oraz `tests/db/money.sh`, a migracja 0155 liczy dzień przez `Europe/Warsaw`. Noc cofnięcia zegara 25.10.2026: załadunek przed 03:00 (`2026-10-25T00:30:00Z`, 02:30 CEST) i druga 02:xx (`2026-10-25T01:30:00Z`, 02:30 CET) → lokalnie 2026-10-25, tydzień 2026-W43; poniedziałek 26.10 (`2026-10-25T23:30:00Z`, 00:30 CET) → 2026-10-26, tydzień 2026-W44. Tydzień z `isoWeekKeyLocal` / `fuelLocalDate`, bez nowej stawki. Kod 0155 i `engine.ts` przypisuje te dni poprawnie — bez migracji. | **DONE** 2026-10-05 — test w `tests/money.test.ts`. Bez migracji i bez wdrożenia (sam test i komentarz w planie). |
-| H-2-PL | — | po H-2 | Utrudnienia PL: HERE Traffic v7 `/incidents` wzdłuż `CORRIDOR_PL` (1 TX/przebieg), pula `HERE_TRAFFIC_FREE=5000`, KPD GDDKiA = zapas. Migracja 0171. | **DONE** 05.10 ~12:27+ |
-| CLEAN-MAPLIBRE | P3 | stałe | Usunąć martwy MapLibre, jeśli nadal jest w zależnościach (17.7). | **ZROBIONE 05.10** — potwierdzenie: brak `maplibre`/`mapbox` w package.json i 0 w lock |
-
-## Polecenie 2026-10-04 17:06 — e-mail decyzji automatycznych
-
-L-13 przyjęte. `automatic_decision_email` = true. Niekrytyczne w skrócie (szacunek szczytu 34 na dobę). Krytyczne: jedno zdarzenie = jeden e-mail na odbiorcę, lista transportów. Limit: najpierw krytyczne, potem skróty; 10 na dobę zostaje na zaproszenia i reset hasła. Po wyczerpaniu limitu aplikacja i dzwonek bez zmiany. Stan systemu: ile e-maili nie wyszło i do kogo. Co tydzień liczby produkcji w `POSTEP.md` obok szacunku 34; strażnik 80 więcej niż dwa razy w tygodniu → raport do właściciela.
-
-## R-0 — plan czyszczenia (04.10.2026 20:30, czas warszawski)
-
-Tylko plan do akceptacji. Nic nie skasowano. 94 transporty zostają do pisemnej akceptacji. Status R-1 bez zmiany. Polecenie z listą do potwierdzania punkt po punkcie jest nieważne i nie jest zapisane.
-
-Kasowane, wyłącznie wiersze transportów i tego, co wisi na nich kluczem obcym (liczby z produkcji `nglnnrmzmhusvxslousq`, odczyt 04.10):
-
-| Co | Teraz | Po czyszczeniu |
-|---|---|---|
-| loads | 94 | 0 |
-| shipment_items | 94 | 0 |
-| load_events | 108 | 0 |
-| load_messages | 1 | 0 |
-| geofence_states | 3 | 0 |
-| driver_tokens | 3 | 0 |
-| risk_signals z transportem | 117 | 0 (zostaje 15 bez transportu) |
-| decisions z transportem | 32 | 0 (zostaje 12 bez transportu) |
-| decision_events tych decyzji | 65 | 0 (zostaje 12 przy decyzjach bez transportu) |
-| notifications z transportem | 1535 | 0 (zostaje 139 bez transportu) |
-| sms_outbox z transportem | 1 | 0 (zostaje 24 bez transportu) |
-| workflow_runs z transportem | 2 | 0 |
-| documents, positions, invoice_lines, load_cost, load_revenue, load_permits, load_escorts, load_agreed_fees, eta_segment_observations, carrier_ratings z transportem | 0 | 0 |
-
-Zostaje bez zmian: organizacje (3), konta (11), rejsy (164), strefy (10), faktury (0), import harmonogramu (1 wiersz historii), automatyzacje (7), cennik, opcje, progi, użytkownicy, zaproszenia. Decyzje, ryzyka, powiadomienia i SMS-y bez transportu zostają.
-
-Przed wykonaniem: pełna kopia do R2, poza repozytorium; próba odtworzenia na teście; potem migracja przez bramę. Liczby przed i po w raporcie. Wykonanie dopiero tuż przed R-1.
-
-# 6. PRZYPISANIE POZYCJI BEZ MIEJSCA (04.10.2026)
-
-Drugie przejście rejestru całości. Tu tylko pozycje z sekcji 4 rejestru, które nie dostały dowodu „zrobione”. Od 04.10 status ID objętych `TRIAGE_REJESTRU.md` bierze się z tego pliku i z sekcji 5 rejestru, nie z kolumny poniżej, gdy się różnią. Realizacji części B ten zapis nie zaczyna.
-
-| ID | Przypisanie | Uzasadnienie |
-|---|---|---|
-| D-18 | do decyzji koordynatora | e-mail do armatora; wiersz II-5 DONE nie jest dowodem tej pozycji |
-| 0.2 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 0.4 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 0.5 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 0.6 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 0.9 | ETAP III | PLAN III-2 (szkielet i stan pusty harmonogramu jak w makiecie + zrzuty) |
-| 1.2 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 1.3 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 1.7 | ETAP I | I-6 `642d68f`: `client_errors` + alarm co 15 min (test produkcyjny: ryzyko + e-mail 200) |
-| 1.8 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 10.2 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 10.3 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 10.5 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 10.9 | ETAP III | Dziennik odłożeń; Etap III (ślad węglowy) |
-| 11.1 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 11.2 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 11.3 | do decyzji koordynatora | PLAN R-3 (O3b) |
-| 11.6 | ETAP I | I-8 `642d68f`: 350 transportów, 112 496 pozycji — liczby w POSTEP |
-| 11.7 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 11.8 | ETAP I | I-4 `3dac401`: instrukcje w aplikacji dla kierowcy (PL/EN/SV), HHL, KSH, przewoźnika |
-| 12.1 | do decyzji koordynatora | brak etapu w 56.1 |
-| 12.10 | do decyzji koordynatora | brak etapu w 56.1 |
-| 12.11 | do decyzji koordynatora | brak etapu w 56.1 |
-| 12.12 | do decyzji koordynatora | brak etapu w 56.1 |
-| 12.13 | do decyzji koordynatora | brak etapu w 56.1 |
-| 12.14 | do decyzji koordynatora | brak etapu w 56.1 |
-| 12.2 | do decyzji koordynatora | brak etapu w 56.1 |
-| 12.3 | do decyzji koordynatora | brak etapu w 56.1 |
-| 12.4 | do decyzji koordynatora | brak etapu w 56.1 |
-| 12.5 | do decyzji koordynatora | brak etapu w 56.1 |
-| 12.6 | do decyzji koordynatora | brak etapu w 56.1 |
-| 12.7 | do decyzji koordynatora | brak etapu w 56.1 |
-| 12.8 | do decyzji koordynatora | brak etapu w 56.1 |
-| 12.9 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.1 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.10 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.11 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.12 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.13 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.14 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.15 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.16 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.2 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.3 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.4 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.5 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.6 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.7 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.8 | do decyzji koordynatora | brak etapu w 56.1 |
-| 13.9 | do decyzji koordynatora | brak etapu w 56.1 |
-| 14.1 | do decyzji koordynatora | brak etapu w 56.1 |
-| 14.10 | do decyzji koordynatora | brak etapu w 56.1 |
-| 14.11 | do decyzji koordynatora | brak etapu w 56.1 |
-| 14.2 | do decyzji koordynatora | brak etapu w 56.1 |
-| 14.3 | do decyzji koordynatora | brak etapu w 56.1 |
-| 14.4 | do decyzji koordynatora | brak etapu w 56.1 |
-| 14.5 | do decyzji koordynatora | brak etapu w 56.1 |
-| 14.6 | do decyzji koordynatora | brak etapu w 56.1 |
-| 14.7 | do decyzji koordynatora | brak etapu w 56.1 |
-| 14.8 | do decyzji koordynatora | brak etapu w 56.1 |
-| 14.9 | do decyzji koordynatora | brak etapu w 56.1 |
-| 15.1 | do decyzji koordynatora | brak etapu w 56.1 |
-| 15.2 | do decyzji koordynatora | brak etapu w 56.1 |
-| 15.3 | do decyzji koordynatora | brak etapu w 56.1 |
-| 15.4 | do decyzji koordynatora | brak etapu w 56.1 |
-| 15.5 | do decyzji koordynatora | brak etapu w 56.1 |
-| 15.6 | do decyzji koordynatora | brak etapu w 56.1 |
-| 15.7 | do decyzji koordynatora | brak etapu w 56.1 |
-| 16.1 | do decyzji koordynatora | brak etapu w 56.1 |
-| 16.2 | do decyzji koordynatora | brak etapu w 56.1 |
-| 16.3 | do decyzji koordynatora | brak etapu w 56.1 |
-| 16.4 | do decyzji koordynatora | brak etapu w 56.1 |
-| 16.5 | do decyzji koordynatora | brak etapu w 56.1 |
-| 16.6 | do decyzji koordynatora | brak etapu w 56.1 |
-| 16.7 | do decyzji koordynatora | brak etapu w 56.1 |
-| 16.8 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.1 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.10 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.11 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.12 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.13 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.14 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.15 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.16 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.2 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.3 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.4 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.5 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.6 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.7 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.8 | do decyzji koordynatora | brak etapu w 56.1 |
-| 17.9 | do decyzji koordynatora | brak etapu w 56.1 |
-| 2.1 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 2.2 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 2.4 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 2.5 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 2.7 | ETAP I | I-7 `642d68f`: dane kierowcy 90 dni; zdjęcia, CMR, POD — D-3 |
-| 2.8 | do decyzji koordynatora | D-5 (umowy RODO), Dziennik blokad |
-| 20.1 | do decyzji koordynatora | brak etapu w 56.1 |
-| 20.10 | do decyzji koordynatora | brak etapu w 56.1 |
-| 20.2 | do decyzji koordynatora | brak etapu w 56.1 |
-| 20.3 | do decyzji koordynatora | brak etapu w 56.1 |
-| 20.4 | do decyzji koordynatora | brak etapu w 56.1 |
-| 20.5 | do decyzji koordynatora | brak etapu w 56.1 |
-| 20.6 | do decyzji koordynatora | brak etapu w 56.1 |
-| 20.7 | do decyzji koordynatora | brak etapu w 56.1 |
-| 20.8 | do decyzji koordynatora | brak etapu w 56.1 |
-| 20.9 | do decyzji koordynatora | brak etapu w 56.1 |
-| 23.2 | do decyzji koordynatora | brak etapu w 56.1 |
-| 23.3 | do decyzji koordynatora | brak etapu w 56.1 |
-| 23.4 | do decyzji koordynatora | brak etapu w 56.1 |
-| 23.5 | do decyzji koordynatora | brak etapu w 56.1 |
-| 23.6 | do decyzji koordynatora | brak etapu w 56.1 |
-| 26.2 | do decyzji koordynatora | brak etapu w 56.1 |
-| 26.3 | do decyzji koordynatora | brak etapu w 56.1 |
-| 26.4 | do decyzji koordynatora | brak etapu w 56.1 |
-| 28.2 | do decyzji koordynatora | brak etapu w 56.1 |
-| 28.3 | do decyzji koordynatora | brak etapu w 56.1 |
-| 28.4 | do decyzji koordynatora | brak etapu w 56.1 |
-| 28.5 | do decyzji koordynatora | brak etapu w 56.1 |
-| 3.1 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 3.10 | ETAP III | Dziennik odłożeń; Etap III (SharePoint) |
-| 3.3 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 3.4 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 3.5 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 3.6 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 3.7 | ETAP I | I-10 `a0d21bc`: e-mail wysłany (SENT 21:20); I-18: także zmiana daty potwierdzonej |
-| 3.9 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 32.1 | do decyzji koordynatora | brak etapu w 56.1 |
-| 32.2 | do decyzji koordynatora | brak etapu w 56.1 |
-| 32.3 | do decyzji koordynatora | brak etapu w 56.1 |
-| 32.4 | do decyzji koordynatora | brak etapu w 56.1 |
-| 32.5 | do decyzji koordynatora | brak etapu w 56.1 |
-| 33.1 | do decyzji koordynatora | brak etapu w 56.1 |
-| 33.2 | do decyzji koordynatora | brak etapu w 56.1 |
-| 33.3 | do decyzji koordynatora | brak etapu w 56.1 |
-| 33.4 | do decyzji koordynatora | brak etapu w 56.1 |
-| 33.5 | do decyzji koordynatora | brak etapu w 56.1 |
-| 33.6 | do decyzji koordynatora | brak etapu w 56.1 |
-| 4.1 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 4.2 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 4.4 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 4.6 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 5.1 | ETAP II | PLAN II-4, D-6; Dziennik blokad |
-| 5.11 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 5.14 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 5.2 | ETAP II | PLAN II-4, D-6; Dziennik blokad |
-| 5.3 | ETAP II | PLAN II-4, D-6; Dziennik blokad |
-| 5.4 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 5.5 | ETAP II | PLAN II-4 (po adapterze 5.1) |
-| 5.6 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 5.7 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 5.8 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 5.9 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 6.3 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 6.7 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 6.9 | ETAP III | Dziennik odłożeń; Etap III (e-CMR) |
-| 7.1 | ETAP I | D-1 (kwoty); formularz cennika — PLAN I-19; pozycja STANDARD — I-12 (0064) |
-| 7.11 | do decyzji koordynatora | Dziennik odłożeń |
-| 7.2 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 7.3 | ETAP II | D-2 / PLAN II-1 (wartości); formularz SEFS I-2f (0052), zakres I-13 (0063) |
-| 7.4 | ETAP II | PLAN II-1 (zadanie notowań po D-2) |
-| 7.6 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 7.7 | ETAP I | PLAN I-19 (dodatki w cenniku) + D-1 |
-| 7.8 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 7.9 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 8.1 | ETAP III | PLAN Etap III „źródło pogody morskiej” |
-| 8.10 | ETAP II | PLAN II-2; Dziennik blokad |
-| 8.2 | ETAP II | PLAN II-5; Dziennik blokad |
-| 8.3 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 8.4 | ETAP II | PLAN II-6 |
-| 8.5 | ETAP II | PLAN II-6; Dziennik blokad |
-| 8.6 | ETAP II | PLAN II-6; Dziennik blokad |
-| 8.7 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 8.8 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 8.9 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 9.1 | do decyzji koordynatora | POSTEP 9.1–9.4 |
-| 9.10 | ETAP III | Dziennik odłożeń; Etap III (kalendarz) |
-| 9.11 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 9.2 | do decyzji koordynatora | POSTEP 9.1–9.4 |
-| 9.3 | do decyzji koordynatora | POSTEP 9.1–9.4 |
-| 9.5 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 9.6 | ETAP I | Dziennik odłożeń; bramka SMS — I-3 (D-4) |
-| 9.7 | do decyzji koordynatora | 56.2 mówi GOTOWE, brak dowodu pliku albo 56.1 nie obejmuje pozycji |
-| 9.9 | do decyzji koordynatora | Dziennik odłożeń |
-| AN1 | do decyzji koordynatora | brak jednoznacznego etapu |
-| AN2 | do decyzji koordynatora | brak jednoznacznego etapu |
-| AN3 | do decyzji koordynatora | brak jednoznacznego etapu |
-| AN4 | do decyzji koordynatora | brak jednoznacznego etapu |
-| AN5 | do decyzji koordynatora | brak jednoznacznego etapu |
-| AUTH-MAIL | do decyzji koordynatora | brak jednoznacznego etapu |
-| BK0 | do decyzji koordynatora | brak jednoznacznego etapu |
-| BK1 | do decyzji koordynatora | brak jednoznacznego etapu |
-| BK2 | do decyzji koordynatora | brak jednoznacznego etapu |
-| BK3 | do decyzji koordynatora | brak jednoznacznego etapu |
-| BK4 | do decyzji koordynatora | brak jednoznacznego etapu |
-| BK5 | do decyzji koordynatora | brak jednoznacznego etapu |
-| BK6 | do decyzji koordynatora | brak jednoznacznego etapu |
-| BRAK-PLIKU-ZLECENIE_DLA_GROKA | do decyzji koordynatora | brak jednoznacznego etapu |
-| BRAK-PLIKU-ZLECENIE_ETAP_I | do decyzji koordynatora | brak jednoznacznego etapu |
-| D-10 | już w PLAN jako D-10 | identyfikator jest w PLAN.md |
-| D-11 | już w PLAN jako D-11 | identyfikator jest w PLAN.md |
-| D-12 | już w PLAN jako D-12 | identyfikator jest w PLAN.md |
-| D-14 | już w PLAN jako D-14 | identyfikator jest w PLAN.md |
-| D-16 | już w PLAN jako D-16 | identyfikator jest w PLAN.md |
-| D-17 | już w PLAN jako D-17 | identyfikator jest w PLAN.md |
-| D-20 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| D-21 | już w PLAN jako D-21 | identyfikator jest w PLAN.md |
-| D-24 | już w PLAN jako D-24 | identyfikator jest w PLAN.md |
-| D-25 | już w PLAN jako D-25 | identyfikator jest w PLAN.md |
-| D-29 | już w PLAN jako D-29 | identyfikator jest w PLAN.md |
-| D-3 | już w PLAN jako D-3 | identyfikator jest w PLAN.md |
-| D-32 | już w PLAN jako D-32 | identyfikator jest w PLAN.md |
-| D-33 | już w PLAN jako D-33 | identyfikator jest w PLAN.md |
-| D-34 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| D-6 | już w PLAN jako D-6 | identyfikator jest w PLAN.md |
-| D-7 | już w PLAN jako D-7 | identyfikator jest w PLAN.md |
-| D-77 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| D-78 | **DONE + pule potwierdzone 05.10 ~12:49** | koszt = max(0, zapytania−pula)×stawka; budżet 100 USD i 50/80/100% tylko od kosztu ponad pule; kafelki→zapas od 80%; **pule potwierdzone**: Advanced Raster Tile 30000, Routing Truck 5000 — źródło „konto HERE właściciela, 05.10" (0170 logika + **0172** etykiety/źródło; bez edycji 0170) |
-| D-79 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| D-8 | już w PLAN jako D-8 | identyfikator jest w PLAN.md |
-| D-80 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| D-81 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| D-82 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| D-83 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| D-84 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| D-85 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| D-9 | już w PLAN jako D-9 | identyfikator jest w PLAN.md |
-| D-EUR-T | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| D-TELM-ETA | już w PLAN jako D-TELM-ETA | identyfikator jest w PLAN.md |
-| D10 | do decyzji koordynatora | brak jednoznacznego etapu |
-| D11 | do decyzji koordynatora | brak jednoznacznego etapu |
-| D13 | do decyzji koordynatora | brak jednoznacznego etapu |
-| D14 | do decyzji koordynatora | brak jednoznacznego etapu |
-| D15 | do decyzji koordynatora | brak jednoznacznego etapu |
-| D17 | do decyzji koordynatora | brak jednoznacznego etapu |
-| D18 | do decyzji koordynatora | brak jednoznacznego etapu |
-| D19 | do decyzji koordynatora | brak jednoznacznego etapu |
-| D19-T | do decyzji koordynatora | brak jednoznacznego etapu |
-| D23-S | do decyzji koordynatora | brak jednoznacznego etapu |
-| D25 | do decyzji koordynatora | brak jednoznacznego etapu |
-| D26 | do decyzji koordynatora | brak jednoznacznego etapu |
-| D6 | do decyzji koordynatora | brak jednoznacznego etapu |
-| DECPOW-§0 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| DECPOW-§1 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| DECPOW-§2 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| DECPOW-§3 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| DECPOW-§4 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| DECPOW-§5 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| DECPOW-§6 | do decyzji koordynatora | decyzja albo numer spoza rejestru, nie etap budowy |
-| ETAP_I/I-0 | do decyzji koordynatora | brak jednoznacznego etapu |
-| ETAP_I/I-1 | do decyzji koordynatora | brak jednoznacznego etapu |
-| ETAP_I/I-2 | do decyzji koordynatora | brak jednoznacznego etapu |
-| ETAP_I/I-3 | do decyzji koordynatora | brak jednoznacznego etapu |
-| ETAP_I/I-4 | do decyzji koordynatora | brak jednoznacznego etapu |
-| ETAP_I/I-5 | do decyzji koordynatora | brak jednoznacznego etapu |
-| ETAP_I/I-6 | do decyzji koordynatora | brak jednoznacznego etapu |
-| ETAP_I/I-7 | do decyzji koordynatora | brak jednoznacznego etapu |
-| ETAP_I/I-8 | do decyzji koordynatora | brak jednoznacznego etapu |
-| ETAP_I/I-9 | do decyzji koordynatora | brak jednoznacznego etapu |
-| F-KLUCZ | do decyzji koordynatora | brak jednoznacznego etapu |
-| F2.1 | do decyzji koordynatora | brak jednoznacznego etapu |
-| F2.2 | do decyzji koordynatora | brak jednoznacznego etapu |
-| F2.3 | do decyzji koordynatora | brak jednoznacznego etapu |
-| F2.4 | do decyzji koordynatora | brak jednoznacznego etapu |
-| F2.4. | do decyzji koordynatora | brak jednoznacznego etapu |
-| F2.5 | do decyzji koordynatora | brak jednoznacznego etapu |
-| F2.6 | do decyzji koordynatora | brak jednoznacznego etapu |
-| G1 | do decyzji koordynatora | brak jednoznacznego etapu |
-| G2 | do decyzji koordynatora | brak jednoznacznego etapu |
-| G3 | do decyzji koordynatora | brak jednoznacznego etapu |
-| G5 | do decyzji koordynatora | brak jednoznacznego etapu |
-| H-10 | do decyzji koordynatora | brak jednoznacznego etapu |
-| H-12 | do decyzji koordynatora | brak jednoznacznego etapu |
-| H-7 | do decyzji koordynatora | brak jednoznacznego etapu |
-| H-8 | do decyzji koordynatora | brak jednoznacznego etapu |
-| I-2A | do decyzji koordynatora | brak jednoznacznego etapu |
-| I-2B | do decyzji koordynatora | brak jednoznacznego etapu |
-| I-2C | do decyzji koordynatora | brak jednoznacznego etapu |
-| I-2b | do decyzji koordynatora | brak jednoznacznego etapu |
-| L1 | do decyzji koordynatora | brak jednoznacznego etapu |
-| L16 | do decyzji koordynatora | brak jednoznacznego etapu |
-| L2 | do decyzji koordynatora | brak jednoznacznego etapu |
-| L4 | do decyzji koordynatora | brak jednoznacznego etapu |
-| L5 | do decyzji koordynatora | brak jednoznacznego etapu |
-| L7 | do decyzji koordynatora | brak jednoznacznego etapu |
-| L8 | do decyzji koordynatora | brak jednoznacznego etapu |
-| L9 | do decyzji koordynatora | brak jednoznacznego etapu |
-| M1 | do decyzji koordynatora | brak jednoznacznego etapu |
-| M10 | do decyzji koordynatora | brak jednoznacznego etapu |
-| M11 | do decyzji koordynatora | brak jednoznacznego etapu |
-| M12 | do decyzji koordynatora | brak jednoznacznego etapu |
-| M2 | do decyzji koordynatora | brak jednoznacznego etapu |
-| M3 | do decyzji koordynatora | brak jednoznacznego etapu |
-| M4 | do decyzji koordynatora | brak jednoznacznego etapu |
-| M5 | do decyzji koordynatora | brak jednoznacznego etapu |
-| M7 | do decyzji koordynatora | brak jednoznacznego etapu |
-| M8 | do decyzji koordynatora | brak jednoznacznego etapu |
-| M9 | do decyzji koordynatora | brak jednoznacznego etapu |
-| O-V | do decyzji koordynatora | brak jednoznacznego etapu |
-| O-V2 | do decyzji koordynatora | brak jednoznacznego etapu |
-| O-V3 | do decyzji koordynatora | brak jednoznacznego etapu |
-| O-V4 | do decyzji koordynatora | brak jednoznacznego etapu |
-| O-V5 | do decyzji koordynatora | brak jednoznacznego etapu |
-| O-V6 | do decyzji koordynatora | brak jednoznacznego etapu |
-| O1 | do decyzji koordynatora | brak jednoznacznego etapu |
-| O2 | do decyzji koordynatora | brak jednoznacznego etapu |
-| O3 | do decyzji koordynatora | brak jednoznacznego etapu |
-| O4 | do decyzji koordynatora | brak jednoznacznego etapu |
-| O5 | do decyzji koordynatora | brak jednoznacznego etapu |
-| P0.1 | do decyzji koordynatora | brak jednoznacznego etapu |
-| P0.1. | do decyzji koordynatora | brak jednoznacznego etapu |
-| P0.2 | do decyzji koordynatora | brak jednoznacznego etapu |
-| P0.3 | do decyzji koordynatora | brak jednoznacznego etapu |
-| P6 | do decyzji koordynatora | brak jednoznacznego etapu |
-| PL-T | do decyzji koordynatora | brak jednoznacznego etapu |
-| POPRAWKI-A1 | do decyzji koordynatora | zasady pracy, nie pozycja budowy |
-| POPRAWKI-A2 | do decyzji koordynatora | zasady pracy, nie pozycja budowy |
-| POPRAWKI-B-1 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-B-10 | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
-| POPRAWKI-B-10a | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
-| POPRAWKI-B-10b | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
-| POPRAWKI-B-10c | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
-| POPRAWKI-B-10d | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
-| POPRAWKI-B-10e | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
-| POPRAWKI-B-10f | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
-| POPRAWKI-B-10g | już w PLAN §5 jako B-10 | pozycja kolejki już istnieje |
-| POPRAWKI-B-11 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-B-12 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-B-13 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-B-14 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-B-15 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-B-16 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-B-17 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-B-18 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-B-19 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-B-2 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-B-2a | już w PLAN §5 jako B-2a | pozycja kolejki już istnieje |
-| POPRAWKI-B-2c | już w PLAN §5 jako B-2c | pozycja kolejki już istnieje |
-| POPRAWKI-B-3 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-B-3a | już w PLAN §5 jako B-3a | pozycja kolejki już istnieje |
-| POPRAWKI-B-4 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-B-4a | już w PLAN §5 jako B-4a | pozycja kolejki już istnieje |
-| POPRAWKI-B-4b | już w PLAN §5 jako B-4b | pozycja kolejki już istnieje |
-| POPRAWKI-B-5 | już w PLAN §5 jako B-5 | pozycja kolejki już istnieje |
-| POPRAWKI-B-6 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-B-6a | już w PLAN §5 jako B-6a | pozycja kolejki już istnieje |
-| POPRAWKI-B-6b | już w PLAN §5 jako B-6b | pozycja kolejki już istnieje |
-| POPRAWKI-B-6c | już w PLAN §5 jako B-6c | pozycja kolejki już istnieje |
-| POPRAWKI-B-6d | już w PLAN §5 jako B-6d | pozycja kolejki już istnieje |
-| POPRAWKI-B-6e | już w PLAN §5 jako B-6e | pozycja kolejki już istnieje |
-| POPRAWKI-B-6f | już w PLAN §5 jako B-6f | pozycja kolejki już istnieje |
-| POPRAWKI-B-6g | już w PLAN §5 jako B-6g | pozycja kolejki już istnieje |
-| POPRAWKI-B-6h | już w PLAN §5 jako B-6h | pozycja kolejki już istnieje |
-| POPRAWKI-B-6i | już w PLAN §5 jako B-6i | pozycja kolejki już istnieje |
-| POPRAWKI-B-7 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-B-7a | już w PLAN §5 jako B-7a | pozycja kolejki już istnieje |
-| POPRAWKI-B-7b | już w PLAN §5 jako B-7b | pozycja kolejki już istnieje |
-| POPRAWKI-B-7c | już w PLAN §5 jako B-7c | pozycja kolejki już istnieje |
-| POPRAWKI-B-8 | już w PLAN §5 jako B-8 | pozycja kolejki już istnieje |
-| POPRAWKI-B-8a | już w PLAN §5 jako B-8 | pozycja kolejki już istnieje |
-| POPRAWKI-B-9 | już w PLAN §5 jako B-9 | pozycja kolejki już istnieje |
-| POPRAWKI-D | już w PLAN §5 jako D-LATER | pozycja kolejki już istnieje |
-| POPRAWKI-Q-1 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-10 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-11 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-12 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-13 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-14 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-15 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-16 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-17 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-18 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-19 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-2 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-3 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-4 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-5 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-6 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-7 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-8 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| POPRAWKI-Q-9 | już w PLAN §5 jako B-Q | pytanie z części B; identyfikator w rejestrze dubluje B-Q |
-| PR1 | do decyzji koordynatora | brak jednoznacznego etapu |
-| PR2 | do decyzji koordynatora | brak jednoznacznego etapu |
-| PR3 | do decyzji koordynatora | brak jednoznacznego etapu |
-| PR4 | do decyzji koordynatora | brak jednoznacznego etapu |
-| PR6 | do decyzji koordynatora | brak jednoznacznego etapu |
-| PR7 | do decyzji koordynatora | brak jednoznacznego etapu |
-| PR8 | do decyzji koordynatora | brak jednoznacznego etapu |
-| SCX-§0 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§1 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§10 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§11 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§12 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§13 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§14 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§15 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§2 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§3 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§4 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§4a | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§5 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§6 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§7 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§8 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SCX-§9 | do decyzji koordynatora | sekcja zlecenia, nie osobna pozycja kolejki; sens do potwierdzenia |
-| SEC-1 | do decyzji koordynatora | brak jednoznacznego etapu |
-| SMS-ZONE-ON | do decyzji koordynatora | brak jednoznacznego etapu |
-| T1 | do decyzji koordynatora | brak jednoznacznego etapu |
-| T2 | do decyzji koordynatora | brak jednoznacznego etapu |
-| T3 | do decyzji koordynatora | brak jednoznacznego etapu |
-| W1 | do decyzji koordynatora | brak jednoznacznego etapu |
-| W2 | do decyzji koordynatora | brak jednoznacznego etapu |
-| W3 | do decyzji koordynatora | brak jednoznacznego etapu |
-| W4 | do decyzji koordynatora | brak jednoznacznego etapu |
-
-# 7. TRIAGE REJESTRU (04.10.2026, przyjęte)
-
-Źródło: `docs/handover/TRIAGE_REJESTRU.md`. Kodu ten zapis nie zmienia.
-
-Kolejka: H-3 (DONE na main, PR #40, flaga wyłączona), potem U-3-PALIWO (z kryteriami SCOPE 32.x i 33.x), diagnoza ETA dla SG-01, SG-24, KR-04, KR-05, KR-06 i KR-07 (bez zmian w kodzie), DRV-CLOSE, STD-CLEAN, SMS-KSH-1H + ETA-PRE-LOAD w jednym PR, AIS-SRC, FERRY-STATUS, PL-DATA, VERIFY-13 oraz PALIWO-33.3. Część B dopiero po całej tej kolejce. Tabela dowodów jest przyjęta.
-
-**Polecenie 05.10.2026 ~10:37 (właściciel):** kolejność (2) SMS-SILENT-FIX + (3) MIG-0159-REG i barlow/wzorce Automatyzacji → (1) PALIWO-AUTO-B → (4) B-7c A, B-8 (zakres dat + bez kierowcy/ciągnika + Zmień ciągnik), B-9 C, Q-9 B. B-3a nadal stop na D-83.
-
-**Polecenie 05.10.2026 07:16 (właściciel):** 1) Q18-V2 — poprawiona reguła widoczności promów (wiersz Q-18). 2) AIS-POLF — dokończenie AIS-SRC dla Polferries (Wawel 311852000, Nova Star 311000787): diagnoza, naprawa, pozycja AISSTREAM nie starsza niż 5 min. 3) Diagnoza pustej mapy dla 5 promów. 4) Część B dalej w tej samej kolejności; B-7a i B-7b nie czekają na decyzję. Czekają na właściciela (tylko propozycja na piśmie): B-7c, filtry i statusy z B-8, B-9, Q-9 — propozycje w `PROPOZYCJE_B_05_10.md`. Czeka na wymiary: B-3a. Kolejność części B bez zmian.
-
-Część B, po tej kolejce, zaczyna od B-MAPA razem z Q-18 (przed B-7a, B-7b i B-7c; Q-17 i Q-19 wchodzą w B-MAPA). Za B-MAPA, nadal w części B i poza kolejką nocną: PL-PLURAL (P3). Dalej: B-1 (do scalenia), B-2a, B-2c, B-3a (po wymiarach), B-4a, B-4b, B-5, B-6a…B-6i, B-7a…B-7c, B-8, B-9, B-10, B-KSH, B-REJSY, B-Q (bez pytań zrobionych w L-*), Q-11a, Q-11b, C-SEP, HHL-4a, FAK-9, UI-12, D-31, D-27.
-
-HERE i ETA, poza bieżącą kolejką: H-2-PL, H-6 (warstwa przeszkód w B-MAPA, wyłączona do D-83), H-7, H-8, H-10, H-12, H-4 i H-5 po emtrack, II-7b. Podkład i rysowanie są w B-MAPA, nie osobno.
-
-Na dane z zewnątrz: TELM-2, II-2, II-3, II-4, II-10-E1, II-10-E2, ZEZW-13, D-15.
-
-Sprawy właściciela, nie blokują B: D-3, D-7, D-14, D-16, D-17, D-21, wymiary (D-83).
-
-Stałe: GATE-WEEKLY, SEC-OWASP (przed pilotażem), CLEAN-MAPLIBRE (P3).
-
-Pilotaż: R-0, potem R-1, potem R-2, potem R-3, potem R-4.
-
-SMS-KSH-1H rozszerzone decyzją właściciela 04.10 jako D-37/D-64. ETA-PRE-LOAD doprecyzowuje D-80: ETA dostawy pojawia się dopiero po wyjeździe ze strefy placu w Śremie; przed załadunkiem wszędzie jest „–”, bez tekstu, a SMS nadal liczy dojazd w tle. Dotychczasowe SCX-§5 (strefy, 0106 i 0116) nie spełnia: SMS leci przy wejściu w koło 50 km, nie według czasu dojazdu ≤ 60 min. Wymagane są oba końce trasy (Śrem i Boden), HERE z własnym silnikiem jako zapasem, jeden SMS na transport i koniec trasy, brak SMS bez GPS oraz testy SIM-1 wskazane w tabeli powyżej. Pozycja SMS-KSH-1H + ETA-PRE-LOAD jest 5. w kolejce i jest w tej paczce (migracja 0158). AIS-SRC jest 6., FERRY-STATUS jest 7., PL-DATA jest 8. (bez budowy w tym zapisie), przed VERIFY-13. Część B zaczyna od B-MAPA razem z Q-18. PL-PLURAL (P3) jest za B-MAPA i za kolejką nocną, bez budowy.
-
-Raport punktu 6 (bez budowania) jest na końcu `TRIAGE_REJESTRU.md`.
-
-## Status planu 05.10 ~11:43 (właściciel)
-
-Raport: `STATUS_PLAN_05_10.md`. Polecenie w `POLECENIA_KOORDYNATORA.md` (~11:43).
-Budowa bez czekania: pozycje „do zrobienia” spoza listy właściciela/zewnętrznej,
-potem H-2-PL, H-7, H-8, H-10, H-12, CLEAN-MAPLIBRE, AUTH-MAIL, I-29, GATE-WEEKLY,
-na końcu SEC-OWASP. Czeka właściciel: D-83→B-3a/H-1/H-3/H-6, R-0, D-3/D-7/D-14/D-16/D-17/D-21.
-Zewnętrzne: TELM-2, II-10-E1.
-
-### Priorytet 2026-10-05 ~12:11 (przed dalszą budową PLAN)
-D-78 pule HERE + przebudowa H-3 (bez Attributes). Potem powrót do raportu stanu i budowy bez czekania.
-
-### Priorytet 2026-10-05 ~13:12 — TELM-EMTRACK-WEB włączenie + test GD035YX
-Kolejność: (0) blokada SMS/e-mail tylko właściciel (test na sucho) → (1) zero alarmów bez awizacji + zapis pozycji sierot → (2) flaga true → (3) faza z pozycji (SE/morze) → (4) test live GD035YX → (5) monitoring 72 h → (6) link do transportu + mapa. Potem powrót do PLAN bez czekania.
-
-### Paczka PLAN 05.10 ~13:30 (po TELM live)
-H-12 święta 0177; H-10 ETA+wiatr propozycja WYŁ.; H-8 propozycja; B-Q/Q-11a dok.; Q-11b czeka push; B-10 PDF kierowca + odczyty czatu; SEC-OWASP start. TELM_EMTRACK_WEB true; H1/H3/H6 false; blokada SMS właściciela zostaje.
-
-## Polecenie właściciela 2026-10-05 ~13:53 — CSP Report-Only, ZAP, D-3, raport, nie stój
-
-1. **CSP:** Report-Only 7 dni → naruszenia w tabeli Stan systemu → lista źródeł do akceptacji → enforce **przed** SEC-OWASP i pilotażem.
-2. **ZAP:** instalacja bez Dockera (Java); Baseline pasywny **prod**; pełny tylko **TEST**; wynik do SEC-OWASP.
-3. **D-3 zatwierdzone:** CMR/POD/zdjęcia **3 lata**, PDF faktur **5 lat**; I-7 kierowca bez zmian → wdrożyć retencję.
-4. Raport stanu (ID|status|dowód): B-KSH, HHL-4a, C-SEP, B-REJSY, FAK-9, Q-7, Q-8, Q-10, Q-15, Q-17, UI-12, D-31, D-27, CLEAN-MAPLIBRE, AUTH-MAIL, I-29, TELM-2 (symulacje), B-10, H-7. Bez dowodu = buduj wg PLAN. Czeka właściciel: D-83→B-3a/H-1/H-3, R-0, D-7/14/16/17/21. GATE-WEEKLY **11.10**.
-5. SG-03: raport po rozładunku (SMS 1 h tylko właściciel).
-Nie stój. TELM true; H1/H3/H6 false; blokada SMS właściciela.
+| 08.10.2026 16:05 | Nowy plan: paczki P0a–P11, linie A–C, protokół dopisków, rozstrzygnięcia luk | polecenie właściciela 14:43; koordynator |
+| 08.10.2026 16:46 | D-20261008-1646-01 (włączony do kompletu przez koordynatora przed P0a): jeden folder, jeden wykonawca, kolejność P0a → P0b → P1 → P2 → P3 → P4 → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11; punkty kontrolne po P2; przy włączaniu doprecyzowane: część paczki bez danych właściciela przechodzi pełny cykl, sygnały dla właściciela w czacie, potwierdzenie na TEST przy migracji | właściciel 16:44; koordynator |
+| 09.10.2026 01:20 | Audyt kompletu (koordynator): termin liczony od Dnia 1 (start 11.10), data wydania — W17; punkty kontrolne od Dnia 1; brama niedzielna przywrócona (11.10 = brama TEST z P0b, potem 18.10); G-15 (brama w jednym folderze); decyzje właściciela przywrócone w E7-2, E7-5, E21-1, E22-2, E23-4, L6, L13, L29, L41, L55, L56; L15 doprecyzowane; G-13 (bez POD), G-14 (adres testowy); §6 przebudowany: W13–W22, pozycje dawnego „PO 1.0” w P4 (H-10 sprawdzenie), P6, P8, P10a, P11 i w bramie niedzielnej | właściciel 08.10 13:26, 14:43, 16:44; 09.10 00:45; koordynator |
+| 09.10.2026 01:20 | D-20261009-0015-01 (treści „Jak pracuję”, 5 wersji) włączony do kompletu przez koordynatora przed P0a: pozycja i odbiór w P10b, L38 | właściciel 09.10 00:12; koordynator |
+| 09.10.2026 02:00 | Po niezależnym przeglądzie kompletu: L33 przywrócone do decyzji E34 B; G-16 (kwoty w dokumentach, W23), G-17 (dane z produkcji na TEST bez danych osobowych, próba R-1 z ROLLBACK, 95 HH); W24 (sprawdzenie na iPhonie i Androidzie); doradca „security” w bramie (E19 pkt 6); szerokości E20; AIS-SRC 24 h → P10a; 11.3 → R-3; D-LATER → W15; retencja `files/` → W18; §7 pozostałe pozycje; godzina wydania 20:00 w §0; blok „Brama niedzielna” | właściciel 09.10 00:45; koordynator |
+| 09.10.2026 02:10 | Po drugim przeglądzie: G-17 przepisane (TEST bez danych z produkcji; R-1: TEST na pliku ze zmyślonymi danymi osobowymi, próba z ROLLBACK w oknie wdrożenia P7; ślad SG-03 zmyślony, prawdziwy po W25); W25; doradca „security” na TEST i po wdrożeniu na produkcji, wyjątek TEST dla ochrony haseł; brama niedzielna w czasie paczki (commit, `main`, powrót); status P0a; W5 z nazwą pliku; W15 i W18 w §6; tekst pomocy „Strefy” zgodny z L33 | właściciel 09.10 00:45; koordynator |
+| 09.10.2026 14:11 | D-20261009-1233-01 (piloci, 12:33) i D-20261009-1309-01 (decyzje 13:09) włączone do kompletu `komplet_2026-10-09_v2` przez koordynatora przed P0a; E44 (link RIO, 10:34–11:19) w P4 po E27; P1: W22 (usunięcie z odpięciem); P3: daty tylko KSH (G-20), wiersz stały `PLAN_DATES_CHANGED` (G-18); P5: polisy raz (G-21), dopłaty — decyzja HHL i SCX (G-22); P6: pozycje dopłat; P7: powiadomienia o zmianie dat (G-18), piloci SCX i konwój (G-23), link RIO w nowym oknie Awizacja, zapis dat do pliku po W13 (G-20); P9: grupowanie w lokalizacji (G-19); P10a: RIO w E23; P10b: poprawione teksty „Jak pracuję”; §5: W14 i W20 zamknięte, W22 rozstrzygnięte, nowe W26–W31; §6 część 1; konstytucja III.5; rejestr „Zmiany 09.10.2026” (i D-18, D-22); `ROZSTRZYGNIECIA_LUK.md` E9-2, E9-6, E18-1, L19, L29, L41, L55, G-18–G-24; `DECYZJE_08_10.md` sekcje 09.10; `UZGODNIENIE_08_10.md` D-30, D-33, D-42, konta „+tower-*” i W14 (pkt 6); `PLAN_OTWARTE_08_10.md` TELM-2, D-18, D-TELM-ETA; etapy E9, E11, E27, E31, E32, E33, E37, E38, E44, E45; `paczki/P1_E18.md`, `paczki/P0a_WGRANIE.md`; makiety E32, E33, E38, E45 poprawione i ich obrazy w raporcie; raport „Zmiany 09.10” i sekcja E44 | właściciel 09.10 10:34, 10:54, 11:19, 12:33, 13:09; koordynator |

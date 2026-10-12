@@ -1,0 +1,202 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.h3{padding:9px 14px 4px;font:700 16px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+.facts{margin:0;padding:10px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:5px}
+.facts b{font-weight:600}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 9px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+table.r td.n,table.r th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.code{font-weight:700;white-space:nowrap}
+.note{font-size:12.5px;color:var(--ink-3)}
+.red{color:var(--red);font-weight:600}.grey{color:var(--ink-3)}.ok{color:var(--go);font-weight:600}
+.chip{height:32px;padding:0 11px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn{height:34px;padding:0 13px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-size:13.5px;background:#fff;white-space:nowrap}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn.sm{height:28px;font-size:12.5px;padding:0 9px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;position:relative}
+.phone .h b{font-size:20px}
+.pc{margin:6px 12px 0;border:1px solid var(--rule);padding:8px 11px;display:flex;flex-direction:column;gap:2px}
+.pc .t{font:700 16px var(--font-cond);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto;background:#fff}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.drow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--rule-2)}
+.drow .l b{font-weight:600}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field .lbl{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.inp{min-height:38px;border:1px solid var(--rule);padding:8px 10px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;background:#fff}
+.drop{border:1.5px dashed #9AAAB6;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;background:var(--surface-2)}
+.ph{font:700 26px var(--font-cond);display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:18px;padding:0 14px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3)}
+.tabs span{padding:9px 0}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+
+
+.ph .no{color:var(--amber);font-size:18px}.ph .nr{font:600 18px var(--font-cond);color:var(--ink-2)}.ph .miss{font:600 15px var(--font-cond);color:var(--red);letter-spacing:.02em}
+.wb{display:flex;gap:0;padding:4px 14px 10px;font-size:13px}.wb span{padding-right:14px;margin-right:14px;border-right:1px solid var(--rule-2)}.wb span:last-child{border:0}.wb b{display:block;font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.todo{margin:12px 14px 4px;border:1px solid var(--rule);border-left:4px solid var(--red);background:#fff}
+.todo .tt{padding:7px 11px;font:700 15px var(--font-cond);display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--rule-2)}
+.todo .it{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 11px;border-bottom:1px solid var(--rule-2);font-size:13px;align-items:center}
+.todo .it:last-child{border-bottom:0}.todo .it .w{font-size:12px;color:var(--ink-3)}
+.todo.am{border-left-color:var(--amber)}
+.mapbox{position:relative;margin:12px 14px 0;border:1px solid var(--rule);height:220px;overflow:hidden}
+.mapbox img{width:100%;height:100%;object-fit:cover}
+.ov{position:absolute;background:#fff;border:1px solid #9AAAB6;padding:6px 9px;font-size:12.5px;line-height:1.4;box-shadow:0 3px 10px rgba(14,26,36,.15)}
+.ov b{font:700 14px var(--font-cond)}
+.zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;border:1px solid #9AAAB6;background:#fff}.zoom span{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:16px;border-bottom:1px solid var(--rule-2)}.zoom span:last-child{border:0}
+.st{margin:14px 14px 4px;font:700 15px var(--font-cond);letter-spacing:.02em;display:flex;gap:8px;align-items:center}
+.st .who{font:500 13px var(--font-sans);color:var(--ink-3)}
+.kv{display:grid;grid-template-columns:128px 1fr;gap:5px 12px;padding:2px 14px 4px;font-size:13.5px}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0}
+.mono{font-family:var(--font-cond);font-weight:600;letter-spacing:.02em}
+.leg{margin:4px 14px;border:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:7px 10px;gap:10px}
+.leg .lt{font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.leg.now{border-left:4px solid var(--go);background:var(--go-bg)}
+.btn.call{color:var(--go);border-color:var(--go);font-weight:600}.btn.call.f{background:var(--go);color:#fff}
+.form{padding:10px 14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.grp{border:1px solid var(--rule);padding:8px 10px 0;margin-bottom:10px}
+.grp .gt{font:600 12px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+.inp.e{color:#9AAAB6}.inp.bad{border-color:var(--red);box-shadow:inset 3px 0 0 var(--red)}
+.chk{display:flex;gap:8px;align-items:center;font-size:13.5px;margin-bottom:4px}.chk i{width:16px;height:16px;border:1.5px solid var(--ink-2);display:inline-block}
+.bar{margin:0 14px;padding:8px 10px;font-size:13px;border:1px solid var(--red);background:var(--red-bg);color:var(--ink)}
+.bar b{color:var(--red)}
+ul.cmp{margin:0;padding:6px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.mbar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.mtabs{display:flex;gap:16px;padding:0 12px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden}
+.mtabs span{padding:10px 0}.mtabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+.acc{margin:6px 12px 0;border:1px solid var(--rule);padding:9px 11px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;min-height:44px}
+.acc b{font:700 15px var(--font-cond)}
+</style><style>
+table.m{border-collapse:collapse;width:100%;font-size:13.5px}
+table.m td,table.m th{padding:6px 14px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:top}
+table.m th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+table.m .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.m tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0}
+.fuel{margin:8px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:12.5px;background:var(--surface-2)}
+.fuel b{font:700 14px var(--font-cond)}
+.fee{margin:6px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.fee .k{font:700 14px var(--font-cond)}
+.rules{margin:6px 14px 12px;font-size:12.5px}
+.rules td{padding:3px 8px 3px 0;border-bottom:1px dotted var(--rule-2)}
+.calc{font-size:13px;background:var(--surface-2);border:1px solid var(--rule);padding:8px 10px;margin-bottom:10px;line-height:1.55}
+.calc b{font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.two div{border:1px solid var(--rule);padding:7px 9px;font-size:13px}
+.two div b{display:block;font:700 18px var(--font-cond)}
+</style>
+<style>
+.zg{padding:6px 14px 2px;font:700 13px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);background:var(--surface-2);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule-2)}
+.zr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 14px;border-bottom:1px solid var(--rule-2);font-size:13px}
+.zr .nm{font-weight:600}.zr .d{color:var(--ink-3);font-size:12.5px}
+.zr.sel{background:var(--go-bg);box-shadow:inset 4px 0 0 var(--go)}
+.hist{margin:0;padding:0 14px 10px;list-style:none;font-size:13px}
+.hist li{padding:6px 0;border-bottom:1px dotted var(--rule-2)}
+.hist b{font-weight:600}
+</style>
+<style>
+.side{width:200px;border-right:1px solid var(--rule);padding:10px 0;font-size:13px;background:var(--surface-2)}
+.side .g{padding:8px 14px 2px;font:600 11px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.side .i{padding:6px 14px}.side .i.on{background:#fff;font-weight:600;box-shadow:inset 3px 0 0 var(--amber)}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 14px}
+.tile{border:1px solid var(--rule);padding:8px 10px;font-size:12.5px}
+.tile b{display:block;font:700 22px var(--font-cond)}
+.tile.on{border-color:var(--ink);box-shadow:inset 0 3px 0 var(--amber)}
+table.r td.msg{font-family:var(--font-cond);font-weight:600;letter-spacing:.01em}
+.rule{margin:6px 14px 12px;border:1px solid var(--rule);background:var(--surface-2);padding:8px 10px;font-size:12.5px}
+.rule b{font-weight:600}
+.cmp2{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px}
+.cmp2 div{border:1px solid var(--rule);padding:8px 10px;font-size:13px}
+.cmp2 div b.t{display:block;font:700 15px var(--font-cond);margin-bottom:3px}
+</style>
+</head><body>
+<div class="sheet">
+  <div class="top"><h1>E46–E48 · Wydajność, błędy aplikacji, bezpieczeństwo po budowie</h1>
+    <span class="ex">Błędy: tabela client_errors 08.10, 13:4x (7 dni, bez przeglądarek testowych) · stan bezpieczeństwa: raport SEC-OWASP 05.10 w repozytorium · „po zmianie” — Przykład</span></div>
+
+  <div class="sec">E47 · Opcje › Stan systemu › Błędy aplikacji (po zmianie) · komputer</div>
+  <div class="card" style="width:1428px;display:flex">
+    <div class="side">
+      <div class="g">Stan systemu</div><div class="i">Źródła danych (E23)</div><div class="i on">Błędy aplikacji (E47)</div><div class="i">Bezpieczeństwo (E19)</div><div class="i">Wydajność (E46)</div>
+      <div class="g">Pozostałe grupy Opcji</div><div class="i" style="color:var(--ink-3)">według E11 / E12</div>
+    </div>
+    <div style="flex:1">
+      <div class="h"><b>Błędy aplikacji</b><span class="sub">ostatnie 7 dni · tylko build produkcyjny · bez przeglądarek testowych · grupowane po treści błędu</span><span class="ex" style="margin-left:auto">Przykład · dane z 08.10</span></div>
+      <div class="tiles">
+        <div class="tile on"><b>3</b>rodzaje błędów (dziś w tabeli 79 osobnych wpisów)</div>
+        <div class="tile"><b>146</b>wystąpień w 7 dni</div>
+        <div class="tile"><b>0</b>nowych od 06.10, 18:12</div>
+        <div class="tile"><b>3</b>strony: Harmonogram, Kokpit, panel transportu</div>
+      </div>
+      <table class="r">
+        <tr><th>Błąd</th><th>Gdzie najczęściej</th><th class="n">Osoby</th><th class="n">Wystąpienia</th><th class="n">Buildy</th><th>Pierwsze</th><th>Ostatnie</th><th>Stan</th></tr>
+        <tr><td class="msg">Cannot read properties of undefined (reading 'appendChild')</td><td>Harmonogram</td><td class="n">5</td><td class="n">95</td><td class="n">15</td><td>05.10, 07:17</td><td>06.10, 17:31</td><td><span class="pill go">ustąpił po naprawie</span></td></tr>
+        <tr><td class="msg">Stara wersja po wdrożeniu (Failed to fetch dynamically imported module)</td><td>Kokpit</td><td class="n">3</td><td class="n">39</td><td class="n">21</td><td>02.10, 14:49</td><td>06.10, 18:12</td><td><span class="pill am">E22: pasek „Jest nowa wersja”</span></td></tr>
+        <tr><td class="msg">Cannot read properties of undefined (reading '_leaflet_pos')</td><td>Panel transportu (mapa)</td><td class="n">2</td><td class="n">12</td><td class="n">5</td><td>01.10, 14:53</td><td>05.10, 07:53</td><td><span class="pill gr">obserwacja</span></td></tr>
+      </table>
+      <div class="rule"><b>Alarm do Administratorów HHL</b> (e-mail i push, jak E23 decyzja A): nowy błąd ≥ 3 wystąpienia albo ≥ 2 osoby w ciągu 1 h · każdy błąd na ścieżce krytycznej (logowanie, zapis Awizacji, numery zleceń, import pliku KSH, faktury, paczka tygodnia) · błędy funkcji serwerowych i zadań cyklicznych (E23). Raport tygodniowy w niedzielnej bramie. Kliknięcie wiersza: stos, build, strona, rola — bez danych osobowych.</div>
+    </div>
+  </div>
+
+  <div class="card" style="width:700px">
+    <div class="h"><b>E47 · Dziś i po zmianie</b></div>
+    <div class="cmp2">
+      <div><b class="t">Dziś</b>Błędy przeglądarki trafiają do tabeli (0058) i do skrótu dziennego (0129, 0130). Każdy build to osobny wpis: 79 wpisów w 7 dni, choć rodzaje są 3. Brak alarmu na bieżąco i brak widoku w aplikacji.</div>
+      <div><b class="t">Po zmianie</b>Jeden widok w Stanie systemu, grupowanie po treści, osoby i strony, alarm według reguły, raport tygodniowy. Bez płatnych narzędzi i bez wysyłania danych do firm trzecich.</div>
+    </div>
+    <div class="cap">Test: wymuszony błąd na TEST → wpis i alarm w ≤ 5 min; ten sam błąd 10 razy = 1 grupa; zero alarmów z przeglądarek testowych.</div>
+  </div>
+  <div class="card" style="width:712px">
+    <div class="h"><b>Telefon 390 px</b><span class="sub">Stan systemu › Błędy aplikacji</span></div>
+    <div style="padding:12px 14px 14px"><div class="phone" style="width:340px">
+      <div class="mbar"><b style="font:700 19px var(--font-cond)">Błędy aplikacji</b><span class="pill go" style="margin-left:auto">0 nowych</span></div>
+      <div class="pc"><div class="t">appendChild <span class="pill go">ustąpił</span></div><div class="note">Harmonogram · 95 × · 5 osób · ostatnio 06.10, 17:31</div></div>
+      <div class="pc"><div class="t">Stara wersja po wdrożeniu</div><div class="note">Kokpit · 39 × · 3 osoby · ostatnio 06.10, 18:12</div></div>
+      <div class="pc" style="margin-bottom:10px"><div class="t">_leaflet_pos</div><div class="note">Panel transportu · 12 × · 2 osoby · ostatnio 05.10</div></div>
+      <div class="nav"><span>Kokpit</span><span>Harmonogram</span><span>Ryzyka</span><span>Dokumenty</span><span class="on">Więcej</span></div>
+    </div></div>
+  </div>
+
+  <div class="sec">E46 · Test wydajności (TEST, przed pilotażem, potem co tydzień)</div>
+  <div class="card" style="width:1428px">
+    <table class="r">
+      <tr><th style="width:220px">Co</th><th>Jak</th><th style="width:420px">Próg zaliczenia</th></tr>
+      <tr><td>Dane</td><td>Na TEST 3 × skala projektu: 420 transportów, pozycje 140 transportów z 5 dni w rzeczywistej częstotliwości, rejsy, sprawy, powiadomienia; usunięte po teście</td><td>—</td></tr>
+      <tr><td>Strony</td><td>Lighthouse (skrypt <code>lh:resp14</code> już jest): Kokpit, Mapa, Harmonogram w układzie pliku (420 wierszy), Finanse, panel transportu; komputer i telefon</td><td>LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms (telefon)</td></tr>
+      <tr><td>Baza</td><td>Czas funkcji list: Harmonogram, Mapa, Finanse, Do zrobienia, dzwonek; zadania cykliczne; doradca Supabase „performance”</td><td>p95 ≤ 500 ms przy 420 transportach · zadania bez nakładania · 0 błędów doradcy</td></tr>
+      <tr><td>Równoczesność</td><td>20 sesji Playwright przez 10 min na kontach testowych 5 rodzajów</td><td>0 błędów · p95 jak wyżej</td></tr>
+      <tr><td>Produkcja</td><td>Tylko lekki pomiar stron po wdrożeniu, bez obciążania</td><td>te same progi stron</td></tr>
+    </table>
+  </div>
+
+  <div class="sec">E48 · Testy bezpieczeństwa OWASP po zbudowaniu wszystkich paczek</div>
+  <div class="card" style="width:1428px">
+    <table class="r">
+      <tr><th style="width:220px">Obszar</th><th style="width:430px">Stan 05.10 (raport SEC-OWASP w repozytorium)</th><th>Po budowie, przed pilotażem</th></tr>
+      <tr><td>ASVS poziom 2</td><td>82 pass · 12 partial · 0 fail · 18 nie dotyczy</td><td>12 partial → pass albo pisemna akceptacja</td></tr>
+      <tr><td>ZAP</td><td>pasywny produkcji: High 0 · Medium 2 · Low 1; aktywny planowany na TEST</td><td>aktywny na TEST + pasywny na produkcji: 0 High, Medium opisane; nigdy aktywnie na produkcji</td></tr>
+      <tr><td>CSP</td><td>Report-Only do 12.10, naruszeń 0</td><td>enforce po akceptacji listy źródeł</td></tr>
+      <tr><td>Kod</td><td>otwarte w PLAN: P3-SW i P3-ZIP (SSRF), P3-AND (komponenty bramki SMS)</td><td>naprawione, z testem</td></tr>
+      <tr><td>Role przez API</td><td>RLS OK (poza słownikiem PostGIS)</td><td>testy bramy bazy dla 5 rodzajów kont: dane innych firm, KSH bez numerów zleceń (E41), KSH tylko polisa HHL (E31), SCX bez ceny KSH (E33)</td></tr>
+      <tr><td>Sekrety i zależności</td><td>npm audit high/critical 0; gitleaks przy każdym commicie</td><td>bez zmian; doradca Supabase „security” bez błędów</td></tr>
+      <tr><td>Hasła</td><td>minimum 12 znaków; ochrona przed wyciekniętymi hasłami — brak (plan Free)</td><td>włączona (plan Pro od 08.10, E19)</td></tr>
+    </table>
+    <div class="cap">Wynik: raport „przed / po” w repozytorium i w Stanie systemu › Bezpieczeństwo (E19).</div>
+  </div>
+</div>
+</body></html>

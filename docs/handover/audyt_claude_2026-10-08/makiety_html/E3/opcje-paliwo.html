@@ -1,0 +1,149 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--surface-3:#EAEFF3;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;
+--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F8DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.page{padding:18px;display:flex;flex-direction:column;gap:14px;max-width:1180px}
+.crumb{font:600 12px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.panel{background:var(--surface);border:1px solid var(--rule)}
+.panel-hd{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;padding:12px 15px;border-bottom:1px solid var(--rule)}
+.panel-hd h2{margin:0;font:700 20px var(--font-cond);letter-spacing:.02em}
+.panel-hd .sub{color:var(--ink-3);font-size:13px}
+.pill{display:inline-block;font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border:1px solid}
+.p-go{color:var(--go);background:var(--go-bg);border-color:var(--go)}
+.p-amber{color:var(--amber-ink);background:var(--amber-bg);border-color:var(--amber)}
+.p-red{color:var(--red);background:var(--red-bg);border-color:var(--red)}
+.p-plan{color:var(--ink-2);background:var(--surface-3);border-color:var(--rule)}
+.bd{padding:14px 15px;display:flex;flex-direction:column;gap:14px}
+.cards{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:10px}
+.card{border:1px solid var(--rule);background:var(--surface-2);padding:12px 13px;display:flex;flex-direction:column;gap:6px}
+.card.now{background:var(--go-bg);border-color:var(--go)}
+.card .k{font:600 12px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.card .big{font:700 34px/1 var(--font-cond)}
+.card .big small{font-size:17px;font-weight:600;color:var(--ink-2);margin-left:6px}
+.card .s{font-size:13px;color:var(--ink-2)}
+.src-ok{color:var(--go);font-weight:600}.src-bad{color:var(--red);font-weight:600}
+h3{margin:0;font:700 14px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.how{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--rule)}
+.how div{padding:10px 12px;border-right:1px solid var(--rule-2);display:flex;flex-direction:column;gap:3px}
+.how div:last-child{border-right:0}
+.how b{font:700 13px var(--font-cond);letter-spacing:.05em;color:var(--sea)}
+.how span{font-size:13px}
+.how .ex{font:600 15px var(--font-cond);color:var(--ink)}
+.two{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;align-items:start}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid var(--rule-2);text-align:left;font-size:13px}
+th{font:600 11.5px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+td.n{text-align:right;font-family:var(--font-cond);font-size:15px}
+tr.wk td{background:var(--surface-2);font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+tr.gap td{background:var(--red-bg)}
+.pub{color:var(--ink-3);font-size:11.5px;margin-left:4px}
+.tiers{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tiers tr.cur td{background:var(--go-bg);font-weight:700}
+.btn{font:600 13px var(--font-sans);padding:7px 12px;border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
+.btn.ghost{background:var(--surface);color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.muted{color:var(--ink-3);font-size:12.5px}
+.alert{border:1px solid var(--red);background:var(--red-bg);padding:9px 12px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px}
+/* telefon */
+body.phone .page{padding:10px;max-width:390px}
+body.phone .cards{grid-template-columns:1fr}
+body.phone .how{grid-template-columns:1fr 1fr}
+body.phone .how div:nth-child(2){border-right:0}
+body.phone .how div:nth-child(-n+2){border-bottom:1px solid var(--rule-2)}
+body.phone .two{grid-template-columns:1fr}
+body.phone .tiers{grid-template-columns:1fr}
+body.phone .card .big{font-size:30px}
+body.phone .hide-phone{display:none}
+</style></head><body>
+<div class="page">
+  <div class="crumb">Opcje › Cennik i opłaty › Opłata paliwowa</div>
+  <section class="panel">
+    <header class="panel-hd">
+      <h2>Opłata paliwowa (SEFS)</h2>
+      <span class="sub">Załącznik 1 do umowy · wersja 3 od 28.09.2026</span>
+      <span class="pill p-go">Uzgodnione z przewoźnikiem</span>
+    </header>
+    <div class="bd">
+      <div class="alert"><b>Brak ceny Orlen z 06.10.</b> Pobieranie o 07:15 nie połączyło się z Orlen. Orlen opublikował tego dnia 6,919 PLN/l. Brak tej ceny zmieni średnią na tydzień 12–18.10.<span class="row"><button class="btn">Uzupełnij z Orlen</button><span class="muted">Następna automatyczna próba: dziś 13:15</span></span></div>
+
+      <div class="cards">
+        <div class="card now">
+          <span class="k">Ten tydzień · 05–11.10</span>
+          <span class="big">+13 %<small>× 1,13</small></span>
+          <span class="s">Ostateczny · z cen 28.09–04.10</span>
+          <span class="s">Dotyczy załadunków od pon. 05.10 do niedz. 11.10, koszt i przychód.</span>
+        </div>
+        <div class="card">
+          <span class="k">Przyszły tydzień · 12–18.10</span>
+          <span class="big">+13 %<small>prognoza</small></span>
+          <span class="s">Ostateczna wartość w poniedziałek 12.10 rano, ze średniej 05–11.10.</span>
+        </div>
+        <div class="card">
+          <span class="k">Pobieranie cen · codziennie 07:15</span>
+          <span class="s">Dziś 07.10: <span class="src-ok">OKQ8 ✓</span> · <span class="src-ok">Orlen ✓</span></span>
+          <span class="s">Wczoraj 06.10: <span class="src-ok">OKQ8 ✓</span> · <span class="src-bad">Orlen ✗</span></span>
+          <span class="s">Ponowienia: 09:15 i 13:15, potem powiadomienie do HHL.</span>
+        </div>
+      </div>
+
+      <h3>Jak liczymy</h3>
+      <div class="how">
+        <div><b>1 · Średnia</b><span>Ceny z poprzedniego tygodnia pn–nd, osobno Szwecja i Polska</span><span class="ex">OKQ8 22,63 SEK/l · Orlen 7,22 PLN/l</span></div>
+        <div><b>2 · Mnożnik</b><span>Każda średnia daje mnożnik z tabeli w załączniku</span><span class="ex">SE × 1,13 · PL × 1,15</span></div>
+        <div><b>3 · Niższy</b><span>Stosujemy niższy z dwóch mnożników</span><span class="ex">× 1,13</span></div>
+        <div><b>4 · Opłata</b><span>Stawka bazowa × (mnożnik − 1)</span><span class="ex">6 900 EUR × 13 % = 897 EUR</span></div>
+      </div>
+
+      <div class="two">
+        <div>
+          <h3 style="margin-bottom:8px">Ceny paliwa — ostatnie 2 tygodnie</h3>
+          <table>
+            <thead><tr><th>Dzień</th><th class="n" style="text-align:right">OKQ8 GoEasy SEK/l</th><th style="text-align:right">Orlen ON PLN/l</th><th class="hide-phone">Pobrane</th></tr></thead>
+            <tbody>
+              <tr class="wk"><td colspan="4">Tydzień 05–11.10 · liczy przyszły tydzień</td></tr>
+              <tr><td>śr 07.10</td><td class="n">22,49</td><td class="n">6,864</td><td class="hide-phone">07:15 auto</td></tr>
+              <tr class="gap"><td>wt 06.10</td><td class="n">22,49<span class="pub">publ. 06.10</span></td><td class="n">brak</td><td class="hide-phone">Orlen: błąd połączenia</td></tr>
+              <tr><td>pn 05.10</td><td class="n">22,29</td><td class="n">6,943<span class="pub">publ. 03.10</span></td><td class="hide-phone">07:15 auto</td></tr>
+              <tr class="wk"><td colspan="4">Tydzień 28.09–04.10 · średnia 22,63 / 7,22 → × 1,13</td></tr>
+              <tr><td>nd 04.10</td><td class="n">23,14</td><td class="n">6,943</td><td class="hide-phone">uzupełnione</td></tr>
+              <tr><td>sb 03.10</td><td class="n">23,14</td><td class="n">6,943</td><td class="hide-phone">uzupełnione</td></tr>
+              <tr><td>pt 02.10</td><td class="n">23,14</td><td class="n">7,280</td><td class="hide-phone">uzupełnione</td></tr>
+              <tr><td>czw 01.10</td><td class="n">23,14</td><td class="n">7,272</td><td class="hide-phone">uzupełnione</td></tr>
+              <tr><td>śr 30.09</td><td class="n">22,09</td><td class="n">7,255</td><td class="hide-phone">uzupełnione</td></tr>
+              <tr><td>wt 29.09</td><td class="n">22,54</td><td class="n">7,363</td><td class="hide-phone">uzupełnione</td></tr>
+              <tr><td>pn 28.09</td><td class="n">22,74</td><td class="n">7,442<span class="pub">publ. 26.09</span></td><td class="hide-phone">uzupełnione</td></tr>
+            </tbody>
+          </table>
+          <p class="muted" style="margin:6px 0 0">Do średniej wchodzi każda nowa cena opublikowana w tygodniu, raz. Dzień bez nowej publikacji powtarza poprzednią cenę.</p>
+        </div>
+        <div>
+          <h3 style="margin-bottom:8px">Tabela mnożników — wokół obecnych cen</h3>
+          <div class="tiers">
+            <table><thead><tr><th>OKQ8 SEK/l</th><th style="text-align:right">Mnożnik</th></tr></thead><tbody>
+              <tr><td>21,91 – 22,20</td><td class="n">1,11</td></tr>
+              <tr><td>22,21 – 22,50</td><td class="n">1,12</td></tr>
+              <tr class="cur"><td>22,51 – 22,80 ◀ 22,63</td><td class="n">1,13</td></tr>
+              <tr><td>22,81 – 23,10</td><td class="n">1,14</td></tr>
+              <tr><td>23,11 – 23,40</td><td class="n">1,15</td></tr>
+            </tbody></table>
+            <table><thead><tr><th>Orlen PLN/l</th><th style="text-align:right">Mnożnik</th></tr></thead><tbody>
+              <tr><td>7,01 – 7,10</td><td class="n">1,13</td></tr>
+              <tr><td>7,11 – 7,20</td><td class="n">1,14</td></tr>
+              <tr class="cur"><td>7,21 – 7,30 ◀ 7,22</td><td class="n">1,15</td></tr>
+              <tr><td>7,31 – 7,40</td><td class="n">1,16</td></tr>
+              <tr><td>7,41 – 7,50</td><td class="n">1,17</td></tr>
+            </tbody></table>
+          </div>
+          <div class="row" style="margin-top:10px"><button class="btn ghost">Pokaż całą tabelę</button><button class="btn ghost">Nowa wersja umowy</button></div>
+          <p class="muted" style="margin:8px 0 0">Źródła: OKQ8 GoEasy Diesel, cena listowa firmowa · Orlen ONEkodiesel, hurt, netto. Ceny bez VAT, tak jak publikuje źródło.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+<script>if(location.search.includes('phone'))document.body.classList.add('phone');</script>
+</body></html>

@@ -1,0 +1,40 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--go:#1B6E5D;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.top{width:100%;display:flex;gap:12px;align-items:center}.top h1{margin:0;font:700 24px var(--font-cond)}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.pn{background:var(--surface);border:1px solid var(--rule)}
+.pn .hd{padding:9px 12px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:baseline}
+.pn .hd b{font:700 18px var(--font-cond)}.note{font-size:12.5px;color:var(--ink-3)}
+.map{position:relative;background:#D9DFE3;overflow:hidden}
+.map svg{position:absolute;inset:0}
+.msg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--rule);box-shadow:0 8px 24px rgba(14,26,36,.18);padding:14px 16px;width:min(380px,86%);display:flex;flex-direction:column;gap:8px}
+.msg b{font:700 17px var(--font-cond)}
+.btn{height:44px;padding:0 14px;border:1px solid var(--ink);background:var(--ink);color:#fff;font:600 14px var(--font-sans);display:inline-flex;align-items:center;justify-content:center}
+.btn.ghost{background:var(--surface);color:var(--ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.src{font-size:12px;color:var(--ink-3);border-top:1px solid var(--rule-2);padding-top:6px}
+.ph{width:360px;border:1px solid #9AAAB6;border-radius:18px;overflow:hidden;background:var(--page)}
+</style></head><body>
+<div class="sheet">
+  <div class="top"><h1>Mapa, gdy podkład się nie wczyta</h1><span class="ex">Przykład · stan awaryjny, w normalnej pracy mapa wygląda jak dziś</span></div>
+  <div class="pn" style="width:860px">
+    <div class="hd"><b>Mapa</b><span class="note">1 pojazd w ruchu · pozycje co 5 min</span></div>
+    <div class="map" style="height:420px">
+      <svg viewBox="0 0 860 420"><path d="M430 40 L420 70 L400 120 L395 170 L380 210 L392 250 L370 300 L360 360 L350 410" stroke="#E5A544" stroke-width="3" fill="none"/><path d="M392 250 L410 300 L405 340" stroke="#6BA8D6" stroke-width="3" fill="none"/><circle cx="430" cy="40" r="6" fill="#E5A544" stroke="#080F15"/><circle cx="415" cy="80" r="8" fill="#1B6E5D" stroke="#fff" stroke-width="2"/></svg>
+      <div class="msg"><b>Nie udało się wczytać podkładu mapy</b><span>Pozycje i trasa są aktualne. Brakuje tylko tła z ulicami.</span><div class="row"><span class="btn">Spróbuj ponownie</span><span class="btn ghost">Odśwież stronę</span></div><span class="src">Próbowano 3 razy: HERE wprost i przez serwer aplikacji. Zgłoszenie zapisane dla HHL.</span></div>
+    </div>
+  </div>
+  <div class="ph">
+    <div style="height:52px;background:var(--surface);border-bottom:1px solid var(--rule);display:flex;align-items:center;padding:0 12px;font:700 17px var(--font-cond)">Mapa</div>
+    <div class="map" style="height:520px">
+      <svg viewBox="0 0 360 520"><path d="M190 30 L185 90 L170 160 L178 230 L160 300 L150 400 L145 510" stroke="#E5A544" stroke-width="3" fill="none"/><circle cx="182" cy="110" r="8" fill="#1B6E5D" stroke="#fff" stroke-width="2"/></svg>
+      <div class="msg"><b>Nie udało się wczytać podkładu</b><span>Pozycje i trasa są aktualne.</span><div class="row"><span class="btn">Spróbuj ponownie</span></div></div>
+    </div>
+  </div>
+</div>
+</body></html>

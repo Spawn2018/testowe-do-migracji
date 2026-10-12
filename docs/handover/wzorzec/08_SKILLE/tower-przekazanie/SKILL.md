@@ -1,16 +1,14 @@
 ---
 name: tower-przekazanie
-description: Przekazuje pracę nad TOWER innemu wykonawcy bez utraty stanu. Użyj przy końcu limitu, zmianie narzędzia lub przerwie dłuższej niż dzień.
+description: Przekazuje pracę nad Watch Tower innej sesji lub innemu wykonawcy bez utraty stanu i bez zatrzymania kolejki. Użyj przy końcu limitu, zmianie narzędzia lub przerwie.
 ---
 
-# tower-przekazanie
+# tower-przekazanie (wersja 08.10.2026)
 
 Na ok. **10% limitu**, nie na 0%:
-1. Bieżąca pozycja: dokończ albo opisz w POSTEP.md dokładnie, gdzie przerwałeś
-2. `git status` czysty, commit, push; HEAD lokalny = zdalny
-3. Migracje: lokalnie = produkcja
-4. Pakiet przekazania: HEAD, ostatnia migracja, testy, pozycja w toku, gdzie leżą
-   poświadczenia (bez wartości), dokładne polecenia testów i wdrożeń, znane pułapki
-5. Nowy wykonawca: najpierw raport stanu **bez zmian w kodzie**; koordynator
-   sprawdza produkcję; dopiero potem kolejka
-6. Zmiana poświadczeń przy przekazaniu (hasło bazy) — nowe tylko u nowego wykonawcy
+1. Bieżąca pozycja: dokończ albo opisz w `POSTEP.md`, gdzie przerwałeś (gałąź, paczka, pozycja).
+2. `git status` czysty, commit, push gałęzi; HEAD lokalny = zdalny.
+3. Migracje: lokalnie = produkcja; migracje gałęzi niescalone — wypisane.
+4. Pakiet przekazania: HEAD, paczka, ostatnia migracja, wyniki testów, dopiski niewłączone, gdzie leżą poświadczenia (bez wartości), znane pułapki.
+5. Nowa sesja: raport stanu (HEAD, migracje lokalnie = produkcja, otwarta paczka) i **od razu dalej**; koordynator sprawdza produkcję równolegle.
+6. Zmiana poświadczeń przy przekazaniu (hasło bazy) — nowe tylko u nowego wykonawcy.

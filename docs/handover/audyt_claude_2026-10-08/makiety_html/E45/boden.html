@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="vendor/package/dist/leaflet.css">
+<style>html,body{margin:0;font-family:Arial}#m{width:1100px;height:820px}.lb{background:#fff;border:1px solid #333;padding:1px 4px;font-size:11px;white-space:nowrap}</style></head><body><div id="m"></div>
+<script src="vendor/package/dist/leaflet.js"></script><script src="boden_data.js"></script>
+<script>
+const q=new URLSearchParams(location.search);
+const map=L.map('m',{zoomControl:false,attributionControl:false});
+L.tileLayer('https://tower.log-mar.pl/tiles/logistics.day/{z}/{x}/{y}',{maxZoom:18}).addTo(map);
+L.polygon(ZONE,{color:'#1B6E5D',weight:2,fillOpacity:.08,dashArray:'5 4'}).addTo(map);
+L.polyline(ROUTE,{color:'#B32639',weight:5,opacity:.85}).addTo(map);
+L.polyline(SG.map(p=>[p[1],p[2]]),{color:'#1B6E5D',weight:4,opacity:.95}).addTo(map);
+L.polyline([[SG[SG.length-1][1],SG[SG.length-1][2]]].concat(SG2.map(p=>[p[1],p[2]])),{color:'#1B6E5D',weight:4,dashArray:'6 6'}).addTo(map);
+for(const p of SG.concat(SG2)){ L.circleMarker([p[1],p[2]],{radius:4,color:'#1B6E5D',fillColor:'#fff',fillOpacity:1,weight:2}).addTo(map);
+  if(q.has('lbl')) L.marker([p[1],p[2]],{icon:L.divIcon({className:'',html:'<span class="lb">'+p[0]+'</span>',iconAnchor:[-6,8]})}).addTo(map); }
+L.circleMarker(POI,{radius:7,color:'#080F15',weight:1,fillColor:'#E5A544',fillOpacity:1}).addTo(map);
+const b=q.get('b').split(',').map(Number); map.fitBounds([[b[0],b[1]],[b[2],b[3]]]);
+</script></body></html>

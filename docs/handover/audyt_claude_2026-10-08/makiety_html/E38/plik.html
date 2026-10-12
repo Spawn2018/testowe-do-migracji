@@ -1,0 +1,337 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.h3{padding:9px 14px 4px;font:700 16px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+.facts{margin:0;padding:10px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:5px}
+.facts b{font-weight:600}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 9px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+table.r td.n,table.r th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.code{font-weight:700;white-space:nowrap}
+.note{font-size:12.5px;color:var(--ink-3)}
+.red{color:var(--red);font-weight:600}.grey{color:var(--ink-3)}.ok{color:var(--go);font-weight:600}
+.chip{height:32px;padding:0 11px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn{height:34px;padding:0 13px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-size:13.5px;background:#fff;white-space:nowrap}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn.sm{height:28px;font-size:12.5px;padding:0 9px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;position:relative}
+.phone .h b{font-size:20px}
+.pc{margin:6px 12px 0;border:1px solid var(--rule);padding:8px 11px;display:flex;flex-direction:column;gap:2px}
+.pc .t{font:700 16px var(--font-cond);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto;background:#fff}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.drow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--rule-2)}
+.drow .l b{font-weight:600}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field .lbl{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.inp{min-height:38px;border:1px solid var(--rule);padding:8px 10px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;background:#fff}
+.drop{border:1.5px dashed #9AAAB6;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;background:var(--surface-2)}
+.ph{font:700 26px var(--font-cond);display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:18px;padding:0 14px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3)}
+.tabs span{padding:9px 0}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+
+
+.ph .no{color:var(--amber);font-size:18px}.ph .nr{font:600 18px var(--font-cond);color:var(--ink-2)}.ph .miss{font:600 15px var(--font-cond);color:var(--red);letter-spacing:.02em}
+.wb{display:flex;gap:0;padding:4px 14px 10px;font-size:13px}.wb span{padding-right:14px;margin-right:14px;border-right:1px solid var(--rule-2)}.wb span:last-child{border:0}.wb b{display:block;font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.todo{margin:12px 14px 4px;border:1px solid var(--rule);border-left:4px solid var(--red);background:#fff}
+.todo .tt{padding:7px 11px;font:700 15px var(--font-cond);display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--rule-2)}
+.todo .it{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 11px;border-bottom:1px solid var(--rule-2);font-size:13px;align-items:center}
+.todo .it:last-child{border-bottom:0}.todo .it .w{font-size:12px;color:var(--ink-3)}
+.todo.am{border-left-color:var(--amber)}
+.mapbox{position:relative;margin:12px 14px 0;border:1px solid var(--rule);height:220px;overflow:hidden}
+.mapbox img{width:100%;height:100%;object-fit:cover}
+.ov{position:absolute;background:#fff;border:1px solid #9AAAB6;padding:6px 9px;font-size:12.5px;line-height:1.4;box-shadow:0 3px 10px rgba(14,26,36,.15)}
+.ov b{font:700 14px var(--font-cond)}
+.zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;border:1px solid #9AAAB6;background:#fff}.zoom span{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:16px;border-bottom:1px solid var(--rule-2)}.zoom span:last-child{border:0}
+.st{margin:14px 14px 4px;font:700 15px var(--font-cond);letter-spacing:.02em;display:flex;gap:8px;align-items:center}
+.st .who{font:500 13px var(--font-sans);color:var(--ink-3)}
+.kv{display:grid;grid-template-columns:128px 1fr;gap:5px 12px;padding:2px 14px 4px;font-size:13.5px}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0}
+.mono{font-family:var(--font-cond);font-weight:600;letter-spacing:.02em}
+.leg{margin:4px 14px;border:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:7px 10px;gap:10px}
+.leg .lt{font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.leg.now{border-left:4px solid var(--go);background:var(--go-bg)}
+.btn.call{color:var(--go);border-color:var(--go);font-weight:600}.btn.call.f{background:var(--go);color:#fff}
+.form{padding:10px 14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.grp{border:1px solid var(--rule);padding:8px 10px 0;margin-bottom:10px}
+.grp .gt{font:600 12px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+.inp.e{color:#9AAAB6}.inp.bad{border-color:var(--red);box-shadow:inset 3px 0 0 var(--red)}
+.chk{display:flex;gap:8px;align-items:center;font-size:13.5px;margin-bottom:4px}.chk i{width:16px;height:16px;border:1.5px solid var(--ink-2);display:inline-block}
+.bar{margin:0 14px;padding:8px 10px;font-size:13px;border:1px solid var(--red);background:var(--red-bg);color:var(--ink)}
+.bar b{color:var(--red)}
+ul.cmp{margin:0;padding:6px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.mbar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.mtabs{display:flex;gap:16px;padding:0 12px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden}
+.mtabs span{padding:10px 0}.mtabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+.acc{margin:6px 12px 0;border:1px solid var(--rule);padding:9px 11px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;min-height:44px}
+.acc b{font:700 15px var(--font-cond)}
+</style><style>
+table.m{border-collapse:collapse;width:100%;font-size:13.5px}
+table.m td,table.m th{padding:6px 14px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:top}
+table.m th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+table.m .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.m tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0}
+.fuel{margin:8px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:12.5px;background:var(--surface-2)}
+.fuel b{font:700 14px var(--font-cond)}
+.fee{margin:6px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.fee .k{font:700 14px var(--font-cond)}
+.rules{margin:6px 14px 12px;font-size:12.5px}
+.rules td{padding:3px 8px 3px 0;border-bottom:1px dotted var(--rule-2)}
+.calc{font-size:13px;background:var(--surface-2);border:1px solid var(--rule);padding:8px 10px;margin-bottom:10px;line-height:1.55}
+.calc b{font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.two div{border:1px solid var(--rule);padding:7px 9px;font-size:13px}
+.two div b{display:block;font:700 18px var(--font-cond)}
+</style>
+<style>
+.zg{padding:6px 14px 2px;font:700 13px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);background:var(--surface-2);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule-2)}
+.zr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 14px;border-bottom:1px solid var(--rule-2);font-size:13px}
+.zr .nm{font-weight:600}.zr .d{color:var(--ink-3);font-size:12.5px}
+.zr.sel{background:var(--go-bg);box-shadow:inset 4px 0 0 var(--go)}
+.hist{margin:0;padding:0 14px 10px;list-style:none;font-size:13px}
+.hist li{padding:6px 0;border-bottom:1px dotted var(--rule-2)}
+.hist b{font-weight:600}
+</style>
+<style>
+table.mp td:nth-child(1){width:28px;color:var(--ink-3)}
+table.mp td.k{font-weight:600;white-space:nowrap}
+.dir{font:700 13px var(--font-cond);letter-spacing:.03em;white-space:nowrap;padding:1px 6px;border:1px solid}
+.dir.in{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.dir.out{color:var(--go);border-color:var(--go);background:var(--go-bg)}
+.dir.no{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}
+tr.skip td{color:var(--ink-3)}
+.frame{margin:10px 14px 4px;border:1px solid #9AAAB6;overflow:hidden;position:relative;background:#fff}
+.frame .bar2{height:10px;background:var(--surface-2);border-top:1px solid var(--rule);position:relative}
+.frame .bar2 i{position:absolute;top:2px;height:6px;background:#9AAAB6;border-radius:3px}
+table.x{border-collapse:separate;border-spacing:0;font-size:12.5px;white-space:nowrap}
+table.x th,table.x td{padding:6px 8px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:top;background:#fff}
+table.x th{font:600 11.5px var(--font-cond);letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:normal;vertical-align:bottom;line-height:1.2}
+table.x td.n,table.x th.n{text-align:right;font-variant-numeric:tabular-nums}
+table.x .s1{position:sticky;left:0;z-index:2;width:92px;min-width:92px;max-width:92px;white-space:normal}
+table.x .s2{position:sticky;left:92px;z-index:2;box-shadow:inset -2px 0 0 var(--rule)}
+table.x th.wt,table.x td.wt{background:#FAFBF6}
+table.x th.wt{background:#EEF2E4}
+table.x th.wt0,table.x td.wt0{border-left:2px solid var(--ink-2)}
+table.x tr.gap td{background:var(--surface-2);font-size:12px}
+table.x .pill{font-size:11px;padding:0 5px}
+.hide-mid .mid{display:none}
+.grp-h{display:flex;font:600 11px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);padding:6px 14px 0}
+.kv2{display:grid;grid-template-columns:78px 1fr;gap:3px 8px;font-size:13px;margin-top:4px}
+.kv2 span{color:var(--ink-3)}.kv2 b{font-weight:600}
+.sync{display:grid;grid-template-columns:1fr 150px 1fr;gap:0;margin:12px 14px;align-items:stretch}
+.sync .box{border:1px solid var(--rule);padding:10px 12px;font-size:13px}
+.sync .box b.t{display:block;font:700 17px var(--font-cond);margin-bottom:4px}
+.sync .mid2{display:flex;flex-direction:column;justify-content:center;gap:14px;padding:0 8px}
+.sync .arr{font:600 12px var(--font-cond);letter-spacing:.03em;text-align:center;padding:6px 4px;border:1px solid}
+.sync .arr.in{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.sync .arr.out{color:var(--go);border-color:var(--go);background:var(--go-bg)}
+ol.rl{margin:0;padding:8px 14px 12px 32px;font-size:13px;display:flex;flex-direction:column;gap:5px}
+ol.rl b{font-weight:600}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 14px}
+.sum div{border:1px solid var(--rule);padding:7px 9px;font-size:12.5px}
+.sum div b{display:block;font:700 20px var(--font-cond)}
+</style>
+</head><body>
+<div class="sheet">
+  <div class="top"><h1>E38 · Plik KSH z SharePoint: kolumny, porównanie z Watch Tower, synchronizacja i Harmonogram w układzie pliku</h1>
+    <span class="ex">Plik „SCRAP_transporty_2026.09.23_REV.01_3.xlsx” z Twojej wiadomości 08.10, 12:14 · baza produkcyjna 08.10, 12:2x, tylko odczyt · kierowcy jako inicjały, telefony ukryte · „po zmianie” i sprawy — Przykład</span></div>
+
+  <div class="sec">1. Plik i kolumny: co oznacza każda, dokąd idzie i kto ją wpisuje</div>
+  <div class="card" style="width:1428px">
+    <div class="h"><b>Arkusz „STEGRA”, tabela „Table1” (A1:U154)</b><span class="sub">21 kolumn · 153 wiersze: 95 HH (Watch Tower), 43 NTG (wszystkie z rozmiarem „Standard”), 15 pustych (tylko Lp. 137–151)</span></div>
+    <table class="r mp">
+      <tr><th>#</th><th>Kolumna w pliku</th><th>Znaczenie (Twoje 12:14)</th><th>Pole w Watch Tower</th><th>Kierunek</th><th>Kto wpisuje</th><th>W pliku · 95 wierszy HH</th></tr>
+      <tr class="skip"><td>1</td><td class="k">Lp.</td><td>pomijamy</td><td>—</td><td><span class="dir no">pomijana</span></td><td>—</td><td>95</td></tr>
+      <tr><td>2</td><td class="k">Typ</td><td>typ</td><td>Ładunek · typ</td><td><span class="dir in">plik → WT</span></td><td>KSH w pliku</td><td>7 typów</td></tr>
+      <tr><td>3</td><td class="k">Wysyłka</td><td>kod, np. SG-03</td><td>Kod transportu — klucz łączenia</td><td><span class="dir in">plik → WT</span></td><td>KSH w pliku</td><td>95 kodów, bez powtórzeń</td></tr>
+      <tr><td>4</td><td class="k">Rozmiar L x W x H</td><td>wymiary</td><td>Ładunek · dł. × szer. × wys.</td><td><span class="dir in">plik → WT</span></td><td>KSH w pliku</td><td>95; „Standard” tylko w NTG; 15 ze spacjami (KR)</td></tr>
+      <tr><td>5</td><td class="k">Waga elementu</td><td>masa elementu</td><td>Ładunek · masa elementu</td><td><span class="dir in">plik → WT</span></td><td>KSH w pliku</td><td>50 to formuły, 45 „-” (= brak)</td></tr>
+      <tr><td>6</td><td class="k">Ilość elementów</td><td>sztuki</td><td>Ładunek · sztuki</td><td><span class="dir in">plik → WT</span></td><td>KSH w pliku</td><td>95</td></tr>
+      <tr><td>7</td><td class="k">Waga transport [t]</td><td>masa transportu</td><td>Ładunek · masa transportu</td><td><span class="dir in">plik → WT</span></td><td>KSH w pliku</td><td>95</td></tr>
+      <tr><td>8</td><td class="k">Data załadunku</td><td>data załadunku</td><td>Plan · data załadunku</td><td><span class="dir in">plik → WT</span> <span class="dir out">WT → plik</span></td><td>KSH w pliku albo w Watch Tower (09.10)</td><td>83; w 28 formuła „dostawa − 5 dni” (zmiana KSH zastępuje ją wartością — W31); 12 pustych</td></tr>
+      <tr class="skip"><td>9</td><td class="k">Dzień (załadunek)</td><td>dzień tygodnia po angielsku</td><td>— (Watch Tower liczy z daty, po polsku); przy zapisie daty przez KSH: komórka z wartością → dzień po angielsku, formuła bez zmian (09.10)</td><td><span class="dir no">pomijana przy odczycie</span></td><td>formuła w pliku</td><td>„Thursday”, „Friday”…</td></tr>
+      <tr><td>10</td><td class="k">Przewoźnik</td><td>HH = HHL, NTG</td><td>Filtr: tylko HH</td><td><span class="dir in">plik → WT</span></td><td>KSH w pliku</td><td>HH 95 · NTG 43 (pomijane)</td></tr>
+      <tr><td>11</td><td class="k">Godzina (załadunek)</td><td>godzina wymagana przez KSH</td><td>Plan · załadunek od (czas polski)</td><td><span class="dir in">plik → WT</span> <span class="dir out">WT → plik</span></td><td>KSH w pliku albo w Watch Tower (09.10)</td><td>20</td></tr>
+      <tr><td>12</td><td class="k">Imię i nazwisko kierowcy</td><td>kierowca</td><td>Kierowca PL · kierowca SE (przepięcie)</td><td><span class="dir out">WT → plik</span></td><td>SCX w Awizacji (E32)</td><td>20; 9 z „A / B” (T-06, T-07: drugi „...”)</td></tr>
+      <tr><td>13</td><td class="k">Nr tel. kierowcy</td><td>telefon</td><td>Telefon PL · telefon SE</td><td><span class="dir out">WT → plik</span></td><td>SCX w Awizacji</td><td>16; 8 z „A / B”; 4 zapisane jako liczba</td></tr>
+      <tr><td>14</td><td class="k">Nr rej. ciągnika</td><td>ciągnik</td><td>Ciągnik PL · ciągnik SE</td><td><span class="dir out">WT → plik</span></td><td>SCX w Awizacji</td><td>20; 8 z „A / B” (T-07: drugi „...”)</td></tr>
+      <tr><td>15</td><td class="k">Nr rej. naczepy</td><td>naczepa</td><td>Naczepa</td><td><span class="dir out">WT → plik</span></td><td>SCX w Awizacji</td><td>20</td></tr>
+      <tr><td>16</td><td class="k">Nr zlecenia HHL-Scan</td><td>nr zlecenia SCX</td><td>Numer zlecenia SCX</td><td><span class="dir out">WT → plik</span></td><td>SCX</td><td>20, „15xxx/2026/OSL/GDA/P”</td></tr>
+      <tr><td>17</td><td class="k">Data dostawy na budowę</td><td>data dostawy</td><td>Plan · data dostawy</td><td><span class="dir in">plik → WT</span> <span class="dir out">WT → plik</span></td><td>KSH w pliku albo w Watch Tower (09.10)</td><td>78</td></tr>
+      <tr class="skip"><td>18</td><td class="k">Dzień (rozładunek)</td><td>dzień dostawy po angielsku</td><td>— (Watch Tower liczy z daty); przy zapisie daty przez KSH: komórka z wartością → dzień po angielsku, formuła bez zmian (09.10)</td><td><span class="dir no">pomijana przy odczycie</span></td><td>formuła w pliku</td><td>—</td></tr>
+      <tr><td>19</td><td class="k">Godzina (rozładunek)</td><td>godzina dostawy wymagana przez KSH</td><td>Plan · dostawa do (czas szwedzki)</td><td><span class="dir in">plik → WT</span> <span class="dir out">WT → plik</span></td><td>KSH w pliku albo w Watch Tower (09.10)</td><td>24</td></tr>
+      <tr><td>20</td><td class="k">Nr zlecenia HHL-KSH</td><td>nr zlecenia HHL</td><td>Numer zlecenia HHL</td><td><span class="dir out">WT → plik</span></td><td>HHL</td><td>20, „00xx/MM/S/2026”</td></tr>
+      <tr class="skip"><td>21</td><td class="k">Komentarz</td><td>pomijamy</td><td>—</td><td><span class="dir no">pomijana</span></td><td>—</td><td>4: „Wcześniej to był SG-…”</td></tr>
+    </table>
+    <div class="cap"><span class="dir in">plik → WT</span> plan należy do KSH: daty i godziny załadunku i dostawy zmienia i potwierdza tylko KSH — w pliku albo w Watch Tower. Zmiana KSH w Watch Tower trafia do pliku (do 1 min), a zmiana w pliku do Watch Tower (decyzja 09.10 13:09, po dostępie W13). W 28 wierszach data załadunku to formuła — zmiana KSH w Watch Tower zastępuje ją wartością (nowsza decyzja; W31). <span class="dir out">WT → plik</span> zasoby i numery wpisuje się w Watch Tower, a on przepisuje je do pliku; przy pierwszej synchronizacji puste pola Watch Tower bierze z pliku. Komórek z formułą (Dzień, Data załadunku, Waga elementu) Watch Tower nie zmienia — poza „Data załadunku” zmienioną przez KSH (W31, 09.10).</div>
+  </div>
+
+  <div class="sec">2. Plik a Watch Tower dziś (porównanie 08.10, 12:2x)</div>
+  <div class="card" style="width:1428px">
+    <div class="h"><b>95 transportów HH w pliku, 94 w Watch Tower</b><span class="sub">porównanie każdej kolumny po kodzie; kierowcy i telefony porównane skrótem, bez odczytu</span></div>
+    <table class="r">
+      <tr><th style="width:240px">Dane</th><th class="n" style="width:80px">Plik</th><th class="n" style="width:110px">Watch Tower</th><th>Różnica i przyczyna</th><th style="width:250px">Po synchronizacji</th></tr>
+      <tr><td>Transporty</td><td class="n">95</td><td class="n">94</td><td><b>KR-03</b> nie ma w Watch Tower: w pliku dostawa 04.11.2026 jest przed załadunkiem 04.12.2026, więc import 01.10 odrzucił cały wiersz.</td><td>KR-03 wchodzi ze sprawą „Daty KSH do sprawdzenia”</td></tr>
+      <tr><td>Typ, wymiary, masa elementu, sztuki</td><td class="n">94</td><td class="n">94</td><td class="ok">0 różnic</td><td>—</td></tr>
+      <tr><td>Daty i masa transportu</td><td class="n">94</td><td class="n">94</td><td><b>SG-11 ↔ SG-13, SG-12 ↔ SG-14</b> zamienione w pliku (komentarz „Wcześniej to był SG-13” itd.). W Watch Tower SG-11 i SG-12: załadunek 06.10, 20,74 t; w pliku 07.10, 19,10 t. SG-13 i SG-14 odwrotnie. Pozostałe 90 zgodne. Te 4 transporty nie mają dokumentów, zezwoleń, czatu ani faktur; cena się nie zmienia (7 797 / 8 186,85 EUR).</td><td>4 zmiany w Historii zmian: „było → jest”, źródło „Plik KSH”</td></tr>
+      <tr><td>Godzina załadunku / dostawy</td><td class="n">20 / 24</td><td class="n">0 / 0</td><td>W Watch Tower nie ma żadnej godziny z pliku.</td><td>20 / 24 godziny w planie</td></tr>
+      <tr><td>Kierowca, telefon, ciągnik, naczepa</td><td class="n">20</td><td class="n">4</td><td>SG-01, SG-02 zgodne. SG-03 zgodny po podziale „A / B”: pierwsza część to odcinek PL, druga SE (Twoja decyzja w E6, 07.10 15:13; tak jest wpisany w Watch Tower 05.10). SG-24 ma w Watch Tower dane testowe, a w pliku nic (E18 P9).</td><td>17 transportów uzupełnionych z pliku</td></tr>
+      <tr><td>Numer zlecenia SCX (HHL-Scan)</td><td class="n">20</td><td class="n">3</td><td>SG-01, SG-02, SG-03 zgodne.</td><td>17 numerów uzupełnionych</td></tr>
+      <tr><td>Numer zlecenia HHL (HHL-KSH)</td><td class="n">20</td><td class="n">3</td><td>SG-01, SG-03 zgodne. SG-24 „Tx/1/2026” to test (E18 P9). SG-02 nie ma numeru w Watch Tower, w pliku 0003/09/S/2026.</td><td>18 numerów uzupełnionych</td></tr>
+      <tr><td>Stara kolumna „Nr zlecenia” (import 01.10)</td><td class="n">—</td><td class="n">10</td><td>Wszystkie 10 to numery SCX (format „15xxx/2026/OSL/GDA/P”; przy SG-01…03 równe numerowi SCX). Nowy plik tej kolumny nie ma. <b>To odpowiedź na pytanie 3 z E41.</b></td><td>pole zostaje bez zmian (aplikacja kierowcy)</td></tr>
+    </table>
+  </div>
+
+  <div class="sec">3. Dzisiejszy import z tym plikiem i reguły po zmianie</div>
+  <div class="card" style="width:560px">
+    <div class="h"><b>Co zrobiłby dzisiejszy import</b><span class="sub">kod 9c4fa33 i funkcja w bazie</span></div>
+    <ul class="cmp">
+      <li class="ok">43 wiersze NTG pominięte (po „Standard” w rozmiarze).</li>
+      <li><span class="red">15 błędów „brak kodu wysyłki”</span> — puste wiersze z samym Lp.</li>
+      <li><span class="red">KR-03 znowu odrzucony</span> (dostawa przed załadunkiem).</li>
+      <li><span class="red">Numery zleceń niewczytane</span> — import szuka kolumny „Nr zlecenia”, a w pliku są „HHL-Scan” i „HHL-KSH”.</li>
+      <li><span class="red">3 fałszywe sprawy</span> „Numer HHL w Watch Tower różni się od pliku KSH” (SG-01, SG-03, SG-24): porównanie z pustą kolumną.</li>
+      <li><span class="red">Kierowcy, telefony i tablice niewczytane</span> — import kierowcę odczytuje, ale baza go nie zapisuje; tablic nie odczytuje.</li>
+      <li>Godziny zostałyby wczytane (te same nazwy kolumn).</li>
+    </ul>
+    <div class="cap"><code>scheduleParse.ts</code> l. 204–216, 272–277 · <code>xlsxRead.ts</code> l. 36–56 · <code>importColumnMap.ts</code> · <code>import_schedule</code> l. 121–124, 149–154, 205–216.</div>
+  </div>
+  <div class="card" style="width:852px">
+    <div class="h"><b>Reguły importu po zmianie</b><span class="sub">ten sam import dla SharePoint i ręcznego wgrania</span></div>
+    <ol class="rl">
+      <li><b>Tylko Przewoźnik = HH.</b> NTG pomijane bez błędu. Wiersz HH z rozmiarem „Standard” albo NTG z wymiarami → sprawa HHL „Wiersz pliku KSH do sprawdzenia”, bez zapisu.</li>
+      <li><b>Puste wiersze</b> (bez danych poza Lp.) pomijane i tylko liczone — dziś 15.</li>
+      <li><b>Pomijane kolumny:</b> Lp., oba „Dzień”, Komentarz.</li>
+      <li><b>Spacje na początku i końcu</b> usuwane (dziś 24 komórki, np. numer SCX przy SG-16); „...” i „-” znaczą „puste”.</li>
+      <li><b>„A / B” = odcinek PL / odcinek SE</b> (przepięcie naczepy) w kierowcy, telefonie i ciągniku — Twoja decyzja w E6 (07.10, 15:13): pierwszy odbiera ładunek, drugi dostarcza. Tak wpisano SG-03 w Watch Tower, a okno Awizacja mówi „w SharePoint zawsze „ / ””. Naczepa jedna na całą trasę. „...” zamiast drugiej części (T-06: kierowca SE; T-07: kierowca, telefon i ciągnik SE) = awizacja niekompletna (E32) → „Uzupełnij awizację” dla SCX.</li>
+      <li><b>Telefon:</b> same cyfry; 9 cyfr to numer PL bez kierunkowego, z „+” kraj z numeru (E6). 4 telefony zapisane w pliku jako liczba czytane bez utraty cyfr.</li>
+      <li><b>Godziny:</b> „Godzina (załadunek)” = załadunek od, czas polski; „Godzina (rozładunek)” = dostawa do, czas szwedzki — jak dziś.</li>
+      <li><b>Daty:</b> dostawa przed załadunkiem nie odrzuca transportu — wchodzi ze sprawą „Daty KSH do sprawdzenia”, jak dostawa w dniu załadunku albo po ponad 14 dniach (E32). Dziś: 6 Kratownic + KR-03.</li>
+      <li><b>Kod to klucz.</b> Zmiana numeracji w pliku to zmiana danych pod tym samym kodem, z wpisem „było → jest” (E17).</li>
+      <li><b>Transport zniknął z pliku</b> → sprawa HHL „Anuluj / Zostaw”; nic nie anuluje się samo.</li>
+      <li><b>Stara kolumna „Nr zlecenia”</b> wypada z mapowania; porównanie numerów (L-1b) liczy się z „HHL-KSH” i „HHL-Scan”.</li>
+    </ol>
+  </div>
+
+  <div class="sec">4. Synchronizacja w obie strony</div>
+  <div class="card" style="width:900px">
+    <div class="h"><b>Kto jest źródłem którego pola</b><span class="sub">Przykład działania</span></div>
+    <div class="sync">
+      <div class="box"><b class="t">Plik KSH (SharePoint)</b>Typ, Wysyłka, rozmiar, masy, sztuki, daty i godziny załadunku i dostawy. Wpisuje KSH (w pliku albo w Watch Tower — 09.10).<br><span class="note">Formuły (Dzień, Data załadunku, Waga elementu) zostają nietknięte — poza „Data załadunku” zmienioną przez KSH (W31, 09.10).</span></div>
+      <div class="mid2"><div class="arr in">plik → WT<br>co 5 min i „Synchronizuj teraz”</div><div class="arr out">WT → plik<br>do 1 min po zapisie</div></div>
+      <div class="box"><b class="t">Watch Tower</b>Kierowcy, telefony, ciągniki, naczepa (Awizacja SCX), numer zlecenia SCX (SCX), numer zlecenia HHL (HHL), daty i godziny zmienione przez KSH w Watch Tower (09.10). Zapis do pliku w formacie pliku: „A / B”.<br><span class="note">Każda zmiana z pliku w Historii zmian ze źródłem „Plik KSH”. Zmiana daty lub godziny → informacja w dzwonku u HHL i SCX (09.10).</span></div>
+    </div>
+    <ol class="rl">
+      <li><b>Pierwsza synchronizacja:</b> puste pola Watch Tower uzupełnione z pliku; inne wartości → sprawa. Najpierw na kopii TEST z raportem „ile przed, ile po”, potem produkcja przy wdrożeniu.</li>
+      <li><b>Różnica później</b> (ktoś zmienił w pliku kierowcę albo numer) → sprawa HHL z „Weź z pliku” i „Zostaw Watch Tower”.</li>
+      <li><b>Daty i godziny</b> (09.10): ta sama komórka zmieniona w pliku i w Watch Tower między synchronizacjami → wygrywa plik, a KSH dostaje informację w dzwonku (W29). HHL i SCX daty tylko oglądają.</li>
+      <li><b>Źródło w Stanie systemu</b> (E23): „Plik KSH (SharePoint)”, „Nie działa” po 30 min bez udanego odczytu; alarm według decyzji 27.</li>
+      <li><b>Nad Harmonogramem</b> (E30): „Plik KSH (SharePoint): zsynchronizowano 12:35”. Ręczne wgranie w „Więcej ▾” zostaje jako zapas (19:51), z tymi samymi regułami.</li>
+      <li><b>Dostęp:</b> aplikacja w Microsoft 365 z dostępem tylko do tej jednej witryny („Sites.Selected”), klucz poza repozytorium. Adres pliku i zgoda administratora Microsoft 365 — od Ciebie.</li>
+    </ol>
+  </div>
+  <div class="card" style="width:512px">
+    <div class="h"><b>Pierwsza synchronizacja · podgląd</b><span class="ex">Przykład · liczby z porównania 08.10</span></div>
+    <div class="sum">
+      <div><b>95</b>wierszy HH</div><div><b>43</b>NTG pominięte</div><div><b>15</b>pustych pominiętych</div>
+      <div><b>1</b>nowy: KR-03 + sprawa dat</div><div><b>4</b>zmiany numeracji SG-11…14</div><div><b>20 / 24</b>godziny zał. / dost.</div>
+      <div><b>17</b>transportów z zasobami</div><div><b>17 · 18</b>numerów SCX · HHL</div><div><b>0</b>błędów</div>
+    </div>
+    <div class="todo am" style="margin-top:4px">
+      <div class="tt">Plik KSH różni się od Watch Tower <span class="pill am" style="margin-left:auto">HHL</span></div>
+      <div class="it"><div><b>SG-05</b> · Nr rej. ciągnika<div class="w">plik: WGM52072 / WGM59402 · Watch Tower: WGM52072 → WGM58000 (Awizacja SCX, 08.10 14:02)</div></div><div class="row"><span class="btn sm">Weź z pliku</span><span class="btn sm pri">Zostaw Watch Tower</span></div></div>
+    </div>
+    <div class="cap">Przykład: tablica WGM58000 i godzina 14:02 wymyślone na potrzeby makiety. „Zostaw Watch Tower” zapisuje wartość z Watch Tower w pliku.</div>
+  </div>
+
+  <div class="sec">5. Harmonogram w układzie pliku (decyzja 24 · pytanie 1, wariant A) · konto HHL, komputer 1366 px</div>
+  <div class="card" style="width:1428px">
+    <div class="h"><b>Harmonogram</b><span class="sub">Plik KSH (SharePoint): zsynchronizowano 12:35 · Kolumny · Widok skrócony (E30) · Więcej ▾</span><span class="ex" style="margin-left:auto">Przykład · dane z pliku 08.10</span></div>
+    <div class="grp-h">Ekran 1366 px: widać od „Typ” do „Nr zlecenia SCX”; dalej przewijanie w bok, „Typ” i „Wysyłka” przyklejone</div>
+    <div class="frame" style="width:1154px">
+      <table class="x">
+        <tr><th class="s1">Typ</th><th class="s2">Wysyłka</th><th class="mid">Rozmiar L × W × H</th><th class="mid n">Waga elementu</th><th class="mid n">Ilość</th><th class="mid n">Waga [t]</th><th class="mid">Data załadunku</th><th class="mid">Dzień</th><th class="mid">Godzina</th><th class="mid">Kierowca</th><th class="mid">Tel.</th><th class="mid">Ciągnik</th><th class="mid">Naczepa</th><th>Nr zlecenia SCX</th><th>Data dostawy</th><th>Dzień</th><th>Godzina</th><th>Nr zlecenia HHL</th><th class="wt wt0">Status</th><th class="wt">ETA Boden</th><th class="wt">Dokumenty</th><th class="wt n">Przychód</th></tr>
+        <tr><td class="s1">Słupy główne</td><td class="s2 code">SG-01</td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">20,74</td><td class="mid">29.09</td><td class="mid">wt.</td><td class="mid">11:00</td><td class="mid">A. C.</td><td class="mid">☎</td><td class="mid mono">WPR6303P</td><td class="mid mono">GD9792X</td><td class="mono">15048/2026/OSL/GDA/P</td><td>05.10</td><td>pon.</td><td>08:00</td><td class="mono">0002/09/S/2026</td><td class="wt"><span class="pill am">Rozładowany</span></td><td class="wt">dostarczono</td><td class="wt"><span class="red">brak CMR</span></td><td class="wt n">8 259,30 <span class="note">· marża 393,30 (4,8%)</span></td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-02</td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">20,74</td><td class="mid">30.09</td><td class="mid">śr.</td><td class="mid">06:00</td><td class="mid">T. M.</td><td class="mid">☎</td><td class="mid mono">CTR44194</td><td class="mid mono">GD216TX</td><td class="mono">15060/2026/OSL/GDA/P</td><td>05.10</td><td>pon.</td><td>09:30</td><td class="mono">0003/09/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">8 259,30 <span class="note">· marża 393,30 (4,8%)</span></td></tr>
+<tr><td class="s1">Tężniki</td><td class="s2 code">T-01</td><td class="mid">14,62 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">55</td><td class="mid n">20,17</td><td class="mid">30.09</td><td class="mid">śr.</td><td class="mid">10:00</td><td class="mid">O. B. → W. Z.</td><td class="mid">☎ ☎</td><td class="mid mono">WGM0550F → ADC71U</td><td class="mid mono">GDA96634</td><td class="mono">15061/2026/OSL/GDA/P</td><td>05.10</td><td>pon.</td><td>11:00</td><td class="mono">0004/09/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">6 596,04 <span class="note">· marża 314,64 (4,8%)</span></td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-03</td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">19,10</td><td class="mid">01.10</td><td class="mid">czw.</td><td class="mid">06:00</td><td class="mid">R. P. → M. M.</td><td class="mid">☎ ☎</td><td class="mid mono">WGM00653 → CTR44190</td><td class="mid mono">GD035YX</td><td class="mono">15062/2026/OSL/GDA/P</td><td>07.10</td><td>śr.</td><td>07:00</td><td class="mono">0005/09/S/2026</td><td class="wt"><span class="pill am">Na placu</span></td><td class="wt">na placu</td><td class="wt"><span class="grey">CMR po dostawie</span></td><td class="wt n">8 259,30 <span class="note">· marża 393,30 (4,8%)</span></td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-04</td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">19,10</td><td class="mid">01.10</td><td class="mid">czw.</td><td class="mid">09:00</td><td class="mid">R. L. → S. S.</td><td class="mid">☎ ☎</td><td class="mid mono">WGM00652 → WGM52072</td><td class="mid mono">GD036YX</td><td class="mono">15063/2026/OSL/GDA/P</td><td>07.10</td><td>śr.</td><td>08:00</td><td class="mono">0006/09/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">8 259,30 <span class="note">· marża 393,30 (4,8%)</span></td></tr>
+<tr><td class="s1">Tężniki</td><td class="s2 code">T-02</td><td class="mid">14,62 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">30</td><td class="mid n">19,68</td><td class="mid">02.10</td><td class="mid">pt.</td><td class="mid">11:00</td><td class="mid">R. L. → A. S.</td><td class="mid">☎ ☎</td><td class="mid mono">WPR6322P → WGM52069</td><td class="mid mono">GDA98508</td><td class="mono">15064/2026/OSL/GDA/P</td><td>08.10</td><td>czw.</td><td>07:30</td><td class="mono">0007/10/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">6 596,04 <span class="note">· marża 314,64 (4,8%)</span></td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-05</td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">20,44</td><td class="mid">02.10</td><td class="mid">pt.</td><td class="mid">06:00</td><td class="mid">S. S. → M. B.</td><td class="mid">☎ ☎</td><td class="mid mono">WGM52072 → WGM59402</td><td class="mid mono">GD1958X</td><td class="mono">15065/2026/OSL/GDA/P</td><td>08.10</td><td>czw.</td><td>08:30</td><td class="mono">0008/10/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">8 259,30 <span class="note">· marża 393,30 (4,8%)</span></td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-06</td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">19,08</td><td class="mid">02.10</td><td class="mid">pt.</td><td class="mid">08:00</td><td class="mid">B. Ł.</td><td class="mid">☎</td><td class="mid mono">WGM8844M</td><td class="mid mono">WL990FA</td><td class="mono">15066/2026/OSL/GDA/P</td><td>08.10</td><td>czw.</td><td>09:30</td><td class="mono">0009/10/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">8 259,30 <span class="note">· marża 393,30 (4,8%)</span></td></tr>
+<tr class="gap"><td class="s1"></td><td class="s2">…</td><td colspan="20" class="grey">SG-07 … SG-10 (4 wiersze)</td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-13 <span class="pill am" title="">zmiana numeracji</span></td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">20,74</td><td class="mid">06.10</td><td class="mid">wt.</td><td class="mid">06:00</td><td class="mid">P. B.</td><td class="mid"><span class="red">brak</span></td><td class="mid mono">W6FOCH</td><td class="mid mono">WSC969EX</td><td class="mono">15050/2026/OSL/GDA/P</td><td>12.10</td><td>pon.</td><td>09:00</td><td class="mono">0014/10/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">8 186,85 <span class="note">· marża 389,85 (4,8%)</span></td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-14 <span class="pill am" title="">zmiana numeracji</span></td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">20,74</td><td class="mid">06.10</td><td class="mid">wt.</td><td class="mid">08:00</td><td class="mid">O. T.</td><td class="mid"><span class="red">brak</span></td><td class="mid mono">W4FOCH</td><td class="mid mono">WSC88W7</td><td class="mono">15052/2026/OSL/GDA/P</td><td>12.10</td><td>pon.</td><td>10:30</td><td class="mono">0015/10/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">8 186,85 <span class="note">· marża 389,85 (4,8%)</span></td></tr>
+<tr><td class="s1">Tężniki</td><td class="s2 code">T-06</td><td class="mid">14,62 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">55</td><td class="mid n">20,17</td><td class="mid">06.10</td><td class="mid">wt.</td><td class="mid">10:00</td><td class="mid">O. B. → <span class="red">?</span></td><td class="mid">☎ → <span class="red">?</span></td><td class="mid mono">WGM0550F</td><td class="mid mono">GDA91201</td><td class="mono">15072/2026/OSL/GDA/P</td><td>12.10</td><td>pon.</td><td>11:30</td><td class="mono">0016/10/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">6 538,18 <span class="note">· marża 311,88 (4,8%)</span></td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-11 <span class="pill am" title="">zmiana numeracji</span></td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">19,10</td><td class="mid">07.10</td><td class="mid">śr.</td><td class="mid">08:00</td><td class="mid">B. S.</td><td class="mid"><span class="red">brak</span></td><td class="mid mono">W3FOCH</td><td class="mid mono">WSC82W8</td><td class="mono">15055/2026/OSL/GDA/P</td><td>13.10</td><td>wt.</td><td>07:00</td><td class="mono">0017/10/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">8 186,85 <span class="note">· marża 389,85 (4,8%)</span></td></tr>
+      </table>
+      <div class="bar2"><i style="left:0;width:62%"></i></div>
+    </div>
+    <div class="grp-h">Po przewinięciu w prawo: koniec kolumn pliku i kolumny Watch Tower (oddzielone kreską)</div>
+    <div class="frame hide-mid" style="width:1154px">
+      <table class="x">
+        <tr><th class="s1">Typ</th><th class="s2">Wysyłka</th><th class="mid">Rozmiar L × W × H</th><th class="mid n">Waga elementu</th><th class="mid n">Ilość</th><th class="mid n">Waga [t]</th><th class="mid">Data załadunku</th><th class="mid">Dzień</th><th class="mid">Godzina</th><th class="mid">Kierowca</th><th class="mid">Tel.</th><th class="mid">Ciągnik</th><th class="mid">Naczepa</th><th>Nr zlecenia SCX</th><th>Data dostawy</th><th>Dzień</th><th>Godzina</th><th>Nr zlecenia HHL</th><th class="wt wt0">Status</th><th class="wt">ETA Boden</th><th class="wt">Dokumenty</th><th class="wt n">Przychód</th></tr>
+        <tr><td class="s1">Słupy główne</td><td class="s2 code">SG-01</td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">20,74</td><td class="mid">29.09</td><td class="mid">wt.</td><td class="mid">11:00</td><td class="mid">A. C.</td><td class="mid">☎</td><td class="mid mono">WPR6303P</td><td class="mid mono">GD9792X</td><td class="mono">15048/2026/OSL/GDA/P</td><td>05.10</td><td>pon.</td><td>08:00</td><td class="mono">0002/09/S/2026</td><td class="wt"><span class="pill am">Rozładowany</span></td><td class="wt">dostarczono</td><td class="wt"><span class="red">brak CMR</span></td><td class="wt n">8 259,30 <span class="note">· marża 393,30 (4,8%)</span></td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-02</td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">20,74</td><td class="mid">30.09</td><td class="mid">śr.</td><td class="mid">06:00</td><td class="mid">T. M.</td><td class="mid">☎</td><td class="mid mono">CTR44194</td><td class="mid mono">GD216TX</td><td class="mono">15060/2026/OSL/GDA/P</td><td>05.10</td><td>pon.</td><td>09:30</td><td class="mono">0003/09/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">8 259,30 <span class="note">· marża 393,30 (4,8%)</span></td></tr>
+<tr><td class="s1">Tężniki</td><td class="s2 code">T-01</td><td class="mid">14,62 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">55</td><td class="mid n">20,17</td><td class="mid">30.09</td><td class="mid">śr.</td><td class="mid">10:00</td><td class="mid">O. B. → W. Z.</td><td class="mid">☎ ☎</td><td class="mid mono">WGM0550F → ADC71U</td><td class="mid mono">GDA96634</td><td class="mono">15061/2026/OSL/GDA/P</td><td>05.10</td><td>pon.</td><td>11:00</td><td class="mono">0004/09/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">6 596,04 <span class="note">· marża 314,64 (4,8%)</span></td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-03</td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">19,10</td><td class="mid">01.10</td><td class="mid">czw.</td><td class="mid">06:00</td><td class="mid">R. P. → M. M.</td><td class="mid">☎ ☎</td><td class="mid mono">WGM00653 → CTR44190</td><td class="mid mono">GD035YX</td><td class="mono">15062/2026/OSL/GDA/P</td><td>07.10</td><td>śr.</td><td>07:00</td><td class="mono">0005/09/S/2026</td><td class="wt"><span class="pill am">Na placu</span></td><td class="wt">na placu</td><td class="wt"><span class="grey">CMR po dostawie</span></td><td class="wt n">8 259,30 <span class="note">· marża 393,30 (4,8%)</span></td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-04</td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">19,10</td><td class="mid">01.10</td><td class="mid">czw.</td><td class="mid">09:00</td><td class="mid">R. L. → S. S.</td><td class="mid">☎ ☎</td><td class="mid mono">WGM00652 → WGM52072</td><td class="mid mono">GD036YX</td><td class="mono">15063/2026/OSL/GDA/P</td><td>07.10</td><td>śr.</td><td>08:00</td><td class="mono">0006/09/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">8 259,30 <span class="note">· marża 393,30 (4,8%)</span></td></tr>
+<tr><td class="s1">Tężniki</td><td class="s2 code">T-02</td><td class="mid">14,62 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">30</td><td class="mid n">19,68</td><td class="mid">02.10</td><td class="mid">pt.</td><td class="mid">11:00</td><td class="mid">R. L. → A. S.</td><td class="mid">☎ ☎</td><td class="mid mono">WPR6322P → WGM52069</td><td class="mid mono">GDA98508</td><td class="mono">15064/2026/OSL/GDA/P</td><td>08.10</td><td>czw.</td><td>07:30</td><td class="mono">0007/10/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">6 596,04 <span class="note">· marża 314,64 (4,8%)</span></td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-05</td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">20,44</td><td class="mid">02.10</td><td class="mid">pt.</td><td class="mid">06:00</td><td class="mid">S. S. → M. B.</td><td class="mid">☎ ☎</td><td class="mid mono">WGM52072 → WGM59402</td><td class="mid mono">GD1958X</td><td class="mono">15065/2026/OSL/GDA/P</td><td>08.10</td><td>czw.</td><td>08:30</td><td class="mono">0008/10/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">8 259,30 <span class="note">· marża 393,30 (4,8%)</span></td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-06</td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">19,08</td><td class="mid">02.10</td><td class="mid">pt.</td><td class="mid">08:00</td><td class="mid">B. Ł.</td><td class="mid">☎</td><td class="mid mono">WGM8844M</td><td class="mid mono">WL990FA</td><td class="mono">15066/2026/OSL/GDA/P</td><td>08.10</td><td>czw.</td><td>09:30</td><td class="mono">0009/10/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">8 259,30 <span class="note">· marża 393,30 (4,8%)</span></td></tr>
+<tr class="gap"><td class="s1"></td><td class="s2">…</td><td colspan="20" class="grey">SG-07 … SG-10 (4 wiersze)</td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-13 <span class="pill am" title="">zmiana numeracji</span></td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">20,74</td><td class="mid">06.10</td><td class="mid">wt.</td><td class="mid">06:00</td><td class="mid">P. B.</td><td class="mid"><span class="red">brak</span></td><td class="mid mono">W6FOCH</td><td class="mid mono">WSC969EX</td><td class="mono">15050/2026/OSL/GDA/P</td><td>12.10</td><td>pon.</td><td>09:00</td><td class="mono">0014/10/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">8 186,85 <span class="note">· marża 389,85 (4,8%)</span></td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-14 <span class="pill am" title="">zmiana numeracji</span></td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">20,74</td><td class="mid">06.10</td><td class="mid">wt.</td><td class="mid">08:00</td><td class="mid">O. T.</td><td class="mid"><span class="red">brak</span></td><td class="mid mono">W4FOCH</td><td class="mid mono">WSC88W7</td><td class="mono">15052/2026/OSL/GDA/P</td><td>12.10</td><td>pon.</td><td>10:30</td><td class="mono">0015/10/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">8 186,85 <span class="note">· marża 389,85 (4,8%)</span></td></tr>
+<tr><td class="s1">Tężniki</td><td class="s2 code">T-06</td><td class="mid">14,62 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">55</td><td class="mid n">20,17</td><td class="mid">06.10</td><td class="mid">wt.</td><td class="mid">10:00</td><td class="mid">O. B. → <span class="red">?</span></td><td class="mid">☎ → <span class="red">?</span></td><td class="mid mono">WGM0550F</td><td class="mid mono">GDA91201</td><td class="mono">15072/2026/OSL/GDA/P</td><td>12.10</td><td>pon.</td><td>11:30</td><td class="mono">0016/10/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">6 538,18 <span class="note">· marża 311,88 (4,8%)</span></td></tr>
+<tr><td class="s1">Słupy główne</td><td class="s2 code">SG-11 <span class="pill am" title="">zmiana numeracji</span></td><td class="mid">18,21 × 2,45 × 2,45</td><td class="mid n">–</td><td class="mid n">7</td><td class="mid n">19,10</td><td class="mid">07.10</td><td class="mid">śr.</td><td class="mid">08:00</td><td class="mid">B. S.</td><td class="mid"><span class="red">brak</span></td><td class="mid mono">W3FOCH</td><td class="mid mono">WSC82W8</td><td class="mono">15055/2026/OSL/GDA/P</td><td>13.10</td><td>wt.</td><td>07:00</td><td class="mono">0017/10/S/2026</td><td class="wt"><span class="pill gr">Zaplanowany</span></td><td class="wt">–</td><td class="wt"><span class="grey">–</span></td><td class="wt n">8 186,85 <span class="note">· marża 389,85 (4,8%)</span></td></tr>
+      </table>
+      <div class="bar2"><i style="left:38%;width:62%"></i></div>
+    </div>
+    <div class="cap">Kolumny w kolejności i z nazwami z pliku, bez Lp., Przewoźnika i Komentarza; dzień tygodnia po polsku; daty „05.10”, masa „20,74” (E21); „→” = przepięcie (odcinek PL → SE), czerwony „?” = w pliku „...”. „Wysyłka” to kod jak w pliku, a numery stoją w swoich kolumnach; nazwa „kod · numer” (E41) zostaje w panelu, na Mapie, w dzwonku i e-mailach. <b>KSH</b> widzi ten układ bez kolumn numerów (decyzja 1). <b>SCX</b> wpisuje swój numer, a numer HHL widzi tylko do odczytu (decyzja 2). Kwota według firmy (E30, E16); telefon według E6. „Widok skrócony” to 8 kolumn z E30. Statusy, ETA i kwoty z bazy 08.10; dokumenty według E31.</div>
+  </div>
+  <div class="card" style="width:404px">
+    <div class="h"><b>Telefon 390 px</b><span class="sub">karta w kolejności pliku</span></div>
+    <div style="padding:12px 14px 16px"><div class="phone" style="width:372px">
+      <div class="mbar"><b style="font:700 20px var(--font-cond)">Harmonogram</b><span class="chip" style="margin-left:auto;height:28px">Filtry · 0</span></div>
+      <div class="note" style="padding:6px 12px">Plik KSH: zsynchronizowano 12:35</div>
+      <div class="pc"><div class="t">SG-03 <span class="pill am">Na placu</span></div>
+<div class="note">Słupy główne · 18,21 × 2,45 × 2,45 · 7 szt. · 19,10 t</div>
+<div class="kv2"><span>Załadunek</span><b>czw. 01.10 · 06:00</b><span>Dostawa</span><b>śr. 07.10 · 07:00</b>
+<span>PL</span><b>R. P. ☎ · WGM00653</b><span>SE</span><b>M. M. ☎ · CTR44190</b><span>Naczepa</span><b>GD035YX</b>
+<span>Nr SCX</span><b class="mono">15062/2026/OSL/GDA/P</b><span>Nr HHL</span><b class="mono">0005/09/S/2026</b></div></div>
+      <div class="pc" style="margin-bottom:10px"><div class="t">SG-04 <span class="pill gr">Zaplanowany</span></div><div class="note">Słupy główne · 7 szt. · 19,10 t · czw. 01.10 → śr. 07.10</div></div>
+      <div class="nav"><span>Kokpit</span><span class="on">Harmonogram</span><span>Ryzyka</span><span>Dokumenty</span><span>Więcej</span></div>
+    </div></div>
+  </div>
+  <div class="card" style="width:1008px">
+    <div class="h"><b>Kto co widzi w tym układzie</b><span class="sub">decyzje 1 i 2 z 12:14, E6, E16</span></div>
+    <table class="r">
+      <tr><th>Kolumna</th><th>HHL</th><th>SCX</th><th>KSH</th></tr>
+      <tr><td>Kolumny pliku 2–8, 11, 17, 19 (ładunek, daty, godziny)</td><td>widzi</td><td>widzi</td><td>widzi</td></tr>
+      <tr><td>Kierowca, ciągnik, naczepa</td><td>widzi, może zmienić</td><td>wpisuje w Awizacji</td><td>widzi (jak dziś)</td></tr>
+      <tr><td>Telefon kierowcy</td><td colspan="3">według dzisiejszej reguły widoczności telefonu (E6, E30), także w eksporcie</td></tr>
+      <tr><td>Nr zlecenia SCX (HHL-Scan)</td><td>widzi</td><td>wpisuje</td><td class="grey">nie ma kolumny</td></tr>
+      <tr><td>Nr zlecenia HHL (HHL-KSH)</td><td>wpisuje</td><td>widzi, tylko odczyt</td><td class="grey">nie ma kolumny</td></tr>
+      <tr><td>Status, ETA Boden, Dokumenty</td><td>widzi</td><td>widzi</td><td>widzi</td></tr>
+      <tr><td>Kwota</td><td>przychód i marża</td><td>„Moja stawka”</td><td>„Twoja cena”</td></tr>
+    </table>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../e45/vendor/package/dist/leaflet.css">
+<style>html,body{margin:0}#m{position:absolute;inset:0}
+.mk{width:24px;height:24px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);position:relative;background:#1B6E5D}
+.mk:after{content:"";position:absolute;left:5px;top:3px;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:10px solid #fff}
+.pt{width:12px;height:12px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+</style></head><body><div id="m"></div>
+<script src="../e45/vendor/package/dist/leaflet.js"></script><script src="../e29/routes.js"></script>
+<script>
+const q=new URLSearchParams(location.search);
+const map=L.map('m',{zoomControl:false,attributionControl:false,zoomSnap:1,fadeAnimation:false});
+L.tileLayer('https://tower.log-mar.pl/tiles/logistics.day/{z}/{x}/{y}',{maxZoom:18}).addTo(map);
+if(q.get('mode')==='site'){
+  const site=[[21.81085,65.81262],[21.80908,65.80919],[21.80425,65.80631],[21.79709,65.8044],[21.7887,65.80376],[21.78036,65.80449],[21.77332,65.80647],[21.76867,65.8094],[21.76711,65.81284],[21.76888,65.81627],[21.7737,65.81916],[21.78086,65.82106],[21.78925,65.8217],[21.7976,65.82098],[21.80464,65.819],[21.80929,65.81606],[21.81085,65.81262]].map(([x,y])=>[y,x]);
+  L.polygon(site,{color:'#1B6E5D',weight:2,dashArray:'6 4',fillColor:'#1B6E5D',fillOpacity:.10}).addTo(map);
+  L.marker([65.80642,21.80361],{icon:L.divIcon({className:'',html:'<div class="mk"></div>',iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map);
+  map.setView([65.812,21.79],11);
+} else {
+  for(const l of [PL,SE]) L.polyline(l,{color:'#E5A544',weight:4,opacity:.95}).addTo(map);
+  for(const [ll,c] of [[[52.0739,17.0246],'#C97E12'],[[65.8127,21.789],'#1B6E5D']]) L.marker(ll,{icon:L.divIcon({className:'',html:`<div class="pt" style="background:${c}"></div>`,iconSize:[12,12],iconAnchor:[6,6]})}).addTo(map);
+  L.polyline([[54.40,18.68],[55.2,18.95],[57.0,19.25],[58.55,18.55],[58.90,17.96]],{color:'#245C87',weight:3,dashArray:'7 6',opacity:.9}).addTo(map);
+  map.setView([59.25,19.4],4);
+}
+</script></body></html>

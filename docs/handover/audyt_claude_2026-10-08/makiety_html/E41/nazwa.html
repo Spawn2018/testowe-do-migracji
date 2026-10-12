@@ -1,0 +1,165 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 10px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+.bd{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.mrow{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--rule-2);font-size:13.5px}.mrow .l{color:var(--ink-2)}.mrow b{font-variant-numeric:tabular-nums}
+.note{font-size:12.5px;color:var(--ink-3)}
+.bad{color:var(--red);font-weight:600}
+.code{font-weight:700}
+.nm{white-space:nowrap}.nm .no{font-weight:500;color:var(--ink-2)}.nm .dot{color:var(--amber);padding:0 4px}
+.q{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--surface-2);padding:1px 5px;border:1px solid var(--rule-2)}
+.btn{height:32px;padding:0 12px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.ph{background:var(--surface);border:1px solid var(--rule)}
+.ph .hd{padding:12px 14px 10px;border-bottom:1px solid var(--rule-2)}
+.ph .t{font:700 26px var(--font-cond);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ph .t .no{font:600 18px var(--font-cond);color:var(--ink-2)}
+.ph .t .dot{color:var(--amber);padding:0 2px}
+.who{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--sea)}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column}
+.phone .h b{font-size:20px}
+.pc{margin:8px 12px 0;border:1px solid var(--rule);padding:9px 12px;display:flex;flex-direction:column;gap:3px}
+.pc .t{font:700 17px var(--font-cond)}.pc .t .no{font-weight:600;color:var(--ink-2)}.pc .t .dot{color:var(--amber);padding:0 3px}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.mx td:first-child{width:210px;color:var(--ink-2)}
+.mx td{font-size:13.5px}
+.today{font-size:12px;color:var(--red)}
+</style></head><body>
+<div class="sheet">
+  <div class="top"><h1>E41 · Nazwa transportu w każdym miejscu, zależnie od firmy · komputer i telefon</h1>
+    <span class="ex">„Dziś” — zrzuty 08.10, 00:0x i dane z bazy · „po zmianie” — kody i numery zleceń z bazy, treści wiadomości przykładowe · 08.10, 12:14: kropka „·” zamiast „●”, SCX widzi numer HHL do odczytu</span></div>
+
+  <div class="sec">Dziś</div>
+  <div class="card" style="width:503px">
+    <div class="h"><b>Harmonogram</b><span class="pill rd">numery widzi każda firma</span></div>
+    <img src="now-harm.png" width="501" height="295" alt="">
+    <div class="cap">Kod w kolumnie „Wysyłka”, numery w osobnych kolumnach „Nr zlecenia HHL-KSH” i „Nr zlecenia HHL-SCAN”. Te same kolumny widzi KSH i SCX.</div>
+  </div>
+  <div class="card" style="width:663px">
+    <div class="h"><b>Ryzyka › Centrum decyzji</b><span class="pill rd">3 różne nazwy</span></div>
+    <img src="now-ryzyka.png" width="661" height="400" alt="">
+    <div class="cap">„15048/2026/OSL/GDA/P” to numer z pliku KSH (SG-01). „5c77d4d7” to początek numeru wewnętrznego (SG-07). „15061/2026/OSL/GDA/P” = T-01.</div>
+  </div>
+  <div class="card" style="width:230px">
+    <div class="h"><b>W bazie 08.10</b></div>
+    <div class="bd" style="gap:2px">
+      <div class="mrow"><span class="l">Kod transportu</span><b>94 / 94</b></div>
+      <div class="mrow"><span class="l">Nr zlecenia HHL</span><b class="bad">3 / 94</b></div>
+      <div class="mrow"><span class="l">Nr zlecenia SCX</span><b class="bad">3 / 94</b></div>
+      <div class="mrow"><span class="l">Nr z pliku KSH</span><b>10 / 94</b></div>
+      <div class="note" style="margin-top:6px">Kody: SG 30, BS 27, KR 14, PL 9, T 6, SS 5, TS 3. Każdy kod jest inny.</div>
+    </div>
+  </div>
+
+  <div class="card" style="width:560px">
+    <div class="h"><b>Panel transportu</b><span class="pill gr">ten sam u KSH i SCX</span></div>
+    <img src="now-panel.png" width="558" height="162" alt="">
+    <div class="cap">Nagłówek: sam kod. W Przeglądzie oba numery, widoczne dla każdej firmy. Edytować może tylko właściciel numeru.</div>
+  </div>
+  <div class="card" style="width:852px">
+    <div class="h"><b>Teksty z bazy dziś: pięć sposobów nazwania transportu</b></div>
+    <table class="r">
+      <tr><th>Gdzie</th><th>Co jest w treści</th><th>Przykład z bazy</th></tr>
+      <tr><td>Brak numeru zlecenia, terminy zasobów</td><td>kod</td><td>„SG-01: brak numeru zlecenia HHL”</td></tr>
+      <tr><td>Brak awizacji i dokumentów, daty KSH, przypomnienia</td><td>numer z pliku KSH, a bez niego 8 znaków numeru wewnętrznego</td><td>„15048/2026/OSL/GDA/P: brak awizacji…”, „5c77d4d7: brak awizacji…”</td></tr>
+      <tr><td>Automatyczna zmiana statusu</td><td>pełny numer wewnętrzny</td><td>„Transport 963e19dd-fe83-4690-9306-5c7fc4b95468 bez numeru zlecenia przewoźnika…”</td></tr>
+      <tr><td>Czat (powiadomienie)</td><td>numer HHL, a bez niego numer z pliku KSH — w danych powiadomienia także dla KSH i SCX</td><td>„0005/09/S/2026”</td></tr>
+      <tr><td>SMS, e-mail o sprawie</td><td>numer z pliku KSH, a bez niego „—” albo 8 znaków</td><td>e-mail o sprawie: lista numerów z pliku KSH</td></tr>
+      <tr><td>Powiadomienie push</td><td>bez transportu</td><td>„Watch Tower — RISK_OPEN”</td></tr>
+    </table>
+    <div class="cap">Dzwonek dokleja z przodu kod i usuwa 8 znaków. Centrum decyzji, e-maile i SMS pokazują tekst z bazy bez zmian. Żaden tekst nie zależy od firmy odbiorcy.</div>
+  </div>
+
+  <div class="sec">Po zmianie — jedna zasada: kod · numer zlecenia własnej firmy</div>
+  <div class="card" style="width:1428px">
+    <div class="h"><b>Ten sam transport w każdej firmie</b><span class="sub">SG-03 ma oba numery, SG-07 nie ma żadnego</span><span style="flex:1"></span><span class="ex">Przykład: treści wiadomości</span></div>
+    <table class="r mx">
+      <tr><th>Miejsce</th><th>HHL · Administrator i Operacje</th><th>SCX · Dyspozytor i Użytkownik</th><th>KSH · Użytkownik</th></tr>
+      <tr><td>Harmonogram, Mapa, Kokpit, Dokumenty, Faktury, Finanse, wyszukiwanie</td>
+        <td><span class="nm"><span class="code">SG-03</span><span class="dot">·</span><span class="no">0005/09/S/2026</span></span></td>
+        <td><span class="nm"><span class="code">SG-03</span><span class="dot">·</span><span class="no">15062/2026/OSL/GDA/P</span></span></td>
+        <td><span class="code">SG-03</span></td></tr>
+      <tr><td>Transport bez numeru</td>
+        <td><span class="code">SG-07</span> <span class="pill rd">brak nr HHL</span> <span class="note">tylko w Harmonogramie i panelu</span></td>
+        <td><span class="code">SG-07</span> <span class="pill rd">brak nr SCX</span> <span class="note">tylko w Harmonogramie i panelu</span></td>
+        <td><span class="code">SG-07</span></td></tr>
+      <tr><td>Do zrobienia, Ryzyka, dzwonek</td>
+        <td><span class="code">SG-07</span> — brak awizacji przed załadunkiem<div class="today">dziś: „5c77d4d7: brak awizacji przed załadunkiem”</div></td>
+        <td><span class="code">SG-07</span> — brak awizacji przed załadunkiem</td>
+        <td class="note">KSH nie ma listy Do zrobienia (19:11); w dzwonku: „SG-03 — Nowa wiadomość w czacie”</td></tr>
+      <tr><td>E-mail (temat)</td>
+        <td>SG-03 · 0005/09/S/2026 — Nowa wiadomość w czacie</td>
+        <td>SG-03 · 15062/2026/OSL/GDA/P — Nowa wiadomość w czacie</td>
+        <td>SG-03 — Nowa wiadomość w czacie</td></tr>
+      <tr><td>Powiadomienie push</td>
+        <td>SG-03 · 0005/09/S/2026 — Nowa wiadomość w czacie</td>
+        <td>SG-03 · 15062/2026/OSL/GDA/P — …</td>
+        <td>SG-03 — …</td></tr>
+      <tr><td>SMS do Śremu i Boden (E42)</td><td colspan="3">Zawsze sam kod: „SG-03 przyjazd ok. 12:45 Boden plac”. Znak „·” nie trafia do SMS (jest spoza alfabetu GSM, więc zmniejszyłby SMS do 70 znaków).</td></tr>
+      <tr><td>PDF, ZIP, załączniki, eksport</td><td colspan="3">Nazwy plików zawsze kodem: „SG-03_CMR.pdf”, „WATCH_TOWER_SG-03.pdf”, folder w ZIP „SG-03”. W środku PDF i w kolumnie „Transport” w eksporcie — nazwa jak na ekranie danej firmy.</td></tr>
+      <tr><td>Adres strony</td><td colspan="3">„…/#/transport/SG-03” dla wszystkich. Kod jest unikalny (94 z 94), a link z e-maila zawsze otwiera właściwy transport.</td></tr>
+    </table>
+  </div>
+
+  <div class="card" style="width:860px">
+    <div class="h"><b>Harmonogram · HHL</b><span class="sub">kolumna „Transport” zamiast „Wysyłka” i dwóch kolumn numerów</span><span style="flex:1"></span><span class="ex">Przykład</span></div>
+    <table class="r">
+      <tr><th>Transport</th><th>Typ</th><th>Załadunek</th><th>Dostawa</th><th>Status</th></tr>
+      <tr><td><span class="nm"><span class="code">SG-01</span><span class="dot">·</span><span class="no">0002/09/S/2026</span></span></td><td>Słupy główne</td><td>29.09.2026</td><td>05.10.2026</td><td><span class="pill am">Rozładowany</span></td></tr>
+      <tr><td><span class="code">T-01</span> <span class="pill rd">brak nr HHL</span></td><td>Tężniki</td><td>30.09.2026</td><td>05.10.2026</td><td><span class="pill gr">Planowany</span></td></tr>
+      <tr><td><span class="code">SG-02</span> <span class="pill rd">brak nr HHL</span></td><td>Słupy główne</td><td>30.09.2026</td><td>05.10.2026</td><td><span class="pill gr">Planowany</span></td></tr>
+      <tr><td><span class="nm"><span class="code">SG-03</span><span class="dot">·</span><span class="no">0005/09/S/2026</span></span></td><td>Słupy główne</td><td>01.10.2026</td><td>07.10.2026</td><td><span class="pill am">Na placu</span></td></tr>
+      <tr><td><span class="code">SG-04</span> <span class="pill rd">brak nr HHL</span></td><td>Słupy główne</td><td>01.10.2026</td><td>07.10.2026</td><td><span class="pill gr">Planowany</span></td></tr>
+    </table>
+    <div class="cap">SCX widzi w tej kolumnie swój numer: „SG-01 · 15048/2026/OSL/GDA/P”, „SG-02 · 15060/2026/OSL/GDA/P”, „T-01 brak nr SCX”. KSH widzi tylko kod. Wyszukiwanie: HHL po kodzie i obu numerach, SCX po kodzie i swoim numerze, KSH po kodzie.</div>
+  </div>
+
+  <div style="width:552px;display:flex;flex-direction:column;gap:10px">
+    <div class="ph"><div class="hd"><div class="who">HHL · nagłówek panelu</div><div class="t">SG-03 <span class="dot">·</span><span class="no">0005/09/S/2026</span><span class="pill am">Na placu</span></div></div>
+      <div class="bd" style="gap:0"><div class="mrow"><span class="l">Nr zlecenia HHL</span><span><b>0005/09/S/2026</b> <span class="btn" style="height:26px">Edytuj</span></span></div><div class="mrow"><span class="l">Nr zlecenia SCX</span><b>15062/2026/OSL/GDA/P</b></div></div></div>
+    <div class="ph"><div class="hd"><div class="who">SCX · nagłówek panelu</div><div class="t">SG-03 <span class="dot">·</span><span class="no">15062/2026/OSL/GDA/P</span><span class="pill am">Na placu</span></div></div>
+      <div class="bd" style="gap:0"><div class="mrow"><span class="l">Nr zlecenia SCX</span><span><b>15062/2026/OSL/GDA/P</b> <span class="btn" style="height:26px">Edytuj</span></span></div><div class="mrow"><span class="l">Nr zlecenia HHL <span class="note">tylko odczyt (decyzja 2)</span></span><b>0005/09/S/2026</b></div></div></div>
+    <div class="ph"><div class="hd"><div class="who">KSH · nagłówek panelu</div><div class="t">SG-03 <span class="pill am">Na placu</span></div></div>
+      <div class="bd note">Bez pól z numerami zleceń.</div></div>
+  </div>
+
+  <div class="phone" style="min-height:360px">
+    <div class="h"><b>Harmonogram</b><span class="who" style="margin-left:auto">HHL</span></div>
+    <div class="pc"><div class="t">SG-01<span class="dot">·</span><span class="no">0002/09/S/2026</span></div><div class="note">Słupy główne · 29.09 → 05.10 · Rozładowany</div></div>
+    <div class="pc"><div class="t">T-01 <span class="pill rd">brak nr HHL</span></div><div class="note">Tężniki · 30.09 → 05.10 · Planowany</div></div>
+    <div class="pc"><div class="t">SG-03<span class="dot">·</span><span class="no">0005/09/S/2026</span></div><div class="note">Słupy główne · 01.10 → 07.10 · Na placu</div></div>
+    <div class="nav"><span>Kokpit</span><span class="on">Harmonogram</span><span>Ryzyka</span><span>Dokumenty</span><span>Więcej</span></div>
+  </div>
+  <div class="phone" style="min-height:360px">
+    <div class="h"><b>Harmonogram</b><span class="who" style="margin-left:auto">SCX</span></div>
+    <div class="pc"><div class="t">SG-01<span class="dot">·</span><span class="no">15048/2026/OSL/GDA/P</span></div><div class="note">Słupy główne · 29.09 → 05.10 · Rozładowany</div></div>
+    <div class="pc"><div class="t">T-01 <span class="pill rd">brak nr SCX</span></div><div class="note">Tężniki · 30.09 → 05.10 · Planowany</div></div>
+    <div class="pc"><div class="t">SG-03<span class="dot">·</span><span class="no">15062/2026/OSL/GDA/P</span></div><div class="note">Słupy główne · 01.10 → 07.10 · Na placu</div></div>
+    <div class="nav"><span>Kokpit</span><span class="on">Harmonogram</span><span>Ryzyka</span><span>Dokumenty</span><span>Więcej</span></div>
+  </div>
+  <div class="phone" style="min-height:360px">
+    <div class="h"><b>Harmonogram</b><span class="who" style="margin-left:auto">KSH</span></div>
+    <div class="pc"><div class="t">SG-01</div><div class="note">Słupy główne · 29.09 → 05.10 · Rozładowany</div></div>
+    <div class="pc"><div class="t">T-01</div><div class="note">Tężniki · 30.09 → 05.10 · Planowany</div></div>
+    <div class="pc"><div class="t">SG-03</div><div class="note">Słupy główne · 01.10 → 07.10 · Na placu</div></div>
+    <div class="nav"><span>Kokpit</span><span class="on">Harmonogram</span><span>Ryzyka</span><span>Dokumenty</span><span>Więcej</span></div>
+  </div>
+</div>
+</body></html>

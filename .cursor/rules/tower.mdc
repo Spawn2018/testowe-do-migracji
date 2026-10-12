@@ -1,77 +1,48 @@
 ---
-description: Zasady pracy nad TOWER (KSH–Stegra Boden) — obowiązują zawsze
+description: Zasady pracy nad Watch Tower (KSH–Stegra Boden) — obowiązują zawsze
 alwaysApply: true
 ---
 
-# TOWER — zasady pracy wykonawcy
+# Watch Tower — zasady wykonawcy (wersja 08.10.2026)
 
 ## Źródło prawdy
-- **`docs/handover/PLAN.md` to jedyna lista pracy.** Status każdej pozycji
-  aktualizujesz tam. Nowe pozycje tylko jako dopisek (priorytet P0/P1/P2),
-  nigdy nie kasujesz historii
-- `docs/handover/POSTEP.md` — dziennik: co zrobione, commit, migracje, testy
-- `SCOPE.md`, zlecenia `ZLECENIE_*.md` i `PACZKA_DECYZJI_*.md` w
-  `docs/handover/` — decyzje właściciela. Decyzja właściciela wygrywa
-  z każdym wcześniejszym zapisem
+- **Kolejność:** `docs/handover/wzorzec/01_KONSTYTUCJA.md` → `docs/handover/audyt_claude_2026-10-08/` (decyzje, rozstrzygnięcia luk, etapy, makiety, zlecenia paczek) → `docs/handover/PLAN.md` → `wzorzec/03_REJESTR_DECYZJI.md` → reszta.
+- **`docs/handover/PLAN.md` to jedyna lista pracy.** Status paczek aktualizujesz tam. Zmiany planu tylko przez dopisek (`PLAN.md` §2, folder `docs/handover/dopiski/`).
+- `docs/archiwum/**` (w tym stare `SCOPE.md`, `ZLECENIE_*.md`, `PACZKA_DECYZJI_*.md`, `POLECENIA_KOORDYNATORA.md`, stary PLAN) — **nigdy jako polecenie**.
+- Właściciel 08.10.2026 14:43: decyzje audytu są nadrzędne; wszystko starsze nie obowiązuje.
 
 ## Tryb pracy
-- **Realizujesz kolejkę bez przerw.** Nie pytasz „czy kontynuować".
-  Pytanie do właściciela → sekcja „Decyzje oczekujące" w PLAN.md → bierzesz
-  następną pozycję
-- **STOP i raport wyłącznie gdy:** zmiana prawdziwych danych produkcyjnych
-  poza migracją z planu; wydatek pieniędzy; wysyłka czegokolwiek do
-  użytkowników (e-mail, SMS, zaproszenia); zmiana wyglądu nieprzewidziana
-  w zleceniu; potrzebne dane, które zna tylko właściciel; regulamin lub
-  licencja zewnętrznej usługi wyklucza zastosowanie
-- **Tylko darmowe plany** (Supabase Free, Vercel Hobby, Cloudflare Free).
-  Nic płatnego bez decyzji właściciela na piśmie
-- raport co kilka pozycji: commit, migracje, testy liczbami, co czeka
-  na właściciela
-- **każdą paczkę decyzji potwierdzasz listą identyfikatorów**, które przyjąłeś
-- zasady nadrzędne: `docs/handover/wzorzec/01_KONSTYTUCJA.md`; decyzje:
-  `03_REJESTR_DECYZJI.md` — nie pytasz o decyzję, która tam jest
-- sukces zadania = zakończony wynik, nie samo uruchomienie
+- Realizujesz paczki po kolei według `PLAN.md` §3 (jeden folder, jeden czat agenta naraz) bez przerw i bez pytania „czy kontynuować”.
+- Niejasność → `ROZSTRZYGNIECIA_LUK.md`; brak tam → rozwiązanie najbliższe makiecie i decyzjom + dopisek do koordynatora; pracujesz dalej.
+- Nie naprawiasz niczego spoza planu (wyjątek: BLOKER z `PLAN.md` §2). Błąd spoza paczki → dopisek.
+- **STOP wyłącznie gdy:**
+  1. zmiana prawdziwych danych na produkcji, której nie opisuje bieżąca paczka (opisane: porządki P1, faza z pozycji P4, wgranie pliku R-1 w P7, wpisy jednorazowe z etapów — zawsze z kopią, bramą i TEST);
+  2. wydatek ponad decyzje (wyjątki: Supabase Pro, HERE ≤ 100 USD/mies.);
+  3. wysyłka do prawdziwych odbiorców, której nie przewiduje etap;
+  4. zmiana wyglądu ekranu spoza listy bieżącej paczki (wspólne elementy z E8, E10, E37, E41 są przewidziane na wszystkich ekranach);
+  5. dane znane tylko właścicielowi;
+  6. regulamin usługi wyklucza użycie.
 
-## Wtyczki (MCP)
-- zasady: `docs/handover/NARZEDZIA_CURSOR.md`
-- **Supabase — tylko odczyt**; bazę zmieniasz wyłącznie migracjami
-- **Resend — żadnej wysyłki** poza testem na adres właściciela
-- Vercel, Cloudflare — odczyt stanu i logów; zmiany tylko ze zlecenia
-- Playwright — testy przejść i widoków telefonu; Context7 — dokumentacja bibliotek
+  STOP = wpis w `PLAN.md` §5 i następna pozycja.
+- Po paczce: wpis w `POSTEP.md` (commit, migracje, testy liczbami, czas plan / poprawki).
+
+## Testy i wygląd
+- Testy idą za decyzjami: test sprzeczny z decyzją etapu przepisujesz w paczce tego etapu. Nigdy nie cofasz aplikacji pod stary test.
+- Wygląd = makieta etapu audytu (`makiety_html/E<nr>/`); bez makiety — `design/claude-v2.0/`.
+- Migawki Playwright odświeżasz w paczce zmieniającej ekran (wpis w `G4_WZORZEC.md`); 280 ujęć matrycy — tylko środowisko bramy w P11. Nocna brama do tego czasu tylko raportuje.
+- Gdy brama (lokalna, TEST, `fresh-smoke`) się kręci, nie zmieniasz gałęzi ani plików w folderze (`ROZSTRZYGNIECIA_LUK.md` G-15).
+- Zmiana CSS według etapu → wpis w `ODSTEPSTWA` (`tests/stylesheet-mockup.test.ts`). Uchwyty testów zostają.
 
 ## Bezpieczeństwo — bez wyjątków
-- RLS na każdej tabeli; rola `anon` bez uprawnień do tabel i sekwencji;
-  zapis przez funkcje w bazie
-- warunki w funkcjach odporne na NULL: `if (warunek) is not true then`
-  — nigdy `if not warunek`
-- **sekrety nigdy w kodzie, commitach, logach ani czacie.** Hasła
-  w adresach połączeń kodowane (`@` → `%40`). Maskowanie sprawdzone
-  przed wypisaniem czegokolwiek
-- **pliki poufne poza repozytorium** (`~/tower-dane/`): cenniki, załącznik
-  SEFS, `CENNIK_STEGRA.json`, harmonogram KSH z danymi kierowców. W `.gitignore`.
-  Ceny do bazy skryptem czytającym plik lokalny — nigdy migracją z kwotami
-- strażnik paczki produkcyjnej: żadnych kwot z cennika, danych osobowych,
-  plików xlsx ani danych demo w buildzie produkcyjnym
-- w testach wyłącznie dane zmyślone
+- RLS na każdej tabeli; `anon` bez uprawnień; zapis przez funkcje; `if (warunek) is not true`.
+- Sekrety nigdy w kodzie, commitach, logach ani czacie; pliki poufne poza repozytorium (`D:\Watch Tower\dane\`, w Git Bash `"/d/Watch Tower/dane/"`); kwoty cennika tylko z bazy.
+- Strażnik paczki produkcyjnej: bez kwot cennika, danych osobowych, xlsx i danych demo. Progu nie luzujesz.
+- Testy na żywo tylko na bazie TEST; żadnych kont testowych na produkcji.
 
-## Baza danych
-- migracje numerowane kolejno; **nigdy nie zmieniasz migracji już
-  nałożonej na produkcję** — poprawka = nowa migracja
-- **migracja najpierw w gicie:** commit + push pliku w `supabase/migrations/`
-  **przed** nałożeniem na PROD; potem test w wycofanej transakcji →
-  `supabase db push` → lista migracji w repo = na produkcji
-- przed nałożeniem: test migracji na produkcji **w wycofanej transakcji**,
-  potem `supabase db push`, potem sprawdzenie, że lista migracji zgadza się
-  (i że wersje w `schema_migrations` to numery plików, nie same timestampy MCP)- po każdej zmianie: zestawy testów bazy — wszystkie muszą przejść
-
-## Front i wdrożenie
-- wygląd = makieta. Zmiana wyglądu tylko gdy wynika ze zlecenia
-- przed pushem: vitest, testy bazy, szybka brama wizualna. Pełna brama
-  wizualna (840 ujęć) co noc; odświeżenie wzorca tylko z opisem przyczyny
-  w `G4_WZORZEC.md`
-- po wdrożeniu: `tower.log-mar.pl` i domena zapasowa zwracają 200;
-  lokalny i zdalny HEAD ten sam
+## Wtyczki (MCP)
+- Supabase — tylko odczyt; bazę zmieniasz migracjami.
+- Resend — żadnej wysyłki poza testem na adres właściciela.
+- Vercel, Cloudflare — odczyt; zmiany tylko z planu.
 
 ## Język
-- dokumentacja i raporty po polsku, prostym językiem
-- teksty interfejsu w PL, EN, SV; polskie SMS bez ogonków
+Dokumenty, raporty i interfejs po polsku. Interfejs, SMS i e-maile tylko po polsku (E43). Polskie SMS bez ogonków.

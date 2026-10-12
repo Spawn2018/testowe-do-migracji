@@ -1,36 +1,23 @@
 ---
-description: Baza danych TOWER — migracje, reguły wierszy, funkcje
+description: Baza danych Watch Tower — migracje, reguły wierszy, funkcje, brama
 globs: supabase/**
 alwaysApply: false
 ---
-- nowa zmiana = **nowa migracja z kolejnym numerem**; nałożonej nigdy nie edytujesz
-- **Migracja najpierw w repozytorium:** plik w `supabase/migrations/` → **commit + push**
-  → dopiero potem nałożenie na PROD. Nigdy odwrotnie (MCP/`db push` bez pusha do gita
-  tworzy rozjazdy numerów vs timestampów w `schema_migrations`)
-- **BEZ ZIELONYCH TESTÓW BAZY ŻADNA MIGRACJA NIE WCHODZI NA PRODUKCJĘ**
-  (podstawowa brama: lokalny Postgres 17, `bash tests/db/gate.sh`, domyślnie localhost:5433.
-  Werdykt zielony, dopiero potem `supabase db push`)
-- **Brama lokalna jest podstawowa** (2026-10-04 13:31, doprecyzowane 13:35):
-  - przy zmianie w kodzie: szybkie testy aplikacji + tylko zestawy bazy dotknięte zmianą (minuty)
-  - pełna brama lokalna przed każdym wdrożeniem, które zawiera migrację
-  - gdy brama się kręci, następna pozycja planu na kolejnej gałęzi
-  - wdrożenie na produkcję od razu po scaleniu, także kilka razy dziennie, gdy brama jest zielona
-  - paczka dzienna tylko wtedy, gdy pełna brama lokalna okaże się wolna
-- **Baza TEST** `emkbykwenwrjmbprydml` tylko na niedzielną bramę tygodniową i ostateczne potwierdzenie przed wdrożeniem.
-  Na TEST nadal w częściach (`node scripts/test-db-gate-step.mjs` + `node scripts/test-db-gate-summary.mjs`, jedno zadanie max 40 min).
-  Wyniki w `tmp-gate/wyniki.json` (poza gitem); zielone tylko przy jednym commicie i jednej wersji migracji.
-  Nie uruchamiaj `node scripts/test-db-gate.mjs` bez filtra — pełny przebieg w jednym procesie jest wyłączony.
-  Produkcja `nglnnrmzmhusvxslousq` tylko przy wdrożeniu.
-- kolejność: testy bazy zielone → **commit + push migracji** → test na produkcji w
-  **wycofanej transakcji** → `supabase db push` → lista migracji w repo = na produkcji
-- każda nowa tabela: `enable row level security`, reguły dla ról, **zero uprawnień
-  dla `anon`**, test w zestawie bezpieczeństwa
-- nowa kolumna w `loads` wymaga osobnego nadania uprawnień
-- funkcje `security definer` z `set search_path`; warunki: `if (warunek) is not true`
-- zapis przez funkcje z wpisem w dzienniku audytu; `loads` bez DELETE; zdarzenia
-  tylko dopisywane
-- dane poufne (kwoty cennika) **nigdy w migracji** — skrypt czytający plik lokalny
-- zadanie cykliczne: sukces = zakończony wynik; zadanie w toku dłużej niż limit
-  → błąd i powiadomienie
-- bezpiecznik: skrypty `tests/db/*` odmawiają, gdy adres zawiera ref produkcji
-  `nglnnrmzmhusvxslousq` (`tests/db/refuse-prod.sh`)
+- Nowa zmiana = nowa migracja z następnym wolnym numerem (ustalanym przy rebase przed bramą końcową). Nałożonej migracji nigdy nie edytujesz.
+- **Kolejność:**
+  1. zestawy bazy dotknięte zmianą (`SUITES=a,b bash tests/db/gate.sh`);
+  2. przed wdrożeniem pełna brama lokalna `bash tests/db/gate.sh` (Postgres 17, `localhost:5433`);
+  3. potwierdzenie na TEST `emkbykwenwrjmbprydml` (zestawy `security`, `status`, `nullguard` + dotknięte; `scripts/test-db-gate-step.mjs`, jedno zadanie max 40 min);
+  4. **commit + push pliku migracji**;
+  5. próba na produkcji w transakcji z ROLLBACK;
+  6. `supabase db push`;
+  7. lista migracji w repozytorium = `schema_migrations` (numery, nie znaczniki czasu).
+- Nie uruchamiasz `node scripts/test-db-gate.mjs` bez filtra. Pełny przebieg TEST (w częściach) — w P0b, w każdą niedzielę (brama tygodniowa, `PLAN.md` §3) i w P11. Na czas bramy bez zmiany gałęzi i plików (G-15). Jedna brama TEST naraz (wpis „TEST zajęte / wolne” w `POSTEP.md` jako ślad); konta testowe odtwarzane po każdym `prep`.
+- Bezpiecznik: skrypty `tests/db/*` odmawiają adresu z ref produkcji `nglnnrmzmhusvxslousq` (`tests/db/refuse-prod.sh`).
+- Każda nowa tabela: `enable row level security`, reguły dla ról, zero uprawnień dla `anon`, test w zestawie bezpieczeństwa, wpis w liście kopii (`_shared/backup/core.ts`).
+- Nowa kolumna w `loads` wymaga osobnego nadania uprawnień.
+- Funkcje `security definer` z `set search_path`; warunki `if (warunek) is not true`; nowa funkcja dla `authenticated` → `function-allowlist.txt` i `null-guard-calls.txt`.
+- Zapis przez funkcje z wpisem w dzienniku audytu; `loads` bez DELETE; zdarzenia tylko dopisywane.
+- Dane jednorazowe (porządki, faza z pozycji, wgranie pliku) tylko z planu: migracja danych w jednej transakcji, liczenie przed zmianą, wyjątek przy za szerokim dopasowaniu, kopia w R2 przed produkcją. Wyzwalacze wysyłające powiadomienia wyłączone tylko w tej transakcji.
+- Dane poufne (kwoty cennika) **nigdy w migracji** — skrypt czytający plik lokalny.
+- Zadanie cykliczne: sukces = zakończony wynik; w toku dłużej niż limit → błąd i powiadomienie.

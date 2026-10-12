@@ -1,0 +1,129 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:12px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center}
+.h b{font:700 24px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}
+.tabs{display:flex;border-bottom:1px solid var(--rule)}.tabs span{padding:10px 12px;color:var(--ink-3)}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+.ph{font:600 12px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);padding:10px 14px 4px;display:flex;justify-content:space-between;gap:8px}
+.ph i{font-style:normal;letter-spacing:.02em;text-transform:none;font:500 12.5px var(--font-sans)}
+ol.st{list-style:none;margin:0;padding:0 14px 6px}
+ol.st li{display:grid;grid-template-columns:20px 1fr auto;gap:10px;padding:6px 0;border-bottom:1px solid var(--rule-2);align-items:start}
+ol.st li:last-child{border-bottom:0}
+.dot{width:14px;height:14px;border-radius:50%;margin-top:3px;border:2px solid var(--go);background:var(--go)}
+.dot.skip{background:transparent;border:2px dashed var(--rule)}
+.dot.next{background:transparent;border:2px solid var(--ink-3)}
+.dot.now{box-shadow:0 0 0 4px var(--go-bg)}
+li b{font-weight:600}li.sk{color:var(--ink-3)}li.nx{color:var(--ink-2)}
+li small{display:block;color:var(--ink-3);font-size:12.5px}
+.t{font-size:12.5px;color:var(--ink-2);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tag{font:600 11px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;margin-left:5px;color:var(--go)}
+.tag.man{color:var(--sea)}
+.foot{padding:10px 14px;border-top:1px solid var(--rule);display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:12.5px;color:var(--ink-3)}
+.btn{height:44px;padding:0 14px;border:1px solid var(--ink);background:var(--surface);color:var(--ink);font:600 14px var(--font-sans);display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;flex:none}
+.btn.pri{background:var(--ink);color:#fff}
+.dlg{width:440px;box-shadow:0 12px 32px rgba(14,26,36,.18)}
+.dlg .bd{padding:14px;display:flex;flex-direction:column;gap:12px}
+.lbl{font:600 12.5px var(--font-sans);color:var(--ink-2);margin-bottom:4px;display:block}
+.fld{height:44px;border:1px solid var(--rule);background:var(--surface);padding:0 12px;display:flex;align-items:center;justify-content:space-between;font-size:15px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.hint{background:var(--sea-bg);border-left:3px solid var(--sea);padding:8px 10px;font-size:13px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.hint u{font-weight:600;text-decoration:none;color:var(--sea);white-space:nowrap}
+.note{font-size:12.5px;color:var(--ink-3)}
+.info{background:var(--amber-bg);border-left:3px solid var(--amber);padding:8px 10px;font-size:13px}
+.act{display:flex;gap:8px;justify-content:flex-end;padding:12px 14px;border-top:1px solid var(--rule)}
+.cur{font-size:13px;color:var(--ink-2)}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);position:relative}
+.phone .h b{font-size:22px}
+.phone ol.st li{grid-template-columns:18px 1fr auto}
+.sheetm{border-top:1px solid var(--rule);box-shadow:0 -10px 28px rgba(14,26,36,.16);border-radius:16px 16px 0 0;background:var(--surface)}
+.grab{width:44px;height:5px;border-radius:3px;background:var(--rule);margin:8px auto 0}
+.dim{background:rgba(14,26,36,.35);height:120px}
+</style></head><body>
+<div class="sheet">
+  <div class="top"><h1>Statusy · prawy panel › Status · komputer</h1><span class="ex">Przykład · SG-03, zdarzenia z bazy, godziny polskie po poprawce przesunięcia o 2 h · „Dostarczone” to nowa reguła E26 · okno „Zmień status” to przykład ręcznej zmiany</span></div>
+
+  <div class="card" style="width:560px">
+    <div class="h"><b>SG-03</b><span class="pill go">Dostarczone</span><span style="flex:1"></span><span style="color:var(--ink-3)">15062/2026/OSL/GDA/P</span></div>
+    <div class="tabs"><span>Przegląd</span><span class="on">Status</span><span>Dokumenty</span><span>Ceny</span><span>Czat</span><span>Historia</span></div>
+    <div class="ph">Przygotowanie<i>bez śledzenia</i></div>
+    <ol class="st">
+      <li><span class="dot"></span><span><b>Zaplanowany</b><small>Import harmonogramu KSH · System // Watch Tower</small></span><span class="t">01.10, 21:43</span></li>
+      <li class="sk"><span class="dot skip"></span><span>Brak zasobów · Brak dokumentów<small>pominięte — awizacja od razu kompletna</small></span><span class="t">—</span></li>
+      <li><span class="dot"></span><span><b>Gotowy</b><span class="tag man">ręcznie</span><small>Awizacja i numery zleceń kompletne · H&amp;H Logistics</small></span><span class="t">05.10, 13:10</span></li>
+    </ol>
+    <div class="ph">W trasie<i>śledzenie włączone</i></div>
+    <ol class="st">
+      <li class="sk"><span class="dot skip"></span><span>Załadunek · Droga PL · Port PL · Na promie · Port SE<small>pominięte — naczepa podłączona dopiero w Szwecji</small></span><span class="t">—</span></li>
+      <li><span class="dot"></span><span><b>Droga SE</b><span class="tag">auto</span><small>Naczepa GD035YX podłączona w Szwecji</small></span><span class="t">05.10, 13:21</span></li>
+      <li><span class="dot"></span><span><b>Na placu</b><span class="tag">auto</span><small>Wjazd na „Plac budowy Stegra Boden”</small></span><span class="t">07.10, 08:35</span></li>
+      <li><span class="dot now"></span><span><b style="color:var(--go)">Dostarczone</b><span class="tag">auto</span><small>Wyjazd z placu po 3 h 44 min · śledzenie wyłączone · data realizacji usługi</small></span><span class="t">07.10, 12:19</span></li>
+    </ol>
+    <div class="ph">Rozliczenie<i>bez śledzenia</i></div>
+    <ol class="st">
+      <li class="nx"><span class="dot next"></span><span><b>Gotowe do fakturowania</b><small>Gdy SCX wgra CMR · zadanie „Wgraj CMR” u przewoźnika</small></span><span class="t">czeka</span></li>
+      <li class="nx"><span class="dot next"></span><span><b>Zafakturowano</b><small>Gdy transport trafi na fakturę</small></span><span class="t">—</span></li>
+    </ol>
+    <div class="foot"><span>Zmienia: SCX i administrator HHL. KSH i Operacje HHL: podgląd.</span><span class="btn">Zmień status</span></div>
+  </div>
+
+  <div class="card dlg">
+    <div class="h"><b style="font-size:20px">Zmień status · SG-03</b></div>
+    <div class="bd">
+      <span class="cur">Teraz: <b>Na placu</b> od 07.10, 08:35 · przykład, gdy automat nie zadziałał</span>
+      <div><span class="lbl">Nowy status</span><div class="fld">Dostarczone<span>▾</span></div></div>
+      <div class="row">
+        <div><span class="lbl">Data</span><div class="fld">07.10.2026</div></div>
+        <div><span class="lbl">Godzina (czas polski)</span><div class="fld">12:19</div></div>
+      </div>
+      <div class="hint"><span>Z GPS: wyjazd z placu 07.10, 12:19</span><u>Użyj</u></div>
+      <div class="info">Data dostawy to data realizacji usługi. Od niej liczą się kurs NBP, opłata paliwowa i tydzień faktury. Śledzenie wyłączy się od tej chwili.</div>
+      <div><span class="lbl">Notatka (opcjonalnie)</span><div class="fld" style="color:var(--ink-3)">np. potwierdzone telefonicznie z placem</div></div>
+      <span class="note">Nie wcześniej niż poprzedni status (07.10, 08:35) i nie później niż teraz. Cofnięcie statusu: tylko administrator HHL, z powodem.</span>
+    </div>
+    <div class="act"><span class="btn">Anuluj</span><span class="btn pri">Zapisz status</span></div>
+  </div>
+
+  <div style="width:100%;font:700 18px var(--font-cond);margin-top:4px">Telefon</div>
+  <div class="phone">
+    <div class="h"><b>SG-03</b><span class="pill go">Dostarczone</span></div>
+    <div class="ph">W trasie<i>śledzenie</i></div>
+    <ol class="st">
+      <li><span class="dot"></span><span><b>Droga SE</b><span class="tag">auto</span><small>Naczepa podłączona w Szwecji</small></span><span class="t">05.10<br>13:21</span></li>
+      <li><span class="dot"></span><span><b>Na placu</b><span class="tag">auto</span><small>Wjazd na plac w Boden</small></span><span class="t">07.10<br>08:35</span></li>
+      <li><span class="dot now"></span><span><b style="color:var(--go)">Dostarczone</b><span class="tag">auto</span><small>Wyjazd z placu po 3 h 44 min · śledzenie wyłączone</small></span><span class="t">07.10<br>12:19</span></li>
+    </ol>
+    <div class="ph">Rozliczenie</div>
+    <ol class="st">
+      <li class="nx"><span class="dot next"></span><span><b>Gotowe do fakturowania</b><small>Gdy SCX wgra CMR</small></span><span class="t">czeka</span></li>
+      <li class="nx"><span class="dot next"></span><span><b>Zafakturowano</b></span><span class="t">—</span></li>
+    </ol>
+    <div class="ph" style="padding-bottom:10px">Przygotowanie<i>rozwiń ▾</i></div>
+    <div class="foot" style="justify-content:stretch"><span class="btn" style="flex:1">Zmień status</span></div>
+  </div>
+
+  <div class="phone" style="background:var(--page)">
+    <div class="dim"></div>
+    <div class="sheetm">
+      <div class="grab"></div>
+      <div class="h" style="border-bottom:1px solid var(--rule)"><b style="font-size:20px">Zmień status</b></div>
+      <div class="bd" style="padding:14px;display:flex;flex-direction:column;gap:12px">
+        <span class="cur">Teraz: <b>Na placu</b> od 07.10, 08:35</span>
+        <div><span class="lbl">Nowy status</span><div class="fld">Dostarczone<span>▾</span></div></div>
+        <div class="row"><div><span class="lbl">Data</span><div class="fld">07.10.2026</div></div><div><span class="lbl">Godzina</span><div class="fld">12:19</div></div></div>
+        <div class="hint"><span>Z GPS: wyjazd z placu 12:19</span><u>Użyj</u></div>
+        <div class="info">Od tej daty: kurs NBP, opłata paliwowa, tydzień faktury. Śledzenie wyłączone.</div>
+      </div>
+      <div class="act" style="justify-content:stretch"><span class="btn" style="flex:1">Anuluj</span><span class="btn pri" style="flex:1">Zapisz</span></div>
+    </div>
+  </div>
+</div>
+</body></html>

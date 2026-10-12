@@ -1,0 +1,161 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:12px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 20px var(--font-cond)}.h .no{color:var(--ink-2);font:600 15px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}
+.bd{padding:14px;display:flex;flex-direction:column;gap:12px}
+.note{font-size:12.5px;color:var(--ink-3)}
+.tl{position:relative;height:118px;margin:6px 4px 0}
+.axis{position:absolute;left:0;right:0;top:64px;height:2px;background:var(--rule)}
+.seg{position:absolute;top:52px;height:26px;display:flex;align-items:center;justify-content:center;font:600 12px var(--font-sans);white-space:nowrap;overflow:hidden}
+.seg.wait{background:repeating-linear-gradient(90deg,var(--go-bg) 0 8px,transparent 8px 14px);border:1px dashed var(--go);color:var(--go)}
+.seg.on{background:var(--go);color:#fff}
+.seg.off{background:repeating-linear-gradient(135deg,var(--red-bg) 0 6px,#fff 6px 12px);border:1px solid var(--red);color:var(--red)}
+.tick{position:absolute;top:84px;font-size:12px;color:var(--ink-2);transform:translateX(-50%);text-align:center;white-space:nowrap}
+.tick b{display:block;font-weight:600}
+.flag{position:absolute;top:0;transform:translateX(-50%);font-size:12px;text-align:center;white-space:nowrap}
+.flag b{display:block;font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase}
+.flag:after{content:"";display:block;width:2px;height:22px;background:currentColor;margin:3px auto 0}
+.flag.go{color:var(--go)}.flag.red{color:var(--red)}.flag.sea{color:var(--sea)}
+.map{position:relative;height:300px;background:#EAF0F3;border-bottom:1px solid var(--rule)}
+.map .empty{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--rule);padding:10px 14px;text-align:center;box-shadow:0 6px 18px rgba(14,26,36,.08)}
+.map .empty b{display:block;font:700 18px var(--font-cond)}
+.cnt{display:flex;gap:6px;flex-wrap:wrap}.chip{height:32px;padding:0 10px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;color:var(--ink-2);white-space:nowrap}.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+ul.nx{list-style:none;margin:0;padding:0}ul.nx li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--rule-2);font-size:13.5px}ul.nx li:last-child{border-bottom:0}
+.warn{color:var(--amber-ink);font-weight:600}
+.strip{display:flex;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--rule);font-size:13.5px}
+.strip .ic{width:10px;height:10px;border-radius:50%;flex:none}
+.strip.pre{background:var(--surface-2)}.strip.pre .ic{border:2px solid var(--ink-3)}
+.strip.on{background:var(--go-bg);border-color:#B5D6CC}.strip.on .ic{background:var(--go);box-shadow:0 0 0 4px #fff}
+.strip.post{background:var(--surface-2)}.strip.post .ic{background:var(--ink-3)}
+.strip small{display:block;color:var(--ink-3);font-size:12.5px}
+table.r{border-collapse:collapse;width:100%;font-size:13px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 8px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+.y{color:var(--go);font-weight:700}.n{color:var(--red);font-weight:700}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column}
+.phone .h b{font-size:20px}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+</style></head><body>
+<div class="sheet">
+  <div class="top"><h1>E27 · Śledzenie: od 03:00 w dniu załadunku (wariant A, decyzja 21:43) do „Dostarczone” · komputer</h1>
+    <span class="ex">Przykład · SG-03, SG-15, SG-16, SG-24 i liczby pozycji z bazy 07.10 20:2x · „Dostarczone 12:19” według E26 · pasek „w trasie” w panelu to przykład · zmiany po Twoich decyzjach 20:57–21:51: dopasowanie jak dziś, tylko w oknie</span></div>
+
+  <!-- OKNO SG-03 -->
+  <div class="card" style="width:880px">
+    <div class="h"><b>Okno śledzenia · SG-03</b><span class="no">· 0005/09/S/2026</span><span class="pill go">Dostarczone</span><span style="flex:1"></span><span class="note">naczepa GD035YX · link: emtrack</span></div>
+    <div class="bd">
+      <div class="tl">
+        <div class="axis"></div>
+        <div class="flag sea" style="left:4%"><b>start</b>01.10, 03:00</div>
+        <div class="flag go" style="left:52%"><b>pierwsza pozycja</b>05.10, 13:21</div>
+        <div class="flag red" style="left:84%"><b>Dostarczone · stop</b>07.10, 12:19</div>
+        <div class="seg wait" style="left:4%;width:48%">dzień załadunku według planu · naczepa jeszcze bez pozycji</div>
+        <div class="seg on" style="left:52%;width:32%">280 pozycji przy SG-03</div>
+        <div class="seg off" style="left:84%;width:16%">dziś: +93 po dostawie</div>
+        <div class="tick" style="left:4%"><b>01.10</b>plan załadunku</div>
+        <div class="tick" style="left:52%"><b>05.10</b>śledzenie podłączone</div>
+        <div class="tick" style="left:84%"><b>07.10</b>wyjazd z placu</div>
+      </div>
+      <div class="note">Po zmianie pozycje po 12:19 nie trafiają już do SG-03. Dziś trafiają: o 20:23 naczepa była ok. 420 km na południe od placu (rejon Sundsvall), a Mapa pokazuje ją jako „SG-03 · na placu”. 93 zapisane już pozycje po dostawie (stan 20:2x, liczba rośnie) zostaną jednorazowo usunięte (zmiana danych, po Twojej akceptacji). 280 pozycji z przewozu zostaje przy transporcie jako dowód postoju i ETA, do 30 dni po dostawie (RODO, jak dziś).</div>
+    </div>
+  </div>
+
+  <!-- MAPA PO ZMIANIE -->
+  <div class="card" style="width:532px">
+    <div class="h"><b>Mapa · 07.10, 20:2x</b><span style="flex:1"></span><span class="note">pozycje co 2 min w ruchu, co 15 min na postoju</span></div>
+    <div class="map">
+      <svg viewBox="0 0 544 300" width="532" height="300" style="position:absolute;inset:0">
+        <polyline points="120,270 150,200 175,150" fill="none" stroke="#C9D5DD" stroke-width="3"/>
+        <polyline points="175,150 240,110" fill="none" stroke="#C9D5DD" stroke-width="3" stroke-dasharray="6 5"/>
+        <polyline points="240,110 300,70 360,30 420,18" fill="none" stroke="#C9D5DD" stroke-width="3"/>
+        <circle cx="120" cy="270" r="5" fill="#fff" stroke="#5A6B78" stroke-width="2"/><text x="130" y="274" font-size="11" fill="#5A6B78">Śrem</text>
+        <circle cx="175" cy="150" r="4" fill="#fff" stroke="#5A6B78" stroke-width="2"/><text x="120" y="146" font-size="11" fill="#5A6B78">Gdańsk</text>
+        <circle cx="240" cy="110" r="4" fill="#fff" stroke="#5A6B78" stroke-width="2"/><text x="250" y="114" font-size="11" fill="#5A6B78">Nynäshamn</text>
+        <circle cx="420" cy="18" r="5" fill="#fff" stroke="#5A6B78" stroke-width="2"/><text x="430" y="22" font-size="11" fill="#5A6B78">Boden</text>
+      </svg>
+      <div class="empty"><b>W trasie: 0</b><span class="note">SG-03 dostarczone 07.10, 12:19 — zniknęło z mapy</span></div>
+    </div>
+    <div class="bd">
+      <div class="cnt"><span class="chip on">W trasie · 0</span><span class="chip">Opóźnione · 0</span><span class="chip">Brak GPS · 0</span></div>
+      <div><span class="note">Najbliższe włączenia śledzenia</span>
+        <ul class="nx">
+          <li><span><b>08.10, 03:00</b> · SG-15, SG-16</span><span class="warn">brak naczepy → „Do zrobienia” SCX</span></li>
+          <li><span><b>16.10, 03:00</b> · SG-17, SG-18, SG-19</span><span class="warn">brak naczepy</span></li>
+          <li><span><b>21.10, 03:00</b> · SG-24</span><span>naczepa TGGG1111</span></li>
+        </ul></div>
+    </div>
+  </div>
+
+  <div class="sec">Panel transportu · pasek śledzenia nad zakładkami · zasady przypisania pozycji</div>
+
+  <div class="card" style="width:540px">
+    <div class="h"><b>Pasek śledzenia w panelu</b></div>
+    <div class="bd">
+      <div class="strip pre"><span class="ic"></span><span><b>SG-24 · Śledzenie włączy się 21.10 o 03:00</b><small>dzień załadunku z harmonogramu KSH (awizacji jeszcze nie ma) · naczepa TGGG1111</small></span></div>
+      <div class="strip on"><span class="ic"></span><span><b>Śledzenie trwa od 03:00 · ostatnia pozycja 2 min temu</b><small>Przykład · wyłączy się samo przy „Dostarczone”</small></span></div>
+      <div class="strip post"><span class="ic"></span><span><b>SG-03 · Śledzenie zakończone 07.10, 12:19 (Dostarczone)</b><small>ślad z przewozu: 05.10, 13:21 – 07.10, 12:19 · usunięty 06.11 (30 dni po dostawie)</small></span></div>
+      <div class="note">Ten sam pasek w Kokpicie, przy znaczniku na mapie i w PDF transportu. Grupa „W trasie” w zakładce Status (E17) ma te same godziny.</div>
+    </div>
+  </div>
+
+  <div class="card" style="width:872px">
+    <div class="h"><b>Kiedy pozycja naczepy trafia do transportu</b></div>
+    <table class="r">
+      <tr><th style="width:38%">Chwila pozycji</th><th style="width:12%">Zapis przy transporcie</th><th>Co widać</th></tr>
+      <tr><td>Przed 03:00 w dniu załadunku</td><td class="n">nie</td><td>Nic: brak znacznika, brak ETA z GPS, brak „Brak GPS”. W panelu „Śledzenie włączy się …”.</td></tr>
+      <tr><td>Od 03:00 w dniu załadunku do „Dostarczone”</td><td class="y">tak</td><td>Znacznik na Mapie, w Kokpicie i w panelu, ETA, strefy, statusy z GPS (E25). Cisza po jeździe: „Brak GPS” po 30 min (E15). Cisza na postoju: informacja „postój, brak sygnału od …”, bez alarmu (lokalizator w naczepie bez zasilania).</td></tr>
+      <tr><td>Auto już stoi w Śremie o 03:00</td><td class="y">tak</td><td>„Załadunek 03:00 · auto było w strefie przy włączeniu śledzenia”. Prawdziwej godziny przyjazdu nie znamy (SMS do Śremu: E42).</td></tr>
+      <tr><td>Od „Dostarczone” (auto albo ręcznie, z godziną)</td><td class="n">nie</td><td>Znacznik znika ze wszystkich map. Ślad z przewozu zostaje przy transporcie do 30 dni po dostawie.</td></tr>
+      <tr><td>Spóźnienie wobec okna KSH (załadunek albo rozładunek)</td><td class="y">tak</td><td>Śledzenie trwa dalej, aż do „Dostarczone”. Transport ma „Opóźniony”.</td></tr>
+      <tr><td>Dopasowanie (21:51: jak dziś)</td><td class="y">w oknie</td><td>Najpierw identyfikator z pola „Link śledzenia”, potem rejestracja naczepy. Bez wyboru z listy. Nowe jest tylko okno czasu.</td></tr>
+      <tr><td>Ta sama naczepa w kolejnym transporcie</td><td class="y">tak, do nowego</td><td>Pozycja trafia do transportu, którego okno trwa w tej chwili. Gdy dwa okna się nakładają, trafia do wcześniejszego niedostarczonego.</td></tr>
+      <tr><td>24 h po planowanej dostawie bez „Dostarczone”</td><td class="y">tak</td><td>Sprawa „Potwierdź dostawę SG-xx” w „Do zrobienia” SCX i HHL, z ostatnią pozycją. Śledzenie trwa do potwierdzenia.</td></tr>
+    </table>
+  </div>
+
+  <div class="sec">Telefon</div>
+
+  <div class="phone" style="min-height:640px">
+    <div class="h"><b>Mapa</b><span style="flex:1"></span><span class="chip on" style="height:28px">W trasie · 0</span></div>
+    <div class="map" style="height:300px">
+      <svg viewBox="0 0 372 300" width="372" height="300" style="position:absolute;inset:0">
+        <polyline points="80,270 105,200 120,150" fill="none" stroke="#C9D5DD" stroke-width="3"/>
+        <polyline points="120,150 165,110" fill="none" stroke="#C9D5DD" stroke-width="3" stroke-dasharray="6 5"/>
+        <polyline points="165,110 210,70 255,35 300,20" fill="none" stroke="#C9D5DD" stroke-width="3"/>
+        <circle cx="80" cy="270" r="5" fill="#fff" stroke="#5A6B78" stroke-width="2"/><circle cx="300" cy="20" r="5" fill="#fff" stroke="#5A6B78" stroke-width="2"/>
+      </svg>
+      <div class="empty"><b>W trasie: 0</b><span class="note">nikt nie jest teraz w trasie</span></div>
+    </div>
+    <div class="bd">
+      <span class="note">Najbliższe włączenia śledzenia</span>
+      <ul class="nx">
+        <li><span><b>08.10, 03:00</b><br>SG-15, SG-16</span><span class="warn">brak naczepy</span></li>
+        <li><span><b>16.10, 03:00</b><br>SG-17, SG-18, SG-19</span><span class="warn">brak naczepy</span></li>
+        <li><span><b>21.10, 03:00</b><br>SG-24</span><span>TGGG1111</span></li>
+      </ul>
+    </div>
+    <div class="nav"><span>Kokpit</span><span>Harmonogram</span><span>Ryzyka</span><span>Dokumenty</span><span class="on">Więcej</span></div>
+  </div>
+
+  <div class="phone" style="min-height:640px">
+    <div class="h"><span style="font:600 20px var(--font-sans);color:var(--ink-2)">←</span><b>SG-03</b><span class="pill go">Dostarczone</span></div>
+    <div class="bd">
+      <div class="strip post"><span class="ic"></span><span><b>Śledzenie zakończone 07.10, 12:19</b><small>Dostarczone · ślad z przewozu do 06.11</small></span></div>
+      <div style="display:flex;border-bottom:1px solid var(--rule);font-size:13.5px"><span style="padding:8px 8px;color:var(--ink-3)">Przegląd</span><span style="padding:8px 8px;font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)">Status</span><span style="padding:8px 8px;color:var(--ink-3)">Dok.</span><span style="padding:8px 8px;color:var(--ink-3)">Ceny</span><span style="padding:8px 8px;color:var(--ink-3)">Czat</span></div>
+      <div style="font:600 12px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);display:flex;justify-content:space-between"><span>W trasie</span><span style="text-transform:none;letter-spacing:0;font:500 12.5px var(--font-sans)">śledzenie 05.10, 13:21 – 07.10, 12:19</span></div>
+      <div class="note">Na telefonie pasek jest pod nagłówkiem panelu, nad zakładkami. Mapa i lista pokazują tylko transporty w oknie śledzenia.</div>
+    </div>
+  </div>
+</div>
+</body></html>

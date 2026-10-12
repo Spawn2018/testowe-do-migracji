@@ -1,0 +1,32 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="vendor/package/dist/leaflet.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&display=swap">
+<style>html,body{margin:0;font-family:Barlow,Arial}#m{position:absolute;inset:0}
+.lb{position:absolute;background:#fff;border:1px solid #3C4E5C;padding:1px 5px;font-size:12px;white-space:nowrap;color:#0E1A24}
+.ship{width:34px;height:34px;border-radius:50%;background:#245C87;border:3px solid #DCE7EE;box-shadow:0 2px 6px rgba(0,0,0,.3);position:relative}
+.ship:after{content:"";position:absolute;left:11px;top:7px;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:14px solid #fff;transform:rotate(-15deg)}
+.badge{position:absolute;right:-12px;top:-12px;min-width:24px;height:24px;border-radius:12px;background:#C97E12;color:#fff;font:700 14px Barlow;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+.tip{position:absolute;left:30px;top:-40px;background:#fff;border:1px solid #9AAAB6;padding:8px 10px;font-size:13px;line-height:1.45;box-shadow:0 6px 18px rgba(14,26,36,.15);white-space:nowrap}
+.tip b{font-size:14px}.ex{font:600 10px Barlow;letter-spacing:.08em;text-transform:uppercase;color:#A55A00;background:#FBEFD9;border:1px dashed #C97E12;padding:0 5px}
+</style></head><body><div id="m"></div>
+<script src="vendor/package/dist/leaflet.js"></script><script src="boden_data.js"></script>
+<script>
+const q=new URLSearchParams(location.search); const mode=q.get('mode');
+const map=L.map('m',{zoomControl:false,attributionControl:false});
+L.tileLayer('https://tower.log-mar.pl/tiles/logistics.day/{z}/{x}/{y}',{maxZoom:18}).addTo(map);
+if(mode==='boden'){
+  // nowa końcówka: HERE do Luleåvägen (tak jak dziś do 12:09), dalej przebieg SG-03 do miejsca rozładunku
+  const pre=ROUTE.filter(p=>p[0]<=65.7845);
+  const sg=SG.slice(5).map(p=>[p[1],p[2]]).concat(SG2.slice(0,2).map(p=>[p[1],p[2]]));
+  L.polyline(pre.concat(sg),{color:'#E5A544',weight:5,opacity:.95}).addTo(map);
+  L.marker(sg[sg.length-1],{icon:L.divIcon({className:'',html:'<span class="lb" style="right:10px;top:-10px">koniec trasy: miejsce rozładunku SG-03 (07.10, 08:35)</span>',iconSize:[0,0]})}).addTo(map);
+  L.marker([65.82178,21.78812],{icon:L.divIcon({className:'',html:'<span class="lb" style="right:10px;top:-10px">wjazd od północy (SG-03 czekało tu od 12:35)</span>',iconSize:[0,0]})}).addTo(map);
+  L.marker([65.8441,21.7623],{icon:L.divIcon({className:'',html:'<span class="lb" style="left:10px;top:-28px">droga 383 · Mjösjön</span>',iconSize:[0,0]})}).addTo(map);
+}
+if(mode==='ferry'){
+  const pos=[55.95,18.05];
+  L.marker(pos,{icon:L.divIcon({className:'',html:'<div class="ship"><span class="badge">3</span></div>',iconSize:[34,34],iconAnchor:[17,17]})}).addTo(map);
+  if(!q.has('notip')) L.marker(pos,{icon:L.divIcon({className:'',html:'<div class="tip"><b>Prom Wawel · 3 auta</b> <span class="ex">Przykład</span><br>rejs Gdańsk → Nynäshamn · 08.10, 18:00<br>SG-15 · SG-16 · SG-17<br><span style="color:#5A6B78">kliknij: lista transportów</span></div>',iconSize:[0,0]})}).addTo(map);
+}
+const b=q.get('b').split(',').map(Number); map.fitBounds([[b[0],b[1]],[b[2],b[3]]]);
+if(q.has('z')) map.setZoom(Number(q.get('z')));
+</script></body></html>

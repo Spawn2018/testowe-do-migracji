@@ -1,0 +1,154 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--surface-3:#EAEFF3;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;
+--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F8DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;flex-direction:column;gap:12px}
+.top{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.top h1{margin:0;font:700 24px var(--font-cond)}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px;display:inline-block}
+.row{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.cap{font:600 12px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.lbl{font:700 15px var(--font-cond);margin:0 0 6px}
+/* telefon */
+.ph{width:360px;height:760px;background:var(--page);border:1px solid #9AAAB6;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 6px 18px rgba(14,26,36,.12)}
+.tb{height:52px;background:var(--surface);border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:8px;padding:0 8px;flex:0 0 auto}
+.tb b{font:700 17px var(--font-cond);letter-spacing:.04em}
+.tb .sp{flex:1}
+.ib{width:44px;height:44px;border:1px solid var(--rule);display:grid;place-items:center;background:var(--surface-2);position:relative;font-size:16px}
+.ib .bd{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font:600 11px var(--font-cond);padding:0 4px;border-radius:7px}
+.scroll{flex:1;overflow:hidden;padding:8px;display:flex;flex-direction:column;gap:8px}
+.bar{height:60px;flex:0 0 auto;background:var(--surface);border-top:1px solid var(--rule);display:grid;grid-template-columns:repeat(5,1fr)}
+.bar span{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11.5px;color:var(--ink-3);gap:2px;position:relative}
+.bar span i{font-style:normal;font-size:17px;line-height:1}
+.bar span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--ink)}
+.bar span em{position:absolute;top:6px;left:calc(50% + 6px);font:600 11px var(--font-cond);font-style:normal;background:var(--red);color:#fff;padding:0 4px;border-radius:7px}
+.pn{background:var(--surface);border:1px solid var(--rule)}
+.pn .hd{padding:9px 11px;border-bottom:1px solid var(--rule-2);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.pn .hd b{font:700 18px var(--font-cond)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{background:var(--surface);border:1px solid var(--rule);padding:9px 10px;display:flex;flex-direction:column;gap:2px;min-height:96px}
+.tile .k{font-size:12.5px;color:var(--ink-3)}
+.tile .v{font:700 30px/1.05 var(--font-cond);white-space:nowrap}
+.tile .s{font-size:12px;color:var(--ink-3)}
+.tile.wide{grid-column:1/-1;min-height:auto}
+.tile.red .v{color:var(--red)}
+.tile.amber .v{color:var(--amber-ink)}
+.lst{display:flex;flex-direction:column}
+.it{display:grid;grid-template-columns:4px 1fr auto;gap:8px;padding:9px 10px;border-top:1px solid var(--rule-2);align-items:center;min-height:52px}
+.it i{align-self:stretch;background:var(--red)}
+.it i.a{background:var(--amber)}
+.it b{font-weight:600;font-size:14px}
+.it small{display:block;color:var(--ink-3);font-size:12.5px}
+.pill{font:600 12px var(--font-cond);letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border:1px solid;white-space:nowrap}
+.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}
+.pill.amber{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}
+.pill.grey{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}
+.pill.red{color:var(--red);border-color:var(--red);background:var(--red-bg)}
+.srch{display:flex;gap:6px}
+.inp{flex:1;height:44px;border:1px solid var(--rule);background:var(--surface);padding:0 10px;display:flex;align-items:center;color:var(--ink-3);font-size:16px}
+.btn{height:44px;padding:0 12px;border:1px solid var(--ink);background:var(--ink);color:#fff;font:600 14px var(--font-sans);display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.btn.ghost{background:var(--surface);color:var(--ink)}
+.btn.full{width:100%}
+.chips{display:flex;gap:6px;overflow:hidden;white-space:nowrap}
+.chip{height:44px;padding:0 12px;border:1px solid var(--rule);background:var(--surface);display:inline-flex;align-items:center;font-size:14px;flex:0 0 auto}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--rule);background:var(--surface)}
+.seg span{height:44px;display:grid;place-items:center;font-weight:600;color:var(--ink-3)}
+.seg span.on{background:var(--ink);color:#fff}
+.card{background:var(--surface);border:1px solid var(--rule);padding:10px 11px;display:flex;flex-direction:column;gap:4px}
+.card .r1{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.card .r1 b{font:700 17px var(--font-cond)}
+.card .m{font-size:13px;color:var(--ink-2)}
+.card .drv{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--ink-2);min-height:44px;border-top:1px solid var(--rule-2);margin-top:2px;padding-top:4px}
+.call{width:44px;height:44px;border:1px solid var(--go);color:var(--go);display:grid;place-items:center;background:var(--surface);flex:0 0 auto}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13px;font-variant-numeric:tabular-nums}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0;text-align:right}
+.note{font-size:12.5px;color:var(--ink-3)}
+.miss{color:var(--red);font-weight:600}
+</style></head><body>
+<div class="sheet">
+  <div class="top"><h1>Telefon 390 px · po zmianie</h1><span class="ex">Przykład układu · liczby i teksty z aplikacji 07.10 · nazwiska kierowców skrócone do inicjałów</span></div>
+  <div class="row">
+
+    <div>
+      <div class="lbl">Kokpit</div>
+      <div class="ph">
+        <div class="tb"><span class="ib">☰</span><b>WATCH TOWER</b><span class="sp"></span><span class="ib">◐</span><span class="ib">🔔<span class="bd">23</span></span></div>
+        <div class="scroll">
+          <div class="tiles">
+            <div class="tile red"><span class="k">Do zrobienia</span><span class="v">23</span><span class="s">22 transporty, 1 sprawa HHL</span></div>
+            <div class="tile"><span class="k">Transporty w drodze</span><span class="v">1</span><span class="s">0 dostarczonych · 93 w przygotowaniu</span></div>
+            <div class="tile"><span class="k">Komplet dokumentów</span><span class="v">0 z 94</span><span class="s">przed załadunkiem</span></div>
+            <div class="tile"><span class="k">Terminowość</span><span class="v">—</span><span class="s">6 dostaw poza oknem</span></div>
+            <div class="tile wide amber"><span class="k">Marża narastająco · prognoza</span><span class="v">144 392,63 PLN</span><span class="s">4,4 % · koszt 2 885 520,22 PLN</span></div>
+          </div>
+          <div class="pn">
+            <div class="hd"><b>Najpilniejsze</b><span class="note">z „Do zrobienia”</span></div>
+            <div class="lst">
+              <div class="it"><i></i><span><b>SG-05 · awizacja po terminie</b><small>od 01.10 · decyduje SCX</small></span><span class="pill red">2</span></div>
+              <div class="it"><i></i><span><b>SG-09 · awizacja po terminie</b><small>od 04.10 · decyduje SCX</small></span><span class="pill red">2</span></div>
+              <div class="it"><i class="a"></i><span><b>SEFS: brak źródła indeksu</b><small>HHL · termin 18.10</small></span><span class="pill amber">1</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="bar"><span class="on"><i>▦</i>Kokpit</span><span><i>☰</i>Harmonogram</span><span><i>⚠</i>Ryzyka<em>23</em></span><span><i>▤</i>Dokumenty</span><span><i>⋯</i>Więcej</span></div>
+      </div>
+      <div class="note" style="max-width:360px;margin-top:6px">Liczby jak dziś. „Do zrobienia 23” z E7 zamiast paska „+136 ryzyk”. Poprawność liczb: E9, E15, E16.</div>
+    </div>
+
+    <div>
+      <div class="lbl">Harmonogram</div>
+      <div class="ph">
+        <div class="tb"><span class="ib">☰</span><b>WATCH TOWER</b><span class="sp"></span><span class="ib">◐</span><span class="ib">🔔<span class="bd">23</span></span></div>
+        <div class="scroll">
+          <div class="seg"><span class="on">Transporty 94</span><span>Rejsy</span></div>
+          <div class="srch"><span class="inp">Szukaj: SG, zlecenie, kierowca</span><span class="btn ghost">Filtry</span><span class="btn ghost">⋯</span></div>
+          <div class="chips"><span class="chip on">Wszystkie 94</span><span class="chip">W drodze</span><span class="chip">Opóźnione</span><span class="chip">Bez dok…</span></div>
+          <div class="card"><div class="r1"><b>SG-01</b><span class="pill go">Rozładowany</span><span class="pill red">+21h05</span></div><div class="m">Słupy główne · 29.09 → 05.10</div><div class="drv"><span>Kierowca A. C. · odbiór i dostawa</span><span class="call">☎</span></div></div>
+          <div class="card"><div class="r1"><b>T-01</b><span class="pill grey">Planowany</span></div><div class="m">Tężniki · 30.09 → 05.10</div><div class="drv"><span class="miss">Brak kierowcy</span><span class="btn ghost" style="height:44px">Awizacja</span></div></div>
+          <div class="card"><div class="r1"><b>SG-03</b><span class="pill amber">Na placu</span></div><div class="m">Słupy główne · 01.10 → 07.10</div><div class="drv"><span>PL R. P. · <b>SE M. M.</b></span><span style="display:flex;gap:6px"><span class="call">☎</span><span class="call" style="background:var(--go);color:#fff">☎</span></span></div></div>
+        </div>
+        <div class="bar"><span><i>▦</i>Kokpit</span><span class="on"><i>☰</i>Harmonogram</span><span><i>⚠</i>Ryzyka<em>23</em></span><span><i>▤</i>Dokumenty</span><span><i>⋯</i>Więcej</span></div>
+      </div>
+      <div class="note" style="max-width:360px;margin-top:6px">Pierwsza karta na 1/3 ekranu (dziś na 687 z 844 px). Wgraj aktualizacje, Zapisz widok, Kolumny, Eksport pod „⋯”. Daty i 9 etapów pod „Filtry”.</div>
+    </div>
+
+    <div>
+      <div class="lbl">Finanse · marża według typu</div>
+      <div class="ph">
+        <div class="tb"><span class="ib">☰</span><b>WATCH TOWER</b><span class="sp"></span><span class="ib">◐</span><span class="ib">🔔<span class="bd">23</span></span></div>
+        <div class="scroll">
+          <div class="pn"><div class="hd"><b>Marża według typu elementu</b><span class="note">7 typów</span></div></div>
+          <div class="card"><div class="r1"><b>Słupy główne</b><span class="note">30 szt.</span></div><dl class="kv"><dt>Przychód</dt><dd>1 080 752,59 PLN</dd><dt>Koszt</dt><dd>1 029 288,18 PLN</dd><dt><b style="color:var(--ink)">Marża</b></dt><dd><b>51 464,41 PLN · 4,8 %</b></dd></dl></div>
+          <div class="card"><div class="r1"><b>Belki suwnicowe</b><span class="note">27 szt.</span></div><dl class="kv"><dt>Przychód</dt><dd>749 179,80 PLN</dd><dt>Koszt</dt><dd>713 447,87 PLN</dd><dt><b style="color:var(--ink)">Marża</b></dt><dd><b>35 731,92 PLN · 4,8 %</b></dd></dl></div>
+          <div class="card"><div class="r1"><b>Kratownice</b><span class="note">14 szt.</span></div><dl class="kv"><dt>Przychód</dt><dd>393 572,02 PLN</dd><dt>Koszt</dt><dd>374 830,49 PLN</dd><dt><b style="color:var(--ink)">Marża</b></dt><dd><b>18 741,52 PLN · 4,8 %</b></dd></dl></div>
+          <div class="note">… 4 kolejne typy. Dziś kolumny Marża i ostatnia są ucięte i nie da się ich przewinąć.</div>
+        </div>
+        <div class="bar"><span><i>▦</i>Kokpit</span><span><i>☰</i>Harmonogram</span><span><i>⚠</i>Ryzyka<em>23</em></span><span><i>▤</i>Dokumenty</span><span class="on"><i>⋯</i>Więcej</span></div>
+      </div>
+      <div class="note" style="max-width:360px;margin-top:6px">Kwoty z aplikacji 07.10. Która marża jest prawdziwa (4,8 % tu, 4,4 % w Kokpicie, 4,77 % w bazie) — E16.</div>
+    </div>
+
+    <div>
+      <div class="lbl">Dokumenty</div>
+      <div class="ph">
+        <div class="tb"><span class="ib">☰</span><b>WATCH TOWER</b><span class="sp"></span><span class="ib">◐</span><span class="ib">🔔<span class="bd">23</span></span></div>
+        <div class="scroll">
+          <div class="btn full">Wgraj dokument</div>
+          <div class="srch"><span class="inp" style="color:var(--ink)">Tydzień 41 (2026-W41) ▾</span><span class="btn ghost">Pobierz paczkę</span></div>
+          <div class="card"><div class="r1"><b>Zezwolenie PL</b><span class="pill red">20 po terminie</span></div><div class="m">Przewoźnik · 24 h przed załadunkiem</div><div class="drv"><span>Komplet <b>0 z 94</b></span><span class="btn ghost">Zmień</span></div></div>
+          <div class="card"><div class="r1"><b>CMR / list przewozowy</b><span class="pill red">15 po terminie</span></div><div class="m">Przewoźnik · do 2 h po załadunku</div><div class="drv"><span>Komplet <b>0 z 94</b></span><span class="btn ghost">Zmień</span></div></div>
+          <div class="card"><div class="r1"><b>Zezwolenie SE (dispens)</b></div><div class="m">Przewoźnik · 24 h przed promem</div><div class="drv"><span>Komplet <b>0 z 94</b></span><span class="btn ghost">Zmień</span></div></div>
+          <div class="card"><div class="r1"><b>Polisa OCP</b><span class="pill go">komplet</span></div><div class="m">Przewoźnik · ważna polisa</div><div class="drv"><span>Komplet <b>94 z 94</b></span><span class="btn ghost">Zmień</span></div></div>
+        </div>
+        <div class="bar"><span><i>▦</i>Kokpit</span><span><i>☰</i>Harmonogram</span><span><i>⚠</i>Ryzyka<em>23</em></span><span class="on"><i>▤</i>Dokumenty</span><span><i>⋯</i>Więcej</span></div>
+      </div>
+      <div class="note" style="max-width:360px;margin-top:6px">Dziś „Pobierz paczkę tygodnia” leży poza ekranem (424–491 px) i nie da się do niego dojść.</div>
+    </div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,218 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.h3{padding:9px 14px 4px;font:700 16px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+.facts{margin:0;padding:10px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:5px}
+.facts b{font-weight:600}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 9px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+table.r td.n,table.r th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.code{font-weight:700;white-space:nowrap}
+.note{font-size:12.5px;color:var(--ink-3)}
+.red{color:var(--red);font-weight:600}.grey{color:var(--ink-3)}.ok{color:var(--go);font-weight:600}
+.chip{height:32px;padding:0 11px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn{height:34px;padding:0 13px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-size:13.5px;background:#fff;white-space:nowrap}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn.sm{height:28px;font-size:12.5px;padding:0 9px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;position:relative}
+.phone .h b{font-size:20px}
+.pc{margin:6px 12px 0;border:1px solid var(--rule);padding:8px 11px;display:flex;flex-direction:column;gap:2px}
+.pc .t{font:700 16px var(--font-cond);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto;background:#fff}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.drow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--rule-2)}
+.drow .l b{font-weight:600}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field .lbl{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.inp{min-height:38px;border:1px solid var(--rule);padding:8px 10px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;background:#fff}
+.drop{border:1.5px dashed #9AAAB6;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;background:var(--surface-2)}
+.ph{font:700 26px var(--font-cond);display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:18px;padding:0 14px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3)}
+.tabs span{padding:9px 0}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+
+
+.ph .no{color:var(--amber);font-size:18px}.ph .nr{font:600 18px var(--font-cond);color:var(--ink-2)}.ph .miss{font:600 15px var(--font-cond);color:var(--red);letter-spacing:.02em}
+.wb{display:flex;gap:0;padding:4px 14px 10px;font-size:13px}.wb span{padding-right:14px;margin-right:14px;border-right:1px solid var(--rule-2)}.wb span:last-child{border:0}.wb b{display:block;font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.todo{margin:12px 14px 4px;border:1px solid var(--rule);border-left:4px solid var(--red);background:#fff}
+.todo .tt{padding:7px 11px;font:700 15px var(--font-cond);display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--rule-2)}
+.todo .it{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 11px;border-bottom:1px solid var(--rule-2);font-size:13px;align-items:center}
+.todo .it:last-child{border-bottom:0}.todo .it .w{font-size:12px;color:var(--ink-3)}
+.todo.am{border-left-color:var(--amber)}
+.mapbox{position:relative;margin:12px 14px 0;border:1px solid var(--rule);height:220px;overflow:hidden}
+.mapbox img{width:100%;height:100%;object-fit:cover}
+.ov{position:absolute;background:#fff;border:1px solid #9AAAB6;padding:6px 9px;font-size:12.5px;line-height:1.4;box-shadow:0 3px 10px rgba(14,26,36,.15)}
+.ov b{font:700 14px var(--font-cond)}
+.zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;border:1px solid #9AAAB6;background:#fff}.zoom span{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:16px;border-bottom:1px solid var(--rule-2)}.zoom span:last-child{border:0}
+.st{margin:14px 14px 4px;font:700 15px var(--font-cond);letter-spacing:.02em;display:flex;gap:8px;align-items:center}
+.st .who{font:500 13px var(--font-sans);color:var(--ink-3)}
+.kv{display:grid;grid-template-columns:128px 1fr;gap:5px 12px;padding:2px 14px 4px;font-size:13.5px}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0}
+.mono{font-family:var(--font-cond);font-weight:600;letter-spacing:.02em}
+.leg{margin:4px 14px;border:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:7px 10px;gap:10px}
+.leg .lt{font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.leg.now{border-left:4px solid var(--go);background:var(--go-bg)}
+.btn.call{color:var(--go);border-color:var(--go);font-weight:600}.btn.call.f{background:var(--go);color:#fff}
+.form{padding:10px 14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.grp{border:1px solid var(--rule);padding:8px 10px 0;margin-bottom:10px}
+.grp .gt{font:600 12px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+.inp.e{color:#9AAAB6}.inp.bad{border-color:var(--red);box-shadow:inset 3px 0 0 var(--red)}
+.chk{display:flex;gap:8px;align-items:center;font-size:13.5px;margin-bottom:4px}.chk i{width:16px;height:16px;border:1.5px solid var(--ink-2);display:inline-block}
+.bar{margin:0 14px;padding:8px 10px;font-size:13px;border:1px solid var(--red);background:var(--red-bg);color:var(--ink)}
+.bar b{color:var(--red)}
+ul.cmp{margin:0;padding:6px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.mbar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.mtabs{display:flex;gap:16px;padding:0 12px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden}
+.mtabs span{padding:10px 0}.mtabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+.acc{margin:6px 12px 0;border:1px solid var(--rule);padding:9px 11px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;min-height:44px}
+.acc b{font:700 15px var(--font-cond)}
+</style><style>
+table.m{border-collapse:collapse;width:100%;font-size:13.5px}
+table.m td,table.m th{padding:6px 14px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:top}
+table.m th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+table.m .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.m tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0}
+.fuel{margin:8px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:12.5px;background:var(--surface-2)}
+.fuel b{font:700 14px var(--font-cond)}
+.fee{margin:6px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.fee .k{font:700 14px var(--font-cond)}
+.rules{margin:6px 14px 12px;font-size:12.5px}
+.rules td{padding:3px 8px 3px 0;border-bottom:1px dotted var(--rule-2)}
+.calc{font-size:13px;background:var(--surface-2);border:1px solid var(--rule);padding:8px 10px;margin-bottom:10px;line-height:1.55}
+.calc b{font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.two div{border:1px solid var(--rule);padding:7px 9px;font-size:13px}
+.two div b{display:block;font:700 18px var(--font-cond)}
+</style>
+<style>
+.zg{padding:6px 14px 2px;font:700 13px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);background:var(--surface-2);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule-2)}
+.zr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 14px;border-bottom:1px solid var(--rule-2);font-size:13px}
+.zr .nm{font-weight:600}.zr .d{color:var(--ink-3);font-size:12.5px}
+.zr.sel{background:var(--go-bg);box-shadow:inset 4px 0 0 var(--go)}
+.hist{margin:0;padding:0 14px 10px;list-style:none;font-size:13px}
+.hist li{padding:6px 0;border-bottom:1px dotted var(--rule-2)}
+.hist b{font-weight:600}
+</style>
+</head><body>
+<div class="sheet">
+  <div class="top"><h1>E34 · Strefy · komputer i telefon</h1>
+    <span class="ex">„Dziś” — zrzuty 08.10, 01:19, konto Operacje HHL · „po zmianie” — strefy, zdarzenia, historia zmian i pozycje SG-03 z bazy 08.10</span></div>
+
+  <div class="sec">Dziś</div>
+  <div class="card" style="width:1002px">
+    <div class="h"><b>Strefy · Operacje HHL</b><span class="pill rd">edycja widoczna, baza nie zapisze</span><span class="pill am">bez mapy wszystkich stref</span></div>
+    <img src="now-d-s.png" width="1000" height="675" alt="">
+  </div>
+  <div class="card" style="width:262px">
+    <div class="h"><b>Telefon 390 px</b></div>
+    <img src="now-m.png" width="260" height="367" alt="">
+    <div class="cap">Widać 3 z 8 kolumn: nazwę, typ i kraj. Promienia, czasów i powiadomień nie widać.</div>
+  </div>
+  <div class="card" style="width:1428px">
+    <div class="h"><b>Fakty 08.10</b><span class="sub">kod, baza produkcji (tylko odczyt), zrzuty</span></div>
+    <ul class="facts">
+      <li><b>10 stref, wszystkie koła:</b> Śrem 600 m i bufor 50 km; terminal Gdańsk 600 m i bufor 20 km; terminal Gdynia 800 m i bufor 20 km; Nynäshamn 800 m; Karlskrona 800 m; plac Boden 1 000 m i bufor 50 km. Kolejność jest przypadkowa (wszystkie mają porządek 0, jedna 5). Nazwy z błędami: „Bufor 20 km przed Gdynia”, „Bufor przed Sremem”. Promień zapisany z kropką: „0.8 km”.</li>
+      <li><b>Co uruchamiają:</b> wjazd do Śremu daje „Załadunek” (z „Gotowy”), wyjazd „Droga PL”. Wjazd do terminalu PL daje „Port Gdańsk”, także w Gdyni. Wjazd do terminalu SE daje „Port Nynäshamn”, także w Karlskronie. Wjazd na plac daje „Na placu”. Bufor przed portem daje powiadomienie HHL (Automatyzacje). Bufory 50 km służą do SMS i do stanu „czeka przed placem”. Strony tego nie pokazują.</li>
+      <li><b>Port według trasy:</b> ETA bierze „pierwszy” terminal SE według porządku stref. Ten porządek jest wszędzie 0, więc nie wiadomo, czy dla trasy Stena liczy do Karlskrony, czy do Nynäshamn. To samo dotyczy terminalu PL.</li>
+      <li><b>Zmiany stref:</b> 06.10, 15:52 Administrator HHL przesunął strefę placu Boden o 1 449 m i zmniejszył ją z 1 500 do 1 000 m. O 15:55 przesunął ją jeszcze o 726 m, a bufor 50 km o 4 km, i ustawił powiadomienia. 05.10 zmniejszył terminal Gdańsk z 800 do 600 m. Strona nie pokazuje historii zmian ani powodu.</li>
+      <li><b>Poprawka do E15:</b> SG-03 zaparkował 06.10 o 12:35. Wtedy strefa placu była w innym miejscu i auto stało 756 m poza nią. „Ok. 9 m od granicy” to odległość od strefy narysowanej o 15:55. Nowej pozycji nie było do 07.10 08:33, więc zmiana strefy niczego nie przeliczyła. Wniosek E15 („czeka przed placem”) zostaje.</li>
+      <li><b>Zdarzenia stref:</b> jest ich 7 w całej bazie. 6 dotyczy SG-03: wyjazd ze Śremu ustalony przy podłączeniu w Szwecji, bufor Boden, wjazd na plac 07.10 08:35, pobyt, wyjazd 12:19. 1 dotyczy SG-24: bufor Gdańsk 01.10 z aplikacji kierowcy.</li>
+      <li><b>Uprawnienia i wygląd:</b> edytor otwiera się każdemu kontu HHL, ale baza zapisze tylko Administratora (E9: Operacje — podgląd). Kolumny „Histereza”, „Próbki” i „Postój” nie są wyjaśnione. Edytor ma rodzaje „Punkt kontrolny” i „Postój” oraz kraje Litwa i Niemcy, których nie ma w żadnej strefie. Jest „Usuń strefę”. Menu ma liczbę „10” (E9: bez liczby). Powiadomienia ustawia się przy strefie (KSH, SCX, HHL), osobno od Opcji › „Kto co dostaje” (E11).</li>
+    </ul>
+  </div>
+
+  <div class="sec">Po zmianie · komputer · Administrator HHL</div>
+  <div class="card" style="width:560px">
+    <div class="h"><b>Strefy</b><span class="sub">10 · według trasy</span><span style="flex:1"></span><span class="btn sm pri">+ Strefa</span></div>
+    <img src="map-over.webp" width="558" height="413" alt="" style="border-bottom:1px solid var(--rule)">
+    <div class="zg">Śrem · załadunek</div>
+    <div class="zr"><div><span class="nm">Bufor 50 km przed Śremem</span><div class="d">zbliżanie · SMS do Śremu (E42)</div></div><span class="d">—</span></div>
+    <div class="zr"><div><span class="nm">KSH Śrem · Grunwaldzka 27C</span><div class="d">600 m · wjazd → Załadunek · wyjazd → Droga PL · czas wolny 6 h</div></div><span class="d">SG-03 wyjazd 05.10</span></div>
+    <div class="zg">Gdańsk · Polferries → Nynäshamn</div>
+    <div class="zr"><div><span class="nm">Bufor 20 km przed Gdańskiem</span><div class="d">powiadomienie HHL (Automatyzacje)</div></div><span class="d">SG-24 wjazd 01.10</span></div>
+    <div class="zr"><div><span class="nm">Terminal Polferries Gdańsk</span><div class="d">600 m · wjazd → Port PL</div></div><span class="d">—</span></div>
+    <div class="zg">Gdynia · Stena → Karlskrona</div>
+    <div class="zr"><div><span class="nm">Bufor 20 km przed Gdynią</span><div class="d">powiadomienie HHL (Automatyzacje)</div></div><span class="d">—</span></div>
+    <div class="zr"><div><span class="nm">Terminal Stena Line Gdynia</span><div class="d">800 m · wjazd → Port PL</div></div><span class="d">—</span></div>
+    <div class="zg">Porty w Szwecji</div>
+    <div class="zr"><div><span class="nm">Terminal Nynäshamn</span><div class="d">800 m · trasa Polferries · wjazd → Port SE · wyjazd → Droga SE</div></div><span class="d">—</span></div>
+    <div class="zr"><div><span class="nm">Terminal Stena Line Karlskrona</span><div class="d">800 m · trasa Stena · wjazd → Port SE · wyjazd → Droga SE</div></div><span class="d">—</span></div>
+    <div class="zg">Boden · rozładunek</div>
+    <div class="zr"><div><span class="nm">Bufor 50 km przed Boden</span><div class="d">zbliżanie · SMS do Boden (E42) · „czeka przed placem” (E15)</div></div><span class="d">SG-03 wyjazd 07.10</span></div>
+    <div class="zr sel"><div><span class="nm">Plac budowy Stegra Boden</span><div class="d">1 000 m · wjazd → Na placu · wyjazd → Dostarczone (E26) · czas wolny 4 h</div></div><span class="d">SG-03 wyjazd 07.10</span></div>
+    <div class="cap">Ostatnie zdarzenie przy każdej strefie. Kolejność według trasy, a nie przypadkowa.</div>
+  </div>
+
+  <div class="card" style="width:852px">
+    <div class="h"><b>Plac budowy Stegra Boden</b><span class="pill go">Plac</span><span class="sub">Szwecja · koło 1 000 m · teraz w strefie: 0</span><span style="flex:1"></span><span class="btn sm pri">Zmień strefę</span><span class="btn sm">Wyłącz</span></div>
+    <img src="map-detail.png" width="850" height="472" alt="" style="border-bottom:1px solid var(--rule)">
+    <div class="two" style="padding:10px 14px 0;grid-template-columns:1fr 1fr 1fr">
+      <div><span class="lbl">Margines granicy</span><b>300 m</b>chroni przed fałszywym wjazdem i wyjazdem przy granicy (dziś „Histereza”)</div>
+      <div><span class="lbl">Potwierdzenie</span><b>2 pozycje</b>z rzędu w strefie albo poza nią (dziś „Próbki”)</div>
+      <div><span class="lbl">Pobyt</span><b>10 min</b>w strefie liczy się jako pobyt (dziś „Postój”)</div>
+    </div>
+    <div class="st">Co robi ta strefa</div>
+    <ul class="cmp" style="padding-top:0">
+      <li>Wjazd: status „Na placu” (E25) i SMS „wjazd” do odbiorców Boden (E42).</li>
+      <li>Wyjazd po co najmniej 10 min: „Dostarczone” i koniec śledzenia (E26, E27).</li>
+      <li>Postój ponad 4 h jest liczony do dopłaty (E33). Powiadomienia działają według Opcji › „Kto co dostaje” (E11).</li>
+    </ul>
+    <div class="st">Historia zmian</div>
+    <ul class="hist">
+      <li><b>06.10, 15:55 · Administrator HHL</b> · środek przesunięty o 726 m · powiadomienia: KSH, SCX, HHL · <span class="grey">powód: — (dziś pole nie istnieje)</span></li>
+      <li><b>06.10, 15:52 · Administrator HHL</b> · środek przesunięty o 1 449 m · promień 1 500 → 1 000 m</li>
+      <li><b>25.09 · utworzona</b> · promień 1 500 m</li>
+    </ul>
+    <div class="cap" style="padding-top:0">Kliknięcie wpisu pokazuje poprzedni kształt na mapie (szare i pomarańczowe koło). Punkty SG-03 pochodzą z pozycji GPS.</div>
+  </div>
+
+  <div class="sec">Po zmianie · zmiana strefy, kto co widzi, telefon</div>
+  <div class="card" style="width:500px">
+    <div class="h"><b>Zmiana strefy · Plac budowy Stegra Boden</b><span class="ex">odtworzenie 06.10 15:55</span></div>
+    <div class="form">
+      <div class="grid2"><div class="field"><span class="lbl">Środek</span><div class="inp">65,81273 N · 21,78898 E</div></div><div class="field"><span class="lbl">Promień</span><div class="inp">1 000 m</div></div></div>
+      <div class="field"><span class="lbl">Powód zmiany (wymagany)</span><div class="inp bad"><span class="grey">np. „wjazd na plac jest od północy”</span></div></div>
+      <div class="calc"><b>Wpływ na transporty w oknie śledzenia</b><br>SG-03 · ostatnia pozycja 06.10, 12:35 (postój)<br>przed zmianą: 738 m poza strefą · po zmianie: 9 m poza strefą<br>→ status bez zmian</div>
+      <div class="note" style="margin-bottom:10px">Według pytania 1 aplikacja od razu sprawdza ostatnią pozycję i zapisuje wjazd albo wyjazd z dopiskiem „zmiana strefy”. Takie wpisy nie wysyłają SMS.</div>
+      <div class="row" style="justify-content:flex-end"><span class="btn">Anuluj</span><span class="btn pri">Zapisz zmianę</span></div>
+    </div>
+  </div>
+  <div class="card" style="width:400px">
+    <div class="h"><b>Kto co widzi i robi</b></div>
+    <ul class="facts">
+      <li><b>HHL Administrator</b> dodaje, zmienia i wyłącza strefy. Podaje powód, a zmiana trafia do historii. Usunięcia nie ma, gdy strefa ma zdarzenia — jest wyłączenie.</li>
+      <li><b>HHL Operacje</b> tylko oglądają (E9). Przycisków edycji nie ma, tak jak w bazie.</li>
+      <li><b>KSH i SCX</b> nie mają menu Strefy. Na Mapie widzą warstwę „Strefy” z nazwami (E29).</li>
+      <li><b>Porty według trasy:</b> rejs Polferries — Gdańsk i Nynäshamn, rejs Stena — Gdynia i Karlskrona. Statusy i ETA biorą porty z rejsu transportu.</li>
+      <li><b>Zostaje 6 rodzajów, które działają.</b> „Punkt kontrolny” i „Postój” znikają, a w kraju tylko Polska i Szwecja.</li>
+      <li><b>Nazwy</b> są poprawione („przed Gdynią”, „50 km przed Śremem”), a liczby po polsku („0,8 km”). Menu nie ma liczby (E9).</li>
+    </ul>
+  </div>
+  <div class="phone">
+    <div class="mbar"><span style="font-size:20px">☰</span><span class="ph" style="font-size:22px">Strefy</span><span style="flex:1"></span><span class="sub grey">10</span></div>
+    <img src="map-over.webp" width="370" height="274" alt="" style="border-bottom:1px solid var(--rule)">
+    <div class="zg">Boden · rozładunek</div>
+    <div class="acc"><span><b>Plac budowy Stegra Boden</b><br><span class="grey" style="font-size:12.5px">1 000 m · ostatnio SG-03 07.10</span></span><span class="grey">›</span></div>
+    <div class="acc"><span><b>Bufor 50 km przed Boden</b><br><span class="grey" style="font-size:12.5px">zbliżanie · SMS do Boden</span></span><span class="grey">›</span></div>
+    <div class="zg" style="margin-top:6px">Śrem · załadunek</div>
+    <div class="acc"><span><b>KSH Śrem · Grunwaldzka 27C</b><br><span class="grey" style="font-size:12.5px">600 m · wjazd → Załadunek</span></span><span class="grey">›</span></div>
+    <div class="cap">Karty według miejsca. Stuknięcie otwiera mapę strefy, opis i historię na cały ekran. Administrator może tam też zmienić środek i promień.</div>
+  </div>
+</div>
+</body></html>

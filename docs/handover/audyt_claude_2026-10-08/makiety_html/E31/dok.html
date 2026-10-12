@@ -1,0 +1,155 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.h3{padding:9px 14px 4px;font:700 16px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+.facts{margin:0;padding:10px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:5px}
+.facts b{font-weight:600}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 9px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+table.r td.n,table.r th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.code{font-weight:700;white-space:nowrap}
+.note{font-size:12.5px;color:var(--ink-3)}
+.red{color:var(--red);font-weight:600}.grey{color:var(--ink-3)}.ok{color:var(--go);font-weight:600}
+.chip{height:32px;padding:0 11px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn{height:34px;padding:0 13px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-size:13.5px;background:#fff;white-space:nowrap}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn.sm{height:28px;font-size:12.5px;padding:0 9px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;position:relative}
+.phone .h b{font-size:20px}
+.pc{margin:6px 12px 0;border:1px solid var(--rule);padding:8px 11px;display:flex;flex-direction:column;gap:2px}
+.pc .t{font:700 16px var(--font-cond);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto;background:#fff}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.drow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--rule-2)}
+.drow .l b{font-weight:600}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field .lbl{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.inp{min-height:38px;border:1px solid var(--rule);padding:8px 10px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;background:#fff}
+.drop{border:1.5px dashed #9AAAB6;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;background:var(--surface-2)}
+.ph{font:700 26px var(--font-cond);display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:18px;padding:0 14px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3)}
+.tabs span{padding:9px 0}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+</style></head><body>
+<div class="sheet">
+  <div class="top"><h1>E31 · Dokumenty: strona i zakładka w panelu · komputer i telefon</h1>
+    <span class="ex">„Dziś” — zrzuty 08.10, 00:3x i dane z bazy · „po zmianie” — wymagania, polisa, liczby i kody z bazy; zezwolenia: wymiary z Twojej tabeli 07.10, numery i daty przykładowe</span></div>
+
+  <div class="sec">Dziś</div>
+  <div class="card" style="width:842px">
+    <div class="h"><b>Strona Dokumenty · komputer</b><span class="pill rd">0 / 94 · „Wgraj” = CMR do pierwszego transportu</span></div>
+    <img src="now-docs.png" width="840" height="511" alt="">
+  </div>
+  <div class="card" style="width:562px">
+    <div class="h"><b>Panel SG-03 › Dokumenty</b><span class="pill rd">bez listy braków</span></div>
+    <img src="now-panel.png" width="560" height="440" alt="">
+  </div>
+  <div class="card" style="width:262px">
+    <div class="h"><b>Telefon 390 px</b></div>
+    <img src="now-m.png" width="260" height="563" alt="">
+    <div class="cap">Tabela ucięta: widać 3 z 6 kolumn. Wybór tygodnia wychodzi poza ekran.</div>
+  </div>
+  <div class="card" style="width:1150px">
+    <div class="h"><b>Fakty 08.10</b></div>
+    <ul class="facts">
+      <li><b>Wymagania w bazie:</b> zezwolenie PL 24 h przed załadunkiem, zezwolenie SE 24 h przed promem, CMR do 2 h po załadunku i polisa przewoźnika. POD i zdjęcia mocowania są nieobowiązkowe. „Specyfikacja” KSH jest w bazie nieobowiązkowa, a strona pokazuje „Rysunek elementu” z kodu.</li>
+      <li><b>„0 / 94”</b> liczy też transporty z załadunkiem za kilka tygodni (62 po 15.10, 12 bez daty). Po terminie: zezwolenie PL 20, CMR 18. Zezwolenie SE ma termin tylko przy przypisanym rejsie, a rejs ma 1 z 94 transportów.</li>
+      <li><b>„Wgraj dokument”</b> na stronie zawsze zapisuje plik jako CMR do pierwszego transportu z listy, bez wyboru transportu i rodzaju. W panelu przycisk widzi każda firma, a rodzaj wybiera się sam (pierwszy brakujący albo CMR).</li>
+      <li><b>Panel SG-03:</b> nie ma listy wymaganych dokumentów ani braków. Jest polisa (auto), „Pobierz paczkę ZIP”, „Wgraj dokument” i „Zezwolenia transportu: brak”.</li>
+      <li><b>Pliki w bazie: 1</b> — certyfikat OCPD Scandinavian Express (07.10, 12:54), bez transportu, widoczny dla wszystkich firm. Zezwoleń 0, CMR 0. „Pliki w vault” pokazuje „brak”.</li>
+      <li><b>Polisy:</b> 2, obie SCX. 436000430439, ubezpieczyciel wpisany jako „Hstia”, 500 000 EUR, ważna do 29.03.2027, z plikiem. Druga, testowa „OCP-SCX-2026-WT” (5 mln EUR, bez pliku), idzie do E18. Polisy HHL (spedytora) nie ma.</li>
+      <li><b>„Zmień” terminy</b> widzi konto Operacje HHL. Według E9 ustawienia zmienia tylko Administrator.</li>
+      <li><b>Twoja tabela z 07.10</b> (wymiary, piloci, zezwolenia): „Firma” — zezwolenie podpina się samo pod transport, jak ubezpieczenie; „Trasa” — SCX dodaje je ręcznie do transportu (Kratownice, pilot PL + SE). W aplikacji tego nie ma.</li>
+    </ul>
+  </div>
+
+  <div class="sec">Po zmianie · komputer · HHL</div>
+  <div class="card" style="width:1156px">
+    <div class="h"><b>Dokumenty</b><span class="sub">wymagania, zezwolenia, polisy i pliki</span><span style="flex:1"></span><span class="btn pri">Wgraj dokument</span><span class="btn">Paczka tygodnia: t41 · 05.10–11.10 ▾</span></div>
+    <div class="h3">Wymagania przy transporcie</div>
+    <table class="r">
+      <tr><th>Dokument</th><th>Kto wgrywa</th><th>Termin</th><th class="n">Po terminie</th><th class="n">W ciągu 7 dni</th><th>Uwagi</th></tr>
+      <tr><td><b>Zezwolenie PL</b></td><td>SCX</td><td>24 h przed załadunkiem</td><td class="n red">20</td><td class="n">0</td><td class="grey">„Firma” podpina się samo, „Trasa” dodaje SCX przy transporcie</td></tr>
+      <tr><td><b>Zezwolenie SE</b></td><td>SCX</td><td>24 h przed promem</td><td class="n">0</td><td class="n">0</td><td class="grey">liczy się po przypisaniu rejsu (dziś 1 z 94)</td></tr>
+      <tr><td><b>CMR z załadunku</b> <span class="pill gr">pytanie 1</span></td><td>SCX</td><td>do 2 h po załadunku</td><td class="n red">18</td><td class="n">0</td><td class="grey">bez podpisu odbiorcy</td></tr>
+      <tr><td><b>CMR z podpisem odbiorcy</b></td><td>SCX</td><td>po „Dostarczone”, termin z Opcji</td><td class="n red">2</td><td class="n">—</td><td class="grey">po wgraniu status „Gotowe do fakturowania” (E25); SG-01, SG-03</td></tr>
+      <tr><td><b>Polisa OCP przewoźnika</b></td><td>SCX wpisuje, HHL zatwierdza</td><td>ważna w dniu transportu</td><td class="n">0</td><td class="n">—</td><td><span class="ok">436000430439 do 29.03.2027</span></td></tr>
+      <tr><td><b>Polisa OCS spedytora</b></td><td>HHL</td><td>ważna w dniu transportu</td><td class="n red">brak</td><td class="n">—</td><td class="grey">nowa: ubezpieczenie HHL obok polisy przewoźnika</td></tr>
+    </table>
+    <div class="cap">Liczą się tylko transporty, którym termin minął albo mija w ciągu 7 dni, a nie 0 / 94. Kliknięcie liczby pokazuje listę transportów. Terminy zmienia Administrator HHL w Opcjach › Zezwolenia i dokumenty (E12). Rysunku, POD i zdjęć mocowania nie ma na liście (19:11, 19:51).</div>
+    <div class="h3" style="display:flex;align-items:center;gap:10px">Zezwolenia <span class="ex">Przykład: numery i daty</span><span style="flex:1"></span><span class="btn sm">+ Zezwolenie firmowe</span></div>
+    <table class="r">
+      <tr><th>Rodzaj</th><th>Kraj</th><th>Numer</th><th>Ważne</th><th>Limity zestawu (D × S × W)</th><th>Dotyczy</th><th class="n">Transporty</th></tr>
+      <tr><td><span class="pill sea">Firma</span></td><td>PL</td><td>P/0000/2026</td><td>01.10–31.12.2026</td><td>21,69 × 2,45 × 3,75 m</td><td>Słupy główne (SG)</td><td class="n">30 · podpięte samo</td></tr>
+      <tr><td><span class="pill sea">Firma</span></td><td>SE</td><td>TRV 0000-2026</td><td>01.10–31.12.2026</td><td>21,69 × 2,45 × 3,75 m</td><td>Słupy główne (SG)</td><td class="n">30 · podpięte samo</td></tr>
+      <tr><td><span class="pill am">Trasa</span></td><td>PL + SE</td><td class="grey">przy transporcie</td><td class="grey">—</td><td>23,69 × 3,52 × 3,9 m · pilot PL + SE</td><td>Kratownice (KR)</td><td class="n">14 · dodaje SCX</td></tr>
+    </table>
+    <div class="cap">Dziś w bazie jest 0 zezwoleń. Wymiary i rodzaje są z Twojej tabeli z 07.10. Zezwolenie niezgodne z wymiarem zestawu blokuje „Gotowy”, tak jak dziś. Zezwolenie, które wygasa przed załadunkiem, trafia do Do zrobienia SCX.</div>
+    <div class="h3" style="display:flex;align-items:center;gap:10px">Pliki<span style="flex:1"></span><span class="chip">Tydzień: wszystkie ▾</span><span class="chip">Transport ▾</span><span class="chip">Rodzaj ▾</span></div>
+    <table class="r">
+      <tr><th>Plik</th><th>Dotyczy</th><th>Rodzaj</th><th>Wgrał</th><th>Widzą</th></tr>
+      <tr><td>Certyfikat-OCPD.pdf</td><td>Scandinavian Express (cała firma)</td><td>Polisa OCP</td><td>07.10, 12:54</td><td>HHL, KSH, SCX (pytanie 3)</td></tr>
+    </table>
+    <div class="cap">Nazwy plików i folderów w ZIP to kody (E41), np. „SG-03_CMR_podpisany.pdf”.</div>
+  </div>
+  <div class="card" style="width:256px">
+    <div class="h"><b>Każda firma</b></div>
+    <ul class="facts">
+      <li><b>SCX</b> wgrywa zezwolenia, CMR i swoją polisę. Widzi swoje braki z terminami.</li>
+      <li><b>HHL</b> widzi wszystko i wgrywa polisę OCS. Operacje mogą wgrać dokument za SCX (E9). Terminy zmienia tylko Administrator.</li>
+      <li><b>KSH</b> widzi CMR i zezwolenia swoich transportów oraz polisy według pytania 3. Nie wgrywa rysunków (19:11).</li>
+      <li><b>Telefon:</b> te same sekcje jako karty, a wgrywanie zdjęciem z aparatu.</li>
+    </ul>
+  </div>
+
+  <div class="sec">Po zmianie · panel, wgrywanie, telefon</div>
+  <div class="card" style="width:520px">
+    <div style="padding:12px 14px 8px"><div class="ph">SG-03 <span style="color:var(--amber);font-size:18px">·</span> <span style="font:600 18px var(--font-cond);color:var(--ink-2)">0005/09/S/2026</span> <span class="pill go">Dostarczone</span></div></div>
+    <div class="tabs"><span>Przegląd</span><span>Status</span><span class="on">Dokumenty</span><span>Ceny</span><span>Czat</span><span>Historia</span></div>
+    <div class="drow"><div class="l"><b>Zezwolenie PL</b><div class="red">brak · firmowe na „Słupy główne” nie wpisane</div></div><span class="pill gr">SCX</span></div>
+    <div class="drow"><div class="l"><b>Zezwolenie SE</b><div class="red">brak</div></div><span class="pill gr">SCX</span></div>
+    <div class="drow"><div class="l"><b>CMR z załadunku</b><div class="red">brak · po terminie od 01.10</div></div><span class="pill gr">SCX</span></div>
+    <div class="drow"><div class="l"><b>CMR z podpisem odbiorcy</b><div class="red">brak · po wgraniu „Gotowe do fakturowania”</div></div><span class="btn sm">Wgraj</span></div>
+    <div class="drow"><div class="l"><b>Polisa OCP przewoźnika</b><div class="ok">436000430439 · do 29.03.2027</div></div><span class="pill go">auto</span></div>
+    <div class="drow"><div class="l"><b>Polisa OCS spedytora</b><div class="red">brak · wgrywa HHL</div></div><span class="pill gr">HHL</span></div>
+    <div class="drow"><div class="l"><b>Inne pliki</b><div class="grey">brak</div></div><span class="btn sm">+ Dodaj</span></div>
+    <div class="row" style="padding:10px 14px"><span class="btn">Pobierz wszystkie (ZIP)</span></div>
+    <div class="cap">„Wgraj” jest tylko przy dokumentach, które ta firma może wgrać. SCX widzi „Wgraj” przy zezwoleniach i CMR.</div>
+  </div>
+  <div class="card" style="width:500px">
+    <div class="h"><b>Wgraj dokument</b><span style="flex:1"></span><span class="grey">✕</span></div>
+    <div style="padding:12px 14px">
+      <div class="field"><span class="lbl">Transport</span><div class="inp"><span><b>SG-15</b> · Słupy główne · załadunek 08.10</span><span class="grey">▾ szukaj: kod lub nr zlecenia</span></div></div>
+      <div class="field"><span class="lbl">Rodzaj</span><div class="inp"><span>Zezwolenie PL <span class="red">· brak, po terminie</span></span><span class="grey">▾</span></div><div class="note">Na górze listy są braki tego transportu.</div></div>
+      <div class="field"><span class="lbl">Zezwolenie</span><div class="row"><span class="chip on">Firma — dla wszystkich „Słupy główne”</span><span class="chip">Trasa — tylko ten transport</span></div></div>
+      <div class="field"><span class="lbl">Plik</span><div class="drop">Przeciągnij PDF lub zdjęcie albo <u>wybierz z dysku</u></div></div>
+      <div class="note" style="margin-bottom:10px">Zapisze się jako „Zezwolenie_PL_SG.pdf” i podepnie do 30 transportów „Słupy główne” w okresie ważności.</div>
+      <div class="row" style="justify-content:flex-end"><span class="btn">Anuluj</span><span class="btn pri">Wgraj</span></div>
+    </div>
+  </div>
+  <div class="phone" style="height:700px">
+    <div class="h"><b>Dokumenty</b><span class="sub">SCX</span></div>
+    <div style="padding:10px 12px"><span class="btn pri" style="width:100%;height:44px">Wgraj dokument lub zrób zdjęcie</span></div>
+    <div class="pc"><div class="t">Zezwolenie PL <span class="pill rd">20 po terminie</span></div><div class="note">24 h przed załadunkiem · wgraj firmowe na „Słupy główne”, żeby podpięło się samo</div></div>
+    <div class="pc"><div class="t">CMR z załadunku <span class="pill rd">18 po terminie</span></div><div class="note">do 2 h po załadunku</div></div>
+    <div class="pc"><div class="t">CMR z podpisem odbiorcy <span class="pill rd">2</span></div><div class="note">SG-01, SG-03 · po wgraniu „Gotowe do fakturowania”</div></div>
+    <div class="pc"><div class="t">Polisa OCP <span class="pill go">ważna</span></div><div class="note">436000430439 · do 29.03.2027</div></div>
+    <div class="nav"><span>Kokpit</span><span>Harmonogram</span><span>Ryzyka</span><span class="on">Dokumenty</span><span>Więcej</span></div>
+  </div>
+</div>
+</body></html>

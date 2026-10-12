@@ -1,0 +1,118 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F8DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.k{width:468px;background:var(--surface);border:1px solid var(--rule)}
+.k .hd{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.k .hd b{font:700 19px var(--font-cond)}.k .hd span{color:var(--ink-3);font-size:12.5px}
+.grid{display:grid;grid-template-columns:1fr 1fr}
+.t{padding:11px 14px 12px;border-bottom:1px solid var(--rule-2);border-right:1px solid var(--rule-2);min-height:104px;display:flex;flex-direction:column;gap:2px}
+.t:nth-child(2n){border-right:0}
+.t .l{font-size:12.5px;color:var(--ink-3);display:flex;justify-content:space-between;gap:6px}
+.t .l i{font-style:normal;color:var(--sea);font-weight:600}
+.t .v{font:700 32px/1.05 var(--font-cond);white-space:nowrap}
+.t .v small{font:600 15px var(--font-cond);color:var(--ink-3);margin-left:4px}
+.t .d{font-size:12.5px;color:var(--ink-2)}
+.red{color:var(--red)}.amb{color:var(--amber-ink)}.go{color:var(--go)}
+.ex2{font:600 10px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--amber-ink);border:1px dashed var(--amber);padding:0 4px;margin-left:4px}
+.foot{padding:8px 14px;font-size:12.5px;color:var(--ink-3)}
+.phone{width:360px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--page);display:flex;flex-direction:column;height:560px}
+.phone .bar{height:52px;background:var(--surface);border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:8px;padding:0 12px}
+.phone .bar b{font:700 17px var(--font-cond)}.phone .bar span{color:var(--ink-3);font-size:12px}
+.phone .body{flex:1;overflow:hidden;padding:10px}
+.phone .k{width:100%}
+.phone .t{min-height:96px;padding:10px 11px}
+.phone .t .v{font-size:28px}
+.nav{height:64px;background:var(--surface);border-top:1px solid var(--rule);display:grid;grid-template-columns:repeat(5,1fr)}
+.nav span{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11.5px;color:var(--ink-3);gap:3px;position:relative}
+.nav span i{font-style:normal;font-size:18px;line-height:1}
+.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.nav em{position:absolute;top:6px;left:56%;background:var(--red);color:#fff;font:600 11px var(--font-sans);font-style:normal;border-radius:9px;padding:0 5px;min-width:18px;text-align:center}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+</style></head><body>
+<div class="sheet">
+  <div class="top"><h1>Kokpit każdej firmy · komputer</h1><span class="ex">Przykład · liczby z bazy 07.10, 18:00 według nowych definicji (E25); „Do zrobienia” HHL z E7 (15:55); oznaczone „przykład” = liczba poglądowa</span></div>
+
+  <div class="k">
+    <div class="hd"><b>H&amp;H Logistics</b><span>Administrator · 07.10.2026</span></div>
+    <div class="grid">
+      <div class="t"><span class="l">W trasie<i>Mapa ›</i></span><span class="v">1</span><span class="d">na placu w Boden: SG-03</span></div>
+      <div class="t"><span class="l">Do zrobienia<i>Ryzyka ›</i></span><span class="v red">23</span><span class="d">22 transporty · 1 sprawa SEFS</span></div>
+      <div class="t"><span class="l">Załadunki w 7 dni<i>Harmonogram ›</i></span><span class="v">5</span><span class="d red">13 po dacie załadunku bez wyjazdu</span></div>
+      <div class="t"><span class="l">Zezwolenia na 7 dni<i>Dokumenty ›</i></span><span class="v amb">0<small>z 5</small></span><span class="d">transporty z zezwoleniem PL i SE</span></div>
+      <div class="t"><span class="l">Dostarczone · rozliczenie<i>Faktury ›</i></span><span class="v">1</span><span class="d">SG-01 czeka na podpisany CMR · 0 gotowych do faktury</span></div>
+      <div class="t"><span class="l">Marża (prognoza)<i>Finanse ›</i></span><span class="v">4,8<small>%</small></span><span class="d">144 392,63 PLN · ważona przychodem (E16)</span></div>
+    </div>
+    <div class="foot">Czas wykrycia odchylenia: <b>za mało danych</b> (2 z 5 zdarzeń w 30 dniach)</div>
+  </div>
+
+  <div class="k">
+    <div class="hd"><b>KSH</b><span>Użytkownik · 07.10.2026</span></div>
+    <div class="grid">
+      <div class="t"><span class="l">Dostarczone<i>Harmonogram ›</i></span><span class="v">1<small>z 94</small></span><span class="d">7 elementów · 20,7 t (SG-01)</span></div>
+      <div class="t"><span class="l">W trasie<i>Mapa ›</i></span><span class="v">1</span><span class="d">SG-03 na placu w Boden od 08:35</span></div>
+      <div class="t"><span class="l">Plan dostaw w 72 h<i>Harmonogram ›</i></span><span class="v">9</span><span class="d amb">1 w drodze · 8 jeszcze nie wyjechało</span></div>
+      <div class="t"><span class="l">Terminowość<i>›</i></span><span class="v">0<small>z 1</small></span><span class="d">SG-01: plan 05.10, dostawa 06.10</span></div>
+      <div class="t"><span class="l">Najbliższy prom<i>Ryzyka ›</i></span><span class="v" style="font-size:24px">08.10, 18:00</span><span class="d">Wawel GDN → NYN · fala 1,3 m · ryzyko niskie</span></div>
+      <div class="t"><span class="l">Faktury do sprawdzenia<i>Faktury ›</i></span><span class="v">0</span><span class="d">brak faktur HHL w systemie</span></div>
+    </div>
+    <div class="foot">KSH bez listy „Do zrobienia” (decyzja 19:11). Ceny dla KSH, bez kosztów przewoźnika i marży.</div>
+  </div>
+
+  <div class="k">
+    <div class="hd"><b>Scandinavian Express</b><span>Dyspozytor · 07.10.2026</span></div>
+    <div class="grid">
+      <div class="t"><span class="l">Do zrobienia<i>Ryzyka ›</i></span><span class="v red">12<span class="ex2">przykład</span></span><span class="d">awizacje, numery SCX, zezwolenia, CMR</span></div>
+      <div class="t"><span class="l">W trasie<i>Mapa ›</i></span><span class="v">1</span><span class="d">SG-03 na placu w Boden</span></div>
+      <div class="t"><span class="l">Załadunki w 7 dni<i>Harmonogram ›</i></span><span class="v">5</span><span class="d red">zezwolenia 0 z 5 · 13 po dacie załadunku</span></div>
+      <div class="t"><span class="l">Do zafakturowania<i>Faktury ›</i></span><span class="v">0</span><span class="d">1 czeka na podpisany CMR (SG-01) · tydz. 41</span></div>
+      <div class="t"><span class="l">Najbliższy prom<i>Ryzyka ›</i></span><span class="v" style="font-size:24px">08.10, 18:00</span><span class="d">Wawel GDN → NYN · fala 1,3 m, porywy 23 kn · ryzyko niskie</span></div>
+      <div class="t"><span class="l">Terminowość<i>›</i></span><span class="v">0<small>z 1</small></span><span class="d">SG-01: plan 05.10, dostawa 06.10</span></div>
+    </div>
+    <div class="foot">SCX Użytkownik: te same kafelki co Dyspozytor (decyzja 19:11).</div>
+  </div>
+
+  <div class="sec">Telefon · dolny pasek z decyzji E8</div>
+  <div class="phone">
+    <div class="bar"><b>Kokpit</b><span>H&amp;H Logistics · Administrator</span></div>
+    <div class="body"><div class="k"><div class="grid">
+      <div class="t"><span class="l">W trasie</span><span class="v">1</span><span class="d">na placu: SG-03</span></div>
+      <div class="t"><span class="l">Do zrobienia</span><span class="v red">23</span><span class="d">22 transporty · SEFS</span></div>
+      <div class="t"><span class="l">Załadunki 7 dni</span><span class="v">5</span><span class="d red">13 po terminie</span></div>
+      <div class="t"><span class="l">Zezwolenia 7 dni</span><span class="v amb">0<small>z 5</small></span><span class="d">PL i SE</span></div>
+      <div class="t"><span class="l">Dostarczone</span><span class="v">1</span><span class="d">czeka na CMR</span></div>
+      <div class="t"><span class="l">Marża</span><span class="v">4,8<small>%</small></span><span class="d">prognoza</span></div>
+    </div></div></div>
+    <div class="nav"><span class="on"><i>▦</i>Kokpit</span><span><i>☰</i>Harmonogram</span><span><i>⚠</i>Ryzyka<em>23</em></span><span><i>▤</i>Dokumenty</span><span><i>⋯</i>Więcej</span></div>
+  </div>
+  <div class="phone">
+    <div class="bar"><b>Kokpit</b><span>KSH · Użytkownik</span></div>
+    <div class="body"><div class="k"><div class="grid">
+      <div class="t"><span class="l">Dostarczone</span><span class="v">1<small>z 94</small></span><span class="d">7 elem. · 20,7 t</span></div>
+      <div class="t"><span class="l">W trasie</span><span class="v">1</span><span class="d">SG-03 na placu</span></div>
+      <div class="t"><span class="l">Plan dostaw 72 h</span><span class="v">9</span><span class="d amb">8 nie wyjechało</span></div>
+      <div class="t"><span class="l">Terminowość</span><span class="v">0<small>z 1</small></span><span class="d">SG-01 +1 dzień</span></div>
+      <div class="t"><span class="l">Najbliższy prom</span><span class="v" style="font-size:22px">08.10 18:00</span><span class="d">fala 1,3 m · niskie</span></div>
+      <div class="t"><span class="l">Faktury</span><span class="v">0</span><span class="d">do sprawdzenia</span></div>
+    </div></div></div>
+    <div class="nav"><span class="on"><i>▦</i>Kokpit</span><span><i>☰</i>Harmonogram</span><span><i>⚠</i>Ryzyka</span><span><i>▤</i>Dokumenty</span><span><i>⋯</i>Więcej</span></div>
+  </div>
+  <div class="phone">
+    <div class="bar"><b>Kokpit</b><span>Scandinavian Express · Dyspozytor</span></div>
+    <div class="body"><div class="k"><div class="grid">
+      <div class="t"><span class="l">Do zrobienia</span><span class="v red">12<span class="ex2">przykład</span></span><span class="d">awizacje, CMR</span></div>
+      <div class="t"><span class="l">W trasie</span><span class="v">1</span><span class="d">SG-03 na placu</span></div>
+      <div class="t"><span class="l">Załadunki 7 dni</span><span class="v">5</span><span class="d red">zezwolenia 0 z 5</span></div>
+      <div class="t"><span class="l">Do zafakturowania</span><span class="v">0</span><span class="d">1 czeka na CMR</span></div>
+      <div class="t"><span class="l">Najbliższy prom</span><span class="v" style="font-size:22px">08.10 18:00</span><span class="d">fala 1,3 m · niskie</span></div>
+      <div class="t"><span class="l">Terminowość</span><span class="v">0<small>z 1</small></span><span class="d">SG-01 +1 dzień</span></div>
+    </div></div></div>
+    <div class="nav"><span class="on"><i>▦</i>Kokpit</span><span><i>☰</i>Harmonogram</span><span><i>⚠</i>Ryzyka<em>12</em></span><span><i>▤</i>Dokumenty</span><span><i>⋯</i>Więcej</span></div>
+  </div>
+</div>
+</body></html>

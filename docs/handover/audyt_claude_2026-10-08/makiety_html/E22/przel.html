@@ -1,0 +1,203 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.h3{padding:9px 14px 4px;font:700 16px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+.facts{margin:0;padding:10px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:5px}
+.facts b{font-weight:600}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 9px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+table.r td.n,table.r th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.code{font-weight:700;white-space:nowrap}
+.note{font-size:12.5px;color:var(--ink-3)}
+.red{color:var(--red);font-weight:600}.grey{color:var(--ink-3)}.ok{color:var(--go);font-weight:600}
+.chip{height:32px;padding:0 11px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn{height:34px;padding:0 13px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-size:13.5px;background:#fff;white-space:nowrap}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn.sm{height:28px;font-size:12.5px;padding:0 9px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;position:relative}
+.phone .h b{font-size:20px}
+.pc{margin:6px 12px 0;border:1px solid var(--rule);padding:8px 11px;display:flex;flex-direction:column;gap:2px}
+.pc .t{font:700 16px var(--font-cond);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto;background:#fff}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.drow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--rule-2)}
+.drow .l b{font-weight:600}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field .lbl{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.inp{min-height:38px;border:1px solid var(--rule);padding:8px 10px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;background:#fff}
+.drop{border:1.5px dashed #9AAAB6;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;background:var(--surface-2)}
+.ph{font:700 26px var(--font-cond);display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:18px;padding:0 14px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3)}
+.tabs span{padding:9px 0}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+
+
+.ph .no{color:var(--amber);font-size:18px}.ph .nr{font:600 18px var(--font-cond);color:var(--ink-2)}.ph .miss{font:600 15px var(--font-cond);color:var(--red);letter-spacing:.02em}
+.wb{display:flex;gap:0;padding:4px 14px 10px;font-size:13px}.wb span{padding-right:14px;margin-right:14px;border-right:1px solid var(--rule-2)}.wb span:last-child{border:0}.wb b{display:block;font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.todo{margin:12px 14px 4px;border:1px solid var(--rule);border-left:4px solid var(--red);background:#fff}
+.todo .tt{padding:7px 11px;font:700 15px var(--font-cond);display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--rule-2)}
+.todo .it{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 11px;border-bottom:1px solid var(--rule-2);font-size:13px;align-items:center}
+.todo .it:last-child{border-bottom:0}.todo .it .w{font-size:12px;color:var(--ink-3)}
+.todo.am{border-left-color:var(--amber)}
+.mapbox{position:relative;margin:12px 14px 0;border:1px solid var(--rule);height:220px;overflow:hidden}
+.mapbox img{width:100%;height:100%;object-fit:cover}
+.ov{position:absolute;background:#fff;border:1px solid #9AAAB6;padding:6px 9px;font-size:12.5px;line-height:1.4;box-shadow:0 3px 10px rgba(14,26,36,.15)}
+.ov b{font:700 14px var(--font-cond)}
+.zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;border:1px solid #9AAAB6;background:#fff}.zoom span{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:16px;border-bottom:1px solid var(--rule-2)}.zoom span:last-child{border:0}
+.st{margin:14px 14px 4px;font:700 15px var(--font-cond);letter-spacing:.02em;display:flex;gap:8px;align-items:center}
+.st .who{font:500 13px var(--font-sans);color:var(--ink-3)}
+.kv{display:grid;grid-template-columns:128px 1fr;gap:5px 12px;padding:2px 14px 4px;font-size:13.5px}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0}
+.mono{font-family:var(--font-cond);font-weight:600;letter-spacing:.02em}
+.leg{margin:4px 14px;border:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:7px 10px;gap:10px}
+.leg .lt{font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.leg.now{border-left:4px solid var(--go);background:var(--go-bg)}
+.btn.call{color:var(--go);border-color:var(--go);font-weight:600}.btn.call.f{background:var(--go);color:#fff}
+.form{padding:10px 14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.grp{border:1px solid var(--rule);padding:8px 10px 0;margin-bottom:10px}
+.grp .gt{font:600 12px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+.inp.e{color:#9AAAB6}.inp.bad{border-color:var(--red);box-shadow:inset 3px 0 0 var(--red)}
+.chk{display:flex;gap:8px;align-items:center;font-size:13.5px;margin-bottom:4px}.chk i{width:16px;height:16px;border:1.5px solid var(--ink-2);display:inline-block}
+.bar{margin:0 14px;padding:8px 10px;font-size:13px;border:1px solid var(--red);background:var(--red-bg);color:var(--ink)}
+.bar b{color:var(--red)}
+ul.cmp{margin:0;padding:6px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.mbar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.mtabs{display:flex;gap:16px;padding:0 12px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden}
+.mtabs span{padding:10px 0}.mtabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+.acc{margin:6px 12px 0;border:1px solid var(--rule);padding:9px 11px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;min-height:44px}
+.acc b{font:700 15px var(--font-cond)}
+</style><style>
+table.m{border-collapse:collapse;width:100%;font-size:13.5px}
+table.m td,table.m th{padding:6px 14px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:top}
+table.m th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+table.m .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.m tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0}
+.fuel{margin:8px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:12.5px;background:var(--surface-2)}
+.fuel b{font:700 14px var(--font-cond)}
+.fee{margin:6px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.fee .k{font:700 14px var(--font-cond)}
+.rules{margin:6px 14px 12px;font-size:12.5px}
+.rules td{padding:3px 8px 3px 0;border-bottom:1px dotted var(--rule-2)}
+.calc{font-size:13px;background:var(--surface-2);border:1px solid var(--rule);padding:8px 10px;margin-bottom:10px;line-height:1.55}
+.calc b{font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.two div{border:1px solid var(--rule);padding:7px 9px;font-size:13px}
+.two div b{display:block;font:700 18px var(--font-cond)}
+</style>
+<style>
+.zg{padding:6px 14px 2px;font:700 13px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);background:var(--surface-2);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule-2)}
+.zr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 14px;border-bottom:1px solid var(--rule-2);font-size:13px}
+.zr .nm{font-weight:600}.zr .d{color:var(--ink-3);font-size:12.5px}
+.zr.sel{background:var(--go-bg);box-shadow:inset 4px 0 0 var(--go)}
+.hist{margin:0;padding:0 14px 10px;list-style:none;font-size:13px}
+.hist li{padding:6px 0;border-bottom:1px dotted var(--rule-2)}
+.hist b{font-weight:600}
+</style>
+<style>
+.shots{display:flex;gap:10px;padding:10px 14px;align-items:flex-start}
+.shots figure{margin:0;display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--ink-3)}
+.shots img{border:1px solid var(--rule)}
+.shots .ar{align-self:center;font-size:20px;color:var(--ink-3)}
+.strip{display:flex;align-items:center;gap:10px;padding:8px 14px;font-size:13.5px;border-bottom:1px solid var(--rule)}
+.strip.nv{background:var(--sea-bg);box-shadow:inset 4px 0 0 var(--sea)}
+.live{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--go)}.live i{width:8px;height:8px;border-radius:50%;background:var(--go);display:inline-block}
+.fb{margin:14px;border:1px solid var(--rule);border-left:4px solid var(--amber);padding:14px 16px;background:#fff;display:flex;flex-direction:column;gap:8px}
+.fb b{font:700 18px var(--font-cond)}
+.bellpop{margin:10px 14px;border:1px solid #9AAAB6;background:#fff;box-shadow:0 4px 12px rgba(14,26,36,.12)}
+.bellpop .it{padding:8px 12px;border-bottom:1px solid var(--rule-2);font-size:13px}.bellpop .it:last-child{border:0}
+.bellpop .it.new{background:var(--amber-bg)}
+</style>
+</head><body>
+<div class="sheet">
+  <div class="top"><h1>E22 · Aplikacja przeładowuje się sama — powrót do karty, wdrożenia, odświeżanie danych</h1>
+    <span class="ex">„Dziś” — symulacje na produkcji 08.10, 02:36–02:40 (konto Operacje HHL, 1366 px; ukrycie i pokazanie karty, brak pliku po wdrożeniu) i błędy przeglądarek z bazy · „Po zmianie” — wpisy w dzwonku i komunikat HHL to „Przykład”</span></div>
+
+  <div class="sec">Dziś · powrót do karty albo aplikacji na telefonie</div>
+  <div class="card" style="width:1428px">
+    <div class="shots">
+      <figure><img src="now-1.png" width="440" height="277" alt=""><span>1 · Harmonogram, wpisane „SG-0”</span></figure>
+      <span class="ar">→</span>
+      <figure><img src="now-2.png" width="440" height="277" alt=""><span>2 · po powrocie do karty: „Ładowanie danych…” przez ok. 3 s</span></figure>
+      <span class="ar">→</span>
+      <figure><img src="now-3.png" width="440" height="277" alt=""><span>3 · ekran zbudowany od nowa, 29 zapytań do bazy</span></figure>
+    </div>
+    <div class="cap">Biblioteka logowania (auth-js 2.117.1) przy każdym powrocie do karty ogłasza „zalogowano”. Aplikacja traktuje to jak nowe logowanie: zakrywa wszystko ekranem ładowania i pobiera dane od nowa. Na telefonie dzieje się to przy każdym przełączeniu aplikacji. Otwarte okno z wpisanym tekstem znika (cała aplikacja montuje się od nowa).</div>
+  </div>
+
+  <div class="sec">Dziś · wdrożenie przy otwartej karcie i odświeżanie danych</div>
+  <div class="card" style="width:470px">
+    <div class="h"><b>Po wdrożeniu</b><span class="sub">symulacja: plik spraw 404</span></div>
+    <div style="padding:10px 14px"><img src="now-404.png" width="440" height="276" alt="" style="border:1px solid var(--rule)"></div>
+    <div class="cap">Otwarta karta ma adresy starych plików. Przejście do Ryzyk (sprawy ładowane osobno) daje pustą stronę: bez paska, bez komunikatu. Pomaga tylko ręczne odświeżenie. Tak ładowanych części jest 30. Funkcja ponowienia <code>lazyRetry</code> istnieje, ale nikt jej nie używa.</div>
+  </div>
+  <div class="card" style="width:470px">
+    <div class="h"><b>Błędy u użytkowników</b><span class="sub">client_errors, bez sesji Claude</span></div>
+    <table class="r">
+      <tr><th>Dzień</th><th class="n">„Failed to fetch dynamically imported module”</th><th class="n">Wersji</th></tr>
+      <tr><td>29.09–04.10</td><td class="n">5</td><td class="n">—</td></tr>
+      <tr><td>05.10</td><td class="n red">27</td><td class="n">17</td></tr>
+      <tr><td>06.10</td><td class="n red">8</td><td class="n">5</td></tr>
+      <tr><td class="b">Razem</td><td class="n b">40</td><td></td></tr>
+    </table>
+    <div class="cap">Zasada wdrożeń: po każdym scaleniu, także kilka razy dziennie (AGENTS.md). Komunikat „Dostępna nowa wersja — odśwież” pojawia się tylko przy zmianie pliku sw.js, a zwykłe wdrożenie go nie zmienia.</div>
+  </div>
+  <div class="card" style="width:470px">
+    <div class="h"><b>Co odświeża się samo</b><span class="sub">130 s bez ruchu na Kokpicie</span></div>
+    <table class="r">
+      <tr><th>Dane</th><th>Dziś</th></tr>
+      <tr><td>Pozycje aut</td><td class="ok">co 60 s</td></tr>
+      <tr><td>Ślad promu, licznik kafelków</td><td class="ok">tak</td></tr>
+      <tr><td>Dzwonek</td><td class="red">nie</td></tr>
+      <tr><td>Statusy, Harmonogram</td><td class="red">nie</td></tr>
+      <tr><td>Sprawy (Do zrobienia, Ryzyka)</td><td class="red">nie</td></tr>
+      <tr><td>Dokumenty, faktury, ceny</td><td class="red">nie</td></tr>
+    </table>
+    <div class="cap">Reszta danych przychodzi tylko przy logowaniu, przy własnym zapisie albo przy powrocie do karty (przez przeładowanie wyżej). Aplikacja nie korzysta z powiadomień bazy o zmianach (Realtime).</div>
+  </div>
+
+  <div class="sec">Po zmianie · komputer · Operacje HHL</div>
+  <div class="card" style="width:940px">
+    <div class="strip nv"><b>Jest nowa wersja Watch Tower.</b> Odśwież, kiedy skończysz to, co robisz. Nic się nie zgubi. <span style="flex:1"></span><span class="btn sm">Odśwież teraz</span></div>
+    <div class="h"><b>Harmonogram</b><span class="sub">wersja 1 z 01.10, 21:43</span><span style="flex:1"></span><span class="live"><i></i>na żywo · 02:45</span></div>
+    <div class="row" style="padding:8px 14px;border-bottom:1px solid var(--rule)"><span class="inp" style="width:240px">SG-0</span><span class="chip">Opóźnione · 0</span><span class="chip">Bez dokumentów · 92</span><span style="flex:1"></span><span class="note">wpisany tekst i otwarte okno zostają po powrocie do karty</span></div>
+    <div class="bellpop">
+      <div class="it new"><b>SG-15</b> · brak awizacji przed załadunkiem — <span class="grey">przed chwilą</span> <span class="ex">Przykład</span></div>
+      <div class="it"><b>Stena Estelle</b> · możliwe odwołanie rejsu — fala 3,4 m <span class="grey">· 2 h temu</span></div>
+    </div>
+    <div class="cap">Dzwonek, statusy, sprawy i dokumenty zmieniają się same, gdy zmienią się w bazie (Realtime). Gdy połączenie się zrywa, aplikacja odświeża dane co minutę. Po powrocie do karty odświeża po cichu, bez ekranu ładowania. „Na żywo · 02:45” pokazuje czas ostatniego odświeżenia.</div>
+  </div>
+  <div class="card" style="width:470px">
+    <div class="h"><b>Zamiast pustej strony</b></div>
+    <div class="fb"><b>Ta część aplikacji zmieniła się po aktualizacji</b><span>Odśwież stronę, żeby ją otworzyć. Twoje zapisane dane są bezpieczne.</span><span class="btn pri" style="align-self:flex-start">Odśwież</span></div>
+    <div class="cap">Najpierw aplikacja sama próbuje raz pobrać nowy plik i przeładować się, jeśli nic nie jest wpisane. Dopiero gdy to się nie uda, pokazuje ten komunikat. Pasek u góry nigdy nie znika.</div>
+  </div>
+
+  <div class="card" style="width:1428px">
+    <div class="h"><b>Kiedy aplikacja ładuje się od nowa (po zmianie)</b></div>
+    <table class="r">
+      <tr><th>Sytuacja</th><th>Dziś</th><th>Po zmianie</th></tr>
+      <tr><td>Powrót do karty, przełączenie aplikacji na telefonie</td><td class="red">ekran ładowania ok. 3 s, wszystko od nowa</td><td class="ok">nic nie znika; dane odświeżają się w tle</td></tr>
+      <tr><td>Odnowienie sesji (co godzinę)</td><td>bez zmian na ekranie</td><td class="ok">bez zmian na ekranie</td></tr>
+      <tr><td>Nowe dane w bazie</td><td class="red">widać dopiero po powrocie do karty albo po zapisie</td><td class="ok">w ciągu sekund (Realtime), w razie przerwy co 60 s</td></tr>
+      <tr><td>Wdrożenie nowej wersji</td><td class="red">bez komunikatu; pusta strona przy przejściu do części ładowanej osobno</td><td class="ok">pasek „Jest nowa wersja”; po kliknięciu albo przy przejściu strony bez wpisanego tekstu — odświeżenie</td></tr>
+      <tr><td>Wylogowanie, zmiana konta, „Działaj jako”</td><td>ładowanie od nowa</td><td>ładowanie od nowa (jak dziś)</td></tr>
+    </table>
+  </div>
+</div>
+</body></html>

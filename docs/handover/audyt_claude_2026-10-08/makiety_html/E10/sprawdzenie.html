@@ -1,0 +1,182 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.h3{padding:9px 14px 4px;font:700 16px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+.facts{margin:0;padding:10px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:5px}
+.facts b{font-weight:600}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 9px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+table.r td.n,table.r th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.code{font-weight:700;white-space:nowrap}
+.note{font-size:12.5px;color:var(--ink-3)}
+.red{color:var(--red);font-weight:600}.grey{color:var(--ink-3)}.ok{color:var(--go);font-weight:600}
+.chip{height:32px;padding:0 11px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn{height:34px;padding:0 13px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-size:13.5px;background:#fff;white-space:nowrap}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn.sm{height:28px;font-size:12.5px;padding:0 9px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;position:relative}
+.phone .h b{font-size:20px}
+.pc{margin:6px 12px 0;border:1px solid var(--rule);padding:8px 11px;display:flex;flex-direction:column;gap:2px}
+.pc .t{font:700 16px var(--font-cond);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto;background:#fff}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.drow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--rule-2)}
+.drow .l b{font-weight:600}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field .lbl{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.inp{min-height:38px;border:1px solid var(--rule);padding:8px 10px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;background:#fff}
+.drop{border:1.5px dashed #9AAAB6;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;background:var(--surface-2)}
+.ph{font:700 26px var(--font-cond);display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:18px;padding:0 14px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3)}
+.tabs span{padding:9px 0}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+
+
+.ph .no{color:var(--amber);font-size:18px}.ph .nr{font:600 18px var(--font-cond);color:var(--ink-2)}.ph .miss{font:600 15px var(--font-cond);color:var(--red);letter-spacing:.02em}
+.wb{display:flex;gap:0;padding:4px 14px 10px;font-size:13px}.wb span{padding-right:14px;margin-right:14px;border-right:1px solid var(--rule-2)}.wb span:last-child{border:0}.wb b{display:block;font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.todo{margin:12px 14px 4px;border:1px solid var(--rule);border-left:4px solid var(--red);background:#fff}
+.todo .tt{padding:7px 11px;font:700 15px var(--font-cond);display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--rule-2)}
+.todo .it{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 11px;border-bottom:1px solid var(--rule-2);font-size:13px;align-items:center}
+.todo .it:last-child{border-bottom:0}.todo .it .w{font-size:12px;color:var(--ink-3)}
+.todo.am{border-left-color:var(--amber)}
+.mapbox{position:relative;margin:12px 14px 0;border:1px solid var(--rule);height:220px;overflow:hidden}
+.mapbox img{width:100%;height:100%;object-fit:cover}
+.ov{position:absolute;background:#fff;border:1px solid #9AAAB6;padding:6px 9px;font-size:12.5px;line-height:1.4;box-shadow:0 3px 10px rgba(14,26,36,.15)}
+.ov b{font:700 14px var(--font-cond)}
+.zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;border:1px solid #9AAAB6;background:#fff}.zoom span{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:16px;border-bottom:1px solid var(--rule-2)}.zoom span:last-child{border:0}
+.st{margin:14px 14px 4px;font:700 15px var(--font-cond);letter-spacing:.02em;display:flex;gap:8px;align-items:center}
+.st .who{font:500 13px var(--font-sans);color:var(--ink-3)}
+.kv{display:grid;grid-template-columns:128px 1fr;gap:5px 12px;padding:2px 14px 4px;font-size:13.5px}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0}
+.mono{font-family:var(--font-cond);font-weight:600;letter-spacing:.02em}
+.leg{margin:4px 14px;border:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:7px 10px;gap:10px}
+.leg .lt{font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.leg.now{border-left:4px solid var(--go);background:var(--go-bg)}
+.btn.call{color:var(--go);border-color:var(--go);font-weight:600}.btn.call.f{background:var(--go);color:#fff}
+.form{padding:10px 14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.grp{border:1px solid var(--rule);padding:8px 10px 0;margin-bottom:10px}
+.grp .gt{font:600 12px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+.inp.e{color:#9AAAB6}.inp.bad{border-color:var(--red);box-shadow:inset 3px 0 0 var(--red)}
+.chk{display:flex;gap:8px;align-items:center;font-size:13.5px;margin-bottom:4px}.chk i{width:16px;height:16px;border:1.5px solid var(--ink-2);display:inline-block}
+.bar{margin:0 14px;padding:8px 10px;font-size:13px;border:1px solid var(--red);background:var(--red-bg);color:var(--ink)}
+.bar b{color:var(--red)}
+ul.cmp{margin:0;padding:6px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.mbar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.mtabs{display:flex;gap:16px;padding:0 12px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden}
+.mtabs span{padding:10px 0}.mtabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+.acc{margin:6px 12px 0;border:1px solid var(--rule);padding:9px 11px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;min-height:44px}
+.acc b{font:700 15px var(--font-cond)}
+</style><style>
+table.m{border-collapse:collapse;width:100%;font-size:13.5px}
+table.m td,table.m th{padding:6px 14px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:top}
+table.m th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+table.m .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.m tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0}
+.fuel{margin:8px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:12.5px;background:var(--surface-2)}
+.fuel b{font:700 14px var(--font-cond)}
+.fee{margin:6px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.fee .k{font:700 14px var(--font-cond)}
+.rules{margin:6px 14px 12px;font-size:12.5px}
+.rules td{padding:3px 8px 3px 0;border-bottom:1px dotted var(--rule-2)}
+.calc{font-size:13px;background:var(--surface-2);border:1px solid var(--rule);padding:8px 10px;margin-bottom:10px;line-height:1.55}
+.calc b{font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.two div{border:1px solid var(--rule);padding:7px 9px;font-size:13px}
+.two div b{display:block;font:700 18px var(--font-cond)}
+</style>
+<style>
+.zg{padding:6px 14px 2px;font:700 13px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);background:var(--surface-2);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule-2)}
+.zr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 14px;border-bottom:1px solid var(--rule-2);font-size:13px}
+.zr .nm{font-weight:600}.zr .d{color:var(--ink-3);font-size:12.5px}
+.zr.sel{background:var(--go-bg);box-shadow:inset 4px 0 0 var(--go)}
+.hist{margin:0;padding:0 14px 10px;list-style:none;font-size:13px}
+.hist li{padding:6px 0;border-bottom:1px dotted var(--rule-2)}
+.hist b{font-weight:600}
+</style>
+<style>
+.shot{padding:10px 14px}.shot img{border:1px solid var(--rule);display:block}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:16px;padding:0 4px;border-radius:8px;background:#B32639;font:700 10px var(--font-cond)}
+.bell{position:relative;display:inline-flex;width:34px;height:30px;border:1px solid var(--rule);align-items:center;justify-content:center;background:#fff;font-size:16px}
+.bell .badge{position:absolute;top:-6px;right:-10px}
+.sw2{display:flex;gap:14px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--rule-2);font-size:13.5px}
+.sw2 .lab{width:120px;color:var(--ink-3);font-size:12.5px}
+.ratio{font:700 15px var(--font-cond)}
+td.v{white-space:nowrap;font-weight:600}
+</style>
+</head><body>
+<div class="sheet">
+  <div class="top"><h1>E10 · Niezależne sprawdzenie: fakty z raportu, punkty niesprawdzone (A3, B9) i kontrast</h1>
+    <span class="ex">Fakty sprawdził osobny agent, który nie przygotowywał raportu (tylko odczyt bazy i kodu, 08.10, 03:34–03:41) · Rejsy i kontrast: produkcja 08.10, 03:3x (konto Operacje HHL) · „Po zmianie” — tylko kolory</span></div>
+
+  <div class="sec">Fakty z raportu</div>
+  <div class="card" style="width:1428px">
+    <div class="h"><b>36 sprawdzonych twierdzeń</b><span class="sub">30 z listy + 6 wybranych przez sprawdzającego z E12, E18, E19, E23</span></div>
+    <table class="r">
+      <tr><th style="width:130px">Wynik</th><th style="width:70px" class="n">Ile</th><th>Szczegóły</th><th style="width:250px">Co zrobione</th></tr>
+      <tr><td class="v ok">Potwierdzone</td><td class="n">33</td><td>Liczby, godziny, definicje funkcji i widoków, uprawnienia, plan Supabase, zasady zapisu, przełączniki, ETA, pozycje SG-03, faktura i polisa testowa, SG-24, reguła „Transport anulowany”, „Przeczytali”. Różnice wynikały tylko z upływu czasu (np. sprawy otwarte 215 → 214).</td><td>—</td></tr>
+      <tr class="bad"><td class="v red">Błąd</td><td class="n">1</td><td><b>E18 P2:</b> 3 konta KSH „+tower-sec-…” opisane jako „bez hasła i bez logowania”. Naprawdę logowały się 05.10, jedno ustawiło hasło, a Administrator wszedł na nie przez „Działaj jako”. Skrypt usunął ich konta logowania, a wpisy w aplikacji zostały aktywne. Pusta data logowania wzięła się z połączenia z usuniętym kontem.</td><td>Poprawione w E18 (raport, plan, E18.md)</td></tr>
+      <tr class="bad"><td class="v red">Błąd</td><td class="n">1</td><td><b>E21:</b> „<code>toFixed</code> 33 razy w 17 plikach” liczyło tylko pliki .tsx. Naprawdę jest 63 razy w 22 plikach.</td><td>Poprawione w E21 (raport, E21.md)</td></tr>
+      <tr class="warn"><td class="v" style="color:var(--amber-ink)">Niepełne</td><td class="n">1</td><td><b>E12:</b> „zmiany roli bez zmiany” podane dla 07.10, a dotyczy to wszystkich 20 wpisów z 02.10–07.10. Mogą to być zapisy bez zmiany albo źle zapisywane „było”.</td><td>Uzupełnione w E12</td></tr>
+      <tr><td class="v grey">Uwagi</td><td class="n">—</td><td><b>E19:</b> role aplikacji mają prawa zapisu do słownika PostGIS, ale wyzwalacz „tylko do odczytu” (0031) je blokuje — sprawdzone. <b>E23:</b> pogoda morska zapisuje „OK” przy każdej odmowie DMI — już opisane w E23.</td><td>Dopisane w E19</td></tr>
+    </table>
+    <div class="cap">Wspólna przyczyna błędów: wniosek z jednego źródła bez drugiego sprawdzenia (połączenie tabel bez sprawdzenia, czy wiersz istnieje; liczenie w części plików). Lekcja dopisana do dziennika. Kod sprawdzany w repozytorium na commicie 9c4fa33, z którego jest ostatnie wdrożenie (07.10, 01:31).</div>
+  </div>
+
+  <div class="sec">Punkty, których wcześniej nie sprawdziłem</div>
+  <div class="card" style="width:470px">
+    <div class="h"><b>A3 · „Zmień ciągnik” u KSH</b><span class="chip fact" style="margin-left:auto">zrobione</span></div>
+    <table class="r">
+      <tr><td>Kod</td><td>Przycisk tylko dla HHL i SCX (<code>canEditResources</code>, <code>permissions.ts</code> l. 69–71; <code>ScheduleView.tsx</code> l. 951–967).</td></tr>
+      <tr><td>Baza</td><td>KSH nie ma zasady zmiany transportu: zmieniać mogą tylko HHL i przewoźnik (<code>loads_update_hhl</code>, <code>loads_update_carrier</code>).</td></tr>
+      <tr><td>Na koncie KSH</td><td class="grey">nie sprawdzone — brak konta KSH do logowania</td></tr>
+    </table>
+    <div class="cap">E30 i tak przenosi zmianę zasobów do Awizacji (E32), a przycisk znika z Harmonogramu.</div>
+  </div>
+  <div class="card" style="width:942px">
+    <div class="h"><b>B9 · Rejsy domyślnie przyszłe</b><span class="chip fact" style="margin-left:auto">zrobione</span></div>
+    <div class="shot"><img src="now-rejsy.png" width="912" height="185" alt=""></div>
+    <div class="cap">Harmonogram › Rejsy, 03:3x: „Przyszłe” jest włączone od wejścia, a pierwszy rejs to 08.10, 08:00 (<code>SailingsPanel.tsx</code> l. 35–36, 48). Zostają uwagi z E30: nagłówek „Rozkład Gdańsk ⇄ Nynäshamn” przy rejsach Steny z Gdyni i źródło „sail_src_STENA” (E21).</div>
+  </div>
+
+  <div class="sec">Kontrast (axe, 9 stron × komputer 1366 px i telefon 390 px, motyw domyślny)</div>
+  <div class="card" style="width:700px">
+    <div class="h"><b>3 miejsca poniżej normy</b><span class="sub">norma dla małego tekstu 4,5 : 1</span></div>
+    <table class="r">
+      <tr><th>Miejsce</th><th>Gdzie</th><th class="n">Dziś</th><th class="n">Po zmianie</th></tr>
+      <tr><td>Liczba w dzwonku (ciemny tekst na czerwonym, 10 px)</td><td>8 stron z 9 (bez Mapy), komputer i telefon</td><td class="n red">2,73</td><td class="n ok">6,46 (biały)</td></tr>
+      <tr><td>Legenda wykresu w Kokpicie (pomarańczowy na białym, 12 px)</td><td>Kokpit</td><td class="n red">3,24</td><td class="n ok">5,17 (#A55A00)</td></tr>
+      <tr><td>Nagłówek „HHL · ADMIN” w Opcjach (pomarańczowy na szarym)</td><td>Opcje</td><td class="n red">2,65</td><td class="n ok">znika (E12)</td></tr>
+    </table>
+    <div class="cap">Kolor #A55A00 jest już w palecie aplikacji: <code>--amber-ink</code>, <code>index.css</code> l. 10. Nie sprawdzone: motyw ciemny, panel transportu, okna i konta KSH i SCX. Do bramy wizualnej: test kontrastu na wszystkich stronach w obu motywach.</div>
+  </div>
+  <div class="card" style="width:340px">
+    <div class="h"><b>Dzwonek</b><span class="sub">komputer</span></div>
+    <div class="sw2"><span class="lab">Dziś</span><span class="bell">🔔<span class="badge" style="color:#0E1A24">40</span></span><span class="ratio red">2,73 : 1</span></div>
+    <div class="sw2"><span class="lab">Po zmianie</span><span class="bell">🔔<span class="badge" style="color:#fff">40</span></span><span class="ratio ok">6,46 : 1</span></div>
+    <div class="sw2" style="border:0"><span class="lab">Legenda Kokpitu</span><span style="color:#C97E12">— plan</span><span style="color:#A55A00;font-weight:600">— plan</span></div>
+  </div>
+  <div class="card" style="width:356px">
+    <div class="h"><b>Telefon</b><span class="sub">390 px</span></div>
+    <div style="padding:12px 14px"><div class="phone" style="width:320px">
+      <div class="h" style="padding:10px 12px;justify-content:space-between"><b>Watch Tower</b><span class="bell">🔔<span class="badge" style="color:#fff">40</span></span></div>
+      <div style="padding:12px;font-size:13px;color:var(--ink-3)">Ten sam dzwonek z białą liczbą. Pasek dolny według E8.</div>
+    </div></div>
+  </div>
+</div>
+</body></html>

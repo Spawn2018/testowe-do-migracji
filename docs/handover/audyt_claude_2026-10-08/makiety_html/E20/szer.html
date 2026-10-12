@@ -1,0 +1,211 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.h3{padding:9px 14px 4px;font:700 16px var(--font-cond)}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+.facts{margin:0;padding:10px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:5px}
+.facts b{font-weight:600}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 9px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+table.r td.n,table.r th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.code{font-weight:700;white-space:nowrap}
+.note{font-size:12.5px;color:var(--ink-3)}
+.red{color:var(--red);font-weight:600}.grey{color:var(--ink-3)}.ok{color:var(--go);font-weight:600}
+.chip{height:32px;padding:0 11px;border:1px solid var(--rule);display:inline-flex;align-items:center;font-size:13px;background:#fff;white-space:nowrap}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn{height:34px;padding:0 13px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-size:13.5px;background:#fff;white-space:nowrap}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.btn.sm{height:28px;font-size:12.5px;padding:0 9px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;position:relative}
+.phone .h b{font-size:20px}
+.pc{margin:6px 12px 0;border:1px solid var(--rule);padding:8px 11px;display:flex;flex-direction:column;gap:2px}
+.pc .t{font:700 16px var(--font-cond);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto;background:#fff}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.drow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--rule-2)}
+.drow .l b{font-weight:600}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field .lbl{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.inp{min-height:38px;border:1px solid var(--rule);padding:8px 10px;display:flex;align-items:center;justify-content:space-between;font-size:13.5px;background:#fff}
+.drop{border:1.5px dashed #9AAAB6;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;background:var(--surface-2)}
+.ph{font:700 26px var(--font-cond);display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:18px;padding:0 14px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3)}
+.tabs span{padding:9px 0}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+
+
+.ph .no{color:var(--amber);font-size:18px}.ph .nr{font:600 18px var(--font-cond);color:var(--ink-2)}.ph .miss{font:600 15px var(--font-cond);color:var(--red);letter-spacing:.02em}
+.wb{display:flex;gap:0;padding:4px 14px 10px;font-size:13px}.wb span{padding-right:14px;margin-right:14px;border-right:1px solid var(--rule-2)}.wb span:last-child{border:0}.wb b{display:block;font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.todo{margin:12px 14px 4px;border:1px solid var(--rule);border-left:4px solid var(--red);background:#fff}
+.todo .tt{padding:7px 11px;font:700 15px var(--font-cond);display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--rule-2)}
+.todo .it{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 11px;border-bottom:1px solid var(--rule-2);font-size:13px;align-items:center}
+.todo .it:last-child{border-bottom:0}.todo .it .w{font-size:12px;color:var(--ink-3)}
+.todo.am{border-left-color:var(--amber)}
+.mapbox{position:relative;margin:12px 14px 0;border:1px solid var(--rule);height:220px;overflow:hidden}
+.mapbox img{width:100%;height:100%;object-fit:cover}
+.ov{position:absolute;background:#fff;border:1px solid #9AAAB6;padding:6px 9px;font-size:12.5px;line-height:1.4;box-shadow:0 3px 10px rgba(14,26,36,.15)}
+.ov b{font:700 14px var(--font-cond)}
+.zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;border:1px solid #9AAAB6;background:#fff}.zoom span{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:16px;border-bottom:1px solid var(--rule-2)}.zoom span:last-child{border:0}
+.st{margin:14px 14px 4px;font:700 15px var(--font-cond);letter-spacing:.02em;display:flex;gap:8px;align-items:center}
+.st .who{font:500 13px var(--font-sans);color:var(--ink-3)}
+.kv{display:grid;grid-template-columns:128px 1fr;gap:5px 12px;padding:2px 14px 4px;font-size:13.5px}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0}
+.mono{font-family:var(--font-cond);font-weight:600;letter-spacing:.02em}
+.leg{margin:4px 14px;border:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:7px 10px;gap:10px}
+.leg .lt{font:600 11.5px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.leg.now{border-left:4px solid var(--go);background:var(--go-bg)}
+.btn.call{color:var(--go);border-color:var(--go);font-weight:600}.btn.call.f{background:var(--go);color:#fff}
+.form{padding:10px 14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.grp{border:1px solid var(--rule);padding:8px 10px 0;margin-bottom:10px}
+.grp .gt{font:600 12px var(--font-cond);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+.inp.e{color:#9AAAB6}.inp.bad{border-color:var(--red);box-shadow:inset 3px 0 0 var(--red)}
+.chk{display:flex;gap:8px;align-items:center;font-size:13.5px;margin-bottom:4px}.chk i{width:16px;height:16px;border:1.5px solid var(--ink-2);display:inline-block}
+.bar{margin:0 14px;padding:8px 10px;font-size:13px;border:1px solid var(--red);background:var(--red-bg);color:var(--ink)}
+.bar b{color:var(--red)}
+ul.cmp{margin:0;padding:6px 14px 12px 28px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.mbar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.mtabs{display:flex;gap:16px;padding:0 12px;border-bottom:1px solid var(--rule);font-size:13.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden}
+.mtabs span{padding:10px 0}.mtabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+.acc{margin:6px 12px 0;border:1px solid var(--rule);padding:9px 11px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;min-height:44px}
+.acc b{font:700 15px var(--font-cond)}
+</style><style>
+table.m{border-collapse:collapse;width:100%;font-size:13.5px}
+table.m td,table.m th{padding:6px 14px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:top}
+table.m th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+table.m .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.m tr.tot td{font-weight:700;border-top:2px solid var(--ink);border-bottom:0}
+.fuel{margin:8px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:12.5px;background:var(--surface-2)}
+.fuel b{font:700 14px var(--font-cond)}
+.fee{margin:6px 14px;border:1px solid var(--rule);padding:8px 10px;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.fee .k{font:700 14px var(--font-cond)}
+.rules{margin:6px 14px 12px;font-size:12.5px}
+.rules td{padding:3px 8px 3px 0;border-bottom:1px dotted var(--rule-2)}
+.calc{font-size:13px;background:var(--surface-2);border:1px solid var(--rule);padding:8px 10px;margin-bottom:10px;line-height:1.55}
+.calc b{font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.two div{border:1px solid var(--rule);padding:7px 9px;font-size:13px}
+.two div b{display:block;font:700 18px var(--font-cond)}
+</style>
+<style>
+.zg{padding:6px 14px 2px;font:700 13px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);background:var(--surface-2);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule-2)}
+.zr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 14px;border-bottom:1px solid var(--rule-2);font-size:13px}
+.zr .nm{font-weight:600}.zr .d{color:var(--ink-3);font-size:12.5px}
+.zr.sel{background:var(--go-bg);box-shadow:inset 4px 0 0 var(--go)}
+.hist{margin:0;padding:0 14px 10px;list-style:none;font-size:13px}
+.hist li{padding:6px 0;border-bottom:1px dotted var(--rule-2)}
+.hist b{font-weight:600}
+</style>
+<style>
+.tiles{display:flex;border-bottom:1px solid var(--rule)}
+.tiles div{flex:1;padding:6px 9px 7px;border-right:1px solid var(--rule-2);font-size:12px;color:var(--ink-2);white-space:nowrap}
+.tiles div b{display:block;font:700 18px var(--font-cond);color:var(--ink)}
+.tiles div.z b{color:#A8B6C1}
+.tb{display:flex;align-items:center;gap:10px;height:52px;padding:0 12px;background:#fff;border-bottom:1px solid var(--rule);white-space:nowrap}
+.tb .logo{display:flex;align-items:center;gap:7px;font:700 20px var(--font-cond);letter-spacing:.04em}
+.tb .logo i{width:20px;height:24px;background:linear-gradient(160deg,#1B6E5D,#2BB38F);clip-path:polygon(50% 0,100% 100%,0 100%);display:inline-block}
+.tb .proj{color:var(--ink-3);font-size:13.5px}
+.tb .sp{flex:1}
+.seg{display:flex;border:1px solid var(--rule)}.seg span{padding:4px 9px;font-size:12.5px;border-right:1px solid var(--rule)}.seg span:last-child{border:0}.seg span.on{background:var(--ink);color:#fff;font-weight:600}
+.tb .lbl2{font-size:12px;color:var(--ink-3)}
+.ib{width:34px;height:34px;border:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font:700 15px var(--font-cond);position:relative;background:#fff}
+.ib .bd{position:absolute;top:-7px;right:-8px;background:var(--red);color:#fff;font:700 11px var(--font-cond);padding:0 4px;min-width:17px;text-align:center}
+.ops2{display:flex;align-items:center;gap:8px;font-size:12px}
+.ops2 .wk{font:700 17px var(--font-cond)}
+.ops2 .cd{font:700 14px var(--font-cond)}
+.ops2 .vs{border-left:1px solid var(--rule);height:28px}
+.av{display:flex;align-items:center;gap:6px;border:1px solid var(--rule);padding:2px 7px 2px 3px;height:36px}
+.av .ini{width:28px;height:28px;background:var(--sea);color:#fff;font:700 12.5px var(--font-cond);display:flex;align-items:center;justify-content:center;border-radius:50%}
+.frame{border:1px solid #9AAAB6;background:var(--page)}
+.lay{display:flex}
+.lnav{width:186px;background:#fff;border-right:1px solid var(--rule);padding:8px 0;font-size:13.5px;flex:none}
+.lnav div{padding:8px 16px;color:var(--ink-2)}.lnav div.on{background:var(--surface-2);box-shadow:inset 3px 0 0 var(--amber);color:var(--ink);font-weight:600}
+.content{flex:1;min-width:0;padding:10px}
+table.r td,table.r th{padding:6px 7px}
+.ruler{display:flex;justify-content:space-between;font:600 11px var(--font-cond);color:var(--ink-3);padding:2px 4px;border-top:1px dashed var(--rule)}
+</style>
+</head><body>
+<div class="sheet">
+  <div class="top"><h1>E20 · Komputer: szerokości 1280–1920 px — Harmonogram i pasek górny</h1>
+    <span class="ex">„Dziś” — zrzuty produkcji 08.10, 02:12 (konto Operacje HHL; szerokości 1280, 1366, 1440, 1920 px) · „Po zmianie” — 1280 px; wiersze i liczby z makiety E30 (dane z bazy), osoba w pasku z E37 („Przykład”)</span></div>
+
+  <div class="sec">Dziś · 1366 px · Harmonogram</div>
+  <div class="card" style="width:1182px">
+    <img src="now-harm-1366.png" width="1180" height="270" alt="">
+    <div class="cap">17 kolumn (2104 px) w oknie 1154 px. Ostatnia kolumna („Marża”) jest przyklejona do prawej krawędzi okna. Przy 1366 px stoi na kolumnie „Kierowca”, tuż za „Status”, więc kwota wygląda jak część statusu.</div>
+  </div>
+  <div class="card" style="width:230px">
+    <div class="h"><b>Pomiary 02:12</b></div>
+    <table class="r">
+      <tr><th class="n">Ekran</th><th class="n">Okno tabeli</th><th>Pasek</th></tr>
+      <tr><td class="n">1280</td><td class="n">1068 / 2104</td><td class="red">logo i „Widok” w 2 liniach</td></tr>
+      <tr><td class="n">1366</td><td class="n">1154 / 2104</td><td>1 linia</td></tr>
+      <tr><td class="n">1440</td><td class="n">1228 / 2104</td><td>1 linia</td></tr>
+      <tr><td class="n">1920</td><td class="n">1708 / 2104</td><td>1 linia</td></tr>
+    </table>
+    <div class="cap">Przy każdej szerokości tabela przewija się w bok, a „Marża” stoi na innej kolumnie.</div>
+  </div>
+  <div class="card" style="width:1282px">
+    <img src="now-top-1280.png" width="1280" height="56" alt="">
+    <div class="cap">1280 px: „WATCH TOWER” łamie się na dwie linie (67 px wysokości), tak samo przyciski „H&amp;H Logistics” i „Scandinavian Express”. Audyt z 06.10 mówił odwrotnie: łamało się przy 1366, a przy 1280 nie. Dziś przy 1366 jest jedna linia.</div>
+  </div>
+
+  <div class="sec">Po zmianie · 1280 px (najmniejszy komputer) · Operacje HHL</div>
+  <div class="frame" style="width:1282px">
+    <div class="tb">
+      <span class="logo"><i></i>WATCH TOWER</span><span class="proj">Stegra Boden</span>
+      <span class="sp"></span>
+      <span class="lbl2">Podgląd</span><span class="seg"><span class="on">HHL</span><span>KSH</span><span>SCX</span></span>
+      <span class="ops2"><span class="vs"></span><span class="wk">t41</span><span>⛴</span><span style="display:flex;flex-direction:column;line-height:1.2"><span><span class="cd">5 h 48 min</span> Stena 08:00 · Gdynia</span><span><span class="cd" style="font-size:12.5px">15 h 48 min</span> Wawel 18:00 · Gdańsk</span></span><span class="vs"></span><span class="cd" style="font-size:15px">08.10.2026</span></span>
+      <span class="ib">?</span><span class="ib">🔔<span class="bd">40</span></span>
+      <span class="av"><span class="ini">AN</span><span class="grey">▾</span></span>
+    </div>
+    <div class="tiles">
+      <div>Przygotowanie<b>92</b></div><div class="z">Załadunek<b>0</b></div><div class="z">Droga PL<b>0</b></div><div class="z">Port PL<b>0</b></div><div class="z">Prom<b>0</b></div><div class="z">Port SE<b>0</b></div><div class="z">Droga SE<b>0</b></div><div class="z">Plac Boden<b>0</b></div><div>Dostarczone<b>2</b></div><div class="z">Rozliczenie<b>0</b></div>
+    </div>
+    <div class="lay">
+      <div class="lnav"><div>Kokpit</div><div>Mapa</div><div class="on">Harmonogram</div><div>Ryzyka</div><div>Dokumenty</div><div>Finanse</div><div>Faktury</div><div>Automatyzacje</div><div>Strefy</div><div>Opcje</div><div class="grey" style="margin-top:8px">« zwiń</div></div>
+      <div class="content">
+        <div class="card">
+          <div class="h"><b>Harmonogram</b><span class="sub">wersja 1 z 01.10, 21:43</span><span style="flex:1"></span><span class="chip on">Transporty</span><span class="chip">Rejsy</span><span class="chip">Kolumny</span><span class="chip">Więcej ▾</span></div>
+          <div class="row" style="padding:8px 12px;border-bottom:1px solid var(--rule)">
+            <span class="inp" style="width:230px">Szukaj: kod, nr, kierowca, tablice</span><span class="inp">Załadunek: t40–t41 ▾</span><span class="chip">Opóźnione · 0</span><span class="chip">Bez dokumentów · 92</span><span class="chip">Bez kierowcy · 90</span><span style="flex:1"></span><span class="note">20 z 94</span>
+          </div>
+          <table class="r" style="font-size:13px">
+            <tr><th>Transport</th><th>Ładunek</th><th>Załadunek → dostawa</th><th>Status</th><th>Kierowca i zestaw</th><th>ETA Boden</th><th>Dokumenty</th><th class="n">Przychód (EUR)</th></tr>
+            <tr><td class="code">SG-01 <span style="color:var(--amber)">·</span><div style="font-weight:500">0002/09/S/2026</div></td><td>Słupy główne · 7 szt.<div class="grey">18,21 × 2,45 × 2,45 · 20,74 t</div></td><td>29.09 → 05.10</td><td><span class="pill go">Dostarczone</span><div class="grey">06.10</div></td><td>A. C. ☎<div class="grey">WPR6303P · GD9792X</div></td><td class="grey">dostarczono</td><td class="red">brak CMR z podpisem<div class="grey" style="font-weight:400">wgrywa SCX</div></td><td class="n">8 259,30<div class="grey">marża 4,8%</div></td></tr>
+            <tr><td class="code">SG-03 <span style="color:var(--amber)">·</span><div style="font-weight:500">0005/09/S/2026</div></td><td>Słupy główne · 7 szt.<div class="grey">18,21 × 2,45 × 2,45 · 19,10 t</div></td><td>01.10 → 07.10</td><td><span class="pill go">Dostarczone</span><div class="grey">07.10</div></td><td>R. P. ☎ → M. M. ☎<div class="grey">WGM00653 → CTR44190</div></td><td class="grey">dostarczono</td><td class="red">brak CMR z podpisem<div class="grey" style="font-weight:400">wgrywa SCX</div></td><td class="n">8 259,30<div class="grey">marża 4,8%</div></td></tr>
+            <tr><td class="code">SG-15 <span class="pill rd">brak nr HHL</span></td><td>Słupy główne · 7 szt.<div class="grey">18,21 × 2,45 × 2,45 · 20,44 t</div></td><td>08.10 → 14.10</td><td><span class="pill gr">Brak zasobów</span></td><td class="red">brak kierowcy i zestawu<div class="grey" style="font-weight:400">uzupełnia SCX</div></td><td class="grey">–</td><td class="red">brak: zezwolenie PL, SE</td><td class="n">8 186,85<div class="grey">marża 4,8%</div></td></tr>
+          </table>
+          <div class="cap">8 kolumn z E30 mieści się w 1072 px obok menu, bez przewijania w bok. Gdy ktoś doda kolumny i pojawi się przewijanie, przyklejona jest pierwsza kolumna („Transport”) z lewej. Kwota nie jest przyklejona i nie zasłania innej kolumny.</div>
+        </div>
+      </div>
+    </div>
+    <div class="ruler"><span>0</span><span>186 · menu</span><span>1280 px</span></div>
+  </div>
+
+  <div class="card" style="width:1282px">
+    <div class="h"><b>Zasady dla szerokości komputera</b></div>
+    <ul class="facts">
+      <li><b>1280 px to najmniejszy komputer.</b> Test: 1280, 1366, 1440 i 1920 px — nic się nie łamie, nic nie wychodzi poza ekran, nic nie zasłania innej kolumny.</li>
+      <li><b>Pasek górny</b> (E37) zawsze w jednej linii. Poniżej 1440 px konto pokazuje tylko inicjały (imię i nazwisko w menu), a rejsy pokazują statek, godzinę i port wyjścia. Od 1440 px — pełne nazwy jak w E37.</li>
+      <li><b>Pasek etapów</b> (E28): 10 kafelków w jednej linii od 1280 px.</li>
+      <li><b>Tabele</b>: domyślne kolumny mieszczą się w oknie obok menu (Harmonogram — E30, Mapa — E29, Dokumenty — E31). Przy przewijaniu w bok przyklejona jest tylko pierwsza kolumna z lewej.</li>
+      <li><b>Lewe menu</b> zwija się do ikon („«”), a stan zwinięcia zapamiętuje konto.</li>
+    </ul>
+  </div>
+</div>
+</body></html>

@@ -1,15 +1,15 @@
 ---
-description: Integracje zewnętrzne TOWER — funkcje Edge i źródła danych
+description: Integracje zewnętrzne Watch Tower — funkcje Edge i źródła danych
 globs: supabase/functions/**
 alwaysApply: false
 ---
-- **przed pierwszym wywołaniem nowej usługi:** regulamin — użytek komercyjny,
-  śledzenie pojazdów, przechowywanie wyników, podanie źródła. Cytat klauzul
-  w raporcie. Wykluczenie = STOP i do właściciela
-- tylko darmowe plany; limit w kodzie poniżej darmowego progu
-- klucze wyłącznie w sekretach funkcji Edge
-- uczciwy nagłówek User-Agent; nie obchodzimy zabezpieczeń stron
-- blokada, zmiana formatu, brak danych → ryzyko HHL, nigdy cicha awaria
-- każdy odczyt zapisany: źródło, adres, wartość surowa, jednostka, czas
-- wymagane podanie źródła w interfejsie (CC BY, ODbL)
-- katalog usług i odrzuconych z powodem: `04_KONEKTORY.md`
+- **Przed pierwszym wywołaniem nowej usługi:** regulamin (użytek komercyjny, śledzenie pojazdów, przechowywanie wyników, podanie źródła); cytat klauzul w raporcie. Wykluczenie = STOP i wpis w `PLAN.md` §5.
+- **Plany płatne tylko z decyzji:** HERE do 100 USD/mies. (D-77, D-78), Supabase Pro (08.10). Reszta darmowa; limit w kodzie poniżej progu.
+- Klucze wyłącznie w sekretach funkcji Edge.
+- Uczciwy nagłówek User-Agent; nie obchodzimy zabezpieczeń stron.
+- Blokada, zmiana formatu, brak danych → wpis w Stanie systemu (E23), nigdy cicha awaria.
+- Każdy odczyt zapisany: źródło, adres, wartość surowa, jednostka, czas. Adres bez kluczy i sekretów (np. link RIO bez `secret` — E44 pkt 8, 09.10.2026).
+- Wymagane podanie źródła w interfejsie (CC BY, ODbL).
+- Drogi PL tylko z HERE (KPD GDDKiA — rezygnacja 08.10).
+- Wysyłka e-mail i SMS: tylko według etapów E40, E42, E43; przełączniki wysyłki zmienia właściciel.
+- Katalog usług: `docs/handover/wzorzec/04_KONEKTORY.md`; tam, gdzie jest sprzeczny z tymi zasadami (Supabase Free, HERE „odrzucone”), obowiązują te zasady.

@@ -1,0 +1,166 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{--font-sans:"Barlow","Helvetica Neue",Arial,sans-serif;--font-cond:"Barlow Condensed","Barlow",Arial,sans-serif;
+--page:#E3E9ED;--surface:#FFFFFF;--surface-2:#F4F7F9;--ink:#0E1A24;--ink-2:#3C4E5C;--ink-3:#5A6B78;--rule:#C9D5DD;--rule-2:#DEE6EB;--amber:#C97E12;--amber-bg:#FBEFD9;--amber-ink:#A55A00;--red:#B32639;--red-bg:#F6DEE2;--go:#1B6E5D;--go-bg:#DCEDE8;--sea:#245C87;--sea-bg:#DCE8F1}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 var(--font-sans)}
+.sheet{padding:16px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:1460px}
+.top{width:100%;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.top h1{margin:0;font:700 24px var(--font-cond)}
+.sec{width:100%;font:700 18px var(--font-cond);margin-top:4px}
+.ex{font:600 11px var(--font-cond);letter-spacing:.08em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber-bg);border:1px dashed var(--amber);padding:2px 7px}
+.card{background:var(--surface);border:1px solid var(--rule)}
+.h{padding:10px 14px;border-bottom:1px solid var(--rule);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.h b{font:700 19px var(--font-cond)}.h .sub{color:var(--ink-3);font-size:13px}
+.pill{font:600 12px var(--font-cond);letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border:1px solid;white-space:nowrap}
+.pill.rd{color:var(--red);border-color:var(--red);background:var(--red-bg)}.pill.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}.pill.gr{color:var(--ink-3);border-color:var(--rule);background:var(--surface-2)}.pill.am{color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}.pill.sea{color:var(--sea);border-color:var(--sea);background:var(--sea-bg)}
+.cap{padding:8px 14px 12px;font-size:12.5px;color:var(--ink-3)}
+img{display:block}
+table.r{border-collapse:collapse;width:100%;font-size:13.5px}
+table.r th,table.r td{border-bottom:1px solid var(--rule-2);padding:7px 10px;text-align:left;vertical-align:top}
+table.r th{font:600 12px var(--font-cond);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+table.r td.n,table.r th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bad{color:var(--red);font-weight:600}
+.bd{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.mrow{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--rule-2);font-size:13.5px}.mrow .l{color:var(--ink-2)}.mrow b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.mrow.tot{border-top:2px solid var(--ink);border-bottom:0;font-weight:700}
+.fuel{border:1px solid var(--rule);background:var(--surface-2);padding:10px 12px;display:flex;flex-direction:column;gap:5px;font-size:13px}
+.fuel .hd{display:flex;justify-content:space-between;align-items:center;gap:8px;font:700 15px var(--font-cond)}
+.fuel .row{display:flex;justify-content:space-between;gap:10px}.fuel .row span:first-child{color:var(--ink-3)}
+.fuel .row b{font-variant-numeric:tabular-nums}
+.note{font-size:12.5px;color:var(--ink-3)}
+.phone{width:372px;border:1px solid #9AAAB6;border-radius:20px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column}
+.phone .h b{font-size:20px}
+.nav{display:flex;border-top:1px solid var(--rule);margin-top:auto}.nav span{flex:1;text-align:center;padding:9px 0 11px;font-size:11.5px;color:var(--ink-3)}.nav span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 3px 0 var(--amber)}
+.tabs{display:flex;border-bottom:1px solid var(--rule)}.tabs span{padding:8px 10px;font-size:13px;color:var(--ink-3)}.tabs span.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -3px 0 var(--amber)}
+</style></head><body>
+<div class="sheet">
+  <div class="top"><h1>E39 · Opłata paliwowa: zawsze tydzień załadunku i tydzień wskaźników · komputer i telefon</h1>
+    <span class="ex">„Dziś” — zrzuty aplikacji 07.10, 22:3x · „po zmianie” — liczby, ceny i tygodnie z bazy 07.10 (fuel_basis transportów)</span></div>
+
+  <div class="sec">Dziś</div>
+  <div class="card" style="width:591px">
+    <div class="h"><b>Panel SG-01 › Ceny</b><span class="pill rd">„z dnia 2026-09-29”</span></div>
+    <img src="now-ceny-koszt.png" width="559" height="260" style="margin:8px 16px">
+    <div class="cap">Wiersz mówi „z dnia 2026-09-29”. To data załadunku, a mnożnik ×1,14 pochodzi ze średnich z tygodnia 21–27.09. Tygodnia, w którym opłata obowiązuje, i tygodnia wskaźników nie widać.</div>
+  </div>
+  <div style="width:821px;display:flex;flex-direction:column;gap:16px">
+    <div class="card">
+      <div class="h"><b>Finanse › karta paliwa</b><span class="pill rd">nieaktualne</span></div>
+      <img src="now-fin-paliwo.png" width="583" height="100" style="margin:8px 16px">
+      <div class="cap">„Bez zatwierdzonych parametrów i odczytów — brak dopłaty”, a opłata jest liczona przy każdym z 86 transportów z ceną.</div>
+    </div>
+    <div class="card">
+      <div class="h"><b>Pięć nazw jednej opłaty</b></div>
+      <table class="r">
+        <tr><th>Nazwa w aplikacji</th><th>Gdzie</th></tr>
+        <tr><td>Dodatek paliwowy</td><td>panel › Ceny, Finanse</td></tr>
+        <tr><td>Przychód — dodatek paliwowy</td><td>Finanse</td></tr>
+        <tr><td>Dopłata paliwowa</td><td>Finanse (tekst), pomoc, Moje stawki SCX</td></tr>
+        <tr><td>BAF / SEFS · paliwo</td><td>Opcje</td></tr>
+        <tr><td>Mnożnik paliwowy</td><td>panel › Ceny</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="sec">Po zmianie · panel transportu › Ceny (HHL widzi obie strony, KSH przychód, SCX koszt — ta sama opłata)</div>
+  <div class="card" style="width:464px">
+    <div class="h"><b>SG-01 › Ceny</b><span class="sub">załadunek 29.09 · dostarczony</span></div>
+    <div class="bd">
+      <div style="font:700 15px var(--font-cond)">Koszt — Scandinavian Express</div>
+      <div class="mrow"><span class="l">Stawka bazowa</span><b>6 900,00 EUR</b></div>
+      <div class="mrow"><span class="l">Opłata paliwowa t40 · ×1,14</span><b>966,00 EUR</b></div>
+      <div class="mrow tot"><span>Razem</span><b>7 866,00 EUR</b></div>
+      <div class="fuel">
+        <div class="hd"><span>Opłata paliwowa ×1,14</span><span class="pill go">ostateczna</span></div>
+        <div class="row"><span>Obowiązuje w tygodniu</span><b>t40 · 28.09–04.10 (tydzień załadunku)</b></div>
+        <div class="row"><span>Wskaźniki z tygodnia</span><b>t39 · 21.09–27.09</b></div>
+        <div class="row"><span>OKQ8 GoEasy Diesel</span><b>23,04 SEK/l (4 publ.) → ×1,14</b></div>
+        <div class="row"><span>Orlen Ekodiesel</span><b>7,41 PLN/l (5 publ.) → ×1,17</b></div>
+        <div class="row"><span>Stosowany</span><b>niższy: ×1,14</b></div>
+        <div class="note">Opłata = stawka × 0,14. Ten sam mnożnik po stronie KSH (przychód 7 245,00 → 1 014,30 EUR).</div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="width:464px">
+    <div class="h"><b>SG-15 › Ceny</b><span class="sub">załadunek 08.10 · plan</span></div>
+    <div class="bd">
+      <div style="font:700 15px var(--font-cond)">Koszt — Scandinavian Express</div>
+      <div class="mrow"><span class="l">Stawka bazowa</span><b>6 900,00 EUR</b></div>
+      <div class="mrow"><span class="l">Opłata paliwowa t41 · ×1,13</span><b>897,00 EUR</b></div>
+      <div class="mrow tot"><span>Razem</span><b>7 797,00 EUR</b></div>
+      <div class="fuel">
+        <div class="hd"><span>Opłata paliwowa ×1,13</span><span class="pill go">ostateczna</span></div>
+        <div class="row"><span>Obowiązuje w tygodniu</span><b>t41 · 05.10–11.10 (tydzień załadunku)</b></div>
+        <div class="row"><span>Wskaźniki z tygodnia</span><b>t40 · 28.09–04.10</b></div>
+        <div class="row"><span>OKQ8 GoEasy Diesel</span><b>22,63 SEK/l (4 publ.) → ×1,13</b></div>
+        <div class="row"><span>Orlen Ekodiesel</span><b>7,22 PLN/l (5 publ.) → ×1,15</b></div>
+        <div class="row"><span>Stosowany</span><b>niższy: ×1,13</b></div>
+        <div class="note">Gdy załadunek przesunie się na inny tydzień, opłata przeliczy się z wskaźników tygodnia przed nowym dniem załadunku.</div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="width:468px">
+    <div class="h"><b>SG-30 › Ceny</b><span class="sub">załadunek 24.10 · plan</span></div>
+    <div class="bd">
+      <div style="font:700 15px var(--font-cond)">Koszt — Scandinavian Express</div>
+      <div class="mrow"><span class="l">Stawka bazowa</span><b>6 900,00 EUR</b></div>
+      <div class="mrow"><span class="l">Opłata paliwowa t43 · ×1,13 prognoza</span><b>897,00 EUR</b></div>
+      <div class="mrow tot"><span>Razem</span><b>7 797,00 EUR</b></div>
+      <div class="fuel">
+        <div class="hd"><span>Opłata paliwowa ×1,13</span><span class="pill am">prognoza</span></div>
+        <div class="row"><span>Obowiązuje w tygodniu</span><b>t43 · 19.10–25.10 (tydzień załadunku)</b></div>
+        <div class="row"><span>Wskaźniki z tygodnia</span><b>t42 · 12.10–18.10 — jeszcze nie zamknięty</b></div>
+        <div class="row"><span>Do tego czasu</span><b>ostatnia ostateczna: ×1,13 (wskaźniki t40)</b></div>
+        <div class="row"><span>Ostateczna od</span><b>19.10 (po zamknięciu t42)</b></div>
+        <div class="note">Kwota w tej chwili: 6 900,00 × 0,13 = 897,00 EUR. Po zamknięciu t42 może się zmienić.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">Po zmianie · Finanse (HHL) › Opłata paliwowa według tygodnia załadunku</div>
+  <div class="card" style="width:1428px">
+    <div class="h"><b>Opłata paliwowa</b><span class="sub">tydzień = poniedziałek–niedziela · opłata obowiązuje w tygodniu załadunku · wskaźniki z tygodnia poprzedniego · niższy z dwóch mnożników · ta sama po stronie kosztu i przychodu</span></div>
+    <table class="r">
+      <tr><th>Tydzień załadunku (obowiązuje)</th><th>Wskaźniki z tygodnia</th><th class="n">OKQ8 GoEasy Diesel</th><th class="n">Orlen Ekodiesel</th><th class="n">Stosowany</th><th>Stan</th><th class="n">Transporty</th></tr>
+      <tr><td><b>t40</b> · 28.09–04.10</td><td>t39 · 21.09–27.09</td><td class="n">23,04 SEK/l → ×1,14</td><td class="n">7,41 PLN/l → ×1,17</td><td class="n"><b>×1,14</b></td><td><span class="pill go">ostateczna</span></td><td class="n">10</td></tr>
+      <tr><td><b>t41</b> · 05.10–11.10</td><td>t40 · 28.09–04.10</td><td class="n">22,63 SEK/l → ×1,13</td><td class="n">7,22 PLN/l → ×1,15</td><td class="n"><b>×1,13</b></td><td><span class="pill go">ostateczna</span></td><td class="n">10</td></tr>
+      <tr><td><b>t42</b> · 12.10–18.10</td><td>t41 · 05.10–11.10 — trwa (dotąd: OKQ8 2 publ., Orlen 1 publ.; brak Orlen 06.10)</td><td class="n">—</td><td class="n">—</td><td class="n"><b>×1,13</b></td><td><span class="pill am">prognoza</span> ostateczna od 12.10</td><td class="n">8</td></tr>
+      <tr><td><b>t43–t51</b> · 19.10–20.12</td><td>t42–t50</td><td class="n">—</td><td class="n">—</td><td class="n"><b>×1,13</b></td><td><span class="pill am">prognoza</span> do zamknięcia tygodnia przed załadunkiem</td><td class="n">58</td></tr>
+      <tr><td>bez daty załadunku</td><td>—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td><span class="pill gr">bez ceny</span> KR-08 – KR-15</td><td class="n">8</td></tr>
+    </table>
+    <div class="cap">Kliknięcie wiersza: lista transportów tygodnia i publikacje cen z datami. Pełne parametry, tabela mnożników i pobieranie cen — Opcje › Cennik i opłaty › Opłata paliwowa (E3). Data załadunku: rzeczywista (wyjazd ze strefy Śrem z GPS albo ręcznie przez SCX z datą — E25), a do tego czasu z planu KSH. Dziś żaden transport nie ma rzeczywistej daty załadunku.</div>
+  </div>
+
+  <div class="sec">Telefon</div>
+  <div class="phone" style="min-height:600px">
+    <div class="h"><b>SG-15</b><span class="pill gr">Planowany</span></div>
+    <div class="tabs"><span>Przegląd</span><span>Status</span><span>Dokumenty</span><span class="on">Ceny</span><span>Czat</span></div>
+    <div class="bd">
+      <div style="font:700 15px var(--font-cond)">Koszt — Scandinavian Express</div>
+      <div class="mrow"><span class="l">Stawka bazowa</span><b>6 900,00 EUR</b></div>
+      <div class="mrow"><span class="l">Opłata paliwowa t41 · ×1,13</span><b>897,00 EUR</b></div>
+      <div class="mrow tot"><span>Razem</span><b>7 797,00 EUR</b></div>
+      <div class="fuel">
+        <div class="hd"><span>Opłata paliwowa ×1,13</span><span class="pill go">ostateczna</span></div>
+        <div class="row"><span>Obowiązuje</span><b>t41 · 05.10–11.10</b></div>
+        <div class="row"><span>Wskaźniki</span><b>t40 · 28.09–04.10</b></div>
+        <div class="row"><span>OKQ8</span><b>22,63 SEK/l → ×1,13</b></div>
+        <div class="row"><span>Orlen</span><b>7,22 PLN/l → ×1,15</b></div>
+        <div class="row"><span>Stosowany</span><b>×1,13</b></div>
+      </div>
+    </div>
+    <div class="nav"><span>Kokpit</span><span class="on">Harmonogram</span><span>Ryzyka</span><span>Dokumenty</span><span>Więcej</span></div>
+  </div>
+  <div class="card" style="width:1040px">
+    <div class="h"><b>Jedna nazwa: „Opłata paliwowa”</b></div>
+    <div class="bd">
+      <div class="mrow"><span class="l">Panel › Ceny</span><b>„Opłata paliwowa t41 · ×1,13” + karta z tygodniami</b></div>
+      <div class="mrow"><span class="l">Finanse (HHL), Rozliczenia (KSH), Moje stawki (SCX)</span><b>„Opłata paliwowa” + tabela według tygodnia załadunku</b></div>
+      <div class="mrow"><span class="l">Faktury — pozycja transportu</span><b>„Opłata paliwowa t41 · ×1,13”</b></div>
+      <div class="mrow"><span class="l">Opcje (E3)</span><b>„Opłata paliwowa” zamiast „BAF / SEFS · paliwo”</b></div>
+      <div class="mrow"><span class="l">E-mail o braku ceny paliwa</span><b>„Brak ceny paliwa Orlen z 06.10 — tydzień t41, wpływa na załadunki t42 (8 transportów)”</b></div>
+      <div class="note">Słowa „dodatek”, „dopłata” (paliwowa), „BAF”, „SEFS” i „mnożnik paliwowy” znikają z ekranów. „Dopłata” zostaje tylko dla postoju i anulowania.</div>
+    </div>
+  </div>
+</div>
+</body></html>
