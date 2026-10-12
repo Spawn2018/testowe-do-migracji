@@ -10,6 +10,7 @@ import pg from 'pg';
 export const TEST_REF = 'emkbykwenwrjmbprydml';
 export const PROD_REF = 'nglnnrmzmhusvxslousq';
 
+/** Fixtures zestawów DB (stałe UUID z seed.sql) — nie zmieniać ról bez przepisania asercji. */
 export const SEED_AUTH_USERS = [
   {
     id: '11111111-0000-0000-0000-000000000001',
@@ -28,6 +29,48 @@ export const SEED_AUTH_USERS = [
     email: 'scx@test',
     org: '00000000-0000-0000-0000-00000000a003',
     role: 'CARRIER_DISPATCH',
+  },
+];
+
+/**
+ * P0b / E9: 5 rodzajów kont na TEST (po prep).
+ * HHL Administrator, HHL Operacje, KSH Użytkownik, SCX Dyspozytor, SCX Użytkownik.
+ */
+export const FIVE_ROLE_USERS = [
+  {
+    id: '11111111-0000-0000-0000-0000000000a1',
+    email: 'hhl-admin@tower-db-test.local',
+    org: '00000000-0000-0000-0000-00000000a001',
+    role: 'HHL_ADMIN',
+    label: 'HHL Administrator',
+  },
+  {
+    id: '11111111-0000-0000-0000-0000000000a2',
+    email: 'hhl-ops@tower-db-test.local',
+    org: '00000000-0000-0000-0000-00000000a001',
+    role: 'HHL_OPS',
+    label: 'HHL Operacje',
+  },
+  {
+    id: '11111111-0000-0000-0000-0000000000a3',
+    email: 'ksh-user@tower-db-test.local',
+    org: '00000000-0000-0000-0000-00000000a002',
+    role: 'CLIENT_USER',
+    label: 'KSH Użytkownik',
+  },
+  {
+    id: '11111111-0000-0000-0000-0000000000a4',
+    email: 'scx-dispatch@tower-db-test.local',
+    org: '00000000-0000-0000-0000-00000000a003',
+    role: 'CARRIER_DISPATCH',
+    label: 'SCX Dyspozytor',
+  },
+  {
+    id: '11111111-0000-0000-0000-0000000000a5',
+    email: 'scx-user@tower-db-test.local',
+    org: '00000000-0000-0000-0000-00000000a003',
+    role: 'CARRIER_USER',
+    label: 'SCX Użytkownik',
   },
 ];
 
@@ -126,6 +169,65 @@ export async function ensureSeedAuthUsers({ dbUrl, supabaseUrl, serviceKey }) {
       if (r.rowCount !== 1 || r.rows[0].auth_id !== u.id || r.rows[0].role !== u.role) {
         throw new Error(
           `ensureSeedAuthUsers verify ${u.email}: ${JSON.stringify(r.rows[0] || null)}`,
+        );
+      }
+    }
+  });
+}
+
+/**
+ * P0b: 5 rodzajów kont na TEST po prep. Odmowa produkcji.
+ * Idempotentne — pomija istniejące auth.id.
+ */
+export async function ensureFiveRoleAccounts({ dbUrl, supabaseUrl, serviceKey }) {
+  assertTestProject(dbUrl, serviceKey, supabaseUrl);
+  await withDb(dbUrl, async (client) => {
+    for (const u of FIVE_ROLE_USERS) {
+      const exists = await client.query(`select 1 from auth.users where id = $1`, [u.id]);
+      if (exists.rowCount > 0) continue;
+
+      await client.query(`delete from user_preferences where user_id in (select id from app_users where email = $1)`, [
+        u.email,
+      ]);
+      await client.query(`delete from app_users where email = $1 or auth_id = $2`, [u.email, u.id]);
+      await client.query(`delete from user_invites where email = $1`, [u.email]);
+      await client.query(
+        `insert into user_invites (email, org_id, role, locale, created_at)
+         values ($1, $2, $3::user_role, 'pl', now())`,
+        [u.email, u.org, u.role],
+      );
+    }
+  });
+
+  for (const u of FIVE_ROLE_USERS) {
+    const already = await withDb(dbUrl, (c) => c.query(`select 1 from auth.users where id = $1`, [u.id]));
+    if (already.rowCount > 0) continue;
+
+    const created = await adminFetch(supabaseUrl, serviceKey, '/auth/v1/admin/users', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: u.id,
+        email: u.email,
+        email_confirm: true,
+        user_metadata: { tower_db_test: true, tower_five_role: true },
+      }),
+    });
+    if (!created.ok) {
+      throw new Error(
+        `ensureFiveRoleAccounts ${u.email}: API ${created.status} ${JSON.stringify(created.body).slice(0, 200)}`,
+      );
+    }
+  }
+
+  await withDb(dbUrl, async (client) => {
+    for (const u of FIVE_ROLE_USERS) {
+      const r = await client.query(
+        `select auth_id::text, role::text from app_users where email = $1`,
+        [u.email],
+      );
+      if (r.rowCount !== 1 || r.rows[0].auth_id !== u.id || r.rows[0].role !== u.role) {
+        throw new Error(
+          `ensureFiveRoleAccounts verify ${u.email}: ${JSON.stringify(r.rows[0] || null)}`,
         );
       }
     }

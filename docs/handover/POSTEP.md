@@ -1989,3 +1989,13 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - **Hash scalenia P0a:** `0aaf412b` (PR #153, `Merge pull request #153 from Spawn2018/pakiet/P0a-komplet`).
 - **Hash scalenia P0-CI:** `9b0f3dc8` (PR #152).
 - Pierwszy commit P0b: `plan: dopiski D-20261011-2135-01, D-20261011-2254-01 i D-20261012-0105-01` — włączenie do AGENTS, PLAN (§1, §3, §4 P0-CI + P0b, §5 W9/W32/W33, §8), rejestr D-86/D-87, skille tower-wdrozenie (R7) i tower-migracja-bazy (R8), reguły, G-15.
+
+## 2026-10-12 — P0b · narzędzia bramy (Sesja 1, ciąg dalszy)
+
+- Gałąź `pakiet/P0b-narzedzia-bramy` @ po `6a670980`.
+- **git lfs:** 3.7.1 OK; **core.hooksPath:** `.githooks` OK (bez wpisu §5).
+- `scripts/lib/gate-suites.mjs`: `EXPECTED_LOCAL` (= gate.sh) + `EXPECTED_TEST` (security 84, risks 21; reszta = LOCAL; nullguard 602, i2 540); brakujące zestawy (dwell…baf, backup); `KNOWN_DEBT` session/l13; CLI `--local-expected` / `--check`.
+- `tests/db/gate.sh`: czyta liczby z gate-suites; `SUITES=a,b` filtruje zestawy.
+- Konta 5 rodzajów: `FIVE_ROLE_USERS` + `ensureFiveRoleAccounts` po `prep`; `scripts/auth/seed-test-users.mjs` (odmowa prod); fixture `SEED_AUTH_USERS` (3 UUID) bez zmian.
+- PLAN §4 P3-APK → „NA PRODUKCJI — scalenie e8351fc3 (PR #154), build APK zielony”.
+- Pomiary CI / pełna brama TEST — po PR i przebiegu na `main` (dopisek niżej).
