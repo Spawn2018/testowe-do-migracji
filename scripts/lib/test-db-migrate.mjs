@@ -82,6 +82,8 @@ export async function resetPublic(url) {
   console.log('reset: DROP SCHEMA public CASCADE');
   await client.query('DROP SCHEMA IF EXISTS public CASCADE');
   await client.query('CREATE SCHEMA public');
+  await client.query('ALTER SCHEMA public OWNER TO postgres').catch(() => {});
+  await client.query(`SET search_path TO public, extensions`);
   await client.query('GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role');
   await client.query('GRANT ALL ON SCHEMA public TO postgres, service_role');
   await client.query('GRANT USAGE ON SCHEMA public TO anon, authenticated');
