@@ -59,6 +59,26 @@ export async function resetPublic(url) {
     await client.query(`drop schema ${name} cascade`);
     console.log(`reset: DROP SCHEMA ${name} CASCADE`);
   }
+  // Hosted: citext/btree_gist/postgis bywają w public. DROP public CASCADE
+  // zostawia sieroty w pg_extension (extnamespace bez nspname) → „type citext does not exist”.
+  for (const ext of ['postgis', 'citext', 'btree_gist']) {
+    const loc = await client.query(
+      `select n.nspname
+         from pg_extension e
+         left join pg_namespace n on n.oid = e.extnamespace
+        where e.extname = $1`,
+      [ext],
+    );
+    if (loc.rowCount === 0) continue;
+    const ns = loc.rows[0].nspname;
+    if (ns === 'extensions') continue;
+    try {
+      await client.query(`alter extension ${ext} set schema extensions`);
+      console.log(`reset: ${ext} → schema extensions (było ${ns ?? 'SIEROTA'})`);
+    } catch (e) {
+      console.log(`reset: ${ext} SET SCHEMA pominięte (${String(e.message || e).slice(0, 80)})`);
+    }
+  }
   console.log('reset: DROP SCHEMA public CASCADE');
   await client.query('DROP SCHEMA IF EXISTS public CASCADE');
   await client.query('CREATE SCHEMA public');
