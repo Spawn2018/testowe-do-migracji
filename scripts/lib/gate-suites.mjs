@@ -1,7 +1,7 @@
 /**
  * Jedno źródło oczekiwanych OK bramy bazy (P0b).
  * LOCAL = tests/db/gate.sh / CI db.yml; TEST = hosted emkbykwenwrjmbprydml.
- * Różnice TEST: security −4 i risks −2 (SKIP spatial_ref_sys / CREATE DATABASE).
+ * Różnice TEST: security −4, risks −2, backup −8 (SKIP spatial_ref_sys / CREATE DATABASE / eksport+odtworzenie).
  * session i l13 — znany dług (uruchamiane, bez asercji liczby w gate.sh).
  */
 import { readFileSync } from 'node:fs';
@@ -52,7 +52,8 @@ export const EXPECTED_LOCAL = {
 
 /**
  * Oczekiwane OK na hosted TEST.
- * security/risks: SKIP (spatial_ref_sys free / tower_test_status CREATE DATABASE).
+ * security/risks/backup: SKIP (spatial_ref_sys free / tower_test_status CREATE DATABASE /
+ *   backup: CREATE DATABASE + eksport harness — pełne 29 w CI db.yml, D-86).
  * Pozostałe = LOCAL (P0b: wyrównanie do gate.sh).
  */
 export const EXPECTED_TEST = {
@@ -61,6 +62,7 @@ export const EXPECTED_TEST = {
   risks: 21, // 23 − 2 SKIP
   // dec6: 23 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 19,
+  backup: 21, // 29 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE)
 };
 
 /** Alias historyczny — brama TEST / summary. */
