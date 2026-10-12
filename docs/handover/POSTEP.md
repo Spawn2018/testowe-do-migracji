@@ -2048,4 +2048,7 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Brama GitHub i potwierdzenie na TEST: jeszcze nie na tej głowie. Próba z ROLLBACK na produkcji: jeszcze nie. Bez scalenia #164.
 - GitHub `db` na `79e891a1` (run 38313075911, zestawy e18,security,status,nullguard): security 88/88, status 44/44, nullguard 602/602, **e18 39/41**. Pełny check `db` na PR #164 (run 38312970245) też czerwony. Unit i visual zielone.
 - GitHub `db` na `3652268f` (run 38314196509): znowu **e18 39/41**. Oba czerwone sprawdzenia: `pg_trigger.tgenabled` (typ `"char"`) bez rzutowania na tekst, zapytanie się nie wykonuje. Reszta K8 zielona.
+- GitHub `db` na `9b4e3c16` (run 38315461054, 13.10 ok. 00:15, zestawy e18,security,status,nullguard, lokalny Postgres 17, nie TEST): **e18 41/41**, security 88/88, status 44/44, nullguard 602/602. Checki głowy PR #164 na tym SHA: unit, visual i pełny `db` (run 38315467215) zielone. Bez scalenia.
+- TEST zajęte: P1, od 13.10 00:28 — potwierdzenie w kopii roboczej według R2 (SHA `9b4e3c16`; zestawy security, status, e18, nullguard, potem testy logowania).
+- TEST 13.10 00:30–00:52, SHA `9b4e3c16`, kopia `/d/Watch Tower/brama-test`: security 84/84 (+2 SKIP), status 44/44, **e18 40/41**. Jedno czerwone: „4 konta auth.users” — przygotowanie wstawiało wiersz bez zaproszenia, wyzwalacz `handle_new_auth_user` zwraca `TOWER_NO_INVITE`. nullguard i testy logowania nie ruszyły. Pętla skończyła się sama (drugi FAIL). TEST wolne od 00:52.
 

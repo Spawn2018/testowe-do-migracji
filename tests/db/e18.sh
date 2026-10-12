@@ -516,59 +516,55 @@ abort_case "4 zaproszenia +tower-test → wyjątek i 0 zmian" "zaproszeń +tower
   "select count(*) from user_invites where email ilike '%+tower-test%'"
 psql "$URL" -c "delete from user_invites where email like 'w-inv%+tower-test@example.test';" >/dev/null 2>&1
 
-psql "$URL" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null 2>&1
-do $w$
-declare
-  i int;
-  rec record;
-  collist text;
-  vallist text;
-begin
-  if to_regclass('auth.users') is null then
-    execute 'create table auth.users (id uuid primary key, email text)';
-  end if;
-  for i in 1..4 loop
-    begin
-      execute format(
-        'insert into auth.users (id, email) values (%L::uuid, %L)',
-        'f1111111-e018-4000-8000-00000000000' || i,
-        'w-auth' || i || '+tower-test@example.test');
-    exception when not_null_violation then
-      collist := 'id, email';
-      vallist := format('%L::uuid, %L',
-        'f1111111-e018-4000-8000-00000000000' || i,
-        'w-auth' || i || '+tower-test@example.test');
-      for rec in
-        select column_name, data_type, udt_name
-        from information_schema.columns
-        where table_schema = 'auth' and table_name = 'users'
-          and is_nullable = 'NO' and column_default is null
-          and column_name not in ('id', 'email')
-      loop
-        collist := collist || ', ' || quote_ident(rec.column_name);
-        vallist := vallist || ', ' || case
-          when rec.data_type = 'uuid' then quote_literal('00000000-0000-0000-0000-000000000000') || '::uuid'
-          when rec.data_type = 'boolean' then 'false'
-          when rec.data_type in ('integer', 'bigint', 'smallint') then '0'
-          when rec.data_type in ('jsonb', 'json') then '''{}''::jsonb'
-          when rec.data_type like 'timestamp%' then 'now()'
-          else quote_literal('')
-        end;
-      end loop;
-      execute 'insert into auth.users (' || collist || ') values (' || vallist || ')';
-    end;
-  end loop;
-end
-$w$;
-SQL
-abort_case "4 konta auth.users → wyjątek i 0 zmian" "kont auth.users +tower" \
-  "select count(*) from auth.users where email ilike 'w-auth%+tower-test@example.test'"
+AUTH_KIND=$(PSQL -c "select case when to_regclass('auth.users') is null then 'missing' when exists (select 1 from pg_trigger where tgrelid = 'auth.users'::regclass and tgname = 'tower_on_auth_user_created' and not tgisinternal) then 'trigger' else 'plain' end")
+AUTH_LOG="${ROOT}/tmp-gate/e18-auth-setup.out"
+if [ "$AUTH_KIND" = "missing" ]; then
+  psql "$URL" -v ON_ERROR_STOP=1 -c "create table auth.users (id uuid primary key, email text)" >"$AUTH_LOG" 2>&1
+fi
+if [ "$AUTH_KIND" = "trigger" ]; then
+  # handle_new_auth_user odrzuca INSERT bez zaproszenia (errcode 42501).
+  psql "$URL" -v ON_ERROR_STOP=1 -c "
+insert into user_invites (email, org_id, role, invited_by)
+select 'w-auth'||n||'+tower-test@example.test', '$HHL', 'HHL_OPS',
+       (select id from app_users where email='hhl@test' limit 1)
+from generate_series(1,4) n;
+insert into auth.users (id, email)
+select ('f1111111-e018-4000-8000-00000000000'||n)::uuid,
+       'w-auth'||n||'+tower-test@example.test'
+from generate_series(1,4) n;
+" >"$AUTH_LOG" 2>&1
+else
+  psql "$URL" -v ON_ERROR_STOP=1 -c "
+insert into auth.users (id, email)
+select ('f1111111-e018-4000-8000-00000000000'||n)::uuid,
+       'w-auth'||n||'+tower-test@example.test'
+from generate_series(1,4) n;
+" >"$AUTH_LOG" 2>&1
+fi
+if [ "$?" != "0" ]; then
+  fail=$((fail+1))
+  fails="${fails} [4 konta auth.users: przygotowanie]"
+  echo "  FAIL  4 konta auth.users → wyjątek i 0 zmian (przygotowanie)"
+  tail -8 "$AUTH_LOG"
+else
+  abort_case "4 konta auth.users → wyjątek i 0 zmian" "kont auth.users +tower" \
+    "select count(*) from auth.users where email ilike 'w-auth%+tower-test@example.test'"
+fi
+psql "$URL" -q -c "
+delete from audit_log where action = 'USER_ACCEPTED_INVITE'
+  and entity_id in (select id::text from auth.users where email ilike 'w-auth%+tower-test@example.test');
+delete from app_users where email ilike 'w-auth%+tower-test@example.test';
+delete from user_invites where email ilike 'w-auth%+tower-test@example.test';
+delete from auth.users where email ilike 'w-auth%+tower-test@example.test';
+" >/dev/null 2>&1
 psql "$URL" -q <<'SQL' >/dev/null 2>&1
-delete from auth.users where email like 'w-auth%+tower-test@example.test';
 do $$
 begin
   if to_regclass('auth.users') is not null
      and not exists (select 1 from auth.users)
+     and not exists (
+       select 1 from pg_trigger
+       where tgrelid = 'auth.users'::regclass and tgname = 'tower_on_auth_user_created')
      and not exists (
        select 1 from information_schema.columns
        where table_schema = 'auth' and table_name = 'users' and column_name = 'aud')
