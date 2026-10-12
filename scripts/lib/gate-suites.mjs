@@ -59,6 +59,8 @@ export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
   security: 84, // 88 − 4 SKIP
   risks: 21, // 23 − 2 SKIP
+  // dec6: 23 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
+  dec6: 19,
 };
 
 /** Alias historyczny — brama TEST / summary. */

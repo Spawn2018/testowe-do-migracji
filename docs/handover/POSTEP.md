@@ -2017,3 +2017,4 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Poprawka: `tests/db/i2.sh` — bootstrap pozycji w części 4 gdy brak wierszy (jak część 2; `DRIVER_PWA` przy `TOWER_HOSTED_READY`). Gałąź `pakiet/P0b-i2-part4-bootstrap`.
 - Merge poprawki: **`a5b46607`** (PR #159).
 - **TEST zajęte: P0b, od 09:38** (pełna brama w częściach na `a5b46607`; = odbiór P0b / brama z Dnia 1).
+- Merge docs TEST zajęte: **`708bf6af`** (PR #160). Brama na tym SHA: do i2-4 zielone (poprawka bootstrap); **dec6 19 OK / 4 FAIL** (wstawki `auth.sessions` dla kont seeda — FK → `auth.users` na hosted). Pętla przerwana na polecenie koordynatora 12.10 12:30 (ten sam FAIL 2×). **TEST zajęte** zostaje do scalenia poprawki SKIP + pełnej bramy od zera na nowym SHA.
