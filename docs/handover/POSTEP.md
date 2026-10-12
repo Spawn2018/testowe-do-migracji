@@ -1999,3 +1999,10 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Konta 5 rodzajów: `FIVE_ROLE_USERS` + `ensureFiveRoleAccounts` po `prep`; `scripts/auth/seed-test-users.mjs` (odmowa prod); fixture `SEED_AUTH_USERS` (3 UUID) bez zmian.
 - PLAN §4 P3-APK → „NA PRODUKCJI — scalenie e8351fc3 (PR #154), build APK zielony”.
 - Pomiary CI / pełna brama TEST — po PR i przebiegu na `main` (dopisek niżej).
+
+## 2026-10-12 — P0b na main (merge PR #155)
+
+- Merge **`7fd5a3f3`** (PR #155). Hak pre-push: unit 901/35 skip ~41 s; lint:css OK.
+- CI PR: unit ~52–59 s; visual 5 m 26 s; db 8 m 10 s — wszystkie zielone.
+- `npm audit --omit=dev --audit-level=high`: 0.
+- TEST zajęte: P0b (brama w częściach po merge).
