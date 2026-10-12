@@ -2018,3 +2018,14 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Merge poprawki: **`a5b46607`** (PR #159).
 - **TEST zajęte: P0b, od 09:38** (pełna brama w częściach na `a5b46607`; = odbiór P0b / brama z Dnia 1).
 - Merge docs TEST zajęte: **`708bf6af`** (PR #160). Brama na tym SHA: do i2-4 zielone (poprawka bootstrap); **dec6 19 OK / 4 FAIL** (wstawki `auth.sessions` dla kont seeda — FK → `auth.users` na hosted). Pętla przerwana na polecenie koordynatora 12.10 12:30 (ten sam FAIL 2×). **TEST zajęte** zostaje do scalenia poprawki SKIP + pełnej bramy od zera na nowym SHA.
+
+## 2026-10-12 — P0b zamknięte: pełna brama TEST zielona
+
+- Merge poprawki backup SKIP: **`832cca5a`** (PR #162; wcześniej dec6 SKIP `f79d8d22` / PR #161, i2-4 `a5b46607` / PR #159).
+- **TEST wolne** (od 21:42). Pełna brama w częściach na `832cca5a` + migracja `0192_aud03_ksh_panel_dates.sql`: **BRAMA ZIELONA**.
+- Start pętli 18:06 → komplet ~21:42 (~3,6 h). Wszystkie zestawy OK wg `EXPECTED_TEST` (m.in. dec6 19/19 +4 SKIP; backup 21/21 +8 SKIP; nullguard 602/602; i2 540/540).
+- Check `db` na `main` po #162: zielony (run 38275045276, ~8 m 47 s). `gh workflow run db.yml --ref main -f suites=security`: uruchomiony 21:43 (run 38299522527).
+- Hak / CI (PR #162): unit 901/35 skip; visual zielony; `npm audit --omit=dev --audit-level=high`: 0.
+- Produkcja: bez migracji aplikacji w P0b; `tower.log-mar.pl` i makieta Vercel → 200.
+- PLAN §4 P0b → NA PRODUKCJI (narzędzia). Następna paczka: **P1**.
+
