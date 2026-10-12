@@ -702,7 +702,17 @@ val "HHL: ZGODNA → zapłata możliwa" $HHL "update invoices set verification_s
 chk "liczba wpisów historii: 3+2 (HHL/KSH: ponowny spór + korekta) + 4 (SCX, w tym korekta)" "$(( $(Q "select count(*) from invoice_dispute_events") - N0 ))" "9"
 $PSQL -c "update invoices set payment_status='NIEOPLACONA', paid_at=null, verification_status='DO_WERYFIKACJI', dispute_note=null where id in ('$IC','$IR')" >/dev/null 2>&1
 echo; echo "[I-25] opóźnienie od końca okna dostawy (0080) — przeliczenie na transporcie"
+# Część 4 osobno: pierwszą pozycję GPS wstawia tylko część 1. Bez wiersza w positions
+# kopia source (limit 1) wstawia 0 wierszy → eta_site NULL (P0b, brama TEST w częściach).
 $PSQL -c "set session_replication_role=replica; update loads set status='IN_TRANSIT_SE', plan_delivery_date='2026-10-01', plan_delivery_from='2026-10-01 08:00 Europe/Stockholm', plan_delivery_to='2026-10-01 12:00 Europe/Stockholm' where id='$L2'; set session_replication_role=origin;" >/dev/null
+if [ "$(Q "select count(*) from positions where load_id='$L2'")" = 0 ]; then
+  if [ -n "${TOWER_HOSTED_READY:-}" ]; then
+    $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), 'DRIVER_PWA')" >/dev/null
+  else
+    $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), 'DRIVER_APP')" >/dev/null 2>&1 \
+      || $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), (enum_range(null::position_source))[1])" >/dev/null
+  fi
+fi
 $PSQL -c "insert into positions (load_id, ts, geom_raw, source) select '$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), source from positions where load_id='$L2' limit 1" >/dev/null
 chk "transport z oknem: delay_minutes = ETA z GPS − koniec okna (po refresh_load_eta)" "$(Q "select refresh_load_eta('$L2'); select (eta_site is not null and delay_minutes is not distinct from greatest(0, round(extract(epoch from eta_site - plan_delivery_to)/60))::int)::text from loads where id='$L2'")" "true"
 echo; echo "[6.5] walidator zezwoleń i wymiarów zestawu (0081)"

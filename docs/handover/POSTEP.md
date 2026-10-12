@@ -2006,3 +2006,12 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - CI PR: unit ~52–59 s; visual 5 m 26 s; db 8 m 10 s — wszystkie zielone.
 - `npm audit --omit=dev --audit-level=high`: 0.
 - TEST zajęte: P0b (brama w częściach po merge).
+
+## 2026-10-12 — P0b brama TEST (przerwana) + poprawka i2-4
+
+- HEAD w trakcie bramy: `f834217a` (po PR #157/#158: 5 ról po resecie; session/l13 = KNOWN-DEBT).
+- Do i2-3 zielone (nullguard 602/602; security/status/storage/money/release/archive/watchdog/invite/risks/import OK).
+- **i2-4 czerwone:** `transport z oknem: delay_minutes = ETA z GPS − koniec okna` — `eta_site` NULL.
+- **Przyczyna:** przy `TOWER_I2_PART=4` pomijana jest część 1, która wstawia pierwszą pozycję GPS dla L2; INSERT w I-25 kopiuje `source` z `positions` L2 → 0 wierszy (ten sam wzorzec co część 2, linie 234–243).
+- **TEST wolne** (brama na `f834217a` niekompletna / czerwona na i2-4).
+- Poprawka: `tests/db/i2.sh` — bootstrap pozycji w części 4 gdy brak wierszy (jak część 2; `DRIVER_PWA` przy `TOWER_HOSTED_READY`). Gałąź `pakiet/P0b-i2-part4-bootstrap`.

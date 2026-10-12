@@ -164,7 +164,7 @@ Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODU
 - Po W21 (dostarczone 12.10.2026, 02:38): w `.github/workflows/sms-gateway-apk.yml` akcje przypięte do pełnego SHA (lista koordynatora 12.10); `packages: platform-tools`; CI `TOWER_APK_KEYSTORE_PROPS` bez lokalnej ścieżki Windows.
 - PR #154 → merge `e8351fc3`. Odbiór: `sms-gateway-apk` zielony (run 38190237518), artefakt `sms-gateway-debug` (5,7 MB); `unit` i `visual` zielone. Bez wdrożenia aplikacji.
 
-### P0b · Narzędzia bramy — W TOKU (`pakiet/P0b-narzedzia-bramy`)
+### P0b · Narzędzia bramy — W TOKU (`pakiet/P0b-i2-part4-bootstrap`; wcześniej `pakiet/P0b-narzedzia-bramy` → `7fd5a3f3`, naprawy 5 ról / KNOWN-DEBT → `f834217a`)
 Tylko `tests/`, `scripts/`, `.githooks/`; bez aplikacji i bez migracji. Pierwszy commit: włączenie dopisków D-20261011-2135-01, D-20261011-2254-01, D-20261012-0105-01 (PLAN §2).
 1. `scripts/lib/gate-suites.mjs`: oczekiwane liczby zgodne z `tests/db/gate.sh` (dziś rozbieżne m.in.: nullguard 533/602, i2 526/540, money 131/135, dec6 15/23, workflows 47/67, i31 6/9, dec2 24/26). Dodać brakujące zestawy: dwell, l12, l13, h1, h3, smsksh, ferry-status, bmapa, h4, aud03, baf, backup. **Jedno źródło liczb:** `gate.sh` czyta oczekiwane z `gate-suites.mjs`; dla TEST osobna kolumna z udokumentowanymi różnicami (security −4 i risks −2: SKIP na TEST, `spatial_ref_sys`); `session` i `l13` — znany dług, jak dziś.
 2. `tests/db/gate.sh`: zmienna `SUITES=a,b` uruchamia tylko wskazane zestawy (z szablonem `tower`); bez zmiennej — wszystkie.
