@@ -28,6 +28,9 @@ jobs:
         with:
           gradle-version: '8.9'
       - name: Build debug APK
+        env:
+          # CI: bez lokalnego D:/Watch Tower/… (spacja psuje URI w file(); klucz poza repo)
+          TOWER_APK_KEYSTORE_PROPS: /nonexistent/tower-apk-keystore.properties
         run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
