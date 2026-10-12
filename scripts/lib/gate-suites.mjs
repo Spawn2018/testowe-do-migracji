@@ -48,7 +48,7 @@ export const EXPECTED_LOCAL = {
   h4: 19,
   aud03: 25,
   baf: 46,
-  e18: 16, // P1 — porządki E18 (0193)
+  e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
 };
 
 /**

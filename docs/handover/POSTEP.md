@@ -2040,4 +2040,10 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Gałąź `pakiet/P1-e18`, HEAD wtedy `b3da6dbc`. Pliki `0193_e18_porzadki.sql` i `tests/db/e18.sh` były tylko w drzewie roboczym, bez commita. Ten wynik nie jest bramą do scalenia.
 - GitHub `db` na `cc206d48` (run 38307558150, zestawy e18,security,status,nullguard): security 88/88, status 44/44, nullguard 602/602, **e18 2/16**. Przyczyna: lokalny CI nie ma `auth.users`; `delete` w 0193 przerywał zestaw. Poprawka: brak tabeli jest pomijany, jak brak uprawnień na hosted.
 - GitHub `db` na `a827de61` (run 38308278607, 12.10 23:04, te same zestawy): **e18 16/16**, security 88/88, status 44/44, nullguard 602/602. Lokalny Postgres 17 w CI, nie TEST. 0193 nie zmienia innych zestawów (na pustym seedzie nic nie rusza).
+- Pełne checki PR #164 na `27ec3c3b` (unit, db, visual) zielone. Nie scalono — dopisek D-20261012-2335-01 zmienia migrację.
+
+## 2026-10-12 — P1 · D5 K1–K9 (D-20261012-2335-01)
+
+- K1–K9 w migracji `0193`, `scripts/e18/kopia.mjs` i `tests/db/e18.sh`. Liczba zestawu `e18` w `scripts/lib/gate-suites.mjs`: **41**. Pozycja D5 w PLAN §4, wiersz w §8.
+- Brama GitHub i potwierdzenie na TEST: jeszcze nie na tej głowie. Próba z ROLLBACK na produkcji: jeszcze nie. Bez scalenia #164.
 

@@ -103,9 +103,8 @@ try {
       'user_invites',
       await q(
         `select * from user_invites
-         where email ilike '%+tower-test%' or invited_by = any($1::uuid[])
+         where email ilike '%+tower-test%'
          order by id`,
-        [ids],
       ),
     );
   } else {
@@ -156,6 +155,23 @@ try {
     ),
   );
   await put(
+    'invoice_dispute_events',
+    await q(
+      `select e.* from invoice_dispute_events e
+       join invoices i on i.id = e.invoice_id
+       where i.invoice_number = 'WT-TEST-P6-20261005'
+       order by e.id`,
+    ),
+  );
+  await put(
+    'invoice_documents',
+    await q(
+      `select d.* from invoice_documents d
+       join invoices i on i.id = d.invoice_id
+       where i.invoice_number = 'WT-TEST-P6-20261005'`,
+    ),
+  );
+  await put(
     'load_messages',
     await q(`select * from load_messages where id in (29, 31, 32, 33) order by id`),
   );
@@ -197,17 +213,18 @@ try {
     const exit = await q(
       `select occurred_at from load_events
        where load_id = $1 and event_type = 'GEOFENCE_EXIT'
-         and coalesce(payload->>'zone_kind', payload->>'kind', '') in ('SITE', 'site')
+         and payload->>'geofence_kind' = 'SITE'
+         and payload->>'geofence_name' ilike '%Stegra Boden%'
+         and (occurred_at at time zone 'UTC')::date = date '2026-10-07'
        order by occurred_at asc limit 1`,
       [sg03[0].id],
     );
-    // fallback: zdarzenie z 07.10 ~12:19 PL jeśli brak kind
     const cutoff = exit[0]?.occurred_at
       || (await q(
         `select occurred_at from load_events
          where load_id = $1 and event_type = 'GEOFENCE_EXIT'
-           and occurred_at >= timestamptz '2026-10-07 10:19:00+00'
-           and occurred_at < timestamptz '2026-10-07 10:20:00+00'
+           and occurred_at >= timestamptz '2026-10-07 10:19:50+00'
+           and occurred_at <= timestamptz '2026-10-07 10:20:00+00'
          order by occurred_at asc limit 1`,
         [sg03[0].id],
       ))[0]?.occurred_at;
@@ -263,6 +280,20 @@ try {
   } else {
     await put('driver_tokens_sg01', []);
   }
+
+  await put(
+    'loads_p11',
+    await q(
+      `select l.id, l.status, l.eta_site, l.eta_confidence_min, l.delay_minutes, l.eta_basis, l.updated_at
+       from loads l
+       where l.status = 'PLANNED'
+          or (l.status = 'READY' and exists (
+            select 1 from shipment_items si
+            where si.load_id = l.id and si.shipment_code = 'SG-24'
+          ))
+       order by l.id`,
+    ),
+  );
 
   await put(
     'eta_breach_planned_open',
