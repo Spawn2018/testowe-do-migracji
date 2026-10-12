@@ -516,11 +516,15 @@ abort_case "4 zaproszenia +tower-test → wyjątek i 0 zmian" "zaproszeń +tower
   "select count(*) from user_invites where email ilike '%+tower-test%'"
 psql "$URL" -c "delete from user_invites where email like 'w-inv%+tower-test@example.test';" >/dev/null 2>&1
 
-AUTH_KIND=$(PSQL -c "select case when to_regclass('auth.users') is null then 'missing' when exists (select 1 from pg_trigger where tgrelid = 'auth.users'::regclass and tgname = 'tower_on_auth_user_created' and not tgisinternal) then 'trigger' else 'plain' end")
 mkdir -p "${ROOT}/tmp-gate"
 AUTH_LOG="${ROOT}/tmp-gate/e18-auth-setup.out"
+: >"$AUTH_LOG"
+# 'auth.users'::regclass pada przy planowaniu, gdy tabeli nie ma (CI). to_regclass zwraca null.
+AUTH_KIND=$(PSQL -c "select case when to_regclass('auth.users') is null then 'missing' when exists (select 1 from pg_trigger where tgrelid = to_regclass('auth.users') and tgname = 'tower_on_auth_user_created' and not tgisinternal) then 'trigger' else 'plain' end" 2>>"$AUTH_LOG" || true)
 AUTH_SETUP=0
-if [ "$AUTH_KIND" = "missing" ]; then
+if [ "$AUTH_KIND" != "missing" ] && [ "$AUTH_KIND" != "trigger" ] && [ "$AUTH_KIND" != "plain" ]; then
+  AUTH_SETUP=1
+elif [ "$AUTH_KIND" = "missing" ]; then
   psql "$URL" -v ON_ERROR_STOP=1 -c "create table auth.users (id uuid primary key, email text)" >"$AUTH_LOG" 2>&1 || AUTH_SETUP=1
 fi
 if [ "$AUTH_SETUP" = "0" ] && [ "$AUTH_KIND" = "trigger" ]; then
@@ -545,7 +549,8 @@ from generate_series(1,4) n;
 fi
 if [ "$AUTH_SETUP" != "0" ]; then
   fail=$((fail+1))
-  reason=$(tail -1 "$AUTH_LOG" 2>/dev/null | tr -d '\r' | head -c 160)
+  reason=$(grep -E 'ERROR:|FATAL:' "$AUTH_LOG" 2>/dev/null | tail -1 | tr -d '\r' | head -c 160)
+  [ -z "$reason" ] && reason=$(tail -1 "$AUTH_LOG" 2>/dev/null | tr -d '\r' | head -c 160)
   fails="${fails} [4 konta auth.users: przygotowanie: ${reason}]"
   echo "  FAIL  4 konta auth.users → wyjątek i 0 zmian (przygotowanie)"
   tail -8 "$AUTH_LOG"
@@ -567,7 +572,7 @@ begin
      and not exists (select 1 from auth.users)
      and not exists (
        select 1 from pg_trigger
-       where tgrelid = 'auth.users'::regclass and tgname = 'tower_on_auth_user_created')
+       where tgrelid = to_regclass('auth.users') and tgname = 'tower_on_auth_user_created')
      and not exists (
        select 1 from information_schema.columns
        where table_schema = 'auth' and table_name = 'users' and column_name = 'aud')
