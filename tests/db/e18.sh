@@ -365,7 +365,7 @@ MIG_RC=$?
 chk "migracja 0193 na fixture" "$MIG_RC" "0"
 if [ "$MIG_RC" != "0" ]; then tail -40 "$MIG_LOG"; fi
 
-TRIG=$(PSQL -c "select string_agg(tgname||':'||tgenabled, ',' order by tgname) from pg_trigger where tgname in ('trg_risk_matrix_notify','trg_loads_status_matrix_notify','trg_loads_eta') and not tgisinternal")
+TRIG=$(PSQL -c "select string_agg(tgname::text||':'||tgenabled::text, ',' order by tgname::text) from pg_trigger where tgname in ('trg_risk_matrix_notify','trg_loads_status_matrix_notify','trg_loads_eta') and not tgisinternal")
 P13_IN="select count(*) from risk_signals where resolved_at is null and kind='JOB_FAILURE' and ((title like 'SMS bez potwierdzenia doręczenia%' and detected_at >= timestamptz '2026-10-01 17:00:00+00' and detected_at < timestamptz '2026-10-01 18:00:00+00') or (title like 'Błędy w przeglądarce użytkowników%' and detected_at >= timestamptz '2026-10-03 17:00:00+00' and detected_at < timestamptz '2026-10-03 18:00:00+00'))"
 
 chk "0 kont +tower-*" "$(PSQL -c "select count(*) from app_users where email ilike '%+tower-%'")" "0"
@@ -578,7 +578,7 @@ begin
 end $$;
 SQL
 
-chk "wyzwalacze po wyjątku" "$(PSQL -c "select string_agg(tgname||':'||tgenabled, ',' order by tgname) from pg_trigger where tgname in ('trg_risk_matrix_notify','trg_loads_status_matrix_notify','trg_loads_eta') and not tgisinternal")" "trg_loads_eta:O,trg_loads_status_matrix_notify:O,trg_risk_matrix_notify:O"
+chk "wyzwalacze po wyjątku" "$(PSQL -c "select string_agg(tgname::text||':'||tgenabled::text, ',' order by tgname::text) from pg_trigger where tgname in ('trg_risk_matrix_notify','trg_loads_status_matrix_notify','trg_loads_eta') and not tgisinternal")" "trg_loads_eta:O,trg_loads_status_matrix_notify:O,trg_risk_matrix_notify:O"
 
 unset TOWER_ALLOW_MIG_REAPPLY
 REFUSE=$(node --input-type=module -e "
