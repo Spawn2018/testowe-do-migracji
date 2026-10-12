@@ -2038,4 +2038,5 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 - 12.10 **22:20:05**, baza **TEST** (hosted): `[db] e18 16/16 OK`, migracja `0193_e18_porzadki.sql`, krok `node scripts/test-db-gate-step.mjs e18` (log `tmp-gate/e18-full.log`). Nie GitHub Actions i nie lokalny Postgres.
 - Gałąź `pakiet/P1-e18`, HEAD wtedy `b3da6dbc`. Pliki `0193_e18_porzadki.sql` i `tests/db/e18.sh` były tylko w drzewie roboczym, bez commita. Ten wynik nie jest bramą do scalenia.
+- GitHub `db` na `cc206d48` (run 38307558150, zestawy e18,security,status,nullguard): security 88/88, status 44/44, nullguard 602/602, **e18 2/16**. Przyczyna: lokalny CI nie ma `auth.users`; `delete` w 0193 przerywał zestaw. Poprawka: brak tabeli jest pomijany, jak brak uprawnień na hosted.
 

@@ -99,8 +99,11 @@ begin
       begin
         delete from auth.users
          where email ilike '%+tower-test%' or email ilike '%+tower-sec%';
-      exception when insufficient_privilege then
-        null; -- hosted bez uprawnień do auth — usuwa App Admin poza migracją / service
+      exception
+        when insufficient_privilege then
+          null; -- hosted bez uprawnień do auth
+        when undefined_table then
+          null; -- lokalny Postgres CI nie ma auth.users (atrapa w supabase_stub)
       end;
 
       -- inne FK do app_users (poza odpiętym dziennikiem) = STOP
