@@ -1974,9 +1974,28 @@ Gałąź `pakiet/P0a-komplet`. Tylko dokumenty (bez `src/`, `supabase/`, `script
 
 Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum i audyt). `PLAN.md` §4 P0a → „NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji”.
 
-## 2026-10-12 — P3-APK — uzupełnienie W21 (pin SHA)
+## 2026-10-12 — P3-APK — uzupełnienie W21 (pin SHA) — NA PRODUKCJI
 
 - **W21 dostarczone 12.10.2026, 02:38** — token GitHub ma uprawnienie `workflow` (sprawdzone 11.10 w P0-CI; `gh auth status`: gist, read:org, repo, workflow).
-- Gałąź `pakiet/P3-APK-uzupelnienie-W21` (po bieżącym commicie P0b, PLAN §3).
-- `.github/workflows/sms-gateway-apk.yml`: pin SHA — `actions/checkout` `11d5960a…` (v4), `actions/setup-java` `cf277c60…` (v4), `android-actions/setup-android` `9fc6c4e9…` (v3), `gradle/actions/setup-gradle` `ed408507…` (v4), `actions/upload-artifact` `ea165f8d…` (v4).
-- Bez migracji, bez wdrożenia aplikacji (tylko CI + dokumenty). Po scaleniu powrót do P0b.
+- Gałąź `pakiet/P3-APK-uzupelnienie-W21` → PR #154 → merge **`e8351fc3`** (12.10.2026 03:07).
+- SHA (koordynator 12.10, `git ls-remote` + `^{}`): checkout `11d5960a…`, setup-java `cf277c60…` (v4 przestarzała — ostrzeżenie OK), setup-android `9fc6c4e9…` + `packages: platform-tools`, setup-gradle `ed408507…`, upload-artifact `ea165f8d…`.
+- CI: `TOWER_APK_KEYSTORE_PROPS=/nonexistent/…` (domyślna ścieżka Windows ze spacją psuje URI na runnerze).
+- Odbiór: build https://github.com/Spawn2018/testowe-do-migracji/actions/runs/38190237518 zielony, artefakt `sms-gateway-debug` 5 763 768 B; unit ×2 zielone; visual https://github.com/Spawn2018/testowe-do-migracji/actions/runs/38190241026 zielony; gitleaks/audit OK. Bez migracji, bez wdrożenia aplikacji.
+- Czas pracy ~0,5 h (pin + poprawki CI); poprawki: packages tools, keystore path. Powrót do P0b.
+
+## 2026-10-12 — P0b start: włączenie dopisków D-86/D-87 (Sesja 1)
+
+- **Dzień 1 = 12.10.2026** (data sesji 0 / start P0a według PLAN §0; sesja uruchomiona 12.10).
+- **Hash scalenia P0a:** `0aaf412b` (PR #153, `Merge pull request #153 from Spawn2018/pakiet/P0a-komplet`).
+- **Hash scalenia P0-CI:** `9b0f3dc8` (PR #152).
+- Pierwszy commit P0b: `plan: dopiski D-20261011-2135-01, D-20261011-2254-01 i D-20261012-0105-01` — włączenie do AGENTS, PLAN (§1, §3, §4 P0-CI + P0b, §5 W9/W32/W33, §8), rejestr D-86/D-87, skille tower-wdrozenie (R7) i tower-migracja-bazy (R8), reguły, G-15.
+
+## 2026-10-12 — P0b · narzędzia bramy (Sesja 1, ciąg dalszy)
+
+- Gałąź `pakiet/P0b-narzedzia-bramy` @ po `6a670980`.
+- **git lfs:** 3.7.1 OK; **core.hooksPath:** `.githooks` OK (bez wpisu §5).
+- `scripts/lib/gate-suites.mjs`: `EXPECTED_LOCAL` (= gate.sh) + `EXPECTED_TEST` (security 84, risks 21; reszta = LOCAL; nullguard 602, i2 540); brakujące zestawy (dwell…baf, backup); `KNOWN_DEBT` session/l13; CLI `--local-expected` / `--check`.
+- `tests/db/gate.sh`: czyta liczby z gate-suites; `SUITES=a,b` filtruje zestawy.
+- Konta 5 rodzajów: `FIVE_ROLE_USERS` + `ensureFiveRoleAccounts` po `prep`; `scripts/auth/seed-test-users.mjs` (odmowa prod); fixture `SEED_AUTH_USERS` (3 UUID) bez zmian.
+- PLAN §4 P3-APK → „NA PRODUKCJI — scalenie e8351fc3 (PR #154), build APK zielony”.
+- Pomiary CI / pełna brama TEST — po PR i przebiegu na `main` (dopisek niżej).

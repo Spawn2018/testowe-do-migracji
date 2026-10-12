@@ -8,12 +8,12 @@ description: Nakłada zmianę bazy danych Watch Tower bezpiecznie i w zgodzie z 
 1. Ostatni numer migracji lokalnie = na produkcji. Numer nowej migracji = następny wolny **w chwili rebase na `main`** przed bramą końcową paczki.
 2. `supabase/migrations/NNNN_nazwa.sql`.
 3. Nowa tabela → RLS, reguły ról, zero uprawnień `anon`, test w zestawie bezpieczeństwa, wpis w liście kopii (`_shared/backup/core.ts`). Nowa funkcja → `is not true`, `set search_path`, dziennik audytu; dla `authenticated` → `function-allowlist.txt`, `null-guard-calls.txt`.
-4. W trakcie pracy: zestawy dotknięte zmianą (`SUITES=a,b bash tests/db/gate.sh`). Zmiana liczby testów → jedno źródło liczb.
-5. Przed wdrożeniem: pełna brama lokalna `bash tests/db/gate.sh` — zielona.
+4. W trakcie pracy: zestawy dotknięte zmianą (`gh workflow run db.yml --ref <gałąź> -f suites=a,b`, D-86). Zmiana liczby testów → jedno źródło liczb.
+5. Przed wdrożeniem: check `db` (GitHub Actions) zielony na tym samym SHA (D-86).
 6. Potwierdzenie na TEST: zestawy `security`, `status`, `nullguard` i dotknięte migracją (`scripts/test-db-gate-step.mjs`).
-7. **Commit + push pliku migracji** (PR, scalenie do `main`).
-8. Próba na produkcji w transakcji zakończonej `ROLLBACK`.
-9. `supabase db push`; powtórny `db push` zgłasza „aktualna”.
+7. **Commit + push pliku migracji** (PR, `gh pr merge --merge`).
+8. Próba na produkcji w transakcji zakończonej `ROLLBACK` — polecenia na Windows: `docs/handover/dopiski/D-20261012-0105-01.md` R8.
+9. `supabase db push`; powtórny `db push` zgłasza „aktualna” — polecenia na Windows: `docs/handover/dopiski/D-20261012-0105-01.md` R8.
 10. Lista migracji w repozytorium = `schema_migrations` (numery, nie znaczniki czasu).
 11. `POSTEP.md`: numer, co zmienia, wyniki liczbami.
 

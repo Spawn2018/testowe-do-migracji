@@ -1,6 +1,6 @@
 # PLAN PRACY WATCH TOWER — jedyna lista pracy
 
-**Wersja: 08.10.2026, 16:05 (koordynator Claude, na polecenie właściciela 08.10 14:43); zmiana 16:46: jeden folder, jeden wykonawca, paczki po kolei (§3, dopisek D-20261008-1646-01); zmiana 09.10.2026, 01:20: audyt kompletu — termin liczony od startu, brama niedzielna, przywrócone decyzje właściciela, nowe pozycje §5 i §6, treści „Jak pracuję” (§8); zmiana 09.10.2026, 14:11: decyzje właściciela z 09.10 (E44 link RIO 10:34–11:19, piloci 12:33, konwój KR, W20, W22 i aktualizacje 1–5 z 13:09) — E44 w P4, zmiany w P1, P3, P5, P6, P7, P9, P10a, P10b, W14 i W20 zamknięte, W22 rozstrzygnięte, nowe W26–W31; dopiski D-20261009-1233-01 i D-20261009-1309-01 (§8).** Zastępuje cały poprzedni `PLAN.md` (przeniesiony do `docs/archiwum/2026-10-08/docs/handover/PLAN.md`). Nic z poprzedniego planu nie obowiązuje, jeśli nie jest wpisane tutaj.
+**Wersja: 08.10.2026, 16:05 (koordynator Claude, na polecenie właściciela 08.10 14:43); zmiana 16:46: jeden folder, jeden wykonawca, paczki po kolei (§3, dopisek D-20261008-1646-01); zmiana 09.10.2026, 01:20: audyt kompletu — termin liczony od startu, brama niedzielna, przywrócone decyzje właściciela, nowe pozycje §5 i §6, treści „Jak pracuję” (§8); zmiana 09.10.2026, 14:11: decyzje właściciela z 09.10 (E44 link RIO 10:34–11:19, piloci 12:33, konwój KR, W20, W22 i aktualizacje 1–5 z 13:09) — E44 w P4, zmiany w P1, P3, P5, P6, P7, P9, P10a, P10b, W14 i W20 zamknięte, W22 rozstrzygnięte, nowe W26–W31; dopiski D-20261009-1233-01 i D-20261009-1309-01 (§8); zmiana 11.10.2026, 21:35: praca na Windows bez WSL — D-86, D-87, P0-CI, zasady Windows (dopiski D-20261011-2135-01, D-20261011-2254-01, D-20261012-0105-01).** Zastępuje cały poprzedni `PLAN.md` (przeniesiony do `docs/archiwum/2026-10-08/docs/handover/PLAN.md`). Nic z poprzedniego planu nie obowiązuje, jeśli nie jest wpisane tutaj.
 
 Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower są nadrzędne. Wszystko co jest starsze jest nieaktualne i nie może obowiązywać.” Właściciel, 13:26: „Najświeższe ustalenia … nadpisują wszelkie starsze decyzje i rozwiązania.”
 
@@ -18,7 +18,7 @@ Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower 
      - `etapy/E<nr>.md` — co zbudować;
      - `makiety_html/E<nr>/` i `raport/img/` — wygląd;
      - `paczki/` — szczegółowe zlecenia paczek;
-     - razem z dopiskami włączonymi do planu (`docs/handover/dopiski/`: D-20261008-1646-01, D-20261009-0015-01, D-20261009-1233-01, D-20261009-1309-01) — przy sprzeczności ze starszym zapisem obowiązuje nowsza decyzja właściciela (08.10 13:26, 14:43);
+     - razem z dopiskami włączonymi do planu (`docs/handover/dopiski/`: D-20261008-1646-01, D-20261009-0015-01, D-20261009-1233-01, D-20261009-1309-01, D-20261011-2135-01, D-20261011-2254-01, D-20261012-0105-01) — przy sprzeczności ze starszym zapisem obowiązuje nowsza decyzja właściciela (08.10 13:26, 14:43; 11.10 21:35);
   3. ten plik — kolejność pracy, zakres paczek, sposób;
   4. `docs/handover/wzorzec/03_REJESTR_DECYZJI.md` — starsze decyzje, tylko tam, gdzie audyt milczy;
   5. kod w repozytorium — opis stanu dzisiejszego, nie wzór docelowy.
@@ -30,24 +30,24 @@ Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower 
 2. **Jedna paczka = jedna gałąź `pakiet/P<n>-<nazwa>`, jedna brama, jedno wdrożenie.** Commity w trakcie mogą być małe; pełna brama tylko na końcu paczki.
 3. **Brama paczki (kolejno):**
    1. szybkie testy przy każdym pushu (hak);
-   2. zestawy bazy dotknięte zmianą (`SUITES=… bash tests/db/gate.sh` po P0b);
+   2. zestawy bazy dotknięte zmianą (`gh workflow run db.yml --ref <gałąź> -f suites=…` po P0b);
    3. przed scaleniem:
       - rebase na `main`;
       - numer migracji = następny wolny w chwili rebase;
-      - pełna brama lokalna `bash tests/db/gate.sh`, jeśli jest migracja;
-      - `scripts/ci/fresh-smoke.sh`;
+      - check `db` (GitHub Actions) zielony na głowie PR, jeśli jest migracja;
+      - check `visual` (GitHub Actions) zielony;
       - od P3, gdy paczka ma migrację: doradca Supabase „security” na TEST po potwierdzeniu TEST bez nowych zgłoszeń spoza `tests/db/advisor-exceptions.txt` (E19 pkt 6 — nowe zgłoszenie blokuje wdrożenie); ostrzeżenie o ochronie przed wyciekniętymi hasłami na TEST (plan darmowy, funkcja planu Pro) jest wyjątkiem tylko dla TEST; po wdrożeniu ten sam doradca na produkcji (odczyt);
       - potwierdzenie na TEST, gdy paczka ma migrację (zestawy `security`, `status`, `nullguard` i dotknięte migracją). **Jedna brama TEST naraz** — przed startem wpis w `POSTEP.md` „TEST zajęte: P<n>, od GG:MM”, po końcu „TEST wolne” (ślad dla koordynatora);
       - gitleaks 0;
       - `npm audit --omit=dev --audit-level=high` bez high i critical;
-   4. PR → scalenie do `main` (merge commit, autor Sebastian Bożek);
+   4. PR → `gh pr checks --watch` → `gh pr merge --merge` (merge commit, autor Sebastian Bożek); nigdy `git push` na `main` z komputera wykonawcy (D-86, D-87);
    5. wdrożenie z `main`;
    6. migracja na produkcji (najpierw próba w transakcji z ROLLBACK, potem `supabase db push`, lista migracji = `schema_migrations`);
    7. `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` zwracają 200;
    8. wpis w `POSTEP.md`.
 4. **Testy idą za decyzjami.** Test sprzeczny z decyzją etapu bieżącej paczki przepisujesz w tej paczce według decyzji; w komentarzu podajesz numer etapu i decyzji. Nigdy nie zmieniasz aplikacji po to, żeby przeszedł stary test. Lista testów do przepisania jest przy każdej paczce.
 5. **Wygląd według makiety etapu.** Zmiana wyglądu ekranu z listy paczki jest przewidziana i nie jest powodem do zatrzymania. Wzorce zrzutów:
-   - 15 migawek Playwright (`tests/__screenshots__/`) odświeżasz w tej samej paczce na maszynie, która uruchamia `fresh-smoke`; wpis do `G4_WZORZEC.md`: „P<n> — E<nr>, ekrany: …”;
+   - 15 migawek Playwright (`tests/__screenshots__/`) odświeżasz w tej samej paczce w GitHub Actions (`visual.yml`, wejście `update`); wpis do `G4_WZORZEC.md`: „P<n> — E<nr>, ekrany: …”;
    - 280 ujęć matrycy (`shots-baseline/`) odświeża środowisko bramy wizualnej raz, w P11, z tagiem `baseline-audyt-<data P11 w formacie RRRR-MM-DD>`. Do tego czasu nocna brama wizualna tylko raportuje; jej różnice nie są powodem zatrzymania ani odświeżania.
    Akceptacja planu przez właściciela (08.10) = zgoda na te odświeżenia.
 6. **CSS:** zmiana według makiety etapu → wpis w `ODSTEPSTWA` w `tests/stylesheet-mockup.test.ts`: `'<selektor>|<właściwość>': 'AUDYT 08.10 E<nr> (P<n>)'`. Pliku `docs/claude/referencje/tower.css` i `SUMA_REF` nie zmieniasz. Cień i zaokrąglenie tylko przez tokeny w `:root`; reguł stylelint nie zmieniasz.
@@ -108,7 +108,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0a → P0b → P1 → P2 → P3 → P4 → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → P3 → P4 → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -119,7 +119,7 @@ Zależności (kolejność je spełnia; lista do kontroli): wszystkie paczki po P
 **Punkty kontrolne (czas polski; Dzień 1 według §0):**
 | Kiedy | Ma być |
 |---|---|
-| koniec Dnia 1, 23:59 (przy starcie 11.10: niedziela 11.10) | P0a i P0b scalone; pełna brama TEST z odbioru P0b zielona (= brama niedzielna 11.10); P1 z zieloną bramą lokalną |
+| koniec Dnia 1, 23:59 (przy starcie 11.10: niedziela 11.10) | P0a i P0b scalone; pełna brama TEST z odbioru P0b zielona (= brama niedzielna 11.10); P1 z zielonym checkiem `db` (D-86) |
 | po wdrożeniu P2 | koordynator liczy z czasów w `POSTEP.md` prognozę dla P3–P11 i ustala dopiskiem kolejne punkty kontrolne |
 | koniec Dnia 4, 20:00 (przy starcie 11.10: środa 14.10) | P11, pełna brama TEST, regeneracja 280 ujęć, `release-1.0` (data według W17) |
 
@@ -137,7 +137,7 @@ Zależności (kolejność je spełnia; lista do kontroli): wszystkie paczki po P
 - **Przy starcie 11.10:** bramą niedzielną 11.10 jest pełna brama TEST z odbioru P0b (na `main` po scaleniu P0b), także gdy skończy się po północy. **Następna: niedziela 18.10** i dalej co tydzień, także po wydaniu.
 - Bramę niedzielną zaczynasz po bieżącym commicie, przed następną pozycją; przez czas jej trwania obowiązuje G-15 (`ROZSTRZYGNIECIA_LUK.md`): bez zmiany gałęzi i plików.
 
-**Brama a jeden folder (G-15):** gdy brama lokalna, TEST albo `fresh-smoke` się kręci, nie zmieniasz gałęzi ani plików. W tym czasie czytasz materiały następnej paczki i spisujesz w czacie listę zmian. Gałąź następnej paczki zakładasz po końcu bramy.
+**Brama a jeden folder (G-15):** gdy brama TEST albo przebieg w GitHub Actions (`unit` / `visual` / `db`) się kręci, nie zmieniasz gałęzi ani plików i nie pushujesz nowych commitów na tę gałąź (zasada Windows pkt 4, D-20261011-2135-01). W tym czasie czytasz materiały następnej paczki i spisujesz w czacie listę zmian. Gałąź następnej paczki zakładasz po końcu bramy / po scaleniu.
 
 ## §4. Paczki
 
@@ -148,23 +148,30 @@ Każda paczka:
 
 Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODUKCJI (commit, godzina)` → `SPRAWDZONE (dopisek koordynatora)`. P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji`, a hash scalenia P0a wpisujesz w pierwszym wpisie P0b w `POSTEP.md`.
 
+### P0-CI · Narzędzia na Windows (D-86, D-87) — NA PRODUKCJI — narzędzia, bez wdrożenia aplikacji
+- Według dopisku `D-20261011-2135-01`; dokończenia: `D-20261011-2254-01` (R1–R3), `D-20261012-0105-01` (R4–R6; R7–R9 do dokumentów).
+- **R1–R6:** R1 `service_role` w `db.yml`; R2 regresja D14 („wstecz zamyka szufladę”); R3 `maxWorkers` tylko na Windows; R4 `TZ`/`PGTZ=Europe/Warsaw` w `db.yml`; R5 `baf` niezależne od daty; R6 `bmapa` niezależne od miesiąca.
+- **Hash scalenia:** `9b0f3dc8` (PR #152, merge 12.10.2026).
+- Workflows: `.github/workflows/db.yml`, `.github/workflows/visual.yml`. Bez wdrożenia aplikacji w zakresie narzędzi; po R2 wdrożenie aplikacji z `main` (POSTEP P0-CI).
+
 ### P0a · Wgranie kompletu dokumentów — NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji
 - Według `docs/handover/audyt_claude_2026-10-08/paczki/P0a_WGRANIE.md`: pliki z kompletu na swoje miejsca, przeniesienie starych dokumentów do `docs/archiwum/2026-10-08/` skryptem `paczki/P0a_przeniesienia.sh`, wpis w `POSTEP.md`.
 - Tylko dokumenty. Bez zmian w `src/`, `supabase/`, `scripts/`, `tests/`.
+- **Hash scalenia:** `0aaf412b` (PR #153, merge 12.10.2026).
 - **Odbiór:** zmiany tylko w `AGENTS.md`, `.cursor/rules/**`, `docs/**` oraz przeniesienia plików z katalogu głównego i `design/claude-v2.0/CLAUDE_V2_SOT.md` do `docs/archiwum/2026-10-08/`; w `AGENTS.md` i `.cursor/rules/` nazwy starych plików (`SCOPE.md`, `ZLECENIE_*`) występują tylko w zdaniach, które nazywają je archiwalnymi.
 
-### P3-APK — uzupełnienie W21 · Pin SHA w workflow APK — W TOKU (`pakiet/P3-APK-uzupelnienie-W21`)
-- Po W21 (dostarczone 12.10.2026, 02:38): w `.github/workflows/sms-gateway-apk.yml` akcje przypięte do pełnego SHA zamiast `@v3`/`@v4` (stary PLAN: P3-APK).
-- Bez zmian w aplikacji i bez migracji. Scalenie `gh pr merge --merge` po zielonych checkach.
+### P3-APK — uzupełnienie W21 · Pin SHA w workflow APK — NA PRODUKCJI — scalenie e8351fc3 (PR #154), build APK zielony
+- Po W21 (dostarczone 12.10.2026, 02:38): w `.github/workflows/sms-gateway-apk.yml` akcje przypięte do pełnego SHA (lista koordynatora 12.10); `packages: platform-tools`; CI `TOWER_APK_KEYSTORE_PROPS` bez lokalnej ścieżki Windows.
+- PR #154 → merge `e8351fc3`. Odbiór: `sms-gateway-apk` zielony (run 38190237518), artefakt `sms-gateway-debug` (5,7 MB); `unit` i `visual` zielone. Bez wdrożenia aplikacji.
 
-### P0b · Narzędzia bramy — DO ZROBIENIA
-Tylko `tests/`, `scripts/`, `.githooks/`; bez aplikacji i bez migracji.
+### P0b · Narzędzia bramy — W TOKU (`pakiet/P0b-narzedzia-bramy`)
+Tylko `tests/`, `scripts/`, `.githooks/`; bez aplikacji i bez migracji. Pierwszy commit: włączenie dopisków D-20261011-2135-01, D-20261011-2254-01, D-20261012-0105-01 (PLAN §2).
 1. `scripts/lib/gate-suites.mjs`: oczekiwane liczby zgodne z `tests/db/gate.sh` (dziś rozbieżne m.in.: nullguard 533/602, i2 526/540, money 131/135, dec6 15/23, workflows 47/67, i31 6/9, dec2 24/26). Dodać brakujące zestawy: dwell, l12, l13, h1, h3, smsksh, ferry-status, bmapa, h4, aud03, baf, backup. **Jedno źródło liczb:** `gate.sh` czyta oczekiwane z `gate-suites.mjs`; dla TEST osobna kolumna z udokumentowanymi różnicami (security −4 i risks −2: SKIP na TEST, `spatial_ref_sys`); `session` i `l13` — znany dług, jak dziś.
 2. `tests/db/gate.sh`: zmienna `SUITES=a,b` uruchamia tylko wskazane zestawy (z szablonem `tower`); bez zmiennej — wszystkie.
 3. Konta testowe 5 rodzajów (HHL Administrator, HHL Operacje, KSH Użytkownik, SCX Dyspozytor, SCX Użytkownik) na bazie TEST `emkbykwenwrjmbprydml`; skrypt odmawia uruchomienia dla `nglnnrmzmhusvxslousq` i jest wywoływany po każdym kroku `prep` bramy TEST (krok czyści schemat).
 4. Sprawdzić `git lfs version` i `git config core.hooksPath` (= `.githooks`). Brak = wpis w §5, bez `--no-verify`.
-5. Pomiar i wpis w `POSTEP.md`: czas haka gałęzi, `fresh-smoke`, pełnej bramy lokalnej, potwierdzenia TEST.
-- **Odbiór:** pełna brama TEST (w częściach) zielona na `main` z oczekiwanymi liczbami TEST; lokalna pełna brama zielona; `SUITES=security bash tests/db/gate.sh` działa; konta testowe istnieją na TEST po przebiegu.
+5. Pomiar i wpis w `POSTEP.md`: czas haka gałęzi, przebiegów `unit`, `visual` i `db` w GitHub Actions, potwierdzenia TEST.
+- **Odbiór:** pełna brama TEST (w częściach) zielona na `main` z oczekiwanymi liczbami TEST; check `db` zielony na `main` po scaleniu P0b; `gh workflow run db.yml --ref main -f suites=security` daje zielony przebieg tylko z zestawem security; konta testowe istnieją na TEST po przebiegu.
 
 ### P1 · E18 porządki danych testowych + „ERGO Hestia” — DO ZROBIENIA
 - Według `paczki/P1_E18.md` (sprawdzone na produkcji 08.10 14:19–14:27). Warunek startu: P0a scalone (akceptacja planu = akceptacja P1).
@@ -461,7 +468,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W6 | Włączenie wysyłki: SMS do odbiorców (po 3 transportach w trybie testowym), e-maile w „Kto co dostaje”, pierwsza paczka tygodnia na adresy księgowości (alarmy E23 i E47 do Administratorów HHL działają od razu — decyzja 27 A) | po P8 / P5 | czeka |
 | W7 | Klucz Management API dla „Send Email Hook” albo wklejenie treści e-maili logowania w panelu Supabase (L54) | po P8 | czeka |
 | W8 | Akceptacja listy źródeł CSP i 12 wyników ASVS „częściowo” (E48) | P11 | czeka |
-| W9 | Klucz przeglądarkowy HERE ograniczony do domeny (AUD-01d) | P11 | czeka |
+| W9 | Klucz przeglądarkowy HERE ograniczony do domeny (AUD-01d) | P11 | **zamknięte 06.10** (D-20261012-0105-01 R9); P11 sprawdza (Referer `tower.log-mar.pl` → 200; obcy → odmowa) |
 | W10 | Konto testowe Claude (interia.pl) — usunięcie po wszystkich pracach (E18 P1) | po R-4 | czeka |
 | W11 | Regeneracja 280 ujęć i tag `baseline-audyt-<data P11>` na maszynie z nocną bramą wizualną (cron właściciela, `scripts/visual/gate.sh`) — wykonawca przygotowuje polecenie w P11 | P11 | czeka |
 | W12 | Usunięcie `tower-hhl.pages.dev` z Redirect URLs w panelu Supabase (E24 pkt 3) | po P9 | czeka |
@@ -484,6 +491,8 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W29 | Ta sama data lub godzina zmieniona w pliku KSH i w Watch Tower między synchronizacjami — co wygrywa. Do odpowiedzi: plik; KSH dostaje informację w dzwonku (D-20261009-1309-01 R6 pkt 6) | przed „P7 — uzupełnienie W13” | czeka |
 | W30 | Czy zablokować Administratorowi HHL zmianę dat i godzin w „Działaj jako” konto KSH (decyzja 13:09 „tylko KSH” a konstytucja VI.5 „może wykonać każdą czynność za każde konto”). Do odpowiedzi: nie blokujemy — zapis jako konto KSH, w dzienniku prawdziwy wykonawca (D-20261009-1309-01 R6 pkt 3) | przed P3 | czeka |
 | W31 | „Data załadunku” w pliku KSH jest w 28 wierszach formułą „dostawa − 5 dni” (plik z 08.10). Gdy KSH zmieni w Watch Tower datę załadunku takiego transportu: nadpisać formułę wartością czy zostawić formułę (wtedy zmiana nie trafi do pliku). Do odpowiedzi: wartość zastępuje formułę — decyzja 13:09 jest nowsza niż „formuł nie zmienia” z 12:50 (D-20261009-1309-01 R6 pkt 5) | przed „P7 — uzupełnienie W13” | czeka |
+| W32 | Nocna brama wizualna nie działa na tym komputerze (P0-CI pkt 8). Na czym działa — inny komputer, agent w chmurze (np. Cursor, Codex, Claude), coś innego? Czy dalej ma co noc działać? | gdy zdecydujesz | czeka — do odpowiedzi: bez zmian, tylko raportuje; jej brak nie wstrzymuje pracy (zrzuty przed scaleniem sprawdza `visual`, D-87; D-20261011-2254-01) |
+| W33 | Windows na komputerze wykonawcy nie instaluje aktualizacji od 11.11.2025 (26100.7171; najnowsza dla 24H2: 26100.9550 z 22.09.2026) — komputer z kluczami produkcji. Naprawa wymaga ok. 25 GB wolnego na C:. Kiedy? | po wydaniu (P11) | czeka — do odpowiedzi: po wydaniu (P11) (D-20261011-2135-01) |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0, rezerwa
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -545,4 +554,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 09.10.2026 02:00 | Po niezależnym przeglądzie kompletu: L33 przywrócone do decyzji E34 B; G-16 (kwoty w dokumentach, W23), G-17 (dane z produkcji na TEST bez danych osobowych, próba R-1 z ROLLBACK, 95 HH); W24 (sprawdzenie na iPhonie i Androidzie); doradca „security” w bramie (E19 pkt 6); szerokości E20; AIS-SRC 24 h → P10a; 11.3 → R-3; D-LATER → W15; retencja `files/` → W18; §7 pozostałe pozycje; godzina wydania 20:00 w §0; blok „Brama niedzielna” | właściciel 09.10 00:45; koordynator |
 | 09.10.2026 02:10 | Po drugim przeglądzie: G-17 przepisane (TEST bez danych z produkcji; R-1: TEST na pliku ze zmyślonymi danymi osobowymi, próba z ROLLBACK w oknie wdrożenia P7; ślad SG-03 zmyślony, prawdziwy po W25); W25; doradca „security” na TEST i po wdrożeniu na produkcji, wyjątek TEST dla ochrony haseł; brama niedzielna w czasie paczki (commit, `main`, powrót); status P0a; W5 z nazwą pliku; W15 i W18 w §6; tekst pomocy „Strefy” zgodny z L33 | właściciel 09.10 00:45; koordynator |
 | 09.10.2026 14:11 | D-20261009-1233-01 (piloci, 12:33) i D-20261009-1309-01 (decyzje 13:09) włączone do kompletu `komplet_2026-10-09_v2` przez koordynatora przed P0a; E44 (link RIO, 10:34–11:19) w P4 po E27; P1: W22 (usunięcie z odpięciem); P3: daty tylko KSH (G-20), wiersz stały `PLAN_DATES_CHANGED` (G-18); P5: polisy raz (G-21), dopłaty — decyzja HHL i SCX (G-22); P6: pozycje dopłat; P7: powiadomienia o zmianie dat (G-18), piloci SCX i konwój (G-23), link RIO w nowym oknie Awizacja, zapis dat do pliku po W13 (G-20); P9: grupowanie w lokalizacji (G-19); P10a: RIO w E23; P10b: poprawione teksty „Jak pracuję”; §5: W14 i W20 zamknięte, W22 rozstrzygnięte, nowe W26–W31; §6 część 1; konstytucja III.5; rejestr „Zmiany 09.10.2026” (i D-18, D-22); `ROZSTRZYGNIECIA_LUK.md` E9-2, E9-6, E18-1, L19, L29, L41, L55, G-18–G-24; `DECYZJE_08_10.md` sekcje 09.10; `UZGODNIENIE_08_10.md` D-30, D-33, D-42, konta „+tower-*” i W14 (pkt 6); `PLAN_OTWARTE_08_10.md` TELM-2, D-18, D-TELM-ETA; etapy E9, E11, E27, E31, E32, E33, E37, E38, E44, E45; `paczki/P1_E18.md`, `paczki/P0a_WGRANIE.md`; makiety E32, E33, E38, E45 poprawione i ich obrazy w raporcie; raport „Zmiany 09.10” i sekcja E44 | właściciel 09.10 10:34, 10:54, 11:19, 12:33, 13:09; koordynator |
-| 12.10.2026 02:38 | W21 dostarczone (token GitHub `workflow`); pozycja „P3-APK — uzupełnienie W21”: pin SHA w `sms-gateway-apk.yml` | właściciel; wykonawca |
+| 11.10.2026 21:35 | D-20261011-2135-01: praca na Windows bez WSL; D-86 brama bazy w GitHub Actions; D-87 test wizualny przed scaleniem w GitHub Actions; P0-CI przed P0a; zasady pracy na Windows; W32, W33 | właściciel 11.10 21:22, 21:35; koordynator |
+| 11.10.2026 23:2x | D-20261011-2254-01: dokończenie P0-CI — R1 `service_role` w `db.yml`, R2 regresja D14, R3 `maxWorkers` Windows; W32 zmienione (nocna brama wizualna nie na tym komputerze) | koordynator (STOP 22:54 PR #152) |
+| 12.10.2026 01:40 | D-20261012-0105-01: dokończenie P0-CI (2) — R4 TZ/PGTZ, R5 baf, R6 bmapa; R7 wdrożenie z Windows, R8 migracje/funkcje z Windows; W9 zamknięte (R9); hash scalenia P0-CI `9b0f3dc8` | koordynator |
+| 12.10.2026 02:38 | W21 dostarczone (token GitHub `workflow`); pozycja „P3-APK — uzupełnienie W21”: pin SHA w `sms-gateway-apk.yml` → merge `e8351fc3` | właściciel; wykonawca |

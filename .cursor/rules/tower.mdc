@@ -30,7 +30,7 @@ alwaysApply: true
 - Testy idą za decyzjami: test sprzeczny z decyzją etapu przepisujesz w paczce tego etapu. Nigdy nie cofasz aplikacji pod stary test.
 - Wygląd = makieta etapu audytu (`makiety_html/E<nr>/`); bez makiety — `design/claude-v2.0/`.
 - Migawki Playwright odświeżasz w paczce zmieniającej ekran (wpis w `G4_WZORZEC.md`); 280 ujęć matrycy — tylko środowisko bramy w P11. Nocna brama do tego czasu tylko raportuje.
-- Gdy brama (lokalna, TEST, `fresh-smoke`) się kręci, nie zmieniasz gałęzi ani plików w folderze (`ROZSTRZYGNIECIA_LUK.md` G-15).
+- Gdy brama TEST albo przebieg w GitHub Actions (`unit` / `visual` / `db`) się kręci, nie zmieniasz gałęzi ani plików i nie pushujesz nowych commitów na tę gałąź (`ROZSTRZYGNIECIA_LUK.md` G-15; D-86, D-87).
 - Zmiana CSS według etapu → wpis w `ODSTEPSTWA` (`tests/stylesheet-mockup.test.ts`). Uchwyty testów zostają.
 
 ## Bezpieczeństwo — bez wyjątków

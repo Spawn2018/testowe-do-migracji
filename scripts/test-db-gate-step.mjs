@@ -20,6 +20,7 @@ import pg from 'pg';
 import { resetPublic, applyMigrationsAndSeed, refuseProdUrl, redactSecrets } from './lib/test-db-migrate.mjs';
 import {
   ensureSeedAuthUsers,
+  ensureFiveRoleAccounts,
   removeSeedAuthUsers,
   cleanupTestAuthUsers,
 } from './lib/test-auth-admin.mjs';
@@ -167,6 +168,18 @@ try {
     await resetPublic(url);
     const last = await applyMigrationsAndSeed(ROOT, url, psqlBin);
     migration = last;
+    if (!env.TEST_SERVICE_ROLE_KEY) {
+      console.error('BRAK TEST_SERVICE_ROLE_KEY');
+      record({ status: 'fail', ok: 0, fail: 1, skip: 0, expected: 1, migration: last });
+      process.exit(1);
+    }
+    const authCtx = {
+      dbUrl: url,
+      supabaseUrl: env.TEST_SUPABASE_URL || `https://${TEST_REF}.supabase.co`,
+      serviceKey: env.TEST_SERVICE_ROLE_KEY,
+    };
+    console.log('auth: 5 rodzajów kont (P0b)');
+    await ensureFiveRoleAccounts(authCtx);
     record({ status: 'ok', ok: 1, fail: 0, skip: 0, expected: 1, migration: last });
   } else {
     const spec = steps[arg];
@@ -193,6 +206,11 @@ try {
     if (needsOrphanSeed(arg)) {
       console.log('auth: remove-seed');
       await removeSeedAuthUsers(authCtx);
+    }
+    // P0b: 5 rodzajów po każdym resecie schematu (prep czyści; zestawy też).
+    if (!needsOrphanSeed(arg)) {
+      console.log('auth: 5 rodzajów kont (P0b)');
+      await ensureFiveRoleAccounts(authCtx);
     }
 
     let lastOut = '';

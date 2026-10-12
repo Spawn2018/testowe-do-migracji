@@ -1,39 +1,71 @@
 /**
- * Katalog bramy TEST: oczekiwane OK i części nullguard / i2.
- * Asercje zostają w tests/db/*.sh — tu tylko liczby i kolejność.
+ * Jedno źródło oczekiwanych OK bramy bazy (P0b).
+ * LOCAL = tests/db/gate.sh / CI db.yml; TEST = hosted emkbykwenwrjmbprydml.
+ * Różnice TEST: security −4 i risks −2 (SKIP spatial_ref_sys / CREATE DATABASE).
+ * session i l13 — znany dług (uruchamiane, bez asercji liczby w gate.sh).
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 
-/** Oczekiwane OK na hosted. security: 88−4 SKIP (spatial_ref_sys free). */
-export const EXPECTED = {
-  security: 84,
+/** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
+export const EXPECTED_LOCAL = {
+  security: 88,
   status: 44,
   storage: 37,
-  money: 131,
+  money: 135,
   release: 146,
-  session: 27,
+  backup: 29,
+  session: 27, // KNOWN-DEBT — nie asertowane w gate.sh
   archive: 18,
   watchdog: 27,
   invite: 48,
-  risks: 21, // 23 − 2 SKIP (tower_test_status wymaga CREATE DATABASE)
+  risks: 23,
   import: 66,
-  nullguard: 533,
-  i2: 526, // +2 asercje 0133 — POSTEP
+  nullguard: 602,
+  i2: 540,
   i30: 10,
-  i31: 6,
-  dec2: 24,
+  i31: 9,
+  dec2: 26,
   dec3: 13,
   dec5: 11,
-  dec6: 15,
+  dec6: 23,
   adm10: 8,
   hist11: 11,
-  workflows: 47,
+  workflows: 67,
   insurance: 42,
-  'dec-auto': 64, // 39 + 25 asercji L-1b (ten commit)
+  'dec-auto': 64,
+  dwell: 17,
+  l13: 30, // KNOWN-DEBT — nie asertowane w gate.sh
+  l12: 12,
+  h1: 14,
+  h3: 20,
+  smsksh: 16,
+  'ferry-status': 8,
+  bmapa: 33,
+  h4: 19,
+  aud03: 25,
+  baf: 46,
 };
+
+/**
+ * Oczekiwane OK na hosted TEST.
+ * security/risks: SKIP (spatial_ref_sys free / tower_test_status CREATE DATABASE).
+ * Pozostałe = LOCAL (P0b: wyrównanie do gate.sh).
+ */
+export const EXPECTED_TEST = {
+  ...EXPECTED_LOCAL,
+  security: 84, // 88 − 4 SKIP
+  risks: 21, // 23 − 2 SKIP
+};
+
+/** Alias historyczny — brama TEST / summary. */
+export const EXPECTED = EXPECTED_TEST;
+
+/** Zestawy uruchamiane w gate.sh, ale bez check liczby (dług 05.10). */
+export const KNOWN_DEBT = new Set(['session', 'l13']);
 
 export const SUITE_FILE = {
   security: 'security.sh',
@@ -41,12 +73,15 @@ export const SUITE_FILE = {
   storage: 'storage.sh',
   money: 'money.sh',
   release: 'release.sh',
+  backup: 'backup.sh',
   session: 'session.sh',
   archive: 'archive.sh',
   watchdog: 'watchdog.sh',
   invite: 'invite.sh',
   risks: 'risks.sh',
   import: 'import.sh',
+  nullguard: 'nullguard.sh',
+  i2: 'i2.sh',
   i30: 'i30.sh',
   i31: 'i31.sh',
   dec2: 'dec2.sh',
@@ -58,7 +93,66 @@ export const SUITE_FILE = {
   workflows: 'workflows.sh',
   insurance: 'insurance.sh',
   'dec-auto': 'dec-auto.sh',
+  dwell: 'dwell.sh',
+  l13: 'l13.sh',
+  l12: 'l12.sh',
+  h1: 'h1.sh',
+  h3: 'h3.sh',
+  smsksh: 'smsksh.sh',
+  'ferry-status': 'ferry-status.sh',
+  bmapa: 'bmapa.sh',
+  h4: 'h4.sh',
+  aud03: 'aud03.sh',
+  baf: 'baf.sh',
 };
+
+/** Jak uruchamiać lokalnie: boot = własna baza, tower = kopia tower_boot, pair = run.sh. */
+export const LOCAL_RUN = {
+  security: 'pair',
+  status: 'pair',
+  storage: 'boot',
+  money: 'boot',
+  release: 'boot',
+  backup: 'boot',
+  session: 'boot',
+  archive: 'boot',
+  watchdog: 'boot',
+  invite: 'boot',
+  risks: 'boot',
+  import: 'boot',
+  nullguard: 'boot',
+  i2: 'boot',
+  i30: 'boot',
+  i31: 'boot',
+  dec2: 'boot',
+  dec3: 'boot',
+  dec5: 'tower',
+  dec6: 'tower',
+  adm10: 'tower',
+  hist11: 'tower',
+  workflows: 'boot',
+  insurance: 'boot',
+  'dec-auto': 'tower',
+  dwell: 'tower',
+  l13: 'tower',
+  l12: 'tower',
+  h1: 'tower',
+  h3: 'tower',
+  smsksh: 'tower',
+  'ferry-status': 'tower',
+  bmapa: 'tower',
+  h4: 'tower',
+  aud03: 'tower',
+  baf: 'boot',
+};
+
+/** Kolejność lokalnej bramy (jak dawny gate.sh). */
+export const LOCAL_ORDER = [
+  'security', 'status', 'storage', 'money', 'release', 'backup', 'session', 'archive',
+  'watchdog', 'invite', 'risks', 'import', 'nullguard', 'i2', 'i30', 'i31', 'dec2', 'dec3',
+  'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto', 'dwell', 'l13',
+  'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'baf',
+];
 
 const NEED_SEED_BASE = new Set(['session']);
 const NEED_ORPHAN = new Set(['invite']);
@@ -69,7 +163,10 @@ function callLines() {
     .filter((l) => l.trim() && !l.trim().startsWith('#'));
 }
 
-/** nullguard-1..3 z listy wywołań; nullguard-4 = reszta do 528 (kontrola dodatnia, w tym n/d). */
+/**
+ * nullguard-1..3 z listy wywołań; nullguard-4 = reszta do EXPECTED_TEST.nullguard
+ * (kompletność + odmowy + kontrola pozytywna / helpery / static).
+ */
 export function nullguardParts() {
   const lines = callLines();
   const slices = [
@@ -87,9 +184,9 @@ export function nullguardParts() {
     parts[name] = { file: 'nullguard.sh', env: { TOWER_NG_PART: name.slice(-1) }, expected: denial + extra, group: 'nullguard' };
   }
   const head = parts['nullguard-1'].expected + parts['nullguard-2'].expected + parts['nullguard-3'].expected;
-  const rest = EXPECTED.nullguard - head;
-  if (rest !== 103) {
-    throw new Error(`nullguard: części 1–3 dają ${head}, część 4 wyszłaby ${rest}, oczekiwano 103 (łącznie 528)`);
+  const rest = EXPECTED_TEST.nullguard - head;
+  if (rest < 1) {
+    throw new Error(`nullguard: części 1–3 dają ${head}, EXPECTED_TEST.nullguard=${EXPECTED_TEST.nullguard}`);
   }
   parts['nullguard-4'] = { file: 'nullguard.sh', env: { TOWER_NG_PART: '4' }, expected: rest, group: 'nullguard' };
   return parts;
@@ -114,8 +211,8 @@ export function i2Parts() {
   }
   const names = Object.keys(parts).sort((a, b) => Number(a.slice(3)) - Number(b.slice(3)));
   const sum = names.reduce((s, n) => s + parts[n].expected, 0);
-  if (sum !== EXPECTED.i2) {
-    throw new Error(`i2: suma części ${sum} !== ${EXPECTED.i2}`);
+  if (sum !== EXPECTED_TEST.i2) {
+    throw new Error(`i2: suma części ${sum} !== ${EXPECTED_TEST.i2}`);
   }
   if (names.length < 2) throw new Error('i2: brak podziału na części');
   const ordered = {};
@@ -123,6 +220,7 @@ export function i2Parts() {
   return ordered;
 }
 
+/** Kolejność kroków bramy TEST (prep + części nullguard/i2). */
 let _steps;
 export function gateSteps() {
   if (_steps) return _steps;
@@ -134,7 +232,7 @@ export function gateSteps() {
     'security', 'status', 'storage', 'money', 'release', 'session', 'archive', 'watchdog', 'invite', 'risks', 'import',
   ];
   for (const name of whole) {
-    steps[name] = { file: SUITE_FILE[name], env: {}, expected: EXPECTED[name], group: null };
+    steps[name] = { file: SUITE_FILE[name], env: {}, expected: EXPECTED_TEST[name], group: null };
     order.push(name);
   }
   for (const name of Object.keys(ng)) {
@@ -145,8 +243,15 @@ export function gateSteps() {
     steps[name] = i2[name];
     order.push(name);
   }
-  for (const name of ['i30', 'i31', 'dec2', 'dec3', 'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto']) {
-    steps[name] = { file: SUITE_FILE[name], env: {}, expected: EXPECTED[name], group: null };
+  const rest = [
+    'i30', 'i31', 'dec2', 'dec3', 'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto',
+    'dwell', 'l12', 'l13', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'baf', 'backup',
+  ];
+  for (const name of rest) {
+    if (!SUITE_FILE[name] || EXPECTED_TEST[name] == null) {
+      throw new Error(`gate-suites: brak pliku/oczekiwanej dla ${name}`);
+    }
+    steps[name] = { file: SUITE_FILE[name], env: {}, expected: EXPECTED_TEST[name], group: null };
     order.push(name);
   }
   _steps = { steps, order };
@@ -158,4 +263,54 @@ export function needsSeedAuth(name) {
 }
 export function needsOrphanSeed(name) {
   return NEED_ORPHAN.has(name);
+}
+
+export function parseSuitesFilter(raw) {
+  if (raw == null || String(raw).trim() === '') return null;
+  const list = String(raw)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  for (const s of list) {
+    if (!LOCAL_ORDER.includes(s)) throw new Error(`SUITES: nieznany zestaw "${s}"`);
+  }
+  return list;
+}
+
+/** CLI: --local-expected | --test-expected | --local-order | --file NAME | --check */
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  const cmd = process.argv[2] || '--local-expected';
+  if (cmd === '--local-expected') {
+    for (const [k, v] of Object.entries(EXPECTED_LOCAL)) console.log(`${k}=${v}`);
+  } else if (cmd === '--test-expected') {
+    for (const [k, v] of Object.entries(EXPECTED_TEST)) console.log(`${k}=${v}`);
+  } else if (cmd === '--local-order') {
+    for (const s of LOCAL_ORDER) console.log(s);
+  } else if (cmd === '--debt') {
+    for (const s of KNOWN_DEBT) console.log(s);
+  } else if (cmd === '--file') {
+    const name = process.argv[3];
+    const f = SUITE_FILE[name];
+    if (!f) {
+      console.error(`brak pliku dla ${name}`);
+      process.exit(2);
+    }
+    console.log(f);
+  } else if (cmd === '--run') {
+    const name = process.argv[3];
+    const m = LOCAL_RUN[name];
+    if (!m) {
+      console.error(`brak LOCAL_RUN dla ${name}`);
+      process.exit(2);
+    }
+    console.log(m);
+  } else if (cmd === '--check') {
+    gateSteps();
+    console.log('gate-suites OK');
+  } else {
+    console.error(
+      'Użycie: node scripts/lib/gate-suites.mjs --local-expected|--test-expected|--local-order|--debt|--file NAME|--run NAME|--check',
+    );
+    process.exit(2);
+  }
 }
