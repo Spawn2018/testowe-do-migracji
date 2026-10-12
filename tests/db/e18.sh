@@ -20,12 +20,12 @@ fi
 set +e
 
 PSQL() { psql "$URL" -v ON_ERROR_STOP=1 -Atq "$@"; }
-ok=0; fail=0
+ok=0; fail=0; fails=""
 chk() {
   local got="$2" exp="$3"
   got=$(printf '%s' "$got" | tr -d '\r')
   if [ "$got" = "$exp" ]; then ok=$((ok+1)); echo "  OK    $1";
-  else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $got, oczekiwano: $exp)"; fi
+  else fail=$((fail+1)); fails="${fails} [${1}: ${got}!=${exp}]"; echo "  FAIL  $1  (otrzymano: $got, oczekiwano: $exp)"; fi
 }
 
 echo; echo "[E18] fixture + ponowienie 0193"
@@ -385,9 +385,9 @@ chk "token SG-24 zostaje" "$(PSQL -c "select count(*) from driver_tokens where t
 chk "0 PLANNED z eta_site" "$(PSQL -c "select count(*) from loads where status='PLANNED' and eta_site is not null")" "0"
 chk "0 PLANNED z delay_minutes>0" "$(PSQL -c "select count(*) from loads where status='PLANNED' and coalesce(delay_minutes,0) > 0")" "0"
 chk "ETA_BREACH PLANNED zamknięte" "$(PSQL -c "select count(*) from risk_signals rs join loads l on l.id=rs.load_id where rs.kind='ETA_BREACH' and rs.resolved_at is null and l.status='PLANNED'")" "0"
-chk "computed_at = czas migracji" "$(PSQL -c "select ((eta_basis->>'pre_load')='true' and (eta_basis->>'computed_at')::timestamptz > now() - interval '15 minutes')::text from loads where id='c1111111-e018-4000-8000-0000000000a1'")" "true"
+chk "computed_at = czas migracji" "$(PSQL -c "select ((eta_basis->>'pre_load')='true' and (eta_basis->>'computed_at')::timestamptz > now() - interval '15 minutes') from loads where id='c1111111-e018-4000-8000-0000000000a1'")" "t"
 chk "audit odpięty" "$(PSQL -c "select count(*) from audit_log where user_id = 'a1111111-e018-4000-8000-000000000001' or acting_as_user_id = 'a1111111-e018-4000-8000-000000000001'")" "0"
-chk "E18_AUDIT_DETACH" "$(PSQL -c "select (count(*) > 0)::text from audit_log where action='E18_AUDIT_DETACH'")" "true"
+chk "E18_AUDIT_DETACH" "$(PSQL -c "select (count(*) > 0) from audit_log where action='E18_AUDIT_DETACH'")" "t"
 chk "powiadomienia poza kontami bez zmian" "$(PSQL -c "select count(*) from notifications n where not exists (select 1 from app_users u where u.id = n.user_id and (u.email ilike '%+tower-test%' or u.email ilike '%+tower-sec%'))")" "$N_BEFORE"
 chk "sms_outbox bez zmian" "$(PSQL -c "select count(*) from sms_outbox")" "$SMS_BEFORE"
 chk "sumy kontrolne bez zmian" "$(PSQL -c "select e18_row_digest()")" "$DIG"
@@ -410,6 +410,7 @@ abort_case() {
     ok=$((ok+1)); echo "  OK    $name"
   else
     fail=$((fail+1))
+    fails="${fails} [${name}: przed=${before} po=${after} suma=$([ "$dig" = "$DIG" ] && echo ok || echo INNA)]"
     echo "  FAIL  $name (przed=$before po=$after suma=$([ "$dig" = "$DIG" ] && echo taka-sama || echo INNA))"
     echo "$OUT" | tail -4 | sed 's/^/        /'
   fi
@@ -592,5 +593,5 @@ try {
 chk "refuseProdUrls blokuje produkcję" "$REFUSE" "ok"
 
 cleanup_keep
-echo; echo "WYNIK: $ok OK, $fail FAIL"
+echo; echo "WYNIK: $ok OK, $fail FAIL${fails}"
 [ "$fail" -eq 0 ]

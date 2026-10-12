@@ -2046,4 +2046,5 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 - K1–K9 w migracji `0193`, `scripts/e18/kopia.mjs` i `tests/db/e18.sh`. Liczba zestawu `e18` w `scripts/lib/gate-suites.mjs`: **41**. Pozycja D5 w PLAN §4, wiersz w §8.
 - Brama GitHub i potwierdzenie na TEST: jeszcze nie na tej głowie. Próba z ROLLBACK na produkcji: jeszcze nie. Bez scalenia #164.
+- GitHub `db` na `79e891a1` (run 38313075911, zestawy e18,security,status,nullguard): security 88/88, status 44/44, nullguard 602/602, **e18 39/41**. Pełny check `db` na PR #164 (run 38312970245) też czerwony. Unit i visual zielone.
 
