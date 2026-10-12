@@ -517,11 +517,13 @@ abort_case "4 zaproszenia +tower-test → wyjątek i 0 zmian" "zaproszeń +tower
 psql "$URL" -c "delete from user_invites where email like 'w-inv%+tower-test@example.test';" >/dev/null 2>&1
 
 AUTH_KIND=$(PSQL -c "select case when to_regclass('auth.users') is null then 'missing' when exists (select 1 from pg_trigger where tgrelid = 'auth.users'::regclass and tgname = 'tower_on_auth_user_created' and not tgisinternal) then 'trigger' else 'plain' end")
+mkdir -p "${ROOT}/tmp-gate"
 AUTH_LOG="${ROOT}/tmp-gate/e18-auth-setup.out"
+AUTH_SETUP=0
 if [ "$AUTH_KIND" = "missing" ]; then
-  psql "$URL" -v ON_ERROR_STOP=1 -c "create table auth.users (id uuid primary key, email text)" >"$AUTH_LOG" 2>&1
+  psql "$URL" -v ON_ERROR_STOP=1 -c "create table auth.users (id uuid primary key, email text)" >"$AUTH_LOG" 2>&1 || AUTH_SETUP=1
 fi
-if [ "$AUTH_KIND" = "trigger" ]; then
+if [ "$AUTH_SETUP" = "0" ] && [ "$AUTH_KIND" = "trigger" ]; then
   # handle_new_auth_user odrzuca INSERT bez zaproszenia (errcode 42501).
   psql "$URL" -v ON_ERROR_STOP=1 -c "
 insert into user_invites (email, org_id, role, invited_by)
@@ -532,18 +534,19 @@ insert into auth.users (id, email)
 select ('f1111111-e018-4000-8000-00000000000'||n)::uuid,
        'w-auth'||n||'+tower-test@example.test'
 from generate_series(1,4) n;
-" >"$AUTH_LOG" 2>&1
-else
+" >"$AUTH_LOG" 2>&1 || AUTH_SETUP=1
+elif [ "$AUTH_SETUP" = "0" ]; then
   psql "$URL" -v ON_ERROR_STOP=1 -c "
 insert into auth.users (id, email)
 select ('f1111111-e018-4000-8000-00000000000'||n)::uuid,
        'w-auth'||n||'+tower-test@example.test'
 from generate_series(1,4) n;
-" >"$AUTH_LOG" 2>&1
+" >"$AUTH_LOG" 2>&1 || AUTH_SETUP=1
 fi
-if [ "$?" != "0" ]; then
+if [ "$AUTH_SETUP" != "0" ]; then
   fail=$((fail+1))
-  fails="${fails} [4 konta auth.users: przygotowanie]"
+  reason=$(tail -1 "$AUTH_LOG" 2>/dev/null | tr -d '\r' | head -c 160)
+  fails="${fails} [4 konta auth.users: przygotowanie: ${reason}]"
   echo "  FAIL  4 konta auth.users → wyjątek i 0 zmian (przygotowanie)"
   tail -8 "$AUTH_LOG"
 else
