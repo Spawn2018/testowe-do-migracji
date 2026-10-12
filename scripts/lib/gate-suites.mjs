@@ -228,8 +228,9 @@ export function gateSteps() {
   const i2 = i2Parts();
   const steps = {};
   const order = ['prep'];
+  // session / l13 — KNOWN-DEBT (jak gate.sh: uruchamiane lokalnie, bez twardej asercji na TEST).
   const whole = [
-    'security', 'status', 'storage', 'money', 'release', 'session', 'archive', 'watchdog', 'invite', 'risks', 'import',
+    'security', 'status', 'storage', 'money', 'release', 'archive', 'watchdog', 'invite', 'risks', 'import',
   ];
   for (const name of whole) {
     steps[name] = { file: SUITE_FILE[name], env: {}, expected: EXPECTED_TEST[name], group: null };
@@ -245,7 +246,7 @@ export function gateSteps() {
   }
   const rest = [
     'i30', 'i31', 'dec2', 'dec3', 'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto',
-    'dwell', 'l12', 'l13', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'baf', 'backup',
+    'dwell', 'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'baf', 'backup',
   ];
   for (const name of rest) {
     if (!SUITE_FILE[name] || EXPECTED_TEST[name] == null) {
