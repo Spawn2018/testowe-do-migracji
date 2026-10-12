@@ -207,11 +207,7 @@ try {
       console.log('auth: remove-seed');
       await removeSeedAuthUsers(authCtx);
     }
-    // P0b: 5 rodzajów po każdym resecie schematu (prep czyści; zestawy też).
-    if (!needsOrphanSeed(arg)) {
-      console.log('auth: 5 rodzajów kont (P0b)');
-      await ensureFiveRoleAccounts(authCtx);
-    }
+    // 5 rodzajów: tylko po prep (PLAN P0b). Zestawy wolą ensureSeedAuthUsers / cleanup.
 
     let lastOut = '';
     let wynik = null;

@@ -177,17 +177,23 @@ export async function ensureSeedAuthUsers({ dbUrl, supabaseUrl, serviceKey }) {
 
 /**
  * P0b: 5 rodzajów kont na TEST po prep. Odmowa produkcji.
- * Idempotentne — pomija istniejące auth.id.
+ * Po resecie schematu auth.users może zostać — wtedy odtwarzamy zaproszenie
+ * i wiersz app_users (wyzwalacz na INSERT auth nie odpala się ponownie).
  */
 export async function ensureFiveRoleAccounts({ dbUrl, supabaseUrl, serviceKey }) {
   assertTestProject(dbUrl, serviceKey, supabaseUrl);
+
   await withDb(dbUrl, async (client) => {
     for (const u of FIVE_ROLE_USERS) {
-      const exists = await client.query(`select 1 from auth.users where id = $1`, [u.id]);
-      if (exists.rowCount > 0) continue;
+      const linked = await client.query(
+        `select 1 from app_users where email = $1 and auth_id = $2 and role = $3::user_role`,
+        [u.email, u.id, u.role],
+      );
+      if (linked.rowCount === 1) continue;
 
-      await client.query(`delete from user_preferences where user_id in (select id from app_users where email = $1)`, [
+      await client.query(`delete from user_preferences where user_id in (select id from app_users where email = $1 or auth_id = $2)`, [
         u.email,
+        u.id,
       ]);
       await client.query(`delete from app_users where email = $1 or auth_id = $2`, [u.email, u.id]);
       await client.query(`delete from user_invites where email = $1`, [u.email]);
@@ -196,6 +202,22 @@ export async function ensureFiveRoleAccounts({ dbUrl, supabaseUrl, serviceKey })
          values ($1, $2, $3::user_role, 'pl', now())`,
         [u.email, u.org, u.role],
       );
+
+      const authExists = await client.query(`select 1 from auth.users where id = $1`, [u.id]);
+      if (authExists.rowCount === 0) {
+        // createUser poniżej (Admin API)
+      } else {
+        // auth jest, schemat wyczyszczony — wstaw app_users jak wyzwalacz zaproszenia
+        await client.query(
+          `insert into app_users (auth_id, org_id, email, role, active)
+           values ($1, $2, $3, $4::user_role, true)
+           on conflict (auth_id) do update set org_id = excluded.org_id, email = excluded.email, role = excluded.role, active = true`,
+          [u.id, u.org, u.email, u.role],
+        );
+        await client.query(`update user_invites set accepted_at = now() where email = $1 and accepted_at is null`, [
+          u.email,
+        ]);
+      }
     }
   });
 
