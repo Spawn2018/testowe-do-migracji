@@ -90,9 +90,9 @@ export async function resetPublic(url) {
     await client.query(`drop schema ${name} cascade`);
     console.log(`reset: DROP SCHEMA ${name} CASCADE`);
   }
-  // P0b: citext/btree_gist w public → DROP robi sieroty. PostGIS zostaje w public:
-  // funkcje z „SET search_path = public” (np. process_position) wymagają geometry w public.
-  for (const ext of ['citext', 'btree_gist']) {
+  // P0b: sieroty (extnamespace bez nspname) → extensions. Typy używane przy
+  // „SET search_path = public” (geometry, citext) muszą być w public po resecie.
+  for (const ext of ['postgis', 'citext', 'btree_gist']) {
     const loc = await client.query(
       `select n.nspname
          from pg_extension e
@@ -101,13 +101,12 @@ export async function resetPublic(url) {
       [ext],
     );
     if (loc.rowCount === 0) continue;
-    const ns = loc.rows[0].nspname;
-    if (ns === 'extensions') continue;
+    if (loc.rows[0].nspname != null) continue;
     try {
       await client.query(`alter extension ${ext} set schema extensions`);
-      console.log(`reset: ${ext} → schema extensions (było ${ns ?? 'SIEROTA'})`);
+      console.log(`reset: ${ext} sierota → extensions`);
     } catch (e) {
-      console.log(`reset: ${ext} SET SCHEMA pominięte (${String(e.message || e).slice(0, 80)})`);
+      console.log(`reset: ${ext} sierota (${String(e.message || e).slice(0, 80)})`);
     }
   }
   console.log('reset: DROP SCHEMA public CASCADE');
@@ -116,18 +115,20 @@ export async function resetPublic(url) {
   await client.query('GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role');
   await client.query('GRANT ALL ON SCHEMA public TO postgres, service_role');
   await client.query('GRANT USAGE ON SCHEMA public TO anon, authenticated');
-  // Po DROP public: postgis musi być w public (SET search_path = public w funkcjach).
-  // „IF NOT EXISTS” nie przenosi z extensions — drop + create.
-  const pgLoc = await client.query(
-    `select n.nspname from pg_extension e
-     left join pg_namespace n on n.oid = e.extnamespace where e.extname = 'postgis'`,
-  );
-  if (pgLoc.rowCount > 0 && pgLoc.rows[0].nspname !== 'public') {
-    await client.query('drop extension postgis cascade');
-    console.log(`reset: drop postgis (było ${pgLoc.rows[0].nspname})`);
+  for (const ext of ['postgis', 'citext', 'btree_gist']) {
+    const loc = await client.query(
+      `select n.nspname from pg_extension e
+       left join pg_namespace n on n.oid = e.extnamespace where e.extname = $1`,
+      [ext],
+    );
+    if (loc.rowCount > 0 && loc.rows[0].nspname === 'public') continue;
+    if (loc.rowCount > 0 && loc.rows[0].nspname != null && loc.rows[0].nspname !== 'public') {
+      await client.query(`drop extension ${ext} cascade`);
+      console.log(`reset: drop ${ext} (było ${loc.rows[0].nspname})`);
+    }
+    await client.query(`create extension if not exists ${ext} with schema public`);
+    console.log(`reset: ${ext} w schema public`);
   }
-  await client.query('create extension if not exists postgis with schema public');
-  console.log('reset: postgis w schema public');
   await client.query(
     'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO postgres, service_role, anon, authenticated',
   );
