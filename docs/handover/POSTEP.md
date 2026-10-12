@@ -2029,3 +2029,8 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Produkcja: bez migracji aplikacji w P0b; `tower.log-mar.pl` i makieta Vercel → 200.
 - PLAN §4 P0b → NA PRODUKCJI (narzędzia). Następna paczka: **P1**.
 
+## 2026-10-12 — R1 D-20261012-2210-01: przerwana pętla bramy TEST
+
+- 12.10 22:02–22:20: pętla bramy TEST po komplecie na `832cca5a` ruszyła ponownie od `prep` na zmienionym HEAD; przerwana (D-20261012-2210-01 R1); wyniki tego przebiegu nieważne; odbiór P0b bez zmian; TEST wolne od 22:32.
+- Pętla (`run-loop.pid` 15116) i monitor (`chat-status.pid` 19670) martwe; `test-db-gate-step` nie działa. Odczyty `pg_stat_activity` (postgres, active, bez własnego pid): 22:27 = 0, 22:32 = 0.
+
