@@ -44,5 +44,28 @@ sval "nieznany kod bez zmiany" "select count(*) from risk_signals where title li
 sval "osiem znaków → kod wysyłki" "select count(*) from risk_signals where title like 'SG-03 %brak awizacji przed załadunkiem'" 1
 sval "kopia w dzienniku" "select (count(*) >= 2)::text from audit_log where action = 'E18_P15_KOPIA'" true
 
+echo; echo "[e41] P2-poprawki — roboty drogowe"
+sval "bez id z listy funkcja zmienia 0" "select e18_p15_poprawka()" 0
+sys "insert into risk_signals (id, project_id, kind, severity, title, title_key, detail) values
+ ('0f692878-7193-40f1-88c7-1bd395e8bd7b','$P','ROAD_SE','LOW',
+  'Zakaz ruchu ciężarówek w Szwecji: E4: od Trafikplats Piteå S do Trafikplats Bergsviken i riktning mot Sundsvall w regionie Norrbottens (BD)',
+  'rk_road_se','{\"rodzaj\":\"roboty\"}'::jsonb)" >/dev/null
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, source) values
+ ('E18_P15_KOPIA','risk_signals','0f692878-7193-40f1-88c7-1bd395e8bd7b','{}','{}','e18-p15')" >/dev/null
+sys "insert into risk_signals (id, project_id, kind, severity, title, title_key) values
+ ('0195aaaa-0000-4000-8000-000000000001','$P','ROAD_SE','LOW',
+  'Zakaz ruchu ciężarówek w Szwecji: spoza listy','rk_road_se')" >/dev/null
+n0=$(sys "select count(*) from notifications" | tail -1)
+s0=$(sys "select count(*) from sms_outbox" | tail -1)
+sval "jedna sprawa z listy" "select e18_p15_poprawka()" 1
+sval "tytuł roboty po polsku" "select title from risk_signals where id='0f692878-7193-40f1-88c7-1bd395e8bd7b'" "Warunki drogowe E4: roboty drogowe, od węzła Piteå S do węzła Bergsviken, w kierunku Sundsvall, region Norrbotten, od 18.08, 06:51 do 31.12, 16:00"
+sval "title_key bez zmian" "select title_key from risk_signals where id='0f692878-7193-40f1-88c7-1bd395e8bd7b'" "rk_road_se"
+sval "severity bez zmian" "select severity::text from risk_signals where id='0f692878-7193-40f1-88c7-1bd395e8bd7b'" "LOW"
+sval "spoza listy bez zmian" "select title from risk_signals where id='0195aaaa-0000-4000-8000-000000000001'" "Zakaz ruchu ciężarówek w Szwecji: spoza listy"
+sval "drugi raz 0" "select e18_p15_poprawka()" 0
+sval "wpis E18_P15_POPRAWKA" "select count(*) from audit_log where action='E18_P15_POPRAWKA' and entity_id='0f692878-7193-40f1-88c7-1bd395e8bd7b'" 1
+sval "powiadomienia bez zmian" "select count(*) from notifications" "$n0"
+sval "sms bez zmian" "select count(*) from sms_outbox" "$s0"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL${bad}"
 [ "$fail" -eq 0 ]

@@ -187,7 +187,7 @@ Tylko `tests/`, `scripts/`, `.githooks/`; bez aplikacji i bez migracji. Pierwszy
   - **D6 (D-20261013-0345-01, L1–L6)** — cofnięcie zmiany aplikacji z `1eca3a01` (`src/data/supabaseProvider.ts` = `main`); testy na żywo zielone na TEST (BK3 14/14, PKCE 8/8, przeglądarka, BK5 8/8): fixture M10/M12 w BK3, polityka hasła TEST = produkcja, e2e logowania hasłem, BK5 na kontach 5 ról; ważność potwierdzenia bazy na `a24c05e0` tylko gdy `git diff --stat a24c05e0 HEAD -- supabase tests/db scripts/lib scripts/e18 src` puste. **Bez scalenia PR #164, dopóki L1–L6 nie są spełnione.**
 - **Odbiór:** „Odbiór” w `paczki/P1_E18.md` + D1–D3 z dopisku D-20261012-2210-01 + „Test odbioru” z dopisku D-20261012-2335-01 (D5) + test odbioru D6 (dopisek D-20261013-0345-01).
 
-### P2 · Fundament ekranów — NA PRODUKCJI (13.10.2026 13:35, merge `35abe70b`, migracja 0194)
+### P2 · Fundament ekranów — NA PRODUKCJI (13.10.2026 14:08, merge `35abe70b`, migracja 0194, wdrożenie `dpl_CqK5DSotFYHT8QyeFwLzMUixdBCs`)
 - **E41** nazwa transportu:
   - jedna funkcja „kod · numer HHL” dla HHL i SCX; KSH widzi tylko kod, a baza nie wysyła KSH numerów;
   - tytuł sprawy: „nazwa — co się stało”;
@@ -202,6 +202,10 @@ Tylko `tests/`, `scripts/`, `.githooks/`; bez aplikacji i bez migracji. Pierwszy
 - **Testy do przepisania:** `etap4-ui.spec.ts` l.71–86 i 135–136; `aud03-ksh-panel.spec.ts` l.64; `etap5-ui.spec.ts` (`.wb-code`); `aud02-dzwonek.test.ts`; `order-numbers.test.ts`; `stylesheet-mockup.test.ts` (ODSTEPSTWA E10); migawki `visual.spec.ts`, `visual-states.spec.ts`; zestawy `security`, `aud03`.
 - **Ekrany:** wszystkie (nazwa, formaty, dzwonek, dolny pasek telefonu).
 - **Odbiór:** KSH przez API nie dostaje żadnego numeru (test bazy na TEST); 0 „●” w aplikacji; strażnik tekstów: 0 trafień w zakresie blokującym (E21-1), raport reszty w PR; zrzuty 1440 i 390 Kokpitu, Harmonogramu i panelu porównane z makietami E41, E21, E10, E8.
+- **Poprawki P2 (D-20261013-1400-01):**
+  - Q1 wdrożenie aplikacji z `main` według R7 — wykonane 13.10.2026 14:08, `dpl_CqK5DSotFYHT8QyeFwLzMUixdBCs`; plik JS przed `assets/index-DtP8UgG7.js`, po `assets/index-h0t0ItfK.js`.
+  - Q2 trzynaście tytułów „Zakaz ruchu ciężarówek w Szwecji” (roboty drogowe) — W TOKU, gałąź `pakiet/P2-poprawki`, przed scaleniem P3.
+  - Q3 zasada „NA PRODUKCJI” w `tower-wdrozenie` — obowiązuje od 13.10.2026 14:00.
 
 ### P3 · Uprawnienia, konta, Opcje, pasek górny — DO ZROBIENIA
 - **E9** prawa ról (z E36, zamkniętym w E9):
@@ -569,3 +573,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 12.10.2026 22:10 | D-20261012-2210-01: R1 zatrzymanie pętli TEST; R2 brama TEST w worktree; R3 parytet `schema_migrations` (registry); R4 poprawka R8 nakładania; R5 słowo w odbiorze P0b — pozycje D1–D4 w P1 | koordynator; wykonawca |
 | 12.10.2026 23:35 | D-20261012-2335-01: poprawki P1 K1–K9 (0193, `kopia.mjs`, zestaw `e18`) przed potwierdzeniem na TEST i scaleniem #164 — pozycja D5 w P1 | koordynator; wykonawca |
 | 13.10.2026 03:45 | D-20261013-0345-01: P1 L1–L6 — bez zmiany aplikacji pod testy na żywo; testy na żywo zielone na TEST; ważność potwierdzenia bazy na `a24c05e0` — pozycja D6 w P1; bez scalenia #164 do spełnienia L1–L6 | koordynator; wykonawca |
+| 13.10.2026 14:00 | D-20261013-1400-01: poprawki P2 — Q1 wdrożenie aplikacji (R7), Q2 trzynaście tytułów ROAD_SE, Q3 zasada „NA PRODUKCJI”. Q2 przed scaleniem P3 | koordynator |
