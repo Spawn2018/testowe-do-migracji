@@ -20,32 +20,14 @@ Deno.serve(async (req) => {
 
   const sb = createClient(url, service, { auth: { persistSession: false } });
 
-  // L-13: raz dziennie DIGEST → PENDING (jeden skrót / user)
-  const day = new Date().toISOString().slice(0, 10);
+  // E5-2 / D-20261014-0015-01 R2: telefon tylko krytyczne — nie promuj DIGEST na telefon.
+  // Stare wiersze WEB_PUSH/DIGEST zamykane jako SENT bez wysyłki (bez DAILY_DIGEST).
   const { data: digests } = await sb.from('notifications')
-    .select('id,user_id,template,payload')
+    .select('id')
     .eq('channel', 'WEB_PUSH').eq('status', 'DIGEST').limit(200);
-  const byUser = new Map<string, typeof digests>();
-  for (const d of digests ?? []) {
-    const uid = String(d.user_id);
-    if (!byUser.has(uid)) byUser.set(uid, []);
-    byUser.get(uid)!.push(d);
-  }
-  for (const [uid, rows] of byUser) {
-    if (!rows?.length) continue;
-    const dedup = `wp-digest:${day}:${uid}`;
-    const titles = rows.map((r) => r.template).slice(0, 8);
-    await sb.from('notifications').insert({
-      channel: 'WEB_PUSH',
-      recipient: uid,
-      user_id: uid,
-      template: 'DAILY_DIGEST',
-      payload: { titles, n: rows.length, critical: false },
-      dedup_key: dedup,
-      status: 'PENDING',
-    });
+  if (digests?.length) {
     await sb.from('notifications').update({ status: 'SENT', sent_at: new Date().toISOString() })
-      .in('id', rows.map((r) => r.id));
+      .in('id', digests.map((r) => r.id));
   }
 
   const { data: rows } = await sb.from('notifications')
