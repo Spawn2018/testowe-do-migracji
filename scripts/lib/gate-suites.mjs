@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 23,
   import: 66,
-  nullguard: 622, // P3: +5 admin_security_flag_set; +5 admin_user_profile_set; +5 security_advisor_snapshot_latest
+  nullguard: 627, // P3 +5 snapshot_latest; P4 +5 load_status_set (PURE bez ×4)
   i2: 540,
   i30: 10,
   i31: 9,

@@ -107,6 +107,8 @@ auth_email_allowed | EMPTY | select auth_email_allowed('hhl@test') | f
 app_user_mark_password_set | GUARD | select app_user_mark_password_set() | TOWER_AUTH|konto nieaktywne|brak
 admin_notification_matrix_set | GUARD | select admin_notification_matrix_set('DECISION','HHL_ADMIN',true,false,false) | wyłącznie administrator HHL
 security_advisor_snapshot_latest | GUARD | select * from security_advisor_snapshot_latest() | wyłącznie administrator HHL|Migawka doradcy
+load_status_rank | PURE | select load_status_rank('READY'::load_status) | -
+load_status_set | GUARD | select load_status_set(gen_random_uuid(),'READY',now(),null) | Brak aktywnego konta|Zmiana statusu|Nieznany transport
 admin_sms_zone_recipient_set | GUARD | select admin_sms_zone_recipient_set('LOAD_SREM',1,'x','500000000','PL',true) | Tylko administrator HHL|wyłącznie HHL
 admin_sms_zone_trigger_set | GUARD | select admin_sms_zone_trigger_set('SMS_ZONE_APPROACH',true) | Tylko administrator HHL|wyłącznie HHL
 admin_sms_zone_test | GUARD | select admin_sms_zone_test('LOAD_SREM') | Tylko administrator HHL|wyłącznie HHL
