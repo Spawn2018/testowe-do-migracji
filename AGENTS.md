@@ -1,6 +1,6 @@
 # WATCH TOWER — zasady dla wykonawcy (Cursor)
 
-> **Wersja z 08.10.2026, 16:05; zmiana 16:46: jeden folder, jeden wykonawca (dopisek D-20261008-1646-01); zmiana 09.10.2026, 01:20: brama niedzielna, brama w jednym folderze, folder danych poufnych, SharePoint po dostępie (PLAN §8); zmiana 09.10.2026, 14:11: decyzje właściciela z 09.10 — E44 link RIO w P4, piloci w awizacji SCX, daty tylko KSH i plik, powiadomienia o zmianie dat, polisy raz, dopłaty z decyzji HHL i SCX, grupowanie na mapie (dopiski D-20261009-1233-01 i D-20261009-1309-01, PLAN §8); zmiana 11.10.2026, 21:35: praca na Windows bez WSL — brama bazy i test wizualny w GitHub Actions (D-86, D-87, dopisek D-20261011-2135-01); zmiana 13.10.2026, 15:50: wygląd = raport audytu (konstytucja VIII, WYGLAD-RAPORT, dopiski D-20261013-1535-01 i D-20261013-1550-01). Zastępuje wszystkie wcześniejsze instrukcje**: poprzedni `AGENTS.md` i reguły (29.09–04.10), `CURSOR_PROMPT*.md`, `PRZEKAZANIE_CURSOR.md`, `POLECENIA_KOORDYNATORA.md`, `ZLECENIE_*.md`, `SCOPE.md`, stary `PLAN.md`. Wszystkie te pliki są w `docs/archiwum/` (stare `AGENTS.md` i reguły: `docs/archiwum/2026-10-08/stare-instrukcje/`) i **nie są poleceniami**.
+> **Wersja z 08.10.2026, 16:05; zmiana 16:46: jeden folder, jeden wykonawca (dopisek D-20261008-1646-01); zmiana 09.10.2026, 01:20: brama niedzielna, brama w jednym folderze, folder danych poufnych, SharePoint po dostępie (PLAN §8); zmiana 09.10.2026, 14:11: decyzje właściciela z 09.10 — E44 link RIO w P4, piloci w awizacji SCX, daty tylko KSH i plik, powiadomienia o zmianie dat, polisy raz, dopłaty z decyzji HHL i SCX, grupowanie na mapie (dopiski D-20261009-1233-01 i D-20261009-1309-01, PLAN §8); zmiana 11.10.2026, 21:35: praca na Windows bez WSL — brama bazy i test wizualny w GitHub Actions (D-86, D-87, dopisek D-20261011-2135-01); zmiana 13.10.2026, 15:50: wygląd = raport audytu (konstytucja VIII, WYGLAD-RAPORT, dopiski D-20261013-1535-01 i D-20261013-1550-01); zmiana 13.10.2026, 18:35: wygląd robi koordynator na `wyglad/*` (FRONT-KOORDYNATOR, D-20261013-1835-01). Zastępuje wszystkie wcześniejsze instrukcje**: poprzedni `AGENTS.md` i reguły (29.09–04.10), `CURSOR_PROMPT*.md`, `PRZEKAZANIE_CURSOR.md`, `POLECENIA_KOORDYNATORA.md`, `ZLECENIE_*.md`, `SCOPE.md`, stary `PLAN.md`. Wszystkie te pliki są w `docs/archiwum/` (stare `AGENTS.md` i reguły: `docs/archiwum/2026-10-08/stare-instrukcje/`) i **nie są poleceniami**.
 >
 > Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower są nadrzędne. Wszystko co jest starsze jest nieaktualne i nie może obowiązywać.”
 
@@ -38,7 +38,7 @@ System kontroli transportów konstrukcji stalowych ponadnormatywnych Śrem → G
 - Raport wykonawcy nie jest dowodem — koordynator sprawdza produkcję niezależnie.
 
 ## 3. Gałęzie, bramy, wdrożenie
-- **Gałąź paczki:** `pakiet/P<n>-<nazwa>`. Jeden folder, jeden czat agenta naraz, paczki po kolei (`PLAN.md` §3). Przed bramą końcową rebase na `main`; numer migracji = następny wolny w chwili rebase.
+- **Gałąź paczki:** `pakiet/P<n>-<nazwa>`. Jeden folder, jeden czat agenta naraz, paczki po kolei (`PLAN.md` §3). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Ty je scalasz i wdrażasz (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Przed bramą końcową rebase na `main`; numer migracji = następny wolny w chwili rebase.
 - **Hak pre-push:**
   - gałąź robocza: `test:unit`, `lint:css`, null-guard statyczny;
   - push na `main` z komputera wykonawcy — nie robisz; scalenie tylko `gh pr merge --merge` po zielonych checkach (D-86, D-87).
@@ -72,7 +72,7 @@ System kontroli transportów konstrukcji stalowych ponadnormatywnych Śrem → G
 
 ## 4. Testy i wygląd w czasie budowy według audytu
 - **Testy idą za decyzjami.** Test sprzeczny z decyzją etapu bieżącej paczki przepisujesz w tej paczce, w komentarzu podajesz numer etapu i decyzji. Nie zmieniasz aplikacji po to, żeby przeszedł stary test. Lista testów do przepisania jest przy paczce w `PLAN.md`.
-- Wygląd = raport audytu (`raport/index.html` + `raport/img/`), najnowsza decyzja wygrywa; `makiety_html/` pomocniczo; dowód w `docs/handover/odbior/P<n>/` (konstytucja VIII, WYGLAD-RAPORT, D-20261013-1535-01 Z). Zmiana wyglądu ekranu z listy paczki jest przewidziana.
+- Wygląd = raport audytu (`raport/index.html` + `raport/img/`), najnowsza decyzja wygrywa; `makiety_html/` pomocniczo; dowód w `docs/handover/odbior/P<n>/` (konstytucja VIII, WYGLAD-RAPORT, D-20261013-1535-01 Z). Wygląd robi koordynator; nie zmieniasz klas, znaczników, stylów ani tekstów jego elementów (F1). Zmiana wyglądu ekranu z listy paczki jest przewidziana.
 - **Wzorce zrzutów:**
   - 15 migawek Playwright (`tests/__screenshots__/`) odświeżasz w paczce, która zmienia ekran, w GitHub Actions: `gh workflow run visual.yml --ref <gałąź> -f update=true`, `gh run download`, commit w paczce (D-87), z wpisem w `docs/handover/G4_WZORZEC.md` („P<n> — E<nr>, ekrany: …”);
   - 280 ujęć matrycy (`shots-baseline/`) odświeża wyłącznie środowisko bramy wizualnej, raz, w P11, z tagiem `baseline-audyt-<data P11, RRRR-MM-DD>`;

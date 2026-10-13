@@ -24,6 +24,11 @@ Właściciel, 08.10.2026 13:26: „Najświeższe ustalenia poczynione w tym czac
 |---|---|---|---|
 | WYGLAD-RAPORT | wzorzec wyglądu całej aplikacji | Wygląd całej aplikacji, na komputerze i na telefonie = raport audytu (`raport/index.html` + `raport/img/`) z najnowszymi decyzjami właściciela. Każda paczka pokazuje to dowodem, koordynator sprawdza | ✅ |
 
+### Decyzja właściciela 13.10.2026, 18:27 — podział pracy
+| ID | Sprawa | Decyzja | Status |
+|---|---|---|---|
+| FRONT-KOORDYNATOR | kto robi wygląd (frontend) | Wygląd (frontend) robi koordynator na gałęziach `wyglad/*`; Cursor podłącza dane, logikę i bazę, scala i wdraża (D-20261013-1835-01) | ✅ |
+
 ### Wpisy zastąpione albo zamknięte (z `UZGODNIENIE_08_10.md` pkt 2; numery linii dotyczą wersji rejestru z 07.10.2026)
 | Wpis (linia) | Dziś w rejestrze | Obowiązuje |
 |---|---|---|
