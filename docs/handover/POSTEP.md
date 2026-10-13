@@ -2105,9 +2105,16 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 ## 2026-10-13 — D-20261013-1835-01 (FRONT-KOORDYNATOR) + start P3 (F5)
 
 - Plan: merge **`59165fc2`** (PR #174) — rejestr `FRONT-KOORDYNATOR`, `AGENTS.md` §3/§4, `front.mdc`, PLAN §1 pkt 5, §3, §4 (Poprawki P2 — wygląd 2 na `wyglad/P2-2`, P3, P5 kolor marży), §8. D-20261013-1815-01 nie wykonywany (F4 — koordynator).
-- Gałąź `pakiet/P3-uprawnienia` z `main`. Bez zmian wyglądu ekranów (F5).
-- Pierwszy krok logiki: E14 (wartość roli z onChange), 5 ról w UI, migracja `0196` (E9/E14/E19/G-20).
-- Podgląd E9-7/G-07: `isPreviewReadOnly`, strażnik `writeThrough`, `PreviewBanner` (klasa `.banner`, bez przebudowy paska).
-- `wyglad/P2-2`: jeszcze brak PR — scalenie P3 dopiero po zielonym `wyglad/P2-2` (F4).
+- Gałąź `pakiet/P3-uprawnienia` (PR #175). Bez zmian wyglądu ekranów (F5).
+- Logika: E14 (rola z onChange), 5 ról, migracja `0196` (E9/E14/E19/G-20), Podgląd E9-7/G-07 (`isPreviewReadOnly`, strażnik `writeThrough`, `PreviewBanner`).
+- `db.yml` money/invite zielone; security 86/88 → poprawka testów E19 (SELECT+RLS zamiast permission denied).
 - TEST wolne.
+
+## 2026-10-13 — Poprawki P2 — wygląd 2 (`wyglad/P2-2`)
+
+- PR #176 scalony → `b9ae3d37` (13.10.2026 19:00 UTC). unit + visual zielone; gitleaks 0 (opis PR); `npm audit --omit=dev --audit-level=high` = 0; bez migracji (F8 OK).
+- Wdrożenie R7 z `main` `b9ae3d37`, 13.10.2026 19:04, `dpl_2S9uAEnAqEdv2sgTCUQWC3gDqtaL`.
+- Plik JS przed: `assets/index-BwXKwh8r.js`. Po: `assets/index-DjH-U2rD.js` — ta sama nazwa na `tower.log-mar.pl` i `watch-tower-makieta.vercel.app`. Oba adresy 200. 60 plików JS: 0 × `service_role`. Kopia wdrożeniowa usunięta. Bez migracji.
+
+**Poprawki P2 — wygląd 2 NA PRODUKCJI — commit `b9ae3d37`, wdrożenie `dpl_2S9uAEnAqEdv2sgTCUQWC3gDqtaL`, 13.10.2026 19:04.** Następna: dokończenie P3 (po rebase na `main`).
 

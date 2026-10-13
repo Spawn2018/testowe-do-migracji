@@ -24,9 +24,9 @@ val "SCX widzi tylko swoją fakturę (kosztową)"       $SCX "select string_agg(
 val "KSH nie widzi pozycji faktury kosztowej"        $KSH "select count(*) from invoice_lines where direction='KOSZT'" 0
 val "SCX nie widzi pozycji faktury przychodowej"     $SCX "select count(*) from invoice_lines where direction='PRZYCHOD'" 0
 
-echo; echo "[2] Rozdzielenie cen (z migracji 0001)"
-err "KSH nie odczyta tabeli kosztów"                 $KSH "select * from load_cost" "permission denied"
-err "SCX nie odczyta tabeli przychodów"              $SCX "select * from load_revenue" "permission denied"
+echo; echo "[2] Rozdzielenie cen (z migracji 0001; E19/P3 0196: SELECT + RLS zamiast permission denied)"
+val "KSH nie widzi wierszy w load_cost (RLS)"        $KSH "select count(*) from load_cost" 0
+val "SCX nie widzi wierszy w load_revenue (RLS)"     $SCX "select count(*) from load_revenue" 0
 
 echo; echo "[3] Kto może zmieniać co na fakturze"
 err "KSH nie zmieni kwoty faktury HHL"               $KSH "update invoices set net_total=1 where id='$INVP'" "weryfikowa"
