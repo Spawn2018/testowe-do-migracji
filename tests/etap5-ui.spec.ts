@@ -41,7 +41,10 @@ test.describe('D14 — trasy adresowalne', () => {
     await expect.poll(() => hashPath(page)).toBe('/harmonogram')
     const row = page.locator('tr[data-load]').first()
     const code = (await row.getAttribute('data-code'))!.trim()
-    const label = (await row.locator('span.code').first().textContent())!.trim()
+    const hhl = (await row.locator('td[data-col="ord_hhl"]').innerText()).trim()
+    /* E38 1A (P2-wyglad V1): kolumna to sam kod. E41: nagłówek panelu zostaje „kod · numer”. */
+    const label = `${code} · ${hhl}`
+    await expect(row.locator('td[data-col="code"] span.code')).toHaveText(code)
     await row.click()
     await expect(page.locator('.drawer .wb-code')).toHaveText(label)
     await expect.poll(() => hashPath(page)).toBe(`/transport/${code}`)

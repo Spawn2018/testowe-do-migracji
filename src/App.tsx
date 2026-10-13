@@ -28,6 +28,7 @@ import { useRouteSync } from './hooks/useRouteSync';
 import { SUPABASE_AUTH_ENABLED } from './auth/config';
 import { canSwitchView } from './lib/prodFacade';
 import { t } from './i18n/messages';
+import { usePhoneTableLabels } from './lib/phoneTableLabels';
 
 // BK2: bramka logowania tylko w trybie Supabase (VITE_AUTH_MODE=supabase); demo bez zmian.
 const AuthGate = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./auth/AuthGate')) : null;
@@ -47,6 +48,7 @@ function TowerShell() {
 
   usePageSectionDnD();
   useRouteSync();
+  usePhoneTableLabels();
 
   // D14: nowy widok zaczyna się od góry (przewinięcie poprzedniego widoku nie przechodzi dalej).
   const mainRef = useRef<HTMLElement>(null);

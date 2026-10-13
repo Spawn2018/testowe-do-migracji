@@ -1082,3 +1082,59 @@ img,video{max-width:100%;height:auto}
     width:auto;min-height:44px;padding:6px 12px;border:0;
   }
 }
+
+/* E8 pkt 1–4 (P2-wyglad, D-20261013-1535-01 V3). Telefon ≤ 768 px.
+   Karty, cele 44 px, tekst od 12 px. Komputer zostaje przy tabelach. */
+.e8-fine{font-size:11.5px}
+@media (max-width:768px){
+  main{overflow-x:auto}
+  .panel-hd,header.panel-hd{flex-wrap:wrap;min-width:0;max-width:100%}
+  .panel,.page-sections,.section-card,.banner{max-width:100%;min-width:0}
+  .banner span,.kpi,.kpi .v,.kpi .d,.stage .l{min-width:0;max-width:100%;overflow-wrap:anywhere}
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .stage .l{white-space:normal;overflow:visible;text-overflow:unset}
+  nav.tower-nav button.nav-pin[data-view="sched"] .count{display:none}
+  .app table,.app tbody{display:block;width:100%;max-width:100%}
+  .app thead{display:none}
+  .app tr{
+    display:flex;flex-direction:column;margin:8px;padding:4px 0;min-width:0;
+    border:1px solid var(--rule);background:var(--surface);
+  }
+  .app td{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:8px;
+    width:auto;min-width:0;max-width:100%;min-height:44px;padding:6px 12px;border:0;
+    white-space:normal;overflow-wrap:anywhere;
+  }
+  .app td::before{
+    content:attr(data-label);font-weight:600;flex:0 1 42%;margin-right:8px;
+  }
+  .app td:not([data-label])::before,.app td[data-label=""]::before{content:none}
+  .app td svg,.app td img{max-width:100%;height:auto}
+  .e8-fine,.stage .l,nav .count,.kpi .k,.kpi .d,thead th .ar,.pill,.flag,kbd,
+  .wb-fields b,.ops .lb,.leaflet-control-attribution,.leaflet-control-attribution a,
+  .mini-stat .k,.mapkey-note,.eyebrow,.panel-mark,.rate-editor-head span,.rate-copy span,
+  .rate-value,.input-unit>span,.settings-row span,.mini-toggle,.workflow-summary-row small,
+  .wf-meta,.sys-tile .k,.sys-tile .d,.sys-table .sys-when,.rate-table th,.sched-card .meta,
+  .legendline,.form-field>span,.form-field small{
+    font-size:12px;
+  }
+  button,.seg button,.chipbtn,.dtabs button,.iconbtn,summary,select,textarea,
+  input:not(.sronly, [hidden]){min-height:44px}
+  button,.seg button,.chipbtn,.dtabs button,.iconbtn,summary{min-width:44px}
+  a,label{
+    display:inline-flex;align-items:center;box-sizing:border-box;
+    min-width:44px;min-height:44px;
+  }
+  input[type="checkbox"],input[type="radio"]{width:44px;height:44px;min-width:44px;min-height:44px}
+  input:not([type="checkbox"], [type="radio"], .sronly),select,textarea{min-width:0;max-width:100%}
+  .leaflet-bar a,.leaflet-control-zoom a{
+    display:flex;align-items:center;justify-content:center;
+    width:44px;height:44px;min-width:44px;min-height:44px;line-height:1;
+  }
+  .leaflet-control-attribution{max-width:100%;white-space:normal}
+  .leaflet-container .leaflet-control-attribution a{min-width:44px;min-height:44px}
+  .maplayers label{min-height:44px}
+  .panel.grid2,.panel-bd,svg{max-width:100%;min-width:0}
+  svg{display:block;height:auto}
+  svg text{font-size:12px}
+}

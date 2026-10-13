@@ -2082,3 +2082,20 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **P2-poprawki NA PRODUKCJI — commit `c410799a`, migracja 0195, wdrożenie `dpl_6FkHhuRasJEFybtjDRbLY72P8kvv`, 13.10.2026 15:35.** Następna paczka: P3.
 
+## PAUZA 2026-10-13 16:20
+
+- Gałąź `pakiet/P2-wyglad`, SHA przed tym commitem `02de6300` (main po scaleniu planu, PR #171). Produkcji ten krok nie zmienia. Bramy TEST nie było.
+- **Zrobione z dopisków D-20261013-1535-01 i D-20261013-1550-01:** Z8 (konstytucja VIII, rejestr `WYGLAD-RAPORT`), Z9 (`AGENTS.md`, `.cursor/rules`, PLAN §0, §1 pkt 5, nagłówek §4), V5 w P3, V6 w P7, Z12 w P11 — scalone na `main` (`02de6300`). Dopisków D-20261013-1525-01 i D-20261013-1615-01 nie wykonywano.
+- **W drzewie, bez sprawdzenia:** V1 (kolumna „Wysyłka” = sam kod), V2 (liczba tylko przy Ryzykach na dolnym pasku — CSS), V3 (szkic kart, tekstu i celów oraz `tests/e8-phone-gate.spec.ts`). Brama E8 nieodpalona. `fresh-smoke.sh` jeszcze bez tego testu. V4 (zrzuty `docs/handover/odbior/P2/`) nie zaczęte.
+- **Następny krok:** dokończyć V1–V3 na `pakiet/P2-wyglad` (lint CSS, brama E8 do 0/0/0, podpięcie w `fresh-smoke.sh`), potem V4 według Z10–Z11, migawki, scalenie i wdrożenie przed P3.
+- GitHub Actions w toku: brak. Ostatnie zakończone: unit `main` run 38410368819 (zielony, `02de6300`); PR #171 unit 38409319769, unit 38409332585, visual 38409329474 (zielone).
+- TEST wolne (od 13.10 15:20, po Q2).
+
+## WZNOWIENIE 2026-10-13 17:10
+
+- Gałąź `pakiet/P2-wyglad`, SHA `ec9e5fe4`, 0 niezapisanych zmian. Autor lokalny: Sebastian Bożek / sebastian.bozekq@gmail.com.
+- Przebiegi z pauzy zielone, żaden nie został w toku: unit `main` 38410368819; PR #171 unit 38409319769, unit 38409332585, visual 38409329474.
+- TEST wolne. Bramy TEST nie wznawiam. Dopiski 1535-01 i 1550-01 są na `main` (`02de6300`) — nie włączam ich drugi raz.
+- Dalej: V1–V3 (lint CSS, brama E8, `fresh-smoke.sh`), potem V4.
+- V1–V3 lokalnie, 13.10 17:20: `lint:css` zielony; brama E8 i test V1–V2: 2/2 (9 widoków × 360/390/430, trzy liczby = 0). V4: 30 zrzutów w `docs/handover/odbior/P2/`. Migawki `visual.yml` jeszcze nieodświeżone.
+

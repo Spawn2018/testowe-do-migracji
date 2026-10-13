@@ -863,7 +863,8 @@ export function ScheduleView() {
                         case 'code':
                           return (
                             <td key={id} data-col={id}>
-                              <span className="code" data-content>{transportLabel(l, role, 'schedule')}</span>
+                              {/* E38 1A (P2-wyglad V1): „Wysyłka” = sam kod. Nazwa „kod · numer” zostaje na karcie telefonu. */}
+                              <span className="code" data-content>{l.code}</span>
                             </td>
                           );
                         case 'ord_hhl':

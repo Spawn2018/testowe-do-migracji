@@ -85,8 +85,9 @@ test.describe('M5 — numery zleceń', () => {
     expect(kshCols[0]).toBe('code')
     await role(page, 'HHL')
     await nav(page, 'sched')
-    const row = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: /^SG-34/ }) })
-    await expect(row.locator('span.code')).toContainText('·')
+    const row = page.locator('tr[data-load]', { has: page.locator('td[data-col="code"] span.code', { hasText: /^SG-34$/ }) })
+    // E38 1A (P2-wyglad V1, D-20261013-1535-01): „Wysyłka” = sam kod. Numer zostaje w swojej kolumnie.
+    await expect(row.locator('td[data-col="code"] span.code')).toHaveText('SG-34')
     await expect(row.locator('td[data-col="ord_hhl"]')).toHaveText(/^HHL\/2026\//)
     await expect(row.locator('td[data-col="ord_scx"]')).toHaveText(/^SCX-26-/)
   })
