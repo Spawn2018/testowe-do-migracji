@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useTowerStore } from '../../store/useTowerStore'
 import { navForRole, type NavKey } from '../../lib/permissions'
-import { invoiceTodoCount, todoQueue } from '../../lib/cockpitE9'
+import { invoiceTodoCount, todoQueue, viewedKind } from '../../lib/cockpitE9'
+import { getAuthProfile } from '../../auth/profile'
 import { navLabel, t } from '../../i18n/messages'
 import { ClaudeIcon, type IconKey } from './ClaudeIcon'
 /* wyglad/P3 (E37 pkt 1): e-mail, rodzaj konta i „Wyloguj” przeszły do menu konta w pasku górnym (AccountMenu). */
@@ -58,7 +59,6 @@ export function Nav() {
   const setView = useTowerStore((s) => s.setView)
   const locale = useTowerStore((s) => s.locale)
   const risks = useTowerStore((s) => s.risks)
-  const invoices = useTowerStore((s) => s.invoices)
   const bills = useTowerStore((s) => s.bills)
   const loads = useTowerStore((s) => s.loads)
   const documents = useTowerStore((s) => s.documents)
@@ -106,11 +106,11 @@ export function Nav() {
      Bez liczb przy Harmonogramie, Strefach i Automatyzacjach. */
   const badge = (key: NavKey): { n: number; hot?: boolean } | null => {
     if (key === 'risk') {
-      const q = todoQueue(role, risks, loads)
+      const q = todoQueue(role, risks, viewedKind(role, getAuthProfile()?.role))
       return q && q.total ? { n: q.total, hot: true } : null
     }
     if (key === 'inv') {
-      const n = invoiceTodoCount(role, { loads, documents, bills, invoices })
+      const n = invoiceTodoCount(role, { loads, documents, bills })
       return n ? { n } : null
     }
     return null

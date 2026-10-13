@@ -38,8 +38,9 @@ describe('L-8 kafelki kokpitu', () => {
     const src = readFileSync('src/views/DashboardView.tsx', 'utf8');
     expect(src).not.toContain('openDecisions');
     expect(src).not.toContain('countOpenDecisions');
-    expect(src).toContain('todoQueue(role, risks, loads)');
-    expect(readFileSync('src/components/shell/Nav.tsx', 'utf8')).toContain('todoQueue(role, risks, loads)');
+    expect(src).toContain('todoQueue(role, risks, kind)');
+    expect(src).toContain('todoRisks(role, risks, kind)');
+    expect(readFileSync('src/components/shell/Nav.tsx', 'utf8')).toContain('todoQueue(role, risks, viewedKind(role, getAuthProfile()?.role))');
     const ck = readFileSync('src/lib/cockpitE9.ts', 'utf8');
     expect(ck).toContain('isoWeekNumber(input.nowIso)');
     expect(src + ck).not.toContain('tydzień 38');

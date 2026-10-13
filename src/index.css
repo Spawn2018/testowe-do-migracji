@@ -1368,3 +1368,5 @@ img,video{max-width:100%;height:auto}
     background:var(--red);color:var(--on-red);font-family:var(--font-cond);font-weight:700;font-size:13px;
   }
 }
+/* KSH bez listy „Do zrobienia” (E9): postęp i mapa na całą szerokość */
+.panel.grid2.ck-solo{grid-template-columns:minmax(0,1fr)}

@@ -85,17 +85,18 @@ Sprawdził pierwszą wersję (`3320bff`). Poprawione w drugim commicie:
 Obraz raportu: `raport/img/e9-after.webp` („Kokpit każdej firmy · komputer” i „Telefon · dolny pasek z decyzji E8”), dla listy pod kafelkami na telefonie `e8-after.webp` (Kokpit). Treść: E9 „Kokpit każdej firmy i liczby w menu” (decyzja 07.10 19:11), B6, B7.
 Zakres z `PLAN.md` §4 P3: „Kokpit i menu według roli — wygląd dostarcza koordynator”; odbiór: „Kokpit na telefonie według E8 pkt 6 i `img/e8-after.webp` (V5): kafelki 2 × 2 o równej szerokości; liczby się nie łamią; 3 najpilniejsze sprawy; treść kafelków według E9”.
 Zrzuty z demo, zamrożony czas 07.10.2026, 18:00 (jak obraz raportu). Liczby w demo są inne niż na obrazie (obraz: baza 07.10, 18:00), układ i opisy — te same.
+Kafelki liczą według statusu transportu, nie etapu paska: „Na placu” (w bazie `AT_SITE`) = na placu w Boden, „Rozładowany” (`UNLOADED`) i „Dostarczone” = dostarczone (E25; etap „Dostarczone” w produkcji nie występuje). Faktury — z tabeli Faktur (`bills`), jak strona Faktury.
 
 ### Z3 — element po elemencie
 
 | element | obraz raportu | po zmianie w aplikacji | zgodne | uwagi |
 |---|---|---|---|---|
 | baner nad Kokpitem | brak (E8 pkt 6: „Do zrobienia 23” zamiast paska „+136 ryzyk”) | brak banera | tak | czerwony baner i baner KSH/SCX usunięte |
-| nagłówek (komputer) | „H&H Logistics” · „Administrator · 07.10.2026” | to samo; rodzaj konta z profilu (Administrator, Operacje, Użytkownik, Dyspozytor) | tak | uchwyt przeciągania sekcji (⋮⋮) jak wcześniej, widoczny po najechaniu |
+| nagłówek (komputer) | „H&H Logistics” · „Administrator · 07.10.2026” | to samo; rodzaj konta z profilu (Administrator, Operacje, Użytkownik, Dyspozytor); w Podglądzie rodzaj domyślny oglądanej firmy (KSH Użytkownik, SCX Dyspozytor) | tak | uchwyt przeciągania sekcji (⋮⋮) jak wcześniej, widoczny po najechaniu |
 | układ (komputer) | 6 kafelków w 2 kolumnach | to samo; karta na całą szerokość strony | tak | obraz stawia 3 firmy obok siebie tylko do porównania; w aplikacji jedna firma, karta jak inne panele |
 | kafelek (komputer) | etykieta szara, „Strona ›” niebieskie pogrubione, duża liczba, „z N” mała, opis | to samo: 13 px / 13 px 600 `--sea` / 36 px / 15 px / 13 px; wysokość 105 px | tak | obraz: ok. 104 px; nagłówek 43 px (obraz ok. 43) |
 | HHL · W trasie | „1 · na placu w Boden: SG-03” · Mapa › | to samo | tak | — |
-| HHL · Do zrobienia | „23 · 22 transporty · 1 sprawa SEFS” · Ryzyka › | „N · X transportów · Y inne sprawy”; liczba = liczba przy „Ryzyka” w menu i na dolnym pasku | częściowo | rodzaj sprawy (SEFS) i lista E7 — P6 (Cursor, dopisek); wspólne źródło liczby: `todoQueue` |
+| HHL · Do zrobienia | „23 · 22 transporty · 1 sprawa SEFS” · Ryzyka › | „N · X transportów · Y inne sprawy”; sprawy według tabeli E9 („Ryzyka › Do zrobienia”: Administrator — wszystkie, Operacje — sprawy HHL), bez komunikatów technicznych; ta sama liczba przy „Ryzyka” w menu, na dolnym pasku i w liście „Najpilniejsze” | częściowo | rodzaj sprawy (SEFS) i pełna lista E7 — P6 (Cursor, dopisek); jedno źródło: `todoRisks` / `todoQueue` |
 | HHL · Załadunki w 7 dni | „5 · 13 po dacie załadunku bez wyjazdu” · Harmonogram › | to samo | tak | — |
 | HHL · Zezwolenia na 7 dni | „0 z 5” bursztynowe · „transporty z zezwoleniem PL i SE” · Dokumenty › | to samo; kliknięcie → Dokumenty z filtrem braków | tak | — |
 | HHL · Dostarczone · rozliczenie | „1 · SG-01 czeka na podpisany CMR · 0 gotowych do faktury” · Faktury › | to samo | tak | „gotowe” = z podpisanym CMR, bez faktury dla KSH; status E25 — P4 (dopisek) |
@@ -105,20 +106,21 @@ Zrzuty z demo, zamrożony czas 07.10.2026, 18:00 (jak obraz raportu). Liczby w d
 | KSH · W trasie | „1 · SG-03 na placu w Boden od 08:35” · Mapa › | „SG-03 na placu w Boden” | częściowo | godzina wjazdu na plac nie jest w danych aplikacji; kafelek ją pokaże, gdy dane ją podadzą (`siteSince`, dopisek) |
 | KSH · Plan dostaw w 72 h | „9 · 1 w drodze · 8 jeszcze nie wyjechało” · Harmonogram › | to samo | tak | — |
 | KSH · Terminowość | „0 z 1 · SG-01: plan 05.10, dostawa 06.10” · › | to samo | tak | definicja E15 — dopisek |
-| KSH · Najbliższy prom | „08.10, 18:00 · Wawel GDN → NYN · fala 1,3 m · ryzyko niskie” · Ryzyka › | to samo w demo; w produkcji „prognoza morza: brak źródła danych”, dopóki pomiar morza z bazy nie trafi do danych aplikacji | częściowo | B7, dopisek |
+| KSH · Najbliższy prom | „08.10, 18:00 · Wawel GDN → NYN · fala 1,3 m · ryzyko niskie” · Ryzyka › | to samo w demo; w produkcji „Wawel GDN → NYN · prognoza morza na stronie Ryzyka”, dopóki pomiar morza (`marine_conditions`, czyta go dziś tylko strona Ryzyka) nie trafi do Kokpitu | częściowo | B7 — podłączenie danych: wykonawca (dopisek); kafelek przyjmie falę, porywy i ryzyko bez zmiany wyglądu |
 | KSH · Faktury do sprawdzenia | „0 · brak faktur HHL w systemie” · Faktury › | to samo („faktury HHL czekają na sprawdzenie”, gdy są) | tak | — |
-| KSH · lista „Do zrobienia” | brak (decyzja 19:11) | brak kafelka; brak liczby przy „Ryzyka” | tak | lista pod kafelkami: „Najpilniejsze z „Sytuacji na trasie”” |
-| SCX · Do zrobienia | „12 · awizacje, numery SCX, zezwolenia, CMR” · Ryzyka › | to samo; liczba = menu | tak | „PRZYKŁAD” — znacznik obrazu |
+| KSH · lista „Do zrobienia” | brak (decyzja 19:11; telefon KSH na obrazie bez listy) | brak kafelka, brak liczby przy „Ryzyka”, brak listy pod kafelkami — postęp dostaw i mapa na całą szerokość | tak | sytuacja na trasie — strona Ryzyka |
+| SCX · Do zrobienia | „12 · awizacje, numery SCX, zezwolenia, CMR” · Ryzyka › | to samo; liczą się sprawy SCX (tabela E9), ta sama liczba w menu, na dolnym pasku i w liście „Najpilniejsze” | częściowo | „PRZYKŁAD” — znacznik obrazu; „Moje zadania” (awizacje, numery) wchodzą do listy w P6 (E7, dopisek) |
 | SCX · W trasie | „1 · SG-03 na placu w Boden” | to samo | tak | — |
 | SCX · Załadunki w 7 dni | „5 · zezwolenia 0 z 5 · 13 po dacie załadunku” | to samo | tak | — |
-| SCX · Do zafakturowania | „0 · 1 czeka na podpisany CMR (SG-01) · tydz. 41” · Faktury › | to samo | tak | status E25 i „jak tabela Faktur” (B7) — P4 (dopisek) |
+| SCX · Do zafakturowania | „0 · 1 czeka na podpisany CMR (SG-01) · tydz. 41” · Faktury › | to samo; liczba = rozładowane z podpisanym CMR bez faktury SCX; „tydz.” = tydzień dostawy tych transportów | tak | status E25 „Gotowe do fakturowania” — P4 (dopisek) |
 | SCX · Najbliższy prom | „… · fala 1,3 m, porywy 23 kn · ryzyko niskie” | bez porywów | częściowo | porywy pokaże kafelek, gdy źródło je poda (`gustKn`, dopisek) |
 | SCX · Terminowość | „0 z 1 · SG-01: plan 05.10, dostawa 06.10” | to samo | tak | — |
 | telefon · nagłówek | „Kokpit” · „H&H Logistics · Administrator” na całą szerokość | to samo | tak | — |
 | telefon · kafelki | 2 × 3 w ramce 12 px od brzegów; krótkie opisy; bez „Strona ›” | to samo; liczba 30 px w jednej linii; kafelek 105 px | tak | obraz: ok. 105 px |
-| telefon · pod kafelkami | E8: „Najpilniejsze z „Do zrobienia”” — 3 sprawy | to samo, 3 sprawy (komputer: 7 i przycisk „Ryzyka”) | tak | stopka i znacznik kursu tylko na komputerze (na telefonie nie ma kwoty) |
+| telefon · pod kafelkami | E8: „Najpilniejsze z „Do zrobienia”” — 3 sprawy | to samo, 3 sprawy (komputer: 7 i przycisk „Ryzyka”); KSH bez listy | tak | stopka i znacznik kursu tylko na komputerze (na telefonie nie ma kwoty) |
 | dolny pasek · liczba | czerwona liczba przy prawym górnym rogu ikony „Ryzyka” | to samo: biała liczba na `--red` (E10), ikona widoczna | tak | w motywie ciemnym kontrast jak w dzwonku (2,9 : 1) — sprawa E10, ta sama dla obu |
-| menu · liczby | liczba tylko przy działaniu do wykonania; bez liczb przy Harmonogramie, Strefach, Automatyzacjach | Ryzyka = „Do zrobienia” (HHL, SCX; KSH bez); Faktury = faktury czekające na mnie + transporty gotowe do mojej faktury; bez „1” zastępczego | tak | reguły E7/E25 — P4, P6 (dopisek); źródło: `src/lib/cockpitE9.ts` |
+| menu · liczby | liczba tylko przy działaniu do wykonania; bez liczb przy Harmonogramie, Strefach, Automatyzacjach | Ryzyka = „Do zrobienia” (HHL, SCX; KSH bez); Faktury = faktury czekające na mnie (KSH i HHL: do sprawdzenia, SCX: sporne) + rozładowane z podpisanym CMR bez mojej faktury; bez „1” zastępczego | tak | reguły E7/E25 — P4, P6 (dopisek); źródło: `src/lib/cockpitE9.ts` |
+| dzwonek · liczba | E9: ta sama liczba w Kokpicie, dzwonku i na dolnym pasku | dzwonek liczy dziś nieprzeczytane powiadomienia (np. 13 przy „Do zrobienia” 28) | nie | logika dzwonka — wykonawca (E7, P6, dopisek) |
 
 ### Konta (Z11)
 
@@ -134,10 +136,18 @@ Zrzuty z demo, zamrożony czas 07.10.2026, 18:00 (jak obraz raportu). Liczby w d
 
 - Brama E8 (`tests/e8-phone-gate.spec.ts`): 3 konta × 360 / 390 / 430 px — 0 poza ekranem, 0 uciętych, 0 celów < 44 px, 0 tekstu < 12 px, liczby kafelków w jednej linii.
 - Nowe testy „wyglad/P3-b Kokpit” w tym samym pliku: komputer 1440 (3 konta: nagłówek, kolejność 6 kafelków, 2 kolumny równej szerokości, „Strona ›”, stopka tylko HHL, „Do zrobienia” = liczba w menu, KSH bez liczby) i telefon 360 / 390 / 430 (nagłówek „Kokpit”, 2 × 3 równej szerokości, bez „Strona ›”, liczby w jednej linii i w kafelku, ≤ 3 najpilniejsze, bez stopki). Wstrzyknięta usterka (liczba 44 px z łamaniem, kolumny 1 : 2) — test łapie.
-- Testy jednostkowe `tests/p3b-cockpit-e9.test.ts` (9): kafelki trzech firm, opisy, „Do zrobienia”, liczba „Faktury” w menu, porywy i godzina wjazdu (gdy dane je podadzą).
+- Testy jednostkowe `tests/p3b-cockpit-e9.test.ts` (11): kafelki trzech firm na statusach jak z produkcji („Na placu”, „Rozładowany”), opisy i liczba mnoga, puste stany, „Do zrobienia” (Administrator, Operacje, SCX, KSH), rodzaj konta w Podglądzie, liczba „Faktury” z tabeli Faktur, porywy i godzina wjazdu (gdy dane je podadzą).
 - axe (WCAG 2.1 AA) na Kokpicie i menu, 3 konta × jasny / ciemny × 1440 / 390: 0 naruszeń przed zmianą liczby na dolnym pasku; po niej w motywie ciemnym kontrast liczby jak w dzwonku (E10).
 - Strona bez przewijania w bok przy 1440, 1024, 768, 430, 390 i 360 px.
-- Testy przepisane (E9, komentarz w teście): `tests/i2l-detect-lag.test.ts` (próg 5 zdarzeń, B6), `tests/l8-cockpit-tiles.test.ts` („Do zrobienia” = menu, KSH bez kafelka decyzji), `tests/etap4-ui.spec.ts` G4 (kwota tylko na marży HHL), `tests/e8-phone-gate.spec.ts` „V1 i V2” (bez liczby przy Harmonogramie także na komputerze).
+- Testy przepisane (E9, komentarz w teście): `tests/i2l-detect-lag.test.ts` i `tests/i2-facade.local.spec.ts` (stopka, próg 5 zdarzeń, B6), `tests/l8-cockpit-tiles.test.ts` („Do zrobienia” = menu, KSH bez kafelka decyzji), `tests/etap4-ui.spec.ts` G4 (kwota tylko na marży HHL), `tests/e8-phone-gate.spec.ts` „V1 i V2” (bez liczby przy Harmonogramie także na komputerze).
+- Niezależne sprawdzenie (agent kontrolny koordynatora, 14.10 ok. 01:15–01:30) na pierwszej wersji (`bd9269d`). Poprawione w drugim commicie:
+  - **produkcja:** kafelki liczyły według etapu paska, a w produkcji „Na placu” i „Rozładowany” mają inne etapy, a etapu „Dostarczone” nie ma — „W trasie” liczyło rozładowane, „Dostarczone” i „Terminowość” dawały 0; teraz według statusu (test na statusach z produkcji);
+  - liczba „Faktury” i „Do zafakturowania” z tabeli Faktur (`bills`, jak w produkcji), a nie ze starej listy `invoices` (w produkcji pusta); faktury SCX → HHL i HHL → KSH osobno;
+  - w Podglądzie nagłówek pokazywał rodzaj konta osoby z HHL („KSH · Administrator”) — teraz rodzaj domyślny oglądanej firmy;
+  - SCX: liczba „Do zrobienia” = sprawy SCX, te same w liście „Najpilniejsze” (lista pokazywała też sprawy HHL); HHL Operacje — sprawy HHL (tabela E9);
+  - KSH: bez listy pod kafelkami (E9: KSH bez listy „Do zrobienia”);
+  - produkcja, prom: zamiast „brak źródła danych” (pomiar jest na stronie Ryzyka) — „prognoza morza na stronie Ryzyka”;
+  - polskie formy („1 jeszcze nie wyjechał”, „2 czekają”), puste stany, tydzień dostawy przy „Do zafakturowania”, stopka czasu wykrycia nie udaje zera przy wczytywaniu i błędzie, najbliższy prom liczony co minutę.
 - Migawki wzorców (`tests/__screenshots__/`) odświeżone w `visual.yml` (`update=true`) — wpis w `docs/handover/G4_WZORZEC.md`.
 
 ### Pliki

@@ -2,16 +2,17 @@
  * wyglad/P3-b — kafelki Kokpitu każdej firmy według E9 (decyzja 07.10 19:11, img/e9-after).
  *
  * Moduł czysty: z danych, które już są w aplikacji, układa 6 kafelków dla firmy (etykieta, liczba, „z N”, opis,
- * krótki opis na telefon, cel kliknięcia). Gdzie aplikacja nie ma jeszcze źródła (np. prognoza morza w produkcji),
- * kafelek mówi „brak źródła danych” (konstytucja III.1) zamiast zgadywać.
+ * krótki opis na telefon, cel kliknięcia). Gdzie Kokpit nie ma jeszcze danych (np. pomiar morza w produkcji),
+ * kafelek nie zgaduje (konstytucja III.1), tylko mówi, gdzie są (strona Ryzyka).
  * Definicje liczb są zgodne z treścią E9; dokładne reguły (E7 „Do zrobienia”, E15 terminowość, E16 marża,
  * E25 „Gotowe do fakturowania”) podłącza wykonawca w swoich paczkach (P4–P6) — wygląd się nie zmienia.
  */
-import type { Bill, Document, Invoice, Load, Locale, Risk, RoleId } from '../types';
+import type { Bill, Document, Load, Locale, LoadStatus, OrgKind, Risk, RoleId } from '../types';
 import type { NavKey } from './permissions';
 import { formatListDateTime, formatPlNumber, isTechnicalRoadNotice } from './format';
 import { t, tp } from '../i18n/messages';
 import { isoWeekNumber } from './cockpitTiles';
+import { isLoadCompleted } from './invoiceMatch';
 
 export type CockpitTone = 'default' | 'alert' | 'warn' | 'good';
 
@@ -39,13 +40,10 @@ export interface CockpitInput {
   nowIso: string;
   loads: readonly Load[];
   documents: readonly Document[];
+  /** Faktury z tabeli Faktur (`bills`): SCX → HHL i HHL → KSH. */
   bills: readonly Bill[];
-  /** Transporty na fakturach SCX → HHL. */
-  invoicedLoadIds: ReadonlySet<string>;
-  /** Transporty na fakturach HHL → KSH. */
-  billedLoadIds: ReadonlySet<string>;
-  /** „Do zrobienia” HHL — dzisiejsza kolejka: razem, ile transportów, ile spraw bez transportu (E7 w P6). */
-  todo: { total: number; loads: number; other: number };
+  /** „Do zrobienia” konta (todoQueue): razem, ile transportów, ile spraw bez transportu (E7 w P6). */
+  todo: TodoQueue;
   /** Najbliższy rejs do Szwecji: statek, trasa, odjazd; prognoza morza, gdy jest źródło. */
   ferry: { vessel: string; route: string; depIso: string; sea: { waveM: number; risk: string; gustKn?: number | null } | null } | null;
   /** Od kiedy transport stoi na placu w Boden (wjazd w strefę) — KSH „SG-03 na placu w Boden od 08:35”; brak = bez godziny. */
@@ -76,8 +74,15 @@ function daysBetween(a: string, b: string): number {
   return Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86_400_000);
 }
 
-const notDeparted = (l: Load) => l.stage === 'PLAN';
-const delivered = (l: Load) => l.stage === 'DELIVERED';
+/* Według statusu, nie etapu paska (E25, E28): etap „DELIVERED” w produkcji nie występuje, a „Na placu” (AT_SITE)
+   i „Rozładowany” (UNLOADED) mają w aplikacji statusy APPROACHING_SITE i UNLOADING (src/data/mappers.ts). */
+const PRE_LOADING: ReadonlySet<LoadStatus> = new Set<LoadStatus>(['PLANNED', 'RESOURCES_PENDING', 'DOC_MISSING', 'READY']);
+/** Przygotowanie — przed załadunkiem („bez wyjazdu”). */
+const notDeparted = (l: Pick<Load, 'status'>) => PRE_LOADING.has(l.status);
+/** Rozładowany albo Dostarczone (jak tabela Faktur: isLoadCompleted). */
+const delivered = (l: Pick<Load, 'status' | 'stage'>) => isLoadCompleted(l);
+/** Na placu w Boden. */
+const onSite = (l: Pick<Load, 'status'>) => l.status === 'APPROACHING_SITE';
 const codes = (ls: readonly Load[], max = 2) => {
   const list = ls.map((l) => l.code);
   return list.length > max ? `${list.slice(0, max).join(', ')} +${list.length - max}` : list.join(', ');
@@ -89,55 +94,66 @@ function hasDoc(documents: readonly Document[], loadId: string, cat: Document['c
 
 export interface TodoQueue { total: number; loads: number; other: number }
 
-const SCX_TODO_STATUSES = ['RESOURCES_PENDING', 'DOC_MISSING'];
-
-/**
- * „Do zrobienia” konta (E9): ta sama liczba na kafelku Kokpitu, przy „Ryzyka” w menu i na dolnym pasku telefonu.
- * HHL: otwarte sprawy (bez komunikatów technicznych drogi), z podziałem na transporty i sprawy bez transportu.
- * SCX: transporty czekające na awizację, numer SCX albo dokumenty („Moje zadania” weszły do „Do zrobienia”).
- * KSH: brak listy „Do zrobienia” (decyzja 07.10 19:11) — null, bez liczby.
- * Dokładną regułę listy (E7) podłącza wykonawca w P6; kafelek i menu biorą ją stąd, więc zostaną równe.
- */
-export function todoQueue(role: RoleId, risks: readonly Pick<Risk, 'title' | 'loadId'>[], loads: readonly Pick<Load, 'status'>[]): TodoQueue | null {
-  if (role === 'KSH') return null;
-  if (role === 'SCX') {
-    const n = loads.filter((l) => SCX_TODO_STATUSES.includes(l.status)).length;
-    return { total: n, loads: n, other: 0 };
-  }
-  const open = risks.filter((r) => !isTechnicalRoadNotice(r.title));
-  const withLoad = new Set(open.filter((r) => r.loadId).map((r) => r.loadId as string));
-  return { total: open.length, loads: withLoad.size, other: open.filter((r) => !r.loadId).length };
+/** Rodzaj konta oglądanej firmy: z profilu, gdy to firma zalogowanej osoby; w Podglądzie — rodzaj domyślny tej firmy. */
+export type AccountKind = 'HHL_ADMIN' | 'HHL_OPS' | 'CLIENT_USER' | 'CARRIER_DISPATCH' | 'CARRIER_USER';
+const KIND_ORG: Record<AccountKind, RoleId> = {
+  HHL_ADMIN: 'HHL', HHL_OPS: 'HHL', CLIENT_USER: 'KSH', CARRIER_DISPATCH: 'SCX', CARRIER_USER: 'SCX',
+};
+const DEFAULT_KIND: Record<RoleId, AccountKind> = { HHL: 'HHL_ADMIN', KSH: 'CLIENT_USER', SCX: 'CARRIER_DISPATCH' };
+export function viewedKind(role: RoleId, profileRole: string | null | undefined): AccountKind {
+  const k = profileRole as AccountKind | null | undefined;
+  return k && KIND_ORG[k] === role ? k : DEFAULT_KIND[role];
 }
 
-/** Transporty na fakturach: SCX → HHL (`invoices`) i HHL → KSH (`bills`). */
-export function invoicedSets(invoices: readonly Pick<Invoice, 'lines'>[], bills: readonly Pick<Bill, 'lines'>[]) {
-  return {
-    invoicedLoadIds: new Set<string>(invoices.flatMap((i) => i.lines.map((ln) => ln.loadId))),
-    billedLoadIds: new Set<string>(bills.flatMap((b) => b.lines.map((ln) => ln.loadId))),
-  };
+/**
+ * Sprawy „Do zrobienia” konta (E9, tabela „Ryzyka › Do zrobienia”): HHL Administrator — wszystkie sprawy,
+ * HHL Operacje — sprawy HHL, SCX — sprawy SCX, KSH — brak listy (tylko sytuacja na trasie). Bez komunikatów technicznych drogi.
+ * Ta sama lista daje liczbę na kafelku, przy „Ryzyka” w menu i na dolnym pasku oraz „Najpilniejsze” pod kafelkami.
+ * Pełną listę E7 (z przekazaniami między firmami i „Moimi zadaniami” SCX) podłącza wykonawca w P6 — w tym miejscu.
+ */
+export function todoRisks<T extends Pick<Risk, 'title' | 'owner'>>(role: RoleId, risks: readonly T[], kind?: AccountKind): T[] {
+  if (role === 'KSH') return [];
+  const open = risks.filter((r) => !isTechnicalRoadNotice(r.title));
+  if (role === 'SCX') return open.filter((r) => r.owner === 'SCX');
+  return kind === 'HHL_OPS' ? open.filter((r) => r.owner === 'HHL') : open;
+}
+
+export function todoQueue(role: RoleId, risks: readonly Pick<Risk, 'title' | 'owner' | 'loadId'>[], kind?: AccountKind): TodoQueue | null {
+  if (role === 'KSH') return null;
+  const list = todoRisks(role, risks, kind);
+  const withLoad = new Set(list.filter((r) => r.loadId).map((r) => r.loadId as string));
+  return { total: list.length, loads: withLoad.size, other: list.filter((r) => !r.loadId).length };
+}
+
+/** Transporty na fakturach wystawionych przez firmę (tabela Faktur, `bills`). */
+export function loadsBilledBy(bills: readonly Pick<Bill, 'issuer' | 'lines'>[], issuer: OrgKind): Set<string> {
+  return new Set<string>(bills.filter((b) => b.issuer === issuer).flatMap((b) => b.lines.map((ln) => ln.loadId)));
 }
 
 /**
  * Liczba przy „Faktury” w menu (E9): faktury czekające na moje działanie plus transporty gotowe do mojej faktury.
- * KSH: faktury HHL do sprawdzenia. HHL: faktury SCX do sprawdzenia + dostarczone z podpisanym CMR bez faktury dla KSH.
- * SCX: faktury do poprawy (sporne) + dostarczone z podpisanym CMR bez faktury SCX. Status E25 „Gotowe do fakturowania” — P4.
+ * KSH: faktury HHL do sprawdzenia. HHL: faktury SCX do sprawdzenia + rozładowane z podpisanym CMR bez faktury HHL dla KSH.
+ * SCX: sporne faktury SCX + rozładowane z podpisanym CMR bez faktury SCX. Status E25 „Gotowe do fakturowania” — P4.
  */
 export function invoiceTodoCount(
   role: RoleId,
-  input: { loads: readonly Load[]; documents: readonly Document[]; bills: readonly Bill[]; invoices: readonly Invoice[] },
+  input: { loads: readonly Load[]; documents: readonly Document[]; bills: readonly Bill[] },
 ): number {
-  const { loads, documents, bills, invoices } = input;
+  const { loads, documents, bills } = input;
   if (role === 'KSH') return bills.filter((b) => b.recipient === 'KSH' && b.verification === 'DO_WERYFIKACJI').length;
-  const { invoicedLoadIds, billedLoadIds } = invoicedSets(invoices, bills);
-  const onMine = role === 'HHL' ? billedLoadIds : invoicedLoadIds;
-  const ready = loads.filter((l) => delivered(l) && !onMine.has(l.id) && hasDoc(documents, l.id, 'CMR')).length;
-  const waiting = invoices.filter((i) => (role === 'HHL' ? i.status === 'SUBMITTED' : i.status === 'DISPUTED')).length;
+  const mine = loadsBilledBy(bills, role);
+  const ready = loads.filter((l) => delivered(l) && !mine.has(l.id) && hasDoc(documents, l.id, 'CMR')).length;
+  const waiting = role === 'HHL'
+    ? bills.filter((b) => b.recipient === 'HHL' && b.verification === 'DO_WERYFIKACJI').length
+    : bills.filter((b) => b.issuer === 'SCX' && b.verification === 'SPORNA').length;
   return waiting + ready;
 }
 
 /** Wspólne liczby z danych (bez zapisu, bez zapytań). */
-export function cockpitFacts(input: Pick<CockpitInput, 'loads' | 'documents' | 'nowIso' | 'invoicedLoadIds' | 'billedLoadIds'>) {
-  const { loads, documents, nowIso, invoicedLoadIds, billedLoadIds } = input;
+export function cockpitFacts(input: Pick<CockpitInput, 'loads' | 'documents' | 'nowIso' | 'bills'>) {
+  const { loads, documents, nowIso, bills } = input;
+  const scxBilled = loadsBilledBy(bills, 'SCX');
+  const hhlBilled = loadsBilledBy(bills, 'HHL');
   const today = dayKey(nowIso) ?? nowIso.slice(0, 10);
   const in7 = addDays(today, 6);
   const in72 = addDays(today, 3);
@@ -150,14 +166,15 @@ export function cockpitFacts(input: Pick<CockpitInput, 'loads' | 'documents' | '
     return notDeparted(l) && d != null && d < today;
   });
   const permitsOk7 = loads7.filter((l) => hasDoc(documents, l.id, 'PERMIT_PL') && hasDoc(documents, l.id, 'PERMIT_SE')).length;
-  const atSite = loads.filter((l) => l.stage === 'SITE');
+  const atSite = loads.filter(onSite);
   const inTransit = loads.filter((l) => !notDeparted(l) && !delivered(l));
   const done = loads.filter(delivered);
   const doneNoCmr = done.filter((l) => !hasDoc(documents, l.id, 'CMR'));
-  const toInvoice = done.filter((l) => !invoicedLoadIds.has(l.id));
+  /* SCX „Do zafakturowania”: rozładowane bez faktury SCX; gotowe = z podpisanym CMR */
+  const toInvoice = done.filter((l) => !scxBilled.has(l.id));
   const toInvoiceNoCmr = toInvoice.filter((l) => !hasDoc(documents, l.id, 'CMR'));
   /* HHL „gotowe do faktury”: dostarczone z podpisanym CMR, jeszcze bez faktury HHL → KSH (E25 READY_TO_INVOICE — reguła w P4) */
-  const readyToInvoice = done.filter((l) => !billedLoadIds.has(l.id) && hasDoc(documents, l.id, 'CMR'));
+  const readyToInvoice = done.filter((l) => !hhlBilled.has(l.id) && hasDoc(documents, l.id, 'CMR'));
   const plan72 = loads.filter((l) => {
     const d = dayKey(l.plannedDeliverDate);
     return !delivered(l) && d != null && d >= today && d <= in72;
@@ -264,8 +281,8 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
       inTransit,
       { id: 'plan72', label: L('p3b_plan72'), labelShort: L('p3b_plan72_short'), go: 'sched',
         value: String(f.plan72.length), of: null,
-        desc: L('p3b_plan72_desc', { a: String(roadN), b: String(waitN) }),
-        descShort: L('p3b_plan72_short_desc', { b: String(waitN) }), tone: 'default' },
+        desc: L('p3b_plan72_desc', { a: roadN, b: waitN }),
+        descShort: L('p3b_plan72_short_desc', { b: waitN }), tone: 'default' },
       otif(),
       ferryTile(false),
       { id: 'bills', label: L('p3b_bills_check'), labelShort: L('p3b_bills_short'), go: 'inv',
@@ -277,7 +294,10 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
   }
 
   if (role === 'SCX') {
-    const week = isoWeekNumber(input.nowIso);
+    /* „tydz. 41” = tydzień dostawy transportów czekających na fakturę (E9: „w tygodniu dostawy”); bez nich — bieżący */
+    const weekOf = (l: Load) => isoWeekNumber(`${dayKey(l.unloadedAt) ?? dayKey(l.plannedDeliverDate) ?? f.today}T12:00:00Z`);
+    const weeks = [...new Set(f.toInvoice.map(weekOf))].sort((a, b) => a - b);
+    const w = weeks.length === 0 ? String(isoWeekNumber(input.nowIso)) : weeks.length === 1 ? String(weeks[0]) : `${weeks[0]}–${weeks[weeks.length - 1]}`;
     return [
       { id: 'todo', label: L('p3b_todo'), labelShort: L('p3b_todo'), go: 'risk',
         value: String(todo.total), of: null, desc: L('p3b_scx_todo_desc'), descShort: L('p3b_scx_todo_short'),
@@ -286,10 +306,12 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
       loads7Tile(true),
       { id: 'to-invoice', label: L('p3b_to_invoice'), labelShort: L('p3b_to_invoice'), go: 'inv',
         value: String(f.toInvoice.length - f.toInvoiceNoCmr.length), of: null,
-        desc: f.toInvoiceNoCmr.length
-          ? L('p3b_to_invoice_desc', { n: String(f.toInvoiceNoCmr.length), codes: codes(f.toInvoiceNoCmr), w: String(week) })
-          : L('p3b_to_invoice_ok', { w: String(week) }),
-        descShort: f.toInvoiceNoCmr.length ? L('p3b_to_invoice_short', { n: String(f.toInvoiceNoCmr.length) }) : L('p3b_cmr_ok_short'),
+        desc: f.toInvoice.length === 0 ? L('p3b_to_invoice_none', { w })
+          : f.toInvoiceNoCmr.length
+            ? L('p3b_to_invoice_desc', { n: f.toInvoiceNoCmr.length, codes: codes(f.toInvoiceNoCmr), w })
+            : L('p3b_to_invoice_ok', { w }),
+        descShort: f.toInvoice.length === 0 ? L('p3b_to_invoice_none_short')
+          : f.toInvoiceNoCmr.length ? L('p3b_to_invoice_short', { n: f.toInvoiceNoCmr.length }) : L('p3b_cmr_ok_short'),
         tone: 'default' },
       ferryTile(true),
       otif(),
@@ -313,8 +335,10 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
       tone: f.permitsOk7 < f.loads7.length ? 'warn' : 'default' },
     { id: 'delivered', label: L('p3b_delivered_settle'), labelShort: L('p3b_delivered'), go: 'inv',
       value: String(f.done.length), of: null,
-      desc: `${f.doneNoCmr.length ? L('p3b_cmr_wait', { n: codes(f.doneNoCmr) }) : L('p3b_cmr_ok')} · ${L('p3b_ready_inv', { n: f.readyToInvoice.length })}`,
-      descShort: f.doneNoCmr.length ? L('p3b_cmr_wait_short') : L('p3b_cmr_ok_short'), tone: 'default' },
+      desc: f.done.length === 0 ? L('p3b_none_delivered')
+        : `${f.doneNoCmr.length ? L(f.doneNoCmr.length === 1 ? 'p3b_cmr_wait_one' : 'p3b_cmr_wait_many', { codes: codes(f.doneNoCmr) }) : L('p3b_cmr_ok')} · ${L('p3b_ready_inv', { n: f.readyToInvoice.length })}`,
+      descShort: f.done.length === 0 ? L('p3b_none_delivered_short') : f.doneNoCmr.length ? L('p3b_cmr_wait_short') : L('p3b_cmr_ok_short'),
+      tone: 'default' },
     { id: 'margin', label: L('p3b_margin', { tier: margin.tierText }), labelShort: L('p3b_margin_short'), go: 'fin',
       value: margin.pct == null ? '—' : formatPlNumber(margin.pct * 100, 1), of: margin.pct == null ? null : '%',
       desc: L('p3b_margin_desc', { money: margin.moneyText }), descShort: margin.tierText, tone: 'default', money: true },
