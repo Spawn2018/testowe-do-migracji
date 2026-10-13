@@ -2197,3 +2197,7 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - PLAN §4 P3: P3-a / P3-b / P3-c; §8 wiersz dopisku.
 
 **wyglad/P3-a NA PRODUKCJI — commit `25b71bca`, wdrożenie `dpl_FBYjeG86cptLjWvXiRmURHH5kKkt`, 14.10.2026 00:12.** G4 na produkcji: commit `2d467649`, `dpl_GVhiKpCETFTpzECiS8QwsRRaKGxo`, 14.10.2026 00:29.
+
+## 2026-10-14 — Poprawki P3: TEST przed scaleniem
+
+- TEST zajęte: P3-poprawki (security, status, nullguard, g20) na `97c02d59`.
