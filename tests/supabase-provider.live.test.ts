@@ -40,15 +40,22 @@ describe.runIf(LIVE)('BK3 SupabaseProvider (live, RLS)', () => {
     admin = createClient(host.url, host.serviceKey, { auth: { persistSession: false } });
     const { data: orgs } = await admin.from('organizations').select('id,code');
     const org = Object.fromEntries((orgs ?? []).map((o) => [o.code, o.id]));
-    const { data: proj } = await admin.from('projects').select('id').eq('code', 'STEGRA_BODEN').single();
+    const { data: projRows, error: projErr } = await admin
+      .from('projects')
+      .select('id,code')
+      .in('code', ['STEGRA_BODEN', 'STEGRA']);
+    if (projErr) throw new Error(projErr.message);
+    // Seed bramy ma kod STEGRA; starszy wiersz na TEST mógł nazywać się STEGRA_BODEN.
+    const proj = (projRows ?? []).find((p) => p.code === 'STEGRA_BODEN') ?? projRows?.[0];
+    if (!proj) throw new Error('brak projektu STEGRA');
     async function fixture(code: string, carrier: string | null, hhlNo: string | null) {
       const found = await admin.from('loads').select('id').eq('order_no', code).maybeSingle();
       let id = found.data?.id as string | undefined;
       if (!id) {
-        const ins = await admin.from('loads').insert({ project_id: proj!.id, order_no: code, carrier_org_id: carrier, hhl_order_no: hhlNo, status: 'PLANNED', plan_load_date: '2026-10-05', plan_delivery_date: '2026-10-09' }).select('id').single();
+        const ins = await admin.from('loads').insert({ project_id: proj.id, order_no: code, carrier_org_id: carrier, hhl_order_no: hhlNo, status: 'PLANNED', plan_load_date: '2026-10-05', plan_delivery_date: '2026-10-09' }).select('id').single();
         if (ins.error) throw new Error(ins.error.message);
         id = ins.data.id as string;
-        const it = await admin.from('shipment_items').insert({ project_id: proj!.id, load_id: id, shipment_code: code, item_type: 'TEST', length_m: 12, width_m: 3, height_m: 3, qty: 1, total_weight_t: 10, assembly_seq: 9000 });
+        const it = await admin.from('shipment_items').insert({ project_id: proj.id, load_id: id, shipment_code: code, item_type: 'TEST', length_m: 12, width_m: 3, height_m: 3, qty: 1, total_weight_t: 10, assembly_seq: 9000 });
         if (it.error) throw new Error(it.error.message);
       } else {
         await admin.from('loads').update({ status: 'PLANNED', driver_name: null, carrier_org_id: carrier, hhl_order_no: hhlNo }).eq('id', id);

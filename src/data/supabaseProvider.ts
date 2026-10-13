@@ -50,10 +50,12 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     if (orgs.length && projectId) return;
     const [o, p] = await Promise.all([
       sb.from('organizations').select('id,code,kind'),
-      sb.from('projects').select('id,code').eq('code', PROJECT_CODE).maybeSingle(),
+      // Produkcja: STEGRA_BODEN. Seed bramy (tests/db/seed.sql): STEGRA.
+      sb.from('projects').select('id,code').in('code', [PROJECT_CODE, 'STEGRA']),
     ]);
     orgs = must(o, 'organizations') as OrgRow[];
-    projectId = (must(p, 'projects') as { id: string } | null)?.id ?? null;
+    const projects = must(p, 'projects') as { id: string; code: string }[];
+    projectId = (projects.find((row) => row.code === PROJECT_CODE) ?? projects[0])?.id ?? null;
   }
 
   async function loadSnapshot(): Promise<DataSnapshot> {
