@@ -1,66 +1,82 @@
 -- TOWER — Migracja 0201: P3 E11 — macierz powiadomień: zdarzenie × 5 ról × kanał.
--- Stara tabela po org_kind → notification_matrix_org_kind (archiwum). Idempotentna.
+-- Stara tabela po org_kind → notification_matrix_org_kind (archiwum). Idempotentna (×2 w próbie).
 
--- 1) Nowa tabela --------------------------------------------------------------
-create table if not exists public.notification_matrix_by_role (
-  event_group text not null,
-  role        user_role not null,
-  in_app      boolean not null default true,
-  email       boolean not null default false,
-  primary key (event_group, role),
-  check (event_group in ('LOAD_STATUS','RISK_FERRY_WEATHER','DECISION','MONEY','SYSTEM')),
-  check (role in ('HHL_ADMIN','HHL_OPS','CLIENT_USER','CARRIER_DISPATCH','CARRIER_USER'))
-);
-
-alter table public.notification_matrix_by_role enable row level security;
-revoke all on public.notification_matrix_by_role from anon;
-revoke insert, update, delete, truncate on public.notification_matrix_by_role from authenticated;
-grant select on public.notification_matrix_by_role to authenticated;
-
-drop policy if exists notification_matrix_by_role_read on public.notification_matrix_by_role;
-create policy notification_matrix_by_role_read on public.notification_matrix_by_role
-  for select to authenticated
-  using (current_app_user_id() is not null and is_hhl());
-
--- 2) Seed z dotychczasowej macierzy org_kind ----------------------------------
-insert into public.notification_matrix_by_role (event_group, role, in_app, email)
-select m.event_group, x.role::user_role, m.in_app, false
-  from public.notification_matrix m
-  join (values
-    ('FORWARDER', 'HHL_ADMIN'),
-    ('FORWARDER', 'HHL_OPS'),
-    ('CARRIER', 'CARRIER_DISPATCH'),
-    ('CARRIER', 'CARRIER_USER'),
-    ('CLIENT', 'CLIENT_USER')
-  ) as x(kind, role) on x.kind = m.org_kind
-on conflict (event_group, role) do nothing;
-
-insert into public.notification_matrix_by_role (event_group, role, in_app, email)
-select g.g, r.r::user_role,
-       case when g.g = 'SYSTEM' then (r.r in ('HHL_ADMIN','HHL_OPS'))
-            when g.g = 'DECISION' and r.r = 'CLIENT_USER' then false
-            else true end,
-       false
-  from (values ('LOAD_STATUS'),('RISK_FERRY_WEATHER'),('DECISION'),('MONEY'),('SYSTEM')) as g(g)
-  cross join (values
-    ('HHL_ADMIN'),('HHL_OPS'),('CARRIER_DISPATCH'),('CARRIER_USER'),('CLIENT_USER')
-  ) as r(r)
-on conflict (event_group, role) do nothing;
-
-update public.notification_matrix_by_role
-   set in_app = false, email = false
- where event_group = 'SYSTEM' and role not in ('HHL_ADMIN','HHL_OPS');
-
--- 3) Podmiana tabel -----------------------------------------------------------
+-- 1–3) Przejście org_kind → role (pomijane, gdy już po roli) -------------------
 do $$
 begin
-  if to_regclass('public.notification_matrix') is not null
-     and to_regclass('public.notification_matrix_org_kind') is null then
-    alter table public.notification_matrix rename to notification_matrix_org_kind;
+  if exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'notification_matrix' and column_name = 'role'
+  ) and to_regclass('public.notification_matrix_org_kind') is not null then
+    raise notice '0201: notification_matrix już po roli — pomijam seed/rename';
+  else
+    create table if not exists public.notification_matrix_by_role (
+      event_group text not null,
+      role        user_role not null,
+      in_app      boolean not null default true,
+      email       boolean not null default false,
+      primary key (event_group, role),
+      check (event_group in ('LOAD_STATUS','RISK_FERRY_WEATHER','DECISION','MONEY','SYSTEM')),
+      check (role in ('HHL_ADMIN','HHL_OPS','CLIENT_USER','CARRIER_DISPATCH','CARRIER_USER'))
+    );
+
+    alter table public.notification_matrix_by_role enable row level security;
+    revoke all on public.notification_matrix_by_role from anon;
+    revoke insert, update, delete, truncate on public.notification_matrix_by_role from authenticated;
+    grant select on public.notification_matrix_by_role to authenticated;
+
+    drop policy if exists notification_matrix_by_role_read on public.notification_matrix_by_role;
+    create policy notification_matrix_by_role_read on public.notification_matrix_by_role
+      for select to authenticated
+      using (current_app_user_id() is not null and is_hhl());
+
+    if exists (
+      select 1 from information_schema.columns
+       where table_schema = 'public' and table_name = 'notification_matrix' and column_name = 'org_kind'
+    ) then
+      insert into public.notification_matrix_by_role (event_group, role, in_app, email)
+      select m.event_group, x.role::user_role, m.in_app, false
+        from public.notification_matrix m
+        join (values
+          ('FORWARDER', 'HHL_ADMIN'),
+          ('FORWARDER', 'HHL_OPS'),
+          ('CARRIER', 'CARRIER_DISPATCH'),
+          ('CARRIER', 'CARRIER_USER'),
+          ('CLIENT', 'CLIENT_USER')
+        ) as x(kind, role) on x.kind = m.org_kind
+      on conflict (event_group, role) do nothing;
+    end if;
+
+    insert into public.notification_matrix_by_role (event_group, role, in_app, email)
+    select g.g, r.r::user_role,
+           case when g.g = 'SYSTEM' then (r.r in ('HHL_ADMIN','HHL_OPS'))
+                when g.g = 'DECISION' and r.r = 'CLIENT_USER' then false
+                else true end,
+           false
+      from (values ('LOAD_STATUS'),('RISK_FERRY_WEATHER'),('DECISION'),('MONEY'),('SYSTEM')) as g(g)
+      cross join (values
+        ('HHL_ADMIN'),('HHL_OPS'),('CARRIER_DISPATCH'),('CARRIER_USER'),('CLIENT_USER')
+      ) as r(r)
+    on conflict (event_group, role) do nothing;
+
+    update public.notification_matrix_by_role
+       set in_app = false, email = false
+     where event_group = 'SYSTEM' and role not in ('HHL_ADMIN','HHL_OPS');
+
+    if to_regclass('public.notification_matrix') is not null
+       and to_regclass('public.notification_matrix_org_kind') is null then
+      alter table public.notification_matrix rename to notification_matrix_org_kind;
+    end if;
+
+    if to_regclass('public.notification_matrix_by_role') is not null
+       and to_regclass('public.notification_matrix') is null then
+      alter table public.notification_matrix_by_role rename to notification_matrix;
+    elsif to_regclass('public.notification_matrix_by_role') is not null
+       and to_regclass('public.notification_matrix') is not null then
+      drop table public.notification_matrix_by_role;
+    end if;
   end if;
 end $$;
-
-alter table if exists public.notification_matrix_by_role rename to notification_matrix;
 
 revoke all on table public.notification_matrix_org_kind from anon, authenticated;
 comment on table public.notification_matrix_org_kind is
