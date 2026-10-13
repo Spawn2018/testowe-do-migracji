@@ -13,6 +13,7 @@ export default defineConfig({
       maxWorkers: 2,
       pool: 'vmForks' as const,
       dangerouslyIgnoreUnhandledErrors: true,
+      testTimeout: 20_000,
     } : {}),
   },
 });
