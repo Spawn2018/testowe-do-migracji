@@ -2170,3 +2170,17 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 ## 2026-10-13 — P3 TEST przed scaleniem
 
 - TEST zajęte: P3 (security, status, nullguard, dec3) na `14663cad`.
+
+## 2026-10-13 — P3 logika/baza NA PRODUKCJI
+
+- Scalenie PR #175 → `d3cbe4d8`; poprawka idempotentności 0201 PR #179 → `567fcc5a`.
+- Migracje **0196–0203** na produkcji (`db push` ×2: drugi „up to date”). Próba ROLLBACK ×2 OK (snap_ok, 25 ról macierzy, 10 push).
+- Edge `security-advisor-snapshot` wdrożona (prod).
+- TEST przed scaleniem: security 84/84, status 44/44, nullguard 161+136+204+121, dec3 13/13; doradca security 0 nowych (po wyjątkach).
+- CI: unit/visual/db zielone na SHA paczki.
+- Wdrożenie R7 z `main` `567fcc5a`, 13.10.2026 23:32, `dpl_9tAM8dDaeXZ2awdpHD6RCNwdkLPP`.
+- Plik JS: `assets/index-_PKBum7P.js` na `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` (oba 200). 9 plików JS z HTML: 0 × `service_role`. Kopia wdrożeniowa usunięta.
+- TEST wolne.
+- Wygląd P3 (Z4/Z11, V5, E13 CSS): koordynator na `wyglad/P3` (dopisek D-20261013-2130-01).
+
+**P3 (logika/baza) NA PRODUKCJI — commit `567fcc5a`, migracje 0196–0203, wdrożenie `dpl_9tAM8dDaeXZ2awdpHD6RCNwdkLPP`, 13.10.2026 23:32.** Następna: P4 (logika); wygląd P3 osobno.

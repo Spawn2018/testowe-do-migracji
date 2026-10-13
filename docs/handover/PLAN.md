@@ -233,7 +233,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
 - **W6.** Brama E8 szczelna (`main` nie zwalnia).
 - **W7.** Dowód w `docs/handover/odbior/P2/`.
 
-### P3 · Uprawnienia, konta, Opcje, pasek górny — DO ZROBIENIA
+### P3 · Uprawnienia, konta, Opcje, pasek górny — NA PRODUKCJI (logika/baza: scalenie `d3cbe4d8` + `567fcc5a`, wdrożenie `dpl_9tAM8dDaeXZ2awdpHD6RCNwdkLPP`, 13.10.2026 23:32); odbiór wyglądu — `wyglad/P3`
 - **Ekrany — wygląd: koordynator, `wyglad/P3`** (D-20261013-1835-01 F5). Cursor: logika, baza, uprawnienia, Podgląd — bez przebudowy wyglądu ekranów do scalenia `wyglad/P3`.
 - **E9** prawa ról (z E36, zamkniętym w E9):
   - 5 rodzajów kont, bez CLIENT_ADMIN i SITE_VIEWER;
