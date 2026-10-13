@@ -189,7 +189,7 @@ Odświeżone 8 migawek stanów Harmonogramu z `visual.yml` `update=true` (run 38
 
 ## wyglad/P3-a (13.10.2026) — E37 pasek górny, E13
 
-Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38466075360, gałąź `wyglad/P3`, commit `73e98ef`). Wszystkie ekrany: nowy pasek górny (konto po prawej, „Podgląd” HHL / KSH / SCX, rejsy z pełnymi nazwami portów, bez przycisku motywu), lewe menu bez e-maila i „Wyloguj”. Matrycy 280 ujęć nie ruszano.
+Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38466075360, gałąź `wyglad/P3`, commit `73e98ef`; ponownie run 38471591003, commit `e82c5e2` — ramka konta po poprawce nazwiska). Wszystkie ekrany: nowy pasek górny (konto po prawej, „Podgląd” HHL / KSH / SCX, rejsy z pełnymi nazwami portów, bez przycisku motywu), lewe menu bez e-maila i „Wyloguj”. Matrycy 280 ujęć nie ruszano.
 
 ## AUD-03 (06.10.2026) — Harmonogram KSH bez „Zmień ciągnik”
 
