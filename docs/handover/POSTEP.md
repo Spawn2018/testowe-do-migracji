@@ -2077,4 +2077,8 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 **P2 NA PRODUKCJI — commit `35abe70b`, wdrożenie `dpl_CqK5DSotFYHT8QyeFwLzMUixdBCs`, 13.10.2026 14:08.** Następna pozycja: poprawki P2 (Q2), potem P3.
 
 - TEST 13.10 14:30–15:20, SHA `ccf0d68c`, migracja `0195_e18_p15_poprawka.sql`. security 84/84 (+2 SKIP), status 44/44, **e41 26/26**, nullguard 161+136+192+118 = **607/607**. Raport `D:/Watch Tower/raporty/brama-test-ccf0d68c2a994b00122805b30d626d5d86ddfac4.json`. **TEST wolne od 15:20.**
+- Produkcja 13.10 15:31–15:33, merge `c410799a`. Parytet przed: `missing_on_prod 0195`. Kopia 13 wierszy: `D:\Watch Tower\dane\p2\kopia-e18-p15-poprawka-2026-10-13.csv`, SHA-256 `80139c845d206fba319df6b9be5e09ceb260d21e29239793166cbb49712f4148`. Próba z ROLLBACK: pierwsze `e18_p15_poprawka` 13, drugie 0, otwarte „Zakaz…” w transakcji 0, wpisy poprawki 13; po ROLLBACK funkcja 0, migracja 0, powiadomienia 9638, SMS 27. `--dry-run` tylko `0195_e18_p15_poprawka.sql`. `db push` nałożył 0195; drugi raz: „Remote database is up to date.” Parytet **MATCH YES** (195/195). Po COMMIT: otwarte „Zakaz ruchu ciężarówek w Szwecji” 0, `E18_P15_POPRAWKA` 13, powiadomienia 9638, SMS 27.
+- Wdrożenie aplikacji z `main` `c410799a` według R7, 13.10.2026 15:35, `dpl_6FkHhuRasJEFybtjDRbLY72P8kvv`. Plik JS przed i po: `assets/index-h0t0ItfK.js` (moduł tytułów nie wchodzi do paczki, bo aplikacja go nie importuje; nazwa równa `dist/assets/index-h0t0ItfK.js` z tego wdrożenia). Oba adresy 200. 63 pliki JS: 0 × `service_role`. Kopia wdrożeniowa usunięta.
+
+**P2-poprawki NA PRODUKCJI — commit `c410799a`, migracja 0195, wdrożenie `dpl_6FkHhuRasJEFybtjDRbLY72P8kvv`, 13.10.2026 15:35.** Następna paczka: P3.
 
