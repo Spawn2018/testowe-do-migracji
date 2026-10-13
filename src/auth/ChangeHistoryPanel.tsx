@@ -7,6 +7,7 @@ import ExcelJS from 'exceljs';
 import { getSupabase } from './client';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
+import { transportLabel } from '../lib/transportName';
 import './auth.css';
 
 type Row = {
@@ -77,6 +78,13 @@ function whoLabel(r: Row): string {
 
 export default function ChangeHistoryPanel() {
   const locale = useTowerStore((s) => s.locale);
+  const role = useTowerStore((s) => s.role);
+  const loads = useTowerStore((s) => s.loads);
+  const historyLoadLabel = (entityId: string | null) => {
+    if (!entityId) return '';
+    const load = loads.find((l) => l.id === entityId);
+    return load ? ` ${transportLabel(load, role)}` : '';
+  };
   const [rows, setRows] = useState<Row[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -225,7 +233,7 @@ export default function ChangeHistoryPanel() {
               <div style={{ minWidth: 0, flex: 1 }}>
                 <b data-content>
                   {r.action} · {r.entity}
-                  {r.entity_id ? ` #${r.entity_id.slice(0, 12)}` : ''}
+                  {historyLoadLabel(r.entity_id)}
                 </b>
                 <span>
                   {fmt(r.created_at)} · {whoLabel(r)}

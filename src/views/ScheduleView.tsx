@@ -6,6 +6,7 @@ import { invoicedLoadIds } from '../lib/importRemoval';
 import { MAP_FIELDS as MAP_FIELDS_UI, REQUIRED_FIELDS as REQUIRED_FIELDS_UI, type PartialColumnMap } from '../lib/importMapping';
 import { useTowerStore } from '../store/useTowerStore';
 import { filterLoads } from '../lib/selectors';
+import { transportLabel } from '../lib/transportName';
 import { StatusPill, formatDelayPill } from '../components/ui/StatusPill';
 import { canEditResources, canImportSchedule, canSeeCost, canSeeMargin, canSeeRevenue } from '../lib/permissions';
 import { fmtNum, pctText, t, tp } from '../i18n/messages';
@@ -307,6 +308,8 @@ export function ScheduleView() {
     if (def.role === 'cost' && !showCost) return false;
     if (def.role === 'rev' && !showRev) return false;
     if (def.role === 'margin' && !showMargin) return false;
+    /* E41 (P2): KSH nie widzi kolumn numerów zleceń. */
+    if (role === 'KSH' && (id === 'ord_hhl' || id === 'ord_scx')) return false;
     return true;
   });
 
@@ -386,6 +389,7 @@ export function ScheduleView() {
                   if (c.role === 'cost' && !showCost) return null;
                   if (c.role === 'rev' && !showRev) return null;
                   if (c.role === 'margin' && !showMargin) return null;
+                  if (role === 'KSH' && (c.id === 'ord_hhl' || c.id === 'ord_scx')) return null;
                   const on = !colPrefs.hidden.includes(c.id);
                   return (
                     <label key={c.id}>
@@ -561,7 +565,7 @@ export function ScheduleView() {
               <div style={{ fontSize: 13, marginBottom: 6 }}>
                 <span style={{ color: 'var(--go)' }}>+{dryRun.added.length}</span>
                 {' · '}
-                <span style={{ color: 'var(--amber)' }}>~{dryRun.changed.length}</span>
+                <span style={{ color: 'var(--amber-ink)' }}>~{dryRun.changed.length}</span>
                 {' · '}
                 <span style={{ color: 'var(--ink-3)' }} data-import-removed-count>−{allowRemovals ? dryRun.removalCandidates.length : 0}</span>
                 {' · '}
@@ -588,7 +592,7 @@ export function ScheduleView() {
               ) : null}
               {SERVER_IMPORT && dateChangeRows.length > 0 ? (
                 <div data-import-date-changes style={{ fontSize: 12, margin: '0 0 8px' }}>
-                  <div style={{ color: 'var(--amber)' }}>
+                  <div style={{ color: 'var(--amber-ink)' }}>
                     {t(locale, 'i18_imp_dates').replace('{n}', String(dateChangeRows.length))}
                   </div>
                   <div className="mono" style={{ color: 'var(--ink-3)', marginTop: 4 }} data-import-date-change-codes>
@@ -601,7 +605,7 @@ export function ScheduleView() {
               ) : null}
               {dryRun.removalBlocked.length > 0 ? (
                 <div data-import-blocked style={{ fontSize: 12, margin: '0 0 8px' }}>
-                  <div style={{ color: 'var(--amber)' }}>
+                  <div style={{ color: 'var(--amber-ink)' }}>
                     {t(locale, 'an3_blocked').replace('{n}', String(dryRun.removalBlocked.length))}
                   </div>
                   <div className="mono" style={{ color: 'var(--ink-3)', marginTop: 4 }} data-import-blocked-codes>
@@ -843,6 +847,7 @@ export function ScheduleView() {
                   <tr
                     key={l.id}
                     data-load={l.id}
+                    data-code={l.code}
                     data-status={l.status}
                     className={`${l.status === 'DELIVERED' ? 'done' : ''} ${hoverLoadId === l.id || selectedLoadId === l.id ? 'hl' : ''}`}
                     onMouseEnter={() => setHoverLoad(l.id)}
@@ -858,7 +863,7 @@ export function ScheduleView() {
                         case 'code':
                           return (
                             <td key={id} data-col={id}>
-                              <span className="code" data-content>{l.code}</span>
+                              <span className="code" data-content>{transportLabel(l, role, 'schedule')}</span>
                             </td>
                           );
                         case 'ord_hhl':
@@ -1018,11 +1023,12 @@ export function ScheduleView() {
                 type="button"
                 className={`sched-card${hoverLoadId === l.id || selectedLoadId === l.id ? ' hl' : ''}`}
                 data-load={l.id}
+                data-code={l.code}
                 data-status={l.status}
                 onClick={() => selectLoad(l.id)}
               >
                 <div className="r1">
-                  <span className="code" data-content>{l.code}</span>
+                  <span className="code" data-content>{transportLabel(l, role, 'schedule')}</span>
                   <StatusPill status={l.status} stage={l.stage} />
                   {dmin != null ? <span className="pill p-red">{formatDelayPill(dmin)}</span> : null}
                 </div>

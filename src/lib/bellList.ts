@@ -2,6 +2,7 @@
  * L-5 — dzwonek bez napisu „przeczytane”.
  * Po kliknięciu pozycja jest przeczytana i znika z listy. Licznik to długość listy.
  */
+import { isTechnicalRoadNotice } from './format';
 export interface BellItem {
   id: string;
   read: boolean;
@@ -61,13 +62,21 @@ function safe(text: string, locale: BellLocale): string {
   return t;
 }
 
-/** „SG-11 · zdarzenie…”; kod z magazynu transportów, potem z ładunku; bez podwójnego kodu na początku. */
-export function bellTitle(title: string, code: string | undefined, locale: BellLocale): string {
+/**
+ * E41 (P2): „nazwa — co się stało”. Nazwa może już zawierać „ · ” i numer firmy.
+ * Pauza „—” nie myli się z separatorem nazwy.
+ */
+export function bellTitle(title: string, name: string | undefined, locale: BellLocale): string {
   const what = safe(title, locale);
-  if (!code) return what;
-  const esc = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const rest = what.replace(new RegExp(`^${esc}\\s*[:·\\-–]\\s*`), '').trim();
-  return `${code} · ${rest || what}`;
+  if (!name) return what;
+  const bare = name.split(' \u00B7 ')[0] ?? name;
+  const escName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escBare = bare.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const rest = what
+    .replace(new RegExp(`^${escName}\\s*[:·—–-]\\s*`), '')
+    .replace(new RegExp(`^${escBare}\\s*[:·—–-]\\s*`), '')
+    .trim();
+  return `${name} — ${rest || what}`;
 }
 
 /** „teraz”, „15 min temu”, „3 godz. temu”, „wczoraj”, „5 dni temu” (en/sv odpowiednio). */
@@ -117,6 +126,8 @@ export function bellGroups<T extends BellSource>(
   const sorted = bellVisible(items, role).slice().sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   const map = new Map<string, BellGroup<T>>();
   for (const n of sorted) {
+    /* E21 (P2): „Nieznany kod źródła drogowego” zostaje w bazie do P10a, bez dzwonka. */
+    if (isTechnicalRoadNotice(n.title) || isTechnicalRoadNotice(n.body)) continue;
     const key = n.loadId && n.kind ? `${n.loadId}|${n.kind}` : n.id;
     const g = map.get(key);
     if (g) {

@@ -233,24 +233,28 @@ export function AwizacjaModal({ load, onClose }: Props) {
             </>
           ) : null}
 
-          <label className="form-field">
-            <span>{t(locale, 'a6_dr_ord_scx')}</span>
-            {orderSide === 'CARRIER' ? (
-              <input className="input mono" value={carrierOrder} onChange={(e) => setCarrierOrder(e.target.value)} autoComplete="off" />
-            ) : (
-              <span className="mono">{load.carrierOrderNo || '—'}</span>
-            )}
-          </label>
+          {role !== 'KSH' ? (
+            <>
+              <label className="form-field">
+                <span>{t(locale, 'a6_dr_ord_scx')}</span>
+                {orderSide === 'CARRIER' ? (
+                  <input className="input mono" value={carrierOrder} onChange={(e) => setCarrierOrder(e.target.value)} autoComplete="off" />
+                ) : (
+                  <span className="mono">{load.carrierOrderNo || '—'}</span>
+                )}
+              </label>
 
-          <label className="form-field">
-            <span>{t(locale, 'a6_dr_ord_hhl')}</span>
-            {orderSide === 'HHL' ? (
-              <input className="input mono" value={hhlOrder} onChange={(e) => setHhlOrder(e.target.value)} autoComplete="off" data-awiz-hhl-order />
-            ) : (
-              <span className="mono" data-hhl-ro>{load.hhlOrderNo || '—'}</span>
-            )}
-            {orderSide !== 'HHL' && load.hhlOrderNo ? <small>{t(locale, 'awiz_hhl_ro')}</small> : null}
-          </label>
+              <label className="form-field">
+                <span>{t(locale, 'a6_dr_ord_hhl')}</span>
+                {orderSide === 'HHL' ? (
+                  <input className="input mono" value={hhlOrder} onChange={(e) => setHhlOrder(e.target.value)} autoComplete="off" data-awiz-hhl-order />
+                ) : (
+                  <span className="mono" data-hhl-ro>{load.hhlOrderNo || '—'}</span>
+                )}
+                {orderSide !== 'HHL' && load.hhlOrderNo ? <small>{t(locale, 'awiz_hhl_ro')}</small> : null}
+              </label>
+            </>
+          ) : null}
 
           <label className="form-field">
             <span>{t(locale, 'awiz_tracking')}</span>

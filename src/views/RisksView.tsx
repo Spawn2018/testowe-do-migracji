@@ -18,6 +18,8 @@ import { formatSeaRiskLabel, formatWaveM, formatWindMs } from '../lib/voyageSea'
 import type { MarineConditionRow } from '../lib/marineWeatherDb';
 import { OperatorNoticeForm } from '../components/OperatorNoticeForm';
 import type { CorridorConditionRow } from '../lib/corridorConditionsDb';
+import { formatListDateTime, isTechnicalRoadNotice } from '../lib/format';
+import { transportLabel } from '../lib/transportName';
 import { knotsToMs } from '../lib/marineUnits';
 import { formatGustPl } from '../lib/pl/weatherPl';
 import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
@@ -124,7 +126,7 @@ export function RisksView() {
   }, []);
 
   const roadSeHasSource = PROD_BUILD ? corridor != null : shows('roadSituationsSe');
-  const roadSeRisks = risks.filter((r) => r.type === 'ROAD_SE');
+  const roadSeRisks = risks.filter((r) => r.type === 'ROAD_SE' && !isTechnicalRoadNotice(r.title));
   const fmRisks = risks.filter((r) => r.type === 'FORCE_MAJEURE');
 
   const sevPill = (sev: string) =>
@@ -354,7 +356,7 @@ export function RisksView() {
                   onClick={() => selectLoad(l.id)}
                 >
                   <span className="lbl">
-                    <span className="code" data-content>{l.code}</span> <span data-content>{l.itemType}</span>
+                    <span className="code" data-content>{transportLabel(l, role)}</span> <span data-content>{l.itemType}</span>
                   </span>
                   <span>{l.ferry.bookingRef || '—'}</span>
                 </div>
@@ -396,9 +398,7 @@ export function RisksView() {
               {corridor.weather != null ? ` · WX ${corridor.weather}` : ''}
               {` · ${t(locale, 'risk_situations')}: ${corridor.situations.length}`}
               {' · '}
-              {new Date(corridor.observedAt).toLocaleString(
-                locale === 'sv' ? 'sv-SE' : locale === 'en' ? 'en-GB' : 'pl-PL',
-              )}
+              {formatListDateTime(corridor.observedAt)}
             </div>
           ) : null}
           <div className="two">

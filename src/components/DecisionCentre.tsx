@@ -6,6 +6,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSupabase } from '../auth/client';
 import { useTowerStore } from '../store/useTowerStore';
+import { formatListDateTime, isTechnicalRoadNotice } from '../lib/format';
+import { transportCaseTitle } from '../lib/transportName';
 import { t } from '../i18n/messages';
 import { decText } from '../i18n/decisions';
 import { getAuthProfile } from '../auth/profile';
@@ -24,9 +26,21 @@ type DecRow = {
   decision_types: { title_key: string; options: Opt[]; decider_role: string } | null;
 };
 
+function decisionTitle(
+  r: { title: string; load_id: string | null },
+  loads: { id: string; code: string; hhlOrderNo?: string | null; carrierOrderNo?: string | null }[],
+  role: 'HHL' | 'KSH' | 'SCX',
+): string {
+  const load = r.load_id ? loads.find((l) => l.id === r.load_id) : undefined;
+  if (!load) return r.title;
+  return transportCaseTitle(load, role, r.title);
+}
+
 export function DecisionCentre() {
   const navigate = useNavigate();
   const locale = useTowerStore((s) => s.locale);
+  const role = useTowerStore((s) => s.role);
+  const loads = useTowerStore((s) => s.loads);
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const setDrawerTab = useTowerStore((s) => s.setDrawerTab);
   const openDecisionId = useTowerStore((s) => s.openDecisionId);
@@ -131,7 +145,7 @@ export function DecisionCentre() {
       </div>
       {msg ? <div className="note" style={{ margin: 8 }}>{msg}</div> : null}
       <ul className="exq">
-        {rows.map((r) => (
+        {rows.filter((r) => !isTechnicalRoadNotice(r.title)).map((r) => (
           <li
             key={r.id}
             data-sev={r.escalated_at ? 'CRITICAL' : 'HIGH'}
@@ -146,10 +160,10 @@ export function DecisionCentre() {
           >
             <span className="gut" />
             <span className="txt">
-              <span className="t">{r.title}</span>
+              <span className="t">{decisionTitle(r, loads, role)}</span>
               <span className="m">
                 {r.type_code}
-                {r.due_at ? ` · ${new Date(r.due_at).toLocaleString()}` : ''}
+                {r.due_at ? ` · ${formatListDateTime(r.due_at)}` : ''}
                 {r.escalated_at ? ` · ${t(locale, 'dec_escalated')}` : ''}
               </span>
             </span>
@@ -160,7 +174,7 @@ export function DecisionCentre() {
 
       {active ? (
         <div className="panel-bd" style={{ borderTop: '1px solid var(--line)', padding: 12 }}>
-          <h3 style={{ marginTop: 0 }}>{active.title}</h3>
+          <h3 style={{ marginTop: 0 }}>{decisionTitle(active, loads, role)}</h3>
           <p className="sub">{active.type_code} · {active.status}</p>
           {active.load_id ? (
             <button type="button" className="btn" onClick={() => selectLoad(active.load_id!)}>

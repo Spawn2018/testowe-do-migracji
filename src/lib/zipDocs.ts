@@ -26,6 +26,7 @@ function triggerDownload(blob: Blob, filename: string) {
 export async function downloadDocumentsZip(
   docs: Document[],
   filename: string,
+  codeOf?: (loadId: string) => string,
 ): Promise<{ count: number; skipped: number }> {
   // D15: JSZip ładowany dopiero przy pobieraniu paczki.
   const { default: JSZip } = await import('jszip');
@@ -40,7 +41,10 @@ export async function downloadDocumentsZip(
     }
     const safeCat = d.category.replace(/[^\w.-]+/g, '_');
     const safeName = (d.name || `${safeCat}.bin`).replace(/[^\w.\-]+/g, '_');
-    const path = `${d.loadId || 'unknown'}/${safeCat}_${safeName}`;
+    const code = d.loadId ? codeOf?.(d.loadId) : undefined;
+    const path = code
+      ? `${code}/${code}_${safeCat}_${safeName}`
+      : `${d.loadId || 'unknown'}/${safeCat}_${safeName}`;
     // BK4: plik w Storage — pobranie linkiem podpisanym (15 min), RLS decyduje o dostępie.
     const sink = getFileSink();
     if (sink && isStoredDoc(d)) {

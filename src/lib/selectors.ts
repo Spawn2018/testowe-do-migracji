@@ -1,5 +1,6 @@
 import type { Load, RoleId, CorridorStage } from '../types';
 import { filterLoadsForRole } from './permissions';
+import { transportSearchBlob } from './transportName';
 
 export function filterLoads(
   loads: Load[],
@@ -13,11 +14,10 @@ export function filterLoads(
   if (q) {
     list = list.filter(
       (l) =>
-        l.code.toLowerCase().includes(q) ||
+        /* E41 (P2): HHL kod + oba numery, SCX kod + swój i HHL, KSH tylko kod. */
+        transportSearchBlob(l, role).includes(q) ||
         (l.resources.driverName ?? '').toLowerCase().includes(q) ||
-        (l.resources.tractorPlate ?? '').toLowerCase().includes(q) ||
-        /* M5 — wyszukiwanie po numerach zleceń KSH / HHL / SCX */
-        [l.orderNo, l.hhlOrderNo, l.carrierOrderNo].some((n) => (n ?? '').toLowerCase().includes(q)),
+        (l.resources.tractorPlate ?? '').toLowerCase().includes(q),
     );
   }
   return list;

@@ -12,6 +12,7 @@ import { attachDocumentFile } from '../../lib/docFiles';
 import { awizacjaChanges } from '../../lib/awizacjaPatch';
 import { hasAwizacja } from '../../lib/awizacjaState';
 import { editableOrderSide } from '../../lib/orderNumbers';
+import { transportLabel } from '../../lib/transportName';
 import { DocPreview } from '../ui/DocPreview';
 import { DocFileRow } from '../ui/DocFileRow';
 import { PlanDatesPanel } from './PlanDatesPanel';
@@ -228,10 +229,10 @@ export function LoadDrawer() {
   return (
     <>
       <button type="button" className="scrim" aria-label={t(locale, 'a6_dr_close')} onClick={() => selectLoad(null)} />
-      <aside className="drawer" role="dialog" aria-label={load.code}>
+      <aside className="drawer" role="dialog" aria-label={transportLabel(load, role, 'panel')}>
         <div className="drawer-hd">
           <div className="r1">
-            <span className="wb-code" data-content>{load.code}</span>
+            <span className="wb-code" data-content>{transportLabel(load, role, 'panel')}</span>
             <StatusPill status={load.status} stage={load.stage} />
             {load.delayed ? <span className="pill p-red">{delayPillText}</span> : null}
             <div className="spacer" />
@@ -346,24 +347,28 @@ export function LoadDrawer() {
                   {fmtDim(load.dims.weightT, locale)} t ({load.qty} ×{' '}
                   {fmtDim(load.dims.weightT / Math.max(1, load.qty), locale)} t)
                 </dd>
-                {/* M5 — trzy numery zleceń (W12): KSH z importu, HHL i przewoźnik — każda strona edytuje wyłącznie swój */}
-                <dt>{t(locale, 'a6_dr_ord_hhl')}</dt>
-                <dd data-order="hhl">
-                  {orderSide === 'HHL' ? (
-                    <div className="awiz-row" style={{ margin: 0 }}>
-                      {load.hhlOrderNo ? <span className="mono">{load.hhlOrderNo}</span> : <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_dr_not_filled')}</span>}
-                      <button type="button" className="btn" data-hhl-order-btn onClick={() => setAwizOpen(true)}>
-                        {load.hhlOrderNo ? t(locale, 'awiz_hhl_edit') : t(locale, 'awiz_hhl_add')}
-                      </button>
-                    </div>
-                  ) : (
-                    <OrderNoField key={`hhl-${load.id}`} value={load.hhlOrderNo} editable={false} onSave={() => undefined} />
-                  )}
-                </dd>
-                <dt>{t(locale, 'a6_dr_ord_scx')}</dt>
-                <dd data-order="scx">
-                  <OrderNoField key={`scx-${load.id}`} value={load.carrierOrderNo} editable={orderSide === 'CARRIER'} onSave={(v) => setOrderNo(load.id, 'CARRIER', v)} />
-                </dd>
+                {/* E41 (P2): KSH bez pól numerów. SCX widzi numer HHL tylko do odczytu. */}
+                {role !== 'KSH' ? (
+                  <>
+                    <dt>{t(locale, 'a6_dr_ord_hhl')}</dt>
+                    <dd data-order="hhl">
+                      {orderSide === 'HHL' ? (
+                        <div className="awiz-row" style={{ margin: 0 }}>
+                          {load.hhlOrderNo ? <span className="mono">{load.hhlOrderNo}</span> : <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_dr_not_filled')}</span>}
+                          <button type="button" className="btn" data-hhl-order-btn onClick={() => setAwizOpen(true)}>
+                            {load.hhlOrderNo ? t(locale, 'awiz_hhl_edit') : t(locale, 'awiz_hhl_add')}
+                          </button>
+                        </div>
+                      ) : (
+                        <OrderNoField key={`hhl-${load.id}`} value={load.hhlOrderNo} editable={false} onSave={() => undefined} />
+                      )}
+                    </dd>
+                    <dt>{t(locale, 'a6_dr_ord_scx')}</dt>
+                    <dd data-order="scx">
+                      <OrderNoField key={`scx-${load.id}`} value={load.carrierOrderNo} editable={orderSide === 'CARRIER'} onSave={(v) => setOrderNo(load.id, 'CARRIER', v)} />
+                    </dd>
+                  </>
+                ) : null}
                 <dt>{t(locale, 'a6_dr_load_place')}</dt>
                 <dd>{SITES.loading.name}</dd>
                 <dt>{t(locale, 'a6_dr_loading')}</dt>
@@ -636,7 +641,7 @@ export function LoadDrawer() {
                   type="button"
                   className="btn ghost"
                   onClick={() => {
-                    void downloadDocumentsZip(loadDocs, `${load.code}_dokumenty.zip`).then((r) => {
+                    void downloadDocumentsZip(loadDocs, `${load.code}_dokumenty.zip`, () => load.code).then((r) => {
                       useTowerStore.getState().pushToast(
                         tp(locale, 'a6_dr_zip_toast', { code: load.code, n: String(r.count) }),
                         'MEDIUM',

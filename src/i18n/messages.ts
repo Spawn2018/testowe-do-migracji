@@ -23,6 +23,8 @@ const pl: Dict = {
   nav_sched: 'Harmonogram',
   nav_risk: 'Ryzyka',
   nav_docs: 'Dokumenty',
+  nav_more: 'Więcej',
+  map_pos_every: 'pozycje co 5 min',
   nav_fin: 'Finanse',
   nav_inv: 'Faktury',
   nav_tasks: 'Moje zadania',

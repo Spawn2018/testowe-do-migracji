@@ -146,6 +146,7 @@ authenticated mark_notifications_read
 authenticated money_effective_eur
 authenticated money_least_tier
 authenticated my_mfa_status
+authenticated load_order_numbers
 authenticated my_profile
 authenticated my_sessions
 authenticated operator_notice_apply

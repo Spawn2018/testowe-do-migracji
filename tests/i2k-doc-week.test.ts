@@ -50,7 +50,7 @@ describe('I-2k — tydzień transportu i wybór dokumentów', () => {
   });
   it('widok dokumentów: paczka z docsForWeek i nazwą pliku z tygodniem (nie cała lista)', async () => {
     const src = (await import('node:fs')).readFileSync('src/views/DocsView.tsx', 'utf8');
-    expect(src).toContain('downloadDocumentsZip(docsForWeek(documents, loads, week), `WATCH_TOWER_dokumenty_${week}.zip`)');
+    expect(src).toContain('downloadDocumentsZip(docsForWeek(documents, loads, week), `WATCH_TOWER_dokumenty_${week}.zip`');
     expect(src).not.toContain("downloadDocumentsZip(documents,");
   });
 });

@@ -163,7 +163,7 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
           </svg>{' '}
           {t(locale, 'actualline')}
         </span>
-        <span style={{ color: 'var(--amber)' }}>▏{t(locale, 'today_mark')} {PROD_BUILD ? ddmm(prodToday()) : '23.09'}</span>
+        <span style={{ color: 'var(--amber-ink)' }}>▏{t(locale, 'today_mark')} {PROD_BUILD ? ddmm(prodToday()) : '23.09'}</span>
       </div>
     </div>
   );
