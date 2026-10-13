@@ -310,8 +310,75 @@ test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
   });
 });
 
+/** Kopia znaczników PreviewBanner, ImpersonationBanner i SystemBroadcastBanner — w demo ich nie ma (zależą od logowania). */
+const SUBBARS_HTML = `
+<div class="subbar subbar-preview" data-banner="preview" role="status"><p class="subbar-tx"><b>Podgląd: tak widzi KSH Użytkownik.</b> Nic tu nie zapiszesz.</p><button class="subbar-btn" type="button">Wróć do HHL</button></div>
+<div class="subbar subbar-actas" data-banner="impersonation" role="status"><p class="subbar-tx"><b>Działasz jako: dyspozytor SCX (Przemysław Szczepański-Kowalczyk)</b> Każda zmiana zapisze się w historii jako „administrator.hhl@przyklad.pl (HHL) jako dyspozytor SCX”.</p><button class="subbar-btn" type="button">Zakończ</button></div>
+<div class="subbar subbar-bcast" data-banner="system-broadcast" role="status"><p class="subbar-tx"><span class="subbar-tag">KOMUNIKAT HHL</span><b class="subbar-tag-ph">Komunikat HHL:</b> <b class="subbar-body">Prom Stena Estelle 09.10 wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.</b><span class="subbar-until"> · do 09.10, 12:00</span></p></div>`;
+const LONG_NAME = 'Przemysław Szczepański-Kowalczyk';
+
 test.describe('wyglad/P3 pasek górny (E37 pkt 1–2, img/e37-after)', () => {
-  test.describe.configure({ mode: 'serial', timeout: 120_000 });
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+
+  test('komputer 800–1440 px: długie imię i nazwisko, wszystko w pasku 52 px, nic na sobie', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page);
+    const bad: string[] = [];
+    for (const width of [1440, 1366, 1280, 1241, 1100, 1024, 900, 800]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.waitForTimeout(150);
+      const res = await page.evaluate((name) => {
+        const b = document.querySelector('#accountBtn .acc-who b');
+        if (b) b.textContent = name;
+        const bar = document.querySelector('.topbar') as HTMLElement;
+        const br = bar.getBoundingClientRect();
+        const out: string[] = [];
+        if (bar.scrollWidth > bar.clientWidth + 1) out.push(`pasek przewija się w poziomie (${bar.scrollWidth} > ${bar.clientWidth})`);
+        if (document.documentElement.scrollWidth > window.innerWidth + 1) out.push('strona szersza od okna');
+        const kids = [...bar.children].filter((e) => getComputedStyle(e).display !== 'none' && (e as HTMLElement).offsetWidth > 0 && !e.classList.contains('kbdpanel'));
+        let prevRight = -1;
+        for (const k of kids) {
+          const r = k.getBoundingClientRect();
+          const tag = (k as HTMLElement).className || k.id;
+          if (r.top < br.top - 1 || r.bottom > br.bottom + 1) out.push(`${tag} wystaje z paska (${Math.round(r.top)}–${Math.round(r.bottom)})`);
+          if (r.left < prevRight - 1) out.push(`${tag} nachodzi na poprzedni element`);
+          if (r.right > window.innerWidth + 1) out.push(`${tag} poza oknem`);
+          if (r.width > 0) prevRight = r.right;
+        }
+        const brand = document.querySelector('.topbar .brand b') as HTMLElement;
+        const lh = parseFloat(getComputedStyle(brand).lineHeight) || parseFloat(getComputedStyle(brand).fontSize) * 1.3;
+        if (brand.getBoundingClientRect().height > lh * 1.4) out.push('„WATCH TOWER” w dwóch liniach');
+        return out;
+      }, LONG_NAME);
+      bad.push(...res.map((x) => `${width}: ${x}`));
+    }
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+
+  test('telefon: paski pod paskiem i menu konta pod nimi — 0 uciętych, 0 celów < 44 px, 0 tekstu < 12 px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page);
+    const hits: Hit[] = [];
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.evaluate((html) => {
+        document.querySelectorAll('.topstack .subbar').forEach((e) => e.remove());
+        document.querySelector('.topstack')!.insertAdjacentHTML('beforeend', html);
+      }, SUBBARS_HTML);
+      hits.push(...await measure(page, 'paski', width, 'HHL'));
+      await page.click('#accountBtn');
+      const below = await page.evaluate(() => {
+        const last = [...document.querySelectorAll('.topstack .subbar')].pop()!.getBoundingClientRect();
+        const menu = document.querySelector('#accountMenu')!.getBoundingClientRect();
+        return menu.top >= last.bottom - 1;
+      });
+      if (!below) hits.push({ kind: 'menu-na-paskach', view: 'paski', width, role: 'HHL', n: 1, sample: ['menu konta zasłania paski'] });
+      await page.click('#accountBtn');
+    }
+    await page.evaluate(() => document.querySelectorAll('.topstack .subbar').forEach((e) => e.remove()));
+    const report = hits.map((h) => `${h.width} ${h.kind}=${h.n}: ${h.sample.join(' | ')}`).join('\n');
+    expect(hits, report).toEqual([]);
+  });
 
   test('komputer: Podgląd, tydzień i rejsy, data, ?, dzwonek, konto z menu; bez sesji w lewym menu', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });

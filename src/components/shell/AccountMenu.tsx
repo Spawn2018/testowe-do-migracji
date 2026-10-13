@@ -80,6 +80,7 @@ export function AccountMenu() {
   const [open, setOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -87,7 +88,7 @@ export function AccountMenu() {
       if (!ref.current?.contains(e.target as Node)) { setOpen(false); setPreviewOpen(false); }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setOpen(false); setPreviewOpen(false); }
+      if (e.key === 'Escape') { setOpen(false); setPreviewOpen(false); btnRef.current?.focus(); }
     };
     document.addEventListener('mousedown', onDoc);
     window.addEventListener('keydown', onKey);
@@ -121,12 +122,14 @@ export function AccountMenu() {
   return (
     <div className="acc-wrap" ref={ref}>
       <button
+        ref={btnRef}
         type="button"
         className="acc-chip"
         id="accountBtn"
+        data-auth={profile ? 'session' : undefined}
         aria-expanded={open}
         aria-controls="accountMenu"
-        aria-label={t(locale, 'p3a_acc_open').replace('{name}', name)}
+        aria-label={t(locale, 'p3a_acc_open').replace('{name}', `${name}, ${kindShort(locale, userRole)}`)}
         onClick={() => { setOpen((v) => !v); setPreviewOpen(false); }}
       >
         <span className="acc-avatar" aria-hidden>{initials(name)}</span>
@@ -155,7 +158,7 @@ export function AccountMenu() {
           <span className="acc-chev" aria-hidden>›</span>
         </button>
         <button type="button" className="acc-row" data-acc="help"
-          onClick={() => { close(); window.dispatchEvent(new CustomEvent('wt-toggle-help')); }}>
+          onClick={() => { close(); window.dispatchEvent(new CustomEvent('wt-open-help')); }}>
           <span className="acc-lbl">{t(locale, 'p3a_acc_help')}</span>
           <span className="acc-hint">?</span>
           <span className="acc-chev" aria-hidden>›</span>
@@ -187,7 +190,7 @@ export function AccountMenu() {
           <span className="acc-chev" aria-hidden>›</span>
         </button>
         {profile ? (
-          <button type="button" className="acc-row acc-out" data-acc="logout" data-auth="session" onClick={logout}>
+          <button type="button" className="acc-row acc-out" data-acc="logout" onClick={logout}>
             <span className="acc-lbl">{t(locale, 'p3a_acc_logout')}</span>
           </button>
         ) : null}

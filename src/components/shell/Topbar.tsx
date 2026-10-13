@@ -85,25 +85,33 @@ function FerryChip({ rows, wk, date }: { rows: FerryRow[]; wk: number; date: str
   const locale = useTowerStore((s) => s.locale);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
       if (!ref.current?.contains(e.target as Node)) setOpen(false);
     };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setOpen(false); btnRef.current?.focus(); }
+    };
     document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      window.removeEventListener('keydown', onKey);
+    };
   }, [open]);
   const first = rows[0];
   if (!first) return null;
   return (
     <div className="ferry-chip-wrap" ref={ref}>
-      <button type="button" className="ferry-chip" aria-expanded={open} aria-haspopup="dialog"
+      <button ref={btnRef} type="button" className="ferry-chip" aria-expanded={open} aria-controls="ferryPop"
         aria-label={t(locale, 'p3a_ferry_open')} onClick={() => setOpen((v) => !v)} data-ferry-chip>
         <span className="ferry-chip-cd"><ClaudeIcon name="ferry" />{first.cd}</span>
         <span className="ferry-chip-lb">{first.short}</span>
       </button>
       {open ? (
-        <div className="ferry-pop" role="dialog" aria-label={t(locale, 'p3a_ferry_open')} data-ferry-pop>
+        <div className="ferry-pop" id="ferryPop" role="group" aria-label={t(locale, 'p3a_ferry_open')} data-ferry-pop>
           {rows.map((row, i) => (
             <div key={i} className="ferry-pop-row">
               <b>{row.cd}</b>
@@ -132,8 +140,14 @@ export function Topbar() {
 
   useEffect(() => {
     const onHelp = () => setHelp((h) => !h);
+    /* menu konta „Pomoc” zawsze otwiera (nie przełącza) */
+    const onOpenHelp = () => setHelp(true);
     window.addEventListener('wt-toggle-help', onHelp);
-    return () => window.removeEventListener('wt-toggle-help', onHelp);
+    window.addEventListener('wt-open-help', onOpenHelp);
+    return () => {
+      window.removeEventListener('wt-toggle-help', onHelp);
+      window.removeEventListener('wt-open-help', onOpenHelp);
+    };
   }, []);
 
   useEffect(() => {

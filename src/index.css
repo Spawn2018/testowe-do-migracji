@@ -1196,27 +1196,31 @@ img,video{max-width:100%;height:auto}
 /* ===== wyglad/P3 — E37 pkt 1–2 (img/e37-after „Po zmianie”): pasek górny, konto po prawej, paski pod paskiem =====
    Komputer: logo + „Stegra Boden” · Podgląd HHL/KSH/SCX (tylko HHL) · tydzień, dwa rejsy, data · ? · dzwonek · konto ▼.
    Telefon: logo · najbliższy prom · dzwonek · konto; „?”, motyw i Podgląd w menu konta. */
-.topstack{display:flex;flex-direction:column;min-width:0}
+.topstack{display:flex;flex-direction:column;min-width:0;position:relative}
 /* menu konta, lista dzwonka i prom na telefonie są nad mapą: warstwy mapy (Leaflet 400–1000, warstwy 600) zostają w swoim pudełku */
 .mapbox,.leaflet-container{isolation:isolate}
 .topstack .topbar{gap:14px}
+.topstack .topbar .brand{flex:0 0 auto}
+.topstack .topbar .brand b{white-space:nowrap}
+.topbar .roleswitch .seg{background:var(--surface)}
 .topbar .brand .brand-sub{font-size:14px}
 .ops .ops-ferry-ico{display:flex;align-items:center;color:var(--sea)}
 .ops .ops-rows{display:flex;flex-direction:column;gap:2px;min-width:0}
 .ops .ops-row{display:flex;align-items:baseline;gap:6px;line-height:1.15}
 .ops .ops-row .cd{font-size:15px}
-.ops .ops-row .lb{color:var(--ink-2);font-size:12.5px}
+.ops .ops-row+.ops-row .cd{font-size:13.5px}
+.ops .ops-row .lb{color:var(--ink);font-size:13px}
 .ops .ops-date{font-size:17px;color:var(--ink)}
 .topbar .top-help{font-family:var(--font-cond);font-weight:700;font-size:15px}
-@media (min-width:769px){.topstack .topbar .iconbtn{height:34px;min-width:34px}}
+@media (min-width:769px){.topstack .topbar .iconbtn{height:36px;min-width:36px;background:var(--surface)}}
 
 /* konto */
 .acc-wrap{position:relative;flex:0 0 auto}
-.acc-chip{display:flex;align-items:center;gap:9px;height:40px;padding:3px 10px 3px 4px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink);text-align:left}
+.acc-chip{display:flex;align-items:center;gap:9px;min-height:40px;padding:3px 10px 3px 4px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink);text-align:left}
 .acc-chip:hover,.acc-chip[aria-expanded="true"]{background:var(--surface-2)}
 .acc-avatar{width:32px;height:32px;flex:0 0 32px;display:grid;place-items:center;border-radius:50%;background:var(--sea);color:var(--surface);font-family:var(--font-cond);font-weight:700;font-size:13.5px;letter-spacing:.02em}
 .acc-who{display:flex;flex-direction:column;min-width:0;line-height:1.15}
-.acc-who b{font-weight:600;font-size:13.5px;white-space:nowrap}
+.acc-who b{font-weight:600;font-size:13.5px;max-width:170px;overflow-wrap:anywhere}
 .acc-who span{font-size:12px;color:var(--ink-3);white-space:nowrap}
 .acc-caret{font-size:10px;color:var(--ink-2)}
 .acc-menu{position:absolute;right:0;top:calc(100% + 6px);width:300px;z-index:60;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--rule)}
@@ -1231,7 +1235,8 @@ img,video{max-width:100%;height:auto}
 .acc-lbl{flex:0 0 auto}
 .acc-hint{margin-left:auto;color:var(--ink-3);font-size:13px;text-align:right}
 .acc-row-desc{align-items:flex-start}
-.acc-row-desc .acc-lbl{flex:0 0 60px}
+.acc-row-desc{gap:10px}
+.acc-row-desc .acc-lbl{flex:0 0 40px}
 .acc-row-desc .acc-hint{margin-left:0;flex:1 1 auto;text-align:left}
 .acc-chev{display:none}
 .acc-out .acc-lbl{font-weight:700}
@@ -1241,13 +1246,13 @@ img,video{max-width:100%;height:auto}
 .acc-seg button{flex:1 1 0;min-height:44px;font-size:14px}
 
 /* paski pod paskiem górnym (kolejność: Podgląd albo „Działasz jako”, potem komunikat HHL) */
-.subbar{display:flex;align-items:center;gap:12px;padding:7px 14px 7px 14px;border-bottom:1px solid var(--rule);border-left:4px solid var(--ink);background:var(--surface);font-size:14px;min-width:0}
+.subbar{display:flex;align-items:center;gap:12px;min-height:44px;padding:7px 14px 7px 11px;border-bottom:1px solid var(--rule);border-left:4px solid var(--ink);background:var(--surface);font-size:14px;min-width:0}
 .subbar-tx{margin:0;flex:1 1 auto;min-width:0;color:var(--ink);line-height:1.35}
-.subbar-tx b{font-weight:700}
+.subbar-tx b{font-weight:700;margin-right:8px}
 .subbar-preview{background:var(--sea-bg);border-left-color:var(--sea)}
 .subbar-actas{background:var(--amber-bg);border-left-color:var(--amber)}
 .subbar-bcast{background:var(--surface);border-left-color:var(--ink)}
-.subbar-btn{flex:0 0 auto;padding:5px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink);font-size:13.5px}
+.subbar-btn{flex:0 0 auto;padding:3px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink);font-size:13.5px}
 .subbar-btn:hover{background:var(--surface-2)}
 .subbar-tag{display:inline-block;margin-right:12px;padding:1px 8px;border:1px solid var(--rule);background:var(--surface-2);color:var(--ink-2);font-family:var(--font-cond);font-weight:600;font-size:12px;letter-spacing:.08em;vertical-align:1px}
 .subbar-tag-ph{display:none}
@@ -1255,16 +1260,19 @@ img,video{max-width:100%;height:auto}
 
 /* telefon: najbliższy prom (dotknięcie → oba rejsy, tydzień i data) */
 .ferry-chip-wrap{display:none;position:relative;flex:0 0 auto}
-.ferry-chip{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:44px;padding:2px 8px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink);line-height:1.15;text-align:left}
+.ferry-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:44px;padding:2px 6px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink);line-height:1.15;text-align:left}
 .ferry-chip-cd{display:flex;align-items:center;gap:4px;font-family:var(--font-cond);font-weight:700;font-size:14px;white-space:nowrap}
 .ferry-chip-lb{font-size:12px;color:var(--ink-2);white-space:nowrap}
-.ferry-pop{position:fixed;left:8px;right:8px;top:58px;z-index:60;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--rule)}
+.ferry-pop{position:absolute;left:13px;right:13px;top:calc(100% + 6px);z-index:60;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--rule)}
 .ferry-pop-row{display:flex;flex-direction:column;gap:2px;padding:10px 14px;border-bottom:1px solid var(--rule-2)}
 .ferry-pop-row b{font-family:var(--font-cond);font-size:16px}
 .ferry-pop-row span{font-size:13px;color:var(--ink-2)}
 .ferry-pop-ft{display:flex;justify-content:space-between;padding:10px 14px;font-family:var(--font-cond);font-size:15px}
 
 /* węższy komputer: najpierw znika nazwa przy inicjałach, potem podpis „Stegra Boden” */
+@media (max-width:1366px){
+  .topbar .brand .brand-sub{display:none}
+}
 @media (max-width:1100px){
   .topbar .acc-who,.topbar .acc-caret{display:none}
   .topbar .acc-chip{padding:3px}
@@ -1275,22 +1283,29 @@ img,video{max-width:100%;height:auto}
   .topstack .topbar{gap:6px;padding:0 8px}
   .topbar .roleswitch,.topbar .top-help{display:none}
   .ferry-chip-wrap{display:block}
-  .topbar .acc-chip{width:44px;height:44px;padding:0;justify-content:center;background:var(--surface-2)}
+  .topbar .brand b{font-size:17px}
+  .topbar .acc-chip{width:44px;height:44px;padding:0;justify-content:center;background:var(--surface)}
+  /* listy z paska (konto, prom, dzwonek) pod paskami „Podgląd”, „Działasz jako” i komunikatem */
+  .topbar .acc-wrap,.topbar .ferry-chip-wrap,.topbar .bell-wrap{position:static}
+  .topstack .bell-pop{top:calc(100% + 6px)}
   .acc-avatar{width:34px;height:34px;flex-basis:34px;font-size:14px}
-  .acc-menu{position:fixed;left:8px;right:8px;top:58px;width:auto;max-height:calc(100dvh - 140px);overflow-y:auto}
+  .acc-menu{position:absolute;left:13px;right:13px;top:calc(100% + 6px);width:auto;max-height:calc(100dvh - 140px);overflow-y:auto}
+  .acc-hd b{font-size:17px}
   .acc-hint,.acc-hd small{display:none}
   .acc-chev{display:inline;margin-left:auto;color:var(--ink-3);font-size:16px}
   .acc-row[data-acc="for-me"]{display:none}
   .acc-row-desc{align-items:center}
   .acc-row-desc .acc-lbl{flex:0 0 auto}
   .acc-preview{display:block}
-  .acc-row{min-height:48px;font-size:15px}
+  .acc-row{min-height:44px;font-size:14px}
   .subbar{padding:8px 10px 8px 12px;font-size:14px;align-items:center}
   .subbar-btn{min-height:44px;font-size:14px}
   .subbar-tag,.subbar-until{display:none}
   .subbar-tag-ph{display:inline}
   .subbar-tx .subbar-body{font-weight:400}
+  .subbar-tx b{margin-right:0}
 }
 @media (max-width:430px){
   .topstack .topbar{gap:4px;padding:0 6px}
+  .topstack .bell-pop{position:absolute;left:8px;right:8px;max-height:calc(100dvh - 140px)}
 }

@@ -7,14 +7,11 @@ import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
-import { isPreviewReadOnly } from '../lib/prodFacade';
 import { OPEN_OPTIONS_EVENT, scrollToScreen, takeOptionsScreen, type OptionsScreen } from '../lib/openOptions';
 
 const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../components/guide/Guide')) : null;
 /* I-13: parametry SEFS tylko do odczytu (zakres wg RLS) — wyłącznie produkcja */
 const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
-/* wyglad/P3 (E37, E6): „Moje konto” także dla KSH i SCX (imię, nazwisko, telefon). */
-const MyAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/MyAccount')) : null;
 const SefsReadOnly = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/SefsReadOnly')) : null;
 
 export function SettingsView() {
@@ -42,7 +39,6 @@ export function SettingsView() {
         {saved ? <span className="pill p-go">{t(locale, 'opt_saved')} · {saved}</span> : null}
       </header>
       <div className="options-grid">
-        {MyAccount && !isPreviewReadOnly({ viewRole: role }) && <Suspense fallback={null}><MyAccount /></Suspense>}
         <UiPrefsPanel onSaved={saveMark} subKey="settings_prefs_sub" noteKey="settings_prefs_note" />
         {SefsReadOnly && (role === 'KSH' || role === 'SCX') && <Suspense fallback={null}><SefsReadOnly /></Suspense>}
         {CarrierScorecard && role === 'SCX' && <Suspense fallback={null}><CarrierScorecard /></Suspense>}

@@ -126,7 +126,7 @@ export function OptionsView() {
       setScreenSection(null);
       window.setTimeout(() => {
         setScreenSection(id);
-        scrollToScreen(screen === 'my-account' ? '[data-auth="my-account"], [data-section="users"]' : '[data-section="prefs"]');
+        window.setTimeout(() => scrollToScreen(`[data-section="${id}"]`), 50);
       }, 0);
     };
     go(takeOptionsScreen());
