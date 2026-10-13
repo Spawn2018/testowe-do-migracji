@@ -438,7 +438,7 @@ export const useTowerStore = create<TowerState>()(
         // Q-9 B: bez ręcznego wyboru — motyw systemu.
         const nextTheme = themeManual ? theme : systemTheme();
         applyThemeToDom(nextTheme);
-        const defaultView = role === 'SCX' ? 'tasks' : 'dash';
+        const defaultView = 'dash';
         setPreviewViewRole(role); // E9-7 — strażnik Podglądu (writeThrough / isPreviewReadOnly)
         set({ role, theme: nextTheme, view: defaultView as ViewKey });
       },
@@ -791,7 +791,7 @@ export const useTowerStore = create<TowerState>()(
             severity: 'HIGH',
             loadId,
             roleScope: ['HHL', 'SCX'],
-            href: { view: 'tasks', loadId },
+            href: { view: 'risk', loadId }, // E9: bez Moje zadania — Do zrobienia
           });
         }
       },

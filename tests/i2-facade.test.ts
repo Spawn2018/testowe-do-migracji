@@ -57,6 +57,10 @@ describe('I-2a: przełącznik widoku i import', () => {
     expect(canEditResources('SCX')).toBe(true)
     expect(canSubmitInvoice('SCX')).toBe(true)
   })
+  it('E9: SCX bez „Moje zadania” w menu', () => {
+    expect(navForRole('SCX', false)).not.toContain('tasks')
+    expect(navForRole('SCX', false)).toContain('risk')
+  })
 })
 
 describe('9.4: Automatyzacje (dawniej I-2c)', () => {

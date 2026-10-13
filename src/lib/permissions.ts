@@ -25,8 +25,9 @@ export type NavKey =
 const NAV_BY_ROLE: Record<RoleId, NavKey[]> = {
   HHL: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'wf', 'geo', 'options'],
   KSH: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'settings'],
-  SCX: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'tasks', 'settings'],
-};
+  // E9: „Moje zadania” SCX znika — praca w „Do zrobienia” (risk); widok tasks zostaje w kodzie bez pozycji menu
+  SCX: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'settings'],
+}
 
 /** 9.4: moduł Automatyzacje (wf) w produkcji tylko dla HHL_ADMIN (lib/prodFacade canSeeWorkflows); demo bez zmian. */
 export function navForRole(role: RoleId, prod?: boolean, userRole?: string | null): NavKey[] {

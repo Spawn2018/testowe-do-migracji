@@ -2118,3 +2118,9 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **Poprawki P2 — wygląd 2 NA PRODUKCJI — commit `b9ae3d37`, wdrożenie `dpl_2S9uAEnAqEdv2sgTCUQWC3gDqtaL`, 13.10.2026 19:04.** Następna: dokończenie P3 (po rebase na `main`).
 
+## 2026-10-13 — P3 WIP (po rebase)
+
+- PR #175: unit/visual/db (pełna brama) zielone na `534904bb` (nullguard 612, aud03 25, money/security/invite).
+- Menu SCX: bez `tasks` (E9 „Moje zadania” znika); kafelek i linki → `risk`.
+- TEST wolne. Bez wdrożenia P3 (jeszcze nie koniec paczki).
+
