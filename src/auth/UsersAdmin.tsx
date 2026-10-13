@@ -81,8 +81,22 @@ export default function UsersAdmin() {
           return (
             <div className={`auth-admin-row${u.active ? '' : ' inactive'}`} key={u.id}>
               <span className="grow"><b>{u.email}</b> <small>{code}</small></span>
-              <select className="input" aria-label={t(locale, 'a6_ua_role_of').replace('{email}', u.email ?? '')} value={u.role} disabled={busy || self} onChange={(e) => void getSupabase().then((sb) => run(() => sb.rpc('admin_set_user_role', { p_user: u.id, p_role: e.target.value }), t(locale, 'a6_ua_role_changed')))}>
-                {(ROLES_FOR_ORG[code] ?? [u.role]).map((r) => <option key={r} value={r}>{t(locale, `a6_role_${r}`)}</option>)}
+              <select
+                className="input"
+                aria-label={t(locale, 'a6_ua_role_of').replace('{email}', u.email ?? '')}
+                value={u.role}
+                disabled={busy || self}
+                onChange={(e) => {
+                  /* E14: wartość od razu z onChange — po await React przywraca kontrolowaną starą rolę */
+                  const next = e.target.value as UserRole;
+                  void getSupabase().then((sb) =>
+                    run(() => sb.rpc('admin_set_user_role', { p_user: u.id, p_role: next }), t(locale, 'a6_ua_role_changed')),
+                  );
+                }}
+              >
+                {Array.from(new Set([...(ROLES_FOR_ORG[code] ?? []), u.role])).map((r) => (
+                  <option key={r} value={r}>{t(locale, `a6_role_${r}`)}</option>
+                ))}
               </select>
               <button className="chipbtn" type="button" disabled={busy || self} onClick={() => void getSupabase().then((sb) => run(() => sb.rpc('admin_set_user_active', { p_user: u.id, p_active: !u.active }), t(locale, u.active ? 'a6_ua_deact_done' : 'a6_ua_act_done')))}>{t(locale, u.active ? 'a6_ua_deact' : 'a6_ua_act')}</button>
               <button className="chipbtn" type="button" disabled={busy || self || !u.active} title={t(locale, 'a6_ua_lost')} onClick={() => void getSupabase().then((sb) => run(() => sb.rpc('revoke_user_sessions', { p_user: u.id }), t(locale, 'a6_ua_logged_out').replace('{email}', u.email ?? '')))}>{t(locale, 'a6_ua_logout_all')}</button>

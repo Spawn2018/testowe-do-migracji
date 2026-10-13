@@ -2102,3 +2102,11 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **P2-wyglad NA PRODUKCJI — commit `4627c8f5`, wdrożenie `dpl_F55udKq2cMiUWyM1CXdY9Kh4sz8r`, 13.10.2026 17:56.** Następna paczka: P3.
 
+## 2026-10-13 — D-20261013-1835-01 (FRONT-KOORDYNATOR) + start P3 (F5)
+
+- Plan: merge **`59165fc2`** (PR #174) — rejestr `FRONT-KOORDYNATOR`, `AGENTS.md` §3/§4, `front.mdc`, PLAN §1 pkt 5, §3, §4 (Poprawki P2 — wygląd 2 na `wyglad/P2-2`, P3, P5 kolor marży), §8. D-20261013-1815-01 nie wykonywany (F4 — koordynator).
+- Gałąź `pakiet/P3-uprawnienia` z `main`. Bez zmian wyglądu ekranów (F5).
+- Pierwszy krok logiki: E14 (wartość roli z onChange), 5 ról w UI, migracja `0196` (E9/E14/E19/G-20).
+- `wyglad/P2-2`: jeszcze brak PR — scalenie P3 dopiero po zielonym `wyglad/P2-2` (F4).
+- TEST wolne.
+

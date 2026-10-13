@@ -38,10 +38,12 @@ val "SCX widzi koszt swojego transportu"           $SCX "select effective_total_
 val "KSH nie widzi kosztu (0 wierszy)"             $KSH "select count(*) from v_load_price_carrier" 0
 val "KSH widzi przychód swojego projektu"          $KSH "select effective_total_eur from v_load_price_client where load_id='$L1'" 2500.00
 val "SCX nie widzi przychodu (0 wierszy)"          $SCX "select count(*) from v_load_price_client" 0
-err "KSH nadal nie odczyta tabeli kosztów"          $KSH "select * from load_cost" "permission denied"
+# E19 (P3, 0196): SELECT na load_cost z RLS — KSH 0 wierszy (nie permission denied)
+val "KSH nie widzi wierszy w load_cost (RLS)"       $KSH "select count(*) from load_cost" 0
 err "anon nie odczyta widoku"                       $KSH "set local role anon; select * from v_load_price_client" "permission denied"
 sys "update app_users set role='CARRIER_USER' where auth_id='$SCX'"
-val "SCX bez roli dyspozytora (CARRIER_USER) nie widzi kosztu"        $SCX "select count(*) from v_load_price_carrier" 0
+# E9 (P3, 0196): SCX Użytkownik widzi koszty jak Dyspozytor
+val "SCX Użytkownik (CARRIER_USER) widzi koszt swojego transportu" $SCX "select count(*) from v_load_price_carrier where load_id='$L1'" 1
 sys "update app_users set role='CARRIER_DISPATCH' where auth_id='$SCX'"
 
 echo; echo "[M2] Z1 — faktura nie nadpisuje wyliczonej wartości"

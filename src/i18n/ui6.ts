@@ -424,7 +424,7 @@ const pl: Dict = {
   a6_role_CARRIER_DISPATCH: 'SCX — dyspozytor',
   a6_role_CARRIER_USER: 'SCX — użytkownik',
   a6_role_CLIENT_ADMIN: 'KSH — administrator',
-  a6_role_CLIENT_USER: 'KSH — podgląd',
+  a6_role_CLIENT_USER: 'KSH — użytkownik',
   a6_role_HHL_ADMIN: 'Administrator HHL',
   a6_role_HHL_OPS: 'Operacje HHL',
   a6_role_SITE_VIEWER: 'Plac budowy — podgląd',

@@ -42,10 +42,13 @@ export const ROLE_LABEL_PL: Record<UserRole, string> = {
   SITE_VIEWER: 'Plac budowy — podgląd',
 };
 
-/** Role dozwolone dla organizacji (lustro role_matches_org z 0005). */
+/**
+ * Role do zaproszeń i zmiany w UI — 5 rodzajów kont (E9, E14).
+ * CLIENT_ADMIN i SITE_VIEWER zostają w enumie bazy (USER_ROLES), ale nie w liście wyboru.
+ */
 export const ROLES_FOR_ORG: Record<string, UserRole[]> = {
   HHL: ['HHL_ADMIN', 'HHL_OPS'],
-  KSH: ['CLIENT_ADMIN', 'CLIENT_USER'],
+  KSH: ['CLIENT_USER'],
   SCX: ['CARRIER_DISPATCH', 'CARRIER_USER'],
 };
 

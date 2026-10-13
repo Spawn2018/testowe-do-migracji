@@ -54,6 +54,7 @@ authenticated admin_ops_threshold_set
 authenticated admin_revoke_invite
 authenticated admin_set_eta_calibration_frozen
 authenticated admin_set_external_messaging
+authenticated admin_security_flag_set
 authenticated admin_set_mfa_enforcement
 authenticated admin_set_permit_requirement
 authenticated admin_set_user_active
