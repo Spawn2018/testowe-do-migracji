@@ -14,6 +14,14 @@ Zmienione punkty: II.5 (nowy), V, VI.5, VIII, IX.1, IX.3, X — poprzednie brzmi
 ## Zmiana z 09.10.2026 (właściciel, 13:09)
 Zmieniony punkt: III.5 (opłaty dodatkowe) — decyzja właściciela 09.10.2026, 13:09, pkt 5: „Wszelkie dopłaty dodatkowe liczą się z automatu ale nie są wprowadzane automatycznie. To jest tylko i wyłącznie wola oraz decyzja biznesowa HHL i SCX czy będą dodane. Opłata dodatkowa SCX dalej wymaga akceptacji HHL.” Zapis: `docs/handover/dopiski/D-20261009-1309-01.md` R8. Poprzednie brzmienia — w tekście punktu.
 
+## Zmiany z 13.10.2026 (właściciel)
+Podstawa:
+- polecenie właściciela 13.10.2026, 15:31: „to, co Cursor już zrobił i zrobi w przyszłości, ma zawsze być zgodne ze wzorcami z pliku audytowego”;
+- polecenie właściciela 13.10.2026, 15:43: „Pytam o wszystko, co będzie budował, także na komputerze i komórce. Każda wizualizacja ma być zgodna z tymi stworzonymi w tym pliku. W końcu tam są moje wszystkie akceptacje, w tym także wyglądu całej aplikacji”;
+- decyzja `WYGLAD-RAPORT` (`docs/handover/wzorzec/03_REJESTR_DECYZJI.md`; dopiski D-20261013-1535-01 i D-20261013-1550-01).
+
+Zmienione punkty: VIII pkt 1 i 2. Poprzednie brzmienie zostaje pod VIII, oznaczone „do 13.10.2026”.
+
 ## I. Cel
 TOWER to **jedno źródło prawdy o transportach** projektu KSH–Stegra Boden
 (konstrukcje stalowe ponadnormatywne, Śrem → Gdańsk → prom → Nynäshamn → Boden)
@@ -89,12 +97,13 @@ użytku komercyjnego i śledzenia pojazdów — zanim cokolwiek zostanie podpię
    osobowych) zostają na stałe dla kalibracji
 
 ## VIII. Wygląd
-**(08.10.2026)**
-- Wzorem wyglądu jest **makieta etapu audytu 07–08.10.2026**: `docs/handover/audyt_claude_2026-10-08/makiety_html/` i `raport/img/`, tam, gdzie etap ją ma.
-- W pozostałych miejscach obowiązuje makieta `design/claude-v2.0/` i tokeny systemu projektowego. Szerokości, motywy i stany niepokazane w makiecie wykonawca wyprowadza z makiety i tokenów — bez generycznego wyglądu „AI”.
+**(13.10.2026, decyzja WYGLAD-RAPORT)**
+1. Wzorem wyglądu całej aplikacji, na komputerze i na telefonie, jest raport audytu 07–11.10.2026: `docs/handover/audyt_claude_2026-10-08/raport/index.html` i obrazy `raport/img/`. To ta sama treść co artefakt właściciela „Audyt Watch Tower”. Przy sprzeczności wygrywa najnowsza decyzja właściciela, potem obraz „po zmianie”, potem tekst propozycji. `makiety_html/` to źródła obrazów, tylko pomocniczo (decyzja WYGLAD-RAPORT, 13.10.2026).
+2. Miejsca i stany bez własnego obrazu w raporcie mają wygląd według D-20261013-1550-01 Z10, czyli taki jak na obrazach raportu: te same kolory, czcionki, przyciski, karty i tabele (tokeny `design/claude-v2.0/`, z których zbudowano obrazy). Bez generycznego wyglądu „AI”. Element bez wzoru → STOP.
 - Zmiana wyglądu wynikająca z etapu przypisanego do paczki w `PLAN.md` jest przewidziana i nie jest powodem do zatrzymania.
 - Odstępstwa: decyzje właściciela (D-27 kontrast, D-31 pasek przy 390 px, D-47 okno awizacji) oraz etapy audytu. D-50 (pasek użytkownika w lewym menu) zastępuje E37: konto, „Moje konto” i „Wyloguj” po prawej w pasku górnym.
 - **Aplikacja działa w pełni na telefonie** i instaluje się z Chrome (D-55). Na telefonie: dolny pasek, karty zamiast tabel (E8).
+- do 13.10.2026: „Wzorem wyglądu jest makieta etapu audytu 07–08.10.2026: `docs/handover/audyt_claude_2026-10-08/makiety_html/` i `raport/img/`, tam, gdzie etap ją ma. W pozostałych miejscach obowiązuje makieta `design/claude-v2.0/` i tokeny systemu projektowego. Szerokości, motywy i stany niepokazane w makiecie wykonawca wyprowadza z makiety i tokenów — bez generycznego wyglądu „AI”.”
 - do 08.10.2026: „Wygląd = makieta, dosłownie 100% (decyzja z 22.09) … Odstępstwa wyłącznie decyzją właściciela (D-27, D-31, D-47, D-50).”
 
 ## IX. Tryb pracy

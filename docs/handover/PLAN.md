@@ -1,6 +1,6 @@
 # PLAN PRACY WATCH TOWER — jedyna lista pracy
 
-**Wersja: 08.10.2026, 16:05 (koordynator Claude, na polecenie właściciela 08.10 14:43); zmiana 16:46: jeden folder, jeden wykonawca, paczki po kolei (§3, dopisek D-20261008-1646-01); zmiana 09.10.2026, 01:20: audyt kompletu — termin liczony od startu, brama niedzielna, przywrócone decyzje właściciela, nowe pozycje §5 i §6, treści „Jak pracuję” (§8); zmiana 09.10.2026, 14:11: decyzje właściciela z 09.10 (E44 link RIO 10:34–11:19, piloci 12:33, konwój KR, W20, W22 i aktualizacje 1–5 z 13:09) — E44 w P4, zmiany w P1, P3, P5, P6, P7, P9, P10a, P10b, W14 i W20 zamknięte, W22 rozstrzygnięte, nowe W26–W31; dopiski D-20261009-1233-01 i D-20261009-1309-01 (§8); zmiana 11.10.2026, 21:35: praca na Windows bez WSL — D-86, D-87, P0-CI, zasady Windows (dopiski D-20261011-2135-01, D-20261011-2254-01, D-20261012-0105-01).** Zastępuje cały poprzedni `PLAN.md` (przeniesiony do `docs/archiwum/2026-10-08/docs/handover/PLAN.md`). Nic z poprzedniego planu nie obowiązuje, jeśli nie jest wpisane tutaj.
+**Wersja: 08.10.2026, 16:05 (koordynator Claude, na polecenie właściciela 08.10 14:43); zmiana 16:46: jeden folder, jeden wykonawca, paczki po kolei (§3, dopisek D-20261008-1646-01); zmiana 09.10.2026, 01:20: audyt kompletu — termin liczony od startu, brama niedzielna, przywrócone decyzje właściciela, nowe pozycje §5 i §6, treści „Jak pracuję” (§8); zmiana 09.10.2026, 14:11: decyzje właściciela z 09.10 (E44 link RIO 10:34–11:19, piloci 12:33, konwój KR, W20, W22 i aktualizacje 1–5 z 13:09) — E44 w P4, zmiany w P1, P3, P5, P6, P7, P9, P10a, P10b, W14 i W20 zamknięte, W22 rozstrzygnięte, nowe W26–W31; dopiski D-20261009-1233-01 i D-20261009-1309-01 (§8); zmiana 11.10.2026, 21:35: praca na Windows bez WSL — D-86, D-87, P0-CI, zasady Windows (dopiski D-20261011-2135-01, D-20261011-2254-01, D-20261012-0105-01); zmiana 13.10.2026, 15:50: wzorzec wyglądu = raport audytu (WYGLAD-RAPORT, dopiski D-20261013-1535-01 i D-20261013-1550-01).** Zastępuje cały poprzedni `PLAN.md` (przeniesiony do `docs/archiwum/2026-10-08/docs/handover/PLAN.md`). Nic z poprzedniego planu nie obowiązuje, jeśli nie jest wpisane tutaj.
 
 Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower są nadrzędne. Wszystko co jest starsze jest nieaktualne i nie może obowiązywać.” Właściciel, 13:26: „Najświeższe ustalenia … nadpisują wszelkie starsze decyzje i rozwiązania.”
 
@@ -11,12 +11,12 @@ Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower 
 - **Cel:** kompletna aplikacja Watch Tower według audytu 07–08.10.2026, na produkcji `tower.log-mar.pl`, gotowa do pierwszego prawdziwego transportu od importu do faktury (R-3) i wydania `release-1.0`.
 - **Termin: 4 dni pracy** (właściciel 08.10 14:43: 4 dni na zbudowanie kompletnej aplikacji). **Dzień 1 = dzień, w którym właściciel uruchamia sesję 0** (zapowiedziany start: niedziela 11.10.2026). Przy starcie 11.10: Dzień 1 = niedziela 11.10, Dzień 2 = poniedziałek 12.10, Dzień 3 = wtorek 13.10, Dzień 4 = środa 14.10. **Wydanie `release-1.0`: koniec Dnia 4, 20:00** (przy starcie 11.10: 14.10.2026, 20:00); granica terminu: koniec Dnia 4, 23:59 (4 h zapasu). Datę wydania potwierdza właściciel (§5 W17); do jego odpowiedzi obowiązuje koniec Dnia 4, 20:00. Punkty kontrolne w §3.
 - **Źródła, w tej kolejności przy sprzeczności:**
-  1. `docs/handover/wzorzec/01_KONSTYTUCJA.md` (ze zmianami z 08.10.2026);
+  1. `docs/handover/wzorzec/01_KONSTYTUCJA.md` (ze zmianami z 08.10.2026 i 13.10.2026);
   2. `docs/handover/audyt_claude_2026-10-08/`:
      - `DECYZJE_08_10.md` — decyzje właściciela;
      - `ROZSTRZYGNIECIA_LUK.md` — wiążące rozstrzygnięcia 156 luk;
      - `etapy/E<nr>.md` — co zbudować;
-     - `makiety_html/E<nr>/` i `raport/img/` — wygląd;
+     - `raport/img/` i decyzje w `raport/index.html` — wygląd (`makiety_html/` pomocniczo);
      - `paczki/` — szczegółowe zlecenia paczek;
      - razem z dopiskami włączonymi do planu (`docs/handover/dopiski/`: D-20261008-1646-01, D-20261009-0015-01, D-20261009-1233-01, D-20261009-1309-01, D-20261011-2135-01, D-20261011-2254-01, D-20261012-0105-01) — przy sprzeczności ze starszym zapisem obowiązuje nowsza decyzja właściciela (08.10 13:26, 14:43; 11.10 21:35);
   3. ten plik — kolejność pracy, zakres paczek, sposób;
@@ -46,7 +46,16 @@ Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower 
    7. `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` zwracają 200;
    8. wpis w `POSTEP.md`.
 4. **Testy idą za decyzjami.** Test sprzeczny z decyzją etapu bieżącej paczki przepisujesz w tej paczce według decyzji; w komentarzu podajesz numer etapu i decyzji. Nigdy nie zmieniasz aplikacji po to, żeby przeszedł stary test. Lista testów do przepisania jest przy każdej paczce.
-5. **Wygląd według makiety etapu.** Zmiana wyglądu ekranu z listy paczki jest przewidziana i nie jest powodem do zatrzymania. Wzorce zrzutów:
+5. **Wygląd według raportu audytu.** Wygląd = raport audytu (`raport/index.html` + `raport/img/`), najnowsza decyzja wygrywa; `makiety_html/` pomocniczo; dowód w `docs/handover/odbior/P<n>/` (konstytucja VIII, WYGLAD-RAPORT, D-20261013-1535-01 Z). Zmiana wyglądu ekranu z listy paczki jest przewidziana i nie jest powodem do zatrzymania. Z1–Z6 (D-20261013-1535-01); Z8–Z12 z D-20261013-1550-01 mają pierwszeństwo przed Z7 i przed słowem „ról” w Z4:
+   - **Z1.** Wzorzec: `docs/handover/audyt_claude_2026-10-08/raport/index.html` i obrazy `raport/img/` (ta sama treść co artefakt „Audyt Watch Tower”); etapy `etapy/E*.md`; `makiety_html/` tylko pomocniczo — przy różnicy z `raport/img/` wygrywa `raport/img/`.
+   - **Z2.** Gdy źródła mówią co innego, wygrywa najnowsza decyzja właściciela (zielone ramki „Twoje decyzje”, „Zmiana 09.10”, sekcje „Zmiany 09.10 / 11.10”, dopiski), potem obraz „po zmianie”, potem tekst propozycji. Różnicę zapisujesz w opisie PR.
+   - **Z3.** Przed pierwszym commitem paczki, która zmienia ekran, w opisie PR jest tabela: ekran, etap, obraz z `raport/img/`, decyzje z datą, co robi ta paczka, co zostaje innej paczce (której). Ekran innej paczki zostaje bez zmian, chyba że PLAN mówi inaczej. Przy miejscu bez własnego obrazu wpisujesz punkt Z10.
+   - **Z4.** Przed scaleniem paczki, która zmienia ekran: zrzuty według Z11; zapis w `docs/handover/odbior/P<n>/` z listą różnic, które zostają, i paczką, która je zamyka; brama E8 z V3 zielona (od `pakiet/P2-wyglad`); check `visual` zielony. Odświeżenie migawek nie jest dowodem zgodności. Dowodem jest porównanie z `raport/img/`.
+   - **Z5.** Różnica między ekranem a raportem, której nie zamyka ani ta, ani żadna późniejsza paczka → STOP i raport do koordynatora.
+   - **Z6.** Po „P<n> NA PRODUKCJI” właściciel pisze „Sprawdź P<n>”. Koordynator porównuje `docs/handover/odbior/P<n>/` i zrzuty produkcji z raportem. Rozbieżności wracają jako „Poprawki P<n>” (§2 pkt 7).
+   - **Z10.** Miejsca i stany bez własnego obrazu, po kolei: (1) ten sam element na innym obrazie raportu; (2) etapy bez obrazu (E2, E14, E36, E44) — treść etapu i wygląd ekranu, na którym element stoi; (3) tylko obraz komputera → telefon według zasad E8, tylko obraz telefonu → komputer w dotychczasowym układzie z treścią etapu; (4) okna, puste listy, komunikaty i stany ładowania z elementów obrazów i tokenów `design/claude-v2.0/`. Żaden punkt nie daje wzoru → STOP.
+   - **Z11.** Zrzuty dla każdego z 5 rodzajów kont, który widzi ekran inaczej (HHL Administrator, HHL Operacje, KSH Użytkownik, SCX Dyspozytor, SCX Użytkownik). Gdy konto widzi ekran tak samo, wystarczy jeden zrzut z dopiskiem „jak <konto>”. Porównanie z obrazem przy 390 i 1440 px. Brama telefonu: 360 / 390 / 430 px (V3). Od paczki z E20 brama komputera: 1280 / 1366 / 1440 / 1920 px, bez nakładania się kolumn.
+   Wzorce zrzutów:
    - 15 migawek Playwright (`tests/__screenshots__/`) odświeżasz w tej samej paczce w GitHub Actions (`visual.yml`, wejście `update`); wpis do `G4_WZORZEC.md`: „P<n> — E<nr>, ekrany: …”;
    - 280 ujęć matrycy (`shots-baseline/`) odświeża środowisko bramy wizualnej raz, w P11, z tagiem `baseline-audyt-<data P11 w formacie RRRR-MM-DD>`. Do tego czasu nocna brama wizualna tylko raportuje; jej różnice nie są powodem zatrzymania ani odświeżania.
    Akceptacja planu przez właściciela (08.10) = zgoda na te odświeżenia.
@@ -108,13 +117,13 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → P3 → P4 → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → P3 → P4 → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; Poprawki P2 — wygląd: `pakiet/P2-wyglad`, D-20261013-1535-01 V1–V4, przed scaleniem P3)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
 - Gdy paczka czeka na dane właściciela (§5): część, która tych danych nie wymaga, przechodzi pełny cykl (brama, scalenie, wdrożenie); status w §4: „NA PRODUKCJI — bez <pozycja>, czeka W<nr>”; wpis w §5; bierzesz następną paczkę z kolejności, której zależności są spełnione. Gdy właściciel napisze „W<nr> gotowe”, brakująca pozycja wchodzi po bieżącym commicie jako osobna pozycja „P<n> — uzupełnienie W<nr>” z własną bramą i wdrożeniem (wyjątek od §2 pkt 6), a potem wracasz do przerwanej paczki.
 
-Zależności (kolejność je spełnia; lista do kontroli): wszystkie paczki po P0a; bramę końcową P1, P2 i P3 robisz po scaleniu P0b (kodować możesz wcześniej) · P3 scalasz po P2 (wspólne pliki paska, nazwy E41 i formatów E21 — rebase przed bramą końcową) · P4 po P2 i P3 · P5 po P4 · P6 po P3 i P4 · P7 po P5 i P6 · P8 po P3 i P4 · P9 po P2 i P4 · P10a po P0b (push alarmów podłączasz po scaleniu P3) · P10b po P3 i P10a · P11 po wszystkich.
+Zależności (kolejność je spełnia; lista do kontroli): wszystkie paczki po P0a; bramę końcową P1, P2 i P3 robisz po scaleniu P0b (kodować możesz wcześniej) · P3 scalasz po P2 i po Poprawkach P2 — wygląd (wspólne pliki paska, nazwy E41 i formatów E21 — rebase przed bramą końcową) · P4 po P2 i P3 · P5 po P4 · P6 po P3 i P4 · P7 po P5 i P6 · P8 po P3 i P4 · P9 po P2 i P4 · P10a po P0b (push alarmów podłączasz po scaleniu P3) · P10b po P3 i P10a · P11 po wszystkich.
 
 **Punkty kontrolne (czas polski; Dzień 1 według §0):**
 | Kiedy | Ma być |
@@ -143,7 +152,7 @@ Zależności (kolejność je spełnia; lista do kontroli): wszystkie paczki po P
 
 Każda paczka:
 - **zakres** = wymienione etapy w całości (punkty „Rozwiązanie / Propozycja / Do wykonania” w `etapy/E<nr>.md`), z decyzjami i rozstrzygnięciami — **chyba że przy etapie podano część** (wtedy reszta etapu jest w paczce wskazanej przy nim);
-- **wygląd** = `makiety_html/E<nr>/` (telefon tam, gdzie jest; inaczej zasady E8);
+- **wygląd** = obraz etapu z `raport/img/` i najnowsze decyzje z `raport/index.html`; telefon: obraz telefonu, gdzie jest, inaczej zasady E8; komputer: obraz komputera, gdzie jest, inaczej układ ekranu bez zmian poza treścią etapu; miejsca bez obrazu — Z10;
 - **odbiór** = sekcja „Test” etapu + punkty „Odbiór” paczki + brama.
 
 Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODUKCJI (commit, godzina)` → `SPRAWDZONE (dopisek koordynatora)`. P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji`, a hash scalenia P0a wpisujesz w pierwszym wpisie P0b w `POSTEP.md`.
@@ -207,6 +216,13 @@ Tylko `tests/`, `scripts/`, `.githooks/`; bez aplikacji i bez migracji. Pierwszy
   - Q2 trzynaście tytułów „Zakaz ruchu ciężarówek w Szwecji” (roboty drogowe) — NA PRODUKCJI (13.10.2026 15:35, merge `c410799a`, migracja 0195, wdrożenie `dpl_6FkHhuRasJEFybtjDRbLY72P8kvv`).
   - Q3 zasada „NA PRODUKCJI” w `tower-wdrozenie` — obowiązuje od 13.10.2026 14:00.
 
+### Poprawki P2 — wygląd · DO ZROBIENIA (przed scaleniem P3)
+Gałąź `pakiet/P2-wyglad`. Tylko aplikacja, bez migracji. D-20261013-1535-01 V1–V4; dowód według Z10 i Z11 (D-20261013-1550-01).
+- **V1.** Harmonogram: kolumna „Wysyłka” = sam kod (E38 1A). Numery w swoich kolumnach (HHL: obie; SCX: swój numer, numer HHL tylko do odczytu; KSH: bez kolumn numerów). Nazwa „kod · numer” zostaje w nagłówku panelu, na Mapie, w dzwonku, e-mailach, listach spraw, Kokpicie i na kartach telefonu. Reszta Harmonogramu bez zmian — to P7.
+- **V2.** Dolny pasek telefonu: liczba tylko przy „Ryzyka”. Menu boczne na komputerze bez zmian.
+- **V3.** Zasady E8 na telefonie (≤ 768 px) dla wszystkich ekranów: nic uciętego, karty zamiast tabel, cele ≥ 44 px, tekst ≥ 12 px. Brama Playwright: 9 widoków (HHL; Kokpit, Mapa, Harmonogram, Ryzyka, Dokumenty, Finanse, Faktury, Strefy, Opcje) przy 360, 390 i 430 px — elementy poza ekranem, cele < 44 px i tekst < 12 px = 0; blokuje scalenie. Wyjątki tylko w `tests/fixtures/e8-exceptions.txt`.
+- **V4.** Dowód w `docs/handover/odbior/P2/`: Kokpit, Harmonogram, Dokumenty, Finanse, panel transportu; 390 i 1440 px; konta według Z11; obok obrazu z `raport/img/` albo wzoru z Z10. Migawki przez `visual.yml` (`update=true`) i wpis w `G4_WZORZEC.md`.
+
 ### P3 · Uprawnienia, konta, Opcje, pasek górny — DO ZROBIENIA
 - **E9** prawa ról (z E36, zamkniętym w E9):
   - 5 rodzajów kont, bez CLIENT_ADMIN i SITE_VIEWER;
@@ -243,7 +259,8 @@ Tylko `tests/`, `scripts/`, `.githooks/`; bez aplikacji i bez migracji. Pierwszy
   - 0 odpowiedzi 403 w konsoli dla każdej roli;
   - Operacje HHL nie mogą zapisać ustawień (odmowa w bazie);
   - zapis daty albo godziny załadunku / rozładunku przez API: HHL Administrator, HHL Operacje, SCX Dyspozytor, SCX Użytkownik → odmowa bazy; KSH Użytkownik → przyjęty, wpis w Historii; wgranie pliku przez Administratora HHL nadal zmienia daty; „Działaj jako” KSH → zapis przyjęty, w dzienniku prawdziwy wykonawca (W30);
-  - zrzuty porównane z makietami E9, E11, E12, E37 (pasek), E6, E13.
+  - zrzuty porównane z makietami E9, E11, E12, E37 (pasek), E6, E13;
+  - Kokpit na telefonie według E8 pkt 6 i `img/e8-after.webp` (D-20261013-1535-01 V5): kafelki 2 × 2 o równej szerokości; liczby się nie łamią („54 / 72” w jednej linii); 3 najpilniejsze sprawy; treść kafelków według E9.
 
 ### P4 · Statusy, śledzenie, ETA — DO ZROBIENIA
 - **E25** statusy (automat „Gotowe do fakturowania” opierasz na dzisiejszym dokumencie CMR po dostawie; P5 podmienia na wymóg z E31):
@@ -370,7 +387,8 @@ Tylko `tests/`, `scripts/`, `.githooks/`; bez aplikacji i bez migracji. Pierwszy
   - `etap4-ui.spec.ts` l.60–86, 355–382, 392–433; `aud03-ksh-panel.spec.ts` l.108–119; `visual-states.spec.ts` l.113–137;
   - `c-sep`, `historyActor`, `schedule-import*`, `import-mapping`, `i18-plan-dates`, `b8-imp`, `xlsx-export-roles`, `pdf-export`;
   - `stylesheet-mockup.test.ts` (`th.stick`, `td.stick`);
-  - zestawy `import`, `aud03`.
+  - zestawy `import`, `aud03`;
+  - z pomiaru 13.10 (D-20261013-1535-01 V6), zamyka P7 według E30 „Telefon” i E20-1 / E20-2: Harmonogram na telefonie — pierwsza karta ok. 820 px z 844 (25 elementów nad nią); przy 1440 px kolumna z kwotą i marżą zasłania „Kierowca” (HHL) i „Nr rej.” (KSH).
 - **Ekrany:** Harmonogram (oba układy), panel transportu, okno Awizacja, wgrywanie pliku.
 - **Odbiór:** sekcje „Test” E38, E30, E20, E32; test odbioru D-20261009-1233-01; testy R1, R4 i R6 (bez części po W13) z D-20261009-1309-01; raport z TEST zgodny z testem E38 pkt 6 (plik z 08.10: 95 HH, 43 NTG, 15 pustych pominiętych, 0 błędów); raport próby z ROLLBACK na produkcji: 94 transporty z bazy + KR-03 nowy ze sprawą, różnice wyjaśnione.
 
@@ -466,8 +484,13 @@ Bez ekranów Opcji (te w P10b, po P3).
    - **KOPIA-D**: kopia `usuniete_standard_2026-10-03` z R2 do `D:\Watch Tower\dane\` (poza repozytorium) i suma SHA-256 zgodna z kopią w R2. Brak dostępu do R2 z komputera = wpis w §5.
 5. **Pełna brama TEST** na commicie wydania (niezależnie od bram niedzielnych, §3).
 6. **Regeneracja 280 ujęć** w środowisku bramy wizualnej (cron właściciela), tag `baseline-audyt-<data P11, RRRR-MM-DD>` — §5 W11.
-7. **R-4** raport końcowy (co zbudowane, liczby testów, co czeka na właściciela — §5, co odłożył właściciel — §6 część 3), tag `release-1.0`.
-8. **R-3** pierwszy prawdziwy transport od importu do faktury — z właścicielem, po wpisaniu użytkowników (§5). W R-3 także 11.3 (testy ścieżek użytkownika; stary plan: „do decyzji koordynatora → R-3”): przejście ścieżki każdej z 5 ról według workflow E9, wynik w R-4.
+7. **Końcowy przegląd zgodności całej aplikacji** (D-20261013-1550-01 Z12), przed R-4 i przed `release-1.0`:
+   - zrzuty każdego miejsca z „Mapy aplikacji”: dla każdego rodzaju konta, który je widzi; przy 1440 i 390 px; w trybie demo; obok obrazu z `raport/img/` albo wzoru z Z10;
+   - zapis w `docs/handover/odbior/P11-zgodnosc/` z tabelą: miejsce | konto | szerokość | obraz | zgodne / różnica | decyzja, która uzasadnia różnicę;
+   - koordynator sprawdza całość; właściciel ogląda aplikację na swoim telefonie i komputerze;
+   - `release-1.0` tylko przy 0 różnic bez decyzji.
+8. **R-4** raport końcowy (co zbudowane, liczby testów, co czeka na właściciela — §5, co odłożył właściciel — §6 część 3), tag `release-1.0`.
+9. **R-3** pierwszy prawdziwy transport od importu do faktury — z właścicielem, po wpisaniu użytkowników (§5). W R-3 także 11.3 (testy ścieżek użytkownika; stary plan: „do decyzji koordynatora → R-3”): przejście ścieżki każdej z 5 ról według workflow E9, wynik w R-4.
 
 ## §5. Czeka na właściciela (wykonawca wpisuje i idzie dalej)
 | Nr | Co | Kiedy potrzebne | Stan |
@@ -574,3 +597,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 12.10.2026 23:35 | D-20261012-2335-01: poprawki P1 K1–K9 (0193, `kopia.mjs`, zestaw `e18`) przed potwierdzeniem na TEST i scaleniem #164 — pozycja D5 w P1 | koordynator; wykonawca |
 | 13.10.2026 03:45 | D-20261013-0345-01: P1 L1–L6 — bez zmiany aplikacji pod testy na żywo; testy na żywo zielone na TEST; ważność potwierdzenia bazy na `a24c05e0` — pozycja D6 w P1; bez scalenia #164 do spełnienia L1–L6 | koordynator; wykonawca |
 | 13.10.2026 14:00 | D-20261013-1400-01: poprawki P2 — Q1 wdrożenie aplikacji (R7), Q2 trzynaście tytułów ROAD_SE, Q3 zasada „NA PRODUKCJI”. Q2 przed scaleniem P3 | koordynator |
+| 13.10.2026 15:50 | D-20261013-1535-01 i D-20261013-1550-01: wzorzec wyglądu = raport audytu (WYGLAD-RAPORT). Konstytucja VIII pkt 1–2; rejestr; `AGENTS.md` i `.cursor/rules`; PLAN §0, §1 pkt 5, nagłówek §4; Poprawki P2 — wygląd (V1–V4) przed P3; P3 V5 (Kokpit, E8 pkt 6); P7 V6; P11 Z12 przed R-4. Z8–Z12 przed Z7 i przed „ról” w Z4. D-20261013-1525-01 i D-20261013-1615-01 bez wykonania | właściciel 13.10 15:31 i 15:43; koordynator |
