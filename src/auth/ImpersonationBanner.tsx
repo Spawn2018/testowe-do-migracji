@@ -21,7 +21,8 @@ export function ImpersonationBanner() {
   const name = me.full_name?.trim() || me.email;
   const kindKey = `p3a_as_${me.role}`;
   const kind = hasKey(locale, kindKey) ? t(locale, kindKey) : t(locale, `a6_role_${me.role}`);
-  const admin = me.real_email ?? '';
+  // G4: imię i nazwisko administratora; do migracji my_profile — e-mail.
+  const admin = me.real_full_name?.trim() || me.real_email || '';
 
   const exit = async () => {
     setBusy(true);

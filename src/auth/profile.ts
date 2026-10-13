@@ -19,6 +19,8 @@ export interface AuthProfile {
   /** ADM-10: prawdziwy administrator przy „Działaj jako”. */
   real_user_id?: string | null;
   real_email?: string | null;
+  /** D-20261013-2255-01 G4: imię i nazwisko administratora w pasku „Działasz jako”. */
+  real_full_name?: string | null;
   real_role?: UserRole | null;
   acting_as?: boolean;
   /** wyglad/P3 (E37): „ostatnie logowanie” w menu konta — pole wypełnia logika profilu (gdy jest). */

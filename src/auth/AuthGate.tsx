@@ -10,6 +10,13 @@ import { markManualLogout, rememberLogin, sessionEndReason, SESSION_END_MSG, typ
 import { MfaSetup, MfaVerify, mfaStep, readMfaStatus } from './Mfa';
 import './auth.css';
 
+/** D-20261013-2255-01 G4: last_sign_in_at z sesji Auth, gdy my_profile jeszcze nie zwraca pola. */
+function withSessionProfile(p: AuthProfile, session: Session): AuthProfile {
+  const fromSession = session.user.last_sign_in_at ?? null;
+  if (p.last_sign_in_at || !fromSession) return p;
+  return { ...p, last_sign_in_at: fromSession };
+}
+
 const LINK_KEY = 'tower_auth_link_pending';
 
 type State =
@@ -358,7 +365,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       const step = mfaStep(level, await readMfaStatus(sb));
       if (!alive) return;
       if (step !== 'none') { setAuthProfile(null); setState({ kind: 'mfa', step }); return; }
-      setAuthProfile(p);
+      const profile = withSessionProfile(p, session);
+      setAuthProfile(profile);
       const st = useTowerStore.getState();
       if (st.role !== viewRole) st.setRole(viewRole);
       if (alive) setState({ kind: 'loading' });
@@ -369,7 +377,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         if (alive) setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_fetch_fail').replace('{err}', e instanceof Error ? e.message : String(e)) });
         return;
       }
-      if (alive) setState({ kind: 'ready', session, profile: p });
+      if (alive) setState({ kind: 'ready', session, profile });
     };
     loadRef.current = load;
 
@@ -477,13 +485,14 @@ export default function AuthGate({ children }: { children: ReactNode }) {
                 const level = (await sb.auth.mfa.getAuthenticatorAssuranceLevel()).data ?? null;
                 const step = mfaStep(level, await readMfaStatus(sb));
                 if (step !== 'none') { setState({ kind: 'mfa', step }); return; }
-                setAuthProfile(p);
+                const profile = withSessionProfile(p, data.session);
+                setAuthProfile(profile);
                 const viewRole = viewRoleForOrg(p.org_code);
                 if (viewRole) useTowerStore.getState().setRole(viewRole);
                 try {
                   const bridge = await import('../data/supabaseBridge');
                   await bridge.connectSupabaseData(sb);
-                  setState({ kind: 'ready', session: data.session, profile: p });
+                  setState({ kind: 'ready', session: data.session, profile });
                 } catch (e) {
                   setState({ kind: 'noaccess', reason: t(locale, 'a6_auth_fetch_fail').replace('{err}', e instanceof Error ? e.message : String(e)) });
                 }

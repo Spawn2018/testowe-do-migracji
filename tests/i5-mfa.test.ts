@@ -20,7 +20,8 @@ describe('I-5 statycznie', () => {
   it('AuthGate: poziom aal przed danymi i zdarzenie MFA_CHALLENGE_VERIFIED', () => {
     expect(gate).toMatch(/getAuthenticatorAssuranceLevel/);
     expect(gate).toMatch(/MFA_CHALLENGE_VERIFIED/);
-    expect(gate.indexOf('mfaStep(')).toBeLessThan(gate.indexOf('setAuthProfile(p)'));
+    // D-20261013-2255-01 G4: po MFA profil z withSessionProfile → setAuthProfile(profile)
+    expect(gate.indexOf('mfaStep(')).toBeLessThan(gate.indexOf('setAuthProfile(profile)'));
   });
   it('Opcje: panel 2FA tylko w buildzie Supabase (leniwy import)', () => {
     expect(opts).toMatch(/const MyMfa = import\.meta\.env\.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED \? lazy\(\(\) => import\('\.\.\/auth\/Mfa'\)\)/);
