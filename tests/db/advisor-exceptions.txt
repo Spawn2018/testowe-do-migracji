@@ -1,0 +1,166 @@
+# E19 pkt 6 — znane zgłoszenia doradcy „security” (TEST). Format: lint	object	powód
+# Nowe zgłoszenie spoza tej listy blokuje wdrożenie z migracją (PLAN §1 pkt 3.3).
+# Obiekty widoków v_load_* NIE są wyjątkami — migracja 0196 ustawia security_invoker.
+rls_enabled_no_policy	public.account_relink_pending	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.auth_login_events	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.corridor_fetches	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.corridor_obstacles	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.deepl_usage	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.driver_tokens	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.here_road_geometry	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.here_tile_reports	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.here_usage	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.impersonation_state	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.insurance_policies	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.security_flags	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.sms_heartbeats	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.sms_outbox_secret	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.system_heartbeat	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.translation_memory	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_enabled_no_policy	public.translation_queue	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+rls_disabled_in_public	public.spatial_ref_sys	PostGIS; security.sh W1; migracja 0031
+extension_in_public	public.postgis	E19 — rozszerzenie w public
+extension_in_public	public.citext	E19 — rozszerzenie w public
+extension_in_public	public.btree_gist	E19 — rozszerzenie w public
+anon_security_definer_function_executable	public.auth_email_allowed	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
+anon_security_definer_function_executable	public.driver_get_instructions	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
+anon_security_definer_function_executable	public.driver_post_event	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
+anon_security_definer_function_executable	public.keep_alive	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
+anon_security_definer_function_executable	public.report_client_error	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
+anon_security_definer_function_executable	public.report_csp_violation	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
+anon_security_definer_function_executable	public.sms_heartbeat	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
+anon_security_definer_function_executable	public.sms_pull	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
+anon_security_definer_function_executable	public.sms_report	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
+anon_security_definer_function_executable	public.st_estimatedextent	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
+anon_security_definer_function_executable	public.st_estimatedextent	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
+anon_security_definer_function_executable	public.st_estimatedextent	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
+authenticated_security_definer_function_executable	public.admin_audit_history	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_auth_login_log	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_broadcast_clear	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_broadcast_set	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_impersonate_start	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_impersonate_stop	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_invite_user	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_notification_matrix_set	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_ops_threshold_set	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_revoke_invite	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_set_eta_calibration_frozen	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_set_external_messaging	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_set_mfa_enforcement	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_set_permit_requirement	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_set_user_active	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_set_user_role	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_sms_zone_recipient_set	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_sms_zone_test	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_sms_zone_trigger_set	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.app_user_mark_password_set	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.apply_eta_calibration_version	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.auth_email_allowed	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.baf_change_log	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.cancel_load	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.carrier_rate_load	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.carrier_rating_detail	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.carrier_scorecard	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.csp_status_view	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.current_app_role	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.current_app_user_id	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.current_org_id	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.current_org_kind	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.decision_assign	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.decision_expire	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.decision_open	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.decision_resolve	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.decision_snooze	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.deepl_usage_view	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.discard_document	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.doc_requirement_set	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.document_supersede	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.driver_get_instructions	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.driver_post_event	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.driver_post_position	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.email_budget_status	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.fee_catalog_hints	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.ferry_track_sample	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.fuel_add_reading	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.fx_rate_before	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.h1_route_check_state	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.h3_corridor_state	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.h3_highlighted	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.here_budget_view	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.here_tiles_report	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.import_cancel_loads	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.import_removal_check	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.import_schedule	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.import_template_save	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.insurance_policies_list	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.insurance_policy_approve	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.insurance_policy_save	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.invoice_dispute_reply	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.issue_driver_token	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.issue_driver_token_sms	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.keep_alive	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.kr_convoy_count	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.ksh_confirm_dates	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.l1b_ksh_file_unreadable	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.list_load_messages_ui	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_agreed_fee_accept	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_agreed_fee_add	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_agreed_fee_reject	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_driver_contacts	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_dwell_info	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_escort_contacts	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_escorts_set	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_insurance_cover	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_insurance_cover_one	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_message_read_list	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_order_numbers	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_permit_link	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_permit_save	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_permit_unlink	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.map_display_state	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.mark_invoice_paid	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.mark_load_message_read	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.mark_notifications_read	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.my_mfa_status	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.my_profile	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.my_sessions	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.operator_notice_apply	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.permit_requirement_state	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.permit_save	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.push_subscribe	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.push_unsubscribe	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.rate_card_change_log	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.rate_card_save	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.rate_match	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.real_app_role	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.real_app_user_id	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.register_invoice	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.report_client_error	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.report_csp_violation	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.report_position	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.revoke_driver_token	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.revoke_user_sessions	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.risk_audience_for	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.sefs_compute_hybrid	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.sefs_save_parameters	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.sefs_week_for_load	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.sefs_week_for_load	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.set_web_push_enabled	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.sms_add_test_number	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.sms_external_messaging_state	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.sms_issue_device	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.sms_revoke_device	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.sms_send_test	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.sms_set_paused	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.st_estimatedextent	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.st_estimatedextent	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.st_estimatedextent	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.storage_upload_allowed	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.system_broadcast_current	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.truck_ban_holiday_hit	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.unmark_invoice_paid	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.wf_duplicate_check	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.workflow_rule_history	E19 — allowlista RPC; sprawdzenie roli w funkcji
+auth_leaked_password_protection	auth.*	TEST: ochrona wycieków haseł — wyjątek planu darmowego (PLAN §1 pkt 3.3)
+rls_enabled_no_policy	public.security_advisor_snapshots	tabela zamknięta dla ról API (RLS bez policy, brak grantu); odczyt przez RPC
+authenticated_security_definer_function_executable	public.security_advisor_snapshot_latest	E19 — allowlista RPC; sprawdzenie roli w funkcji

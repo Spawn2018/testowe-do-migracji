@@ -71,8 +71,10 @@ create policy notification_matrix_read on public.notification_matrix
   for select to authenticated
   using (current_app_user_id() is not null and is_hhl());
 
--- 4) RPC zapisu (p_role zamiast p_org_kind) -----------------------------------
-create or replace function public.admin_notification_matrix_set(
+-- 4) RPC zapisu (p_role zamiast p_org_kind) — DROP: Postgres nie zmienia nazwy argumentu ---
+drop function if exists public.admin_notification_matrix_set(text, text, boolean, boolean);
+
+create function public.admin_notification_matrix_set(
   p_event_group text,
   p_role text,
   p_in_app boolean,

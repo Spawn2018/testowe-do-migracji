@@ -1,5 +1,5 @@
 /**
- * E11 / DEC-4 — macierz powiadomień (grupa × 5 ról × IN_APP/e-mail). Tylko HHL_ADMIN (RPC).
+ * E11 / E5-2 — macierz powiadomień (grupa × 5 ról × app / e-mail / telefon). Tylko HHL_ADMIN (RPC).
  */
 import { useCallback, useEffect, useState } from 'react';
 import { getSupabase } from './client';
@@ -8,7 +8,8 @@ import { t } from '../i18n/messages';
 import './auth.css';
 
 type MatrixRole = 'HHL_ADMIN' | 'HHL_OPS' | 'CLIENT_USER' | 'CARRIER_DISPATCH' | 'CARRIER_USER';
-type Row = { event_group: string; role: MatrixRole; in_app: boolean; email: boolean };
+type Row = { event_group: string; role: MatrixRole; in_app: boolean; email: boolean; push: boolean };
+type MatrixField = 'in_app' | 'email' | 'push';
 
 const GROUPS = ['LOAD_STATUS', 'RISK_FERRY_WEATHER', 'DECISION', 'MONEY', 'SYSTEM'] as const;
 const ROLES: MatrixRole[] = ['HHL_ADMIN', 'HHL_OPS', 'CARRIER_DISPATCH', 'CARRIER_USER', 'CLIENT_USER'];
@@ -29,7 +30,7 @@ export default function NotificationMatrixForm() {
 
   const refresh = useCallback(async () => {
     const sb = await getSupabase();
-    const q = await sb.from('notification_matrix').select('event_group,role,in_app,email').order('event_group');
+    const q = await sb.from('notification_matrix').select('event_group,role,in_app,email,push').order('event_group');
     if (q.error) {
       setMsg(q.error.message);
       return;
@@ -45,12 +46,12 @@ export default function NotificationMatrixForm() {
     return rows.find((r) => r.event_group === group && r.role === role);
   }
 
-  async function toggle(group: string, role: MatrixRole, field: 'in_app' | 'email') {
+  async function toggle(group: string, role: MatrixRole, field: MatrixField) {
     if (locked(group, role)) {
       setMsg(t(locale, 'dec_matrix_locked'));
       return;
     }
-    const cur = cell(group, role) ?? { event_group: group, role, in_app: false, email: false };
+    const cur = cell(group, role) ?? { event_group: group, role, in_app: false, email: false, push: false };
     const next = { ...cur, [field]: !cur[field] };
     setBusy(true);
     const sb = await getSupabase();
@@ -59,6 +60,7 @@ export default function NotificationMatrixForm() {
       p_role: role,
       p_in_app: next.in_app,
       p_email: next.email,
+      p_push: next.push,
     });
     setBusy(false);
     if (error) {
@@ -103,7 +105,7 @@ export default function NotificationMatrixForm() {
                             checked={!!c?.in_app}
                             onChange={() => void toggle(g, role, 'in_app')}
                           />
-                          <span>app</span>
+                          <span>{t(locale, 'dec_matrix_ch_app')}</span>
                         </label>
                         <label className="switchline" style={{ opacity: lock ? 0.45 : 1 }}>
                           <input
@@ -112,7 +114,16 @@ export default function NotificationMatrixForm() {
                             checked={!!c?.email}
                             onChange={() => void toggle(g, role, 'email')}
                           />
-                          <span>e-mail</span>
+                          <span>{t(locale, 'dec_matrix_ch_email')}</span>
+                        </label>
+                        <label className="switchline" style={{ opacity: lock ? 0.45 : 1 }}>
+                          <input
+                            type="checkbox"
+                            disabled={busy || lock}
+                            checked={!!c?.push}
+                            onChange={() => void toggle(g, role, 'push')}
+                          />
+                          <span>{t(locale, 'dec_matrix_ch_push')}</span>
                         </label>
                       </td>
                     );

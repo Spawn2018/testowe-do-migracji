@@ -2150,11 +2150,19 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 - Migracja **0200**: `notification_matrix.email = false` wszędzie (start E5-1).
 
-## 2026-10-13 — P3 E13
+## 2026-10-13 — P3 E13 → koordynator
 
-- CSS telefon ≤430 px: dzwonek `fixed` pod paskiem, pasek `overflow-y:visible` (lista nie ucięta).
+- CSS E13 wycofany z gałęzi logiki (F1/F5). Dopisek **D-20261013-2130-01** do `wyglad/P3`.
 
 ## 2026-10-13 — P3 E11 macierz 5 ról
 
-- Migracja **0201**: `notification_matrix` po `role` (5 rodzajów); archiwum `notification_matrix_org_kind`; RPC `p_role`; UI kolumny ról.
+- Migracja **0201**: `notification_matrix` po `role` (5 rodzajów); archiwum `notification_matrix_org_kind`; RPC `p_role` (DROP przed CREATE — Postgres nie zmienia nazwy argumentu); UI kolumny ról.
+
+## 2026-10-13 — P3 E5-2 + E19-4 (logika/baza)
+
+- Migracja **0202**: kolumna `notification_matrix.push` (telefon); start RISK_FERRY_WEATHER + DECISION; `matrix_notify` WEB_PUSH wg `push`.
+- Migracja **0203**: `security_advisor_snapshots`, cron `tower-security-advisor`, RPC odczytu dla HHL_ADMIN; Edge `security-advisor-snapshot`.
+- `tests/db/advisor-exceptions.txt` + `scripts/security-advisor-check.mjs` (E19 pkt 6).
+- nullguard **622** (+ `security_advisor_snapshot_latest`).
+- Bez CSS; dopisek D-20261013-2130-01 do `wyglad/P3`.
 
