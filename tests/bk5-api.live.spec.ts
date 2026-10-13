@@ -12,6 +12,7 @@
  */
 import { test, expect, request as pwRequest, type APIRequestContext } from '@playwright/test';
 import { loadEnvLocal, ensureLiveFiveRoles, accountEmail, FIVE_ROLE_ACCOUNTS } from '../scripts/auth/env.mjs';
+import { FIVE_ROLE_LIVE_PASSWORD } from '../scripts/auth/env.mjs';
 
 const LIVE = process.env.SUPABASE_LIVE === '1';
 const APP = process.env.BK5_BASE ?? 'http://127.0.0.1:4178/';
@@ -23,6 +24,15 @@ const LIVE_ACCOUNT: Record<Org, typeof FIVE_ROLE_ACCOUNTS[number]> = {
   SCX: FIVE_ROLE_ACCOUNTS.find((a) => a.role === 'CARRIER_DISPATCH')!,
 };
 const liveEmail = (o: Org) => accountEmail(env, LIVE_ACCOUNT[o]);
+
+async function passwordLoginPage(page: import('@playwright/test').Page, o: Org) {
+  await page.goto(APP);
+  await page.waitForSelector('[data-auth="login"]', { timeout: 30000 });
+  await page.locator('input[type=email]').fill(liveEmail(o));
+  await page.locator('#auth-pw').fill(FIVE_ROLE_LIVE_PASSWORD);
+  await page.locator('[data-auth="login"] form button[type=submit]').click();
+  await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
+}
 
 // Wartości-wartowniki: występują WYŁĄCZNIE w danych kosztowych / przychodowych fixture.
 const COST = { amount: '7717.71', inv: 'TEST-BK5-SCX-KOSZT', line: '7707.07' };
@@ -229,8 +239,8 @@ async function loadRow() {
   const [r] = await adminReq('GET', `/rest/v1/loads?select=order_no,hhl_order_no,carrier_order_no,driver_name,plan_load_from,plan_load_to,plan_delivery_from,plan_delivery_to&id=eq.${fx.loadA}`);
   return r;
 }
-async function patch(o: Org, body: Record<string, unknown>) {
-  const r = await api[o].patch(`${base}/rest/v1/loads?id=eq.${fx.loadA}`, { data: body, headers: { Prefer: 'return=representation' } });
+async function patch(o: Org, body: Record<string, unknown>, prefer = 'return=representation') {
+  const r = await api[o].patch(`${base}/rest/v1/loads?id=eq.${fx.loadA}`, { data: body, headers: { Prefer: prefer } });
   return { status: r.status(), body: await json(r) };
 }
 
@@ -254,16 +264,18 @@ test('API: przewoźnik nie zmieni numeru zlecenia HHL ani KSH ani okien planowyc
 
 test('API: przewoźnik zmienia własne pola (nr zlecenia SCX, kierowca); HHL nie zmieni nr SCX; KSH nic', async () => {
   const before = await loadRow();
-  const ok = await patch('SCX', { carrier_order_no: 'TEST-BK5-SCX-NR', driver_name: 'Test BK5' });
-  expect(ok.status, `SCX własne pola: HTTP ${ok.status} ${JSON.stringify(ok.body).slice(0, 240)}`).toBe(200);
-  expect(ok.body?.[0]).toMatchObject({ carrier_order_no: 'TEST-BK5-SCX-NR', driver_name: 'Test BK5' });
-  const hhl = await patch('HHL', { carrier_order_no: 'HHL-HACK' });
+  const ok = await patch('SCX', { carrier_order_no: 'TEST-BK5-SCX-NR' }, 'return=minimal');
+  expect(ok.status, `SCX nr zlecenia: HTTP ${ok.status} ${JSON.stringify(ok.body).slice(0, 240)}`).toBe(204);
+  const okDrv = await patch('SCX', { driver_name: 'Test BK5' }, 'return=minimal');
+  expect(okDrv.status).toBe(204);
+  expect(await loadRow()).toMatchObject({ carrier_order_no: 'TEST-BK5-SCX-NR', driver_name: 'Test BK5' });
+  const hhl = await patch('HHL', { carrier_order_no: 'HHL-HACK' }, 'return=minimal');
   expect(hhl.status).toBeGreaterThanOrEqual(400);
   expect(JSON.stringify(hhl.body)).toContain('Numer zlecenia przewoźnika wpisuje wyłącznie przewoźnik');
   const ksh = await patch('KSH', { driver_name: 'KSH-HACK' });
   expect(ksh.status === 200 ? ksh.body : []).toEqual([]); // RLS: brak wiersza do zmiany
-  const restore = await patch('SCX', { carrier_order_no: before.carrier_order_no, driver_name: before.driver_name });
-  expect(restore.status).toBe(200);
+  await patch('SCX', { carrier_order_no: before.carrier_order_no }, 'return=minimal');
+  await patch('SCX', { driver_name: before.driver_name }, 'return=minimal');
   expect(await loadRow()).toEqual(before);
 });
 
@@ -273,18 +285,14 @@ test('Aplikacja (tryb Supabase): odpowiedzi sieciowe w każdym widoku bez danych
   const reachable = await fetch(APP).then((r) => r.ok).catch(() => false);
   test.skip(!reachable, `build Supabase nie działa pod ${APP}`);
   for (const [o, forbidden] of [['KSH', forbiddenCost()], ['SCX', forbiddenRev()]] as [Org, string[]][]) {
-    const ctx = await browser.newContext();
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await ctx.newPage();
     const bodies: string[] = [];
     page.on('response', async (r) => {
       if (!r.url().startsWith(base)) return;
       try { bodies.push(await r.text()); } catch { /* przekierowanie / brak treści */ }
     });
-    const g = await adminReq('POST', '/auth/v1/admin/generate_link', { type: 'magiclink', email: liveEmail(o) });
-    const hop = await fetch(g.action_link ?? g.properties?.action_link, { redirect: 'manual' });
-    const loc = hop.headers.get('location') ?? '';
-    await page.goto(APP + loc.slice(loc.indexOf('#')));
-    await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
+    await passwordLoginPage(page, o);
     const views = await page.locator('nav [data-view]').all();
     for (const v of views) { await v.click({ timeout: 5000 }).catch(() => undefined); await page.waitForTimeout(700); }
     await page.keyboard.press('h');
@@ -302,20 +310,17 @@ test('Aplikacja: przewoźnik zapisuje „Awizacja / Prom” bez zmiany okien —
   test.setTimeout(120_000);
   const reachable = await fetch(APP).then((r) => r.ok).catch(() => false);
   test.skip(!reachable, `build Supabase nie działa pod ${APP}`);
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
   const patches: string[] = [];
   page.on('request', (r) => { if (r.url().includes('/rest/v1/loads') && r.method() === 'PATCH') patches.push(r.postData() ?? ''); });
-  const g = await adminReq('POST', '/auth/v1/admin/generate_link', { type: 'magiclink', email: liveEmail('SCX') });
-  const hop = await fetch(g.action_link ?? g.properties?.action_link, { redirect: 'manual' });
-  const loc = hop.headers.get('location') ?? '';
-  await page.goto(APP + loc.slice(loc.indexOf('#')));
-  await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
+  await passwordLoginPage(page, 'SCX');
   await page.keyboard.press('h');
   await page.locator(`tr[data-load="${fx.loadA}"]`).first().click();
   await page.locator('aside .dtabs button').filter({ hasText: /Ustalenia/ }).first().click();
   const before = await loadRow();
-  await page.getByRole('button', { name: 'Zapisz awizację' }).click();
+  await page.locator('aside .awiz-row button').first().click();
+  await page.locator('[data-awiz-save]').click();
   await page.waitForTimeout(2500);
   expect(patches.filter((p) => p.includes('plan_')), 'zapis okien planowych').toEqual([]);
   expect(await page.locator('text=Nie zapisano na serwerze').count()).toBe(0);
