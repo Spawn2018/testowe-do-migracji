@@ -10,6 +10,7 @@ import { TIER_PILL, marginSplit, moneyViewFor, tierSummary } from '../lib/money/
 import type { PricingTier } from '../lib/money/engine';
 import { formatPercentPoints } from '../lib/format';
 import { transportLabel } from '../lib/transportName';
+import { useIsPhone } from '../lib/useIsPhone';
 
 const TIERS: PricingTier[] = ['PROGNOZA', 'REALIZACJA', 'FAKTURA'];
 
@@ -23,6 +24,7 @@ export function FinanceView() {
   const locale = useTowerStore((s) => s.locale);
   const currency = useTowerStore((s) => s.displayCurrency);
   const money = (n: number) => formatAppMoney(n, locale, currency);
+  const phone = useIsPhone();
 
   const showCost = canSeeCost(role);
   const showRev = canSeeRevenue(role);
@@ -243,7 +245,31 @@ export function FinanceView() {
         {role === 'HHL' && showMargin && (
           <>
             <div className="hr" />
-            <h4 className="sec">{t(locale, 'fin_margin_by_type')}</h4>
+            <h4 className="sec">
+              {t(locale, 'fin_margin_by_type')}
+              {phone ? <span className="sub" data-fin-type-count="">{tp(locale, 'p22_fin_types_n', { n: byType.length })}</span> : null}
+            </h4>
+            {phone ? (
+              /* wyglad/P2-2 W3 (E8 pkt 2, img/e8-after „Finanse · marża według typu”): karta na typ elementu. */
+              <div className="mcards" data-fin-type-cards="">
+                {byType.map((row) => (
+                  <article key={row.k} className="mcard" data-fin-type-card={row.k}>
+                    <header className="mcard-hd">
+                      <b data-content>{row.k}</b>
+                      <span className="mcard-sub">{tp(locale, 'p22_fin_qty_n', { n: row.n })}</span>
+                    </header>
+                    <dl className="mcard-kv">
+                      <div><dt>{t(locale, 'sched_col_rev')}</dt><dd>{money(row.r)}</dd></div>
+                      <div><dt>{t(locale, 'cost')}</dt><dd>{money(row.c)}</dd></div>
+                      <div className="strong">
+                        <dt>{t(locale, 'sched_col_margin')}</dt>
+                        <dd>{money(row.m)} · {pct(row.p)}</dd>
+                      </div>
+                    </dl>
+                  </article>
+                ))}
+              </div>
+            ) : (
             <table style={{ width: '100%', fontSize: 13 }}>
               <thead>
                 <tr>
@@ -277,6 +303,7 @@ export function FinanceView() {
                 ))}
               </tbody>
             </table>
+            )}
             <div className="note" style={{ margin: '11px -13px -13px' }}>
               <span data-content>{t(locale, 'a6_fin_no_zero')}</span>
             </div>
