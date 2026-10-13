@@ -223,8 +223,8 @@ Gałąź `pakiet/P2-wyglad`. Tylko aplikacja, bez migracji. D-20261013-1535-01 V
 - **V3.** Zasady E8 na telefonie (≤ 768 px) dla wszystkich ekranów: nic uciętego, karty zamiast tabel, cele ≥ 44 px, tekst ≥ 12 px. Brama Playwright: 9 widoków (HHL; Kokpit, Mapa, Harmonogram, Ryzyka, Dokumenty, Finanse, Faktury, Strefy, Opcje) przy 360, 390 i 430 px — elementy poza ekranem, cele < 44 px i tekst < 12 px = 0; blokuje scalenie. Wyjątki tylko w `tests/fixtures/e8-exceptions.txt`.
 - **V4.** Dowód w `docs/handover/odbior/P2/`: Kokpit, Harmonogram, Dokumenty, Finanse, panel transportu; 390 i 1440 px; konta według Z11; obok obrazu z `raport/img/` albo wzoru z Z10. Migawki przez `visual.yml` (`update=true`) i wpis w `G4_WZORZEC.md`.
 
-### Poprawki P2 — wygląd 2 · NA PRODUKCJI (13.10.2026 19:04, merge `b9ae3d37`, wdrożenie `dpl_2S9uAEnAqEdv2sgTCUQWC3gDqtaL`)
-Gałąź `wyglad/P2-2` (koordynator; D-20261013-1815-01 W1–W7; D-20261013-1835-01 F4). Tylko wygląd, bez migracji. Cursor scalał PR #176 i wdrażał według F2 pkt 3.
+### Poprawki P2 — wygląd 2 · NA PRODUKCJI (13.10.2026 19:53, merge `770960fd` PR #177 `wyglad/P2-2-popr`, wdrożenie `dpl_ESWeHnmtc375vwNpyZMZsH7CSCCH`; wcześniej #176 `b9ae3d37` / `dpl_2S9uAEnAqEdv2sgTCUQWC3gDqtaL`)
+Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1–W7; D-20261013-1835-01 F2/F3 pkt 5). Tylko wygląd, bez migracji. Cursor scalał i wdrażał według F2 pkt 3.
 - **W1.** Kokpit na telefonie: 2 kolumny, liczby w jednej linii.
 - **W2.** Karty: jedna kolumna etykiet (`td::before` left).
 - **W3.** Finanse „Marża według typu elementu” jak `e8-after`.

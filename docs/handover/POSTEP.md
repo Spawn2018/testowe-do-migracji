@@ -2120,7 +2120,14 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 ## 2026-10-13 — P3 WIP (po rebase)
 
-- PR #175: unit/visual/db (pełna brama) zielone na `534904bb` (nullguard 612, aud03 25, money/security/invite).
-- Menu SCX: bez `tasks` (E9 „Moje zadania” znika); kafelek i linki → `risk`.
-- TEST wolne. Bez wdrożenia P3 (jeszcze nie koniec paczki).
+- PR #175: unit/visual/db (pełna brama) zielone; menu SCX bez `tasks` (E9); kafelek i linki → `risk`.
+- Rebase na `main` po #177. TEST wolne. Bez wdrożenia P3 (jeszcze nie koniec paczki).
+
+## 2026-10-13 — Poprawki P2 — wygląd 2-popr (`wyglad/P2-2-popr`)
+
+- PR #177 scalony → `770960fd` (13.10.2026 ~19:45 UTC). unit + visual zielone; gitleaks 0 (opis PR); `npm audit --omit=dev --audit-level=high` = 0; bez migracji (F8 OK). F3 pkt 5 po niezależnym sprawdzeniu #176.
+- Wdrożenie R7 z `main` `770960fd`, 13.10.2026 19:53, `dpl_ESWeHnmtc375vwNpyZMZsH7CSCCH`.
+- Plik JS przed: `assets/index-DjH-U2rD.js`. Po: `assets/index-FTeLpkaa.js` — ta sama nazwa na `tower.log-mar.pl` i `watch-tower-makieta.vercel.app`. Oba adresy 200. 60 plików JS: 0 × `service_role`. Kopia wdrożeniowa usunięta. Bez migracji.
+
+**Poprawki P2 — wygląd 2-popr NA PRODUKCJI — commit `770960fd`, wdrożenie `dpl_ESWeHnmtc375vwNpyZMZsH7CSCCH`, 13.10.2026 19:53.** Dalej P3 (logika/baza).
 
