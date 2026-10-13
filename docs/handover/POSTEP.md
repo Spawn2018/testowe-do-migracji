@@ -2097,5 +2097,8 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Przebiegi z pauzy zielone, żaden nie został w toku: unit `main` 38410368819; PR #171 unit 38409319769, unit 38409332585, visual 38409329474.
 - TEST wolne. Bramy TEST nie wznawiam. Dopiski 1535-01 i 1550-01 są na `main` (`02de6300`) — nie włączam ich drugi raz.
 - Dalej: V1–V3 (lint CSS, brama E8, `fresh-smoke.sh`), potem V4.
-- V1–V3 lokalnie, 13.10 17:20: `lint:css` zielony; brama E8 i test V1–V2: 2/2 (9 widoków × 360/390/430, trzy liczby = 0). V4: 30 zrzutów w `docs/handover/odbior/P2/`. Migawki `visual.yml` jeszcze nieodświeżone.
+- V1–V3 lokalnie, 13.10 17:20: `lint:css` zielony; brama E8 i test V1–V2: 2/2 (9 widoków × 360/390/430, trzy liczby = 0). V4: 30 zrzutów w `docs/handover/odbior/P2/`. Migawki stanów Harmonogramu odświeżone (run 38421964162, 8 plików). Checki PR #172: unit i visual zielone (visual run 38424836023).
+- Wdrożenie z `main` `4627c8f5` według R7, 13.10.2026 17:56, `dpl_F55udKq2cMiUWyM1CXdY9Kh4sz8r`. Plik JS przed: `assets/index-h0t0ItfK.js`. Po: `assets/index-BwXKwh8r.js` — ta sama nazwa na `tower.log-mar.pl` i `watch-tower-makieta.vercel.app`. Oba adresy 200. 63 pliki JS: 0 × `service_role`. Kopia wdrożeniowa usunięta. Bez migracji.
+
+**P2-wyglad NA PRODUKCJI — commit `4627c8f5`, wdrożenie `dpl_F55udKq2cMiUWyM1CXdY9Kh4sz8r`, 13.10.2026 17:56.** Następna paczka: P3.
 
