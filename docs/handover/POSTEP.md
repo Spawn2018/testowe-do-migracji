@@ -2200,4 +2200,11 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 ## 2026-10-14 — Poprawki P3: TEST przed scaleniem
 
-- TEST zajęte: P3-poprawki (security, status, nullguard, g20) na `97c02d59`.
+- TEST zajęte: P3-poprawki (security, status, nullguard, g20) na `97c02d59` / potwierdzenie `10d21b5b`.
+- Wynik TEST: security 84/84, status 44/44, nullguard 622, g20 15/15.
+- Doradca security TEST: 0 nowych (po wyjątkach). Doradca prod (odczyt): ostrzeżenie `auth_leaked_password_protection` — W1 (właściciel włącza w panelu).
+- **STOP §1 pkt 12.2 / W34:** GitHub Actions nie startuje jobów (płatność / limit wydatków konta). Checki na `10d21b5b` fail 2–3 s, 0 kroków; adnotacja: „recent account payments have failed or your spending limit needs to be increased”. Wcześniejsze checki na `97c02d59` były zielone.
+- PR #184 gotowy do scalenia po W34 (unit/visual/db na głowie). Migracja **0204** w gałęzi; wdrożenie i `db push` po zielonych checkach.
+- TEST wolne.
+
+**CZEKA NA WŁAŚCICIELA: W34 — GitHub Actions billing / spending limit.** Po „W34 gotowe” — checki, merge #184, migracja 0204, Edge `web-push-send`, sygnał P3-poprawki NA PRODUKCJI. Wracam do P4 (bez wdrożenia migracji P4 do po Poprawkach P3).

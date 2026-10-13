@@ -273,12 +273,10 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - zrzuty porównane z makietami E9, E11, E12, E37 (pasek), E6, E13;
   - Kokpit na telefonie według E8 pkt 6 i `img/e8-after.webp` (D-20261013-1535-01 V5): kafelki 2 × 2 o równej szerokości; liczby się nie łamią („54 / 72” w jednej linii); 3 najpilniejsze sprawy; treść kafelków według E9.
 
-### Poprawki P3 · DO ZROBIENIA (gałąź `pakiet/P3-poprawki`, D-20261014-0015-01) — przed wdrożeniem P4 z migracją
-- **D1 / R1.** G-20 w bazie: `guard_load_update` odrzuca zmianę 6 kolumn planu przez HHL poza `tower.import_ctx` / `tower.dates_ctx` / systemem; `import_schedule` ustawia `import_ctx`; testy `g20` + TEST.
-- **D1 / R2.** WEB_PUSH tylko krytyczne (bez promocji DIGEST na telefon); DECISION × CLIENT_USER: `push = false` (migracja, kopia + audit).
-- **D1 / R3.** Wyjątki doradcy na produkcji (`email_budget_day`, `pg_net`); wynik doradcy w POSTEP; od tej paczki po wdrożeniu z migracją — doradca na produkcji (odczyt).
-- **D1 / R4.** Instrukcja W1: `docs/handover/INSTRUKCJA_W1_USTAWIENIA_LOGOWANIA.md`; odnośnik w §5 W1.
-- **Migracja:** jeden plik (następny wolny numer przy rebase na `main`).
+### Poprawki P3 · CZEKA NA WŁAŚCICIELA: W34 (gałąź `pakiet/P3-poprawki`, PR #184, D-20261014-0015-01) — przed wdrożeniem P4 z migracją
+- **D1 / R1–R4** w kodzie na `10d21b5b` (migracja **0204**): G-20 baza + `g20`, WEB_PUSH tylko krytyczne, DECISION×CLIENT_USER `push=false`, wyjątki doradcy, instrukcja W1.
+- **TEST** (przed scaleniem): security 84, status 44, nullguard 622, g20 15/15; doradca security TEST 0 nowych. Doradca prod: tylko ostrzeżenie ochrony haseł (W1 — włącza właściciel).
+- **STOP §1 pkt 12.2:** GitHub Actions odmawia startu jobów — płatność / limit wydatków konta (W34). Po „W34 gotowe” — ponowienie checków `unit`/`visual`/`db` na głowie PR #184, scalenie, `db push` 0204, wdrożenie Edge `web-push-send`, sygnał „P3-poprawki NA PRODUKCJI”.
 
 ### P4 · Statusy, śledzenie, ETA — DO ZROBIENIA
 - **E25** statusy (automat „Gotowe do fakturowania” opierasz na dzisiejszym dokumencie CMR po dostawie; P5 podmienia na wymóg z E31):
@@ -547,6 +545,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W31 | „Data załadunku” w pliku KSH jest w 28 wierszach formułą „dostawa − 5 dni” (plik z 08.10). Gdy KSH zmieni w Watch Tower datę załadunku takiego transportu: nadpisać formułę wartością czy zostawić formułę (wtedy zmiana nie trafi do pliku). Do odpowiedzi: wartość zastępuje formułę — decyzja 13:09 jest nowsza niż „formuł nie zmienia” z 12:50 (D-20261009-1309-01 R6 pkt 5) | przed „P7 — uzupełnienie W13” | czeka |
 | W32 | Nocna brama wizualna nie działa na tym komputerze (P0-CI pkt 8). Na czym działa — inny komputer, agent w chmurze (np. Cursor, Codex, Claude), coś innego? Czy dalej ma co noc działać? | gdy zdecydujesz | czeka — do odpowiedzi: bez zmian, tylko raportuje; jej brak nie wstrzymuje pracy (zrzuty przed scaleniem sprawdza `visual`, D-87; D-20261011-2254-01) |
 | W33 | Windows na komputerze wykonawcy nie instaluje aktualizacji od 11.11.2025 (26100.7171; najnowsza dla 24H2: 26100.9550 z 22.09.2026) — komputer z kluczami produkcji. Naprawa wymaga ok. 25 GB wolnego na C:. Kiedy? | po wydaniu (P11) | czeka — do odpowiedzi: po wydaniu (P11) (D-20261011-2135-01) |
+| W34 | GitHub Actions: joby nie startują — „recent account payments have failed or your spending limit needs to be increased” (Billing & plans). Blokuje checki PR #184 (Poprawki P3) i dalsze bramy. STOP §1 pkt 12.2 (wydatek / limit poza decyzjami planu). | przed scaleniem Poprawek P3 | czeka — 14.10.2026 01:39; po naprawie: „W34 gotowe” → dokończenie bram i wdrożenia Poprawek P3 |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0, rezerwa
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -621,3 +620,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 13.10.2026 21:30 | D-20261013-2130-01: do `wyglad/P3` — E13 CSS dzwonek (Cursor nie zmienia CSS); uchwyty Moje konto / Użytkownicy / matryca 5 ról / Podgląd; scalenie logiki P3 bez czekania na wygląd | wykonawca (Cursor) |
 | 13.10.2026 22:55 | D-20261013-2255-01: wyglad/P3-a — kolejność scalenia PR #178, uchwyty G3, logika profilu G4 (`last_sign_in_at`, `real_full_name`); PLAN §4 P3: P3-a / P3-b / P3-c | koordynator; wykonawca |
 | 14.10.2026 00:15 | D-20261014-0015-01: Poprawki P3 (R1 G-20 baza, R2 push krytyczne + DECISION×CLIENT_USER, R3 doradca prod, R4 instrukcja W1) — przed P4 z migracją | koordynator |
+| 14.10.2026 01:39 | STOP Poprawki P3: GitHub Actions — płatność / limit wydatków (W34); TEST i doradca TEST OK na `10d21b5b`; dalej P4 (bez wdrożenia migracji P4 do po Poprawkach P3) | wykonawca |
