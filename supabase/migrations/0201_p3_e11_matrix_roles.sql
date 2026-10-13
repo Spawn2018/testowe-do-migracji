@@ -232,6 +232,7 @@ comment on function public.matrix_notify(text, text, uuid, uuid, jsonb, text, te
   'E11: macierz po roli; G-18 PLAN_DATES_CHANGED IN_APP zawsze dla 4 ról.';
 
 -- 6) Pozostałe funkcje z join po org_kind → po roli ----------------------------
+-- Tylko prokind=f: pg_get_functiondef na agregatach (array_agg) rzuca błąd.
 do $$
 declare
   r record;
@@ -243,7 +244,9 @@ begin
       from pg_proc p
       join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public'
-       and pg_get_functiondef(p.oid) like '%org_kind = o.kind%'
+       and p.prokind = 'f'
+       and pg_get_functiondef(p.oid) like '%notification_matrix%'
+       and pg_get_functiondef(p.oid) like '%org_kind%'
   loop
     src := pg_get_functiondef(r.oid);
     nxt := replace(src, 'm.org_kind = o.kind::text', 'm.role = u.role');
