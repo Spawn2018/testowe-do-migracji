@@ -2076,3 +2076,5 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **P2 NA PRODUKCJI — commit `35abe70b`, wdrożenie `dpl_CqK5DSotFYHT8QyeFwLzMUixdBCs`, 13.10.2026 14:08.** Następna pozycja: poprawki P2 (Q2), potem P3.
 
+- TEST 13.10 14:30–15:20, SHA `ccf0d68c`, migracja `0195_e18_p15_poprawka.sql`. security 84/84 (+2 SKIP), status 44/44, **e41 26/26**, nullguard 161+136+192+118 = **607/607**. Raport `D:/Watch Tower/raporty/brama-test-ccf0d68c2a994b00122805b30d626d5d86ddfac4.json`. **TEST wolne od 15:20.**
+
