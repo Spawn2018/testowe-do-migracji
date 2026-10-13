@@ -2066,3 +2066,8 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **P1 NA PRODUKCJI — commit `08c18747`, 13.10.2026 04:32.** Następna paczka: P2.
 
+## 2026-10-13 — P2 · fundament ekranów
+
+- TEST zajęte: P2, od 13.10 12:27 — potwierdzenie w kopii `/d/Watch Tower/brama-test` na SHA `eb49590d` (zestawy security, status, e41, nullguard). Checki PR #167 na tym SHA: unit, visual i `db` zielone.
+- TEST 13.10 12:28–13:17, SHA `eb49590d`, migracja `0194_e41_nazwa_formaty.sql`. security 84/84 (+2 SKIP), status 44/44, **e41 16/16**, nullguard 161+136+192+118 = **607/607**. Raport `D:/Watch Tower/raporty/brama-test-eb49590d717ee9210d334e61aa750b12faa06f7e.json`. To potwierdzenie paczki, nie pełna brama tygodniowa (reszta zestawów nie była uruchamiana). **TEST wolne od 13:17.**
+
