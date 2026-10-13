@@ -23,6 +23,7 @@ function savedText(locale: Locale, code: string): string {
 const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../components/guide/Guide')) : null;
 const MyMfa = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/Mfa')) : null;
 const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/UsersAdmin')) : null;
+const MyAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/MyAccount')) : null;
 const BafForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/BafForm')) : null;
 const NotificationMatrixForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/NotificationMatrixForm')) : null;
 const RateCardForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/RateCardForm')) : null;
@@ -251,10 +252,11 @@ export function OptionsView() {
       keywords: 'użytkownicy sesje 2fa mfa hasło devices',
       children: (
         <>
+          {MyAccount ? <SuspenseBlock><MyAccount /></SuspenseBlock> : null}
           {UsersAdmin ? <SuspenseBlock><UsersAdmin /></SuspenseBlock> : null}
           {MyMfa ? <SuspenseBlock><MyMfa /></SuspenseBlock> : null}
           {MyDevices ? <SuspenseBlock><MyDevices /></SuspenseBlock> : null}
-          {!UsersAdmin && !MyMfa && !MyDevices ? <Soon locale={locale} tipKey="opt_acc_users_soon" /> : null}
+          {!MyAccount && !UsersAdmin && !MyMfa && !MyDevices ? <Soon locale={locale} tipKey="opt_acc_users_soon" /> : null}
         </>
       ),
     });

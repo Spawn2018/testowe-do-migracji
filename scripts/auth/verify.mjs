@@ -65,7 +65,7 @@ const scxRole = await rpc('SCX', 'admin_set_user_role', { p_user: kshId, p_role:
 check('SCX nie może nadawać ról', !scxRole.ok);
 const bad = await rpc('HHL', 'admin_invite_user', { p_email: probe, p_org_code: 'SCX', p_role: 'CLIENT_USER' });
 check('HHL: rola niezgodna z organizacją odrzucona', !bad.ok);
-const good = await rpc('HHL', 'admin_invite_user', { p_email: probe, p_org_code: 'KSH', p_role: 'CLIENT_USER', p_full_name: 'BK2 probe' });
+const good = await rpc('HHL', 'admin_invite_user', { p_email: probe, p_org_code: 'KSH', p_role: 'CLIENT_USER', p_first_name: 'BK2', p_last_name: 'probe', p_phone: '+48111222333' });
 check('HHL zaprasza użytkownika KSH', good.ok && typeof good.body === 'string');
 const invHHL = await req(`/rest/v1/user_invites?select=id,role&email=eq.${encodeURIComponent(probe)}`, { token: tok.HHL });
 check('HHL widzi zaproszenie', invHHL.ok && invHHL.body.length === 1 && invHHL.body[0].role === 'CLIENT_USER');

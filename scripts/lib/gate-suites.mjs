@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 23,
   import: 66,
-  nullguard: 612, // P3: +5 admin_security_flag_set (4 odmowy + kontrola HHL)
+  nullguard: 617, // P3: +5 admin_security_flag_set; +5 admin_user_profile_set (E6)
   i2: 540,
   i30: 10,
   i31: 9,

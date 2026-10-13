@@ -39,7 +39,8 @@ export function formatHistoryActor(actor: string | null | undefined): string {
 export function currentActorLabel(fallbackRole?: string): string {
   const p = getAuthProfile();
   if (p) {
-    const name = (p.full_name ?? '').trim() || (p.email.split('@')[0] || '—');
+    const fromParts = [p.first_name, p.last_name].filter(Boolean).join(' ').trim();
+    const name = (p.full_name ?? '').trim() || fromParts || (p.email.split('@')[0] || '—');
     const firm = (p.org_name ?? '').trim() || p.org_code || '—';
     return `${name} // ${firm}`;
   }

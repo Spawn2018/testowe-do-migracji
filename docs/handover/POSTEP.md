@@ -2131,3 +2131,9 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **Poprawki P2 — wygląd 2-popr NA PRODUKCJI — commit `770960fd`, wdrożenie `dpl_ESWeHnmtc375vwNpyZMZsH7CSCCH`, 13.10.2026 19:53.** Dalej P3 (logika/baza).
 
+## 2026-10-13 — P3 E6 konta (logika/baza)
+
+- Migracja **0197**: `first_name`/`last_name`, telefon E.164, `admin_user_profile_set`, zaproszenie z imieniem/nazwiskiem/telefonem, `my_profile` + pola, sync `full_name`, `handle_new_auth_user` jak 0046 (relink, bez `accepted_at`).
+- UI (bez przebudowy wyglądu): Opcje › Moje konto, formularz zaproszenia i lista z „Zadzwoń”; nullguard **617**.
+- TEST wolne. Bez wdrożenia P3 (paczka w toku).
+

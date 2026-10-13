@@ -4,7 +4,8 @@
 #   TOKEN  — API kierowcy: uprawnieniem jest token, nie konto; zły token → wyjątek (regex)
 #   EMPTY  — brak danych/skutku: wynik musi być równy wartości (0, f, NULL=∅); kontrola pozytywna: HHL dostaje inną wartość
 #   PURE   — czysta funkcja obliczeniowa (tylko argumenty, bez odczytu tabel) — nie ma czego odmawiać; liczona osobno
-admin_invite_user | GUARD | select admin_invite_user('nowy@test.pl','KSH','CLIENT_USER') | wyłącznie administrator HHL
+admin_invite_user | GUARD | select admin_invite_user('nowy@test.pl','KSH','CLIENT_USER',null,'pl','Jan','Kowalski','+48123456789') | wyłącznie administrator HHL
+admin_user_profile_set | GUARD | select admin_user_profile_set('$KSHID','Jan','Kowalski','+48123456789') | Profil zmienia wyłącznie|Brak aktywnego konta
 admin_revoke_invite | GUARD | select admin_revoke_invite(gen_random_uuid()) | Wyłącznie administrator HHL
 admin_set_user_active | GUARD | select admin_set_user_active('$KSHID', true) | Wyłącznie administrator HHL
 admin_set_user_role | GUARD | select admin_set_user_role('$KSHID', 'CLIENT_USER') | Role nadaje wyłącznie

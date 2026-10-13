@@ -140,7 +140,7 @@ try {
     headers: {
       apikey: ANON, Authorization: `Bearer ${hhlTok}`, 'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ p_email: testEmail, p_org_code: 'KSH', p_role: 'CLIENT_USER', p_full_name: 'SEC PKCE test' }),
+    body: JSON.stringify({ p_email: testEmail, p_org_code: 'KSH', p_role: 'CLIENT_USER', p_first_name: 'SEC', p_last_name: 'PKCE', p_phone: '+48111222333' }),
   });
   check(`zaproszenie RPC ${maskEmail(testEmail)}`, inv.ok);
   if (!inv.ok) console.log('  invite', inv.status, (await inv.text()).slice(0, 200));

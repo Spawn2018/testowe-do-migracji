@@ -49,6 +49,7 @@ authenticated admin_broadcast_set
 authenticated admin_impersonate_start
 authenticated admin_impersonate_stop
 authenticated admin_invite_user
+authenticated admin_user_profile_set
 authenticated admin_notification_matrix_set
 authenticated admin_ops_threshold_set
 authenticated admin_revoke_invite
