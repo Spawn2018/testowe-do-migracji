@@ -2166,3 +2166,7 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - nullguard **622** (+ `security_advisor_snapshot_latest`).
 - Bez CSS; dopisek D-20261013-2130-01 do `wyglad/P3`.
 
+
+## 2026-10-13 — P3 TEST przed scaleniem
+
+- TEST zajęte: P3 (security, status, nullguard, dec3) na `14663cad`.
