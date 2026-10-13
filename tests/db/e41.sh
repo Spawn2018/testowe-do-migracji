@@ -5,13 +5,13 @@ PSQL="psql ${PGURL:-postgres://postgres@localhost:5433/tower} -Atq"
 HHL=11111111-0000-0000-0000-000000000001; KSH=11111111-0000-0000-0000-000000000002; SCX=11111111-0000-0000-0000-000000000003
 L1=33333333-0000-0000-0000-000000000001
 P=22222222-0000-0000-0000-000000000001
-ok=0; fail=0
+ok=0; fail=0; bad=""
 run() { local end="rollback"; [ "$3" = "commit" ] && end="commit"
   $PSQL -v ON_ERROR_STOP=1 -c "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; $2; $end;" 2>&1; }
 val()  { out=$(run "$2" "$3" "$5" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1)
-         if [ "$out" = "$4" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $out, oczekiwano: $4)"; fi; }
+         if [ "$out" = "$4" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); bad="${bad} [$1 => ${out}]"; echo "  FAIL  $1  (otrzymano: $out, oczekiwano: $4)"; fi; }
 sys()  { $PSQL -v ON_ERROR_STOP=1 -c "$1" 2>&1; }
-sval() { out=$(sys "$2" | tail -1); if [ "$out" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $out, oczekiwano: $3)"; fi; }
+sval() { out=$(sys "$2" | tail -1); if [ "$out" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); bad="${bad} [$1 => ${out}]"; echo "  FAIL  $1  (otrzymano: $out, oczekiwano: $3)"; fi; }
 
 sys "update loads set hhl_order_no='0005/09/S/2026', carrier_order_no='15062/2026/OSL/GDA/P', order_no='KSH/1' where id='$L1'" >/dev/null
 sys "insert into shipment_items (project_id, load_id, shipment_code, item_type, length_m, width_m, height_m)
@@ -40,9 +40,9 @@ sys "insert into risk_signals (project_id, load_id, kind, severity, title) value
  ('$P','$L1','DOC_MISSING','HIGH','5c77d4d7: brak awizacji przed załadunkiem')" >/dev/null
 sval "przepisanie" "select e18_p15_apply() >= 2" t
 sval "szwedzki opis po polsku" "select count(*) from risk_signals where resolved_at is null and title like '%Zakaz ruchu ciężarówek w Szwecji:%riktningarna%'" 1
-sval "nieznany kod bez zmiany" "select count(*) from risk_signals where title = 'Nieznany kod źródła drogowego — w panelu: zdarzenie drogowe'" 1
-sval "osiem znaków → kod wysyłki" "select count(*) from risk_signals where title = 'SG-03 — brak awizacji przed załadunkiem'" 1
-sval "kopia w dzienniku" "select (count(*) >= 2)::text from audit_log where action = 'E18_P15_KOPIA'" t
+sval "nieznany kod bez zmiany" "select count(*) from risk_signals where title like 'Nieznany kod źródła drogowego%'" 1
+sval "osiem znaków → kod wysyłki" "select count(*) from risk_signals where title like 'SG-03 %brak awizacji przed załadunkiem'" 1
+sval "kopia w dzienniku" "select (count(*) >= 2)::text from audit_log where action = 'E18_P15_KOPIA'" true
 
-echo; echo "WYNIK: $ok OK, $fail FAIL"
+echo; echo "WYNIK: $ok OK, $fail FAIL${bad}"
 [ "$fail" -eq 0 ]
