@@ -222,7 +222,7 @@ Polecenie kazało przepisać D-66–D-76 dosłownie z `ZLECENIE_POPRAWKI_02_10.m
 | PALIWO-AUTO-A — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | akceptacja próbki | Orlen OK (ONEkodiesel netto). OKQ8: Q8 Trucks / Diesel = 22,90 wprost, bez VAT. | ✅ 05.10 ~10:37 |
 | PALIWO-AUTO-B | automat | Budować po potwierdzeniu 22,90; mechanizm SEFS bez zmian; korekta 0166. | ⏳ |
 | SMS-SILENT-FIX | fałszywe SMS_GATEWAY_SILENT | Diagnoza + naprawa; jeden alarm bez powtórek; Resend 200≠ERROR; zero prawdziwych SMS. | ⏳ |
-| MIG-0159-REG | ewidencja 0159 | Dopisać do schema_migrations bez ponownego wykonania; PROD = repo. | ⏳ |
+| MIG-0159-REG | ewidencja 0159 | Dopisać do schema_migrations bez ponownego wykonania; PROD = repo. | ✅ PROD = repo po D-20261012-2210-01 R3 (13.10.2026 04:31) |
 | BARLOW+WZ | smoke + wzorce Automatyzacji | Napraw barlow.css; odśwież automatyzacje__* (przyczyna: B-5). | ⏳ |
 | B-7c — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | filtry mapy | Wariant A | ✅ / ⏳ |
 | B-8 — 🔁 zastąpione 08.10.2026, zob. decyzje audytu | filtry/ciągnik | Zakres dat + bez kierowcy/ciągnika + Zmień ciągnik | ✅ / ⏳ |
