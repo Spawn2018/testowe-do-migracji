@@ -295,7 +295,7 @@ val "wymaganie wyłączone: HHL_ADMIN przy aal1 = HHL" $HHL "select is_hhl()" t
 $PSQL -c "update security_flags set enabled=true where key='MFA_HHL_ADMIN'" >/dev/null
 val "wymaganie włączone: HHL_ADMIN bez drugiego składnika (aal1) — is_hhl() false" $HHL "select is_hhl()::text||'/'||coalesce(current_app_role()::text,'∅')" "false/∅"
 val "HHL_ADMIN aal1: 0 transportów (RLS)" $HHL "select count(*) from loads" 0
-err "HHL_ADMIN aal1: admin_invite_user odrzucone" $HHL "select admin_invite_user('x@test.pl','KSH','CLIENT_USER',null,'pl','Jan','X','+48111222333')" "wyłącznie administrator HHL"
+err "HHL_ADMIN aal1: admin_invite_user odrzucone" $HHL "select admin_invite_user('x@test.pl','KSH','CLIENT_USER',null,'pl','Jan','X','+48000000001')" "wyłącznie administrator HHL"
 err "HHL_ADMIN aal1: cancel_load odrzucone" $HHL "select cancel_load('$L2','x')" "wyłącznie HHL"
 val "HHL_ADMIN aal1: my_profile nadal zwraca konto (ekran TOTP)" $HHL "select role from my_profile()" HHL_ADMIN
 val "HHL_ADMIN aal1: my_mfa_status wymagane, niespełnione" $HHL "select (my_mfa_status()->>'required')||'/'||(my_mfa_status()->>'satisfied')||'/'||(my_mfa_status()->>'aal')" "true/false/aal1"

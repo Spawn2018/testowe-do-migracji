@@ -71,7 +71,7 @@ export default function MyAccount() {
       <form className="auth-form" onSubmit={(e) => void save(e)}>
         <label>{t(locale, 'a6_ua_first')}<input className="input full" required value={firstName} onChange={(e) => setFirstName(e.target.value)} autoComplete="given-name" /></label>
         <label>{t(locale, 'a6_ua_last')}<input className="input full" required value={lastName} onChange={(e) => setLastName(e.target.value)} autoComplete="family-name" /></label>
-        <label>{t(locale, 'a6_ua_phone')}<input className="input full" required value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" placeholder="+48…" /></label>
+        <label>{t(locale, 'a6_ua_phone')}<input className="input full" required value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" /></label>
         <button className="btn" type="submit" disabled={busy}>{t(locale, 'a6_ua_save')}</button>
       </form>
       {msg ? <div className={`auth-msg ${msg.ok ? 'ok' : 'err'} auth-admin-row`} role="status">{msg.text}</div> : null}

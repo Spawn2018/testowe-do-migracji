@@ -110,7 +110,7 @@ export default function UsersAdmin() {
         <label>{t(locale, 'a6_ua_email')}<input className="input full" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
         <label>{t(locale, 'a6_ua_first')}<input className="input full" required value={firstName} onChange={(e) => setFirstName(e.target.value)} autoComplete="given-name" /></label>
         <label>{t(locale, 'a6_ua_last')}<input className="input full" required value={lastName} onChange={(e) => setLastName(e.target.value)} autoComplete="family-name" /></label>
-        <label>{t(locale, 'a6_ua_phone')}<input className="input full" required value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="+48…" /></label>
+        <label>{t(locale, 'a6_ua_phone')}<input className="input full" required value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" /></label>
         <label>{t(locale, 'a6_ua_org')}<select className="input" value={org} onChange={(e) => { setOrg(e.target.value); setRole(ROLES_FOR_ORG[e.target.value][0]); }}>{Object.keys(ROLES_FOR_ORG).map((c) => <option key={c} value={c}>{c}</option>)}</select></label>
         <label>{t(locale, 'a6_ua_role')}<select className="input" value={role} onChange={(e) => setRole(e.target.value as UserRole)}>{ROLES_FOR_ORG[org].map((r) => <option key={r} value={r}>{t(locale, `a6_role_${r}`)}</option>)}</select></label>
         <button className="btn" type="submit" disabled={busy || !email.trim()}>{t(locale, 'a6_ua_invite')}</button>

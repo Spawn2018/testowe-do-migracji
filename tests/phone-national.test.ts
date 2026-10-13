@@ -45,8 +45,8 @@ describe('isPlausibleNational', () => {
 });
 
 describe('isE164 (E6)', () => {
-  it('accepts +48 mobile', () => {
-    expect(isE164('+48601234567')).toBe(true);
+  it('accepts fictional PL E.164', () => {
+    expect(isE164('+48000000001')).toBe(true);
   });
   it('rejects national without +', () => {
     expect(isE164('601234567')).toBe(false);
