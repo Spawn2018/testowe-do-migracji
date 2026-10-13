@@ -380,6 +380,36 @@ test.describe('wyglad/P3 pasek górny (E37 pkt 1–2, img/e37-after)', () => {
     expect(hits, report).toEqual([]);
   });
 
+  test('E13 telefon: lista dzwonka pod paskiem na całą szerokość, widoczna w środku, przewijana w środku', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page);
+    const bad: string[] = [];
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.click('.bell-trigger');
+      const r = await page.evaluate(() => {
+        const pop = document.querySelector('.bell-pop') as HTMLElement;
+        const bar = document.querySelector('.topbar')!.getBoundingClientRect();
+        const pr = pop.getBoundingClientRect();
+        const mid = document.elementFromPoint(pr.left + pr.width / 2, pr.top + Math.min(pr.height - 4, 150));
+        const scroller = pop.querySelector(':scope > div:last-child') as HTMLElement | null;
+        return {
+          left: pr.left, right: pr.right, top: pr.top, bottom: pr.bottom, barBottom: bar.bottom, w: window.innerWidth, h: window.innerHeight,
+          inside: !!mid && pop.contains(mid),
+          scroll: scroller ? getComputedStyle(scroller).overflowY : 'brak',
+        };
+      });
+      if (!(r.left >= 0 && r.left <= 16 && r.right >= r.w - 16 && r.right <= r.w)) bad.push(`${width}: lista nie na całą szerokość (${Math.round(r.left)}–${Math.round(r.right)})`);
+      if (r.top < r.barBottom - 1) bad.push(`${width}: lista zaczyna się w pasku`);
+      if (r.bottom > r.h) bad.push(`${width}: lista wychodzi poza okno`);
+      if (!r.inside) bad.push(`${width}: w środku listy jest inny element (lista pod spodem)`);
+      if (r.scroll !== 'auto') bad.push(`${width}: lista bez przewijania w środku`);
+      await page.mouse.click(5, 820);
+      if (await page.locator('.bell-pop').count()) bad.push(`${width}: dotknięcie obok nie zamyka listy`);
+    }
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+
   test('komputer: Podgląd, tydzień i rejsy, data, ?, dzwonek, konto z menu; bez sesji w lewym menu', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page);

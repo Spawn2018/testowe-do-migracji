@@ -30,7 +30,7 @@ Zakres P3 z `PLAN.md` §4: „E37 (część: pasek górny; reszta E37 w P10b) ko
 | telefon — prom | dotknięcie → oba rejsy, tydzień, data | lista pod paskami: rejsy, „t41”, data | tak | układ listy nie jest na obrazie — wzór Z10 pkt 1 (jak lista dzwonka E13) |
 | telefon — menu konta | pod komunikatem HHL; Anna Nowak / H&H Logistics · Operacje HHL; Moje konto ›, Pomoc ›, Podgląd: HHL · KSH · SCX ›, Jasny / ciemny ›, Wyloguj | to samo, pod paskami; „Podgląd” rozwija HHL / KSH / SCX | tak | „Dla mnie” tylko na komputerze, jak na obrazie |
 | telefon — komunikat | „Komunikat HHL: …” · ✕ | „Komunikat HHL: …” bez ✕ | częściowo | ✕ — P10b |
-| telefon — dzwonek (E13) | lista pod paskiem na całą szerokość | lista pod paskiem, a gdy są paski „Podgląd”, „Działasz jako” albo komunikat — pod nimi | tak | — |
+| telefon — dzwonek (E13, `e13-phone-fix`) | lista pod paskiem na całą szerokość (8 px od brzegów), przewijana w środku | to samo; gdy są paski „Podgląd”, „Działasz jako” albo komunikat — pod nimi; zamyka dotknięcie obok | tak | CSS E13 przejęty od Cursora (D-20261013-2130-01 pkt 1; jego commit `52a15123` wycofany na gałęzi logiki). Bez „✕”, jak na obrazie. Test „E13 telefon” w bramie: szerokość, lista w środku nad treścią, przewijanie, zamknięcie |
 
 ### Konta (Z11)
 
