@@ -2154,3 +2154,7 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 - CSS telefon ≤430 px: dzwonek `fixed` pod paskiem, pasek `overflow-y:visible` (lista nie ucięta).
 
+## 2026-10-13 — P3 E11 macierz 5 ról
+
+- Migracja **0201**: `notification_matrix` po `role` (5 rodzajów); archiwum `notification_matrix_org_kind`; RPC `p_role`; UI kolumny ról.
+
