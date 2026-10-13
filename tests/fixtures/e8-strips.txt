@@ -1,0 +1,3 @@
+# Brama E8: paski przewijane w bok, które wolno mieć na telefonie (E8 pkt 1: „poza paskami przewijanymi w bok”).
+# Selektor | powód. Tylko to, co przewiduje etap (np. filtry stanu Harmonogramu, E8 pkt 5 — P7).
+# Strona, `main` i `.app` nigdy nie są paskiem. Dziś (13.10, wyglad/P2-2-popr) żaden pasek nie jest potrzebny.

@@ -53,3 +53,31 @@ Zrzuty: `docs/handover/odbior/P2/wyglad-P2-2/`, tryb demo, zamrożony czas 2026-
 - Brama E8 (`tests/e8-phone-gate.spec.ts`), uszczelniona w W6: `main`, `body` i `.app` nie są paskiem przewijanym; nowe sprawdzenia „liczba-lamana” (kafelek Kokpitu) i „etykieta” (karty). Na `main` `05eb67e`: błąd (Kokpit 2 liczby, etykiety: Dokumenty 10, Finanse 68, Faktury 36, Strefy 52 przy każdej szerokości). Na `wyglad/P2-2`: 0 przy 360 / 390 / 430.
 - Pomiar koordynatora (9 widoków × 360 / 390 / 430): 0 poza ekranem, 0 celów < 44 px, 0 tekstu < 12 px, `main` i strona bez przewijania w bok.
 - Uwaga poza zakresem: `tests/resp14-phone.spec.ts` „menu telefon” pada już na `main` (szuka ☰, który P2 zastąpił dolnym paskiem; test nie jest w `visual.yml`). Do przepisania w P3 razem z E37 (konto w pasku górnym).
+
+## wyglad/P2-2-popr — koordynator, po niezależnym sprawdzeniu (13.10, ok. 19:00)
+
+Osobny agent kontrolny koordynatora (bez udziału w pracy) sprawdził `wyglad/P2-2` (PR #176, scalony 19:00) i znalazł usterki, których opis wyżej nie wymienia. Poprawki na `wyglad/P2-2-popr`. Zrzuty: `docs/handover/odbior/P2/wyglad-P2-2-popr/` (motyw jasny, demo, 360 i 390 px).
+
+**Poprawione:**
+- Dokumenty: wybór tygodnia był ucięty (HHL przy 360 px: „Tydzień 42 (2026-W”; KSH i SCX bez „Wgraj”: pole ściśnięte obok tytułu). Teraz: rząd tytułu; „Wgraj dokument” na całą szerokość; tydzień i „Pobierz paczkę” w jednym rzędzie od ok. 375 px, przy 360 px każde w swoim rzędzie. Przyciski 14 px, „Zmień” i „Pobierz paczkę” z ciemną ramką jak w makiecie.
+- Kokpit: etykiety kafelków w pierwszym rzędzie stały nierówno (11 i 20 px od góry), bo przycisk centrował treść. Teraz treść od góry, wszystkie 11 px.
+- Mapa (lista) i Dokumenty (nazwy plików): wielokropek ucinał nazwy („Element konstrukcji · missing …”, „LASHING_PHOTOS_SG-01.pdf” przy 360 px). Teraz zawijają się.
+- Brama E8 (`tests/e8-phone-gate.spec.ts`) przepisana:
+  - pasek przewijany zwalnia tylko z listy `tests/fixtures/e8-strips.txt` (dziś pusta), strona, `main` i `.app` nigdy;
+  - nowe „uciete”: `overflow:hidden|clip`, wielokropek i ucięcie w pionie (scrollWidth / scrollHeight), wartość kafelka szersza od kafelka, tekst wybranej opcji pola wyboru szerszy od pola;
+  - tekst < 12 px liczony także w `::before` / `::after`;
+  - „etykieta”: kolejność, kierunek i przesunięcie etykiety karty; etykiety kafelków Kokpitu równo od góry;
+  - przebieg dla HHL, SCX i KSH (nie tylko HHL).
+  - Agent kontrolny wstrzyknął 6 usterek, które stara brama przepuszczała; nowa łapie wszystkie 6 (ucięte kwoty, karty w pasku przewijanym, ucięta liczba, etykiety po prawej, etykiety 9 px, wielokropek). Nie sprawdza `transform: scale` ani `clip-path`.
+  - Na `main` `b9ae3d3` brama pada (pole tygodnia 157 > 129 px przy 360, nazwy plików, Mapa, etykiety kafelków); na `wyglad/P2-2-popr` 5/5 zielone.
+
+**Odstępstwo od tekstu W1:** zamiast `clamp()` kafelek ma stałe 30 px jak `.tile .v` w makiecie (`makiety_html/E8/telefon.html`), a długa wartość dostaje cały rząd jak `.tile.wide`. Brama sprawdza, że wartość mieści się w kafelku i jest w jednej linii.
+
+**Różnice, które zostają (drobne):**
+- Finanse: nagłówek „Marża według typu elementu” to podtytuł w panelu (15 px), na obrazie osobny pasek 18 px; karty stoją w panelu (podwójna ramka).
+- Dokumenty: przy 360 px tydzień i „Pobierz paczkę” w dwóch rzędach (makieta nie ma marginesów panelu); u KSH i SCX bez „Zmień” (prawa: tylko HHL).
+- Kokpit: treść i układ kafelków, „Najpilniejsze”, baner — P3 (V5).
+
+**Poza zakresem, do paczek wyglądu koordynatora:** Ryzyka — karty rejsów bez etykiet (P6); Opcje — tekst 1–2 px od krawędzi (P3); `tests/resp14-phone.spec.ts` „menu telefon” (P3, E37).
+
+Komputer: 18 zrzutów 1440 px (3 konta × 6 widoków) identycznych z `main` `b9ae3d3`; agent kontrolny potwierdził też 800 i 769 px.
