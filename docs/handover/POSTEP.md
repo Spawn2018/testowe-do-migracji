@@ -2150,3 +2150,7 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 - Migracja **0200**: `notification_matrix.email = false` wszędzie (start E5-1).
 
+## 2026-10-13 — P3 E13
+
+- CSS telefon ≤430 px: dzwonek `fixed` pod paskiem, pasek `overflow-y:visible` (lista nie ucięta).
+

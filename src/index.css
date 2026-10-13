@@ -942,12 +942,19 @@ img,video{max-width:100%;height:auto}
   /* D-31: pasek górny nie może wychodzić poza 390 px (błąd makiety, nie zamysł) */
   .topbar{
     gap:4px;padding:0 6px;
-    overflow-x:clip;overflow-y:hidden;
+    overflow-x:clip;
+    /* E13: overflow-y:hidden ucinało listę dzwonka (absolute w pasku 52 px) */
+    overflow-y:visible;
   }
   .topbar .brand{gap:4px;min-width:0;flex:1 1 auto;overflow:hidden}
   .topbar .brand b{font-size:15px;letter-spacing:.03em;white-space:nowrap}
   .topbar .brand img{height:22px;width:auto;flex:0 0 auto}
   .topbar .spacer{flex:0 0 0;min-width:0;width:0;overflow:hidden}
+  /* E13: panel dzwonka na całą szerokość pod paskiem, przewijanie w środku */
+  .bell-pop{
+    position:fixed;left:8px;right:8px;top:58px;width:auto;
+    max-height:calc(100dvh - 74px);
+  }
   /* język + przełącznik widoku: na 390 px nie mieszczą się z ikonami 44 px (język w Ustawieniach) */
   .topbar .seg[id="langSeg"],
   .topbar .roleswitch{display:none}
