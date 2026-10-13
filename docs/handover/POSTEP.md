@@ -2193,7 +2193,7 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Wdrożenie R7 z `main` `25b71bca`, 14.10.2026 00:12, `dpl_FBYjeG86cptLjWvXiRmURHH5kKkt`.
 - Plik JS przed: `assets/index-_PKBum7P.js`. Po: `assets/index-lVQ_YtiK.js` — ta sama nazwa na `tower.log-mar.pl`, `watch-tower-makieta.vercel.app` i w `dist/` buildu. Oba adresy 200. 64 pliki JS: 0 × `service_role`. Kopia wdrożeniowa usunięta.
 - G3 (uchwyty): `#themeBtn` w menu konta; `[data-auth="session"]` na `#accountBtn`; `.nav-session` usunięte; `#roleSeg` bez zmian (napisy HHL/KSH/SCX, „Podgląd”).
-- G4 (podłączenie, bez zmiany wyglądu): `last_sign_in_at` z sesji Auth w `AuthGate`; typ `real_full_name` + `ImpersonationBanner` (fallback `real_email`); migracja `my_profile` (`last_sign_in_at` z `auth.users` dla eff, `real_full_name`) — przy rebase P4 (numer wolny); G4.2 „Moje konto” KSH/SCX — po P3-c.
+- G4 (podłączenie, bez zmiany wyglądu): `last_sign_in_at` z sesji Auth w `AuthGate`; typ `real_full_name` + `ImpersonationBanner` (fallback `real_email`); migracja `my_profile` (`last_sign_in_at` z `auth.users` dla eff, `real_full_name`) — przy rebase P4 (numer wolny); G4.2 „Moje konto” KSH/SCX — po P3-c. PR #182 → `2d467649`; wdrożenie G4 R7 14.10.2026 00:29, `dpl_GVhiKpCETFTpzECiS8QwsRRaKGxo`; JS `assets/index-CCGb6sOq.js` (oba adresy 200, 0 × `service_role`).
 - PLAN §4 P3: P3-a / P3-b / P3-c; §8 wiersz dopisku.
 
-**wyglad/P3-a NA PRODUKCJI — commit `25b71bca`, wdrożenie `dpl_FBYjeG86cptLjWvXiRmURHH5kKkt`, 14.10.2026 00:12.**
+**wyglad/P3-a NA PRODUKCJI — commit `25b71bca`, wdrożenie `dpl_FBYjeG86cptLjWvXiRmURHH5kKkt`, 14.10.2026 00:12.** G4 na produkcji: commit `2d467649`, `dpl_GVhiKpCETFTpzECiS8QwsRRaKGxo`, 14.10.2026 00:29.
