@@ -1175,11 +1175,20 @@ img,video{max-width:100%;height:auto}
 .mtag.red{color:var(--red);border-color:var(--red);background:var(--red-bg)}
 .mtag.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}
 @media (max-width:768px){
-  /* Dokumenty: „Wgraj dokument” na całą szerokość, pod nim tydzień i „Pobierz paczkę” w jednym rzędzie */
-  .page-sections[data-page="docs"]>.panel-hd{gap:8px}
-  .page-sections[data-page="docs"]>.panel-hd>.spacer{display:none}
+  /* Dokumenty: rząd tytułu; „Wgraj dokument” na całą szerokość; tydzień i „Pobierz paczkę” w jednym rzędzie,
+     a gdy się nie mieszczą (≤ ok. 375 px), każde w swoim rzędzie — nic uciętego (wyglad/P2-2-popr). */
+  .page-sections[data-page="docs"]>.panel-hd{gap:8px;align-items:center}
+  .page-sections[data-page="docs"]>.panel-hd>.spacer{display:block;flex:1 1 100%;height:0;margin:0}
   .page-sections[data-page="docs"]>.panel-hd>.btn:not(.ghost){flex:1 1 100%;min-height:44px}
-  .page-sections[data-page="docs"]>.panel-hd>select{flex:1 1 0;min-width:0;font-size:16px}
-  .page-sections[data-page="docs"]>.panel-hd>[data-docs-pack]{flex:0 0 auto;min-height:44px}
+  .page-sections[data-page="docs"]>.panel-hd>select{flex:1 1 200px;min-width:0;font-size:16px}
+  .page-sections[data-page="docs"]>.panel-hd>[data-docs-pack]{flex:1 0 auto;min-height:44px}
+  /* przyciski Dokumentów jak w makiecie (.btn 14 px; .btn.ghost z ciemną ramką) */
+  .page-sections[data-page="docs"] .btn{font-size:14px}
+  .page-sections[data-page="docs"] .btn.ghost{border-color:var(--ink)}
   .mcard-foot .btn{min-height:44px;font-size:14px}
+  /* Kokpit: treść kafelka od góry (przycisk centrował ją w pionie i etykiety w rzędzie nie stały równo) */
+  .kpis button.kpi{display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch}
+  /* nic uciętego: nazwy w liście na Mapie i nazwy plików w Dokumentach zawijają się zamiast „…” */
+  .map-loads-table .cell-clip{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+  .docrow-name{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
 }
