@@ -96,8 +96,10 @@ describe('M9 zdarzenia etapów (§6)', () => {
     expect(sent.some((m) => m.type === 'load.status')).toBe(false);
     st.driverMilestone(token, 'UNLOADED');
     const s = sent.find((m) => m.type === 'load.status');
-    expect(s && s.type === 'load.status' && s.status === 'UNLOADING' && typeof s.unloadedAt === 'string').toBe(true);
+    // E25 (P4): UNLOADING → DELIVERED (UNLOADED scalony z Dostarczone)
+    expect(s && s.type === 'load.status' && s.status === 'DELIVERED' && typeof s.unloadedAt === 'string').toBe(true);
     const l = useTowerStore.getState().loads.find((x) => x.id === loadId)!;
+    expect(l.status).toBe('DELIVERED');
     expect(l.unloadedAt).toBeTruthy();
     st.driverReportFix(token, fix({}));
     const p = sent.find((m) => m.type === 'position.report');
