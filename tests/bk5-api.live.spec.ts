@@ -11,13 +11,18 @@
  * (service role wyłącznie do fixture/sprzątania). Bez wysyłki e-maili (generate_link).
  */
 import { test, expect, request as pwRequest, type APIRequestContext } from '@playwright/test';
-import { loadEnvLocal, ensureLiveFiveRoles, accountEmail, TEST_ACCOUNTS } from '../scripts/auth/env.mjs';
+import { loadEnvLocal, ensureLiveFiveRoles, accountEmail, FIVE_ROLE_ACCOUNTS } from '../scripts/auth/env.mjs';
 
 const LIVE = process.env.SUPABASE_LIVE === '1';
 const APP = process.env.BK5_BASE ?? 'http://127.0.0.1:4178/';
 type Org = 'HHL' | 'KSH' | 'SCX';
 const ORGS: Org[] = ['HHL', 'KSH', 'SCX'];
-const ENV_KEY: Record<Org, string> = { HHL: 'TEST_USER_HHL_EMAIL', KSH: 'TEST_USER_KSH_EMAIL', SCX: 'TEST_USER_SCX_EMAIL' };
+const LIVE_ACCOUNT: Record<Org, typeof FIVE_ROLE_ACCOUNTS[number]> = {
+  HHL: FIVE_ROLE_ACCOUNTS.find((a) => a.role === 'HHL_ADMIN')!,
+  KSH: FIVE_ROLE_ACCOUNTS.find((a) => a.role === 'CLIENT_USER')!,
+  SCX: FIVE_ROLE_ACCOUNTS.find((a) => a.role === 'CARRIER_DISPATCH')!,
+};
+const liveEmail = (o: Org) => accountEmail(env, LIVE_ACCOUNT[o]);
 
 // Wartości-wartowniki: występują WYŁĄCZNIE w danych kosztowych / przychodowych fixture.
 const COST = { amount: '7717.71', inv: 'TEST-BK5-SCX-KOSZT', line: '7707.07' };
@@ -69,12 +74,12 @@ test.beforeAll(async () => {
   env.VITE_SUPABASE_URL = host.url;
   env.VITE_SUPABASE_ANON_KEY = host.anonKey;
   env.SUPABASE_SERVICE_ROLE_KEY = host.serviceKey;
-  for (const a of TEST_ACCOUNTS) env[a.key] = accountEmail(env, a);
+  for (const a of FIVE_ROLE_ACCOUNTS) env[a.key] = accountEmail(env, a);
   const SR = host.serviceKey;
   admin = await pwRequest.newContext({ extraHTTPHeaders: { apikey: SR, Authorization: `Bearer ${SR}` } });
 
   for (const o of ORGS) {
-    const g = await adminReq('POST', '/auth/v1/admin/generate_link', { type: 'magiclink', email: env[ENV_KEY[o]].toLowerCase() });
+    const g = await adminReq('POST', '/auth/v1/admin/generate_link', { type: 'magiclink', email: liveEmail(o) });
     const anon = await pwRequest.newContext({ extraHTTPHeaders: { apikey: env.VITE_SUPABASE_ANON_KEY } });
     const v = await anon.post(`${base}/auth/v1/verify`, { data: { type: 'magiclink', token_hash: g.hashed_token ?? g.properties?.hashed_token } });
     token[o] = (await json(v))?.access_token;
@@ -85,9 +90,27 @@ test.beforeAll(async () => {
 
   const orgs = await adminReq('GET', '/rest/v1/organizations?select=id,code');
   fx.org = Object.fromEntries(orgs.map((x: { id: string; code: string }) => [x.code, x.id]));
-  const [load] = await adminReq('GET', '/rest/v1/loads?select=id,project_id&order_no=eq.TEST-BK3-A');
-  expect(load, 'fixture TEST-BK3-A (BK3)').toBeTruthy();
+  let [load] = await adminReq('GET', '/rest/v1/loads?select=id,project_id,carrier_org_id&order_no=eq.TEST-BK3-A');
+  if (!load) {
+    const [proj] = await adminReq('GET', '/rest/v1/projects?select=id&code=eq.STEGRA_BODEN');
+    const projId = proj?.id ?? (await adminReq('GET', '/rest/v1/projects?select=id&code=eq.STEGRA'))[0]?.id;
+    expect(projId, 'projekt STEGRA_BODEN lub STEGRA').toBeTruthy();
+    const ins = await adminReq('POST', '/rest/v1/loads', {
+      project_id: projId,
+      order_no: 'TEST-BK3-A',
+      carrier_org_id: fx.org.SCX,
+      hhl_order_no: 'TEST-BK3-A-HHL',
+      status: 'PLANNED',
+      plan_load_date: '2026-10-05',
+      plan_delivery_date: '2026-10-09',
+    });
+    load = ins[0];
+  }
+  expect(load, 'fixture TEST-BK3-A').toBeTruthy();
   fx.loadA = load.id; fx.project = load.project_id;
+  if (load.carrier_org_id !== fx.org.SCX) {
+    await adminReq('PATCH', `/rest/v1/loads?id=eq.${fx.loadA}`, { carrier_org_id: fx.org.SCX });
+  }
 
   // koszt / przychód transportu (tylko gdy brak — nie nadpisujemy cudzych danych)
   if (!(await adminReq('GET', `/rest/v1/load_cost?select=load_id&load_id=eq.${fx.loadA}`)).length) {
@@ -223,7 +246,7 @@ test('API: przewoźnik nie zmieni numeru zlecenia HHL ani KSH ani okien planowyc
   ];
   for (const [what, body] of attempts) {
     const r = await patch('SCX', body);
-    expect(r.status, `SCX ${what}: HTTP ${r.status} ${JSON.stringify(r.body).slice(0, 160)}`).toBeGreaterThanOrEqual(400);
+    expect(r.status, `SCX ${what}: HTTP ${r.status} code=${r.body?.code ?? r.body?.[0]?.code} msg=${JSON.stringify(r.body).slice(0, 200)}`).toBeGreaterThanOrEqual(400);
     expect(JSON.stringify(r.body), what).toMatch(/Przewoźnik nie może zmieniać|permission denied/);
   }
   expect(await loadRow()).toEqual(before);
@@ -232,7 +255,7 @@ test('API: przewoźnik nie zmieni numeru zlecenia HHL ani KSH ani okien planowyc
 test('API: przewoźnik zmienia własne pola (nr zlecenia SCX, kierowca); HHL nie zmieni nr SCX; KSH nic', async () => {
   const before = await loadRow();
   const ok = await patch('SCX', { carrier_order_no: 'TEST-BK5-SCX-NR', driver_name: 'Test BK5' });
-  expect(ok.status).toBe(200);
+  expect(ok.status, `SCX własne pola: HTTP ${ok.status} ${JSON.stringify(ok.body).slice(0, 240)}`).toBe(200);
   expect(ok.body?.[0]).toMatchObject({ carrier_order_no: 'TEST-BK5-SCX-NR', driver_name: 'Test BK5' });
   const hhl = await patch('HHL', { carrier_order_no: 'HHL-HACK' });
   expect(hhl.status).toBeGreaterThanOrEqual(400);
@@ -257,7 +280,7 @@ test('Aplikacja (tryb Supabase): odpowiedzi sieciowe w każdym widoku bez danych
       if (!r.url().startsWith(base)) return;
       try { bodies.push(await r.text()); } catch { /* przekierowanie / brak treści */ }
     });
-    const g = await adminReq('POST', '/auth/v1/admin/generate_link', { type: 'magiclink', email: env[ENV_KEY[o]].toLowerCase() });
+    const g = await adminReq('POST', '/auth/v1/admin/generate_link', { type: 'magiclink', email: liveEmail(o) });
     const hop = await fetch(g.action_link ?? g.properties?.action_link, { redirect: 'manual' });
     const loc = hop.headers.get('location') ?? '';
     await page.goto(APP + loc.slice(loc.indexOf('#')));
@@ -283,7 +306,7 @@ test('Aplikacja: przewoźnik zapisuje „Awizacja / Prom” bez zmiany okien —
   const page = await ctx.newPage();
   const patches: string[] = [];
   page.on('request', (r) => { if (r.url().includes('/rest/v1/loads') && r.method() === 'PATCH') patches.push(r.postData() ?? ''); });
-  const g = await adminReq('POST', '/auth/v1/admin/generate_link', { type: 'magiclink', email: env[ENV_KEY.SCX].toLowerCase() });
+  const g = await adminReq('POST', '/auth/v1/admin/generate_link', { type: 'magiclink', email: liveEmail('SCX') });
   const hop = await fetch(g.action_link ?? g.properties?.action_link, { redirect: 'manual' });
   const loc = hop.headers.get('location') ?? '';
   await page.goto(APP + loc.slice(loc.indexOf('#')));

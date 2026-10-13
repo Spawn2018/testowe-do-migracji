@@ -184,7 +184,8 @@ Tylko `tests/`, `scripts/`, `.githooks/`; bez aplikacji i bez migracji. Pierwszy
   - **D4 (R5)** — słowo w odbiorze P0b (konta po `prep`) — zrobione przy włączeniu dopisku.
   - **R1** — zatrzymanie pętli bramy TEST — wykonane 12.10 22:32 (POSTEP); nie jest pozycją kodową.
   - **D5 (D-20261012-2335-01, K1–K9)** — okna i próg 5 dla P13; `auth.users` bez cichego pomijania (brak tabeli tylko w CI); zaproszenia tylko po e-mailu `+tower-test`; progi SG-24 (1 / 2 / 2); wyjazd SG-03 po `geofence_kind` i nazwie; kontrola powiadomień i `raise notice`; kopia wierszy P11, sporów i dokumentów faktury; zestaw `e18` z brakującymi sprawdzeniami (liczba w `gate-suites.mjs`); `computed_at` w `eta_basis`. Bez potwierdzenia na TEST i bez scalenia #164, dopóki check `db` nie jest zielony na nowej głowie.
-- **Odbiór:** „Odbiór” w `paczki/P1_E18.md` + D1–D3 z dopisku D-20261012-2210-01 + „Test odbioru” z dopisku D-20261012-2335-01 (D5).
+  - **D6 (D-20261013-0345-01, L1–L6)** — cofnięcie zmiany aplikacji z `1eca3a01` (`src/data/supabaseProvider.ts` = `main`); testy na żywo zielone na TEST (BK3 14/14, PKCE 8/8, przeglądarka, BK5 8/8): fixture M10/M12 w BK3, polityka hasła TEST = produkcja, e2e logowania hasłem, BK5 na kontach 5 ról; ważność potwierdzenia bazy na `a24c05e0` tylko gdy `git diff --stat a24c05e0 HEAD -- supabase tests/db scripts/lib scripts/e18 src` puste. **Bez scalenia PR #164, dopóki L1–L6 nie są spełnione.**
+- **Odbiór:** „Odbiór” w `paczki/P1_E18.md` + D1–D3 z dopisku D-20261012-2210-01 + „Test odbioru” z dopisku D-20261012-2335-01 (D5) + test odbioru D6 (dopisek D-20261013-0345-01).
 
 ### P2 · Fundament ekranów — DO ZROBIENIA
 - **E41** nazwa transportu:
@@ -567,3 +568,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 12.10.2026 02:38 | W21 dostarczone (token GitHub `workflow`); pozycja „P3-APK — uzupełnienie W21”: pin SHA w `sms-gateway-apk.yml` → merge `e8351fc3` | właściciel; wykonawca |
 | 12.10.2026 22:10 | D-20261012-2210-01: R1 zatrzymanie pętli TEST; R2 brama TEST w worktree; R3 parytet `schema_migrations` (registry); R4 poprawka R8 nakładania; R5 słowo w odbiorze P0b — pozycje D1–D4 w P1 | koordynator; wykonawca |
 | 12.10.2026 23:35 | D-20261012-2335-01: poprawki P1 K1–K9 (0193, `kopia.mjs`, zestaw `e18`) przed potwierdzeniem na TEST i scaleniem #164 — pozycja D5 w P1 | koordynator; wykonawca |
+| 13.10.2026 03:45 | D-20261013-0345-01: P1 L1–L6 — bez zmiany aplikacji pod testy na żywo; testy na żywo zielone na TEST; ważność potwierdzenia bazy na `a24c05e0` — pozycja D6 w P1; bez scalenia #164 do spełnienia L1–L6 | koordynator; wykonawca |

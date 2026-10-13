@@ -7,11 +7,63 @@
  * tworzone idempotentnie; zdarzenia są append-only (0001), więc zostają.
  *   SUPABASE_LIVE=1 npx vitest run tests/supabase-provider.live.test.ts
  */
+import { execSync } from 'node:child_process';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createClient as createClientRaw, type SupabaseClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import { createSupabaseProvider } from '../src/data/supabaseProvider';
 import { friendlyDbError, orderGateMessage } from '../src/lib/orderNumbers';
+
+async function ensureStegraBodenProject(admin: SupabaseClient): Promise<string> {
+  const { data: boden } = await admin.from('projects').select('id').eq('code', 'STEGRA_BODEN').maybeSingle();
+  if (boden?.id) return boden.id as string;
+  const { data: stegra, error } = await admin.from('projects').select('id').eq('code', 'STEGRA').maybeSingle();
+  if (error) throw new Error(error.message);
+  if (stegra?.id) {
+    const up = await admin.from('projects').update({ code: 'STEGRA_BODEN' }).eq('id', stegra.id);
+    if (up.error) throw new Error(up.error.message);
+    return stegra.id as string;
+  }
+  throw new Error('brak projektu STEGRA ani STEGRA_BODEN');
+}
+
+async function ensureM10M12Fixture(admin: SupabaseClient, projectId: string, dbUrl: string) {
+  for (const row of [
+    { name: 'M/F Wawel', operator: 'POLSCA Baltic Ferries (Polferries)' },
+    { name: 'M/F Nova Star', operator: 'POLSCA Baltic Ferries (Polferries)' },
+  ]) {
+    const found = await admin.from('vessels').select('id').eq('name', row.name).maybeSingle();
+    if (!found.data?.id) {
+      const ins = await admin.from('vessels').insert(row).select('id').single();
+      if (ins.error && !/duplicate|unique/i.test(ins.error.message)) throw new Error(ins.error.message);
+    }
+  }
+  const wawel = (await admin.from('vessels').select('id').eq('name', 'M/F Wawel').maybeSingle()).data;
+  const nova = (await admin.from('vessels').select('id').eq('name', 'M/F Nova Star').maybeSingle()).data;
+  const t0 = Date.now();
+  const iso = (d: number) => new Date(t0 + d).toISOString();
+  if (wawel?.id) {
+    await admin.from('sailings').upsert(
+      { project_id: projectId, vessel_id: wawel.id, route: 'GDN-NYN', departure_at: iso(3 * 86400000), arrival_at: iso(3 * 86400000 + 18 * 3600000), status: 'ZAPLANOWANY', source: 'POLFERRIES' },
+      { onConflict: 'vessel_id,departure_at' },
+    );
+  }
+  if (nova?.id) {
+    await admin.from('sailings').upsert(
+      { project_id: projectId, vessel_id: nova.id, route: 'GDN-NYN', departure_at: iso(4 * 86400000), arrival_at: iso(4 * 86400000 + 18 * 3600000), status: 'ZAPLANOWANY', source: 'POLFERRIES' },
+      { onConflict: 'vessel_id,departure_at' },
+    );
+  }
+  const { count } = await admin.from('integration_runs').select('id', { count: 'exact', head: true }).eq('job', 'ferry-status');
+  if (!count) {
+    const ins = await admin.from('integration_runs').insert({ job: 'ferry-status', ok: true, result: { fixture: 'bk3-live' } });
+    if (ins.error) throw new Error(ins.error.message);
+  }
+  execSync(`psql "${dbUrl.replace(/"/g, '')}" -v ON_ERROR_STOP=1 -f scripts/ferry/path-scenario.sql`, {
+    cwd: process.cwd(),
+    stdio: 'pipe',
+  });
+}
 
 const LIVE = process.env.SUPABASE_LIVE === '1';
 // Node < 22 nie ma natywnego WebSocket — realtime nieużywany, ale klient go inicjuje.
@@ -38,16 +90,13 @@ describe.runIf(LIVE)('BK3 SupabaseProvider (live, RLS)', () => {
     env.SUPABASE_SERVICE_ROLE_KEY = host.serviceKey;
     for (const a of TEST_ACCOUNTS) env[a.key] = accountEmail(env, a);
     admin = createClient(host.url, host.serviceKey, { auth: { persistSession: false } });
+    const projectId = await ensureStegraBodenProject(admin);
+    const dbUrl = env.TEST_DB_URL || '';
+    if (!dbUrl) throw new Error('BRAK TEST_DB_URL');
+    await ensureM10M12Fixture(admin, projectId, dbUrl);
     const { data: orgs } = await admin.from('organizations').select('id,code');
     const org = Object.fromEntries((orgs ?? []).map((o) => [o.code, o.id]));
-    const { data: projRows, error: projErr } = await admin
-      .from('projects')
-      .select('id,code')
-      .in('code', ['STEGRA_BODEN', 'STEGRA']);
-    if (projErr) throw new Error(projErr.message);
-    // Seed bramy ma kod STEGRA; starszy wiersz na TEST mógł nazywać się STEGRA_BODEN.
-    const proj = (projRows ?? []).find((p) => p.code === 'STEGRA_BODEN') ?? projRows?.[0];
-    if (!proj) throw new Error('brak projektu STEGRA');
+    const proj = { id: projectId };
     async function fixture(code: string, carrier: string | null, hhlNo: string | null) {
       const found = await admin.from('loads').select('id').eq('order_no', code).maybeSingle();
       let id = found.data?.id as string | undefined;

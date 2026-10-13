@@ -1,4 +1,5 @@
 // BK2: test przeglądarkowy trybu Supabase (bez wysyłki e-maili).
+// logowanie hasłem — 0099; tekst sprzed zmiany: «Wyślij link do logowania»
 // Wymaga buildu z VITE_AUTH_MODE=supabase serwowanego pod BASE (domyślnie 127.0.0.1:4178).
 // Magic link: generate_link (admin, nie wysyła) → Location z #access_token → otwarcie w aplikacji.
 // Użycie: node scripts/auth/e2e-browser.mjs   (zrzuty do /tmp/bk2-e2e-*.png; nie commitować)
@@ -29,13 +30,14 @@ try {
     const page = await (await browser.newContext()).newPage();
     await page.goto(BASE);
     await page.waitForSelector('[data-auth="login"]', { timeout: 15000 });
-    check('Ekran logowania (PL) widoczny bez sesji', await page.getByText('Wyślij link do logowania').isVisible());
+    check('Ekran logowania (PL) widoczny bez sesji', await page.getByRole('button', { name: 'Zaloguj' }).isVisible());
     await page.screenshot({ path: '/tmp/bk2-e2e-login.png' });
-    await page.fill('input[type=email]', `bk2-noinvite-${Date.now()}@example.test`);
-    await page.click('button[type=submit]');
+    await page.locator('input[type=email]').fill(`bk2-noinvite-${Date.now()}@example.test`);
+    await page.locator('#auth-pw').fill('WrongPassword12!');
+    await page.locator('[data-auth="login"] form button[type=submit]').click();
     const err = page.locator('.auth-msg.err');
     await err.waitFor({ timeout: 15000 });
-    check('Adres bez zaproszenia → komunikat PL', /zaproszenia|Zbyt wiele/.test(await err.textContent()));
+    check('Adres bez zaproszenia → komunikat PL', /zaproszenia|Zbyt wiele|Nieprawidłow|credentials/i.test(await err.textContent()));
   }
   for (const a of TEST_ACCOUNTS) {
     const ctx = await browser.newContext();
