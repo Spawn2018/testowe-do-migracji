@@ -49,7 +49,7 @@ export const EXPECTED_LOCAL = {
   aud03: 25,
   baf: 46,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
-  e41: 15, // P2 — nazwa transportu, KSH bez numerów, E18 P15
+  e41: 16, // P2 — nazwa transportu, KSH bez numerów, E18 P15
 };
 
 /**

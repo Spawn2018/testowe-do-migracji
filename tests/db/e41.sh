@@ -42,7 +42,7 @@ sval "przepisanie" "select e18_p15_apply() >= 2" t
 sval "szwedzki opis po polsku" "select count(*) from risk_signals where resolved_at is null and title like '%Zakaz ruchu ciężarówek w Szwecji:%riktningarna%'" 1
 sval "nieznany kod bez zmiany" "select count(*) from risk_signals where title = 'Nieznany kod źródła drogowego — w panelu: zdarzenie drogowe'" 1
 sval "osiem znaków → kod wysyłki" "select count(*) from risk_signals where title = 'SG-03 — brak awizacji przed załadunkiem'" 1
-sval "kopia w dzienniku" "select (count(*) >= 2)::text from audit_log where action = 'E18_P15_KOPIA'" true
+sval "kopia w dzienniku" "select (count(*) >= 2)::text from audit_log where action = 'E18_P15_KOPIA'" t
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
