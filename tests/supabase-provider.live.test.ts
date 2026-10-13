@@ -7,11 +7,118 @@
  * tworzone idempotentnie; zdarzenia są append-only (0001), więc zostają.
  *   SUPABASE_LIVE=1 npx vitest run tests/supabase-provider.live.test.ts
  */
+import { spawnSync } from 'node:child_process';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createClient as createClientRaw, type SupabaseClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import { createSupabaseProvider } from '../src/data/supabaseProvider';
 import { friendlyDbError, orderGateMessage } from '../src/lib/orderNumbers';
+
+async function ensureStegraBodenProject(admin: SupabaseClient): Promise<string> {
+  const { data: boden } = await admin.from('projects').select('id').eq('code', 'STEGRA_BODEN').maybeSingle();
+  if (boden?.id) return boden.id as string;
+  const { data: stegra, error } = await admin.from('projects').select('id').eq('code', 'STEGRA').maybeSingle();
+  if (error) throw new Error(error.message);
+  if (stegra?.id) {
+    const up = await admin.from('projects').update({ code: 'STEGRA_BODEN' }).eq('id', stegra.id);
+    if (up.error) throw new Error(up.error.message);
+    return stegra.id as string;
+  }
+  throw new Error('brak projektu STEGRA ani STEGRA_BODEN');
+}
+
+function runPsql(dbUrl: string, args: string[]) {
+  const r = spawnSync('psql', ['-d', dbUrl, ...args], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+    env: { ...process.env, PGTZ: process.env.PGTZ || 'Europe/Warsaw' },
+  });
+  if (r.status !== 0) throw new Error(`psql ${args.join(' ')}: ${(r.stderr || r.stdout || '').slice(0, 400)}`);
+}
+
+async function ensureM10M12Fixture(admin: SupabaseClient, projectId: string, dbUrl: string, carrierOrgId: string) {
+  for (const row of [
+    { name: 'M/F Wawel', operator: 'POLSCA Baltic Ferries (Polferries)' },
+    { name: 'M/F Nova Star', operator: 'POLSCA Baltic Ferries (Polferries)' },
+  ]) {
+    const found = await admin.from('vessels').select('id').eq('name', row.name).maybeSingle();
+    if (!found.data?.id) {
+      const ins = await admin.from('vessels').insert(row).select('id').single();
+      if (ins.error && !/duplicate|unique/i.test(ins.error.message)) throw new Error(ins.error.message);
+    }
+  }
+  const wawel = (await admin.from('vessels').select('id').eq('name', 'M/F Wawel').maybeSingle()).data;
+  const nova = (await admin.from('vessels').select('id').eq('name', 'M/F Nova Star').maybeSingle()).data;
+  const t0 = Date.now();
+  const iso = (d: number) => new Date(t0 + d).toISOString();
+  let sailM10 = '';
+  if (wawel?.id) {
+    const dep = iso(3 * 86400000);
+    const arr = iso(3 * 86400000 + 18 * 3600000);
+    const s = await admin.from('sailings').upsert(
+      { project_id: projectId, vessel_id: wawel.id, route: 'GDN-NYN', departure_at: dep, arrival_at: arr, status: 'ZAPLANOWANY', source: 'POLFERRIES' },
+      { onConflict: 'vessel_id,departure_at' },
+    ).select('id').single();
+    if (s.error) throw new Error(s.error.message);
+    sailM10 = s.data.id as string;
+    await admin.from('sailings').upsert(
+      { project_id: projectId, vessel_id: wawel.id, route: 'GDN-NYN', departure_at: iso(5 * 86400000), arrival_at: iso(5 * 86400000 + 18 * 3600000), status: 'ZAPLANOWANY', source: 'POLFERRIES' },
+      { onConflict: 'vessel_id,departure_at' },
+    );
+  }
+  if (nova?.id) {
+    await admin.from('sailings').upsert(
+      { project_id: projectId, vessel_id: nova.id, route: 'GDN-NYN', departure_at: iso(4 * 86400000), arrival_at: iso(4 * 86400000 + 18 * 3600000), status: 'ZAPLANOWANY', source: 'POLFERRIES' },
+      { onConflict: 'vessel_id,departure_at' },
+    );
+  }
+  const { count } = await admin.from('integration_runs').select('id', { count: 'exact', head: true }).eq('job', 'ferry-status');
+  if (!count) {
+    const ins = await admin.from('integration_runs').insert({ job: 'ferry-status', ok: true, result: { fixture: 'bk3-live' } });
+    if (ins.error) throw new Error(ins.error.message);
+  }
+  runPsql(dbUrl, ['-v', 'ON_ERROR_STOP=1', '-f', 'scripts/ferry/path-scenario.sql']);
+  const m10 = await admin.from('loads').select('id,status,sailing_id').eq('order_no', 'TEST-M10').maybeSingle();
+  if (!m10.data?.id || m10.data.status === 'READY') {
+    const depPast = new Date(Date.now() - 2 * 3600000).toISOString();
+    const arrPast = new Date(Date.now() + 16 * 3600000).toISOString();
+    let sailId = sailM10;
+    if (!sailId && wawel?.id) {
+      const ins = await admin.from('sailings').insert({
+        project_id: projectId, vessel_id: wawel.id, route: 'GDN-NYN', departure_at: depPast, arrival_at: arrPast, status: 'ZAPLANOWANY', source: 'RECZNIE',
+      }).select('id').single();
+      if (ins.error) throw new Error(ins.error.message);
+      sailId = ins.data.id as string;
+    }
+    const base = {
+      project_id: projectId,
+      carrier_org_id: carrierOrgId,
+      order_no: 'TEST-M10',
+      hhl_order_no: 'HHL/TEST-M10',
+      carrier_order_no: 'SCX/TEST-M10',
+      sailing_id: sailId,
+      ferry_booking_ref: 'PF-TEST-M10',
+      status: 'AT_SITE',
+      plan_load_date: '2026-10-05',
+    };
+    if (m10.data?.id) await admin.from('loads').update(base).eq('id', m10.data.id);
+    else await admin.from('loads').insert(base);
+    const loadId = (m10.data?.id ?? (await admin.from('loads').select('id').eq('order_no', 'TEST-M10').single()).data!.id) as string;
+    await admin.from('load_events').delete().eq('load_id', loadId).eq('event_type', 'STATUS_AUTO');
+    const tBase = Date.now() - 4 * 3600000;
+    const steps = ['AT_PORT_GDANSK', 'FERRY', 'AT_PORT_NYNASHAMN', 'IN_TRANSIT_SE', 'AT_SITE'] as const;
+    for (let i = 0; i < steps.length; i++) {
+      const at = new Date(tBase + i * 300000).toISOString();
+      const ins = await admin.from('load_events').insert({
+        load_id: loadId,
+        event_type: 'STATUS_AUTO',
+        occurred_at: at,
+        payload: { to: steps[i], powod: 'fixture BK3 live' },
+      });
+      if (ins.error) throw new Error(ins.error.message);
+    }
+  }
+}
 
 const LIVE = process.env.SUPABASE_LIVE === '1';
 // Node < 22 nie ma natywnego WebSocket — realtime nieużywany, ale klient go inicjuje.
@@ -30,20 +137,29 @@ describe.runIf(LIVE)('BK3 SupabaseProvider (live, RLS)', () => {
   const tag = `bk3-${Date.now()}`;
 
   beforeAll(async () => {
-    const { loadEnvLocal } = await import('../scripts/auth/env.mjs');
+    const { loadEnvLocal, ensureLiveFiveRoles, accountEmail, TEST_ACCOUNTS } = await import('../scripts/auth/env.mjs');
     env = loadEnvLocal();
-    admin = createClient(env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+    const host = await ensureLiveFiveRoles(env);
+    env.VITE_SUPABASE_URL = host.url;
+    env.VITE_SUPABASE_ANON_KEY = host.anonKey;
+    env.SUPABASE_SERVICE_ROLE_KEY = host.serviceKey;
+    for (const a of TEST_ACCOUNTS) env[a.key] = accountEmail(env, a);
+    admin = createClient(host.url, host.serviceKey, { auth: { persistSession: false } });
+    const projectId = await ensureStegraBodenProject(admin);
+    const dbUrl = env.TEST_DB_URL || '';
+    if (!dbUrl) throw new Error('BRAK TEST_DB_URL');
     const { data: orgs } = await admin.from('organizations').select('id,code');
     const org = Object.fromEntries((orgs ?? []).map((o) => [o.code, o.id]));
-    const { data: proj } = await admin.from('projects').select('id').eq('code', 'STEGRA_BODEN').single();
+    await ensureM10M12Fixture(admin, projectId, dbUrl, org.SCX);
+    const proj = { id: projectId };
     async function fixture(code: string, carrier: string | null, hhlNo: string | null) {
       const found = await admin.from('loads').select('id').eq('order_no', code).maybeSingle();
       let id = found.data?.id as string | undefined;
       if (!id) {
-        const ins = await admin.from('loads').insert({ project_id: proj!.id, order_no: code, carrier_org_id: carrier, hhl_order_no: hhlNo, status: 'PLANNED', plan_load_date: '2026-10-05', plan_delivery_date: '2026-10-09' }).select('id').single();
+        const ins = await admin.from('loads').insert({ project_id: proj.id, order_no: code, carrier_org_id: carrier, hhl_order_no: hhlNo, status: 'PLANNED', plan_load_date: '2026-10-05', plan_delivery_date: '2026-10-09' }).select('id').single();
         if (ins.error) throw new Error(ins.error.message);
         id = ins.data.id as string;
-        const it = await admin.from('shipment_items').insert({ project_id: proj!.id, load_id: id, shipment_code: code, item_type: 'TEST', length_m: 12, width_m: 3, height_m: 3, qty: 1, total_weight_t: 10, assembly_seq: 9000 });
+        const it = await admin.from('shipment_items').insert({ project_id: proj.id, load_id: id, shipment_code: code, item_type: 'TEST', length_m: 12, width_m: 3, height_m: 3, qty: 1, total_weight_t: 10, assembly_seq: 9000 });
         if (it.error) throw new Error(it.error.message);
       } else {
         await admin.from('loads').update({ status: 'PLANNED', driver_name: null, carrier_org_id: carrier, hhl_order_no: hhlNo }).eq('id', id);

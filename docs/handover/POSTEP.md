@@ -2029,3 +2029,33 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Produkcja: bez migracji aplikacji w P0b; `tower.log-mar.pl` i makieta Vercel → 200.
 - PLAN §4 P0b → NA PRODUKCJI (narzędzia). Następna paczka: **P1**.
 
+## 2026-10-12 — R1 D-20261012-2210-01: przerwana pętla bramy TEST
+
+- 12.10 22:02–ok. 22:20: pętla bramy TEST po komplecie na `832cca5a` ruszyła ponownie od `prep` na zmienionym HEAD; przerwana (D-20261012-2210-01 R1); ostatnie czyszczenie TEST 22:19:33; wyniki tego przebiegu nieważne; odbiór P0b bez zmian; TEST wolne od 22:32.
+- Pętla (`run-loop.pid` 15116) i monitor (`chat-status.pid` 19670) martwe; `test-db-gate-step` nie działa. Odczyty `pg_stat_activity` (postgres, active, bez własnego pid): 22:27 = 0, 22:32 = 0.
+
+## 2026-10-12 — P1 · zestaw e18 16/16
+
+- 12.10 **22:20:05**, baza **TEST** (hosted): `[db] e18 16/16 OK`, migracja `0193_e18_porzadki.sql`, krok `node scripts/test-db-gate-step.mjs e18` (log `tmp-gate/e18-full.log`). Nie GitHub Actions i nie lokalny Postgres.
+- Gałąź `pakiet/P1-e18`, HEAD wtedy `b3da6dbc`. Pliki `0193_e18_porzadki.sql` i `tests/db/e18.sh` były tylko w drzewie roboczym, bez commita. Ten wynik nie jest bramą do scalenia.
+- GitHub `db` na `cc206d48` (run 38307558150, zestawy e18,security,status,nullguard): security 88/88, status 44/44, nullguard 602/602, **e18 2/16**. Przyczyna: lokalny CI nie ma `auth.users`; `delete` w 0193 przerywał zestaw. Poprawka: brak tabeli jest pomijany, jak brak uprawnień na hosted.
+- GitHub `db` na `a827de61` (run 38308278607, 12.10 23:04, te same zestawy): **e18 16/16**, security 88/88, status 44/44, nullguard 602/602. Lokalny Postgres 17 w CI, nie TEST. 0193 nie zmienia innych zestawów (na pustym seedzie nic nie rusza).
+- Pełne checki PR #164 na `27ec3c3b` (unit, db, visual) zielone. Nie scalono — dopisek D-20261012-2335-01 zmienia migrację.
+
+## 2026-10-12 — P1 · D5 K1–K9 (D-20261012-2335-01)
+
+- K1–K9 w migracji `0193`, `scripts/e18/kopia.mjs` i `tests/db/e18.sh`. Liczba zestawu `e18` w `scripts/lib/gate-suites.mjs`: **41**. Pozycja D5 w PLAN §4, wiersz w §8.
+- Brama GitHub i potwierdzenie na TEST: jeszcze nie na tej głowie. Próba z ROLLBACK na produkcji: jeszcze nie. Bez scalenia #164.
+- GitHub `db` na `79e891a1` (run 38313075911, zestawy e18,security,status,nullguard): security 88/88, status 44/44, nullguard 602/602, **e18 39/41**. Pełny check `db` na PR #164 (run 38312970245) też czerwony. Unit i visual zielone.
+- GitHub `db` na `3652268f` (run 38314196509): znowu **e18 39/41**. Oba czerwone sprawdzenia: `pg_trigger.tgenabled` (typ `"char"`) bez rzutowania na tekst, zapytanie się nie wykonuje. Reszta K8 zielona.
+- GitHub `db` na `9b4e3c16` (run 38315461054, 13.10 ok. 00:15, zestawy e18,security,status,nullguard, lokalny Postgres 17, nie TEST): **e18 41/41**, security 88/88, status 44/44, nullguard 602/602. Checki głowy PR #164 na tym SHA: unit, visual i pełny `db` (run 38315467215) zielone. Bez scalenia.
+- TEST zajęte: P1, od 13.10 00:28 — potwierdzenie w kopii roboczej według R2 (SHA `9b4e3c16`; zestawy security, status, e18, nullguard, potem testy logowania).
+- TEST 13.10 00:30–00:52, SHA `9b4e3c16`, kopia `/d/Watch Tower/brama-test`: security 84/84 (+2 SKIP), status 44/44, **e18 40/41**. Jedno czerwone: „4 konta auth.users” — przygotowanie wstawiało wiersz bez zaproszenia, wyzwalacz `handle_new_auth_user` zwraca `TOWER_NO_INVITE`. nullguard i testy logowania nie ruszyły. Pętla skończyła się sama (drugi FAIL). TEST wolne od 00:52. Kopia robocza zdjęta.
+- GitHub `db` na `09d43e5e` (run 38319498611, zestawy e18,security,status,nullguard; pełny check PR run 38319503803): security 88/88, status 44/44, nullguard 602/602, **e18 40/41**. Przygotowanie kont `auth.users` pisało log do `tmp-gate/`, którego nie ma w czystym CI (katalog w `.gitignore`). Unit i visual zielone. Bez scalenia.
+- GitHub `db` na `1d72a26f` (run 38320359925, te same zestawy; pełny check PR run 38320365051): znowu **e18 40/41**. Zapytanie rodzaju `auth.users` używało `'auth.users'::regclass`, które pada przy planowaniu, gdy tabeli nie ma. Reszta zestawów zielona. Unit i visual zielone. Bez scalenia.
+- GitHub `db` na `a24c05e0` (run 38321283995, 13.10 ok. 01:18, zestawy e18,security,status,nullguard, lokalny Postgres 17, nie TEST): **e18 41/41**, security 88/88, status 44/44, nullguard 602/602. Checki głowy PR #164 na tym SHA: unit, visual i pełny `db` (run 38321287705, 8 min 12 s) zielone. Bez scalenia.
+- **TEST zajęte: P1, od 13.10 01:26** — potwierdzenie w kopii roboczej według R2 (SHA `a24c05e0`; zestawy security, status, e18, nullguard-1…4, potem testy logowania).
+- TEST 13.10 01:26–03:32, SHA `a24c05e0`, kopia `/d/Watch Tower/brama-test`, raport `D:/Watch Tower/raporty/brama-test-a24c05e07573f6c2970d33ed08e78b7f274e2278.json`. Zestawy: security 84/84 (+2 SKIP), status 44/44, **e18 41/41**, nullguard 161+136+188+117 = 602/602. Logowanie: `verify.mjs` 21/21. BK3 po poprawce kodu projektu: 12/14 (M10 i M12 wymagają fixture spoza seedu: brak statku Wawel i rejsów POLFERRIES). PKCE 7/8 — administrator API przyjmuje hasło krótsze niż 12 znaków. Stary test przeglądarki szuka tekstu „Wyślij link do logowania”, a ekran ma przycisk „Zaloguj”. BK5: 5/8 (przewoźnik, własny numer zlecenia: HTTP 403), 2 nie ruszyły. **TEST wolne od 03:32.** Kopia robocza zdjęta. Bez scalenia #164.
+- **TEST zajęte: P1 (testy na żywo), od 03:50** — SHA głowy PR po D6.
+- TEST 13.10 03:50–04:12, SHA `c1b18f8d`, build `/tmp/wt-sb-dist` z `TEST_SUPABASE_URL` / `TEST_ANON_KEY`. Hasło: produkcja `password_min_length=12`, `password_required_characters=""`; TEST przed: 6 / `""`, po: 12 / `""` (`sync-test-password-policy.mjs`). Logowanie: verify **21/21**, BK3 **14/14**, PKCE **8/8**, `e2e-browser.mjs` **20/20**, BK5 **8/8**. `git diff origin/main -- src/` puste. L6: diff `a24c05e0`…`c1b18f8d` w `supabase tests/db scripts/lib scripts/e18 src` pusty. **TEST wolne od 04:12.** Bez scalenia #164 (czeka checki CI na `c1b18f8d`).
+

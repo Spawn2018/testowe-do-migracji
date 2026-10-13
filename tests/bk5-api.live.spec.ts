@@ -11,13 +11,28 @@
  * (service role wyłącznie do fixture/sprzątania). Bez wysyłki e-maili (generate_link).
  */
 import { test, expect, request as pwRequest, type APIRequestContext } from '@playwright/test';
-import { loadEnvLocal } from '../scripts/auth/env.mjs';
+import { loadEnvLocal, ensureLiveFiveRoles, accountEmail, FIVE_ROLE_ACCOUNTS } from '../scripts/auth/env.mjs';
+import { FIVE_ROLE_LIVE_PASSWORD } from '../scripts/auth/env.mjs';
 
 const LIVE = process.env.SUPABASE_LIVE === '1';
 const APP = process.env.BK5_BASE ?? 'http://127.0.0.1:4178/';
 type Org = 'HHL' | 'KSH' | 'SCX';
 const ORGS: Org[] = ['HHL', 'KSH', 'SCX'];
-const ENV_KEY: Record<Org, string> = { HHL: 'TEST_USER_HHL_EMAIL', KSH: 'TEST_USER_KSH_EMAIL', SCX: 'TEST_USER_SCX_EMAIL' };
+const LIVE_ACCOUNT: Record<Org, typeof FIVE_ROLE_ACCOUNTS[number]> = {
+  HHL: FIVE_ROLE_ACCOUNTS.find((a) => a.role === 'HHL_ADMIN')!,
+  KSH: FIVE_ROLE_ACCOUNTS.find((a) => a.role === 'CLIENT_USER')!,
+  SCX: FIVE_ROLE_ACCOUNTS.find((a) => a.role === 'CARRIER_DISPATCH')!,
+};
+const liveEmail = (o: Org) => accountEmail(env, LIVE_ACCOUNT[o]);
+
+async function passwordLoginPage(page: import('@playwright/test').Page, o: Org) {
+  await page.goto(APP);
+  await page.waitForSelector('[data-auth="login"]', { timeout: 30000 });
+  await page.locator('input[type=email]').fill(liveEmail(o));
+  await page.locator('#auth-pw').fill(FIVE_ROLE_LIVE_PASSWORD);
+  await page.locator('[data-auth="login"] form button[type=submit]').click();
+  await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
+}
 
 // Wartości-wartowniki: występują WYŁĄCZNIE w danych kosztowych / przychodowych fixture.
 const COST = { amount: '7717.71', inv: 'TEST-BK5-SCX-KOSZT', line: '7707.07' };
@@ -64,12 +79,17 @@ async function registerAndUpload(org: Org, category: string, name: string, proje
 
 test.beforeAll(async () => {
   env = loadEnvLocal();
-  base = env.VITE_SUPABASE_URL.replace(/\/$/, '');
-  const SR = env.SUPABASE_SERVICE_ROLE_KEY;
+  const host = await ensureLiveFiveRoles(env);
+  base = host.url;
+  env.VITE_SUPABASE_URL = host.url;
+  env.VITE_SUPABASE_ANON_KEY = host.anonKey;
+  env.SUPABASE_SERVICE_ROLE_KEY = host.serviceKey;
+  for (const a of FIVE_ROLE_ACCOUNTS) env[a.key] = accountEmail(env, a);
+  const SR = host.serviceKey;
   admin = await pwRequest.newContext({ extraHTTPHeaders: { apikey: SR, Authorization: `Bearer ${SR}` } });
 
   for (const o of ORGS) {
-    const g = await adminReq('POST', '/auth/v1/admin/generate_link', { type: 'magiclink', email: env[ENV_KEY[o]].toLowerCase() });
+    const g = await adminReq('POST', '/auth/v1/admin/generate_link', { type: 'magiclink', email: liveEmail(o) });
     const anon = await pwRequest.newContext({ extraHTTPHeaders: { apikey: env.VITE_SUPABASE_ANON_KEY } });
     const v = await anon.post(`${base}/auth/v1/verify`, { data: { type: 'magiclink', token_hash: g.hashed_token ?? g.properties?.hashed_token } });
     token[o] = (await json(v))?.access_token;
@@ -80,9 +100,27 @@ test.beforeAll(async () => {
 
   const orgs = await adminReq('GET', '/rest/v1/organizations?select=id,code');
   fx.org = Object.fromEntries(orgs.map((x: { id: string; code: string }) => [x.code, x.id]));
-  const [load] = await adminReq('GET', '/rest/v1/loads?select=id,project_id&order_no=eq.TEST-BK3-A');
-  expect(load, 'fixture TEST-BK3-A (BK3)').toBeTruthy();
+  let [load] = await adminReq('GET', '/rest/v1/loads?select=id,project_id,carrier_org_id&order_no=eq.TEST-BK3-A');
+  if (!load) {
+    const [proj] = await adminReq('GET', '/rest/v1/projects?select=id&code=eq.STEGRA_BODEN');
+    const projId = proj?.id ?? (await adminReq('GET', '/rest/v1/projects?select=id&code=eq.STEGRA'))[0]?.id;
+    expect(projId, 'projekt STEGRA_BODEN lub STEGRA').toBeTruthy();
+    const ins = await adminReq('POST', '/rest/v1/loads', {
+      project_id: projId,
+      order_no: 'TEST-BK3-A',
+      carrier_org_id: fx.org.SCX,
+      hhl_order_no: 'TEST-BK3-A-HHL',
+      status: 'PLANNED',
+      plan_load_date: '2026-10-05',
+      plan_delivery_date: '2026-10-09',
+    });
+    load = ins[0];
+  }
+  expect(load, 'fixture TEST-BK3-A').toBeTruthy();
   fx.loadA = load.id; fx.project = load.project_id;
+  if (load.carrier_org_id !== fx.org.SCX) {
+    await adminReq('PATCH', `/rest/v1/loads?id=eq.${fx.loadA}`, { carrier_org_id: fx.org.SCX });
+  }
 
   // koszt / przychód transportu (tylko gdy brak — nie nadpisujemy cudzych danych)
   if (!(await adminReq('GET', `/rest/v1/load_cost?select=load_id&load_id=eq.${fx.loadA}`)).length) {
@@ -201,8 +239,8 @@ async function loadRow() {
   const [r] = await adminReq('GET', `/rest/v1/loads?select=order_no,hhl_order_no,carrier_order_no,driver_name,plan_load_from,plan_load_to,plan_delivery_from,plan_delivery_to&id=eq.${fx.loadA}`);
   return r;
 }
-async function patch(o: Org, body: Record<string, unknown>) {
-  const r = await api[o].patch(`${base}/rest/v1/loads?id=eq.${fx.loadA}`, { data: body, headers: { Prefer: 'return=representation' } });
+async function patch(o: Org, body: Record<string, unknown>, prefer = 'return=representation') {
+  const r = await api[o].patch(`${base}/rest/v1/loads?id=eq.${fx.loadA}`, { data: body, headers: { Prefer: prefer } });
   return { status: r.status(), body: await json(r) };
 }
 
@@ -218,7 +256,7 @@ test('API: przewoźnik nie zmieni numeru zlecenia HHL ani KSH ani okien planowyc
   ];
   for (const [what, body] of attempts) {
     const r = await patch('SCX', body);
-    expect(r.status, `SCX ${what}: HTTP ${r.status} ${JSON.stringify(r.body).slice(0, 160)}`).toBeGreaterThanOrEqual(400);
+    expect(r.status, `SCX ${what}: HTTP ${r.status} code=${r.body?.code ?? r.body?.[0]?.code} msg=${JSON.stringify(r.body).slice(0, 200)}`).toBeGreaterThanOrEqual(400);
     expect(JSON.stringify(r.body), what).toMatch(/Przewoźnik nie może zmieniać|permission denied/);
   }
   expect(await loadRow()).toEqual(before);
@@ -226,16 +264,18 @@ test('API: przewoźnik nie zmieni numeru zlecenia HHL ani KSH ani okien planowyc
 
 test('API: przewoźnik zmienia własne pola (nr zlecenia SCX, kierowca); HHL nie zmieni nr SCX; KSH nic', async () => {
   const before = await loadRow();
-  const ok = await patch('SCX', { carrier_order_no: 'TEST-BK5-SCX-NR', driver_name: 'Test BK5' });
-  expect(ok.status).toBe(200);
-  expect(ok.body?.[0]).toMatchObject({ carrier_order_no: 'TEST-BK5-SCX-NR', driver_name: 'Test BK5' });
-  const hhl = await patch('HHL', { carrier_order_no: 'HHL-HACK' });
+  const ok = await patch('SCX', { carrier_order_no: 'TEST-BK5-SCX-NR' }, 'return=minimal');
+  expect(ok.status, `SCX nr zlecenia: HTTP ${ok.status} ${JSON.stringify(ok.body).slice(0, 240)}`).toBe(204);
+  const okDrv = await patch('SCX', { driver_name: 'Test BK5' }, 'return=minimal');
+  expect(okDrv.status).toBe(204);
+  expect(await loadRow()).toMatchObject({ carrier_order_no: 'TEST-BK5-SCX-NR', driver_name: 'Test BK5' });
+  const hhl = await patch('HHL', { carrier_order_no: 'HHL-HACK' }, 'return=minimal');
   expect(hhl.status).toBeGreaterThanOrEqual(400);
   expect(JSON.stringify(hhl.body)).toContain('Numer zlecenia przewoźnika wpisuje wyłącznie przewoźnik');
   const ksh = await patch('KSH', { driver_name: 'KSH-HACK' });
   expect(ksh.status === 200 ? ksh.body : []).toEqual([]); // RLS: brak wiersza do zmiany
-  const restore = await patch('SCX', { carrier_order_no: before.carrier_order_no, driver_name: before.driver_name });
-  expect(restore.status).toBe(200);
+  await patch('SCX', { carrier_order_no: before.carrier_order_no }, 'return=minimal');
+  await patch('SCX', { driver_name: before.driver_name }, 'return=minimal');
   expect(await loadRow()).toEqual(before);
 });
 
@@ -245,18 +285,14 @@ test('Aplikacja (tryb Supabase): odpowiedzi sieciowe w każdym widoku bez danych
   const reachable = await fetch(APP).then((r) => r.ok).catch(() => false);
   test.skip(!reachable, `build Supabase nie działa pod ${APP}`);
   for (const [o, forbidden] of [['KSH', forbiddenCost()], ['SCX', forbiddenRev()]] as [Org, string[]][]) {
-    const ctx = await browser.newContext();
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await ctx.newPage();
     const bodies: string[] = [];
     page.on('response', async (r) => {
       if (!r.url().startsWith(base)) return;
       try { bodies.push(await r.text()); } catch { /* przekierowanie / brak treści */ }
     });
-    const g = await adminReq('POST', '/auth/v1/admin/generate_link', { type: 'magiclink', email: env[ENV_KEY[o]].toLowerCase() });
-    const hop = await fetch(g.action_link ?? g.properties?.action_link, { redirect: 'manual' });
-    const loc = hop.headers.get('location') ?? '';
-    await page.goto(APP + loc.slice(loc.indexOf('#')));
-    await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
+    await passwordLoginPage(page, o);
     const views = await page.locator('nav [data-view]').all();
     for (const v of views) { await v.click({ timeout: 5000 }).catch(() => undefined); await page.waitForTimeout(700); }
     await page.keyboard.press('h');
@@ -274,20 +310,17 @@ test('Aplikacja: przewoźnik zapisuje „Awizacja / Prom” bez zmiany okien —
   test.setTimeout(120_000);
   const reachable = await fetch(APP).then((r) => r.ok).catch(() => false);
   test.skip(!reachable, `build Supabase nie działa pod ${APP}`);
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
   const patches: string[] = [];
   page.on('request', (r) => { if (r.url().includes('/rest/v1/loads') && r.method() === 'PATCH') patches.push(r.postData() ?? ''); });
-  const g = await adminReq('POST', '/auth/v1/admin/generate_link', { type: 'magiclink', email: env[ENV_KEY.SCX].toLowerCase() });
-  const hop = await fetch(g.action_link ?? g.properties?.action_link, { redirect: 'manual' });
-  const loc = hop.headers.get('location') ?? '';
-  await page.goto(APP + loc.slice(loc.indexOf('#')));
-  await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
+  await passwordLoginPage(page, 'SCX');
   await page.keyboard.press('h');
   await page.locator(`tr[data-load="${fx.loadA}"]`).first().click();
   await page.locator('aside .dtabs button').filter({ hasText: /Ustalenia/ }).first().click();
   const before = await loadRow();
-  await page.getByRole('button', { name: 'Zapisz awizację' }).click();
+  await page.locator('aside .awiz-row button').first().click();
+  await page.locator('[data-awiz-save]').click();
   await page.waitForTimeout(2500);
   expect(patches.filter((p) => p.includes('plan_')), 'zapis okien planowych').toEqual([]);
   expect(await page.locator('text=Nie zapisano na serwerze').count()).toBe(0);

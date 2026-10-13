@@ -4,14 +4,15 @@
  * Zaproszenie (RPC + generate_link) → Dalej → hasło ≥12 → login → recovery → nowe hasło → login.
  */
 import { chromium } from '@playwright/test';
-import { loadEnvLocal, need, maskEmail } from './env.mjs';
+import { loadEnvLocal, maskEmail, ensureLiveFiveRoles, accountEmail, TEST_ACCOUNTS } from './env.mjs';
 
 const env = loadEnvLocal();
-need(env, ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'TEST_USER_HHL_EMAIL']);
+const host = await ensureLiveFiveRoles(env);
 const BASE = (process.env.BK2_BASE ?? 'http://127.0.0.1:4178/').replace(/\/?$/, '/');
-const sb = env.VITE_SUPABASE_URL.replace(/\/$/, '');
-const SR = env.SUPABASE_SERVICE_ROLE_KEY;
-const ANON = env.VITE_SUPABASE_ANON_KEY;
+const sb = host.url;
+const SR = host.serviceKey;
+const ANON = host.anonKey;
+const hhlEmail = accountEmail(env, TEST_ACCOUNTS[0]);
 const stamp = Date.now();
 const testEmail = `sebastian+tower-sec-pkce-${stamp}@log-mar.pl`;
 const pw1 = `TowerSec1!${String(stamp).slice(-8)}xx`; // ≥12
@@ -133,7 +134,7 @@ try {
     await page.close();
   }
 
-  const hhlTok = await magicToken(env.TEST_USER_HHL_EMAIL.toLowerCase());
+  const hhlTok = await magicToken(hhlEmail);
   const inv = await fetch(`${sb}/rest/v1/rpc/admin_invite_user`, {
     method: 'POST',
     headers: {

@@ -2,13 +2,13 @@
 // Magic link: auth.admin.generate_link (nie wysyła) → /auth/v1/verify → sesja
 // → sprawdzenie ról i RLS z 0001/0005 dla każdej z trzech firm.
 // Użycie: node scripts/auth/verify.mjs   (exit 1 przy jakiejkolwiek porażce)
-import { loadEnvLocal, need, TEST_ACCOUNTS } from './env.mjs';
+import { loadEnvLocal, TEST_ACCOUNTS, ensureLiveFiveRoles, accountEmail } from './env.mjs';
 
 const env = loadEnvLocal();
-need(env, ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', ...TEST_ACCOUNTS.map((a) => a.key)]);
-const base = env.VITE_SUPABASE_URL.replace(/\/$/, '');
-const SR = env.SUPABASE_SERVICE_ROLE_KEY;
-const ANON = env.VITE_SUPABASE_ANON_KEY;
+const host = await ensureLiveFiveRoles(env);
+const base = host.url;
+const SR = host.serviceKey;
+const ANON = host.anonKey;
 let pass = 0, fail = 0;
 const check = (name, cond) => { cond ? pass++ : fail++; console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}`); };
 
@@ -34,7 +34,7 @@ async function magicLinkSession(email) {
 
 const tok = {};
 for (const a of TEST_ACCOUNTS) {
-  try { tok[a.org] = await magicLinkSession(env[a.key].toLowerCase()); check(`${a.org}: magic link → sesja`, true); }
+  try { tok[a.org] = await magicLinkSession(accountEmail(env, a)); check(`${a.org}: magic link → sesja`, true); }
   catch (e) { check(`${a.org}: magic link → sesja (${e.message})`, false); }
 }
 const rpc = (org, fn, body) => req(`/rest/v1/rpc/${fn}`, { token: tok[org], method: 'POST', body });
@@ -73,10 +73,10 @@ if (good.ok) {
   const rv = await rpc('HHL', 'admin_revoke_invite', { p_invite: good.body });
   check('HHL cofa zaproszenie', rv.ok);
 }
-const r1 = await rpc('HHL', 'admin_set_user_role', { p_user: kshId, p_role: 'CLIENT_USER' });
+const r1 = await rpc('HHL', 'admin_set_user_role', { p_user: kshId, p_role: 'CLIENT_ADMIN' });
 const p1 = await rpc('KSH', 'my_profile', {});
-const r2 = await rpc('HHL', 'admin_set_user_role', { p_user: kshId, p_role: 'CLIENT_ADMIN' });
-check('HHL zmienia rolę KSH (CLIENT_USER → CLIENT_ADMIN)', r1.ok && r2.ok && p1.body?.[0]?.role === 'CLIENT_USER');
+const r2 = await rpc('HHL', 'admin_set_user_role', { p_user: kshId, p_role: 'CLIENT_USER' });
+check('HHL zmienia rolę KSH i przywraca CLIENT_USER', r1.ok && r2.ok && p1.body?.[0]?.role === 'CLIENT_ADMIN');
 const hhlSelf = usersHHL.body?.find((u) => u.role === 'HHL_ADMIN' && tok.HHL && JSON.parse(Buffer.from(tok.HHL.split('.')[1], 'base64url')).sub === u.auth_id);
 const demote = await rpc('HHL', 'admin_set_user_role', { p_user: hhlSelf?.id, p_role: 'HHL_OPS' });
 check('HHL nie może odebrać sobie roli admina', !demote.ok);
