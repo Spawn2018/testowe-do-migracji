@@ -1118,14 +1118,23 @@ img,video{max-width:100%;height:auto}
   .legendline,.form-field>span,.form-field small{
     font-size:12px;
   }
-  button,.seg button,.chipbtn,.dtabs button,.iconbtn,summary,a,label,select,textarea,
-  input:not(.sronly):not([hidden]){min-height:44px}
+  button,.seg button,.chipbtn,.dtabs button,.iconbtn,summary,select,textarea,
+  input:not(.sronly, [hidden]){min-height:44px}
   button,.seg button,.chipbtn,.dtabs button,.iconbtn,summary{min-width:44px}
+  a,label{
+    display:inline-flex;align-items:center;box-sizing:border-box;
+    min-width:44px;min-height:44px;
+  }
   input[type="checkbox"],input[type="radio"]{width:44px;height:44px;min-width:44px;min-height:44px}
-  input:not([type="checkbox"]):not([type="radio"]):not(.sronly),select,textarea{min-width:0;max-width:100%}
+  input:not([type="checkbox"], [type="radio"], .sronly),select,textarea{min-width:0;max-width:100%}
   .leaflet-bar a,.leaflet-control-zoom a{
-    width:44px;height:44px;min-width:44px;min-height:44px;line-height:44px;
+    display:flex;align-items:center;justify-content:center;
+    width:44px;height:44px;min-width:44px;min-height:44px;line-height:1;
   }
   .leaflet-control-attribution{max-width:100%;white-space:normal}
+  .leaflet-container .leaflet-control-attribution a{min-width:44px;min-height:44px}
   .maplayers label{min-height:44px}
+  .panel.grid2,.panel-bd,svg{max-width:100%;min-width:0}
+  svg{display:block;height:auto}
+  svg text{font-size:12px}
 }

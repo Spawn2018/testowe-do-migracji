@@ -2,3 +2,7 @@
 input.sronly | ukryte pole pliku 1×1 (klasa .sronly)
 input[hidden] | ukryte pole pliku
 .sr-only | tekst tylko dla czytnika, 1×1
+.leaflet-tile-pane | kafel podkładu mapy, większy od ramki i przez nią ucięty
+.leaflet-tile-pane * | kafel podkładu mapy, większy od ramki i przez nią ucięty
+.leaflet-overlay-pane | rysunek mapy ucięty przez ramkę
+.leaflet-overlay-pane * | rysunek mapy ucięty przez ramkę

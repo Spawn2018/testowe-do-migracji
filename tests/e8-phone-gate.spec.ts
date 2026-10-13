@@ -19,12 +19,12 @@ const EXCEPTIONS = readFileSync('tests/fixtures/e8-exceptions.txt', 'utf8')
 
 type Hit = { kind: string; view: string; width: number; n: number; sample: string[] };
 
-async function boot(page: Page) {
+async function boot(page: Page, navCollapsed = false) {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(FROZEN_URL, { waitUntil: 'networkidle', timeout: 120_000 });
-  await page.evaluate(() => {
+  await page.evaluate((collapsed) => {
     try {
-      sessionStorage.setItem('wtNavCollapsed', '1');
+      sessionStorage.setItem('wtNavCollapsed', collapsed ? '1' : '0');
       sessionStorage.removeItem('wt-persist-wipe-notice');
     } catch { /* ignore */ }
     try {
@@ -32,10 +32,12 @@ async function boot(page: Page) {
         if (/watch|tower|wt/i.test(k)) localStorage.removeItem(k);
       }
     } catch { /* ignore */ }
-  });
+  }, navCollapsed);
   await page.reload({ waitUntil: 'networkidle', timeout: 120_000 });
-  await page.waitForSelector('#roleSeg button[data-role="HHL"]', { timeout: 30_000 });
-  await page.locator('#roleSeg button[data-role="HHL"]').click();
+  await page.waitForSelector('#roleSeg button[data-role="HHL"]', { state: 'attached', timeout: 30_000 });
+  await page.evaluate(() => {
+    (document.querySelector('#roleSeg button[data-role="HHL"]') as HTMLButtonElement).click();
+  });
   await page.waitForTimeout(300);
 }
 

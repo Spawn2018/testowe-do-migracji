@@ -2091,3 +2091,11 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - GitHub Actions w toku: brak. Ostatnie zakończone: unit `main` run 38410368819 (zielony, `02de6300`); PR #171 unit 38409319769, unit 38409332585, visual 38409329474 (zielone).
 - TEST wolne (od 13.10 15:20, po Q2).
 
+## WZNOWIENIE 2026-10-13 17:10
+
+- Gałąź `pakiet/P2-wyglad`, SHA `ec9e5fe4`, 0 niezapisanych zmian. Autor lokalny: Sebastian Bożek / sebastian.bozekq@gmail.com.
+- Przebiegi z pauzy zielone, żaden nie został w toku: unit `main` 38410368819; PR #171 unit 38409319769, unit 38409332585, visual 38409329474.
+- TEST wolne. Bramy TEST nie wznawiam. Dopiski 1535-01 i 1550-01 są na `main` (`02de6300`) — nie włączam ich drugi raz.
+- Dalej: V1–V3 (lint CSS, brama E8, `fresh-smoke.sh`), potem V4.
+- V1–V3 lokalnie, 13.10 17:20: `lint:css` zielony; brama E8 i test V1–V2: 2/2 (9 widoków × 360/390/430, trzy liczby = 0). V4: 30 zrzutów w `docs/handover/odbior/P2/`. Migawki `visual.yml` jeszcze nieodświeżone.
+

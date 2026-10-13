@@ -56,6 +56,8 @@ if [ "${PW_UPDATE:-}" = "1" ]; then
 else
   npx playwright test tests/visual-states.spec.ts
 fi
+# E8 pkt 1 i 7 (P2-wyglad V3): 9 widoków, 360/390/430, 0/0/0 — blokuje scalenie
+npx playwright test tests/e8-phone-gate.spec.ts
 # B-PERSIST-TOAST: pierwsze wejście bez toastu „stan uszkodzony”
 npx playwright test tests/persist-toast.spec.ts
 # B-SMOKE-LANG: test:d19 wyłączony (brak #langSeg / PL-only)
