@@ -42,6 +42,11 @@ export function isPlausibleNational(national: string): boolean {
   return /^0?\d{7,11}$/.test(national);
 }
 
+/** E6-4 — numer konta / zaproszenia w pełnym E.164. */
+export function isE164(phone: string): boolean {
+  return /^\+[1-9][0-9]{7,14}$/.test(phone.trim());
+}
+
 /** E.164 wyłącznie do dial/`tel:` i bramki SMS — nie do zapisu w loads. */
 export function toE164(national: string, country: PhoneCountry = 'PL'): string | null {
   const d = national.replace(DIGITS, '');

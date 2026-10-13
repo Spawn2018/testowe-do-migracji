@@ -24,17 +24,17 @@ val() { out=$(run "$2" "$3" "$5" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | 
 err() { out=$(run "$2" "$3"); if echo "$out" | grep -qiE "$4"; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  →  $(echo "$out" | tail -1)"; fi; }
 
 echo; echo "[DEC-3] powiadomienia decyzji"
-val "macierz DECISION HHL in_app" $HHL "select in_app::text from notification_matrix where event_group='DECISION' and org_kind='FORWARDER'" true
-val "macierz DECISION KSH in_app=false" $HHL "select in_app::text from notification_matrix where event_group='DECISION' and org_kind='CLIENT'" false
+val "macierz DECISION HHL_ADMIN in_app" $HHL "select in_app::text from notification_matrix where event_group='DECISION' and role='HHL_ADMIN'" true
+val "macierz DECISION CLIENT_USER in_app=false" $HHL "select in_app::text from notification_matrix where event_group='DECISION' and role='CLIENT_USER'" false
 val "KSH nie czyta macierzy" $KSH "select count(*) from notification_matrix" 0
 # open → powiadomienie HHL
 D=$(run "$HHL" "select decision_open('$P','BACKUP_FAILED','test powiadomienia', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
 val "OPEN → powiadomienie IN_APP HHL" $HHL "select count(*) from notifications where channel='IN_APP' and template='DECISION_OPEN' and payload->>'decision_id'='$D'" 1
 val "resolve → audit DECISION_RESOLVE" $HHL "select decision_resolve('$D','RETRY_NOW'); select count(*) from audit_log where action='DECISION_RESOLVE' and entity_id='$D'" 1 commit
 val "RESOLVE → powiadomienie" $HHL "select count(*) from notifications where channel='IN_APP' and template='DECISION_RESOLVED' and payload->>'decision_id'='$D'" 1
-# DEC-4 admin macierz
-val "admin ustawia e-mail DECISION HHL" $HHL "select admin_notification_matrix_set('DECISION','FORWARDER',true,true); select email::text from notification_matrix where event_group='DECISION' and org_kind='FORWARDER'" true commit
-err "SYSTEM nie dla KSH" $HHL "select admin_notification_matrix_set('SYSTEM','CLIENT',true,false)" "tylko HHL|systemowe"
+# DEC-4 / E11 admin macierz (po roli)
+val "admin ustawia e-mail DECISION HHL_ADMIN" $HHL "select admin_notification_matrix_set('DECISION','HHL_ADMIN',true,true); select email::text from notification_matrix where event_group='DECISION' and role='HHL_ADMIN'" true commit
+err "SYSTEM nie dla CLIENT_USER" $HHL "select admin_notification_matrix_set('SYSTEM','CLIENT_USER',true,false)" "tylko HHL|systemowe"
 
 # DEC-3 reszta: status + ryzyko przez macierz (0126)
 L=33333333-0000-0000-0000-000000000001

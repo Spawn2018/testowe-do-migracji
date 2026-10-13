@@ -7,6 +7,7 @@ import { hasKey, t } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
 import { DEMO_FX_META } from '../lib/money/demoFx';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
+import { getAuthProfile } from '../auth/profile';
 import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
 import { OptionsAccordion, type OptionsSectionDef } from '../components/settings/OptionsAccordion';
 import { OptionsHowTo } from '../components/settings/OptionsHowTo';
@@ -23,6 +24,7 @@ function savedText(locale: Locale, code: string): string {
 const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../components/guide/Guide')) : null;
 const MyMfa = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/Mfa')) : null;
 const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/UsersAdmin')) : null;
+const MyAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/MyAccount')) : null;
 const BafForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/BafForm')) : null;
 const NotificationMatrixForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/NotificationMatrixForm')) : null;
 const RateCardForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/RateCardForm')) : null;
@@ -131,6 +133,9 @@ export function OptionsView() {
 
   const sections: OptionsSectionDef[] = useMemo(() => {
     if (role !== 'HHL') return [];
+    /* E12-A: Operacje HHL — bez Użytkowników (admin), Logowań, Historii; ustawienia tylko odczyt w bazie (0198). */
+    const authRole = getAuthProfile()?.role;
+    const isHhlAdmin = authRole !== 'HHL_OPS';
     const list: OptionsSectionDef[] = [];
 
     list.push({
@@ -251,23 +256,26 @@ export function OptionsView() {
       keywords: 'użytkownicy sesje 2fa mfa hasło devices',
       children: (
         <>
-          {UsersAdmin ? <SuspenseBlock><UsersAdmin /></SuspenseBlock> : null}
+          {MyAccount ? <SuspenseBlock><MyAccount /></SuspenseBlock> : null}
+          {isHhlAdmin && UsersAdmin ? <SuspenseBlock><UsersAdmin /></SuspenseBlock> : null}
           {MyMfa ? <SuspenseBlock><MyMfa /></SuspenseBlock> : null}
           {MyDevices ? <SuspenseBlock><MyDevices /></SuspenseBlock> : null}
-          {!UsersAdmin && !MyMfa && !MyDevices ? <Soon locale={locale} tipKey="opt_acc_users_soon" /> : null}
+          {!MyAccount && !(isHhlAdmin && UsersAdmin) && !MyMfa && !MyDevices ? <Soon locale={locale} tipKey="opt_acc_users_soon" /> : null}
         </>
       ),
     });
 
-    list.push({
-      id: 'auth-log',
-      titleKey: 'opt_acc_authlog_title',
-      descKey: 'opt_acc_authlog_desc',
-      keywords: 'dziennik logowań auth',
-      children: AuthLoginLog
-        ? <SuspenseBlock><AuthLoginLog /></SuspenseBlock>
-        : <Soon locale={locale} tipKey="opt_acc_authlog_soon" />,
-    });
+    if (isHhlAdmin) {
+      list.push({
+        id: 'auth-log',
+        titleKey: 'opt_acc_authlog_title',
+        descKey: 'opt_acc_authlog_desc',
+        keywords: 'dziennik logowań auth',
+        children: AuthLoginLog
+          ? <SuspenseBlock><AuthLoginLog /></SuspenseBlock>
+          : <Soon locale={locale} tipKey="opt_acc_authlog_soon" />,
+      });
+    }
 
     list.push({
       id: 'broadcast',
@@ -279,15 +287,17 @@ export function OptionsView() {
         : <Soon locale={locale} tipKey="opt_acc_bcast_soon" />,
     });
 
-    list.push({
-      id: 'history',
-      titleKey: 'opt_acc_hist_title',
-      descKey: 'opt_acc_hist_desc',
-      keywords: 'historia zmian audit dziennik było jest',
-      children: ChangeHistoryPanel
-        ? <SuspenseBlock><ChangeHistoryPanel /></SuspenseBlock>
-        : <Soon locale={locale} tipKey="opt_acc_hist_soon" />,
-    });
+    if (isHhlAdmin) {
+      list.push({
+        id: 'history',
+        titleKey: 'opt_acc_hist_title',
+        descKey: 'opt_acc_hist_desc',
+        keywords: 'historia zmian audit dziennik było jest',
+        children: ChangeHistoryPanel
+          ? <SuspenseBlock><ChangeHistoryPanel /></SuspenseBlock>
+          : <Soon locale={locale} tipKey="opt_acc_hist_soon" />,
+      });
+    }
 
     list.push({
       id: 'export',

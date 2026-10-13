@@ -4,7 +4,8 @@
 #   TOKEN  — API kierowcy: uprawnieniem jest token, nie konto; zły token → wyjątek (regex)
 #   EMPTY  — brak danych/skutku: wynik musi być równy wartości (0, f, NULL=∅); kontrola pozytywna: HHL dostaje inną wartość
 #   PURE   — czysta funkcja obliczeniowa (tylko argumenty, bez odczytu tabel) — nie ma czego odmawiać; liczona osobno
-admin_invite_user | GUARD | select admin_invite_user('nowy@test.pl','KSH','CLIENT_USER') | wyłącznie administrator HHL
+admin_invite_user | GUARD | select admin_invite_user('nowy@test.pl','KSH','CLIENT_USER',null,'pl','Jan','Kowalski','+48000000001') | wyłącznie administrator HHL
+admin_user_profile_set | GUARD | select admin_user_profile_set('$KSHID','Jan','Kowalski','+48000000001') | Profil zmienia wyłącznie|Brak aktywnego konta
 admin_revoke_invite | GUARD | select admin_revoke_invite(gen_random_uuid()) | Wyłącznie administrator HHL
 admin_set_user_active | GUARD | select admin_set_user_active('$KSHID', true) | Wyłącznie administrator HHL
 admin_set_user_role | GUARD | select admin_set_user_role('$KSHID', 'CLIENT_USER') | Role nadaje wyłącznie
@@ -65,6 +66,7 @@ sms_set_paused | GUARD | select sms_set_paused(null, null) | wyłącznie HHL
 sms_add_test_number | GUARD | select sms_add_test_number(null, null) | wyłącznie HHL
 sms_send_test | GUARD | select sms_send_test(null) | wyłącznie HHL
 admin_set_external_messaging | GUARD | select admin_set_external_messaging(null) | wyłącznie administrator HHL
+admin_security_flag_set | GUARD | select admin_security_flag_set(null, null) | wyłącznie administrator HHL
 sms_external_messaging_state | GUARD | select sms_external_messaging_state() | wyłącznie HHL
 admin_set_permit_requirement | GUARD | select admin_set_permit_requirement(null) | wyłącznie administrator HHL
 permit_requirement_state | GUARD | select permit_requirement_state() | wyłącznie HHL
@@ -103,7 +105,8 @@ decision_resolve | GUARD | select decision_resolve(gen_random_uuid(), 'ACCEPT') 
 decision_expire | GUARD | select decision_expire(gen_random_uuid(), 'test wygaszenia') | HHL lub system|Wygaszenie
 auth_email_allowed | EMPTY | select auth_email_allowed('hhl@test') | f
 app_user_mark_password_set | GUARD | select app_user_mark_password_set() | TOWER_AUTH|konto nieaktywne|brak
-admin_notification_matrix_set | GUARD | select admin_notification_matrix_set('DECISION','FORWARDER',true,false) | wyłącznie administrator HHL
+admin_notification_matrix_set | GUARD | select admin_notification_matrix_set('DECISION','HHL_ADMIN',true,false,false) | wyłącznie administrator HHL
+security_advisor_snapshot_latest | GUARD | select * from security_advisor_snapshot_latest() | wyłącznie administrator HHL|Migawka doradcy
 admin_sms_zone_recipient_set | GUARD | select admin_sms_zone_recipient_set('LOAD_SREM',1,'x','500000000','PL',true) | Tylko administrator HHL|wyłącznie HHL
 admin_sms_zone_trigger_set | GUARD | select admin_sms_zone_trigger_set('SMS_ZONE_APPROACH',true) | Tylko administrator HHL|wyłącznie HHL
 admin_sms_zone_test | GUARD | select admin_sms_zone_test('LOAD_SREM') | Tylko administrator HHL|wyłącznie HHL

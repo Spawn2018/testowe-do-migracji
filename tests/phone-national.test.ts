@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isPlausibleNational, toE164, toNationalPhone } from '../src/lib/phoneNational';
+import { isE164, isPlausibleNational, toE164, toNationalPhone } from '../src/lib/phoneNational';
 import { normalizePhone } from '../src/lib/scheduleParse';
 
 describe('toNationalPhone', () => {
@@ -41,5 +41,14 @@ describe('isPlausibleNational', () => {
   });
   it('rejects empty', () => {
     expect(isPlausibleNational('')).toBe(false);
+  });
+});
+
+describe('isE164 (E6)', () => {
+  it('accepts fictional PL E.164', () => {
+    expect(isE164('+48000000001')).toBe(true);
+  });
+  it('rejects national without +', () => {
+    expect(isE164('601234567')).toBe(false);
   });
 });

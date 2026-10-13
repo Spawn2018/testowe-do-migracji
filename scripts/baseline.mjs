@@ -91,7 +91,7 @@ const VIEWS = [
   { name: 'Automatyzacje', file: 'automatyzacje', dataView: 'wf', roles: ['HHL'] },
   { name: 'Strefy', file: 'strefy', dataView: 'geo', roles: ['HHL'] },
   { name: 'Opcje', file: 'opcje', dataView: 'options', roles: ['HHL'] },
-  { name: 'Moje zadania', file: 'moje-zadania', dataView: 'tasks', roles: ['SCX'] },
+  // E9 P3: „Moje zadania” SCX usunięte z menu (praca w Do zrobienia / risk)
   { name: 'Moje stawki', file: 'moje-stawki', dataView: 'fin', roles: ['SCX'] },
   { name: 'Rozliczenia', file: 'rozliczenia', dataView: 'fin', roles: ['KSH'] },
   // G4: Ustawienia (waluta wyświetlania itd.) dla KSH i SCX.

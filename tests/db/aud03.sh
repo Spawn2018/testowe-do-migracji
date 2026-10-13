@@ -31,8 +31,8 @@ val "przewoźnik (SCX) zmienia ciągnik na swoim transporcie" $SCX "with u as (u
 val "HHL zmienia ciągnik"                                  $HHL "with u as (update loads set tractor_plate='PO3333C' where id='$L1' returning 1) select count(*) from u" 1
 
 echo; echo "[aud03-2] Edycja dat przez KSH (ksh_confirm_dates)"
-err "przewoźnik nie wywoła edycji dat KSH"                 $SCX "select ksh_confirm_dates('$L1','2026-11-11','2026-11-15')" "wyłącznie KSH"
-err "HHL nie wywoła edycji dat KSH"                        $HHL "select ksh_confirm_dates('$L1','2026-11-11','2026-11-15')" "wyłącznie KSH"
+err "przewoźnik nie wywoła edycji dat KSH"                 $SCX "select ksh_confirm_dates('$L1','2026-11-11','2026-11-15')" "KSH Użytkownik|wyłącznie KSH"
+err "HHL nie wywoła edycji dat KSH"                        $HHL "select ksh_confirm_dates('$L1','2026-11-11','2026-11-15')" "KSH Użytkownik|wyłącznie KSH"
 err "rozładunek przed załadunkiem odrzucony"               $KSH "select ksh_confirm_dates('$L1','2026-11-12','2026-11-11')" "przed datą załadunku"
 err "okno odwrócone odrzucone"                             $KSH "select ksh_confirm_dates('$L1',null,null,'2026-11-10 16:00+01','2026-11-10 08:00+01')" "Początek okna"
 val "KSH zmienia datę i godziny"                           $KSH "select (ksh_confirm_dates('$L1','2026-11-12','2026-11-16','2026-11-12 08:00+01','2026-11-12 14:00+01','2026-11-16 09:00+01','2026-11-16 13:00+01')->>'changed')" true commit
@@ -48,7 +48,7 @@ sval "I-10: awizowany → SCHEDULE_DATE_CRITICAL + IN_APP HHL i przewoźnik" "se
 val "bez zmiany → changed=false, bez wpisu"                $KSH "select (ksh_confirm_dates('$L2','2026-11-11','2026-11-15')->>'changed')" false commit
 sval "nadal jeden wpis PLAN_DATES_CHANGED na L2"           "select count(*) from load_events where load_id='$L2' and event_type='PLAN_DATES_CHANGED' and payload->>'by'='KSH'" "1"
 sys "update loads set status='AT_LOADING', hhl_order_no='HHL/T/1', carrier_order_no='SCX/T/1' where id='$L2'" >/dev/null 2>&1
-err "po wjeździe na załadunek KSH nie zmienia dat"         $KSH "select ksh_confirm_dates('$L2','2026-11-12','2026-11-16')" "wyłącznie HHL|Brak"
+err "po wjeździe na załadunek KSH nie zmienia dat"         $KSH "select ksh_confirm_dates('$L2','2026-11-12','2026-11-16')" "Po wjeździe na załadunek|wyłącznie HHL|Brak"
 val "anon nie wywoła RPC"                                  $KSH "select has_function_privilege('anon','ksh_confirm_dates(uuid,date,date,timestamptz,timestamptz,timestamptz,timestamptz)','execute')::text" false
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

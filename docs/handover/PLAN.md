@@ -223,8 +223,8 @@ Gałąź `pakiet/P2-wyglad`. Tylko aplikacja, bez migracji. D-20261013-1535-01 V
 - **V3.** Zasady E8 na telefonie (≤ 768 px) dla wszystkich ekranów: nic uciętego, karty zamiast tabel, cele ≥ 44 px, tekst ≥ 12 px. Brama Playwright: 9 widoków (HHL; Kokpit, Mapa, Harmonogram, Ryzyka, Dokumenty, Finanse, Faktury, Strefy, Opcje) przy 360, 390 i 430 px — elementy poza ekranem, cele < 44 px i tekst < 12 px = 0; blokuje scalenie. Wyjątki tylko w `tests/fixtures/e8-exceptions.txt`.
 - **V4.** Dowód w `docs/handover/odbior/P2/`: Kokpit, Harmonogram, Dokumenty, Finanse, panel transportu; 390 i 1440 px; konta według Z11; obok obrazu z `raport/img/` albo wzoru z Z10. Migawki przez `visual.yml` (`update=true`) i wpis w `G4_WZORZEC.md`.
 
-### Poprawki P2 — wygląd 2 · DO ZROBIENIA (koordynator, przed scaleniem P3)
-Gałąź `wyglad/P2-2` (koordynator; D-20261013-1815-01 W1–W7; D-20261013-1835-01 F4). Tylko wygląd, bez migracji. Cursor nie wykonuje W1–W7 — scala PR i wdraża według F2 pkt 3, gdy checki zielone. P3 nie scalasz przed tą pozycją.
+### Poprawki P2 — wygląd 2 · NA PRODUKCJI (13.10.2026 19:53, merge `770960fd` PR #177 `wyglad/P2-2-popr`, wdrożenie `dpl_ESWeHnmtc375vwNpyZMZsH7CSCCH`; wcześniej #176 `b9ae3d37` / `dpl_2S9uAEnAqEdv2sgTCUQWC3gDqtaL`)
+Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1–W7; D-20261013-1835-01 F2/F3 pkt 5). Tylko wygląd, bez migracji. Cursor scalał i wdrażał według F2 pkt 3.
 - **W1.** Kokpit na telefonie: 2 kolumny, liczby w jednej linii.
 - **W2.** Karty: jedna kolumna etykiet (`td::before` left).
 - **W3.** Finanse „Marża według typu elementu” jak `e8-after`.
@@ -611,3 +611,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 13.10.2026 14:00 | D-20261013-1400-01: poprawki P2 — Q1 wdrożenie aplikacji (R7), Q2 trzynaście tytułów ROAD_SE, Q3 zasada „NA PRODUKCJI”. Q2 przed scaleniem P3 | koordynator |
 | 13.10.2026 15:50 | D-20261013-1535-01 i D-20261013-1550-01: wzorzec wyglądu = raport audytu (WYGLAD-RAPORT). Konstytucja VIII pkt 1–2; rejestr; `AGENTS.md` i `.cursor/rules`; PLAN §0, §1 pkt 5, nagłówek §4; Poprawki P2 — wygląd (V1–V4) przed P3; P3 V5 (Kokpit, E8 pkt 6); P7 V6; P11 Z12 przed R-4. Z8–Z12 przed Z7 i przed „ról” w Z4. D-20261013-1525-01 i D-20261013-1615-01 bez wykonania | właściciel 13.10 15:31 i 15:43; koordynator |
 | 13.10.2026 18:35 | D-20261013-1835-01: FRONT-KOORDYNATOR — wygląd na `wyglad/*` robi koordynator; Cursor: dane, logika, baza, scalenie i wdrożenie (F1–F8). Rejestr; `AGENTS.md` §3 i §4; `.cursor/rules/front.mdc`; PLAN §1 pkt 5, §3, §4 P2 (Poprawki P2 — wygląd 2), P3, P5 (kolor marży), §8. D-20261013-1815-01 (W1–W7) przejmuje koordynator na `wyglad/P2-2` (F4); Cursor scala i wdraża gdy zielony. P3: najpierw logika i baza (F5) | właściciel 13.10 18:27; koordynator |
+| 13.10.2026 21:30 | D-20261013-2130-01: do `wyglad/P3` — E13 CSS dzwonek (Cursor nie zmienia CSS); uchwyty Moje konto / Użytkownicy / matryca 5 ról / Podgląd; scalenie logiki P3 bez czekania na wygląd | wykonawca (Cursor) |

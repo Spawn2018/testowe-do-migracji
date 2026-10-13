@@ -1,5 +1,5 @@
 /**
- * DEC-4 — macierz powiadomień (grupa × firma × IN_APP/e-mail). Tylko HHL_ADMIN (RPC).
+ * E11 / E5-2 — macierz powiadomień (grupa × 5 ról × app / e-mail / telefon). Tylko HHL_ADMIN (RPC).
  */
 import { useCallback, useEffect, useState } from 'react';
 import { getSupabase } from './client';
@@ -7,13 +7,19 @@ import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 import './auth.css';
 
-type Row = { event_group: string; org_kind: string; in_app: boolean; email: boolean };
+type MatrixRole = 'HHL_ADMIN' | 'HHL_OPS' | 'CLIENT_USER' | 'CARRIER_DISPATCH' | 'CARRIER_USER';
+type Row = { event_group: string; role: MatrixRole; in_app: boolean; email: boolean; push: boolean };
+type MatrixField = 'in_app' | 'email' | 'push';
 
 const GROUPS = ['LOAD_STATUS', 'RISK_FERRY_WEATHER', 'DECISION', 'MONEY', 'SYSTEM'] as const;
-const KINDS = ['FORWARDER', 'CARRIER', 'CLIENT'] as const;
+const ROLES: MatrixRole[] = ['HHL_ADMIN', 'HHL_OPS', 'CARRIER_DISPATCH', 'CARRIER_USER', 'CLIENT_USER'];
 
-function locked(group: string, kind: string): boolean {
-  return group === 'SYSTEM' && kind !== 'FORWARDER';
+function locked(group: string, role: MatrixRole): boolean {
+  return group === 'SYSTEM' && role !== 'HHL_ADMIN' && role !== 'HHL_OPS';
+}
+
+function roleLabel(locale: 'pl' | 'en' | 'sv', role: MatrixRole): string {
+  return t(locale, `a6_role_${role}`);
 }
 
 export default function NotificationMatrixForm() {
@@ -24,7 +30,7 @@ export default function NotificationMatrixForm() {
 
   const refresh = useCallback(async () => {
     const sb = await getSupabase();
-    const q = await sb.from('notification_matrix').select('event_group,org_kind,in_app,email').order('event_group');
+    const q = await sb.from('notification_matrix').select('event_group,role,in_app,email,push').order('event_group');
     if (q.error) {
       setMsg(q.error.message);
       return;
@@ -36,24 +42,25 @@ export default function NotificationMatrixForm() {
     void refresh();
   }, [refresh]);
 
-  function cell(group: string, kind: string): Row | undefined {
-    return rows.find((r) => r.event_group === group && r.org_kind === kind);
+  function cell(group: string, role: MatrixRole): Row | undefined {
+    return rows.find((r) => r.event_group === group && r.role === role);
   }
 
-  async function toggle(group: string, kind: string, field: 'in_app' | 'email') {
-    if (locked(group, kind)) {
+  async function toggle(group: string, role: MatrixRole, field: MatrixField) {
+    if (locked(group, role)) {
       setMsg(t(locale, 'dec_matrix_locked'));
       return;
     }
-    const cur = cell(group, kind) ?? { event_group: group, org_kind: kind, in_app: false, email: false };
+    const cur = cell(group, role) ?? { event_group: group, role, in_app: false, email: false, push: false };
     const next = { ...cur, [field]: !cur[field] };
     setBusy(true);
     const sb = await getSupabase();
     const { error } = await sb.rpc('admin_notification_matrix_set', {
       p_event_group: group,
-      p_org_kind: kind,
+      p_role: role,
       p_in_app: next.in_app,
       p_email: next.email,
+      p_push: next.push,
     });
     setBusy(false);
     if (error) {
@@ -72,50 +79,62 @@ export default function NotificationMatrixForm() {
       </header>
       <div className="panel-bd">
         {msg ? <div className="note">{msg}</div> : null}
-        <table style={{ width: '100%', fontSize: 13 }}>
-          <thead>
-            <tr>
-              <th>{t(locale, 'dec_matrix_group')}</th>
-              {KINDS.map((k) => (
-                <th key={k}>{k === 'FORWARDER' ? 'HHL' : k === 'CARRIER' ? t(locale, 'dec_matrix_carrier') : 'KSH'}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {GROUPS.map((g) => (
-              <tr key={g}>
-                <td>{t(locale, `dec_matrix_${g}`)}</td>
-                {KINDS.map((k) => {
-                  const c = cell(g, k);
-                  const lock = locked(g, k);
-                  return (
-                    <td key={k}>
-                      <label style={{ display: 'flex', gap: 6, alignItems: 'center', opacity: lock ? 0.45 : 1 }}>
-                        <input
-                          type="checkbox"
-                          disabled={busy || lock}
-                          checked={!!c?.in_app}
-                          onChange={() => void toggle(g, k, 'in_app')}
-                        />
-                        app
-                      </label>
-                      <label style={{ display: 'flex', gap: 6, alignItems: 'center', opacity: lock ? 0.45 : 1 }}>
-                        <input
-                          type="checkbox"
-                          disabled={busy || lock}
-                          checked={!!c?.email}
-                          onChange={() => void toggle(g, k, 'email')}
-                        />
-                        e-mail
-                      </label>
-                    </td>
-                  );
-                })}
+        <div className="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>{t(locale, 'dec_matrix_group')}</th>
+                {ROLES.map((r) => (
+                  <th key={r}>{roleLabel(locale, r)}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {GROUPS.map((g) => (
+                <tr key={g}>
+                  <td>{t(locale, `dec_matrix_${g}`)}</td>
+                  {ROLES.map((role) => {
+                    const c = cell(g, role);
+                    const lock = locked(g, role);
+                    return (
+                      <td key={role}>
+                        <label className="switchline" style={{ opacity: lock ? 0.45 : 1 }}>
+                          <input
+                            type="checkbox"
+                            disabled={busy || lock}
+                            checked={!!c?.in_app}
+                            onChange={() => void toggle(g, role, 'in_app')}
+                          />
+                          <span>{t(locale, 'dec_matrix_ch_app')}</span>
+                        </label>
+                        <label className="switchline" style={{ opacity: lock ? 0.45 : 1 }}>
+                          <input
+                            type="checkbox"
+                            disabled={busy || lock}
+                            checked={!!c?.email}
+                            onChange={() => void toggle(g, role, 'email')}
+                          />
+                          <span>{t(locale, 'dec_matrix_ch_email')}</span>
+                        </label>
+                        <label className="switchline" style={{ opacity: lock ? 0.45 : 1 }}>
+                          <input
+                            type="checkbox"
+                            disabled={busy || lock}
+                            checked={!!c?.push}
+                            onChange={() => void toggle(g, role, 'push')}
+                          />
+                          <span>{t(locale, 'dec_matrix_ch_push')}</span>
+                        </label>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <div className="note option-note">{t(locale, 'dec_matrix_note')}</div>
+        <div className="note option-note">{t(locale, 'dec_matrix_plan_dates_locked')}</div>
       </div>
     </section>
   );

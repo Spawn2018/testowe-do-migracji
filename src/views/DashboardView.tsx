@@ -192,7 +192,7 @@ export function DashboardView() {
                 ).length}
                 delta={t(locale, "dash_fields_missing")}
                 tone="alert"
-                onClick={() => setView('tasks')}
+                onClick={() => setView('risk')}
               />
               <KpiTile
                 label={t(locale, 'kpi_in_transit')}

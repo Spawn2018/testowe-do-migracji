@@ -4,6 +4,11 @@ export interface AuthProfile {
   user_id: string;
   email: string;
   full_name: string | null;
+  /** E6: imię / nazwisko osobno; full_name = „Imię Nazwisko”. */
+  first_name?: string | null;
+  last_name?: string | null;
+  /** E6-4: telefon E.164. */
+  phone?: string | null;
   role: UserRole;
   org_code: string;
   org_name: string;

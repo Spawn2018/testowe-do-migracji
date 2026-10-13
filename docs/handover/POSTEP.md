@@ -2102,3 +2102,71 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **P2-wyglad NA PRODUKCJI — commit `4627c8f5`, wdrożenie `dpl_F55udKq2cMiUWyM1CXdY9Kh4sz8r`, 13.10.2026 17:56.** Następna paczka: P3.
 
+## 2026-10-13 — D-20261013-1835-01 (FRONT-KOORDYNATOR) + start P3 (F5)
+
+- Plan: merge **`59165fc2`** (PR #174) — rejestr `FRONT-KOORDYNATOR`, `AGENTS.md` §3/§4, `front.mdc`, PLAN §1 pkt 5, §3, §4 (Poprawki P2 — wygląd 2 na `wyglad/P2-2`, P3, P5 kolor marży), §8. D-20261013-1815-01 nie wykonywany (F4 — koordynator).
+- Gałąź `pakiet/P3-uprawnienia` (PR #175). Bez zmian wyglądu ekranów (F5).
+- Logika: E14 (rola z onChange), 5 ról, migracja `0196` (E9/E14/E19/G-20), Podgląd E9-7/G-07 (`isPreviewReadOnly`, strażnik `writeThrough`, `PreviewBanner`).
+- `db.yml` money/invite zielone; security 86/88 → poprawka testów E19 (SELECT+RLS zamiast permission denied).
+- TEST wolne.
+
+## 2026-10-13 — Poprawki P2 — wygląd 2 (`wyglad/P2-2`)
+
+- PR #176 scalony → `b9ae3d37` (13.10.2026 19:00 UTC). unit + visual zielone; gitleaks 0 (opis PR); `npm audit --omit=dev --audit-level=high` = 0; bez migracji (F8 OK).
+- Wdrożenie R7 z `main` `b9ae3d37`, 13.10.2026 19:04, `dpl_2S9uAEnAqEdv2sgTCUQWC3gDqtaL`.
+- Plik JS przed: `assets/index-BwXKwh8r.js`. Po: `assets/index-DjH-U2rD.js` — ta sama nazwa na `tower.log-mar.pl` i `watch-tower-makieta.vercel.app`. Oba adresy 200. 60 plików JS: 0 × `service_role`. Kopia wdrożeniowa usunięta. Bez migracji.
+
+**Poprawki P2 — wygląd 2 NA PRODUKCJI — commit `b9ae3d37`, wdrożenie `dpl_2S9uAEnAqEdv2sgTCUQWC3gDqtaL`, 13.10.2026 19:04.** Następna: dokończenie P3 (po rebase na `main`).
+
+## 2026-10-13 — P3 WIP (po rebase)
+
+- PR #175: unit/visual/db (pełna brama) zielone; menu SCX bez `tasks` (E9); kafelek i linki → `risk`.
+- Rebase na `main` po #177. TEST wolne. Bez wdrożenia P3 (jeszcze nie koniec paczki).
+
+## 2026-10-13 — Poprawki P2 — wygląd 2-popr (`wyglad/P2-2-popr`)
+
+- PR #177 scalony → `770960fd` (13.10.2026 ~19:45 UTC). unit + visual zielone; gitleaks 0 (opis PR); `npm audit --omit=dev --audit-level=high` = 0; bez migracji (F8 OK). F3 pkt 5 po niezależnym sprawdzeniu #176.
+- Wdrożenie R7 z `main` `770960fd`, 13.10.2026 19:53, `dpl_ESWeHnmtc375vwNpyZMZsH7CSCCH`.
+- Plik JS przed: `assets/index-DjH-U2rD.js`. Po: `assets/index-FTeLpkaa.js` — ta sama nazwa na `tower.log-mar.pl` i `watch-tower-makieta.vercel.app`. Oba adresy 200. 60 plików JS: 0 × `service_role`. Kopia wdrożeniowa usunięta. Bez migracji.
+
+**Poprawki P2 — wygląd 2-popr NA PRODUKCJI — commit `770960fd`, wdrożenie `dpl_ESWeHnmtc375vwNpyZMZsH7CSCCH`, 13.10.2026 19:53.** Dalej P3 (logika/baza).
+
+## 2026-10-13 — P3 E6 konta (logika/baza)
+
+- Migracja **0197**: `first_name`/`last_name`, telefon E.164, `admin_user_profile_set`, zaproszenie z imieniem/nazwiskiem/telefonem, `my_profile` + pola, sync `full_name`, `handle_new_auth_user` jak 0046 (relink, bez `accepted_at`).
+- UI (bez przebudowy wyglądu): Opcje › Moje konto, formularz zaproszenia i lista z „Zadzwoń”; nullguard **617**.
+- TEST wolne. Bez wdrożenia P3 (paczka w toku).
+
+## 2026-10-13 — P3 E12-A (logika)
+
+- Migracja **0198**: `is_hhl_admin()`; zapisy Opcji (`rate_card_save`, SEFS/paliwo, bramka SMS) tylko Administrator HHL.
+- Opcje UI: Operacje bez Użytkowników (admin), Logowań, Historii zmian; Moje konto / 2FA / urządzenia zostają.
+
+## 2026-10-13 — P3 G-18 (matryca dat)
+
+- Migracja **0199**: `matrix_notify` — IN_APP dla `PLAN_DATES_CHANGED` zawsze dla HHL_ADMIN, HHL_OPS, CARRIER_DISPATCH, CARRIER_USER; e-mail/push wg macierzy.
+
+## 2026-10-13 — P3 E5-1
+
+- Migracja **0200**: `notification_matrix.email = false` wszędzie (start E5-1).
+
+## 2026-10-13 — P3 E13 → koordynator
+
+- CSS E13 wycofany z gałęzi logiki (F1/F5). Dopisek **D-20261013-2130-01** do `wyglad/P3`.
+
+## 2026-10-13 — P3 E11 macierz 5 ról
+
+- Migracja **0201**: `notification_matrix` po `role` (5 rodzajów); archiwum `notification_matrix_org_kind`; RPC `p_role` (DROP przed CREATE — Postgres nie zmienia nazwy argumentu); UI kolumny ról.
+
+## 2026-10-13 — P3 E5-2 + E19-4 (logika/baza)
+
+- Migracja **0202**: kolumna `notification_matrix.push` (telefon); start RISK_FERRY_WEATHER + DECISION; `matrix_notify` WEB_PUSH wg `push`.
+- Migracja **0203**: `security_advisor_snapshots`, cron `tower-security-advisor`, RPC odczytu dla HHL_ADMIN; Edge `security-advisor-snapshot`.
+- `tests/db/advisor-exceptions.txt` + `scripts/security-advisor-check.mjs` (E19 pkt 6).
+- nullguard **622** (+ `security_advisor_snapshot_latest`).
+- Bez CSS; dopisek D-20261013-2130-01 do `wyglad/P3`.
+
+
+## 2026-10-13 — P3 TEST przed scaleniem
+
+- TEST zajęte: P3 (security, status, nullguard, dec3) na `14663cad`.

@@ -31,7 +31,8 @@ chk() { if [ "$2" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((f
 as() { $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; $2; commit;" 2>&1 | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1; }
 sees() { as "$1" "select (select count(*) from organizations)+(select count(*) from projects)+(select count(*) from loads)+(select count(*) from app_users)"; }
 acc() { Q "select count(*) from audit_log where action='USER_ACCEPTED_INVITE' and entity_id='$1'"; }
-inv() { as $HHL "select admin_invite_user('$1','KSH','CLIENT_USER') is not null"; }
+# E6: imię, nazwisko, telefon E.164 wymagane przy zaproszeniu
+inv() { as $HHL "select admin_invite_user('$1','KSH','CLIENT_USER',null,'pl','Jan','Testowy','+48000000001') is not null"; }
 
 echo; echo "[0039] Przyjęcie zaproszenia dopiero przy pierwszym logowaniu"
 chk "HHL zaprasza nowy@firma.pl"                                   "$(inv nowy@firma.pl)" t
@@ -75,7 +76,7 @@ chk "zadanie po ponownym zaproszeniu: 0 (konto zostaje aktywne)" "$(Q "select ex
 chk "reaktywowane konto widzi dane (>0)"                       "$( [ "$(sees $OLD)" -gt 0 ] && echo t)" t
 $PSQL -c "update auth.users set last_sign_in_at = now() where id='$OLD'" >/dev/null
 chk "logowanie po ponownym zaproszeniu → USER_ACCEPTED_INVITE" "$(acc $OLD)" 1
-chk "zalogowanego nie da się zaprosić ponownie"                "$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select admin_invite_user('zalog@firma.pl','KSH','CLIENT_USER'); rollback;" 2>&1 | grep -c 'już istnieje')" 1
+chk "zalogowanego nie da się zaprosić ponownie"                "$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select admin_invite_user('zalog@firma.pl','KSH','CLIENT_USER',null,'pl','Jan','Testowy','+48000000001'); rollback;" 2>&1 | grep -c 'już istnieje')" 1
 
 echo; echo "[0039] Wygasłe konto loguje się starym linkiem (bez ponownego zaproszenia)"
 inv wygasly@firma.pl >/dev/null
@@ -92,7 +93,7 @@ chk "restore_mark_relink(): lista = konta bez auth.users (seed: 3)" "$(Q "select
 chk "zaproszenie ksh@test przyjęte (restore) — bez listy byłby TOWER_NO_INVITE" "$(Q "select count(*) from user_invites where email='ksh@test' and accepted_at is null")" 0
 $PSQL -c "insert into auth.users (id, email) values ('$REL','KSH@test')" >/dev/null 2>&1
 chk "nowe konto auth z adresem z listy → app_users.auth_id = nowe konto" "$(Q "select count(*) from app_users where email='ksh@test' and auth_id='$REL'")" 1
-chk "rola i organizacja bez zmian"                               "$(Q "select role||':'||(org_id is not null) from app_users where auth_id='$REL'")" "CLIENT_ADMIN:true"
+chk "rola i organizacja bez zmian"                               "$(Q "select role||':'||(org_id is not null) from app_users where auth_id='$REL'")" "CLIENT_USER:true"
 chk "audit USER_RELINKED_AFTER_RESTORE, adres zdjęty z listy"   "$(Q "select count(*) from audit_log where action='USER_RELINKED_AFTER_RESTORE' and new_value->>'new_auth_id'='$REL'"):$(Q "select count(*) from account_relink_pending where email='ksh@test'")" "1:0"
 chk "połączone konto widzi dane (>0)"                            "$( [ "$(sees $REL)" -gt 0 ] && echo t)" t
 chk "adres spoza listy i bez zaproszenia → TOWER_NO_INVITE"      "$($PSQL -c "insert into auth.users (id, email) values (gen_random_uuid(), 'obcy@firma.pl')" 2>&1 | grep -c TOWER_NO_INVITE)" 1

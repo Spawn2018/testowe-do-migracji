@@ -32,7 +32,7 @@ const PLN_BANNED = /\bSEK\b|\bkr\b|\bkronor\b|\bEUR\b|€/i
 /** M4 — widoki KSH i SCX (waluta ustawiana w „Ustawienia”). */
 const ROLE_VIEWS = {
   KSH: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'settings'],
-  SCX: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'tasks', 'settings'],
+  SCX: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'settings'], // E9 P3: bez Moje zadania
 } as const
 
 type Hit = { mode: string; view: string; text: string; path: string }

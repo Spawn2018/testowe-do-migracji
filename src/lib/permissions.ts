@@ -1,7 +1,12 @@
 import type { Load, RoleId } from '../types';
 import { getNowMs } from './frozenNow';
 import { TZ_UNLOAD_SE, calendarDayNoonMs, parseInstant } from './time';
-import { canSeeWorkflows } from './prodFacade';
+import { canSeeWorkflows, isPreviewReadOnly } from './prodFacade';
+
+/** E9-7: w Podglądzie KSH/SCX (supabase) brak zapisu w UI. */
+function allowWrite(role: RoleId): boolean {
+  return !isPreviewReadOnly({ viewRole: role });
+}
 
 export type NavKey =
   | 'dash'
@@ -20,8 +25,9 @@ export type NavKey =
 const NAV_BY_ROLE: Record<RoleId, NavKey[]> = {
   HHL: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'wf', 'geo', 'options'],
   KSH: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'settings'],
-  SCX: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'tasks', 'settings'],
-};
+  // E9: „Moje zadania” SCX znika — praca w „Do zrobienia” (risk); widok tasks zostaje w kodzie bez pozycji menu
+  SCX: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'settings'],
+}
 
 /** 9.4: moduł Automatyzacje (wf) w produkcji tylko dla HHL_ADMIN (lib/prodFacade canSeeWorkflows); demo bez zmian. */
 export function navForRole(role: RoleId, prod?: boolean, userRole?: string | null): NavKey[] {
@@ -43,11 +49,11 @@ export function canSeeMargin(role: RoleId): boolean {
 }
 
 export function canEditGeofence(role: RoleId): boolean {
-  return role === 'HHL';
+  return allowWrite(role) && role === 'HHL';
 }
 
 export function canEditWorkflow(role: RoleId): boolean {
-  return role === 'HHL';
+  return allowWrite(role) && role === 'HHL';
 }
 
 /**
@@ -55,19 +61,19 @@ export function canEditWorkflow(role: RoleId): boolean {
  * I-2a: także w demo (wcześniej demo pokazywało import KSH — niezgodnie z produkcją).
  */
 export function canImportSchedule(role: RoleId, _prod?: boolean): boolean {
-  return role === 'HHL';
+  return allowWrite(role) && role === 'HHL';
 }
 
 export function canSubmitInvoice(role: RoleId): boolean {
-  return role === 'SCX';
+  return allowWrite(role) && role === 'SCX';
 }
 
 export function canMatchInvoice(role: RoleId): boolean {
-  return role === 'HHL';
+  return allowWrite(role) && role === 'HHL';
 }
 
 export function canEditResources(role: RoleId): boolean {
-  return role === 'SCX' || role === 'HHL';
+  return allowWrite(role) && (role === 'SCX' || role === 'HHL');
 }
 
 
