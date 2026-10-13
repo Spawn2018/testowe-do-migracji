@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTowerStore } from '../../store/useTowerStore'
 import { navForRole, type NavKey } from '../../lib/permissions'
-import { isTechnicalRoadNotice } from '../../lib/format'
+import { invoiceTodoCount, todoQueue } from '../../lib/cockpitE9'
 import { navLabel, t } from '../../i18n/messages'
 import { ClaudeIcon, type IconKey } from './ClaudeIcon'
 /* wyglad/P3 (E37 pkt 1): e-mail, rodzaj konta i „Wyloguj” przeszły do menu konta w pasku górnym (AccountMenu). */
@@ -60,9 +60,8 @@ export function Nav() {
   const risks = useTowerStore((s) => s.risks)
   const invoices = useTowerStore((s) => s.invoices)
   const bills = useTowerStore((s) => s.bills)
-  const workflows = useTowerStore((s) => s.workflows)
   const loads = useTowerStore((s) => s.loads)
-  const geofences = useTowerStore((s) => s.geofences)
+  const documents = useTowerStore((s) => s.documents)
   const navCollapsed = useTowerStore((s) => s.navCollapsed)
   const setNavCollapsed = useTowerStore((s) => s.setNavCollapsed)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -101,35 +100,18 @@ export function Nav() {
   const items = navForRole(role)
   const rows = rowsForRole(items)
 
+  /* wyglad/P3-b (E9 „Liczby w menu”): liczba stoi tylko przy działaniu do wykonania.
+     Ryzyka = „Do zrobienia” konta (ta sama co na kafelku Kokpitu; KSH bez listy — bez liczby).
+     Faktury = faktury czekające na moje działanie + transporty gotowe do mojej faktury; 0 = bez liczby.
+     Bez liczb przy Harmonogramie, Strefach i Automatyzacjach. */
   const badge = (key: NavKey): { n: number; hot?: boolean } | null => {
     if (key === 'risk') {
-      const n = risks.filter((r) => !isTechnicalRoadNotice(r.title)).length
-      return n ? { n, hot: true } : null
-    }
-    if (key === 'tasks') {
-      const n = loads.filter((l) =>
-        ['RESOURCES_PENDING', 'DOC_MISSING', 'READY'].includes(l.status),
-      ).length
-      return n ? { n, hot: true } : null
+      const q = todoQueue(role, risks, loads)
+      return q && q.total ? { n: q.total, hot: true } : null
     }
     if (key === 'inv') {
-      if (role === 'KSH') {
-        /* M6 — KSH: faktury HHL do weryfikacji */
-        const k = bills.filter((b) => b.recipient === 'KSH' && b.verification === 'DO_WERYFIKACJI').length
-        return k ? { n: k } : null
-      }
-      const n = invoices.filter((i) => i.status === 'DISPUTED' || i.status === 'SUBMITTED').length
-      return n ? { n } : { n: 1 }
-    }
-    if (key === 'wf') {
-      const n = workflows.filter((w) => w.enabled).length
-      return { n }
-    }
-    if (key === 'geo') {
-      return { n: geofences.length }
-    }
-    if (key === 'sched') {
-      return { n: loads.length }
+      const n = invoiceTodoCount(role, { loads, documents, bills, invoices })
+      return n ? { n } : null
     }
     return null
   }

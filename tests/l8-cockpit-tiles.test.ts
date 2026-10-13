@@ -32,13 +32,16 @@ describe('L-8 kafelki kokpitu', () => {
     expect(d19Pl.dash_week_invoice).toBe('tydzień {week}, do zafakturowania');
   });
 
-  it('kokpit nie bierze liczby z Centrum decyzji i nie ma stałego tygodnia 38', () => {
+  /* Przepisane w wyglad/P3-b — E9 (decyzja 07.10 19:11): KSH nie ma listy „Do zrobienia”, więc nie ma kafelka decyzji;
+     „Do zrobienia” HHL i SCX to ta sama liczba w Kokpicie i przy „Ryzyka” w menu (todoQueue); tydzień SCX z isoWeekNumber. */
+  it('kokpit nie bierze liczby z Centrum decyzji, „Do zrobienia” = liczba w menu, bez stałego tygodnia 38', () => {
     const src = readFileSync('src/views/DashboardView.tsx', 'utf8');
     expect(src).not.toContain('openDecisions');
     expect(src).not.toContain('countOpenDecisions');
-    expect(src).toContain("needsDecisionCount('KSH', risks)");
-    expect(src).toContain("needsDecisionCount('HHL', risks)");
-    expect(src).toContain("tp(locale, 'dash_week_invoice'");
-    expect(src).not.toContain('tydzień 38');
+    expect(src).toContain('todoQueue(role, risks, loads)');
+    expect(readFileSync('src/components/shell/Nav.tsx', 'utf8')).toContain('todoQueue(role, risks, loads)');
+    const ck = readFileSync('src/lib/cockpitE9.ts', 'utf8');
+    expect(ck).toContain('isoWeekNumber(input.nowIso)');
+    expect(src + ck).not.toContain('tydzień 38');
   });
 });

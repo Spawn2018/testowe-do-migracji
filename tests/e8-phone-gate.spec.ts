@@ -270,7 +270,12 @@ test.describe('P2-wyglad V1 i V2', () => {
     const pill = row.locator('td[data-col="status"] .pill');
     const fit = await pill.evaluate((el) => el.scrollWidth <= el.clientWidth + 1);
     expect(fit).toBe(true);
-    await expect(page.locator('nav button[data-view="sched"] .count')).toBeVisible();
+    /* Przepisane w wyglad/P3-b — E9 „Liczby w menu” (decyzja 07.10 19:11): liczba tylko przy działaniu do wykonania,
+       bez liczb przy Harmonogramie, Strefach i Automatyzacjach — także w menu bocznym na komputerze (V2 dotyczyło P2). */
+    await expect(page.locator('nav button[data-view="sched"] .count')).toHaveCount(0);
+    await expect(page.locator('nav button[data-view="geo"] .count')).toHaveCount(0);
+    await expect(page.locator('nav button[data-view="wf"] .count')).toHaveCount(0);
+    await expect(page.locator('nav button[data-view="risk"] .count')).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(200);
@@ -463,4 +468,70 @@ test.describe('wyglad/P3 pasek górny (E37 pkt 1–2, img/e37-after)', () => {
     await expect(page.locator('#roleSeg button[data-role="KSH"]')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#accountMenu')).toBeHidden();
   });
+});
+
+test.describe('wyglad/P3-b Kokpit (E9, img/e9-after; telefon: E8 pkt 6, V5)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 180_000 });
+  const IDS: Record<string, string[]> = {
+    HHL: ['in-transit', 'todo', 'loads7', 'permits7', 'delivered', 'margin'],
+    KSH: ['delivered', 'in-transit', 'plan72', 'otif', 'ferry', 'bills'],
+    SCX: ['todo', 'in-transit', 'loads7', 'to-invoice', 'ferry', 'otif'],
+  };
+
+  for (const role of ['HHL', 'KSH', 'SCX']) {
+    test(`${role}: komputer — nagłówek firma · rodzaj · data, 6 kafelków w 2 kolumnach, „Strona ›”`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await boot(page, role);
+      await openView(page, 'dash');
+      const card = page.locator(`[data-cockpit="${role}"]`);
+      await expect(card).toBeVisible();
+      await expect(card.locator('.ck-hd h2 .ck-desk')).toHaveText({ HHL: 'H&H Logistics', KSH: 'KSH', SCX: 'Scandinavian Express' }[role]!);
+      await expect(card.locator('.ck-hd .sub .ck-desk')).toHaveText(/ · \d{2}\.\d{2}\.\d{4}$/);
+      const ids = await card.locator('[data-ck]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.ck));
+      expect(ids).toEqual(IDS[role]);
+      const boxes = await card.locator('[data-ck]').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.width)]; }));
+      expect(new Set(boxes.map((b) => b[0])).size).toBe(2);
+      expect(Math.max(...boxes.map((b) => b[1])) - Math.min(...boxes.map((b) => b[1]))).toBeLessThanOrEqual(1);
+      await expect(card.locator('[data-ck] .ck-go').first()).toBeVisible();
+      await expect(card.locator('[data-ck] .ck-go').first()).toHaveText(/ ›$/);
+      // stopka „Czas wykrycia odchylenia” tylko u HHL (E9 B6)
+      await expect(card.locator('.ck-ft')).toHaveCount(role === 'HHL' ? 1 : 0);
+      // KSH: bez „Do zrobienia” i bez liczby przy „Ryzyka” (decyzja 19:11); HHL i SCX: kafelek = liczba w menu
+      if (role === 'KSH') {
+        await expect(page.locator('nav button[data-view="risk"] .count')).toHaveCount(0);
+      } else {
+        const tile = (await card.locator('[data-ck="todo"] .v').innerText()).trim();
+        const menu = (await page.locator('nav button[data-view="risk"] .count').innerText().catch(() => '0')).trim();
+        expect(tile).toBe(menu);
+      }
+    });
+  }
+
+  for (const width of [360, 390, 430]) {
+    test(`telefon ${width}: „Kokpit · firma · rodzaj”, kafelki 2 × 3 równej szerokości, bez „Strona ›”, 3 najpilniejsze`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      for (const role of ['HHL', 'KSH', 'SCX']) {
+        await boot(page, role, true);
+        await openView(page, 'dash');
+        const card = page.locator(`[data-cockpit="${role}"]`);
+        await expect(card.locator('.ck-hd h2 .ck-phone')).toHaveText('Kokpit');
+        await expect(card.locator('.ck-hd h2 .ck-desk')).toBeHidden();
+        const boxes = await card.locator('[data-ck]').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.width), Math.round(r.right)]; }));
+        expect(boxes).toHaveLength(6);
+        expect(new Set(boxes.map((b) => b[0])).size, role).toBe(2);
+        expect(Math.max(...boxes.map((b) => b[1])) - Math.min(...boxes.map((b) => b[1]))).toBeLessThanOrEqual(1);
+        expect(Math.max(...boxes.map((b) => b[2]))).toBeLessThanOrEqual(width);
+        await expect(card.locator('[data-ck] .ck-go').first()).toBeHidden();
+        // liczba w jednej linii i w kafelku (E8 pkt 6)
+        const values = await card.locator('[data-ck] .v').evaluateAll((els) => els.map((e) => {
+          const cs = getComputedStyle(e); const r = e.getBoundingClientRect(); const t = (e.closest('[data-ck]') as HTMLElement).getBoundingClientRect();
+          return { one: r.height <= parseFloat(cs.lineHeight) * 1.4 + 0.5, inside: r.right <= t.right + 1 && e.scrollWidth <= e.clientWidth + 1 };
+        }));
+        expect(values.every((v) => v.one && v.inside), `${role} ${JSON.stringify(values)}`).toBe(true);
+        const urgent = await page.locator('ul.ck-urgent > li').evaluateAll((els) => els.filter((e) => getComputedStyle(e).display !== 'none').length);
+        expect(urgent).toBeLessThanOrEqual(3);
+        await expect(card.locator('.ck-ft')).toBeHidden();
+      }
+    });
+  }
 });

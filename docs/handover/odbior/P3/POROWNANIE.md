@@ -1,7 +1,7 @@
 # Odbiór P3 — wygląd (koordynator, `wyglad/P3`)
 
 Podział pracy: D-20261013-1835-01 (FRONT-KOORDYNATOR). Wzór: raport audytu `docs/handover/audyt_claude_2026-10-08/raport/` (konstytucja VIII, WYGLAD-RAPORT), dowód według Z3, Z4, Z10 i Z11 (D-20261013-1550-01).
-P3 wyglądu ma trzy części: **P3-a** pasek górny (ten dokument), P3-b Kokpit według E9, P3-c Opcje według E11 i E12.
+P3 wyglądu ma trzy części: **P3-a** pasek górny, **P3-b** Kokpit i liczby w menu według E9 (oba w tym dokumencie), P3-c Opcje według E11 i E12.
 
 ## wyglad/P3-a — pasek górny, konto, paski pod paskiem (E37 pkt 1–2, E13)
 
@@ -78,3 +78,68 @@ Sprawdził pierwszą wersję (`3320bff`). Poprawione w drugim commicie:
 ### Pliki
 
 `wyglad-P3-a/`: `porownanie-*` (obraz raportu u góry albo z lewej, aplikacja obok), `pasek-*`, `podpaski-*`, `menu-*`, `promy-*`.
+
+
+## wyglad/P3-b — Kokpit każdej firmy i liczby w menu (E9, V5; telefon E8 pkt 6)
+
+Obraz raportu: `raport/img/e9-after.webp` („Kokpit każdej firmy · komputer” i „Telefon · dolny pasek z decyzji E8”), dla listy pod kafelkami na telefonie `e8-after.webp` (Kokpit). Treść: E9 „Kokpit każdej firmy i liczby w menu” (decyzja 07.10 19:11), B6, B7.
+Zakres z `PLAN.md` §4 P3: „Kokpit i menu według roli — wygląd dostarcza koordynator”; odbiór: „Kokpit na telefonie według E8 pkt 6 i `img/e8-after.webp` (V5): kafelki 2 × 2 o równej szerokości; liczby się nie łamią; 3 najpilniejsze sprawy; treść kafelków według E9”.
+Zrzuty z demo, zamrożony czas 07.10.2026, 18:00 (jak obraz raportu). Liczby w demo są inne niż na obrazie (obraz: baza 07.10, 18:00), układ i opisy — te same.
+
+### Z3 — element po elemencie
+
+| element | obraz raportu | po zmianie w aplikacji | zgodne | uwagi |
+|---|---|---|---|---|
+| baner nad Kokpitem | brak (E8 pkt 6: „Do zrobienia 23” zamiast paska „+136 ryzyk”) | brak banera | tak | czerwony baner i baner KSH/SCX usunięte |
+| nagłówek (komputer) | „H&H Logistics” · „Administrator · 07.10.2026” | to samo; rodzaj konta z profilu (Administrator, Operacje, Użytkownik, Dyspozytor) | tak | uchwyt przeciągania sekcji (⋮⋮) jak wcześniej, widoczny po najechaniu |
+| układ (komputer) | 6 kafelków w 2 kolumnach | to samo; karta na całą szerokość strony | tak | obraz stawia 3 firmy obok siebie tylko do porównania; w aplikacji jedna firma, karta jak inne panele |
+| kafelek (komputer) | etykieta szara, „Strona ›” niebieskie pogrubione, duża liczba, „z N” mała, opis | to samo: 13 px / 13 px 600 `--sea` / 36 px / 15 px / 13 px; wysokość 105 px | tak | obraz: ok. 104 px; nagłówek 43 px (obraz ok. 43) |
+| HHL · W trasie | „1 · na placu w Boden: SG-03” · Mapa › | to samo | tak | — |
+| HHL · Do zrobienia | „23 · 22 transporty · 1 sprawa SEFS” · Ryzyka › | „N · X transportów · Y inne sprawy”; liczba = liczba przy „Ryzyka” w menu i na dolnym pasku | częściowo | rodzaj sprawy (SEFS) i lista E7 — P6 (Cursor, dopisek); wspólne źródło liczby: `todoQueue` |
+| HHL · Załadunki w 7 dni | „5 · 13 po dacie załadunku bez wyjazdu” · Harmonogram › | to samo | tak | — |
+| HHL · Zezwolenia na 7 dni | „0 z 5” bursztynowe · „transporty z zezwoleniem PL i SE” · Dokumenty › | to samo; kliknięcie → Dokumenty z filtrem braków | tak | — |
+| HHL · Dostarczone · rozliczenie | „1 · SG-01 czeka na podpisany CMR · 0 gotowych do faktury” · Faktury › | to samo | tak | „gotowe” = z podpisanym CMR, bez faktury dla KSH; status E25 — P4 (dopisek) |
+| HHL · Marża (prognoza) | „4,8 % · 144 392,63 PLN · ważona przychodem (E16)” · Finanse › | to samo; poziom w etykiecie; pod kwotą „kurs tymczasowy · N” | tak, z dodatkiem | znacznik kursu z G4 (M8) zostaje przy kwocie; „(E16)” to dopisek audytu |
+| HHL · stopka | „Czas wykrycia odchylenia: **za mało danych** (2 z 5 zdarzeń w 30 dniach)” | to samo; od 5 zdarzeń mediana (B6) | tak | — |
+| KSH · Dostarczone | „1 z 94 · 7 elementów · 20,7 t (SG-01)” · Harmonogram › | to samo | tak | — |
+| KSH · W trasie | „1 · SG-03 na placu w Boden od 08:35” · Mapa › | „SG-03 na placu w Boden” | częściowo | godzina wjazdu na plac nie jest w danych aplikacji; kafelek ją pokaże, gdy dane ją podadzą (`siteSince`, dopisek) |
+| KSH · Plan dostaw w 72 h | „9 · 1 w drodze · 8 jeszcze nie wyjechało” · Harmonogram › | to samo | tak | — |
+| KSH · Terminowość | „0 z 1 · SG-01: plan 05.10, dostawa 06.10” · › | to samo | tak | definicja E15 — dopisek |
+| KSH · Najbliższy prom | „08.10, 18:00 · Wawel GDN → NYN · fala 1,3 m · ryzyko niskie” · Ryzyka › | to samo w demo; w produkcji „prognoza morza: brak źródła danych”, dopóki pomiar morza z bazy nie trafi do danych aplikacji | częściowo | B7, dopisek |
+| KSH · Faktury do sprawdzenia | „0 · brak faktur HHL w systemie” · Faktury › | to samo („faktury HHL czekają na sprawdzenie”, gdy są) | tak | — |
+| KSH · lista „Do zrobienia” | brak (decyzja 19:11) | brak kafelka; brak liczby przy „Ryzyka” | tak | lista pod kafelkami: „Najpilniejsze z „Sytuacji na trasie”” |
+| SCX · Do zrobienia | „12 · awizacje, numery SCX, zezwolenia, CMR” · Ryzyka › | to samo; liczba = menu | tak | „PRZYKŁAD” — znacznik obrazu |
+| SCX · W trasie | „1 · SG-03 na placu w Boden” | to samo | tak | — |
+| SCX · Załadunki w 7 dni | „5 · zezwolenia 0 z 5 · 13 po dacie załadunku” | to samo | tak | — |
+| SCX · Do zafakturowania | „0 · 1 czeka na podpisany CMR (SG-01) · tydz. 41” · Faktury › | to samo | tak | status E25 i „jak tabela Faktur” (B7) — P4 (dopisek) |
+| SCX · Najbliższy prom | „… · fala 1,3 m, porywy 23 kn · ryzyko niskie” | bez porywów | częściowo | porywy pokaże kafelek, gdy źródło je poda (`gustKn`, dopisek) |
+| SCX · Terminowość | „0 z 1 · SG-01: plan 05.10, dostawa 06.10” | to samo | tak | — |
+| telefon · nagłówek | „Kokpit” · „H&H Logistics · Administrator” na całą szerokość | to samo | tak | — |
+| telefon · kafelki | 2 × 3 w ramce 12 px od brzegów; krótkie opisy; bez „Strona ›” | to samo; liczba 30 px w jednej linii; kafelek 105 px | tak | obraz: ok. 105 px |
+| telefon · pod kafelkami | E8: „Najpilniejsze z „Do zrobienia”” — 3 sprawy | to samo, 3 sprawy (komputer: 7 i przycisk „Ryzyka”) | tak | stopka i znacznik kursu tylko na komputerze (na telefonie nie ma kwoty) |
+| dolny pasek · liczba | czerwona liczba przy prawym górnym rogu ikony „Ryzyka” | to samo: biała liczba na `--red` (E10), ikona widoczna | tak | w motywie ciemnym kontrast jak w dzwonku (2,9 : 1) — sprawa E10, ta sama dla obu |
+| menu · liczby | liczba tylko przy działaniu do wykonania; bez liczb przy Harmonogramie, Strefach, Automatyzacjach | Ryzyka = „Do zrobienia” (HHL, SCX; KSH bez); Faktury = faktury czekające na mnie + transporty gotowe do mojej faktury; bez „1” zastępczego | tak | reguły E7/E25 — P4, P6 (dopisek); źródło: `src/lib/cockpitE9.ts` |
+
+### Konta (Z11)
+
+| konto | zrzut | różnica |
+|---|---|---|
+| HHL Administrator | `kokpit-1440-hhl-*`, `strona-1440-hhl-jasny.png`, `telefon-*-hhl-*` | — |
+| HHL Operacje | jak Administrator | podpis „Operacje” (te same kafelki, E9) |
+| KSH Użytkownik | `kokpit-1440-ksh-*`, `strona-1440-ksh-jasny.png`, `telefon-*-ksh-*` | — |
+| SCX Dyspozytor | `kokpit-1440-scx-*`, `strona-1440-scx-jasny.png`, `telefon-*-scx-*` | — |
+| SCX Użytkownik | jak Dyspozytor | podpis „Użytkownik” (decyzja 19:11: te same kafelki) |
+
+### Sprawdzenia
+
+- Brama E8 (`tests/e8-phone-gate.spec.ts`): 3 konta × 360 / 390 / 430 px — 0 poza ekranem, 0 uciętych, 0 celów < 44 px, 0 tekstu < 12 px, liczby kafelków w jednej linii.
+- Nowe testy „wyglad/P3-b Kokpit” w tym samym pliku: komputer 1440 (3 konta: nagłówek, kolejność 6 kafelków, 2 kolumny równej szerokości, „Strona ›”, stopka tylko HHL, „Do zrobienia” = liczba w menu, KSH bez liczby) i telefon 360 / 390 / 430 (nagłówek „Kokpit”, 2 × 3 równej szerokości, bez „Strona ›”, liczby w jednej linii i w kafelku, ≤ 3 najpilniejsze, bez stopki). Wstrzyknięta usterka (liczba 44 px z łamaniem, kolumny 1 : 2) — test łapie.
+- Testy jednostkowe `tests/p3b-cockpit-e9.test.ts` (9): kafelki trzech firm, opisy, „Do zrobienia”, liczba „Faktury” w menu, porywy i godzina wjazdu (gdy dane je podadzą).
+- axe (WCAG 2.1 AA) na Kokpicie i menu, 3 konta × jasny / ciemny × 1440 / 390: 0 naruszeń przed zmianą liczby na dolnym pasku; po niej w motywie ciemnym kontrast liczby jak w dzwonku (E10).
+- Strona bez przewijania w bok przy 1440, 1024, 768, 430, 390 i 360 px.
+- Testy przepisane (E9, komentarz w teście): `tests/i2l-detect-lag.test.ts` (próg 5 zdarzeń, B6), `tests/l8-cockpit-tiles.test.ts` („Do zrobienia” = menu, KSH bez kafelka decyzji), `tests/etap4-ui.spec.ts` G4 (kwota tylko na marży HHL), `tests/e8-phone-gate.spec.ts` „V1 i V2” (bez liczby przy Harmonogramie także na komputerze).
+- Migawki wzorców (`tests/__screenshots__/`) odświeżone w `visual.yml` (`update=true`) — wpis w `docs/handover/G4_WZORZEC.md`.
+
+### Pliki
+
+`wyglad-P3-b/`: `porownanie-komputer.png` i `porownanie-telefon.png` (obraz raportu u góry, aplikacja pod spodem), `kokpit-1440-*` (karta, jasny i ciemny), `strona-1440-*` (cała strona z menu i liczbami), `telefon-360|390|430-*`.
