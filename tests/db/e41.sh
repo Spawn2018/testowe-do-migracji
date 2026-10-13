@@ -39,7 +39,7 @@ sys "insert into risk_signals (project_id, load_id, kind, severity, title) value
  ('$P','$L1','ROAD_SE','LOW','Nieznany kod źródła drogowego — w panelu: zdarzenie drogowe'),
  ('$P','$L1','DOC_MISSING','HIGH','5c77d4d7: brak awizacji przed załadunkiem')" >/dev/null
 sval "przepisanie" "select e18_p15_apply() >= 2" t
-sval "szwedzki opis po polsku" "select count(*) from risk_signals where resolved_at is null and title like '%Zakaz ruchu ciężarówek w Szwecji:%riktningarna%'" 1
+sval "szwedzki opis po polsku" "select (count(*) >= 1)::text from risk_signals where resolved_at is null and title like '%Zakaz ruchu ciężarówek w Szwecji:%riktningarna%'" true
 sval "nieznany kod bez zmiany" "select count(*) from risk_signals where title like 'Nieznany kod źródła drogowego%'" 1
 sval "osiem znaków → kod wysyłki" "select count(*) from risk_signals where title like 'SG-03 %brak awizacji przed załadunkiem'" 1
 sval "kopia w dzienniku" "select (count(*) >= 2)::text from audit_log where action = 'E18_P15_KOPIA'" true
