@@ -2146,3 +2146,7 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 - Migracja **0199**: `matrix_notify` — IN_APP dla `PLAN_DATES_CHANGED` zawsze dla HHL_ADMIN, HHL_OPS, CARRIER_DISPATCH, CARRIER_USER; e-mail/push wg macierzy.
 
+## 2026-10-13 — P3 E5-1
+
+- Migracja **0200**: `notification_matrix.email = false` wszędzie (start E5-1).
+
