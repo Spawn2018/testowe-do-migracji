@@ -2070,4 +2070,7 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 - TEST zajęte: P2, od 13.10 12:27 — potwierdzenie w kopii `/d/Watch Tower/brama-test` na SHA `eb49590d` (zestawy security, status, e41, nullguard). Checki PR #167 na tym SHA: unit, visual i `db` zielone.
 - TEST 13.10 12:28–13:17, SHA `eb49590d`, migracja `0194_e41_nazwa_formaty.sql`. security 84/84 (+2 SKIP), status 44/44, **e41 16/16**, nullguard 161+136+192+118 = **607/607**. Raport `D:/Watch Tower/raporty/brama-test-eb49590d717ee9210d334e61aa750b12faa06f7e.json`. To potwierdzenie paczki, nie pełna brama tygodniowa (reszta zestawów nie była uruchamiana). **TEST wolne od 13:17.**
+- Produkcja 13.10 13:33–13:35, merge `35abe70b`. Parytet przed migracją: `missing_in_repo —`, `missing_on_prod 0194`. Kopia tytułów poza repozytorium: `D:\Watch Tower\dane\p2\kopia-e18-p15-2026-10-13.csv`, 88 wierszy danych, SHA-256 `fc9ee0db9fb7be3b653c62a072e001a16af55aed0b39dfe630211a9916a8d963`. Próba z ROLLBACK: `e18_p15_apply` 49, drugi raz 0, po ROLLBACK funkcja 0 i migracja 0. `db push` nałożył 0194; drugi raz: „Remote database is up to date.” Po COMMIT: migracja 0194 jest, funkcje 3, „Nieznany kod źródła drogowego” otwarte 39, kopie w dzienniku 49, tytuły „Zakaz ruchu…” 13. `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` zwracają 200.
+
+**P2 NA PRODUKCJI — commit `35abe70b`, 13.10.2026 13:35.** Następna paczka: P3.
 
