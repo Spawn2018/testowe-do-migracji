@@ -12,6 +12,7 @@ import { shows } from '../lib/prodFacade';
 import { DEFAULT_DOC_REQUIREMENTS, docStatusRows, docSummary, type DocRequirement, type DocStatusRow } from '../lib/docRequirements';
 import { defaultDocWeek, docsForWeek, weeksWithLoads } from '../lib/docWeek';
 import { clickableRow } from '../lib/clickableRow';
+import { useIsPhone } from '../lib/useIsPhone';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 
 const InsurancePolicyForm =
@@ -33,6 +34,7 @@ export function DocsView() {
   const loads = useTowerStore((s) => s.loads);
   const locale = useTowerStore((s) => s.locale);
   const role = useTowerStore((s) => s.role);
+  const phone = useIsPhone();
   const nLoads = loads.length;
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [filterCat, setFilterCat] = useState<DocCategory | 'ALL'>('ALL');
@@ -146,12 +148,16 @@ export function DocsView() {
         ) : null}
         {weeks.length ? (
           <select className="input" value={week} data-docs-week="" aria-label={t(locale, 'bill_col_week')} onChange={(e) => setPackWeek(e.target.value)}>
-            {weeks.map((w) => <option key={w} value={w}>{w}</option>)}
+            {weeks.map((w) => (
+              <option key={w} value={w}>
+                {phone ? tp(locale, 'p22_docs_week_label', { n: Number(w.split('-W')[1] ?? 0), w }) : w}
+              </option>
+            ))}
           </select>
         ) : null}
         <button
           type="button"
-          className="chipbtn"
+          className={phone ? 'btn ghost' : 'chipbtn'}
           data-docs-pack=""
           disabled={!week}
           onClick={() => {
@@ -161,10 +167,86 @@ export function DocsView() {
             });
           }}
         >
-          {t(locale, 'docs_week_pack')}
+          {phone ? t(locale, 'p22_docs_pack_short') : t(locale, 'docs_week_pack')}
         </button>
       </header>
       <div className="panel-bd flush">
+        {phone ? (
+          /* wyglad/P2-2 W4 (E8 pkt 2, img/e8-after „Dokumenty”): karta kategorii w trzech rzędach. */
+          <div className="mcards" data-docreq-cards="">
+            {rows.map((r) => {
+              const pct = r.n / Math.max(1, r.total);
+              const req = r.req;
+              const optional = req !== null && !req.required;
+              const editing = editCat === r.key && editReq !== null;
+              const reqText = !req
+                ? t(locale, r.key === 'INSURANCE' && !shows('policyExpiryNote') ? 'i2_docs_insurance_when' : r.whenKey)
+                : !req.required
+                  ? t(locale, 'iii6_optional')
+                  : t(locale, `iii6_a_${req.anchor}`).replace('{h}', String(req.offsetHours));
+              const who = req ? t(locale, `iii6_r_${req.responsible}`) : r.who;
+              return (
+                <article
+                  key={r.labelKey}
+                  className="mcard docreq-card"
+                  data-docreq-card={r.key}
+                  {...clickableRow(() => {
+                    setFilterCat(r.key);
+                  })}
+                >
+                  <header className="mcard-hd">
+                    <b>{t(locale, r.labelKey)}</b>
+                    {optional ? (
+                      <span className="mtag">{t(locale, 'iii6_optional')}</span>
+                    ) : r.overdue > 0 ? (
+                      <span className="mtag red" data-docreq-card-overdue={r.overdue}>{tp(locale, 'p22_docs_overdue_n', { n: r.overdue })}</span>
+                    ) : pct >= 1 ? (
+                      <span className="mtag go">{t(locale, 'p22_docs_complete_badge')}</span>
+                    ) : null}
+                  </header>
+                  {editing && editReq ? (
+                    <div className="mcard-edit" onClick={(e) => e.stopPropagation()}>
+                      <label>
+                        <input type="checkbox" data-docreq-card-required="" checked={editReq.required}
+                          onChange={(e) => setEditReq({ ...editReq, required: e.target.checked })} /> {t(locale, 'iii6_required')}
+                      </label>
+                      {editReq.anchor !== 'ORG' ? (
+                        <input className="input" type="number" min={0} max={720} data-docreq-card-hours=""
+                          aria-label={t(locale, 'iii6_hours')} value={editReq.offsetHours}
+                          onChange={(e) => setEditReq({ ...editReq, offsetHours: Math.max(0, Math.min(720, Math.round(Number(e.target.value) || 0))) })} />
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="mcard-line">{who} · {reqText}</div>
+                  )}
+                  <div className="mcard-foot">
+                    <span className="mcard-count">
+                      {optional ? '—' : (
+                        <>
+                          {t(locale, 'p22_docs_komplet')} <b>{tp(locale, 'p22_n_of_total', { n: r.n, total: r.total })}</b>
+                        </>
+                      )}
+                    </span>
+                    {role === 'HHL' ? (
+                      <span className="mcard-actions" onClick={(e) => e.stopPropagation()}>
+                        {editing && editReq ? (
+                          <>
+                            <button type="button" className="btn" data-action="docreq-card-save" onClick={() => void saveReq(editReq)}>{t(locale, 'iii6_save')}</button>
+                            <button type="button" className="btn ghost" onClick={() => setEditCat(null)}>{t(locale, 'iii6_cancel')}</button>
+                          </>
+                        ) : req ? (
+                          <button type="button" className="btn ghost" data-action="docreq-card-edit" onClick={() => { setEditCat(r.key); setEditReq(req); }}>
+                            {t(locale, 'iii6_edit')}
+                          </button>
+                        ) : null}
+                      </span>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
         <div className="tablewrap">
           <table>
             <thead>
@@ -245,6 +327,7 @@ export function DocsView() {
             </tbody>
           </table>
         </div>
+        )}
         <div className="note" data-docreq-proposal="" style={{ border: 0 }}>{t(locale, 'iii6_proposal')}</div>
 
         <div className="filters" style={{ padding: '9px 13px' }}>

@@ -1,6 +1,8 @@
 /**
- * E8 pkt 1 i 7 (P2-wyglad V3, D-20261013-1535-01).
+ * E8 pkt 1 i 7 (P2-wyglad V3, D-20261013-1535-01; uszczelnienie wyglad/P2-2 W6, D-20261013-1815-01).
  * 9 widoków, konto HHL, 360 / 390 / 430 px: elementy poza ekranem, cele < 44 px, tekst < 12 px = 0.
+ * W6: `main`, `body`, `html` i `.app` nie są paskiem przewijanym w bok (szerszy `main` = błąd „poza”);
+ * liczba w kafelku Kokpitu w jednej linii (E8 pkt 6); etykiety kart tabel wyrównane do lewej.
  * Wyjątki: tests/fixtures/e8-exceptions.txt.
  */
 import { readFileSync } from 'node:fs';
@@ -74,7 +76,8 @@ async function measure(page: Page, view: string, width: number): Promise<Hit[]> 
       const r = el.getBoundingClientRect();
       if (r.right <= vw + 1 && r.left >= -1) return false;
       let n: Element | null = el.parentElement;
-      while (n) {
+      // W6: strona, `main` i `.app` nie zwalniają — tylko prawdziwy pasek przewijany wewnątrz widoku.
+      while (n && n !== document.body && n !== document.documentElement && n.tagName !== 'MAIN' && !n.classList.contains('app')) {
         const cs = getComputedStyle(n);
         const ox = cs.overflowX;
         if ((ox === 'auto' || ox === 'scroll') && n.scrollWidth > n.clientWidth + 1) {
@@ -109,15 +112,45 @@ async function measure(page: Page, view: string, width: number): Promise<Hit[]> 
       if (r.width < 44 || r.height < 44) tight.push(name(el));
     });
     const pageWide = document.documentElement.scrollWidth > window.innerWidth + 1;
+    const main = document.querySelector('main');
+    const mainWide = !!main && main.scrollWidth > main.clientWidth + 1;
+    // W6: E8 pkt 6 — wartość kafelka Kokpitu nie łamie się (wysokość ≤ 1,4 × wysokość linii)
+    const broken: string[] = [];
+    document.querySelectorAll('.kpi .v').forEach((el) => {
+      if (!visible(el)) return;
+      const cs = getComputedStyle(el);
+      const lh = cs.lineHeight === 'normal' ? parseFloat(cs.fontSize) * 1.2 : parseFloat(cs.lineHeight);
+      if (el.getBoundingClientRect().height > lh * 1.4 + 0.5) broken.push(name(el));
+    });
+    // W6: etykiety kart tabel (td::before) przy lewej krawędzi
+    const misaligned: string[] = [];
+    document.querySelectorAll('.app td[data-label]').forEach((td) => {
+      if (!visible(td) || !td.getAttribute('data-label')) return;
+      const b = getComputedStyle(td, '::before');
+      if (b.content === 'none' || b.content === 'normal') return;
+      if (b.textAlign !== 'left' && b.textAlign !== 'start') misaligned.push(name(td));
+    });
     return {
-      out: pageWide ? ['STRONA szersza od okna', ...out] : out,
+      out: [
+        ...(pageWide ? ['STRONA szersza od okna'] : []),
+        ...(mainWide ? ['MAIN szerszy od okna'] : []),
+        ...out,
+      ],
       small,
       tight,
+      broken,
+      misaligned,
     };
   }, EXCEPTIONS);
   const pack = (kind: string, list: string[]): Hit | null =>
     list.length ? { kind, view, width, n: list.length, sample: list.slice(0, 8) } : null;
-  return [pack('poza', raw.out), pack('tekst', raw.small), pack('cel', raw.tight)].filter((x): x is Hit => x !== null);
+  return [
+    pack('poza', raw.out),
+    pack('tekst', raw.small),
+    pack('cel', raw.tight),
+    pack('liczba-lamana', raw.broken),
+    pack('etykieta', raw.misaligned),
+  ].filter((x): x is Hit => x !== null);
 }
 
 test.describe('brama E8 telefon', () => {
@@ -160,5 +193,36 @@ test.describe('P2-wyglad V1 i V2', () => {
     await page.waitForTimeout(200);
     await expect(page.locator('nav button.nav-pin[data-view="sched"] .count')).toBeHidden();
     await expect(page.locator('nav button.nav-pin[data-view="risk"] .count')).toBeVisible();
+  });
+});
+
+test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 120_000 });
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  test('telefon: karty typu w Finansach i karty kategorii w Dokumentach; komputer: tabele', async ({ page }) => {
+    await boot(page);
+    await openView(page, 'fin');
+    const finCards = page.locator('[data-fin-type-cards] [data-fin-type-card]');
+    expect(await finCards.count()).toBeGreaterThan(0);
+    await expect(finCards.first().locator('.mcard-kv dt')).toHaveCount(3);
+    await expect(page.locator('[data-fin-type-count]')).toBeVisible();
+
+    await openView(page, 'docs');
+    const docCards = page.locator('[data-docreq-cards] [data-docreq-card]');
+    expect(await docCards.count()).toBeGreaterThan(0);
+    await expect(docCards.first().locator('.mcard-foot')).toContainText('Komplet');
+    await expect(page.locator('[data-docreq]')).toHaveCount(0);
+    const upload = await page.locator('[data-page="docs"] > .panel-hd > .btn:not(.ghost)').boundingBox();
+    const hd = await page.locator('[data-page="docs"] > .panel-hd').boundingBox();
+    expect(upload && hd && upload.width).toBeGreaterThan((hd?.width ?? 0) - 40);
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForTimeout(300);
+    await openView(page, 'docs');
+    await expect(page.locator('[data-docreq-cards]')).toHaveCount(0);
+    expect(await page.locator('[data-docreq]').count()).toBeGreaterThan(0);
+    await openView(page, 'fin');
+    await expect(page.locator('[data-fin-type-cards]')).toHaveCount(0);
   });
 });

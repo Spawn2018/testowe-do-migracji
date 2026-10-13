@@ -1090,8 +1090,14 @@ img,video{max-width:100%;height:auto}
   main{overflow-x:auto}
   .panel-hd,header.panel-hd{flex-wrap:wrap;min-width:0;max-width:100%}
   .panel,.page-sections,.section-card,.banner{max-width:100%;min-width:0}
-  .banner span,.kpi,.kpi .v,.kpi .d,.stage .l{min-width:0;max-width:100%;overflow-wrap:anywhere}
-  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .banner span,.kpi,.kpi .d,.stage .l{min-width:0;max-width:100%;overflow-wrap:anywhere}
+  /* wyglad/P2-2 W1 (E8 pkt 6, img/e8-after): kafelki w 2 kolumnach, liczba nigdy się nie łamie.
+     Długa wartość (kwota) ma cały rząd i stoi na końcu; samotny ostatni kafelek też ma cały rząd. */
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:row dense}
+  .kpi{min-width:0}
+  .kpi .v{white-space:nowrap;font-size:30px;line-height:1.05}
+  .kpi.kpi-wide{grid-column:1/-1;order:2}
+  .kpi:not(.kpi-wide):nth-last-child(1 of :not(.kpi-wide)):nth-child(odd of :not(.kpi-wide)){grid-column:1/-1}
   .stage .l{white-space:normal;overflow:visible;text-overflow:unset}
   nav.tower-nav button.nav-pin[data-view="sched"] .count{display:none}
   .app table,.app tbody{display:block;width:100%;max-width:100%}
@@ -1105,9 +1111,11 @@ img,video{max-width:100%;height:auto}
     width:auto;min-width:0;max-width:100%;min-height:44px;padding:6px 12px;border:0;
     white-space:normal;overflow-wrap:anywhere;
   }
+  /* wyglad/P2-2 W2: etykiety kart w jednej kolumnie przy lewej krawędzi (komórki .num miały text-align:right) */
   .app td::before{
-    content:attr(data-label);font-weight:600;flex:0 1 42%;margin-right:8px;
+    content:attr(data-label);font-weight:600;flex:0 1 42%;margin-right:8px;text-align:left;
   }
+  .app td.num{text-align:right}
   .app td:not([data-label])::before,.app td[data-label=""]::before{content:none}
   .app td svg,.app td img{max-width:100%;height:auto}
   .e8-fine,.stage .l,nav .count,.kpi .k,.kpi .d,thead th .ar,.pill,.flag,kbd,
@@ -1125,7 +1133,10 @@ img,video{max-width:100%;height:auto}
     display:inline-flex;align-items:center;box-sizing:border-box;
     min-width:44px;min-height:44px;
   }
-  input[type="checkbox"],input[type="radio"]{width:44px;height:44px;min-width:44px;min-height:44px}
+  /* wyglad/P2-2 W5: pole wyboru w zwykłym rozmiarze; 44 px ma cały wiersz z napisem (label) */
+  input[type="checkbox"],input[type="radio"]{width:22px;height:22px;min-width:22px;min-height:22px;margin:0 8px 0 0;flex:0 0 auto}
+  label:has(> input[type="checkbox"]),label:has(> input[type="radio"]){gap:2px;padding-right:8px;cursor:pointer}
+  .page-sections[data-page="map"] .maplayers label{min-height:44px}
   input:not([type="checkbox"], [type="radio"], .sronly),select,textarea{min-width:0;max-width:100%}
   .leaflet-bar a,.leaflet-control-zoom a{
     display:flex;align-items:center;justify-content:center;
@@ -1137,4 +1148,38 @@ img,video{max-width:100%;height:auto}
   .panel.grid2,.panel-bd,svg{max-width:100%;min-width:0}
   svg{display:block;height:auto}
   svg text{font-size:12px}
+}
+
+/* wyglad/P2-2 W3 i W4 (E8 pkt 2, img/e8-after; źródło: makiety_html/E8/telefon.html .card .r1 .kv .m .drv .pill).
+   Karty renderowane tylko na telefonie (useIsPhone), więc reguły nie dotykają komputera. */
+.mcards{display:flex;flex-direction:column;gap:8px;margin:8px 0}
+.panel-bd.flush>.mcards{margin:8px}
+.mcard{background:var(--surface);border:1px solid var(--rule);padding:10px 11px;display:flex;flex-direction:column;gap:4px;text-align:left;color:inherit}
+.mcard-hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mcard-hd>b{font-family:var(--font-cond);font-weight:700;font-size:17px;line-height:1.2}
+.mcard-sub{font-size:12.5px;color:var(--ink-3)}
+.sec>[data-fin-type-count]{margin-left:8px;font-weight:400}
+.mcard-kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0;font-size:13px;font-variant-numeric:tabular-nums}
+.mcard-kv>div{display:contents}
+.mcard-kv dt{color:var(--ink-3)}
+.mcard-kv dd{margin:0;text-align:right}
+.mcard-kv .strong dt{color:var(--ink);font-weight:700}
+.mcard-kv .strong dd{font-weight:700}
+.mcard-line{font-size:13px;color:var(--ink-2)}
+.mcard-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--ink-2);min-height:44px;border-top:1px solid var(--rule-2);margin-top:2px;padding-top:4px}
+.mcard-count b{color:var(--ink)}
+.mcard-actions{display:flex;gap:6px}
+.mcard-edit{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px}
+.mcard-edit .input{width:90px}
+.mtag{font-family:var(--font-cond);font-weight:600;font-size:12px;letter-spacing:.04em;padding:1px 6px;border:1px solid var(--rule);background:var(--surface-2);color:var(--ink-3);white-space:nowrap}
+.mtag.red{color:var(--red);border-color:var(--red);background:var(--red-bg)}
+.mtag.go{color:var(--go);border-color:var(--go);background:var(--go-bg)}
+@media (max-width:768px){
+  /* Dokumenty: „Wgraj dokument” na całą szerokość, pod nim tydzień i „Pobierz paczkę” w jednym rzędzie */
+  .page-sections[data-page="docs"]>.panel-hd{gap:8px}
+  .page-sections[data-page="docs"]>.panel-hd>.spacer{display:none}
+  .page-sections[data-page="docs"]>.panel-hd>.btn:not(.ghost){flex:1 1 100%;min-height:44px}
+  .page-sections[data-page="docs"]>.panel-hd>select{flex:1 1 0;min-width:0;font-size:16px}
+  .page-sections[data-page="docs"]>.panel-hd>[data-docs-pack]{flex:0 0 auto;min-height:44px}
+  .mcard-foot .btn{min-height:44px;font-size:14px}
 }
