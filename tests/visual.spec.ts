@@ -112,14 +112,14 @@ async function setTheme(page: Page, theme: 'light' | 'dark', roleDefault: 'light
   )
   if (current === theme) return
   if (current !== roleDefault) {
-    await page.click('#themeBtn')
+    await page.evaluate(() => (document.querySelector('#themeBtn') as HTMLButtonElement).click()) /* wyglad/P3 (E37): motyw w zamkniętym menu konta */
     await page.waitForTimeout(300)
   }
   const mid = await page.evaluate(() =>
     document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark',
   )
   if (mid !== theme) {
-    await page.click('#themeBtn')
+    await page.evaluate(() => (document.querySelector('#themeBtn') as HTMLButtonElement).click()) /* wyglad/P3 (E37): motyw w zamkniętym menu konta */
     await page.waitForTimeout(300)
   }
   const final = await page.evaluate(() =>

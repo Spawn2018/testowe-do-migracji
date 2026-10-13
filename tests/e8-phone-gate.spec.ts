@@ -3,7 +3,8 @@
  * P2-wyglad V3 (D-20261013-1535-01); uszczelnienie wyglad/P2-2 W6 (D-20261013-1815-01)
  * i wyglad/P2-2-popr (niezależne sprawdzenie koordynatora 13.10: 6 wstrzykniętych usterek przechodziło).
  *
- * 9 widoków × konta HHL, SCX i KSH × 360 / 390 / 430 px. Każda liczba = 0:
+ * 9 widoków × konta HHL, SCX i KSH × 360 / 390 / 430 px, a także otwarte menu konta i lista promów
+ * z paska górnego (wyglad/P3, E37 pkt 2). Każda liczba = 0:
  * - „poza”: element wystaje poza okno; zwalnia go tylko pasek przewijany z listy tests/fixtures/e8-strips.txt
  *   (strona, `main` i `.app` nigdy); szerszy `main` albo strona = błąd;
  * - „uciete”: treść ucięta przez `overflow:hidden|clip` albo wielokropek (scrollWidth > clientWidth),
@@ -237,6 +238,16 @@ test.describe('brama E8 telefon', () => {
           if (!(await openView(page, view, false))) continue;
           hits.push(...await measure(page, view, width, role));
         }
+        // wyglad/P3 (E37 pkt 2): otwarte menu konta (z „Podglądem”, gdy jest) i lista promów w pasku
+        await openView(page, 'dash');
+        await page.click('#accountBtn');
+        const preview = page.locator('[data-acc="preview"] > .acc-row');
+        if (await preview.count()) await preview.click();
+        hits.push(...await measure(page, 'menu-konta', width, role));
+        await page.click('#accountBtn');
+        await page.click('[data-ferry-chip]');
+        hits.push(...await measure(page, 'promy', width, role));
+        await page.click('[data-ferry-chip]');
       }
       const report = hits.map((h) => `${h.role} ${h.width} ${h.view} ${h.kind}=${h.n}: ${h.sample.join(' | ')}`).join('\n');
       expect(hits, report).toEqual([]);
@@ -296,5 +307,160 @@ test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
     expect(await page.locator('[data-docreq]').count()).toBeGreaterThan(0);
     await openView(page, 'fin');
     await expect(page.locator('[data-fin-type-cards]')).toHaveCount(0);
+  });
+});
+
+/** Kopia znaczników PreviewBanner, ImpersonationBanner i SystemBroadcastBanner — w demo ich nie ma (zależą od logowania). */
+const SUBBARS_HTML = `
+<div class="subbar subbar-preview" data-banner="preview" role="status"><p class="subbar-tx"><b>Podgląd: tak widzi KSH Użytkownik.</b> Nic tu nie zapiszesz.</p><button class="subbar-btn" type="button">Wróć do HHL</button></div>
+<div class="subbar subbar-actas" data-banner="impersonation" role="status"><p class="subbar-tx"><b>Działasz jako: dyspozytor SCX (Przemysław Szczepański-Kowalczyk)</b> Każda zmiana zapisze się w historii jako „administrator.hhl@przyklad.pl (HHL) jako dyspozytor SCX”.</p><button class="subbar-btn" type="button">Zakończ</button></div>
+<div class="subbar subbar-bcast" data-banner="system-broadcast" role="status"><p class="subbar-tx"><span class="subbar-tag">KOMUNIKAT HHL</span><b class="subbar-tag-ph">Komunikat HHL:</b> <b class="subbar-body">Prom Stena Estelle 09.10 wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.</b><span class="subbar-until"> · do 09.10, 12:00</span></p></div>`;
+const LONG_NAME = 'Przemysław Szczepański-Kowalczyk';
+
+test.describe('wyglad/P3 pasek górny (E37 pkt 1–2, img/e37-after)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+
+  test('komputer 800–1440 px: długie imię i nazwisko, wszystko w pasku 52 px, nic na sobie', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page);
+    const bad: string[] = [];
+    for (const [width, name] of [[1440, LONG_NAME], [1366, LONG_NAME], [1280, LONG_NAME], [1241, LONG_NAME], [1241, `${LONG_NAME} z Wiśniewskich`], [1100, LONG_NAME], [1024, LONG_NAME], [900, LONG_NAME], [800, LONG_NAME]] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.waitForTimeout(150);
+      const res = await page.evaluate((name) => {
+        const b = document.querySelector('#accountBtn .acc-who b');
+        if (b) b.textContent = name;
+        const bar = document.querySelector('.topbar') as HTMLElement;
+        const br = bar.getBoundingClientRect();
+        const out: string[] = [];
+        if (bar.scrollWidth > bar.clientWidth + 1) out.push(`pasek przewija się w poziomie (${bar.scrollWidth} > ${bar.clientWidth})`);
+        if (document.documentElement.scrollWidth > window.innerWidth + 1) out.push('strona szersza od okna');
+        const kids = [...bar.children].filter((e) => getComputedStyle(e).display !== 'none' && (e as HTMLElement).offsetWidth > 0 && !e.classList.contains('kbdpanel'));
+        let prevRight = -1;
+        for (const k of kids) {
+          const r = k.getBoundingClientRect();
+          const tag = (k as HTMLElement).className || k.id;
+          if (r.top < br.top - 1 || r.bottom > br.bottom + 1) out.push(`${tag} wystaje z paska (${Math.round(r.top)}–${Math.round(r.bottom)})`);
+          if (r.left < prevRight - 1) out.push(`${tag} nachodzi na poprzedni element`);
+          if (r.right > window.innerWidth + 1) out.push(`${tag} poza oknem`);
+          if (r.width > 0) prevRight = r.right;
+        }
+        const brand = document.querySelector('.topbar .brand b') as HTMLElement;
+        const lh = parseFloat(getComputedStyle(brand).lineHeight) || parseFloat(getComputedStyle(brand).fontSize) * 1.3;
+        if (brand.getBoundingClientRect().height > lh * 1.4) out.push('„WATCH TOWER” w dwóch liniach');
+        return out;
+      }, name);
+      bad.push(...res.map((x) => `${width} (${name.length} znaków): ${x}`));
+    }
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+
+  test('telefon: paski pod paskiem; menu konta, prom i dzwonek pod nimi i nad dolnym paskiem — 0 uciętych, 0 celów < 44 px, 0 tekstu < 12 px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page);
+    const hits: Hit[] = [];
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: 640 }); // niski telefon: listy muszą się zmieścić nad dolnym paskiem
+      await page.evaluate((html) => {
+        document.querySelectorAll('.topstack .subbar').forEach((e) => e.remove());
+        document.querySelector('.topstack')!.insertAdjacentHTML('beforeend', html);
+      }, SUBBARS_HTML);
+      hits.push(...await measure(page, 'paski', width, 'HHL'));
+      // menu konta, lista promów i lista dzwonka: pod paskami, nad dolnym paskiem E8, dół listy widoczny
+      for (const [open, sel] of [['#accountBtn', '#accountMenu'], ['[data-ferry-chip]', '[data-ferry-pop]'], ['.bell-trigger', '.bell-pop']] as const) {
+        await page.click(open);
+        const res = await page.evaluate((q) => {
+          const last = [...document.querySelectorAll('.topstack .subbar')].pop()!.getBoundingClientRect();
+          const pop = document.querySelector(q) as HTMLElement;
+          const r = pop.getBoundingClientRect();
+          const nav = document.querySelector('nav.tower-nav')!.getBoundingClientRect();
+          const low = document.elementFromPoint(r.left + r.width / 2, r.bottom - 4);
+          const out: string[] = [];
+          if (r.top < last.bottom - 1) out.push(`${q} zasłania paski`);
+          if (r.bottom > Math.min(window.innerHeight, nav.top) + 1) out.push(`${q} schodzi pod dolny pasek albo poza okno (${Math.round(r.bottom)} > ${Math.round(Math.min(window.innerHeight, nav.top))})`);
+          if (!low || !pop.contains(low)) out.push(`${q}: dół listy przykryty`);
+          return out;
+        }, sel);
+        if (res.length) hits.push({ kind: 'lista-pod-paskami', view: 'paski', width, role: 'HHL', n: res.length, sample: res });
+        await page.click(open);
+      }
+    }
+    await page.evaluate(() => document.querySelectorAll('.topstack .subbar').forEach((e) => e.remove()));
+    const report = hits.map((h) => `${h.width} ${h.kind}=${h.n}: ${h.sample.join(' | ')}`).join('\n');
+    expect(hits, report).toEqual([]);
+  });
+
+  test('E13 telefon: lista dzwonka pod paskiem na całą szerokość, widoczna w środku, przewijana w środku', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page);
+    const bad: string[] = [];
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.click('.bell-trigger');
+      const r = await page.evaluate(() => {
+        const pop = document.querySelector('.bell-pop') as HTMLElement;
+        const bar = document.querySelector('.topbar')!.getBoundingClientRect();
+        const pr = pop.getBoundingClientRect();
+        const mid = document.elementFromPoint(pr.left + pr.width / 2, pr.top + Math.min(pr.height - 4, 150));
+        const scroller = pop.querySelector(':scope > div:last-child') as HTMLElement | null;
+        return {
+          left: pr.left, right: pr.right, top: pr.top, bottom: pr.bottom, barBottom: bar.bottom, w: window.innerWidth, h: window.innerHeight,
+          inside: !!mid && pop.contains(mid),
+          scroll: scroller ? getComputedStyle(scroller).overflowY : 'brak',
+        };
+      });
+      if (!(r.left >= 0 && r.left <= 16 && r.right >= r.w - 16 && r.right <= r.w)) bad.push(`${width}: lista nie na całą szerokość (${Math.round(r.left)}–${Math.round(r.right)})`);
+      if (r.top < r.barBottom - 1) bad.push(`${width}: lista zaczyna się w pasku`);
+      if (r.bottom > r.h) bad.push(`${width}: lista wychodzi poza okno`);
+      if (!r.inside) bad.push(`${width}: w środku listy jest inny element (lista pod spodem)`);
+      if (r.scroll !== 'auto') bad.push(`${width}: lista bez przewijania w środku`);
+      await page.mouse.click(5, 820);
+      if (await page.locator('.bell-pop').count()) bad.push(`${width}: dotknięcie obok nie zamyka listy`);
+    }
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+
+  test('komputer: Podgląd, tydzień i rejsy, data, ?, dzwonek, konto z menu; bez sesji w lewym menu', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page);
+    await expect(page.locator('#brandSub')).toHaveText('Stegra Boden');
+    await expect(page.locator('#roleLbl')).toHaveText('Podgląd');
+    await expect(page.locator('#roleSeg button')).toHaveText(['HHL', 'KSH', 'SCX']);
+    await expect(page.locator('#ops .wk')).toBeVisible();
+    await expect(page.locator('#ops [data-ferry-row]').first()).toContainText('→');
+    await expect(page.locator('#ops [data-ops-date]')).toHaveText(/^\d{2}\.\d{2}\.\d{4}$/);
+    await expect(page.locator('#helpBtn')).toBeVisible();
+    await expect(page.locator('#accountBtn .acc-who b')).toBeVisible();
+    await expect(page.locator('#themeBtn')).toBeHidden();
+    await expect(page.locator('nav .nav-session')).toHaveCount(0);
+    await expect(page.locator('[data-ferry-chip]')).toBeHidden();
+
+    await page.click('#accountBtn');
+    await expect(page.locator('#accountMenu .acc-row:visible .acc-lbl')).toHaveText(['Moje konto', 'Dla mnie', 'Pomoc', 'Jasny / ciemny']);
+    const before = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    await page.click('#themeBtn');
+    expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).not.toBe(before);
+    await page.click('[data-acc="my-account"]');
+    await expect(page.locator('#accountMenu')).toBeHidden();
+    await expect(page.locator('[data-section="users"]')).toHaveAttribute('open', '');
+  });
+
+  test('telefon: logo, najbliższy prom, dzwonek, konto; ?, motyw i Podgląd w menu konta', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page);
+    await expect(page.locator('[data-ferry-chip]')).toBeVisible();
+    await expect(page.locator('#helpBtn')).toBeHidden();
+    await expect(page.locator('.topbar .roleswitch')).toBeHidden();
+    await expect(page.locator('#ops')).toBeHidden();
+    await expect(page.locator('#accountBtn .acc-who')).toBeHidden();
+    await page.click('[data-ferry-chip]');
+    await expect(page.locator('[data-ferry-pop] .ferry-pop-ft b').first()).toHaveText(/^t\d+$/);
+    await page.click('[data-ferry-chip]');
+    await page.click('#accountBtn');
+    await expect(page.locator('#accountMenu .acc-row:visible .acc-lbl')).toHaveText(['Moje konto', 'Pomoc', 'Podgląd: HHL · KSH · SCX', 'Jasny / ciemny']);
+    await page.click('[data-acc="preview"] > .acc-row');
+    await page.click('[data-preview-seg] button[data-role="KSH"]');
+    await expect(page.locator('#roleSeg button[data-role="KSH"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#accountMenu')).toBeHidden();
   });
 });

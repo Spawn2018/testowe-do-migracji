@@ -29,7 +29,7 @@ export function UiPrefsPanel({ onSaved, showDemoMarks: showDemoToggle, subKey = 
     });
   }, [live]);
   return (
-    <section className="panel option-panel">
+    <section className="panel option-panel" data-screen="for-me">
       <header className="panel-hd"><h2>{t(locale, 'opt_ui_prefs')}</h2><span className="sub">{t(locale, subKey)}</span></header>
       <div className="panel-bd"><dl className="kv options-kv">
         {showDemoToggle ? <><dt>{t(locale, 'opt_demo_marks')}</dt><dd><label className="switchline"><input type="checkbox" checked={showDemoMarks} onChange={(e) => { setShowDemoMarks(e.target.checked); onSaved('demo'); }} /><span>{showDemoMarks ? t(locale, 'on') : t(locale, 'off')}</span></label><div className="muted" style={{ marginTop: 4 }}>{t(locale, 'opt_demo_marks_sub')}</div></dd></> : null}

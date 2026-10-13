@@ -21,6 +21,8 @@ export interface AuthProfile {
   real_email?: string | null;
   real_role?: UserRole | null;
   acting_as?: boolean;
+  /** wyglad/P3 (E37): „ostatnie logowanie” w menu konta — pole wypełnia logika profilu (gdy jest). */
+  last_sign_in_at?: string | null;
 }
 
 let current: AuthProfile | null = null;

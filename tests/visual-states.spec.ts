@@ -27,7 +27,7 @@ async function open(page: Page, theme: 'dark' | 'light') {
   /* B-SMOKE-LANG: bez #langSeg — PL domyślny */
   await page.waitForTimeout(300)
   const cur = await page.evaluate(() => document.documentElement.getAttribute('data-theme'))
-  if (cur !== theme) await page.click('#themeBtn')
+  if (cur !== theme) await page.evaluate(() => (document.querySelector('#themeBtn') as HTMLButtonElement).click()) /* wyglad/P3 (E37): motyw w zamkniętym menu konta */
   await page.evaluate(async () => { if (document.fonts?.ready) await document.fonts.ready })
 }
 async function sched(page: Page, opts: { holdSkeleton?: boolean } = {}) {
