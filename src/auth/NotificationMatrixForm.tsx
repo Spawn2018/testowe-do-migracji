@@ -116,6 +116,8 @@ export default function NotificationMatrixForm() {
           </tbody>
         </table>
         <div className="note option-note">{t(locale, 'dec_matrix_note')}</div>
+        {/* G-18 / E11: dzwonek PLAN_DATES_CHANGED zawsze dla HHL Admin/Ops i SCX Dyspozytor/Użytkownik — w bazie (0199) */}
+        <div className="note option-note">{t(locale, 'dec_matrix_plan_dates_locked')}</div>
       </div>
     </section>
   );

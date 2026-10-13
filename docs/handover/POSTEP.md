@@ -2142,3 +2142,7 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Migracja **0198**: `is_hhl_admin()`; zapisy Opcji (`rate_card_save`, SEFS/paliwo, bramka SMS) tylko Administrator HHL.
 - Opcje UI: Operacje bez Użytkowników (admin), Logowań, Historii zmian; Moje konto / 2FA / urządzenia zostają.
 
+## 2026-10-13 — P3 G-18 (matryca dat)
+
+- Migracja **0199**: `matrix_notify` — IN_APP dla `PLAN_DATES_CHANGED` zawsze dla HHL_ADMIN, HHL_OPS, CARRIER_DISPATCH, CARRIER_USER; e-mail/push wg macierzy.
+
