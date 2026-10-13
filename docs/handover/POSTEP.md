@@ -2184,3 +2184,16 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Wygląd P3 (Z4/Z11, V5, E13 CSS): koordynator na `wyglad/P3` (dopisek D-20261013-2130-01).
 
 **P3 (logika/baza) NA PRODUKCJI — commit `567fcc5a`, migracje 0196–0203, wdrożenie `dpl_9tAM8dDaeXZ2awdpHD6RCNwdkLPP`, 13.10.2026 23:32.** Następna: P4 (logika); wygląd P3 osobno.
+
+## 2026-10-14 — wyglad/P3-a (pasek E37 + E13) — NA PRODUKCJI
+
+- Dopisek `D-20261013-2255-01` w `docs/handover/dopiski/` (G1–G5).
+- Przed scaleniem: `unit` i `visual` zielone na `981c93d`; gitleaks 0 na zakresie PR; `npm audit --omit=dev --audit-level=high` 0.
+- Scalenie PR #178 (`wyglad/P3`) → merge `25b71bca` (14.10.2026 00:10). Bez migracji.
+- Wdrożenie R7 z `main` `25b71bca`, 14.10.2026 00:12, `dpl_FBYjeG86cptLjWvXiRmURHH5kKkt`.
+- Plik JS przed: `assets/index-_PKBum7P.js`. Po: `assets/index-lVQ_YtiK.js` — ta sama nazwa na `tower.log-mar.pl`, `watch-tower-makieta.vercel.app` i w `dist/` buildu. Oba adresy 200. 64 pliki JS: 0 × `service_role`. Kopia wdrożeniowa usunięta.
+- G3 (uchwyty): `#themeBtn` w menu konta; `[data-auth="session"]` na `#accountBtn`; `.nav-session` usunięte; `#roleSeg` bez zmian (napisy HHL/KSH/SCX, „Podgląd”).
+- G4 (podłączenie, bez zmiany wyglądu): `last_sign_in_at` z sesji Auth w `AuthGate`; typ `real_full_name` + `ImpersonationBanner` (fallback `real_email`); migracja `my_profile` (`last_sign_in_at` z `auth.users` dla eff, `real_full_name`) — przy rebase P4 (numer wolny); G4.2 „Moje konto” KSH/SCX — po P3-c.
+- PLAN §4 P3: P3-a / P3-b / P3-c; §8 wiersz dopisku.
+
+**wyglad/P3-a NA PRODUKCJI — commit `25b71bca`, wdrożenie `dpl_FBYjeG86cptLjWvXiRmURHH5kKkt`, 14.10.2026 00:12.**
