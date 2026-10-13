@@ -302,7 +302,7 @@ val "HHL_ADMIN aal1: my_mfa_status wymagane, niespełnione" $HHL "select (my_mfa
 val "HHL_ADMIN aal2: pełny dostęp" $HHL "$A2; select is_hhl()::text||'/'||can_see_margin()::text||'/'||(select count(*) from loads)" "true/true/$(Q "select count(*) from loads")"
 val "HHL_ADMIN aal2: my_mfa_status spełnione" $HHL "$A2; select my_mfa_status()->>'satisfied'" true
 val "HHL_OPS przy aal1 bez zmian (wymaganie tylko dla HHL_ADMIN)" $OPS "select is_hhl()" t
-val "KSH przy aal1 bez zmian" $KSH "select current_app_role()" CLIENT_ADMIN
+val "KSH przy aal1 bez zmian" $KSH "select current_app_role()" CLIENT_USER
 err "przełącznik: HHL_ADMIN aal1 odrzucony" $HHL "select admin_set_mfa_enforcement(false)" "wyłącznie administrator HHL"
 err "przełącznik: HHL_OPS aal2 odrzucony" $OPS "$A2; select admin_set_mfa_enforcement(false)" "wyłącznie administrator HHL"
 val "przełącznik: HHL_ADMIN aal2 wyłącza + audyt" $HHL "$A2; select admin_set_mfa_enforcement(false)" f commit
@@ -416,7 +416,7 @@ $PSQL -c "update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003'
 chk "nowy transport: POTWIERDZONA z pliku, bez autora KSH" "$(Q "select plan_dates_status||'/'||coalesce(plan_dates_confirmed_by::text,'∅')||'/'||(plan_dates_confirmed_at is not null)::text from loads where id='$LD'")" "POTWIERDZONA/∅/true"
 # AUD-03 (0192): ksh_confirm_dates ponownie włączone (decyzja właściciela 05.10, KSH — PANEL ZLECENIA) — pełne testy: tests/db/aud03.sh
 err "AUD-03: ksh_confirm bez zmian dat (KSH) → changed false" $KSH "select ksh_confirm_dates('$LD')" '"changed": false'
-err "AUD-03: ksh_confirm tylko KSH (HHL odmowa)" $HHL "select ksh_confirm_dates('$LD')" "wyłącznie KSH"
+err "AUD-03: ksh_confirm tylko KSH (HHL odmowa)" $HHL "select ksh_confirm_dates('$LD')" "KSH Użytkownik|wyłącznie KSH"
 err "konto bez app_users: odmowa" 11111111-0000-0000-0000-0000000000ee "select ksh_confirm_dates('$LD')" "Brak aktywnego konta"
 err "HHL nie ustawi statusu ręcznie (PATCH)" $HHL "update loads set plan_dates_status='WSTEPNA' where id='$LD'" "Status dat planu"
 err "ANEKS 2: przewoźnik nadal nie zmienia okien KSH" $SCX "update loads set plan_load_date='$D3' where id='$LD'" "Przewoźnik nie może zmieniać"

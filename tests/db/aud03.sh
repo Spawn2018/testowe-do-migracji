@@ -31,8 +31,8 @@ val "przewoźnik (SCX) zmienia ciągnik na swoim transporcie" $SCX "with u as (u
 val "HHL zmienia ciągnik"                                  $HHL "with u as (update loads set tractor_plate='PO3333C' where id='$L1' returning 1) select count(*) from u" 1
 
 echo; echo "[aud03-2] Edycja dat przez KSH (ksh_confirm_dates)"
-err "przewoźnik nie wywoła edycji dat KSH"                 $SCX "select ksh_confirm_dates('$L1','2026-11-11','2026-11-15')" "wyłącznie KSH"
-err "HHL nie wywoła edycji dat KSH"                        $HHL "select ksh_confirm_dates('$L1','2026-11-11','2026-11-15')" "wyłącznie KSH"
+err "przewoźnik nie wywoła edycji dat KSH"                 $SCX "select ksh_confirm_dates('$L1','2026-11-11','2026-11-15')" "KSH Użytkownik|wyłącznie KSH"
+err "HHL nie wywoła edycji dat KSH"                        $HHL "select ksh_confirm_dates('$L1','2026-11-11','2026-11-15')" "KSH Użytkownik|wyłącznie KSH"
 err "rozładunek przed załadunkiem odrzucony"               $KSH "select ksh_confirm_dates('$L1','2026-11-12','2026-11-11')" "przed datą załadunku"
 err "okno odwrócone odrzucone"                             $KSH "select ksh_confirm_dates('$L1',null,null,'2026-11-10 16:00+01','2026-11-10 08:00+01')" "Początek okna"
 val "KSH zmienia datę i godziny"                           $KSH "select (ksh_confirm_dates('$L1','2026-11-12','2026-11-16','2026-11-12 08:00+01','2026-11-12 14:00+01','2026-11-16 09:00+01','2026-11-16 13:00+01')->>'changed')" true commit

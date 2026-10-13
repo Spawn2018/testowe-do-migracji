@@ -92,7 +92,7 @@ chk "restore_mark_relink(): lista = konta bez auth.users (seed: 3)" "$(Q "select
 chk "zaproszenie ksh@test przyjęte (restore) — bez listy byłby TOWER_NO_INVITE" "$(Q "select count(*) from user_invites where email='ksh@test' and accepted_at is null")" 0
 $PSQL -c "insert into auth.users (id, email) values ('$REL','KSH@test')" >/dev/null 2>&1
 chk "nowe konto auth z adresem z listy → app_users.auth_id = nowe konto" "$(Q "select count(*) from app_users where email='ksh@test' and auth_id='$REL'")" 1
-chk "rola i organizacja bez zmian"                               "$(Q "select role||':'||(org_id is not null) from app_users where auth_id='$REL'")" "CLIENT_ADMIN:true"
+chk "rola i organizacja bez zmian"                               "$(Q "select role||':'||(org_id is not null) from app_users where auth_id='$REL'")" "CLIENT_USER:true"
 chk "audit USER_RELINKED_AFTER_RESTORE, adres zdjęty z listy"   "$(Q "select count(*) from audit_log where action='USER_RELINKED_AFTER_RESTORE' and new_value->>'new_auth_id'='$REL'"):$(Q "select count(*) from account_relink_pending where email='ksh@test'")" "1:0"
 chk "połączone konto widzi dane (>0)"                            "$( [ "$(sees $REL)" -gt 0 ] && echo t)" t
 chk "adres spoza listy i bez zaproszenia → TOWER_NO_INVITE"      "$($PSQL -c "insert into auth.users (id, email) values (gen_random_uuid(), 'obcy@firma.pl')" 2>&1 | grep -c TOWER_NO_INVITE)" 1
