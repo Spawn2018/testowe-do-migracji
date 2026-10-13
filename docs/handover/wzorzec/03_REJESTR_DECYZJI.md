@@ -19,6 +19,11 @@ Właściciel, 08.10.2026 13:26: „Najświeższe ustalenia poczynione w tym czac
 | E44 / D-TELM-ETA — część „linki podwykonawców” | czeka na linki | link RIO jest; odczyt automatyczny według E44 w P4 (G-24). Część D-TELM-ETA „oficjalne API emtrack” nadal czeka (`PLAN.md` §5 W15) |
 | grupowanie na mapie | tylko auta na promie (E45) | także auta w jednej lokalizacji (G-19) |
 
+### Decyzja właściciela 13.10.2026, 15:31 i 15:43 — wzorzec wyglądu
+| ID | Sprawa | Decyzja | Status |
+|---|---|---|---|
+| WYGLAD-RAPORT | wzorzec wyglądu całej aplikacji | Wygląd całej aplikacji, na komputerze i na telefonie = raport audytu (`raport/index.html` + `raport/img/`) z najnowszymi decyzjami właściciela. Każda paczka pokazuje to dowodem, koordynator sprawdza | ✅ |
+
 ### Wpisy zastąpione albo zamknięte (z `UZGODNIENIE_08_10.md` pkt 2; numery linii dotyczą wersji rejestru z 07.10.2026)
 | Wpis (linia) | Dziś w rejestrze | Obowiązuje |
 |---|---|---|

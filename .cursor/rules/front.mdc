@@ -3,7 +3,7 @@ description: Front Watch Tower — wygląd, teksty, telefon, paczka produkcyjna
 globs: src/**
 alwaysApply: false
 ---
-- **Wygląd = makieta etapu audytu** (`docs/handover/audyt_claude_2026-10-08/makiety_html/E<nr>/`, obrazy w `raport/img/`). Bez makiety etapu — `design/claude-v2.0/` i tokeny. Teksty oznaczone „Przykład” to przykłady, nie dane.
+- Wygląd = raport audytu (`raport/index.html` + `raport/img/`), najnowsza decyzja wygrywa; `makiety_html/` pomocniczo; dowód w `docs/handover/odbior/P<n>/` (konstytucja VIII, WYGLAD-RAPORT, D-20261013-1535-01 Z). Teksty oznaczone „Przykład” to przykłady, nie dane.
 - Nazwa transportu tylko z jednej funkcji (E41: „SG-03 · 0005/09/S/2026”, KSH sam kod). Formaty tylko z jednego modułu (E21).
 - Każdy tekst przez słownik, **tylko PL** (nowe klucze bez EN i SV, E43).
 - Daty ze strefą: Warszawa lub Sztokholm, oznaczone. Kwoty w EUR; PLN jako widok z ustawień użytkownika (w bazie).
