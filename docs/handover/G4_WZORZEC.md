@@ -187,6 +187,10 @@ Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visua
 
 Odświeżone 8 migawek stanów Harmonogramu z `visual.yml` `update=true` (run 38421964162, gałąź `pakiet/P2-wyglad`). Ekrany: Harmonogram — kolumna „Wysyłka” to sam kod. Kokpit i Mapa bez zmiany pikseli. Matrycy 280 ujęć nie ruszano.
 
+## wyglad/P3-a (13.10.2026) — E37 pasek górny, E13
+
+Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38466075360, gałąź `wyglad/P3`, commit `73e98ef`). Wszystkie ekrany: nowy pasek górny (konto po prawej, „Podgląd” HHL / KSH / SCX, rejsy z pełnymi nazwami portów, bez przycisku motywu), lewe menu bez e-maila i „Wyloguj”. Matrycy 280 ujęć nie ruszano.
+
 ## AUD-03 (06.10.2026) — Harmonogram KSH bez „Zmień ciągnik”
 
 Zamierzona zmiana UI (polecenie AUD-03: „Zmień ciągnik” niewidoczny dla roli KSH; baza i tak odmawia — `tests/db/aud03.sh`). gate:visual na `b52dcc5`: 274/280, zmienione wyłącznie `harmonogram__ksh__pl__{1280,1440,1920}__{dark,light-default}` (6). Odświeżono te 6 ujęć z przebiegu bramy (kolejność pełnej matrycy). Innych ujęć nie ruszano.
