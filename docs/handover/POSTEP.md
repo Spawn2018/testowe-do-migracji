@@ -2137,3 +2137,8 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - UI (bez przebudowy wyglądu): Opcje › Moje konto, formularz zaproszenia i lista z „Zadzwoń”; nullguard **617**.
 - TEST wolne. Bez wdrożenia P3 (paczka w toku).
 
+## 2026-10-13 — P3 E12-A (logika)
+
+- Migracja **0198**: `is_hhl_admin()`; zapisy Opcji (`rate_card_save`, SEFS/paliwo, bramka SMS) tylko Administrator HHL.
+- Opcje UI: Operacje bez Użytkowników (admin), Logowań, Historii zmian; Moje konto / 2FA / urządzenia zostają.
+
