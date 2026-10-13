@@ -7,6 +7,7 @@
  * Tryb demo (lokalnie, podglądy Vercel) bez zmian.
  */
 import { getAuthProfile } from '../auth/profile';
+import { getPreviewViewRole } from './previewGate';
 
 export const PROD_BUILD: boolean = import.meta.env.VITE_AUTH_MODE === 'supabase';
 
@@ -56,4 +57,19 @@ export function canManageWorkflows(prod: boolean = PROD_BUILD, role: string | nu
  */
 export function canSwitchView(prod: boolean = PROD_BUILD, orgCode: string | null | undefined = getAuthProfile()?.org_code): boolean {
   return !prod || orgCode === 'HHL';
+}
+
+/**
+ * E9-7 / G-07 — „Podgląd bez zapisu” tylko w supabase: HHL ogląda KSH/SCX jak ta firma,
+ * UI ukrywa i blokuje zapis; sesja bazy zostaje admina. Demo: pełne prawa wybranej roli.
+ */
+export function isPreviewReadOnly(opts?: {
+  prod?: boolean;
+  viewRole?: string | null;
+  orgCode?: string | null;
+}): boolean {
+  const prod = opts?.prod ?? PROD_BUILD;
+  const viewRole = opts?.viewRole !== undefined ? opts.viewRole : getPreviewViewRole();
+  const orgCode = opts?.orgCode !== undefined ? opts.orgCode : getAuthProfile()?.org_code;
+  return Boolean(prod && orgCode === 'HHL' && viewRole && viewRole !== 'HHL');
 }

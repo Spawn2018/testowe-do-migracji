@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { HIDDEN_IN_PROD, canSeeWorkflows, canSwitchView, shows } from '../src/lib/prodFacade'
-import { navForRole, canImportSchedule } from '../src/lib/permissions'
+import { HIDDEN_IN_PROD, canSeeWorkflows, canSwitchView, isPreviewReadOnly, shows } from '../src/lib/prodFacade'
+import { navForRole, canImportSchedule, canEditResources, canSubmitInvoice } from '../src/lib/permissions'
 import { delayPillMinutes, docsCompleteBeforeLoad, otifShown, permitBannerState, prodBannerRisk } from '../src/lib/prodDash'
 import { progressWeeksFromDb, progressWeeksLabel } from '../src/components/chart/DeliveryProgress'
 import { nextDbSailing } from '../src/lib/sailings'
@@ -46,6 +46,16 @@ describe('I-2a: przełącznik widoku i import', () => {
   })
   it('import harmonogramu: wyłącznie HHL (także demo)', () => {
     expect(['HHL', 'KSH', 'SCX'].map((r) => canImportSchedule(r as never))).toEqual([true, false, false])
+  })
+  it('E9-7 / G-07: Podgląd bez zapisu tylko w supabase (HHL → KSH/SCX)', () => {
+    expect(isPreviewReadOnly({ prod: true, viewRole: 'KSH', orgCode: 'HHL' })).toBe(true)
+    expect(isPreviewReadOnly({ prod: true, viewRole: 'SCX', orgCode: 'HHL' })).toBe(true)
+    expect(isPreviewReadOnly({ prod: true, viewRole: 'HHL', orgCode: 'HHL' })).toBe(false)
+    expect(isPreviewReadOnly({ prod: true, viewRole: 'KSH', orgCode: 'KSH' })).toBe(false)
+    expect(isPreviewReadOnly({ prod: false, viewRole: 'KSH', orgCode: 'HHL' })).toBe(false)
+    // demo: pełne prawa wybranej roli (G-07) — PROD_BUILD=false w vitest
+    expect(canEditResources('SCX')).toBe(true)
+    expect(canSubmitInvoice('SCX')).toBe(true)
   })
 })
 

@@ -5,9 +5,15 @@
  */
 import type { DataMutation } from './provider';
 import type { DocCategory, Document } from '../types';
+import { isPreviewReadOnly } from '../lib/prodFacade';
 
 type Sink = (m: DataMutation) => void;
 let sink: Sink | null = null;
+
+/** Preferencje i odczyt powiadomień to własne ustawienia admina — nie domena Podglądu. */
+function isPersonalMutation(m: DataMutation): boolean {
+  return m.type === 'prefs.save' || m.type === 'notifications.read';
+}
 
 export function registerRemoteSink(s: Sink | null): void {
   sink = s;
@@ -40,6 +46,8 @@ function targetId(m: DataMutation): string | null {
 /** Przekaż zapis do serwera (tylko tryb Supabase i tylko encje z id serwera). */
 export function writeThrough(m: DataMutation): void {
   if (!sink) return;
+  // E9-7 / G-07: Podgląd KSH/SCX — bez zapisu domeny (UI + ten strażnik).
+  if (!isPersonalMutation(m) && isPreviewReadOnly()) return;
   const id = targetId(m);
   if (id !== null && !isServerId(id)) return;
   sink(m);

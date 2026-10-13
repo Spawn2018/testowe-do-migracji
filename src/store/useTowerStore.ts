@@ -36,6 +36,7 @@ import type {
 } from '../types';
 import type { NavKey as NK } from '../lib/permissions';
 import { canEditResources } from '../lib/permissions';
+import { setPreviewViewRole } from '../lib/previewGate';
 import { applyThemeToDom, systemTheme, type Theme } from '../lib/theme';
 export type { Theme };
 import {
@@ -438,6 +439,7 @@ export const useTowerStore = create<TowerState>()(
         const nextTheme = themeManual ? theme : systemTheme();
         applyThemeToDom(nextTheme);
         const defaultView = role === 'SCX' ? 'tasks' : 'dash';
+        setPreviewViewRole(role); // E9-7 — strażnik Podglądu (writeThrough / isPreviewReadOnly)
         set({ role, theme: nextTheme, view: defaultView as ViewKey });
       },
 
@@ -1933,6 +1935,7 @@ export const useTowerStore = create<TowerState>()(
           });
         }
         if (!state) return;
+        if (state.role) setPreviewViewRole(state.role);
         // After persist merge: stale theme must not stick when user never toggled manually.
         const theme = state.themeManual
           ? state.theme
@@ -1955,5 +1958,7 @@ export const useTowerStore = create<TowerState>()(
     },
   ),
 );
+
+setPreviewViewRole(useTowerStore.getState().role);
 
 export { DRIVER_TOKENS };
