@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 23,
   import: 66,
-  nullguard: 602,
+  nullguard: 607, // P2: +5 load_order_numbers (4 odmowy + kontrola HHL)
   i2: 540,
   i30: 10,
   i31: 9,
@@ -49,6 +49,7 @@ export const EXPECTED_LOCAL = {
   aud03: 25,
   baf: 46,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
+  e41: 15, // P2 — nazwa transportu, KSH bez numerów, E18 P15
 };
 
 /**
@@ -110,6 +111,7 @@ export const SUITE_FILE = {
   aud03: 'aud03.sh',
   baf: 'baf.sh',
   e18: 'e18.sh',
+  e41: 'e41.sh',
 };
 
 /** Jak uruchamiać lokalnie: boot = własna baza, tower = kopia tower_boot, pair = run.sh. */
@@ -151,6 +153,7 @@ export const LOCAL_RUN = {
   aud03: 'tower',
   baf: 'boot',
   e18: 'boot',
+  e41: 'tower',
 };
 
 /** Kolejność lokalnej bramy (jak dawny gate.sh). */
@@ -158,7 +161,7 @@ export const LOCAL_ORDER = [
   'security', 'status', 'storage', 'money', 'release', 'backup', 'session', 'archive',
   'watchdog', 'invite', 'risks', 'import', 'nullguard', 'i2', 'i30', 'i31', 'dec2', 'dec3',
   'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto', 'dwell', 'l13',
-  'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'baf', 'e18',
+  'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'baf', 'e18', 'e41',
 ];
 
 const NEED_SEED_BASE = new Set(['session']);
@@ -253,7 +256,7 @@ export function gateSteps() {
   }
   const rest = [
     'i30', 'i31', 'dec2', 'dec3', 'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto',
-    'dwell', 'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'baf', 'e18', 'backup',
+    'dwell', 'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'baf', 'e18', 'e41', 'backup',
   ];
   for (const name of rest) {
     if (!SUITE_FILE[name] || EXPECTED_TEST[name] == null) {

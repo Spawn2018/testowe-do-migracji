@@ -13,6 +13,7 @@ import type { Bill, BillDirection, BillLineFx, BillVerification, Document, Local
 import { getNowIso } from '../lib/frozenNow';
 import { isoWeekKeyLocal, localDateOf } from '../lib/money/engine';
 import { unloadedAtOf } from '../lib/money/loadMoney';
+import { transportLabel } from '../lib/transportName';
 import {
   BILL_FLAG_LABEL, PAYMENT_LABEL, VERIFICATION_LABEL, billCandidates, billPaymentToday, billVisibleTo,
   canMarkPaid, canRegisterBill, computedEurFor, canVerifyBill, checkBill, expectedNetFor, invoicedLoadIds, isoWeekMonday,
@@ -289,7 +290,7 @@ function BillDetail({ bill }: { bill: Bill }) {
               const at = l ? unloadedAtOf(l) : null;
               return (
                 <tr key={ln.loadId} style={{ cursor: 'pointer' }} {...clickableRow(() => { if (l) selectLoad(l.id); })}>
-                  <td><span className="code" data-content>{l?.code ?? ln.loadId}</span></td>
+                  <td><span className="code" data-content>{l ? transportLabel(l, role) : '—'}</span></td>
                   <td>{fmtDay(at ? localDateOf(at) : null)}</td>
                   <td className="num"><Amount n={ln.expectedNet} cur={bill.currency} /></td>
                   <td className="num"><Amount n={ln.invoicedNet} cur={bill.currency} /></td>
@@ -371,6 +372,7 @@ interface LineState { on: boolean; net: string; fuel: string; fx: BillLineFx | n
 
 function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (id: string | null) => void }) {
   const locale = useTowerStore((s) => s.locale);
+  const role = useTowerStore((s) => s.role);
   const loads = useTowerStore((s) => s.loads);
   const bills = useTowerStore((s) => s.bills);
   const registerBill = useTowerStore((s) => s.registerBill);
@@ -471,8 +473,8 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
               const res = chk.lines.find((x) => x.loadId === l.id);
               return (
                 <tr key={l.id} data-w-line={l.code}>
-                  <td><input type="checkbox" checked={st.on} onChange={(e) => patch(l.id, { on: e.target.checked })} aria-label={l.code} /></td>
-                  <td><span className="code" data-content>{l.code}</span></td>
+                  <td><input type="checkbox" checked={st.on} onChange={(e) => patch(l.id, { on: e.target.checked })} aria-label={transportLabel(l, role)} /></td>
+                  <td><span className="code" data-content>{transportLabel(l, role)}</span></td>
                   <td>{fmtDay(at ? localDateOf(at) : null)}</td>
                   <td className="num"><Amount n={expectedNetFor(l, direction, currency, today)} cur={currency} /></td>
                   <td className="num" data-deur-exempt="invoice-currency"><input className="input" style={{ width: 110 }} value={st.net} onChange={(e) => patch(l.id, { net: e.target.value })} disabled={!st.on} /></td>

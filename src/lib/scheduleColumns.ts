@@ -29,7 +29,7 @@ export type SchedColDef = {
 
 export const SCHED_COLS: SchedColDef[] = [
   { id: 'code', labelKey: 'sched_col_code', defaultWidth: 90 },
-  /* M5 — trzy numery zleceń obok kodu wysyłki (W12, Q9: widoczne dla wszystkich ról) */
+  /* M5 — kolumny numerów. E41 (P2): KSH ich nie dostaje (filtr w harmonogramie). */
   { id: 'ord_hhl', labelKey: 'sched_col_ord_hhl', defaultWidth: 100 },
   { id: 'ord_scx', labelKey: 'sched_col_ord_scx', defaultWidth: 100 },
   { id: 'type', labelKey: 'sched_col_type', defaultWidth: 70 },

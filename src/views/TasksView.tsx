@@ -3,6 +3,7 @@ import { t, tp } from '../i18n/messages';
 import { formatTableDay, refYearInOps } from '../lib/time';
 import { getNow } from '../lib/frozenNow';
 import { clickableRow } from '../lib/clickableRow';
+import { transportLabel } from '../lib/transportName';
 
 function hoursUntilLoad(plannedLoadDate: string): number {
   const target = Date.parse(`${plannedLoadDate}T06:00:00+02:00`);
@@ -12,6 +13,7 @@ function hoursUntilLoad(plannedLoadDate: string): number {
 
 export function TasksView() {
   const loads = useTowerStore((s) => s.loads);
+  const role = useTowerStore((s) => s.role);
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const locale = useTowerStore((s) => s.locale);
   const refYear = refYearInOps(getNow());
@@ -55,7 +57,7 @@ export function TasksView() {
                 return (
                   <tr key={l.id} data-load={l.id} style={{ cursor: 'pointer' }} {...clickableRow(() => selectLoad(l.id))}>
                     <td>
-                      <span className="code" data-content>{l.code}</span>
+                      <span className="code" data-content>{transportLabel(l, role)}</span>
                     </td>
                     <td>{what}</td>
                     <td>{formatTableDay(l.plannedLoadDate, refYear)}</td>

@@ -11,6 +11,8 @@ import { formatEtaBodenCompact } from '../lib/time';
 import { latestReadAt, subscribeFerryPositions, type AisMode } from '../lib/ais';
 import { formatOpsDateTime } from '../lib/time';
 import { clickableRow } from '../lib/clickableRow';
+import { vehiclesInMotion } from '../lib/format';
+import { transportLabel } from '../lib/transportName';
 
 /** Claude maplayers — exactly 5. Labels via i18n. */
 const LAYER_ORDER: { key: string; labelKey: string }[] = [
@@ -192,7 +194,7 @@ export function MapView() {
       <header className="panel-hd">
         <h2>{t(locale, 'nav_map')}</h2>
         <span className="sub">
-          {gpsWithFix} {t(locale, 'map_vehicles_sub')}
+          {vehiclesInMotion(gpsWithFix)} · {t(locale, 'map_pos_every')}
         </span>
         <div className="spacer" />
         <button type="button" className="chipbtn" onClick={() => setView('geo')}>
@@ -316,7 +318,7 @@ export function MapView() {
                     >
                       <td>
                         <span className="cell-clip">
-                          <span className="code" data-content>{l.code}</span>
+                          <span className="code" data-content>{transportLabel(l, role)}</span>
                         </span>
                       </td>
                       <td>

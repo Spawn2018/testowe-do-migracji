@@ -25,7 +25,8 @@ test.describe('D14 — trasy adresowalne', () => {
   test('link #/transport/SG-32 otwiera szufladę; zamknięcie → ścieżka widoku; ?now zachowane', async ({ page }) => {
     await fresh(page)
     await page.goto(url('/transport/SG-32'), { waitUntil: 'networkidle' })
-    await expect(page.locator('.drawer .wb-code')).toHaveText('SG-32')
+    /* E41 (P2): HHL widzi kod i numer HHL. Adres zostaje przy samym kodzie. */
+    await expect(page.locator('.drawer .wb-code')).toHaveText('SG-32 · HHL/2026/1304')
     expect(page.url()).toContain(NOW)
     await page.locator('.drawer .drawer-hd button.iconbtn').last().click()
     await expect(page.locator('.drawer')).toHaveCount(0)
@@ -39,15 +40,16 @@ test.describe('D14 — trasy adresowalne', () => {
     await page.locator('nav button[data-view="sched"]').click()
     await expect.poll(() => hashPath(page)).toBe('/harmonogram')
     const row = page.locator('tr[data-load]').first()
-    const code = (await row.locator('span.code').first().textContent())!.trim()
+    const code = (await row.getAttribute('data-code'))!.trim()
+    const label = (await row.locator('span.code').first().textContent())!.trim()
     await row.click()
-    await expect(page.locator('.drawer .wb-code')).toHaveText(code)
+    await expect(page.locator('.drawer .wb-code')).toHaveText(label)
     await expect.poll(() => hashPath(page)).toBe(`/transport/${code}`)
     await page.goBack()
     await expect(page.locator('.drawer')).toHaveCount(0)
     await expect.poll(() => hashPath(page)).toBe('/harmonogram')
     await page.goForward()
-    await expect(page.locator('.drawer .wb-code')).toHaveText(code)
+    await expect(page.locator('.drawer .wb-code')).toHaveText(label)
   })
 
   test('adresy /harmonogram, /mapa, /faktury, /ustawienia wchodzą w widok; rola przetrwa przeładowanie', async ({ page }) => {

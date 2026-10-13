@@ -34,22 +34,23 @@ describe('AUD-02 dzwonek: tytuł PL, czas względny, grupowanie, bez kodów szab
       expect(looksLikeTemplateCode(g.title), g.title).toBe(false);
       expect(looksLikeTemplateCode(g.body), g.body).toBe(false);
       expect(g.title).not.toMatch(/[0-9a-f]{8}:/);
-      if (g.latest.loadId) expect(g.title).toMatch(/^SG-(11|03) · \S/);
+      /* E41 (P2): pauza po nazwie, nie kropka środkowa. */
+      if (g.latest.loadId) expect(g.title).toMatch(/^SG-(11|03) — \S/);
     }
     const t = groups.map((g) => g.title);
     if (process.env.AUD02_DUMP) {
       const now = Date.UTC(2026, 9, 6, 12, 15);
       writeFileSync(process.env.AUD02_DUMP, groups.map((g) => `${g.latest.kind}\t${g.title}\t${g.body}\t${bellAge(g.latest.at, now, 'pl')}\t${g.latest.href?.path ?? ''}`).join('\n') + '\n');
     }
-    expect(t).toContain('SG-11 · Nowe ryzyko: Warunki drogowe E4: wypadek, bardzo duży wpływ na ruch');
-    expect(t.find((x) => x.includes('Bufor 50 km przed Boden'))).toMatch(/^SG-11 · /);
-    expect(t.some((x) => /^SG-(11|03) · SG-/.test(x))).toBe(false);
-    expect(t.find((x) => x.includes('wagi ryzyka'))).toBe('SG-03 · Zmiana wagi ryzyka (krytyczna): brak awizacji przed załadunkiem');
+    expect(t).toContain('SG-11 — Nowe ryzyko: Warunki drogowe E4: wypadek, bardzo duży wpływ na ruch');
+    expect(t.find((x) => x.includes('Bufor 50 km przed Boden'))).toMatch(/^SG-11 — /);
+    expect(t.some((x) => /^SG-(11|03) — SG-/.test(x))).toBe(false);
+    expect(t.find((x) => x.includes('wagi ryzyka'))).toBe('SG-03 — Zmiana wagi ryzyka (krytyczna): brak awizacji przed załadunkiem');
     expect(groups.find((g) => g.latest.kind === 'DECISION_OPEN')?.body).not.toMatch(/e-mail/);
   });
   it('kod transportu z ładunku, gdy transportu nie ma w magazynie', () => {
     const g = bellGroups(rows, 'HHL', () => undefined, 'pl');
-    expect(g.find((x) => x.latest.kind === 'RESOURCE_DEADLINE')?.title).toMatch(/^SG-03 · brak/);
+    expect(g.find((x) => x.latest.kind === 'RESOURCE_DEADLINE')?.title).toMatch(/^SG-03 — brak/);
   });
   it('grupowanie: ten sam transport + ten sam rodzaj = jedna pozycja z licznikiem i najwyższą wagą; najnowsza treść', () => {
     const base = { template: 'RISK_OPEN', load_id: L1, read_at: null };
@@ -60,7 +61,7 @@ describe('AUD-02 dzwonek: tytuł PL, czas względny, grupowanie, bez kodów szab
     expect(g).toHaveLength(3);
     expect(g[0].count).toBe(3);
     expect(g[0].ids).toEqual(['srv-100', 'srv-101', 'srv-102']);
-    expect(g[0].title).toBe('SG-11 · Nowe ryzyko: Zdarzenie 5');
+    expect(g[0].title).toBe('SG-11 — Nowe ryzyko: Zdarzenie 5');
     expect(g[0].severity).toBe('CRITICAL');
     expect(g[0].body).toMatch(/^3 zdarzenia tego rodzaju/);
   });
@@ -75,7 +76,7 @@ describe('AUD-02 dzwonek: tytuł PL, czas względny, grupowanie, bez kodów szab
     expect(bellAge('2026-10-06T11:45:00Z', now, 'sv')).toBe('15 min sedan');
   });
   it('nieznany szablon → „Powiadomienie”, nigdy kod', () => {
-    expect(bellTitle('SOME_NEW_TEMPLATE', 'SG-01', 'pl')).toBe('SG-01 · Powiadomienie');
+    expect(bellTitle('SOME_NEW_TEMPLATE', 'SG-01', 'pl')).toBe('SG-01 — Powiadomienie');
     const n = notificationFromRow({ id: 9, template: 'SOME_NEW_TEMPLATE', payload: { locale: 'pl' }, load_id: null, created_at: '2026-10-06T12:00:00Z', read_at: null } as never);
     expect(bellGroups([n], 'HHL', () => undefined, 'pl')[0].title).not.toMatch(/SOME_NEW_TEMPLATE/);
   });
@@ -92,5 +93,12 @@ describe('AUD-02 dzwonek: tytuł PL, czas względny, grupowanie, bez kodów szab
     expect(withLoadCode('/decyzje/d1', 'SG-11')).toBe('/decyzje/d1');
     expect(withLoadCode('/transport/brak', undefined)).toBe('/transport/brak');
     expect(readFileSync('src/store/useTowerStore.ts', 'utf8')).toMatch(/withLoadCode\(href\.path, loadCode\)/);
+  });
+  it('E21 (P2): „Nieznany kod źródła drogowego” nie wchodzi do dzwonka', () => {
+    const n = notificationFromRow({
+      id: 77, template: 'RISK_OPEN', load_id: L1, created_at: '2026-10-06T12:00:00Z', read_at: null,
+      payload: { title: 'Nieznany kod źródła drogowego — w panelu: zdarzenie drogowe', locale: 'pl', kind: 'ROAD_SE' },
+    } as never);
+    expect(bellGroups([n], 'HHL', () => 'SG-11', 'pl')).toHaveLength(0);
   });
 });

@@ -18,6 +18,7 @@ import {
 import { formatOpsDateTime, formatTableDay, refYearInOps } from '../lib/time';
 import { getNow } from '../lib/frozenNow';
 import { formatAppMoney } from '../lib/money/demoFx';
+import { transportLabel } from '../lib/transportName';
 
 /** D25 — week label from invoice / ISO week, not hard-coded copy. */
 function weekSubtitle(weekLabel: string | null | undefined, locale: 'pl' | 'en' | 'sv'): string {
@@ -206,7 +207,7 @@ export function InvoicesView() {
                     {...clickableRow(() => selectLoad(row.loadId))}
                   >
                     <td>
-                      <span className="code" data-content>{row.code}</span>
+                      <span className="code" data-content>{transportLabel(loads.find((l) => l.id === row.loadId) ?? { code: row.code }, role)}</span>
                     </td>
                     <td data-content>{row.itemType}</td>
                     <td>{formatTableDay(row.deliverDate === '—' ? null : row.deliverDate, refYear)}</td>
@@ -439,7 +440,7 @@ export function InvoicesView() {
                 return [
                   <div key={`${l.id}-empty`} className="mrow">
                     <span className="lbl">
-                      <span className="code">{l.code}</span> · CMR
+                      <span className="code">{transportLabel(l, role)}</span> · CMR
                     </span>
                     <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_inv_missing')}</span>
                   </div>,
@@ -449,7 +450,7 @@ export function InvoicesView() {
                 <DocFileRow
                   key={d.id}
                   doc={d}
-                  label={`${l.code} · ${docCategoryLabel(d.category, locale)}`}
+                  label={`${transportLabel(l, role)} · ${docCategoryLabel(d.category, locale)}`}
                   onPreview={setPreviewDoc}
                   showUpload={role === 'SCX' || role === 'HHL'}
                   onUploadClick={() => {

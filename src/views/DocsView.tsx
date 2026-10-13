@@ -156,7 +156,7 @@ export function DocsView() {
           disabled={!week}
           onClick={() => {
             if (!week) return;
-            void downloadDocumentsZip(docsForWeek(documents, loads, week), `WATCH_TOWER_dokumenty_${week}.zip`).then((r) => {
+            void downloadDocumentsZip(docsForWeek(documents, loads, week), `WATCH_TOWER_dokumenty_${week}.zip`, (id) => loads.find((l) => l.id === id)?.code ?? id).then((r) => {
               useTowerStore.getState().pushToast(tp(locale, 'a6_docs_zip_toast', { n: r.count }), 'MEDIUM');
             });
           }}

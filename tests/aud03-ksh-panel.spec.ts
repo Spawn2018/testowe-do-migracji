@@ -61,7 +61,8 @@ for (const vp of [{ w: 1366, h: 900, tag: 'komputer' }, { w: 390, h: 844, tag: '
     await expect(page.locator('.drawer[data-ksh-side-menu]')).toHaveCount(0)
     expect(await noHScroll(page), 'panel KSH bez przewijania w poziomie').toBe(true)
     await expect(page.locator('.drawer button[aria-selected]')).toHaveCount(6)
-    await expect(page.locator('.drawer [data-order]')).toHaveCount(2)
+    /* E41 (P2): KSH bez numerów zlecenia w panelu */
+    await expect(page.locator('.drawer [data-order]')).toHaveCount(0)
     await expect(page.locator('.drawer [data-load-when]')).toHaveText(/\d/)
     await expect(page.locator('.drawer [data-ksh-actions] [data-ksh-edit]')).toHaveText('Edytuj')
     /* Ceny: przychód tak, koszt przewoźnika i marża — nie */

@@ -46,15 +46,15 @@ async function actionsTab(page: Page) {
   await page.locator('.drawer button[aria-selected]').nth(4).click()
   await page.waitForTimeout(200)
 }
-async function openLoad(page: Page, code: string) {
-  await page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: new RegExp(`^${code}$`) }) }).first().click()
+async function openLoad(page: Page, code: string, opts?: { orders?: boolean }) {
+  await page.locator(`tr[data-code="${code}"]`).first().click()
   await page.waitForSelector('.drawer')
   await page.locator('.drawer button[aria-selected]').nth(0).click()
-  await page.waitForSelector('.drawer [data-order="hhl"]')
+  if (opts?.orders !== false) await page.waitForSelector('.drawer [data-order="hhl"]')
 }
-/** AUD-03 (KSH — PANEL ZLECENIA): KSH ma ten sam panel co pozostali; jedyny przycisk zmian = „Edytuj” w Przeglądzie. */
+/** E41 (P2): KSH bez pól numerów; jedyny przycisk zmian = „Edytuj”. */
 async function openLoadKsh(page: Page, code: string) {
-  await openLoad(page, code)
+  await openLoad(page, code, { orders: false })
   await page.waitForSelector('.drawer [data-ksh-edit]')
 }
 /** B-SMOKE-DRIFT: nr HHL edytowany w oknie awizacji (AWIZ-4 / HHL-4a, 13ace35), nie w polu szuflady. */
@@ -68,19 +68,25 @@ async function setHhlOrder(page: Page, v: string) {
 }
 
 test.describe('M5 — numery zleceń', () => {
-  test('harmonogram: trzy kolumny KSH / HHL / SCX obok kodu wysyłki, w każdej roli', async ({ page }) => {
+  test('harmonogram: kolumny numerów dla HHL i SCX, KSH tylko kod (E41 P2)', async ({ page }) => {
     await boot(page)
-    for (const r of ['HHL', 'KSH', 'SCX'] as const) {
+    for (const r of ['HHL', 'SCX'] as const) {
       await role(page, r)
       await nav(page, 'sched')
       const cols = await page.locator('table.sched-table thead th').evaluateAll((ths) => ths.map((t) => t.getAttribute('data-col')))
       expect(cols.slice(0, 3), r).toEqual(['code', 'ord_hhl', 'ord_scx'])
-      // ostatnia kolumna przyklejona do prawej krawędzi (przewijanie w poziomie)
       expect(await page.locator('table.sched-table thead th.stick').count(), r).toBeGreaterThan(0)
     }
+    await role(page, 'KSH')
+    await nav(page, 'sched')
+    const kshCols = await page.locator('table.sched-table thead th').evaluateAll((ths) => ths.map((t) => t.getAttribute('data-col')))
+    expect(kshCols).not.toContain('ord_hhl')
+    expect(kshCols).not.toContain('ord_scx')
+    expect(kshCols[0]).toBe('code')
     await role(page, 'HHL')
     await nav(page, 'sched')
-    const row = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: /^SG-34$/ }) })
+    const row = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: /^SG-34/ }) })
+    await expect(row.locator('span.code')).toContainText('·')
     await expect(row.locator('td[data-col="ord_hhl"]')).toHaveText(/^HHL\/2026\//)
     await expect(row.locator('td[data-col="ord_scx"]')).toHaveText(/^SCX-26-/)
   })
@@ -103,7 +109,7 @@ test.describe('M5 — numery zleceń', () => {
     await expect(page.locator('.drawer [data-order="hhl"] .mono')).toHaveText(/^HHL\/2026\//)
     await setHhlOrder(page, '')
     await closeDrawer(page)
-    const row0 = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: new RegExp(`^${code}$`) }) })
+    const row0 = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: new RegExp(`^${code}`) }) })
     await expect(row0.locator('td[data-col="ord_hhl"]')).toHaveText('— brak —')
     await openLoad(page, code)
     await actionsTab(page)
@@ -111,7 +117,7 @@ test.describe('M5 — numery zleceń', () => {
     await expect(page.getByText('Nie można oznaczyć jako gotowy — brak numeru zlecenia HHL', { exact: false }).first()).toBeVisible()
     await setHhlOrder(page, 'HHL/2026/9001')
     await closeDrawer(page)
-    const row = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: new RegExp(`^${code}$`) }) })
+    const row = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: new RegExp(`^${code}`) }) })
     await expect(row.locator('td[data-col="ord_hhl"]')).toHaveText('HHL/2026/9001')
   })
 
@@ -132,8 +138,8 @@ test.describe('M5 — numery zleceń', () => {
     await role(page, 'KSH')
     await nav(page, 'sched')
     await openLoadKsh(page, 'SG-11')
-    /* AUD-03: KSH widzi numery zleceń (odczyt), bez pól edycji */
-    await expect(page.locator('.drawer [data-order]')).toHaveCount(2)
+    /* E41 (P2): KSH nie widzi pól numerów zleceń */
+    await expect(page.locator('.drawer [data-order]')).toHaveCount(0)
     await expect(page.locator('.drawer [data-order] input')).toHaveCount(0)
     await expect(page.locator('.drawer input')).toHaveCount(0)
   })
@@ -260,7 +266,7 @@ test.describe('M8 — poziom wyceny i kurs tymczasowy', () => {
     await role(page, 'KSH')
     await nav(page, 'sched')
     /* B-K.1 (8322d02): KSH bez zakładki „Ceny” — swoją cenę widzi w harmonogramie, koszt przewoźnika nigdzie */
-    const kshRow = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: /^SG-34$/ }) })
+    const kshRow = page.locator('tr[data-code="SG-34"]')
     await expect(kshRow.locator('td[data-col="rev"]')).toHaveText(/\d/)
     await expect(page.locator('table.sched-table [data-col="cost"]')).toHaveCount(0)
     await openLoadKsh(page, 'SG-34')

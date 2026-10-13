@@ -4,6 +4,7 @@ import { t } from '../../i18n/messages';
 import type { Severity } from '../../types';
 import { getNowMs } from '../../lib/frozenNow';
 import { bellAge, bellGroups, type BellLocale } from '../../lib/bellList';
+import { transportLabel } from '../../lib/transportName';
 
 function gut(s: Severity) {
   if (s === 'CRITICAL' || s === 'HIGH') return 'var(--red)';
@@ -24,8 +25,10 @@ export function NotificationBell() {
 
   // AUD-02: grupy (transport + rodzaj), tytuł „SG-xx · co się stało”, czas „15 min temu”
   const lang: BellLocale = locale === 'en' || locale === 'sv' ? locale : 'pl';
-  const codeById = new Map(loads.map((l) => [l.id, l.code]));
-  const visible = bellGroups(notifications, role, (id) => codeById.get(id), lang).slice(0, 40);
+  const visible = bellGroups(notifications, role, (id) => {
+    const load = loads.find((l) => l.id === id);
+    return load ? transportLabel(load, role) : undefined;
+  }, lang).slice(0, 40);
   const unread = visible.length;
   const nowMs = getNowMs();
 
@@ -62,8 +65,8 @@ export function NotificationBell() {
               padding: '0 4px',
               borderRadius: 2,
               background: 'var(--red)',
-              color: '#0E1A24',
-              fontSize: 10,
+              color: 'var(--on-red)',
+              fontSize: 12,
               fontWeight: 700,
               lineHeight: '16px',
               textAlign: 'center',

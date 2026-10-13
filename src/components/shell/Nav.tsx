@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTowerStore } from '../../store/useTowerStore'
 import { navForRole, type NavKey, ROLE_META } from '../../lib/permissions'
+import { isTechnicalRoadNotice } from '../../lib/format'
 import { navLabel, t } from '../../i18n/messages'
 import { ClaudeIcon, type IconKey } from './ClaudeIcon'
 import { AUTH_RELOAD_EVENT, getAuthProfile, type AuthProfile } from '../../auth/profile'
@@ -26,6 +27,8 @@ const COMMON: NavKey[] = ['dash', 'map', 'sched', 'risk', 'docs']
 const MONEY: NavKey[] = ['fin', 'inv']
 const ADMIN: NavKey[] = ['wf', 'geo', 'options', 'settings']
 const TASKS: NavKey[] = ['tasks']
+/** E8 (P2): dolny pasek telefonu. */
+const PHONE_PINS: NavKey[] = ['dash', 'sched', 'risk', 'docs']
 
 type NavRow = { kind: 'item'; key: NavKey } | { kind: 'sep' }
 
@@ -64,6 +67,7 @@ export function Nav() {
   const navCollapsed = useTowerStore((s) => s.navCollapsed)
   const setNavCollapsed = useTowerStore((s) => s.setNavCollapsed)
   const [profile, setProfile] = useState<AuthProfile | null>(() => getAuthProfile())
+  const [moreOpen, setMoreOpen] = useState(false)
 
   useEffect(() => {
     const sync = () => setProfile(getAuthProfile())
@@ -98,6 +102,7 @@ export function Nav() {
 
   const go = (key: NavKey) => {
     setView(key)
+    setMoreOpen(false)
     if (window.matchMedia('(max-width: 768px)').matches) {
       setNavCollapsed(true, { persist: false })
     }
@@ -107,7 +112,7 @@ export function Nav() {
 
   const badge = (key: NavKey): { n: number; hot?: boolean } | null => {
     if (key === 'risk') {
-      const n = risks.length
+      const n = risks.filter((r) => !isTechnicalRoadNotice(r.title)).length
       return n ? { n, hot: true } : null
     }
     if (key === 'tasks') {
@@ -139,7 +144,7 @@ export function Nav() {
   }
 
   return (
-    <nav aria-label={t(locale, 'a6_nav_menu')} aria-expanded={!navCollapsed}>
+    <nav className={`tower-nav${moreOpen ? ' nav-more-open' : ''}`} aria-label={t(locale, 'a6_nav_menu')} aria-expanded={!navCollapsed}>
       {rows.map((row, i) => {
         if (row.kind === 'sep') {
           return navCollapsed ? null : <div key={`sep-${i}`} className="sep" />
@@ -153,6 +158,7 @@ export function Nav() {
             key={key}
             type="button"
             data-view={key}
+            className={PHONE_PINS.includes(key) ? 'nav-pin' : undefined}
             aria-current={current ? 'page' : 'false'}
             aria-label={label}
             title={navCollapsed ? label : undefined}
@@ -196,6 +202,16 @@ export function Nav() {
           !navCollapsed ? <span className="nav-session-role">{ROLE_META[role].name}</span> : null
         )}
       </div>
+      <button
+        type="button"
+        className="nav-more-btn"
+        aria-expanded={moreOpen}
+        aria-label={t(locale, 'nav_more')}
+        onClick={() => setMoreOpen((v) => !v)}
+      >
+        <span className="glyph">⋯</span>
+        <span className="lbl">{t(locale, 'nav_more')}</span>
+      </button>
       <button
         type="button"
         className="iconbtn"

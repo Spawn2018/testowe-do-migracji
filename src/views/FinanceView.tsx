@@ -8,11 +8,13 @@ import { SEFS_WEEKLY, SEFS_SOURCES, computeSefs } from '../lib/sefs';
 import { formatAppMoney, formatSourceMoney } from '../lib/money/demoFx';
 import { TIER_PILL, marginSplit, moneyViewFor, tierSummary } from '../lib/money/loadMoney';
 import type { PricingTier } from '../lib/money/engine';
+import { formatPercentPoints } from '../lib/format';
+import { transportLabel } from '../lib/transportName';
 
 const TIERS: PricingTier[] = ['PROGNOZA', 'REALIZACJA', 'FAKTURA'];
 
 function pct(n: number) {
-  return `${(n * 100).toFixed(1).replace('.', ',')}%`;
+  return formatPercentPoints(n * 100);
 }
 
 export function FinanceView() {
@@ -285,7 +287,7 @@ export function FinanceView() {
                 {below.map((l) => (
                   <div key={l.id} className="mrow">
                     <span className="lbl">
-                      <span className="code" data-content>{l.code}</span> <span data-content>{l.itemType}</span>
+                      <span className="code" data-content>{transportLabel(l, role)}</span> <span data-content>{l.itemType}</span>
                     </span>
                     <span style={{ color: 'var(--red)' }}>
                       {l.pricing.money?.v === 2 ? (

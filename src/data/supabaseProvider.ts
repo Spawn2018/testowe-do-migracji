@@ -22,10 +22,10 @@ import {
 
 export const PROJECT_CODE = 'STEGRA_BODEN';
 const LOAD_COLUMNS =
-  'id,order_no,carrier_org_id,status,plan_load_date,plan_load_from,plan_load_to,plan_delivery_date,plan_delivery_from,' +
+  'id,carrier_org_id,status,plan_load_date,plan_load_from,plan_load_to,plan_delivery_date,plan_delivery_from,' +
   'plan_delivery_to,tractor_plate,trailer_plate,escort_vehicles,ferry_booking_ref,sailing_id,telematics_vehicle_id,' +
   'plan_dates_status,plan_dates_confirmed_at,' +
-  'combo_length_m,combo_width_m,combo_height_m,combo_weight_t,delay_minutes,eta_site,eta_confidence_min,eta_basis,eta_computed_at,hhl_order_no,carrier_order_no,actual_delivery_at,' +
+  'combo_length_m,combo_width_m,combo_height_m,combo_weight_t,delay_minutes,eta_site,eta_confidence_min,eta_basis,eta_computed_at,actual_delivery_at,' +
   'shipment_items(shipment_code,item_type,cargo_class,length_m,width_m,height_m,total_weight_t,unit_weight_t,qty,assembly_seq),' +
   'sailings(departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,status,vessels(name))';
 
@@ -65,7 +65,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       if (r.error && /fuel_status/.test(r.error.message ?? '')) return sb.from(view).select(PRICE_VIEW_COLUMNS_LEGACY);
       return r;
     };
-    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ] = await Promise.all([
+    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos] = await Promise.all([
       sb.from('loads').select(LOAD_COLUMNS).neq('status', 'CANCELLED').order('plan_load_date', { ascending: true, nullsFirst: false }),
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
@@ -91,10 +91,17 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       // 9.4 (0094): reguły automatyzacji — RLS wf_all: tylko HHL_ADMIN (pozostali: 0 wierszy); przebiegi — odczyt HHL
       sb.from('workflows').select('id,code,name,description,trigger_type,condition,actions,enabled').order('code', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false }),
       sb.from('workflow_runs').select('id,workflow_id,load_id,status,result,ran_at').order('id', { ascending: false }).limit(1000),
+      /* E41: KSH dostaje null. Brak funkcji (okno przed migracją) nie gasi całego zrzutu. */
+      sb.rpc('load_order_numbers'),
     ]);
     const wfRuns = (wfRunQ.error ? [] : wfRunQ.data ?? []) as WorkflowRunDbRow[];
     const okBy = new Map<string, number>();
     for (const r of wfRuns) if (r.status === 'OK') okBy.set(r.workflow_id, (okBy.get(r.workflow_id) ?? 0) + 1);
+    if (orderNos.error && !/load_order_numbers|PGRST202|schema cache|Could not find/i.test(orderNos.error.message ?? '')) {
+      throw new Error(`load_order_numbers: ${orderNos.error.message}`);
+    }
+    const orderBy = new Map(((orderNos.error ? [] : orderNos.data ?? []) as { load_id: string; hhl_order_no: string | null; carrier_order_no: string | null }[])
+      .map((r) => [r.load_id, r]));
     const permitOk = new Map(((permitQ.error ? [] : permitQ.data ?? []) as { load_id: string; permits_linked: number; ok: boolean }[])
       .filter((p) => p.permits_linked > 0).map((p) => [p.load_id, p.ok]));
     const drivers = new Map(((driversQ.error ? [] : driversQ.data ?? []) as {
@@ -113,6 +120,9 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       loads: (must(loads, 'loads') as unknown as LoadRow[])
         .map((r) => ({
           ...r,
+          order_no: null,
+          hhl_order_no: orderBy.get(r.id)?.hhl_order_no ?? null,
+          carrier_order_no: orderBy.get(r.id)?.carrier_order_no ?? null,
           driver_name: drivers.get(r.id)?.driver_name ?? null,
           driver_phone: drivers.get(r.id)?.driver_phone ?? null,
           driver_phone_country: drivers.get(r.id)?.driver_phone_country ?? 'PL',

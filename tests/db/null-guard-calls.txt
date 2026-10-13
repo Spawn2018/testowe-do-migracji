@@ -151,3 +151,4 @@ truck_ban_holiday_hit | PURE | select 1 | 1
 h4_schedule_remaining | PURE | select 1 | 1
 h4_driver_state_from_gps | PURE | select 1 | 1
 h4_record_eta_observation | PURE | select 1 | 1
+load_order_numbers | EMPTY | select count(*)::text from load_order_numbers() | 0

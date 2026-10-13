@@ -3,6 +3,9 @@ import { getSupabase } from './client';
 import { authErrorPl } from './config';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
+import { formatCalendarDay } from '../lib/time';
+import { formatPlNumber } from '../lib/format';
+import { transportLabel } from '../lib/transportName';
 import './auth.css';
 
 /**
@@ -39,7 +42,10 @@ export default function CarrierScorecard() {
     return () => { cancelled = true; };
   }, [role, from, to]);
   if ((role !== 'HHL' && role !== 'SCX') || rows === null) return null;
-  const codeOf = (id: string) => loads.find((l) => l.id === id)?.code ?? id.slice(0, 8);
+  const codeOf = (id: string) => {
+    const load = loads.find((l) => l.id === id);
+    return load ? transportLabel(load, role) : '—';
+  };
   const pct = (a: number, b: number) => (b > 0 ? `${Math.round((100 * a) / b)}%` : '—');
   return (
     <section className="panel option-panel" data-carrier-scorecard={rows.length}>
@@ -64,7 +70,7 @@ export default function CarrierScorecard() {
                   <td className="mono" data-scorecard-ontime>{r.on_time} ({pct(r.on_time, r.delivered)})</td>
                   <td className="mono">{r.late_carrier}</td>
                   <td className="mono">{r.avg_late_min == null ? '—' : `${r.avg_late_min} min`}</td>
-                  <td className="mono" data-scorecard-score>{r.avg_score == null ? '—' : `${Number(r.avg_score).toFixed(2).replace('.', locale === 'en' ? '.' : ',')} / 5 (${r.ratings})`}</td>
+                  <td className="mono" data-scorecard-score>{r.avg_score == null ? '—' : `${formatPlNumber(Number(r.avg_score), 2)} / 5 (${r.ratings})`}</td>
                 </tr>
               ))}
             </tbody>
@@ -76,7 +82,7 @@ export default function CarrierScorecard() {
             <table className="rate-table" data-my-ratings={mine.length}>
               <thead><tr><th>{t(locale, 'd23_load')}</th><th>{t(locale, 'iii9_score')}</th><th>{t(locale, 'd23_date')}</th></tr></thead>
               <tbody>{mine.map((m) => (
-                <tr key={m.load_id} data-my-rating={m.score}><td className="mono">{codeOf(m.load_id)}</td><td className="mono">{m.score} / 5</td><td className="mono">{m.rated_at.slice(0, 10)}</td></tr>
+                <tr key={m.load_id} data-my-rating={m.score}><td className="mono">{codeOf(m.load_id)}</td><td className="mono">{m.score} / 5</td><td className="mono">{formatCalendarDay(m.rated_at.slice(0, 10))}</td></tr>
               ))}</tbody>
             </table>
           </>

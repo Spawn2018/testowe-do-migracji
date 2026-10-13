@@ -5,6 +5,7 @@ import { getAuthProfile } from './profile';
 import { safeStorageTarget } from '../data/storagePath';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
+import { formatCalendarDay } from '../lib/time';
 import './auth.css';
 
 /**
@@ -204,7 +205,7 @@ export default function InsurancePolicyForm() {
                   {statusLabel(p.approval_status)}
                 </span>
                 {' '}
-                {p.valid_from} – {p.valid_until}
+                {formatCalendarDay(p.valid_from)} – {formatCalendarDay(p.valid_until)}
                 {p.insurer ? ` · ${p.insurer}` : ''}
                 {p.sum_insured != null ? ` · ${p.sum_insured} ${p.currency}` : ''}
                 {p.approval_status === 'REJECTED' && p.reject_reason ? (
