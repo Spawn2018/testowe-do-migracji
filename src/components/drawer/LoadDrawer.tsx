@@ -3,7 +3,15 @@ import { useTowerStore } from '../../store/useTowerStore';
 import { CorridorMap } from '../map/LazyCorridorMap';
 import { StatusPill } from '../ui/StatusPill';
 import { fmtNum, fmtNumKeepPl, fmtPct, t, tp } from '../../i18n/messages';
-import { canEditResources, canSeeCost, canSeeMargin, canSeeRevenue, visibleDriverPhone } from '../../lib/permissions';
+import {
+  canChangeLoadStatus,
+  canEditResources,
+  canSeeCost,
+  canSeeMargin,
+  canSeeRevenue,
+  visibleDriverPhone,
+} from '../../lib/permissions';
+import { getAuthProfile } from '../../auth/profile';
 import { SITES } from '../../lib/status';
 import { SEFS_SOURCES } from '../../lib/sefs';
 import { isReadyBlocked, evaluateLoadCover } from '../../lib/permits';
@@ -20,6 +28,7 @@ import { formatTowerPair } from '../../lib/cSep';
 import { formatHistoryActor } from '../../lib/historyActor';
 import { AwizacjaModal } from './AwizacjaModal';
 import { KshDatesModal } from './KshDatesModal';
+import { StatusChangeModal } from './StatusChangeModal';
 import { RouteCheckPanel } from './RouteCheckPanel';
 import { CorridorObstaclesPanel } from './CorridorObstaclesPanel';
 import { RouteProfilePanel } from './RouteProfilePanel';
@@ -44,7 +53,6 @@ import {
   etaConfidenceLabel,
   eventTypeLabel,
   ferryStatusLabel,
-  readyGateReasonLabel,
 } from '../../lib/enumLabels';
 
 import { TIER_PILL, type MoneySideV2 } from '../../lib/money/loadMoney';
@@ -130,7 +138,6 @@ export function LoadDrawer() {
   const updateResources = useTowerStore((s) => s.updateResources);
   const updateAwizacja = useTowerStore((s) => s.updateAwizacja);
   const sailings = useTowerStore((s) => s.sailings);
-  const setLoadStatus = useTowerStore((s) => s.setLoadStatus);
   const assignScx = useTowerStore((s) => s.assignScx);
   const triggerGeofence = useTowerStore((s) => s.triggerGeofence);
   const geofences = useTowerStore((s) => s.geofences);
@@ -147,6 +154,7 @@ export function LoadDrawer() {
   const [uploadCat, setUploadCat] = useState<import('../../types').Document['category'] | null>(null);
   const [awizOpen, setAwizOpen] = useState(false);
   const [kshDatesOpen, setKshDatesOpen] = useState(false);
+  const [statusChangeOpen, setStatusChangeOpen] = useState(false);
 
   useEffect(() => {
     const allowed: Tab[] = ['overview', 'timeline', 'history', 'docs', 'pricing', 'chat'];
@@ -196,6 +204,7 @@ export function LoadDrawer() {
   const showRev = canSeeRevenue(role);
   const showMargin = canSeeMargin(role);
   const canEdit = canEditResources(role);
+  const canStatus = canChangeLoadStatus(role, getAuthProfile()?.role ?? null);
   /** B-10: awizację uzupełnia SCX; HHL (nie admin) nie dodaje. */
   const canAwiz = role === 'SCX';
   const orderSide = editableOrderSide(role);
@@ -934,10 +943,10 @@ export function LoadDrawer() {
               {import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED && canEdit && isServerId(load.id) && <DriverLinkPanel loadId={load.id} />}
 
               <div className="hr" />
-              {/* AUD-03: przyciski przewoźnika/HHL (statusy, przypisanie) — niewidoczne dla KSH */}
-              {canEdit && (
+              {/* E25: „Zmień status” zamiast osobnych przycisków; AUD-03: niewidoczne dla KSH */}
+              {(canEdit || canStatus) && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }} data-carrier-actions>
-                {role === 'HHL' && (
+                {role === 'HHL' && canEdit && (
                   <button
                     type="button"
                     className="btn"
@@ -946,33 +955,18 @@ export function LoadDrawer() {
                     {t(locale, 'a6_dr_assign_scx')}
                   </button>
                 )}
-                <button
-                  type="button"
-                  className="btn"
-                  data-action="mark-ready"
-                  disabled={readyUiBlocked}
-                  title={permitBlock ? readyGateReasonLabel(readyGate.reason, locale) : undefined}
-                  onClick={() => {
-                    if (readyUiBlocked) return;
-                    setLoadStatus(load.id, 'READY', role, t(locale, 'a6_dr_ready_note'));
-                  }}
-                >
-                  {t(locale, 'a6_dr_mark_ready')}
-                </button>
-                <button
-                  type="button"
-                  className="btn ghost"
-                  disabled={readyUiBlocked}
-                  title={permitBlock ? readyGateReasonLabel(readyGate.reason, locale) : undefined}
-                  onClick={() => {
-                    if (readyUiBlocked) return;
-                    setLoadStatus(load.id, 'IN_TRANSIT_PL', role);
-                  }}
-                >
-                  {t(locale, 'a6_dr_depart')}
-                </button>
+                {canStatus && (
+                  <button
+                    type="button"
+                    className="btn"
+                    data-action="change-status"
+                    onClick={() => setStatusChangeOpen(true)}
+                  >
+                    {t(locale, 'a6_dr_change_status')}
+                  </button>
+                )}
                 {/* W2: zdarzenia stref tworzy wyłącznie system (process_position) — symulacja tylko w trybie demo */}
-                {!SUPABASE_AUTH_ENABLED && (
+                {!SUPABASE_AUTH_ENABLED && canEdit && (
                   <button
                     type="button"
                     className="btn ghost"
@@ -984,13 +978,6 @@ export function LoadDrawer() {
                     {t(locale, 'a6_dr_geo_event')}
                   </button>
                 )}
-                <button
-                  type="button"
-                  className="btn ghost"
-                  onClick={() => setLoadStatus(load.id, 'UNLOADING', role, t(locale, 'a6_dr_unloaded_note'))}
-                >
-                  {t(locale, 'a6_dr_mark_unloaded')}
-                </button>
               </div>
               )}
 
@@ -1033,6 +1020,14 @@ export function LoadDrawer() {
       <DocPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
       {awizOpen ? <AwizacjaModal load={load} onClose={() => setAwizOpen(false)} /> : null}
       {kshDatesOpen && role === 'KSH' ? <KshDatesModal load={load} onClose={() => setKshDatesOpen(false)} /> : null}
+      {statusChangeOpen && canStatus ? (
+        <StatusChangeModal
+          loadId={load.id}
+          code={load.code}
+          current={load.status}
+          onClose={() => setStatusChangeOpen(false)}
+        />
+      ) : null}
     </>
   );
 }

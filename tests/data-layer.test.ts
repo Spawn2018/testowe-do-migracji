@@ -68,8 +68,15 @@ describe('BK3 registry — demo data never leaves the browser', () => {
 
 describe('BK3 mappers', () => {
   it('status round-trip for every DB-backed app status; flags stay local', () => {
-    const app: LoadStatus[] = ['PLANNED', 'RESOURCES_PENDING', 'DOC_MISSING', 'READY', 'LOADING', 'IN_TRANSIT_PL', 'AT_PORT', 'ON_FERRY', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'UNLOADING', 'DELIVERED'];
+    // E25 (P4): UNLOADING/UNLOADED → DELIVERED; nowe READY_TO_INVOICE / INVOICED
+    const app: LoadStatus[] = [
+      'PLANNED', 'RESOURCES_PENDING', 'DOC_MISSING', 'READY', 'LOADING', 'IN_TRANSIT_PL',
+      'AT_PORT', 'ON_FERRY', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'DELIVERED',
+      'READY_TO_INVOICE', 'INVOICED',
+    ];
     for (const s of app) expect(statusFromDb(statusToDb(s)!)).toBe(s);
+    expect(statusToDb('UNLOADING')).toBe('DELIVERED');
+    expect(statusFromDb('UNLOADED')).toBe('DELIVERED');
     expect(statusToDb('DELAYED')).toBeNull();
     expect(statusToDb('SILENT')).toBeNull();
     expect(statusFromDb('AT_PORT_NYNASHAMN')).toBe('IN_TRANSIT_SE');

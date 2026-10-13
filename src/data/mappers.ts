@@ -19,7 +19,7 @@ import type { Sailing } from '../types';
 export type DbLoadStatus =
   | 'PLANNED' | 'RESOURCES_PENDING' | 'DOCS_PENDING' | 'READY' | 'AT_LOADING' | 'IN_TRANSIT_PL'
   | 'AT_PORT_GDANSK' | 'FERRY' | 'AT_PORT_NYNASHAMN' | 'IN_TRANSIT_SE' | 'AT_SITE' | 'UNLOADED'
-  | 'DELIVERED' | 'CANCELLED';
+  | 'DELIVERED' | 'READY_TO_INVOICE' | 'INVOICED' | 'CANCELLED';
 
 const DB_TO_APP_STATUS: Record<DbLoadStatus, LoadStatus> = {
   PLANNED: 'PLANNED',
@@ -33,8 +33,11 @@ const DB_TO_APP_STATUS: Record<DbLoadStatus, LoadStatus> = {
   AT_PORT_NYNASHAMN: 'IN_TRANSIT_SE',
   IN_TRANSIT_SE: 'IN_TRANSIT_SE',
   AT_SITE: 'APPROACHING_SITE',
-  UNLOADED: 'UNLOADING',
+  /** E25: UNLOADED scalony z DELIVERED */
+  UNLOADED: 'DELIVERED',
   DELIVERED: 'DELIVERED',
+  READY_TO_INVOICE: 'READY_TO_INVOICE',
+  INVOICED: 'INVOICED',
   CANCELLED: 'PLANNED',
 };
 
@@ -50,8 +53,11 @@ const APP_TO_DB_STATUS: Record<LoadStatus, DbLoadStatus | null> = {
   ON_FERRY: 'FERRY',
   IN_TRANSIT_SE: 'IN_TRANSIT_SE',
   APPROACHING_SITE: 'AT_SITE',
-  UNLOADING: 'UNLOADED',
+  /** E25: stary przycisk „rozładowany” → Dostarczone */
+  UNLOADING: 'DELIVERED',
   DELIVERED: 'DELIVERED',
+  READY_TO_INVOICE: 'READY_TO_INVOICE',
+  INVOICED: 'INVOICED',
   DELAYED: null,
   SILENT: null,
 };

@@ -1,4 +1,4 @@
--- TOWER — Migracja 0204: P4 E25 — kody READY_TO_INVOICE / INVOICED; RPC ręcznej zmiany statusu.
+-- TOWER — Migracja 0205: P4 E25 — kody READY_TO_INVOICE / INVOICED; RPC ręcznej zmiany statusu.
 -- UNLOADED zostaje w enum (historia); nowe zapisy i ręczne „Dostarczone” = DELIVERED.
 -- Dane jednorazowe SG-01 UNLOADED→DELIVERED — po potwierdzeniu daty przez HHL (§5), nie w tej migracji.
 

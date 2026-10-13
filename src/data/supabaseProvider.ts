@@ -217,11 +217,15 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       case 'load.status': {
         const db = statusToDb(m.status);
         if (!db) return;
-        // STATUSY_AUTOMATYCZNE §3.3 — UNLOADED wyłącznie razem z datą rozładunku (jedna zmiana)
-        const patch: Record<string, unknown> = db === 'UNLOADED'
-          ? { status: db, actual_delivery_at: m.unloadedAt ?? new Date().toISOString() }
-          : { status: db };
-        await updateLoad(m.loadId, patch, 'status');
+        // E25 — jedna funkcja w bazie (role, kierunek, czas, audit); UNLOADED→DELIVERED po stronie RPC
+        const when = m.occurredAt ?? m.unloadedAt ?? new Date().toISOString();
+        const r = await sb.rpc('load_status_set', {
+          p_load: m.loadId,
+          p_status: db,
+          p_occurred_at: when,
+          p_note: m.note ?? null,
+        });
+        if (r.error) throw new Error(`status: ${r.error.message}`);
         return;
       }
       case 'sailing.save': {

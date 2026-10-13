@@ -76,6 +76,19 @@ export function canEditResources(role: RoleId): boolean {
   return allowWrite(role) && (role === 'SCX' || role === 'HHL');
 }
 
+/**
+ * E25 — ręczna zmiana statusu: HHL_ADMIN + SCX (Dyspozytor/Użytkownik).
+ * HHL_OPS i KSH — tylko podgląd (decyzja 07.10 17:46).
+ * Demo (bez profilu bazy): HHL i SCX jak dziś.
+ */
+export function canChangeLoadStatus(role: RoleId, appRole?: string | null): boolean {
+  if (!allowWrite(role)) return false;
+  if (appRole) {
+    return appRole === 'HHL_ADMIN' || appRole === 'CARRIER_DISPATCH' || appRole === 'CARRIER_USER';
+  }
+  return role === 'HHL' || role === 'SCX';
+}
+
 
 export function deliveryInstantMs(load: Pick<Load, 'plannedDeliverDate' | 'etaBoden' | 'awizacja'>): number | null {
   const unload = load.awizacja?.unloadWindowStart;

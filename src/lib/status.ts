@@ -13,6 +13,8 @@ export const STATUS_TO_STAGE: Record<LoadStatus, CorridorStage> = {
   APPROACHING_SITE: 'APPROACH',
   UNLOADING: 'SITE',
   DELIVERED: 'DELIVERED',
+  READY_TO_INVOICE: 'DELIVERED',
+  INVOICED: 'DELIVERED',
   DELAYED: 'SE_ROAD',
   SILENT: 'SE_ROAD',
   DOC_MISSING: 'PLAN',
@@ -30,6 +32,8 @@ export const PROGRESS_OF: Record<LoadStatus, number> = {
   APPROACHING_SITE: 0.88,
   UNLOADING: 0.95,
   DELIVERED: 1,
+  READY_TO_INVOICE: 1,
+  INVOICED: 1,
   DELAYED: 0.7,
   SILENT: 0.65,
   DOC_MISSING: 0.04,
@@ -81,6 +85,8 @@ export function statusColor(status: LoadStatus): string {
     case 'ON_FERRY':
       return 'var(--wt-ferry)';
     case 'DELIVERED':
+    case 'READY_TO_INVOICE':
+    case 'INVOICED':
       return 'var(--wt-ok)';
     case 'DELAYED':
     case 'SILENT':
@@ -96,7 +102,7 @@ export function statusColor(status: LoadStatus): string {
 export function statusTone(status: LoadStatus): 'plan' | 'ok' | 'warn' | 'crit' | 'ferry' | 'done' {
   if (['DELAYED', 'SILENT', 'DOC_MISSING'].includes(status)) return 'crit';
   if (status === 'ON_FERRY') return 'ferry';
-  if (status === 'DELIVERED') return 'done';
+  if (status === 'DELIVERED' || status === 'READY_TO_INVOICE' || status === 'INVOICED') return 'done';
   if (['APPROACHING_SITE', 'UNLOADING', 'AT_PORT'].includes(status)) return 'warn';
   if (['PLANNED', 'RESOURCES_PENDING', 'READY'].includes(status)) return 'plan';
   return 'ok';

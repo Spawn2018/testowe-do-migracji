@@ -18,6 +18,8 @@ const STATUS_KEYS: Partial<Record<LoadStatus, string>> = {
   APPROACHING_SITE: 's_on_site',
   UNLOADING: 's_unloaded',
   DELIVERED: 's_delivered',
+  READY_TO_INVOICE: 's_ready_to_invoice',
+  INVOICED: 's_invoiced',
   DELAYED: 's_delayed',
   SILENT: 's_silent',
 };

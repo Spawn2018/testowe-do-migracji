@@ -14,6 +14,8 @@ export type LoadStatus =
   | 'APPROACHING_SITE'
   | 'UNLOADING'
   | 'DELIVERED'
+  | 'READY_TO_INVOICE'
+  | 'INVOICED'
   | 'DELAYED'
   | 'SILENT'
   | 'DOC_MISSING';

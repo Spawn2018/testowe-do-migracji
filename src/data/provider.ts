@@ -46,8 +46,8 @@ export function emptySnapshot(): DataSnapshot {
 
 /** Zapisy przekazywane do dostawcy (write-through ze store). */
 export type DataMutation =
-  /** `unloadedAt` — M9: „Rozładowany” zawsze razem z datą rozładunku (baza odrzuca UNLOADED bez daty) */
-  | { type: 'load.status'; loadId: string; status: LoadStatus; unloadedAt?: string }
+  /** E25: ręczna zmiana przez `load_status_set` (czas + notatka); `unloadedAt` = legacy alias czasu dostawy */
+  | { type: 'load.status'; loadId: string; status: LoadStatus; unloadedAt?: string; occurredAt?: string; note?: string | null }
   /** M9 — pozycja z aplikacji kierowcy → report_position() → process_position() (strefy, automat statusów) */
   | { type: 'position.report'; loadId: string; lat: number; lng: number; at: string; accuracy: number | null; speedKmh: number | null; heading: number | null }
   | { type: 'load.resources'; loadId: string; patch: Partial<LoadResources> }

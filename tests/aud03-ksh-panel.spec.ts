@@ -72,7 +72,7 @@ for (const vp of [{ w: 1366, h: 900, tag: 'komputer' }, { w: 390, h: 844, tag: '
     /* Ustalenia: bez przycisków przewoźnika/HHL (statusy, przypisanie, zasoby) */
     await page.locator('.drawer button[aria-selected]').nth(4).click()
     await expect(page.locator('.drawer [data-carrier-actions]')).toHaveCount(0)
-    await expect(page.locator('.drawer [data-action="mark-ready"]')).toHaveCount(0)
+    await expect(page.locator('.drawer [data-action="change-status"]')).toHaveCount(0)
     await page.locator('.drawer .drawer-hd button.iconbtn').last().click()
     await page.waitForSelector('.drawer', { state: 'detached' })
 

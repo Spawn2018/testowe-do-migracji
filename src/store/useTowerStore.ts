@@ -93,8 +93,9 @@ function uid(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+/** E25: bez sztucznego −2 h (dawne replace Z→+02:00); prawdziwy czas UTC / zamrożony w testach. */
 function nowIso() {
-  return new Date().toISOString().replace('Z', '+02:00');
+  return getNowIso();
 }
 
 
@@ -294,7 +295,7 @@ interface TowerState {
   kshEditPlanDates: (loadId: string, p: KshPlanDatesPatch) => boolean;
   updateAwizacja: (loadId: string, patch: Partial<Awizacja>) => void;
   updateFerry: (loadId: string, patch: Partial<FerryBooking>) => void;
-  setLoadStatus: (loadId: string, status: LoadStatus, actor?: string, note?: string) => void;
+  setLoadStatus: (loadId: string, status: LoadStatus, actor?: string, note?: string, occurredAt?: string) => void;
   /** M5 — numer zlecenia: HHL wpisuje swój, przewoźnik swój (W12; wymusza baza). */
   setOrderNo: (loadId: string, side: OrderSide, value: string | null) => boolean;
   appendEvent: (ev: Omit<LoadEvent, 'id'>) => void;
@@ -725,9 +726,11 @@ export const useTowerStore = create<TowerState>()(
         writeThrough({ type: 'event.append', event: ev });
       },
 
-      setLoadStatus: (loadId, status, actor = 'system', note) => {
+      setLoadStatus: (loadId, status, actor = 'system', note, occurredAt) => {
         const systemActors = new Set(['system', 'import', 'geofence-engine', 'driver-pwa', 'DRIVER', 'auto']);
         const actorLabel = systemActors.has(actor) ? actor : currentActorLabel(actor);
+        /* E25: UNLOADING = Dostarczone (UNLOADED scalony z DELIVERED) */
+        if (status === 'UNLOADING') status = 'DELIVERED';
         {
           /* M5 — lustro enforce_order_numbers(): bez numeru HHL nie ma GOTOWY, bez numeru przewoźnika nie ma załadunku */
           const load = get().loads.find((l) => l.id === loadId);
@@ -759,8 +762,8 @@ export const useTowerStore = create<TowerState>()(
         }
         const progress = PROGRESS_OF[status];
         const pos = positionAlong(progress);
-        const at = nowIso();
-        const unloading = status === 'UNLOADING';
+        const at = occurredAt ?? nowIso();
+        const delivered = status === 'DELIVERED';
         set((s) => ({
           loads: s.loads.map((l) => {
             if (l.id !== loadId) return l;
@@ -774,26 +777,21 @@ export const useTowerStore = create<TowerState>()(
               heading: pos.heading,
               delayed: status === 'DELAYED',
               silentMinutes: status === 'SILENT' ? l.silentMinutes ?? 100 : l.silentMinutes,
-              /* M9 — rozładunek zawsze z datą (data realizacji usługi: paliwo, kurs NBP, tydzień faktury) */
-              ...(unloading ? { unloadedAt: at } : {}),
+              ...(delivered ? { unloadedAt: at } : {}),
             };
             const withEta = applyEtaToLoad(next, at);
-            /* demo: poziom REALIZACJA i kurs z dnia rozładunku od razu; Supabase — migawka liczona w bazie */
-            return unloading && !SUPABASE_AUTH_ENABLED ? withMoneyV2(withEta, localDateOf(at)) : withEta;
+            return delivered && !SUPABASE_AUTH_ENABLED ? withMoneyV2(withEta, localDateOf(at)) : withEta;
           }),
         }));
-        writeThrough(unloading ? { type: 'load.status', loadId, status, unloadedAt: at } : { type: 'load.status', loadId, status });
+        writeThrough({
+          type: 'load.status',
+          loadId,
+          status,
+          occurredAt: at,
+          note: note ?? null,
+          ...(delivered ? { unloadedAt: at } : {}),
+        });
         get().appendEvent({ loadId, type: `STATUS_${status}`, at, actor: actorLabel, note });
-        if (status === 'UNLOADING' || note?.includes('UNLOADED')) {
-          get().pushNotification({
-            title: 'Zadanie POD 24h',
-            body: `Po rozładunku — wgraj POD w 24h`,
-            severity: 'HIGH',
-            loadId,
-            roleScope: ['HHL', 'SCX'],
-            href: { view: 'risk', loadId }, // E9: bez Moje zadania — Do zrobienia
-          });
-        }
       },
 
       setOrderNo: (loadId, side, value) => {
