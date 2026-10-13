@@ -67,6 +67,7 @@ Sprawdził pierwszą wersję (`3320bff`). Poprawione w drugim commicie:
 - na telefonie menu konta i lista promów zasłaniały paski „Podgląd”, „Działasz jako” i komunikat (obraz: menu pod komunikatem);
 - Escape oddaje fokus przyciskowi konta i przyciskowi promu; lista promów zamyka się Escape; „Pomoc” z menu zawsze otwiera; opis przycisku konta zawiera rodzaj konta;
 - wymiary bliżej obrazu: „?” i dzwonek 36 px na białym tle, Podgląd na białym tle, opisy rejsów 13 px w kolorze tekstu, drugi rejs mniejszą cyfrą, paski pod paskiem 44 px, opis „Moje konto” od 67 px od lewej krawędzi menu (obraz ok. 66 px), na telefonie „WATCH TOWER” 17 px, prom wyśrodkowany, menu 13 px od krawędzi, pozycje 44 px, nazwisko 17 px.
+- Drugie sprawdzenie tego samego agenta (na `c5c18a3`): wszystko wyżej potwierdzone. Znalazł jeszcze listę dzwonka na telefonie schodzącą pod dolny pasek, gdy są paski pod paskiem (i nazwisko z 31+ znaków o 1 px za wysokie). Poprawione: wysokość list z paska = okno minus pasek z paskami, odstęp i dolny pasek; lista dzwonka nad dolnym paskiem; nazwisko w ramce konta w 2 liniach do ok. 50 znaków. Test „paski pod paskiem” mierzy teraz menu konta, prom i dzwonek na niskim telefonie (640 px): pod paskami, nad dolnym paskiem, dół listy widoczny.
 - Migawki wzorców (`tests/__screenshots__/`) odświeżone w `visual.yml` (`update=true`) — wpis w `docs/handover/G4_WZORZEC.md`.
 
 ### Zostaje do innych części

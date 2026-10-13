@@ -324,7 +324,7 @@ test.describe('wyglad/P3 pasek górny (E37 pkt 1–2, img/e37-after)', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page);
     const bad: string[] = [];
-    for (const width of [1440, 1366, 1280, 1241, 1100, 1024, 900, 800]) {
+    for (const [width, name] of [[1440, LONG_NAME], [1366, LONG_NAME], [1280, LONG_NAME], [1241, LONG_NAME], [1241, `${LONG_NAME} z Wiśniewskich`], [1100, LONG_NAME], [1024, LONG_NAME], [900, LONG_NAME], [800, LONG_NAME]] as const) {
       await page.setViewportSize({ width, height: 900 });
       await page.waitForTimeout(150);
       const res = await page.evaluate((name) => {
@@ -349,31 +349,41 @@ test.describe('wyglad/P3 pasek górny (E37 pkt 1–2, img/e37-after)', () => {
         const lh = parseFloat(getComputedStyle(brand).lineHeight) || parseFloat(getComputedStyle(brand).fontSize) * 1.3;
         if (brand.getBoundingClientRect().height > lh * 1.4) out.push('„WATCH TOWER” w dwóch liniach');
         return out;
-      }, LONG_NAME);
-      bad.push(...res.map((x) => `${width}: ${x}`));
+      }, name);
+      bad.push(...res.map((x) => `${width} (${name.length} znaków): ${x}`));
     }
     expect(bad, bad.join('\n')).toEqual([]);
   });
 
-  test('telefon: paski pod paskiem i menu konta pod nimi — 0 uciętych, 0 celów < 44 px, 0 tekstu < 12 px', async ({ page }) => {
+  test('telefon: paski pod paskiem; menu konta, prom i dzwonek pod nimi i nad dolnym paskiem — 0 uciętych, 0 celów < 44 px, 0 tekstu < 12 px', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await boot(page);
     const hits: Hit[] = [];
     for (const width of WIDTHS) {
-      await page.setViewportSize({ width, height: 844 });
+      await page.setViewportSize({ width, height: 640 }); // niski telefon: listy muszą się zmieścić nad dolnym paskiem
       await page.evaluate((html) => {
         document.querySelectorAll('.topstack .subbar').forEach((e) => e.remove());
         document.querySelector('.topstack')!.insertAdjacentHTML('beforeend', html);
       }, SUBBARS_HTML);
       hits.push(...await measure(page, 'paski', width, 'HHL'));
-      await page.click('#accountBtn');
-      const below = await page.evaluate(() => {
-        const last = [...document.querySelectorAll('.topstack .subbar')].pop()!.getBoundingClientRect();
-        const menu = document.querySelector('#accountMenu')!.getBoundingClientRect();
-        return menu.top >= last.bottom - 1;
-      });
-      if (!below) hits.push({ kind: 'menu-na-paskach', view: 'paski', width, role: 'HHL', n: 1, sample: ['menu konta zasłania paski'] });
-      await page.click('#accountBtn');
+      // menu konta, lista promów i lista dzwonka: pod paskami, nad dolnym paskiem E8, dół listy widoczny
+      for (const [open, sel] of [['#accountBtn', '#accountMenu'], ['[data-ferry-chip]', '[data-ferry-pop]'], ['.bell-trigger', '.bell-pop']] as const) {
+        await page.click(open);
+        const res = await page.evaluate((q) => {
+          const last = [...document.querySelectorAll('.topstack .subbar')].pop()!.getBoundingClientRect();
+          const pop = document.querySelector(q) as HTMLElement;
+          const r = pop.getBoundingClientRect();
+          const nav = document.querySelector('nav.tower-nav')!.getBoundingClientRect();
+          const low = document.elementFromPoint(r.left + r.width / 2, r.bottom - 4);
+          const out: string[] = [];
+          if (r.top < last.bottom - 1) out.push(`${q} zasłania paski`);
+          if (r.bottom > Math.min(window.innerHeight, nav.top) + 1) out.push(`${q} schodzi pod dolny pasek albo poza okno (${Math.round(r.bottom)} > ${Math.round(Math.min(window.innerHeight, nav.top))})`);
+          if (!low || !pop.contains(low)) out.push(`${q}: dół listy przykryty`);
+          return out;
+        }, sel);
+        if (res.length) hits.push({ kind: 'lista-pod-paskami', view: 'paski', width, role: 'HHL', n: res.length, sample: res });
+        await page.click(open);
+      }
     }
     await page.evaluate(() => document.querySelectorAll('.topstack .subbar').forEach((e) => e.remove()));
     const report = hits.map((h) => `${h.width} ${h.kind}=${h.n}: ${h.sample.join(' | ')}`).join('\n');

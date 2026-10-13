@@ -1219,8 +1219,8 @@ img,video{max-width:100%;height:auto}
 .acc-chip{display:flex;align-items:center;gap:9px;min-height:40px;padding:3px 10px 3px 4px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink);text-align:left}
 .acc-chip:hover,.acc-chip[aria-expanded="true"]{background:var(--surface-2)}
 .acc-avatar{width:32px;height:32px;flex:0 0 32px;display:grid;place-items:center;border-radius:50%;background:var(--sea);color:var(--surface);font-family:var(--font-cond);font-weight:700;font-size:13.5px;letter-spacing:.02em}
-.acc-who{display:flex;flex-direction:column;min-width:0;line-height:1.15}
-.acc-who b{font-weight:600;font-size:13.5px;max-width:170px;overflow-wrap:anywhere}
+.acc-who{display:flex;flex-direction:column;min-width:0;line-height:1.1}
+.acc-who b{font-weight:600;font-size:13.5px;max-width:190px;overflow-wrap:anywhere}
 .acc-who span{font-size:12px;color:var(--ink-3);white-space:nowrap}
 .acc-caret{font-size:10px;color:var(--ink-2)}
 .acc-menu{position:absolute;right:0;top:calc(100% + 6px);width:300px;z-index:60;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--rule)}
@@ -1289,9 +1289,12 @@ img,video{max-width:100%;height:auto}
   .topbar .acc-wrap,.topbar .ferry-chip-wrap,.topbar .bell-wrap{position:static}
   /* E13 (img/e13-phone-fix; D-20261013-2130-01 pkt 1): lista dzwonka na całą szerokość pod paskiem
      (i pod paskami „Podgląd”, „Działasz jako”, komunikatem), przewijanie w środku, zamyka dotknięcie obok */
-  .topstack .bell-pop{position:absolute;left:8px;right:8px;top:calc(100% + 6px);width:auto;max-height:calc(100dvh - 140px)}
+  .topstack .bell-pop{position:absolute;left:8px;right:8px;top:calc(100% + 6px);width:auto;z-index:60}
+  /* wysokość list z paska: okno minus pasek z paskami pod nim (100% = wysokość .topstack), odstęp i dolny pasek E8 */
+  .topstack .bell-pop,.topstack .acc-menu,.topstack .ferry-pop{max-height:calc(100dvh - 100% - 84px - env(safe-area-inset-bottom,0px))}
+  .topstack .acc-menu,.topstack .ferry-pop{overflow-y:auto}
   .acc-avatar{width:34px;height:34px;flex-basis:34px;font-size:14px}
-  .acc-menu{position:absolute;left:13px;right:13px;top:calc(100% + 6px);width:auto;max-height:calc(100dvh - 140px);overflow-y:auto}
+  .acc-menu{position:absolute;left:13px;right:13px;top:calc(100% + 6px);width:auto}
   .acc-hd b{font-size:17px}
   .acc-hint,.acc-hd small{display:none}
   .acc-chev{display:inline;margin-left:auto;color:var(--ink-3);font-size:16px}
