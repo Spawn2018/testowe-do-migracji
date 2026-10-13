@@ -164,3 +164,5 @@ authenticated_security_definer_function_executable	public.workflow_rule_history	
 auth_leaked_password_protection	auth.*	TEST: ochrona wycieków haseł — wyjątek planu darmowego (PLAN §1 pkt 3.3)
 rls_enabled_no_policy	public.security_advisor_snapshots	tabela zamknięta dla ról API (RLS bez policy, brak grantu); odczyt przez RPC
 authenticated_security_definer_function_executable	public.security_advisor_snapshot_latest	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_security_flag_set	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_user_profile_set	E19 — allowlista RPC; sprawdzenie roli w funkcji
