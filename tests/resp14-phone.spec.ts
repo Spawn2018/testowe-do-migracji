@@ -27,11 +27,13 @@ for (const width of WIDTHS) {
   });
 }
 
-test('RESP-14 menu telefon: sesja / rola w nav (UI-12)', async ({ page }) => {
+// wyglad/P3 (E37 pkt 1–2): konto (imię i nazwisko, firma, rodzaj, „Wyloguj”) jest w pasku górnym, nie w lewym menu.
+test('RESP-14 menu telefon: konto w pasku górnym (E37, UI-12)', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.click('.phone-menu-btn');
-  await expect(page.locator('nav .nav-session')).toBeVisible();
-  // demo: rola w menu; produkcja: e-mail + Wyloguj — oba w .nav-session
-  await expect(page.locator('nav .nav-session')).not.toBeEmpty();
+  await page.waitForSelector('.topbar');
+  await expect(page.locator('nav .nav-session')).toHaveCount(0);
+  await page.click('#accountBtn');
+  await expect(page.locator('#accountMenu')).toBeVisible();
+  await expect(page.locator('#accountMenu .acc-hd b')).not.toBeEmpty();
 });

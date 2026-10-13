@@ -32,7 +32,7 @@ for (const role of ROLES) {
   for (const theme of ['dark', 'light']) {
     const cur = await page.evaluate(() => (document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'));
     for (let i = 0; i < 3 && (await page.evaluate(() => (document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'))) !== theme; i++) {
-      await page.click('#themeBtn'); await page.waitForTimeout(300);
+      await page.evaluate(() => document.querySelector('#themeBtn').click()) /* wyglad/P3 (E37): motyw w zamkniętym menu konta */; await page.waitForTimeout(300);
     }
     void cur;
     const views = await page.evaluate(() => [...document.querySelectorAll('nav button[data-view]')].map((b) => b.getAttribute('data-view')));

@@ -1,6 +1,6 @@
 /**
  * E9-7 / G-07 — pasek „Podgląd … Nic tu nie zapiszesz” (tylko supabase, widok KSH/SCX).
- * Wygląd paska górnego zostaje dla koordynatora (`wyglad/P3`); tu tylko logika i istniejąca klasa `.banner`.
+ * wyglad/P3 (E37, img/e37-after): pasek pod paskiem górnym na całą szerokość, niebieski, „Wróć do HHL” po prawej.
  */
 import { useTowerStore } from '../store/useTowerStore';
 import { isPreviewReadOnly } from '../lib/prodFacade';
@@ -20,15 +20,14 @@ export function PreviewBanner() {
   if (!isPreviewReadOnly({ viewRole: role })) return null;
 
   const who = VIEW_LABEL[role] ?? role;
-  const label = t(locale, 'a6_preview_banner').replace('{who}', who);
 
   return (
-    <div className="banner" data-banner="preview" role="status">
-      <div>
-        <b>{label}</b>
-      </div>
-      <button className="chipbtn" type="button" onClick={() => setRole('HHL')}>
-        {t(locale, 'a6_preview_back')}
+    <div className="subbar subbar-preview" data-banner="preview" role="status">
+      <p className="subbar-tx">
+        <b>{t(locale, 'p3a_preview_bold').replace('{who}', who)}</b> {t(locale, 'p3a_preview_rest')}
+      </p>
+      <button className="subbar-btn" type="button" onClick={() => setRole('HHL')}>
+        {t(locale, 'p3a_preview_back')}
       </button>
     </div>
   );

@@ -168,7 +168,17 @@ function TowerShell() {
 
   return (
     <div className={`app${navCollapsed ? ' nav-collapsed' : ''}`}>
-      <Topbar />
+      {/* wyglad/P3 (E37): pasek górny i paski pod nim — Podgląd albo „Działasz jako”, potem komunikat HHL. */}
+      <div className="topstack">
+        <Topbar />
+        {import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? (
+          <>
+            <PreviewBanner />
+            <ImpersonationBanner />
+          </>
+        ) : null}
+        <SystemBroadcastBanner />
+      </div>
       <CorridorSpine />
       <div className="body">
         <button
@@ -179,7 +189,6 @@ function TowerShell() {
         />
         <Nav />
         <main ref={mainRef}>
-          <SystemBroadcastBanner />
           {accessMessage ? (
             <div className="note" role="alert" data-access-denied>
               {t(locale, 'click_denied')}
@@ -191,12 +200,6 @@ function TowerShell() {
               {t(locale, 'click_entry')}
               <button type="button" className="btn ghost" onClick={() => setEntryOpen(false)}>OK</button>
             </div>
-          ) : null}
-          {import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? (
-            <>
-              <PreviewBanner />
-              <ImpersonationBanner />
-            </>
           ) : null}
           {body}
         </main>

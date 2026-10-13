@@ -1,12 +1,13 @@
 /**
  * ADM-10 — pasek „Działasz jako …” (wyjście jednym kliknięciem).
+ * wyglad/P3 (E37 pkt 6, img/e37-after): pasek pod paskiem górnym, bursztynowy; zdanie o zapisie w historii; „Zakończ”.
  */
 import { useState } from 'react';
 import { getAuthProfile, requestAuthReload } from './profile';
 import { getSupabase } from './client';
 import { authErrorPl } from './config';
 import { useTowerStore } from '../store/useTowerStore';
-import { t } from '../i18n/messages';
+import { hasKey, t } from '../i18n/messages';
 import './auth.css';
 
 export function ImpersonationBanner() {
@@ -18,9 +19,9 @@ export function ImpersonationBanner() {
   if (!me?.acting_as) return null;
 
   const name = me.full_name?.trim() || me.email;
-  const label = t(locale, 'a6_ua_act_as_banner')
-    .replace('{name}', name)
-    .replace('{email}', me.email);
+  const kindKey = `p3a_as_${me.role}`;
+  const kind = hasKey(locale, kindKey) ? t(locale, kindKey) : t(locale, `a6_role_${me.role}`);
+  const admin = me.real_email ?? '';
 
   const exit = async () => {
     setBusy(true);
@@ -41,13 +42,14 @@ export function ImpersonationBanner() {
   };
 
   return (
-    <div className="banner" data-banner="impersonation" role="status">
-      <div>
-        <b>{label}</b>
+    <div className="subbar subbar-actas" data-banner="impersonation" role="status">
+      <p className="subbar-tx">
+        <b>{`${t(locale, 'p3a_actas_bold').replace('{kind}', kind)} (${name})`}</b>{' '}
+        {t(locale, 'p3a_actas_rest').replace('{admin}', admin).replace('{kind}', kind)}
         {err ? <span className="auth-msg err"> {err}</span> : null}
-      </div>
-      <button className="chipbtn" type="button" disabled={busy} onClick={() => void exit()}>
-        {t(locale, 'a6_ua_act_as_exit')}
+      </p>
+      <button className="subbar-btn" type="button" disabled={busy} onClick={() => void exit()}>
+        {t(locale, 'p3a_actas_end')}
       </button>
     </div>
   );

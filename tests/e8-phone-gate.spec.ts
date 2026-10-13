@@ -3,7 +3,8 @@
  * P2-wyglad V3 (D-20261013-1535-01); uszczelnienie wyglad/P2-2 W6 (D-20261013-1815-01)
  * i wyglad/P2-2-popr (niezależne sprawdzenie koordynatora 13.10: 6 wstrzykniętych usterek przechodziło).
  *
- * 9 widoków × konta HHL, SCX i KSH × 360 / 390 / 430 px. Każda liczba = 0:
+ * 9 widoków × konta HHL, SCX i KSH × 360 / 390 / 430 px, a także otwarte menu konta i lista promów
+ * z paska górnego (wyglad/P3, E37 pkt 2). Każda liczba = 0:
  * - „poza”: element wystaje poza okno; zwalnia go tylko pasek przewijany z listy tests/fixtures/e8-strips.txt
  *   (strona, `main` i `.app` nigdy); szerszy `main` albo strona = błąd;
  * - „uciete”: treść ucięta przez `overflow:hidden|clip` albo wielokropek (scrollWidth > clientWidth),
@@ -237,6 +238,16 @@ test.describe('brama E8 telefon', () => {
           if (!(await openView(page, view, false))) continue;
           hits.push(...await measure(page, view, width, role));
         }
+        // wyglad/P3 (E37 pkt 2): otwarte menu konta (z „Podglądem”, gdy jest) i lista promów w pasku
+        await openView(page, 'dash');
+        await page.click('#accountBtn');
+        const preview = page.locator('[data-acc="preview"] > .acc-row');
+        if (await preview.count()) await preview.click();
+        hits.push(...await measure(page, 'menu-konta', width, role));
+        await page.click('#accountBtn');
+        await page.click('[data-ferry-chip]');
+        hits.push(...await measure(page, 'promy', width, role));
+        await page.click('[data-ferry-chip]');
       }
       const report = hits.map((h) => `${h.role} ${h.width} ${h.view} ${h.kind}=${h.n}: ${h.sample.join(' | ')}`).join('\n');
       expect(hits, report).toEqual([]);
@@ -296,5 +307,53 @@ test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
     expect(await page.locator('[data-docreq]').count()).toBeGreaterThan(0);
     await openView(page, 'fin');
     await expect(page.locator('[data-fin-type-cards]')).toHaveCount(0);
+  });
+});
+
+test.describe('wyglad/P3 pasek górny (E37 pkt 1–2, img/e37-after)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 120_000 });
+
+  test('komputer: Podgląd, tydzień i rejsy, data, ?, dzwonek, konto z menu; bez sesji w lewym menu', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page);
+    await expect(page.locator('#brandSub')).toHaveText('Stegra Boden');
+    await expect(page.locator('#roleLbl')).toHaveText('Podgląd');
+    await expect(page.locator('#roleSeg button')).toHaveText(['HHL', 'KSH', 'SCX']);
+    await expect(page.locator('#ops .wk')).toBeVisible();
+    await expect(page.locator('#ops [data-ferry-row]').first()).toContainText('→');
+    await expect(page.locator('#ops [data-ops-date]')).toHaveText(/^\d{2}\.\d{2}\.\d{4}$/);
+    await expect(page.locator('#helpBtn')).toBeVisible();
+    await expect(page.locator('#accountBtn .acc-who b')).toBeVisible();
+    await expect(page.locator('#themeBtn')).toBeHidden();
+    await expect(page.locator('nav .nav-session')).toHaveCount(0);
+    await expect(page.locator('[data-ferry-chip]')).toBeHidden();
+
+    await page.click('#accountBtn');
+    await expect(page.locator('#accountMenu .acc-row:visible .acc-lbl')).toHaveText(['Moje konto', 'Dla mnie', 'Pomoc', 'Jasny / ciemny']);
+    const before = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    await page.click('#themeBtn');
+    expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).not.toBe(before);
+    await page.click('[data-acc="my-account"]');
+    await expect(page.locator('#accountMenu')).toBeHidden();
+    await expect(page.locator('[data-section="users"]')).toHaveAttribute('open', '');
+  });
+
+  test('telefon: logo, najbliższy prom, dzwonek, konto; ?, motyw i Podgląd w menu konta', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page);
+    await expect(page.locator('[data-ferry-chip]')).toBeVisible();
+    await expect(page.locator('#helpBtn')).toBeHidden();
+    await expect(page.locator('.topbar .roleswitch')).toBeHidden();
+    await expect(page.locator('#ops')).toBeHidden();
+    await expect(page.locator('#accountBtn .acc-who')).toBeHidden();
+    await page.click('[data-ferry-chip]');
+    await expect(page.locator('[data-ferry-pop] .ferry-pop-ft b').first()).toHaveText(/^t\d+$/);
+    await page.click('[data-ferry-chip]');
+    await page.click('#accountBtn');
+    await expect(page.locator('#accountMenu .acc-row:visible .acc-lbl')).toHaveText(['Moje konto', 'Pomoc', 'Podgląd: HHL · KSH · SCX', 'Jasny / ciemny']);
+    await page.click('[data-acc="preview"] > .acc-row');
+    await page.click('[data-preview-seg] button[data-role="KSH"]');
+    await expect(page.locator('#roleSeg button[data-role="KSH"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#accountMenu')).toBeHidden();
   });
 });

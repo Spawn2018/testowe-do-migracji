@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTowerStore } from '../store/useTowerStore';
 import type { BafParams, FactoringOffer, Locale, RateRule } from '../types';
@@ -14,6 +14,7 @@ import { OptionsHowTo } from '../components/settings/OptionsHowTo';
 import { SmsFallbackEntry } from '../components/shell/SmsFallbackEntry';
 import { canSeeWorkflows, PROD_BUILD, shows } from '../lib/prodFacade';
 import { parseRoute } from '../lib/routes';
+import { OPEN_OPTIONS_EVENT, scrollToScreen, takeOptionsScreen, type OptionsScreen } from '../lib/openOptions';
 
 /** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */
 function savedText(locale: Locale, code: string): string {
@@ -116,6 +117,23 @@ export function OptionsView() {
   const openSystem = smsEntry != null || parseRoute(location.pathname).kind === 'system';
   const setView = useTowerStore((s) => s.setView);
   const [saved, setSaved] = useState('');
+  /* wyglad/P3 (E37): „Moje konto” i „Dla mnie” z menu konta otwierają swoją sekcję. */
+  const [screenSection, setScreenSection] = useState<string | null>(null);
+  useEffect(() => {
+    const go = (screen: OptionsScreen | null) => {
+      if (!screen) return;
+      const id = screen === 'my-account' ? 'users' : 'prefs';
+      setScreenSection(null);
+      window.setTimeout(() => {
+        setScreenSection(id);
+        scrollToScreen(screen === 'my-account' ? '[data-auth="my-account"], [data-section="users"]' : '[data-section="prefs"]');
+      }, 0);
+    };
+    go(takeOptionsScreen());
+    const onOpen = () => go(takeOptionsScreen());
+    window.addEventListener(OPEN_OPTIONS_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_OPTIONS_EVENT, onOpen);
+  }, []);
 
   const saveMark = (label: string) => {
     setSaved(label);
@@ -407,7 +425,7 @@ export function OptionsView() {
         </div>
         {saved ? <span className="pill p-go">{t(locale, 'opt_saved')} · {savedText(locale, saved)}</span> : null}
       </header>
-      <OptionsAccordion locale={locale} sections={sections} forceOpen={openSystem ? 'system' : null} />
+      <OptionsAccordion locale={locale} sections={sections} forceOpen={openSystem ? 'system' : screenSection} />
     </div>
   );
 }

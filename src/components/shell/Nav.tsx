@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useTowerStore } from '../../store/useTowerStore'
-import { navForRole, type NavKey, ROLE_META } from '../../lib/permissions'
+import { navForRole, type NavKey } from '../../lib/permissions'
 import { isTechnicalRoadNotice } from '../../lib/format'
 import { navLabel, t } from '../../i18n/messages'
 import { ClaudeIcon, type IconKey } from './ClaudeIcon'
-import { AUTH_RELOAD_EVENT, getAuthProfile, type AuthProfile } from '../../auth/profile'
-import { markManualLogout } from '../../auth/sessionYear'
+/* wyglad/P3 (E37 pkt 1): e-mail, rodzaj konta i „Wyloguj” przeszły do menu konta w pasku górnym (AccountMenu). */
 
 /** Claude v2.0 SVG icons 1:1 */
 const ICON: Record<NavKey, IconKey> = {
@@ -66,15 +65,7 @@ export function Nav() {
   const geofences = useTowerStore((s) => s.geofences)
   const navCollapsed = useTowerStore((s) => s.navCollapsed)
   const setNavCollapsed = useTowerStore((s) => s.setNavCollapsed)
-  const [profile, setProfile] = useState<AuthProfile | null>(() => getAuthProfile())
   const [moreOpen, setMoreOpen] = useState(false)
-
-  useEffect(() => {
-    const sync = () => setProfile(getAuthProfile())
-    sync()
-    window.addEventListener(AUTH_RELOAD_EVENT, sync)
-    return () => window.removeEventListener(AUTH_RELOAD_EVENT, sync)
-  }, [])
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 1100px)')
@@ -171,37 +162,6 @@ export function Nav() {
         )
       })}
       <div style={{ flex: 1 }} />
-      {!navCollapsed ? <div className="sep" /> : null}
-      <div className="nav-session" data-auth="session">
-        {profile ? (
-          <>
-            {!navCollapsed ? (
-              <>
-                <b title={profile.email}>{profile.email}</b>
-                <span>{t(locale, `a6_role_${profile.role}`)}</span>
-              </>
-            ) : (
-              <span className="nav-session-dot" title={`${profile.email} · ${t(locale, `a6_role_${profile.role}`)}`} aria-hidden />
-            )}
-            <button
-              className="chipbtn"
-              type="button"
-              title={t(locale, 'a6_auth_logout')}
-              aria-label={t(locale, 'a6_auth_logout')}
-              onClick={() => {
-                markManualLogout()
-                if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
-                  void import('../../auth/client').then(({ getSupabase }) => getSupabase()).then((sb) => sb.auth.signOut())
-                }
-              }}
-            >
-              {navCollapsed ? '⎋' : t(locale, 'a6_auth_logout')}
-            </button>
-          </>
-        ) : (
-          !navCollapsed ? <span className="nav-session-role">{ROLE_META[role].name}</span> : null
-        )}
-      </div>
       <button
         type="button"
         className="nav-more-btn"

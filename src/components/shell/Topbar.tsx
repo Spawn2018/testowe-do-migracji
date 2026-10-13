@@ -1,15 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { INTL_LOCALE, t, tp } from '../../i18n/messages';
 import { ROLE_META } from '../../lib/permissions';
-import type { RoleId } from '../../types';
+import type { Locale, RoleId } from '../../types';
 import { NotificationBell } from './NotificationBell';
 import { ClaudeIcon } from './ClaudeIcon';
 import { KeyboardHelp } from './KeyboardHelp';
-import { ferryWidgetLabel, nextLiveSailing } from '../../lib/ferry';
+import { AccountMenu } from './AccountMenu';
+import { nextLiveSailing, vesselById } from '../../lib/ferry';
 import { getNow } from '../../lib/frozenNow';
 import { canSwitchView, PROD_BUILD } from '../../lib/prodFacade';
-import { dbFerryWidget, nearestCrossingSailings } from '../../lib/sailings';
+import { effDeparture, nearestCrossingSailings } from '../../lib/sailings';
+import { formatListDateTime } from '../../lib/format';
 
 const ROLES: RoleId[] = ['HHL', 'KSH', 'SCX'];
 /** ISO week number (Europe/Warsaw local date). */
@@ -21,19 +23,110 @@ function isoWeek(d: Date): number {
   return Math.ceil(((tmp.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
 
+/** Jeden rejs w pasku (E37 pkt 1: „6 h 13 min Stena Estelle · 08:00 · Gdynia → Karlskrona”). */
+type FerryRow = { mins: number; cd: string; line: string; short: string };
+
+function countdown(mins: number): string {
+  return `${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')} min`;
+}
+
+/** Godzina rejsu: dziś „08:00”, inny dzień „09.10, 08:00” (E21). */
+function depLabel(depIso: string, nowIso: string): string {
+  const dep = formatListDateTime(depIso);
+  const today = formatListDateTime(nowIso).split(', ')[0];
+  const [day, time] = dep.split(', ');
+  return day === today && time ? time : dep;
+}
+
+function portName(locale: Locale, code: string): string {
+  return t(locale, `p3a_port_${code}`);
+}
+
+function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof nearestCrossingSailings>[0]): FerryRow[] {
+  const nowMs = now.getTime();
+  const nowIso = now.toISOString();
+  const rows: FerryRow[] = [];
+  if (PROD_BUILD) {
+    /* P7 — produkcja: najbliższa Stena (GDY→KAA) i najbliższy Polferries (GDN→NYN) z bazy. */
+    const near = nearestCrossingSailings(sailings, nowMs, 1);
+    for (const [s, op] of [[near.stena[0], 'Stena'], [near.polferries[0], 'Polferries']] as const) {
+      if (!s) {
+        rows.push({ mins: Number.MAX_SAFE_INTEGER, cd: '—', line: `${op} · ${t(locale, 'i2_no_sailing')}`, short: op });
+        continue;
+      }
+      const depIso = effDeparture(s);
+      const mins = Math.max(0, Math.round((Date.parse(depIso) - nowMs) / 60_000));
+      const [from, to] = s.route.split('-');
+      const when = depLabel(depIso, nowIso);
+      rows.push({
+        mins,
+        cd: countdown(mins),
+        line: `${s.vessel} · ${when} · ${portName(locale, from)} → ${portName(locale, to)}`,
+        short: `${op} ${when}`,
+      });
+    }
+  } else {
+    /* Demo — rozkład pokazowy Polferries (jeden rejs). */
+    const s = nextLiveSailing(now);
+    const mins = Math.max(0, Math.round((Date.parse(s.depLocal) - nowMs) / 60_000));
+    const when = depLabel(new Date(Date.parse(s.depLocal)).toISOString(), nowIso);
+    rows.push({
+      mins,
+      cd: countdown(mins),
+      line: `${vesselById(s.vessel).short || vesselById(s.vessel).name} · ${when} · ${portName(locale, s.depPort)} → ${portName(locale, s.arrPort)}`,
+      short: `Polferries ${when}`,
+    });
+  }
+  return rows.sort((a, b) => a.mins - b.mins);
+}
+
+/** Telefon (E37 pkt 2): najbliższy prom; dotknięcie → oba rejsy, tydzień i data. */
+function FerryChip({ rows, wk, date }: { rows: FerryRow[]; wk: number; date: string }) {
+  const locale = useTowerStore((s) => s.locale);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+  const first = rows[0];
+  if (!first) return null;
+  return (
+    <div className="ferry-chip-wrap" ref={ref}>
+      <button type="button" className="ferry-chip" aria-expanded={open} aria-haspopup="dialog"
+        aria-label={t(locale, 'p3a_ferry_open')} onClick={() => setOpen((v) => !v)} data-ferry-chip>
+        <span className="ferry-chip-cd"><ClaudeIcon name="ferry" />{first.cd}</span>
+        <span className="ferry-chip-lb">{first.short}</span>
+      </button>
+      {open ? (
+        <div className="ferry-pop" role="dialog" aria-label={t(locale, 'p3a_ferry_open')} data-ferry-pop>
+          {rows.map((row, i) => (
+            <div key={i} className="ferry-pop-row">
+              <b>{row.cd}</b>
+              <span>{row.line}</span>
+            </div>
+          ))}
+          <div className="ferry-pop-ft">
+            <b>{tp(locale, 'a6_top_wk', { n: String(wk) })}</b>
+            <b>{date}</b>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function Topbar() {
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
   const setRole = useTowerStore((s) => s.setRole);
-  const toggleTheme = useTowerStore((s) => s.toggleTheme);
   const sailings = useTowerStore((s) => s.sailings);
   const [help, setHelp] = useState(false);
-  const [ops, setOps] = useState({
-    wk: 0,
-    /** P7 — Stena + Polferries obok siebie w pasku */
-    ferryRows: [] as { cd: string; line: string }[],
-    date: '',
-  });
+  const [ops, setOps] = useState({ wk: 0, ferryRows: [] as FerryRow[], date: '' });
 
   const closeHelp = useCallback(() => setHelp(false), []);
 
@@ -51,70 +144,35 @@ export function Topbar() {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
       }).formatToParts(now);
       const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
-      /* P7 — produkcja: najbliższe Stena + Polferries; demo — jeden widget jak wcześniej */
-      let ferryRows: { cd: string; line: string }[] = [];
-      if (PROD_BUILD) {
-        const near = nearestCrossingSailings(sailings, now.getTime(), 1);
-        const st = dbFerryWidget(near.stena[0] ?? null, now.getTime());
-        const pf = dbFerryWidget(near.polferries[0] ?? null, now.getTime());
-        if (st) ferryRows.push({ cd: st.cd, line: `Stena · ${st.line}` });
-        else ferryRows.push({ cd: '—', line: `Stena · ${t(locale, 'i2_no_sailing')}` });
-        if (pf) ferryRows.push({ cd: pf.cd, line: `Polferries · ${pf.line}` });
-        else ferryRows.push({ cd: '—', line: `Polferries · ${t(locale, 'i2_no_sailing')}` });
-      } else {
-        const fw = ferryWidgetLabel(nextLiveSailing(now), locale);
-        ferryRows = [{ cd: fw.cd, line: `${fw.line}${fw.wave ? ` · ${fw.wave}` : ''}` }];
-      }
-      const y = Number(get('year'));
-      const m = Number(get('month'));
-      const day = Number(get('day'));
-      const localNoon = new Date(y, m - 1, day, 12, 0, 0);
+      const localNoon = new Date(Number(get('year')), Number(get('month')) - 1, Number(get('day')), 12, 0, 0);
       setOps({
         wk: isoWeek(localNoon),
-        ferryRows,
-        /* A6-T3 — data w języku interfejsu (PL bez zmian: DD.MM.RRRR); P10 — bez zegara */
+        ferryRows: buildFerryRows(locale, now, sailings),
+        /* A6-T3 — data w języku interfejsu (PL: DD.MM.RRRR); P10 — bez zegara */
         date: new Intl.DateTimeFormat(INTL_LOCALE[locale], { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', year: 'numeric' }).format(now),
       });
     };
     tick();
     const id = window.setInterval(tick, 30_000);
-    // also refresh countdown display every second for the clock + smooth CD
-    const id2 = window.setInterval(tick, 1000);
-    return () => {
-      clearInterval(id);
-      clearInterval(id2);
-    };
+    return () => clearInterval(id);
   }, [locale, sailings]);
+
+  const switchView = canSwitchView();
 
   return (
     <header className="topbar">
-      <button
-        type="button"
-        className="iconbtn phone-menu-btn"
-        aria-label={t(locale, 'a6_nav_menu_open')}
-        title={t(locale, 'a6_nav_menu_open')}
-        onClick={() => {
-          const s = useTowerStore.getState();
-          s.setNavCollapsed(!s.navCollapsed, { persist: false });
-        }}
-      >
-        ☰
-      </button>
       <div className="brand">
         <img src="/brand/watchtower-symbol.png" alt="" width={28} height={28} />
         <b>{t(locale, 'brand')}</b>
-        <span id="brandSub" className="brand-sub">{`Stegra Boden · ${ROLE_META[role].name}`}</span>
+        <span id="brandSub" className="brand-sub">{t(locale, 'p3a_brand_sub')}</span>
       </div>
       <div className="spacer" />
-      {/* I-2a: przełącznik widoku tylko dla HHL (w produkcji — konto organizacji HHL) */}
-      {canSwitchView() ? <div className="roleswitch">
-        <span id="roleLbl" className="role-lbl">{t(locale, 'role')}</span>
-        <div className="seg" role="group" aria-label={t(locale, 'role')} id="roleSeg">
+      {/* E9 / E37: „Podgląd” tylko dla HHL (w produkcji — konto organizacji HHL) */}
+      {switchView ? <div className="roleswitch">
+        <span id="roleLbl" className="role-lbl">{t(locale, 'p3a_preview_lbl')}</span>
+        <div className="seg" role="group" aria-label={t(locale, 'p3a_preview_lbl')} id="roleSeg">
           {ROLES.map((r) => (
             <button
               key={r}
@@ -124,55 +182,41 @@ export function Topbar() {
               onClick={() => setRole(r)}
               title={ROLE_META[r].name}
             >
-              {ROLE_META[r].name}
+              {ROLE_META[r].short}
             </button>
           ))}
         </div>
       </div> : null}
-      {/* P8 — brak wyboru języka w UI */}
-      <button
-        type="button"
-        className="iconbtn"
-        id="themeBtn"
-        onClick={toggleTheme}
-        title={t(locale, 'a6_top_theme')}
-        aria-label={t(locale, 'theme')}
-      >
-        <ClaudeIcon name="theme" />
-      </button>
-      <button
-        type="button"
-        className="iconbtn"
-        id="helpBtn"
-        title={t(locale, 'a6_top_shortcuts')}
-        aria-label={t(locale, 'a6_top_shortcuts')}
-        style={{ fontFamily: "'Barlow Condensed'", fontWeight: 700, fontSize: 15 }}
-        onClick={() => setHelp((h) => !h)}
-        aria-pressed={help}
-      >
-        ?
-      </button>
-      <NotificationBell />
       <div className="ops" id="ops" title={t(locale, 'a6_top_ferry_title')} data-p7-ferries>
+        {switchView ? <span className="sep" /> : null}
         <span className="wk">{tp(locale, 'a6_top_wk', { n: String(ops.wk) })}</span>
-        <span className="sep" />
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--sea)' }}>
-          <ClaudeIcon name="ferry" />
-        </span>
-        <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+        <span className="ops-ferry-ico"><ClaudeIcon name="ferry" /></span>
+        <span className="ops-rows">
           {ops.ferryRows.map((row, i) => (
-            <span key={i} data-ferry-row={i} style={{ display: 'flex', alignItems: 'baseline', gap: 6, lineHeight: 1.15 }}>
-              <span className="cd" style={{ fontSize: i === 0 ? undefined : 12 }}>{row.cd}</span>
+            <span key={i} data-ferry-row={i} className="ops-row">
+              <span className="cd">{row.cd}</span>
               <span className="lb">{row.line}</span>
             </span>
           ))}
         </span>
         <span className="sep" />
         {/* P10 — data bez zegara */}
-        <span>
-          <span className="cd" data-ops-date>{ops.date}</span>
-        </span>
+        <span className="cd ops-date" data-ops-date>{ops.date}</span>
       </div>
+      <FerryChip rows={ops.ferryRows} wk={ops.wk} date={ops.date} />
+      <button
+        type="button"
+        className="iconbtn top-help"
+        id="helpBtn"
+        title={t(locale, 'a6_top_shortcuts')}
+        aria-label={t(locale, 'a6_top_shortcuts')}
+        onClick={() => setHelp((h) => !h)}
+        aria-pressed={help}
+      >
+        ?
+      </button>
+      <NotificationBell />
+      <AccountMenu />
       <KeyboardHelp open={help} onClose={closeHelp} />
     </header>
   );
