@@ -195,6 +195,10 @@ Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visua
 
 Odświeżone 14 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38487793951, gałąź `wyglad/P3-b`, commit `a54f1da`). Ekrany: Kokpit — 6 kafelków E9 w 2 kolumnach, stopka czasu wykrycia, „Najpilniejsze” zamiast czerwonego banera; wszystkie ekrany — lewe menu z liczbami tylko przy „Ryzyka” i „Faktury” (bez Harmonogramu, Stref, Automatyzacji). Matrycy 280 ujęć nie ruszano.
 
+## wyglad/P4-c (14.10.2026) — E44 pole „Link śledzenia”, „Gotowy” L6/L9, E26 sprawa L14, E35 „Działa samo”
+
+Odświeżona 1 migawka Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38554118466, gałąź `wyglad/P4-c`, commit `6318360`): „stan-zablokowany” — w zakładce Status pod „Gotowy” zdanie „Brakuje: zezwolenie” (L6, L9). Pozostałe 14 migawek bez zmian. Matrycy 280 ujęć nie ruszano.
+
 ## wyglad/P4-b (14.10.2026) — E25 zakładka Status, E27 pasek śledzenia, E15 blok ETA, słownik nazw E25
 
 Odświeżone 10 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38512437080, gałąź `wyglad/P4-b`, commit `3c5f0bf`, na PR #181 `2902bc5`). Mapa: pigułki statusów z nazwami E25 („Droga SE”, „Droga PL”, „Port PL”, „Port SE”). Stany (III-2): panel transportu z paskiem śledzenia nad zakładkami; „stan-zablokowany” — zakładka Status z osią i „Zmień status”. Matrycy 280 ujęć nie ruszano.
