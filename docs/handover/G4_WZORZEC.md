@@ -195,6 +195,10 @@ Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visua
 
 Odświeżone 14 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38487793951, gałąź `wyglad/P3-b`, commit `a54f1da`). Ekrany: Kokpit — 6 kafelków E9 w 2 kolumnach, stopka czasu wykrycia, „Najpilniejsze” zamiast czerwonego banera; wszystkie ekrany — lewe menu z liczbami tylko przy „Ryzyka” i „Faktury” (bez Harmonogramu, Stref, Automatyzacji). Matrycy 280 ujęć nie ruszano.
 
+## wyglad/P4-a (14.10.2026) — E28 pasek etapów, E27 Mapa, L7 oznaczenia
+
+Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38500750044, gałąź `wyglad/P4`, commit `fe090d0`). Wszystkie ekrany: pod paskiem górnym pasek 10 kafelków z liczbą w grupach Przygotowanie · W trasie · Po dostawie (zamiast 9 kafelków bez cyfr). Harmonogram: filtry stanu Opóźnione N · Bez dokumentów · Bez kierowcy · Bez ciągnika i licznik „N z M” (bez przycisków etapów). Mapa: chipy W trasie · Opóźnione · Brak GPS, oznaczenia obok statusu, „Najbliższe włączenia śledzenia”. Matrycy 280 ujęć nie ruszano.
+
 ## AUD-03 (06.10.2026) — Harmonogram KSH bez „Zmień ciągnik”
 
 Zamierzona zmiana UI (polecenie AUD-03: „Zmień ciągnik” niewidoczny dla roli KSH; baza i tak odmawia — `tests/db/aud03.sh`). gate:visual na `b52dcc5`: 274/280, zmienione wyłącznie `harmonogram__ksh__pl__{1280,1440,1920}__{dark,light-default}` (6). Odświeżono te 6 ujęć z przebiegu bramy (kolejność pełnej matrycy). Innych ujęć nie ruszano.

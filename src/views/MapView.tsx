@@ -13,6 +13,15 @@ import { formatOpsDateTime } from '../lib/time';
 import { clickableRow } from '../lib/clickableRow';
 import { vehiclesInMotion } from '../lib/format';
 import { transportLabel } from '../lib/transportName';
+import { StageBar, StageChip } from '../components/shell/StageBar';
+import { StatusMarkers } from '../components/ui/StatusPill';
+import { isOnRoute, nextTrackingStarts, statusMarkers, trackingWindowPrep } from '../lib/stageTiles';
+import { delayPillMinutes } from '../lib/prodDash';
+import { delayMinutesVsPlan } from '../lib/time';
+import { filterLoadsForRole } from '../lib/permissions';
+import { getNow } from '../lib/frozenNow';
+import { formatTableDay, refYearInOps } from '../lib/time';
+import type { Load } from '../types';
 
 /** Claude maplayers — exactly 5. Labels via i18n. */
 const LAYER_ORDER: { key: string; labelKey: string }[] = [
@@ -53,13 +62,16 @@ function loadMapWidths(): Record<MapColId, number> {
   return base;
 }
 
-type TimingFilter = 'all' | 'ontime' | 'late' | 'nogps' | 'risk';
+/* wyglad/P4 (E27, img/e27-after): W trasie · Opóźnione · Brak GPS */
+type TimingFilter = 'all' | 'late' | 'nogps';
+const isLate = (l: Load) => l.delayed || l.status === 'DELAYED';
+/* „Brak GPS” jak oznaczenie obok statusu (L7): tylko w trasie, po 30 min ciszy */
+const isNoGps = (l: Load) => statusMarkers(l, { hasDelayMinutes: true }).includes('nogps');
 
 export function MapView() {
   const loads = useTowerStore((s) => s.loads);
   const role = useTowerStore((s) => s.role);
   const stageFilter = useTowerStore((s) => s.stageFilter);
-  const risks = useTowerStore((s) => s.risks);
   const search = useTowerStore((s) => s.search);
   const setSearch = useTowerStore((s) => s.setSearch);
   const hoverLoadId = useTowerStore((s) => s.hoverLoadId);
@@ -77,7 +89,6 @@ export function MapView() {
   const [aisReadAt, setAisReadAt] = useState<string | null>(null);
   const [timing, setTiming] = useState<TimingFilter>('all');
   const [widths, setWidths] = useState<Record<MapColId, number>>(() => loadMapWidths());
-  const [gpsWithFix, setGpsWithFix] = useState(0);
   const widthsRef = useRef(widths);
   widthsRef.current = widths;
 
@@ -113,56 +124,58 @@ export function MapView() {
     [loads, role, stageFilter, search],
   );
 
-  const riskLoadIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const r of risks) {
-      if (r.loadId) ids.add(r.loadId);
-    }
-    return ids;
-  }, [risks]);
-
+  /* E27 / E28: na mapie i w „W trasie” tylko transporty w trasie (Załadunek … Plac Boden — ta sama suma co grupa paska i Kokpit, E9);
+     z filtrem etapu tabela pokazuje ten etap (np. 92 w przygotowaniu), a mapa — tylko te z nich, które są w trasie („W trasie: 0”).
+     „Teraz” zaokrąglone do minuty: listy i znaczniki nie przeliczają się przy każdym najechaniu (bez dodatkowych zapytań). */
+  const nowMin = Math.floor(getNow().getTime() / 60_000);
+  const nowIso = useMemo(() => new Date(nowMin * 60_000).toISOString(), [nowMin]);
+  const tableBase = useMemo(() => (stageFilter ? baseList : baseList.filter(isOnRoute)), [baseList, stageFilter]);
   const list = useMemo(() => {
-    if (timing === 'ontime') return baseList.filter((l) => !l.delayed);
-    if (timing === 'late') return baseList.filter((l) => l.delayed);
-    if (timing === 'nogps') {
-      return baseList.filter(
-        (l) => l.status === 'SILENT' || (l.silentMinutes != null && l.silentMinutes >= 30),
-      );
-    }
-    if (timing === 'risk') return baseList.filter((l) => riskLoadIds.has(l.id));
-    return baseList;
-  }, [baseList, timing, riskLoadIds]);
+    if (timing === 'late') return tableBase.filter(isLate);
+    if (timing === 'nogps') return tableBase.filter(isNoGps);
+    return tableBase;
+  }, [tableBase, timing]);
+  const onMap = useMemo(() => list.filter(isOnRoute), [list]);
+  /* E27: na produkcji znacznik dostaje też transport w przygotowaniu po 03:00 w dniu załadunku, gdy baza ma jego pozycję GPS
+     (CorridorMap rysuje na produkcji tylko pozycje z bazy). Tabela i „W trasie · N” zostają przy transportach w trasie.
+     Demo nie ma GPS — tam bez zmian (obraz E28: „Przygotowanie” → „W trasie: 0”). Lista ma klucz z numerów, żeby nie pytać bazy co minutę od nowa. */
+  const windowPrepKey = PROD_BUILD && timing === 'all' ? trackingWindowPrep(baseList, nowIso).map((l) => l.id).join(',') : '';
+  const mapLoads = useMemo(() => {
+    if (!windowPrepKey) return onMap;
+    const ids = new Set(windowPrepKey.split(','));
+    return [...onMap, ...baseList.filter((l) => ids.has(l.id))];
+  }, [onMap, baseList, windowPrepKey]);
+  const nextStarts = useMemo(() => nextTrackingStarts(filterLoadsForRole(loads, role), nowIso, 3), [loads, role, nowIso]);
+  const refYear = refYearInOps(getNow());
+  const filtersOn = !!stageFilter || !!search.trim() || timing !== 'all';
 
-  /* E: licznik „N pojazdów” = tylko pojazdy z prawdziwą pozycją GPS (prod); demo = progress w ruchu. */
+  /* E: licznik „N pojazdów” = tylko pojazdy w trasie z prawdziwą pozycją GPS (prod; to samo zapytanie co mapa, te same numery); demo = progress w ruchu. */
+  const [fixIds, setFixIds] = useState<ReadonlySet<string>>(() => new Set());
   useEffect(() => {
-    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
-      setGpsWithFix(list.filter((l) => l.progress > 0 && l.progress < 1).length);
-      return undefined;
-    }
+    /* warunek wprost na zmiennej środowiska — paczka demo nie dostaje kodu pobierania pozycji (test I-2) */
+    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return undefined;
     let cancelled = false;
-    const ids = list.map((l) => l.id);
+    const ids = mapLoads.map((l) => l.id);
     const run = () => {
       void import('../lib/vehiclePositions').then(({ fetchLatestVehicleFixes }) => fetchLatestVehicleFixes(ids)).then(
-        (rows) => {
-          if (cancelled) return;
-          const want = new Set(ids);
-          setGpsWithFix(rows.filter((r) => want.has(r.loadId)).length);
-        },
-        () => { if (!cancelled) setGpsWithFix(0); },
+        (rows) => { if (!cancelled) setFixIds(new Set(rows.map((r) => r.loadId))); },
+        () => { if (!cancelled) setFixIds(new Set()); },
       );
     };
     run();
     const id = window.setInterval(run, 60_000);
     return () => { cancelled = true; window.clearInterval(id); };
-  }, [list]);
+  }, [mapLoads]);
+  const gpsWithFix = PROD_BUILD
+    ? onMap.filter((l) => fixIds.has(l.id)).length
+    : onMap.filter((l) => l.progress > 0 && l.progress < 1).length;
+  /* pusto na mapie = nikt w trasie i żaden transport z okna śledzenia nie ma pozycji */
+  const mapEmpty = onMap.length === 0 && !mapLoads.some((l) => fixIds.has(l.id));
 
 
-  const ontimeCount = baseList.filter((l) => !l.delayed).length;
-  const lateCount = baseList.filter((l) => l.delayed).length;
-  const nogpsCount = baseList.filter(
-    (l) => l.status === 'SILENT' || (l.silentMinutes != null && l.silentMinutes >= 30),
-  ).length;
-  const riskCount = baseList.filter((l) => riskLoadIds.has(l.id)).length;
+  /* liczby przy chipach = to, co pokaże kliknięcie (E28 pkt 6) */
+  const lateCount = tableBase.filter(isLate).length;
+  const nogpsCount = tableBase.filter(isNoGps).length;
 
   const startResize = (id: MapColId, clientX: number) => {
     const startW = widthsRef.current[id] ?? 80;
@@ -194,7 +207,9 @@ export function MapView() {
       <header className="panel-hd">
         <h2>{t(locale, 'nav_map')}</h2>
         <span className="sub">
-          {vehiclesInMotion(gpsWithFix)} · {t(locale, 'map_pos_every')}
+          {vehiclesInMotion(gpsWithFix)}
+          {/* telefon: bez opisu częstotliwości — mapa ma się zmieścić w całości po otwarciu (B-7a) */}
+          <span className="map-sub-cadence"> · {t(locale, 'p4_map_sub')}</span>
         </span>
         <div className="spacer" />
         <button type="button" className="chipbtn" onClick={() => setView('geo')}>
@@ -217,61 +232,58 @@ export function MapView() {
             ))}
           </div>
           <div className="mapstage">
-            <CorridorMap loads={list} />
+            <CorridorMap loads={mapLoads} />
+            {mapEmpty ? (
+              /* E27: nikogo w oknie śledzenia — mapa bez znaczników z informacją na środku */
+              <div className="map-empty" data-map-empty>
+                <b>{t(locale, 'p4_map_empty')}</b>
+                <span>{t(locale, filtersOn ? 'p4_map_empty_sub_f' : 'p4_map_empty_sub')}</span>
+              </div>
+            ) : null}
           </div>
         </div>
 
         <div className="mlist" style={{ display: 'flex', flexDirection: 'column', background: 'var(--surface)' }}>
-          <div className="filters" style={{ borderBottom: '1px solid var(--rule)' }}>
+          <StageBar variant="page" />
+          <div className="filters" style={{ borderBottom: '1px solid var(--rule)' }} data-map-filters>
             <input
               style={{ flex: 1, minWidth: 100 }}
               placeholder={t(locale, 'search')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            <StageChip />
+            {/* z filtrem etapu „W trasie” zastępuje chip etapu (liczby niżej = ten etap) */}
+            {stageFilter ? null : (
+              <button
+                type="button"
+                className="chipbtn"
+                data-timing="all"
+                aria-pressed={timing === 'all'}
+                onClick={() => setTiming('all')}
+              >
+                {tp(locale, 'p4_map_on', { n: tableBase.length })}
+              </button>
+            )}
             <button
               type="button"
               className="chipbtn"
-              aria-pressed={timing === 'all'}
-              onClick={() => setTiming('all')}
-            >
-              {tp(locale, 'a6_map_all', { n: String(baseList.length) })}
-            </button>
-            <button
-              type="button"
-              className="chipbtn"
-              aria-pressed={timing === 'ontime'}
-              onClick={() => setTiming(timing === 'ontime' ? 'all' : 'ontime')}
-              title={t(locale, 'a6_map_ontime_title')}
-            >
-              {tp(locale, 'a6_map_ontime', { n: String(ontimeCount) })}
-            </button>
-            <button
-              type="button"
-              className="chipbtn"
+              data-timing="late"
               aria-pressed={timing === 'late'}
               onClick={() => setTiming(timing === 'late' ? 'all' : 'late')}
               title={t(locale, 'a6_map_late_title')}
             >
-              {t(locale, 'map_late')} · {lateCount}
+              {tp(locale, 'p4_map_late', { n: lateCount })}
             </button>
             <button
               type="button"
               className="chipbtn"
+              data-timing="nogps"
               aria-pressed={timing === 'nogps'}
               onClick={() => setTiming(timing === 'nogps' ? 'all' : 'nogps')}
               title={t(locale, 'a6_map_nogps_title')}
             >
-              {tp(locale, 'a6_map_nogps', { n: String(nogpsCount) })}
-            </button>
-            <button
-              type="button"
-              className="chipbtn"
-              aria-pressed={timing === 'risk'}
-              onClick={() => setTiming(timing === 'risk' ? 'all' : 'risk')}
-              title={t(locale, 'a6_map_risk_title')}
-            >
-              {tp(locale, 'a6_map_risk', { n: String(riskCount) })}
+              {tp(locale, 'p4_map_nogps', { n: nogpsCount })}
             </button>
           </div>
 
@@ -333,6 +345,7 @@ export function MapView() {
                       <td>
                         <span className="cell-clip">
                           <StatusPill status={l.status} stage={l.stage} />
+                          <StatusMarkers load={l} delayMin={delayPillMinutes(l, delayMinutesVsPlan(l.etaBoden, l.plannedDeliverDate, l.planDates?.deliveryTo), PROD_BUILD)} />
                         </span>
                       </td>
                       <td>
@@ -351,6 +364,32 @@ export function MapView() {
                 )}
               </tbody>
             </table>
+          </div>
+          {/* E27: najbliższe włączenia śledzenia (03:00 w dniu załadunku), z naczepą albo „brak naczepy” */}
+          <div className="map-next" data-map-next>
+            <div className="map-next-hd">{t(locale, 'p4_map_next')}</div>
+            {nextStarts.length === 0 ? (
+              <div className="map-next-row"><span className="muted">{t(locale, 'p4_map_next_none')}</span></div>
+            ) : (
+              nextStarts.map((g, gi) => {
+                const noTrailer = g.loads.some((l) => !(l.resources.trailerPlate ?? '').trim());
+                const plates = [...new Set(g.loads.map((l) => (l.resources.trailerPlate ?? '').trim()).filter(Boolean))];
+                return (
+                  <div key={g.day} className="map-next-row" data-next-day={g.day}>
+                    <span>
+                      <b>{tp(locale, 'p4_map_next_at', { day: formatTableDay(g.day, refYear) })}</b>
+                      {' · '}
+                      {g.loads.map((l) => l.code).join(', ')}
+                    </span>
+                    {noTrailer ? (
+                      <span className="map-next-warn">{t(locale, gi === 0 ? 'p4_map_no_trailer_todo' : 'p4_map_no_trailer')}</span>
+                    ) : (
+                      <span className="muted" data-content>{plates.join(', ')}</span>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </div>

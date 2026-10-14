@@ -4,6 +4,7 @@ import { paymentBlockedByDispute } from '../lib/invoiceDispute';
 import { standardSkipMessage } from '../lib/standardSkipMessage';
 import { persist } from 'zustand/middleware';
 import { SE_ROUTE_ALTS } from '../lib/seRouteAlts';
+import type { StageTile } from '../lib/stageTiles';
 import type {
   Sailing,
   AppToast,
@@ -11,7 +12,6 @@ import type {
   Bill,
   BillVerification,
   BafParams,
-  CorridorStage,
   Document,
   FactoringOffer,
   FerryBooking,
@@ -190,7 +190,8 @@ interface TowerState {
   /** D18 — show DEMONSTRACYJNE marks on rates / BAF / SE road */
   showDemoMarks: boolean;
   view: ViewKey;
-  stageFilter: CorridorStage | null;
+  /** wyglad/P4 (E28): filtr kafelka paska etapów — 10 kafelków według statusów E25 (src/lib/stageTiles.ts). */
+  stageFilter: StageTile | null;
   search: string;
   selectedLoadId: string | null;
   hoverLoadId: string | null;
@@ -246,7 +247,7 @@ interface TowerState {
     view?: ViewKey;
     tab?: string | null;
     loadId?: string | null;
-    stage?: CorridorStage | null;
+    stage?: StageTile | null;
     riskFilter?: string | null;
     docsFilter?: 'missing' | null;
   }) => void;
@@ -264,7 +265,7 @@ interface TowerState {
   /** M4 — ustawienia z serwera (bez write-through). */
   applyUserPrefs: (p: import('../data/provider').UserPrefsPatch) => void;
   setView: (view: ViewKey) => void;
-  setStageFilter: (stage: CorridorStage | null) => void;
+  setStageFilter: (stage: StageTile | null) => void;
   setSearch: (q: string) => void;
   selectLoad: (id: string | null) => void;
   setHoverLoad: (id: string | null) => void;

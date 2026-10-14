@@ -3,7 +3,7 @@ import { HashRouter, Routes, Route } from 'react-router-dom';
 import { applyThemeToDom } from './lib/theme';
 import { useTowerStore } from './store/useTowerStore';
 import { Topbar } from './components/shell/Topbar';
-import { CorridorSpine } from './components/shell/CorridorSpine';
+import { StageBar } from './components/shell/StageBar';
 import { Nav } from './components/shell/Nav';
 import { Toasts } from './components/shell/Toasts';
 import { SystemBroadcastBanner } from './components/shell/SystemBroadcastBanner';
@@ -179,7 +179,8 @@ function TowerShell() {
         ) : null}
         <SystemBroadcastBanner />
       </div>
-      <CorridorSpine />
+      {/* wyglad/P4 (E28): pasek etapów — 10 kafelków z liczbami; na telefonie w Harmonogramie i na Mapie */}
+      <StageBar variant="global" />
       <div className="body">
         <button
           type="button"
