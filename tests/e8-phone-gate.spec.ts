@@ -248,6 +248,14 @@ test.describe('brama E8 telefon', () => {
         await page.click('[data-ferry-chip]');
         hits.push(...await measure(page, 'promy', width, role));
         await page.click('[data-ferry-chip]');
+        // wyglad/P4 (E8, E28): Harmonogram — otwarte „⋯” (działania) i „Filtry ▾” (daty, Bez kierowcy, Bez ciągnika)
+        await openView(page, 'sched');
+        await page.click('.sched-more');
+        hits.push(...await measure(page, 'harmonogram-dzialania', width, role));
+        await page.click('.sched-more');
+        await page.click('[data-sched-more-filters]');
+        hits.push(...await measure(page, 'harmonogram-filtry', width, role));
+        await page.click('[data-sched-more-filters]');
       }
       const report = hits.map((h) => `${h.role} ${h.width} ${h.view} ${h.kind}=${h.n}: ${h.sample.join(' | ')}`).join('\n');
       expect(hits, report).toEqual([]);
@@ -532,6 +540,134 @@ test.describe('wyglad/P3-b Kokpit (E9, img/e9-after; telefon: E8 pkt 6, V5)', ()
         expect(urgent).toBeLessThanOrEqual(3);
         await expect(card.locator('.ck-ft')).toBeHidden();
       }
+    });
+  }
+});
+
+test.describe('wyglad/P4 pasek etapów (E28, img/e28-after) i Mapa (E27)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 180_000 });
+  const TILES = ['PREP', 'LOADING', 'ROAD_PL', 'PORT_PL', 'FERRY', 'PORT_SE', 'ROAD_SE', 'SITE', 'DELIVERED', 'SETTLE'];
+
+  test('komputer: 10 kafelków z liczbą w 3 grupach; klik z Kokpitu → Mapa z chipem; w Harmonogramie filtr na miejscu; Escape zdejmuje', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    const bar = page.locator('[data-stage-bar="global"]');
+    await expect(bar).toBeVisible();
+    await expect(bar.locator('.sbar-grp span')).toHaveText(['PRZYGOTOWANIE', 'W TRASIE · ŚLEDZENIE', 'PO DOSTAWIE']);
+    const ids = await bar.locator('[data-tile]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.tile));
+    expect(ids).toEqual(TILES);
+    for (const n of await bar.locator('[data-tile] .n').allInnerTexts()) expect(n).toMatch(/^\d+$/);
+    // z Kokpitu na Mapę z filtrem
+    await openView(page, 'dash');
+    await bar.locator('[data-tile="ROAD_SE"]').click();
+    await expect(page.locator('[data-page="map"]')).toBeVisible();
+    await expect(page.locator('[data-stage-chip="ROAD_SE"]')).toHaveText('Etap: Droga SE ✕');
+    await expect(bar.locator('[data-tile="ROAD_SE"]')).toHaveAttribute('aria-pressed', 'true');
+    // drugi klik zdejmuje
+    await bar.locator('[data-tile="ROAD_SE"]').click();
+    await expect(page.locator('[data-stage-chip]')).toHaveCount(0);
+    // w Harmonogramie filtr na miejscu; licznik „N z M” = wiersze; liczba na kafelku = wiersze
+    await openView(page, 'sched');
+    await bar.locator('[data-tile="PREP"]').click();
+    await expect(page.locator('[data-page="schedule"]')).toBeVisible();
+    const tileN = Number(await bar.locator('[data-tile="PREP"] .n').innerText());
+    await expect(page.locator('table.sched-table tbody tr[data-load]')).toHaveCount(tileN);
+    await expect(page.locator('.sched-count')).toHaveText(new RegExp(`^${tileN} z \\d+$`));
+    // Harmonogram: tylko filtry stanu (E28 pkt 2)
+    const quick = await page.locator('[data-sched-filters] [data-quick]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.quick));
+    expect(quick).toEqual(['late', 'nodocs', 'nodriver', 'notractor']);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-stage-chip]')).toHaveCount(0);
+  });
+
+  test('komputer: Mapa — W trasie · Opóźnione · Brak GPS; „W trasie: 0” przy etapie bez aut; najbliższe włączenia śledzenia', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    const timing = await page.locator('[data-map-filters] [data-timing]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.timing));
+    expect(timing).toEqual(['all', 'late', 'nogps']);
+    await expect(page.locator('[data-map-next] .map-next-hd')).toHaveText('Najbliższe włączenia śledzenia');
+    await page.locator('[data-stage-bar="global"] [data-tile="PREP"]').click();
+    await expect(page.locator('[data-map-empty]')).toContainText('W trasie: 0');
+  });
+
+  test('komputer: Mapa z filtrem etapu — liczba przy chipie = wiersze po kliknięciu; bez chipa „W trasie”', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    const bar = page.locator('[data-stage-bar="global"]');
+    const rows = page.locator('table.map-loads-table tbody tr[data-load]');
+    for (const tile of TILES) {
+      const n = Number(await bar.locator(`[data-tile="${tile}"] .n`).innerText());
+      if (n === 0) continue;
+      await bar.locator(`[data-tile="${tile}"]`).click();
+      await expect(page.locator(`[data-stage-chip="${tile}"]`)).toBeVisible();
+      await expect(page.locator('[data-map-filters] [data-timing="all"]')).toHaveCount(0);
+      await expect(rows).toHaveCount(n);
+      for (const k of ['late', 'nogps']) {
+        const chip = page.locator(`[data-map-filters] [data-timing="${k}"]`);
+        const c = Number((await chip.innerText()).replace(/\D+/g, ''));
+        await chip.click();
+        await expect(rows, `${tile} ${k}`).toHaveCount(c);
+        await chip.click();
+      }
+      await bar.locator(`[data-tile="${tile}"]`).click();
+    }
+  });
+
+  test('telefon 390: włączony filtr stanu widać w rzędzie także z filtrem etapu; „⋯” — Escape i dotknięcie obok zamykają tylko menu', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', true);
+    await openView(page, 'sched');
+    const sched = page.locator('[data-page="schedule"]');
+    const row = sched.locator('[data-sched-filters]');
+    // filtr spod „Filtry ▾” po włączeniu jest w rzędzie
+    await sched.locator('[data-sched-more-filters]').click();
+    await sched.locator('.sched-more-filters [data-quick="nodriver"]').click();
+    await expect(row.locator('[data-quick="nodriver"]')).toBeVisible();
+    await expect(row.locator('[data-quick="nodriver"]')).toHaveAttribute('aria-pressed', 'true');
+    // z filtrem etapu: w rzędzie chip etapu, włączony filtr stanu i „Filtry ▾”
+    await sched.locator('[data-stage-bar="page"] [data-tile="PREP"]').click();
+    await expect(row.locator('[data-stage-chip="PREP"]')).toBeVisible();
+    await expect(row.locator('[data-quick="nodriver"]')).toBeVisible();
+    await expect(row.locator('[data-quick="late"]')).toHaveCount(0);
+    // „⋯”: Escape zamyka menu, filtr etapu zostaje
+    const more = sched.locator('.sched-more');
+    await more.click();
+    await expect(sched.locator('.sched-actions-pop')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(sched.locator('.sched-actions-pop')).toHaveCount(0);
+    await expect(row.locator('[data-stage-chip="PREP"]')).toBeVisible();
+    // dotknięcie obok (karta transportu) zamyka menu i nie otwiera transportu
+    await more.click();
+    await expect(sched.locator('.sched-actions-pop')).toBeVisible();
+    const card = sched.locator('[data-sched-cards] [data-load]').first();
+    await expect(card).toBeVisible();
+    await card.click({ position: { x: 8, y: 8 } });
+    await expect(sched.locator('.sched-actions-pop')).toHaveCount(0);
+    await page.waitForTimeout(300);
+    await expect(page.locator('aside.drawer')).toHaveCount(0);
+    // następne dotknięcie karty otwiera transport jak zwykle
+    await card.click({ position: { x: 8, y: 8 } });
+    await expect(page.locator('aside.drawer')).toHaveCount(1);
+  });
+
+  for (const width of [360, 390, 430]) {
+    test(`telefon ${width}: pasek tylko w Harmonogramie i na Mapie, przewijany w bok; kafelki ≥ 44 px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await boot(page, 'HHL', true);
+      await expect(page.locator('[data-stage-bar="global"]')).toBeHidden();
+      for (const view of ['sched', 'map']) {
+        await openView(page, view);
+        const strip = page.locator(`[data-page="${view === 'sched' ? 'schedule' : 'map'}"] [data-stage-bar="page"]`);
+        await expect(strip).toBeVisible();
+        const boxes = await strip.locator('[data-tile]').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }));
+        expect(boxes).toHaveLength(10);
+        expect(boxes.every(([w, h]) => w >= 44 && h >= 44)).toBe(true);
+        expect(await strip.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+      }
+      await openView(page, 'dash');
+      await expect(page.locator('[data-stage-bar="page"]')).toHaveCount(0);
     });
   }
 });

@@ -88,12 +88,13 @@ test.describe('III-2 zrzuty stanów (HHL pl 1440)', () => {
 
   test('stan-wcisniety (dark)', async ({ page }) => {
     await open(page, 'dark'); await sched(page)
-    const chips = page.locator('[data-page="schedule"] .filters .chipbtn')
-    await chips.nth(2).click() // „Opóźnione” — aria-pressed
-    const box = (await chips.nth(3).boundingBox())!
+    /* Przepisane w wyglad/P4 — E28 pkt 2: bez „Wszystkie” i „W drodze”; filtry stanu mają data-quick */
+    const late = page.locator('[data-page="schedule"] .filters [data-quick="late"]')
+    await late.click() // „Opóźnione” — aria-pressed
+    const box = (await page.locator('[data-page="schedule"] .filters [data-quick="nodocs"]').boundingBox())!
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
-    await page.mouse.down() // :active na „Braki dokumentów”
-    await expect(chips.nth(2)).toHaveAttribute('aria-pressed', 'true')
+    await page.mouse.down() // :active na „Bez dokumentów”
+    await expect(late).toHaveAttribute('aria-pressed', 'true')
     await expect(page).toHaveScreenshot('stan-wcisniety__dark.png', SHOT)
     await page.mouse.up()
   })

@@ -7,8 +7,8 @@ import { MAP_FIELDS as MAP_FIELDS_UI, REQUIRED_FIELDS as REQUIRED_FIELDS_UI, typ
 import { useTowerStore } from '../store/useTowerStore';
 import { filterLoads } from '../lib/selectors';
 import { transportLabel } from '../lib/transportName';
-import { StatusPill, formatDelayPill } from '../components/ui/StatusPill';
-import { canEditResources, canImportSchedule, canSeeCost, canSeeMargin, canSeeRevenue } from '../lib/permissions';
+import { StatusPill } from '../components/ui/StatusPill';
+import { canEditResources, canImportSchedule, canSeeCost, canSeeMargin, canSeeRevenue, filterLoadsForRole } from '../lib/permissions';
 import { fmtNum, pctText, t, tp } from '../i18n/messages';
 import { formatTowerPair } from '../lib/cSep';
 import { docCategoryLabel } from '../lib/enumLabels';
@@ -25,7 +25,7 @@ import { getNow } from '../lib/frozenNow';
 // D15: ExcelJS (~1 MB) tylko przy imporcie/eksporcie — dynamiczny import.
 import type { ImportDiff } from '../lib/scheduleDryRun';
 import { COLUMN_MAP_DEFAULT } from '../lib/importColumnMap';
-import type { CorridorStage, DocCategory, Load, Locale } from '../types';
+import type { DocCategory, Load, Locale } from '../types';
 import {
   SCHED_COLS,
   loadSchedPrefs,
@@ -40,20 +40,16 @@ import type { ServerImportDraft } from '../data/scheduleImportServer';
 import { clickableRow } from '../lib/clickableRow';
 import { standardSkipMessage } from '../lib/standardSkipMessage';
 import { plPlural } from '../lib/plPlural';
+import { StageBar, StageChip } from '../components/shell/StageBar';
+import { StatusMarkers } from '../components/ui/StatusPill';
+import { useIsPhone } from '../lib/useIsPhone';
 
 /** I-1: import w produkcji przez import_schedule() w bazie (podgląd i zapis w jednej transakcji). */
 const SERVER_IMPORT = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED;
 
 type ImportStep = null | 'upload' | 'colmap' | 'map' | 'diff' | 'done';
-type Quick =
-  | 'all'
-  | 'active'
-  | 'late'
-  | 'nodocs'
-  | 'delivered'
-  | 'nodriver'
-  | 'notractor'
-  | CorridorStage;
+/* wyglad/P4 (E28 pkt 2): jeden filtr etapu — kafelek paska; w Harmonogramie zostają tylko filtry stanu */
+type Quick = 'all' | 'late' | 'nodocs' | 'nodriver' | 'notractor';
 
 /** A6-T3 — wymiary w języku interfejsu (PL bez zmian). */
 function fmtDim(n: number, locale: Locale = 'pl'): string {
@@ -62,6 +58,14 @@ function fmtDim(n: number, locale: Locale = 'pl'): string {
 
 function delayMinutes(l: Load): number | null {
   return delayPillMinutes(l, delayMinutesVsPlan(l.etaBoden, l.plannedDeliverDate, l.planDates?.deliveryTo), PROD_BUILD);
+}
+
+function quickMatch(l: Load, q: Quick): boolean {
+  if (q === 'late') return l.delayed || l.status === 'DELAYED';
+  if (q === 'nodocs') return l.docMissing || l.status === 'DOC_MISSING';
+  if (q === 'nodriver') return !(l.resources.driverName ?? '').trim();
+  if (q === 'notractor') return !(l.resources.tractorPlate ?? '').trim();
+  return true;
 }
 
 /** I-18: data wstępna vs potwierdzona przez KSH (tylko produkcja — w demo pola brak). */
@@ -107,6 +111,39 @@ export function ScheduleView() {
   const [tplName, setTplName] = useState('');
   const pendingBuf = useRef<ArrayBuffer | null>(null);
   const [quick, setQuick] = useState<Quick>('all');
+  /* wyglad/P4 (E8, E28): telefon — działania pod „⋯”, daty i reszta filtrów pod „Filtry ▾” */
+  const phone = useIsPhone();
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  /* „⋯” zamyka się po działaniu, Escape i dotknięciu obok.
+     Escape łapany w fazie przechwytywania i zatrzymany: zamyka tylko menu, filtr etapu i otwarty transport zostają (skrót globalny w App).
+     Dotknięcie obok tylko zamyka menu — nie klika tego, co pod spodem. */
+  const morePopRef = useRef<HTMLDivElement | null>(null);
+  const moreBtnRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    if (!actionsOpen) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      setActionsOpen(false);
+      moreBtnRef.current?.focus();
+    };
+    const onDown = (e: PointerEvent) => {
+      const el = morePopRef.current;
+      if (!el || el.contains(e.target as Node)) return;
+      setActionsOpen(false);
+      /* jedno kliknięcie po tym dotknięciu nie dochodzi do elementu pod spodem (np. wiersza transportu) */
+      const stop = (ev: MouseEvent) => { ev.preventDefault(); ev.stopPropagation(); };
+      window.addEventListener('click', stop, { capture: true, once: true });
+      window.setTimeout(() => window.removeEventListener('click', stop, true), 800);
+    };
+    window.addEventListener('keydown', onKey, true);
+    window.addEventListener('pointerdown', onDown, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('pointerdown', onDown, true);
+    };
+  }, [actionsOpen]);
   /* III-2 (SCOPE 0.9, makieta go()): krótki szkielet tabeli po wejściu w widok — wiersze w rytmie tabeli, nigdy spinner */
   const [skeleton, setSkeleton] = useState(true);
   useEffect(() => { const id = window.setTimeout(() => setSkeleton(false), SKELETON_MS); return () => window.clearTimeout(id); }, []);
@@ -119,6 +156,12 @@ export function ScheduleView() {
 
   // B-9 C: ten sam filtr kafelka (stageFilter) działa też w Harmonogramie
   const stageFilter = useTowerStore((s) => s.stageFilter);
+  /* kafelek paska pokazuje transporty — z zakładki „Rejsy” wracamy do „Transporty”, żeby filtr był widoczny */
+  const [prevStage, setPrevStage] = useState(stageFilter);
+  if (stageFilter !== prevStage) {
+    setPrevStage(stageFilter);
+    if (stageFilter) setSchedTab('loads');
+  }
   const updateResources = useTowerStore((s) => s.updateResources);
   const [loadFrom, setLoadFrom] = useState('');
   const [loadTo, setLoadTo] = useState('');
@@ -129,31 +172,10 @@ export function ScheduleView() {
     [loads, role, stageFilter, search],
   );
 
+  /* „Opóźnione 5” — liczba przy chipie (makieta E28) */
+  const lateCount = useMemo(() => base.filter((l) => quickMatch(l, 'late')).length, [base]);
   const list = useMemo(() => {
-    return base.filter((l) => {
-      if (quick === 'active') {
-        return ['IN_TRANSIT_PL', 'AT_PORT', 'ON_FERRY', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'LOADING'].includes(
-          l.status,
-        );
-      }
-      if (quick === 'late') return l.delayed || l.status === 'DELAYED';
-      if (quick === 'nodocs') return l.docMissing || l.status === 'DOC_MISSING';
-      if (quick === 'delivered') return l.status === 'DELIVERED' || l.stage === 'DELIVERED';
-      if (quick === 'nodriver') return !(l.resources.driverName ?? '').trim();
-      if (quick === 'notractor') return !(l.resources.tractorPlate ?? '').trim();
-      if (
-        quick === 'LOADING' ||
-        quick === 'TO_PORT' ||
-        quick === 'GDANSK' ||
-        quick === 'FERRY' ||
-        quick === 'APPROACH' ||
-        quick === 'SE_ROAD' ||
-        quick === 'SITE'
-      ) {
-        return l.stage === quick;
-      }
-      return true;
-    }).filter((l) => {
+    return base.filter((l) => quickMatch(l, quick)).filter((l) => {
       if (loadFrom && (l.plannedLoadDate ?? '') < loadFrom) return false;
       if (loadTo && (l.plannedLoadDate ?? '') > loadTo) return false;
       if (delivFrom && (l.plannedDeliverDate ?? '') < delivFrom) return false;
@@ -285,22 +307,27 @@ export function ScheduleView() {
     }
   }
 
-  const chips: { id: Quick; labelKey: string }[] = [
-    { id: 'all', labelKey: 'sched_all' },
-    { id: 'active', labelKey: 'kpi_on_road' },
-    { id: 'late', labelKey: 'sched_late' },
-    { id: 'nodocs', labelKey: 'sched_nodocs' },
-    { id: 'delivered', labelKey: 'stage_DELIVERED' },
-    { id: 'nodriver', labelKey: 'a6_sch_nodriver' },
-    { id: 'notractor', labelKey: 'a6_sch_notractor' },
-    { id: 'LOADING', labelKey: 's_loading' },
-    { id: 'TO_PORT', labelKey: 'stage_TO_PORT' },
-    { id: 'GDANSK', labelKey: 'stage_GDANSK' },
-    { id: 'FERRY', labelKey: 'stage_FERRY' },
-    { id: 'APPROACH', labelKey: 'stage_APPROACH' },
-    { id: 'SE_ROAD', labelKey: 'stage_SE_ROAD' },
-    { id: 'SITE', labelKey: 'stage_SITE' },
+  /* wyglad/P4 (E28): filtry stanu — Opóźnione (z liczbą), Bez dokumentów, Bez kierowcy, Bez ciągnika;
+     na telefonie dwa pierwsze w rzędzie, reszta pod „Filtry ▾” (E8, img/e28-after) */
+  const chips: { id: Exclude<Quick, 'all'>; labelKey: string; phoneRow: boolean }[] = [
+    { id: 'late', labelKey: 'p4_f_late', phoneRow: true },
+    { id: 'nodocs', labelKey: 'p4_f_nodocs', phoneRow: true },
+    { id: 'nodriver', labelKey: 'p4_f_nodriver', phoneRow: false },
+    { id: 'notractor', labelKey: 'p4_f_notractor', phoneRow: false },
   ];
+  const chipBtn = (c: (typeof chips)[number]) => (
+    <button
+      key={c.id}
+      type="button"
+      className="chipbtn"
+      data-quick={c.id}
+      aria-pressed={quick === c.id}
+      onClick={() => setQuick(quick === c.id ? 'all' : c.id)}
+    >
+      {t(locale, c.labelKey)}
+      {c.id === 'late' ? <em className="chip-n">{lateCount}</em> : null}
+    </button>
+  );
 
   const visibleCols = colPrefs.order.filter((id) => {
     if (colPrefs.hidden.includes(id)) return false;
@@ -335,7 +362,7 @@ export function ScheduleView() {
     <div className="seg" role="group" aria-label={t(locale, 'nav_sched')} data-sched-tabs>
       {(['loads', 'sailings'] as const).map((k) => (
         <button key={k} type="button" data-sched-tab={k} aria-pressed={schedTab === k} onClick={() => setSchedTab(k)}>
-          {t(locale, k === 'loads' ? 'sched_tab_loads' : 'sched_tab_sailings')}
+          {k === 'loads' && phone ? tp(locale, 'p4_tab_loads', { n: filterLoadsForRole(loads, role).length }) : t(locale, k === 'loads' ? 'sched_tab_loads' : 'sched_tab_sailings')}
         </button>
       ))}
     </div>
@@ -354,14 +381,9 @@ export function ScheduleView() {
     );
   }
 
-  return (
-    <div className="panel section-card page-sections" data-page="schedule" style={{ margin: 12, display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
-      <div className="panel-hd" style={{ flexWrap: 'wrap' }}>
-        <h2>{t(locale, 'nav_sched')}</h2>
-        <span className="sub">{verLine}</span>
-        <div className="spacer" />
-        {schedTabs}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>
+  /* Działania Harmonogramu: na komputerze w nagłówku; na telefonie pod „⋯” obok szukajki (E8, img/e8-after) */
+  const actionButtons = (
+    <>
           {canImportSchedule(role) ? (
             <button type="button" className="chipbtn" onClick={() => setStep('upload')} disabled={parsing}>
               {t(locale, 'sched_upload')}
@@ -448,7 +470,17 @@ export function ScheduleView() {
           >
             {t(locale, 'i24_sch_pdf')}
           </button>
-        </div>
+    </>
+  );
+
+  return (
+    <div className="panel section-card page-sections" data-page="schedule" style={{ margin: 12, display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
+      <div className="panel-hd" style={{ flexWrap: 'wrap' }}>
+        <h2>{t(locale, 'nav_sched')}</h2>
+        <span className="sub">{verLine}</span>
+        <div className="spacer" />
+        {schedTabs}
+        {phone ? null : <div className="sched-actions">{actionButtons}</div>}
       </div>
 
       {canImportSchedule(role) && step === 'upload' && (
@@ -711,6 +743,67 @@ export function ScheduleView() {
       )}
 
       <div className="panel-bd flush" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {phone ? (
+          <>
+            {/* telefon (E8, E28): szukajka i „⋯”, pasek etapów, filtry stanu i „Filtry ▾” */}
+            <div className="filters sched-ph-search">
+              <input
+                type="search"
+                placeholder={t(locale, 'search')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <div className="sched-more-wrap" ref={morePopRef}>
+                <button
+                  ref={moreBtnRef}
+                  type="button"
+                  className="chipbtn sched-more"
+                  aria-expanded={actionsOpen}
+                  aria-label={t(locale, 'p4_actions_more')}
+                  title={t(locale, 'p4_actions_more')}
+                  onClick={() => setActionsOpen((v) => !v)}
+                >
+                  ⋯
+                </button>
+                {actionsOpen ? (
+                  <div
+                    className="sched-actions sched-actions-pop"
+                    onClick={(e) => { if ((e.target as HTMLElement).closest('button')) setActionsOpen(false); }}
+                  >
+                    {actionButtons}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            <StageBar variant="page" />
+            <div className="filters" data-sched-filters>
+              <StageChip />
+              {/* z filtrem etapu w rzędzie zostaje chip etapu i „Filtry ▾” (makieta E28, telefon); włączony filtr stanu zawsze widać */}
+              {chips.filter((c) => (!stageFilter && c.phoneRow) || quick === c.id).map(chipBtn)}
+              <button type="button" className="chipbtn" aria-expanded={filtersOpen} data-sched-more-filters onClick={() => setFiltersOpen((v) => !v)}>
+                {t(locale, filtersOpen ? 'p4_f_more_open' : 'p4_f_more')}
+              </button>
+              <div className="spacer" />
+              <span className="sched-count">{tp(locale, 'p4_count', { n: list.length, total: loads.length })}</span>
+            </div>
+            {filtersOpen ? (
+              <div className="filters sched-more-filters">
+                {chips.filter((c) => !((!stageFilter && c.phoneRow) || quick === c.id)).map(chipBtn)}
+                <label className="muted" title={t(locale, 'a6_sch_dates')}>
+                  {t(locale, 'a6_sch_dates')}{' '}
+                  <input type="date" value={loadFrom} onChange={(e) => setLoadFrom(e.target.value)} aria-label={t(locale, 'a6_sch_dates')} />
+                  <input type="date" value={loadTo} onChange={(e) => setLoadTo(e.target.value)} aria-label={t(locale, 'a6_sch_dates')} />
+                </label>
+                <label className="muted" title={t(locale, 'a6_sch_deliv_dates')}>
+                  {t(locale, 'a6_sch_deliv_dates')}{' '}
+                  <input type="date" value={delivFrom} onChange={(e) => setDelivFrom(e.target.value)} />
+                  <input type="date" value={delivTo} onChange={(e) => setDelivTo(e.target.value)} />
+                </label>
+                <OptionsHowTo locale={locale} k="a6_sch_howto_filters" summaryKey="a6_sch_howto_btn" />
+              </div>
+            ) : null}
+          </>
+        ) : (
         <div className="filters" data-sched-filters>
           <OptionsHowTo locale={locale} k="a6_sch_howto_filters" summaryKey="a6_sch_howto_btn" />
           <input
@@ -732,32 +825,23 @@ export function ScheduleView() {
             <input type="date" value={delivFrom} onChange={(e) => setDelivFrom(e.target.value)} />
             <input type="date" value={delivTo} onChange={(e) => setDelivTo(e.target.value)} />
           </label>
-          {chips.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className="chipbtn"
-              aria-pressed={quick === c.id}
-              onClick={() => setQuick(c.id)}
-            >
-              {t(locale, c.labelKey)}
-            </button>
-          ))}
+          <StageChip />
+          {chips.map(chipBtn)}
           <div className="spacer" />
-          <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>
-            {list.length} / {loads.length}
-          </span>
+          <span className="sched-count">{tp(locale, 'p4_count', { n: list.length, total: loads.length })}</span>
         </div>
+        )}
         {!skeleton && list.length === 0 ? (
           <div className="empty" data-sched-empty>
             <b>{t(locale, 'iii2_empty_title')}</b>
             <p>
-              {chips.some((c) => c.id === quick && /^[A-Z_]+$/.test(c.id))
-                ? t(locale, 'iii2_empty_stage').replace('{stage}', t(locale, chips.find((c) => c.id === quick)!.labelKey))
+              {/* „Na etapie … nie ma” tylko gdy pusty jest sam etap; gdy wiersze etapu odsiał inny filtr — tekst ogólny */}
+              {stageFilter && base.length === 0 && !search.trim()
+                ? t(locale, 'iii2_empty_stage').replace('{stage}', t(locale, `p4_tile_${stageFilter}`))
                 : t(locale, 'iii2_empty_any')}{' '}
               {t(locale, 'iii2_empty_hint')}
             </p>
-            <button type="button" className="btn ghost" data-sched-clear onClick={() => { setSearch(''); setQuick('all'); setLoadFrom(''); setLoadTo(''); setDelivFrom(''); setDelivTo(''); }}>
+            <button type="button" className="btn ghost" data-sched-clear onClick={() => { setSearch(''); setQuick('all'); setLoadFrom(''); setLoadTo(''); setDelivFrom(''); setDelivTo(''); useTowerStore.getState().navigateTo({ stage: null }); }}>
               {t(locale, 'iii2_empty_clear')}
             </button>
           </div>
@@ -914,12 +998,10 @@ export function ScheduleView() {
                         }                        case 'status':
                           return (
                             <td key={id} data-col={id}>
-                              <StatusPill status={l.status} stage={l.stage} />
-                              {dmin != null ? (
-                                <span className="pill p-red" style={{ marginLeft: 4 }}>
-                                  {formatDelayPill(dmin)}
-                                </span>
-                              ) : null}
+                              <span className="st-wrap">
+                                <StatusPill status={l.status} stage={l.stage} />
+                                <StatusMarkers load={l} delayMin={dmin} />
+                              </span>
                             </td>
                           );
                         case 'driver':
@@ -1031,7 +1113,7 @@ export function ScheduleView() {
                 <div className="r1">
                   <span className="code" data-content>{transportLabel(l, role, 'schedule')}</span>
                   <StatusPill status={l.status} stage={l.stage} />
-                  {dmin != null ? <span className="pill p-red">{formatDelayPill(dmin)}</span> : null}
+                  <StatusMarkers load={l} delayMin={dmin} />
                 </div>
                 <div className="meta" data-content>{l.itemType}</div>
                 <div className="meta">
