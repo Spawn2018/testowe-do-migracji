@@ -4,7 +4,8 @@
  * (jeden próg z Opcji — bez progu wyłączona), opłata paliwowa według tygodnia załadunku.
  * KSH („Rozliczenia”) widzi tylko swoją cenę, SCX („Moje stawki”) tylko swoją stawkę — bez marży i ceny drugiej strony.
  * EUR jest źródłem; PLN — kurs NBP transportu, a przed rozładunkiem kurs bieżący (E16, 23:12). Telefon: karty (E8).
- * Dane: `src/lib/p5Source.ts` (próg marży i średnie cen paliwa podłącza wykonawca).
+ * HHL: na końcu „Paczka tygodnia dla księgowości” (E40, img/e40-after) — gdy baza poda adresy i dziennik wysyłek.
+ * Dane: `src/lib/p5Source.ts` (próg marży, średnie cen paliwa, adresy księgowości i wysyłkę paczek podłącza wykonawca).
  */
 import { useMemo } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
@@ -16,8 +17,9 @@ import { getNowIso } from '../lib/frozenNow';
 import { localDateOf } from '../lib/money/engine';
 import { useIsPhone } from '../lib/useIsPhone';
 import { codeRange, marginPct, transportsText, type FinAmount, type FinSide, type FinStage, type FinStageRow } from '../lib/p5Finance';
-import { belowOf, financeOf, fuelWeeksOf, marginThresholdOf } from '../lib/p5Source';
+import { accountingPackActionsOf, accountingPackConfigOf, belowOf, financeOf, fuelWeeksOf, marginThresholdOf } from '../lib/p5Source';
 import { FuelWeekTable } from '../components/finance/FuelWeekTable';
+import { AccountingPackSection } from '../components/finance/AccountingPack';
 import type { Locale } from '../types';
 import '../components/finance/finance.css';
 
@@ -44,9 +46,19 @@ export function FinanceView() {
   const loads = useTowerStore((s) => s.loads);
   const locale = useTowerStore((s) => s.locale);
   const currency = useTowerStore((s) => s.displayCurrency);
+  const bills = useTowerStore((s) => s.bills);
+  const documents = useTowerStore((s) => s.documents);
   const phone = useIsPhone();
   const side = sideOf(role);
-  const today = localDateOf(getNowIso());
+  const nowIso = getNowIso();
+  const today = localDateOf(nowIso);
+  const packCfg = useMemo(() => (role === 'HHL' ? accountingPackConfigOf(bills) : null), [role, bills]);
+  const pack = packCfg ? (
+    <AccountingPackSection
+      locale={locale} phone={phone} loads={loads} bills={bills} documents={documents}
+      cfg={packCfg} actions={accountingPackActionsOf()} nowIso={nowIso}
+    />
+  ) : null;
 
   const fin = useMemo(() => financeOf(loads, side), [loads, side]);
   const threshold = side === 'both' ? marginThresholdOf() : null;
@@ -303,6 +315,7 @@ export function FinanceView() {
         {side === 'both' ? flagCard : null}
         {typesBlock}
         <FuelWeekTable rows={fuel} locale={locale} phone />
+        {pack}
       </div>
     );
   }
@@ -331,6 +344,7 @@ export function FinanceView() {
         ) : null}
       </div>
       <FuelWeekTable rows={fuel} locale={locale} phone={false} />
+      {pack}
     </div>
   );
 }

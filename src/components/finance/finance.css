@@ -84,12 +84,48 @@ table.fin-table{width:100%;border-collapse:collapse;font-size:14px;font-variant-
 .fin-kv .strong dd{font-weight:700}
 #fin-fuel .fin-cards{padding:10px}
 
+/* E40 — paczka tygodnia dla księgowości (img/e40-after) */
+.fin-tag.red{color:var(--red);background:var(--red-bg)}
+.fin-tag.go.solid{color:var(--surface);background:var(--go);border-color:var(--go)}
+.pack-hd{align-items:center}
+.pack-week{width:auto;min-width:220px}
+.pack-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 28px;padding:12px 14px 4px}
+.pack{display:flex;flex-direction:column;gap:10px;min-width:0}
+.pack h4.sec{margin:0;font-size:17px;color:var(--ink)}
+.pack-kv{display:grid;grid-template-columns:auto minmax(0,1fr);margin:0;font-size:14px;font-variant-numeric:tabular-nums}
+.pack-kv>div{display:contents}
+.pack-kv dt{color:var(--ink-2);padding:9px 12px 9px 0;border-bottom:1px solid var(--rule-2)}
+.pack-kv dd{margin:0;padding:9px 0;text-align:right;border-bottom:1px solid var(--rule-2);min-width:0;overflow-wrap:anywhere}
+.pack-inv{display:block}
+.pack-ok{color:var(--go);font-weight:600}
+.pack .neg,.pack-card .neg{color:var(--red);font-weight:600}
+.pack-files{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:13.5px;color:var(--ink-2)}
+.pack-files li{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;min-width:0;overflow-wrap:anywhere}
+.pack-files li::before{content:"";flex:none;width:9px;height:11px;border:1px solid var(--ink-3);background:var(--surface-2);transform:translateY(1px)}
+.pack-acts{display:flex;flex-direction:column;gap:8px}
+.pack-btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pack-btns .btn{min-height:40px}
+.pack-btns .btn:disabled{background:var(--surface-2);color:var(--ink-3);border-color:var(--rule);cursor:not-allowed}
+.pack-sent{color:var(--go);font-weight:600;font-size:14px}
+.pack-sent.neg{color:var(--red)}
+.pack-why{margin:0;color:var(--red);font-weight:600;font-size:13.5px}
+.pack-again{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;background:var(--amber-bg);border:1px solid var(--amber);font-size:14px}
+.pack-panel>.note{padding:0 14px 12px}
+.pack-cards{padding:10px}
+.pack-card .pack-btns{display:grid;grid-template-columns:minmax(0,1fr)}
+.pack-card .pack-btns .btn{min-height:44px;justify-content:center}
+
 @media (max-width:1180px){
   .fin-grid{grid-template-columns:minmax(0,1fr)}
   .fin-side{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 }
+@media (max-width:1180px){
+  .pack-grid{grid-template-columns:minmax(0,1fr)}
+}
 @media (max-width:768px){
   .fin-page{margin:8px;gap:10px}
+  .pack-week{min-width:0;width:100%;font-size:16px;min-height:44px}
+  .pack-hd{flex-direction:column;align-items:stretch}
   .fin-head{padding:10px 2px;border-bottom:0}
   .fin-head h2{font-size:22px}
   .fin-cur{font-size:12px}

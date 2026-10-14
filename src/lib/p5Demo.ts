@@ -1,13 +1,16 @@
 /**
  * wyglad/P5 — przykłady tylko dla trybu demo (strażnik I-0): próg marży i średnie cen paliwa z publikacjami.
  * Wołane wyłącznie przez `src/lib/p5Source.ts` za warunkiem `import.meta.env.VITE_AUTH_MODE !== 'supabase'`.
- * W produkcji te dane podaje baza (E16 próg w Opcjach, E39 `fuel_basis`) — podłącza wykonawca.
+ * W produkcji te dane podaje baza (E16 próg w Opcjach, E39 `fuel_basis`, E4b faktoring, E40 adresy i dziennik wysyłek)
+ * — podłącza wykonawca. Adresy e-mail zmyślone (example.com, G-09).
  */
 import { SEFS_PLN, SEFS_SEK, type SefsTier } from './sefs';
 import { addDays, type FuelPubl, type FuelWeekRow } from './p5Finance';
 import type { Bill } from '../types';
 import { factoringPayout } from './p5Invoices';
-import type { FactoringOfferView, FactoringTask } from './p5Source';
+import type { FactoringOfferView, FactoringTask, PackActions } from './p5Source';
+import type { PackConfig, PackSent } from './p5Pack';
+import { addDaysIso } from './invoices3';
 
 /** Próg marży z Opcji (E16, 08.10: 4 %). */
 export const demoMarginThreshold = (): number => 4;
@@ -57,4 +60,29 @@ export function demoFactoringTasks(bills: Bill[], nowIso: string): FactoringTask
   const due = new Date(Date.parse(accepted) + 48 * 3600 * 1000).toISOString();
   const { fee, payout } = factoringPayout(b.net, b.gross, 1);
   return [{ billId: b.id, number: b.number, issuer: 'Scandinavian Express', currency: b.currency, net: b.net, gross: b.gross, fee, payout, issuedAt: b.issueDate, acceptedAt: accepted, dueAt: due, paidAt: null, feePct: 1, hours: 48 }];
+}
+
+/** E40 — adresy księgowości (Opcje › Adresy księgowości) i dziennik wysyłek: wysłana paczka HHL dla przyjętej faktury SCX. */
+export function demoAccountingPack(bills: Bill[]): PackConfig {
+  const sent: PackConfig['sent'] = {};
+  for (const b of bills) {
+    if (b.direction === 'KOSZT' && (b.verification === 'ZAAKCEPTOWANA' || b.payment === 'OPLACONA')) {
+      sent[`${b.weekKey}:HHL`] = { at: `${addDaysIso(b.issueDate, 2)}T09:14:00+02:00`, to: 1, status: 'DORECZONO', by: 'Konto pokazowe' };
+    }
+  }
+  return {
+    addresses: { KSH: ['ksiegowosc.ksh@example.com', 'faktury.ksh@example.com'], HHL: ['ksiegowosc.hhl@example.com'] },
+    sent,
+  };
+}
+
+/** E40 — w demo „Wyślij” zapisuje tylko stan na ekranie, ZIP pakuje wgrane CMR (bez wysyłki i bez zapisu w bazie). */
+export function demoPackActions(): PackActions {
+  return {
+    send: async (_key, _weekKey, to, nowIso): Promise<PackSent> => ({ at: nowIso, to: to.length, status: 'DORECZONO', by: 'Konto pokazowe' }),
+    zip: async (docs, filename, codeOf) => {
+      const { downloadDocumentsZip } = await import('./zipDocs');
+      await downloadDocumentsZip(docs, filename, codeOf);
+    },
+  };
 }

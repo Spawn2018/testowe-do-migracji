@@ -1091,7 +1091,7 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
  * Komputer: HHL — etapy z marżą, rodzaje, kurs NBP, flaga marży; KSH i SCX — tylko swoja strona, bez marży.
  * Telefon 360 / 390 / 430: karty etapów i rodzajów, tydzień opłaty rozwinięty — ta sama brama E8 (0 w każdej kolumnie).
  */
-test.describe('wyglad/P5 Finanse — E16, E39', () => {
+test.describe('wyglad/P5 Finanse — E16, E39, E40', () => {
   test.describe.configure({ mode: 'serial', timeout: 300_000 });
 
   test('komputer: HHL tabela etapów z marżą, rodzaje, NBP i flaga; KSH i SCX jedna kolumna; wiersz tygodnia się rozwija', async ({ page }) => {
@@ -1109,6 +1109,13 @@ test.describe('wyglad/P5 Finanse — E16, E39', () => {
     await expect(page.locator('[data-fuel-detail]')).toHaveCount(1);
     await week.press('Enter');
     await expect(page.locator('[data-fuel-detail]')).toHaveCount(0);
+    // E40: paczka tygodnia dla księgowości — dwie paczki; zablokowana wysyłka jest szara i ma powód
+    await expect(page.locator('[data-fin-pack] [data-pack]')).toHaveCount(2);
+    await expect(page.locator('[data-fin-pack] [data-pack-files="KSH"] li').last()).toContainText('Zestawienie_');
+    for (const key of ['KSH', 'HHL'] as const) {
+      const why = page.locator(`[data-pack="${key}"] [data-pack-why]`);
+      if (await why.count()) await expect(page.locator(`[data-pack-send="${key}"]`)).toBeDisabled();
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1441);
     for (const [r, head] of [['KSH', 'DO ZAPŁATY'], ['SCX', 'NALEŻNOŚĆ']] as const) {
       await boot(page, r);
@@ -1117,7 +1124,7 @@ test.describe('wyglad/P5 Finanse — E16, E39', () => {
       await expect(t.locator('thead th')).toHaveCount(3);
       await expect(t.locator('thead th').nth(2)).toContainText(head);
       await expect(page.locator('[data-page="finance"]')).not.toContainText('Marża');
-      await expect(page.locator('[data-fin-nbp], [data-fin-flag], [data-fin-types]')).toHaveCount(0);
+      await expect(page.locator('[data-fin-nbp], [data-fin-flag], [data-fin-types], [data-fin-pack]')).toHaveCount(0);
       await expect(page.locator('[data-fuel-table]')).toBeVisible();
     }
   });

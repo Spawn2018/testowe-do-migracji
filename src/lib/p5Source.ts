@@ -3,9 +3,10 @@
  * próg marży i średnie cen paliwa z publikacjami podaje baza — podłącza wykonawca (dopisek do PR wyglad/P5).
  * Przykłady demo wyłącznie za warunkiem trybu demo wpisanym wprost (strażnik I-0, `tests/p5-finance.test.ts`).
  */
-import type { Bill, Load } from '../types';
+import type { Bill, Document, Load } from '../types';
+import type { PackConfig, PackKey, PackSent } from './p5Pack';
 import { belowThreshold, financeSummary, fuelWeeks, type FinBelowRow, type FinSide, type FinSummary, type FuelWeekRow } from './p5Finance';
-import { demoFactoringOffer, demoFactoringTasks, demoFuelEnrich, demoMarginThreshold } from './p5Demo';
+import { demoAccountingPack, demoFactoringOffer, demoFactoringTasks, demoFuelEnrich, demoMarginThreshold, demoPackActions } from './p5Demo';
 
 /** Próg marży w % (Opcje › Cennik i opłaty, E16); null = nie ustawiony, flaga wyłączona. */
 export function marginThresholdOf(): number | null {
@@ -40,4 +41,21 @@ export interface FactoringTask {
 }
 export function factoringTasksOf(bills: Bill[], nowIso: string): FactoringTask[] {
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoFactoringTasks(bills, nowIso) : [];
+}
+
+/**
+ * E40 — adresy księgowości (Opcje, zmienia Administrator HHL) i dziennik wysyłek paczek.
+ * null = nie podłączone: sekcji „Paczka tygodnia dla księgowości” nie ma. W produkcji z bazy — wykonawca.
+ */
+export function accountingPackConfigOf(bills: Bill[]): PackConfig | null {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoAccountingPack(bills) : null;
+}
+
+/** E40 — „Wyślij” (e-mail z załącznikami po stronie serwera, wpis w Historii zmian) i „Pobierz paczkę (ZIP)”. */
+export interface PackActions {
+  send: (key: PackKey, weekKey: string, to: string[], nowIso: string) => Promise<PackSent | null>;
+  zip: (docs: Document[], filename: string, codeOf: (loadId: string) => string) => Promise<void>;
+}
+export function accountingPackActionsOf(): PackActions | null {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoPackActions() : null;
 }
