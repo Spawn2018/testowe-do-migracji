@@ -36,6 +36,8 @@ test('HHL: bramka SMS — urządzenie, numer testowy, SMS testowy (przed R-2)', 
   test.setTimeout(90_000);
   await login(page, 'hhl@bk5.local');
   await page.locator('nav [data-view="options"]').first().click();
+  /* D-20261014-0700-01 J5: bramka SMS → zones. */
+  await page.locator('[data-opt-nav="zones"]').click();
   const g = page.locator('[data-sms-gateway]');
   await expect(g.locator('[data-sms-external="off"]')).toHaveText('przed R-2: tylko SMS testowe i e-mail na log-mar.pl');
   await g.getByLabel('Nazwa telefonu').fill('Pixel test');

@@ -234,7 +234,12 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
 - **W7.** Dowód w `docs/handover/odbior/P2/`.
 
 ### P3 · Uprawnienia, konta, Opcje, pasek górny — NA PRODUKCJI (logika/baza: scalenie `d3cbe4d8` + `567fcc5a`, wdrożenie `dpl_9tAM8dDaeXZ2awdpHD6RCNwdkLPP`, 13.10.2026 23:32); P3-a wygląd: scalenie `25b71bca` (PR #178), wdrożenie `dpl_FBYjeG86cptLjWvXiRmURHH5kKkt`, 14.10.2026 00:12; P3-b Kokpit: scalenie `50b23eb0` (PR #185), wdrożenie `dpl_Go31sqkke7v66cur6AxKfkuDwDWj`, 14.10.2026 02:53
-- **Ekrany — wygląd:** P3-a pasek górny + E13 — `wyglad/P3` (PR #178, D-20261013-2255-01); P3-b Kokpit (E9, V5) — `wyglad/P3-b` (PR #185, D-20261014-0215-01) **NA PRODUKCJI**; P3-c Opcje (E11, E12). Cursor: logika, baza, uprawnienia, Podgląd — bez przebudowy wyglądu ekranów koordynatora (F1).
+- **Ekrany — wygląd:** P3-a pasek górny + E13 — `wyglad/P3` (PR #178, D-20261013-2255-01); P3-b Kokpit (E9, V5) — `wyglad/P3-b` (PR #185, D-20261014-0215-01) **NA PRODUKCJI**; P3-c Opcje i Ustawienia (E11, E12, E37, E6) — `wyglad/P3-c` (PR #190, D-20261014-0700-01) **NA PRODUKCJI**. Cursor: logika, baza, uprawnienia, Podgląd — bez przebudowy wyglądu ekranów koordynatora (F1).
+- **Podłączenie danych ekranów Opcji** (D-20261014-0700-01 J3; bez zmiany wyglądu — F1):
+  1. **Moje konto** (`AccountScreen`: `my_profile`, `admin_user_profile_set`, 2FA z `Mfa`, `my_sessions` / `revoke_user_sessions`) — zaraz po scaleniu P3-c (G4 pkt 2); HHL zamiast trzech formularzy; KSH/SCX; w Podglądzie tylko odczyt;
+  2–11. Użytkownicy, Logowania, Kto co dostaje, Co dostaję, Komunikat, Progi, Przełączniki, Historia, Eksport, stany przy menu — w paczkach, które mają te dane (propsy z dopisku);
+  12. przełącznik strefy dla Operacji HHL (E12 1A) → **P8** (E42).
+- **Pytanie (J4):** gdzie ocena przewoźnika (`CarrierScorecard`) — Kokpit SCX (E9) czy osobny ekran? Dziś w „Dla mnie › Wygląd i waluta” (`look`); tabela E12 przenosi do Kokpitu, a `wyglad/P3-b` jej nie ma.
 - **E9** prawa ról (z E36, zamkniętym w E9):
   - 5 rodzajów kont, bez CLIENT_ADMIN i SITE_VIEWER;
   - menu według roli; „Moje zadania” SCX znika;
@@ -421,6 +426,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - tryb testowy przez 3 transporty; odbiorcy 2 + 2 bez wyboru języka;
   - e-mail zastępczy, wpis w Historii.
   - Przełącznik „Wysyłka do odbiorców” włącza właściciel (§5).
+  - **D-20261014-0700-01 J3 pkt 12:** przełącznik strefy SMS dla Operacji HHL — wyłączenie w UI (baza i tak odmawia `geofences_write` = HHL_ADMIN); E12 1A.
 - **E43** „Treści wiadomości”: tylko PL; edytor; 28 rodzajów (L53); link 24 h (L37). E-maile logowania według L54 (§5).
 - **E35** Automatyzacje: kreator z akcją SMS (L35); „Działa samo” według E35 pkt 1 i L13.
 - **H-7** mapa w e-mailach i PDF (zlecenie HERE z 04.10; w starym planie „do decyzji koordynatora” — koordynator 09.10: P8). Najpierw stan (B-10 z 05.10: „PDF+mapa H-7”). Brakującą część budujesz przy treściach wiadomości (E43): mapa trasy transportu (droga i prom jak na Przeglądzie — E1, E45) jako obraz w e-mailu o transporcie i w PDF; HERE w limicie 100 USD/mies.
@@ -631,3 +637,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 14.10.2026 02:15 | D-20261014-0215-01: wyglad/P3-b — kolejność scalenia po #184, uchwyty Kokpitu/menu, logika H3 w P4/P6 | koordynator |
 | 14.10.2026 03:15 | D-20261014-0315-01: wyglad/P4-a — kolejność #188→#181, H1 `AT_PORT_SE`, naprawa 0205/visual; P4 Ekrany P4-a/P4-b | koordynator |
 | 14.10.2026 06:40 | D-20261014-0640-01: wyglad/P4-b (#189) — H1 CHECK `STATUS_READY_TO_INVOICE`/`STATUS_INVOICED` w #181 przed scaleniem; H2 actor + jedno zdarzenie + czas ≥ poprzedni; H3 etaDetail/progi 30/120; H4 RIO secret tylko serwer; kolejność #181→#189 | koordynator |
+| 14.10.2026 07:00 | D-20261014-0700-01: wyglad/P3-c — scalenie PR #190, podłączenie danych Opcji (J3), testy lokalne (J5), pytanie J4 (ocena przewoźnika); PLAN §4 P3 / P8, §8 | koordynator; wykonawca |

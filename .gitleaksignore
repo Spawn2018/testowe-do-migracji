@@ -39,6 +39,10 @@ tests/db/h3.sh:generic-api-key:30
 tests/db/h3.sh:generic-api-key:40
 tests/db/h3.sh:generic-api-key:66
 tests/db/h3.sh:generic-api-key:67
+# wyglad/P3-c: ta sama nazwa flagi w demo Opcji (tylko tryb demo).
+src/components/options/demo.tsx:generic-api-key:89
+a9f91717e954098e157003eb58861541c36a2229:src/components/options/demo.tsx:generic-api-key:89
+41a23d2838f492ef155fc35c37b1261fee03ec66:src/components/options/demo.tsx:generic-api-key:89
 
 # Nie sekret. Ta sama nazwa flagi H3_CORRIDOR_OBSTACLES w teście SMS-KSH-1H.
 # generic-api-key łapie kolumnę key. To przełącznik w bazie, nie klucz dostępu.

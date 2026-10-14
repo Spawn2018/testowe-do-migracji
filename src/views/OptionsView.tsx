@@ -1,20 +1,23 @@
-import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTowerStore } from '../store/useTowerStore';
 import type { BafParams, FactoringOffer, Locale, RateRule } from '../types';
-import { geofenceDisplayName, geofenceTypeLabel, workflowDisplayName } from '../lib/enumLabels';
+import { geofenceDisplayName, geofenceTypeLabel } from '../lib/enumLabels';
 import { hasKey, t } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
 import { DEMO_FX_META } from '../lib/money/demoFx';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { getAuthProfile } from '../auth/profile';
 import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
-import { OptionsAccordion, type OptionsSectionDef } from '../components/settings/OptionsAccordion';
+import { OptionsShell } from '../components/options/OptionsShell';
+import type { OptGroup, OptScreen, OptScreenId, AccountKind } from '../components/options/types';
+import { useDemoOptions } from '../components/options/useDemoOptions';
+import { ForMeScreen } from '../components/options/ForMeScreen';
 import { OptionsHowTo } from '../components/settings/OptionsHowTo';
 import { SmsFallbackEntry } from '../components/shell/SmsFallbackEntry';
-import { canSeeWorkflows, PROD_BUILD, shows } from '../lib/prodFacade';
+import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { parseRoute } from '../lib/routes';
-import { OPEN_OPTIONS_EVENT, scrollToScreen, takeOptionsScreen, type OptionsScreen } from '../lib/openOptions';
+import { OPEN_OPTIONS_EVENT, takeOptionsScreen, type OptionsScreen } from '../lib/openOptions';
 
 /** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */
 function savedText(locale: Locale, code: string): string {
@@ -23,9 +26,9 @@ function savedText(locale: Locale, code: string): string {
 }
 
 const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../components/guide/Guide')) : null;
-const MyMfa = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/Mfa')) : null;
 const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/UsersAdmin')) : null;
-const MyAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/MyAccount')) : null;
+/** D-20261014-0700-01 J3 pkt 1: AccountScreen zamiast MyAccount + Mfa + MyDevices. */
+const LiveAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/LiveAccountScreen')) : null;
 const BafForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/BafForm')) : null;
 const NotificationMatrixForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/NotificationMatrixForm')) : null;
 const RateCardForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/RateCardForm')) : null;
@@ -40,7 +43,6 @@ const DataExportPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABAS
 const ChangeHistoryPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/ChangeHistoryPanel')) : null;
 const PermitRequirement = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/PermitRequirement')) : null;
 const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
-const MyDevices = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/MyDevices')) : null;
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
   { key: 'indexSource', labelKey: 'baf_index', type: 'text' },
@@ -110,30 +112,28 @@ export function OptionsView() {
   const saveGeofence = useTowerStore((s) => s.saveGeofence);
   const notificationPrefs = useTowerStore((s) => s.notificationPrefs);
   const updateNotificationPrefs = useTowerStore((s) => s.updateNotificationPrefs);
-  const notifications = useTowerStore((s) => s.notifications);
-  const workflows = useTowerStore((s) => s.workflows);
   const smsEntry = useTowerStore((s) => s.smsEntry);
   const location = useLocation();
-  const openSystem = smsEntry != null || parseRoute(location.pathname).kind === 'system';
-  const setView = useTowerStore((s) => s.setView);
   const [saved, setSaved] = useState('');
-  /* wyglad/P3 (E37): „Moje konto” i „Dla mnie” z menu konta otwierają swoją sekcję. */
-  const [screenSection, setScreenSection] = useState<string | null>(null);
+  /* wyglad/P3-c (E11, E37 pkt 1): menu konta i adresy /opcje/… otwierają ekran z menu bocznego. */
+  const [request, setRequest] = useState<{ screen: OptScreenId; seq: number } | null>(null);
   useEffect(() => {
     const go = (screen: OptionsScreen | null) => {
       if (!screen) return;
-      const id = screen === 'my-account' ? 'users' : 'prefs';
-      setScreenSection(null);
-      window.setTimeout(() => {
-        setScreenSection(id);
-        window.setTimeout(() => scrollToScreen(`[data-section="${id}"]`), 50);
-      }, 0);
+      setRequest((r) => ({ screen: screen === 'my-account' ? 'account' : 'forme', seq: (r?.seq ?? 0) + 1 }));
     };
     go(takeOptionsScreen());
     const onOpen = () => go(takeOptionsScreen());
     window.addEventListener(OPEN_OPTIONS_EVENT, onOpen);
     return () => window.removeEventListener(OPEN_OPTIONS_EVENT, onOpen);
   }, []);
+  useEffect(() => {
+    const r = parseRoute(location.pathname);
+    const screen: OptScreenId | null = smsEntry != null || r.kind === 'system' ? 'status'
+      : r.kind === 'options' && r.section === 'sms' ? 'zones'
+        : r.kind === 'options' && r.section === 'cennik' ? 'rates' : null;
+    if (screen) setRequest((prev) => ({ screen, seq: (prev?.seq ?? 0) + 1 }));
+  }, [location.pathname, smsEntry]);
 
   const saveMark = (label: string) => {
     setSaved(label);
@@ -145,69 +145,74 @@ export function OptionsView() {
   };
   const updateFactoring = <K extends keyof FactoringOffer>(key: K, value: FactoringOffer[K]) => updateFactoringOffer({ [key]: value });
 
-  const geoActive = geofences.filter((g) => g.active).length;
-  const unread = notifications.filter((n) => !n.read).length;
-  const wfOn = workflows.filter((w) => w.enabled).length;
+  /* E12-A: Operacje HHL — bez Użytkowników, Logowań i Historii; ustawienia tylko do odczytu (baza 0198). */
+  const authRole = getAuthProfile()?.role;
+  const isHhlAdmin = authRole !== 'HHL_OPS';
+  const kind: AccountKind = isHhlAdmin ? 'HHL_ADMIN' : 'HHL_OPS';
+  const ro = !isHhlAdmin;
+  const change = ro ? 'read' as const : 'admin' as const;
 
-  const sections: OptionsSectionDef[] = useMemo(() => {
-    if (role !== 'HHL') return [];
-    /* E12-A: Operacje HHL — bez Użytkowników (admin), Logowań, Historii; ustawienia tylko odczyt w bazie (0198). */
-    const authRole = getAuthProfile()?.role;
-    const isHhlAdmin = authRole !== 'HHL_OPS';
-    const list: OptionsSectionDef[] = [];
+  /* Przełączniki „na tym urządzeniu” (dziś tylko w przeglądarce, E11) — w Dla mnie › Co dostaję. */
+  const browserPrefs = (
+    <>
+      <div className="pref-list">
+        {([['workflowAlerts', t(locale, 'opt_wf_rules')], ['geofenceAlerts', t(locale, 'opt_geo_alerts')], ['riskAlerts', t(locale, 'opt_risk_alerts')]] as const)
+          .filter(([key]) => key !== 'workflowAlerts' || !PROD_BUILD)
+          .map(([key, label]) => (
+            <label key={key} className="switchline">
+              <input type="checkbox" checked={notificationPrefs?.[key] ?? true} onChange={(e) => { updateNotificationPrefs({ [key]: e.target.checked }); saveMark('powiadomienia'); }} />
+              <span>{label}</span>
+            </label>
+          ))}
+      </div>
+      <div className="note option-note">{t(locale, 'b6_notif_filter_note')}</div>
+      <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().markAllNotificationsRead('HHL')}>{t(locale, 'opt_mark_read')}</button>
+    </>
+  );
 
-    list.push({
-      id: 'notif-dec',
-      titleKey: 'opt_acc_notif_title',
-      descKey: 'opt_acc_notif_desc',
-      count: String(unread),
-      keywords: 'macierz decyzje powiadomienia matrix',
-      children: (
-        <>
-          <OptionsHowTo locale={locale} k="b6_howto_notif" />
-          {NotificationMatrixForm ? <SuspenseBlock><NotificationMatrixForm /></SuspenseBlock> : null}
-          <div className="pref-list" style={{ marginTop: 10 }}>
-            {([['workflowAlerts', t(locale, 'opt_wf_rules')], ['geofenceAlerts', t(locale, 'opt_geo_alerts')], ['riskAlerts', t(locale, 'opt_risk_alerts')]] as const)
-              .filter(([key]) => key !== 'workflowAlerts' || !PROD_BUILD)
-              .map(([key, label]) => (
-                <label key={key} className="switchline">
-                  <input type="checkbox" checked={notificationPrefs?.[key] ?? true} onChange={(e) => { updateNotificationPrefs({ [key]: e.target.checked }); saveMark('powiadomienia'); }} />
-                  <span>{label}</span>
-                </label>
-              ))}
-          </div>
-          <div className="note option-note">{t(locale, 'b6_notif_filter_note')}</div>
-          <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().markAllNotificationsRead('HHL')}>{t(locale, 'opt_mark_read')}</button>
-          {canSeeWorkflows() ? (
-            <div style={{ marginTop: 12 }}>
-              <div className="note">{t(locale, 'opt_auto_h2')}: {wfOn}/{workflows.length} — ONE-MECH / D-29</div>
-              <div className="workflow-summary">
-                {workflows.map((w) => (
-                  <button type="button" className="workflow-summary-row" key={w.id} onClick={() => setView('wf')}>
-                    <span className={`status-dot${w.enabled ? ' on' : ''}`} />
-                    <span data-content>{workflowDisplayName(w, locale)}</span>
-                    <small>{w.enabled ? t(locale, 'on') : t(locale, 'off')}</small>
-                  </button>
-                ))}
-              </div>
-              <button type="button" className="chipbtn" onClick={() => setView('wf')}>{t(locale, 'opt_open_wf')}</button>
-            </div>
-          ) : null}
-        </>
-      ),
+  const demo = useDemoOptions(locale, { kind, readOnly: ro, prefs: browserPrefs });
+
+  if (role !== 'HHL') {
+    return <div className="panel section-card" style={{ margin: 12 }}><div className="panel-bd"><b>{t(locale, 'opt_hhl_only')}</b></div></div>;
+  }
+
+  const noSource = <div className="note option-note">{t(locale, 'p3c_no_source')}</div>;
+  const pick = (id: OptScreenId, prod: ReactNode): ReactNode => demo?.bodies[id] ?? prod ?? noSource;
+  const scr = (id: OptScreenId, body: ReactNode, extra: Partial<OptScreen> = {}): OptScreen => ({
+    id,
+    body,
+    meta: demo?.meta[id]?.meta,
+    metaTone: demo?.meta[id]?.tone,
+    ...extra,
+  });
+  const block = (el: ReactNode) => <SuspenseBlock>{el}</SuspenseBlock>;
+
+  const groups: OptGroup[] = [];
+
+  if (isHhlAdmin) {
+    groups.push({
+      id: 'people',
+      screens: [
+        scr('users', pick('users', UsersAdmin ? block(<UsersAdmin />) : null), { right: 'admin' }),
+        scr('logins', pick('logins', AuthLoginLog ? block(<AuthLoginLog />) : null)),
+      ],
     });
+  }
 
-    list.push({
-      id: 'sms-zones',
-      titleKey: 'opt_acc_sms_title',
-      descKey: 'opt_acc_sms_desc',
-      count: `${geoActive}/${geofences.length}`,
-      keywords: 'sms strefy geofence bramka recipients',
-      children: (
+  groups.push({
+    id: 'notify',
+    screens: [
+      scr('who', (
+        <>
+          {pick('who', NotificationMatrixForm ? block(<NotificationMatrixForm />) : null)}
+          <OptionsHowTo locale={locale} k="b6_howto_notif" />
+        </>
+      ), { right: change }),
+      scr('zones', (
         <>
           <OptionsHowTo locale={locale} k="b6_howto_zones" />
-          {SmsZoneRecipients ? <SuspenseBlock><SmsZoneRecipients /></SuspenseBlock> : null}
-          {SmsGateway ? <SuspenseBlock><SmsGateway /></SuspenseBlock> : null}
+          {SmsZoneRecipients ? block(<SmsZoneRecipients />) : null}
+          {SmsGateway ? block(<SmsGateway />) : null}
           <div className="settings-list" style={{ marginTop: 10 }}>
             {geofences.map((g) => (
               <div className="settings-row" key={g.id}>
@@ -222,210 +227,107 @@ export function OptionsView() {
             ))}
           </div>
         </>
-      ),
-    });
+      ), { right: change }),
+      scr('bcast', pick('bcast', BroadcastForm ? block(<BroadcastForm />) : null), { right: change }),
+    ],
+  });
 
-    list.push({
-      id: 'thresholds',
-      titleKey: 'opt_acc_thresh_title',
-      descKey: 'opt_acc_thresh_desc',
-      count: '10',
-      keywords: 'progi fala wiatr opóźnienie awizacja',
-      children: (
+  const money: OptScreen[] = [
+    scr('rates', PROD_BUILD ? (
+      RateCardForm ? block(<RateCardForm />) : <div className="note option-note">{t(locale, 'i2_rates_no_source')}</div>
+    ) : (
+      <>
+        <div className="rate-grid">
+          <RateEditor side="COST" rules={rateCost} currency="EUR" locale={locale} onChange={(id, value) => updateRate('COST', id, value)} onSave={() => saveMark('cennik')} />
+          <RateEditor side="REVENUE" rules={rateRev} currency="EUR" locale={locale} onChange={(id, value) => updateRate('REVENUE', id, value)} onSave={() => saveMark('cennik')} />
+        </div>
+        <div className="note option-note" data-fx-note="demo">{t(locale, 'opt_rates_note')} {` · ${t(locale, 'opt_fx_demo')} ${DEMO_FX_META.tableLabel} · ${DEMO_FX_META.effectiveDate} · ${DEMO_FX_META.mid.toFixed(4).replace('.', ',')}.`}</div>
+        {RateCardForm ? block(<RateCardForm />) : null}
+      </>
+    ), { right: change, mark: PROD_BUILD ? undefined : <DemoMark /> }),
+    scr('surch', DwellOptionsForm ? block(<DwellOptionsForm />) : <Soon locale={locale} tipKey="opt_acc_dwell_note" />, { right: change }),
+    scr('fuel', (
+      <>
+        <OptionsHowTo locale={locale} k="b6_howto_sefs" />
+        {BafForm ? block(<BafForm />) : (
+          <>
+            <div className="fuel-grid">
+              <div><h4 className="sec">{t(locale, 'opt_index_read')}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(0, 6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} readOnly disabled title={t(locale, 'opt_baf_facade_title')} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{t(locale, field.suffix)}</span> : null}</div></dd></div>)}</dl></div>
+              <div><h4 className="sec">{t(locale, 'opt_billing_rules')}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} readOnly disabled title={t(locale, 'opt_baf_facade_title')} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{t(locale, field.suffix)}</span> : null}</div></dd></div>)}</dl></div>
+            </div>
+            <div className="note option-note" data-facade="baf-options">{t(locale, 'opt_baf_facade_note')}</div>
+          </>
+        )}
+      </>
+    ), { right: change, mark: BafForm ? undefined : <DemoMark /> }),
+  ];
+  if (shows('factoringOffer')) {
+    money.push(scr('fact', (
+      <dl className="kv options-kv">
+        <dt>{t(locale, 'opt_active')}</dt><dd><label className="switchline"><input type="checkbox" checked={factoringOffer.enabled} onChange={(e) => { updateFactoring('enabled', e.target.checked); saveMark('factoring'); }} /><span>{factoringOffer.enabled ? t(locale, 'yes') : t(locale, 'no')}</span></label></dd>
+        <dt>{t(locale, 'opt_offer_name')}</dt><dd><input className="input full" aria-label={t(locale, 'opt_offer_name')} value={factoringOffer.label ?? ''} onChange={(e) => updateFactoring('label', e.target.value)} onBlur={() => saveMark('oferta')} /></dd>
+        <dt>{t(locale, 'opt_fee')}</dt><dd><div className="inline-input"><input className="input" aria-label={t(locale, 'opt_fee')} type="number" min="0" max="20" step="0.1" value={factoringOffer.feePercent} onChange={(e) => updateFactoring('feePercent', Number(e.target.value) || 0)} onBlur={() => saveMark('prowizja')} /><span>%</span></div></dd>
+        <dt>{t(locale, 'opt_payout_after')}</dt><dd><div className="inline-input"><input className="input" aria-label={t(locale, 'opt_payout_after')} type="number" min="1" value={factoringOffer.payoutDelayValue} onChange={(e) => updateFactoring('payoutDelayValue', Number(e.target.value) || 1)} onBlur={() => saveMark('termin')} /><select className="input" aria-label={t(locale, 'opt_payout_after')} value={factoringOffer.payoutDelayUnit} onChange={(e) => { updateFactoring('payoutDelayUnit', e.target.value as 'hours' | 'days'); saveMark('termin'); }}><option value="hours">{t(locale, 'opt_hours')}</option><option value="days">{t(locale, 'opt_days')}</option></select></div></dd>
+        <dt>{t(locale, 'opt_note')}</dt><dd><input className="input full" aria-label={t(locale, 'opt_note')} value={factoringOffer.notes ?? ''} onChange={(e) => updateFactoring('notes', e.target.value)} onBlur={() => saveMark('notatka')} /></dd>
+      </dl>
+    ), { right: change }));
+  }
+  groups.push({ id: 'money', screens: money });
+
+  groups.push({
+    id: 'rules',
+    screens: [
+      scr('thr', (
         <>
           <OptionsHowTo locale={locale} k="b6_howto_thresh" />
-          {OpsThresholdsForm
-            ? <SuspenseBlock><OpsThresholdsForm /></SuspenseBlock>
-            : <Soon locale={locale} tipKey="opt_acc_thresh_soon" />}
+          {pick('thr', OpsThresholdsForm ? block(<OpsThresholdsForm />) : <Soon locale={locale} tipKey="opt_acc_thresh_soon" />)}
         </>
-      ),
-    });
+      ), { right: change }),
+      scr('permits', PermitRequirement ? block(<PermitRequirement />) : <Soon locale={locale} tipKey="opt_acc_perm_soon" />, { right: change }),
+    ],
+  });
 
-    list.push({
-      id: 'dwell',
-      titleKey: 'opt_acc_dwell_title',
-      descKey: 'opt_acc_dwell_desc',
-      count: '7',
-      keywords: 'czas wolny przestój postój dopłata WSTĘPNE',
-      children: DwellOptionsForm
-        ? <SuspenseBlock><DwellOptionsForm /></SuspenseBlock>
-        : <Soon locale={locale} tipKey="opt_acc_dwell_note" />,
-    });
+  const system: OptScreen[] = [
+    scr('status', (
+      <>
+        <SmsFallbackEntry />
+        {SystemStatusPanel ? block(<SystemStatusPanel />) : <Soon locale={locale} tipKey="opt_acc_sys_soon" />}
+      </>
+    )),
+    scr('flags', pick('flags', null), { right: change }),
+  ];
+  if (isHhlAdmin) system.push(scr('hist', pick('hist', ChangeHistoryPanel ? block(<ChangeHistoryPanel />) : null)));
+  system.push(scr('export', pick('export', DataExportPanel ? block(<DataExportPanel />) : null), { right: 'download' }));
+  groups.push({ id: 'system', screens: system });
 
-    list.push({
-      id: 'system',
-      titleKey: 'opt_acc_sys_title',
-      descKey: 'opt_acc_sys_desc',
-      keywords: 'integracje sharepoint kopia backup sms bramka',
-      children: (
-        <>
-          <SmsFallbackEntry />
-          {SystemStatusPanel
-            ? <SuspenseBlock><SystemStatusPanel /></SuspenseBlock>
-            : <Soon locale={locale} tipKey="opt_acc_sys_soon" />}
-        </>
-      ),
-    });
+  const forme: OptScreen[] = [
+    scr('account', pick('account', LiveAccount ? block(<LiveAccount />) : null), { right: 'own' }),
+    scr('forme', pick('forme', <ForMeScreen locale={locale} kind={null} groups={null}>{browserPrefs}</ForMeScreen>), { right: 'own' }),
+    scr('look', (
+      <>
+        <UiPrefsPanel onSaved={saveMark} showDemoMarks={shows('demoMarksToggle')} />
+        {CarrierScorecard ? block(<CarrierScorecard />) : null}
+      </>
+    ), { right: 'own' }),
+  ];
+  if (Guide) forme.push(scr('guide', block(<Guide locale={locale} role="hhl" />)));
+  groups.push({ id: 'forme', screens: forme });
 
-    list.push({
-      id: 'users',
-      titleKey: 'opt_acc_users_title',
-      descKey: 'opt_acc_users_desc',
-      keywords: 'użytkownicy sesje 2fa mfa hasło devices',
-      children: (
-        <>
-          {MyAccount ? <SuspenseBlock><MyAccount /></SuspenseBlock> : null}
-          {isHhlAdmin && UsersAdmin ? <SuspenseBlock><UsersAdmin /></SuspenseBlock> : null}
-          {MyMfa ? <SuspenseBlock><MyMfa /></SuspenseBlock> : null}
-          {MyDevices ? <SuspenseBlock><MyDevices /></SuspenseBlock> : null}
-          {!MyAccount && !(isHhlAdmin && UsersAdmin) && !MyMfa && !MyDevices ? <Soon locale={locale} tipKey="opt_acc_users_soon" /> : null}
-        </>
-      ),
-    });
-
-    if (isHhlAdmin) {
-      list.push({
-        id: 'auth-log',
-        titleKey: 'opt_acc_authlog_title',
-        descKey: 'opt_acc_authlog_desc',
-        keywords: 'dziennik logowań auth',
-        children: AuthLoginLog
-          ? <SuspenseBlock><AuthLoginLog /></SuspenseBlock>
-          : <Soon locale={locale} tipKey="opt_acc_authlog_soon" />,
-      });
-    }
-
-    list.push({
-      id: 'broadcast',
-      titleKey: 'opt_acc_bcast_title',
-      descKey: 'opt_acc_bcast_desc',
-      keywords: 'komunikat baner',
-      children: BroadcastForm
-        ? <SuspenseBlock><BroadcastForm /></SuspenseBlock>
-        : <Soon locale={locale} tipKey="opt_acc_bcast_soon" />,
-    });
-
-    if (isHhlAdmin) {
-      list.push({
-        id: 'history',
-        titleKey: 'opt_acc_hist_title',
-        descKey: 'opt_acc_hist_desc',
-        keywords: 'historia zmian audit dziennik było jest',
-        children: ChangeHistoryPanel
-          ? <SuspenseBlock><ChangeHistoryPanel /></SuspenseBlock>
-          : <Soon locale={locale} tipKey="opt_acc_hist_soon" />,
-      });
-    }
-
-    list.push({
-      id: 'export',
-      titleKey: 'opt_acc_export_title',
-      descKey: 'opt_acc_export_desc',
-      keywords: 'eksport csv xlsx',
-      children: DataExportPanel
-        ? <SuspenseBlock><DataExportPanel /></SuspenseBlock>
-        : <Soon locale={locale} tipKey="opt_acc_export_soon" />,
-    });
-
-    list.push({
-      id: 'rates',
-      titleKey: 'opt_acc_rates_title',
-      descKey: 'opt_acc_rates_desc',
-      keywords: 'cennik rate card',
-      /* O4/D18: stawki demo oznaczone (zgubione przy akordeonie DEC-6 5685099) */
-      mark: PROD_BUILD ? undefined : <DemoMark />,
-      children: PROD_BUILD ? (
-        RateCardForm ? <SuspenseBlock><RateCardForm /></SuspenseBlock> : (
-          <div className="note option-note">{t(locale, 'i2_rates_no_source')}</div>
-        )
-      ) : (
-        <>
-          <div className="rate-grid">
-            <RateEditor side="COST" rules={rateCost} currency="EUR" locale={locale} onChange={(id, value) => updateRate('COST', id, value)} onSave={() => saveMark('cennik')} />
-            <RateEditor side="REVENUE" rules={rateRev} currency="EUR" locale={locale} onChange={(id, value) => updateRate('REVENUE', id, value)} onSave={() => saveMark('cennik')} />
-          </div>
-          <div className="note option-note" data-fx-note="demo">{t(locale, 'opt_rates_note')} {` · ${t(locale, 'opt_fx_demo')} ${DEMO_FX_META.tableLabel} · ${DEMO_FX_META.effectiveDate} · ${DEMO_FX_META.mid.toFixed(4).replace('.', ',')}.`}</div>
-          {RateCardForm ? <SuspenseBlock><RateCardForm /></SuspenseBlock> : null}
-        </>
-      ),
-    });
-
-    list.push({
-      id: 'sefs',
-      titleKey: 'opt_acc_sefs_title',
-      descKey: 'opt_acc_sefs_desc',
-      keywords: 'sefs baf paliwo',
-      /* O4/D18: opłata paliwowa (fasada demo) oznaczona; z prawdziwym formularzem BAF — bez oznaczenia */
-      mark: BafForm ? undefined : <DemoMark />,
-      children: (
-        <>
-          <OptionsHowTo locale={locale} k="b6_howto_sefs" />
-          {BafForm ? <SuspenseBlock><BafForm /></SuspenseBlock> : (
-            <>
-              <div className="fuel-grid">
-                <div><h4 className="sec">{t(locale, 'opt_index_read')}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(0, 6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} readOnly disabled title={t(locale, 'opt_baf_facade_title')} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{t(locale, field.suffix)}</span> : null}</div></dd></div>)}</dl></div>
-                <div><h4 className="sec">{t(locale, 'opt_billing_rules')}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} readOnly disabled title={t(locale, 'opt_baf_facade_title')} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{t(locale, field.suffix)}</span> : null}</div></dd></div>)}</dl></div>
-              </div>
-              <div className="note option-note" data-facade="baf-options">{t(locale, 'opt_baf_facade_note')}</div>
-            </>
-          )}
-        </>
-      ),
-    });
-
-    list.push({
-      id: 'permits',
-      titleKey: 'opt_acc_perm_title',
-      descKey: 'opt_acc_perm_desc',
-      keywords: 'zezwolenia permit',
-      children: PermitRequirement ? <SuspenseBlock><PermitRequirement /></SuspenseBlock> : <Soon locale={locale} tipKey="opt_acc_perm_soon" />,
-    });
-
-    list.push({
-      id: 'prefs',
-      titleKey: 'opt_acc_prefs_title',
-      descKey: 'opt_acc_prefs_desc',
-      keywords: 'preferencje ui motyw język',
-      children: (
-        <>
-          <UiPrefsPanel onSaved={saveMark} showDemoMarks={shows('demoMarksToggle')} />
-          {CarrierScorecard ? <SuspenseBlock><CarrierScorecard /></SuspenseBlock> : null}
-          {shows('factoringOffer') ? (
-            <dl className="kv options-kv" style={{ marginTop: 12 }}>
-              <dt>{t(locale, 'opt_active')}</dt><dd><label className="switchline"><input type="checkbox" checked={factoringOffer.enabled} onChange={(e) => { updateFactoring('enabled', e.target.checked); saveMark('factoring'); }} /><span>{factoringOffer.enabled ? t(locale, 'yes') : t(locale, 'no')}</span></label></dd>
-              <dt>{t(locale, 'opt_offer_name')}</dt><dd><input className="input full" aria-label={t(locale, 'opt_offer_name')} value={factoringOffer.label ?? ''} onChange={(e) => updateFactoring('label', e.target.value)} onBlur={() => saveMark('oferta')} /></dd>
-              <dt>{t(locale, 'opt_fee')}</dt><dd><div className="inline-input"><input className="input" aria-label={t(locale, 'opt_fee')} type="number" min="0" max="20" step="0.1" value={factoringOffer.feePercent} onChange={(e) => updateFactoring('feePercent', Number(e.target.value) || 0)} onBlur={() => saveMark('prowizja')} /><span>%</span></div></dd>
-              <dt>{t(locale, 'opt_payout_after')}</dt><dd><div className="inline-input"><input className="input" aria-label={t(locale, 'opt_payout_after')} type="number" min="1" value={factoringOffer.payoutDelayValue} onChange={(e) => updateFactoring('payoutDelayValue', Number(e.target.value) || 1)} onBlur={() => saveMark('termin')} /><select className="input" aria-label={t(locale, 'opt_payout_after')} value={factoringOffer.payoutDelayUnit} onChange={(e) => { updateFactoring('payoutDelayUnit', e.target.value as 'hours' | 'days'); saveMark('termin'); }}><option value="hours">{t(locale, 'opt_hours')}</option><option value="days">{t(locale, 'opt_days')}</option></select></div></dd>
-              <dt>{t(locale, 'opt_note')}</dt><dd><input className="input full" aria-label={t(locale, 'opt_note')} value={factoringOffer.notes ?? ''} onChange={(e) => updateFactoring('notes', e.target.value)} onBlur={() => saveMark('notatka')} /></dd>
-            </dl>
-          ) : null}
-          {Guide ? <SuspenseBlock><Guide locale={locale} role="hhl" /></SuspenseBlock> : null}
-        </>
-      ),
-    });
-
-    return list;
-  }, [
-    role, locale, unread, geoActive, geofences, wfOn, workflows, notificationPrefs,
-    rateCost, rateRev, baf, factoringOffer, saveGeofence, updateNotificationPrefs,
-    updateRate, setView, updateFactoringOffer, updateBaf,
-  ]);
-
-  if (role !== 'HHL') {
-    return <div className="panel section-card" style={{ margin: 12 }}><div className="panel-bd"><b>{t(locale, 'opt_hhl_only')}</b></div></div>;
+  for (const g of groups) {
+    const s = demo?.summaries[g.id];
+    if (s) { g.summary = s.text; g.summaryTone = s.tone; }
   }
 
   return (
-    <div className="options-page" data-dec6="shell">
-      <header className="options-title">
-        <div>
-          <div className="eyebrow">{t(locale, 'a6_opt_eyebrow')}</div>
-          <h1>{t(locale, 'opt_title')}</h1>
-          <p>{t(locale, 'opt_acc_subtitle')}</p>
-        </div>
-        {saved ? <span className="pill p-go">{t(locale, 'opt_saved')} · {savedText(locale, saved)}</span> : null}
-      </header>
-      <OptionsAccordion locale={locale} sections={sections} forceOpen={openSystem ? 'system' : screenSection} />
+    <div className="options-page" data-page="options" data-p3c="shell">
+      <OptionsShell
+        locale={locale}
+        rootKey="opt_title"
+        who={`HHL · ${t(locale, `p3c_kind_${kind}`).toLowerCase()}`}
+        groups={groups}
+        request={request}
+        saved={saved ? <span className="pill p-go">{t(locale, 'opt_saved')} · {savedText(locale, saved)}</span> : null}
+      />
     </div>
   );
 }

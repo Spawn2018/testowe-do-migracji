@@ -302,13 +302,13 @@ test.describe('M11 — rozbicie marży', () => {
     expect(total).toBe(72)
     expect((await n('FAKTURA')) + (await n('REALIZACJA')) + (await n('PROGNOZA'))).toBe(total)
     await nav(page, 'options')
-    /* DEC-6 (5685099): preferencje w zwiniętym akordeonie */
-    await page.locator('[data-section="prefs"] > summary').click()
+    /* wyglad/P3-c (E11): waluta w Dla mnie › Wygląd i waluta */
+    await page.click('[data-opt-nav="look"]')
     await page.locator('[data-deur-exempt="currency-pref"] select').selectOption('PLN')
     await nav(page, 'fin')
     await expect(split.locator('[data-margin-total]')).toContainText('PLN')
     await nav(page, 'options')
-    if (!(await page.locator('[data-section="prefs"]').evaluate((d) => (d as HTMLDetailsElement).open))) await page.locator('[data-section="prefs"] > summary').click()
+    await page.click('[data-opt-nav="look"]')
     await page.locator('[data-deur-exempt="currency-pref"] select').selectOption('EUR')
     await nav(page, 'fin')
     await expect(split.locator('[data-margin-total]')).toContainText(/€|EUR/)

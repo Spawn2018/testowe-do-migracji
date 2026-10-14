@@ -47,7 +47,8 @@ try {
     check(`${a.org}: token usunięty z adresu`, !page.url().includes('access_token'));
     if (a.org === 'HHL') {
       await page.locator('nav button[data-view="options"]').click();
-      await page.locator('details[data-section="users"] summary').click();
+      /* wyglad/P3-c (E11): Ludzie i dostęp › Użytkownicy w menu bocznym Opcji */
+      await page.locator('[data-opt-nav="users"]').click();
       const panel = page.locator('[data-auth="users-admin"]');
       await panel.waitFor({ state: 'visible', timeout: 15000 });
       await panel.locator('.auth-admin-row select').nth(2).waitFor({ timeout: 15000 }).catch(() => {});

@@ -22,8 +22,12 @@ async function fresh(page: Page) {
 test.describe('O4 — oznaczenie demo zostaje', () => {
   test('stawki i opłata paliwowa (Opcje, Finanse) oraz SE drogi (Ryzyka) oznaczone jako demo; przełącznik działa', async ({ page }) => {
     await fresh(page)
+    /* wyglad/P3-c (E11, E12): stawki i opłata paliwowa to osobne ekrany menu bocznego, każdy z jednym oznaczeniem */
     await page.goto(url('/opcje'), { waitUntil: 'networkidle' })
-    await expect(page.locator('[data-demo-mark]')).toHaveCount(2)
+    await page.click('[data-opt-nav="rates"]')
+    await expect(page.locator('[data-opt-screen="rates"] [data-demo-mark]')).toHaveCount(1)
+    await page.click('[data-opt-nav="fuel"]')
+    await expect(page.locator('[data-opt-screen="fuel"] [data-demo-mark]')).toHaveCount(1)
     await page.goto(url('/finanse'), { waitUntil: 'networkidle' })
     await expect(page.locator('[data-demo-mark]')).toHaveCount(1)
     await page.goto(url('/ryzyka'), { waitUntil: 'networkidle' })
@@ -33,12 +37,15 @@ test.describe('O4 — oznaczenie demo zostaje', () => {
     await expect(se.locator('.note')).toContainText('demonstracyjne')
     // przełącznik w Opcjach ukrywa oznaczenia, ponowne włączenie przywraca
     await page.goto(url('/opcje'), { waitUntil: 'networkidle' })
-    /* B-SMOKE-DRIFT: Opcje w akordeonie DEC-6 — przełącznik w zwiniętej sekcji „Preferencje” */
-    await page.locator('[data-section="prefs"] > summary').click()
+    /* wyglad/P3-c: przełącznik w Dla mnie › Wygląd i waluta */
+    await page.click('[data-opt-nav="look"]')
     const sw = page.locator('xpath=//dt[normalize-space()="Oznaczenia demonstracyjne"]/following-sibling::dd[1]//input[@type="checkbox"]')
     await sw.uncheck()
+    await page.click('[data-opt-nav="rates"]')
     await expect(page.locator('[data-demo-mark]')).toHaveCount(0)
+    await page.click('[data-opt-nav="look"]')
     await sw.check()
-    await expect(page.locator('[data-demo-mark]')).toHaveCount(2)
+    await page.click('[data-opt-nav="rates"]')
+    await expect(page.locator('[data-demo-mark]')).toHaveCount(1)
   })
 })

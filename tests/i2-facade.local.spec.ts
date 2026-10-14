@@ -98,9 +98,10 @@ test('HHL: formularz BAF/SEFS — wersja parametrów, odczyt, korekta, dziennik'
   psql(`set session_replication_role = replica; delete from fuel_index_readings; delete from sefs_parameters; delete from audit_log where action in ('SEFS_PARAMS_VERSION','FUEL_READING_ADD','FUEL_READING_CORRECT');`);
   await login(page, 'hhl@bk5.local');
   await page.locator('nav [data-view="options"]').first().click();
+  /* D-20261014-0700-01 J5: BAF → fuel (cennik osobno w i19 → rates). */
+  await page.locator('[data-opt-nav="fuel"]').click();
   const f = page.locator('[data-baf-form]');
   await expect(f).toContainText('brak zapisanych parametrów');
-  await expect(page.locator('[data-rate-card-form]')).toBeVisible();
   const p = f.locator('[data-baf="params"]');
   await p.getByLabel('Obowiązuje od').fill('2026-10-01');
   await p.getByLabel('Baza SEK/l').fill('18,50');
@@ -159,58 +160,27 @@ async function magic(page: Page, email: string) {
 }
 const nextWindow = (page: Page) => page.waitForTimeout(30000 - (Date.now() % 30000) + 500);
 
-test('I-5 + I-17 HHL: dwa urządzenia TOTP, wymaganie dopiero przy dwóch, każde urządzenie działa niezależnie', async ({ page }) => {
-  test.setTimeout(240000);
+test('I-5 HHL: włączenie TOTP z Moje konto (AccountScreen) i weryfikacja przy kolejnym logowaniu', async ({ page }) => {
+  /* D-20261014-0700-01 J3/J5: AccountScreen zamiast MyMfa; I-17 (2 urządzenia + wymóg) zostaje w tests/db/i2.sh. */
+  test.setTimeout(180000);
   mfaReset();
   try {
     await login(page, 'hhl@bk5.local');
     await page.locator('nav [data-view="options"]').first().click();
+    await page.locator('[data-opt-nav="account"]').click();
+    await expect(page.locator('[data-auth="my-account"]')).toBeVisible();
+    await page.getByRole('button', { name: 'Włącz 2FA' }).click();
     const box = page.locator('[data-auth="my-mfa"]');
-    await expect(box.locator('.sub')).toHaveText('wyłączona');
-    await box.getByRole('button', { name: 'Skonfiguruj aplikację' }).click();
     await box.locator('[data-mfa="setup"] button').click();
     const s1 = (await box.locator('[data-mfa-secret]').textContent())!.trim();
     await box.locator('[data-mfa="setup-code"] input').fill(totp(s1));
     await box.locator('[data-mfa="setup-code"] button[type=submit]').click();
-    await expect(box.locator('.sub')).toHaveText('włączona', { timeout: 15000 });
-    await expect(box.locator('[data-mfa-device-row]')).toHaveCount(1);
-    // jedno urządzenie: wymaganie zablokowane (UI i baza)
-    await expect(box.locator('[data-mfa-needs-second]')).toBeVisible();
-    // I-17: drugie urządzenie
-    await box.locator('[data-mfa-second] button').click();
-    await box.locator('[data-mfa="setup"] button').click();
-    const s2 = (await box.locator('[data-mfa-secret]').textContent())!.trim();
-    expect(s2).not.toBe(s1);
-    await nextWindow(page);
-    await box.locator('[data-mfa="setup-code"] input').fill(totp(s2));
-    await box.locator('[data-mfa="setup-code"] button[type=submit]').click();
-    await expect(box.locator('[data-mfa-device-row]')).toHaveCount(2, { timeout: 15000 });
-    await box.locator('[data-mfa-enforced] button').click();
-    await expect(box.locator('[data-mfa-enforced]')).toHaveAttribute('data-mfa-enforced', 'true');
-    expect(psql(`select count(*) from audit_log where action='MFA_ENFORCEMENT_SET' and created_at > now() - interval '5 minutes'`)).not.toBe('0');
-    // sesja A: urządzenie 2 (wybór z listy)
+    await expect(page.locator('.ox-account .ox-tag')).toContainText(/Włączona/i, { timeout: 15000 });
     await magic(page, 'hhl@bk5.local');
     await page.waitForSelector('[data-auth="mfa"] [data-mfa="verify"]', { timeout: 30000 });
     await expect(page.locator('[data-auth="session"]')).toHaveCount(0);
-    const opts = page.locator('[data-mfa-device] option');
-    await expect(opts).toHaveCount(2);
-    await page.locator('[data-mfa-device]').selectOption({ index: 1 });
     await nextWindow(page);
-    await page.locator('[data-mfa="verify"] input').fill(totp(s2));
-    await page.locator('[data-mfa="verify"] button[type=submit]').click();
-    await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
-    // sesja B: urządzenie 1 — niezależnie; kod urządzenia 2 dla urządzenia 1 odrzucony
-    await magic(page, 'hhl@bk5.local');
-    await page.waitForSelector('[data-auth="mfa"] [data-mfa="verify"]', { timeout: 30000 });
-    await page.locator('[data-mfa-device]').selectOption({ index: 0 });
-    await nextWindow(page);
-    const c1 = totp(s1), c2 = totp(s2);
-    if (c1 !== c2) {
-      await page.locator('[data-mfa="verify"] input').fill(c2);
-      await page.locator('[data-mfa="verify"] button[type=submit]').click();
-      await expect(page.locator('[data-mfa="verify"] [role="alert"]')).toBeVisible();
-    }
-    await page.locator('[data-mfa="verify"] input').fill(c1);
+    await page.locator('[data-mfa="verify"] input').fill(totp(s1));
     await page.locator('[data-mfa="verify"] button[type=submit]').click();
     await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
   } finally { mfaReset(); }
@@ -221,6 +191,8 @@ for (const [who, view, role, n] of [['hhl', 'options', 'hhl', 7], ['ksh', 'setti
   test(`I-4 ${who.toUpperCase()}: instrukcja w ${view === 'options' ? 'Opcjach' : 'Ustawieniach'} — ${n} kroków`, async ({ page }) => {
     await login(page, `${who}@bk5.local`);
     await page.locator(`nav [data-view="${view}"]`).first().click();
+    /* wyglad/P3-c (E11): Dla mnie › Instrukcja w menu bocznym */
+    await page.locator('[data-opt-nav="guide"]').click();
     const g = page.locator(`[data-guide="${role}"]`);
     await expect(g.locator('summary h2')).toHaveText('Instrukcja');
     await g.locator('summary').click();

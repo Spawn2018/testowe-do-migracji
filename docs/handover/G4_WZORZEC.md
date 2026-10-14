@@ -199,6 +199,10 @@ Odświeżone 14 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visua
 
 Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38500750044, gałąź `wyglad/P4`, commit `fe090d0`). Wszystkie ekrany: pod paskiem górnym pasek 10 kafelków z liczbą w grupach Przygotowanie · W trasie · Po dostawie (zamiast 9 kafelków bez cyfr). Harmonogram: filtry stanu Opóźnione N · Bez dokumentów · Bez kierowcy · Bez ciągnika i licznik „N z M” (bez przycisków etapów). Mapa: chipy W trasie · Opóźnione · Brak GPS, oznaczenia obok statusu, „Najbliższe włączenia śledzenia”. Matrycy 280 ujęć nie ruszano.
 
+## wyglad/P3-c (14.10.2026) — E11, E12 Opcje i Ustawienia (E37, E6 Moje konto)
+
+`visual.yml` z `update=true` po rebase na `main` `cb14008` (run 38504703136, gałąź `wyglad/P3-c`, commit `61fbfd2`) i po poprawkach z niezależnego sprawdzenia (run 38514652438, commit `26716b6`): 15 migawek Playwright identycznych bajt w bajt z `tests/__screenshots__/` — nic nie podmieniono. Migawki nie obejmują Opcji ani Ustawień; ekrany P3-c sprawdza brama E8 (blok „wyglad/P3-c”, 360/390/430 px) i dowód `docs/handover/odbior/P3/wyglad-P3-c/`. Matrycy 280 ujęć nie ruszano.
+
 ## P4 (14.10.2026) — E25 statusy, stan-zablokowany (nodocs)
 
 Odświeżone migawki Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38503841814, gałąź `pakiet/P4-statusy-sledzenie`, commit `26d8b9c5`). Ekrany: Harmonogram — filtr „Bez dokumentów” przez `[data-quick="nodocs"]` (E25 / D-20261014-0315-01 H2.4) zamiast `.chipbtn`).nth(3). Matrycy 280 ujęć nie ruszano.
