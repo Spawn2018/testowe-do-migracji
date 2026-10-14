@@ -2357,3 +2357,14 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Dane pod wygląd: w P6 według PLAN §4 P6 i D-20261014-2145-01 T1–T6 (`p6Source.ts`).
 
 **wyglad/P6-a NA PRODUKCJI — commit `49d05641`, wdrożenie `dpl_9PFrMuYyTVXRymWBp63t2vGZapnc`, 14.10.2026 22:07.**
+
+## 2026-10-15 — wyglad/P6-b NA PRODUKCJI
+
+- Dopisek D-20261014-2300-01 w `docs/handover/dopiski/`; PLAN §4 P6 Ekrany (H1–H4 / `p6bSource.ts` razem z E17) + Odbiór + §8 (PR #208).
+- Scalenie PR #207 → `adeda6e7` (głowa `35489c22`). unit + visual zielone; gitleaks 0; `npm audit --omit=dev --audit-level=high` 0. Bez migracji (bez `db` / TEST).
+- Wdrożenie R7 z `main` `adeda6e7`, 15.10.2026 00:14, `dpl_DQ5qsdYwuib3m5sXHLSGWMC3FZoy`.
+- Plik JS: `assets/index-tzPPF_z_.js` (oba adresy 200). 0 × `service_role` (27 plików JS z HTML). Kopia wdrożeniowa usunięta.
+- Dane pod wygląd: w P6 razem z E17 według PLAN §4 P6 i D-20261014-2300-01 H1–H4 (`p6bSource.ts`).
+- Konflikt / nakładanie z gałęzią `pakiet/P4-k2-h3-r6` (PR #203): **nie rozwiązywałem** (D-20261014-2300-01); #207 weszło na `main` merge’em; rebase P4 na nowy `main` — poza tą paczką (koordynator przenosi wygląd na main).
+
+**wyglad/P6-b NA PRODUKCJI — commit `adeda6e7`, wdrożenie `dpl_DQ5qsdYwuib3m5sXHLSGWMC3FZoy`, 15.10.2026 00:14.**

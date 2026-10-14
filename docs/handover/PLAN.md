@@ -384,14 +384,15 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - matryca `ryzyka` (uchwyt `[data-panel="ferry"]` zostaje); `etap6-ui.spec.ts` l.29–33;
   - `notify-dedup`, `click-targets`, `risk-keys`, `l8-cockpit-tiles`, `decision-access`, `i2-facade`;
   - zestawy `risks`, `dec2`, `dec3`, `dec5`, `dec6`, `dec-auto`, `backup`.
-- **Ekrany — wygląd:** `wyglad/P6-a` (PR #205; Ryzyka E7 — „Do zrobienia” / karta sprawy E6 / „Sytuacja na trasie”; telefon z zakładkami). Panel transportu (Historia, Czat) — osobny PR `wyglad/P6-b`. Dane pod wygląd: `src/lib/p6Source.ts` według D-20261014-2145-01 T1–T6 (bez zmiany klas i tekstów wyglądu, F1).
+- **Ekrany — wygląd:** `wyglad/P6-a` (PR #205; Ryzyka E7 — „Do zrobienia” / karta sprawy E6 / „Sytuacja na trasie”; telefon z zakładkami); `wyglad/P6-b` (PR #207; panel transportu — Historia i Czat E17, Przegląd: profil trasy ukryty, piloci, prom i stan awizacji). Dane pod wygląd: `src/lib/p6Source.ts` według D-20261014-2145-01 T1–T6; `src/lib/p6bSource.ts` według D-20261014-2300-01 H1–H4 — w P6 razem z E17 (bez zmiany klas i tekstów wyglądu, F1).
 - **Odbiór:**
   - sekcja „Test” E17; testy z punktów E7 (G-02);
   - liczba „Do zrobienia” z reguł E7 na danych testowych; ta sama liczba w menu, Kokpicie i na dzwonku (E7-2);
   - pozycje dopłat według testu R8 (D-20261009-1309-01): postój 8 h 10 min → pozycja u HHL i u SCX; SCX „Dodaj” → pozycja HHL;
   - 8.4: odwołany rejs na jednej przeprawie → propozycja najbliższych rejsów drugiej; przy sztormie na obu → brak propozycji; brak rozkładów → „Brak danych” (test na TEST);
   - wszystko, co dziś zapisuje przeglądarka, działa po zawężeniu `events_insert` (test e2e);
-  - test odbioru T1–T6 z D-20261014-2145-01.
+  - test odbioru T1–T6 z D-20261014-2145-01;
+  - test odbioru H1–H4 z D-20261014-2300-01.
 
 ### P7 · Harmonogram, import pliku KSH, panel i Awizacja — DO ZROBIENIA
 - **E38** import ręczny pliku SharePoint:
@@ -646,3 +647,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 14.10.2026 14:20 | D-20261014-1420-01: poprawka P3-c J3.1 (R1 2FA=verified TOTP, R2 MyMfa, R3 my_session_revoke, R4 hasło, R5 I-17, R6 wyjątek load_status_rank w P4, R7 P3-d + J4 Kokpit) | koordynator |
 | 14.10.2026 20:05 | D-20261014-2005-01: wyglad/P5 (PR #201) — scalenie i wdrożenie wyglądu; dane S1–S5 w P5 (`p5Source.ts`: Finanse, Faktury, paczka E40, Dokumenty, Ceny/dopłaty); PLAN §4 P5 Ekrany | koordynator; wykonawca |
 | 14.10.2026 21:45 | D-20261014-2145-01: wyglad/P6-a (PR #205) — scalenie i wdrożenie wyglądu Ryzyk; dane T1–T6 w P6 (`p6Source.ts`: jedna liczba, reguły E7, osoby/przydział E6, sytuacja na trasie, dopłaty/L14, porządki); PLAN §4 P6 Ekrany | koordynator; wykonawca |
+| 14.10.2026 23:00 | D-20261014-2300-01: wyglad/P6-b (PR #207) — scalenie i wdrożenie wyglądu Historii i Czatu (E17); dane H1–H4 w P6 razem z E17 (`p6bSource.ts`: historia z bazy, czat widoczność/odczyty, piloci/wymiary, porządki E18); PLAN §4 P6 Ekrany + Odbiór | koordynator; wykonawca |
