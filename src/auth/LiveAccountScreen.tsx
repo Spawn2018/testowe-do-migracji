@@ -1,7 +1,8 @@
 /**
  * D-20261014-0700-01 J3 pkt 1 — dane do AccountScreen (wyglad/P3-c).
+ * D-20261014-1420-01 R1/R2/R4: 2FA = verified TOTP; MyMfa przy ≥1 urządzeniu; hasło — osobny komunikat.
  * my_profile / admin_user_profile_set, 2FA (Mfa), my_sessions / revoke_user_sessions.
- * Podgląd KSH/SCX (E9-7, G-07): tylko odczyt — bez RPC zapisów (MyAccount/Mfa omijały writeThrough).
+ * Podgląd KSH/SCX (E9-7, G-07): tylko odczyt — bez RPC zapisów.
  */
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { AccountScreen, type MyDevice } from '../components/options/PeopleScreens';
@@ -13,7 +14,7 @@ import { useTowerStore } from '../store/useTowerStore';
 import type { Locale } from '../types';
 import { getSupabase } from './client';
 import { authErrorPl, passwordOk, PASSWORD_MIN } from './config';
-import { MfaSetup, readMfaStatus } from './Mfa';
+import MyMfa, { MfaSetup, accountMfaEnabled } from './Mfa';
 import { getAuthProfile, requestAuthReload } from './profile';
 import { deviceLabel } from './sessionYear';
 import './auth.css';
@@ -55,10 +56,10 @@ export default function LiveAccountScreen() {
 
   const refresh = useCallback(async () => {
     const sb = await getSupabase();
-    const status = await readMfaStatus(sb);
+    // R1: bez my_mfa_status.satisfied — tylko zweryfikowane TOTP
     const list = await sb.auth.mfa.listFactors();
     const totp = (list.data?.totp ?? []).filter((f) => f.status === 'verified');
-    setMfaOn(Boolean(status?.satisfied) || totp.length > 0);
+    setMfaOn(accountMfaEnabled(totp.length));
     const { data, error } = await sb.rpc('my_sessions');
     if (error) {
       setMsg({ ok: false, text: authErrorPl(error.message) });
@@ -149,7 +150,7 @@ export default function LiveAccountScreen() {
     setPwOpen(false);
     setPw('');
     setPw2('');
-    setMsg({ ok: true, text: t(locale, 'a6_ua_profile_saved') });
+    setMsg({ ok: true, text: t(locale, 'auth_pw_changed') });
   };
 
   const onMfa = previewRo ? undefined : () => {
@@ -157,7 +158,7 @@ export default function LiveAccountScreen() {
     setMsg(null);
   };
 
-  /** Brak RPC na jedną sesję — Auth `signOut({ scope: 'others' })` (revoke_user_sessions kasuje też bieżącą). */
+  /** R3 (osobna paczka): dziś nadal Auth scope others — do my_session_revoke. */
   const onRemoveDevice = previewRo ? undefined : async (id: string) => {
     const target = devices.find((d) => d.id === id);
     if (!target || target.current) return;
@@ -198,13 +199,15 @@ export default function LiveAccountScreen() {
           </form>
         </section>
       ) : null}
-      {mfaSetup && !previewRo ? (
-        <section className="ox-panel" data-auth="my-mfa">
+      {mfaSetup && !previewRo && !mfaOn ? (
+        <section className="ox-panel" data-auth="my-mfa" data-mfa-first="1">
           <div className="ox-panel-bd">
             <MfaSetup onDone={() => { setMfaSetup(false); void refresh(); }} />
           </div>
         </section>
       ) : null}
+      {/* R2: MyMfa (drugie urządzenie, usuwanie, wymóg admin) — tymczasowo do wyglądu koordynatora */}
+      {mfaOn && !previewRo ? <MyMfa /> : null}
       {msg ? <div className={`auth-msg ${msg.ok ? 'ok' : 'err'} auth-admin-row`} role="status">{msg.text}</div> : null}
     </div>
   );

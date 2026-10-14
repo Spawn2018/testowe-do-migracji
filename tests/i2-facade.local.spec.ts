@@ -160,27 +160,62 @@ async function magic(page: Page, email: string) {
 }
 const nextWindow = (page: Page) => page.waitForTimeout(30000 - (Date.now() % 30000) + 500);
 
-test('I-5 HHL: włączenie TOTP z Moje konto (AccountScreen) i weryfikacja przy kolejnym logowaniu', async ({ page }) => {
-  /* D-20261014-0700-01 J3/J5: AccountScreen zamiast MyMfa; I-17 (2 urządzenia + wymóg) zostaje w tests/db/i2.sh. */
-  test.setTimeout(180000);
+test('I-5 + I-17 HHL: AccountScreen → dwa urządzenia TOTP, wymaganie, każde urządzenie niezależnie', async ({ page }) => {
+  /* D-20261014-1420-01 R2/R5: pierwsze włączenie z AccountScreen; MyMfa wraca przy ≥1 TOTP. */
+  test.setTimeout(240000);
   mfaReset();
   try {
     await login(page, 'hhl@bk5.local');
     await page.locator('nav [data-view="options"]').first().click();
     await page.locator('[data-opt-nav="account"]').click();
     await expect(page.locator('[data-auth="my-account"]')).toBeVisible();
+    await expect(page.locator('.ox-account .ox-tag')).toContainText(/Wyłączona/i);
     await page.getByRole('button', { name: 'Włącz 2FA' }).click();
-    const box = page.locator('[data-auth="my-mfa"]');
-    await box.locator('[data-mfa="setup"] button').click();
-    const s1 = (await box.locator('[data-mfa-secret]').textContent())!.trim();
-    await box.locator('[data-mfa="setup-code"] input').fill(totp(s1));
-    await box.locator('[data-mfa="setup-code"] button[type=submit]').click();
+    const first = page.locator('[data-auth="my-mfa"][data-mfa-first]');
+    await first.locator('[data-mfa="setup"] button').click();
+    const s1 = (await first.locator('[data-mfa-secret]').textContent())!.trim();
+    await first.locator('[data-mfa="setup-code"] input').fill(totp(s1));
+    await first.locator('[data-mfa="setup-code"] button[type=submit]').click();
     await expect(page.locator('.ox-account .ox-tag')).toContainText(/Włączona/i, { timeout: 15000 });
+    const box = page.locator('section.option-panel[data-auth="my-mfa"]');
+    await expect(box.locator('.sub')).toHaveText('włączona', { timeout: 15000 });
+    await expect(box.locator('[data-mfa-device-row]')).toHaveCount(1);
+    await expect(box.locator('[data-mfa-needs-second]')).toBeVisible();
+    // I-17: drugie urządzenie
+    await box.locator('[data-mfa-second] button').click();
+    await box.locator('[data-mfa="setup"] button').click();
+    const s2 = (await box.locator('[data-mfa-secret]').textContent())!.trim();
+    expect(s2).not.toBe(s1);
+    await nextWindow(page);
+    await box.locator('[data-mfa="setup-code"] input').fill(totp(s2));
+    await box.locator('[data-mfa="setup-code"] button[type=submit]').click();
+    await expect(box.locator('[data-mfa-device-row]')).toHaveCount(2, { timeout: 15000 });
+    await box.locator('[data-mfa-enforced] button').click();
+    await expect(box.locator('[data-mfa-enforced]')).toHaveAttribute('data-mfa-enforced', 'true');
+    expect(psql(`select count(*) from audit_log where action='MFA_ENFORCEMENT_SET' and created_at > now() - interval '5 minutes'`)).not.toBe('0');
+    // sesja A: urządzenie 2
     await magic(page, 'hhl@bk5.local');
     await page.waitForSelector('[data-auth="mfa"] [data-mfa="verify"]', { timeout: 30000 });
     await expect(page.locator('[data-auth="session"]')).toHaveCount(0);
+    const opts = page.locator('[data-mfa-device] option');
+    await expect(opts).toHaveCount(2);
+    await page.locator('[data-mfa-device]').selectOption({ index: 1 });
     await nextWindow(page);
-    await page.locator('[data-mfa="verify"] input').fill(totp(s1));
+    await page.locator('[data-mfa="verify"] input').fill(totp(s2));
+    await page.locator('[data-mfa="verify"] button[type=submit]').click();
+    await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
+    // sesja B: urządzenie 1 — kod urządzenia 2 dla urządzenia 1 odrzucony
+    await magic(page, 'hhl@bk5.local');
+    await page.waitForSelector('[data-auth="mfa"] [data-mfa="verify"]', { timeout: 30000 });
+    await page.locator('[data-mfa-device]').selectOption({ index: 0 });
+    await nextWindow(page);
+    const c1 = totp(s1), c2 = totp(s2);
+    if (c1 !== c2) {
+      await page.locator('[data-mfa="verify"] input').fill(c2);
+      await page.locator('[data-mfa="verify"] button[type=submit]').click();
+      await expect(page.locator('[data-mfa="verify"] [role="alert"]')).toBeVisible();
+    }
+    await page.locator('[data-mfa="verify"] input').fill(c1);
     await page.locator('[data-mfa="verify"] button[type=submit]').click();
     await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
   } finally { mfaReset(); }
