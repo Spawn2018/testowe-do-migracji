@@ -19,6 +19,8 @@ const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENA
 const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
 /* I-13: parametry SEFS tylko do odczytu (zakres wg RLS) — wyłącznie produkcja */
 const SefsReadOnly = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/SefsReadOnly')) : null;
+/** D-20261014-0700-01 J3 pkt 1: Moje konto KSH/SCX (Podgląd = tylko odczyt w LiveAccountScreen). */
+const LiveAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/LiveAccountScreen')) : null;
 
 function block(el: ReactNode) {
   return <Suspense fallback={null}>{el}</Suspense>;
@@ -52,9 +54,7 @@ export function SettingsView() {
   const noSource = <div className="note option-note">{t(locale, 'p3c_no_source')}</div>;
 
   const forme: OptScreen[] = [
-    /* F8: na produkcji KSH i SCX nie dostają tu nowych zapisów (dane, hasło, 2FA, urządzenia) —
-       podłącza wykonawca według dopisku do PR wyglad/P3-c (G2); do tego czasu „Brak źródła danych.” */
-    { id: 'account', right: 'own', body: demo?.bodies.account ?? noSource },
+    { id: 'account', right: 'own', body: demo?.bodies.account ?? (LiveAccount ? block(<LiveAccount />) : noSource) },
     { id: 'forme', right: 'own', body: demo?.bodies.forme ?? <ForMeScreen locale={locale} kind={null} groups={null} /> },
     {
       id: 'look',

@@ -23,8 +23,9 @@ describe('I-5 statycznie', () => {
     // D-20261013-2255-01 G4: po MFA profil z withSessionProfile → setAuthProfile(profile)
     expect(gate.indexOf('mfaStep(')).toBeLessThan(gate.indexOf('setAuthProfile(profile)'));
   });
-  it('Opcje: panel 2FA tylko w buildzie Supabase (leniwy import)', () => {
-    expect(opts).toMatch(/const MyMfa = import\.meta\.env\.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED \? lazy\(\(\) => import\('\.\.\/auth\/Mfa'\)\)/);
+  it('Opcje: Moje konto (AccountScreen + MfaSetup) tylko w buildzie Supabase — D-20261014-0700-01 J3 pkt 1 / E11', () => {
+    expect(opts).toMatch(/const LiveAccount = import\.meta\.env\.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED \? lazy\(\(\) => import\('\.\.\/auth\/LiveAccountScreen'\)\)/);
+    expect(readFileSync('src/auth/LiveAccountScreen.tsx', 'utf8')).toMatch(/MfaSetup/);
   });
   it('0057: flaga włączana tylko, gdy każdy aktywny HHL_ADMIN ma TOTP; zmiana wymaga aal2', () => {
     expect(sql).toMatch(/security_flags/);

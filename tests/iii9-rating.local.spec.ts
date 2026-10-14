@@ -58,6 +58,8 @@ test('HHL: ocena w szufladzie → baza; karta przewoźników w Opcjach', async (
   expect(psql(`select (count(*) > 0)::text from audit_log where action='CARRIER_RATING' and entity_id='${LD}'`)).toBe('true');
   await page.keyboard.press('Escape');
   await page.locator('nav [data-view="options"]').first().click();
+  /* D-20261014-0700-01 J5: Opcje → najpierw ekran look (ocena przewoźnika). */
+  await page.locator('[data-opt-nav="look"]').click();
   const card = page.locator('[data-carrier-scorecard]');
   await expect(card).toBeVisible();
   await expect(card.locator('[data-scorecard-score]').first()).toContainText('4,00 / 5 (1)');
@@ -69,6 +71,8 @@ test('D-23 SCX: własna karta i oceny w Ustawieniach, ocena w szufladzie tylko d
   test.setTimeout(120_000);
   await login(page, 'scx@bk5.local');
   await page.locator('nav [data-view="settings"]').first().click();
+  /* D-20261014-0700-01 J5: Ustawienia → look. */
+  await page.locator('[data-opt-nav="look"]').click();
   const card = page.locator('[data-carrier-scorecard]');
   await expect(card).toBeVisible();
   await expect(card.locator('[data-scorecard-row]')).toHaveCount(1);
