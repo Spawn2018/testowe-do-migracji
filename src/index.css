@@ -237,6 +237,8 @@ tbody tr.done td{color:var(--ink-3)}
 .dtabs{display:flex;gap:0;border-bottom:1px solid var(--rule);background:var(--surface-2)}
 .dtabs button{padding:8px 13px;font-size:13.5px;color:var(--ink-2);border-bottom:2px solid transparent}
 .dtabs button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-color:var(--amber);background:var(--surface)}
+/* wyglad/P6-b (E17): liczba nieprzeczytanych na zakładce „Czat” */
+.dtabs .dt-n{display:inline-block;min-width:18px;margin-left:6px;padding:0 5px;background:var(--ink);color:var(--surface);border-radius:2px;font-size:12px;font-weight:700;line-height:1.5;text-align:center;font-variant-numeric:tabular-nums}
 .dbody{flex:1;overflow-y:auto;padding:13px 15px}
 .kv{display:grid;grid-template-columns:150px 1fr;gap:3px 12px;font-size:13.2px}
 .kv dt{color:var(--ink-3)}

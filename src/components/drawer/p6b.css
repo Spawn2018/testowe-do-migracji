@@ -1,0 +1,63 @@
+/* wyglad/P6-b — panel transportu: „Historia” i „Czat” (E17, img/e17-after). Ładowane leniwie razem z zakładkami. */
+
+/* ---------- Historia ---------- */
+.ph{display:flex;flex-direction:column;margin:-13px -15px 0;min-width:0}
+.ph-filters{display:flex;flex-wrap:wrap;gap:8px;padding:12px 15px;border-bottom:1px solid var(--rule);background:var(--surface)}
+.ph-chip{min-height:38px;padding:6px 14px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);font:inherit;font-size:14.5px;cursor:pointer;white-space:nowrap}
+.ph-chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.ph-chip:focus-visible,.ch-seg button:focus-visible,.ch-log:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.ph-days{display:flex;flex-direction:column}
+.ph-day-hd{margin:0;padding:8px 15px 7px;background:var(--surface-2);border-bottom:1px solid var(--rule-2);font-family:var(--font-cond);font-size:13.5px;font-weight:600;letter-spacing:.06em;color:var(--ink-2)}
+.ph-day + .ph-day .ph-day-hd{border-top:1px solid var(--rule)}
+.ph-list{list-style:none;margin:0;padding:0 15px}
+.ph-row{display:grid;grid-template-columns:52px minmax(0,1fr);gap:0 6px;padding:10px 0;border-bottom:1px solid var(--rule-2)}
+.ph-row:last-child{border-bottom:0}
+.ph-time{font-size:14.5px;color:var(--ink-2);font-variant-numeric:tabular-nums;line-height:1.45}
+.ph-body{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ph-what{font-size:15px;line-height:1.45;color:var(--ink);overflow-wrap:anywhere}
+.ph-what s{color:var(--ink-3)}
+.ph-what b{font-weight:600}
+.ph-tag{display:inline-block;margin-right:6px;padding:0 5px;border:1px solid currentColor;font-family:var(--font-cond);font-size:12px;font-weight:600;letter-spacing:.06em;line-height:1.4;vertical-align:1px;color:var(--ink-3)}
+.ph-tag.t-status,.ph-tag.t-trasa{color:var(--go)}
+.ph-tag.t-zasoby,.ph-tag.t-cena{color:var(--amber-ink)}
+.ph-tag.t-numer,.ph-tag.t-dokument,.ph-tag.t-plan{color:var(--sea)}
+.ph-who{font-size:13.5px;color:var(--ink-3);overflow-wrap:anywhere}
+.ph-empty{margin:0;padding:16px 15px;font-size:14px;color:var(--ink-3)}
+.ph-hidden{margin:0;padding:12px 15px;border-top:1px solid var(--rule);font-size:13px;line-height:1.5;color:var(--ink-3)}
+
+/* ---------- Czat ---------- */
+.dbody.is-chat{padding:0;display:flex;flex-direction:column;overflow:hidden}
+.ch{flex:1;min-height:0;display:flex;flex-direction:column}
+.ch-log{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:12px 15px 16px;background:var(--surface-2)}
+.ch-day{display:flex;flex-direction:column;gap:10px}
+.ch-day-hd{align-self:center;margin:4px 0 0;font-family:var(--font-cond);font-size:13.5px;font-weight:600;letter-spacing:.06em;color:var(--ink-2)}
+.ch-msg{align-self:flex-start;display:flex;flex-direction:column;gap:3px;max-width:80%;min-width:0;padding:9px 13px;background:var(--surface);border:1px solid var(--rule)}
+.ch-msg.is-me{align-self:flex-end;background:var(--sea-bg);border-color:var(--rule)}
+.ch-msg.is-me .ch-who{color:var(--ink-2)}
+.ch-msg.is-only{border-style:dashed;border-color:var(--amber)}
+.ch-who{font-size:13px;color:var(--ink-3);overflow-wrap:anywhere}
+.ch-only{display:inline-block;margin-left:6px;padding:0 5px;border:1px solid var(--amber);color:var(--amber-ink);font-size:12px;line-height:1.4}
+.ch-text{font-size:15px;line-height:1.45;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+.ch-rcpt{font-size:12.5px;color:var(--ink-3)}
+.ch-rcpt.is-read{color:var(--go)}
+.ch-empty{margin:auto 0;align-self:center;font-size:14px;color:var(--ink-3)}
+.ch-compose{flex:none;display:flex;flex-direction:column;gap:10px;padding:12px 15px;background:var(--surface);border-top:1px solid var(--rule)}
+.ch-vis{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink-2)}
+.ch-seg{display:flex;border:1px solid var(--rule)}
+.ch-seg button{min-height:36px;padding:6px 12px;border:0;border-right:1px solid var(--rule);background:var(--surface);color:var(--ink);font:inherit;font-size:14px;cursor:pointer}
+.ch-seg button:last-child{border-right:0}
+.ch-seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.ch-row{display:flex;gap:10px;align-items:stretch}
+.ch-input{flex:1;min-width:0;min-height:48px;padding:10px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink);font:inherit;font-size:15px;line-height:1.4;resize:vertical}
+.ch-send{flex:none;min-width:88px;padding:0 18px;font-size:15px}
+.ch-hint{margin:0;font-size:13px;line-height:1.5;color:var(--ink-3)}
+
+@media (max-width:768px){
+  .ph-filters{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .ph-chip{min-height:44px;flex:none}
+  .ph-row{grid-template-columns:48px minmax(0,1fr)}
+  .ch-msg{max-width:88%}
+  .ch-seg button{min-height:44px}
+  .ch-input{resize:none;font-size:16px}
+  .ch-send{min-height:44px}
+}

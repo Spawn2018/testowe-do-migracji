@@ -43,7 +43,8 @@ async function login(page: Page, email: string) {
 async function openRes(page: Page) {
   await page.locator('nav [data-view="sched"]').first().click();
   await page.locator(`tr[data-load="${LD}"]`).click();
-  await page.locator('.dtabs button').nth(4).click();
+  /* wyglad/P6-b (E17, E32): piloci w Przeglądzie (z „Ustaleń”); do awizacji SCX w P7 */
+  await page.locator('.dtabs button').nth(0).click();
   await expect(page.locator('[data-escorts]')).toBeVisible();
 }
 

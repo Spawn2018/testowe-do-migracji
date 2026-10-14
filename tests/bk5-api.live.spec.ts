@@ -317,9 +317,9 @@ test('Aplikacja: przewoźnik zapisuje „Awizacja / Prom” bez zmiany okien —
   await passwordLoginPage(page, 'SCX');
   await page.keyboard.press('h');
   await page.locator(`tr[data-load="${fx.loadA}"]`).first().click();
-  await page.locator('aside .dtabs button').filter({ hasText: /Ustalenia/ }).first().click();
+  /* wyglad/P6-b (E17, E32): awizacja tylko w Przeglądzie (zakładka „Czat” to sama rozmowa) */
   const before = await loadRow();
-  await page.locator('aside .awiz-row button').first().click();
+  await page.locator('aside [data-awiz-open]').first().click();
   await page.locator('[data-awiz-save]').click();
   await page.waitForTimeout(2500);
   expect(patches.filter((p) => p.includes('plan_')), 'zapis okien planowych').toEqual([]);

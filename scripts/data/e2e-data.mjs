@@ -57,9 +57,10 @@ try {
   // zapis z UI: czat w szufladzie transportu
   const tag = `bk3-ui-${Date.now()}`;
   await scx.page.locator(`tr[data-load="${idA}"]`).first().click();
-  await scx.page.locator('aside').getByRole('button', { name: /Ustalenia/ }).first().click();
-  await scx.page.fill('input[placeholder="Napisz do pozostałych stron…"]', tag);
-  await scx.page.locator('form.chatbar button[type=submit]').click();
+  /* wyglad/P6-b (E17): zakładka „Czat” (dawniej Ustalenia) */
+  await scx.page.locator('aside').getByRole('button', { name: /^Czat/ }).first().click();
+  await scx.page.fill('aside [data-chat-input]', tag);
+  await scx.page.locator('aside [data-chat-send]').click();
   let row = null;
   for (let i = 0; i < 20 && !row; i++) {
     await new Promise((r) => setTimeout(r, 500));

@@ -204,6 +204,8 @@ export interface LoadMessage {
   text: string;
   /** B-10g: kto odczytał (podgląd); puste = jeszcze nikt poza autorem */
   reads?: { userId: string; name: string; org?: string; at: string }[];
+  /** E17 (wyglad/P6-b): kto widzi wiadomość; brak = wszyscy. Produkcja — z `load_messages.visible_to` (zapis i odczyt w aplikacji — wykonawca). */
+  visibleTo?: 'ALL' | 'HHL_SCX';
 }
 
 export interface Document {

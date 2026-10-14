@@ -3,3 +3,4 @@
 # Strona, `main` i `.app` nigdy nie są paskiem.
 .sbar-scroll | E28 pkt 4 (decyzja 07.10 20:57): pasek etapów na telefonie nad Harmonogramem i Mapą, przewijany w bok (wyglad/P4)
 .drawer .dtabs | E1, img/e32-after (telefon: „Zakładki przewija się w bok”): zakładki panelu transportu na telefonie przewijane w bok (wyglad/P4-c)
+.drawer .ph-filters | E17 (img/e17-after, telefon): „W Historii filtry też przewijają się w bok” (wyglad/P6-b)

@@ -5,20 +5,17 @@ import { StatusPill } from '../ui/StatusPill';
 import { fmtNum, t, tp } from '../../i18n/messages';
 import {
   canChangeLoadStatus,
-  canEditResources,
   visibleDriverPhone,
 } from '../../lib/permissions';
 import { getAuthProfile } from '../../auth/profile';
 import { SITES } from '../../lib/status';
 import { isReadyBlocked, evaluateLoadCover } from '../../lib/permits';
-import { awizacjaChanges } from '../../lib/awizacjaPatch';
 import { hasAwizacja } from '../../lib/awizacjaState';
 import { editableOrderSide } from '../../lib/orderNumbers';
 import { transportLabel } from '../../lib/transportName';
 import { DocPreview } from '../ui/DocPreview';
 import { PlanDatesPanel } from './PlanDatesPanel';
 import { formatTowerPair } from '../../lib/cSep';
-import { formatHistoryActor } from '../../lib/historyActor';
 import { KshDatesModal } from './KshDatesModal';
 import { StatusAxisTab } from './StatusAxisTab';
 import { TrackingBar } from './TrackingBar';
@@ -32,29 +29,20 @@ import { useIsPhone } from '../../lib/useIsPhone';
 import { getNow } from '../../lib/frozenNow';
 import { RouteCheckPanel } from './RouteCheckPanel';
 import { CorridorObstaclesPanel } from './CorridorObstaclesPanel';
-import { RouteProfilePanel } from './RouteProfilePanel';
 import {
   TZ_LOAD_PL,
   TZ_UNLOAD_SE,
   formatLoadPl,
-  formatUnloadSe,
-  formatOpsDateTime,
   formatSchedTableDay,
-  isoToDatetimeLocalValue,
-  wallLocalToIso,
   delayMinutesVsPlan,
 } from '../../lib/time';
 import { formatDelayPill } from '../ui/StatusPill';
 import { AgreedFeeForm } from './AgreedFeeForm';
-import {
-  eventTypeLabel,
-  ferryStatusLabel,
-} from '../../lib/enumLabels';
-
-import { autoStatusText, effArrival, effDeparture, fmtLocal, sailingStatusLabel } from '../../lib/sailings';
+import { effArrival, effDeparture, fmtLocal, sailingStatusLabel } from '../../lib/sailings';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { isServerId } from '../../data/registry';
-import { DriverLinkPanel } from './DriverLinkPanel';
+import { chatMeOf, chatMessagesOf, chatReadsOn, chatUnread } from '../../lib/p6bSource';
+import { ht, htn } from '../../i18n/p6b';
 import { OptionsHowTo } from '../settings/OptionsHowTo';
 import type { Load, Locale } from '../../types';
 import { PROD_BUILD, shows } from '../../lib/prodFacade';
@@ -67,6 +55,9 @@ const AwizacjaModal = lazy(lazyRetry(() => import('./AwizacjaModal').then((m) =>
 const StatusChangeModal = lazy(lazyRetry(() => import('./StatusChangeModal').then((m) => ({ default: m.StatusChangeModal }))));
 const PanelDocs = lazy(lazyRetry(() => import('./PanelDocs').then((m) => ({ default: m.PanelDocs }))));
 const PanelPrices = lazy(lazyRetry(() => import('./PanelPrices').then((m) => ({ default: m.PanelPrices }))));
+/* wyglad/P6-b: „Historia” i „Czat” (E17) poza pierwszym wczytaniem */
+const PanelHistory = lazy(lazyRetry(() => import('./PanelHistory').then((m) => ({ default: m.PanelHistory }))));
+const PanelChat = lazy(lazyRetry(() => import('./PanelChat').then((m) => ({ default: m.PanelChat }))));
 const CarrierRating = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/CarrierRating')) : null;
 const EscortPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/EscortPanel')) : null;
 
@@ -107,11 +98,7 @@ export function LoadDrawer() {
   const messages = useTowerStore((s) => s.messages);
   const locale = useTowerStore((s) => s.locale);
   const role = useTowerStore((s) => s.role);
-  const updateResources = useTowerStore((s) => s.updateResources);
-  const updateAwizacja = useTowerStore((s) => s.updateAwizacja);
   const sailings = useTowerStore((s) => s.sailings);
-  const assignScx = useTowerStore((s) => s.assignScx);
-  const triggerGeofence = useTowerStore((s) => s.triggerGeofence);
   const geofences = useTowerStore((s) => s.geofences);
   const sendMessage = useTowerStore((s) => s.sendMessage);
   const pushToast = useTowerStore((s) => s.pushToast);
@@ -121,7 +108,8 @@ export function LoadDrawer() {
   const setLoadStatus = useTowerStore((s) => s.setLoadStatus);
 
   const [tab, setTab] = useState<Tab>('overview');
-  const [chat, setChat] = useState('');
+  /* E17: wiadomości widziane w zakładce „Czat” w tej sesji (liczba nieprzeczytanych; odczyt w bazie zapisuje wykonawca) */
+  const [chatSeen, setChatSeen] = useState<Record<string, readonly string[]>>({});
   const [previewDoc, setPreviewDoc] = useState<import('../../types').Document | null>(null);
   const [awizOpen, setAwizOpen] = useState(false);
   const [kshDatesOpen, setKshDatesOpen] = useState(false);
@@ -173,6 +161,7 @@ export function LoadDrawer() {
     () => (load ? messages.filter((m) => m.loadId === load.id) : []),
     [messages, load],
   );
+  const chatMsgs = useMemo(() => (load ? chatMessagesOf(load, loadMsgs, nowIso) : []), [load, loadMsgs, nowIso]);
 
 
 
@@ -186,18 +175,12 @@ export function LoadDrawer() {
   /* AUD-03 (KSH — PANEL ZLECENIA): KSH widzi ten sam panel co pozostali; jedyny przycisk zmian = „Edytuj” (daty i godziny). */
   const driverPhone = visibleDriverPhone(role, load);
 
-  const canEdit = canEditResources(role);
   const canStatus = canChangeLoadStatus(role, getAuthProfile()?.role ?? null);
   /** B-10: awizację uzupełnia SCX; HHL (nie admin) nie dodaje. */
   const canAwiz = role === 'SCX';
   const orderSide = editableOrderSide(role);
-  /* AN2 — okna planowe zmienia wyłącznie HHL (plan z harmonogramu KSH); przewoźnik widzi je jako tekst */
-  const planEditable = role === 'HHL';
   /* M10 — rejs z rozkładu */
   const curSailing = sailings.find((x) => x.id === load.sailingId);
-  const sailingText = curSailing
-    ? `${curSailing.vessel} · ${fmtLocal(effDeparture(curSailing))} → ${fmtLocal(effArrival(curSailing))}${curSailing.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(curSailing.status, locale)}` : ''}`
-    : `${load.ferry.vessel ? `${load.ferry.vessel} · ` : ''}${t(locale, 'sail_unassigned')}`;
   const readyGate = isReadyBlocked(load, loadDocs);
   const permitBlock = readyGate.blocked;
   const coverInfo = evaluateLoadCover(load, loadDocs);
@@ -206,8 +189,6 @@ export function LoadDrawer() {
   const delayPillText = delayMin === null ? t(locale, 'i2_delay_pill') : formatDelayPill(delayMin);
   const permitState = !shows('permitNumber') ? permitBannerState(load, loadDocs) : null;
   const comboL = load.resources.setLengthM ?? load.dims.lengthM;
-  const comboW = load.resources.setWidthM ?? load.dims.widthM;
-  const comboH = load.resources.setHeightM ?? load.dims.heightM;
 
   /* E25: oś statusów raz na render — data dostawy i wjazd na plac do bloku ETA */
   const statusAxis = buildStatusAxis(load, loadEvents);
@@ -234,6 +215,13 @@ export function LoadDrawer() {
         : undefined}
     />
   ) : null;
+
+  const chatUnreadN = chatReadsOn() ? chatUnread(chatMsgs, role, chatMeOf(role), new Set(chatSeen[load.id] ?? [])) : 0;
+  /* wejście do „Czatu” i wyjście z niego: to, co było na ekranie, jest przeczytane (tylko w tej sesji) */
+  const switchTab = (next: Tab) => {
+    if (tab === 'chat' || next === 'chat') setChatSeen((s) => ({ ...s, [load.id]: chatMsgs.map((m) => m.id) }));
+    setTab(next);
+  };
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'overview', label: t(locale, 'tab_overview') },
@@ -301,14 +289,19 @@ export function LoadDrawer() {
         <TrackingBar load={load} events={loadEvents} label={transportLabel(load, role, 'plain')} locale={locale} nowIso={nowIso} trackingLink={trackingLink} />
 
         <div className="dtabs">
-          {tabs.map((x) => (
-              <button key={x.id} type="button" onClick={() => setTab(x.id)} aria-selected={tab === x.id}>
+          {tabs.map((x) => {
+            /* E17: liczba nieprzeczytanych na zakładce „Czat” */
+            const n = x.id === 'chat' && tab !== 'chat' ? chatUnreadN : 0;
+            return (
+              <button key={x.id} type="button" onClick={() => switchTab(x.id)} aria-selected={tab === x.id} aria-label={n ? `${x.label}, ${htn(locale, 'p6b_chat_unread', n)}` : undefined}>
                 {x.label}
+                {n ? <span className="dt-n" aria-hidden="true" data-chat-unread={n}>{n}</span> : null}
               </button>
-            ))}
+            );
+          })}
         </div>
 
-        <div className="dbody">
+        <div className={`dbody${tab === 'chat' ? ' is-chat' : ''}`}>
           {tab === 'overview' && (
             <>
               {/* wyglad/P4-c (L14): otwarta sprawa „czy dostarczono?” — odpowiedź w zakładce Status */}
@@ -380,10 +373,6 @@ export function LoadDrawer() {
                 <dt>{t(locale, 'h3_title')}</dt>
                 <dd data-corridor>
                   <CorridorObstaclesPanel loadId={load.id} locale={locale} />
-                </dd>
-                <dt>{t(locale, 'h8_title')}</dt>
-                <dd data-route-profile>
-                  <RouteProfilePanel loadId={load.id} locale={locale} />
                 </dd>
                 <dt>{t(locale, 'a6_dr_mass')}</dt>
                 <dd>
@@ -457,7 +446,8 @@ export function LoadDrawer() {
                     '—'
                   )}
                 </dd>
-                {load.resources.escort ? (
+                {/* wyglad/P6-b: przy liście pilotów z bazy (SCX, KSH) bez drugiego, starszego wiersza „Pilot” */}
+                {load.resources.escort && !(EscortPanel && isServerId(load.id) && (role === 'SCX' || role === 'KSH')) ? (
                   <>
                     <dt>{t(locale, 'a6_dr_escort')}</dt>
                     <dd data-escort="required">
@@ -468,12 +458,17 @@ export function LoadDrawer() {
                   </>
                 ) : null}
                 <dt>{t(locale, 'a6_dr_ferry')}</dt>
-                <dd>
-                  {load.ferry.vessel
-                    ? (curSailing
-                      ? `${load.ferry.vessel} · ${fmtLocal(effDeparture(curSailing))}`
-                      : load.ferry.vessel)
-                    : t(locale, 'a6_dr_no_booking')}
+                {/* wyglad/P6-b (E17 → E32): to, co KSH widział w „Ustaleniach” — przypłynięcie i stan rejsu — jest tu dla wszystkich */}
+                <dd data-ferry-row>
+                  {curSailing
+                    ? `${load.ferry.vessel ?? curSailing.vessel} · ${fmtLocal(effDeparture(curSailing))} → ${fmtLocal(effArrival(curSailing))}${curSailing.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(curSailing.status, locale)}` : ''}`
+                    : load.ferry.vessel ?? t(locale, 'a6_dr_no_booking')}
+                </dd>
+                <dt>{t(locale, 'a6_dr_awi')}</dt>
+                <dd data-awiz-state={!hasAwizacja(load) ? 'none' : load.awizacja.confirmed ? 'confirmed' : 'open'}>
+                  {!hasAwizacja(load)
+                    ? <span style={{ color: 'var(--red)' }}>{ht(locale, 'p6b_awi_none')}</span>
+                    : `${load.awizacja.loadWindowStart ? `${formatLoadPl(load.awizacja.loadWindowStart)} – ${formatLoadPl(load.awizacja.loadWindowEnd)} · ` : ''}${ht(locale, load.awizacja.confirmed ? 'p6b_awi_ok' : 'p6b_awi_open')}`}
                 </dd>
               </dl>
 
@@ -494,6 +489,8 @@ export function LoadDrawer() {
                   </button>
                 </div>
               )}
+              {/* wyglad/P6-b (E17, E32): pojazdy pilotujące z „Ustaleń” do Przeglądu (te same firmy co dotąd: SCX i KSH); do awizacji SCX w P7 (09.10) */}
+              {EscortPanel && isServerId(load.id) && (role === 'SCX' || role === 'KSH') && <Suspense fallback={null}><EscortPanel key={load.id} loadId={load.id} /></Suspense>}
 
               {load.permitFits === false ? (
                 <div className="banner red" data-permit="mismatch" style={{ margin: '13px 0 0' }}>
@@ -543,37 +540,11 @@ export function LoadDrawer() {
             />
           )}
 
+          {/* wyglad/P6-b (E17 pkt 2): Historia „było → jest” po dniach, z filtrami — poza pierwszym wczytaniem */}
           {tab === 'history' && (
-            <ul className="tl" data-history>
-              {loadEvents.length === 0 ? (
-                <li className="future">
-                  <span className="mk" />
-                  <div className="w">{t(locale, 'a6_dr_no_events')}</div>
-                  <div className="ts">—</div>
-                </li>
-              ) : (
-                loadEvents.map((e) => (
-                  <li key={`h-${e.id}`}>
-                    <span className="mk" />
-                    <div className="w" style={{ fontWeight: 700 }}>
-                      {e.type === 'STATUS_AUTO' ? (
-                        <span data-tl-auto>
-                          <span className="pill p-sea">{t(locale, 'tl_auto')}</span> {autoStatusText(e.payload) ?? ''}
-                        </span>
-                      ) : (
-                        <>
-                          {eventTypeLabel(e.type, locale)}
-                          {e.note ? ` · ${e.note}` : ''}
-                        </>
-                      )}
-                    </div>
-                    <div className="ts">
-                      {formatHistoryActor(e.actor)} — {formatOpsDateTime(e.at)}
-                    </div>
-                  </li>
-                ))
-              )}
-            </ul>
+            <Suspense fallback={null}>
+              <PanelHistory key={load.id} load={load} role={role} locale={locale} phone={phone} events={loadEvents} geofences={geofences} nowIso={nowIso} />
+            </Suspense>
           )}
 
           {/* wyglad/P5 (E31 pkt 5, E33): zakładki „Dokumenty” i „Ceny” poza pierwszym wczytaniem (budżet 400 kB gzip) */}
@@ -606,234 +577,20 @@ export function LoadDrawer() {
             </Suspense>
           )}
 
+          {/* wyglad/P6-b (E17, decyzje 20:57): „Czat” — sama rozmowa. Link dla kierowcy, „Przypisz SCX” (automat, E9),
+              symulacja strefy, kopie zasobów i awizacji (Przegląd, E32) oraz wymiary zestawu u SCX (D-83) — usunięte. */}
           {tab === 'chat' && (
-            <>
-              {!canEdit && (
-                <>
-                  <div className="note" style={{ margin: '0 0 12px' }}>
-                    {t(locale, 'a6_dr_edit_note')}
-                  </div>
-                  <h4 className="sec">{t(locale, 'a6_dr_resources')}</h4>
-                  <dl className="kv">
-                    <dt>{t(locale, 'a6_dr_driver')}</dt>
-                    <dd data-content>{load.resources.driverName ?? '—'}</dd>
-                    <dt>{t(locale, 'a6_dr_phone')}</dt>
-                    <dd>
-                      {driverPhone ? (
-                        <a
-                          href={`tel:${(load.resources.driverPhone || load.resources.driverDeliveryPhone || '').replace(/\s+/g, '')}`}
-                          className="mono"
-                          data-content
-                          data-phone-pair
-                        >
-                          {formatTowerPair(
-                            load.resources.driverPhone,
-                            load.resources.driverDeliveryPhone,
-                            !!load.resources.trailerSwap,
-                          )}
-                        </a>
-                      ) : (
-                        '—'
-                      )}
-                    </dd>
-                    <dt>{t(locale, 'a6_dr_tractor')}</dt>
-                    <dd>
-                      <span className="mono" data-content>{formatTowerPair(load.resources.tractorPlate, load.resources.tractorDeliveryPlate, !!load.resources.trailerSwap)}</span>
-                    </dd>
-                    <dt>{t(locale, 'a6_dr_trailer')}</dt>
-                    <dd>
-                      <span className="mono">{load.resources.trailerPlate ?? '—'}</span>
-                    </dd>
-                    {!(EscortPanel && isServerId(load.id)) && load.resources.escort && (<>
-                    <dt>{t(locale, 'a6_dr_escort')}</dt>
-                    <dd data-escort="required">
-                      {load.resources.escortPlate
-                        ? tp(locale, 'a6_dr_escort_one_plate', { plate: load.resources.escortPlate })
-                        : t(locale, 'a6_dr_escort_one')}
-                    </dd>
-                    </>)}
-                    <dt>{t(locale, 'a6_dr_combo')}</dt>
-                    <dd>
-                      {fmtDim(comboL, locale)} × {fmtDim(comboW, locale)} × {fmtDim(comboH, locale)} m
-                    </dd>
-                    <dt>{t(locale, 'a6_dr_combo_mass')}</dt>
-                    <dd>{fmtDim(load.resources.setWeightT ?? load.dims.weightT, locale)} t</dd>
-                  </dl>
-                  {EscortPanel && isServerId(load.id) && <Suspense fallback={null}><EscortPanel key={load.id} loadId={load.id} /></Suspense>}
-                  <h4 className="sec" style={{ marginTop: 18 }}>
-                    {t(locale, 'a6_dr_awi_ferry')}
-                  </h4>
-                  <dl className="kv">
-                    <dt>{t(locale, 'a6_dr_load_window')}</dt>
-                    <dd>
-                      {formatLoadPl(load.awizacja.loadWindowStart)} – {formatLoadPl(load.awizacja.loadWindowEnd)}
-                    </dd>
-                    <dt>{t(locale, 'sail_label')}</dt>
-                    <dd data-sailing-ro>{sailingText}</dd>
-                    <dt>{t(locale, 'a6_dr_ferry_status')}</dt>
-                    <dd>{ferryStatusLabel(load.ferry.status, locale)}</dd>
-                    <dt>{t(locale, 'a6_dr_confirmed')}</dt>
-                    <dd>{load.awizacja.confirmed ? t(locale, 'a6_dr_yes') : t(locale, 'a6_dr_no')}</dd>
-                  </dl>
-                </>
-              )}
-              {canAwiz && (
-                <>
-                  <div className="note" style={{ margin: '0 0 12px' }} data-awiz-chat-note>
-                    {t(locale, 'awiz_chat_note')}
-                  </div>
-                  <div className="awiz-row" style={{ margin: '0 0 14px' }}>
-                    <button type="button" className="btn" onClick={() => setAwizOpen(true)}>
-                      {hasAwizacja(load) ? t(locale, 'awiz_edit') : t(locale, 'awiz_add')}
-                    </button>
-                  </div>
-                  <h4 className="sec">{t(locale, 'a6_dr_combo_dims')}</h4>
-                  <form
-                    key={`combo-${load.id}`}
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const fd = new FormData(e.currentTarget);
-                      updateResources(load.id, {
-                        ...(EscortPanel && isServerId(load.id) ? {} : {
-                          escort: fd.get('escort') === 'on',
-                          escortPlate: String(fd.get('escortPlate') || '') || null,
-                        }),
-                        setLengthM: Number(fd.get('setLengthM')) || null,
-                        setWidthM: Number(fd.get('setWidthM')) || null,
-                        setHeightM: Number(fd.get('setHeightM')) || null,
-                        setWeightT: Number(fd.get('setWeightT')) || null,
-                      });
-                    }}
-                  >
-                    <dl className="kv">
-                      {!(EscortPanel && isServerId(load.id)) && (<>
-                      <dt>{t(locale, 'a6_dr_escort')}</dt>
-                      <dd>
-                        <label>
-                          <input name="escort" type="checkbox" defaultChecked={load.resources.escort} /> {t(locale, 'a6_dr_escort_on')}
-                        </label>
-                        {' · '}
-                        <input name="escortPlate" className="input" placeholder={t(locale, 'a6_dr_escort_plate')} style={{ width: '55%' }} defaultValue={load.resources.escortPlate ?? ''} />
-                      </dd>
-                      </>)}
-                      <dt>{t(locale, 'a6_dr_combo')}</dt>
-                      <dd>
-                        <input name="setLengthM" className="input" style={{ width: '30%' }} defaultValue={load.resources.setLengthM ?? ''} placeholder="L" />{' '}
-                        <input name="setWidthM" className="input" style={{ width: '30%' }} defaultValue={load.resources.setWidthM ?? ''} placeholder="W" />{' '}
-                        <input name="setHeightM" className="input" style={{ width: '30%' }} defaultValue={load.resources.setHeightM ?? ''} placeholder="H" />
-                      </dd>
-                      <dt>{t(locale, 'a6_dr_combo_mass')}</dt>
-                      <dd>
-                        <input name="setWeightT" className="input" style={{ width: '40%' }} defaultValue={load.resources.setWeightT ?? ''} placeholder="t" />
-                      </dd>
-                    </dl>
-                    <button type="submit" className="btn ghost" style={{ marginTop: 8 }}>{t(locale, 'a6_dr_save_res')}</button>
-                  </form>
-                  {EscortPanel && isServerId(load.id) && <Suspense fallback={null}><EscortPanel key={load.id} loadId={load.id} /></Suspense>}
-
-                  {planEditable && (
-                    <>
-                      <h4 className="sec" style={{ marginTop: 18 }}>{t(locale, 'a6_dr_awi')}</h4>
-                      <form
-                        key={`awi-${load.id}`}
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          const fd = new FormData(e.currentTarget);
-                          const awiPatch = awizacjaChanges(load.awizacja, {
-                            loadWindowStart: wallLocalToIso(String(fd.get('loadWindowStart') || ''), TZ_LOAD_PL),
-                            loadWindowEnd: wallLocalToIso(String(fd.get('loadWindowEnd') || ''), TZ_LOAD_PL),
-                            unloadWindowStart: wallLocalToIso(String(fd.get('unloadWindowStart') || ''), TZ_UNLOAD_SE),
-                            unloadWindowEnd: wallLocalToIso(String(fd.get('unloadWindowEnd') || ''), TZ_UNLOAD_SE),
-                            confirmed: fd.get('confirmed') === 'on',
-                          });
-                          updateAwizacja(load.id, awiPatch);
-                        }}
-                      >
-                        <dl className="kv">
-                          <dt>{t(locale, 'a6_dr_load_window_range')}</dt>
-                          <dd>
-                            <input name="loadWindowStart" type="datetime-local" className="input" style={{ width: '48%' }} defaultValue={isoToDatetimeLocalValue(load.awizacja.loadWindowStart, TZ_LOAD_PL)} required />{' '}
-                            <input name="loadWindowEnd" type="datetime-local" className="input" style={{ width: '48%' }} defaultValue={isoToDatetimeLocalValue(load.awizacja.loadWindowEnd, TZ_LOAD_PL)} required />
-                          </dd>
-                          <dt>{t(locale, 'a6_dr_confirmed')}</dt>
-                          <dd>
-                            <label>
-                              <input name="confirmed" type="checkbox" defaultChecked={load.awizacja.confirmed} /> {t(locale, 'a6_dr_yes')}
-                            </label>
-                          </dd>
-                          <input type="hidden" name="unloadWindowStart" defaultValue={isoToDatetimeLocalValue(load.awizacja.unloadWindowStart, TZ_UNLOAD_SE)} />
-                          <input type="hidden" name="unloadWindowEnd" defaultValue={isoToDatetimeLocalValue(load.awizacja.unloadWindowEnd, TZ_UNLOAD_SE)} />
-                        </dl>
-                        <button type="submit" className="btn ghost" style={{ marginTop: 8 }}>{t(locale, 'a6_dr_save_awi')}</button>
-                      </form>
-                    </>
-                  )}
-                </>
-              )}
-              {import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED && canEdit && isServerId(load.id) && <DriverLinkPanel loadId={load.id} />}
-
-              <div className="hr" />
-              {/* E25 (wyglad/P4-b): „Zmień status” przeniesione do zakładki Status (img/e25-after); tu tylko przypisanie SCX i demo stref. AUD-03: niewidoczne dla KSH */}
-              {canEdit && (role === 'HHL' || !SUPABASE_AUTH_ENABLED) && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }} data-carrier-actions>
-                {role === 'HHL' && canEdit && (
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => assignScx(load.id, load.pricing.scxPozycja ?? 'cennik SCX')}
-                  >
-                    {t(locale, 'a6_dr_assign_scx')}
-                  </button>
-                )}
-                {/* W2: zdarzenia stref tworzy wyłącznie system (process_position) — symulacja tylko w trybie demo */}
-                {!SUPABASE_AUTH_ENABLED && canEdit && (
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    onClick={() => {
-                      const gf = geofences.find((g) => g.type === 'PRE_ARRIVAL') ?? geofences[0];
-                      if (gf) triggerGeofence(load.id, gf.id);
-                    }}
-                  >
-                    {t(locale, 'a6_dr_geo_event')}
-                  </button>
-                )}
-              </div>
-              )}
-
-              {loadMsgs.map((m) => (
-                <div key={m.id} className={`msg${m.org === 'HHL' ? ' me' : ''}`}>
-                  <div className="who">
-                    {m.author} // {m.org} — {formatOpsDateTime(m.at)}
-                  </div>
-                  <div>{m.text}</div>
-                  {m.reads && m.reads.length > 0 ? (
-                    <details style={{ marginTop: 4, fontSize: 11, color: 'var(--ink-3)' }}>
-                      <summary>{locale === 'sv' ? 'läst' : locale === 'en' ? 'read' : 'odczytano'} ({m.reads.length})</summary>
-                      <ul style={{ margin: '4px 0 0', paddingLeft: 16 }}>
-                        {m.reads.map((r) => (
-                          <li key={r.userId + r.at}>{r.name}{r.org ? ` // ${r.org}` : ''} — {formatOpsDateTime(r.at)}</li>
-                        ))}
-                      </ul>
-                    </details>
-                  ) : null}
-                </div>
-              ))}
-              <form
-                className="chatbar"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!chat.trim()) return;
-                  sendMessage(load.id, chat.trim());
-                  setChat('');
-                }}
-              >
-                <input value={chat} onChange={(e) => setChat(e.target.value)} placeholder={t(locale, 'a6_dr_chat_ph')} />
-                <button type="submit" className="btn">
-                  {t(locale, 'a6_dr_send')}
-                </button>
-              </form>
-            </>
+            <Suspense fallback={null}>
+              <PanelChat
+                key={load.id}
+                loadId={load.id}
+                role={role}
+                locale={locale}
+                phone={phone}
+                messages={chatMsgs}
+                onSend={(text, vis) => sendMessage(load.id, text, vis)}
+              />
+            </Suspense>
           )}
         </div>
       </aside>
