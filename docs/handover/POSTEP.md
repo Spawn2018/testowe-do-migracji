@@ -2270,3 +2270,11 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Plik JS przed: `assets/index-gD-kQcbR.js`. Po: `assets/index-TI93uCIy.js`. Oba adresy 200. 0 × `service_role`.
 
 **P3-c J3.1 (Moje konto) NA PRODUKCJI — commit `fdfb0caa`, wdrożenie `dpl_sd7RM5S4cfWemmi7zjpF8uPKip45`, 14.10.2026 11:57.**
+
+
+## 2026-10-14 — P4 H1/H2 (D-20261014-0640-01) — TEST
+
+- **TEST zajęte: P4**, od 14.10.2026 12:35 — potwierdzenie security, status, nullguard, e25 na `cf4b673d` (PR #181).
+- TEST: security **84/84** (+2 SKIP), status **44/44**, e25 **21/21**, nullguard **161+136+208+122 = 627/627**; doradca security TEST: 0 nowych (po wyjątku `load_status_set` / `load_status_rank`).
+- CI PR #181 na `cf4b673d`: unit, visual, db zielone; gitleaks 0 (zakres vs main); `npm audit --omit=dev --audit-level=high` 0.
+- **TEST wolne** od 14.10.2026 13:25.
