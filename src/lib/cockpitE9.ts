@@ -9,10 +9,11 @@
  */
 import type { Bill, Document, Load, Locale, LoadStatus, OrgKind, Risk, RoleId } from '../types';
 import type { NavKey } from './permissions';
-import { formatListDateTime, formatPlNumber, isTechnicalRoadNotice } from './format';
+import { formatListDateTime, formatPlNumber } from './format';
 import { t, tp } from '../i18n/messages';
 import { isoWeekNumber } from './cockpitTiles';
 import { isLoadCompleted } from './invoiceMatch';
+import { isTodoRisk, todoCardKey } from './todoRules';
 
 export type CockpitTone = 'default' | 'alert' | 'warn' | 'good';
 
@@ -107,22 +108,32 @@ export function viewedKind(role: RoleId, profileRole: string | null | undefined)
 
 /**
  * Sprawy „Do zrobienia” konta (E9, tabela „Ryzyka › Do zrobienia”): HHL Administrator — wszystkie sprawy,
- * HHL Operacje — sprawy HHL, SCX — sprawy SCX, KSH — brak listy (tylko sytuacja na trasie). Bez komunikatów technicznych drogi.
+ * HHL Operacje — sprawy HHL, SCX — sprawy SCX, KSH — brak listy (tylko sytuacja na trasie).
+ * wyglad/P6 (E7): bez komunikatów technicznych drogi, bez zakazów ruchu (informacja przy transporcie), bez sytuacji na trasie
+ * bez transportu i bez spraw technicznych (Stan systemu) — `todoRules.ts`.
  * Ta sama lista daje liczbę na kafelku, przy „Ryzyka” w menu i na dolnym pasku oraz „Najpilniejsze” pod kafelkami.
- * Pełną listę E7 (z przekazaniami między firmami i „Moimi zadaniami” SCX) podłącza wykonawca w P6 — w tym miejscu.
+ * Decyzje, dopłaty i sprawy L14 w tej liczbie oraz samozamykanie (E7 pkt 3) podłącza wykonawca w P6 — w tym miejscu.
  */
-export function todoRisks<T extends Pick<Risk, 'title' | 'owner'>>(role: RoleId, risks: readonly T[], kind?: AccountKind): T[] {
+export function todoRisks<T extends Pick<Risk, 'title' | 'owner'> & Partial<Pick<Risk, 'loadId' | 'type' | 'kind' | 'code'>>>(
+  role: RoleId, risks: readonly T[], kind?: AccountKind,
+): T[] {
   if (role === 'KSH') return [];
-  const open = risks.filter((r) => !isTechnicalRoadNotice(r.title));
+  const open = risks.filter((r) => isTodoRisk(r));
   if (role === 'SCX') return open.filter((r) => r.owner === 'SCX');
   return kind === 'HHL_OPS' ? open.filter((r) => r.owner === 'HHL') : open;
 }
 
-export function todoQueue(role: RoleId, risks: readonly Pick<Risk, 'title' | 'owner' | 'loadId'>[], kind?: AccountKind): TodoQueue | null {
+/** wyglad/P6 (E7 pkt 1–3): liczba = karty — jedna na transport, jednakowe sprawy bez transportu razem („12 SEFS → 1”). */
+export function todoQueue(
+  role: RoleId,
+  risks: readonly (Pick<Risk, 'title' | 'owner'> & Partial<Pick<Risk, 'loadId' | 'type' | 'kind' | 'code'>>)[],
+  kind?: AccountKind,
+): TodoQueue | null {
   if (role === 'KSH') return null;
   const list = todoRisks(role, risks, kind);
   const withLoad = new Set(list.filter((r) => r.loadId).map((r) => r.loadId as string));
-  return { total: list.length, loads: withLoad.size, other: list.filter((r) => !r.loadId).length };
+  const other = new Set(list.filter((r) => !r.loadId).map((r) => todoCardKey(r)));
+  return { total: withLoad.size + other.size, loads: withLoad.size, other: other.size };
 }
 
 /** Transporty na fakturach wystawionych przez firmę (tabela Faktur, `bills`). */

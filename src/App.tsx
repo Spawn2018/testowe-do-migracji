@@ -13,7 +13,8 @@ import { LoadDrawer } from './components/drawer/LoadDrawer';
 import { DashboardView } from './views/DashboardView';
 import { MapView } from './views/MapView';
 import { ScheduleView } from './views/ScheduleView';
-import { RisksView } from './views/RisksView';
+/* wyglad/P6: Ryzyka (E7) ładowane osobno (budżet pierwszego wczytania) */
+import { RisksViewLazy as RisksView } from './views/risksLazy';
 import { DocsViewLazy as DocsView } from './views/docsLazy';
 import { FinanceViewLazy as FinanceView } from './views/financeLazy';
 import { InvoicesViewLazy as InvoicesView } from './views/invoicesLazy';

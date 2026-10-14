@@ -481,6 +481,8 @@ export interface Risk {
   titleParams?: Record<string, unknown>;
   metaKey?: string;
   metaParams?: Record<string, unknown>;
+  /** wyglad/P6 — rodzaj z bazy (`risk_signals.kind`, np. RESOURCE_MISSING, JOB_FAILURE, ROAD_PL); nazwy spraw E7-4. */
+  kind?: string;
 }
 
 export interface RateRule {

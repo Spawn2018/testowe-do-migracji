@@ -14,9 +14,7 @@ export const PROD_BUILD: boolean = import.meta.env.VITE_AUTH_MODE === 'supabase'
 /** Funkcje ukryte w produkcji 1.0 — powód (do POSTEP/SCOPE i do testu). */
 export const HIDDEN_IN_PROD = {
   seaWeather: 'Pogoda morska demo (statyczna voyageSea); produkcja = marine_conditions z II-8 (FMI+DMI+SMHI)',
-  ferryAlternatives: 'Przeprawy alternatywne (8.4): lista statyczna, bez przeliczenia',
   roadSituationsSe: 'Zdarzenia drogowe SE demo (8.5 seed): w produkcji panel czyta corridor_conditions + ROAD_SE z bazy (II-6 / road-se)',
-  seRouteAlternatives: 'Objazdy SE (8.4/D25): warianty statyczne',
   aisSeedPositions: 'Pozycje przykładowe promów na mapie (8.3): w produkcji tylko pozycje z bazy (vessel_positions, I-2j) z czasem sygnału albo „brak źródła danych”',
   delayCodes: 'Kody przyczyn opóźnień (8.10): nieuzgodnione z przewoźnikiem',
   detectTimeKpi: 'Kafelek „czas wykrycia odchylenia” (10.7): w demo wartość przykładowa „8 min”; w produkcji mediana z risk_signals (kpi_detection_lag, I-2l) albo „—”',
