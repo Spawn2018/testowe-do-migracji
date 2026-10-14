@@ -23,6 +23,7 @@ register_invoice | GUARD | select register_invoice('{"direction":"PRZYCHOD"}'::j
 report_position | GUARD | select count(*) from report_position('$L2', 59.3, 18.0, now()) | albo HHL|wyłącznie
 revoke_driver_token | GUARD | select revoke_driver_token('$L2') | albo HHL|wyłącznie
 revoke_user_sessions | GUARD | select revoke_user_sessions(null) | Brak aktywnego konta
+my_session_revoke | GUARD | select my_session_revoke('00000000-0000-0000-0000-00000000ffff') | Brak aktywnego konta
 risk_audience_for | GUARD | select risk_audience_for('FERRY', '{}') | Brak aktywnego konta
 unmark_invoice_paid | GUARD | select unmark_invoice_paid('$INV', 'test') | wyłącznie HHL
 upsert_geofence_circle | GUARD | select upsert_geofence_circle(null, '$P', 'x', 'CUSTOM', 59.3, 18.0, 100, 50, 60, 2, true, true, true, null, true) | row-level security|Brak uprawnień

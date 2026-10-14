@@ -18,13 +18,13 @@ export const EXPECTED_LOCAL = {
   money: 135,
   release: 146,
   backup: 29,
-  session: 27, // KNOWN-DEBT — nie asertowane w gate.sh
+  session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); KNOWN-DEBT — nie asertowane w pełnym gate.sh
   archive: 18,
   watchdog: 27,
   invite: 48,
   risks: 23,
   import: 66,
-  nullguard: 627, // P3 +5 snapshot_latest; P4 +5 load_status_set (PURE bez ×4)
+  nullguard: 632, // +5 my_session_revoke GUARD ×4 + pozytywna (D-20261014-1420-01 R3)
   i2: 540,
   i30: 10,
   i31: 9,

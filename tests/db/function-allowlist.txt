@@ -154,6 +154,7 @@ authenticated my_mfa_status
 authenticated load_order_numbers
 authenticated my_profile
 authenticated my_sessions
+authenticated my_session_revoke
 authenticated operator_notice_apply
 authenticated permit_fits
 authenticated permit_requirement_state
