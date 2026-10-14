@@ -1352,3 +1352,82 @@ test.describe('wyglad/P5 panel transportu — Ceny (E33) i Dokumenty (E31 pkt 5)
     });
   }
 });
+
+test.describe('wyglad/P6 Ryzyka — E7 „Do zrobienia” i „Sytuacja na trasie”, E6 karta sprawy', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+
+  test('komputer: liczba = menu, filtry, karta rozwija się w miejscu, karta sprawy z „Zadzwoń”; sytuacja na trasie; KSH bez listy', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    for (const role of ['HHL', 'SCX'] as const) {
+      await boot(page, role);
+      await openView(page, 'risk');
+      const menu = (await page.locator('nav button[data-view="risk"] .count').first().innerText()).trim();
+      await expect(page.locator('[data-rk-todo] [data-rk-count]')).toHaveText(menu);
+      /* zakres domyślny = liczba w menu (E7-2) */
+      await expect(page.locator('[data-rk-scope][aria-pressed="true"] .rk-chip-n')).toHaveText(menu);
+      await expect(page.locator('[data-rk-scope]')).toHaveCount(3);
+      const first = page.locator('[data-rk-card]').first();
+      await expect(first.locator('.rk-card-hd')).toHaveAttribute('aria-expanded', 'true');
+      await expect(first.locator('[data-rk-issue]').first()).toBeVisible();
+      await first.locator('[data-rk-details]').first().click();
+      await expect(first.locator('[data-rk-case]')).toBeVisible();
+      await expect(page.locator('[data-rk-card]')).toHaveCount(4);
+      await page.locator('[data-rk-rest]').click();
+      expect(await page.locator('[data-rk-card]').count()).toBeGreaterThan(4);
+      const second = page.locator('[data-rk-card] .rk-card-hd').nth(1);
+      await second.click();
+      await expect(second).toHaveAttribute('aria-expanded', 'true');
+      await expect(page.locator('[data-rk-route] [data-panel="ferry"] [data-ferry-row]')).toHaveCount(2);
+      await expect(page.locator('[data-rk-route] [data-panel="road-se"]')).toBeVisible();
+      await expect(page.locator('[data-rk-route] [data-panel="system"]')).toHaveCount(role === 'HHL' ? 1 : 0);
+      await expect(page.locator('[data-rk-todo]')).not.toContainText(/NO_AWIZACJA|RESOURCE_MISSING|:\d{2}:\d{2}/);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1441);
+    }
+    /* E6-5: „Biorę tę sprawę” → „Oddaj”; Przejmij z potwierdzeniem */
+    await boot(page, 'SCX');
+    await openView(page, 'risk');
+    const take = page.locator('[data-rk-take]').first();
+    const id = await take.getAttribute('data-rk-take');
+    await take.click();
+    await expect(page.locator(`[data-rk-give="${id}"]`)).toBeVisible();
+    await boot(page, 'KSH');
+    await openView(page, 'risk');
+    await expect(page.locator('[data-rk-todo]')).toHaveCount(0);
+    await expect(page.locator('[data-panel="ferry"]')).toBeVisible();
+  });
+
+  for (const role of ['HHL', 'SCX', 'KSH'] as const) {
+    test(`telefon ${role}: ${role === 'KSH' ? 'sytuacja na trasie' : 'zakładki, karty, karta sprawy, „Na trasie”'} — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role);
+      await openView(page, 'risk');
+      const hits: Hit[] = [];
+      const gate = async (name: string) => {
+        for (const width of WIDTHS) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(150);
+          hits.push(...await measure(page, name, width, role));
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
+      };
+      if (role === 'KSH') {
+        await expect(page.locator('[data-rk-tab]')).toHaveCount(0);
+        await gate('ryzyka-ksh');
+      } else {
+        await expect(page.locator('[data-rk-tab]')).toHaveCount(role === 'HHL' ? 3 : 2);
+        await gate('ryzyka-todo');
+        await page.locator('[data-rk-details]').first().click();
+        await gate('ryzyka-sprawa');
+        await page.locator('[data-rk-tab="route"]').click();
+        await expect(page.locator('[data-panel="ferry"]')).toBeVisible();
+        await gate('ryzyka-trasa');
+        if (role === 'HHL') {
+          await page.locator('[data-rk-tab="sys"]').click();
+          await expect(page.locator('[data-panel="system"]')).toBeVisible();
+          await gate('ryzyka-system');
+        }
+      }
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});

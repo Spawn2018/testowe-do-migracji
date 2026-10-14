@@ -46,8 +46,9 @@ test('HHL (HHL_ADMIN): przełącznik jest; Automatyzacje z bazy (9.4); ryzyka �
   await expect(page.locator('nav [data-view="wf"]')).toHaveCount(1);
   await page.locator('nav [data-view="risk"]').first().click();
   await expect(page.locator('[data-panel="ferry"][data-source="db"]')).toBeVisible();
-  await expect(page.locator('[data-no-source="sea"]')).toBeVisible();
-  await expect(page.locator('[data-ferry-alt="db"]')).toBeVisible();
+  /* wyglad/P6 (E7 pkt 4, E7-5): wiersz na rejs z najnowszym pomiarem („bez pomiaru morza”, gdy brak); druga przeprawa
+     tylko przy odwołaniu albo sztormie — lista liczona z rozkładu (`altProposal`, tests/p6-todo.test.ts) */
+  await expect(page.locator('[data-panel="ferry"][data-source="db"]')).not.toContainText('demonstracyjne');
   const ferry = page.locator('[data-panel="ferry"][data-source="db"]');
   await expect(ferry).not.toContainText('TT-Line');
   await expect(ferry).not.toContainText('Unity Line');

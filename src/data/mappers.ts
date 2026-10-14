@@ -404,6 +404,8 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
     ageHours: Math.max(0, Math.round((Date.parse(nowIso) - Date.parse(r.detected_at)) / 36e5)),
     /* M10 — rodzaj ryzyka automatu / rejsu z klucza deduplikacji (0004) */
     code: autoRiskCode(r.kind, r.dedup_key),
+    /* wyglad/P6 — rodzaj z bazy: nazwy spraw (E7-4), zakazy ruchu jako informacja, sprawy techniczne do Stanu systemu */
+    kind: r.kind,
     /* A6-T1 — tekst w języku odbiorcy: klucz + parametry (0042) */
     titleKey: r.title_key ?? undefined,
     titleParams: params,

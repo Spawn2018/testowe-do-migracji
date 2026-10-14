@@ -45,7 +45,8 @@ function input(role: CockpitInput['role'], extra: Partial<CockpitInput> = {}): C
 
 describe('E9 — „Do zrobienia” i liczby w menu', () => {
   it('HHL Administrator: wszystkie sprawy bez komunikatów technicznych; Operacje: sprawy HHL; podział na transporty i sprawy bez transportu', () => {
-    expect(todoQueue('HHL', RISKS)).toEqual({ total: 3, loads: 1, other: 1 });
+    /* wyglad/P6 (E7 pkt 1–2): liczba = karty — SG-04 z dwiema sprawami to jedna karta, SEFS druga */
+    expect(todoQueue('HHL', RISKS)).toEqual({ total: 2, loads: 1, other: 1 });
     expect(todoQueue('HHL', RISKS, 'HHL_OPS')).toEqual({ total: 2, loads: 1, other: 1 });
   });
   it('SCX: sprawy SCX; KSH bez listy (null); lista „Najpilniejsze” = te same sprawy', () => {
@@ -93,7 +94,8 @@ describe('E9 — kafelki Kokpitu (img/e9-after)', () => {
     const by = Object.fromEntries(tiles.map((x) => [x.id, x]));
     expect(by['in-transit'].value).toBe('1');
     expect(by['in-transit'].desc).toBe('na placu w Boden: SG-03');
-    expect(by.todo.value).toBe('3');
+    /* wyglad/P6 (E7): 1 karta transportu + 1 karta bez transportu */
+    expect(by.todo.value).toBe('2');
     expect(by.todo.tone).toBe('alert');
     expect(by.todo.desc).toBe('1 transport · 1 inna sprawa');
     // załadunki 07.10–13.10 bez wyjazdu: SG-05, SG-06; po terminie: SG-04

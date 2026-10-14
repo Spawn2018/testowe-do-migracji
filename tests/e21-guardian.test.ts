@@ -8,7 +8,10 @@ import { describe, expect, it } from 'vitest';
 const read = (p: string) => readFileSync(p, 'utf8');
 
 const BLOCKING = [
-  'src/components/DecisionCentre.tsx',
+  /* wyglad/P6 (E7 pkt 1): Centrum decyzji połączone z „Do zrobienia” — karty i sytuacja na trasie */
+  'src/components/risks/TodoPanel.tsx',
+  'src/components/risks/TodoCard.tsx',
+  'src/components/risks/RoutePanel.tsx',
   'src/views/RisksView.tsx',
   'src/views/MapView.tsx',
   'src/lib/bellList.ts',
