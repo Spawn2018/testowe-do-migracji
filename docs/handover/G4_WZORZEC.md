@@ -195,6 +195,10 @@ Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visua
 
 Odświeżone 14 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38487793951, gałąź `wyglad/P3-b`, commit `a54f1da`). Ekrany: Kokpit — 6 kafelków E9 w 2 kolumnach, stopka czasu wykrycia, „Najpilniejsze” zamiast czerwonego banera; wszystkie ekrany — lewe menu z liczbami tylko przy „Ryzyka” i „Faktury” (bez Harmonogramu, Stref, Automatyzacji). Matrycy 280 ujęć nie ruszano.
 
+## wyglad/P4-b (14.10.2026) — E25 zakładka Status, E27 pasek śledzenia, E15 blok ETA, słownik nazw E25
+
+Odświeżone 10 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38512437080, gałąź `wyglad/P4-b`, commit `3c5f0bf`, na PR #181 `2902bc5`). Mapa: pigułki statusów z nazwami E25 („Droga SE”, „Droga PL”, „Port PL”, „Port SE”). Stany (III-2): panel transportu z paskiem śledzenia nad zakładkami; „stan-zablokowany” — zakładka Status z osią i „Zmień status”. Matrycy 280 ujęć nie ruszano.
+
 ## wyglad/P4-a (14.10.2026) — E28 pasek etapów, E27 Mapa, L7 oznaczenia
 
 Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38500750044, gałąź `wyglad/P4`, commit `fe090d0`). Wszystkie ekrany: pod paskiem górnym pasek 10 kafelków z liczbą w grupach Przygotowanie · W trasie · Po dostawie (zamiast 9 kafelków bez cyfr). Harmonogram: filtry stanu Opóźnione N · Bez dokumentów · Bez kierowcy · Bez ciągnika i licznik „N z M” (bez przycisków etapów). Mapa: chipy W trasie · Opóźnione · Brak GPS, oznaczenia obok statusu, „Najbliższe włączenia śledzenia”. Matrycy 280 ujęć nie ruszano.
