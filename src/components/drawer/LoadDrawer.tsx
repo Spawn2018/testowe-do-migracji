@@ -29,6 +29,8 @@ import { formatHistoryActor } from '../../lib/historyActor';
 import { KshDatesModal } from './KshDatesModal';
 import { StatusAxisTab } from './StatusAxisTab';
 import { TrackingBar } from './TrackingBar';
+import { DeliveredCheckCard } from './DeliveredCheckCard';
+import { deliveredCheckOf, readyGapsOf, trackingLinkOf } from '../../lib/p4cSource';
 import { lazyRetry } from '../../lib/lazyRetry';
 import { EtaBlock } from './EtaBlock';
 import { buildStatusAxis } from '../../lib/statusAxis';
@@ -151,6 +153,7 @@ export function LoadDrawer() {
   const setOrderNo = useTowerStore((s) => s.setOrderNo);
   const drawerTab = useTowerStore((s) => s.drawerTab);
   const setDrawerTab = useTowerStore((s) => s.setDrawerTab);
+  const setLoadStatus = useTowerStore((s) => s.setLoadStatus);
 
   const [tab, setTab] = useState<Tab>('overview');
   const [chat, setChat] = useState('');
@@ -212,6 +215,8 @@ export function LoadDrawer() {
 
   /* E27 (wyglad/P4-b): poza oknem śledzenia (przed 03:00 w dniu załadunku i po „Dostarczone”) panel nie pokazuje kropki pojazdu */
   const drawerMapLoads = useMemo(() => (load && trackingPhase(load, nowIso) === 'on' ? [load] : []), [load, nowIso]);
+  /* wyglad/P4-c (L14): sprawa zamknięta „Nie” w trybie demo — karta znika bez zmiany statusu */
+  const [dcClosed, setDcClosed] = useState<string | null>(null);
 
   if (!load) return null;
 
@@ -246,6 +251,29 @@ export function LoadDrawer() {
 
   /* E25: oś statusów raz na render — data dostawy i wjazd na plac do bloku ETA */
   const statusAxis = buildStatusAxis(load, loadEvents);
+  /* wyglad/P4-c: link śledzenia z serwera (E44), braki do „Gotowy” (L6, L9, L29), sprawa „czy dostarczono?” (L14) */
+  const trackingLink = trackingLinkOf(load, loads, nowIso);
+  const readyGaps = readyGapsOf(load, loadDocs);
+  const dcRaw = deliveredCheckOf(load, loads, geofences, nowIso, role);
+  const deliveredCheck = dcRaw && dcRaw.id !== dcClosed ? dcRaw : null;
+  const deliveredCard = deliveredCheck ? (
+    <DeliveredCheckCard
+      check={deliveredCheck}
+      locale={locale}
+      onYes={import.meta.env.VITE_AUTH_MODE !== 'supabase'
+        ? () => setLoadStatus(load.id, 'DELIVERED', role, tp(locale, 'p4c_dc_note_yes', { n: deliveredCheck.minutes }), deliveredCheck.exitAt)
+        : undefined}
+      onNo={import.meta.env.VITE_AUTH_MODE !== 'supabase'
+        ? () => {
+          setDcClosed(deliveredCheck.id);
+          useTowerStore.getState().appendEvent({ loadId: load.id, type: 'NOTE', at: nowIso, actor: role, note: tp(locale, 'p4c_dc_note_no', { n: deliveredCheck.minutes }) });
+          pushToast(t(locale, 'p4c_dc_no_done'), 'LOW', load.id);
+          /* fokus nie ginie razem z kartą */
+          window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.drawer [data-action="change-status"]')?.focus());
+        }
+        : undefined}
+    />
+  ) : null;
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'overview', label: t(locale, 'tab_overview') },
@@ -308,7 +336,7 @@ export function LoadDrawer() {
         </div>
 
         {/* E27 pkt 5 (E1-2): pasek śledzenia nad zakładkami */}
-        <TrackingBar load={load} events={loadEvents} label={transportLabel(load, role, 'plain')} locale={locale} nowIso={nowIso} />
+        <TrackingBar load={load} events={loadEvents} label={transportLabel(load, role, 'plain')} locale={locale} nowIso={nowIso} trackingLink={trackingLink} />
 
         <div className="dtabs">
           {tabs.map((x) => (
@@ -321,6 +349,13 @@ export function LoadDrawer() {
         <div className="dbody">
           {tab === 'overview' && (
             <>
+              {/* wyglad/P4-c (L14): otwarta sprawa „czy dostarczono?” — odpowiedź w zakładce Status */}
+              {deliveredCheck ? (
+                <button type="button" className="dcc-jump" data-dc-jump onClick={() => setTab('timeline')}>
+                  <b>{tp(locale, 'p4c_dc_title', { n: deliveredCheck.minutes })}</b>
+                  <span>{t(locale, deliveredCheck.canDecide ? 'p4c_dc_jump' : 'p4c_dc_jump_view')} ›</span>
+                </button>
+              ) : null}
               <div data-load-map style={{ position: 'relative', height: 220, marginBottom: 8 }}>
                 <CorridorMap loads={drawerMapLoads} embedded slot="drawer" />
               </div>
@@ -541,6 +576,8 @@ export function LoadDrawer() {
               phone={phone}
               canStatus={canStatus}
               onChange={() => setStatusChangeOpen(true)}
+              readyGaps={readyGaps}
+              top={deliveredCard}
             />
           )}
 

@@ -5,8 +5,15 @@
  * gdy jest już otwarty. Tylko przejście między ekranami: bez zapisu, bez zmiany roli i uprawnień.
  */
 import { useTowerStore } from '../store/useTowerStore';
+import type { OptScreenId } from '../components/options/types';
 
-export type OptionsScreen = 'my-account' | 'for-me';
+/** wyglad/P4-c: także ekran Opcji wprost (np. „Opcje › Progi” z listy „Działa samo”, E35 pkt 1). */
+export type OptionsScreen = 'my-account' | 'for-me' | OptScreenId;
+
+/** Ekran menu Opcji / Ustawień dla wskazania z menu konta albo z odnośnika. */
+export function optScreenOf(screen: OptionsScreen): OptScreenId {
+  return screen === 'my-account' ? 'account' : screen === 'for-me' ? 'forme' : screen;
+}
 export const OPEN_OPTIONS_EVENT = 'wt-open-options';
 
 let pending: OptionsScreen | null = null;

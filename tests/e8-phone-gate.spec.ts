@@ -896,3 +896,195 @@ test.describe('wyglad/P4-b panel transportu — Status E25 (img/e25-after), pase
     });
   }
 });
+
+/**
+ * wyglad/P4-c — pole „Link śledzenia” w awizacji (E44), „Gotowy” ze zdaniem, czego brakuje (L6, L9, L29),
+ * sprawa „Wyjazd z placu po X min — czy dostarczono?” (E26 pkt 4, L14), Automatyzacje › „Działa samo” (E35 pkt 1, L13).
+ * Dane demo (`src/lib/p4cDemo.ts`): P-01 — link RIO z ostrzeżeniami, D-02 — braki do „Gotowy”, D-01 — sprawa L14.
+ * Telefon 360 / 390 / 430: każdy stan przechodzi tę samą bramę E8 (0 w każdej kolumnie). Komputer 1280 / 1440: bez przewijania w bok.
+ */
+test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), sprawa L14, „Działa samo” (E35)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+
+  async function openCode(page: Page, code: string) {
+    await page.evaluate((c) => { window.location.hash = `#/transport/${c}`; }, code);
+    await page.waitForSelector('aside.drawer', { timeout: 10_000 });
+    await page.waitForTimeout(300);
+  }
+  async function closeDrawer(page: Page) {
+    await page.locator('aside.drawer .dhead button[aria-label], aside.drawer button.iconbtn').first().click().catch(() => {});
+    await page.evaluate(() => { window.location.hash = '#/'; });
+    await page.waitForTimeout(300);
+  }
+  const tab = async (page: Page, i: number) => { await page.locator('.drawer .dtabs button').nth(i).click(); await page.waitForTimeout(250); };
+  const noSideScroll = async (page: Page, width: number) =>
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+
+  test('komputer SCX: zapisany link RIO bez adresu i klucza, wynik zapytania, lokalizator, ostrzeżenia; „Zmień link” i powrót', async ({ page }) => {
+    for (const width of [1280, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await boot(page, 'SCX');
+      await openCode(page, 'P-01');
+      await page.locator('[data-awiz-open]').click();
+      const f = page.locator('[data-awiz-tracking]');
+      await expect(f).toHaveAttribute('data-tl-mode', 'saved');
+      await expect(f.locator('[data-tl-chip]')).toHaveText(/^RIO · .+ · ••••$/);
+      const html = await f.innerHTML();
+      expect(html).not.toMatch(/secret|position-sharing/i);
+      await expect(f.locator('[data-tl-check="ok"]')).toContainText('Link RIO działa');
+      await expect(f.locator('[data-tl-tracker]')).toContainText('Lokalizator: naczepa');
+      await expect(f.locator('[data-tl-note="expires-early"]')).toBeVisible();
+      await expect(f.locator('[data-tl-note="starts-late"]')).toBeVisible();
+      await expect(f.locator('[data-tl-open]')).toBeVisible();
+      await f.locator('[data-tl-change]').click();
+      await expect(f).toHaveAttribute('data-tl-mode', 'change');
+      const input = f.locator('input');
+      await expect(input).toHaveValue('');
+      await expect(input).toBeFocused();
+      /* wklejony link z kluczem znika z pola od razu (E44 pkt 8) — klucza nie ma nigdzie w stronie */
+      const FAKE = 'zmyslony-P4C-1';
+      await input.dispatchEvent('paste');
+      await input.fill(`https://public.position-sharing.rio.cloud/?id=00000000-0000-0000-0000-000000000000&secret=${FAKE}`);
+      await expect(f).toHaveAttribute('data-tl-mode', 'new-rio');
+      await expect(f.locator('[data-tl-new]')).toContainText('RIO · nowy link · ••••');
+      expect(await page.evaluate((k) => document.documentElement.outerHTML.includes(k), FAKE)).toBe(false);
+      /* wpisany ręcznie — zakryty po wyjściu z pola */
+      await f.locator('[data-tl-repaste]').click();
+      await expect(f.locator('input')).toBeFocused();
+      await f.locator('input').pressSequentially(`https://public.position-sharing.rio.cloud/?id=1&secret=${FAKE}`, { delay: 0 });
+      await f.locator('input').blur();
+      await expect(f).toHaveAttribute('data-tl-mode', 'new-rio');
+      expect(await page.evaluate((k) => document.documentElement.outerHTML.includes(k), FAKE)).toBe(false);
+      await f.locator('[data-tl-keep]').click();
+      await expect(f).toHaveAttribute('data-tl-mode', 'saved');
+      await expect(f.locator('[data-tl-change]')).toBeFocused();
+      await noSideScroll(page, width);
+      await page.keyboard.press('Escape');
+    }
+  });
+
+  test('komputer SCX: nowy link RIO zapisany w awizacji — po ponownym otwarciu „RIO · … · ••••”, klucza nie ma w stronie', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'SCX');
+    await openCode(page, 'P-01');
+    await page.locator('[data-awiz-open]').click();
+    const f = page.locator('[data-awiz-tracking]');
+    await f.locator('[data-tl-change]').click();
+    const FAKE = 'zmyslony-P4C-2';
+    await f.locator('input').dispatchEvent('paste');
+    await f.locator('input').fill(`https://public.position-sharing.rio.cloud/?id=11111111-1111-1111-1111-111111111111&secret=${FAKE}`);
+    await page.locator('[data-awiz-save]').click();
+    await expect(page.locator('.awiz-modal')).toHaveCount(0);
+    await page.locator('[data-awiz-open]').click();
+    await expect(page.locator('[data-awiz-tracking]')).toHaveAttribute('data-tl-mode', 'saved');
+    await expect(page.locator('[data-awiz-tracking] [data-tl-chip]')).toHaveText(/^RIO · .+ · ••••$/);
+    expect(await page.evaluate((k) => document.documentElement.outerHTML.includes(k), FAKE)).toBe(false);
+  });
+
+  test('komputer SCX: „Gotowy” — zdanie z brakami na osi i w oknie, „Zapisz status” zablokowany (D-02); komplet (P-01)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'SCX');
+    await openCode(page, 'D-02');
+    await tab(page, 1);
+    await expect(page.locator('.drawer [data-axis-row="READY"] .sax-sub')).toContainText('Brakuje:');
+    await page.locator('.drawer [data-action="change-status"]').click();
+    const modal = page.locator('[data-status-change-modal]');
+    await modal.locator('[data-status-select]').selectOption('READY');
+    await expect(modal.locator('[data-status-ready-gaps]')).toContainText('Brakuje:');
+    await expect(modal.locator('[data-status-ready-gaps]')).toContainText('Uzupełnia');
+    await expect(modal.locator('[data-status-save]')).toBeDisabled();
+    await modal.locator('[data-status-select]').selectOption('LOADING');
+    await expect(modal.locator('[data-status-ready-gaps]')).toHaveCount(0);
+    await expect(modal.locator('[data-status-save]')).toBeEnabled();
+    await modal.getByRole('button', { name: 'Anuluj' }).click();
+    await closeDrawer(page);
+    await openCode(page, 'P-01');
+    await tab(page, 1);
+    await page.locator('.drawer [data-action="change-status"]').click();
+    await modal.locator('[data-status-select]').selectOption('READY');
+    await expect(modal.locator('[data-status-ready-ok]')).toBeVisible();
+  });
+
+  test('komputer: sprawa „czy dostarczono?” (D-01) — SCX odpowiada, „Nie” zamyka bez zmiany statusu; HHL widzi, na kogo czeka', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'SCX');
+    await openCode(page, 'D-01');
+    await tab(page, 0);
+    await page.locator('.drawer [data-dc-jump]').click();
+    const card = page.locator('.drawer [data-delivered-check]');
+    await expect(card).toContainText('czy dostarczono?');
+    await expect(card.locator('[data-dc="yes"]')).toHaveText('Tak, dostarczono');
+    await card.locator('[data-dc="no"]').click();
+    await expect(card).toHaveCount(0);
+    await expect(page.locator('.drawer [data-axis-kind="current"] .sax-name')).toHaveText('Na placu');
+    await boot(page, 'HHL');
+    await openCode(page, 'D-01');
+    await tab(page, 1);
+    await expect(page.locator('.drawer [data-delivered-check] [data-dc="wait"]')).toBeVisible();
+    await expect(page.locator('.drawer [data-delivered-check] [data-dc="yes"]')).toHaveCount(0);
+  });
+
+  test('komputer HHL: Automatyzacje — „Działa samo” pierwsza; 4 grupy, 7 automatów; reguły stref; odnośnik do Opcji; „Własne reguły”', async ({ page }) => {
+    for (const width of [1280, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await boot(page, 'HHL');
+      await openView(page, 'wf');
+      const tabs = page.locator('.wf-tabs [role="tab"]');
+      await expect(tabs.first()).toHaveText('Działa samo');
+      await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
+      await expect(page.locator('[data-auto-group]')).toHaveCount(4);
+      await expect(page.locator('[data-auto-row]')).toHaveCount(7);
+      await page.locator('[data-auto-row="zones"] .arl-hd').click();
+      await expect(page.locator('[data-auto-zone-rules] [data-zone-rule]')).toHaveCount(5);
+      await expect(page.locator('[data-zone-rule="site"]')).toContainText('Dostarczone');
+      await noSideScroll(page, width);
+      await tabs.nth(1).click();
+      await expect(page.locator('#wf-panel-own [data-wf-id]').first()).toBeVisible();
+      await expect(page.locator('#wf-panel-auto')).toBeHidden();
+    }
+    await page.locator('.wf-tabs [role="tab"]').first().click();
+    await page.locator('[data-auto-row="cases"] .arl-hd').click();
+    await page.locator('[data-auto-go="cases"]').click();
+    await expect(page.locator('[data-opt-screen="thr"]')).toBeVisible();
+  });
+
+  for (const width of WIDTHS) {
+    test(`telefon ${width}: awizacja z linkiem RIO, „Gotowy” zablokowany, sprawa L14 i „Działa samo” — 0 w każdej kolumnie E8`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      const hits: Hit[] = [];
+      await boot(page, 'SCX', true);
+      await openCode(page, 'P-01');
+      await page.locator('[data-awiz-open]').click();
+      await page.locator('[data-awiz-tracking]').scrollIntoViewIfNeeded();
+      hits.push(...await measure(page, 'awizacja-link', width, 'SCX'));
+      await page.locator('[data-tl-change]').click();
+      const font = await page.locator('[data-awiz-tracking] input').evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+      expect(font, 'pole ≥ 16 px').toBeGreaterThanOrEqual(16);
+      hits.push(...await measure(page, 'awizacja-link-zmiana', width, 'SCX'));
+      await page.keyboard.press('Escape');
+      await closeDrawer(page);
+      await openCode(page, 'D-02');
+      await tab(page, 1);
+      await page.locator('.drawer [data-action="change-status"]').click();
+      await page.locator('[data-status-select]').selectOption('READY');
+      await expect(page.locator('[data-status-ready-gaps]')).toBeVisible();
+      hits.push(...await measure(page, 'gotowy-braki', width, 'SCX'));
+      await page.getByRole('button', { name: 'Anuluj' }).click();
+      await closeDrawer(page);
+      await openCode(page, 'D-01');
+      await tab(page, 0);
+      hits.push(...await measure(page, 'sprawa-przeglad', width, 'SCX'));
+      await page.locator('.drawer [data-dc-jump]').click();
+      await expect(page.locator('.drawer [data-delivered-check]')).toBeVisible();
+      hits.push(...await measure(page, 'sprawa-status', width, 'SCX'));
+      await closeDrawer(page);
+      await boot(page, 'HHL', true);
+      await openView(page, 'wf');
+      hits.push(...await measure(page, 'dziala-samo', width, 'HHL'));
+      await page.locator('[data-auto-row="zones"] .arl-hd').click();
+      hits.push(...await measure(page, 'dziala-samo-strefy', width, 'HHL'));
+      /* „Własne reguły” (dzisiejsza lista z warunkami w JSON, ucięte na telefonie) — przebudowa E35 w P8, POROWNANIE P4-c */
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});

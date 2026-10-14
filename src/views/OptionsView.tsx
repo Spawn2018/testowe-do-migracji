@@ -17,7 +17,7 @@ import { OptionsHowTo } from '../components/settings/OptionsHowTo';
 import { SmsFallbackEntry } from '../components/shell/SmsFallbackEntry';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { parseRoute } from '../lib/routes';
-import { OPEN_OPTIONS_EVENT, takeOptionsScreen, type OptionsScreen } from '../lib/openOptions';
+import { OPEN_OPTIONS_EVENT, optScreenOf, takeOptionsScreen, type OptionsScreen } from '../lib/openOptions';
 
 /** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */
 function savedText(locale: Locale, code: string): string {
@@ -120,7 +120,7 @@ export function OptionsView() {
   useEffect(() => {
     const go = (screen: OptionsScreen | null) => {
       if (!screen) return;
-      setRequest((r) => ({ screen: screen === 'my-account' ? 'account' : 'forme', seq: (r?.seq ?? 0) + 1 }));
+      setRequest((r) => ({ screen: optScreenOf(screen), seq: (r?.seq ?? 0) + 1 }));
     };
     go(takeOptionsScreen());
     const onOpen = () => go(takeOptionsScreen());

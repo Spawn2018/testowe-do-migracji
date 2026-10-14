@@ -17,7 +17,8 @@ import {
 import { isPlausibleNational, toNationalPhone } from '../../lib/phoneNational';
 import { effArrival, effDeparture, fmtLocal, sailingAssignDenied, sailingStatusLabel } from '../../lib/sailings';
 import { getNowIso } from '../../lib/frozenNow';
-import { trackerKind } from '../../lib/trackerLink';
+import { trackingLinkOf } from '../../lib/p4cSource';
+import { TrackingLinkField } from './TrackingLinkField';
 import type { Load } from '../../types';
 
 type Props = {
@@ -257,18 +258,17 @@ export function AwizacjaModal({ load, onClose }: Props) {
             </>
           ) : null}
 
-          <label className="form-field" data-awiz-tracking>
-            <span>{t(locale, 'awiz_tracking')}</span>
-            <input className="input" value={trackingRef} onChange={(e) => setTrackingRef(e.target.value)} placeholder={t(locale, 'awiz_tracking_ph')} autoComplete="off" />
-            {/* wyglad/P4-b (E44): podpowiedź i rozpoznany dostawca — samego linku (z kluczem RIO) nie powtarzamy */}
-            <small className="awiz-track-hint" data-awiz-tracking-kind={trackerKind(trackingRef)}>
-              {trackerKind(trackingRef) === 'rio'
-                ? t(locale, 'p4b_awiz_rio')
-                : trackerKind(trackingRef) === 'emtrack'
-                  ? t(locale, 'p4b_awiz_emtrack')
-                  : t(locale, 'p4b_awiz_track_hint')}
-            </small>
-          </label>
+          {/* wyglad/P4-c (E44): pole „Link śledzenia” — zapisany link RIO bez klucza, wynik zapytania testowego, ostrzeżenia */}
+          <TrackingLinkField
+            value={trackingRef}
+            onChange={setTrackingRef}
+            savedRef={load.resources.trackingRef}
+            info={trackingLinkOf(load, loads, nowIso)}
+            load={load}
+            locale={locale}
+            nowIso={nowIso}
+            onOpenRio={import.meta.env.VITE_AUTH_MODE !== 'supabase' ? () => pushToast(t(locale, 'p4c_tl_open_demo'), 'LOW', load.id) : undefined}
+          />
 
           <label className="form-field">
             <span>{t(locale, 'awiz_operator')}</span>

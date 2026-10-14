@@ -1545,3 +1545,95 @@ img,video{max-width:100%;height:auto}
   .scm .input{font-size:16px}
   .sax-tag,.etab-lbl,.etab-val .pill,.etab-howto{font-size:12px}
 }
+
+/* ===== wyglad/P4-c — pole „Link śledzenia” (E44), „Gotowy” z brakami (L6, L9, L29), sprawa „czy dostarczono?” (E26, L14),
+   Automatyzacje › „Działa samo” (E35 pkt 1, L13). Wzór: img/e32-after (pole w awizacji), img/e7-desk (karta sprawy),
+   img/e35-after („Działa samo”, komputer i telefon). E44 bez obrazu — Z10 pkt 2: elementy, które już są (pigułki tła, .btn, karty). */
+.tlf-saved{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;min-height:44px;padding:5px 6px 5px 12px;border:1px solid var(--rule);background:var(--surface-2)}
+.tlf-chip{flex:1 1 auto;min-width:0;font-family:var(--font-mono);font-size:14px;color:var(--ink);overflow-wrap:anywhere}
+.tlf-acts{display:flex;flex-wrap:wrap;gap:6px}
+.tlf-btn{padding:6px 12px;border-color:var(--ink)}
+.tlf-change{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px}
+.form-field .tlf-change small{margin-left:0}
+.tlf-keep{padding:4px 2px;font-size:12.5px;font-weight:600;color:var(--sea)}
+.tlf-notes{display:grid;gap:4px;margin:2px 0 0;padding:0;list-style:none}
+.tlf-n{padding:7px 10px;border-left:3px solid var(--rule);background:var(--surface-2);font-size:12.5px;line-height:1.4;color:var(--ink)}
+.tlf-n.ok{border-left-color:var(--go);background:var(--go-bg)}
+.tlf-n.info{border-left-color:var(--sea);background:var(--sea-bg)}
+.tlf-n.warn{border-left-color:var(--amber);background:var(--amber-bg)}
+.tlf-n.bad{border-left-color:var(--red);background:var(--red-bg)}
+
+.scm-info.bad{background:var(--red-bg);border-left-color:var(--red)}
+.scm-info.ok{background:var(--go-bg);border-left-color:var(--go)}
+.scm-who{display:block;margin-top:3px;color:var(--ink-2)}
+.scm-actions .btn:disabled,.dcc-acts .btn:disabled{background:var(--rule);border-color:var(--rule);color:var(--ink-3)}
+
+.dcc{display:flex;flex-direction:column;gap:10px;margin:0 0 12px;padding:12px 14px;border:1px solid var(--rule);border-left:4px solid var(--amber);background:var(--surface)}
+.dcc-main{flex:1 1 auto;min-width:0}
+.dcc-t{margin:0;font-size:15px;font-weight:600;line-height:1.3;color:var(--ink)}
+.dcc-s{margin:3px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-3)}
+.dcc-r{margin:6px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-2)}
+.dcc-acts{display:flex;flex-shrink:0;gap:8px}
+.dcc-acts .btn{padding:8px 16px}
+.dcc-acts .btn.ghost{border-color:var(--ink)}
+.dcc-wait{margin:0;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.dcc-jump{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;width:100%;margin:0 0 10px;padding:9px 12px;
+  border:1px solid var(--rule);border-left:4px solid var(--amber);background:var(--amber-bg);text-align:left;font-size:13px;color:var(--ink)}
+.dcc-jump b{font-weight:600}
+.dcc-jump span{font-weight:600;color:var(--ink-2)}
+
+.wf-tabs{margin:0}
+.arl-lead{margin:0;padding:10px 14px;border-bottom:1px solid var(--rule);font-size:13px;color:var(--ink-3)}
+.arl-gh{margin:0;padding:7px 14px;border-bottom:1px solid var(--rule);background:var(--surface-2);
+  font-family:var(--font-cond);font-weight:600;font-size:12px;letter-spacing:.08em;color:var(--ink-2)}
+.arl-list{margin:0;padding:0;list-style:none}
+.arl-row{border-bottom:1px solid var(--rule-2)}
+.arl-hd{display:grid;grid-template-columns:minmax(0,1fr) auto 14px;align-items:start;gap:3px 16px;width:100%;padding:10px 14px;background:none;text-align:left;color:var(--ink)}
+.arl-hd:hover{background:var(--surface-2)}
+.arl-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.arl-name{font-size:14px;font-weight:600}
+.arl-desc{font-size:12.5px;line-height:1.4;color:var(--ink-3)}
+.arl-meta{font-size:12.5px;white-space:nowrap;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.arl-chev{font-size:16px;line-height:1.2;color:var(--ink-3)}
+.arl-row.open .arl-chev{transform:rotate(90deg)}
+.arl-body{padding:2px 14px 12px}
+.arl-zt-wrap{margin:0 0 8px;overflow-x:auto}
+.arl-zt{width:100%;border-collapse:collapse;font-size:12.5px}
+.arl-zt th,.arl-zt td{padding:6px 8px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:top}
+.arl-zt thead th{font-family:var(--font-cond);font-weight:600;font-size:12px;letter-spacing:.06em;color:var(--ink-3)}
+.arl-zt tbody th{font-weight:600;color:var(--ink)}
+.arl-zt tbody tr:hover{background:transparent}
+.arl-last,.arl-who{margin:0 0 8px;font-size:12.5px;line-height:1.45;color:var(--ink-2)}
+.arl-go{padding:6px 12px;border-color:var(--ink)}
+.arl-foot{margin:0;padding:10px 14px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink-3)}
+@media (max-width:768px){
+  /* telefon (E8): cele ≥ 44 px, tekst ≥ 12 px; „Działa samo” jako karty z „›” (img/e35-after, telefon), tabela reguł → karty */
+  /* E8 pkt 4: pola okna awizacji ≥ 16 px (bez powiększania strony przy wpisywaniu linku i rejestracji) */
+  .awiz-modal .input{font-size:16px}
+  /* okno awizacji na całym ekranie bez marginesu .panel (wystawało 8 px w prawo); podpowiedzi ≥ 12 px */
+  .awiz-modal{margin:0}
+  .awiz-modal small{font-size:12px}
+  .tlf-saved{padding:8px}
+  .tlf-acts{width:100%}
+  .tlf-btn{flex:1 1 0;min-height:44px}
+  .tlf-keep{min-height:44px;padding:0 6px}
+  .dcc{padding:12px}
+  .dcc-acts{display:grid;grid-template-columns:1fr 1fr;width:100%}
+  .dcc-acts .btn{min-height:44px}
+  .dcc-jump{min-height:44px}
+  .arl-lead{padding:10px 12px}
+  .arl-gh{padding:7px 12px}
+  .arl-list{display:grid;gap:8px;padding:8px 12px}
+  .arl-row{border:1px solid var(--rule);background:var(--surface)}
+  .arl-hd{grid-template-columns:minmax(0,1fr) 14px;min-height:56px;padding:10px 12px}
+  .arl-desc{display:none}
+  .arl-meta{grid-column:1;grid-row:2;white-space:normal}
+  .arl-chev{grid-column:2;grid-row:1 / span 2;align-self:center}
+  .arl-body{padding:0 12px 12px}
+  .arl-go{width:100%;min-height:44px}
+  /* tabela reguł → karty jak każda tabela na telefonie (.app td z data-label); nazwa strefy jako nagłówek karty */
+  .arl-zt tr{margin:0 0 8px}
+  .arl-zt th,.arl-zt td{border-bottom:0}
+  .arl-zt tbody th{padding:8px 12px 2px;border:0;text-align:left}
+  .arl-foot{padding:10px 12px}
+}

@@ -276,6 +276,50 @@ export interface EtaDetail {
   waitSince?: string | null;
 }
 
+/**
+ * wyglad/P4-c (E44 pkt 1, 5, 6, 8): stan linku śledzenia z serwera — wypełnia wykonawca.
+ * Bez `secret`: przeglądarka dostaje tylko rejestrację, ważność, wynik zapytania testowego i ostrzeżenia.
+ */
+export interface TrackingLinkInfo {
+  provider: 'RIO' | 'EMTRACK' | 'OTHER';
+  /** `asset_name` z RIO — rejestracja pojazdu z lokalizatorem (np. „GD 4417K”) */
+  asset?: string | null;
+  /** ważność linku RIO (`start` / `end`) */
+  validFrom?: string | null;
+  validTo?: string | null;
+  /** wynik zapytania testowego po zapisie i ostatniego odczytu */
+  check?: { state: 'ok' | 'pending' | 'invalid' | 'down'; at?: string | null; lastFixAt?: string | null } | null;
+  /** gdzie jest lokalizator (pkt 6) */
+  trackerOn?: 'NACZEPA' | 'CIAGNIK_PL' | 'CIAGNIK_SE' | 'NIEZNANY' | null;
+  /** inne transporty z tym samym identyfikatorem RIO (nazwy E41) — pkt 5 */
+  usedBy?: string[] | null;
+}
+
+/** wyglad/P4-c (L6, L9, L29): czego brakuje do „Gotowy” — jedna definicja z bazy (E32 pkt 6), wypełnia wykonawca. */
+export type ReadyGapKind = 'AWIZ' | 'PILOTS' | 'ORDER_HHL' | 'ORDER_SCX' | 'PERMIT' | 'POLICY_SCX';
+export interface ReadyGap {
+  kind: ReadyGapKind;
+  /** szczegóły po polsku, np. ['naczepa', 'telefon'], ['pilot SE — imię i nazwisko'], ['PL', 'SE'] */
+  items?: string[];
+  /** kto uzupełnia */
+  who: 'SCX' | 'HHL';
+}
+
+/** wyglad/P4-c (E26 pkt 4, L14): sprawa „Wyjazd z placu po X min — czy dostarczono?” — wypełnia wykonawca. */
+export interface DeliveredCheck {
+  /** id sprawy (decyzji) do zamknięcia */
+  id: string;
+  /** wyjazd ze strefy placu */
+  exitAt: string;
+  /** minuty na placu przed wyjazdem */
+  minutes: number;
+  /** próg strefy placu w minutach (E26: dziś 10) */
+  thresholdMin?: number;
+  zoneName: string;
+  /** czy to konto rozstrzyga (przewoźnik) */
+  canDecide: boolean;
+}
+
 export interface Load {
   id: string;
   code: string; // SG-01 etc
@@ -309,6 +353,12 @@ export interface Load {
   etaConfMin?: number | null;
   /** wyglad/P4-b — szczegóły ETA (E15); null/undefined = brak */
   etaDetail?: EtaDetail | null;
+  /** wyglad/P4-c — link śledzenia z serwera (E44); undefined = brak danych */
+  trackingLink?: TrackingLinkInfo | null;
+  /** wyglad/P4-c — braki do „Gotowy” (L6, L9, L29); undefined = brak danych, [] = komplet */
+  readyGaps?: ReadyGap[] | null;
+  /** wyglad/P4-c — otwarta sprawa L14 dla tego transportu */
+  deliveredCheck?: DeliveredCheck | null;
   /** I-2d: `loads.delay_minutes` (ETA v1 vs koniec okna planu); undefined w demo. */
   delayMinutesDb?: number | null;
   lat: number;
