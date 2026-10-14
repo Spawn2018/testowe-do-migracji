@@ -35,6 +35,8 @@ async function login(page: Page, email: string) {
 
 async function openOptions(page: Page) {
   await page.locator('nav [data-view="options"], nav [data-view="settings"]').first().click();
+  /* D-20261014-0700-01 J5: wymóg zezwoleń → permits. */
+  await page.locator('[data-opt-nav="permits"]').click();
 }
 
 test('HHL_ADMIN: włącza i wyłącza wymóg zezwoleń (flaga + audit_log)', async ({ page }) => {

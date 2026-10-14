@@ -26,9 +26,9 @@ function savedText(locale: Locale, code: string): string {
 }
 
 const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../components/guide/Guide')) : null;
-const MyMfa = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/Mfa')) : null;
 const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/UsersAdmin')) : null;
-const MyAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/MyAccount')) : null;
+/** D-20261014-0700-01 J3 pkt 1: AccountScreen zamiast MyAccount + Mfa + MyDevices. */
+const LiveAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/LiveAccountScreen')) : null;
 const BafForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/BafForm')) : null;
 const NotificationMatrixForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/NotificationMatrixForm')) : null;
 const RateCardForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/RateCardForm')) : null;
@@ -43,7 +43,6 @@ const DataExportPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABAS
 const ChangeHistoryPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/ChangeHistoryPanel')) : null;
 const PermitRequirement = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/PermitRequirement')) : null;
 const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
-const MyDevices = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/MyDevices')) : null;
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
   { key: 'indexSource', labelKey: 'baf_index', type: 'text' },
@@ -302,13 +301,7 @@ export function OptionsView() {
   groups.push({ id: 'system', screens: system });
 
   const forme: OptScreen[] = [
-    scr('account', pick('account', (MyAccount || MyMfa || MyDevices) ? (
-      <>
-        {MyAccount ? block(<MyAccount />) : null}
-        {MyMfa ? block(<MyMfa />) : null}
-        {MyDevices ? block(<MyDevices />) : null}
-      </>
-    ) : null), { right: 'own' }),
+    scr('account', pick('account', LiveAccount ? block(<LiveAccount />) : null), { right: 'own' }),
     scr('forme', pick('forme', <ForMeScreen locale={locale} kind={null} groups={null}>{browserPrefs}</ForMeScreen>), { right: 'own' }),
     scr('look', (
       <>

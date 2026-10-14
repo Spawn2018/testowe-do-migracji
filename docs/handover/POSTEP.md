@@ -2236,3 +2236,22 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Plik JS przed: `assets/index-CCGb6sOq.js`. Po: `assets/index-aVxTzmYJ.js` — ta sama nazwa na `tower.log-mar.pl` i w logu buildu Vercel. Oba adresy 200. 0 × `service_role`. Kopia wdrożeniowa usunięta.
 
 **wyglad/P3-b NA PRODUKCJI — commit `50b23eb0`, wdrożenie `dpl_Go31sqkke7v66cur6AxKfkuDwDWj`, 14.10.2026 02:53.**
+
+## 2026-10-14 — wyglad/P3-c NA PRODUKCJI
+
+- Dopisek D-20261014-0700-01 (w PR #190; włączenie do planu w `pakiet/P3-c-konto`).
+- CI na `70756d9`: unit i visual zielone; gitleaks = znana atrapa `H3_CORRIDOR_OBSTACLES` w `demo.tsx` (jak 0154; odcisk w `.gitleaksignore` w commicie włączającym); `npm audit --omit=dev --audit-level=high` 0. Bez migracji.
+- Scalenie PR #190 → `980c5a6f`.
+- Wdrożenie R7 z `main` `980c5a6f`, 14.10.2026 11:33, `dpl_88oQ2pwsRC1aavsiSmFmcMzwUPKe`.
+- Plik JS przed: `assets/index-CJKv76X6.js`. Po: `assets/index-gD-kQcbR.js` — ta sama nazwa na `tower.log-mar.pl` i `watch-tower-makieta.vercel.app`. Oba adresy 200. 0 × `service_role` (9 plików JS z HTML). Kopia wdrożeniowa usunięta.
+
+**wyglad/P3-c NA PRODUKCJI — commit `980c5a6f`, wdrożenie `dpl_88oQ2pwsRC1aavsiSmFmcMzwUPKe`, 14.10.2026 11:33.**
+
+
+## 2026-10-14 — P3-c J3 pkt 1 (Moje konto) — `pakiet/P3-c-konto`
+
+- Włączenie D-20261014-0700-01: PLAN §4 P3 (P3-c NA PRODUKCJI, J3, J4), P8 (J3 pkt 12), §8.
+- `LiveAccountScreen`: `AccountScreen` ← `my_profile` / `admin_user_profile_set`, `MfaSetup`, `my_sessions`; Podgląd = bez zapisów RPC (`isPreviewReadOnly`).
+- Opcje HHL i Ustawienia KSH/SCX: zamiast MyAccount+Mfa+MyDevices / „Brak źródła danych.”
+- J5: testy lokalne `iii9`/`i2`/`i19`/`i3`/`i27` → `[data-opt-nav]`; `i5-mfa` pod LiveAccount.
+- `.gitleaksignore`: atrapa `H3_CORRIDOR_OBSTACLES` w `demo.tsx`.

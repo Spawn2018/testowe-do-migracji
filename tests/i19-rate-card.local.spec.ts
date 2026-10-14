@@ -36,6 +36,8 @@ test('HHL: cennik kosztów — wersja 1, wersja 2 z powodem, dziennik', async ({
   test.setTimeout(90_000);
   await login(page, 'hhl@bk5.local');
   await page.locator('nav [data-view="options"]').first().click();
+  /* D-20261014-0700-01 J5: cennik → rates. */
+  await page.locator('[data-opt-nav="rates"]').click();
   const f = page.locator('[data-rate-card-form]');
   await expect(f).toContainText('brak zapisanego cennika');
   await expect(page.locator('[data-no-source="rate-card"]')).toHaveCount(0);
@@ -76,6 +78,8 @@ test('KSH: brak formularza cennika', async ({ page }) => {
   const opt = page.locator('nav [data-view="options"]');
   if (await opt.count()) {
     await opt.first().click();
+    /* D-20261014-0700-01 J5: rates (KSH i tak bez cennika w menu). */
+    if (await page.locator('[data-opt-nav="rates"]').count()) await page.locator('[data-opt-nav="rates"]').click();
     await expect(page.locator('[data-rate-card-form]')).toHaveCount(0);
   }
 });
