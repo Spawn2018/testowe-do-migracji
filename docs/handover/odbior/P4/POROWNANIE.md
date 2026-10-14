@@ -159,3 +159,71 @@ Zrzuty z demo na serwerze deweloperskim, czas 07.10.2026, 20:30. Do zrzutów osi
 `wyglad-P4-b/`:
 - `porownanie-e25-komputer.png`, `porownanie-e25-telefon.png`, `porownanie-e15.png`, `porownanie-e27-pasek.png` — obraz raportu i aplikacja;
 - `panel-1440-*` (Status, Przegląd: przed wyjazdem, w trasie, odpoczynek, czekanie, dostarczone; ciemny motyw), `okno-1440-*`, `telefon-390-*`, `awizacja-1440-scx-link-rio.png`.
+
+## wyglad/P4-c — pole „Link śledzenia” (E44), „Gotowy” z brakami (L6, L9, L29), sprawa „czy dostarczono?” (E26, L14), „Działa samo” (E35, L13)
+
+Polecenie właściciela 14.10.2026, 11:33 i 11:41 („Zacznij robić P4-c”), dopisek D-20261014-1145-01 W3.
+Obrazy raportu:
+- `raport/img/e32-after.webp` — okno Awizacja, pole „LINK ŚLEDZENIA” (bez stanów E44);
+- `e7-desk.webp` — karta sprawy w „Do zrobienia” (wzór karty sprawy L14);
+- `e35-after.webp` — Automatyzacje › „Działa samo” (komputer i telefon);
+- E44 i „Gotowy” (L6, L9) nie mają obrazu — Z10 pkt 2: elementy, które już są (pigułki tła jak `scm-info`, `.btn`, karta z paskiem z lewej).
+
+Zakres z `PLAN.md` §4 P4: „pole „Link śledzenia” w oknie awizacji (E44)”, „„Gotowy” według L6 i L9”, „E26 … sprawa „czy dostarczono” (L14), lista reguł w Opcjach według L13”.
+Logika i zapis — wykonawca (dopisek do PR): link RIO na serwerze i zapytanie testowe (`load.trackingLink`), lista braków z bazy (`load.readyGaps`), sprawa L14 i jej zamknięcie (`load.deliveredCheck`, `onYes` / `onNo`), ostatnie działania automatów. Ten PR zmienia tylko wygląd i nawigację; w produkcji bez tych danych nic nowego się nie pokazuje i nic nie jest blokowane.
+
+Zrzuty z podglądu demo, „teraz” = 14.10.2026, 12:00. Przykłady demo (`src/lib/p4cDemo.ts`, tylko tryb demo): P-01 — link RIO z ostrzeżeniami, D-01 — link RIO działa i sprawa L14, K-01 — link wygasł, SG-29 — pojazd spoza awizacji i link użyty przy D-01, SS-03 — link nieprawidłowy, K-03 — sprawdzanie, D-02 — braki do „Gotowy”. Rejestracje z danych demo, bez prawdziwych linków i kluczy.
+
+### Z3 — element po elemencie
+
+| element | obraz raportu / decyzja | po zmianie w aplikacji | zgodne | uwagi |
+|---|---|---|---|---|
+| pole — puste | „LINK ŚLEDZENIA”, pole „link z systemu GPS przewoźnika (pole jak dziś, E27; link RIO rozpoznawany sam — E44)” | „Link śledzenia”, pole, pod spodem „SCX zawsze dodaje link śledzenia. emtrack albo link RIO od podwykonawcy — nowy link na każdy przejazd.” | tak | wygląd etykiety jak w dzisiejszym oknie awizacji; nowe okno Awizacja — P7 |
+| pole — wklejony link | E44 pkt 1: rozpoznanie dostawcy | „Rozpoznano link RIO. Po zapisie sprawdzimy, czy działa. Klucz z linku zostaje na serwerze — tu będzie „••••”.”; emtrack — „pozycje z naczepy, jak dziś”; inny — „pozycje odczytujemy tylko z emtrack i RIO” | tak | — |
+| pole — zapisany link RIO | E44 pkt 8: „RIO · WPR 8220T · ••••”, „Otwórz w RIO” | „RIO · <rejestracja> · ••••” zamiast adresu, „Otwórz w RIO ↗”, „Zmień link” | tak | adresu z kluczem nie ma w widoku (test: brak „secret” i „position-sharing” w polu) |
+| wynik zapytania testowego | E44 pkt 1: „Link RIO działa · WPR 8220T · ważny do 09.10 06:00” albo błąd | zielony: „Link RIO działa · <rejestracja> · ważny do 15.10, 06:00 · ostatnia pozycja 11:56”; czerwony: „Link RIO nieprawidłowy — RIO nie zna tego linku…”; „RIO nie odpowiada. Sprawdzimy ponownie za 2 min.”; „Sprawdzam link RIO…” | tak | — |
+| lokalizator | E44 pkt 6: „Lokalizator: ciągnik WPR 8220T (RIO)” / „naczepa …” | „Lokalizator: naczepa <rejestracja> (RIO)”, „ciągnik …, odcinek PL / SE (RIO)”; w pasku śledzenia panelu „Lokalizator: naczepa … · RIO” | tak | zamyka różnicę „częściowo” z P4-b |
+| ostrzeżenia | E44 pkt 5–6: użyty przy innym transporcie, wygasa przed dostawą, zacznie nadawać później, pojazd spoza awizacji, wygasł | pomarańczowe: „Ten link RIO jest już przy D-01 · SCX-…”, „Link RIO dotyczy pojazdu …, którego nie ma w awizacji.”, „Link wygasa 15.10, 06:00, przed dostawą 15.10. Poproś przewoźnika o nowy link.”; niebieskie: „Link RIO zacznie nadawać 11.10, 10:00.”; czerwone: „Link RIO wygasł 11.10, 06:00. Wklej nowy link — do tego czasu statusy ręcznie.” | tak | start i wygaśnięcie także w pasku śledzenia panelu |
+| „Zmień link” | E44 pkt 5: nowy link zastępuje stary, ślad zostaje | puste pole + „Nowy link zastąpi obecny, ślad zostaje. Puste pole usunie link przy zapisie.” + „Zostaw obecny link” | tak | — |
+| „Gotowy” — okno | L6, L9, L29 (bez obrazu) | wybór „Gotowy” przy brakach: czerwone „„Gotowy” jeszcze nie. Brakuje: awizacja (naczepa, telefon) · nr zlecenia SCX · zezwolenie. Uzupełnia Scandinavian Express (…) i H&H Logistics (…).”; „Zapisz status” zablokowany; przy komplecie zielone „Komplet do „Gotowy”: awizacja, numery HHL i SCX, zezwolenia, polisa.” | tak (Z10) | lista braków z bazy (jedna definicja, E32 pkt 6) — wykonawca |
+| „Gotowy” — oś | — | wiersz „Gotowy” (czeka): „Brakuje: …” | tak (Z10) | widzą wszystkie konta (KSH i Operacje HHL — podgląd) |
+| sprawa L14 — karta | e7-desk: tytuł, „decyduje …”, przyciski po prawej; L14: „Tak, dostarczono” / „Nie” | nad osią w zakładce Status: „Wyjazd z placu po 6 min — czy dostarczono?”, „Wyjazd ze strefy „…” 14.10, 11:35 · krócej niż 10 min, więc status bez zmian · decyduje Scandinavian Express”, zasada „Tak / Nie”, przyciski pod tekstem | tak | w panelu (560 px) przyciski pod tekstem; inne konta: „Czeka na odpowiedź Scandinavian Express.” |
+| sprawa L14 — Przegląd | — | pomarańczowy wiersz „Wyjazd z placu po 6 min — czy dostarczono? · Odpowiedz w zakładce Status ›” | tak (Z10) | — |
+| „Działa samo” — zakładki | „Działa samo · Własne reguły · 0 · Przebiegi · Historia zmian” | „Działa samo” (pierwsza) · „Własne reguły · 12” | częściowo | „Przebiegi” i „Historia zmian” — P8 (E35); dzisiejsza historia zmian zostaje w „Własnych regułach” |
+| „Działa samo” — lista | opis „Co aplikacja robi bez człowieka…”, grupy STATUSY · DO ZROBIENIA · WIADOMOŚCI · PIENIĄDZE I DANE, 7 automatów z opisem, po prawej ostatnie działanie albo miejsce ustawień, stopka | to samo, te same teksty | tak | „Harmonogram KSH”: opis według decyzji 09.10 13:09 i AGENTS §6 (plik KSH, daty tylko KSH, SharePoint po dostępie od IT KSH) zamiast „TYP = STANDARD” (bez kodów) |
+| „Działa samo” — rozwinięcie | „Po kliknięciu wiersza: pełny opis, ostatnie działania i odnośnik do ustawień” | wiersz rozwija ostatnie działanie i przycisk „Ustawienia: Opcje › Progi ›” (Strefy, Kto co dostaje, SMS przy miejscach, Opłata paliwowa); „Status ze stref” — reguły strefa × wjazd × wyjazd (L13) i „Zmienia tylko Administrator HHL…” | tak | odnośnik otwiera właściwy ekran Opcji (P3-c) |
+| „Działa samo” — telefon | karty z „›”, nazwa i jedna linia stanu | karty z „›”, nazwa i stan; reguły stref jako karty (jak każda tabela na telefonie) | tak | — |
+
+### Różnice, które zostają
+
+| różnica | gdzie | zamyka |
+|---|---|---|
+| etykieta pola i układ okna awizacji jak dziś (obraz: nowe okno Awizacja z sekcjami) | okno awizacji | P7 (E32, nowe okno Awizacja) |
+| brak zakładek „Przebiegi” i „Historia zmian”; „Własne reguły” — dzisiejsza lista z warunkami w JSON (na telefonie ucięte), kreator po prawej na obrazie | Automatyzacje | P8 (E35) |
+| ostatnie działania („SG-03 · 07.10 08:35”, „ostatnio 07.10, 20:15”, „tryb testowy”) w produkcji: „brak źródła danych” / miejsce ustawień | „Działa samo” | wykonawca — dopisek do PR |
+| karta L14 w „Do zrobienia” (Ryzyka) — dziś ogólne przyciski opcji decyzji | Ryzyka | P6 (E7) — komponent `DeliveredCheckCard` gotowy |
+| blok „Do zrobienia przy tym transporcie” w Przeglądzie | panel transportu | P7 (E32) |
+
+### Konta (Z11)
+
+| konto | zrzut | różnica |
+|---|---|---|
+| SCX Dyspozytor i Użytkownik | `awizacja-1440-scx-*`, `pole-1440-*`, `okno-1440-scx-gotowy-*`, `panel-1440-scx-*`, `karta-1440-scx-sprawa.png`, `telefon-390-scx-*` | awizacja tylko SCX (B-10); odpowiada na sprawę L14 |
+| HHL Administrator | `okno-1440-hhl-gotowy-braki-okno.png`, `karta-1440-hhl-sprawa.png`, `dziala-samo-1440-hhl*`, `telefon-390-hhl-*` | „Gotowy” z brakami w oknie; sprawa — „czeka na SCX”; „Działa samo” |
+| HHL Operacje | jak HHL w demo | bez „Zmień status” (P4-b); strony Automatyzacji dziś nie widzą (podgląd — P8, E35) |
+| KSH Użytkownik | `panel-1440-ksh-d01-status-sprawa.png` | oś z „Brakuje: …” i sprawa „czeka na SCX”, bez przycisków |
+
+### Sprawdzenia
+
+- Testy jednostkowe `tests/p4c-look.test.ts` (9): wynik zapytania, lokalizator, ostrzeżenia w kolejności, wygasły link, pasek śledzenia, start 03:00 i koniec dostawy, braki „Gotowy” (jedna i dwie firmy), przykłady demo tylko za warunkiem trybu, brak wartości linku w polu.
+- Brama E8 (`tests/e8-phone-gate.spec.ts`, opis „wyglad/P4-c”, 7 testów): komputer 1280 / 1440 — pole (bez „secret”, wynik, lokalizator, ostrzeżenia, „Zmień link” i powrót), „Gotowy” (oś, okno, zapis zablokowany, komplet), sprawa L14 (SCX „Nie” zamyka bez zmiany statusu, HHL czeka), „Działa samo” (kolejność zakładek, 4 grupy, 7 automatów, reguły stref, odnośnik do Opcji › Progi, „Własne reguły”), bez przewijania w bok; telefon 360 / 390 / 430 — awizacja, zmiana linku (pole 16 px), „Gotowy”, sprawa w Przeglądzie i w Statusie, „Działa samo” zwinięte i rozwinięte — 0 w każdej kolumnie.
+- Przy okazji (E8 na telefonie, okno awizacji): okno na całym ekranie wystawało 8 px w prawo (margines `.panel`), pola miały 13 px, podpowiedź 11 px — teraz bez marginesu, pola 16 px, tekst 12 px. Zakładki panelu na telefonie — pasek przewijany w bok (`tests/fixtures/e8-strips.txt`, e32-after: „Zakładki przewija się w bok”).
+- Pierwsze wczytanie: 396,7 kB gzip (budżet 400). Automatyzacje, okno awizacji i okno „Zmień status” ładują się leniwie; teksty „Działa samo” w osobnym module (`src/i18n/p4cWf.ts`).
+- Build produkcyjny (`VITE_AUTH_MODE=supabase`) bez przykładów demo (`demo-dc-`, „tryb testowy”, braki z demo — 0 trafień).
+- Lokalnie (podgląd demo): `tsc`, `test:unit` 967 / 37 pominiętych, `lint:css`, brama E8 P4-a, P4-b i P4-c (19), `etap4-ui`, `etap5-ui`, `etap6-ui`, `aud03-ksh-panel`, `persist-toast`, `d-eur-t` (27). `d19-i18n` lokalnie nie przechodzi także przed zmianą („lang missing: en” — przełącznik języka usunięty, E43).
+
+### Pliki
+
+`wyglad-P4-c/`:
+- `porownanie-e32-pole-link.png`, `porownanie-e7-sprawa-l14.png`, `porownanie-e35-komputer.png`, `porownanie-e35-telefon.png` — obraz raportu i aplikacja;
+- `awizacja-1440-scx-rio-ostrzezenia.png`, `pole-1440-*` (7 stanów pola), `okno-1440-*-gotowy-*`, `panel-1440-*` (Przegląd ze sprawą, Status ze sprawą u SCX, HHL i KSH, Status z „Brakuje”), `karta-1440-*-sprawa.png`, `dziala-samo-1440-hhl*`, `wlasne-reguly-1440-hhl.png`, `telefon-390-*`.

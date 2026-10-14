@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import type { Locale } from '../../types';
 import type { OptScreenId } from '../options/types';
-import { t, tp } from '../../i18n/messages';
+import { wt } from '../../i18n/p4cWf';
 import { openOptionsScreen } from '../../lib/openOptions';
 import { useTowerStore } from '../../store/useTowerStore';
 
@@ -50,17 +50,17 @@ function ZoneTable({ locale }: { locale: Locale }) {
       <table className="arl-zt" data-auto-zone-rules>
         <thead>
           <tr>
-            <th scope="col">{t(locale, 'p4c_wf_zt_zone')}</th>
-            <th scope="col">{t(locale, 'p4c_wf_zt_in')}</th>
-            <th scope="col">{t(locale, 'p4c_wf_zt_out')}</th>
+            <th scope="col">{wt(locale, 'p4c_wf_zt_zone')}</th>
+            <th scope="col">{wt(locale, 'p4c_wf_zt_in')}</th>
+            <th scope="col">{wt(locale, 'p4c_wf_zt_out')}</th>
           </tr>
         </thead>
         <tbody>
           {ZONE_RULES.map((z) => (
             <tr key={z} data-zone-rule={z}>
-              <th scope="row">{t(locale, `p4c_wf_zt_${z}`)}</th>
-              <td data-label={t(locale, 'p4c_wf_zt_in')}>{t(locale, `p4c_wf_zt_${z}_in`)}</td>
-              <td data-label={t(locale, 'p4c_wf_zt_out')}>{t(locale, `p4c_wf_zt_${z}_out`)}</td>
+              <th scope="row">{wt(locale, `p4c_wf_zt_${z}`)}</th>
+              <td data-label={wt(locale, 'p4c_wf_zt_in')}>{wt(locale, `p4c_wf_zt_${z}_in`)}</td>
+              <td data-label={wt(locale, 'p4c_wf_zt_out')}>{wt(locale, `p4c_wf_zt_${z}_out`)}</td>
             </tr>
           ))}
         </tbody>
@@ -80,14 +80,14 @@ export function AutoRulesList({ locale, meta }: { locale: Locale; meta: Partial<
 
   return (
     <div className="arl" data-auto-rules>
-      <p className="arl-lead">{t(locale, 'p4c_wf_auto_lead')}</p>
+      <p className="arl-lead">{wt(locale, 'p4c_wf_auto_lead')}</p>
       {GROUPS.map((g) => (
         <section key={g.id} className="arl-grp" data-auto-group={g.id}>
-          <h3 className="arl-gh">{t(locale, `p4c_wf_g_${g.id}`)}</h3>
+          <h3 className="arl-gh">{wt(locale, `p4c_wf_g_${g.id}`)}</h3>
           <ul className="arl-list">
             {g.rows.map((r) => {
               const last = meta[r.id];
-              const right = last ?? (r.fixed ? t(locale, r.fixed) : r.go ? t(locale, r.go.label) : '');
+              const right = last ?? (r.fixed ? wt(locale, r.fixed) : r.go ? wt(locale, r.go.label) : '');
               const isOpen = open === r.id;
               return (
                 <li key={r.id} className={`arl-row${isOpen ? ' open' : ''}`} data-auto-row={r.id}>
@@ -99,8 +99,8 @@ export function AutoRulesList({ locale, meta }: { locale: Locale; meta: Partial<
                     onClick={() => setOpen(isOpen ? null : r.id)}
                   >
                     <span className="arl-txt">
-                      <span className="arl-name">{t(locale, `p4c_wf_r_${r.id}`)}</span>
-                      <span className="arl-desc">{t(locale, `p4c_wf_r_${r.id}_d`)}</span>
+                      <span className="arl-name">{wt(locale, `p4c_wf_r_${r.id}`)}</span>
+                      <span className="arl-desc">{wt(locale, `p4c_wf_r_${r.id}_d`)}</span>
                     </span>
                     <span className="arl-meta">{right}</span>
                     <span className="arl-chev" aria-hidden>›</span>
@@ -109,12 +109,12 @@ export function AutoRulesList({ locale, meta }: { locale: Locale; meta: Partial<
                     <div className="arl-body" id={`arl-${r.id}`} data-auto-body={r.id}>
                       {r.id === 'zones' ? <ZoneTable locale={locale} /> : null}
                       <p className="arl-last">
-                        {last ? tp(locale, r.id === 'texts' ? 'p4c_wf_state' : 'p4c_wf_last', { what: last }) : t(locale, 'p4c_wf_last_none')}
+                        {last ? wt(locale, r.id === 'texts' ? 'p4c_wf_state' : 'p4c_wf_last', { what: last }) : wt(locale, 'p4c_wf_last_none')}
                       </p>
-                      {r.id === 'zones' ? <p className="arl-who">{t(locale, 'p4c_wf_zt_who')}</p> : null}
+                      {r.id === 'zones' ? <p className="arl-who">{wt(locale, 'p4c_wf_zt_who')}</p> : null}
                       {r.go ? (
                         <button type="button" className="btn ghost arl-go" data-auto-go={r.id} onClick={() => follow(r.go)}>
-                          {tp(locale, 'p4c_wf_open', { where: t(locale, r.go.label) })}
+                          {wt(locale, 'p4c_wf_open', { where: wt(locale, r.go.label) })}
                         </button>
                       ) : null}
                     </div>
@@ -125,7 +125,7 @@ export function AutoRulesList({ locale, meta }: { locale: Locale; meta: Partial<
           </ul>
         </section>
       ))}
-      <p className="arl-foot">{t(locale, 'p4c_wf_auto_foot')}</p>
+      <p className="arl-foot">{wt(locale, 'p4c_wf_auto_foot')}</p>
     </div>
   );
 }

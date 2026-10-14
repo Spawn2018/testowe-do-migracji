@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
+import { wt } from '../i18n/p4cWf';
 import { decText } from '../i18n/decisions';
 import { workflowDisplayName } from '../lib/enumLabels';
 import { PROD_BUILD, canManageWorkflows } from '../lib/prodFacade';
@@ -161,10 +162,10 @@ export function WorkflowsView() {
       </header>
       <div className="dtabs wf-tabs" role="tablist" aria-label={t(locale, 'nav_wf')}>
         <button type="button" role="tab" id="wf-tab-auto" aria-controls="wf-panel-auto" aria-selected={wfTab === 'auto'} data-wf-tab="auto" onClick={() => setWfTab('auto')}>
-          {t(locale, 'p4c_wf_tab_auto')}
+          {wt(locale, 'p4c_wf_tab_auto')}
         </button>
         <button type="button" role="tab" id="wf-tab-own" aria-controls="wf-panel-own" aria-selected={wfTab === 'own'} data-wf-tab="own" onClick={() => setWfTab('own')}>
-          {tp(locale, 'p4c_wf_tab_own', { n: workflows.length })}
+          {wt(locale, 'p4c_wf_tab_own', { n: workflows.length })}
         </button>
       </div>
       {/* oba panele w drzewie (aria-controls), niewybrany ukryty atrybutem hidden */}

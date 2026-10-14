@@ -18,7 +18,7 @@ import { DocsView } from './views/DocsView';
 import { FinanceView } from './views/FinanceView';
 import { InvoicesView } from './views/InvoicesView';
 import { TasksView } from './views/TasksView';
-import { WorkflowsView } from './views/WorkflowsView';
+import { WorkflowsViewLazy as WorkflowsView } from './views/workflowsLazy';
 import { GeofenceView } from './views/GeofenceView';
 import { DriverPwa } from './views/DriverPwa';
 /* wyglad/P3-c: Opcje i Ustawienia ładowane osobno (budżet pierwszego wczytania) */
