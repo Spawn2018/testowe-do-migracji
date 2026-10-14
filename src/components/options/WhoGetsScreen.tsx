@@ -10,7 +10,7 @@ import { t, tp } from '../../i18n/messages';
 import { ACCOUNT_KINDS, type AccountKind } from './types';
 
 export type { Channel, MatrixCell, MatrixGroup, MatrixRow } from './channels';
-import { CH_KEY, CHANNELS, ChannelChip, Icon, type Channel, type MatrixCell, type MatrixGroup } from './channels';
+import { CH_KEY, CHANNELS, ChannelChip, Icon, type Channel, type MatrixCell, type MatrixGroup, type MatrixRow } from './channels';
 import { up } from './up';
 
 export type WhoGetsCards = {
@@ -53,6 +53,15 @@ function CellChips({ locale, cell, onSet, readOnly }: { locale: Locale; cell: Ma
       ))}
     </span>
   );
+}
+
+/** Telefon, zwinięta karta zdarzenia (obraz E11 telefon): „wszyscy: dzwonek” albo „5 ról · 4 z dzwonkiem”. */
+function rowSummary(locale: Locale, r: MatrixRow): string {
+  const cells = ACCOUNT_KINDS.map((k) => r.cells[k]).filter((c): c is NonNullable<MatrixCell> => !!c);
+  const list = (c: NonNullable<MatrixCell>) => CHANNELS.filter((ch) => c[ch]).map((ch) => t(locale, `p3c_chs_${ch}`)).join(', ');
+  const same = cells.length > 0 && cells.every((c) => list(c) === list(cells[0]));
+  if (same) return list(cells[0]) ? t(locale, 'p3c_mx_all').replace('{list}', list(cells[0])) : t(locale, 'p3c_mx_none');
+  return tp(locale, 'p3c_mx_sum', { n: cells.length, b: cells.filter((c) => c.bell).length });
 }
 
 export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOnly, onToggle, mark }: Props) {
@@ -146,13 +155,12 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
               <h3 data-content>{up(g.title)}</h3>
               {g.rows.map((r) => {
                 const isSel = r.id === sel;
-                const on = ACCOUNT_KINDS.filter((k) => r.cells[k]?.bell).length;
                 return (
                   <div key={r.id} className={`ox-mxc-card${isSel ? ' is-open' : ''}`}>
                     <button type="button" className="ox-mxc-hd" aria-expanded={isSel} onClick={() => setSel(isSel ? null : r.id)} disabled={r.risksOnly}>
                       <span className="ox-tile-copy">
                         <b data-content>{r.title}</b>
-                        <span data-content>{r.risksOnly ? t(locale, 'p3c_risks_only') : [r.sub, r.fixedNote ? t(locale, 'p3c_always') : null].filter(Boolean).join(' · ') || `${t(locale, 'p3c_ch_bell')}: ${on}`}</span>
+                        <span>{r.risksOnly ? t(locale, 'p3c_risks_only') : isSel ? [r.sub, r.fixedNote ? t(locale, 'p3c_always') : null].filter(Boolean).join(' · ') : rowSummary(locale, r)}</span>
                       </span>
                       {r.risksOnly ? null : <span className="ox-chev" aria-hidden="true">{isSel ? '⌄' : '›'}</span>}
                     </button>

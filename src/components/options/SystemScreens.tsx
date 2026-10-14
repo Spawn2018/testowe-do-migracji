@@ -10,35 +10,39 @@ import { up } from './up';
 
 /* ---------- Przełączniki bezpieczeństwa ---------- */
 
+/** 13 kluczy `security_flags` w kolejności ekranu; nazwa i zdanie: p3c_flag_<KEY> / p3c_flag_<KEY>_fx. */
+export const SECURITY_FLAG_KEYS = [
+  'EXTERNAL_MESSAGING', 'MFA_HHL_ADMIN', 'PERMIT_REQUIRED_NON_STANDARD', 'SMS_ZONE_APPROACH', 'SMS_ZONE_ENTER',
+  'AUTOMATIC_DECISION_EMAIL', 'TELM_EMTRACK_WEB', 'DRIVER_LINK_ACCEPT', 'FUEL_SE_PL_INGEST', 'FUEL_WOB_INGEST',
+  'H1_ROUTE_CHECK', 'H3_CORRIDOR_OBSTACLES', 'H6_MAP_OBSTACLES',
+] as const;
+
 export type SecurityFlagRow = {
   key: string;
-  name: string;
   on: boolean;
-  /** Co robi — zdanie o skutku. */
-  does: string;
   /** „02.10, 18:43” */
   when: string;
   /** Imię i nazwisko albo rodzaj konta; null = zmiana poleceniem w bazie. */
   by: string | null;
 };
 
-export function FlagsScreen({ locale, flags: initial, readOnly, onToggle, mark }: {
+export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mark }: {
   locale: Locale;
   flags: SecurityFlagRow[];
   readOnly?: boolean;
   onToggle?: (key: string, next: boolean) => void;
   mark?: ReactNode;
 }) {
-  const [flags, setFlags] = useState(initial);
-  const [ask, setAsk] = useState<SecurityFlagRow | null>(null);
-  const last = (f: SecurityFlagRow) => `${f.when} · ${f.by ?? t(locale, 'p3c_by_command')}`;
+  const [flags, setFlags] = useState(() => initialRaw.map((f) => ({ ...f, name: t(locale, `p3c_flag_${f.key}`), does: t(locale, `p3c_flag_${f.key}_fx`) })));
+  const [ask, setAsk] = useState<(SecurityFlagRow & { name: string; does: string }) | null>(null);
+  const last = (f: SecurityFlagRow & { name: string }) => `${f.when} · ${f.by ?? t(locale, 'p3c_by_command')}`;
   const confirm = () => {
     if (!ask) return;
     setFlags((fs) => fs.map((f) => (f.key === ask.key ? { ...f, on: !f.on } : f)));
     onToggle?.(ask.key, !ask.on);
     setAsk(null);
   };
-  const sw = (f: SecurityFlagRow) => (
+  const sw = (f: SecurityFlagRow & { name: string; does: string }) => (
     <button
       type="button"
       className="ox-switch"
@@ -60,7 +64,7 @@ export function FlagsScreen({ locale, flags: initial, readOnly, onToggle, mark }
               <th scope="row" data-label={up(t(locale, 'p3c_col_flag'))}><b>{f.name}</b></th>
               <td data-label={up(t(locale, 'p3c_col_state'))}>{sw(f)}</td>
               <td data-label={up(t(locale, 'p3c_col_does'))}>{f.does}</td>
-              <td data-label={up(t(locale, 'p3c_col_last'))} className="ox-nowrap" data-content>{last(f)}</td>
+              <td data-label={up(t(locale, 'p3c_col_last'))} className="ox-flag-last" data-content>{last(f)}</td>
             </tr>
           ))}
         </tbody>
@@ -210,33 +214,70 @@ export function ExportScreen({ locale, kinds, range, fileName, onDownload }: {
 
 /* ---------- Progi alarmów ---------- */
 
+/** Klucze `ops_thresholds` w kolejności ekranu; etykieta i zdanie o skutku: p3c_thr_<KEY> / p3c_thr_<KEY>_fx. */
+export const THRESHOLD_KEYS = [
+  'WAVE_M', 'GUST_KN', 'DELAY_MIN', 'LEAD_DAYS',
+  'AWIZ_EARLY_H', 'AWIZ_LATE_H', 'DOC_WARN_H', 'DOC_CRIT_H',
+  'SILENT_MIN', 'OFFROUTE_KM',
+] as const;
+
 export type ThresholdRow = {
   key: string;
-  label: string;
-  /** „3,8 m” albo „48 h · 12 h” */
-  value: string;
-  /** Zdanie o skutku: „wyżej sprawa „możliwe odwołanie rejsu”” */
-  effect: string;
+  value: number;
+  /** „m”, „węzłów”, „min”, „dni”, „h”, „km” */
+  unit: string;
 };
 
-export function ThresholdsScreen({ locale, rows, readOnly, onChange, mark }: {
+export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark }: {
   locale: Locale;
   rows: ThresholdRow[];
   readOnly?: boolean;
-  onChange?: (key: string) => void;
+  /** Zapis po potwierdzeniu (wykonawca: admin_ops_threshold_set). */
+  onSave?: (key: string, value: number) => void;
   mark?: ReactNode;
 }) {
+  const [vals, setVals] = useState<Record<string, number>>(() => Object.fromEntries(rows.map((r) => [r.key, r.value])));
+  const [edit, setEdit] = useState<{ key: string; draft: string; ask: boolean } | null>(null);
+  const fmt = (n: number) => new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(n);
+  const num = (d: string) => Number(d.replace(',', '.'));
   return (
     <div className="ox-thr">
       {mark ? <div className="ox-count-line"><span />{mark}</div> : null}
       <ul className="ox-thr-list">
-        {rows.map((r) => (
-          <li key={r.key} data-threshold={r.key}>
-            <span className="ox-thr-label">{r.label}</span>
-            <span className="ox-thr-val"><b data-content>{r.value}</b> <span>— {r.effect}</span></span>
-            {readOnly ? null : <button type="button" className="btn ghost ox-btn" onClick={() => onChange?.(r.key)}>{t(locale, 'p3c_thr_change')}</button>}
-          </li>
-        ))}
+        {rows.map((r) => {
+          const label = t(locale, `p3c_thr_${r.key}`);
+          const editing = edit?.key === r.key;
+          const v = vals[r.key];
+          return (
+            <li key={r.key} data-threshold={r.key} className={editing ? 'is-edit' : undefined}>
+              <span className="ox-thr-label">{label}</span>
+              {editing ? (
+                <span className="ox-thr-edit">
+                  {edit.ask ? (
+                    <span className="ox-thr-ask">{t(locale, 'p3c_thr_ask').replace('{name}', label).replace('{was}', `${fmt(v)} ${r.unit}`).replace('{is}', `${fmt(num(edit.draft))} ${r.unit}`)}</span>
+                  ) : (
+                    <label className="ox-thr-input"><input className="input" inputMode="decimal" aria-label={label} value={edit.draft} onChange={(e) => setEdit({ ...edit, draft: e.target.value })} /><span>{r.unit}</span></label>
+                  )}
+                  <span className="ox-thr-val"><span>— {t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
+                </span>
+              ) : (
+                <span className="ox-thr-val"><b data-content>{fmt(v)} {r.unit}</b> <span>— {t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
+              )}
+              {readOnly ? null : editing ? (
+                <span className="ox-thr-btns">
+                  <button type="button" className="btn ghost ox-btn" onClick={() => setEdit(null)}>{t(locale, 'p3c_cancel')}</button>
+                  {edit.ask ? (
+                    <button type="button" className="btn ox-btn" onClick={() => { setVals({ ...vals, [r.key]: num(edit.draft) }); onSave?.(r.key, num(edit.draft)); setEdit(null); }}>{t(locale, 'p3c_yes_change')}</button>
+                  ) : (
+                    <button type="button" className="btn ox-btn" disabled={!(num(edit.draft) > 0) || num(edit.draft) === v} onClick={() => setEdit({ ...edit, ask: true })}>{t(locale, 'p3c_m_save')}</button>
+                  )}
+                </span>
+              ) : (
+                <button type="button" className="btn ghost ox-btn" onClick={() => setEdit({ key: r.key, draft: fmt(v), ask: false })}>{t(locale, 'p3c_thr_change')}</button>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

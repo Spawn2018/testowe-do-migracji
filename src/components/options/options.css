@@ -7,7 +7,9 @@
 /* ---------- układ: komputer ---------- */
 .options-page[data-p3c="shell"]{padding:0}
 .ox-field,.ox-field > span{text-align:left}
-.ox-desk{display:grid;grid-template-columns:280px minmax(0,1fr);align-items:start;min-height:100%;margin:-12px -14px 0;background:var(--page)}
+/* telefon: globalna reguła `a, label` (inline-flex, środek) — pole formularza zostaje kolumną od lewej */
+.ox-screen .ox-field{display:flex;align-items:stretch}
+.ox-desk{display:grid;grid-template-columns:280px minmax(0,1fr);align-items:start;min-height:100%;margin:0;background:var(--page)}
 .ox-side{position:sticky;top:0;align-self:start;min-height:calc(100dvh - 120px);background:var(--surface);border-right:1px solid var(--rule);padding:22px 0 24px}
 .ox-side-hd{padding:0 20px 10px}
 .ox-side-hd h1{margin:0;font-family:var(--font-cond);font-size:28px;line-height:1.05;letter-spacing:.02em;font-weight:700}
@@ -103,7 +105,7 @@
 
 /* tabele */
 .ox-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--rule)}
-.ox-table th,.ox-table td{padding:11px 14px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:middle;font-size:14.5px}
+.ox-table th,.ox-table td{white-space:normal;padding:11px 14px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:middle;font-size:14.5px}
 .ox-table thead th{background:var(--surface-2);font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--ink-3)}
 .ox-table tbody th{font-weight:400}
 .ox-table tbody th b{font-weight:600}
@@ -151,6 +153,8 @@
 
 /* ---------- Przełączniki ---------- */
 .ox-flags .ox-table td:nth-child(3){color:var(--ink-2)}
+.ox-flags .ox-table tbody th{min-width:200px;width:28%}
+.ox-flags .ox-table .ox-flag-last{width:190px;color:var(--ink-2)}
 .ox-scrim{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:16px;background:rgba(6,14,20,.45)}
 .ox-dialog{width:min(460px,100%);background:var(--surface);border:1px solid var(--rule);padding:20px}
 .ox-dialog h3{margin:0 0 10px;font-family:var(--font-cond);font-size:22px;font-weight:700}
@@ -182,6 +186,12 @@
 .ox-thr-list li:last-child{border-bottom:0}
 .ox-thr-val span{color:var(--ink-2)}
 .ox-thr-list .ox-btn{min-height:36px;padding:6px 12px}
+.ox-thr-list li.is-edit{background:var(--surface-2)}
+.ox-thr-edit{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;min-width:0}
+.ox-thr-input{display:inline-flex;align-items:center;gap:8px}
+.ox-thr-input .input{width:110px;min-height:36px;font-size:15px}
+.ox-thr-ask{font-weight:600}
+.ox-thr-btns{display:inline-flex;gap:8px}
 
 /* ---------- Użytkownicy ---------- */
 .ox-counters{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 14px}
@@ -191,7 +201,15 @@
 .ox-counter.is-alert b{color:var(--red)}
 .ox-counters .panel-mark{margin-left:auto}
 .ox-people{margin-bottom:16px}
-.ox-call-cell{width:60px;text-align:right}
+.ox-call-cell{width:110px;text-align:right}
+.ox-row-act{display:inline-flex;gap:6px;justify-content:flex-end}
+.ox-morebtn{display:inline-grid;place-items:center;width:44px;height:38px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);font-size:18px;line-height:1;color:var(--ink-2)}
+.ox-morebtn[aria-expanded="true"]{background:var(--surface-2);border-color:var(--ink-3)}
+.ox-person-act td{background:var(--surface-2)}
+.ox-person-panel{display:flex;flex-wrap:wrap;align-items:flex-end;gap:4px 16px}
+.ox-person-panel .ox-field{margin:0;min-width:220px}
+.ox-person-panel .ox-actions{margin:0}
+.ox-people tr.is-off > th,.ox-people tr.is-off > td{color:var(--ink-3)}
 .ox-callbtn{display:inline-grid;place-items:center;width:44px;height:38px;border:1px solid var(--go);border-radius:2px;color:var(--go);background:var(--surface)}
 .ox-users-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
 .ox-invite-act{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
@@ -230,7 +248,9 @@
   .ox-right{margin-left:0;font-size:13px}
   .ox-screen-hd p{font-size:14.5px}
 
-  .ox-cards3{grid-template-columns:minmax(0,1fr)}
+  /* obraz E11 telefon: od razu lista zdarzeń — karty i legenda tylko na komputerze */
+  .ox-cards3,.ox-legend-item,.ox-legend-hint{display:none}
+  .ox-legend{justify-content:flex-end}
   .ox-who-split{grid-template-columns:minmax(0,1fr)}
   .ox-mx-wrap{display:none}
   .ox-mxc{display:block}
@@ -261,6 +281,9 @@
   .ox-cards-phone .ox-call-cell{text-align:left}
   .ox-cards-phone .ox-call-cell:empty{display:none}
   .ox-callbtn{width:56px;height:44px}
+  .ox-morebtn{width:56px;height:44px}
+  .ox-cards-phone .ox-person-act{margin-top:-10px;border-top:0}
+  .ox-person-panel .ox-field{min-width:0;width:100%}
   .ox-switch{width:56px;height:44px;place-items:center start}
 
   .ox-btn{min-height:44px}
@@ -272,7 +295,10 @@
   .ox-kv dt{padding-bottom:0;border-bottom:0}
   .ox-thr-list li{grid-template-columns:minmax(0,1fr) auto;gap:6px 10px}
   .ox-thr-list .ox-thr-val{grid-column:1 / -1;grid-row:2}
-  .ox-thr-list .ox-btn{min-height:44px;grid-column:2;grid-row:1}
+  .ox-thr-list .ox-btn{min-height:44px}
+  .ox-thr-list li > .ox-btn,.ox-thr-btns{grid-column:2;grid-row:1}
+  .ox-thr-list .ox-thr-edit{grid-column:1 / -1;grid-row:2}
+  .ox-thr-input .input{min-height:44px;font-size:16px}
   .ox-list > li{flex-wrap:wrap}
   .ox-invite-act{justify-content:flex-start}
   .ox-counters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}

@@ -727,6 +727,13 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
         for (const { group, screen } of list) {
           await openPhoneScreen(page, group, screen);
           hits.push(...await measure(page, `opcje/${screen}`, width, role));
+          /* stany otwarte: edycja progu, działania przy osobie */
+          const open = screen === 'thr' ? '[data-threshold] .ox-btn' : screen === 'users' ? '.ox-morebtn' : null;
+          if (open && await page.locator(open).count()) {
+            await page.locator(open).first().click();
+            await page.waitForTimeout(150);
+            hits.push(...await measure(page, `opcje/${screen}/otwarte`, width, role));
+          }
         }
       }
       const report = hits.map((h) => `${h.role} ${h.width} ${h.view} ${h.kind}=${h.n}: ${h.sample.join(' | ')}`).join('\n');
@@ -743,6 +750,22 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
     await page.click('[data-opt-nav="flags"]');
     await expect(page.locator('[data-opt-screen="flags"] .ox-crumb')).toHaveText('Opcje › System');
     await expect(page.locator('[data-opt-screen="flags"] tbody tr')).toHaveCount(13);
+    /* każdy ekran przy 1440 i 1280 px: strona i `main` bez przewijania w bok (macierz „Kto co dostaje” ma własny pasek) */
+    const ids = await page.evaluate(() => Array.from(document.querySelectorAll('.ox-side [data-opt-nav]')).map((b) => b.getAttribute('data-opt-nav') ?? ''));
+    const wide: string[] = [];
+    for (const w of [1440, 1280]) {
+      await page.setViewportSize({ width: w, height: 900 });
+      for (const id of ids) {
+        await page.click(`[data-opt-nav="${id}"]`);
+        await page.waitForTimeout(150);
+        const bad = await page.evaluate(() => {
+          const m = document.querySelector('main');
+          return document.documentElement.scrollWidth > window.innerWidth + 1 || (!!m && m.scrollWidth > m.clientWidth + 1);
+        });
+        if (bad) wide.push(`${w} ${id}`);
+      }
+    }
+    expect(wide).toEqual([]);
     for (const r of ['KSH', 'SCX'] as const) {
       await boot(page, r);
       await openView(page, 'settings');
