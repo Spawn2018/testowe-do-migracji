@@ -2278,3 +2278,15 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - TEST: security **84/84** (+2 SKIP), status **44/44**, e25 **21/21**, nullguard **161+136+208+122 = 627/627**; doradca security TEST: 0 nowych (po wyjątku `load_status_set` / `load_status_rank`).
 - CI PR #181 na `cf4b673d`: unit, visual, db zielone; gitleaks 0 (zakres vs main); `npm audit --omit=dev --audit-level=high` 0.
 - **TEST wolne** od 14.10.2026 13:25.
+
+## 2026-10-14 — P4 H1/H2 (logika/baza E25) NA PRODUKCJI
+
+- Dopisek D-20261014-0640-01 włączony (H1/H2 w PR #181; H3/H4 zostają w P4).
+- Scalenie PR #181 → `3dd72256`. Migracja **0205** (`db push` ×2: drugi „up to date”); próba ROLLBACK: chk_ok=1, fn_ok=1, enum_ok=2.
+- TEST przed scaleniem (`cf4b673d` / head z wyjątkami doradcy): security 84, status 44, e25 21/21, nullguard 627, doradca 0 nowych.
+- Wdrożenie R7 z `main` `3dd72256`, 14.10.2026 13:43, `dpl_AffqVNywWVnTJTtTYxVnNs1xjKmD`.
+- Plik JS: `assets/index-B9wDrCrF.js`. Oba adresy 200. 0 × `service_role`.
+- PR #189 (`wyglad/P4-b`) — draft; scalenie po oznaczeniu gotowości przez koordynatora.
+
+**P4 H1/H2 (E25 statusy) NA PRODUKCJI — commit `3dd72256`, migracja 0205, wdrożenie `dpl_AffqVNywWVnTJTtTYxVnNs1xjKmD`, 14.10.2026 13:43.**
+
