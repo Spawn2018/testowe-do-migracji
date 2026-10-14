@@ -1086,6 +1086,10 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
       await page.locator('[data-auto-row="zones"] .arl-hd').click();
       hits.push(...await measure(page, 'dziala-samo-strefy', width, 'HHL'));
       /* „Własne reguły” (dzisiejsza lista z warunkami w JSON, ucięte na telefonie) — przebudowa E35 w P8, POROWNANIE P4-c */
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});
 
 /**
  * wyglad/P5 — Finanse (E16, img/e16-after) i opłata paliwowa według tygodnia (E39, img/e39-after).
