@@ -25,7 +25,7 @@ export function deliveredCheckOf(
   nowIso: string,
   role: 'HHL' | 'KSH' | 'SCX',
 ): DeliveredCheck | null {
-  if (load.status === 'DELIVERED' || load.status === 'CANCELLED') return null;
+  if (load.status === 'DELIVERED' || String(load.status) === 'CANCELLED' /* jak TrackingBar: anulowany spoza LoadStatus */) return null;
   if (load.deliveredCheck !== undefined) return load.deliveredCheck;
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoDeliveredCheck(load, loads, geofences, nowIso, role) : null;
 }
