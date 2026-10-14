@@ -106,10 +106,10 @@ export function DashboardView() {
     </span>
   ) : null;
   /* Stopka HHL (E9): „Czas wykrycia odchylenia: **za mało danych** (2 z 5 zdarzeń w 30 dniach)”; mediana od 5 zdarzeń */
-  const detect: [string, string] | null = shows('detectTimeKpi')
+  const detect: [string, string] = shows('detectTimeKpi')
     ? [tp(locale, 'p3b_detect_ok', { m: '8' }), tp(locale, 'p3b_detect_ok_n', { n: 12 })]
     : detectLag === null
-      ? null
+      ? [t(locale, 'p3b_detect_loading'), '']
       : detectLag === 'error'
         ? [t(locale, 'p3b_detect_err'), '']
         : detectLag.samples >= 5 && detectLag.medianMin != null
@@ -117,7 +117,7 @@ export function DashboardView() {
           : detectLag.samples > 0
             ? [t(locale, 'p3b_detect_few'), tp(locale, 'p3b_detect_few_n', { n: String(detectLag.samples) })]
             : [t(locale, 'p3b_detect_none'), t(locale, 'p3b_detect_none_n')];
-  const footer = role === 'HHL' && canSeeMargin(role) && detect ? (
+  const footer = role === 'HHL' && canSeeMargin(role) ? (
     <span data-detect-lag>
       {t(locale, 'p3b_detect_label')} <b>{detect[0]}</b> {detect[1]}
     </span>
@@ -175,30 +175,35 @@ export function DashboardView() {
           )}
         </div>
         )}
-        <div style={{ minWidth: 0 }}>
-          <header className="panel-hd">
-            <h2>{t(locale, 'progress')}</h2>
-            <span className="sub">{PROD_BUILD ? (prodWeeks ? tp(locale, 'i2_progress_weeks', { r: prodWeeks }) : '') : t(locale, 'progress_weeks')}</span>
-          </header>
-          <div className="panel-bd">
-            <DeliveryProgress loads={loads} locale={locale} />
+        {/* KSH (ck-solo) na szerokim ekranie: postęp i mapa obok siebie, jak u innych firm (bez rozciągania wykresu) */}
+        <div className="ck-side" style={{ minWidth: 0 }}>
+          <div className="ck-prog" style={{ minWidth: 0 }}>
+            <header className="panel-hd">
+              <h2>{t(locale, 'progress')}</h2>
+              <span className="sub">{PROD_BUILD ? (prodWeeks ? tp(locale, 'i2_progress_weeks', { r: prodWeeks }) : '') : t(locale, 'progress_weeks')}</span>
+            </header>
+            <div className="panel-bd">
+              <DeliveryProgress loads={loads} locale={locale} />
+            </div>
           </div>
-          <header className="panel-hd" style={{ borderTop: '1px solid var(--rule-2)' }}>
-            <h2>{t(locale, 'nav_map')}</h2>
-            <div className="spacer" />
-            <button
-              type="button"
-              className="chipbtn"
-              onClick={() => navigateTo({ view: 'map' })}
+          <div className="ck-map" style={{ minWidth: 0 }}>
+            <header className="panel-hd">
+              <h2>{t(locale, 'nav_map')}</h2>
+              <div className="spacer" />
+              <button
+                type="button"
+                className="chipbtn"
+                onClick={() => navigateTo({ view: 'map' })}
+              >
+                {t(locale, 'nav_map')}
+              </button>
+            </header>
+            <div
+              className="grid2-map-body minimap"
+              style={{ overflow: 'hidden', background: 'var(--surface-3)', position: 'relative' }}
             >
-              {t(locale, 'nav_map')}
-            </button>
-          </header>
-          <div
-            className="grid2-map-body minimap"
-            style={{ overflow: 'hidden', background: 'var(--surface-3)', position: 'relative' }}
-          >
-            <CorridorMap loads={loads} embedded />
+              <CorridorMap loads={loads} embedded />
+            </div>
           </div>
         </div>
       </div>

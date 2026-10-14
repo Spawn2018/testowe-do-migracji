@@ -166,6 +166,7 @@ const pl: Dict = {
   p3b_detect_none: 'brak danych',
   p3b_detect_none_n: '(0 z 5 zdarzeń w 30 dniach)',
   p3b_detect_err: 'nie udało się odczytać',
+  p3b_detect_loading: 'wczytuję…',
   p3b_urgent: 'Najpilniejsze',
   p3b_urgent_sub: 'z „Do zrobienia”',
   nav_fin: 'Finanse',

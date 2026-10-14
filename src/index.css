@@ -1370,3 +1370,9 @@ img,video{max-width:100%;height:auto}
 }
 /* KSH bez listy „Do zrobienia” (E9): postęp i mapa na całą szerokość */
 .panel.grid2.ck-solo{grid-template-columns:minmax(0,1fr)}
+.ck-map>.panel-hd{border-top:1px solid var(--rule-2)}
+@media (min-width:1101px){
+  .panel.grid2.ck-solo .ck-side{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}
+  .panel.grid2.ck-solo .ck-map{border-left:1px solid var(--rule-2)}
+  .panel.grid2.ck-solo .ck-map>.panel-hd{border-top:0}
+}

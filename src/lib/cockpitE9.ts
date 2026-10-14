@@ -132,20 +132,20 @@ export function loadsBilledBy(bills: readonly Pick<Bill, 'issuer' | 'lines'>[], 
 
 /**
  * Liczba przy „Faktury” w menu (E9): faktury czekające na moje działanie plus transporty gotowe do mojej faktury.
- * KSH: faktury HHL do sprawdzenia. HHL: faktury SCX do sprawdzenia + rozładowane z podpisanym CMR bez faktury HHL dla KSH.
- * SCX: sporne faktury SCX + rozładowane z podpisanym CMR bez faktury SCX. Status E25 „Gotowe do fakturowania” — P4.
+ * Czeka na mnie: faktura do mnie „do weryfikacji” (sprawdzam ją) albo moja faktura „sporna” (odpowiada tylko wystawca,
+ * canReplyDispute). Gotowe do mojej faktury (HHL, SCX): rozładowane z podpisanym CMR, jeszcze bez mojej faktury.
+ * Status E25 „Gotowe do fakturowania” i ewentualnie „zgodna” czekająca na akceptację — P4 (wykonawca).
  */
 export function invoiceTodoCount(
   role: RoleId,
   input: { loads: readonly Load[]; documents: readonly Document[]; bills: readonly Bill[] },
 ): number {
   const { loads, documents, bills } = input;
-  if (role === 'KSH') return bills.filter((b) => b.recipient === 'KSH' && b.verification === 'DO_WERYFIKACJI').length;
+  const waiting = bills.filter((b) =>
+    (b.recipient === role && b.verification === 'DO_WERYFIKACJI') || (b.issuer === role && b.verification === 'SPORNA')).length;
+  if (role === 'KSH') return waiting;
   const mine = loadsBilledBy(bills, role);
   const ready = loads.filter((l) => delivered(l) && !mine.has(l.id) && hasDoc(documents, l.id, 'CMR')).length;
-  const waiting = role === 'HHL'
-    ? bills.filter((b) => b.recipient === 'HHL' && b.verification === 'DO_WERYFIKACJI').length
-    : bills.filter((b) => b.issuer === 'SCX' && b.verification === 'SPORNA').length;
   return waiting + ready;
 }
 
@@ -295,7 +295,7 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
 
   if (role === 'SCX') {
     /* „tydz. 41” = tydzień dostawy transportów czekających na fakturę (E9: „w tygodniu dostawy”); bez nich — bieżący */
-    const weekOf = (l: Load) => isoWeekNumber(`${dayKey(l.unloadedAt) ?? dayKey(l.plannedDeliverDate) ?? f.today}T12:00:00Z`);
+    const weekOf = (l: Load) => isoWeekNumber(`${dayKey(l.unloadedAt) ?? f.today}T12:00:00Z`);
     const weeks = [...new Set(f.toInvoice.map(weekOf))].sort((a, b) => a - b);
     const w = weeks.length === 0 ? String(isoWeekNumber(input.nowIso)) : weeks.length === 1 ? String(weeks[0]) : `${weeks[0]}–${weeks[weeks.length - 1]}`;
     return [

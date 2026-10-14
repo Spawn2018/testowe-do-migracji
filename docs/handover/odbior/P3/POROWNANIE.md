@@ -136,7 +136,7 @@ Kafelki liczą według statusu transportu, nie etapu paska: „Na placu” (w ba
 
 - Brama E8 (`tests/e8-phone-gate.spec.ts`): 3 konta × 360 / 390 / 430 px — 0 poza ekranem, 0 uciętych, 0 celów < 44 px, 0 tekstu < 12 px, liczby kafelków w jednej linii.
 - Nowe testy „wyglad/P3-b Kokpit” w tym samym pliku: komputer 1440 (3 konta: nagłówek, kolejność 6 kafelków, 2 kolumny równej szerokości, „Strona ›”, stopka tylko HHL, „Do zrobienia” = liczba w menu, KSH bez liczby) i telefon 360 / 390 / 430 (nagłówek „Kokpit”, 2 × 3 równej szerokości, bez „Strona ›”, liczby w jednej linii i w kafelku, ≤ 3 najpilniejsze, bez stopki). Wstrzyknięta usterka (liczba 44 px z łamaniem, kolumny 1 : 2) — test łapie.
-- Testy jednostkowe `tests/p3b-cockpit-e9.test.ts` (11): kafelki trzech firm na statusach jak z produkcji („Na placu”, „Rozładowany”), opisy i liczba mnoga, puste stany, „Do zrobienia” (Administrator, Operacje, SCX, KSH), rodzaj konta w Podglądzie, liczba „Faktury” z tabeli Faktur, porywy i godzina wjazdu (gdy dane je podadzą).
+- Testy jednostkowe `tests/p3b-cockpit-e9.test.ts` (11, w tym faktura sporna): kafelki trzech firm na statusach jak z produkcji („Na placu”, „Rozładowany”), opisy i liczba mnoga, puste stany, „Do zrobienia” (Administrator, Operacje, SCX, KSH), rodzaj konta w Podglądzie, liczba „Faktury” z tabeli Faktur, porywy i godzina wjazdu (gdy dane je podadzą).
 - axe (WCAG 2.1 AA) na Kokpicie i menu, 3 konta × jasny / ciemny × 1440 / 390: 0 naruszeń przed zmianą liczby na dolnym pasku; po niej w motywie ciemnym kontrast liczby jak w dzwonku (E10).
 - Strona bez przewijania w bok przy 1440, 1024, 768, 430, 390 i 360 px.
 - Testy przepisane (E9, komentarz w teście): `tests/i2l-detect-lag.test.ts` i `tests/i2-facade.local.spec.ts` (stopka, próg 5 zdarzeń, B6), `tests/l8-cockpit-tiles.test.ts` („Do zrobienia” = menu, KSH bez kafelka decyzji), `tests/etap4-ui.spec.ts` G4 (kwota tylko na marży HHL), `tests/e8-phone-gate.spec.ts` „V1 i V2” (bez liczby przy Harmonogramie także na komputerze).
@@ -148,7 +148,17 @@ Kafelki liczą według statusu transportu, nie etapu paska: „Na placu” (w ba
   - KSH: bez listy pod kafelkami (E9: KSH bez listy „Do zrobienia”);
   - produkcja, prom: zamiast „brak źródła danych” (pomiar jest na stronie Ryzyka) — „prognoza morza na stronie Ryzyka”;
   - polskie formy („1 jeszcze nie wyjechał”, „2 czekają”), puste stany, tydzień dostawy przy „Do zafakturowania”, stopka czasu wykrycia nie udaje zera przy wczytywaniu i błędzie, najbliższy prom liczony co minutę.
-- Migawki wzorców (`tests/__screenshots__/`) odświeżone w `visual.yml` (`update=true`) — wpis w `docs/handover/G4_WZORZEC.md`.
+- Drugie sprawdzenie tego samego agenta (na `b3f2713`): poprawki potwierdzone (symulacja na mapowaniu statusów z produkcji daje liczby jak na obrazie: HHL „Dostarczone 1 · SG-01 czeka na podpisany CMR”, KSH „Terminowość 0 z 1”, SCX „Do zafakturowania 0 · 1 czeka… · tydz. 41”), 0 regresji (Playwright 43/43). Poprawione jeszcze:
+  - „Faktury” w menu: czeka na mnie także moja faktura sporna (odpowiada wystawca — `canReplyDispute`), np. faktura HHL zakwestionowana przez KSH;
+  - KSH na szerokim ekranie: postęp i mapa obok siebie (bez rozciągania wykresu na całą szerokość);
+  - „tydz.” przy „Do zafakturowania” z daty rozładunku, bez daty — bieżący tydzień (nie plan z przyszłości);
+  - stopka czasu wykrycia od razu na miejscu („wczytuję…”), bez skoku układu.
+- Drugie sprawdzenie tego samego agenta (na `b3f2713`): poprawki potwierdzone (symulacja na mapowaniu statusów z produkcji daje liczby jak na obrazie: HHL „Dostarczone 1 · SG-01 czeka na podpisany CMR”, KSH „Terminowość 0 z 1”, SCX „Do zafakturowania 0 · 1 czeka… · tydz. 41”), 0 regresji (Playwright 43/43). Poprawione jeszcze:
+  - „Faktury” w menu: czeka na mnie także moja faktura sporna (odpowiada wystawca — `canReplyDispute`), np. faktura HHL zakwestionowana przez KSH;
+  - KSH na szerokim ekranie: postęp i mapa obok siebie (bez rozciągania wykresu na całą szerokość);
+  - „tydz.” przy „Do zafakturowania” z daty rozładunku, bez daty — bieżący tydzień (nie plan z przyszłości);
+  - stopka czasu wykrycia od razu na miejscu („wczytuję…”), bez skoku układu.
+- **Czeka:** migawki wzorców (`tests/__screenshots__/`) do odświeżenia w `visual.yml` (`update=true`) i wpis w `docs/handover/G4_WZORZEC.md` — GitHub Actions zatrzymane 14.10 od ok. 00:45 przez rozliczenia konta (decyzja właściciela). Do tego czasu check `visual` w PR jest czerwony z powodu migawek Kokpitu i menu.
 
 ### Pliki
 

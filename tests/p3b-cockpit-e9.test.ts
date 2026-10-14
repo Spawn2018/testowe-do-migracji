@@ -73,6 +73,10 @@ describe('E9 — „Do zrobienia” i liczby w menu', () => {
     // SCX: 1 sporna; SG-02 jest już na fakturze SCX
     expect(invoiceTodoCount('SCX', { loads: LOADS, documents: DOCS, bills })).toBe(1);
     expect(invoiceTodoCount('SCX', { loads: LOADS, documents: [], bills: [] })).toBe(0);
+    // faktura HHL zakwestionowana przez KSH: odpowiada HHL (wystawca), KSH już nie ma nic do zrobienia
+    const disputed = [bill({ issuer: 'HHL', recipient: 'KSH', verification: 'SPORNA' })];
+    expect(invoiceTodoCount('HHL', { loads: [], documents: [], bills: disputed })).toBe(1);
+    expect(invoiceTodoCount('KSH', { loads: [], documents: [], bills: disputed })).toBe(0);
   });
   it('loadsBilledBy: transporty z faktur danego wystawcy', () => {
     const bills = [bill({ issuer: 'SCX', lines: [{ loadId: 'A' }] as Bill['lines'] }), bill({ issuer: 'HHL', lines: [{ loadId: 'B' }] as Bill['lines'] })];
