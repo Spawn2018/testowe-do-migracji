@@ -26,11 +26,10 @@ import { DocFileRow } from '../ui/DocFileRow';
 import { PlanDatesPanel } from './PlanDatesPanel';
 import { formatTowerPair } from '../../lib/cSep';
 import { formatHistoryActor } from '../../lib/historyActor';
-import { AwizacjaModal } from './AwizacjaModal';
 import { KshDatesModal } from './KshDatesModal';
-import { StatusChangeModal } from './StatusChangeModal';
 import { StatusAxisTab } from './StatusAxisTab';
 import { TrackingBar } from './TrackingBar';
+import { lazyRetry } from '../../lib/lazyRetry';
 import { EtaBlock } from './EtaBlock';
 import { buildStatusAxis } from '../../lib/statusAxis';
 import { trackingPhase } from '../../lib/stageTiles';
@@ -70,6 +69,9 @@ import { delayPillMinutes, permitBannerState } from '../../lib/prodDash';
 /* SCOPE 6.4 — formularz zezwoleń: tylko build Supabase, chunk leniwy (paczka demo bez niego) */
 const PermitForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/PermitForm')) : null;
 /* III-4 — pojazdy pilotujące z bazy (load_escorts): tylko build Supabase; demo zostaje przy polu „Pilot” formularza zasobów */
+/* wyglad/P4-c: okna awizacji i „Zmień status” poza pierwszym wczytaniem (budżet 400 kB gzip, scripts/bundle-size.mjs) */
+const AwizacjaModal = lazy(lazyRetry(() => import('./AwizacjaModal').then((m) => ({ default: m.AwizacjaModal }))));
+const StatusChangeModal = lazy(lazyRetry(() => import('./StatusChangeModal').then((m) => ({ default: m.StatusChangeModal }))));
 const CarrierRating = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/CarrierRating')) : null;
 const EscortPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/EscortPanel')) : null;
 
@@ -957,15 +959,17 @@ export function LoadDrawer() {
         </div>
       </aside>
       <DocPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
-      {awizOpen ? <AwizacjaModal load={load} onClose={() => setAwizOpen(false)} /> : null}
+      {awizOpen ? <Suspense fallback={null}><AwizacjaModal load={load} onClose={() => setAwizOpen(false)} /></Suspense> : null}
       {kshDatesOpen && role === 'KSH' ? <KshDatesModal load={load} onClose={() => setKshDatesOpen(false)} /> : null}
       {statusChangeOpen && canStatus ? (
-        <StatusChangeModal
-          loadId={load.id}
-          code={load.code}
-          current={load.status}
-          onClose={() => setStatusChangeOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <StatusChangeModal
+            loadId={load.id}
+            code={load.code}
+            current={load.status}
+            onClose={() => setStatusChangeOpen(false)}
+          />
+        </Suspense>
       ) : null}
     </>
   );
