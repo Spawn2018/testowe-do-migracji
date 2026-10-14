@@ -115,6 +115,19 @@ export function ScheduleView() {
   const phone = useIsPhone();
   const [actionsOpen, setActionsOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  /* „⋯” zamyka się po działaniu, Escape i dotknięciu obok */
+  const morePopRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!actionsOpen) return undefined;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setActionsOpen(false); };
+    const onDown = (e: PointerEvent) => {
+      const el = morePopRef.current;
+      if (el && !el.contains(e.target as Node)) setActionsOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('pointerdown', onDown);
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('pointerdown', onDown); };
+  }, [actionsOpen]);
   /* III-2 (SCOPE 0.9, makieta go()): krótki szkielet tabeli po wejściu w widok — wiersze w rytmie tabeli, nigdy spinner */
   const [skeleton, setSkeleton] = useState(true);
   useEffect(() => { const id = window.setTimeout(() => setSkeleton(false), SKELETON_MS); return () => window.clearTimeout(id); }, []);
@@ -127,6 +140,12 @@ export function ScheduleView() {
 
   // B-9 C: ten sam filtr kafelka (stageFilter) działa też w Harmonogramie
   const stageFilter = useTowerStore((s) => s.stageFilter);
+  /* kafelek paska pokazuje transporty — z zakładki „Rejsy” wracamy do „Transporty”, żeby filtr był widoczny */
+  const [prevStage, setPrevStage] = useState(stageFilter);
+  if (stageFilter !== prevStage) {
+    setPrevStage(stageFilter);
+    if (stageFilter) setSchedTab('loads');
+  }
   const updateResources = useTowerStore((s) => s.updateResources);
   const [loadFrom, setLoadFrom] = useState('');
   const [loadTo, setLoadTo] = useState('');
@@ -711,7 +730,7 @@ export function ScheduleView() {
         {phone ? (
           <>
             {/* telefon (E8, E28): szukajka i „⋯”, pasek etapów, filtry stanu i „Filtry ▾” */}
-            <div className="filters sched-ph-search">
+            <div className="filters sched-ph-search" ref={morePopRef}>
               <input
                 type="search"
                 placeholder={t(locale, 'search')}
@@ -728,13 +747,20 @@ export function ScheduleView() {
               >
                 ⋯
               </button>
-              {actionsOpen ? <div className="sched-actions sched-actions-pop">{actionButtons}</div> : null}
+              {actionsOpen ? (
+                <div
+                  className="sched-actions sched-actions-pop"
+                  onClick={(e) => { if ((e.target as HTMLElement).closest('button')) setActionsOpen(false); }}
+                >
+                  {actionButtons}
+                </div>
+              ) : null}
             </div>
             <StageBar variant="page" />
             <div className="filters" data-sched-filters>
               <StageChip />
-              {/* z filtrem etapu w rzędzie zostaje chip etapu i „Filtry ▾” (makieta E28, telefon) */}
-              {stageFilter ? null : chips.filter((c) => c.phoneRow).map(chipBtn)}
+              {/* z filtrem etapu w rzędzie zostaje chip etapu i „Filtry ▾” (makieta E28, telefon); włączony filtr stanu zawsze widać */}
+              {chips.filter((c) => (!stageFilter && c.phoneRow) || quick === c.id).map(chipBtn)}
               <button type="button" className="chipbtn" aria-expanded={filtersOpen} data-sched-more-filters onClick={() => setFiltersOpen((v) => !v)}>
                 {t(locale, filtersOpen ? 'p4_f_more_open' : 'p4_f_more')}
               </button>
@@ -743,7 +769,7 @@ export function ScheduleView() {
             </div>
             {filtersOpen ? (
               <div className="filters sched-more-filters">
-                {chips.filter((c) => !c.phoneRow || !!stageFilter).map(chipBtn)}
+                {chips.filter((c) => !((!stageFilter && c.phoneRow) || quick === c.id)).map(chipBtn)}
                 <label className="muted" title={t(locale, 'a6_sch_dates')}>
                   {t(locale, 'a6_sch_dates')}{' '}
                   <input type="date" value={loadFrom} onChange={(e) => setLoadFrom(e.target.value)} aria-label={t(locale, 'a6_sch_dates')} />

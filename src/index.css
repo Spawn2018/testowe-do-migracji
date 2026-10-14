@@ -1459,3 +1459,7 @@ img,video{max-width:100%;height:auto}
   .sbar-tile{padding:9px 8px 8px}
   .sbar-grp span{padding:3px 8px}
 }
+@media (max-width:768px){
+  /* „Kolumny” dotyczą tabeli na komputerze — na telefonie lista to karty */
+  .sched-actions-pop .sched-col-picker{display:none}
+}

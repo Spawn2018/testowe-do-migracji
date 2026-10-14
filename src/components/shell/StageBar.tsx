@@ -111,6 +111,7 @@ export function StageChip() {
       className="chipbtn sbar-chip"
       data-stage-chip={stageFilter}
       title={t(locale, 'p4_bar_clear')}
+      aria-label={tp(locale, 'p4_chip_aria', { stage: t(locale, `p4_tile_${stageFilter}`) })}
       onClick={() => useTowerStore.getState().navigateTo({ stage: null })}
     >
       {tp(locale, 'p4_chip', { stage: t(locale, `p4_tile_${stageFilter}`) })}
