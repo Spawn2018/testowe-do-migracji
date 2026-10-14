@@ -16,7 +16,9 @@ describe('AUD-03 — panel zlecenia KSH (źródło)', () => {
     const d = src('src/components/drawer/LoadDrawer.tsx');
     expect(d).not.toMatch(/KshSideMenu/);
     expect(d).not.toMatch(/if \(role === 'KSH'\) \{\s*return/);
-    expect(d).toMatch(/data-ksh-actions/);
+    // wyglad/P7-a — E32 pkt 4: „Edytuj” daty KSH w sekcji „Plan i ETA” Przeglądu (PanelOverview); okno dat zostaje w panelu.
+    expect(src('src/components/drawer/PanelOverview.tsx')).toMatch(/data-ksh-actions/);
+    expect(d).toMatch(/onKshDates=\{/);
     expect(d).toMatch(/<KshDatesModal/);
     // E25: „Zmień status” (przepisane w wyglad/P4-b — E25, img/e25-after) w zakładce Status, tylko przy canStatus.
     // wyglad/P6-b — E17 (20:57): „Czat” to sama rozmowa — bez „Przypisz SCX”, symulacji strefy i linku dla kierowcy.

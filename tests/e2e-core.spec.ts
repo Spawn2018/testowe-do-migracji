@@ -39,10 +39,14 @@ test.describe('E2E core (demo)', () => {
     await role(page, 'SCX')
     await page.locator('nav button[data-view="sched"]').click()
 
+    /* wyglad/P7-a — E32 (img/e32-after „okno Awizacja”): przyciski „Uzupełnij awizację” / „Edytuj awizację”, tytuł
+       „Awizacja · <kod>”, odcinek kierowcy z polami „Imię i nazwisko” i „Ciągnik” (wersaliki) */
+    const ADD = 'Uzupełnij awizację'
+    const EDIT = 'Edytuj awizację'
     const fillAwiz = async (driver: string, plate: string) => {
       const modal = page.locator('[data-awiz-modal]')
-      await modal.locator('label.form-field', { hasText: 'Kierowca' }).locator('input').fill(driver)
-      await modal.locator('label.form-field', { hasText: 'Ciągnik' }).locator('input').fill(plate)
+      await modal.locator('label.form-field', { hasText: 'Imię i nazwisko' }).first().locator('input').fill(driver)
+      await modal.locator('label.form-field', { hasText: 'Ciągnik' }).first().locator('input').fill(plate)
       await page.locator('[data-awiz-save]').click()
       await expect(modal).toHaveCount(0)
     }
@@ -54,14 +58,15 @@ test.describe('E2E core (demo)', () => {
     const firstLabel = ((await openBtn.textContent()) ?? '').trim()
     await openBtn.click()
     await expect(page.locator('[data-awiz-modal]')).toBeVisible()
-    await expect(page.locator('#awiz-title')).toContainText(firstLabel === 'Edytuj' ? 'Edytuj' : 'Dodaj')
+    expect([ADD, EDIT]).toContain(firstLabel)
+    await expect(page.locator('#awiz-title')).toContainText('Awizacja · ')
     await fillAwiz('Jan Testowy', 'TESTE201')
 
     await page.locator('.drawer .drawer-hd button.iconbtn').last().click().catch(() => {})
     await page.waitForTimeout(200)
     const rows = page.locator('tr[data-load]')
     const n = await rows.count()
-    const want = firstLabel === 'Dodaj' ? 'Edytuj' : 'Dodaj'
+    const want = firstLabel === ADD ? EDIT : ADD
     let found = false
     for (let i = 0; i < Math.min(n, 50); i++) {
       await rows.nth(i).click()
@@ -74,14 +79,14 @@ test.describe('E2E core (demo)', () => {
       const label = ((await btn.textContent()) ?? '').trim()
       if (label === want) {
         await btn.click()
-        await expect(page.locator('#awiz-title')).toContainText(want)
-        await fillAwiz(want === 'Dodaj' ? 'Adam Nowy' : 'Piotr Edytowany', want === 'Dodaj' ? 'POZNE201' : 'EDITE201')
+        await expect(page.locator('#awiz-title')).toContainText('Awizacja · ')
+        await fillAwiz(want === ADD ? 'Adam Nowy' : 'Piotr Edytowany', want === ADD ? 'POZNE201' : 'EDITE201')
         found = true
         break
       }
       await page.locator('.drawer .drawer-hd button.iconbtn').last().click().catch(() => {})
     }
-    expect(found || firstLabel === 'Edytuj' || firstLabel === 'Dodaj').toBeTruthy()
+    expect(found || firstLabel === EDIT || firstLabel === ADD).toBeTruthy()
   })
 
   test('decyzja: kolejka „Wymaga decyzji” → klik otwiera kontekst', async ({ page }) => {
