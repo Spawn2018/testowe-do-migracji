@@ -20,6 +20,7 @@ import { triggerToDb } from '../data/workflowMap';
 import type { WorkflowRule } from '../types';
 import { AutoRulesList } from '../components/automations/AutoRulesList';
 import { autoMetaOf } from '../lib/p4cSource';
+import { getNowIso } from '../lib/frozenNow';
 
 /** tryb Supabase — stała z kompilacji, by paczka demo nie zawierała klienta bazy (I-2) */
 const LIVE = import.meta.env.VITE_AUTH_MODE === 'supabase';
@@ -81,7 +82,7 @@ export function WorkflowsView() {
   /* wyglad/P4-c (E35 pkt 1, L13): pierwsza zakładka „Działa samo”; wskazana reguła własna otwiera „Własne reguły” */
   const [wfTab, setWfTab] = useState<'auto' | 'own'>(workflowFocus ? 'own' : 'auto');
   useEffect(() => { if (workflowFocus) setWfTab('own'); }, [workflowFocus]);
-  const autoMeta = useMemo(() => autoMetaOf(loads, events), [loads, events]);
+  const autoMeta = useMemo(() => autoMetaOf(loads, events, getNowIso()), [loads, events]);
   const manage = canManageWorkflows(PROD_BUILD, undefined, PROD_BUILD ? undefined : role);
   const active = workflows.filter((w) => w.enabled).length;
   const focused = workflowFocus ? workflows.find((w) => w.id === workflowFocus || w.name === workflowFocus) : undefined;
@@ -160,11 +161,23 @@ export function WorkflowsView() {
         <div className="spacer" />
         {manage ? <button type="button" className="btn" data-wf-new onClick={openNew}>{t(locale, 'b5_new')}</button> : null}
       </header>
-      <div className="dtabs wf-tabs" role="tablist" aria-label={t(locale, 'nav_wf')}>
-        <button type="button" role="tab" id="wf-tab-auto" aria-controls="wf-panel-auto" aria-selected={wfTab === 'auto'} data-wf-tab="auto" onClick={() => setWfTab('auto')}>
+      <div
+        className="dtabs wf-tabs"
+        role="tablist"
+        aria-label={t(locale, 'nav_wf')}
+        onKeyDown={(e) => {
+          /* klawiatura: strzałki przełączają zakładki (wzorzec tablist) */
+          if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft' && e.key !== 'Home' && e.key !== 'End') return;
+          e.preventDefault();
+          const next = e.key === 'Home' ? 'auto' : e.key === 'End' ? 'own' : wfTab === 'auto' ? 'own' : 'auto';
+          setWfTab(next);
+          document.getElementById(`wf-tab-${next}`)?.focus();
+        }}
+      >
+        <button type="button" role="tab" id="wf-tab-auto" aria-controls="wf-panel-auto" aria-selected={wfTab === 'auto'} tabIndex={wfTab === 'auto' ? 0 : -1} data-wf-tab="auto" onClick={() => setWfTab('auto')}>
           {wt(locale, 'p4c_wf_tab_auto')}
         </button>
-        <button type="button" role="tab" id="wf-tab-own" aria-controls="wf-panel-own" aria-selected={wfTab === 'own'} data-wf-tab="own" onClick={() => setWfTab('own')}>
+        <button type="button" role="tab" id="wf-tab-own" aria-controls="wf-panel-own" aria-selected={wfTab === 'own'} tabIndex={wfTab === 'own' ? 0 : -1} data-wf-tab="own" onClick={() => setWfTab('own')}>
           {wt(locale, 'p4c_wf_tab_own', { n: workflows.length })}
         </button>
       </div>

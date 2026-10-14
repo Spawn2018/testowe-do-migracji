@@ -97,8 +97,9 @@ export function StatusAxisTab({
   /** wyglad/P4-c — sprawa nad osią (E26 pkt 4, L14) */
   top?: ReactNode;
 }) {
-  const [prepOpen, setPrepOpen] = useState(false);
   const axis = buildStatusAxis(load, events);
+  /* telefon: „Przygotowanie” rozwinięte, gdy transport jeszcze w nim jest (widać „Brakuje: …” przy „Gotowy”) */
+  const [prepOpen, setPrepOpen] = useState(() => axis.groups.find((g) => g.key === 'prep')?.rows.some((r) => r.kind === 'current') ?? false);
   const hits = new Map<LoadStatus, AxisHit | null>();
   for (const g of axis.groups) for (const r of g.rows) if (r.hit) hits.set(r.statuses[0], r.hit);
   const order = phone ? (['route', 'after', 'prep'] as const) : (['prep', 'route', 'after'] as const);

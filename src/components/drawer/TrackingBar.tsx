@@ -11,11 +11,11 @@ import { trackingPhase } from '../../lib/stageTiles';
 import { buildStatusAxis, dayOnly, dayTime, isoMs } from '../../lib/statusAxis';
 import { hasAwizacja } from '../../lib/awizacjaState';
 import { trackerKind } from '../../lib/trackerLink';
-import { trackerBarRio } from '../../lib/p4c';
+import { rioStartsLate, trackerBarRio } from '../../lib/p4c';
 
-function trackerText(load: Pick<Load, 'resources'>, locale: Locale, link: TrackingLinkInfo | null, nowIso: string): string {
+function trackerText(load: Pick<Load, 'resources' | 'plannedLoadDate'>, locale: Locale, link: TrackingLinkInfo | null, nowIso: string): string {
   /* wyglad/P4-c (E44 pkt 5, 6): link RIO z serwera — pojazd z lokalizatorem, start i wygaśnięcie linku */
-  const rio = trackerBarRio(link, nowIso, locale);
+  const rio = trackerBarRio(link, nowIso, locale, load);
   if (rio) return rio;
   const kind = trackerKind(load.resources.trackingRef);
   const plate = (load.resources.trailerPlate ?? '').trim();
@@ -58,7 +58,7 @@ export function TrackingBar({
       t(locale, hasAwizacja(load) ? 'p4b_trk_before_sub' : 'p4b_trk_before_sub_noawiz'),
       trailer ? tp(locale, 'p4b_trailer', { plate: trailer }) : t(locale, 'p4b_no_trailer'),
       /* wyglad/P4-c (E44 pkt 5): link RIO nadaje później niż od 03:00 albo już wygasł */
-      trackingLink?.provider === 'RIO' && ((trackingLink.validFrom && isoMs(trackingLink.validFrom) > isoMs(nowIso)) || (trackingLink.validTo && isoMs(trackingLink.validTo) <= isoMs(nowIso)))
+      trackingLink?.provider === 'RIO' && (rioStartsLate(trackingLink, load, nowIso) || (trackingLink.validTo && isoMs(trackingLink.validTo) <= isoMs(nowIso)))
         ? tracker
         : null,
     ].filter(Boolean).join(' · ');

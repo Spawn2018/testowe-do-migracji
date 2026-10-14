@@ -44,7 +44,7 @@ const PL: Record<string, string> = {
   p4c_wf_zt_out: 'Wyjazd',
   p4c_wf_zt_srem: 'KSH Śrem (załadunek)',
   p4c_wf_zt_srem_in: 'Załadunek',
-  p4c_wf_zt_srem_out: 'Droga PL — po postoju ≥ 5 min (załadowany)',
+  p4c_wf_zt_srem_out: 'Droga PL — po postoju ≥ 5 min (próg strefy; załadowany)',
   p4c_wf_zt_portpl: 'Port PL — Gdańsk, Gdynia',
   p4c_wf_zt_portpl_in: 'Port PL',
   p4c_wf_zt_portpl_out: 'bez zmiany — „Na promie” z odejścia rejsu',
@@ -53,13 +53,11 @@ const PL: Record<string, string> = {
   p4c_wf_zt_portse_out: 'Droga SE',
   p4c_wf_zt_site: 'Plac budowy Stegra Boden',
   p4c_wf_zt_site_in: 'Na placu',
-  p4c_wf_zt_site_out: 'Dostarczone — po ≥ 10 min; krócej: sprawa „czy dostarczono?” dla SCX',
+  p4c_wf_zt_site_out: 'Dostarczone — po ≥ 10 min (próg strefy); krócej: sprawa „czy dostarczono?” dla SCX',
   p4c_wf_zt_buf: 'Bufory: 20 km przed portem, 50 km przed Boden i Śremem',
   p4c_wf_zt_buf_in: 'bez zmiany statusu',
   p4c_wf_zt_buf_out: 'bez zmiany statusu',
-  p4c_wf_zt_who: 'Zmienia tylko Administrator HHL: edycja strefy (E34) i własne reguły (E35). Wierszy tej listy nie edytuje się tutaj.',
-  p4c_wf_more: 'Więcej',
-  p4c_wf_less: 'Zwiń',
+  p4c_wf_zt_who: 'Zmienia tylko Administrator HHL: edycja strefy i własne reguły. Wierszy tej listy nie edytuje się tutaj.',
 };
 
 /** Tekst „Działa samo” z parametrami `{nazwa}`. */

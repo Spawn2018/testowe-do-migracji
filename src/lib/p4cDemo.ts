@@ -91,9 +91,11 @@ export function demoDeliveredCheck(
 }
 
 /** E35 pkt 1 — ostatnie działanie „Statusu ze stref” z dziennika zdarzeń demo. */
-export function demoAutoMeta(loads: readonly Load[], events: readonly LoadEvent[]): Partial<Record<string, string>> {
+export function demoAutoMeta(loads: readonly Load[], events: readonly LoadEvent[], nowIso: string): Partial<Record<string, string>> {
+  const now = isoMs(nowIso);
   const last = [...events]
     .filter((e) => e.type === 'STATUS_AUTO' || e.type.startsWith('GEOFENCE_') || ['LOADING', 'LOADED', 'PORT_OUT', 'PORT_IN', 'SITE', 'UNLOADED'].includes(e.type))
+    .filter((e) => isoMs(e.at) <= now)
     .sort((a, b) => isoMs(b.at) - isoMs(a.at))[0];
   const load = last ? loads.find((l) => l.id === last.loadId) : undefined;
   return {

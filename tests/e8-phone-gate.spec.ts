@@ -940,13 +940,45 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
       await expect(f).toHaveAttribute('data-tl-mode', 'change');
       const input = f.locator('input');
       await expect(input).toHaveValue('');
-      await input.fill('https://public.position-sharing.rio.cloud/?id=00000000-0000-0000-0000-000000000000&secret=TEST');
-      await expect(f.locator('[data-awiz-tracking-kind="rio"]')).toBeVisible();
+      await expect(input).toBeFocused();
+      /* wklejony link z kluczem znika z pola od razu (E44 pkt 8) — klucza nie ma nigdzie w stronie */
+      const FAKE = 'zmyslony-P4C-1';
+      await input.dispatchEvent('paste');
+      await input.fill(`https://public.position-sharing.rio.cloud/?id=00000000-0000-0000-0000-000000000000&secret=${FAKE}`);
+      await expect(f).toHaveAttribute('data-tl-mode', 'new-rio');
+      await expect(f.locator('[data-tl-new]')).toContainText('RIO · nowy link · ••••');
+      expect(await page.evaluate((k) => document.documentElement.outerHTML.includes(k), FAKE)).toBe(false);
+      /* wpisany ręcznie — zakryty po wyjściu z pola */
+      await f.locator('[data-tl-repaste]').click();
+      await expect(f.locator('input')).toBeFocused();
+      await f.locator('input').pressSequentially(`https://public.position-sharing.rio.cloud/?id=1&secret=${FAKE}`, { delay: 0 });
+      await f.locator('input').blur();
+      await expect(f).toHaveAttribute('data-tl-mode', 'new-rio');
+      expect(await page.evaluate((k) => document.documentElement.outerHTML.includes(k), FAKE)).toBe(false);
       await f.locator('[data-tl-keep]').click();
       await expect(f).toHaveAttribute('data-tl-mode', 'saved');
+      await expect(f.locator('[data-tl-change]')).toBeFocused();
       await noSideScroll(page, width);
       await page.keyboard.press('Escape');
     }
+  });
+
+  test('komputer SCX: nowy link RIO zapisany w awizacji — po ponownym otwarciu „RIO · … · ••••”, klucza nie ma w stronie', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'SCX');
+    await openCode(page, 'P-01');
+    await page.locator('[data-awiz-open]').click();
+    const f = page.locator('[data-awiz-tracking]');
+    await f.locator('[data-tl-change]').click();
+    const FAKE = 'zmyslony-P4C-2';
+    await f.locator('input').dispatchEvent('paste');
+    await f.locator('input').fill(`https://public.position-sharing.rio.cloud/?id=11111111-1111-1111-1111-111111111111&secret=${FAKE}`);
+    await page.locator('[data-awiz-save]').click();
+    await expect(page.locator('.awiz-modal')).toHaveCount(0);
+    await page.locator('[data-awiz-open]').click();
+    await expect(page.locator('[data-awiz-tracking]')).toHaveAttribute('data-tl-mode', 'saved');
+    await expect(page.locator('[data-awiz-tracking] [data-tl-chip]')).toHaveText(/^RIO · .+ · ••••$/);
+    expect(await page.evaluate((k) => document.documentElement.outerHTML.includes(k), FAKE)).toBe(false);
   });
 
   test('komputer SCX: „Gotowy” — zdanie z brakami na osi i w oknie, „Zapisz status” zablokowany (D-02); komplet (P-01)', async ({ page }) => {

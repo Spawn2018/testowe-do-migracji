@@ -95,7 +95,7 @@ export function AutoRulesList({ locale, meta }: { locale: Locale; meta: Partial<
                     type="button"
                     className="arl-hd"
                     aria-expanded={isOpen}
-                    aria-controls={`arl-${r.id}`}
+                    aria-controls={isOpen ? `arl-${r.id}` : undefined}
                     onClick={() => setOpen(isOpen ? null : r.id)}
                   >
                     <span className="arl-txt">

@@ -4,7 +4,10 @@
  * Rejestracje i identyfikatory zmyślone (G-09, G-17).
  */
 import { readFileSync } from 'node:fs';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { TrackingLinkField } from '../src/components/drawer/TrackingLinkField';
 import { deliveryRefMs, readyGapsText, trackerBarRio, trackingLinkNotes, trackingStartMs } from '../src/lib/p4c';
 import type { Load, TrackingLinkInfo } from '../src/types';
 
@@ -42,8 +45,11 @@ describe('E44 — pod polem „Link śledzenia”', () => {
     expect(trackerBarRio(null, NOW, 'pl')).toBeNull();
     expect(trackerBarRio({ provider: 'EMTRACK' }, NOW, 'pl')).toBeNull();
   });
-  it('okno śledzenia od 03:00 w dniu załadunku; dostawa do końca dnia albo do godziny z okna KSH', () => {
+  it('okno śledzenia od 03:00 w dniu załadunku; dostawa do końca dnia albo do godziny z okna KSH; czas zimowy po 25.10', () => {
     expect(new Date(trackingStartMs(load)).toISOString()).toBe('2026-10-05T01:00:00.000Z');
+    const winter = { plannedLoadDate: '2026-11-03', plannedDeliverDate: '2026-11-06', planDates: undefined } as unknown as typeof load;
+    expect(new Date(trackingStartMs(winter)).toISOString()).toBe('2026-11-03T02:00:00.000Z');
+    expect(new Date(deliveryRefMs(winter)).toISOString()).toBe('2026-11-06T22:59:00.000Z');
     expect(new Date(deliveryRefMs(load)).toISOString()).toBe('2026-10-07T21:59:00.000Z');
     const withTo = { ...load, planDates: { deliveryTo: '2026-10-07T12:00:00+02:00' } } as unknown as typeof load;
     expect(new Date(deliveryRefMs(withTo)).toISOString()).toBe('2026-10-07T10:00:00.000Z');
@@ -74,9 +80,18 @@ describe('I-0 — przykłady P4-c tylko w demo', () => {
     expect(calls.length).toBeGreaterThan(0);
     expect(guarded.length).toBe(calls.length);
   });
-  it('klucz linku RIO nie trafia do widoku: pole pokazuje „RIO · … · ••••”, nie wartość z „secret”', () => {
-    const src = readFileSync(new URL('../src/components/drawer/TrackingLinkField.tsx', import.meta.url), 'utf8');
-    expect(src).toContain("p4c_tl_rio_chip");
-    expect(src).not.toMatch(/\{\s*(savedRef|saved)\s*\}/);
+  it('klucz linku RIO nie trafia do widoku: zapisany link (z danymi z serwera i bez nich, także „rio:”) → „RIO · … · ••••”', () => {
+    const FAKE = 'zmyslony-unit';
+    const url = `https://public.position-sharing.rio.cloud/?id=00000000-0000-0000-0000-000000000000&secret=${FAKE}`;
+    const render = (savedRef: string, info: TrackingLinkInfo | null) => renderToStaticMarkup(createElement(TrackingLinkField, {
+      value: savedRef, onChange: () => {}, savedRef, info, load, locale: 'pl', nowIso: NOW,
+    }));
+    for (const [ref, info] of [[url, null], [url, { provider: 'RIO', asset: 'TST 0001', check: { state: 'ok' } }], [`rio:${FAKE}`, null]] as const) {
+      const html = render(ref, info as TrackingLinkInfo | null);
+      expect(html).toContain('data-tl-chip');
+      expect(html).not.toContain(FAKE);
+    }
+    /* emtrack i inne adresy — jak dziś, w polu */
+    expect(render('https://emtrack.eu/app/', null)).toContain('value="https://emtrack.eu/app/"');
   });
 });

@@ -313,6 +313,8 @@ export interface DeliveredCheck {
   exitAt: string;
   /** minuty na placu przed wyjazdem */
   minutes: number;
+  /** próg strefy placu w minutach (E26: dziś 10) */
+  thresholdMin?: number;
   zoneName: string;
   /** czy to konto rozstrzyga (przewoźnik) */
   canDecide: boolean;

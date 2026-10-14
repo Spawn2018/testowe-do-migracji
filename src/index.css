@@ -1602,6 +1602,7 @@ img,video{max-width:100%;height:auto}
 .arl-zt th,.arl-zt td{padding:6px 8px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:top}
 .arl-zt thead th{font-family:var(--font-cond);font-weight:600;font-size:12px;letter-spacing:.06em;color:var(--ink-3)}
 .arl-zt tbody th{font-weight:600;color:var(--ink)}
+.arl-zt tbody tr:hover{background:transparent}
 .arl-last,.arl-who{margin:0 0 8px;font-size:12.5px;line-height:1.45;color:var(--ink-2)}
 .arl-go{padding:6px 12px;border-color:var(--ink)}
 .arl-foot{margin:0;padding:10px 14px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink-3)}
@@ -1632,6 +1633,7 @@ img,video{max-width:100%;height:auto}
   .arl-go{width:100%;min-height:44px}
   /* tabela reguł → karty jak każda tabela na telefonie (.app td z data-label); nazwa strefy jako nagłówek karty */
   .arl-zt tr{margin:0 0 8px}
-  .arl-zt tbody th{padding:8px 12px 2px;border:0}
+  .arl-zt th,.arl-zt td{border-bottom:0}
+  .arl-zt tbody th{padding:8px 12px 2px;border:0;text-align:left}
   .arl-foot{padding:10px 12px}
 }

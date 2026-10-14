@@ -8,6 +8,10 @@
 import type { Load, Locale, ReadyGap, TrackingLinkInfo } from '../types';
 import { t, tp } from '../i18n/messages';
 import { dayOnly, dayTime, isoMs, timeOnly } from './statusAxis';
+import { TZ_OPS, wallLocalToIso } from './time';
+
+/** godzina czasu polskiego w danym dniu → ms (zmiana czasu 25.10 — bez stałego „+02:00”) */
+const warsawMs = (day: string, hhmm: string) => isoMs(wallLocalToIso(`${day}T${hhmm}`, TZ_OPS));
 
 export type TlTone = 'ok' | 'info' | 'warn' | 'bad';
 export type TlNote = { key: string; tone: TlTone; text: string };
@@ -17,13 +21,13 @@ export function deliveryRefMs(load: Pick<Load, 'plannedDeliverDate' | 'planDates
   const to = load.planDates?.deliveryTo;
   if (to && /T\d{2}:\d{2}/.test(to)) return isoMs(to);
   const day = (to ?? load.plannedDeliverDate ?? '').slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? Date.parse(`${day}T23:59:00+02:00`) : Number.NaN;
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? warsawMs(day, '23:59') : Number.NaN;
 }
 
 /** Start okna śledzenia: 03:00 czasu polskiego w dniu załadunku (E27, L15, L16). */
 export function trackingStartMs(load: Pick<Load, 'plannedLoadDate'>): number {
   const day = (load.plannedLoadDate ?? '').slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? Date.parse(`${day}T03:00:00+02:00`) : Number.NaN;
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? warsawMs(day, '03:00') : Number.NaN;
 }
 
 function trackerLine(info: TrackingLinkInfo, locale: Locale): string | null {
@@ -78,16 +82,22 @@ export function trackingLinkNotes(
   if (!expired && to && Number.isFinite(deliv) && isoMs(to) < deliv) {
     notes.push({ key: 'expires-early', tone: 'warn', text: tp(locale, 'p4c_tl_expires_early', { to: dayTime(to), day: dayOnly(load.planDates?.deliveryTo ?? load.plannedDeliverDate) }) });
   }
-  const from = info.validFrom ?? null;
-  const start = trackingStartMs(load);
-  if (from && isoMs(from) > now && Number.isFinite(start) && isoMs(from) > start) {
-    notes.push({ key: 'starts-late', tone: 'info', text: tp(locale, 'p4c_tl_starts_late', { from: dayTime(from) }) });
+  if (info.validFrom && rioStartsLate(info, load, nowIso)) {
+    notes.push({ key: 'starts-late', tone: 'info', text: tp(locale, 'p4c_tl_starts_late', { from: dayTime(info.validFrom) }) });
   }
   return { check, notes, tracker: expired ? null : trackerLine(info, locale) };
 }
 
 /** Opis lokalizatora w pasku śledzenia panelu (E44 pkt 5, 6); null = bez danych z serwera (zostaje opis P4-b). */
-export function trackerBarRio(info: TrackingLinkInfo | null | undefined, nowIso: string, locale: Locale): string | null {
+/** Link RIO nadaje później niż od startu okna śledzenia (03:00 w dniu załadunku) i ten czas jeszcze nie minął (E44 pkt 5). */
+export function rioStartsLate(info: TrackingLinkInfo | null | undefined, load: Pick<Load, 'plannedLoadDate'> | null, nowIso: string): boolean {
+  const from = info?.validFrom;
+  if (!from || isoMs(from) <= isoMs(nowIso)) return false;
+  const start = load ? trackingStartMs(load) : Number.NaN;
+  return !Number.isFinite(start) || isoMs(from) > start;
+}
+
+export function trackerBarRio(info: TrackingLinkInfo | null | undefined, nowIso: string, locale: Locale, load: Pick<Load, 'plannedLoadDate'> | null = null): string | null {
   if (!info || info.provider !== 'RIO') return null;
   const now = isoMs(nowIso);
   if (info.validTo && isoMs(info.validTo) <= now) return tp(locale, 'p4c_trk_rio_expired', { at: dayTime(info.validTo) });
@@ -96,7 +106,7 @@ export function trackerBarRio(info: TrackingLinkInfo | null | undefined, nowIso:
   if (asset && info.trackerOn === 'NACZEPA') text = tp(locale, 'p4c_trk_rio_trailer', { asset });
   else if (asset && (info.trackerOn === 'CIAGNIK_PL' || info.trackerOn === 'CIAGNIK_SE')) text = tp(locale, 'p4c_trk_rio_tractor', { asset });
   else if (asset && info.trackerOn === 'NIEZNANY') text = tp(locale, 'p4c_trk_rio_unknown', { asset });
-  if (info.validFrom && isoMs(info.validFrom) > now) text = `${text} · ${tp(locale, 'p4c_trk_rio_starts', { from: dayTime(info.validFrom) })}`;
+  if (info.validFrom && rioStartsLate(info, load, nowIso)) text = `${text} · ${tp(locale, 'p4c_trk_rio_starts', { from: dayTime(info.validFrom) })}`;
   return text;
 }
 

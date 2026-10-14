@@ -261,12 +261,15 @@ export function LoadDrawer() {
       check={deliveredCheck}
       locale={locale}
       onYes={import.meta.env.VITE_AUTH_MODE !== 'supabase'
-        ? () => setLoadStatus(load.id, 'DELIVERED', role, tp(locale, 'p4c_dc_title', { n: deliveredCheck.minutes }), deliveredCheck.exitAt)
+        ? () => setLoadStatus(load.id, 'DELIVERED', role, tp(locale, 'p4c_dc_note_yes', { n: deliveredCheck.minutes }), deliveredCheck.exitAt)
         : undefined}
       onNo={import.meta.env.VITE_AUTH_MODE !== 'supabase'
         ? () => {
           setDcClosed(deliveredCheck.id);
+          useTowerStore.getState().appendEvent({ loadId: load.id, type: 'NOTE', at: nowIso, actor: role, note: tp(locale, 'p4c_dc_note_no', { n: deliveredCheck.minutes }) });
           pushToast(t(locale, 'p4c_dc_no_done'), 'LOW', load.id);
+          /* fokus nie ginie razem z kartą */
+          window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.drawer [data-action="change-status"]')?.focus());
         }
         : undefined}
     />

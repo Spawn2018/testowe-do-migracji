@@ -31,6 +31,6 @@ export function deliveredCheckOf(
 }
 
 /** Ostatnie działania automatów na liście „Działa samo” (E35 pkt 1); produkcja — wykonawca. */
-export function autoMetaOf(loads: readonly Load[], events: readonly LoadEvent[]): Partial<Record<string, string>> {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoAutoMeta(loads, events) : {};
+export function autoMetaOf(loads: readonly Load[], events: readonly LoadEvent[], nowIso: string): Partial<Record<string, string>> {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoAutoMeta(loads, events, nowIso) : {};
 }
