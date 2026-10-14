@@ -2208,3 +2208,8 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - TEST wolne.
 
 **CZEKA NA WŁAŚCICIELA: W34 — GitHub Actions billing / spending limit.** Po „W34 gotowe” — checki, merge #184, migracja 0204, Edge `web-push-send`, sygnał P3-poprawki NA PRODUKCJI. Wracam do P4 (bez wdrożenia migracji P4 do po Poprawkach P3).
+
+## 2026-10-14 — W34 dostarczone; Poprawki P3 — ponowienie bram
+
+- W34 dostarczone 14.10.2026, 01:55 (właściciel: GitHub Actions działa).
+- Ponowienie checków PR #184 na głowie; TEST z `10d21b5b` nadal ważny (późniejsze commity tylko `docs/**`).
