@@ -352,6 +352,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
 
 ### P6 · Do zrobienia, ryzyka, panel i historia — DO ZROBIENIA
 - **E7** „Do zrobienia”:
+  - liczba przy dzwonku = „Do zrobienia” (`todoQueue`), E9 (D-20261014-0215-01 H3); pełna lista w `todoRisks()` (`src/lib/cockpitE9.ts`);
   - karta na transport, sprawy z firmą i osobą, przyciski;
   - filtry „Moje / Moja firma / Wszystkie”, jedna liczba (E7-2), samozamykanie;
   - „Sytuacja na trasie”; zakazy jako informacja; sprawy techniczne → Stan systemu (E7-3);
