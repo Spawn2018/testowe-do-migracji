@@ -39,3 +39,8 @@ export function statusLabel(status: LoadStatus, stage?: CorridorStage, locale: L
   if (key) return t(locale, key);
   return stage ? t(locale, STAGE_KEYS[stage]) : status;
 }
+
+/** wyglad/P4 (E25, L7): nazwa etapu bez statusu — dla „Opóźniony” i „Cichy”, które w E25 są oznaczeniem obok statusu. */
+export function stageOnlyLabel(stage: CorridorStage, locale: Locale = 'pl'): string {
+  return t(locale, STAGE_KEYS[stage]);
+}

@@ -1,5 +1,7 @@
-import type { CorridorStage, LoadStatus } from '../../types';
-import { statusLabel } from '../../lib/statusLabel';
+import type { CorridorStage, Load, LoadStatus } from '../../types';
+import { stageOnlyLabel, statusLabel } from '../../lib/statusLabel';
+import { statusMarkers } from '../../lib/stageTiles';
+import { t } from '../../i18n/messages';
 import { statusTone } from '../../lib/status';
 import { useTowerStore } from '../../store/useTowerStore';
 
@@ -34,9 +36,32 @@ export function StatusPill({
   stage?: CorridorStage;
 }) {
   const locale = useTowerStore((s) => s.locale);
-  const tone =
-    status === 'DELAYED' || status === 'SILENT'
-      ? 'warn'
-      : statusTone(status);
-  return <span className={`pill ${TONE_PILL[tone]}`}>{statusLabel(status, stage, locale)}</span>;
+  /* wyglad/P4 (E25, L7): „Opóźniony” i „Cichy” to oznaczenia obok statusu, nie status — w pigułce nazwa etapu */
+  const flagOnly = (status === 'DELAYED' || status === 'SILENT') && !!stage;
+  const tone = flagOnly ? 'ok' : statusTone(status);
+  return <span className={`pill ${TONE_PILL[tone]}`}>{flagOnly ? stageOnlyLabel(stage!, locale) : statusLabel(status, stage, locale)}</span>;
+}
+
+/**
+ * wyglad/P4 (E25, L7): oznaczenia obok statusu — Opóźniony (gdy brak liczby minut; inaczej „+2h05”), Brak GPS, Brak dokumentów.
+ */
+export function StatusMarkers({
+  load,
+  delayMin,
+}: {
+  load: Pick<Load, 'status' | 'stage' | 'delayed' | 'docMissing' | 'silentMinutes'>;
+  delayMin: number | null;
+}) {
+  const locale = useTowerStore((s) => s.locale);
+  const markers = statusMarkers(load, { hasDelayMinutes: delayMin != null });
+  return (
+    <>
+      {delayMin != null ? <span className="pill p-red st-mk" data-marker="delay">{formatDelayPill(delayMin)}</span> : null}
+      {markers.map((m) => (
+        <span key={m} className={`pill ${m === 'nogps' ? 'p-amber' : 'p-red'} st-mk`} data-marker={m}>
+          {t(locale, `p4_m_${m}`)}
+        </span>
+      ))}
+    </>
+  );
 }

@@ -1,3 +1,4 @@
 # Brama E8: paski przewijane w bok, które wolno mieć na telefonie (E8 pkt 1: „poza paskami przewijanymi w bok”).
 # Selektor | powód. Tylko to, co przewiduje etap (np. filtry stanu Harmonogramu, E8 pkt 5 — P7).
-# Strona, `main` i `.app` nigdy nie są paskiem. Dziś (13.10, wyglad/P2-2-popr) żaden pasek nie jest potrzebny.
+# Strona, `main` i `.app` nigdy nie są paskiem.
+.sbar-scroll | E28 pkt 4 (decyzja 07.10 20:57): pasek etapów na telefonie nad Harmonogramem i Mapą, przewijany w bok (wyglad/P4)

@@ -1376,3 +1376,86 @@ img,video{max-width:100%;height:auto}
   .panel.grid2.ck-solo .ck-map{border-left:1px solid var(--rule-2)}
   .panel.grid2.ck-solo .ck-map>.panel-hd{border-top:0}
 }
+/* ===== wyglad/P4 — E28 pasek etapów (img/e28-after, makieta E28/pasek.html): 10 kafelków z liczbą według statusów E25 =====
+   Komputer: grupy Przygotowanie · W trasie, śledzenie · Po dostawie; kafelek = nazwa, liczba; zero wyszarzone; włączony = ciemny z „✕”.
+   Telefon (≤ 768 px): pasek tylko w Harmonogramie i na Mapie, przewijany w bok (liczba nad nazwą). */
+.sbar{background:var(--surface);border-bottom:1px solid var(--rule);flex-shrink:0}
+.sbar-grp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,7fr) minmax(0,2fr);background:var(--surface-2);border-bottom:1px solid var(--rule);
+  font-family:var(--font-cond);font-weight:600;font-size:11px;letter-spacing:.07em;color:var(--ink-3)}
+.sbar-grp span{padding:3px 12px;border-right:1px solid var(--rule-2);white-space:nowrap;overflow:hidden}
+.sbar-grp span:last-child{border-right:0}
+.sbar-row{display:grid;grid-template-columns:repeat(10,minmax(0,1fr))}
+.sbar-tile{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:1px;min-height:62px;min-width:0;
+  padding:9px 12px 8px;border-right:1px solid var(--rule-2);background:var(--surface);color:var(--ink);text-align:left;cursor:pointer}
+.sbar-tile:last-child{border-right:0}
+.sbar-tile:hover{background:var(--surface-2)}
+.sbar-tile .nm{display:flex;justify-content:space-between;gap:4px;font-size:12.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden}
+.sbar-tile .n{font-family:var(--font-cond);font-weight:700;font-size:28px;line-height:1}
+.sbar-tile.zero .n{color:var(--plan)}
+.sbar-tile::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:transparent}
+.sbar-tile.pre::before{background:var(--plan)}
+.sbar-tile.sea::before{background:var(--sea)}
+.sbar-tile.site::before{background:var(--go)}
+.sbar-tile.acc::before{background:var(--amber)}
+.sbar-tile.on,.sbar-tile.on:hover{background:var(--ink);color:var(--surface)}
+.sbar-tile.on .nm{color:var(--rule)}
+.sbar-tile.on .n{color:var(--surface)}
+.sbar-x{font-weight:700;color:var(--surface)}
+/* chip filtru etapu nad listą (makieta .chip.f) */
+.chipbtn.sbar-chip{background:var(--sea-bg);border-color:var(--sea);color:var(--sea);font-weight:600}
+/* telefon: przewijany pasek nad listą */
+.sbar-scroll{display:none}
+@media (max-width:768px){
+  .sbar{display:none}
+  .sbar-scroll{display:flex;gap:8px;overflow-x:auto;padding:10px 12px;background:var(--surface);border-bottom:1px solid var(--rule);
+    scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+  .sbar-sc{flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:92px;min-height:62px;padding:6px 10px;
+    border:1px solid var(--rule);background:var(--surface);color:var(--ink);text-align:left;scroll-snap-align:start}
+  .sbar-sc b{font-family:var(--font-cond);font-weight:700;font-size:22px;line-height:1}
+  .sbar-sc span{font-size:12px;color:var(--ink-2);white-space:nowrap}
+  .sbar-sc.zero b{color:var(--plan)}
+  .sbar-sc.on{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+  .sbar-sc.on span{color:var(--rule)}
+  .sbar-sc.on b,.sbar-sc.on .sbar-x{color:var(--surface)}
+}
+/* Harmonogram (E28 pkt 2): liczba przy „Opóźnione”, licznik „1 z 94”, oznaczenia obok statusu (E25, L7) */
+.chip-n{font-style:normal;color:var(--ink-3);font-size:12.5px;margin-left:5px}
+.chipbtn[aria-pressed="true"] .chip-n{color:inherit}
+.sched-count{font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.st-wrap{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center}
+.sched-card .r1 .st-mk{margin-left:0}
+/* Mapa (E27): „W trasie: 0” na środku mapy i najbliższe włączenia śledzenia */
+.map-empty{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:500;display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:14px 18px;background:var(--surface);border:1px solid var(--rule);text-align:center;pointer-events:none;max-width:calc(100% - 32px)}
+.map-empty b{font-family:var(--font-cond);font-weight:700;font-size:20px}
+.map-empty span{font-size:13px;color:var(--ink-3)}
+.map-next{border-top:1px solid var(--rule);padding:8px 14px 10px}
+.map-next-hd{font-size:12.5px;color:var(--ink-3);margin-bottom:4px}
+.map-next-row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:7px 0;border-bottom:1px solid var(--rule-2);font-size:13px}
+.map-next-row:last-child{border-bottom:0}
+.map-next-warn{color:var(--amber-ink);font-weight:600}
+@media (max-width:768px){
+  /* telefon: działania Harmonogramu pod „⋯” (E8) i reszta filtrów pod „Filtry ▾” */
+  .sched-ph-search{position:relative;flex-wrap:nowrap}
+  .sched-ph-search input[type="search"]{flex:1 1 auto;font-size:16px}
+  .sched-more{font-size:18px;font-weight:700;letter-spacing:.1em}
+  .sched-actions-pop{position:absolute;right:12px;top:calc(100% - 2px);z-index:40;display:flex;flex-direction:column;align-items:stretch;gap:6px;
+    min-width:220px;padding:8px;background:var(--surface);border:1px solid var(--rule)}
+  .sched-actions-pop .chipbtn{width:100%;justify-content:flex-start}
+  .sched-more-filters{border-top:1px solid var(--rule-2)}
+  .sched-more-filters label{flex-wrap:wrap;gap:6px}
+}
+.sched-actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+@media (max-width:768px){
+  /* Harmonogram na telefonie (E8): przełącznik Transporty / Rejsy na całą szerokość, bez linii wersji (pierwsza karta wyżej) */
+  .page-sections[data-page="schedule"]>.panel-hd>.sub{display:none}
+  .page-sections[data-page="schedule"] [data-sched-tabs]{flex:1 1 100%;display:flex}
+  .page-sections[data-page="schedule"] [data-sched-tabs] button{flex:1 1 0;min-height:44px}
+}
+@media (min-width:769px) and (max-width:1180px){
+  /* węższy ekran: mniejsze wcięcie, żeby „Przygotowanie” się mieściło; poniżej 1000 px pasek przewija się w bok (jak dawny pasek) */
+  .sbar{overflow-x:auto}
+  .sbar-grp,.sbar-row{min-width:1000px}
+  .sbar-tile{padding:9px 8px 8px}
+  .sbar-grp span{padding:3px 8px}
+}

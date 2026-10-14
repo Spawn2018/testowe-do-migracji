@@ -1,15 +1,17 @@
-import type { Load, RoleId, CorridorStage } from '../types';
+import type { Load, RoleId } from '../types';
+import { stageTileOf, type StageTile } from './stageTiles';
 import { filterLoadsForRole } from './permissions';
 import { transportSearchBlob } from './transportName';
 
 export function filterLoads(
   loads: Load[],
   role: RoleId,
-  stageFilter: CorridorStage | null,
+  stageFilter: StageTile | null,
   search: string,
 ): Load[] {
   let list = filterLoadsForRole(loads, role);
-  if (stageFilter) list = list.filter((l) => l.stage === stageFilter);
+  /* wyglad/P4 (E28): kafelek według statusu E25 (src/lib/stageTiles.ts), jeden filtr dla Harmonogramu i Mapy */
+  if (stageFilter) list = list.filter((l) => stageTileOf(l) === stageFilter);
   const q = search.trim().toLowerCase();
   if (q) {
     list = list.filter(

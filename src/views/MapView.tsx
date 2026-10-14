@@ -13,6 +13,13 @@ import { formatOpsDateTime } from '../lib/time';
 import { clickableRow } from '../lib/clickableRow';
 import { vehiclesInMotion } from '../lib/format';
 import { transportLabel } from '../lib/transportName';
+import { StageBar, StageChip } from '../components/shell/StageBar';
+import { StatusMarkers } from '../components/ui/StatusPill';
+import { nextTrackingStarts, trackingPhase } from '../lib/stageTiles';
+import { filterLoadsForRole } from '../lib/permissions';
+import { getNow, getNowIso } from '../lib/frozenNow';
+import { formatTableDay, refYearInOps } from '../lib/time';
+import type { Load } from '../types';
 
 /** Claude maplayers — exactly 5. Labels via i18n. */
 const LAYER_ORDER: { key: string; labelKey: string }[] = [
@@ -53,13 +60,15 @@ function loadMapWidths(): Record<MapColId, number> {
   return base;
 }
 
-type TimingFilter = 'all' | 'ontime' | 'late' | 'nogps' | 'risk';
+/* wyglad/P4 (E27, img/e27-after): W trasie · Opóźnione · Brak GPS */
+type TimingFilter = 'all' | 'late' | 'nogps';
+const isLate = (l: Load) => l.delayed || l.status === 'DELAYED';
+const isNoGps = (l: Load) => l.status === 'SILENT' || (l.silentMinutes != null && l.silentMinutes >= 30);
 
 export function MapView() {
   const loads = useTowerStore((s) => s.loads);
   const role = useTowerStore((s) => s.role);
   const stageFilter = useTowerStore((s) => s.stageFilter);
-  const risks = useTowerStore((s) => s.risks);
   const search = useTowerStore((s) => s.search);
   const setSearch = useTowerStore((s) => s.setSearch);
   const hoverLoadId = useTowerStore((s) => s.hoverLoadId);
@@ -113,25 +122,19 @@ export function MapView() {
     [loads, role, stageFilter, search],
   );
 
-  const riskLoadIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const r of risks) {
-      if (r.loadId) ids.add(r.loadId);
-    }
-    return ids;
-  }, [risks]);
-
+  /* E27: na mapie tylko transporty w oknie śledzenia (od 03:00 w dniu załadunku do „Dostarczone”).
+     E28: z filtrem etapu tabela pokazuje ten etap (np. 92 w przygotowaniu), mapa — tylko te z nich, które są w trasie. */
+  const nowIso = getNowIso();
+  const tracked = useMemo(() => baseList.filter((l) => trackingPhase(l, nowIso) === 'on'), [baseList, nowIso]);
+  const tableBase = stageFilter ? baseList : tracked;
   const list = useMemo(() => {
-    if (timing === 'ontime') return baseList.filter((l) => !l.delayed);
-    if (timing === 'late') return baseList.filter((l) => l.delayed);
-    if (timing === 'nogps') {
-      return baseList.filter(
-        (l) => l.status === 'SILENT' || (l.silentMinutes != null && l.silentMinutes >= 30),
-      );
-    }
-    if (timing === 'risk') return baseList.filter((l) => riskLoadIds.has(l.id));
-    return baseList;
-  }, [baseList, timing, riskLoadIds]);
+    if (timing === 'late') return tableBase.filter(isLate);
+    if (timing === 'nogps') return tableBase.filter(isNoGps);
+    return tableBase;
+  }, [tableBase, timing]);
+  const onMap = useMemo(() => list.filter((l) => trackingPhase(l, nowIso) === 'on'), [list, nowIso]);
+  const nextStarts = useMemo(() => nextTrackingStarts(filterLoadsForRole(loads, role), nowIso, 3), [loads, role, nowIso]);
+  const refYear = refYearInOps(getNow());
 
   /* E: licznik „N pojazdów” = tylko pojazdy z prawdziwą pozycją GPS (prod); demo = progress w ruchu. */
   useEffect(() => {
@@ -157,12 +160,8 @@ export function MapView() {
   }, [list]);
 
 
-  const ontimeCount = baseList.filter((l) => !l.delayed).length;
-  const lateCount = baseList.filter((l) => l.delayed).length;
-  const nogpsCount = baseList.filter(
-    (l) => l.status === 'SILENT' || (l.silentMinutes != null && l.silentMinutes >= 30),
-  ).length;
-  const riskCount = baseList.filter((l) => riskLoadIds.has(l.id)).length;
+  const lateCount = tracked.filter(isLate).length;
+  const nogpsCount = tracked.filter(isNoGps).length;
 
   const startResize = (id: MapColId, clientX: number) => {
     const startW = widthsRef.current[id] ?? 80;
@@ -194,7 +193,7 @@ export function MapView() {
       <header className="panel-hd">
         <h2>{t(locale, 'nav_map')}</h2>
         <span className="sub">
-          {vehiclesInMotion(gpsWithFix)} · {t(locale, 'map_pos_every')}
+          {vehiclesInMotion(gpsWithFix)} · {t(locale, 'p4_map_sub')}
         </span>
         <div className="spacer" />
         <button type="button" className="chipbtn" onClick={() => setView('geo')}>
@@ -217,61 +216,55 @@ export function MapView() {
             ))}
           </div>
           <div className="mapstage">
-            <CorridorMap loads={list} />
+            <CorridorMap loads={onMap} />
+            {onMap.length === 0 ? (
+              /* E27: nikogo w oknie śledzenia — mapa bez znaczników z informacją na środku */
+              <div className="map-empty" data-map-empty>
+                <b>{t(locale, 'p4_map_empty')}</b>
+                <span>{t(locale, 'p4_map_empty_sub')}</span>
+              </div>
+            ) : null}
           </div>
         </div>
 
         <div className="mlist" style={{ display: 'flex', flexDirection: 'column', background: 'var(--surface)' }}>
-          <div className="filters" style={{ borderBottom: '1px solid var(--rule)' }}>
+          <StageBar variant="page" />
+          <div className="filters" style={{ borderBottom: '1px solid var(--rule)' }} data-map-filters>
             <input
               style={{ flex: 1, minWidth: 100 }}
               placeholder={t(locale, 'search')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            <StageChip />
             <button
               type="button"
               className="chipbtn"
+              data-timing="all"
               aria-pressed={timing === 'all'}
               onClick={() => setTiming('all')}
             >
-              {tp(locale, 'a6_map_all', { n: String(baseList.length) })}
+              {tp(locale, 'p4_map_on', { n: tracked.length })}
             </button>
             <button
               type="button"
               className="chipbtn"
-              aria-pressed={timing === 'ontime'}
-              onClick={() => setTiming(timing === 'ontime' ? 'all' : 'ontime')}
-              title={t(locale, 'a6_map_ontime_title')}
-            >
-              {tp(locale, 'a6_map_ontime', { n: String(ontimeCount) })}
-            </button>
-            <button
-              type="button"
-              className="chipbtn"
+              data-timing="late"
               aria-pressed={timing === 'late'}
               onClick={() => setTiming(timing === 'late' ? 'all' : 'late')}
               title={t(locale, 'a6_map_late_title')}
             >
-              {t(locale, 'map_late')} · {lateCount}
+              {tp(locale, 'p4_map_late', { n: lateCount })}
             </button>
             <button
               type="button"
               className="chipbtn"
+              data-timing="nogps"
               aria-pressed={timing === 'nogps'}
               onClick={() => setTiming(timing === 'nogps' ? 'all' : 'nogps')}
               title={t(locale, 'a6_map_nogps_title')}
             >
-              {tp(locale, 'a6_map_nogps', { n: String(nogpsCount) })}
-            </button>
-            <button
-              type="button"
-              className="chipbtn"
-              aria-pressed={timing === 'risk'}
-              onClick={() => setTiming(timing === 'risk' ? 'all' : 'risk')}
-              title={t(locale, 'a6_map_risk_title')}
-            >
-              {tp(locale, 'a6_map_risk', { n: String(riskCount) })}
+              {tp(locale, 'p4_map_nogps', { n: nogpsCount })}
             </button>
           </div>
 
@@ -333,6 +326,7 @@ export function MapView() {
                       <td>
                         <span className="cell-clip">
                           <StatusPill status={l.status} stage={l.stage} />
+                          <StatusMarkers load={l} delayMin={null} />
                         </span>
                       </td>
                       <td>
@@ -351,6 +345,32 @@ export function MapView() {
                 )}
               </tbody>
             </table>
+          </div>
+          {/* E27: najbliższe włączenia śledzenia (03:00 w dniu załadunku), z naczepą albo „brak naczepy” */}
+          <div className="map-next" data-map-next>
+            <div className="map-next-hd">{t(locale, 'p4_map_next')}</div>
+            {nextStarts.length === 0 ? (
+              <div className="map-next-row"><span className="muted">{t(locale, 'p4_map_next_none')}</span></div>
+            ) : (
+              nextStarts.map((g, gi) => {
+                const noTrailer = g.loads.some((l) => !(l.resources.trailerPlate ?? '').trim());
+                const plates = [...new Set(g.loads.map((l) => (l.resources.trailerPlate ?? '').trim()).filter(Boolean))];
+                return (
+                  <div key={g.day} className="map-next-row" data-next-day={g.day}>
+                    <span>
+                      <b>{tp(locale, 'p4_map_next_at', { day: formatTableDay(g.day, refYear) })}</b>
+                      {' · '}
+                      {g.loads.map((l) => l.code).join(', ')}
+                    </span>
+                    {noTrailer ? (
+                      <span className="map-next-warn">{t(locale, gi === 0 ? 'p4_map_no_trailer_todo' : 'p4_map_no_trailer')}</span>
+                    ) : (
+                      <span className="muted">{plates.join(', ')}</span>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </div>
