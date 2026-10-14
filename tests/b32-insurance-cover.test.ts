@@ -10,7 +10,8 @@ describe('0182 insurance auto-attach', () => {
   });
   it('DocsView uses insuranceCover for INSURANCE row', () => {
     const src = readFileSync('src/views/DocsView.tsx', 'utf8');
-    expect(src).toMatch(/c\.key === 'INSURANCE' && insuranceCover/);
+    /* przepisane w wyglad/P5 (E31): wiersz „Polisa OCP przewoźnika” — liczba transportów z ważną polisą z insuranceCover */
+    expect(src).toMatch(/key === 'INSURANCE' && insuranceCover/);
     expect(src).toMatch(/loadInsuranceCover/);
   });
   it('LoadDrawer shows auto note', () => {

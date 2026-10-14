@@ -91,7 +91,9 @@ test.describe('D15 — kawałki ładowane leniwie', () => {
     const [xlsx] = await Promise.all([page.waitForEvent('download'), page.locator('[data-action="export-xlsx"]').click()])
     expect(xlsx.suggestedFilename()).toMatch(/\.xlsx$/)
     await page.locator('nav button[data-view="docs"]').click()
-    const [zip] = await Promise.all([page.waitForEvent('download'), page.locator('button.chipbtn', { hasText: /ZIP|paczk/i }).first().click()])
+    /* przepisane w wyglad/P5 (E31, img/e31-after): „Paczka tygodnia: tNN ▾” otwiera listę tygodni, wybór tygodnia pobiera ZIP */
+    await page.locator('[data-docs-pack]').click()
+    const [zip] = await Promise.all([page.waitForEvent('download'), page.locator('[data-docs-week]').first().click()])
     expect(zip.suggestedFilename()).toMatch(/\.zip$/)
   })
 })

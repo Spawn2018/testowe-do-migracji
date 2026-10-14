@@ -16,6 +16,7 @@ import { ForMeScreen } from '../components/options/ForMeScreen';
 import { OptionsHowTo } from '../components/settings/OptionsHowTo';
 import { SmsFallbackEntry } from '../components/shell/SmsFallbackEntry';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
+import { lazyRetry } from '../lib/lazyRetry';
 import { parseRoute } from '../lib/routes';
 import { OPEN_OPTIONS_EVENT, optScreenOf, takeOptionsScreen, type OptionsScreen } from '../lib/openOptions';
 
@@ -42,6 +43,8 @@ const BroadcastForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_
 const DataExportPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/DataExportPanel')) : null;
 const ChangeHistoryPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/ChangeHistoryPanel')) : null;
 const PermitRequirement = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/PermitRequirement')) : null;
+/* wyglad/P5 (E31, E12, L26): terminy dokumentów — przeniesione ze strony Dokumenty, zapis bez zmian */
+const DocTerms = lazy(lazyRetry(() => import('../components/docs/DocTerms')));
 const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
@@ -283,7 +286,12 @@ export function OptionsView() {
           {pick('thr', OpsThresholdsForm ? block(<OpsThresholdsForm />) : <Soon locale={locale} tipKey="opt_acc_thresh_soon" />)}
         </>
       ), { right: change }),
-      scr('permits', PermitRequirement ? block(<PermitRequirement />) : <Soon locale={locale} tipKey="opt_acc_perm_soon" />, { right: change }),
+      scr('permits', (
+        <>
+          <Suspense fallback={null}><DocTerms canEdit={isHhlAdmin} /></Suspense>
+          {PermitRequirement ? block(<PermitRequirement />) : <Soon locale={locale} tipKey="opt_acc_perm_soon" />}
+        </>
+      ), { right: change }),
     ],
   });
 

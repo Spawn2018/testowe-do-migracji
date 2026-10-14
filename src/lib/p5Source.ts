@@ -6,7 +6,7 @@
 import type { Bill, Document, Load } from '../types';
 import type { PackConfig, PackKey, PackSent } from './p5Pack';
 import { belowThreshold, financeSummary, fuelWeeks, type FinBelowRow, type FinSide, type FinSummary, type FuelWeekRow } from './p5Finance';
-import { demoAccountingPack, demoFactoringOffer, demoFactoringTasks, demoFuelEnrich, demoMarginThreshold, demoPackActions } from './p5Demo';
+import { demoAccountingPack, demoFactoringOffer, demoFactoringTasks, demoFuelEnrich, demoMarginThreshold, demoPackActions, demoPermits, demoPolicies } from './p5Demo';
 
 /** Próg marży w % (Opcje › Cennik i opłaty, E16); null = nie ustawiony, flaga wyłączona. */
 export function marginThresholdOf(): number | null {
@@ -58,4 +58,34 @@ export interface PackActions {
 }
 export function accountingPackActionsOf(): PackActions | null {
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoPackActions() : null;
+}
+
+/** E31 — zezwolenia „Firma” (podpinane same według rodzaju ładunku) i „Trasa” (SCX przy transporcie). */
+export interface PermitView {
+  id: string;
+  scope: 'FIRMA' | 'TRASA';
+  country: 'PL' | 'SE' | 'PL+SE';
+  number: string | null;
+  validFrom: string | null;
+  validTo: string | null;
+  /** Limity zestawu w metrach: długość × szerokość × wysokość. */
+  limits: { l: number; w: number; h: number } | null;
+  pilot: string | null;
+  appliesTo: string;
+  loads: number;
+}
+/** null = nie podłączone (tabela „Zezwolenia” ukryta; zezwolenia dodaje się jak dziś w panelu transportu). */
+export function permitsOf(loads: Load[]): PermitView[] | null {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoPermits(loads) : null;
+}
+/** Wybór „Firma / Trasa” w oknie „Wgraj dokument” — po podłączeniu rodzaju zezwolenia w bazie. */
+export function permitScopeOf(): boolean {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase';
+}
+
+/** E31 — polisy dodawane raz (G-21): OCP przewoźnika (SCX, zatwierdza HHL) i polisa HHL. */
+export interface PolicyView { org: 'SCX' | 'HHL'; name: string; number: string; validTo: string; approved: boolean }
+/** null = nie podłączone: w uwagach liczba transportów z ważną polisą (jak dziś), bez numeru polisy. */
+export function policiesOf(): PolicyView[] | null {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoPolicies() : null;
 }

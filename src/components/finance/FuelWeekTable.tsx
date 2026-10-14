@@ -10,6 +10,8 @@ import { formatPlNumber } from '../../lib/format';
 import { weekLabel, type FuelSrc, type FuelWeekRow } from '../../lib/p5Finance';
 import { up } from '../options/up';
 import { ft, ftp } from '../../i18n/p5';
+import { DemoMark } from '../ui/DemoMark';
+import { PROD_BUILD } from '../../lib/prodFacade';
 
 const x = (n: number) => `×${formatPlNumber(n, 2)}`;
 const dm = (day: string) => `${day.slice(8, 10)}.${day.slice(5, 7)}`;
@@ -81,6 +83,8 @@ export function FuelWeekTable({ rows, locale, phone }: { rows: FuelWeekRow[]; lo
       <header className="panel-hd fin-hd2">
         <h3 id="fin-fuel-h">{ft(locale, 'p5_fuel_h')}</h3>
         <span className="sub">{ft(locale, 'p5_fuel_sub')}</span>
+        {/* G-08: średnie cen i publikacje w demo to przykład — oznaczenie tylko w buildzie demo */}
+        {PROD_BUILD ? null : <DemoMark />}
       </header>
       {rows.length === 0 ? (
         <p className="fin-muted fin-pad">{ft(locale, 'p5_fuel_empty')}</p>

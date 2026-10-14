@@ -308,11 +308,12 @@ test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
     await openView(page, 'docs');
     const docCards = page.locator('[data-docreq-cards] [data-docreq-card]');
     expect(await docCards.count()).toBeGreaterThan(0);
-    await expect(docCards.first().locator('.mcard-foot')).toContainText('Komplet');
+    /* przepisane w wyglad/P5 — E31 telefon (img/e31-after): karta wymagania z terminem i liczbą po terminie, bez „Komplet” */
+    await expect(page.locator('[data-docreq-card="PERMIT_PL"]')).toContainText('przed załadunkiem');
     await expect(page.locator('[data-docreq]')).toHaveCount(0);
-    const upload = await page.locator('[data-page="docs"] > .panel-hd > .btn:not(.ghost)').boundingBox();
-    const hd = await page.locator('[data-page="docs"] > .panel-hd').boundingBox();
-    expect(upload && hd && upload.width).toBeGreaterThan((hd?.width ?? 0) - 40);
+    const upload = await page.locator('[data-page="docs"] [data-doc-upload]').boundingBox();
+    const pg = await page.locator('[data-page="docs"]').boundingBox();
+    expect(upload && pg && upload.width).toBeGreaterThan((pg?.width ?? 0) - 40);
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.waitForTimeout(300);
@@ -1200,6 +1201,69 @@ test.describe('wyglad/P5 Faktury — E4, E4b', () => {
         await page.setViewportSize({ width, height: 844 });
         await page.waitForTimeout(200);
         hits.push(...await measure(page, 'faktury-p5', width, role));
+      }
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});
+
+test.describe('wyglad/P5 Dokumenty — E31', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+
+  test('komputer: wymagania (po terminie, 7 dni), terminy tylko do odczytu, zezwolenia, pliki z filtrami, okno „Wgraj dokument”', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'docs');
+    await expect(page.locator('table.doc-req thead th')).toHaveText(['DOKUMENT', 'KTO WGRYWA', 'TERMIN', 'PO TERMINIE', 'W CIĄGU 7 DNI', 'UWAGI']);
+    await expect(page.locator('tr[data-docreq]')).toHaveCount(5);
+    await expect(page.locator('[data-action="docreq-edit"]')).toHaveCount(0);
+    await expect(page.locator('table.doc-req')).not.toContainText(/Rysunek|POD|mocowania/);
+    const count = page.locator('tr[data-docreq] .doc-count').first();
+    if (await count.count()) {
+      await count.click();
+      await expect(page.locator('[data-docreq-list] li').first()).toBeVisible();
+    }
+    await expect(page.locator('[data-doc-permits] tbody tr')).toHaveCount(3);
+    await expect(page.locator('[data-doc-files] [data-doc-f]')).toHaveCount(3);
+    await page.locator('[data-doc-upload]').click();
+    const modal = page.locator('[data-upload-modal]');
+    await expect(modal).toBeVisible();
+    await modal.locator('[data-up-search]').fill('SG-0');
+    await expect(modal.locator('[data-up-load]')).not.toHaveValue('');
+    await expect(modal.locator('[data-up-send]')).toBeDisabled();
+    await page.keyboard.press('Escape');
+    await expect(modal).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1441);
+    await boot(page, 'KSH');
+    await openView(page, 'docs');
+    await expect(page.locator('[data-doc-upload]')).toHaveCount(0);
+    await expect(page.locator('tr[data-docreq="INSURANCE"]')).toHaveCount(0);
+    await expect(page.locator('tr[data-docreq="OCS"]')).toHaveCount(1);
+    await expect(page.locator('[data-doc-permits]')).toHaveCount(0);
+  });
+
+  for (const role of ['HHL', 'KSH', 'SCX'] as const) {
+    test(`telefon ${role}: karty wymagań, pliki, paczka tygodnia${role === 'KSH' ? '' : ', okno „Wgraj dokument”'} — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role);
+      await openView(page, 'docs');
+      await expect(page.locator('table.doc-req')).toHaveCount(0);
+      expect(await page.locator('[data-docreq-cards] [data-docreq-card]').count()).toBeGreaterThan(0);
+      const hits: Hit[] = [];
+      for (const width of WIDTHS) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.waitForTimeout(200);
+        hits.push(...await measure(page, 'dokumenty-p5', width, role));
+      }
+      if (role !== 'KSH') {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.locator('[data-doc-upload]').click();
+        await expect(page.locator('[data-upload-modal]')).toBeVisible();
+        for (const width of WIDTHS) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(200);
+          hits.push(...await measure(page, 'wgraj-p5', width, role));
+        }
       }
       expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
     });

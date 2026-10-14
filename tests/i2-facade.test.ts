@@ -24,7 +24,8 @@ describe('I-2: rejestr funkcji ukrytych w produkcji', () => {
   it('każdy klucz HIDDEN_IN_PROD jest użyty przez shows(...) w src (poza delayCodes — brak w UI)', () => {
     const unused = Object.keys(HIDDEN_IN_PROD).filter((k) => k !== 'delayCodes' && !SRC.some((f) => f.s.includes(`shows('${k}'`)))
     expect(unused).toEqual([])
-    expect(Object.keys(HIDDEN_IN_PROD).length).toBe(12)
+    /* wyglad/P5 (E31): „policyExpiryNote” usunięty — polisy w wierszach wymagań na stronie Dokumenty (12 → 11) */
+    expect(Object.keys(HIDDEN_IN_PROD).length).toBe(11)
   })
   it('shows(): demo widoczne, produkcja ukryte', () => {
     expect(shows('seaWeather', false)).toBe(true)

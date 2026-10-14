@@ -6,9 +6,9 @@
  */
 import { SEFS_PLN, SEFS_SEK, type SefsTier } from './sefs';
 import { addDays, type FuelPubl, type FuelWeekRow } from './p5Finance';
-import type { Bill } from '../types';
+import type { Bill, Load } from '../types';
 import { factoringPayout } from './p5Invoices';
-import type { FactoringOfferView, FactoringTask, PackActions } from './p5Source';
+import type { FactoringOfferView, FactoringTask, PackActions, PermitView, PolicyView } from './p5Source';
 import type { PackConfig, PackSent } from './p5Pack';
 import { addDaysIso } from './invoices3';
 
@@ -86,3 +86,18 @@ export function demoPackActions(): PackActions {
     },
   };
 }
+
+/** E31 — zezwolenia z tabeli właściciela 07.10 (wymiary i rodzaje); numery i daty przykładowe (G-09). */
+export function demoPermits(loads: Load[]): PermitView[] {
+  const n = (prefix: string) => loads.filter((l) => l.code.startsWith(prefix)).length;
+  return [
+    { id: 'demo-p1', scope: 'FIRMA', country: 'PL', number: 'P/0000/2026', validFrom: '2026-10-01', validTo: '2026-12-31', limits: { l: 21.69, w: 2.45, h: 3.75 }, pilot: null, appliesTo: 'Słupy główne (SG)', loads: n('SG-') },
+    { id: 'demo-p2', scope: 'FIRMA', country: 'SE', number: 'TRV 0000-2026', validFrom: '2026-10-01', validTo: '2026-12-31', limits: { l: 21.69, w: 2.45, h: 3.75 }, pilot: null, appliesTo: 'Słupy główne (SG)', loads: n('SG-') },
+    { id: 'demo-p3', scope: 'TRASA', country: 'PL+SE', number: null, validFrom: null, validTo: null, limits: { l: 23.69, w: 3.52, h: 3.9 }, pilot: 'PL + SE', appliesTo: 'Kratownice (KR)', loads: n('KR-') },
+  ];
+}
+
+/** E31 — polisa przewoźnika (numer zmyślony); polisy HHL w przykładzie nie ma — tak jak dziś w bazie. */
+export const demoPolicies = (): PolicyView[] => [
+  { org: 'SCX', name: 'OCP przewoźnika', number: 'OCP-0000-PRZYKLAD', validTo: '2027-03-29', approved: true },
+];
