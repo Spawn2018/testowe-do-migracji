@@ -31,7 +31,7 @@ function applyUrlToStore(
   const st = useTowerStore.getState();
   const tab = new URLSearchParams(search).get('zakladka');
   const tabMap: Record<string, string> = {
-    status: 'timeline', dokumenty: 'docs', ceny: 'pricing', ustalenia: 'chat', awizacja: 'overview',
+    status: 'timeline', dokumenty: 'docs', ceny: 'pricing', ustalenia: 'chat', czat: 'chat', historia: 'history', awizacja: 'overview',
     'awizacja-pilot': 'overview', 'numer-hhl': 'overview', 'numer-przewoznika': 'overview',
   };
   if (r.kind !== 'sms' && st.smsEntry) st.setSmsEntry(null);

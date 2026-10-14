@@ -18,8 +18,10 @@ describe('AUD-03 — panel zlecenia KSH (źródło)', () => {
     expect(d).not.toMatch(/if \(role === 'KSH'\) \{\s*return/);
     expect(d).toMatch(/data-ksh-actions/);
     expect(d).toMatch(/<KshDatesModal/);
-    // E25: akcje przewoźnika/HHL; „Zmień status” (przepisane w wyglad/P4-b — E25, img/e25-after) w zakładce Status, tylko przy canStatus
-    expect(d).toMatch(/data-carrier-actions/);
+    // E25: „Zmień status” (przepisane w wyglad/P4-b — E25, img/e25-after) w zakładce Status, tylko przy canStatus.
+    // wyglad/P6-b — E17 (20:57): „Czat” to sama rozmowa — bez „Przypisz SCX”, symulacji strefy i linku dla kierowcy.
+    expect(d).not.toMatch(/data-carrier-actions|DriverLinkPanel|assignScx|triggerGeofence/);
+    expect(d).toMatch(/<PanelChat/);
     expect(d).toMatch(/canStatus=\{canStatus\}/);
     expect(src('src/components/drawer/StatusAxisTab.tsx')).toMatch(/\{canStatus \? \([\s\S]{0,200}data-action="change-status"/);
   });

@@ -97,3 +97,79 @@ Zrzuty z podglądu demo, „teraz” = 14.10.2026, 12:00, folder `wyglad-P6-a/`.
   - `i2-facade` (bez statycznych przepraw i objazdów, 11 → 9);
   - `e21-guardian` (pliki strony Ryzyka zamiast Centrum decyzji);
   - lokalny `i2-facade.local` (druga przeprawa tylko przy odwołaniu albo sztormie).
+
+---
+
+# Odbiór P6 — wygląd, część b: panel transportu, Historia i Czat (koordynator, `wyglad/P6-b`)
+
+Podział pracy i wzór — jak w części a. Etap E17 (decyzje 07.10, 20:57: „Ustalenia” = „Czat”, rozmowa „tylko HHL i SCX”, KSH pisze do wszystkich i jej nie widzi, profil trasy ukryty), obraz `img/e17-after`. Do tego E41 (KSH bez numerów zleceń), E6 (autor „Imię Nazwisko // Firma”), D-83 (przewoźnik nie wpisuje wymiarów), decyzja 09.10 (piloci w awizacji SCX — P7).
+
+Ten PR zmienia tylko wygląd i nawigację (F8). Nie zmienia migracji, uprawnień ani zapisów:
+- wysyłka wiadomości — ten sam zapis (`message.send` z `{loadId, text}`); wybór „tylko HHL i SCX” zostaje w stanie aplikacji (demo);
+- lista pilotów (`EscortPanel`) — ten sam komponent i te same zapytania, w Przeglądzie zamiast w „Ustaleniach” (ładuje się przy otwarciu panelu przez SCX i KSH);
+- historia — te same zdarzenia, które aplikacja ma dziś.
+
+Nowe dane: `src/lib/p6bSource.ts` (demo: `src/lib/p6bDemo.ts`, za warunkiem trybu demo — strażnik I-0, test `p6-history`). W produkcji wybór „tylko HHL i SCX”, „przeczytali” i liczba nieprzeczytanych są wyłączone do podłączenia (dopisek D-20261014-2300-01 H2). Co podłącza wykonawca — ten dopisek.
+
+Zrzuty z podglądu demo, transport SG-01, „teraz” = 14.10.2026, 12:00, folder `wyglad-P6-b/`. Osoby i wiadomości w demo są zmyślone (G-09).
+
+## Z3 — element po elemencie
+
+### Historia (E17 pkt 2) — `porownanie-e17-komputer.png` (lewa kolumna), `porownanie-e17-telefon.png`
+
+| element | obraz raportu / decyzja | po zmianie w aplikacji | zgodne | uwagi |
+|---|---|---|---|---|
+| filtry | Wszystko · Statusy i trasa · Zasoby i awizacja · Numery · Dokumenty · Ceny | to samo; KSH bez „Numery” (E41) | tak | telefon: przewijane w bok, „Zasoby” |
+| dni | „07.10.2026 · ŚRODA”, najnowsze na górze | to samo | tak | — |
+| wpis | godzina, rodzaj (STATUS, TRASA, ZASOBY, NUMER, PRÓBA, IMPORT), „~~było~~ → **jest** · przyczyna” | to samo | tak | telefon bez znacznika rodzaju (jak w raporcie) |
+| autor | „Imię Nazwisko // Firma”, „H&H Logistics (zapis bez osoby)”, „System // Watch Tower · GPS emtrack”, „GPS emtrack” | to samo | tak | „AIS” przy pozycji z AIS |
+| strefa | „Wjazd w strefę „Bufor 50 km przed Boden”” | to samo (nazwa z wpisu albo z listy stref) | tak | bez nazwy — „(strefa bez nazwy)”, nigdy kod |
+| numer zlecenia | „Nr zlecenia SCX: — → 15062/…” | z wartością poprzednią — tak samo; z dzisiejszego zapisu (sama notatka) — „Nr zlecenia SCX: **…**” | tak | wartości poprzedniej, której zdarzenie nie ma, nie zgadujemy (do wyzwalaczy H1) |
+| ukryte | „5 dawnych zapisów bez zmiany ukrytych (…)” | to samo, liczba w bieżącym filtrze | tak | ukryte: „było = jest”, „Gotowy → Gotowy”, powtórzenie tego samego zapisu, „rejs usunięty” bez rejsu |
+| bez kodów | 15 rodzajów zdarzeń z polską nazwą | każdy rodzaj z ograniczenia bazy (0205) ma polską nazwę; notatki automatów z kodami — po polsku albo bez | tak | test `p6-history` |
+| ceny | KSH bez ceny SCX i marży, SCX bez ceny KSH i marży | to samo; cena bez oznaczonej strony — tylko HHL | tak | — |
+
+### Czat (E17, 20:57) — `porownanie-e17-komputer.png` (środek i prawa), `porownanie-e17-telefon.png`
+
+| element | obraz raportu / decyzja | po zmianie w aplikacji | zgodne | uwagi |
+|---|---|---|---|---|
+| nazwa zakładki | „Czat” (dawniej Ustalenia) | to samo; liczba nieprzeczytanych przy nazwie | tak | w produkcji liczba po podłączeniu odczytów (H2) |
+| wiadomości | po dniach; moje po prawej, cudze po lewej; „Imię Nazwisko // Firma · godzina” | to samo | tak | „moje” = mojej firmy do czasu `author_id` (H2 pkt 3) |
+| odczyt | „✓✓ przeczytali: SCX, KSH”, „✓ wysłane · nikt z SCX i KSH jeszcze nie otworzył” | to samo; częściowo — „przeczytali: SCX · KSH jeszcze nie” | tak | produkcja — po zmianie oznaczania odczytu (H2 pkt 2) |
+| „tylko HHL i SCX” | „Widzą: HHL, SCX, KSH / tylko HHL i SCX”; KSH bez wyboru i bez tych rozmów | to samo; wiadomość ze znacznikiem „tylko HHL i SCX” | tak | produkcja — po podłączeniu `visible_to` (H2 pkt 1) |
+| pole pisania | na dole, „Napisz do HHL, SCX i KSH…”, „Wyślij”, podpowiedź „Enter wysyła · Shift+Enter nowa linia …” | to samo; telefon: „Napisz…”, przyklejone na dole | tak | — |
+| bez innych przycisków | „Znika z czatu: link dla kierowcy · Przypisz SCX · Oznacz … · Wymiary zestawu u SCX · dane zasobów i awizacji” | to samo — w Czacie tylko wybór odbiorców i „Wyślij” | tak | test E8 i `p6-history` |
+
+### Przegląd (E17 pkt 5; E32 — do P7) — `przeglad-1440-hhl.png`, `przeglad-1440-ksh.png`
+
+| element | obraz raportu / decyzja | po zmianie w aplikacji | zgodne | uwagi |
+|---|---|---|---|---|
+| profil trasy | ukryty u wszystkich, bez wywołania `route-profile` | to samo | tak | funkcja i tabela — E18 P16 |
+| piloci | w awizacji SCX (09.10, P7) | lista pilotów z „Ustaleń” w Przeglądzie (SCX, KSH jak dotąd) | częściowo | do okna awizacji w P7 |
+| prom i awizacja | E32 „Awizacja · uzupełnia SCX” | wiersz „Prom” z przypłynięciem i stanem rejsu, wiersz „Awizacja” (okno · potwierdzona / „brak · uzupełnia SCX”) | częściowo | to, co KSH widział w „Ustaleniach”; pełny Przegląd E32 — P7 |
+
+## Z4 — różnice, które zostają
+
+| różnica | gdzie | dlaczego |
+|---|---|---|
+| wybór „tylko HHL i SCX”, „przeczytali” i liczba nieprzeczytanych tylko w demo | Czat | dane (H2): zapis `visible_to`, odczyt po otwarciu zakładki |
+| „moje” = mojej firmy | Czat | brak autora w odczycie (H2 pkt 3) |
+| numer z dzisiejszego zapisu bez „było” | Historia | dziś zapis bez wartości poprzedniej (H1) |
+| historia z 500 ostatnich zdarzeń wszystkich transportów | Historia | zapytanie po jednym transporcie (H1 pkt 3) |
+| nagłówek panelu ze „✕” zamiast strzałki na telefonie | panel | E32 / P7 |
+
+## Konta (Z11)
+
+| konto | zrzuty | różnica |
+|---|---|---|
+| HHL Administrator i Operacje | `historia-*-hhl`, `czat-*-hhl`, `przeglad-1440-hhl` | wszystkie wpisy; wybór odbiorców |
+| SCX Dyspozytor i Użytkownik | `historia-*-scx`, `czat-*-scx` | bez ceny KSH i marży; wybór odbiorców |
+| KSH Użytkownik | `historia-*-ksh`, `czat-*-ksh`, `przeglad-1440-ksh` | bez numerów zleceń i „Numery”; bez rozmów HHL ↔ SCX; bez wyboru odbiorców |
+
+## Sprawdzenia (lokalnie, podgląd demo)
+
+- `tsc -b`: 0 błędów; `lint:css`: 0 błędów; gitleaks: 0.
+- `test:unit`: 1054 przechodzi, 37 pominiętych. Nowy test `p6-history` (21): wpisy po polsku, każdy rodzaj zdarzenia z 0205, ukryte i powtórzenia, KSH bez numerów, ceny według strony, Czat (widoczność, nieprzeczytane), demo i strażnik I-0.
+- Brama E8: nowy blok P6-b (komputer HHL i KSH; telefon HHL, SCX, KSH przy 360 / 390 / 430 / 768 px) — 4 / 4. Cały zestaw Playwright: 113 przechodzi; 3 nie przechodzą tak samo na `main` (lokalne czcionki w zrzutach `visual` i `visual-states`, `d19-i18n` — „lang missing: en”) — w GitHub Actions decyduje `visual`.
+- Pierwsze wczytanie: 385,2 kB gzip (budżet 400 kB); Historia i Czat ładują się leniwie.
+- Przepisane testy: `aud03-ksh-panel` (test i spec), `etap4-ui` (awizacja z Przeglądu), `iii4-escorts.local` (piloci w Przeglądzie), `bk5-api.live`, `scripts/data/e2e-data.mjs` (zakładka „Czat”).

@@ -301,7 +301,8 @@ interface TowerState {
   /** M5 — numer zlecenia: HHL wpisuje swój, przewoźnik swój (W12; wymusza baza). */
   setOrderNo: (loadId: string, side: OrderSide, value: string | null) => boolean;
   appendEvent: (ev: Omit<LoadEvent, 'id'>) => void;
-  sendMessage: (loadId: string, text: string) => void;
+  /** E17: `visibleTo` tylko w demo (wybór „tylko HHL i SCX”); zapis na serwer bez zmian. */
+  sendMessage: (loadId: string, text: string, visibleTo?: 'ALL' | 'HHL_SCX') => void;
   uploadDocument: (
     loadId: string,
     category: Document['category'],
@@ -980,7 +981,7 @@ export const useTowerStore = create<TowerState>()(
         get().appendEvent({ loadId, type: 'FERRY_UPDATED', at, actor: currentActorLabel(get().role) });
       },
 
-      sendMessage: (loadId, text) => {
+      sendMessage: (loadId, text, visibleTo) => {
         const msg: LoadMessage = {
           id: uid('msg'),
           loadId,
@@ -988,6 +989,7 @@ export const useTowerStore = create<TowerState>()(
           author: get().role,
           org: get().role,
           text,
+          ...(visibleTo === 'HHL_SCX' ? { visibleTo } : {}),
         };
         set((s) => ({ messages: [...s.messages, msg] }));
         writeThrough({ type: 'message.send', loadId, text });

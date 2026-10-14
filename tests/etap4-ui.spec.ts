@@ -41,7 +41,7 @@ async function closeDrawer(page: Page) {
   await page.locator('.drawer .drawer-hd button.iconbtn').last().click()
   await page.waitForSelector('.drawer', { state: 'detached' })
 }
-/** Zakładka działań szuflady (formularze, przyciski statusu) — piąta zakładka. */
+/** Piąta zakładka szuflady — „Czat” (wyglad/P6-b, E17: dawniej „Ustalenia”; sama rozmowa, bez formularzy). */
 async function actionsTab(page: Page) {
   await page.locator('.drawer button[aria-selected]').nth(4).click()
   await page.waitForTimeout(200)
@@ -386,8 +386,8 @@ test.describe('M10 — rejsy i automat statusów', () => {
     await page.locator('[data-sched-tab="loads"]').click()
     /* AWIZ-4 (13ace35): rejs wybierany w oknie awizacji (armator → rejs → statek); B-10b: bez nr rezerwacji promu */
     await openLoad(page, 'SG-34')
-    await actionsTab(page)
-    await page.locator('.drawer [data-awiz-chat-note] + .awiz-row button').click()
+    /* wyglad/P6-b (E17, E32): awizacja tylko w Przeglądzie — w „Czacie” nie ma już kopii przycisku */
+    await page.locator('.drawer [data-awiz-open]').click()
     const modal = page.locator('[data-awiz-modal]')
     const sel = modal.locator('select[data-awiz-sailing]')
     await expect(sel).toBeVisible()
@@ -395,15 +395,14 @@ test.describe('M10 — rejsy i automat statusów', () => {
     await sel.selectOption(opt!)
     await modal.locator('[data-awiz-save]').click()
     await expect(modal).toHaveCount(0)
-    await page.locator('.drawer [data-awiz-chat-note] + .awiz-row button').click()
+    await page.locator('.drawer [data-awiz-open]').click()
     await expect(modal.locator('select[data-awiz-sailing]')).toHaveValue(opt!)
     await modal.locator('.panel-hd .iconbtn').click()
     await closeDrawer(page)
     // SCX: transport na promie — rejs tylko do odczytu
     const onFerry = 'SG-06' // status PROM w danych demo
     await openLoad(page, onFerry)
-    await actionsTab(page)
-    await page.locator('.drawer [data-awiz-chat-note] + .awiz-row button').click()
+    await page.locator('.drawer [data-awiz-open]').click()
     await expect(page.locator('[data-awiz-modal] [data-sailing-locked]')).toBeVisible()
     await expect(page.locator('[data-awiz-modal] select[data-awiz-sailing]')).toHaveCount(0)
     await page.locator('[data-awiz-modal] .panel-hd .iconbtn').click()

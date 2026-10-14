@@ -69,10 +69,13 @@ for (const vp of [{ w: 1366, h: 900, tag: 'komputer' }, { w: 390, h: 844, tag: '
     await page.locator('.drawer button[aria-selected]').nth(3).click()
     await expect(page.locator('.drawer [data-money-side="cost"]')).toHaveCount(0)
     await expect(page.locator('.drawer').getByText(/marża/i)).toHaveCount(0)
-    /* Ustalenia: bez przycisków przewoźnika/HHL (statusy, przypisanie, zasoby) */
+    /* wyglad/P6-b — E17 (decyzja 20:57): „Czat” (dawniej Ustalenia) — sama rozmowa; KSH pisze do wszystkich, bez wyboru „tylko HHL i SCX” */
     await page.locator('.drawer button[aria-selected]').nth(4).click()
+    await expect(page.locator('.drawer [data-chat-compose]')).toBeVisible()
     await expect(page.locator('.drawer [data-carrier-actions]')).toHaveCount(0)
     await expect(page.locator('.drawer [data-action="change-status"]')).toHaveCount(0)
+    await expect(page.locator('.drawer [data-chat-vis]')).toHaveCount(0)
+    await expect(page.locator('.drawer [data-chat-msg][data-vis="HHL_SCX"]')).toHaveCount(0)
     /* wyglad/P4-b — E25: zakładka Status dla KSH to podgląd osi, bez „Zmień status” (decyzja 17:46) */
     await page.locator('.drawer button[aria-selected]').nth(1).click()
     await expect(page.locator('.drawer [data-status-axis]')).toBeVisible()
@@ -105,7 +108,8 @@ for (const vp of [{ w: 1366, h: 900, tag: 'komputer' }, { w: 390, h: 844, tag: '
     await page.locator('.drawer button[aria-selected]').nth(5).click()
     const entry = page.locator('.drawer [data-history] li').first()
     await expect(entry).toContainText('Zmiana dat i godzin planu')
-    await expect(entry).toContainText('// KSH')
+    /* wyglad/P6-b — E17: autor „Imię Nazwisko // Firma”; zapis demo bez osoby — „KSH (zapis bez osoby)” */
+    await expect(entry).toContainText('KSH (zapis bez osoby)')
     expect(code).toMatch(/^SG-/)
   })
 }
