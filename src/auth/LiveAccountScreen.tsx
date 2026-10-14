@@ -158,14 +158,14 @@ export default function LiveAccountScreen() {
     setMsg(null);
   };
 
-  /** R3 (osobna paczka): dziś nadal Auth scope others — do my_session_revoke. */
+  /** D-20261014-1420-01 R3: jedno urządzenie przez my_session_revoke (nie signOut others). */
   const onRemoveDevice = previewRo ? undefined : async (id: string) => {
     const target = devices.find((d) => d.id === id);
     if (!target || target.current) return;
     setBusy(true);
     setMsg(null);
     const sb = await getSupabase();
-    const { error } = await sb.auth.signOut({ scope: 'others' });
+    const { error } = await sb.rpc('my_session_revoke', { p_session: id });
     setBusy(false);
     if (error) {
       setMsg({ ok: false, text: authErrorPl(error.message) });

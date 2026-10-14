@@ -126,6 +126,7 @@ authenticated_security_definer_function_executable	public.mark_notifications_rea
 authenticated_security_definer_function_executable	public.my_mfa_status	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.my_profile	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.my_sessions	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.my_session_revoke	E19 — allowlista RPC; D-20261014-1420-01 R3; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.operator_notice_apply	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.permit_requirement_state	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.permit_save	E19 — allowlista RPC; sprawdzenie roli w funkcji
