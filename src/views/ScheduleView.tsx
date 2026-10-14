@@ -115,18 +115,34 @@ export function ScheduleView() {
   const phone = useIsPhone();
   const [actionsOpen, setActionsOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  /* „⋯” zamyka się po działaniu, Escape i dotknięciu obok */
+  /* „⋯” zamyka się po działaniu, Escape i dotknięciu obok.
+     Escape łapany w fazie przechwytywania i zatrzymany: zamyka tylko menu, filtr etapu i otwarty transport zostają (skrót globalny w App).
+     Dotknięcie obok tylko zamyka menu — nie klika tego, co pod spodem. */
   const morePopRef = useRef<HTMLDivElement | null>(null);
+  const moreBtnRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     if (!actionsOpen) return undefined;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setActionsOpen(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      setActionsOpen(false);
+      moreBtnRef.current?.focus();
+    };
     const onDown = (e: PointerEvent) => {
       const el = morePopRef.current;
-      if (el && !el.contains(e.target as Node)) setActionsOpen(false);
+      if (!el || el.contains(e.target as Node)) return;
+      setActionsOpen(false);
+      /* jedno kliknięcie po tym dotknięciu nie dochodzi do elementu pod spodem (np. wiersza transportu) */
+      const stop = (ev: MouseEvent) => { ev.preventDefault(); ev.stopPropagation(); };
+      window.addEventListener('click', stop, { capture: true, once: true });
+      window.setTimeout(() => window.removeEventListener('click', stop, true), 800);
     };
-    window.addEventListener('keydown', onKey);
-    window.addEventListener('pointerdown', onDown);
-    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('pointerdown', onDown); };
+    window.addEventListener('keydown', onKey, true);
+    window.addEventListener('pointerdown', onDown, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('pointerdown', onDown, true);
+    };
   }, [actionsOpen]);
   /* III-2 (SCOPE 0.9, makieta go()): krótki szkielet tabeli po wejściu w widok — wiersze w rytmie tabeli, nigdy spinner */
   const [skeleton, setSkeleton] = useState(true);
@@ -730,31 +746,34 @@ export function ScheduleView() {
         {phone ? (
           <>
             {/* telefon (E8, E28): szukajka i „⋯”, pasek etapów, filtry stanu i „Filtry ▾” */}
-            <div className="filters sched-ph-search" ref={morePopRef}>
+            <div className="filters sched-ph-search">
               <input
                 type="search"
                 placeholder={t(locale, 'search')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <button
-                type="button"
-                className="chipbtn sched-more"
-                aria-expanded={actionsOpen}
-                aria-label={t(locale, 'p4_actions_more')}
-                title={t(locale, 'p4_actions_more')}
-                onClick={() => setActionsOpen((v) => !v)}
-              >
-                ⋯
-              </button>
-              {actionsOpen ? (
-                <div
-                  className="sched-actions sched-actions-pop"
-                  onClick={(e) => { if ((e.target as HTMLElement).closest('button')) setActionsOpen(false); }}
+              <div className="sched-more-wrap" ref={morePopRef}>
+                <button
+                  ref={moreBtnRef}
+                  type="button"
+                  className="chipbtn sched-more"
+                  aria-expanded={actionsOpen}
+                  aria-label={t(locale, 'p4_actions_more')}
+                  title={t(locale, 'p4_actions_more')}
+                  onClick={() => setActionsOpen((v) => !v)}
                 >
-                  {actionButtons}
-                </div>
-              ) : null}
+                  ⋯
+                </button>
+                {actionsOpen ? (
+                  <div
+                    className="sched-actions sched-actions-pop"
+                    onClick={(e) => { if ((e.target as HTMLElement).closest('button')) setActionsOpen(false); }}
+                  >
+                    {actionButtons}
+                  </div>
+                ) : null}
+              </div>
             </div>
             <StageBar variant="page" />
             <div className="filters" data-sched-filters>
@@ -816,7 +835,8 @@ export function ScheduleView() {
           <div className="empty" data-sched-empty>
             <b>{t(locale, 'iii2_empty_title')}</b>
             <p>
-              {stageFilter
+              {/* „Na etapie … nie ma” tylko gdy pusty jest sam etap; gdy wiersze etapu odsiał inny filtr — tekst ogólny */}
+              {stageFilter && base.length === 0 && !search.trim()
                 ? t(locale, 'iii2_empty_stage').replace('{stage}', t(locale, `p4_tile_${stageFilter}`))
                 : t(locale, 'iii2_empty_any')}{' '}
               {t(locale, 'iii2_empty_hint')}

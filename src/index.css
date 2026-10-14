@@ -1439,6 +1439,8 @@ img,video{max-width:100%;height:auto}
   .sched-ph-search{position:relative;flex-wrap:nowrap}
   .sched-ph-search input[type="search"]{flex:1 1 auto;font-size:16px}
   .sched-more{font-size:18px;font-weight:700;letter-spacing:.1em}
+  [data-page="map"] .map-sub-cadence{display:none}
+  .sched-more-wrap{display:contents} /* „⋯” i jego menu: jeden obszar dla „dotknięcia obok”, bez zmiany układu */
   .sched-actions-pop{position:absolute;right:12px;top:calc(100% - 2px);z-index:40;display:flex;flex-direction:column;align-items:stretch;gap:6px;
     min-width:220px;padding:8px;background:var(--surface);border:1px solid var(--rule)}
   .sched-actions-pop .chipbtn{width:100%;justify-content:flex-start}

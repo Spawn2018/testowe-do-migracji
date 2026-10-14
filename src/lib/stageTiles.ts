@@ -100,6 +100,17 @@ export function trackingPhase(l: Pick<Load, 'status' | 'stage' | 'plannedLoadDat
   return 'before';
 }
 
+/**
+ * E27 (Mapa): transporty jeszcze w przygotowaniu, którym okno śledzenia już się zaczęło (od 03:00 w dniu załadunku).
+ * Na produkcji dostają znacznik, gdy baza ma ich pozycję GPS; do liczby „W trasie” się nie wliczają (E28: suma grupy „W trasie”).
+ */
+export function trackingWindowPrep<T extends Pick<Load, 'status' | 'stage' | 'plannedLoadDate'>>(
+  loads: readonly T[],
+  nowIso: string,
+): T[] {
+  return loads.filter((l) => stageTileOf(l) === 'PREP' && trackingPhase(l, nowIso) === 'on');
+}
+
 /** Najbliższe włączenia śledzenia (E27, Mapa): dni załadunku po dzisiejszym 03:00, z transportami i naczepą. */
 export function nextTrackingStarts(
   loads: readonly Load[],

@@ -2,7 +2,7 @@
  * wyglad/P4 — E28 przypisanie statusów do kafelków (według E25), E27 okno śledzenia, L7 oznaczenia obok statusu.
  */
 import { describe, expect, it } from 'vitest';
-import { countByTile, nextTrackingStarts, stageTileOf, statusMarkers, trackingPhase, type StageTile } from '../src/lib/stageTiles';
+import { countByTile, nextTrackingStarts, stageTileOf, statusMarkers, trackingPhase, trackingWindowPrep, type StageTile } from '../src/lib/stageTiles';
 import type { Load } from '../src/types';
 
 const L = (p: Partial<Load> & { status: string }): Load =>
@@ -43,6 +43,17 @@ describe('E27 — okno śledzenia od 03:00 w dniu załadunku do „Dostarczone�
     expect(trackingPhase(L({ status: 'IN_TRANSIT_SE' }), '2026-10-01T00:00:00Z')).toBe('on');
     expect(trackingPhase(L({ status: 'DELIVERED' }), '2026-10-08T12:00:00Z')).toBe('after');
     expect(trackingPhase(L({ status: 'CANCELLED' }), '2026-10-08T12:00:00Z')).toBe('after');
+  });
+  it('Mapa (E27): przygotowanie po 03:00 w dniu załadunku — kandydat na znacznik (gdy baza ma GPS); w trasie i przed oknem — nie', () => {
+    const now = '2026-10-08T06:00:00Z';
+    const loads = [
+      L({ code: 'A', status: 'READY', plannedLoadDate: '2026-10-08' }),
+      L({ code: 'B', status: 'READY', plannedLoadDate: '2026-10-09' }),
+      L({ code: 'C', status: 'IN_TRANSIT_PL', stage: 'TO_PORT' }),
+      L({ code: 'D', status: 'PLANNED', plannedLoadDate: '2026-10-07' }),
+    ];
+    expect(trackingWindowPrep(loads, now).map((l) => l.code)).toEqual(['A', 'D']);
+    expect(trackingWindowPrep(loads, '2026-10-08T00:30:00Z').map((l) => l.code)).toEqual(['D']);
   });
   it('najbliższe włączenia: dni po kolei, transporty w dniu', () => {
     const loads = [

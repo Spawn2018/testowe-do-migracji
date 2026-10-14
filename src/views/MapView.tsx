@@ -15,7 +15,7 @@ import { vehiclesInMotion } from '../lib/format';
 import { transportLabel } from '../lib/transportName';
 import { StageBar, StageChip } from '../components/shell/StageBar';
 import { StatusMarkers } from '../components/ui/StatusPill';
-import { isOnRoute, nextTrackingStarts, statusMarkers } from '../lib/stageTiles';
+import { isOnRoute, nextTrackingStarts, statusMarkers, trackingWindowPrep } from '../lib/stageTiles';
 import { delayPillMinutes } from '../lib/prodDash';
 import { delayMinutesVsPlan } from '../lib/time';
 import { filterLoadsForRole } from '../lib/permissions';
@@ -89,7 +89,6 @@ export function MapView() {
   const [aisReadAt, setAisReadAt] = useState<string | null>(null);
   const [timing, setTiming] = useState<TimingFilter>('all');
   const [widths, setWidths] = useState<Record<MapColId, number>>(() => loadMapWidths());
-  const [gpsWithFix, setGpsWithFix] = useState(0);
   const widthsRef = useRef(widths);
   widthsRef.current = widths;
 
@@ -137,32 +136,41 @@ export function MapView() {
     return tableBase;
   }, [tableBase, timing]);
   const onMap = useMemo(() => list.filter(isOnRoute), [list]);
+  /* E27: na produkcji znacznik dostaje też transport w przygotowaniu po 03:00 w dniu załadunku, gdy baza ma jego pozycję GPS
+     (CorridorMap rysuje na produkcji tylko pozycje z bazy). Tabela i „W trasie · N” zostają przy transportach w trasie.
+     Demo nie ma GPS — tam bez zmian (obraz E28: „Przygotowanie” → „W trasie: 0”). Lista ma klucz z numerów, żeby nie pytać bazy co minutę od nowa. */
+  const windowPrepKey = PROD_BUILD && timing === 'all' ? trackingWindowPrep(baseList, nowIso).map((l) => l.id).join(',') : '';
+  const mapLoads = useMemo(() => {
+    if (!windowPrepKey) return onMap;
+    const ids = new Set(windowPrepKey.split(','));
+    return [...onMap, ...baseList.filter((l) => ids.has(l.id))];
+  }, [onMap, baseList, windowPrepKey]);
   const nextStarts = useMemo(() => nextTrackingStarts(filterLoadsForRole(loads, role), nowIso, 3), [loads, role, nowIso]);
   const refYear = refYearInOps(getNow());
   const filtersOn = !!stageFilter || !!search.trim() || timing !== 'all';
 
-  /* E: licznik „N pojazdów” = tylko pojazdy z prawdziwą pozycją GPS (prod); demo = progress w ruchu. */
+  /* E: licznik „N pojazdów” = tylko pojazdy w trasie z prawdziwą pozycją GPS (prod; to samo zapytanie co mapa, te same numery); demo = progress w ruchu. */
+  const [fixIds, setFixIds] = useState<ReadonlySet<string>>(() => new Set());
   useEffect(() => {
-    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
-      setGpsWithFix(onMap.filter((l) => l.progress > 0 && l.progress < 1).length);
-      return undefined;
-    }
+    /* warunek wprost na zmiennej środowiska — paczka demo nie dostaje kodu pobierania pozycji (test I-2) */
+    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return undefined;
     let cancelled = false;
-    const ids = onMap.map((l) => l.id);
+    const ids = mapLoads.map((l) => l.id);
     const run = () => {
       void import('../lib/vehiclePositions').then(({ fetchLatestVehicleFixes }) => fetchLatestVehicleFixes(ids)).then(
-        (rows) => {
-          if (cancelled) return;
-          const want = new Set(ids);
-          setGpsWithFix(rows.filter((r) => want.has(r.loadId)).length);
-        },
-        () => { if (!cancelled) setGpsWithFix(0); },
+        (rows) => { if (!cancelled) setFixIds(new Set(rows.map((r) => r.loadId))); },
+        () => { if (!cancelled) setFixIds(new Set()); },
       );
     };
     run();
     const id = window.setInterval(run, 60_000);
     return () => { cancelled = true; window.clearInterval(id); };
-  }, [onMap]);
+  }, [mapLoads]);
+  const gpsWithFix = PROD_BUILD
+    ? onMap.filter((l) => fixIds.has(l.id)).length
+    : onMap.filter((l) => l.progress > 0 && l.progress < 1).length;
+  /* pusto na mapie = nikt w trasie i żaden transport z okna śledzenia nie ma pozycji */
+  const mapEmpty = onMap.length === 0 && !mapLoads.some((l) => fixIds.has(l.id));
 
 
   /* liczby przy chipach = to, co pokaże kliknięcie (E28 pkt 6) */
@@ -199,7 +207,9 @@ export function MapView() {
       <header className="panel-hd">
         <h2>{t(locale, 'nav_map')}</h2>
         <span className="sub">
-          {vehiclesInMotion(gpsWithFix)} · {t(locale, 'p4_map_sub')}
+          {vehiclesInMotion(gpsWithFix)}
+          {/* telefon: bez opisu częstotliwości — mapa ma się zmieścić w całości po otwarciu (B-7a) */}
+          <span className="map-sub-cadence"> · {t(locale, 'p4_map_sub')}</span>
         </span>
         <div className="spacer" />
         <button type="button" className="chipbtn" onClick={() => setView('geo')}>
@@ -222,8 +232,8 @@ export function MapView() {
             ))}
           </div>
           <div className="mapstage">
-            <CorridorMap loads={onMap} />
-            {onMap.length === 0 ? (
+            <CorridorMap loads={mapLoads} />
+            {mapEmpty ? (
               /* E27: nikogo w oknie śledzenia — mapa bez znaczników z informacją na środku */
               <div className="map-empty" data-map-empty>
                 <b>{t(locale, 'p4_map_empty')}</b>
