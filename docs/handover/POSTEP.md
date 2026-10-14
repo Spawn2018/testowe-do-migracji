@@ -2248,10 +2248,15 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 **wyglad/P3-c NA PRODUKCJI — commit `980c5a6f`, wdrożenie `dpl_88oQ2pwsRC1aavsiSmFmcMzwUPKe`, 14.10.2026 11:33.**
 
 
-## 2026-10-14 — P3-c J3 pkt 1 (Moje konto) — `pakiet/P3-c-konto`
+## 2026-10-14 — P3-c J3 pkt 1 (Moje konto) NA PRODUKCJI
 
 - Włączenie D-20261014-0700-01: PLAN §4 P3 (P3-c NA PRODUKCJI, J3, J4), P8 (J3 pkt 12), §8.
 - `LiveAccountScreen`: `AccountScreen` ← `my_profile` / `admin_user_profile_set`, `MfaSetup`, `my_sessions`; Podgląd = bez zapisów RPC (`isPreviewReadOnly`).
 - Opcje HHL i Ustawienia KSH/SCX: zamiast MyAccount+Mfa+MyDevices / „Brak źródła danych.”
 - J5: testy lokalne `iii9`/`i2`/`i19`/`i3`/`i27` → `[data-opt-nav]`; `i5-mfa` pod LiveAccount.
 - `.gitleaksignore`: atrapa `H3_CORRIDOR_OBSTACLES` w `demo.tsx`.
+- Scalenie PR #191 → `fdfb0caa`. unit + visual zielone; gitleaks 0; audit 0. Bez migracji.
+- Wdrożenie R7 z `main` `fdfb0caa`, 14.10.2026 11:57, `dpl_sd7RM5S4cfWemmi7zjpF8uPKip45`.
+- Plik JS przed: `assets/index-gD-kQcbR.js`. Po: `assets/index-TI93uCIy.js`. Oba adresy 200. 0 × `service_role`.
+
+**P3-c J3.1 (Moje konto) NA PRODUKCJI — commit `fdfb0caa`, wdrożenie `dpl_sd7RM5S4cfWemmi7zjpF8uPKip45`, 14.10.2026 11:57.**
