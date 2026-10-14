@@ -267,7 +267,22 @@ export function AwizacjaModal({ load, onClose }: Props) {
             load={load}
             locale={locale}
             nowIso={nowIso}
-            onOpenRio={import.meta.env.VITE_AUTH_MODE !== 'supabase' ? () => pushToast(t(locale, 'p4c_tl_open_demo'), 'LOW', load.id) : undefined}
+            onOpenRio={import.meta.env.VITE_AUTH_MODE !== 'supabase'
+              ? () => pushToast(t(locale, 'p4c_tl_open_demo'), 'LOW', load.id)
+              : async () => {
+                try {
+                  const { getSupabase } = await import('../../auth/client');
+                  const sb = await getSupabase();
+                  const { data, error } = await sb.rpc('rio_tracking_open', { p_load_id: load.id });
+                  if (error || !data) {
+                    pushToast(error?.message ?? t(locale, 'p4c_tl_open_fail'), 'HIGH', load.id);
+                    return;
+                  }
+                  window.open(String(data), '_blank', 'noopener,noreferrer');
+                } catch (e) {
+                  pushToast(e instanceof Error ? e.message : t(locale, 'p4c_tl_open_fail'), 'HIGH', load.id);
+                }
+              }}
           />
 
           <label className="form-field">

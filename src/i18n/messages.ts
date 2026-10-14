@@ -364,6 +364,7 @@ const pl: Dict = {
   p4c_tl_rio_chip_noasset: 'RIO · ••••',
   p4c_tl_open: 'Otwórz w RIO',
   p4c_tl_open_demo: 'Tryb demo — w wersji z bazą „Otwórz w RIO” otwiera stronę RIO w nowej karcie.',
+  p4c_tl_open_fail: 'Nie udało się otworzyć RIO.',
   p4c_tl_change: 'Zmień link',
   p4c_tl_change_cancel: 'Zostaw obecny link',
   p4c_tl_change_hint: 'Nowy link zastąpi obecny, ślad zostaje. Bez nowego linku zostaje obecny.',

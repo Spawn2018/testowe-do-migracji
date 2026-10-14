@@ -227,7 +227,7 @@ const pl: Dict = {
     + '|„przed terminem” (bursztynowy) — ETA przed początkiem okna dostawy (inny dzień albo przed godziną „od”); tylko informacja, bez decyzji w Centrum i bez SMS.'
     + '|„po terminie” (czerwony) — ETA po końcu okna dostawy; ten sam warunek co ryzyko ETA po terminie i próg L-3 — bez drugiego alarmu.'
     + '|„przyjazd nocą” — ETA między 22:00 a 06:00 czasu polskiego; tylko informacja, bez decyzji i bez SMS.'
-    + '|Wysoka / Średnia / Niska — pewność prognozy według pasma ± minut: Wysoka do ±60 min, Średnia do ±240 min, Niska powyżej albo bez pasma.'
+    + '|Wysoka / Średnia / Niska — pewność prognozy według pasma ± minut: Wysoka do ±30 min, Średnia do ±120 min, Niska powyżej albo bez pasma.'
     + '|Rozbicie ETA — jazda, przerwy, odpoczynek dobowy, prom; pasmo ± min łączy niepewność odcinków pierwiastkiem z sumy kwadratów.'
     + '|„–” — przed wyjazdem z placu załadunku albo bez świeżej pozycji GPS ETA nie jest pokazywana.',
   a6_dr_in_window: 'w oknie',
@@ -897,7 +897,7 @@ const en: Dict = {
     + '|“before schedule” (amber) — ETA before the start of the delivery window (another day or before the “from” time); information only, no Decision Centre entry and no SMS.'
     + '|“after schedule” (red) — ETA after the end of the delivery window; the same condition as the ETA-after-latest risk and the L-3 threshold — no second alarm.'
     + '|“night arrival” — ETA between 22:00 and 06:00 Polish time; information only, no decision and no SMS.'
-    + '|High / Medium / Low — forecast confidence from the ± minutes band: High up to ±60 min, Medium up to ±240 min, Low above that or without a band.'
+    + '|High / Medium / Low — forecast confidence from the ± minutes band: High up to ±30 min, Medium up to ±120 min, Low above that or without a band.'
     + '|ETA breakdown — driving, breaks, daily rest, ferry; the ± min band combines segment uncertainty as root sum of squares.'
     + '|“–” — before leaving the loading yard or without a fresh GPS position the ETA is not shown.',
   a6_dr_in_window: 'in window',
@@ -1567,7 +1567,7 @@ const sv: Dict = {
     + '|”före tid” (bärnsten) — ETA före början av leveransfönstret (annan dag eller före ”från”-tid); endast information, ingen beslutspost och inget SMS.'
     + '|”efter tid” (röd) — ETA efter slutet av leveransfönstret; samma villkor som risken ETA efter senast-tid och L-3-tröskeln — inget andra larm.'
     + '|”nattankomst” — ETA mellan 22:00 och 06:00 polsk tid; endast information, inget beslut och inget SMS.'
-    + '|Hog / Medel / Lag — prognosens säkerhet enligt ± minuter-intervallet: Hog upp till ±60 min, Medel upp till ±240 min, Lag över det eller utan intervall.'
+    + '|Hog / Medel / Lag — prognosens säkerhet enligt ± minuter-intervallet: Hog upp till ±30 min, Medel upp till ±120 min, Lag över det eller utan intervall.'
     + '|ETA-uppdelning — körning, raster, dygnsvila, färja; ± min-intervallet kombinerar osäkerhet som kvadratrotssumma.'
     + '|”–” — före avfärd från lastplatsen eller utan färsk GPS-position visas ingen ETA.',
   a6_dr_in_window: 'inom fönstret',

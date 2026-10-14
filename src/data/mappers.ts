@@ -13,7 +13,9 @@ import { renderNotice, asLocale, DECISION_LEAD } from '../../supabase/functions/
 import { clickFromPayload, clickTarget } from '../../supabase/functions/_shared/clickTargets';
 import { shows } from '../lib/prodFacade';
 import { autoRiskCode } from '../lib/sailings';
-import type { Sailing } from '../types';
+import { etaDetailFromBasis } from '../lib/etaDetail';
+import { trackerKind } from '../lib/trackerLink';
+import type { Sailing, TrackingLinkInfo } from '../types';
 
 // ---- status ---------------------------------------------------------------
 export type DbLoadStatus =
@@ -94,6 +96,15 @@ export interface LoadRow {
   driver_phone_country?: string | null;
   escort_vehicles: number | null; ferry_booking_ref: string | null; sailing_id?: string | null;
   telematics_vehicle_id?: string | null;
+  /** E44 / H4 — bez `rio_secret` (kolumna bez SELECT dla authenticated). */
+  rio_tracking_id?: string | null;
+  rio_asset_name?: string | null;
+  rio_tracker_on?: string | null;
+  rio_valid_from?: string | null;
+  rio_valid_to?: string | null;
+  rio_check_state?: string | null;
+  rio_check_at?: string | null;
+  rio_last_fix_at?: string | null;
   /** Rejs (AN1): jedno źródło prawdy — `sailings` przez `loads.sailing_id` (embed PostgREST). */
   sailings?: SailingRow | null;
   combo_length_m: number | string | null; combo_width_m: number | string | null; combo_height_m: number | string | null;
@@ -112,13 +123,19 @@ export interface EtaBasis {
   method?: string; segment?: string; flags?: string[]; sailing?: string | null;
   segments?: Array<Record<string, unknown>>; computed_at?: string;
   pre_load?: boolean;
+  causes?: {
+    drive_h?: number | null;
+    rest_h?: number | null;
+    remaining_km?: number | null;
+    progress?: string | null;
+  };
 }
 
-/** I-2d: pasmo ufności (minuty) → poziom. ≤60 min WYSOKA, ≤240 ŚREDNIA, inaczej NISKA. */
+/** I-2d / E15-3 (D-20261014-0640-01 H3.2): ≤30 min WYSOKA, ≤120 ŚREDNIA, inaczej NISKA. */
 export function etaConfidenceFromMinutes(min: number | null | undefined): 'HIGH' | 'MED' | 'LOW' {
   if (min === null || min === undefined) return 'LOW';
-  if (min <= 60) return 'HIGH';
-  if (min <= 240) return 'MED';
+  if (min <= 30) return 'HIGH';
+  if (min <= 120) return 'MED';
   return 'LOW';
 }
 
@@ -147,6 +164,34 @@ export const vesselToDb = (v: string | null | undefined): string | null => {
   if (/^stena /i.test(v)) return v.startsWith('M/F ') ? v : `M/F ${v}`;
   return v.startsWith('M/F ') ? v : `M/F ${v}`;
 };
+
+/** E44 / D-20261014-1320-01 K2.1 — stan linku bez secret. */
+export function trackingLinkFromRow(row: LoadRow): TrackingLinkInfo | null | undefined {
+  const ref = row.telematics_vehicle_id ?? null;
+  const kind = trackerKind(ref);
+  const hasRio = Boolean(row.rio_tracking_id) || kind === 'rio';
+  if (!hasRio && kind === 'none') return undefined;
+  if (!hasRio && kind === 'emtrack') {
+    return { provider: 'EMTRACK', check: { state: 'ok' } };
+  }
+  if (!hasRio && kind === 'other') {
+    return { provider: 'OTHER', check: { state: 'ok' } };
+  }
+  const on = row.rio_tracker_on;
+  const trackerOn =
+    on === 'NACZEPA' || on === 'CIAGNIK_PL' || on === 'CIAGNIK_SE' || on === 'NIEZNANY' ? on : null;
+  const st = row.rio_check_state;
+  const checkState =
+    st === 'ok' || st === 'pending' || st === 'invalid' || st === 'down' ? st : 'pending';
+  return {
+    provider: 'RIO',
+    asset: row.rio_asset_name ?? null,
+    validFrom: row.rio_valid_from ?? null,
+    validTo: row.rio_valid_to ?? null,
+    trackerOn,
+    check: { state: checkState, at: row.rio_check_at ?? null, lastFixAt: row.rio_last_fix_at ?? null },
+  };
+}
 
 export function ferryFromRow(row: Pick<LoadRow, 'ferry_booking_ref' | 'sailings'>): FerryBooking {
   const s = row.sailings ?? null;
@@ -230,6 +275,11 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
     unloadedAt: row.actual_delivery_at ?? null,
     sailingId: row.sailing_id ?? null,
   };
+  const trackingLink = trackingLinkFromRow(row);
+  const withLink = trackingLink !== undefined ? { ...base, trackingLink } : base;
+  const etaDetail = etaDetailFromBasis(row.eta_basis, status);
+  const withEta = etaDetail ? { ...withLink, etaDetail } : withLink;
+
   // I-2d: ETA v1 z bazy (0051) — klient niczego nie dolicza (zero fasady).
   if (row.eta_basis || !shows('clientEta')) {
     const nowMs = Date.parse(nowIso);
@@ -237,7 +287,7 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
     const conf = row.eta_confidence_min ?? null;
     const h = (ms: number) => Math.round((ms / 3600000) * 10) / 10;
     return {
-      ...base,
+      ...withEta,
       etaConfidence: etaConfidenceFromMinutes(conf),
       etaConfMin: conf,
       etaEarliestHours: Number.isFinite(etaMs) ? Math.max(0, h(etaMs - (conf ?? 0) * 60000 - nowMs)) : 0,
@@ -249,7 +299,7 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
     };
   }
   return {
-    ...base,
+    ...withEta,
     etaBoden: null,
     etaReasons: ['Brak pozycji GPS'],
     etaMethod: 'pozycja',

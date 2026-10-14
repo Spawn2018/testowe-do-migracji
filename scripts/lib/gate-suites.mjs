@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 23,
   import: 66,
-  nullguard: 632, // +5 my_session_revoke GUARD ×4 + pozytywna (D-20261014-1420-01 R3)
+  nullguard: 637, // +5 rio_tracking_open GUARD (0207 E44 H4); wcześniej +5 my_session_revoke
   i2: 540,
   i30: 10,
   i31: 9,
