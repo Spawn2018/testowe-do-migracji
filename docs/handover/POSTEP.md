@@ -2303,3 +2303,16 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **P3-c poprawka NA PRODUKCJI — commit `50d4fc3e`, 14.10.2026 14:45.**
 
+## 2026-10-14 — P3-c-sesja (D-20261014-1420-01 R3) — TEST + NA PRODUKCJI
+
+- **TEST zajęte: P3-c-sesja**, od 14.10.2026 ~15:02 — security, nullguard, doradca (session w CI `db`).
+- TEST na `c7e8a368` / migracja **0206**: security **84/84** (+2 SKIP), nullguard **161+136+212+123 = 632/632**; doradca security TEST: **0 nowych** (wyjątek `my_session_revoke`).
+- CI PR #197 na `c7e8a368`: unit, visual, db zielone; gitleaks 0 (zakres vs main); `npm audit --omit=dev --audit-level=high` 0.
+- **TEST wolne** od 14.10.2026 15:40.
+- Scalenie PR #197 → `12b72b00`.
+- Próba ROLLBACK 0206 na produkcji: fn_ok=1, definer_ok=1, grant_auth=1, no_anon=1; ROLLBACK.
+- `db push` 0206; drugi raz „up to date”; 206 migracji; `my_session_revoke` na produkcji.
+- Wdrożenie R7 z `main` `12b72b00`, 14.10.2026 15:43, `dpl_3BeJ9Y55vxh15noTNpevBabdV7aT`.
+- Plik JS: `assets/index-DqC_epNn.js` (chunk `LiveAccountScreen-*.js` z `my_session_revoke`). Oba adresy 200. 0 × `service_role` (9 plików JS z HTML + crawl). Kopia wdrożeniowa usunięta.
+
+**P3-c-sesja NA PRODUKCJI — commit `12b72b00`, migracja 0206, wdrożenie `dpl_3BeJ9Y55vxh15noTNpevBabdV7aT`, 14.10.2026 15:43.**
