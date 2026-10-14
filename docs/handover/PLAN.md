@@ -117,7 +117,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Cursor scala te PR i wdraża (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → P4 → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; Poprawki P2 — wygląd: `pakiet/P2-wyglad`, D-20261013-1535-01 V1–V4; Poprawki P2 — wygląd 2: koordynator `wyglad/P2-2`, D-20261013-1815-01 W1–W7 — przed scaleniem P3)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; Poprawki P2 — wygląd: `pakiet/P2-wyglad`, D-20261013-1535-01 V1–V4; Poprawki P2 — wygląd 2: koordynator `wyglad/P2-2`, D-20261013-1815-01 W1–W7 — przed scaleniem P3; Poprawki P3: `pakiet/P3-poprawki`, D-20261014-0015-01 — przed wdrożeniem P4 z migracją)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -272,6 +272,11 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - zapis daty albo godziny załadunku / rozładunku przez API: HHL Administrator, HHL Operacje, SCX Dyspozytor, SCX Użytkownik → odmowa bazy; KSH Użytkownik → przyjęty, wpis w Historii; wgranie pliku przez Administratora HHL nadal zmienia daty; „Działaj jako” KSH → zapis przyjęty, w dzienniku prawdziwy wykonawca (W30);
   - zrzuty porównane z makietami E9, E11, E12, E37 (pasek), E6, E13;
   - Kokpit na telefonie według E8 pkt 6 i `img/e8-after.webp` (D-20261013-1535-01 V5): kafelki 2 × 2 o równej szerokości; liczby się nie łamią („54 / 72” w jednej linii); 3 najpilniejsze sprawy; treść kafelków według E9.
+
+### Poprawki P3 · W TRAKCIE SCALENIA (gałąź `pakiet/P3-poprawki`, PR #184, D-20261014-0015-01) — przed wdrożeniem P4 z migracją
+- **D1 / R1–R4** w kodzie (migracja **0204**): G-20 baza + `g20`, WEB_PUSH tylko krytyczne, DECISION×CLIENT_USER `push=false`, wyjątki doradcy, instrukcja W1.
+- **TEST** (przed scaleniem): security 84, status 44, nullguard 622, g20 15/15; doradca security TEST 0 nowych. Doradca prod: tylko ostrzeżenie ochrony haseł (W1 — włącza właściciel).
+- **W34 dostarczone 14.10.2026 01:55** — ponowienie checków `unit`/`visual`/`db`, scalenie, `db push` 0204, Edge `web-push-send`, sygnał „P3-poprawki NA PRODUKCJI”.
 
 ### P4 · Statusy, śledzenie, ETA — DO ZROBIENIA
 - **E25** statusy (automat „Gotowe do fakturowania” opierasz na dzisiejszym dokumencie CMR po dostawie; P5 podmienia na wymóg z E31):
@@ -507,7 +512,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 ## §5. Czeka na właściciela (wykonawca wpisuje i idzie dalej)
 | Nr | Co | Kiedy potrzebne | Stan |
 |---|---|---|---|
-| W1 | Ustawienia logowania Supabase: ochrona przed wyciekniętymi hasłami, minimum 12 znaków, „litery i cyfry” (instrukcja od wykonawcy w P3) | po P3 | czeka |
+| W1 | Ustawienia logowania Supabase: ochrona przed wyciekniętymi hasłami, minimum 12 znaków, „litery i cyfry” — instrukcja: `docs/handover/INSTRUKCJA_W1_USTAWIENIA_LOGOWANIA.md` (D-20261014-0015-01 R4) | po P3 | czeka (instrukcja w repo; włączenie w panelu — właściciel) |
 | W2 | Użytkownicy (imię, nazwisko, telefon) i numery SMS Śrem / Boden — wpisuje właściciel w programie | po P3 i P8 | czeka |
 | W3 | SG-01: potwierdzenie daty rozładunku w oknie „Zmień status” | po P4 | czeka |
 | W4 | SCX wgrywa zezwolenie 13/GD/2026; HHL wgrywa polisę PZU 1106707356 | po P5 | czeka |
@@ -540,6 +545,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W31 | „Data załadunku” w pliku KSH jest w 28 wierszach formułą „dostawa − 5 dni” (plik z 08.10). Gdy KSH zmieni w Watch Tower datę załadunku takiego transportu: nadpisać formułę wartością czy zostawić formułę (wtedy zmiana nie trafi do pliku). Do odpowiedzi: wartość zastępuje formułę — decyzja 13:09 jest nowsza niż „formuł nie zmienia” z 12:50 (D-20261009-1309-01 R6 pkt 5) | przed „P7 — uzupełnienie W13” | czeka |
 | W32 | Nocna brama wizualna nie działa na tym komputerze (P0-CI pkt 8). Na czym działa — inny komputer, agent w chmurze (np. Cursor, Codex, Claude), coś innego? Czy dalej ma co noc działać? | gdy zdecydujesz | czeka — do odpowiedzi: bez zmian, tylko raportuje; jej brak nie wstrzymuje pracy (zrzuty przed scaleniem sprawdza `visual`, D-87; D-20261011-2254-01) |
 | W33 | Windows na komputerze wykonawcy nie instaluje aktualizacji od 11.11.2025 (26100.7171; najnowsza dla 24H2: 26100.9550 z 22.09.2026) — komputer z kluczami produkcji. Naprawa wymaga ok. 25 GB wolnego na C:. Kiedy? | po wydaniu (P11) | czeka — do odpowiedzi: po wydaniu (P11) (D-20261011-2135-01) |
+| W34 | GitHub Actions: joby nie startują — „recent account payments have failed or your spending limit needs to be increased” (Billing & plans). Blokuje checki PR #184 (Poprawki P3) i dalsze bramy. STOP §1 pkt 12.2 (wydatek / limit poza decyzjami planu). | przed scaleniem Poprawek P3 | **dostarczone 14.10.2026, 01:55** (właściciel: GitHub Actions działa) |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0, rezerwa
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -613,3 +619,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 13.10.2026 18:35 | D-20261013-1835-01: FRONT-KOORDYNATOR — wygląd na `wyglad/*` robi koordynator; Cursor: dane, logika, baza, scalenie i wdrożenie (F1–F8). Rejestr; `AGENTS.md` §3 i §4; `.cursor/rules/front.mdc`; PLAN §1 pkt 5, §3, §4 P2 (Poprawki P2 — wygląd 2), P3, P5 (kolor marży), §8. D-20261013-1815-01 (W1–W7) przejmuje koordynator na `wyglad/P2-2` (F4); Cursor scala i wdraża gdy zielony. P3: najpierw logika i baza (F5) | właściciel 13.10 18:27; koordynator |
 | 13.10.2026 21:30 | D-20261013-2130-01: do `wyglad/P3` — E13 CSS dzwonek (Cursor nie zmienia CSS); uchwyty Moje konto / Użytkownicy / matryca 5 ról / Podgląd; scalenie logiki P3 bez czekania na wygląd | wykonawca (Cursor) |
 | 13.10.2026 22:55 | D-20261013-2255-01: wyglad/P3-a — kolejność scalenia PR #178, uchwyty G3, logika profilu G4 (`last_sign_in_at`, `real_full_name`); PLAN §4 P3: P3-a / P3-b / P3-c | koordynator; wykonawca |
+| 14.10.2026 00:15 | D-20261014-0015-01: Poprawki P3 (R1 G-20 baza, R2 push krytyczne + DECISION×CLIENT_USER, R3 doradca prod, R4 instrukcja W1) — przed P4 z migracją | koordynator |
+| 14.10.2026 01:39 | STOP Poprawki P3: GitHub Actions — płatność / limit wydatków (W34); TEST i doradca TEST OK na `10d21b5b`; dalej P4 (bez wdrożenia migracji P4 do po Poprawkach P3) | wykonawca |

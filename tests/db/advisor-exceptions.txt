@@ -162,6 +162,8 @@ authenticated_security_definer_function_executable	public.unmark_invoice_paid	E1
 authenticated_security_definer_function_executable	public.wf_duplicate_check	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.workflow_rule_history	E19 — allowlista RPC; sprawdzenie roli w funkcji
 auth_leaked_password_protection	auth.*	TEST: ochrona wycieków haseł — wyjątek planu darmowego (PLAN §1 pkt 3.3)
+rls_enabled_no_policy	public.email_budget_day	tylko produkcja; tabela zamknięta dla ról API (RLS bez policy, brak grantu)
+extension_in_public	public.pg_net	rozszerzenie w public, jak postgis (tylko produkcja; na TEST brak)
 rls_enabled_no_policy	public.security_advisor_snapshots	tabela zamknięta dla ról API (RLS bez policy, brak grantu); odczyt przez RPC
 authenticated_security_definer_function_executable	public.security_advisor_snapshot_latest	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.admin_security_flag_set	E19 — allowlista RPC; sprawdzenie roli w funkcji
