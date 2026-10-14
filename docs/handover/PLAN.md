@@ -284,9 +284,11 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
 
 ### P4 · Statusy, śledzenie, ETA — DO ZROBIENIA
 - **E25** statusy (automat „Gotowe do fakturowania” opierasz na dzisiejszym dokumencie CMR po dostawie; P5 podmienia na wymóg z E31):
+  - status aplikacji `AT_PORT_SE` dla Port SE z listami statusów (D-20261014-0315-01 H1);
   - Kokpit i liczba „Faktury” ze statusu `READY_TO_INVOICE` (`src/lib/cockpitE9.ts`, D-20261014-0215-01 H3);
   - pomiar morza na kafelku „Najbliższy prom” (`DashboardView.tsx`, `sea` — B7 / D-20261014-0215-01 H3);
   - nowe kody „Gotowe do fakturowania”, „Zafakturowano”; UNLOADED scalony z DELIVERED;
+  - typy zdarzeń `STATUS_READY_TO_INVOICE` / `STATUS_INVOICED` w `load_events_event_type_known` (D-20261014-0640-01 H1); autor w `load_status_set` i jedno zdarzenie na zmianę; warunek „nie wcześniej niż poprzedni status” w bazie (H2);
   - okno „Zmień status” (role według decyzji 17:46); jedna funkcja w bazie;
   - poprawka −2 h dla nowych zapisów;
   - oznaczenia Opóźniony / Brak GPS / Brak dokumentów obok statusu (L7);
@@ -299,6 +301,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - bezpiecznik według L17.
 - **E44** odczyt pozycji z linku RIO (decyzje właściciela 09.10 10:34, 10:54, 11:19; `etapy/E44.md` w całości — pkt 1–9; G-24):
   - **najpierw regulamin RIO** (`AGENTS.md` §6 „Nowa usługa zewnętrzna”): strona `public.position-sharing.rio.cloud` w robots.txt zakazuje automatów, API nie ma publicznej dokumentacji (E44 „Fakty”); zgoda SCX i podwykonawcy na automatyczny odczyt jest na piśmie (11:19). Wynik sprawdzenia (adres warunków, data, cytat punktu o automatycznym dostępie) wpisujesz w PR. Jeśli warunki RIO wykluczają automatyczny odczyt — STOP §1 pkt 12.6: wpis w §5, sygnał w czacie i dalej następna pozycja P4 (bez E44);
+  - klucz RIO tylko po stronie serwera, `trackingRef` bez `secret` (D-20261014-0640-01 H4.1); `trackerOn` / `trackerPlate` (H4.2);
   - rozpoznanie linku w polu „Link śledzenia” w dzisiejszym oknie awizacji (`AwizacjaModal.tsx`), `rio_tracking_id` i `rio_secret` tylko po stronie serwera, zapytanie testowe po zapisie (pkt 1); P7 przenosi to działanie do nowego okna Awizacja bez zmian;
   - adapter `_shared/telematics/rioPositionSharing.ts`, cron `tower-rio-links` co 2 min — tylko transporty w oknie śledzenia E27 i tylko w czasie `start`–`end` linku (pkt 2);
   - zapis pozycji do tej samej tabeli co emtrack, `position_source = SUBCONTRACTOR_LINK`, bez duplikatów, prędkość z odległości i czasu (pkt 3); dalej jak dla emtrack (pkt 4) — SMS Śrem / Boden z E42 działają po P8 na tych samych pozycjach;
@@ -307,6 +310,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - błędy (pkt 7): „Link RIO nieprawidłowy” — sprawa dla SCX; 3 błędy pod rząd — wpis w `integration_runs` (`rio-links`) i sprawa „Źródło danych nie działa · RIO” dla HHL, tak jak dziś dla emtrack (`SOURCE_DOWN`, E23 „Fakty”); e-mail i push do Administratorów HHL — od P10a (RIO na liście źródeł E23);
   - pole „Link śledzenia” a kompletność awizacji: L19 (nie blokuje) i pytanie W27.
 - **E15** ETA:
+  - `Load.etaDetail` z `eta_basis` (D-20261014-0640-01 H3.1); progi słowa pewności 30 / 120 min (H3.2);
   - poprawka odpoczynku, „czeka przed placem” (E15-2), przeliczanie co 5 min;
   - cisza GPS 30 min w ruchu / 3 h na postoju; geometria HERE (E15-1);
   - „–” przed wyjazdem, słowa pewności (E15-3), kalibracja po 5 dostawach.
@@ -318,7 +322,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - `etap4-ui.spec.ts` l.88–116 („Oznacz jako gotowy”); `visual-states.spec.ts` (`mark-ready`, chipy);
   - `status-label.test.ts`, `status-pill.test.ts`, `money-v2.test.ts` l.63, `telm2-sim.test.ts`, `l11-spine.test.ts`, `eta-*.test.ts`, `i15-eta-band.test.ts`, `corridor-eta.test.ts`;
   - zestawy `status`, `release`, `i2`, `h4`, `dwell`.
-- **Ekrany:** panel transportu (Status), pasek etapów (Kokpit, Harmonogram, Mapa), znaczniki statusów; pole „Link śledzenia” w oknie awizacji i opis lokalizatora w panelu (E44).
+- **Ekrany:** wygląd — koordynator: P4-a `wyglad/P4` (pasek E28, Harmonogram, Mapa E27, oznaczenia L7); P4-b panel transportu (E25 Status i okno, E27 pasek w panelu, E15 ETA, E44) — po scaleniu PR #181; pole „Link śledzenia” w oknie awizacji i opis lokalizatora w panelu (E44).
 - **Odbiór:**
   - sekcje „Test” E25, E26, E27, E28, E15 i E44 (pkt 9; `secret` w żadnym logu ani eksporcie — grep po testach);
   - na TEST przejazd SG-03 kończy się „Dostarczone 12:19” — na śladzie zmyślonym (G-17), a po zgodzie W25 także na prawdziwych pozycjach;
@@ -631,4 +635,6 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 14.10.2026 01:39 | STOP Poprawki P3: GitHub Actions — płatność / limit wydatków (W34); TEST i doradca TEST OK na `10d21b5b`; dalej P4 (bez wdrożenia migracji P4 do po Poprawkach P3) | wykonawca |
 | 14.10.2026 01:55 | W34 dostarczone (GitHub Actions działa); Poprawki P3 scalone i wdrożone | właściciel; wykonawca |
 | 14.10.2026 02:15 | D-20261014-0215-01: wyglad/P3-b — kolejność scalenia po #184, uchwyty Kokpitu/menu, logika H3 w P4/P6 | koordynator |
+| 14.10.2026 03:15 | D-20261014-0315-01: wyglad/P4-a — kolejność #188→#181, H1 `AT_PORT_SE`, naprawa 0205/visual; P4 Ekrany P4-a/P4-b | koordynator |
+| 14.10.2026 06:40 | D-20261014-0640-01: wyglad/P4-b (#189) — H1 CHECK `STATUS_READY_TO_INVOICE`/`STATUS_INVOICED` w #181 przed scaleniem; H2 actor + jedno zdarzenie + czas ≥ poprzedni; H3 etaDetail/progi 30/120; H4 RIO secret tylko serwer; kolejność #181→#189 | koordynator |
 | 14.10.2026 07:00 | D-20261014-0700-01: wyglad/P3-c — scalenie PR #190, podłączenie danych Opcji (J3), testy lokalne (J5), pytanie J4 (ocena przewoźnika); PLAN §4 P3 / P8, §8 | koordynator; wykonawca |

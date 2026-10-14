@@ -16,7 +16,7 @@ export type VehicleMarkerIn = {
 
 export type VehicleMarker = VehicleMarkerIn & { lat: number; lng: number };
 
-const MOVING = ['IN_TRANSIT_PL', 'ON_FERRY', 'IN_TRANSIT_SE', 'APPROACHING_SITE'];
+const MOVING = ['IN_TRANSIT_PL', 'ON_FERRY', 'AT_PORT_SE', 'IN_TRANSIT_SE', 'APPROACHING_SITE'];
 
 /** Pozycja przykładowa — tylko tryb demo. */
 export function demoFleetMarkers(loads: readonly VehicleMarkerIn[], tickBump: number): VehicleMarker[] {

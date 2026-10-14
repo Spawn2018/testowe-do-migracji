@@ -10,10 +10,13 @@ export type LoadStatus =
   | 'IN_TRANSIT_PL'
   | 'AT_PORT'
   | 'ON_FERRY'
+  | 'AT_PORT_SE'
   | 'IN_TRANSIT_SE'
   | 'APPROACHING_SITE'
   | 'UNLOADING'
   | 'DELIVERED'
+  | 'READY_TO_INVOICE'
+  | 'INVOICED'
   | 'DELAYED'
   | 'SILENT'
   | 'DOC_MISSING';

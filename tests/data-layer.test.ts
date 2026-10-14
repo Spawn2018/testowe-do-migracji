@@ -10,6 +10,7 @@ import {
 import { useTowerStore } from '../src/store/useTowerStore';
 import type { DataMutation } from '../src/data/provider';
 import type { LoadStatus } from '../src/types';
+import { stageTileOf } from '../src/lib/stageTiles';
 
 const ORGS: OrgRow[] = [
   { id: '11111111-1111-4111-8111-111111111111', code: 'HHL', kind: 'FORWARDER' },
@@ -68,11 +69,23 @@ describe('BK3 registry — demo data never leaves the browser', () => {
 
 describe('BK3 mappers', () => {
   it('status round-trip for every DB-backed app status; flags stay local', () => {
-    const app: LoadStatus[] = ['PLANNED', 'RESOURCES_PENDING', 'DOC_MISSING', 'READY', 'LOADING', 'IN_TRANSIT_PL', 'AT_PORT', 'ON_FERRY', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'UNLOADING', 'DELIVERED'];
+    // E25 (P4): UNLOADING/UNLOADED → DELIVERED; nowe READY_TO_INVOICE / INVOICED
+    // E25 / D-20261014-0315-01 H1: AT_PORT_NYNASHAMN → AT_PORT_SE (Port SE)
+    const app: LoadStatus[] = [
+      'PLANNED', 'RESOURCES_PENDING', 'DOC_MISSING', 'READY', 'LOADING', 'IN_TRANSIT_PL',
+      'AT_PORT', 'ON_FERRY', 'AT_PORT_SE', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'DELIVERED',
+      'READY_TO_INVOICE', 'INVOICED',
+    ];
     for (const s of app) expect(statusFromDb(statusToDb(s)!)).toBe(s);
+    expect(statusToDb('UNLOADING')).toBe('DELIVERED');
+    expect(statusFromDb('UNLOADED')).toBe('DELIVERED');
     expect(statusToDb('DELAYED')).toBeNull();
     expect(statusToDb('SILENT')).toBeNull();
-    expect(statusFromDb('AT_PORT_NYNASHAMN')).toBe('IN_TRANSIT_SE');
+    expect(statusFromDb('AT_PORT_NYNASHAMN')).toBe('AT_PORT_SE');
+  });
+  it('AT_PORT_NYNASHAMN → AT_PORT_SE → kafelek PORT_SE (H1)', () => {
+    expect(statusFromDb('AT_PORT_NYNASHAMN')).toBe('AT_PORT_SE');
+    expect(stageTileOf({ status: 'AT_PORT_SE', stage: 'APPROACH' })).toBe('PORT_SE');
   });
   it('load row → Load (code from shipment item, carrier org, windows, no demo pricing)', () => {
     const row: LoadRow = {

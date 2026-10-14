@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 23,
   import: 66,
-  nullguard: 622, // P3: +5 admin_security_flag_set; +5 admin_user_profile_set; +5 security_advisor_snapshot_latest
+  nullguard: 627, // P3 +5 snapshot_latest; P4 +5 load_status_set (PURE bez ×4)
   i2: 540,
   i30: 10,
   i31: 9,
@@ -51,6 +51,7 @@ export const EXPECTED_LOCAL = {
   baf: 46,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 26, // P2 — nazwa + E18 P15; P2-poprawki +10 (tytuły robot drogowych)
+  e25: 21, // P4 — load_status_set (E25); +4 H1/H2 D-20261014-0640-01
 };
 
 /**
@@ -114,6 +115,7 @@ export const SUITE_FILE = {
   baf: 'baf.sh',
   e18: 'e18.sh',
   e41: 'e41.sh',
+  e25: 'e25.sh',
 };
 
 /** Jak uruchamiać lokalnie: boot = własna baza, tower = kopia tower_boot, pair = run.sh. */
@@ -157,6 +159,7 @@ export const LOCAL_RUN = {
   baf: 'boot',
   e18: 'boot',
   e41: 'tower',
+  e25: 'tower',
 };
 
 /** Kolejność lokalnej bramy (jak dawny gate.sh). */
@@ -164,7 +167,7 @@ export const LOCAL_ORDER = [
   'security', 'status', 'storage', 'money', 'release', 'backup', 'session', 'archive',
   'watchdog', 'invite', 'risks', 'import', 'nullguard', 'i2', 'i30', 'i31', 'dec2', 'dec3',
   'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto', 'dwell', 'l13',
-  'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41',
+  'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25',
 ];
 
 const NEED_SEED_BASE = new Set(['session']);
@@ -259,7 +262,7 @@ export function gateSteps() {
   }
   const rest = [
     'i30', 'i31', 'dec2', 'dec3', 'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto',
-    'dwell', 'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'backup',
+    'dwell', 'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'backup',
   ];
   for (const name of rest) {
     if (!SUITE_FILE[name] || EXPECTED_TEST[name] == null) {

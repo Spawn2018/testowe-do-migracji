@@ -92,19 +92,20 @@ test.describe('M5 — numery zleceń', () => {
     await expect(row.locator('td[data-col="ord_scx"]')).toHaveText(/^SCX-26-/)
   })
 
+  // E25 (P4): zamiast „Oznacz jako gotowy” — okno „Zmień status” (PLAN §4 P4 testy do przepisania)
   test('HHL: GOTOWY bez numeru HHL → zrozumiały komunikat; numer przewoźnika tylko do odczytu', async ({ page }) => {
     await boot(page)
     await role(page, 'HHL')
     await nav(page, 'sched')
-    // transport, dla którego GOTOWY nie jest zablokowany dokumentami (sprawdzamy wyłącznie blokadę numeru)
     let code = ''
     for (const c of ['SG-29', 'SS-03', 'P-01', 'SG-09', 'SG-11', 'SG-18', 'SG-19', 'SG-20', 'T-10', 'SG-30', 'T-14', 'SS-04', 'SS-05', 'K-03', 'P-02', 'R-03']) {
       await openLoad(page, c)
       await actionsTab(page)
-      if (await page.locator('.drawer button', { hasText: 'Oznacz jako gotowy' }).isEnabled()) { code = c; break }
+      const btn = page.locator('.drawer [data-action="change-status"]')
+      if ((await btn.count()) > 0 && (await btn.isEnabled())) { code = c; break }
       await closeDrawer(page)
     }
-    expect(code, 'transport z odblokowanym GOTOWY').not.toBe('')
+    expect(code, 'transport z przyciskiem Zmień status').not.toBe('')
     await page.locator('.drawer button[aria-selected]').nth(0).click()
     await expect(page.locator('.drawer [data-order="scx"] input')).toHaveCount(0)
     await expect(page.locator('.drawer [data-order="hhl"] .mono')).toHaveText(/^HHL\/2026\//)
@@ -114,7 +115,11 @@ test.describe('M5 — numery zleceń', () => {
     await expect(row0.locator('td[data-col="ord_hhl"]')).toHaveText('— brak —')
     await openLoad(page, code)
     await actionsTab(page)
-    await page.locator('.drawer button', { hasText: 'Oznacz jako gotowy' }).click()
+    await page.locator('.drawer [data-action="change-status"]').click()
+    const modal = page.locator('[data-status-change-modal]')
+    await expect(modal).toBeVisible()
+    await modal.locator('[data-status-select]').selectOption('READY')
+    await modal.locator('[data-status-save]').click()
     await expect(page.getByText('Nie można oznaczyć jako gotowy — brak numeru zlecenia HHL', { exact: false }).first()).toBeVisible()
     await setHhlOrder(page, 'HHL/2026/9001')
     await closeDrawer(page)

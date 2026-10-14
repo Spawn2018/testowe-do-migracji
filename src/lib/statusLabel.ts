@@ -14,10 +14,13 @@ const STATUS_KEYS: Partial<Record<LoadStatus, string>> = {
   IN_TRANSIT_PL: 's_road_pl',
   AT_PORT: 's_port_gdn',
   ON_FERRY: 's_on_ferry',
+  AT_PORT_SE: 's_port_se',
   IN_TRANSIT_SE: 's_road_se',
   APPROACHING_SITE: 's_on_site',
   UNLOADING: 's_unloaded',
   DELIVERED: 's_delivered',
+  READY_TO_INVOICE: 's_ready_to_invoice',
+  INVOICED: 's_invoiced',
   DELAYED: 's_delayed',
   SILENT: 's_silent',
 };

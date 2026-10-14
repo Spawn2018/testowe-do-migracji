@@ -2237,6 +2237,16 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **wyglad/P3-b NA PRODUKCJI — commit `50b23eb0`, wdrożenie `dpl_Go31sqkke7v66cur6AxKfkuDwDWj`, 14.10.2026 02:53.**
 
+## 2026-10-14 — wyglad/P4-a NA PRODUKCJI
+
+- Dopisek D-20261014-0315-01 włączony w gałęzi P4 (H5).
+- CI PR #188: unit i visual zielone; gitleaks 0; `npm audit --omit=dev --audit-level=high` 0. Bez migracji.
+- Scalenie PR #188 → `cb140085`.
+- Wdrożenie R7 z `main` `cb140085`, 14.10.2026 04:54, `dpl_DYK297WxbcnC9y5CXTQMXN7CvzWg`.
+- Plik JS przed: `assets/index-aVxTzmYJ.js`. Po: `assets/index-CJKv76X6.js`. Oba adresy 200.
+
+**wyglad/P4-a NA PRODUKCJI — commit `cb140085`, wdrożenie `dpl_DYK297WxbcnC9y5CXTQMXN7CvzWg`, 14.10.2026 04:54.**
+
 ## 2026-10-14 — wyglad/P3-c NA PRODUKCJI
 
 - Dopisek D-20261014-0700-01 (w PR #190; włączenie do planu w `pakiet/P3-c-konto`).
@@ -2260,3 +2270,11 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Plik JS przed: `assets/index-gD-kQcbR.js`. Po: `assets/index-TI93uCIy.js`. Oba adresy 200. 0 × `service_role`.
 
 **P3-c J3.1 (Moje konto) NA PRODUKCJI — commit `fdfb0caa`, wdrożenie `dpl_sd7RM5S4cfWemmi7zjpF8uPKip45`, 14.10.2026 11:57.**
+
+
+## 2026-10-14 — P4 H1/H2 (D-20261014-0640-01) — TEST
+
+- **TEST zajęte: P4**, od 14.10.2026 12:35 — potwierdzenie security, status, nullguard, e25 na `cf4b673d` (PR #181).
+- TEST: security **84/84** (+2 SKIP), status **44/44**, e25 **21/21**, nullguard **161+136+208+122 = 627/627**; doradca security TEST: 0 nowych (po wyjątku `load_status_set` / `load_status_rank`).
+- CI PR #181 na `cf4b673d`: unit, visual, db zielone; gitleaks 0 (zakres vs main); `npm audit --omit=dev --audit-level=high` 0.
+- **TEST wolne** od 14.10.2026 13:25.

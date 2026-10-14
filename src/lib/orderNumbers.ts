@@ -15,11 +15,11 @@ export const ORDER_NO_LEAD_H = 48;
 
 /** Statusy aplikacji wymagające numeru HHL (DB: READY…DELIVERED). */
 const NEEDS_HHL: ReadonlySet<LoadStatus> = new Set<LoadStatus>([
-  'READY', 'LOADING', 'IN_TRANSIT_PL', 'AT_PORT', 'ON_FERRY', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'UNLOADING', 'DELIVERED',
+  'READY', 'LOADING', 'IN_TRANSIT_PL', 'AT_PORT', 'ON_FERRY', 'AT_PORT_SE', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'UNLOADING', 'DELIVERED',
 ]);
 /** Statusy wymagające numeru przewoźnika (DB: AT_LOADING…DELIVERED). */
 const NEEDS_CARRIER: ReadonlySet<LoadStatus> = new Set<LoadStatus>([
-  'LOADING', 'IN_TRANSIT_PL', 'AT_PORT', 'ON_FERRY', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'UNLOADING', 'DELIVERED',
+  'LOADING', 'IN_TRANSIT_PL', 'AT_PORT', 'ON_FERRY', 'AT_PORT_SE', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'UNLOADING', 'DELIVERED',
 ]);
 
 const blank = (v: string | null | undefined): boolean => !v || !v.trim();

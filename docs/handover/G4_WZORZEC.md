@@ -203,6 +203,10 @@ Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visua
 
 `visual.yml` z `update=true` po rebase na `main` `cb14008` (run 38504703136, gałąź `wyglad/P3-c`, commit `61fbfd2`) i po poprawkach z niezależnego sprawdzenia (run 38514652438, commit `26716b6`): 15 migawek Playwright identycznych bajt w bajt z `tests/__screenshots__/` — nic nie podmieniono. Migawki nie obejmują Opcji ani Ustawień; ekrany P3-c sprawdza brama E8 (blok „wyglad/P3-c”, 360/390/430 px) i dowód `docs/handover/odbior/P3/wyglad-P3-c/`. Matrycy 280 ujęć nie ruszano.
 
+## P4 (14.10.2026) — E25 statusy, stan-zablokowany (nodocs)
+
+Odświeżone migawki Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38503841814, gałąź `pakiet/P4-statusy-sledzenie`, commit `26d8b9c5`). Ekrany: Harmonogram — filtr „Bez dokumentów” przez `[data-quick="nodocs"]` (E25 / D-20261014-0315-01 H2.4) zamiast `.chipbtn`).nth(3). Matrycy 280 ujęć nie ruszano.
+
 ## AUD-03 (06.10.2026) — Harmonogram KSH bez „Zmień ciągnik”
 
 Zamierzona zmiana UI (polecenie AUD-03: „Zmień ciągnik” niewidoczny dla roli KSH; baza i tak odmawia — `tests/db/aud03.sh`). gate:visual na `b52dcc5`: 274/280, zmienione wyłącznie `harmonogram__ksh__pl__{1280,1440,1920}__{dark,light-default}` (6). Odświeżono te 6 ujęć z przebiegu bramy (kolejność pełnej matrycy). Innych ujęć nie ruszano.
