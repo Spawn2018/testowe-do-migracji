@@ -400,7 +400,8 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           <TrackReplay key={replayId} map={mapReady} loadId={replayId} code={loads.find((l) => l.id === replayId)?.code ?? ''} noFix={gpsReady && !gpsFixes.has(replayId)} />
         </Suspense>
       ) : null}
-      {PROD_BUILD && mapLayers.vehicles && gpsReady && !loads.some((l) => gpsFixes.has(l.id)) ? (
+      {/* wyglad/P4-b (E27): pusta lista = nikt w oknie śledzenia (Mapa: „W trasie: 0”, panel poza oknem) — to nie „brak danych” */}
+      {PROD_BUILD && mapLayers.vehicles && gpsReady && loads.length > 0 && !loads.some((l) => gpsFixes.has(l.id)) ? (
         <div className="note" data-empty="vehicle-positions" style={{ position: 'absolute', left: 12, right: 12, bottom: embedded ? 8 : 36, zIndex: 500, maxWidth: 360, background: 'var(--surface)', padding: '6px 8px' }}>
           {t(locale, 'b1_no_vehicle_positions')}
         </div>

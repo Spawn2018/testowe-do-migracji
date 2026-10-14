@@ -11,7 +11,7 @@ import { t, tp } from '../../i18n/messages';
 import { statusLabel } from '../../lib/statusLabel';
 import { TZ_OPS, isoToDatetimeLocalValue, wallLocalToIso } from '../../lib/time';
 import { getNowIso } from '../../lib/frozenNow';
-import { buildStatusAxis, dateTimeFields, dayTime, gpsHint } from '../../lib/statusAxis';
+import { buildStatusAxis, dateTimeFields, dayTime, gpsHint, isoMs } from '../../lib/statusAxis';
 import { useIsPhone } from '../../lib/useIsPhone';
 import type { LoadStatus } from '../../types';
 
@@ -52,7 +52,9 @@ export function StatusChangeModal({
   const geofences = useTowerStore((s) => s.geofences);
   const phone = useIsPhone();
   const [status, setStatus] = useState<LoadStatus>(current === 'UNLOADING' ? 'DELIVERED' : current);
-  const [whenLocal, setWhenLocal] = useState(() => isoToDatetimeLocalValue(getNowIso(), TZ_OPS));
+  /* data i godzina osobno — wyczyszczenie jednego pola nie zeruje drugiego; łączone w `whenLocal` przy zapisie */
+  const [date, setDate] = useState(() => isoToDatetimeLocalValue(getNowIso(), TZ_OPS).slice(0, 10));
+  const [time, setTime] = useState(() => isoToDatetimeLocalValue(getNowIso(), TZ_OPS).slice(11, 16));
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -78,16 +80,13 @@ export function StatusChangeModal({
   const axis = useMemo(() => (load ? buildStatusAxis(load, events) : null), [load, events]);
   const since = axis?.currentSince ?? null;
   const hint = useMemo(() => gpsHint(status, events, geofences, since), [status, events, geofences, since]);
-  const date = whenLocal.slice(0, 10);
-  const time = whenLocal.slice(11, 16);
-  const setDate = (v: string) => setWhenLocal(`${v}T${time || '00:00'}`);
-  const setTime = (v: string) => setWhenLocal(`${date}T${v}`);
 
   function save(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
     setBusy(true);
     try {
+      const whenLocal = `${date}T${time}`;
       const occurredAt = wallLocalToIso(whenLocal, TZ_OPS);
       if (!occurredAt) {
         pushToast('Podaj prawidłową datę i godzinę', 'HIGH', loadId);
@@ -95,6 +94,11 @@ export function StatusChangeModal({
       }
       if (Date.parse(occurredAt) > Date.now() + 60_000) {
         pushToast('Czas statusu nie może być w przyszłości', 'HIGH', loadId);
+        return;
+      }
+      /* E25: nie wcześniej niż poprzedni status (tekst zasad w oknie); baza sprawdza to samo — dopisek wykonawcy */
+      if (since && Date.parse(occurredAt) < isoMs(since)) {
+        pushToast(tp(locale, 'p4b_m_err_before', { at: dayTime(since) }), 'HIGH', loadId);
         return;
       }
       setLoadStatus(loadId, status, role, note.trim() || undefined, occurredAt);
@@ -164,7 +168,10 @@ export function StatusChangeModal({
                 className="scm-use"
                 onClick={() => {
                   const f = dateTimeFields(hint.at);
-                  if (f) setWhenLocal(`${f.date}T${f.time}`);
+                  if (f) {
+                    setDate(f.date);
+                    setTime(f.time);
+                  }
                 }}
               >
                 {t(locale, 'p4b_m_gps_use')}

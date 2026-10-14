@@ -86,6 +86,21 @@ describe('E25 — podpowiedź z GPS w oknie „Zmień status”', () => {
     expect(gpsHint('DELIVERED', events, zones, '2026-10-07T11:00:00Z')).toBeNull();
     expect(gpsHint('READY', events, zones, null)).toBeNull();
   });
+  it('porównanie po czasie, nie po tekście (+02:00 z okna i Z z bazy); strefa dopisana przy fazie z pozycji (synthetic) — pominięta', () => {
+    /* ręcznie „Na placu” 08:35 czasu polskiego, wyjazd z placu 07:30Z = 09:30 — podpowiedź musi go widzieć */
+    const evs = [...events, ev('GEOFENCE_EXIT', '2026-10-07T07:30:00Z', { geofence_id: SITE })];
+    expect(gpsHint('DELIVERED', evs, zones, '2026-10-07T08:35:00+02:00')).toEqual({ kind: 'siteExit', at: '2026-10-07T10:19:00Z' });
+    const only = [ev('GEOFENCE_EXIT', '2026-10-07T07:30:00Z', { geofence_id: SITE })];
+    expect(gpsHint('DELIVERED', only, zones, '2026-10-07T08:35:00+02:00')).toEqual({ kind: 'siteExit', at: '2026-10-07T07:30:00Z' });
+    const loadZone = [{ id: 'gf-srem', type: 'LOADING' as const }];
+    const synth = [ev('GEOFENCE_EXIT', '2026-10-05T11:21:00Z', { geofence_id: 'gf-srem', synthetic: true, zrodlo: 'TELM_PHASE_INFER' })];
+    expect(gpsHint('IN_TRANSIT_PL', synth, loadZone, null)).toBeNull();
+  });
+  it('data realizacji usługi z `actual_delivery_at` (rozliczenie), nie z późniejszej poprawki statusu', () => {
+    const again = ev('STATUS_DELIVERED', '2026-10-08T09:00:00Z', { manual: true }, 'Jan Testowy // H&H Logistics');
+    const a = buildStatusAxis({ status: 'DELIVERED', stage: 'DELIVERED', unloadedAt: '2026-10-07T10:19:00Z' } as never, [...events, again]);
+    expect(dayTime(a.deliveredAt)).toBe('07.10, 12:19');
+  });
 });
 
 describe('E44 — rozpoznanie linku śledzenia (bez pokazywania linku)', () => {

@@ -853,6 +853,23 @@ test.describe('wyglad/P4-b panel transportu — Status E25 (img/e25-after), pase
       const groups = await page.locator('.drawer [data-axis-group]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.axisGroup));
       expect(groups).toEqual(['route', 'after', 'prep']);
       await expect(page.locator('.drawer [data-axis-group="prep"] [data-axis-row]')).toHaveCount(0);
+      /* E8 pkt 4: w panelu (pasek śledzenia i oś) tekst ≥ 12 px, przyciski ≥ 44 px */
+      const tiny = async (sel: string) => page.locator(sel).evaluateAll((roots) => roots.flatMap((root) => {
+        const out: string[] = [];
+        const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        for (let n = w.nextNode(); n; n = w.nextNode()) {
+          const el = n.parentElement;
+          if (!el || !(n.textContent ?? '').trim()) continue;
+          const r = el.getBoundingClientRect();
+          if (r.width === 0 || r.height === 0) continue;
+          if (parseFloat(getComputedStyle(el).fontSize) < 12) out.push(`${(n.textContent ?? '').trim().slice(0, 30)} ${getComputedStyle(el).fontSize}`);
+        }
+        return out;
+      }));
+      expect(await tiny('.drawer [data-tracking-bar], .drawer [data-status-axis]')).toEqual([]);
+      const smallBtn = await page.locator('.drawer [data-status-axis] button').evaluateAll((els) =>
+        els.filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height < 44; }).map((e) => e.textContent));
+      expect(smallBtn).toEqual([]);
       const btn = page.locator('.drawer [data-action="change-status"]');
       await btn.scrollIntoViewIfNeeded();
       const b = (await btn.boundingBox())!;
@@ -872,6 +889,9 @@ test.describe('wyglad/P4-b panel transportu — Status E25 (img/e25-after), pase
       const small = await modal.locator('button, select, input').evaluateAll((els) =>
         els.filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height < 44; }).map((e) => e.outerHTML.slice(0, 60)));
       expect(small).toEqual([]);
+      expect(await tiny('[data-status-change-modal]')).toEqual([]);
+      const inputFont = await modal.locator('input, select').evaluateAll((els) => els.map((e) => parseFloat(getComputedStyle(e).fontSize)));
+      expect(inputFont.every((f) => f >= 16), `pola ≥ 16 px: ${inputFont.join(', ')}`).toBe(true);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
     });
   }

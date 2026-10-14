@@ -141,7 +141,18 @@ Zrzuty z demo na serwerze deweloperskim, czas 07.10.2026, 20:30. Do zrzutów osi
 - Testy jednostkowe `tests/p4b-status-axis.test.ts`: oś SG-03 (grupy, pominięte z przyczyną, AUTO / RĘCZNIE, bieżący, czeka), ręczne „Dostarczone” z okna, kody bazy na osi, Anulowany, autor, podpowiedź z GPS, rozpoznanie linku RIO / emtrack.
 - Brama E8 (`tests/e8-phone-gate.spec.ts`, opis „wyglad/P4-b”): komputer — pasek nad zakładkami, 3 grupy i 14 statusów, jeden bieżący, okno z informacją przy „Dostarczone”; KSH bez przycisku; telefon 360 / 390 / 430 — kolejność grup, „Przygotowanie” zwinięte, „Zmień status” ≥ 44 px i niezasłonięty dolnym paskiem, arkusz na całą szerokość przy dolnej krawędzi, wszystkie pola i przyciski ≥ 44 px, bez przewijania w bok.
 - Testy przepisane (E25, komentarz w teście): `tests/etap4-ui.spec.ts` i `tests/visual-states.spec.ts` („stan-zablokowany”) — „Zmień status” w zakładce Status; `tests/aud03-ksh-panel.spec.ts` i `.test.ts` — KSH: oś bez przycisku, przycisk w `StatusAxisTab.tsx`; `tests/aud01e-map-pool.test.ts` — kropka w panelu tylko w oknie śledzenia; `tests/status-label.test.ts` — nazwy ze spisu E25.
-- Lokalnie (podgląd demo): `tsc -b`, `test:unit` 956 / 37 pominiętych, `lint:css`, `oxlint` bez nowych ostrzeżeń, brama E8 całości, `etap4-ui`, `etap5-ui`, `etap6-ui`, `aud03-ksh-panel`, `visual-states` (przebieg), `b7-map`, `resp14-phone`, `e8-odbiór`, `d-eur-t`, `e2e-core`, `persist-toast`. Wzorce zrzutów odświeża `visual.yml` po rebase na `main` z PR #181.
+- Niezależne sprawdzenie (agent kontrolny koordynatora, 14.10 ok. 06:10–06:25, commit `5731239`). Poprawione:
+  - na telefonie pola okna miały 15 px (iOS powiększa stronę) i część tekstów 11–11,5 px — teraz pola 16 px, tekst ≥ 12 px; test telefonu sprawdza to w panelu i w arkuszu;
+  - wyczyszczenie daty w oknie zerowało godzinę na 00:00 — data i godzina mają osobny stan, łączone przy zapisie;
+  - podpowiedź „Z GPS” brała też strefę „wyjechał ze Śremu” dopisaną przy ustaleniu fazy z pierwszej pozycji (`synthetic`, 0188) — pomijana;
+  - czasy porównywane jako tekst („+02:00” z okna i „Z” z bazy) — teraz po czasie;
+  - „Dostarczone” w pasku i bloku ETA bierze `actual_delivery_at` (data rozliczenia), a nie późniejszą poprawkę statusu;
+  - blok ETA: atrybucja OpenStreetMap przy ETA z OSM, przyczyny ETA, „Na placu” zamiast „W trasie”, bez wymyślonych 11 h odpoczynku;
+  - podgląd dokumentu na telefonie przyciemnia panel (nad panelem); mapa w panelu poza oknem śledzenia nie pisze „brak danych pozycji”;
+  - nazwa transportu w pasku według E41; „ostatnia pozycja … temu” odświeża się co minutę;
+  - okno odrzuca czas wcześniejszy niż bieżący status (tekst zasad); baza ma sprawdzać to samo — dopisek;
+  - test lokalny `tests/i2-facade.local.spec.ts` przepisany pod blok ETA (E15).
+- Lokalnie (podgląd demo): `tsc -b`, `test:unit` 958 / 37 pominiętych, `lint:css`, `oxlint` bez nowych ostrzeżeń, brama E8 całości, `etap4-ui`, `etap5-ui`, `etap6-ui`, `aud03-ksh-panel`, `visual-states` (przebieg), `b7-map`, `resp14-phone`, `e8-odbiór`, `d-eur-t`, `e2e-core`, `persist-toast`. Wzorce zrzutów odświeża `visual.yml` po rebase na `main` z PR #181.
 
 ### Pliki
 

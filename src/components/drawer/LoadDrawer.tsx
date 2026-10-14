@@ -160,6 +160,12 @@ export function LoadDrawer() {
   const [statusChangeOpen, setStatusChangeOpen] = useState(false);
   /* wyglad/P4-b: telefon (oś i blok ETA) i „teraz” zaokrąglone do minuty (pasek śledzenia E27) */
   const phone = useIsPhone();
+  /* odświeżenie co minutę: „ostatnia pozycja X min temu”, faza okna śledzenia */
+  const [, setMinuteTick] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setMinuteTick((n) => n + 1), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
   const nowMin = Math.floor(getNow().getTime() / 60_000);
   const nowIso = useMemo(() => new Date(nowMin * 60_000).toISOString(), [nowMin]);
 
@@ -236,6 +242,9 @@ export function LoadDrawer() {
   const comboW = load.resources.setWidthM ?? load.dims.widthM;
   const comboH = load.resources.setHeightM ?? load.dims.heightM;
 
+  /* E25: oś statusów raz na render — data dostawy i wjazd na plac do bloku ETA */
+  const statusAxis = buildStatusAxis(load, loadEvents);
+
   const tabs: { id: Tab; label: string }[] = [
     { id: 'overview', label: t(locale, 'tab_overview') },
     { id: 'timeline', label: t(locale, 'tab_timeline') },
@@ -297,7 +306,7 @@ export function LoadDrawer() {
         </div>
 
         {/* E27 pkt 5 (E1-2): pasek śledzenia nad zakładkami */}
-        <TrackingBar load={load} events={loadEvents} label={load.code} locale={locale} nowIso={nowIso} />
+        <TrackingBar load={load} events={loadEvents} label={transportLabel(load, role, 'plain')} locale={locale} nowIso={nowIso} />
 
         <div className="dtabs">
           {tabs.map((x) => (
@@ -345,7 +354,8 @@ export function LoadDrawer() {
                 locale={locale}
                 phone={phone}
                 nowIso={nowIso}
-                deliveredAt={buildStatusAxis(load, loadEvents).deliveredAt}
+                deliveredAt={statusAxis.deliveredAt}
+                siteSince={statusAxis.current === 'APPROACHING_SITE' ? statusAxis.currentSince : null}
                 delayMin={delayMin}
               />
               <div data-eta-howto className="etab-howto">

@@ -84,6 +84,13 @@ export interface AxisHit {
   geofenceId: string | null;
 }
 
+/** Czas zdarzenia w ms (porównania po czasie, nie po tekście: „+02:00” i „Z”). */
+export function isoMs(iso: string | null | undefined): number {
+  const v = iso ? Date.parse(iso) : NaN;
+  return Number.isFinite(v) ? v : 0;
+}
+const ms = isoMs;
+
 const isSystemActor = (a: string | null | undefined) =>
   !a || a === 'system' || a.startsWith('workflow:') || a === 'driver-pwa';
 
@@ -129,7 +136,8 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
       geofenceId: str('geofence_id'),
     });
   }
-  return out.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+  /* porównanie po czasie, nie po tekście: zdarzenia z okna mają „+02:00”, z bazy „Z” */
+  return out.sort((a, b) => ms(a.at) - ms(b.at));
 }
 
 export type AxisRowKind = 'done' | 'current' | 'skipped' | 'pending';
@@ -208,9 +216,10 @@ export function buildStatusAxis(
   for (const e of events) {
     const p = (e.payload ?? {}) as Record<string, unknown>;
     const fromGps = e.type.startsWith('GEOFENCE_') || (e.type === 'STATUS_AUTO' && typeof p.lat === 'number');
-    if (fromGps && (!firstFix || e.at < firstFix)) firstFix = e.at;
+    if (fromGps && (!firstFix || ms(e.at) < ms(firstFix))) firstFix = e.at;
   }
-  const delivered = last.get('DELIVERED')?.at ?? l.unloadedAt ?? null;
+  /* data realizacji usługi = `actual_delivery_at` (rozliczenie); zdarzenie — gdy jej brak (demo) */
+  const delivered = l.unloadedAt ?? last.get('DELIVERED')?.at ?? null;
   return { groups, current, currentSince, cancelled, firstFixAt: firstFix, deliveredAt: delivered };
 }
 
@@ -245,8 +254,10 @@ export function gpsHint(
     const id = typeof p.geofence_id === 'string' ? p.geofence_id : null;
     const kind = (id && types.get(id)) ?? (typeof p.geofence_kind === 'string' ? p.geofence_kind : null);
     if (kind !== rule.zone) continue;
-    if (notBefore && e.at < notBefore) continue;
-    if (!best || e.at > best) best = e.at;
+    /* strefa „wyjechał” dopisana przy ustaleniu fazy z pierwszej pozycji (0188, `synthetic`) — nie jest pomiarem */
+    if (p.synthetic === true) continue;
+    if (notBefore && ms(e.at) < ms(notBefore)) continue;
+    if (!best || ms(e.at) > ms(best)) best = e.at;
   }
   return best ? { kind: rule.kind, at: best } : null;
 }

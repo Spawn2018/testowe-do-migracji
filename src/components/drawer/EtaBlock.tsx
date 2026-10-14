@@ -28,6 +28,7 @@ export function EtaBlock({
   phone,
   nowIso,
   deliveredAt,
+  siteSince,
   delayMin,
 }: {
   load: Load;
@@ -35,6 +36,8 @@ export function EtaBlock({
   phone: boolean;
   nowIso: string;
   deliveredAt: string | null;
+  /** wjazd na plac (bieżący status „Na placu”) */
+  siteSince: string | null;
   delayMin: number | null;
 }) {
   const tile = stageTileOf(load);
@@ -61,7 +64,8 @@ export function EtaBlock({
     );
   }
 
-  const phase = d?.phase === 'REST' || d?.phase === 'WAIT_SITE' ? d.phase : 'DRIVE';
+  const phase: 'DRIVE' | 'REST' | 'WAIT_SITE' | 'SITE' =
+    d?.phase === 'REST' || d?.phase === 'WAIT_SITE' ? d.phase : tile === 'SITE' ? 'SITE' : 'DRIVE';
   const kind = load.etaBoden
     ? etaWindowKind(
         load.etaBoden,
@@ -71,7 +75,10 @@ export function EtaBlock({
       )
     : null;
   const late = load.delayed || kind === 'after';
-  const winText = kind ? t(locale, late ? 'p4b_eta_win_after' : kind === 'before' ? 'p4b_eta_win_before' : 'p4b_eta_win_in') : null;
+  const win = kind ? (late ? 'after' : kind === 'before' ? 'before' : 'in') : null;
+  const winText = win ? t(locale, `p4b_eta_win_${win}`) : null;
+  const osm = (load.etaMethod ?? '').includes('OSM') ? t(locale, 'i2_eta_osm_attr') : null;
+  const reasons = !d && load.etaReasons?.length ? load.etaReasons.slice(0, 2).join(' · ') : null;
 
   /* pasmo ± minut i słowo pewności (E15-3) */
   const word = etaConfidenceLabel(load.etaConfidence, locale);
@@ -87,18 +94,29 @@ export function EtaBlock({
     value = load.etaBoden ? dayTime(load.etaBoden, SE) : t(locale, 'p4b_eta_none');
     pill = { cls: 'p-sea', text: up(t(locale, 'p4b_eta_rest_pill')) };
     sub = [
-      tp(locale, 'p4b_eta_rest_sub', {
-        from: timeOnly(d?.restFrom),
-        h: d?.restHours ?? 11,
-        until: dayTime(d?.restUntil),
-        dur: d?.driveMin != null ? hoursMinutes(d.driveMin * 60_000) : '—',
-      }),
+      d?.restFrom ? tp(locale, 'p4b_eta_rest_from', { from: timeOnly(d.restFrom) }) : null,
+      d?.restUntil
+        ? d.restHours
+          ? tp(locale, 'p4b_eta_rest_until_h', { h: d.restHours, until: dayTime(d.restUntil) })
+          : tp(locale, 'p4b_eta_rest_until', { until: dayTime(d.restUntil) })
+        : null,
+      d?.driveMin != null ? tp(locale, 'p4b_eta_rest_then', { dur: hoursMinutes(d.driveMin * 60_000) }) : null,
+      osm,
     ];
   } else if (phase === 'WAIT_SITE') {
     lbl = tp(locale, 'p4b_eta_wait_lbl', { at: dayTime(load.etaUpdatedAt) });
     value = tp(locale, 'p4b_eta_wait_val', { time: timeOnly(d?.waitSince) });
-    pill = winText ? { cls: late ? 'p-red' : 'p-go', text: up(winText.replace(' dostawy', '')) } : null;
-    sub = [tp(locale, 'p4b_eta_wait_sub', { day: dayOnly(load.plannedDeliverDate), last: timeOnly(lastFix) })];
+    pill = win ? { cls: win === 'after' ? 'p-red' : 'p-go', text: up(t(locale, `p4b_eta_pill_${win}`)) } : null;
+    sub = [
+      t(locale, 'p4b_eta_wait_edge'),
+      tp(locale, 'p4b_eta_wait_window', { day: dayOnly(load.plannedDeliverDate) }),
+      lastFix ? tp(locale, 'p4b_eta_wait_quiet', { last: timeOnly(lastFix) }) : null,
+    ];
+  } else if (phase === 'SITE') {
+    lbl = siteSince ? tp(locale, 'p4b_eta_site_lbl_at', { at: dayTime(siteSince) }) : t(locale, 'p4b_eta_site_lbl');
+    value = siteSince ? tp(locale, 'p4b_eta_wait_val', { time: timeOnly(siteSince) }) : t(locale, 'p4b_eta_site_val');
+    pill = win ? { cls: win === 'after' ? 'p-red' : 'p-go', text: up(t(locale, `p4b_eta_pill_${win}`)) } : null;
+    sub = [tp(locale, 'p4b_eta_wait_window', { day: dayOnly(load.plannedDeliverDate) })];
   } else {
     lbl = phone ? t(locale, 'p4b_eta_phone_lbl') : tp(locale, 'p4b_eta_route_lbl', { at: dayTime(load.etaUpdatedAt) });
     value = load.etaBoden ? dayTime(load.etaBoden, SE) : t(locale, 'p4b_eta_none');
@@ -113,7 +131,8 @@ export function EtaBlock({
       d?.distanceKm != null ? tp(locale, 'p4b_eta_km', { km: Math.round(d.distanceKm) }) : null,
       phone ? null : drive,
       winText,
-      !d && !load.etaBoden ? (load.etaReasons[0] ?? null) : null,
+      reasons,
+      osm,
     ];
   }
   const subText = sub.filter(Boolean).join(' · ');
@@ -144,7 +163,7 @@ export function EtaBlock({
           ) : null}
         </div>
         {subText ? (
-          <div className="etab-sub" {...(kind ? { 'data-eta-window': late ? 'after' : kind } : {})}>{subText}</div>
+          <div className="etab-sub" {...(win ? { 'data-eta-window': win } : {})}>{subText}</div>
         ) : null}
       </div>
       {why.length ? (

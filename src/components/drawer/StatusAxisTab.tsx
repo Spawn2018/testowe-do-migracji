@@ -8,7 +8,7 @@ import { useState } from 'react';
 import type { Geofence, Load, LoadEvent, LoadStatus, Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { statusLabel } from '../../lib/statusLabel';
-import { axisActor, buildStatusAxis, dayOnly, dayTime, hoursMinutes, timeOnly, type AxisHit, type AxisRow } from '../../lib/statusAxis';
+import { axisActor, buildStatusAxis, dayOnly, dayTime, hoursMinutes, isoMs, timeOnly, type AxisHit, type AxisRow } from '../../lib/statusAxis';
 
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
@@ -60,7 +60,7 @@ function rowSub(
   }
   if (s === 'DELIVERED') {
     const site = hits.get('APPROACHING_SITE');
-    if (site && site.at < h.at) {
+    if (site && isoMs(site.at) < isoMs(h.at)) {
       const dur = hoursMinutes(Date.parse(h.at) - Date.parse(site.at));
       return tp(locale, phone ? 'p4b_sub_delivered_auto_ph' : 'p4b_sub_delivered_auto', { dur });
     }
@@ -93,7 +93,7 @@ export function StatusAxisTab({
   for (const g of axis.groups) for (const r of g.rows) if (r.hit) hits.set(r.statuses[0], r.hit);
   const order = phone ? (['route', 'after', 'prep'] as const) : (['prep', 'route', 'after'] as const);
   const cancelEv = axis.cancelled
-    ? [...events].filter((e) => e.type === 'STATUS_CANCELLED').sort((a, b) => (a.at < b.at ? 1 : -1))[0]
+    ? [...events].filter((e) => e.type === 'STATUS_CANCELLED').sort((a, b) => isoMs(b.at) - isoMs(a.at))[0]
     : undefined;
 
   return (

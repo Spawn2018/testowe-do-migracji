@@ -486,7 +486,7 @@ nav button{padding:8px 14px}
 
 /* ---------- Punkt 5: podgląd dokumentu (scrim + panel, Claude v2) ---------- */
 .docpreview{
-  position:fixed;z-index:51;
+  position:fixed;z-index:53;
   left:50%;top:50%;transform:translate(-50%,-50%);
   width:min(720px,calc(100vw - 32px));
   max-height:min(80vh,860px);
@@ -1541,4 +1541,7 @@ img,video{max-width:100%;height:auto}
   .scm.sheet .scm-actions{display:grid;grid-template-columns:1fr 1fr}
   .scm.sheet .scm-actions .btn{width:100%;min-height:44px}
   .scm-use{min-height:44px;padding:0 6px}
+  /* E8 pkt 4: pola ≥ 16 px (bez powiększania strony przy wpisywaniu), tekst ≥ 12 px */
+  .scm .input{font-size:16px}
+  .sax-tag,.etab-lbl,.etab-val .pill,.etab-howto{font-size:12px}
 }

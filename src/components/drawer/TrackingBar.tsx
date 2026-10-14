@@ -8,7 +8,7 @@
 import type { Load, LoadEvent, Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { trackingPhase } from '../../lib/stageTiles';
-import { buildStatusAxis, dayOnly, dayTime } from '../../lib/statusAxis';
+import { buildStatusAxis, dayOnly, dayTime, isoMs } from '../../lib/statusAxis';
 import { hasAwizacja } from '../../lib/awizacjaState';
 import { trackerKind } from '../../lib/trackerLink';
 
@@ -101,7 +101,7 @@ export function TrackingBar({
   const done = axis.deliveredAt;
   const purge = done ? new Date(Date.parse(done) + 30 * 86_400_000).toISOString() : null;
   const sub = [
-    done && axis.firstFixAt && axis.firstFixAt < done
+    done && axis.firstFixAt && isoMs(axis.firstFixAt) < isoMs(done)
       ? tp(locale, 'p4b_trk_after_trail', { from: dayTime(axis.firstFixAt), to: dayTime(done) })
       : null,
     purge ? tp(locale, 'p4b_trk_after_purge', { day: dayOnly(purge) }) : null,
