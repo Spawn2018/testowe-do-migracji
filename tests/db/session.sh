@@ -57,7 +57,7 @@ err "cudzej sesji nie usunie"                            $HHL "select my_session
 val "obce własne urządzenie usunięte"                    $HHL "select my_session_revoke('$S_OTHER')" 1 commit
 chk "S_OTHER usunięte, bieżąca zostaje"                  "$(Q "select count(*) filter (where id='$S_OTHER')||':'||count(*) filter (where id='$S_NEW') from auth.sessions")" "0:1"
 chk "SESSION_REVOKE w dzienniku"                         "$(Q "select count(*) from audit_log where action='SESSION_REVOKE'")" 1
-err "brak uuid urządzenia"                               $HHL "select my_session_revoke(null)" "urządzeni"
+err "brak uuid urządzenia"                               $HHL "select my_session_revoke(null::uuid)" "urządzeni"
 
 echo; echo "[A5-SESJA-ROK] Odwoływanie"
 U_SCX=$(Q "select id from app_users where auth_id='$SCX'"); U_HHL=$(Q "select id from app_users where auth_id='$HHL'")
