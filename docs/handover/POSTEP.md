@@ -2347,3 +2347,13 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Dane pod wygląd: w P5 według PLAN §4 P5 i D-20261014-2005-01 S1–S5 (`p5Source.ts`).
 
 **wyglad/P5 NA PRODUKCJI — commit `6631eb8a`, wdrożenie `dpl_6BupPHfhnDTw2sBdpgEpJqVZ9v5x`, 14.10.2026 20:49.**
+
+## 2026-10-14 — wyglad/P6-a NA PRODUKCJI
+
+- Dopisek D-20261014-2145-01 w `docs/handover/dopiski/`; PLAN §4 P6 Ekrany (T1–T6) + §8.
+- Scalenie PR #205 → `49d05641` (głowa `93b83cb`). unit + visual zielone; gitleaks 0; `npm audit --omit=dev --audit-level=high` 0. Bez migracji (bez `db` / TEST).
+- Wdrożenie R7 z `main` `49d05641`, 14.10.2026 22:07, `dpl_9PFrMuYyTVXRymWBp63t2vGZapnc`.
+- Plik JS: `assets/index-C4kdLq0M.js` (oba adresy 200). 0 × `service_role` (25 plików JS z HTML). Kopia wdrożeniowa usunięta.
+- Dane pod wygląd: w P6 według PLAN §4 P6 i D-20261014-2145-01 T1–T6 (`p6Source.ts`).
+
+**wyglad/P6-a NA PRODUKCJI — commit `49d05641`, wdrożenie `dpl_9PFrMuYyTVXRymWBp63t2vGZapnc`, 14.10.2026 22:07.**
