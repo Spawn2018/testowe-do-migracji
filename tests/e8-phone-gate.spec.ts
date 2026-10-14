@@ -1141,3 +1141,60 @@ test.describe('wyglad/P5 Finanse — E16, E39', () => {
     });
   }
 });
+
+test.describe('wyglad/P5 Faktury — E4, E4b', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+
+  test('komputer: HHL dwie zakładki (strzałki), kafelki, obieg, lista z jednym statusem; KSH i SCX jedna sekcja', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'inv');
+    const koszt = page.locator('[data-inv-tab="KOSZT"]');
+    await expect(koszt).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#inv-panel-PRZYCHOD')).toBeHidden();
+    await expect(page.locator('[data-inv-kpis="KOSZT"] [data-inv-kpi]')).toHaveCount(4);
+    await expect(page.locator('[data-inv-flow="KOSZT"] li')).toHaveCount(5);
+    await expect(page.locator('#inv-panel-KOSZT table.inv-table thead th')).toHaveText(['TYDZIEŃ', 'FAKTURA', 'TRANSPORTY', 'NETTO', 'VAT 23 %', 'BRUTTO', 'TERMIN', 'STATUS', /.*/]);
+    for (const row of await page.locator('#inv-panel-KOSZT tr[data-bill]').all()) {
+      await expect(row.locator('[data-bill-status]')).toHaveCount(1);
+    }
+    await expect(page.locator('[data-verify="ZGODNA"], [data-bill-quick="ZGODNA"]')).toHaveCount(0);
+    await koszt.focus();
+    await koszt.press('ArrowRight');
+    await expect(page.locator('[data-inv-tab="PRZYCHOD"]')).toBeFocused();
+    await expect(page.locator('#inv-panel-PRZYCHOD')).toBeVisible();
+    await expect(page.locator('#inv-panel-KOSZT')).toBeHidden();
+    await expect(page.locator('[data-inv-flow="PRZYCHOD"]')).toContainText('Termin 30 dni od wystawienia');
+    await expect(page.locator('[data-page="invoices"]')).toContainText('Kto co widzi i co robi');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1441);
+    for (const [r, dir] of [['KSH', 'PRZYCHOD'], ['SCX', 'KOSZT']] as const) {
+      await boot(page, r);
+      await openView(page, 'inv');
+      await expect(page.locator('[data-inv-tab]')).toHaveCount(0);
+      await expect(page.locator('[data-bill-section]')).toHaveCount(1);
+      await expect(page.locator(`[data-bill-section="${dir}"] [data-inv-kpi]`)).toHaveCount(4);
+    }
+    await page.locator('[data-bill-new="KOSZT"]').click();
+    await expect(page.locator('[data-inv-flow="KOSZT"]')).toContainText('Termin 35 dni od wystawienia');
+    await expect(page.locator('[data-bill-wizard="KOSZT"] [data-w="submit"]')).toBeVisible();
+  });
+
+  for (const role of ['HHL', 'KSH', 'SCX'] as const) {
+    test(`telefon ${role}: kafelki 2 × 2 i karty faktur — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role);
+      await openView(page, 'inv');
+      await expect(page.locator('table.inv-table')).toHaveCount(0);
+      await expect(page.locator('[data-inv-flow]')).toHaveCount(0);
+      await expect(page.locator('#inv-who-h')).toHaveCount(0);
+      expect(await page.locator('.inv-cards [data-bill]').count()).toBeGreaterThan(0);
+      const hits: Hit[] = [];
+      for (const width of WIDTHS) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.waitForTimeout(200);
+        hits.push(...await measure(page, 'faktury-p5', width, role));
+      }
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});

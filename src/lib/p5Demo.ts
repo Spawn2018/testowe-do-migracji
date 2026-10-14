@@ -5,6 +5,9 @@
  */
 import { SEFS_PLN, SEFS_SEK, type SefsTier } from './sefs';
 import { addDays, type FuelPubl, type FuelWeekRow } from './p5Finance';
+import type { Bill } from '../types';
+import { factoringPayout } from './p5Invoices';
+import type { FactoringOfferView, FactoringTask } from './p5Source';
 
 /** Próg marży z Opcji (E16, 08.10: 4 %). */
 export const demoMarginThreshold = (): number => 4;
@@ -41,4 +44,17 @@ export function demoFuelEnrich(rows: FuelWeekRow[], today: string): FuelWeekRow[
       publications: pub,
     };
   });
+}
+
+/** E4b — oferta HHL (07.10: 1 % od netto, wypłata 48 h po akceptacji przez HHL). */
+export const demoFactoringOffer = (): FactoringOfferView => ({ feePct: 1, hours: 48, version: 1, from: '2026-10-07' });
+
+/** E4b — zadanie „Wypłata faktoringu” dla pierwszej przyjętej, nieopłaconej faktury przewoźnika. */
+export function demoFactoringTasks(bills: Bill[], nowIso: string): FactoringTask[] {
+  const b = bills.find((x) => x.direction === 'KOSZT' && x.verification === 'ZAAKCEPTOWANA' && x.payment !== 'OPLACONA');
+  if (!b) return [];
+  const accepted = new Date(Date.parse(nowIso) - 60 * 60 * 1000).toISOString();
+  const due = new Date(Date.parse(accepted) + 48 * 3600 * 1000).toISOString();
+  const { fee, payout } = factoringPayout(b.net, b.gross, 1);
+  return [{ billId: b.id, number: b.number, issuer: 'Scandinavian Express', currency: b.currency, net: b.net, gross: b.gross, fee, payout, issuedAt: b.issueDate, acceptedAt: accepted, dueAt: due, paidAt: null, feePct: 1, hours: 48 }];
 }

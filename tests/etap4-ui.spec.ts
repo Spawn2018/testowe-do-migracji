@@ -193,6 +193,10 @@ test.describe('M6 — faktury v2', () => {
     await expect(page.locator('[data-bill-section="PRZYCHOD"]')).toHaveCount(1)
     await expect(page.locator('[data-bill-new="KOSZT"]')).toHaveCount(0)
     const before = await page.locator('[data-bill-section="PRZYCHOD"] tr[data-bill]').count()
+    // wyglad/P5, E4 (img/e4-faktury-desk): HHL ma dwie zakładki — „Do KSH · przychód” otwiera sekcję przychodu
+    await expect(page.locator('[data-inv-tab="KOSZT"]')).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('[data-bill-new="PRZYCHOD"]')).toBeHidden()
+    await page.locator('[data-inv-tab="PRZYCHOD"]').click()
     await page.locator('[data-bill-new="PRZYCHOD"]').click()
     const wz = page.locator('[data-bill-wizard="PRZYCHOD"]')
     await expect(wz.locator('tr[data-w-line]').first()).toBeVisible()

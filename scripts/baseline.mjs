@@ -86,8 +86,8 @@ const VIEWS = [
   { name: 'Finanse', file: 'finanse', dataView: 'fin', roles: ['HHL'] },
   // G4 (Fala 3B): Faktury także dla KSH (moduł faktur HHL → KSH).
   { name: 'Faktury', file: 'faktury', dataView: 'inv', roles: ['HHL', 'KSH', 'SCX'] },
-  // G4: faktury przychodowe HHL leżą pod sekcją kosztową — osobne ujęcie przewinięte do sekcji.
-  { name: 'Faktury przychodowe', file: 'faktury-przychodowe', dataView: 'inv', roles: ['HHL'], scrollTo: '[data-bill-section="PRZYCHOD"]' },
+  // G4: osobne ujęcie faktur przychodowych HHL. wyglad/P5 (E4): przychód jest na zakładce „Do KSH · przychód” — klik zamiast przewijania.
+  { name: 'Faktury przychodowe', file: 'faktury-przychodowe', dataView: 'inv', roles: ['HHL'], tab: '[data-inv-tab="PRZYCHOD"]' },
   { name: 'Automatyzacje', file: 'automatyzacje', dataView: 'wf', roles: ['HHL'] },
   { name: 'Strefy', file: 'strefy', dataView: 'geo', roles: ['HHL'] },
   { name: 'Opcje', file: 'opcje', dataView: 'options', roles: ['HHL'] },
@@ -307,13 +307,21 @@ async function setTheme(theme, roleDefault) {
   if (final !== theme) throw new Error(`theme want=${theme} got=${final}`)
 }
 
-async function navTo(dataView, scrollTo) {
+async function navTo(dataView, scrollTo, tab) {
   await page.evaluate((key) => {
     const btn = document.querySelector(`nav button[data-view="${key}"]`)
     if (!btn) throw new Error('nav not found: data-view=' + key)
     btn.click()
   }, dataView)
   await sleep(600)
+  if (tab) {
+    await page.evaluate((sel) => {
+      const btn = document.querySelector(sel)
+      if (!btn) throw new Error('tab not found: ' + sel)
+      btn.click()
+    }, tab)
+    await sleep(300)
+  }
   await page.evaluate(async () => {
     if (document.fonts?.ready) await document.fonts.ready
   })
@@ -387,7 +395,7 @@ for (const job of jobs) {
     await setLocale(job.lang)
     await setTheme(job.theme, job.role.defaultTheme)
     if (job.currency) await setCurrency(job.role.id, job.currency)
-    await navTo(job.view.dataView, job.view.scrollTo)
+    await navTo(job.view.dataView, job.view.scrollTo, job.view.tab)
     await shoot(job.file)
     if (RECTS_SEL.length) {
       rects[job.file] = await page.evaluate((sels) => sels.flatMap((sel) => [...document.querySelectorAll(sel)].map((el) => {
