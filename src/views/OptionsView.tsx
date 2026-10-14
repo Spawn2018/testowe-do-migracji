@@ -221,7 +221,7 @@ export function OptionsView() {
                   <b data-content>{geofenceDisplayName(g.name, locale)}</b>
                   <span>{geofenceTypeLabel(g.type, locale)} · {g.radiusM >= 1000 ? `${Math.round(g.radiusM / 1000)} km` : `${g.radiusM} m`}</span>
                 </div>
-                <button type="button" className={`mini-toggle${g.active ? ' is-on' : ''}`} aria-pressed={g.active} disabled={ro} onClick={() => { saveGeofence({ ...g, active: !g.active }); saveMark('strefa'); }}>
+                <button type="button" className={`mini-toggle${g.active ? ' is-on' : ''}`} aria-pressed={g.active} onClick={() => { saveGeofence({ ...g, active: !g.active }); saveMark('strefa'); }}>
                   <i />{g.active ? t(locale, 'on') : t(locale, 'off')}
                 </button>
               </div>

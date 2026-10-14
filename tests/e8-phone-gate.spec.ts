@@ -458,6 +458,13 @@ test.describe('wyglad/P3 pasek górny (E37 pkt 1–2, img/e37-after)', () => {
     /* wyglad/P3-c (E11, E37): „Moje konto” otwiera ekran z menu bocznego Opcji */
     await expect(page.locator('[data-opt-screen="account"]')).toBeVisible();
     await expect(page.locator('[data-opt-nav="account"]')).toHaveAttribute('aria-current', 'page');
+    /* wskazanie z menu konta obsłużone raz: po przejściu na inny ekran zmiana ustawienia nie wraca do „Moje konto” */
+    await page.click('[data-opt-nav="look"]');
+    const cur = page.locator('[data-deur-exempt="currency-pref"] select');
+    await cur.selectOption((await cur.inputValue()) === 'PLN' ? 'EUR' : 'PLN');
+    await page.waitForTimeout(200);
+    await expect(page.locator('[data-opt-screen="look"]')).toBeVisible();
+    await expect(page.locator('[data-opt-nav="look"]')).toHaveAttribute('aria-current', 'page');
   });
 
   test('telefon: logo, najbliższy prom, dzwonek, konto; ?, motyw i Podgląd w menu konta', async ({ page }) => {
@@ -681,6 +688,12 @@ test.describe('wyglad/P4 pasek etapów (E28, img/e28-after) i Mapa (E27)', () =>
 async function phoneScreens(page: Page): Promise<Array<{ group: string; screen: string }>> {
   const groups = await page.evaluate(() => Array.from(document.querySelectorAll('.ox-tiles [data-opt-group]')).map((b) => b.getAttribute('data-opt-group') ?? ''));
   const out: Array<{ group: string; screen: string }> = [];
+  if (!groups.length) {
+    /* jedna grupa — od razu lista ekranów (Ustawienia KSH i SCX) */
+    const group = (await page.getAttribute('[data-opt-level="groups"]', 'data-opt-group')) ?? '';
+    const screens = await page.evaluate(() => Array.from(document.querySelectorAll('.ox-tiles [data-opt-nav]')).map((b) => b.getAttribute('data-opt-nav') ?? ''));
+    return screens.map((screen) => ({ group, screen }));
+  }
   for (const group of groups) {
     await page.click(`.ox-tiles [data-opt-group="${group}"]`);
     await page.waitForTimeout(150);
@@ -703,8 +716,10 @@ async function openPhoneScreen(page: Page, group: string, screen: string) {
     await page.click('.ox-backbtn');
     await page.waitForTimeout(80);
   }
-  await page.click(`.ox-tiles [data-opt-group="${group}"]`);
-  await page.waitForTimeout(120);
+  if (await page.locator(`.ox-tiles [data-opt-group="${group}"]`).count()) {
+    await page.click(`.ox-tiles [data-opt-group="${group}"]`);
+    await page.waitForTimeout(120);
+  }
   if (await page.locator(`.ox-tiles [data-opt-nav="${screen}"]`).count()) await page.click(`.ox-tiles [data-opt-nav="${screen}"]`);
   await page.waitForSelector(`[data-opt-screen="${screen}"]`);
   await page.waitForTimeout(250);
@@ -721,6 +736,8 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
       await page.waitForSelector('.ox-tiles');
       const list = await phoneScreens(page);
       expect(list.length).toBeGreaterThan(role === 'HHL' ? 15 : 2);
+      /* KSH i SCX w demo mają jedną grupę — telefon pokazuje od razu ekrany „Dla mnie” (bez kafelka grupy) */
+      if (role !== 'HHL') expect(list.map((x) => x.screen)).toEqual(['account', 'forme', 'look']);
       const hits: Hit[] = [];
       for (const width of WIDTHS) {
         await page.setViewportSize({ width, height: 844 });

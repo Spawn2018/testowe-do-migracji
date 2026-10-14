@@ -21,6 +21,8 @@ export type MatrixRow = {
   target?: string;
   /** Opis stałego kanału (G-18: „zawsze — decyzja właściciela 09.10”). */
   fixedNote?: boolean;
+  /** Średnio zdarzeń na dobę z ostatnich 7 dni (z danych) — prognoza e-maili w podglądzie wiersza (E11). */
+  perDay?: number;
   cells: Record<AccountKind, MatrixCell>;
 };
 

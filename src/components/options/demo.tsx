@@ -17,55 +17,56 @@ import type { ReactNode } from 'react';
 const c = (bell: boolean, push = false, mail = false, fixed?: MatrixCell extends null ? never : NonNullable<MatrixCell>['fixed']): MatrixCell => ({ bell, push, mail, fixed });
 const all5 = (cell: MatrixCell): Record<AccountKind, MatrixCell> => ({ HHL_ADMIN: cell, HHL_OPS: cell, CLIENT_USER: cell, CARRIER_DISPATCH: cell, CARRIER_USER: cell });
 
-/** Zaznaczenia przykładowe — obraz E11 („ZAZNACZENIA PRZYKŁADOWE”); wiersz zmiany dat według G-18. */
+/** Zaznaczenia przykładowe — obraz E11 („ZAZNACZENIA PRZYKŁADOWE”); wiersz zmiany dat według G-18.
+ *  `perDay` — przykładowa liczba zdarzeń na dobę (obraz E11: „Decyzja po terminie” ok. 9 na dobę → 72 e-maile). */
 export const DEMO_MATRIX: MatrixGroup[] = [
   {
     id: 'todo', title: 'Do zrobienia', sub: 'wymaga działania', rows: [
-      { id: 'dec_new', title: 'Nowa decyzja do podjęcia', sub: 'trafia do firmy, która ma zdecydować', target: 'Ryzyka › ta decyzja',
+      { id: 'dec_new', perDay: 6, title: 'Nowa decyzja do podjęcia', sub: 'trafia do firmy, która ma zdecydować', target: 'Ryzyka › ta decyzja',
         cells: { HHL_ADMIN: c(true), HHL_OPS: c(true, true), CLIENT_USER: c(true), CARRIER_DISPATCH: c(true, true), CARRIER_USER: c(false) } },
-      { id: 'dec_late', title: 'Decyzja po terminie', sub: 'eskalacja · krytyczne', target: 'Ryzyka › ta decyzja',
+      { id: 'dec_late', perDay: 9, title: 'Decyzja po terminie', sub: 'eskalacja · krytyczne', target: 'Ryzyka › ta decyzja',
         cells: { HHL_ADMIN: c(true, true, true), HHL_OPS: c(true, true, true), CLIENT_USER: c(true), CARRIER_DISPATCH: c(true, true, true), CARRIER_USER: c(false) } },
-      { id: 'res_missing', title: 'Brak kierowcy, pojazdu lub pilota', sub: 'przed terminem podania danych', target: 'Harmonogram › transport',
+      { id: 'res_missing', perDay: 3, title: 'Brak kierowcy, pojazdu lub pilota', sub: 'przed terminem podania danych', target: 'Harmonogram › transport',
         cells: { HHL_ADMIN: c(true), HHL_OPS: c(true), CLIENT_USER: c(false), CARRIER_DISPATCH: c(true, true, true), CARRIER_USER: c(true) } },
-      { id: 'order_no', title: 'Brak numeru zlecenia', sub: 'numer HHL albo przewoźnika', target: 'Harmonogram › transport',
+      { id: 'order_no', perDay: 4, title: 'Brak numeru zlecenia', sub: 'numer HHL albo przewoźnika', target: 'Harmonogram › transport',
         cells: { HHL_ADMIN: c(true), HHL_OPS: c(true), CLIENT_USER: c(false), CARRIER_DISPATCH: c(true), CARRIER_USER: c(false) } },
-      { id: 'chat', title: 'Nowa wiadomość w czacie', sub: 'w transporcie, którego dotyczy', target: 'Transport › Czat',
+      { id: 'chat', perDay: 14, title: 'Nowa wiadomość w czacie', sub: 'w transporcie, którego dotyczy', target: 'Transport › Czat',
         cells: { HHL_ADMIN: c(true), HHL_OPS: c(true, true), CLIENT_USER: c(true), CARRIER_DISPATCH: c(true, true), CARRIER_USER: c(true) } },
     ],
   },
   {
     id: 'transport', title: 'Transport', rows: [
-      { id: 'status', title: 'Zmiana statusu transportu', sub: 'załadowany, w drodze, na promie, dostarczony', target: 'Transport › Status', cells: all5(c(true)) },
-      { id: 'dates', title: 'Zmiana dat planu', sub: 'daty załadunku albo rozładunku od KSH', fixedNote: true, target: 'Transport › Historia',
+      { id: 'status', perDay: 22, title: 'Zmiana statusu transportu', sub: 'załadowany, w drodze, na promie, dostarczony', target: 'Transport › Status', cells: all5(c(true)) },
+      { id: 'dates', perDay: 2, title: 'Zmiana dat planu', sub: 'daty załadunku albo rozładunku od KSH', fixedNote: true, target: 'Transport › Historia',
         cells: { HHL_ADMIN: c(true, false, false, ['bell']), HHL_OPS: c(true, false, false, ['bell']), CLIENT_USER: c(false), CARRIER_DISPATCH: c(true, true, false, ['bell']), CARRIER_USER: c(true, false, false, ['bell']) } },
-      { id: 'zone', title: 'Wjazd lub wyjazd ze strefy', sub: 'Śrem, port, Boden · SMS ustawiasz osobno', target: 'Mapa › auto', cells: all5(c(true)) },
+      { id: 'zone', perDay: 30, title: 'Wjazd lub wyjazd ze strefy', sub: 'Śrem, port, Boden · SMS ustawiasz osobno', target: 'Mapa › auto', cells: all5(c(true)) },
     ],
   },
   {
     id: 'risk', title: 'Ryzyka', rows: [
-      { id: 'risk_route', title: 'Ryzyko na trasie przed pojazdem', sub: 'prom jeszcze przed nim, odcinek drogi jeszcze nieminięty · po minięciu znika', target: 'Ryzyka › ta sprawa', cells: all5(c(true)) },
-      { id: 'risk_crit', title: 'Ryzyko podniesione do krytycznego', target: 'Ryzyka › ta sprawa',
+      { id: 'risk_route', perDay: 5, title: 'Ryzyko na trasie przed pojazdem', sub: 'prom jeszcze przed nim, odcinek drogi jeszcze nieminięty · po minięciu znika', target: 'Ryzyka › ta sprawa', cells: all5(c(true)) },
+      { id: 'risk_crit', perDay: 1, title: 'Ryzyko podniesione do krytycznego', target: 'Ryzyka › ta sprawa',
         cells: { HHL_ADMIN: c(true, true, true), HHL_OPS: c(true, true), CLIENT_USER: c(true, false, true), CARRIER_DISPATCH: c(true, true), CARRIER_USER: c(true) } },
       { id: 'risk_general', title: 'Sytuacja ogólna: promy, drogi, pogoda', sub: 'bez transportu albo już za pojazdem', risksOnly: true, cells: all5(null) },
     ],
   },
   {
     id: 'money', title: 'Pieniądze', rows: [
-      { id: 'week', title: 'Tydzień zamknięty: faktura do wystawienia', sub: 'SCX wystawia HHL, HHL wystawia KSH', target: 'Faktury',
+      { id: 'week', perDay: 1, title: 'Tydzień zamknięty: faktura do wystawienia', sub: 'SCX wystawia HHL, HHL wystawia KSH', target: 'Faktury',
         cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(false), CLIENT_USER: c(false), CARRIER_DISPATCH: c(true, false, true), CARRIER_USER: c(false) } },
-      { id: 'inv_check', title: 'Faktura do weryfikacji', sub: 'u odbiorcy faktury', target: 'Faktury › ta faktura',
+      { id: 'inv_check', perDay: 1, title: 'Faktura do weryfikacji', sub: 'u odbiorcy faktury', target: 'Faktury › ta faktura',
         cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(false), CLIENT_USER: c(true, false, true), CARRIER_DISPATCH: c(false), CARRIER_USER: c(false) } },
-      { id: 'inv_dispute', title: 'Faktura sporna', sub: 'u wystawcy i odbiorcy', target: 'Faktury › ta faktura',
+      { id: 'inv_dispute', perDay: 1, title: 'Faktura sporna', sub: 'u wystawcy i odbiorcy', target: 'Faktury › ta faktura',
         cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(false), CLIENT_USER: c(true, false, true), CARRIER_DISPATCH: c(true, false, true), CARRIER_USER: c(false) } },
-      { id: 'factoring', title: 'Faktoring: wypłata', sub: 'HHL: do wykonania w 48 h · SCX: wykonana', target: 'Faktury',
+      { id: 'factoring', perDay: 1, title: 'Faktoring: wypłata', sub: 'HHL: do wykonania w 48 h · SCX: wykonana', target: 'Faktury',
         cells: { HHL_ADMIN: c(true, true, true), HHL_OPS: c(false), CLIENT_USER: null, CARRIER_DISPATCH: c(true, false, true), CARRIER_USER: c(false) } },
     ],
   },
   {
     id: 'system', title: 'System', sub: 'tylko HHL', rows: [
-      { id: 'sms_gw', title: 'Bramka SMS milczy albo SMS niedoręczony', target: 'Opcje › Stan systemu',
+      { id: 'sms_gw', perDay: 1, title: 'Bramka SMS milczy albo SMS niedoręczony', target: 'Opcje › Stan systemu',
         cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
-      { id: 'daily', title: 'Raport dzienny', sub: 'podsumowanie doby', target: 'Kokpit',
+      { id: 'daily', perDay: 1, title: 'Raport dzienny', sub: 'podsumowanie doby', target: 'Kokpit',
         cells: { HHL_ADMIN: c(false, false, true), HHL_OPS: c(false), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
     ],
   },
@@ -113,10 +114,10 @@ const PEOPLE: PersonRow[] = [
 ];
 
 const INVITES: InviteRow[] = [
-  { id: 'i1', name: 'Dyspozytor SCX', kind: 'CARRIER_DISPATCH', line: 'link otwarty 29.09, hasła nie ustawił · 0 aktywnych sesji', status: 'unfinished' },
+  { id: 'i1', name: 'Dyspozytor SCX', kind: 'CARRIER_DISPATCH', domain: 'scandinavian.com.pl', line: 'link otwarty 29.09, hasła nie ustawił · 0 aktywnych sesji', status: 'unfinished' },
   { id: 'i2', name: 'Anna Nowak', kind: 'CLIENT_USER', line: 'zaproszenie wysłane 09.10, 10:15 · ważne do 16.10 · e-mail doręczony', status: 'sent' },
   { id: 'i3', name: 'Jan Kowalski', kind: 'CARRIER_USER', line: 'zaproszenie z 01.10 wygasło 08.10', status: 'expired' },
-  { id: 'i4', name: 'Operacje HHL', kind: 'HHL_OPS', line: 'aktywne · ostatnie logowanie 05.10 · bez imienia i telefonu', status: 'nophone' },
+  { id: 'i4', name: 'Operacje HHL', kind: 'HHL_OPS', domain: 'hhlogistics.pl', line: 'aktywne · ostatnie logowanie 05.10 · bez imienia i telefonu', status: 'nophone' },
 ];
 
 export type DemoBodies = {
@@ -132,7 +133,7 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
   const [first, ...rest] = me.name.split(' ');
   return {
     bodies: {
-      users: <UsersScreen locale={locale} counts={{ total: 14, active: 12, withPhone: 0, named: 7 }} people={PEOPLE} invites={INVITES} readOnly={readOnly} mark={mark} />,
+      users: <UsersScreen locale={locale} counts={{ total: 14, active: 12, withPhone: 0, named: 7, noPassword: 8 }} people={PEOPLE} invites={INVITES} readOnly={readOnly} mark={mark} />,
       logins: (
         <LoginsScreen
           locale={locale}
@@ -154,6 +155,7 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
           readOnly={readOnly}
           mark={mark}
           cards={{ mail: { on: true, used: 23, max: 90, reserve: 10 }, push: { on: true, devices: 1 }, last: { when: '05.10, 12:10', text: 'Administrator HHL · System → HHL: e-mail wyłączony' } }}
+          history={{ n: 4, since: '01.10', last: '05.10, 12:10' }}
         />
       ),
       bcast: (
@@ -163,8 +165,8 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
           mark={mark}
           draft={{ text: 'Prom Stena Estelle 09.10 wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.', firms: ['HHL', 'KSH', 'SCX'], until: '2026-10-09T12:00' }}
           history={[
-            { id: 'b1', when: '01.10, 22:04', who: 'Administrator HHL', text: 'Witamy w Watch Tower. To jest komunikat testowy.', line: 'HHL, KSH, SCX · zdjęty 02.10, 14:50' },
-            { id: 'b2', when: '01.10, 22:03', who: 'Administrator HHL', text: 'Witamy w Watch Tower…', line: 'zdjęty po 5 s' },
+            { id: 'b1', when: '01.10, 22:04', who: 'Administrator HHL', text: 'Witamy w Watch Tower. To jest komunikat testowy.', line: 'HHL, KSH, SCX · zdjęty 02.10, 14:50', test: true },
+            { id: 'b2', when: '01.10, 22:03', who: 'Administrator HHL', text: 'Witamy w Watch Tower…', line: 'zdjęty po 5 s', test: true },
           ]}
         />
       ),

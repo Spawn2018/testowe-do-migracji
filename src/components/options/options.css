@@ -43,6 +43,8 @@
 .ox-card{background:var(--surface);border:1px solid var(--rule);padding:16px 18px;min-width:0}
 .ox-card-v{display:block;margin-top:4px;font-family:var(--font-cond);font-size:24px;font-weight:700}
 .ox-card-sub{display:block;margin-top:6px;color:var(--ink-2);font-size:14px}
+.ox-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px}
+.ox-card-top .ox-card-v{margin-top:0}
 .ox-meter{display:block;height:5px;margin-top:8px;background:var(--rule-2)}
 .ox-meter i{display:block;height:100%;background:var(--sea)}
 .ox-cards3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px}
@@ -50,6 +52,7 @@
 .ox-panel-hd{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule-2)}
 .ox-panel-hd h3{margin:0;font-family:var(--font-cond);font-size:20px;font-weight:700}
 .ox-panel-hd .panel-mark,.ox-panel-hd .ox-tag{margin-left:auto}
+.ox-panel-sub{color:var(--ink-3);font-size:15px}
 .ox-panel-hd-mid{border-top:1px solid var(--rule-2);background:var(--surface-2)}
 .ox-panel-bd{padding:14px 16px}
 .ox-panel-note{margin:10px 16px 14px;color:var(--ink-3);font-size:13.5px}
@@ -147,6 +150,8 @@
 .ox-preview ul{list-style:none;margin:0 0 10px;padding:0}
 .ox-preview li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--rule-2)}
 .ox-preview p,.ox-rules p{margin:8px 0 0;color:var(--ink-2);font-size:14px}
+.ox-forecast .ox-link{font-weight:700}
+.ox-rules-hist{padding-top:8px;border-top:1px solid var(--rule-2)}
 
 /* ---------- Dla mnie › Co dostaję ---------- */
 .ox-forme-group h4{margin:12px 16px 4px;font-family:var(--font-cond);font-size:13.5px;font-weight:700;letter-spacing:.1em;color:var(--ink-3)}
@@ -154,7 +159,7 @@
 /* ---------- Przełączniki ---------- */
 .ox-flags .ox-table td:nth-child(3){color:var(--ink-2)}
 .ox-flags .ox-table tbody th{min-width:200px;width:28%}
-.ox-flags .ox-table .ox-flag-last{width:190px;color:var(--ink-2)}
+.ox-flags .ox-table .ox-flag-last{width:190px;color:var(--ink-2);white-space:nowrap}
 .ox-scrim{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:16px;background:rgba(6,14,20,.45)}
 .ox-dialog{width:min(460px,100%);background:var(--surface);border:1px solid var(--rule);padding:20px}
 .ox-dialog h3{margin:0 0 10px;font-family:var(--font-cond);font-size:22px;font-weight:700}
@@ -219,14 +224,18 @@
 .ox-me-hd .panel-mark{margin-left:auto}
 .ox-avatar{display:grid;place-items:center;flex:0 0 46px;width:46px;height:46px;border-radius:50%;background:var(--sea);color:var(--surface);font-family:var(--font-cond);font-weight:700;font-size:18px}
 
+/* listy przeniesione z dawnych paneli (SMS przy miejscach): ekran ma własną stronę — bez wewnętrznego przewijania 360 px */
+.ox-screen .settings-list{max-height:none;overflow:visible}
+
 /* ---------- komputer, węższy ekran ---------- */
 @media (max-width:1680px){
   .ox-who-split{grid-template-columns:minmax(0,1fr)}
+  /* lista kont na całą szerokość — stan i przyciski w jednym rzędzie (obraz E37) */
+  .ox-users-split{grid-template-columns:minmax(0,1fr)}
   .ox-who-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:1100px){
   .ox-desk{grid-template-columns:230px minmax(0,1fr)}
-  .ox-users-split{grid-template-columns:minmax(0,1fr)}
   .ox-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 
@@ -273,12 +282,14 @@
   .ox-cards-phone,.ox-cards-phone tbody,.ox-cards-phone tr,.ox-cards-phone th,.ox-cards-phone td{display:block;width:100%}
   .ox-cards-phone{border:0;background:transparent}
   .ox-cards-phone thead{display:none}
-  .ox-cards-phone tbody tr{background:var(--surface);border:1px solid var(--rule);margin-bottom:10px;padding:6px 0}
+  .ox-cards-phone tbody tr{background:var(--surface);border:1px solid var(--rule);margin:0 0 10px;padding:6px 0}
   .ox-cards-phone tbody tr.ox-firm-row{background:transparent;border:0;margin:14px 0 4px;padding:0}
   .ox-cards-phone .ox-firm-row th{background:transparent;padding:0}
   .ox-cards-phone th,.ox-cards-phone td{border:0;padding:6px 16px}
   .ox-cards-phone [data-label]::before{content:attr(data-label);display:block;font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.08em;color:var(--ink-3)}
   .ox-cards-phone .ox-call-cell{text-align:left}
+  /* nagłówek kolumny działań jest tylko dla czytnika ekranu — bez etykiety „Zadzwoń” nad przyciskami karty */
+  .ox-cards-phone .ox-call-cell[data-label]::before{content:none}
   .ox-cards-phone .ox-call-cell:empty{display:none}
   .ox-callbtn{width:56px;height:44px}
   .ox-morebtn{width:56px;height:44px}
@@ -303,7 +314,6 @@
   .ox-invite-act{justify-content:flex-start}
   .ox-counters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
   .ox-counters .panel-mark{grid-column:1 / -1;margin-left:0}
-  .ox-users-split{grid-template-columns:minmax(0,1fr)}
   .ox-hist-diff{gap:6px 10px}
 }
 

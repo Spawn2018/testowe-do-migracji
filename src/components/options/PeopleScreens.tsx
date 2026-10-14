@@ -43,6 +43,8 @@ export type InviteRow = {
   id: string;
   name: string;
   kind: AccountKind;
+  /** domena adresu konta bez imienia (obraz E37: „Dyspozytor SCX · @…”) — wtedy zamiast rodzaju konta */
+  domain?: string;
   /** zdanie o stanie: „zaproszenie wysłane 09.10, 10:15 · ważne do 16.10 · e-mail doręczony” */
   line: string;
   status: InviteStatus;
@@ -65,7 +67,8 @@ function telHref(phone: string): string {
 
 export function UsersScreen({ locale, counts, people, invites, readOnly, mark, onInvite, onAction, onPerson }: {
   locale: Locale;
-  counts: { total: number; active: number; withPhone: number; named: number };
+  /** `noPassword` — konta bez ustawionego hasła (podtytuł „Konta i zaproszenia”, obraz E37) */
+  counts: { total: number; active: number; withPhone: number; named: number; noPassword?: number };
   people: PersonRow[];
   invites: InviteRow[];
   readOnly?: boolean;
@@ -122,12 +125,15 @@ export function UsersScreen({ locale, counts, people, invites, readOnly, mark, o
       <div className="ox-users-split">
         {readOnly ? null : <InviteForm locale={locale} onInvite={onInvite} />}
         <section className="ox-panel">
-          <header className="ox-panel-hd"><h3>{t(locale, 'p3c_u_list')}</h3></header>
+          <header className="ox-panel-hd">
+            <h3>{t(locale, 'p3c_u_list')}</h3>
+            <span className="ox-panel-sub">{tp(locale, counts.noPassword != null ? 'p3c_u_list_hd_pw' : 'p3c_u_list_hd', { n: counts.total, a: counts.active, p: counts.noPassword ?? 0 })}</span>
+          </header>
           <ul className="ox-list ox-invites">
             {invites.map((iv) => (
               <li key={iv.id} data-invite={iv.status}>
                 <span className="ox-tile-copy">
-                  <b><span data-content>{iv.name}</span> <span className="ox-sub-inline">· {t(locale, `p3c_role_${iv.kind}`)}</span></b>
+                  <b><span data-content>{iv.name}</span> <span className="ox-sub-inline">· {iv.domain ? <span data-content>@{iv.domain}</span> : t(locale, `p3c_role_${iv.kind}`)}</span></b>
                   <span data-content>{iv.line}</span>
                 </span>
                 <span className="ox-invite-act">
@@ -224,7 +230,8 @@ export function LoginsScreen({ locale, rows, mark }: { locale: Locale; rows: Log
 
 /* ---------- Komunikat dla wszystkich ---------- */
 
-export type BroadcastHistoryRow = { id: string; when: string; who: string; text: string; line: string };
+/** `test` — komunikat próbny (obraz E37: „próbny” po prawej). */
+export type BroadcastHistoryRow = { id: string; when: string; who: string; text: string; line: string; test?: boolean };
 
 export function BroadcastScreen({ locale, draft, history, readOnly, mark, onPublish }: {
   locale: Locale;
@@ -271,6 +278,7 @@ export function BroadcastScreen({ locale, draft, history, readOnly, mark, onPubl
           {history.map((h) => (
             <li key={h.id}>
               <span className="ox-tile-copy"><b data-content>{h.when} · {h.who}</b><span data-content>„{h.text}” · {h.line}</span></span>
+              {h.test ? <small className="ox-muted">{t(locale, 'p3c_b_test')}</small> : null}
             </li>
           ))}
         </ul>

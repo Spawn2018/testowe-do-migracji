@@ -5,7 +5,7 @@
  * Telefon (E12 „Telefon”, E11 `img/e11-phone`): kafelki grup ze stanem → lista ekranów grupy → ekran z „‹”.
  * Tylko nawigacja między ekranami: bez zapisu, bez zmiany roli i uprawnień.
  */
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t } from '../../i18n/messages';
 import { DESC_KEY, GROUP_KEY, RIGHT_KEY, SCREEN_KEY, type OptGroup, type OptGroupId, type OptScreen, type OptScreenId } from './types';
@@ -41,6 +41,14 @@ type Props = {
   saved?: ReactNode;
 };
 
+/** Aplikacja przewija się w `main`, nie w oknie — na górę ekranu po otwarciu. */
+function toTop() {
+  if (typeof document === 'undefined') return;
+  const m = document.querySelector('main');
+  if (m && typeof m.scrollTo === 'function') m.scrollTo({ top: 0 });
+  if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') window.scrollTo({ top: 0 });
+}
+
 type Level = { kind: 'groups' } | { kind: 'group'; group: OptGroupId } | { kind: 'screen'; screen: OptScreenId };
 
 export function OptionsShell({ locale, rootKey, who, groups, request, saved }: Props) {
@@ -49,13 +57,16 @@ export function OptionsShell({ locale, rootKey, who, groups, request, saved }: P
   const first = all[0]?.screen.id ?? null;
   const [active, setActive] = useState<OptScreenId | null>(request?.screen ?? first);
   const [level, setLevel] = useState<Level>(request ? { kind: 'screen', screen: request.screen } : { kind: 'groups' });
+  /* każde wskazanie z zewnątrz obsłużone raz (numer `seq`) — kolejne odświeżenie widoku nie wraca do tego ekranu */
+  const handled = useRef(request?.seq ?? 0);
 
   useEffect(() => {
-    if (!request) return;
+    if (!request || request.seq <= handled.current) return;
     if (!all.some((x) => x.screen.id === request.screen)) return;
+    handled.current = request.seq;
     setActive(request.screen);
     setLevel({ kind: 'screen', screen: request.screen });
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0 });
+    toTop();
   }, [request, all]);
 
   /* ekran zniknął (np. zmiana roli w Podglądzie) → pierwszy dostępny */
@@ -64,14 +75,40 @@ export function OptionsShell({ locale, rootKey, who, groups, request, saved }: P
   const open = (id: OptScreenId) => {
     setActive(id);
     setLevel({ kind: 'screen', screen: id });
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0 });
+    toTop();
   };
 
   const root = t(locale, rootKey);
 
   if (!current) return null;
 
+  /* jedna grupa (np. Ustawienia KSH i SCX w demo: tylko „Dla mnie”) — od razu lista ekranów, bez zbędnego poziomu */
+  const single = groups.length === 1;
+  const screenTiles = (g: OptGroup) => (
+    <ul className="ox-tiles" aria-label={single ? t(locale, 'p3c_menu') : undefined}>
+      {g.screens.map((s) => (
+        <li key={s.id}>
+          <button type="button" className="ox-tile" data-opt-nav={s.id} onClick={() => open(s.id)}>
+            <span className="ox-tile-copy">
+              <b>{t(locale, SCREEN_KEY[s.id])}</b>
+              <span className={s.metaTone === 'alert' ? 'ox-alert' : undefined}>{s.meta ?? t(locale, DESC_KEY[s.id])}</span>
+            </span>
+            <span className="ox-chev" aria-hidden="true">›</span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+
   if (phone) {
+    if (level.kind === 'groups' && single) {
+      return (
+        <div className="ox ox-phone" data-opt-level="groups" data-opt-group={groups[0].id}>
+          <header className="ox-phone-hd"><h1>{root}</h1>{saved}</header>
+          {screenTiles(groups[0])}
+        </div>
+      );
+    }
     if (level.kind === 'groups') {
       return (
         <div className="ox ox-phone" data-opt-level="groups">
@@ -111,19 +148,7 @@ export function OptionsShell({ locale, rootKey, who, groups, request, saved }: P
             <button type="button" className="ox-backbtn" aria-label={t(locale, 'p3c_back')} onClick={() => setLevel({ kind: 'groups' })}>‹</button>
             <h1>{t(locale, GROUP_KEY[g.id])}</h1>
           </header>
-          <ul className="ox-tiles">
-            {g.screens.map((s) => (
-              <li key={s.id}>
-                <button type="button" className="ox-tile" data-opt-nav={s.id} onClick={() => open(s.id)}>
-                  <span className="ox-tile-copy">
-                    <b>{t(locale, SCREEN_KEY[s.id])}</b>
-                    <span className={s.metaTone === 'alert' ? 'ox-alert' : undefined}>{s.meta ?? t(locale, DESC_KEY[s.id])}</span>
-                  </span>
-                  <span className="ox-chev" aria-hidden="true">›</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          {screenTiles(g)}
         </div>
       );
     }
@@ -135,7 +160,7 @@ export function OptionsShell({ locale, rootKey, who, groups, request, saved }: P
             type="button"
             className="ox-backbtn"
             aria-label={t(locale, 'p3c_back')}
-            onClick={() => setLevel(g.screens.length === 1 ? { kind: 'groups' } : { kind: 'group', group: g.id })}
+            onClick={() => setLevel(single || g.screens.length === 1 ? { kind: 'groups' } : { kind: 'group', group: g.id })}
           >‹</button>
           <h1>{t(locale, SCREEN_KEY[current.screen.id])}</h1>
           {saved}

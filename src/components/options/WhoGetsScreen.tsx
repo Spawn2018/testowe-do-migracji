@@ -27,6 +27,10 @@ type Props = {
   readOnly?: boolean;
   /** Zapis jednego pola macierzy (wykonawca). Bez funkcji — zmiana tylko na ekranie. */
   onToggle?: (rowId: string, kind: AccountKind, ch: Channel, next: boolean) => void;
+  /** Przełączniki w kartach „E-maile o zdarzeniach” i „Powiadomienia na telefon” (obraz E11). Bez funkcji — zmiana tylko na ekranie. */
+  onCard?: (card: 'mail' | 'push', next: boolean) => void;
+  /** „Historia: 4 zmiany od 01.10 · ostatnia 05.10, 12:10” w „Zasadach” (obraz E11) — z Historii zmian. */
+  history?: { n: number; since: string; last: string };
   /** Znacznik danych przykładowych przy macierzy. */
   mark?: ReactNode;
 };
@@ -64,8 +68,22 @@ function rowSummary(locale: Locale, r: MatrixRow): string {
   return tp(locale, 'p3c_mx_sum', { n: cells.length, b: cells.filter((c) => c.bell).length });
 }
 
-export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOnly, onToggle, mark }: Props) {
+function CardSwitch({ label, on, readOnly, onChange }: { label: string; on: boolean; readOnly?: boolean; onChange: (next: boolean) => void }) {
+  return (
+    <button type="button" className="ox-switch" role="switch" aria-checked={on} aria-label={label} disabled={readOnly} onClick={() => onChange(!on)}>
+      <span className="ox-track"><i /></span>
+    </button>
+  );
+}
+
+export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOnly, onToggle, onCard, history, mark }: Props) {
   const [groups, setGroups] = useState(initial);
+  const [mailOn, setMailOn] = useState(cards?.mail.on ?? false);
+  const [pushOn, setPushOn] = useState(cards?.push.on ?? false);
+  const card = (which: 'mail' | 'push', next: boolean) => {
+    (which === 'mail' ? setMailOn : setPushOn)(next);
+    onCard?.(which, next);
+  };
   const firstRow = groups.flatMap((g) => g.rows).find((r) => !r.risksOnly)?.id ?? null;
   const [sel, setSel] = useState<string | null>(firstRow);
   const rows = groups.flatMap((g) => g.rows);
@@ -81,20 +99,35 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
 
   const accText = (k: AccountKind) => (accounts && accounts[k] != null ? tp(locale, 'p3c_accounts', { n: accounts[k]! }) : null);
 
+  /* prognoza e-maili (E11 „podgląd: konta, cel, prognoza e-maili vs 90”): zdarzenia na dobę × konta z zaznaczonym e-mailem */
+  const mailsOf = (r: MatrixRow): number | null => {
+    if (r.perDay == null || !accounts || r.risksOnly) return null;
+    return Math.round(r.perDay * ACCOUNT_KINDS.reduce((sum, k) => sum + (r.cells[k]?.mail ? accounts[k] ?? 0 : 0), 0));
+  };
+  const mailsAll = rows.reduce((sum, r) => sum + (mailsOf(r) ?? 0), 0);
+  const selMails = selected ? mailsOf(selected) : null;
+  const overLimit = cards != null && selMails != null && selMails > 0 && mailsAll > cards.mail.max;
+
   return (
     <div className="ox-who">
       {cards ? (
         <div className="ox-cards3">
-          <div className="ox-card">
+          <div className="ox-card" data-who-card="mail">
             <span className="ox-eyebrow">{up(t(locale, 'p3c_mail_title'))}</span>
-            <b className="ox-card-v">{t(locale, cards.mail.on ? 'p3c_on' : 'p3c_off')}</b>
+            <span className="ox-card-top">
+              <b className="ox-card-v">{t(locale, mailOn ? 'p3c_on' : 'p3c_off')}</b>
+              <CardSwitch label={t(locale, 'p3c_mail_title')} on={mailOn} readOnly={readOnly} onChange={(next) => card('mail', next)} />
+            </span>
             <span className="ox-meter" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round((cards.mail.used / Math.max(1, cards.mail.max)) * 100))}%` }} /></span>
             <span className="ox-card-sub">{t(locale, 'p3c_mail_quota').replace('{used}', String(cards.mail.used)).replace('{max}', String(cards.mail.max)).replace('{reserve}', String(cards.mail.reserve))}</span>
           </div>
-          <div className="ox-card">
+          <div className="ox-card" data-who-card="push">
             <span className="ox-eyebrow">{up(t(locale, 'p3c_push_title'))}</span>
-            <b className="ox-card-v">{t(locale, cards.push.on ? 'p3c_on' : 'p3c_off')}</b>
-            <span className="ox-card-sub">{t(locale, 'p3c_push_devices').replace('{n}', String(cards.push.devices))}</span>
+            <span className="ox-card-top">
+              <b className="ox-card-v">{t(locale, pushOn ? 'p3c_on' : 'p3c_off')}</b>
+              <CardSwitch label={t(locale, 'p3c_push_title')} on={pushOn} readOnly={readOnly} onChange={(next) => card('push', next)} />
+            </span>
+            <span className="ox-card-sub">{tp(locale, 'p3c_push_devices', { n: cards.push.devices })}</span>
           </div>
           <div className="ox-card">
             <span className="ox-eyebrow">{up(t(locale, 'p3c_last_title'))}</span>
@@ -196,12 +229,21 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
                 ))}
               </ul>
               {selected.target ? <p>{t(locale, 'p3c_click_to')} <b className="ox-link" data-content>{selected.target}</b></p> : null}
+              {selMails != null && selected.perDay != null ? (
+                <p className="ox-forecast" data-who-forecast>
+                  {t(locale, 'p3c_fc_lead')}{' '}
+                  <b className="ox-link">{tp(locale, 'p3c_fc_events', { n: selected.perDay })} → {tp(locale, 'p3c_fc_mails', { n: selMails })}</b>{' '}
+                  {t(locale, 'p3c_fc_tail')}
+                  {overLimit ? <> <span className="ox-alert">{tp(locale, 'p3c_fc_over', { max: cards!.mail.max })}</span></> : null}
+                </p>
+              ) : null}
             </div>
           ) : null}
           <div className="ox-card ox-rules">
             <span className="ox-eyebrow">{up(t(locale, 'p3c_rules'))}</span>
             <p>{t(locale, 'p3c_rule_scope')}</p>
             <p>{t(locale, 'p3c_rule_quota')}</p>
+            {history ? <p className="ox-rules-hist" data-content>{tp(locale, 'p3c_rule_hist', { n: history.n, since: history.since, last: history.last })}</p> : null}
           </div>
         </aside>
       </div>
