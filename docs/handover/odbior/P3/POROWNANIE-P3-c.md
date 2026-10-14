@@ -68,7 +68,7 @@ Po poprawkach z niezależnego sprawdzenia, lokalnie:
 - Pierwsze wczytanie: produkcja 390,2 kB gzip, demo 391,4 kB (budżet 400 kB; `main` `cb14008` 387,7 kB). Opcje i Ustawienia ładują się osobno (`src/views/optionsLazy.tsx`), bo z nimi w pierwszym wczytaniu było 399,1 kB.
 - Playwright, cała brama `e8-phone-gate` (P2, P3-a, P3-b, P4-a, P3-c): 27 ✓. Blok „wyglad/P3-c Opcje i Ustawienia”: każdy ekran HHL, KSH i SCX przy 360/390/430 px, także edycja progu i działania przy osobie — 0 w każdej kolumnie; KSH i SCX na telefonie od razu lista 3 ekranów; komputer: 6 grup, 1440 i 1280 px bez przewijania w bok. Test menu konta sprawdza też, że po „Moje konto” → „Wygląd i waluta” zmiana waluty nie wraca do „Moje konto”.
 - `etap4-ui`, `etap6-ui`, `d-eur-t`, `persist-toast`, `etap5-ui`, `aud03-ksh-panel`: 27 ✓.
-- Migawki `tests/__screenshots__/`: `visual.yml` z `update=true` po rebase (run 38504703136, commit `61fbfd2`) i po poprawkach (wpis w `G4_WZORZEC.md` pod „wyglad/P4-a”). 15 migawek bez zmiany pikseli — migawki nie obejmują Opcji ani Ustawień, więc nic nie podmieniono. Ekrany P3-c sprawdza brama E8 i ten dowód.
+- Migawki `tests/__screenshots__/`: `visual.yml` z `update=true` po rebase (run 38504703136, commit `61fbfd2`) i po poprawkach (run 38514652438, commit `26716b6`; wpis w `G4_WZORZEC.md` pod „wyglad/P4-a”). 15 migawek bez zmiany pikseli — migawki nie obejmują Opcji ani Ustawień, więc nic nie podmieniono. Ekrany P3-c sprawdza brama E8 i ten dowód.
 - Build produkcyjny (`VITE_AUTH_MODE=supabase`): brak modułu `demo` i danych przykładowych w `dist/` (grep: osoby, domeny, „Stena Estelle 09.10”, `perDay`), `i0-prod-guard` ✓, `i2-demo-no-send` ✓.
 
 ## Niezależne sprawdzenie
