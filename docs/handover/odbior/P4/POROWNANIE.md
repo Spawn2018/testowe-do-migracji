@@ -162,7 +162,7 @@ Zrzuty z demo na serwerze deweloperskim, czas 07.10.2026, 20:30. Do zrzutów osi
 
 ## wyglad/P4-c — pole „Link śledzenia” (E44), „Gotowy” z brakami (L6, L9, L29), sprawa „czy dostarczono?” (E26, L14), „Działa samo” (E35, L13)
 
-Polecenie właściciela 14.10.2026, 11:33 i 11:41 („Zacznij robić P4-c”), dopisek D-20261014-1145-01 W3.
+Polecenie właściciela 14.10.2026, 11:33 i 11:41 („Zacznij robić P4-c”). Dane i zapis — dopisek D-20261014-1320-01.
 Obrazy raportu:
 - `raport/img/e32-after.webp` — okno Awizacja, pole „LINK ŚLEDZENIA” (bez stanów E44);
 - `e7-desk.webp` — karta sprawy w „Do zrobienia” (wzór karty sprawy L14);
