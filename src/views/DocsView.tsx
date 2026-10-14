@@ -1,53 +1,94 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+/**
+ * wyglad/P5 — Dokumenty (E31, img/e31-after; decyzje 08.10 12:14 i 09.10 13:09).
+ * Komputer: nagłówek z „Wgraj dokument” i „Paczka tygodnia”, „Wymagania przy transporcie” (po terminie i w ciągu
+ * 7 dni zamiast „0 / 94”, klik w liczbę pokazuje transporty), „Zezwolenia” (Firma / Trasa), „Pliki” z filtrami.
+ * Terminy tylko do odczytu — zmienia je Administrator HHL w Opcjach › Zezwolenia i dokumenty (E12).
+ * Polisy: KSH widzi polisę HHL, SCX swoją, HHL obie (pytanie 3); dodawane raz, podpinają się same (G-21).
+ * KSH nic nie wgrywa (19:11). Telefon: duży przycisk „Wgraj dokument lub zrób zdjęcie”, braki jako karty (E8).
+ * Dane: wymagania i stan z bazy (`doc_requirements`, `doc_requirements_status`) albo wartości startowe w demo;
+ * zezwolenia i polisy z `p5Source` (podłącza wykonawca). Zapis pliku jak dziś (`attachDocumentFile`).
+ */
+import { Fragment, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
-import { pctText, t, tp } from '../i18n/messages';
-import type { DocCategory, Document } from '../types';
+import { t, tp } from '../i18n/messages';
+import { ft, ftp } from '../i18n/p5';
+import type { DocCategory, Document, Locale, RoleId } from '../types';
 import { downloadDocumentsZip } from '../lib/zipDocs';
-import { attachDocumentFile } from '../lib/docFiles';
 import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
-import { docCategoryLabel } from '../lib/enumLabels';
 import { getNowMs } from '../lib/frozenNow';
-import { shows } from '../lib/prodFacade';
-import { DEFAULT_DOC_REQUIREMENTS, docStatusRows, docSummary, type DocRequirement, type DocStatusRow } from '../lib/docRequirements';
+import { DEFAULT_DOC_REQUIREMENTS, docStatusRows, type DocRequirement, type DocStatusRow } from '../lib/docRequirements';
 import { defaultDocWeek, docsForWeek, weeksWithLoads } from '../lib/docWeek';
-import { clickableRow } from '../lib/clickableRow';
+import { setDocReqCache } from '../lib/docReqCache';
 import { useIsPhone } from '../lib/useIsPhone';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
+import { transportLabel } from '../lib/transportName';
+import { formatPlNumber } from '../lib/format';
+import { weekKeyLabel } from '../lib/p5Invoices';
+import {
+  cmrKind, codesText, filterFiles, reqCount, reqVisible, REQ_KEYS, responsibleOrg, seenBy, type FileFilter, type ReqKey,
+} from '../lib/p5Docs';
+import { permitsOf, policiesOf, type PolicyView } from '../lib/p5Source';
+import { docLabel, UploadDocModal } from '../components/docs/UploadDocModal';
+import { up } from '../components/options/up';
+import '../components/finance/finance.css';
+import '../components/docs/docs.css';
 
 const InsurancePolicyForm =
   import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED
     ? lazy(() => import('../auth/InsurancePolicyForm'))
     : null;
 
-const CATS: { key: DocCategory; labelKey: string; who: string; whenKey: string }[] = [
-  { key: 'PERMIT_PL', labelKey: 'doc_cat_permit_pl', who: 'Scandinavian Express', whenKey: 'docs_before_load' },
-  { key: 'PERMIT_SE', labelKey: 'doc_cat_permit_se', who: 'Scandinavian Express', whenKey: 'docs_before_se' },
-  { key: 'CMR', labelKey: 'doc_cat_cmr', who: 'Scandinavian Express', whenKey: 'docs_at_load' },
-  /* UI-12: POD i zdjęcia mocowania usunięte z UI — CMR wgrywa dyspozytor SCX lub HHL */
-  { key: 'INSURANCE', labelKey: 'doc_cat_insurance', who: 'Scandinavian Express', whenKey: 'docs_insurance_when' },
-  { key: 'DRAWING', labelKey: 'doc_cat_drawing', who: 'KSH', whenKey: 'docs_drawing_when' },
-];
+/** Rodzaje do wgrania przy transporcie (polisy dodaje się raz — formularz polis, G-21). */
+const UPLOAD_KINDS: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR'];
+const FILE_KINDS: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR', 'INSURANCE', 'POD', 'LASHING_PHOTOS', 'DRAWING', 'INVOICE'];
+const MAX_FILES = 60;
+
+const dmy = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+const dm = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}`;
+const atText = (iso: string | null) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return '—';
+  const f = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', ...o }).format(d);
+  return `${f({ day: '2-digit', month: '2-digit' })}, ${f({ hour: '2-digit', minute: '2-digit' })}`;
+};
+const m2 = (n: number) => formatPlNumber(n, 2);
+
+interface ReqRow {
+  key: ReqKey;
+  label: string;
+  who: string;
+  due: string;
+  over: DocStatusRow[] | null;
+  soon: DocStatusRow[] | null;
+  /** Polisa HHL bez wpisu — „brak” zamiast liczby. */
+  missingPolicy: boolean;
+  note: string;
+  noteGood: boolean;
+}
+
+function policyNote(locale: Locale, p: PolicyView): string {
+  return ftp(locale, p.approved ? 'p5_doc_n_policy' : 'p5_doc_n_policy_wait', { number: p.number, date: dmy(p.validTo) });
+}
 
 export function DocsView() {
   const documents = useTowerStore((s) => s.documents);
   const loads = useTowerStore((s) => s.loads);
   const locale = useTowerStore((s) => s.locale);
-  const role = useTowerStore((s) => s.role);
+  const role = useTowerStore((s) => s.role) as RoleId;
   const phone = useIsPhone();
-  const nLoads = loads.length;
+  const nowMs = getNowMs();
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
-  const [filterCat, setFilterCat] = useState<DocCategory | 'ALL'>('ALL');
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [uploadTarget, setUploadTarget] = useState<{ loadId: string; category: DocCategory } | null>(null);
-  // III-6: wymagalność i terminy z bazy (produkcja) albo wartości startowe (demo)
+  const [upload, setUpload] = useState(false);
+  const [open, setOpen] = useState<{ key: ReqKey; kind: 'over' | 'soon' } | null>(null);
+  const [filter, setFilter] = useState<FileFilter>({ week: '', loadId: '', category: '' });
+  const [packOpen, setPackOpen] = useState(false);
+  const packRef = useRef<HTMLDivElement>(null);
+  /* III-6: wymagalność i stan z bazy (produkcja) albo wartości startowe (demo) — odczyt bez zmian */
   const [reqs, setReqs] = useState<DocRequirement[]>(DEFAULT_DOC_REQUIREMENTS);
   const [serverStatus, setServerStatus] = useState<DocStatusRow[] | null>(null);
   const [insuranceCover, setInsuranceCover] = useState<{ covered: number; total: number } | null>(null);
-  const [projectId, setProjectId] = useState<string | null>(null);
-  const [editCat, setEditCat] = useState<DocCategory | null>(null);
-  const [editReq, setEditReq] = useState<DocRequirement | null>(null);
-  const [reloadTick, setReloadTick] = useState(0);
   useEffect(() => {
     if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return;
     let alive = true;
@@ -55,12 +96,12 @@ export function DocsView() {
       .then((m) => m.loadDocRequirements())
       .then((r) => {
         if (!alive) return;
-        setProjectId(r.projectId);
         if (r.reqs.length) setReqs(r.reqs);
         setServerStatus(r.status);
+        setDocReqCache(r.reqs.length ? r.reqs : DEFAULT_DOC_REQUIREMENTS, r.status);
         if (r.projectId) {
           void import('../data/insuranceCoverServer')
-            .then((ic) => ic.loadInsuranceCover(r.projectId!))
+            .then((ic) => ic.loadInsuranceCover(r.projectId))
             .then((rows) => {
               if (!alive) return;
               setInsuranceCover({ covered: rows.filter((x) => x.covered).length, total: rows.length });
@@ -70,338 +111,387 @@ export function DocsView() {
       })
       .catch(() => { /* brak odczytu → wartości startowe, stan liczony lokalnie */ });
     return () => { alive = false; };
-  }, [documents.length, reloadTick]);
-  const summary = useMemo(
-    () => docSummary(serverStatus ?? docStatusRows(loads, documents, reqs, getNowMs())),
-    [serverStatus, loads, documents, reqs],
-  );
-  const saveReq = async (r: DocRequirement) => {
-    const st = useTowerStore.getState();
-    try {
-      if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
-        if (!projectId) throw new Error('—');
-        const m = await import('../data/docRequirementsServer');
-        await m.saveDocRequirement(projectId, r);
-        setReloadTick((x) => x + 1);
+  }, [documents.length]);
+  useEffect(() => {
+    if (!packOpen) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !packRef.current?.contains(e.target as Node)) setPackOpen(false);
+    };
+    window.addEventListener('mousedown', close);
+    window.addEventListener('keydown', close);
+    return () => { window.removeEventListener('mousedown', close); window.removeEventListener('keydown', close); };
+  }, [packOpen]);
+
+  const statusRows = useMemo(() => serverStatus ?? docStatusRows(loads, documents, reqs, nowMs), [serverStatus, loads, documents, reqs, nowMs]);
+  const byId = useMemo(() => new Map(loads.map((l) => [l.id, l])), [loads]);
+  const nameOf = (id: string) => { const l = byId.get(id); return l ? transportLabel(l, role) : id; };
+  const policies = policiesOf();
+  const permits = useMemo(() => permitsOf(loads), [loads]);
+  const canUpload = role === 'HHL' || role === 'SCX';
+
+  const rows: ReqRow[] = useMemo(() => {
+    const out: ReqRow[] = [];
+    for (const key of REQ_KEYS) {
+      if (!reqVisible(key, role)) continue;
+      if (key === 'INSURANCE' || key === 'OCS') {
+        const org = key === 'INSURANCE' ? 'SCX' : 'HHL';
+        const pol = policies?.find((p) => p.org === org) ?? null;
+        const covered = key === 'INSURANCE' && insuranceCover ? insuranceCover : null;
+        out.push({
+          key,
+          label: ft(locale, `p5_doc_r_${key}`),
+          who: ft(locale, `p5_doc_who_${key}`),
+          due: ft(locale, 'p5_doc_due_policy'),
+          over: null,
+          soon: null,
+          /* „brak” tylko przy danych z bazy — bez nich nic nie twierdzimy o polisie HHL */
+          missingPolicy: key === 'OCS' && policies != null && !pol,
+          note: pol ? policyNote(locale, pol) : covered ? ftp(locale, 'p5_doc_n_cover', covered) : key === 'OCS' ? ft(locale, 'p5_doc_n_OCS') : '',
+          noteGood: !!pol && pol.approved,
+        });
+        continue;
       }
-      setReqs((xs) => xs.map((x) => (x.category === r.category ? r : x)));
-      setEditCat(null);
-      st.pushToast(t(locale, 'iii6_saved'), 'MEDIUM');
-    } catch (e) {
-      st.pushToast(t(locale, 'iii6_err').replace('{msg}', e instanceof Error ? e.message : String(e)), 'HIGH');
+      const req = reqs.find((r) => r.category === key) ?? null;
+      if (!req || !req.required) continue;
+      const cnt = reqCount(statusRows, key, nowMs);
+      const cmr = key === 'CMR' ? cmrKind(req) : null;
+      const label = cmr ? ft(locale, `p5_doc_r_CMR_${cmr}`) : ft(locale, `p5_doc_r_${key}`);
+      const due = cmr === 'SIGNED'
+        ? ftp(locale, 'p5_doc_due_CMR_SIGNED', { h: req.offsetHours })
+        : t(locale, `iii6_a_${req.anchor}`).replace('{h}', String(req.offsetHours));
+      let note = '';
+      /* „Firma” podpina się sama — opis dopiero, gdy zezwolenia „Firma / Trasa” są w danych */
+      if (key === 'PERMIT_PL' && permits) note = ft(locale, 'p5_doc_n_PERMIT_PL');
+      if (key === 'PERMIT_SE') note = ftp(locale, 'p5_doc_n_PERMIT_SE', { n: loads.filter((l) => l.ferry?.departureAt).length, all: loads.length });
+      if (cmr) {
+        note = ft(locale, `p5_doc_n_CMR_${cmr}`);
+        if (cmr === 'SIGNED' && cnt.overdue.length) note += `; ${codesText(cnt.overdue.map((r) => byId.get(r.loadId)?.code ?? r.loadId))}`;
+      }
+      out.push({ key, label, who: responsibleOrg(req.responsible), due, over: cnt.overdue, soon: cnt.soon, missingPolicy: false, note, noteGood: false });
     }
+    return out;
+  }, [role, reqs, statusRows, nowMs, locale, loads, byId, policies, insuranceCover, permits]);
+
+  /* paczka tygodnia: tylko dokumenty, które widzi ta firma (RLS i `visibleTo`), od najnowszego tygodnia */
+  const weeks = useMemo(() => weeksWithLoads(loads).reverse(), [loads]);
+  const [packWeek, setPackWeek] = useState('');
+  /* domyślnie bieżący tydzień (jak dziś: `defaultDocWeek`), lista od najnowszego */
+  const curWeek = weeks.includes(packWeek) ? packWeek : defaultDocWeek([...weeks].reverse(), new Date(nowMs));
+  const downloadWeek = (week: string) => {
+    setPackWeek(week);
+    setPackOpen(false);
+    void downloadDocumentsZip(docsForWeek(documents, loads, week), `WATCH_TOWER_dokumenty_${week}.zip`, (id) => byId.get(id)?.code ?? id).then((r) => {
+      useTowerStore.getState().pushToast(tp(locale, 'a6_docs_zip_toast', { n: r.count }), 'MEDIUM');
+    });
+  };
+  const weekShort = (w: string) => `t${weekKeyLabel(w)}`;
+
+  const files = useMemo(() => filterFiles(documents, loads, filter), [documents, loads, filter]);
+  const fileLoads = useMemo(() => {
+    const ids = new Set(documents.filter((d) => d.loadId && (d.status === 'UPLOADED' || d.status === 'MISMATCH')).map((d) => d.loadId));
+    return loads.filter((l) => ids.has(l.id));
+  }, [documents, loads]);
+  const driverVault = useMemo(() => documents.filter((d) => d.source === 'driver' && d.status === 'UPLOADED'), [documents]);
+
+  const toggle = (key: ReqKey, kind: 'over' | 'soon') => setOpen((o) => (o && o.key === key && o.kind === kind ? null : { key, kind }));
+  const countBtn = (r: ReqRow, kind: 'over' | 'soon') => {
+    const list = kind === 'over' ? r.over : r.soon;
+    if (!list) return <span className="fin-muted">—</span>;
+    if (!list.length) return <span>0</span>;
+    const on = open?.key === r.key && open.kind === kind;
+    return (
+      <button
+        type="button"
+        className={kind === 'over' ? 'doc-count neg' : 'doc-count'}
+        aria-expanded={on}
+        aria-label={`${ftp(locale, kind === 'over' ? 'p5_doc_list_over' : 'p5_doc_list_soon', { n: list.length })} — ${r.label}`}
+        onClick={() => toggle(r.key, kind)}
+      >
+        {list.length}
+      </button>
+    );
+  };
+  const openList = (r: ReqRow) => {
+    if (!open || open.key !== r.key) return null;
+    const list = open.kind === 'over' ? r.over : r.soon;
+    if (!list?.length) return null;
+    return (
+      <div className="doc-list" data-docreq-list={r.key}>
+        <b>{ftp(locale, open.kind === 'over' ? 'p5_doc_list_over' : 'p5_doc_list_soon', { n: list.length })}</b>
+        <ul>
+          {list.map((x) => (
+            <li key={x.loadId} data-content>
+              <span className="code">{nameOf(x.loadId)}</span>
+              {x.dueAt ? <span className="fin-muted"> · {dm(x.dueAt)}</span> : null}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
   };
 
-  const rows = useMemo(() => {
-    return CATS.map((c) => {
-      const req = reqs.find((r) => r.category === c.key) ?? null;
-      const sum = summary.get(c.key);
-      // 3.2 / 0182: polisa ORG — kompletność z APPROVED insurance_policies (auto-podpięcie), nie z pliku per transport
-      if (c.key === 'INSURANCE' && insuranceCover) {
-        return { ...c, req, n: insuranceCover.covered, total: insuranceCover.total, overdue: 0 };
-      }
-      // dokument organizacyjny albo brak stanu z bazy: transporty z dokumentem tej kategorii
-      const legacyOk = loads.filter((l) =>
-        documents.some((d) => d.loadId === l.id && d.category === c.key && d.status === 'UPLOADED'),
-      ).length;
-      const perLoad = req !== null && req.required && req.anchor !== 'ORG';
-      return { ...c, req, n: perLoad ? sum?.ok ?? 0 : legacyOk, total: perLoad ? sum?.total ?? nLoads : nLoads, overdue: perLoad ? sum?.overdue ?? 0 : 0 };
-    });
-  }, [documents, loads, reqs, summary, nLoads, insuranceCover]);
+  const packMenu = weeks.length ? (
+    <div className="doc-pack" ref={packRef}>
+      <button
+        type="button"
+        className="btn ghost doc-pack-btn"
+        data-docs-pack=""
+        aria-haspopup="true"
+        aria-expanded={packOpen}
+        title={ft(locale, 'p5_doc_pack_hint')}
+        onClick={() => setPackOpen((o) => !o)}
+      >
+        {ftp(locale, 'p5_doc_pack', { label: weekShort(curWeek) })} ▾
+      </button>
+      {packOpen ? (
+        <div className="doc-pack-menu" role="group" aria-label={ft(locale, 'p5_doc_pack_h')}>
+          <span className="fin-muted">{ft(locale, 'p5_doc_pack_hint')}</span>
+          {weeks.map((w) => (
+            <button key={w} type="button" data-docs-week={w} aria-current={w === curWeek ? 'true' : undefined} onClick={() => downloadWeek(w)}>
+              {weekShort(w)}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  ) : null;
 
-  const fileRows = useMemo(() => {
-    const list = documents.filter((d) => (d.status === 'UPLOADED' || d.status === 'MISMATCH') && !d.superseded);
-    const filtered = filterCat === 'ALL' ? list : list.filter((d) => d.category === filterCat);
-    // Keep actionable permit mismatches visible in the first page of the vault.
-    return [...filtered].sort((a, b) => Number(b.status === 'MISMATCH') - Number(a.status === 'MISMATCH')).slice(0, 40);
-  }, [documents, filterCat]);
-
-  const driverVault = useMemo(
-    () => documents.filter((d) => d.source === 'driver' && d.status === 'UPLOADED'),
-    [documents],
+  const reqTable = (
+    <div className="fin-scroll">
+      <table className="fin-table doc-req">
+        <thead>
+          <tr>
+            <th>{up(ft(locale, 'p5_doc_col_doc'))}</th>
+            <th>{up(ft(locale, 'p5_doc_col_who'))}</th>
+            <th>{up(ft(locale, 'p5_doc_col_due'))}</th>
+            <th className="num">{up(ft(locale, 'p5_doc_col_over'))}</th>
+            <th className="num">{up(ft(locale, 'p5_doc_col_soon'))}</th>
+            <th>{up(ft(locale, 'p5_doc_col_note'))}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <Fragment key={r.key}>
+              <tr data-docreq={r.key}>
+                <td><b>{r.label}</b></td>
+                <td>{r.who}</td>
+                <td data-docreq-text="">{r.due}</td>
+                <td className="num" data-docreq-overdue={r.over ? r.over.length : undefined}>{r.missingPolicy ? <span className="neg" data-docreq-missing>{ft(locale, 'p5_doc_none')}</span> : countBtn(r, 'over')}</td>
+                <td className="num" data-docreq-soon={r.soon ? r.soon.length : undefined}>{countBtn(r, 'soon')}</td>
+                <td className={r.noteGood ? 'doc-note good' : 'doc-note'} data-content>{r.note}</td>
+              </tr>
+              {open?.key === r.key ? (
+                <tr className="fin-detail-row"><td colSpan={6}>{openList(r)}</td></tr>
+              ) : null}
+            </Fragment>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 
-  const defaultLoadId = loads[0]?.id;
-  // I-2k: paczka tygodnia — tylko dokumenty transportów z wybranego tygodnia ISO
-  const weeks = useMemo(() => weeksWithLoads(loads), [loads]);
-  const [packWeek, setPackWeek] = useState('');
-  const week = weeks.includes(packWeek) ? packWeek : defaultDocWeek(weeks);
+  const reqCards = (
+    <div className="fin-cards doc-cards" data-docreq-cards="">
+      {rows.map((r) => {
+        const over = r.over?.length ?? 0;
+        const soon = r.soon?.length ?? 0;
+        const isPolicy = r.key === 'INSURANCE' || r.key === 'OCS';
+        const kind: 'over' | 'soon' | null = isPolicy ? null : over ? 'over' : soon ? 'soon' : null;
+        const tag = isPolicy ? (
+          r.missingPolicy ? <span className="fin-tag red">{up(ft(locale, 'p5_doc_tag_none'))}</span>
+            : r.noteGood ? <span className="fin-tag go">{up(ft(locale, 'p5_doc_tag_ok'))}</span> : null
+        ) : kind === 'over' ? (
+          <span className="fin-tag red" data-docreq-card-overdue={over}>{up(ftp(locale, 'p5_doc_tag_over', { n: over }))}</span>
+        ) : kind === 'soon' ? (
+          <span className="fin-tag warn">{up(ftp(locale, 'p5_doc_tag_soon', { n: soon }))}</span>
+        ) : null;
+        return (
+          <article key={r.key} className="fin-card doc-card" data-docreq-card={r.key}>
+            {/* telefon: liczba rozwija listę transportów — cały nagłówek karty jest przyciskiem (cel ≥ 44 px) */}
+            {kind ? (
+              <button type="button" className="doc-card-btn doc-card-hd" aria-expanded={open?.key === r.key && open.kind === kind} onClick={() => toggle(r.key, kind)}>
+                <b>{r.label}</b>{tag}
+              </button>
+            ) : (
+              <header className="doc-card-hd"><b>{r.label}</b>{tag}</header>
+            )}
+            <p className="fin-muted" data-content>{[r.due, r.note].filter(Boolean).join(' · ')}</p>
+            {openList(r)}
+          </article>
+        );
+      })}
+    </div>
+  );
 
-  return (
-    <div className="panel section-card page-sections" data-page="docs" style={{ margin: 12 }}>
-      <header className="panel-hd">
-        <h2>{t(locale, 'nav_docs')}</h2>
-        <span className="sub">{t(locale, 'docs_cats_sub')}</span>
+  const permitBlock = permits && role !== 'KSH' ? (
+    <section className="doc-sec" aria-labelledby="doc-perm-h" data-doc-permits>
+      <header className="doc-sec-hd">
+        <h3 id="doc-perm-h">{ft(locale, 'p5_doc_perm_h')}</h3>
         <div className="spacer" />
-        {role !== 'KSH' ? (
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              if (!defaultLoadId) return;
-              setUploadTarget({ loadId: defaultLoadId, category: 'CMR' });
-              fileRef.current?.click();
-            }}
-          >
-            {t(locale, 'a6_docs_upload')}
-          </button>
-        ) : null}
-        {weeks.length ? (
-          <select className="input" value={week} data-docs-week="" aria-label={t(locale, 'bill_col_week')} onChange={(e) => setPackWeek(e.target.value)}>
-            {weeks.map((w) => (
-              <option key={w} value={w}>
-                {phone ? tp(locale, 'p22_docs_week_label', { n: Number(w.split('-W')[1] ?? 0), w }) : w}
-              </option>
-            ))}
-          </select>
-        ) : null}
-        <button
-          type="button"
-          className={phone ? 'btn ghost' : 'chipbtn'}
-          data-docs-pack=""
-          disabled={!week}
-          onClick={() => {
-            if (!week) return;
-            void downloadDocumentsZip(docsForWeek(documents, loads, week), `WATCH_TOWER_dokumenty_${week}.zip`, (id) => loads.find((l) => l.id === id)?.code ?? id).then((r) => {
-              useTowerStore.getState().pushToast(tp(locale, 'a6_docs_zip_toast', { n: r.count }), 'MEDIUM');
-            });
-          }}
-        >
-          {phone ? t(locale, 'p22_docs_pack_short') : t(locale, 'docs_week_pack')}
-        </button>
+        {canUpload ? <button type="button" className="btn ghost" data-doc-permit-add onClick={() => setUpload(true)}>{ft(locale, 'p5_doc_perm_add')}</button> : null}
       </header>
-      <div className="panel-bd flush">
-        {phone ? (
-          /* wyglad/P2-2 W4 (E8 pkt 2, img/e8-after „Dokumenty”): karta kategorii w trzech rzędach. */
-          <div className="mcards" data-docreq-cards="">
-            {rows.map((r) => {
-              const pct = r.n / Math.max(1, r.total);
-              const req = r.req;
-              const optional = req !== null && !req.required;
-              const editing = editCat === r.key && editReq !== null;
-              const reqText = !req
-                ? t(locale, r.key === 'INSURANCE' && !shows('policyExpiryNote') ? 'i2_docs_insurance_when' : r.whenKey)
-                : !req.required
-                  ? t(locale, 'iii6_optional')
-                  : t(locale, `iii6_a_${req.anchor}`).replace('{h}', String(req.offsetHours));
-              const who = req ? t(locale, `iii6_r_${req.responsible}`) : r.who;
-              return (
-                <article
-                  key={r.labelKey}
-                  className="mcard docreq-card"
-                  data-docreq-card={r.key}
-                  {...clickableRow(() => {
-                    setFilterCat(r.key);
-                  })}
-                >
-                  <header className="mcard-hd">
-                    <b>{t(locale, r.labelKey)}</b>
-                    {optional ? (
-                      <span className="mtag">{t(locale, 'iii6_optional')}</span>
-                    ) : r.overdue > 0 ? (
-                      <span className="mtag red" data-docreq-card-overdue={r.overdue}>{tp(locale, 'p22_docs_overdue_n', { n: r.overdue })}</span>
-                    ) : pct >= 1 ? (
-                      <span className="mtag go">{t(locale, 'p22_docs_complete_badge')}</span>
-                    ) : null}
-                  </header>
-                  {editing && editReq ? (
-                    <div className="mcard-edit" onClick={(e) => e.stopPropagation()}>
-                      <label>
-                        <input type="checkbox" data-docreq-card-required="" checked={editReq.required}
-                          onChange={(e) => setEditReq({ ...editReq, required: e.target.checked })} /> {t(locale, 'iii6_required')}
-                      </label>
-                      {editReq.anchor !== 'ORG' ? (
-                        <input className="input" type="number" min={0} max={720} data-docreq-card-hours=""
-                          aria-label={t(locale, 'iii6_hours')} value={editReq.offsetHours}
-                          onChange={(e) => setEditReq({ ...editReq, offsetHours: Math.max(0, Math.min(720, Math.round(Number(e.target.value) || 0))) })} />
-                      ) : null}
-                    </div>
-                  ) : (
-                    <div className="mcard-line">{who} · {reqText}</div>
-                  )}
-                  <div className="mcard-foot">
-                    <span className="mcard-count">
-                      {optional ? '—' : (
-                        <>
-                          {t(locale, 'p22_docs_komplet')} <b>{tp(locale, 'p22_n_of_total', { n: r.n, total: r.total })}</b>
-                        </>
-                      )}
-                    </span>
-                    {role === 'HHL' ? (
-                      <span className="mcard-actions" onClick={(e) => e.stopPropagation()}>
-                        {editing && editReq ? (
-                          <>
-                            <button type="button" className="btn" data-action="docreq-card-save" onClick={() => void saveReq(editReq)}>{t(locale, 'iii6_save')}</button>
-                            <button type="button" className="btn ghost" onClick={() => setEditCat(null)}>{t(locale, 'iii6_cancel')}</button>
-                          </>
-                        ) : req ? (
-                          <button type="button" className="btn ghost" data-action="docreq-card-edit" onClick={() => { setEditCat(r.key); setEditReq(req); }}>
-                            {t(locale, 'iii6_edit')}
-                          </button>
-                        ) : null}
-                      </span>
-                    ) : null}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-        <div className="tablewrap">
-          <table>
+      {phone ? (
+        <div className="fin-cards doc-cards">
+          {permits.map((p) => (
+            <article key={p.id} className="fin-card doc-card" data-doc-permit={p.id}>
+              <header className="doc-card-hd"><b data-content>{p.country} · {p.number ?? ft(locale, 'p5_doc_perm_at_load')}</b><span className={p.scope === 'FIRMA' ? 'fin-tag sea' : 'fin-tag warn'}>{up(ft(locale, `p5_doc_perm_${p.scope}`))}</span></header>
+              <p className="fin-muted" data-content>
+                {[p.appliesTo, p.limits ? `${m2(p.limits.l)} × ${m2(p.limits.w)} × ${m2(p.limits.h)} m` : null, p.validFrom && p.validTo ? `${dm(p.validFrom)}–${dmy(p.validTo)}` : null,
+                  ftp(locale, p.scope === 'FIRMA' ? 'p5_doc_perm_auto' : 'p5_doc_perm_manual', { n: p.loads })].filter(Boolean).join(' · ')}
+              </p>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="fin-scroll">
+          <table className="fin-table">
             <thead>
               <tr>
-                <th>{t(locale, 'a6_docs_th_cat')}</th>
-                <th>{t(locale, 'a6_docs_th_who')}</th>
-                <th>{t(locale, 'iii6_th_req')}</th>
-                <th className="num">{t(locale, 'docs_completeness')}</th>
-                <th className="num">{t(locale, 'iii6_th_overdue')}</th>
-                <th>{t(locale, 'a6_docs_th_state')}</th>
-                {role === 'HHL' ? <th /> : null}
+                <th>{up(ft(locale, 'p5_doc_perm_c_kind'))}</th>
+                <th>{up(ft(locale, 'p5_doc_perm_c_country'))}</th>
+                <th>{up(ft(locale, 'p5_doc_perm_c_no'))}</th>
+                <th>{up(ft(locale, 'p5_doc_perm_c_valid'))}</th>
+                <th>{up(ft(locale, 'p5_doc_perm_c_limits'))}</th>
+                <th>{up(ft(locale, 'p5_doc_perm_c_for'))}</th>
+                <th className="num">{up(ft(locale, 'p5_doc_perm_c_loads'))}</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
-                const pct = r.n / Math.max(1, r.total);
-                const pill = pct >= 1 ? 'p-go' : pct > 0.8 ? 'p-amber' : 'p-red';
-                const req = r.req;
-                const editing = editCat === r.key && editReq !== null;
-                const reqText = !req
-                  ? t(locale, r.key === 'INSURANCE' && !shows('policyExpiryNote') ? 'i2_docs_insurance_when' : r.whenKey)
-                  : !req.required
-                    ? t(locale, 'iii6_optional')
-                    : t(locale, `iii6_a_${req.anchor}`).replace('{h}', String(req.offsetHours));
-                return (
-                  <tr
-                    key={r.labelKey}
-                    data-docreq={r.key}
-                    style={{ cursor: 'pointer' }}
-                    {...clickableRow(() => {
-                      setFilterCat(r.key);
-                    })}
-                  >
-                    <td style={{ fontWeight: 600 }}>{t(locale, r.labelKey)}</td>
-                    <td>{req ? t(locale, `iii6_r_${req.responsible}`) : r.who}</td>
-                    <td style={{ color: 'var(--ink-3)' }} data-docreq-text="">
-                      {editing && editReq ? (
-                        <span onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                          <label>
-                            <input type="checkbox" data-docreq-required="" checked={editReq.required}
-                              onChange={(e) => setEditReq({ ...editReq, required: e.target.checked })} /> {t(locale, 'iii6_required')}
-                          </label>
-                          {editReq.anchor !== 'ORG' ? (
-                            <input className="input" type="number" min={0} max={720} style={{ width: 70 }} data-docreq-hours=""
-                              aria-label={t(locale, 'iii6_hours')} value={editReq.offsetHours}
-                              onChange={(e) => setEditReq({ ...editReq, offsetHours: Math.max(0, Math.min(720, Math.round(Number(e.target.value) || 0))) })} />
-                          ) : null}
-                        </span>
-                      ) : reqText}
-                    </td>
-                    <td className="num">
-                      {req && !req.required ? '—' : `${r.n} / ${r.total}`}
-                    </td>
-                    <td className="num" data-docreq-overdue={r.overdue}>
-                      {r.overdue > 0 ? <span className="pill p-red">{r.overdue}</span> : '0'}
-                    </td>
-                    <td>
-                      {req && !req.required ? <span className="pill">{t(locale, 'iii6_optional')}</span>
-                        : <span className={`pill ${pill}`}>{pctText(locale, pct, 0, `${Math.round(pct * 100)}%`)}</span>}
-                    </td>
-                    {role === 'HHL' ? (
-                      <td onClick={(e) => e.stopPropagation()}>
-                        {editing && editReq ? (
-                          <>
-                            <button type="button" className="btn" data-action="docreq-save" onClick={() => void saveReq(editReq)}>{t(locale, 'iii6_save')}</button>{' '}
-                            <button type="button" className="btn ghost" onClick={() => setEditCat(null)}>{t(locale, 'iii6_cancel')}</button>
-                          </>
-                        ) : req ? (
-                          <button type="button" className="btn ghost" data-action="docreq-edit" onClick={() => { setEditCat(r.key); setEditReq(req); }}>
-                            {t(locale, 'iii6_edit')}
-                          </button>
-                        ) : null}
-                      </td>
-                    ) : null}
-                  </tr>
-                );
-              })}
+              {permits.map((p) => (
+                <tr key={p.id} data-doc-permit={p.id}>
+                  <td><span className={p.scope === 'FIRMA' ? 'fin-tag sea' : 'fin-tag warn'}>{up(ft(locale, `p5_doc_perm_${p.scope}`))}</span></td>
+                  <td>{p.country.replace('+', ' + ')}</td>
+                  <td data-content>{p.number ?? <span className="fin-muted">{ft(locale, 'p5_doc_perm_at_load')}</span>}</td>
+                  <td>{p.validFrom && p.validTo ? `${dm(p.validFrom)}–${dmy(p.validTo)}` : '—'}</td>
+                  <td>{p.limits ? `${m2(p.limits.l)} × ${m2(p.limits.w)} × ${m2(p.limits.h)} m` : '—'}{p.pilot ? ` · ${ftp(locale, 'p5_doc_perm_pilot', { p: p.pilot })}` : ''}</td>
+                  <td data-content>{p.appliesTo}</td>
+                  <td className="num">{ftp(locale, p.scope === 'FIRMA' ? 'p5_doc_perm_auto' : 'p5_doc_perm_manual', { n: p.loads })}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
-        )}
-        <div className="note" data-docreq-proposal="" style={{ border: 0 }}>{t(locale, 'iii6_proposal')}</div>
+      )}
+      <p className="fin-muted doc-pad">{ft(locale, 'p5_doc_perm_note')}</p>
+    </section>
+  ) : null;
 
-        <div className="filters" style={{ padding: '9px 13px' }}>
-          <span className="sub">{t(locale, 'a6_docs_vault')}</span>
-          <div className="spacer" />
-          <button
-            type="button"
-            className="chipbtn"
-            aria-pressed={filterCat === 'ALL'}
-            onClick={() => setFilterCat('ALL')}
-          >
-            {t(locale, 'sched_all')}
-          </button>
-          {filterCat !== 'ALL' ? (
-            <button type="button" className="chipbtn" aria-pressed="true" onClick={() => setFilterCat('ALL')}>
-              {docCategoryLabel(filterCat, locale)}
-            </button>
-          ) : null}
+  const filesBlock = (
+    <section className="doc-sec" aria-labelledby="doc-files-h" data-doc-files>
+      <header className="doc-sec-hd">
+        <h3 id="doc-files-h">{ft(locale, 'p5_doc_files_h')}</h3>
+        <div className="spacer" />
+        <div className="doc-filters">
+          <select className="input" aria-label={ft(locale, 'p5_doc_f_week_l')} value={filter.week} data-doc-f="week" onChange={(e) => setFilter((f) => ({ ...f, week: e.target.value }))}>
+            <option value="">{ft(locale, 'p5_doc_f_week')}</option>
+            {weeks.map((w) => <option key={w} value={w}>{weekShort(w)}</option>)}
+          </select>
+          <select className="input" aria-label={ft(locale, 'p5_doc_f_load_l')} value={filter.loadId} data-doc-f="load" onChange={(e) => setFilter((f) => ({ ...f, loadId: e.target.value }))}>
+            <option value="">{ft(locale, 'p5_doc_f_load')}</option>
+            {fileLoads.map((l) => <option key={l.id} value={l.id}>{transportLabel(l, role)}</option>)}
+          </select>
+          <select className="input" aria-label={ft(locale, 'p5_doc_f_cat_l')} value={filter.category} data-doc-f="cat" onChange={(e) => setFilter((f) => ({ ...f, category: e.target.value as DocCategory | '' }))}>
+            <option value="">{ft(locale, 'p5_doc_f_cat')}</option>
+            {FILE_KINDS.map((c) => <option key={c} value={c}>{docLabel(locale, c)}</option>)}
+          </select>
         </div>
+      </header>
+      {files.length === 0 ? (
+        <p className="fin-muted doc-pad">{ft(locale, 'p5_doc_files_empty')}</p>
+      ) : phone ? (
+        <div className="doc-pad doc-file-rows">
+          {files.slice(0, MAX_FILES).map((d) => (
+            <DocFileRow key={d.id} doc={d} label={`${d.loadId ? nameOf(d.loadId) : ft(locale, 'p5_doc_whole')} · ${docLabel(locale, d.category)}`} onPreview={setPreviewDoc} />
+          ))}
+        </div>
+      ) : (
+        <div className="fin-scroll">
+          <table className="fin-table doc-files">
+            <thead>
+              <tr>
+                <th>{up(ft(locale, 'p5_doc_fc_file'))}</th>
+                <th>{up(ft(locale, 'p5_doc_fc_for'))}</th>
+                <th>{up(ft(locale, 'p5_doc_fc_cat'))}</th>
+                <th>{up(ft(locale, 'p5_doc_fc_at'))}</th>
+                <th>{up(ft(locale, 'p5_doc_fc_seen'))}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {files.slice(0, MAX_FILES).map((d) => (
+                <tr key={d.id} data-doc-file={d.id} className={d.status === 'MISMATCH' ? 'is-warn' : undefined}>
+                  <td data-content>
+                    <button type="button" className="linkbtn" onClick={() => setPreviewDoc(d)}>{d.name}</button>
+                  </td>
+                  <td data-content>{d.loadId ? nameOf(d.loadId) : ft(locale, 'p5_doc_whole')}</td>
+                  <td>{docLabel(locale, d.category)}</td>
+                  <td>{atText(d.uploadedAt)}</td>
+                  <td>{seenBy(d.visibleTo)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {files.length > MAX_FILES ? <p className="fin-muted doc-pad">{ftp(locale, 'p5_doc_files_more', { n: MAX_FILES, all: files.length })}</p> : null}
+      <p className="fin-muted doc-pad">{ft(locale, 'p5_doc_files_note')}</p>
+    </section>
+  );
 
-        <div style={{ padding: '0 13px 9px' }}>
-          {fileRows.length === 0 ? (
-            <div className="note" style={{ border: 0 }}>
-              {t(locale, 'docs_empty_cat')}
+  return (
+    <div className="fin-page doc-page" data-page="docs">
+      <section className="panel fin-panel" aria-labelledby="doc-title">
+        <header className="fin-head doc-head">
+          <h2 id="doc-title">{t(locale, 'nav_docs')}</h2>
+          {phone ? <span className="fin-cur">{role}</span> : <span className="sub">{ft(locale, 'p5_doc_sub')}</span>}
+          {phone ? null : (
+            <div className="doc-head-acts">
+              {canUpload ? <button type="button" className="btn" data-doc-upload onClick={() => setUpload(true)}>{ft(locale, 'p5_doc_upload')}</button> : null}
+              {packMenu}
             </div>
-          ) : (
-            fileRows.map((d) => {
-              const code = loads.find((l) => l.id === d.loadId)?.code ?? d.loadId;
-              return (
-                <DocFileRow
-                  key={d.id}
-                  doc={d}
-                  label={`${code} · ${docCategoryLabel(d.category, locale)}`}
-                  onPreview={setPreviewDoc}
-                />
-              );
-            })
           )}
-        </div>
-
+        </header>
+        {phone && canUpload ? (
+          <div className="doc-pad">
+            <button type="button" className="btn doc-upload-big" data-doc-upload onClick={() => setUpload(true)}>{ft(locale, 'p5_doc_upload_phone')}</button>
+          </div>
+        ) : null}
+        <section className="doc-sec" aria-labelledby="doc-req-h">
+          <header className="doc-sec-hd"><h3 id="doc-req-h">{ft(locale, 'p5_doc_req_h')}</h3></header>
+          {phone ? reqCards : reqTable}
+          <p className="fin-muted doc-pad" data-docreq-note="">{ft(locale, 'p5_doc_req_note')}</p>
+        </section>
+        {permitBlock}
+        {filesBlock}
+        {phone && packMenu ? <div className="doc-pad doc-pack-phone">{packMenu}</div> : null}
         {driverVault.length > 0 ? (
           <div className="note" data-vault="driver">
             {t(locale, 'a6_docs_driver_vault')}
             <div style={{ marginTop: 6 }}>
               {driverVault.map((d) => (
-                <DocFileRow key={d.id} doc={d} label={docCategoryLabel(d.category, locale)} onPreview={setPreviewDoc} />
+                <DocFileRow key={d.id} doc={d} label={docLabel(locale, d.category)} onPreview={setPreviewDoc} />
               ))}
             </div>
           </div>
         ) : null}
-        {/* D-30: formularz + notka z bazy (produkcja); demo — stała notka makiety */}
-        {InsurancePolicyForm && (role === 'HHL' || role === 'SCX') ? (
+      </section>
+      {/* polisy dodaje się raz (G-21): formularz z bazy — SCX wpisuje, HHL zatwierdza */}
+      {InsurancePolicyForm && canUpload ? (
+        <section className="panel fin-panel" aria-labelledby="doc-pol-h">
+          <header className="panel-hd fin-hd2"><h3 id="doc-pol-h">{ft(locale, 'p5_doc_policies_h')}</h3></header>
           <Suspense fallback={null}><InsurancePolicyForm /></Suspense>
-        ) : null}
-        {shows('policyExpiryNote') && !InsurancePolicyForm ? (
-          <div className="note">
-            {t(locale, 'a6_docs_ocp_note')}
-          </div>
-        ) : null}
-      </div>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*,application/pdf"
-        className="sronly"
-        aria-label={t(locale, 'a6_docs_pick')}
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          e.target.value = '';
-          if (!f || !uploadTarget) return;
-          // BK4: tryb Supabase → Storage; demo → pamięć sesji.
-          void attachDocumentFile(f, uploadTarget.loadId, uploadTarget.category);
-        }}
-      />
+        </section>
+      ) : null}
+      {upload && canUpload ? (
+        <UploadDocModal
+          locale={locale}
+          role={role as 'HHL' | 'SCX'}
+          phone={phone}
+          loads={loads}
+          statusRows={statusRows}
+          allowed={UPLOAD_KINDS}
+          onClose={() => setUpload(false)}
+        />
+      ) : null}
       <DocPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
     </div>
   );

@@ -1,0 +1,80 @@
+/* wyglad/P5 — Dokumenty (E31, img/e31-after) i okno „Wgraj dokument”. Ładowane razem z leniwym widokiem Dokumentów. */
+.doc-head{align-items:center}
+.doc-head-acts{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+.doc-head-acts .btn{min-height:38px}
+.doc-sec{display:flex;flex-direction:column;gap:6px;padding:8px 0 4px;border-top:1px solid var(--rule-2);min-width:0}
+.doc-sec:first-of-type{border-top:0}
+.doc-sec-hd{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;padding:4px 14px}
+.doc-sec-hd h3{margin:0;font-family:var(--font-cond);font-weight:700;font-size:19px;line-height:1.2}
+.doc-pad{padding:4px 14px 8px}
+.doc-note{color:var(--ink-3)}
+.doc-note.good{color:var(--go);font-weight:600}
+.doc-req td{vertical-align:top}
+.doc-req tbody td{white-space:normal}
+.doc-req td:first-child,.doc-req td:nth-child(2),.doc-req td:nth-child(4),.doc-req td:nth-child(5){white-space:nowrap}
+.doc-count{min-width:32px;min-height:28px;padding:0 6px;border:1px solid transparent;background:none;color:inherit;font:inherit;font-weight:700;text-align:right;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.doc-count.neg{color:var(--red)}
+.doc-count:hover,.doc-count[aria-expanded="true"]{border-color:var(--rule);background:var(--surface)}
+.doc-count:focus-visible,.linkbtn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.doc-list{display:flex;flex-direction:column;gap:6px;white-space:normal}
+.doc-list ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13.5px}
+.doc-list li{white-space:nowrap}
+.doc-files td:first-child{max-width:340px;white-space:normal;overflow-wrap:anywhere}
+.doc-files tr.is-warn{background:var(--amber-bg)}
+.doc-filters{display:flex;flex-wrap:wrap;gap:6px}
+.doc-filters .input{width:auto;min-width:150px}
+.linkbtn{padding:0;border:0;background:none;color:var(--sea);font:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer;text-align:left}
+
+/* paczka tygodnia */
+.doc-pack{position:relative}
+.doc-pack-btn{white-space:nowrap}
+.doc-pack-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:30;display:flex;flex-direction:column;gap:2px;min-width:240px;max-height:320px;overflow:auto;padding:8px;background:var(--surface);border:1px solid var(--rule)}
+.doc-pack-menu>span{padding:2px 6px 6px;font-size:12.5px}
+.doc-pack-menu button{min-height:34px;padding:4px 8px;border:0;background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.doc-pack-menu button:hover,.doc-pack-menu button[aria-current="true"]{background:var(--surface-2)}
+
+/* karty (telefon) */
+.doc-cards{padding:4px 10px}
+.doc-card-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.doc-card-hd>b{font-family:var(--font-cond);font-size:17px}
+.doc-card-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.doc-card-btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.doc-upload-big{width:100%;min-height:48px;justify-content:center;font-size:16px}
+.doc-file-rows{display:flex;flex-direction:column}
+.doc-pack-phone .doc-pack,.doc-pack-phone .doc-pack-btn{width:100%}
+.doc-pack-phone .doc-pack-menu{left:0;right:0;top:auto;bottom:calc(100% + 4px)}
+
+/* okno „Wgraj dokument” */
+.up-modal{width:min(560px,calc(100vw - 24px));margin:0}
+.up-modal .panel-hd h2{font-size:20px;margin:0}
+.up-bd{display:flex;flex-direction:column;gap:14px}
+.up-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.up-lbl{font-family:var(--font-cond);font-weight:600;font-size:13px;letter-spacing:.07em;color:var(--ink-2)}
+.up-field .input{width:100%;min-height:40px;font-size:15px}
+.up-seg{display:flex;flex-wrap:wrap;gap:8px}
+.up-seg button{min-height:40px;padding:6px 12px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;text-align:left}
+.up-seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.up-drop{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px 6px;min-height:72px;padding:12px;border:1px dashed var(--rule);background:var(--surface-2);color:var(--ink-2);text-align:center}
+.up-drop.is-drag{border-color:var(--sea);background:var(--sea-bg)}
+.up-acts{display:flex;justify-content:flex-end;gap:8px;padding-top:4px}
+.up-acts .btn{min-height:40px;min-width:96px;justify-content:center}
+.up-acts .btn:disabled{background:var(--surface-2);color:var(--ink-3);border-color:var(--rule);cursor:not-allowed}
+
+@media (max-width:768px){
+  .doc-page>.fin-panel{border:0;background:none}
+  .doc-sec{border-top:0}
+  .doc-sec-hd .btn{width:100%;min-height:44px}
+  .up-modal{width:100%;margin:0}
+  .up-field .input{min-height:44px;font-size:16px}
+  .doc-card-btn{min-height:44px}
+  .doc-head{padding:10px 2px}
+  .doc-sec-hd{padding:4px 2px}
+  .doc-pad{padding:4px 2px 8px}
+  .doc-cards{padding:4px 0}
+  .doc-filters,.doc-filters .input{width:100%;min-width:0}
+  .doc-sec-hd .spacer{display:none}
+  .up-acts{flex-direction:column-reverse}
+  .up-acts .btn,.up-seg button{width:100%;min-height:44px}
+  .up-drop{min-height:96px}
+  .linkbtn{min-height:44px}
+}

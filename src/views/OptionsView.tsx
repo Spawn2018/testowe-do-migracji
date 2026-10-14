@@ -16,6 +16,7 @@ import { ForMeScreen } from '../components/options/ForMeScreen';
 import { OptionsHowTo } from '../components/settings/OptionsHowTo';
 import { SmsFallbackEntry } from '../components/shell/SmsFallbackEntry';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
+import { lazyRetry } from '../lib/lazyRetry';
 import { parseRoute } from '../lib/routes';
 import { OPEN_OPTIONS_EVENT, optScreenOf, takeOptionsScreen, type OptionsScreen } from '../lib/openOptions';
 
@@ -42,6 +43,9 @@ const BroadcastForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_
 const DataExportPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/DataExportPanel')) : null;
 const ChangeHistoryPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/ChangeHistoryPanel')) : null;
 const PermitRequirement = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/PermitRequirement')) : null;
+/* wyglad/P5 (E31, E12, L26): terminy dokumentów — przeniesione ze strony Dokumenty, zapis bez zmian */
+const DocTerms = lazy(lazyRetry(() => import('../components/docs/DocTerms')));
+const FactoringOfferScreen = lazy(lazyRetry(() => import('../components/options/FactoringOfferScreen').then((m) => ({ default: m.FactoringOfferScreen }))));
 const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
@@ -262,14 +266,11 @@ export function OptionsView() {
     ), { right: change, mark: BafForm ? undefined : <DemoMark /> }),
   ];
   if (shows('factoringOffer')) {
+    /* wyglad/P5 (E4b, img/e4b-desk): „Oferta HHL” — pola i zapis jak dotąd, wygląd według raportu */
     money.push(scr('fact', (
-      <dl className="kv options-kv">
-        <dt>{t(locale, 'opt_active')}</dt><dd><label className="switchline"><input type="checkbox" checked={factoringOffer.enabled} onChange={(e) => { updateFactoring('enabled', e.target.checked); saveMark('factoring'); }} /><span>{factoringOffer.enabled ? t(locale, 'yes') : t(locale, 'no')}</span></label></dd>
-        <dt>{t(locale, 'opt_offer_name')}</dt><dd><input className="input full" aria-label={t(locale, 'opt_offer_name')} value={factoringOffer.label ?? ''} onChange={(e) => updateFactoring('label', e.target.value)} onBlur={() => saveMark('oferta')} /></dd>
-        <dt>{t(locale, 'opt_fee')}</dt><dd><div className="inline-input"><input className="input" aria-label={t(locale, 'opt_fee')} type="number" min="0" max="20" step="0.1" value={factoringOffer.feePercent} onChange={(e) => updateFactoring('feePercent', Number(e.target.value) || 0)} onBlur={() => saveMark('prowizja')} /><span>%</span></div></dd>
-        <dt>{t(locale, 'opt_payout_after')}</dt><dd><div className="inline-input"><input className="input" aria-label={t(locale, 'opt_payout_after')} type="number" min="1" value={factoringOffer.payoutDelayValue} onChange={(e) => updateFactoring('payoutDelayValue', Number(e.target.value) || 1)} onBlur={() => saveMark('termin')} /><select className="input" aria-label={t(locale, 'opt_payout_after')} value={factoringOffer.payoutDelayUnit} onChange={(e) => { updateFactoring('payoutDelayUnit', e.target.value as 'hours' | 'days'); saveMark('termin'); }}><option value="hours">{t(locale, 'opt_hours')}</option><option value="days">{t(locale, 'opt_days')}</option></select></div></dd>
-        <dt>{t(locale, 'opt_note')}</dt><dd><input className="input full" aria-label={t(locale, 'opt_note')} value={factoringOffer.notes ?? ''} onChange={(e) => updateFactoring('notes', e.target.value)} onBlur={() => saveMark('notatka')} /></dd>
-      </dl>
+      <Suspense fallback={null}>
+        <FactoringOfferScreen locale={locale} offer={factoringOffer} readOnly={ro} onChange={updateFactoring} onSaved={saveMark} />
+      </Suspense>
     ), { right: change }));
   }
   groups.push({ id: 'money', screens: money });
@@ -283,7 +284,12 @@ export function OptionsView() {
           {pick('thr', OpsThresholdsForm ? block(<OpsThresholdsForm />) : <Soon locale={locale} tipKey="opt_acc_thresh_soon" />)}
         </>
       ), { right: change }),
-      scr('permits', PermitRequirement ? block(<PermitRequirement />) : <Soon locale={locale} tipKey="opt_acc_perm_soon" />, { right: change }),
+      scr('permits', (
+        <>
+          <Suspense fallback={null}><DocTerms canEdit={isHhlAdmin} /></Suspense>
+          {PermitRequirement ? block(<PermitRequirement />) : <Soon locale={locale} tipKey="opt_acc_perm_soon" />}
+        </>
+      ), { right: change }),
     ],
   });
 

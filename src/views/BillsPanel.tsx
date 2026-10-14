@@ -6,7 +6,7 @@
  *         ZGODNA / SPORNA (z uzasadnieniem) / ZAAKCEPTOWANA, termin i status płatności.
  * Kwoty w walucie faktury → `data-deur-exempt="invoice-currency"`.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 import type { Bill, BillDirection, BillLineFx, BillVerification, Document, Locale } from '../types';
@@ -15,15 +15,23 @@ import { isoWeekKeyLocal, localDateOf } from '../lib/money/engine';
 import { unloadedAtOf } from '../lib/money/loadMoney';
 import { transportLabel } from '../lib/transportName';
 import {
-  BILL_FLAG_LABEL, PAYMENT_LABEL, VERIFICATION_LABEL, billCandidates, billPaymentToday, billVisibleTo,
+  BILL_TERM_DAYS,
+  BILL_FLAG_LABEL, VERIFICATION_LABEL, billCandidates, billPaymentToday, billVisibleTo,
   canMarkPaid, canRegisterBill, computedEurFor, canVerifyBill, checkBill, expectedNetFor, invoicedLoadIds, isoWeekMonday,
-  addDaysIso, paymentPill, reminderPlan, reminderRecipients, suggestLineFx, verificationPill, type BillDraft,
+  addDaysIso, reminderPlan, reminderRecipients, suggestLineFx, type BillDraft,
 } from '../lib/invoices3';
 import { DocFileRow } from '../components/ui/DocFileRow';
 import { DocPreview } from '../components/ui/DocPreview';
 import { canReplyDispute, correctionFileError, disputeActorSide, paymentBlockedByDispute, type DisputeEvent } from '../lib/invoiceDispute';
 import { readFileAsDataUrl } from '../lib/docsIo';
 import { clickableRow } from '../lib/clickableRow';
+import { formatPlNumber } from '../lib/format';
+import { transportsText } from '../lib/p5Finance';
+import { ISSUER, RECIPIENT, VAT_RATE, billDiff, billStatus, invoiceKpis, pendingWeeks, weekKeyLabel, type InvKpis, type InvStatus } from '../lib/p5Invoices';
+import { up } from '../components/options/up';
+import { ft, ftn, ftp } from '../i18n/p5';
+import { factoringOfferOf } from '../lib/p5Source';
+import { PaymentChoice } from '../components/invoices/Factoring';
 
 /** III-7 — historia sporu (zgłoszenie → odpowiedź / korekta wystawcy → rozstrzygnięcie) i odpowiedź wystawcy. */
 function DisputeThread({ bill }: { bill: Bill }) {
@@ -148,13 +156,14 @@ function DisputeThread({ bill }: { bill: Bill }) {
   );
 }
 
-const fmtCur = (n: number | null | undefined, cur: string, locale: Locale) =>
-  n == null ? '—' : new Intl.NumberFormat(locale === 'sv' ? 'sv-SE' : locale === 'en' ? 'en-GB' : 'pl-PL', { style: 'currency', currency: cur, minimumFractionDigits: 2 }).format(n);
+/* E4: kwoty jak w raporcie — „21 820,30” (EUR, waluta umowy); inna waluta faktury z kodem: „38 413,13 PLN”. */
+const fmtCur = (n: number | null | undefined, cur: string) =>
+  n == null ? '—' : cur === 'EUR' ? formatPlNumber(n, 2) : `${formatPlNumber(n, 2)} ${cur}`;
+const fmtNum = (n: number | null | undefined) => (n == null ? '—' : formatPlNumber(n, 2));
 const fmtDay = (iso: string | null | undefined) => (iso ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}` : '—');
 
 function Amount({ n, cur }: { n: number | null | undefined; cur: string }) {
-  const locale = useTowerStore((s) => s.locale);
-  return <span className="mono" data-deur-exempt="invoice-currency">{fmtCur(n, cur, locale)}</span>;
+  return <span className="mono" data-deur-exempt="invoice-currency">{fmtCur(n, cur)}</span>;
 }
 
 function errLabel(code: string, locale: Locale): string {
@@ -162,85 +171,267 @@ function errLabel(code: string, locale: Locale): string {
   return t(locale, `bill_err_${code}`);
 }
 
-export function BillsPanel() {
+/** E4 — kafelki nad listą: czeka na wystawienie, do weryfikacji, do zapłaty w 7 dni, po terminie. */
+function Kpis({ direction, kpis }: { direction: BillDirection; kpis: InvKpis }) {
+  const locale = useTowerStore((s) => s.locale);
+  const first = kpis.pending[0];
+  const ver = kpis.toVerify[0];
+  const dm = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
+  return (
+    <div className="inv-kpis" data-inv-kpis={direction}>
+      <section className={`inv-kpi${first ? ' is-sea' : ''}`} data-inv-kpi="pending">
+        <h3>{up(ft(locale, 'p5_inv_k_pending'))}</h3>
+        <b className="inv-kpi-v">{first ? ftp(locale, 'p5_inv_k_pending_v', { no: first.no }) : '—'}</b>
+        <p>
+          {first ? (
+            <>
+              {ftp(locale, 'p5_inv_k_pending_s', { loads: transportsText(first.loads.length), range: `${dm(first.from)}–${dm(first.to)}`, net: formatPlNumber(first.netEur, 2) })}
+              <b>{ftp(locale, 'p5_inv_k_pending_who', { who: ISSUER[direction] })}</b>
+              {kpis.pending.length > 1 ? ftn(locale, 'p5_inv_k_pending_more', kpis.pending.length - 1) : ''}
+            </>
+          ) : ft(locale, 'p5_inv_k_pending_none')}
+        </p>
+      </section>
+      <section className={`inv-kpi${kpis.toVerify.length && kpis.verifyMine ? ' is-warn' : ''}`} data-inv-kpi="verify">
+        <h3>{up(kpis.verifyMine ? ft(locale, 'p5_inv_k_verify_mine') : ftp(locale, 'p5_inv_k_verify_other', { who: RECIPIENT[direction] }))}</h3>
+        <b className="inv-kpi-v">{kpis.toVerify.length}</b>
+        <p>
+          {ver ? (
+            <>
+              <span data-content>{ftp(locale, 'p5_inv_k_verify_s', { number: ver.number, diff: formatPlNumber(billDiff(ver), 2), cur: ver.currency })}</span>
+              <b>{ftp(locale, 'p5_inv_k_verify_who', { who: RECIPIENT[direction] })}</b>
+            </>
+          ) : ft(locale, 'p5_inv_k_verify_none')}
+        </p>
+      </section>
+      <section className="inv-kpi" data-inv-kpi="due">
+        <h3>{up(ft(locale, 'p5_inv_k_due'))}</h3>
+        <b className="inv-kpi-v">{kpis.dueSoon.length}</b>
+        <p>{kpis.nextDue ? ftp(locale, 'p5_inv_k_due_s', { date: dm(kpis.nextDue) }) : ft(locale, 'p5_inv_k_due_none')}</p>
+      </section>
+      <section className={`inv-kpi${kpis.overdue.length ? ' is-red' : ''}`} data-inv-kpi="overdue">
+        <h3>{up(ft(locale, 'p5_inv_k_over'))}</h3>
+        <b className="inv-kpi-v">{kpis.overdue.length}</b>
+        <p>
+          {kpis.overdue[0] ? (
+            <span data-content>
+              {ftp(locale, 'p5_inv_k_over_some', { number: kpis.overdue[0].number, date: dm(kpis.overdue[0].dueDate) })}
+              {kpis.overdue.length > 1 ? ftp(locale, 'p5_inv_k_over_more', { n: kpis.overdue.length - 1 }) : ''}
+            </span>
+          ) : ft(locale, 'p5_inv_k_over_s')}
+        </p>
+      </section>
+    </div>
+  );
+}
+
+/** E4 — obieg faktury w pięciu krokach (komputer). */
+function Flow({ direction }: { direction: BillDirection }) {
+  const locale = useTowerStore((s) => s.locale);
+  const steps = [1, 2, 3, 4, 5].map((i) => ({
+    h: ftp(locale, `p5_inv_flow_${i}h`, { who: i === 2 ? ISSUER[direction] : RECIPIENT[direction] }),
+    t: ft(locale, `p5_inv_flow_${i}t`),
+    d: ftp(locale, `p5_inv_flow_${i}d`, { days: BILL_TERM_DAYS[direction] }),
+  }));
+  return (
+    <ol className="inv-flow" data-inv-flow={direction}>
+      {steps.map((s) => (
+        <li key={s.t}>
+          <span className="inv-flow-h">{up(s.h)}</span>
+          <b>{s.t}</b>
+          <span className="inv-flow-d">{s.d}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+const STATUS_TAG: Record<InvStatus, string> = {
+  DO_WYSTAWIENIA: 'fin-tag sea', DO_WERYFIKACJI: 'fin-tag warn', ZGODNA: 'fin-tag go', SPORNA: 'fin-tag red',
+  ZAAKCEPTOWANA: 'fin-tag go', OPLACONA: 'fin-tag go solid', PO_TERMINIE: 'fin-tag red',
+};
+
+function StatusTag({ bill, status }: { bill?: Bill; status: InvStatus }) {
+  const locale = useTowerStore((s) => s.locale);
+  return (
+    <span className={STATUS_TAG[status]} data-bill-status={status} data-verif={bill?.verification} data-pay={bill?.payment}>
+      {up(ft(locale, `p5_inv_st_${status}`))}
+    </span>
+  );
+}
+
+/** E4 — jedna sekcja kierunku (koszt SCX → HHL albo przychód HHL → KSH): kafelki, obieg, lista, nowa faktura, szczegóły. */
+export function BillsSection({ direction, phone }: { direction: BillDirection; phone: boolean }) {
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
   const allBills = useTowerStore((s) => s.bills);
-  const [wizard, setWizard] = useState<BillDirection | null>(null);
+  const loads = useTowerStore((s) => s.loads);
+  const verifyBill = useTowerStore((s) => s.verifyBill);
+  const [wizard, setWizard] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const today = localDateOf(getNowIso());
   const bills = useMemo(
     () => allBills.filter((b) => billVisibleTo(role, b)).map((b) => ({ ...b, payment: billPaymentToday(b, today) })),
     [allBills, role, today],
   );
-  const sections: BillDirection[] = role === 'HHL' ? ['KOSZT', 'PRZYCHOD'] : role === 'SCX' ? ['KOSZT'] : ['PRZYCHOD'];
+  const list = useMemo(
+    () => bills.filter((b) => b.direction === direction).sort((a, b) => b.weekKey.localeCompare(a.weekKey) || b.issueDate.localeCompare(a.issueDate)),
+    [bills, direction],
+  );
+  const pending = useMemo(() => pendingWeeks(loads, allBills, direction, today), [loads, allBills, direction, today]);
+  const kpis = useMemo(() => invoiceKpis(role, bills, pending, direction, today), [role, bills, pending, direction, today]);
+  const title = role === 'KSH' ? ft(locale, 'p5_inv_list_ksh') : role === 'SCX' ? ft(locale, 'p5_inv_list_scx') : ft(locale, `p5_inv_list_${direction}`);
+  const dm = (d: string | null | undefined) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '—');
+  const quick = (b: Bill) => canVerifyBill(role, b) && b.verification === 'DO_WERYFIKACJI';
+  const open = (id: string) => setOpenId((o) => (o === id ? null : id));
+  const dispute = (id: string) => {
+    setOpenId(id);
+    window.setTimeout(() => (document.querySelector(`[data-bill-detail="${id}"] [data-dispute-note]`) as HTMLInputElement | null)?.focus(), 50);
+  };
+  const actions = (b: Bill) => quick(b) ? (
+    <span className="inv-actions" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+      <button type="button" className="btn" data-bill-quick="ZAAKCEPTOWANA" onClick={() => verifyBill(b.id, 'ZAAKCEPTOWANA', null)}>{ft(locale, 'p5_inv_accept')}</button>
+      <button type="button" className="btn ghost" data-bill-quick="SPORNA" onClick={() => dispute(b.id)}>{ft(locale, 'p5_inv_dispute')}</button>
+    </span>
+  ) : null;
 
   return (
-    <div data-bills>
-      {sections.map((dir) => {
-        const list = bills.filter((b) => b.direction === dir);
-        const title = role === 'KSH' ? t(locale, 'bill_title_ksh') : t(locale, dir === 'KOSZT' ? 'bill_title_cost' : 'bill_title_rev');
-        return (
-          <div key={dir} className="panel section-card" style={{ margin: 12 }} data-bill-section={dir}>
-            <header className="panel-hd">
-              <h2>{title}</h2>
-              <span className="sub">{t(locale, dir === 'KOSZT' ? 'bill_sub_cost' : role === 'KSH' ? 'bill_sub_ksh' : 'bill_sub_rev')}</span>
-              <div className="spacer" />
-              {canRegisterBill(role, dir) ? (
-                <button type="button" className="btn" data-bill-new={dir} onClick={() => setWizard(wizard === dir ? null : dir)}>
-                  {t(locale, dir === 'KOSZT' ? 'bill_new_cost' : 'bill_new_rev')}
+    <div data-bill-section={direction} className="inv-section">
+      <Kpis direction={direction} kpis={kpis} />
+      {phone ? null : <Flow direction={direction} />}
+      {/* telefon (img/e4-faktury-phone): bez nagłówka listy — tytuł zostaje w etykiecie sekcji, przycisk nowej faktury nad kartami */}
+      <section className="panel fin-panel" aria-labelledby={phone ? undefined : `inv-list-${direction}`} aria-label={phone ? title : undefined}>
+        {phone && !canRegisterBill(role, direction) ? null : (
+        <header className="panel-hd fin-hd2 inv-list-hd">
+          {phone ? null : <h3 id={`inv-list-${direction}`}>{title}</h3>}
+          {role === 'HHL' && !phone ? <span className="sub">{ft(locale, `p5_inv_list_sees_${direction}`)}</span> : null}
+          <div className="spacer" />
+          {canRegisterBill(role, direction) ? (
+            <button type="button" className="btn" data-bill-new={direction} aria-expanded={wizard} onClick={() => setWizard((w) => !w)}>
+              {t(locale, direction === 'KOSZT' ? 'bill_new_cost' : 'bill_new_rev')}
+            </button>
+          ) : null}
+        </header>
+        )}
+        {wizard ? <BillWizard direction={direction} onDone={(id) => { setWizard(false); if (id) setOpenId(id); }} /> : null}
+        {list.length === 0 && pending.length === 0 ? (
+          <p className="fin-muted fin-pad">{ft(locale, 'p5_inv_empty')}</p>
+        ) : phone ? (
+          <div className="fin-cards inv-cards">
+            {pending.map((w) => (
+              <article key={w.weekKey} className="fin-card inv-card is-sea" data-bill-pending={w.weekKey}>
+                <header className="fin-card-hd"><b>{ftp(locale, 'p5_inv_card_week', { label: weekKeyLabel(w.weekKey) })}</b><StatusTag status="DO_WYSTAWIENIA" /></header>
+                <b className="inv-card-big">{ftp(locale, 'p5_inv_card_net', { net: formatPlNumber(w.netEur, 2) })}</b>
+                <p className="fin-muted">{ftp(locale, 'p5_inv_card_pending', { loads: transportsText(w.loads.length), who: ISSUER[direction] })}</p>
+              </article>
+            ))}
+            {list.map((b) => (
+              <article key={b.id} className="fin-card inv-card" data-bill={b.id}>
+                <button type="button" className="fin-card-btn inv-card-hd" aria-expanded={openId === b.id} onClick={() => open(b.id)}>
+                  <span className="code" data-content>{b.number}</span>
+                  <StatusTag bill={b} status={billStatus(b)} />
                 </button>
-              ) : null}
-            </header>
-            <div className="panel-bd flush">
-              {wizard === dir ? <BillWizard direction={dir} onDone={(id) => { setWizard(null); if (id) setOpenId(id); }} /> : null}
-              {list.length === 0 ? (
-                <div className="note">{t(locale, 'bill_empty')}</div>
-              ) : (
-                <div className="tablewrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>{t(locale, 'bill_col_number')}</th>
-                        <th>{t(locale, 'bill_col_week')}</th>
-                        <th>{t(locale, 'bill_col_issue')}</th>
-                        <th className="num">{t(locale, 'bill_col_net')}</th>
-                        <th className="num">{t(locale, 'bill_col_vat')}</th>
-                        <th className="num">{t(locale, 'bill_col_gross')}</th>
-                        <th>{t(locale, 'bill_col_due')}</th>
-                        <th>{t(locale, 'bill_col_verif')}</th>
-                        <th>{t(locale, 'bill_col_pay')}</th>
-                        <th>{t(locale, 'bill_col_checks')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {list.map((b) => {
-                        const flagged = b.lines.filter((l) => l.flags.length).length + (b.headerFlags.length ? 1 : 0);
-                        return (
-                          <tr key={b.id} data-bill={b.id} style={{ cursor: 'pointer' }} aria-selected={openId === b.id} {...clickableRow(() => setOpenId(openId === b.id ? null : b.id))}>
-                            <td><span className="code" data-content>{b.number}</span></td>
-                            <td className="mono" data-content>{b.weekKey}</td>
-                            <td>{fmtDay(b.issueDate)}</td>
-                            <td className="num"><Amount n={b.net} cur={b.currency} /></td>
-                            <td className="num"><Amount n={b.vat} cur={b.currency} /></td>
-                            <td className="num"><Amount n={b.gross} cur={b.currency} /></td>
-                            <td>{fmtDay(b.dueDate)}</td>
-                            <td><span className={`pill ${verificationPill(b.verification)}`} data-verif={b.verification}>{VERIFICATION_LABEL[b.verification][locale]}</span></td>
-                            <td><span className={`pill ${paymentPill(b.payment)}`} data-pay={b.payment}>{PAYMENT_LABEL[b.payment][locale]}</span></td>
-                            <td>{flagged ? <span className="pill p-amber">{t(locale, 'bill_flags')} · {flagged}</span> : <span className="pill p-go">{t(locale, 'bill_ok')}</span>}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              {list.some((b) => b.id === openId) ? <BillDetail bill={list.find((b) => b.id === openId)!} /> : null}
-            </div>
+                <b className="inv-card-big" data-deur-exempt="invoice-currency">{formatPlNumber(b.gross, 2)} {b.currency} {ft(locale, 'p5_inv_col_gross').toLocaleLowerCase('pl-PL')}</b>
+                <p className="fin-muted" data-deur-exempt="invoice-currency">
+                  {ftp(locale, 'p5_inv_card_line', { week: Number(b.weekKey.slice(-2)), loads: transportsText(b.lines.length), net: fmtNum(b.net), vat: fmtNum(b.vat), due: dm(b.dueDate) })}
+                </p>
+                {quick(b) ? <div className="inv-card-acts">{actions(b)}</div> : null}
+                {openId === b.id ? <BillDetail bill={b} /> : null}
+              </article>
+            ))}
           </div>
-        );
-      })}
+        ) : (
+          <div className="fin-scroll">
+            <table className="fin-table inv-table">
+              <thead>
+                <tr>
+                  <th>{up(ft(locale, 'p5_inv_col_week'))}</th>
+                  <th>{up(ft(locale, 'p5_inv_col_inv'))}</th>
+                  <th className="num">{up(ft(locale, 'p5_inv_col_loads'))}</th>
+                  <th className="num">{up(ft(locale, 'p5_inv_col_net'))}</th>
+                  <th className="num">{up(ft(locale, 'p5_inv_col_vat'))}</th>
+                  <th className="num">{up(ft(locale, 'p5_inv_col_gross'))}</th>
+                  <th>{up(ft(locale, 'p5_inv_col_due'))}</th>
+                  <th>{up(ft(locale, 'p5_inv_col_status'))}</th>
+                  <th><span className="sronly">{t(locale, 'bill_col_checks')}</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {pending.map((w) => (
+                  <tr key={w.weekKey} data-bill-pending={w.weekKey}>
+                    <td>{weekKeyLabel(w.weekKey)}</td>
+                    <td className="fin-muted">{ft(locale, 'p5_inv_not_issued')}</td>
+                    <td className="num">{w.loads.length}</td>
+                    <td className="num"><b>{formatPlNumber(w.netEur, 2)}</b></td>
+                    <td className="num">{formatPlNumber(Math.round(w.netEur * VAT_RATE * 100) / 100, 2)}</td>
+                    <td className="num"><b>{formatPlNumber(Math.round(w.netEur * (1 + VAT_RATE) * 100) / 100, 2)}</b></td>
+                    <td>—</td>
+                    <td><StatusTag status="DO_WYSTAWIENIA" /></td>
+                    <td className="fin-muted">{ftp(locale, 'p5_inv_waits', { who: ISSUER[direction] })}</td>
+                  </tr>
+                ))}
+                {list.map((b) => {
+                  const flagged = b.lines.filter((l) => l.flags.length).length + (b.headerFlags.length ? 1 : 0);
+                  return (
+                    <Fragment key={b.id}>
+                      <tr data-bill={b.id} className={openId === b.id ? 'is-open' : undefined} aria-selected={openId === b.id} {...clickableRow(() => open(b.id))}>
+                        <td>{weekKeyLabel(b.weekKey)}</td>
+                        <td>
+                          <span className="code" data-content>{b.number}</span>
+                          <span className="inv-sub">{ftp(locale, 'p5_inv_issued', { date: dm(b.issueDate) })}{b.pdfName || b.pdfStoragePath ? ' · PDF' : ''}</span>
+                        </td>
+                        <td className="num">{b.lines.length}</td>
+                        <td className="num"><b><Amount n={b.net} cur={b.currency} /></b></td>
+                        <td className="num"><Amount n={b.vat} cur={b.currency} /></td>
+                        <td className="num"><b><Amount n={b.gross} cur={b.currency} /></b></td>
+                        <td>{dm(b.dueDate)}</td>
+                        <td>
+                          <span className="inv-status">
+                            <StatusTag bill={b} status={billStatus(b)} />
+                            {flagged ? <span className="fin-tag warn" data-bill-flags={flagged}>{up(t(locale, 'bill_flags'))} · {flagged}</span> : null}
+                          </span>
+                        </td>
+                        <td>{actions(b)}</td>
+                      </tr>
+                      {openId === b.id ? (
+                        <tr className="fin-detail-row"><td colSpan={9}><BillDetail bill={b} /></td></tr>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
+  );
+}
+
+/** E4 — tabela „Kto co widzi i co robi”. */
+export function WhoSees() {
+  const locale = useTowerStore((s) => s.locale);
+  const rows = [1, 2, 3];
+  const cell = (r: number, who: 'hhl' | 'ksh' | 'scx') => {
+    const v = ft(locale, `p5_inv_who_r${r}_${who}`);
+    return <td className={v === 'nie widzi' ? 'fin-muted' : 'inv-who-yes'}>{v}</td>;
+  };
+  return (
+    <section className="panel fin-panel" aria-labelledby="inv-who-h" data-inv-who>
+      <header className="panel-hd fin-hd2"><h3 id="inv-who-h">{ft(locale, 'p5_inv_who_h')}</h3></header>
+      <div className="fin-scroll">
+        <table className="fin-table">
+          <thead>
+            <tr><th><span className="sronly">{ft(locale, 'p5_inv_col_inv')}</span></th><th>HHL</th><th>KSH</th><th>{up('Scandinavian Express')}</th></tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r}><th scope="row">{ft(locale, `p5_inv_who_r${r}`)}</th>{cell(r, 'hhl')}{cell(r, 'ksh')}{cell(r, 'scx')}</tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
@@ -271,7 +462,7 @@ function BillDetail({ bill }: { bill: Bill }) {
   const verify = (v: BillVerification) => { if (verifyBill(bill.id, v, v === 'SPORNA' ? note : null)) setNote(''); };
 
   return (
-    <div className="panel-bd" data-bill-detail={bill.id} style={{ borderTop: '1px solid var(--line)' }}>
+    <div className="inv-detail" data-bill-detail={bill.id}>
       <div className="tablewrap">
         <table>
           <thead>
@@ -340,10 +531,10 @@ function BillDetail({ bill }: { bill: Bill }) {
       <DisputeThread bill={bill} />
       {canVerifyBill(role, bill) ? (
         <div className="filters" data-bill-actions="verify">
-          <input className="input" style={{ flex: 1, minWidth: 220 }} placeholder={t(locale, 'bill_dispute_ph')} value={note} onChange={(e) => setNote(e.target.value)} aria-label={t(locale, 'bill_dispute_note')} />
-          <button type="button" className="chipbtn" data-verify="SPORNA" onClick={() => verify('SPORNA')}>{VERIFICATION_LABEL.SPORNA[locale]}</button>
-          <button type="button" className="chipbtn" data-verify="ZGODNA" onClick={() => verify('ZGODNA')}>{VERIFICATION_LABEL.ZGODNA[locale]}</button>
-          <button type="button" className="btn" data-verify="ZAAKCEPTOWANA" onClick={() => verify('ZAAKCEPTOWANA')}>{VERIFICATION_LABEL.ZAAKCEPTOWANA[locale]}</button>
+          {/* wyglad/P5 — E4 „Weryfikacja”: Akceptuj albo Sporna z powodem (bez osobnego „Zgodna”) */}
+          <input className="input" style={{ flex: 1, minWidth: 220 }} placeholder={t(locale, 'bill_dispute_ph')} value={note} onChange={(e) => setNote(e.target.value)} aria-label={t(locale, 'bill_dispute_note')} data-dispute-note="" />
+          <button type="button" className="btn ghost" data-verify="SPORNA" onClick={() => verify('SPORNA')}>{VERIFICATION_LABEL.SPORNA[locale]}</button>
+          <button type="button" className="btn" data-verify="ZAAKCEPTOWANA" onClick={() => verify('ZAAKCEPTOWANA')}>{ft(locale, 'p5_inv_accept')}</button>
         </div>
       ) : null}
       {canMarkPaid(role) ? (
@@ -419,112 +610,123 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
   const chk = checkBill(draft, loads, bills, today);
   const monday = week ? isoWeekMonday(week) : '';
 
+  const diff = Math.round((chk.invoicedTotal - chk.expectedTotal) * 100) / 100;
+  const due = addDaysIso(issueDate || today, BILL_TERM_DAYS[direction]); /* 03_REJESTR: SCX → HHL 35 dni, HHL → KSH 30 dni */
+  const offer = direction === 'KOSZT' && role === 'SCX' ? factoringOfferOf() : null;
+
   return (
-    <div className="panel-bd" data-bill-wizard={direction} style={{ borderBottom: '1px solid var(--line)' }}>
-      <dl className="kv">
-        <dt>{t(locale, 'bill_col_week')}</dt>
-        <dd>
+    <div className="inv-form" data-bill-wizard={direction}>
+      <header className="inv-form-hd">
+        <h4 className="sec">{week ? ftp(locale, 'p5_inv_new_h', { no: Number(week.slice(-2)) }) : ft(locale, 'p5_inv_new')}</h4>
+        <label className="inv-week">
+          <span>{t(locale, 'bill_col_week')}</span>
           <select className="input" value={week} data-w="week" onChange={(e) => { setWeek(e.target.value); setLines({}); }}>
             {weeks.map((w) => <option key={w} value={w}>{w}</option>)}
-          </select>{' '}
-          {monday ? <span style={{ color: 'var(--ink-3)' }}>{fmtDay(monday)}–{fmtDay(addDaysIso(monday, 6))}</span> : null}
-        </dd>
-        <dt>{t(locale, 'bill_currency')}</dt>
-        <dd data-deur-exempt="invoice-currency">
-          <div className="seg" role="group" aria-label={t(locale, 'bill_currency')}>
-            {(['EUR', 'PLN'] as const).map((c) => (
-              <button key={c} type="button" data-cur={c} aria-pressed={currency === c} onClick={() => { setCurrency(c); setLines({}); }}>{c}</button>
-            ))}
-          </div>
-        </dd>
-        <dt>{t(locale, 'bill_col_number')}</dt>
-        <dd><input className="input" data-w="number" value={number} onChange={(e) => setNumber(e.target.value)} /></dd>
-        <dt>{t(locale, 'bill_col_issue')}</dt>
-        <dd><input className="input" type="date" data-w="issue" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} /></dd>
-        <dt>{t(locale, 'bill_due_doc_in')}</dt>
-        <dd><input className="input" type="date" data-w="due" value={dueDoc} onChange={(e) => setDueDoc(e.target.value)} /> <span style={{ color: 'var(--ink-3)' }}>{t(locale, 'bill_due_hint')}</span></dd>
-        <dt>{t(locale, 'bill_totals')}</dt>
-        <dd data-deur-exempt="invoice-currency">
-          <input className="input" data-w="net" style={{ width: 110 }} placeholder={t(locale, 'bill_col_net')} value={net} onChange={(e) => setNet(e.target.value)} />{' '}
-          <input className="input" data-w="vat" style={{ width: 90 }} placeholder={t(locale, 'bill_col_vat')} value={vat} onChange={(e) => setVat(e.target.value)} />{' '}
-          <input className="input" data-w="gross" style={{ width: 110 }} placeholder={t(locale, 'bill_col_gross')} value={gross} onChange={(e) => setGross(e.target.value)} />{' '}
-          <span style={{ color: 'var(--ink-3)' }}>{currency} · {t(locale, 'bill_vat_hint')}</span>
-        </dd>
-        <dt>{t(locale, 'bill_pdf')}</dt>
-        <dd><input type="file" accept="application/pdf" data-w="pdf" aria-label={t(locale, 'bill_pdf')} onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></dd>
-      </dl>
-      <div className="tablewrap">
-        <table>
-          <thead>
-            <tr>
-              <th />
-              <th>{t(locale, 'sched_col_code')}</th>
-              <th>{t(locale, 'bill_col_unload')}</th>
-              <th className="num">{t(locale, 'bill_col_expected')}</th>
-              <th className="num">{t(locale, 'bill_col_invoiced')}</th>
-              {currency === 'PLN' ? <th>{t(locale, 'bill_col_fx')}</th> : null}
-              <th>{t(locale, 'bill_col_checks')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {candidates.map((l) => {
-              const st = lineOf(l.id);
-              const at = unloadedAtOf(l);
-              const res = chk.lines.find((x) => x.loadId === l.id);
-              return (
-                <tr key={l.id} data-w-line={l.code}>
-                  <td><input type="checkbox" checked={st.on} onChange={(e) => patch(l.id, { on: e.target.checked })} aria-label={transportLabel(l, role)} /></td>
-                  <td><span className="code" data-content>{transportLabel(l, role)}</span></td>
-                  <td>{fmtDay(at ? localDateOf(at) : null)}</td>
-                  <td className="num"><Amount n={expectedNetFor(l, direction, currency, today)} cur={currency} /></td>
-                  <td className="num" data-deur-exempt="invoice-currency"><input className="input" style={{ width: 110 }} value={st.net} onChange={(e) => patch(l.id, { net: e.target.value })} disabled={!st.on} /></td>
-                  {currency === 'PLN' ? (
-                    <td data-deur-exempt="invoice-fx">
-                      {st.fx ? (
-                        <>
-                          <input className="input" style={{ width: 120 }} value={st.fx.tableNo} onChange={(e) => patch(l.id, { fx: { ...st.fx!, tableNo: e.target.value } })} aria-label={t(locale, 'bill_fx_table')} />{' '}
-                          <input className="input" style={{ width: 80 }} value={String(st.fx.mid)} onChange={(e) => patch(l.id, { fx: { ...st.fx!, mid: Number(e.target.value.replace(',', '.')) || 0 } })} aria-label={t(locale, 'bill_fx_mid')} />{' '}
-                          <input className="input" type="date" value={st.fx.effectiveDate} onChange={(e) => patch(l.id, { fx: { ...st.fx!, effectiveDate: e.target.value } })} aria-label={t(locale, 'bill_fx_date')} />{' '}
-                          <label><input type="checkbox" data-fx-confirm checked={st.fxConfirmed} onChange={(e) => patch(l.id, { fxConfirmed: e.target.checked })} /> {t(locale, 'bill_fx_confirm')}</label>
-                        </>
-                      ) : <span className="pill p-amber">{BILL_FLAG_LABEL.BRAK_KURSU[locale]}</span>}
-                    </td>
-                  ) : null}
-                  <td>
-                    {!st.on ? '—' : res?.flags.length
-                      ? res.flags.map((f) => <span key={f} className="pill p-amber" data-flag={f} style={{ marginRight: 4 }}>{BILL_FLAG_LABEL[f][locale]}</span>)
-                      : <span className="pill p-go">{t(locale, 'bill_ok')}</span>}
-                  </td>
+          </select>
+          {monday ? <span className="fin-muted">{fmtDay(monday)}–{fmtDay(addDaysIso(monday, 6))}</span> : null}
+        </label>
+      </header>
+      <div className="inv-form-grid">
+        <div className="inv-form-lines">
+          <div className="fin-scroll">
+            <table className="fin-table">
+              <thead>
+                <tr>
+                  <th><span className="sronly">{t(locale, 'bill_col_checks')}</span></th>
+                  <th>{up(t(locale, 'sched_col_code'))}</th>
+                  <th>{up(t(locale, 'bill_col_unload'))}</th>
+                  <th className="num">{up(t(locale, 'bill_col_expected'))}</th>
+                  <th className="num">{up(t(locale, 'bill_col_invoiced'))}</th>
+                  {currency === 'PLN' ? <th>{up(t(locale, 'bill_col_fx'))}</th> : null}
+                  <th>{up(t(locale, 'bill_col_checks'))}</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div className="filters">
-        <span>{t(locale, 'bill_expected_total')} <Amount n={chk.expectedTotal} cur={currency} /></span>
-        <span>{t(locale, 'bill_invoiced_total')} <Amount n={chk.invoicedTotal} cur={currency} /></span>
-        {chk.headerFlags.length ? <span className="pill p-amber" data-flag="BRAK_NA_FAKTURZE">{BILL_FLAG_LABEL.BRAK_NA_FAKTURZE[locale]} · {chk.missingLoadIds.length}</span> : null}
-        <div className="spacer" />
-        <button type="button" className="chipbtn" onClick={() => onDone(null)}>{t(locale, 'bill_cancel')}</button>
-        <button
-          type="button"
-          className="btn"
-          data-w="submit"
-          onClick={() => {
-            const r = registerBill(draft, file);
-            if (r.ok) onDone(r.id); else setErrors(r.errors);
-          }}
-        >
-          {t(locale, 'bill_submit')}
-        </button>
-      </div>
-      {errors.length ? (
-        <div className="note" data-w-errors style={{ color: 'var(--red)' }}>
-          {errors.map((e) => <div key={e}>{errLabel(e, locale)}</div>)}
+              </thead>
+              <tbody>
+                {candidates.map((l) => {
+                  const st = lineOf(l.id);
+                  const at = unloadedAtOf(l);
+                  const res = chk.lines.find((x) => x.loadId === l.id);
+                  return (
+                    <tr key={l.id} data-w-line={l.code}>
+                      <td><input type="checkbox" className="inv-check" checked={st.on} onChange={(e) => patch(l.id, { on: e.target.checked })} aria-label={transportLabel(l, role)} /></td>
+                      <td><span className="code" data-content>{transportLabel(l, role)}</span></td>
+                      <td>{fmtDay(at ? localDateOf(at) : null)}</td>
+                      <td className="num"><Amount n={expectedNetFor(l, direction, currency, today)} cur={currency} /></td>
+                      <td className="num" data-deur-exempt="invoice-currency"><input className="input inv-num" value={st.net} onChange={(e) => patch(l.id, { net: e.target.value })} disabled={!st.on} aria-label={`${t(locale, 'bill_col_invoiced')} · ${l.code}`} /></td>
+                      {currency === 'PLN' ? (
+                        <td data-deur-exempt="invoice-fx">
+                          {st.fx ? (
+                            <span className="inv-fx">
+                              <input className="input" style={{ width: 120 }} value={st.fx.tableNo} onChange={(e) => patch(l.id, { fx: { ...st.fx!, tableNo: e.target.value } })} aria-label={t(locale, 'bill_fx_table')} />
+                              <input className="input" style={{ width: 80 }} value={String(st.fx.mid)} onChange={(e) => patch(l.id, { fx: { ...st.fx!, mid: Number(e.target.value.replace(',', '.')) || 0 } })} aria-label={t(locale, 'bill_fx_mid')} />
+                              <input className="input" type="date" value={st.fx.effectiveDate} onChange={(e) => patch(l.id, { fx: { ...st.fx!, effectiveDate: e.target.value } })} aria-label={t(locale, 'bill_fx_date')} />
+                              <label><input type="checkbox" data-fx-confirm checked={st.fxConfirmed} onChange={(e) => patch(l.id, { fxConfirmed: e.target.checked })} /> {t(locale, 'bill_fx_confirm')}</label>
+                            </span>
+                          ) : <span className="fin-tag warn">{BILL_FLAG_LABEL.BRAK_KURSU[locale]}</span>}
+                        </td>
+                      ) : null}
+                      <td>
+                        {!st.on ? '—' : res?.flags.length
+                          ? res.flags.map((f) => <span key={f} className="fin-tag warn" data-flag={f} style={{ marginRight: 4 }}>{BILL_FLAG_LABEL[f][locale]}</span>)
+                          : <span className="fin-tag go">{t(locale, 'bill_ok')}</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="fin-muted">{ft(locale, 'p5_inv_form_lines_note')}</p>
         </div>
-      ) : null}
-      <div className="note">{t(locale, 'bill_wizard_note')}</div>
+        <div className="inv-form-fields">
+          <div className="inv-fields">
+            <label className="inv-field"><span>{t(locale, 'bill_col_number')}</span><input className="input" data-w="number" value={number} onChange={(e) => setNumber(e.target.value)} /></label>
+            <label className="inv-field"><span>{t(locale, 'bill_col_issue')}</span><input className="input" type="date" data-w="issue" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} /></label>
+            <div className="inv-field" data-deur-exempt="invoice-currency">
+              <span id={`inv-cur-${direction}`}>{t(locale, 'bill_currency')}</span>
+              <div className="seg" role="group" aria-labelledby={`inv-cur-${direction}`}>
+                {(['EUR', 'PLN'] as const).map((c) => (
+                  <button key={c} type="button" data-cur={c} aria-pressed={currency === c} onClick={() => { setCurrency(c); setLines({}); }}>{c}</button>
+                ))}
+              </div>
+            </div>
+            <label className="inv-field"><span>{t(locale, 'bill_due_doc_in')}</span><input className="input" type="date" data-w="due" value={dueDoc} onChange={(e) => setDueDoc(e.target.value)} /></label>
+            <label className="inv-field" data-deur-exempt="invoice-currency"><span>{t(locale, 'bill_col_net')} ({currency})</span><input className="input" data-w="net" inputMode="decimal" value={net} onChange={(e) => setNet(e.target.value)} /></label>
+            <label className="inv-field" data-deur-exempt="invoice-currency"><span>{t(locale, 'bill_col_vat')} ({currency})</span><input className="input" data-w="vat" inputMode="decimal" value={vat} onChange={(e) => setVat(e.target.value)} /></label>
+            <label className="inv-field" data-deur-exempt="invoice-currency"><span>{t(locale, 'bill_col_gross')} ({currency})</span><input className="input" data-w="gross" inputMode="decimal" value={gross} onChange={(e) => setGross(e.target.value)} /></label>
+            <label className="inv-field inv-field-wide"><span>{t(locale, 'bill_pdf')}</span><input className="input" type="file" accept="application/pdf" data-w="pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>
+          </div>
+          <p className="fin-muted">{t(locale, 'bill_due_hint')} · {t(locale, 'bill_vat_hint')}</p>
+          {offer ? <PaymentChoice offer={offer} net={num(net)} gross={num(gross)} due={due} currency={currency} /> : null}
+          <dl className="inv-sum" data-deur-exempt="invoice-currency">
+            <div><dt>{ft(locale, 'p5_inv_form_sum_exp')}</dt><dd><Amount n={chk.expectedTotal} cur={currency} /></dd></div>
+            <div><dt>{ft(locale, 'p5_inv_form_sum_inv')}</dt><dd><Amount n={chk.invoicedTotal} cur={currency} /></dd></div>
+            <div className="strong"><dt>{ft(locale, 'p5_inv_form_sum_diff')}</dt><dd className={diff === 0 ? 'inv-ok' : 'neg'}><Amount n={diff} cur={currency} />{diff === 0 ? ` · ${ft(locale, 'p5_inv_form_sum_ok')}` : ''}</dd></div>
+            <div><dt>{t(locale, 'bill_col_due')} ({BILL_TERM_DAYS[direction]})</dt><dd>{fmtDay(dueDoc || due)}</dd></div>
+          </dl>
+          {chk.headerFlags.length ? <span className="fin-tag warn" data-flag="BRAK_NA_FAKTURZE">{BILL_FLAG_LABEL.BRAK_NA_FAKTURZE[locale]} · {chk.missingLoadIds.length}</span> : null}
+          <div className="inv-form-acts">
+            <button type="button" className="btn ghost" onClick={() => onDone(null)}>{t(locale, 'bill_cancel')}</button>
+            <button
+              type="button"
+              className="btn inv-send"
+              data-w="submit"
+              onClick={() => {
+                const r = registerBill(draft, file);
+                if (r.ok) onDone(r.id); else setErrors(r.errors);
+              }}
+            >
+              {ft(locale, `p5_inv_form_send_${direction}`)}
+            </button>
+          </div>
+          {errors.length ? (
+            <div className="note inv-errors" data-w-errors>
+              {errors.map((e) => <div key={e}>{errLabel(e, locale)}</div>)}
+            </div>
+          ) : null}
+        </div>
+      </div>
+      <p className="note">{t(locale, 'bill_wizard_note')}</p>
     </div>
   );
 }

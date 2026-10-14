@@ -10,12 +10,15 @@ describe('0182 insurance auto-attach', () => {
   });
   it('DocsView uses insuranceCover for INSURANCE row', () => {
     const src = readFileSync('src/views/DocsView.tsx', 'utf8');
-    expect(src).toMatch(/c\.key === 'INSURANCE' && insuranceCover/);
+    /* przepisane w wyglad/P5 (E31): wiersz „Polisa OCP przewoźnika” — liczba transportów z ważną polisą z insuranceCover */
+    expect(src).toMatch(/key === 'INSURANCE' && insuranceCover/);
     expect(src).toMatch(/loadInsuranceCover/);
   });
-  it('LoadDrawer shows auto note', () => {
+  /* przepisane w wyglad/P5 (E31 pkt 5): polisa przewoźnika w zakładce „Dokumenty” jako wiersz z numerem i ważnością (podpięta sama) */
+  it('LoadDrawer shows auto-attached policy in the Documents tab', () => {
     const src = readFileSync('src/components/drawer/LoadDrawer.tsx', 'utf8');
-    expect(src).toMatch(/data-ins-auto/);
-    expect(src).toMatch(/b32_ins_auto/);
+    expect(src).toMatch(/insAuto=\{insAuto\}/);
+    const tab = readFileSync('src/components/drawer/PanelDocs.tsx', 'utf8');
+    expect(tab).toMatch(/prod\?\.covered && prod\.policyNo/);
   });
 });

@@ -1,21 +1,44 @@
+/**
+ * wyglad/P5 — Finanse (E16, img/e16-after; E39 tabela tygodni, img/e39-after).
+ * HHL: „Od przychodu do marży” według etapu rozliczenia, marża według rodzaju elementu, kurs NBP, flaga marży
+ * (jeden próg z Opcji — bez progu wyłączona), opłata paliwowa według tygodnia załadunku.
+ * KSH („Rozliczenia”) widzi tylko swoją cenę, SCX („Moje stawki”) tylko swoją stawkę — bez marży i ceny drugiej strony.
+ * EUR jest źródłem; PLN — kurs NBP transportu, a przed rozładunkiem kurs bieżący (E16, 23:12). Telefon: karty (E8).
+ * HHL: na końcu „Paczka tygodnia dla księgowości” (E40, img/e40-after) — gdy baza poda adresy i dziennik wysyłek.
+ * Dane: `src/lib/p5Source.ts` (próg marży, średnie cen paliwa, adresy księgowości i wysyłkę paczek podłącza wykonawca).
+ */
 import { useMemo } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
-import { canSeeCost, canSeeMargin, canSeeRevenue } from '../lib/permissions';
-import { t, tp } from '../i18n/messages';
-import { DemoMark } from '../components/ui/DemoMark';
-import { PROD_BUILD } from '../lib/prodFacade';
-import { SEFS_WEEKLY, SEFS_SOURCES, computeSefs } from '../lib/sefs';
-import { formatAppMoney, formatSourceMoney } from '../lib/money/demoFx';
-import { TIER_PILL, marginSplit, moneyViewFor, tierSummary } from '../lib/money/loadMoney';
-import type { PricingTier } from '../lib/money/engine';
-import { formatPercentPoints } from '../lib/format';
-import { transportLabel } from '../lib/transportName';
+import { t } from '../i18n/messages';
+import { up } from '../components/options/up';
+import { ft, ftn, ftp } from '../i18n/p5';
+import { formatPlNumber } from '../lib/format';
+import { getNowIso } from '../lib/frozenNow';
+import { localDateOf } from '../lib/money/engine';
 import { useIsPhone } from '../lib/useIsPhone';
+import { codeRange, marginPct, transportsText, type FinAmount, type FinSide, type FinStage, type FinStageRow } from '../lib/p5Finance';
+import { accountingPackActionsOf, accountingPackConfigOf, belowOf, financeOf, fuelWeeksOf, marginThresholdOf } from '../lib/p5Source';
+import { FuelWeekTable } from '../components/finance/FuelWeekTable';
+import { AccountingPackSection } from '../components/finance/AccountingPack';
+import type { Locale } from '../types';
+import '../components/finance/finance.css';
 
-const TIERS: PricingTier[] = ['PROGNOZA', 'REALIZACJA', 'FAKTURA'];
+const STAGE_TAG: Record<FinStage, string> = { FAKTURA: 'fin-tag go', REALIZACJA: 'fin-tag sea', PROGNOZA: 'fin-tag plain' };
+const PHONE_ORDER: FinStage[] = ['REALIZACJA', 'PROGNOZA', 'FAKTURA'];
+const pctText = (p: number | null) => (p == null ? '—' : `${formatPlNumber(p, 2)}%`);
 
-function pct(n: number) {
-  return formatPercentPoints(n * 100);
+function sideOf(role: string): FinSide {
+  return role === 'HHL' ? 'both' : role === 'KSH' ? 'rev' : 'cost';
+}
+
+function Head({ locale, title, sub, cur }: { locale: Locale; title: string; sub: string; cur: string }) {
+  return (
+    <header className="fin-head">
+      <h2 id="fin-title">{title}</h2>
+      <span className="sub" data-fin-sub>{sub}</span>
+      <span className="fin-cur" data-fin-cur>{up(ftp(locale, 'p5_fin_cur', { cur }))}</span>
+    </header>
+  );
 }
 
 export function FinanceView() {
@@ -23,312 +46,306 @@ export function FinanceView() {
   const loads = useTowerStore((s) => s.loads);
   const locale = useTowerStore((s) => s.locale);
   const currency = useTowerStore((s) => s.displayCurrency);
-  const money = (n: number) => formatAppMoney(n, locale, currency);
+  const bills = useTowerStore((s) => s.bills);
+  const documents = useTowerStore((s) => s.documents);
   const phone = useIsPhone();
+  const side = sideOf(role);
+  const nowIso = getNowIso();
+  const today = localDateOf(nowIso);
+  const packCfg = useMemo(() => (role === 'HHL' ? accountingPackConfigOf(bills) : null), [role, bills]);
+  const pack = packCfg ? (
+    <AccountingPackSection
+      locale={locale} phone={phone} loads={loads} bills={bills} documents={documents}
+      cfg={packCfg} actions={accountingPackActionsOf()} nowIso={nowIso}
+    />
+  ) : null;
 
-  const showCost = canSeeCost(role);
-  const showRev = canSeeRevenue(role);
-  const showMargin = canSeeMargin(role);
+  const fin = useMemo(() => financeOf(loads, side), [loads, side]);
+  const threshold = side === 'both' ? marginThresholdOf() : null;
+  const below = useMemo(() => (side === 'both' ? belowOf(loads, threshold) : []), [loads, side, threshold]);
+  const fuel = useMemo(() => fuelWeeksOf(loads, side === 'rev' ? 'rev' : 'cost', today), [loads, side, today]);
 
-  const done = useMemo(() => loads.filter((l) => l.status === 'DELIVERED'), [loads]);
-  const rev = done.reduce((s, l) => s + l.pricing.revTotal, 0);
-  const cost = done.reduce((s, l) => s + l.pricing.costTotal, 0);
-  const baseR = done.reduce((s, l) => s + l.pricing.revBase, 0);
-  const bafR = done.reduce((s, l) => s + l.pricing.revSefs, 0);
-  const baseC = done.reduce((s, l) => s + l.pricing.costBase, 0);
-  const bafC = done.reduce((s, l) => s + l.pricing.costSefs, 0);
-  const exC = done.reduce((s, l) => s + l.pricing.costExtras, 0);
+  const pln = currency === 'PLN' && fin.plnComplete && fin.nbpLatest != null;
+  const cur = pln ? 'PLN' : 'EUR';
+  const n = (a: FinAmount) => formatPlNumber(pln ? a.pln ?? 0 : a.eur, 2);
+  const m = (a: FinAmount, b: FinAmount) => formatPlNumber(pln ? (a.pln ?? 0) - (b.pln ?? 0) : a.eur - b.eur, 2);
 
-  const byType = useMemo(() => {
-    const map = new Map<string, { n: number; r: number; c: number }>();
-    for (const l of loads) {
-      const cur = map.get(l.itemType) ?? { n: 0, r: 0, c: 0 };
-      cur.n += 1;
-      cur.r += l.pricing.revTotal;
-      cur.c += l.pricing.costTotal;
-      map.set(l.itemType, cur);
-    }
-    return [...map.entries()].map(([k, v]) => ({
-      k,
-      ...v,
-      m: v.r - v.c,
-      p: v.r ? (v.r - v.c) / v.r : 0,
-    }));
-  }, [loads]);
-  const maxAbs = Math.max(...byType.map((t) => t.r), 1);
+  const title = role === 'SCX' ? t(locale, 'nav_fin_scx') : role === 'KSH' ? t(locale, 'nav_fin_ksh') : t(locale, 'nav_fin');
+  const unpriced = fin.unpricedCodes.length;
+  const subFull =
+    side === 'rev' ? ft(locale, 'p5_fin_sub_ksh')
+    : side === 'cost' ? ft(locale, 'p5_fin_sub_scx')
+    : unpriced
+      ? `${transportsText(fin.all)}: ${fin.priced} z ceną, ${unpriced} bez ceny ${ftp(locale, 'p5_fin_unpriced_note', { codes: codeRange(fin.unpricedCodes), why: fin.unpricedNoDate ? ft(locale, 'p5_fin_unpriced_why_date') : '' })}`
+      : `${transportsText(fin.all)}: ${ft(locale, 'p5_fin_priced_all').replace('{priced}', String(fin.priced))}`;
+  const nbp = fin.nbpLatest;
+  const nbpDate = nbp ? `${nbp.date.slice(8, 10)}.${nbp.date.slice(5, 7)}.${nbp.date.slice(0, 4)}` : '';
 
-  const title =
-    role === 'SCX' ? t(locale, 'nav_fin_scx') : role === 'KSH' ? t(locale, 'nav_fin_ksh') : t(locale, 'nav_fin');
-  const sub =
-    role === 'SCX'
-      ? tp(locale, 'a6_fin_sub_scx', { n: String(done.length) })
-      : role === 'KSH'
-        ? tp(locale, 'a6_fin_sub_ksh', { n: String(done.length) })
-        : tp(locale, 'a6_fin_sub_hhl', { n: String(done.length) });
+  const stageLabel = (k: FinStage) => (side === 'both' || k !== 'REALIZACJA' ? ft(locale, `p5_fin_stage_${k}`) : ft(locale, `p5_fin_stage_REALIZACJA_${side}`));
+  const plnNote = currency === 'PLN'
+    ? pln ? ftp(locale, 'p5_fin_pln_note', { table: nbp!.tableNo, date: nbpDate }) : ft(locale, 'p5_fin_pln_missing')
+    : null;
 
-  const week = SEFS_WEEKLY[SEFS_WEEKLY.length - 1];
-  const live = computeSefs(week.priceSek, week.pricePln);
-  const appliedNum = Number(((live.appliedMult - 1) * 100).toFixed(1));
-  const below = loads.filter((l) => l.pricing.belowThreshold);
-  const tiers = useMemo(() => tierSummary(loads, role), [loads, role]);
-  const split = useMemo(() => marginSplit(loads), [loads]);
-  /* M11 — sumy z totalsByTier: EUR źródłowo, PLN per transport kursem NBP (nie kursem demo). */
-  const splitMoney = (x: { marginEur: number; marginPln: number }) =>
-    currency === 'PLN' ? formatSourceMoney(x.marginPln, locale, 'PLN') : formatSourceMoney(x.marginEur, locale, 'EUR');
-
-  const bafCard = (
-    <div data-deur-exempt="fuel-index" title={t(locale, 'a6_fin_deur_fuel')}>
-      <dl className="kv">
-        <dt>{t(locale, 'a6_fin_index')}</dt>
-        <dd>
-          SEFS hybrid · {SEFS_SOURCES.labelSek} / {SEFS_SOURCES.labelPln}
-        </dd>
-        <dt>{t(locale, 'fin_base_val')}</dt>
-        <dd>
-          {formatSourceMoney(SEFS_SOURCES.baseSek, locale, 'SEK')} · {formatSourceMoney(SEFS_SOURCES.basePln, locale, 'PLN')}
-        </dd>
-        <dt>{t(locale, 'a6_fin_quote')}</dt>
-        <dd>
-          {formatSourceMoney(week.priceSek, locale, 'SEK')} · {formatSourceMoney(week.pricePln, locale, 'PLN')} · {week.weekLabel}
-        </dd>
-        <dt>{t(locale, 'fin_fuel_share')}</dt>
-        <dd>{t(locale, 'a6_fin_fuel_rule')}</dd>
-        <dt>{t(locale, 'fin_formula')}</dt>
-        <dd>
-          min({live.multSek.toFixed(3)}, {live.multPln.toFixed(3)}) = <b>{live.appliedMult.toFixed(3)}</b> (−
-          {tp(locale, 'a6_fin_vs_one', { pct: appliedNum })}
-        </dd>
-        <dt>{t(locale, 'fin_threshold')}</dt>
-        <dd>{t(locale, 'fin_margin_flag')}</dd>
-        <dt>{t(locale, 'a6_fin_cycle')}</dt>
-        <dd>{t(locale, 'fin_weekly')} · {week.sourceNote}</dd>
-      </dl>
-      <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 9 }}>
-        {t(locale, 'fin_sources')}{' '}
-        <a href={SEFS_SOURCES.orlen} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>
-          ORLEN
-        </a>
-        {' · '}
-        <a href={SEFS_SOURCES.okq8} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>
-          OKQ8
-        </a>
-        <span data-content>{t(locale, 'a6_fin_quote_note')}</span>
-      </div>
-    </div>
+  /* ---------- etapy: komputer ---------- */
+  const stagesTable = (
+    <table className="fin-table" data-fin-stages={side}>
+      <thead>
+        <tr>
+          <th>{up(ft(locale, side === 'both' ? 'p5_fin_col_stage' : 'p5_fin_col_stage_s'))}</th>
+          <th className="num">{up(ft(locale, 'p5_fin_col_loads'))}</th>
+          {side === 'both' ? (
+            <>
+              <th className="num">{up(ft(locale, 'p5_fin_col_rev'))}</th>
+              <th className="num">{up(ft(locale, 'p5_fin_col_cost'))}</th>
+              <th className="num">{up(ft(locale, 'p5_fin_col_margin'))}</th>
+              <th className="num">{up(ft(locale, 'p5_fin_col_pct'))}</th>
+            </>
+          ) : (
+            <th className="num">{up(ftp(locale, side === 'rev' ? 'p5_fin_col_due_ksh' : 'p5_fin_col_due_scx', { cur }))}</th>
+          )}
+        </tr>
+      </thead>
+      <tbody>
+        {fin.stages.map((s) => (
+          <tr key={s.stage} data-fin-stage={s.stage} data-count={s.count}>
+            <td>
+              {side === 'both' ? (
+                <span className="fin-stage"><span className={STAGE_TAG[s.stage]}>{up(stageLabel(s.stage))}</span> {ft(locale, `p5_fin_stage_${s.stage}_d`)}</span>
+              ) : stageLabel(s.stage)}
+            </td>
+            <td className="num">{s.count}</td>
+            {side === 'both' ? (
+              <>
+                <td className="num">{n(s.rev)}</td>
+                <td className="num">{n(s.cost)}</td>
+                <td className="num">{m(s.rev, s.cost)}</td>
+                <td className="num">{s.count ? pctText(marginPct(s.rev.eur, s.cost.eur)) : '—'}</td>
+              </>
+            ) : (
+              <td className="num">{n(side === 'rev' ? s.rev : s.cost)}</td>
+            )}
+          </tr>
+        ))}
+      </tbody>
+      <tfoot>
+        <tr data-fin-stage-total data-count={fin.total.count}>
+          <th scope="row">{side === 'both' ? ftp(locale, 'p5_fin_total', { cur }) : ft(locale, 'p5_fin_total_s')}</th>
+          <td className="num">{fin.total.count}</td>
+          {side === 'both' ? (
+            <>
+              <td className="num">{n(fin.total.rev)}</td>
+              <td className="num">{n(fin.total.cost)}</td>
+              <td className="num">{m(fin.total.rev, fin.total.cost)}</td>
+              <td className="num">{pctText(marginPct(fin.total.rev.eur, fin.total.cost.eur))}</td>
+            </>
+          ) : (
+            <td className="num">{n(side === 'rev' ? fin.total.rev : fin.total.cost)}</td>
+          )}
+        </tr>
+      </tfoot>
+    </table>
   );
 
-  return (
-    <div className="panel section-card page-sections" data-page="finance" style={{ margin: 12 }}>
-      <header className="panel-hd">
-        <h2>{title}</h2>
-        <span className="sub">{sub}</span>
+  /* ---------- etapy: telefon ---------- */
+  const stageCard = (s: FinStageRow) => (
+    <article key={s.stage} className="fin-card" data-fin-stage={s.stage} data-count={s.count}>
+      <header className="fin-card-hd">
+        <span className="fin-card-tag"><span className={STAGE_TAG[s.stage]}>{up(stageLabel(s.stage))}</span> <b>{s.count}</b></span>
+        {side === 'both' ? <b>{s.count ? pctText(marginPct(s.rev.eur, s.cost.eur)) : '—'}</b> : null}
       </header>
-      <div className="panel-bd">
-        <div className="two">
-          <div>
-            {role === 'SCX' && showCost && (
-              <>
-                <h4 className="sec">{t(locale, 'a6_fin_due_scx')}</h4>
-                <div className="mrow">
-                  <span className="lbl">{t(locale, 'a6_fin_base_rate')}</span>
-                  <span>{money(baseC)}</span>
-                </div>
-                <div className="mrow">
-                  <span className="lbl">{PROD_BUILD ? t(locale, 'fin_rev_fuel') : tp(locale, 'a6_fin_fuel_pct', { pct: appliedNum })}</span>
-                  <span>{money(bafC)}</span>
-                </div>
-                <div className="mrow">
-                  <span className="lbl">{t(locale, 'a6_fin_pilot')}</span>
-                  <span>{money(exC)}</span>
-                </div>
-                <div className="mrow total">
-                  <span>{t(locale, 'a6_fin_total')}</span>
-                  <span>{money(cost)}</span>
-                </div>
-                <div className="locked" style={{ marginTop: 13 }}>
-                  {t(locale, 'a6_fin_locked_scx')}
-                </div>
-              </>
-            )}
-            {role === 'KSH' && showRev && (
-              <>
-                <h4 className="sec">{t(locale, 'a6_fin_due_ksh')}</h4>
-                <div className="mrow">
-                  <span className="lbl">{t(locale, 'a6_fin_freight_base')}</span>
-                  <span>{money(baseR)}</span>
-                </div>
-                <div className="mrow">
-                  <span className="lbl">{PROD_BUILD ? t(locale, 'fin_rev_fuel') : tp(locale, 'a6_fin_fuel_pct', { pct: appliedNum })}</span>
-                  <span>{money(bafR)}</span>
-                </div>
-                <div className="mrow total">
-                  <span>{t(locale, 'a6_fin_total')}</span>
-                  <span>{money(rev)}</span>
-                </div>
-                <div className="locked" style={{ marginTop: 13 }}>
-                  {t(locale, 'a6_fin_locked_ksh')}
-                </div>
-              </>
-            )}
-            {role === 'HHL' && showMargin && (
-              <>
-                <h4 className="sec">{t(locale, 'fin_from_rev')}</h4>
-                <div className="mrow">
-                  <span className="lbl">{t(locale, 'fin_rev_base')}</span>
-                  <span>{money(baseR)}</span>
-                </div>
-                <div className="mrow">
-                  <span className="lbl">{t(locale, 'fin_rev_fuel')}</span>
-                  <span>{money(bafR)}</span>
-                </div>
-                <div className="mrow">
-                  <span className="lbl">{t(locale, 'a6_fin_cost_scx')}</span>
-                  <span style={{ color: 'var(--red)' }}>− {money(cost)}</span>
-                </div>
-                <div className="mrow total">
-                  <span>{t(locale, 'sched_col_margin')}</span>
-                  <span style={{ color: 'var(--go)' }}>
-                    {money(rev - cost)} · {pct(rev ? (rev - cost) / rev : 0)}
-                  </span>
-                </div>
-                <div data-margin-split>
-                  {(['FAKTURA', 'REALIZACJA', 'PROGNOZA'] as const).map((k) => (
-                    <div key={k} className="mrow" data-margin-tier={k} data-count={split.tiers[k].count}>
-                      <span className="lbl">
-                        <span className={`pill ${TIER_PILL[k]}`}>{t(locale, `tier_${k}`)}</span> {t(locale, `m11_${k}`)} · {split.tiers[k].count}
-                      </span>
-                      <span>{splitMoney(split.tiers[k])}</span>
-                    </div>
-                  ))}
-                  <div className="mrow total" data-margin-total data-count={split.total.count}>
-                    <span>
-                      {t(locale, 'm11_total')} · {split.total.count}
-                      {split.skipped ? ` · ${t(locale, 'm11_skipped')}: ${split.skipped}` : ''}
-                    </span>
-                    <span style={{ color: 'var(--go)' }}>{splitMoney(split.total)}</span>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-          <div>
-            <h4 className="sec" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {t(locale, 'fin_fuel_addon')}
-              {PROD_BUILD ? null : <DemoMark />}
-            </h4>
-            {PROD_BUILD ? <div className="note" data-no-source="fuel-finance">{t(locale, 'i2_fin_fuel_prod')}</div> : bafCard}
-          </div>
-        </div>
-
-        <div className="hr" />
-        <h4 className="sec">{t(locale, 'fin_tiers')}</h4>
-        <div data-tier-summary>
-          {TIERS.map((k) => (
-            <div key={k} className="mrow">
-              <span className="lbl"><span className={`pill ${TIER_PILL[k]}`}>{t(locale, `tier_${k}`)}</span></span>
-              <span data-tier-count={k}>{tiers.counts[k]}</span>
+      {s.count ? (
+        <dl className="fin-kv">
+          {side === 'both' ? (
+            <>
+              <div className="strong"><dt>{ft(locale, 'p5_fin_card_margin')}</dt><dd>{m(s.rev, s.cost)} {cur}</dd></div>
+              <div><dt>{ft(locale, 'p5_fin_card_revcost')}</dt><dd>{n(s.rev)} / {n(s.cost)}</dd></div>
+            </>
+          ) : (
+            <div className="strong">
+              <dt>{ft(locale, side === 'rev' ? 'p5_fin_card_due_ksh' : 'p5_fin_card_due_scx')}</dt>
+              <dd>{n(side === 'rev' ? s.rev : s.cost)} {cur}</dd>
             </div>
-          ))}
-          <div className="mrow">
-            <span className="lbl"><span className="pill p-amber">{t(locale, 'fx_provisional')}</span></span>
-            <span data-tier-provisional>{tiers.provisional}</span>
-          </div>
-        </div>
-        {tiers.errors.length > 0 ? (
-          <div className="note" data-money-errors style={{ margin: '11px 0 0', color: 'var(--red)' }}>
-            {t(locale, 'fin_tiers_err')}: {tiers.errors.length} · <span className="mono">{tiers.errors.join(', ')}</span>
-          </div>
-        ) : (
-          <div className="note" data-money-ok style={{ margin: '11px 0 0' }}>{t(locale, 'fin_tiers_ok')}</div>
-        )}
+          )}
+        </dl>
+      ) : null}
+    </article>
+  );
+  const countOf = (k: FinStage) => fin.stages.find((s) => s.stage === k)?.count ?? 0;
+  /* telefon (img/e16-after): etapy z transportami najpierw, puste na końcu */
+  const phoneStages = [...PHONE_ORDER].sort((a, b) => (countOf(a) ? 0 : 1) - (countOf(b) ? 0 : 1));
+  const totalAmt = side === 'rev' ? fin.total.rev : fin.total.cost;
 
-        {role === 'HHL' && showMargin && (
-          <>
-            <div className="hr" />
-            <h4 className="sec">
-              {t(locale, 'fin_margin_by_type')}
-              {phone ? <span className="sub" data-fin-type-count="">{tp(locale, 'p22_fin_types_n', { n: byType.length })}</span> : null}
-            </h4>
-            {phone ? (
-              /* wyglad/P2-2 W3 (E8 pkt 2, img/e8-after „Finanse · marża według typu”): karta na typ elementu. */
-              <div className="mcards" data-fin-type-cards="">
-                {byType.map((row) => (
-                  <article key={row.k} className="mcard" data-fin-type-card={row.k}>
-                    <header className="mcard-hd">
-                      <b data-content>{row.k}</b>
-                      <span className="mcard-sub">{tp(locale, 'p22_fin_qty_n', { n: row.n })}</span>
-                    </header>
-                    <dl className="mcard-kv">
-                      <div><dt>{t(locale, 'sched_col_rev')}</dt><dd>{money(row.r)}</dd></div>
-                      <div><dt>{t(locale, 'cost')}</dt><dd>{money(row.c)}</dd></div>
-                      <div className="strong">
-                        <dt>{t(locale, 'sched_col_margin')}</dt>
-                        <dd>{money(row.m)} · {pct(row.p)}</dd>
-                      </div>
-                    </dl>
-                  </article>
-                ))}
-              </div>
-            ) : (
-            <table style={{ width: '100%', fontSize: 13 }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left' }}>{t(locale, 'inv_type')}</th>
-                  <th className="num">{t(locale, 'a6_fin_qty')}</th>
-                  <th className="num">{t(locale, 'sched_col_rev')}</th>
-                  <th className="num">{t(locale, 'cost')}</th>
-                  <th className="num">{t(locale, 'sched_col_margin')}</th>
-                  <th style={{ width: 140 }} />
-                </tr>
-              </thead>
-              <tbody>
-                {byType.map((row) => (
-                  <tr key={row.k}>
-                    <td>
-                      <span className="code" data-content>{row.k.slice(0, 8)}</span> <span data-content>{row.k}</span>
-                    </td>
-                    <td className="num">{row.n}</td>
-                    <td className="num">{money(row.r)}</td>
-                    <td className="num">{money(row.c)}</td>
-                    <td className={`num money ${row.p < 0.18 ? 'neg' : ''}`}>
-                      {money(row.m)} · {pct(row.p)}
-                    </td>
-                    <td>
-                      <svg width="130" height="12">
-                        <rect width={(row.r / maxAbs) * 130} height="12" fill="var(--rule)" />
-                        <rect width={(row.c / maxAbs) * 130} height="12" fill="var(--sea)" fillOpacity={0.55} />
-                      </svg>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            )}
-            <div className="note" style={{ margin: '11px -13px -13px' }}>
-              <span data-content>{t(locale, 'a6_fin_no_zero')}</span>
-            </div>
-            {below.length > 0 ? (
-              <>
-                <div className="hr" />
-                <h4 className="sec">{t(locale, 'fin_below_margin')}</h4>
-                {below.map((l) => (
-                  <div key={l.id} className="mrow">
-                    <span className="lbl">
-                      <span className="code" data-content>{transportLabel(l, role)}</span> <span data-content>{l.itemType}</span>
-                    </span>
-                    <span style={{ color: 'var(--red)' }}>
-                      {l.pricing.money?.v === 2 ? (
-                        <><span className={`pill ${TIER_PILL[moneyViewFor('HHL', l.pricing.money).tier]}`} data-tier={l.pricing.money.tier}>{t(locale, `tier_${l.pricing.money.tier}`)}</span>{' '}</>
-                      ) : null}
-                      {(l.pricing.marginPct * 100).toFixed(1)}% · {money(l.pricing.margin)}
-                    </span>
-                  </div>
-                ))}
-              </>
-            ) : null}
-          </>
-        )}
+  /* ---------- karty z boku (HHL) ---------- */
+  const nbpCard = (
+    <section className="panel fin-panel" data-fin-nbp data-deur-exempt="fx-nbp" aria-labelledby="fin-nbp-h">
+      <header className="panel-hd fin-hd2"><h3 id="fin-nbp-h">{ft(locale, 'p5_fin_nbp_h')}</h3></header>
+      {phone ? (
+        <p className="fin-muted fin-pad">{nbp ? ftp(locale, 'p5_fin_nbp_short', { table: nbp.tableNo, date: nbpDate.slice(0, 5), mid: formatPlNumber(nbp.mid, 4) }) : ft(locale, 'p5_fin_nbp_none')}</p>
+      ) : (
+        <>
+          <dl className="fin-dl">
+            <dt>{ft(locale, 'p5_fin_nbp_last')}</dt>
+            <dd>{nbp ? <><b>{nbp.tableNo}</b> {ftp(locale, 'p5_fin_nbp_last_v', { date: nbpDate, mid: formatPlNumber(nbp.mid, 4) })}</> : ft(locale, 'p5_fin_nbp_none')}</dd>
+            <dt>{ft(locale, 'p5_fin_nbp_fetch')}</dt>
+            <dd>{ft(locale, 'p5_fin_nbp_fetch_v')}</dd>
+            <dt>{ft(locale, 'p5_fin_nbp_done')}</dt>
+            <dd>{ft(locale, 'p5_fin_nbp_done_v')}</dd>
+            <dt>{ft(locale, 'p5_fin_nbp_before')}</dt>
+            <dd>{ft(locale, 'p5_fin_nbp_before_v')}</dd>
+          </dl>
+          <p className="fin-muted fin-pad">{ft(locale, 'p5_fin_nbp_foot')}</p>
+        </>
+      )}
+    </section>
+  );
+  const flagCard = (
+    <section className="panel fin-panel" data-fin-flag={threshold == null ? 'off' : 'on'} aria-labelledby="fin-flag-h">
+      <header className="panel-hd fin-hd2"><h3 id="fin-flag-h">{ft(locale, 'p5_fin_flag_h')}</h3></header>
+      <dl className="fin-dl fin-dl-rows">
+        <dt>{ft(locale, 'p5_fin_flag_thr')}</dt>
+        <dd><b>{threshold == null ? ft(locale, 'p5_fin_flag_thr_none') : `${formatPlNumber(threshold, 0)}%`}</b></dd>
+        <dt>{ft(locale, 'p5_fin_flag_below')}</dt>
+        <dd><b data-fin-below-count={below.length}>{threshold == null ? ft(locale, 'p5_fin_flag_off') : below.length}</b></dd>
+      </dl>
+      {below.length ? (
+        <div className="fin-below" data-fin-below>
+          <h4 className="sec">{ft(locale, 'p5_fin_flag_list_h')}</h4>
+          <ul>
+            {below.map((b) => (
+              <li key={b.id} data-fin-below-row={b.code}>
+                <span><b data-content>{b.code}</b> <span className="fin-muted" data-content>{b.type}</span></span>
+                <span className="neg">{pctText(b.marginPct)} · {formatPlNumber(pln && b.marginPln != null ? b.marginPln : b.marginEur, 2)} {pln && b.marginPln != null ? 'PLN' : 'EUR'}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <p className="fin-muted fin-pad">{ft(locale, 'p5_fin_flag_note')}</p>
+    </section>
+  );
+  const fuelCard = (
+    <section className="panel fin-panel" data-fin-fuel-card aria-labelledby="fin-fuel-card-h">
+      <header className="panel-hd fin-hd2"><h3 id="fin-fuel-card-h">{ft(locale, 'p5_fin_fuel_h')}</h3></header>
+      <p className="fin-muted fin-pad">{ft(locale, 'p5_fin_fuel_p')}</p>
+      <div className="fin-pad fin-links">
+        <a className="btn ghost" href="#fin-fuel" onClick={(e) => { e.preventDefault(); document.getElementById('fin-fuel')?.scrollIntoView({ block: 'start' }); }}>
+          {ft(locale, 'p5_fin_fuel_go_table')}
+        </a>
       </div>
+    </section>
+  );
+
+  /* ---------- marża według rodzaju (HHL) ---------- */
+  const marginCls = (rev: number, cost: number) => {
+    const p = marginPct(rev, cost);
+    return threshold != null && p != null && p < threshold ? 'num neg' : 'num';
+  };
+  const typesBlock = side === 'both' ? (
+    phone ? (
+      <section className="fin-sec" aria-labelledby="fin-types-h">
+        <h4 className="sec" id="fin-types-h">{ft(locale, 'p5_fin_types_h')} <span className="sub" data-fin-type-count>{ftn(locale, 'p5_fin_types_n', fin.types.length)}</span></h4>
+        <div className="fin-cards" data-fin-type-cards>
+          {fin.types.map((r) => (
+            <article key={r.type} className="fin-card" data-fin-type-card={r.type}>
+              <header className="fin-card-hd"><b data-content>{r.type}</b><span className="fin-muted">{r.priced} / {r.all}</span></header>
+              <dl className="fin-kv">
+                <div className="strong"><dt>{ft(locale, 'p5_fin_card_margin')}</dt><dd className={marginCls(r.rev.eur, r.cost.eur)}>{m(r.rev, r.cost)} · {pctText(marginPct(r.rev.eur, r.cost.eur))}</dd></div>
+                <div><dt>{ft(locale, 'p5_fin_card_revcost')}</dt><dd>{n(r.rev)} / {n(r.cost)}</dd></div>
+              </dl>
+            </article>
+          ))}
+        </div>
+      </section>
+    ) : (
+      <section className="fin-sec" aria-labelledby="fin-types-h">
+        <h4 className="sec" id="fin-types-h">{ft(locale, 'p5_fin_types_h')}</h4>
+        <table className="fin-table" data-fin-types>
+          <thead>
+            <tr>
+              <th>{up(ft(locale, 'p5_fin_col_type'))}</th>
+              <th className="num">{up(ft(locale, 'p5_fin_col_priced'))}</th>
+              <th className="num">{up(ft(locale, 'p5_fin_col_rev_s'))}</th>
+              <th className="num">{up(ft(locale, 'p5_fin_col_cost_s'))}</th>
+              <th className="num">{up(ft(locale, 'p5_fin_col_margin'))}</th>
+              <th className="num">{up(ft(locale, 'p5_fin_col_pct'))}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {fin.types.map((r) => (
+              <tr key={r.type} data-fin-type={r.type}>
+                <td data-content>{r.type}</td>
+                <td className="num">{r.priced} / {r.all}</td>
+                <td className="num">{n(r.rev)}</td>
+                <td className="num">{n(r.cost)}</td>
+                <td className={marginCls(r.rev.eur, r.cost.eur)}>{m(r.rev, r.cost)}</td>
+                <td className={marginCls(r.rev.eur, r.cost.eur)}>{pctText(marginPct(r.rev.eur, r.cost.eur))}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    )
+  ) : null;
+
+  const stagesNote = ft(locale, side === 'both' ? 'p5_fin_stages_note' : side === 'rev' ? 'p5_fin_stages_note_ksh' : 'p5_fin_stages_note_scx');
+  const stagesTitle = ft(locale, side === 'both' ? 'p5_fin_stages_h' : side === 'rev' ? 'p5_fin_stages_h_ksh' : 'p5_fin_stages_h_scx');
+
+  if (phone) {
+    const marginAll = fin.total.rev.eur - fin.total.cost.eur;
+    return (
+      <div className="fin-page" data-page="finance" data-fin-side={side}>
+        <header className="fin-head">
+          <h2>{title}</h2>
+          <span className="fin-cur" data-fin-cur>{cur}</span>
+        </header>
+        <p className="fin-muted fin-line" data-fin-sub>
+          {unpriced ? ftp(locale, 'p5_fin_priced_line', { priced: fin.priced, unpriced }) : ftp(locale, 'p5_fin_priced_all', { priced: fin.priced })}
+        </p>
+        <article className="fin-card fin-card-big" data-fin-total data-count={fin.total.count}>
+          <header className="fin-card-hd">
+            <b>{side === 'both' ? ft(locale, 'p5_fin_margin_total') : ft(locale, side === 'rev' ? 'p5_fin_card_due_ksh' : 'p5_fin_card_due_scx')}</b>
+            {side === 'both' ? <b>{pctText(marginPct(fin.total.rev.eur, fin.total.cost.eur))}</b> : null}
+          </header>
+          <div className="fin-big">{side === 'both' ? `${formatPlNumber(pln ? (fin.total.rev.pln ?? 0) - (fin.total.cost.pln ?? 0) : marginAll, 2)} ${cur}` : `${n(totalAmt)} ${cur}`}</div>
+          {side === 'both' ? <p className="fin-muted">{ftp(locale, 'p5_fin_margin_line', { rev: n(fin.total.rev), cost: n(fin.total.cost) })}</p> : null}
+        </article>
+        <div className="fin-cards" data-fin-stage-cards>{phoneStages.map((k) => stageCard(fin.stages.find((s) => s.stage === k)!))}</div>
+        {plnNote ? <p className="fin-muted fin-line">{plnNote}</p> : null}
+        {side === 'both' ? nbpCard : null}
+        {side === 'both' ? flagCard : null}
+        {typesBlock}
+        <FuelWeekTable rows={fuel} locale={locale} phone />
+        {pack}
+      </div>
+    );
+  }
+
+  return (
+    <div className="fin-page" data-page="finance" data-fin-side={side}>
+      <div className={side === 'both' ? 'fin-grid' : 'fin-grid one'}>
+        <section className="panel fin-panel fin-main" aria-labelledby="fin-title">
+          <Head locale={locale} title={title} sub={subFull} cur={cur} />
+          <div className="fin-body">
+            <section className="fin-sec" aria-labelledby="fin-stages-h">
+              <h4 className="sec" id="fin-stages-h">{stagesTitle}</h4>
+              {stagesTable}
+              <p className="fin-muted">{stagesNote}</p>
+              {plnNote ? <p className="fin-muted">{plnNote}</p> : null}
+            </section>
+            {typesBlock}
+          </div>
+        </section>
+        {side === 'both' ? (
+          <aside className="fin-side">
+            {nbpCard}
+            {flagCard}
+            {fuelCard}
+          </aside>
+        ) : null}
+      </div>
+      <FuelWeekTable rows={fuel} locale={locale} phone={false} />
+      {pack}
     </div>
   );
 }
+

@@ -1,6 +1,8 @@
 /**
  * III-6 (SCOPE 6.1) — wymagalność i terminy dokumentów z bazy na BUILDZIE PRODUKCYJNYM i lokalnym Supabase.
- * HHL: tabela wymagań z bazy (7 kategorii), zmiana terminu CMR zapisana w doc_requirements (audit_log), kolumna „Po terminie”.
+ * HHL: tabela wymagań z bazy (wyglad/P5, E31: zezwolenia, CMR i dwie polisy — bez rysunku, POD i zdjęć mocowania),
+ * kolumna „Po terminie” = stan z bazy; terminy tylko do odczytu na stronie Dokumenty. Zmiana terminu CMR —
+ * Opcje › Zezwolenia i dokumenty (E12, L26), zapis w doc_requirements (audit_log) bez zmian.
  * KSH: widzi wymagania, bez przycisku zmiany; próba RPC jako KSH odrzucona w bazie (test i2).
  * Uruchamia: SPEC=tests/iii6-docs.local.spec.ts scripts/i2/local-ui.sh
  */
@@ -41,19 +43,25 @@ test('HHL: wymagania z bazy, zmiana terminu CMR zapisana', async ({ page }) => {
   await page.locator('nav [data-view="docs"]').first().click();
   const cmr = page.locator('tr[data-docreq="CMR"]');
   await expect(cmr.locator('[data-docreq-text]')).toContainText('2 h');
-  await expect(page.locator('tr[data-docreq]')).toHaveCount(7);
-  await expect(page.locator('[data-docreq-proposal]')).toBeVisible();
+  // wyglad/P5, E31 pkt 1: zezwolenie PL, zezwolenie SE, CMR, polisa przewoźnika, polisa HHL
+  await expect(page.locator('tr[data-docreq]')).toHaveCount(5);
+  await expect(page.locator('[data-docreq-note]')).toBeVisible();
   await expect(cmr.locator('[data-docreq-overdue]')).toHaveCount(1);
-  await cmr.locator('[data-action="docreq-edit"]').click();
-  await cmr.locator('[data-docreq-hours]').fill('6');
-  await cmr.locator('[data-action="docreq-save"]').click();
-  await expect(cmr.locator('[data-docreq-text]')).toContainText('6 h');
-  await expect.poll(() => psql(`select offset_hours from doc_requirements where category='CMR'`)).toBe('6');
-  expect(Number(psql(`select count(*) from audit_log where action='DOC_REQUIREMENT_SET' and new_value->>'offset_hours'='6'`))).toBeGreaterThan(0);
+  await expect(page.locator('[data-action="docreq-edit"]')).toHaveCount(0);
   // stan z bazy: liczba „po terminie” w UI = liczba OVERDUE w doc_requirements_status (konto HHL widzi wszystkie transporty)
   const permit = page.locator('tr[data-docreq="PERMIT_PL"] [data-docreq-overdue]');
   const dbOverdue = psql(`select count(*) from doc_requirements_status((select id from projects limit 1)) where category='PERMIT_PL' and state='OVERDUE'`);
   await expect(permit).toHaveAttribute('data-docreq-overdue', dbOverdue);
+  // zmiana terminu: Opcje › Zezwolenia i dokumenty (E12, L26)
+  await page.locator('nav [data-view="options"]').first().click();
+  await page.locator('[data-opt-nav="permits"]').first().click();
+  const term = page.locator('[data-doc-terms] tr[data-docreq="CMR"]');
+  await term.locator('[data-action="docreq-edit"]').click();
+  await term.locator('[data-docreq-hours]').fill('6');
+  await term.locator('[data-action="docreq-save"]').click();
+  await expect(term.locator('[data-docreq-text]')).toContainText('6 h');
+  await expect.poll(() => psql(`select offset_hours from doc_requirements where category='CMR'`)).toBe('6');
+  expect(Number(psql(`select count(*) from audit_log where action='DOC_REQUIREMENT_SET' and new_value->>'offset_hours'='6'`))).toBeGreaterThan(0);
 });
 
 test('KSH: wymagania widoczne, bez możliwości zmiany', async ({ page }) => {

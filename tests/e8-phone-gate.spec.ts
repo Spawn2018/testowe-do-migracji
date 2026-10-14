@@ -301,17 +301,19 @@ test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
     await openView(page, 'fin');
     const finCards = page.locator('[data-fin-type-cards] [data-fin-type-card]');
     expect(await finCards.count()).toBeGreaterThan(0);
-    await expect(finCards.first().locator('.mcard-kv dt')).toHaveCount(3);
+    /* przepisane w wyglad/P5 — E16 telefon (img/e16-after): karta rodzaju jak karta etapu — „Marża” i „Przychód / koszt” */
+    await expect(finCards.first().locator('.fin-kv dt')).toHaveText(['Marża', 'Przychód / koszt']);
     await expect(page.locator('[data-fin-type-count]')).toBeVisible();
 
     await openView(page, 'docs');
     const docCards = page.locator('[data-docreq-cards] [data-docreq-card]');
     expect(await docCards.count()).toBeGreaterThan(0);
-    await expect(docCards.first().locator('.mcard-foot')).toContainText('Komplet');
+    /* przepisane w wyglad/P5 — E31 telefon (img/e31-after): karta wymagania z terminem i liczbą po terminie, bez „Komplet” */
+    await expect(page.locator('[data-docreq-card="PERMIT_PL"]')).toContainText('przed załadunkiem');
     await expect(page.locator('[data-docreq]')).toHaveCount(0);
-    const upload = await page.locator('[data-page="docs"] > .panel-hd > .btn:not(.ghost)').boundingBox();
-    const hd = await page.locator('[data-page="docs"] > .panel-hd').boundingBox();
-    expect(upload && hd && upload.width).toBeGreaterThan((hd?.width ?? 0) - 40);
+    const upload = await page.locator('[data-page="docs"] [data-doc-upload]').boundingBox();
+    const pg = await page.locator('[data-page="docs"]').boundingBox();
+    expect(upload && pg && upload.width).toBeGreaterThan((pg?.width ?? 0) - 40);
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.waitForTimeout(300);
@@ -1084,6 +1086,268 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
       await page.locator('[data-auto-row="zones"] .arl-hd').click();
       hits.push(...await measure(page, 'dziala-samo-strefy', width, 'HHL'));
       /* „Własne reguły” (dzisiejsza lista z warunkami w JSON, ucięte na telefonie) — przebudowa E35 w P8, POROWNANIE P4-c */
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});
+
+/**
+ * wyglad/P5 — Finanse (E16, img/e16-after) i opłata paliwowa według tygodnia (E39, img/e39-after).
+ * Komputer: HHL — etapy z marżą, rodzaje, kurs NBP, flaga marży; KSH i SCX — tylko swoja strona, bez marży.
+ * Telefon 360 / 390 / 430: karty etapów i rodzajów, tydzień opłaty rozwinięty — ta sama brama E8 (0 w każdej kolumnie).
+ */
+test.describe('wyglad/P5 Finanse — E16, E39, E40', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+
+  test('komputer: HHL tabela etapów z marżą, rodzaje, NBP i flaga; KSH i SCX jedna kolumna; wiersz tygodnia się rozwija', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'fin');
+    const stages = page.locator('[data-fin-stages="both"]');
+    await expect(stages.locator('thead th')).toHaveText(['ETAP ROZLICZENIA', 'TRANSPORTY', 'PRZYCHÓD (KSH)', 'KOSZT (SCX)', 'MARŻA', '%']);
+    await expect(stages.locator('tbody [data-fin-stage]')).toHaveCount(3);
+    await expect(page.locator('[data-fin-types] tbody tr').first()).toBeVisible();
+    await expect(page.locator('[data-fin-nbp]')).toContainText('Ostatnia tabela');
+    await expect(page.locator('[data-fin-flag]')).toContainText('Próg marży');
+    const week = page.locator('[data-fuel-table] tr[data-fuel-week]').first();
+    await week.click();
+    await expect(page.locator('[data-fuel-detail]')).toHaveCount(1);
+    await week.locator('[data-fuel-toggle]').press('Enter');
+    await expect(page.locator('[data-fuel-detail]')).toHaveCount(0);
+    // E40: paczka tygodnia dla księgowości — dwie paczki; zablokowana wysyłka jest szara i ma powód
+    await expect(page.locator('[data-fin-pack] [data-pack]')).toHaveCount(2);
+    await expect(page.locator('[data-fin-pack] [data-pack-files="KSH"] li').last()).toContainText('Zestawienie_');
+    for (const key of ['KSH', 'HHL'] as const) {
+      const why = page.locator(`[data-pack="${key}"] [data-pack-why]`);
+      if (await why.count()) await expect(page.locator(`[data-pack-send="${key}"]`)).toBeDisabled();
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1441);
+    for (const [r, head] of [['KSH', 'DO ZAPŁATY'], ['SCX', 'NALEŻNOŚĆ']] as const) {
+      await boot(page, r);
+      await openView(page, 'fin');
+      const t = page.locator(`[data-fin-stages="${r === 'KSH' ? 'rev' : 'cost'}"]`);
+      await expect(t.locator('thead th')).toHaveCount(3);
+      await expect(t.locator('thead th').nth(2)).toContainText(head);
+      await expect(page.locator('[data-page="finance"]')).not.toContainText('Marża');
+      await expect(page.locator('[data-fin-nbp], [data-fin-flag], [data-fin-types], [data-fin-pack]')).toHaveCount(0);
+      await expect(page.locator('[data-fuel-table]')).toBeVisible();
+    }
+  });
+
+  for (const role of ['HHL', 'KSH', 'SCX'] as const) {
+    test(`telefon ${role}: karty etapów, rodzajów i tygodni opłaty — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role);
+      await openView(page, 'fin');
+      await expect(page.locator('[data-fin-stage-cards] [data-fin-stage]')).toHaveCount(3);
+      await expect(page.locator('table.fin-table')).toHaveCount(0);
+      await page.locator('#fin-fuel [data-fuel-week] .fin-card-btn').first().click();
+      await expect(page.locator('[data-fuel-detail]')).toHaveCount(1);
+      const hits: Hit[] = [];
+      for (const width of WIDTHS) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.waitForTimeout(200);
+        hits.push(...await measure(page, 'finanse-p5', width, role));
+      }
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});
+
+test.describe('wyglad/P5 Faktury — E4, E4b', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+
+  test('komputer: HHL dwie zakładki (strzałki), kafelki, obieg, lista z jednym statusem; KSH i SCX jedna sekcja', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'inv');
+    const koszt = page.locator('[data-inv-tab="KOSZT"]');
+    await expect(koszt).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#inv-panel-PRZYCHOD')).toBeHidden();
+    await expect(page.locator('[data-inv-kpis="KOSZT"] [data-inv-kpi]')).toHaveCount(4);
+    await expect(page.locator('[data-inv-flow="KOSZT"] li')).toHaveCount(5);
+    await expect(page.locator('#inv-panel-KOSZT table.inv-table thead th')).toHaveText(['TYDZIEŃ', 'FAKTURA', 'TRANSPORTY', 'NETTO', 'VAT 23 %', 'BRUTTO', 'TERMIN', 'STATUS', /.*/]);
+    for (const row of await page.locator('#inv-panel-KOSZT tr[data-bill]').all()) {
+      await expect(row.locator('[data-bill-status]')).toHaveCount(1);
+    }
+    await expect(page.locator('[data-verify="ZGODNA"], [data-bill-quick="ZGODNA"]')).toHaveCount(0);
+    await koszt.focus();
+    await koszt.press('ArrowRight');
+    await expect(page.locator('[data-inv-tab="PRZYCHOD"]')).toBeFocused();
+    await expect(page.locator('#inv-panel-PRZYCHOD')).toBeVisible();
+    await expect(page.locator('#inv-panel-KOSZT')).toBeHidden();
+    await expect(page.locator('[data-inv-flow="PRZYCHOD"]')).toContainText('Termin 30 dni od wystawienia');
+    await expect(page.locator('[data-page="invoices"]')).toContainText('Kto co widzi i co robi');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1441);
+    for (const [r, dir] of [['KSH', 'PRZYCHOD'], ['SCX', 'KOSZT']] as const) {
+      await boot(page, r);
+      await openView(page, 'inv');
+      await expect(page.locator('[data-inv-tab]')).toHaveCount(0);
+      await expect(page.locator('[data-bill-section]')).toHaveCount(1);
+      await expect(page.locator(`[data-bill-section="${dir}"] [data-inv-kpi]`)).toHaveCount(4);
+    }
+    await page.locator('[data-bill-new="KOSZT"]').click();
+    await expect(page.locator('[data-inv-flow="KOSZT"]')).toContainText('Termin 35 dni od wystawienia');
+    await expect(page.locator('[data-bill-wizard="KOSZT"] [data-w="submit"]')).toBeVisible();
+  });
+
+  for (const role of ['HHL', 'KSH', 'SCX'] as const) {
+    test(`telefon ${role}: kafelki 2 × 2 i karty faktur — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role);
+      await openView(page, 'inv');
+      await expect(page.locator('table.inv-table')).toHaveCount(0);
+      await expect(page.locator('[data-inv-flow]')).toHaveCount(0);
+      await expect(page.locator('#inv-who-h')).toHaveCount(0);
+      expect(await page.locator('.inv-cards [data-bill]').count()).toBeGreaterThan(0);
+      const hits: Hit[] = [];
+      for (const width of WIDTHS) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.waitForTimeout(200);
+        hits.push(...await measure(page, 'faktury-p5', width, role));
+      }
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});
+
+test.describe('wyglad/P5 Dokumenty — E31', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+
+  test('komputer: wymagania (po terminie, 7 dni), terminy tylko do odczytu, zezwolenia, pliki z filtrami, okno „Wgraj dokument”', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'docs');
+    await expect(page.locator('table.doc-req thead th')).toHaveText(['DOKUMENT', 'KTO WGRYWA', 'TERMIN', 'PO TERMINIE', 'W CIĄGU 7 DNI', 'UWAGI']);
+    await expect(page.locator('tr[data-docreq]')).toHaveCount(5);
+    await expect(page.locator('[data-action="docreq-edit"]')).toHaveCount(0);
+    await expect(page.locator('table.doc-req')).not.toContainText(/Rysunek|POD|mocowania/);
+    const count = page.locator('tr[data-docreq] .doc-count').first();
+    if (await count.count()) {
+      await count.click();
+      await expect(page.locator('[data-docreq-list] li').first()).toBeVisible();
+    }
+    await expect(page.locator('[data-doc-permits] tbody tr')).toHaveCount(3);
+    await expect(page.locator('[data-doc-files] [data-doc-f]')).toHaveCount(3);
+    await page.locator('[data-doc-upload]').click();
+    const modal = page.locator('[data-upload-modal]');
+    await expect(modal).toBeVisible();
+    await modal.locator('[data-up-search]').fill('SG-0');
+    await expect(modal.locator('[data-up-load]')).not.toHaveValue('');
+    await expect(modal.locator('[data-up-send]')).toBeDisabled();
+    await page.keyboard.press('Escape');
+    await expect(modal).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1441);
+    await boot(page, 'KSH');
+    await openView(page, 'docs');
+    await expect(page.locator('[data-doc-upload]')).toHaveCount(0);
+    await expect(page.locator('tr[data-docreq="INSURANCE"]')).toHaveCount(0);
+    await expect(page.locator('tr[data-docreq="OCS"]')).toHaveCount(1);
+    await expect(page.locator('[data-doc-permits]')).toHaveCount(0);
+  });
+
+  for (const role of ['HHL', 'KSH', 'SCX'] as const) {
+    test(`telefon ${role}: karty wymagań, pliki, paczka tygodnia${role === 'KSH' ? '' : ', okno „Wgraj dokument”'} — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role);
+      await openView(page, 'docs');
+      await expect(page.locator('table.doc-req')).toHaveCount(0);
+      expect(await page.locator('[data-docreq-cards] [data-docreq-card]').count()).toBeGreaterThan(0);
+      const hits: Hit[] = [];
+      for (const width of WIDTHS) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.waitForTimeout(200);
+        hits.push(...await measure(page, 'dokumenty-p5', width, role));
+      }
+      if (role !== 'KSH') {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.locator('[data-doc-upload]').click();
+        await expect(page.locator('[data-upload-modal]')).toBeVisible();
+        for (const width of WIDTHS) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(200);
+          hits.push(...await measure(page, 'wgraj-p5', width, role));
+        }
+      }
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});
+
+test.describe('wyglad/P5 panel transportu — Ceny (E33) i Dokumenty (E31 pkt 5)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  async function openTab(page: Page, code: string, tab: number) {
+    await page.evaluate((c) => { window.location.hash = `#/transport/${c}`; }, code);
+    await page.waitForSelector('aside.drawer', { timeout: 10_000 });
+    await page.locator('.drawer .dtabs button').nth(tab).click();
+    await page.waitForTimeout(400);
+  }
+
+  test('komputer: HHL tabela koszt / przychód, marża, karta paliwa, dopłaty, zasady, okno „Dopłata”; KSH i SCX jedna kolumna', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openTab(page, 'SG-03', 3);
+    await expect(page.locator('.drawer [data-pp-table] thead th')).toHaveText([/.*/, 'KOSZT · SCX', 'PRZYCHÓD · KSH']);
+    await expect(page.locator('.drawer [data-pp-row]')).toHaveCount(4);
+    await expect(page.locator('.drawer [data-pp-margin]')).toContainText('%');
+    await expect(page.locator('.drawer [data-pp-fuel]')).toBeVisible();
+    await expect(page.locator('.drawer [data-fee]')).toHaveCount(3);
+    await expect(page.locator('.drawer [data-fee-rules]')).toBeVisible();
+    await expect(page.locator('.drawer')).not.toContainText(/WSTĘPNE|OPL-8|Inne/);
+    await page.locator('.drawer [data-fee-add]').click();
+    await expect(page.locator('[data-fee-modal] [data-fee-kind]')).toHaveCount(2);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-fee-modal]')).toHaveCount(0);
+    await openTab(page, 'SG-03', 2);
+    await expect(page.locator('.drawer [data-pd-req]')).toHaveCount(5);
+    await expect(page.locator('.drawer [data-pd-zip]')).toBeVisible();
+    for (const r of ['KSH', 'SCX'] as const) {
+      await boot(page, r);
+      await openTab(page, 'SG-03', 3);
+      await expect(page.locator('.drawer [data-pp-table] thead')).toHaveCount(0);
+      await expect(page.locator('.drawer [data-pp-margin]')).toHaveCount(0);
+      await expect(page.locator('.drawer')).not.toContainText(r === 'KSH' ? 'Koszt' : 'Przychód');
+      await openTab(page, 'SG-03', 2);
+      await expect(page.locator(`.drawer [data-pd-req="${r === 'KSH' ? 'INSURANCE' : 'OCS'}"]`)).toHaveCount(0);
+      if (r === 'KSH') await expect(page.locator('.drawer [data-pd-upload]')).toHaveCount(0);
+    }
+  });
+
+  for (const role of ['HHL', 'KSH', 'SCX'] as const) {
+    test(`telefon ${role}: karty ceny, szczegóły po stuknięciu${role === 'KSH' ? '' : ', „+ Dopłata”'}, dokumenty — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role);
+      await openTab(page, role === 'SCX' ? 'SG-15' : 'SG-03', 3);
+      await expect(page.locator('.drawer [data-pp-phone]')).toBeVisible();
+      await expect(page.locator('.drawer [data-pp-table]')).toHaveCount(0);
+      const hits: Hit[] = [];
+      for (const key of ['fuel', 'fees', 'rules']) {
+        const card = page.locator(`.drawer [data-pp-card="${key}"] .pp-card-hd`);
+        if (await card.count()) await card.click();
+        for (const width of WIDTHS) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(150);
+          hits.push(...await measure(page, `ceny-${key}`, width, role));
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
+      }
+      if (role !== 'KSH') {
+        await page.locator('.drawer [data-fee-add]').click();
+        await expect(page.locator('[data-fee-modal]')).toBeVisible();
+        for (const width of WIDTHS) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(150);
+          hits.push(...await measure(page, 'doplata', width, role));
+        }
+        await page.keyboard.press('Escape');
+        await page.setViewportSize({ width: 390, height: 844 });
+      }
+      await openTab(page, 'SG-03', 2);
+      for (const width of WIDTHS) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.waitForTimeout(150);
+        hits.push(...await measure(page, 'panel-dokumenty', width, role));
+      }
       expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
     });
   }

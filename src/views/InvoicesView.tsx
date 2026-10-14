@@ -1,419 +1,123 @@
+/**
+ * wyglad/P5 — Faktury (E4, img/e4-faktury-desk / -phone; E4b faktoring).
+ * Jedna strona z modułem zapisującym w bazie (rejestracja, weryfikacja, opłacenie — bez zmian działania).
+ * HHL: zakładki „Od przewoźnika · koszt” i „Do KSH · przychód”; KSH widzi tylko faktury od HHL, SCX tylko swoje.
+ * Każda zakładka: kafelki (czeka na wystawienie, do weryfikacji, do zapłaty w 7 dni, po terminie), obieg (komputer),
+ * lista z jednym statusem, nowa faktura. Panel makiety (porównanie trójstronne tygodnia 38, lokalne przyciski,
+ * formularz oferty faktoringu) usunięty (E4 „Jedna strona”, E4b „Usunąć”). Telefon: kafelki 2 × 2 i karty, bez obiegu
+ * i bez tabeli „Kto co widzi” (img/e4-faktury-phone, E8). Terminy: SCX → HHL 35 dni, HHL → KSH 30 dni (03_REJESTR).
+ */
 import { useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { attachDocumentFile } from '../lib/docFiles';
-import { canMatchInvoice, canSubmitInvoice, canSeeCost } from '../lib/permissions';
-import { t, tp } from '../i18n/messages';
-import type { Document, FactoringOffer } from '../types';
+import { canSeeCost } from '../lib/permissions';
+import { t } from '../i18n/messages';
+import { ft } from '../i18n/p5';
+import type { BillDirection, Document } from '../types';
 import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
-import { BillsPanel } from './BillsPanel';
-import {
-  billedMapFromInvoiceLines,
-  buildThreeWayMatch,
-  isLoadCompleted,
-  rateCardExpected,
-  threeWayVerdictLabel,
-  threeWayVerdictPill,
-} from '../lib/invoiceMatch';
-import { formatOpsDateTime, formatTableDay, refYearInOps } from '../lib/time';
-import { getNow } from '../lib/frozenNow';
-import { formatAppMoney } from '../lib/money/demoFx';
+import { BillsSection, WhoSees } from './BillsPanel';
+import { isLoadCompleted } from '../lib/invoiceMatch';
+import { getNowIso } from '../lib/frozenNow';
 import { transportLabel } from '../lib/transportName';
-
-/** D25 — week label from invoice / ISO week, not hard-coded copy. */
-function weekSubtitle(weekLabel: string | null | undefined, locale: 'pl' | 'en' | 'sv'): string {
-  const m = (weekLabel ?? '').match(/(\d{4})-W(\d{1,2})/i);
-  if (!m) return weekLabel || '';
-  const year = Number(m[1]);
-  const week = Number(m[2]);
-  // ISO week: Thursday of week determines dates — approximate Mon–Sun via UTC Thursday
-  const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
-  const dow = simple.getUTCDay();
-  const mon = new Date(simple);
-  mon.setUTCDate(simple.getUTCDate() - ((dow + 6) % 7));
-  const sun = new Date(mon);
-  sun.setUTCDate(mon.getUTCDate() + 6);
-  const fmt = (d: Date) =>
-    `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-  const word = t(locale, 'a6_inv_week_word');
-  return `${word} ${week} · ${fmt(mon)}–${fmt(sun)}.${year} · Scandinavian Express`;
-}
-import { docCategoryLabel, payoutStatusLabel } from '../lib/enumLabels';
-import { clickableRow } from '../lib/clickableRow';
+import { useIsPhone } from '../lib/useIsPhone';
+import { docCategoryLabel } from '../lib/enumLabels';
+import { factoringTasksOf } from '../lib/p5Source';
+import { FactoringTaskCard } from '../components/invoices/Factoring';
+import { up } from '../components/options/up';
+import '../components/finance/finance.css';
+import '../components/invoices/invoices.css';
 
 export function InvoicesView() {
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
-  const refYear = refYearInOps(getNow());
-  const currency = useTowerStore((s) => s.displayCurrency);
-  const money = (n: number) => formatAppMoney(n, locale, currency);
   const loads = useTowerStore((s) => s.loads);
-  const invoices = useTowerStore((s) => s.invoices);
-  const factoringOffer = useTowerStore((s) => s.factoringOffer);
-  const updateFactoringOffer = useTowerStore((s) => s.updateFactoringOffer);
-  const submitInvoice = useTowerStore((s) => s.submitInvoice);
-  const resolveInvoice = useTowerStore((s) => s.resolveInvoice);
-  const selectLoad = useTowerStore((s) => s.selectLoad);
-  const [useFactoring, setUseFactoring] = useState(true);
-  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
+  const bills = useTowerStore((s) => s.bills);
   const documents = useTowerStore((s) => s.documents);
+  const phone = useIsPhone();
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const attachRef = useRef<HTMLInputElement>(null);
   const [attachLoadId, setAttachLoadId] = useState<string | null>(null);
+  const sections: BillDirection[] = role === 'HHL' ? ['KOSZT', 'PRZYCHOD'] : role === 'SCX' ? ['KOSZT'] : ['PRZYCHOD'];
+  const [tab, setTab] = useState<BillDirection>(sections[0]);
+  const nowIso = getNowIso();
+  const tasks = useMemo(() => (role === 'HHL' ? factoringTasksOf(bills, nowIso) : []), [role, bills, nowIso]);
+  /* CMR do faktur: ostatnie dostarczone transporty (wgrywanie CMR z podpisem — jak dziś; okno „Wgraj dokument” E31 w P5) */
+  const recent = useMemo(() => loads.filter(isLoadCompleted).slice(-6), [loads]);
 
-  const completed = useMemo(() => loads.filter(isLoadCompleted), [loads]);
-  /** Prefer open W38 dispute / submit as billed SoT; else last completed as draft selection. */
-  const focusInvoice = useMemo(() => {
+  if (role === 'SCX' && !canSeeCost(role)) {
     return (
-      invoices.find((i) => i.weekLabel === '2026-W38' && (i.status === 'DISPUTED' || i.status === 'SUBMITTED')) ??
-      invoices.find((i) => i.status === 'DISPUTED') ??
-      invoices.find((i) => i.status === 'SUBMITTED') ??
-      null
-    );
-  }, [invoices]);
-
-  const week = useMemo(() => {
-    if (focusInvoice?.lines.length) {
-      const ids = new Set(focusInvoice.lines.map((ln) => ln.loadId));
-      const fromInv = loads.filter((l) => ids.has(l.id));
-      const extras = completed.filter((l) => !ids.has(l.id)).slice(-4);
-      return [...fromInv, ...extras];
-    }
-    return completed.slice(-6);
-  }, [focusInvoice, loads, completed]);
-
-  const match = useMemo(() => {
-    const selectedIds = focusInvoice?.lines.map((ln) => ln.loadId) ?? week.map((l) => l.id);
-    const billedByLoadId = focusInvoice
-      ? billedMapFromInvoiceLines(focusInvoice.lines)
-      : Object.fromEntries(week.map((l) => [l.id, rateCardExpected(l)]));
-    return buildThreeWayMatch({
-      loads: week,
-      selectedIds,
-      billedByLoadId,
-    });
-  }, [focusInvoice, week]);
-
-  const expected = match.expectedTotal;
-  const invoiced = match.billedTotal;
-  const rows = match.lines;
-
-  if (role === 'KSH') {
-    /* M6 — moduł faktur KSH: wyłącznie faktury HHL → KSH (nigdy koszt) */
-    return (
-      <div className="invoices-page page-sections" data-page="invoices">
-        <BillsPanel />
+      <div className="fin-page" data-page="invoices">
+        <p className="fin-muted fin-pad">{t(locale, 'inv_unavailable')}</p>
       </div>
     );
   }
 
-  if (!canSeeCost(role) && role !== 'HHL') {
-    return (
-      <div className="panel section-card page-sections" data-page="invoices" style={{ margin: 12 }}>
-        <div className="panel-bd" style={{ color: 'var(--ink-3)' }}>
-          {t(locale, 'inv_unavailable')}
-        </div>
-      </div>
-    );
-  }
-
-  const disputed = focusInvoice ?? invoices.find((i) => i.status === 'DISPUTED') ?? invoices[0];
-  const feePreview = Math.round((invoiced * factoringOffer.feePercent) / 100);
-  const netPreview = invoiced - feePreview;
+  const onTabKey = (e: React.KeyboardEvent, i: number) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft' && e.key !== 'Home' && e.key !== 'End') return;
+    e.preventDefault();
+    const n = sections.length;
+    const j = e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : (i + (e.key === 'ArrowRight' ? 1 : n - 1)) % n;
+    setTab(sections[j]);
+    document.getElementById(`inv-tab-${sections[j]}`)?.focus();
+  };
 
   return (
-    <div className="invoices-page page-sections" data-page="invoices">
-      <div className="panel section-card" style={{ margin: 12 }}>
-        <header className="panel-hd">
-          <h2>{t(locale, 'nav_inv')}</h2>
-          <span className="sub">{weekSubtitle(focusInvoice?.weekLabel ?? disputed?.weekLabel ?? '2026-W38', locale)}</span>
-          <div className="spacer" />
-          {role === 'SCX' && canSubmitInvoice(role) ? (
+    <div className="fin-page inv-page" data-page="invoices">
+      <header className="fin-head inv-head">
+        <h2>{ft(locale, 'p5_inv_h')}</h2>
+        <span className="sub">{ft(locale, `p5_inv_sub_${role}`)}</span>
+      </header>
+      {sections.length > 1 ? (
+        <div className="inv-tabs" role="tablist" aria-label={ft(locale, 'p5_inv_h')}>
+          {sections.map((d, i) => (
             <button
+              key={d}
+              id={`inv-tab-${d}`}
               type="button"
-              className="btn"
-              onClick={() =>
-                submitInvoice(
-                  '2026-W38',
-                  week.filter(isLoadCompleted).map((l) => l.id),
-                  Object.fromEntries(
-                    week.filter(isLoadCompleted).map((l) => [l.id, rateCardExpected(l)]),
-                  ),
-                  useFactoring && factoringOffer.enabled,
-                )
-              }
+              role="tab"
+              data-inv-tab={d}
+              aria-selected={tab === d}
+              aria-controls={`inv-panel-${d}`}
+              tabIndex={tab === d ? 0 : -1}
+              className={tab === d ? 'on' : undefined}
+              onClick={() => setTab(d)}
+              onKeyDown={(e) => onTabKey(e, i)}
             >
-              {t(locale, 'inv_submit')}
+              {up(ft(locale, `p5_inv_tab_${d}`))}
             </button>
-          ) : canMatchInvoice(role) ? (
-            <>
-              <button
-                type="button"
-                className="chipbtn"
-                onClick={() => disputed && resolveInvoice(disputed.id, 'DISPUTED')}
-              >
-                {t(locale, 'btn_dispute')}
-              </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => disputed && resolveInvoice(disputed.id, 'MATCHED')}
-              >
-                {t(locale, 'btn_approve')}
-              </button>
-            </>
+          ))}
+        </div>
+      ) : null}
+      {sections.map((d) => (
+        <div
+          key={d}
+          id={`inv-panel-${d}`}
+          role={sections.length > 1 ? 'tabpanel' : undefined}
+          aria-labelledby={sections.length > 1 ? `inv-tab-${d}` : undefined}
+          hidden={sections.length > 1 && tab !== d}
+          className="inv-panel"
+        >
+          <BillsSection direction={d} phone={phone} />
+          {d === 'KOSZT' && tasks.length ? (
+            <div className="inv-tasks">
+              {tasks.map((x) => <FactoringTaskCard key={x.billId} task={x} nowIso={nowIso} locale={locale} />)}
+            </div>
           ) : null}
-        </header>
-        <div className="panel-bd flush">
-          <div className="filters">
-            <span>
-              {t(locale, 'a6_inv_amount_rate')} <b className="mono">{money(expected)}</b>
-            </span>
-            <span>
-              {t(locale, 'a6_inv_amount_inv')} <b className="mono">{money(invoiced)}</b>
-            </span>
-            <span>
-              {t(locale, 'inv_diff')}{' '}
-              <b
-                className="mono"
-                style={{ color: match.diffTotal === 0 ? 'var(--go)' : 'var(--red)' }}
-              >
-                {match.diffTotal > 0 ? '+' : ''}
-                {money(match.diffTotal)}
-              </b>
-            </span>
-            <div className="spacer" />
-            <span className={`pill ${match.openCount ? 'p-red' : 'p-go'}`}>
-              {match.openCount ? `${t(locale, 'inv_to_clarify')} · ${match.openCount}` : t(locale, 'inv_match_ok')}
-            </span>
-          </div>
-          <div className="tablewrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t(locale, 'sched_col_code')}</th>
-                  <th>{t(locale, 'inv_type')}</th>
-                  <th>{t(locale, 'inv_delivery')}</th>
-                  <th className="num">{t(locale, 'a6_inv_by_rate')}</th>
-                  <th className="num">{t(locale, 'a6_inv_invoiced')}</th>
-                  <th className="num">{t(locale, 'inv_diff_col')}</th>
-                  <th>{t(locale, 'a6_inv_verdict')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr
-                    key={row.loadId}
-                    style={{ cursor: 'pointer' }}
-                    {...clickableRow(() => selectLoad(row.loadId))}
-                  >
-                    <td>
-                      <span className="code" data-content>{transportLabel(loads.find((l) => l.id === row.loadId) ?? { code: row.code }, role)}</span>
-                    </td>
-                    <td data-content>{row.itemType}</td>
-                    <td>{formatTableDay(row.deliverDate === '—' ? null : row.deliverDate, refYear)}</td>
-                    <td className="num">{money(row.expected)}</td>
-                    <td className="num">{row.selected ? money(row.billed) : '—'}</td>
-                    <td className={`num ${row.diff ? 'money neg' : ''}`}>
-                      {row.diff ? `${row.diff > 0 ? '+' : ''}${money(row.diff)}` : '—'}
-                    </td>
-                    <td>
-                      <span className={`pill ${threeWayVerdictPill(row.verdict)}`}>
-                        {threeWayVerdictLabel(row.verdict, locale)}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="note">
-            {t(locale, 'inv_three_way')}
-            {' '}(<span className="code">pricing.costTotal</span>). {t(locale, 'inv_threshold_note')} ±
-            {money(match.threshold)}{tp(locale, 'a6_inv_open_n', { n: String(match.openCount) })}
-          </div>
         </div>
-      </div>
+      ))}
 
-      <BillsPanel />
-
-      {role === 'HHL' ? (
-        <div className="panel section-card" style={{ margin: 12 }}>
-          <header className="panel-hd">
-            <h2>{t(locale, 'factoring_admin_title')}</h2>
-            <span className="sub">{t(locale, 'factoring_admin_hint')}</span>
-          </header>
-          <div className="panel-bd">
-            <dl className="kv">
-              <dt>{t(locale, 'factoring_enabled')}</dt>
-              <dd>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={factoringOffer.enabled}
-                    onChange={(e) => updateFactoringOffer({ enabled: e.target.checked })}
-                  />{' '}
-                  {t(locale, factoringOffer.enabled ? 'a6_yes' : 'a6_no')}
-                </label>
-              </dd>
-              <dt>{t(locale, 'factoring_fee_pct')}</dt>
-              <dd>
-                <input
-                  className="input"
-                  type="number"
-                  step="0.1"
-                  min={0}
-                  max={20}
-                  aria-label={t(locale, 'factoring_fee_pct')}
-                  value={factoringOffer.feePercent}
-                  onChange={(e) => updateFactoringOffer({ feePercent: Number(e.target.value) || 0 })}
-                  style={{ width: 80 }}
-                />
-              </dd>
-              <dt>{t(locale, 'factoring_delay')}</dt>
-              <dd>
-                <input
-                  className="input"
-                  type="number"
-                  min={1}
-                  aria-label={t(locale, 'factoring_delay')}
-                  value={factoringOffer.payoutDelayValue}
-                  onChange={(e) =>
-                    updateFactoringOffer({ payoutDelayValue: Number(e.target.value) || 1 })
-                  }
-                  style={{ width: 72 }}
-                />{' '}
-                <select
-                  className="input"
-                  aria-label={t(locale, 'factoring_delay')}
-                  value={factoringOffer.payoutDelayUnit}
-                  onChange={(e) =>
-                    updateFactoringOffer({
-                      payoutDelayUnit: e.target.value as FactoringOffer['payoutDelayUnit'],
-                    })
-                  }
-                >
-                  <option value="hours">{t(locale, 'factoring_unit_hours')}</option>
-                  <option value="days">{t(locale, 'factoring_unit_days')}</option>
-                </select>
-              </dd>
-              <dt>{t(locale, 'factoring_label')}</dt>
-              <dd>
-                <input
-                  className="input"
-                  style={{ width: '100%' }}
-                  aria-label={t(locale, 'factoring_label')}
-                  value={factoringOffer.label}
-                  onChange={(e) => updateFactoringOffer({ label: e.target.value })}
-                />
-              </dd>
-            </dl>
-          </div>
-        </div>
-      ) : null}
-
-      {role === 'SCX' && canSubmitInvoice(role) && factoringOffer.enabled ? (
-        <div className="panel section-card" style={{ margin: 12 }}>
-          <header className="panel-hd">
-            <h2>{t(locale, 'factoring_payment_mode')}</h2>
-            <span className="sub">{factoringOffer.label}</span>
-          </header>
-          <div className="panel-bd">
-            <div className="mrow">
-              <span className="lbl">
-                <label>
-                  <input
-                    type="radio"
-                    name="paymode"
-                    checked={!useFactoring}
-                    onChange={() => setUseFactoring(false)}
-                  />{' '}
-                  {t(locale, 'factoring_standard')}
-                </label>
-              </span>
-              <span style={{ color: 'var(--ink-3)', fontSize: 12.5 }}>{t(locale, 'factoring_standard_hint')}</span>
-            </div>
-            <div className="mrow">
-              <span className="lbl">
-                <label>
-                  <input
-                    type="radio"
-                    name="paymode"
-                    checked={useFactoring}
-                    onChange={() => setUseFactoring(true)}
-                  />{' '}
-                  {t(locale, 'factoring_option')}
-                </label>
-              </span>
-              <span style={{ color: 'var(--ink-3)', fontSize: 12.5 }}>
-                {t(locale, 'factoring_option_hint')
-                  .replace('{fee}', String(factoringOffer.feePercent))
-                  .replace(
-                    '{delay}',
-                    `${factoringOffer.payoutDelayValue} ${
-                      factoringOffer.payoutDelayUnit === 'hours'
-                        ? t(locale, 'factoring_unit_hours')
-                        : t(locale, 'factoring_unit_days')
-                    }`,
-                  )}
-              </span>
-            </div>
-            {useFactoring ? (
-              <>
-                <div className="mrow">
-                  <span className="lbl">{t(locale, 'factoring_gross')}</span>
-                  <span>{money(invoiced)}</span>
-                </div>
-                <div className="mrow">
-                  <span className="lbl">{t(locale, 'factoring_fee')}</span>
-                  <span>
-                    −{money(feePreview)} ({factoringOffer.feePercent}%)
-                  </span>
-                </div>
-                <div className="mrow total">
-                  <span>{t(locale, 'factoring_net')}</span>
-                  <span>{money(netPreview)}</span>
-                </div>
-              </>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {invoices.some((i) => i.factoring?.selected) ? (
-        <div className="panel section-card" style={{ margin: 12 }}>
-          <header className="panel-hd">
-            <h2>{t(locale, 'factoring_review_title')}</h2>
-          </header>
-          <div className="panel-bd">
-            {invoices
-              .filter((i) => i.factoring?.selected)
-              .slice(0, 4)
-              .map((i) => (
-                <div key={i.id} className="mrow">
-                  <span className="lbl">
-                    {i.weekLabel} · <span className="pill p-amber">{t(locale, 'factoring_badge')}</span>
-                  </span>
-                  <span>
-                    net {money(i.factoring!.netPayout)} · {payoutStatusLabel(i.payoutStatus, locale)}
-                    {i.factoring?.payoutAt ? ` · ${formatOpsDateTime(i.factoring.payoutAt)}` : ''}
-                  </span>
-                </div>
-              ))}
-          </div>
-        </div>
-      ) : null}
-
-      <div className="panel section-card" style={{ margin: 12 }}>
-        <header className="panel-hd">
-          <h2>{t(locale, 'inv_attachments')}</h2>
-          <span className="sub">{t(locale, 'inv_docs_sub')}</span>
+      <section className="panel fin-panel" aria-labelledby="inv-cmr-h" data-inv-cmr>
+        <header className="panel-hd fin-hd2 inv-list-hd">
+          <h3 id="inv-cmr-h">{t(locale, 'inv_attachments')}</h3>
+          <span className="sub">{ft(locale, 'p5_inv_cmr_sub')}</span>
           <div className="spacer" />
           {role === 'SCX' || role === 'HHL' ? (
             <button
               type="button"
-              className="btn"
+              className="btn ghost"
               onClick={() => {
-                const id = week[0]?.id;
+                const id = recent[0]?.id;
                 if (!id) return;
                 setAttachLoadId(id);
                 attachRef.current?.click();
@@ -423,26 +127,19 @@ export function InvoicesView() {
             </button>
           ) : null}
         </header>
-        <div className="panel-bd">
-          {week.length === 0 ? (
-            <div className="note" style={{ border: 0, padding: 0 }}>
-              {t(locale, 'inv_empty')}
-            </div>
+        <div className="fin-pad inv-cmr">
+          {recent.length === 0 ? (
+            <p className="fin-muted">{t(locale, 'inv_empty')}</p>
           ) : (
-            week.flatMap((l) => {
+            recent.flatMap((l) => {
               const docs = documents.filter(
-                (d) =>
-                  d.loadId === l.id &&
-                  d.category === 'CMR' &&
-                  (d.status === 'UPLOADED' || d.status === 'MISSING'),
+                (d) => d.loadId === l.id && d.category === 'CMR' && (d.status === 'UPLOADED' || d.status === 'MISSING'),
               );
               if (docs.length === 0) {
                 return [
                   <div key={`${l.id}-empty`} className="mrow">
-                    <span className="lbl">
-                      <span className="code">{transportLabel(l, role)}</span> · CMR
-                    </span>
-                    <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_inv_missing')}</span>
+                    <span className="lbl"><span className="code">{transportLabel(l, role)}</span> · CMR</span>
+                    <span className="neg">{t(locale, 'a6_inv_missing')}</span>
                   </div>,
                 ];
               }
@@ -477,10 +174,10 @@ export function InvoicesView() {
             void attachDocumentFile(f, attachLoadId, 'CMR');
           }}
         />
-      </div>
+      </section>
 
+      {phone ? null : <WhoSees />}
       <DocPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
-
     </div>
   );
 }
