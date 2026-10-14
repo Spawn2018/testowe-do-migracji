@@ -16,7 +16,7 @@ export function trackingLinkOf(load: Load, loads: readonly Load[], nowIso: strin
 /** null = brak danych (nic nie pokazujemy i nie blokujemy); [] = komplet. */
 export function readyGapsOf(load: Load, docs: readonly Document[]): ReadyGap[] | null {
   if (load.readyGaps !== undefined) return load.readyGaps;
-  /* jedna definicja E32 pkt 6 — ta sama w demo i w produkcji (K2.2) */
+  /* jedna definicja E32 pkt 6 — ta sama w demo i w produkcji (K2.2); bez przykładów z p4cDemo */
   return computeReadyGaps(load, docs);
 }
 
@@ -46,7 +46,5 @@ function prodAutoMeta(loads: readonly Load[], events: readonly LoadEvent[], nowI
 
 /** Ostatnie działania automatów na liście „Działa samo” (E35 pkt 1; K2.4). */
 export function autoMetaOf(loads: readonly Load[], events: readonly LoadEvent[], nowIso: string): Partial<Record<string, string>> {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase'
-    ? demoAutoMeta(loads, events, nowIso)
-    : prodAutoMeta(loads, events, nowIso);
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoAutoMeta(loads, events, nowIso) : prodAutoMeta(loads, events, nowIso);
 }
