@@ -2337,3 +2337,13 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Dalej: K2 (dane P4-c) + H3/H4 (0640) + R6 (1420) w paczce P4.
 
 **wyglad/P4-c NA PRODUKCJI — commit `bb55884f`, wdrożenie `dpl_6EEFjRMh516nGexue6GZPyv8sEeK`, 14.10.2026 18:17.**
+
+## 2026-10-14 — wyglad/P5 NA PRODUKCJI
+
+- Dopisek D-20261014-2005-01 w `docs/handover/dopiski/`; PLAN §4 P5 Ekrany (S1–S5) + §8.
+- Scalenie PR #201 → `6631eb8a` (głowa `5e3dc21`). unit + visual zielone; gitleaks 0; `npm audit --omit=dev --audit-level=high` 0. Bez migracji (bez `db` / TEST).
+- Wdrożenie R7 z `main` `6631eb8a`, 14.10.2026 20:49, `dpl_6BupPHfhnDTw2sBdpgEpJqVZ9v5x`.
+- Plik JS: `assets/index-LoAtWpmu.js` (oba adresy 200). 0 × `service_role` (25 plików JS z HTML). Kopia wdrożeniowa usunięta.
+- Dane pod wygląd: w P5 według PLAN §4 P5 i D-20261014-2005-01 S1–S5 (`p5Source.ts`).
+
+**wyglad/P5 NA PRODUKCJI — commit `6631eb8a`, wdrożenie `dpl_6BupPHfhnDTw2sBdpgEpJqVZ9v5x`, 14.10.2026 20:49.**

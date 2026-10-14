@@ -357,8 +357,8 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - `doc-requirements.test.ts` l.17–18;
   - `money*`, `invoices3`, `invoice-*`, `payment-reminders`, `b32-insurance-cover`, `i2k-doc-week`, `paliwo-auto-b`, `i31-sefs`, `i30-*`, `b4b-cmr-only`;
   - zestawy `money`, `insurance`, `storage`, `baf`, `i30`, `i31`.
-- **Ekrany:** Finanse, Faktury, Dokumenty, Opcje › Pieniądze, panel (dokumenty, kwoty, okno „Dopłata”).
-- **Odbiór:** sekcje „Test” E31, E33, E39, E16, E40; testy R7 i R8 z D-20261009-1309-01; faktura testowa na TEST zgodna z wyliczeniem co do grosza; KSH nie widzi kosztu ani marży, SCX nie widzi ceny KSH (test na TEST).
+- **Ekrany — wygląd:** `wyglad/P5` (PR #201; Finanse E16/E39 + paczka E40, Faktury E4/E4b, Dokumenty E31, Opcje › Faktoring, Opcje › Zezwolenia i dokumenty, panel › „Ceny”/„Dokumenty”/okno „Dopłata” E33). Dane pod wygląd: `src/lib/p5Source.ts` według D-20261014-2005-01 S1–S5 (bez zmiany klas i tekstów wyglądu, F1).
+- **Odbiór:** sekcje „Test” E31, E33, E39, E16, E40; testy R7 i R8 z D-20261009-1309-01; faktura testowa na TEST zgodna z wyliczeniem co do grosza; KSH nie widzi kosztu ani marży, SCX nie widzi ceny KSH (test na TEST); test odbioru S1–S5 z D-20261014-2005-01.
 - **Po wdrożeniu (§5):** SCX wgrywa zezwolenie 13/GD/2026, HHL wgrywa polisę PZU 1106707356 (raz — podpina się sama, G-21).
 
 ### P6 · Do zrobienia, ryzyka, panel i historia — DO ZROBIENIA
@@ -643,3 +643,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 14.10.2026 07:00 | D-20261014-0700-01: wyglad/P3-c — scalenie PR #190, podłączenie danych Opcji (J3), testy lokalne (J5), pytanie J4 (ocena przewoźnika); PLAN §4 P3 / P8, §8 | koordynator; wykonawca |
 | 14.10.2026 13:20 | D-20261014-1320-01: wyglad/P4-c — kolejność scalenia #181→#189→#193 (K1; D-20261014-1145-01 nie powstanie), dane K2 (`trackingLink`, `readyGaps`, `deliveredCheck`, `autoMetaOf`), uchwyty K3; PLAN §4 P4 Ekrany P4-a/b/c, P6 E7 DeliveredCheckCard | koordynator |
 | 14.10.2026 14:20 | D-20261014-1420-01: poprawka P3-c J3.1 (R1 2FA=verified TOTP, R2 MyMfa, R3 my_session_revoke, R4 hasło, R5 I-17, R6 wyjątek load_status_rank w P4, R7 P3-d + J4 Kokpit) | koordynator |
+| 14.10.2026 20:05 | D-20261014-2005-01: wyglad/P5 (PR #201) — scalenie i wdrożenie wyglądu; dane S1–S5 w P5 (`p5Source.ts`: Finanse, Faktury, paczka E40, Dokumenty, Ceny/dopłaty); PLAN §4 P5 Ekrany | koordynator; wykonawca |
