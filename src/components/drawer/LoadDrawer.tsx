@@ -1,28 +1,21 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { CorridorMap } from '../map/LazyCorridorMap';
 import { StatusPill } from '../ui/StatusPill';
-import { fmtNum, fmtPct, t, tp } from '../../i18n/messages';
+import { fmtNum, t, tp } from '../../i18n/messages';
 import {
   canChangeLoadStatus,
   canEditResources,
-  canSeeCost,
-  canSeeMargin,
-  canSeeRevenue,
   visibleDriverPhone,
 } from '../../lib/permissions';
 import { getAuthProfile } from '../../auth/profile';
 import { SITES } from '../../lib/status';
-import { SEFS_SOURCES } from '../../lib/sefs';
 import { isReadyBlocked, evaluateLoadCover } from '../../lib/permits';
-import { downloadDocumentsZip } from '../../lib/zipDocs';
-import { attachDocumentFile } from '../../lib/docFiles';
 import { awizacjaChanges } from '../../lib/awizacjaPatch';
 import { hasAwizacja } from '../../lib/awizacjaState';
 import { editableOrderSide } from '../../lib/orderNumbers';
 import { transportLabel } from '../../lib/transportName';
 import { DocPreview } from '../ui/DocPreview';
-import { DocFileRow } from '../ui/DocFileRow';
 import { PlanDatesPanel } from './PlanDatesPanel';
 import { formatTowerPair } from '../../lib/cSep';
 import { formatHistoryActor } from '../../lib/historyActor';
@@ -51,7 +44,6 @@ import {
   wallLocalToIso,
   delayMinutesVsPlan,
 } from '../../lib/time';
-import { formatAppMoney } from '../../lib/money/demoFx';
 import { formatDelayPill } from '../ui/StatusPill';
 import { AgreedFeeForm } from './AgreedFeeForm';
 import {
@@ -59,7 +51,6 @@ import {
   ferryStatusLabel,
 } from '../../lib/enumLabels';
 
-import { TIER_PILL, type MoneySideV2 } from '../../lib/money/loadMoney';
 import { autoStatusText, effArrival, effDeparture, fmtLocal, sailingStatusLabel } from '../../lib/sailings';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { isServerId } from '../../data/registry';
@@ -74,35 +65,10 @@ const PermitForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUT
 /* wyglad/P4-c: okna awizacji i „Zmień status” poza pierwszym wczytaniem (budżet 400 kB gzip, scripts/bundle-size.mjs) */
 const AwizacjaModal = lazy(lazyRetry(() => import('./AwizacjaModal').then((m) => ({ default: m.AwizacjaModal }))));
 const StatusChangeModal = lazy(lazyRetry(() => import('./StatusChangeModal').then((m) => ({ default: m.StatusChangeModal }))));
+const PanelDocs = lazy(lazyRetry(() => import('./PanelDocs').then((m) => ({ default: m.PanelDocs }))));
+const PanelPrices = lazy(lazyRetry(() => import('./PanelPrices').then((m) => ({ default: m.PanelPrices }))));
 const CarrierRating = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/CarrierRating')) : null;
 const EscortPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/EscortPanel')) : null;
-
-/** M8 — poziom, mnożnik paliwowy z datą i kurs strony wyceny. */
-function MoneySideMeta({ side, locale, which, showFx }: { side: MoneySideV2; locale: Locale; which: 'cost' | 'rev'; showFx: boolean }) {
-  return (
-    <div data-money-side={which}>
-      <div className="mrow">
-        <span className="lbl">{t(locale, 'tier_label')}</span>
-        <span><span className={`pill ${TIER_PILL[side.tier]}`} data-tier={side.tier}>{t(locale, `tier_${side.tier}`)}</span></span>
-      </div>
-      <div className="mrow">
-        <span className="lbl">{t(locale, 'fuel_mult')}</span>
-        <span className="mono" data-fuel-ref={side.fuel.refDate}>×{side.fuel.applied.toFixed(4)} · {t(locale, 'fuel_ref')} {side.fuel.refDate}
-          {side.fuel.status === 'PROGNOZA' ? <> <span className="pill p-amber" data-fuel-forecast>{t(locale, 'fuel_forecast')}</span></> : null}
-          {side.fuel.status === 'WSTEPNY' ? <> <span className="pill p-amber" data-fuel-provisional>{t(locale, 'fuel_provisional')}</span></> : null}</span>
-      </div>
-      {showFx ? (
-        <div className="mrow" data-fx-row>
-          <span className="lbl">{t(locale, 'fx_table')}</span>
-          <span className="mono">
-            {side.fx.tableNo} · {side.fx.mid.toFixed(4)} · {side.fx.date}
-            {side.fx.provisional ? <> <span className="pill p-amber" data-fx-provisional>{t(locale, 'fx_provisional')}</span></> : null}
-          </span>
-        </div>
-      ) : null}
-    </div>
-  );
-}
 
 type Tab = 'overview' | 'timeline' | 'history' | 'docs' | 'pricing' | 'chat';
 
@@ -140,7 +106,6 @@ export function LoadDrawer() {
   const documents = useTowerStore((s) => s.documents);
   const messages = useTowerStore((s) => s.messages);
   const locale = useTowerStore((s) => s.locale);
-  const currency = useTowerStore((s) => s.displayCurrency);
   const role = useTowerStore((s) => s.role);
   const updateResources = useTowerStore((s) => s.updateResources);
   const updateAwizacja = useTowerStore((s) => s.updateAwizacja);
@@ -158,8 +123,6 @@ export function LoadDrawer() {
   const [tab, setTab] = useState<Tab>('overview');
   const [chat, setChat] = useState('');
   const [previewDoc, setPreviewDoc] = useState<import('../../types').Document | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [uploadCat, setUploadCat] = useState<import('../../types').Document['category'] | null>(null);
   const [awizOpen, setAwizOpen] = useState(false);
   const [kshDatesOpen, setKshDatesOpen] = useState(false);
   const [statusChangeOpen, setStatusChangeOpen] = useState(false);
@@ -223,9 +186,6 @@ export function LoadDrawer() {
   /* AUD-03 (KSH — PANEL ZLECENIA): KSH widzi ten sam panel co pozostali; jedyny przycisk zmian = „Edytuj” (daty i godziny). */
   const driverPhone = visibleDriverPhone(role, load);
 
-  const showCost = canSeeCost(role);
-  const showRev = canSeeRevenue(role);
-  const showMargin = canSeeMargin(role);
   const canEdit = canEditResources(role);
   const canStatus = canChangeLoadStatus(role, getAuthProfile()?.role ?? null);
   /** B-10: awizację uzupełnia SCX; HHL (nie admin) nie dodaje. */
@@ -290,10 +250,12 @@ export function LoadDrawer() {
       <aside className="drawer" role="dialog" aria-label={transportLabel(load, role, 'panel')}>
         <div className="drawer-hd">
           <div className="r1">
-            <span className="wb-code" data-content>{transportLabel(load, role, 'panel')}</span>
-            <StatusPill status={load.status} stage={load.stage} />
-            {load.delayed ? <span className="pill p-red">{delayPillText}</span> : null}
-            <div className="spacer" />
+            {/* wyglad/P5 (E8): nazwa i znaczniki zawijają się, „✕” zostaje w rogu przy 360 px (HHL: kod · numer zlecenia) */}
+            <div className="r1-l">
+              <span className="wb-code" data-content>{transportLabel(load, role, 'panel')}</span>
+              <StatusPill status={load.status} stage={load.stage} />
+              {load.delayed ? <span className="pill p-red">{delayPillText}</span> : null}
+            </div>
             <button type="button" className="iconbtn" aria-label={t(locale, 'close')} onClick={() => selectLoad(null)}>
               ✕
             </button>
@@ -614,154 +576,34 @@ export function LoadDrawer() {
             </ul>
           )}
 
+          {/* wyglad/P5 (E31 pkt 5, E33): zakładki „Dokumenty” i „Ceny” poza pierwszym wczytaniem (budżet 400 kB gzip) */}
           {tab === 'docs' && (
-            <>
-              <div className="note" data-ins-auto style={{ margin: '0 0 10px' }}>
-                {insAuto?.covered && insAuto.policyNo
-                  ? tp(locale, 'b32_ins_auto', { no: insAuto.policyNo, until: insAuto.validUntil ?? '—' })
-                  : t(locale, 'b32_ins_missing')}
-              </div>
-              {loadDocs.map((d) => (
-                <DocFileRow
-                  key={d.id}
-                  doc={d}
-                  onPreview={setPreviewDoc}
-                  showUpload={canEdit}
-                  onUploadClick={() => {
-                    setUploadCat(d.category);
-                    fileRef.current?.click();
-                  }}
-                />
-              ))}
-              <div style={{ marginTop: 13 }}>
-                <button
-                  type="button"
-                  className="btn ghost"
-                  onClick={() => {
-                    void downloadDocumentsZip(loadDocs, `${load.code}_dokumenty.zip`, () => load.code).then((r) => {
-                      useTowerStore.getState().pushToast(
-                        tp(locale, 'a6_dr_zip_toast', { code: load.code, n: String(r.count) }),
-                        'MEDIUM',
-                        load.id,
-                      );
-                    });
-                  }}
-                >
-                  {t(locale, 'a6_dr_zip_btn')}
-                </button>
-                {true ? (
-                  <button
-                    type="button"
-                    className="btn"
-                    style={{ marginLeft: 7 }}
-                    onClick={() => {
-                      const missing = loadDocs.find((d) => d.status === 'MISSING');
-                      setUploadCat(missing?.category ?? 'CMR');
-                      fileRef.current?.click();
-                    }}
-                  >
-                    {t(locale, 'a6_dr_upload')}
-                  </button>
-                ) : null}
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*,application/pdf"
-                  className="sronly"
-                  aria-label={t(locale, 'a6_dr_pick_file')}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    e.target.value = '';
-                    if (!f) return;
-                    const cat = uploadCat ?? loadDocs.find((d) => d.status === 'MISSING')?.category ?? 'CMR';
-                    // BK4: tryb Supabase → Storage; demo → pamięć sesji.
-                    void attachDocumentFile(f, load.id, cat, { fallbackName: `${cat}_${load.code}.pdf` });
-                  }}
-                />
-              </div>
-              {PermitForm && isServerId(load.id) && <Suspense fallback={null}><PermitForm key={load.id} loadId={load.id} /></Suspense>}
-            </>
+            <Suspense fallback={null}>
+              <PanelDocs
+                load={load}
+                role={role}
+                locale={locale}
+                phone={phone}
+                nowMs={nowMin * 60_000}
+                docs={loadDocs}
+                insAuto={insAuto}
+                onPreview={setPreviewDoc}
+                permitForm={PermitForm && isServerId(load.id) ? <Suspense fallback={null}><PermitForm key={load.id} loadId={load.id} /></Suspense> : null}
+              />
+            </Suspense>
           )}
 
           {tab === 'pricing' && (
-            <>
-              {load.pricing.moneyError ? (
-                <div className="note" data-money-error style={{ margin: '0 0 12px', color: 'var(--red)' }}>
-                  {t(locale, 'money_error')}: {load.pricing.moneyError}
-                </div>
-              ) : null}
-              {showCost ? (
-                <>
-                  <h4 className="sec">{t(locale, 'cost')} — Scandinavian Express</h4>
-                  <div className="mrow">
-                    <span className="lbl">{t(locale, 'a6_dr_base_rate')}</span>
-                    <span>{formatAppMoney(load.pricing.costBase, locale, currency)}</span>
-                  </div>
-                  <div className="mrow">
-                    <span className="lbl">{t(locale, 'a6_dr_fuel')}</span>
-                    <span>{formatAppMoney(load.pricing.costSefs, locale, currency)}</span>
-                  </div>
-                  <div className="mrow">
-                    <span className="lbl">{t(locale, 'a6_dr_extras')}</span>
-                    <span>{formatAppMoney(load.pricing.costExtras, locale, currency)}</span>
-                  </div>
-                  <div className="mrow total">
-                    <span>{t(locale, 'a6_dr_total')}</span>
-                    <span>{formatAppMoney(load.pricing.costTotal, locale, currency)}</span>
-                  </div>
-                  {load.pricing.money ? <MoneySideMeta side={load.pricing.money.cost} locale={locale} which="cost" showFx={role === 'HHL' || currency !== 'EUR'} /> : null}
-                </>
-              ) : (
-                <div className="locked">{t(locale, 'no_price')}</div>
-              )}
-              {showRev ? (
-                <>
-                  <h4 className="sec" style={{ marginTop: 15 }}>
-                    {t(locale, 'revenue')} — KSH
-                  </h4>
-                  <div className="mrow">
-                    <span className="lbl">{t(locale, 'a6_dr_base_rate')}</span>
-                    <span>{formatAppMoney(load.pricing.revBase, locale, currency)}</span>
-                  </div>
-                  <div className="mrow">
-                    <span className="lbl">{t(locale, 'a6_dr_fuel')}</span>
-                    <span>{formatAppMoney(load.pricing.revSefs, locale, currency)}</span>
-                  </div>
-                  <div className="mrow">
-                    <span className="lbl">{t(locale, 'a6_dr_extras')}</span>
-                    <span>{formatAppMoney(load.pricing.revExtras, locale, currency)}</span>
-                  </div>
-                  <div className="mrow total">
-                    <span>{t(locale, 'a6_dr_total')}</span>
-                    <span>{formatAppMoney(load.pricing.revTotal, locale, currency)}</span>
-                  </div>
-                  {load.pricing.money ? <MoneySideMeta side={load.pricing.money.rev} locale={locale} which="rev" showFx={role === 'HHL' || currency !== 'EUR'} /> : null}
-                </>
-              ) : (
-                <div className="locked" style={{ marginTop: 13 }}>
-                  {t(locale, 'no_price')}
-                </div>
-              )}
-              {showMargin ? (
-                <div className="mrow total" style={{ marginTop: 15, borderTop: '2px solid var(--ink)' }}>
-                  <span>{t(locale, 'margin')}</span>
-                  <span style={{ color: load.pricing.marginPct < 0.18 ? 'var(--red)' : 'var(--go)' }}>
-                    {formatAppMoney(load.pricing.margin, locale, currency)} · {locale === 'pl' ? `${(load.pricing.marginPct * 100).toFixed(1)}%` : fmtPct(locale, load.pricing.marginPct)}
-                  </span>
-                </div>
-              ) : null}
-              <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 10 }}>
-                <a href={SEFS_SOURCES.orlen} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>
-                  ORLEN
-                </a>
-                {' · '}
-                <a href={SEFS_SOURCES.okq8} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>
-                  OKQ8
-                </a>
-              </div>
-              {/* AUD-03: KSH widzi dopłaty z akceptacją (10f.4 — bez dodawania; AgreedFeeForm.canAdd) */}
-              {isServerId(load.id) ? <AgreedFeeForm loadId={load.id} locale={locale} role={role} /> : null}
-            </>
+            <Suspense fallback={null}>
+              <PanelPrices
+                load={load}
+                role={role}
+                locale={locale}
+                phone={phone}
+                nowIso={nowIso}
+                legacyFees={isServerId(load.id) ? <AgreedFeeForm loadId={load.id} locale={locale} role={role} /> : null}
+              />
+            </Suspense>
           )}
 
           {tab === 'chat' && (

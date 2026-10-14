@@ -7,9 +7,12 @@
 import { SEFS_PLN, SEFS_SEK, type SefsTier } from './sefs';
 import { addDays, type FuelPubl, type FuelWeekRow } from './p5Finance';
 import type { Bill, Load } from '../types';
+import { useTowerStore } from '../store/useTowerStore';
 import { factoringPayout } from './p5Invoices';
 import type { FactoringOfferView, FactoringTask, PackActions, PermitView, PolicyView } from './p5Source';
 import type { PackConfig, PackSent } from './p5Pack';
+import { cancelFee, DECIDED_RULES, dwellFee, type FeeRules, type FeeSuggestion } from './p5Fees';
+import { unloadedAtOf } from './money/loadMoney';
 import { addDaysIso } from './invoices3';
 
 /** Próg marży z Opcji (E16, 08.10: 4 %). */
@@ -49,8 +52,12 @@ export function demoFuelEnrich(rows: FuelWeekRow[], today: string): FuelWeekRow[
   });
 }
 
-/** E4b — oferta HHL (07.10: 1 % od netto, wypłata 48 h po akceptacji przez HHL). */
-export const demoFactoringOffer = (): FactoringOfferView => ({ feePct: 1, hours: 48, version: 1, from: '2026-10-07' });
+/** E4b — oferta HHL (07.10: 1 % od netto, wypłata 48 h po akceptacji przez HHL); w demo z ekranu Opcje › Faktoring. */
+export function demoFactoringOffer(): FactoringOfferView | null {
+  const o = useTowerStore.getState().factoringOffer;
+  if (!o.enabled) return null;
+  return { feePct: o.feePercent, hours: o.payoutDelayUnit === 'days' ? o.payoutDelayValue * 24 : o.payoutDelayValue, version: 1, from: '2026-10-07' };
+}
 
 /** E4b — zadanie „Wypłata faktoringu” dla pierwszej przyjętej, nieopłaconej faktury przewoźnika. */
 export function demoFactoringTasks(bills: Bill[], nowIso: string): FactoringTask[] {
@@ -101,3 +108,34 @@ export function demoPermits(loads: Load[]): PermitView[] {
 export const demoPolicies = (): PolicyView[] => [
   { org: 'SCX', name: 'OCP przewoźnika', number: 'OCP-0000-PRZYKLAD', validTo: '2027-03-29', approved: true },
 ];
+
+/** E33 — zasady cennika: wartości z decyzji 12:23 i 12:35 (w produkcji z bazy — wykonawca). */
+export const demoFeeRules = (): FeeRules => DECIDED_RULES;
+
+/**
+ * E33 — podpowiedzi dopłat dla transportu: postój na załadunku i rozładunku (pomiar ze strefy albo powód braku),
+ * anulowanie (nie dotyczy). Przykład: co piąty transport po załadunku ma postój 8 h 10 min w Śremie.
+ */
+export function demoFeeSuggestions(load: Load): FeeSuggestion[] {
+  const at = unloadedAtOf(load);
+  const n = Number((load.code.match(/(\d+)$/) ?? ['', '1'])[1]);
+  const loaded = !['PLANNED', 'RESOURCES_PENDING', 'READY'].includes(load.status);
+  const base = { costEur: 0, revEur: 0, hhl: null, scx: null, enterAt: null, exitAt: null, minutes: null, zone: null, noMeasure: null } as const;
+  const out: FeeSuggestion[] = [];
+  if (loaded && n % 5 === 0 && load.plannedLoadDate) {
+    const day = load.plannedLoadDate.slice(0, 10);
+    const f = dwellFee(490, 'LOAD');
+    out.push({ ...base, id: `${load.id}-dl`, kind: 'DWELL', place: 'LOAD', where: 'Śrem', enterAt: `${day}T07:10:00+02:00`, exitAt: `${day}T15:20:00+02:00`, minutes: 490, zone: 'Załadunek Śrem', costEur: f.eur, revEur: f.eur });
+  } else {
+    out.push({ ...base, id: `${load.id}-dl`, kind: 'DWELL', place: 'LOAD', where: 'Śrem', noMeasure: loaded ? 'brak pomiaru — śledzenie od Szwecji' : 'jeszcze nie mierzono' });
+  }
+  if (at) {
+    const exit = Date.parse(at);
+    out.push({ ...base, id: `${load.id}-du`, kind: 'DWELL', place: 'UNLOAD', where: 'Boden', enterAt: new Date(exit - 224 * 60_000).toISOString(), exitAt: at, minutes: 224, zone: 'Plac budowy Stegra Boden' });
+  } else {
+    out.push({ ...base, id: `${load.id}-du`, kind: 'DWELL', place: 'UNLOAD', where: 'Boden', noMeasure: 'jeszcze nie mierzono' });
+  }
+  const c = cancelFee(load.pricing.costBase, load.pricing.revBase, 4);
+  out.push({ ...base, id: `${load.id}-c`, kind: 'CANCEL', place: null, where: '', noMeasure: 'nie dotyczy', cancelledAt: null, days: 4, pct: c.pct });
+  return out;
+}

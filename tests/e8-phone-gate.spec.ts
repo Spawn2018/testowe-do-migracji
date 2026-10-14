@@ -1273,3 +1273,82 @@ test.describe('wyglad/P5 Dokumenty — E31', () => {
     });
   }
 });
+
+test.describe('wyglad/P5 panel transportu — Ceny (E33) i Dokumenty (E31 pkt 5)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  async function openTab(page: Page, code: string, tab: number) {
+    await page.evaluate((c) => { window.location.hash = `#/transport/${c}`; }, code);
+    await page.waitForSelector('aside.drawer', { timeout: 10_000 });
+    await page.locator('.drawer .dtabs button').nth(tab).click();
+    await page.waitForTimeout(400);
+  }
+
+  test('komputer: HHL tabela koszt / przychód, marża, karta paliwa, dopłaty, zasady, okno „Dopłata”; KSH i SCX jedna kolumna', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openTab(page, 'SG-03', 3);
+    await expect(page.locator('.drawer [data-pp-table] thead th')).toHaveText([/.*/, 'KOSZT · SCX', 'PRZYCHÓD · KSH']);
+    await expect(page.locator('.drawer [data-pp-row]')).toHaveCount(4);
+    await expect(page.locator('.drawer [data-pp-margin]')).toContainText('%');
+    await expect(page.locator('.drawer [data-pp-fuel]')).toBeVisible();
+    await expect(page.locator('.drawer [data-fee]')).toHaveCount(3);
+    await expect(page.locator('.drawer [data-fee-rules]')).toBeVisible();
+    await expect(page.locator('.drawer')).not.toContainText(/WSTĘPNE|OPL-8|Inne/);
+    await page.locator('.drawer [data-fee-add]').click();
+    await expect(page.locator('[data-fee-modal] [data-fee-kind]')).toHaveCount(2);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-fee-modal]')).toHaveCount(0);
+    await openTab(page, 'SG-03', 2);
+    await expect(page.locator('.drawer [data-pd-req]')).toHaveCount(5);
+    await expect(page.locator('.drawer [data-pd-zip]')).toBeVisible();
+    for (const r of ['KSH', 'SCX'] as const) {
+      await boot(page, r);
+      await openTab(page, 'SG-03', 3);
+      await expect(page.locator('.drawer [data-pp-table] thead')).toHaveCount(0);
+      await expect(page.locator('.drawer [data-pp-margin]')).toHaveCount(0);
+      await expect(page.locator('.drawer')).not.toContainText(r === 'KSH' ? 'Koszt' : 'Przychód');
+      await openTab(page, 'SG-03', 2);
+      await expect(page.locator(`.drawer [data-pd-req="${r === 'KSH' ? 'INSURANCE' : 'OCS'}"]`)).toHaveCount(0);
+      await expect(page.locator('.drawer [data-pd-upload], .drawer [data-pd-add]')).toHaveCount(r === 'KSH' ? 0 : await page.locator('.drawer [data-pd-upload], .drawer [data-pd-add]').count());
+    }
+  });
+
+  for (const role of ['HHL', 'KSH', 'SCX'] as const) {
+    test(`telefon ${role}: karty ceny, szczegóły po stuknięciu${role === 'KSH' ? '' : ', „+ Dopłata”'}, dokumenty — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role);
+      await openTab(page, role === 'SCX' ? 'SG-15' : 'SG-03', 3);
+      await expect(page.locator('.drawer [data-pp-phone]')).toBeVisible();
+      await expect(page.locator('.drawer [data-pp-table]')).toHaveCount(0);
+      const hits: Hit[] = [];
+      for (const key of ['fuel', 'fees', 'rules']) {
+        const card = page.locator(`.drawer [data-pp-card="${key}"] .pp-card-hd`);
+        if (await card.count()) await card.click();
+        for (const width of WIDTHS) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(150);
+          hits.push(...await measure(page, `ceny-${key}`, width, role));
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
+      }
+      if (role !== 'KSH') {
+        await page.locator('.drawer [data-fee-add]').click();
+        await expect(page.locator('[data-fee-modal]')).toBeVisible();
+        for (const width of WIDTHS) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(150);
+          hits.push(...await measure(page, 'doplata', width, role));
+        }
+        await page.keyboard.press('Escape');
+        await page.setViewportSize({ width: 390, height: 844 });
+      }
+      await openTab(page, 'SG-03', 2);
+      for (const width of WIDTHS) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.waitForTimeout(150);
+        hits.push(...await measure(page, 'panel-dokumenty', width, role));
+      }
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});

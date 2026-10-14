@@ -120,3 +120,9 @@
   .inv-send,.fact-mark{width:100%}
   .inv-tasks{grid-template-columns:minmax(0,1fr)}
 }
+.fact-offer{display:flex;flex-direction:column;gap:10px;max-width:760px}
+.fact-dl{padding:4px 0}
+.fact-inline{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px}
+.fact-inline .input{width:96px}
+.fact-inline select.input{width:auto}
+.fact-ex-h{margin:6px 0 0;font-family:var(--font-cond);font-size:13px;letter-spacing:.07em;color:var(--ink-2)}

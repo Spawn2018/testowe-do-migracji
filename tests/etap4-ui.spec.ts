@@ -268,13 +268,15 @@ test.describe('M8 — poziom wyceny i kurs tymczasowy', () => {
     await nav(page, 'sched')
     await openLoad(page, 'SG-34')
     await page.locator('.drawer button[aria-selected]').nth(3).click()
-    const cost = page.locator('.drawer [data-money-side="cost"]')
-    const rev = page.locator('.drawer [data-money-side="rev"]')
-    await expect(cost.locator('[data-tier]')).toHaveCount(1)
-    await expect(rev.locator('[data-tier]')).toHaveCount(1)
-    const refC = await cost.locator('[data-fuel-ref]').getAttribute('data-fuel-ref')
+    /* przepisane w wyglad/P5 — E33 (img/e33-after): jedna tabela „Koszt · SCX / Przychód · KSH”, etap nad tabelą,
+       opłata paliwowa z tygodniem i mnożnikiem — ta sama data mnożnika po obu stronach */
+    const pp = page.locator('.drawer [data-pp]')
+    await expect(pp.locator('[data-tier]')).toHaveCount(1)
+    const fuel = pp.locator('[data-pp-row="fuel"]')
+    await expect(fuel).toContainText('×')
+    const refC = await fuel.locator('[data-fuel-side="cost"]').getAttribute('data-fuel-ref')
     expect(refC).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-    expect(await rev.locator('[data-fuel-ref]').getAttribute('data-fuel-ref')).toBe(refC)
+    expect(await fuel.locator('[data-fuel-side="rev"]').getAttribute('data-fuel-ref')).toBe(refC)
     await expect(page.locator('.drawer [data-money-error]')).toHaveCount(0)
     await closeDrawer(page)
 

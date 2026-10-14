@@ -143,9 +143,10 @@ function clearResourceGapRisks(risks: Risk[], loadId: string, complete: boolean)
 
 
 /** HHL seed defaults — editable live in Faktury admin panel. */
+/* wyglad/P5 (E4b, decyzja 07.10): przykład demo jak oferta HHL — 1 % od netto, wypłata 48 h po akceptacji */
 export const DEFAULT_FACTORING_OFFER: FactoringOffer = {
   enabled: true,
-  feePercent: 2.5,
+  feePercent: 1,
   payoutDelayValue: 48,
   payoutDelayUnit: 'hours',
   label: 'SCX Factoring',

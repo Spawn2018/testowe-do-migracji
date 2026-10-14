@@ -6,7 +6,8 @@
 import type { Bill, Document, Load } from '../types';
 import type { PackConfig, PackKey, PackSent } from './p5Pack';
 import { belowThreshold, financeSummary, fuelWeeks, type FinBelowRow, type FinSide, type FinSummary, type FuelWeekRow } from './p5Finance';
-import { demoAccountingPack, demoFactoringOffer, demoFactoringTasks, demoFuelEnrich, demoMarginThreshold, demoPackActions, demoPermits, demoPolicies } from './p5Demo';
+import { demoAccountingPack, demoFactoringOffer, demoFactoringTasks, demoFeeRules, demoFeeSuggestions, demoFuelEnrich, demoMarginThreshold, demoPackActions, demoPermits, demoPolicies } from './p5Demo';
+import type { FeeRules, FeeSuggestion } from './p5Fees';
 
 /** Próg marży w % (Opcje › Cennik i opłaty, E16); null = nie ustawiony, flaga wyłączona. */
 export function marginThresholdOf(): number | null {
@@ -88,4 +89,17 @@ export interface PolicyView { org: 'SCX' | 'HHL'; name: string; number: string; 
 /** null = nie podłączone: w uwagach liczba transportów z ważną polisą (jak dziś), bez numeru polisy. */
 export function policiesOf(): PolicyView[] | null {
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoPolicies() : null;
+}
+
+/** E33 — zasady cennika w panelu „Ceny” (czas wolny, stawki postoju, procenty anulowania). null = nie podłączone. */
+export function feeRulesOf(): FeeRules | null {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoFeeRules() : null;
+}
+
+/**
+ * E33 — podpowiedzi dopłat (pomiar postoju ze stref, anulowanie z cennika) i stan decyzji firm.
+ * null = nie podłączone: w panelu zostaje dzisiejszy formularz dopłat (`AgreedFeeForm`).
+ */
+export function feeSuggestionsOf(load: Load): FeeSuggestion[] | null {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoFeeSuggestions(load) : null;
 }

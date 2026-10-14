@@ -58,6 +58,7 @@
 .up-drop.is-drag{border-color:var(--sea);background:var(--sea-bg)}
 .up-acts{display:flex;justify-content:flex-end;gap:8px;padding-top:4px}
 .up-acts .btn{min-height:40px;min-width:96px;justify-content:center}
+.up-acts .btn:disabled{background:var(--surface-2);color:var(--ink-3);border-color:var(--rule);cursor:not-allowed}
 
 @media (max-width:768px){
   .doc-page>.fin-panel{border:0;background:none}

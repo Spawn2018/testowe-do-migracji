@@ -15,6 +15,7 @@ import { transportLabel } from '../../lib/transportName';
 import { permitScopeOf } from '../../lib/p5Source';
 import { ft, ftp } from '../../i18n/p5';
 import { up } from '../options/up';
+import './docs.css';
 
 interface Props {
   locale: Locale;

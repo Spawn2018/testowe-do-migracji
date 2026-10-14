@@ -1,0 +1,75 @@
+/* wyglad/P5 — panel transportu: „Ceny” (E33, img/e33-after), „Dokumenty” (E31, img/e31-after), okno „Dopłata”. Ładowane leniwie. */
+.pp{display:flex;flex-direction:column;gap:10px;min-width:0}
+.pp-hd{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px}
+.pp-hd h4.sec{margin:0;font-size:17px}
+.pp-table{font-size:14px}
+.pp-table tbody td{white-space:normal}
+.pp-table td.num,.pp-table th.num{white-space:nowrap}
+.pp-table tfoot th{font-weight:700}
+.pp-margin{display:flex;justify-content:space-between;gap:12px;font-size:15px;font-variant-numeric:tabular-nums}
+.pp-margin .neg,.pp-sum .neg{color:var(--red)}
+.pp-pln{margin:0}
+.pp-fuel{padding:10px 12px;background:var(--sea-bg);border:1px solid var(--sea);font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+.pp-fuel b{color:var(--ink)}
+.pp-link{margin-left:6px}
+.pp-err{margin:0;color:var(--red)}
+.pp-sec{display:flex;flex-direction:column;gap:8px;padding-top:6px}
+.pp-sec-hd{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pp-sec h4.sec{margin:0;font-size:16px}
+.pp-sec h4.sec .sub{font-weight:400;color:var(--ink-3);font-size:13px}
+.pp-add{min-height:34px}
+.pp .btn:disabled,.pd .btn:disabled{background:var(--surface-2);color:var(--ink-3);border-color:var(--rule);cursor:not-allowed}
+.pp-over{color:var(--amber-ink);font-weight:600}
+.pp-fees{display:flex;flex-direction:column;gap:8px}
+.pp-fee{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:9px 11px;border:1px solid var(--rule);background:var(--surface)}
+.pp-fee.is-wait{border-left:3px solid var(--amber)}
+.pp-fee-tx{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:13.5px;color:var(--ink-2)}
+.pp-fee-tx b{color:var(--ink);font-size:14px}
+.pp-fee-act{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex:none}
+.pp-tag-btn{padding:0;border:0;background:none;cursor:pointer}
+.pp-tag-btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.pp-rules{display:grid;grid-template-columns:minmax(110px,auto) 1fr;margin:0;font-size:13.5px}
+.pp-rules dt,.pp-rules dd{margin:0;padding:6px 0;border-bottom:1px solid var(--rule-2)}
+.pp-rules dt{color:var(--ink-2);padding-right:12px}
+.pp-card-hd{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pp-sum{flex-direction:row;justify-content:space-between;align-items:center;font-variant-numeric:tabular-nums}
+.pp-sum b:first-child{font-family:var(--font-cond);font-size:16px}
+.pp-add-big{width:100%;min-height:48px;justify-content:center;font-size:16px}
+
+/* Dokumenty w panelu */
+.pd{display:flex;flex-direction:column;gap:10px;min-width:0}
+.pd-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule-2)}
+.pd-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--rule-2)}
+.pd-tx{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:14px}
+.pd-tx b{font-size:14.5px}
+.pd-tx .neg{color:var(--red);font-weight:600}
+.pd-ok,.pd-warn{color:var(--go);font-weight:600;overflow-wrap:anywhere}
+.pd-warn{color:var(--amber-ink)}
+.pd-name{color:inherit;font-weight:600}
+.linkbtn{padding:0;border:0;background:none;color:var(--sea);font:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer;text-align:left}
+.pd-act{display:flex;align-items:center;gap:6px;flex:none}
+.pd-foot{display:flex;gap:8px;flex-wrap:wrap}
+
+/* okno „Dopłata” */
+.fee-modal{z-index:55;width:min(520px,calc(100vw - 24px));margin:0}
+.fee-modal .panel-hd h2{font-size:20px;margin:0}
+.fee-bd{display:flex;flex-direction:column;gap:12px}
+.fee-calc{display:flex;flex-direction:column;gap:2px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--rule);font-size:14px}
+.fee-boxes{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.fee-box{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--rule);font-size:13.5px}
+.fee-box.is-mine{border-color:var(--ink)}
+.fee-box b{font-family:var(--font-cond);font-size:22px;font-variant-numeric:tabular-nums}
+
+@media (max-width:768px){
+  .pp-fee{flex-direction:column}
+  .pp-fee-act{align-items:stretch;width:100%}
+  .pp-fee-act .btn{min-height:44px;justify-content:center}
+  .pp-tag-btn{min-height:44px}
+  .pp-card-hd{min-height:44px}
+  .pp-rules{grid-template-columns:1fr}
+  .pp-rules dt{border-bottom:0;padding-bottom:0;font-weight:600}
+  .pd-row{flex-direction:column}
+  .pd-act{width:100%}
+  .pd-act .btn,.pd-foot .btn{min-height:44px;flex:1;justify-content:center}
+  .fee-modal{width:100%}
+}
