@@ -55,7 +55,11 @@ test('HHL (HHL_ADMIN): przełącznik jest; Automatyzacje z bazy (9.4); ryzyka �
   await expect(page.locator('[data-panel="road-se"] .alt-list')).toHaveCount(0);
   await page.locator('nav [data-view="sched"]').first().click();
   await page.locator('tr[data-load]').first().click();
-  await expect(page.locator('[data-eta="db"]')).toContainText(/± \d+ min · ETA/);
+  /* przepisane w wyglad/P4-b — E15 pkt 6 i 8: blok ETA w Przeglądzie; przed wyjazdem „ETA: –”, w trasie „± N MIN · SŁOWO” z bazy */
+  const eta = page.locator('[data-eta-block]');
+  await expect(eta).toHaveCount(1);
+  if ((await eta.getAttribute('data-eta')) === 'value') await expect(page.locator('[data-eta="db"]')).toContainText(/± \d+ MIN · /);
+  else await expect(eta).toContainText('ETA: –');
   await expect(page.locator('[data-permit]')).toHaveCount(1);
   await expect(page.locator('.drawer')).not.toContainText(/PL\/2026\/14\d\d|HHL\/2026\/12\d\d/);
 });

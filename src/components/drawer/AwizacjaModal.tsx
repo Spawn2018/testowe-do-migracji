@@ -17,6 +17,7 @@ import {
 import { isPlausibleNational, toNationalPhone } from '../../lib/phoneNational';
 import { effArrival, effDeparture, fmtLocal, sailingAssignDenied, sailingStatusLabel } from '../../lib/sailings';
 import { getNowIso } from '../../lib/frozenNow';
+import { trackerKind } from '../../lib/trackerLink';
 import type { Load } from '../../types';
 
 type Props = {
@@ -256,9 +257,17 @@ export function AwizacjaModal({ load, onClose }: Props) {
             </>
           ) : null}
 
-          <label className="form-field">
+          <label className="form-field" data-awiz-tracking>
             <span>{t(locale, 'awiz_tracking')}</span>
             <input className="input" value={trackingRef} onChange={(e) => setTrackingRef(e.target.value)} placeholder={t(locale, 'awiz_tracking_ph')} autoComplete="off" />
+            {/* wyglad/P4-b (E44): podpowiedź i rozpoznany dostawca — samego linku (z kluczem RIO) nie powtarzamy */}
+            <small className="awiz-track-hint" data-awiz-tracking-kind={trackerKind(trackingRef)}>
+              {trackerKind(trackingRef) === 'rio'
+                ? t(locale, 'p4b_awiz_rio')
+                : trackerKind(trackingRef) === 'emtrack'
+                  ? t(locale, 'p4b_awiz_emtrack')
+                  : t(locale, 'p4b_awiz_track_hint')}
+            </small>
           </label>
 
           <label className="form-field">

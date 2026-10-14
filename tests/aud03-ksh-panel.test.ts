@@ -18,10 +18,10 @@ describe('AUD-03 — panel zlecenia KSH (źródło)', () => {
     expect(d).not.toMatch(/if \(role === 'KSH'\) \{\s*return/);
     expect(d).toMatch(/data-ksh-actions/);
     expect(d).toMatch(/<KshDatesModal/);
-    // E25: akcje przewoźnika/HHL przy canEdit || canStatus (przycisk „Zmień status”)
+    // E25: akcje przewoźnika/HHL; „Zmień status” (przepisane w wyglad/P4-b — E25, img/e25-after) w zakładce Status, tylko przy canStatus
     expect(d).toMatch(/data-carrier-actions/);
-    expect(d).toMatch(/canStatus/);
-    expect(d).toMatch(/data-action="change-status"/);
+    expect(d).toMatch(/canStatus=\{canStatus\}/);
+    expect(src('src/components/drawer/StatusAxisTab.tsx')).toMatch(/\{canStatus \? \([\s\S]{0,200}data-action="change-status"/);
   });
   it('okno: wyłącznie 4 pola daty i godziny; zapis przez ksh_confirm_dates', () => {
     const m = src('src/components/drawer/KshDatesModal.tsx');

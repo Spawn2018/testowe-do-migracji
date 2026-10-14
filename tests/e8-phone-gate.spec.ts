@@ -791,3 +791,108 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
     }
   });
 });
+
+test.describe('wyglad/P4-b panel transportu — Status E25 (img/e25-after), pasek śledzenia E27, okno „Zmień status”', () => {
+  test.describe.configure({ mode: 'serial', timeout: 180_000 });
+
+  async function openLoad(page: Page, code: string) {
+    await openView(page, 'sched');
+    await page.evaluate((c) => {
+      const el = [...document.querySelectorAll('[data-load]')].find((r) => (r.textContent ?? '').trim().includes(c)) as HTMLElement | undefined;
+      el?.click();
+    }, code);
+    await page.waitForSelector('aside.drawer', { timeout: 10_000 });
+  }
+  const statusTab = (page: Page) => page.locator('.drawer button[aria-selected]').nth(1).click();
+
+  test('komputer HHL: pasek śledzenia nad zakładkami; oś 3 grupy i 14 statusów; bieżący; okno z informacją przy „Dostarczone”', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openLoad(page, 'T-12');
+    const bar = page.locator('.drawer [data-tracking-bar]');
+    await expect(bar).toHaveAttribute('data-tracking-bar', 'on');
+    const barBox = (await bar.boundingBox())!;
+    const tabsBox = (await page.locator('.drawer .dtabs').boundingBox())!;
+    expect(barBox.y + barBox.height).toBeLessThanOrEqual(tabsBox.y + 1);
+    await expect(page.locator('.drawer [data-eta-block]')).toBeVisible();
+    await statusTab(page);
+    const axis = page.locator('.drawer [data-status-axis]');
+    await expect(axis.locator('[data-axis-group]')).toHaveCount(3);
+    const groups = await axis.locator('[data-axis-group]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.axisGroup));
+    expect(groups).toEqual(['prep', 'route', 'after']);
+    const names = await axis.locator('[data-axis-row]').evaluateAll((els) => els.flatMap((e) => ((e as HTMLElement).dataset.axisRow ?? '').split(' ')));
+    expect(names).toHaveLength(14);
+    await expect(axis.locator('[data-axis-kind="current"]')).toHaveCount(1);
+    await expect(axis.locator('[data-axis-kind="current"] .sax-name')).toHaveText('Na placu');
+    await page.locator('.drawer [data-action="change-status"]').click();
+    const modal = page.locator('[data-status-change-modal]');
+    await expect(modal).toBeVisible();
+    await expect(modal.locator('[data-status-now]')).toContainText('Na placu');
+    await modal.locator('[data-status-select]').selectOption('DELIVERED');
+    await expect(modal.locator('[data-status-info]')).toBeVisible();
+    await modal.getByRole('button', { name: 'Anuluj' }).click();
+    await expect(modal).toHaveCount(0);
+  });
+
+  test('KSH: oś statusów jako podgląd, bez „Zmień status”', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'KSH');
+    await openLoad(page, 'SG-01');
+    await statusTab(page);
+    await expect(page.locator('.drawer [data-status-axis]')).toBeVisible();
+    await expect(page.locator('.drawer [data-action="change-status"]')).toHaveCount(0);
+    await expect(page.locator('.drawer .sax-who')).toBeVisible();
+  });
+
+  for (const width of [360, 390, 430]) {
+    test(`telefon ${width}: oś od „W trasie”, „Przygotowanie” zwinięte; „Zmień status” nad dolnym paskiem; okno jako arkusz od dołu`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await boot(page, 'HHL', true);
+      await openLoad(page, 'T-12');
+      await statusTab(page);
+      const groups = await page.locator('.drawer [data-axis-group]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.axisGroup));
+      expect(groups).toEqual(['route', 'after', 'prep']);
+      await expect(page.locator('.drawer [data-axis-group="prep"] [data-axis-row]')).toHaveCount(0);
+      /* E8 pkt 4: w panelu (pasek śledzenia i oś) tekst ≥ 12 px, przyciski ≥ 44 px */
+      const tiny = async (sel: string) => page.locator(sel).evaluateAll((roots) => roots.flatMap((root) => {
+        const out: string[] = [];
+        const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        for (let n = w.nextNode(); n; n = w.nextNode()) {
+          const el = n.parentElement;
+          if (!el || !(n.textContent ?? '').trim()) continue;
+          const r = el.getBoundingClientRect();
+          if (r.width === 0 || r.height === 0) continue;
+          if (parseFloat(getComputedStyle(el).fontSize) < 12) out.push(`${(n.textContent ?? '').trim().slice(0, 30)} ${getComputedStyle(el).fontSize}`);
+        }
+        return out;
+      }));
+      expect(await tiny('.drawer [data-tracking-bar], .drawer [data-status-axis]')).toEqual([]);
+      const smallBtn = await page.locator('.drawer [data-status-axis] button').evaluateAll((els) =>
+        els.filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height < 44; }).map((e) => e.textContent));
+      expect(smallBtn).toEqual([]);
+      const btn = page.locator('.drawer [data-action="change-status"]');
+      await btn.scrollIntoViewIfNeeded();
+      const b = (await btn.boundingBox())!;
+      expect(b.height).toBeGreaterThanOrEqual(44);
+      const onTop = await btn.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('[data-action="change-status"]') === el;
+      });
+      expect(onTop, 'przycisk nie jest zasłonięty dolnym paskiem').toBe(true);
+      await btn.click();
+      const modal = page.locator('[data-status-change-modal]');
+      await expect(modal).toBeVisible();
+      const m = (await modal.boundingBox())!;
+      expect(Math.round(m.x)).toBe(0);
+      expect(Math.round(m.width)).toBe(width);
+      expect(Math.round(m.y + m.height)).toBe(844);
+      const small = await modal.locator('button, select, input').evaluateAll((els) =>
+        els.filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height < 44; }).map((e) => e.outerHTML.slice(0, 60)));
+      expect(small).toEqual([]);
+      expect(await tiny('[data-status-change-modal]')).toEqual([]);
+      const inputFont = await modal.locator('input, select').evaluateAll((els) => els.map((e) => parseFloat(getComputedStyle(e).fontSize)));
+      expect(inputFont.every((f) => f >= 16), `pola ≥ 16 px: ${inputFont.join(', ')}`).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+    });
+  }
+});

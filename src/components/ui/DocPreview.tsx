@@ -67,7 +67,7 @@ export function DocPreview({ doc, onClose }: Props) {
       <button
         type="button"
         className="scrim"
-        style={{ zIndex: 50 }}
+        style={{ zIndex: 52 }}
         aria-label={t(locale, 'a6_dp_close_preview')}
         onClick={onClose}
       />

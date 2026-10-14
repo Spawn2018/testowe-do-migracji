@@ -1,0 +1,120 @@
+/**
+ * wyglad/P4-b — pasek śledzenia w panelu transportu, nad zakładkami (E27 pkt 5, img/e27-after; E1-2).
+ * Przed oknem: „Śledzenie włączy się 21.10 o 03:00 · naczepa …”; w oknie: „Śledzenie trwa od 03:00 · ostatnia pozycja 2 min temu”;
+ * po „Dostarczone”: „Śledzenie zakończone 07.10, 12:19” i ślad z przewozu (usuwany 30 dni po dostawie).
+ * Opis lokalizatora (E44 pkt 6): emtrack = naczepa SCX (decyzja 21:43); link RIO — bez klucza (E44 pkt 8: „RIO · ••••”).
+ * Czysty wygląd: dane z transportu i dziennika zdarzeń, bez zapytań.
+ */
+import type { Load, LoadEvent, Locale } from '../../types';
+import { t, tp } from '../../i18n/messages';
+import { trackingPhase } from '../../lib/stageTiles';
+import { buildStatusAxis, dayOnly, dayTime, isoMs } from '../../lib/statusAxis';
+import { hasAwizacja } from '../../lib/awizacjaState';
+import { trackerKind } from '../../lib/trackerLink';
+
+function trackerText(load: Pick<Load, 'resources'>, locale: Locale): string {
+  const kind = trackerKind(load.resources.trackingRef);
+  const plate = (load.resources.trailerPlate ?? '').trim();
+  if (kind === 'emtrack') return plate ? tp(locale, 'p4b_tracker_emtrack', { plate }) : t(locale, 'p4b_tracker_emtrack_noplate');
+  if (kind === 'rio') return t(locale, 'p4b_tracker_rio');
+  if (kind === 'other') return t(locale, 'p4b_tracker_other');
+  return t(locale, 'p4b_tracker_none');
+}
+
+function ago(fromIso: string, nowIso: string, locale: Locale): string {
+  const m = Math.max(0, Math.round((Date.parse(nowIso) - Date.parse(fromIso)) / 60_000));
+  if (m < 1) return t(locale, 'p4b_ago_now');
+  if (m < 60) return tp(locale, 'p4b_ago_min', { n: m });
+  return tp(locale, 'p4b_ago_h', { h: Math.floor(m / 60), m: m % 60 });
+}
+
+export function TrackingBar({
+  load,
+  events,
+  label,
+  locale,
+  nowIso,
+}: {
+  load: Load;
+  events: readonly LoadEvent[];
+  /** nazwa transportu do tekstu („SG-24”) */
+  label: string;
+  locale: Locale;
+  nowIso: string;
+}) {
+  const phase = trackingPhase(load, nowIso);
+  const tracker = trackerText(load, locale);
+  const trailer = (load.resources.trailerPlate ?? '').trim();
+
+  if (phase === 'before') {
+    const sub = [
+      t(locale, hasAwizacja(load) ? 'p4b_trk_before_sub' : 'p4b_trk_before_sub_noawiz'),
+      trailer ? tp(locale, 'p4b_trailer', { plate: trailer }) : t(locale, 'p4b_no_trailer'),
+    ].join(' · ');
+    return (
+      <div className="trk before" data-tracking-bar="before">
+        <span className="trk-mk" aria-hidden />
+        <div className="trk-txt">
+          <b>{tp(locale, 'p4b_trk_before', { code: label, day: dayOnly(load.plannedLoadDate) })}</b>
+          <span>{sub}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'on') {
+    const day = (load.plannedLoadDate ?? '').slice(0, 10);
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw' }).format(new Date(nowIso));
+    /* start okna = 03:00 w dniu załadunku (L15, L16); gdy transport ruszył przed dniem z planu — od pierwszego statusu trasy */
+    const firstRoute = buildStatusAxis(load, events).groups.find((g) => g.key === 'route')?.rows.find((r) => r.hit)?.hit?.at ?? null;
+    const start = day && day > today
+      ? (firstRoute ? dayTime(firstRoute) : null)
+      : !day || day === today ? '03:00' : `${dayOnly(day)}, 03:00`;
+    const lastFix = load.etaDetail?.lastFixAt
+      ?? (load.silentMinutes != null ? new Date(Date.parse(nowIso) - load.silentMinutes * 60_000).toISOString() : null);
+    const head = [start ? tp(locale, 'p4b_trk_on', { start }) : t(locale, 'p4b_trk_on_nostart'), lastFix ? tp(locale, 'p4b_trk_on_last', { ago: ago(lastFix, nowIso, locale) }) : null]
+      .filter(Boolean)
+      .join(' · ');
+    return (
+      <div className="trk on" data-tracking-bar="on">
+        <span className="trk-mk" aria-hidden />
+        <div className="trk-txt">
+          <b>{head}</b>
+          <span>{[t(locale, 'p4b_trk_on_sub'), tracker].join(' · ')}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (String(load.status) === 'CANCELLED') {
+    return (
+      <div className="trk after" data-tracking-bar="cancelled">
+        <span className="trk-mk" aria-hidden />
+        <div className="trk-txt">
+          <b>{tp(locale, 'p4b_trk_cancelled', { code: label })}</b>
+        </div>
+      </div>
+    );
+  }
+
+  const axis = buildStatusAxis(load, events);
+  const done = axis.deliveredAt;
+  const purge = done ? new Date(Date.parse(done) + 30 * 86_400_000).toISOString() : null;
+  const sub = [
+    done && axis.firstFixAt && isoMs(axis.firstFixAt) < isoMs(done)
+      ? tp(locale, 'p4b_trk_after_trail', { from: dayTime(axis.firstFixAt), to: dayTime(done) })
+      : null,
+    purge ? tp(locale, 'p4b_trk_after_purge', { day: dayOnly(purge) }) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    <div className="trk after" data-tracking-bar="after">
+      <span className="trk-mk" aria-hidden />
+      <div className="trk-txt">
+        <b>{done ? tp(locale, 'p4b_trk_after', { code: label, at: dayTime(done) }) : tp(locale, 'p4b_trk_after_nodate', { code: label })}</b>
+        {sub ? <span>{sub}</span> : null}
+      </div>
+    </div>
+  );
+}

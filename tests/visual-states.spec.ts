@@ -103,8 +103,8 @@ test.describe('III-2 zrzuty stanów (HHL pl 1440)', () => {
     await open(page, 'dark'); await sched(page)
     await page.locator('[data-page="schedule"] .filters [data-quick="nodocs"]').click() // E25 / D-20261014-0315-01 H2.4
     await page.locator('tr[data-load]').first().click()
-    // E25 (P4): zamiast zablokowanego „Oznacz jako gotowy” — „Zmień status” (bramka w oknie/RPC)
-    await page.locator('.drawer button[aria-selected]').nth(4).click()
+    // E25 (P4): zamiast zablokowanego „Oznacz jako gotowy” — „Zmień status” (bramka w oknie/RPC); wyglad/P4-b: przycisk w zakładce Status (img/e25-after)
+    await page.locator('.drawer button[aria-selected]').nth(1).click()
     const btn = page.locator('.drawer [data-action="change-status"]')
     await expect(btn).toBeVisible()
     await expect(btn).toBeEnabled()

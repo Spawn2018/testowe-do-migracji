@@ -122,7 +122,7 @@ const pl: Dict = {
   awiz_err_phone: 'Numer telefonu wygląda niepoprawnie',
   awiz_phone_country: 'Kraj numeru',
   awiz_phone_hint: 'Bez kierunkowego (np. 601234567). +48… usuwane automatycznie.',
-  awiz_tracking: 'Link śledzenia / emtrack',
+  awiz_tracking: 'Link śledzenia',
   awiz_tracking_ph: 'URL lub identyfikator',
   awiz_operator: 'Armator',
   awiz_vessel: 'Statek',

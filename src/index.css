@@ -486,7 +486,7 @@ nav button{padding:8px 14px}
 
 /* ---------- Punkt 5: podgląd dokumentu (scrim + panel, Claude v2) ---------- */
 .docpreview{
-  position:fixed;z-index:51;
+  position:fixed;z-index:53;
   left:50%;top:50%;transform:translate(-50%,-50%);
   width:min(720px,calc(100vw - 32px));
   max-height:min(80vh,860px);
@@ -1464,4 +1464,84 @@ img,video{max-width:100%;height:auto}
 @media (max-width:768px){
   /* „Kolumny” dotyczą tabeli na komputerze — na telefonie lista to karty */
   .sched-actions-pop .sched-col-picker{display:none}
+}
+/* ===== wyglad/P4-b — panel transportu: pasek śledzenia E27, oś statusów E25, okno „Zmień status”, blok ETA E15 =====
+   Wzór: img/e25-after, img/e27-after („Pasek śledzenia w panelu”), img/e15-after („Przegląd · blok ETA”). */
+.trk{display:flex;align-items:flex-start;gap:10px;margin:10px 15px;padding:9px 12px;border:1px solid var(--rule);background:var(--surface-2)}
+.trk-mk{flex:0 0 12px;width:12px;height:12px;margin-top:3px;border-radius:50%;border:2px solid var(--ink-3);background:var(--surface)}
+.trk.on{background:var(--go-bg);border-color:var(--go)}
+.trk.on .trk-mk{background:var(--go);border-color:var(--go)}
+.trk.after .trk-mk{background:var(--ink-3);border-color:var(--ink-3)}
+.trk-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.trk-txt b{font-size:13.5px;font-weight:600;color:var(--ink)}
+.trk-txt span{font-size:12px;color:var(--ink-3)}
+
+.sax-cancel{margin:0 0 10px;padding:9px 12px;background:var(--red-bg);border-left:3px solid var(--red);font-size:13px}
+.sax-gh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:12px 0 4px;
+  font-family:var(--font-cond);font-weight:600;font-size:12px;letter-spacing:.08em;color:var(--ink-2)}
+.sax-grp:first-of-type .sax-gh{padding-top:2px}
+.sax-gr{font-family:var(--font-sans);font-weight:400;font-size:12.5px;letter-spacing:0;color:var(--ink-3)}
+.sax-more{font-family:var(--font-sans);font-weight:400;font-size:12.5px;letter-spacing:0;color:var(--ink-2)}
+.sax-list{list-style:none;margin:0;padding:0}
+.sax-row{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:2px 12px;padding:9px 0;border-bottom:1px solid var(--rule-2)}
+.sax-row:last-child{border-bottom:0}
+.sax-mk{width:16px;height:16px;margin-top:2px;border-radius:50%;border:2px solid var(--ink-3);background:var(--surface)}
+.sax-row.done .sax-mk{background:var(--go);border-color:var(--go)}
+.sax-row.current .sax-mk{background:var(--go);border-color:var(--go-bg);outline:2px solid var(--go)}
+.sax-row.skipped .sax-mk{border-style:dashed;border-color:var(--ink-3);background:transparent}
+.sax-main{min-width:0}
+.sax-nm{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 7px}
+.sax-name{font-size:14px;font-weight:600;color:var(--ink)}
+.sax-row.current .sax-name{color:var(--go)}
+.sax-row.skipped .sax-name{font-weight:400;color:var(--ink-3)}
+.sax-row.pending .sax-name{color:var(--ink-2)}
+.sax-tag{font-family:var(--font-cond);font-weight:700;font-size:11px;letter-spacing:.06em;color:var(--go)}
+.sax-tag.manual{color:var(--sea)}
+.sax-sub{margin-top:2px;font-size:12.5px;line-height:1.4;color:var(--ink-3)}
+.sax-ts{display:flex;flex-direction:column;align-items:flex-end;font-size:12.5px;color:var(--ink-2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.sax-row.skipped .sax-ts,.sax-row.pending .sax-ts{color:var(--ink-3)}
+.sax-ft{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--rule)}
+.sax-who{font-size:12.5px;color:var(--ink-3)}
+.sax-change{flex-shrink:0;border-color:var(--ink)}
+
+.etab{margin:0 0 10px;padding:10px 14px;border:1px solid var(--rule);background:var(--surface)}
+.etab-lbl{font-family:var(--font-cond);font-weight:600;font-size:11.5px;letter-spacing:.08em;color:var(--ink-3)}
+.etab-val{display:flex;flex-wrap:wrap;align-items:center;gap:6px 9px;margin:3px 0 4px;
+  font-family:var(--font-cond);font-weight:700;font-size:24px;line-height:1.15;color:var(--ink)}
+.etab-val .pill{font-family:var(--font-cond);font-size:11.5px;letter-spacing:.05em}
+.etab-sub{font-size:12.5px;line-height:1.45;color:var(--ink-3)}
+.etab.why .etab-sub{color:var(--ink-2)}
+.etab-howto{margin:-2px 0 12px;font-size:11.5px}
+
+.awiz-modal.scm{width:min(600px,calc(100vw - 24px))}
+.scm .panel-hd h2{font-size:21px}
+.scm-now{margin:0 0 12px;font-size:13.5px;color:var(--ink-2)}
+.scm-now b{color:var(--ink)}
+.scm-when{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.scm-gps{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;padding:9px 12px;
+  background:var(--sea-bg);border-left:3px solid var(--sea);font-size:13px;color:var(--ink)}
+.scm-use{flex-shrink:0;padding:4px 2px;font-weight:600;color:var(--sea)}
+.scm-info{margin:0 0 12px;padding:10px 12px;background:var(--amber-bg);border-left:3px solid var(--amber);font-size:13px;line-height:1.45;color:var(--ink)}
+.scm-rules{margin:0;font-size:12.5px;line-height:1.45;color:var(--ink-3)}
+.scm-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--rule)}
+.scm-actions .btn{min-width:96px;padding:9px 18px}
+.scm-actions .btn.ghost{border-color:var(--ink)}
+.scm .input{min-height:44px;font-size:15px}
+.form-field .awiz-track-hint{margin-left:0;font-size:12px;color:var(--ink-3)}
+.form-field .awiz-track-hint[data-awiz-tracking-kind="rio"],.form-field .awiz-track-hint[data-awiz-tracking-kind="emtrack"]{color:var(--go)}
+.scm-grab{display:block;width:44px;height:4px;margin:8px auto 0;border-radius:var(--wt-r-float);background:var(--rule)}
+@media (max-width:768px){
+  /* telefon: panel transportu na całym ekranie nad dolnym paskiem (img/e25-after, e27-after) — stopka z „Zmień status” nie chowa się pod paskiem */
+  .drawer{z-index:51}
+  .trk{margin:8px 12px}
+  .sax-row{grid-template-columns:18px minmax(0,1fr) auto}
+  .sax-more{min-height:44px;padding:0 4px}
+  .sax-ft .sax-change{width:100%;min-height:44px}
+  .awiz-modal.scm.sheet{inset:auto 0 0 0;top:auto;left:0;transform:none;width:100%;height:auto;max-height:92vh;margin:0;border-top:1px solid var(--rule)}
+  .scm.sheet .scm-actions{display:grid;grid-template-columns:1fr 1fr}
+  .scm.sheet .scm-actions .btn{width:100%;min-height:44px}
+  .scm-use{min-height:44px;padding:0 6px}
+  /* E8 pkt 4: pola ≥ 16 px (bez powiększania strony przy wpisywaniu), tekst ≥ 12 px */
+  .scm .input{font-size:16px}
+  .sax-tag,.etab-lbl,.etab-val .pill,.etab-howto{font-size:12px}
 }
