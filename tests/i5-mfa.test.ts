@@ -1,7 +1,7 @@
 /** I-5 — 2FA: decyzja ekranu po logowaniu + statyczne gwarancje (AuthGate, Opcje, migracja 0057). */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { mfaStep, type MfaStatus } from '../src/auth/Mfa';
+import { accountMfaEnabled, mfaStep, type MfaStatus } from '../src/auth/Mfa';
 
 const st = (o: Partial<MfaStatus>): MfaStatus => ({ role: 'HHL_ADMIN', aal: 'aal1', enforced: false, required: false, satisfied: true, ...o });
 
@@ -13,9 +13,21 @@ describe('I-5 mfaStep', () => {
   it('brak danych → nic', () => expect(mfaStep(null, null)).toBe('none'));
 });
 
+describe('I-5 accountMfaEnabled (D-20261014-1420-01 R1)', () => {
+  it('satisfied = true i 0 urządzeń → Wyłączona', () => {
+    // satisfied z my_mfa_status celowo nie jest argumentem — nie może włączyć UI
+    expect(accountMfaEnabled(0)).toBe(false);
+  });
+  it('≥1 zweryfikowane TOTP → Włączona', () => {
+    expect(accountMfaEnabled(1)).toBe(true);
+    expect(accountMfaEnabled(2)).toBe(true);
+  });
+});
+
 describe('I-5 statycznie', () => {
   const gate = readFileSync('src/auth/AuthGate.tsx', 'utf8');
   const opts = readFileSync('src/views/OptionsView.tsx', 'utf8');
+  const live = readFileSync('src/auth/LiveAccountScreen.tsx', 'utf8');
   const sql = readFileSync('supabase/migrations/0057_mfa_hhl_admin.sql', 'utf8');
   it('AuthGate: poziom aal przed danymi i zdarzenie MFA_CHALLENGE_VERIFIED', () => {
     expect(gate).toMatch(/getAuthenticatorAssuranceLevel/);
@@ -23,9 +35,12 @@ describe('I-5 statycznie', () => {
     // D-20261013-2255-01 G4: po MFA profil z withSessionProfile → setAuthProfile(profile)
     expect(gate.indexOf('mfaStep(')).toBeLessThan(gate.indexOf('setAuthProfile(profile)'));
   });
-  it('Opcje: Moje konto (AccountScreen + MfaSetup) tylko w buildzie Supabase — D-20261014-0700-01 J3 pkt 1 / E11', () => {
+  it('Opcje: Moje konto (AccountScreen + MfaSetup + MyMfa) — D-20261014-0700-01 J3 / D-20261014-1420-01 R2', () => {
     expect(opts).toMatch(/const LiveAccount = import\.meta\.env\.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED \? lazy\(\(\) => import\('\.\.\/auth\/LiveAccountScreen'\)\)/);
-    expect(readFileSync('src/auth/LiveAccountScreen.tsx', 'utf8')).toMatch(/MfaSetup/);
+    expect(live).toMatch(/MfaSetup/);
+    expect(live).toMatch(/MyMfa/);
+    expect(live).toMatch(/accountMfaEnabled/);
+    expect(live).toMatch(/auth_pw_changed/);
   });
   it('0057: flaga włączana tylko, gdy każdy aktywny HHL_ADMIN ma TOTP; zmiana wymaga aal2', () => {
     expect(sql).toMatch(/security_flags/);

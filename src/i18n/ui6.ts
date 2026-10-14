@@ -45,6 +45,7 @@ const pl: Dict = {
   auth_saving: 'Zapisywanie…',
   auth_pw_short: 'Hasło musi mieć co najmniej {n~znak|znaki|znaków}.',
   auth_pw_mismatch: 'Hasła nie są takie same.',
+  auth_pw_changed: 'Hasło zmienione.',
   a6_bill_flag_label_brak_kursu: 'brak kursu',
   a6_bill_flag_label_brak_na_fakturze: 'pominięty z tygodnia',
   a6_bill_flag_label_data_kursu: 'data kursu',

@@ -15,6 +15,15 @@ import './auth.css';
 
 export interface MfaStatus { role: string | null; aal: string; enforced: boolean; required: boolean; satisfied: boolean; factors?: number }
 
+/**
+ * D-20261014-1420-01 R1 — stan „2FA: Włączona” w Moje konto.
+ * Tylko zweryfikowane TOTP (`listFactors`, `status === 'verified'`).
+ * `my_mfa_status.satisfied` NIE wchodzi: znaczy „spełnia wymaganie”, nie „ma 2FA”.
+ */
+export function accountMfaEnabled(verifiedTotpCount: number): boolean {
+  return verifiedTotpCount > 0;
+}
+
 /** I-17: nazwa nowego urządzenia — unikalna na koncie (Supabase wymaga różnych friendlyName). */
 export function deviceName(existing: string[], now = new Date()): string {
   const base = `Watch Tower ${existing.length + 1} · ${now.toISOString().slice(0, 16).replace('T', ' ')}`;
