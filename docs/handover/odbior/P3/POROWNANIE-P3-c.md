@@ -1,7 +1,7 @@
 # P3-c — Opcje i Ustawienia: porównanie z raportem audytu (Z3, Z4, Z11)
 
 Gałąź `wyglad/P3-c` (koordynator, FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Tylko wygląd i nawigacja między ekranami — bez bazy, migracji, uprawnień i zapisów (F8).
-Osobny plik, bo `POROWNANIE.md` zmienia równolegle `wyglad/P3-b` (#185).
+Osobny plik obok `POROWNANIE.md` (P3-a, P3-b). Gałąź po rebase na `main` `cb14008` (wygląd P4-a, PR #188) — zrzuty z nowym paskiem etapów `StageBar`.
 
 Wzorzec (Z1): `raport/img/e11-desk.webp`, `e11-phone.webp`, `e12-after.webp`, `e6-desk.webp`, `e37-after.webp`; etapy E11, E12 (w `E1-E6_E11-E14.md` i `E12.md`), E37, E6, E14; `ROZSTRZYGNIECIA_LUK.md` G-11, G-18, E12-1…E12-4, E9-4, E4b-1, E3-1; `DECYZJE_08_10.md` pkt 21–23.
 Zrzuty: tryb demo, `#/?now=2026-10-08T10:32:00Z`, `docs/handover/odbior/P3/wyglad-P3-c/` (39 zrzutów + 8 porównań `porownanie-*.png`).
@@ -48,17 +48,18 @@ Zrzuty: tryb demo, `#/?now=2026-10-08T10:32:00Z`, `docs/handover/odbior/P3/wygla
 6. **Ekrany bez treści do czasu swojej paczki:** Treści wiadomości (P8), Terminy płatności i adresy (P5) — nie ma ich w menu, dopóki paczka ich nie doda.
 7. **Na produkcji do podłączenia danych przez wykonawcę** ekrany Użytkownicy, Logowania, Kto co dostaje, Komunikat, Progi, Historia zmian, Eksport, Moje konto pokazują dzisiejsze formularze w nowym układzie, a Przełączniki — „Brak źródła danych.” (F1). Nowy wygląd tych ekranów widać w trybie demo i po podłączeniu (dopisek G2).
 8. **„Automatyzacje” (lista reguł) zniknęły z Opcji** — mają własną stronę w menu.
-9. **Ocena przewoźnika** (dziś w preferencjach) zostaje w „Wygląd i waluta” do czasu Kokpitu E9 (`wyglad/P3-b`), który ją przejmuje.
+9. **Ocena przewoźnika** (dziś w preferencjach) zostaje w „Wygląd i waluta”. Tabela E12 przenosi ją do Kokpitu (E9), ale Kokpit z `wyglad/P3-b` jej nie ma — zostaje tu do dopisku (pytanie w dopisku do wykonawcy, G5).
 10. **Motyw ciemny:** wybrane segmenty i przyciski główne są jasne na ciemnym tle — jak `.btn` w całej aplikacji.
 11. **Pola daty** (`type="date"`) mają format przeglądarki.
 
-## Sprawdzenia (lokalnie, tryb demo, `vite build` jak w `fresh-smoke.sh`)
+## Sprawdzenia (lokalnie po rebase na `cb14008`, tryb demo, `vite build` jak w `fresh-smoke.sh`)
 
-- `npm run test:unit`: 915 ✓ (2 przypadki `pl-t` zależą od języka systemu; z `LANG=C.UTF-8` — 4 ✓).
-- `npm run lint:css` ✓; `tsc -b` ✓; pierwsze wczytanie 390,2 kB gzip (budżet 400 kB; `main` 380,9 kB).
-- Playwright: `e8-phone-gate` 14 ✓ — w tym nowe „wyglad/P3-c Opcje i Ustawienia” (każdy ekran HHL, KSH i SCX przy 360/390/430 px, także edycja progu i działania przy osobie: 0 w każdej kolumnie; komputer: 6 grup, 1440 i 1280 px bez przewijania w bok); `etap4-ui`, `etap6-ui`, `d-eur-t`, `persist-toast`, `etap5-ui`, `aud03` ✓.
-- Migawki `tests/__screenshots__/` bez zmian (Opcje nie mają migawek). `visual.spec`: 2 różnice ~68 px w `stan-*` — te same na `main` w tym środowisku (czcionki), nie od tej zmiany.
-- Build produkcyjny (`VITE_AUTH_MODE=supabase`): brak modułu `demo` i danych przykładowych w `dist/` (sprawdzone grep), `i0-prod-guard` ✓, `i2-demo-no-send` ✓.
+- `tsc -b` ✓; `npm run lint:css` ✓; `npm run test:unit`: 949 ✓ (2 przypadki `pl-t` zależą od hunspella w systemie — w CI go nie ma; z `LANG=C.UTF-8` jedyne zgłoszenie to „elem” w `p3b_delivered_ksh` z P3-b, nie z P3-c).
+- Pierwsze wczytanie: 391,0 kB gzip (budżet 400 kB; `main` `cb14008` 387,7 kB). Opcje i Ustawienia ładują się osobno (`src/views/optionsLazy.tsx`), bo z nimi w pierwszym wczytaniu było 399,1 kB.
+- Playwright, cała brama `e8-phone-gate` (P2, P3-a, P3-b, P4-a, P3-c): 27 ✓. Nowy blok „wyglad/P3-c Opcje i Ustawienia”: każdy ekran HHL, KSH i SCX przy 360/390/430 px, także edycja progu i działania przy osobie — 0 w każdej kolumnie; komputer: 6 grup, 1440 i 1280 px bez przewijania w bok.
+- `etap4-ui`, `etap6-ui`, `d-eur-t`, `persist-toast`, `etap5-ui`, `aud03`: 27 ✓.
+- Migawki `tests/__screenshots__/`: odświeżone w `visual.yml` (`update=true`) po rebase — wpis w `G4_WZORZEC.md` pod „wyglad/P4-a”.
+- Build produkcyjny (`VITE_AUTH_MODE=supabase`): brak modułu `demo` i danych przykładowych w `dist/` (grep), `i0-prod-guard` ✓, `i2-demo-no-send` ✓.
 
 ## Niezależne sprawdzenie
 

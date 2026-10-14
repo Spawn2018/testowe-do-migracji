@@ -21,8 +21,8 @@ import { TasksView } from './views/TasksView';
 import { WorkflowsView } from './views/WorkflowsView';
 import { GeofenceView } from './views/GeofenceView';
 import { DriverPwa } from './views/DriverPwa';
-import { OptionsView } from './views/OptionsView';
-import { SettingsView } from './views/SettingsView';
+/* wyglad/P3-c: Opcje i Ustawienia ładowane osobno (budżet pierwszego wczytania) */
+import { OptionsViewLazy as OptionsView, SettingsViewLazy as SettingsView } from './views/optionsLazy';
 import { navForRole } from './lib/permissions';
 import { usePageSectionDnD } from './hooks/usePageSectionDnD';
 import { useRouteSync } from './hooks/useRouteSync';
