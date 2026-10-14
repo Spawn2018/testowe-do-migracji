@@ -2327,3 +2327,13 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - PR #193 (`wyglad/P4-c`) — draft; scalenie po sygnale „#193 GOTOWE DO SCALENIA”.
 
 **wyglad/P4-b NA PRODUKCJI — commit `c7dd55aa`, wdrożenie `dpl_AvsXQY2ZyiUDJuc3wpttzzgKQusq`, 14.10.2026 17:19.**
+
+## 2026-10-14 — wyglad/P4-c NA PRODUKCJI
+
+- Sygnał właściciela 14.10.2026 ~18:13: scalić #193 i wdrożyć; dane K2 według D-20261014-1320-01.
+- Scalenie PR #193 → `bb55884f` (głowa po przeniesieniu na main: `938760a`). unit + visual zielone; gitleaks 0; `npm audit --omit=dev --audit-level=high` 0. Bez migracji.
+- Wdrożenie R7 z `main` `bb55884f`, 14.10.2026 18:17, `dpl_6EEFjRMh516nGexue6GZPyv8sEeK`.
+- Plik JS: `assets/index-CS7-22Du.js` (oba adresy 200). 0 × `service_role` (JS z HTML). Kopia wdrożeniowa usunięta.
+- Dalej: K2 (dane P4-c) + H3/H4 (0640) + R6 (1420) w paczce P4.
+
+**wyglad/P4-c NA PRODUKCJI — commit `bb55884f`, wdrożenie `dpl_6EEFjRMh516nGexue6GZPyv8sEeK`, 14.10.2026 18:17.**

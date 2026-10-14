@@ -322,7 +322,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - `etap4-ui.spec.ts` l.88–116 („Oznacz jako gotowy”); `visual-states.spec.ts` (`mark-ready`, chipy);
   - `status-label.test.ts`, `status-pill.test.ts`, `money-v2.test.ts` l.63, `telm2-sim.test.ts`, `l11-spine.test.ts`, `eta-*.test.ts`, `i15-eta-band.test.ts`, `corridor-eta.test.ts`;
   - zestawy `status`, `release`, `i2`, `h4`, `dwell`.
-- **Ekrany — wygląd:** P4-a — `wyglad/P4` (PR #188, na produkcji; pasek E28, Harmonogram, Mapa E27, oznaczenia L7); P4-b — panel transportu (E25 Status i okno, E27 pasek w panelu, E15 ETA, E44) — `wyglad/P4-b` (PR #189) **NA PRODUKCJI**; P4-c — pole „Link śledzenia”, „Gotowy” (L6, L9, L29), sprawa L14, „Działa samo” — `wyglad/P4-c` (PR #193; scalenie po sygnale „#193 GOTOWE DO SCALENIA”). Kolejność #181 → #189 → #193 (D-20261014-1320-01 K1; D-20261014-1145-01 nie powstanie).
+- **Ekrany — wygląd:** P4-a — `wyglad/P4` (PR #188, na produkcji; pasek E28, Harmonogram, Mapa E27, oznaczenia L7); P4-b — panel transportu (E25 Status i okno, E27 pasek w panelu, E15 ETA, E44) — `wyglad/P4-b` (PR #189) **NA PRODUKCJI**; P4-c — pole „Link śledzenia”, „Gotowy” (L6, L9, L29), sprawa L14, „Działa samo” — `wyglad/P4-c` (PR #193) **NA PRODUKCJI**. Kolejność #181 → #189 → #193 (D-20261014-1320-01 K1; D-20261014-1145-01 nie powstanie).
 - **Dane wyglądu P4-c (K2, D-20261014-1320-01):** po scaleniu #193 — `trackingLink`, `readyGaps`, `deliveredCheck`, `autoMetaOf` (bez zmiany wyglądu, F1); razem z H3/H4 (0640) i R6 (1420 — usuń wyjątek `load_status_rank`).
 - **Odbiór:**
   - sekcje „Test” E25, E26, E27, E28, E15 i E44 (pkt 9; `secret` w żadnym logu ani eksporcie — grep po testach);
