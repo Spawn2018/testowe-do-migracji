@@ -2316,3 +2316,14 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Plik JS: `assets/index-DqC_epNn.js` (chunk `LiveAccountScreen-*.js` z `my_session_revoke`). Oba adresy 200. 0 × `service_role` (9 plików JS z HTML + crawl). Kopia wdrożeniowa usunięta.
 
 **P3-c-sesja NA PRODUKCJI — commit `12b72b00`, migracja 0206, wdrożenie `dpl_3BeJ9Y55vxh15noTNpevBabdV7aT`, 14.10.2026 15:43.**
+
+## 2026-10-14 — wyglad/P4-b NA PRODUKCJI
+
+- Dopisek D-20261014-1320-01 włączony (PR #199 → `5ba9d5ca`): PLAN §4 P4 Ekrany P4-a/b/c, K2, P6 E7 `DeliveredCheckCard`; odwołania do D-20261014-1145-01 w 1420-01 → K1.
+- Sygnał koordynatora 14.10.2026 14:49: „#189 GOTOWE DO SCALENIA” (głowa `832fe9a`, 4 commity P4-b po przeniesieniu na main po #181).
+- Scalenie PR #189 → `c7dd55aa`. unit + visual zielone; gitleaks 0 (4 commity); `npm audit --omit=dev --audit-level=high` 0. Bez migracji.
+- Wdrożenie R7 z `main` `c7dd55aa`, 14.10.2026 17:19, `dpl_AvsXQY2ZyiUDJuc3wpttzzgKQusq`.
+- Plik JS: `assets/index-o__amAGp.js` (oba adresy 200). 0 × `service_role` (9 plików JS z HTML). Kopia wdrożeniowa usunięta.
+- PR #193 (`wyglad/P4-c`) — draft; scalenie po sygnale „#193 GOTOWE DO SCALENIA”.
+
+**wyglad/P4-b NA PRODUKCJI — commit `c7dd55aa`, wdrożenie `dpl_AvsXQY2ZyiUDJuc3wpttzzgKQusq`, 14.10.2026 17:19.**
