@@ -116,6 +116,11 @@ begin
     return;
   end if;
 
+  -- ANEKS 3 §2.1 / guard_load_update: CANCELLED tylko z tower.cancel_ctx (IMPORT|MANUAL)
+  if v_new = 'CANCELLED' then
+    perform set_config('tower.cancel_ctx', 'MANUAL', true);
+  end if;
+
   update loads
      set status = v_new,
          actual_delivery_at = case

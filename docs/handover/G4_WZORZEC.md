@@ -199,6 +199,10 @@ Odświeżone 14 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visua
 
 Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38500750044, gałąź `wyglad/P4`, commit `fe090d0`). Wszystkie ekrany: pod paskiem górnym pasek 10 kafelków z liczbą w grupach Przygotowanie · W trasie · Po dostawie (zamiast 9 kafelków bez cyfr). Harmonogram: filtry stanu Opóźnione N · Bez dokumentów · Bez kierowcy · Bez ciągnika i licznik „N z M” (bez przycisków etapów). Mapa: chipy W trasie · Opóźnione · Brak GPS, oznaczenia obok statusu, „Najbliższe włączenia śledzenia”. Matrycy 280 ujęć nie ruszano.
 
+## P4 (14.10.2026) — E25 statusy, stan-zablokowany (nodocs)
+
+Odświeżone migawki Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38503841814, gałąź `pakiet/P4-statusy-sledzenie`, commit `26d8b9c5`). Ekrany: Harmonogram — filtr „Bez dokumentów” przez `[data-quick="nodocs"]` (E25 / D-20261014-0315-01 H2.4) zamiast `.chipbtn`).nth(3). Matrycy 280 ujęć nie ruszano.
+
 ## AUD-03 (06.10.2026) — Harmonogram KSH bez „Zmień ciągnik”
 
 Zamierzona zmiana UI (polecenie AUD-03: „Zmień ciągnik” niewidoczny dla roli KSH; baza i tak odmawia — `tests/db/aud03.sh`). gate:visual na `b52dcc5`: 274/280, zmienione wyłącznie `harmonogram__ksh__pl__{1280,1440,1920}__{dark,light-default}` (6). Odświeżono te 6 ujęć z przebiegu bramy (kolejność pełnej matrycy). Innych ujęć nie ruszano.

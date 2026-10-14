@@ -33,20 +33,22 @@ sys "update loads set status='AT_SITE', carrier_org_id='$SCXO',
 echo; echo "[e25] enum i ranga"
 sval "READY_TO_INVOICE w enum" "select count(*) from pg_enum e join pg_type t on t.oid=e.enumtypid where t.typname='load_status' and e.enumlabel='READY_TO_INVOICE'" 1
 sval "INVOICED w enum" "select count(*) from pg_enum e join pg_type t on t.oid=e.enumtypid where t.typname='load_status' and e.enumlabel='INVOICED'" 1
-sval "UNLOADED i DELIVERED ta sama ranga" "select (load_status_rank('UNLOADED'::load_status)=load_status_rank('DELIVERED'::load_status))::text" t
+sval "UNLOADED i DELIVERED ta sama ranga" "select (load_status_rank('UNLOADED'::load_status)=load_status_rank('DELIVERED'::load_status))" t
 
 echo; echo "[e25] role"
 err "HHL_OPS odmowa" $OPS "select load_status_set('$L1','IN_TRANSIT_PL',now(),null)" "Zmiana statusu"
 err "KSH odmowa" $KSH "select load_status_set('$L1','IN_TRANSIT_PL',now(),null)" "Zmiana statusu"
 val "HHL_ADMIN do przodu" $HHL "select load_status_set('$L1','AT_LOADING',now(),null); select status::text from loads where id='$L1'" AT_LOADING
 val "SCX do przodu" $SCX "select load_status_set('$L1','IN_TRANSIT_PL',now(),null); select status::text from loads where id='$L1'" IN_TRANSIT_PL
-err "SCX wstecz" $SCX "select load_status_set('$L1','READY',now(),'cofka')" "tylko do przodu"
-err "HHL_ADMIN wstecz bez powodu" $HHL "select load_status_set('$L1','READY',now(),null)" "powodu"
-val "HHL_ADMIN wstecz z powodem" $HHL "select load_status_set('$L1','READY',now(),'korekta'); select status::text from loads where id='$L1'" READY
+# Ta sama transakcja: najpierw do przodu, potem próba wstecz (osobny rollback zostawiałby READY→READY = no-op).
+err "SCX wstecz" $SCX "select load_status_set('$L1','IN_TRANSIT_PL',now(),null); select load_status_set('$L1','READY',now(),'cofka')" "tylko do przodu"
+err "HHL_ADMIN wstecz bez powodu" $HHL "select load_status_set('$L1','IN_TRANSIT_PL',now(),null); select load_status_set('$L1','READY',now(),null)" "powodu"
+val "HHL_ADMIN wstecz z powodem" $HHL "select load_status_set('$L1','IN_TRANSIT_PL',now(),null); select load_status_set('$L1','READY',now(),'korekta'); select status::text from loads where id='$L1'" READY
 
 echo; echo "[e25] UNLOADED→DELIVERED, czas, anulowanie"
-val "UNLOADED → DELIVERED" $HHL "select load_status_set('$L2','UNLOADED',now(),null); select status::text from loads where id='$L2'" DELIVERED
-sval "actual_delivery_at po Dostarczone" "select (actual_delivery_at is not null)::text from loads where id='$L2'" t
+# commit: actual_delivery_at i audit sprawdzane osobnym zapytaniem poza transakcją testu
+val "UNLOADED → DELIVERED" $HHL "select load_status_set('$L2','UNLOADED',now(),null); select status::text from loads where id='$L2'" DELIVERED commit
+sval "actual_delivery_at po Dostarczone" "select (actual_delivery_at is not null) from loads where id='$L2'" t
 err "czas w przyszłości" $HHL "select load_status_set('$L1','AT_LOADING',now()+interval '2 hours',null)" "przyszłości"
 err "anulowanie bez powodu" $HHL "select load_status_set('$L1','CANCELLED',now(),null)" "powodu"
 err "SCX nie anuluje" $SCX "select load_status_set('$L1','CANCELLED',now(),'x')" "Anulowanie"
