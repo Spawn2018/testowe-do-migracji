@@ -221,6 +221,8 @@ for (const [who, view, role, n] of [['hhl', 'options', 'hhl', 7], ['ksh', 'setti
   test(`I-4 ${who.toUpperCase()}: instrukcja w ${view === 'options' ? 'Opcjach' : 'Ustawieniach'} — ${n} kroków`, async ({ page }) => {
     await login(page, `${who}@bk5.local`);
     await page.locator(`nav [data-view="${view}"]`).first().click();
+    /* wyglad/P3-c (E11): Dla mnie › Instrukcja w menu bocznym */
+    await page.locator('[data-opt-nav="guide"]').click();
     const g = page.locator(`[data-guide="${role}"]`);
     await expect(g.locator('summary h2')).toHaveText('Instrukcja');
     await g.locator('summary').click();

@@ -94,6 +94,9 @@ async function navTo(page: Page, dataView: string) {
 /** Set display currency via Options preference (HHL). */
 async function setDisplayCurrency(page: Page, currency: 'EUR' | 'PLN', prefsView = 'options') {
   await navTo(page, prefsView)
+  /* wyglad/P3-c (E11): waluta w Dla mnie › Wygląd i waluta (Opcje i Ustawienia) */
+  await page.evaluate(() => (document.querySelector('[data-opt-nav="look"]') as HTMLButtonElement | null)?.click())
+  await page.waitForTimeout(300)
   await page.evaluate((cur) => {
     const select = document.querySelector(
       '[data-deur-exempt="currency-pref"] select, dd[data-deur-exempt="currency-pref"] select',
@@ -209,8 +212,9 @@ test.describe('D-EUR-T display currency EUR vs PLN', () => {
 
     // Options FX note should mention demo mid (Polish decimal comma)
     await navTo(page, 'options')
-    /* B-SMOKE-DRIFT: Opcje w akordeonie DEC-6 (5685099) — nota FX w sekcji „Cennik” (data-fx-note), bez .pricing-panel */
-    const note = await page.locator('[data-section="rates"] [data-fx-note="demo"]').first().textContent()
+    /* wyglad/P3-c (E11, G-11): nota FX na ekranie Pieniądze › Cennik i opłaty */
+    await page.click('[data-opt-nav="rates"]')
+    const note = await page.locator('[data-opt-screen="rates"] [data-fx-note="demo"]').first().textContent()
     expect(note || '').toMatch(/4[,.]3900/)
     expect(note || '').toMatch(/186\/A\/NBP\/2026/)
 
