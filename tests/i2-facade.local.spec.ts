@@ -76,18 +76,20 @@ test('I-2j KSH: mapa — pozycja promu z bazy z czasem odczytu albo „brak źr�
   psql(`delete from vessel_positions`);
 });
 
-test('I-2l HHL: kafelek „czas wykrycia odchylenia” — „—” bez danych, potem mediana z risk_signals', async ({ page }) => {
+/* Przepisane w wyglad/P3-b — E9 (decyzja 07.10 19:11, B6): czas wykrycia to stopka pod kafelkami HHL, nie kafelek;
+   poniżej 5 zdarzeń „za mało danych (n z 5 zdarzeń w 30 dniach)”, od 5 zdarzeń mediana. */
+test('I-2l HHL: stopka „Czas wykrycia odchylenia” — brak danych, potem „za mało danych” z risk_signals (B6)', async ({ page }) => {
   psql(`delete from risk_signals where dedup_key like 'E2E-I2L-%'`);
   const base = Number(psql(`select count(*) from risk_signals where load_id is not null and occurred_at is not null and detected_at > now() - interval '30 days'`));
   test.skip(base > 0, 'baza lokalna ma już ryzyka z czasem zdarzenia');
   await login(page, 'hhl@bk5.local');
-  const tile = page.locator('.kpi', { hasText: 'Czas wykrycia odchylenia' });
-  await expect(tile.locator('.v')).toHaveText('—');
+  const foot = page.locator('[data-cockpit] [data-detect-lag]');
+  await expect(foot).toHaveText('Czas wykrycia odchylenia: brak danych (0 z 5 zdarzeń w 30 dniach)');
   psql(`insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key) select project_id, id, 'AUTO_STATUS', 'LOW', 'e2e', 'rk_generic', jsonb_build_object('occurred_at', now() - interval '12 minutes'), 'E2E-I2L-1' from loads order by id limit 1`);
   await page.reload();
   await page.waitForSelector('[data-auth="session"]', { timeout: 30000 });
-  await expect(tile.locator('.v')).toHaveText('12 min');
-  await expect(tile.locator('.d')).toHaveText('mediana · n = 1 (30 dni)');
+  await expect(foot).toHaveText('Czas wykrycia odchylenia: za mało danych (1 z 5 zdarzeń w 30 dniach)');
+  await expect(foot.locator('b')).toHaveText('za mało danych');
   psql(`delete from risk_signals where dedup_key like 'E2E-I2L-%'`);
 });
 

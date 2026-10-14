@@ -439,20 +439,23 @@ test.describe('D26 — import: anulowania za zgodą (ANEKS 3 §2.1)', () => {
   })
 })
 
+/* Przepisane w wyglad/P3-b — E9 (decyzja 07.10 19:11, img/e9-after): kwota jest tylko na kafelku „Marża (prognoza)” HHL;
+   poziom pewności stoi w etykiecie kafelka, kurs tymczasowy przy kwocie. SCX i KSH nie mają kwot w Kokpicie. */
 test.describe('G4 — kokpit: poziom i kurs tymczasowy (z M8)', () => {
-  test('HHL marża i SCX tydzień: pill poziomu + pill kursu tymczasowego; KSH bez kwot w kokpicie', async ({ page }) => {
+  test('HHL marża: poziom w etykiecie + pill kursu tymczasowego; SCX i KSH bez kwot w kokpicie', async ({ page }) => {
     await boot(page)
-    for (const r of ['HHL', 'SCX'] as const) {
+    await role(page, 'HHL')
+    await nav(page, 'dash')
+    const tile = page.locator('.kpi[data-ck="margin"]')
+    await expect(tile.locator('.k')).toContainText(/Marża \((prognoza|realizacja|faktura)\)/)
+    const tag = page.locator('.kpi [data-kpi-tier]')
+    await expect(tag).toHaveCount(1)
+    const prov = Number(await tag.getAttribute('data-kpi-provisional'))
+    await expect(tag.locator('.pill.p-amber')).toHaveCount(prov > 0 ? 1 : 0)
+    for (const r of ['SCX', 'KSH'] as const) {
       await role(page, r)
       await nav(page, 'dash')
-      const tag = page.locator('.kpi [data-kpi-tier]')
-      await expect(tag).toHaveCount(1)
-      await expect(tag.locator('.pill').first()).toHaveText(/Prognoza|Realizacja|Faktura/)
-      const prov = Number(await tag.getAttribute('data-kpi-provisional'))
-      await expect(tag.locator('.pill.p-amber')).toHaveCount(prov > 0 ? 1 : 0)
+      await expect(page.locator('.kpi [data-kpi-tier]')).toHaveCount(0)
     }
-    await role(page, 'KSH')
-    await nav(page, 'dash')
-    await expect(page.locator('.kpi [data-kpi-tier]')).toHaveCount(0)
   })
 })

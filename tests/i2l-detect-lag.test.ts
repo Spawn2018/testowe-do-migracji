@@ -10,16 +10,22 @@ describe('I-2l — czas wykrycia z risk_signals', () => {
     expect(detectionLagFromRow(undefined)).toEqual({ samples: 0, medianMin: null });
     expect(detectionLagFromRow({ samples: 0, median_min: 5 })).toEqual({ samples: 0, medianMin: null });
   });
-  it('kokpit: w produkcji wartość z bazy albo „—”; „8 min” wyłącznie w gałęzi demo (shows)', () => {
+  /* Przepisane w wyglad/P3-b — E9 (decyzja 07.10 19:11, B6): czas wykrycia stoi pod kafelkami HHL;
+     mediana dopiero od 5 zdarzeń, poniżej „za mało danych (n z 5 zdarzeń w 30 dniach)”. „8 min” nadal tylko w demo. */
+  it('kokpit: w produkcji wartość z bazy od 5 zdarzeń, poniżej „za mało danych”; „8 min” wyłącznie w gałęzi demo (shows)', () => {
     const src = readFileSync('src/views/DashboardView.tsx', 'utf8');
     expect(src).toContain("import('../lib/detectLag')");
-    expect(src).toContain("`${detectLag.medianMin} min` : '—'");
     const demo = src.indexOf("shows('detectTimeKpi')");
-    const eight = src.indexOf('value="8 min"');
-    const prodTile = src.indexOf('detectLag.medianMin != null');
+    const eight = src.indexOf("m: '8'");
+    const prodTile = src.indexOf('detectLag.samples >= 5 && detectLag.medianMin != null');
+    const few = src.indexOf("t(locale, 'p3b_detect_few')");
     expect(demo).toBeGreaterThan(0);
     expect(eight).toBeGreaterThan(demo);
     expect(prodTile).toBeGreaterThan(eight);
+    expect(few).toBeGreaterThan(prodTile);
+    const msg = readFileSync('src/i18n/messages.ts', 'utf8');
+    expect(msg).toContain("p3b_detect_few: 'za mało danych'");
+    expect(msg).toContain("p3b_detect_few_n: '({n} z 5 zdarzeń w 30 dniach)'");
   });
   it('migracja 0055: SECURITY INVOKER (zakres RLS), anon bez EXECUTE, lista dozwolonych', () => {
     const m = readFileSync('supabase/migrations/0055_detection_lag.sql', 'utf8');

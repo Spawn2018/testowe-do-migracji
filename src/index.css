@@ -1314,3 +1314,65 @@ img,video{max-width:100%;height:auto}
   /* E13: pasek bez ucinania w pionie (overflow-y:hidden ucinało listę dzwonka); w poziomie zostaje clip (D-31) */
   .topstack .topbar{gap:4px;padding:0 6px;overflow-y:visible}
 }
+
+/* ===== wyglad/P3-b — Kokpit każdej firmy (E9, img/e9-after; telefon: E8 pkt 6, V5) =====
+   Komputer: „firma · rodzaj · data”, 6 kafelków w 2 kolumnach; w kafelku etykieta i „Strona ›”, liczba, „z N”, opis.
+   Telefon: nagłówek „Kokpit · firma · rodzaj”, kafelki 2 × 3 w ramce, krótsze opisy, bez „Strona ›”; pod spodem 3 najpilniejsze. */
+.ck-phone{display:none}
+.ck-card .ck-hd{background:var(--surface);padding:9px 14px;align-items:baseline;flex-wrap:wrap;row-gap:2px}
+.ck-card .ck-hd h2{font-size:20px;font-weight:700;letter-spacing:0;line-height:1.2}
+.ck-card .ck-hd .sub{font-size:13.5px}
+.kpis.ck-grid{grid-template-columns:repeat(2,minmax(0,1fr));border-top:0}
+.kpis.ck-grid .kpi.ck-tile{
+  display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;min-width:0;
+  padding:12px 14px 18px;border-right:1px solid var(--rule-2);border-bottom:1px solid var(--rule-2);
+}
+.kpis.ck-grid .kpi.ck-tile:nth-child(2n){border-right:0}
+.kpis.ck-grid:last-child .kpi.ck-tile:nth-last-child(-n+2):nth-child(odd),
+.kpis.ck-grid:last-child .kpi.ck-tile:nth-last-child(-n+2):nth-child(odd)~.ck-tile{border-bottom:0}
+.ck-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;min-width:0}
+.ck-tile .k{font-size:13px;color:var(--ink-3);letter-spacing:0;min-width:0}
+.ck-go{font-size:13px;font-weight:600;color:var(--sea);white-space:nowrap}
+.ck-tile .v{font-size:36px;line-height:1;margin-top:1px;white-space:nowrap;color:var(--ink)}
+.ck-tile .v.alert{color:var(--red)}
+.ck-tile .v.warn{color:var(--amber-ink)}
+.ck-tile .v.good{color:var(--go)}
+.ck-of{font-family:var(--font-cond);font-size:15px;font-weight:600;color:var(--ink-3);margin-left:5px;letter-spacing:.02em}
+.ck-tile .d{font-size:13px;color:var(--ink-2);margin-top:0;line-height:1.4}
+.ck-tile .d.ck-tags{margin-top:6px}
+.ck-ft{padding:10px 14px;font-size:13px;color:var(--ink-2)}
+.ck-ft b{color:var(--ink);font-weight:600}
+@media (max-width:768px){
+  .ck-desk{display:none}
+  .ck-phone{display:inline}
+  /* nagłówek „Kokpit” na całą szerokość, kafelki w ramce pod nim (img/e9-after, telefon) */
+  .page-sections[data-page="dash"]>.ck-card{margin:0 0 12px;border:0;background:transparent}
+  .ck-card .ck-hd{padding:14px 14px;border-bottom:1px solid var(--rule);gap:8px}
+  .ck-card .ck-hd h2{font-size:20px}
+  .ck-card .ck-hd .sub{font-size:14px}
+  .kpis.ck-grid{margin:12px 12px 0;border:1px solid var(--rule);background:var(--surface)}
+  .kpis.ck-grid .kpi.ck-tile{padding:12px 12px 18px}
+  .kpis.ck-grid .kpi.ck-tile:nth-last-child(-n+2):nth-child(odd),
+  .kpis.ck-grid .kpi.ck-tile:nth-last-child(-n+2):nth-child(odd)~.ck-tile{border-bottom:0}
+  .ck-tile .k,.ck-tile .d{font-size:13px}
+  .ck-tile .v{font-size:30px;line-height:1.05;margin-top:2px}
+  .ck-of{font-size:14px}
+  .ck-tile .d{margin-top:3px}
+  /* telefon (img/e9-after): pod kafelkami bez stopki i bez znacznika kursu — kwoty marży na telefonie nie ma */
+  .ck-ft,.ck-tile .ck-tags{display:none}
+  .ck-urgent li:nth-child(n+4){display:none}
+  /* liczba „Do zrobienia” na dolnym pasku (img/e9-after, img/e8-after; E10: biała liczba na czerwonym jak w dzwonku):
+     przy prawym górnym rogu ikony, ikona zostaje widoczna */
+  nav.tower-nav .nav-pin .count.hot{
+    top:2px;left:calc(50% + 3px);padding:1px 5px;line-height:1.25;
+    background:var(--red);color:var(--on-red);font-family:var(--font-cond);font-weight:700;font-size:13px;
+  }
+}
+/* KSH bez listy „Do zrobienia” (E9): postęp i mapa na całą szerokość */
+.panel.grid2.ck-solo{grid-template-columns:minmax(0,1fr)}
+.ck-map>.panel-hd{border-top:1px solid var(--rule-2)}
+@media (min-width:1101px){
+  .panel.grid2.ck-solo .ck-side{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}
+  .panel.grid2.ck-solo .ck-map{border-left:1px solid var(--rule-2)}
+  .panel.grid2.ck-solo .ck-map>.panel-hd{border-top:0}
+}
