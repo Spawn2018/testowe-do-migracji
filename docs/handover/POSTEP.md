@@ -2213,3 +2213,16 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 - W34 dostarczone 14.10.2026, 01:55 (właściciel: GitHub Actions działa).
 - Ponowienie checków PR #184 na głowie; TEST z `10d21b5b` nadal ważny (późniejsze commity tylko `docs/**`).
+
+## 2026-10-14 — Poprawki P3 NA PRODUKCJI
+
+- CI na `dcb2d28e`: unit, visual, db zielone; gitleaks 0 (zakres PR); `npm audit --omit=dev --audit-level=high` 0.
+- Scalenie PR #184 → `38711bd7`.
+- Próba ROLLBACK 0204 na produkcji: mig_ok, DECISION×CLIENT_USER push=false, import_schedule z import_ctx; ROLLBACK.
+- `db push` 0204; drugi raz „up to date”; parytet MATCH YES (0001…0204).
+- Edge `web-push-send` wdrożona (prod).
+- Doradca security prod (odczyt): ostrzeżenie `auth_leaked_password_protection` — W1 (panel właściciela).
+- Wdrożenie R7 z `main` `38711bd7`, 14.10.2026 02:40, `dpl_DHp28HQMcy6D5PHZmMWCcvRcqKUF`.
+- Plik JS: `assets/index-CCGb6sOq.js` (bez zmian w `src/` aplikacji — tylko baza/Edge); oba adresy 200; 0 × `service_role`. Kopia wdrożeniowa usunięta.
+
+**P3-poprawki NA PRODUKCJI — commit `38711bd7`, migracja 0204, wdrożenie `dpl_DHp28HQMcy6D5PHZmMWCcvRcqKUF`, 14.10.2026 02:40.**

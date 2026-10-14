@@ -234,7 +234,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
 - **W7.** Dowód w `docs/handover/odbior/P2/`.
 
 ### P3 · Uprawnienia, konta, Opcje, pasek górny — NA PRODUKCJI (logika/baza: scalenie `d3cbe4d8` + `567fcc5a`, wdrożenie `dpl_9tAM8dDaeXZ2awdpHD6RCNwdkLPP`, 13.10.2026 23:32); P3-a wygląd: scalenie `25b71bca` (PR #178), wdrożenie `dpl_FBYjeG86cptLjWvXiRmURHH5kKkt`, 14.10.2026 00:12
-- **Ekrany — wygląd:** P3-a pasek górny + E13 — `wyglad/P3` (PR #178, D-20261013-2255-01); P3-b Kokpit (E9, V5); P3-c Opcje (E11, E12). Cursor: logika, baza, uprawnienia, Podgląd — bez przebudowy wyglądu ekranów koordynatora (F1).
+- **Ekrany — wygląd:** P3-a pasek górny + E13 — `wyglad/P3` (PR #178, D-20261013-2255-01); P3-b Kokpit (E9, V5) — `wyglad/P3-b` (PR #185, D-20261014-0215-01); P3-c Opcje (E11, E12). Cursor: logika, baza, uprawnienia, Podgląd — bez przebudowy wyglądu ekranów koordynatora (F1).
 - **E9** prawa ról (z E36, zamkniętym w E9):
   - 5 rodzajów kont, bez CLIENT_ADMIN i SITE_VIEWER;
   - menu według roli; „Moje zadania” SCX znika;
@@ -273,13 +273,14 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - zrzuty porównane z makietami E9, E11, E12, E37 (pasek), E6, E13;
   - Kokpit na telefonie według E8 pkt 6 i `img/e8-after.webp` (D-20261013-1535-01 V5): kafelki 2 × 2 o równej szerokości; liczby się nie łamią („54 / 72” w jednej linii); 3 najpilniejsze sprawy; treść kafelków według E9.
 
-### Poprawki P3 · W TRAKCIE SCALENIA (gałąź `pakiet/P3-poprawki`, PR #184, D-20261014-0015-01) — przed wdrożeniem P4 z migracją
-- **D1 / R1–R4** w kodzie (migracja **0204**): G-20 baza + `g20`, WEB_PUSH tylko krytyczne, DECISION×CLIENT_USER `push=false`, wyjątki doradcy, instrukcja W1.
-- **TEST** (przed scaleniem): security 84, status 44, nullguard 622, g20 15/15; doradca security TEST 0 nowych. Doradca prod: tylko ostrzeżenie ochrony haseł (W1 — włącza właściciel).
-- **W34 dostarczone 14.10.2026 01:55** — ponowienie checków `unit`/`visual`/`db`, scalenie, `db push` 0204, Edge `web-push-send`, sygnał „P3-poprawki NA PRODUKCJI”.
+### Poprawki P3 · NA PRODUKCJI (14.10.2026 02:40, merge `38711bd7` PR #184, migracja 0204, wdrożenie `dpl_DHp28HQMcy6D5PHZmMWCcvRcqKUF`)
+- **D1 / R1–R4** (D-20261014-0015-01): G-20 baza + `g20`, WEB_PUSH tylko krytyczne, DECISION×CLIENT_USER `push=false`, wyjątki doradcy, instrukcja W1.
+- TEST przed scaleniem: security 84, status 44, nullguard 622, g20 15/15; doradca TEST 0 nowych. CI unit/visual/db zielone na `dcb2d28e`. Edge `web-push-send` wdrożona.
 
 ### P4 · Statusy, śledzenie, ETA — DO ZROBIENIA
 - **E25** statusy (automat „Gotowe do fakturowania” opierasz na dzisiejszym dokumencie CMR po dostawie; P5 podmienia na wymóg z E31):
+  - Kokpit i liczba „Faktury” ze statusu `READY_TO_INVOICE` (`src/lib/cockpitE9.ts`, D-20261014-0215-01 H3);
+  - pomiar morza na kafelku „Najbliższy prom” (`DashboardView.tsx`, `sea` — B7 / D-20261014-0215-01 H3);
   - nowe kody „Gotowe do fakturowania”, „Zafakturowano”; UNLOADED scalony z DELIVERED;
   - okno „Zmień status” (role według decyzji 17:46); jedna funkcja w bazie;
   - poprawka −2 h dla nowych zapisów;
@@ -621,3 +622,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 13.10.2026 22:55 | D-20261013-2255-01: wyglad/P3-a — kolejność scalenia PR #178, uchwyty G3, logika profilu G4 (`last_sign_in_at`, `real_full_name`); PLAN §4 P3: P3-a / P3-b / P3-c | koordynator; wykonawca |
 | 14.10.2026 00:15 | D-20261014-0015-01: Poprawki P3 (R1 G-20 baza, R2 push krytyczne + DECISION×CLIENT_USER, R3 doradca prod, R4 instrukcja W1) — przed P4 z migracją | koordynator |
 | 14.10.2026 01:39 | STOP Poprawki P3: GitHub Actions — płatność / limit wydatków (W34); TEST i doradca TEST OK na `10d21b5b`; dalej P4 (bez wdrożenia migracji P4 do po Poprawkach P3) | wykonawca |
+| 14.10.2026 01:55 | W34 dostarczone (GitHub Actions działa); Poprawki P3 scalone i wdrożone | właściciel; wykonawca |
+| 14.10.2026 02:15 | D-20261014-0215-01: wyglad/P3-b — kolejność scalenia po #184, uchwyty Kokpitu/menu, logika H3 w P4/P6 | koordynator |
