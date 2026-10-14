@@ -93,7 +93,7 @@ export function factoringPayout(net: number, gross: number, feePct: number): { f
   return { fee, payout: r2(gross - fee) };
 }
 
-/** „t41 · 05.10–11.10” z klucza tygodnia „2026-W41”. */
+/** „41 · 05.10–11.10” z klucza tygodnia „2026-W41” (bez „t” — kolumna „Tydzień” w Fakturach; Dokumenty dodają „t”). */
 export function weekKeyLabel(weekKey: string): string {
   const m = /^\d{4}-W(\d{2})$/.exec(weekKey);
   if (!m) return weekKey;

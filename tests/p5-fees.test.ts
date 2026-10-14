@@ -50,3 +50,21 @@ describe('E33 — panel „Ceny”', () => {
     expect(s).toMatch(/VITE_AUTH_MODE !== 'supabase' \? demoFeeSuggestions\(load\) : null/);
   });
 });
+
+describe('E33 — panel „Ceny” bez daty załadunku (produkcja: fuel_ref_date = null)', () => {
+  it('nie wyrzuca błędu i nie pokazuje tygodnia ani mnożnika', async () => {
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { createElement } = await import('react');
+    const { PanelPrices } = await import('../src/components/drawer/PanelPrices');
+    const { buildDemoSnapshot } = await import('../src/data/demoProvider');
+    const base = buildDemoSnapshot().loads.find((l) => l.pricing.money)!;
+    const money = base.pricing.money!;
+    const empty = (side: typeof money.cost) => ({ ...side, fuel: { ...side.fuel, refDate: '' } });
+    const load = { ...base, pricing: { ...base.pricing, money: { ...money, cost: empty(money.cost), rev: empty(money.rev) } } };
+    for (const role of ['HHL', 'KSH', 'SCX'] as const) {
+      const html = renderToStaticMarkup(createElement(PanelPrices, { load, role, locale: 'pl', phone: false, nowIso: '2026-10-14T10:00:00Z' }));
+      expect(html).toContain('data-pp-row="fuel"');
+      expect(html).not.toMatch(/tNaN|Invalid/);
+    }
+  });
+});

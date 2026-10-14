@@ -75,7 +75,10 @@ export function packWeeks(bills: Pick<Bill, 'weekKey'>[]): string[] {
 /** Nazwa pliku z numeru faktury albo kodu: „FV/41/2026” → „FV_41_2026”. */
 export const fileSafe = (s: string) => s.trim().replace(/[^\p{L}\p{N}.-]+/gu, '_').replace(/^_+|_+$/g, '');
 
-/** CMR z podpisem = wgrany dokument CMR transportu (dwa rodzaje CMR rozdziela E31 — wtedy liczy się tylko podpisany). */
+/**
+ * CMR transportu = wgrany dokument CMR. Po E31 (decyzja 1B: tylko CMR z rozładunku, z podpisem odbiorcy) każdy CMR
+ * jest podpisany; do tego czasu napisy mówią „CMR”, bez „z podpisem”.
+ */
 export function hasSignedCmr(loadId: string, docs: readonly Pick<Document, 'loadId' | 'category' | 'status'>[]): boolean {
   return docs.some((d) => d.loadId === loadId && d.category === 'CMR' && d.status === 'UPLOADED');
 }

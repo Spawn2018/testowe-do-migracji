@@ -56,19 +56,21 @@ const PL: Record<string, string> = {
   p5_fin_col_priced: 'Z ceną / wszystkie',
   p5_fin_col_rev_s: 'Przychód',
   p5_fin_col_cost_s: 'Koszt',
-  p5_fin_types_n: '{n} rodzajów',
+  p5_fin_types_n_1: '{n} rodzaj',
+  p5_fin_types_n_2: '{n} rodzaje',
+  p5_fin_types_n_5: '{n} rodzajów',
   /* karty z boku */
   p5_fin_nbp_h: 'Kurs NBP (tabela A)',
   p5_fin_nbp_last: 'Ostatnia tabela',
   p5_fin_nbp_last_v: 'z {date} · 1 EUR = {mid} PLN',
   p5_fin_nbp_none: 'brak kursu w danych',
   p5_fin_nbp_fetch: 'Pobieranie',
-  p5_fin_nbp_fetch_v: '2× dziennie, 12:30 i 16:30',
+  p5_fin_nbp_fetch_v: '2× dziennie: 12:30 i 16:30 latem, 11:30 i 15:30 zimą',
   p5_fin_nbp_done: 'Dostarczony',
   p5_fin_nbp_done_v: 'kurs z dnia roboczego przed rozładunkiem, na stałe przy transporcie',
   p5_fin_nbp_before: 'Przed rozładunkiem',
   p5_fin_nbp_before_v: 'kurs bieżący (ostatnia tabela), z dopiskiem „kurs bieżący”',
-  p5_fin_nbp_foot: 'PLN tylko po przełączeniu waluty w Moje konto.',
+  p5_fin_nbp_foot: 'PLN po przełączeniu waluty w „Dla mnie”.',
   p5_fin_flag_h: 'Flaga marży',
   p5_fin_flag_thr: 'Próg marży (Opcje › Cennik i opłaty)',
   p5_fin_flag_thr_none: 'nie ustawiony',
@@ -105,7 +107,7 @@ const PL: Record<string, string> = {
     'Kliknięcie wiersza: lista transportów i publikacje cen. Data załadunku: rzeczywista (wyjazd ze strefy Śrem albo ręczny status przewoźnika z datą), a do tego czasu z planu KSH.',
   p5_fuel_loads_h: 'Transporty',
   p5_fuel_publ_h: 'Publikacje cen z tygodnia {label}',
-  p5_fuel_publ_none: 'Lista publikacji — po podłączeniu danych z bazy.',
+  p5_fuel_publ_none: 'Brak listy publikacji dla tego tygodnia.',
   p5_fuel_publ_row: '{date} · {source} · {price}',
   p5_fuel_empty: 'Brak transportów z opłatą paliwową.',
   /* E4 — Faktury */
@@ -120,7 +122,9 @@ const PL: Record<string, string> = {
   p5_inv_k_pending_none: 'nic do wystawienia',
   p5_inv_k_pending_s: '{loads} dostarczone {range} · wg cennika {net} EUR netto · ',
   p5_inv_k_pending_who: 'wystawia {who}',
-  p5_inv_k_pending_more: ' · i {n} kolejne tygodnie',
+  p5_inv_k_pending_more_1: ' · i 1 kolejny tydzień',
+  p5_inv_k_pending_more_2: ' · i {n} kolejne tygodnie',
+  p5_inv_k_pending_more_5: ' · i {n} kolejnych tygodni',
   p5_inv_k_verify_mine: 'Do Twojej weryfikacji',
   p5_inv_k_verify_other: 'Czeka na weryfikację {who}',
   p5_inv_k_verify_s: '{number} · różnica {diff} {cur} · ',
@@ -209,7 +213,7 @@ const PL: Record<string, string> = {
   p5_fact_std: 'Standardowo',
   p5_fact_std_d: 'Termin {due} · 35 dni od wystawienia',
   p5_fact_hhl: 'Faktoring HHL',
-  p5_fact_hhl_d: '{hours} h po akceptacji faktury przez HHL · prowizja {pct} % od netto: {fee} EUR',
+  p5_fact_hhl_d: '{hours} h po akceptacji faktury przez HHL · prowizja {pct} % od netto: {fee} {cur}',
   p5_fact_pay_note: 'Wybór zapisuje się na fakturze i widzi go HHL. KSH tej faktury nie widzi.',
   p5_fact_task_h: 'Wypłata faktoringu',
   p5_fact_task_due: 'Do wypłaty do {at} · zostało {h} h',
@@ -221,7 +225,7 @@ const PL: Record<string, string> = {
   p5_fact_tl_3: 'Wypłata faktoringu',
   p5_fact_tl_3d: 'do {at} · po terminie: ryzyko i dzwonek HHL',
   p5_fact_tl_4: 'Wypłacona · SCX widzi status',
-  p5_fact_tl_4d: 'prowizja {fee} EUR zostaje w HHL',
+  p5_fact_tl_4d: 'prowizja {fee} {cur} zostaje w HHL',
   /* E40 — paczka tygodnia dla księgowości (Finanse, tylko HHL) */
   p5_pack_h: 'Paczka tygodnia dla księgowości',
   p5_pack_sub: 'tydzień faktury · faktura + CMR każdego zafakturowanego transportu',
@@ -237,9 +241,9 @@ const PL: Record<string, string> = {
   p5_pack_count: 'Transporty na fakturze',
   p5_pack_check: 'Sprawdzenie HHL',
   p5_pack_unload: '{name} · rozładunek {date}',
-  p5_pack_cmr_ok_KSH: 'CMR z podpisem',
+  p5_pack_cmr_ok_KSH: 'CMR',
   p5_pack_cmr_ok_HHL: 'CMR',
-  p5_pack_cmr_no: 'brak CMR z podpisem',
+  p5_pack_cmr_no: 'brak CMR',
   p5_pack_to: 'Do (Opcje)',
   p5_pack_to_none: 'brak adresu',
   p5_pack_sum_KSH: '(kod, rozładunek, netto)',
@@ -264,7 +268,7 @@ const PL: Record<string, string> = {
   p5_pack_b_NO_PDF: 'Brak PDF faktury {number}',
   p5_pack_b_NOT_ACCEPTED: 'Faktura SCX czeka na sprawdzenie przez HHL',
   p5_pack_b_DISPUTED: 'Faktura SCX sporna — czeka na korektę SCX',
-  p5_pack_b_NO_CMR: 'Brak CMR z podpisem: {codes} — „Do zrobienia” SCX',
+  p5_pack_b_NO_CMR: 'Brak CMR: {codes} — „Do zrobienia” SCX',
   p5_pack_b_NO_ADDRESS: 'Brak adresu księgowości w Opcjach — uzupełnia Administrator HHL',
   p5_pack_phone_line: '{number} · {gross} brutto · {loads} · CMR {ok}/{all}',
   p5_pack_phone_accepted: 'zaakceptowana',
@@ -419,6 +423,7 @@ const PL: Record<string, string> = {
   p5_pr_rule_cancel_v: '% frachtu bez opłaty paliwowej: ≥ 5 dni {d5} · 4 dni {d4} · 3 dni {d3} · 2 dni {d2} · 1 dzień {d1} · dzień załadunku {d0}',
   p5_pr_rules_note: 'Zasady zmienia Administrator HHL w Opcjach › Cennik i opłaty.',
   p5_pr_fee_wait_KSH: 'czeka na Twoją akceptację · po akceptacji wchodzi do „Razem”',
+  p5_pr_fee_wait_HHL: 'SCX dodał {fee} — czeka na Twoją akceptację; po akceptacji wchodzi do kosztu',
   p5_pr_fee_accept: 'Akceptuj',
   p5_pr_fee_reject: 'Odrzuć',
   p5_pr_fee_add_scx: 'Dodaj dopłatę',
@@ -439,7 +444,12 @@ const PL: Record<string, string> = {
   p5_fee_CANCEL: 'Anulowanie',
   p5_fee_calc_dwell: '{code} · {place} {where} · wjazd {from} · wyjazd {to}',
   p5_fee_calc_dwell2: 'postój {dur} − czas wolny {free} h = {over}',
-  p5_fee_calc_dwell3: '→ {hours} rozpoczęte godziny × {rate} EUR = {fee}',
+  p5_fee_calc_hours_1: '→ 1 rozpoczęta godzina × {rate} EUR = {fee}',
+  p5_fee_calc_hours_2: '→ {n} rozpoczęte godziny × {rate} EUR = {fee}',
+  p5_fee_calc_hours_5: '→ {n} rozpoczętych godzin × {rate} EUR = {fee}',
+  p5_fee_calc_days_1: '→ 1 rozpoczęta doba × {rate} EUR = {fee}',
+  p5_fee_calc_days_2: '→ {n} rozpoczęte doby × {rate} EUR = {fee}',
+  p5_fee_calc_days_5: '→ {n} rozpoczętych dób × {rate} EUR = {fee}',
   p5_fee_calc_cancel: 'Anulowano {at}, załadunek {load} → {days} dni → {pct} % frachtu',
   p5_fee_calc_none: 'Brak pomiaru ponad czas wolny ani anulowania — nic do dodania.',
   p5_fee_rev_mine: 'Przychód · KSH (Twoja strona)',
@@ -496,6 +506,18 @@ const PL: Record<string, string> = {
 
 export function ft(locale: Locale, key: string): string {
   return PL[key] ?? t(locale, key);
+}
+
+/** Polska odmiana po liczbie: klucze `<base>_1` (1), `<base>_2` (2–4, bez 12–14), `<base>_5` (reszta). */
+export function plForm(n: number): '1' | '2' | '5' {
+  if (n === 1) return '1';
+  const d = n % 10;
+  const t = n % 100;
+  return d >= 2 && d <= 4 && (t < 12 || t > 14) ? '2' : '5';
+}
+
+export function ftn(locale: Locale, base: string, n: number, params: Record<string, string | number> = {}): string {
+  return ftp(locale, `${base}_${plForm(n)}`, { n, ...params });
 }
 
 export function ftp(locale: Locale, key: string, params: Record<string, string | number>): string {

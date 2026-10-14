@@ -151,7 +151,10 @@ export function codeRange(codes: string[]): string {
   if (codes.length === 0) return '';
   if (codes.length <= 3) return codes.join(', ');
   const pre = (c: string) => c.replace(/\d+$/, '');
-  return codes.every((c) => pre(c) === pre(codes[0])) ? `${codes[0]} – ${codes[codes.length - 1]}` : `${codes.slice(0, 3).join(', ')} …`;
+  const num = (c: string) => Number((c.match(/(\d+)$/) ?? ['', 'NaN'])[1]);
+  /* zakres „KR-08 – KR-15” tylko bez przerw w numeracji jednej serii */
+  const run = codes.every((c, i) => pre(c) === pre(codes[0]) && (i === 0 || num(c) === num(codes[i - 1]) + 1));
+  return run ? `${codes[0]} – ${codes[codes.length - 1]}` : `${codes.slice(0, 3).join(', ')} … (${codes.length})`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -251,7 +254,9 @@ export function fuelWeeks(loads: Load[], side: FinSide, today: string): FuelWeek
   const merged: FuelWeekRow[] = [];
   for (const r of rows) {
     const prev = merged[merged.length - 1];
-    const same = prev && prev.state === 'PROGNOZA' && r.state === 'PROGNOZA' && !prev.finalFrom && !r.finalFrom && prev.applied === r.applied;
+    /* tylko tygodnie po kolei — przerwa (tydzień bez transportów) zaczyna nowy wiersz */
+    const next = prev && r.week && (prev.weekLast ?? prev.week) ? addDays((prev.weekLast ?? prev.week)!.from, 7) === r.week.from : false;
+    const same = prev && next && prev.state === 'PROGNOZA' && r.state === 'PROGNOZA' && !prev.finalFrom && !r.finalFrom && prev.applied === r.applied;
     if (same) {
       prev.weekLast = r.week;
       prev.idxLast = r.idx;

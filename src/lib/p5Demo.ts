@@ -6,7 +6,7 @@
  */
 import { SEFS_PLN, SEFS_SEK, type SefsTier } from './sefs';
 import { addDays, type FuelPubl, type FuelWeekRow } from './p5Finance';
-import type { Bill, Load } from '../types';
+import type { Bill, Document, Load } from '../types';
 import { useTowerStore } from '../store/useTowerStore';
 import { factoringPayout } from './p5Invoices';
 import type { FactoringOfferView, FactoringTask, PackActions, PermitView, PolicyView } from './p5Source';
@@ -64,9 +64,11 @@ export function demoFactoringTasks(bills: Bill[], nowIso: string): FactoringTask
   const b = bills.find((x) => x.direction === 'KOSZT' && x.verification === 'ZAAKCEPTOWANA' && x.payment !== 'OPLACONA');
   if (!b) return [];
   const accepted = new Date(Date.parse(nowIso) - 60 * 60 * 1000).toISOString();
-  const due = new Date(Date.parse(accepted) + 48 * 3600 * 1000).toISOString();
-  const { fee, payout } = factoringPayout(b.net, b.gross, 1);
-  return [{ billId: b.id, number: b.number, issuer: 'Scandinavian Express', currency: b.currency, net: b.net, gross: b.gross, fee, payout, issuedAt: b.issueDate, acceptedAt: accepted, dueAt: due, paidAt: null, feePct: 1, hours: 48 }];
+  /* prowizja i czas wypłaty z oferty w Opcjach (demo) */
+  const offer = demoFactoringOffer() ?? { feePct: 1, hours: 48 };
+  const due = new Date(Date.parse(accepted) + offer.hours * 3600 * 1000).toISOString();
+  const { fee, payout } = factoringPayout(b.net, b.gross, offer.feePct);
+  return [{ billId: b.id, number: b.number, issuer: 'Scandinavian Express', currency: b.currency, net: b.net, gross: b.gross, fee, payout, issuedAt: b.issueDate, acceptedAt: accepted, dueAt: due, paidAt: null, feePct: offer.feePct, hours: offer.hours }];
 }
 
 /** E40 — adresy księgowości (Opcje › Adresy księgowości) i dziennik wysyłek: wysłana paczka HHL dla przyjętej faktury SCX. */
@@ -87,9 +89,14 @@ export function demoAccountingPack(bills: Bill[]): PackConfig {
 export function demoPackActions(): PackActions {
   return {
     send: async (_key, _weekKey, to, nowIso): Promise<PackSent> => ({ at: nowIso, to: to.length, status: 'DORECZONO', by: 'Konto pokazowe' }),
-    zip: async (docs, filename, codeOf) => {
+    /* demo: pliki faktur i zestawienia jako opis (jak inne pliki demo bez treści), CMR z danych */
+    zip: async (pack, cmrDocs, codeOf) => {
       const { downloadDocumentsZip } = await import('./zipDocs');
-      await downloadDocumentsZip(docs, filename, codeOf);
+      const stub = (name: string, category: Document['category']): Document => ({
+        id: `pack-${name}`, loadId: '', category, name, uploadedAt: null, deadline: null, status: 'UPLOADED', permitFits: null, visibleTo: ['HHL'],
+      });
+      const extra = pack.files.filter((f) => !/_CMR\.pdf$/.test(f)).map((f) => stub(f, 'INVOICE'));
+      await downloadDocumentsZip([...extra, ...cmrDocs], `Paczka_t${Number(pack.weekKey.slice(-2))}_${pack.key}.zip`, codeOf);
     },
   };
 }

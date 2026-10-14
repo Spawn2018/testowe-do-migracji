@@ -125,15 +125,13 @@ export function FuelWeekTable({ rows, locale, phone }: { rows: FuelWeekRow[]; lo
             <tbody>
               {rows.map((r) => (
                 <Fragment key={r.key}>
-                  <tr
-                    className={open === r.key ? 'is-open' : undefined}
-                    data-fuel-week={r.key}
-                    tabIndex={0}
-                    aria-expanded={open === r.key}
-                    onClick={() => toggle(r.key)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(r.key); } }}
-                  >
-                    <td><b data-content>{weekText(locale, r)}</b></td>
+                  <tr className={open === r.key ? 'is-open' : undefined} data-fuel-week={r.key} onClick={() => toggle(r.key)}>
+                    {/* klawiatura i czytnik: przycisk w pierwszej komórce (wiersz klikalny myszą) */}
+                    <td>
+                      <button type="button" className="fuel-row-btn" data-fuel-toggle aria-expanded={open === r.key} onClick={(e) => { e.stopPropagation(); toggle(r.key); }}>
+                        <b data-content>{weekText(locale, r)}</b>
+                      </button>
+                    </td>
                     <td data-content>{idxText(locale, r)}</td>
                     <td className="num">{src(locale, 'p5_fuel_okq8', r.okq8)}</td>
                     <td className="num">{src(locale, 'p5_fuel_orlen', r.orlen)}</td>

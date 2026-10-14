@@ -78,7 +78,9 @@ describe('E16 — etapy rozliczenia i strony kwoty', () => {
     expect([1, 2, 5, 12, 22, 94, 86].map(transportsText)).toEqual([
       '1 transport', '2 transporty', '5 transportów', '12 transportów', '22 transporty', '94 transporty', '86 transportów',
     ]);
-    expect(codeRange(['KZ-08', 'KZ-09', 'KZ-10', 'KZ-15'])).toBe('KZ-08 – KZ-15');
+    expect(codeRange(['KZ-08', 'KZ-09', 'KZ-10', 'KZ-11'])).toBe('KZ-08 – KZ-11');
+    /* przerwa w numeracji — bez zakresu, który udawałby ciągłość */
+    expect(codeRange(['KZ-08', 'KZ-09', 'KZ-10', 'KZ-15'])).toBe('KZ-08, KZ-09, KZ-10 … (4)');
     expect(codeRange(['KZ-08', 'KZ-09'])).toBe('KZ-08, KZ-09');
   });
 });
@@ -113,6 +115,9 @@ describe('E39 — opłata paliwowa według tygodnia załadunku', () => {
     expect(weekLabel(rows[0].week!, rows[0].weekLast)).toBe('t44–t46 · 26.10–15.11');
     expect(rows[0].finalFrom).toBeNull();
     expect(rows[0].loads).toHaveLength(3);
+    /* tydzień bez transportów przerywa scalanie: t44 i t46 to dwa wiersze */
+    const gap = fuelWeeks([mk('TA-07', '2026-10-27'), mk('TA-08', '2026-11-10')], 'cost', '2026-10-14');
+    expect(gap.map((r) => weekLabel(r.week!, r.weekLast))).toEqual(['t44 · 26.10–01.11', 't46 · 09.11–15.11']);
   });
 });
 

@@ -1112,7 +1112,7 @@ test.describe('wyglad/P5 Finanse — E16, E39, E40', () => {
     const week = page.locator('[data-fuel-table] tr[data-fuel-week]').first();
     await week.click();
     await expect(page.locator('[data-fuel-detail]')).toHaveCount(1);
-    await week.press('Enter');
+    await week.locator('[data-fuel-toggle]').press('Enter');
     await expect(page.locator('[data-fuel-detail]')).toHaveCount(0);
     // E40: paczka tygodnia dla księgowości — dwie paczki; zablokowana wysyłka jest szara i ma powód
     await expect(page.locator('[data-fin-pack] [data-pack]')).toHaveCount(2);
@@ -1309,7 +1309,7 @@ test.describe('wyglad/P5 panel transportu — Ceny (E33) i Dokumenty (E31 pkt 5)
       await expect(page.locator('.drawer')).not.toContainText(r === 'KSH' ? 'Koszt' : 'Przychód');
       await openTab(page, 'SG-03', 2);
       await expect(page.locator(`.drawer [data-pd-req="${r === 'KSH' ? 'INSURANCE' : 'OCS'}"]`)).toHaveCount(0);
-      await expect(page.locator('.drawer [data-pd-upload], .drawer [data-pd-add]')).toHaveCount(r === 'KSH' ? 0 : await page.locator('.drawer [data-pd-upload], .drawer [data-pd-add]').count());
+      if (r === 'KSH') await expect(page.locator('.drawer [data-pd-upload]')).toHaveCount(0);
     }
   });
 

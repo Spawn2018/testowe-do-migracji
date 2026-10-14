@@ -15,6 +15,8 @@ import { transportLabel } from '../../lib/transportName';
 import { permitScopeOf } from '../../lib/p5Source';
 import { ft, ftp } from '../../i18n/p5';
 import { up } from '../options/up';
+import { useModal } from '../ui/useModal';
+import { t } from '../../i18n/messages';
 import './docs.css';
 
 interface Props {
@@ -48,13 +50,11 @@ export function UploadDocModal({ locale, role, phone, loads, statusRows, allowed
   const kind = cat || kinds[0]?.category || '';
   const isPermit = kind === 'PERMIT_PL' || kind === 'PERMIT_SE';
 
+  const boxRef = useRef<HTMLElement>(null);
+  useModal(boxRef, onClose);
+  /* fokus do okna po zapamiętaniu przycisku, który je otworzył (useModal) */
   /* telefon: bez automatycznego fokusu — klawiatura zasłoniłaby okno */
   useEffect(() => { if (!phone) firstRef.current?.focus(); }, [phone]);
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', k);
-    return () => window.removeEventListener('keydown', k);
-  }, [onClose]);
 
   const stateText = (s: 'OVERDUE' | 'MISSING' | 'OK' | null) => (s ? ft(locale, `p5_up_state_${s}`) : '');
   const typeName = load?.itemType ?? '';
@@ -72,8 +72,8 @@ export function UploadDocModal({ locale, role, phone, loads, statusRows, allowed
 
   return (
     <>
-      <button type="button" className="scrim" style={{ zIndex: 52 }} aria-label={ft(locale, 'p5_up_cancel')} onClick={onClose} />
-      <section className="panel awiz-modal up-modal" role="dialog" aria-modal="true" aria-labelledby="up-title" data-upload-modal>
+      <button type="button" className="scrim" style={{ zIndex: 52 }} aria-label={t(locale, 'close')} onClick={onClose} />
+      <section ref={boxRef} className="panel awiz-modal up-modal" role="dialog" aria-modal="true" aria-labelledby="up-title" data-upload-modal>
         <header className="panel-hd">
           <h2 id="up-title">{ft(locale, 'p5_up_h')}</h2>
           <div className="spacer" />

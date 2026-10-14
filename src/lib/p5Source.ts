@@ -1,10 +1,10 @@
 /**
  * wyglad/P5 — jedno miejsce danych Finansów (E16, E39). Dziś liczy z cen transportów w aplikacji (EUR z widoków cen);
- * próg marży i średnie cen paliwa z publikacjami podaje baza — podłącza wykonawca (dopisek do PR wyglad/P5).
+ * próg marży i średnie cen paliwa z publikacjami podaje baza — podłącza wykonawca (D-20261014-2005-01).
  * Przykłady demo wyłącznie za warunkiem trybu demo wpisanym wprost (strażnik I-0, `tests/p5-finance.test.ts`).
  */
 import type { Bill, Document, Load } from '../types';
-import type { PackConfig, PackKey, PackSent } from './p5Pack';
+import type { AccountingPack, PackConfig, PackKey, PackSent } from './p5Pack';
 import { belowThreshold, financeSummary, fuelWeeks, type FinBelowRow, type FinSide, type FinSummary, type FuelWeekRow } from './p5Finance';
 import { demoAccountingPack, demoFactoringOffer, demoFactoringTasks, demoFeeRules, demoFeeSuggestions, demoFuelEnrich, demoMarginThreshold, demoPackActions, demoPermits, demoPolicies } from './p5Demo';
 import type { FeeRules, FeeSuggestion } from './p5Fees';
@@ -55,7 +55,8 @@ export function accountingPackConfigOf(bills: Bill[]): PackConfig | null {
 /** E40 — „Wyślij” (e-mail z załącznikami po stronie serwera, wpis w Historii zmian) i „Pobierz paczkę (ZIP)”. */
 export interface PackActions {
   send: (key: PackKey, weekKey: string, to: string[], nowIso: string) => Promise<PackSent | null>;
-  zip: (docs: Document[], filename: string, codeOf: (loadId: string) => string) => Promise<void>;
+  /** ZIP z tą samą zawartością co e-mail: faktury, CMR każdego transportu, zestawienie (4A). */
+  zip: (pack: AccountingPack, cmrDocs: Document[], codeOf: (loadId: string) => string) => Promise<void>;
 }
 export function accountingPackActionsOf(): PackActions | null {
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoPackActions() : null;

@@ -21,11 +21,13 @@ const dmh = (iso: string) => {
   return `${g('day')}.${g('month')}, ${g('hour')}:${g('minute')}`;
 };
 
-export function PaymentChoice({ offer, net, gross, due, value, onChange }: {
+export function PaymentChoice({ offer, net, gross, due, currency, value, onChange }: {
   offer: FactoringOfferView;
   net: number | null;
   gross: number | null;
   due: string;
+  /** Waluta faktury (EUR albo PLN) — kwoty i prowizja w tej walucie. */
+  currency: string;
   value?: 'STANDARD' | 'FACTORING';
   onChange?: (v: 'STANDARD' | 'FACTORING') => void;
 }) {
@@ -34,7 +36,7 @@ export function PaymentChoice({ offer, net, gross, due, value, onChange }: {
   const v = value ?? local;
   const set = (x: 'STANDARD' | 'FACTORING') => { setLocal(x); onChange?.(x); };
   const calc = net != null && gross != null ? factoringPayout(net, gross, offer.feePct) : null;
-  const eur = (n: number | null) => (n == null ? '—' : `${formatPlNumber(n, 2)} EUR`);
+  const eur = (n: number | null) => (n == null ? '—' : `${formatPlNumber(n, 2)} ${currency}`);
   return (
     <fieldset className="fact-choice" data-fact-choice={v} data-deur-exempt="invoice-currency">
       <legend>{ft(locale, 'p5_fact_pay_h')}</legend>
@@ -46,7 +48,7 @@ export function PaymentChoice({ offer, net, gross, due, value, onChange }: {
             <span className="fin-muted">
               {k === 'STANDARD'
                 ? ftp(locale, 'p5_fact_std_d', { due: dm(due) })
-                : ftp(locale, 'p5_fact_hhl_d', { hours: offer.hours, pct: formatPlNumber(offer.feePct, 0), fee: calc ? formatPlNumber(calc.fee, 2) : '—' })}
+                : ftp(locale, 'p5_fact_hhl_d', { hours: offer.hours, pct: formatPlNumber(offer.feePct, offer.feePct % 1 ? 1 : 0), fee: calc ? formatPlNumber(calc.fee, 2) : '—', cur: currency })}
             </span>
           </span>
           <b className="fact-opt-v">{k === 'STANDARD' ? eur(gross) : eur(calc?.payout ?? null)}</b>
@@ -65,7 +67,7 @@ export function FactoringTaskCard({ task, nowIso, locale, onMarkPaid }: { task: 
     { on: true, t: ft(locale, 'p5_fact_tl_1'), d: dm(task.issuedAt) },
     { on: true, t: ft(locale, 'p5_fact_tl_2'), d: ftp(locale, 'p5_fact_tl_2d', { at: dmh(task.acceptedAt), hours: task.hours }) },
     { on: paid ? true : 'now', t: ft(locale, 'p5_fact_tl_3'), d: ftp(locale, 'p5_fact_tl_3d', { at: dmh(task.dueAt) }) },
-    { on: paid, t: ft(locale, 'p5_fact_tl_4'), d: ftp(locale, 'p5_fact_tl_4d', { fee: formatPlNumber(task.fee, 2) }) },
+    { on: paid, t: ft(locale, 'p5_fact_tl_4'), d: ftp(locale, 'p5_fact_tl_4d', { fee: formatPlNumber(task.fee, 2), cur: task.currency }) },
   ];
   return (
     <section className="panel fin-panel fact-task" data-fact-task={task.billId} data-deur-exempt="invoice-currency" aria-labelledby={`fact-${task.billId}`}>

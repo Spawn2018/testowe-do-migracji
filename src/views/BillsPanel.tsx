@@ -29,7 +29,7 @@ import { formatPlNumber } from '../lib/format';
 import { transportsText } from '../lib/p5Finance';
 import { ISSUER, RECIPIENT, VAT_RATE, billDiff, billStatus, invoiceKpis, pendingWeeks, weekKeyLabel, type InvKpis, type InvStatus } from '../lib/p5Invoices';
 import { up } from '../components/options/up';
-import { ft, ftp } from '../i18n/p5';
+import { ft, ftn, ftp } from '../i18n/p5';
 import { factoringOfferOf } from '../lib/p5Source';
 import { PaymentChoice } from '../components/invoices/Factoring';
 
@@ -187,7 +187,7 @@ function Kpis({ direction, kpis }: { direction: BillDirection; kpis: InvKpis }) 
             <>
               {ftp(locale, 'p5_inv_k_pending_s', { loads: transportsText(first.loads.length), range: `${dm(first.from)}–${dm(first.to)}`, net: formatPlNumber(first.netEur, 2) })}
               <b>{ftp(locale, 'p5_inv_k_pending_who', { who: ISSUER[direction] })}</b>
-              {kpis.pending.length > 1 ? ftp(locale, 'p5_inv_k_pending_more', { n: kpis.pending.length - 1 }) : ''}
+              {kpis.pending.length > 1 ? ftn(locale, 'p5_inv_k_pending_more', kpis.pending.length - 1) : ''}
             </>
           ) : ft(locale, 'p5_inv_k_pending_none')}
         </p>
@@ -697,7 +697,7 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
             <label className="inv-field inv-field-wide"><span>{t(locale, 'bill_pdf')}</span><input className="input" type="file" accept="application/pdf" data-w="pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>
           </div>
           <p className="fin-muted">{t(locale, 'bill_due_hint')} · {t(locale, 'bill_vat_hint')}</p>
-          {offer ? <PaymentChoice offer={offer} net={num(net)} gross={num(gross)} due={due} /> : null}
+          {offer ? <PaymentChoice offer={offer} net={num(net)} gross={num(gross)} due={due} currency={currency} /> : null}
           <dl className="inv-sum" data-deur-exempt="invoice-currency">
             <div><dt>{ft(locale, 'p5_inv_form_sum_exp')}</dt><dd><Amount n={chk.expectedTotal} cur={currency} /></dd></div>
             <div><dt>{ft(locale, 'p5_inv_form_sum_inv')}</dt><dd><Amount n={chk.invoicedTotal} cur={currency} /></dd></div>

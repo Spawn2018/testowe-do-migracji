@@ -19,6 +19,7 @@ import { DocFileRow } from '../components/ui/DocFileRow';
 import { getNowMs } from '../lib/frozenNow';
 import { DEFAULT_DOC_REQUIREMENTS, docStatusRows, type DocRequirement, type DocStatusRow } from '../lib/docRequirements';
 import { defaultDocWeek, docsForWeek, weeksWithLoads } from '../lib/docWeek';
+import { setDocReqCache } from '../lib/docReqCache';
 import { useIsPhone } from '../lib/useIsPhone';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { transportLabel } from '../lib/transportName';
@@ -97,6 +98,7 @@ export function DocsView() {
         if (!alive) return;
         if (r.reqs.length) setReqs(r.reqs);
         setServerStatus(r.status);
+        setDocReqCache(r.reqs.length ? r.reqs : DEFAULT_DOC_REQUIREMENTS, r.status);
         if (r.projectId) {
           void import('../data/insuranceCoverServer')
             .then((ic) => ic.loadInsuranceCover(r.projectId))
@@ -142,7 +144,8 @@ export function DocsView() {
           due: ft(locale, 'p5_doc_due_policy'),
           over: null,
           soon: null,
-          missingPolicy: key === 'OCS' && !pol,
+          /* „brak” tylko przy danych z bazy — bez nich nic nie twierdzimy o polisie HHL */
+          missingPolicy: key === 'OCS' && policies != null && !pol,
           note: pol ? policyNote(locale, pol) : covered ? ftp(locale, 'p5_doc_n_cover', covered) : key === 'OCS' ? ft(locale, 'p5_doc_n_OCS') : '',
           noteGood: !!pol && pol.approved,
         });
@@ -157,7 +160,8 @@ export function DocsView() {
         ? ftp(locale, 'p5_doc_due_CMR_SIGNED', { h: req.offsetHours })
         : t(locale, `iii6_a_${req.anchor}`).replace('{h}', String(req.offsetHours));
       let note = '';
-      if (key === 'PERMIT_PL') note = ft(locale, 'p5_doc_n_PERMIT_PL');
+      /* „Firma” podpina się sama — opis dopiero, gdy zezwolenia „Firma / Trasa” są w danych */
+      if (key === 'PERMIT_PL' && permits) note = ft(locale, 'p5_doc_n_PERMIT_PL');
       if (key === 'PERMIT_SE') note = ftp(locale, 'p5_doc_n_PERMIT_SE', { n: loads.filter((l) => l.ferry?.departureAt).length, all: loads.length });
       if (cmr) {
         note = ft(locale, `p5_doc_n_CMR_${cmr}`);
@@ -166,7 +170,7 @@ export function DocsView() {
       out.push({ key, label, who: responsibleOrg(req.responsible), due, over: cnt.overdue, soon: cnt.soon, missingPolicy: false, note, noteGood: false });
     }
     return out;
-  }, [role, reqs, statusRows, nowMs, locale, loads, byId, policies, insuranceCover]);
+  }, [role, reqs, statusRows, nowMs, locale, loads, byId, policies, insuranceCover, permits]);
 
   /* paczka tygodnia: tylko dokumenty, które widzi ta firma (RLS i `visibleTo`), od najnowszego tygodnia */
   const weeks = useMemo(() => weeksWithLoads(loads).reverse(), [loads]);
@@ -200,6 +204,7 @@ export function DocsView() {
         type="button"
         className={kind === 'over' ? 'doc-count neg' : 'doc-count'}
         aria-expanded={on}
+        aria-label={`${ftp(locale, kind === 'over' ? 'p5_doc_list_over' : 'p5_doc_list_soon', { n: list.length })} — ${r.label}`}
         onClick={() => toggle(r.key, kind)}
       >
         {list.length}

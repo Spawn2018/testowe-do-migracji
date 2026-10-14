@@ -11,7 +11,7 @@ import { useMemo } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 import { up } from '../components/options/up';
-import { ft, ftp } from '../i18n/p5';
+import { ft, ftn, ftp } from '../i18n/p5';
 import { formatPlNumber } from '../lib/format';
 import { getNowIso } from '../lib/frozenNow';
 import { localDateOf } from '../lib/money/engine';
@@ -243,7 +243,7 @@ export function FinanceView() {
   const typesBlock = side === 'both' ? (
     phone ? (
       <section className="fin-sec" aria-labelledby="fin-types-h">
-        <h4 className="sec" id="fin-types-h">{ft(locale, 'p5_fin_types_h')} <span className="sub" data-fin-type-count>{ftp(locale, 'p5_fin_types_n', { n: fin.types.length })}</span></h4>
+        <h4 className="sec" id="fin-types-h">{ft(locale, 'p5_fin_types_h')} <span className="sub" data-fin-type-count>{ftn(locale, 'p5_fin_types_n', fin.types.length)}</span></h4>
         <div className="fin-cards" data-fin-type-cards>
           {fin.types.map((r) => (
             <article key={r.type} className="fin-card" data-fin-type-card={r.type}>

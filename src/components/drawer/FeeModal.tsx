@@ -11,8 +11,10 @@ import type { Load, Locale } from '../../types';
 import { formatPlNumber } from '../../lib/format';
 import { localDateOf } from '../../lib/money/engine';
 import { cancelFee, dwellFee, durText, type FeeDecision, type FeeKind, type FeeRules, type FeeSuggestion } from '../../lib/p5Fees';
-import { ft, ftp } from '../../i18n/p5';
+import { ft, ftn, ftp } from '../../i18n/p5';
 import { up } from '../options/up';
+import { useModal } from '../ui/useModal';
+import { t } from '../../i18n/messages';
 import '../docs/docs.css';
 import './panel.css';
 
@@ -41,12 +43,10 @@ export function FeeModal({ load, role, locale, rules, suggestions, initial, onCl
     return list.find((s) => s.costEur > 0 || s.revEur > 0) ?? list[0] ?? null;
   }, [initial, kind, suggestions]);
   const [desc, setDesc] = useState('');
+  const boxRef = useRef<HTMLElement>(null);
+  useModal(boxRef, onClose);
+  /* fokus do okna po zapamiętaniu przycisku, który je otworzył (useModal) */
   useEffect(() => { firstRef.current?.focus(); }, []);
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', k);
-    return () => window.removeEventListener('keydown', k);
-  }, [onClose]);
 
   /* wyliczenie z zasad (te same kwoty po obu stronach przy postoju, ten sam % przy anulowaniu) */
   const calc = useMemo(() => {
@@ -58,7 +58,9 @@ export function FeeModal({ load, role, locale, rules, suggestions, initial, onCl
         lines: [
           ftp(locale, 'p5_fee_calc_dwell', { code: load.code, place: ft(locale, `p5_pr_place_${sug.place}`), where: sug.where, from: `${dm(localDateOf(sug.enterAt))}, ${hm(sug.enterAt)}`, to: hm(sug.exitAt) }),
           ftp(locale, 'p5_fee_calc_dwell2', { dur: durText(sug.minutes), free: rules.freeHours[sug.place], over: durText(f.overMin) }),
-          ftp(locale, 'p5_fee_calc_dwell3', { hours: f.hours || f.days, rate: f.days ? rules.dayEur : rules.hourEur, fee: `${n2(f.eur)} EUR` }),
+          f.days
+            ? ftn(locale, 'p5_fee_calc_days', f.days, { rate: rules.dayEur, fee: `${n2(f.eur)} EUR` })
+            : ftn(locale, 'p5_fee_calc_hours', f.hours, { rate: rules.hourEur, fee: `${n2(f.eur)} EUR` }),
         ],
         cost: f.eur, rev: f.eur, costNote: null as string | null, revNote: null as string | null,
       };
@@ -88,8 +90,8 @@ export function FeeModal({ load, role, locale, rules, suggestions, initial, onCl
 
   return (
     <>
-      <button type="button" className="scrim" style={{ zIndex: 54 }} aria-label={ft(locale, 'p5_fee_no')} onClick={onClose} />
-      <section className="panel awiz-modal fee-modal" role="dialog" aria-modal="true" aria-labelledby="fee-title" data-fee-modal>
+      <button type="button" className="scrim" style={{ zIndex: 54 }} aria-label={t(locale, 'close')} onClick={onClose} />
+      <section ref={boxRef} className="panel awiz-modal fee-modal" role="dialog" aria-modal="true" aria-labelledby="fee-title" data-fee-modal>
         <header className="panel-hd">
           <h2 id="fee-title">{ft(locale, 'p5_fee_h')} · {load.code}</h2>
           <div className="spacer" />

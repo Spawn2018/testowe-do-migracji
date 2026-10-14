@@ -65,15 +65,20 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
   const both = role === 'HHL';
   const tier = money ? (both ? money.tier : role === 'KSH' ? money.rev.tier : money.cost.tier) : null;
   const fuelSide = money ? (role === 'KSH' ? money.rev : money.cost) : null;
-  const fuelWeek = fuelSide ? `t${isoWeek(fuelSide.fuel.refDate)}` : null;
-  const fuelLabel = fuelSide ? `${fuelWeek} · ${x2(fuelSide.fuel.applied)}` : null;
+  /* produkcja: brak daty załadunku → `fuel_ref_date` null → refDate '' (bez tygodnia i mnożnika) */
+  const fuelRef = fuelSide && /^\d{4}-\d{2}-\d{2}/.test(fuelSide.fuel.refDate) ? fuelSide.fuel.refDate : null;
+  const fuelLabel = fuelSide && fuelRef ? `t${isoWeek(fuelRef)} · ${x2(fuelSide.fuel.applied)}` : null;
   const margin = pr.revTotal - pr.costTotal;
   const mPct = marginPct(pr.revTotal, pr.costTotal);
   const below = threshold != null && mPct != null && mPct < threshold;
   const fx = money ? (role === 'KSH' ? money.rev.fx : money.cost.fx) : null;
   const rateText = fx && fx.mid > 0 ? ftp(locale, fx.provisional ? 'p5_pr_rate_now' : 'p5_pr_rate_nbp', { table: fx.tableNo, date: dm(fx.date), mid: formatPlNumber(fx.mid, 4) }) : null;
 
-  const dec = (s: FeeSuggestion): FeeDecision | null => decided[s.id] ?? (role === 'SCX' ? s.scx : s.hhl);
+  /* decyzje osobno po stronie HHL (przychód — akceptuje KSH) i SCX (koszt — akceptuje HHL); klucz „id:strona” */
+  const hhlDec = (s: FeeSuggestion): FeeDecision | null => decided[`${s.id}:hhl`] ?? s.hhl;
+  const scxDec = (s: FeeSuggestion): FeeDecision | null => decided[`${s.id}:scx`] ?? s.scx;
+  const dec = (s: FeeSuggestion): FeeDecision | null => (role === 'SCX' ? scxDec(s) : hhlDec(s));
+  const setDec = (s: FeeSuggestion, side: 'hhl' | 'scx', d: FeeDecision) => setDecided((m) => ({ ...m, [`${s.id}:${side}`]: d }));
   const feeTag = (s: FeeSuggestion) => {
     const eur = role === 'KSH' ? s.revEur : role === 'SCX' ? s.costEur : Math.max(s.costEur, s.revEur);
     const d = dec(s);
@@ -97,8 +102,10 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
         const mine = role === 'KSH' ? s.revEur : role === 'SCX' ? s.costEur : Math.max(s.costEur, s.revEur);
         const d = dec(s);
         const kshWait = role === 'KSH' && d === 'CZEKA_KSH';
+        /* dopłata dodana przez SCX czeka na HHL: „Akceptuję” / „Odrzucam” (09.10 13:09 pkt 5) */
+        const hhlWait = role === 'HHL' && scxDec(s) === 'CZEKA_HHL';
         return (
-          <article key={s.id} className={kshWait ? 'pp-fee is-wait' : 'pp-fee'} data-fee={s.kind} data-fee-place={s.place ?? ''}>
+          <article key={s.id} className={kshWait || hhlWait ? 'pp-fee is-wait' : 'pp-fee'} data-fee={s.kind} data-fee-place={s.place ?? ''}>
             <div className="pp-fee-tx">
               <b>{feeTitle(s)}</b>
               <span data-content>{feeLine(s)}</span>
@@ -107,12 +114,13 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
                 <span className="pp-over" data-content>{ftp(locale, 'p5_pr_over', { dur: durText(s.minutes - rules.freeHours[s.place] * 60), fee: `${n2(mine)} EUR` })}</span>
               ) : role === 'SCX' && !s.noMeasure && !mine ? <span className="fin-muted">{ft(locale, 'p5_pr_fee_nothing')}</span> : null}
               {kshWait ? <span className="fin-muted">{ft(locale, 'p5_pr_fee_wait_KSH')}</span> : null}
+              {hhlWait ? <span className="fin-muted" data-content>{ftp(locale, 'p5_pr_fee_wait_HHL', { fee: `${n2(s.costEur)} EUR` })}</span> : null}
             </div>
             <div className="pp-fee-act">
-              {kshWait ? (
+              {kshWait || hhlWait ? (
                 <>
-                  <button type="button" className="btn" onClick={() => setDecided((m) => ({ ...m, [s.id]: 'PRZYJETA' }))}>{ft(locale, 'p5_pr_fee_accept')}</button>
-                  <button type="button" className="btn ghost" onClick={() => setDecided((m) => ({ ...m, [s.id]: 'ODRZUCONA' }))}>{ft(locale, 'p5_pr_fee_reject')}</button>
+                  <button type="button" className="btn" data-fee-accept onClick={() => setDec(s, kshWait ? 'hhl' : 'scx', 'PRZYJETA')}>{ft(locale, 'p5_pr_fee_accept')}</button>
+                  <button type="button" className="btn ghost" data-fee-reject onClick={() => setDec(s, kshWait ? 'hhl' : 'scx', 'ODRZUCONA')}>{ft(locale, 'p5_pr_fee_reject')}</button>
                 </>
               ) : role === 'SCX' && !d ? (
                 <button type="button" className="btn ghost" disabled={!mine} onClick={() => setFeeOpen(s)}>{ft(locale, 'p5_pr_fee_add_scx')}</button>
@@ -189,7 +197,7 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
         suggestions={suggestions ?? []}
         initial={feeOpen === 'new' ? null : feeOpen}
         onClose={() => setFeeOpen(null)}
-        onDecide={(id, d) => { setDecided((m) => ({ ...m, [id]: d })); setFeeOpen(null); }}
+        onDecide={(id, d) => { setDecided((m) => ({ ...m, [`${id}:${role === 'SCX' ? 'scx' : 'hhl'}`]: d })); setFeeOpen(null); }}
       />
     </Suspense>
   ) : null;
@@ -211,7 +219,7 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
           {showCost ? <article className="fin-card pp-sum" data-pp-total="cost"><b>{ft(locale, 'p5_pr_col_cost')}</b><b>{amt(pr.costTotal, 'cost')} {cur}</b></article> : null}
           {showRev ? <article className="fin-card pp-sum" data-pp-total="rev"><b>{ft(locale, 'p5_pr_col_rev')}</b><b>{amt(pr.revTotal, 'rev')} {cur}</b></article> : null}
           {both ? (
-            <article className="fin-card pp-sum" data-pp-margin><b>{ft(locale, 'p5_pr_margin')}</b><b className={below ? 'neg' : undefined}>{n2(margin)} · {mPct != null ? `${formatPlNumber(mPct, 2)} %` : '—'}</b></article>
+            <article className="fin-card pp-sum" data-pp-margin><b>{ft(locale, 'p5_pr_margin')}</b><b className={below ? 'neg' : undefined}>{n2(pln && midCost && midRev ? pr.revTotal * midRev - pr.costTotal * midCost : margin)} {cur} · {mPct != null ? `${formatPlNumber(mPct, 2)} %` : '—'}</b></article>
           ) : null}
           {fuelLabel ? card('fuel', <><b>{ft(locale, 'p5_pr_fuel')}</b> <span className="fin-muted">{fuelLabel}</span></>, <>{fuelCard}{plnLine}</>) : null}
           {suggestions ? card('fees', <><b>{ft(locale, 'p5_pr_fees')}</b> <span className="fin-muted">· {ft(locale, 'p5_pr_fees_sub')} {n2(feeSum ?? 0)} EUR</span></>, feeList) : null}

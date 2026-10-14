@@ -61,7 +61,9 @@ interface Props {
 
 export function AccountingPackSection({ locale, phone, loads, bills, documents, cfg, actions, nowIso }: Props) {
   const weeks = useMemo(() => packWeeks(bills), [bills]);
-  const [week, setWeek] = useState(weeks[0] ?? '');
+  const [picked, setWeek] = useState('');
+  /* faktury mogą dojść później — bez wyboru albo po zniknięciu tygodnia: najnowszy tydzień faktury */
+  const week = weeks.includes(picked) ? picked : weeks[0] ?? '';
   /* wysyłki z tej sesji (dziennik z bazy przychodzi w `cfg.sent`) */
   const [sentNow, setSentNow] = useState<Record<string, PackSent>>({});
   const [ask, setAsk] = useState<PackKey | null>(null);
@@ -90,7 +92,7 @@ export function AccountingPackSection({ locale, phone, loads, bills, documents, 
     if (!actions) return;
     const ids = new Set(p.loads.map((l) => l.id));
     const docs = documents.filter((d) => d.loadId && ids.has(d.loadId) && d.category === 'CMR' && d.status === 'UPLOADED');
-    void actions.zip(docs, `Paczka_t${Number(p.weekKey.slice(-2))}_${p.key}.zip`, codeOf);
+    void actions.zip(p, docs, codeOf);
   };
 
   const status = (p: Pack) => {
