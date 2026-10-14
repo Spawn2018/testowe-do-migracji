@@ -301,7 +301,8 @@ test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
     await openView(page, 'fin');
     const finCards = page.locator('[data-fin-type-cards] [data-fin-type-card]');
     expect(await finCards.count()).toBeGreaterThan(0);
-    await expect(finCards.first().locator('.mcard-kv dt')).toHaveCount(3);
+    /* przepisane w wyglad/P5 — E16 telefon (img/e16-after): karta rodzaju jak karta etapu — „Marża” i „Przychód / koszt” */
+    await expect(finCards.first().locator('.fin-kv dt')).toHaveText(['Marża', 'Przychód / koszt']);
     await expect(page.locator('[data-fin-type-count]')).toBeVisible();
 
     await openView(page, 'docs');
@@ -1084,6 +1085,58 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
       await page.locator('[data-auto-row="zones"] .arl-hd').click();
       hits.push(...await measure(page, 'dziala-samo-strefy', width, 'HHL'));
       /* „Własne reguły” (dzisiejsza lista z warunkami w JSON, ucięte na telefonie) — przebudowa E35 w P8, POROWNANIE P4-c */
+
+/**
+ * wyglad/P5 — Finanse (E16, img/e16-after) i opłata paliwowa według tygodnia (E39, img/e39-after).
+ * Komputer: HHL — etapy z marżą, rodzaje, kurs NBP, flaga marży; KSH i SCX — tylko swoja strona, bez marży.
+ * Telefon 360 / 390 / 430: karty etapów i rodzajów, tydzień opłaty rozwinięty — ta sama brama E8 (0 w każdej kolumnie).
+ */
+test.describe('wyglad/P5 Finanse — E16, E39', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+
+  test('komputer: HHL tabela etapów z marżą, rodzaje, NBP i flaga; KSH i SCX jedna kolumna; wiersz tygodnia się rozwija', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'fin');
+    const stages = page.locator('[data-fin-stages="both"]');
+    await expect(stages.locator('thead th')).toHaveText(['ETAP ROZLICZENIA', 'TRANSPORTY', 'PRZYCHÓD (KSH)', 'KOSZT (SCX)', 'MARŻA', '%']);
+    await expect(stages.locator('tbody [data-fin-stage]')).toHaveCount(3);
+    await expect(page.locator('[data-fin-types] tbody tr').first()).toBeVisible();
+    await expect(page.locator('[data-fin-nbp]')).toContainText('Ostatnia tabela');
+    await expect(page.locator('[data-fin-flag]')).toContainText('Próg marży');
+    const week = page.locator('[data-fuel-table] tr[data-fuel-week]').first();
+    await week.click();
+    await expect(page.locator('[data-fuel-detail]')).toHaveCount(1);
+    await week.press('Enter');
+    await expect(page.locator('[data-fuel-detail]')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1441);
+    for (const [r, head] of [['KSH', 'DO ZAPŁATY'], ['SCX', 'NALEŻNOŚĆ']] as const) {
+      await boot(page, r);
+      await openView(page, 'fin');
+      const t = page.locator(`[data-fin-stages="${r === 'KSH' ? 'rev' : 'cost'}"]`);
+      await expect(t.locator('thead th')).toHaveCount(3);
+      await expect(t.locator('thead th').nth(2)).toContainText(head);
+      await expect(page.locator('[data-page="finance"]')).not.toContainText('Marża');
+      await expect(page.locator('[data-fin-nbp], [data-fin-flag], [data-fin-types]')).toHaveCount(0);
+      await expect(page.locator('[data-fuel-table]')).toBeVisible();
+    }
+  });
+
+  for (const role of ['HHL', 'KSH', 'SCX'] as const) {
+    test(`telefon ${role}: karty etapów, rodzajów i tygodni opłaty — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role);
+      await openView(page, 'fin');
+      await expect(page.locator('[data-fin-stage-cards] [data-fin-stage]')).toHaveCount(3);
+      await expect(page.locator('table.fin-table')).toHaveCount(0);
+      await page.locator('#fin-fuel [data-fuel-week] .fin-card-btn').first().click();
+      await expect(page.locator('[data-fuel-detail]')).toHaveCount(1);
+      const hits: Hit[] = [];
+      for (const width of WIDTHS) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.waitForTimeout(200);
+        hits.push(...await measure(page, 'finanse-p5', width, role));
+      }
       expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
     });
   }

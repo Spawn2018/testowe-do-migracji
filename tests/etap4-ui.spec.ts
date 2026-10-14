@@ -286,24 +286,26 @@ test.describe('M8 — poziom wyceny i kurs tymczasowy', () => {
 
     await role(page, 'HHL')
     await nav(page, 'fin')
-    const sum = page.locator('[data-tier-summary]')
-    await expect(sum).toBeVisible()
+    /* przepisane w wyglad/P5 — E16: etapy rozliczenia w tabeli „Od przychodu do marży” (Zafakturowane, Dostarczone, Prognoza) */
+    const stages = page.locator('[data-fin-stages="both"]')
+    await expect(stages).toBeVisible()
     let total = 0
-    for (const k of ['PROGNOZA', 'REALIZACJA', 'FAKTURA']) total += Number(await sum.locator(`[data-tier-count="${k}"]`).innerText())
+    for (const k of ['PROGNOZA', 'REALIZACJA', 'FAKTURA']) total += Number(await stages.locator(`[data-fin-stage="${k}"]`).getAttribute('data-count'))
     expect(total).toBeGreaterThan(0)
-    await expect(page.locator('[data-money-ok]')).toBeVisible()
   })
 })
 
 test.describe('M11 — rozbicie marży', () => {
-  test('HHL: trzy wiersze .mrow + marża łączna (liczby transportów się sumują), waluta z ustawień; KSH/SCX bez marży', async ({ page }) => {
+  /* przepisane w wyglad/P5 — E16: jedna tabela etapów (Zafakturowane / Dostarczone / Prognoza + Razem), waluta z „Dla mnie”;
+     KSH („Rozliczenia”) tylko swoja cena, SCX („Moje stawki”) tylko swoja stawka — bez marży */
+  test('HHL: trzy etapy + razem (liczby transportów się sumują), waluta z ustawień; KSH/SCX bez marży', async ({ page }) => {
     await boot(page)
     await role(page, 'HHL')
     await nav(page, 'fin')
-    const split = page.locator('[data-margin-split]')
-    await expect(split.locator('.mrow[data-margin-tier]')).toHaveCount(3)
-    const n = async (k: string) => Number(await split.locator(`[data-margin-tier="${k}"]`).getAttribute('data-count'))
-    const total = Number(await split.locator('[data-margin-total]').getAttribute('data-count'))
+    const stages = page.locator('[data-fin-stages="both"]')
+    await expect(stages.locator('tbody [data-fin-stage]')).toHaveCount(3)
+    const n = async (k: string) => Number(await stages.locator(`[data-fin-stage="${k}"]`).getAttribute('data-count'))
+    const total = Number(await stages.locator('[data-fin-stage-total]').getAttribute('data-count'))
     expect(total).toBe(72)
     expect((await n('FAKTURA')) + (await n('REALIZACJA')) + (await n('PROGNOZA'))).toBe(total)
     await nav(page, 'options')
@@ -311,16 +313,19 @@ test.describe('M11 — rozbicie marży', () => {
     await page.click('[data-opt-nav="look"]')
     await page.locator('[data-deur-exempt="currency-pref"] select').selectOption('PLN')
     await nav(page, 'fin')
-    await expect(split.locator('[data-margin-total]')).toContainText('PLN')
+    await expect(stages.locator('[data-fin-stage-total]')).toContainText('PLN')
     await nav(page, 'options')
     await page.click('[data-opt-nav="look"]')
     await page.locator('[data-deur-exempt="currency-pref"] select').selectOption('EUR')
     await nav(page, 'fin')
-    await expect(split.locator('[data-margin-total]')).toContainText(/€|EUR/)
+    await expect(stages.locator('[data-fin-stage-total]')).toContainText('EUR')
     for (const r of ['KSH', 'SCX'] as const) {
       await role(page, r)
       await nav(page, 'fin')
-      await expect(page.locator('[data-margin-split]')).toHaveCount(0)
+      await expect(page.locator('[data-fin-stages="both"]')).toHaveCount(0)
+      await expect(page.locator('[data-fin-stages]')).toHaveCount(1)
+      await expect(page.locator('[data-page="finance"]')).not.toContainText('Marża')
+      await expect(page.locator('[data-fin-types]')).toHaveCount(0)
     }
   })
 })

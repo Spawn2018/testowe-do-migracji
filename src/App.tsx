@@ -15,7 +15,7 @@ import { MapView } from './views/MapView';
 import { ScheduleView } from './views/ScheduleView';
 import { RisksView } from './views/RisksView';
 import { DocsView } from './views/DocsView';
-import { FinanceView } from './views/FinanceView';
+import { FinanceViewLazy as FinanceView } from './views/financeLazy';
 import { InvoicesView } from './views/InvoicesView';
 import { TasksView } from './views/TasksView';
 import { WorkflowsViewLazy as WorkflowsView } from './views/workflowsLazy';
