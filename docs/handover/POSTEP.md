@@ -2290,3 +2290,16 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **P4 H1/H2 (E25 statusy) NA PRODUKCJI — commit `3dd72256`, migracja 0205, wdrożenie `dpl_AffqVNywWVnTJTtTYxVnNs1xjKmD`, 14.10.2026 13:43.**
 
+## 2026-10-14 — P3-c poprawka (D-20261014-1420-01 R1–R2/R4–R5/R7) NA PRODUKCJI
+
+- R1: `accountMfaEnabled` — 2FA UI tylko przy verified TOTP (bez `satisfied`).
+- R2: `MyMfa` pod AccountScreen przy ≥1 TOTP (nie Podgląd).
+- R4: `auth_pw_changed` = „Hasło zmienione.”
+- R5: i5-mfa **13/13** (w tym 2× R1); i2-facade I-5+I-17 przywrócone (przebieg na żywo — po R3 / TEST).
+- R7: PLAN P3-d po P4; J4 = Kokpit.
+- Scalenie PR #195 → `50d4fc3e`. Bez migracji.
+- Wdrożenie R7 z `main` `50d4fc3e`, 14.10.2026 14:45, `dpl_54y7p76dguMDSCjfNwApqGkfaFDB`.
+- Plik JS: `assets/index-CdyCUXOf.js`. Oba adresy 200. 0 × `service_role`.
+
+**P3-c poprawka NA PRODUKCJI — commit `50d4fc3e`, 14.10.2026 14:45.**
+
