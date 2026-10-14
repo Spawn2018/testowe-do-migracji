@@ -233,8 +233,8 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
 - **W6.** Brama E8 szczelna (`main` nie zwalnia).
 - **W7.** Dowód w `docs/handover/odbior/P2/`.
 
-### P3 · Uprawnienia, konta, Opcje, pasek górny — NA PRODUKCJI (logika/baza: scalenie `d3cbe4d8` + `567fcc5a`, wdrożenie `dpl_9tAM8dDaeXZ2awdpHD6RCNwdkLPP`, 13.10.2026 23:32); P3-a wygląd: scalenie `25b71bca` (PR #178), wdrożenie `dpl_FBYjeG86cptLjWvXiRmURHH5kKkt`, 14.10.2026 00:12
-- **Ekrany — wygląd:** P3-a pasek górny + E13 — `wyglad/P3` (PR #178, D-20261013-2255-01); P3-b Kokpit (E9, V5) — `wyglad/P3-b` (PR #185, D-20261014-0215-01); P3-c Opcje (E11, E12). Cursor: logika, baza, uprawnienia, Podgląd — bez przebudowy wyglądu ekranów koordynatora (F1).
+### P3 · Uprawnienia, konta, Opcje, pasek górny — NA PRODUKCJI (logika/baza: scalenie `d3cbe4d8` + `567fcc5a`, wdrożenie `dpl_9tAM8dDaeXZ2awdpHD6RCNwdkLPP`, 13.10.2026 23:32); P3-a wygląd: scalenie `25b71bca` (PR #178), wdrożenie `dpl_FBYjeG86cptLjWvXiRmURHH5kKkt`, 14.10.2026 00:12; P3-b Kokpit: scalenie `50b23eb0` (PR #185), wdrożenie `dpl_Go31sqkke7v66cur6AxKfkuDwDWj`, 14.10.2026 02:53
+- **Ekrany — wygląd:** P3-a pasek górny + E13 — `wyglad/P3` (PR #178, D-20261013-2255-01); P3-b Kokpit (E9, V5) — `wyglad/P3-b` (PR #185, D-20261014-0215-01) **NA PRODUKCJI**; P3-c Opcje (E11, E12). Cursor: logika, baza, uprawnienia, Podgląd — bez przebudowy wyglądu ekranów koordynatora (F1).
 - **E9** prawa ról (z E36, zamkniętym w E9):
   - 5 rodzajów kont, bez CLIENT_ADMIN i SITE_VIEWER;
   - menu według roli; „Moje zadania” SCX znika;
