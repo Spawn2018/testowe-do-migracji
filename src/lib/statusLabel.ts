@@ -17,7 +17,8 @@ const STATUS_KEYS: Partial<Record<LoadStatus, string>> = {
   AT_PORT_SE: 's_port_se',
   IN_TRANSIT_SE: 's_road_se',
   APPROACHING_SITE: 's_on_site',
-  UNLOADING: 's_unloaded',
+  /* E25: „Rozładowany” scalony z „Dostarczone” (wyglad/P4-b — jeden słownik nazw) */
+  UNLOADING: 's_delivered',
   DELIVERED: 's_delivered',
   READY_TO_INVOICE: 's_ready_to_invoice',
   INVOICED: 's_invoiced',
@@ -31,7 +32,8 @@ const STAGE_KEYS: Record<CorridorStage, string> = {
   TO_PORT: 's_road_pl',
   GDANSK: 's_port_gdn',
   FERRY: 's_on_ferry',
-  APPROACH: 's_nynashamn',
+  /* E25 / E28 (wyglad/P4-b): etap portu SE nazywa się „Port SE” (Nynäshamn albo Karlskrona) */
+  APPROACH: 's_port_se',
   SE_ROAD: 's_road_se',
   SITE: 's_on_site',
   DELIVERED: 's_delivered',

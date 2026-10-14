@@ -251,6 +251,31 @@ export interface LoadPermit {
   attachmentKind?: 'PERIOD' | 'TRIP' | 'NONE' | 'REGULATION';
 }
 
+/**
+ * wyglad/P4-b (E15 pkt 8, img/e15-after): szczegóły ETA do bloku w Przeglądzie — wypełnia wykonawca z `eta_basis` (E15).
+ * Każde pole opcjonalne: bez niego blok pokazuje tylko ETA, pasmo, słowo pewności i okno dostawy.
+ */
+export interface EtaDetail {
+  /** stan liczenia: jazda, odpoczynek w toku, czeka przed placem (E15-2), prom */
+  phase?: 'DRIVE' | 'REST' | 'WAIT_SITE' | 'FERRY' | null;
+  /** czas ostatniej pozycji użytej do ETA (E15 pkt 3 „wiek pozycji”) */
+  lastFixAt?: string | null;
+  distanceKm?: number | null;
+  /** jazda do placu w minutach */
+  driveMin?: number | null;
+  /** czy przed Boden potrzebny jest odpoczynek */
+  restNeeded?: boolean | null;
+  restHours?: number | null;
+  /** odpoczynek w toku: początek postoju i najwcześniejszy koniec */
+  restFrom?: string | null;
+  restUntil?: string | null;
+  /** odpoczynek zrobiony (rozpoznany z GPS) */
+  restDoneFrom?: string | null;
+  restDoneTo?: string | null;
+  /** czeka przed placem od */
+  waitSince?: string | null;
+}
+
 export interface Load {
   id: string;
   code: string; // SG-01 etc
@@ -282,6 +307,8 @@ export interface Load {
   etaPreLoad?: boolean;
   /** I-2d: ETA v1 z bazy — pasmo ± minut (eta_confidence_min); null = ETA liczone w kliencie (demo). */
   etaConfMin?: number | null;
+  /** wyglad/P4-b — szczegóły ETA (E15); null/undefined = brak */
+  etaDetail?: EtaDetail | null;
   /** I-2d: `loads.delay_minutes` (ETA v1 vs koniec okna planu); undefined w demo. */
   delayMinutesDb?: number | null;
   lat: number;

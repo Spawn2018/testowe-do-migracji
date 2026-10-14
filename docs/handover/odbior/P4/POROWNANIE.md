@@ -89,3 +89,62 @@ Zrzuty z demo, zamrożony czas 07.10.2026, 20:00. Liczby w demo są inne niż na
 - `harmonogram-*`, `mapa-*`, `kokpit-klik-droga-se-mapa-1440-hhl.png`, `telefon-390-*` (w tym `telefon-390-hhl-mapa.png` — mapa w całości po otwarciu).
 
 Zrzuty zrobione po rebase na `main` z P3-b, więc menu boczne i dolny pasek mają już liczby z P3-b (E9).
+
+## wyglad/P4-b — panel transportu: zakładka Status, okno „Zmień status”, pasek śledzenia, blok ETA, link śledzenia
+
+Obrazy raportu:
+- `raport/img/e25-after.webp` — prawy panel › Status (komputer i telefon), okno „Zmień status” (okno i arkusz od dołu);
+- `e27-after.webp` — „Pasek śledzenia w panelu” (przed oknem, w oknie, po „Dostarczone”), telefon: pasek pod nagłówkiem;
+- `e15-after.webp` — „Panel transportu › Przegląd · blok ETA” (4 stany) i telefon („ETA Boden”, „Dlaczego tyle”);
+- etap E44 (bez obrazu): opis lokalizatora w panelu, link RIO pokazywany jako „RIO · ••••”.
+
+Zakres z `PLAN.md` §4 P4 „Ekrany”: „P4-b panel transportu (E25 Status i okno, E27 pasek w panelu, E15 ETA, E44)” i „pole „Link śledzenia” w oknie awizacji i opis lokalizatora w panelu (E44)”.
+Logika i zapis: PR #181 (`load_status_set`, kody E25, `AT_PORT_SE`). Ten PR zmienia tylko wygląd i układ; zapis w oknie bez zmian (`setLoadStatus(…, occurredAt)`).
+
+Zrzuty z demo na serwerze deweloperskim, czas 07.10.2026, 20:30. Do zrzutów osi i okna do transportu T-12 w demo wstrzyknięto zdarzenia jak SG-03 z produkcji (import 01.10 21:43, „Gotowy” ręcznie 05.10 13:10, faza z pozycji naczepy 05.10 13:21, wjazd na plac 07.10 08:35, wyjazd 12:19; naczepa zmyślona TST123). Do bloku ETA wstrzyknięto stany E15 (jazda, odpoczynek, czekanie) z liczbami z obrazu. Nic nie jest zapisywane — to tylko zrzut.
+
+### Z3 — element po elemencie
+
+| element | obraz raportu | po zmianie w aplikacji | zgodne | uwagi |
+|---|---|---|---|---|
+| Status — grupy | PRZYGOTOWANIE · bez śledzenia; W TRASIE · śledzenie włączone; ROZLICZENIE · bez śledzenia | to samo | tak | — |
+| Status — wiersz | kropka, nazwa, AUTO / RĘCZNIE, godzina „05.10, 13:10”, pod spodem przyczyna i autor | to samo; autor „Imię Nazwisko // Firma”, stare wpisy — nazwa firmy („H&H Logistics”); „System // Watch Tower” przy imporcie | tak | godziny z dziennika zdarzeń transportu, bez nowych zapytań |
+| Status — pominięte | „Brak zasobów · Brak dokumentów — pominięte — awizacja od razu kompletna”; „Załadunek … Port SE — pominięte — naczepa podłączona dopiero w Szwecji” | to samo (przyczyna z następnego statusu: „Gotowy” → awizacja kompletna; faza z pozycji naczepy → podłączona w Szwecji / Polsce) | tak | inne przeskoki: samo „pominięte” |
+| Status — bieżący | zielona kropka z obwódką, nazwa na zielono | to samo | tak | — |
+| Status — „Dostarczone” AUTO | „Wyjazd z placu po 3 h 44 min · śledzenie wyłączone · data realizacji usługi” | to samo (czas od wjazdu na plac) | tak | ręcznie: notatka · autor · data realizacji usługi |
+| Status — rozliczenie | „Gotowe do fakturowania · czeka · Gdy SCX wgra CMR · zadanie „Wgraj CMR” u przewoźnika”; „Zafakturowano · — · Gdy transport trafi na fakturę” | to samo („czeka” po „Dostarczone”) | tak | brakująca faktura przy „Zafakturowano” — gdy wykonawca poda dane faktur (dopisek K) |
+| Status — stopka | „Zmienia: SCX i administrator HHL. KSH i Operacje HHL: podgląd.” + „Zmień status” | to samo; przycisk tylko dla SCX i administratora HHL (`canStatus` z PR #181) | tak | przycisk przeniesiony z Ustaleń (E25: „przyciski z Ustaleń znikają”) |
+| Status — telefon | najpierw „W trasie” i „Rozliczenie”, „Przygotowanie · rozwiń ▾”, godzina w dwóch liniach, „Zmień status” na całą szerokość | to samo | tak | panel na telefonie nad dolnym paskiem (przycisk nie chowa się pod paskiem) |
+| okno — nagłówek i „Teraz” | „Zmień status · SG-03”, „Teraz: **Na placu** od 07.10, 08:35” | to samo | tak | — |
+| okno — pola | Nowy status; Data; Godzina (czas polski); Notatka (opcjonalnie) z przykładem | to samo; data i godzina to dwa pola składane w jedną wartość jak w PR #181 | tak | format daty w polu ustawia przeglądarka (na komputerze właściciela po polsku; zrzut z przeglądarki testowej pokazuje format amerykański) |
+| okno — „Z GPS” | „Z GPS: wyjazd z placu 07.10, 12:19 · Użyj” | to samo; „Użyj” wpisuje datę i godzinę | tak | z dziennika stref (wjazd/wyjazd: Śrem, port PL, port SE, plac) |
+| okno — informacja | przy „Dostarczone”: data realizacji usługi, kurs NBP, opłata paliwowa, tydzień faktury, śledzenie wyłączy się | to samo; telefon — wersja krótka | tak | — |
+| okno — zasady | „Nie wcześniej niż poprzedni status (07.10, 08:35) i nie później niż teraz. Cofnięcie: tylko administrator HHL, z powodem.” | to samo | tak | „nie wcześniej niż poprzedni status” sprawdza baza — dopisek K3 |
+| okno — przyciski | „Anuluj” · „Zapisz status”; telefon: arkusz od dołu, „Anuluj” · „Zapisz” | to samo | tak | notatka zostaje też na telefonie (cofnięcie i anulowanie wymagają powodu) |
+| pasek śledzenia | nad zakładkami: przed oknem „Śledzenie włączy się 21.10 o 03:00 · naczepa …”, w oknie „Śledzenie trwa od 03:00 · ostatnia pozycja 2 min temu”, po „Śledzenie zakończone 07.10, 12:19 (Dostarczone)” + ślad i usunięcie po 30 dniach | to samo; w drugiej linii opis lokalizatora (E44) | tak | „ostatnia pozycja” — gdy baza poda czas pozycji (dopisek K1); mapa w panelu poza oknem bez kropki pojazdu (E27) |
+| blok ETA | „PRZED WYJAZDEM ZE ŚREMU · ETA: – · Plan dostawy KSH: 07.10 …”; „W TRASIE · 06.10, 12:20 · ± 46 MIN · ŚREDNIA · z GPS 2 min temu · 196 km do placu · jazda …”; „ODPOCZYNEK W TOKU”; „CZEKA PRZED PLACEM · Na miejscu od 12:25 · PRZED OKNEM” | to samo, w Przeglądzie nad listą pól (zastępuje wiersz „ETA Boden”) | tak | bez dopisku „(D-80)” z obrazu (numer decyzji, nie tekst dla użytkownika); km, jazda, odpoczynek, czekanie — gdy wykonawca poda `etaDetail` (dopisek K1); dziś: ETA, pasmo, słowo pewności, okno |
+| blok ETA — telefon | „ETA BODEN” + „DLACZEGO TYLE” | to samo | tak | — |
+| E44 — awizacja | pole „Link śledzenia” | „Link śledzenia” + podpowiedź „emtrack albo link RIO od podwykonawcy SCX — nowy link na każdy przejazd”; po wklejeniu: „Rozpoznano link RIO (podwykonawca SCX)” | tak | zapytanie testowe i wynik „Link RIO działa · …” — wykonawca (E44 pkt 1) |
+| E44 — panel | „Lokalizator: ciągnik WPR 8220T (RIO)” / „naczepa …” | „Lokalizator: naczepa TST123 · emtrack”; link RIO: „Lokalizator: RIO · ••••” | częściowo | rodzaj pojazdu i rejestracja z RIO po rozpoznaniu w bazie (E44 pkt 6) — dopisek K5 |
+| nazwy statusów | spis E25: Zaplanowany, Brak zasobów, Port PL, Droga PL, Droga SE, Port SE | jeden słownik `statusLabel` z tymi nazwami (także pigułki w Harmonogramie, na Mapie i w Kokpicie); „Rozładowany” → „Dostarczone” | tak | dotąd: Planowany, Brak auta, Port Gdańsk, W drodze PL/SE, Nynäshamn |
+
+### Konta (Z11)
+
+| konto | zrzut | różnica |
+|---|---|---|
+| HHL Administrator i Operacje | `panel-1440-hhl-*`, `okno-1440-hhl-*`, `telefon-390-hhl-*` | Operacje HHL bez „Zmień status” w produkcji (`canStatus`: rola w bazie `HHL_ADMIN`) |
+| KSH Użytkownik | `panel-1440-ksh-status.png` | ta sama oś, bez „Zmień status”, w stopce „kto zmienia” |
+| SCX Dyspozytor i Użytkownik | `panel-1440-scx-status.png`, `awizacja-1440-scx-link-rio.png` | z „Zmień status”; nazwa transportu z numerem SCX (E41) |
+
+### Sprawdzenia
+
+- Testy jednostkowe `tests/p4b-status-axis.test.ts`: oś SG-03 (grupy, pominięte z przyczyną, AUTO / RĘCZNIE, bieżący, czeka), ręczne „Dostarczone” z okna, kody bazy na osi, Anulowany, autor, podpowiedź z GPS, rozpoznanie linku RIO / emtrack.
+- Brama E8 (`tests/e8-phone-gate.spec.ts`, opis „wyglad/P4-b”): komputer — pasek nad zakładkami, 3 grupy i 14 statusów, jeden bieżący, okno z informacją przy „Dostarczone”; KSH bez przycisku; telefon 360 / 390 / 430 — kolejność grup, „Przygotowanie” zwinięte, „Zmień status” ≥ 44 px i niezasłonięty dolnym paskiem, arkusz na całą szerokość przy dolnej krawędzi, wszystkie pola i przyciski ≥ 44 px, bez przewijania w bok.
+- Testy przepisane (E25, komentarz w teście): `tests/etap4-ui.spec.ts` i `tests/visual-states.spec.ts` („stan-zablokowany”) — „Zmień status” w zakładce Status; `tests/aud03-ksh-panel.spec.ts` i `.test.ts` — KSH: oś bez przycisku, przycisk w `StatusAxisTab.tsx`; `tests/aud01e-map-pool.test.ts` — kropka w panelu tylko w oknie śledzenia; `tests/status-label.test.ts` — nazwy ze spisu E25.
+- Lokalnie (podgląd demo): `tsc -b`, `test:unit` 956 / 37 pominiętych, `lint:css`, `oxlint` bez nowych ostrzeżeń, brama E8 całości, `etap4-ui`, `etap5-ui`, `etap6-ui`, `aud03-ksh-panel`, `visual-states` (przebieg), `b7-map`, `resp14-phone`, `e8-odbiór`, `d-eur-t`, `e2e-core`, `persist-toast`. Wzorce zrzutów odświeża `visual.yml` po rebase na `main` z PR #181.
+
+### Pliki
+
+`wyglad-P4-b/`:
+- `porownanie-e25-komputer.png`, `porownanie-e25-telefon.png`, `porownanie-e15.png`, `porownanie-e27-pasek.png` — obraz raportu i aplikacja;
+- `panel-1440-*` (Status, Przegląd: przed wyjazdem, w trasie, odpoczynek, czekanie, dostarczone; ciemny motyw), `okno-1440-*`, `telefon-390-*`, `awizacja-1440-scx-link-rio.png`.

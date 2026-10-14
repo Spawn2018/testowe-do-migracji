@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { CorridorMap } from '../map/LazyCorridorMap';
 import { StatusPill } from '../ui/StatusPill';
-import { fmtNum, fmtNumKeepPl, fmtPct, t, tp } from '../../i18n/messages';
+import { fmtNum, fmtPct, t, tp } from '../../i18n/messages';
 import {
   canChangeLoadStatus,
   canEditResources,
@@ -29,28 +29,31 @@ import { formatHistoryActor } from '../../lib/historyActor';
 import { AwizacjaModal } from './AwizacjaModal';
 import { KshDatesModal } from './KshDatesModal';
 import { StatusChangeModal } from './StatusChangeModal';
+import { StatusAxisTab } from './StatusAxisTab';
+import { TrackingBar } from './TrackingBar';
+import { EtaBlock } from './EtaBlock';
+import { buildStatusAxis } from '../../lib/statusAxis';
+import { trackingPhase } from '../../lib/stageTiles';
+import { useIsPhone } from '../../lib/useIsPhone';
+import { getNow } from '../../lib/frozenNow';
 import { RouteCheckPanel } from './RouteCheckPanel';
 import { CorridorObstaclesPanel } from './CorridorObstaclesPanel';
 import { RouteProfilePanel } from './RouteProfilePanel';
 import {
   TZ_LOAD_PL,
   TZ_UNLOAD_SE,
-  formatEtaBoden,
   formatLoadPl,
   formatUnloadSe,
   formatOpsDateTime,
   formatSchedTableDay,
   isoToDatetimeLocalValue,
   wallLocalToIso,
-  etaWindowKind,
-  etaIsNightArrival,
   delayMinutesVsPlan,
 } from '../../lib/time';
 import { formatAppMoney } from '../../lib/money/demoFx';
 import { formatDelayPill } from '../ui/StatusPill';
 import { AgreedFeeForm } from './AgreedFeeForm';
 import {
-  etaConfidenceLabel,
   eventTypeLabel,
   ferryStatusLabel,
 } from '../../lib/enumLabels';
@@ -155,6 +158,10 @@ export function LoadDrawer() {
   const [awizOpen, setAwizOpen] = useState(false);
   const [kshDatesOpen, setKshDatesOpen] = useState(false);
   const [statusChangeOpen, setStatusChangeOpen] = useState(false);
+  /* wyglad/P4-b: telefon (oś i blok ETA) i „teraz” zaokrąglone do minuty (pasek śledzenia E27) */
+  const phone = useIsPhone();
+  const nowMin = Math.floor(getNow().getTime() / 60_000);
+  const nowIso = useMemo(() => new Date(nowMin * 60_000).toISOString(), [nowMin]);
 
   useEffect(() => {
     const allowed: Tab[] = ['overview', 'timeline', 'history', 'docs', 'pricing', 'chat'];
@@ -194,6 +201,9 @@ export function LoadDrawer() {
   );
 
 
+
+  /* E27 (wyglad/P4-b): poza oknem śledzenia (przed 03:00 w dniu załadunku i po „Dostarczone”) panel nie pokazuje kropki pojazdu */
+  const drawerMapLoads = useMemo(() => (load && trackingPhase(load, nowIso) === 'on' ? [load] : []), [load, nowIso]);
 
   if (!load) return null;
 
@@ -286,6 +296,9 @@ export function LoadDrawer() {
           <div className="perf" />
         </div>
 
+        {/* E27 pkt 5 (E1-2): pasek śledzenia nad zakładkami */}
+        <TrackingBar load={load} events={loadEvents} label={load.code} locale={locale} nowIso={nowIso} />
+
         <div className="dtabs">
           {tabs.map((x) => (
               <button key={x.id} type="button" onClick={() => setTab(x.id)} aria-selected={tab === x.id}>
@@ -298,7 +311,7 @@ export function LoadDrawer() {
           {tab === 'overview' && (
             <>
               <div data-load-map style={{ position: 'relative', height: 220, marginBottom: 8 }}>
-                <CorridorMap loads={[load]} embedded slot="drawer" />
+                <CorridorMap loads={drawerMapLoads} embedded slot="drawer" />
               </div>
               <div style={{ marginBottom: 12 }}>
                 <button
@@ -326,6 +339,18 @@ export function LoadDrawer() {
                 </button>
               </div>
               {load.planDates ? <PlanDatesPanel load={load} /> : null}
+              {/* E15 pkt 8 (img/e15-after): blok ETA nad listą pól */}
+              <EtaBlock
+                load={load}
+                locale={locale}
+                phone={phone}
+                nowIso={nowIso}
+                deliveredAt={buildStatusAxis(load, loadEvents).deliveredAt}
+                delayMin={delayMin}
+              />
+              <div data-eta-howto className="etab-howto">
+                <OptionsHowTo locale={locale} k="a6_dr_eta_howto" summaryKey="a6_sch_howto_btn" />
+              </div>
               <dl className="kv">
                 <dt>{t(locale, 'a6_dr_type')}</dt>
                 <dd>
@@ -384,71 +409,6 @@ export function LoadDrawer() {
                 <dd className="cond" data-load-when>{formatSchedTableDay(load.plannedLoadDate, load.awizacja.loadWindowStart, TZ_LOAD_PL)}</dd>
                 <dt>{t(locale, 'a6_dr_delivery')}</dt>
                 <dd className="cond" data-deliver-when>{formatSchedTableDay(load.plannedDeliverDate, load.awizacja.unloadWindowStart, TZ_UNLOAD_SE)}</dd>
-                <dt>{t(locale, 'eta')}</dt>
-                <dd className="cond" data-eta={load.etaPreLoad ? 'pre-load' : 'value'}>
-                  {load.etaPreLoad ? (
-                    <span>{t(locale, 'eta_dash')}</span>
-                  ) : load.etaBoden ? formatEtaBoden(load.etaBoden) : (
-                    <span>{t(locale, 'eta_dash')} <span className="note">{load.etaReasons[0] || t(locale, 'eta_no_gps')}</span></span>
-                  )}{' '}
-                  {!load.etaPreLoad && load.etaBoden ? (
-                    <>
-                      {(() => {
-                        const kind = etaWindowKind(
-                          load.etaBoden,
-                          load.plannedDeliverDate,
-                          load.awizacja.unloadWindowStart ?? load.planDates?.deliveryFrom,
-                          load.awizacja.unloadWindowEnd ?? load.planDates?.deliveryTo,
-                        );
-                        /* „po terminie” = ten sam warunek co delayed / L-3 — bez drugiego alarmu */
-                        if (load.delayed || kind === 'after') {
-                          return <span className="pill p-red" data-eta-window="after">{t(locale, 'a6_dr_after_window')}{delayMin != null ? ` · ${formatDelayPill(delayMin)}` : ''}</span>;
-                        }
-                        if (kind === 'before') {
-                          return <span className="pill p-amber" data-eta-window="before">{t(locale, 'a6_dr_before_window')}</span>;
-                        }
-                        return <span className="pill p-go" data-eta-window="in">{t(locale, 'a6_dr_in_window')}</span>;
-                      })()}
-                      {etaIsNightArrival(load.etaBoden) ? (
-                        <span className="pill" data-eta-night="1" style={{ marginLeft: 4 }}>{t(locale, 'a6_dr_night_arrival')}</span>
-                      ) : null}
-                    </>
-                  ) : null}
-                  {' '}
-                  {!load.etaPreLoad && <>
-                  <span
-                    className={`pill ${
-                      load.etaConfidence === 'LOW'
-                        ? 'p-red'
-                        : load.etaConfidence === 'HIGH'
-                          ? 'p-go'
-                          : 'p-amber'
-                    }`}
-                  >
-                    {etaConfidenceLabel(load.etaConfidence, locale)}
-                  </span>
-                  <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 4, fontWeight: 400 }}>
-                    {load.etaConfMin !== undefined && load.etaConfMin !== null
-                      ? (
-                        <span data-eta="db">
-                          {tp(
-                            locale,
-                            (load.etaMethod ?? '').includes('OSM') ? 'i2_eta_band_osm' : 'i2_eta_band_db',
-                            { m: String(load.etaConfMin) },
-                          )}
-                          {(load.etaMethod ?? '').includes('OSM')
-                            ? ` · ${t(locale, 'i2_eta_osm_attr')}`
-                            : ''}
-                        </span>
-                      )
-                      : tp(locale, 'a6_dr_band', { a: fmtNumKeepPl(locale, load.etaEarliestHours, 1, load.etaEarliestHours.toFixed(1)), b: fmtNumKeepPl(locale, load.etaLatestHours, 1, load.etaLatestHours.toFixed(1)) })}
-                    {load.etaReasons?.length ? ` · ${load.etaReasons.slice(0, 3).join(' · ')}` : ''}
-                  </div>
-                  </>}
-                  <div data-eta-howto style={{ fontSize: 11.5, marginTop: 4, fontWeight: 400 }}>
-                    <OptionsHowTo locale={locale} k="a6_dr_eta_howto" summaryKey="a6_sch_howto_btn" />
-                  </div>
-                </dd>
                 <dt>{t(locale, 'a6_dr_driver')}</dt>
                 <dd>
                   {load.resources.driverName || load.resources.driverDeliveryName ? (
@@ -561,36 +521,15 @@ export function LoadDrawer() {
           )}
 
           {tab === 'timeline' && (
-            <ul className="tl">
-              {loadEvents.length === 0 ? (
-                <li className="future">
-                  <span className="mk" />
-                  <div className="w">{t(locale, 'a6_dr_no_events')}</div>
-                  <div className="ts">—</div>
-                </li>
-              ) : (
-                loadEvents.map((e) => (
-                  <li key={e.id}>
-                    <span className="mk" />
-                    <div className="w">
-                      {e.type === 'STATUS_AUTO' ? (
-                        <span data-tl-auto>
-                          <span className="pill p-sea">{t(locale, 'tl_auto')}</span> {autoStatusText(e.payload) ?? ''}
-                        </span>
-                      ) : (
-                        <>
-                          {eventTypeLabel(e.type, locale)}
-                          {e.note ? ` · ${e.note}` : ''}
-                        </>
-                      )}
-                    </div>
-                    <div className="ts">
-                      {formatHistoryActor(e.actor)} — {formatOpsDateTime(e.at)}
-                    </div>
-                  </li>
-                ))
-              )}
-            </ul>
+            <StatusAxisTab
+              load={load}
+              events={loadEvents}
+              geofences={geofences}
+              locale={locale}
+              phone={phone}
+              canStatus={canStatus}
+              onChange={() => setStatusChangeOpen(true)}
+            />
           )}
 
           {tab === 'history' && (
@@ -943,8 +882,8 @@ export function LoadDrawer() {
               {import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED && canEdit && isServerId(load.id) && <DriverLinkPanel loadId={load.id} />}
 
               <div className="hr" />
-              {/* E25: „Zmień status” zamiast osobnych przycisków; AUD-03: niewidoczne dla KSH */}
-              {(canEdit || canStatus) && (
+              {/* E25 (wyglad/P4-b): „Zmień status” przeniesione do zakładki Status (img/e25-after); tu tylko przypisanie SCX i demo stref. AUD-03: niewidoczne dla KSH */}
+              {canEdit && (role === 'HHL' || !SUPABASE_AUTH_ENABLED) && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }} data-carrier-actions>
                 {role === 'HHL' && canEdit && (
                   <button
@@ -953,16 +892,6 @@ export function LoadDrawer() {
                     onClick={() => assignScx(load.id, load.pricing.scxPozycja ?? 'cennik SCX')}
                   >
                     {t(locale, 'a6_dr_assign_scx')}
-                  </button>
-                )}
-                {canStatus && (
-                  <button
-                    type="button"
-                    className="btn"
-                    data-action="change-status"
-                    onClick={() => setStatusChangeOpen(true)}
-                  >
-                    {t(locale, 'a6_dr_change_status')}
                   </button>
                 )}
                 {/* W2: zdarzenia stref tworzy wyłącznie system (process_position) — symulacja tylko w trybie demo */}

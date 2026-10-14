@@ -73,6 +73,10 @@ for (const vp of [{ w: 1366, h: 900, tag: 'komputer' }, { w: 390, h: 844, tag: '
     await page.locator('.drawer button[aria-selected]').nth(4).click()
     await expect(page.locator('.drawer [data-carrier-actions]')).toHaveCount(0)
     await expect(page.locator('.drawer [data-action="change-status"]')).toHaveCount(0)
+    /* wyglad/P4-b — E25: zakładka Status dla KSH to podgląd osi, bez „Zmień status” (decyzja 17:46) */
+    await page.locator('.drawer button[aria-selected]').nth(1).click()
+    await expect(page.locator('.drawer [data-status-axis]')).toBeVisible()
+    await expect(page.locator('.drawer [data-action="change-status"]')).toHaveCount(0)
     await page.locator('.drawer .drawer-hd button.iconbtn').last().click()
     await page.waitForSelector('.drawer', { state: 'detached' })
 

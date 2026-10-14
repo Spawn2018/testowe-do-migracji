@@ -26,6 +26,9 @@ describe('AUD-01e: jedna mapa na sesję (źródło)', () => {
     expect(pool).not.toMatch(/prefetch|keepBuffer|preload/i);
   });
   it('panel zlecenia ma własne miejsce widoku', () => {
-    expect(readFileSync('src/components/drawer/LoadDrawer.tsx', 'utf8')).toMatch(/<CorridorMap loads=\{\[load\]\} embedded slot="drawer" \/>/);
+    /* wyglad/P4-b — E27: kropka w panelu tylko w oknie śledzenia (lista stała między renderami) */
+    const d = readFileSync('src/components/drawer/LoadDrawer.tsx', 'utf8');
+    expect(d).toMatch(/<CorridorMap loads=\{drawerMapLoads\} embedded slot="drawer" \/>/);
+    expect(d).toMatch(/const drawerMapLoads = useMemo\(\(\) => \(load && trackingPhase\(load, nowIso\) === 'on' \? \[load\] : \[\]\)/);
   });
 });

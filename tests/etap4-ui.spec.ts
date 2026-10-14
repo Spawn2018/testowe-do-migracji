@@ -46,6 +46,11 @@ async function actionsTab(page: Page) {
   await page.locator('.drawer button[aria-selected]').nth(4).click()
   await page.waitForTimeout(200)
 }
+/* wyglad/P4-b — E25 (img/e25-after): „Zmień status” jest w zakładce Status (nie w Ustaleniach) */
+async function statusTab(page: Page) {
+  await page.locator('.drawer button[aria-selected]').nth(1).click()
+  await page.waitForTimeout(200)
+}
 async function openLoad(page: Page, code: string, opts?: { orders?: boolean }) {
   await page.locator(`tr[data-code="${code}"]`).first().click()
   await page.waitForSelector('.drawer')
@@ -100,7 +105,7 @@ test.describe('M5 — numery zleceń', () => {
     let code = ''
     for (const c of ['SG-29', 'SS-03', 'P-01', 'SG-09', 'SG-11', 'SG-18', 'SG-19', 'SG-20', 'T-10', 'SG-30', 'T-14', 'SS-04', 'SS-05', 'K-03', 'P-02', 'R-03']) {
       await openLoad(page, c)
-      await actionsTab(page)
+      await statusTab(page)
       const btn = page.locator('.drawer [data-action="change-status"]')
       if ((await btn.count()) > 0 && (await btn.isEnabled())) { code = c; break }
       await closeDrawer(page)
@@ -114,7 +119,7 @@ test.describe('M5 — numery zleceń', () => {
     const row0 = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: new RegExp(`^${code}`) }) })
     await expect(row0.locator('td[data-col="ord_hhl"]')).toHaveText('— brak —')
     await openLoad(page, code)
-    await actionsTab(page)
+    await statusTab(page)
     await page.locator('.drawer [data-action="change-status"]').click()
     const modal = page.locator('[data-status-change-modal]')
     await expect(modal).toBeVisible()
