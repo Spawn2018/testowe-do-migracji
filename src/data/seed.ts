@@ -561,7 +561,7 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
       });
     }
     if (
-      ['ON_FERRY', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'UNLOADING', 'DELIVERED', 'DELAYED', 'SILENT'].includes(
+      ['ON_FERRY', 'AT_PORT_SE', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'UNLOADING', 'DELIVERED', 'DELAYED', 'SILENT'].includes(
         l.status,
       )
     ) {

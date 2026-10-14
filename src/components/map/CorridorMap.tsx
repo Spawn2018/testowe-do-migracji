@@ -32,6 +32,7 @@ function statusColor(status: string): string {
     case 'ON_FERRY':
     case 'IN_TRANSIT_PL':
     case 'IN_TRANSIT_SE':
+    case 'AT_PORT_SE':
     case 'AT_PORT':
       return '#6BA8D6';
     case 'DELAYED':

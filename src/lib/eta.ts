@@ -36,7 +36,7 @@ function remainingFactor(status: LoadStatus, kind: EtaSegment['kind']): number {
     if (kind === 'BREAK') return 0.3;
     return 0;
   }
-  if (status === 'IN_TRANSIT_SE') {
+  if (status === 'IN_TRANSIT_SE' || status === 'AT_PORT_SE') {
     if (kind === 'PL_ROAD' || kind === 'WAIT_FERRY' || kind === 'CROSSING') return 0;
     if (kind === 'SE_ROAD') return 0.55;
     return 0.6;
@@ -106,7 +106,7 @@ function bandFor(kind: EtaSegment['kind'], hours: number, status: LoadStatus): {
     confidence = 'LOW';
     hi *= 1.25;
   }
-  if (kind === 'SE_ROAD' && ['IN_TRANSIT_SE', 'APPROACHING_SITE'].includes(status)) {
+  if (kind === 'SE_ROAD' && ['AT_PORT_SE', 'IN_TRANSIT_SE', 'APPROACHING_SITE'].includes(status)) {
     reasons.push('GPS w trasie');
   }
 

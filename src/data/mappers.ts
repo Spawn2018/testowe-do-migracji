@@ -30,7 +30,7 @@ const DB_TO_APP_STATUS: Record<DbLoadStatus, LoadStatus> = {
   IN_TRANSIT_PL: 'IN_TRANSIT_PL',
   AT_PORT_GDANSK: 'AT_PORT',
   FERRY: 'ON_FERRY',
-  AT_PORT_NYNASHAMN: 'IN_TRANSIT_SE',
+  AT_PORT_NYNASHAMN: 'AT_PORT_SE',
   IN_TRANSIT_SE: 'IN_TRANSIT_SE',
   AT_SITE: 'APPROACHING_SITE',
   /** E25: UNLOADED scalony z DELIVERED */
@@ -51,6 +51,7 @@ const APP_TO_DB_STATUS: Record<LoadStatus, DbLoadStatus | null> = {
   IN_TRANSIT_PL: 'IN_TRANSIT_PL',
   AT_PORT: 'AT_PORT_GDANSK',
   ON_FERRY: 'FERRY',
+  AT_PORT_SE: 'AT_PORT_NYNASHAMN',
   IN_TRANSIT_SE: 'IN_TRANSIT_SE',
   APPROACHING_SITE: 'AT_SITE',
   /** E25: stary przycisk „rozładowany” → Dostarczone */

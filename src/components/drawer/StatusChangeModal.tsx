@@ -19,6 +19,7 @@ const MANUAL_STATUSES: LoadStatus[] = [
   'IN_TRANSIT_PL',
   'AT_PORT',
   'ON_FERRY',
+  'AT_PORT_SE',
   'IN_TRANSIT_SE',
   'APPROACHING_SITE',
   'DELIVERED',

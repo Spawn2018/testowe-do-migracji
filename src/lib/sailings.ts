@@ -12,7 +12,7 @@ export const effArrival = (s: Sailing): string => s.delayedArrivalAt ?? s.arriva
 export const hasDeparted = (s: Sailing, nowIso: string): boolean => Date.parse(effDeparture(s)) <= Date.parse(nowIso);
 
 /** Statusy „na promie lub dalej” — rejsu nie zmienia już przewoźnik (lustro wyzwalacza 0008). */
-const AFTER_FERRY: ReadonlySet<LoadStatus> = new Set<LoadStatus>(['ON_FERRY', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'UNLOADING', 'DELIVERED']);
+const AFTER_FERRY: ReadonlySet<LoadStatus> = new Set<LoadStatus>(['ON_FERRY', 'AT_PORT_SE', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'UNLOADING', 'DELIVERED']);
 
 export type SailingDenied = 'ROLE' | 'DEPARTED' | 'CANCELLED' | null;
 /** Kto może zmienić przypisanie rejsu transportu. */

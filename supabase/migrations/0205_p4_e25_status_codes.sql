@@ -9,10 +9,12 @@ comment on type public.load_status is
   'E25: PLANNED…DELIVERED + READY_TO_INVOICE + INVOICED; UNLOADED = historyczny synonim Dostarczone.';
 
 -- Kolejność statusów (do przodu dla SCX; HHL_ADMIN może cofnąć z powodem).
+-- Porównanie przez ::text: nowe wartości enum w tej samej transakcji co ALTER TYPE
+-- (Postgres 55P04 „unsafe use of new value” przy case na typie enum).
 create or replace function public.load_status_rank(p_status load_status)
 returns int
 language sql immutable parallel safe set search_path = public as $$
-  select case p_status
+  select case p_status::text
     when 'PLANNED' then 10
     when 'RESOURCES_PENDING' then 20
     when 'DOCS_PENDING' then 30
@@ -72,7 +74,7 @@ begin
     v_new := trim(p_status)::load_status;
   exception when others then
     raise exception 'Nieznany status' using errcode = '22023';
-  end if;
+  end;
 
   if v_new = 'UNLOADED' then
     v_new := 'DELIVERED';

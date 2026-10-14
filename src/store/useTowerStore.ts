@@ -1122,7 +1122,7 @@ export const useTowerStore = create<TowerState>()(
           LOADING: 'LOADING',
           PRE_PORT: 'AT_PORT',
           PORT_OUT: 'AT_PORT',
-          PORT_IN: 'IN_TRANSIT_SE',
+          PORT_IN: 'AT_PORT_SE',
           PRE_ARRIVAL: 'APPROACHING_SITE',
           SITE: 'UNLOADING',
           CHECKPOINT: load.status,

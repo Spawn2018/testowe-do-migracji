@@ -9,6 +9,7 @@ export const STATUS_TO_STAGE: Record<LoadStatus, CorridorStage> = {
   IN_TRANSIT_PL: 'TO_PORT',
   AT_PORT: 'GDANSK',
   ON_FERRY: 'FERRY',
+  AT_PORT_SE: 'APPROACH',
   IN_TRANSIT_SE: 'SE_ROAD',
   APPROACHING_SITE: 'APPROACH',
   UNLOADING: 'SITE',
@@ -28,6 +29,7 @@ export const PROGRESS_OF: Record<LoadStatus, number> = {
   IN_TRANSIT_PL: 0.22,
   AT_PORT: 0.35,
   ON_FERRY: 0.48,
+  AT_PORT_SE: 0.55,
   IN_TRANSIT_SE: 0.68,
   APPROACHING_SITE: 0.88,
   UNLOADING: 0.95,
@@ -103,7 +105,7 @@ export function statusTone(status: LoadStatus): 'plan' | 'ok' | 'warn' | 'crit' 
   if (['DELAYED', 'SILENT', 'DOC_MISSING'].includes(status)) return 'crit';
   if (status === 'ON_FERRY') return 'ferry';
   if (status === 'DELIVERED' || status === 'READY_TO_INVOICE' || status === 'INVOICED') return 'done';
-  if (['APPROACHING_SITE', 'UNLOADING', 'AT_PORT'].includes(status)) return 'warn';
+  if (['APPROACHING_SITE', 'UNLOADING', 'AT_PORT', 'AT_PORT_SE'].includes(status)) return 'warn';
   if (['PLANNED', 'RESOURCES_PENDING', 'READY'].includes(status)) return 'plan';
   return 'ok';
 }

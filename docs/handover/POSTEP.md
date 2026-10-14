@@ -2236,3 +2236,13 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Plik JS przed: `assets/index-CCGb6sOq.js`. Po: `assets/index-aVxTzmYJ.js` — ta sama nazwa na `tower.log-mar.pl` i w logu buildu Vercel. Oba adresy 200. 0 × `service_role`. Kopia wdrożeniowa usunięta.
 
 **wyglad/P3-b NA PRODUKCJI — commit `50b23eb0`, wdrożenie `dpl_Go31sqkke7v66cur6AxKfkuDwDWj`, 14.10.2026 02:53.**
+
+## 2026-10-14 — wyglad/P4-a NA PRODUKCJI
+
+- Dopisek D-20261014-0315-01 włączony w gałęzi P4 (H5).
+- CI PR #188: unit i visual zielone; gitleaks 0; `npm audit --omit=dev --audit-level=high` 0. Bez migracji.
+- Scalenie PR #188 → `cb140085`.
+- Wdrożenie R7 z `main` `cb140085`, 14.10.2026 04:54, `dpl_DYK297WxbcnC9y5CXTQMXN7CvzWg`.
+- Plik JS przed: `assets/index-aVxTzmYJ.js`. Po: `assets/index-CJKv76X6.js`. Oba adresy 200.
+
+**wyglad/P4-a NA PRODUKCJI — commit `cb140085`, wdrożenie `dpl_DYK297WxbcnC9y5CXTQMXN7CvzWg`, 14.10.2026 04:54.**

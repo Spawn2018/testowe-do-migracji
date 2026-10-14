@@ -279,6 +279,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
 
 ### P4 · Statusy, śledzenie, ETA — DO ZROBIENIA
 - **E25** statusy (automat „Gotowe do fakturowania” opierasz na dzisiejszym dokumencie CMR po dostawie; P5 podmienia na wymóg z E31):
+  - status aplikacji `AT_PORT_SE` dla Port SE z listami statusów (D-20261014-0315-01 H1);
   - Kokpit i liczba „Faktury” ze statusu `READY_TO_INVOICE` (`src/lib/cockpitE9.ts`, D-20261014-0215-01 H3);
   - pomiar morza na kafelku „Najbliższy prom” (`DashboardView.tsx`, `sea` — B7 / D-20261014-0215-01 H3);
   - nowe kody „Gotowe do fakturowania”, „Zafakturowano”; UNLOADED scalony z DELIVERED;
@@ -313,7 +314,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - `etap4-ui.spec.ts` l.88–116 („Oznacz jako gotowy”); `visual-states.spec.ts` (`mark-ready`, chipy);
   - `status-label.test.ts`, `status-pill.test.ts`, `money-v2.test.ts` l.63, `telm2-sim.test.ts`, `l11-spine.test.ts`, `eta-*.test.ts`, `i15-eta-band.test.ts`, `corridor-eta.test.ts`;
   - zestawy `status`, `release`, `i2`, `h4`, `dwell`.
-- **Ekrany:** panel transportu (Status), pasek etapów (Kokpit, Harmonogram, Mapa), znaczniki statusów; pole „Link śledzenia” w oknie awizacji i opis lokalizatora w panelu (E44).
+- **Ekrany:** wygląd — koordynator: P4-a `wyglad/P4` (pasek E28, Harmonogram, Mapa E27, oznaczenia L7); P4-b panel transportu (E25 Status i okno, E27 pasek w panelu, E15 ETA, E44) — po scaleniu PR #181; pole „Link śledzenia” w oknie awizacji i opis lokalizatora w panelu (E44).
 - **Odbiór:**
   - sekcje „Test” E25, E26, E27, E28, E15 i E44 (pkt 9; `secret` w żadnym logu ani eksporcie — grep po testach);
   - na TEST przejazd SG-03 kończy się „Dostarczone 12:19” — na śladzie zmyślonym (G-17), a po zgodzie W25 także na prawdziwych pozycjach;
@@ -625,3 +626,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 14.10.2026 01:39 | STOP Poprawki P3: GitHub Actions — płatność / limit wydatków (W34); TEST i doradca TEST OK na `10d21b5b`; dalej P4 (bez wdrożenia migracji P4 do po Poprawkach P3) | wykonawca |
 | 14.10.2026 01:55 | W34 dostarczone (GitHub Actions działa); Poprawki P3 scalone i wdrożone | właściciel; wykonawca |
 | 14.10.2026 02:15 | D-20261014-0215-01: wyglad/P3-b — kolejność scalenia po #184, uchwyty Kokpitu/menu, logika H3 w P4/P6 | koordynator |
+| 14.10.2026 03:15 | D-20261014-0315-01: wyglad/P4-a — kolejność #188→#181, H1 `AT_PORT_SE`, naprawa 0205/visual; P4 Ekrany P4-a/P4-b | koordynator |
