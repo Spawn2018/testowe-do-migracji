@@ -158,7 +158,7 @@ Kafelki liczą według statusu transportu, nie etapu paska: „Na placu” (w ba
   - KSH na szerokim ekranie: postęp i mapa obok siebie (bez rozciągania wykresu na całą szerokość);
   - „tydz.” przy „Do zafakturowania” z daty rozładunku, bez daty — bieżący tydzień (nie plan z przyszłości);
   - stopka czasu wykrycia od razu na miejscu („wczytuję…”), bez skoku układu.
-- **Czeka:** migawki wzorców (`tests/__screenshots__/`) do odświeżenia w `visual.yml` (`update=true`) i wpis w `docs/handover/G4_WZORZEC.md` — GitHub Actions zatrzymane 14.10 od ok. 00:45 przez rozliczenia konta (decyzja właściciela). Do tego czasu check `visual` w PR jest czerwony z powodu migawek Kokpitu i menu.
+- Migawki wzorców (`tests/__screenshots__/`, 14) odświeżone w `visual.yml` (`update=true`, run 38487793951, commit `a54f1da`) — wpis w `docs/handover/G4_WZORZEC.md`.
 
 ### Pliki
 

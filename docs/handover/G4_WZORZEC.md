@@ -191,6 +191,10 @@ Odświeżone 8 migawek stanów Harmonogramu z `visual.yml` `update=true` (run 38
 
 Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38466075360, gałąź `wyglad/P3`, commit `73e98ef`; ponownie run 38471591003, commit `e82c5e2` — ramka konta po poprawce nazwiska). Wszystkie ekrany: nowy pasek górny (konto po prawej, „Podgląd” HHL / KSH / SCX, rejsy z pełnymi nazwami portów, bez przycisku motywu), lewe menu bez e-maila i „Wyloguj”. Matrycy 280 ujęć nie ruszano.
 
+## wyglad/P3-b (14.10.2026) — E9 Kokpit i liczby w menu (V5, E8 pkt 6)
+
+Odświeżone 14 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38487793951, gałąź `wyglad/P3-b`, commit `a54f1da`). Ekrany: Kokpit — 6 kafelków E9 w 2 kolumnach, stopka czasu wykrycia, „Najpilniejsze” zamiast czerwonego banera; wszystkie ekrany — lewe menu z liczbami tylko przy „Ryzyka” i „Faktury” (bez Harmonogramu, Stref, Automatyzacji). Matrycy 280 ujęć nie ruszano.
+
 ## AUD-03 (06.10.2026) — Harmonogram KSH bez „Zmień ciągnik”
 
 Zamierzona zmiana UI (polecenie AUD-03: „Zmień ciągnik” niewidoczny dla roli KSH; baza i tak odmawia — `tests/db/aud03.sh`). gate:visual na `b52dcc5`: 274/280, zmienione wyłącznie `harmonogram__ksh__pl__{1280,1440,1920}__{dark,light-default}` (6). Odświeżono te 6 ujęć z przebiegu bramy (kolejność pełnej matrycy). Innych ujęć nie ruszano.
