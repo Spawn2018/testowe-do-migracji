@@ -455,7 +455,16 @@ test.describe('wyglad/P3 pasek górny (E37 pkt 1–2, img/e37-after)', () => {
     expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).not.toBe(before);
     await page.click('[data-acc="my-account"]');
     await expect(page.locator('#accountMenu')).toBeHidden();
-    await expect(page.locator('[data-section="users"]')).toHaveAttribute('open', '');
+    /* wyglad/P3-c (E11, E37): „Moje konto” otwiera ekran z menu bocznego Opcji */
+    await expect(page.locator('[data-opt-screen="account"]')).toBeVisible();
+    await expect(page.locator('[data-opt-nav="account"]')).toHaveAttribute('aria-current', 'page');
+    /* wskazanie z menu konta obsłużone raz: po przejściu na inny ekran zmiana ustawienia nie wraca do „Moje konto” */
+    await page.click('[data-opt-nav="look"]');
+    const cur = page.locator('[data-deur-exempt="currency-pref"] select');
+    await cur.selectOption((await cur.inputValue()) === 'PLN' ? 'EUR' : 'PLN');
+    await page.waitForTimeout(200);
+    await expect(page.locator('[data-opt-screen="look"]')).toBeVisible();
+    await expect(page.locator('[data-opt-nav="look"]')).toHaveAttribute('aria-current', 'page');
   });
 
   test('telefon: logo, najbliższy prom, dzwonek, konto; ?, motyw i Podgląd w menu konta', async ({ page }) => {
@@ -670,4 +679,115 @@ test.describe('wyglad/P4 pasek etapów (E28, img/e28-after) i Mapa (E27)', () =>
       await expect(page.locator('[data-stage-bar="page"]')).toHaveCount(0);
     });
   }
+});
+
+/**
+ * wyglad/P3-c — Opcje (HHL) i Ustawienia (KSH, SCX) według E11 i E12 na telefonie: kafelki grup → lista ekranów → ekran.
+ * Każdy ekran dostępny dla konta przy 360 / 390 / 430 px przechodzi tę samą bramę E8 (0 w każdej kolumnie).
+ */
+async function phoneScreens(page: Page): Promise<Array<{ group: string; screen: string }>> {
+  const groups = await page.evaluate(() => Array.from(document.querySelectorAll('.ox-tiles [data-opt-group]')).map((b) => b.getAttribute('data-opt-group') ?? ''));
+  const out: Array<{ group: string; screen: string }> = [];
+  if (!groups.length) {
+    /* jedna grupa — od razu lista ekranów (Ustawienia KSH i SCX) */
+    const group = (await page.getAttribute('[data-opt-level="groups"]', 'data-opt-group')) ?? '';
+    const screens = await page.evaluate(() => Array.from(document.querySelectorAll('.ox-tiles [data-opt-nav]')).map((b) => b.getAttribute('data-opt-nav') ?? ''));
+    return screens.map((screen) => ({ group, screen }));
+  }
+  for (const group of groups) {
+    await page.click(`.ox-tiles [data-opt-group="${group}"]`);
+    await page.waitForTimeout(150);
+    const screens = await page.evaluate(() => Array.from(document.querySelectorAll('.ox-tiles [data-opt-nav]')).map((b) => b.getAttribute('data-opt-nav') ?? ''));
+    if (screens.length) {
+      for (const screen of screens) out.push({ group, screen });
+      await page.click('.ox-backbtn');
+    } else {
+      const one = await page.getAttribute('[data-opt-screen]', 'data-opt-screen');
+      out.push({ group, screen: one ?? '' });
+      await page.click('.ox-backbtn');
+    }
+    await page.waitForTimeout(100);
+  }
+  return out;
+}
+
+async function openPhoneScreen(page: Page, group: string, screen: string) {
+  while (await page.locator('.ox-backbtn').count()) {
+    await page.click('.ox-backbtn');
+    await page.waitForTimeout(80);
+  }
+  if (await page.locator(`.ox-tiles [data-opt-group="${group}"]`).count()) {
+    await page.click(`.ox-tiles [data-opt-group="${group}"]`);
+    await page.waitForTimeout(120);
+  }
+  if (await page.locator(`.ox-tiles [data-opt-nav="${screen}"]`).count()) await page.click(`.ox-tiles [data-opt-nav="${screen}"]`);
+  await page.waitForSelector(`[data-opt-screen="${screen}"]`);
+  await page.waitForTimeout(250);
+}
+
+test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
+  test.describe.configure({ mode: 'serial', timeout: 600_000 });
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  for (const role of ROLES) {
+    test(`${role}: każdy ekran Opcji / Ustawień na telefonie — 0 w bramie E8`, async ({ page }) => {
+      await boot(page, role);
+      await openView(page, role === 'HHL' ? 'options' : 'settings');
+      await page.waitForSelector('.ox-tiles');
+      const list = await phoneScreens(page);
+      expect(list.length).toBeGreaterThan(role === 'HHL' ? 15 : 2);
+      /* KSH i SCX w demo mają jedną grupę — telefon pokazuje od razu ekrany „Dla mnie” (bez kafelka grupy) */
+      if (role !== 'HHL') expect(list.map((x) => x.screen)).toEqual(['account', 'forme', 'look']);
+      const hits: Hit[] = [];
+      for (const width of WIDTHS) {
+        await page.setViewportSize({ width, height: 844 });
+        for (const { group, screen } of list) {
+          await openPhoneScreen(page, group, screen);
+          hits.push(...await measure(page, `opcje/${screen}`, width, role));
+          /* stany otwarte: edycja progu, działania przy osobie */
+          const open = screen === 'thr' ? '[data-threshold] .ox-btn' : screen === 'users' ? '.ox-morebtn' : null;
+          if (open && await page.locator(open).count()) {
+            await page.locator(open).first().click();
+            await page.waitForTimeout(150);
+            hits.push(...await measure(page, `opcje/${screen}/otwarte`, width, role));
+          }
+        }
+      }
+      const report = hits.map((h) => `${h.role} ${h.width} ${h.view} ${h.kind}=${h.n}: ${h.sample.join(' | ')}`).join('\n');
+      expect(hits, report).toEqual([]);
+    });
+  }
+
+  test('komputer: menu boczne z 6 grupami (E11, E12) i ekran z nagłówkiem; KSH i SCX tylko „Dla mnie”', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'options');
+    await expect(page.locator('.ox-side-group h2')).toHaveText(['LUDZIE I DOSTĘP', 'POWIADOMIENIA', 'PIENIĄDZE', 'ZASADY TRANSPORTU', 'SYSTEM', 'DLA MNIE']);
+    await expect(page.locator('.ox-side [data-opt-group="notify"] [data-opt-nav]')).toHaveText(['Kto co dostaje', 'SMS przy miejscachBoden: brak', 'Komunikat dla wszystkich']);
+    await page.click('[data-opt-nav="flags"]');
+    await expect(page.locator('[data-opt-screen="flags"] .ox-crumb')).toHaveText('Opcje › System');
+    await expect(page.locator('[data-opt-screen="flags"] tbody tr')).toHaveCount(13);
+    /* każdy ekran przy 1440 i 1280 px: strona i `main` bez przewijania w bok (macierz „Kto co dostaje” ma własny pasek) */
+    const ids = await page.evaluate(() => Array.from(document.querySelectorAll('.ox-side [data-opt-nav]')).map((b) => b.getAttribute('data-opt-nav') ?? ''));
+    const wide: string[] = [];
+    for (const w of [1440, 1280]) {
+      await page.setViewportSize({ width: w, height: 900 });
+      for (const id of ids) {
+        await page.click(`[data-opt-nav="${id}"]`);
+        await page.waitForTimeout(150);
+        const bad = await page.evaluate(() => {
+          const m = document.querySelector('main');
+          return document.documentElement.scrollWidth > window.innerWidth + 1 || (!!m && m.scrollWidth > m.clientWidth + 1);
+        });
+        if (bad) wide.push(`${w} ${id}`);
+      }
+    }
+    expect(wide).toEqual([]);
+    for (const r of ['KSH', 'SCX'] as const) {
+      await boot(page, r);
+      await openView(page, 'settings');
+      await expect(page.locator('.ox-side-group h2')).toHaveText(['DLA MNIE']);
+      await expect(page.locator('.ox-side [data-opt-nav]')).toHaveText(['Moje konto', 'Co dostaję', 'Wygląd i waluta']);
+    }
+  });
 });
