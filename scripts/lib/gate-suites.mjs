@@ -51,7 +51,7 @@ export const EXPECTED_LOCAL = {
   baf: 46,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 26, // P2 — nazwa + E18 P15; P2-poprawki +10 (tytuły robot drogowych)
-  e25: 17, // P4 — load_status_set (E25)
+  e25: 21, // P4 — load_status_set (E25); +4 H1/H2 D-20261014-0640-01
 };
 
 /**

@@ -38,6 +38,24 @@ $$;
 revoke all on function public.load_status_rank(load_status) from public, anon;
 grant execute on function public.load_status_rank(load_status) to authenticated;
 
+-- H1 (D-20261014-0640-01): STATUS_READY_TO_INVOICE / STATUS_INVOICED w CHECK
+-- (pełna lista jak 0061 + dwa nowe typy z load_status_set).
+alter table public.load_events drop constraint if exists load_events_event_type_known;
+alter table public.load_events add constraint load_events_event_type_known check (event_type in (
+    'NOTE', 'DOC_UPLOADED', 'PERMIT_MISMATCH', 'AWIZACJA_UPDATED', 'RESOURCES_UPDATED', 'ORDER_NO_UPDATED',
+    'FERRY_UPDATED', 'SAILING_ASSIGNED', 'SCX_ASSIGNED', 'PLAN_B_ACTIVATED', 'READY_BLOCKED',
+    'SCHEDULE_IMPORTED', 'SCHEDULE_DATE_CRITICAL', 'STATUS_APPROACHING_SITE', 'STATUS_AT_LOADING',
+    'STATUS_AT_PORT', 'STATUS_AT_PORT_GDANSK', 'STATUS_AT_PORT_NYNASHAMN', 'STATUS_AT_SITE',
+    'STATUS_CANCELLED', 'STATUS_DELAYED', 'STATUS_DELIVERED', 'STATUS_DOCS_PENDING', 'STATUS_DOC_MISSING',
+    'STATUS_FERRY', 'STATUS_IN_TRANSIT_PL', 'STATUS_IN_TRANSIT_SE', 'STATUS_LOADING', 'STATUS_ON_FERRY',
+    'STATUS_PLANNED', 'STATUS_READY', 'STATUS_RESOURCES_PENDING', 'STATUS_SILENT', 'STATUS_UNLOADED',
+    'STATUS_UNLOADING', 'STATUS_READY_TO_INVOICE', 'STATUS_INVOICED',
+    'MILESTONE_LOADED', 'MILESTONE_UNLOADED', 'DRIVER_ON_FERRY', 'DRIVER_PROBLEM',
+    'GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'GEOFENCE_DWELL', 'STATUS_AUTO', 'POSITION_SHARED',
+    'POSITION_SHARE_DENIED', 'DELAY_DETECTED', 'RISK_RAISED', 'SILENT_VEHICLE',
+    'PLAN_DATES_CONFIRMED', 'PLAN_DATES_CHANGED'
+));
+
 create or replace function public.load_status_set(
   p_load uuid,
   p_status text,
@@ -53,6 +71,8 @@ declare
   v_new load_status;
   v_when timestamptz;
   v_note text := nullif(trim(coalesce(p_note, '')), '');
+  v_actor text;
+  v_prev_at timestamptz;
 begin
   select id, role::text, org_id into v_me, v_role, v_org
     from app_users where auth_id = auth.uid() and active;
@@ -116,6 +136,22 @@ begin
     return;
   end if;
 
+  -- H2: nie wcześniej niż poprzedni status (STATUS_* / STATUS_AUTO)
+  select max(occurred_at) into v_prev_at
+    from load_events
+   where load_id = p_load
+     and event_type like 'STATUS_%';
+  if v_prev_at is not null and v_when < v_prev_at then
+    raise exception 'Czas statusu nie wcześniej niż poprzedni status' using errcode = '22023';
+  end if;
+
+  select coalesce(nullif(btrim(u.full_name), ''), split_part(u.email::text, '@', 1), '—')
+         || ' // ' || coalesce(nullif(btrim(o.name), ''), nullif(btrim(o.code), ''), '—')
+    into v_actor
+    from app_users u
+    left join organizations o on o.id = u.org_id
+   where u.id = v_me;
+
   -- ANEKS 3 §2.1 / guard_load_update: CANCELLED tylko z tower.cancel_ctx (IMPORT|MANUAL)
   if v_new = 'CANCELLED' then
     perform set_config('tower.cancel_ctx', 'MANUAL', true);
@@ -136,6 +172,7 @@ begin
     'STATUS_' || v_new::text,
     v_when,
     jsonb_build_object(
+      'actor', v_actor,
       'actor_user_id', v_me,
       'from', v_load.status::text,
       'to', v_new::text,

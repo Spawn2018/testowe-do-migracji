@@ -792,7 +792,20 @@ export const useTowerStore = create<TowerState>()(
           note: note ?? null,
           ...(delivered ? { unloadedAt: at } : {}),
         });
-        get().appendEvent({ loadId, type: `STATUS_${status}`, at, actor: actorLabel, note });
+        // E25 H2 (D-20261014-0640-01): jedno zdarzenie — z RPC (payload.actor); bez drugiego event.append
+        if (SUPABASE_AUTH_ENABLED) {
+          const full: LoadEvent = {
+            id: uid('ev'),
+            loadId,
+            type: `STATUS_${status}`,
+            at,
+            actor: actorLabel,
+            note,
+          };
+          set((s) => ({ events: [full, ...s.events] }));
+        } else {
+          get().appendEvent({ loadId, type: `STATUS_${status}`, at, actor: actorLabel, note });
+        }
       },
 
       setOrderNo: (loadId, side, value) => {

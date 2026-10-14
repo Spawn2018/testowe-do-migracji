@@ -45,10 +45,16 @@ err "SCX wstecz" $SCX "select load_status_set('$L1','IN_TRANSIT_PL',now(),null);
 err "HHL_ADMIN wstecz bez powodu" $HHL "select load_status_set('$L1','IN_TRANSIT_PL',now(),null); select load_status_set('$L1','READY',now(),null)" "powodu"
 val "HHL_ADMIN wstecz z powodem" $HHL "select load_status_set('$L1','IN_TRANSIT_PL',now(),null); select load_status_set('$L1','READY',now(),'korekta'); select status::text from loads where id='$L1'" READY
 
-echo; echo "[e25] UNLOADED→DELIVERED, czas, anulowanie"
+echo; echo "[e25] UNLOADED→DELIVERED, READY_TO_INVOICE/INVOICED (H1), actor i czas (H2)"
 # commit: actual_delivery_at i audit sprawdzane osobnym zapytaniem poza transakcją testu
 val "UNLOADED → DELIVERED" $HHL "select load_status_set('$L2','UNLOADED',now(),null); select status::text from loads where id='$L2'" DELIVERED commit
 sval "actual_delivery_at po Dostarczone" "select (actual_delivery_at is not null) from loads where id='$L2'" t
+# H1: CHECK zna STATUS_READY_TO_INVOICE / STATUS_INVOICED (D-20261014-0640-01)
+val "SCX → READY_TO_INVOICE + zdarzenie" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null); select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_READY_TO_INVOICE') from loads where id='$L2'" "READY_TO_INVOICE|1" commit
+val "HHL → INVOICED + zdarzenie" $HHL "select load_status_set('$L2','INVOICED',now(),null); select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_INVOICED') from loads where id='$L2'" "INVOICED|1" commit
+# H2: actor w payload; nie wcześniej niż poprzedni status
+sval "actor w payload" "select (payload->>'actor' like '% // %') from load_events where load_id='$L2' and event_type='STATUS_INVOICED' order by id desc limit 1" t
+err "wcześniej niż poprzedni status" $HHL "select load_status_set('$L2','READY_TO_INVOICE',(select max(occurred_at)-interval '1 second' from load_events where load_id='$L2' and event_type like 'STATUS_%'),'test cofniecia czasu')" "wcześniej"
 err "czas w przyszłości" $HHL "select load_status_set('$L1','AT_LOADING',now()+interval '2 hours',null)" "przyszłości"
 err "anulowanie bez powodu" $HHL "select load_status_set('$L1','CANCELLED',now(),null)" "powodu"
 err "SCX nie anuluje" $SCX "select load_status_set('$L1','CANCELLED',now(),'x')" "Anulowanie"
