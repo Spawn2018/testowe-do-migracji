@@ -4,10 +4,11 @@
  * Telefon: najpierw „W trasie” i „Rozliczenie”, „Przygotowanie” zwinięte.
  * Stopka: kto zmienia + „Zmień status” (SCX i administrator HHL, decyzja 17:46). Okno — `StatusChangeModal`.
  */
-import { useState } from 'react';
-import type { Geofence, Load, LoadEvent, LoadStatus, Locale } from '../../types';
+import { useState, type ReactNode } from 'react';
+import type { Geofence, Load, LoadEvent, LoadStatus, Locale, ReadyGap } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { statusLabel } from '../../lib/statusLabel';
+import { readyGapsText } from '../../lib/p4c';
 import { axisActor, buildStatusAxis, dayOnly, dayTime, hoursMinutes, isoMs, timeOnly, type AxisHit, type AxisRow } from '../../lib/statusAxis';
 
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
@@ -23,6 +24,7 @@ function rowSub(
   hits: Map<LoadStatus, AxisHit | null>,
   phone: boolean,
   locale: Locale,
+  readyGaps: readonly ReadyGap[] | null,
 ): string | null {
   const s = r.statuses[0];
   if (r.kind === 'skipped') {
@@ -34,6 +36,8 @@ function rowSub(
     return t(locale, 'p4b_skip');
   }
   if (r.kind === 'pending') {
+    /* wyglad/P4-c (L6, L9, L29): czego brakuje do „Gotowy” */
+    if (s === 'READY' && readyGaps?.length) return tp(locale, 'p4c_ready_axis', { list: readyGapsText(readyGaps, locale).list });
     if (s === 'READY_TO_INVOICE') return t(locale, phone ? 'p4b_sub_rti_wait_ph' : 'p4b_sub_rti_wait');
     if (s === 'INVOICED') return phone ? null : t(locale, 'p4b_sub_inv_wait');
     return null;
@@ -78,6 +82,8 @@ export function StatusAxisTab({
   phone,
   canStatus,
   onChange,
+  readyGaps = null,
+  top = null,
 }: {
   load: Pick<Load, 'status' | 'stage' | 'unloadedAt' | 'resources'>;
   events: readonly LoadEvent[];
@@ -86,6 +92,10 @@ export function StatusAxisTab({
   phone: boolean;
   canStatus: boolean;
   onChange: () => void;
+  /** wyglad/P4-c — braki do „Gotowy” (L6, L9, L29) */
+  readyGaps?: readonly ReadyGap[] | null;
+  /** wyglad/P4-c — sprawa nad osią (E26 pkt 4, L14) */
+  top?: ReactNode;
 }) {
   const [prepOpen, setPrepOpen] = useState(false);
   const axis = buildStatusAxis(load, events);
@@ -98,6 +108,7 @@ export function StatusAxisTab({
 
   return (
     <div className="sax" data-status-axis>
+      {top}
       {axis.cancelled ? (
         <div className="sax-cancel" data-axis-cancelled>
           <b>{t(locale, 'p4b_cancelled')}</b>
@@ -122,7 +133,7 @@ export function StatusAxisTab({
             {collapsed ? null : (
               <ol className="sax-list">
                 {g.rows.map((r) => {
-                  const sub0 = rowSub(r, load, geofences, hits, phone, locale);
+                  const sub0 = rowSub(r, load, geofences, hits, phone, locale, readyGaps);
                   /* bez powtórzenia nazwy („Na promie · Na promie”) */
                   const sub = sub0 && sub0.trim().toLocaleLowerCase('pl') !== rowName(r, locale).toLocaleLowerCase('pl') ? sub0 : null;
                   const waiting = r.kind === 'pending' && r.statuses[0] === 'READY_TO_INVOICE' && axis.current === 'DELIVERED';

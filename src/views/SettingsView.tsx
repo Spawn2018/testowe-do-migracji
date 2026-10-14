@@ -9,7 +9,7 @@ import { t } from '../i18n/messages';
 import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { getAuthProfile } from '../auth/profile';
-import { OPEN_OPTIONS_EVENT, takeOptionsScreen, type OptionsScreen } from '../lib/openOptions';
+import { OPEN_OPTIONS_EVENT, optScreenOf, takeOptionsScreen, type OptionsScreen } from '../lib/openOptions';
 import { OptionsShell } from '../components/options/OptionsShell';
 import type { AccountKind, OptGroup, OptScreen, OptScreenId } from '../components/options/types';
 import { useDemoOptions } from '../components/options/useDemoOptions';
@@ -38,7 +38,7 @@ export function SettingsView() {
   useEffect(() => {
     const go = (screen: OptionsScreen | null) => {
       if (!screen) return;
-      setRequest((r) => ({ screen: screen === 'my-account' ? 'account' : 'forme', seq: (r?.seq ?? 0) + 1 }));
+      setRequest((r) => ({ screen: optScreenOf(screen), seq: (r?.seq ?? 0) + 1 }));
     };
     go(takeOptionsScreen());
     const onOpen = () => go(takeOptionsScreen());

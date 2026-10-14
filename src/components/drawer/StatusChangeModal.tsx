@@ -13,6 +13,8 @@ import { TZ_OPS, isoToDatetimeLocalValue, wallLocalToIso } from '../../lib/time'
 import { getNowIso } from '../../lib/frozenNow';
 import { buildStatusAxis, dateTimeFields, dayTime, gpsHint, isoMs } from '../../lib/statusAxis';
 import { useIsPhone } from '../../lib/useIsPhone';
+import { readyGapsOf } from '../../lib/p4cSource';
+import { readyGapsText } from '../../lib/p4c';
 import type { LoadStatus } from '../../types';
 
 const MANUAL_STATUSES: LoadStatus[] = [
@@ -50,6 +52,7 @@ export function StatusChangeModal({
   const load = useTowerStore((s) => s.loads.find((l) => l.id === loadId));
   const allEvents = useTowerStore((s) => s.events);
   const geofences = useTowerStore((s) => s.geofences);
+  const documents = useTowerStore((s) => s.documents);
   const phone = useIsPhone();
   const [status, setStatus] = useState<LoadStatus>(current === 'UNLOADING' ? 'DELIVERED' : current);
   /* data i godzina osobno — wyczyszczenie jednego pola nie zeruje drugiego; łączone w `whenLocal` przy zapisie */
@@ -80,10 +83,17 @@ export function StatusChangeModal({
   const axis = useMemo(() => (load ? buildStatusAxis(load, events) : null), [load, events]);
   const since = axis?.currentSince ?? null;
   const hint = useMemo(() => gpsHint(status, events, geofences, since), [status, events, geofences, since]);
+  /* wyglad/P4-c (L6, L9, L29): „Gotowy” tylko przy komplecie — przycisk zablokowany, obok zdanie, czego brakuje */
+  const gaps = useMemo(
+    () => (load ? readyGapsOf(load, documents.filter((d) => d.loadId === loadId)) : null),
+    [load, documents, loadId],
+  );
+  const readyBlocked = status === 'READY' && !!gaps?.length;
+  const gapText = gaps?.length ? readyGapsText(gaps, locale) : null;
 
   function save(e: React.FormEvent) {
     e.preventDefault();
-    if (busy) return;
+    if (busy || readyBlocked) return;
     setBusy(true);
     try {
       const whenLocal = `${date}T${time}`;
@@ -150,6 +160,16 @@ export function StatusChangeModal({
               ))}
             </select>
           </label>
+          {status === 'READY' && gaps ? (
+            gapText ? (
+              <div className="scm-info bad" id="scm-ready-gaps" data-status-ready-gaps role="status">
+                <b>{t(locale, 'p4c_ready_title')}</b> {tp(locale, 'p4c_ready_missing', { list: gapText.list })}
+                {gapText.who ? <span className="scm-who">{tp(locale, 'p4c_ready_who', { who: gapText.who })}</span> : null}
+              </div>
+            ) : (
+              <div className="scm-info ok" data-status-ready-ok>{t(locale, 'p4c_ready_ok')}</div>
+            )
+          ) : null}
           <div className="scm-when" data-status-when>
             <label className="form-field">
               <span>{t(locale, 'p4b_m_date')}</span>
@@ -203,7 +223,7 @@ export function StatusChangeModal({
             <button type="button" className="btn ghost" onClick={onClose}>
               {t(locale, 'p4b_m_cancel')}
             </button>
-            <button type="submit" className="btn" data-status-save disabled={busy}>
+            <button type="submit" className="btn" data-status-save disabled={busy || readyBlocked} aria-describedby={readyBlocked ? 'scm-ready-gaps' : undefined}>
               {t(locale, phone ? 'p4b_m_save_ph' : 'p4b_m_save')}
             </button>
           </div>

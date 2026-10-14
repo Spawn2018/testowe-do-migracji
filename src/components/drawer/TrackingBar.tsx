@@ -5,14 +5,18 @@
  * Opis lokalizatora (E44 pkt 6): emtrack = naczepa SCX (decyzja 21:43); link RIO — bez klucza (E44 pkt 8: „RIO · ••••”).
  * Czysty wygląd: dane z transportu i dziennika zdarzeń, bez zapytań.
  */
-import type { Load, LoadEvent, Locale } from '../../types';
+import type { Load, LoadEvent, Locale, TrackingLinkInfo } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { trackingPhase } from '../../lib/stageTiles';
 import { buildStatusAxis, dayOnly, dayTime, isoMs } from '../../lib/statusAxis';
 import { hasAwizacja } from '../../lib/awizacjaState';
 import { trackerKind } from '../../lib/trackerLink';
+import { trackerBarRio } from '../../lib/p4c';
 
-function trackerText(load: Pick<Load, 'resources'>, locale: Locale): string {
+function trackerText(load: Pick<Load, 'resources'>, locale: Locale, link: TrackingLinkInfo | null, nowIso: string): string {
+  /* wyglad/P4-c (E44 pkt 5, 6): link RIO z serwera — pojazd z lokalizatorem, start i wygaśnięcie linku */
+  const rio = trackerBarRio(link, nowIso, locale);
+  if (rio) return rio;
   const kind = trackerKind(load.resources.trackingRef);
   const plate = (load.resources.trailerPlate ?? '').trim();
   if (kind === 'emtrack') return plate ? tp(locale, 'p4b_tracker_emtrack', { plate }) : t(locale, 'p4b_tracker_emtrack_noplate');
@@ -34,6 +38,7 @@ export function TrackingBar({
   label,
   locale,
   nowIso,
+  trackingLink = null,
 }: {
   load: Load;
   events: readonly LoadEvent[];
@@ -41,16 +46,22 @@ export function TrackingBar({
   label: string;
   locale: Locale;
   nowIso: string;
+  /** wyglad/P4-c — link śledzenia z serwera (E44) */
+  trackingLink?: TrackingLinkInfo | null;
 }) {
   const phase = trackingPhase(load, nowIso);
-  const tracker = trackerText(load, locale);
+  const tracker = trackerText(load, locale, trackingLink, nowIso);
   const trailer = (load.resources.trailerPlate ?? '').trim();
 
   if (phase === 'before') {
     const sub = [
       t(locale, hasAwizacja(load) ? 'p4b_trk_before_sub' : 'p4b_trk_before_sub_noawiz'),
       trailer ? tp(locale, 'p4b_trailer', { plate: trailer }) : t(locale, 'p4b_no_trailer'),
-    ].join(' · ');
+      /* wyglad/P4-c (E44 pkt 5): link RIO nadaje później niż od 03:00 albo już wygasł */
+      trackingLink?.provider === 'RIO' && ((trackingLink.validFrom && isoMs(trackingLink.validFrom) > isoMs(nowIso)) || (trackingLink.validTo && isoMs(trackingLink.validTo) <= isoMs(nowIso)))
+        ? tracker
+        : null,
+    ].filter(Boolean).join(' · ');
     return (
       <div className="trk before" data-tracking-bar="before">
         <span className="trk-mk" aria-hidden />

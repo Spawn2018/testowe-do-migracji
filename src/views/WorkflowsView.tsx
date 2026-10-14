@@ -17,6 +17,8 @@ import {
 } from '../lib/workflowCreator';
 import { triggerToDb } from '../data/workflowMap';
 import type { WorkflowRule } from '../types';
+import { AutoRulesList } from '../components/automations/AutoRulesList';
+import { autoMetaOf } from '../lib/p4cSource';
 
 /** tryb Supabase — stała z kompilacji, by paczka demo nie zawierała klienta bazy (I-2) */
 const LIVE = import.meta.env.VITE_AUTH_MODE === 'supabase';
@@ -73,6 +75,12 @@ export function WorkflowsView() {
   const locale = useTowerStore((s) => s.locale);
   const role = useTowerStore((s) => s.role);
   const workflowFocus = useTowerStore((s) => s.workflowFocus);
+  const loads = useTowerStore((s) => s.loads);
+  const events = useTowerStore((s) => s.events);
+  /* wyglad/P4-c (E35 pkt 1, L13): pierwsza zakładka „Działa samo”; wskazana reguła własna otwiera „Własne reguły” */
+  const [wfTab, setWfTab] = useState<'auto' | 'own'>(workflowFocus ? 'own' : 'auto');
+  useEffect(() => { if (workflowFocus) setWfTab('own'); }, [workflowFocus]);
+  const autoMeta = useMemo(() => autoMetaOf(loads, events), [loads, events]);
   const manage = canManageWorkflows(PROD_BUILD, undefined, PROD_BUILD ? undefined : role);
   const active = workflows.filter((w) => w.enabled).length;
   const focused = workflowFocus ? workflows.find((w) => w.id === workflowFocus || w.name === workflowFocus) : undefined;
@@ -151,6 +159,19 @@ export function WorkflowsView() {
         <div className="spacer" />
         {manage ? <button type="button" className="btn" data-wf-new onClick={openNew}>{t(locale, 'b5_new')}</button> : null}
       </header>
+      <div className="dtabs wf-tabs" role="tablist" aria-label={t(locale, 'nav_wf')}>
+        <button type="button" role="tab" id="wf-tab-auto" aria-controls="wf-panel-auto" aria-selected={wfTab === 'auto'} data-wf-tab="auto" onClick={() => setWfTab('auto')}>
+          {t(locale, 'p4c_wf_tab_auto')}
+        </button>
+        <button type="button" role="tab" id="wf-tab-own" aria-controls="wf-panel-own" aria-selected={wfTab === 'own'} data-wf-tab="own" onClick={() => setWfTab('own')}>
+          {tp(locale, 'p4c_wf_tab_own', { n: workflows.length })}
+        </button>
+      </div>
+      {/* oba panele w drzewie (aria-controls), niewybrany ukryty atrybutem hidden */}
+      <div className="panel-bd flush" role="tabpanel" id="wf-panel-auto" aria-labelledby="wf-tab-auto" hidden={wfTab !== 'auto'}>
+        <AutoRulesList locale={locale} meta={autoMeta} />
+      </div>
+      <div role="tabpanel" id="wf-panel-own" aria-labelledby="wf-tab-own" hidden={wfTab !== 'own'}>
       {workflowFocus ? (
         <section className="note" data-workflow-preview={workflowFocus} style={{ margin: '0 12px 8px' }}>
           <b>{t(locale, 'wf_preview')}</b>
@@ -175,6 +196,7 @@ export function WorkflowsView() {
             {showAllHist ? <HistoryList id={null} locale={locale} /> : null}
           </details>
         ) : null}
+      </div>
       </div>
 
       {manage && open ? <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && close()}>
