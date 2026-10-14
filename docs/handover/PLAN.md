@@ -322,9 +322,11 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - `etap4-ui.spec.ts` l.88–116 („Oznacz jako gotowy”); `visual-states.spec.ts` (`mark-ready`, chipy);
   - `status-label.test.ts`, `status-pill.test.ts`, `money-v2.test.ts` l.63, `telm2-sim.test.ts`, `l11-spine.test.ts`, `eta-*.test.ts`, `i15-eta-band.test.ts`, `corridor-eta.test.ts`;
   - zestawy `status`, `release`, `i2`, `h4`, `dwell`.
-- **Ekrany:** wygląd — koordynator: P4-a `wyglad/P4` (pasek E28, Harmonogram, Mapa E27, oznaczenia L7); P4-b panel transportu (E25 Status i okno, E27 pasek w panelu, E15 ETA, E44) — po scaleniu PR #181; pole „Link śledzenia” w oknie awizacji i opis lokalizatora w panelu (E44).
+- **Ekrany — wygląd:** P4-a — `wyglad/P4` (PR #188, na produkcji; pasek E28, Harmonogram, Mapa E27, oznaczenia L7); P4-b — panel transportu (E25 Status i okno, E27 pasek w panelu, E15 ETA, E44) — `wyglad/P4-b` (PR #189); P4-c — pole „Link śledzenia”, „Gotowy” (L6, L9, L29), sprawa L14, „Działa samo” — `wyglad/P4-c` (PR #193). Kolejność scalenia #181 → #189 → #193 po sygnałach koordynatora (D-20261014-1320-01 K1; D-20261014-1145-01 nie powstanie).
+- **Dane wyglądu P4-c (K2, D-20261014-1320-01):** po scaleniu #193 — `trackingLink`, `readyGaps`, `deliveredCheck`, `autoMetaOf` (bez zmiany wyglądu, F1); razem z H3/H4 (0640) i R6 (1420 — usuń wyjątek `load_status_rank`).
 - **Odbiór:**
   - sekcje „Test” E25, E26, E27, E28, E15 i E44 (pkt 9; `secret` w żadnym logu ani eksporcie — grep po testach);
+  - test odbioru D-20261014-1320-01 (awizacja RIO, „Gotowy” z brakami, sprawa L14, Automatyzacje, telefon E8 P4-c);
   - na TEST przejazd SG-03 kończy się „Dostarczone 12:19” — na śladzie zmyślonym (G-17), a po zgodzie W25 także na prawdziwych pozycjach;
   - pełna trasa Śrem → Boden z symulowanymi pozycjami: każdy status raz, właściwy kafelek, prawdziwa godzina.
 
@@ -366,6 +368,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - filtry „Moje / Moja firma / Wszystkie”, jedna liczba (E7-2), samozamykanie;
   - „Sytuacja na trasie”; zakazy jako informacja; sprawy techniczne → Stan systemu (E7-3);
   - nazwy spraw (E7-4); kliknięcie rozwija kartę w miejscu;
+  - Ryzyka: karta sprawy L14 — `DeliveredCheckCard` (D-20261014-1320-01 K2 pkt 3);
   - **podpowiedzi dopłat** (G-22, D-20261009-1309-01 R8): pozycja „Do zrobienia” dla HHL (część przychodowa) i dla SCX (część kosztowa) otwiera okno „Dopłata” z P5; „Nie dodaję” zamyka pozycję tej firmy z wpisem w Historii; dopłata dodana przez SCX → pozycja HHL „Akceptuję / Odrzucam”.
 - **8.4 alternatywne przeprawy** w „Sytuacji na trasie” według `ROZSTRZYGNIECIA` E7-5 (D-45, L-9, FERRY-STATUS). Najpierw sprawdzasz, co z L-9 już działa (`RisksView`, `sailings`); brakującą część budujesz.
 - **E6 (karta decyzji):** „Biorę tę sprawę”, „Oddaj”, „Przejmij” (E6-5), „Zadzwoń”.
@@ -638,4 +641,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 14.10.2026 03:15 | D-20261014-0315-01: wyglad/P4-a — kolejność #188→#181, H1 `AT_PORT_SE`, naprawa 0205/visual; P4 Ekrany P4-a/P4-b | koordynator |
 | 14.10.2026 06:40 | D-20261014-0640-01: wyglad/P4-b (#189) — H1 CHECK `STATUS_READY_TO_INVOICE`/`STATUS_INVOICED` w #181 przed scaleniem; H2 actor + jedno zdarzenie + czas ≥ poprzedni; H3 etaDetail/progi 30/120; H4 RIO secret tylko serwer; kolejność #181→#189 | koordynator |
 | 14.10.2026 07:00 | D-20261014-0700-01: wyglad/P3-c — scalenie PR #190, podłączenie danych Opcji (J3), testy lokalne (J5), pytanie J4 (ocena przewoźnika); PLAN §4 P3 / P8, §8 | koordynator; wykonawca |
+| 14.10.2026 13:20 | D-20261014-1320-01: wyglad/P4-c — kolejność scalenia #181→#189→#193 (K1; D-20261014-1145-01 nie powstanie), dane K2 (`trackingLink`, `readyGaps`, `deliveredCheck`, `autoMetaOf`), uchwyty K3; PLAN §4 P4 Ekrany P4-a/b/c, P6 E7 DeliveredCheckCard | koordynator |
 | 14.10.2026 14:20 | D-20261014-1420-01: poprawka P3-c J3.1 (R1 2FA=verified TOTP, R2 MyMfa, R3 my_session_revoke, R4 hasło, R5 I-17, R6 wyjątek load_status_rank w P4, R7 P3-d + J4 Kokpit) | koordynator |
