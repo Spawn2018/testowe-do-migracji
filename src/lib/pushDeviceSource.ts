@@ -18,12 +18,37 @@ export interface PushDevice {
   current?: boolean;
   /** endpoint — do usunięcia / porównania bieżącego */
   endpoint?: string;
+  /** C16 N3/N7: ostatnie potwierdzenie odbioru z telefonu (ISO); null = jeszcze żadnego */
+  lastAck?: string | null;
+  /** C16 N7: baza zapisuje potwierdzenia (kolumna `last_ack_at` istnieje) */
+  ackSupported?: boolean;
+}
+
+/** C16 N1: powód z odpowiedzi `web-push-test`; `network` = prośba nie doszła do serwera (np. CORS). */
+export type PushReason = 'gone' | 'auth' | 'payload' | 'service' | 'no_sub' | 'network' | 'unknown';
+
+export interface PushTestResult {
+  ok: boolean;
+  reason?: PushReason;
+  /** chwila wysłania (ISO) — od niej liczymy „doszło po … s” */
+  sentAt: string;
+}
+
+const REASONS: readonly PushReason[] = ['gone', 'auth', 'payload', 'service', 'no_sub', 'network', 'unknown'];
+
+/** Odpowiedź `web-push-test` → wynik dla ekranu. Stara funkcja (bez `reason`) daje `unknown`. */
+export function pushTestResultOf(httpOk: boolean, body: unknown, now: string): PushTestResult {
+  const b = (body && typeof body === 'object' ? body : {}) as { ok?: unknown; reason?: unknown; sent_at?: unknown };
+  const sentAt = typeof b.sent_at === 'string' && Number.isFinite(Date.parse(b.sent_at)) ? b.sent_at : now;
+  if (httpOk && b.ok === true) return { ok: true, sentAt };
+  const r = typeof b.reason === 'string' && (REASONS as readonly string[]).includes(b.reason) ? (b.reason as PushReason) : 'unknown';
+  return { ok: false, reason: r, sentAt };
 }
 
 export interface PushDeviceSource {
   devices: PushDevice[];
   /** null = przycisk ukryty */
-  sendTest: ((id: string) => Promise<boolean>) | null;
+  sendTest: ((id: string) => Promise<PushTestResult>) | null;
   remove: ((id: string) => Promise<boolean>) | null;
   /** odśwież listę z bazy (produkcja) */
   refresh?: () => Promise<PushDevice[]>;
@@ -31,8 +56,11 @@ export interface PushDeviceSource {
 
 function demoDevices(): PushDeviceSource {
   return {
-    devices: [{ id: 'dev-1', label: 'Android · Chrome', since: '2026-10-05T09:12:00+02:00', active: true, current: true }],
-    sendTest: async () => true,
+    devices: [{
+      id: 'dev-1', label: 'Android · Chrome', since: '2026-10-05T09:12:00+02:00', active: true, current: true,
+      lastAck: '2026-10-05T09:14:03+02:00', ackSupported: true,
+    }],
+    sendTest: async () => ({ ok: true, sentAt: new Date().toISOString() }),
     remove: async () => true,
   };
 }
@@ -61,42 +89,70 @@ async function currentEndpoint(): Promise<string | null> {
   }
 }
 
-async function loadDevices(): Promise<PushDevice[]> {
+type DeviceRow = { id: string; endpoint: string; user_agent: string | null; created_at: string | null; last_ack_at?: string | null };
+
+/** Kolumny `last_ack_at` jeszcze nie ma — zapamiętane na sesję, żeby nie pytać bazy za każdym odświeżeniem. */
+let ackColumnMissing = false;
+
+/** C16 N7: najpierw z `last_ack_at`; gdy kolumny jeszcze nie ma (przed migracją wykonawcy) — ten sam odczyt bez niej. */
+async function readDeviceRows(): Promise<{ rows: DeviceRow[]; ack: boolean }> {
   const sb = await getSupabase();
-  const { data, error } = await sb
+  if (!ackColumnMissing) {
+    const withAck = await sb
+      .from('push_subscriptions')
+      .select('id, endpoint, user_agent, created_at, last_ack_at')
+      .order('created_at', { ascending: false });
+    if (!withAck.error && withAck.data) return { rows: withAck.data as DeviceRow[], ack: true };
+    const code = (withAck.error as { code?: string } | null)?.code;
+    if (code === '42703' || code === 'PGRST204') ackColumnMissing = true;
+  }
+  const plain = await sb
     .from('push_subscriptions')
     .select('id, endpoint, user_agent, created_at')
     .order('created_at', { ascending: false });
-  if (error || !data) return [];
+  return { rows: (plain.data ?? []) as DeviceRow[], ack: false };
+}
+
+async function loadDevices(): Promise<PushDevice[]> {
+  const { rows, ack } = await readDeviceRows();
   const cur = await currentEndpoint();
-  return data.map((r) => ({
-    id: r.id as string,
-    label: labelFromUa(r.user_agent as string | null),
-    since: (r.created_at as string) ?? new Date().toISOString(),
+  return rows.map((r) => ({
+    id: r.id,
+    label: labelFromUa(r.user_agent),
+    since: r.created_at ?? new Date().toISOString(),
     active: true,
     current: cur != null && r.endpoint === cur,
-    endpoint: r.endpoint as string,
+    endpoint: r.endpoint,
+    lastAck: ack ? (r.last_ack_at ?? null) : undefined,
+    ackSupported: ack,
   }));
 }
 
-async function sendTestPush(id: string): Promise<boolean> {
+async function sendTestPush(id: string): Promise<PushTestResult> {
+  const now = new Date().toISOString();
   const sb = await getSupabase();
   const { data: sess } = await sb.auth.getSession();
   const token = sess.session?.access_token;
-  if (!token) return false;
+  if (!token) return { ok: false, reason: 'unknown', sentAt: now };
   const edge = ['functions', 'v1', 'web-push-test'].join('/');
-  const res = await fetch(`${SUPABASE_URL.replace(/\/$/, '')}/${edge}`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ subscription_id: id }),
-  });
-  if (!res.ok) return false;
-  const j = await res.json() as { ok?: boolean };
-  return j.ok === true;
+  let res: Response;
+  try {
+    res = await fetch(`${SUPABASE_URL.replace(/\/$/, '')}/${edge}`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ subscription_id: id }),
+    });
+  } catch {
+    /* prośba nie doszła do serwera (sieć albo CORS — F1 w D-20261015-1955-01) */
+    return { ok: false, reason: 'network', sentAt: now };
+  }
+  let body: unknown = null;
+  try { body = await res.json(); } catch { /* odpowiedź bez JSON */ }
+  return pushTestResultOf(res.ok, body, now);
 }
 
 async function removeDevice(id: string): Promise<boolean> {
