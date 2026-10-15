@@ -2385,14 +2385,18 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **CZEKA NA WŁAŚCICIELA: W37 — emtrack: nowe dane logowania od SCX (sekrety `EMTRACK_LOGIN` / `EMTRACK_PASSWORD`).**
 
-## 2026-10-15 — P4 / PR #203 — B (D-0300) w toku
+## 2026-10-15 — P4 / PR #203 — B (D-0300) NA PRODUKCJI
 
-- Gałąź `pakiet/P4-k2-h3-r6` @ `a8f6c42e`+ (poprawka 0214 `revoke all (rio_secret)…` — brama `db` zielona 8m43s).
-- Wygląd #213 → #214 → hotfix #217 (`NavKey` `risk`) na prod: `dpl_4hKE1hWKKUTT1WUNPSBqx3WyABX4` (15.10 ~11:45); `tower.log-mar.pl` / `watch-tower-makieta.vercel.app` = 200.
-- **B (kod w tym pushu):** B1 `deliveredCheck` z zdarzeń bazy → pole load; B3 morze `marine_conditions` w Kokpicie; B4 `tracker_on`/`trackerPlate` w STATUS_AUTO (0216); B5 piloci z `plPilotsRequired` + `usedBy`; B7 progi E15 w `ops_thresholds` (SILENT_MIN=30, ETA_CONF_*, GEOFENCE_EDGE_M, SILENT_STOP_H) + faza prom AIS; B8 geometria `SE_APPROACH_SG03`; B9 stan śledzenia w PDF; B10 anulowanie HHL_ADMIN + wczytywanie CANCELLED dla HHL + `telm_infer` bez FERRY; B11 kotwica czasu w `i2.sh` ~717.
-- **H3.6 (definicje Kokpit):** terminowość = dzień rozładunku ≤ dzień dostawy z planu; marża = suma marży / suma przychodu (`cockpitE9.ts` / `DashboardView.tsx`).
-- **B12–B14 (po scaleniu / TEST):** doradca security na produkcji po 0214–0216; `i2-facade.local` I-5/I-17 liczbami; czasy paczek P1–P4; status PLAN §4 P4 → W TOKU.
-- Testy lokalnie: unit **1065** + `tests/p4-b-d0300.test.ts` **5/5**; `tsc` 0.
-- Czas plan B (wznowienie 12:33→) ~1,5 h; poprawki 0214 wcześniej.
+- Gałąź `pakiet/P4-k2-h3-r6` → merge #203 `ea10b1bc`; hotfix #219 `readyGaps` → `3c676d96`.
+- Wygląd #213 → #214 → #217 wcześniej; P4 logika: `dpl_Dvv2rR9aHYN4nVSv6QZAskxBGf5b` (15.10 ~15:39).
+- **B1–B11:** deliveredCheck; Kokpit morze/`READY_TO_INVOICE`/siteSince; tracker_on STATUS_AUTO; readyGaps piloci z `permit.plPilotsRequired` + usedBy/POLICY_SCX; RIO URL wklejony; progi E15 w `ops_thresholds` (SILENT_MIN=30); `SE_APPROACH_SG03`; stan śledzenia PDF; anulowanie HHL_ADMIN + CANCELLED dla HHL; `telm_infer` bez FERRY; kotwica czasu i2.sh.
+- **H3.6:** terminowość = dzień rozładunku ≤ dzień dostawy z planu; marża = suma marży / suma przychodu.
+- **TEST (przed wdrożeniem, SHA przed hotfixem):** security **84/84** (+2 SKIP), status **44/44**, nullguard **161+136+216+124 = 637/637**, dec6 **21/21** (+4 SKIP), risks **21/21** (+2 SKIP), e25 **26/26**, dec-auto **64/64**; doradca security TEST: **4** zgłoszenia, **0 nowych** (parser CLI `results` — `security-advisor-check.mjs`).
+- **B12 produkcja:** doradca security po 0214–0216: **5** zgłoszeń, **0 nowych**; Edge `security-advisor-snapshot` + `backup-export` wdrożone; `advisor_ok=false` → `integration_runs.ok=false` / „Brak pomiaru”.
+- **B13:** unit `i5-mfa` **13/13** (CI unit zielony); `i2-facade.local` I-5/I-17 w tej sesji nie uruchamiano (Windows bez lokalnego Supabase) — wpisy I-5/I-17 DONE historycznie w POSTEP; uzupełnienie facade na TEST przy bramie niedzielnej.
+- **B14 czasy (orientacyjnie z godzin commitów / POSTEP):** P1 ~8 h plan + poprawki e18/auth; P2 ~6 h; P3 ~10 h (+ Poprawki P3 / W34); Poprawki P3 (0015) ~4 h do STOP W34; P4 (B, wznowienie 12:33→15:40) ~3 h plan + ~1 h poprawki (TDZ DashboardView, readyGaps TS, doradca CLI).
+- CI merge #203 / #219: unit + visual + db zielone; `npm audit --omit=dev --audit-level=high` 0.
+- Produkcja: ROLLBACK OK → `db push` 0214–0216; JS `assets/index-0TxiZS0x.js`; tower / makieta **200**; 0 × `service_role` w index.
+- Dowód wyglądu P4-a (wstecz, Q3): wcześniej `cb140085` / `dpl_DYK297…` — index z wdrożenia = produkcja, 0 × `service_role` (POSTEP 14.10).
 
-**P4 — W TOKU (PR #203; na produkcji 0205 i wygląd P4-a/b/c; migracje 0214–0216 w PR).**
+**P4 NA PRODUKCJI — commit `3c676d96`, migracje 0214–0216, wdrożenie `dpl_Dvv2rR9aHYN4nVSv6QZAskxBGf5b`, 15.10.2026 15:39.**
