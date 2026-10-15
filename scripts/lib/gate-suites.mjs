@@ -31,7 +31,7 @@ export const EXPECTED_LOCAL = {
   dec2: 26,
   dec3: 13,
   dec5: 11,
-  dec6: 23,
+  dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
   adm10: 8,
   hist11: 11,
   workflows: 67,
@@ -64,8 +64,8 @@ export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
   security: 84, // 88 − 4 SKIP
   risks: 21, // 23 − 2 SKIP
-  // dec6: 23 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
-  dec6: 19,
+  // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
+  dec6: 21,
   backup: 21, // 29 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE)
 };
 

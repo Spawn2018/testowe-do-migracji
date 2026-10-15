@@ -15,10 +15,13 @@ err() {
 }
 
 echo; echo "[dec6] progi ops_thresholds"
-val "17 progów domyślnych (10 + 7 postój)" "select count(*) from ops_thresholds" 17
+/* B7 / E15 (D-0300): +4 progi ETA/ciszy; SILENT_MIN 15 → 30 */
+val "21 progów domyślnych (10 + 7 postój + 4 E15)" "select count(*) from ops_thresholds" 21
 val "fala 3.8" "select value_num::text from ops_thresholds where key='WAVE_M'" "3.8"
 val "porywy 40" "select value_num::text from ops_thresholds where key='GUST_KN'" "40"
-val "silent 15" "select value_num::text from ops_thresholds where key='SILENT_MIN'" "15"
+val "silent 30 (E15 / B7)" "select value_num::text from ops_thresholds where key='SILENT_MIN'" "30"
+val "ETA_CONF_HIGH_MIN 30" "select value_num::text from ops_thresholds where key='ETA_CONF_HIGH_MIN'" "30"
+val "ETA_CONF_MED_MIN 120" "select value_num::text from ops_thresholds where key='ETA_CONF_MED_MIN'" "120"
 
 sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated;
      select admin_ops_threshold_set('DELAY_MIN', 45); commit;" >/dev/null
