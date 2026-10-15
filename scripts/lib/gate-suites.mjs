@@ -2,7 +2,7 @@
  * Jedno źródło oczekiwanych OK bramy bazy (P0b).
  * LOCAL = tests/db/gate.sh / CI db.yml; TEST = hosted emkbykwenwrjmbprydml.
  * Różnice TEST: security −4, risks −2, backup −8 (SKIP spatial_ref_sys / CREATE DATABASE / eksport+odtworzenie).
- * session i l13 — znany dług (uruchamiane, bez asercji liczby w gate.sh).
+ * session / l13: zamknięte w 0218 (truck_ban active + L-13 DIGEST / decision_id).
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -18,7 +18,7 @@ export const EXPECTED_LOCAL = {
   money: 135,
   release: 146,
   backup: 29,
-  session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); KNOWN-DEBT — nie asertowane w pełnym gate.sh
+  session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active
   archive: 18,
   watchdog: 27,
   invite: 48,
@@ -38,7 +38,7 @@ export const EXPECTED_LOCAL = {
   insurance: 42,
   'dec-auto': 64,
   dwell: 17,
-  l13: 30, // KNOWN-DEBT — nie asertowane w gate.sh
+  l13: 34, // 0218: DIGEST przez l13_queue_email + e-mail DECISION w teście (było 21 OK / 13 FAIL)
   l12: 12,
   h1: 14,
   h3: 20,
@@ -72,8 +72,8 @@ export const EXPECTED_TEST = {
 /** Alias historyczny — brama TEST / summary. */
 export const EXPECTED = EXPECTED_TEST;
 
-/** Zestawy uruchamiane w gate.sh, ale bez check liczby (dług 05.10). */
-export const KNOWN_DEBT = new Set(['session', 'l13']);
+/** Zestawy uruchamiane w gate.sh, ale bez check liczby (puste po 0218). */
+export const KNOWN_DEBT = new Set();
 
 export const SUITE_FILE = {
   security: 'security.sh',
@@ -244,7 +244,7 @@ export function gateSteps() {
   const i2 = i2Parts();
   const steps = {};
   const order = ['prep'];
-  // session / l13 — KNOWN-DEBT (jak gate.sh: uruchamiane lokalnie, bez twardej asercji na TEST).
+  // session / l13 — asertowane od 0218 (wcześniej KNOWN-DEBT).
   const whole = [
     'security', 'status', 'storage', 'money', 'release', 'archive', 'watchdog', 'invite', 'risks', 'import',
   ];
