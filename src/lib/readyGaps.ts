@@ -21,9 +21,9 @@ export function computeReadyGaps(load: Load, docs: readonly Document[]): ReadyGa
   ].filter(Boolean) as string[];
   if (awiz.length) gaps.push({ kind: 'AWIZ', items: awiz, who: 'SCX' });
 
-  /* B5 / D-0300: piloci z wymogu symbolu (`plPilotsRequired`), nie z permits (0 wierszy).
+  /* B5 / D-0300: piloci z wymogu symbolu (`permit.plPilotsRequired`), nie z wierszy zezwoleń (0).
    * Do tabeli symboli (D1) — gdy wymóg > 0 albo awizacja ma escort bez tablicy. */
-  const pilotsNeed = Math.max(0, Number(load.plPilotsRequired ?? 0));
+  const pilotsNeed = Math.max(0, Number(load.permit?.plPilotsRequired ?? 0));
   if (pilotsNeed > 0 || (r.escort && !r.escortPlate?.trim())) {
     if (!r.escortPlate?.trim()) {
       gaps.push({
