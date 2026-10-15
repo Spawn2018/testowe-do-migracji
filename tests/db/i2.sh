@@ -97,9 +97,9 @@ chk "starsza pozycja nie zmienia wyniku (liczy się najnowsza)" "$(Q "select eta
 
 echo; echo "[I-2d] na placu, rozładunek, anulowanie"
 $PSQL -c "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L2','STATUS_AUTO', now()-interval '10 minutes', '{\"to\":\"AT_SITE\"}')" >/dev/null
-# occurred_at = czas STATUS_AUTO (10 min temu), żeby ETA = wjazd na plac
-val "HHL: AT_SITE" $HHL "select load_status_set('$L2','AT_SITE',now()-interval '10 minutes',null); select status from loads where id='$L2'" AT_SITE commit
-chk "AT_SITE: ETA = czas wjazdu na plac, pasmo 0" "$(Q "select (abs(extract(epoch from eta_site-(now()-interval '10 minutes')))<120)::text||'/'||eta_confidence_min from loads where id='$L2'")" "true/0"
+# load_status_set: czas nie wcześniej niż poprzedni STATUS_* (FERRY) — więc now(), nie −10 min
+val "HHL: AT_SITE" $HHL "select load_status_set('$L2','AT_SITE',now(),null); select status from loads where id='$L2'" AT_SITE commit
+chk "AT_SITE: ETA = czas wjazdu na plac, pasmo 0" "$(Q "select (abs(extract(epoch from eta_site-now()))<120)::text||'/'||eta_confidence_min from loads where id='$L2'")" "true/0"
 chk "delay_minutes = max(0, ETA − koniec okna dostawy, a bez okna − koniec dnia dostawy Europe/Stockholm) — SCOPE §57 (0080)" "$(Q "select (delay_minutes is not distinct from greatest(0, round(extract(epoch from eta_site - load_delivery_deadline(plan_delivery_date, plan_delivery_to))/60))::int)::text||'/'||(plan_delivery_date is not null)::text from loads where id='$L2'")" "true/true"
 chk "I-25 akceptacja: okno 01.10 08–12, ETA 18:00 → 360 | bez okna, ETA 18:00 w dniu dostawy → 0 | bez okna, ETA 06:00 dnia następnego → 360" "$(Q "select greatest(0, round(extract(epoch from ('2026-10-01 18:00 Europe/Stockholm'::timestamptz - load_delivery_deadline('2026-10-01', '2026-10-01 12:00 Europe/Stockholm')))/60))::int||'|'||greatest(0, round(extract(epoch from ('2026-10-01 18:00 Europe/Stockholm'::timestamptz - load_delivery_deadline('2026-10-01', null)))/60))::int||'|'||greatest(0, round(extract(epoch from ('2026-10-02 06:00 Europe/Stockholm'::timestamptz - load_delivery_deadline('2026-10-01', null)))/60))::int")" "360|0|360"
 chk "I-25 bez okna: północ Europe/Stockholm (lato +02, zima +01)" "$(Q "select to_char(load_delivery_deadline('2026-09-30', null) at time zone 'UTC', 'YYYY-MM-DD HH24:MI')||'|'||to_char(load_delivery_deadline('2026-12-26', null) at time zone 'UTC', 'YYYY-MM-DD HH24:MI')")" "2026-09-30 22:00|2026-12-26 23:00"

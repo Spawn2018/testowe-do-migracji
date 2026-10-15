@@ -91,8 +91,9 @@ err "SCX nie anuluje transportu"                       $SCX "update loads set st
 err "HHL nie zmieni numeru zlecenia przewoźnika"       $HHL "update loads set carrier_order_no='ZMIENIONY' where id='$L2'" "wyłącznie przewoźnik"
 val "HHL zmienia swój numer zlecenia"                  $HHL "with u as (update loads set hhl_order_no='HHL/2026/0777' where id='$L2' returning 1) select count(*) from u" 1
 err "rozładunek bez daty / bezpośredni UPDATE (A5)"   $HHL "update loads set status='UNLOADED' where id='$L1'" "wymaga daty rozładunku|load_status_set"
-err "SCX nie zmieni daty rozładunku transportu na fakturze" $SCX "update loads set actual_delivery_at='2026-09-20 10:00+00' where id='$L1'" "zamrożona"
-# A5: actual_delivery_at tylko przez load_status_set (nie bezpośredni UPDATE)
+err "SCX nie zmieni daty rozładunku transportu na fakturze" $SCX "update loads set actual_delivery_at='2026-09-20 10:00+00' where id='$L1'" "zamrożona|load_status_set"
+# A5: actual_delivery_at tylko przez load_status_set; DELIVERED wymaga numerów (enforce_order_numbers)
+sys "update loads set hhl_order_no='HHL/SEC-L1', carrier_order_no='SCX/SEC-L1' where id='$L1'" >/dev/null
 val "HHL zmienia datę rozładunku zafakturowanego — z audytem" $HHL "select load_status_set('$L1','DELIVERED',timestamptz '2026-09-24 10:00+00','korekta daty'); select 1" 1 commit
 val "zmiana daty rozładunku zapisana w dzienniku"      $HHL "select count(*) from audit_log where action='LOAD_STATUS_SET' and entity_id='$L1'" 1
 
