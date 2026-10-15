@@ -2411,6 +2411,20 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 ## 2026-10-15 — Poprawki P2–P3 (PR #221) — TEST
 
-- **TEST zajęte: Poprawki P2–P3**, od 15.10.2026 17:30 — potwierdzenie security, status, nullguard, risks na `e39ccb47` (migracje 0217–0218).
-- CI `db` / `unit` / `visual` zielone na `e39ccb47` (session 33, risks 27, l13 34).
+- **TEST zajęte: Poprawki P2–P3**, od 15.10.2026 17:30 — potwierdzenie security, status, nullguard, risks na `e39ccb47`/`4fc44255` (migracje 0217–0218).
+- TEST: security **84/84** (+2 SKIP), status **44/44**, risks **25/25** (+2 SKIP), nullguard **161+136+216+124 = 637/637**. Doradca TEST: **149** zgłoszeń, **0 nowych**.
+- CI `db` / `unit` / `visual` zielone na `4fc44255` (session 33, risks 27, l13 34).
+- **TEST wolne** od 15.10.2026 18:25.
+
+## 2026-10-15 — Poprawki P2–P3: C1 / C12 / C14 NA PRODUKCJI (paczka W TOKU → C2…)
+
+- Merge PR #221 → `2a315a4d` (0217 C1 dzwonek, 0218 session/l13, C12 DOC_MISSING, C14 ADVISOR_MGMT_TOKEN).
+- Kopia przed C1: `D:\Watch Tower\dane\poprawki-p2-p3-c1\kopia-c1-bell-2026-10-15T16-27-50-905Z.json`, n=**6872**, SHA256 `50e5f2521a01675cc3962907110a1f698585268fab43e401bbf1169547bd11d4`.
+- Produkcja: ROLLBACK OK → `db push` 0217–0218; po: `unread RISK_* bez load_id` = **0**; `truck_ban_holidays` = `current_app_role() IS NOT NULL`; audit `C1_BELL_MARK_READ_NO_LOAD`.
+- Edge `security-advisor-snapshot` wdrożona (C14). Doradca produkcja: ostrzeżenie `auth_leaked_password_protection` (W1 — włączenie w panelu Auth; nie z migracji).
+- Wdrożenie aplikacji: `dpl_BVVAGR5vymg7EXbMjVEj6jrSYZV2`, JS `assets/index-DwXAzakW.js`; tower / makieta **200**; 0 × `service_role`.
+- PR #218 wyglad/A5 wcześniej: `12e3efd7` / `dpl_4ndnWfvyNcHWgfEdHP3qC9Na3zYY`.
+- Następne w paczce: **C2** (pushDevicesOf / sw.js / web-push-send).
+
+**C1+C12+C14 NA PRODUKCJI — commit `2a315a4d`, migracje 0217–0218, wdrożenie `dpl_BVVAGR5vymg7EXbMjVEj6jrSYZV2`, 15.10.2026 18:30.** (paczka Poprawki P2–P3 nadal W TOKU — C2–C15, C11/C13 wygląd)
 
