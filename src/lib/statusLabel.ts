@@ -22,6 +22,7 @@ const STATUS_KEYS: Partial<Record<LoadStatus, string>> = {
   DELIVERED: 's_delivered',
   READY_TO_INVOICE: 's_ready_to_invoice',
   INVOICED: 's_invoiced',
+  CANCELLED: 'p4b_cancelled',
   DELAYED: 's_delayed',
   SILENT: 's_silent',
 };

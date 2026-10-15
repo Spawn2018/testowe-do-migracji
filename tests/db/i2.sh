@@ -714,7 +714,9 @@ if [ "$(Q "select count(*) from positions where load_id='$L2'")" = 0 ]; then
       || $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), (enum_range(null::position_source))[1])" >/dev/null
   fi
 fi
-$PSQL -c "insert into positions (load_id, ts, geom_raw, source) select '$L2', now(), st_setsrid(st_makepoint(21.0, 63.5),4326), source from positions where load_id='$L2' limit 1" >/dev/null
+# B11 / D-0300: kotwica czasu (wzór R5/R6) — niezależne od daty uruchomienia (także po 01.11.2026)
+I25_TS='2026-09-28T12:00:00+00'
+$PSQL -c "insert into positions (load_id, ts, geom_raw, source) select '$L2', timestamptz '$I25_TS', st_setsrid(st_makepoint(21.0, 63.5),4326), source from positions where load_id='$L2' limit 1" >/dev/null
 chk "transport z oknem: delay_minutes = ETA z GPS − koniec okna (po refresh_load_eta)" "$(Q "select refresh_load_eta('$L2'); select (eta_site is not null and delay_minutes is not distinct from greatest(0, round(extract(epoch from eta_site - plan_delivery_to)/60))::int)::text from loads where id='$L2'")" "true"
 echo; echo "[6.5] walidator zezwoleń i wymiarów zestawu (0081)"
 LP=33333333-0000-0000-0000-0000000006d1

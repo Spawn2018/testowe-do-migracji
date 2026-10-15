@@ -17,6 +17,7 @@ export type LoadStatus =
   | 'DELIVERED'
   | 'READY_TO_INVOICE'
   | 'INVOICED'
+  | 'CANCELLED'
   | 'DELAYED'
   | 'SILENT'
   | 'DOC_MISSING';
@@ -260,6 +261,10 @@ export interface LoadPermit {
 export interface EtaDetail {
   /** stan liczenia: jazda, odpoczynek w toku, czeka przed placem (E15-2), prom */
   phase?: 'DRIVE' | 'REST' | 'WAIT_SITE' | 'FERRY' | null;
+  /** B7 / E15 pkt 8: na promie bez AIS — „czeka na pozycję AIS” */
+  waitAis?: boolean | null;
+  /** ETA z AIS promu (ISO), gdy znane */
+  ferryEtaAt?: string | null;
   /** czas ostatniej pozycji użytej do ETA (E15 pkt 3 „wiek pozycji”) */
   lastFixAt?: string | null;
   distanceKm?: number | null;

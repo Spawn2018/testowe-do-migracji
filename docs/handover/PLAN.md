@@ -289,7 +289,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
 - **D1 / R1–R4** (D-20261014-0015-01): G-20 baza + `g20`, WEB_PUSH tylko krytyczne, DECISION×CLIENT_USER `push=false`, wyjątki doradcy, instrukcja W1.
 - TEST przed scaleniem: security 84, status 44, nullguard 622, g20 15/15; doradca TEST 0 nowych. CI unit/visual/db zielone na `dcb2d28e`. Edge `web-push-send` wdrożona.
 
-### P4 · Statusy, śledzenie, ETA — DO ZROBIENIA
+### P4 · Statusy, śledzenie, ETA — W TOKU (PR #203; na produkcji 0205 i wygląd P4-a/b/c)
 - **E25** statusy (automat „Gotowe do fakturowania” opierasz na dzisiejszym dokumencie CMR po dostawie; P5 podmienia na wymóg z E31):
   - status aplikacji `AT_PORT_SE` dla Port SE z listami statusów (D-20261014-0315-01 H1);
   - Kokpit i liczba „Faktury” ze statusu `READY_TO_INVOICE` (`src/lib/cockpitE9.ts`, D-20261014-0215-01 H3);

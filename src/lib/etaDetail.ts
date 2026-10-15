@@ -11,18 +11,31 @@ type Causes = {
   progress?: string | null;
 };
 
+type BasisExtra = EtaBasis & {
+  causes?: Causes;
+  ferry_eta_at?: string | null;
+  ais_eta_at?: string | null;
+  wait_ais?: boolean | null;
+};
+
 export function etaDetailFromBasis(
   basis: EtaBasis | null | undefined,
   status: LoadStatus,
 ): EtaDetail | null {
   if (!basis) return null;
-  const causes = (basis as EtaBasis & { causes?: Causes }).causes;
+  const b = basis as BasisExtra;
+  const causes = b.causes;
   const segment = (basis.segment ?? '').toUpperCase();
   const detail: EtaDetail = {};
 
   if (status === 'APPROACHING_SITE' || /WAIT|SITE|YARD/i.test(segment)) detail.phase = 'WAIT_SITE';
-  else if (status === 'ON_FERRY' || segment.includes('FERRY') || segment.includes('CROSSING')) detail.phase = 'FERRY';
-  else if (causes?.rest_h != null && Number(causes.rest_h) > 0 && /REST/i.test(segment)) detail.phase = 'REST';
+  else if (status === 'ON_FERRY' || segment.includes('FERRY') || segment.includes('CROSSING')) {
+    /* B7 / E15 pkt 8: faza prom — ETA z AIS albo „czeka na pozycję AIS” */
+    detail.phase = 'FERRY';
+    const ais = b.ferry_eta_at ?? b.ais_eta_at ?? null;
+    if (ais) detail.ferryEtaAt = ais;
+    else detail.waitAis = b.wait_ais !== false;
+  } else if (causes?.rest_h != null && Number(causes.rest_h) > 0 && /REST/i.test(segment)) detail.phase = 'REST';
   else if (
     ['LOADING', 'IN_TRANSIT_PL', 'AT_PORT', 'AT_PORT_SE', 'IN_TRANSIT_SE', 'DELAYED', 'SILENT', 'READY'].includes(status)
   ) {
@@ -40,7 +53,8 @@ export function etaDetailFromBasis(
     detail.restNeeded = Number(causes.rest_h) > 0;
   }
 
-  return detail.phase != null || detail.distanceKm != null || detail.driveMin != null || detail.restHours != null
+  return detail.phase != null || detail.distanceKm != null || detail.driveMin != null
+    || detail.restHours != null || detail.waitAis || detail.ferryEtaAt
     ? detail
     : null;
 }

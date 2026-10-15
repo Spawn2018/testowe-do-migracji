@@ -21,10 +21,17 @@ export function computeReadyGaps(load: Load, docs: readonly Document[]): ReadyGa
   ].filter(Boolean) as string[];
   if (awiz.length) gaps.push({ kind: 'AWIZ', items: awiz, who: 'SCX' });
 
-  /* B5 / D-0300: piloci z symbolu ładunku (D1), nie z permits (0 wierszy). Do D1 — nie licz z permits.
-   * Gdy awizacja ma już escort bez tablicy — nadal brak (ręcznie zaznaczony). */
-  if (r.escort && !r.escortPlate?.trim()) {
-    gaps.push({ kind: 'PILOTS', items: ['pilot'], who: 'SCX' });
+  /* B5 / D-0300: piloci z wymogu symbolu (`plPilotsRequired`), nie z permits (0 wierszy).
+   * Do tabeli symboli (D1) — gdy wymóg > 0 albo awizacja ma escort bez tablicy. */
+  const pilotsNeed = Math.max(0, Number(load.plPilotsRequired ?? 0));
+  if (pilotsNeed > 0 || (r.escort && !r.escortPlate?.trim())) {
+    if (!r.escortPlate?.trim()) {
+      gaps.push({
+        kind: 'PILOTS',
+        items: pilotsNeed > 1 ? [`pilot ×${pilotsNeed}`] : ['pilot'],
+        who: 'SCX',
+      });
+    }
   }
 
   if (!load.carrierOrderNo?.trim()) gaps.push({ kind: 'ORDER_SCX', who: 'SCX' });

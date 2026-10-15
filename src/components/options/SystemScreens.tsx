@@ -218,7 +218,8 @@ export function ExportScreen({ locale, kinds, range, fileName, onDownload }: {
 export const THRESHOLD_KEYS = [
   'WAVE_M', 'GUST_KN', 'DELAY_MIN', 'LEAD_DAYS',
   'AWIZ_EARLY_H', 'AWIZ_LATE_H', 'DOC_WARN_H', 'DOC_CRIT_H',
-  'SILENT_MIN', 'OFFROUTE_KM',
+  'SILENT_MIN', 'SILENT_STOP_H', 'OFFROUTE_KM',
+  'ETA_CONF_HIGH_MIN', 'ETA_CONF_MED_MIN', 'GEOFENCE_EDGE_M',
 ] as const;
 
 export type ThresholdRow = {

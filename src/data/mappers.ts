@@ -14,6 +14,7 @@ import { clickFromPayload, clickTarget } from '../../supabase/functions/_shared/
 import { shows } from '../lib/prodFacade';
 import { autoRiskCode } from '../lib/sailings';
 import { etaDetailFromBasis } from '../lib/etaDetail';
+import { opsThreshold } from '../lib/opsThresholdDefaults';
 import { trackerKind } from '../lib/trackerLink';
 import type { Sailing, TrackingLinkInfo } from '../types';
 
@@ -40,7 +41,7 @@ const DB_TO_APP_STATUS: Record<DbLoadStatus, LoadStatus> = {
   DELIVERED: 'DELIVERED',
   READY_TO_INVOICE: 'READY_TO_INVOICE',
   INVOICED: 'INVOICED',
-  CANCELLED: 'PLANNED',
+  CANCELLED: 'CANCELLED',
 };
 
 /** App → DB. DELAYED / SILENT to flagi, nie statusy w bazie → null (tylko zdarzenie). */
@@ -61,6 +62,7 @@ const APP_TO_DB_STATUS: Record<LoadStatus, DbLoadStatus | null> = {
   DELIVERED: 'DELIVERED',
   READY_TO_INVOICE: 'READY_TO_INVOICE',
   INVOICED: 'INVOICED',
+  CANCELLED: 'CANCELLED',
   DELAYED: null,
   SILENT: null,
 };
@@ -131,11 +133,11 @@ export interface EtaBasis {
   };
 }
 
-/** I-2d / E15-3 (D-20261014-0640-01 H3.2): ≤30 min WYSOKA, ≤120 ŚREDNIA, inaczej NISKA. */
+/** I-2d / E15-3 / B7: progi z `ops_thresholds` (ETA_CONF_HIGH_MIN / ETA_CONF_MED_MIN). */
 export function etaConfidenceFromMinutes(min: number | null | undefined): 'HIGH' | 'MED' | 'LOW' {
   if (min === null || min === undefined) return 'LOW';
-  if (min <= 30) return 'HIGH';
-  if (min <= 120) return 'MED';
+  if (min <= opsThreshold('ETA_CONF_HIGH_MIN')) return 'HIGH';
+  if (min <= opsThreshold('ETA_CONF_MED_MIN')) return 'MED';
   return 'LOW';
 }
 
