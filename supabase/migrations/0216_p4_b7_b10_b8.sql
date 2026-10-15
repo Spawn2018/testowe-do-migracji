@@ -112,7 +112,7 @@ create policy ops_thresholds_read on public.ops_thresholds for select to authent
 alter table public.corridor_polylines drop constraint if exists corridor_polylines_code_check;
 alter table public.corridor_polylines
   add constraint corridor_polylines_code_check
-  check (code in ('PL_ROAD', 'SE_E4', 'SE_APPROACH_SG03'));
+  check (code in ('PL_ROAD', 'SE_E4', 'SE_E22', 'SE_APPROACH_SG03'));
 
 insert into public.corridor_polylines (code, geom, total_km, source)
 values (
