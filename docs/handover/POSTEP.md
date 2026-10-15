@@ -2456,8 +2456,6 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 - **TEST zajęte: C16 N2–N8**, od 15.10.2026 21:16 — security, status, nullguard, c16-push, risks na `a82ccc9e` (PR #229, migracja 0219).
 
-
-
 ### C16 N2–N8 — TEST (0219) przed poprawkami przeglądu
 
 | zestaw | wynik |
@@ -2469,5 +2467,23 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 | risks | 25/25 (+2 SKIP) |
 | nullguard | 161+136+216+124 = 637/637 |
 
-SHA TEST: `b5e65f4c`. Potem poprawki przeglądu (sw click/openWindow, HMAC `nid\|sid`, `verify_jwt=false`) — nowy commit przed scaleniem.
+SHA TEST: `b5e65f4c`. Potem poprawki przeglądu (sw click/openWindow, HMAC `nid\|sid`, `verify_jwt=false`) → `ee689452`.
+
+### C16 N2–N8 — TEST na `ee689452` (przed scaleniem #229)
+
+| zestaw | wynik |
+|---|---|
+| prep | ok |
+| security | 84/84 (+2 SKIP) |
+| status | 44/44 |
+| c16-push | 10/10 |
+| nullguard | 161+136+216+124 = 637/637 |
+| doradca security TEST | 167 zgłoszeń, **0 nowych** |
+
+CI #229 na `ee689452`: unit / visual / `db` zielone; `npm audit --omit=dev --audit-level=high` 0.
+**TEST wolne** od 15.10.2026 23:32.
+
+| punkt | zrobione / odbiór |
+|---|---|
+| C16 N2–N8 TEST | zrobione 23:32 — security 84, status 44, c16-push 10, nullguard 637, doradca 0 nowych; commit `ee689452` |
 
