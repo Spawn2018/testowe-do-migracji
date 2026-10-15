@@ -739,7 +739,8 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
       const list = await phoneScreens(page);
       expect(list.length).toBeGreaterThan(role === 'HHL' ? 15 : 2);
       /* KSH i SCX w demo mają jedną grupę — telefon pokazuje od razu ekrany „Dla mnie” (bez kafelka grupy) */
-      if (role !== 'HHL') expect(list.map((x) => x.screen)).toEqual(['account', 'forme', 'look']);
+      /* wyglad/C (E11 menu „Dla mnie”, E5): „Ten telefon / komputer” po „Wygląd i waluta” */
+      if (role !== 'HHL') expect(list.map((x) => x.screen)).toEqual(['account', 'forme', 'look', 'device']);
       const hits: Hit[] = [];
       for (const width of WIDTHS) {
         await page.setViewportSize({ width, height: 844 });
@@ -789,7 +790,8 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
       await boot(page, r);
       await openView(page, 'settings');
       await expect(page.locator('.ox-side-group h2')).toHaveText(['DLA MNIE']);
-      await expect(page.locator('.ox-side [data-opt-nav]')).toHaveText(['Moje konto', 'Co dostaję', 'Wygląd i waluta']);
+      /* wyglad/C (E11, E5): „Ten telefon / komputer” */
+      await expect(page.locator('.ox-side [data-opt-nav]')).toHaveText(['Moje konto', 'Co dostaję', 'Wygląd i waluta', 'Ten telefon / komputer']);
     }
   });
 });

@@ -14,6 +14,7 @@ import { OptionsShell } from '../components/options/OptionsShell';
 import type { AccountKind, OptGroup, OptScreen, OptScreenId } from '../components/options/types';
 import { useDemoOptions } from '../components/options/useDemoOptions';
 import { ForMeScreen } from '../components/options/ForMeScreen';
+import { DeviceScreen } from '../components/options/DeviceScreen';
 
 const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../components/guide/Guide')) : null;
 const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
@@ -66,6 +67,7 @@ export function SettingsView() {
         </>
       ),
     },
+    { id: 'device', right: 'own', body: <DeviceScreen locale={locale} /> },
   ];
   if (Guide) forme.push({ id: 'guide', body: block(<Guide locale={locale} role={role === 'KSH' ? 'ksh' : role === 'SCX' ? 'scx' : 'hhl'} />) });
 

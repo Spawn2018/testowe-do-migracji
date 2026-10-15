@@ -13,6 +13,7 @@ import { OptionsShell } from '../components/options/OptionsShell';
 import type { OptGroup, OptScreen, OptScreenId, AccountKind } from '../components/options/types';
 import { useDemoOptions } from '../components/options/useDemoOptions';
 import { ForMeScreen } from '../components/options/ForMeScreen';
+import { DeviceScreen } from '../components/options/DeviceScreen';
 import { OptionsHowTo } from '../components/settings/OptionsHowTo';
 import { SmsFallbackEntry } from '../components/shell/SmsFallbackEntry';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
@@ -315,6 +316,7 @@ export function OptionsView() {
         {CarrierScorecard ? block(<CarrierScorecard />) : null}
       </>
     ), { right: 'own' }),
+    scr('device', <DeviceScreen locale={locale} />, { right: 'own' }),
   ];
   if (Guide) forme.push(scr('guide', block(<Guide locale={locale} role="hhl" />)));
   groups.push({ id: 'forme', screens: forme });

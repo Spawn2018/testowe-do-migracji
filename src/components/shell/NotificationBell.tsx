@@ -3,15 +3,25 @@ import { useTowerStore } from '../../store/useTowerStore';
 import { t } from '../../i18n/messages';
 import type { Severity } from '../../types';
 import { getNowMs } from '../../lib/frozenNow';
-import { bellAge, bellGroups, type BellLocale } from '../../lib/bellList';
+import { formatListDateTime } from '../../lib/format';
+import { bellGeneralCount, bellGroups, type BellGroup, type BellLocale, type BellSource } from '../../lib/bellList';
 import { transportLabel } from '../../lib/transportName';
 
-function gut(s: Severity) {
-  if (s === 'CRITICAL' || s === 'HIGH') return 'var(--red)';
-  if (s === 'MEDIUM') return 'var(--amber)';
-  return 'var(--plan)';
+/** Pasek po lewej pozycji: „Do zrobienia” według wagi, „Moje transporty” zawsze niebieski (img/e5-desk). */
+function gut(section: 'todo' | 'mine', s: Severity): string {
+  if (section === 'mine') return 'mine';
+  if (s === 'CRITICAL' || s === 'HIGH') return 'hot';
+  if (s === 'MEDIUM') return 'warn';
+  return 'mine';
 }
 
+const up = (s: string) => s.toLocaleUpperCase('pl');
+
+/**
+ * E5 (img/e5-desk, img/e5-phone; decyzja 07.10 13:21): dzwonek w dwóch grupach — „Do zrobienia” i „Moje transporty”.
+ * Sytuacja ogólna (promy, drogi, pogoda bez transportu) nie trafia do dzwonka — zdanie pod listą prowadzi do Ryzyk.
+ * Nazwa transportu według firmy (E41) w drugiej linii pozycji „Do zrobienia” i na początku pozycji „Moje transporty”.
+ */
 export function NotificationBell() {
   const locale = useTowerStore((s) => s.locale);
   const role = useTowerStore((s) => s.role);
@@ -19,18 +29,21 @@ export function NotificationBell() {
   const markAllNotificationsRead = useTowerStore((s) => s.markAllNotificationsRead);
   const openNotification = useTowerStore((s) => s.openNotification);
   const markNotificationRead = useTowerStore((s) => s.markNotificationRead);
+  const setView = useTowerStore((s) => s.setView);
   const loads = useTowerStore((s) => s.loads);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // AUD-02: grupy (transport + rodzaj), tytuł „SG-xx · co się stało”, czas „15 min temu”
   const lang: BellLocale = locale === 'en' || locale === 'sv' ? locale : 'pl';
   const visible = bellGroups(notifications, role, (id) => {
     const load = loads.find((l) => l.id === id);
     return load ? transportLabel(load, role) : undefined;
   }, lang).slice(0, 40);
+  const todo = visible.filter((g) => g.section === 'todo');
+  const mine = visible.filter((g) => g.section === 'mine');
   const unread = visible.length;
   const nowMs = getNowMs();
+  const general = bellGeneralCount(notifications, role, nowMs);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -39,6 +52,42 @@ export function NotificationBell() {
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, []);
+
+  const item = (g: BellGroup<BellSource>) => {
+    const isTodo = g.section === 'todo';
+    const when = formatListDateTime(g.latest.at);
+    const title = isTodo ? g.what : g.title;
+    const meta = isTodo
+      ? [g.name, g.body].filter(Boolean).join(' · ')
+      : [when, g.body].filter(Boolean).join(' · ');
+    return (
+      <div key={g.key} className="bell-item" data-bell-count={g.count} data-bell-section={g.section}>
+        <span className={`bell-gut ${gut(g.section, g.severity as Severity)}`} aria-hidden />
+        <button
+          type="button"
+          className="bell-go"
+          onClick={() => {
+            openNotification(g.latest.id);
+            for (const id of g.ids.slice(1)) markNotificationRead(id);
+            setOpen(false);
+          }}
+        >
+          <span className="bell-line">
+            <span className="bell-title">{isTodo ? <i className="bell-dot" aria-hidden /> : null}{title}</span>
+            <span className="bell-to">{up(t(locale, `bell_to_${g.place}`))} ›</span>
+          </span>
+          {meta ? <span className="bell-meta">{meta}</span> : null}
+        </button>
+      </div>
+    );
+  };
+
+  const section = (key: 'todo' | 'mine', list: BellGroup<BellSource>[]) => (list.length ? (
+    <section className="bell-sec" data-bell-sec={key} aria-label={t(locale, `bell_sec_${key}`)}>
+      <h3 className="bell-sec-hd"><span>{up(t(locale, `bell_sec_${key}`))}</span><span className="tabular">{list.length}</span></h3>
+      {list.map(item)}
+    </section>
+  ) : null);
 
   return (
     <div className="bell-wrap" ref={ref}>
@@ -55,25 +104,7 @@ export function NotificationBell() {
           <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
         </svg>
         {unread > 0 ? (
-          <span
-            className="bell-badge cond tabular"
-            style={{
-              top: -4,
-              right: -4,
-              minWidth: 16,
-              height: 16,
-              padding: '0 4px',
-              borderRadius: 2,
-              background: 'var(--red)',
-              color: 'var(--on-red)',
-              fontSize: 12,
-              fontWeight: 700,
-              lineHeight: '16px',
-              textAlign: 'center',
-            }}
-          >
-            {unread > 99 ? '99+' : unread}
-          </span>
+          <span className="bell-badge cond tabular">{unread > 99 ? '99+' : unread}</span>
         ) : null}
       </button>
       {open && (
@@ -82,56 +113,33 @@ export function NotificationBell() {
           role="dialog"
           aria-label={t(locale, 'notifications')}
         >
-          <div className="panel-hd">
-            <h2 style={{ margin: 0, fontFamily: '"Barlow Condensed"', fontSize: 17, fontWeight: 600, letterSpacing: '0.02em' }}>
-              {t(locale, 'notifications')}
-            </h2>
-            <span className="sub">{unread}</span>
+          <div className="panel-hd bell-hd">
+            <h2>{t(locale, 'notifications')}</h2>
             <div className="spacer" />
             {unread > 0 ? (
-              <button type="button" className="btn" onClick={() => markAllNotificationsRead(role)}>
-                {t(locale, 'mark_all_read')}
+              <button type="button" className="btn bell-all" onClick={() => markAllNotificationsRead(role)}>
+                {t(locale, 'bell_mark_all')}
               </button>
             ) : null}
           </div>
-          <div style={{ overflowY: 'auto', flex: 1 }}>
+          <div className="bell-scroll">
             {visible.length === 0 ? (
-              <div className="panel-bd" style={{ color: 'var(--ink-3)' }}>{t(locale, 'no_notifications')}</div>
+              <div className="panel-bd bell-empty">{t(locale, 'no_notifications')}</div>
             ) : (
-              visible.map((g) => (
-                <div
-                  key={g.key}
-                  data-bell-count={g.count}
-                  style={{
-                    display: 'flex',
-                    gap: 10,
-                    padding: '9px 13px',
-                    borderBottom: '1px solid var(--rule-2)',
-                    alignItems: 'flex-start',
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'var(--surface-2)' }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
-                >
-                  <span style={{ width: 3, alignSelf: 'stretch', flex: '0 0 3px', background: gut(g.severity as Severity) }} />
-                  <button
-                    type="button"
-                    style={{ flex: 1, textAlign: 'left', minWidth: 0, background: 'transparent', border: 0, padding: 0, cursor: 'pointer', color: 'var(--ink)', font: 'inherit' }}
-                    onClick={() => {
-                      openNotification(g.latest.id);
-                      for (const id of g.ids.slice(1)) markNotificationRead(id);
-                      setOpen(false);
-                    }}
-                  >
-                    <div style={{ fontWeight: 500, lineHeight: 1.3 }}>{g.title}</div>
-                    <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.body}</div>
-                  </button>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                    <span className="age">{bellAge(g.latest.at, nowMs, lang)}</span>
-                    {g.count > 1 ? <span className="age tabular" aria-label={`${g.count}`}>×{g.count}</span> : null}
-                  </div>
-                </div>
-              ))
+              <>
+                {section('todo', todo)}
+                {section('mine', mine)}
+              </>
             )}
+            <p className="bell-general">
+              {t(locale, 'bell_general')}{' '}
+              <button type="button" className="btn bell-link" onClick={() => { setView('risks'); setOpen(false); }}>
+                {t(locale, 'bell_general_link')}
+              </button>
+              {'. '}
+              {general > 0 ? `${t(locale, 'bell_general_n').replace('{n}', String(general))} ` : ''}
+              {t(locale, 'bell_general_tail')}
+            </p>
           </div>
         </div>
       )}

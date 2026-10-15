@@ -191,6 +191,10 @@ Odświeżone 8 migawek stanów Harmonogramu z `visual.yml` `update=true` (run 38
 
 Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38466075360, gałąź `wyglad/P3`, commit `73e98ef`; ponownie run 38471591003, commit `e82c5e2` — ramka konta po poprawce nazwiska). Wszystkie ekrany: nowy pasek górny (konto po prawej, „Podgląd” HHL / KSH / SCX, rejsy z pełnymi nazwami portów, bez przycisku motywu), lewe menu bez e-maila i „Wyloguj”. Matrycy 280 ujęć nie ruszano.
 
+## wyglad/C-dzwonek (15.10.2026) — E5 dzwonek w grupach, E10 liczba na stałym tle
+
+`visual.yml` z `update=true` (run 38675408793, gałąź `wyglad/C-dzwonek`, commit `465d260`): zmienione 2 migawki — `kokpit-hhl-pl-1920-light` i `kokpit-hhl-pl-1920-dark-default` (liczba przy dzwonku bez sytuacji ogólnej, E5 decyzja 07.10 13:21; tło liczby `--alarm`, E10). Pozostałe 13 bez zmian. Matrycy 280 ujęć nie ruszano.
+
 ## wyglad/P3-b (14.10.2026) — E9 Kokpit i liczby w menu (V5, E8 pkt 6)
 
 Odświeżone 14 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38487793951, gałąź `wyglad/P3-b`, commit `a54f1da`). Ekrany: Kokpit — 6 kafelków E9 w 2 kolumnach, stopka czasu wykrycia, „Najpilniejsze” zamiast czerwonego banera; wszystkie ekrany — lewe menu z liczbami tylko przy „Ryzyka” i „Faktury” (bez Harmonogramu, Stref, Automatyzacji). Matrycy 280 ujęć nie ruszano.
