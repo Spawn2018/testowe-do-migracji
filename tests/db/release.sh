@@ -48,7 +48,7 @@ for st in AT_LOADING IN_TRANSIT_PL AT_PORT_GDANSK FERRY AT_PORT_NYNASHAMN IN_TRA
   val "import nie anuluje w $st (BLOCKED_STATUS, status bez zmian)" $HHL "select string_agg(verdict,',') from import_cancel_loads(array['$L2']::uuid[]); select status from loads where id='$L2'" $st
 done
 sys "update loads set status='AT_LOADING', actual_delivery_at=null where id='$L2'"
-err "HHL: bezpośredni UPDATE na CANCELLED odrzucony"     $HHL "update loads set status='CANCELLED' where id='$L2'" "cancel_load"
+err "HHL: bezpośredni UPDATE na CANCELLED odrzucony"     $HHL "update loads set status='CANCELLED' where id='$L2'" "cancel_load|load_status_set"
 err "HHL: ręczne anulowanie bez powodu odrzucone"        $HHL "select cancel_load('$L2', ' ')" "wymaga powodu"
 err "SCX: cancel_load odrzucone"                         $SCX "select cancel_load('$L2', 'awaria')" "wyłącznie HHL"
 err "KSH: import_cancel_loads odrzucone"                 $KSH "select * from import_cancel_loads(array['$L2']::uuid[])" "wyłącznie HHL"
@@ -128,8 +128,8 @@ val "KSH nie widzi żadnego z nich"                       $KSH "select count(*) 
 chk "przypomnienie do przewoźnika (SCX)"                 "$(Q "select count(*) from notifications where load_id='$L5' and template='ORDER_NO_MISSING' and payload->>'side'='CARRIER' and user_id=(select id from app_users where auth_id='$SCX')")" 1
 chk "przypomnienie do HHL"                               "$(Q "select count(*) from notifications where load_id='$L5' and template='ORDER_NO_MISSING' and payload->>'side'='HHL' and user_id=(select id from app_users where auth_id='$HHL')")" 1
 chk "przewoźnik bez przypomnienia o numerze HHL"         "$(Q "select count(*) from notifications where load_id='$L5' and payload->>'side'='HHL' and user_id=(select id from app_users where auth_id='$SCX')")" 0
-val "brak blokady: HHL przestawia na RESOURCES_PENDING bez numerów (47 h)" $HHL "update loads set status='RESOURCES_PENDING' where id='$L5' returning status" RESOURCES_PENDING
-err "blokady Q10 zostają: READY bez numeru HHL odrzucone" $HHL "update loads set status='READY' where id='$L5'" "numeru zlecenia"
+val "brak blokady: HHL przestawia na RESOURCES_PENDING bez numerów (47 h)" $HHL "select load_status_set('$L5','RESOURCES_PENDING',now(),null); select status from loads where id='$L5'" RESOURCES_PENDING
+err "blokady Q10 zostają: READY bez numeru HHL odrzucone" $HHL "select load_status_set('$L5','READY',now(),null)" "numeru zlecenia"
 
 echo; echo "[2.3] Token kierowcy — skrót, jeden transport, ważność, odwołanie, limit, bez cen"
 L6=33333333-0000-0000-0000-000000000006; L7=33333333-0000-0000-0000-000000000007

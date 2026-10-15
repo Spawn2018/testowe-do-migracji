@@ -50,7 +50,7 @@ echo; echo "[e25] UNLOADED→DELIVERED, READY_TO_INVOICE/INVOICED (H1), actor i 
 val "UNLOADED → DELIVERED" $HHL "select load_status_set('$L2','UNLOADED',now(),null); select status::text from loads where id='$L2'" DELIVERED commit
 sval "actual_delivery_at po Dostarczone" "select (actual_delivery_at is not null) from loads where id='$L2'" t
 # A5: DELIVERED nadpisuje wybraną godzinę (W3)
-val "DELIVERED nadpisuje godzinę" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','korekta godziny'); select (actual_delivery_at = timestamptz '2026-10-07 10:19:54+00')::text from loads where id='$L2'" t commit
+val "DELIVERED nadpisuje godzinę" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','korekta godziny'); select (actual_delivery_at = timestamptz '2026-10-07 10:19:54+00')::text from loads where id='$L2'" true commit
 # A5: READY_TO_INVOICE bez CMR
 err "READY_TO_INVOICE bez CMR" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null)" "CMR"
 sys "delete from documents where load_id='$L2' and category='CMR' and storage_path='test/e25-cmr.pdf'" >/dev/null

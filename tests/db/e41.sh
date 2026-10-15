@@ -54,8 +54,8 @@ sys "insert into load_message_reads (message_id, user_id, read_at)
      select 900041, u.id, now() from app_users u where u.auth_id='$HHL'
      on conflict (message_id, user_id) do nothing" >/dev/null
 val "KSH bez listy dla wiadomości HHL–SCX" $KSH "select count(*) from load_message_read_list(900041)" 0
-val "HHL widzi listę dla tej wiadomości" $HHL "select (count(*) >= 1)::text from load_message_read_list(900041)" t
-val "SCX widzi listę dla tej wiadomości" $SCX "select (count(*) >= 1)::text from load_message_read_list(900041)" t
+val "HHL widzi listę dla tej wiadomości" $HHL "select (count(*) >= 1)::text from load_message_read_list(900041)" true
+val "SCX widzi listę dla tej wiadomości" $SCX "select (count(*) >= 1)::text from load_message_read_list(900041)" true
 # Security definer omija RLS loads — warunek jak loads_read: drugi przewoźnik nie widzi cudzego transportu.
 CAR2O=00000000-0000-0000-0000-00000000a004
 CAR2=11111111-0000-0000-0000-0000000000c2

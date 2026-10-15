@@ -73,7 +73,7 @@ chk "opóźnienie rejsu w rozkładzie nie jest ETA" "$(Q "select coalesce(eta_si
 
 $PSQL -c "set session_replication_role=replica; update loads set hhl_order_no='HHL/2026/1', carrier_order_no='SCX/1', plan_delivery_date=current_date-1, plan_delivery_to=null where id='$L2'; set session_replication_role=origin;" >/dev/null
 echo; echo "[I-2d] przewoźnik zmienia status (strażnik nie blokuje przeliczenia), prom"
-val "SCX: status FERRY" $SCX "update loads set status='FERRY' where id='$L2' returning status" FERRY commit
+val "SCX: status FERRY" $SCX "select load_status_set('$L2','FERRY',now(),null); select status from loads where id='$L2'" FERRY commit
 chk "FERRY bez AIS: ETA pusta, czeka na AIS, nie z rozkładu" "$(Q "select coalesce(eta_site::text,'∅')||'/'||(eta_basis->>'ferry_eta')||'/'||(eta_basis->>'segment') from loads where id='$L2'")" "∅/waits_for_ais/FERRY"
 
 $PSQL -c "insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values ('55555555-0000-0000-0000-000000000001', 58.0, 18.2, 16, now(), 'DIGITRAFFIC')" >/dev/null
@@ -97,12 +97,12 @@ chk "starsza pozycja nie zmienia wyniku (liczy się najnowsza)" "$(Q "select eta
 
 echo; echo "[I-2d] na placu, rozładunek, anulowanie"
 $PSQL -c "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L2','STATUS_AUTO', now()-interval '10 minutes', '{\"to\":\"AT_SITE\"}')" >/dev/null
-val "HHL: AT_SITE" $HHL "update loads set status='AT_SITE' where id='$L2' returning status" AT_SITE commit
+val "HHL: AT_SITE" $HHL "select load_status_set('$L2','AT_SITE',now(),null); select status from loads where id='$L2'" AT_SITE commit
 chk "AT_SITE: ETA = czas wjazdu na plac, pasmo 0" "$(Q "select (abs(extract(epoch from eta_site-(now()-interval '10 minutes')))<120)::text||'/'||eta_confidence_min from loads where id='$L2'")" "true/0"
 chk "delay_minutes = max(0, ETA − koniec okna dostawy, a bez okna − koniec dnia dostawy Europe/Stockholm) — SCOPE §57 (0080)" "$(Q "select (delay_minutes is not distinct from greatest(0, round(extract(epoch from eta_site - load_delivery_deadline(plan_delivery_date, plan_delivery_to))/60))::int)::text||'/'||(plan_delivery_date is not null)::text from loads where id='$L2'")" "true/true"
 chk "I-25 akceptacja: okno 01.10 08–12, ETA 18:00 → 360 | bez okna, ETA 18:00 w dniu dostawy → 0 | bez okna, ETA 06:00 dnia następnego → 360" "$(Q "select greatest(0, round(extract(epoch from ('2026-10-01 18:00 Europe/Stockholm'::timestamptz - load_delivery_deadline('2026-10-01', '2026-10-01 12:00 Europe/Stockholm')))/60))::int||'|'||greatest(0, round(extract(epoch from ('2026-10-01 18:00 Europe/Stockholm'::timestamptz - load_delivery_deadline('2026-10-01', null)))/60))::int||'|'||greatest(0, round(extract(epoch from ('2026-10-02 06:00 Europe/Stockholm'::timestamptz - load_delivery_deadline('2026-10-01', null)))/60))::int")" "360|0|360"
 chk "I-25 bez okna: północ Europe/Stockholm (lato +02, zima +01)" "$(Q "select to_char(load_delivery_deadline('2026-09-30', null) at time zone 'UTC', 'YYYY-MM-DD HH24:MI')||'|'||to_char(load_delivery_deadline('2026-12-26', null) at time zone 'UTC', 'YYYY-MM-DD HH24:MI')")" "2026-09-30 22:00|2026-12-26 23:00"
-val "HHL: UNLOADED z datą" $HHL "update loads set status='UNLOADED', actual_delivery_at='2026-10-05 10:00+02' where id='$L2' returning status" UNLOADED commit
+val "HHL: UNLOADED z datą" $HHL "select load_status_set('$L2','UNLOADED',timestamptz '2026-10-05 10:00+02',null); select status from loads where id='$L2'" DELIVERED commit
 chk "UNLOADED: ETA = data rozładunku" "$(Q "select eta_site||'/'||eta_confidence_min from loads where id='$L2'")" "2026-10-05 10:00:00+02/0"
 val "HHL anuluje L1 (cancel_load)" $HHL "select cancel_load('$L1','test ETA') is not null" t commit
 chk "CANCELLED: ETA NULL, flaga" "$(Q "select coalesce(eta_site::text,'∅')||'/'||(eta_basis->'flags'->>0) from loads where id='$L1'")" "∅/anulowany"
@@ -727,13 +727,13 @@ PM=$(Q "select id from permits where permit_no='PL/7/2026'")
 val "SCX łączy zezwolenie z własnym transportem" $SCX "select load_permit_link('$LP','$PM')::text" true commit
 err "KSH nie łączy zezwoleń" $KSH "select load_permit_link('$LP','$PM')" "HHL albo przewoźnik transportu"
 val "nieznane wymiary zestawu = naruszenie DIMS_UNKNOWN (nie „pasuje”)" $SCX "select ok::text||'/'||array_to_string(breaches,',') from load_permit_status() where load_id='$LP'" "false/DIMS_UNKNOWN"
-err "blokada: DOCS_PENDING → READY przy niezgodnym zezwoleniu" $HHL "update loads set status='READY' where id='$LP'" "transport zablokowany"
+err "blokada: DOCS_PENDING → READY przy niezgodnym zezwoleniu" $HHL "select load_status_set('$LP','READY',now(),null)" "transport zablokowany"
 $PSQL -c "update loads set combo_length_m=32.5, combo_width_m=3.9, combo_height_m=4.4, combo_weight_t=58 where id='$LP'" >/dev/null
 val "zestaw 32,5 m przy limicie 30 m → LENGTH" $KSH "select ok::text||'/'||array_to_string(breaches,',')||'/'||array_to_string(missing_countries,',') from load_permit_status() where load_id='$LP'" "false/LENGTH/SE"
-err "blokada nadal: długość ponad limit" $SCX "update loads set status='READY' where id='$LP'" "PL PL/7/2026: LENGTH"
+err "blokada nadal: długość ponad limit" $SCX "select load_status_set('$LP','READY',now(),null)" "PL PL/7/2026: LENGTH"
 $PSQL -c "update loads set combo_length_m=29.8 where id='$LP'" >/dev/null
 val "zestaw w limitach → OK (brak SE sygnalizowany, nie blokuje)" $SCX "select ok::text||'/'||array_to_string(missing_countries,',') from load_permit_status() where load_id='$LP'" "true/SE"
-val "zgodne zezwolenie: DOCS_PENDING → READY przechodzi" $HHL "update loads set status='READY' where id='$LP' returning status" READY commit
+val "zgodne zezwolenie: DOCS_PENDING → READY przechodzi" $HHL "select load_status_set('$LP','READY',now(),null); select status from loads where id='$LP'" READY commit
 val "KSH widzi zezwolenie powiązane z transportem projektu" $KSH "select count(*) from permits where id='$PM'" 1
 $PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER') on conflict do nothing; insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH') on conflict do nothing" >/dev/null
 val "inny przewoźnik nie widzi zezwolenia cudzego transportu" 11111111-0000-0000-0000-00000000000b "select count(*) from permits where id='$PM'" 0
@@ -760,7 +760,7 @@ err "odłączenie niepowiązanego → odmowa" $SCX "select load_permit_unlink('$
 val "SCX odłącza zezwolenie przed READY (audit_log PERMIT_UNLINK)" $SCX "select load_permit_unlink('$LF','$PF')::text" true commit
 chk "po odłączeniu: 1 powiązanie, wpis PERMIT_UNLINK, zezwolenie zostaje w projekcie" "$(Q "select (select count(*) from load_permits where load_id='$LF')||'/'||(select count(*) from audit_log where action='PERMIT_UNLINK' and entity_id='$LF')||'/'||(select count(*) from permits where id='$PF')")" "1/1/1"
 val "HHL łączy ponownie istniejące zezwolenie" $HHL "select load_permit_link('$LF','$PF')::text" true commit
-val "zgodne zezwolenia: PLANNED → READY" $HHL "update loads set status='READY' where id='$LF' returning status" READY commit
+val "zgodne zezwolenia: PLANNED → READY" $HHL "select load_status_set('$LF','READY',now(),null); select status from loads where id='$LF'" READY commit
 err "po READY odłączenie zablokowane (nie obchodzi blokady)" $HHL "select load_permit_unlink('$LF','$PF')" "przed statusem Gotowy"
 err "permit_save: przewoźnik bez transportu w projekcie → odmowa" 11111111-0000-0000-0000-00000000000b "select permit_save('$P','PL','PL/X',current_date,current_date+30,30,4,4.5,60)" "tylko w projekcie, w którym ma transport"
 $PSQL -c "update loads set status='CANCELLED' where id='$LF'" >/dev/null 2>&1
@@ -904,24 +904,24 @@ $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status) v
   update loads set plan_load_date=current_date+3, hhl_order_no='HHL/'||order_no, carrier_order_no='SCX/'||order_no where id in ('$LD','$LS');
   insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, cargo_class) values ('$P','$LD','I27-D',30,4,4,'DIMENSIONED'), ('$P','$LS','I27-S',null,null,null,'STANDARD')" >/dev/null
 chk "przełącznik istnieje, domyślnie wyłączony" "$(Q "select enabled::text from security_flags where key='PERMIT_REQUIRED_NON_STANDARD'")" false
-val "wyłączony: DIMENSIONED bez zezwolenia → READY przechodzi (stan przed włączeniem)" $HHL "update loads set status='READY' where id='$LD' returning status" READY
+val "wyłączony: DIMENSIONED bez zezwolenia → READY przechodzi (stan przed włączeniem)" $HHL "select load_status_set('$LD','READY',now(),null); select status from loads where id='$LD'" READY
 err "KSH nie włącza wymogu" $KSH "select admin_set_permit_requirement(true)" "wyłącznie administrator HHL"
 err "SCX nie włącza wymogu" $SCX "select admin_set_permit_requirement(true)" "wyłącznie administrator HHL"
 err "KSH nie widzi stanu wymogu" $KSH "select permit_requirement_state()" "wyłącznie HHL"
 val "HHL_ADMIN włącza wymóg (audit_log)" $HHL "select admin_set_permit_requirement(true)::text" true commit
 chk "flaga włączona + wpis PERMIT_REQUIREMENT_SET" "$(Q "select (select enabled from security_flags where key='PERMIT_REQUIRED_NON_STANDARD')::text||'/'||(select count(*)>0 from audit_log where action='PERMIT_REQUIREMENT_SET')::text")" "true/true"
-err "włączony: DIMENSIONED bez zezwolenia NIE osiąga READY" $HHL "update loads set status='READY' where id='$LD'" "Brak zezwolenia \\(PL, SE\\)"
-err "włączony: przewoźnik też nie przestawi na READY" $SCX "update loads set status='READY' where id='$LD'" "Brak zezwolenia"
-err "włączony: STANDARD bez zezwolenia NIE osiąga READY" $SCX "update loads set status='READY' where id='$LS'" "Brak zezwolenia"
+err "włączony: DIMENSIONED bez zezwolenia NIE osiąga READY" $HHL "select load_status_set('$LD','READY',now(),null)" "Brak zezwolenia \\(PL, SE\\)"
+err "włączony: przewoźnik też nie przestawi na READY" $SCX "select load_status_set('$LD','READY',now(),null)" "Brak zezwolenia"
+err "włączony: STANDARD bez zezwolenia NIE osiąga READY" $SCX "select load_status_set('$LS','READY',now(),null)" "Brak zezwolenia"
 $PSQL -c "update loads set combo_length_m=29, combo_width_m=3.9, combo_height_m=4.4, combo_weight_t=58 where id='$LD'" >/dev/null
 val "SCX: zezwolenie PL powiązane" $SCX "select load_permit_link('$LD', permit_save('$P','PL','PL/I27',current_date,current_date+30,30,4,4.5,60))::text" true commit
-err "tylko PL: nadal brak SE" $HHL "update loads set status='READY' where id='$LD'" "Brak zezwolenia \\(SE\\)"
+err "tylko PL: nadal brak SE" $HHL "select load_status_set('$LD','READY',now(),null)" "Brak zezwolenia \\(SE\\)"
 val "SCX: zezwolenie SE powiązane" $SCX "select load_permit_link('$LD', permit_save('$P','SE','SE/I27',current_date,current_date+30,30,4,4.5,60))::text" true commit
-val "PL + SE zgodne: DIMENSIONED → READY przechodzi" $HHL "update loads set status='READY' where id='$LD' returning status" READY commit
+val "PL + SE zgodne: DIMENSIONED → READY przechodzi" $HHL "select load_status_set('$LD','READY',now(),null); select status from loads where id='$LD'" READY commit
 $PSQL -c "update loads set status='DOCS_PENDING' where id='$LD'" >/dev/null 2>&1
 $PSQL -c "delete from shipment_items where load_id='$LD'" >/dev/null
 $PSQL -c "delete from load_permits where load_id='$LD'" >/dev/null
-err "transport bez pozycji (klasa nieznana) traktowany jak ponadnormatywny" $HHL "update loads set status='READY' where id='$LD'" "Brak zezwolenia"
+err "transport bez pozycji (klasa nieznana) traktowany jak ponadnormatywny" $HHL "select load_status_set('$LD','READY',now(),null)" "Brak zezwolenia"
 val "HHL_ADMIN wyłącza wymóg" $HHL "select admin_set_permit_requirement(false)::text" false commit
 $PSQL -c "delete from shipment_items where load_id in ('$LD','$LS'); update loads set status='CANCELLED' where id in ('$LD','$LS')" >/dev/null 2>&1
 echo; echo "[OPL-8] opłaty wyłącznie ręcznie (§8; 0115)"
