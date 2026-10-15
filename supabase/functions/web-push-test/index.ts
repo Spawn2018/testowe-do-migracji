@@ -1,11 +1,11 @@
 /**
- * C2 / E5 / C16-N1 — powiadomienie testowe na własne urządzenie (JWT użytkownika).
- * Body: { subscription_id: uuid }. Wysyłka od razu; CORS (OPTIONS) jak web-push-vapid-public.
- * Odpowiedź: { ok, status, reason?, sent_at }.
+ * C2 / E5 / C16-N1+N3 — powiadomienie testowe na własne urządzenie (JWT użytkownika).
+ * Body: { subscription_id: uuid }. Wysyłka od razu; CORS; nid/ack dla potwierdzenia.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
 import { corsHeaders, corsJson, corsPreflight } from '../_shared/cors.ts';
+import { signPushAck } from '../_shared/pushAck.ts';
 import {
   pushFailReasonOf,
   pushServiceHost,
@@ -76,11 +76,20 @@ Deno.serve(async (req) => {
   }
 
   webpush.setVapidDetails(subject, pub, priv);
+  const sid = String(sub.id);
+  const nid = `test:${sid}:${Date.parse(sentAt) || Date.now()}`;
+  const ack = await signPushAck(nid, sid, priv);
+  const ackUrl = `${url.replace(/\/$/, '')}/functions/v1/web-push-ack`;
   const payload = JSON.stringify({
     title: 'Watch Tower',
     body: 'Powiadomienie testowe',
     url: '/#/opcje?panel=device',
     tag: 'push-test',
+    nid,
+    sid,
+    ack,
+    ack_url: ackUrl,
+    timestamp: Date.now(),
   });
   const host = pushServiceHost(sub.endpoint);
   try {
@@ -90,6 +99,11 @@ Deno.serve(async (req) => {
       { urgency: 'high', TTL: 60 },
     );
     const status = typeof res?.statusCode === 'number' ? res.statusCode : 201;
+    await admin.from('push_subscriptions').update({
+      last_ok_at: sentAt,
+      last_error: null,
+      last_seen_at: sentAt,
+    }).eq('id', sub.id);
     console.log(JSON.stringify({ event: 'web-push-test', ok: true, status, host }));
     return corsJson({ ok: true, status, sent_at: sentAt });
   } catch (e) {
@@ -102,6 +116,9 @@ Deno.serve(async (req) => {
       reason,
       host,
     }));
+    await admin.from('push_subscriptions').update({
+      last_error: `push_${status ?? reason}`,
+    }).eq('id', sub.id);
     if (reason === 'gone') {
       await admin.from('push_subscriptions').delete().eq('id', sub.id);
     }

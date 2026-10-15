@@ -2437,3 +2437,53 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **C2 NA PRODUKCJI — commit `e49285c5`, wdrożenie `dpl_BGubwMaao7NTm9wauFLPcShYkTQr`, 15.10.2026 ~19:00.** Następne: C3–C15.
 
+## 2026-10-15 — C16-N1 NA PRODUKCJI (BLOKER C2 / D-20261015-1955-01)
+
+- Przyczyna: przycisk testu → tylko `OPTIONS … web-push-test → 405` (brak CORS), zero POST.
+- PR #227 → `2b9c3679` (`d3fde479`): CORS, `{ ok, status, reason, sent_at }`, `urgency: high`, `TTL: 60`, kod z `e.statusCode`.
+- PR #226 → `0f5075ef` (wyglad/push-telefon): ekran „Sprawdź ten telefon”, powód porażki, badge-96; dopisek D-20261015-1955-01.
+- Edge `web-push-test` wdrożona (prod) ~20:37; aplikacja `dpl_GQnkaNkuBj4TeXNrg8y1br8vCDvj` ~20:40; JS `assets/index-CUhhGQCv.js`; tower / makieta **200**; 0 × `service_role` (20 plików JS).
+- unit: `push-fail-reason` 2/2 (+ HMAC w N2); CI unit/visual/db #227 zielone; `npm audit` 0.
+- PLAN: C16 przed C3; W42 = e-mail; W43 iPhone; W24 czeka do odbioru C16 na S24.
+- Czas plan ~0,5 h N1; poprawki: 0.
+- **Następne:** C16 N2–N8 (send/ack/fallback/sw/sync/migracja 0219).
+
+**C16-N1 NA PRODUKCJI — 20:37 (funkcja) / 20:40 (aplikacja), właściciel może testować S24.** commit `0f5075ef`, wdrożenie `dpl_GQnkaNkuBj4TeXNrg8y1br8vCDvj`.
+
+- **W24 (Android S24) dostarczone 15.10.2026, 20:50** — właściciel: powiadomienie odebrane w telefonie (N1; pełny odbiór C16 po N3 z `delivered_at` / „Doszło na urządzenie”). iPhone = W43.
+
+## 2026-10-15 — C16 N2–N8 TEST
+
+- **TEST zajęte: C16 N2–N8**, od 15.10.2026 21:16 — security, status, nullguard, c16-push, risks na `a82ccc9e` (PR #229, migracja 0219).
+
+### C16 N2–N8 — TEST (0219) przed poprawkami przeglądu
+
+| zestaw | wynik |
+|---|---|
+| prep | ok |
+| security | 84/84 (+2 SKIP) |
+| status | 44/44 |
+| c16-push | 10/10 |
+| risks | 25/25 (+2 SKIP) |
+| nullguard | 161+136+216+124 = 637/637 |
+
+SHA TEST: `b5e65f4c`. Potem poprawki przeglądu (sw click/openWindow, HMAC `nid\|sid`, `verify_jwt=false`) → `ee689452`.
+
+### C16 N2–N8 — TEST na `ee689452` (przed scaleniem #229)
+
+| zestaw | wynik |
+|---|---|
+| prep | ok |
+| security | 84/84 (+2 SKIP) |
+| status | 44/44 |
+| c16-push | 10/10 |
+| nullguard | 161+136+216+124 = 637/637 |
+| doradca security TEST | 167 zgłoszeń, **0 nowych** |
+
+CI #229 na `ee689452`: unit / visual / `db` zielone; `npm audit --omit=dev --audit-level=high` 0.
+**TEST wolne** od 15.10.2026 23:32.
+
+| punkt | zrobione / odbiór |
+|---|---|
+| C16 N2–N8 TEST | zrobione 23:32 — security 84, status 44, c16-push 10, nullguard 637, doradca 0 nowych; commit `ee689452` |
+
