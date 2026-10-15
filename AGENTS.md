@@ -100,7 +100,7 @@ System kontroli transportów konstrukcji stalowych ponadnormatywnych Śrem → G
 - **Resend** — żadnej wysyłki poza testem na adres właściciela (adres `sebastian@log-mar.pl` i numer z `sms_test_numbers`, migracja 0176 — `ROZSTRZYGNIECIA_LUK.md` G-14).
 - **Vercel, Cloudflare** — odczyt stanu i logów; zmiany tylko z planu.
 - **Nowa usługa zewnętrzna:** najpierw regulamin (użytek komercyjny, śledzenie pojazdów, przechowywanie); wykluczenie = STOP. Dotyczy też odczytu linku RIO (E44, P4 — `PLAN.md` §4).
-- **Przełączniki wysyłki** (`EXTERNAL_MESSAGING`, tryb testowy SMS E42, e-maile w „Kto co dostaje”) zmienia tylko właściciel.
+- **Przełączniki wysyłki** (`EXTERNAL_MESSAGING`, tryb testowy SMS E42) zmienia tylko właściciel. Macierz „Kto co dostaje” zmienia Administrator HHL (E5, decyzja 07.10 12:52; D-20261015-0300-01 E); włączenie wysyłki do prawdziwych odbiorców spoza HHL (KSH, SCX) — dalej W6.
 - **SharePoint:** synchronizacja w obie strony według E38 dopiero po dostępie od działu IT KSH (`PLAN.md` §5 W13, `ROZSTRZYGNIECIA_LUK.md` L41). Do tego czasu tylko ręczne wgranie pliku według E38. Wiersze spoza filtru „Przewoźnik = HH” pomijane tak jak przy imporcie (L43). Od decyzji właściciela 09.10.2026, 13:09: daty i godziny załadunku i rozładunku zmienia i potwierdza tylko KSH (w Watch Tower) i plik KSH; po dostępie W13 zmiana KSH w Watch Tower trafia do pliku, a zmiana w pliku — do Watch Tower (`ROZSTRZYGNIECIA_LUK.md` G-20, dopisek D-20261009-1309-01 R6).
 
 ## 7. Język
