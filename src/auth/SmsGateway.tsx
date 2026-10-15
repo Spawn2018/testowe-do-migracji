@@ -3,6 +3,7 @@ import { getSupabase } from './client';
 import { authErrorPl } from './config';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
+import { groupPhone } from '../lib/phoneDisplay';
 import './auth.css';
 
 /**
@@ -91,7 +92,7 @@ export default function SmsGateway() {
         </form>
         <div className="panel-bd flush" data-sms="test-numbers">
           {nums.map((n) => (
-            <div className="auth-admin-row" key={n.to_e164}><span className="grow"><b>{n.label}</b> · …{n.to_e164.slice(-3)}</span>
+            <div className="auth-admin-row" key={n.to_e164}><span className="grow"><b>{n.label}</b> · {groupPhone(n.to_e164)}</span>
               <button className="chipbtn" type="button" disabled={busy} onClick={() => call('sms_send_test', { p_to: n.to_e164 }, t(locale, 'i3_test_sent'))}>{t(locale, 'i3_test_send')}</button></div>
           ))}
         </div>
@@ -104,7 +105,7 @@ export default function SmsGateway() {
                 {when(o.created_at)} · <b>{o.kind}</b> · {o.status}
                 {o.sent_at ? ` · SENT ${when(o.sent_at)}` : ''}
                 {o.delivered_at ? ` · DELIV ${when(o.delivered_at)}` : o.status === 'SENT' ? ` · ${t(locale, 'i3_await_deliv')}` : ''}
-                {' · …'}{o.to_e164.slice(-3)}
+                {' · '}{groupPhone(o.to_e164)}
                 {o.attempts > 1 ? ` · ×${o.attempts}` : ''}
                 {o.fallback_at ? ` · ${t(locale, 'i3_fallback')}` : ''}
                 {o.error ? ` · ${o.error}` : ''}

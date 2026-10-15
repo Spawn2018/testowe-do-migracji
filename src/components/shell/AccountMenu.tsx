@@ -16,6 +16,7 @@ import { openOptionsScreen } from '../../lib/openOptions';
 import type { Locale, RoleId } from '../../types';
 import { formatListDateTime } from '../../lib/format';
 import { getNow } from '../../lib/frozenNow';
+import { groupPhone } from '../../lib/phoneDisplay';
 
 const PREVIEW_ROLES: RoleId[] = ['HHL', 'KSH', 'SCX'];
 const DEMO_KIND: Record<RoleId, string> = { HHL: 'HHL_ADMIN', KSH: 'CLIENT_USER', SCX: 'CARRIER_DISPATCH' };
@@ -53,14 +54,6 @@ function kindShort(locale: Locale, userRole: string): string {
 function kindLong(locale: Locale, userRole: string): string {
   const k = `p3a_long_${userRole}`;
   return hasKey(locale, k) ? t(locale, k) : t(locale, `a6_role_${userRole}`);
-}
-
-/** „+48 600 100 123” → „+48 ••• ••• 123” (E37: numer częściowo ukryty). */
-function maskPhone(e164: string): string {
-  const digits = e164.replace(/[^\d]/g, '');
-  if (digits.length < 6) return e164;
-  const cc = e164.startsWith('+') ? `+${digits.slice(0, 2)}` : digits.slice(0, 2);
-  return `${cc} ••• ••• ${digits.slice(-3)}`;
 }
 
 /** „dziś, 07:58” albo „07.10, 18:20” (E21). */
@@ -102,7 +95,7 @@ export function AccountMenu() {
   const userRole = profile?.role ?? DEMO_KIND[role];
   const orgName = profile?.org_name || ROLE_META[role].name;
   const contact = [
-    profile?.phone ? t(locale, 'p3a_acc_tel').replace('{tel}', maskPhone(profile.phone)) : profile?.email ?? '',
+    profile?.phone ? t(locale, 'p3a_acc_tel').replace('{tel}', groupPhone(profile.phone)) : profile?.email ?? '',
     profile?.last_sign_in_at ? t(locale, 'p3a_acc_last').replace('{when}', lastLogin(locale, profile.last_sign_in_at)) : '',
   ].filter(Boolean).join(' · ');
   const switchView = canSwitchView();
