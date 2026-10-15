@@ -2504,3 +2504,19 @@ CI #229 na `ee689452`: unit / visual / `db` zielone; `npm audit --omit=dev --aud
 
 **C16 NA PRODUKCJI — 456a7a14, 23:52; właściciel: test S24 z potwierdzeniem.**
 
+## 2026-10-16 — wygląd P5-b / P5-c / P6-c / P6-d NA PRODUKCJI (F2)
+
+| punkt | zrobione / odbiór |
+|---|---|
+| #222 wyglad/P5-b | scalone `668e00ea`; dpl `dpl_3MdW736TrSGugPp2kdarLVnLWbED` ~00:10; tower/makieta 200 |
+| #225 wyglad/P5-c | scalone `3d20f53a`; dpl `dpl_9zVg9fWHNcMUGS6VZsycee3ftxBX` ~00:12; tower/makieta 200 |
+| #228 wyglad/P6-c | scalone `fd5562ff`; dpl `dpl_8Zn7b5LUwhjXeYot2aAFodPNFGD8` ~00:14; tower/makieta 200 |
+| #230 wyglad/P6-d | scalone `d6fc9ae8`; dpl `dpl_BfZ9gPTzdhMpbw5ZMKqNe5Jmpqb2` ~00:17; dopisek C17 w repo; tower/makieta 200 |
+
+unit + visual zielone przed każdym scaleniem; `npm audit` 0. #209/#231 (P7) — sobota (D-20261015-0130-01).
+
+**wyglad/P5-b NA PRODUKCJI — 668e00ea.**  
+**wyglad/P5-c NA PRODUKCJI — 3d20f53a.**  
+**wyglad/P6-c NA PRODUKCJI — fd5562ff.**  
+**wyglad/P6-d NA PRODUKCJI — d6fc9ae8.**
+

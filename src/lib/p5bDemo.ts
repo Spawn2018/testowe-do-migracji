@@ -101,7 +101,7 @@ export const demoDwellRules = (): DwellRulesView => ({
 
 export const demoCancelRules = (): CancelRulesView => ({
   pct: { 5: 0, 4: 15, 3: 25, 2: 25, 1: 50, 0: 100 },
-  example: { label: 'SG', costEur: 6900, revEur: 7245 },
+  example: { label: 'SG', costEur: 6900, revEur: 7300 },
   changed: { at: '2026-10-08T12:14:00+02:00', by: 'Administrator HHL' },
 });
 
