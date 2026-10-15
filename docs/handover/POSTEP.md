@@ -2368,3 +2368,19 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Konflikt / nakładanie z gałęzią `pakiet/P4-k2-h3-r6` (PR #203): **nie rozwiązywałem** (D-20261014-2300-01); #207 weszło na `main` merge’em; rebase P4 na nowy `main` — poza tą paczką (koordynator przenosi wygląd na main).
 
 **wyglad/P6-b NA PRODUKCJI — commit `adeda6e7`, wdrożenie `dpl_DQ5qsdYwuib3m5sXHLSGWMC3FZoy`, 15.10.2026 00:14.**
+
+## 2026-10-15 — Poprawki audyt A (D-20261015-0300-01 / D-0330) NA PRODUKCJI
+
+- Dopiski: D-20261015-0300-01 (A1–A6), D-20261015-0330-01 (A2 widoczność, W35–W40), D-20261015-0400-01 (P6 E2 po C1) — włączane w PR dokumentów.
+- PR #212 → `fa840b51` (migracje 0207–0213 + testy); PR #215 → `034a993d` (fix 0207 alias `fr`, 0211 wyłącza append-only przy korekcie SG-03).
+- TEST (przed wdrożeniem): security **84**, status **44**, e41 **36**, e25 **26**, nullguard **161+136+212+123**; CI `db` / `unit` / `visual` zielone na #215.
+- Kopia przed produkcją: `D:\Watch Tower\dane\audyt-A\kopia-audyt-a-2026-10-15T03-50-07-263Z.json`, SHA256 `3dfc8a23e04678bda846e15439052b2d0e8c3ad8ce46591048e052ec83ad32d7`.
+- Produkcja: ROLLBACK OK → `supabase db push` (pooler) 0207–0213; weryfikacja: Orlen w `fuel_index_readings`, SG-03 DELIVERED `2026-10-07 12:19:54` Europe/Warsaw, `has_column_privilege(authenticated, loads.order_*)` = false.
+- W39 SELECT (po A): `notification_matrix` `LOAD_STATUS × HHL_ADMIN` = `in_app=true, email=false, push=false` (już cofnięte).
+- Wdrożenie aplikacji z `main` `034a993d`: `dpl_HPasjkw4nWBTeY5w2AVF93dLW8eN`, JS `assets/index-BmAE31XS.js`, oba adresy 200, 0 × `service_role` (27 plików JS).
+- PR #210 (raport Zmiany 11.10/15.10) scalony → `6c8971a3` przed PR dokumentów.
+- Czas plan ~5 h A; poprawki migracji/testów (#215) wliczone.
+
+**POPRAWKI-AUDYT-A NA PRODUKCJI — commit `034a993d`, migracje 0207–0213, wdrożenie `dpl_HPasjkw4nWBTeY5w2AVF93dLW8eN`, 15.10.2026 06:11.**
+
+**CZEKA NA WŁAŚCICIELA: W37 — emtrack: nowe dane logowania od SCX (sekrety `EMTRACK_LOGIN` / `EMTRACK_PASSWORD`).**

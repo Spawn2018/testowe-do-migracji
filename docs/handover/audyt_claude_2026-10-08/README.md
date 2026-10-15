@@ -23,7 +23,7 @@ Ten folder zawiera wynik audytu Watch Tower (07–08.10.2026), decyzje właścic
 
 ## Stan na 08.10.2026
 - Etapy E1–E45 zdecydowane; E36 zamknięty w E9; E44 czeka na linki podwykonawców (`PLAN.md` §5 W14; po ich dostarczeniu wchodzi jako uzupełnienie — `ROZSTRZYGNIECIA_LUK.md` L55). *[09.10.2026: nieaktualne — link RIO jest, E44 w P4; niżej „Zmiana 09.10.2026, 14:11”]*
-- E46–E48 (wydajność, błędy aplikacji, OWASP) — zlecone przez właściciela 13:26; progi według `UZGODNIENIE_08_10.md` pkt 5.
+- E46–E48 (wydajność, błędy aplikacji, OWASP) — zlecone przez właściciela 13:26; progi według `UZGODNIENIE_08_10.md` pkt 5; **zaakceptowane 15.10.2026, 03:12 (W40)**.
 - Czekają na dane od właściciela (nie są odłożone jego decyzją): dostęp do pliku SharePoint od działu IT KSH (W13), linki podwykonawców (W14 — *zamknięte 09.10*), oficjalne API emtrack (W15) — `PLAN.md` §5.
 - **Zmiana 09.10.2026, 01:20 (audyt kompletu):** przywrócone decyzje właściciela w rozstrzygnięciach, termin liczony od startu pracy, brama niedzielna — `ROZSTRZYGNIECIA_LUK.md` (nagłówek) i `PLAN.md` §8.
 - **Zmiana 09.10.2026, 14:11 (decyzje właściciela 09.10: 10:34–11:19, 12:33, 13:09):**

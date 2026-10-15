@@ -9,7 +9,7 @@ Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower 
 ## §0. Cel, termin, źródła
 
 - **Cel:** kompletna aplikacja Watch Tower według audytu 07–08.10.2026, na produkcji `tower.log-mar.pl`, gotowa do pierwszego prawdziwego transportu od importu do faktury (R-3) i wydania `release-1.0`.
-- **Termin: 4 dni pracy** (właściciel 08.10 14:43: 4 dni na zbudowanie kompletnej aplikacji). **Dzień 1 = dzień, w którym właściciel uruchamia sesję 0** (zapowiedziany start: niedziela 11.10.2026). Przy starcie 11.10: Dzień 1 = niedziela 11.10, Dzień 2 = poniedziałek 12.10, Dzień 3 = wtorek 13.10, Dzień 4 = środa 14.10. **Wydanie `release-1.0`: koniec Dnia 4, 20:00** (przy starcie 11.10: 14.10.2026, 20:00); granica terminu: koniec Dnia 4, 23:59 (4 h zapasu). Datę wydania potwierdza właściciel (§5 W17); do jego odpowiedzi obowiązuje koniec Dnia 4, 20:00. Punkty kontrolne w §3.
+- **Termin:** wydanie `release-1.0` w czwartek **22.10.2026, 20:00**; granica 23:59 (decyzja właściciela 15.10.2026, 03:12, W35 — „podaj i zastosuj osiągalną datę”; zastępuje »4 dni«, »koniec Dnia 4« i W17). Dzień 1 = 12.10.2026 (Zmiany 11.10). Punkty kontrolne w §3.
 - **Źródła, w tej kolejności przy sprzeczności:**
   1. `docs/handover/wzorzec/01_KONSTYTUCJA.md` (ze zmianami z 08.10.2026 i 13.10.2026);
   2. `docs/handover/audyt_claude_2026-10-08/`:
@@ -18,7 +18,7 @@ Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower 
      - `etapy/E<nr>.md` — co zbudować;
      - `raport/img/` i decyzje w `raport/index.html` — wygląd (`makiety_html/` pomocniczo);
      - `paczki/` — szczegółowe zlecenia paczek;
-     - razem z dopiskami włączonymi do planu (`docs/handover/dopiski/`: D-20261008-1646-01, D-20261009-0015-01, D-20261009-1233-01, D-20261009-1309-01, D-20261011-2135-01, D-20261011-2254-01, D-20261012-0105-01) — przy sprzeczności ze starszym zapisem obowiązuje nowsza decyzja właściciela (08.10 13:26, 14:43; 11.10 21:35);
+     - razem z dopiskami włączonymi do planu (`docs/handover/dopiski/`: m.in. D-20261008-1646-01 … D-20261015-0300-01, D-20261015-0330-01, D-20261015-0400-01) — przy sprzeczności ze starszym zapisem obowiązuje nowsza decyzja właściciela (08.10 13:26, 14:43; 11.10 21:35; 15.10 03:12);
   3. ten plik — kolejność pracy, zakres paczek, sposób;
   4. `docs/handover/wzorzec/03_REJESTR_DECYZJI.md` — starsze decyzje, tylko tam, gdzie audyt milczy;
   5. kod w repozytorium — opis stanu dzisiejszego, nie wzór docelowy.
@@ -46,7 +46,7 @@ Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower 
    7. `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` zwracają 200;
    8. wpis w `POSTEP.md`.
 4. **Testy idą za decyzjami.** Test sprzeczny z decyzją etapu bieżącej paczki przepisujesz w tej paczce według decyzji; w komentarzu podajesz numer etapu i decyzji. Nigdy nie zmieniasz aplikacji po to, żeby przeszedł stary test. Lista testów do przepisania jest przy każdej paczce.
-5. **Wygląd według raportu audytu.** Wygląd = raport audytu (`raport/index.html` + `raport/img/`), najnowsza decyzja wygrywa; `makiety_html/` pomocniczo; dowód w `docs/handover/odbior/P<n>/` (konstytucja VIII, WYGLAD-RAPORT, D-20261013-1535-01 Z). Wygląd robi koordynator na gałęziach `wyglad/*` (FRONT-KOORDYNATOR, D-20261013-1835-01 F1–F3); tabelę Z3 i dowód Z4 / Z11 robi koordynator w PR `wyglad/*`; PR Cursora potwierdza brak zmian wyglądu (F3 pkt 4). Cursor nie zmienia klas, znaczników, stylów ani tekstów elementów koordynatora. Zmiana wyglądu ekranu z listy paczki jest przewidziana i nie jest powodem do zatrzymania. Z1–Z6 (D-20261013-1535-01); Z8–Z12 z D-20261013-1550-01 mają pierwszeństwo przed Z7 i przed słowem „ról” w Z4:
+5. **Wygląd według raportu audytu.** Wygląd = raport audytu (`raport/index.html` + `raport/img/`), najnowsza decyzja wygrywa; `makiety_html/` pomocniczo; dowód w `docs/handover/odbior/P<n>/` (konstytucja VIII, WYGLAD-RAPORT, D-20261013-1535-01 Z). Wygląd robi koordynator na gałęziach `wyglad/*` (FRONT-KOORDYNATOR, D-20261013-1835-01 F1–F3); tabelę Z3 i dowód Z4 / Z11 robi koordynator w PR `wyglad/*`; PR Cursora potwierdza brak zmian wyglądu (F3 pkt 4). Cursor nie zmienia klas, znaczników, stylów ani tekstów elementów koordynatora. **Wygląd koordynatora sprawdza przed scaleniem osobny agent kontrolny, który nie robił tej pracy (F7, E10; D-20261015-0300-01 E).** Nocnej bramy wizualnej nie ma (W32) — W11 i P11 pkt 6: odświeżenie 280 ujęć w GitHub Actions. Zmiana wyglądu ekranu z listy paczki jest przewidziana i nie jest powodem do zatrzymania. Z1–Z6 (D-20261013-1535-01); Z8–Z12 z D-20261013-1550-01 mają pierwszeństwo przed Z7 i przed słowem „ról” w Z4:
    - **Z1.** Wzorzec: `docs/handover/audyt_claude_2026-10-08/raport/index.html` i obrazy `raport/img/` (ta sama treść co artefakt „Audyt Watch Tower”); etapy `etapy/E*.md`; `makiety_html/` tylko pomocniczo — przy różnicy z `raport/img/` wygrywa `raport/img/`.
    - **Z2.** Gdy źródła mówią co innego, wygrywa najnowsza decyzja właściciela (zielone ramki „Twoje decyzje”, „Zmiana 09.10”, sekcje „Zmiany 09.10 / 11.10”, dopiski), potem obraz „po zmianie”, potem tekst propozycji. Różnicę zapisujesz w opisie PR.
    - **Z3.** Przed pierwszym commitem paczki, która zmienia ekran, w opisie PR jest tabela: ekran, etap, obraz z `raport/img/`, decyzje z datą, co robi ta paczka, co zostaje innej paczce (której). Ekran innej paczki zostaje bez zmian, chyba że PLAN mówi inaczej. Przy miejscu bez własnego obrazu wpisujesz punkt Z10.
@@ -117,7 +117,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Cursor scala te PR i wdraża (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **P3-d — dane ekranów Opcji (J3 pkt 2–11)** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; Poprawki P2 — wygląd: `pakiet/P2-wyglad`, D-20261013-1535-01 V1–V4; Poprawki P2 — wygląd 2: koordynator `wyglad/P2-2`, D-20261013-1815-01 W1–W7 — przed scaleniem P3; Poprawki P3: `pakiet/P3-poprawki`, D-20261014-0015-01 — przed wdrożeniem P4 z migracją; P3-d zaraz po P4 — D-20261014-1420-01 R7)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** → **P3-d — dane ekranów Opcji (J3 pkt 2–11)** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; Poprawki P2 — wygląd: `pakiet/P2-wyglad`, D-20261013-1535-01 V1–V4; Poprawki P2 — wygląd 2: koordynator `wyglad/P2-2`, D-20261013-1815-01 W1–W7 — przed scaleniem P3; Poprawki P3: `pakiet/P3-poprawki`, D-20261014-0015-01 — przed wdrożeniem P4 z migracją; Poprawki P2–P3 (audyt 15.10): D-20261015-0300-01 C1–C15 + D-20261015-0330-01 C14–C15 — po zamknięciu P4, przed P3-d; P3-d zaraz po Poprawkach P2–P3 — D-20261014-1420-01 R7)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -125,14 +125,21 @@ Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08
 
 Zależności (kolejność je spełnia; lista do kontroli): wszystkie paczki po P0a; bramę końcową P1, P2 i P3 robisz po scaleniu P0b (kodować możesz wcześniej) · P3 scalasz po P2, po Poprawkach P2 — wygląd i po Poprawkach P2 — wygląd 2 (`wyglad/P2-2`; wspólne pliki paska, nazwy E41 i formatów E21 — rebase przed bramą końcową) · P4 po P2 i P3 · P5 po P4 · P6 po P3 i P4 · P7 po P5 i P6 · P8 po P3 i P4 · P9 po P2 i P4 · P10a po P0b (push alarmów podłączasz po scaleniu P3) · P10b po P3 i P10a · P11 po wszystkich.
 
-**Punkty kontrolne (czas polski; Dzień 1 według §0):**
-| Kiedy | Ma być |
+**Punkty kontrolne (czas polski):**
+| Kiedy | Ma być na produkcji |
 |---|---|
-| koniec Dnia 1, 23:59 (przy starcie 11.10: niedziela 11.10) | P0a i P0b scalone; pełna brama TEST z odbioru P0b zielona (= brama niedzielna 11.10); P1 z zielonym checkiem `db` (D-86) |
-| po wdrożeniu P2 | koordynator liczy z czasów w `POSTEP.md` prognozę dla P3–P11 i ustala dopiskiem kolejne punkty kontrolne |
-| koniec Dnia 4, 20:00 (przy starcie 11.10: środa 14.10) | P11, pełna brama TEST, regeneracja 280 ujęć, `release-1.0` (data według W17) |
+| pt 16.10, 20:00 | A (blokery); B — PR #203 scalony, P4 zamknięte; commit włączający D-20261015-0300-01 i D-20261015-0330-01 / D-20261015-0400-01; PR #210 scalony; C — Poprawki P2–P3 |
+| sob 17.10, 23:59 | D-20261015-0130-01 (PR #209); strażnik tekstów E21 pkt 7 (D-0300 D, P11 — „przed P5”); P3-d; P5 |
+| nd 18.10, 23:59 | brama niedzielna (pełny TEST na `main`); P6 z W38 |
+| pn 19.10, 23:59 | P7; P8 |
+| wt 20.10, 23:59 | P10a; P9 |
+| śr 21.10, 23:59 | P10b; P11 w toku (agent kontrolny, axe, przegląd ról) |
+| czw 22.10, 20:00 | P11: pełna brama TEST, 280 ujęć, `release-1.0` |
 
-**Reguła cięcia:** gdy punkt kontrolny jest spóźniony o ponad 4 h albo prognoza po P2 pokazuje, że P11 nie zmieści się do końca Dnia 4, 20:00 (albo do daty z W17), koordynator przedstawia właścicielowi pozycje do przeniesienia do PO 1.0 (najpierw lista „Rezerwa”, §6 część 4). Decyduje właściciel; po jego decyzji koordynator wysyła dopisek. Wykonawca sam nie tnie zakresu.
+- Wygląd koordynatora (`wyglad/*`) do danej paczki jest gotowy przed jej punktem kontrolnym; scalasz go jak dotąd.
+- Test E22 („tydzień bez nowych błędów »stara wersja«”) kończy się 7 dni po wdrożeniu P10a (ok. 27.10) — wynik dopisuje koordynator po wydaniu (jak w W17).
+
+**Reguła cięcia:** gdy punkt kontrolny jest spóźniony o ponad 4 h, koordynator przedstawia właścicielowi pozycje do przeniesienia do PO 1.0 (najpierw lista „Rezerwa”, §6 część 4). Decyduje właściciel; po jego decyzji koordynator wysyła dopisek. Wykonawca sam nie tnie zakresu.
 
 **Brama niedzielna (GATE-WEEKLY, zasada z 04.10 — obowiązuje):**
 - W każdą niedzielę, na `main`, pełna brama TEST w częściach: `scripts/test-db-gate-step.mjs` (jedno zadanie max 40 min) + `scripts/test-db-gate-summary.mjs`, wyniki w `tmp-gate/wyniki.json`; zielone tylko przy jednym commicie i jednej wersji migracji.
@@ -330,7 +337,27 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - na TEST przejazd SG-03 kończy się „Dostarczone 12:19” — na śladzie zmyślonym (G-17), a po zgodzie W25 także na prawdziwych pozycjach;
   - pełna trasa Śrem → Boden z symulowanymi pozycjami: każdy status raz, właściwy kafelek, prawdziwa godzina.
 
+### Poprawki P2–P3 (audyt 15.10) — DO ZROBIENIA
+Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01). Gałąź `pakiet/poprawki-p2-p3-audyt-15`.
+- **C1** zalew dzwonka E5 — ryzyko bez `load_id` bez IN_APP/EMAIL/WEB_PUSH; bez nowych RISK_RESOLVED; cel `/transport/brak` nie powstaje; WEB_PUSH tylko krytyczne z transportem (+ E5-5 źródła); jednorazowo nieprzeczytane RISK_* bez transportu → przeczytane. **Przed** `tower-road-pl` (P6 E2).
+- **C2** `sw.js` push/notificationclick; `web-push-send` z celem; przełącznik z `push_subscriptions`; „Wyślij powiadomienie testowe”.
+- **C3** macierz powiadomień po zdarzeniu (nie 5 grup); jeśli `LOAD_STATUS × HHL_ADMIN` `email=true` → `false` (W39).
+- **C4** ustawienia z „było → jest” (`old_value`); alerty stref/ryzyk → profil lub usunięte.
+- **C5** nazwa transportu w funkcjach bazy = `shipment_code` / `transport_label`; KSH bez numeru zlecenia.
+- **C6** teksty spraw z serwera (E21): daty, pogoda, AUTO_STATUS bez UUID.
+- **C7** role E9 w bazie; zestaw `e9-role`.
+- **C8** Opcje HHL_OPS: pola nieaktywne, 0 × 403; `security_flags_list()`.
+- **C9** testy bezpieczeństwa E19 pkt 6 (Przeczytali, anon, v_load_price_client, …).
+- **C10** `my_profile`: `real_full_name`, `last_sign_in_at`.
+- **C11** warunek „konto bez telefonu E.164” (pasek — koordynator).
+- **C12** `KshDatesModal`: `DOC_MISSING` jak `preLoading`.
+- **C13** lista kluczy starej Instrukcji do POSTEP (teksty — koordynator).
+- **C14** (D-0330): `security-advisor-snapshot` czyta `ADVISOR_MGMT_TOKEN`; `advisor_ok=false` → `integration_runs.ok=false`.
+- **C15** (D-0330): po 3× `login_failed` emtrack → 1 próba / 6 h; jedna sprawa `SOURCE_DOWN:EMTRACK_WEB`.
+- **Odbiór:** brama `db`, TEST (`risks`, `security`, `e41`, `e9-role`, `nullguard`, dotknięte), doradca TEST i produkcja.
+
 ### P5 · Pieniądze i dokumenty — DO ZROBIENIA
+- **D1** (D-20261015-0300-01 D): tabela symboli właściciela w bazie (`WYMIARY_PILOT_ZEZWOLENIA.md`) — przeniesiona z P7; status ZEZW-13 / B-3a / D-83: „dane są od 07.10 — wprowadzić”.
 - **E31** dokumenty, zezwolenia, polisy:
   - CMR tylko z rozładunku, usunięcie wymogu CMR z załadunku i jego alarmów;
   - „Firma” podpięte samo, „Trasa” (KR) ręcznie;
@@ -372,9 +399,19 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - **podpowiedzi dopłat** (G-22, D-20261009-1309-01 R8): pozycja „Do zrobienia” dla HHL (część przychodowa) i dla SCX (część kosztowa) otwiera okno „Dopłata” z P5; „Nie dodaję” zamyka pozycję tej firmy z wpisem w Historii; dopłata dodana przez SCX → pozycja HHL „Akceptuję / Odrzucam”.
 - **8.4 alternatywne przeprawy** w „Sytuacji na trasie” według `ROZSTRZYGNIECIA` E7-5 (D-45, L-9, FERRY-STATUS). Najpierw sprawdzasz, co z L-9 już działa (`RisksView`, `sailings`); brakującą część budujesz.
 - **E6 (karta decyzji):** „Biorę tę sprawę”, „Oddaj”, „Przejmij” (E6-5), „Zadzwoń”.
-- **E2** drogi PL z HERE:
-  - panel PL w „Sytuacji na trasie”, odświeżanie co 15 min;
-  - usunięcie KPD (E2-1); próg jak dla dróg SE (E2-2).
+- **E2 drogi PL z HERE** (decyzja 07.10, 12:23; D-20261015-0400-01):
+  - zadanie `tower-road-pl` co 15 minut, jak `tower-road-se` — **dopiero po wdrożeniu C1** („Poprawki P2–P3 (audyt 15.10)”, zalew dzwonka); ok. 3 000 zapytań HERE Traffic w miesiącu, w darmowej puli;
+  - `road-pl` tylko z HERE, bez KPD (E2-1); stan źródła i próg w Stanie systemu jak dla dróg SE (E2-2, E23-2);
+  - `roadPlOf()` w produkcji czyta otwarte sytuacje HERE z `risk_signals` (`kind = 'ROAD_PL'`, źródło `HERE_TRAFFIC_PL`), w tym samym kształcie co drogi SE; zakazy ruchu (`TIME_BAN:PL:…`) zostają osobno jako informacja (decyzja 07.10, 15:55);
+  - kategoria drogowa, nie `OPS` (E2 „Kategoria”): `ROAD_PL` w `mappers.ts` jak `ROAD_SE`; filtry i liczby na stronie Ryzyka liczą drogi PL razem z drogami;
+  - zasady E5 (13:21): sytuacja bez przypisanego transportu — tylko strona Ryzyka, bez dzwonka, e-maila i telefonu; przy transporcie — tylko sytuacje jeszcze przed pojazdem;
+  - odbiór (E2 „Sprawdzenie”): po wdrożeniu w `integration_runs` przebiegi `road-pl` co 15 minut, licznik HERE Traffic rośnie, panel „Drogi PL” pokazuje dane albo „brak utrudnień”; test w zestawie `risks`: sytuacja PL bez transportu → 0 wpisów w dzwonku;
+  - teksty i wygląd panelu bez zmian (koordynator). Gdy dane wymagają innego układu, wpis w `POSTEP.md` — poprawka w `wyglad/*`.
+- **W38 Podgląd z prawdziwymi uprawnieniami** (decyzja właściciela 15.10.2026, 03:12; D-20261015-0330-01):
+  - Podgląd = „Działaj jako” w trybie tylko do odczytu: `impersonation_state.read_only`; przełącznik „HHL · KSH · SCX” tylko HHL (Administrator i Operacje); start: pierwsze aktywne konto KSH Użytkownik / SCX Dyspozytor; HHL Operacje tylko `read_only`;
+  - `current_app_*` = konto docelowe (RLS jak to konto); każdy zapis w `read_only` → odmowa `assert_not_preview()` („Podgląd — nic tu nie zapiszesz”);
+  - „Wróć do HHL” kończy impersonację; po odświeżeniu Podgląd trwa; dziennik bezpieczeństwa start/koniec; stary przełącznik tylko ukrywający elementy znika;
+  - testy: `e9-role` + „Podgląd KSH: odczyt jak KSH, zapis → odmowa”; P11 pkt 2: w Podglądzie KSH API bez numerów, kosztu i marży.
 - **E17** panel transportu (Historia dopłat — wyzwalacz na `load_agreed_fees` buduje P5 z E33; P6 tylko wyświetla):
   - Status / Historia / Czat (Czat HHL–SCX; KSH pisze do wszystkich);
   - profil trasy ukryty; nazwy zdarzeń (E17-2);
@@ -384,6 +421,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - matryca `ryzyka` (uchwyt `[data-panel="ferry"]` zostaje); `etap6-ui.spec.ts` l.29–33;
   - `notify-dedup`, `click-targets`, `risk-keys`, `l8-cockpit-tiles`, `decision-access`, `i2-facade`;
   - zestawy `risks`, `dec2`, `dec3`, `dec5`, `dec6`, `dec-auto`, `backup`.
+- **Z D-20261015-0300-01 D (P6):** przydział „Biorę / Oddaj / Przejmij” dla każdej sprawy z zapisem; zezwolenie wygasające przed załadunkiem → Do zrobienia SCX; „Działaj jako” w `load_events`/`audit_log` (`real_actor` / `acting_as`); komunikaty spraw zamkniętych / innej firmy; status w panelu (plan, kamienie, źródło) — dane Twoje, wygląd `wyglad/P6-c`.
 - **Ekrany — wygląd:** `wyglad/P6-a` (PR #205; Ryzyka E7 — „Do zrobienia” / karta sprawy E6 / „Sytuacja na trasie”; telefon z zakładkami); `wyglad/P6-b` (PR #207; panel transportu — Historia i Czat E17, Przegląd: profil trasy ukryty, piloci, prom i stan awizacji). Dane pod wygląd: `src/lib/p6Source.ts` według D-20261014-2145-01 T1–T6; `src/lib/p6bSource.ts` według D-20261014-2300-01 H1–H4 — w P6 razem z E17 (bez zmiany klas i tekstów wyglądu, F1).
 - **Odbiór:**
   - sekcja „Test” E17; testy z punktów E7 (G-02);
@@ -545,7 +583,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W14 | Linki śledzenia od podwykonawców SCX (E44, L55) | — | **ZAMKNIĘTE 09.10.2026**: link RIO jest (10:34), dane automatycznie (10:54), zgody na piśmie i nowy link na każdy przejazd (11:19) — E44 w P4 (G-24) |
 | W15 | Oficjalne API emtrack (TELM-2, II-4, D-TELM-ETA) i API Stena (D-LATER); do tego czasu odczyt jak dziś (`emtrack-web`, źródło STENA) | gdy będzie | czeka |
 | W16 | Kody opóźnień uzgodnione z SCX (II-2) — po spotkaniu z SCX | gdy będą | czeka |
-| W17 | Data wydania `release-1.0`: koniec Dnia 4 (przy starcie 11.10 — 14.10.2026) czy inna. Test E22 („tydzień bez nowych błędów »stara wersja«”) kończy się 7 dni po wdrożeniu P10a; przy wcześniejszym wydaniu jego wynik koordynator dopisuje do R-4 po 7 dniach (E22-2) | przed P11 | czeka |
+| W17 | Data wydania `release-1.0` | przed P11 | **zamknięte 15.10.2026, 03:12 — zastąpione przez W35 (22.10, 20:00)** |
 | W18 | Decyzja: e-CMR (6.9), kanał zespołowy Slack/Teams (9.9), kalendarz do subskrypcji (9.10), raport śladu węglowego (10.9), retencja `files/` w R2 (lista „Etap III” starego planu) — w 1.0 czy po 1.0. Od 27.09 „do decyzji właściciela”, decyzji nie było; do decyzji nie są budowane | gdy zdecydujesz | czeka |
 | W19 | H-10 (D-84: porywy 15 m/s, silny wiatr wydłuża ETA): o ile wydłużać ETA i które źródło serii wiatru drogowego przyjąć (wykonawca w P4 wpisuje tu, co sprawdził) | po P4 | czeka |
 | W20 | D-18: czy wysłać armatorom e-mail z prośbą o zgodę na odczyt komunikatów (odczyt działa bez zgody od 29.09) | — | **ZAMKNIĘTE 09.10.2026, 13:09**: „mamy wszystkie zgody każdego z armatorów” — nic nie przygotowujesz i nie wysyłasz (D-18 ✅, D-20261009-1309-01 R2) |
@@ -560,9 +598,15 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W29 | Ta sama data lub godzina zmieniona w pliku KSH i w Watch Tower między synchronizacjami — co wygrywa. Do odpowiedzi: plik; KSH dostaje informację w dzwonku (D-20261009-1309-01 R6 pkt 6) | przed „P7 — uzupełnienie W13” | czeka |
 | W30 | Czy zablokować Administratorowi HHL zmianę dat i godzin w „Działaj jako” konto KSH (decyzja 13:09 „tylko KSH” a konstytucja VI.5 „może wykonać każdą czynność za każde konto”). Do odpowiedzi: nie blokujemy — zapis jako konto KSH, w dzienniku prawdziwy wykonawca (D-20261009-1309-01 R6 pkt 3) | przed P3 | czeka |
 | W31 | „Data załadunku” w pliku KSH jest w 28 wierszach formułą „dostawa − 5 dni” (plik z 08.10). Gdy KSH zmieni w Watch Tower datę załadunku takiego transportu: nadpisać formułę wartością czy zostawić formułę (wtedy zmiana nie trafi do pliku). Do odpowiedzi: wartość zastępuje formułę — decyzja 13:09 jest nowsza niż „formuł nie zmienia” z 12:50 (D-20261009-1309-01 R6 pkt 5) | przed „P7 — uzupełnienie W13” | czeka |
-| W32 | Nocna brama wizualna nie działa na tym komputerze (P0-CI pkt 8). Na czym działa — inny komputer, agent w chmurze (np. Cursor, Codex, Claude), coś innego? Czy dalej ma co noc działać? | gdy zdecydujesz | czeka — do odpowiedzi: bez zmian, tylko raportuje; jej brak nie wstrzymuje pracy (zrzuty przed scaleniem sprawdza `visual`, D-87; D-20261011-2254-01) |
+| W32 | Nocna brama wizualna nie działa na tym komputerze (P0-CI pkt 8) | — | **zamknięte 15.10.2026** (D-20261015-0300-01 E): bez nocnej bramy; 280 ujęć w GitHub Actions (W11 / P11 pkt 6); zrzuty przed scaleniem = `visual` (D-87) |
 | W33 | Windows na komputerze wykonawcy nie instaluje aktualizacji od 11.11.2025 (26100.7171; najnowsza dla 24H2: 26100.9550 z 22.09.2026) — komputer z kluczami produkcji. Naprawa wymaga ok. 25 GB wolnego na C:. Kiedy? | po wydaniu (P11) | czeka — do odpowiedzi: po wydaniu (P11) (D-20261011-2135-01) |
 | W34 | GitHub Actions: joby nie startują — „recent account payments have failed or your spending limit needs to be increased” (Billing & plans). Blokuje checki PR #184 (Poprawki P3) i dalsze bramy. STOP §1 pkt 12.2 (wydatek / limit poza decyzjami planu). | przed scaleniem Poprawek P3 | **dostarczone 14.10.2026, 01:55** (właściciel: GitHub Actions działa) |
+| W35 | Termin wydania `release-1.0` | — | **rozstrzygnięte 15.10.2026, 03:12**: czwartek 22.10.2026, 20:00 (D-20261015-0330-01) |
+| W36 | Token do odczytu doradcy „security” — sekret Edge `ADVISOR_MGMT_TOKEN` (nie `SUPABASE_*`) | przed C14 / P10a | **dostarczone 15.10.2026, 03:42** (właściciel: „W36 gotowe”) |
+| W37 | emtrack: nowe dane logowania od SCX — właściciel podmienia sekrety `EMTRACK_LOGIN` i `EMTRACK_PASSWORD` (Supabase › Edge Functions › Secrets, produkcja) i pisze „W37 gotowe” | przed pierwszym transportem ze śledzeniem | czeka — dane od SCX (D-20261015-0330-01) |
+| W38 | „Podgląd” z prawdziwymi uprawnieniami firmy | przed P6 | **rozstrzygnięte 15.10.2026, 03:12: TAK** — P6 (D-20261015-0330-01) |
+| W39 | `LOAD_STATUS × HHL_ADMIN` e-mail w „Kto co dostaje” | teraz | **rozstrzygnięte 15.10.2026, 03:12: cofnąć**; stan 15.10 ~06:11: `email=false` (już wyłączone) |
+| W40 | Uzgodnienie pkt 2–3 i E46–E48 | — | **zaakceptowane 15.10.2026, 03:12** (D-20261015-0330-01) |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0, rezerwa
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -648,3 +692,6 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 14.10.2026 20:05 | D-20261014-2005-01: wyglad/P5 (PR #201) — scalenie i wdrożenie wyglądu; dane S1–S5 w P5 (`p5Source.ts`: Finanse, Faktury, paczka E40, Dokumenty, Ceny/dopłaty); PLAN §4 P5 Ekrany | koordynator; wykonawca |
 | 14.10.2026 21:45 | D-20261014-2145-01: wyglad/P6-a (PR #205) — scalenie i wdrożenie wyglądu Ryzyk; dane T1–T6 w P6 (`p6Source.ts`: jedna liczba, reguły E7, osoby/przydział E6, sytuacja na trasie, dopłaty/L14, porządki); PLAN §4 P6 Ekrany | koordynator; wykonawca |
 | 14.10.2026 23:00 | D-20261014-2300-01: wyglad/P6-b (PR #207) — scalenie i wdrożenie wyglądu Historii i Czatu (E17); dane H1–H4 w P6 razem z E17 (`p6bSource.ts`: historia z bazy, czat widoczność/odczyty, piloci/wymiary, porządki E18); PLAN §4 P6 Ekrany + Odbiór | koordynator; wykonawca |
+| 15.10.2026 03:00 | D-20261015-0300-01: blokery A1–A6; B (domknięcie P4); Poprawki P2–P3 C1–C13; D/E do §4 przyszłych paczek; §5 (numery potem W35–W40 wg D-0330) | koordynator; wykonawca |
+| 15.10.2026 03:30 | D-20261015-0330-01: W35 wydanie 22.10 20:00; W36–W40; C14/C15; Podgląd → P6; PR #210 | właściciel 03:12; koordynator |
+| 15.10.2026 04:00 | D-20261015-0400-01: P6 E2 drogi PL z HERE — `tower-road-pl` dopiero po C1 | właściciel 03:52; koordynator |
