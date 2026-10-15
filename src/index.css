@@ -1550,6 +1550,14 @@ img,video{max-width:100%;height:auto}
 .sax-ft{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--rule)}
 .sax-who{font-size:12.5px;color:var(--ink-3)}
 .sax-change{flex-shrink:0;border-color:var(--ink)}
+/* wyglad/P6-c (E17, img/e17-after): plan z różnicą pod godziną, kamienie milowe pod statusem, oznaczenia przy aktualnym */
+.sax-plan{margin-top:2px;font-size:12px;color:var(--go);white-space:nowrap}
+.sax-plan.late{color:var(--red)}
+.sax-row.skipped .sax-plan,.sax-row.pending .sax-plan{color:var(--ink-3)}
+.sax-ms{list-style:none;margin:5px 0 0;padding:0 0 0 10px;border-left:2px solid var(--rule)}
+.sax-ms li{font-size:12.5px;line-height:1.45;color:var(--ink-2)}
+.sax-marks{display:inline-flex;flex-wrap:wrap;gap:4px}
+.sax-marks:empty{display:none}
 
 .etab{margin:0 0 10px;padding:10px 14px;border:1px solid var(--rule);background:var(--surface)}
 .etab-lbl{font-family:var(--font-cond);font-weight:600;font-size:11.5px;letter-spacing:.08em;color:var(--ink-3)}
