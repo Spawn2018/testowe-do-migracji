@@ -100,7 +100,12 @@ describe('B5 readyGaps piloci z symbolu', () => {
       mimeType: 'application/pdf', sizeBytes: 1, uploadedAt: '2026-10-01', status: 'UPLOADED',
     } as Document];
     const gaps = computeReadyGaps(baseLoad({
-      permit: { plPilotsRequired: 1 } as Load['permit'],
+      permit: {
+        pozycja: 'x', lp: 1, zestaw: { L: 20, W: 3, H: 3, masa_max_t: 40 },
+        plStatus: 'OK', plCategory: 'NORMATIVE', plCategoryLabel: 'normatywne',
+        plPilotsRequired: 1, plOver: [], sePath: 'NONE', seNotes: [],
+      },
+      permitFits: true,
       resources: { ...baseLoad().resources, escort: false, escortPlate: null },
     }), docs);
     expect(gaps.some((g) => g.kind === 'PILOTS')).toBe(true);
