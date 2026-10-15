@@ -1,5 +1,5 @@
 /* Watch Tower — PWA (§14). CACHE bump przy każdej zmianie precache / offline. */
-const CACHE = 'wt-static-v2026-10-05-push';
+const CACHE = 'wt-static-v2026-10-15-c2-push';
 const PRECACHE = [
   '/',
   '/offline.html',
@@ -63,4 +63,37 @@ self.addEventListener('fetch', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
+/* C2 / E5 — powiadomienie na telefon: tytuł, treść, tag; klik → cel z payload.url */
+self.addEventListener('push', (event) => {
+  let data = { title: 'Watch Tower', body: '', url: '/', tag: 'wt' };
+  try {
+    if (event.data) data = { ...data, ...event.data.json() };
+  } catch { /* treść pusta */ }
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Watch Tower', {
+      body: data.body || '',
+      tag: data.tag || 'wt',
+      data: { url: data.url || '/' },
+      renotify: true,
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const raw = (event.notification.data && event.notification.data.url) || '/';
+  const target = new URL(raw, self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const c of clients) {
+        if ('focus' in c) {
+          void c.navigate(target);
+          return c.focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(target);
+    }),
+  );
 });
