@@ -1560,7 +1560,8 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
     await expect(page.locator('.drawer [data-awiz-state]')).toHaveAttribute('data-awiz-state', 'none');
     await expect(page.locator('.drawer [data-po-set]')).toContainText('× 2,50 m');
     await expect(page.locator('.drawer [data-po-permit-kind="FIRMA"]')).toBeVisible();
-    await expect(page.locator('.drawer [data-order="hhl"] [data-hhl-order-btn]')).toBeVisible();
+    /* E32 pkt 2 / E9 krok 5: numer HHL wpisuje HHL w „Numerach zleceń”, bez okna Awizacja */
+    await expect(page.locator('.drawer [data-order="hhl"] input')).toBeVisible();
     await expect(page.locator('.drawer [data-awiz-open]')).toHaveCount(0);
     await expect(page.locator('.drawer [data-awiz-fix]')).toHaveText('Popraw awizację');
     await expect(page.locator('.drawer [data-action="export-load-pdf-map"]')).toBeVisible();

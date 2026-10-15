@@ -34,11 +34,11 @@ Osoby, telefony (pula fikcyjna +48 000 000 0xx) i piloci (WX 0000x, ABC 00x) są
 | mapa | zoom 11 / cała trasa z powodem (E1) | dzisiejsza mapa transportu | nie | E1 — P9 (PLAN §4 P7: „P7 jej nie zmienia”) |
 | Plan i ETA | „czw 08.10.2026 · godzina nie podana”, miejsce, „z harmonogramu KSH · import 01.10, 21:43”, „KSH może zmienić do wjazdu na załadunek”, ETA „–” do wyjazdu | to samo; po zmianie dat „zmienił Imię Nazwisko // Firma, …”; bez „potwierdził” bez osoby; ETA — blok E15 | tak | ETA jako blok E15 (img/e15-after), do którego odsyła E32 pkt 4; „Jak działa” z E15 |
 | Awizacja (bez kierowcy) | „Awizacja · uzupełnia SCX BRAK”, Kierowca —, Ciągnik · naczepa — · —, Link —, Rejs „wybiera SCX z rozkładu w awizacji” | to samo; przy części „BRAKUJE n” | tak | przycisk: SCX „Uzupełnij awizację” / „Edytuj awizację”, HHL „Popraw awizację” (demo) |
-| Kierowcy i zestaw | odcinki PL / SE z „Zadzwoń”, odcinek „teraz” wyróżniony; naczepa, link „wpisany”, rejs | to samo (E6); jeden kierowca — „Kierowca · odbiór i dostawa · Śrem → Boden” | tak | telefon według `visibleDriverPhone` jak dotąd |
-| piloci | tylko „PL + SE” (KR, PL-B): pilot PL, pilot SE | wiersze „Pilot PL / SE” — „brak · uzupełnia SCX” albo numer i nazwisko (K-03) | tak | produkcja po P3 dopisku |
+| Kierowcy i zestaw | odcinki PL / SE z „Zadzwoń”, odcinek „teraz” wyróżniony; naczepa, link „wpisany”, rejs | to samo (E6); bez przepięcia jeden kierowca — „Kierowca · odbiór i dostawa · Śrem → Boden” | tak | telefon według `visibleDriverPhone` jak dotąd |
+| piloci | tylko „PL + SE” (KR, PL-B): pilot PL, pilot SE; przy „BRAK” nigdzie | wiersze „Pilot PL / SE” — „brak · uzupełnia SCX” albo numer i nazwisko (K-03); stara lista „Pojazdy pilotujące” (`EscortPanel`) usunięta z panelu | tak | produkcja po P3 dopisku (`load_escorts` 0 wierszy — nic nie znika) |
 | Ładunek i zestaw | „Słupy główne · SG · 7 szt. · 20,44 t”, wymiary ładunku, „Zestaw z ładunkiem 21,69 × 2,45 × 3,75 m [Zmień] z Twojej tabeli (SG) · zmienia HHL”, „FIRMA podpina się samo” | to samo; „z tabeli HHL (SG)” albo „wpisane przy transporcie”; „TRASA wgrywa SCX do transportu” przy KR | tak, bez „Zmień” | „Zmień” po zapisie dla HHL (dopisek P2 pkt 3) |
-| Numery zleceń | HHL „brak [Dodaj]”, SCX „brak · wpisuje SCX” | to samo; SCX wpisuje swój numer w miejscu; KSH bez sekcji (E41) | tak | — |
-| Dokumenty | „Zezwolenie PL, SE — brak · po terminie”, „CMR z załadunku — do 2 h po załadunku”, „Polisa SCX …”, „Dokumenty →” | to samo z wymagań E31 (P5); „niezgodne z zestawem” przy `permitFits = false` | tak | polisa HHL — w zakładce Dokumenty |
+| Numery zleceń | HHL „brak [Dodaj]”, SCX „brak · wpisuje SCX” | HHL i SCX wpisują swój numer w miejscu, bez okna Awizacja i bez kompletnej awizacji (E9 krok 5); „Dodaj” w Do zrobienia przenosi do pola; KSH bez sekcji (E41) | tak | ten sam zapis `setOrderNo` co dotąd |
+| Dokumenty | „Zezwolenie PL, SE — brak · po terminie”, „CMR …”, „Polisa SCX …”, „Dokumenty →” | wymagania E31 (P5): „Firma” — jeden wiersz „Zezwolenie firmowe”, „Trasa” — „Zezwolenie PL, SE” (G-01c, L30); CMR według wymagania z bazy — „CMR z podpisem odbiorcy · po rozładunku” (E31 1B; obraz e32-after ma starsze „CMR z załadunku”, decyzja wygrywa — Z2); „niezgodne z zestawem” przy `permitFits = false` | tak | polisa HHL — w zakładce Dokumenty, nazwa „OC przewoźnika — PZU” (Uzgodnienie pkt 3) |
 | znika | „Kontrola trasy”, „Przeszkody”, profil trasy, czerwony baner zezwolenia, „potwierdził KSH” | nie ma | tak | klucz fasady `permitNumber` usunięty (I-2: 9 → 8) |
 | PDF | „PDF transportu (+ mapa)” | to samo | tak | — |
 
@@ -46,7 +46,7 @@ Osoby, telefony (pula fikcyjna +48 000 000 0xx) i piloci (WX 0000x, ABC 00x) są
 
 | element | obraz raportu / decyzja | po zmianie w aplikacji | zgodne | uwagi |
 |---|---|---|---|---|
-| nagłówek | „Awizacja · SG-15 brak nr SCX załadunek czw 08.10 · Śrem” | to samo | tak | — |
+| nagłówek | „Awizacja · SG-15 brak nr SCX załadunek czw 08.10 · Śrem” | to samo — nazwa według firmy (E41: SCX „kod · nr SCX”, HHL „kod · nr HHL”) | tak | linia „Konwój” też z nazwami |
 | „Brakuje” | „Brakuje: kierowca, telefon, ciągnik, naczepa. Pilne od 07.10, 12:00 (12 h przed dniem załadunku).” | to samo, liczone na bieżąco z pól okna; z godziną z planu „(12 h przed załadunkiem)” jak `l3_anchor` | tak | komplet — „Awizacja kompletna.” |
 | odcinek kierowcy | „KIEROWCA · ODBIÓR I DOSTAWA · ŚREM → BODEN”: imię i nazwisko, telefon „PL ▾”, ciągnik | to samo; przy przepięciu „ODCINEK PL · ŚREM → PROM” i „ODCINEK SE · PROM → BODEN” | tak | puste pola z czerwoną krawędzią |
 | naczepa, przepięcie | „NACZEPA (JEDNA NA CAŁĄ TRASĘ)”, „Przepięcie naczepy — po zaznaczeniu pojawia się …” | to samo | tak | — |
@@ -55,7 +55,7 @@ Osoby, telefony (pula fikcyjna +48 000 000 0xx) i piloci (WX 0000x, ABC 00x) są
 | numery | „NR ZLECENIA SCX” (wymagane), „NR ZLECENIA HHL — wpisuje HHL” szare | to samo | tak | KSH bez numerów |
 | piloci | „Piloci 2 BRAKUJĄ”, opis z zestawu, konwój, „PILOT PL · ŚREM → GDAŃSK” i „PILOT SE · NYNÄSHAMN → BODEN”: numer rejestracyjny, imię i nazwisko | to samo (K-03); konwój KR z tą samą datą — jedna linia i zapis dla wszystkich kodów | tak | „Tabela HHL” zamiast „Twoja tabela” (okno widzi SCX) |
 | stopka | „Można zapisać część …”, „Anuluj”, „Zapisz” | to samo | tak, tekst | zapis części — dopisek P1 pkt 3 |
-| KSH | tylko ogląda (E32 pkt 6) | pola wyłączone, „Awizację robi SCX. Ty ją oglądasz.”, „Zamknij” | tak | wejście tylko z adresu `?zakladka=awizacja` |
+| KSH, HHL Operacje | tylko oglądają (E32 pkt 6) | pola wyłączone, „Awizację robi SCX. Ty ją oglądasz.”, „Zamknij”; HHL Administrator poprawia (`canFixAwizOf`, w produkcji po P4 dopisku) | tak | KSH wchodzi tylko z adresu `?zakladka=awizacja` |
 
 ### Telefon (E32 pkt 9, E8) — `porownanie-e32-telefon.png`
 
@@ -95,4 +95,5 @@ Osoby, telefony (pula fikcyjna +48 000 000 0xx) i piloci (WX 0000x, ABC 00x) są
 - Brama E8: nowy blok P7-a (komputer HHL, SCX, KSH; telefon HHL, SCX, KSH przy 360 / 390 / 430 / 768 px, także sekcje rozwinięte i okno Awizacja) — 4 / 4. Cały zestaw Playwright: poza 3 testami nie przechodzącymi tak samo na `main` (lokalne czcionki w zrzutach `visual` i `visual-states`, `d19-i18n` — „lang missing: en”) — zielony; w GitHub Actions decyduje `visual`.
 - Pierwsze wczytanie: 382,8 kB gzip (budżet 400 kB); Przegląd ładuje się leniwie.
 - Przepisane testy: `e2e-core` (awizacja: „Uzupełnij / Edytuj awizację”, „Awizacja · …”), `aud03-ksh-panel` (test: „Edytuj” w Przeglądzie; spec: „Plan” rozwijany na telefonie), `i2-facade` (rejestr 8 kluczy), `e8-phone-gate` P4-c (sekcja „Awizacja” rozwijana na telefonie).
-- Przegląd niezależny (agent bez udziału w pracy): 1 blokada (fałszywe „Polisa HHL: brak” w produkcji) i 6 uwag — poprawione: polisa jak w zakładce Dokumenty, termin od godziny załadunku, odcinek SE bez przepięcia, „Dodaj” tylko przy sprawie numeru HHL, wiersz zezwolenia z brakującego, KSH tylko ogląda; zapis części i definicja L3_AWIZ — dopisek P1.
+- Przegląd niezależny (agent bez udziału w pracy): 1 blokada (fałszywe „Polisa HHL: brak” w produkcji) i 6 uwag — poprawione: polisa jak w zakładce Dokumenty, termin od godziny załadunku, „Dodaj” tylko przy sprawie numeru HHL, wiersz zezwolenia z brakującego, KSH tylko ogląda; zapis części i definicja L3_AWIZ — dopisek P1.
+- Pełny audyt decyzji właściciela 15.10 (9 agentów, artefakt „Audyt Watch Tower”) — w tym PR poprawione: CMR według E31 1B, zezwolenie według „Firma” / „Trasa”, numer HHL w polu (bez okna Awizacja), okno tylko do odczytu dla HHL Operacje, odcinek SE tylko przy przepięciu, stara lista pilotów usunięta, nazwa E41 w oknie, nazwa polisy HHL. Reszta — dopisek D-20261015-0300-01.

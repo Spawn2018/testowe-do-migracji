@@ -42,7 +42,7 @@ const PanelChat = lazy(lazyRetry(() => import('./PanelChat').then((m) => ({ defa
 const PanelOverview = lazy(lazyRetry(() => import('./PanelOverview').then((m) => ({ default: m.PanelOverview }))));
 const CarrierRating = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/CarrierRating')) : null;
 /* III-4 — pojazdy pilotujące z bazy (load_escorts): tylko build Supabase; w Przeglądzie do czasu pilotów w awizacji (P7) */
-const EscortPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/EscortPanel')) : null;
+/* E32 (zmiana 09.10): stara lista pilotów (EscortPanel) nie pokazuje się — piloci tylko w awizacji przy „PL + SE” (D-20261015-0130-01 P3) */
 
 type Tab = 'overview' | 'timeline' | 'history' | 'docs' | 'pricing' | 'chat';
 
@@ -271,7 +271,6 @@ export function LoadDrawer() {
                   siteSince={statusAxis.current === 'APPROACHING_SITE' ? statusAxis.currentSince : null}
                   delayMin={delayMin}
                   mapNode={<CorridorMap loads={drawerMapLoads} embedded slot="drawer" />}
-                  escortNode={EscortPanel && isServerId(load.id) && (role === 'SCX' || role === 'KSH') ? <Suspense fallback={null}><EscortPanel key={load.id} loadId={load.id} /></Suspense> : null}
                   ratingNode={CarrierRating && (role === 'HHL' || role === 'SCX') && isServerId(load.id) ? <Suspense fallback={null}><CarrierRating key={load.id} loadId={load.id} /></Suspense> : null}
                   onAwiz={() => setAwizOpen(true)}
                   onKshDates={() => setKshDatesOpen(true)}

@@ -23,7 +23,8 @@ import { getNowIso } from '../../lib/frozenNow';
 import { trackingLinkOf } from '../../lib/p4cSource';
 import { TrackingLinkField } from './TrackingLinkField';
 import { awizDeadline, awizMissing, convoyOf, dayShort, dmHm, NO_PILOTS, pilotsMissingCount, type Pilots } from '../../lib/p7Awiz';
-import { pilotsOf, savePilotsOf, symbolSpecOf } from '../../lib/p7Source';
+import { canFixAwizOf, pilotsOf, savePilotsOf, symbolSpecOf } from '../../lib/p7Source';
+import { transportLabel } from '../../lib/transportName';
 import { pt, ptp } from '../../i18n/p7';
 import type { Load } from '../../types';
 import './p7.css';
@@ -175,13 +176,13 @@ export function AwizacjaModal({ load, onClose }: Props) {
     pilotsOn ? pil : null,
   );
   const deadline = awizDeadline(load.plannedLoadDate, nowIso, load.planDates?.loadFrom ?? null);
-  const twoSeg = trailerSwap || !!(driverDeliveryName || driverDeliveryPhone || tractorDeliveryPlate);
-  /* E32 pkt 6: KSH tylko ogląda awizację (wejście z adresu `?zakladka=awizacja`) */
-  const readOnly = role === 'KSH';
+  /* E6: odcinek SE tylko przy przepięciu naczepy */
+  const twoSeg = trailerSwap;
+  /* E32 pkt 6: SCX robi, HHL Administrator poprawia (canFixAwizOf), HHL Operacje i KSH tylko oglądają */
+  const readOnly = role === 'KSH' || (role === 'HHL' && !canFixAwizOf(role));
   const missText = missing.map((m) => pt(locale, `p7_miss_${m}`)).join(', ');
   const pilotsMiss = pilotsMissingCount(missing);
   const setPilot = (side: 'pl' | 'se', key: 'plate' | 'name', v: string) => setPil((x) => ({ ...x, [side]: { ...x[side], [key]: v } }));
-  const scxMissing = role === 'SCX' && !(load.carrierOrderNo ?? '').trim();
 
   return (
     <>
@@ -195,8 +196,12 @@ export function AwizacjaModal({ load, onClose }: Props) {
       >
         <header className="panel-hd am-hd">
           <h2 id="awiz-title" className="am-title">
-            {ptp(locale, 'p7_m_title', { code: load.code })}
-            {scxMissing ? <span className="am-miss"> {pt(locale, 'p7_hd_miss_scx')}</span> : null}
+            {(() => {
+              /* E41: nazwa transportu według firmy („SG-15 brak nr SCX” — brak na czerwono) */
+              const label = transportLabel(load, role, 'panel');
+              const m = / (brak nr (?:HHL|SCX))$/.exec(label);
+              return m ? <>{ptp(locale, 'p7_m_title', { code: label.slice(0, m.index) })}<span className="am-miss"> {m[1]}</span></> : ptp(locale, 'p7_m_title', { code: label });
+            })()}
             <span className="am-sub">{` ${ptp(locale, 'p7_m_load', { day: dayShort(load.plannedLoadDate) })}`}</span>
           </h2>
           <button type="button" className="iconbtn" aria-label={t(locale, 'close')} onClick={onClose}>✕</button>
@@ -372,7 +377,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
               </p>
               {convoy.length ? (
                 <p className="am-convoy" data-awiz-convoy={convoy.length}>
-                  {ptp(locale, 'p7_m_convoy', { day: dayShort(load.plannedLoadDate), codes: convoy.map((l) => l.code).join(', ') })}
+                  {ptp(locale, 'p7_m_convoy', { day: dayShort(load.plannedLoadDate), codes: convoy.map((l) => transportLabel(l, role)).join(', ') })}
                 </p>
               ) : null}
               {(['pl', 'se'] as const).map((side) => (

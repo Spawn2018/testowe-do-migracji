@@ -25,7 +25,7 @@ import { SITES } from '../../lib/status';
 import { effArrival, effDeparture, fmtLocal, sailingStatusLabel } from '../../lib/sailings';
 import { getDocReqCache } from '../../lib/docReqCache';
 import { DEFAULT_DOC_REQUIREMENTS, docStatusRows } from '../../lib/docRequirements';
-import { reqVisible } from '../../lib/p5Docs';
+import { cmrKind, reqVisible } from '../../lib/p5Docs';
 import { policiesOf } from '../../lib/p5Source';
 import { trackingLinkOf } from '../../lib/p4cSource';
 import { EtaBlock } from './EtaBlock';
@@ -50,8 +50,6 @@ interface Props {
   siteSince: string | null;
   delayMin: number | null;
   mapNode: ReactNode;
-  /** dzisiejsza lista pilotów z bazy (produkcja, SCX i KSH), dopóki piloci nie wejdą do awizacji */
-  escortNode: ReactNode;
   ratingNode: ReactNode;
   onAwiz: () => void;
   onKshDates: () => void;
@@ -135,11 +133,19 @@ export function PanelOverview(p: Props) {
     peopleOf: () => null, historyOf: () => null, onTake: noop, onGive: noop, onTakeover: noop, confirmId: null, onConfirm: noop,
     onCancelConfirm: noop, onGo: noop, onFee: noop, checkHandlers: () => ({}), decisions: null, mayResolve: () => false, onResolved: noop,
   };
+  /* E32 pkt 2, E9 krok 5: numer HHL wpisuje HHL w „Numerach zleceń”, bez okna Awizacja i bez kompletnej awizacji */
+  const goHhlNo = () => {
+    const fold = document.querySelector<HTMLDetailsElement>('.drawer details[data-po="numbers"]');
+    if (fold) fold.open = true;
+    const el = document.querySelector<HTMLInputElement>('.drawer [data-order="hhl"] input');
+    el?.scrollIntoView({ block: 'center' });
+    el?.focus();
+  };
   const action = (i: TodoIssue): ReactNode => {
     if (i.owner !== role) return <span className="po-chip">{ORG_SHORT[i.owner]}</span>;
     if (i.go === 'AWIZACJA') {
       if (role === 'SCX') return <button type="button" className="btn ghost" data-po-act="awiz" onClick={p.onAwiz}>{pt(locale, 'p7_todo_awiz')}</button>;
-      if (role === 'HHL' && i.risk?.titleKey?.startsWith('rk_order_no_hhl') && !(load.hhlOrderNo ?? '').trim()) return <button type="button" className="btn" data-po-act="hhl-no" onClick={p.onAwiz}>{pt(locale, 'p7_todo_add')}</button>;
+      if (role === 'HHL' && i.risk?.titleKey?.startsWith('rk_order_no_hhl') && !(load.hhlOrderNo ?? '').trim()) return <button type="button" className="btn" data-po-act="hhl-no" onClick={goHhlNo}>{pt(locale, 'p7_todo_add')}</button>;
     }
     if (i.go === 'DOCS') return <button type="button" className="btn ghost" data-po-act="docs" onClick={() => p.onTab('docs')}>{pt(locale, 'p7_todo_upload')}</button>;
     if (i.go === 'PRICING' || i.go === 'FEE') return <button type="button" className="btn ghost" data-po-act="pricing" onClick={() => p.onTab('pricing')}>{pt(locale, 'p7_todo_prices')}</button>;
@@ -204,8 +210,8 @@ export function PanelOverview(p: Props) {
   const segNow = segmentNow(load);
   const hasDriver = !!(r.driverName ?? '').trim();
   const swap = !!r.trailerSwap;
-  /* dwa odcinki — ten sam warunek co w oknie Awizacja: przepięcie albo wpisany kierowca / ciągnik odcinka SE (E6) */
-  const twoSeg = swap || [r.driverDeliveryName, r.driverDeliveryPhone, r.tractorDeliveryPlate].some((v) => !!(v ?? '').trim());
+  /* dwa odcinki tylko przy przepięciu naczepy (E6: bez przepięcia jeden kierowca „odbiór i dostawa”) */
+  const twoSeg = swap;
   const driverCard = (seg: 'one' | 'PL' | 'SE', name: string | null | undefined, tel: string | null | undefined, tractor: string | null | undefined) => {
     const now = (seg === 'PL' && segNow === 'PL') || (seg === 'SE' && segNow === 'SE');
     const label = pt(locale, seg === 'one' ? 'p7_seg_one' : seg === 'PL' ? 'p7_seg_pl' : 'p7_seg_se');
@@ -256,8 +262,10 @@ export function PanelOverview(p: Props) {
   const rows = cached ? cached.status.filter((x) => x.loadId === load.id) : prod ? [] : docStatusRows([load], [...docs], reqs, Date.parse(nowIso));
   const doc = (c: string) => docs.find((d) => d.category === c && (d.status === 'UPLOADED' || d.status === 'MISMATCH') && !d.superseded);
   const row = (c: string) => rows.find((x) => x.category === c);
+  /* E31 (G-01c, L30): „Firma” — jedno zezwolenie firmowe wystarcza; „Trasa” — PL i SE przy transporcie */
+  const permitFirm = spec?.permit === 'FIRMA';
   const permitState: 'mismatch' | 'ok' | 'missing' = load.permitFits === false || docs.some((d) => d.category.startsWith('PERMIT') && d.status === 'MISMATCH')
-    ? 'mismatch' : doc('PERMIT_PL') && doc('PERMIT_SE') ? 'ok' : 'missing';
+    ? 'mismatch' : (permitFirm ? !!(doc('PERMIT_PL') ?? doc('PERMIT_SE')) : !!(doc('PERMIT_PL') && doc('PERMIT_SE'))) ? 'ok' : 'missing';
   const permitRows = [row('PERMIT_PL'), row('PERMIT_SE')].filter((x): x is NonNullable<typeof x> => !!x && x.state !== 'OK');
   const permitRow = permitRows.find((x) => x.state === 'OVERDUE')
     ?? [...permitRows].sort((a, b) => (a.dueAt ?? '9999').localeCompare(b.dueAt ?? '9999'))[0];
@@ -267,9 +275,10 @@ export function PanelOverview(p: Props) {
         : permitRow?.dueAt ? ptp(locale, 'p7_doc_due', { date: dmHm(permitRow.dueAt) }) : pt(locale, 'p7_doc_missing');
   const cmrDoc = doc('CMR');
   const cmrRow = row('CMR');
+  const cmrSigned = cmrKind(reqs.find((x) => x.category === 'CMR')) === 'SIGNED';
   const cmrState: 'ok' | 'over' | 'wait' = cmrDoc ? 'ok' : cmrRow?.state === 'OVERDUE' ? 'over' : 'wait';
   const cmrText = cmrState === 'ok' ? pt(locale, 'p7_doc_ok') : cmrState === 'over' ? pt(locale, 'p7_doc_over')
-    : cmrRow?.dueAt ? ptp(locale, 'p7_doc_due', { date: dmHm(cmrRow.dueAt) }) : pt(locale, 'p7_doc_cmr_after');
+    : cmrRow?.dueAt ? ptp(locale, 'p7_doc_due', { date: dmHm(cmrRow.dueAt) }) : pt(locale, cmrSigned ? 'p7_doc_cmr_after_unload' : 'p7_doc_cmr_after');
   const policies = policiesOf();
   const policyRow = (key: 'INSURANCE' | 'OCS') => {
     if (!reqVisible(key, role)) return null;
@@ -378,7 +387,6 @@ export function PanelOverview(p: Props) {
             </>
           ) : null}
         </dl>
-        {!spec ? p.escortNode : null}
         {awizBtn ? <div className="po-act" data-awiz-actions>{awizBtn}</div> : null}
       </Sec>
 
@@ -417,12 +425,9 @@ export function PanelOverview(p: Props) {
           <dl className="po-kv">
             <dt>HHL</dt>
             <dd data-order="hhl">
-              {hhlNo ? <b className="mono">{hhlNo}</b> : <span className="po-miss">{pt(locale, 'p7_num_missing')}</span>}
               {orderSide === 'HHL' ? (
-                <button type="button" className={`btn ${hhlNo ? 'ghost' : ''} po-inline`} data-hhl-order-btn onClick={p.onAwiz}>
-                  {pt(locale, hhlNo ? 'p7_num_edit' : 'p7_num_add')}
-                </button>
-              ) : !hhlNo ? <span className="po-muted">{` · ${pt(locale, 'p7_num_by_hhl')}`}</span> : null}
+                <OrderNoField key={`hhl-${load.id}`} value={load.hhlOrderNo} onSave={(v) => setOrderNo(load.id, 'HHL', v)} locale={locale} />
+              ) : hhlNo ? <b className="mono">{hhlNo}</b> : <><span className="po-miss">{pt(locale, 'p7_num_missing')}</span><span className="po-muted">{` · ${pt(locale, 'p7_num_by_hhl')}`}</span></>}
             </dd>
             <dt>SCX</dt>
             <dd data-order="scx">
@@ -442,9 +447,9 @@ export function PanelOverview(p: Props) {
         right={!phone ? <button type="button" className="linkbtn po-go" data-po-go="docs" onClick={() => p.onTab('docs')}>{pt(locale, 'p7_docs_go')} →</button> : null}
       >
         <dl className="po-kv">
-          <dt>{pt(locale, 'p7_doc_permit')}</dt>
+          <dt>{pt(locale, permitFirm ? 'p7_doc_permit_firm' : 'p7_doc_permit')}</dt>
           <dd data-permit={permitState}><span className={permitState === 'ok' ? 'po-ok' : 'po-miss'}>{permitText}</span></dd>
-          <dt>{pt(locale, 'p7_doc_cmr')}</dt>
+          <dt>{pt(locale, cmrSigned ? 'p7_doc_cmr_signed' : 'p7_doc_cmr')}</dt>
           <dd data-po-cmr={cmrState}><span className={cmrState === 'ok' ? 'po-ok' : cmrState === 'over' ? 'po-miss' : ''}>{cmrText}</span></dd>
           {pols.map((x) => (
             <Fragment key={x.key}>
