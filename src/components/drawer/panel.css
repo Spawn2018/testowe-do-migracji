@@ -26,6 +26,12 @@
 .pp-fee-tx{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:13.5px;color:var(--ink-2)}
 .pp-fee-tx b{color:var(--ink);font-size:14px}
 .pp-fee-act{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex:none}
+/* wyglad/P5-c (E33): odrzucenie dopłaty z powodem */
+.pp-rej{display:flex;flex-direction:column;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--rule-2)}
+.pp-rej-l{display:flex;flex-direction:column;gap:4px;color:var(--ink);font-size:13.5px}
+.pp-rej-l .input{width:100%;min-width:0}
+.pp-rej-act{display:flex;flex-wrap:wrap;gap:8px}
+.pp-rej-by{color:var(--ink-2);font-size:13.5px}
 .pp-tag-btn{padding:0;border:0;background:none;cursor:pointer}
 .pp-tag-btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .pp-rules{display:grid;grid-template-columns:minmax(110px,auto) 1fr;margin:0;font-size:13.5px}
@@ -64,6 +70,8 @@
   .pp-fee{flex-direction:column}
   .pp-fee-act{align-items:stretch;width:100%}
   .pp-fee-act .btn{min-height:44px;justify-content:center}
+  .pp-rej-l .input{min-height:44px;font-size:16px}
+  .pp-rej-act .btn{min-height:44px;flex:1 1 auto;justify-content:center}
   .pp-tag-btn{min-height:44px}
   .pp-card-hd{min-height:44px}
   .pp-rules{grid-template-columns:1fr}

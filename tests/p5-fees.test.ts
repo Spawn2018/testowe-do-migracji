@@ -14,8 +14,10 @@ describe('E33 — postój', () => {
   it('czas wolny 6 h na załadunku: 8 h 10 min → 3 rozpoczęte godziny × 75 = 225,00 EUR', () => {
     expect(dwellFee(490, 'LOAD')).toMatchObject({ overMin: 130, hours: 3, eur: 225 });
   });
-  it('powyżej 24 h — 750 EUR za każdą rozpoczętą dobę', () => {
+  it('powyżej 10 h (W41, 15.10 18:32; wcześniej 24 h) — 750 EUR za każdą rozpoczętą dobę', () => {
     expect(dwellFee(25 * 60, 'UNLOAD')).toMatchObject({ days: 2, eur: 1500 });
+    expect(dwellFee(12 * 60, 'LOAD')).toMatchObject({ days: 1, eur: 750 }); // 12 h > 10 h → doba zamiast 6 h × 75
+    expect(dwellFee(10 * 60, 'LOAD')).toMatchObject({ days: 0, hours: 4, eur: 300 }); // dokładnie 10 h → godziny
   });
   it('czas jako tekst', () => {
     expect([durText(224), durText(490), durText(45), durText(120)]).toEqual(['3 h 44 min', '8 h 10 min', '45 min', '2 h']);

@@ -16,6 +16,8 @@ import { getAuthProfile } from '../auth/profile';
 import { formatSeaRiskLabel } from '../lib/voyageSea';
 import { formatAppMoney } from '../lib/money/demoFx';
 import { aggregateTier } from '../lib/money/loadMoney';
+import { financeOf } from '../lib/p5Source';
+import { formatPlNumber } from '../lib/format';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { riskAsException, sortExceptions } from '../lib/prodDash';
 
@@ -101,6 +103,21 @@ export function DashboardView() {
     const rev = loads.reduce((a, l) => a + (l.pricing?.revTotal || 0), 0);
     const mar = loads.reduce((a, l) => a + (l.pricing?.margin || 0), 0);
     const agg = aggregateTier(loads, role);
+    /* wyglad/P5-c (E16): Kokpit HHL liczy marżę tym samym kodem co Finanse — suma marż ÷ suma przychodów transportów
+       z ceną, waluta jak w Finansach — oraz pokazuje liczbę transportów z ceną i bez ceny */
+    const fin = role === 'HHL' ? financeOf(loads, 'both') : null;
+    if (fin) {
+      const pln = currency === 'PLN' && fin.plnComplete && fin.nbpLatest != null;
+      const r = pln ? fin.total.rev.pln ?? 0 : fin.total.rev.eur;
+      const c = pln ? fin.total.cost.pln ?? 0 : fin.total.cost.eur;
+      return {
+        priced: fin.priced,
+        unpriced: fin.unpricedCodes.length,
+        pct: r > 0 ? (r - c) / r : null,
+        moneyText: `${formatPlNumber(r - c, 2)} ${pln ? 'PLN' : 'EUR'}`,
+        tierText: agg.tier ? t(locale, `tier_${agg.tier}`).toLowerCase() : t(locale, 'tier_PROGNOZA').toLowerCase(),
+      };
+    }
     return {
       pct: rev > 0 ? mar / rev : null,
       moneyText: formatAppMoney(mar, locale, currency),

@@ -417,7 +417,7 @@ const PL: Record<string, string> = {
   p5_pr_rule_free_v: 'załadunek {load} h · rozładunek {unload} h, od późniejszego z: wjazd do strefy, plan',
   p5_pr_rule_hour: 'Ponad czas wolny',
   p5_pr_rule_hour_v: '{eur} EUR za każdą rozpoczętą godzinę',
-  p5_pr_rule_day: 'Powyżej 24 h',
+  p5_pr_rule_day: 'Powyżej {h} h',
   p5_pr_rule_day_v: '{eur} EUR za każdą rozpoczętą dobę',
   p5_pr_rule_cancel: 'Anulowanie',
   p5_pr_rule_cancel_v: '% frachtu bez opłaty paliwowej: ≥ 5 dni {d5} · 4 dni {d4} · 3 dni {d3} · 2 dni {d2} · 1 dzień {d1} · dzień załadunku {d0}',
