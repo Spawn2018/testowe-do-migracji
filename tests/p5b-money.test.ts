@@ -138,9 +138,9 @@ describe('E33, E16 — Cennik i opłaty: procenty za anulowanie i próg marży',
     const h = html(createElement(RatesExtras, { locale: 'pl', cancel: demoCancelRules(), onCancelSave: ok, margin: null, onMarginSave: ok, readOnly: false }));
     expect((h.match(/data-pm-row="\d"/g) ?? []).length).toBe(6);
     expect(h).toContain('25 %');
-    expect(h).toContain('SG: 1 725,00 / 1 811,25 EUR');
-    expect(h).toContain('SG: 6 900,00 / 7 245,00 EUR');
-    expect(h).toContain('Przykład dla frachtu SG z cennika: koszt 6 900 EUR, przychód 7 245 EUR.');
+    expect(h).toContain('SG: 1 725,00 / 1 825,00 EUR');
+    expect(h).toContain('SG: 6 900,00 / 7 300,00 EUR');
+    expect(h).toContain('Przykład dla frachtu SG z cennika: koszt 6 900 EUR, przychód 7 300 EUR.');
     expect(h).not.toMatch(/\(E\d{1,2}\)|\(12:35\)/);
     expect(h).toContain('Próg marży');
     expect(h).toContain('nie ustawiony');
@@ -149,7 +149,7 @@ describe('E33, E16 — Cennik i opłaty: procenty za anulowanie i próg marży',
   it('bez przykładu z cennika — procenty bez kwot SG (nic na stałe w komponencie)', () => {
     const h = html(createElement(RatesExtras, { locale: 'pl', cancel: { ...demoCancelRules(), example: null }, onCancelSave: ok, margin: 4, onMarginSave: ok, readOnly: false }));
     expect(h).toContain('15 %');
-    expect(h).not.toMatch(/SG:|6 900|7 245/);
+    expect(h).not.toMatch(/SG:|6 900|7 300/);
     expect(h).toContain('Dni liczymy kalendarzowo od daty anulowania do planowanego załadunku.');
   });
   it('Operacje HHL (tylko odczyt): procenty i próg bez „Zmień”', () => {
