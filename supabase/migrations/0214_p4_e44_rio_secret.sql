@@ -34,7 +34,7 @@ grant select (
   rio_tracking_id, rio_asset_name, rio_tracker_on,
   rio_valid_from, rio_valid_to, rio_check_state, rio_check_at, rio_last_fix_at
 ) on public.loads to authenticated;
-revoke all on column public.loads.rio_secret from public, anon, authenticated;
+revoke all (rio_secret) on public.loads from public, anon, authenticated;
 
 create or replace function public.loads_rio_sanitize()
 returns trigger
