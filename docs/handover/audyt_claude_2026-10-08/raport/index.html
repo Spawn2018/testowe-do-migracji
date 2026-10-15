@@ -80,7 +80,7 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
   <h1>Audyt Watch Tower</h1>
   <p>Twoja lista 14 punktów z 07.10.2026, sprawdzana etap po etapie na produkcji. Każdy etap ma fakty z dowodem, propozycję rozwiązania i podgląd, jak to będzie wyglądać. Nic nie trafia do Cursora bez Twojej akceptacji.</p>
   <div class="meta">
-    <span>Stan: 08.10.2026, 14:10 · zmiany 09.10.2026, 14:11 (<a href="#zmiany-0910">Zmiany 09.10</a>)</span>
+    <span>Stan: 08.10.2026, 14:10 · zmiany 09.10.2026, 14:11 (<a href="#zmiany-0910">Zmiany 09.10</a>) · zmiany 11.10.2026, 23:40 (<a href="#zmiany-1110">Zmiany 11.10</a>)</span>
     <span>Kod: <span class="mono">testowe-do-migracji @ 9c4fa33</span> (07.10, 01:00)</span>
     <span>Baza: produkcja, tylko odczyt</span>
     <span>Aplikacja: konto testowe Operacje HHL (od 14:11)</span>
@@ -94,6 +94,7 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
 </header>
 
 <nav class="stages" aria-label="Etapy audytu">
+  <a href="#zmiany-1110"><span><span class="id">11.10</span>Zmiany: Cursor na Windows, bramy w GitHub, P0-CI</span><span class="st done">w toku · P0-CI</span></a>
   <a href="#zmiany-0910"><span><span class="id">09.10</span>Zmiany: link RIO, piloci, decyzje 13:09</span><span class="st done">zdecydowane</span></a>
   <a href="#e1"><span><span class="id">E1</span>Mapy: kadr i środek</span><span class="st done">zdecydowane</span></a>
   <a href="#e2"><span><span class="id">E2</span>Sytuacje drogowe PL z HERE</span><span class="st done">zdecydowane</span></a>
@@ -145,6 +146,85 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
   <a href="#uzg"><span><span class="id">Uzg.</span>Repozytorium a decyzje: rejestr, PLAN, paczki P0–P10</span><span class="st done">do akceptacji · 3 punkty</span></a>
   <a href="#e46"><span><span class="id">E46–48</span>Wydajność, błędy aplikacji, OWASP</span><span class="st done">do akceptacji · bez pytań</span></a>
 </nav>
+
+<!-- ===================== ZMIANY 11.10 ===================== -->
+<section class="stage" id="zmiany-1110">
+  <div class="stage-hd">
+    <span class="eyebrow">11.10.2026 · Twoje decyzje 20:07–23:07 · zapis 23:40</span>
+    <h2>Zmiany 11.10: Cursor na Windows, bramy w GitHub, etap P0-CI</h2>
+  </div>
+  <p>Komputer, na którym pracuje Cursor, nie uruchomi Linuksa (WSL): Windows ma uszkodzony magazyn składników (błąd 14098), a naprawa z obrazu wymaga ok. 25 GB wolnego na dysku C: (jest 5 GB z 80 GB). Dlatego sprawdzenia, które potrzebują Linuksa — brama bazy i test wizualny przed scaleniem — działają w GitHub Actions. Pełny zapis dla Cursora: dopiski <code>D-20261011-2135-01</code> (D-86, D-87, zasady pracy na Windows, etap P0-CI) i <code>D-20261011-2254-01</code> (dokończenie P0-CI). Polecenia dla Cursora: <code>PROMPT_START_CURSOR_2026-10-11.md</code>, wersja 23:35 — zastępuje plik z 09.10.</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Godzina</th><th>Decyzja albo zdarzenie</th><th>Co to zmienia</th><th>Paczka</th></tr></thead>
+      <tbody>
+        <tr><td class="num">20:07–21:17</td><td>Próba Linuksa (WSL) na komputerze, potem naprawa Windows z obrazu (A1)</td><td>nieudane: błąd 14098; <code>DISM /RestoreHealth</code> i <code>sfc</code> bez skutku; na C: 5 GB wolnego, Microsoft wymaga min. 20 GB</td><td>—</td></tr>
+        <tr><td class="num">21:22</td><td>Rezygnacja z WSL: „wszystko z obecnymi narzędziami”</td><td>lokalny Postgres i Ubuntu odpadają; Cursor zostaje na Windows</td><td>—</td></tr>
+        <tr><td class="num">21:30–21:35</td><td>Repozytorium na chwilę publiczne, potem znów prywatne</td><td>gitleaks: 0 sekretów w 685 commitach — kluczy nie wymieniamy; agent nie zmienia widoczności repozytorium</td><td>—</td></tr>
+        <tr><td class="num">21:35</td><td><b>D-86</b>: brama bazy w GitHub Actions</td><td>ten sam skrypt <code>tests/db/gate.sh</code> (Postgres 17 + PostGIS) w <code>db.yml</code>; przy zmianach SQL i migracji; scalenie i wdrożenie z migracją tylko przy zielonym wyniku na tym samym commicie</td><td>od P0-CI</td></tr>
+        <tr><td class="num">21:5x</td><td><b>D-87</b> (wklejenie bloku „Sesja CI”): test wizualny przed scaleniem w GitHub Actions</td><td>check <code>visual</code> zamiast lokalnego <code>fresh-smoke</code>; 15 migawek odświeżanych w GitHub w paczce, która zmienia ekran; progi i wzorce bez zmian</td><td>od P0-CI</td></tr>
+        <tr><td class="num">22:54</td><td>P0-CI zatrzymany przed scaleniem (PR #152)</td><td><code>unit</code> zielony; <code>db</code> — brak roli <code>service_role</code> w świeżej bazie (środowisko); <code>visual</code> — wszystkie migawki zgodne, padł test „wstecz zamyka szufladę”</td><td>P0-CI</td></tr>
+        <tr><td class="num">23:07</td><td>W32: nocna brama wizualna prawdopodobnie działała w bocie Grok, z którego już nie korzystasz</td><td>nocnej bramy nie ma; do P11 bez znaczenia (zrzuty przed scaleniem sprawdza <code>visual</code>); odświeżenie 280 ujęć w P11 — dopisek przed P11</td><td>P11</td></tr>
+        <tr><td class="num">23:2x</td><td>Dopisek <code>D-20261011-2254-01</code> (koordynator, wykonanie D14, D-86, D-87)</td><td>rola <code>service_role</code> w <code>db.yml</code>; poprawka błędu „wstecz” w aplikacji (test bez zmian, 20 powtórzeń, wdrożenie); test jednostkowy przy małej pamięci</td><td>P0-CI</td></tr>
+        <tr><td class="num">—</td><td>Dzień 1 = dzień Sesji 0 (PLAN §0)</td><td>Sesja 0 po 00:00 → Dzień 1 = 12.10; domyślne wydanie <code>release-1.0</code>: czwartek 15.10, 20:00 (W17 — potwierdzasz Ty)</td><td>wszystkie</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Fakty</h3>
+  <ul class="facts">
+    <li><span class="chip bad">Błąd na produkcji</span><div>Po otwarciu transportu z Harmonogramu przycisk „wstecz” w przeglądarce (i gest wstecz na telefonie) zmienia adres, ale mniej więcej co drugi raz nie zamyka panelu transportu — niezgodnie z D14 (26.09). Sprawdzone na kopii <code>main</code>: test czerwony 2 razy na 3; w testach śledzących panel został w 10 przebiegach z 17.
+      <span class="src">Test <code>tests/etap5-ui.spec.ts:36</code>; GitHub Actions, przebieg 38171907816; kod <code>src/hooks/useRouteSync.ts</code>. Poprawka w P0-CI, wdrożenie po scaleniu.</span></div></li>
+    <li><span class="chip fact">Fakt</span><div>W GitHub Actions (Linux) wszystkie migawki są zgodne ze wzorcami: <code>visual.spec.ts</code> 4/4, <code>visual-states.spec.ts</code> 12/12. Na Windows ta sama migawka kokpitu różniła się o 18 988 pikseli (próg 60) — dlatego D-87.</div></li>
+    <li><span class="chip fact">Fakt</span><div>Brama bazy w GitHub wstała (Postgres 17 + PostGIS, port 5433) i zatrzymała się przed pierwszym zestawem na braku roli <code>service_role</code>, którą lokalnie tworzy <code>tests/db/boot.sh</code>.
+      <span class="src">GitHub Actions, przebieg 38171907708.</span></div></li>
+    <li><span class="chip fact">Fakt</span><div>Konto GitHub na komputerze ma uprawnienie „workflow” (zakresy: gist, read:org, repo, workflow) — pozycja W21 jest spełniona.
+      <span class="src">Raport P0-CI, <code>gh auth status</code>.</span></div></li>
+    <li><span class="chip fact">Fakt</span><div>Windows na komputerze wykonawcy nie instaluje aktualizacji od 11.11.2025 (kompilacja 26100.7171; najnowsza dla 24H2: 26100.9550 z 22.09.2026), a jest na nim dostęp do produkcji — W33.</div></li>
+  </ul>
+
+  <h3>Kolejność pracy Cursora</h3>
+  <ol class="steps">
+    <li><b>Sesja CI — dokończenie</b> (nowy czat): rola w <code>db.yml</code>, poprawka „wstecz”, <code>unit</code>, <code>db</code> i <code>visual</code> zielone, scalenie, wdrożenie. Sygnał: „P0-CI scalone i wdrożone…”.</li>
+    <li><b>Sesja 0</b> (po 00:00 i po tym sygnale): wgranie kompletu (P0a). Dzień 1 = 12.10.</li>
+    <li><b>Audyt startowy</b> (tylko odczyt): raport do koordynatora; odpowiedź „start Sesji 1” albo dopisek.</li>
+    <li><b>Sesja 1</b>: pierwszy commit P0b włącza oba dopiski z 11.10 do <code>AGENTS.md</code>, <code>PLAN.md</code> i rejestru; potem P0b → P1 → … → P11.</li>
+  </ol>
+
+  <h3>Co przestało obowiązywać</h3>
+  <ul class="facts">
+    <li><span class="chip bad">Unieważnione</span><div>„Podstawowa jest brama lokalna, Postgres 17 na localhost:5433” i „pełna brama lokalna przed wdrożeniem z migracją” (<code>AGENTS.md</code> §3, <code>PLAN.md</code> §1 pkt 3, odbiór P0b) → D-86; lokalny <code>fresh-smoke</code> przed scaleniem → D-87; push na <code>main</code> z komputera wykonawcy → scalenie tylko <code>gh pr merge</code> po zielonych checkach; migawki „na maszynie uruchamiającej fresh-smoke” → GitHub Actions; WSL (20:07) i naprawa Windows z obrazu (20:51) → rezygnacja 21:22; W11 „na maszynie z nocną bramą wizualną” → do dopisku przed P11.</div></li>
+  </ul>
+
+  <div class="ask-box">
+    <span class="chip ask" style="align-self:flex-start">Twoje czynności</span>
+    <p>Żeby nic nie przeszkadzało Cursorowi i nie psuło jego pracy:</p>
+    <ul>
+      <li><b>Przed „Sesją CI — dokończenie”:</b> w Cursorze wyłącz wtyczkę pamięci Supermemory, continual-learning i wszystkie wtyczki spoza listy (zostają: GitHub, Supabase, Vercel, Playwright, Cloudflare, Resend, Context7). W regułach użytkownika (User Rules) i pamięci (Memories) usuń polecenia dotyczące Watch Tower, KSH, Stegry, HHL, SCX i Groka (część A audytu startowego).</li>
+      <li><b>Pliki:</b> <code>D-20261011-2254-01.md</code> do <code>D:\Watch Tower\dopiski_nowe\</code>; używasz tylko poleceń z 11.10, wersja 23:35.</li>
+      <li><b>Kolejność:</b> „Sesja CI — dokończenie” → po „P0-CI scalone i wdrożone” i po 00:00 „Sesja 0” → „Audyt startowy” (raport do koordynatora) → „Sesja 1”. Przy „P0-CI STOP” raport <code>p0-ci.md</code> do koordynatora.</li>
+      <li><b>Po starcie Sesji 1:</b> blok „Dane od właściciela” z tekstem „W21 gotowe: token GitHub ma uprawnienie workflow (sprawdzone 11.10 w P0-CI)”.</li>
+      <li><b>GitHub, bezpieczeństwo:</b> odbierz dostęp botowi Grok (Settings → Applications; Developer settings → Personal access tokens; w repozytorium Collaborators i Deploy keys) i wymień klucze Supabase, Vercel, Cloudflare, jeśli je dostał; Insights → Traffic — klony i odwiedziny z 11.10. Nie usuwaj dostępu GitHub CLI na swoim komputerze ani Vercela.</li>
+      <li><b>Dysk C:</b> <code>powercfg /h off</code> i Ustawienia → System → Magazyn → Pliki tymczasowe (bez „Pobrane”).</li>
+      <li><b>Nie rób:</b> zmian w plikach repozytorium (poza zapisaniem dopisku), zmiany widoczności repozytorium, poleceń dla agenta z pominięciem planu — każda zmiana przez koordynatora jako dopisek; nie uruchamiaj drugiego czatu agenta w tym samym folderze.</li>
+    </ul>
+  </div>
+
+  <div class="ask-box" style="background:var(--accent-soft);border-color:var(--accent)">
+    <span class="chip fact" style="align-self:flex-start">Do zamknięcia później</span>
+    <p>Nie wstrzymuje pracy Cursora:</p>
+    <ul>
+      <li><b>Po każdej paczce:</b> agent pisze „P&lt;n&gt; NA PRODUKCJI” → Ty piszesz koordynatorowi „Sprawdź P&lt;n&gt;”.</li>
+      <li><b>W17, przed P11:</b> data wydania (domyślnie czwartek 15.10, 20:00).</li>
+      <li><b>W11 i W32, przed P11:</b> dopisek koordynatora — odświeżenie 280 ujęć <code>shots-baseline/</code> w GitHub Actions (ręczny przebieg, ok. 13 min).</li>
+      <li><b>W26–W31:</b> do Twojej odpowiedzi obowiązują odpowiedzi domyślne (sekcja „Zmiany 09.10”).</li>
+      <li><b>W1–W25:</b> dane i czynności według <code>PLAN.md</code> §5 — wysyłasz blokiem „Dane od właściciela”, gdy agent zgłosi „CZEKA NA WŁAŚCICIELA”.</li>
+      <li><b>W33, po wydaniu:</b> naprawa Windows i aktualizacje (ok. 25 GB wolnego na C:).</li>
+      <li><b>W10, na końcu:</b> usunięcie konta testowego Claude (interia.pl).</li>
+    </ul>
+  </div>
+  <p class="note">Szacunek koordynatora (bez pomiaru): dokończenie P0-CI ok. 2–3 h, z czego przebiegi w GitHub ok. 30 min.</p>
+</section>
 
 <!-- ===================== ZMIANY 09.10 ===================== -->
 <section class="stage" id="zmiany-0910">
@@ -4332,3 +4412,5 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
   </ol>
 </section>
 </div>
+
+</body></html>
