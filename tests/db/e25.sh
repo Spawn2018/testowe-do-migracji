@@ -49,8 +49,32 @@ echo; echo "[e25] UNLOADED→DELIVERED, READY_TO_INVOICE/INVOICED (H1), actor i 
 # commit: actual_delivery_at i audit sprawdzane osobnym zapytaniem poza transakcją testu
 val "UNLOADED → DELIVERED" $HHL "select load_status_set('$L2','UNLOADED',now(),null); select status::text from loads where id='$L2'" DELIVERED commit
 sval "actual_delivery_at po Dostarczone" "select (actual_delivery_at is not null) from loads where id='$L2'" t
+# A5: DELIVERED nadpisuje wybraną godzinę (W3)
+val "DELIVERED nadpisuje godzinę" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','korekta godziny'); select (actual_delivery_at = timestamptz '2026-10-07 10:19:54+00')::text from loads where id='$L2'" t commit
+# A5: READY_TO_INVOICE bez CMR
+err "READY_TO_INVOICE bez CMR" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null)" "CMR"
+sys "delete from documents where load_id='$L2' and category='CMR' and storage_path='test/e25-cmr.pdf'" >/dev/null
+sys "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes)
+     values ('$P','$L2','CMR','test/e25-cmr.pdf','cmr.pdf','application/pdf',100)" >/dev/null
 # H1: CHECK zna STATUS_READY_TO_INVOICE / STATUS_INVOICED (D-20261014-0640-01)
 val "SCX → READY_TO_INVOICE + zdarzenie" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null); select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_READY_TO_INVOICE') from loads where id='$L2'" "READY_TO_INVOICE|1" commit
+# A5: INVOICED bez faktur
+err "INVOICED bez faktur" $HHL "select load_status_set('$L2','INVOICED',now(),null)" "brak faktury"
+# Minimalne invoice_lines (obie strony) — bez pełnego register_invoice
+HHLO=00000000-0000-0000-0000-00000000a001
+KSHO=00000000-0000-0000-0000-00000000a002
+sys "insert into invoices (id, project_id, carrier_org_id, period_start, period_end, currency, direction, issuer_org_id, recipient_org_id, invoice_number, issue_date, week_key)
+     values ('aaaaaaaa-0000-4000-8000-00000000e251','$P','$SCXO','2026-10-06','2026-10-12','EUR','KOSZT','$SCXO','$HHLO','E25/K/1','2026-10-13','2026-W41')
+     on conflict (id) do nothing" >/dev/null
+sys "insert into invoices (id, project_id, carrier_org_id, period_start, period_end, currency, direction, issuer_org_id, recipient_org_id, invoice_number, issue_date, week_key)
+     values ('aaaaaaaa-0000-4000-8000-00000000e252','$P','$SCXO','2026-10-06','2026-10-12','EUR','PRZYCHOD','$HHLO','$KSHO','E25/P/1','2026-10-13','2026-W41')
+     on conflict (id) do nothing" >/dev/null
+sys "insert into invoice_lines (invoice_id, load_id, direction, expected_amount, invoiced_amount)
+     values ('aaaaaaaa-0000-4000-8000-00000000e251','$L2','KOSZT',1,1)
+     on conflict (invoice_id, load_id) do update set direction=excluded.direction" >/dev/null
+sys "insert into invoice_lines (invoice_id, load_id, direction, expected_amount, invoiced_amount)
+     values ('aaaaaaaa-0000-4000-8000-00000000e252','$L2','PRZYCHOD',1,1)
+     on conflict (invoice_id, load_id) do update set direction=excluded.direction" >/dev/null
 val "HHL → INVOICED + zdarzenie" $HHL "select load_status_set('$L2','INVOICED',now(),null); select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_INVOICED') from loads where id='$L2'" "INVOICED|1" commit
 # H2: actor w payload; nie wcześniej niż poprzedni status
 sval "actor w payload" "select (payload->>'actor' like '% // %') from load_events where load_id='$L2' and event_type='STATUS_INVOICED' order by id desc limit 1" t
@@ -60,6 +84,9 @@ err "anulowanie bez powodu" $HHL "select load_status_set('$L1','CANCELLED',now()
 err "SCX nie anuluje" $SCX "select load_status_set('$L1','CANCELLED',now(),'x')" "Anulowanie"
 val "HHL anuluje z powodem" $HHL "select load_status_set('$L1','CANCELLED',now(),'test e25'); select status::text from loads where id='$L1'" CANCELLED
 sval "audit LOAD_STATUS_SET" "select count(*)>=1 from audit_log where action='LOAD_STATUS_SET' and entity_id='$L2'" t
+# A5: bezpośredni UPDATE statusu z sesji — odmowa
+err "HHL bezpośredni UPDATE statusu" $HHL "update loads set status='IN_TRANSIT_PL' where id='$L1'" "load_status_set"
+err "SCX bezpośredni UPDATE statusu" $SCX "update loads set status='IN_TRANSIT_PL' where id='$L1'" "load_status_set"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL${bad}"
 [ "$fail" -eq 0 ]

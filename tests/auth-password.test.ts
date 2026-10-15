@@ -10,12 +10,13 @@ describe('AUTH-1 hasło', () => {
     expect(passwordOk('123456789012')).toBe(true);
   });
 
-  it('AuthGate: hasło, Dalej, reset bez e-maila bez zaproszenia', () => {
+  it('AuthGate: hasło, Dalej, reset bez ujawniania konta (A3)', () => {
     const gate = readFileSync('src/auth/AuthGate.tsx', 'utf8');
     const client = readFileSync('src/auth/client.ts', 'utf8');
     expect(gate).toMatch(/signInWithPassword/);
-    expect(gate).toMatch(/auth_email_allowed/);
+    expect(gate).not.toMatch(/auth_email_allowed/);
     expect(gate).toMatch(/sendRecoveryLink/);
+    expect(gate).toMatch(/auth_reset_sent/);
     expect(readFileSync('src/auth/sendAuthEmail.ts', 'utf8')).toMatch(/auth\/v1\/recover/);
     expect(gate).toMatch(/data-auth="link-pending"/);
     expect(gate).toMatch(/data-auth="set-password"/);
@@ -24,11 +25,12 @@ describe('AUTH-1 hasło', () => {
     expect(client).toMatch(/flowType:\s*'pkce'/);
   });
 
-  it('0099: auth_email_allowed + must_set_password + mark', () => {
+  it('0099 + 0208: auth_email_allowed bez anon (A3)', () => {
     const sql = readFileSync('supabase/migrations/0099_auth_password_login.sql', 'utf8');
     expect(sql).toMatch(/auth_email_allowed/);
     expect(sql).toMatch(/must_set_password/);
     expect(sql).toMatch(/app_user_mark_password_set/);
-    expect(sql).toMatch(/grant execute on function public\.auth_email_allowed\(text\) to anon/);
+    const a3 = readFileSync('supabase/migrations/0208_audyt_a2_a3_reads_auth.sql', 'utf8');
+    expect(a3).toMatch(/revoke execute on function public\.auth_email_allowed\(text\) from anon/i);
   });
 });

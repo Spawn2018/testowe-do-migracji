@@ -167,18 +167,7 @@ function LoginScreen({
     e.preventDefault();
     setBusy(true); setMsg(null);
     const addr = email.trim().toLowerCase();
-    const sb = await getSupabase();
-    const { data: allowed, error: allowErr } = await sb.rpc('auth_email_allowed', { p_email: addr });
-    if (allowErr) {
-      setBusy(false);
-      setMsg({ ok: false, text: authErrorPl(allowErr.message) });
-      return;
-    }
-    if (allowed !== true) {
-      setBusy(false);
-      setMsg({ ok: false, text: t(locale, 'auth_no_invite') });
-      return;
-    }
+    // A3 (D-20261015-0300-01): bez sprawdzania konta po stronie klienta — zawsze ten sam komunikat.
     const mail = await sendRecoveryLink(addr, redirectTo());
     setBusy(false);
     setMsg(mail.error
