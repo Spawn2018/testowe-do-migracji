@@ -91,14 +91,15 @@ val "po uzupełnieniu: tabela z dnia roboczego przed rozładunkiem" $HHL "select
 
 echo; echo "[M5] Numery zleceń: wymuszenie z bazy, każda strona swój, brak przed terminem → ryzyko + przypomnienie"
 L3=33333333-0000-0000-0000-000000000003; L4=33333333-0000-0000-0000-000000000004
-err "GOTOWY bez numeru HHL → zrozumiały komunikat bazy"    $HHL "update loads set status='READY' where id='$L1'" "bez numeru zlecenia HHL"
-val "HHL wpisuje swój numer"                               $HHL "update loads set hhl_order_no='HHL/T/1' where id='$L1' returning hhl_order_no" "HHL/T/1"
+# A5/E25: status tylko load_status_set; A4: numery w RETURNING → load_order_numbers()
+err "GOTOWY bez numeru HHL → zrozumiały komunikat bazy"    $HHL "select load_status_set('$L1','READY',now(),null)" "bez numeru zlecenia HHL"
+val "HHL wpisuje swój numer"                               $HHL "update loads set hhl_order_no='HHL/T/1' where id='$L1'; select hhl_order_no from load_order_numbers() where load_id='$L1'" "HHL/T/1"
 err "HHL nie zmieni numeru przewoźnika (W12)"              $HHL "update loads set carrier_order_no='X' where id='$L1'" "wpisuje wy..cznie przewo"
 err "przewoźnik nie zmieni numeru HHL"                     $SCX "update loads set hhl_order_no='X' where id='$L1'" "nie mo.e zmienia.: hhl_order_no"
 err "przewoźnik nie zmieni numeru KSH"                     $SCX "update loads set order_no='X' where id='$L1'" "nie mo.e zmienia.: order_no"
-val "przewoźnik wpisuje swój numer"                        $SCX "update loads set carrier_order_no='SCX/T/1' where id='$L1' returning carrier_order_no" "SCX/T/1"
+val "przewoźnik wpisuje swój numer"                        $SCX "update loads set carrier_order_no='SCX/T/1' where id='$L1'; select carrier_order_no from load_order_numbers() where load_id='$L1'" "SCX/T/1"
 err "przewoźnik nie zmieni okna planowego (AN2)"           $SCX "update loads set plan_load_from=now() where id='$L1'" "plan_load_from"
-err "załadunek bez numeru przewoźnika → błąd"              $HHL "update loads set hhl_order_no='HHL/T/2', status='AT_LOADING' where id='$L2'" "bez numeru zlecenia przewo"
+err "załadunek bez numeru przewoźnika → błąd"              $HHL "update loads set hhl_order_no='HHL/T/2' where id='$L2'; select load_status_set('$L2','AT_LOADING',now(),null)" "bez numeru zlecenia przewo"
 sys "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date) values ('$L3','$P','00000000-0000-0000-0000-00000000a003','KSH/3', current_date + 1), ('$L4','$P','00000000-0000-0000-0000-00000000a003','KSH/4', current_date + 5)"
 err "wykrywanie: zwykły użytkownik nie wywoła"             $HHL "select detect_missing_order_numbers()" "permission denied"
 d1=$($PSQL -c "select detect_missing_order_numbers()" 2>&1 | grep -vE '^(SELECT|)$' | tail -1 | tr -d '\r')
@@ -206,8 +207,9 @@ val "słaby fix (dokładność 400 m) nie zapisuje pozycji ani stref"      $SCX 
 val "SCX: dwa fixy w strefie załadunku → AT_LOADING (źródło DRIVER_PWA)" $SCX "select count(*) from report_position('$L9',52.07391,17.0246,now() - interval '2 minutes',15); select count(*) from report_position('$L9',52.07395,17.0247,$NOW,15); select status||' '||(select string_agg(distinct source::text, ',') from positions where load_id='$L9') from loads where id='$L9'" "AT_LOADING DRIVER_PWA" commit
 err "KSH nie zapisze MILESTONE_LOADED (warunek wyjazdu z załadunku)"   $KSH "insert into load_events (load_id, event_type, occurred_at) values ('$L9','MILESTONE_LOADED',now())" "row-level security"
 val "SCX (przewoźnik transportu) zapisuje MILESTONE_LOADED"            $SCX "insert into load_events (load_id, event_type, occurred_at, source) values ('$L9','MILESTONE_LOADED',now(),'DRIVER_PWA'); select count(*) from load_events where load_id='$L9' and event_type='MILESTONE_LOADED'" 1 commit
-err "„Rozładowany” bez daty rozładunku odrzucony"                      $SCX "update loads set status='UNLOADED' where id='$L9'" "wymaga daty rozładunku"
-val "„Rozładowany” razem z datą w jednej zmianie"                     $SCX "update loads set status='UNLOADED', actual_delivery_at=now() where id='$L9'; select status from loads where id='$L9'" UNLOADED
+# A5: bezpośredni UPDATE statusu → load_status_set; UNLOADED mapuje na DELIVERED (E25)
+err "„Rozładowany” bezpośrednim UPDATE odrzucony (A5)"               $SCX "update loads set status='UNLOADED' where id='$L9'" "load_status_set|wymaga daty rozładunku"
+val "„Rozładowany” przez load_status_set → DELIVERED"                 $SCX "select load_status_set('$L9','UNLOADED',now(),null); select status from loads where id='$L9'" DELIVERED
 sys "insert into geofences (project_id, name, kind, geom, country) values ('$P','Terminal Nynäshamn','PORT_IN',make_circle_fence(58.9350,17.9500,800),'SE')"
 if [ -n "${TOWER_HOSTED_READY:-}" ]; then
   # Hosted: shim no-opuje ponowne -f migracji; stosujemy ten sam UPDATE co 0017.

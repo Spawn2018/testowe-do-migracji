@@ -22,7 +22,6 @@ rls_disabled_in_public	public.spatial_ref_sys	PostGIS; security.sh W1; migracja 
 extension_in_public	public.postgis	E19 — rozszerzenie w public
 extension_in_public	public.citext	E19 — rozszerzenie w public
 extension_in_public	public.btree_gist	E19 — rozszerzenie w public
-anon_security_definer_function_executable	public.auth_email_allowed	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
 anon_security_definer_function_executable	public.driver_get_instructions	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
 anon_security_definer_function_executable	public.driver_post_event	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
 anon_security_definer_function_executable	public.keep_alive	E19 — anon: token/kierowca/sms/report/keep_alive/PostGIS
@@ -112,7 +111,7 @@ authenticated_security_definer_function_executable	public.load_escort_contacts	E
 authenticated_security_definer_function_executable	public.load_escorts_set	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.load_insurance_cover	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.load_insurance_cover_one	E19 — allowlista RPC; sprawdzenie roli w funkcji
-authenticated_security_definer_function_executable	public.load_message_read_list	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_message_read_list	lista czytających — tylko widoczna wiadomość i transport (loads_read); nazwiska i e-maile dla wszystkich firm (decyzja właściciela 15.10, 03:12, zgody RODO)
 authenticated_security_definer_function_executable	public.load_order_numbers	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.load_permit_link	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.load_permit_save	E19 — allowlista RPC; sprawdzenie roli w funkcji

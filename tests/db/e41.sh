@@ -33,6 +33,39 @@ val "HHL dostaje oba numery" $HHL "select hhl_order_no||'|'||carrier_order_no fr
 val "SCX dostaje numer HHL do odczytu i swój" $SCX "select hhl_order_no||'|'||carrier_order_no from load_order_numbers() where load_id='$L1'" "0005/09/S/2026|15062/2026/OSL/GDA/P"
 sval "SMS = kod wysyłki, nie numer z pliku" "select load_sms_code('$L1')" "SG-03"
 
+echo; echo "[e41] A4 — kolumny numerów bez SELECT dla KSH"
+# PostgREST/psql: SELECT kolumny bez uprawnienia → błąd; HHL/SCX też bez SELECT (numery tylko RPC).
+err_col() { out=$(run "$2" "$3" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tr '\n' ' ')
+  if echo "$out" | grep -qiE 'permission denied|42501|must be owner'; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); bad="${bad} [$1 => ${out}]"; echo "  FAIL  $1  (brak odmowy kolumny; było: $out)"; fi; }
+err_col "KSH bez hhl_order_no" $KSH "select hhl_order_no from loads where id='$L1'"
+err_col "KSH bez carrier_order_no" $KSH "select carrier_order_no from loads where id='$L1'"
+err_col "KSH bez order_no" $KSH "select order_no from loads where id='$L1'"
+sval "authenticated bez SELECT hhl_order_no" "select has_column_privilege('authenticated','loads','hhl_order_no','select')::text" false
+sval "authenticated bez SELECT carrier_order_no" "select has_column_privilege('authenticated','loads','carrier_order_no','select')::text" false
+sval "authenticated bez SELECT order_no" "select has_column_privilege('authenticated','loads','order_no','select')::text" false
+
+echo; echo "[e41] A2 — Przeczytali tylko dla widocznej wiadomości (decyzja 15.10 03:12 / D-0330)"
+# Wiadomość tylko HHL+CARRIER (bez CLIENT): KSH nie dostaje listy czytających.
+sys "insert into load_messages (id, load_id, author_id, body, visible_to)
+     select 900041, '$L1', u.id, 'a2-hhl-scx', array['FORWARDER','CARRIER']::org_kind[]
+       from app_users u where u.auth_id='$HHL'
+     on conflict (id) do update set visible_to=excluded.visible_to, body=excluded.body" >/dev/null
+sys "insert into load_message_reads (message_id, user_id, read_at)
+     select 900041, u.id, now() from app_users u where u.auth_id='$HHL'
+     on conflict (message_id, user_id) do nothing" >/dev/null
+val "KSH bez listy dla wiadomości HHL–SCX" $KSH "select count(*) from load_message_read_list(900041)" 0
+val "HHL widzi listę dla tej wiadomości" $HHL "select (count(*) >= 1)::text from load_message_read_list(900041)" true
+val "SCX widzi listę dla tej wiadomości" $SCX "select (count(*) >= 1)::text from load_message_read_list(900041)" true
+# Security definer omija RLS loads — warunek jak loads_read: drugi przewoźnik nie widzi cudzego transportu.
+CAR2O=00000000-0000-0000-0000-00000000a004
+CAR2=11111111-0000-0000-0000-0000000000c2
+sys "insert into organizations (id, code, name, kind) values ('$CAR2O','CAR2','Drugi przewoznik','CARRIER')
+     on conflict (id) do nothing;
+     insert into app_users (auth_id, org_id, email, role, active)
+     values ('$CAR2','$CAR2O','car2-e41@test','CARRIER_DISPATCH',true)
+     on conflict (auth_id) do update set org_id=excluded.org_id, role='CARRIER_DISPATCH', active=true" >/dev/null
+val "drugi przewoźnik bez listy cudzego transportu" $CAR2 "select count(*) from load_message_read_list(900041)" 0
+
 echo; echo "[e41] E18 P15 tytuły"
 sys "insert into risk_signals (project_id, load_id, kind, severity, title) values
  ('$P','$L1','ROAD_SE','LOW','E4: trasa riktningarna test'),
