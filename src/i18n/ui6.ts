@@ -219,7 +219,7 @@ const pl: Dict = {
 
   a6_dr_ferry: 'Prom',
   a6_dr_ferry_status: 'Status promu',
-  a6_dr_fuel: 'Dodatek paliwowy',
+  a6_dr_fuel: 'Opłata paliwowa',
   a6_dr_geo_event: 'Zdarzenie strefy',
   a6_dr_eta_howto:
     'ETA — przewidywany przyjazd na plac budowy, liczony automatycznie z ostatniej pozycji GPS (czas warszawski). Czas pracy kierowcy szacowany z ruchu i postojów pojazdu, bez danych z tachografu.'
@@ -309,7 +309,7 @@ const pl: Dict = {
   a6_fin_due_ksh: 'Do zapłaty narastająco',
   a6_fin_due_scx: 'Należność narastająco',
   a6_fin_freight_base: 'Fracht — stawka bazowa',
-  a6_fin_fuel_pct: 'Dodatek paliwowy {pct:1}%',
+  a6_fin_fuel_pct: 'Opłata paliwowa {pct:1}%',
   a6_fin_fuel_rule: 'min(mult_SEK, mult_PLN) na fracht drogowy',
   a6_fin_index: 'Indeks',
   a6_fin_locked_ksh: 'Stawki przewoźnika i marża spedytora nie są dostępne w roli klienta.',
@@ -432,7 +432,7 @@ const pl: Dict = {
   a6_sailing_status_label_odwolany: 'Odwołany',
   a6_sailing_status_label_opozniony: 'Opóźniony',
   a6_sailing_status_label_zaplanowany: 'Zaplanowany',
-  a6_saved_BAF: 'BAF',
+  a6_saved_BAF: 'opłata paliwowa',
   a6_saved_cennik: 'cennik',
   a6_saved_demo: 'demo',
   a6_saved_factoring: 'factoring',
