@@ -9,7 +9,7 @@ export type OptGroupId = 'people' | 'notify' | 'money' | 'rules' | 'system' | 'f
 
 export type OptScreenId =
   | 'users' | 'logins'
-  | 'who' | 'zones' | 'bcast'
+  | 'who' | 'texts' | 'zones' | 'bcast'
   | 'rates' | 'surch' | 'fuel' | 'fact'
   | 'thr' | 'permits'
   | 'status' | 'flags' | 'hist' | 'export'
@@ -52,6 +52,7 @@ export const SCREEN_KEY: Record<OptScreenId, string> = {
   users: 'p3c_s_users',
   logins: 'p3c_s_logins',
   who: 'p3c_s_who',
+  texts: 'p3c_s_texts',
   zones: 'p3c_s_zones',
   bcast: 'p3c_s_bcast',
   rates: 'p3c_s_rates',

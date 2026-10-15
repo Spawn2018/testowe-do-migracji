@@ -747,12 +747,14 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
         for (const { group, screen } of list) {
           await openPhoneScreen(page, group, screen);
           hits.push(...await measure(page, `opcje/${screen}`, width, role));
-          /* stany otwarte: edycja progu, działania przy osobie */
-          const open = screen === 'thr' ? '[data-threshold] .ox-btn' : screen === 'users' ? '.ox-morebtn' : null;
+          /* stany otwarte: edycja progu, działania przy osobie, wiadomość w „Treściach wiadomości” (wyglad/P8-a) */
+          const open = screen === 'thr' ? '[data-threshold] .ox-btn' : screen === 'users' ? '.ox-morebtn' : screen === 'texts' ? '[data-mt-item="SMS_C"]' : null;
           if (open && await page.locator(open).count()) {
             await page.locator(open).first().click();
             await page.waitForTimeout(150);
             hits.push(...await measure(page, `opcje/${screen}/otwarte`, width, role));
+            /* wiadomość ma własne „‹” (nagłówek ekranu jest wtedy schowany) — powrót do listy przed dalszym przejściem */
+            if (screen === 'texts' && await page.locator('.mt-back').count()) await page.click('.mt-back');
           }
         }
       }
@@ -766,7 +768,7 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
     await boot(page, 'HHL');
     await openView(page, 'options');
     await expect(page.locator('.ox-side-group h2')).toHaveText(['LUDZIE I DOSTĘP', 'POWIADOMIENIA', 'PIENIĄDZE', 'ZASADY TRANSPORTU', 'SYSTEM', 'DLA MNIE']);
-    await expect(page.locator('.ox-side [data-opt-group="notify"] [data-opt-nav]')).toHaveText(['Kto co dostaje', 'SMS przy miejscachBoden: brak', 'Komunikat dla wszystkich']);
+    await expect(page.locator('.ox-side [data-opt-group="notify"] [data-opt-nav]')).toHaveText(['Kto co dostaje', 'Treści wiadomości', 'SMS przy miejscachBoden: brak', 'Komunikat dla wszystkich']);
     await page.click('[data-opt-nav="flags"]');
     await expect(page.locator('[data-opt-screen="flags"] .ox-crumb')).toHaveText('Opcje › System');
     await expect(page.locator('[data-opt-screen="flags"] tbody tr')).toHaveCount(13);
