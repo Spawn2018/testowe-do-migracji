@@ -2487,3 +2487,20 @@ CI #229 na `ee689452`: unit / visual / `db` zielone; `npm audit --omit=dev --aud
 |---|---|
 | C16 N2–N8 TEST | zrobione 23:32 — security 84, status 44, c16-push 10, nullguard 637, doradca 0 nowych; commit `ee689452` |
 
+## 2026-10-15 — C16 N2–N8 NA PRODUKCJI (D-20261015-1955-01)
+
+- Merge PR #229 → `456a7a14` (merge commit); głowa treści `94dc8ae7` / poprawki `ee689452`.
+- Migracja **0219**: ROLLBACK OK → `db push` (drugi: up to date); `schema_migrations` …0219.
+- Edge: `web-push-send`, `web-push-test`; `web-push-ack` / `web-push-resub` z `verify_jwt=false` (lista funkcji potwierdzona); OPTIONS → **200** + CORS (`Access-Control-Allow-Origin: https://tower.log-mar.pl`).
+- Aplikacja: `dpl_7ngsrbV8JXwDHvDCEBRjdWVS2dLw`, JS `assets/index-s00c_A3-.js`, `sw.js` z openWindow po błędzie navigate; tower / makieta **200**; 0 × `service_role` (19 plików JS).
+- CI #229: unit / visual / `db` zielone; `npm audit` 0; TEST: security 84, status 44, c16-push 10, nullguard 637, doradca 0 nowych.
+- Czas plan N2–N8 ~3 h; poprawki przeglądu (N5 openWindow, JWT off, HMAC nid\|sid) wliczone.
+- **Odbiór C16 (pkt 1–7) — czeka na właściciela:** ponowny test S24 z potwierdzeniem „Doszło na urządzenie…” ≤ 10 s; zablokowany ekran; klik → cel; Samsung Internet + komputer; wypięcie → 410 → e-mail W42. iPhone = W43.
+
+| punkt | zrobione / odbiór |
+|---|---|
+| C16 N2–N8 produkcja | zrobione 23:52 — commit `456a7a14`, migracja 0219, dpl `dpl_7ngsrbV8JXwDHvDCEBRjdWVS2dLw`; odbiór S24 **czeka** |
+| W24 Android S24 | dostarczone 20:50 (N1); pełny odbiór po tym wdrożeniu |
+
+**C16 NA PRODUKCJI — 456a7a14, 23:52; właściciel: test S24 z potwierdzeniem.**
+
