@@ -2452,3 +2452,7 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 - **W24 dostarczone 15.10.2026, 20:50** — właściciel: test na S24 doszedł (C16-N1).
 
+## 2026-10-15 — C16 N2–N8 TEST
+
+- **TEST zajęte: C16 N2–N8**, od 15.10.2026 21:16 — security, status, nullguard, c16-push, risks na `a82ccc9e` (PR #229, migracja 0219).
+
