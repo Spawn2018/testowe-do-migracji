@@ -1,6 +1,6 @@
 /**
- * C16 N3 — potwierdzenie odbioru z service workera (bez JWT; tylko HMAC).
- * Body: { nid, ack, sid? }. nid = id notifications albo test:<subId>:<czas>.
+ * C16 N3 — potwierdzenie odbioru z service workera (bez JWT; tylko HMAC nid|sid).
+ * Body: { nid, ack, sid }. Wdrożenie: --no-verify-jwt.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders, corsJson, corsPreflight } from '../_shared/cors.ts';
@@ -28,8 +28,8 @@ Deno.serve(async (req) => {
   const nid = typeof body.nid === 'string' ? body.nid.trim() : '';
   const ack = typeof body.ack === 'string' ? body.ack.trim() : '';
   const sid = typeof body.sid === 'string' ? body.sid.trim() : '';
-  if (!nid || !ack) return corsJson({ ok: false, error: 'payload' }, 400);
-  if (!(await verifyPushAck(nid, ack, priv))) {
+  if (!nid || !ack || !sid) return corsJson({ ok: false, error: 'payload' }, 400);
+  if (!(await verifyPushAck(nid, sid, ack, priv))) {
     return corsJson({ ok: false, error: 'forbidden' }, 403);
   }
 
@@ -38,9 +38,13 @@ Deno.serve(async (req) => {
 
   if (nid.startsWith('test:')) {
     const parts = nid.split(':');
-    const subId = parts[1] ?? sid;
-    if (!subId) return corsJson({ ok: false, error: 'payload' }, 400);
-    await admin.from('push_subscriptions').update({ last_ack_at: now, last_ok_at: now, last_error: null }).eq('id', subId);
+    const subFromNid = parts[1] ?? '';
+    if (subFromNid && subFromNid !== sid) {
+      return corsJson({ ok: false, error: 'forbidden' }, 403);
+    }
+    await admin.from('push_subscriptions').update({
+      last_ack_at: now, last_ok_at: now, last_error: null,
+    }).eq('id', sid);
     return corsJson({ ok: true, delivered_at: now });
   }
 
@@ -55,13 +59,20 @@ Deno.serve(async (req) => {
     .maybeSingle();
   if (!row) return corsJson({ ok: false, error: 'not_found' }, 404);
 
+  const { data: sub } = await admin
+    .from('push_subscriptions')
+    .select('id, user_id')
+    .eq('id', sid)
+    .maybeSingle();
+  if (!sub || (row.user_id && sub.user_id !== row.user_id)) {
+    return corsJson({ ok: false, error: 'forbidden' }, 403);
+  }
+
   if (!row.delivered_at) {
     await admin.from('notifications').update({ delivered_at: now }).eq('id', notifId);
   }
-  if (sid) {
-    await admin.from('push_subscriptions').update({ last_ack_at: now, last_ok_at: now, last_error: null }).eq('id', sid);
-  } else if (row.user_id) {
-    await admin.from('push_subscriptions').update({ last_ack_at: now, last_ok_at: now, last_error: null }).eq('user_id', row.user_id);
-  }
+  await admin.from('push_subscriptions').update({
+    last_ack_at: now, last_ok_at: now, last_error: null,
+  }).eq('id', sid);
   return corsJson({ ok: true, delivered_at: row.delivered_at ?? now });
 });

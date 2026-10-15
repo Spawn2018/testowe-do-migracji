@@ -70,17 +70,18 @@ Deno.serve(async (req) => {
     }
     const tag = r.template === 'DAILY_DIGEST' ? 'digest' : `wt-${r.template}-${r.id}`;
     const nid = String(r.id);
-    const ack = await signPushAck(nid, priv);
     const ackUrl = `${url.replace(/\/$/, '')}/functions/v1/web-push-ack`;
     let okAny = false;
     let lastErr = 'push_fail';
     for (const s of subs) {
       const host = pushServiceHost(s.endpoint);
+      const sid = String(s.id);
+      const ack = await signPushAck(nid, sid, priv);
       try {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
           JSON.stringify({
-            title, body, url: clickUrl, tag, nid, sid: s.id, ack, ack_url: ackUrl,
+            title, body, url: clickUrl, tag, nid, sid, ack, ack_url: ackUrl,
             timestamp: Date.now(),
           }),
           { urgency: 'high', TTL: 86400 },

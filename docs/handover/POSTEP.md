@@ -2450,9 +2450,24 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **C16-N1 NA PRODUKCJI — 20:37 (funkcja) / 20:40 (aplikacja), właściciel może testować S24.** commit `0f5075ef`, wdrożenie `dpl_GQnkaNkuBj4TeXNrg8y1br8vCDvj`.
 
-- **W24 dostarczone 15.10.2026, 20:50** — właściciel: test na S24 doszedł (C16-N1).
+- **W24 (Android S24) dostarczone 15.10.2026, 20:50** — właściciel: powiadomienie odebrane w telefonie (N1; pełny odbiór C16 po N3 z `delivered_at` / „Doszło na urządzenie”). iPhone = W43.
 
 ## 2026-10-15 — C16 N2–N8 TEST
 
 - **TEST zajęte: C16 N2–N8**, od 15.10.2026 21:16 — security, status, nullguard, c16-push, risks na `a82ccc9e` (PR #229, migracja 0219).
+
+
+
+### C16 N2–N8 — TEST (0219) przed poprawkami przeglądu
+
+| zestaw | wynik |
+|---|---|
+| prep | ok |
+| security | 84/84 (+2 SKIP) |
+| status | 44/44 |
+| c16-push | 10/10 |
+| risks | 25/25 (+2 SKIP) |
+| nullguard | 161+136+216+124 = 637/637 |
+
+SHA TEST: `b5e65f4c`. Potem poprawki przeglądu (sw click/openWindow, HMAC `nid\|sid`, `verify_jwt=false`) — nowy commit przed scaleniem.
 

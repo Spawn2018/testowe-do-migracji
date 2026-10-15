@@ -113,14 +113,18 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {
       for (const c of clientList) {
-        if ('focus' in c) {
-          try {
-            if ('navigate' in c) await c.navigate(target);
-          } catch { /* okno niekontrolowane przez SW — openWindow poniżej */ }
-          try { return await c.focus(); } catch { /* dalej */ }
+        if (!('focus' in c)) continue;
+        try {
+          if ('navigate' in c) {
+            await c.navigate(target);
+            return c.focus();
+          }
+        } catch {
+          /* navigate nie działa na oknie poza SW — openWindow (N5) */
         }
       }
       if (self.clients.openWindow) return self.clients.openWindow(target);
+      return undefined;
     }),
   );
 });

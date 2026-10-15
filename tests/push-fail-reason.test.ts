@@ -21,7 +21,12 @@ function pushStatusCodeOf(err: unknown): number | undefined {
   return undefined;
 }
 
-async function signPushAck(nid: string, secret: string): Promise<string> {
+function pushAckPayload(nid: string, sid: string): string {
+  return `${nid}|${sid}`;
+}
+
+async function signPushAck(nid: string, sid: string, secret: string): Promise<string> {
+  const payload = pushAckPayload(nid, sid);
   const key = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(secret),
@@ -29,16 +34,16 @@ async function signPushAck(nid: string, secret: string): Promise<string> {
     false,
     ['sign'],
   );
-  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(nid));
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
   const bytes = new Uint8Array(mac);
   let bin = '';
   for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]!);
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-async function verifyPushAck(nid: string, ack: string, secret: string): Promise<boolean> {
-  if (!nid || !ack || !secret) return false;
-  const expected = await signPushAck(nid, secret);
+async function verifyPushAck(nid: string, sid: string, ack: string, secret: string): Promise<boolean> {
+  if (!nid || !sid || !ack || !secret) return false;
+  const expected = await signPushAck(nid, sid, secret);
   if (expected.length !== ack.length) return false;
   let diff = 0;
   for (let i = 0; i < expected.length; i++) {
@@ -68,13 +73,15 @@ describe('pushFailReasonOf (C16-N1)', () => {
 });
 
 describe('pushAck HMAC (C16-N3)', () => {
-  it('dobry podpis → true; zły → false', async () => {
+  it('dobry podpis nid|sid → true; zły sid/ack → false', async () => {
     const secret = 'test-vapid-private';
     const nid = 'test:sub-1:1729000000000';
-    const ack = await signPushAck(nid, secret);
-    expect(await verifyPushAck(nid, ack, secret)).toBe(true);
-    expect(await verifyPushAck(nid, ack + 'x', secret)).toBe(false);
-    expect(await verifyPushAck(nid, ack, 'other')).toBe(false);
-    expect(await verifyPushAck('', ack, secret)).toBe(false);
+    const sid = 'sub-1';
+    const ack = await signPushAck(nid, sid, secret);
+    expect(await verifyPushAck(nid, sid, ack, secret)).toBe(true);
+    expect(await verifyPushAck(nid, 'other-sid', ack, secret)).toBe(false);
+    expect(await verifyPushAck(nid, sid, ack + 'x', secret)).toBe(false);
+    expect(await verifyPushAck(nid, sid, ack, 'other')).toBe(false);
+    expect(await verifyPushAck('', sid, ack, secret)).toBe(false);
   });
 });

@@ -76,8 +76,9 @@ Deno.serve(async (req) => {
   }
 
   webpush.setVapidDetails(subject, pub, priv);
-  const nid = `test:${sub.id}:${Date.parse(sentAt) || Date.now()}`;
-  const ack = await signPushAck(nid, priv);
+  const sid = String(sub.id);
+  const nid = `test:${sid}:${Date.parse(sentAt) || Date.now()}`;
+  const ack = await signPushAck(nid, sid, priv);
   const ackUrl = `${url.replace(/\/$/, '')}/functions/v1/web-push-ack`;
   const payload = JSON.stringify({
     title: 'Watch Tower',
@@ -85,7 +86,7 @@ Deno.serve(async (req) => {
     url: '/#/opcje?panel=device',
     tag: 'push-test',
     nid,
-    sid: sub.id,
+    sid,
     ack,
     ack_url: ackUrl,
     timestamp: Date.now(),
