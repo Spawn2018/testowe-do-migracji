@@ -153,11 +153,11 @@ q "insert into documents (project_id, load_id, category, storage_path, file_name
 chk "C17 drugi CMR nie dubluje zdarzenia" \
   "select count(*) from load_events where load_id='$C17A' and event_type='STATUS_AUTO' and payload->>'to'='READY_TO_INVOICE'" 1
 # faktury: najpierw obie na C17B (jeszcze bez CMR) — potem CMR → dwa zdarzenia
-DOC_K=aaaaaaaa-0000-4000-8000-00000000c17k
-DOC_P=aaaaaaaa-0000-4000-8000-00000000c17p
-INV_K=aaaaaaaa-0000-4000-8000-00000000c17a
-INV_P=aaaaaaaa-0000-4000-8000-00000000c17b
-INV_BAD=aaaaaaaa-0000-4000-8000-00000000c17c
+DOC_K=aaaaaaaa-0000-4000-8000-00000000c171
+DOC_P=aaaaaaaa-0000-4000-8000-00000000c172
+INV_K=aaaaaaaa-0000-4000-8000-00000000c173
+INV_P=aaaaaaaa-0000-4000-8000-00000000c174
+INV_BAD=aaaaaaaa-0000-4000-8000-00000000c175
 q "insert into documents (id, project_id, load_id, category, storage_path, file_name, mime_type, size_bytes)
     values ('$DOC_K','$P','$C17B','INVOICE','test/c17-fk.pdf','fk.pdf','application/pdf',100),
            ('$DOC_P','$P','$C17B','INVOICE','test/c17-fp.pdf','fp.pdf','application/pdf',100)
@@ -180,7 +180,7 @@ chk "C17 dwa STATUS_AUTO (READY + INVOICED)" \
 q "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
     values ('$P','$C17C','CMR','test/c17-c.pdf','cmr.pdf','application/pdf',100,'2026-10-10 16:00+00')" >/dev/null
 chk "C17 C → READY_TO_INVOICE po CMR" "$(st $C17C)" READY_TO_INVOICE
-DOC_BAD=aaaaaaaa-0000-4000-8000-00000000c17d
+DOC_BAD=aaaaaaaa-0000-4000-8000-00000000c176
 q "insert into documents (id, project_id, load_id, category, storage_path, file_name, mime_type, size_bytes)
     values ('$DOC_BAD','$P','$C17C','INVOICE','test/c17-bad.pdf','bad.pdf','application/pdf',100) on conflict (id) do nothing" >/dev/null
 q "insert into invoices (id, project_id, carrier_org_id, period_start, period_end, currency, direction,
@@ -190,8 +190,8 @@ q "insert into invoices (id, project_id, carrier_org_id, period_start, period_en
 q "insert into invoice_lines (invoice_id, load_id, direction, expected_amount, invoiced_amount)
     values ('$INV_BAD','$C17C','KOSZT',1,1) on conflict (invoice_id, load_id) do nothing" >/dev/null
 # druga strona SUBMITTED — nadal brak pary ważnej
-DOC_P2=aaaaaaaa-0000-4000-8000-00000000c17e
-INV_P2=aaaaaaaa-0000-4000-8000-00000000c17f
+DOC_P2=aaaaaaaa-0000-4000-8000-00000000c177
+INV_P2=aaaaaaaa-0000-4000-8000-00000000c178
 q "insert into documents (id, project_id, load_id, category, storage_path, file_name, mime_type, size_bytes)
     values ('$DOC_P2','$P','$C17C','INVOICE','test/c17-p2.pdf','p2.pdf','application/pdf',100) on conflict (id) do nothing" >/dev/null
 q "insert into invoices (id, project_id, carrier_org_id, period_start, period_end, currency, direction,
