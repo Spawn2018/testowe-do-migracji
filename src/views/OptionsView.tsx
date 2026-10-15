@@ -15,6 +15,8 @@ import { useDemoOptions } from '../components/options/useDemoOptions';
 import { ForMeScreen } from '../components/options/ForMeScreen';
 import { DeviceScreen } from '../components/options/DeviceScreen';
 import { MessageTexts } from '../components/options/MessageTexts';
+import { SmsPlaces } from '../components/options/SmsPlaces';
+import { smsPlacesReady } from '../lib/p8bSource';
 import { OptionsHowTo } from '../components/settings/OptionsHowTo';
 import { SmsFallbackEntry } from '../components/shell/SmsFallbackEntry';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
@@ -215,7 +217,7 @@ export function OptionsView() {
         </>
       ), { right: change }),
       scr('texts', <MessageTexts readOnly={ro} />, { right: change }),
-      scr('zones', (
+      scr('zones', smsPlacesReady() ? <SmsPlaces readOnly={ro} /> : (
         <>
           <OptionsHowTo locale={locale} k="b6_howto_zones" />
           {SmsZoneRecipients ? block(<SmsZoneRecipients />) : null}
