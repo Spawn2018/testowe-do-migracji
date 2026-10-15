@@ -127,8 +127,9 @@ begin
     raise exception 'Brak uprawnień' using errcode = '42501';
   end if;
 
+  -- B6 / E44: forma wklejana przez SCX — /?id=<UUID>&secret=<KLUCZ>, nie /share/…
   return format(
-    'https://public.position-sharing.rio.cloud/share/%s?secret=%s',
+    'https://public.position-sharing.rio.cloud/?id=%s&secret=%s',
     v_id, v_secret
   );
 end;

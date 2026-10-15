@@ -158,7 +158,10 @@ export function invoiceTodoCount(
     (b.recipient === role && b.verification === 'DO_WERYFIKACJI') || (b.issuer === role && b.verification === 'SPORNA')).length;
   if (role === 'KSH') return waiting;
   const mine = loadsBilledBy(bills, role);
-  const ready = loads.filter((l) => delivered(l) && !mine.has(l.id) && hasDoc(documents, l.id, 'CMR')).length;
+  /* B3: gotowe do faktury = status READY_TO_INVOICE (E25), nie sama reguła CMR */
+  const ready = loads.filter((l) =>
+    (String(l.status) === 'READY_TO_INVOICE' || (delivered(l) && hasDoc(documents, l.id, 'CMR')))
+    && !mine.has(l.id)).length;
   return waiting + ready;
 }
 
@@ -186,8 +189,11 @@ export function cockpitFacts(input: Pick<CockpitInput, 'loads' | 'documents' | '
   /* SCX „Do zafakturowania”: rozładowane bez faktury SCX; gotowe = z podpisanym CMR */
   const toInvoice = done.filter((l) => !scxBilled.has(l.id));
   const toInvoiceNoCmr = toInvoice.filter((l) => !hasDoc(documents, l.id, 'CMR'));
-  /* HHL „gotowe do faktury”: dostarczone z podpisanym CMR, jeszcze bez faktury HHL → KSH (E25 READY_TO_INVOICE — reguła w P4) */
-  const readyToInvoice = done.filter((l) => !hhlBilled.has(l.id) && hasDoc(documents, l.id, 'CMR'));
+  /* B3 / H3: HHL „gotowe do faktury” = READY_TO_INVOICE (E25), zapas: dostarczone + CMR */
+  const readyToInvoice = loads.filter((l) =>
+    !hhlBilled.has(l.id)
+    && (String(l.status) === 'READY_TO_INVOICE'
+      || (delivered(l) && hasDoc(documents, l.id, 'CMR'))));
   const plan72 = loads.filter((l) => {
     const d = dayKey(l.plannedDeliverDate);
     return !delivered(l) && d != null && d >= today && d <= in72;

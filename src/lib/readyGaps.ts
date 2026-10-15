@@ -21,18 +21,17 @@ export function computeReadyGaps(load: Load, docs: readonly Document[]): ReadyGa
   ].filter(Boolean) as string[];
   if (awiz.length) gaps.push({ kind: 'AWIZ', items: awiz, who: 'SCX' });
 
-  const pilotsReq = load.permit?.plPilotsRequired ?? 0;
-  const sePilots = (load.permit as { sePilotsRequired?: number } | undefined)?.sePilotsRequired ?? 0;
-  if ((pilotsReq > 0 || sePilots > 0 || r.escort) && !r.escortPlate?.trim()) {
-    const items: string[] = [];
-    if (pilotsReq > 0) items.push('pilot PL');
-    if (sePilots > 0) items.push('pilot SE');
-    if (!items.length) items.push('pilot');
-    gaps.push({ kind: 'PILOTS', items, who: 'SCX' });
+  /* B5 / D-0300: piloci z symbolu ładunku (D1), nie z permits (0 wierszy). Do D1 — nie licz z permits.
+   * Gdy awizacja ma już escort bez tablicy — nadal brak (ręcznie zaznaczony). */
+  if (r.escort && !r.escortPlate?.trim()) {
+    gaps.push({ kind: 'PILOTS', items: ['pilot'], who: 'SCX' });
   }
 
   if (!load.carrierOrderNo?.trim()) gaps.push({ kind: 'ORDER_SCX', who: 'SCX' });
   if (!load.hhlOrderNo?.trim()) gaps.push({ kind: 'ORDER_HHL', who: 'HHL' });
+  /* B5 K2.2: polisa SCX wymagana do Gotowy */
+  const hasPolicyScx = docs.some((d) => d.loadId === load.id && d.category === 'INSURANCE');
+  if (!hasPolicyScx) gaps.push({ kind: 'POLICY_SCX', who: 'SCX' });
   if (load.dims && isReadyBlocked(load, [...docs]).blocked) gaps.push({ kind: 'PERMIT', who: 'SCX' });
   return gaps;
 }

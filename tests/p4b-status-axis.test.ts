@@ -14,8 +14,9 @@ const SITE = 'gf-site';
 const events: LoadEvent[] = [
   ev('SCHEDULE_IMPORTED', '2026-10-01T19:43:00Z', { code: 'SG-03' }),
   ev('STATUS_READY', '2026-10-05T09:10:00Z', {}, 'HHL', 'Zasoby uzupełnione — cover OK'),
-  ev('STATUS_AUTO', '2026-10-05T11:21:00Z', { from: 'READY', to: 'READY', powod: 'faza ustalona z pozycji naczepy przy podłączeniu', zrodlo: 'TELM_PHASE_INFER', lat: 62.5, lon: 17.6 }),
-  ev('STATUS_AUTO', '2026-10-05T11:21:00Z', { from: 'READY', to: 'IN_TRANSIT_SE', powod: 'faza ustalona z pozycji naczepy przy podłączeniu', zrodlo: 'TELM_PHASE_INFER', lat: 62.5, lon: 17.6 }),
+  /* B4 / D-20261015-0300-01: skipTracker z payload.tracker_on, nie ze słowa „naczep” w powod */
+  ev('STATUS_AUTO', '2026-10-05T11:21:00Z', { from: 'READY', to: 'READY', powod: 'faza ustalona z pozycji przy podłączeniu', zrodlo: 'TELM_PHASE_INFER', tracker_on: 'NACZEPA', lat: 62.5, lon: 17.6 }),
+  ev('STATUS_AUTO', '2026-10-05T11:21:00Z', { from: 'READY', to: 'IN_TRANSIT_SE', powod: 'faza ustalona z pozycji przy podłączeniu', zrodlo: 'TELM_PHASE_INFER', tracker_on: 'NACZEPA', lat: 62.5, lon: 17.6 }),
   ev('GEOFENCE_ENTER', '2026-10-07T06:35:00Z', { geofence_id: SITE }),
   ev('STATUS_AUTO', '2026-10-07T06:35:00Z', { from: 'IN_TRANSIT_SE', to: 'AT_SITE', powod: 'wjazd na plac budowy', geofence_id: SITE }),
   ev('GEOFENCE_EXIT', '2026-10-07T10:19:00Z', { geofence_id: SITE }),

@@ -37,6 +37,7 @@ export function DashboardView() {
   const locale = useTowerStore((s) => s.locale);
   const currency = useTowerStore((s) => s.displayCurrency);
   const loads = useTowerStore((s) => s.loads);
+  const events = useTowerStore((s) => s.events);
   const risks = useTowerStore((s) => s.risks);
   const documents = useTowerStore((s) => s.documents);
   const selectLoad = useTowerStore((s) => s.selectLoad);
@@ -95,9 +96,21 @@ export function DashboardView() {
       tierText: agg.tier ? t(locale, `tier_${agg.tier}`).toLowerCase() : t(locale, 'tier_PROGNOZA').toLowerCase(),
     };
   }, [loads, role, locale, currency]);
+  /* B3 / H3.5: „na placu od …” — GEOFENCE_ENTER SITE */
+  const siteSince = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of events) {
+      if (e.type !== 'GEOFENCE_ENTER') continue;
+      const p = (e.payload ?? {}) as { geofence_type?: string; zone?: string };
+      if (p.geofence_type !== 'SITE' && p.zone !== 'SITE') continue;
+      const prev = m.get(e.loadId);
+      if (!prev || Date.parse(e.at) > Date.parse(prev)) m.set(e.loadId, e.at);
+    }
+    return m;
+  }, [events]);
   const tiles = buildCockpit({
     role, locale, nowIso: getNow().toISOString(), loads, documents, bills,
-    todo, ferry, margin: marginInfo,
+    todo, ferry, margin: marginInfo, siteSince,
   });
   const marginTier = aggregateTier(loads, role);
   const moneyTags = marginTier.tier ? (

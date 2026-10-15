@@ -82,6 +82,8 @@ export interface AxisHit {
   /** faza ustalona z pierwszej pozycji (TELM_PHASE_INFER) */
   phaseInfer: boolean;
   geofenceId: string | null;
+  /** B4: `payload.tracker_on` (NACZEPA / CIAGNIK_*) */
+  trackerOn: string | null;
 }
 
 /** Czas zdarzenia w ms (porównania po czasie, nie po tekście: „+02:00” i „Z”). */
@@ -134,6 +136,7 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
       why: str('powod'),
       phaseInfer: str('zrodlo') === 'TELM_PHASE_INFER',
       geofenceId: str('geofence_id'),
+      trackerOn: str('tracker_on') ?? str('trackerOn'),
     });
   }
   /* porównanie po czasie, nie po tekście: zdarzenia z okna mają „+02:00”, z bazy „Z” */
@@ -202,7 +205,8 @@ export function buildStatusAxis(
     if (r.group === 'prep' && next.statuses[0] === 'READY') r.row.skipWhy = 'complete';
     else if (r.group === 'route' && next.hit.phaseInfer) {
       r.row.skipWhy = SE_SIDE.has(next.statuses[0]) ? 'trackerSe' : 'trackerPl';
-      r.row.skipTracker = /naczep/i.test(next.hit.why ?? '') ? 'trailer' : 'tracker';
+      /* B4 / H4.2: lokalizator z payload STATUS_AUTO.tracker_on — nie ze słowa „naczep” */
+      r.row.skipTracker = (next.hit.trackerOn ?? '').toUpperCase() === 'NACZEPA' ? 'trailer' : 'tracker';
     }
   });
   const groups: AxisGroup[] = (['prep', 'route', 'after'] as const).map((key) => ({

@@ -195,7 +195,7 @@ export function LoadDrawer() {
   /* wyglad/P4-c: link śledzenia z serwera (E44), braki do „Gotowy” (L6, L9, L29), sprawa „czy dostarczono?” (L14) */
   const trackingLink = trackingLinkOf(load, loads, nowIso);
   const readyGaps = readyGapsOf(load, loadDocs);
-  const dcRaw = deliveredCheckOf(load, loads, geofences, nowIso, role);
+  const dcRaw = deliveredCheckOf(load, loads, geofences, nowIso, role, loadEvents);
   const deliveredCheck = dcRaw && dcRaw.id !== dcClosed ? dcRaw : null;
   const deliveredCard = deliveredCheck ? (
     <DeliveredCheckCard

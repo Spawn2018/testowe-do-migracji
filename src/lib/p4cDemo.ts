@@ -84,6 +84,7 @@ export function demoAutoMeta(loads: readonly Load[], events: readonly LoadEvent[
   const load = last ? loads.find((l) => l.id === last.loadId) : undefined;
   return {
     zones: last && load ? `${load.code} · ${dayTime(last.at)}` : undefined,
+    prices: last && load ? `${load.code} · ${dayTime(last.at)}` : undefined,
     texts: 'tryb testowy',
   };
 }

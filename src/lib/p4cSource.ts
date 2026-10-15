@@ -20,27 +20,70 @@ export function readyGapsOf(load: Load, docs: readonly Document[]): ReadyGap[] |
   return computeReadyGaps(load, docs);
 }
 
+/** B1 / L14: sprawa „czy dostarczono?” z bazy (load.deliveredCheck) albo z GEOFENCE_EXIT SITE przy krótkim postoju. */
+export function deliveredCheckFromEvents(
+  load: Load,
+  events: readonly LoadEvent[],
+  geofences: readonly Pick<Geofence, 'type' | 'name'>[],
+  role: 'HHL' | 'KSH' | 'SCX',
+  thresholdMin = 10,
+): DeliveredCheck | null {
+  if (load.status === 'DELIVERED' || String(load.status) === 'CANCELLED') return null;
+  const siteExit = [...events]
+    .filter((e) => e.loadId === load.id && e.type === 'GEOFENCE_EXIT')
+    .sort((a, b) => isoMs(b.at) - isoMs(a.at))[0];
+  if (!siteExit) return null;
+  const p = (siteExit.payload ?? {}) as { dwell_min?: number; minutes?: number; zone?: string; geofence_type?: string };
+  const minutes = Number(p.dwell_min ?? p.minutes ?? NaN);
+  if (!Number.isFinite(minutes) || minutes >= thresholdMin) return null;
+  const zoneName = p.zone
+    ?? geofences.find((g) => g.type === 'SITE')?.name
+    ?? 'Plac budowy';
+  return {
+    id: `dc-${load.id}-${siteExit.at}`,
+    exitAt: siteExit.at,
+    minutes: Math.round(minutes),
+    thresholdMin,
+    zoneName,
+    canDecide: role === 'SCX',
+  };
+}
+
 export function deliveredCheckOf(
   load: Load,
   loads: readonly Load[],
   geofences: readonly Pick<Geofence, 'type' | 'name'>[],
   nowIso: string,
   role: 'HHL' | 'KSH' | 'SCX',
+  events: readonly LoadEvent[] = [],
 ): DeliveredCheck | null {
   if (load.status === 'DELIVERED' || String(load.status) === 'CANCELLED' /* jak TrackingBar: anulowany spoza LoadStatus */) return null;
   if (load.deliveredCheck !== undefined) return load.deliveredCheck;
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoDeliveredCheck(load, loads, geofences, nowIso, role) : null;
+  if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return demoDeliveredCheck(load, loads, geofences, nowIso, role);
+  return deliveredCheckFromEvents(load, events, geofences, role);
 }
 
 function prodAutoMeta(loads: readonly Load[], events: readonly LoadEvent[], nowIso: string): Partial<Record<string, string>> {
   const now = isoMs(nowIso);
-  const last = [...events]
-    .filter((e) => e.type === 'STATUS_AUTO' || e.type.startsWith('GEOFENCE_') || ['LOADING', 'LOADED', 'PORT_OUT', 'PORT_IN', 'SITE', 'UNLOADED'].includes(e.type))
-    .filter((e) => isoMs(e.at) <= now)
-    .sort((a, b) => isoMs(b.at) - isoMs(a.at))[0];
-  const load = last ? loads.find((l) => l.id === last.loadId) : undefined;
+  const timed = [...events].filter((e) => isoMs(e.at) <= now).sort((a, b) => isoMs(b.at) - isoMs(a.at));
+  const zoneEv = timed.find((e) => e.type === 'STATUS_AUTO' || e.type.startsWith('GEOFENCE_')
+    || ['LOADING', 'LOADED', 'PORT_OUT', 'PORT_IN', 'SITE', 'UNLOADED'].includes(e.type));
+  const priceEv = timed.find((e) => /PRICE|FEE|BAF|SEFS|INVOICE/i.test(e.type) || /price|fee|baf/i.test(String((e.payload as { kind?: string } | undefined)?.kind ?? '')));
+  const textEv = timed.find((e) => e.type === 'NOTE' || /NOTIFY|BROADCAST|TEXT/i.test(e.type));
   const out: Partial<Record<string, string>> = {};
-  if (last && load) out.zones = `${load.code} · ${dayTime(last.at)}`;
+  if (zoneEv) {
+    const load = loads.find((l) => l.id === zoneEv.loadId);
+    if (load) out.zones = `${load.code} · ${dayTime(zoneEv.at)}`;
+  }
+  /* B2 / K2.4: prices i texts — nie tylko zones */
+  if (priceEv) {
+    const load = loads.find((l) => l.id === priceEv.loadId);
+    out.prices = load ? `${load.code} · ${dayTime(priceEv.at)}` : dayTime(priceEv.at);
+  }
+  if (textEv) {
+    const load = loads.find((l) => l.id === textEv.loadId);
+    out.texts = load ? `${load.code} · ${dayTime(textEv.at)}` : dayTime(textEv.at);
+  }
   return out;
 }
 
