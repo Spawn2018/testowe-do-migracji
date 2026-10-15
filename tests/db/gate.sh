@@ -108,11 +108,13 @@ if want_suite security || want_suite status; then
   if want_suite security; then
     WYNIK_LINE[security]=$(echo "$run_out" | awk '/^=== security$/{f=1;next} f&&/WYNIK/{print;exit}')
     echo "=== security"
+    echo "$run_out" | awk '/^=== security$/{f=1;next} f&&/^=== /{exit} f&&/FAIL/{print}'
     echo "${WYNIK_LINE[security]:-WYNIK: brak}"
   fi
   if want_suite status; then
     WYNIK_LINE[status]=$(echo "$run_out" | awk '/^=== status$/{f=1;next} f&&/WYNIK/{print;exit}')
     echo "=== status"
+    echo "$run_out" | awk '/^=== status$/{f=1;next} f&&/^=== /{exit} f&&/FAIL/{print}'
     echo "${WYNIK_LINE[status]:-WYNIK: brak}"
   fi
 fi
@@ -124,14 +126,16 @@ for s in "${SUITE_LIST[@]}"; do
   mode=$("${GS[@]}" --run "$s")
   file=$("${GS[@]}" --file "$s")
   if [ "$mode" = "tower" ]; then
-    line=$(run_on_tower "$file" | grep -E "WYNIK|RAPORT" | tail -1 || true)
+    suite_out=$(run_on_tower "$file" || true)
   elif [ "$s" = "backup" ]; then
-    line=$(BACKUP_HOSTED= bash "tests/db/$file" 2>/dev/null | grep -E "WYNIK" | tail -1 || true)
+    suite_out=$(BACKUP_HOSTED= bash "tests/db/$file" 2>/dev/null || true)
   else
-    line=$(bash "tests/db/$file" 2>/dev/null | grep -E "WYNIK" | tail -1 || true)
+    suite_out=$(bash "tests/db/$file" 2>/dev/null || true)
   fi
+  line=$(echo "$suite_out" | grep -E "WYNIK|RAPORT" | tail -1 || true)
   WYNIK_LINE["$s"]=$line
   echo "=== $s"
+  echo "$suite_out" | grep -E "FAIL" | head -40 || true
   echo "${line:-WYNIK: brak}"
 done
 
