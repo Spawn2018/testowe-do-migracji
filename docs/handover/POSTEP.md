@@ -2437,3 +2437,16 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **C2 NA PRODUKCJI — commit `e49285c5`, wdrożenie `dpl_BGubwMaao7NTm9wauFLPcShYkTQr`, 15.10.2026 ~19:00.** Następne: C3–C15.
 
+## 2026-10-15 — C16-N1 NA PRODUKCJI (BLOKER C2 / D-20261015-1955-01)
+
+- Przyczyna: przycisk testu → tylko `OPTIONS … web-push-test → 405` (brak CORS), zero POST.
+- PR #227 → `2b9c3679` (`d3fde479`): CORS, `{ ok, status, reason, sent_at }`, `urgency: high`, `TTL: 60`, kod z `e.statusCode`.
+- PR #226 → `0f5075ef` (wyglad/push-telefon): ekran „Sprawdź ten telefon”, powód porażki, badge-96; dopisek D-20261015-1955-01.
+- Edge `web-push-test` wdrożona (prod) ~20:37; aplikacja `dpl_GQnkaNkuBj4TeXNrg8y1br8vCDvj` ~20:40; JS `assets/index-CUhhGQCv.js`; tower / makieta **200**; 0 × `service_role` (20 plików JS).
+- unit: `push-fail-reason` 2/2 (+ HMAC w N2); CI unit/visual/db #227 zielone; `npm audit` 0.
+- PLAN: C16 przed C3; W42 = e-mail; W43 iPhone; W24 czeka do odbioru C16 na S24.
+- Czas plan ~0,5 h N1; poprawki: 0.
+- **Następne:** C16 N2–N8 (send/ack/fallback/sw/sync/migracja 0219).
+
+**C16-N1 NA PRODUKCJI — 20:37 (funkcja) / 20:40 (aplikacja), właściciel może testować S24.** commit `0f5075ef`, wdrożenie `dpl_GQnkaNkuBj4TeXNrg8y1br8vCDvj`.
+

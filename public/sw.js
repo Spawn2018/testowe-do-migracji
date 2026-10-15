@@ -1,5 +1,6 @@
 /* Watch Tower — PWA (§14). CACHE bump przy każdej zmianie precache / offline. */
-const CACHE = 'wt-static-v2026-10-15-c2-push';
+/* C16: push ack, pushsubscriptionchange, notificationclick openWindow, icon/badge */
+const CACHE = 'wt-static-v2026-10-15-c16-push';
 const PRECACHE = [
   '/',
   '/offline.html',
@@ -8,6 +9,7 @@ const PRECACHE = [
   '/brand/icon-512.png',
   '/brand/icon-maskable-192.png',
   '/brand/icon-maskable-512.png',
+  '/brand/badge-96.png',
   '/brand/favicon.ico',
   '/brand/watchtower-symbol.png',
 ];
@@ -35,7 +37,6 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (isApiOrAuth(url)) return;
 
-  /* Nawigacja (HTML) — sieć najpierw; offline → offline.html */
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
@@ -49,7 +50,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  /* Statyczne brand / offline — cache first */
   if (url.pathname.startsWith('/brand/') || url.pathname === '/offline.html' || url.pathname === '/sw.js') {
     event.respondWith(
       caches.match(req).then((hit) => hit || fetch(req).then((res) => {
@@ -63,21 +63,46 @@ self.addEventListener('fetch', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data && event.data.type === 'WT_PUSH_CFG' && event.data.resubUrl) {
+    void caches.open(CACHE).then((c) => c.put(
+      '/__wt_push_cfg',
+      new Response(JSON.stringify({ resubUrl: event.data.resubUrl }), {
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    ));
+  }
 });
 
-/* C2 / E5 — powiadomienie na telefon: tytuł, treść, tag; klik → cel z payload.url */
+async function ackDelivery(data) {
+  const nid = data && data.nid;
+  const ack = data && data.ack;
+  const ackUrl = data && data.ack_url;
+  if (!nid || !ack || !ackUrl) return;
+  try {
+    await fetch(ackUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nid, ack, sid: data.sid || undefined }),
+    });
+  } catch { /* potwierdzenie nie blokuje wyświetlenia */ }
+}
+
 self.addEventListener('push', (event) => {
   let data = { title: 'Watch Tower', body: '', url: '/', tag: 'wt' };
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch { /* treść pusta */ }
+  const ts = typeof data.timestamp === 'number' ? data.timestamp : Date.now();
   event.waitUntil(
     self.registration.showNotification(data.title || 'Watch Tower', {
       body: data.body || '',
       tag: data.tag || 'wt',
-      data: { url: data.url || '/' },
+      data: { url: data.url || '/', nid: data.nid, ack: data.ack, sid: data.sid },
+      icon: '/brand/icon-192.png',
+      badge: '/brand/badge-96.png',
+      timestamp: ts,
       renotify: true,
-    }),
+    }).then(() => ackDelivery(data)),
   );
 });
 
@@ -86,14 +111,44 @@ self.addEventListener('notificationclick', (event) => {
   const raw = (event.notification.data && event.notification.data.url) || '/';
   const target = new URL(raw, self.location.origin).href;
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      for (const c of clients) {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {
+      for (const c of clientList) {
         if ('focus' in c) {
-          void c.navigate(target);
-          return c.focus();
+          try {
+            if ('navigate' in c) await c.navigate(target);
+          } catch { /* okno niekontrolowane przez SW — openWindow poniżej */ }
+          try { return await c.focus(); } catch { /* dalej */ }
         }
       }
       if (self.clients.openWindow) return self.clients.openWindow(target);
     }),
   );
+});
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil((async () => {
+    const oldEp = event.oldSubscription && event.oldSubscription.endpoint;
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of clients) c.postMessage({ type: 'WT_PUSH_RESYNC' });
+    try {
+      const opts = event.oldSubscription && event.oldSubscription.options
+        ? event.oldSubscription.options
+        : { userVisibleOnly: true };
+      const sub = await self.registration.pushManager.subscribe(opts);
+      const json = sub.toJSON();
+      const cfgRes = await caches.match('/__wt_push_cfg');
+      const cfg = cfgRes ? await cfgRes.json() : null;
+      if (!cfg || !cfg.resubUrl || !oldEp || !json.endpoint || !json.keys) return;
+      await fetch(cfg.resubUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          old_endpoint: oldEp,
+          endpoint: json.endpoint,
+          p256dh: json.keys.p256dh,
+          auth: json.keys.auth,
+        }),
+      });
+    } catch { /* syncWebPush przy starcie aplikacji */ }
+  })());
 });
