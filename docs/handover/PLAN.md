@@ -117,7 +117,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Cursor scala te PR i wdraża (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** → **P3-d — dane ekranów Opcji (J3 pkt 2–11)** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; Poprawki P2 — wygląd: `pakiet/P2-wyglad`, D-20261013-1535-01 V1–V4; Poprawki P2 — wygląd 2: koordynator `wyglad/P2-2`, D-20261013-1815-01 W1–W7 — przed scaleniem P3; Poprawki P3: `pakiet/P3-poprawki`, D-20261014-0015-01 — przed wdrożeniem P4 z migracją; Poprawki P2–P3 (audyt 15.10): D-20261015-0300-01 C1–C15 + D-20261015-0330-01 C14–C15 — po zamknięciu P4, przed P3-d; P3-d zaraz po Poprawkach P2–P3 — D-20261014-1420-01 R7)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** → **P3-d — dane ekranów Opcji (J3 pkt 2–11)** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; Poprawki P2 — wygląd: `pakiet/P2-wyglad`, D-20261013-1535-01 V1–V4; Poprawki P2 — wygląd 2: koordynator `wyglad/P2-2`, D-20261013-1815-01 W1–W7 — przed scaleniem P3; Poprawki P3: `pakiet/P3-poprawki`, D-20261014-0015-01 — przed wdrożeniem P4 z migracją; Poprawki P2–P3 (audyt 15.10): D-20261015-0300-01 C1–C15 + D-20261015-0330-01 C14–C15 + D-20261015-1955-01 **C16 przed C3** — po zamknięciu P4, przed P3-d; P3-d zaraz po Poprawkach P2–P3 — D-20261014-1420-01 R7)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -338,9 +338,10 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - pełna trasa Śrem → Boden z symulowanymi pozycjami: każdy status raz, właściwy kafelek, prawdziwa godzina.
 
 ### Poprawki P2–P3 (audyt 15.10) — W TOKU (gałąź `pakiet/poprawki-p2-p3-audyt-15`; C1/C2/C12/C14 na produkcji; C2 `e49285c5` / `dpl_BGubwMaao7NTm9wauFLPcShYkTQr`)
-Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01). Gałąź `pakiet/poprawki-p2-p3-audyt-15`.
+Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261015-1955-01 C16). Gałąź `pakiet/poprawki-p2-p3-audyt-15`.
 - **C1** ✅ zalew dzwonka E5 — ryzyko bez `load_id` bez IN_APP/EMAIL/WEB_PUSH; bez nowych RISK_RESOLVED; cel `/transport/brak` nie powstaje; WEB_PUSH tylko krytyczne z transportem (+ E5-5 źródła); jednorazowo nieprzeczytane RISK_* bez transportu → przeczytane. **Przed** `tower-road-pl` (P6 E2).
-- **C2** ✅ `sw.js` push/notificationclick; `web-push-send` z celem; przełącznik z `push_subscriptions`; „Wyślij powiadomienie testowe”.
+- **C2** ✅ `sw.js` push/notificationclick; `web-push-send` z celem; przełącznik z `push_subscriptions`; „Wyślij powiadomienie testowe”. **Odbiór C2 nie przeszedł** (BLOKER 15.10 — tylko OPTIONS 405, zero POST) → **C16** przed C3.
+- **C16** (D-20261015-1955-01, BLOKER): powiadomienia na każdym telefonie (także iPhone). N1: CORS + `{ ok, status, reason, sent_at }` w `web-push-test` (urgency high, TTL 60). N2–N8: `web-push-send` (kody, urgency, TTL 86400, wysyłka od razu + cron zapas), `web-push-ack`, kanał zapasowy e-mail (W42), `sw.js`, `syncWebPush`, kolumny stanu, testy. Ekran „Ten telefon” — koordynator `wyglad/push-telefon` (PR #226). Odbiór S24 właściciela; iPhone = W43 (nie blokuje).
 - **C3** macierz powiadomień po zdarzeniu (nie 5 grup); jeśli `LOAD_STATUS × HHL_ADMIN` `email=true` → `false` (W39).
 - **C4** ustawienia z „było → jest” (`old_value`); alerty stref/ryzyk → profil lub usunięte.
 - **C5** nazwa transportu w funkcjach bazy = `shipment_code` / `transport_label`; KSH bez numeru zlecenia.
@@ -590,7 +591,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W21 | P3-APK: uprawnienie `workflow` dla tokenu GitHub — potem wykonawca przypina akcje (SHA) w workflow APK | gdy będzie | **dostarczone 12.10.2026, 02:38** (token ma `workflow` — sprawdzone 11.10 w P0-CI; pin SHA = pozycja „P3-APK — uzupełnienie W21”) |
 | W22 | E18 P3 (decyzja „A: usunąć konta +tower-test z zaproszeniami”) i P2: wiersze 6 kont „+tower-*” wskazuje 11 wpisów dziennika bezpieczeństwa (klucz bez kaskady) | — | **ROZSTRZYGNIĘTE 09.10.2026, 13:09**: „usunąć z odpięciem 11 wpisów dziennika” — robi P1 (`paczki/P1_E18.md`, D-20261009-1309-01 R3) |
 | W23 | Kwoty w dokumentach audytu (E3, E16, E33, E40, `DECYZJE_08_10.md`): zostają w repozytorium (prywatnym) czy usunąć je z dokumentów (G-16) | gdy zdecydujesz | czeka |
-| W24 | Sprawdzenie na iPhonie i Androidzie (E8 pkt 8, E13): dolny pasek, karty, dzwonek, instalacja — wynik do koordynatora | po P2 i po P3 | czeka |
+| W24 | Sprawdzenie na iPhonie i Androidzie (E8 pkt 8, E13): dolny pasek, karty, dzwonek, instalacja — wynik do koordynatora; odbiór C16 na S24 (D-20261015-1955-01) | po P2 i po P3; po C16 | czeka |
 | W25 | Zgoda na jednorazową kopię prawdziwych pozycji SG-03 (czas, współrzędne, prędkość, zapłon; bez nazwisk i tablic) z produkcji na TEST na czas testów P4 i P8, z usunięciem po teście (G-17 pkt 3). Bez zgody testy idą na śladzie zmyślonym | przed P4 | czeka |
 | W26 | Piloci: zmiana symbolu ładunku z „PL + SE” na „BRAK” po wpisaniu pilotów — usunąć zapisane wiersze pilotów czy zostawić je ukryte w bazie (D-20261009-1233-01 pyt. 2). Do odpowiedzi: wiersze zostają w bazie, niewyświetlane | przed P7 | czeka |
 | W27 | Link śledzenia: decyzja 07.10 20:57 „SCX zawsze musi dodać link”, E44 pkt 5 „pole wymagane przy każdej awizacji transportu podwykonawcy”, a kompletna awizacja w E32 pkt 6 (akceptacja 08.10 12:14) nie zawiera linku. Czy brak linku ma blokować kompletną awizację i „Gotowy”; jeśli tylko u podwykonawcy — po czym rozpoznać transport podwykonawcy SCX. Do odpowiedzi: według E32 pkt 6 nie blokuje; sprawa „Dodaj link śledzenia” dla SCX otwarta do wklejenia linku (L19) | przed P4 | czeka |
@@ -607,6 +608,8 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W38 | „Podgląd” z prawdziwymi uprawnieniami firmy | przed P6 | **rozstrzygnięte 15.10.2026, 03:12: TAK** — P6 (D-20261015-0330-01) |
 | W39 | `LOAD_STATUS × HHL_ADMIN` e-mail w „Kto co dostaje” | teraz | **rozstrzygnięte 15.10.2026, 03:12: cofnąć**; stan 15.10 ~06:11: `email=false` (już wyłączone) |
 | W40 | Uzgodnienie pkt 2–3 i E46–E48 | — | **zaakceptowane 15.10.2026, 03:12** (D-20261015-0330-01) |
+| W42 | Kanał zapasowy, gdy telefon nie potwierdzi pilnego WEB_PUSH w 5 min albo konto bez urządzenia | C16 N4 | **rozstrzygnięte 15.10.2026, 19:57: e-mail** na adres konta (bez SMS; D-20261015-1955-01) |
+| W43 | iPhone do odbioru C16 (właściciel nie ma) | C16 odbiór krok 3 | czeka na pierwsze konto z iPhone’em — dowód: `push_subscriptions` z `web.push.apple.com` + `last_ack_at`; nie blokuje zamknięcia C16 (D-20261015-1955-01) |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0, rezerwa
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -695,3 +698,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 15.10.2026 03:00 | D-20261015-0300-01: blokery A1–A6; B (domknięcie P4); Poprawki P2–P3 C1–C13; D/E do §4 przyszłych paczek; §5 (numery potem W35–W40 wg D-0330) | koordynator; wykonawca |
 | 15.10.2026 03:30 | D-20261015-0330-01: W35 wydanie 22.10 20:00; W36–W40; C14/C15; Podgląd → P6; PR #210 | właściciel 03:12; koordynator |
 | 15.10.2026 04:00 | D-20261015-0400-01: P6 E2 drogi PL z HERE — `tower-road-pl` dopiero po C1 | właściciel 03:52; koordynator |
+| 15.10.2026 19:55 | D-20261015-1955-01: BLOKER C2 → C16 przed C3 (powiadomienia na każdym telefonie); W42 e-mail; W43 iPhone; W24 czeka do odbioru C16 na S24 | właściciel 19:43 / 19:57; koordynator |
