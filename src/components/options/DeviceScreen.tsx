@@ -30,6 +30,12 @@ export function DeviceScreen({ locale }: { locale: Locale }) {
     });
   }, []);
 
+  useEffect(() => {
+    const s = pushDevicesOf();
+    if (!s?.refresh) return;
+    void s.refresh().then(setDevices);
+  }, []);
+
   const turn = (on: boolean) => {
     if (!loadWebPush) return;
     setBusy(true);
@@ -42,6 +48,8 @@ export function DeviceScreen({ locale }: { locale: Locale }) {
         await wp.disableWebPush();
         setMsg(t(locale, 'dev_off_ok'));
       }
+      const s = pushDevicesOf();
+      if (s?.refresh) setDevices(await s.refresh());
       setBusy(false);
     })();
   };

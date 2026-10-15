@@ -42,18 +42,30 @@ Deno.serve(async (req) => {
       failed++;
       continue;
     }
+    const payload = (r.payload ?? {}) as {
+      body?: string; title?: string; url?: string; href?: string; n?: number; code?: string;
+    };
     const title = r.template === 'DAILY_DIGEST'
       ? 'Watch Tower — skrót dnia'
-      : `Watch Tower — ${r.template}`;
+      : String(payload.title ?? `Watch Tower — ${r.template}`);
     const body = r.template === 'DAILY_DIGEST'
-      ? `${(r.payload as { n?: number })?.n ?? 0} powiadomień`
-      : String((r.payload as { body?: string })?.body ?? r.template);
+      ? `${payload.n ?? 0} powiadomień`
+      : String(payload.body ?? r.template);
+    // C2 / E5: cel kliknięcia z payload (transport / decyzja); bez /transport/brak
+    let clickUrl = payload.url || payload.href || '/';
+    if (typeof clickUrl === 'string' && (clickUrl.includes('/brak') || clickUrl.endsWith('/brak'))) {
+      clickUrl = '/';
+    }
+    if (payload.code && clickUrl === '/') {
+      clickUrl = `/#/transport/${encodeURIComponent(payload.code)}`;
+    }
+    const tag = r.template === 'DAILY_DIGEST' ? 'digest' : `wt-${r.template}-${r.id}`;
     let okAny = false;
     for (const s of subs) {
       try {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-          JSON.stringify({ title, body, url: '/' }),
+          JSON.stringify({ title, body, url: clickUrl, tag }),
         );
         okAny = true;
       } catch (e) {
