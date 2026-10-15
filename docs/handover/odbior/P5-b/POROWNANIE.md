@@ -36,7 +36,7 @@ Makiety ekranu nie ma (E12: „Pieniądze › Dopłaty — Czas wolny i przestó
 
 | element | decyzja | po zmianie w aplikacji | zgodne | uwagi |
 |---|---|---|---|---|
-| wartości | czas wolny 6 h / 4 h, 75 EUR za rozpoczętą godzinę, powyżej 24 h 750 EUR za rozpoczętą dobę | 5 wierszy z wartością i zdaniem o skutku, „Zmień” | tak | bez „(WSTĘPNE)” i bez kodów |
+| wartości | czas wolny 6 h / 4 h, 75 EUR za rozpoczętą godzinę, 750 EUR za rozpoczętą dobę powyżej 10 h (W41, 15.10 18:32; wcześniej 24 h) | 5 wierszy z wartością i zdaniem o skutku, „Zmień” | tak | bez „(WSTĘPNE)” i bez kodów; zrzuty ekranu Dopłaty po W41 |
 | wybory | „od późniejszego z: wjazd do strefy, plan”; „każda rozpoczęta godzina” (dziś „1 = cała godzina, 2 = ułamek”) | przyciski w dwóch rzędach | tak | — |
 | zmiana | „Zmiana z potwierdzeniem i wpisem w historii” (E12) | „Zmień” → pole → „Zapisz” → „Zmienić: … było → jest?” → „Tak, zmień”; przy wyborach to samo pytanie | tak | wzór: Progi alarmów (P3-c) |
 | przykład | postój 8 h 10 min, czas wolny 6 h → 3 rozpoczęte godziny × 75 EUR = 225,00 EUR (E33, okno „Dopłata”) | „Przykład: postój 8 h 10 min na załadunku → 225,00 EUR, tyle samo po stronie kosztu i przychodu.” — liczony z bieżących wartości | tak | — |

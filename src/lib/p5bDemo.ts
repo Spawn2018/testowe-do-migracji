@@ -93,7 +93,8 @@ export function demoFuelScreen(today: string): FuelScreenView {
 }
 
 export const demoDwellRules = (): DwellRulesView => ({
-  freeLoadH: 6, freeUnloadH: 4, hourEur: 75, dayEur: 750, dayAfterH: 24,
+  /* dayAfterH 10 h — decyzja właściciela 15.10, 18:32 (W41); wcześniej 24 h (07.10 12:35) */
+  freeLoadH: 6, freeUnloadH: 4, hourEur: 75, dayEur: 750, dayAfterH: 10,
   startFrom: 'LATER', hourMode: 'FULL',
   changed: { at: '2026-10-07T12:35:00+02:00', by: 'Administrator HHL' },
 });
