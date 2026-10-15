@@ -30,7 +30,7 @@ fx "update loads set status='IN_TRANSIT_PL', tractor_plate='WGM 1234' where id='
 $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L1', now() - interval '3 hours', st_setsrid(st_makepoint(18.0,53.0),4326), 'TELEMATICS_API')" >/dev/null
 Q "select detect_silent_vehicles(90)" >/dev/null
 chk "detect_silent_vehicles → rk_silent_vehicle" "$(key "kind='SILENT_VEHICLE'")" rk_silent_vehicle
-/* B7 / E15: SILENT_MIN = 30 */
+# B7 / E15: SILENT_MIN = 30
 chk "detect_silent_vehicles: params plate i minutes" "$(Q "select (detail->'params'->>'plate')||'/'||(detail->'params'->>'minutes') from risk_signals where kind='SILENT_VEHICLE'")" "WGM 1234/30"
 chk "tytuł PL bez zmian (dziennik)" "$(Q "select title from risk_signals where kind='SILENT_VEHICLE'")" "Brak pozycji pojazdu WGM 1234 od 30 min"
 

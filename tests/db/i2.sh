@@ -262,7 +262,7 @@ $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order
 $PSQL -c "insert into positions (load_id, ts, geom_raw, source) select '$L7', now()-interval '3 hours', st_setsrid(st_makepoint(18.0, 53.0),4326), source from positions limit 1" >/dev/null
 chk "anon bez EXECUTE kpi_detection_lag; funkcja SECURITY INVOKER" "$(Q "select has_function_privilege('anon','kpi_detection_lag(uuid,integer)','execute')::text||'/'||(select prosecdef::text from pg_proc where proname='kpi_detection_lag')")" "false/false"
 val "brak ryzyk z czasem zdarzenia → 0 próbek, mediana NULL (kafelek „—”)" $HHL "select samples||'/'||coalesce(median_min::text,'∅') from kpi_detection_lag('$P')" "0/∅"
-/* B7 / E15: SILENT_MIN 30 → lag = 180 − 30 = 150 */
+# B7 / E15: SILENT_MIN 30 → lag = 180 − 30 = 150
 chk "cichy pojazd: próg z Opcji (30 min), pozycja sprzed 3 h → wykrycie po 150 min" "$(Q "select detect_silent_vehicles(90) >= 1")/$(Q "select round(extract(epoch from detected_at-occurred_at)/60) from risk_signals where load_id='$L7' and kind='SILENT_VEHICLE'")" "t/150"
 $PSQL -c "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L7','GEOFENCE_ENTER', now()-interval '7 minutes', '{\"geofence_id\":\"g-test\"}')" >/dev/null
 $PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key) values ('$P','$L7','LOADING_UNCONFIRMED','MEDIUM','test strefy','rk_dates_unconfirmed','{\"geofence_id\":\"g-test\",\"zdarzenie\":\"GEOFENCE_ENTER\"}','T-I2L-G')" >/dev/null 2>&1
@@ -947,7 +947,7 @@ val "dwell_info bez zdarzeń = 0 (bez kwoty)" $HHL "select count(*) from load_dw
 $PSQL -c "delete from load_agreed_fees where load_id='$LF'; delete from load_cost where load_id='$LF'; delete from load_revenue where load_id='$LF'; update loads set status='CANCELLED' where id='$LF'" >/dev/null 2>&1
 
 echo; echo "[II-7] korytarz OSM + ETA v2"
-/* B8 / L57: + SE_APPROACH_SG03 (krótki odcinek — total_km może być < 100) */
+# B8 / L57: + SE_APPROACH_SG03 (krótki odcinek — total_km może być < 100)
 chk "corridor_polylines: PL_ROAD + SE_E4 + SE_E22 + SE_APPROACH_SG03" "$(Q "select string_agg(code||'='||(case when code='SE_APPROACH_SG03' then (total_km>0) else (total_km>100) end)::text, ',' order by code) from corridor_polylines")" "PL_ROAD=true,SE_APPROACH_SG03=true,SE_E22=true,SE_E4=true"
 chk "anon bez SELECT corridor_polylines / EXECUTE corridor_progress" "$(Q "select has_table_privilege('anon','corridor_polylines','select')::text||has_function_privilege('anon','corridor_progress(text,geometry)','execute')::text")" "falsefalse"
 val "KSH czyta korytarz (4 linie)" $KSH "select count(*) from corridor_polylines" 4

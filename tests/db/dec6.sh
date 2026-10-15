@@ -15,7 +15,7 @@ err() {
 }
 
 echo; echo "[dec6] progi ops_thresholds"
-/* B7 / E15 (D-0300): +4 progi ETA/ciszy; SILENT_MIN 15 → 30 */
+# B7 / E15 (D-0300): +4 progi ETA/ciszy; SILENT_MIN 15 → 30
 val "21 progów domyślnych (10 + 7 postój + 4 E15)" "select count(*) from ops_thresholds" 21
 val "fala 3.8" "select value_num::text from ops_thresholds where key='WAVE_M'" "3.8"
 val "porywy 40" "select value_num::text from ops_thresholds where key='GUST_KN'" "40"
