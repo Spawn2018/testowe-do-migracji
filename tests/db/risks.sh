@@ -83,4 +83,27 @@ elif psql "$ST" -Atqc "select 1" >/dev/null 2>&1; then
 else
   fail=$((fail+2)); echo "  FAIL  brak bazy tower_test_status — uruchom najpierw tests/db/run.sh"
 fi
+
+echo; echo "[C1] zalew dzwonka — E5 (D-20261015-0300-01)"
+# (1) FERRY bez load_id → 0 nowych IN_APP RISK_OPEN
+N0=$(Q "select count(*) from notifications where channel='IN_APP' and template='RISK_OPEN'")
+$PSQL -c "insert into risk_signals (project_id, kind, severity, title, title_key, detail)
+  values ('$P','FERRY','HIGH','C1 ferry','rk_c1_ferry','{\"title_key\":\"rk_c1_ferry\"}')" >/dev/null 2>&1
+chk "C1: FERRY bez load_id → 0 nowych RISK_OPEN IN_APP" \
+  "$(Q "select count(*) - $N0 from notifications where channel='IN_APP' and template='RISK_OPEN'")" 0
+# ryzyko z transportem → IN_APP (macierz SYSTEM / HHL z migracji)
+N1=$(Q "select count(*) from notifications where channel='IN_APP' and template='RISK_OPEN' and load_id='$L1'")
+RID=$(Q "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail)
+  values ('$P','$L1','SILENT_VEHICLE','HIGH','C1 silent','rk_c1_silent','{\"title_key\":\"rk_c1_silent\",\"kind\":\"SILENT_VEHICLE\"}')
+  returning id")
+chk "C1: ryzyko z load_id → RISK_OPEN IN_APP" \
+  "$(Q "select case when count(*) > $N1 then 1 else 0 end from notifications where channel='IN_APP' and template='RISK_OPEN' and load_id='$L1' and (payload->>'risk_id')='$RID'")" 1
+# (2) resolve → 0 RISK_RESOLVED; istniejący RISK_OPEN przeczytany
+$PSQL -c "update risk_signals set resolved_at = now() where id = '$RID'" >/dev/null
+chk "C1: resolve → 0 RISK_RESOLVED" \
+  "$(Q "select count(*) from notifications where template='RISK_RESOLVED' and (payload->>'risk_id')='$RID'")" 0
+chk "C1: resolve → RISK_OPEN oznaczony przeczytany" \
+  "$(Q "select count(*) from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$RID' and read_at is not null and payload->>'c1_resolved' = 'true'")" \
+  "$(Q "select count(*) from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$RID'")"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

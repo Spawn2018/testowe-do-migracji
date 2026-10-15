@@ -22,7 +22,7 @@ export const EXPECTED_LOCAL = {
   archive: 18,
   watchdog: 27,
   invite: 48,
-  risks: 23,
+  risks: 27, // +4 C1 zalew dzwonka (D-0300); wcześniej 23
   import: 66,
   nullguard: 637, // +5 rio_tracking_open GUARD (0207 E44 H4); wcześniej +5 my_session_revoke
   i2: 540,
@@ -63,7 +63,7 @@ export const EXPECTED_LOCAL = {
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
   security: 84, // 88 − 4 SKIP
-  risks: 21, // 23 − 2 SKIP
+  risks: 25, // 27 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,
   backup: 21, // 29 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE)
