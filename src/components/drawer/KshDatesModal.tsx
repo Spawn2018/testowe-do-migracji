@@ -10,7 +10,8 @@ import { t } from '../../i18n/messages';
 import { isoToDatetimeLocalValue, wallLocalToIso, TZ_OPS } from '../../lib/time';
 import type { Load } from '../../types';
 
-const PRE_LOADING = ['PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING', 'READY'];
+/* C12 / D-0300: status UI = DOC_MISSING (mapper), nie DOCS_PENDING z bazy */
+const PRE_LOADING = ['PLANNED', 'RESOURCES_PENDING', 'DOC_MISSING', 'READY'];
 
 function datePart(iso: string | null | undefined, fallback: string): string {
   if (!iso) return fallback;

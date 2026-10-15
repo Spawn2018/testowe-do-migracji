@@ -337,7 +337,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - na TEST przejazd SG-03 kończy się „Dostarczone 12:19” — na śladzie zmyślonym (G-17), a po zgodzie W25 także na prawdziwych pozycjach;
   - pełna trasa Śrem → Boden z symulowanymi pozycjami: każdy status raz, właściwy kafelek, prawdziwa godzina.
 
-### Poprawki P2–P3 (audyt 15.10) — DO ZROBIENIA
+### Poprawki P2–P3 (audyt 15.10) — W TOKU (gałąź `pakiet/poprawki-p2-p3-audyt-15`)
 Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01). Gałąź `pakiet/poprawki-p2-p3-audyt-15`.
 - **C1** zalew dzwonka E5 — ryzyko bez `load_id` bez IN_APP/EMAIL/WEB_PUSH; bez nowych RISK_RESOLVED; cel `/transport/brak` nie powstaje; WEB_PUSH tylko krytyczne z transportem (+ E5-5 źródła); jednorazowo nieprzeczytane RISK_* bez transportu → przeczytane. **Przed** `tower-road-pl` (P6 E2).
 - **C2** `sw.js` push/notificationclick; `web-push-send` z celem; przełącznik z `push_subscriptions`; „Wyślij powiadomienie testowe”.

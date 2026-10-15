@@ -2400,3 +2400,17 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Dowód wyglądu P4-a (wstecz, Q3): wcześniej `cb140085` / `dpl_DYK297…` — index z wdrożenia = produkcja, 0 × `service_role` (POSTEP 14.10).
 
 **P4 NA PRODUKCJI — commit `3c676d96`, migracje 0214–0216, wdrożenie `dpl_Dvv2rR9aHYN4nVSv6QZAskxBGf5b`, 15.10.2026 15:39.**
+
+## 2026-10-15 — wyglad/A5 (PR #218) NA PRODUKCJI
+
+- Scalenie PR #218 → `12e3efd7` (okno „Zmień status”: CMR / faktury, E25). unit + visual zielone; bez migracji.
+- Wdrożenie z `main` `12e3efd7`: `dpl_4ndnWfvyNcHWgfEdHP3qC9Na3zYY`, JS `assets/index-DvW5-7T4.js`.
+- tower.log-mar.pl i watch-tower-makieta.vercel.app **200**; 0 × `service_role`.
+
+**wyglad/A5 NA PRODUKCJI — commit `12e3efd7`, wdrożenie `dpl_4ndnWfvyNcHWgfEdHP3qC9Na3zYY`, 15.10.2026 17:30.**
+
+## 2026-10-15 — Poprawki P2–P3 (PR #221) — TEST
+
+- **TEST zajęte: Poprawki P2–P3**, od 15.10.2026 17:30 — potwierdzenie security, status, nullguard, risks na `e39ccb47` (migracje 0217–0218).
+- CI `db` / `unit` / `visual` zielone na `e39ccb47` (session 33, risks 27, l13 34).
+
