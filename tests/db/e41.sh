@@ -44,7 +44,7 @@ sval "authenticated bez SELECT hhl_order_no" "select has_column_privilege('authe
 sval "authenticated bez SELECT carrier_order_no" "select has_column_privilege('authenticated','loads','carrier_order_no','select')::text" false
 sval "authenticated bez SELECT order_no" "select has_column_privilege('authenticated','loads','order_no','select')::text" false
 
-echo; echo "[e41] A2 — Przeczytali tylko dla widocznej wiadomości (decyzja 15.10 03:12)"
+echo; echo "[e41] A2 — Przeczytali tylko dla widocznej wiadomości (decyzja 15.10 03:12 / D-0330)"
 # Wiadomość tylko HHL+CARRIER (bez CLIENT): KSH nie dostaje listy czytających.
 sys "insert into load_messages (id, load_id, author_id, body, visible_to)
      select 900041, '$L1', u.id, 'a2-hhl-scx', array['FORWARDER','CARRIER']::org_kind[]
@@ -56,6 +56,15 @@ sys "insert into load_message_reads (message_id, user_id, read_at)
 val "KSH bez listy dla wiadomości HHL–SCX" $KSH "select count(*) from load_message_read_list(900041)" 0
 val "HHL widzi listę dla tej wiadomości" $HHL "select (count(*) >= 1)::text from load_message_read_list(900041)" t
 val "SCX widzi listę dla tej wiadomości" $SCX "select (count(*) >= 1)::text from load_message_read_list(900041)" t
+# Security definer omija RLS loads — warunek jak loads_read: drugi przewoźnik nie widzi cudzego transportu.
+CAR2O=00000000-0000-0000-0000-00000000a004
+CAR2=11111111-0000-0000-0000-0000000000c2
+sys "insert into organizations (id, code, name, kind) values ('$CAR2O','CAR2','Drugi przewoznik','CARRIER')
+     on conflict (id) do nothing;
+     insert into app_users (auth_id, org_id, email, role, active)
+     values ('$CAR2','$CAR2O','car2-e41@test','CARRIER_DISPATCH',true)
+     on conflict (auth_id) do update set org_id=excluded.org_id, role='CARRIER_DISPATCH', active=true" >/dev/null
+val "drugi przewoźnik bez listy cudzego transportu" $CAR2 "select count(*) from load_message_read_list(900041)" 0
 
 echo; echo "[e41] E18 P15 tytuły"
 sys "insert into risk_signals (project_id, load_id, kind, severity, title) values

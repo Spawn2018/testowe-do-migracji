@@ -50,7 +50,7 @@ export const EXPECTED_LOCAL = {
   g20: 15, // P3-poprawki — G-20 daty + DECISION×CLIENT_USER push (D-20261014-0015-01)
   baf: 46,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
-  e41: 35, // P2 + P2-poprawki; A4 +6 kolumny; A2 +3 widoczność Przeczytali (15.10 03:12)
+  e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 26, // P4 — load_status_set (E25); +4 H1/H2; A5 +5 (CMR/faktury/UPDATE/godzina)
 };
 
