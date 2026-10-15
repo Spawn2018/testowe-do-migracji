@@ -44,13 +44,16 @@ function idxText(locale: Locale, r: FuelWeekRow): string {
   return r.running ? ftp(locale, 'p5_fuel_idx_running', { label }) : label;
 }
 
-function Detail({ r, locale }: { r: FuelWeekRow; locale: Locale }) {
+/** E41: nazwa transportu według firmy (z widoku Finanse); bez niej — kod. */
+type NameOf = (id: string, code: string) => string;
+
+function Detail({ r, locale, nameOf }: { r: FuelWeekRow; locale: Locale; nameOf?: NameOf }) {
   return (
     <div className="fuel-detail" data-fuel-detail={r.key}>
       <div>
         <h4 className="sec">{ft(locale, 'p5_fuel_loads_h')} · {r.loads.length}</h4>
         <p className="fuel-codes" data-content>
-          {r.loads.map((l, i) => <span key={l.id}>{i ? ', ' : ''}<span className="fuel-code">{l.code}</span></span>)}
+          {r.loads.map((l, i) => <span key={l.id}>{i ? ', ' : ''}<span className="fuel-code">{nameOf ? nameOf(l.id, l.code) : l.code}</span></span>)}
         </p>
       </div>
       {r.idx ? (
@@ -75,7 +78,7 @@ function Detail({ r, locale }: { r: FuelWeekRow; locale: Locale }) {
   );
 }
 
-export function FuelWeekTable({ rows, locale, phone }: { rows: FuelWeekRow[]; locale: Locale; phone: boolean }) {
+export function FuelWeekTable({ rows, locale, phone, nameOf }: { rows: FuelWeekRow[]; locale: Locale; phone: boolean; nameOf?: NameOf }) {
   const [open, setOpen] = useState<string | null>(null);
   const toggle = (k: string) => setOpen((o) => (o === k ? null : k));
   return (
@@ -104,7 +107,7 @@ export function FuelWeekTable({ rows, locale, phone }: { rows: FuelWeekRow[]; lo
                 <div><dt>{ft(locale, 'p5_fuel_col_loads')}</dt><dd>{r.loads.length}</dd></div>
               </dl>
               {stateNote(locale, r) ? <p className="fin-muted" data-content>{stateNote(locale, r)}</p> : null}
-              {open === r.key ? <Detail r={r} locale={locale} /> : null}
+              {open === r.key ? <Detail r={r} locale={locale} nameOf={nameOf} /> : null}
             </article>
           ))}
         </div>
@@ -143,7 +146,7 @@ export function FuelWeekTable({ rows, locale, phone }: { rows: FuelWeekRow[]; lo
                   </tr>
                   {open === r.key ? (
                     <tr className="fin-detail-row">
-                      <td colSpan={7}><Detail r={r} locale={locale} /></td>
+                      <td colSpan={7}><Detail r={r} locale={locale} nameOf={nameOf} /></td>
                     </tr>
                   ) : null}
                 </Fragment>

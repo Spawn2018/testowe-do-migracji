@@ -213,7 +213,7 @@ function ScreenFrame({ locale, root, group, screen, phone = false }: { locale: L
       <header className="ox-screen-hd">
         <div className="ox-screen-title">
           {phone ? null : <h2>{t(locale, SCREEN_KEY[screen.id])}</h2>}
-          <span className="ox-crumb">{t(locale, 'p3c_crumb').replace('{root}', root).replace('{group}', t(locale, GROUP_KEY[group]))}</span>
+          <span className="ox-crumb">{t(locale, GROUP_KEY[group]) === root ? root : t(locale, 'p3c_crumb').replace('{root}', root).replace('{group}', t(locale, GROUP_KEY[group]))}</span>
           {screen.mark}
           {screen.right ? <span className="ox-right" data-opt-right={screen.right}>{up(t(locale, RIGHT_KEY[screen.right]))}</span> : null}
         </div>

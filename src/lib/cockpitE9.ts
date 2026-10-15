@@ -14,6 +14,7 @@ import { t, tp } from '../i18n/messages';
 import { isoWeekNumber } from './cockpitTiles';
 import { isLoadCompleted } from './invoiceMatch';
 import { isTodoRisk, todoCardKey } from './todoRules';
+import { transportLabel } from './transportName';
 
 export type CockpitTone = 'default' | 'alert' | 'warn' | 'good';
 
@@ -84,8 +85,9 @@ const notDeparted = (l: Pick<Load, 'status'>) => PRE_LOADING.has(l.status);
 const delivered = (l: Pick<Load, 'status' | 'stage'>) => isLoadCompleted(l);
 /** Na placu w Boden. */
 const onSite = (l: Pick<Load, 'status'>) => l.status === 'APPROACHING_SITE';
-const codes = (ls: readonly Load[], max = 2) => {
-  const list = ls.map((l) => l.code);
+/** E41: nazwa transportu według firmy, która patrzy (HHL — kod · nr HHL, SCX — kod · nr SCX, KSH — kod). */
+const codes = (ls: readonly Load[], role: RoleId, max = 2) => {
+  const list = ls.map((l) => transportLabel(l, role));
   return list.length > max ? `${list.slice(0, max).join(', ')} +${list.length - max}` : list.join(', ');
 };
 
@@ -215,8 +217,8 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
   /* HHL: „na placu w Boden: SG-03”; KSH i SCX: „SG-03 na placu w Boden” (img/e9-after) */
   const siteDesc = f.atSite.length
     ? role === 'HHL'
-      ? { desc: L('p3b_at_site', { codes: codes(f.atSite) }), short: L('p3b_at_site_short', { codes: codes(f.atSite, 1) }) }
-      : { desc: L('p3b_site_ksh', { codes: codes(f.atSite) }) + siteSinceText(), short: L('p3b_site_ksh_short', { codes: codes(f.atSite, 1) }) }
+      ? { desc: L('p3b_at_site', { codes: codes(f.atSite, role) }), short: L('p3b_at_site_short', { codes: codes(f.atSite, role, 1) }) }
+      : { desc: L('p3b_site_ksh', { codes: codes(f.atSite, role) }) + siteSinceText(), short: L('p3b_site_ksh_short', { codes: codes(f.atSite, role, 1) }) }
     : { desc: L('p3b_on_road'), short: L('p3b_on_road') };
 
   const inTransit: CockpitTile = {
@@ -236,8 +238,8 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
     return {
       id: 'otif', label: L('p3b_otif'), labelShort: L('p3b_otif'), go: null,
       value: String(f.onTime.length), of: L('p3b_of', { n: String(f.doneDated.length) }),
-      desc: L('p3b_otif_desc', { code: last.code, plan: shortDate(plan), done: shortDate(doneDay) }),
-      descShort: late > 0 ? L('p3b_otif_late_short', { code: last.code, d: late }) : L('p3b_otif_ok_short', { code: last.code }),
+      desc: L('p3b_otif_desc', { code: transportLabel(last, role), plan: shortDate(plan), done: shortDate(doneDay) }),
+      descShort: late > 0 ? L('p3b_otif_late_short', { code: transportLabel(last, role), d: late }) : L('p3b_otif_ok_short', { code: transportLabel(last, role) }),
       tone: 'default',
     };
   };
@@ -287,7 +289,7 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
     return [
       { id: 'delivered', label: L('p3b_delivered'), labelShort: L('p3b_delivered'), go: 'sched',
         value: String(f.done.length), of: L('p3b_of', { n: String(loads.length) }),
-        desc: L('p3b_delivered_ksh_long', { qty, t: formatPlNumber(tons, 1) }) + (f.done.length ? ` (${codes(f.done)})` : ''),
+        desc: L('p3b_delivered_ksh_long', { qty, t: formatPlNumber(tons, 1) }) + (f.done.length ? ` (${codes(f.done, role)})` : ''),
         descShort: L('p3b_delivered_ksh', { qty: String(qty), t: formatPlNumber(tons, 1) }), tone: 'default' },
       inTransit,
       { id: 'plan72', label: L('p3b_plan72'), labelShort: L('p3b_plan72_short'), go: 'sched',
@@ -319,7 +321,7 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
         value: String(f.toInvoice.length - f.toInvoiceNoCmr.length), of: null,
         desc: f.toInvoice.length === 0 ? L('p3b_to_invoice_none', { w })
           : f.toInvoiceNoCmr.length
-            ? L('p3b_to_invoice_desc', { n: f.toInvoiceNoCmr.length, codes: codes(f.toInvoiceNoCmr), w })
+            ? L('p3b_to_invoice_desc', { n: f.toInvoiceNoCmr.length, codes: codes(f.toInvoiceNoCmr, role), w })
             : L('p3b_to_invoice_ok', { w }),
         descShort: f.toInvoice.length === 0 ? L('p3b_to_invoice_none_short')
           : f.toInvoiceNoCmr.length ? L('p3b_to_invoice_short', { n: f.toInvoiceNoCmr.length }) : L('p3b_cmr_ok_short'),
@@ -347,7 +349,7 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
     { id: 'delivered', label: L('p3b_delivered_settle'), labelShort: L('p3b_delivered'), go: 'inv',
       value: String(f.done.length), of: null,
       desc: f.done.length === 0 ? L('p3b_none_delivered')
-        : `${f.doneNoCmr.length ? L(f.doneNoCmr.length === 1 ? 'p3b_cmr_wait_one' : 'p3b_cmr_wait_many', { codes: codes(f.doneNoCmr) }) : L('p3b_cmr_ok')} · ${L('p3b_ready_inv', { n: f.readyToInvoice.length })}`,
+        : `${f.doneNoCmr.length ? L(f.doneNoCmr.length === 1 ? 'p3b_cmr_wait_one' : 'p3b_cmr_wait_many', { codes: codes(f.doneNoCmr, role) }) : L('p3b_cmr_ok')} · ${L('p3b_ready_inv', { n: f.readyToInvoice.length })}`,
       descShort: f.done.length === 0 ? L('p3b_none_delivered_short') : f.doneNoCmr.length ? L('p3b_cmr_wait_short') : L('p3b_cmr_ok_short'),
       tone: 'default' },
     { id: 'margin', label: L('p3b_margin', { tier: margin.tierText }), labelShort: L('p3b_margin_short'), go: 'fin',

@@ -191,6 +191,10 @@ Odświeżone 8 migawek stanów Harmonogramu z `visual.yml` `update=true` (run 38
 
 Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38466075360, gałąź `wyglad/P3`, commit `73e98ef`; ponownie run 38471591003, commit `e82c5e2` — ramka konta po poprawce nazwiska). Wszystkie ekrany: nowy pasek górny (konto po prawej, „Podgląd” HHL / KSH / SCX, rejsy z pełnymi nazwami portów, bez przycisku motywu), lewe menu bez e-maila i „Wyloguj”. Matrycy 280 ujęć nie ruszano.
 
+## wyglad/C-reszta (15.10.2026) — E41 nazwy w Kokpicie, E20 pasek poniżej 1440 px
+
+`visual.yml` z `update=true` (run 38678112902, gałąź `wyglad/C-reszta` złożona na `wyglad/C-dzwonek`, commit `c7f1f54`): zmienione 2 migawki — `kokpit-hhl-pl-1920-light` i `kokpit-hhl-pl-1920-dark-default` (kafelki Kokpitu z nazwą transportu według firmy, E41: „T-12 · HHL/2026/1276”). Pozostałe 13 bez zmian. Matrycy 280 ujęć nie ruszano.
+
 ## wyglad/C-dzwonek (15.10.2026) — E5 dzwonek w grupach, E10 liczba na stałym tle
 
 `visual.yml` z `update=true` (run 38675408793, gałąź `wyglad/C-dzwonek`, commit `465d260`): zmienione 2 migawki — `kokpit-hhl-pl-1920-light` i `kokpit-hhl-pl-1920-dark-default` (liczba przy dzwonku bez sytuacji ogólnej, E5 decyzja 07.10 13:21; tło liczby `--alarm`, E10). Pozostałe 13 bez zmian. Matrycy 280 ujęć nie ruszano.

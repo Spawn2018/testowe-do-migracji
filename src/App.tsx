@@ -7,6 +7,7 @@ import { StageBar } from './components/shell/StageBar';
 import { Nav } from './components/shell/Nav';
 import { Toasts } from './components/shell/Toasts';
 import { SystemBroadcastBanner } from './components/shell/SystemBroadcastBanner';
+import { PhoneMissingBar } from './components/shell/PhoneMissingBar';
 import { ImpersonationBanner } from './auth/ImpersonationBanner';
 import { PreviewBanner } from './auth/PreviewBanner';
 import { LoadDrawer } from './components/drawer/LoadDrawer';
@@ -179,6 +180,8 @@ function TowerShell() {
           </>
         ) : null}
         <SystemBroadcastBanner />
+        {/* E6 (C11): konto bez telefonu — „Uzupełnij telefon” */}
+        <PhoneMissingBar />
       </div>
       {/* wyglad/P4 (E28): pasek etapów — 10 kafelków z liczbami; na telefonie w Harmonogramie i na Mapie */}
       <StageBar variant="global" />

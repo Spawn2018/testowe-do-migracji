@@ -187,7 +187,8 @@ const pl: Dict = {
   bill_cancel: 'Anuluj',
   bill_submit: 'Zarejestruj',
   bill_wizard_note: 'Kurs pozycji podpowiada reguła (ostatnia tabela A sprzed dnia rozładunku) — potwierdź albo popraw. Kontrole: tydzień, realizacja, kwota, kurs, pominięte transporty tygodnia.',
-  nav_settings: 'Ustawienia',
+  /* E9, E12 (pkt 4043): KSH i SCX mają „Dla mnie” zamiast „Ustawień” */
+  nav_settings: 'Dla mnie',
   settings_subtitle: 'Twoje ustawienia: język, waluta wyświetlania i motyw. Zapisywane dla Twojego konta.',
   settings_prefs_sub: 'Twoje konto',
   sched_col_ord_ksh: 'Zlec. KSH',

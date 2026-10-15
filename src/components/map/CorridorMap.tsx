@@ -15,6 +15,7 @@ import { severityLabel } from '../../lib/enumLabels';
 import { getNowIso, isFrozenNow } from '../../lib/frozenNow';
 import { ferryMarkerTone } from '../../lib/ferry/stenaAis';
 import { isServerId } from '../../data/registry';
+import { transportLabel } from '../../lib/transportName';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { h6Requests } from '../../lib/map/draw';
 import { acquireMap, ensureBasemap, releaseMap, type LayerBag, type MapSlot, type PoolEntry } from './mapPool';
@@ -63,6 +64,8 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   const layersRef = useRef<LayerBag | null>(null);
   const entryRef = useRef<PoolEntry | null>(null);
   const theme = useTowerStore((s) => s.theme);
+  /* E41: podpis znacznika i przebieg — nazwa transportu według firmy, która patrzy */
+  const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
   const mapLayers = useTowerStore((s) => s.mapLayers);
   const geofences = useTowerStore((s) => s.geofences);
@@ -291,7 +294,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         focusMode && selectedLoadId ? loads.filter((l) => l.id === selectedLoadId) : loads;
       const markerIn: VehicleMarkerIn[] = visibleLoads.map((l) => ({
         id: l.id,
-        code: l.code,
+        code: transportLabel(l, role),
         status: l.status,
         progress: l.progress,
         driver: l.resources.driverName,
@@ -381,7 +384,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           .addTo(layers.ais);
       }
     }
-  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes]);
+  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes, role]);
 
   return (
     <div
@@ -397,7 +400,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       />
       {TrackReplay && !embedded && mapReady && mapLayers.trail && replayId ? (
         <Suspense fallback={null}>
-          <TrackReplay key={replayId} map={mapReady} loadId={replayId} code={loads.find((l) => l.id === replayId)?.code ?? ''} noFix={gpsReady && !gpsFixes.has(replayId)} />
+          <TrackReplay key={replayId} map={mapReady} loadId={replayId} code={(() => { const rl = loads.find((l) => l.id === replayId); return rl ? transportLabel(rl, role) : ''; })()} noFix={gpsReady && !gpsFixes.has(replayId)} />
         </Suspense>
       ) : null}
       {/* wyglad/P4-b (E27): pusta lista = nikt w oknie śledzenia (Mapa: „W trasie: 0”, panel poza oknem) — to nie „brak danych” */}

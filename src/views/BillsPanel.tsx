@@ -652,7 +652,7 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
                       <td><span className="code" data-content>{transportLabel(l, role)}</span></td>
                       <td>{fmtDay(at ? localDateOf(at) : null)}</td>
                       <td className="num"><Amount n={expectedNetFor(l, direction, currency, today)} cur={currency} /></td>
-                      <td className="num" data-deur-exempt="invoice-currency"><input className="input inv-num" value={st.net} onChange={(e) => patch(l.id, { net: e.target.value })} disabled={!st.on} aria-label={`${t(locale, 'bill_col_invoiced')} · ${l.code}`} /></td>
+                      <td className="num" data-deur-exempt="invoice-currency"><input className="input inv-num" value={st.net} onChange={(e) => patch(l.id, { net: e.target.value })} disabled={!st.on} aria-label={`${t(locale, 'bill_col_invoiced')} · ${transportLabel(l, role)}`} /></td>
                       {currency === 'PLN' ? (
                         <td data-deur-exempt="invoice-fx">
                           {st.fx ? (

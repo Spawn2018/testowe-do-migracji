@@ -1288,6 +1288,8 @@ img,video{max-width:100%;height:auto}
 .subbar-preview{background:var(--sea-bg);border-left-color:var(--sea)}
 .subbar-actas{background:var(--amber-bg);border-left-color:var(--amber)}
 .subbar-bcast{background:var(--surface);border-left-color:var(--ink)}
+/* E6 (C11): „Uzupełnij telefon” — brak na czerwono, jak w liście Użytkowników */
+.subbar-phone{background:var(--red-bg);border-left-color:var(--red)}
 .subbar-btn{flex:0 0 auto;padding:3px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink);font-size:13.5px}
 .subbar-btn:hover{background:var(--surface-2)}
 .subbar-tag{display:inline-block;margin-right:12px;padding:1px 8px;border:1px solid var(--rule);background:var(--surface-2);color:var(--ink-2);font-family:var(--font-cond);font-weight:600;font-size:12px;letter-spacing:.08em;vertical-align:1px}
@@ -1305,7 +1307,14 @@ img,video{max-width:100%;height:auto}
 .ferry-pop-row span{font-size:13px;color:var(--ink-2)}
 .ferry-pop-ft{display:flex;justify-content:space-between;padding:10px 14px;font-family:var(--font-cond);font-size:15px}
 
-/* węższy komputer: najpierw znika nazwa przy inicjałach, potem podpis „Stegra Boden” */
+/* E20 pkt 2 (zdecydowane 08.10 12:14): poniżej 1440 px konto pokazuje same inicjały (imię i nazwisko w menu),
+   a rejsy — statek, godzinę i port wyjścia; od 1440 px pełne nazwy */
+@media (max-width:1439px){
+  .topbar .acc-who,.topbar .acc-caret{display:none}
+  .topbar .acc-chip{padding:3px}
+  .ops .ops-to{display:none}
+}
+/* węższy komputer: podpis „Stegra Boden” znika przy 1366 px */
 @media (max-width:1366px){
   .topbar .brand .brand-sub{display:none}
 }
