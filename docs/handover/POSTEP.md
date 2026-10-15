@@ -2428,3 +2428,12 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **C1+C12+C14 NA PRODUKCJI — commit `2a315a4d`, migracje 0217–0218, wdrożenie `dpl_BVVAGR5vymg7EXbMjVEj6jrSYZV2`, 15.10.2026 18:30.** (paczka Poprawki P2–P3 nadal W TOKU — C2–C15, C11/C13 wygląd)
 
+## 2026-10-15 — Poprawki P2–P3: C2 NA PRODUKCJI
+
+- Merge PR #223 → `e49285c5`. Bez migracji. unit + visual + db zielone; `npm audit` 0.
+- Edge: `web-push-test`, `web-push-send` (cel z payload).
+- Aplikacja: `dpl_BGubwMaao7NTm9wauFLPcShYkTQr`; tower / makieta **200**.
+- Odbiór C2 na Androidzie (≤ 10 s) → potem W24.
+
+**C2 NA PRODUKCJI — commit `e49285c5`, wdrożenie `dpl_BGubwMaao7NTm9wauFLPcShYkTQr`, 15.10.2026 ~19:00.** Następne: C3–C15.
+
