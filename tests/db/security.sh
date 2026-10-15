@@ -92,8 +92,9 @@ err "HHL nie zmieni numeru zlecenia przewoźnika"       $HHL "update loads set c
 val "HHL zmienia swój numer zlecenia"                  $HHL "with u as (update loads set hhl_order_no='HHL/2026/0777' where id='$L2' returning 1) select count(*) from u" 1
 err "rozładunek bez daty / bezpośredni UPDATE (A5)"   $HHL "update loads set status='UNLOADED' where id='$L1'" "wymaga daty rozładunku|load_status_set"
 err "SCX nie zmieni daty rozładunku transportu na fakturze" $SCX "update loads set actual_delivery_at='2026-09-20 10:00+00' where id='$L1'" "zamrożona"
-val "HHL zmienia datę rozładunku zafakturowanego — z audytem" $HHL "with u as (update loads set actual_delivery_at='2026-09-24 10:00+00' where id='$L1' returning 1) select count(*) from u" 1 commit
-val "zmiana daty rozładunku zapisana w dzienniku"      $HHL "select count(*) from audit_log where action='LOAD_DELIVERY_DATE_CHANGE'" 1
+# A5: actual_delivery_at tylko przez load_status_set (nie bezpośredni UPDATE)
+val "HHL zmienia datę rozładunku zafakturowanego — z audytem" $HHL "select load_status_set('$L1','DELIVERED',timestamptz '2026-09-24 10:00+00','korekta daty'); select 1" 1 commit
+val "zmiana daty rozładunku zapisana w dzienniku"      $HHL "select count(*) from audit_log where action='LOAD_STATUS_SET' and entity_id='$L1'" 1
 
 echo; echo "[6.1] EXECUTE — lista dozwolonych funkcji (tests/db/function-allowlist.txt)"
 CAT=$(psql "$PGURL" -Atq -c "select r||' '||p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace cross join unnest(array['anon','authenticated']) r where n.nspname='public' and not exists (select 1 from pg_depend d where d.objid=p.oid and d.deptype='e') and has_function_privilege(r, p.oid, 'execute') group by 1 order by 1" | tr -d '\r')
