@@ -9,6 +9,8 @@
   --rule:#C9D5DD; --rule-2:#DEE6EB;
   --amber:#C97E12; --amber-bg:#FBEFD9; --amber-ink:#A55A00;
   --red:#B32639; --red-bg:#F8DEE2; --on-red:#FFFFFF;
+  /* E10 (zaakceptowane 08.10): biała liczba w dzwonku i na dolnym pasku — tło stałe w obu motywach, 6,46 : 1 */
+  --alarm:#B32639;
   --go:#1B6E5D; --go-bg:#DCEDE8;
   --sea:#245C87; --sea-bg:#DCE8F1;
   --plan:#6C7D8A; --plan-bg:#E6ECF0;
@@ -1037,7 +1039,37 @@ img,video{max-width:100%;height:auto}
 
 /* E8 + E10 (P2): dolny pasek, karty, cele 44 px, tekst od 12 px, biała liczba dzwonka. */
 .nav-more-btn{display:none}
-.bell-badge{color:var(--on-red);background:var(--red);font-size:12px;font-weight:700}
+.bell-badge{color:var(--on-red);background:var(--alarm);font-size:12px;font-weight:700}
+.bell-badge{top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:2px;line-height:1.34;text-align:center}
+
+/* E5 (img/e5-desk, img/e5-phone): dzwonek w dwóch grupach, zdanie o sytuacji ogólnej pod listą */
+.bell-pop{width:min(420px,92vw);max-height:min(560px,calc(100vh - 72px))}
+.bell-hd h2{margin:0;font-family:var(--font-cond);font-size:19px;font-weight:600;letter-spacing:.02em}
+.bell-hd .btn.bell-all{border:0;background:none;padding:0;min-height:0;color:var(--sea);text-decoration:underline;font-size:13px;font-weight:400}
+.bell-scroll{overflow-y:auto;flex:1}
+.bell-sec{border-bottom:1px solid var(--rule)}
+.bell-sec-hd{display:flex;justify-content:space-between;align-items:baseline;margin:0;padding:10px 14px 4px;
+  font-family:var(--font-cond);font-size:13px;font-weight:600;letter-spacing:.08em;color:var(--ink-2)}
+.bell-item{display:flex;gap:10px;padding:9px 14px;border-top:1px solid var(--rule-2);align-items:stretch}
+.bell-sec-hd + .bell-item{border-top:0}
+.bell-item:hover{background:var(--surface-2)}
+.bell-gut{flex:0 0 4px;background:var(--sea)}
+.bell-gut.hot{background:var(--red)}
+.bell-gut.warn{background:var(--amber)}
+.bell-go{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left;background:transparent;border:0;padding:0;cursor:pointer;color:var(--ink);font:inherit}
+.bell-line{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.bell-title{font-weight:500;line-height:1.3;min-width:0}
+.bell-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sea);margin-right:7px;vertical-align:2px}
+.bell-to{flex:0 0 auto;font-family:var(--font-cond);font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--sea);white-space:nowrap;padding-top:2px}
+.bell-meta{font-size:12.5px;color:var(--ink-3);line-height:1.35;overflow-wrap:anywhere}
+.bell-empty{color:var(--ink-3)}
+.bell-general{margin:0;padding:10px 14px 12px;background:var(--surface-2);font-size:12.5px;line-height:1.45;color:var(--ink-2)}
+.bell-general .btn.bell-link{display:inline;border:0;background:none;padding:0;min-height:0;font:inherit;color:var(--sea);text-decoration:underline}
+@media (max-width:768px){
+  .bell-go{min-height:44px}
+  .bell-title{font-size:15px}
+  .bell-meta{font-size:13px}
+}
 
 @media (max-width:768px){
   .phone-menu-btn{display:none}
@@ -1369,7 +1401,7 @@ img,video{max-width:100%;height:auto}
      przy prawym górnym rogu ikony, ikona zostaje widoczna */
   nav.tower-nav .nav-pin .count.hot{
     top:2px;left:calc(50% + 3px);padding:1px 5px;line-height:1.25;
-    background:var(--red);color:var(--on-red);font-family:var(--font-cond);font-weight:700;font-size:13px;
+    background:var(--alarm);color:var(--on-red);font-family:var(--font-cond);font-weight:700;font-size:13px;
   }
 }
 /* KSH bez listy „Do zrobienia” (E9): postęp i mapa na całą szerokość */

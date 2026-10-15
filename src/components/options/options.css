@@ -320,3 +320,21 @@
 /* Faktoring (dzisiejszy formularz przeniesiony do ekranu): wybór jednostki nie ucina tekstu */
 .ox-screen .inline-input{flex-wrap:wrap}
 .ox-screen .inline-input select.input{min-width:130px}
+
+/* wyglad/C — Dla mnie › Ten telefon / komputer (E5 img/e5-desk, prawa część) */
+.ox-dev .ox-eyebrow{margin-top:14px}
+.ox-dev-steps{list-style:none;margin:8px 0 4px;padding:0;display:flex;flex-direction:column;gap:10px}
+.ox-dev-steps li{display:flex;gap:12px;align-items:flex-start;font-size:15px;color:var(--ink)}
+.ox-dev-n{flex:0 0 30px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--ink);
+  font-family:var(--font-cond);font-size:20px;font-weight:700;color:var(--sea)}
+.ox-dev-here{margin-top:14px;padding-top:4px;border-top:1px solid var(--rule-2)}
+.ox-dev-list{margin-top:14px;border-top:1px solid var(--rule-2)}
+.ox-dev-ul > li{display:flex;flex-direction:column;align-items:stretch;gap:10px;padding:10px 0}
+.ox-dev-row{display:flex;justify-content:space-between;gap:12px;align-items:baseline;font-size:15px}
+.ox-dev-cur{color:var(--ink-3)}
+.ox-dev-on{color:var(--go);font-weight:600}
+.ox-dev-off{color:var(--ink-3)}
+.ox-dev-btns{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px}
+@media (max-width:768px){
+  .ox-dev-btns .btn,.ox-dev-here .btn{min-height:44px;flex:1 1 100%}
+}

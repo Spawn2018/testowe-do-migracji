@@ -34,6 +34,79 @@ export interface BellSource extends BellItem {
   loadId?: string;
   kind?: string;
   code?: string;
+  /** Cel kliknięcia (L-4) — tylko do napisu „DECYZJA ›”, „DOKUMENTY ›”… przy pozycji. */
+  href?: { view?: string; path?: string; loadId?: string };
+}
+
+/**
+ * E5 (img/e5-desk, decyzja 07.10 13:21): dzwonek w grupach.
+ * „Do zrobienia” — decyzje, braki, wiadomości i faktury dla Twojej firmy lub roli;
+ * „Moje transporty” — strefy, statusy i ryzyka przed pojazdem, zgrupowane na transport;
+ * „Sytuacja ogólna” — promy, drogi, pogoda bez przypisanego transportu: tylko strona Ryzyka, nigdy dzwonek.
+ */
+export type BellSection = 'todo' | 'mine' | 'general';
+
+/** Sytuacja ogólna, gdy wpis nie ma transportu (E5 13:21). */
+const GENERAL_KINDS = new Set([
+  'RISK_OPEN', 'RISK_RESOLVED', 'RISK_SEVERITY', 'FERRY', 'FERRY_CANCELLED', 'SAILING_CANCELLED', 'MISSED_SAILING',
+  'FERRY_OVERDUE', 'WEATHER', 'ROAD_PL', 'ROAD_SE', 'ROAD_RISK', 'ROUTE_OBSTACLE',
+]);
+/** Informacja o transporcie (E11 grupy „Transport” i „Ryzyka”) — „Moje transporty”. */
+const INFO_KINDS = new Set([
+  'STATUS_CHANGE', 'LOAD_STATUS_CHANGED', 'GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'GEOFENCE_DWELL', 'ZONE', 'ZONE_ENTER',
+  'ZONE_EXIT', 'MILESTONE_LOADED', 'MILESTONE_UNLOADED', 'AWIZACJA', 'PLAN_DATES_CHANGED', 'FEE_DECIDED',
+  'DECISION_RESOLVED', 'INVOICE_DISPUTE_RESOLVED', 'RISK_OPEN', 'RISK_RESOLVED', 'ROAD_PL', 'ROAD_SE', 'WEATHER',
+  'FERRY', 'ROUTE_OBSTACLE', 'WORKFLOW_ALERT',
+]);
+
+export function bellSection(n: Pick<BellSource, 'kind' | 'loadId' | 'severity' | 'href'>): BellSection {
+  const k = n.kind;
+  if (k) {
+    if (!n.loadId && GENERAL_KINDS.has(k)) return 'general';
+    if (k === 'RISK_SEVERITY') return n.severity === 'CRITICAL' ? 'todo' : 'mine';
+    if (n.loadId && INFO_KINDS.has(k)) return 'mine';
+    return 'todo';
+  }
+  /* wpis bez szablonu (dane przykładowe): ryzyko bez transportu = sytuacja ogólna, zdarzenie transportu = moje */
+  const view = n.href?.view;
+  const load = n.loadId ?? n.href?.loadId;
+  if (!load && view === 'risk') return 'general';
+  if (load && (view === 'sched' || view === 'map' || view === 'geo' || view === 'wf' || view === 'risk')) return 'mine';
+  return 'todo';
+}
+
+/** Miejsce, do którego prowadzi kliknięcie — napis po prawej („DECYZJA ›”). Klucz słownika `bell_to_<miejsce>`. */
+export type BellPlace = 'decision' | 'invoice' | 'docs' | 'chat' | 'awiz' | 'numbers' | 'prices' | 'system' | 'options'
+  | 'transport' | 'risks' | 'finance' | 'schedule' | 'zones' | 'entry';
+
+export function bellPlace(n: Pick<BellSource, 'loadId' | 'href'>): BellPlace {
+  const path = n.href?.path ?? '';
+  if (path) {
+    if (path.startsWith('/decyzje')) return 'decision';
+    if (path.startsWith('/finanse/faktury')) return 'invoice';
+    if (path.startsWith('/opcje/stan-systemu')) return 'system';
+    if (path.startsWith('/opcje')) return 'options';
+    if (path.startsWith('/ryzyka')) return 'risks';
+    if (path.startsWith('/szczegoly-wpisu')) return 'entry';
+    const tab = /[?&]zakladka=([^&]+)/.exec(path)?.[1] ?? '';
+    if (tab === 'dokumenty') return 'docs';
+    if (tab === 'ustalenia' || tab === 'czat') return 'chat';
+    if (tab.startsWith('awizacja')) return 'awiz';
+    if (tab.startsWith('numer')) return 'numbers';
+    if (tab === 'ceny') return 'prices';
+    return 'transport';
+  }
+  const load = n.loadId ?? n.href?.loadId;
+  switch (n.href?.view) {
+    case 'risk': return load ? 'transport' : 'risks';
+    case 'docs': return 'docs';
+    case 'decisions': return 'decision';
+    case 'inv': case 'invoices': return 'invoice';
+    case 'fin': return 'finance';
+    case 'geo': return 'zones';
+    case 'sched': return load ? 'transport' : 'schedule';
+    default: return load ? 'transport' : 'entry';
+  }
 }
 
 export interface BellGroup<T extends BellSource> {
@@ -44,6 +117,12 @@ export interface BellGroup<T extends BellSource> {
   title: string;
   body: string;
   severity: string;
+  /** E5: grupa w dzwonku i miejsce docelowe. */
+  section: Exclude<BellSection, 'general'>;
+  place: BellPlace;
+  /** „co się stało” bez nazwy transportu i nazwa transportu według firmy (E41) — osobno do układu E5. */
+  what: string;
+  name?: string;
 }
 
 const SEV_RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
@@ -77,6 +156,20 @@ export function bellTitle(title: string, name: string | undefined, locale: BellL
     .replace(new RegExp(`^${escBare}\\s*[:·—–-]\\s*`), '')
     .trim();
   return `${name} — ${rest || what}`;
+}
+
+/** „Co się stało” bez nazwy transportu na początku (E5: nazwa jest w drugiej linii). */
+export function bellWhat(title: string, name: string | undefined, locale: BellLocale): string {
+  const full = bellTitle(title, name, locale);
+  return name && full.startsWith(`${name} — `) ? full.slice(name.length + 3) : full;
+}
+
+/**
+ * Sytuacja ogólna pominięta w dzwonku (E5): liczba nieprzeczytanych wpisów z ostatniej doby — do zdania pod listą
+ * „… jest na stronie Ryzyka”.
+ */
+export function bellGeneralCount<T extends BellSource>(items: readonly T[], role: string, nowMs: number): number {
+  return bellVisible(items, role).filter((n) => bellSection(n) === 'general' && nowMs - Date.parse(n.at) <= 86_400_000).length;
 }
 
 /** „teraz”, „15 min temu”, „3 godz. temu”, „wczoraj”, „5 dni temu” (en/sv odpowiednio). */
@@ -128,6 +221,9 @@ export function bellGroups<T extends BellSource>(
   for (const n of sorted) {
     /* E21 (P2): „Nieznany kod źródła drogowego” zostaje w bazie do P10a, bez dzwonka. */
     if (isTechnicalRoadNotice(n.title) || isTechnicalRoadNotice(n.body)) continue;
+    /* E5 (13:21): sytuacja ogólna bez transportu — tylko strona Ryzyka. */
+    const section = bellSection(n);
+    if (section === 'general') continue;
     const key = n.loadId && n.kind ? `${n.loadId}|${n.kind}` : n.id;
     const g = map.get(key);
     if (g) {
@@ -136,8 +232,12 @@ export function bellGroups<T extends BellSource>(
       if ((SEV_RANK[n.severity] ?? 0) > (SEV_RANK[g.severity] ?? 0)) g.severity = n.severity;
       continue;
     }
-    const code = (n.loadId ? codeOf(n.loadId) : undefined) ?? n.code;
-    map.set(key, { key, ids: [n.id], latest: n, count: 1, title: bellTitle(n.title, code, locale), body: safe(n.body, locale), severity: n.severity });
+    const lid = n.loadId ?? n.href?.loadId;
+    const code = (lid ? codeOf(lid) : undefined) ?? n.code;
+    map.set(key, {
+      key, ids: [n.id], latest: n, count: 1, title: bellTitle(n.title, code, locale), body: safe(n.body, locale), severity: n.severity,
+      section, place: bellPlace(n), what: bellWhat(n.title, code, locale), name: code,
+    });
   }
   const out = [...map.values()];
   for (const g of out) {
