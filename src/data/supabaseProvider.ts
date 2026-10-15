@@ -19,11 +19,16 @@ import {
   type DocumentRow, type EventRow, type GeofenceRow, type LoadRow, type MessageRow, type OrgRow, type RiskRow,
   SAILING_COLUMNS, sailingFromRow, sailingToRow, type SailingDbRow,
 } from './mappers';
+import { setOpsThresholdCache } from '../lib/opsThresholdDefaults';
+import { deliveredCheckFromEvents } from '../lib/p4cSource';
+import { transportLabel } from '../lib/transportName';
+import type { Load, LoadEvent, OrgKind } from '../types';
 
 export const PROJECT_CODE = 'STEGRA_BODEN';
 const LOAD_COLUMNS =
   'id,carrier_org_id,status,plan_load_date,plan_load_from,plan_load_to,plan_delivery_date,plan_delivery_from,' +
   'plan_delivery_to,tractor_plate,trailer_plate,escort_vehicles,ferry_booking_ref,sailing_id,telematics_vehicle_id,' +
+  'rio_tracking_id,rio_asset_name,rio_tracker_on,rio_valid_from,rio_valid_to,rio_check_state,rio_check_at,rio_last_fix_at,' +
   'plan_dates_status,plan_dates_confirmed_at,' +
   'combo_length_m,combo_width_m,combo_height_m,combo_weight_t,delay_minutes,eta_site,eta_confidence_min,eta_basis,eta_computed_at,actual_delivery_at,' +
   'shipment_items(shipment_code,item_type,cargo_class,length_m,width_m,height_m,total_weight_t,unit_weight_t,qty,assembly_seq),' +
@@ -65,8 +70,16 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       if (r.error && /fuel_status/.test(r.error.message ?? '')) return sb.from(view).select(PRICE_VIEW_COLUMNS_LEGACY);
       return r;
     };
-    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos] = await Promise.all([
-      sb.from('loads').select(LOAD_COLUMNS).neq('status', 'CANCELLED').order('plan_load_date', { ascending: true, nullsFirst: false }),
+    /* B10: HHL wczytuje anulowane (filtr w Harmonogramie); KSH/SCX — bez CANCELLED */
+    const profileQ = await sb.rpc('my_profile');
+    const profileRow = Array.isArray(profileQ.data) ? profileQ.data[0] : profileQ.data;
+    const profileRole = String((profileRow as { role?: string } | null)?.role ?? '');
+    const isHhl = profileRole === 'HHL_ADMIN' || profileRole === 'HHL_OPS';
+    const orgKind: OrgKind = isHhl ? 'HHL' : profileRole.startsWith('CLIENT') || profileRole.startsWith('SITE') ? 'KSH' : 'SCX';
+    let loadsQuery = sb.from('loads').select(LOAD_COLUMNS).order('plan_load_date', { ascending: true, nullsFirst: false });
+    if (!isHhl) loadsQuery = loadsQuery.neq('status', 'CANCELLED');
+    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ] = await Promise.all([
+      loadsQuery,
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
       sb.rpc('list_load_messages_ui'),
@@ -93,7 +106,12 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.from('workflow_runs').select('id,workflow_id,load_id,status,result,ran_at').order('id', { ascending: false }).limit(1000),
       /* E41: KSH dostaje null. Brak funkcji (okno przed migracją) nie gasi całego zrzutu. */
       sb.rpc('load_order_numbers'),
+      /* B7: progi ETA / ciszy — cache dla mappera (RLS: HHL wszystko, inni podzbiór) */
+      sb.from('ops_thresholds').select('key,value_num'),
     ]);
+    if (!thrQ.error && thrQ.data) {
+      setOpsThresholdCache(thrQ.data as { key: string; value_num: number }[]);
+    }
     const wfRuns = (wfRunQ.error ? [] : wfRunQ.data ?? []) as WorkflowRunDbRow[];
     const okBy = new Map<string, number>();
     for (const r of wfRuns) if (r.status === 'OK') okBy.set(r.workflow_id, (okBy.get(r.workflow_id) ?? 0) + 1);
@@ -113,28 +131,55 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     const docRows = must(docs, 'documents') as DocumentRow[];
     const costBy = new Map((must(costV, 'v_load_price_carrier') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
     const revBy = new Map((must(revV, 'v_load_price_client') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
+    const mappedEvents = (must(events, 'load_events') as EventRow[]).map(eventFromRow) as LoadEvent[];
+    const geosRows = (must(geos, 'v_geofences_circle') as GeofenceRow[]).map((g) => geofenceFromRow(g, orgs));
+    const loadRows = must(loads, 'loads') as unknown as LoadRow[];
+    const rioByLoad = new Map(loadRows.map((r) => [r.id, r.rio_tracking_id ?? null]));
+    let mappedLoads: Load[] = loadRows
+      .map((r) => ({
+        ...r,
+        order_no: null,
+        hhl_order_no: orderBy.get(r.id)?.hhl_order_no ?? null,
+        carrier_order_no: orderBy.get(r.id)?.carrier_order_no ?? null,
+        driver_name: drivers.get(r.id)?.driver_name ?? null,
+        driver_phone: drivers.get(r.id)?.driver_phone ?? null,
+        driver_phone_country: drivers.get(r.id)?.driver_phone_country ?? 'PL',
+        driver_delivery_name: drivers.get(r.id)?.driver_delivery_name ?? null,
+        driver_delivery_phone: drivers.get(r.id)?.driver_delivery_phone ?? null,
+        driver_delivery_phone_country: drivers.get(r.id)?.driver_delivery_phone_country ?? 'PL',
+        tractor_delivery_plate: drivers.get(r.id)?.tractor_delivery_plate ?? null,
+        trailer_swap: drivers.get(r.id)?.trailer_swap ?? false,
+      }))
+      .map((r, i) => applyPriceViews(loadFromRow(r, orgs, i, at), costBy.get(r.id), revBy.get(r.id)))
+      .map((l) => (permitOk.has(l.id) ? { ...l, permitFits: permitOk.get(l.id) ?? null } : l));
+    /* B5 K2.1: usedBy — inne transporty z tym samym rio_tracking_id */
+    const rioGroups = new Map<string, Load[]>();
+    for (const l of mappedLoads) {
+      const rioId = rioByLoad.get(l.id);
+      if (!rioId || l.trackingLink?.provider !== 'RIO') continue;
+      const g = rioGroups.get(rioId) ?? [];
+      g.push(l);
+      rioGroups.set(rioId, g);
+    }
+    const dcRole = orgKind === 'HHL' ? 'HHL' as const : orgKind === 'KSH' ? 'KSH' as const : 'SCX' as const;
+    mappedLoads = mappedLoads.map((l) => {
+      const rioId = rioByLoad.get(l.id);
+      const peers = rioId ? (rioGroups.get(rioId) ?? []).filter((p) => p.id !== l.id) : [];
+      const usedBy = peers.map((p) => transportLabel(p, orgKind, 'plain'));
+      let next = l;
+      if (l.trackingLink?.provider === 'RIO' && usedBy.length) {
+        next = { ...next, trackingLink: { ...l.trackingLink, usedBy } };
+      }
+      /* B1 / L14: sprawa z zdarzeń bazy → pole load.deliveredCheck */
+      next = { ...next, deliveredCheck: deliveredCheckFromEvents(l, mappedEvents, geosRows, dcRole) };
+      return next;
+    });
     return {
       ...emptySnapshot(),
       workflows: ((wfQ.error ? [] : wfQ.data ?? []) as WorkflowDbRow[]).map((r) => workflowFromRow(r, okBy.get(r.id) ?? 0)),
       workflowRuns: wfRuns.map(workflowRunFromRow),
-      loads: (must(loads, 'loads') as unknown as LoadRow[])
-        .map((r) => ({
-          ...r,
-          order_no: null,
-          hhl_order_no: orderBy.get(r.id)?.hhl_order_no ?? null,
-          carrier_order_no: orderBy.get(r.id)?.carrier_order_no ?? null,
-          driver_name: drivers.get(r.id)?.driver_name ?? null,
-          driver_phone: drivers.get(r.id)?.driver_phone ?? null,
-          driver_phone_country: drivers.get(r.id)?.driver_phone_country ?? 'PL',
-          driver_delivery_name: drivers.get(r.id)?.driver_delivery_name ?? null,
-          driver_delivery_phone: drivers.get(r.id)?.driver_delivery_phone ?? null,
-          driver_delivery_phone_country: drivers.get(r.id)?.driver_delivery_phone_country ?? 'PL',
-          tractor_delivery_plate: drivers.get(r.id)?.tractor_delivery_plate ?? null,
-          trailer_swap: drivers.get(r.id)?.trailer_swap ?? false,
-        }))
-        .map((r, i) => applyPriceViews(loadFromRow(r, orgs, i, at), costBy.get(r.id), revBy.get(r.id)))
-        .map((l) => (permitOk.has(l.id) ? { ...l, permitFits: permitOk.get(l.id) ?? null } : l)),
-      events: (must(events, 'load_events') as EventRow[]).map(eventFromRow),
+      loads: mappedLoads,
+      events: mappedEvents,
       messages: (() => {
         const rows = (messagesUi.error ? must(messagesPlain, 'load_messages') : (messagesUi.data ?? [])) as MessageRow[];
         const mapped = rows.map(messageFromRow);
@@ -149,7 +194,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         });
         return mapped;
       })(),
-      geofences: (must(geos, 'v_geofences_circle') as GeofenceRow[]).map((g) => geofenceFromRow(g, orgs)),
+      geofences: geosRows,
       risks: (must(risks, 'risk_signals') as RiskRow[]).map((r) => riskFromRow(r, at)),
       documents: docRows.map(documentFromRow).filter((d) => d !== null),
       notifications: (must(notesQ, 'notifications') as NotificationRow[]).map((r) => notificationFromRow(r)),

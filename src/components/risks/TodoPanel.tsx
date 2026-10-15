@@ -51,6 +51,7 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
   const setOpenDecisionId = useTowerStore((s) => s.setOpenDecisionId);
   const setAccessMessage = useTowerStore((s) => s.setAccessMessage);
   const riskFilter = useTowerStore((s) => s.riskFilter);
+  const events = useTowerStore((s) => s.events);
 
   const me = useMemo(() => caseMeOf(role), [role]);
   const [assign, setAssign] = useState<Record<string, string> | null>(() => caseAssignmentsOf());
@@ -80,13 +81,13 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
       load,
       fees: (feeSuggestionsOf(load) ?? []).filter((f) => !feeDone.has(f.id)),
       check: (() => {
-        const c = deliveredCheckOf(load, loads, geofences, nowIso, role);
+        const c = deliveredCheckOf(load, loads, geofences, nowIso, role, events);
         return c && !checkDone.has(c.id) ? c : null;
       })(),
     }));
     const extras = todoExtrasOf(role, items, cardLoads);
     return extras.length ? buildTodo({ risks: visRisks, decisions: decs, extras, nowIso }) : base;
-  }, [visRisks, decs, nowIso, loads, geofences, role, feeDone, checkDone]);
+  }, [visRisks, decs, nowIso, loads, geofences, role, feeDone, checkDone, events]);
 
   const assigneeOf = (id: string): CasePerson | null => {
     const pid = assign?.[id];

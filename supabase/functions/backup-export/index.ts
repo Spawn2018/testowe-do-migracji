@@ -27,6 +27,16 @@ const env = (k: string) => {
   return v;
 };
 
+/** A7 / E44: lista kolumn `loads` bez `rio_secret` do COPY. */
+async function loadColumnsWithoutRioSecret(sql: ReturnType<typeof postgres>): Promise<string> {
+  const cols = await sql<{ column_name: string }[]>`
+    select column_name from information_schema.columns
+     where table_schema = 'public' and table_name = 'loads' and column_name <> 'rio_secret'
+     order by ordinal_position`;
+  if (!cols.length) throw new Error('kopia: brak kolumn loads');
+  return cols.map((c) => `"${String(c.column_name).replace(/"/g, '""')}"`).join(', ');
+}
+
 Deno.serve(async (req) => {
   const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   if (!service || !(await isServiceRequest(req, { url: Deno.env.get('SUPABASE_URL') ?? '', service }))) return new Response('forbidden', { status: 403 });
@@ -58,7 +68,11 @@ Deno.serve(async (req) => {
     const tables = backupTables(catalog);
     for (const t of tables) {
       const chunks: Uint8Array[] = [];
-      const stream = await sql.unsafe(`copy public.${t} to stdout with (format csv, header true)`).readable();
+      // A7 / E44: loads bez kolumny rio_secret (klucz RIO nie w kopii R2)
+      const copySql = t === 'loads'
+        ? `copy (select ${await loadColumnsWithoutRioSecret(sql)} from public.loads) to stdout with (format csv, header true)`
+        : `copy public.${t} to stdout with (format csv, header true)`;
+      const stream = await sql.unsafe(copySql).readable();
       // zdarzenia zamiast `for await`: w Edge Runtime iterator strumienia COPY zawieszał się na tabelach > ~16 kB (PR2, 27.09)
       await new Promise<void>((res, rej) => {
         stream.on('data', (c: Uint8Array) => chunks.push(c));

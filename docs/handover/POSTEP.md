@@ -2384,3 +2384,15 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 **POPRAWKI-AUDYT-A NA PRODUKCJI — commit `034a993d`, migracje 0207–0213, wdrożenie `dpl_HPasjkw4nWBTeY5w2AVF93dLW8eN`, 15.10.2026 06:11.**
 
 **CZEKA NA WŁAŚCICIELA: W37 — emtrack: nowe dane logowania od SCX (sekrety `EMTRACK_LOGIN` / `EMTRACK_PASSWORD`).**
+
+## 2026-10-15 — P4 / PR #203 — B (D-0300) w toku
+
+- Gałąź `pakiet/P4-k2-h3-r6` @ `a8f6c42e`+ (poprawka 0214 `revoke all (rio_secret)…` — brama `db` zielona 8m43s).
+- Wygląd #213 → #214 → hotfix #217 (`NavKey` `risk`) na prod: `dpl_4hKE1hWKKUTT1WUNPSBqx3WyABX4` (15.10 ~11:45); `tower.log-mar.pl` / `watch-tower-makieta.vercel.app` = 200.
+- **B (kod w tym pushu):** B1 `deliveredCheck` z zdarzeń bazy → pole load; B3 morze `marine_conditions` w Kokpicie; B4 `tracker_on`/`trackerPlate` w STATUS_AUTO (0216); B5 piloci z `plPilotsRequired` + `usedBy`; B7 progi E15 w `ops_thresholds` (SILENT_MIN=30, ETA_CONF_*, GEOFENCE_EDGE_M, SILENT_STOP_H) + faza prom AIS; B8 geometria `SE_APPROACH_SG03`; B9 stan śledzenia w PDF; B10 anulowanie HHL_ADMIN + wczytywanie CANCELLED dla HHL + `telm_infer` bez FERRY; B11 kotwica czasu w `i2.sh` ~717.
+- **H3.6 (definicje Kokpit):** terminowość = dzień rozładunku ≤ dzień dostawy z planu; marża = suma marży / suma przychodu (`cockpitE9.ts` / `DashboardView.tsx`).
+- **B12–B14 (po scaleniu / TEST):** doradca security na produkcji po 0214–0216; `i2-facade.local` I-5/I-17 liczbami; czasy paczek P1–P4; status PLAN §4 P4 → W TOKU.
+- Testy lokalnie: unit **1065** + `tests/p4-b-d0300.test.ts` **5/5**; `tsc` 0.
+- Czas plan B (wznowienie 12:33→) ~1,5 h; poprawki 0214 wcześniej.
+
+**P4 — W TOKU (PR #203; na produkcji 0205 i wygląd P4-a/b/c; migracje 0214–0216 w PR).**

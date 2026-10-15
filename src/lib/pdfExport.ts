@@ -126,12 +126,31 @@ export async function appendMapPage(pdfBytes: Uint8Array, mapPng: Uint8Array, ca
 export async function exportLoadPdfWithMap(
   load: Load,
   locale: Locale = 'pl',
+  events: import('../types').LoadEvent[] = [],
+  nowIso: string = new Date().toISOString(),
 ): Promise<{ rows: number; bytes: number; mapAttached: boolean; mapSkipReason?: string }> {
   const res = await fetch(`${import.meta.env.BASE_URL ?? '/'}fonts/LiberationSans-Regular.ttf`);
   if (!res.ok) throw new Error(`czcionka PDF: HTTP ${res.status}`);
   const title = tp(locale, 'h7_pdf_title', { code: load.code });
   const fontBuf = await res.arrayBuffer();
   let bytes = await buildLoadsPdf([load], fontBuf, { title, locale });
+  /* B9 / E27 pkt 5: stan śledzenia jak w panelu */
+  try {
+    const { trackingStateOneLine } = await import('./trackingStateText');
+    const line = trackingStateOneLine(load, events, locale, nowIso);
+    if (line) {
+      const doc = await PDFDocument.load(bytes);
+      doc.registerFontkit(fontkit);
+      const font = await doc.embedFont(fontBuf, { subset: true });
+      const page = doc.getPages()[0];
+      if (page) {
+        page.drawText(fit(line, font, 8, PAGE_W - 2 * M), {
+          x: M, y: PAGE_H - M - 22, size: 8, font, color: rgb(0.25, 0.25, 0.25),
+        });
+      }
+      bytes = await doc.save();
+    }
+  } catch { /* bez linii śledzenia — tabela i tak jest */ }
   let mapAttached = false;
   let mapSkipReason: string | undefined;
 

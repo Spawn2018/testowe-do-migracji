@@ -5,12 +5,11 @@
  * Rejestracje i czasy wynikają z danych demo (bez prawdziwych linków, kluczy i tablic — G-09, G-17).
  */
 import type { DeliveredCheck, Document, Geofence, Load, LoadEvent, LoadStatus, ReadyGap, TrackingLinkInfo } from '../types';
-import { isReadyBlocked } from './permits';
+import { computeReadyGaps } from './readyGaps';
 import { dayTime, isoMs } from './statusAxis';
 import { transportLabel } from './transportName';
 
 const ROUTE: LoadStatus[] = ['LOADING', 'IN_TRANSIT_PL', 'AT_PORT', 'ON_FERRY', 'AT_PORT_SE', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'DELAYED', 'SILENT'];
-const PREP: LoadStatus[] = ['PLANNED', 'RESOURCES_PENDING', 'DOC_MISSING'];
 
 const byCode = (a: Load, b: Load) => a.code.localeCompare(b.code, 'pl', { numeric: true });
 const plusDayUtc = (day: string, d: number, hh: number) => {
@@ -51,24 +50,9 @@ export function demoTrackingLink(load: Load, loads: readonly Load[], nowIso: str
   return null;
 }
 
-/** L6, L9, L29 — braki z danych demo (produkcja: jedna definicja z bazy, E32 pkt 6). */
+/** L6, L9, L29 — ta sama definicja co produkcja (`computeReadyGaps`). */
 export function demoReadyGaps(load: Load, docs: readonly Document[]): ReadyGap[] {
-  if (!PREP.includes(load.status)) return [];
-  const r = load.resources;
-  const gaps: ReadyGap[] = [];
-  const awiz = [
-    !r.driverName?.trim() ? 'kierowca' : null,
-    !r.driverPhone?.trim() ? 'telefon' : null,
-    !r.tractorPlate?.trim() ? 'ciągnik' : null,
-    !r.trailerPlate?.trim() ? 'naczepa' : null,
-    r.trailerSwap && !r.tractorDeliveryPlate?.trim() ? 'ciągnik SE' : null,
-  ].filter(Boolean) as string[];
-  if (awiz.length) gaps.push({ kind: 'AWIZ', items: awiz, who: 'SCX' });
-  if ((load.permit?.plPilotsRequired ?? 0) > 0 && !r.escortPlate?.trim()) gaps.push({ kind: 'PILOTS', items: ['pilot PL', 'pilot SE'], who: 'SCX' });
-  if (!load.carrierOrderNo?.trim()) gaps.push({ kind: 'ORDER_SCX', who: 'SCX' });
-  if (!load.hhlOrderNo?.trim()) gaps.push({ kind: 'ORDER_HHL', who: 'HHL' });
-  if (isReadyBlocked(load, [...docs]).blocked) gaps.push({ kind: 'PERMIT', who: 'SCX' });
-  return gaps;
+  return computeReadyGaps(load, docs);
 }
 
 /** E26 pkt 4, L14 — jedna sprawa na pierwszym transporcie „Na placu”. */
@@ -100,6 +84,7 @@ export function demoAutoMeta(loads: readonly Load[], events: readonly LoadEvent[
   const load = last ? loads.find((l) => l.id === last.loadId) : undefined;
   return {
     zones: last && load ? `${load.code} · ${dayTime(last.at)}` : undefined,
+    prices: last && load ? `${load.code} · ${dayTime(last.at)}` : undefined,
     texts: 'tryb testowy',
   };
 }

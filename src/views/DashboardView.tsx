@@ -23,20 +23,13 @@ export function DashboardView() {
   // I-2l: czas wykrycia odchylenia z bazy (kpi_detection_lag) — wyłącznie build produkcyjny, moduł leniwy
   // null = jeszcze się wczytuje (stopka czeka), 'error' = nie udało się odczytać (nie udajemy zera zdarzeń)
   const [detectLag, setDetectLag] = useState<{ samples: number; medianMin: number | null } | 'error' | null>(null);
-  useEffect(() => {
-    if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
-      let cancelled = false;
-      void import('../lib/detectLag')
-        .then((m) => m.fetchDetectionLag())
-        .then((r) => { if (!cancelled) setDetectLag(r); }, () => { if (!cancelled) setDetectLag('error'); });
-      return () => { cancelled = true; };
-    }
-    return undefined;
-  }, []);
+  /* B3 / H3.4: pomiar morza z marine_conditions do kafelka „Najbliższy prom” */
+  const [marineSea, setMarineSea] = useState<{ waveM: number; risk: string; gustKn?: number | null } | null>(null);
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
   const currency = useTowerStore((s) => s.displayCurrency);
   const loads = useTowerStore((s) => s.loads);
+  const events = useTowerStore((s) => s.events);
   const risks = useTowerStore((s) => s.risks);
   const documents = useTowerStore((s) => s.documents);
   const selectLoad = useTowerStore((s) => s.selectLoad);
@@ -45,6 +38,26 @@ export function DashboardView() {
 
   const bills = useTowerStore((s) => s.bills);
   const sailings = useTowerStore((s) => s.sailings);
+  useEffect(() => {
+    if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
+      let cancelled = false;
+      void import('../lib/detectLag')
+        .then((m) => m.fetchDetectionLag())
+        .then((r) => { if (!cancelled) setDetectLag(r); }, () => { if (!cancelled) setDetectLag('error'); });
+      void import('../lib/marineWeatherDb')
+        .then((m) => m.fetchMarineCondition())
+        .then((row) => {
+          if (cancelled || !row || row.maxWaveM == null) return;
+          setMarineSea({
+            waveM: row.maxWaveM,
+            risk: formatSeaRiskLabel(row.risk, locale),
+            gustKn: row.maxGustKn,
+          });
+        }, () => { /* brak odczytu — kafelek bez morza */ });
+      return () => { cancelled = true; };
+    }
+    return undefined;
+  }, [locale]);
   /* rodzaj konta oglądanej firmy (w Podglądzie — rodzaj domyślny tej firmy, nie rodzaj osoby z HHL) */
   const kind = viewedKind(role, getAuthProfile()?.role);
 
@@ -73,8 +86,7 @@ export function DashboardView() {
       const s = [near.stena[0], near.polferries[0]].filter(Boolean).sort((a, b) => Date.parse(effDeparture(a!)) - Date.parse(effDeparture(b!)))[0];
       if (!s) return null;
       const [from, to] = s.route.split('-');
-      /* E9 B7: pomiar morza (marine_conditions) czyta dziś tylko strona Ryzyka — kafelek do niej odsyła; podłączenie: wykonawca */
-      return { vessel: s.vessel, route: `${from} → ${to}`, depIso: effDeparture(s), sea: null };
+      return { vessel: s.vessel, route: `${from} → ${to}`, depIso: effDeparture(s), sea: marineSea };
     }
     const s = focusVoyage(new Date(nowMinute * 60_000));
     const sea = shows('seaWeather') ? seaForSailing(s) : null;
@@ -84,7 +96,7 @@ export function DashboardView() {
       depIso: new Date(Date.parse(s.depLocal)).toISOString(),
       sea: sea ? { waveM: sea.waveM, risk: formatSeaRiskLabel(sea.risk, locale) } : null,
     };
-  }, [sailings, locale, nowMinute]);
+  }, [sailings, locale, nowMinute, marineSea]);
   const marginInfo = useMemo(() => {
     const rev = loads.reduce((a, l) => a + (l.pricing?.revTotal || 0), 0);
     const mar = loads.reduce((a, l) => a + (l.pricing?.margin || 0), 0);
@@ -95,9 +107,21 @@ export function DashboardView() {
       tierText: agg.tier ? t(locale, `tier_${agg.tier}`).toLowerCase() : t(locale, 'tier_PROGNOZA').toLowerCase(),
     };
   }, [loads, role, locale, currency]);
+  /* B3 / H3.5: „na placu od …” — GEOFENCE_ENTER SITE */
+  const siteSince = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of events) {
+      if (e.type !== 'GEOFENCE_ENTER') continue;
+      const p = (e.payload ?? {}) as { geofence_type?: string; zone?: string };
+      if (p.geofence_type !== 'SITE' && p.zone !== 'SITE') continue;
+      const prev = m.get(e.loadId);
+      if (!prev || Date.parse(e.at) > Date.parse(prev)) m.set(e.loadId, e.at);
+    }
+    return m;
+  }, [events]);
   const tiles = buildCockpit({
     role, locale, nowIso: getNow().toISOString(), loads, documents, bills,
-    todo, ferry, margin: marginInfo,
+    todo, ferry, margin: marginInfo, siteSince,
   });
   const marginTier = aggregateTier(loads, role);
   const moneyTags = marginTier.tier ? (

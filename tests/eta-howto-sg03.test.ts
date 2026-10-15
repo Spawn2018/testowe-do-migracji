@@ -7,10 +7,10 @@ import { etaConfidenceFromMinutes } from '../src/data/mappers';
 /** SG-03 ETA „Jak działa” + strażnik U-31 (po decyzji B 05.10 — znaczniki przed/po/noc). */
 describe('ETA „Jak działa” (SG-03)', () => {
   for (const loc of ['pl', 'en', 'sv'] as const) {
-    it(`${loc}: punkty howto + progi 60/240 min`, () => {
+    it(`${loc}: punkty howto + progi 30/120 min (E15-3)`, () => {
       const items = t(loc, 'a6_dr_eta_howto').split('|').map((x) => x.trim()).filter(Boolean);
       expect(items.length).toBeGreaterThanOrEqual(7);
-      const conf = items.find((x) => x.includes('±60') && x.includes('±240'));
+      const conf = items.find((x) => x.includes('±30') && x.includes('±120'));
       expect(conf).toBeTruthy();
     });
   }
@@ -22,11 +22,11 @@ describe('ETA „Jak działa” (SG-03)', () => {
     expect(s).toContain('„przyjazd nocą”');
     expect(s).toContain('Wysoka / Średnia / Niska');
   });
-  it('progi pewności w kodzie = progi w opisie', () => {
-    expect(etaConfidenceFromMinutes(60)).toBe('HIGH');
-    expect(etaConfidenceFromMinutes(61)).toBe('MED');
-    expect(etaConfidenceFromMinutes(240)).toBe('MED');
-    expect(etaConfidenceFromMinutes(241)).toBe('LOW');
+  it('progi pewności w kodzie = progi w opisie (H3.2)', () => {
+    expect(etaConfidenceFromMinutes(30)).toBe('HIGH');
+    expect(etaConfidenceFromMinutes(31)).toBe('MED');
+    expect(etaConfidenceFromMinutes(120)).toBe('MED');
+    expect(etaConfidenceFromMinutes(121)).toBe('LOW');
     expect(etaConfidenceFromMinutes(null)).toBe('LOW');
   });
 });

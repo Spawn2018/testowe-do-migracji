@@ -107,10 +107,11 @@ $PSQL -c "update ops_thresholds set value_num = 3 where key = 'LEAD_DAYS'" >/dev
 val "krótsze wyprzedzenie KSH gasi alarm" "select l3_lead_alarm(now() + interval '4 days', now())" f
 $PSQL -c "update ops_thresholds set value_num = 5 where key = 'LEAD_DAYS'" >/dev/null
 val "cisza GPS tylko przy źródle i ruchu" "select l3_silent_alarm(now() - interval '30 minutes', now(), false, true)" f
-val "cisza 30 min przy progu 15" "select l3_silent_alarm(now() - interval '30 minutes', now(), true, true)" t
+# B7 / E15: SILENT_MIN = 30; alarm gdy cisza > progu
+val "cisza 45 min przy progu 30" "select l3_silent_alarm(now() - interval '45 minutes', now(), true, true)" t
 $PSQL -c "update ops_thresholds set value_num = 60 where key = 'SILENT_MIN'" >/dev/null
-val "dłuższy próg ciszy gasi alarm" "select l3_silent_alarm(now() - interval '30 minutes', now(), true, true)" f
-$PSQL -c "update ops_thresholds set value_num = 15 where key = 'SILENT_MIN'" >/dev/null
+val "dłuższy próg ciszy gasi alarm" "select l3_silent_alarm(now() - interval '45 minutes', now(), true, true)" f
+$PSQL -c "update ops_thresholds set value_num = 30 where key = 'SILENT_MIN'" >/dev/null
 val "zjazd: jedna pozycja nie alarmuje" "select l3_deviation_alarm(5000, 1, 20, false)" f
 val "zjazd: dwie pozycje, 10 min, ponad 2 km" "select l3_deviation_alarm(5000, 2, 10, false)" t
 $PSQL -c "update ops_thresholds set value_num = 9 where key = 'OFFROUTE_KM'" >/dev/null

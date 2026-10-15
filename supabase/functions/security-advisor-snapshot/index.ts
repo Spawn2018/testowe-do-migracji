@@ -46,7 +46,11 @@ Deno.serve(async (req) => {
     /* ignore */
   }
 
-  const token = Deno.env.get('SUPABASE_ACCESS_TOKEN') ?? Deno.env.get('SUPABASE_MGMT_TOKEN') ?? '';
+  // C14 / D-0330: Supabase nie pozwala na sekrety SUPABASE_* — używamy ADVISOR_MGMT_TOKEN
+  const token = Deno.env.get('ADVISOR_MGMT_TOKEN')
+    ?? Deno.env.get('SUPABASE_ACCESS_TOKEN')
+    ?? Deno.env.get('SUPABASE_MGMT_TOKEN')
+    ?? '';
   const projectRef = Deno.env.get('SUPABASE_PROJECT_REF')
     ?? (url.match(/https:\/\/([a-z0-9]+)\.supabase\.co/i)?.[1] ?? '');
 
@@ -61,7 +65,7 @@ Deno.serve(async (req) => {
       advisorError = e instanceof Error ? e.message : String(e);
     }
   } else {
-    advisorError = 'brak SUPABASE_ACCESS_TOKEN / SUPABASE_MGMT_TOKEN lub project ref';
+    advisorError = 'brak ADVISOR_MGMT_TOKEN lub project ref';
   }
 
   const flat = findings.flatMap((lint) =>
@@ -96,11 +100,13 @@ Deno.serve(async (req) => {
     snapshotId = data as number;
   }
 
-  await log(true, {
+  // B12: brak pomiaru (advisor_ok=false) → integration_runs.ok=false, nie „OK”
+  await log(advisorOk, {
     snapshot_id: snapshotId,
     findings: flat.length,
     advisor_ok: advisorOk,
     advisor_error: advisorError,
+    detail: advisorOk ? 'doradca security' : 'Brak pomiaru',
   });
-  return Response.json({ ok: true, snapshot_id: snapshotId, findings: flat.length, advisor_ok: advisorOk });
+  return Response.json({ ok: advisorOk, snapshot_id: snapshotId, findings: flat.length, advisor_ok: advisorOk });
 });

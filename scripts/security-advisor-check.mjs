@@ -28,7 +28,10 @@ function flattenLints(lints) {
   const out = [];
   for (const lint of lints ?? []) {
     const name = lint.name ?? 'unknown';
-    const findings = lint.findings?.length ? lint.findings : [{ metadata: { schema: 'public', name: '*' } }];
+    // CLI „results”: metadata na obiekcie lint; starsze: tablica findings
+    const findings = lint.findings?.length
+      ? lint.findings
+      : [{ metadata: lint.metadata ?? { schema: 'public', name: '*' }, detail: lint.detail }];
     for (const f of findings) {
       const schema = f.metadata?.schema ?? 'public';
       const obj = f.metadata?.name ?? '*';
@@ -37,7 +40,7 @@ function flattenLints(lints) {
         lint: name,
         object: `${schema}.${obj}`,
         level: lint.level ?? 'INFO',
-        detail: f.detail ?? lint.title ?? '',
+        detail: f.detail ?? lint.detail ?? lint.title ?? '',
       });
     }
   }
@@ -48,8 +51,7 @@ function loadLintsFromArgs(argv) {
   const jsonIdx = argv.indexOf('--from-json');
   if (jsonIdx >= 0) {
     const raw = JSON.parse(readFileSync(argv[jsonIdx + 1], 'utf8'));
-    const lints = Array.isArray(raw) ? raw : (raw.lints ?? raw.result?.lints ?? []);
-    return lints;
+    return extractLints(raw);
   }
   const refIdx = argv.indexOf('--project-ref');
   const ref = refIdx >= 0 ? argv[refIdx + 1] : process.env.SUPABASE_PROJECT_REF;
@@ -57,17 +59,23 @@ function loadLintsFromArgs(argv) {
     console.error('Podaj --project-ref lub --from-json');
     process.exit(2);
   }
+  // CLI: --output-format json; --project-ref tylko z --linked (inaczej --db-url)
   const r = spawnSync(
     'npx',
-    ['supabase', 'db', 'advisors', '--project-ref', ref, '--type', 'security', '--output', 'json'],
+    ['supabase', 'db', 'advisors', '--project-ref', ref, '--linked', '--type', 'security', '--output-format', 'json'],
     { cwd: ROOT, encoding: 'utf8', shell: true },
   );
   if (r.status !== 0) {
     console.error(r.stderr || r.stdout || 'supabase db advisors failed');
     process.exit(2);
   }
-  const raw = JSON.parse(r.stdout);
-  return Array.isArray(raw) ? raw : (raw.lints ?? raw.result?.lints ?? []);
+  return extractLints(JSON.parse(r.stdout));
+}
+
+/** CLI zwraca { results: [...] }; starsze: tablica / lints / result.lints */
+function extractLints(raw) {
+  if (Array.isArray(raw)) return raw;
+  return raw.results ?? raw.lints ?? raw.result?.lints ?? [];
 }
 
 const exceptions = parseExceptions(readFileSync(EXC, 'utf8'));

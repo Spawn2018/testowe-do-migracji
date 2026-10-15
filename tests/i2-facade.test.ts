@@ -110,8 +110,8 @@ describe('I-2d/e: ETA i prom z bazy', () => {
     expect(delayPillMinutes({ delayed: true }, null, false)).toBe(95)
     expect(delayPillMinutes({ delayed: false, delayMinutesDb: 42 }, null, true)).toBeNull()
   })
-  it('ufność z pasma minut: ≤60 HIGH, ≤240 MED, inaczej / brak LOW', () => {
-    expect([30, 60, 61, 240, 241, null].map((m) => etaConfidenceFromMinutes(m))).toEqual(['HIGH', 'HIGH', 'MED', 'MED', 'LOW', 'LOW'])
+  it('ufność z pasma minut: ≤30 HIGH, ≤120 MED, inaczej / brak LOW (E15-3 / H3.2)', () => {
+    expect([30, 31, 120, 121, null].map((m) => etaConfidenceFromMinutes(m))).toEqual(['HIGH', 'MED', 'MED', 'LOW', 'LOW'])
   })
   it('najbliższy rejs z sailings: pomija odwołane i przeszłe, uwzględnia opóźnienie', () => {
     const s = (id: string, dep: string, status = 'ZAPLANOWANY', delayed: string | null = null) =>

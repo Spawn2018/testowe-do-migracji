@@ -24,14 +24,14 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 23,
   import: 66,
-  nullguard: 632, // +5 my_session_revoke GUARD ×4 + pozytywna (D-20261014-1420-01 R3)
+  nullguard: 637, // +5 rio_tracking_open GUARD (0207 E44 H4); wcześniej +5 my_session_revoke
   i2: 540,
   i30: 10,
   i31: 9,
   dec2: 26,
   dec3: 13,
   dec5: 11,
-  dec6: 23,
+  dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
   adm10: 8,
   hist11: 11,
   workflows: 67,
@@ -64,8 +64,8 @@ export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
   security: 84, // 88 − 4 SKIP
   risks: 21, // 23 − 2 SKIP
-  // dec6: 23 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
-  dec6: 19,
+  // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
+  dec6: 21,
   backup: 21, // 29 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE)
 };
 

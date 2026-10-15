@@ -15,6 +15,7 @@ import { buildStatusAxis, dateTimeFields, dayTime, gpsHint, isoMs } from '../../
 import { useIsPhone } from '../../lib/useIsPhone';
 import { readyGapsOf } from '../../lib/p4cSource';
 import { readyGapsText } from '../../lib/p4c';
+import { getAuthProfile } from '../../auth/profile';
 import type { LoadStatus } from '../../types';
 
 const MANUAL_STATUSES: LoadStatus[] = [
@@ -60,6 +61,8 @@ export function StatusChangeModal({
   const [time, setTime] = useState(() => isoToDatetimeLocalValue(getNowIso(), TZ_OPS).slice(11, 16));
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  /* B10 / E25: anulowanie — tylko Administrator HHL z powodem */
+  const canCancel = getAuthProfile()?.role === 'HHL_ADMIN';
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -73,10 +76,10 @@ export function StatusChangeModal({
     return () => window.removeEventListener('keydown', onKey, true);
   }, [onClose]);
 
-  const options = useMemo(
-    () => MANUAL_STATUSES.map((s) => ({ s, label: statusLabel(s, undefined, locale) })),
-    [locale],
-  );
+  const options = useMemo(() => {
+    const list = canCancel ? [...MANUAL_STATUSES, 'CANCELLED' as LoadStatus] : MANUAL_STATUSES;
+    return list.map((s) => ({ s, label: statusLabel(s, undefined, locale) }));
+  }, [locale, canCancel]);
 
   /* „Teraz: … od …” i podpowiedź z GPS — z dziennika zdarzeń transportu (bez zapytań) */
   const events = useMemo(() => allEvents.filter((e) => e.loadId === loadId), [allEvents, loadId]);
@@ -94,6 +97,16 @@ export function StatusChangeModal({
   function save(e: React.FormEvent) {
     e.preventDefault();
     if (busy || readyBlocked) return;
+    if (status === 'CANCELLED') {
+      if (!canCancel) {
+        pushToast('Anulowanie — tylko Administrator HHL', 'HIGH', loadId);
+        return;
+      }
+      if (!note.trim()) {
+        pushToast('Anulowanie wymaga powodu', 'HIGH', loadId);
+        return;
+      }
+    }
     setBusy(true);
     try {
       const whenLocal = `${date}T${time}`;
@@ -107,7 +120,7 @@ export function StatusChangeModal({
         return;
       }
       /* E25: nie wcześniej niż poprzedni status (tekst zasad w oknie); baza sprawdza to samo — dopisek wykonawcy */
-      if (since && Date.parse(occurredAt) < isoMs(since)) {
+      if (since && Date.parse(occurredAt) < isoMs(since) && status !== 'CANCELLED') {
         pushToast(tp(locale, 'p4b_m_err_before', { at: dayTime(since) }), 'HIGH', loadId);
         return;
       }

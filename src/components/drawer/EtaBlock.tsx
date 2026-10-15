@@ -64,6 +64,25 @@ export function EtaBlock({
     );
   }
 
+  /* B7 / E15 pkt 8: faza prom — ETA z AIS albo „czeka na pozycję AIS” */
+  if (d?.phase === 'FERRY' || load.status === 'ON_FERRY') {
+    const aisEta = d?.ferryEtaAt ?? null;
+    const waiting = d?.waitAis || !aisEta;
+    return (
+      <div className="etab ferry" data-eta="ferry" data-eta-block>
+        <div className="etab-lbl">{t(locale, 'p4b_eta_ferry_lbl')}</div>
+        <div className="etab-val">
+          {waiting ? t(locale, 'p4b_eta_ferry_wait_ais') : dayTime(aisEta)}
+        </div>
+        <div className="etab-sub">
+          {waiting
+            ? t(locale, 'p4b_eta_ferry_wait_sub')
+            : tp(locale, 'p4b_eta_ferry_ais_sub', { at: dayTime(aisEta) })}
+        </div>
+      </div>
+    );
+  }
+
   const phase: 'DRIVE' | 'REST' | 'WAIT_SITE' | 'SITE' =
     d?.phase === 'REST' || d?.phase === 'WAIT_SITE' ? d.phase : tile === 'SITE' ? 'SITE' : 'DRIVE';
   const kind = load.etaBoden

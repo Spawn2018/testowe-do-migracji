@@ -37,6 +37,7 @@ import type {
 import type { NavKey as NK } from '../lib/permissions';
 import { canEditResources } from '../lib/permissions';
 import { setPreviewViewRole } from '../lib/previewGate';
+import { redactResourcesPatch, redactTrackingRef } from '../lib/trackingRefSafe';
 import { applyThemeToDom, systemTheme, type Theme } from '../lib/theme';
 export type { Theme };
 import {
@@ -873,23 +874,30 @@ export const useTowerStore = create<TowerState>()(
         /* AUD-03: zasoby („Zmień ciągnik”, awizacja) — tylko przewoźnik i HHL; KSH nic nie zapisuje (baza też odmawia) */
         if (!canEditResources(role)) return;
         const at = nowIso();
+        /* E44 pkt 8 / K2.1: do bazy może iść pełny link (wyzwalacz wycina secret); do UI i zdarzeń — bez secret */
+        const safePatch = redactResourcesPatch(patch);
+        const dbPatch = { ...patch };
         set((s) => {
-          const loads = s.loads.map((l) =>
-            l.id === loadId ? { ...l, resources: { ...l.resources, ...patch } } : l,
-          );
+          const loads = s.loads.map((l) => {
+            if (l.id !== loadId) return l;
+            const resources = { ...l.resources, ...safePatch };
+            /* po zapisie RIO w stanie lokalnym zostaje rio:<uuid>, nie URL z kluczem */
+            if ('trackingRef' in patch) resources.trackingRef = redactTrackingRef(patch.trackingRef);
+            return { ...l, resources };
+          });
           const updated = loads.find((l) => l.id === loadId);
           const complete = resourcesComplete(updated?.resources);
           const risks = clearResourceGapRisks(s.risks, loadId, complete);
           const exceptions = exceptionsFromRisks(risks, loads);
           return { loads, risks, exceptions };
         });
-        writeThrough({ type: 'load.resources', loadId, patch });
+        writeThrough({ type: 'load.resources', loadId, patch: dbPatch });
         get().appendEvent({
           loadId,
           type: 'RESOURCES_UPDATED',
           at,
           actor: currentActorLabel(role),
-          payload: patch as Record<string, unknown>,
+          payload: safePatch as Record<string, unknown>,
         });
         get().pushToast(t(get().locale, 'a6_ts_res_saved'), 'MEDIUM', loadId);
 
