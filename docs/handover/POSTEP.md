@@ -2450,3 +2450,5 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 
 **C16-N1 NA PRODUKCJI — 20:37 (funkcja) / 20:40 (aplikacja), właściciel może testować S24.** commit `0f5075ef`, wdrożenie `dpl_GQnkaNkuBj4TeXNrg8y1br8vCDvj`.
 
+- **W24 dostarczone 15.10.2026, 20:50** — właściciel: test na S24 doszedł (C16-N1).
+

@@ -28,9 +28,9 @@ sys "insert into notifications (channel, recipient, user_id, load_id, template, 
   '{\"title\":\"C16\",\"body\":\"brak urzadzenia\",\"url\":\"/#/transport/SG-99\"}'::jsonb,
   'c16-nosub:$HHL','ERROR','no_sub')" >/dev/null
 NID=$(sys "select id from notifications where dedup_key='c16-nosub:$HHL'" | tail -1)
-val "no_sub → enqueue fallback" "select public.web_push_enqueue_fallback($NID)::text" t
+val "no_sub → enqueue fallback" "select public.web_push_enqueue_fallback($NID)::text" true
 val "fallback EMAIL istnieje" "select count(*) from notifications where dedup_key='push_fallback:$NID' and channel='EMAIL'" 1
-val "drugi przebieg nie dubluje" "select public.web_push_enqueue_fallback($NID)::text" f
+val "drugi przebieg nie dubluje" "select public.web_push_enqueue_fallback($NID)::text" false
 val "nadal jeden EMAIL" "select count(*) from notifications where dedup_key='push_fallback:$NID'" 1
 
 # 2) SENT bez delivered_at po 5 min → tick
@@ -49,7 +49,7 @@ sys "insert into notifications (channel, recipient, user_id, load_id, template, 
   '{\"title\":\"C16\",\"body\":\"doszlo\"}'::jsonb,
   'c16-ack:$HHL','SENT', now() - interval '10 minutes', now() - interval '9 minutes')" >/dev/null
 NID3=$(sys "select id from notifications where dedup_key='c16-ack:$HHL'" | tail -1)
-val "z delivered_at bez fallbacku" "select public.web_push_enqueue_fallback($NID3)::text" f
+val "z delivered_at bez fallbacku" "select public.web_push_enqueue_fallback($NID3)::text" false
 
 # 4) kolumny stanu urządzenia
 val "last_ack_at istnieje" "select count(*) from information_schema.columns where table_schema='public' and table_name='push_subscriptions' and column_name='last_ack_at'" 1
