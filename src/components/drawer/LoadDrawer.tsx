@@ -288,12 +288,30 @@ export function LoadDrawer() {
         {/* E27 pkt 5 (E1-2): pasek śledzenia nad zakładkami */}
         <TrackingBar load={load} events={loadEvents} label={transportLabel(load, role, 'plain')} locale={locale} nowIso={nowIso} trackingLink={trackingLink} />
 
-        <div className="dtabs">
-          {tabs.map((x) => {
+        {/* wyglad/P5-c (E10, axe): zakładki jako lista zakładek — `aria-selected` dozwolone tylko przy roli „tab” */}
+        <div className="dtabs" role="tablist" aria-label={transportLabel(load, role, 'plain')}>
+          {tabs.map((x, i) => {
             /* E17: liczba nieprzeczytanych na zakładce „Czat” */
             const n = x.id === 'chat' && tab !== 'chat' ? chatUnreadN : 0;
             return (
-              <button key={x.id} type="button" onClick={() => switchTab(x.id)} aria-selected={tab === x.id} aria-label={n ? `${x.label}, ${htn(locale, 'p6b_chat_unread', n)}` : undefined}>
+              <button
+                key={x.id}
+                type="button"
+                role="tab"
+                id={`dtab-${x.id}`}
+                aria-controls="dpanel"
+                tabIndex={tab === x.id ? 0 : -1}
+                onClick={() => switchTab(x.id)}
+                onKeyDown={(e) => {
+                  /* wzór listy zakładek: ← → przełączają, Home / End — pierwsza i ostatnia */
+                  const j = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : null;
+                  if (j == null) return;
+                  e.preventDefault();
+                  const next = tabs[(j + tabs.length) % tabs.length];
+                  switchTab(next.id);
+                  window.setTimeout(() => document.getElementById(`dtab-${next.id}`)?.focus(), 0);
+                }}
+                aria-selected={tab === x.id} aria-label={n ? `${x.label}, ${htn(locale, 'p6b_chat_unread', n)}` : undefined}>
                 {x.label}
                 {n ? <span className="dt-n" aria-hidden="true" data-chat-unread={n}>{n}</span> : null}
               </button>
@@ -301,7 +319,7 @@ export function LoadDrawer() {
           })}
         </div>
 
-        <div className={`dbody${tab === 'chat' ? ' is-chat' : ''}`}>
+        <div className={`dbody${tab === 'chat' ? ' is-chat' : ''}`} role="tabpanel" id="dpanel" aria-labelledby={`dtab-${tab}`}>
           {tab === 'overview' && (
             <>
               {/* wyglad/P4-c (L14): otwarta sprawa „czy dostarczono?” — odpowiedź w zakładce Status */}
