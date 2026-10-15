@@ -59,8 +59,7 @@ export function deliveredCheckOf(
 ): DeliveredCheck | null {
   if (load.status === 'DELIVERED' || String(load.status) === 'CANCELLED' /* jak TrackingBar: anulowany spoza LoadStatus */) return null;
   if (load.deliveredCheck !== undefined) return load.deliveredCheck;
-  if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return demoDeliveredCheck(load, loads, geofences, nowIso, role);
-  return deliveredCheckFromEvents(load, events, geofences, role);
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoDeliveredCheck(load, loads, geofences, nowIso, role) : deliveredCheckFromEvents(load, events, geofences, role);
 }
 
 function prodAutoMeta(loads: readonly Load[], events: readonly LoadEvent[], nowIso: string): Partial<Record<string, string>> {
