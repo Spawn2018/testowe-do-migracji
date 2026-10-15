@@ -14,7 +14,15 @@ const allowProd = process.env.TOWER_AUDYT_A_PROD === '1';
 const env = loadEnvLocal();
 
 function pickUrl() {
-  if (allowProd) return env.DATABASE_URL || env.SUPABASE_DB_URL || env.PROD_DB_URL || '';
+  if (allowProd) {
+    return (
+      env.DATABASE_URL ||
+      env.SUPABASE_DB_POOLER_URL ||
+      env.SUPABASE_DB_URL ||
+      env.PROD_DB_URL ||
+      ''
+    );
+  }
   return env.TEST_DB_URL || '';
 }
 
@@ -81,7 +89,8 @@ try {
   );
   await put(
     'sg03_positions_after',
-    `select p.id, p.load_id, p.ts, p.lat, p.lon
+    `select p.id, p.load_id, p.ts,
+            st_y(p.geom_raw::geometry) as lat, st_x(p.geom_raw::geometry) as lon
        from positions p join shipment_items si on si.load_id=p.load_id
       where si.shipment_code='SG-03' and p.ts > timestamptz '2026-10-07 10:19:54+00'`,
   );

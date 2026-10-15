@@ -17,11 +17,12 @@ begin
   end if;
 
   -- Idempotencja: publikacja 06.10 już jest (nieskorygowana) → nie dokładaj drugiej.
+  -- Alias fr (nie r) — unikamy kolizji z zmienną rekordu pętli poniżej.
   if exists (
-    select 1 from fuel_index_readings r
-     where r.project_id = v_p and r.index_code = 'PLN' and r.published_on = date '2026-10-06'
-       and r.corrects_id is null
-       and not exists (select 1 from fuel_index_readings c where c.corrects_id = r.id)
+    select 1 from fuel_index_readings fr
+     where fr.project_id = v_p and fr.index_code = 'PLN' and fr.published_on = date '2026-10-06'
+       and fr.corrects_id is null
+       and not exists (select 1 from fuel_index_readings c where c.corrects_id = fr.id)
   ) then
     raise notice '0207: publikacja PLN 2026-10-06 już jest';
   else
