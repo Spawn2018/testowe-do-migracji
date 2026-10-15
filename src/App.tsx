@@ -22,6 +22,8 @@ import { InvoicesViewLazy as InvoicesView } from './views/invoicesLazy';
 import { TasksView } from './views/TasksView';
 import { WorkflowsViewLazy as WorkflowsView } from './views/workflowsLazy';
 import { GeofenceView } from './views/GeofenceView';
+import { ZonesViewLazy as ZonesView } from './views/zonesLazy';
+import { zonesReady } from './lib/p8cReady';
 import { DriverPwa } from './views/DriverPwa';
 /* wyglad/P3-c: Opcje i Ustawienia ładowane osobno (budżet pierwszego wczytania) */
 import { OptionsViewLazy as OptionsView, SettingsViewLazy as SettingsView } from './views/optionsLazy';
@@ -156,7 +158,8 @@ function TowerShell() {
       body = <WorkflowsView />;
       break;
     case 'geo':
-      body = <GeofenceView />;
+      /* wyglad/P8-c (E34): nowa strona Stref, gdy jest źródło (demo; produkcja po podłączeniu w P8) */
+      body = zonesReady() ? <ZonesView /> : <GeofenceView />;
       break;
     case 'options':
       body = <OptionsView />;
