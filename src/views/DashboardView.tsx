@@ -16,7 +16,7 @@ import { getAuthProfile } from '../auth/profile';
 import { formatSeaRiskLabel } from '../lib/voyageSea';
 import { formatAppMoney } from '../lib/money/demoFx';
 import { aggregateTier } from '../lib/money/loadMoney';
-import { financeOf } from '../lib/p5Source';
+import { financeSummary } from '../lib/p5Finance';
 import { formatPlNumber } from '../lib/format';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { riskAsException, sortExceptions } from '../lib/prodDash';
@@ -105,7 +105,7 @@ export function DashboardView() {
     const agg = aggregateTier(loads, role);
     /* wyglad/P5-c (E16): Kokpit HHL liczy marżę tym samym kodem co Finanse — suma marż ÷ suma przychodów transportów
        z ceną, waluta jak w Finansach — oraz pokazuje liczbę transportów z ceną i bez ceny */
-    const fin = role === 'HHL' ? financeOf(loads, 'both') : null;
+    const fin = role === 'HHL' ? financeSummary(loads, 'both') : null;
     if (fin) {
       const pln = currency === 'PLN' && fin.plnComplete && fin.nbpLatest != null;
       const r = pln ? fin.total.rev.pln ?? 0 : fin.total.rev.eur;

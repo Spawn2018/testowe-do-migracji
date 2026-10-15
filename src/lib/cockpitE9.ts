@@ -16,7 +16,6 @@ import { isLoadCompleted } from './invoiceMatch';
 import { isTodoRisk, todoCardKey } from './todoRules';
 import { transportLabel } from './transportName';
 import { fcp } from '../i18n/p5c';
-import { ftp } from '../i18n/p5';
 
 export type CockpitTone = 'default' | 'alert' | 'warn' | 'good';
 
@@ -369,7 +368,7 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
         ? fcp(locale, 'p5c_margin_desc', {
           money: margin.moneyText,
           /* te same słowa co nagłówek Finansów: „86 z ceną · 8 bez ceny” */
-          counts: margin.unpriced ? ftp(locale, 'p5_fin_priced_line', { priced: margin.priced, unpriced: margin.unpriced }) : ftp(locale, 'p5_fin_priced_all', { priced: margin.priced }),
+          counts: margin.unpriced ? fcp(locale, 'p5c_priced_line', { priced: margin.priced, unpriced: margin.unpriced }) : fcp(locale, 'p5c_priced_all', { priced: margin.priced }),
         })
         : L('p3b_margin_desc', { money: margin.moneyText }),
       descShort: margin.tierText, tone: 'default', money: true },
