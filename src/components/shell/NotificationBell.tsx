@@ -133,7 +133,7 @@ export function NotificationBell() {
             )}
             <p className="bell-general">
               {t(locale, 'bell_general')}{' '}
-              <button type="button" className="btn bell-link" onClick={() => { setView('risks'); setOpen(false); }}>
+              <button type="button" className="btn bell-link" onClick={() => { setView('risk'); setOpen(false); }}>
                 {t(locale, 'bell_general_link')}
               </button>
               {'. '}
