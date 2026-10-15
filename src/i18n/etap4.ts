@@ -86,7 +86,7 @@ const pl: Dict = {
   fuel_provisional: 'wstępny — tydzień nie zamknięty',
   fuel_forecast: 'prognoza',
   fx_table: 'Kurs NBP',
-  fuel_mult: 'Mnożnik paliwowy',
+  fuel_mult: 'Opłata paliwowa',
   fuel_ref: 'z dnia',
   money_error: 'Wyliczenie przerwane — rozjazd mechanizmu',
   money_computed: 'Wyliczenie mechanizmem',
