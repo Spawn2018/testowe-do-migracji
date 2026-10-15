@@ -258,7 +258,7 @@ function CaseDetail({ i, ctx }: { i: TodoIssue; ctx: CardCtx }) {
               <textarea className="input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
             </label>
           </div>
-        ) : <p className="rk-muted">{t(locale, 'dec_wrong_firm')}</p>
+        ) : <p className="rk-muted" data-rk-other-firm>{rtp(locale, 'p6_case_other_firm', { org: ORG_SHORT[i.owner] })}</p>
       ) : null}
       {msg ? <p className="rk-muted neg" role="status">{msg}</p> : null}
       {history && history.length ? (

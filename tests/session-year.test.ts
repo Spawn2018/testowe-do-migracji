@@ -18,7 +18,8 @@ describe('A5 sesja roczna — ekran logowania po usunięciu sesji', () => {
     rememberLogin(jwt({ amr: [{ timestamp: t0 / 1000 }] }), s);
     expect(s.getItem(LOGIN_AT_KEY)).toBe(String(t0));
     expect(sessionEndReason(t0 + 365 * DAY + 60_000, s)).toBe('YEAR');
-    expect(SESSION_END_MSG.YEAR.pl).toBe('Minął rok od logowania na tym urządzeniu — zaloguj się ponownie linkiem z e-maila');
+    /* E37 „Komunikaty zdaniami” (koniec sesji: „Zaloguj się e-mailem i hasłem”; logowanie hasłem od 29.09) */
+    expect(SESSION_END_MSG.YEAR.pl).toBe('Minął rok od logowania na tym urządzeniu. Zaloguj się e-mailem i hasłem.');
     expect(SESSION_END_MSG.YEAR.en).toMatch(/year/);
     expect(SESSION_END_MSG.YEAR.sv).toMatch(/ett år/);
     expect(s.getItem(LOGIN_AT_KEY)).toBeNull();
