@@ -25,6 +25,19 @@ export function DashboardView() {
   const [detectLag, setDetectLag] = useState<{ samples: number; medianMin: number | null } | 'error' | null>(null);
   /* B3 / H3.4: pomiar morza z marine_conditions do kafelka „Najbliższy prom” */
   const [marineSea, setMarineSea] = useState<{ waveM: number; risk: string; gustKn?: number | null } | null>(null);
+  const role = useTowerStore((s) => s.role);
+  const locale = useTowerStore((s) => s.locale);
+  const currency = useTowerStore((s) => s.displayCurrency);
+  const loads = useTowerStore((s) => s.loads);
+  const events = useTowerStore((s) => s.events);
+  const risks = useTowerStore((s) => s.risks);
+  const documents = useTowerStore((s) => s.documents);
+  const selectLoad = useTowerStore((s) => s.selectLoad);
+  const navigateTo = useTowerStore((s) => s.navigateTo);
+  const setView = useTowerStore((s) => s.setView);
+
+  const bills = useTowerStore((s) => s.bills);
+  const sailings = useTowerStore((s) => s.sailings);
   useEffect(() => {
     if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
       let cancelled = false;
@@ -45,19 +58,6 @@ export function DashboardView() {
     }
     return undefined;
   }, [locale]);
-  const role = useTowerStore((s) => s.role);
-  const locale = useTowerStore((s) => s.locale);
-  const currency = useTowerStore((s) => s.displayCurrency);
-  const loads = useTowerStore((s) => s.loads);
-  const events = useTowerStore((s) => s.events);
-  const risks = useTowerStore((s) => s.risks);
-  const documents = useTowerStore((s) => s.documents);
-  const selectLoad = useTowerStore((s) => s.selectLoad);
-  const navigateTo = useTowerStore((s) => s.navigateTo);
-  const setView = useTowerStore((s) => s.setView);
-
-  const bills = useTowerStore((s) => s.bills);
-  const sailings = useTowerStore((s) => s.sailings);
   /* rodzaj konta oglądanej firmy (w Podglądzie — rodzaj domyślny tej firmy, nie rodzaj osoby z HHL) */
   const kind = viewedKind(role, getAuthProfile()?.role);
 
