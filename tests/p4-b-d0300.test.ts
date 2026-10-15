@@ -53,7 +53,6 @@ function baseLoad(over: Partial<Load> = {}): Load {
     delayed: false,
     docMissing: false,
     permitFits: null,
-    plPilotsRequired: 0,
     hhlOrderNo: 'H1',
     carrierOrderNo: 'C1',
     ...over,
@@ -100,9 +99,15 @@ describe('B5 readyGaps piloci z symbolu', () => {
       id: 'd1', loadId: 'l1', category: 'INSURANCE', fileName: 'p.pdf',
       mimeType: 'application/pdf', sizeBytes: 1, uploadedAt: '2026-10-01', status: 'UPLOADED',
     } as Document];
-    const gaps = computeReadyGaps(baseLoad({ plPilotsRequired: 1, resources: {
-      ...baseLoad().resources, escort: false, escortPlate: null,
-    } }), docs);
+    const gaps = computeReadyGaps(baseLoad({
+      permit: {
+        pozycja: 'x', lp: 1, zestaw: { L: 20, W: 3, H: 3, masa_max_t: 40 },
+        plStatus: 'OK', plCategory: 'NORMATIVE', plCategoryLabel: 'normatywne',
+        plPilotsRequired: 1, plOver: [], sePath: 'NONE', seNotes: [],
+      },
+      permitFits: true,
+      resources: { ...baseLoad().resources, escort: false, escortPlate: null },
+    }), docs);
     expect(gaps.some((g) => g.kind === 'PILOTS')).toBe(true);
   });
 });
