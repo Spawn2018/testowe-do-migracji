@@ -44,6 +44,16 @@
 .po-inline{margin-left:10px}
 .po-order-f{display:flex;gap:6px;align-items:center}
 .po-order-f .input{flex:1;min-width:0}
+/* wyglad/P7-b — „Zmień” przy zestawie (E32 pkt 7, img/e32-after) */
+.po-set-v{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.po-set-btn{padding:2px 10px;min-height:28px;font-size:13.5px}
+.po-set-form fieldset{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:8px}
+.po-set-fs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.po-set-f{display:flex;flex-direction:column;gap:3px;min-width:0;font-size:13.5px;color:var(--ink-3);text-align:left}
+.po-set-in{display:flex;align-items:center;gap:4px;color:var(--ink-2)}
+.po-set-in .input{flex:1;min-width:0;width:100%}
+.po-set-err{margin:0;font-size:13.5px;color:var(--red);font-weight:600}
+.po-set-acts{display:flex;flex-wrap:wrap;gap:6px}
 .po-act{display:flex;gap:8px;flex-wrap:wrap}
 .po-go{font-family:var(--font-cond);font-size:15px;color:var(--ink-2);text-decoration:none}
 .po-pdf{padding-top:4px}
@@ -131,6 +141,9 @@
   .po-kv dt{margin-top:8px}
   .po-todo-i{align-items:flex-start}
   .po-todo-a .btn,.po-act .btn,.po-inline,.po-order-f .btn{min-height:44px}
+  .po-set-btn,.po-set-acts .btn{min-height:44px}
+  .po-set-in .input{font-size:16px;min-height:44px}
+  .po-set-acts .btn{flex:1 1 auto}
   .po-drv{flex-direction:column;align-items:stretch}
   .po-call{min-height:44px}
   .po-inline{margin:8px 0 0;display:flex}

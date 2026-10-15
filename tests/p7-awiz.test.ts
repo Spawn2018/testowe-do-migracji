@@ -108,7 +108,7 @@ describe('I-0 / F8 — źródło danych P7-a', () => {
   const src = readFileSync('src/lib/p7Source.ts', 'utf8')
   it('przykłady demo tylko za warunkiem trybu wpisanym wprost; produkcja: null / false', () => {
     const lines = src.split('\n').filter((l) => /return .*demo[A-Z]/.test(l))
-    expect(lines.length).toBe(3)
+    expect(lines.length).toBe(4) // wyglad/P7-b (E32 pkt 7): + saveSetOf
     for (const line of lines) {
       expect(line).toMatch(/import\.meta\.env\.VITE_AUTH_MODE !== 'supabase' \? /)
     }
