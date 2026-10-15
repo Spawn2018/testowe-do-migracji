@@ -48,6 +48,8 @@ const PL: Record<string, string> = {
   p6_merged_2: '{n} jednakowe zgłoszenia połączone w jedno',
   p6_merged_5: '{n} jednakowych zgłoszeń połączonych w jedno',
   p6_take: 'Biorę tę sprawę',
+  /* E37 „Komunikaty zdaniami” (zamiast „Tę decyzję rozstrzyga inna firma.”) */
+  p6_case_other_firm: 'Tę sprawę prowadzi {org}. Możesz ją tylko podejrzeć.',
   p6_give: 'Oddaj',
   p6_takeover: 'Przejmij',
   p6_takeover_q: 'Przejąć sprawę od {name}?',
