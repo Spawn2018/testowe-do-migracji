@@ -80,7 +80,7 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
   <h1>Audyt Watch Tower</h1>
   <p>Twoja lista 14 punktów z 07.10.2026, sprawdzana etap po etapie na produkcji. Każdy etap ma fakty z dowodem, propozycję rozwiązania i podgląd, jak to będzie wyglądać. Nic nie trafia do Cursora bez Twojej akceptacji.</p>
   <div class="meta">
-    <span>Stan: 08.10.2026, 14:10 · zmiany 09.10.2026, 14:11 (<a href="#zmiany-0910">Zmiany 09.10</a>) · zmiany 11.10.2026, 23:40 (<a href="#zmiany-1110">Zmiany 11.10</a>)</span>
+    <span>Stan: 08.10.2026, 14:10 · zmiany 09.10.2026, 14:11 (<a href="#zmiany-0910">Zmiany 09.10</a>) · zmiany 11.10.2026, 23:40 (<a href="#zmiany-1110">Zmiany 11.10</a>) · zmiany 15.10.2026, 03:40 (<a href="#zmiany-1510">Zmiany 15.10</a>)</span>
     <span>Kod: <span class="mono">testowe-do-migracji @ 9c4fa33</span> (07.10, 01:00)</span>
     <span>Baza: produkcja, tylko odczyt</span>
     <span>Aplikacja: konto testowe Operacje HHL (od 14:11)</span>
@@ -94,6 +94,7 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
 </header>
 
 <nav class="stages" aria-label="Etapy audytu">
+  <a href="#zmiany-1510"><span><span class="id">15.10</span>Zmiany: termin wydania 22.10, Podgląd, „Przeczytali”, telefony</span><span class="st done">zdecydowane 03:12</span></a>
   <a href="#zmiany-1110"><span><span class="id">11.10</span>Zmiany: Cursor na Windows, bramy w GitHub, P0-CI</span><span class="st done">w toku · P0-CI</span></a>
   <a href="#zmiany-0910"><span><span class="id">09.10</span>Zmiany: link RIO, piloci, decyzje 13:09</span><span class="st done">zdecydowane</span></a>
   <a href="#e1"><span><span class="id">E1</span>Mapy: kadr i środek</span><span class="st done">zdecydowane</span></a>
@@ -143,9 +144,71 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
   <a href="#e18"><span><span class="id">E18</span>Porządki: dane i konta testowe</span><span class="st done">zdecydowane 12:14 · zmiana 09.10</span></a>
   <a href="#e12"><span><span class="id">E12</span>Opcje: pozostałe 13 ekranów</span><span class="st done">zdecydowane 12:14</span></a>
   <a href="#e10"><span><span class="id">E10</span>Niezależne sprawdzenie całości</span><span class="st done">zdecydowane 12:14</span></a>
-  <a href="#uzg"><span><span class="id">Uzg.</span>Repozytorium a decyzje: rejestr, PLAN, paczki P0–P10</span><span class="st done">do akceptacji · 3 punkty</span></a>
-  <a href="#e46"><span><span class="id">E46–48</span>Wydajność, błędy aplikacji, OWASP</span><span class="st done">do akceptacji · bez pytań</span></a>
+  <a href="#uzg"><span><span class="id">Uzg.</span>Repozytorium a decyzje: rejestr, PLAN, paczki P0–P10</span><span class="st done">zaakceptowane 15.10</span></a>
+  <a href="#e46"><span><span class="id">E46–48</span>Wydajność, błędy aplikacji, OWASP</span><span class="st done">zaakceptowane 15.10</span></a>
 </nav>
+
+<!-- ===================== ZMIANY 15.10 ===================== -->
+<section class="stage" id="zmiany-1510">
+  <div class="stage-hd">
+    <span class="eyebrow">15.10.2026 · Twoje polecenie 01:35 i decyzje 03:12 · zapis 03:40</span>
+    <h2>Zmiany 15.10: pełny audyt Twoich decyzji, termin wydania, „Przeczytali”, telefony, Podgląd</h2>
+  </div>
+  <p>Na Twoje polecenie z 01:35 sprawdziłem jeszcze raz całość: decyzje z tego raportu, plan, kod na <code>main</code>, otwarte PR i produkcję (tylko odczyt). Pracowało 9 niezależnych agentów: ok. 880 sprawdzonych punktów, ok. 110 problemów. Naprawę opisuje dopisek <code>D-20261015-0300-01</code> (Cursor robi go przed <code>D-20261015-0130-01</code>). Twoje odpowiedzi z 03:12 są w dopisku <code>D-20261015-0330-01</code>. Zmiany są też przy etapach E5, E9, E19 i E37, w zielonych ramkach „Zmiana 15.10”.</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Godzina</th><th>Twoja decyzja</th><th>Co to zmienia</th><th>Paczka</th></tr></thead>
+      <tbody>
+        <tr><td class="num">01:35</td><td>Pełny audyt decyzji; najpierw naprawa, potem P7 (<code>D-20261015-0130-01</code>)</td><td>dopisek <code>D-20261015-0300-01</code>: 7 blokerów (A), 14 braków P4 (B), 13 poprawek P2–P3 (C), poszerzone zakresy P5–P11 (D), dokumenty (E)</td><td>A, B, C, P5–P11</td></tr>
+        <tr><td class="num">03:12 · W35</td><td>Termin: „podaj i zastosuj osiągalną datę”</td><td><code>release-1.0</code> w czwartek <b>22.10.2026, 20:00</b> (granica 23:59); punkty kontrolne niżej; W17 zamknięte</td><td>wszystkie</td></tr>
+        <tr><td class="num">03:12 · W36</td><td>Token doradcy bezpieczeństwa: gdzie go wziąć i zapisać</td><td>sekret funkcji <code>ADVISOR_MGMT_TOKEN</code> (Supabase nie przyjmuje nazw zaczynających się od <code>SUPABASE_</code>); funkcja czyta nową nazwę</td><td>C</td></tr>
+        <tr><td class="num">03:12 · W37</td><td>emtrack: czekasz na dane od SCX</td><td>dane logowania bez zmian; po 3 nieudanych logowaniach 1 próba na 6 h, żeby nie zablokować konta SCX</td><td>C</td></tr>
+        <tr><td class="num">03:12 · W38</td><td>Podgląd z prawdziwymi uprawnieniami: <b>tak</b></td><td>Podgląd = „Działaj jako” tylko do odczytu; baza daje dane jak konto KSH albo SCX i odrzuca każdy zapis</td><td>P6, P11</td></tr>
+        <tr><td class="num">03:12 · W39</td><td>E-mail „Statusy, strefy, awizacja, daty” do Administratorów HHL: <b>cofnąć</b></td><td>wyłączasz w Opcjach › Kto co dostaje; Cursor sprawdza stan przy przebudowie macierzy</td><td>C</td></tr>
+        <tr><td class="num">03:12 · W40</td><td>Uzgodnienie pkt 2–3 i E46–E48: <b>akceptuję</b></td><td>zaakceptowane, progi E46–E48 obowiązują</td><td>P11</td></tr>
+        <tr><td class="num">03:12</td><td>„Przeczytali”: cudze nazwiska i e-maile zostają — masz zgody RODO od wszystkich</td><td>E19: zostaje tylko warunek „lista tylko dla wiadomości, którą widzisz”; bez zamiany na nazwę firmy</td><td>A</td></tr>
+        <tr><td class="num">03:12</td><td>Telefony wszędzie widoczne, bez gwiazdek</td><td>pełne numery kierowców, pilotów i użytkowników dla każdej firmy; menu konta bez „••• •••” (zmiana wobec makiety E37)</td><td>wygląd, P11</td></tr>
+        <tr><td class="num">03:12</td><td>Zgoda na scalenie PR #210</td><td>ten raport trafia do repozytorium razem z sekcjami „Zmiany 11.10” i „Zmiany 15.10”</td><td>dokumenty</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Termin i punkty kontrolne</h3>
+  <p>Prognoza z czasów w <code>POSTEP.md</code> i godzin scaleń. Od 12.10 do 15.10, 03:00 Cursor wykonał ok. 60 h pracy, czyli ok. 19 h na dobę. Średnia paczka trwała 7–10 h, a P4 trwa już ponad 13 h. Zostało ok. 120 h, co daje 21.10. Z zapasem na poprawki: <b>22.10, 20:00</b>.</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Kiedy</th><th>Ma być na produkcji</th></tr></thead>
+      <tbody>
+        <tr><td class="num">pt 16.10, 20:00</td><td>A (blokery); P4 zamknięte (PR #203); dokumenty i PR #210; C (poprawki P2–P3)</td></tr>
+        <tr><td class="num">sob 17.10, 23:59</td><td>P7-a (PR #209); strażnik tekstów E21; P3-d; P5</td></tr>
+        <tr><td class="num">nd 18.10, 23:59</td><td>brama niedzielna; P6 z Podglądem (W38)</td></tr>
+        <tr><td class="num">pn 19.10, 23:59</td><td>P7; P8</td></tr>
+        <tr><td class="num">wt 20.10, 23:59</td><td>P10a; P9</td></tr>
+        <tr><td class="num">śr 21.10, 23:59</td><td>P10b; P11 w toku</td></tr>
+        <tr><td class="num">czw 22.10, 20:00</td><td>P11, pełna brama TEST, 280 ujęć, <code>release-1.0</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Reguła cięcia bez zmian: gdy punkt kontrolny spóźni się o ponad 4 h, przedstawię Ci pozycje do przeniesienia po wydaniu; decydujesz Ty. Test E22 („tydzień bez nowych błędów »stara wersja«”) skończy się ok. 27.10 — wynik dopiszę po wydaniu.</p>
+
+  <h3>Numery pytań</h3>
+  <p>W planie numer W34 był już zajęty (GitHub Actions, 14.10). Twoje odpowiedzi z 03:12 (W34–W39 z dopisku z 03:00) są w planie jako <b>W35–W40</b>, w tej samej kolejności.</p>
+
+  <h3>Co przestało obowiązywać</h3>
+  <ul class="facts">
+    <li><span class="chip bad">Unieważnione</span><div>„4 dni”, „koniec Dnia 4, 20:00” i domyślne wydanie 15.10 (W17) → 22.10, 20:00. E19: „imiona i nazwiska tylko z własnej firmy, inne firmy jako nazwa i liczba osób, nigdy adres e-mail” → nazwiska i e-maile dla wszystkich firm, warunek widoczności wiadomości zostaje. E37: numer w menu konta „częściowo ukryty” → pełny numer. Sekret <code>SUPABASE_ACCESS_TOKEN</code> dla doradcy → <code>ADVISOR_MGMT_TOKEN</code>. Przełącznik „Widok”, który tylko ukrywa elementy (E9-7) → Podgląd z prawdziwymi uprawnieniami (P6).</div></li>
+  </ul>
+
+  <div class="ask-box">
+    <span class="chip ask" style="align-self:flex-start">Twoje czynności</span>
+    <ul>
+      <li><b>W36 (token):</b> <code>supabase.com/dashboard/account/tokens</code> → „Generate new token”, nazwa np. „watch-tower-advisor”. Jeśli możesz wybrać uprawnienia: tylko projekt produkcji, „Advisors” → „Read”. Skopiuj token (zaczyna się od <code>sbp_</code>, widać go tylko raz). Projekt produkcji → Edge Functions → Secrets → „Add new secret”: nazwa <code>ADVISOR_MGMT_TOKEN</code>, wartość: token → „Save”. Tokenu nie wklejasz nigdzie indziej. Potem napisz Cursorowi „W36 gotowe”. To nie jest plik <code>tower-backup-age-key.txt</code> — to klucz szyfrowania kopii zapasowych, nie ruszaj go.</li>
+      <li><b>W39:</b> Opcje → Kto co dostaje → tabela „Powiadomienia i decyzje” → wiersz „Statusy, strefy, awizacja, daty” → kolumna „Administrator HHL” → odznacz „e-mail”.</li>
+      <li><b>W37:</b> gdy dostaniesz dane od SCX — w tym samym miejscu co W36 podmień sekrety <code>EMTRACK_LOGIN</code> i <code>EMTRACK_PASSWORD</code> i napisz Cursorowi „W37 gotowe”.</li>
+      <li><b>Cursor:</b> wklej mu prompt do dopisku <code>D-20261015-0330-01</code> (sam dopisek do <code>D:\Watch Tower\dopiski_nowe\</code>).</li>
+    </ul>
+  </div>
+</section>
 
 <!-- ===================== ZMIANY 11.10 ===================== -->
 <section class="stage" id="zmiany-1110">
@@ -166,7 +229,7 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
         <tr><td class="num">22:54</td><td>P0-CI zatrzymany przed scaleniem (PR #152)</td><td><code>unit</code> zielony; <code>db</code> — brak roli <code>service_role</code> w świeżej bazie (środowisko); <code>visual</code> — wszystkie migawki zgodne, padł test „wstecz zamyka szufladę”</td><td>P0-CI</td></tr>
         <tr><td class="num">23:07</td><td>W32: nocna brama wizualna prawdopodobnie działała w bocie Grok, z którego już nie korzystasz</td><td>nocnej bramy nie ma; do P11 bez znaczenia (zrzuty przed scaleniem sprawdza <code>visual</code>); odświeżenie 280 ujęć w P11 — dopisek przed P11</td><td>P11</td></tr>
         <tr><td class="num">23:2x</td><td>Dopisek <code>D-20261011-2254-01</code> (koordynator, wykonanie D14, D-86, D-87)</td><td>rola <code>service_role</code> w <code>db.yml</code>; poprawka błędu „wstecz” w aplikacji (test bez zmian, 20 powtórzeń, wdrożenie); test jednostkowy przy małej pamięci</td><td>P0-CI</td></tr>
-        <tr><td class="num">—</td><td>Dzień 1 = dzień Sesji 0 (PLAN §0)</td><td>Sesja 0 po 00:00 → Dzień 1 = 12.10; domyślne wydanie <code>release-1.0</code>: czwartek 15.10, 20:00 (W17 — potwierdzasz Ty)</td><td>wszystkie</td></tr>
+        <tr><td class="num">—</td><td>Dzień 1 = dzień Sesji 0 (PLAN §0)</td><td>Sesja 0 po 00:00 → Dzień 1 = 12.10; domyślne wydanie <code>release-1.0</code>: czwartek 15.10, 20:00 (W17 — potwierdzasz Ty) <span class="src" style="display:inline">(zmiana 15.10, 03:12: czwartek 22.10, 20:00 — W35, „Zmiany 15.10”)</span></td><td>wszystkie</td></tr>
       </tbody>
     </table>
   </div>
@@ -215,7 +278,7 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
     <p>Nie wstrzymuje pracy Cursora:</p>
     <ul>
       <li><b>Po każdej paczce:</b> agent pisze „P&lt;n&gt; NA PRODUKCJI” → Ty piszesz koordynatorowi „Sprawdź P&lt;n&gt;”.</li>
-      <li><b>W17, przed P11:</b> data wydania (domyślnie czwartek 15.10, 20:00).</li>
+      <li><b>W17, przed P11:</b> data wydania (domyślnie czwartek 15.10, 20:00). <span class="src" style="display:inline">(rozstrzygnięte 15.10, 03:12: czwartek 22.10, 20:00 — W35)</span></li>
       <li><b>W11 i W32, przed P11:</b> dopisek koordynatora — odświeżenie 280 ujęć <code>shots-baseline/</code> w GitHub Actions (ręczny przebieg, ok. 13 min).</li>
       <li><b>W26–W31:</b> do Twojej odpowiedzi obowiązują odpowiedzi domyślne (sekcja „Zmiany 09.10”).</li>
       <li><b>W1–W25:</b> dane i czynności według <code>PLAN.md</code> §5 — wysyłasz blokiem „Dane od właściciela”, gdy agent zgłosi „CZEKA NA WŁAŚCICIELA”.</li>
@@ -610,6 +673,10 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
       <li>Przy transporcie pokazujemy tylko prom i ryzyko drogowe, które są <b>jeszcze przed pojazdem</b>. Gdy pojazd zjechał z promu albo minął odcinek z ryzykiem, ryzyko znika z transportu i z dzwonka. Zostaje tylko na stronie Ryzyka.</li>
       <li>3 konta testów bezpieczeństwa KSH z 05.10: <b>wyłączyć</b>. Ja mam do produkcji tylko odczyt. Najszybciej: Opcje › Użytkownicy i sesje › „Wyłącz” przy adresach sebastian+tower-sec-pkce-1791212426729, sebastian+tower-sec-debug-1791212464030 i sebastian+tower-sec-pkce-1791212492938 (@log-mar.pl). Inaczej trafia do listy dla Cursora.</li>
     </ul>
+  </div>
+  <div class="ask-box" style="background:var(--accent-soft);border-color:var(--accent)">
+    <span class="chip fact" style="align-self:flex-start">Zmiana 15.10.2026</span>
+    <ul><li>E-mail „Statusy, strefy, awizacja, daty” dla Administratorów HHL, włączony 14.10 o 16:36 — <b>cofnięty</b> (W39). Macierz „Kto co dostaje” po zdarzeniu startuje z wartości po tej zmianie.</li></ul>
   </div>
 </section>
 
@@ -1366,6 +1433,10 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
   <div class="ask-box" style="background:var(--accent-soft);border-color:var(--accent)">
     <span class="chip fact" style="align-self:flex-start">Zmiana 09.10.2026</span>
     <ul><li>Piloci: wpisuje SCX w awizacji; Administrator HHL może poprawić; Operacje HHL i KSH tylko oglądają (12:33). Daty i godziny załadunku i rozładunku zmienia i potwierdza tylko KSH i plik KSH; HHL i SCX tylko oglądają; „Działaj jako” konto KSH — Administrator HHL może zmienić daty jako KSH, w dzienniku widać prawdziwego wykonawcę (konstytucja VI.5; pytanie W30). Dopłaty: każda firma decyduje po swojej stronie, dopłatę SCX akceptuje HHL. Polisy dodaje się raz.</li></ul>
+  </div>
+  <div class="ask-box" style="background:var(--accent-soft);border-color:var(--accent)">
+    <span class="chip fact" style="align-self:flex-start">Zmiana 15.10.2026</span>
+    <ul><li>Podgląd „HHL · KSH · SCX” (tylko HHL) daje dane według uprawnień konta KSH Użytkownik albo SCX Dyspozytor, tylko do odczytu; każdy zapis odrzuca baza (W38, P6).</li><li>Telefony kierowców, pilotów i użytkowników widzi w pełnej postaci każda firma, która widzi transport albo sprawę — bez ukrywania numerów.</li></ul>
   </div>
 </section>
 
@@ -3230,6 +3301,10 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
   <div class="figs" style="grid-template-columns:1fr">
     <figure><img src="img/e37-after.webp" alt="Dziś: pasek górny z listą skrótów, pasek na telefonie, logowanie, Nie pamiętam hasła, fakty z bazy; po zmianie: pasek z kontem po prawej, paski Podgląd, Działaj jako i komunikat HHL, menu konta, Pomoc, komunikaty zdaniami, formularz komunikatu, zaproszenie i lista kont, 4 ekrany pierwszego wejścia, telefon, Link wygasł, weryfikacja dwuetapowa" width="2984" height="8744"><figcaption><b>Dziś (u góry) i po zmianie</b> · zrzuty z 08.10, 01:46–01:47 (konto Operacje HHL; logowanie bez konta), liczby kont i rejsy z bazy; osoby, telefony i treść komunikatu to przykład</figcaption></figure>
   </div>
+  <div class="ask-box" style="background:var(--accent-soft);border-color:var(--accent)">
+    <span class="chip fact" style="align-self:flex-start">Zmiana 15.10.2026</span>
+    <ul><li>Menu konta pokazuje pełny numer telefonu, bez „••• •••”.</li><li>Podgląd działa z prawdziwymi uprawnieniami firmy (W38).</li></ul>
+  </div>
 </section>
 
 <!-- ===================== E20 ===================== -->
@@ -3739,8 +3814,8 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
     <li><span class="chip prop">„Przeczytali”</span>
       <ul>
         <li>Funkcja najpierw sprawdza, czy pytający widzi wiadomość (ta sama zasada co odczyt czatu).</li>
-        <li>Imiona i nazwiska tylko z własnej firmy, a HHL widzi wszystkich. Inne firmy jako nazwa i liczba osób.</li>
-        <li>Nigdy adres e-mail.</li>
+        <li>Imiona i nazwiska tylko z własnej firmy, a HHL widzi wszystkich. Inne firmy jako nazwa i liczba osób. <span class="src" style="display:inline">(zmiana 15.10, 03:12: nie obowiązuje — imiona, nazwiska i e-maile czytających widzą wszystkie firmy; masz zgody RODO)</span></li>
+        <li>Nigdy adres e-mail. <span class="src" style="display:inline">(zmiana 15.10, 03:12: nie obowiązuje — jak wyżej)</span></li>
       </ul></li>
     <li><span class="chip prop">Zdarzenia</span>
       <ul>
@@ -3769,7 +3844,7 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
         <li>Niedzielna brama i każde wdrożenie z migracją: nowe zgłoszenie doradcy spoza listy wyjątków zatrzymuje wdrożenie.</li>
         <li>Test bezpieczeństwa dostaje przypadki:
           <ul>
-            <li>KSH i SCX nie dostaną „Przeczytali” cudzej wiadomości ani adresu e-mail;</li>
+            <li>KSH i SCX nie dostaną „Przeczytali” cudzej wiadomości ani adresu e-mail; <span class="src" style="display:inline">(zmiana 15.10: tylko wiadomości, której nie widzą)</span></li>
             <li>KSH nie dopisze „anulowany”;</li>
             <li>bez logowania nie da się sprawdzić adresu;</li>
             <li>widok cen klienta dla SCX zwraca 0 wierszy;</li>
@@ -3795,6 +3870,10 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
   <h3>Dziś i po zmianie</h3>
   <div class="figs" style="grid-template-columns:1fr">
     <figure><img src="img/e19-after.webp" alt="Dziś: tabela zgłoszeń doradcy Supabase z oceną (widoki cen, PostGIS, 126 i 12 funkcji, hasła, rozszerzenia, tabele zamknięte), znalezione poza doradcą (lista Przeczytali, zdarzenie anulowany, Nie pamiętam hasła, 2FA), co jest w porządku; po zmianie: okno Przeczytali na koncie KSH, ekran Nie pamiętam hasła z jedną odpowiedzią, historia i reguły, kafelek Bezpieczeństwo w Stanie systemu i na telefonie" width="2984" height="3412"><figcaption><b>Dziś i po zmianie</b> · doradca i odczyt bazy produkcyjnej 08.10, 03:0x; imiona w „Przeczytali” to przykład</figcaption></figure>
+  </div>
+  <div class="ask-box" style="background:var(--accent-soft);border-color:var(--accent)">
+    <span class="chip fact" style="align-self:flex-start">Zmiana 15.10.2026</span>
+    <ul><li>„Przeczytali”: imiona i nazwiska oraz e-maile czytających widzą wszystkie firmy (masz zgody RODO od wszystkich). Zostaje warunek: lista tylko dla wiadomości, którą pytający widzi. Test: konto KSH nie dostaje listy dla wiadomości „tylko HHL i SCX”.</li><li>Codzienny zapis doradcy: sekret <code>ADVISOR_MGMT_TOKEN</code> (W36) — nazw zaczynających się od <code>SUPABASE_</code> Supabase nie przyjmuje.</li></ul>
   </div>
 </section>
 
@@ -4198,7 +4277,7 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
 <!-- ===================== UZGODNIENIE ===================== -->
 <section class="stage" id="uzg">
   <div class="stage-hd">
-    <span class="eyebrow">Uzgodnienie · Twoje polecenie 08.10, 13:26 · do akceptacji 08.10, 14:00 · 3 punkty · zakres P1 doprecyzowany 14:20</span>
+    <span class="eyebrow">Uzgodnienie · Twoje polecenie 08.10, 13:26 · do akceptacji 08.10, 14:00 · 3 punkty · zakres P1 doprecyzowany 14:20 · zaakceptowane 15.10, 03:12 (W40)</span>
     <h2>Repozytorium a decyzje audytu: 32 wpisy rejestru zastąpione albo zamknięte, 110 otwartych pozycji PLAN rozpisanych, paczki P0–P10 dla Cursora</h2>
   </div>
   <p class="verdict"><b>Cursor czyta według AGENTS.md najpierw konstytucję, potem rejestr decyzji i PLAN.md z repozytorium. Rejestr nie ma żadnej decyzji z audytu (ostatnia zmiana 07.10, 01:00), a 32 jego wpisy są z nimi sprzeczne albo już zamknięte.</b> Bez przepisania Cursor zbudowałby według starszych zasad. Zestawiłem rejestr i PLAN.md z decyzjami z tego czatu (Twoja zasada z 13:26: najświeższe ustalenia nadpisują starsze), dopisałem Twoje dane z 13:26 i dokumenty, a rzeczy spoza audytu ująłem jako E46–E48. Pierwsza paczka dla Cursora (P0) przenosi to wszystko do repozytorium, bez kodu.</p>
@@ -4310,7 +4389,7 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
 <!-- ===================== E46 ===================== -->
 <section class="stage" id="e46">
   <div class="stage-hd">
-    <span class="eyebrow">E46–E48 · Twoje polecenie 08.10, 13:26 (rzeczy spoza audytu) · do akceptacji 08.10, 14:00 · bez pytań</span>
+    <span class="eyebrow">E46–E48 · Twoje polecenie 08.10, 13:26 (rzeczy spoza audytu) · do akceptacji 08.10, 14:00 · bez pytań · zaakceptowane 15.10, 03:12 (W40)</span>
     <h2>Test wydajności, monitoring błędów aplikacji i testy bezpieczeństwa OWASP po budowie</h2>
   </div>
   <p class="verdict"><b>Część narzędzi już jest: błędy przeglądarki trafiają do tabeli, skrypt Lighthouse istnieje, a 05.10 zrobiono pierwszy przegląd OWASP.</b> Brakuje widoku i alarmu dla błędów, testu na skali projektu i powtórzenia testów bezpieczeństwa po przebudowie. Proponuję trzy etapy na końcu budowy, przed pilotażem, bez płatnych narzędzi.</p>
@@ -4407,8 +4486,8 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
     <li><b>E18</b> <i>(zdecydowane 08.10 12:14; sekcja wyżej)</i> Porządki: polisa i faktura testowa, konta testowe. Tylko lista do Twojej akceptacji, nic nie kasuję (B10).</li>
     <li><b>E12</b> <i>(zdecydowane 08.10 12:14; sekcja wyżej)</i> Pozostałe 13 ekranów Opcji, w tym błąd 403 przełączników (B4), ładowanie bez „Odśwież” (B5), Ustawienia KSH i SCX. Adresy księgowości (E40) i szablony (E43) w Opcjach. Ostatni etap roboczy.</li>
     <li><b>E10</b> <i>(zdecydowane 08.10 12:14; sekcja wyżej)</i> Na koniec niezależne sprawdzenie całości, w tym punktów, których dziś nie sprawdziłem (A3 „Zmień ciągnik”, B9 Rejsy, kontrast).</li>
-      <li><b>Uzgodnienie</b> <i>(do akceptacji 08.10 14:10, 3 punkty; sekcja wyżej)</i> Rejestr decyzji i PLAN.md z repozytorium zestawione z decyzjami audytu; paczki P0–P10 dla Cursora.</li>
-    <li><b>E46–E48</b> <i>(do akceptacji 08.10 14:10, bez pytań; sekcja wyżej)</i> Test wydajności, monitoring błędów aplikacji, testy OWASP po budowie.</li>
+      <li><b>Uzgodnienie</b> <i>(zaakceptowane 15.10, 03:12 — W40; 3 punkty; sekcja wyżej)</i> Rejestr decyzji i PLAN.md z repozytorium zestawione z decyzjami audytu; paczki P0–P10 dla Cursora.</li>
+    <li><b>E46–E48</b> <i>(zaakceptowane 15.10, 03:12 — W40; sekcja wyżej)</i> Test wydajności, monitoring błędów aplikacji, testy OWASP po budowie.</li>
   </ol>
 </section>
 </div>
