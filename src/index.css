@@ -1611,6 +1611,24 @@ img,video{max-width:100%;height:auto}
 .scm-info.bad{background:var(--red-bg);border-left-color:var(--red)}
 .scm-info.ok{background:var(--go-bg);border-left-color:var(--go)}
 .scm-who{display:block;margin-top:3px;color:var(--ink-2)}
+/* wyglad/A5 — okno „Zmień status”: CMR przy „Gotowe do fakturowania”, faktury przy „Zafakturowano” (E25; bez obrazu — Z10 pkt 2:
+   pola ostrzeżeń .scm-info, podpis pola jak .form-field>span, przycisk .btn) */
+.scm-cmr{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
+.scm-cmr>span{flex:1 1 220px;min-width:0}
+.scm-up{flex-shrink:0;min-height:36px;padding:6px 14px}
+.scm-file{font-family:var(--font-mono);font-size:14px;overflow-wrap:anywhere}
+.scm-lbl{display:block;margin:0 0 5px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.scm-inv{display:grid;gap:4px;margin:0 0 10px;padding:0;list-style:none}
+.scm-inv li{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 12px;padding:8px 12px;border:1px solid var(--rule);background:var(--surface-2);font-size:13px;color:var(--ink)}
+.scm-inv-dir{font-weight:600}
+.scm-inv-v{min-width:0;text-align:right}
+.scm-inv li.has .scm-inv-v{color:var(--go)}
+.scm-inv li.miss{border-left:3px solid var(--red)}
+.scm-inv li.miss .scm-inv-v{font-weight:600;color:var(--red)}
+.scm-inv li.hid .scm-inv-v{color:var(--ink-3)}
+@media (max-width:768px){
+  .scm-up{width:100%;min-height:44px}
+}
 .scm-actions .btn:disabled,.dcc-acts .btn:disabled{background:var(--rule);border-color:var(--rule);color:var(--ink-3)}
 
 .dcc{display:flex;flex-direction:column;gap:10px;margin:0 0 12px;padding:12px 14px;border:1px solid var(--rule);border-left:4px solid var(--amber);background:var(--surface)}
