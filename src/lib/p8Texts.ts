@@ -17,7 +17,7 @@ export type TokenId =
   | 'side' | 'missing' | 'ruleName' | 'detail' | 'invoiceNo' | 'amount' | 'reason' | 'policyNo' | 'recipients'
   | 'source' | 'date' | 'count' | 'name' | 'firm' | 'account' | 'inviter' | 'validity' | 'button'
   | 'road' | 'transports' | 'week' | 'loadWeek' | 'queued' | 'limit' | 'carrier' | 'codes' | 'reminder'
-  | 'loadDateBefore' | 'planDateBefore' | 'site';
+  | 'loadDateBefore' | 'planDateBefore' | 'site' | 'placeTo';
 
 /** Fragment treści: zwykły tekst albo klocek danych. */
 export type Seg = { k: 'txt'; v: string } | { k: 'tok'; id: TokenId };
@@ -54,9 +54,10 @@ export const TOKEN_LABEL: Record<TokenId, string> = {
   road: 'Droga', transports: 'Lista transportów', week: 'Tydzień', loadWeek: 'Tydzień załadunków', queued: 'SMS w kolejce',
   limit: 'Limit na dobę', carrier: 'Przewoźnik', codes: 'Kody transportów', reminder: 'Ile do terminu',
   loadDateBefore: 'Załadunek przed zmianą', planDateBefore: 'Dostawa przed zmianą', site: 'Śrem albo Boden',
+  placeTo: 'Miejsce (wjazd na …)',
 };
 
-const SMS_T: TokenId[] = ['code', 'trailer', 'tractor', 'place', 'dwell', 'arrival', 'planDate', 'link'];
+const SMS_T: TokenId[] = ['code', 'trailer', 'tractor', 'place', 'placeTo', 'dwell', 'arrival', 'planDate', 'link'];
 const RISK_T: TokenId[] = ['code', 'order', 'riskName', 'severity', 'loadDate', 'planDate', 'link'];
 const DEC_T: TokenId[] = ['decision', 'due', 'transports', 'outcome', 'author', 'link'];
 const LOAD_T: TokenId[] = ['code', 'order', 'loadDate', 'planDate', 'author', 'link'];
@@ -73,7 +74,8 @@ const I = (
 
 /** Spis wiadomości w kolejności listy (img/e43-after). Odbiorców i kanały ustawia „Kto co dostaje” (E11). */
 export const MESSAGES: readonly MsgItem[] = [
-  /* SMS: A według L50 (korekta = „korekta - ” + ta sama treść), B–D według E42; klocek „Miejsce” w formie „przy …” */
+  /* SMS: A według L50 (korekta = „korekta - ” + ta sama treść), B–D według E42 (img/e42-after); klocek „Miejsce” w formie
+     „przy placu Stegra Boden”, „Miejsce (wjazd na …)” — „plac Stegra Boden” / „teren KSH Śrem” */
   I('SMS_A', 'zone', 'SMS', 'A · Przyjazd za ok. 60 min', SMS_TO_BOTH, SMS_T,
     '{{code}}: auto {{trailer}} będzie przy {{place}} ok. {{arrival}}.'),
   I('SMS_B', 'zone', 'SMS', 'B · Wcześniejszy przyjazd', 'Do: odbiorcy w Boden z zaznaczonym „B” (E42)', SMS_T,
@@ -81,7 +83,7 @@ export const MESSAGES: readonly MsgItem[] = [
   I('SMS_C', 'zone', 'SMS', 'C · Auto czeka', 'Do: odbiorcy w Śremie i Boden z zaznaczonym „C” (E42)', SMS_T,
     '{{code}}: auto {{trailer}} stoi przy {{place}} od {{dwell}}. Plan dostawy: {{planDate}}.'),
   I('SMS_D', 'zone', 'SMS', 'D · Wjazd', SMS_TO_BOTH, SMS_T,
-    '{{code}}: auto {{trailer}} przy {{place}} — wjazd o {{arrival}}.'),
+    '{{code}}: auto {{trailer}} wjechało na {{placeTo}} o {{arrival}}.'),
 
   /* E-maile i wpisy w dzwonku — 28 rodzajów z `notifyTemplates.ts` (L53: obecne polskie treści, kod transportu E41,
      daty E21, konkret i link — E43 „Nowe domyślne”); id = rodzaj powiadomienia. */
@@ -280,6 +282,7 @@ export function sampleOf(load: Pick<Load, 'code' | 'hhlOrderNo' | 'plannedLoadDa
     loadDateBefore: '04.10',
     planDateBefore: '06.10',
     site: 'Boden',
+    placeTo: 'plac Stegra Boden',
   };
 }
 
@@ -327,7 +330,7 @@ export const SMS_MAX = 160;
 
 /** Najdłuższe wartości klocków SMS — limit 160 ma wytrzymać każdy transport, nie tylko ten z podglądu (E43 „SMS”). */
 const SMS_WORST: Sample = {
-  code: 'X'.repeat(8), trailer: 'X'.repeat(10), tractor: 'X'.repeat(10), place: 'X'.repeat(28),
+  code: 'X'.repeat(8), trailer: 'X'.repeat(10), tractor: 'X'.repeat(10), place: 'X'.repeat(28), placeTo: 'X'.repeat(28),
   dwell: '00:00', arrival: '00:00', planDate: '00.00', link: `tower.log-mar.pl/#/transport/${'X'.repeat(8)}`,
 };
 
