@@ -51,7 +51,7 @@ export const EXPECTED_LOCAL = {
   baf: 46,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 30, // P4 E25 + C17 auto CMR/faktury (D-20261015-2110-01)
+  e25: 29, // P4 E25 + C17 auto CMR/faktury (D-20261015-2110-01)
   'c16-push': 10, // C16 N8 — zapas e-mail WEB_PUSH (D-20261015-1955-01)
 };
 
