@@ -9,7 +9,7 @@ import type { Locale } from '../types';
 type Dict = Record<string, string>;
 
 const pl: Dict = {
-  p3c_settings: 'Ustawienia',
+  p3c_settings: 'Dla mnie',
   p3c_crumb: '{root} › {group}',
   p3c_back: 'Wróć do listy',
   p3c_menu: 'Menu Opcji',

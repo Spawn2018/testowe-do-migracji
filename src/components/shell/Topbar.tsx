@@ -24,7 +24,8 @@ function isoWeek(d: Date): number {
 }
 
 /** Jeden rejs w pasku (E37 pkt 1: „6 h 13 min Stena Estelle · 08:00 · Gdynia → Karlskrona”). */
-type FerryRow = { mins: number; cd: string; line: string; short: string };
+/** `head` + `to` = `line`; poniżej 1440 px pasek pokazuje tylko `head` (statek · godzina · port wyjścia — E20 pkt 2). */
+type FerryRow = { mins: number; cd: string; line: string; short: string; head: string; to: string };
 
 function countdown(mins: number): string {
   return `${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')} min`;
@@ -51,18 +52,22 @@ function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof n
     const near = nearestCrossingSailings(sailings, nowMs, 1);
     for (const [s, op] of [[near.stena[0], 'Stena'], [near.polferries[0], 'Polferries']] as const) {
       if (!s) {
-        rows.push({ mins: Number.MAX_SAFE_INTEGER, cd: '—', line: `${op} · ${t(locale, 'i2_no_sailing')}`, short: op });
+        const none = `${op} · ${t(locale, 'i2_no_sailing')}`;
+        rows.push({ mins: Number.MAX_SAFE_INTEGER, cd: '—', line: none, short: op, head: none, to: '' });
         continue;
       }
       const depIso = effDeparture(s);
       const mins = Math.max(0, Math.round((Date.parse(depIso) - nowMs) / 60_000));
       const [from, to] = s.route.split('-');
       const when = depLabel(depIso, nowIso);
+      const head = `${s.vessel} · ${when} · ${portName(locale, from)}`;
       rows.push({
         mins,
         cd: countdown(mins),
-        line: `${s.vessel} · ${when} · ${portName(locale, from)} → ${portName(locale, to)}`,
+        line: `${head} → ${portName(locale, to)}`,
         short: `${op} ${when}`,
+        head,
+        to: portName(locale, to),
       });
     }
   } else {
@@ -70,11 +75,14 @@ function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof n
     const s = nextLiveSailing(now);
     const mins = Math.max(0, Math.round((Date.parse(s.depLocal) - nowMs) / 60_000));
     const when = depLabel(new Date(Date.parse(s.depLocal)).toISOString(), nowIso);
+    const head = `${vesselById(s.vessel).short || vesselById(s.vessel).name} · ${when} · ${portName(locale, s.depPort)}`;
     rows.push({
       mins,
       cd: countdown(mins),
-      line: `${vesselById(s.vessel).short || vesselById(s.vessel).name} · ${when} · ${portName(locale, s.depPort)} → ${portName(locale, s.arrPort)}`,
+      line: `${head} → ${portName(locale, s.arrPort)}`,
       short: `Polferries ${when}`,
+      head,
+      to: portName(locale, s.arrPort),
     });
   }
   return rows.sort((a, b) => a.mins - b.mins);
@@ -209,7 +217,7 @@ export function Topbar() {
           {ops.ferryRows.map((row, i) => (
             <span key={i} data-ferry-row={i} className="ops-row">
               <span className="cd">{row.cd}</span>
-              <span className="lb">{row.line}</span>
+              <span className="lb">{row.head}{row.to ? <span className="ops-to"> → {row.to}</span> : null}</span>
             </span>
           ))}
         </span>

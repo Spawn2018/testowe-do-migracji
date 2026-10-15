@@ -19,6 +19,7 @@ import { useIsPhone } from '../lib/useIsPhone';
 import { codeRange, marginPct, transportsText, type FinAmount, type FinSide, type FinStage, type FinStageRow } from '../lib/p5Finance';
 import { accountingPackActionsOf, accountingPackConfigOf, belowOf, financeOf, fuelWeeksOf, marginThresholdOf } from '../lib/p5Source';
 import { FuelWeekTable } from '../components/finance/FuelWeekTable';
+import { transportLabel } from '../lib/transportName';
 import { AccountingPackSection } from '../components/finance/AccountingPack';
 import type { Locale } from '../types';
 import '../components/finance/finance.css';
@@ -64,6 +65,8 @@ export function FinanceView() {
   const threshold = side === 'both' ? marginThresholdOf() : null;
   const below = useMemo(() => (side === 'both' ? belowOf(loads, threshold) : []), [loads, side, threshold]);
   const fuel = useMemo(() => fuelWeeksOf(loads, side === 'rev' ? 'rev' : 'cost', today), [loads, side, today]);
+  /** E41: nazwa transportu według firmy, która patrzy. */
+  const nameOf = (id: string, code: string) => { const l = loads.find((x) => x.id === id); return l ? transportLabel(l, role) : code; };
 
   const pln = currency === 'PLN' && fin.plnComplete && fin.nbpLatest != null;
   const cur = pln ? 'PLN' : 'EUR';
@@ -213,7 +216,7 @@ export function FinanceView() {
           <ul>
             {below.map((b) => (
               <li key={b.id} data-fin-below-row={b.code}>
-                <span><b data-content>{b.code}</b> <span className="fin-muted" data-content>{b.type}</span></span>
+                <span><b data-content>{nameOf(b.id, b.code)}</b> <span className="fin-muted" data-content>{b.type}</span></span>
                 <span className="neg">{pctText(b.marginPct)} · {formatPlNumber(pln && b.marginPln != null ? b.marginPln : b.marginEur, 2)} {pln && b.marginPln != null ? 'PLN' : 'EUR'}</span>
               </li>
             ))}
@@ -314,7 +317,7 @@ export function FinanceView() {
         {side === 'both' ? nbpCard : null}
         {side === 'both' ? flagCard : null}
         {typesBlock}
-        <FuelWeekTable rows={fuel} locale={locale} phone />
+        <FuelWeekTable rows={fuel} locale={locale} phone nameOf={nameOf} />
         {pack}
       </div>
     );
@@ -343,7 +346,7 @@ export function FinanceView() {
           </aside>
         ) : null}
       </div>
-      <FuelWeekTable rows={fuel} locale={locale} phone={false} />
+      <FuelWeekTable rows={fuel} locale={locale} phone={false} nameOf={nameOf} />
       {pack}
     </div>
   );

@@ -15,6 +15,7 @@ import { ft, ftn, ftp } from '../../i18n/p5';
 import { up } from '../options/up';
 import { useModal } from '../ui/useModal';
 import { t } from '../../i18n/messages';
+import { transportLabel } from '../../lib/transportName';
 import '../docs/docs.css';
 import './panel.css';
 
@@ -56,7 +57,7 @@ export function FeeModal({ load, role, locale, rules, suggestions, initial, onCl
       if (!f.eur) return null;
       return {
         lines: [
-          ftp(locale, 'p5_fee_calc_dwell', { code: load.code, place: ft(locale, `p5_pr_place_${sug.place}`), where: sug.where, from: `${dm(localDateOf(sug.enterAt))}, ${hm(sug.enterAt)}`, to: hm(sug.exitAt) }),
+          ftp(locale, 'p5_fee_calc_dwell', { code: transportLabel(load, role), place: ft(locale, `p5_pr_place_${sug.place}`), where: sug.where, from: `${dm(localDateOf(sug.enterAt))}, ${hm(sug.enterAt)}`, to: hm(sug.exitAt) }),
           ftp(locale, 'p5_fee_calc_dwell2', { dur: durText(sug.minutes), free: rules.freeHours[sug.place], over: durText(f.overMin) }),
           f.days
             ? ftn(locale, 'p5_fee_calc_days', f.days, { rate: rules.dayEur, fee: `${n2(f.eur)} EUR` })
@@ -93,7 +94,7 @@ export function FeeModal({ load, role, locale, rules, suggestions, initial, onCl
       <button type="button" className="scrim" style={{ zIndex: 54 }} aria-label={t(locale, 'close')} onClick={onClose} />
       <section ref={boxRef} className="panel awiz-modal fee-modal" role="dialog" aria-modal="true" aria-labelledby="fee-title" data-fee-modal>
         <header className="panel-hd">
-          <h2 id="fee-title">{ft(locale, 'p5_fee_h')} · {load.code}</h2>
+          <h2 id="fee-title">{ft(locale, 'p5_fee_h')} · {transportLabel(load, role)}</h2>
           <div className="spacer" />
           <button type="button" className="iconbtn" aria-label={ft(locale, 'p5_up_cancel')} onClick={onClose}>✕</button>
         </header>

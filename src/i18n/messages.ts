@@ -62,6 +62,10 @@ const pl: Dict = {
   p3a_acc_my_hint: 'imię, nazwisko, telefon, hasło, 2FA, urządzenia',
   p3a_acc_forme: 'Dla mnie',
   p3a_acc_forme_hint: 'co dostaję',
+  /* E6 (C11): pasek „Uzupełnij telefon” */
+  phone_missing_h: 'Uzupełnij telefon.',
+  phone_missing_tx: 'Bez numeru inne firmy nie zadzwonią do Ciebie w sprawie transportu.',
+  phone_missing_btn: 'Uzupełnij',
   p3a_acc_help: 'Pomoc',
   p3a_acc_theme: 'Jasny / ciemny',
   p3a_acc_preview: 'Podgląd: HHL · KSH · SCX',

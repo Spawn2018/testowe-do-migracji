@@ -379,7 +379,7 @@ export function MapView() {
                     <span>
                       <b>{tp(locale, 'p4_map_next_at', { day: formatTableDay(g.day, refYear) })}</b>
                       {' · '}
-                      {g.loads.map((l) => l.code).join(', ')}
+                      {g.loads.map((l) => transportLabel(l, role)).join(', ')}
                     </span>
                     {noTrailer ? (
                       <span className="map-next-warn">{t(locale, gi === 0 ? 'p4_map_no_trailer_todo' : 'p4_map_no_trailer')}</span>
