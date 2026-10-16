@@ -13,6 +13,7 @@ import type { MatrixCell, MatrixGroup } from './channels';
 import { ExportScreen, FlagsScreen, HistoryScreen, ThresholdsScreen, type SecurityFlagRow, type ThresholdRow } from './SystemScreens';
 import { AccountScreen, BroadcastScreen, LoginsScreen, UsersScreen, type InviteRow, type PersonRow } from './PeopleScreens';
 import type { ReactNode } from 'react';
+import { m2 } from '../../i18n/mfa2';
 
 const c = (bell: boolean, push = false, mail = false, fixed?: MatrixCell extends null ? never : NonNullable<MatrixCell>['fixed']): MatrixCell => ({ bell, push, mail, fixed });
 const all5 = (cell: MatrixCell): Record<AccountKind, MatrixCell> => ({ HHL_ADMIN: cell, HHL_OPS: cell, CLIENT_USER: cell, CARRIER_DISPATCH: cell, CARRIER_USER: cell });
@@ -171,7 +172,8 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
         />
       ),
       thr: <ThresholdsScreen locale={locale} rows={DEMO_THRESHOLDS} readOnly={readOnly} mark={mark} />,
-      flags: <FlagsScreen locale={locale} flags={DEMO_FLAGS} readOnly={readOnly} mark={mark} />,
+      /* wyglad/2fa: wymaganie 2FA dla administratorów — dopiero przy 2FA na dwóch urządzeniach (I-17) */
+      flags: <FlagsScreen locale={locale} flags={DEMO_FLAGS} readOnly={readOnly} mark={mark} blocked={{ MFA_HHL_ADMIN: m2('m2_flag_blocked_two') }} />,
       hist: (
         <HistoryScreen
           locale={locale}
@@ -202,6 +204,10 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
           mark={mark}
           me={{ first: first ?? '', last: rest.join(' '), phone: me.phone ?? '', mail: me.mail, kind, lastLogin: me.last }}
           mfa={me.mfa}
+          mfaDevices={me.mfa ? [{ id: 'f1', name: 'Telefon 1', since: '12.10.2026' }] : undefined}
+          mfaCode
+          onMfaAdd={() => undefined}
+          onMfaRemove={() => undefined}
           devices={[
             { id: 'd1', name: 'Chrome · Windows', last: 'dziś, 08:12', push: false, current: true },
             { id: 'd2', name: 'Safari · iPhone', last: 'wczoraj, 19:40', push: true, current: false },

@@ -26,12 +26,14 @@ export type SecurityFlagRow = {
   by: string | null;
 };
 
-export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mark }: {
+export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mark, blocked }: {
   locale: Locale;
   flags: SecurityFlagRow[];
   readOnly?: boolean;
   onToggle?: (key: string, next: boolean) => void;
   mark?: ReactNode;
+  /** wyglad/2fa: przełącznik zablokowany z powodem (np. MFA_HHL_ADMIN — konto bez 2FA na dwóch urządzeniach albo sesja bez kodu) */
+  blocked?: Partial<Record<string, string>>;
 }) {
   const [flags, setFlags] = useState(() => initialRaw.map((f) => ({ ...f, name: t(locale, `p3c_flag_${f.key}`), does: t(locale, `p3c_flag_${f.key}_fx`) })));
   const [ask, setAsk] = useState<(SecurityFlagRow & { name: string; does: string }) | null>(null);
@@ -49,7 +51,7 @@ export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mar
       role="switch"
       aria-checked={f.on}
       aria-label={f.name}
-      disabled={readOnly}
+      disabled={readOnly || (!!blocked?.[f.key] && !f.on)}
       onClick={() => setAsk(f)}
     ><span className="ox-track"><i /></span></button>
   );
@@ -61,7 +63,7 @@ export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mar
         <tbody>
           {flags.map((f) => (
             <tr key={f.key} data-flag={f.key}>
-              <th scope="row" data-label={up(t(locale, 'p3c_col_flag'))}><b>{f.name}</b></th>
+              <th scope="row" data-label={up(t(locale, 'p3c_col_flag'))}><b>{f.name}</b>{blocked?.[f.key] && !f.on ? <small className="ox-flag-why" data-flag-blocked>{blocked[f.key]}</small> : null}</th>
               <td data-label={up(t(locale, 'p3c_col_state'))}>{sw(f)}</td>
               <td data-label={up(t(locale, 'p3c_col_does'))}>{f.does}</td>
               <td data-label={up(t(locale, 'p3c_col_last'))} className="ox-flag-last" data-content>{last(f)}</td>

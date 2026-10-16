@@ -353,3 +353,10 @@
 @media (max-width:768px){
   .ox-dev-btns .btn,.ox-dev-here .btn{min-height:44px;flex:1 1 100%}
 }
+
+/* wyglad/2fa — Moje konto › urządzenia 2FA; Przełączniki › powód blokady (D-20261014-1420-01) */
+.ox-mfa{display:flex;flex-direction:column;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid var(--rule-2)}
+.ox-mfa-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.ox-mfa-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--rule-2)}
+.ox-mfa-list li:last-child{border-bottom:0}
+.ox-flag-why{display:block;margin-top:4px;font-size:12.5px;font-weight:400;line-height:1.45;color:var(--amber-ink)}

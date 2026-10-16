@@ -555,6 +555,52 @@ test.describe('wyglad/P3-b Kokpit (E9, img/e9-after; telefon: E8 pkt 6, V5)', ()
   }
 });
 
+/**
+ * wyglad/2fa — Moje konto › urządzenia 2FA („Dodaj drugie urządzenie”, „Usuń” z pytaniem), Przełączniki › wymaganie 2FA
+ * dla administratorów zablokowane z powodem (D-20261014-1420-01 „Koordynator”, I-17; E12, E19).
+ */
+test.describe('wyglad/2fa — Moje konto i Przełączniki', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const openOpt = async (page: Page, view: 'options' | 'settings', key: string) => {
+    await openView(page, view);
+    await page.evaluate((k) => (document.querySelector(`[data-opt-nav="${k}"]`) as HTMLButtonElement).click(), key);
+    await page.waitForTimeout(300);
+  };
+
+  test('komputer HHL: 2FA włączona — „Telefon 1 · od 12.10.2026”, „Dodaj drugie urządzenie”; Przełączniki — wymaganie 2FA nieaktywne z powodem', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'HHL');
+    await openOpt(page, 'options', 'account');
+    await expect(page.locator('[data-mfa-devices]')).toHaveAttribute('data-mfa-devices', '1');
+    await expect(page.locator('[data-mfa-device]')).toContainText('Telefon 1');
+    await expect(page.locator('[data-mfa-device]')).toContainText('od 12.10.2026');
+    await expect(page.locator('[data-mfa-add]')).toBeEnabled();
+    await expect(page.locator('[data-mfa-remove]')).toHaveCount(0);
+    await expect(page.locator('[data-mfa-needs-code]')).toHaveCount(0);
+    await openOpt(page, 'options', 'flags');
+    const row = page.locator('[data-flag="MFA_HHL_ADMIN"]');
+    await expect(row.locator('[role="switch"]')).toBeDisabled();
+    await expect(row.locator('[data-flag-blocked]')).toContainText('2FA na dwóch urządzeniach');
+    await expect(page.locator('[data-flag="EXTERNAL_MESSAGING"] [role="switch"]')).toBeEnabled();
+  });
+
+  test('telefon HHL: Moje konto z urządzeniami 2FA — 0 w bramie E8', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL');
+    await openView(page, 'options');
+    await page.waitForSelector('.ox-tiles');
+    await openPhoneScreen(page, 'forme', 'account');
+    await expect(page.locator('[data-mfa-device]')).toHaveCount(1);
+    const hits: Hit[] = [];
+    for (const width of [...WIDTHS, 768]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.waitForTimeout(150);
+      hits.push(...await measure(page, 'moje-konto-2fa', width, 'HHL'));
+    }
+    expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+  });
+});
+
 test.describe('wyglad/P4 pasek etapów (E28, img/e28-after) i Mapa (E27)', () => {
   test.describe.configure({ mode: 'serial', timeout: 180_000 });
   const TILES = ['PREP', 'LOADING', 'ROAD_PL', 'PORT_PL', 'FERRY', 'PORT_SE', 'ROAD_SE', 'SITE', 'DELIVERED', 'SETTLE'];
