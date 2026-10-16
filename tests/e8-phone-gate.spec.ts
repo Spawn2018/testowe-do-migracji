@@ -1295,7 +1295,7 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
   }
   const closeDrawer = (page: Page) => page.locator('.drawer .drawer-hd button.iconbtn').last().click();
 
-  test('komputer: kolejność sekcji, daty z dniem tygodnia, bez kontroli trasy i baneru; SCX zapisuje część awizacji; KSH linia stanu', async ({ page }) => {
+  test('komputer: kolejność sekcji, daty z dniem tygodnia, bez kontroli trasy i baneru; SCX zapisuje część awizacji; KSH linia stanu', async ({ page, browser }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await boot(page, 'HHL', false, NOW_URL);
     await openLoad(page, 'SG-19');
@@ -1360,13 +1360,21 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
     await expect(page.locator('.drawer [data-po-driver="one"] a.po-call')).toHaveAttribute('href', /^tel:\+?\d+$/);
     await closeDrawer(page);
 
-    /* KSH: bez Do zrobienia i przycisków awizacji, linia stanu; bez numerów zleceń (E41); „Edytuj” daty */
-    await boot(page, 'KSH', false, NOW_URL);
-    await openLoad(page, 'SG-19');
-    await expect(page.locator('.drawer [data-po-todo]')).toHaveCount(0);
-    await expect(page.locator('.drawer [data-po-ksh-line]')).toHaveText('Awizacja: przewoźnik uzupełnia');
-    await expect(page.locator('.drawer [data-awiz-open], .drawer [data-awiz-fix], .drawer [data-order]')).toHaveCount(0);
-    await expect(page.locator('.drawer [data-ksh-edit]')).toHaveText('Edytuj');
+    /* KSH: bez Do zrobienia i przycisków awizacji, linia stanu; bez numerów zleceń (E41); „Edytuj” daty.
+       Nowa karta bez zapisanego stanu — zapis awizacji SCX wyżej mógł dojść do pamięci po wyczyszczeniu w `boot`
+       (wyścig widoczny w CI 16.10, run 38843857595) */
+    const kshCtx = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport: { width: 1440, height: 1000 } });
+    const ksh = await kshCtx.newPage();
+    try {
+      await boot(ksh, 'KSH', false, NOW_URL);
+      await openLoad(ksh, 'SG-19');
+      await expect(ksh.locator('.drawer [data-po-todo]')).toHaveCount(0);
+      await expect(ksh.locator('.drawer [data-po-ksh-line]')).toHaveText('Awizacja: przewoźnik uzupełnia');
+      await expect(ksh.locator('.drawer [data-awiz-open], .drawer [data-awiz-fix], .drawer [data-order]')).toHaveCount(0);
+      await expect(ksh.locator('.drawer [data-ksh-edit]')).toHaveText('Edytuj');
+    } finally {
+      await kshCtx.close();
+    }
   });
 
   for (const role of ['HHL', 'SCX', 'KSH'] as const) {
