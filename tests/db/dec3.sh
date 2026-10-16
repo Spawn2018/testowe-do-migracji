@@ -25,7 +25,8 @@ err() { out=$(run "$2" "$3"); if echo "$out" | grep -qiE "$4"; then ok=$((ok+1))
 
 echo; echo "[DEC-3] powiadomienia decyzji"
 val "macierz DECISION HHL_ADMIN in_app" $HHL "select in_app::text from notification_matrix where event_group='DECISION' and role='HHL_ADMIN'" true
-val "macierz DECISION CLIENT_USER in_app=false" $HHL "select in_app::text from notification_matrix where event_group='DECISION' and role='CLIENT_USER'" false
+# C3 / E11 (obraz e11-desk): KSH ma dzwonek przy „Nowa decyzja”, nie całą grupę DECISION wyłączoną.
+val "macierz dec_new CLIENT_USER in_app" $HHL "select in_app::text from notification_matrix where event_key='dec_new' and role='CLIENT_USER'" true
 val "KSH nie czyta macierzy" $KSH "select count(*) from notification_matrix" 0
 # open → powiadomienie HHL
 D=$(run "$HHL" "select decision_open('$P','BACKUP_FAILED','test powiadomienia', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')

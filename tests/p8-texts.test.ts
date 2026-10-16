@@ -35,16 +35,18 @@ describe('spis wiadomości (E43 „Jeden ekran”)', () => {
     expect(new Set(MESSAGES.map((m) => m.id)).size).toBe(MESSAGES.length);
   });
 
-  it('28 rodzajów = rodzaje powiadomień z notifyTemplates.ts (L53) — id wiadomości to nazwa rodzaju', () => {
+  it('34 rodzaje = rodzaje powiadomień z notifyTemplates.ts (L53 + C3) — id wiadomości to nazwa rodzaju', () => {
     const src = readFileSync('supabase/functions/_shared/notifyTemplates.ts', 'utf8');
     const kinds = [...src.matchAll(/case '([A-Z_]+)':/g)].map((m) => m[1]).sort();
-    expect(kinds).toHaveLength(28);
-    expect(MESSAGES.filter((m) => m.channel === 'EMAIL' && !m.noBell && !m.planned).map((m) => m.id).sort()).toEqual(kinds);
+    expect(kinds).toHaveLength(34);
+    expect(MESSAGES.filter((m) => m.channel === 'EMAIL' && !m.noBell).map((m) => m.id).sort()).toEqual(kinds);
   });
 
-  it('wyglad/audyt-E (E-03): 6 nowych zdarzeń z „Kto co dostaje” ma treść domyślną — E35, E49, E23 (źródło i „Wróciło”), E46', () => {
-    expect(MESSAGES.filter((m) => m.planned).map((m) => m.id)).toEqual(['SCX_DETOUR_CHOICE', 'PRE_ARRIVAL', 'PRE_PORT', 'SOURCE_DOWN', 'SOURCE_BACK', 'APP_ERROR']);
-    for (const m of MESSAGES.filter((x) => x.planned)) {
+  it('C3 / wyglad/audyt-E (E-03): 6 zdarzeń z „Kto co dostaje” ma treść w notifyTemplates — E35, E49, E23, E47', () => {
+    const six = ['SCX_DETOUR_CHOICE', 'PRE_ARRIVAL', 'PRE_PORT', 'SOURCE_DOWN', 'SOURCE_BACK', 'APP_ERROR'];
+    expect(MESSAGES.filter((m) => six.includes(m.id)).map((m) => m.id)).toEqual(six);
+    expect(MESSAGES.some((m) => m.planned)).toBe(false);
+    for (const m of MESSAGES.filter((x) => six.includes(x.id))) {
       expect(m.channel, m.id).toBe('EMAIL');
       expect(m.tokens, m.id).toContain('link');
       expect(`${m.subject} ${m.body}`, m.id).not.toMatch(/\bE\d{1,2}\b/);

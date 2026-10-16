@@ -50,6 +50,8 @@ authenticated admin_impersonate_stop
 authenticated admin_invite_user
 authenticated admin_user_profile_set
 authenticated admin_notification_matrix_set
+authenticated my_notify_get
+authenticated my_notify_set
 authenticated admin_ops_threshold_set
 authenticated admin_revoke_invite
 authenticated admin_set_eta_calibration_frozen

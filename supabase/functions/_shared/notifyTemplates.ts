@@ -366,6 +366,79 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
       const subject = locale === 'en' ? `Status: ${from} → ${to}` : locale === 'sv' ? `Status: ${from} → ${to}` : `Status: ${from} → ${to}`;
       return { subject, body: '', severity: 'LOW', view: null };
     }
+    /* C3 (D-20261016-1345-01 pkt 3.8, E43): treści po polsku — te same zdania co w spisie wiadomości. */
+    case 'PRE_ARRIVAL': {
+      const code = String(p.code ?? p.load_code ?? '');
+      const site = String(p.site ?? '');
+      const trailer = String(p.trailer ?? '');
+      const time = String(p.time ?? '');
+      const arrival = String(p.arrival ?? '');
+      return {
+        subject: `${code}: auto 50 km przed celem — ${site}`,
+        body: `Auto ${trailer} jest ok. 50 km przed celem: ${site} (o ${time}). Przyjazd ok. ${arrival}.`,
+        severity: 'LOW',
+        view: null,
+      };
+    }
+    case 'PRE_PORT': {
+      const code = String(p.code ?? p.load_code ?? '');
+      const port = String(p.port ?? '');
+      const trailer = String(p.trailer ?? '');
+      const time = String(p.time ?? '');
+      return {
+        subject: `${code}: auto 20 km przed portem ${port}`,
+        body: `Auto ${trailer} jest ok. 20 km przed portem ${port} (o ${time}).`,
+        severity: 'LOW',
+        view: null,
+      };
+    }
+    case 'SCX_DETOUR_CHOICE': {
+      const code = String(p.code ?? p.load_code ?? '');
+      const choice = String(p.choice ?? '');
+      const closure = String(p.closure ?? '');
+      const author = String(p.author ?? '');
+      return {
+        subject: `${code}: decyzja SCX — ${choice}`,
+        body: `Na trasie: ${closure}. SCX wybrał: ${choice} (${author}). ETA liczy ten wybór.`,
+        severity: 'MEDIUM',
+        view: null,
+      };
+    }
+    case 'SOURCE_DOWN': {
+      const feed = String(p.feed ?? '');
+      const since = String(p.since ?? '');
+      const effect = String(p.effect ?? '');
+      return {
+        subject: `${feed} nie działa od ${since}`,
+        body: `${feed} nie działa od ${since}. Skutek: ${effect}. Przypomnienie po 2 h, jeśli nie wróci.`,
+        severity: 'HIGH',
+        view: null,
+      };
+    }
+    case 'SOURCE_BACK': {
+      const feed = String(p.feed ?? '');
+      const since = String(p.since ?? '');
+      const time = String(p.time ?? '');
+      return {
+        subject: `Wróciło: ${feed}`,
+        body: `${feed} działa znowu od ${time}. Przerwa trwała od ${since}.`,
+        severity: 'LOW',
+        view: null,
+      };
+    }
+    case 'APP_ERROR': {
+      const error = String(p.error ?? '');
+      const times = String(p.times ?? '');
+      const people = String(p.people ?? '');
+      const page = String(p.page ?? '');
+      const time = String(p.time ?? '');
+      return {
+        subject: `Błąd aplikacji: ${error}`,
+        body: `Błąd „${error}”: ${times} razy, u ${people} osób, ostatnio o ${time}, strona ${page}.`,
+        severity: 'HIGH',
+        view: null,
+      };
+    }
     default: {
       // AUD-02: nigdy kod szablonu w treści dla użytkownika
       const title = String(p.title ?? '').trim();

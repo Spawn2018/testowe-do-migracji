@@ -1,5 +1,5 @@
 /**
- * E11 / E5-2 — macierz powiadomień (grupa × 5 ról × app / e-mail / telefon). Tylko HHL_ADMIN (RPC).
+ * C3 / E11 — macierz powiadomień (zdarzenie × 5 ról × dzwonek / e-mail / telefon). Tylko HHL_ADMIN (RPC).
  */
 import { useCallback, useEffect, useState } from 'react';
 import { getSupabase } from './client';
@@ -8,14 +8,24 @@ import { t } from '../i18n/messages';
 import './auth.css';
 
 type MatrixRole = 'HHL_ADMIN' | 'HHL_OPS' | 'CLIENT_USER' | 'CARRIER_DISPATCH' | 'CARRIER_USER';
-type Row = { event_group: string; role: MatrixRole; in_app: boolean; email: boolean; push: boolean };
+type Row = {
+  event_key: string;
+  event_group: string;
+  label_pl: string | null;
+  role: MatrixRole;
+  in_app: boolean;
+  email: boolean;
+  push: boolean;
+  risks_only: boolean;
+};
 type MatrixField = 'in_app' | 'email' | 'push';
 
-const GROUPS = ['LOAD_STATUS', 'RISK_FERRY_WEATHER', 'DECISION', 'MONEY', 'SYSTEM'] as const;
 const ROLES: MatrixRole[] = ['HHL_ADMIN', 'HHL_OPS', 'CARRIER_DISPATCH', 'CARRIER_USER', 'CLIENT_USER'];
 
-function locked(group: string, role: MatrixRole): boolean {
-  return group === 'SYSTEM' && role !== 'HHL_ADMIN' && role !== 'HHL_OPS';
+function locked(row: Row | undefined, role: MatrixRole): boolean {
+  if (!row) return true;
+  if (row.risks_only) return true;
+  return row.event_group === 'SYSTEM' && role !== 'HHL_ADMIN' && role !== 'HHL_OPS';
 }
 
 function roleLabel(locale: 'pl' | 'en' | 'sv', role: MatrixRole): string {
@@ -30,7 +40,7 @@ export default function NotificationMatrixForm() {
 
   const refresh = useCallback(async () => {
     const sb = await getSupabase();
-    const q = await sb.from('notification_matrix').select('event_group,role,in_app,email,push').order('event_group');
+    const q = await sb.from('notification_matrix').select('event_key,event_group,label_pl,role,in_app,email,push,risks_only').order('event_key');
     if (q.error) {
       setMsg(q.error.message);
       return;
@@ -42,21 +52,23 @@ export default function NotificationMatrixForm() {
     void refresh();
   }, [refresh]);
 
-  function cell(group: string, role: MatrixRole): Row | undefined {
-    return rows.find((r) => r.event_group === group && r.role === role);
+  function cell(eventKey: string, role: MatrixRole): Row | undefined {
+    return rows.find((r) => r.event_key === eventKey && r.role === role);
   }
 
-  async function toggle(group: string, role: MatrixRole, field: MatrixField) {
-    if (locked(group, role)) {
+  const eventKeys = [...new Set(rows.map((r) => r.event_key))];
+
+  async function toggle(eventKey: string, role: MatrixRole, field: MatrixField) {
+    const cur = cell(eventKey, role);
+    if (locked(cur, role) || !cur) {
       setMsg(t(locale, 'dec_matrix_locked'));
       return;
     }
-    const cur = cell(group, role) ?? { event_group: group, role, in_app: false, email: false, push: false };
     const next = { ...cur, [field]: !cur[field] };
     setBusy(true);
     const sb = await getSupabase();
     const { error } = await sb.rpc('admin_notification_matrix_set', {
-      p_event_group: group,
+      p_event_group: eventKey,
       p_role: role,
       p_in_app: next.in_app,
       p_email: next.email,
@@ -90,12 +102,12 @@ export default function NotificationMatrixForm() {
               </tr>
             </thead>
             <tbody>
-              {GROUPS.map((g) => (
+              {eventKeys.map((g) => (
                 <tr key={g}>
-                  <td>{t(locale, `dec_matrix_${g}`)}</td>
+                  <td>{cell(g, 'HHL_ADMIN')?.label_pl ?? g}</td>
                   {ROLES.map((role) => {
                     const c = cell(g, role);
-                    const lock = locked(g, role);
+                    const lock = locked(c, role);
                     return (
                       <td key={role}>
                         <label className="switchline" style={{ opacity: lock ? 0.45 : 1 }}>
