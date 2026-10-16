@@ -23,6 +23,13 @@ import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { lazyRetry } from '../lib/lazyRetry';
 import { parseRoute } from '../lib/routes';
 import { OPEN_OPTIONS_EVENT, optScreenOf, takeOptionsScreen, type OptionsScreen } from '../lib/openOptions';
+import { getNowIso } from '../lib/frozenNow';
+import { localDateOf } from '../lib/money/engine';
+import { accountingPackConfigOf } from '../lib/p5Source';
+import {
+  accountingAddressesSaverOf, accountingTestMailOf, cancelRulesOf, cancelSaverOf, dwellRulesOf, dwellSaverOf,
+  fuelActionsOf, fuelScreenOf, marginSettingOf, paymentTermsOf, paymentTermsSaverOf,
+} from '../lib/p5bSource';
 
 /** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */
 function savedText(locale: Locale, code: string): string {
@@ -50,6 +57,11 @@ const PermitRequirement = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPAB
 /* wyglad/P5 (E31, E12, L26): terminy dokumentów — przeniesione ze strony Dokumenty, zapis bez zmian */
 const DocTerms = lazy(lazyRetry(() => import('../components/docs/DocTerms')));
 const FactoringOfferScreen = lazy(lazyRetry(() => import('../components/options/FactoringOfferScreen').then((m) => ({ default: m.FactoringOfferScreen }))));
+/* wyglad/P5-b (E3, E33, E16, E40, E12): Opłata paliwowa, Dopłaty (postój), Cennik (anulowanie, próg marży), Terminy i adresy */
+const FuelScreen = lazy(lazyRetry(() => import('../components/options/MoneyScreens').then((m) => ({ default: m.FuelScreen }))));
+const DwellScreen = lazy(lazyRetry(() => import('../components/options/MoneyScreens').then((m) => ({ default: m.DwellScreen }))));
+const RatesExtras = lazy(lazyRetry(() => import('../components/options/MoneyScreens').then((m) => ({ default: m.RatesExtras }))));
+const TermsScreen = lazy(lazyRetry(() => import('../components/options/MoneyScreens').then((m) => ({ default: m.TermsScreen }))));
 const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
@@ -121,6 +133,7 @@ export function OptionsView() {
   const notificationPrefs = useTowerStore((s) => s.notificationPrefs);
   const updateNotificationPrefs = useTowerStore((s) => s.updateNotificationPrefs);
   const smsEntry = useTowerStore((s) => s.smsEntry);
+  const bills = useTowerStore((s) => s.bills);
   const location = useLocation();
   const [saved, setSaved] = useState('');
   /* wyglad/P3-c (E11, E37 pkt 1): menu konta i adresy /opcje/… otwierają ekran z menu bocznego. */
@@ -241,11 +254,33 @@ export function OptionsView() {
     ],
   });
 
+  /* wyglad/P5-b — dane ekranów Pieniądze; null = nie podłączone (zostaje dzisiejszy formularz albo sekcji nie ma) */
+  const fuelView = fuelScreenOf(localDateOf(getNowIso()));
+  const dwell = dwellRulesOf();
+  const cancel = cancelRulesOf();
+  const margin = marginSettingOf();
+  const terms = paymentTermsOf();
+  const addresses = accountingPackConfigOf(bills)?.addresses ?? null;
+  const ratesExtras = cancel || margin ? block(
+    <RatesExtras
+      locale={locale}
+      readOnly={ro}
+      cancel={cancel}
+      onCancelSave={cancelSaverOf()}
+      margin={margin ? margin.pct : undefined}
+      onMarginSave={margin?.save ?? null}
+    />,
+  ) : null;
+
   const money: OptScreen[] = [
     scr('rates', PROD_BUILD ? (
-      RateCardForm ? block(<RateCardForm />) : <div className="note option-note">{t(locale, 'i2_rates_no_source')}</div>
+      <>
+        {ratesExtras}
+        {RateCardForm ? block(<RateCardForm />) : <div className="note option-note">{t(locale, 'i2_rates_no_source')}</div>}
+      </>
     ) : (
       <>
+        {ratesExtras}
         <div className="rate-grid">
           <RateEditor side="COST" rules={rateCost} currency="EUR" locale={locale} onChange={(id, value) => updateRate('COST', id, value)} onSave={() => saveMark('cennik')} />
           <RateEditor side="REVENUE" rules={rateRev} currency="EUR" locale={locale} onChange={(id, value) => updateRate('REVENUE', id, value)} onSave={() => saveMark('cennik')} />
@@ -254,8 +289,12 @@ export function OptionsView() {
         {RateCardForm ? block(<RateCardForm />) : null}
       </>
     ), { right: change, mark: PROD_BUILD ? undefined : <DemoMark /> }),
-    scr('surch', DwellOptionsForm ? block(<DwellOptionsForm />) : <Soon locale={locale} tipKey="opt_acc_dwell_note" />, { right: change }),
-    scr('fuel', (
+    scr('surch', dwell
+      ? block(<DwellScreen locale={locale} rules={dwell} readOnly={ro} onSave={dwellSaverOf()} />)
+      : DwellOptionsForm ? block(<DwellOptionsForm />) : <Soon locale={locale} tipKey="opt_acc_dwell_note" />, { right: change, mark: dwell && !PROD_BUILD ? <DemoMark /> : undefined }),
+    scr('fuel', fuelView ? block(
+      <FuelScreen locale={locale} view={fuelView} actions={fuelActionsOf()} readOnly={ro} />,
+    ) : (
       <>
         <OptionsHowTo locale={locale} k="b6_howto_sefs" />
         {BafForm ? block(<BafForm />) : (
@@ -268,8 +307,21 @@ export function OptionsView() {
           </>
         )}
       </>
-    ), { right: change, mark: BafForm ? undefined : <DemoMark /> }),
+    ), { right: change, mark: PROD_BUILD ? undefined : <DemoMark /> }),
   ];
+  if (terms || addresses) {
+    money.push(scr('terms', block(
+      <TermsScreen
+        locale={locale}
+        readOnly={ro}
+        terms={terms}
+        onTermsSave={paymentTermsSaverOf()}
+        addresses={addresses}
+        onAddrSave={accountingAddressesSaverOf()}
+        onTest={accountingTestMailOf()}
+      />,
+    ), { right: change, mark: PROD_BUILD ? undefined : <DemoMark /> }));
+  }
   if (shows('factoringOffer')) {
     /* wyglad/P5 (E4b, img/e4b-desk): „Oferta HHL” — pola i zapis jak dotąd, wygląd według raportu */
     money.push(scr('fact', (

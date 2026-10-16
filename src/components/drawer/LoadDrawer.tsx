@@ -36,12 +36,12 @@ import {
   formatSchedTableDay,
   delayMinutesVsPlan,
 } from '../../lib/time';
-import { formatDelayPill } from '../ui/StatusPill';
+import { formatDelayPill, StatusMarkers } from '../ui/StatusPill';
 import { AgreedFeeForm } from './AgreedFeeForm';
 import { effArrival, effDeparture, fmtLocal, sailingStatusLabel } from '../../lib/sailings';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { isServerId } from '../../data/registry';
-import { chatMeOf, chatMessagesOf, chatReadsOn, chatUnread } from '../../lib/p6bSource';
+import { chatMeOf, chatMessagesOf, chatReadsOn, chatUnread, historyEventsOf } from '../../lib/p6bSource';
 import { ht, htn } from '../../i18n/p6b';
 import { OptionsHowTo } from '../settings/OptionsHowTo';
 import type { Load, Locale } from '../../types';
@@ -95,6 +95,7 @@ export function LoadDrawer() {
   const loads = useTowerStore((s) => s.loads);
   const events = useTowerStore((s) => s.events);
   const documents = useTowerStore((s) => s.documents);
+  const bills = useTowerStore((s) => s.bills);
   const messages = useTowerStore((s) => s.messages);
   const locale = useTowerStore((s) => s.locale);
   const role = useTowerStore((s) => s.role);
@@ -139,6 +140,8 @@ export function LoadDrawer() {
     () => (load ? events.filter((e) => e.loadId === load.id).sort((a, b) => (a.at < b.at ? 1 : -1)) : []),
     [events, load],
   );
+  /* wyglad/P6-c (E17): oś statusów z tych samych zdarzeń co Historia — demo z przykładami P6-b, produkcja bez zmian */
+  const axisEvents = useMemo(() => (load ? historyEventsOf(load, loadEvents, nowIso) : loadEvents), [load, loadEvents, nowIso]);
   const loadDocs = useMemo(
     () => (load ? documents.filter((d) => d.loadId === load.id) : []),
     [documents, load],
@@ -191,7 +194,7 @@ export function LoadDrawer() {
   const comboL = load.resources.setLengthM ?? load.dims.lengthM;
 
   /* E25: oś statusów raz na render — data dostawy i wjazd na plac do bloku ETA */
-  const statusAxis = buildStatusAxis(load, loadEvents);
+  const statusAxis = buildStatusAxis(load, axisEvents);
   /* wyglad/P4-c: link śledzenia z serwera (E44), braki do „Gotowy” (L6, L9, L29), sprawa „czy dostarczono?” (L14) */
   const trackingLink = trackingLinkOf(load, loads, nowIso);
   const readyGaps = readyGapsOf(load, loadDocs);
@@ -288,12 +291,30 @@ export function LoadDrawer() {
         {/* E27 pkt 5 (E1-2): pasek śledzenia nad zakładkami */}
         <TrackingBar load={load} events={loadEvents} label={transportLabel(load, role, 'plain')} locale={locale} nowIso={nowIso} trackingLink={trackingLink} />
 
-        <div className="dtabs">
-          {tabs.map((x) => {
+        {/* wyglad/P5-c (E10, axe): zakładki jako lista zakładek — `aria-selected` dozwolone tylko przy roli „tab” */}
+        <div className="dtabs" role="tablist" aria-label={transportLabel(load, role, 'plain')}>
+          {tabs.map((x, i) => {
             /* E17: liczba nieprzeczytanych na zakładce „Czat” */
             const n = x.id === 'chat' && tab !== 'chat' ? chatUnreadN : 0;
             return (
-              <button key={x.id} type="button" onClick={() => switchTab(x.id)} aria-selected={tab === x.id} aria-label={n ? `${x.label}, ${htn(locale, 'p6b_chat_unread', n)}` : undefined}>
+              <button
+                key={x.id}
+                type="button"
+                role="tab"
+                id={`dtab-${x.id}`}
+                aria-controls="dpanel"
+                tabIndex={tab === x.id ? 0 : -1}
+                onClick={() => switchTab(x.id)}
+                onKeyDown={(e) => {
+                  /* wzór listy zakładek: ← → przełączają, Home / End — pierwsza i ostatnia */
+                  const j = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : null;
+                  if (j == null) return;
+                  e.preventDefault();
+                  const next = tabs[(j + tabs.length) % tabs.length];
+                  switchTab(next.id);
+                  window.setTimeout(() => document.getElementById(`dtab-${next.id}`)?.focus(), 0);
+                }}
+                aria-selected={tab === x.id} aria-label={n ? `${x.label}, ${htn(locale, 'p6b_chat_unread', n)}` : undefined}>
                 {x.label}
                 {n ? <span className="dt-n" aria-hidden="true" data-chat-unread={n}>{n}</span> : null}
               </button>
@@ -301,7 +322,7 @@ export function LoadDrawer() {
           })}
         </div>
 
-        <div className={`dbody${tab === 'chat' ? ' is-chat' : ''}`}>
+        <div className={`dbody${tab === 'chat' ? ' is-chat' : ''}`} role="tabpanel" id="dpanel" aria-labelledby={`dtab-${tab}`} tabIndex={0}>
           {tab === 'overview' && (
             <>
               {/* wyglad/P4-c (L14): otwarta sprawa „czy dostarczono?” — odpowiedź w zakładce Status */}
@@ -529,7 +550,7 @@ export function LoadDrawer() {
           {tab === 'timeline' && (
             <StatusAxisTab
               load={load}
-              events={loadEvents}
+              events={axisEvents}
               geofences={geofences}
               locale={locale}
               phone={phone}
@@ -537,6 +558,10 @@ export function LoadDrawer() {
               onChange={() => setStatusChangeOpen(true)}
               readyGaps={readyGaps}
               top={deliveredCard}
+              marks={<StatusMarkers load={load} delayMin={load.delayed ? delayMin : null} />}
+              role={role}
+              documents={documents}
+              bills={bills}
             />
           )}
 

@@ -67,6 +67,10 @@ export function demoHistoryEvents(load: Load, nowIso: string): LoadEvent[] {
   if (p >= PROGRESS_OF.AT_PORT) {
     push(at(day, '10:30'), 'GEOFENCE_ENTER', 'geofence-engine', { geofence_id: 'gf-03', source: 'GPS', provider: 'emtrack' });
   }
+  if (p >= PROGRESS_OF.IN_TRANSIT_SE) {
+    /* wyglad/P6-c (E17): „Droga SE GPS” — wyjazd ze strefy portu w Szwecji; pod nim wjazd w bufor 50 km przed Boden */
+    push(at(load.plannedDeliverDate, '14:05', -1), 'STATUS_AUTO', 'system', { from: 'AT_PORT_SE', to: 'IN_TRANSIT_SE', powod: 'wyjazd ze strefy portu', source: 'GPS', provider: 'emtrack' });
+  }
   if (p >= PROGRESS_OF.APPROACHING_SITE) {
     push(at(load.plannedDeliverDate, '05:22'), 'GEOFENCE_ENTER', 'geofence-engine', { geofence_id: 'gf-10', source: 'GPS', provider: 'emtrack' });
   }

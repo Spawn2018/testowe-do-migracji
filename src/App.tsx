@@ -32,6 +32,7 @@ import { usePageSectionDnD } from './hooks/usePageSectionDnD';
 import { useRouteSync } from './hooks/useRouteSync';
 import { SUPABASE_AUTH_ENABLED } from './auth/config';
 import { canSwitchView } from './lib/prodFacade';
+import { ACCESS_OPEN_LOAD, accessNoteText, parseAccessNote } from './lib/accessNote';
 import { t } from './i18n/messages';
 import { usePhoneTableLabels } from './lib/phoneTableLabels';
 
@@ -197,12 +198,26 @@ function TowerShell() {
         />
         <Nav />
         <main ref={mainRef}>
-          {accessMessage ? (
-            <div className="note" role="alert" data-access-denied>
-              {t(locale, 'click_denied')}
-              <button type="button" className="btn ghost" onClick={() => setAccessMessage(null)}>OK</button>
-            </div>
-          ) : null}
+          {accessMessage ? (() => {
+            /* wyglad/P6-d (E37 „Komunikaty zdaniami”): sprawa zamknięta albo innej firmy — zdanie zamiast „Brak dostępu” */
+            const note = parseAccessNote(accessMessage);
+            const text = note ? accessNoteText(note) : null;
+            const code = note?.kind === 'closed' ? note.code : null;
+            return (
+              <div className="note" role="alert" data-access-denied data-access-note={note?.kind ?? 'denied'}>
+                {text ?? t(locale, 'click_denied')}
+                {code ? (
+                  <button
+                    type="button"
+                    className="btn"
+                    data-access-open-load
+                    onClick={() => { setAccessMessage(null); window.location.hash = `#/transport/${encodeURIComponent(code)}`; }}
+                  >{ACCESS_OPEN_LOAD}</button>
+                ) : null}
+                <button type="button" className="btn ghost" onClick={() => setAccessMessage(null)}>OK</button>
+              </div>
+            );
+          })() : null}
           {entryOpen ? (
             <div className="note" role="dialog" data-entry-detail>
               {t(locale, 'click_entry')}
