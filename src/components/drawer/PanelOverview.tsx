@@ -420,7 +420,11 @@ export function PanelOverview(p: Props) {
   const setL = r.setLengthM ?? spec?.set.l ?? null;
   const setW = r.setWidthM ?? spec?.set.w ?? null;
   const setH = r.setHeightM ?? spec?.set.h ?? null;
-  const setSrc = r.setLengthM != null ? pt(locale, 'p7_set_own') : spec ? ptp(locale, 'p7_set_src', { sym: spec.symbol }) : pt(locale, 'p7_set_none');
+  /* audyt-B B-13: wymiary równe wierszowi tabeli symboli to zestaw „z tabeli” (jak okno Awizacja), nie „wpisane przy transporcie” */
+  const sameAsTable = !!spec && [[r.setLengthM, spec.set.l], [r.setWidthM, spec.set.w], [r.setHeightM, spec.set.h]]
+    .every(([a, b]) => a == null || Math.abs((a as number) - (b as number)) < 0.005);
+  const setOwn = r.setLengthM != null && !sameAsTable;
+  const setSrc = setOwn ? pt(locale, 'p7_set_own') : spec ? ptp(locale, 'p7_set_src', { sym: spec.symbol }) : pt(locale, 'p7_set_none');
   const cargo = [spec?.kind, spec?.symbol ?? load.itemType, ptp(locale, 'p7_qty', { n: load.qty }), `${dim(load.dims.weightT, locale)} t`].filter(Boolean).join(' · ');
 
   return (
@@ -538,7 +542,7 @@ export function PanelOverview(p: Props) {
               key={load.id}
               loadId={load.id}
               value={setL != null && setW != null && setH != null ? { l: setL, w: setW, h: setH } : null}
-              own={r.setLengthM != null}
+              own={setOwn}
               sym={spec?.symbol ?? null}
               save={saveSetOf(role)}
               locale={locale}

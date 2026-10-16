@@ -2402,7 +2402,9 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
     await expect(page.locator('.drawer [data-dates-origin]')).toContainText('z harmonogramu KSH');
     await expect(page.locator('.drawer [data-dates-origin]')).not.toContainText('potwierdził');
     await expect(page.locator('.drawer [data-awiz-state]')).toHaveAttribute('data-awiz-state', 'none');
-    await expect(page.locator('.drawer [data-po-set]')).toContainText('× 2,50 m');
+    /* audyt-B B-13: zestaw z tabeli symboli (jak okno Awizacja) — SG: 21,69 × 2,45 × 3,75 m */
+    await expect(page.locator('.drawer [data-po-set]')).toContainText('21,69 × 2,45 × 3,75 m');
+    await expect(page.locator('.drawer [data-po-set]')).toContainText('z tabeli HHL (SG)');
     await expect(page.locator('.drawer [data-po-permit-kind="FIRMA"]')).toBeVisible();
     /* E32 pkt 2 / E9 krok 5: numer HHL wpisuje HHL w „Numerach zleceń”, bez okna Awizacja */
     await expect(page.locator('.drawer [data-order="hhl"] input')).toBeVisible();
@@ -2530,6 +2532,8 @@ test.describe('wyglad/P5 panel transportu — Ceny (E33) i Dokumenty (E31 pkt 5)
     await openTab(page, 'SG-03', 3);
     await expect(page.locator('.drawer [data-pp-table] thead th')).toHaveText([/.*/, 'KOSZT · SCX', 'PRZYCHÓD · KSH']);
     await expect(page.locator('.drawer [data-pp-row]')).toHaveCount(4);
+    /* audyt-B B-06 (E33): „Dopłaty” = suma listy dopłat — w demo żadna nie jest dodana */
+    await expect(page.locator('.drawer [data-pp-row="fees"] td.num')).toHaveText(['0,00', '0,00']);
     await expect(page.locator('.drawer [data-pp-margin]')).toContainText('%');
     await expect(page.locator('.drawer [data-pp-fuel]')).toBeVisible();
     await expect(page.locator('.drawer [data-fee]')).toHaveCount(3);
