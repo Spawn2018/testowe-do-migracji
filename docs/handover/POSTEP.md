@@ -2692,3 +2692,15 @@ git checkout main && git pull --ff-only origin main
 **C16-H NA PRODUKCJI — 8bae03be, 10:02.**  
 **P8-a, P8-b, P8-c, P8-d, push-w42 NA PRODUKCJI (wygląd) — a300b29b, 11:20; dpl_9tVs4DubP7G6Do8KX43zZz1qnKxK.**
 
+## 2026-10-16 — dopisek D-20261016-2130-01 w planie (wykonanie później)
+
+Kolejka wyglądu: `wyglad/W-dane` PR #274. Scalenie i wdrożenie po skończonym C3 (#273), gdy `unit` i `visual` zielone. Bez bazy (F8). Plik dopisku wchodzi z PR, nie z `dopiski_nowe`.
+
+| punkt | gdzie | stan |
+|---|---|---|
+| kolejka #274 | PLAN §4 | wpisane; scalenie po C3 |
+| P5 pkt 3.1 | rodzaj OTHER, wiele plików bez wersji, HHL i SCX wgrywają, KSH i Podgląd odmowa, na końcu `otherDocsOn()` = true | do zrobienia w P5, z testem odbioru |
+| P9 pkt 3.2 | geometria objazdu HERE przy sprawie; `detourLinesOf()` czyta `{ loadId, line, via, addKm, addMin }` | do zrobienia w P9, z testem odbioru |
+| P9 pkt 3.3 | najpierw TEST: czy HERE ma odcinek promowy; jeśli tak — `ferries` w `map_display_state`; jeśli nie — wpis W | do zrobienia w P9, z testem odbioru |
+| Podgląd W38 | bez zmian w planie | bez zmian |
+
