@@ -33,3 +33,6 @@ Wygląd, teksty i obliczenia widoku (F8), bez zapisów. **Złożone na #256 (`wy
 - pierwsze wczytanie 389,1 kB gzip (Rejsy w części Harmonogramu, ładowanej osobno).
 
 **Zrzuty:** `rejsy-1366-hhl.webp`, `rejsy-1366-hhl-powroty.webp`, `rejsy-kody-filtr-1366.webp`, `rejsy-1440-ksh.webp`, `rejsy-telefon-390.webp`.
+
+## Poprawka E21 (16.10, 12:39)
+Przy wgraniu pliku, który nie jest arkuszem .xlsx, Harmonogram pokazywał komunikat biblioteki „Can't find end of central directory …”. Teraz: „Nie da się otworzyć pliku — to nie jest arkusz Excel (.xlsx) albo plik jest uszkodzony. Zapisz go w Excelu jako .xlsx i wgraj ponownie.” Test `visual-states` stan-blad sprawdza tekst; wzorzec `stan-blad-dark.png` odświeżony (visual.yml update=true, run 38888757854).
