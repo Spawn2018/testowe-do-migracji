@@ -179,7 +179,7 @@ export function ExportScreen({ locale, kinds, range, fileName, onDownload }: {
   /** Co ta rola może pobrać (Faktury i finanse — tylko HHL; Historia zmian — bez Operacji, E12-1). */
   kinds: ExportKind[];
   range: { from: string; to: string };
-  /** np. „WatchTower_Transporty_01.10–08.10.xlsx” */
+  /** np. „WatchTower_Transporty_01.10.2026–08.10.2026.xlsx” */
   fileName: (kind: ExportKind) => string;
   onDownload?: (kind: ExportKind, fmt: 'xlsx' | 'csv') => void;
 }) {
