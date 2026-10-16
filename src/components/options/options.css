@@ -328,6 +328,10 @@
 .ox-dev-n{flex:0 0 30px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--ink);
   font-family:var(--font-cond);font-size:20px;font-weight:700;color:var(--sea)}
 .ox-dev-here{margin-top:14px;padding-top:4px;border-top:1px solid var(--rule-2)}
+.ox-dev-app,.ox-dev-chat{margin-top:14px;padding-top:4px;border-top:1px solid var(--rule-2);display:flex;flex-direction:column;gap:6px}
+.ox-dev-app-st{margin:4px 0 0;font-size:14px;line-height:1.5;color:var(--amber-ink)}
+.ox-dev-app-st.is-ok{color:var(--go)}
+.ox-dev-bul{margin:4px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.5;color:var(--ink-2)}
 .ox-dev-list{margin-top:14px;border-top:1px solid var(--rule-2)}
 .ox-dev-ul > li{display:flex;flex-direction:column;align-items:stretch;gap:10px;padding:10px 0}
 .ox-dev-row{display:flex;justify-content:space-between;gap:12px;align-items:baseline;font-size:15px}
