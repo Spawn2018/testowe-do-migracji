@@ -13,7 +13,7 @@ import { fmtNum, pctText } from '../../i18n/messages';
 import { s7, s7p } from '../../i18n/sched7';
 import { StatusMarkers, StatusPill } from '../ui/StatusPill';
 import { clickableRow } from '../../lib/clickableRow';
-import { formatAppMoney } from '../../lib/money/demoFx';
+import { formatLoadMoney, formatLoadRevMargin } from '../../lib/money/loadPln';
 import { formatTableInZone, TZ_LOAD_PL, TZ_UNLOAD_SE } from '../../lib/time';
 import { transportLabel } from '../../lib/transportName';
 import {
@@ -119,14 +119,16 @@ function Docs({ l, ctx, two }: { l: Load; ctx: SchedRowCtx; two?: boolean }) {
 function Money({ l, ctx, two }: { l: Load; ctx: SchedRowCtx; two?: boolean }) {
   const { role, locale, currency } = ctx;
   const p = l.pricing;
-  if (role === 'KSH') return <span className="s7-num">{formatAppMoney(p.revTotal, locale, currency)}</span>;
-  if (role === 'SCX') return <span className="s7-num">{formatAppMoney(p.costTotal, locale, currency)}</span>;
+  /* E16 (audyt-F F-04): PLN kursem NBP transportu — ta sama funkcja co panel „Ceny” (`loadPln.ts`), bez stałego 4,39 */
+  if (role === 'KSH') return <span className="s7-num">{formatLoadMoney(p.revTotal, l, 'rev', locale, currency)}</span>;
+  if (role === 'SCX') return <span className="s7-num">{formatLoadMoney(p.costTotal, l, 'cost', locale, currency)}</span>;
   const low = ctx.marginMin != null && p.marginPct * 100 < ctx.marginMin;
   const pct = pctText(locale, p.marginPct, 1);
-  const m = formatAppMoney(p.margin, locale, currency);
+  const rm = formatLoadRevMargin(l, locale, currency);
+  const m = rm.margin;
   return (
     <span className={`s7-money${two ? ' is-two' : ''}`} data-money>
-      <b className="s7-num">{formatAppMoney(p.revTotal, locale, currency)}</b>
+      <b className="s7-num">{rm.rev}</b>
       <small className={`s7-margin${low ? ' s7-neg' : ''}`}>{two ? s7p(locale, 's7_margin_short', { v: m, p: pct }) : ` · ${s7p(locale, 's7_margin', { v: m, p: pct })}`}</small>
     </span>
   );
@@ -275,7 +277,7 @@ function shortCell(id: string, l: Load, ctx: SchedRowCtx): ReactNode {
     case 'tractor': return <Pair a={r.tractorPlate} b={r.tractorDeliveryPlate} swap={swap} mono locale={L} />;
     case 'trailer': return r.trailerPlate ? <span className="mono" data-content>{r.trailerPlate}</span> : dash;
     case 'sailing': return l.ferry?.vessel ? <span data-content>{l.ferry.vessel}{l.ferry.departureAt ? ` · ${formatTableInZone(l.ferry.departureAt, TZ_LOAD_PL)}` : ''}</span> : dash;
-    case 'cost': return <span className="s7-num">{formatAppMoney(l.pricing.costTotal, L, ctx.currency)}</span>;
+    case 'cost': return <span className="s7-num">{formatLoadMoney(l.pricing.costTotal, l, 'cost', L, ctx.currency)}</span>;
     default: return null;
   }
 }

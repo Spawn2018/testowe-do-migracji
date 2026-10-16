@@ -15,6 +15,15 @@ import { buildDemoSnapshot } from '../src/data/demoProvider';
 import { INITIAL_NOTIFICATIONS, INITIAL_WORKFLOW_RUNS } from '../src/data/seed';
 import { bellGroups, sectionFor } from '../src/lib/bellList';
 import { transportLabel, type TransportParty } from '../src/lib/transportName';
+import { buildTodo, countedFor, defaultScope, scopeCards, visibleTodoRisks } from '../src/lib/p6Todo';
+import { extraRisksOf, sampleDecisionsOf, todoExtrasOf } from '../src/lib/p6Source';
+import { feeSuggestionsOf } from '../src/lib/p5Source';
+import { todoQueue, todoRisks } from '../src/lib/cockpitE9';
+import { formatLoadMoney, formatLoadRevMargin, loadFxMid } from '../src/lib/money/loadPln';
+import { formatMoney } from '../src/lib/money/engine';
+import { formatPlNumber } from '../src/lib/format';
+import { canFixAwizOf } from '../src/lib/p7Source';
+import { setAuthProfile } from '../src/auth/profile';
 
 const snap = buildDemoSnapshot();
 const loadById = (id: string) => snap.loads.find((l) => l.id === id);
@@ -142,5 +151,88 @@ describe('A-08 / A-09 — kontrast ≥ 4,5 : 1 przez tokeny', () => {
   it('karta przeprawy: opis w --ink-2; znacznik demo na --surface', () => {
     expect(readFileSync('src/components/risks/risks.css', 'utf8')).toMatch(/\.rk-alt \.rk-muted\{color:var\(--ink-2\)\}/);
     expect(readFileSync('src/index.css', 'utf8')).toMatch(/\.panel-mark\.demo-mark\{color:var\(--amber-ink\);background:var\(--surface\);/);
+  });
+});
+
+describe('F-01 — Operacje HHL: jedna liczba „Do zrobienia” (nagłówek, menu, Kokpit, domyślny filtr)', () => {
+  const nowIso = '2026-09-23T14:32:00Z';
+  const cardsFor = (role: 'HHL' | 'SCX') => {
+    const vis = visibleTodoRisks(role, [...snap.risks, ...extraRisksOf(snap.loads, nowIso)]);
+    const decs = sampleDecisionsOf(snap.loads, nowIso, role).filter((d) => role !== 'SCX' || d.decider === 'SCX');
+    const base = buildTodo({ risks: vis, decisions: decs, nowIso });
+    const cardLoads = new Set(base.map((c) => c.loadId).filter((x): x is string => !!x));
+    const items = snap.loads.map((load) => ({ load, fees: feeSuggestionsOf(load) ?? [], check: null }));
+    const extras = todoExtrasOf(role, items, cardLoads);
+    return extras.length ? buildTodo({ risks: vis, decisions: decs, extras, nowIso }) : base;
+  };
+  it('HHL_OPS: „Moja firma” = todoQueue (bez kart tylko z dopłatą HHL)', () => {
+    const cards = cardsFor('HHL');
+    const q = todoQueue('HHL', snap.risks, 'HHL_OPS')!;
+    const counted = countedFor('HHL_OPS', todoRisks('HHL', snap.risks, 'HHL_OPS'));
+    expect(defaultScope('HHL_OPS')).toBe('FIRM');
+    expect(scopeCards(cards, 'FIRM', 'HHL', () => null, null, counted)).toHaveLength(q.total);
+    /* przed poprawką filtr pokazywał więcej kart niż liczba w nagłówku */
+    expect(scopeCards(cards, 'FIRM', 'HHL', () => null, null).length).toBeGreaterThan(q.total);
+    expect(scopeCards(cards, 'ALL', 'HHL', () => null, null, counted)).toHaveLength(cards.length);
+  });
+  it('inne konta bez zmian: Administrator „Wszystkie”, SCX „Moja firma” bez listy liczonych', () => {
+    expect(countedFor('HHL_ADMIN', snap.risks)).toBeUndefined();
+    expect(countedFor('CARRIER_DISPATCH', snap.risks)).toBeUndefined();
+    const scx = cardsFor('SCX');
+    expect(scopeCards(scx, 'FIRM', 'SCX', () => null, null, countedFor('CARRIER_DISPATCH', []))).toEqual(scopeCards(scx, 'FIRM', 'SCX', () => null, null));
+  });
+});
+
+describe('F-04 / F-05 — jeden kurs PLN (Harmonogram = panel „Ceny”) i odstęp tysięcy', () => {
+  const sg03 = snap.loads.find((l) => l.code === 'SG-03')!;
+  it('kurs transportu z migawki NBP, nie stałe 4,39', () => {
+    const mid = loadFxMid(sg03, 'rev')!;
+    expect(mid).toBe(sg03.pricing.money!.rev.fx.mid);
+    expect(mid).not.toBe(4.39);
+    expect(loadFxMid({ pricing: { ...sg03.pricing, money: undefined } }, 'rev')).toBeNull();
+  });
+  it('kwoty Harmonogramu = kwoty panelu (przychód × kurs przychodu, marża = przychód × kurs − koszt × kurs)', () => {
+    const p = sg03.pricing;
+    const r = loadFxMid(sg03, 'rev')!;
+    const c = loadFxMid(sg03, 'cost')!;
+    const money = (n: number) => `${formatPlNumber(n, 2)} PLN`;
+    const rm = formatLoadRevMargin(sg03, 'pl', 'PLN');
+    expect(rm.rev.replace(/\s/g, ' ')).toBe(money(p.revTotal * r).replace(/\s/g, ' '));
+    expect(rm.margin.replace(/\s/g, ' ')).toBe(money(p.revTotal * r - p.costTotal * c).replace(/\s/g, ' '));
+    expect(formatLoadMoney(p.costTotal, sg03, 'cost', 'pl', 'PLN').replace(/\s/g, ' ')).toBe(money(p.costTotal * c).replace(/\s/g, ' '));
+    expect(formatLoadMoney(p.revTotal, sg03, 'rev', 'pl', 'EUR')).toBe(formatMoney(p.revTotal, 'pl', 'EUR'));
+  });
+  it('Harmonogram i panel biorą kurs z loadPln.ts', () => {
+    const sched = readFileSync('src/components/schedule/SchedTables.tsx', 'utf8');
+    expect(sched).not.toMatch(/formatAppMoney/);
+    expect(readFileSync('src/components/drawer/PanelPrices.tsx', 'utf8')).toMatch(/const midCost = loadFxMid\(load, 'cost'\)/);
+  });
+  it('F-05: „7 301,36 PLN” — odstęp tysięcy także w kwotach 4-cyfrowych', () => {
+    expect(formatMoney(7301.36, 'pl', 'PLN')).toMatch(/^7\s301,36\sPLN$/);
+    expect(formatMoney(1724.82, 'pl', 'PLN')).toMatch(/^1\s724,82\sPLN$/);
+    expect(formatMoney(422.74, 'pl', 'PLN')).toMatch(/^422,74\sPLN$/);
+  });
+});
+
+describe('F-07 — Operacje HHL: rejsy i awizacja tylko do odczytu (według rodzaju konta)', () => {
+  const asKind = (role: string | null) => setAuthProfile(role ? {
+    user_id: 'u1', email: 'x@example.com', full_name: 'Test', role: role as never, org_code: 'HHL', org_name: 'H&H Logistics', locale: 'pl', active: true,
+  } : null);
+  it('„Popraw awizację” i edycja okna: Administrator HHL tak, Operacje HHL nie, KSH i SCX nie', () => {
+    asKind(null);
+    expect(canFixAwizOf('HHL')).toBe(true);
+    asKind('HHL_ADMIN');
+    expect(canFixAwizOf('HHL')).toBe(true);
+    asKind('HHL_OPS');
+    expect(canFixAwizOf('HHL')).toBe(false);
+    expect(canFixAwizOf('KSH')).toBe(false);
+    asKind(null);
+    const modal = readFileSync('src/components/drawer/AwizacjaModal.tsx', 'utf8');
+    expect(modal).toMatch(/const readOnly = role === 'KSH' \|\| \(role === 'HHL' && !canFixAwizOf\(role\)\)/);
+  });
+  it('Rejsy: w demo „Dodaj rejs”, „Opóźnienie”, „Odwołaj” tylko dla konta innego niż Operacje', () => {
+    const src = readFileSync('src/views/SailingsPanel.tsx', 'utf8');
+    expect(src).toMatch(/: role === 'HHL' && getAuthProfile\(\)\?\.role !== 'HHL_OPS';/);
+    expect(src).toMatch(/\? getAuthProfile\(\)\?\.role === 'HHL_ADMIN'/);
   });
 });

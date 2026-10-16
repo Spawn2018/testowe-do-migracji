@@ -17,6 +17,7 @@ import { addDays, isoWeek, marginPct, mondayOf, weekLabel, weekOf } from '../../
 import { durText, reasonReaderOf, rejecterOf, rejectNeedsReason, rejectionVisibleTo, type FeeDecision, type FeeSide, type FeeSuggestion } from '../../lib/p5Fees';
 import { lazyRetry } from '../../lib/lazyRetry';
 import { localDateOf } from '../../lib/money/engine';
+import { loadFxMid } from '../../lib/money/loadPln';
 import { ft, ftp } from '../../i18n/p5';
 import { fc, fcp } from '../../i18n/p5c';
 import { up } from '../options/up';
@@ -61,8 +62,9 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
   const [rejecting, setRejecting] = useState<{ id: string; side: FeeSide; draft: string } | null>(null);
   const fuelRow = useMemo(() => fuelWeeksOf([load], role === 'KSH' ? 'rev' : 'cost', today)[0] ?? null, [load, role, today]);
 
-  const midCost = money && money.cost.fx.mid > 0 ? money.cost.fx.mid : null;
-  const midRev = money && money.rev.fx.mid > 0 ? money.rev.fx.mid : null;
+  /* E16 (audyt-F F-04): kurs transportu z jednej funkcji — ta sama w Harmonogramie (`loadPln.ts`) */
+  const midCost = loadFxMid(load, 'cost');
+  const midRev = loadFxMid(load, 'rev');
   const pln = currency === 'PLN' && (role !== 'HHL' ? (role === 'KSH' ? midRev : midCost) : midCost && midRev) != null;
   const cur = pln ? 'PLN' : pr.currency;
   const amt = (eur: number, side: 'cost' | 'rev') => n2(pln ? eur * ((side === 'cost' ? midCost : midRev) ?? 0) : eur);
