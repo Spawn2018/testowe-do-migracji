@@ -7,6 +7,7 @@ import { useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { up } from './up';
+import { E49_THR } from '../../i18n/e49Thr';
 
 /* ---------- Przełączniki bezpieczeństwa ---------- */
 
@@ -26,12 +27,14 @@ export type SecurityFlagRow = {
   by: string | null;
 };
 
-export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mark }: {
+export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mark, blocked }: {
   locale: Locale;
   flags: SecurityFlagRow[];
   readOnly?: boolean;
   onToggle?: (key: string, next: boolean) => void;
   mark?: ReactNode;
+  /** wyglad/2fa: przełącznik zablokowany z powodem (np. MFA_HHL_ADMIN — konto bez 2FA na dwóch urządzeniach albo sesja bez kodu) */
+  blocked?: Partial<Record<string, string>>;
 }) {
   const [flags, setFlags] = useState(() => initialRaw.map((f) => ({ ...f, name: t(locale, `p3c_flag_${f.key}`), does: t(locale, `p3c_flag_${f.key}_fx`) })));
   const [ask, setAsk] = useState<(SecurityFlagRow & { name: string; does: string }) | null>(null);
@@ -49,7 +52,7 @@ export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mar
       role="switch"
       aria-checked={f.on}
       aria-label={f.name}
-      disabled={readOnly}
+      disabled={readOnly || (!!blocked?.[f.key] && !f.on)}
       onClick={() => setAsk(f)}
     ><span className="ox-track"><i /></span></button>
   );
@@ -61,7 +64,7 @@ export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mar
         <tbody>
           {flags.map((f) => (
             <tr key={f.key} data-flag={f.key}>
-              <th scope="row" data-label={up(t(locale, 'p3c_col_flag'))}><b>{f.name}</b></th>
+              <th scope="row" data-label={up(t(locale, 'p3c_col_flag'))}><b>{f.name}</b>{blocked?.[f.key] && !f.on ? <small className="ox-flag-why" data-flag-blocked>{blocked[f.key]}</small> : null}</th>
               <td data-label={up(t(locale, 'p3c_col_state'))}>{sw(f)}</td>
               <td data-label={up(t(locale, 'p3c_col_does'))}>{f.does}</td>
               <td data-label={up(t(locale, 'p3c_col_last'))} className="ox-flag-last" data-content>{last(f)}</td>
@@ -246,7 +249,7 @@ export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark }: {
       {mark ? <div className="ox-count-line"><span />{mark}</div> : null}
       <ul className="ox-thr-list">
         {rows.map((r) => {
-          const label = t(locale, `p3c_thr_${r.key}`);
+          const label = E49_THR[r.key] ?? t(locale, `p3c_thr_${r.key}`);
           const editing = edit?.key === r.key;
           const v = vals[r.key];
           return (
@@ -259,10 +262,10 @@ export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark }: {
                   ) : (
                     <label className="ox-thr-input"><input className="input" inputMode="decimal" aria-label={label} value={edit.draft} onChange={(e) => setEdit({ ...edit, draft: e.target.value })} /><span>{r.unit}</span></label>
                   )}
-                  <span className="ox-thr-val"><span>— {t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
+                  <span className="ox-thr-val"><span>— {E49_THR[`${r.key}_fx`] ?? t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
                 </span>
               ) : (
-                <span className="ox-thr-val"><b data-content>{fmt(v)} {r.unit}</b> <span>— {t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
+                <span className="ox-thr-val"><b data-content>{fmt(v)} {r.unit}</b> <span>— {E49_THR[`${r.key}_fx`] ?? t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
               )}
               {readOnly ? null : editing ? (
                 <span className="ox-thr-btns">

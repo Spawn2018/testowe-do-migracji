@@ -16,7 +16,8 @@ describe('AUTH-1 hasło', () => {
     expect(gate).toMatch(/signInWithPassword/);
     expect(gate).not.toMatch(/auth_email_allowed/);
     expect(gate).toMatch(/sendRecoveryLink/);
-    expect(gate).toMatch(/auth_reset_sent/);
+    /* wyglad/P10b-a (E37 pkt 7): jedna odpowiedź „Jeśli adres ma konto, wysłaliśmy link. Działa na każdym urządzeniu przez 1 h.” */
+    expect(gate).toMatch(/p10b_reset_sent/);
     expect(readFileSync('src/auth/sendAuthEmail.ts', 'utf8')).toMatch(/auth\/v1\/recover/);
     expect(gate).toMatch(/data-auth="link-pending"/);
     expect(gate).toMatch(/data-auth="set-password"/);

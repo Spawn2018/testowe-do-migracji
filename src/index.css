@@ -1062,6 +1062,8 @@ img,video{max-width:100%;height:auto}
 .bell-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sea);margin-right:7px;vertical-align:2px}
 .bell-to{flex:0 0 auto;font-family:var(--font-cond);font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--sea);white-space:nowrap;padding-top:2px}
 .bell-meta{font-size:12.5px;color:var(--ink-3);line-height:1.35;overflow-wrap:anywhere}
+.bell-chat{font-size:13.5px;line-height:1.4;color:var(--ink-2);overflow-wrap:anywhere}
+.bell-only{display:inline-block;margin-right:6px;padding:0 5px;border:1px solid var(--amber);color:var(--amber-ink);font-size:12px;line-height:1.4}
 .bell-empty{color:var(--ink-3)}
 .bell-general{margin:0;padding:10px 14px 12px;background:var(--surface-2);font-size:12.5px;line-height:1.45;color:var(--ink-2)}
 .bell-general .btn.bell-link{display:inline;border:0;background:none;padding:0;min-height:0;font:inherit;color:var(--sea);text-decoration:underline}
@@ -1069,6 +1071,10 @@ img,video{max-width:100%;height:auto}
   .bell-go{min-height:44px}
   .bell-title{font-size:15px}
   .bell-meta{font-size:13px}
+  .bell-chat{font-size:14px}
+  /* wyglad/P6-e: cele dotyku ≥ 44 px także w nagłówku i pod listą dzwonka (E8) */
+  .bell-hd .btn.bell-all{min-height:44px;padding:0 4px}
+  .bell-general .btn.bell-link{display:inline-flex;align-items:center;min-height:44px;min-width:44px;vertical-align:middle}
 }
 
 @media (max-width:768px){
@@ -1303,6 +1309,8 @@ img,video{max-width:100%;height:auto}
 .part-fail p{margin:0;font-size:14.5px;line-height:1.5;color:var(--ink-2)}
 .subbar-btn{flex:0 0 auto;padding:3px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink);font-size:13.5px}
 .subbar-btn:hover{background:var(--surface-2)}
+/* wyglad/P10b-a (E37 pkt 4): „Zamknij” przy komunikacie HHL; na telefonie „✕” 44 × 44 px */
+.subbar-close-x{display:none}
 .subbar-tag{display:inline-block;margin-right:12px;padding:1px 8px;border:1px solid var(--rule);background:var(--surface-2);color:var(--ink-2);font-family:var(--font-cond);font-weight:600;font-size:12px;letter-spacing:.08em;vertical-align:1px}
 .subbar-tag-ph{display:none}
 .subbar-until{color:var(--ink-3)}
@@ -1361,6 +1369,9 @@ img,video{max-width:100%;height:auto}
   .acc-row{min-height:44px;font-size:14px}
   .subbar{padding:8px 10px 8px 12px;font-size:14px;align-items:center}
   .subbar-btn{min-height:44px;font-size:14px}
+  .subbar-close{min-width:44px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+  .subbar-close-tx{display:none}
+  .subbar-close-x{display:inline;font-size:16px;line-height:1}
   .subbar-tag,.subbar-until{display:none}
   .subbar-tag-ph{display:inline}
   .subbar-tx .subbar-body{font-weight:400}
@@ -1577,6 +1588,10 @@ img,video{max-width:100%;height:auto}
 .etab-val .pill{font-family:var(--font-cond);font-size:11.5px;letter-spacing:.05em}
 .etab-sub{font-size:12.5px;line-height:1.45;color:var(--ink-3)}
 .etab.why .etab-sub{color:var(--ink-2)}
+/* wyglad/E49: linie wiatru, postoju, śliskości i objazdu w ETA */
+.etab-wx{list-style:none;margin:6px 0 0;padding:6px 0 0;border-top:1px dashed var(--rule);display:flex;flex-direction:column;gap:3px;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.etab-wx .is-hold{color:var(--red);font-weight:600}
+.etab-wx .etab-wx-attr{color:var(--ink-3);font-size:12.5px}
 .etab-howto{margin:-2px 0 12px;font-size:11.5px}
 
 .awiz-modal.scm{width:min(600px,calc(100vw - 24px))}

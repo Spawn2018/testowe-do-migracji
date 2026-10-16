@@ -25,6 +25,7 @@ const pl: Dict = {
   p3c_s_users: 'Użytkownicy',
   p3c_s_logins: 'Logowania',
   p3c_s_who: 'Kto co dostaje',
+  p3c_s_texts: 'Treści wiadomości',
   p3c_s_zones: 'SMS przy miejscach',
   p3c_s_bcast: 'Komunikat dla wszystkich',
   p3c_s_rates: 'Cennik i opłaty',
@@ -47,6 +48,7 @@ const pl: Dict = {
   p3c_d_users: 'Konta i zaproszenia. Imię, nazwisko i telefon są wymagane.',
   p3c_d_logins: 'Kto i kiedy logował się do Watch Tower.',
   p3c_d_who: 'Administrator HHL decyduje, które zdarzenie trafia do którego rodzaju konta i którym kanałem. Zmiana działa od razu i zapisuje się w Historii zmian.',
+  p3c_d_texts: 'Treść każdego SMS, e-maila, wpisu w dzwonku i e-maila logowania. Dane z transportu wstawia się przyciskami, a podgląd pokazuje wiadomość na prawdziwym transporcie.',
   p3c_d_zones: 'Kto dostaje SMS, gdy auto zbliża się do Śremu albo Boden i gdy wjeżdża na teren.',
   p3c_d_bcast: 'Baner nad treścią strony dla wybranych firm, widoczny do wskazanej daty.',
   p3c_d_rates: 'Wersje cennika KSH i SCX oraz procenty za anulowanie.',
@@ -68,7 +70,9 @@ const pl: Dict = {
 
   /* E5 (img/e5-desk): Dla mnie › Ten telefon / komputer */
   dev_title: 'Powiadomienia na telefonie',
-  dev_rule: 'Na telefon trafia tylko pilna sprawa „Do zrobienia”. Reszta czeka w dzwonku.',
+  /* W42 (D-20261015-1955-01, 15.10.2026, 19:57): e-mail zapasowy po 5 min — zdanie dopisane po wdrożeniu N4 (0219) */
+  /* wyglad/P6-f (D-20261016-0310-01 Cz13): wiadomości z Czatu też na telefon */
+  dev_rule: 'Na telefon trafiają pilne sprawy „Do zrobienia” i wiadomości z Czatu. Reszta czeka w dzwonku. Gdy telefon nie potwierdzi pilnego powiadomienia w ciągu 5 minut, dostaniesz je e-mailem.',
   dev_ios: 'iPhone · tylko z aplikacji na ekranie początkowym',
   dev_ios_1: 'Otwórz tower.log-mar.pl w Safari.',
   dev_ios_2: 'Udostępnij → „Do ekranu początkowego” → Dodaj.',
@@ -416,6 +420,7 @@ const en: Dict = {
   p3c_s_users: 'Users',
   p3c_s_logins: 'Sign-ins',
   p3c_s_who: 'Who gets what',
+  p3c_s_texts: 'Message texts',
   p3c_s_zones: 'SMS at places',
   p3c_s_bcast: 'Message to everyone',
   p3c_s_rates: 'Rates and fees',
@@ -438,6 +443,7 @@ const en: Dict = {
   p3c_d_users: 'Accounts and invitations. First name, last name and phone are required.',
   p3c_d_logins: 'Who signed in to Watch Tower and when.',
   p3c_d_who: 'The HHL administrator decides which event goes to which account type and through which channel. A change applies at once and is logged in Change history.',
+  p3c_d_texts: 'The text of every SMS, e-mail, bell entry and sign-in e-mail. Transport data is inserted with buttons and the preview shows the message on a real transport.',
   p3c_d_zones: 'Who gets an SMS when a truck approaches Srem or Boden and when it enters the site.',
   p3c_d_bcast: 'A banner above the page for selected companies, visible until the given date.',
   p3c_d_rates: 'KSH and SCX rate card versions and cancellation percentages.',
