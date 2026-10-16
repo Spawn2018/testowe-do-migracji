@@ -16,7 +16,7 @@ Wygląd i teksty (F8). Bez migracji, uprawnień i zapisów na serwer. Produkcja 
 | Brak objazdu dla zestawu | — | „Brak objazdu dla tego zestawu” + powód z HERE; zostaje tylko „Stoimy”. |
 | Szczegóły ETA (panel transportu) | bez wiatru | Linie: „Postój: Högakustenbron (E4) zamknięty, do 22:02 · decyzja SCX”, „Wiatr +14 min · porywy 22 m/s z boku · E4 Skellefteå–Piteå, 22:32 · prognoza SMHI”, „Śliskość +9 min · E4 Hudiksvall (do 25 km) · Trafikverket”, po decyzji „Objazd +35 min …”. Podpis „Źródło: SMHI (CC BY 4.0), dane przetworzone”. Największy wpływ pierwszy. |
 | Opcje › Progi | bez wiatru | 8 wartości ze zdaniem o skutku: wiatr — wolniej od 20 m/s; z boku +15 %; z przodu +5 %; postój od 25 m/s; ruszenie poniżej 20 m/s; czas na ruszenie 30 min; śliskość — zasięg 25 km i +15 %. Bez „15 m/s” (D-84 = 20 m/s). |
-| Pierwsze wczytanie | 396,3 kB gzip | 397,2 kB gzip (budżet 400). Sprawa „Objazd czy postój?” i dane demo ładują się osobno (Ryzyka); w pierwszym wczytaniu są tylko linie ETA (`e49Wx.ts`, `i18n/e49Wx.ts`). |
+| Pierwsze wczytanie | 396,3 kB gzip | **376,2 kB gzip** (budżet 400). Panel transportu (`LoadDrawer`) ładuje się osobno, pobierany w tle zaraz po starcie (`requestIdleCallback`, `lazyRetry`) — otwiera się bez czekania; zapas ok. 24 kB na wygląd P6–P10. Sprawa „Objazd czy postój?” i dane demo też osobno (Ryzyka). Bez tego suma PR #240–#243 dawała 398,7 kB. |
 
 Sprawdzone (podgląd demo, „teraz” 23.09.2026, 14:32; T-17; HHL, SCX; 1440, 768, 390, 360 px; jasny i ciemny):
 - e2e `e8-phone-gate` blok „wyglad/E49” — 3/3:
