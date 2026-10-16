@@ -2029,6 +2029,7 @@ test.describe('wyglad/P4-b panel transportu — Status E25 (img/e25-after), pase
     await statusTab(page);
     await page.locator('.drawer [data-action="change-status"]').click();
     const modal = page.locator('[data-status-change-modal]');
+    await expect(modal.locator('[data-status-select]')).toBeVisible();
     const opts = await modal.locator('[data-status-select] option').evaluateAll((els) => els.map((e) => (e as HTMLOptionElement).value));
     expect(opts[0]).toBe('ON_FERRY');
     expect(opts).not.toContain('PLANNED');
