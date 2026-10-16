@@ -1435,98 +1435,6 @@ test.describe('wyglad/P6 Ryzyka — E7 „Do zrobienia” i „Sytuacja na trasi
 });
 
 /**
- * wyglad/P6-b — panel transportu: Historia i Czat (E17, decyzje 07.10 20:57, img/e17-after).
- * „Teraz” 14.10.2026 — wpisy demo transportu SG-01 (dostarczony) są wtedy już w przeszłości.
- */
-test.describe('wyglad/P6-b panel transportu — Historia i Czat (E17)', () => {
-  test.describe.configure({ mode: 'serial', timeout: 300_000 });
-  const NOW_URL = `/#/?now=${encodeURIComponent('2026-10-14T10:00:00Z')}`;
-  async function openTab(page: Page, code: string, tab: number) {
-    await page.evaluate((c) => { window.location.hash = `#/transport/${c}`; }, code);
-    await page.waitForSelector('aside.drawer', { timeout: 10_000 });
-    await page.locator('.drawer .dtabs button').nth(tab).click();
-    await page.waitForTimeout(400);
-  }
-
-  test('komputer: Historia po polsku z filtrami i ukrytymi wpisami; Czat bez innych przycisków; KSH nie widzi „tylko HHL i SCX”; profil trasy ukryty', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await boot(page, 'HHL', false, NOW_URL);
-    await openTab(page, 'SG-01', 0);
-    await expect(page.locator('.drawer [data-route-profile]')).toHaveCount(0);
-    await expect(page.locator('.drawer .dtabs button').nth(4)).toHaveText(/^Czat/);
-    await expect(page.locator('.drawer [data-chat-unread]')).toHaveCount(1);
-    /* Historia */
-    await openTab(page, 'SG-01', 5);
-    await expect(page.locator('.drawer [data-hist-filter]')).toHaveText(['Wszystko', 'Statusy i trasa', 'Zasoby i awizacja', 'Numery', 'Dokumenty', 'Ceny']);
-    expect(await page.locator('.drawer [data-history] li').count()).toBeGreaterThan(5);
-    await expect(page.locator('.drawer [data-history]')).not.toContainText(/\b[A-Z]{2,}_[A-Z_]+\b|\bREADY:|vault/);
-    await expect(page.locator('.drawer [data-history]')).toContainText('Anna Wiśniewska // H&H Logistics');
-    await expect(page.locator('.drawer [data-history] s').first()).toBeVisible();
-    await expect(page.locator('.drawer [data-hist-hidden]')).toContainText('bez zmiany');
-    await page.locator('.drawer [data-hist-filter="NUM"]').click();
-    await expect(page.locator('.drawer [data-hist-filter="NUM"]')).toHaveAttribute('aria-pressed', 'true');
-    const cats = await page.locator('.drawer [data-history] li').evaluateAll((els) => els.map((e) => e.getAttribute('data-hist-cat')));
-    expect(cats.length).toBeGreaterThan(0);
-    expect(new Set(cats)).toEqual(new Set(['NUMER']));
-    /* Czat */
-    await openTab(page, 'SG-01', 4);
-    await expect(page.locator('.drawer [data-chat-compose] button')).toHaveCount(3);
-    await expect(page.locator('.drawer [data-carrier-actions], .drawer [data-awiz-chat-note]')).toHaveCount(0);
-    await expect(page.locator('.drawer [data-chat-msg][data-vis="HHL_SCX"]')).toHaveCount(1);
-    const before = await page.locator('.drawer [data-chat-msg]').count();
-    await page.locator('.drawer [data-chat-input]').fill('Wiadomość testowa do wszystkich');
-    await page.locator('.drawer [data-chat-input]').press('Enter');
-    await expect(page.locator('.drawer [data-chat-msg]')).toHaveCount(before + 1);
-    await expect(page.locator('.drawer [data-chat-msg]').last()).toContainText('Wysłane do HHL, SCX i KSH · nikt jeszcze nie otworzył');
-    await page.locator('.drawer [data-chat-vis="HHL_SCX"]').click();
-    await expect(page.locator('.drawer [data-chat-input]')).toHaveAttribute('placeholder', 'Napisz tylko do HHL i SCX…');
-    await page.locator('.drawer [data-chat-input]').fill('Druga linia');
-    await page.locator('.drawer [data-chat-input]').press('Shift+Enter');
-    await expect(page.locator('.drawer [data-chat-msg]')).toHaveCount(before + 1);
-    await page.locator('.drawer [data-chat-send]').click();
-    await expect(page.locator('.drawer [data-chat-msg]').last()).toHaveAttribute('data-vis', 'HHL_SCX');
-    /* po wyjściu z „Czatu” to, co było na ekranie, jest przeczytane — zakładka bez liczby */
-    await page.locator('.drawer .dtabs button').nth(5).click();
-    await expect(page.locator('.drawer [data-chat-unread]')).toHaveCount(0);
-    /* KSH: pisze do wszystkich, nie widzi rozmów HHL ↔ SCX */
-    await boot(page, 'KSH', false, NOW_URL);
-    await openTab(page, 'SG-01', 4);
-    await expect(page.locator('.drawer [data-chat-msg]').first()).toBeVisible();
-    await expect(page.locator('.drawer [data-chat-msg][data-vis="HHL_SCX"]')).toHaveCount(0);
-    await expect(page.locator('.drawer [data-chat-vis]')).toHaveCount(0);
-    await expect(page.locator('.drawer [data-chat-compose] button')).toHaveCount(1);
-  });
-
-  for (const role of ['HHL', 'SCX', 'KSH'] as const) {
-    test(`telefon ${role}: Historia (filtry w bok) i Czat (pole pisania na dole) — 0 w bramie E8`, async ({ page }) => {
-      await page.setViewportSize({ width: 390, height: 844 });
-      await boot(page, role, false, NOW_URL);
-      const hits: Hit[] = [];
-      const gate = async (name: string) => {
-        for (const width of [...WIDTHS, 768]) {
-          await page.setViewportSize({ width, height: 844 });
-          await page.waitForTimeout(150);
-          hits.push(...await measure(page, name, width, role));
-        }
-        await page.setViewportSize({ width: 390, height: 844 });
-      };
-      await openTab(page, 'SG-01', 5);
-      await expect(page.locator('.drawer [data-hist-filter="RES"]')).toHaveText('Zasoby');
-      /* E41: KSH bez numerów zleceń — także w Historii */
-      await expect(page.locator('.drawer [data-hist-filter="NUM"]')).toHaveCount(role === 'KSH' ? 0 : 1);
-      if (role === 'KSH') await expect(page.locator('.drawer [data-history] [data-hist-cat="NUMER"]')).toHaveCount(0);
-      await expect(page.locator('.drawer .ph-tag')).toHaveCount(0);
-      await gate('panel-historia');
-      await openTab(page, 'SG-01', 4);
-      const box = await page.locator('.drawer [data-chat-compose]').boundingBox();
-      expect(box && box.y + box.height).toBeLessThanOrEqual(844 + 1);
-      await gate('panel-czat');
-      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
-    });
-  }
-});
-
-/**
  * wyglad/P6-e — Czat: „Przeczytali” (kto i kiedy), wiadomość w dzwonku, wejście z powiadomienia
  * (D-20261016-0250-01 Cz11, D-20261016-0310-01 Cz23, D-20261016-0315-01). Demo: SG-01 — wiadomość HHL przeczytał SCX,
  * KSH jeszcze nie; rozmowa „tylko HHL i SCX” od SCX — w dzwonku tylko u HHL, nigdy u KSH.
@@ -1613,6 +1521,98 @@ test.describe('wyglad/P6-e — Czat: „Przeczytali”, dzwonek, odpowiedź z po
       await page.locator('.drawer [data-chat-read="yes"], .drawer [data-chat-read="list"]').first().click();
       await expect(page.locator('.drawer [data-chat-readers]')).toBeVisible();
       await gate('panel-czat-przeczytali');
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});
+
+/**
+ * wyglad/P6-b — panel transportu: Historia i Czat (E17, decyzje 07.10 20:57, img/e17-after).
+ * „Teraz” 14.10.2026 — wpisy demo transportu SG-01 (dostarczony) są wtedy już w przeszłości.
+ */
+test.describe('wyglad/P6-b panel transportu — Historia i Czat (E17)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const NOW_URL = `/#/?now=${encodeURIComponent('2026-10-14T10:00:00Z')}`;
+  async function openTab(page: Page, code: string, tab: number) {
+    await page.evaluate((c) => { window.location.hash = `#/transport/${c}`; }, code);
+    await page.waitForSelector('aside.drawer', { timeout: 10_000 });
+    await page.locator('.drawer .dtabs button').nth(tab).click();
+    await page.waitForTimeout(400);
+  }
+
+  test('komputer: Historia po polsku z filtrami i ukrytymi wpisami; Czat bez innych przycisków; KSH nie widzi „tylko HHL i SCX”; profil trasy ukryty', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL', false, NOW_URL);
+    await openTab(page, 'SG-01', 0);
+    await expect(page.locator('.drawer [data-route-profile]')).toHaveCount(0);
+    await expect(page.locator('.drawer .dtabs button').nth(4)).toHaveText(/^Czat/);
+    await expect(page.locator('.drawer [data-chat-unread]')).toHaveCount(1);
+    /* Historia */
+    await openTab(page, 'SG-01', 5);
+    await expect(page.locator('.drawer [data-hist-filter]')).toHaveText(['Wszystko', 'Statusy i trasa', 'Zasoby i awizacja', 'Numery', 'Dokumenty', 'Ceny']);
+    expect(await page.locator('.drawer [data-history] li').count()).toBeGreaterThan(5);
+    await expect(page.locator('.drawer [data-history]')).not.toContainText(/\b[A-Z]{2,}_[A-Z_]+\b|\bREADY:|vault/);
+    await expect(page.locator('.drawer [data-history]')).toContainText('Anna Wiśniewska // H&H Logistics');
+    await expect(page.locator('.drawer [data-history] s').first()).toBeVisible();
+    await expect(page.locator('.drawer [data-hist-hidden]')).toContainText('bez zmiany');
+    await page.locator('.drawer [data-hist-filter="NUM"]').click();
+    await expect(page.locator('.drawer [data-hist-filter="NUM"]')).toHaveAttribute('aria-pressed', 'true');
+    const cats = await page.locator('.drawer [data-history] li').evaluateAll((els) => els.map((e) => e.getAttribute('data-hist-cat')));
+    expect(cats.length).toBeGreaterThan(0);
+    expect(new Set(cats)).toEqual(new Set(['NUMER']));
+    /* Czat */
+    await openTab(page, 'SG-01', 4);
+    await expect(page.locator('.drawer [data-chat-compose] button')).toHaveCount(3);
+    await expect(page.locator('.drawer [data-carrier-actions], .drawer [data-awiz-chat-note]')).toHaveCount(0);
+    await expect(page.locator('.drawer [data-chat-msg][data-vis="HHL_SCX"]')).toHaveCount(1);
+    const before = await page.locator('.drawer [data-chat-msg]').count();
+    await page.locator('.drawer [data-chat-input]').fill('Wiadomość testowa do wszystkich');
+    await page.locator('.drawer [data-chat-input]').press('Enter');
+    await expect(page.locator('.drawer [data-chat-msg]')).toHaveCount(before + 1);
+    await expect(page.locator('.drawer [data-chat-msg]').last()).toContainText('Wysłane do HHL, SCX i KSH · nikt jeszcze nie otworzył');
+    await page.locator('.drawer [data-chat-vis="HHL_SCX"]').click();
+    await expect(page.locator('.drawer [data-chat-input]')).toHaveAttribute('placeholder', 'Napisz tylko do HHL i SCX…');
+    await page.locator('.drawer [data-chat-input]').fill('Druga linia');
+    await page.locator('.drawer [data-chat-input]').press('Shift+Enter');
+    await expect(page.locator('.drawer [data-chat-msg]')).toHaveCount(before + 1);
+    await page.locator('.drawer [data-chat-send]').click();
+    await expect(page.locator('.drawer [data-chat-msg]').last()).toHaveAttribute('data-vis', 'HHL_SCX');
+    /* po wyjściu z „Czatu” to, co było na ekranie, jest przeczytane — zakładka bez liczby */
+    await page.locator('.drawer .dtabs button').nth(5).click();
+    await expect(page.locator('.drawer [data-chat-unread]')).toHaveCount(0);
+    /* KSH: pisze do wszystkich, nie widzi rozmów HHL ↔ SCX */
+    await boot(page, 'KSH', false, NOW_URL);
+    await openTab(page, 'SG-01', 4);
+    await expect(page.locator('.drawer [data-chat-msg]').first()).toBeVisible();
+    await expect(page.locator('.drawer [data-chat-msg][data-vis="HHL_SCX"]')).toHaveCount(0);
+    await expect(page.locator('.drawer [data-chat-vis]')).toHaveCount(0);
+    await expect(page.locator('.drawer [data-chat-compose] button')).toHaveCount(1);
+  });
+
+  for (const role of ['HHL', 'SCX', 'KSH'] as const) {
+    test(`telefon ${role}: Historia (filtry w bok) i Czat (pole pisania na dole) — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role, false, NOW_URL);
+      const hits: Hit[] = [];
+      const gate = async (name: string) => {
+        for (const width of [...WIDTHS, 768]) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(150);
+          hits.push(...await measure(page, name, width, role));
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
+      };
+      await openTab(page, 'SG-01', 5);
+      await expect(page.locator('.drawer [data-hist-filter="RES"]')).toHaveText('Zasoby');
+      /* E41: KSH bez numerów zleceń — także w Historii */
+      await expect(page.locator('.drawer [data-hist-filter="NUM"]')).toHaveCount(role === 'KSH' ? 0 : 1);
+      if (role === 'KSH') await expect(page.locator('.drawer [data-history] [data-hist-cat="NUMER"]')).toHaveCount(0);
+      await expect(page.locator('.drawer .ph-tag')).toHaveCount(0);
+      await gate('panel-historia');
+      await openTab(page, 'SG-01', 4);
+      const box = await page.locator('.drawer [data-chat-compose]').boundingBox();
+      expect(box && box.y + box.height).toBeLessThanOrEqual(844 + 1);
+      await gate('panel-czat');
       expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
     });
   }
