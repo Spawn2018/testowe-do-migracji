@@ -191,10 +191,10 @@ export function pair(a: string | null | undefined, b: string | null | undefined,
   return { a: pa, b: pb, missingB: !pb };
 }
 
-/** Status po rozładunku: „dostarczono”; na placu: „na placu”; przed wyjazdem „–” (E15). */
+/** Dostarczone (E25: także „Rozładowany”): „dostarczono”; na placu: „na placu”; przed wyjazdem „–” (E15). */
 export function etaText(l: Pick<Load, 'status' | 'stage' | 'etaBoden' | 'etaPreLoad'>): 'done' | 'site' | 'none' | 'eta' {
-  if (['DELIVERED', 'READY_TO_INVOICE', 'INVOICED'].includes(l.status) || l.stage === 'DELIVERED') return 'done';
-  if (l.status === 'UNLOADING' || l.stage === 'SITE') return 'site';
+  if (['UNLOADING', 'DELIVERED', 'READY_TO_INVOICE', 'INVOICED'].includes(l.status) || l.stage === 'DELIVERED') return 'done';
+  if (l.stage === 'SITE') return 'site';
   if (l.status === 'CANCELLED' || l.etaPreLoad || !l.etaBoden || l.stage === 'PLAN') return 'none';
   return 'eta';
 }
