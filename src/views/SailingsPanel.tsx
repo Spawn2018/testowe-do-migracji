@@ -44,7 +44,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
   const rows = useMemo(() => sailRows(sailings, loads, now, { future, returns }), [sailings, loads, now, future, returns]);
   const reach = useMemo(() => reachOf(sailings), [sailings]);
   const reachLine = reach.length
-    ? svp(locale, 'sv_reach', { list: reach.map((r) => svp(locale, 'sv_reach_item', { line: sv(locale, `sv_reach_${r.line}`), date: sailDay(r.untilIso, now) })).join(', ') })
+    ? svp(locale, 'sv_reach', { list: reach.map((r) => svp(locale, 'sv_reach_item', { line: sv(locale, `sv_reach_${r.line}`), date: sailDay(r.untilIso) })).join(', ') })
     : null;
 
   const pills = (r: SailRow) => (
@@ -55,11 +55,11 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
     </>
   );
   const depCell = (r: SailRow) => (r.sailing.delayedDepartureAt
-    ? <><s className="sv-was">{sailTime(r.sailing.departureAt, now)}</s> {sailTime(r.dep, now)}</>
-    : sailTime(r.dep, now));
+    ? <><s className="sv-was">{sailTime(r.sailing.departureAt)}</s> {sailTime(r.dep)}</>
+    : sailTime(r.dep));
   const arrCell = (r: SailRow) => (r.sailing.delayedArrivalAt
-    ? <><s className="sv-was">{sailTime(r.sailing.arrivalAt, now)}</s> {sailTime(r.arr, now)}</>
-    : sailTime(r.arr, now));
+    ? <><s className="sv-was">{sailTime(r.sailing.arrivalAt)}</s> {sailTime(r.arr)}</>
+    : sailTime(r.arr));
   const codesBtn = (r: SailRow) => (r.codes.length
     ? (
       <button type="button" className="sv-codes" data-sail-loads={r.sailing.id} title={sv(locale, 'sv_loads_title')} onClick={() => onShowLoads?.(r.sailing.id)}>
@@ -75,7 +75,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
         type="button"
         className="chipbtn"
         data-sail-cancel={r.sailing.id}
-        onClick={() => { if (cancelSailing(r.sailing.id)) pushToast(`${t(locale, 'sail_cancelled')} · ${r.sailing.vessel} ${sailTime(r.sailing.departureAt, now)}`, 'HIGH'); }}
+        onClick={() => { if (cancelSailing(r.sailing.id)) pushToast(`${t(locale, 'sail_cancelled')} · ${r.sailing.vessel} ${sailTime(r.sailing.departureAt)}`, 'HIGH'); }}
       >
         {t(locale, 'sail_cancel')}
       </button>
@@ -167,7 +167,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
               if (ok) { setDelayId(null); pushToast(`${t(locale, 'sail_delayed')} · ${s.vessel}`, 'MEDIUM'); } else pushToast(t(locale, 'sail_err_ORDER'), 'HIGH');
             }}
           >
-            <h4 className="sec">{t(locale, 'sail_delay')} · {s.vessel} {sailTime(s.departureAt, now)}</h4>
+            <h4 className="sec">{t(locale, 'sail_delay')} · {s.vessel} {sailTime(s.departureAt)}</h4>
             <dl className="kv">
               <dt>{t(locale, 'sail_new_times')}</dt>
               <dd className="sv-times">
@@ -191,7 +191,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
           {rows.map((r) => (
             <li key={r.sailing.id} className={`sv-card${r.sailing.status === 'ODWOLANY' ? ' is-off' : ''}`} data-sailing={r.sailing.id} data-sail-status={r.sailing.status}>
               <div className="sv-c1"><b>{depCell(r)}</b><span>· {r.sailing.vessel}</span>{pills(r)}</div>
-              <div className="sv-c2">{ROUTE_SHORT[r.sailing.route]} · {svp(locale, 'sv_arr', { t: sailTime(r.arr, now) })}</div>
+              <div className="sv-c2">{ROUTE_SHORT[r.sailing.route]} · {svp(locale, 'sv_arr', { t: sailTime(r.arr) })}</div>
               <div className="sv-c3"><span>{sv(locale, sourceKey(r.sailing.source))}</span><span>·</span><span>{sv(locale, 'sv_loads_l')}</span>{codesBtn(r)}</div>
               {canAct(r) ? <div className="sv-acts">{actions(r)}</div> : null}
             </li>

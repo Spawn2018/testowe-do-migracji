@@ -6,6 +6,7 @@
 import { PANEL_FALLBACK, translateTvCode, type TvDomain } from './codes.ts';
 import { applyPhrases, hasSwedishWords } from './phrases.ts';
 import { plSeLocation } from './seLocation.ts';
+import { fmtDateTime } from '../time.ts';
 
 export interface RoadPolish {
   title: string;
@@ -26,9 +27,8 @@ function warsaw(iso: unknown): string {
   if (typeof iso !== 'string' || !iso) return '';
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return '';
-  return new Intl.DateTimeFormat('pl-PL', {
-    timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
-  }).format(d);
+  /* „16.10.2026, 08:05” — rok zawsze (właściciel 16.10.2026) */
+  return fmtDateTime(d, 'Europe/Warsaw');
 }
 
 function known(domain: TvDomain, code: unknown, unknown: string[]): string | null {

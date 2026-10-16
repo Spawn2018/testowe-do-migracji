@@ -20,7 +20,8 @@ function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-function partsInZone(
+/** Części chwili w strefie, zegar 24 h (północ = 0, nigdy 24). */
+export function partsInZone(
   at: Date,
   timeZone: string,
 ): { y: number; mo: number; d: number; h: number; mi: number; s: number } {
@@ -32,10 +33,10 @@ function partsInZone(
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    hour12: false,
+    hourCycle: 'h23',
   }).formatToParts(at);
   const g = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? '0');
-  return { y: g('year'), mo: g('month'), d: g('day'), h: g('hour'), mi: g('minute'), s: g('second') };
+  return { y: g('year'), mo: g('month'), d: g('day'), h: g('hour') % 24, mi: g('minute'), s: g('second') };
 }
 
 /** Offset of `timeZone` at instant `at`, as `+02:00` / `Z`. */
@@ -70,30 +71,89 @@ export function formatCalendarDay(day: string | null | undefined): string {
   return `${m[3]}.${m[2]}.${m[1]}`;
 }
 
+/* ── Jedyne formaty na ekranie (właściciel 16.10.2026, 13:58 i 14:09 — zmienia E21) ──────────────────
+ * data „16.10.2026”, godzina „08:05” (24 h), data z godziną „16.10.2026, 08:05”,
+ * zakres dat „12.10.2026–18.10.2026”, zakres godzin w dniu „16.10.2026, 08:00–12:00”,
+ * tydzień „t42 · 12.10.2026–18.10.2026”, dzień tygodnia przed datą „czw. 16.10.2026”.
+ * Rok zawsze — bez wyjątku dla bieżącego roku (reguła D17 „bez roku” zniesiona). */
+
+const isDay = (raw: string) => /^\d{4}-\d{2}-\d{2}$/.test(raw);
+
+/** „16.10.2026” — dzień kalendarza `RRRR-MM-DD` (bez przesuwania strefy) albo chwila ISO w strefie. */
+export function fmtDate(v: string | null | undefined, timeZone: string = TZ_OPS): string {
+  if (!v) return '—';
+  const raw = String(v).trim();
+  if (isDay(raw)) return formatCalendarDay(raw);
+  const d = parseInstant(raw);
+  if (!d) return /^\d{4}-\d{2}-\d{2}/.test(raw) ? formatCalendarDay(raw) : '—';
+  const p = partsInZone(d, timeZone);
+  return `${pad(p.d)}.${pad(p.mo)}.${p.y}`;
+}
+
+/** „08:05” — godzina chwili ISO w strefie; brak → „—”. */
+export function fmtTime(iso: string | number | Date | null | undefined, timeZone: string = TZ_OPS): string {
+  if (iso == null || iso === '') return '—';
+  const d = iso instanceof Date ? iso : typeof iso === 'number' ? new Date(iso) : parseInstant(iso);
+  if (!d || !Number.isFinite(d.getTime())) return '—';
+  const p = partsInZone(d, timeZone);
+  return `${pad(p.h)}:${pad(p.mi)}`;
+}
+
+/** „16.10.2026, 08:05”; sam dzień kalendarza → „16.10.2026”; brak → „—”. */
+export function fmtDateTime(iso: string | number | Date | null | undefined, timeZone: string = TZ_OPS): string {
+  if (iso == null || iso === '') return '—';
+  if (typeof iso === 'string') {
+    const raw = iso.trim();
+    if (isDay(raw)) return formatCalendarDay(raw);
+    const d = parseInstant(raw);
+    if (!d) return /^\d{4}-\d{2}-\d{2}/.test(raw) ? formatCalendarDay(raw) : '—';
+    iso = d;
+  }
+  const d = iso instanceof Date ? iso : new Date(iso);
+  if (!Number.isFinite(d.getTime())) return '—';
+  const p = partsInZone(d, timeZone);
+  return `${pad(p.d)}.${pad(p.mo)}.${p.y}, ${pad(p.h)}:${pad(p.mi)}`;
+}
+
+/** „12.10.2026–18.10.2026” (półpauza, bez spacji); jeden dzień → „12.10.2026”. */
+export function fmtDateRange(from: string | null | undefined, to: string | null | undefined, timeZone: string = TZ_OPS): string {
+  const a = from ? fmtDate(from, timeZone) : null;
+  const b = to ? fmtDate(to, timeZone) : null;
+  if (a && b) return a === b ? a : `${a}–${b}`;
+  return a ?? b ?? '—';
+}
+
+/** „16.10.2026, 08:00–12:00” w jednym dniu; przez północ „16.10.2026, 22:00–17.10.2026, 02:00”. */
+export function fmtDateTimeRange(from: string | null | undefined, to: string | null | undefined, timeZone: string = TZ_OPS): string {
+  if (!from || !to) return fmtDateTime(from || to, timeZone);
+  const a = fmtDateTime(from, timeZone);
+  const b = fmtDateTime(to, timeZone);
+  if (a === b) return a;
+  const [da] = a.split(', ');
+  const [db, tb] = b.split(', ');
+  return da === db && tb ? `${a}–${tb}` : `${a}–${b}`;
+}
+
+/** „t42 · 12.10.2026–18.10.2026”. */
+export function fmtWeek(n: number | string, from: string, to: string): string {
+  return `t${n} · ${fmtDateRange(from, to)}`;
+}
+
 export function formatInZone(
   iso: string | null | undefined,
   timeZone: CorridorZone,
-  opts?: { dateStyle?: 'short' | 'medium'; withTime?: boolean },
+  opts?: { withTime?: boolean },
 ): string {
   if (!iso) return '—';
   const raw = String(iso).trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return formatCalendarDay(raw);
+  if (isDay(raw)) return formatCalendarDay(raw);
 
   const d = parseInstant(raw);
   if (!d) {
     if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return formatCalendarDay(raw);
     return raw;
   }
-  const withTime = opts?.withTime !== false;
-  return new Intl.DateTimeFormat('pl-PL', {
-    timeZone,
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    ...(withTime
-      ? { hour: '2-digit' as const, minute: '2-digit' as const }
-      : {}),
-  }).format(d);
+  return opts?.withTime === false ? fmtDate(raw, timeZone) : fmtDateTime(d, timeZone);
 }
 
 /** Ops tower / schedule default — Europe/Warsaw. */
@@ -123,29 +183,16 @@ export function formatEtaBoden(iso: string | null | undefined): string {
 }
 
 /**
- * D17 — table dates: omit year when it matches the ops reference year
- * (context / current corridor year). Detail panels keep full `dd.MM.yyyy`
- * via formatCalendarDay / formatLoadPl / formatUnloadSe.
+ * Komórki tabel — data zawsze z rokiem (właściciel 16.10.2026; reguła D17 „bez roku w bieżącym roku” zniesiona).
+ * Calendar `YYYY-MM-DD` → `dd.MM.yyyy`.
  */
-export function refYearInOps(at: Date = new Date()): number {
-  return partsInZone(at, TZ_OPS).y;
-}
-
-/** Calendar `YYYY-MM-DD` → `dd.MM` when year === refYear, else `dd.MM.yyyy`. */
-export function formatTableDay(
-  day: string | null | undefined,
-  refYear: number,
-): string {
+export function formatTableDay(day: string | null | undefined): string {
   if (!day) return '—';
-  const m = String(day).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) return String(day);
-  const y = Number(m[1]);
-  const core = `${m[3]}.${m[2]}`;
-  return y === refYear ? core : `${core}.${m[1]}`;
+  return formatCalendarDay(day);
 }
 
 
-/** B-8.3 / B-8.11 — data w harmonogramie zawsze z rokiem; godzina z okna KSH gdy jest; brak godziny → „–” (bez zgadywania). */
+/** B-8.3 / B-8.11 — data w harmonogramie z rokiem; godzina z okna KSH gdy jest („16.10.2026, 08:05”); brak godziny → „16.10.2026, –” (bez zgadywania). */
 export function formatSchedTableDay(
   day: string | null | undefined,
   windowIso: string | null | undefined,
@@ -153,41 +200,33 @@ export function formatSchedTableDay(
 ): string {
   if (!day) return '—';
   const datePart = formatCalendarDay(day);
-  if (!windowIso) return `${datePart} –`;
+  if (!windowIso) return `${datePart}, –`;
   const d = parseInstant(windowIso);
-  if (!d) return `${datePart} –`;
-  const p = partsInZone(d, timeZone);
-  return `${datePart} ${pad(p.h)}:${pad(p.mi)}`;
+  if (!d) return `${datePart}, –`;
+  return `${datePart}, ${fmtTime(d, timeZone)}`;
 }
 
 /**
- * Instant or calendar day for table cells — same year rule as formatTableDay.
+ * Instant or calendar day for table cells — „16.10.2026, 08:05”.
  * Default withTime=true for ISO instants; date-only never shows time.
  */
 export function formatTableInZone(
   iso: string | null | undefined,
   timeZone: CorridorZone,
-  refYear: number,
   opts?: { withTime?: boolean },
 ): string {
   if (!iso) return '—';
   const raw = String(iso).trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return formatTableDay(raw, refYear);
-
+  if (isDay(raw)) return formatTableDay(raw);
   const d = parseInstant(raw);
   if (!d) {
-    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return formatTableDay(raw.slice(0, 10), refYear);
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return formatTableDay(raw.slice(0, 10));
     return raw;
   }
-  const p = partsInZone(d, timeZone);
-  const dayPart =
-    p.y === refYear ? `${pad(p.d)}.${pad(p.mo)}` : `${pad(p.d)}.${pad(p.mo)}.${p.y}`;
-  const withTime = opts?.withTime !== false;
-  if (!withTime) return dayPart;
-  return `${dayPart} ${pad(p.h)}:${pad(p.mi)}`;
+  return opts?.withTime === false ? fmtDate(raw, timeZone) : fmtDateTime(d, timeZone);
 }
 
-/** Compact `dd.MM HH:mm` in zone — replaces unsafe `.slice(5,16)`. */
+/** `dd.MM.yyyy, HH:mm` in zone — replaces unsafe `.slice(5,16)`; sam dzień → `dd.MM.yyyy`. */
 export function formatCompactInZone(
   iso: string | null | undefined,
   timeZone: CorridorZone,
@@ -195,14 +234,10 @@ export function formatCompactInZone(
   if (!iso) return '—';
   const d = parseInstant(iso);
   if (!d) {
-    if (/^\d{4}-\d{2}-\d{2}/.test(String(iso))) {
-      const day = formatCalendarDay(iso);
-      return day === '—' ? '—' : day.slice(0, 5); // dd.MM
-    }
+    if (/^\d{4}-\d{2}-\d{2}/.test(String(iso))) return formatCalendarDay(iso);
     return '—';
   }
-  const p = partsInZone(d, timeZone);
-  return `${pad(p.d)}.${pad(p.mo)} ${pad(p.h)}:${pad(p.mi)}`;
+  return fmtDateTime(d, timeZone);
 }
 
 export function formatEtaBodenCompact(iso: string | null | undefined): string {

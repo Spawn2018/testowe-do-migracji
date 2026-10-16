@@ -8,7 +8,7 @@
  */
 import type { Load, RoleId, Sailing } from '../types';
 import { stageTileOf, statusMarkers, trackingPhase, type StageTile } from './stageTiles';
-import { delayMinutesVsPlan, TZ_OPS } from './time';
+import { delayMinutesVsPlan, fmtTime, TZ_OPS } from './time';
 import { delayPillMinutes } from './prodDash';
 import { formatListDateTime } from './format';
 import { durText } from './p5Fees';
@@ -20,9 +20,8 @@ const PORT_PL: Record<string, string> = { GDN: 'Gdańsk', NYN: 'Nynäshamn', GDY
 /** „00:19” (czas polski). */
 export function hm(iso: string | null | undefined): string {
   if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat('pl-PL', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
+  const out = fmtTime(iso, TZ);
+  return out === '—' ? '' : out;
 }
 
 /** Kolor znacznika według etapu E28 (pkt 4): załadunek, w drodze (PL, port, prom, SE), na placu. */

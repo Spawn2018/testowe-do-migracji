@@ -19,8 +19,6 @@ export const E18_P15_ROWS = [
   ['eb51a481-ba12-4c38-a10c-cbde4b6c3234', 'Zakaz ruchu ciężarówek w Szwecji: E4: od Länsgr. Västerbottens/Norrbottens län vid Kinnbäck do Trafikplats Björkhammar oba kierunki w regionie Västerbottens (AC)', 'roboty', 'från Länsgr. Västerbottens/Norrbottens län vid Kinnbäck till Trafikplats Björkhammar båda riktningarna i Västerbottens län (AC)', '2026-08-03T00:00:00.000+02:00', '2026-12-31T16:00:00.000+01:00'],
 ] as const;
 
-const REF_YEAR = 2026;
-
 export function e18P15NewTitle(row: (typeof E18_P15_ROWS)[number]): string {
   return roadSeRepairTitle({
     currentTitle: row[1],
@@ -28,7 +26,6 @@ export function e18P15NewTitle(row: (typeof E18_P15_ROWS)[number]): string {
     event: row[3],
     od: row[4],
     doAt: row[5],
-    refYear: REF_YEAR,
   });
 }
 
@@ -48,14 +45,16 @@ describe('E18 P15 poprawka tytułów ROAD_SE', () => {
   it('przykład: węzeł, kierunek, region, czas E21', () => {
     const row = E18_P15_ROWS.find((r) => r[0].startsWith('0f692878'))!;
     expect(e18P15NewTitle(row)).toBe(
-      'Warunki drogowe E4: roboty drogowe, od węzła Piteå S do węzła Bergsviken, w kierunku Sundsvall, region Norrbotten, od 18.08, 06:51 do 31.12, 16:00',
+      'Warunki drogowe E4: roboty drogowe, od węzła Piteå S do węzła Bergsviken, w kierunku Sundsvall, region Norrbotten, od 18.08.2026, 06:51 do 31.12.2026, 16:00',
     );
   });
 
   it('migracja ma te same stałe tytuły', () => {
+    /* 0195 jest nałożona (13.10.2026) i nie zmienia się; rok w datach dodany 16.10.2026 (właściciel) — tytuły w bazie
+       poprawia wykonawca po stronie serwera, tu porównujemy treść 1:1 poza samym rokiem. */
     const sql = readFileSync('supabase/migrations/0195_e18_p15_poprawka.sql', 'utf8');
     for (const row of E18_P15_ROWS) {
-      const title = e18P15NewTitle(row).replace(/'/g, "''");
+      const title = e18P15NewTitle(row).replace(/(\d{2}\.\d{2})\.2026\b/g, '$1').replace(/'/g, "''");
       expect(sql).toContain(title);
       expect(sql).toContain(row[0]);
     }

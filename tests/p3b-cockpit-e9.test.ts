@@ -127,10 +127,10 @@ describe('E9 — kafelki Kokpitu (img/e9-after)', () => {
     // ostatnia dostawa: SG-02 w terminie, SG-01 dzień po planie → 1 z 2
     expect(by.otif.value).toBe('1');
     expect(by.otif.of).toBe('z 2');
-    expect(by.otif.desc).toBe('SG-02: plan 06.10, dostawa 06.10');
+    expect(by.otif.desc).toBe('SG-02: plan 06.10.2026, dostawa 06.10.2026');
     expect(by.otif.descShort).toBe('SG-02 w terminie');
-    expect(by.ferry.value).toBe('08.10, 18:00');
-    expect(by.ferry.valueShort).toBe('08.10 18:00');
+    expect(by.ferry.value).toBe('08.10.2026, 18:00');
+    expect(by.ferry.valueShort).toBe('08.10.2026, 18:00');
     expect(by.ferry.desc).toBe('Wawel GDN → NYN · fala 1,3 m · ryzyko niskie');
     expect(by.ferry.descShort).toBe('fala 1,3 m · niskie');
     expect(by.bills.desc).toBe('brak faktur HHL w systemie');

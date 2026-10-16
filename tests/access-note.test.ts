@@ -8,7 +8,7 @@ describe('E37 — komunikaty zdaniami', () => {
   it('sprawa zamknięta: data wygaśnięcia i transport', () => {
     const n = parseAccessNote(closedNote('2026-10-06T21:59:00Z', 'SG-03'));
     expect(n).toEqual({ kind: 'closed', until: '2026-10-06', code: 'SG-03' });
-    expect(accessNoteText(n!)).toBe('Ta sprawa jest już zamknięta (wygasła 06.10).');
+    expect(accessNoteText(n!)).toBe('Ta sprawa jest już zamknięta (wygasła 06.10.2026).');
   });
   it('sprawa zamknięta bez daty i bez transportu', () => {
     const n = parseAccessNote(closedNote(null, null));

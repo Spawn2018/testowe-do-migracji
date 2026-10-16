@@ -12,6 +12,7 @@ import { statusFromDb } from '../data/mappers';
 import { formatHistoryActor } from './historyActor';
 import { docCategoryLabel, eventTypeLabel, readyGateReasonLabel } from './enumLabels';
 import { ht, htHas, htp } from '../i18n/p6b';
+import { fmtDateTime as fmtDateTimeZ, fmtTime, formatCalendarDay } from './time';
 
 export type HistCat = 'STATUS' | 'TRASA' | 'ZASOBY' | 'NUMER' | 'DOKUMENT' | 'CENA' | 'PLAN' | 'IMPORT' | 'PROBA' | 'NOTATKA' | 'INNE';
 export type HistFilter = 'ALL' | 'ROUTE' | 'RES' | 'NUM' | 'DOC' | 'PRICE';
@@ -81,13 +82,10 @@ export interface HistRow {
 }
 
 const TZ = 'Europe/Warsaw';
-const fmtDateTime = (iso: string) => {
-  const d = new Date(iso);
-  const p = Object.fromEntries(new Intl.DateTimeFormat('pl-PL', { timeZone: TZ, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    .formatToParts(d).map((x) => [x.type, x.value]));
-  return `${p.day}.${p.month}.${p.year} ${p.hour}:${p.minute}`;
-};
-const fmtDay = (day: string) => `${day.slice(8, 10)}.${day.slice(5, 7)}.${day.slice(0, 4)}`;
+/** „07.10.2026, 12:00” (czas polski). */
+const fmtDateTime = (iso: string) => fmtDateTimeZ(iso, TZ);
+/** „07.10.2026”. */
+const fmtDay = (day: string) => formatCalendarDay(day.slice(0, 10));
 
 /** Wartość po polsku: status — nazwa, data — dd.mm.rrrr, tak / nie; obiekt — brak (nie drukujemy surowych danych). */
 function fmtVal(v: unknown, locale: Locale): string | null {
@@ -268,7 +266,7 @@ export function histRow(e: LoadEvent, locale: Locale, zones: ReadonlyMap<string,
 export interface HistDay { day: string; rows: HistRow[] }
 
 export const dayKey = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
-export const hhmm = (iso: string) => new Intl.DateTimeFormat('pl-PL', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+export const hhmm = (iso: string) => fmtTime(iso, TZ);
 /** „07.10.2026” */
 export const dmy = (day: string) => fmtDay(day);
 /** „07.10.2026 · środa” */

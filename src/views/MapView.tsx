@@ -13,7 +13,7 @@ import { StageBar, StageChip } from '../components/shell/StageBar';
 import { nextTrackingStarts } from '../lib/stageTiles';
 import { filterLoadsForRole } from '../lib/permissions';
 import { getNow } from '../lib/frozenNow';
-import { formatTableDay, refYearInOps } from '../lib/time';
+import { formatTableDay } from '../lib/time';
 import { useIsPhone } from '../lib/useIsPhone';
 import { headCounts, hm, mapRow, rowMatches, type MapRow } from '../lib/p9cMap';
 import type { Load } from '../types';
@@ -143,7 +143,6 @@ export function MapView() {
   );
   const head = headCounts(rows.filter(({ load, row }) => row.inWindow && rowMatches(load, row.label, '')).map(({ row }) => row));
   const nextStarts = useMemo(() => nextTrackingStarts(filterLoadsForRole(loads, role), nowIso, 3), [loads, role, nowIso]);
-  const refYear = refYearInOps(getNow());
   const filtersOn = !!stageFilter || !!search.trim() || timing !== 'all';
   const shownWithPos = list.filter(({ row }) => row.inWindow && row.pos.kind !== 'none').length;
   const mapEmpty = shownWithPos === 0;
@@ -315,7 +314,7 @@ export function MapView() {
                 return (
                   <div key={g.day} className="map-next-row" data-next-day={g.day}>
                     <span>
-                      <b>{tp(locale, 'p4_map_next_at', { day: formatTableDay(g.day, refYear) })}</b>
+                      <b>{tp(locale, 'p4_map_next_at', { day: formatTableDay(g.day) })}</b>
                       {' · '}
                       {g.loads.map((l) => mapRowLabel(rows, l)).join(', ')}
                     </span>

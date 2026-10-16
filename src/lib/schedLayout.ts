@@ -6,6 +6,7 @@
 import type { DocCategory, Load, RoleId } from '../types';
 import type { DocRequirement, DocStatusRow } from './docRequirements';
 import { isoWeekNumber } from './cockpitTiles';
+import { fmtDate, fmtTime } from './time';
 
 /* ── Kolumny ─────────────────────────────────────────────────────────────────────── */
 
@@ -116,10 +117,12 @@ export function saveSchedLayout(l: SchedLayout): void {
 
 const DAYS = ['niedz.', 'pon.', 'wt.', 'śr.', 'czw.', 'pt.', 'sob.'];
 
-/** „2026-10-05” → „05.10”. */
-export function ddmm(ymd: string | null | undefined): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ymd ?? '');
-  return m ? `${m[3]}.${m[2]}` : '–';
+/** „2026-10-05” → „05.10.2026” (rok zawsze — właściciel 16.10.2026); chwila ISO → dzień w strefie (domyślnie Polska). */
+export function dmy(ymdOrIso: string | null | undefined, tz?: string): string {
+  const v = (ymdOrIso ?? '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}/.test(v)) return '–';
+  const out = fmtDate(v, tz);
+  return out === '—' ? '–' : out;
 }
 
 /** Dzień tygodnia po polsku (plik ma „Monday”…, E21). */
@@ -129,12 +132,11 @@ export function dayPl(ymd: string | null | undefined): string {
   return DAYS[new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).getUTCDay()];
 }
 
-/** Godzina z okna planu w strefie miejsca (załadunek — Polska, dostawa — Szwecja). */
+/** Godzina „08:05” z okna planu w strefie miejsca (załadunek — Polska, dostawa — Szwecja). */
 export function hmIn(iso: string | null | undefined, tz: string): string {
   if (!iso) return '–';
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return '–';
-  return new Intl.DateTimeFormat('pl-PL', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).format(t);
+  const out = fmtTime(iso, tz);
+  return out === '—' ? '–' : out;
 }
 
 /** Dzisiejsza data w Polsce (RRRR-MM-DD). */
@@ -208,7 +210,7 @@ export type DocCell =
   | { tone: 'none' };
 
 /**
- * Dokumenty (E31): po terminie — „brak: …” i kto wgrywa; przed terminem — „… do dd.mm”; komplet; bez wymagań — „–”.
+ * Dokumenty (E31): po terminie — „brak: …” i kto wgrywa; przed terminem — „… do dd.mm.rrrr”; komplet; bez wymagań — „–”.
  * Stan wymagań ten sam co na stronie Dokumenty i w panelu (`doc_requirements_status`).
  */
 export function docCell(rows: readonly DocStatusRow[], reqs: readonly DocRequirement[]): DocCell {

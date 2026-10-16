@@ -3,6 +3,7 @@ import type { Locale } from '../types';
 import raw from '../data/ferry-sailings.json';
 import { getNow, getNowMs } from './frozenNow';
 import { voyageWaveLabelForDay } from './voyageSea';
+import { fmtDateTime } from './time';
 
 export type FerryVesselId = 'WAW' | 'NS';
 export type FerrySailingStatus =
@@ -196,16 +197,8 @@ export function ferryWidgetLabel(s: FerrySailing, locale: Locale = 'pl'): { cd: 
   const depMs = Date.parse(s.depLocal);
   const mins = Math.max(0, Math.round((depMs - now) / 60_000));
   const cd = `${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')} min`;
-  const parts = new Intl.DateTimeFormat('pl-PL', {
-    timeZone: 'Europe/Warsaw',
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(new Date(depMs));
-  const g = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  const when = `${g('day')}.${g('month')} ${g('hour')}:${g('minute')}`;
+  /* „16.10.2026, 18:00” — rok zawsze (właściciel 16.10.2026) */
+  const when = fmtDateTime(new Date(depMs), 'Europe/Warsaw');
   const dir = s.depPort === 'GDN' ? 'GDN→NYN' : 'NYN→GDN';
   return {
     cd,

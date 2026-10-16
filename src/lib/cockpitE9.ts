@@ -259,8 +259,8 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
         desc: L('p3b_ferry_none'), descShort: L('p3b_ferry_none'), tone: 'default' };
     }
     const when = formatListDateTime(ferry.depIso);
-    /* komputer „08.10, 18:00”, telefon „08.10 18:00” */
-    const whenShort = when.replace(', ', ' ');
+    /* komputer i telefon „08.10.2026, 18:00” (rok zawsze — właściciel 16.10.2026; na telefonie łamie się po przecinku) */
+    const whenShort = when;
     const wave = ferry.sea ? formatPlNumber(ferry.sea.waveM, 1) : '';
     /* SCX: także porywy (B7), gdy źródło je podaje */
     const gust = withGusts && ferry.sea?.gustKn != null ? formatPlNumber(ferry.sea.gustKn, 0) : null;

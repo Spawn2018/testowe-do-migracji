@@ -5,6 +5,7 @@
  */
 import type { FerryRoute, Load, Sailing } from '../types';
 import { effArrival, effDeparture } from './sailings';
+import { fmtDate, fmtDateTime } from './time';
 
 export type SailLine = 'POLFERRIES' | 'STENA';
 
@@ -27,28 +28,15 @@ export const ROUTE_SHORT: Record<FerryRoute, string> = {
 };
 
 const TZ = 'Europe/Warsaw';
-function parts(iso: string): Record<string, string> | null {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  const p = new Intl.DateTimeFormat('pl-PL', { timeZone: TZ, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d);
-  return Object.fromEntries(p.map((x) => [x.type, x.value]));
+
+/** „08.10.2026, 18:00” — rok zawsze (właściciel 16.10.2026). Czas polski. */
+export function sailTime(iso: string): string {
+  return fmtDateTime(iso, TZ);
 }
 
-/** „08.10, 18:00” — rok tylko, gdy inny niż bieżący („09.01.2027, 18:00”). Czas polski. */
-export function sailTime(iso: string, nowIso: string): string {
-  const p = parts(iso);
-  const n = parts(nowIso);
-  if (!p) return '—';
-  const year = n && n.year === p.year ? '' : `.${p.year}`;
-  return `${p.day}.${p.month}${year}, ${p.hour}:${p.minute}`;
-}
-
-/** „18.10” albo „09.01.2027” (zasięg rozkładu). */
-export function sailDay(iso: string, nowIso: string): string {
-  const p = parts(iso);
-  const n = parts(nowIso);
-  if (!p) return '—';
-  return n && n.year === p.year ? `${p.day}.${p.month}` : `${p.day}.${p.month}.${p.year}`;
+/** „18.10.2026” (zasięg rozkładu) — rok zawsze. */
+export function sailDay(iso: string): string {
+  return fmtDate(iso, TZ);
 }
 
 const byCode = (a: string, b: string) => a.localeCompare(b, 'pl', { numeric: true });
