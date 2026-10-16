@@ -1,7 +1,7 @@
 /**
  * E19-4 — uzupełnia dzienną migawkę wynikiem doradcy Supabase „security”.
  * Wywołanie: pg_cron → security_advisor_snapshot_tick → ta funkcja (service role).
- * Bez SUPABASE_ACCESS_TOKEN / SUPABASE_MGMT_TOKEN zapisuje tylko meta (flagi już w SQL).
+ * C14 / D-0330: sekret = ADVISOR_MGMT_TOKEN (nazwy SUPABASE_* nie da się ustawić w Edge Secrets).
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
@@ -46,26 +46,25 @@ Deno.serve(async (req) => {
     /* ignore */
   }
 
-  // C14 / D-0330: Supabase nie pozwala na sekrety SUPABASE_* — używamy ADVISOR_MGMT_TOKEN
-  const token = Deno.env.get('ADVISOR_MGMT_TOKEN')
-    ?? Deno.env.get('SUPABASE_ACCESS_TOKEN')
-    ?? Deno.env.get('SUPABASE_MGMT_TOKEN')
-    ?? '';
+  // C14 / D-0330: tylko ADVISOR_MGMT_TOKEN
+  const token = Deno.env.get('ADVISOR_MGMT_TOKEN') ?? '';
   const projectRef = Deno.env.get('SUPABASE_PROJECT_REF')
     ?? (url.match(/https:\/\/([a-z0-9]+)\.supabase\.co/i)?.[1] ?? '');
 
   let findings: AdvisorLint[] = [];
   let advisorOk = false;
   let advisorError: string | null = null;
-  if (token && projectRef) {
+  if (!token) {
+    advisorError = 'brak ADVISOR_MGMT_TOKEN';
+  } else if (!projectRef) {
+    advisorError = 'brak project ref';
+  } else {
     try {
       findings = await fetchSecurityLints(projectRef, token);
       advisorOk = true;
     } catch (e) {
       advisorError = e instanceof Error ? e.message : String(e);
     }
-  } else {
-    advisorError = 'brak ADVISOR_MGMT_TOKEN lub project ref';
   }
 
   const flat = findings.flatMap((lint) =>

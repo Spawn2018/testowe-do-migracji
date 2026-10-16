@@ -335,6 +335,21 @@
 .ox-dev-on{color:var(--go);font-weight:600}
 .ox-dev-off{color:var(--ink-3)}
 .ox-dev-btns{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px}
+/* wyglad/push-telefon (D-20261015-1955-01): „Sprawdź ten telefon” i wynik testu */
+.ox-dev-check{margin-top:14px;border-top:1px solid var(--rule-2)}
+.ox-dev-ck{list-style:none;margin:8px 0 4px;padding:0;display:flex;flex-direction:column;gap:10px}
+.ox-dev-ck li{display:flex;gap:12px;align-items:flex-start;font-size:15px;color:var(--ink)}
+.ox-dev-mk{flex:0 0 30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid currentColor;
+  font-family:var(--font-cond);font-size:18px;font-weight:700;color:var(--ink-3)}
+.ox-dev-mk.ok{color:var(--go)}
+.ox-dev-mk.bad{color:var(--red)}
+.ox-dev-mk.todo{color:var(--amber-ink)}
+.ox-dev-ck-tx{display:flex;flex-direction:column;gap:2px;min-width:0;padding-top:4px}
+.ox-dev-ck li[data-state="na"] .ox-dev-ck-lb{color:var(--ink-3)}
+.ox-dev-ck-hint{font-size:14px;color:var(--ink-2)}
+.ox-dev-res{margin:0}
+.ox-dev-res:empty{margin-top:-10px}
+.ox-dev-res.bad{color:var(--red)}
 @media (max-width:768px){
   .ox-dev-btns .btn,.ox-dev-here .btn{min-height:44px;flex:1 1 100%}
 }

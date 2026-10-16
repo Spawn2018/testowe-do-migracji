@@ -76,7 +76,8 @@ export function authErrorPl(message: string | undefined): string {
     return 'Hasło musi mieć co najmniej 12 znaków.';
   }
   if (/not authorized|Error sending|smtp/i.test(m)) {
-    return 'Wysyłka e-maili nie jest jeszcze skonfigurowana (SMTP Resend — krok właściciela).';
+    /* E37 „Komunikaty zdaniami”: bez nazw usług; szczegóły w Stanie systemu */
+    return 'Nie udało się wysłać e-maila. Spróbuj za kilka minut.';
   }
   if (/invalid.*email|unable to validate email/i.test(m)) return 'Nieprawidłowy adres e-mail.';
   return m || 'Nieznany błąd logowania.';

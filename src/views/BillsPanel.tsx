@@ -31,6 +31,8 @@ import { ISSUER, RECIPIENT, VAT_RATE, billDiff, billStatus, invoiceKpis, pending
 import { up } from '../components/options/up';
 import { ft, ftn, ftp } from '../i18n/p5';
 import { factoringOfferOf } from '../lib/p5Source';
+import { billLineFuel } from '../lib/p5cFuel';
+import { fc, fcp } from '../i18n/p5c';
 import { PaymentChoice } from '../components/invoices/Factoring';
 
 /** III-7 — historia sporu (zgłoszenie → odpowiedź / korekta wystawcy → rozstrzygnięcie) i odpowiedź wystawcy. */
@@ -467,11 +469,11 @@ function BillDetail({ bill }: { bill: Bill }) {
         <table>
           <thead>
             <tr>
-              <th>{t(locale, 'sched_col_code')}</th>
+              <th>{fc(locale, 'p5c_bd_load')}</th>
               <th>{t(locale, 'bill_col_unload')}</th>
               <th className="num">{t(locale, bill.direction === 'PRZYCHOD' && role === 'KSH' ? 'bill_col_expected_ksh' : 'bill_col_expected')}</th>
               <th className="num">{t(locale, 'bill_col_invoiced')}</th>
-              {bill.currency === 'PLN' ? <th>{t(locale, 'bill_col_fx')}</th> : null}
+              {bill.currency === 'PLN' ? <th>{fc(locale, 'p5c_bd_fx')}</th> : null}
               <th>{t(locale, 'bill_col_checks')}</th>
             </tr>
           </thead>
@@ -479,15 +481,26 @@ function BillDetail({ bill }: { bill: Bill }) {
             {bill.lines.map((ln) => {
               const l = byId.get(ln.loadId);
               const at = l ? unloadedAtOf(l) : null;
+              /* wyglad/P5-c (E39): przy pozycji — tydzień i mnożnik opłaty paliwowej oraz kwota z wyliczenia */
+              const fuel = billLineFuel(l, bill.direction, bill.currency, ln.fx, localDateOf(getNowIso()));
               return (
                 <tr key={ln.loadId} style={{ cursor: 'pointer' }} {...clickableRow(() => { if (l) selectLoad(l.id); })}>
-                  <td><span className="code" data-content>{l ? transportLabel(l, role) : '—'}</span></td>
+                  <td>
+                    <span className="code" data-content>{l ? transportLabel(l, role) : '—'}</span>
+                    {fuel ? (
+                      <span className="inv-sub inv-fuel" data-bill-fuel={fuel.week} data-deur-exempt="fuel-index">
+                        {fcp(locale, 'p5c_bd_fuel', { week: fuel.week, mult: formatPlNumber(fuel.mult, 2) })}
+                        {fuel.forecast ? ` · ${fc(locale, 'p5c_bd_fuel_fc')}` : ''}
+                        {fuel.amount != null ? ` · ${fcp(locale, 'p5c_bd_fuel_amt', { amt: formatPlNumber(fuel.amount, 2), cur: fuel.currency })}` : ''}
+                      </span>
+                    ) : null}
+                  </td>
                   <td>{fmtDay(at ? localDateOf(at) : null)}</td>
                   <td className="num"><Amount n={ln.expectedNet} cur={bill.currency} /></td>
                   <td className="num"><Amount n={ln.invoicedNet} cur={bill.currency} /></td>
                   {bill.currency === 'PLN' ? (
                     <td className="mono" data-deur-exempt="invoice-fx" data-content>
-                      {ln.fx ? `${ln.fx.tableNo} · ${ln.fx.mid.toFixed(4)} · ${fmtDay(ln.fx.effectiveDate)}` : '—'}
+                      {ln.fx ? `${ln.fx.tableNo} · ${formatPlNumber(ln.fx.mid, 4)} · ${fmtDay(ln.fx.effectiveDate)}` : '—'}
                     </td>
                   ) : null}
                   <td>
@@ -533,7 +546,7 @@ function BillDetail({ bill }: { bill: Bill }) {
         <div className="filters" data-bill-actions="verify">
           {/* wyglad/P5 — E4 „Weryfikacja”: Akceptuj albo Sporna z powodem (bez osobnego „Zgodna”) */}
           <input className="input" style={{ flex: 1, minWidth: 220 }} placeholder={t(locale, 'bill_dispute_ph')} value={note} onChange={(e) => setNote(e.target.value)} aria-label={t(locale, 'bill_dispute_note')} data-dispute-note="" />
-          <button type="button" className="btn ghost" data-verify="SPORNA" onClick={() => verify('SPORNA')}>{VERIFICATION_LABEL.SPORNA[locale]}</button>
+          <button type="button" className="btn ghost" data-verify="SPORNA" onClick={() => verify('SPORNA')}>{ft(locale, 'p5_inv_dispute')}</button>
           <button type="button" className="btn" data-verify="ZAAKCEPTOWANA" onClick={() => verify('ZAAKCEPTOWANA')}>{ft(locale, 'p5_inv_accept')}</button>
         </div>
       ) : null}

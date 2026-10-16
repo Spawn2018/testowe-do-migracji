@@ -127,5 +127,86 @@ chk "plac Stegra: 1500 m"  "select abs(round(st_distance(st_centroid(geom)::geog
 chk "bufor Boden: 50 km"   "select abs(round(st_distance(st_centroid(geom)::geography, st_exteriorring(geom)::geography)::numeric) - 50000) < 500 from geofences where name='Bufor Boden'" t
 chk "auto 600 m od środka portu jest w strefie" "select st_contains(geom, st_setsrid(st_makepoint(18.6800 + 600/(111320*cos(radians(54.403))), 54.4030),4326)) from geofences where name='Port Gdańsk'" t
 
+# C17 (D-20261015-2110-01): CMR → READY_TO_INVOICE, obie faktury → INVOICED, UNLOADED nie powstaje
+echo; echo "[10] C17 — automat rozliczenia (CMR / faktury)"
+HHLO=00000000-0000-0000-0000-00000000a001
+KSHO=00000000-0000-0000-0000-00000000a002
+C17A=$(L 2a); C17B=$(L 2b); C17C=$(L 2c); C17D=$(L 2d)
+mk $C17A C17A "'HHL/C17A'" "'SCX/C17A'" DELIVERED null
+mk $C17B C17B "'HHL/C17B'" "'SCX/C17B'" DELIVERED null
+mk $C17C C17C "'HHL/C17C'" "'SCX/C17C'" DELIVERED null
+mk $C17D C17D "'HHL/C17D'" "'SCX/C17D'" AT_SITE null
+q "update loads set actual_delivery_at='2026-10-10 12:00+00' where id in ('$C17A','$C17B','$C17C')" >/dev/null
+# CMR przed dostawą — bez zmiany
+q "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
+    values ('$P','$C17A','CMR','test/c17-early.pdf','cmr.pdf','application/pdf',100,'2026-10-09 08:00+00')" >/dev/null
+chk "C17 CMR przed dostawą: status DELIVERED" "$(st $C17A)" DELIVERED
+# CMR po dostawie → READY_TO_INVOICE, jedno STATUS_AUTO
+q "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
+    values ('$P','$C17A','CMR','test/c17-ok.pdf','cmr2.pdf','application/pdf',100,'2026-10-10 14:00+00')" >/dev/null
+chk "C17 CMR po dostawie → READY_TO_INVOICE" "$(st $C17A)" READY_TO_INVOICE
+chk "C17 jedno zdarzenie STATUS_AUTO READY_TO_INVOICE" \
+  "select count(*) from load_events where load_id='$C17A' and event_type='STATUS_AUTO' and payload->>'to'='READY_TO_INVOICE'" 1
+# drugi CMR nie dubluje
+q "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
+    values ('$P','$C17A','CMR','test/c17-ok2.pdf','cmr3.pdf','application/pdf',100,'2026-10-10 15:00+00')" >/dev/null
+chk "C17 drugi CMR nie dubluje zdarzenia" \
+  "select count(*) from load_events where load_id='$C17A' and event_type='STATUS_AUTO' and payload->>'to'='READY_TO_INVOICE'" 1
+# faktury: najpierw obie na C17B (jeszcze bez CMR) — potem CMR → dwa zdarzenia
+DOC_K=aaaaaaaa-0000-4000-8000-00000000c171
+DOC_P=aaaaaaaa-0000-4000-8000-00000000c172
+INV_K=aaaaaaaa-0000-4000-8000-00000000c173
+INV_P=aaaaaaaa-0000-4000-8000-00000000c174
+INV_BAD=aaaaaaaa-0000-4000-8000-00000000c175
+q "insert into documents (id, project_id, load_id, category, storage_path, file_name, mime_type, size_bytes)
+    values ('$DOC_K','$P','$C17B','INVOICE','test/c17-fk.pdf','fk.pdf','application/pdf',100),
+           ('$DOC_P','$P','$C17B','INVOICE','test/c17-fp.pdf','fp.pdf','application/pdf',100)
+    on conflict (id) do nothing" >/dev/null
+q "insert into invoices (id, project_id, carrier_org_id, period_start, period_end, currency, direction,
+                         issuer_org_id, recipient_org_id, invoice_number, issue_date, week_key, document_id, status)
+    values ('$INV_K','$P','$SCXO','2026-10-06','2026-10-12','EUR','KOSZT','$SCXO','$HHLO','C17/K/1','2026-10-13','2026-W41','$DOC_K','SUBMITTED'),
+           ('$INV_P','$P','$SCXO','2026-10-06','2026-10-12','EUR','PRZYCHOD','$HHLO','$KSHO','C17/P/1','2026-10-13','2026-W41','$DOC_P','SUBMITTED')
+    on conflict (id) do nothing" >/dev/null
+q "insert into invoice_lines (invoice_id, load_id, direction, expected_amount, invoiced_amount)
+    values ('$INV_K','$C17B','KOSZT',1,1), ('$INV_P','$C17B','PRZYCHOD',1,1)
+    on conflict (invoice_id, load_id) do nothing" >/dev/null
+chk "C17 faktury przed CMR: nadal DELIVERED" "$(st $C17B)" DELIVERED
+q "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
+    values ('$P','$C17B','CMR','test/c17-b.pdf','cmr.pdf','application/pdf',100,'2026-10-10 16:00+00')" >/dev/null
+chk "C17 faktury+CMR → INVOICED" "$(st $C17B)" INVOICED
+chk "C17 dwa STATUS_AUTO (READY + INVOICED)" \
+  "select count(*) from load_events where load_id='$C17B' and event_type='STATUS_AUTO' and payload->>'to' in ('READY_TO_INVOICE','INVOICED')" 2
+# faktura DISPUTED nie liczy się — C17C
+q "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
+    values ('$P','$C17C','CMR','test/c17-c.pdf','cmr.pdf','application/pdf',100,'2026-10-10 16:00+00')" >/dev/null
+chk "C17 C → READY_TO_INVOICE po CMR" "$(st $C17C)" READY_TO_INVOICE
+DOC_BAD=aaaaaaaa-0000-4000-8000-00000000c176
+q "insert into documents (id, project_id, load_id, category, storage_path, file_name, mime_type, size_bytes)
+    values ('$DOC_BAD','$P','$C17C','INVOICE','test/c17-bad.pdf','bad.pdf','application/pdf',100) on conflict (id) do nothing" >/dev/null
+q "insert into invoices (id, project_id, carrier_org_id, period_start, period_end, currency, direction,
+                         issuer_org_id, recipient_org_id, invoice_number, issue_date, week_key, document_id, status)
+    values ('$INV_BAD','$P','$SCXO','2026-10-06','2026-10-12','EUR','KOSZT','$SCXO','$HHLO','C17/K/BAD','2026-10-13','2026-W41','$DOC_BAD','DISPUTED')
+    on conflict (id) do nothing" >/dev/null
+q "insert into invoice_lines (invoice_id, load_id, direction, expected_amount, invoiced_amount)
+    values ('$INV_BAD','$C17C','KOSZT',1,1) on conflict (invoice_id, load_id) do nothing" >/dev/null
+# druga strona SUBMITTED — nadal brak pary ważnej
+DOC_P2=aaaaaaaa-0000-4000-8000-00000000c177
+INV_P2=aaaaaaaa-0000-4000-8000-00000000c178
+q "insert into documents (id, project_id, load_id, category, storage_path, file_name, mime_type, size_bytes)
+    values ('$DOC_P2','$P','$C17C','INVOICE','test/c17-p2.pdf','p2.pdf','application/pdf',100) on conflict (id) do nothing" >/dev/null
+q "insert into invoices (id, project_id, carrier_org_id, period_start, period_end, currency, direction,
+                         issuer_org_id, recipient_org_id, invoice_number, issue_date, week_key, document_id, status)
+    values ('$INV_P2','$P','$SCXO','2026-10-06','2026-10-12','EUR','PRZYCHOD','$HHLO','$KSHO','C17/P/2','2026-10-13','2026-W41','$DOC_P2','SUBMITTED')
+    on conflict (id) do nothing" >/dev/null
+q "insert into invoice_lines (invoice_id, load_id, direction, expected_amount, invoiced_amount)
+    values ('$INV_P2','$C17C','PRZYCHOD',1,1) on conflict (invoice_id, load_id) do nothing" >/dev/null
+chk "C17 faktura DISPUTED: bez INVOICED" "$(st $C17C)" READY_TO_INVOICE
+# UNLOADED nie powstaje przy zapisie statusu (API)
+q "update loads set status='DELIVERED', actual_delivery_at='2026-10-10 12:00+00' where id='$C17D'" >/dev/null
+# bezpośredni zapis UNLOADED przez status_ctx — wyzwalacz/guard; sprawdzamy funkcję rangi + brak UNLOADED po load_status_set ścieżce jest w e25;
+# tu: auto_set_status z UNLOADED nie jest wołany z GPS; assert że po C17 brak ścieżki GPS do UNLOADED (już [7]) + enum zapisany jako DELIVERED w driver — sprawdzamy helper:
+chk "C17 UNLOADED i DELIVERED ta sama ranga" "select (load_status_rank('UNLOADED'::load_status)=load_status_rank('DELIVERED'::load_status))" t
+chk "C17 0 transportów UNLOADED w zestawie" "select count(*) from loads where status='UNLOADED' and id in ('$C17A','$C17B','$C17C','$C17D')" 0
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

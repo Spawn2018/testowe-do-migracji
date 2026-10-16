@@ -12,11 +12,12 @@ import type { Load, Locale } from '../../types';
 import { useTowerStore } from '../../store/useTowerStore';
 import { formatPlNumber } from '../../lib/format';
 import { fuelWeeksOf, feeRulesOf, feeSuggestionsOf, marginThresholdOf } from '../../lib/p5Source';
-import { isoWeek, marginPct, weekLabel } from '../../lib/p5Finance';
-import { durText, type FeeDecision, type FeeSuggestion } from '../../lib/p5Fees';
+import { addDays, isoWeek, marginPct, mondayOf, weekLabel, weekOf } from '../../lib/p5Finance';
+import { durText, reasonReaderOf, rejecterOf, rejectNeedsReason, rejectionVisibleTo, type FeeDecision, type FeeSide, type FeeSuggestion } from '../../lib/p5Fees';
 import { lazyRetry } from '../../lib/lazyRetry';
 import { localDateOf } from '../../lib/money/engine';
 import { ft, ftp } from '../../i18n/p5';
+import { fc, fcp } from '../../i18n/p5c';
 import { up } from '../options/up';
 import '../finance/finance.css';
 import './panel.css';
@@ -53,6 +54,9 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
   const [decided, setDecided] = useState<Record<string, FeeDecision>>({});
   const [feeOpen, setFeeOpen] = useState<FeeSuggestion | null | 'new'>(null);
   const [openCard, setOpenCard] = useState<string | null>(null);
+  /* wyglad/P5-c (E33): odrzucenie dopłaty z powodem — HHL odrzuca dopłatę SCX (powód wymagany), KSH dopłatę HHL */
+  const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [rejecting, setRejecting] = useState<{ id: string; side: FeeSide; draft: string } | null>(null);
   const fuelRow = useMemo(() => fuelWeeksOf([load], role === 'KSH' ? 'rev' : 'cost', today)[0] ?? null, [load, role, today]);
 
   const midCost = money && money.cost.fx.mid > 0 ? money.cost.fx.mid : null;
@@ -67,7 +71,8 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
   const fuelSide = money ? (role === 'KSH' ? money.rev : money.cost) : null;
   /* produkcja: brak daty załadunku → `fuel_ref_date` null → refDate '' (bez tygodnia i mnożnika) */
   const fuelRef = fuelSide && /^\d{4}-\d{2}-\d{2}/.test(fuelSide.fuel.refDate) ? fuelSide.fuel.refDate : null;
-  const fuelLabel = fuelSide && fuelRef ? `t${isoWeek(fuelRef)} · ${x2(fuelSide.fuel.applied)}` : null;
+  /* img/e39-after: „Opłata paliwowa t43 · ×1,13 prognoza” — stan z tej samej funkcji co Finanse */
+  const fuelLabel = fuelSide && fuelRef ? `t${isoWeek(fuelRef)} · ${x2(fuelSide.fuel.applied)}${fuelRow?.state === 'PROGNOZA' ? ` ${fc(locale, 'p5c_bd_fuel_fc')}` : ''}` : null;
   const margin = pr.revTotal - pr.costTotal;
   const mPct = marginPct(pr.revTotal, pr.costTotal);
   const below = threshold != null && mPct != null && mPct < threshold;
@@ -78,7 +83,17 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
   const hhlDec = (s: FeeSuggestion): FeeDecision | null => decided[`${s.id}:hhl`] ?? s.hhl;
   const scxDec = (s: FeeSuggestion): FeeDecision | null => decided[`${s.id}:scx`] ?? s.scx;
   const dec = (s: FeeSuggestion): FeeDecision | null => (role === 'SCX' ? scxDec(s) : hhlDec(s));
-  const setDec = (s: FeeSuggestion, side: 'hhl' | 'scx', d: FeeDecision) => setDecided((m) => ({ ...m, [`${s.id}:${side}`]: d }));
+  const setDec = (s: FeeSuggestion, side: FeeSide, d: FeeDecision, reason?: string) => {
+    setDecided((m) => ({ ...m, [`${s.id}:${side}`]: d }));
+    if (reason) setReasons((m) => ({ ...m, [`${s.id}:${side}`]: reason }));
+  };
+  const reasonOf = (s: FeeSuggestion, side: FeeSide) => reasons[`${s.id}:${side}`] ?? (side === 'hhl' ? s.hhlReason : s.scxReason) ?? null;
+  /* kto odrzucił: dopłatę HHL odrzuca KSH, dopłatę SCX — HHL; widzi to strona dopłaty i HHL */
+  const rejectedLine = (s: FeeSuggestion, side: FeeSide) => {
+    const r = reasonOf(s, side);
+    const who = rejecterOf(side);
+    return <span className="pp-rej-by" data-fee-rejected={side} tabIndex={-1}>{r ? fcp(locale, 'p5c_rej_by', { who, reason: r }) : fcp(locale, 'p5c_rej_by_nr', { who })}</span>;
+  };
   const feeTag = (s: FeeSuggestion) => {
     const eur = role === 'KSH' ? s.revEur : role === 'SCX' ? s.costEur : Math.max(s.costEur, s.revEur);
     const d = dec(s);
@@ -104,8 +119,17 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
         const kshWait = role === 'KSH' && d === 'CZEKA_KSH';
         /* dopłata dodana przez SCX czeka na HHL: „Akceptuję” / „Odrzucam” (09.10 13:09 pkt 5) */
         const hhlWait = role === 'HHL' && scxDec(s) === 'CZEKA_HHL';
+        /* formularz tylko dla firmy, która odrzuca tę stronę (Podgląd może zmienić rolę przy otwartym panelu) */
+        const rej = rejecting?.id === s.id && rejecterOf(rejecting.side) === role ? rejecting : null;
+        const rejNeed = rej ? rejectNeedsReason(rej.side) : false;
+        const rejWho = rej ? reasonReaderOf(rej.side) : 'HHL';
+        const showHhlRej = rejectionVisibleTo(role, 'hhl') && hhlDec(s) === 'ODRZUCONA';
+        const showScxRej = rejectionVisibleTo(role, 'scx') && scxDec(s) === 'ODRZUCONA';
+        /* fokus po zamknięciu formularza: „Odrzuć” po anulowaniu, karta po odrzuceniu */
+        const refocus = (sel: string) => window.setTimeout(() => (document.querySelector(`[data-fee-id="${s.id}"] ${sel}`) as HTMLElement | null)?.focus(), 0);
+        const closeRej = () => { setRejecting(null); refocus('[data-fee-reject]'); };
         return (
-          <article key={s.id} className={kshWait || hhlWait ? 'pp-fee is-wait' : 'pp-fee'} data-fee={s.kind} data-fee-place={s.place ?? ''}>
+          <article key={s.id} className={kshWait || hhlWait ? 'pp-fee is-wait' : 'pp-fee'} data-fee={s.kind} data-fee-place={s.place ?? ''} data-fee-id={s.id}>
             <div className="pp-fee-tx">
               <b>{feeTitle(s)}</b>
               <span data-content>{feeLine(s)}</span>
@@ -115,12 +139,49 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
               ) : role === 'SCX' && !s.noMeasure && !mine ? <span className="fin-muted">{ft(locale, 'p5_pr_fee_nothing')}</span> : null}
               {kshWait ? <span className="fin-muted">{ft(locale, 'p5_pr_fee_wait_KSH')}</span> : null}
               {hhlWait ? <span className="fin-muted" data-content>{ftp(locale, 'p5_pr_fee_wait_HHL', { fee: `${n2(s.costEur)} EUR` })}</span> : null}
+              {showHhlRej ? rejectedLine(s, 'hhl') : null}
+              {showScxRej ? rejectedLine(s, 'scx') : null}
+              {rej ? (
+                <form
+                  className="pp-rej"
+                  data-fee-reject-form={rej.side}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (rejNeed && !rej.draft.trim()) return;
+                    setDec(s, rej.side, 'ODRZUCONA', rej.draft.trim() || undefined);
+                    setRejecting(null);
+                    refocus('[data-fee-rejected]');
+                  }}
+                  onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); closeRej(); } }}
+                >
+                  <label className="pp-rej-l">
+                    <span>{fc(locale, 'p5c_rej_label')}</span>
+                    <input
+                      className="input"
+                      // eslint-disable-next-line jsx-a11y/no-autofocus -- fokus z „Odrzuć” na pole powodu
+                      autoFocus
+                      value={rej.draft}
+                      placeholder={fc(locale, 'p5c_rej_ph')}
+                      aria-describedby={`pp-rej-h-${s.id}`}
+                      aria-required={rejNeed || undefined}
+                      onChange={(e) => setRejecting({ ...rej, draft: e.target.value })}
+                    />
+                  </label>
+                  <span className="fin-muted" id={`pp-rej-h-${s.id}`}>{fcp(locale, rejNeed ? 'p5c_rej_need' : 'p5c_rej_opt', { who: rejWho })}</span>
+                  <span className="pp-rej-act">
+                    <button type="button" className="btn ghost" onClick={closeRej}>{fc(locale, 'p5c_rej_cancel')}</button>
+                    <button type="submit" className="btn" data-fee-reject-ok disabled={rejNeed && !rej.draft.trim()}>
+                      {fc(locale, 'p5c_rej_ok')}
+                    </button>
+                  </span>
+                </form>
+              ) : null}
             </div>
             <div className="pp-fee-act">
-              {kshWait || hhlWait ? (
+              {rej ? null : kshWait || hhlWait ? (
                 <>
                   <button type="button" className="btn" data-fee-accept onClick={() => setDec(s, kshWait ? 'hhl' : 'scx', 'PRZYJETA')}>{ft(locale, 'p5_pr_fee_accept')}</button>
-                  <button type="button" className="btn ghost" data-fee-reject onClick={() => setDec(s, kshWait ? 'hhl' : 'scx', 'ODRZUCONA')}>{ft(locale, 'p5_pr_fee_reject')}</button>
+                  <button type="button" className="btn ghost" data-fee-reject onClick={() => setRejecting({ id: s.id, side: kshWait ? 'hhl' : 'scx', draft: '' })}>{ft(locale, 'p5_pr_fee_reject')}</button>
                 </>
               ) : role === 'SCX' && !d ? (
                 <button type="button" className="btn ghost" disabled={!mine} onClick={() => setFeeOpen(s)}>{ft(locale, 'p5_pr_fee_add_scx')}</button>
@@ -140,7 +201,7 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
       <dl className="pp-rules">
         <dt>{ft(locale, 'p5_pr_rule_free')}</dt><dd>{ftp(locale, 'p5_pr_rule_free_v', { load: rules.freeHours.LOAD, unload: rules.freeHours.UNLOAD })}</dd>
         <dt>{ft(locale, 'p5_pr_rule_hour')}</dt><dd>{ftp(locale, 'p5_pr_rule_hour_v', { eur: rules.hourEur })}</dd>
-        <dt>{ft(locale, 'p5_pr_rule_day')}</dt><dd>{ftp(locale, 'p5_pr_rule_day_v', { eur: rules.dayEur })}</dd>
+        <dt>{ftp(locale, 'p5_pr_rule_day', { h: rules.dayAfterH })}</dt><dd>{ftp(locale, 'p5_pr_rule_day_v', { eur: rules.dayEur })}</dd>
         <dt>{ft(locale, 'p5_pr_rule_cancel')}</dt>
         <dd>{ftp(locale, 'p5_pr_rule_cancel_v', { d5: rules.cancelPct[5], d4: rules.cancelPct[4], d3: rules.cancelPct[3], d2: rules.cancelPct[2], d1: rules.cancelPct[1], d0: rules.cancelPct[0] })}</dd>
       </dl>
@@ -152,10 +213,18 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
     <div className="pp-fuel" data-pp-fuel data-deur-exempt="fuel-index">
       <b>{ftp(locale, 'p5_pr_fuel_card', { week: weekLabel(fuelRow.week) })}</b>
       {fuelRow.idx ? <span> · {ftp(locale, 'p5_pr_fuel_idx', { idx: weekLabel(fuelRow.idx) })}</span> : null}
-      {fuelRow.okq8 ? <span>: OKQ8 {fuelRow.okq8.avg != null ? `${formatPlNumber(fuelRow.okq8.avg, 2)} SEK/l → ` : ''}{x2(fuelRow.okq8.mult)}</span> : null}
-      {fuelRow.orlen ? <span> · Orlen {fuelRow.orlen.avg != null ? `${formatPlNumber(fuelRow.orlen.avg, 2)} PLN/l → ` : ''}{x2(fuelRow.orlen.mult)}</span> : null}
-      {fuelRow.applied != null ? <span> · {ftp(locale, 'p5_pr_fuel_lower', { x: x2(fuelRow.applied) })}</span> : null}
+      {/* wyglad/P5-c (E39): średnia z liczbą publikacji; przy prognozie — od kiedy ostateczna */}
+      {fuelRow.okq8 ? <span>: OKQ8 {fuelRow.okq8.avg != null ? `${formatPlNumber(fuelRow.okq8.avg, 2)}\u00a0SEK/l${fuelRow.okq8.n ? `\u00a0${fcp(locale, 'p5c_fuel_n', { n: fuelRow.okq8.n })}` : ''} → ` : ''}{x2(fuelRow.okq8.mult)}</span> : null}
+      {fuelRow.orlen ? <span> · Orlen {fuelRow.orlen.avg != null ? `${formatPlNumber(fuelRow.orlen.avg, 2)}\u00a0PLN/l${fuelRow.orlen.n ? `\u00a0${fcp(locale, 'p5c_fuel_n', { n: fuelRow.orlen.n })}` : ''} → ` : ''}{x2(fuelRow.orlen.mult)}</span> : null}
+      {fuelRow.applied != null ? (
+        <span> · {fuelRow.state === 'PROGNOZA' && fuelRow.running && fuelRow.idx
+          ? fcp(locale, 'p5c_fuel_running', { x: x2(fuelRow.applied), last: `t${weekOf(addDays(mondayOf(today), -7)).no}` })
+          : ftp(locale, 'p5_pr_fuel_lower', { x: x2(fuelRow.applied) })}</span>
+      ) : null}
       <span> · {ft(locale, `p5_fuel_state_${fuelRow.state}`).toLocaleLowerCase('pl-PL')}</span>
+      {fuelRow.state === 'PROGNOZA' ? (
+        <span data-pp-final={fuelRow.finalFrom ?? ''}> · {fuelRow.finalFrom ? fcp(locale, 'p5c_fuel_final_from', { date: dm(fuelRow.finalFrom) }) : fc(locale, 'p5c_fuel_until')}</span>
+      ) : null}
       <button type="button" className="linkbtn pp-link" onClick={() => useTowerStore.getState().setView('fin')}>▸ {ft(locale, 'p5_pr_fuel_link')}</button>
     </div>
   ) : null;
