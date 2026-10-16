@@ -126,3 +126,5 @@
 .fact-inline .input{width:96px}
 .fact-inline select.input{width:auto}
 .fact-ex-h{margin:6px 0 0;font-family:var(--font-cond);font-size:13px;letter-spacing:.07em;color:var(--ink-2)}
+/* audyt-C C-09 (img/e4-faktury-desk): VAT 23 % i brutto — tylko do odczytu, liczone przez system */
+.inv-field .input.inv-auto{background:var(--go-bg);border-color:var(--go);color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}

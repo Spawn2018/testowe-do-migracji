@@ -181,6 +181,9 @@ const PL: Record<string, string> = {
   p5_inv_empty: 'Brak faktur i tygodni do wystawienia.',
   p5_inv_new: 'Nowa faktura',
   p5_inv_new_h: 'Nowa faktura · tydzień {no}',
+  /* audyt-C C-09 (img/e4-faktury-desk): VAT i brutto liczy system z netto */
+  p5_inv_vat_auto: 'VAT 23 % · liczy system ({cur})',
+  p5_inv_gross_auto: 'Brutto · liczy system ({cur})',
   p5_inv_card_week: 'Tydzień {label}',
   p5_inv_card_net: '{net} EUR netto',
   p5_inv_card_pending: '{loads} dostarczone · czeka na {who}',

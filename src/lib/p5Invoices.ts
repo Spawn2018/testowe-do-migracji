@@ -4,12 +4,12 @@
  * z dostarczonych, jeszcze niezafakturowanych transportów, liczby kafelków. Bez zapisu i bez nowych zapytań.
  */
 import type { Bill, BillDirection, Load, RoleId } from '../types';
-import { addDaysIso, billCandidates, canVerifyBill, expectedNetFor, invoicedLoadIds, isoWeekMonday } from './invoices3';
+import { addDaysIso, BILL_VAT_RATE, billCandidates, canVerifyBill, expectedNetFor, invoicedLoadIds, isoWeekMonday } from './invoices3';
 import { isoWeekKeyLocal } from './money/engine';
 import { unloadedAtOf } from './money/loadMoney';
 
 export type InvStatus = 'DO_WYSTAWIENIA' | 'DO_WERYFIKACJI' | 'ZGODNA' | 'SPORNA' | 'ZAAKCEPTOWANA' | 'OPLACONA' | 'PO_TERMINIE';
-export const VAT_RATE = 0.23;
+export const VAT_RATE = BILL_VAT_RATE;
 
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
@@ -91,6 +91,18 @@ export function invoiceKpis(role: RoleId, bills: Bill[], pending: PendingWeek[],
 export function factoringPayout(net: number, gross: number, feePct: number): { fee: number; payout: number } {
   const fee = r2((net * feePct) / 100);
   return { fee, payout: r2(gross - fee) };
+}
+
+/**
+ * audyt-C C-16 (E31/E40; decyzja 16.10, 13:58 · 4 — data z rokiem): „t42 · 12.10.2026–18.10.2026” — tydzień w oknie
+ * nowej faktury, z kluczem „2026-W42” tylko w wartości pola.
+ */
+export function weekOptionLabel(weekKey: string): string {
+  const m = /^\d{4}-W(\d{2})$/.exec(weekKey);
+  if (!m) return weekKey;
+  const from = isoWeekMonday(weekKey);
+  const dmy = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
+  return `t${Number(m[1])} · ${dmy(from)}–${dmy(addDaysIso(from, 6))}`;
 }
 
 /** „41 · 05.10–11.10” z klucza tygodnia „2026-W41” (bez „t” — kolumna „Tydzień” w Fakturach; Dokumenty dodają „t”). */
