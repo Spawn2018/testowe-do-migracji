@@ -2591,6 +2591,44 @@ Tabela sprawdzalności (prompt 16.10):
 | D-20261016-0315-01 | Cz26–Cz33 | P6 | E17 Czat — dane |
 | D-20261016-0220-01 | Z1–Z3 E35 Automatyzacje | P8 | E35 — **włączone po #239** (`3bbb480e`) |
 
+## 2026-10-16 — dopiski włączone do planu (0305…1020)
+
+Tabela sprawdzalności (prompt 16.10, 11:30 i 11:40). Pliki dopisków wchodzą z PR wyglądu — nie kopiowane osobno.
+
+| dopisek | PR | paczka i pozycja w PLAN | punkty | test odbioru |
+|---|---|---|---|---|
+| D-20261016-0305-01 | #240 `wyglad/E49` | P6 E49 | pkt 1–5 (z 0230 Z1–Z4, Z6) | Z6 + zestaw `e49` |
+| D-20261016-0330-01 | #241 `wyglad/P6-e`; #242 `wyglad/P6-f` | P6 E17 Czat — dane; C3 wartości startowe | pkt 1–7 | Cz12, Cz24, Cz33; bloki `wyglad/P6-e`, `wyglad/P6-b`, `p6-history` |
+| D-20261016-0405-01 | #243 `wyglad/2fa` | P3-d Moje konto (pkt 1) i Przełączniki (pkt 8) | pkt 1–2 | pkt 3 |
+| D-20261016-0430-01 | #244 `wyglad/P10a-a` | P10a E22 | pkt 1–3 | pkt 4 (E22 pkt 5) |
+| D-20261016-0445-01 | #245 `wyglad/P9-a` | P9 E24 | pkt 1–4 | P9 Odbiór pkt 4 |
+| D-20261016-0530-01 | #246 `wyglad/P10b-a` | P10b E37 | pkt 1–4 | P10b Odbiór: testy z pkt 1–4 |
+| D-20261016-0615-01 | #248 `wyglad/P9-c` | P9 E29 | pkt 1–4 | P9 Odbiór pkt 6 (E29 pkt 11) |
+| D-20261016-0635-01 | #249 `wyglad/P9-d` | P9 E1 | zrobione w wyglądzie | — (dane bez zmian zakresu) |
+| D-20261016-0715-01 | #250 `wyglad/P9-e` | P9 E45 grupowanie | pkt 1–2 | P9 Odbiór pkt 4 |
+| D-20261016-0740-01 | #251 `wyglad/P9-f` | P9 Przegląd w panelu | pkt 1–2 | P9 Odbiór pkt 4 |
+| D-20261016-0810-01 | #252 `wyglad/P10b-b` | P10b Pomoc i „Co nowego” | pkt 1–2 | P10b Odbiór pkt 4 |
+| D-20261016-0845-01 | #253 `wyglad/P10b-c` | P10a E23 i E47; P10b E23 i E47; P11 E46 | pkt 1–6 | P10a/P10b Odbiór pkt 8; E46 do pierwszego testu „bez pomiaru” |
+| D-20261016-0930-01 | #254 `wyglad/P10b-d` | P10b E37 pierwsze wejście | pkt 1–4 | P10b Odbiór pkt 6 |
+| D-20261016-1020-01 | #256 `wyglad/P7-c` | P7 E38, E30, E20 | pkt 1–6 | TEST: 1366 px, eksport „t40–t41”, układ na drugim komputerze, telefon 390, kwoty i kolumny według firmy, waga elementu, „ZMIANA NUMERACJI” |
+
+E49 miejsca w kodzie → P6.  
+Czat — miejsca w kodzie, Cz14 → P6.  
+2FA urządzenia → P3-d.  
+E22 → wygląd (P10a-a), dane P10a.  
+E24-1 zapis zgłoszenia → P9.  
+E37 pkt 4 i 7 — dane → P10b.  
+E29 dane → P9.  
+E1 → wygląd (P9-d).  
+E45 grupowanie → wygląd (P9-e), dane P9.  
+E32 pkt 3 → wygląd (P9-f), dane P9.  
+E37 Pomoc → wygląd (P10b-b), dane P10b.  
+E23/E47/E19 pkt 7/E46 ekran Stan systemu → wygląd (P10b-c), dane P10a/P11.  
+E37 pierwsze wejście → wygląd (P10b-d), dane P10b.  
+E38 1A / E30 / E20 Harmonogram → wygląd (P7-c), dane P7.
+
+**Następny krok po tym commicie:** kolejka wyglądu #240 → #241 → #242 → #243 → #244 → #245 → #246 → #248 → #249 → #250 → #251 → #252 → #253 → #254 → #256, potem sobota #209 → #231 → #247. Potem C3…C15 → P3-d → P5 → P6 → …
+
 ## PAUZA — 2026-10-16 10:21 — **WZNOWIONE 10:59** (hasło „ruszamy”)
 
 **ZAKŁADKA — przerwane tu:** scalenie PR dokumentacji #255; potem sygnały dopisków; potem kolejka PR wyglądu.
