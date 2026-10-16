@@ -15,7 +15,8 @@ import type { AccountKind, OptGroup, OptScreen, OptScreenId } from '../component
 import { useDemoOptions } from '../components/options/useDemoOptions';
 import { ForMeScreen } from '../components/options/ForMeScreen';
 import { DeviceScreen } from '../components/options/DeviceScreen';
-import { myNotifyOf } from '../lib/forMeSource';
+import { myNotifyOf, useLiveNotify } from '../lib/forMeSource';
+import { NOTIFY_CATALOG } from '../lib/notifyCatalog';
 
 /* I-13: parametry SEFS tylko do odczytu (zakres wg RLS) — wyłącznie produkcja */
 const SefsReadOnly = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/SefsReadOnly')) : null;
@@ -52,11 +53,14 @@ export function SettingsView() {
     : profileRole === 'CARRIER_USER' ? 'CARRIER_USER' : 'CARRIER_DISPATCH';
   /* wyglad/audyt-E (W47 — właściciel 16.10, 13:58 i 14:09): KSH i SCX same ustawiają swoje powiadomienia w Co dostaję */
   const demo = useDemoOptions(locale, { kind, readOnly: true, my: myNotifyOf(kind) });
+  const live = useLiveNotify(kind);
   const noSource = <div className="note option-note">{t(locale, 'p3c_no_source')}</div>;
 
   const forme: OptScreen[] = [
     { id: 'account', right: 'own', body: demo?.bodies.account ?? (LiveAccount ? block(<LiveAccount />) : noSource) },
-    { id: 'forme', right: 'own', body: demo?.bodies.forme ?? <ForMeScreen locale={locale} kind={null} groups={null} /> },
+    { id: 'forme', right: 'own', body: demo?.bodies.forme ?? (live
+      ? <ForMeScreen locale={locale} kind={kind} groups={NOTIFY_CATALOG} prefs={live.prefs} onSave={live.save} />
+      : <ForMeScreen locale={locale} kind={null} groups={null} />) },
     {
       id: 'look',
       right: 'own',

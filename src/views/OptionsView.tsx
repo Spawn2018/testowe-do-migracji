@@ -31,7 +31,8 @@ import {
 } from '../lib/p5bSource';
 import { KshSyncSourceBlock, StatusScreen } from '../components/options/StatusScreen';
 import { sourceHealth } from '../lib/sysSource';
-import { myNotifyOf } from '../lib/forMeSource';
+import { myNotifyOf, useLiveNotify } from '../lib/forMeSource';
+import { NOTIFY_CATALOG } from '../lib/notifyCatalog';
 
 /** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */
 function savedText(locale: Locale, code: string): string {
@@ -142,6 +143,7 @@ export function OptionsView() {
      usunięte; w Dla mnie › Co dostaję osoba HHL ustawia swoje kanały tak samo jak KSH i SCX — jedno miejsce zapisu
      `myNotifyOf` (demo: magazyn strony; produkcja: wykonawca). „Oznacz wszystkie jako przeczytane” jest w dzwonku (E5). */
   const my = myNotifyOf(kind);
+  const live = useLiveNotify(kind);
   const demo = useDemoOptions(locale, { kind, readOnly: ro, my });
 
   if (role !== 'HHL') {
@@ -332,7 +334,9 @@ export function OptionsView() {
 
   const forme: OptScreen[] = [
     scr('account', pick('account', LiveAccount ? block(<LiveAccount />) : null), { right: 'own' }),
-    scr('forme', pick('forme', <ForMeScreen locale={locale} kind={null} groups={null} />), { right: 'own' }),
+    scr('forme', pick('forme', live
+      ? <ForMeScreen locale={locale} kind={kind} groups={NOTIFY_CATALOG} prefs={live.prefs} onSave={live.save} />
+      : <ForMeScreen locale={locale} kind={null} groups={null} />), { right: 'own' }),
     scr('look', (
       <>
         {/* wyglad/audyt-E (E-13; E37, E11 „tylko na Twoim koncie”): ten sam opis co u KSH i SCX */}

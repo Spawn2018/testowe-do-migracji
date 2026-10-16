@@ -162,7 +162,11 @@ Każda paczka:
 - **wygląd** = obraz etapu z `raport/img/` i najnowsze decyzje z `raport/index.html`; telefon: obraz telefonu, gdzie jest, inaczej zasady E8; komputer: obraz komputera, gdzie jest, inaczej układ ekranu bez zmian poza treścią etapu; miejsca bez obrazu — Z10;
 - **odbiór** = sekcja „Test” etapu + punkty „Odbiór” paczki + brama.
 
-Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODUKCJI (commit, godzina)` → `SPRAWDZONE (dopisek koordynatora)`. P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji`, a hash scalenia P0a wpisujesz w pierwszym wpisie P0b w `POSTEP.md`.
+Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODUKCJI (commit, godzina)` → `SPRAWDZONE (dopisek koordynatora)`.
+
+**Kolejka wyglądu (D-20261016-2130-01):** `wyglad/W-dane` PR #274 — scalenie i wdrożenie po skończonym punkcie C3 (#273), gdy `unit` i `visual` są zielone. Wygląd bez bazy (F8): „Inne pliki” z „+ Dodaj” (produkcja: `otherDocsOn()` = false do P5), przerywana linia objazdu (produkcja: `detourLinesOf()` = [] do P9), przeprawy z HERE z `map_display_state.ferries` (bez danych zostaje stały tor). Gdy `visual` jest czerwony przed commitem wzorców koordynatora — sygnał „VISUAL #274”. Plik dopisku wchodzi z PR, nie z `dopiski_nowe`.
+
+P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji`, a hash scalenia P0a wpisujesz w pierwszym wpisie P0b w `POSTEP.md`.
 
 ### P0-CI · Narzędzia na Windows (D-86, D-87) — NA PRODUKCJI — narzędzia, bez wdrożenia aplikacji
 - Według dopisku `D-20261011-2135-01`; dokończenia: `D-20261011-2254-01` (R1–R3), `D-20261012-0105-01` (R4–R6; R7–R9 do dokumentów).
@@ -369,6 +373,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
   - polisy: KSH widzi tylko polisę HHL, SCX tylko swoją, HHL obie; nazwa polisy HHL „OC przewoźnika — PZU”;
   - termin CMR z podpisem odbiorcy (L26); przypomnienie o polisie HHL (L27);
   - **polisy SCX i HHL dodawane raz** — podpinają się same do dokumentów każdego transportu, przy którym polisa jest ważna w dniu transportu (E31; polisa SCX od zatwierdzenia przez HHL); bez wgrywania polisy przy pojedynczym transporcie (decyzja 09.10 13:09 pkt 4, G-21, D-20261009-1309-01 R7).
+  - **S4 pkt 7 / pkt 3.1 (D-20261016-2130-01):** rodzaj „Inne” (`OTHER`). `documentFromRow`: `DOC_CAT.OTHER = 'OTHER'` (pliki `OTHER` z bazy nie są pomijane). `attachDocumentFile` i `addStoredDocument`: rodzaj `OTHER` — wiele plików, bez wersji i bez `supersedes` (jak `LASHING_PHOTOS`). Baza: wgrywa HHL i SCX przewoźnika transportu; KSH — odmowa; `visible_to` jak inne dokumenty transportu; Storage jak dziś (PDF i zdjęcia). `DOC_CAT_TO_DB.OTHER` jest w PR #274, więc odczyt wymagań (`docRequirementsServer`, `FROM_DB`) przyjmie wiersz `OTHER` z `doc_requirements`. Domyślnie takiego wiersza nie ma — „Inne” nie jest wymaganym dokumentem. Na końcu `otherDocsOn()` zwraca `true` także w produkcji — zmieniasz tylko ten warunek. Przycisk ma już warunek Podglądu (W38): w Podglądzie go nie ma. Test: SCX dodaje 2 pliki „Inne” do jednego transportu → oba w panelu, na stronie Dokumenty (filtr „Inne”) i w ZIP; KSH: brak przycisku i odmowa zapisu w bazie; Podgląd SCX (W38): brak przycisku, zapis → odmowa; zezwolenia i CMR nadal z wersją.
 - **E33** ceny i dopłaty:
   - **system liczy, nie wprowadza** (decyzja 09.10 13:09 pkt 5, G-22, D-20261009-1309-01 R8): podpowiedź po stronie HHL (część przychodowa) i SCX (część kosztowa) w oknie „Dopłata” z przyciskami „Dodaj” i „Nie dodaję”; dopłata dodana przez SCX → „czeka na HHL” → HHL „Akceptuję” / „Odrzucam”; dopłata dodana przez HHL → „czeka na KSH” → akceptuje KSH; do ceny trafia tylko dopłata dodana i zaakceptowana (pozycje „Do zrobienia” tych podpowiedzi — P6);
   - postój 750 EUR za dobę albo 75 EUR za godzinę (wolne: 6 h na załadunku, 4 h na rozładunku);
@@ -389,7 +394,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
   - `doc-requirements.test.ts` l.17–18;
   - `money*`, `invoices3`, `invoice-*`, `payment-reminders`, `b32-insurance-cover`, `i2k-doc-week`, `paliwo-auto-b`, `i31-sefs`, `i30-*`, `b4b-cmr-only`;
   - zestawy `money`, `insurance`, `storage`, `baf`, `i30`, `i31`.
-- **Ekrany — wygląd:** `wyglad/P5` (PR #201; Finanse E16/E39 + paczka E40, Faktury E4/E4b, Dokumenty E31, Opcje › Faktoring, Opcje › Zezwolenia i dokumenty, panel › „Ceny”/„Dokumenty”/okno „Dopłata” E33). Dane pod wygląd: `src/lib/p5Source.ts` według D-20261014-2005-01 S1–S5 (bez zmiany klas i tekstów wyglądu, F1).
+- **Ekrany — wygląd:** `wyglad/P5` (PR #201; Finanse E16/E39 + paczka E40, Faktury E4/E4b, Dokumenty E31, Opcje › Faktoring, Opcje › Zezwolenia i dokumenty, panel › „Ceny”/„Dokumenty”/okno „Dopłata” E33); `wyglad/W-dane` (PR #274; „Inne pliki” z „+ Dodaj”, E31 pkt 5 — D-20261016-2130-01). Dane pod wygląd: `src/lib/p5Source.ts` według D-20261014-2005-01 S1–S5 (bez zmiany klas i tekstów wyglądu, F1); rodzaj `OTHER` i `otherDocsOn()` = true — pkt 3.1.
 - **Odbiór:** sekcje „Test” E31, E33, E39, E16, E40; testy R7 i R8 z D-20261009-1309-01; faktura testowa na TEST zgodna z wyliczeniem co do grosza; KSH nie widzi kosztu ani marży, SCX nie widzi ceny KSH (test na TEST); test odbioru S1–S5 z D-20261014-2005-01; odbiór D1 (Z1 pkt 8) i D2 (Z2 pkt 6) z D-20261016-0200-01.
 
 ### P6 · Do zrobienia, ryzyka, panel i historia — DO ZROBIENIA
@@ -489,13 +494,13 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 
 ### P9 · Mapy — DO ZROBIENIA
 - **H-1 i H-3 — usunięcie** (D-20261016-0200-01 Z3): „Kontrola trasy” i „Przeszkody wzdłuż korytarza” usunięte na stałe (nie wracają); panel, warstwa map, Edge `route-check` / `corridor-obstacles`, puste tabele `route_checks` / `corridor_obstacles` / `corridor_fetches` (kopia 0 wierszy); zestawy `h1`/`h3` usunięte; zostają `corridor_polylines` i `corridor_conditions`. Odbiór Z3 pkt 7.
-- **E45 (uzupełnienie E49 Z3 pkt 8):** linia objazdu na mapie po decyzji SCX „Jedziemy objazdem”.
+- **E45 (uzupełnienie E49 Z3 pkt 8) — pkt 3.2 (D-20261016-2130-01), razem z P6 E49 Z3:** linia objazdu na mapie po decyzji SCX „Jedziemy objazdem”. Przy liczeniu objazdu zapisujesz geometrię trasy HERE Routing (od zjazdu z trasy do powrotu, uproszczona do ok. 200 punktów, `[szer., dł.]`) przy sprawie. Dla każdej obowiązującej decyzji „objazd” serwer daje `{ loadId, line, via, addKm, addMin }`. Gałąź produkcyjna `detourLinesOf()` czyta to pole. Decyzja przestaje obowiązywać, gdy zamknięcie jest odwołane albo auto wróciło na trasę — linia znika. Test: „Jedziemy objazdem” → linia na Mapie, w Kokpicie i w Przeglądzie; „Stoimy” → bez linii; zamknięcie odwołane → linia znika; „Trasa” odznaczona → linia schowana. Wygląd linii jest w `wyglad/W-dane` (PR #274); do P9 produkcja zostaje `detourLinesOf()` = [].
 - **E1** Kokpit i Mapa: kadr całej trasy (fitBounds), bez zapamiętywania przesunięcia; Przegląd: zoom 11 na pojeździe, co 60 s. Zrobione w wyglądzie — `wyglad/P9-d` (D-20261016-0635-01).
 - **E29** Mapa: wygląd `wyglad/P9-c`; dane D-20261016-0615-01 pkt 1–4.
   - tabela = transporty w oknie śledzenia; filtry „Opóźnione”, „Brak GPS”, „Bez pozycji” (L22);
   - kafelek zmienia zakres; bez deklaracji częstotliwości (L20).
 - **E45** trasy:
-  - promy z HERE (L56: najpierw sprawdzenie na TEST; brak odcinka promowego = wpis W, pkt 1 czeka na właściciela, pkt 2–5 idą dalej); bez kropek;
+  - promy z HERE — **pkt 3.3 (D-20261016-2130-01, L56):** najpierw sprawdzenie na TEST, czy HERE Routing zwraca odcinek promowy (`sections[].transport.mode = 'ferry'`) dla Gdańsk–Nynäshamn i Gdynia–Karlskrona. Jeśli tak — `map_display_state` dostaje `ferries: [{ leg: 'FERRY-GDN-NYN' | 'FERRY-GDY-KAA', points: [[szer., dł.], …] }]`, z tego samego odczytu co `roads`. Jeśli HERE nie ma odcinka promowego — wpis W w §5 (jak w L56) i zostają stałe tory. Element mapy ma `data-ferries` ze skrótem sprawdzenia, np. „FERRY-GDN-NYN: HERE · FERRY-GDY-KAA: tor — końce dalej niż 10 km od portów”. Wynik z TEST wpisujesz do `POSTEP.md`. Test: poprawny odcinek → rysowany zamiast toru; zła geometria → stały tor; jedna przeprawa z HERE → druga ze stałego toru. Bez kropek. Wygląd odczytu `ferries` jest w `wyglad/W-dane` (PR #274); bez danych zostaje stały tor;
   - checkbox „Trasa” chowa drogę i prom; statki AIS pod „Pojazdy”;
   - ostatni odcinek SE jak SG-03, z geometrią zapisaną w bazie (L57);
   - grupowanie aut na promie — wygląd `wyglad/P9-e`; dane D-20261016-0715-01 pkt 1–2;
@@ -507,7 +512,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
   - usunięcie pages.dev z Redirect URLs Supabase — właściciel (§5 W12);
   - komunikat zamiast szarej mapy (E24-1): wygląd `wyglad/P9-a`; zapis zgłoszenia dla HHL — D-20261016-0445-01 pkt 1–4.
 - **Testy do przepisania:** migawki mapy i Kokpitu; `aud01-mapa`, `aud01e-*`, `map-declutter`, `b1-vehicle-markers`, `bmapa`; zestawy `bmapa`, `h1`, `h3`.
-- **Ekrany:** Kokpit (mapa), Mapa, Przegląd w panelu — wygląd `wyglad/P9-f`; dane D-20261016-0740-01 pkt 1–2.
+- **Ekrany — wygląd:** Kokpit (mapa), Mapa, Przegląd w panelu — `wyglad/P9-f`; dane D-20261016-0740-01 pkt 1–2. Linia objazdu i przeprawy z HERE — `wyglad/W-dane` (PR #274, D-20261016-2130-01); dane pkt 3.2 i 3.3 w P9.
 - **Odbiór:** sekcje „Test” E29, E45, E24; test R5 z D-20261009-1309-01; zrzuty 1440 i 390 porównane z makietami E1, E29, E45; pkt 4 (test na TEST) D-20261016-0445-01; pkt 4 D-20261016-0715-01; pkt 4 D-20261016-0740-01; pkt 6 D-20261016-0615-01.
 
 ### P10a · Przeładowania, stan źródeł i błędy aplikacji — część bazy i funkcji — DO ZROBIENIA
@@ -733,3 +738,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 16.10.2026 08:45 | D-20261016-0845-01: E23/E47 dane w P10a, ekrany `wyglad/P10b-c` #253 w P10b, E46 `perfResults()` w P11 | koordynator; wykonawca |
 | 16.10.2026 09:30 | D-20261016-0930-01: pierwsze wejście E37 — wygląd `wyglad/P10b-d` #254; dane P10b | koordynator; wykonawca |
 | 16.10.2026 10:20 | D-20261016-1020-01: Harmonogram w układzie pliku (E38 1A, E30, E20) — wygląd `wyglad/P7-c` #256; dane P7 pkt 1–6 | koordynator; wykonawca |
+| 16.10.2026 21:30 | D-20261016-2130-01: `wyglad/W-dane` PR #274 — „Inne pliki” z „+ Dodaj”, linia objazdu, przeprawy z HERE (wygląd bez bazy, F8). Scalenie po skończonym C3 (#273), gdy unit i visual zielone. Dane: P5 pkt 3.1 (rodzaj OTHER, na końcu `otherDocsOn()` = true); P9 pkt 3.2 (geometria objazdu, `detourLinesOf()`); P9 pkt 3.3 (najpierw TEST — odcinek promowy HERE, inaczej W). Podgląd W38 bez zmian w planie | właściciel 16.10 21:13 i 21:22; koordynator |

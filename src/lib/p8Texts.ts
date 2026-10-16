@@ -115,7 +115,7 @@ export const MESSAGES: readonly MsgItem[] = [
   /* wyglad/audyt-E (E-03; E49 16.10, 02:08): wybór SCX przy zamkniętym moście albo drodze */
   I('SCX_DETOUR_CHOICE', 'risk', 'EMAIL', 'Decyzja SCX: objazd albo postój', '', ['code', 'order', 'closure', 'choice', 'author', 'link'],
     'Na trasie: {{closure}}. SCX wybrał: {{choice}} ({{author}}). ETA liczy ten wybór. Otwórz transport: {{link}}',
-    '{{code}}: decyzja SCX — {{choice}}', { planned: true }),
+    '{{code}}: decyzja SCX — {{choice}}'),
 
   I('LOAD_STATUS_CHANGED', 'load', 'EMAIL', 'Zmiana statusu', '', ['code', 'order', 'statusFrom', 'statusTo', 'time', 'link'],
     'Status: {{statusFrom}} → {{statusTo}} ({{time}}). Otwórz transport: {{link}}', '{{code}}: {{statusTo}}'),
@@ -136,10 +136,10 @@ export const MESSAGES: readonly MsgItem[] = [
   /* wyglad/audyt-E (E-03; E35 pkt 2): dawne reguły „Dojazd na plac” i „Wjazd przed port” — zdarzenia w „Kto co dostaje” */
   I('PRE_ARRIVAL', 'load', 'EMAIL', 'Auto 50 km przed placem', '', ['code', 'order', 'trailer', 'site', 'time', 'arrival', 'link'],
     'Auto {{trailer}} jest ok. 50 km przed celem: {{site}} (o {{time}}). Przyjazd ok. {{arrival}}. Otwórz transport: {{link}}',
-    '{{code}}: auto 50 km przed celem — {{site}}', { planned: true }),
+    '{{code}}: auto 50 km przed celem — {{site}}'),
   I('PRE_PORT', 'load', 'EMAIL', 'Auto 20 km przed portem', '', ['code', 'order', 'trailer', 'port', 'time', 'link'],
     'Auto {{trailer}} jest ok. 20 km przed portem {{port}} (o {{time}}). Otwórz transport: {{link}}',
-    '{{code}}: auto 20 km przed portem {{port}}', { planned: true }),
+    '{{code}}: auto 20 km przed portem {{port}}'),
 
   I('INVOICE_NEW', 'inv', 'EMAIL', 'Nowa faktura', '', INV_T,
     'Faktura {{invoiceNo}} ({{week}}), {{amount}}, termin {{due}}. Otwórz fakturę: {{link}}', 'Nowa faktura {{invoiceNo}} do weryfikacji'),
@@ -177,13 +177,13 @@ export const MESSAGES: readonly MsgItem[] = [
   /* wyglad/audyt-E (E-03; E23 decyzja 1 A, obraz E23): alarm źródła i „Wróciło”; E46: błąd aplikacji */
   I('SOURCE_DOWN', 'sys', 'EMAIL', 'Źródło danych nie działa', '', ['feed', 'since', 'effect', 'link'],
     '{{feed}} nie działa od {{since}}. Skutek: {{effect}}. Przypomnienie po 2 h, jeśli nie wróci. Stan systemu: {{link}}',
-    '{{feed}} nie działa od {{since}}', { planned: true }),
+    '{{feed}} nie działa od {{since}}'),
   I('SOURCE_BACK', 'sys', 'EMAIL', 'Źródło danych wróciło', '', ['feed', 'since', 'time', 'link'],
     '{{feed}} działa znowu od {{time}}. Przerwa trwała od {{since}}. Stan systemu: {{link}}',
-    'Wróciło: {{feed}}', { planned: true }),
+    'Wróciło: {{feed}}'),
   I('APP_ERROR', 'sys', 'EMAIL', 'Błąd aplikacji', '', ['error', 'times', 'people', 'page', 'time', 'link'],
     'Błąd „{{error}}”: {{times}} razy, u {{people}} osób, ostatnio o {{time}}, strona {{page}}. Błędy aplikacji: {{link}}',
-    'Błąd aplikacji: {{error}}', { planned: true }),
+    'Błąd aplikacji: {{error}}'),
 
   I('INVITE', 'login', 'LOGIN', 'Zaproszenie', 'Do: osoba zaproszona w Użytkownikach', LOGIN_T,
     'Dzień dobry,\n{{inviter}} zaprasza do Watch Tower — systemu kontroli transportów Śrem → Boden.\nOsoba: {{name}} · Firma: {{firm}} · Konto: {{account}}\n{{button}}\nLink jest ważny {{validity}}.',

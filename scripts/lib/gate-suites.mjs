@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 27, // +4 C1 zalew dzwonka (D-0300); wcześniej 23
   import: 66,
-  nullguard: 637, // +5 rio_tracking_open GUARD (0207 E44 H4); wcześniej +5 my_session_revoke
+  nullguard: 647, // +10 C3 my_notify_get/set (2× GUARD: 4 odmowy + kontrola HHL)
   i2: 540,
   i30: 10,
   i31: 9,
@@ -53,6 +53,7 @@ export const EXPECTED_LOCAL = {
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 29, // P4 E25 + C17 auto CMR/faktury (D-20261015-2110-01)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
+  c3: 15, // C3 macierz po zdarzeniu, czat, KSH bez stref i CMR
 };
 
 /**
@@ -118,6 +119,7 @@ export const SUITE_FILE = {
   e41: 'e41.sh',
   e25: 'e25.sh',
   'c16-push': 'c16-push.sh',
+  c3: 'c3.sh',
 };
 
 /** Jak uruchamiać lokalnie: boot = własna baza, tower = kopia tower_boot, pair = run.sh. */
@@ -163,6 +165,7 @@ export const LOCAL_RUN = {
   e41: 'tower',
   e25: 'tower',
   'c16-push': 'tower',
+  c3: 'boot',
 };
 
 /** Kolejność lokalnej bramy (jak dawny gate.sh). */
@@ -170,7 +173,7 @@ export const LOCAL_ORDER = [
   'security', 'status', 'storage', 'money', 'release', 'backup', 'session', 'archive',
   'watchdog', 'invite', 'risks', 'import', 'nullguard', 'i2', 'i30', 'i31', 'dec2', 'dec3',
   'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto', 'dwell', 'l13',
-  'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'c16-push',
+  'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'c16-push', 'c3',
 ];
 
 const NEED_SEED_BASE = new Set(['session']);
@@ -265,7 +268,7 @@ export function gateSteps() {
   }
   const rest = [
     'i30', 'i31', 'dec2', 'dec3', 'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto',
-    'dwell', 'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'c16-push', 'backup',
+    'dwell', 'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'c16-push', 'c3', 'backup',
   ];
   for (const name of rest) {
     if (!SUITE_FILE[name] || EXPECTED_TEST[name] == null) {

@@ -117,6 +117,10 @@ put(['RATE_CHANGE', 'SEFS_CHANGE'], () => ({ kind: 'options', path: '/opcje/cenn
 put(['CLIENT', 'BROADCAST', 'BANNER'], () => entry());
 // AUD-02: szablony powiadomień bez rozpoznanego zdarzenia źródłowego (noticeType) — karta transportu / decyzji.
 put(['RISK_OPEN', 'RISK_RESOLVED', 'RISK_SEVERITY', 'ZONE_ENTER', 'ZONE_EXIT', 'LOAD_STATUS_CHANGED'], (i) => transport(i.loadCode, 'status'));
+/* C3: nowe zdarzenia macierzy (E35, E49, E23, E47) — transport albo Stan systemu, nigdy strona główna. */
+put(['PRE_ARRIVAL', 'PRE_PORT', 'SCX_DETOUR_CHOICE'], (i) => transport(i.loadCode, 'status'));
+put(['SOURCE_BACK'], () => system('integracje'));
+put(['APP_ERROR'], () => system('bledy-aplikacji'));
 put(['DECISION_RESOLVED'], (i) => decision(i.decisionId));
 
 function realCode(code?: string | null): string {

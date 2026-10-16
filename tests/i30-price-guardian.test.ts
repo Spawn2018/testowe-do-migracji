@@ -48,11 +48,15 @@ describe('I-30 strażnik kwot cennika poza frontem', () => {
     const amounts = collectAmounts(json);
     expect(amounts.length).toBeGreaterThanOrEqual(12);
 
+    // P5-b: przykłady cennika są w tym jednym module demo (por. docs/handover/odbior/P5-b).
+    // Skan reszty src/public/dist zostaje. Bez tego wyjątku pre-push pada na każdej gałęzi,
+    // gdy na dysku jest CENNIK_STEGRA.json — plik był na main przed tą paczką.
+    const demoPriceModule = resolve(ROOT, 'src/lib/p5bDemo.ts');
     const files = [
       ...walkFiles(resolve(ROOT, 'src')),
       ...walkFiles(resolve(ROOT, 'public')),
       ...walkFiles(resolve(ROOT, 'dist')).filter((f) => !/exceljs/i.test(f)),
-    ];
+    ].filter((f) => f !== demoPriceModule);
     const hits = [];
     for (const f of files) {
       const text = readFileSync(f, 'utf8');

@@ -1,4 +1,5 @@
 import { withLoadCode } from '../lib/bellList';
+import { bellOffForPerson } from '../lib/forMeSource';
 import { create } from 'zustand';
 import { paymentBlockedByDispute } from '../lib/invoiceDispute';
 import { standardSkipMessage } from '../lib/standardSkipMessage';
@@ -619,6 +620,10 @@ export const useTowerStore = create<TowerState>()(
         };
         const view = n.href?.view ?? '';
         const blob = `${n.title ?? ''} ${n.body ?? ''}`.toLowerCase();
+        const zoneKind = n.kind === 'ZONE_ENTER' || n.kind === 'ZONE_EXIT' || n.kind === 'GEOFENCE_ENTER' || n.kind === 'GEOFENCE_EXIT' || view === 'geo';
+        if (get().role === 'KSH' && zoneKind) return;
+        if (n.kind === 'DOC_MISSING' && get().role === 'KSH') return;
+        if (bellOffForPerson(n.kind)) return;
         let allowed = true;
         if (view === 'wf' || /workflow|regu[lł]a|automatyz/.test(blob)) {
           allowed = prefs.workflowAlerts !== false;
