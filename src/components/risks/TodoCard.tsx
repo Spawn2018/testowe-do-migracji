@@ -19,6 +19,9 @@ import { stripTransportPrefix, transportLabel } from '../../lib/transportName';
 import { durText } from '../../lib/p5Fees';
 import { AUTO_RISK_CODES, autoRiskLabel, type AutoRiskCode } from '../../lib/sailings';
 import { DeliveredCheckCard } from '../drawer/DeliveredCheckCard';
+import { DetourCard } from './DetourCard';
+import { e49t } from '../../i18n/e49';
+import { timeOnly } from '../../lib/statusAxis';
 
 export interface CardCtx {
   role: 'HHL' | 'SCX';
@@ -42,6 +45,8 @@ export interface CardCtx {
   onGo: (i: TodoIssue) => void;
   onFee: (i: TodoIssue) => void;
   checkHandlers: (i: TodoIssue) => { onYes?: () => void; onNo?: () => void };
+  /** wyglad/E49: „Objazd czy postój?” — kto decyduje i zapis (null = nie podłączone) */
+  detourHandlers: (i: TodoIssue) => { canDecide: boolean; busy: boolean; onDecide: ((pick: 'HOLD' | 'DETOUR', note: string | null) => void) | null };
   decisions: DecisionsApi | null;
   mayResolve: (deciderRole: string | null) => boolean;
   onResolved: (i: TodoIssue, hint: string | null) => void;
@@ -95,6 +100,9 @@ export function issueTexts(i: TodoIssue, ctx: CardCtx): { name: string; detail: 
     return { name, detail };
   }
   if (i.check) return { name: '', detail: '' };
+  if (i.detour) {
+    return { name: e49t('e49_short', { place: i.detour.place }), detail: rtp(locale, 'p6_decides', { org }) + ` · ${timeOnly(i.detour.decideByIso)}` };
+  }
   const r = i.risk!;
   const name = stripTransportPrefix(riskText(locale, r.title, r.titleKey, r.titleParams), load?.code);
   /* „Odpowiada: X” z dawnego opisu zastępuje „uzupełnia / decyduje X” (E6) */
@@ -280,6 +288,14 @@ function IssueRow({ i, ctx, open, onToggle }: { i: TodoIssue; ctx: CardCtx; open
     return (
       <li className="rk-issue is-check" data-rk-issue={i.id}>
         <DeliveredCheckCard check={i.check} locale={locale} onYes={h.onYes} onNo={h.onNo} />
+      </li>
+    );
+  }
+  if (i.detour) {
+    const h = ctx.detourHandlers(i);
+    return (
+      <li className="rk-issue is-detour" data-rk-issue={i.id} data-src={i.src}>
+        <DetourCard c={i.detour} nowIso={ctx.nowIso} canDecide={h.canDecide} busy={h.busy} onDecide={h.onDecide} />
       </li>
     );
   }
