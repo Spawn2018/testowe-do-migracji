@@ -2513,7 +2513,7 @@ CI #229 na `ee689452`: unit / visual / `db` zielone; `npm audit --omit=dev --aud
 | #228 wyglad/P6-c | scalone `fd5562ff`; dpl `dpl_8Zn7b5LUwhjXeYot2aAFodPNFGD8` ~00:14; tower/makieta 200 |
 | #230 wyglad/P6-d | scalone `d6fc9ae8`; dpl `dpl_BfZ9gPTzdhMpbw5ZMKqNe5Jmpqb2` ~00:17; dopisek C17 w repo; tower/makieta 200 |
 
-unit + visual zielone przed każdym scaleniem; `npm audit` 0. #209/#231 (P7) — sobota (D-20261015-0130-01).
+unit + visual zielone przed każdym scaleniem; `npm audit` 0. #209/#231 (P7) — w kolejce bez czekania na dzień (D-20261015-0130-01, D-20261016-1345-01).
 
 **wyglad/P5-b NA PRODUKCJI — 668e00ea.**  
 **wyglad/P5-c NA PRODUKCJI — 3d20f53a.**  
@@ -2610,7 +2610,87 @@ Tabela sprawdzalności (prompt 16.10, 11:30 i 11:40). Pliki dopisków wchodzą z
 | D-20261016-0810-01 | #252 `wyglad/P10b-b` | P10b Pomoc i „Co nowego” | pkt 1–2 | P10b Odbiór pkt 4 |
 | D-20261016-0845-01 | #253 `wyglad/P10b-c` | P10a E23 i E47; P10b E23 i E47; P11 E46 | pkt 1–6 | P10a/P10b Odbiór pkt 8; E46 do pierwszego testu „bez pomiaru” |
 | D-20261016-0930-01 | #254 `wyglad/P10b-d` | P10b E37 pierwsze wejście | pkt 1–4 | P10b Odbiór pkt 6 |
-| D-20261016-1020-01 | #256 `wyglad/P7-c` | P7 E38, E30, E20 | pkt 1–6 | TEST: 1366 px, eksport „t40–t41”, układ na drugim komputerze, telefon 390, kwoty i kolumny według firmy, waga elementu, „ZMIANA NUMERACJI” |
+| D-20261016-1020-01 | #256 `wyglad/P7-c` | P7 E38, E30, E20 | pkt 1–6 | TEST: 1366 px, eksport „t40–t41”, układ na drugim komputerze, telefon 390, kwoty i kolumny według firmy, waga elementu, „ZMIANA NUMERACJI”; bramka visual (`etap4-ui`, `etap5-ui`, `aud03-ksh-panel.spec`, `d-eur-t`, `visual-states`) już przepisana w #256 (`56847e2`) — tylko sprawdzenie; zostaje `scheduleColumns.ts` w `tests/order-numbers.test.ts` |
+| D-20261016-1150-01 | #260 `wyglad/P7-d` | P7 E30 pkt 7 Rejsy | wygląd; danych do podłączenia nie ma | pkt 4 |
+| D-20261016-1230-01 | #260 niesie plik dopisku | P7 E38 — uzupełnienie W13 | pkt 2–5 | pkt 6 |
+| D-20261016-1345-01 | #261 `wyglad/E6-tel` niesie plik dopisku | P7 E32; P5; P6; P9; C3; C8; P8 | pkt 2 i pkt 3.1–3.10 | pkt 2.3 i testy z pkt 3 |
+
+Zadzwoń — kierowca odcinka (E6).
+
+Kolejka bez dni: #260 → #209 → #231 → #247 → #261 → kolejne PR koordynatora w kolejności numerów. Każdy zaraz po zielonych unit i visual.
+
+**DOPISEK 1345 WŁĄCZONY — commit `a33fe408`, kolejka bez dni (#260 → #209 → #231 → #247 → #261), E6 Zadzwoń → P7, pkt 3 → P5, P6, P9, C3, C8, P8; W46, W47 w §5.**
+
+D-20261016-1410-01:
+1. VAT 23 % z netto → P5 E4 (`register_invoice`, PDF, paczka; test).
+2. „Polisa HHL” → P5 D2; W46 zamknięte.
+3. Waluta faktury PLN albo EUR zapisana przy fakturze → P5 E4.
+4. Daty DD.MM.RRRR i godziny GG:MM → C6, P8 E43, P5, strażnik P11; wygląd #262 (szkic).
+5. W czasie promu kierowca SE → P7 E32; test na TEST: „Prom” → kierowca SE.
+6. Kolumna „Telefon kierowcy” i „☎ Zadzwoń” → wygląd #261; eksport XLSX z serwera w P7.
+7. KSH i SCX same ustawiają kanały → C3/C4; W47 zamknięte.
+
+Kolejka bez dni: #209 → #231 → #247 → #261 → #262 (gdy gotowy) → kolejne PR koordynatora.
+
+D-20261016-1620-01: kolejka #261 → #262 → #263 → #264 → #265. Daty z serwera → C6, P8 E43, P5, P11. P5: CMR, VAT, „Zafakturowane”, jedna opłata paliwowa, cennik, zezwolenia „Trasa”. P9: `h1_record_route_check` i `rk_route_obstacle`. C3/C4: `myNotifyOf` w bazie. SMHI próg 2 h. Hasło 12 znaków, litery i cyfry. C8: 0 × 403.
+
+D-20261016-1750-01: kolejka #261 → #267. Status ręcznie, `payload.source` i jedna liczba „Do zrobienia” → P6. `UNLOADING` = `DELIVERED` → C17. Tabela symboli i kurs NBP → P5. Dzwonek KSH → C3.
+
+**DOPISEK 1620 WŁĄCZONY — commit (ten docs), kolejka #261 → #262 → #263 → #264 → #265; daty z serwera → C6/P8/P5/P11; P5 pkt 3 i 5.3–5.4; P9 Z3; C3/C4 W47; SMHI; hasło; C8.**
+
+**DOPISEK 1750 WŁĄCZONY — commit (ten docs), kolejka #261 → #267; status ręcznie, payload.source, Do zrobienia → P6; UNLOADING → C17; tabela symboli, kurs NBP → P5; dzwonek KSH → C3.**
+
+D-20261016-1845-01: kolejka #261 `2a8a94b` → #262 `206e861` → #263 `6c98104` → #264 `0661115` → #265 `570215d` → #266 `e1ff7ba` → #267 `9a4aad5` → #268 (wzorce w toku).
+P7 — uzupełnienie W13: pole `kshSharePointSync` (produkcja ze stanu `ksh-sharepoint-sync`; HHL całe pole; KSH i SCX bez `lastRun`; przed pierwszym przebiegiem `null`; demo: odczyt sprzed 5 min, zapis wyłączony, sekret `2028-10-12`) oraz „Sprawdź teraz” tylko dla Administratora HHL.
+
+**DOPISEK 1845 WŁĄCZONY — commit (ten docs), kolejka #261 → #268; pole kshSharePointSync (produkcja, KSH/SCX, demo) i „Sprawdź teraz” → P7 uzupełnienie W13.**
+
+D-20261016-1905-01: VISUAL #268 — bez nowych wzorców (run 38934632601). Kolejka #265 → #266 → #267 → #268. Pliki dopisków 1845 i 1905 wchodzą z PR #269, nie z #268.
+P11 pkt 6: workflow `.github/workflows/baseline.yml` (`workflow_dispatch`, `mode` `compare` albo `update`, Chromium Playwright, 75 min, demo, port 4188, `FROZEN_NOW`). Matryca: szerokość 1366 oraz widoki według menu firmy (E29–E37, E9, Z12). Przebieg: `update` na `main` → gałąź `chore/baseline-audyt-RRRR-MM-DD` → sprawdzenie koordynatora i agenta kontrolnego (F7) → „BASELINE OK” → tag → `compare` = 0 zmienionych. `scripts/visual/gate.sh` zostaje lokalnie; w CI zastępuje go `baseline.yml`. Po P2-TILES, przed pkt 7 i `release-1.0`. W11: w planie — P11 pkt 6.
+
+**DOPISEK 1905 WŁĄCZONY — commit (ten docs), kolejka #265 → #268; VISUAL #268 bez nowych wzorców; regeneracja ujęć (`baseline.yml`) → P11 pkt 6; pliki dopisków z PR #269.**
+
+D-20261016-1950-01: kolejka #270 (`wyglad/P7-e2`, na `main`). #269 scalony.
+P7 — uzupełnienie W13: `sourceOk` = wynik ostatniej próby odczytu. `lastReadAt` = ostatni udany odczyt — nieudana próba go nie zmienia. Alarm `SOURCE_DOWN` w bazie tą samą regułą co widok (> 30 min od `lastReadAt`). Test: nieudana próba 5 min po odczycie → „Częściowo”, bez alarmu; 31 min bez odczytu → „Nie działa” i jeden alarm; udany odczyt → `sourceOk = true`, alarm zamknięty. Wygląd #268 + #270. Dopóki Stan systemu czeka na dane źródeł (D-20261016-0845-01), wiersz „Plik KSH (SharePoint)” stoi nad dzisiejszym panelem.
+
+**DOPISEK 1950 WŁĄCZONY — commit (ten docs), kolejka #270; sourceOk / lastReadAt / SOURCE_DOWN → P7 uzupełnienie W13.**
+
+D-20261016-2005-01: kolejka #270 → #271 (`wyglad/C13-teksty`, na `main`).
+C13 ✅ — koordynator, #271 (D-20261016-2005-01).
+
+**DOPISEK 2005 WŁĄCZONY — commit (ten docs), kolejka #270 → #271; C13 ✅ (koordynator).**
+
+D-20261016-2045-01: kolejka #272 (`wyglad/J4-ocena`, na `main`). #270 i #271 scalone.
+J4 ✅ (koordynator) — „Ocena przewoźników” w Kokpicie, PR #272.
+P5 przy C17: `carrier_scorecard` i `carrier_rate_load` biorą `UNLOADED`, `DELIVERED`, `READY_TO_INVOICE`, `INVOICED`. Dzień rozładunku: `(actual_delivery_at at time zone 'Europe/Warsaw')::date`. Test: `INVOICED` liczony i ocenialny; `CANCELLED` nie; KSH odmowa; granica północy.
+
+**DOPISEK 2045 WŁĄCZONY — commit (ten docs), kolejka #272; carrier_scorecard / carrier_rate_load + READY_TO_INVOICE, INVOICED i dzień w czasie polskim → P5 (C17); J4 ✅.**
+
+**DOPISEK 1410 WŁĄCZONY — commit `5666bcf4`, VAT 23 % i Polisa HHL → P5, daty DD.MM.RRRR → C6/P8/P5/P11, prom → kierowca SE, telefon w Harmonogramie, W46 i W47 zamknięte.**
+
+## 2026-10-16 — scalenie #209
+
+Wzorzec `stan-zablokowany` (dark) odświeżony w `ff508f2`. Visual zielony.
+
+#209 scalony — `b90619f3`.
+
+#231 scalony — `c375c5c6`.
+
+#247 scalony — `26060a5c`.
+
+Wdrożenie R7 z `main` `26060a5c`, 16.10.2026 14:36, `dpl_FvTyehHHmvV395JoSfQh6NnN1CeP`. JS `assets/index-DCNU0GbK.js`. tower.log-mar.pl i watch-tower-makieta.vercel.app → 200. 76 plików JS, 0× `service_role`. Obejmuje #209 `b90619f3`, #231 `c375c5c6` i #247 `26060a5c`.
+
+**VISUAL #261** (`wyglad/E6-tel`, `78c6c7b`): pada tylko `stan-najechanie` (dark). Kolejka stoi. #262 zostaje szkicem.
+
+E30 pkt 7 Rejsy → wygląd (P7-d).
+
+P7 — uzupełnienie W13:
+- odczyt: od 16.10, plik → Watch Tower co 5 min (przełącznik zapisu wyłączony);
+- zapis: po pliku testowym od działu IT KSH (przyszły tydzień); właściwy plik po zgodzie właściciela;
+- stan: pole `kshSharePointSync` (`lastReadAt`, `lastWriteAt`, `writeEnabled`, `sourceOk`, `secretExpiresOn`, `lastRun.created` / `changed` / `skipped` / `ntg` / `cases`) — typ w `src/types.ts`, demo w `src/data/seed.ts`; wygląd linii i wiersza w Stanie systemu robi koordynator (`wyglad/P7-e`).
+
+**DOPISEK 1150 WŁĄCZONY — commit `8bd2c9ba`, P7: E30 pkt 7 Rejsy → wygląd.**  
+**DOPISEK 1230 WŁĄCZONY — commit `8bd2c9ba`, P7: uzupełnienie W13 (odczyt teraz, zapis po pliku testowym); W29, W31 zamknięte.**
 
 E49 miejsca w kodzie → P6.  
 Czat — miejsca w kodzie, Cz14 → P6.  
@@ -2627,7 +2707,58 @@ E23/E47/E19 pkt 7/E46 ekran Stan systemu → wygląd (P10b-c), dane P10a/P11.
 E37 pierwsze wejście → wygląd (P10b-d), dane P10b.  
 E38 1A / E30 / E20 Harmonogram → wygląd (P7-c), dane P7.
 
-**Następny krok po tym commicie:** kolejka wyglądu #240 → #241 → #242 → #243 → #244 → #245 → #246 → #248 → #249 → #250 → #251 → #252 → #253 → #254 → #256, potem sobota #209 → #231 → #247. Potem C3…C15 → P3-d → P5 → P6 → …
+**Następny krok po tym commicie:** kolejka wyglądu #240 → #241 → #242 → #243 → #244 → #245 → #246 → #248 → #249 → #250 → #251 → #252 → #253 → #254 → #256, potem #209 → #231 → #247. Potem C3…C15 → P3-d → P5 → P6 → …
+
+## 2026-10-16 — scalenia kolejki wyglądu do #246
+
+#258 scalony — `49e5ab7a`.  
+#240 scalony — `e5a6b97f`.  
+#241 scalony — `0e4f187c`.  
+#242 scalony — `6535aa7d`.  
+#243 scalony — `c4171ff2`.  
+#244 scalony — `7cb77116`.  
+#245 scalony — `8f185611`.  
+#246 scalony — `9cc44387`.
+
+Wdrożenie R7 z `main` `9cc44387`, 16.10.2026 12:10, `dpl_84KHHgRyr2iZqpAYSRDA1pLTDSeD`. JS `assets/index-g1LI-ddS.js`. tower.log-mar.pl i watch-tower-makieta.vercel.app → 200. 0× `service_role`.
+
+**KONFLIKT #248** (`wyglad/P9-c`, baza `main` po #244 i #245). Kolejka stoi. #249 i dalsze bez zmiany kolejności — po commicie koordynatora na #248.
+
+## 2026-10-16 — scalenia #248–#253
+
+Konflikt #248 zamknięty commitem koordynatora `38e0c5ce` na `wyglad/P9-c`.
+
+#248 scalony — `00a23903`.  
+#249 scalony — `c92ddfa0`.  
+#250 scalony — `3a760a87`.  
+#251 scalony — `828e6bf0`.  
+#252 scalony — `78bb44d8`.  
+#253 scalony — `b654f175`.
+
+Wdrożenie R7 z `main` `b654f175`, 16.10.2026 12:47, `dpl_DF9pz2PkA4Nr7z84bZq7Uw8kPwjw`. JS `assets/index-zyfrQ2kB.js`. tower.log-mar.pl i watch-tower-makieta.vercel.app → 200. 75 plików JS, 0× `service_role`.
+
+**KONFLIKT #254** (`wyglad/P10b-d`, baza `main`). Kolejka stoi. #256 i #260 bez zmiany kolejności — po commicie koordynatora na #254.
+
+## 2026-10-16 — scalenia #254 i #256
+
+Konflikt #254 zamknięty commitem koordynatora `286c8ef` na `wyglad/P10b-d`. Main wciągnięty też do #256 (`4198b41`) i #260 (`7112303`).
+
+#254 scalony — `0f8b79d7`.  
+#256 scalony — `d4e69058`.
+
+Wdrożenie R7 z `main` `d4e69058`, 16.10.2026 13:17, `dpl_HvZ73WLu6mxTE2SP1DnAkBVqm6Zh`. JS `assets/index-CMMlOYN_.js`. tower.log-mar.pl i watch-tower-makieta.vercel.app → 200. 75 plików JS, 0× `service_role`.
+
+**VISUAL #260** (`wyglad/P7-d`, `7112303`): pada tylko `stan-blad` (dark) — komunikat po polsku. Kolejka stoi do commitu koordynatora z odświeżonym wzorcem. Potem #260, #209 → #231 → #247.
+
+## 2026-10-16 — scalenie #260
+
+Wzorzec `stan-blad` odświeżony; visual zielony na `1d43751`.
+
+#260 scalony — `bf4d9f5c`.
+
+Wdrożenie R7 z `main` `bf4d9f5c`, 16.10.2026 14:06, `dpl_75R5u1FnU87NKVUk2gNE3VuuS3iu`. JS `assets/index-Def7mKry.js`. tower.log-mar.pl i watch-tower-makieta.vercel.app → 200. 75 plików JS, 0× `service_role`.
+
+**VISUAL #209** (`75b65d1`): pada tylko `stan-zablokowany` (dark). Kolejka stoi. #231, #247 i #261 bez zmiany kolejności. Nowy commit na #209: `ff508f2` — visual w toku.
 
 ## PAUZA — 2026-10-16 10:21 — **WZNOWIONE 10:59** (hasło „ruszamy”)
 
