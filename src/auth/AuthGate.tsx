@@ -8,6 +8,9 @@ import { setAuthProfile, AUTH_RELOAD_EVENT, type AuthProfile } from './profile';
 import { useTowerStore } from '../store/useTowerStore';
 import { markManualLogout, rememberLogin, sessionEndReason, SESSION_END_MSG, type SessionEnd } from './sessionYear';
 import { MfaSetup, MfaVerify, mfaStep, readMfaStatus } from './Mfa';
+import { ExpiredLinkScreen } from './ExpiredLinkScreen';
+import { p10bp } from '../i18n/p10b';
+import { RECOVERY_LINK_TTL, expiredLinkInfo, isExpiredLinkError, resendExpiredLink, type ExpiredLinkInfo, type PendingLink } from '../lib/p10bSource';
 import './auth.css';
 
 /** D-20261013-2255-01 G4: last_sign_in_at z sesji Auth, gdy my_profile jeszcze nie zwraca pola. */
@@ -25,6 +28,8 @@ type State =
   | { kind: 'anon'; ended?: SessionEnd; mode?: 'login' | 'forgot' }
   | { kind: 'set-password'; session: Session; profile: AuthProfile; reason: 'invite' | 'recovery' | 'required' }
   | { kind: 'noaccess'; reason: string }
+  /* wyglad/P10b-a (E37 pkt 7): wygasły albo zużyty link z e-maila */
+  | { kind: 'expired'; link: PendingLink }
   | { kind: 'mfa'; step: 'verify' | 'setup' }
   | { kind: 'ready'; session: Session; profile: AuthProfile };
 
@@ -44,6 +49,20 @@ function redirectTo(): string {
   return window.location.origin + window.location.pathname;
 }
 
+/**
+ * wyglad/P10b-a (E37 pkt 7): Auth po nieudanej weryfikacji wraca z `#error=access_denied&error_code=otp_expired…`
+ * (albo tym samym w zapytaniu). Wcześniej taki adres trafiał do routera — ekran logowania bez słowa wyjaśnienia.
+ */
+const EXPIRED_RE = /error_code=(otp_expired|otp_disabled|flow_state_expired|flow_state_not_found)|error=access_denied/;
+function captureExpiredFromUrl(): PendingLink | false {
+  if (typeof window === 'undefined') return false;
+  const hash = window.location.hash;
+  const search = window.location.search;
+  if (!EXPIRED_RE.test(hash) && !EXPIRED_RE.test(search)) return false;
+  history.replaceState(null, '', window.location.pathname);
+  return { hash, search };
+}
+
 /** Czy hash/query wygląda na link z e-maila Auth (invite / recovery / magic / PKCE). */
 function captureAuthLinkFromUrl(): boolean {
   const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
@@ -58,13 +77,18 @@ function captureAuthLinkFromUrl(): boolean {
   return true;
 }
 
-async function consumePendingLink(sb: SupabaseClient): Promise<{ error?: string; recovery?: boolean }> {
+async function consumePendingLink(sb: SupabaseClient): Promise<{ error?: string; recovery?: boolean; link?: PendingLink }> {
   const raw = sessionStorage.getItem(LINK_KEY);
   sessionStorage.removeItem(LINK_KEY);
   if (!raw) return { error: 'Brak linku do weryfikacji.' };
   let pending: { hash?: string; search?: string };
   try { pending = JSON.parse(raw) as { hash?: string; search?: string }; }
   catch { return { error: 'Uszkodzony link.' }; }
+  const r = await consumeLink(sb, pending);
+  return { ...r, link: pending };
+}
+
+async function consumeLink(sb: SupabaseClient, pending: { hash?: string; search?: string }): Promise<{ error?: string; recovery?: boolean }> {
 
   const hash = (pending.hash ?? '').replace(/^#/, '');
   const hashParams = new URLSearchParams(hash.includes('=') ? hash : '');
@@ -170,9 +194,13 @@ function LoginScreen({
     // A3 (D-20261015-0300-01): bez sprawdzania konta po stronie klienta — zawsze ten sam komunikat.
     const mail = await sendRecoveryLink(addr, redirectTo());
     setBusy(false);
-    setMsg(mail.error
-      ? { ok: false, text: authErrorPl(mail.error) }
-      : { ok: true, text: t(locale, 'auth_reset_sent') });
+    /* wyglad/P10b-a (E37 pkt 7): zawsze ta sama odpowiedź — także „brak zaproszenia” (bez zdradzania, czy konto
+       istnieje); własny tekst tylko przy zbyt wielu próbach i nieudanej wysyłce e-maila */
+    const err = mail.error ? authErrorPl(mail.error) : '';
+    const own = /Zbyt wiele prób|Nie udało się wysłać e-maila|Nieprawidłowy adres e-mail/.test(err);
+    setMsg(own
+      ? { ok: false, text: err }
+      : { ok: true, text: p10bp(locale, 'p10b_reset_sent', { ttl: RECOVERY_LINK_TTL }) });
   };
 
   if (mode === 'forgot') {
@@ -291,6 +319,27 @@ function MfaScreen({ step }: { step: 'verify' | 'setup' }) {
   );
 }
 
+/** wyglad/P10b-a: ekran „Link wygasł” z informacją o linku (źródło p10bSource; produkcja do podłączenia). */
+function ExpiredLinkContainer({ link, onForgot, onLogin }: { link: PendingLink; onForgot: () => void; onLogin: () => void }) {
+  const locale = useTowerStore((s) => s.locale);
+  const [info, setInfo] = useState<ExpiredLinkInfo | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void expiredLinkInfo(link).then((i) => { if (alive) setInfo(i); }).catch(() => {});
+    return () => { alive = false; };
+  }, [link]);
+  return (
+    <ExpiredLinkScreen
+      brand={<Brand />}
+      locale={locale}
+      info={info}
+      onResend={() => resendExpiredLink(link)}
+      onForgot={onForgot}
+      onLogin={onLogin}
+    />
+  );
+}
+
 function NoAccess({ reason }: { reason: string }) {
   const locale = useTowerStore((s) => s.locale);
   return (
@@ -308,11 +357,13 @@ function NoAccess({ reason }: { reason: string }) {
 
 export default function AuthGate({ children }: { children: ReactNode }) {
   const locale = useTowerStore((s) => s.locale);
-  const [state, setState] = useState<State>(() =>
-    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(LINK_KEY)) || captureAuthLinkFromUrl()
+  const [state, setState] = useState<State>(() => {
+    const expired = captureExpiredFromUrl();
+    if (expired) return { kind: 'expired', link: expired };
+    return (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(LINK_KEY)) || captureAuthLinkFromUrl()
       ? { kind: 'link-pending' }
-      : { kind: 'loading' },
-  );
+      : { kind: 'loading' };
+  });
   const [anonMode, setAnonMode] = useState<'login' | 'forgot'>('login');
   const [recoveryOnce, setRecoveryOnce] = useState(false);
   const loadRef = useRef<(session: Session | null, opts?: { forcePassword?: boolean }) => Promise<void>>(async () => {});
@@ -376,7 +427,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     loadRef.current = load;
 
     void getSupabase().then(async (sb) => {
-      if (state.kind === 'link-pending') return; // czekamy na „Dalej”
+      if (state.kind === 'link-pending' || state.kind === 'expired') return; // czekamy na „Dalej” / ekran „Link wygasł”
       const { data } = await sb.auth.getSession();
       await load(data.session, recoveryOnce ? { forcePassword: true } : undefined);
       const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
@@ -394,7 +445,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     return () => { alive = false; unsub?.(); };
     // link-pending / recoveryOnce — celowo: po Dalej przeładujemy efekt
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.kind === 'link-pending' ? 'pending' : 'go', recoveryOnce]);
+  }, [state.kind === 'link-pending' ? 'pending' : state.kind === 'expired' ? 'expired' : 'go', recoveryOnce]);
 
   useEffect(() => {
     const onReload = () => {
@@ -441,7 +492,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
             const sb = await getSupabase();
             const r = await consumePendingLink(sb);
             if (r.error) {
-              setState({ kind: 'noaccess', reason: r.error });
+              /* wyglad/P10b-a (E37 pkt 7): wygasły link → ekran „Link wygasł” zamiast czerwonego komunikatu */
+              setState(isExpiredLinkError(r.error) ? { kind: 'expired', link: r.link ?? null } : { kind: 'noaccess', reason: r.error });
               return;
             }
             if (r.recovery) setRecoveryOnce(true);
@@ -494,6 +546,16 @@ export default function AuthGate({ children }: { children: ReactNode }) {
             }
           });
         }}
+      />
+    );
+  }
+
+  if (state.kind === 'expired') {
+    return (
+      <ExpiredLinkContainer
+        link={state.link}
+        onForgot={() => { setAnonMode('forgot'); setState({ kind: 'loading' }); }}
+        onLogin={() => { setAnonMode('login'); setState({ kind: 'loading' }); }}
       />
     );
   }
