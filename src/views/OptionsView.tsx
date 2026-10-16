@@ -37,7 +37,6 @@ function savedText(locale: Locale, code: string): string {
   return hasKey(locale, k) ? t(locale, k) : code;
 }
 
-const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../components/guide/Guide')) : null;
 const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/UsersAdmin')) : null;
 /** D-20261014-0700-01 J3 pkt 1: AccountScreen zamiast MyAccount + Mfa + MyDevices. */
 const LiveAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/LiveAccountScreen')) : null;
@@ -374,7 +373,7 @@ export function OptionsView() {
     ), { right: 'own' }),
     scr('device', <DeviceScreen locale={locale} />, { right: 'own' }),
   ];
-  if (Guide) forme.push(scr('guide', block(<Guide locale={locale} role="hhl" />)));
+  /* wyglad/P10b-b (E37 pkt 3): „Instrukcja” znika z Opcji i Ustawień — zastępuje ją Pomoc („?”, menu konta) */
   groups.push({ id: 'forme', screens: forme });
 
   for (const g of groups) {
