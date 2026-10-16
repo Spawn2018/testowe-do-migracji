@@ -142,6 +142,8 @@ Kolejka PR koordynatora (D-20261016-1905-01): #265 → #266 → #267 → #268 �
 
 Kolejka PR koordynatora (D-20261016-1950-01): #269 scalony (dopiski 1845 i 1905 są w `main`). **#270** (`wyglad/P7-e2`, głowa `792ed32`, na `main`) — poprawki stanu pliku KSH (SharePoint) po niezależnym sprawdzeniu #268. Wygląd i obliczenia widoku (F8), bez bazy. Wzorce zrzutów bez zmian: demo nie ma pola, a blok produkcyjny w demo się nie pokazuje. Scalasz po zielonych `unit` i `visual`; wdrożenie po scaleniu. Gdy `visual` jest czerwony przed commitem koordynatora — „VISUAL #270”. Plik dopisku wchodzi z #270 — nie kopiujesz go z `dopiski_nowe`. Potem plan w tej samej kolejności paczek.
 
+Kolejka PR koordynatora (D-20261016-2005-01): #270 → **#271** (`wyglad/C13-teksty`, na `main`) → kolejne PR koordynatora w kolejności numerów. Same teksty i martwe klucze (F8), bez bazy. Wzorce zrzutów bez zmian — zmienione teksty nie pokazują się w demo. Scalasz po zielonych `unit` i `visual`, wdrożenie po scaleniu. Gdy `visual` jest czerwony przed commitem koordynatora — „VISUAL #271”. Plik dopisku wchodzi z #271 — nie kopiujesz go z `dopiski_nowe`. Dalej plan w tej samej kolejności paczek.
+
 - Wygląd koordynatora (`wyglad/*`) do danej paczki jest gotowy przed jej punktem kontrolnym; scalasz go jak dotąd.
 - Test E22 („tydzień bez nowych błędów »stara wersja«”) kończy się 7 dni po wdrożeniu P10a (ok. 27.10) — wynik dopisuje koordynator po wydaniu (jak w W17).
 
@@ -361,7 +363,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C10** `my_profile`: `real_full_name`, `last_sign_in_at`.
 - **C11** warunek „konto bez telefonu E.164” (pasek — koordynator). **+ D-20261016-1620-01 pkt 5.6 (E19 1A, P3, W1):** hasło minimum 12 znaków, litery i cyfry — `src/auth/config.ts` `passwordOk`, przy pierwszym wejściu i w logowaniu; ten sam warunek w bazie / Auth.
 - **C12** ✅ `KshDatesModal`: `DOC_MISSING` jak `preLoading`.
-- **C13** lista kluczy starej Instrukcji do POSTEP (teksty — koordynator).
+- **C13** ✅ — koordynator, #271 (D-20261016-2005-01).
 - **C14** ✅ (D-0330): `security-advisor-snapshot` czyta `ADVISOR_MGMT_TOKEN`; `advisor_ok=false` → `integration_runs.ok=false`.
 - **C15** (D-0330): po 3× `login_failed` emtrack → 1 próba / 6 h; jedna sprawa `SOURCE_DOWN:EMTRACK_WEB`.
 - **Odbiór:** brama `db`, TEST (`risks`, `security`, `e41`, `e9-role`, `nullguard`, dotknięte), doradca TEST i produkcja.
@@ -786,3 +788,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 16.10.2026 18:45 | D-20261016-1845-01: KONFLIKT i VISUAL #261 zamknięte (`2a8a94b`); wzorce #266 `e1ff7ba` i #267 `9a4aad5`; #268 `wyglad/P7-e` — pole `kshSharePointSync` i „Sprawdź teraz” w P7 uzupełnienie W13 | koordynator; wykonawca |
 | 16.10.2026 19:05 | D-20261016-1905-01: VISUAL #268 bez nowych wzorców; W11 — regeneracja ujęć w `baseline.yml` (P11 pkt 6), tag `baseline-audyt-<data P11>`; pliki dopisków 1845 i 1905 wchodzą z PR #269, nie z #268 | koordynator; wykonawca |
 | 16.10.2026 19:50 | D-20261016-1950-01: #270 `wyglad/P7-e2` — stan pliku KSH po sprawdzeniu #268; `sourceOk` = ostatnia próba, `lastReadAt` = ostatni udany odczyt, alarm `SOURCE_DOWN` tą samą regułą co widok — P7 uzupełnienie W13 pkt 5.5–5.6 | koordynator; wykonawca |
+| 16.10.2026 20:05 | D-20261016-2005-01: C13 ✅ — koordynator, #271 (`wyglad/C13-teksty`); kolejka #270 → #271 | koordynator; wykonawca |

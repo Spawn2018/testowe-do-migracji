@@ -2655,6 +2655,11 @@ P7 — uzupełnienie W13: `sourceOk` = wynik ostatniej próby odczytu. `lastRead
 
 **DOPISEK 1950 WŁĄCZONY — commit (ten docs), kolejka #270; sourceOk / lastReadAt / SOURCE_DOWN → P7 uzupełnienie W13.**
 
+D-20261016-2005-01: kolejka #270 → #271 (`wyglad/C13-teksty`, na `main`).
+C13 ✅ — koordynator, #271 (D-20261016-2005-01).
+
+**DOPISEK 2005 WŁĄCZONY — commit (ten docs), kolejka #270 → #271; C13 ✅ (koordynator).**
+
 **DOPISEK 1410 WŁĄCZONY — commit `5666bcf4`, VAT 23 % i Polisa HHL → P5, daty DD.MM.RRRR → C6/P8/P5/P11, prom → kierowca SE, telefon w Harmonogramie, W46 i W47 zamknięte.**
 
 ## 2026-10-16 — scalenie #209
