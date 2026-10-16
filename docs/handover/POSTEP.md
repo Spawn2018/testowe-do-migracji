@@ -2629,6 +2629,21 @@ E38 1A / E30 / E20 Harmonogram → wygląd (P7-c), dane P7.
 
 **Następny krok po tym commicie:** kolejka wyglądu #240 → #241 → #242 → #243 → #244 → #245 → #246 → #248 → #249 → #250 → #251 → #252 → #253 → #254 → #256, potem sobota #209 → #231 → #247. Potem C3…C15 → P3-d → P5 → P6 → …
 
+## 2026-10-16 — scalenia kolejki wyglądu do #246
+
+#258 scalony — `49e5ab7a`.  
+#240 scalony — `e5a6b97f`.  
+#241 scalony — `0e4f187c`.  
+#242 scalony — `6535aa7d`.  
+#243 scalony — `c4171ff2`.  
+#244 scalony — `7cb77116`.  
+#245 scalony — `8f185611`.  
+#246 scalony — `9cc44387`.
+
+Wdrożenie R7 z `main` `9cc44387`, 16.10.2026 12:10, `dpl_84KHHgRyr2iZqpAYSRDA1pLTDSeD`. JS `assets/index-g1LI-ddS.js`. tower.log-mar.pl i watch-tower-makieta.vercel.app → 200. 0× `service_role`.
+
+**KONFLIKT #248** (`wyglad/P9-c`, baza `main` po #244 i #245). Kolejka stoi. #249 i dalsze bez zmiany kolejności — po commicie koordynatora na #248.
+
 ## PAUZA — 2026-10-16 10:21 — **WZNOWIONE 10:59** (hasło „ruszamy”)
 
 **ZAKŁADKA — przerwane tu:** scalenie PR dokumentacji #255; potem sygnały dopisków; potem kolejka PR wyglądu.
