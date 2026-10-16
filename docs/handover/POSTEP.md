@@ -2642,6 +2642,10 @@ Wzorzec `stan-zablokowany` (dark) odświeżony w `ff508f2`. Visual zielony.
 
 #231 scalony — `c375c5c6`.
 
+#247 scalony — `26060a5c`.
+
+**VISUAL #261** (`wyglad/E6-tel`, `78c6c7b`): pada tylko `stan-najechanie` (dark). Kolejka stoi. #262 zostaje szkicem.
+
 E30 pkt 7 Rejsy → wygląd (P7-d).
 
 P7 — uzupełnienie W13:
