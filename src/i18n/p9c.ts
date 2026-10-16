@@ -72,6 +72,8 @@ const PL: Record<string, string> = {
   /* dopisek pod mapą (pkt 8) */
   p9c_note: 'Podkład i trasy: HERE · utrudnienia: Trafikverket (SE), HERE (PL) · statki: AIS Fintraffic / digitraffic.fi, CC BY 4.0',
   p9c_note_ais_at: ', ostatni odczyt {t}',
+  /* E1 (Przegląd): bez pozycji — cała trasa i ta informacja */
+  p9c_drawer_nogps: 'Brak pozycji GPS',
   /* telefon (pkt 9) */
   p9c_sheet_open: 'Otwórz panel transportu',
   p9c_sheet_trail: 'Pokaż przebieg na mapie',
