@@ -1045,7 +1045,9 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
       await expect(page.locator('[data-zone-rule="site"]')).toContainText('Dostarczone');
       await noSideScroll(page, width);
       await tabs.nth(1).click();
-      await expect(page.locator('#wf-panel-own [data-wf-id]').first()).toBeVisible();
+      /* wyglad/P8-d (E35 pkt 2, decyzja 08.10.2026, 12:14): po zmianie lista własnych reguł jest pusta — reguły START
+         znikają albo przechodzą do „Kto co dostaje”; dawne wiersze `[data-wf-id]` tylko w widoku produkcji do podłączenia */
+      await expect(page.locator('#wf-panel-own .rl-empty')).toBeVisible();
       await expect(page.locator('#wf-panel-auto')).toBeHidden();
     }
     await page.locator('.wf-tabs [role="tab"]').first().click();
@@ -1587,4 +1589,103 @@ test.describe('wyglad/P8-c Strefy (E34, img/e34-after)', () => {
       expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
     });
   }
+});
+
+test.describe('wyglad/P8-d Automatyzacje (E35, img/e35-after)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const noSideScroll = async (page: Page, width: number) =>
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+
+  test('komputer HHL: 4 zakładki, kreator „Gdy … wtedy …” obok listy, sprawdzenie na 30 dniach, zapis, wyłączenie z powodem, przebiegi i historia', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'HHL');
+    await openView(page, 'wf');
+    await expect(page.locator('.rl-tabs [role="tab"]')).toHaveText(['Działa samo', 'Własne reguły · 0', 'Przebiegi', 'Historia zmian']);
+    await page.locator('[data-rule-new]').click();
+    await expect(page.locator('[data-rule-creator] h2')).toBeFocused();
+    await expect(page.locator('.rl-main')).toBeVisible();
+    await page.locator('[data-rule-save]').click();
+    await expect(page.locator('[data-rule-f="name"]')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.locator('[data-rule-f="name"]')).toBeFocused();
+    await page.locator('[data-rule-f="name"]').fill('Długi pobyt na placu');
+    await page.locator('[data-rule-f="zone"]').selectOption({ label: 'Plac budowy Stegra Boden' });
+    await page.locator('[data-rule-then="notify-HHL_OPS"]').click();
+    await page.locator('[data-rule-then="notify-SCX"]').click();
+    await expect(page.locator('[data-rule-check]')).toContainText('zadziałałaby 1 raz');
+    await expect(page.locator('[data-rule-check]')).toContainText('SG-03 · plac od 07.10, 08:35 → 07.10, 11:35 (wyjazd 12:19)');
+    await expect(page.locator('[data-rule-check]')).toContainText('Wbudowane automaty robiące to samo: brak.');
+    await noSideScroll(page, 1440);
+    await page.locator('[data-rule-save]').click();
+    await expect(page.locator('.rl-live')).toHaveText('Dodano regułę. Wpis jest w historii zmian.');
+    await expect(page.locator('[data-wf-tab="own"]')).toHaveText('Własne reguły · 1');
+    const row = page.locator('.rl-rule').first();
+    /* nowa reguła startuje wyłączona (img/e35-after: „włączona” niezaznaczone) */
+    await expect(row.locator('.rl-state')).toHaveText('wyłączona');
+    await expect(row).toContainText('Gdy auto jest w strefie „Plac budowy Stegra Boden” dłużej niż 3');
+    await expect(row.locator('.rl-rule-name')).toBeFocused();
+    await row.locator('[data-rule-toggle]').click();
+    await row.locator('[data-rule-ask-yes]').click();
+    await expect(row.locator('.rl-err')).toHaveText('Wpisz powód zmiany.');
+    await row.locator('[data-rule-reason]').fill('SCX prosi o sygnał po 3 h na placu');
+    await row.locator('[data-rule-ask-yes]').click();
+    await expect(page.locator('.rl-live')).toHaveText('Reguła włączona.');
+    await expect(row.locator('[data-rule-toggle]')).toHaveText('Wyłącz');
+    await expect(row.locator('[data-rule-toggle]')).toBeFocused();
+    await page.locator('[data-wf-tab="runs"]').click();
+    await expect(page.locator('[data-rule-runs] tbody tr')).toHaveCount(5);
+    await expect(page.locator('[data-rule-runs]')).toContainText('powiadomienie: KSH 4 osoby, SCX 1 osoba');
+    await expect(page.locator('[data-rule-runs]')).not.toContainText('SKIPPED');
+    await page.locator('[data-wf-tab="hist"]').click();
+    await expect(page.locator('[data-rule-hist] li').first()).toContainText('włączona · „Długi pobyt na placu” · powód: SCX prosi o sygnał po 3 h na placu');
+  });
+
+  test('komputer 1280 → 1100: kreator zamiast listy; zmiana reguły wymaga powodu', async ({ page }) => {
+    await page.setViewportSize({ width: 1100, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'wf');
+    await page.locator('[data-rule-new]').click();
+    await expect(page.locator('.rl-main')).toBeHidden();
+    await page.locator('[data-rule-f="name"]').fill('Brak awizacji — SCX');
+    await page.locator('[data-rule-when="issue"]').click();
+    await page.locator('[data-rule-then="todo"]').click();
+    await page.locator('[data-rule-f="todo"]').selectOption('SCX');
+    await page.locator('[data-rule-save]').click();
+    await expect(page.locator('.rl-main')).toBeVisible();
+    await page.locator('.rl-rule [data-rule-edit]').first().click();
+    await page.locator('[data-rule-save]').click();
+    await expect(page.locator('[data-rule-f="reason"]')).toBeFocused();
+    await noSideScroll(page, 1100);
+  });
+
+  test('telefon HHL: zakładki, „+ Nowa reguła”, kreator na cały ekran, przebiegi kartami, historia — 0 w bramie E8', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL');
+    await openView(page, 'wf');
+    const hits: Hit[] = [];
+    const gate = async (name: string) => {
+      for (const width of [...WIDTHS, 768]) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.waitForTimeout(200);
+        hits.push(...await measure(page, name, width, 'HHL'));
+      }
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.waitForTimeout(200);
+    };
+    await gate('automatyzacje-dziala-samo');
+    await page.locator('[data-wf-tab="own"]').click();
+    await gate('automatyzacje-wlasne');
+    await page.locator('#wf-panel-own [data-rule-new]').click();
+    await expect(page.locator('[data-rule-creator] h2')).toBeFocused();
+    const font = await page.locator('[data-rule-f="name"]').evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+    expect(font, 'pole ≥ 16 px').toBeGreaterThanOrEqual(16);
+    await page.locator('[data-rule-save]').click();
+    await gate('automatyzacje-kreator');
+    await page.locator('.rl-back').click();
+    await page.locator('[data-wf-tab="runs"]').click();
+    await expect(page.locator('.rl-run-card')).toHaveCount(5);
+    await gate('automatyzacje-przebiegi');
+    await page.locator('[data-wf-tab="hist"]').click();
+    await gate('automatyzacje-historia');
+    expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+  });
 });
