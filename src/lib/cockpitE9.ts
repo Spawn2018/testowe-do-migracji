@@ -15,6 +15,7 @@ import { isoWeekNumber } from './cockpitTiles';
 import { isLoadCompleted } from './invoiceMatch';
 import { isTodoRisk, todoCardKey } from './todoRules';
 import { transportLabel } from './transportName';
+import { fcp } from '../i18n/p5c';
 
 export type CockpitTone = 'default' | 'alert' | 'warn' | 'good';
 
@@ -51,7 +52,7 @@ export interface CockpitInput {
   /** Od kiedy transport stoi na placu w Boden (wjazd w strefę) — KSH „SG-03 na placu w Boden od 08:35”; brak = bez godziny. */
   siteSince?: ReadonlyMap<string, string>;
   /** Suma marży i przychodu w walucie widoku (marża ważona przychodem, E16) + kwota marży już sformatowana. */
-  margin: { pct: number | null; moneyText: string; tierText: string };
+  margin: { pct: number | null; moneyText: string; tierText: string; priced?: number; unpriced?: number };
 }
 
 const TZ = 'Europe/Warsaw';
@@ -362,6 +363,14 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
       tone: 'default' },
     { id: 'margin', label: L('p3b_margin', { tier: margin.tierText }), labelShort: L('p3b_margin_short'), go: 'fin',
       value: margin.pct == null ? '—' : formatPlNumber(margin.pct * 100, 1), of: margin.pct == null ? null : '%',
-      desc: L('p3b_margin_desc', { money: margin.moneyText }), descShort: margin.tierText, tone: 'default', money: true },
+      /* wyglad/P5-c (E16): „z liczbą transportów z ceną i bez ceny” — liczby z Finansów (to samo źródło) */
+      desc: margin.priced != null && margin.priced + (margin.unpriced ?? 0) > 0
+        ? fcp(locale, 'p5c_margin_desc', {
+          money: margin.moneyText,
+          /* te same słowa co nagłówek Finansów: „86 z ceną · 8 bez ceny” */
+          counts: margin.unpriced ? fcp(locale, 'p5c_priced_line', { priced: margin.priced, unpriced: margin.unpriced }) : fcp(locale, 'p5c_priced_all', { priced: margin.priced }),
+        })
+        : L('p3b_margin_desc', { money: margin.moneyText }),
+      descShort: margin.tierText, tone: 'default', money: true },
   ];
 }
