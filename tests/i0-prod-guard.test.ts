@@ -82,7 +82,8 @@ describe('I-0: strażnik paczki produkcyjnej', () => {
     expect(m.codes.length).toBeGreaterThanOrEqual(60)
     expect(m.codes).toEqual(expect.arrayContaining(['SG-34', 'SG-14', 'T-17']))
     // audyt-C (C-01, E7 „bez kodów”): tytuł ryzyka SG-34 po polsku — fraza demo z nowego tytułu
-    expect(m.phrases).toContain('przekracza wysokość i szerokość')
+    // audyt-AF (A-07, E41): tytuł bez kodu — „przekroczona wysokość i szerokość”
+    expect(m.phrases).toContain('przekroczona wysokość i szerokość')
     expect(m.amounts).toContain('1 840 PLN')
     expect(m.amounts).toContain('3758.54')
     expect(m.all.join('\n')).not.toMatch(/Wawel|Nova Star|Gävle|Gavle/)

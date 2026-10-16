@@ -29,7 +29,8 @@ describe('C-01, C-02, C-15 — Ryzyka i dzwonek po polsku', () => {
   it('C-01: ryzyko SG-34 bez „Permit mismatch”, „READY” i „PERMIT_SE”', () => {
     const text = risks.map((r) => `${r.title} ${r.detail ?? ''} ${r.meta ?? ''}`).join('\n');
     expect(text).not.toMatch(/Permit mismatch|READY|PERMIT_SE|missing/);
-    expect(DEMO_ONLY_I18N.RISK.pl.rk_seed_permit_mismatch_34).toBe('Zezwolenie niezgodne z zestawem — SG-34 przekracza wysokość i szerokość');
+    /* audyt-AF A-07 (E41): nazwę transportu wstawia ekran — tytuł bez „SG-34” */
+    expect(DEMO_ONLY_I18N.RISK.pl.rk_seed_permit_mismatch_34).toBe('Zezwolenie niezgodne z zestawem — przekroczona wysokość i szerokość');
   });
   it('C-02: zamknięcie przy T-17 w postaci E49 i połączone ze sprawą „Objazd czy postój?” (jedna sprawa w karcie)', () => {
     expect(RISK_I18N.pl.rk_seed_e4_closure).toBe('Högakustenbron (E4) zamknięty — porywy 31 m/s');

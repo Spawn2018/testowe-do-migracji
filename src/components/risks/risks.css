@@ -114,6 +114,8 @@
 .rk-alert.is-plain{color:var(--ink-3)}
 .rk-alt{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--sea);background:var(--sea-bg)}
 .rk-alt .rk-sec{margin:0;color:var(--sea)}
+/* E10 (audyt-A A-08): opis na tle --sea-bg — --ink-3 dawał 4,42 : 1 (jasny) i 4,32 : 1 (ciemny); --ink-2: 6,92 i 7,23 */
+.rk-alt .rk-muted{color:var(--ink-2)}
 .rk-alt-why{margin:0;font-size:15px}
 .rk-alt-list{list-style:none;margin:0;padding:0;font-size:15px}
 .rk-alt-list li{padding:3px 0}

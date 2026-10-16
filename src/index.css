@@ -569,7 +569,8 @@ nav button{padding:8px 14px}
 .inline-input .input{width:92px}
 .settings-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px}
 .panel-mark{margin-left:auto;color:var(--ink-3);font-family:var(--font-cond);font-size:10px;font-weight:700;letter-spacing:.11em}
-.panel-mark.demo-mark{color:var(--amber-ink);border:1px solid var(--amber);padding:1px 6px;letter-spacing:.08em}
+/* E10 (audyt-A A-09): znacznik na własnym tle — na szarym nagłówku 4,22 : 1, na --surface 5,17 : 1 (jasny), 8,06 : 1 (ciemny) */
+.panel-mark.demo-mark{color:var(--amber-ink);background:var(--surface);border:1px solid var(--amber);padding:1px 6px;letter-spacing:.08em}
 .rate-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px}
 .rate-editor{border-top:1px solid var(--rule)}
 .rate-editor-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:5px 0 6px;border-bottom:1px solid var(--rule-2);font-size:13px}

@@ -9,7 +9,9 @@ import { NotificationBell } from './NotificationBell';
 import { ClaudeIcon } from './ClaudeIcon';
 import { hp } from '../../i18n/help';
 import { AccountMenu } from './AccountMenu';
-import { nextLiveSailing, vesselById } from '../../lib/ferry';
+import { vesselById } from '../../lib/ferry';
+import { nextGdnSailing } from '../../lib/voyage';
+import { portName } from '../../lib/portName';
 import { getNow } from '../../lib/frozenNow';
 import { canSwitchView, PROD_BUILD } from '../../lib/prodFacade';
 import { effDeparture, nearestCrossingSailings } from '../../lib/sailings';
@@ -44,10 +46,6 @@ function depLabel(depIso: string, nowIso: string): string {
   return day === today && time ? time : dep;
 }
 
-function portName(locale: Locale, code: string): string {
-  return t(locale, `p3a_port_${code}`);
-}
-
 function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof nearestCrossingSailings>[0]): FerryRow[] {
   const nowMs = now.getTime();
   const nowIso = now.toISOString();
@@ -77,8 +75,9 @@ function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof n
       });
     }
   } else {
-    /* Demo — rozkład pokazowy Polferries (jeden rejs). */
-    const s = nextLiveSailing(now);
+    /* Demo — rozkład pokazowy Polferries (jeden rejs): najbliższy odjazd z Gdańska do Szwecji, ten sam co kafelek
+       „Najbliższy prom” w Kokpicie (E37; audyt-A A-04 — bez rejsu powrotnego Nynäshamn → Gdańsk). */
+    const s = nextGdnSailing(now);
     const mins = Math.max(0, Math.round((Date.parse(s.depLocal) - nowMs) / 60_000));
     const when = depLabel(new Date(Date.parse(s.depLocal)).toISOString(), nowIso);
     const head = `${vesselById(s.vessel).short || vesselById(s.vessel).name} · ${when} · ${portName(locale, s.depPort)}`;

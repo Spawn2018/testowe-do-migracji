@@ -4,7 +4,13 @@
  * E37 (pełne nazwy portów, rejs PL → SE), E21 (po polsku, „t39”), E10 (kontrast ≥ 4,5 : 1), E16 (jeden kurs PLN,
  * odstęp tysięcy), E9 (Operacje HHL: jedna liczba „Do zrobienia”; rejsy i awizacja tylko do odczytu).
  */
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { formatExqAge } from '../src/components/ui/ExceptionRow';
+import { t } from '../src/i18n/messages';
+import { DEMO_ONLY_I18N } from '../src/i18n/demoOnly';
+import { ferryRouteName, portName } from '../src/lib/portName';
+import { nextGdnSailing } from '../src/lib/voyage';
 import { buildDemoSnapshot } from '../src/data/demoProvider';
 import { INITIAL_NOTIFICATIONS, INITIAL_WORKFLOW_RUNS } from '../src/data/seed';
 import { bellGroups, sectionFor } from '../src/lib/bellList';
@@ -71,5 +77,70 @@ describe('A-02 / F-02 — KSH bez „Do zrobienia” i bez zadań SCX; wpis Stre
     expect(sectionFor('todo', 'HHL')).toBe('todo');
     expect(sectionFor('todo', 'SCX')).toBe('todo');
     expect(sectionFor('mine', 'SCX')).toBe('mine');
+  });
+});
+
+describe('A-03 / A-04 — prom: pełne nazwy portów, ten sam rejs PL → SE w pasku i w Kokpicie', () => {
+  it('portName i ferryRouteName: „Gdańsk → Nynäshamn”, „Gdynia → Karlskrona” w każdym języku', () => {
+    expect(ferryRouteName('pl', 'GDN', 'NYN')).toBe('Gdańsk → Nynäshamn');
+    expect(ferryRouteName('pl', 'GDY', 'KAA')).toBe('Gdynia → Karlskrona');
+    expect(portName('en', 'NYN')).toBe('Nynäshamn');
+    expect(portName('pl', 'XYZ')).toBe('XYZ');
+  });
+  it('nextGdnSailing: najbliższy odjazd z Gdańska, bez rejsu powrotnego (23.09.2026, 16:32 → 23.09.2026, 18:00)', () => {
+    const now = new Date('2026-09-23T14:32:00Z');
+    const s = nextGdnSailing(now);
+    expect(s.depPort).toBe('GDN');
+    expect(s.arrPort).toBe('NYN');
+    expect(s.depLocal).toBe('2026-09-23T18:00:00+02:00');
+  });
+  it('pasek górny i Kokpit biorą rejs z nextGdnSailing i nazwy z portName', () => {
+    const top = readFileSync('src/components/shell/Topbar.tsx', 'utf8');
+    expect(top).toMatch(/const s = nextGdnSailing\(now\)/);
+    expect(top).not.toMatch(/nextLiveSailing/);
+    const dash = readFileSync('src/views/DashboardView.tsx', 'utf8');
+    expect(dash).toMatch(/nextGdnSailing\(new Date\(nowMinute \* 60_000\)\)/);
+    expect(dash.match(/ferryRouteName\(locale,/g)).toHaveLength(2);
+    expect(dash).not.toMatch(/route: `\$\{/);
+  });
+});
+
+describe('A-05 — wiek sprawy po polsku', () => {
+  it('„24 min temu”, „6 h temu”, „1 dzień temu”, „3 dni temu”', () => {
+    expect(formatExqAge(0.4)).toBe('24 min temu');
+    expect(formatExqAge(6.2)).toBe('6 h temu');
+    expect(formatExqAge(23.7)).toBe('1 dzień temu');
+    expect(formatExqAge(26)).toBe('1 dzień temu');
+    expect(formatExqAge(72)).toBe('3 dni temu');
+    expect(formatExqAge(0.4, 'en')).toBe('24 min ago');
+  });
+});
+
+describe('A-06 — „t39” w kafelku „Do zafakturowania”', () => {
+  it('bez „tydz.”', () => {
+    for (const k of ['p3b_to_invoice_desc', 'p3b_to_invoice_ok', 'p3b_to_invoice_none']) {
+      expect(t('pl', k), k).toMatch(/ · t\{w\}$/);
+      expect(t('pl', k), k).not.toMatch(/tydz\./);
+    }
+  });
+});
+
+describe('A-07 — tytuł sprawy bez kodu transportu, którego dotyczy', () => {
+  it('ryzyka demo nie powtarzają własnego kodu (nazwę wstawia ekran)', () => {
+    for (const r of snap.risks) {
+      const code = r.loadId ? loadById(r.loadId)?.code : (r as { loadCode?: string }).loadCode;
+      if (!code || r.id === 'risk-seq' || r.id.startsWith('risk-sequence')) continue;
+      expect(r.title, r.id).not.toContain(code);
+    }
+    const pl = DEMO_ONLY_I18N.RISK.pl;
+    expect(pl.rk_seed_permit_mismatch_34).toBe('Zezwolenie niezgodne z zestawem — przekroczona wysokość i szerokość');
+    expect(pl.rk_seed_doc_missing_36).toBe('Brak zezwolenia SE');
+  });
+});
+
+describe('A-08 / A-09 — kontrast ≥ 4,5 : 1 przez tokeny', () => {
+  it('karta przeprawy: opis w --ink-2; znacznik demo na --surface', () => {
+    expect(readFileSync('src/components/risks/risks.css', 'utf8')).toMatch(/\.rk-alt \.rk-muted\{color:var\(--ink-2\)\}/);
+    expect(readFileSync('src/index.css', 'utf8')).toMatch(/\.panel-mark\.demo-mark\{color:var\(--amber-ink\);background:var\(--surface\);/);
   });
 });
