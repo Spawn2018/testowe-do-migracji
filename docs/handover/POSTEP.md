@@ -2650,6 +2650,11 @@ P11 pkt 6: workflow `.github/workflows/baseline.yml` (`workflow_dispatch`, `mode
 
 **DOPISEK 1905 WŁĄCZONY — commit (ten docs), kolejka #265 → #268; VISUAL #268 bez nowych wzorców; regeneracja ujęć (`baseline.yml`) → P11 pkt 6; pliki dopisków z PR #269.**
 
+D-20261016-1950-01: kolejka #270 (`wyglad/P7-e2`, na `main`). #269 scalony.
+P7 — uzupełnienie W13: `sourceOk` = wynik ostatniej próby odczytu. `lastReadAt` = ostatni udany odczyt — nieudana próba go nie zmienia. Alarm `SOURCE_DOWN` w bazie tą samą regułą co widok (> 30 min od `lastReadAt`). Test: nieudana próba 5 min po odczycie → „Częściowo”, bez alarmu; 31 min bez odczytu → „Nie działa” i jeden alarm; udany odczyt → `sourceOk = true`, alarm zamknięty. Wygląd #268 + #270. Dopóki Stan systemu czeka na dane źródeł (D-20261016-0845-01), wiersz „Plik KSH (SharePoint)” stoi nad dzisiejszym panelem.
+
+**DOPISEK 1950 WŁĄCZONY — commit (ten docs), kolejka #270; sourceOk / lastReadAt / SOURCE_DOWN → P7 uzupełnienie W13.**
+
 **DOPISEK 1410 WŁĄCZONY — commit `5666bcf4`, VAT 23 % i Polisa HHL → P5, daty DD.MM.RRRR → C6/P8/P5/P11, prom → kierowca SE, telefon w Harmonogramie, W46 i W47 zamknięte.**
 
 ## 2026-10-16 — scalenie #209
