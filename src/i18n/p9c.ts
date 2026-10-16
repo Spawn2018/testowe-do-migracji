@@ -35,6 +35,8 @@ const PL: Record<string, string> = {
   p9c_f_nogps: 'Brak GPS · {n}',
   p9c_f_nopos: 'Bez pozycji · {n}',
   p9c_search: 'Szukaj: kod, nr zlecenia, tablice',
+  /* KSH widzi tylko kod, bez numerów zleceń (E41, 08.10) */
+  p9c_search_ksh: 'Szukaj: kod, tablice',
   /* tabela (pkt 6) */
   p9c_c_transport: 'Transport',
   p9c_c_stage: 'Etap',

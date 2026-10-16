@@ -15,7 +15,7 @@ import { filterLoadsForRole } from '../lib/permissions';
 import { getNow } from '../lib/frozenNow';
 import { formatTableDay } from '../lib/time';
 import { useIsPhone } from '../lib/useIsPhone';
-import { headCounts, hm, mapRow, rowMatches, type MapRow } from '../lib/p9cMap';
+import { headCounts, hm, mapRow, rowMatches, searchHintKey, type MapRow } from '../lib/p9cMap';
 import type { Load } from '../types';
 
 /**
@@ -94,7 +94,7 @@ export function MapView() {
   const nowMin = Math.floor(getNow().getTime() / 60_000);
   const nowIso = useMemo(() => new Date(nowMin * 60_000).toISOString(), [nowMin]);
 
-  /* Rola i kafelek E28; wyszukiwanie po kodzie, nazwie (E41), numerach zleceń i tablicach (pkt 5) */
+  /* Rola i kafelek E28; wyszukiwanie po kodzie, numerach zleceń widocznych dla firmy (E41) i tablicach (pkt 5) */
   const roleStage = useMemo(() => filterLoads(loads, role, stageFilter, ''), [loads, role, stageFilter]);
 
   /* Pozycje z bazy (produkcja): ten sam zestaw co mapa; demo bez zapytań */
@@ -127,8 +127,8 @@ export function MapView() {
 
   /* pkt 1 (pyt. 1 A): bez kafelka — tylko okno śledzenia; z kafelkiem — cały etap */
   const scoped = useMemo(
-    () => rows.filter(({ load, row }) => (stageFilter ? true : row.inWindow) && rowMatches(load, row.label, search)),
-    [rows, stageFilter, search],
+    () => rows.filter(({ load, row }) => (stageFilter ? true : row.inWindow) && rowMatches(load, role, search)),
+    [rows, stageFilter, search, role],
   );
   const list = useMemo(() => {
     if (timing === 'late') return scoped.filter(({ row }) => row.late);
@@ -141,7 +141,7 @@ export function MapView() {
     () => list.filter(({ row }) => row.inWindow && (PROD_BUILD || row.pos.kind !== 'none')).map(({ load }) => load),
     [list],
   );
-  const head = headCounts(rows.filter(({ load, row }) => row.inWindow && rowMatches(load, row.label, '')).map(({ row }) => row));
+  const head = headCounts(rows.filter(({ row }) => row.inWindow).map(({ row }) => row));
   const nextStarts = useMemo(() => nextTrackingStarts(filterLoadsForRole(loads, role), nowIso, 3), [loads, role, nowIso]);
   const filtersOn = !!stageFilter || !!search.trim() || timing !== 'all';
   const shownWithPos = list.filter(({ row }) => row.inWindow && row.pos.kind !== 'none').length;
@@ -168,7 +168,8 @@ export function MapView() {
       data-page="map"
       style={{ margin: 12, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 140px)' }}
     >
-      <header className="panel-hd">
+      {/* audyt D-06: u HHL na telefonie „Strefy” w jednym wierszu z tytułem i liczbami, „na żywo” pod nimi (CSS `.map-hd-zones`) */}
+      <header className={role === 'HHL' ? 'panel-hd map-hd-zones' : 'panel-hd'}>
         <h2>{t(locale, 'nav_map')}</h2>
         <span className="sub" data-map-head>
           {phone
@@ -187,6 +188,9 @@ export function MapView() {
           </button>
         ) : null}
       </header>
+
+      {/* audyt D-06 (E29, makieta „Po zmianie · telefon”): na telefonie pasek kafelków nad mapą — nagłówek → kafelki → mapa */}
+      {phone ? <StageBar variant="page" /> : null}
 
       <div className="mapsplit" data-b7="fixed-map">
         <div className="mapbox">
@@ -212,12 +216,12 @@ export function MapView() {
         </div>
 
         <div className="mlist" style={{ display: 'flex', flexDirection: 'column', background: 'var(--surface)' }}>
-          <StageBar variant="page" />
+          {phone ? null : <StageBar variant="page" />}
           <div className="filters" style={{ borderBottom: '1px solid var(--rule)' }} data-map-filters>
             <input
               className="map-search"
-              placeholder={p9m(locale, 'p9c_search')}
-              aria-label={p9m(locale, 'p9c_search')}
+              placeholder={p9m(locale, searchHintKey(role))}
+              aria-label={p9m(locale, searchHintKey(role))}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

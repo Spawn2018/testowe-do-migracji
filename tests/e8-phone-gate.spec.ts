@@ -402,6 +402,20 @@ test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
     await expect(page.locator('[data-page="map"] .wt-marker-ferry')).toHaveCount(0);
   });
 
+  test('komputer: najechanie na wiersz tabeli podświetla znacznik (E29, audyt D-03)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    const lit = page.locator('[data-page="map"] .leaflet-marker-icon.is-hover');
+    await expect(page.locator('[data-page="map"] .wt-mk').first()).toBeAttached();
+    await expect(lit).toHaveCount(0);
+    /* wiersz z pozycją GPS ma znacznik (sam albo w grupie strefy) */
+    await page.locator('[data-map-table] tbody tr[data-load]:has(td[data-map-pos="fix"])').first().hover();
+    await expect(lit).toHaveCount(1);
+    await page.mouse.move(4, 4);
+    await expect(lit).toHaveCount(0);
+  });
+
   test('KSH: bez przycisku „Strefy”, nazwa transportu to sam kod (E41)', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'KSH');
@@ -410,6 +424,17 @@ test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
     const names = await page.locator('[data-map-table] tbody tr[data-load] td[data-map-name]').allInnerTexts();
     expect(names.length).toBeGreaterThan(0);
     expect(names.every((x) => /^[A-Z]+-\d+$/.test(x.trim()))).toBe(true);
+    /* audyt D-04 (E41, 08.10): KSH szuka tylko po kodzie i tablicach — numer zlecenia HHL ani SCX nie jest kluczem */
+    const search = page.locator('[data-map-filters] .map-search');
+    await expect(search).toHaveAttribute('placeholder', 'Szukaj: kod, tablice');
+    const rows = page.locator('[data-map-table] tbody tr[data-load]');
+    await search.fill('HHL/2026');
+    await expect(rows).toHaveCount(0);
+    await search.fill('SCX-26');
+    await expect(rows).toHaveCount(0);
+    await search.fill(names[0].trim());
+    expect(await rows.count()).toBeGreaterThan(0);
+    await search.fill('');
   });
 
   test('telefon 390: „Warstwy ▾” → arkusz z warstwami i legendą; lista jako karty; znacznik → arkusz z „Otwórz panel transportu”', async ({ page }) => {
@@ -486,6 +511,28 @@ test.describe('wyglad/P9-d kadr całej trasy (E1)', () => {
     const b = await routeBox(page, '[data-page="map"] .mapbox');
     expect(b.inside, 'bez zapamiętanego przesunięcia').toBe(true);
     await expect(page.locator('[data-cockpit-full-route], .map-fit-btn')).toHaveCount(0);
+  });
+
+  test('telefon 390: trasa nad podpisem podkładu; kafelki nad mapą, „Strefy” w wierszu z tytułem (audyt D-05, D-06)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', true);
+    await openView(page, 'map');
+    await page.waitForTimeout(800);
+    const a = await routeBox(page, '[data-page="map"] .mapbox');
+    expect(a.inside, JSON.stringify(a)).toBe(true);
+    /* E1 pkt 1a–1b: podpis podkładu (na telefonie 2 linie) nie zasłania początku trasy (Śrem) */
+    const at = (await page.locator('[data-page="map"] .leaflet-control-attribution').boundingBox())!;
+    expect(a.u.b, 'trasa nad podpisem podkładu').toBeLessThanOrEqual(at.y - 20);
+    /* E29 makieta „Po zmianie · telefon”: nagłówek → kafelki → mapa → filtry */
+    const bar = (await page.locator('[data-page="map"] [data-stage-bar="page"]').boundingBox())!;
+    const map = (await page.locator('[data-page="map"] .mapbox').boundingBox())!;
+    const filters = (await page.locator('[data-map-filters]').boundingBox())!;
+    expect(bar.y + bar.height, 'kafelki nad mapą').toBeLessThanOrEqual(map.y + 1);
+    expect(map.y + map.height, 'filtry pod mapą').toBeLessThanOrEqual(filters.y + 1);
+    const title = (await page.locator('[data-page="map"] > .panel-hd h2').boundingBox())!;
+    const zones = (await page.locator('[data-map-zones]').boundingBox())!;
+    expect(zones.y < title.y + title.height && zones.y + zones.height > title.y, '„Strefy” w wierszu z tytułem').toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
 
   test('komputer: Przegląd w panelu — przybliżenie 11, pojazd na środku', async ({ page }) => {

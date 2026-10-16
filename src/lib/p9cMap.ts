@@ -12,7 +12,7 @@ import { delayMinutesVsPlan, fmtTime, TZ_OPS } from './time';
 import { delayPillMinutes } from './prodDash';
 import { formatListDateTime } from './format';
 import { durText } from './p5Fees';
-import { transportLabel } from './transportName';
+import { transportLabel, transportSearchBlob } from './transportName';
 
 const TZ = 'Europe/Warsaw';
 const PORT_PL: Record<string, string> = { GDN: 'Gdańsk', NYN: 'Nynäshamn', GDY: 'Gdynia', KAA: 'Karlskrona' };
@@ -164,11 +164,20 @@ export function headCounts(rows: readonly MapRow[]): { n: number; withPos: numbe
   return { n: win.length, withPos: win.length - noPos, noPos };
 }
 
-/** Wyszukiwanie (pkt 5): kod, nazwa (E41), numery zleceń, tablice ciągnika i naczepy. */
-export function rowMatches(l: Load, label: string, q: string): boolean {
+/**
+ * Wyszukiwanie (pkt 5): kod, numery zleceń, które firma widzi (E41, 08.10), tablice ciągnika i naczepy.
+ * HHL: kod + nr HHL i nr SCX; SCX: kod + swój i nr HHL; KSH: sam kod (bez numerów zleceń innych firm).
+ * Nigdy numer z pliku KSH — ta sama zasada co Harmonogram (`transportSearchBlob`).
+ */
+export function rowMatches(l: Load, role: RoleId, q: string): boolean {
   const s = q.trim().toLowerCase();
   if (!s) return true;
-  const hay = [l.code, label, l.hhlOrderNo, l.carrierOrderNo, l.orderNo, l.resources.tractorPlate, l.resources.trailerPlate]
+  const hay = [transportSearchBlob(l, role), l.resources.tractorPlate, l.resources.trailerPlate]
     .filter(Boolean).join(' ').toLowerCase();
   return hay.includes(s);
+}
+
+/** Podpowiedź pola szukania według firmy: KSH bez „nr zlecenia” (E41). */
+export function searchHintKey(role: RoleId): 'p9c_search' | 'p9c_search_ksh' {
+  return role === 'KSH' ? 'p9c_search_ksh' : 'p9c_search';
 }

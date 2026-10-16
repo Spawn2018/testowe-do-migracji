@@ -20,7 +20,7 @@ import { transportLabel } from '../../lib/transportName';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { h6Requests } from '../../lib/map/draw';
 import {
-  acquireMap, ensureBasemap, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
+  acquireMap, attributionOf, ensureBasemap, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
   type BasemapHealth, type LayerBag, type MapSlot, type PoolEntry,
 } from './mapPool';
 import { BasemapFailCard } from './BasemapFailCard';
@@ -150,6 +150,8 @@ const LABELS_MAX = 15;
 /** E1 (Przegląd): przybliżenie na pojeździe i odstęp podążania. */
 const DRAWER_ZOOM = 11;
 const FOLLOW_MS = 60_000;
+/** audyt D-03: podświetlony znacznik nad innymi (grupy mają 1000). */
+const HOVER_Z = 3000;
 
 export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit' : 'map', onMarker }: {
   loads: Load[];
@@ -170,6 +172,8 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   const geofences = useTowerStore((s) => s.geofences);
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const setHoverLoad = useTowerStore((s) => s.setHoverLoad);
+  /* audyt D-03 (E29, 08.10): najechanie na wiersz tabeli podświetla znacznik (albo znacznik grupy z tym autem) */
+  const hoverLoadId = useTowerStore((s) => s.hoverLoadId);
   const selectedLoadId = useTowerStore((s) => s.selectedLoadId);
   const focusMode = useTowerStore((s) => s.focusMode);
   const mapFocusKey = useTowerStore((s) => s.mapFocusKey);
@@ -242,6 +246,18 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   navigateToRef.current = navigateTo;
   risksRef.current = risks;
   mapFocusKeyRef.current = mapFocusKey;
+  /* audyt D-03: znaczniki z ostatniego rysowania — podświetlenie bez rysowania od nowa (najechanie nie przerysowuje mapy) */
+  const hoverRef = useRef(hoverLoadId);
+  hoverRef.current = hoverLoadId;
+  const hoverMarksRef = useRef<{ m: L.Marker; ids: readonly string[]; z: number }[]>([]);
+  const applyHover = useCallback((id: string | null) => {
+    for (const h of hoverMarksRef.current) {
+      const on = !!id && h.ids.includes(id);
+      h.m.getElement()?.classList.toggle('is-hover', on);
+      h.m.setZIndexOffset(on ? HOVER_Z : h.z);
+    }
+  }, []);
+  useEffect(() => { applyHover(hoverLoadId); }, [hoverLoadId, applyHover]);
 
   useEffect(() => {
     if (!shows('roadSituationsSe')) return; // I-2e: produkcja — bez źródła nie rysujemy zdarzeń przykładowych
@@ -335,13 +351,16 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     const raf = requestAnimationFrame(() => safeInvalidate());
     const t = window.setTimeout(() => safeInvalidate(), 250);
     let lastSize = '';
+    /* audyt D-05: podpis podkładu dochodzi po wczytaniu podkładu (zmienia wysokość) — kadr liczony od nowa */
+    const attr = attributionOf(map);
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
       safeInvalidate();
-      const size = `${pooled.el.clientWidth}x${pooled.el.clientHeight}`;
+      const size = `${pooled.el.clientWidth}x${pooled.el.clientHeight}:${attr?.offsetHeight ?? 0}`;
       if (size !== lastSize) refit();
       lastSize = size;
     }) : null;
     if (ro) ro.observe(pooled.el);
+    if (ro && attr) ro.observe(attr);
     /* E1 (Przegląd): użytkownik przesunął albo przybliżył → mapa przestaje podążać za pojazdem */
     const onUserMove = () => { if (!programmaticRef.current) userMovedRef.current = true; };
     map.on('dragstart', onUserMove);
@@ -459,6 +478,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     }
 
     layers.fleet.clearLayers();
+    hoverMarksRef.current = [];
     /* wyglad/P9-f (E32 pkt 3): na placu — strefa placu na mapie Przeglądu (bez względu na warstwę „Strefy”) */
     if (slot === 'drawer' && panelAtSite && mapLayers.vehicles) {
       for (const g of geofences) {
@@ -587,6 +607,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           setOpenGroup(g.key);
         });
         groupMarkers.push(gm);
+        hoverMarksRef.current.push({ m: gm, ids: g.ids, z: 1000 });
       }
       groupViewsRef.current = views;
       /* III-5 (SCOPE 5.10): produkcja — pozycje z bazy/statusu często w tym samym punkcie (np. plac załadunku);
@@ -621,9 +642,12 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           else selectLoadRef.current(f.id);
         });
         m.addTo(layers.fleet);
+        hoverMarksRef.current.push({ m, ids: [f.id], z: 0 });
       }
       /* grupy po zwykłych znacznikach (nad nimi) */
       for (const gm of groupMarkers) gm.addTo(layers.fleet);
+      /* audyt D-03: po narysowaniu — podświetlenie transportu z wiersza, nad którym jest kursor */
+      applyHover(hoverRef.current);
     }
 
     layers.situations.clearLayers();
@@ -683,7 +707,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           .addTo(layers.ais);
       }
     }
-  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes, role, sailings, embedded, slot, panelAtSite]);
+  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes, role, sailings, embedded, slot, panelAtSite, applyHover]);
 
   /* wyglad/P9-e: lista grupy z ostatniego rysowania; grupa, która zniknęła (np. auto wyjechało ze strefy), zamyka listę */
   const openView = openGroup ? groupViewsRef.current.get(openGroup) ?? null : null;

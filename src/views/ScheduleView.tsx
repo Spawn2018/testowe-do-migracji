@@ -73,6 +73,8 @@ export function ScheduleView() {
   const currency = useTowerStore((s) => s.displayCurrency);
   const search = useTowerStore((s) => s.search);
   const setSearch = useTowerStore((s) => s.setSearch);
+  /* E41 (08.10): KSH szuka tylko po kodzie — podpowiedź bez „nr zlecenia” (filtr: `transportSearchBlob`) */
+  const searchKey = role === 'KSH' ? 's7_search_ksh' : 's7_search';
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const selectedLoadId = useTowerStore((s) => s.selectedLoadId);
   const hoverLoadId = useTowerStore((s) => s.hoverLoadId);
@@ -712,7 +714,7 @@ export function ScheduleView() {
             {/* telefon (E30 pkt 8, E28): pasek etapów w bok, „Szukaj” i „Filtry · n” (arkusz), „⋯” — Więcej */}
             <StageBar variant="page" />
             <div className="filters sched-ph-search" data-sched-filters>
-              <input type="search" placeholder={s7(locale, 's7_search_ph')} aria-label={s7(locale, 's7_search')} value={search} onChange={(e) => setSearch(e.target.value)} />
+              <input type="search" placeholder={s7(locale, 's7_search_ph')} aria-label={s7(locale, searchKey)} value={search} onChange={(e) => setSearch(e.target.value)} />
               <button type="button" className="chipbtn s7-fbtn" aria-expanded={sheetOpen} data-sched-more-filters onClick={() => setSheetOpen(true)}>
                 {activeFilters ? s7p(locale, 's7_filters_n', { n: activeFilters }) : s7(locale, 's7_filters')}
               </button>
@@ -764,7 +766,7 @@ export function ScheduleView() {
           </>
         ) : (
           <div className="filters s7-filters" data-sched-filters>
-            <input type="search" className="s7-search" placeholder={s7(locale, 's7_search')} aria-label={s7(locale, 's7_search')} value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input type="search" className="s7-search" placeholder={s7(locale, searchKey)} aria-label={s7(locale, searchKey)} value={search} onChange={(e) => setSearch(e.target.value)} />
             <label className="s7-sel" data-week="load">
               <span>{s7(locale, 's7_f_load')}:</span>
               <select value={loadPick} onChange={(e) => setLoadPick(e.target.value)}>

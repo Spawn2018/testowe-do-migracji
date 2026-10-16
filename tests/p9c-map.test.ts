@@ -4,7 +4,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { headCounts, markerTone, mapRow, rowMatches, type RowCtx } from '../src/lib/p9cMap';
+import { headCounts, markerTone, mapRow, rowMatches, searchHintKey, type RowCtx } from '../src/lib/p9cMap';
 import { p9m, p9mp } from '../src/i18n/p9c';
 import type { Load } from '../src/types';
 
@@ -89,10 +89,30 @@ describe('P9-c · wiersz Mapy', () => {
     const b = mapRow(load({ status: 'PLANNED', stage: 'PLAN', plannedLoadDate: '2026-10-10' }), ctx({ nowIso: DAY }));
     expect(headCounts([a, b])).toEqual({ n: 2, withPos: 1, noPos: 1 });
     const l = load({ status: 'IN_TRANSIT_SE' });
-    expect(rowMatches(l, a.label, 'ctr44')).toBe(true);
-    expect(rowMatches(l, a.label, '0005/09')).toBe(true);
-    expect(rowMatches(l, a.label, 'GD035')).toBe(true);
-    expect(rowMatches(l, a.label, 'xyz')).toBe(false);
+    expect(rowMatches(l, 'HHL', 'ctr44')).toBe(true);
+    expect(rowMatches(l, 'HHL', '0005/09')).toBe(true);
+    expect(rowMatches(l, 'HHL', 'hhl/2026/1250')).toBe(true);
+    expect(rowMatches(l, 'HHL', 'GD035')).toBe(true);
+    expect(rowMatches(l, 'HHL', 'xyz')).toBe(false);
+  });
+
+  it('wyszukiwanie według firmy (E41, 08.10): KSH tylko kod i tablice, SCX swój numer i HHL, nigdy numer z pliku KSH', () => {
+    const l = load({ status: 'IN_TRANSIT_SE', orderNo: '15048/2026/OSL/GDA/P' });
+    /* KSH: numer zlecenia HHL ani SCX nie jest kluczem (nie ujawnia powiązania) */
+    expect(rowMatches(l, 'KSH', 'HHL/2026/1250')).toBe(false);
+    expect(rowMatches(l, 'KSH', '0005/09/S/2026')).toBe(false);
+    expect(rowMatches(l, 'KSH', 'sg-13')).toBe(true);
+    expect(rowMatches(l, 'KSH', 'CTR44190')).toBe(true);
+    expect(rowMatches(l, 'KSH', 'gd035')).toBe(true);
+    /* SCX widzi numer HHL (tylko do odczytu) i swój */
+    expect(rowMatches(l, 'SCX', 'HHL/2026/1250')).toBe(true);
+    expect(rowMatches(l, 'SCX', '0005/09')).toBe(true);
+    /* numer z pliku KSH nie jest kluczem w żadnej firmie (jak Harmonogram) */
+    for (const role of ['HHL', 'SCX', 'KSH'] as const) expect(rowMatches(l, role, '15048/2026')).toBe(false);
+    expect(searchHintKey('KSH')).toBe('p9c_search_ksh');
+    expect(p9m('pl', searchHintKey('KSH'))).toBe('Szukaj: kod, tablice');
+    expect(p9m('pl', searchHintKey('HHL'))).toBe('Szukaj: kod, nr zlecenia, tablice');
+    expect(p9m('pl', searchHintKey('SCX'))).toBe('Szukaj: kod, nr zlecenia, tablice');
   });
 
   it('KSH widzi sam kod (E41)', () => {

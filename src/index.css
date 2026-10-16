@@ -1766,6 +1766,10 @@ img,video{max-width:100%;height:auto}
 .wt-mk.is-late{outline:3px solid var(--red)}
 .wt-mk-arrow{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:9px solid var(--surface)}
 .wt-mk-lb{position:absolute;left:27px;top:1px;white-space:nowrap;font:700 13px/1.3 var(--font-cond);color:var(--ink);background:var(--surface);border:1px solid var(--rule);padding:0 4px}
+/* audyt D-03 (E29, 08.10): najechanie na wiersz tabeli Mapy podświetla znacznik — większy, obwódka tokenem, nad innymi */
+.wt-marker.is-hover>.wt-mk,.wt-marker.is-hover>.wt-mk-grp{transform:scale(1.3)}
+.wt-marker.is-hover>.wt-mk,.wt-marker.is-hover>.wt-mk-grp>.wt-mk{border-color:var(--ink)}
+.wt-marker.is-hover>.wt-mk>.wt-mk-lb{transform:scale(.77);transform-origin:0 50%;border-color:var(--ink)}
 .leaflet-tooltip.wt-mk-tip{background:var(--surface);color:var(--ink);border:1px solid var(--rule);border-radius:2px;box-shadow:none;padding:8px 10px;font-size:13px;line-height:1.45;white-space:nowrap}
 .leaflet-tooltip.wt-mk-tip b{font:700 15px var(--font-cond)}
 .leaflet-tooltip.wt-mk-tip .r{color:var(--red);font-weight:600}
@@ -1832,6 +1836,10 @@ img,video{max-width:100%;height:auto}
   .page-sections[data-page="map"] .mapbox{height:auto;overflow:hidden}
   .page-sections[data-page="map"] .mapstage{height:max(300px, 50vh);height:max(300px, 50dvh);max-height:none}
   .page-sections[data-page="map"] .mapkey{display:none}
+  /* audyt D-06 (E29 telefon): nagłówek → kafelki → mapa; u HHL „Strefy” w wierszu z tytułem i liczbami
+     (jak makieta „Mapa w oknie 6 · bez pozycji 2”), znacznik „na żywo” pod nimi */
+  .page-sections[data-page="map"]>.panel-hd.map-hd-zones{row-gap:0}
+  .page-sections[data-page="map"]>.panel-hd.map-hd-zones>.live-mark{order:1;flex:1 1 100%;margin-left:0}
 }
 .mlist .filters .map-search{flex:1 1 230px;min-width:0}
 .map-e29 td[data-map-name] .map-cell-sub{white-space:nowrap}
