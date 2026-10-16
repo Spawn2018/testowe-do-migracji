@@ -29,7 +29,7 @@ Wygląd, teksty, obliczenia widoku i przejścia (F8), bez zapisów. **Złożone 
 **Sprawdzone:**
 - unit `sched-layout` (11): kolumny pliku w kolejności i z nazwami z pliku; KSH bez numerów; kwota według firmy; 8 kolumn skróconego; dodatkowe kolumny według firmy; daty i dni po polsku; „A → B” i „?”; ETA; Dokumenty; tygodnie pon–nd; filtry stanu; nazwa pliku eksportu; zapis układu; bez „Zmień ciągnik”, „Zapisz widok” i okna przeglądarki;
 - `aud03-ksh-panel` przepisany: Harmonogram bez „Zmień ciągnik”, prawa do zestawu bez zmian;
-- `visual-states` przepisany (`stan-blad`, `stan-walidacja`: wgranie pliku przez „Więcej ▾”), wzorce zrzutów Harmonogramu odświeżone w GitHub Actions;
+- przepisane do nowego układu (uruchamia je bramka `visual`): `visual-states` (`stan-blad`, `stan-walidacja`: wgranie pliku przez „Więcej ▾”), `etap4-ui` (M5, M8, D26), `etap5-ui` (D14, D15), `aud03-ksh-panel.spec`, `d-eur-t` — lokalnie zielone; wzorce zrzutów Harmonogramu odświeżone w GitHub Actions;
 - e2e blok P7-c (3):
   - komputer 1366, HHL: nagłówki pliku; strona bez przewijania w bok; „Wysyłka” na miejscu po przewinięciu; kreska przed „Status”; bez „Zmień ciągnik”; wiersz → panel; „Widok skrócony” bez przewijania; „Kolumny” → „Naczepa”, układ po przeładowaniu, „Przywróć kolumny domyślne”; tydzień załadunku; liczba przy każdym filtrze stanu = wiersze;
   - komputer 1440: KSH bez numerów, „Twoja cena”; SCX „Moja stawka”;
