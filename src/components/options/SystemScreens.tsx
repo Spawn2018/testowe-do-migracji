@@ -7,6 +7,7 @@ import { useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { up } from './up';
+import { E49_THR } from '../../i18n/e49Thr';
 
 /* ---------- Przełączniki bezpieczeństwa ---------- */
 
@@ -246,7 +247,7 @@ export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark }: {
       {mark ? <div className="ox-count-line"><span />{mark}</div> : null}
       <ul className="ox-thr-list">
         {rows.map((r) => {
-          const label = t(locale, `p3c_thr_${r.key}`);
+          const label = E49_THR[r.key] ?? t(locale, `p3c_thr_${r.key}`);
           const editing = edit?.key === r.key;
           const v = vals[r.key];
           return (
@@ -259,10 +260,10 @@ export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark }: {
                   ) : (
                     <label className="ox-thr-input"><input className="input" inputMode="decimal" aria-label={label} value={edit.draft} onChange={(e) => setEdit({ ...edit, draft: e.target.value })} /><span>{r.unit}</span></label>
                   )}
-                  <span className="ox-thr-val"><span>— {t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
+                  <span className="ox-thr-val"><span>— {E49_THR[`${r.key}_fx`] ?? t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
                 </span>
               ) : (
-                <span className="ox-thr-val"><b data-content>{fmt(v)} {r.unit}</b> <span>— {t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
+                <span className="ox-thr-val"><b data-content>{fmt(v)} {r.unit}</b> <span>— {E49_THR[`${r.key}_fx`] ?? t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
               )}
               {readOnly ? null : editing ? (
                 <span className="ox-thr-btns">

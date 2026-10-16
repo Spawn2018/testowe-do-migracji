@@ -80,7 +80,7 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
   <h1>Audyt Watch Tower</h1>
   <p>Twoja lista 14 punktów z 07.10.2026, sprawdzana etap po etapie na produkcji. Każdy etap ma fakty z dowodem, propozycję rozwiązania i podgląd, jak to będzie wyglądać. Nic nie trafia do Cursora bez Twojej akceptacji.</p>
   <div class="meta">
-    <span>Stan: 08.10.2026, 14:10 · zmiany 09.10.2026, 14:11 (<a href="#zmiany-0910">Zmiany 09.10</a>) · zmiany 11.10.2026, 23:40 (<a href="#zmiany-1110">Zmiany 11.10</a>) · zmiany 15.10.2026, 03:40 i 21:10 (<a href="#zmiany-1510">Zmiany 15.10</a>)</span>
+    <span>Stan: 08.10.2026, 14:10 · zmiany 09.10.2026, 14:11 (<a href="#zmiany-0910">Zmiany 09.10</a>) · zmiany 11.10.2026, 23:40 (<a href="#zmiany-1110">Zmiany 11.10</a>) · zmiany 15.10.2026, 03:40 i 21:10 (<a href="#zmiany-1510">Zmiany 15.10</a>) · zmiany 16.10.2026, 02:10 (<a href="#zmiany-1610">Zmiany 16.10</a>, <a href="#e49">E49 wiatr</a>)</span>
     <span>Kod: <span class="mono">testowe-do-migracji @ 9c4fa33</span> (07.10, 01:00)</span>
     <span>Baza: produkcja, tylko odczyt</span>
     <span>Aplikacja: konto testowe Operacje HHL (od 14:11)</span>
@@ -94,6 +94,8 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
 </header>
 
 <nav class="stages" aria-label="Etapy audytu">
+  <a href="#zmiany-1610"><span><span class="id">16.10</span>Zmiany: e-maile zapasowe, wymiary z tabeli, polisa HHL, bez kontroli trasy</span><span class="st done">zdecydowane 01:13</span></a>
+  <a href="#e49"><span><span class="id">E49</span>Wiatr a ETA</span><span class="st wait">do akceptacji</span></a>
   <a href="#zmiany-1510"><span><span class="id">15.10</span>Zmiany: termin wydania 22.10, Podgląd, „Przeczytali”, telefony</span><span class="st done">zdecydowane 03:12</span></a>
   <a href="#zmiany-1110"><span><span class="id">11.10</span>Zmiany: Cursor na Windows, bramy w GitHub, P0-CI</span><span class="st done">w toku · P0-CI</span></a>
   <a href="#zmiany-0910"><span><span class="id">09.10</span>Zmiany: link RIO, piloci, decyzje 13:09</span><span class="st done">zdecydowane</span></a>
@@ -147,6 +149,169 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
   <a href="#uzg"><span><span class="id">Uzg.</span>Repozytorium a decyzje: rejestr, PLAN, paczki P0–P10</span><span class="st done">zaakceptowane 15.10</span></a>
   <a href="#e46"><span><span class="id">E46–48</span>Wydajność, błędy aplikacji, OWASP</span><span class="st done">zaakceptowane 15.10</span></a>
 </nav>
+
+<!-- ===================== ZMIANY 16.10 ===================== -->
+<section class="stage" id="zmiany-1610">
+  <div class="stage-hd">
+    <span class="eyebrow">16.10.2026 · Twoje wiadomości 00:45–02:57 · zapis 03:15</span>
+    <h2>Zmiany 16.10: e-maile zapasowe, wymiary z tabeli, polisa HHL, wiatr i objazd, czat</h2>
+  </div>
+  <p>Twoje decyzje z 01:13 dotyczyły listy „Czeka na Ciebie — stan z 07.10”. Sprawdziłem każdą pozycję w historii czatu, w dokumentach i w tym raporcie. Wszystkie były już rozstrzygnięte, a plan nie wyciągnął z tego wniosków. Zapis dla Cursora: dopisek <code>D-20261016-0200-01</code>, który nie przerywa jego bieżącej pracy. E-maile zapasowe opisuje dopisek <code>D-20261016-0100-01</code> (BLOKER C16-H). Wiatr ma własny etap <a href="#e49">E49</a>.</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Godzina</th><th>Twoja wiadomość albo decyzja</th><th>Co to zmienia</th><th>Paczka</th></tr></thead>
+      <tbody>
+        <tr><td class="num">00:45</td><td>„Znowu zmasowane maile”. Czy inni użytkownicy też je dostają?</td><td>Przyczyna: zapasowy e-mail (W42) zbiera stare, niepotwierdzone powiadomienia z 7 dni, po 80 naraz. Dostajesz je tylko Ty (sprawdzone w Resend i w bazie). KSH i SCX dostały wyłącznie e-maile potwierdzające. Naprawa: zapasowy e-mail tylko dla pilnych powiadomień od wdrożenia, każde jeden raz; stare zamknięte bez wysyłki; poprawny adres aplikacji w e-mailach.</td><td>C16-H (BLOKER)</td></tr>
+        <tr><td class="num">00:55</td><td>Cursor nie może skakać po zadaniach</td><td>Polecenie dla Cursora: C16-H po bieżącym C17, potem kolejka bez zmian. Każdy nowy dopisek idzie tak samo — „po bieżącej pozycji, bez przerywania”.</td><td>kolejność</td></tr>
+        <tr><td class="num">01:13 · 1</td><td>Wymiary zestawów: tabela jest; pilot i zamiana zezwoleń SE i PL na zezwolenie „na firmę” — automatycznie</td><td>Każdy transport dostaje sam z symbolu wymiary zestawu, pilota („PL + SE” albo „BRAK”) i rodzaj zezwolenia („Firma” albo „Trasa”). Nie ma stanu „czeka na wymiary”. Na produkcji dziś wymiary ma 1 transport z 94 — P5 to naprawia.</td><td>P5 D1</td></tr>
+        <tr><td class="num">01:13 · 1</td><td>Rezygnacja z „Przeszkód wzdłuż korytarza” i „Kontroli trasy”</td><td>Nie wracają (E32 pkt 1 mówił „wrócą jedną linią”). Panel, warstwa przeszkód na mapie, dwie funkcje i trzy puste tabele są usuwane.</td><td>P9</td></tr>
+        <tr><td class="num">01:13 · 2</td><td>KPD GDDKiA — rezygnacja</td><td>Rozstrzygnięte 08.10, 13:26; drogi PL tylko z HERE (E2). Bez nowej pracy.</td><td>P6</td></tr>
+        <tr><td class="num">01:13 · 3</td><td>SMS bez fałszywych wiadomości (analiza SG-03)</td><td>Rozstrzygnięte w E42 (07.10, 22:15): 4 rodzaje A–D, cisza 20:00–06:00, test na przejeździe SG-03. Bez nowej pracy.</td><td>P8</td></tr>
+        <tr><td class="num">01:13 · 4</td><td>„Wykorzystaj polisę HHL i podepnij. Ma się podpinać automatycznie pod każdy transport.”</td><td>Polisę PZU 1106707356 i zezwolenie GDDKiA 13/GD/2026 wpisuje Cursor raz, z Twoich plików, z kopią i testem na TEST. Podpinają się same do każdego transportu w okresie ważności (polisa — do każdego; zezwolenie — do „Firma”). Pytanie W4 („HHL i SCX wgrywają”) zamknięte.</td><td>P5 D2</td></tr>
+        <tr><td class="num">01:13 · 5</td><td>Wiatr a ETA: pogłębiona analiza i wersja do akceptacji</td><td>Etap <a href="#e49">E49</a>: sprawdzone na przejeździe SG-03 i na progach SMHI, IMGW i mostu Storebælt. Do Twojej akceptacji nic się nie zmienia.</td><td>W19</td></tr>
+        <tr><td class="num">02:08</td><td>E49 zaakceptowane; zamknięty most — „komunikat w Ryzykach dla SCX: objazd czy stoją, ile km, ile czasu, jakie ryzyka”</td><td>Etap <a href="#e49">E49</a>: progi 20 / 25 m/s, D-84 = 20 m/s, śliskość do 25 km, sprawa SCX „Objazd czy postój?”. Dopisek <code>D-20261016-0230-01</code>, wygląd PR <code>wyglad/E49</code>, miejsca w kodzie <code>D-20261016-0305-01</code>. W19 zamknięte, nowe W45.</td><td>P6</td></tr>
+        <tr><td class="num">02:39</td><td>Czat: nie mogę wybrać, do kogo piszę, i nie widzę, kto i kiedy przeczytał — „to było ustalane”</td><td>Nie pominięte: ustalone w E17 (07.10, 20:57) i 15.10, 03:12; wygląd na produkcji od 14.10, ale <b>wyłączony</b> — aplikacja nie zapisuje odbiorców, a odczyty są fałszywe (40 ostatnich przy każdym wejściu). W planie P6 była jedna linia — rozpisana na Cz1–Cz12 z testem; dodane odświeżanie czatu bez przeładowania. Lista „kto i kiedy” (osoba, firma, godzina) — wygląd <code>wyglad/P6-e</code>. Dopisek <code>D-20261016-0250-01</code>.</td><td>P6</td></tr>
+        <tr><td class="num">02:57</td><td>Czat w dzwonku i w telefonie: „SG-03 + kto + treść”; przyciski „Oznacz jako odczytane” i „Odpowiedz” jak w WhatsApp; otwieranie aplikacji, nie Chrome</td><td>Wiersz „Wiadomość w czacie” w macierzy (C3). W P6: tytuł „SG-03 · Imię Nazwisko // firma” i pełna treść, jedno powiadomienie na transport, odczyt i odpowiedź z powiadomienia bez otwierania aplikacji, dotknięcie otwiera zainstalowaną aplikację (dziś fokus łapie karta Chrome), bez powiadomienia przy otwartym czacie. iPhone nie pokazuje przycisków (ograniczenie iOS). Dopisek <code>D-20261016-0310-01</code>.</td><td>C3, P6</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Fakty</h3>
+  <ul class="facts">
+    <li><span class="chip fact">Fakt</span><div>Na produkcji: <code>permits</code> = 0, polisa HHL nie istnieje (jest tylko polisa SCX, ERGO Hestia, zatwierdzona). Wymiary zestawu: 1 transport z 94. Tabele kontroli trasy i przeszkód: 0 wierszy; funkcje są wdrożone, nikt ich nie uruchamia.
+      <span class="src">Supabase, produkcja, tylko odczyt, 16.10 01:40.</span></div></li>
+    <li><span class="chip fact">Fakt</span><div>Zezwolenie 13/GD/2026 to kategoria IV, pozycja 4 tabeli kategorii zezwoleń: zestaw do 23 m długości, 3,4 m szerokości, 4,3 m wysokości, 60 t. Każdy symbol z „Firma” w Twojej tabeli się w tym mieści; KR (23,69 × 3,52 m) — nie, dlatego ma „Trasa”.
+      <span class="src">Skan zezwolenia z 08.10 (druk AF 0082620); Twoja tabela z 07.10.</span></div></li>
+  </ul>
+
+  <h3>Co przestało obowiązywać</h3>
+  <ul class="facts">
+    <li><span class="chip bad">Unieważnione</span><div>„Kontrola trasy” i „Przeszkody” „wrócą jedną linią z listą przeszkód” (E32 pkt 1) → nie wracają. W4 „HHL wgrywa polisę, SCX wgrywa zezwolenie po P5” → wpisuje Cursor w P5. D-83 „wymiary poda właściciel dla każdego transportu” → spełnione tabelą według symbolu. Stara propozycja wiatru (×0,70 od 15 m/s, 05.10) → zastąpiona propozycją E49.</div></li>
+  </ul>
+
+  <div class="ask-box">
+    <span class="chip ask" style="align-self:flex-start">Twoje czynności</span>
+    <ul>
+      <li><b>Pliki:</b> zapisz oba pliki, które dostałeś w czacie (polisa PZU i zezwolenie kat. IV), w <code>D:\Watch Tower\dane\</code> bez zmiany nazw. Dopisek <code>D-20261016-0200-01.md</code> zapisz w <code>D:\Watch Tower\dopiski_nowe\</code>.</li>
+      <li><b>Cursor:</b> wklej prompt do tego dopisku. Cursor włączy go do planu po bieżącej pozycji, bez przerywania pracy.</li>
+      <li><b>E49:</b> odpowiedziałeś 02:08 — zapis w <a href="#e49">E49</a>.</li>
+      <li><b>Czat:</b> zapisz dopiski <code>D-20261016-0250-01.md</code> i <code>D-20261016-0310-01.md</code> w <code>D:\Watch Tower\dopiski_nowe\</code> i wklej Cursorowi oba prompty. Po wdrożeniu P6 test na Twoim S24 (wiadomość „tylko HHL i SCX”, przyciski w powiadomieniu, otwieranie aplikacji).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===================== E49 ===================== -->
+<section class="stage" id="e49">
+  <div class="stage-hd">
+    <span class="eyebrow">E49 · W19, H-10, D-84 · Twoje polecenie 16.10, 01:13 · zaakceptowane 02:08 · wygląd 03:10</span>
+    <h2>Wiatr a ETA: kiedy wiatr naprawdę wydłuża przejazd</h2>
+  </div>
+  <p class="verdict"><b>Zaakceptowane 16.10, 02:08.</b> ETA liczy wiatr dopiero od 20 m/s (z boku +15 %, z przodu +5 %), od 25 m/s postój. Ostrzeżenie D-84: 20 m/s zamiast 15. Gdy na dalszej trasie zamkną most albo drogę, SCX dostaje w Ryzykach sprawę „Objazd czy postój?” z podpowiedzią: ile więcej km i czasu kosztuje objazd i jakie ma ryzyka. Dane podłącza Cursor w P6 (<code>D-20261016-0230-01</code>), wygląd jest w PR <code>wyglad/E49</code>.</p>
+
+  <h3>Fakty</h3>
+  <ul class="facts">
+    <li><span class="chip bad">Nie działa</span><div>Ostrzeżenie o wietrze (D-84, 15 m/s) powstaje tylko przy zmiennej testowej. Przy każdym przebiegu dziennik pisze „brak żywej serii wiatru drogowego”. Pomiary Trafikverket przy E4 zapisują tylko średni wiatr, bez porywów.
+      <span class="src">Kod: <code>_shared/integrations/jobs.ts</code> l. 1102–1117, <code>road.ts</code> l. 235–240.</span></div></li>
+    <li><span class="chip fact">Fakt</span><div>SG-03 to jedyny przejazd z pozycjami (281, Szwecja, 05–06.10). Przy porywach 11–17 m/s przy drodze (na stacjach wysuniętych w morze do 21 m/s), także z boku, jechał 80–81 km/h, czyli tyle, ile wolno ciężarówce.
+      <span class="src">Pozycje: <code>positions</code> SG-03; wiatr: 8 stacji SMHI wzdłuż E4 (średni, poryw, kierunek), odczyt 16.10.</span></div></li>
+    <li><span class="chip fact">Fakt</span><div>ETA ma już mnożnik pogody dla Szwecji, ale dla całej trasy naraz: jeden śliski punkt z 25 dodaje 15 % do całego odcinka SE. 16.10 o 01:30 było tak przy 1 punkcie — ok. 2,5 h więcej dla każdego transportu w Szwecji.
+      <span class="src">Supabase: <code>corridor_conditions</code> SE_E4 = 1,15 („nawierzchnia 1”); funkcja <code>compute_load_eta</code>.</span></div></li>
+    <li><span class="chip fact">Fakt</span><div>Prognoza SMHI obejmuje całą trasę: Śrem, Gdańsk, Bałtyk, Szwecję do Boden. Siatka 2,5 km, co godzinę na ok. 2,5 doby, dalej do 10 dni; poryw, średni wiatr i kierunek. Licencja CC BY 4.0: bezpłatnie, także komercyjnie, z podpisem „SMHI”.
+      <span class="src">API sprawdzone 16.10 dla Gdańska i Västerbotten; warunki użycia SMHI.</span></div></li>
+  </ul>
+
+  <h3>SG-03: wiatr i prędkość (czas polski)</h3>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Kiedy</th><th>Odcinek</th><th>Prędkość</th><th>Wiatr na stacjach (średni / poryw, m/s)</th></tr></thead>
+      <tbody>
+        <tr><td class="num">05.10, 13–14</td><td>Härnösand → Höga Kusten → Örnsköldsvik</td><td class="num">75–80 km/h</td><td>głąb lądu 2–4 / 6–8; wybrzeże 7–9 / 9–12; z południa</td></tr>
+        <tr><td class="num">05.10, 15–17</td><td>Örnsköldsvik → Umeå</td><td class="num">80–81 km/h</td><td>6–10 / 11–15; z SSW (z tyłu, trochę z boku)</td></tr>
+        <tr><td class="num">05.10, 18 → 06.10, 07</td><td>odpoczynek za Umeå</td><td class="num">0</td><td>—</td></tr>
+        <tr><td class="num">06.10, 09–12</td><td>Skellefteå → Piteå → Luleå → Boden</td><td class="num"><b>80–81 km/h</b></td><td>przy drodze 6–10 / 11–16; przylądek Bjuröklubb 12–17 / 18–21; <b>z zachodu, z boku</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Progi, które stosują inni</h3>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Kto</th><th>Poryw</th><th>Co się dzieje</th></tr></thead>
+      <tbody>
+        <tr><td>IMGW</td><td class="num">19–24 / 24–32 / &gt; 32 m/s</td><td>ostrzeżenie 1. / 2. / 3. stopnia</td></tr>
+        <tr><td>SMHI, Norrland (Gävleborg–Norrbotten)</td><td class="num">23 / 27 / 30 m/s</td><td>ostrzeżenie żółte / pomarańczowe / czerwone (Sztokholm, Uppsala: 21 / 25 / 30)</td></tr>
+        <tr><td>Most Storebælt, ciężarówki</td><td class="num">20–25 m/s<br>&gt; 25 m/s</td><td>ograniczenie do 70 km/h<br>most zamknięty dla wszystkich</td></tr>
+        <tr><td>Mosty E4 Höga Kusten, Sundsvall</td><td class="num">burza (np. ok. 30 m/s, 11.01.2019)</td><td>Trafikverket zamyka most; komunikat jest w danych, które już czytamy</td></tr>
+        <tr><td>GDDKiA</td><td>bez liczby</td><td>w złej pogodzie pojazd nienormatywny zjeżdża z drogi; decyduje kierowca i pilot</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Fizyka zestawu 50–60 t: wiatr z przodu 10 / 15 / 20 m/s na wysokości auta wydłuża jazdę o ok. 1,5–4 / 4–7 / 6–16 %; na wysokości auta wiatr jest słabszy niż w prognozie dla 10 m (ok. 0,7–0,8 ×). Stalowy ładunek się nie przewróci; ograniczeniem jest utrzymanie pasa przy szerokości do 3,52 m — przy silnym wietrze z boku kierowca i pilot zwalniają, przy burzy stają.</p>
+
+  <h3>Rozwiązanie (zaakceptowane 02:08)</h3>
+  <ol class="steps">
+    <li><span class="chip prop">Źródło</span> Prognoza SMHI w punktach co 25 km wzdłuż trasy drogowej PL i SE (ok. 60 punktów), co godzinę, tylko gdy transport jest w oknie śledzenia. Dla każdego odcinka przed autem liczy się poryw i kierunek <b>w godzinie, w której auto tam będzie</b>. Mosty: komunikaty Trafikverket. Bez IMGW (warunki komercyjne niejasne) i bez kosztów.</li>
+    <li><span class="chip prop">Poniżej 20 m/s</span> Bez zmian — sprawdzone na SG-03.</li>
+    <li><span class="chip prop">20–24 m/s</span> Odcinek dłużej: wiatr <b>z boku +15 %</b> (80 → 70 km/h, jak Storebælt), <b>z przodu +5 %</b>, z tyłu bez zmian.</li>
+    <li><span class="chip prop">25 m/s i więcej</span> <b>Postój</b> przed odcinkiem, aż prognoza spadnie poniżej 20 m/s, plus 30 min na ruszenie.</li>
+    <li><span class="chip prop">Zamknięty most albo droga</span> Twoja odpowiedź 3: sprawa SCX w Ryzykach <b>„Objazd czy postój?”</b>. Dwie możliwości obok siebie: <b>postój</b> (do końca zamknięcia + 30 min, ETA) i <b>objazd</b> (trasa HERE dla ciężarówki z wymiarami i masą zestawu: którędy, + km, + czas, ETA). Szybsza jest oznaczona. Przy każdej możliwości ryzyka zdaniami: zezwolenie „Trasa”, ograniczenia na objeździe, zakazy czasowe, roboty, wiatr, czas pracy kierowcy, prom, okno dostawy KSH, pilot. SCX wybiera „Stoimy” albo „Jedziemy objazdem”: wpis w Historii, powiadomienie HHL, ETA według wyboru. HHL widzi to samo bez przycisków, KSH — nie. Gdy objazdu nie ma dla tego zestawu, zostaje postój.</li>
+    <li><span class="chip prop">Czas pracy</span> Postój przez wiatr liczy się jako przerwa albo odpoczynek kierowcy; gdy wypada razem z odpoczynkiem, ETA bierze dłuższy z nich, nie sumę.</li>
+    <li><span class="chip prop">Ostrzeżenie</span> Zmiana D-84: <b>20–24 m/s</b> na dalszej trasie w ciągu 24 h — sprawa „Silny wiatr na trasie” dla HHL i SCX; <b>25 m/s i więcej</b> albo zamknięty most — „Postój przez wiatr”, pilne. Próg 15 m/s znika: na wybrzeżu Botnii taki poryw jest prawie codziennie, a SG-03 jechał przy nim normalnie.</li>
+    <li><span class="chip prop">Wartości</span> W bazie; zmienia tylko Administrator HHL (Opcje › Progi, Historia zmian).</li>
+    <li><span class="chip prop">Sprawdzanie</span> Po każdym przejeździe zapis prognozy i prędkości z GPS na każdym odcinku. Po 5 przejazdach z porywem ≥ 20 m/s porównuję wynik i, jeśli trzeba, proponuję Ci inne wartości.</li>
+    <li><span class="chip prop">Przy okazji</span> Śliskość w Szwecji: +15 % tylko na odcinkach przed autem do 25 km od punktu z komunikatem, nie na całej trasie SE.</li>
+  </ol>
+
+  <h3>Jak to będzie wyglądać</h3>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Miejsce</th><th>Tekst</th></tr></thead>
+      <tbody>
+        <tr><td>Szczegóły ETA (E15)</td><td>„Wiatr +14 min · porywy 22 m/s z boku · E4 Skellefteå–Piteå, 08:00 · prognoza SMHI”</td></tr>
+        <tr><td>Szczegóły ETA przy postoju</td><td>„Postój przez wiatr 14:00–20:30 · porywy 27 m/s · E4 Umeå–Skellefteå”</td></tr>
+        <tr><td>Do zrobienia (HHL, SCX)</td><td>„Postój przez wiatr · porywy 27 m/s na E4 Umeå–Skellefteå, 14:00–20:00 · ETA +7 h 30 min”</td></tr>
+        <tr><td>Ryzyka › Do zrobienia (SCX)</td><td>„Högakustenbron (E4) zamknięty do 21:32 — objazd czy postój?” · Postój: +0 km · +3 h 54 min · Objazd przez Kramfors i Sandöbron (droga 90): +31 km · +35 min · „szybciej o 3 h 19 min”</td></tr>
+        <tr><td>Szczegóły ETA przy zamknięciu</td><td>„Postój: Högakustenbron (E4) zamknięty, do 22:02 · decyzja SCX”; po decyzji „Objazd +35 min · przez Kramfors i Sandöbron (droga 90)”</td></tr>
+        <tr><td>Podpis</td><td>„Źródło: SMHI (CC BY 4.0), dane przetworzone” — w szczegółach ETA i w Pomocy</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="figs">
+    <figure><img src="img/e49-objazd-scx.webp" alt="Karta sprawy SCX: Högakustenbron zamknięty — postój albo objazd, kilometry, czas, ryzyka i przyciski" width="684" height="742"><figcaption><b>Ryzyka › Do zrobienia, SCX</b> · postój albo objazd: km, czas, ETA, ryzyka · przykład</figcaption></figure>
+    <figure><img src="img/e49-eta.webp" alt="Szczegóły ETA: postój przy zamkniętym moście, wiatr i śliskość z doliczonymi minutami" width="520" height="188"><figcaption><b>Panel transportu › ETA</b> · linie wiatru, śliskości i zamknięcia · przykład</figcaption></figure>
+  </div>
+
+  <h3>Przykłady</h3>
+  <ul class="facts">
+    <li><span class="chip fact">SG-03</span><div>Wiatr nie zmienia ETA: porywy przy drodze poniżej 20 m/s. Stara propozycja: ok. 1 h 40 min błędu.</div></li>
+    <li><span class="chip prop">Wybrzeże</span><div>120 km E4 z porywem 22 m/s z boku: 96 min jazdy × 1,15 → <b>+14 min</b>.</div></li>
+    <li><span class="chip prop">Burza</span><div>27 m/s przez 7 h na trasie (SMHI: pomarańczowe): postój 7 h + 30 min → <b>+7 h 30 min</b>; gdy w tym czasie wypadał odpoczynek 11 h, ETA rośnie tylko o różnicę.</div></li>
+    <li><span class="chip prop">Most</span><div>Komunikat „Högakustenbron avstängd” do 18:00: SCX dostaje sprawę — postój do 18:30 (ETA +3 h 54 min) albo objazd przez Kramfors i Sandöbron (droga 90): +31 km, +35 min, ryzyka: wiatr na Sandöbron, roboty w Kramfors.</div></li>
+  </ul>
+
+  <div class="ask-box">
+    <span class="chip ask" style="align-self:flex-start">Twoje odpowiedzi · 16.10, 02:08</span>
+    <ul>
+      <li><b>1.</b> Progi i wartości oraz D-84 z 15 na 20 m/s — <b>akceptuję</b>.</li>
+      <li><b>2.</b> SMHI + Trafikverket, bez IMGW — <b>akceptuję</b>.</li>
+      <li><b>3.</b> Zamknięty most — „komunikat w Ryzykach dla SCX … ile więcej km i czasu … z jakimi ryzykami” — <b>zaprojektowane i wdrożone w wyglądzie</b> (wyżej). Pytanie do SCX o warunek pogodowy w zezwoleniach — W45 (do odpowiedzi: 25 m/s, nie blokuje).</li>
+      <li><b>4.</b> Śliskość tylko do 25 km od komunikatu — <b>akceptuję</b>.</li>
+      <li><b>5.</b> Przebieg testu — <b>akceptuję</b>.</li>
+    </ul>
+  </div>
+
+  <h3>Test (zaakceptowany 02:08)</h3>
+  <ol class="steps">
+    <li>SG-03 odtworzony z pozycji i prognozy: wiatr 0 min.</li>
+    <li>22 m/s z boku → +15 % tylko na tym odcinku; z tyłu 0; z przodu +5 %. 15–19 m/s → bez sprawy i bez zmiany ETA.</li>
+    <li>26 m/s przez 6 h przed autem → postój do spadku poniżej 20 m/s + 30 min; sprawa „Postój przez wiatr” u HHL i SCX; godziny postoju w szczegółach ETA. Postój w czasie odpoczynku 11 h → ETA rośnie tylko o różnicę.</li>
+    <li>Zamknięty most na dalszej trasie → sprawa SCX z postojem i objazdem (+ km, + czas, ryzyka); most za autem → nic; brak trasy HERE dla zestawu KR → „Brak objazdu dla tego zestawu”.</li>
+    <li>„Jedziemy objazdem” → Historia, powiadomienie HHL, ETA po objeździe, bez „zjazdu z trasy”; „Stoimy” → ETA z postojem; komunikat odwołany → sprawa zamknięta sama.</li>
+    <li>SMHI niedostępne → ETA bez wiatru, w Stanie systemu „Wiatr: brak prognozy”. Zmiana wartości przez Operacje HHL → odmowa bazy; przez Administratora → Historia zmian.</li>
+  </ol>
+  <p class="note">Źródła: <a href="https://www.smhi.se/en/services/open-data/conditions-of-use-1.33347">SMHI — warunki użycia (CC BY 4.0)</a> · <a href="https://opendata.smhi.se/apidocs/metfcst/index.html">SMHI — API prognoz</a> · <a href="https://www.smhi.se/download/18.7e767aad1997b06a81a30cb/1760538195529/Tr%C3%B6skelv%C3%A4rden%20f%C3%B6r%20Konsekvensbaserade%20varningar%20version%203.1.pdf">SMHI — progi ostrzeżeń, wersja 3.1</a> · <a href="https://powiatprudnicki.pl/download/attachment/29592/klasyfikacja-stopni-groznych-zjawisk-meteorologiczno-hydrologicznych.pdf">IMGW — stopnie zagrożeń</a> · <a href="https://storebaelt.dk/en/traffic-weather/vehicles-and-vind-conditions/">Storebælt — pojazdy a wiatr</a> · <a href="https://www.svt.se/nyheter/inrikes/stormen-jan-blaser-in-over-fjallen-med-orkanvindar">SVT, 11.01.2019 — zamknięte mosty E4</a>. Pełny zapis: <code>etapy/E49.md</code>.</p>
+</section>
 
 <!-- ===================== ZMIANY 15.10 ===================== -->
 <section class="stage" id="zmiany-1510">
@@ -2501,6 +2666,10 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
     <span class="eyebrow">E31 · Twoje polecenia 07.10, 16:20 pkt 8 i 19:51 (bez POD) · zdecydowane 08.10, 12:14 z doprecyzowaniem</span>
     <h2>Dokumenty: braki z terminami, zezwolenia „Firma” i „Trasa”, dwie polisy, wgrywanie z wyborem transportu</h2>
   </div>
+  <div class="ask-box" style="background:var(--accent-soft);border-color:var(--accent)">
+    <span class="chip fact" style="align-self:flex-start">Zmiana 16.10, 01:13</span>
+    <ul><li>Polisę HHL (PZU 1106707356, „OC przewoźnika — PZU”) i zezwolenie GDDKiA 13/GD/2026 <b>wpisuje Cursor raz, z Twoich plików</b> (P5 D2) — nie czekamy, aż wgra je HHL i SCX (W4 zamknięte). Podpinają się same: polisa do każdego transportu w okresie ważności, zezwolenie do każdego transportu „Firma”.</li></ul>
+  </div>
   <p class="verdict"><b>Strona Dokumenty pokazuje dziś „0 / 94” przy każdym wymaganiu.</b> Liczy się w tym też 62 transporty z załadunkiem po 15.10. Przycisk „Wgraj dokument” zawsze zapisuje plik jako CMR do pierwszego transportu z listy. W panelu transportu nie ma listy wymaganych dokumentów ani braków. W bazie jest jeden plik (certyfikat polisy SCX), 0 zezwoleń i 0 CMR. Twoja tabela z 07.10 (zezwolenia „Firma” podpinane same i „Trasa” dodawane przy transporcie) nie jest w aplikacji. Polisy HHL jako spedytora nie ma. Proponuję jedną listę wymagań z brakami po terminie i w ciągu 7 dni, zezwolenia firmowe podpinane według rodzaju ładunku, dwie polisy, osobny CMR z podpisem odbiorcy oraz wgrywanie z wyborem transportu i rodzaju.</p>
 
   <div class="ask-box" style="background:var(--accent-soft);border-color:var(--accent)">
@@ -2615,6 +2784,10 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
   <div class="stage-hd">
     <span class="eyebrow">E32 · Twoje polecenie 07.10, 16:20 pkt 8 · zdecydowane 08.10, 12:14 (poprawione 01:15)</span>
     <h2>Panel › Przegląd i awizacja: co trzeba zrobić i kto, mapa przy aucie, awizacja liczona tak samo jak w bazie, zestaw i piloci z Twojej tabeli</h2>
+  </div>
+  <div class="ask-box" style="background:var(--accent-soft);border-color:var(--accent)">
+    <span class="chip fact" style="align-self:flex-start">Zmiana 16.10, 01:13</span>
+    <ul><li>„Kontrola trasy” i „Przeszkody wzdłuż korytarza” <b>nie wracają</b> (pkt 1 mówił „wrócą jedną linią z listą przeszkód”) — usunięte z aplikacji i bazy w P9.</li><li>Zestaw, pilot i rodzaj zezwolenia z Twojej tabeli według symbolu — <b>automatycznie</b> dla każdego transportu (pkt 7, P5 D1); nie ma stanu „czeka na wymiary”.</li></ul>
   </div>
   <p class="verdict"><b>SG-15 ma załadunek dziś, a jego Przegląd tego nie mówi.</b> Brakuje awizacji, numeru HHL i numeru SCX. Na ekranie to trzy czerwone „nie uzupełniono” w różnych miejscach, bez informacji, kto ma je uzupełnić. Czerwony baner „transport nie może ruszyć” jest przy wszystkich 94 transportach, także przy SG-03 na placu w Boden. „Potwierdził KSH” to w rzeczywistości godzina importu pliku. Okno awizacji przyjmuje mniej, niż wymaga alarm w bazie. Piloci i wymiary zestawu z Twojej tabeli nie są w aplikacji. Proponuję na górze Przeglądu listę „Do zrobienia przy tym transporcie” z firmą i terminem, mapę z E1, jedną definicję kompletnej awizacji oraz zestaw i pilotów z tabeli. Długie teksty „wyłączone” i baner znikają.</p>
 

@@ -13,6 +13,7 @@ import { TrackingBar } from './TrackingBar';
 import { DeliveredCheckCard } from './DeliveredCheckCard';
 import { deliveredCheckOf, readyGapsOf, trackingLinkOf } from '../../lib/p4cSource';
 import { lazyRetry } from '../../lib/lazyRetry';
+import { useEtaWx } from '../../lib/e49WxSource';
 import { buildStatusAxis } from '../../lib/statusAxis';
 import { trackingPhase } from '../../lib/stageTiles';
 import { useIsPhone } from '../../lib/useIsPhone';
@@ -129,6 +130,8 @@ export function LoadDrawer() {
   const drawerMapLoads = useMemo(() => (load && trackingPhase(load, nowIso) === 'on' ? [load] : []), [load, nowIso]);
   /* wyglad/P4-c (L14): sprawa zamknięta „Nie” w trybie demo — karta znika bez zmiany statusu */
   const [dcClosed, setDcClosed] = useState<string | null>(null);
+  /* wyglad/E49: linie wiatru / postoju / śliskości / objazdu w ETA (produkcja: `etaDetail.weather`; demo dociągane) */
+  const etaWx = useEtaWx(load, loads, nowIso);
 
   if (!load) return null;
 
@@ -291,6 +294,7 @@ export function LoadDrawer() {
                   deliveredAt={statusAxis.deliveredAt}
                   siteSince={statusAxis.current === 'APPROACHING_SITE' ? statusAxis.currentSince : null}
                   delayMin={delayMin}
+                  wx={etaWx}
                   mapNode={<CorridorMap loads={drawerMapLoads} embedded slot="drawer" />}
                   ratingNode={CarrierRating && (role === 'HHL' || role === 'SCX') && isServerId(load.id) ? <Suspense fallback={null}><CarrierRating key={load.id} loadId={load.id} /></Suspense> : null}
                   onAwiz={() => setAwizOpen(true)}
