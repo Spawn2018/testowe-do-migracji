@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 
 import { useTowerStore } from '../../store/useTowerStore';
@@ -23,8 +23,18 @@ import {
   type BasemapHealth, type LayerBag, type MapSlot, type PoolEntry,
 } from './mapPool';
 import { BasemapFailCard } from './BasemapFailCard';
-import { mapRow, markerTone, type MapRow } from '../../lib/p9cMap';
+import { hm, mapRow, markerTone, type MapRow, type MarkerTone } from '../../lib/p9cMap';
+import { stageTileOf } from '../../lib/stageTiles';
 import { p9m, p9mp } from '../../i18n/p9c';
+import {
+  demoStageAnchor, groupView, placeMarkers, splitLabel, vesselKey,
+  type FerryInfo, type GroupItem, type GroupView, type GroupZone, type Placed, type ShipFix,
+} from '../../lib/p9eGroups';
+import { p9e, p9ep } from '../../i18n/p9e';
+import { formatListDateTime } from '../../lib/format';
+import { TZ_OPS } from '../../lib/time';
+import { useIsPhone } from '../../lib/useIsPhone';
+import { GroupList } from './GroupList';
 
 /* III-5 — odtwarzanie przebiegu z bazy: tylko build Supabase (chunk leniwy); demo bez zmian */
 const TrackReplay = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./TrackReplay')) : null;
@@ -91,6 +101,42 @@ function vehicleTip(row: MapRow, locale: Parameters<typeof t>[0]): string {
   const l3 = [last, p9m(locale, `p9c_tip_seg_${row.seg}`)].filter(Boolean).map(esc).join(' · ');
   return [l1, l2, `<span class="g">${l3}</span>`, `<span class="g">${esc(p9m(locale, 'p9c_tip_click'))}</span>`].filter((x) => x && x !== '<span class="g"></span>').join('<br>');
 }
+/**
+ * wyglad/P9-e (E45 pkt 5, R5): znacznik grupy — auta jednego rejsu na statku (strzałka statku) albo kilka aut w jednej
+ * strefie; liczba aut w pomarańczowym kółku (makieta `a-ferry.webp`). Bez AIS — wyszarzony, w dymku „brak AIS”.
+ */
+const ZONE_TONE: Record<string, MarkerTone> = { LOADING: 'load', PORT_OUT: 'road', PORT_IN: 'road', SITE: 'site' };
+function groupIcon(g: Extract<Placed, { kind: 'ferry' | 'zone' }>): L.DivIcon {
+  const n = g.ids.length;
+  const tone: MarkerTone = g.kind === 'ferry' ? 'road' : ZONE_TONE[g.zoneType] ?? 'road';
+  const cls = [
+    'wt-mk', 'is-grp', `is-${tone}`,
+    g.kind === 'ferry' ? 'is-ship' : '',
+    g.kind === 'ferry' && g.ais === 'none' ? 'is-noais' : '',
+    g.late ? 'is-late' : '',
+  ].filter(Boolean).join(' ');
+  return L.divIcon({
+    className: 'wt-marker',
+    /* liczba obok kółka (nie w nim) — przy wyszarzeniu „brak AIS” zostaje czytelna */
+    html: `<div class="wt-mk-grp"><div class="${cls}" data-mk="${g.kind}" data-n="${n}">${g.kind === 'ferry' ? '<i class="wt-mk-arrow"></i>' : ''}</div><span class="wt-mk-n">${n}</span></div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+  });
+}
+/** Dymek grupy: tytuł · liczba aut / rejs albo rodzaj miejsca / nazwy (E41) / AIS / „kliknij: lista transportów”. */
+const GROUP_TIP_NAMES = 6;
+function groupTip(v: GroupView, locale: Parameters<typeof t>[0]): string {
+  /* E45 pkt 5: najechanie — rejs i kody */
+  const names = v.rows.slice(0, GROUP_TIP_NAMES).map((r) => esc(splitLabel(r.label).code)).join(' · ')
+    + (v.rows.length > GROUP_TIP_NAMES ? ` ${esc(p9ep(locale, 'p9e_more', { n: v.rows.length - GROUP_TIP_NAMES }))}` : '');
+  return [
+    `<b>${esc(v.title)}</b>`,
+    v.sub ? esc(v.sub) : '',
+    names,
+    v.note ? `<span class="g">${esc(v.note)}</span>` : '',
+    `<span class="g">${esc(p9e(locale, 'p9e_tip_click'))}</span>`,
+  ].filter(Boolean).join('<br>');
+}
 function durTextLocal(m: number): string {
   const h = Math.floor(m / 60);
   const mm = Math.round(m % 60);
@@ -131,6 +177,13 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   const sailings = useTowerStore((s) => s.sailings);
   const onMarkerRef = useRef(onMarker);
   onMarkerRef.current = onMarker;
+  /* wyglad/P9-e: otwarta lista grupy (klucz) i widoki grup z ostatniego rysowania */
+  const phone = useIsPhone();
+  const phoneRef = useRef(phone);
+  phoneRef.current = phone;
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const groupViewsRef = useRef<Map<string, GroupView>>(new Map());
+  const closeGroup = useCallback(() => setOpenGroup(null), []);
   /* E1 (Przegląd): przybliżenie 11 na ostatniej pozycji, podążanie co 60 s, póki użytkownik nie ruszy mapy */
   const programmaticRef = useRef(false);
   const userMovedRef = useRef(false);
@@ -151,6 +204,12 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   /* III-5: odtwarzany transport = ostatnio wybrany (zostaje po zamknięciu szuflady, znika po wyłączeniu warstwy „Ślad”) */
   const [replayId, setReplayId] = useState<string | null>(null);
   useEffect(() => { if (selectedLoadId && isServerId(selectedLoadId)) setReplayId(selectedLoadId); }, [selectedLoadId]);
+  /* wyglad/P9-e: kliknięcie w mapę poza znacznikiem zamyka listę grupy */
+  useEffect(() => {
+    if (!mapReady) return undefined;
+    mapReady.on('click', closeGroup);
+    return () => { mapReady.off('click', closeGroup); };
+  }, [mapReady, closeGroup]);
 
   const selectLoadRef = useRef(selectLoad);
   const setHoverLoadRef = useRef(setHoverLoad);
@@ -381,6 +440,9 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     }
 
     layers.fleet.clearLayers();
+    /* wyglad/P9-e: statki, na których pozycji stoi znacznik rejsu z liczbą aut — bez drugiego znacznika w warstwie AIS */
+    const takenShips = new Set<string>();
+    if (!mapLayers.vehicles) groupViewsRef.current = new Map();
     if (mapLayers.vehicles) {
       const visibleLoads =
         focusMode && selectedLoadId ? loads.filter((l) => l.id === selectedLoadId) : loads;
@@ -392,7 +454,17 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         driver: l.resources.driverName,
         plate: l.resources.tractorPlate,
       }));
-      const fleet = PROD_BUILD ? prodFleetMarkers(markerIn, gpsFixes) : demoFleetMarkers(markerIn, tick);
+      const zones: GroupZone[] = geofences.map((g) => ({
+        id: g.id, name: g.name, type: g.type, lat: g.lat, lng: g.lng, radiusM: g.radiusM, active: g.active,
+      }));
+      const loadOf = new Map(visibleLoads.map((l) => [l.id, l]));
+      /* wyglad/P9-e: demo — auto w strefie swojego etapu (załadunek, port, plac) albo na morzu (prom) */
+      const demoAnchored = () => demoFleetMarkers(markerIn, tick).map((f) => {
+        const l = loadOf.get(f.id);
+        const a = l ? demoStageAnchor(stageTileOf(l), zones) : null;
+        return a ? { ...f, lat: a.lat, lng: a.lng } : f;
+      });
+      const fleet = PROD_BUILD ? prodFleetMarkers(markerIn, gpsFixes) : demoAnchored();
       /* E29 pkt 4 i 7: etap, opóźnienie, brak GPS i dymek z tych samych danych co tabela Mapy */
       const loc = useTowerStore.getState().locale;
       const nowIso = getNowIso();
@@ -422,10 +494,80 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           try { fitCorridor(map); } finally { programmaticRef.current = false; }
         }
       }
+      /* wyglad/P9-e (E45 pkt 5, R5): auta jednego rejsu na promie — jeden znacznik na statku z AIS; więcej niż 1 auto
+         w strefie załadunku, portu PL, portu SE albo placu — jeden znacznik z liczbą. Przegląd i tryb skupienia bez grup. */
+      const fleetById = new Map(fleet.map((f) => [f.id, f]));
+      const ferryKeyOf = (l: Load | undefined): string | null => {
+        if (!l) return null;
+        if (l.sailingId) return l.sailingId;
+        /* bez przypisanego rejsu: statek (jeden statek płynie w danej chwili jednym rejsem) */
+        return l.ferry.vessel ? `v:${vesselKey(l.ferry.vessel)}` : null;
+      };
+      const ferryInfo = (fk: string): FerryInfo | null => {
+        const s = sailings.find((x) => x.id === fk);
+        if (s) return { vessel: s.vessel, route: s.route, departureAt: s.delayedDepartureAt ?? s.departureAt };
+        const l = visibleLoads.find((x) => ferryKeyOf(x) === fk);
+        if (!l) return null;
+        const ls = l.sailingId ? undefined : sailings.find((x) => x.vessel === l.ferry.vessel && x.departureAt === l.ferry.departureAt);
+        return { vessel: l.ferry.vessel, route: ls?.route ?? null, departureAt: l.ferry.departureAt };
+      };
+      const shipOf = (fk: string): ShipFix | null => {
+        const v = vesselKey(ferryInfo(fk)?.vessel);
+        if (!v) return null;
+        /* I-2e: pozycje przykładowe (seed) nie są pozycją statku */
+        const p = aisPositions.find((x) => x.source !== 'seed' && vesselKey(x.name) === v);
+        if (!p) return null;
+        return { lat: p.lat, lng: p.lng, ts: p.ts, stale: ferryMarkerTone(p.ts, nowIso) === 'stale', vessel: p.name };
+      };
+      const groupItems: GroupItem[] = fleet.map((f) => {
+        const row = rowOf(f.id);
+        return {
+          id: f.id, lat: f.lat, lng: f.lng, tile: row?.tile ?? null, ferryKey: ferryKeyOf(byId.get(f.id)),
+          lastFixAt: row?.lastFixAt ?? null, late: !!row?.late,
+        };
+      });
+      const placed = placeMarkers(groupItems, {
+        zones, shipOf, grouping: slot !== 'drawer' && !(focusMode && selectedLoadId),
+      });
+      const views = new Map<string, GroupView>();
+      const groupMarkers: L.Marker[] = [];
+      for (const g of placed) {
+        if (g.kind === 'one') continue;
+        if (g.kind === 'ferry' && g.ais !== 'none' && g.vessel) takenShips.add(vesselKey(g.vessel));
+        const v = groupView(g, {
+          nowIso,
+          row: (id) => { const r = rowOf(id); return r ? { id, label: r.label, stageKey: r.stageKey, late: r.late } : null; },
+          ferryInfo,
+          tx: (k, p) => (p ? p9ep(loc, k, p) : p9e(loc, k)),
+          hm,
+          dt: (iso) => formatListDateTime(iso, TZ_OPS),
+        });
+        views.set(g.key, v);
+        const gm = L.marker([g.lat, g.lng], { icon: groupIcon(g), keyboard: false, zIndexOffset: 1000 });
+        if (!onMarkerRef.current && !phoneRef.current) {
+          gm.bindTooltip(groupTip(v, loc), { direction: 'top', offset: [0, -16], className: 'wt-mk-tip' });
+        }
+        gm.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          gm.closeTooltip();
+          /* jedno auto na promie — od razu panel (jak zwykły znacznik) */
+          if (g.ids.length === 1) {
+            if (onMarkerRef.current) onMarkerRef.current(g.ids[0]);
+            else selectLoadRef.current(g.ids[0]);
+            return;
+          }
+          setOpenGroup(g.key);
+        });
+        groupMarkers.push(gm);
+      }
+      groupViewsRef.current = views;
       /* III-5 (SCOPE 5.10): produkcja — pozycje z bazy/statusu często w tym samym punkcie (np. plac załadunku);
          nakładające się znaczniki rozkładamy na okręgu/spirali (≥ 22 px), by etykiety i kliknięcia nie kolidowały.
          Tryb demo bez zmian (wzorzec zrzutów makiety). */
-      for (const f of fleet) {
+      for (const p of placed) {
+        if (p.kind !== 'one') continue;
+        const f = fleetById.get(p.id);
+        if (!f) continue;
         const ll = L.latLng(f.lat, f.lng);
         const row = rowOf(f.id);
         const m = L.marker(ll, {
@@ -452,6 +594,8 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         });
         m.addTo(layers.fleet);
       }
+      /* grupy po zwykłych znacznikach (nad nimi) */
+      for (const gm of groupMarkers) gm.addTo(layers.fleet);
     }
 
     layers.situations.clearLayers();
@@ -494,6 +638,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       const liveSail = nextLiveSailing();
       for (const p of aisPositions) {
         if (p.source === 'seed') continue;
+        if (takenShips.has(vesselKey(p.name))) continue;
         const heading = typeof p.cog === 'number' ? p.cog : (p.vesselId === liveSail.vessel ? (liveSail.depPort === 'GDN' ? 20 : 200) : 20);
         const stale = ferryMarkerTone(p.ts, getNowIso()) === 'stale';
         const when = formatOpsDateTime(p.ts);
@@ -511,6 +656,9 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       }
     }
   }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes, role, sailings, embedded, slot]);
+
+  /* wyglad/P9-e: lista grupy z ostatniego rysowania; grupa, która zniknęła (np. auto wyjechało ze strefy), zamyka listę */
+  const openView = openGroup ? groupViewsRef.current.get(openGroup) ?? null : null;
 
   return (
     <div
@@ -549,6 +697,19 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           {slot === 'drawer' ? p9m(locale, 'p9c_drawer_nogps') : t(locale, 'b1_no_vehicle_positions')}
         </div>
       ) : null}
+      {openView ? (
+        <GroupList
+          view={openView}
+          phone={phone}
+          locale={locale}
+          onClose={closeGroup}
+          onPick={(id) => {
+            setOpenGroup(null);
+            if (onMarkerRef.current) onMarkerRef.current(id);
+            else selectLoadRef.current(id);
+          }}
+        />
+      ) : null}
       {!embedded ? (
         /* E29 pkt 4: legenda tylko z tego, co może wystąpić (etapy E28, opóźnienie, brak GPS, statek z liczbą aut) */
         <div className="mapkey" data-mapkey="e29" aria-label={t(locale, 'map_legend')} style={{ zIndex: 500 }}>
@@ -558,6 +719,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           <span><i className="mk-dot is-late" />{p9m(locale, 'p9c_lg_late')}</span>
           <span><i className="mk-dot is-nogps" />{p9m(locale, 'p9c_lg_nogps')}</span>
           <span><i className="mk-dot is-ship" />{p9m(locale, 'p9c_lg_ship')}</span>
+          <span><i className="mk-dot is-grp" />{p9e(locale, 'p9e_lg_zone')}</span>
         </div>
       ) : null}
     </div>

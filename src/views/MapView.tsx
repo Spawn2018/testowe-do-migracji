@@ -5,6 +5,7 @@ import { filterLoads } from '../lib/selectors';
 import { CorridorMap } from '../components/map/LazyCorridorMap';
 import { t, tp } from '../i18n/messages';
 import { p9m, p9mp } from '../i18n/p9c';
+import { p9e } from '../i18n/p9e';
 import { PROD_BUILD } from '../lib/prodFacade';
 import { latestReadAt, subscribeFerryPositions, type AisMode } from '../lib/ais';
 import { clickableRow } from '../lib/clickableRow';
@@ -47,6 +48,7 @@ function Legend({ locale }: { locale: Parameters<typeof p9m>[0] }) {
       <span><i className="mk-dot is-late" />{p9m(locale, 'p9c_lg_late')}</span>
       <span><i className="mk-dot is-nogps" />{p9m(locale, 'p9c_lg_nogps')}</span>
       <span><i className="mk-dot is-ship" />{p9m(locale, 'p9c_lg_ship_short')}</span>
+      <span><i className="mk-dot is-grp" />{p9e(locale, 'p9e_lg_zone_short')}</span>
     </div>
   );
 }

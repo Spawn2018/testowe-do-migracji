@@ -368,7 +368,8 @@ test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
     await expect(page.locator('[data-page="map"] .panel-hd')).not.toContainText('pozycje co');
     await expect(page.locator('[data-map-table] thead th')).toHaveText(['Transport', 'Etap', 'Pozycja', 'ETA Boden']);
     await expect(page.locator('.maplayers label')).toHaveText(['Pojazdy i statki', 'Trasa (droga i prom)', 'Strefy', 'Utrudnienia drogowe', 'Przebieg wybranego'].map((x) => new RegExp(x.replace(/[()]/g, '\\$&'))));
-    await expect(page.locator('[data-mapkey="e29"] > span')).toHaveText(['załadunek', 'w drodze (PL, port, prom, SE)', 'na placu', 'opóźniony', 'brak GPS', 'statek (AIS) z liczbą aut']);
+    /* P9-e (R5): + „kilka aut w jednej strefie” */
+    await expect(page.locator('[data-mapkey="e29"] > span')).toHaveText(['załadunek', 'w drodze (PL, port, prom, SE)', 'na placu', 'opóźniony', 'brak GPS', 'statek (AIS) z liczbą aut', 'kilka aut w jednej strefie']);
     await expect(page.locator('[data-map-note]')).toHaveText(/^Podkład i trasy: HERE · utrudnienia: Trafikverket \(SE\), HERE \(PL\) · statki: AIS Fintraffic \/ digitraffic\.fi, CC BY 4\.0/);
     await expect(page.locator('[data-map-zones]')).toBeVisible();
     const n = Number((await page.locator('[data-map-filters] [data-timing="all"]').innerText()).replace(/\D+/g, ''));
@@ -376,7 +377,7 @@ test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
     await expect(page.locator('[data-map-filters] .map-search')).toHaveAttribute('placeholder', 'Szukaj: kod, nr zlecenia, tablice');
     /* znacznik: etap, opóźnienie, ostatnia pozycja, odcinek, kliknięcie */
     await expect(page.locator('.wt-mk').first()).toBeAttached();
-    await page.locator('.leaflet-marker-icon.wt-marker').first().dispatchEvent('mouseover');
+    await page.locator('.leaflet-marker-icon.wt-marker:not(:has(.is-grp))').first().dispatchEvent('mouseover');
     await expect(page.locator('.leaflet-tooltip.wt-mk-tip').first()).toContainText('kliknij: panel transportu');
     await expect(page.locator('.leaflet-tooltip.wt-mk-tip').first()).toContainText(/kierowca odcinka (PL|SE)/);
     expect(await tableWithin(page)).toBe(true);
@@ -423,7 +424,7 @@ test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
     const sheet = page.locator('[data-map-layers-sheet] .mapsheet');
     await expect(sheet.locator('input[type="checkbox"]')).toHaveCount(5);
     await expect(sheet.locator('label').last()).toContainText('Przebieg wybranego transportu');
-    await expect(sheet.locator('[data-sheet-legend] > span')).toHaveCount(6);
+    await expect(sheet.locator('[data-sheet-legend] > span')).toHaveCount(7);
     const bad = await sheet.evaluate((el) => {
       const out: string[] = [];
       for (const n of el.querySelectorAll<HTMLElement>('label, button')) {
@@ -438,7 +439,7 @@ test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
     await expect(page.locator('[data-map-layers-sheet]')).toHaveCount(0);
     const n = Number((await page.locator('[data-map-filters] [data-timing="all"]').innerText()).replace(/\D+/g, ''));
     await expect(page.locator('[data-map-cards] .map-card')).toHaveCount(n);
-    await page.locator('.leaflet-marker-icon.wt-marker').first().dispatchEvent('click');
+    await page.locator('.leaflet-marker-icon.wt-marker:not(:has(.is-grp))').first().dispatchEvent('click');
     const ls = page.locator('[data-map-load-sheet] .mapsheet');
     await expect(ls.locator('[data-sheet-open]')).toHaveText('Otwórz panel transportu');
     await expect(ls.locator('[data-sheet-trail]')).toHaveText('Pokaż przebieg na mapie');
@@ -518,6 +519,70 @@ test.describe('wyglad/P9-d kadr całej trasy (E1)', () => {
     await openView(page, 'dash');
     await page.waitForTimeout(800);
     expect(await page.locator('.grid2-map-body .wt-mk').count()).toBe(onMap);
+  });
+});
+
+/* wyglad/P9-e — E45 pkt 5 (zdecydowane 07.10 22:42) i D-20261009-1309-01 R5: auta jednego rejsu na promie jednym
+   znacznikiem z liczbą; więcej niż 1 auto w strefie załadunku, portu PL, portu SE albo placu — jeden znacznik z liczbą;
+   najechanie — rejs (miejsce) i kody; kliknięcie — lista (telefon: od dołu); tak samo w Kokpicie. */
+test.describe('wyglad/P9-e grupowanie na promie i w strefie (E45 pkt 5, R5)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const groupsOf = (page: Page, root: string) => page.locator(`${root} .wt-mk.is-grp`).evaluateAll((els) => els.map((e) => `${(e as HTMLElement).dataset.mk}:${(e as HTMLElement).dataset.n}`).sort());
+
+  test('komputer: znaczniki grup, dymek z kodami, lista, wiersz → panel; Kokpit — te same grupy', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    await page.waitForTimeout(600);
+    const onMap = await groupsOf(page, '[data-page="map"]');
+    /* demo: 6 aut na promie Nova Star; Port PL 4, Załadunek 3, Plac Boden 3 — każde w swojej strefie */
+    expect(onMap).toEqual(['ferry:6', 'zone:3', 'zone:3', 'zone:4']);
+    await expect(page.locator('[data-mapkey="e29"] > span').last()).toHaveText('kilka aut w jednej strefie');
+    const ferry = page.locator('[data-page="map"] .leaflet-marker-icon:has(.wt-mk[data-mk="ferry"])');
+    await ferry.dispatchEvent('mouseover');
+    const tip = page.locator('.leaflet-tooltip.wt-mk-tip').last();
+    await expect(tip).toContainText('Prom Nova Star · 6 aut');
+    await expect(tip).toContainText('Gdańsk → Nynäshamn');
+    await expect(tip).toContainText('kliknij: lista transportów');
+    /* kody, bez numerów zleceń (E45 pkt 5: „rejs i kody”) */
+    await expect(tip).not.toContainText('HHL/2026');
+    await ferry.dispatchEvent('mouseout');
+    await ferry.dispatchEvent('click');
+    const card = page.locator('[data-map-group="ferry"]');
+    await expect(card.locator('.mapgrp-title')).toHaveText('Prom Nova Star · 6 aut');
+    await expect(card.locator('[data-grp-row]')).toHaveCount(6);
+    await expect(page.locator('.leaflet-tooltip.wt-mk-tip')).toHaveCount(0);
+    const id = await card.locator('[data-grp-row]').nth(1).getAttribute('data-grp-row');
+    await card.locator('[data-grp-row]').nth(1).click();
+    await expect(page.locator('[data-map-group]')).toHaveCount(0);
+    await expect(page.locator('aside.drawer')).toHaveCount(1);
+    expect(id).toBeTruthy();
+    await page.keyboard.press('Escape');
+    const site = page.locator('[data-page="map"] .leaflet-marker-icon:has(.wt-mk[data-mk="zone"].is-site)');
+    await site.dispatchEvent('mouseover');
+    await expect(page.locator('.leaflet-tooltip.wt-mk-tip').last()).toContainText(/· 3 auta/);
+    await expect(page.locator('.leaflet-tooltip.wt-mk-tip').last()).toContainText('plac');
+    await site.dispatchEvent('mouseout');
+    await openView(page, 'dash');
+    await page.evaluate(() => document.querySelector('.grid2-map-body')?.scrollIntoView({ block: 'center' }));
+    await page.waitForTimeout(800);
+    expect(await groupsOf(page, '.grid2-map-body')).toEqual(onMap);
+    await page.locator('.grid2-map-body .leaflet-marker-icon:has(.wt-mk[data-mk="zone"].is-site)').dispatchEvent('click');
+    await expect(page.locator('.grid2-map-body [data-map-group="zone"] [data-grp-row]')).toHaveCount(3);
+  });
+
+  test('telefon 390: znacznik promu → lista od dołu (wiersze ≥ 44 px) → arkusz transportu', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', true);
+    await openView(page, 'map');
+    await page.locator('.leaflet-marker-icon:has(.wt-mk[data-mk="ferry"])').first().dispatchEvent('click');
+    const sheet = page.locator('[data-map-group-sheet="ferry"] .mapsheet');
+    await expect(sheet.locator('[data-grp-row]')).toHaveCount(6);
+    const small = await sheet.locator('[data-grp-row]').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height < 44).length);
+    expect(small).toBe(0);
+    await sheet.locator('[data-grp-row]').first().click();
+    await expect(page.locator('[data-map-group-sheet]')).toHaveCount(0);
+    await expect(page.locator('[data-map-load-sheet] [data-sheet-open]')).toHaveText('Otwórz panel transportu');
   });
 });
 
