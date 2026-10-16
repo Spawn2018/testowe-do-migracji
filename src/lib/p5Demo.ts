@@ -4,7 +4,7 @@
  * W produkcji te dane podaje baza (E16 próg w Opcjach, E39 `fuel_basis`, E4b faktoring, E40 adresy i dziennik wysyłek)
  * — podłącza wykonawca. Adresy e-mail zmyślone (example.com, G-09).
  */
-import { SEFS_PLN, SEFS_SEK, type SefsTier } from './sefs';
+import { SEFS_PLN, SEFS_SEK, sefsForLoadDate, type SefsTier } from './sefs';
 import { addDays, type FuelPubl, type FuelWeekRow } from './p5Finance';
 import type { Bill, Document, Load } from '../types';
 import { useTowerStore } from '../store/useTowerStore';
@@ -36,12 +36,18 @@ function publications(idxFrom: string, okq8: number, orlen: number, until: strin
   return out.sort((a, b) => a.date.localeCompare(b.date) || a.source.localeCompare(b.source));
 }
 
-/** E39: średnie OKQ8 i Orlen z liczbą publikacji dla zamkniętych tygodni wskaźników; lista publikacji (też w toku). */
+/**
+ * E39: średnie OKQ8 i Orlen z liczbą publikacji dla zamkniętych tygodni wskaźników; lista publikacji (też w toku).
+ * audyt-C C-13: średnie z tego samego źródła co mnożnik transportu (`sefsForLoadDate`) i co Opcje › Opłata paliwowa;
+ * przykład z tabeli tylko, gdy tydzień nie ma notowania.
+ */
 export function demoFuelEnrich(rows: FuelWeekRow[], today: string): FuelWeekRow[] {
   return rows.map((r) => {
     if (!r.idx) return r;
-    const sek = avgFor(r.okq8?.mult ?? r.applied ?? 1, SEFS_SEK) ?? 22.63;
-    const pln = avgFor(r.orlen?.mult ?? r.applied ?? 1, SEFS_PLN) ?? 7.22;
+    const snap = sefsForLoadDate(r.week?.from ?? r.idx.from);
+    const same = snap.multSek === (r.okq8?.mult ?? snap.multSek) && snap.multPln === (r.orlen?.mult ?? snap.multPln);
+    const sek = same ? snap.priceSek : avgFor(r.okq8?.mult ?? r.applied ?? 1, SEFS_SEK) ?? snap.priceSek;
+    const pln = same ? snap.pricePln : avgFor(r.orlen?.mult ?? r.applied ?? 1, SEFS_PLN) ?? snap.pricePln;
     const pub = r.weekLast ? null : publications(r.idx.from, sek, pln, today < r.idx.to ? today : r.idx.to);
     if (r.state !== 'OSTATECZNA') return { ...r, publications: pub };
     return {

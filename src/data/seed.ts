@@ -247,11 +247,14 @@ type ExtraLoadSpec = {
   permitPatch?: Partial<NonNullable<Load['permit']>>;
 };
 
-/** Additional corridor movements deliberately cover operational failure modes in P7. */
+/**
+ * Additional corridor movements deliberately cover operational failure modes in P7.
+ * audyt-C C-12: `itemType` = symbol rodzaju jak w pliku KSH (prefiks kodu), bez opisów po angielsku.
+ */
 const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   {
     code: 'SG-31',
-    itemType: 'Segment ramy · weather hold',
+    itemType: 'SG',
     status: 'IN_TRANSIT_SE',
     dims: { lengthM: 20.4, widthM: 3.25, heightM: 4.15, weightT: 28.8 },
     plannedLoadDate: '2026-09-23',
@@ -260,7 +263,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'SG-32',
-    itemType: 'Moduł mostowy · ferry cancel',
+    itemType: 'SG',
     status: 'AT_PORT',
     dims: { lengthM: 18.8, widthM: 3.1, heightM: 3.8, weightT: 26.4 },
     plannedLoadDate: '2026-09-23',
@@ -276,7 +279,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'T-17',
-    itemType: 'Transformator · E4 closure',
+    itemType: 'T',
     status: 'IN_TRANSIT_SE',
     dims: { lengthM: 16.2, widthM: 3.35, heightM: 4.25, weightT: 31.2 },
     plannedLoadDate: '2026-09-22',
@@ -285,7 +288,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'SG-33',
-    itemType: 'Segment stalowy · silent GPS',
+    itemType: 'SG',
     status: 'SILENT',
     dims: { lengthM: 19.6, widthM: 2.95, heightM: 3.7, weightT: 24.1 },
     plannedLoadDate: '2026-09-21',
@@ -295,7 +298,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'SG-34',
-    itemType: 'Kratownica · permit mismatch',
+    itemType: 'SG',
     // Deliberate P9 READY-gate fixture: visible MISMATCH docs keep this load blocked.
     status: 'DOC_MISSING',
     docMissing: true,
@@ -307,7 +310,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'T-18',
-    itemType: 'Belka dachowa · sequence',
+    itemType: 'T',
     status: 'APPROACHING_SITE',
     dims: { lengthM: 17.4, widthM: 2.9, heightM: 3.45, weightT: 22.7 },
     plannedLoadDate: '2026-09-20',
@@ -317,7 +320,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'SG-35',
-    itemType: 'Płyta fasadowa · wind window',
+    itemType: 'SG',
     status: 'DELAYED',
     dims: { lengthM: 15.7, widthM: 3.0, heightM: 3.6, weightT: 19.5 },
     plannedLoadDate: '2026-09-22',
@@ -327,7 +330,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'SG-36',
-    itemType: 'Element konstrukcji · missing permit',
+    itemType: 'SG',
     status: 'DOC_MISSING',
     dims: { lengthM: 18.1, widthM: 3.25, heightM: 4.05, weightT: 27.2 },
     plannedLoadDate: '2026-09-25',
@@ -337,7 +340,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'R-03',
-    itemType: 'Reaktor · escort gap',
+    itemType: 'R',
     status: 'RESOURCES_PENDING',
     dims: { lengthM: 14.9, widthM: 3.15, heightM: 3.9, weightT: 25.8 },
     plannedLoadDate: '2026-09-26',
@@ -346,7 +349,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'SS-08',
-    itemType: 'Steel skid · frost route',
+    itemType: 'SS',
     status: 'IN_TRANSIT_SE',
     dims: { lengthM: 16.8, widthM: 2.85, heightM: 3.5, weightT: 23.4 },
     plannedLoadDate: '2026-09-22',
