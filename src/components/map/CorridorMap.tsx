@@ -35,6 +35,7 @@ import { formatListDateTime } from '../../lib/format';
 import { TZ_OPS } from '../../lib/time';
 import { useIsPhone } from '../../lib/useIsPhone';
 import { GroupList } from './GroupList';
+import { drawerMapNote } from '../../lib/p9fNote';
 
 /* III-5 — odtwarzanie przebiegu z bazy: tylko build Supabase (chunk leniwy); demo bez zmian */
 const TrackReplay = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./TrackReplay')) : null;
@@ -175,6 +176,23 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   const navigateTo = useTowerStore((s) => s.navigateTo);
   const risks = useTowerStore((s) => s.risks);
   const sailings = useTowerStore((s) => s.sailings);
+  /* wyglad/P9-f (E32 pkt 3): Przegląd w panelu — transport panelu także poza oknem śledzenia (dopisek pod mapą) */
+  const allLoads = useTowerStore((s) => s.loads);
+  const panelLoad = slot === 'drawer' && selectedLoadId ? allLoads.find((l) => l.id === selectedLoadId) ?? null : null;
+  const panelAtSite = !!panelLoad && stageTileOf(panelLoad) === 'SITE';
+  const events = useTowerStore((s) => s.events);
+  /* „Na placu od …” — ostatni wjazd do strefy placu (jak w Kokpicie, B3 / H3.5) */
+  const panelSiteSince = (() => {
+    if (!panelLoad || !panelAtSite) return null;
+    let best: string | null = null;
+    for (const e of events) {
+      if (e.loadId !== panelLoad.id || e.type !== 'GEOFENCE_ENTER') continue;
+      const pl = (e.payload ?? {}) as { geofence_type?: string; zone?: string };
+      if (pl.geofence_type !== 'SITE' && pl.zone !== 'SITE') continue;
+      if (!best || Date.parse(e.at) > Date.parse(best)) best = e.at;
+    }
+    return best;
+  })();
   const onMarkerRef = useRef(onMarker);
   onMarkerRef.current = onMarker;
   /* wyglad/P9-e: otwarta lista grupy (klucz) i widoki grup z ostatniego rysowania */
@@ -440,6 +458,14 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     }
 
     layers.fleet.clearLayers();
+    /* wyglad/P9-f (E32 pkt 3): na placu — strefa placu na mapie Przeglądu (bez względu na warstwę „Strefy”) */
+    if (slot === 'drawer' && panelAtSite && mapLayers.vehicles) {
+      for (const g of geofences) {
+        if (!g.active || g.type !== 'SITE') continue;
+        L.circle([g.lat, g.lng], { radius: g.radiusM, color: '#1B6E5D', weight: 1.5, fillColor: '#1B6E5D', fillOpacity: 0.12, interactive: false })
+          .addTo(layers.fleet);
+      }
+    }
     /* wyglad/P9-e: statki, na których pozycji stoi znacznik rejsu z liczbą aut — bez drugiego znacznika w warstwie AIS */
     const takenShips = new Set<string>();
     if (!mapLayers.vehicles) groupViewsRef.current = new Map();
@@ -655,10 +681,21 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           .addTo(layers.ais);
       }
     }
-  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes, role, sailings, embedded, slot]);
+  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes, role, sailings, embedded, slot, panelAtSite]);
 
   /* wyglad/P9-e: lista grupy z ostatniego rysowania; grupa, która zniknęła (np. auto wyjechało ze strefy), zamyka listę */
   const openView = openGroup ? groupViewsRef.current.get(openGroup) ?? null : null;
+  const drawerNote = panelLoad && mapLayers.vehicles
+    ? drawerMapNote(panelLoad, {
+      nowIso: getNowIso(),
+      prod: PROD_BUILD,
+      gpsReady,
+      hasFix: gpsFixes.has(panelLoad.id),
+      tx: (k, p) => (k.startsWith('p9c_') ? (p ? p9mp(locale, k, p) : p9m(locale, k)) : (p ? p9ep(locale, k, p) : p9e(locale, k))),
+      dt: (iso) => formatListDateTime(iso, TZ_OPS),
+      siteSince: panelSiteSince,
+    })
+    : null;
 
   return (
     <div
@@ -691,10 +728,21 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           onReload={() => window.location.reload()}
         />
       ) : null}
+      {/* wyglad/P9-f (E32 pkt 3, E27): Przegląd — bez pozycji powód z danych, przed oknem „Śledzenie od …”, na placu „Na placu od …” */}
+      {drawerNote ? (
+        <div
+          className="note po-mapnote"
+          data-map-bottom
+          data-drawer-note={drawerNote.kind}
+          data-empty={drawerNote.kind === 'site' ? undefined : 'vehicle-positions'}
+        >
+          {drawerNote.text}
+        </div>
+      ) : null}
       {/* wyglad/P4-b (E27): pusta lista = nikt w oknie śledzenia (Mapa: „W trasie: 0”, panel poza oknem) — to nie „brak danych” */}
-      {PROD_BUILD && mapLayers.vehicles && gpsReady && loads.length > 0 && !loads.some((l) => gpsFixes.has(l.id)) ? (
+      {slot !== 'drawer' && PROD_BUILD && mapLayers.vehicles && gpsReady && loads.length > 0 && !loads.some((l) => gpsFixes.has(l.id)) ? (
         <div className="note" data-empty="vehicle-positions" style={{ position: 'absolute', left: 12, right: 12, bottom: embedded ? 8 : 36, zIndex: 500, maxWidth: 360, background: 'var(--surface)', padding: '6px 8px' }}>
-          {slot === 'drawer' ? p9m(locale, 'p9c_drawer_nogps') : t(locale, 'b1_no_vehicle_positions')}
+          {t(locale, 'b1_no_vehicle_positions')}
         </div>
       ) : null}
       {openView ? (

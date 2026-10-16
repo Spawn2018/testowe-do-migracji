@@ -83,16 +83,19 @@ export function corridorBoundsOf(): L.LatLngBounds {
 export const CORRIDOR_PADDING = 24;
 /**
  * Margines kadru (E1: 24 px). Na stronie Mapa legenda leży na dole mapy — margines dolny liczony od jej górnej krawędzi,
- * żeby legenda nie zasłaniała początku trasy (Śrem). Kokpit, panel i telefon (legenda w arkuszu) — bez legendy na mapie.
+ * żeby legenda nie zasłaniała początku trasy (Śrem). To samo dla dopisku na mapie Przeglądu (P9-f). Kokpit i telefon
+ * (legenda w arkuszu) — bez nakładki na mapie.
  */
 export function corridorPadding(map: L.Map): { paddingTopLeft: L.PointTuple; paddingBottomRight: L.PointTuple } {
   let extra = 0;
   try {
-    const key = map.getContainer().closest('.corridor-map-root')?.querySelector<HTMLElement>('.mapkey');
-    if (key && key.offsetHeight > 0) {
+    /* legenda Mapy i dopisek Przeglądu (wyglad/P9-f) leżą na dole mapy */
+    const over = map.getContainer().closest('.corridor-map-root')?.querySelectorAll<HTMLElement>('.mapkey, [data-map-bottom]') ?? [];
+    for (const key of over) {
+      if (!(key.offsetHeight > 0)) continue;
       const root = key.offsetParent as HTMLElement | null;
       const fromBottom = root ? root.clientHeight - key.offsetTop : key.offsetHeight;
-      extra = Math.max(0, Math.round(fromBottom));
+      extra = Math.max(extra, Math.round(fromBottom));
     }
   } catch {
     /* mapa bez kontenera */

@@ -1800,6 +1800,8 @@ img,video{max-width:100%;height:auto}
 .mapgrp-row .r{color:var(--red);font-weight:600}
 .mapsheet .mapgrp-row{min-height:48px;font-size:15px}
 .mapsheet .mapgrp-row b{font-size:16px}
+/* wyglad/P9-f (E32 pkt 3): dopisek na mapie Przeglądu — powód braku pozycji albo „Na placu od …” */
+.note.po-mapnote{position:absolute;left:12px;right:12px;bottom:8px;z-index:500;max-width:360px;background:var(--surface);color:var(--ink);padding:6px 8px;font-size:13px}
 .map-cards{margin:8px 10px}
 .map-card{width:100%}
 .map-cards-empty{padding:10px;font-size:13px}
