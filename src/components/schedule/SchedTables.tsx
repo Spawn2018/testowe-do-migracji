@@ -176,7 +176,8 @@ function rowProps(l: Load, ctx: SchedRowCtx) {
     'data-load': l.id,
     'data-code': l.code,
     'data-status': l.status,
-    className: `${l.status === 'DELIVERED' ? 'done' : ''}${ctx.hoverLoadId === l.id || ctx.selectedLoadId === l.id ? ' hl' : ''}${l.status === 'CANCELLED' ? ' is-cancel' : ''}`,
+    /* E25 (audyt-B B-03): „Rozładowany” = „Dostarczone” — ten sam wygląd wiersza */
+    className: `${l.status === 'DELIVERED' || l.status === 'UNLOADING' ? 'done' : ''}${ctx.hoverLoadId === l.id || ctx.selectedLoadId === l.id ? ' hl' : ''}${l.status === 'CANCELLED' ? ' is-cancel' : ''}`,
     onMouseEnter: () => ctx.setHover(l.id),
     onMouseLeave: () => ctx.setHover(null),
     ...clickableRow(() => ctx.onOpen(l.id)),
