@@ -30,8 +30,10 @@ export const DEMO_MATRIX: MatrixGroup[] = [
         cells: { HHL_ADMIN: c(true), HHL_OPS: c(true), CLIENT_USER: c(false), CARRIER_DISPATCH: c(true, true, true), CARRIER_USER: c(true) } },
       { id: 'order_no', perDay: 4, title: 'Brak numeru zlecenia', sub: 'numer HHL albo przewoźnika', target: 'Harmonogram › transport',
         cells: { HHL_ADMIN: c(true), HHL_OPS: c(true), CLIENT_USER: c(false), CARRIER_DISPATCH: c(true), CARRIER_USER: c(false) } },
-      { id: 'chat', perDay: 14, title: 'Nowa wiadomość w czacie', sub: 'w transporcie, którego dotyczy', target: 'Transport › Czat',
-        cells: { HHL_ADMIN: c(true), HHL_OPS: c(true, true), CLIENT_USER: c(true), CARRIER_DISPATCH: c(true, true), CARRIER_USER: c(true) } },
+      /* wyglad/P6-e (D-20261016-0310-01 Cz13, D-20261016-0315-01 Cz25): dzwonek i telefon dla 5 rodzajów kont, bez e-maila;
+       * odbiorców zawęża zawsze `visible_to` — rozmowa „tylko HHL i SCX” nigdy do KSH */
+      { id: 'chat', perDay: 14, title: 'Nowa wiadomość w czacie', sub: 'tylko do firm, które widzą wiadomość · „tylko HHL i SCX” nigdy do KSH, niezależnie od ustawień', target: 'Transport › Czat',
+        cells: all5(c(true, true)) },
     ],
   },
   {
