@@ -220,7 +220,7 @@ function fuelSideOf(load: Load, side: FinSide): MoneySideV2 | null {
   return pick.fuel.refDate ? pick : null;
 }
 
-const stateOfSnap = (status: string | undefined, idxEnd: string, today: string): FuelState =>
+export const stateOfSnap = (status: string | undefined, idxEnd: string, today: string): FuelState =>
   status === 'OSTATECZNY' ? 'OSTATECZNA' : status === 'BRAK' ? 'BRAK' : status === 'PROGNOZA' || status === 'WSTEPNY' ? 'PROGNOZA' : idxEnd < today ? 'OSTATECZNA' : 'PROGNOZA';
 
 /** Wiersze tabeli E39: tydzień załadunku, tydzień wskaźników, mnożniki, stan, transporty. Zakres prognoz scalony. */

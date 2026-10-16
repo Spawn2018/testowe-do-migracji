@@ -53,31 +53,44 @@ sval "actual_delivery_at po Dostarczone" "select (actual_delivery_at is not null
 val "DELIVERED nadpisuje godzinę" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','korekta godziny'); select (actual_delivery_at = timestamptz '2026-10-07 10:19:54+00')::text from loads where id='$L2'" true commit
 # A5: READY_TO_INVOICE bez CMR
 err "READY_TO_INVOICE bez CMR" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null)" "CMR"
-sys "delete from documents where load_id='$L2' and category='CMR' and storage_path='test/e25-cmr.pdf'" >/dev/null
-sys "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes)
-     values ('$P','$L2','CMR','test/e25-cmr.pdf','cmr.pdf','application/pdf',100)" >/dev/null
-# H1: CHECK zna STATUS_READY_TO_INVOICE / STATUS_INVOICED (D-20261014-0640-01)
+# A5 ręcznie: CMR sprzed dostawy (C17 auto nie rusza) → STATUS_READY_TO_INVOICE
+sys "delete from documents where load_id='$L2' and category='CMR' and storage_path like 'test/e25-cmr%'" >/dev/null
+sys "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
+     values ('$P','$L2','CMR','test/e25-cmr-early.pdf','cmr.pdf','application/pdf',100,
+             timestamptz '2026-10-06 08:00:00+00')" >/dev/null
+sval "C17 wczesny CMR: nadal DELIVERED" "select status::text from loads where id='$L2'" DELIVERED
 val "SCX → READY_TO_INVOICE + zdarzenie" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null); select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_READY_TO_INVOICE') from loads where id='$L2'" "READY_TO_INVOICE|1" commit
+# C17: CMR po dostawie na świeżym DELIVERED → STATUS_AUTO (cofnięcie ręczne + supersede wczesnego)
+val "HHL cofa do DELIVERED (A5)" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','cofka e25'); select status::text from loads where id='$L2'" DELIVERED commit
+sys "update documents set superseded_at=now() where load_id='$L2' and category='CMR' and superseded_at is null" >/dev/null
+sys "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
+     values ('$P','$L2','CMR','test/e25-cmr-auto.pdf','cmr.pdf','application/pdf',100,
+             timestamptz '2026-10-07 12:00:00+00')" >/dev/null
+sval "C17 CMR po dostawie → READY STATUS_AUTO" "select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_AUTO' and payload->>'to'='READY_TO_INVOICE') from loads where id='$L2'" "READY_TO_INVOICE|1"
 # A5: INVOICED bez faktur
+sys "delete from invoice_lines where load_id='$L2'" >/dev/null
 err "INVOICED bez faktur" $HHL "select load_status_set('$L2','INVOICED',now(),null)" "brak faktury"
-# Minimalne invoice_lines (obie strony) — bez pełnego register_invoice
+# C17: obie faktury z plikiem → INVOICED STATUS_AUTO; potem ręczna ścieżka z actor
 HHLO=00000000-0000-0000-0000-00000000a001
 KSHO=00000000-0000-0000-0000-00000000a002
-sys "insert into invoices (id, project_id, carrier_org_id, period_start, period_end, currency, direction, issuer_org_id, recipient_org_id, invoice_number, issue_date, week_key)
-     values ('aaaaaaaa-0000-4000-8000-00000000e251','$P','$SCXO','2026-10-06','2026-10-12','EUR','KOSZT','$SCXO','$HHLO','E25/K/1','2026-10-13','2026-W41')
+sys "insert into documents (id, project_id, load_id, category, storage_path, file_name, mime_type, size_bytes)
+     values ('aaaaaaaa-0000-4000-8000-00000000e25d','$P','$L2','INVOICE','test/e25-inv-k.pdf','k.pdf','application/pdf',100),
+            ('aaaaaaaa-0000-4000-8000-00000000e25e','$P','$L2','INVOICE','test/e25-inv-p.pdf','p.pdf','application/pdf',100)
      on conflict (id) do nothing" >/dev/null
-sys "insert into invoices (id, project_id, carrier_org_id, period_start, period_end, currency, direction, issuer_org_id, recipient_org_id, invoice_number, issue_date, week_key)
-     values ('aaaaaaaa-0000-4000-8000-00000000e252','$P','$SCXO','2026-10-06','2026-10-12','EUR','PRZYCHOD','$HHLO','$KSHO','E25/P/1','2026-10-13','2026-W41')
-     on conflict (id) do nothing" >/dev/null
+sys "insert into invoices (id, project_id, carrier_org_id, period_start, period_end, currency, direction, issuer_org_id, recipient_org_id, invoice_number, issue_date, week_key, document_id, status)
+     values ('aaaaaaaa-0000-4000-8000-00000000e251','$P','$SCXO','2026-10-06','2026-10-12','EUR','KOSZT','$SCXO','$HHLO','E25/K/1','2026-10-13','2026-W41','aaaaaaaa-0000-4000-8000-00000000e25d','SUBMITTED')
+     on conflict (id) do update set document_id=excluded.document_id, status='SUBMITTED'" >/dev/null
+sys "insert into invoices (id, project_id, carrier_org_id, period_start, period_end, currency, direction, issuer_org_id, recipient_org_id, invoice_number, issue_date, week_key, document_id, status)
+     values ('aaaaaaaa-0000-4000-8000-00000000e252','$P','$SCXO','2026-10-06','2026-10-12','EUR','PRZYCHOD','$HHLO','$KSHO','E25/P/1','2026-10-13','2026-W41','aaaaaaaa-0000-4000-8000-00000000e25e','SUBMITTED')
+     on conflict (id) do update set document_id=excluded.document_id, status='SUBMITTED'" >/dev/null
 sys "insert into invoice_lines (invoice_id, load_id, direction, expected_amount, invoiced_amount)
      values ('aaaaaaaa-0000-4000-8000-00000000e251','$L2','KOSZT',1,1)
      on conflict (invoice_id, load_id) do update set direction=excluded.direction" >/dev/null
 sys "insert into invoice_lines (invoice_id, load_id, direction, expected_amount, invoiced_amount)
      values ('aaaaaaaa-0000-4000-8000-00000000e252','$L2','PRZYCHOD',1,1)
      on conflict (invoice_id, load_id) do update set direction=excluded.direction" >/dev/null
-val "HHL → INVOICED + zdarzenie" $HHL "select load_status_set('$L2','INVOICED',now(),null); select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_INVOICED') from loads where id='$L2'" "INVOICED|1" commit
-# H2: actor w payload; nie wcześniej niż poprzedni status
-sval "actor w payload" "select (payload->>'actor' like '% // %') from load_events where load_id='$L2' and event_type='STATUS_INVOICED' order by id desc limit 1" t
+sval "C17 obie faktury → INVOICED STATUS_AUTO" "select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_AUTO' and payload->>'to'='INVOICED') from loads where id='$L2'" "INVOICED|1"
+val "HHL ręcznie INVOICED + actor" $HHL "select load_status_set('$L2','READY_TO_INVOICE',now(),'cofka e25'); select load_status_set('$L2','INVOICED',now(),null); select (payload->>'actor' like '% // %')::text from load_events where load_id='$L2' and event_type='STATUS_INVOICED' order by id desc limit 1" true commit
 err "wcześniej niż poprzedni status" $HHL "select load_status_set('$L2','READY_TO_INVOICE',(select max(occurred_at)-interval '1 second' from load_events where load_id='$L2' and event_type like 'STATUS_%'),'test cofniecia czasu')" "wcześniej"
 err "czas w przyszłości" $HHL "select load_status_set('$L1','AT_LOADING',now()+interval '2 hours',null)" "przyszłości"
 err "anulowanie bez powodu" $HHL "select load_status_set('$L1','CANCELLED',now(),null)" "powodu"

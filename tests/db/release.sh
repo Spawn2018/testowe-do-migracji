@@ -180,7 +180,8 @@ ROLE=anon err "limit zapytań: 121. wywołanie w godzinie odrzucone" "" "select 
 sys "update driver_tokens set window_start = now() - interval '61 minutes' where token_hash = sha256(convert_to('$TA4','UTF8'))"
 ROLE=anon val "limit zapytań: nowe okno po godzinie"    "" "select driver_get_instructions('$TA4')->>'order_no'" KSH/6
 ROLE=anon val "Rozładowany: zdarzenie przyjęte"         "" "select driver_post_event('$TA4', '$L6', 'MILESTONE_UNLOADED', now() - interval '5 minutes')" MILESTONE_UNLOADED commit
-chk "Rozładowany: status UNLOADED z datą rozładunku"     "$(Q "select status||':'||(actual_delivery_at is not null) from loads where id='$L6'")" "UNLOADED:true"
+# C17 (D-20261015-2110-01, etap E25/driver): MILESTONE_UNLOADED → DELIVERED (UNLOADED nie powstaje)
+chk "Rozładowany: status DELIVERED z datą rozładunku"    "$(Q "select status||':'||(actual_delivery_at is not null) from loads where id='$L6'")" "DELIVERED:true"
 chk "wydanie i odwołanie w dzienniku audytu"             "$(Q "select count(*) >= 2 from audit_log where action in ('DRIVER_TOKEN_ISSUE','DRIVER_TOKEN_REVOKE')")" t
 TP=$(tok $SCX $L6)
 err "zdjęcie: anon nie zarejestruje dokumentu wprost"    "" "set local role anon; select * from driver_create_document('$TP', '$L6', 'CMR', 'a.jpg', 'image/jpeg', 1000)" "permission denied"
