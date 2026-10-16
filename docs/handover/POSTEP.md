@@ -2621,8 +2621,8 @@ P7 — uzupełnienie W13:
 - zapis: po pliku testowym od działu IT KSH (przyszły tydzień); właściwy plik po zgodzie właściciela;
 - stan: pole `kshSharePointSync` (`lastReadAt`, `lastWriteAt`, `writeEnabled`, `sourceOk`, `secretExpiresOn`, `lastRun.created` / `changed` / `skipped` / `ntg` / `cases`) — typ w `src/types.ts`, demo w `src/data/seed.ts`; wygląd linii i wiersza w Stanie systemu robi koordynator (`wyglad/P7-e`).
 
-**DOPISEK 1150 WŁĄCZONY — commit (ten docs), P7: E30 pkt 7 Rejsy → wygląd.**  
-**DOPISEK 1230 WŁĄCZONY — commit (ten docs), P7: uzupełnienie W13 (odczyt teraz, zapis po pliku testowym); W29, W31 zamknięte.**
+**DOPISEK 1150 WŁĄCZONY — commit `8bd2c9ba`, P7: E30 pkt 7 Rejsy → wygląd.**  
+**DOPISEK 1230 WŁĄCZONY — commit `8bd2c9ba`, P7: uzupełnienie W13 (odczyt teraz, zapis po pliku testowym); W29, W31 zamknięte.**
 
 E49 miejsca w kodzie → P6.  
 Czat — miejsca w kodzie, Cz14 → P6.  
@@ -2655,6 +2655,21 @@ E38 1A / E30 / E20 Harmonogram → wygląd (P7-c), dane P7.
 Wdrożenie R7 z `main` `9cc44387`, 16.10.2026 12:10, `dpl_84KHHgRyr2iZqpAYSRDA1pLTDSeD`. JS `assets/index-g1LI-ddS.js`. tower.log-mar.pl i watch-tower-makieta.vercel.app → 200. 0× `service_role`.
 
 **KONFLIKT #248** (`wyglad/P9-c`, baza `main` po #244 i #245). Kolejka stoi. #249 i dalsze bez zmiany kolejności — po commicie koordynatora na #248.
+
+## 2026-10-16 — scalenia #248–#253
+
+Konflikt #248 zamknięty commitem koordynatora `38e0c5ce` na `wyglad/P9-c`.
+
+#248 scalony — `00a23903`.  
+#249 scalony — `c92ddfa0`.  
+#250 scalony — `3a760a87`.  
+#251 scalony — `828e6bf0`.  
+#252 scalony — `78bb44d8`.  
+#253 scalony — `b654f175`.
+
+Wdrożenie R7 z `main` `b654f175`, 16.10.2026 12:47, `dpl_DF9pz2PkA4Nr7z84bZq7Uw8kPwjw`. JS `assets/index-zyfrQ2kB.js`. tower.log-mar.pl i watch-tower-makieta.vercel.app → 200. 75 plików JS, 0× `service_role`.
+
+**KONFLIKT #254** (`wyglad/P10b-d`, baza `main`). Kolejka stoi. #256 i #260 bez zmiany kolejności — po commicie koordynatora na #254.
 
 ## PAUZA — 2026-10-16 10:21 — **WZNOWIONE 10:59** (hasło „ruszamy”)
 
