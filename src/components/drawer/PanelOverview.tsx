@@ -29,6 +29,7 @@ import { cmrKind, reqVisible } from '../../lib/p5Docs';
 import { policiesOf } from '../../lib/p5Source';
 import { trackingLinkOf } from '../../lib/p4cSource';
 import { EtaBlock } from './EtaBlock';
+import type { EtaWx } from '../../lib/e49Wx';
 import { OptionsHowTo } from '../settings/OptionsHowTo';
 import './p7.css';
 
@@ -49,6 +50,8 @@ interface Props {
   deliveredAt: string | null;
   siteSince: string | null;
   delayMin: number | null;
+  /** wyglad/E49: linie wiatru / postoju / objazdu w bloku ETA. */
+  wx?: readonly EtaWx[];
   mapNode: ReactNode;
   ratingNode: ReactNode;
   onAwiz: () => void;
@@ -132,6 +135,8 @@ export function PanelOverview(p: Props) {
     role, locale, phone, nowIso, loadOf: (id) => loads.find((x) => x.id === id), assignOn: false, assignee: () => null, me: null,
     peopleOf: () => null, historyOf: () => null, onTake: noop, onGive: noop, onTakeover: noop, confirmId: null, onConfirm: noop,
     onCancelConfirm: noop, onGo: noop, onFee: noop, checkHandlers: () => ({}), decisions: null, mayResolve: () => false, onResolved: noop,
+    /* wyglad/E49: „Objazd czy postój?” rozstrzyga SCX na stronie Ryzyka — w panelu tylko podgląd */
+    detourHandlers: () => ({ canDecide: false, busy: false, onDecide: null }),
   };
   /* E32 pkt 2, E9 krok 5: numer HHL wpisuje HHL w „Numerach zleceń”, bez okna Awizacja i bez kompletnej awizacji */
   const goHhlNo = () => {
@@ -332,7 +337,7 @@ export function PanelOverview(p: Props) {
           </dd>
         </dl>
         {/* E15 pkt 8 (img/e15-after): blok ETA — w „Planie i ETA” (E32 pkt 4) */}
-        <EtaBlock load={load} locale={locale} phone={phone} nowIso={nowIso} deliveredAt={p.deliveredAt} siteSince={p.siteSince} delayMin={p.delayMin} />
+        <EtaBlock load={load} locale={locale} phone={phone} nowIso={nowIso} deliveredAt={p.deliveredAt} siteSince={p.siteSince} delayMin={p.delayMin} wx={p.wx} />
         <div data-eta-howto className="etab-howto">
           <OptionsHowTo locale={locale} k="a6_dr_eta_howto" summaryKey="a6_sch_howto_btn" />
         </div>

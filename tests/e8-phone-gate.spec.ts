@@ -1492,6 +1492,91 @@ test.describe('wyglad/P5 panel transportu — Ceny (E33) i Dokumenty (E31 pkt 5)
   }
 });
 
+/**
+ * wyglad/E49 — zamknięty most albo droga: sprawa SCX „Objazd czy postój?” (decyzja właściciela 16.10.2026, 02:08,
+ * odpowiedź 3; D-20261016-0230-01 Z3), linie wiatru / postoju / objazdu w ETA (Z1) i progi wiatru w Opcjach (Z1 pkt 5).
+ * Dane demo (`src/lib/e49Demo.ts`): T-17 w drodze przez Szwecję — Högakustenbron zamknięty.
+ */
+test.describe('wyglad/E49 — „Objazd czy postój?”, wiatr w ETA, progi wiatru', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const openRisks = async (page: Page) => {
+    await page.evaluate(() => { window.location.hash = '#/ryzyka'; });
+    await page.waitForTimeout(800);
+    await page.locator('[data-rk-card]').filter({ hasText: 'T-17' }).first().locator('.rk-card-hd').click();
+    await page.waitForTimeout(300);
+  };
+  const noSideScroll = async (page: Page, width: number) =>
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+
+  test('komputer SCX: dwie możliwości obok siebie, szybsza oznaczona, ryzyka, decyzja „Jedziemy objazdem” → ETA z objazdem', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'SCX');
+    await openRisks(page);
+    const card = page.locator('[data-detour]');
+    await expect(card).toBeVisible();
+    await expect(card.locator('.dtr-t')).toContainText('Högakustenbron (E4) zamknięty do');
+    await expect(card.locator('.dtr-t')).toContainText('objazd czy postój?');
+    await expect(card.locator('[data-detour-opt]')).toHaveCount(2);
+    const [hold, detour] = [card.locator('[data-detour-opt="HOLD"]'), card.locator('[data-detour-opt="DETOUR"]')];
+    const hb = await hold.boundingBox();
+    const db = await detour.boundingBox();
+    expect(Math.abs((hb?.y ?? 0) - (db?.y ?? 1)), 'obok siebie').toBeLessThan(2);
+    await expect(detour.locator('.dtr-fast')).toContainText('szybciej o');
+    await expect(detour.locator('.dtr-nums')).toContainText('+31');
+    await expect(detour.locator('[data-detour-risk="WIND"]')).toContainText('Sandöbron');
+    await expect(hold.locator('.dtr-big')).toContainText('koniec zamknięcia + 30 min');
+    await noSideScroll(page, 1440);
+    await card.locator('[data-detour-note]').fill('kierowca zna objazd');
+    await card.locator('[data-detour-pick="DETOUR"]').click();
+    await expect(page.locator('[data-detour]')).toHaveCount(0);
+    await page.evaluate(() => { window.location.hash = '#/transport/T-17'; });
+    await page.waitForSelector('aside.drawer', { timeout: 10_000 });
+    await expect(page.locator('[data-eta-wx] [data-eta-wx-kind="DETOUR"]')).toContainText('Objazd +35');
+    await expect(page.locator('[data-eta-wx] [data-eta-wx-kind="WIND"]')).toContainText('porywy 22 m/s z boku');
+    await expect(page.locator('[data-eta-wx] .etab-wx-attr')).toHaveText('Źródło: SMHI (CC BY 4.0), dane przetworzone');
+  });
+
+  test('komputer HHL: ta sama sprawa bez przycisków — „Decyduje SCX”; Opcje › Progi z progami wiatru', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'HHL');
+    await openRisks(page);
+    await expect(page.locator('[data-detour]')).toBeVisible();
+    await expect(page.locator('[data-detour-pick]')).toHaveCount(0);
+    await expect(page.locator('[data-detour-wait]')).toHaveText('Decyduje SCX — czeka na decyzję.');
+    await openView(page, 'options');
+    await page.evaluate(() => (document.querySelector('[data-opt-nav="thr"]') as HTMLButtonElement).click());
+    await expect(page.locator('[data-opt-screen="thr"]')).toBeVisible();
+    await expect(page.locator('[data-threshold="WIND_SLOW_MS"]')).toContainText('20 m/s');
+    await expect(page.locator('[data-threshold="WIND_HOLD_MS"]')).toContainText('25 m/s');
+    await expect(page.locator('[data-threshold="SLIP_RADIUS_KM"]')).toContainText('25 km');
+    await page.evaluate(() => { window.location.hash = '#/transport/T-17'; });
+    await page.waitForSelector('aside.drawer', { timeout: 10_000 });
+    await expect(page.locator('[data-eta-wx] [data-eta-wx-kind="CLOSURE_HOLD"]')).toContainText('Högakustenbron (E4) zamknięty');
+  });
+
+  test('telefon SCX: sprawa jedna możliwość pod drugą, przyciski 48 px, pole 16 px — 0 w bramie E8', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'SCX');
+    await openRisks(page);
+    const hits: Hit[] = [];
+    for (const width of [...WIDTHS, 768]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.waitForTimeout(200);
+      hits.push(...await measure(page, 'ryzyka-objazd', width, 'SCX'));
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(200);
+    const hb = await page.locator('[data-detour-opt="HOLD"]').boundingBox();
+    const db = await page.locator('[data-detour-opt="DETOUR"]').boundingBox();
+    expect((db?.y ?? 0) > (hb?.y ?? 0) + (hb?.height ?? 0) - 2, 'jedna pod drugą').toBe(true);
+    const btn = await page.locator('[data-detour-pick="HOLD"]').evaluate((e) => e.getBoundingClientRect().height);
+    expect(btn).toBeGreaterThanOrEqual(44);
+    const font = await page.locator('[data-detour-note]').evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+    expect(font).toBeGreaterThanOrEqual(16);
+    expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+  });
+});
+
 test.describe('wyglad/P6 Ryzyka — E7 „Do zrobienia” i „Sytuacja na trasie”, E6 karta sprawy', () => {
   test.describe.configure({ mode: 'serial', timeout: 300_000 });
 

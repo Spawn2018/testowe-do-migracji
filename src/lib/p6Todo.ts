@@ -8,9 +8,10 @@
  */
 import type { DeliveredCheck, OrgKind, Risk, Severity } from '../types';
 import type { FeeSuggestion } from './p5Fees';
+import type { DetourCase } from './e49Detour';
 import { isTimeBan, isTodoRisk, todoCardKey } from './todoRules';
 
-export type IssueSrc = 'RISK' | 'DECISION' | 'FEE' | 'CHECK';
+export type IssueSrc = 'RISK' | 'DECISION' | 'FEE' | 'CHECK' | 'DETOUR';
 /** Dokąd prowadzi główny przycisk sprawy (bez zapisu — nawigacja). */
 export type IssueGo = 'AWIZACJA' | 'DOCS' | 'PRICING' | 'OPEN' | 'FEE' | 'NONE';
 export type TodoScope = 'MINE' | 'FIRM' | 'ALL';
@@ -54,6 +55,8 @@ export interface TodoIssue {
   decision?: TodoDecision;
   fee?: FeeSuggestion;
   check?: DeliveredCheck;
+  /** wyglad/E49: zamknięty most albo droga — „Objazd czy postój?” (SCX) */
+  detour?: DetourCase;
 }
 
 export interface TodoInfo { id: string; loadId: string; risk: Risk }

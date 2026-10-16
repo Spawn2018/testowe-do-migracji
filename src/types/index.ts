@@ -281,6 +281,8 @@ export interface EtaDetail {
   restDoneTo?: string | null;
   /** czeka przed placem od */
   waitSince?: string | null;
+  /** wyglad/E49: wiatr, postój przez wiatr, śliskość, zamknięcie i objazd (serwer: `eta_basis.causes.weather`) */
+  weather?: import('../lib/e49Wx').EtaWx[] | null;
 }
 
 /**

@@ -10,7 +10,7 @@ import { SystemBroadcastBanner } from './components/shell/SystemBroadcastBanner'
 import { PhoneMissingBar } from './components/shell/PhoneMissingBar';
 import { ImpersonationBanner } from './auth/ImpersonationBanner';
 import { PreviewBanner } from './auth/PreviewBanner';
-import { LoadDrawer } from './components/drawer/LoadDrawer';
+import { lazyRetry } from './lib/lazyRetry';
 import { DashboardView } from './views/DashboardView';
 import { MapView } from './views/MapView';
 import { ScheduleView } from './views/ScheduleView';
@@ -33,6 +33,15 @@ import { canSwitchView } from './lib/prodFacade';
 import { ACCESS_OPEN_LOAD, accessNoteText, parseAccessNote } from './lib/accessNote';
 import { t } from './i18n/messages';
 import { usePhoneTableLabels } from './lib/phoneTableLabels';
+
+const loadDrawerChunk = () => import('./components/drawer/LoadDrawer').then((m) => ({ default: m.LoadDrawer }));
+const LoadDrawer = lazy(lazyRetry(loadDrawerChunk));
+/* pobranie panelu transportu w tle, gdy przeglądarka jest wolna (pierwsze kliknięcie bez czekania) */
+if (typeof window !== 'undefined') {
+  const idle = (window as Window & { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback;
+  const warm = () => { void loadDrawerChunk().catch(() => undefined); };
+  if (idle) idle(warm); else window.setTimeout(warm, 1500);
+}
 
 // BK2: bramka logowania tylko w trybie Supabase (VITE_AUTH_MODE=supabase); demo bez zmian.
 const AuthGate = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./auth/AuthGate')) : null;
@@ -224,7 +233,8 @@ function TowerShell() {
           {body}
         </main>
       </div>
-      <LoadDrawer />
+      {/* D15 (budżet 400 kB): panel transportu osobno — pobierany w tle po starcie, więc otwiera się od razu */}
+      <Suspense fallback={null}><LoadDrawer /></Suspense>
       <Toasts />
     </div>
   );
