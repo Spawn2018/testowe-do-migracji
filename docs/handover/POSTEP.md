@@ -2632,7 +2632,13 @@ D-20261016-1410-01:
 
 Kolejka bez dni: #209 → #231 → #247 → #261 → #262 (gdy gotowy) → kolejne PR koordynatora.
 
-**DOPISEK 1410 WŁĄCZONY — commit (ten docs), VAT 23 % i Polisa HHL → P5, daty DD.MM.RRRR → C6/P8/P5/P11, prom → kierowca SE, telefon w Harmonogramie, W46 i W47 zamknięte.**
+**DOPISEK 1410 WŁĄCZONY — commit `5666bcf4`, VAT 23 % i Polisa HHL → P5, daty DD.MM.RRRR → C6/P8/P5/P11, prom → kierowca SE, telefon w Harmonogramie, W46 i W47 zamknięte.**
+
+## 2026-10-16 — scalenie #209
+
+Wzorzec `stan-zablokowany` (dark) odświeżony w `ff508f2`. Visual zielony.
+
+#209 scalony — `b90619f3`.
 
 E30 pkt 7 Rejsy → wygląd (P7-d).
 
