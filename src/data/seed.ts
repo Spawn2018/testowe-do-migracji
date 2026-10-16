@@ -503,7 +503,21 @@ export function buildSeedLoads(): Load[] {
        Wymiary przy transporcie = wiersz tabeli (Przegląd pokazuje „z tabeli HHL (SG)”), zezwolenie wystawione na ten zestaw
        (ten sam wynik sprawdzenia zezwolenia co wcześniej). Symbole spoza tabeli (R, D) — bez zmian. */
     const sym = demoSymbolSpec(l);
-    const resources = sym ? { ...l.resources, setLengthM: sym.set.l, setWidthM: sym.set.w, setHeightM: sym.set.h } : l.resources;
+    let resources = sym ? { ...l.resources, setLengthM: sym.set.l, setWidthM: sym.set.w, setHeightM: sym.set.h } : l.resources;
+    /* audyt-B B-14 (E6, E32 pkt 5; 16.10 13:34–13:58): jeden transport w Szwecji z przepięciem naczepy — odcinek PL
+       (Śrem → prom) i odcinek SE (prom → Boden), dwóch kierowców z numerami i dwa ciągniki; naczepa jedna. T-01 jest
+       na „Drodze SE”, więc „Zadzwoń”, karta na telefonie i kolumna „Telefon kierowcy” pokazują kierowcę SE. */
+    if (l.code === 'T-01') {
+      resources = {
+        ...resources,
+        trailerSwap: true,
+        driverPhoneCountry: 'PL',
+        driverDeliveryName: 'Henrik Lund',
+        driverDeliveryPhone: '+46701740615',
+        driverDeliveryPhoneCountry: 'SE',
+        tractorDeliveryPlate: 'BDN 417',
+      };
+    }
     if (sym && permit) permit = { ...permit, zestaw: { ...permit.zestaw, L: sym.set.l, W: sym.set.w, H: sym.set.h } };
 
     const permitFits =

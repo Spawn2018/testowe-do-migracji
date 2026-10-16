@@ -1066,6 +1066,42 @@ test.describe('wyglad/P7-c Harmonogram w układzie pliku (E38, E30, E20)', () =>
     await page.locator('[data-action="reset-cols"]').click();
   });
 
+  /* audyt-B B-14 (E6; 16.10, 13:34–13:58): transport z przepięciem naczepy w Szwecji (demo T-01, „Droga SE”) —
+     w Harmonogramie numer kierowcy odcinka SE z dopiskiem „kierowca SE · teraz”, na telefonie „Zadzwoń” do niego,
+     w panelu dwa odcinki, SE pierwszy i wyróżniony. */
+  test('przepięcie naczepy (T-01): numer kierowcy SE w Harmonogramie, karcie i panelu', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'sched');
+    const row = () => page.locator('[data-sched-layout] tbody tr[data-load]').filter({ has: page.locator('td[data-col="code"]', { hasText: /^T-01\b/ }) });
+    for (const view of ['file', 'short'] as const) {
+      if (view === 'short') await page.locator('[data-sched-short]').click();
+      await expect(page.locator(`[data-sched-layout="${view}"]`)).toBeVisible();
+      const tel = row().locator('td[data-col="phone"] a[data-tel-active]');
+      await expect(tel, view).toHaveAttribute('data-tel-active', 'SE');
+      await expect(tel, view).toHaveText('+46 701 740 615');
+      await expect(tel, view).toHaveAttribute('href', 'tel:+46701740615');
+      await expect(row().locator('td[data-col="phone"] [data-tel-leg]'), view).toHaveText('kierowca SE · teraz');
+    }
+    await row().locator('td[data-col="code"]').click();
+    await page.waitForSelector('aside.drawer [data-overview]');
+    const drv = page.locator('.drawer [data-po-driver]');
+    await expect(drv).toHaveCount(2);
+    await expect(drv.first()).toHaveAttribute('data-po-driver', 'SE');
+    await expect(drv.first()).toHaveClass(/is-now/);
+    await expect(drv.first()).toContainText('Henrik Lund · +46 701 740 615');
+    await expect(drv.nth(1)).toContainText('Tomasz Wójcik · +48 000 000 003');
+    await expect(drv.first().locator('a.po-call')).toHaveAttribute('href', 'tel:+46701740615');
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', true);
+    await openView(page, 'sched');
+    const card = page.locator('[data-sched-cards] [data-code="T-01"]');
+    await expect(card.locator('[data-card-driver]')).toHaveAttribute('data-card-driver', 'SE');
+    await expect(card.locator('[data-card-call="SE"]')).toHaveAttribute('href', 'tel:+46701740615');
+    await expect(card.locator('[data-card-vehicle]')).toContainText('BDN 417');
+  });
+
   test('komputer 1440: KSH bez kolumn numerów i z „Twoja cena”, SCX z „Moja stawka”', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'KSH');
