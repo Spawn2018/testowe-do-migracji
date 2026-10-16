@@ -89,6 +89,14 @@ describe('Historia — wpis po polsku „było → jest” (E17 pkt 2)', () => {
     const odd = histRow(ev('SOMETHING_NEW_42', '2026-10-01T19:43:00Z', 'system'), 'pl');
     expect(odd.head).toBe('Zmiana w transporcie');
   });
+  it('audyt-B B-08: status z automatu nazwą E25 i źródłem jak na osi Status (bez „Załadowano”, „Rozładowano”)', () => {
+    expect(histRow(ev('LOADED', '2026-10-01T06:30:00Z', 'system', { source: 'GPS', provider: 'emtrack' }), 'pl'))
+      .toMatchObject({ cat: 'STATUS', head: '', from: null, to: 'Załadunek', who: 'GPS emtrack', src: null, tail: null });
+    expect(histRow(ev('ON_FERRY', '2026-10-01T09:15:00Z', 'system', { source: 'AIS' }), 'pl')).toMatchObject({ to: 'Na promie', who: 'AIS' });
+    expect(histRow(ev('UNLOADED', '2026-10-06T10:00:00Z', 'system', { source: 'GPS', provider: 'emtrack' }), 'pl')).toMatchObject({ to: 'Dostarczone', who: 'GPS emtrack' });
+    const r = histRow(ev('UNLOADED', '2026-10-06T10:00:00Z', 'driver-pwa', undefined, 'Rozładowany'), 'pl');
+    expect(text(r)).not.toMatch(/Rozładowan|Załadowano/);
+  });
   it('import harmonogramu: wersja i plik; stara notatka „KSH import …” bez dopisku', () => {
     expect(histRow(ev('SCHEDULE_IMPORTED', '2026-10-01T19:43:00Z', 'system', { version: 1, file_name: 'plik.xlsx' }), 'pl'))
       .toMatchObject({ cat: 'IMPORT', head: 'Dodany z harmonogramu KSH', tail: 'wersja 1, plik plik.xlsx' });

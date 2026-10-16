@@ -581,8 +581,9 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
         loadId: l.id,
         type: 'LOADED',
         at: `${l.plannedLoadDate}T08:30:00+02:00`,
-        actor: 'driver-pwa',
-        note: 'Załadowany',
+        /* audyt-B B-08 (E17): automat ze źródłem pozycji — w Historii „GPS emtrack”, nie „Kierowca (aplikacja)” */
+        actor: 'system',
+        payload: { source: 'GPS', provider: 'emtrack' },
       });
     }
     if (
@@ -595,8 +596,8 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
         loadId: l.id,
         type: 'ON_FERRY',
         at: `${l.plannedLoadDate}T11:15:00+02:00`,
-        actor: 'driver-pwa',
-        note: 'Na promie',
+        actor: 'system',
+        payload: { source: 'AIS' },
       });
     }
     if (['UNLOADING', 'DELIVERED'].includes(l.status)) {
@@ -605,8 +606,8 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
         loadId: l.id,
         type: 'UNLOADED',
         at: `${l.plannedDeliverDate}T12:00:00+02:00`,
-        actor: 'driver-pwa',
-        note: 'Rozładowany',
+        actor: 'system',
+        payload: { source: 'GPS', provider: 'emtrack' },
       });
     }
     if (l.status === 'SILENT') {
