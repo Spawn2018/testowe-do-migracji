@@ -151,7 +151,7 @@ describe('E9 — kafelki Kokpitu (img/e9-after)', () => {
     expect(by['in-transit'].desc).toBe('SG-03 na placu w Boden');
     expect(by.loads7.desc).toBe('zezwolenia 1 z 2 · 1 po dacie załadunku');
     expect(by['to-invoice'].value).toBe('1');
-    expect(by['to-invoice'].desc).toBe('1 czeka na podpisany CMR (SG-01) · tydz. 41');
+    expect(by['to-invoice'].desc).toBe('1 czeka na podpisany CMR (SG-01) · t41');
     expect(by['to-invoice'].descShort).toBe('1 czeka na CMR');
     expect(by.ferry.desc).toBe('Wawel GDN → NYN · prognoza morza na stronie Ryzyka');
     expect(by.ferry.valueShort).toBe('18:00');
@@ -165,12 +165,12 @@ describe('E9 — kafelki Kokpitu (img/e9-after)', () => {
     const ksh = buildCockpit(input('KSH', { loads: late }));
     expect(ksh.find((x) => x.id === 'plan72')!.desc).toBe('1 w drodze · 2 jeszcze nie wyjechały');
     const two = buildCockpit(input('SCX', { documents: [] }));
-    expect(two.find((x) => x.id === 'to-invoice')!.desc).toBe('2 czekają na podpisany CMR (SG-01, SG-02) · tydz. 41');
+    expect(two.find((x) => x.id === 'to-invoice')!.desc).toBe('2 czekają na podpisany CMR (SG-01, SG-02) · t41');
     const hhl = buildCockpit(input('HHL', { documents: [] }));
     expect(hhl.find((x) => x.id === 'delivered')!.desc).toBe('SG-01, SG-02 czekają na podpisany CMR · 0 gotowych do faktury');
     const none = LOADS.filter((l) => l.status !== 'UNLOADING');
     expect(buildCockpit(input('HHL', { loads: none })).find((x) => x.id === 'delivered')!.desc).toBe('jeszcze bez rozładowanych transportów');
-    expect(buildCockpit(input('SCX', { loads: none })).find((x) => x.id === 'to-invoice')!.desc).toBe('nic nie czeka na fakturę · tydz. 41');
+    expect(buildCockpit(input('SCX', { loads: none })).find((x) => x.id === 'to-invoice')!.desc).toBe('nic nie czeka na fakturę · t41');
   });
   it('źródła dopinane później: porywy u SCX (B7) i godzina wjazdu na plac u KSH', () => {
     const sea = { waveM: 1.3, risk: 'niskie', gustKn: 23.3 };

@@ -203,6 +203,8 @@ export function cardOrder(a: TodoCard, b: TodoCard): number {
 /**
  * Zakres: Moje — sprawy przypisane do mnie; Moja firma — sprawy mojej firmy; Wszystkie — wszystko, co konto widzi.
  * Karta zostaje, gdy ma co najmniej jedną sprawę w zakresie.
+ * `counted` (E9, E7-2; audyt-F F-01): ryzyka liczone przy „Ryzyka” w menu (`todoRisks`) — w „Moja firma” zostają
+ * tylko karty z taką sprawą, żeby domyślny filtr pokazał tyle kart, ile mówi nagłówek, menu i Kokpit.
  */
 export function scopeCards(
   cards: readonly TodoCard[],
@@ -210,11 +212,14 @@ export function scopeCards(
   org: OrgKind,
   assigneeOf: (issueId: string) => CasePerson | null,
   meId: string | null,
+  counted?: ReadonlySet<string>,
 ): TodoCard[] {
   if (scope === 'ALL') return [...cards];
   const keep = (i: TodoIssue) => (scope === 'FIRM' ? i.owner === org : !!meId && assigneeOf(i.id)?.id === meId);
+  const isCounted = (i: TodoIssue) => !!counted && (counted.has(i.risk?.id ?? '') || !!i.mergedIds?.some((id) => counted.has(id)));
   /* waga, termin i kolejność z widocznych spraw — karta nie zostaje czerwona przez sprawę innej firmy */
   return cards
+    .filter((c) => scope !== 'FIRM' || !counted || c.issues.some(isCounted))
     .map((c) => {
       const issues = c.issues.filter(keep);
       return {
@@ -229,9 +234,21 @@ export function scopeCards(
     .sort(cardOrder);
 }
 
-/** Zakres domyślny = ten, który liczy menu (E7-2, `todoQueue`): Administrator HHL — wszystkie, reszta — firma. */
+/**
+ * Zakres domyślny = ten, który liczy menu (E7-2, `todoQueue`): Administrator HHL — wszystkie, reszta — firma.
+ * Operacje HHL: „Moja firma” z listą liczonych spraw (`countedFor`) — ta sama liczba w filtrze, nagłówku, menu i Kokpicie.
+ */
 export function defaultScope(kind: string): TodoScope {
   return kind === 'HHL_ADMIN' ? 'ALL' : 'FIRM';
+}
+
+/**
+ * audyt-F F-01 (E9 „Operacje: sprawy HHL”): u Operacji HHL „Moja firma” = sprawy, które liczy menu — id ryzyk z `todoRisks`.
+ * Dopłaty i decyzje wejdą do liczby razem z wykonawcą (P6); do tego czasu karta tylko z nimi jest w „Wszystkie”.
+ * Inne rodzaje kont bez zmian (`undefined`).
+ */
+export function countedFor(kind: string, countedRisks: readonly Pick<Risk, 'id'>[]): ReadonlySet<string> | undefined {
+  return kind === 'HHL_OPS' ? new Set(countedRisks.map((r) => r.id)) : undefined;
 }
 
 /** Ryzyka widoczne dla firmy na stronie Ryzyka (jak dotąd): KSH bez listy, SCX swoje i sytuacje na trasie. */

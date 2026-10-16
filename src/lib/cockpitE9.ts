@@ -317,7 +317,7 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
   }
 
   if (role === 'SCX') {
-    /* „tydz. 41” = tydzień dostawy transportów czekających na fakturę (E9: „w tygodniu dostawy”); bez nich — bieżący */
+    /* „t41” (E21, audyt-A A-06) = tydzień dostawy transportów czekających na fakturę (E9: „w tygodniu dostawy”); bez nich — bieżący */
     const weekOf = (l: Load) => isoWeekNumber(`${dayKey(l.unloadedAt) ?? f.today}T12:00:00Z`);
     const weeks = [...new Set(f.toInvoice.map(weekOf))].sort((a, b) => a - b);
     const w = weeks.length === 0 ? String(isoWeekNumber(input.nowIso)) : weeks.length === 1 ? String(weeks[0]) : `${weeks[0]}–${weeks[weeks.length - 1]}`;

@@ -1052,7 +1052,7 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
       id: 'risk-gps-silent-33',
       type: 'OPS',
       severity: 'HIGH',
-      title: 'Cichy GPS — SG-33 bez pingu od 3 h 14 min',
+      title: 'Cichy GPS — bez pingu od 3 h 14 min',
       detail: 'Ostatnia pozycja: E4 na południe od Umeå; brak potwierdzenia postoju i kierowcy.',
       loadCode: 'SG-33',
       owner: 'SCX',
@@ -1064,7 +1064,8 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
       id: 'risk-permit-mismatch-34',
       type: 'DOC',
       severity: 'CRITICAL',
-      title: 'Zezwolenie niezgodne z zestawem — SG-34 przekracza wysokość i szerokość',
+      /* audyt-A A-07 (E41): nazwę transportu wstawia ekran przed tytułem — w tytule bez kodu */
+      title: 'Zezwolenie niezgodne z zestawem — przekroczona wysokość i szerokość',
       detail: 'Zezwolenie „Trasa” nie obejmuje zestawu 21,8 × 3,6 × 4,55 m; transport nie przejdzie do „Gotowy”.',
       loadCode: 'SG-34',
       owner: 'SCX',
@@ -1088,7 +1089,7 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
       id: 'risk-weather-wind-35',
       type: 'OPS',
       severity: 'MEDIUM',
-      title: 'Okno pogodowe — wiatr boczny 17 m/s dla SG-35',
+      title: 'Okno pogodowe — wiatr boczny 17 m/s',
       detail: 'Załadunek ponadgabarytu możliwy tylko do 18:00; po zmianie prognozy wymagany postój.',
       loadCode: 'SG-35',
       owner: 'SCX',
@@ -1101,7 +1102,7 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
       id: 'risk-doc-missing-36',
       type: 'DOC',
       severity: 'HIGH',
-      title: 'Brak zezwolenia SE — SG-36 T-48',
+      title: 'Brak zezwolenia SE',
       detail: 'Brak potwierdzonej ścieżki BK dla masy 27,2 t; załadunek zaplanowany na 25.09.2026.',
       loadCode: 'SG-36',
       owner: 'SCX',
@@ -1113,7 +1114,7 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
       id: 'risk-escort-03',
       type: 'OPS',
       severity: 'MEDIUM',
-      title: 'Brak eskorty — R-03 niekompletne zasoby',
+      title: 'Brak eskorty — niekompletne zasoby',
       detail: 'Do załadunku pozostały 52 h; brak kierowcy, ciągnika i tablicy naczepy.',
       loadCode: 'R-03',
       owner: 'SCX',
@@ -1299,6 +1300,13 @@ export const SCHEDULE_VERSIONS: ScheduleVersion[] = [
   },
 ];
 
+/**
+ * Powiadomienia demo (E41, E5; audyt-A A-01, A-02, F-02, F-03): tytuł to „co się stało” bez kodu transportu —
+ * nazwę według firmy wstawia dzwonek z `loadId` (HHL „kod · nr HHL”, SCX „kod · nr SCX”, KSH sam kod).
+ * Każdy wpis prowadzi do transportu, którego dotyczy: brak CMR — dostarczony bez podpisanego CMR (SG-23),
+ * brak sygnału — T-05 (cisza 95 min), brak naczepy — SG-09 (zasoby niekompletne), marża — SG-15.
+ * KSH nie dostaje zadań przewoźnika (CMR); wpis Stref tylko dla HHL (E34 — Strefy ma tylko HHL).
+ */
 export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n1',
@@ -1313,7 +1321,7 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n2',
     at: '2026-09-22T18:00:00+02:00',
-    title: 'T-48 bez zezwolenia PL',
+    title: 'Brak zezwolenia PL',
     body: '2 transporty bez zezwolenia — wgraj przed załadunkiem.',
     severity: 'HIGH',
     read: false,
@@ -1333,12 +1341,12 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n4',
     at: '2026-09-22T15:12:00+02:00',
-    title: 'ETA mniej pewne · SG-12',
+    title: 'ETA mniej pewne',
     body: 'Brak sygnału 40 min — zakres ETA poszerzony.',
     severity: 'HIGH',
     read: false,
     roleScope: ['HHL', 'SCX'],
-    href: { view: 'map', loadId: 'load-012' },
+    href: { view: 'map', loadId: 'load-015' },
   },
   {
     id: 'n5',
@@ -1353,21 +1361,22 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n6',
     at: '2026-09-22T12:30:00+02:00',
-    title: 'Brak CMR · SG-07',
+    title: 'Brak CMR',
     body: 'Wgraj CMR z podpisem odbiorcy — potem „Gotowe do fakturowania”.',
     severity: 'CRITICAL',
     read: false,
-    roleScope: ['HHL', 'SCX', 'KSH'],
-    href: { view: 'docs', loadId: 'load-007' },
+    roleScope: ['HHL', 'SCX'],
+    href: { view: 'docs', loadId: 'load-034' },
   },
   {
     id: 'n7',
     at: '2026-09-22T11:00:00+02:00',
-    title: 'Marża poniżej progu 4 % · SG-15',
+    title: 'Marża poniżej progu 4 %',
     body: 'Sprawdź rozbicie kosztów w finansach.',
     severity: 'MEDIUM',
     read: false,
     roleScope: ['HHL'],
+    loadId: 'load-022',
     href: { view: 'fin', tab: 'margin' },
   },
   {
@@ -1383,12 +1392,12 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n9',
     at: '2026-09-22T08:20:00+02:00',
-    title: 'Brak sygnału · SG-12',
+    title: 'Brak sygnału',
     body: 'Brak pozycji GPS ponad 90 min.',
     severity: 'HIGH',
     read: false,
     roleScope: ['HHL', 'SCX'],
-    href: { view: 'wf', loadId: 'load-012' },
+    href: { view: 'wf', loadId: 'load-015' },
   },
   {
     id: 'n10',
@@ -1407,7 +1416,7 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
     body: 'Stegra · Stalverket 20 — przekroczono okno rozładunku.',
     severity: 'MEDIUM',
     read: false,
-    roleScope: ['HHL', 'KSH', 'SCX'],
+    roleScope: ['HHL'],
     href: { view: 'geo', entityId: 'gf-11' },
   },
   {
@@ -1423,12 +1432,12 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n13',
     at: '2026-09-21T10:15:00+02:00',
-    title: 'Brak naczepy · SG-09',
-    body: 'Uzupełnij zasoby do T-24.',
+    title: 'Brak naczepy',
+    body: 'Uzupełnij zasoby przed załadunkiem.',
     severity: 'HIGH',
     read: false,
     roleScope: ['SCX', 'HHL'],
-    href: { view: 'tasks', loadId: 'load-009' },
+    href: { view: 'tasks', loadId: 'load-013' },
   },
 ];
 
@@ -1448,7 +1457,7 @@ export const INITIAL_WORKFLOW_RUNS: WorkflowRun[] = [
     at: '2026-09-22T14:20:00+02:00',
     status: 'OK',
     note: 'Oznaczono brak sygnału',
-    loadId: 'load-012',
+    loadId: 'load-015',
   },
 ];
 

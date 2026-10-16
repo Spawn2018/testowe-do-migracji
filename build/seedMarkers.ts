@@ -10,7 +10,7 @@ const CODE = /^[A-Z]{1,3}-\d{2,}$/
 /** Miejscowości korytarza — prawdziwe, nie znacznik przykładowy. */
 const REAL_PLACES = ['gävle', 'gavle']
 /** Frazy tylko z danych demo (dawny „Permit mismatch” zostaje na wypadek powrotu angielskiego tytułu). */
-const DEMO_PHRASES = ['Permit mismatch', 'przekracza wysokość i szerokość']
+const DEMO_PHRASES = ['Permit mismatch', 'przekracza wysokość i szerokość', 'przekroczona wysokość i szerokość']
 
 export type SeedMarkers = {
   codes: string[]

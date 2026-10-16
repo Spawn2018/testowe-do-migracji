@@ -10,7 +10,8 @@ import { canSeeMargin, filterLoadsForRole, ROLE_META } from '../lib/permissions'
 import { trackingPhase } from '../lib/stageTiles';
 import { getNow } from '../lib/frozenNow';
 import { computeCorridorKpis } from '../lib/corridorKpis';
-import { focusVoyage, seaForSailing } from '../lib/voyage';
+import { nextGdnSailing, seaForSailing } from '../lib/voyage';
+import { ferryRouteName } from '../lib/portName';
 import { vesselById } from '../lib/ferry';
 import { effDeparture, nearestCrossingSailings } from '../lib/sailings';
 import { buildCockpit, todoQueue, todoRisks, viewedKind, type CockpitTile } from '../lib/cockpitE9';
@@ -97,13 +98,15 @@ export function DashboardView() {
       const s = [near.stena[0], near.polferries[0]].filter(Boolean).sort((a, b) => Date.parse(effDeparture(a!)) - Date.parse(effDeparture(b!)))[0];
       if (!s) return null;
       const [from, to] = s.route.split('-');
-      return { vessel: s.vessel, route: `${from} → ${to}`, depIso: effDeparture(s), sea: marineSea };
+      /* E37, E21 (audyt-A A-03): pełne nazwy portów „Gdańsk → Nynäshamn”, jak w pasku górnym */
+      return { vessel: s.vessel, route: ferryRouteName(locale, from ?? '', to ?? ''), depIso: effDeparture(s), sea: marineSea };
     }
-    const s = focusVoyage(new Date(nowMinute * 60_000));
+    /* audyt-A A-04: demo — najbliższy odjazd z Gdańska, ten sam rejs co w pasku górnym */
+    const s = nextGdnSailing(new Date(nowMinute * 60_000));
     const sea = shows('seaWeather') ? seaForSailing(s) : null;
     return {
       vessel: vesselById(s.vessel).short || vesselById(s.vessel).name,
-      route: `${s.depPort} → ${s.arrPort}`,
+      route: ferryRouteName(locale, s.depPort, s.arrPort),
       depIso: new Date(Date.parse(s.depLocal)).toISOString(),
       sea: sea ? { waveM: sea.waveM, risk: formatSeaRiskLabel(sea.risk, locale) } : null,
     };

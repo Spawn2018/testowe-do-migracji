@@ -29,10 +29,11 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
   const cancelSailing = useTowerStore((s) => s.cancelSailing);
   const pushToast = useTowerStore((s) => s.pushToast);
   const now = getNowIso();
-  // B-REJSY: ręczna edycja tylko administrator (HHL_ADMIN); w demo — rola HHL.
+  // B-REJSY: ręczna edycja tylko administrator (HHL_ADMIN); w demo — firma HHL, ale nie konto Operacji
+  // (E9 „Rejsy · ręczne zmiany: zmienia — HHL Admin.; widzi — HHL Oper.”; audyt-F F-07 — według rodzaju konta).
   const canEditSailings = PROD_BUILD
     ? getAuthProfile()?.role === 'HHL_ADMIN'
-    : role === 'HHL';
+    : role === 'HHL' && getAuthProfile()?.role !== 'HHL_OPS';
 
   /* E30 pkt 7: domyślnie przyszłe i tylko do Szwecji */
   const [future, setFuture] = useState(true);

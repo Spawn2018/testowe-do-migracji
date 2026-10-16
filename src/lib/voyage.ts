@@ -55,6 +55,19 @@ export function upcomingGdnSailings(now = getNow(), count = 4): FerrySailing[] {
 }
 
 /**
+ * E37 (audyt-A A-04): najbliższy rejs korytarza PL → SE w demo — pierwszy odjazd z Gdańska, który jeszcze nie
+ * wypłynął (5 min zapasu jak `nextLiveSailing`). Ten sam rejs w pasku górnym i na kafelku „Najbliższy prom” w Kokpicie
+ * (produkcja: `nearestCrossingSailings`). Bez rejsu w rozkładzie — rejs z prognozą (`focusVoyage`).
+ */
+export function nextGdnSailing(now = getNow()): FerrySailing {
+  const from = now.getTime() - 5 * 60_000;
+  const next = buildSchedule(now)
+    .filter((s) => s.depPort === 'GDN' && s.status !== 'CANCELLED' && Date.parse(s.depLocal) >= from)
+    .sort((a, b) => Date.parse(a.depLocal) - Date.parse(b.depLocal))[0];
+  return next ?? focusVoyage(now);
+}
+
+/**
  * Ops focus voyage: first upcoming GDN sailing with elevated sea risk,
  * else next GDN departure (not hardcoded 24.09 vs 25.09).
  */

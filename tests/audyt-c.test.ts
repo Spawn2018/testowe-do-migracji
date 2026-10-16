@@ -29,7 +29,8 @@ describe('C-01, C-02, C-15 — Ryzyka i dzwonek po polsku', () => {
   it('C-01: ryzyko SG-34 bez „Permit mismatch”, „READY” i „PERMIT_SE”', () => {
     const text = risks.map((r) => `${r.title} ${r.detail ?? ''} ${r.meta ?? ''}`).join('\n');
     expect(text).not.toMatch(/Permit mismatch|READY|PERMIT_SE|missing/);
-    expect(DEMO_ONLY_I18N.RISK.pl.rk_seed_permit_mismatch_34).toBe('Zezwolenie niezgodne z zestawem — SG-34 przekracza wysokość i szerokość');
+    /* audyt-AF A-07 (E41): nazwę transportu wstawia ekran — tytuł bez „SG-34” */
+    expect(DEMO_ONLY_I18N.RISK.pl.rk_seed_permit_mismatch_34).toBe('Zezwolenie niezgodne z zestawem — przekroczona wysokość i szerokość');
   });
   it('C-02: zamknięcie przy T-17 w postaci E49 i połączone ze sprawą „Objazd czy postój?” (jedna sprawa w karcie)', () => {
     expect(RISK_I18N.pl.rk_seed_e4_closure).toBe('Högakustenbron (E4) zamknięty — porywy 31 m/s');
@@ -44,7 +45,9 @@ describe('C-01, C-02, C-15 — Ryzyka i dzwonek po polsku', () => {
   it('C-15: dzwonek — „faktoring”, próg 4 %, tydzień „t38”, kwota w EUR, bez „READY”', () => {
     const text = [...INITIAL_NOTIFICATIONS.map((n) => `${n.title} ${n.body}`), ...WORKFLOWS.map((w) => `${w.name} ${w.description}`)].join('\n');
     expect(text).not.toMatch(/factoring|READY|W3\d\b|12%|>50 PLN/);
-    expect(text).toContain('Marża poniżej progu 4 % · SG-15');
+    /* audyt-AF A-01: tytuł bez kodu — nazwę transportu (SG-15) wstawia dzwonek z odnośnika */
+    expect(text).toContain('Marża poniżej progu 4 %');
+    expect(text).not.toContain('· SG-15');
     expect(text).toContain('Faktura w sporze · t38');
     expect(text).toContain('Zgodność OK · faktoring zaplanowany.');
   });

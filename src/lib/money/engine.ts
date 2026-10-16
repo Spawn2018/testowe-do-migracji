@@ -682,9 +682,10 @@ export function formatMoney(
   lang: 'pl' | 'en' | 'sv',
   currency: 'EUR' | 'PLN' | 'SEK' = CURRENCY
 ): string {
+  /* E16, E21 (audyt-F F-05): odstęp tysięcy także w kwotach 4-cyfrowych („7 301,36 PLN”) — pl-PL domyślnie grupuje od 10 000 */
   return new Intl.NumberFormat(LOCALE[lang], {
     style: 'currency', currency, currencyDisplay: 'code',
-    minimumFractionDigits: 2, maximumFractionDigits: 2,
+    minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always',
   }).format(amount);
 }
 

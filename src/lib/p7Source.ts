@@ -7,6 +7,7 @@
 import type { Load, OrgKind } from '../types';
 import type { Pilots } from './p7Awiz';
 import { demoPilots, demoSavePilots, demoSaveSet, demoSymbolSpec } from './p7Demo';
+import { getAuthProfile } from '../auth/profile';
 
 /** Wiersz tabeli właściciela według symbolu (E32 pkt 7): zestaw z ładunkiem, wymóg pilotów, rodzaj zezwolenia. */
 export interface SymbolSpec {
@@ -33,9 +34,13 @@ export function savePilotsOf(): ((codes: readonly string[], p: Pilots) => void) 
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoSavePilots : null;
 }
 
-/** E32 pkt 6: HHL Administrator może poprawić awizację. Produkcja — po sprawdzeniu praw zapisu w bazie (wykonawca). */
+/**
+ * E32 pkt 6: HHL Administrator może poprawić awizację; Operacje HHL i KSH tylko oglądają (E9; 09.10 12:33).
+ * Demo: według rodzaju konta, nie samej firmy (audyt-F F-07) — konto HHL Operacje bez „Popraw awizację”, okno tylko
+ * do odczytu. Produkcja — po sprawdzeniu praw zapisu w bazie (wykonawca).
+ */
 export function canFixAwizOf(role: OrgKind): boolean {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? role === 'HHL' : false;
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? role === 'HHL' && getAuthProfile()?.role !== 'HHL_OPS' : false;
 }
 
 /** Wymiary zestawu z ładunkiem w metrach. */

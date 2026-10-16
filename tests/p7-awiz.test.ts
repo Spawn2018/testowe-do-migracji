@@ -113,7 +113,8 @@ describe('I-0 / F8 — źródło danych P7-a', () => {
     for (const line of lines) {
       expect(line).toMatch(/import\.meta\.env\.VITE_AUTH_MODE !== 'supabase' \? /)
     }
-    expect(src).toMatch(/role === 'HHL' : false/)
+    /* audyt-AF F-07: w demo według rodzaju konta (Operacje HHL bez poprawiania); produkcja nadal false */
+    expect(src).toMatch(/role === 'HHL' && getAuthProfile\(\)\?\.role !== 'HHL_OPS' : false/)
   })
   it('bez zapytań i zapisów do bazy w nowych plikach', () => {
     /* AwizacjaModal.tsx poza listą: zapis awizacji i „Otwórz w RIO” (PR #203, E44) należą do wykonawcy */

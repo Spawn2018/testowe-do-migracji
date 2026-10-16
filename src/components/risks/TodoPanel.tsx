@@ -9,7 +9,8 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Geofence, Load, Locale, Risk } from '../../types';
 import { useTowerStore } from '../../store/useTowerStore';
-import { buildTodo, defaultScope, scopeCards, visibleTodoRisks, type CaseEvent, type CasePerson, type TodoIssue, type TodoScope } from '../../lib/p6Todo';
+import { buildTodo, countedFor, defaultScope, scopeCards, visibleTodoRisks, type CaseEvent, type CasePerson, type TodoIssue, type TodoScope } from '../../lib/p6Todo';
+import { todoRisks, type AccountKind } from '../../lib/cockpitE9';
 import { caseAssignmentsOf, caseHistoryOf, caseMeOf, casePeopleOf, sampleDecisionsOf, extraRisksOf, todoExtrasOf } from '../../lib/p6Source';
 import { feeRulesOf, feeSuggestionsOf } from '../../lib/p5Source';
 import { deliveredCheckOf } from '../../lib/p4cSource';
@@ -119,12 +120,14 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
     return [...(casePeopleOf('HHL') ?? []), ...(casePeopleOf('SCX') ?? [])].find((p) => p.id === pid) ?? null;
   };
 
+  /* audyt-F F-01: Operacje HHL — „Moja firma” z tych spraw, które liczy menu (filtr = nagłówek = menu = Kokpit) */
+  const counted = useMemo(() => countedFor(kind, todoRisks(role, risks, kind as AccountKind)), [kind, role, risks]);
   const counts = useMemo(() => ({
     MINE: scopeCards(cards, 'MINE', role, assigneeOf, me?.id ?? null).length,
-    FIRM: scopeCards(cards, 'FIRM', role, assigneeOf, me?.id ?? null).length,
+    FIRM: scopeCards(cards, 'FIRM', role, assigneeOf, me?.id ?? null, counted).length,
     ALL: cards.length,
-  }), [cards, role, assign, me]); // eslint-disable-line react-hooks/exhaustive-deps
-  const shown = useMemo(() => scopeCards(cards, scope, role, assigneeOf, me?.id ?? null), [cards, scope, role, assign, me]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [cards, role, assign, me, counted]); // eslint-disable-line react-hooks/exhaustive-deps
+  const shown = useMemo(() => scopeCards(cards, scope, role, assigneeOf, me?.id ?? null, counted), [cards, scope, role, assign, me, counted]); // eslint-disable-line react-hooks/exhaustive-deps
   const open = expanded ?? new Set(shown[0] ? [shown[0].key] : []);
   const list = showAll ? shown : shown.slice(0, FIRST);
   const rest = shown.length - list.length;
