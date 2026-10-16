@@ -984,10 +984,10 @@ test.describe('wyglad/P7-c Harmonogram w układzie pliku (E38, E30, E20)', () =>
     await page.locator('aside.drawer .dhead button[aria-label], aside.drawer button.iconbtn').first().click();
     await expect(page.locator('aside.drawer')).toHaveCount(0);
 
-    /* „Widok skrócony” — 8 kolumn E30 w 1154 px bez przewijania */
+    /* „Widok skrócony” — 8 kolumn E30 + „Telefon kierowcy” (właściciel 16.10, 13:58) w 1154 px bez przewijania */
     await page.locator('[data-sched-short]').click();
     await expect(page.locator('[data-sched-short]')).toHaveAttribute('aria-pressed', 'true');
-    expect(await heads(page)).toEqual(['Transport', 'Ładunek', 'Załadunek → dostawa', 'Status', 'Kierowca i zestaw', 'ETA Boden', 'Dokumenty', 'Przychód']);
+    expect(await heads(page)).toEqual(['Transport', 'Ładunek', 'Załadunek → dostawa', 'Status', 'Kierowca i zestaw', 'Telefon kierowcy', 'ETA Boden', 'Dokumenty', 'Przychód']);
     expect(await page.locator('[data-sched-layout="short"]').evaluate((w) => w.scrollWidth <= w.clientWidth + 1)).toBe(true);
     /* „Kolumny” dodaje kolumny; układ zostaje po przeładowaniu; „Więcej ▾ › Przywróć kolumny domyślne” */
     await page.locator('[data-sched-cols]').click();

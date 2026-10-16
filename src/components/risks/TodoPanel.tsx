@@ -96,9 +96,15 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
        audyt-C (C-02): ryzyko zamknięcia przy tym transporcie łączy się ze sprawą (jedna sprawa w karcie) */
     const detours = detourCasesOf(role, loads, nowIso, cardLoads).filter((c) => !detourDone.has(c.id));
     const joined = mergeClosures(visRisks, detours);
+    /* audyt-C (C-02): sprawa po połączeniu ma co najmniej wagę połączonego ryzyka zamknięcia (np. „krytyczne”) — stoi tam, gdzie stało ryzyko */
+    const sevRank = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 } as const;
+    const mergedSev = (caseId: string): 'CRITICAL' | 'HIGH' | null => {
+      const ids = new Set(joined.mergedIds[caseId] ?? []);
+      return visRisks.some((r) => ids.has(r.id) && sevRank[r.severity as keyof typeof sevRank] >= 4) ? 'CRITICAL' : null;
+    };
     for (const c of detours) {
       extras.push({
-        id: c.id, src: 'DETOUR', loadId: c.loadId, owner: 'SCX', severity: urgentOf(c, nowIso) ? 'CRITICAL' : 'HIGH',
+        id: c.id, src: 'DETOUR', loadId: c.loadId, owner: 'SCX', severity: urgentOf(c, nowIso) || mergedSev(c.id) === 'CRITICAL' ? 'CRITICAL' : 'HIGH',
         dueAt: c.decideByIso, overdue: Date.parse(c.decideByIso) < Date.parse(nowIso), merged: 1, go: 'NONE', ageHours: 0, detour: c,
         ...(joined.mergedIds[c.id] ? { mergedIds: [c.id, ...joined.mergedIds[c.id]] } : {}),
       });
