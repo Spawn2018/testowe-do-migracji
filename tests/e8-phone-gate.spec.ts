@@ -828,6 +828,97 @@ async function openPhoneScreen(page: Page, group: string, screen: string) {
   await page.waitForTimeout(250);
 }
 
+/* wyglad/P9-a (E24-1, img/e24-after) — komunikat zamiast szarej mapy. Kafelki podkładu odrzucane w przeglądarce
+   (prawdziwa droga awarii: 3 przebiegi bez kafelka); po zdjęciu blokady „Spróbuj ponownie” wczytuje podkład. */
+const P9A_TILE = /arcgisonline\.com\/ArcGIS\/rest\/services\/.*\/tile\//;
+test.describe('wyglad/P9-a komunikat zamiast szarej mapy (E24-1, img/e24-after)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+
+  test('komputer: karta z makiety, mapa pod spodem działa, bez cienia; „Spróbuj ponownie” wczytuje podkład i karta znika', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.route(P9A_TILE, (r) => r.abort());
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    const card = page.locator('[data-basemap-failed="tiles"]').first();
+    await expect(card).toBeVisible({ timeout: 30_000 });
+    await expect(card).toHaveAttribute('data-compact', '0');
+    await expect(card.locator('.bm-fail-t')).toHaveText('Nie udało się wczytać podkładu mapy');
+    await expect(card.locator('.bm-fail-b')).toHaveText('Pozycje i trasa są aktualne. Brakuje tylko tła z ulicami.');
+    await expect(card.locator('[data-basemap-retry]')).toHaveText('Spróbuj ponownie');
+    await expect(card.locator('[data-basemap-reload]')).toHaveText('Odśwież stronę');
+    await expect(card.locator('[data-basemap-src]')).toHaveText(/^Próbowano 3 razy: .+\. Zgłoszenie zapisane dla HHL\.$/);
+    const look = await card.locator('.bm-fail').evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { shadow: cs.boxShadow, radius: cs.borderRadius, wrapEvents: getComputedStyle(el.parentElement as Element).pointerEvents };
+    });
+    expect(look.shadow).toBe('none');
+    expect(['0px', '2px']).toContain(look.radius);
+    expect(look.wrapEvents).toBe('none');
+    /* trasa i pojazdy nadal na mapie (dane nie zależą od podkładu) */
+    expect(await page.locator('.corridor-map-el .leaflet-overlay-pane path').count()).toBeGreaterThan(0);
+    expect(await page.locator('.corridor-map-el .leaflet-marker-pane .leaflet-marker-icon').count()).toBeGreaterThan(0);
+    for (const sel of ['[data-basemap-retry]', '[data-basemap-reload]']) {
+      const b = await card.locator(sel).boundingBox();
+      expect(b && b.height >= 44 && b.width >= 44, `${sel} ≥ 44 px`).toBeTruthy();
+    }
+    await page.unroute(P9A_TILE);
+    await card.locator('[data-basemap-retry]').click();
+    await expect(page.locator('[data-basemap-failed]')).toHaveCount(0, { timeout: 30_000 });
+    await expect(page.locator('.corridor-map-el img.leaflet-tile-loaded').first()).toBeAttached({ timeout: 30_000 });
+  });
+
+  test('komputer: podkład się wczytuje — karty nie ma (stan normalny jak dziś)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    await expect(page.locator('.corridor-map-el img.leaflet-tile-loaded').first()).toBeAttached({ timeout: 30_000 });
+    await page.waitForTimeout(500);
+    await expect(page.locator('[data-basemap-failed]')).toHaveCount(0);
+  });
+
+  test('Kokpit (mapa w kafelku): wersja krótka', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.route(P9A_TILE, (r) => r.abort());
+    await boot(page, 'HHL');
+    await openView(page, 'dash');
+    const card = page.locator('[data-basemap-failed="tiles"]').first();
+    await expect(card).toBeAttached({ timeout: 30_000 });
+    await expect(card).toHaveAttribute('data-compact', '1');
+    await expect(card.locator('.bm-fail-t')).toHaveText('Nie udało się wczytać podkładu');
+    await expect(card.locator('[data-basemap-reload], [data-basemap-src]')).toHaveCount(0);
+  });
+
+  for (const width of [360, 390, 430]) {
+    test(`telefon ${width}: krótko — tytuł, jedno zdanie, „Spróbuj ponownie” ≥ 44 px; nic uciętego, tekst ≥ 12 px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.route(P9A_TILE, (r) => r.abort());
+      await boot(page, 'HHL');
+      await openView(page, 'map');
+      const card = page.locator('[data-basemap-failed="tiles"]').first();
+      await expect(card).toBeVisible({ timeout: 30_000 });
+      await expect(card).toHaveAttribute('data-compact', '1');
+      await expect(card.locator('.bm-fail-t')).toHaveText('Nie udało się wczytać podkładu');
+      await expect(card.locator('.bm-fail-b')).toHaveText('Pozycje i trasa są aktualne.');
+      await expect(card.locator('button')).toHaveCount(1);
+      await expect(card.locator('[data-basemap-retry]')).toHaveText('Spróbuj ponownie');
+      const m = await card.locator('.bm-fail').evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const out: string[] = [];
+        if (r.left < 0 || r.right > window.innerWidth) out.push(`karta poza oknem ${Math.round(r.left)}–${Math.round(r.right)}`);
+        for (const n of el.querySelectorAll<HTMLElement>('b, span, button')) {
+          const cs = getComputedStyle(n);
+          if (parseFloat(cs.fontSize) < 12) out.push(`tekst < 12 px: ${n.textContent}`);
+          if (n.scrollWidth > n.clientWidth + 1 && cs.overflow !== 'visible') out.push(`ucięte: ${n.textContent}`);
+        }
+        const b = el.querySelector('button')!.getBoundingClientRect();
+        if (b.width < 44 || b.height < 44) out.push(`przycisk ${Math.round(b.width)}×${Math.round(b.height)}`);
+        return out;
+      });
+      expect(m).toEqual([]);
+    });
+  }
+});
+
 test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
   test.describe.configure({ mode: 'serial', timeout: 600_000 });
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });

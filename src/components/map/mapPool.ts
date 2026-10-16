@@ -14,6 +14,8 @@ import { SITES } from '../../lib/status';
 import { PROD_BUILD } from '../../lib/prodFacade';
 import { WATER_GDN_NYN, WATER_GDY_KAA, type ThemeName } from '../../lib/map/draw';
 import { useTowerStore } from '../../store/useTowerStore';
+import { reportBasemapFailure } from '../../lib/p9aSource';
+import { TILE_RETRY_MS, TILE_TRIES, tileVia, watchTiles, type TileHealth, type TileVia } from './tileHealth';
 
 export type MapSlot = 'map' | 'kokpit' | 'drawer';
 
@@ -38,7 +40,18 @@ export type PoolEntry = {
   tilesLoaded: boolean;
   basemapSeq: number;
   views: Map<MapSlot, { center: L.LatLng; zoom: number; w: number; h: number }>;
+  /** wyglad/P9-a (E24-1): stan podkładu — „failed” = komunikat zamiast szarej mapy. */
+  health: BasemapHealth;
+  healthSubs: Set<(h: BasemapHealth) => void>;
+  unwatch: (() => void) | null;
+  /** Nieudane pobrania pliku aplikacji z podkładem (E22: karta sprzed wdrożenia). */
+  chunkFails: number;
+  /** Miejsce, które ostatnio wzięło mapę (do zgłoszenia awarii). */
+  slot: MapSlot;
 };
+
+/** wyglad/P9-a (E24-1): stan podkładu na mapie z puli. `reported` = zgłoszenie zapisane dla HHL (p9aSource). */
+export type BasemapHealth = TileHealth & { via: TileVia; reported: boolean; cause: 'tiles' | 'chunk' };
 
 export const DEFAULT_CENTER: L.LatLngTuple = [58.5, 18.5];
 export const DEFAULT_ZOOM = 4.2;
@@ -86,7 +99,41 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
   return {
     map, el, pooled, tilesTheme: null, tilesLoaded: false, basemapSeq: 0, views: new Map(),
     layers: { tiles, route, ferryLeg, geofences, poi, fleet, situations, ais },
+    health: { state: 'loading', tries: 0, via: 'fallback', reported: false, cause: 'tiles' },
+    healthSubs: new Set(), unwatch: null, chunkFails: 0, slot: 'map',
   };
+}
+
+function setHealth(e: PoolEntry, next: BasemapHealth): void {
+  const prev = e.health;
+  if (prev.state === next.state && prev.tries === next.tries && prev.via === next.via
+    && prev.reported === next.reported && prev.cause === next.cause) return;
+  e.health = next;
+  for (const fn of e.healthSubs) fn(next);
+  // Jedno zgłoszenie na epizod awarii (przejście do „failed”); wynik zapisu pokazuje przypis komunikatu.
+  if (next.state === 'failed' && prev.state !== 'failed') {
+    const seq = e.basemapSeq;
+    void reportBasemapFailure({ via: next.via, tries: next.tries, slot: e.slot, cause: next.cause })
+      .then((ok) => {
+        if (ok && e.basemapSeq === seq && e.health.state === 'failed') setHealth(e, { ...e.health, reported: true });
+      })
+      .catch(() => { /* zgłoszenie nie może samo psuć mapy */ });
+  }
+}
+
+/** wyglad/P9-a: subskrypcja stanu podkładu (widok mapy). Od razu oddaje bieżący stan. */
+export function subscribeBasemapHealth(e: PoolEntry, fn: (h: BasemapHealth) => void): () => void {
+  e.healthSubs.add(fn);
+  fn(e.health);
+  return () => { e.healthSubs.delete(fn); };
+}
+
+/** wyglad/P9-a: „Spróbuj ponownie” — podkład zakładany od nowa (nowa warstwa, liczniki od zera). */
+export function retryBasemap(e: PoolEntry): void {
+  e.tilesTheme = null;
+  e.chunkFails = 0;
+  setHealth(e, { ...e.health, state: 'loading', tries: 0, reported: false });
+  void ensureBasemap(e, useTowerStore.getState().theme);
 }
 
 function safeInvalidate(map: L.Map): void {
@@ -99,14 +146,20 @@ function safeInvalidate(map: L.Map): void {
 
 /** Wpina mapę do kontenera widoku. Ten sam widok co ostatnio w tym miejscu → bez `setView` (zero nowych kafelków). */
 export function acquireMap(root: HTMLElement, slot: MapSlot): PoolEntry {
-  if (inUse) return build(false, root);
+  if (inUse) {
+    const one = build(false, root);
+    one.slot = slot;
+    return one;
+  }
   inUse = true;
   if (!entry) {
     entry = build(true, root);
+    entry.slot = slot;
     return entry;
   }
   poolStats.reused += 1;
   const e = entry;
+  e.slot = slot;
   root.appendChild(e.el);
   safeInvalidate(e.map);
   const saved = e.views.get(slot);
@@ -131,6 +184,9 @@ export function acquireMap(root: HTMLElement, slot: MapSlot): PoolEntry {
 export function releaseMap(e: PoolEntry, slot: MapSlot): void {
   if (!e.pooled) {
     e.map.remove();
+    e.unwatch?.();
+    e.unwatch = null;
+    e.healthSubs.clear();
     e.el.remove();
     poolStats.destroyed += 1;
     return;
@@ -162,6 +218,34 @@ export function ensureBasemap(e: PoolEntry, theme: ThemeName): Promise<L.Layer> 
   const seq = ++e.basemapSeq;
   const markLoaded = (layer: L.Layer) => {
     layer.once('load', () => { if (e.basemapSeq === seq) e.tilesLoaded = true; });
+    // wyglad/P9-a (E24-1): podkład „jest” dopiero po pierwszym kafelku z obrazem; 3 nieudane próby = komunikat.
+    e.unwatch?.();
+    e.chunkFails = 0;
+    const via = tileVia(e.map.getContainer().dataset.tilePath);
+    setHealth(e, { state: 'loading', tries: 0, via, reported: false, cause: 'tiles' });
+    e.unwatch = watchTiles(layer as unknown as Parameters<typeof watchTiles>[0], (h) => {
+      if (e.basemapSeq !== seq) return;
+      setHealth(e, { ...e.health, ...h, via: tileVia(e.map.getContainer().dataset.tilePath), cause: 'tiles' });
+    });
+  };
+  /*
+   * wyglad/P9-a (E22 w E24-1): plik aplikacji z podkładem się nie pobrał (karta sprzed wdrożenia) — wcześniej
+   * `tilesTheme` zostawał ustawiony i mapa była szara do odświeżenia. Teraz: 3 próby (po 1 s i 2 s), potem komunikat
+   * z „Odśwież stronę”.
+   */
+  const onChunkFail = (): L.Layer => {
+    if (e.basemapSeq !== seq) return e.layers.tiles;
+    e.tilesTheme = null;
+    e.chunkFails += 1;
+    if (e.chunkFails >= TILE_TRIES) {
+      setHealth(e, { ...e.health, state: 'failed', tries: e.chunkFails, reported: false, cause: 'chunk' });
+    } else {
+      setHealth(e, { ...e.health, state: 'loading', tries: e.chunkFails, reported: false, cause: 'chunk' });
+      setTimeout(() => {
+        if (e.basemapSeq === seq && e.tilesTheme === null) void ensureBasemap(e, useTowerStore.getState().theme);
+      }, TILE_RETRY_MS(e.chunkFails));
+    }
+    return e.layers.tiles;
   };
   if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
     return import('./fallbackTiles').then(({ installFallback }) => {
@@ -170,7 +254,7 @@ export function ensureBasemap(e: PoolEntry, theme: ThemeName): Promise<L.Layer> 
       e.layers.tiles = layer;
       markLoaded(layer);
       return layer;
-    });
+    }, onChunkFail);
   }
   return import('./applyBasemap').then(({ applyBasemap }) => applyBasemap(e.map, e.layers.tiles, theme, () => {
     // Budżet D-78 zamknięty — przełóż podkład (zapas) dla bieżącego motywu.
@@ -184,7 +268,7 @@ export function ensureBasemap(e: PoolEntry, theme: ThemeName): Promise<L.Layer> 
     e.layers.tiles = layer;
     markLoaded(layer);
     return layer;
-  });
+  }, onChunkFail);
 }
 
 /** Tylko testy. */

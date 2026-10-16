@@ -18,7 +18,11 @@ import { isServerId } from '../../data/registry';
 import { transportLabel } from '../../lib/transportName';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { h6Requests } from '../../lib/map/draw';
-import { acquireMap, ensureBasemap, releaseMap, type LayerBag, type MapSlot, type PoolEntry } from './mapPool';
+import {
+  acquireMap, ensureBasemap, releaseMap, retryBasemap, subscribeBasemapHealth,
+  type BasemapHealth, type LayerBag, type MapSlot, type PoolEntry,
+} from './mapPool';
+import { BasemapFailCard } from './BasemapFailCard';
 
 /* III-5 — odtwarzanie przebiegu z bazy: tylko build Supabase (chunk leniwy); demo bez zmian */
 const TrackReplay = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./TrackReplay')) : null;
@@ -86,6 +90,9 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   const [mapReady, setMapReady] = useState<L.Map | null>(null);
   /* AUD-01: produkcja — dane mapy (pozycje, trasa, sytuacje, AIS) dopiero po narysowaniu podkładu (albo po 1,5 s). */
   const [basemapReady, setBasemapReady] = useState(import.meta.env.VITE_AUTH_MODE !== 'supabase');
+  /* wyglad/P9-a (E24-1): stan podkładu — po 3 nieudanych próbach komunikat zamiast szarej mapy */
+  const [health, setHealth] = useState<BasemapHealth | null>(null);
+  const [retrying, setRetrying] = useState(false);
   /* III-5: odtwarzany transport = ostatnio wybrany (zostaje po zamknięciu szuflady, znika po wyłączeniu warstwy „Ślad”) */
   const [replayId, setReplayId] = useState<string | null>(null);
   useEffect(() => { if (selectedLoadId && isServerId(selectedLoadId)) setReplayId(selectedLoadId); }, [selectedLoadId]);
@@ -220,6 +227,15 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     const readyTimer = window.setTimeout(() => { if (!cancelled) setBasemapReady(true); }, 1500);
     return () => { cancelled = true; off?.(); window.clearTimeout(readyTimer); };
   }, [theme, mapReady]);
+
+  useEffect(() => {
+    const pooled = entryRef.current;
+    if (!pooled || !mapReady) return undefined;
+    return subscribeBasemapHealth(pooled, (h) => {
+      setHealth(h);
+      if (h.state !== 'loading') setRetrying(false);
+    });
+  }, [mapReady]);
 
   useEffect(() => {
     if (!mapReady || !basemapReady || import.meta.env.VITE_AUTH_MODE !== 'supabase') return;
@@ -402,6 +418,20 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         <Suspense fallback={null}>
           <TrackReplay key={replayId} map={mapReady} loadId={replayId} code={(() => { const rl = loads.find((l) => l.id === replayId); return rl ? transportLabel(rl, role) : ''; })()} noFix={gpsReady && !gpsFixes.has(replayId)} />
         </Suspense>
+      ) : null}
+      {health && (health.state === 'failed' || (retrying && health.state === 'loading')) ? (
+        <BasemapFailCard
+          health={health}
+          busy={retrying && health.state === 'loading'}
+          locale={locale}
+          onRetry={() => {
+            const pooled = entryRef.current;
+            if (!pooled) return;
+            setRetrying(true);
+            retryBasemap(pooled);
+          }}
+          onReload={() => window.location.reload()}
+        />
       ) : null}
       {/* wyglad/P4-b (E27): pusta lista = nikt w oknie śledzenia (Mapa: „W trasie: 0”, panel poza oknem) — to nie „brak danych” */}
       {PROD_BUILD && mapLayers.vehicles && gpsReady && loads.length > 0 && !loads.some((l) => gpsFixes.has(l.id)) ? (
