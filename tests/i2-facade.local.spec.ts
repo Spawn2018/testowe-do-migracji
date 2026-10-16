@@ -227,16 +227,13 @@ test('I-5 + I-17 HHL: AccountScreen → dwa urządzenia TOTP, wymaganie, każde 
 });
 
 // ── I-4: instrukcje w aplikacji ──────────────────────────────────────────────
-for (const [who, view, role, n] of [['hhl', 'options', 'hhl', 7], ['ksh', 'settings', 'ksh', 6], ['scx', 'settings', 'scx', 6]] as const) {
-  test(`I-4 ${who.toUpperCase()}: instrukcja w ${view === 'options' ? 'Opcjach' : 'Ustawieniach'} — ${n} kroków`, async ({ page }) => {
+/* wyglad/P10b-b i C13: Opcje i Ustawienia bez „Instrukcji” — zastępuje ją Pomoc („?”, „Jak pracuję” w 5 wersjach) */
+for (const [who, view] of [['hhl', 'options'], ['ksh', 'settings'], ['scx', 'settings']] as const) {
+  test(`I-4 ${who.toUpperCase()}: ${view === 'options' ? 'Opcje' : 'Ustawienia'} bez „Instrukcji”`, async ({ page }) => {
     await login(page, `${who}@bk5.local`);
     await page.locator(`nav [data-view="${view}"]`).first().click();
-    /* wyglad/P3-c (E11): Dla mnie › Instrukcja w menu bocznym */
-    await page.locator('[data-opt-nav="guide"]').click();
-    const g = page.locator(`[data-guide="${role}"]`);
-    await expect(g.locator('summary h2')).toHaveText('Instrukcja');
-    await g.locator('summary').click();
-    await expect(g.locator('ol > li')).toHaveCount(n);
+    await expect(page.locator('[data-opt-nav="guide"]')).toHaveCount(0);
+    await expect(page.locator('[data-guide]')).toHaveCount(0);
   });
 }
 

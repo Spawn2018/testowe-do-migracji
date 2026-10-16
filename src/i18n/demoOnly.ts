@@ -61,19 +61,19 @@ export const DEMO_ONLY_I18N: { RISK: Record<Locale, Dict>; ETAP4: Record<Locale,
   ETAP4: {
     pl: {
       an5_banner_scx_title: '7 pól bez uzupełnienia.',
-      an5_banner_scx_body: 'Trzy transporty z załadunkiem w ciągu 48 h nie mają zezwolenia. Lista w zakładce Moje zadania.',
+      an5_banner_scx_body: 'Trzy transporty z załadunkiem w ciągu 48 h nie mają zezwolenia. Lista w Ryzykach › Do zrobienia.',
       an5_banner_ksh_title: 'Dostawa 26.09.2026, 11:30.',
       an5_banner_ksh_body: 'Dźwig i ekipa potrzebne przez 3 h. Transport R-03 przekracza okno o 1 h 35 min — nowa propozycja godziny czeka na potwierdzenie.',
     },
     en: {
       an5_banner_scx_title: '7 fields not filled in.',
-      an5_banner_scx_body: 'Three loads loading within 48 h have no permit. List in the Tasks tab.',
+      an5_banner_scx_body: 'Three loads loading within 48 h have no permit. List in Risks › To do.',
       an5_banner_ksh_title: 'Delivery 26.09.2026, 11:30.',
       an5_banner_ksh_body: 'Crane and crew needed for 3 h. Load R-03 exceeds the window by 1 h 35 min — a new time proposal awaits confirmation.',
     },
     sv: {
       an5_banner_scx_title: '7 fält inte ifyllda.',
-      an5_banner_scx_body: 'Tre transporter med lastning inom 48 h saknar tillstånd. Lista under fliken Uppgifter.',
+      an5_banner_scx_body: 'Tre transporter med lastning inom 48 h saknar tillstånd. Lista under Risker › Att göra.',
       an5_banner_ksh_title: 'Leverans 26.09.2026, 11:30.',
       an5_banner_ksh_body: 'Kran och personal behövs i 3 h. Transport R-03 överskrider fönstret med 1 h 35 min — ett nytt tidsförslag väntar på bekräftelse.',
     },
