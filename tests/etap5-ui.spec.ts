@@ -40,8 +40,9 @@ test.describe('D14 — trasy adresowalne', () => {
     await page.locator('nav button[data-view="sched"]').click()
     await expect.poll(() => hashPath(page)).toBe('/harmonogram')
     const row = page.locator('tr[data-load]').first()
+    await expect(row).toBeVisible() // wyglad/P7-c: Harmonogram ładowany osobno
     const code = (await row.getAttribute('data-code'))!.trim()
-    const hhl = (await row.locator('td[data-col="ord_hhl"]').innerText()).trim()
+    const hhl = (await row.locator('td[data-col="ordHhl"]').innerText()).trim()
     /* E38 1A (P2-wyglad V1): kolumna to sam kod. E41: nagłówek panelu zostaje „kod · numer”. */
     const label = `${code} · ${hhl}`
     await expect(row.locator('td[data-col="code"] span.code')).toHaveText(code)
@@ -88,7 +89,9 @@ test.describe('D15 — kawałki ładowane leniwie', () => {
     await expect(page.locator('.corridor-map-el.leaflet-container')).toHaveCount(1)
     await expect(page.locator('.mapkey')).toBeVisible()
     await page.locator('nav button[data-view="sched"]').click()
-    const [xlsx] = await Promise.all([page.waitForEvent('download'), page.locator('[data-action="export-xlsx"]').click()])
+    /* wyglad/P7-c (E30 pkt 4): eksport tego, co widać, w „Więcej ▾” */
+    await page.locator('[data-sched-more]').click()
+    const [xlsx] = await Promise.all([page.waitForEvent('download'), page.locator('[data-sched-more-menu] [data-action="export-xlsx"]').click()])
     expect(xlsx.suggestedFilename()).toMatch(/\.xlsx$/)
     await page.locator('nav button[data-view="docs"]').click()
     /* przepisane w wyglad/P5 (E31, img/e31-after): „Paczka tygodnia: tNN ▾” otwiera listę tygodni, wybór tygodnia pobiera ZIP */

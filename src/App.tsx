@@ -1,4 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { NewVersionBar } from './components/shell/NewVersionBar';
+import { PartBoundary } from './components/shell/PartBoundary';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { applyThemeToDom } from './lib/theme';
 import { useTowerStore } from './store/useTowerStore';
@@ -12,8 +14,9 @@ import { ImpersonationBanner } from './auth/ImpersonationBanner';
 import { PreviewBanner } from './auth/PreviewBanner';
 import { lazyRetry } from './lib/lazyRetry';
 import { DashboardView } from './views/DashboardView';
-import { MapView } from './views/MapView';
-import { ScheduleView } from './views/ScheduleView';
+import { MapViewLazy as MapView } from './views/mapLazy';
+/* wyglad/P7-c: Harmonogram (E38, E30) ładowany osobno (budżet pierwszego wczytania) */
+import { ScheduleViewLazy as ScheduleView } from './views/scheduleLazy';
 /* wyglad/P6: Ryzyka (E7) ładowane osobno (budżet pierwszego wczytania) */
 import { RisksViewLazy as RisksView } from './views/risksLazy';
 import { DocsViewLazy as DocsView } from './views/docsLazy';
@@ -22,6 +25,8 @@ import { InvoicesViewLazy as InvoicesView } from './views/invoicesLazy';
 import { TasksView } from './views/TasksView';
 import { WorkflowsViewLazy as WorkflowsView } from './views/workflowsLazy';
 import { GeofenceView } from './views/GeofenceView';
+import { ZonesViewLazy as ZonesView } from './views/zonesLazy';
+import { zonesReady } from './lib/p8cReady';
 import { DriverPwa } from './views/DriverPwa';
 /* wyglad/P3-c: Opcje i Ustawienia ładowane osobno (budżet pierwszego wczytania) */
 import { OptionsViewLazy as OptionsView, SettingsViewLazy as SettingsView } from './views/optionsLazy';
@@ -33,6 +38,8 @@ import { canSwitchView } from './lib/prodFacade';
 import { ACCESS_OPEN_LOAD, accessNoteText, parseAccessNote } from './lib/accessNote';
 import { t } from './i18n/messages';
 import { usePhoneTableLabels } from './lib/phoneTableLabels';
+/* wyglad/P10b-d (E37 pkt 9): podgląd pierwszego wejścia w demo; produkcja — AuthGate */
+import { DemoFirstEntry } from './auth/DemoFirstEntry';
 
 const loadDrawerChunk = () => import('./components/drawer/LoadDrawer').then((m) => ({ default: m.LoadDrawer }));
 const LoadDrawer = lazy(lazyRetry(loadDrawerChunk));
@@ -45,7 +52,6 @@ if (typeof window !== 'undefined') {
 
 // BK2: bramka logowania tylko w trybie Supabase (VITE_AUTH_MODE=supabase); demo bez zmian.
 const AuthGate = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./auth/AuthGate')) : null;
-
 function TowerShell() {
   const view = useTowerStore((s) => s.view);
   const role = useTowerStore((s) => s.role);
@@ -166,7 +172,8 @@ function TowerShell() {
       body = <WorkflowsView />;
       break;
     case 'geo':
-      body = <GeofenceView />;
+      /* wyglad/P8-c (E34): nowa strona Stref, gdy jest źródło (demo; produkcja po podłączeniu w P8) */
+      body = zonesReady() ? <ZonesView /> : <GeofenceView />;
       break;
     case 'options':
       body = <OptionsView />;
@@ -183,6 +190,8 @@ function TowerShell() {
       {/* wyglad/P3 (E37): pasek górny i paski pod nim — Podgląd albo „Działasz jako”, potem komunikat HHL. */}
       <div className="topstack">
         <Topbar />
+        {/* wyglad/P10a-a (E22 pkt 3): nowa wersja po wdrożeniu */}
+        <NewVersionBar />
         {import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? (
           <>
             <PreviewBanner />
@@ -230,7 +239,8 @@ function TowerShell() {
               <button type="button" className="btn ghost" onClick={() => setEntryOpen(false)}>OK</button>
             </div>
           ) : null}
-          {body}
+          {/* wyglad/P10a-a (E22 pkt 4): część, która się nie wczyta, pokazuje komunikat — pasek i menu zostają */}
+          <PartBoundary key={view} name={view}>{body}</PartBoundary>
         </main>
       </div>
       {/* D15 (budżet 400 kB): panel transportu osobno — pobierany w tle po starcie, więc otwiera się od razu */}
@@ -247,7 +257,7 @@ export default function App() {
         <Route path="/driver/:token" element={<DriverPwa />} />
         <Route
           path="/*"
-          element={AuthGate ? <Suspense fallback={null}><AuthGate><TowerShell /></AuthGate></Suspense> : <TowerShell />}
+          element={AuthGate ? <Suspense fallback={null}><AuthGate><TowerShell /></AuthGate></Suspense> : <DemoFirstEntry><TowerShell /></DemoFirstEntry>}
         />
       </Routes>
     </HashRouter>

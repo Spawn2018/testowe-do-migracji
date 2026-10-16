@@ -8,6 +8,15 @@ import { setAuthProfile, AUTH_RELOAD_EVENT, type AuthProfile } from './profile';
 import { useTowerStore } from '../store/useTowerStore';
 import { markManualLogout, rememberLogin, sessionEndReason, SESSION_END_MSG, type SessionEnd } from './sessionYear';
 import { MfaSetup, MfaVerify, mfaStep, readMfaStatus } from './Mfa';
+import { ExpiredLinkScreen } from './ExpiredLinkScreen';
+import { p10bp } from '../i18n/p10b';
+import { RECOVERY_LINK_TTL, expiredLinkInfo, isExpiredLinkError, resendExpiredLink, type ExpiredLinkInfo, type PendingLink } from '../lib/p10bSource';
+import { FirstEntryFlow, InviteStep, PasswordStep } from './FirstEntry';
+import { enableNotifications, firstEntryReady, firstEntryReceives, inviteInfo, saveMyDetails, type InviteInfo } from '../lib/firstEntrySource';
+import { requestHelpOnce } from '../lib/firstEntryFlag';
+import { splitName, type FirstStep } from '../lib/firstEntry';
+import { viewedKind } from '../lib/cockpitE9';
+import { needsPhone } from '../components/shell/PhoneMissingBar';
 import './auth.css';
 
 /** D-20261013-2255-01 G4: last_sign_in_at z sesji Auth, gdy my_profile jeszcze nie zwraca pola. */
@@ -25,7 +34,11 @@ type State =
   | { kind: 'anon'; ended?: SessionEnd; mode?: 'login' | 'forgot' }
   | { kind: 'set-password'; session: Session; profile: AuthProfile; reason: 'invite' | 'recovery' | 'required' }
   | { kind: 'noaccess'; reason: string }
+  /* wyglad/P10b-a (E37 pkt 7): wygasły albo zużyty link z e-maila */
+  | { kind: 'expired'; link: PendingLink }
   | { kind: 'mfa'; step: 'verify' | 'setup' }
+  /* wyglad/P10b-d (E37 pkt 9): kroki 3–4 po zaproszeniu albo sam krok 3 przy logowaniu konta bez telefonu */
+  | { kind: 'first-entry'; session: Session; profile: AuthProfile; steps: FirstStep[]; help: boolean }
   | { kind: 'ready'; session: Session; profile: AuthProfile };
 
 function Brand() {
@@ -44,6 +57,20 @@ function redirectTo(): string {
   return window.location.origin + window.location.pathname;
 }
 
+/**
+ * wyglad/P10b-a (E37 pkt 7): Auth po nieudanej weryfikacji wraca z `#error=access_denied&error_code=otp_expired…`
+ * (albo tym samym w zapytaniu). Wcześniej taki adres trafiał do routera — ekran logowania bez słowa wyjaśnienia.
+ */
+const EXPIRED_RE = /error_code=(otp_expired|otp_disabled|flow_state_expired|flow_state_not_found)|error=access_denied/;
+function captureExpiredFromUrl(): PendingLink | false {
+  if (typeof window === 'undefined') return false;
+  const hash = window.location.hash;
+  const search = window.location.search;
+  if (!EXPIRED_RE.test(hash) && !EXPIRED_RE.test(search)) return false;
+  history.replaceState(null, '', window.location.pathname);
+  return { hash, search };
+}
+
 /** Czy hash/query wygląda na link z e-maila Auth (invite / recovery / magic / PKCE). */
 function captureAuthLinkFromUrl(): boolean {
   const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
@@ -58,13 +85,18 @@ function captureAuthLinkFromUrl(): boolean {
   return true;
 }
 
-async function consumePendingLink(sb: SupabaseClient): Promise<{ error?: string; recovery?: boolean }> {
+async function consumePendingLink(sb: SupabaseClient): Promise<{ error?: string; recovery?: boolean; link?: PendingLink }> {
   const raw = sessionStorage.getItem(LINK_KEY);
   sessionStorage.removeItem(LINK_KEY);
   if (!raw) return { error: 'Brak linku do weryfikacji.' };
   let pending: { hash?: string; search?: string };
   try { pending = JSON.parse(raw) as { hash?: string; search?: string }; }
   catch { return { error: 'Uszkodzony link.' }; }
+  const r = await consumeLink(sb, pending);
+  return { ...r, link: pending };
+}
+
+async function consumeLink(sb: SupabaseClient, pending: { hash?: string; search?: string }): Promise<{ error?: string; recovery?: boolean }> {
 
   const hash = (pending.hash ?? '').replace(/^#/, '');
   const hashParams = new URLSearchParams(hash.includes('=') ? hash : '');
@@ -126,8 +158,43 @@ function PasswordField({
   );
 }
 
+/** wyglad/P10b-d: rodzaj linku z e-maila (`type=invite` / `type=recovery`) — krok 1 tylko przy zaproszeniu. */
+function pendingLinkType(): 'invite' | 'recovery' | 'other' {
+  try {
+    const raw = sessionStorage.getItem(LINK_KEY);
+    const p = raw ? (JSON.parse(raw) as { hash?: string; search?: string }) : null;
+    const m = /[?&#]type=([a-z_]+)/.exec(`${p?.hash ?? ''}&${p?.search ?? ''}`);
+    return m?.[1] === 'invite' ? 'invite' : m?.[1] === 'recovery' ? 'recovery' : 'other';
+  } catch {
+    return 'other';
+  }
+}
+
+function pendingLink(): PendingLink {
+  try {
+    const raw = sessionStorage.getItem(LINK_KEY);
+    return raw ? (JSON.parse(raw) as { hash?: string; search?: string }) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** wyglad/P10b-d (E37 pkt 9, krok 1 z 4): kto zaprasza, firma, konto, „Dalej — ustaw hasło” (ochrona przed skanerami). */
+function InviteStepContainer({ onContinue, onCancel }: { onContinue: () => void; onCancel: () => void }) {
+  const locale = useTowerStore((s) => s.locale);
+  const [info, setInfo] = useState<InviteInfo | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void inviteInfo(pendingLink()).then((i) => { if (alive) setInfo(i); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  return <InviteStep locale={locale} brand={<Brand />} pos={{ n: 1, total: 4 }} info={info} busy={busy} onContinue={() => { setBusy(true); onContinue(); }} onCancel={onCancel} />;
+}
+
 function LinkPendingScreen({ onContinue, onCancel }: { onContinue: () => void; onCancel: () => void }) {
   const locale = useTowerStore((s) => s.locale);
+  if (firstEntryReady() && pendingLinkType() === 'invite') return <InviteStepContainer onContinue={onContinue} onCancel={onCancel} />;
   return (
     <div className="auth-screen" data-auth="link-pending">
       <section className="panel auth-card">
@@ -170,9 +237,13 @@ function LoginScreen({
     // A3 (D-20261015-0300-01): bez sprawdzania konta po stronie klienta — zawsze ten sam komunikat.
     const mail = await sendRecoveryLink(addr, redirectTo());
     setBusy(false);
-    setMsg(mail.error
-      ? { ok: false, text: authErrorPl(mail.error) }
-      : { ok: true, text: t(locale, 'auth_reset_sent') });
+    /* wyglad/P10b-a (E37 pkt 7): zawsze ta sama odpowiedź — także „brak zaproszenia” (bez zdradzania, czy konto
+       istnieje); własny tekst tylko przy zbyt wielu próbach i nieudanej wysyłce e-maila */
+    const err = mail.error ? authErrorPl(mail.error) : '';
+    const own = /Zbyt wiele prób|Nie udało się wysłać e-maila|Nieprawidłowy adres e-mail/.test(err);
+    setMsg(own
+      ? { ok: false, text: err }
+      : { ok: true, text: p10bp(locale, 'p10b_reset_sent', { ttl: RECOVERY_LINK_TTL }) });
   };
 
   if (mode === 'forgot') {
@@ -256,6 +327,22 @@ function SetPasswordScreen({
     onDone();
   };
 
+  /* wyglad/P10b-d (E37 pkt 9, krok 2 z 4): po zaproszeniu — ten sam zapis, ekran ścieżki pierwszego wejścia */
+  if (firstEntryReady() && reason !== 'recovery') {
+    return (
+      <PasswordStep locale={locale} brand={<Brand />} pos={{ n: 2, total: 4 }}
+        onSave={async (next) => {
+          const sb = await getSupabase();
+          const { error } = await sb.auth.updateUser({ password: next });
+          if (error) return authErrorPl(error.message);
+          const { error: markErr } = await sb.rpc('app_user_mark_password_set');
+          if (markErr) return authErrorPl(markErr.message);
+          onDone();
+          return null;
+        }} />
+    );
+  }
+
   return (
     <div className="auth-screen" data-auth="set-password">
       <section className="panel auth-card">
@@ -291,6 +378,27 @@ function MfaScreen({ step }: { step: 'verify' | 'setup' }) {
   );
 }
 
+/** wyglad/P10b-a: ekran „Link wygasł” z informacją o linku (źródło p10bSource; produkcja do podłączenia). */
+function ExpiredLinkContainer({ link, onForgot, onLogin }: { link: PendingLink; onForgot: () => void; onLogin: () => void }) {
+  const locale = useTowerStore((s) => s.locale);
+  const [info, setInfo] = useState<ExpiredLinkInfo | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void expiredLinkInfo(link).then((i) => { if (alive) setInfo(i); }).catch(() => {});
+    return () => { alive = false; };
+  }, [link]);
+  return (
+    <ExpiredLinkScreen
+      brand={<Brand />}
+      locale={locale}
+      info={info}
+      onResend={() => resendExpiredLink(link)}
+      onForgot={onForgot}
+      onLogin={onLogin}
+    />
+  );
+}
+
 function NoAccess({ reason }: { reason: string }) {
   const locale = useTowerStore((s) => s.locale);
   return (
@@ -308,11 +416,13 @@ function NoAccess({ reason }: { reason: string }) {
 
 export default function AuthGate({ children }: { children: ReactNode }) {
   const locale = useTowerStore((s) => s.locale);
-  const [state, setState] = useState<State>(() =>
-    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(LINK_KEY)) || captureAuthLinkFromUrl()
+  const [state, setState] = useState<State>(() => {
+    const expired = captureExpiredFromUrl();
+    if (expired) return { kind: 'expired', link: expired };
+    return (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(LINK_KEY)) || captureAuthLinkFromUrl()
       ? { kind: 'link-pending' }
-      : { kind: 'loading' },
-  );
+      : { kind: 'loading' };
+  });
   const [anonMode, setAnonMode] = useState<'login' | 'forgot'>('login');
   const [recoveryOnce, setRecoveryOnce] = useState(false);
   const loadRef = useRef<(session: Session | null, opts?: { forcePassword?: boolean }) => Promise<void>>(async () => {});
@@ -366,7 +476,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         if (alive) setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_fetch_fail').replace('{err}', e instanceof Error ? e.message : String(e)) });
         return;
       }
-      if (alive) setState({ kind: 'ready', session, profile });
+      /* wyglad/P10b-d (E37 pkt 9): konto bez telefonu — krok 3 przy logowaniu */
+      if (alive) setState(firstEntryReady() && needsPhone(profile) ? { kind: 'first-entry', session, profile, steps: ['details'], help: false } : { kind: 'ready', session, profile });
       /* C16 N6: odśwież zapis urządzenia push po zalogowaniu */
       void import('../lib/webPush').then((wp) => {
         void wp.syncWebPush();
@@ -376,7 +487,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     loadRef.current = load;
 
     void getSupabase().then(async (sb) => {
-      if (state.kind === 'link-pending') return; // czekamy na „Dalej”
+      if (state.kind === 'link-pending' || state.kind === 'expired') return; // czekamy na „Dalej” / ekran „Link wygasł”
       const { data } = await sb.auth.getSession();
       await load(data.session, recoveryOnce ? { forcePassword: true } : undefined);
       const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
@@ -394,7 +505,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     return () => { alive = false; unsub?.(); };
     // link-pending / recoveryOnce — celowo: po Dalej przeładujemy efekt
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.kind === 'link-pending' ? 'pending' : 'go', recoveryOnce]);
+  }, [state.kind === 'link-pending' ? 'pending' : state.kind === 'expired' ? 'expired' : 'go', recoveryOnce]);
 
   useEffect(() => {
     const onReload = () => {
@@ -441,7 +552,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
             const sb = await getSupabase();
             const r = await consumePendingLink(sb);
             if (r.error) {
-              setState({ kind: 'noaccess', reason: r.error });
+              /* wyglad/P10b-a (E37 pkt 7): wygasły link → ekran „Link wygasł” zamiast czerwonego komunikatu */
+              setState(isExpiredLinkError(r.error) ? { kind: 'expired', link: r.link ?? null } : { kind: 'noaccess', reason: r.error });
               return;
             }
             if (r.recovery) setRecoveryOnce(true);
@@ -486,7 +598,10 @@ export default function AuthGate({ children }: { children: ReactNode }) {
                 try {
                   const bridge = await import('../data/supabaseBridge');
                   await bridge.connectSupabaseData(sb);
-                  setState({ kind: 'ready', session: data.session, profile });
+                  /* wyglad/P10b-d (E37 pkt 9): po haśle — kroki 3 i 4, potem Kokpit z „Jak pracuję” otwartym raz */
+                  setState(firstEntryReady()
+                    ? { kind: 'first-entry', session: data.session, profile, steps: ['details', 'notify'], help: true }
+                    : { kind: 'ready', session: data.session, profile });
                 } catch (e) {
                   setState({ kind: 'noaccess', reason: t(locale, 'a6_auth_fetch_fail').replace('{err}', e instanceof Error ? e.message : String(e)) });
                 }
@@ -494,6 +609,44 @@ export default function AuthGate({ children }: { children: ReactNode }) {
             }
           });
         }}
+      />
+    );
+  }
+
+  if (state.kind === 'first-entry') {
+    const { session, profile, steps, help } = state;
+    const name = profile.first_name || profile.last_name
+      ? { first: profile.first_name ?? '', last: profile.last_name ?? '' }
+      : splitName(profile.full_name);
+    const org = viewRoleForOrg(profile.org_code) ?? 'KSH';
+    return (
+      <FirstEntryFlow
+        locale={locale}
+        brand={<Brand />}
+        steps={steps}
+        numbered={steps.length > 1}
+        kind={viewedKind(org, profile.role)}
+        initial={{ ...name, phone: profile.phone ?? null }}
+        missing={steps.length === 1}
+        onSaveDetails={(d) => saveMyDetails(d) ?? Promise.resolve(false)}
+        loadReceives={firstEntryReceives}
+        onEnable={enableNotifications}
+        onDone={(d) => {
+          const next = d ? { ...profile, first_name: d.first, last_name: d.last, full_name: `${d.first} ${d.last}`, phone: d.phone } : profile;
+          setAuthProfile(next);
+          setState({ kind: 'ready', session, profile: next });
+          if (help) requestHelpOnce();
+        }}
+      />
+    );
+  }
+
+  if (state.kind === 'expired') {
+    return (
+      <ExpiredLinkContainer
+        link={state.link}
+        onForgot={() => { setAnonMode('forgot'); setState({ kind: 'loading' }); }}
+        onLogin={() => { setAnonMode('login'); setState({ kind: 'loading' }); }}
       />
     );
   }

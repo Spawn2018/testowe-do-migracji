@@ -184,8 +184,8 @@ Wpisy nie wymienione obowiązują bez zmian (m.in. D-9, D-34 z doprecyzowaniami,
 | D-80 | ETA | ETA nadal wyłącznie z pozycji GPS i AIS (decyzja z 04.10). HERE liczy czas przejazdu z bieżącej pozycji, nigdy z planu. **Doprecyzowanie ETA-PRE-LOAD 04.10.2026:** ETA dostawy pokazujemy dopiero po załadunku, czyli po wyjeździe ze strefy placu w Śremie. Przed załadunkiem we wszystkich miejscach (harmonogram, szczegóły, kokpit, eksport, e-maile) jest wyłącznie „–”, bez tekstu. SMS-KSH-1H nadal w tle liczy dojazd do Śremu. | ✅ 04.10.2026 |
 | D-81 | licencja HERE | Wyniki przechowujemy najwyżej 30 dni. Na stałe wyłącznie własne podsumowania. Geometria i surowe dane HERE kasowane po 30 dniach. Warunki usługi — w `POSTEP.md` przed startem. | ✅ 04.10.2026 |
 | D-82 | myto | Opłaty drogowe poza zakresem. Nie liczymy i nie pokazujemy. | ✅ 04.10.2026 |
-| D-83 | wymiary zestawu | Wymiary dla każdego transportu poda właściciel. Kontrola trasy nie bierze niczego z dokumentów. Przewoźnik nie wprowadza żadnych wymiarów. | ✅ 04.10.2026 |
-| D-84 | próg wiatru | Porywy 15 m/s. Silny wiatr na trasie wydłuża ETA (H-10). | ✅ 04.10.2026 |
+| D-83 | wymiary zestawu | Wymiary dla każdego transportu poda właściciel. Kontrola trasy nie bierze niczego z dokumentów. Przewoźnik nie wprowadza żadnych wymiarów. | ✅ 04.10.2026; **zamknięte 16.10.2026** — dane z tabeli 07.10, wpis automatyczny w P5 D1 (D-20261016-0200-01 Z1); „Kontrola trasy” usunięta (Z3) |
+| D-84 | próg wiatru | Porywy 15 m/s. Silny wiatr na trasie wydłuża ETA (H-10). | ✅ 04.10.2026; **zmiana 16.10.2026, 02:08: 20 m/s** (E49, D-20261016-0230-01) |
 | D-85 | ETA | W pełni automatyczne, zero ręcznego wpisu, także prędkości. Limit km/h w Opcjach nie obowiązuje. **05.10 ~18:40 (właściciel):** dostępu do tachografu **NIE BĘDZIE nigdy** (ani emtrack, ani inne źródło) — rozwiązanie docelowe. Czas jazdy i odpoczynku liczony **wyłącznie z pozycji GPS naczepy**. H-4 budować teraz (nie po emtrack). **20:10:** droga SE z Trafikverket w pełnym zakresie — sytuacje, nawierzchnia, pomiary stacji. Wpływ na prędkość z wytycznych, potem nauka z GPS. Osobna linia ETA „nawierzchnia". Szczegóły w `ZLECENIE_HERE.md`. | ✅ 04.10.2026 / uzupełnienie 05.10 |
 | D-86 | brama bazy w GitHub Actions | Brama `tests/db/gate.sh` (Postgres 17 + PostGIS, port 5433) działa w GitHub Actions — `.github/workflows/db.yml` — nie na komputerze wykonawcy. Uruchamia się dla zmian z SQL lub migracją i przed każdym wdrożeniem z migracją; scalenie i wdrożenie z migracją tylko przy zielonym wyniku na tym samym SHA. Potwierdzenie na TEST, pełna brama TEST w P0b / niedzielę / P11 — z komputera wykonawcy (hasło tylko w `.env.local`). Zastępuje wymóg lokalnego Postgresa 17 / WSL. Szczegóły: `docs/handover/dopiski/D-20261011-2135-01.md`. | ✅ 11.10.2026 |
 | D-87 | test wizualny przed scaleniem w GitHub Actions | `scripts/ci/fresh-smoke.sh` przed scaleniem działa w GitHub Actions — `.github/workflows/visual.yml` — na każdym PR; zielony check `visual` zastępuje lokalny `fresh-smoke`. Progów, `playwright.config.ts` i wzorców nie zmieniasz. 15 migawek odświeżasz w paczce zmieniającej ekran przez `gh workflow run visual.yml --ref <gałąź> -f update=true` → `gh run download` → commit. Szczegóły: `docs/handover/dopiski/D-20261011-2135-01.md`. | ✅ 11.10.2026 |
@@ -259,4 +259,13 @@ Polecenie kazało przepisać D-66–D-76 dosłownie z `ZLECENIE_POPRAWKI_02_10.m
 |---|---|---|---|
 | ETA-MARK | znaczniki przy ETA | zielony „w oknie" (między początkiem a końcem okna); bursztynowy „przed terminem" (przed początkiem — info); czerwony „po terminie" (po końcu — **ten sam warunek** co ryzyko ETA po terminie / L-3, bez drugiego alarmu); „przyjazd nocą" 22:00–06:00 Europe/Warsaw (info). Przed terminem i noc: bez Centrum decyzji i bez SMS. Opis w „Jak działa". | ✅ 05.10 |
 | H-4 | ETA + czas pracy kierowcy UE | **Zrobione 05.10** (0185). Brak tachografu na stałe (D-85). Czas jazdy/odpoczynku tylko z GPS naczepy. U-31; A\|B = przepięcie. Reguły UE w ETA; prom = odpoczynek; ostrożne bez GPS; SMS-KSH-1H z tego ETA; II-7b obserwacja po rozładunku. | ✅ 05.10 |
+
+## Decyzje 16.10.2026
+
+| ID | Sprawa | Decyzja | Status |
+|---|---|---|---|
+| 16.10.2026 01:13 | wymiary, polisa, zezwolenie, H-1/H-3 | Wymiary/pilot/zezwolenie z tabeli 07.10 (P5 D1); polisa HHL i zezwolenie 13/GD/2026 wpisuje wykonawca (P5 D2, W4 zamknięte); bez kontroli trasy i przeszkód (P9); D-21 → E31/L6 | ✅ D-20261016-0200-01 |
+| E49 | wiatr a ETA, objazd | E49 zaakceptowane: SMHI, progi 20/25 m/s, sprawa SCX „Objazd czy postój?”, śliskość lokalnie; D-84 = 20 m/s; W19 zamknięte | ✅ 16.10.2026, 02:08 (D-20261016-0230-01) |
+| E17 (07.10, 20:57) | Czat | wykonanie: D-20261016-0250-01 + 0310-01 + 0315-01 (P6 Cz1–Cz33; C3 Cz13/Cz25) | ⏳ P6 / C3 |
+| D-21 | wymóg zezwoleń | zastąpione przez E31 i L6 (D-20261016-0200-01 Z1 pkt 7) | 🔁 16.10.2026 |
 

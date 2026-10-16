@@ -124,17 +124,16 @@ for (const vp of [{ w: 1366, h: 900, tag: 'komputer' }, { w: 390, h: 844, tag: '
   })
 }
 
-test('AUD-03: „Zmień ciągnik” — przewoźnik i HHL widzą, KSH nie', async ({ page }) => {
+/* wyglad/P7-c (E30 pkt 5, E32): bez „Zmień ciągnik” w Harmonogramie u nikogo — zestaw zmienia się w oknie Awizacja
+   (SCX robi, Administrator HHL poprawia); prawa do zestawu bez zmian (test jednostkowy aud03-ksh-panel.test.ts). */
+test('AUD-03: bez „Zmień ciągnik” w Harmonogramie (E30 pkt 5) — u żadnej firmy', async ({ page }) => {
   await boot(page)
-  for (const r of ['SCX', 'HHL'] as const) {
+  for (const r of ['SCX', 'HHL', 'KSH'] as const) {
     await role(page, r)
     await sched(page)
-    expect(await page.locator('[data-change-tractor]').count()).toBeGreaterThan(0)
+    await expect(page.locator(ROW).first()).toBeVisible()
+    await expect(page.locator('[data-change-tractor]')).toHaveCount(0)
   }
-  await role(page, 'KSH')
-  await sched(page)
-  await expect(page.locator('[data-change-tractor]')).toHaveCount(0)
-  await expect(page.locator(ROW).first()).toBeVisible()
 })
 
 test('AUD-03: przewoźnik nie ma „Edytuj” dat KSH; HHL też nie', async ({ page }) => {

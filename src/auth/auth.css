@@ -36,3 +36,7 @@ nav[aria-expanded="false"] .nav-session{align-items:center;padding:6px 4px}
 .baf-form label.wide{grid-column:span 2}
 .baf-form label.check{flex-direction:row;align-items:center;gap:6px}
 @media (max-width:760px){.baf-form{grid-template-columns:1fr}.baf-form label.wide{grid-column:auto}}
+/* wyglad/P10b-a (E37 pkt 7, makieta E37 „Link wygasł”): tytuł ekranu, przyciski 44 px, przypis szary */
+.auth-screen .auth-title{font:700 20px/1.2 var(--font-cond);color:var(--ink);text-align:center}
+.auth-screen[data-auth="expired"] .btn{min-height:44px;font-size:14px}
+.auth-screen .auth-note{color:var(--ink-3)}
