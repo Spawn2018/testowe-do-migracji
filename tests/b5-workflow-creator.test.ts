@@ -7,7 +7,6 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { setAuthProfile } from '../src/auth/profile';
 import {
   actionsFromText, actionsToText, draftCondition, draftFromRule, emptyDraft, groupOf, localDuplicateCheck, logicToRows,
   rowsToLogic, validateDraft,
@@ -23,10 +22,25 @@ const profile = (role: string) => ({ user_id: 'u', email: 'a@log-mar.pl', full_n
    e8-phone-gate „wyglad/P8-d”); widok B-5 zostaje w produkcji do podłączenia źródła reguł w P8 — tu sprawdzany
    w trybie produkcji (VITE_AUTH_MODE=supabase, rulesReady() = false). */
 describe('B-5: przycisk „Nowa automatyzacja” (produkcja)', () => {
-  beforeEach(() => { vi.stubEnv('VITE_AUTH_MODE', 'supabase'); });
-  afterEach(() => { setAuthProfile(null); vi.unstubAllEnvs(); });
+  /*
+   * wyglad/P8-d: rulesReady() = false przy VITE_AUTH_MODE=supabase → LegacyWorkflowsView.
+   * SSR (renderToStaticMarkup) czyta początkowy snapshot zustanda — przy pierwszym imporcie
+   * store w trybie supabase jest pusty (BK3), więc najpierw ładujemy seed demo, potem stub supabase.
+   */
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.unstubAllEnvs();
+    await import('../src/store/useTowerStore');
+    vi.stubEnv('VITE_AUTH_MODE', 'supabase');
+  });
+  afterEach(async () => {
+    const { setAuthProfile: clear } = await import('../src/auth/profile');
+    clear(null);
+    vi.unstubAllEnvs();
+  });
   it('HHL_ADMIN: przycisk, edycja i aktywne włączniki', async () => {
-    setAuthProfile(profile('HHL_ADMIN'));
+    const { setAuthProfile: setProf } = await import('../src/auth/profile');
+    setProf(profile('HHL_ADMIN'));
     const { WorkflowsView } = await import('../src/views/WorkflowsView');
     const html = renderToStaticMarkup(createElement(WorkflowsView));
     expect(html).toContain('data-wf-new');
@@ -37,7 +51,8 @@ describe('B-5: przycisk „Nowa automatyzacja” (produkcja)', () => {
     for (const s of sw) expect(s).not.toContain('disabled');
   });
   it('inna rola (HHL_DISPATCH): bez przycisku i edycji, włączniki zablokowane', async () => {
-    setAuthProfile(profile('HHL_DISPATCH'));
+    const { setAuthProfile: setProf } = await import('../src/auth/profile');
+    setProf(profile('HHL_DISPATCH'));
     const { WorkflowsView } = await import('../src/views/WorkflowsView');
     const html = renderToStaticMarkup(createElement(WorkflowsView));
     expect(html).not.toContain('data-wf-new');
