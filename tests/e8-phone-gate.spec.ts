@@ -1766,7 +1766,7 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
     await expect(page.locator('.ox-side [data-opt-group="notify"] [data-opt-nav]')).toHaveText(['Kto co dostaje', 'Treści wiadomości', 'SMS przy miejscachBoden: brak', 'Komunikat dla wszystkich']);
     await page.click('[data-opt-nav="flags"]');
     await expect(page.locator('[data-opt-screen="flags"] .ox-crumb')).toHaveText('Opcje › System');
-    await expect(page.locator('[data-opt-screen="flags"] tbody tr')).toHaveCount(13);
+    await expect(page.locator('[data-opt-screen="flags"] tbody tr')).toHaveCount(10); /* wyglad/P9-b: bez H1, H3, H6 (16.10 01:13) */
     /* każdy ekran przy 1440 i 1280 px: strona i `main` bez przewijania w bok (macierz „Kto co dostaje” ma własny pasek) */
     const ids = await page.evaluate(() => Array.from(document.querySelectorAll('.ox-side [data-opt-nav]')).map((b) => b.getAttribute('data-opt-nav') ?? ''));
     const wide: string[] = [];

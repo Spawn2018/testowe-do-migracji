@@ -89,9 +89,6 @@ export const DEMO_FLAGS: SecurityFlagRow[] = [
   { key: 'DRIVER_LINK_ACCEPT', on: false, when: '03.10, 23:52', by: null },
   { key: 'FUEL_SE_PL_INGEST', on: true, when: '05.10, 11:07', by: null },
   { key: 'FUEL_WOB_INGEST', on: false, when: '28.09, 09:58', by: null },
-  { key: 'H1_ROUTE_CHECK', on: false, when: '04.10, 22:05', by: null },
-  { key: 'H3_CORRIDOR_OBSTACLES', on: false, when: '04.10, 23:16', by: null },
-  { key: 'H6_MAP_OBSTACLES', on: false, when: '05.10, 03:58', by: null },
 ];
 
 /** Wartości progów z bazy 08.10 (E12 „Fakty”; cisza GPS według E12-3: 30 min w ruchu). */
