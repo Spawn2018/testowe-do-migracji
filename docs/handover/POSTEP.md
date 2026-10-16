@@ -2543,6 +2543,94 @@ unit + visual zielone przed każdym scaleniem; `npm audit` 0. #209/#231 (P7) —
 
 **C17 NA PRODUKCJI — e7595541, 02:02.**
 
-## 2026-10-16 — BLOKER C16-H w toku (D-20261016-0100-01)
+## 2026-10-16 — C16-H NA PRODUKCJI (D-20261016-0100-01)
 
-- Start po zamknięciu C17; migracja **0221**; H1–H5; do zamknięcia C16-H nic innego.
+- Merge PR #238 → `8bae03be`; treść `3b71b56e`.
+- CI #238: unit / visual / `db` zielone; `npm audit` 0.
+- TEST: security 84/84, status 55/55, c16-push 18/18, nullguard 161+136+216+124 = 637/637 (nullguard-4 ponowiony 124/124); doradca 149, **0 nowych**.
+- Kopia PENDING push_fallback: `D:\Watch Tower\dane\p2\kopia-c16h-pending-fallback-2026-10-16.csv` (0 wierszy danych), SHA-256 `1283ff25df934c3475e683021322c071b20afa990e7c87ebecab6c2caebd010c`.
+- Przed: PENDING push_fallback=0; WEB_PUSH sprzed granicy bez fallbacku=933.
+- ROLLBACK 0221 OK → `db push` ×2; parytet **MATCH YES** 0001…0221; audit `C16H_PUSH_FALLBACK_CANCEL` cancelled_pending=0.
+- Po: tick=0; new_fb_for_old=0; pending_fb=0.
+- H3: `send-notifications` v24→**v26** (notifyTemplates PL); web-push-* już z C16.
+- H4: sekret `APP_URL=https://tower.log-mar.pl` (bez logowania innych sekretów).
+- Odbiór pkt 1 (SELECT): OK. Pkt 2 (test właściciela G-14) — po wdrożeniu.
+
+| punkt | zrobione / odbiór |
+|---|---|
+| H1 tick / enqueue | zrobione — 0221 |
+| H2 CANCEL PENDING starych | zrobione — 0 PENDING |
+| H3 send-notifications | zrobione — v26 |
+| H4 APP_URL | zrobione |
+| H5 testy | zrobione — c16-push 18, unit temat |
+
+**C16-H NA PRODUKCJI — 8bae03be, 10:02.**
+
+## 2026-10-16 — dopiski włączone do planu (0200 / 0230 / 0250 / 0310 / 0315)
+
+Tabela sprawdzalności (prompt 16.10):
+
+| dopisek | punkt | paczka | pozycja w PLAN |
+|---|---|---|---|
+| D-20261016-0200-01 | Z1 wymiary/pilot/zezwolenie z tabeli | P5 | D1 |
+| D-20261016-0200-01 | Z2 polisa HHL + zezwolenie 13/GD/2026 | P5 | D2 |
+| D-20261016-0200-01 | Z3 usunięcie H-1 / H-3 | P9 | H-1 i H-3 — usunięcie |
+| D-20261016-0200-01 | Z4 KPD / SMS SG-03 / D-21 | P6 E2-1; P8 E42; dokumenty | zamknięte bez nowej pracy |
+| D-20261016-0200-01 | Z5 W19 | §5 | zastąpione przez 0230 (W19 zamknięte) |
+| D-20261016-0230-01 | Z1–Z6 E49 wiatr/objazd/śliskość | P6 | E49 |
+| D-20261016-0230-01 | Z3 pkt 8 linia objazdu | P9 | E45 uzupełnienie |
+| D-20261016-0230-01 | Z5 Wiatr — SMHI | P10a | E23 |
+| D-20261016-0230-01 | Z7 W19 / W45 / D-84 | §5 / rejestr | W19 zamknięte; W45; D-84=20 |
+| D-20261016-0250-01 | Cz1–Cz12 | P6 | E17 Czat — dane |
+| D-20261016-0250-01 | Cz11 wygląd | P6 | wyglad/P6-d |
+| D-20261016-0310-01 | Cz13 | C3 | wiersz „Wiadomość w czacie” |
+| D-20261016-0310-01 | Cz14–Cz24 | P6 | E17 Czat — dane |
+| D-20261016-0310-01 | Cz23 wygląd | P6 | wyglad/P6-e |
+| D-20261016-0310-01 | Cz24 pkt 12 iPhone | §5 | W43 |
+| D-20261016-0315-01 | Cz25 | C3 | przy Cz13 |
+| D-20261016-0315-01 | Cz26–Cz33 | P6 | E17 Czat — dane |
+| D-20261016-0220-01 | Z1–Z3 E35 Automatyzacje | P8 | E35 — **wchodzi z PR #239** (po scaleniu) |
+
+## PAUZA — 2026-10-16 10:21 (hasło wznowienia: „ruszamy”)
+
+**ZAKŁADKA — przerwane tu:** scalenie PR dokumentacji #255; potem sygnały dopisków; potem kolejka PR wyglądu.
+
+### Stan w chwili pauzy
+| pozycja | stan |
+|---|---|
+| C17 | **zamknięte** — `e7595541`, 0220, dpl `dpl_HRCPmDoD3Ghiumi6tXDkaxcSzRfs`, 02:02 |
+| C16-H | **NA PRODUKCJI** — merge `8bae03be`, migracja **0221**, `send-notifications` **v26**, `APP_URL=https://tower.log-mar.pl`, tick starych=0, pending_fb=0; TEST security 84 / status 55 / c16-push 18 / nullguard 637; CI #238 zielone |
+| Gałąź lokalna | `docs/dopiski-20261016-plan` @ `442281ca` (wypchnięta) |
+| PR #255 | OPEN, MERGEABLE, unit+visual **SUCCESS** — **następny krok: `gh pr merge 255 --merge`**, potem `git checkout main && git pull` |
+| Untracked | `docs/handover/dopiski_nowe/` (kopie źródłowe; treść już w `docs/handover/dopiski/`) — nie commitować osobno |
+
+### Po scaleniu #255 — sygnały (jeszcze nie wysłane)
+1. `DOPISKI 0200 / 0230 / 0250 / 0310 / 0315 WŁĄCZONE — commit <hash merge lub 442281ca>`
+2. `DOPISEK 0250 WŁĄCZONY — commit …, P6: E17 Czat — dane, Cz1–Cz12`
+3. `DOPISEK 0310 WŁĄCZONY — commit …, C3: Cz13; P6: Cz14–Cz24`
+4. `DOPISEK 0315 WŁĄCZONY — commit …, C3: Cz25; P6: Cz26–Cz33`
+5. (już w POSTEP) `C16-H NA PRODUKCJI — 8bae03be, 10:02` — powtórz właścicielowi jeśli nie dostał
+
+Tabela sprawdzalności punktów jest w POSTEP powyżej („dopiski włączone do planu”).
+
+### Kolejka po sygnałach (bez zmian)
+1. Wygląd D-20261016-0045-01 **+ #239**: `#232` → `#233` → `#236` → `#239` → `#237` — po każdym zielone unit+visual, merge; **jedno wdrożenie R7** na końcu; sygnał `P8-a, P8-b, P8-c, push-w42…` według dopisku (oraz P8-d z #239).
+2. Po #239: dopisek **D-20261016-0220-01** → wpis P8 E35 w PLAN (w commicie po scaleniu #239) + wiersz w tabeli POSTEP.
+3. Potem `wyglad/E49` (**PR #240**), scal jak wygląd.
+4. Dalej: **C3…C15** → **P3-d** → P5 → P6 → … według PLAN.md (nic z 0200 przed P5; czat Cz* w C3/P6; E49 w P6).
+
+### Nie zaczynaj przy wznowieniu
+- Nie wracaj do C16-H / C17 (zamknięte).
+- Nie rób punktów z dopisków 0200/0230/0250/0310/0315 poza wpisami w PLAN (wykonanie dopiero w paczkach).
+- Jedna rzecz naraz; G-15 przy bramach.
+
+### Komendy startowe po „ruszamy”
+```bash
+cd "/d/Watch Tower/repo"
+git checkout docs/dopiski-20261016-plan && git pull
+gh pr checks 255   # jeśli nadal zielone:
+gh pr merge 255 --merge
+git checkout main && git pull --ff-only origin main
+# sygnały dopisków → kolejka #232…
+```
+
