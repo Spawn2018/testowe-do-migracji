@@ -332,6 +332,61 @@ const SUBBARS_HTML = `
 <div class="subbar subbar-bcast" data-banner="system-broadcast" role="status"><p class="subbar-tx"><span class="subbar-tag">KOMUNIKAT HHL</span><b class="subbar-tag-ph">Komunikat HHL:</b> <b class="subbar-body">Prom Stena Estelle 09.10 wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.</b><span class="subbar-until"> · do 09.10, 12:00</span></p></div>`;
 const LONG_NAME = 'Przemysław Szczepański-Kowalczyk';
 
+/**
+ * wyglad/P10a-a — E22: pasek nowej wersji, „na żywo · HH:MM” / „brak połączenia od …” przy tytule strony,
+ * komunikat w miejscu części, która się nie wczytała (pasek górny i menu zostają).
+ */
+test.describe('wyglad/P10a-a — nowa wersja, „na żywo”, zamiast pustej strony (E22)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+
+  test('komputer: pasek „Jest nowa wersja Watch Tower.” z „Odśwież teraz”; Harmonogram „na żywo · HH:MM”, bez sieci „brak połączenia od …”', async ({ page, context }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL', false, `${FROZEN_URL}&nowa-wersja=1`);
+    const bar = page.locator('[data-banner="new-version"]');
+    await expect(bar).toBeVisible();
+    await expect(bar).toContainText('Jest nowa wersja Watch Tower.');
+    await expect(bar).toContainText('Odśwież, kiedy skończysz to, co robisz. Nic się nie zgubi.');
+    await expect(bar.locator('[data-new-version-reload]')).toHaveText('Odśwież teraz');
+    await openView(page, 'sched');
+    const live = page.locator('[data-page="schedule"] [data-live]');
+    await expect(live).toHaveAttribute('data-live', 'on');
+    await expect(live).toHaveText(/^na żywo · \d{2}:\d{2}$/);
+    await context.setOffline(true);
+    await expect(live).toHaveAttribute('data-live', 'off');
+    await expect(live).toHaveText(/^brak połączenia od \d{2}:\d{2}$/);
+    await context.setOffline(false);
+    await expect(live).toHaveAttribute('data-live', 'on');
+  });
+
+  test('część, która się nie wczyta (plik Ryzyk po wdrożeniu) → komunikat i „Odśwież”; pasek górny i menu zostają', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await page.route(/\/assets\/RisksView-[^/]+\.js$/, (r) => r.abort());
+    await page.evaluate(() => (document.querySelector('nav button[data-view="risk"]') as HTMLButtonElement).click());
+    const fail = page.locator('[data-part-failed]');
+    await expect(fail).toBeVisible({ timeout: 20_000 });
+    await expect(fail.locator('h2')).toHaveText('Ta część aplikacji zmieniła się po aktualizacji');
+    await expect(fail).toContainText('Odśwież stronę, żeby ją otworzyć. Twoje zapisane dane są bezpieczne.');
+    await expect(fail.locator('[data-part-reload]')).toHaveText('Odśwież');
+    await expect(page.locator('header.topbar')).toBeVisible();
+    await expect(page.locator('nav button[data-view="sched"]')).toBeVisible();
+    await page.unroute(/\/assets\/RisksView-[^/]+\.js$/);
+  });
+
+  test('telefon: pasek nowej wersji — 0 w bramie E8', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'SCX', false, `${FROZEN_URL}&nowa-wersja=1`);
+    await expect(page.locator('[data-banner="new-version"]')).toBeVisible();
+    const hits: Hit[] = [];
+    for (const width of [...WIDTHS, 768]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.waitForTimeout(150);
+      hits.push(...await measure(page, 'nowa-wersja', width, 'SCX'));
+    }
+    expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+  });
+});
+
 test.describe('wyglad/P3 pasek górny (E37 pkt 1–2, img/e37-after)', () => {
   test.describe.configure({ mode: 'serial', timeout: 300_000 });
 

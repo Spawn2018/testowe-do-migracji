@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { LiveMark } from '../components/shell/LiveMark';
 import { useTowerStore } from '../store/useTowerStore';
 import { filterLoads } from '../lib/selectors';
 import { StatusPill } from '../components/ui/StatusPill';
@@ -211,6 +212,7 @@ export function MapView() {
           {/* telefon: bez opisu częstotliwości — mapa ma się zmieścić w całości po otwarciu (B-7a) */}
           <span className="map-sub-cadence"> · {t(locale, 'p4_map_sub')}</span>
         </span>
+        <LiveMark />
         <div className="spacer" />
         <button type="button" className="chipbtn" onClick={() => setView('geo')}>
           {t(locale, 'nav_geo')}

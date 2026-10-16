@@ -1,4 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { NewVersionBar } from './components/shell/NewVersionBar';
+import { PartBoundary } from './components/shell/PartBoundary';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { applyThemeToDom } from './lib/theme';
 import { useTowerStore } from './store/useTowerStore';
@@ -174,6 +176,8 @@ function TowerShell() {
       {/* wyglad/P3 (E37): pasek górny i paski pod nim — Podgląd albo „Działasz jako”, potem komunikat HHL. */}
       <div className="topstack">
         <Topbar />
+        {/* wyglad/P10a-a (E22 pkt 3): nowa wersja po wdrożeniu */}
+        <NewVersionBar />
         {import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? (
           <>
             <PreviewBanner />
@@ -221,7 +225,8 @@ function TowerShell() {
               <button type="button" className="btn ghost" onClick={() => setEntryOpen(false)}>OK</button>
             </div>
           ) : null}
-          {body}
+          {/* wyglad/P10a-a (E22 pkt 4): część, która się nie wczyta, pokazuje komunikat — pasek i menu zostają */}
+          <PartBoundary key={view} name={view}>{body}</PartBoundary>
         </main>
       </div>
       <LoadDrawer />
