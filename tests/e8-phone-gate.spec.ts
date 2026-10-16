@@ -774,6 +774,133 @@ test.describe('wyglad/P10b-c Stan systemu (E23, E47, E19, E46)', () => {
   });
 });
 
+/* wyglad/P10b-d — E37 pkt 9 (pierwsze wejście, makieta E37 „zaproszona osoba”): 1 Zaproszenie, 2 Hasło, 3 Twoje dane
+   (telefon wymagany), 4 Powiadomienia i telefon; potem Kokpit z „Jak pracuję” otwartym raz. Demo: `pierwsze-wejscie=1`
+   (cała ścieżka dla firmy z Podglądu) i `pierwsze-wejscie=telefon` (sam krok 3 — konto bez telefonu przy logowaniu). */
+test.describe('wyglad/P10b-d pierwsze wejście (E37 pkt 9)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const startFlow = async (page: Page, role: string, flag: '1' | 'telefon') => {
+    await boot(page, role);
+    await page.goto(`${FROZEN_URL}&pierwsze-wejscie=${flag}`, { waitUntil: 'networkidle' });
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForSelector('[data-auth="first-entry"]');
+  };
+  const pos = (page: Page) => page.locator('[data-fe-pos]');
+
+  test('komputer KSH: 4 ekrany „n z 4”, hasło z oceną długości, telefon wymagany, powiadomienia; potem Kokpit z „Jak pracuję”', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await startFlow(page, 'KSH', '1');
+    await expect(page.locator('[data-fe-step="invite"]')).toBeVisible();
+    await expect(pos(page)).toHaveText('1 z 4');
+    await expect(page.locator('[data-fe-title]')).toHaveText('Zaproszenie do Watch Tower');
+    await expect(page.locator('[data-fe-lead]')).toHaveText(/^.+ z .+ zaprasza Cię do systemu kontroli transportów Śrem → Boden\.$/);
+    await expect(page.locator('[data-fe-invite] dt')).toHaveText(['Osoba', 'Firma', 'Konto']);
+    await expect(page.locator('[data-fe-invite] dd').nth(1)).toHaveText('KSH');
+    await expect(page.locator('[data-fe-invite] dd').nth(2)).toHaveText('Użytkownik');
+    await page.locator('[data-fe-next]').click();
+
+    await expect(page.locator('[data-fe-step="password"]')).toBeVisible();
+    await expect(pos(page)).toHaveText('2 z 4');
+    await page.fill('#fe-pw', 'krotkie');
+    await expect(page.locator('[data-fe-pwlen]')).toHaveText('7 znaków — za mało (min. 12)');
+    await page.fill('#fe-pw', 'Dlugie-haslo-2026');
+    await expect(page.locator('[data-fe-pwlen]')).toHaveText('17 znaków — dobrze (min. 12)');
+    await page.fill('#fe-pw2', 'Dlugie-haslo-2025');
+    await expect(page.locator('[data-fe-pwsame]')).toHaveText('Hasła się różnią');
+    await page.fill('#fe-pw2', 'Dlugie-haslo-2026');
+    await expect(page.locator('[data-fe-pwsame]')).toHaveText('✓ Hasła są takie same');
+    await page.locator('[data-fe-next]').click();
+
+    await expect(page.locator('[data-fe-step="details"]')).toBeVisible();
+    await expect(pos(page)).toHaveText('3 z 4');
+    await expect(page.locator('[data-fe-first]')).not.toHaveValue('');
+    await page.locator('[data-fe-next]').click();
+    await expect(page.locator('[data-fe-err]')).toHaveText('Wpisz numer telefonu: 7–11 cyfr, bez kierunkowego.');
+    await page.selectOption('[data-fe-cc]', 'SE');
+    await page.fill('[data-fe-phone]', '070 123 45 67');
+    await page.locator('[data-fe-next]').click();
+
+    await expect(page.locator('[data-fe-step="notify"]')).toBeVisible();
+    await expect(pos(page)).toHaveText('4 z 4');
+    await expect(page.locator('[data-fe-gets] li')).toHaveCount(3);
+    await expect(page.locator('[data-fe-push]')).toHaveText('Włącz powiadomienia na tym komputerze');
+    await page.locator('[data-fe-push]').click();
+    await expect(page.locator('[data-fe-push-msg]')).toHaveText('Powiadomienia włączone na tym urządzeniu.');
+    /* krok 4 można pominąć — „Zaczynam” działa bez włączania */
+    await page.locator('[data-fe-done]').click();
+
+    await expect(page.locator('[data-auth="first-entry"]')).toHaveCount(0);
+    await expect(page.locator('[data-help-panel]')).toBeVisible();
+    await expect(page.locator('[data-help-tab="how"]')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('[data-help-kind]')).toHaveAttribute('data-help-kind', 'CLIENT_USER');
+    expect(await page.evaluate(() => location.hash)).toMatch(/^#\/kokpit/);
+    /* „Jak pracuję” otwarty raz: po zamknięciu i zmianie widoku nie wraca */
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-help-panel]')).toHaveCount(0);
+    await openView(page, 'sched');
+    await page.waitForTimeout(400);
+    await expect(page.locator('[data-help-panel]')).toHaveCount(0);
+  });
+
+  test.describe('telefon 390 (iPhone)', () => {
+    test.use({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' });
+    test('4 ekrany: bez przewijania w bok, przyciski ≥ 44 px, tekst ≥ 12 px; iPhone — „Dodaj do ekranu głównego”', async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await startFlow(page, 'SCX', '1');
+      const check = async (step: string) => {
+        await expect(page.locator(`[data-fe-step="${step}"]`)).toBeVisible();
+        const m = await page.evaluate(() => {
+          const out: string[] = [];
+          if (document.documentElement.scrollWidth > window.innerWidth) out.push(`przewijanie w bok ${document.documentElement.scrollWidth}`);
+          for (const b of document.querySelectorAll<HTMLElement>('[data-auth="first-entry"] .fe-btn, [data-auth="first-entry"] button[type="submit"]')) {
+            if (b.getBoundingClientRect().height < 44) out.push(`przycisk < 44 px: ${b.textContent}`);
+          }
+          for (const n of document.querySelectorAll<HTMLElement>('[data-auth="first-entry"] .auth-form *')) {
+            if (!n.childNodes.length || ![...n.childNodes].some((c) => c.nodeType === 3 && c.textContent!.trim())) continue;
+            if (parseFloat(getComputedStyle(n).fontSize) < 12) out.push(`tekst < 12 px: ${n.textContent}`);
+          }
+          return out;
+        });
+        expect(m, step).toEqual([]);
+      };
+      await check('invite');
+      await expect(page.locator('[data-fe-invite] dd').nth(1)).toHaveText('Scandinavian Express');
+      await page.locator('[data-fe-next]').click();
+      await check('password');
+      await page.fill('#fe-pw', 'Dlugie-haslo-2026');
+      await page.fill('#fe-pw2', 'Dlugie-haslo-2026');
+      await page.locator('[data-fe-next]').click();
+      await check('details');
+      await page.fill('[data-fe-phone]', '600 100 200');
+      await page.locator('[data-fe-next]').click();
+      await check('notify');
+      await expect(page.locator('[data-fe-push]')).toHaveText('Włącz powiadomienia na tym telefonie');
+      await expect(page.locator('[data-fe-install="ios"]')).toContainText('Udostępnij → Dodaj do ekranu głównego');
+      await page.locator('[data-fe-done]').click();
+      await expect(page.locator('[data-help-panel]')).toBeVisible();
+      await expect(page.locator('[data-help-kind]')).toHaveAttribute('data-help-kind', 'CARRIER_DISPATCH');
+    });
+  });
+
+  test('telefon 390: konto bez telefonu — sam krok 3 bez numeru kroku; bez telefonu nie przejdzie', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await startFlow(page, 'HHL', 'telefon');
+    await expect(page.locator('[data-fe-step="details"]')).toBeVisible();
+    await expect(pos(page)).toHaveCount(0);
+    await expect(page.locator('[data-fe-missing]')).toHaveText('Na Twoim koncie nie ma jeszcze telefonu. Uzupełnij go, żeby przejść dalej.');
+    await expect(page.locator('[data-fe-next]')).toHaveText('Zapisz i przejdź dalej');
+    await page.locator('[data-fe-next]').click();
+    await expect(page.locator('[data-fe-err]')).toBeVisible();
+    await expect(page.locator('[data-auth="first-entry"]')).toBeVisible();
+    await page.fill('[data-fe-phone]', '600 100 200');
+    await page.locator('[data-fe-next]').click();
+    await expect(page.locator('[data-auth="first-entry"]')).toHaveCount(0);
+    /* przy samym kroku 3 Pomoc się nie otwiera (to nie pierwsze wejście) */
+    await page.waitForTimeout(400);
+    await expect(page.locator('[data-help-panel]')).toHaveCount(0);
+  });
+});
+
 test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
   test.describe.configure({ mode: 'serial', timeout: 120_000 });
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });

@@ -37,6 +37,8 @@ import { canSwitchView } from './lib/prodFacade';
 import { ACCESS_OPEN_LOAD, accessNoteText, parseAccessNote } from './lib/accessNote';
 import { t } from './i18n/messages';
 import { usePhoneTableLabels } from './lib/phoneTableLabels';
+/* wyglad/P10b-d (E37 pkt 9): podgląd pierwszego wejścia w demo; produkcja — AuthGate */
+import { DemoFirstEntry } from './auth/DemoFirstEntry';
 
 const loadDrawerChunk = () => import('./components/drawer/LoadDrawer').then((m) => ({ default: m.LoadDrawer }));
 const LoadDrawer = lazy(lazyRetry(loadDrawerChunk));
@@ -49,7 +51,6 @@ if (typeof window !== 'undefined') {
 
 // BK2: bramka logowania tylko w trybie Supabase (VITE_AUTH_MODE=supabase); demo bez zmian.
 const AuthGate = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./auth/AuthGate')) : null;
-
 function TowerShell() {
   const view = useTowerStore((s) => s.view);
   const role = useTowerStore((s) => s.role);
@@ -255,7 +256,7 @@ export default function App() {
         <Route path="/driver/:token" element={<DriverPwa />} />
         <Route
           path="/*"
-          element={AuthGate ? <Suspense fallback={null}><AuthGate><TowerShell /></AuthGate></Suspense> : <TowerShell />}
+          element={AuthGate ? <Suspense fallback={null}><AuthGate><TowerShell /></AuthGate></Suspense> : <DemoFirstEntry><TowerShell /></DemoFirstEntry>}
         />
       </Routes>
     </HashRouter>

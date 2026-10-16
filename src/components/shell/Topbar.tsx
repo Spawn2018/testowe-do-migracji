@@ -1,4 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { clearHelpOnce, peekHelpOnce } from '../../lib/firstEntryFlag';
 import { useTowerStore } from '../../store/useTowerStore';
 import { INTL_LOCALE, t, tp } from '../../i18n/messages';
 import { ROLE_META } from '../../lib/permissions';
@@ -144,7 +145,9 @@ export function Topbar() {
   const locale = useTowerStore((s) => s.locale);
   const setRole = useTowerStore((s) => s.setRole);
   const sailings = useTowerStore((s) => s.sailings);
-  const [help, setHelp] = useState(false);
+  /* wyglad/P10b-d (E37 pkt 9): po pierwszym wejściu Kokpit z „Jak pracuję” otwartym raz */
+  const [help, setHelp] = useState(() => peekHelpOnce());
+  useEffect(() => { clearHelpOnce(); }, []);
   const [ops, setOps] = useState({ wk: 0, ferryRows: [] as FerryRow[], date: '' });
 
   const closeHelp = useCallback(() => setHelp(false), []);
