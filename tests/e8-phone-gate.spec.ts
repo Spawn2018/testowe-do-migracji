@@ -1009,6 +1009,90 @@ test.describe('wyglad/P7-c Harmonogram w układzie pliku (E38, E30, E20)', () =>
   });
 });
 
+/* wyglad/P7-d — E30 pkt 7: Harmonogram › Rejsy — nagłówek obu przepraw, domyślnie przyszłe rejsy do Szwecji, „Pokaż powroty”,
+   „Stena Line” zamiast klucza, kolumna „Transporty” z kodami (kliknięcie filtruje Harmonogram), zasięg rozkładów pod tabelą,
+   edycja tylko Administrator HHL; telefon — karty (E8). Rejsy dodane w teście przez „Dodaj rejs” (dane wymyślone, G-09). */
+test.describe('wyglad/P7-d Rejsy (E30 pkt 7)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const openRejsy = async (page: Page) => {
+    await openView(page, 'sched');
+    await page.locator('[data-sched-tab="sailings"]').click();
+    await expect(page.locator('[data-sailings]')).toBeVisible();
+  };
+  const addSailing = async (page: Page, vessel: string, route: string, dep: string, arr: string) => {
+    await page.locator('[data-sail-new]').click();
+    const form = page.locator('[data-sail-form]');
+    await form.locator('select[name="vessel"]').selectOption(vessel);
+    await form.locator('select[name="route"]').selectOption(route);
+    await form.locator('input[name="dep"]').fill(dep);
+    await form.locator('input[name="arr"]').fill(arr);
+    await form.locator('[data-sail-submit]').click();
+    await expect(form).toHaveCount(0);
+  };
+
+  test('komputer 1366, HHL: kolumny z makiety, tylko do Szwecji, „Pokaż powroty”, Stena Line, zasięg, kody filtrują Harmonogram', async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 900 });
+    await boot(page, 'HHL');
+    await openRejsy(page);
+    await expect(page.locator('[data-page="schedule"] .panel-hd .sub')).toHaveText('Gdańsk → Nynäshamn i Gdynia → Karlskrona');
+    expect(await page.locator('[data-sailings] thead th').allInnerTexts()).toEqual(['Odejście', 'Statek', 'Trasa', 'Przypłynięcie', 'Źródło', 'Transporty', '']);
+    await expect(page.locator('[data-sail-future]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('[data-sail-returns]')).toHaveAttribute('aria-pressed', 'false');
+    await addSailing(page, 'Stena Estelle', 'GDY-KAA', '2026-09-24T08:00', '2026-09-24T17:45');
+    await addSailing(page, 'Stena Spirit', 'KAA-GDY', '2026-09-24T09:00', '2026-09-24T19:30');
+    const routes = () => page.locator('[data-sailings] tbody tr[data-sailing] td.sv-route').allInnerTexts();
+    expect((await routes()).every((r) => r === 'GDN → NYN' || r === 'GDY → KAA'), 'domyślnie tylko do Szwecji').toBe(true);
+    expect(await routes()).toContain('GDY → KAA');
+    await page.locator('[data-sail-returns]').click();
+    expect(await routes()).toContain('KAA → GDY');
+    await page.locator('[data-sail-returns]').click();
+    expect(await routes()).not.toContain('KAA → GDY');
+    await expect(page.locator('[data-sailings]')).not.toContainText('sail_src_');
+    await expect(page.locator('[data-sailings]')).not.toContainText('sv_');
+    await expect(page.locator('[data-sail-reach]')).toHaveText(/^Rozkład w bazie: Stena Line do \d\d\.\d\d, Polferries do \d\d\.\d\d\.$/);
+    /* „Przyszłe” wyłączone pokazuje też minione rejsy */
+    const futureN = await page.locator('[data-sailings] tbody tr[data-sailing]').count();
+    await page.locator('[data-sail-future]').click();
+    expect(await page.locator('[data-sailings] tbody tr[data-sailing]').count()).toBeGreaterThan(futureN);
+    await page.locator('[data-sail-future]').click();
+    /* odwołany rejs z przypisanym transportem: kod w kolumnie „Transporty” → Harmonogram z filtrem rejsu */
+    const row = page.locator('[data-sailings] tbody tr[data-sail-status="ODWOLANY"]', { has: page.locator('[data-sail-loads]') }).first();
+    await expect(row.locator('.pill')).toHaveText('odwołany');
+    const codes = (await row.locator('[data-sail-loads]').innerText()).split(', ');
+    await row.locator('[data-sail-loads]').click();
+    await expect(page.locator('[data-sched-tab="loads"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('[data-sail-filter]')).toContainText('Rejs: ');
+    await expect(page.locator('[data-sched-layout] tbody tr[data-load]')).toHaveCount(codes.length);
+    for (const c of codes) await expect(page.locator('[data-sched-layout] tbody')).toContainText(c);
+    await page.locator('[data-sail-filter]').click();
+    await expect(page.locator('[data-sail-filter]')).toHaveCount(0);
+    expect(await page.locator('[data-sched-layout] tbody tr[data-load]').count()).toBeGreaterThan(codes.length);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1366);
+  });
+
+  test('komputer 1440, KSH: tylko podgląd — bez „Dodaj rejs”, „Opóźnienie” i „Odwołaj”, zdanie o Administratorze HHL', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'KSH');
+    await openRejsy(page);
+    await expect(page.locator('[data-sail-new]')).toHaveCount(0);
+    await expect(page.locator('[data-sail-delay], [data-sail-cancel]')).toHaveCount(0);
+    expect(await page.locator('[data-sailings] thead th').allInnerTexts()).toEqual(['Odejście', 'Statek', 'Trasa', 'Przypłynięcie', 'Źródło', 'Transporty']);
+    await expect(page.locator('[data-sailings] .sv-foot')).toContainText('Rejsy zmienia tylko Administrator HHL.');
+  });
+
+  test('telefon 390, HHL: karty zamiast tabeli, cele ≥ 44 px, bez przewijania w bok', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', true);
+    await openRejsy(page);
+    await expect(page.locator('[data-sailings] table')).toHaveCount(0);
+    const cards = page.locator('[data-sail-cards] [data-sailing]');
+    expect(await cards.count()).toBeGreaterThan(0);
+    const small = await page.locator('[data-sailings] button').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height < 44).map((e) => e.textContent));
+    expect(small).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  });
+});
+
 test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
   test.describe.configure({ mode: 'serial', timeout: 120_000 });
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
