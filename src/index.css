@@ -1431,8 +1431,6 @@ img,video{max-width:100%;height:auto}
   .kpis.ck-grid .kpi.ck-tile:nth-last-child(-n+2):nth-child(odd)~.ck-tile{border-bottom:0}
   .ck-tile .k,.ck-tile .d{font-size:13px}
   .ck-tile .v{font-size:30px;line-height:1.05;margin-top:2px}
-  /* rok w dacie rejsu (właściciel 16.10.2026): „24.09.2026, 18:00” łamie się po przecinku — data i godzina w całości */
-  .ck-tile[data-ck="ferry"] .v{white-space:normal;font-size:24px}
   .ck-of{font-size:14px}
   .ck-tile .d{margin-top:3px}
   /* telefon (img/e9-after): pod kafelkami bez stopki i bez znacznika kursu — kwoty marży na telefonie nie ma */
