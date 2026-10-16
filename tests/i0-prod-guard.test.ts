@@ -81,13 +81,14 @@ describe('I-0: strażnik paczki produkcyjnej', () => {
     const m = loadSeedMarkers()
     expect(m.codes.length).toBeGreaterThanOrEqual(60)
     expect(m.codes).toEqual(expect.arrayContaining(['SG-34', 'SG-14', 'T-17']))
-    expect(m.phrases).toContain('Permit mismatch')
+    // audyt-C (C-01, E7 „bez kodów”): tytuł ryzyka SG-34 po polsku — fraza demo z nowego tytułu
+    expect(m.phrases).toContain('przekracza wysokość i szerokość')
     expect(m.amounts).toContain('1 840 PLN')
     expect(m.amounts).toContain('3758.54')
     expect(m.all.join('\n')).not.toMatch(/Wawel|Nova Star|Gävle|Gavle/)
   })
 
-  it('build produkcyjny nie zawiera znaczników z seeda (kody, Permit mismatch, kwoty)', () => {
+  it('build produkcyjny nie zawiera znaczników z seeda (kody, frazy ryzyk demo, kwoty)', () => {
     const hits = findSeedMarkerHits(out)
     expect(hits, hits.slice(0, 20).join('\n')).toEqual([])
   })

@@ -29,7 +29,7 @@ import { weekKeyLabel } from '../lib/p5Invoices';
 import {
   cmrKind, codesText, filterFiles, reqCount, reqVisible, REQ_KEYS, responsibleOrg, seenBy, type FileFilter, type ReqKey,
 } from '../lib/p5Docs';
-import { permitsOf, policiesOf, type PolicyView } from '../lib/p5Source';
+import { docRequirementsStart, docsSeenOf, permitsOf, policiesOf, type PolicyView } from '../lib/p5Source';
 import { docLabel, UploadDocModal } from '../components/docs/UploadDocModal';
 import { up } from '../components/options/up';
 import '../components/finance/finance.css';
@@ -42,7 +42,8 @@ const InsurancePolicyForm =
 
 /** Rodzaje do wgrania przy transporcie (polisy dodaje się raz — formularz polis, G-21). */
 const UPLOAD_KINDS: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR'];
-const FILE_KINDS: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR', 'INSURANCE', 'POD', 'LASHING_PHOTOS', 'DRAWING', 'INVOICE'];
+/** Filtr „Rodzaj”: zezwolenia, CMR, polisy i faktury — bez POD, rysunku i zdjęć mocowania (E31 19:11, 19:51; audyt-C C-04). */
+const FILE_KINDS: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR', 'INSURANCE', 'INVOICE'];
 const MAX_FILES = 60;
 
 /* rok zawsze — właściciel 16.10.2026: „08.10.2026”, „08.10.2026, 12:00”, „01.10.2026–31.10.2026” */
@@ -69,10 +70,12 @@ function policyNote(locale: Locale, p: PolicyView): string {
 }
 
 export function DocsView() {
-  const documents = useTowerStore((s) => s.documents);
+  const allDocuments = useTowerStore((s) => s.documents);
   const loads = useTowerStore((s) => s.loads);
   const locale = useTowerStore((s) => s.locale);
   const role = useTowerStore((s) => s.role) as RoleId;
+  /* audyt-C C-06 (E31 pytanie 3 B): pliki, które widzi ta firma — w produkcji decyduje RLS, w demo `visibleTo` */
+  const documents = useMemo(() => docsSeenOf(allDocuments, role), [allDocuments, role]);
   const phone = useIsPhone();
   const nowMs = getNowMs();
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
@@ -82,7 +85,7 @@ export function DocsView() {
   const [packOpen, setPackOpen] = useState(false);
   const packRef = useRef<HTMLDivElement>(null);
   /* III-6: wymagalność i stan z bazy (produkcja) albo wartości startowe (demo) — odczyt bez zmian */
-  const [reqs, setReqs] = useState<DocRequirement[]>(DEFAULT_DOC_REQUIREMENTS);
+  const [reqs, setReqs] = useState<DocRequirement[]>(docRequirementsStart);
   const [serverStatus, setServerStatus] = useState<DocStatusRow[] | null>(null);
   const [insuranceCover, setInsuranceCover] = useState<{ covered: number; total: number } | null>(null);
   useEffect(() => {

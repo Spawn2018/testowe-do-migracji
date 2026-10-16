@@ -4,7 +4,7 @@
  * Warunek `import.meta.env.VITE_AUTH_MODE` wpisany wprost, żeby build produkcyjny wyciął przykłady (strażnik I-0).
  */
 import type { DeliveredCheck, Document, Geofence, Load, LoadEvent, ReadyGap, TrackingLinkInfo } from '../types';
-import { demoAutoMeta, demoDeliveredCheck, demoTrackingLink } from './p4cDemo';
+import { demoAutoMeta, demoDeliveredCheck, demoReadyGaps, demoTrackingLink } from './p4cDemo';
 import { computeReadyGaps } from './readyGaps';
 import { dayTime, isoMs } from './statusAxis';
 
@@ -13,11 +13,14 @@ export function trackingLinkOf(load: Load, loads: readonly Load[], nowIso: strin
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoTrackingLink(load, loads, nowIso) : null;
 }
 
-/** null = brak danych (nic nie pokazujemy i nie blokujemy); [] = komplet. */
-export function readyGapsOf(load: Load, docs: readonly Document[]): ReadyGap[] | null {
+/**
+ * null = brak danych (nic nie pokazujemy i nie blokujemy); [] = komplet.
+ * `companyDocs` — wszystkie dokumenty (pliki firmy bez transportu); używane tylko w demo (polisa SCX firmy, audyt-C C-06).
+ */
+export function readyGapsOf(load: Load, docs: readonly Document[], companyDocs: readonly Document[] = []): ReadyGap[] | null {
   if (load.readyGaps !== undefined) return load.readyGaps;
-  /* jedna definicja E32 pkt 6 — ta sama w demo i w produkcji (K2.2); bez przykładów z p4cDemo */
-  return computeReadyGaps(load, docs);
+  /* jedna definicja E32 pkt 6 — ta sama w demo i w produkcji (K2.2) */
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoReadyGaps(load, docs, companyDocs) : computeReadyGaps(load, docs);
 }
 
 /** B1 / L14: sprawa „czy dostarczono?” z bazy (load.deliveredCheck) albo z GEOFENCE_EXIT SITE przy krótkim postoju. */

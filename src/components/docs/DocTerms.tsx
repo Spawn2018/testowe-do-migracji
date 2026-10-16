@@ -9,7 +9,8 @@ import { useTowerStore } from '../../store/useTowerStore';
 import { t } from '../../i18n/messages';
 import { ft, ftp } from '../../i18n/p5';
 import type { DocCategory } from '../../types';
-import { DEFAULT_DOC_REQUIREMENTS, type DocRequirement } from '../../lib/docRequirements';
+import type { DocRequirement } from '../../lib/docRequirements';
+import { docRequirementsStart } from '../../lib/p5Source';
 import { cmrKind, responsibleOrg } from '../../lib/p5Docs';
 import { up } from '../options/up';
 import '../finance/finance.css';
@@ -19,7 +20,7 @@ const KEYS: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR'];
 
 export default function DocTerms({ canEdit }: { canEdit: boolean }) {
   const locale = useTowerStore((s) => s.locale);
-  const [reqs, setReqs] = useState<DocRequirement[]>(DEFAULT_DOC_REQUIREMENTS);
+  const [reqs, setReqs] = useState<DocRequirement[]>(docRequirementsStart);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [edit, setEdit] = useState<DocRequirement | null>(null);
   const [tick, setTick] = useState(0);

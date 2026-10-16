@@ -155,9 +155,9 @@ const pl: Dict = {
   rk_seed_weather_ice_meta: 'Odpowiada: H&H Logistics · przyczyna: oblodzenie / pogoda',
   rk_seed_ferry_cancel: 'Prom anulowany — M/F Nova Star · 24.09.2026',
   rk_seed_ferry_cancel_meta: 'Odpowiada: H&H Logistics · status armatora: anulowany',
-  rk_seed_e4_closure: 'E4 zamknięta — Luleå północ · objazd +120 min',
+  rk_seed_e4_closure: 'Högakustenbron (E4) zamknięty — porywy 31 m/s',
   rk_route_obstacle: 'Przeszkoda na trasie: {place}. Limit {limit}, zestaw {value}.',
-  rk_seed_e4_closure_meta: 'Odpowiada: Scandinavian Express · E4 zamknięta · źródło: Trafikverket',
+  rk_seed_e4_closure_meta: 'Odpowiada: Scandinavian Express · Högakustenbron (E4) zamknięty · źródło: Trafikverket',
 };
 
 const en: Dict = {
@@ -302,9 +302,9 @@ const en: Dict = {
   rk_seed_weather_ice_meta: 'Owner: H&H Logistics · cause: icing / weather',
   rk_seed_ferry_cancel: 'Ferry cancelled — M/F Nova Star · 24.09.2026',
   rk_seed_ferry_cancel_meta: 'Owner: H&H Logistics · operator status: cancelled',
-  rk_seed_e4_closure: 'E4 closed — Luleå north · detour +120 min',
+  rk_seed_e4_closure: 'Högakustenbron (E4) closed — gusts 31 m/s',
   rk_route_obstacle: 'Obstacle on the route: {place}. Limit {limit}, vehicle {value}.',
-  rk_seed_e4_closure_meta: 'Owner: Scandinavian Express · E4 closed · source: Trafikverket',
+  rk_seed_e4_closure_meta: 'Owner: Scandinavian Express · Högakustenbron (E4) closed · source: Trafikverket',
 };
 
 const sv: Dict = {
@@ -449,9 +449,9 @@ const sv: Dict = {
   rk_seed_weather_ice_meta: 'Ansvarig: H&H Logistics · orsak: isbildning / väder',
   rk_seed_ferry_cancel: 'Färjan inställd — M/F Nova Star · 24.09.2026',
   rk_seed_ferry_cancel_meta: 'Ansvarig: H&H Logistics · rederiets status: inställd',
-  rk_seed_e4_closure: 'E4 avstängd — Luleå norr · omledning +120 min',
+  rk_seed_e4_closure: 'Högakustenbron (E4) avstängd — vindbyar 31 m/s',
   rk_route_obstacle: 'Hinder på vägen: {place}. Gräns {limit}, fordon {value}.',
-  rk_seed_e4_closure_meta: 'Ansvarig: Scandinavian Express · E4 stängd · källa: Trafikverket',
+  rk_seed_e4_closure_meta: 'Ansvarig: Scandinavian Express · Högakustenbron (E4) avstängd · källa: Trafikverket',
 };
 
 // I-0: teksty tylko dla danych demo (identyfikatory transportów demo, statyczne banery) — w demoOnly.ts,

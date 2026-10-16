@@ -14,7 +14,7 @@ import { caseAssignmentsOf, caseHistoryOf, caseMeOf, casePeopleOf, sampleDecisio
 import { feeRulesOf, feeSuggestionsOf } from '../../lib/p5Source';
 import { deliveredCheckOf } from '../../lib/p4cSource';
 import { detourCasesOf, detourDecideOf } from '../../lib/e49Source';
-import { kmText, minText, urgentOf } from '../../lib/e49Detour';
+import { kmText, mergeClosures, minText, urgentOf } from '../../lib/e49Detour';
 import { e49t } from '../../i18n/e49';
 import { timeOnly } from '../../lib/statusAxis';
 import { mayResolveDecision } from '../../lib/decisionAccess';
@@ -92,15 +92,24 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
       })(),
     }));
     const extras = todoExtrasOf(role, items, cardLoads);
-    /* wyglad/E49: zamknięty most albo droga — sprawa SCX „Objazd czy postój?” (D-20261016-0230-01 Z3) */
-    for (const c of detourCasesOf(role, loads, nowIso, cardLoads)) {
-      if (detourDone.has(c.id)) continue;
+    /* wyglad/E49: zamknięty most albo droga — sprawa SCX „Objazd czy postój?” (D-20261016-0230-01 Z3);
+       audyt-C (C-02): ryzyko zamknięcia przy tym transporcie łączy się ze sprawą (jedna sprawa w karcie) */
+    const detours = detourCasesOf(role, loads, nowIso, cardLoads).filter((c) => !detourDone.has(c.id));
+    const joined = mergeClosures(visRisks, detours);
+    /* audyt-C (C-02): sprawa po połączeniu ma co najmniej wagę połączonego ryzyka zamknięcia (np. „krytyczne”) — stoi tam, gdzie stało ryzyko */
+    const sevRank = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 } as const;
+    const mergedSev = (caseId: string): 'CRITICAL' | 'HIGH' | null => {
+      const ids = new Set(joined.mergedIds[caseId] ?? []);
+      return visRisks.some((r) => ids.has(r.id) && sevRank[r.severity as keyof typeof sevRank] >= 4) ? 'CRITICAL' : null;
+    };
+    for (const c of detours) {
       extras.push({
-        id: c.id, src: 'DETOUR', loadId: c.loadId, owner: 'SCX', severity: urgentOf(c, nowIso) ? 'CRITICAL' : 'HIGH',
+        id: c.id, src: 'DETOUR', loadId: c.loadId, owner: 'SCX', severity: urgentOf(c, nowIso) || mergedSev(c.id) === 'CRITICAL' ? 'CRITICAL' : 'HIGH',
         dueAt: c.decideByIso, overdue: Date.parse(c.decideByIso) < Date.parse(nowIso), merged: 1, go: 'NONE', ageHours: 0, detour: c,
+        ...(joined.mergedIds[c.id] ? { mergedIds: [c.id, ...joined.mergedIds[c.id]] } : {}),
       });
     }
-    return extras.length ? buildTodo({ risks: visRisks, decisions: decs, extras, nowIso }) : base;
+    return extras.length ? buildTodo({ risks: joined.risks, decisions: decs, extras, nowIso }) : base;
   }, [visRisks, decs, nowIso, loads, geofences, role, feeDone, checkDone, detourDone, events]);
 
   const assigneeOf = (id: string): CasePerson | null => {

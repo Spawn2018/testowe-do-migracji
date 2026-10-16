@@ -2,7 +2,7 @@
  * wyglad/P5 — panel transportu › „Dokumenty” (E31 pkt 5, img/e31-after „SG-03 · Dokumenty”).
  * Lista wymaganych dokumentów tego transportu ze stanem (jest / brak / po terminie z datą) i kto wgrywa;
  * „Wgraj” tylko przy tym, co ta firma może wgrać (SCX i HHL — zezwolenia i CMR; KSH nic, 19:11).
- * Polisy podpinają się same (G-21): przewoźnika — numer i ważność, HHL — numer albo „brak · wgrywa HHL”
+ * Polisy podpinają się same (G-21): przewoźnika i Polisa HHL — numer i ważność z „AUTO” albo „brak” (audyt-C C-07)
  * (KSH widzi polisę HHL, SCX swoją, HHL obie). „Inne pliki” (bez „+ Dodaj” do rodzaju „Inne”), „Pobierz wszystkie (ZIP)” z kodem w nazwie.
  * „Wgraj” otwiera okno „Wgraj dokument” z wybranym transportem. Zapis jak dziś (`attachDocumentFile`).
  */
@@ -14,10 +14,10 @@ import { downloadDocumentFile } from '../../lib/docsIo';
 import { downloadStoredDocument } from '../../lib/docFiles';
 import { isStoredDoc } from '../../data/registry';
 import { downloadDocumentsZip } from '../../lib/zipDocs';
-import { DEFAULT_DOC_REQUIREMENTS, docStatusRows } from '../../lib/docRequirements';
+import { docStatusRows } from '../../lib/docRequirements';
 import { cmrKind, reqVisible } from '../../lib/p5Docs';
 import { getDocReqCache } from '../../lib/docReqCache';
-import { policiesOf } from '../../lib/p5Source';
+import { docRequirementsStart, policiesOf } from '../../lib/p5Source';
 import { lazyRetry } from '../../lib/lazyRetry';
 import { t, tp } from '../../i18n/messages';
 import { ft, ftp } from '../../i18n/p5';
@@ -54,7 +54,7 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
   /* ten sam odczyt co strona Dokumenty (baza); w demo — wartości startowe; w produkcji bez odczytu — bez terminów */
   const cached = getDocReqCache();
   const prod = import.meta.env.VITE_AUTH_MODE === 'supabase';
-  const reqs = cached?.reqs ?? DEFAULT_DOC_REQUIREMENTS;
+  const reqs = cached?.reqs ?? docRequirementsStart();
   const rows = useMemo(
     () => (cached ? cached.status.filter((r) => r.loadId === load.id) : prod ? [] : docStatusRows([load], docs, reqs, nowMs)),
     [cached, prod, load, docs, reqs, nowMs],
