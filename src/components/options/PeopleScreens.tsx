@@ -8,6 +8,7 @@ import { useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { up } from './up';
+import { m2 } from '../../i18n/mfa2';
 import { ACCOUNT_KINDS, type AccountKind } from './types';
 import { IcoCall } from './icons';
 
@@ -290,8 +291,10 @@ export function BroadcastScreen({ locale, draft, history, readOnly, mark, onPubl
 /* ---------- Moje konto ---------- */
 
 export type MyDevice = { id: string; name: string; last: string; push: boolean; current: boolean };
+/** wyglad/2fa: urządzenie z aplikacją kodów (TOTP, `status = verified`) — nazwa i data dodania („12.10.2026”). */
+export type MfaDevice = { id: string; name: string; since: string };
 
-export function AccountScreen({ locale, me, mfa, devices, mark, onSave, onPassword, onMfa, onRemoveDevice }: {
+export function AccountScreen({ locale, me, mfa, devices, mark, onSave, onPassword, onMfa, onRemoveDevice, mfaDevices, mfaCode, onMfaAdd, onMfaRemove, readOnly }: {
   locale: Locale;
   me: { first: string; last: string; phone: string; mail: string; kind: AccountKind; lastLogin: string | null };
   mfa: boolean;
@@ -301,8 +304,18 @@ export function AccountScreen({ locale, me, mfa, devices, mark, onSave, onPasswo
   onPassword?: () => void;
   onMfa?: () => void;
   onRemoveDevice?: (id: string) => void;
+  /** wyglad/2fa: urządzenia 2FA (tylko zweryfikowane); brak — lista niewidoczna */
+  mfaDevices?: MfaDevice[];
+  /** sesja potwierdzona kodem 2FA (aal2) — wtedy można dodawać i usuwać urządzenia */
+  mfaCode?: boolean;
+  onMfaAdd?: () => void;
+  onMfaRemove?: (id: string) => void;
+  /** Podgląd (W38): pola i przyciski nieaktywne */
+  readOnly?: boolean;
 }) {
   const [v, setV] = useState({ first: me.first, last: me.last, phone: me.phone });
+  const [askRemove, setAskRemove] = useState<MfaDevice | null>(null);
+  const ro = !!readOnly;
   const initials = `${me.first.slice(0, 1)}${me.last.slice(0, 1)}`.toUpperCase();
   return (
     <div className="ox-account">
@@ -321,12 +334,13 @@ export function AccountScreen({ locale, me, mfa, devices, mark, onSave, onPasswo
         <header className="ox-panel-hd"><h3>{t(locale, 'p3c_m_data')}</h3></header>
         <div className="ox-panel-bd">
           <div className="ox-grid2">
-            <label className="ox-field"><span>{up(t(locale, 'p3c_m_first'))}</span><input className="input" value={v.first} onChange={(e) => setV({ ...v, first: e.target.value })} /></label>
-            <label className="ox-field"><span>{up(t(locale, 'p3c_m_last'))}</span><input className="input" value={v.last} onChange={(e) => setV({ ...v, last: e.target.value })} /></label>
-            <label className="ox-field"><span>{up(t(locale, 'p3c_m_phone'))}</span><input className={`input${v.phone.trim() ? '' : ' is-invalid'}`} inputMode="tel" placeholder="+48" value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} /><small className="ox-muted">{t(locale, 'p3c_m_phone_note')}</small></label>
+            <label className="ox-field"><span>{up(t(locale, 'p3c_m_first'))}</span><input className="input" value={v.first} readOnly={ro} onChange={(e) => setV({ ...v, first: e.target.value })} /></label>
+            <label className="ox-field"><span>{up(t(locale, 'p3c_m_last'))}</span><input className="input" value={v.last} readOnly={ro} onChange={(e) => setV({ ...v, last: e.target.value })} /></label>
+            <label className="ox-field"><span>{up(t(locale, 'p3c_m_phone'))}</span><input className={`input${v.phone.trim() ? '' : ' is-invalid'}`} inputMode="tel" placeholder="+48" value={v.phone} readOnly={ro} onChange={(e) => setV({ ...v, phone: e.target.value })} /><small className="ox-muted">{t(locale, 'p3c_m_phone_note')}</small></label>
             <label className="ox-field"><span>{up(t(locale, 'p3c_m_mail'))}</span><input className="input" value={me.mail} readOnly /><small className="ox-muted">{t(locale, 'p3c_m_mail_note')}</small></label>
           </div>
-          <div className="ox-actions"><button type="button" className="btn ox-btn" onClick={() => onSave?.(v)}>{t(locale, 'p3c_m_save')}</button></div>
+          <div className="ox-actions"><button type="button" className="btn ox-btn" disabled={ro} onClick={() => onSave?.(v)}>{t(locale, 'p3c_m_save')}</button></div>
+          {ro ? <p className="ox-foot" data-acc-preview>{m2('m2_preview')}</p> : null}
         </div>
       </section>
       <div className="ox-users-split">
@@ -334,14 +348,39 @@ export function AccountScreen({ locale, me, mfa, devices, mark, onSave, onPasswo
           <header className="ox-panel-hd"><h3>{t(locale, 'p3c_m_pw')}</h3></header>
           <div className="ox-panel-bd">
             <p className="ox-panel-note ox-flush">{t(locale, 'p3c_m_pw_note')}</p>
-            <div className="ox-actions ox-actions-start"><button type="button" className="btn ghost ox-btn" onClick={onPassword}>{t(locale, 'p3c_m_pw_change')}</button></div>
+            <div className="ox-actions ox-actions-start"><button type="button" className="btn ghost ox-btn" disabled={ro} onClick={onPassword}>{t(locale, 'p3c_m_pw_change')}</button></div>
           </div>
         </section>
         <section className="ox-panel">
           <header className="ox-panel-hd"><h3>{t(locale, 'p3c_m_2fa')}</h3><span className={`ox-tag ${mfa ? 'ox-tag-active' : 'ox-tag-plain'}`}>{up(t(locale, mfa ? 'p3c_m_2fa_on' : 'p3c_m_2fa_off'))}</span></header>
           <div className="ox-panel-bd">
             <p className="ox-panel-note ox-flush">{t(locale, 'p3c_m_2fa_note')}</p>
-            {mfa ? null : <div className="ox-actions ox-actions-start"><button type="button" className="btn ghost ox-btn" onClick={onMfa}>{t(locale, 'p3c_m_2fa_enable')}</button></div>}
+            {mfa ? null : <div className="ox-actions ox-actions-start"><button type="button" className="btn ghost ox-btn" disabled={ro} onClick={onMfa}>{t(locale, 'p3c_m_2fa_enable')}</button></div>}
+            {mfa && mfaDevices ? (
+              <div className="ox-mfa" data-mfa-devices={mfaDevices.length}>
+                <span className="ox-eyebrow">{up(m2('m2_devices'))}</span>
+                <ul className="ox-mfa-list">
+                  {mfaDevices.map((d) => (
+                    <li key={d.id} data-mfa-device>
+                      <span className="ox-tile-copy"><b data-content>{d.name}</b><span>{m2('m2_since', { d: d.since })}</span></span>
+                      {mfaDevices.length > 1 ? (
+                        <button type="button" className="btn ghost ox-btn" data-mfa-remove disabled={ro || !mfaCode || !onMfaRemove} onClick={() => setAskRemove(d)}>{m2('m2_remove')}</button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+                {mfaDevices.length < 2 ? (
+                  <>
+                    <p className="ox-foot">{m2('m2_second_hint')}</p>
+                    <div className="ox-actions ox-actions-start">
+                      <button type="button" className="btn ox-btn" data-mfa-add disabled={ro || !mfaCode || !onMfaAdd} onClick={onMfaAdd}>{m2('m2_add_second')}</button>
+                    </div>
+                  </>
+                ) : null}
+                {mfaDevices.length === 1 ? <p className="ox-foot">{m2('m2_remove_last')}</p> : null}
+                {!mfaCode && !ro ? <p className="ox-foot" data-mfa-needs-code>{m2('m2_needs_code')}</p> : null}
+              </div>
+            ) : null}
           </div>
         </section>
       </div>
@@ -354,11 +393,23 @@ export function AccountScreen({ locale, me, mfa, devices, mark, onSave, onPasswo
                 <b data-content>{d.name}{d.current ? ` · ${t(locale, 'p3c_m_dev_this')}` : ''}</b>
                 <span>{[t(locale, 'p3c_m_dev_last').replace('{when}', d.last), d.push ? t(locale, 'p3c_m_dev_push') : null].filter(Boolean).join(' · ')}</span>
               </span>
-              {d.current ? null : <button type="button" className="btn ghost ox-btn" onClick={() => onRemoveDevice?.(d.id)}>{t(locale, 'p3c_m_dev_remove')}</button>}
+              {d.current ? null : <button type="button" className="btn ghost ox-btn" disabled={ro} onClick={() => onRemoveDevice?.(d.id)}>{t(locale, 'p3c_m_dev_remove')}</button>}
             </li>
           ))}
         </ul>
       </section>
+      {askRemove ? (
+        <div className="ox-scrim" role="presentation" onClick={() => setAskRemove(null)}>
+          <div className="ox-dialog" role="dialog" aria-modal="true" aria-labelledby="ox-mfa-q" onClick={(e) => e.stopPropagation()}>
+            <h3 id="ox-mfa-q">{m2('m2_q_remove', { name: askRemove.name })}</h3>
+            <p>{m2('m2_q_remove_fx')}</p>
+            <div className="ox-actions">
+              <button type="button" className="btn ghost ox-btn" onClick={() => setAskRemove(null)}>{m2('m2_cancel')}</button>
+              <button type="button" className="btn ox-btn" data-mfa-remove-ok onClick={() => { onMfaRemove?.(askRemove.id); setAskRemove(null); }}>{m2('m2_remove')}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

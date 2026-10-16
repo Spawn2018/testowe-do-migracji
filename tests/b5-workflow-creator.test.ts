@@ -6,7 +6,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setAuthProfile } from '../src/auth/profile';
 import {
   actionsFromText, actionsToText, draftCondition, draftFromRule, emptyDraft, groupOf, localDuplicateCheck, logicToRows,
@@ -19,20 +19,29 @@ vi.mock('../src/lib/prodFacade', async (orig) => ({ ...(await orig<typeof import
 
 const profile = (role: string) => ({ user_id: 'u', email: 'a@log-mar.pl', full_name: 'A', role, org_code: 'HHL', org_name: 'HHL', locale: 'pl', active: true }) as never;
 
+/* wyglad/P8-d (E35, decyzja 08.10.2026, 12:14): w demo Automatyzacje to strona E35 (tests/p8d-rules.test.ts,
+   e8-phone-gate „wyglad/P8-d”); widok B-5 zostaje w produkcji do podłączenia źródła reguł w P8 — tu sprawdzany
+   w trybie produkcji (VITE_AUTH_MODE=supabase, rulesReady() = false). */
 describe('B-5: przycisk „Nowa automatyzacja” (produkcja)', () => {
-  afterEach(() => setAuthProfile(null));
-  it('HHL_ADMIN: przycisk, edycja i aktywne włączniki', async () => {
+  /*
+   * Po P8-d store w supabase startuje pusty (BK3); SSR zustanda nie widzi setState, więc wierszy
+   * z wf-edit / .sw może nie być. Przycisk i brak przycisku sprawdzamy w HTML; edycję/włączniki — w kodzie Legacy.
+   */
+  beforeEach(() => { vi.stubEnv('VITE_AUTH_MODE', 'supabase'); });
+  afterEach(() => { setAuthProfile(null); vi.unstubAllEnvs(); });
+  it('HHL_ADMIN: przycisk; w Legacy — edycja i włączniki bez disabled dla manage', async () => {
     setAuthProfile(profile('HHL_ADMIN'));
     const { WorkflowsView } = await import('../src/views/WorkflowsView');
     const html = renderToStaticMarkup(createElement(WorkflowsView));
     expect(html).toContain('data-wf-new');
     expect(html).toContain('>Nowa automatyzacja<');
-    expect(html).toContain('wf-edit');
+    const src = readFileSync(new URL('../src/views/WorkflowsView.tsx', import.meta.url), 'utf8');
+    expect(src).toContain('className="chipbtn wf-edit"');
+    expect(src).toMatch(/className="sw"[\s\S]*?disabled=\{!manage\}/);
     const sw = [...html.matchAll(/<button[^>]*class="sw"[^>]*>/g)].map((m) => m[0]);
-    expect(sw.length).toBeGreaterThan(0);
     for (const s of sw) expect(s).not.toContain('disabled');
   });
-  it('inna rola (HHL_DISPATCH): bez przycisku i edycji, włączniki zablokowane', async () => {
+  it('inna rola (HHL_DISPATCH): bez przycisku i edycji; włączniki zablokowane gdy są wiersze', async () => {
     setAuthProfile(profile('HHL_DISPATCH'));
     const { WorkflowsView } = await import('../src/views/WorkflowsView');
     const html = renderToStaticMarkup(createElement(WorkflowsView));

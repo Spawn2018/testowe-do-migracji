@@ -1062,6 +1062,8 @@ img,video{max-width:100%;height:auto}
 .bell-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sea);margin-right:7px;vertical-align:2px}
 .bell-to{flex:0 0 auto;font-family:var(--font-cond);font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--sea);white-space:nowrap;padding-top:2px}
 .bell-meta{font-size:12.5px;color:var(--ink-3);line-height:1.35;overflow-wrap:anywhere}
+.bell-chat{font-size:13.5px;line-height:1.4;color:var(--ink-2);overflow-wrap:anywhere}
+.bell-only{display:inline-block;margin-right:6px;padding:0 5px;border:1px solid var(--amber);color:var(--amber-ink);font-size:12px;line-height:1.4}
 .bell-empty{color:var(--ink-3)}
 .bell-general{margin:0;padding:10px 14px 12px;background:var(--surface-2);font-size:12.5px;line-height:1.45;color:var(--ink-2)}
 .bell-general .btn.bell-link{display:inline;border:0;background:none;padding:0;min-height:0;font:inherit;color:var(--sea);text-decoration:underline}
@@ -1069,6 +1071,10 @@ img,video{max-width:100%;height:auto}
   .bell-go{min-height:44px}
   .bell-title{font-size:15px}
   .bell-meta{font-size:13px}
+  .bell-chat{font-size:14px}
+  /* wyglad/P6-e: cele dotyku ≥ 44 px także w nagłówku i pod listą dzwonka (E8) */
+  .bell-hd .btn.bell-all{min-height:44px;padding:0 4px}
+  .bell-general .btn.bell-link{display:inline-flex;align-items:center;min-height:44px;min-width:44px;vertical-align:middle}
 }
 
 @media (max-width:768px){
@@ -1582,6 +1588,10 @@ img,video{max-width:100%;height:auto}
 .etab-val .pill{font-family:var(--font-cond);font-size:11.5px;letter-spacing:.05em}
 .etab-sub{font-size:12.5px;line-height:1.45;color:var(--ink-3)}
 .etab.why .etab-sub{color:var(--ink-2)}
+/* wyglad/E49: linie wiatru, postoju, śliskości i objazdu w ETA */
+.etab-wx{list-style:none;margin:6px 0 0;padding:6px 0 0;border-top:1px dashed var(--rule);display:flex;flex-direction:column;gap:3px;font-size:13px;line-height:1.45;color:var(--ink-2)}
+.etab-wx .is-hold{color:var(--red);font-weight:600}
+.etab-wx .etab-wx-attr{color:var(--ink-3);font-size:12.5px}
 .etab-howto{margin:-2px 0 12px;font-size:11.5px}
 
 .awiz-modal.scm{width:min(600px,calc(100vw - 24px))}

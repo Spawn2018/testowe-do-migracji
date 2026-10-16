@@ -4,3 +4,4 @@
 .sbar-scroll | E28 pkt 4 (decyzja 07.10 20:57): pasek etapów na telefonie nad Harmonogramem i Mapą, przewijany w bok (wyglad/P4)
 .drawer .dtabs | E1, img/e32-after (telefon: „Zakładki przewija się w bok”): zakładki panelu transportu na telefonie przewijane w bok (wyglad/P4-c)
 .drawer .ph-filters | E17 (img/e17-after, telefon): „W Historii filtry też przewijają się w bok” (wyglad/P6-b)
+.mt-ins-row.is-scroll | E43, img/e43-after (telefon: „Wstaw dane (przewiń w bok)”): przyciski klocków w edytorze treści wiadomości przewijane w bok (wyglad/P8-a)

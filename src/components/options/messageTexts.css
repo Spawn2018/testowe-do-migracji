@@ -1,0 +1,116 @@
+/*
+ * wyglad/P8-a — Opcje › Powiadomienia › Treści wiadomości (E43, img/e43-after).
+ * Komputer: lista po lewej (tło jak menu Opcji, bieżąca pozycja z pomarańczowym paskiem), edytor po prawej.
+ * Klocki danych w kolorze „morza” (jak przyciski „Wstaw dane”), podgląd na jasnym tle z dymkiem SMS.
+ * Telefon (≤ 768 px): lista → ekran wiadomości ze strzałką wstecz; pola ≥ 16 px, cele ≥ 44 px, „Wstaw dane” przewijane w bok.
+ * Tylko tokeny z :root; promień 2px; bez cieni i gradientów (reguły stylów).
+ */
+
+.mt{min-width:0}
+.mt-lead{display:flex;justify-content:flex-end;margin:-6px 0 10px}
+.mt-who{padding:4px 0;border:0;background:transparent;color:var(--ink-3);font-size:14.5px;text-align:right}
+.mt-who:hover{color:var(--sea);text-decoration:underline}
+
+.mt-grid{display:grid;grid-template-columns:minmax(260px,330px) minmax(0,1fr);align-items:stretch;background:var(--surface);border:1px solid var(--rule)}
+
+/* ---------- lista ---------- */
+/* lista przyklejona do góry i przewijana osobno (37 pozycji), edytor obok przewija się ze stroną */
+.mt-side{min-width:0;background:var(--surface-2);border-right:1px solid var(--rule)}
+.mt-list{position:sticky;top:0;max-height:calc(100dvh - 150px);overflow-y:auto;min-width:0;padding:14px 0 16px;scrollbar-width:thin}
+.mt-ed-box{min-width:0}
+.mt-grp + .mt-grp{margin-top:12px}
+.mt-grp-h{display:block;padding:0 16px 4px;font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--ink-3)}
+.mt-grp ul{list-style:none;margin:0;padding:0}
+.mt-item{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:40px;padding:7px 14px 7px 15px;border:0;border-left:3px solid transparent;background:transparent;color:var(--ink);font-size:15px;text-align:left}
+.mt-item:hover{background:var(--surface)}
+.mt-item.is-cur{border-left-color:var(--amber);background:var(--surface);font-weight:600}
+.mt-item-n{display:flex;flex-direction:column;min-width:0}
+.mt-item-n small{font-size:12.5px;font-weight:400}
+.mt-item-s{flex:0 0 auto;color:var(--ink-3);font-size:13px;font-weight:400}
+.mt-item-s.is-changed{color:var(--amber-ink)}
+.mt-tag{flex:0 0 auto;display:inline-block;padding:2px 7px;border:1px solid var(--rule);background:var(--surface);font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.06em;color:var(--ink-2);white-space:nowrap}
+.mt-foot{margin:14px 16px 0;color:var(--ink-3);font-size:13.5px;line-height:1.5}
+
+/* ---------- edytor ---------- */
+.mt-ed-panel{display:flex;flex-direction:column;gap:12px;min-width:0;padding:18px 22px 22px}
+.mt-ed-hd{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.mt-title{margin:0;font-family:var(--font-cond);font-size:26px;line-height:1.1;font-weight:700}
+.mt-ed-hd .mt-tag{border-color:var(--sea);background:var(--sea-bg);color:var(--sea)}
+.mt-to{color:var(--ink-3);font-size:14.5px}
+.mt-state{margin-left:auto;color:var(--ink-3);font-size:13.5px}
+.mt-state.is-changed{color:var(--amber-ink);font-weight:600}
+.mt-note{margin:0;color:var(--ink-3);font-size:14.5px}
+.mt-ro{margin:0;padding:8px 12px;border-left:3px solid var(--sea);background:var(--sea-bg);color:var(--ink);font-size:14px}
+
+.mt-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.mt-lbl{font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--ink-3)}
+.mt-field > .mt-lbl{font-family:var(--font-sans);font-size:13.5px;font-weight:400;letter-spacing:0}
+.mt-hint{color:var(--ink-3);font-size:13px}
+
+.mt-ed{display:block;min-height:44px;padding:9px 12px;border:1px solid var(--ink-2);border-radius:2px;background:var(--surface);color:var(--ink);font-size:15.5px;line-height:2;white-space:pre-wrap;overflow-wrap:anywhere;cursor:text}
+.mt-ed.is-multi{min-height:150px}
+.mt-ed:focus{outline:2px solid var(--focus);outline-offset:1px}
+.mt-ed[aria-invalid="true"]{border-color:var(--red)}
+.mt-ed.is-ro{border-color:var(--rule);background:var(--surface-2);cursor:default}
+.mt-chip{display:inline-block;margin:0 2px;padding:1px 9px;border:1px solid var(--rule);border-radius:2px;background:var(--sea-bg);color:var(--sea);font-size:14px;font-weight:600;line-height:1.6;white-space:nowrap;cursor:default}
+.mt-chip-btn{border-color:var(--ink);background:var(--ink);color:var(--surface)}
+
+.mt-ins{display:flex;align-items:flex-start;gap:10px;min-width:0}
+.mt-ins > .mt-lbl{flex:0 0 auto;padding-top:11px}
+.mt-ins-row{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.btn.ghost.mt-ins-btn{min-height:38px;padding:7px 12px;border-color:var(--rule);background:var(--surface);color:var(--sea);font-size:14px;font-weight:500}
+.btn.ghost.mt-ins-btn:hover{border-color:var(--sea);background:var(--sea-bg)}
+.btn.ghost.mt-ins-btn.is-must{border-color:var(--ink);color:var(--ink);font-weight:600}
+
+.mt-count{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;margin:0;font-size:14.5px;color:var(--ink-2)}
+.mt-count b{color:var(--go);font-family:var(--font-cond);font-size:16px;letter-spacing:.02em}
+.mt-count.is-over b{color:var(--red)}
+.mt-count-warn{flex-basis:100%;color:var(--red);font-weight:600}
+.mt-loading{margin:0;padding:18px 22px;color:var(--ink-3)}
+
+.mt-prev{display:flex;flex-direction:column;gap:10px;padding:12px 16px 14px;border:1px solid var(--rule);background:var(--surface-2)}
+.mt-prev-hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;color:var(--ink-3);font-size:14.5px}
+.mt-prev-sel{width:auto;min-width:150px;font-size:14.5px}
+.mt-prev-box{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border:1px solid var(--rule);background:var(--surface);font-size:15px;line-height:1.5;overflow-wrap:anywhere}
+.mt-prev-box p{margin:0;min-height:1.5em;white-space:pre-wrap}
+.mt-prev-box.is-sms{align-self:flex-start;max-width:min(560px,100%)}
+.mt-prev-box p.mt-prev-subj{margin-bottom:4px;font-weight:700}
+.mt-prev-btn{display:inline-block;margin:4px 0;padding:6px 16px;border-radius:2px;background:var(--ink);color:var(--surface);font-weight:700}
+
+/* pole „status” zawsze w drzewie dostępności; puste nie zajmuje miejsca ani odstępu */
+.mt-live:empty{position:absolute;width:1px;height:1px;overflow:hidden}
+.mt-msg{margin:0;padding:8px 12px;border-left:3px solid var(--go);background:var(--go-bg);font-size:14px}
+.mt-msg.is-bad{border-left-color:var(--red);background:var(--red-bg)}
+
+.mt-acts{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.mt-acts .btn{min-height:40px;padding:8px 16px;font-size:15px}
+.mt-acts .btn[aria-disabled="true"]{opacity:.6;cursor:progress}
+.mt-hist{margin-left:auto;color:var(--ink-3);font-size:13.5px}
+.mt-help{margin:0;color:var(--ink-3);font-size:13.5px;line-height:1.5;max-width:980px}
+
+/* ---------- telefon ---------- */
+@media (max-width: 768px){
+  .mt.is-phone{margin:0 -2px}
+  /* otwarta wiadomość: nagłówek ekranu Opcji chowa się — na górze jest „‹ C · Auto czeka” (img/e43-after, telefon) */
+  .ox-screen:has(.mt.is-phone.is-open) > .ox-screen-hd,
+  .options-page:has(.mt.is-phone.is-open) .ox-phone-sub{display:none}
+  .mt.is-phone .mt-list{position:static;max-height:none;overflow:visible;padding:6px 0 10px;border:1px solid var(--rule);background:var(--surface)}
+  .mt.is-phone .mt-grp-h{padding:10px 14px 4px}
+  .mt.is-phone .mt-item{min-height:48px;padding:10px 14px;font-size:16px;border-left:0;border-top:1px solid var(--rule-2)}
+  .mt.is-phone .mt-item.is-cur{background:var(--surface-2)}
+  .mt.is-phone .mt-ed-panel{gap:12px;padding:0}
+  .mt.is-phone .mt-ed-hd{flex-wrap:nowrap;gap:10px}
+  .mt.is-phone .mt-title{font-size:22px;min-width:0}
+  .mt-back{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink);font-size:24px;line-height:1}
+  .mt.is-phone .mt-state{display:none}
+  .mt.is-phone .mt-ed{font-size:16px}
+  .mt-ins{flex-direction:column;gap:6px}
+  .mt-ins > .mt-lbl{padding-top:0;font-family:var(--font-sans);font-size:14px;font-weight:400;letter-spacing:0}
+  .mt-ins-row.is-scroll{flex-wrap:nowrap;width:100%;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+  .mt-ins-row.is-scroll .mt-ins-btn{flex:0 0 auto;min-height:44px;font-size:15px}
+  .mt-prev{padding:10px 12px 12px}
+  .mt-prev-sel{min-height:44px;font-size:16px}
+  .mt-acts{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+  .mt-acts .btn{min-height:48px;font-size:16px}
+  .mt-acts .btn[data-mt-reset]{grid-column:1 / -1}
+}

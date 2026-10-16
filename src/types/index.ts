@@ -281,6 +281,8 @@ export interface EtaDetail {
   restDoneTo?: string | null;
   /** czeka przed placem od */
   waitSince?: string | null;
+  /** wyglad/E49: wiatr, postój przez wiatr, śliskość, zamknięcie i objazd (serwer: `eta_basis.causes.weather`) */
+  weather?: import('../lib/e49Wx').EtaWx[] | null;
 }
 
 /**
@@ -464,6 +466,8 @@ export interface Notification {
   kind?: string;
   /** AUD-02: kod transportu z ładunku powiadomienia (gdy brak transportu w magazynie). */
   code?: string;
+  /** wyglad/P6-e: wiadomość Czatu „tylko HHL i SCX” — z `payload.visible_to` bez KSH (mapowanie: D-20261016-0310-01 Cz14). */
+  chatOnly?: boolean;
 }
 
 export interface Risk {

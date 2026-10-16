@@ -40,6 +40,16 @@
 .ch-text{font-size:15px;line-height:1.45;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
 .ch-rcpt{font-size:12.5px;color:var(--ink-3)}
 .ch-rcpt.is-read{color:var(--go)}
+.ch-rd{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ch-rd-btn{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:2px 0;border:0;background:none;font:inherit;font-size:12.5px;text-align:left;cursor:pointer}
+.ch-rd-btn.is-other{color:var(--ink-3)}
+.ch-rd-btn:hover,.ch-rd-btn:focus-visible{text-decoration:underline}
+.ch-rd-chev{font-size:12px;line-height:1}
+.ch-rd-pop{display:flex;flex-direction:column;gap:6px;padding:8px 10px;background:var(--surface);border:1px solid var(--rule)}
+.ch-rd-pop ul{display:flex;flex-direction:column;gap:4px;margin:0;padding:0;list-style:none}
+.ch-rd-pop li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:baseline;font-size:13px;color:var(--ink-2)}
+.ch-rd-pop li b{font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+.ch-rd-pend{margin:0;font-size:13px;color:var(--amber-ink)}
 .ch-empty{margin:auto 0;align-self:center;font-size:14px;color:var(--ink-3)}
 .ch-compose{flex:none;display:flex;flex-direction:column;gap:10px;padding:12px 15px;background:var(--surface);border-top:1px solid var(--rule)}
 .ch-vis{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink-2)}
@@ -60,4 +70,7 @@
   .ch-seg button{min-height:44px}
   .ch-input{resize:none;font-size:16px}
   .ch-send{min-height:44px}
+  .ch-rd-btn{min-height:44px;min-width:44px;font-size:13px}
+  .ch-rd-pop li{grid-template-columns:minmax(0,1fr) auto;row-gap:0}
+  .ch-rd-pop li .tabular{grid-column:1 / -1}
 }
