@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { clearHelpOnce, peekHelpOnce } from '../../lib/firstEntryFlag';
 import { useTowerStore } from '../../store/useTowerStore';
 import { t, tp } from '../../i18n/messages';
-import { fmtDate } from '../../lib/time';
+import { fmtDate, fmtTime } from '../../lib/time';
 import { ROLE_META } from '../../lib/permissions';
 import type { Locale, RoleId } from '../../types';
 import { NotificationBell } from './NotificationBell';
@@ -70,7 +70,8 @@ function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof n
         mins,
         cd: countdown(mins),
         line: `${head} → ${portName(locale, to)}`,
-        short: `${op} ${when}`,
+        /* telefon: przycisk ma odliczanie i „Stena 08:00” — data z rokiem nie mieści się w 360 px; pełna data w liście po dotknięciu */
+        short: `${op} ${fmtTime(depIso)}`,
         head,
         to: portName(locale, to),
       });
@@ -85,7 +86,7 @@ function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof n
       mins,
       cd: countdown(mins),
       line: `${head} → ${portName(locale, s.arrPort)}`,
-      short: `Polferries ${when}`,
+      short: `Polferries ${fmtTime(s.depLocal)}`,
       head,
       to: portName(locale, s.arrPort),
     });

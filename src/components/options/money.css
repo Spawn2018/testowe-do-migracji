@@ -100,4 +100,5 @@
   .pm-add .input{min-height:44px;font-size:16px}
   .pm-add .ox-btn{min-height:44px}
 }
-.pm-fetch>span{white-space:nowrap}
+/* „Orlen ✕” razem; między „·” linia może się złamać (data z rokiem jest dłuższa — 16.10.2026) */
+.pm-fetch .pm-ok,.pm-fetch .pm-bad{white-space:nowrap}
