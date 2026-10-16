@@ -29,7 +29,7 @@ export const FILE_COLS: readonly FileColDef[] = [
   { id: 'loadDay', key: 's7_c_day', group: 'file', w: 54 },
   { id: 'loadTime', key: 's7_c_time', group: 'file', w: 66 },
   { id: 'driver', key: 's7_c_driver', group: 'file', w: 160 },
-  { id: 'phone', key: 's7_c_phone', group: 'file', w: 58 },
+  { id: 'phone', key: 's7_c_phone', group: 'file', w: 172 },
   { id: 'tractor', key: 's7_c_tractor', group: 'file', w: 168 },
   { id: 'trailer', key: 's7_c_trailer', group: 'file', w: 96 },
   { id: 'ordScx', key: 's7_c_ord_scx', group: 'file', w: 170 },
@@ -43,9 +43,9 @@ export const FILE_COLS: readonly FileColDef[] = [
   { id: 'money', key: 's7_c_money', group: 'wt', w: 250, num: true },
 ];
 
-/** „Widok skrócony” — 8 kolumn E30 pkt 1; „Kolumny” dodaje osobno numery, telefon, ciągnik, naczepę, rejs, koszt. */
-export type ShortColId = 'transport' | 'cargo' | 'dates' | 'status' | 'crew' | 'eta' | 'docs' | 'money';
-export type ShortExtraId = 'ordHhl' | 'ordScx' | 'phone' | 'tractor' | 'trailer' | 'sailing' | 'cost';
+/** „Widok skrócony” — 8 kolumn E30 pkt 1 + „Telefon kierowcy” (właściciel 16.10, 13:58); „Kolumny” dodaje osobno numery, ciągnik, naczepę, rejs, koszt. */
+export type ShortColId = 'transport' | 'cargo' | 'dates' | 'status' | 'crew' | 'phone' | 'eta' | 'docs' | 'money';
+export type ShortExtraId = 'ordHhl' | 'ordScx' | 'tractor' | 'trailer' | 'sailing' | 'cost';
 
 export const SHORT_COLS: readonly { id: ShortColId; key: string; num?: boolean }[] = [
   { id: 'transport', key: 's7_s_transport' },
@@ -53,6 +53,8 @@ export const SHORT_COLS: readonly { id: ShortColId; key: string; num?: boolean }
   { id: 'dates', key: 's7_s_dates' },
   { id: 'status', key: 's7_c_status' },
   { id: 'crew', key: 's7_s_crew' },
+  /* właściciel 16.10, 13:58: telefon kierowcy osobną kolumną w obu widokach (numer, nie ikonka) */
+  { id: 'phone', key: 's7_c_phone' },
   { id: 'eta', key: 's7_c_eta' },
   { id: 'docs', key: 's7_c_docs' },
   { id: 'money', key: 's7_c_money', num: true },
@@ -60,7 +62,6 @@ export const SHORT_COLS: readonly { id: ShortColId; key: string; num?: boolean }
 export const SHORT_EXTRAS: readonly { id: ShortExtraId; key: string }[] = [
   { id: 'ordHhl', key: 's7_c_ord_hhl' },
   { id: 'ordScx', key: 's7_c_ord_scx' },
-  { id: 'phone', key: 's7_x_phone' },
   { id: 'tractor', key: 's7_c_tractor' },
   { id: 'trailer', key: 's7_c_trailer' },
   { id: 'sailing', key: 's7_x_sailing' },

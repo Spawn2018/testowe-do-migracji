@@ -5,6 +5,7 @@
  * w oknie Awizacja (E32), nie w tabeli.
  */
 import { useLayoutEffect, useRef, type ReactNode } from 'react';
+import { activeDriver } from '../../lib/activeDriver';
 import type { DocStatusRow, DocRequirement } from '../../lib/docRequirements';
 import type { DisplayCurrency } from '../../lib/money/engine';
 import type { Load, Locale, RoleId } from '../../types';
@@ -60,14 +61,25 @@ function Q({ locale }: { locale: Locale }) {
 
 function Phones({ l, locale }: { l: Load; locale: Locale }) {
   const r = l.resources;
-  const swap = !!r.trailerSwap;
-  const one = (num: string | null | undefined, name: string | null | undefined) => {
-    const n = (num ?? '').replace(/\s+/g, '');
-    if (n) return <a className="s7-tel" href={`tel:${n}`} aria-label={s7p(locale, 's7_call', { who: (name ?? '').trim() || n })} title={num ?? ''} onClick={(e) => e.stopPropagation()}>☎</a>;
-    return (name ?? '').trim() ? <b className="s7-neg">{s7(locale, 's7_no_phone')}</b> : <Q locale={locale} />;
-  };
   if (!(r.driverName || r.driverPhone || r.driverDeliveryName || r.driverDeliveryPhone)) return dash;
-  return <span className="s7-tels">{one(r.driverPhone, r.driverName)}{swap ? <> → {one(r.driverDeliveryPhone, r.driverDeliveryName)}</> : null}</span>;
+  /* wyglad/E6-tel (właściciel 16.10, 13:34 i 13:58): numer kierowcy, który teraz wykonuje transport — przy przepięciu od promu kierowca SE */
+  const d = activeDriver(l);
+  const leg = d.swap ? <small className="s7-ph-leg" data-tel-leg={d.leg}>{s7p(locale, 's7_ph_leg', { leg: d.leg })}</small> : null;
+  if (d.dial) {
+    const label = s7p(locale, d.swap ? 's7_call_leg' : 's7_call', { who: d.name || d.display || '', leg: d.leg });
+    return (
+      <span className="s7-ph">
+        <a className="s7-ph-n mono" href={`tel:${d.dial}`} data-tel-active={d.leg} aria-label={label} title={label} onClick={(e) => e.stopPropagation()}>{d.display}</a>
+        {leg}
+      </span>
+    );
+  }
+  return (
+    <span className="s7-ph">
+      {d.name ? <b className="s7-neg" title={d.swap ? s7p(locale, 's7_no_phone_leg', { leg: d.leg }) : undefined}>{s7(locale, 's7_no_phone_full')}</b> : <Q locale={locale} />}
+      {leg}
+    </span>
+  );
 }
 
 function Status({ l, ctx }: { l: Load; ctx: SchedRowCtx }) {
@@ -248,7 +260,7 @@ function shortCell(id: string, l: Load, ctx: SchedRowCtx): ReactNode {
       }
       return (
         <span className="s7-two">
-          <span><Pair a={r.driverName} b={r.driverDeliveryName} swap={swap} locale={L} /> <Phones l={l} locale={L} /></span>
+          <span><Pair a={r.driverName} b={r.driverDeliveryName} swap={swap} locale={L} /></span>
           <small className="s7-sub mono">
             <Pair a={r.tractorPlate} b={r.tractorDeliveryPlate} swap={swap} mono locale={L} />{r.trailerPlate ? ` · ${r.trailerPlate}` : ''}
           </small>
@@ -306,11 +318,12 @@ export function SchedCards({ list, ctx }: { list: Load[]; ctx: SchedRowCtx }) {
   return (
     <div className="sched-cards s7-cards" data-sched-cards>
       {list.map((l) => {
-        const r = l.resources;
-        const drv = pair(r.driverName, r.driverDeliveryName, !!r.trailerSwap);
+        const d = activeDriver(l);
+        const open = () => ctx.onOpen(l.id);
         return (
-          <button key={`card-${l.id}`} type="button" className={`sched-card s7-card${ctx.hoverLoadId === l.id || ctx.selectedLoadId === l.id ? ' hl' : ''}`}
-            data-load={l.id} data-code={l.code} data-status={l.status} onClick={() => ctx.onOpen(l.id)}>
+          <div key={`card-${l.id}`} role="button" tabIndex={0} className={`sched-card s7-card${ctx.hoverLoadId === l.id || ctx.selectedLoadId === l.id ? ' hl' : ''}`}
+            data-load={l.id} data-code={l.code} data-status={l.status} onClick={open}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } }}>
             <div className="r1">
               <span className="code" data-content>{transportLabel(l, ctx.role, 'schedule')}</span>
               <StatusPill status={l.status} stage={l.stage} />
@@ -320,10 +333,23 @@ export function SchedCards({ list, ctx }: { list: Load[]; ctx: SchedRowCtx }) {
             <div className="meta" data-content>
               {l.itemType}{l.qty ? ` · ${s7p(L, 's7_pcs', { n: l.qty })}` : ''} · {dim(l.dims.weightT, L)} t · {dayPl(l.plannedLoadDate)} {ddmm(l.plannedLoadDate)} → {dayPl(l.plannedDeliverDate)} {ddmm(l.plannedDeliverDate)}
             </div>
-            <div className="meta" data-content>
-              {drv.a || drv.b ? `${drv.a ?? '?'}${r.trailerSwap ? ` → ${drv.b ?? '?'}` : ''}` : s7(L, 's7_card_driver_none')}
+            {/* wyglad/E6-tel (16.10, 13:58): na telefonie kierowca, który teraz wykonuje transport, i „Zadzwoń” do niego */}
+            <div className="s7-card-drv">
+              <span className="meta" data-content data-card-driver={d.swap ? d.leg : 'one'}>
+                {d.name ?? s7(L, 's7_card_driver_none')}
+                {d.swap ? <small className="s7-ph-leg">{` · ${s7p(L, 's7_ph_leg', { leg: d.leg })}`}</small> : null}
+              </span>
+              {d.dial ? (
+                <a className="btn s7-card-call" href={`tel:${d.dial}`} data-card-call={d.leg}
+                  aria-label={s7p(L, d.swap ? 's7_call_leg' : 's7_call', { who: d.name || d.display || '', leg: d.leg })}
+                  onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>☎ {s7(L, 's7_call_btn')}</a>
+              ) : d.name ? <b className="s7-neg">{s7(L, 's7_no_phone_full')}</b> : null}
             </div>
-          </button>
+            {/* właściciel 16.10, 14:09: pojazd, który teraz wiezie ładunek — ciągnik odcinka (automat jak „Zadzwoń”) i naczepa */}
+            <div className="meta s7-card-veh" data-content data-card-vehicle={d.swap ? d.leg : 'one'}>
+              {s7(L, 's7_card_tractor')} <b className="mono">{d.tractor ?? '–'}</b>{' · '}{s7(L, 's7_card_trailer')} <b className="mono">{(l.resources.trailerPlate ?? '').trim() || '–'}</b>
+            </div>
+          </div>
         );
       })}
     </div>

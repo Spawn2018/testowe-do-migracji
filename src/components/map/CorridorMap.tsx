@@ -1,4 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { activeDriver } from '../../lib/activeDriver';
 import L from 'leaflet';
 
 import { useTowerStore } from '../../store/useTowerStore';
@@ -477,8 +478,9 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         code: transportLabel(l, role),
         status: l.status,
         progress: l.progress,
-        driver: l.resources.driverName,
-        plate: l.resources.tractorPlate,
+        /* E29/E6: kierowca i ciągnik z odcinka, na którym auto jest teraz (wyglad/E6-tel) */
+        driver: activeDriver(l).name,
+        plate: activeDriver(l).tractor,
       }));
       const zones: GroupZone[] = geofences.map((g) => ({
         id: g.id, name: g.name, type: g.type, lat: g.lat, lng: g.lng, radiusM: g.radiusM, active: g.active,

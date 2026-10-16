@@ -16,7 +16,8 @@ import { pt, ptn, ptp } from '../../i18n/p7';
 import { buildTodo, visibleTodoRisks, type TodoIssue } from '../../lib/p6Todo';
 import { sampleDecisionsOf } from '../../lib/p6Source';
 import { issueTexts, type CardCtx } from '../risks/TodoCard';
-import { awizDeadline, awizMissing, awizState, dayLong, dayShort, dmHm, hourWindow, segmentNow, warsawDay } from '../../lib/p7Awiz';
+import { awizDeadline, awizMissing, awizState, dayLong, dayShort, dmHm, hourWindow, warsawDay } from '../../lib/p7Awiz';
+import { activeLeg } from '../../lib/activeDriver';
 import { canFixAwizOf, pilotsOf, saveSetOf, symbolSpecOf, type SetDims } from '../../lib/p7Source';
 import { checkSet, setFieldValue, type SetKey } from '../../lib/p7bSet';
 import { whoOf } from '../../lib/p6History';
@@ -322,7 +323,8 @@ export function PanelOverview(p: Props) {
 
   /* ---------- Awizacja / Kierowcy i zestaw (E32 pkt 5–7, E6) ---------- */
   const phoneOk = !!visibleDriverPhone(role, load);
-  const segNow = segmentNow(load);
+  /* wyglad/E6-tel (16.10, 13:34): przy przepięciu wyróżniony (i pierwszy) kierowca, który teraz wykonuje transport — ten sam wybór co „☎” w Harmonogramie */
+  const segNow: 'PL' | 'SE' | null = load.resources.trailerSwap ? activeLeg(load) : null;
   const hasDriver = !!(r.driverName ?? '').trim();
   const swap = !!r.trailerSwap;
   /* dwa odcinki tylko przy przepięciu naczepy (E6: bez przepięcia jeden kierowca „odbiór i dostawa”) */
@@ -465,8 +467,17 @@ export function PanelOverview(p: Props) {
           <div className="po-drvs">
             {twoSeg ? (
               <>
-                {driverCard('PL', r.driverName, r.driverPhone, r.tractorPlate)}
-                {driverCard('SE', r.driverDeliveryName, r.driverDeliveryPhone, r.tractorDeliveryPlate)}
+                {segNow === 'SE' ? (
+                  <>
+                    {driverCard('SE', r.driverDeliveryName, r.driverDeliveryPhone, r.tractorDeliveryPlate)}
+                    {driverCard('PL', r.driverName, r.driverPhone, r.tractorPlate)}
+                  </>
+                ) : (
+                  <>
+                    {driverCard('PL', r.driverName, r.driverPhone, r.tractorPlate)}
+                    {driverCard('SE', r.driverDeliveryName, r.driverDeliveryPhone, r.tractorDeliveryPlate)}
+                  </>
+                )}
               </>
             ) : driverCard('one', r.driverName, r.driverPhone, r.tractorPlate)}
           </div>

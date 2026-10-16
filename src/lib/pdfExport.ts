@@ -29,10 +29,14 @@ export function pdfColumns(locale: Locale = 'pl'): PdfColumn[] {
     { label: t(locale, 'i24_pdf_col_tractor'), width: 70, value: (l) => l.resources.tractorPlate ?? '' },
     { label: t(locale, 'i24_pdf_col_trailer'), width: 70, value: (l) => l.resources.trailerPlate ?? '' },
     { label: t(locale, 'i24_pdf_col_driver'), width: 110, value: (l) => {
-      const name = l.resources.driverName ?? '';
-      const phone = l.resources.driverPhone ?? '';
-      if (!name && !phone) return '';
-      return phone ? `${name} ${phone}`.trim() : name;
+      const one = (n?: string | null, p?: string | null) => `${n ?? ''} ${p ?? ''}`.trim();
+      const a = one(l.resources.driverName, l.resources.driverPhone);
+      /* wyglad/E6-tel: przy przepięciu naczepy oba odcinki „PL / SE”, jak w pliku KSH (E38) */
+      if (l.resources.trailerSwap) {
+        const b = one(l.resources.driverDeliveryName, l.resources.driverDeliveryPhone);
+        return a || b ? `${a || '–'} / ${b || '–'}` : '';
+      }
+      return a;
     } },
   ];
 }
