@@ -15,6 +15,7 @@ import type { AccountKind, OptGroup, OptScreen, OptScreenId } from '../component
 import { useDemoOptions } from '../components/options/useDemoOptions';
 import { ForMeScreen } from '../components/options/ForMeScreen';
 import { DeviceScreen } from '../components/options/DeviceScreen';
+import { myNotifyOf } from '../lib/forMeSource';
 
 const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
 /* I-13: parametry SEFS tylko do odczytu (zakres wg RLS) — wyłącznie produkcja */
@@ -50,7 +51,8 @@ export function SettingsView() {
   const kind: AccountKind = role === 'KSH'
     ? 'CLIENT_USER'
     : profileRole === 'CARRIER_USER' ? 'CARRIER_USER' : 'CARRIER_DISPATCH';
-  const demo = useDemoOptions(locale, { kind, readOnly: true });
+  /* wyglad/audyt-E (W47 — właściciel 16.10, 13:58 i 14:09): KSH i SCX same ustawiają swoje powiadomienia w Co dostaję */
+  const demo = useDemoOptions(locale, { kind, readOnly: true, my: myNotifyOf(kind) });
   const noSource = <div className="note option-note">{t(locale, 'p3c_no_source')}</div>;
 
   const forme: OptScreen[] = [

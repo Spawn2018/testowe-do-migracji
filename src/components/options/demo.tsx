@@ -14,6 +14,7 @@ import { ExportScreen, FlagsScreen, HistoryScreen, ThresholdsScreen, type Securi
 import { AccountScreen, BroadcastScreen, LoginsScreen, UsersScreen, type InviteRow, type PersonRow } from './PeopleScreens';
 import type { ReactNode } from 'react';
 import { m2 } from '../../i18n/mfa2';
+import type { MyNotifySource } from '../../lib/forMeSource';
 
 const c = (bell: boolean, push = false, mail = false, fixed?: MatrixCell extends null ? never : NonNullable<MatrixCell>['fixed']): MatrixCell => ({ bell, push, mail, fixed });
 const all5 = (cell: MatrixCell): Record<AccountKind, MatrixCell> => ({ HHL_ADMIN: cell, HHL_OPS: cell, CLIENT_USER: cell, CARRIER_DISPATCH: cell, CARRIER_USER: cell });
@@ -150,7 +151,7 @@ export type DemoBodies = {
 };
 
 /** Ekrany w trybie demo. `mark` — oznaczenie danych przykładowych (DemoMark). `kind` — rodzaj konta osoby. */
-export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: boolean; mark: ReactNode; prefs?: ReactNode }): DemoBodies {
+export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: boolean; mark: ReactNode; my?: MyNotifySource | null }): DemoBodies {
   const { kind, readOnly, mark } = opts;
   const me = PEOPLE.find((p) => p.kind === kind) ?? PEOPLE[0];
   const [first, ...rest] = me.name.split(' ');
@@ -236,7 +237,8 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
           ]}
         />
       ),
-      forme: <ForMeScreen locale={locale} kind={kind} groups={DEMO_MATRIX} mark={mark}>{opts.prefs}</ForMeScreen>,
+      /* wyglad/audyt-E (E-05, W47): przełączniki osoby z zapisem (jedno miejsce: `myNotifyOf`) */
+      forme: <ForMeScreen locale={locale} kind={kind} groups={DEMO_MATRIX} mark={mark} prefs={opts.my?.prefs} onSave={opts.my?.save} />,
     },
     meta: {
       users: { meta: '12 aktywnych' },

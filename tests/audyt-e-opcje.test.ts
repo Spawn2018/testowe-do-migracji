@@ -1,0 +1,122 @@
+/**
+ * wyglad/audyt-E — poprawki Opcji z przeglądu zgodności 16.10.2026 (`/tmp/claude-0/gap/E/GAPS.md`):
+ * E-01/N-01 przełączniki, E-02/E-14 „Kto co dostaje”, E-04 „Jak to działa”, E-05/N-02 (W47) „Co dostaję”.
+ */
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+import { SECURITY_FLAG_KEYS } from '../src/components/options/SystemScreens';
+import { DEMO_FLAGS, DEMO_MATRIX, demoBodies } from '../src/components/options/demo';
+import { ForMeScreen } from '../src/components/options/ForMeScreen';
+import { myNotifyOf } from '../src/lib/forMeSource';
+import { demoMyNotify, demoSaveMyNotify } from '../src/lib/forMeDemo';
+import { t } from '../src/i18n/messages';
+
+const html = (el: ReturnType<typeof createElement>) => renderToStaticMarkup(el);
+const read = (p: string) => readFileSync(p, 'utf8');
+const row = (id: string) => DEMO_MATRIX.flatMap((g) => g.rows).find((r) => r.id === id);
+
+describe('E-01, N-01: Przełączniki bezpieczeństwa — 9, bez „Kontroli trasy”, „Przeszkód” i e-maila decyzji', () => {
+  it('lista i dane demo: te same 9 kluczy, w tej samej kolejności', () => {
+    expect(SECURITY_FLAG_KEYS).toHaveLength(9);
+    expect(DEMO_FLAGS.map((f) => f.key)).toEqual([...SECURITY_FLAG_KEYS]);
+    for (const k of ['H1_ROUTE_CHECK', 'H3_CORRIDOR_OBSTACLES', 'H6_MAP_OBSTACLES', 'AUTOMATIC_DECISION_EMAIL']) {
+      expect(SECURITY_FLAG_KEYS as readonly string[]).not.toContain(k);
+      expect(t('pl', `p3c_flag_${k}`)).toBe(`p3c_flag_${k}`);
+    }
+  });
+  it('kafelek „System” na telefonie: „9 przełączników”; nigdzie „Czeka na wymiary”', () => {
+    const d = demoBodies('pl', { kind: 'HHL_ADMIN', readOnly: false, mark: null });
+    expect(d.summaries.system?.text).toBe('1 źródło nie działa · 9 przełączników');
+    expect(read('src/components/options/demo.tsx') + read('src/i18n/p3c.ts')).not.toContain('Czeka na wymiary');
+  });
+});
+
+describe('E-02, E-14: „Kto co dostaje” — nowe zdarzenia', () => {
+  it('„Auto 50 km przed placem / przed Śremem” — KSH i SCX; „Auto 20 km przed portem” — HHL (E35 pkt 2)', () => {
+    expect(row('pre_arrival')?.title).toBe('Auto 50 km przed placem / przed Śremem');
+    expect(row('pre_arrival')?.cells.CLIENT_USER?.bell).toBe(true);
+    expect(row('pre_arrival')?.cells.CARRIER_DISPATCH?.bell).toBe(true);
+    expect(row('pre_arrival')?.cells.HHL_ADMIN?.bell).toBe(false);
+    expect(row('pre_port')?.title).toBe('Auto 20 km przed portem');
+    expect(row('pre_port')?.cells.HHL_ADMIN?.bell).toBe(true);
+    expect(row('pre_port')?.cells.CLIENT_USER?.bell).toBe(false);
+  });
+  it('„Decyzja SCX: objazd albo postój” — HHL Administrator i Operacje: dzwonek i telefon, e-mail wyłączony (E49)', () => {
+    const r = row('scx_detour')!;
+    for (const k of ['HHL_ADMIN', 'HHL_OPS'] as const) expect(r.cells[k]).toMatchObject({ bell: true, push: true, mail: false });
+    expect(DEMO_MATRIX.find((g) => g.id === 'todo')?.rows.some((x) => x.id === 'scx_detour')).toBe(true);
+  });
+  it('System: źródło danych i błąd aplikacji — Administrator HHL, e-mail i telefon na stałe (E23, E46)', () => {
+    for (const id of ['src_down', 'app_err']) {
+      const c = row(id)!.cells.HHL_ADMIN!;
+      expect(c).toMatchObject({ bell: true, push: true, mail: true });
+      expect(c.fixed).toEqual(['push', 'mail']);
+      expect(row(id)!.cells.CLIENT_USER).toBeNull();
+    }
+  });
+  it('E-14: SMS niewysłany — e-mail do Operacji HHL (E42)', () => {
+    expect(row('sms_gw')?.cells.HHL_OPS).toMatchObject({ bell: true, mail: true });
+  });
+});
+
+describe('E-04: „Jak to działa” bez starych zasad', () => {
+  it('Kto co dostaje i Progi alarmów — według E11, E7, E35, E12 i 16.10', () => {
+    const notif = t('pl', 'b6_howto_notif');
+    const thr = t('pl', 'b6_howto_thresh');
+    expect(notif).not.toMatch(/Centrum decyzji|Nowa automatyzacja|dla grupy zdarzenia i firmy/);
+    expect(thr).not.toMatch(/Zapis przy wyjściu z pola|albo polisy na 24 h/);
+    expect(thr).toMatch(/zezwolenie PL i SE przy transporcie jest potrzebne tylko przy „Trasa”/);
+  });
+});
+
+describe('E-05, N-02 (W47): „Dla mnie › Co dostaję” — przełączniki osoby', () => {
+  it('KSH Użytkownik: zdarzenia rodzaju konta z przełącznikami i miejscem na „Zapisano”', () => {
+    const h = html(createElement(ForMeScreen, { locale: 'pl', kind: 'CLIENT_USER', groups: DEMO_MATRIX, onSave: async () => true }));
+    expect(h).toContain('data-forme="edit"');
+    expect(h).toContain('data-forme-row="pre_arrival"');
+    expect(h).not.toContain('data-forme-row="pre_port"');
+    expect(h).toContain('role="status"');
+    expect(h).toContain('Włączasz i wyłączasz swoje kanały');
+    expect(h).not.toMatch(/Na tym urządzeniu|tylko tej przeglądarki/);
+    /* przyciski kanałów działają (bez disabled), kanał „zawsze” — zablokowany */
+    const chips = h.match(/<button[^>]*class="ox-ch[^"]*"[^>]*>/g) ?? [];
+    expect(chips.length).toBeGreaterThan(0);
+    expect(chips.filter((b) => !b.includes('is-fixed')).every((b) => !b.includes('disabled'))).toBe(true);
+  });
+  it('kanał „zawsze” (Zmiana dat planu — dzwonek SCX) nie do wyłączenia; ustawienie osoby nadpisuje wartość startową', () => {
+    const h = html(createElement(ForMeScreen, {
+      locale: 'pl', kind: 'CARRIER_DISPATCH', groups: DEMO_MATRIX, onSave: async () => true,
+      prefs: { status: { bell: false }, dates: { bell: false } },
+    }));
+    const statusRow = h.slice(h.indexOf('data-forme-row="status"'), h.indexOf('data-forme-row="dates"'));
+    expect(statusRow).toMatch(/ox-ch-bell"[^>]*aria-pressed="false"/);
+    const datesRow = h.slice(h.indexOf('data-forme-row="dates"'));
+    expect(datesRow).toMatch(/ox-ch-bell is-on is-fixed"[^>]*aria-pressed="true"[^>]*disabled/);
+  });
+  it('bez funkcji zapisu — tylko podgląd (przyciski nieaktywne)', () => {
+    const h = html(createElement(ForMeScreen, { locale: 'pl', kind: 'HHL_ADMIN', groups: DEMO_MATRIX }));
+    expect(h).toContain('data-forme="read"');
+    expect(h).toContain('Tylko podgląd');
+    expect(h).not.toContain('role="status"');
+  });
+  it('jedno miejsce zapisu: demo — magazyn strony (bez localStorage), osobno dla każdej osoby', async () => {
+    const my = myNotifyOf('CLIENT_USER');
+    expect(my?.save).toBeTypeOf('function');
+    expect(await my!.save!('pre_arrival', 'mail', true)).toBe(true);
+    expect(myNotifyOf('CLIENT_USER')?.prefs.pre_arrival).toEqual({ mail: true });
+    expect(demoMyNotify('CARRIER_DISPATCH').pre_arrival).toBeUndefined();
+    await demoSaveMyNotify('CARRIER_DISPATCH', 'pre_arrival', 'bell', false);
+    expect(demoMyNotify('CARRIER_DISPATCH').pre_arrival).toEqual({ bell: false });
+    const src = read('src/lib/forMeSource.ts') + read('src/lib/forMeDemo.ts');
+    expect(src).not.toMatch(/localStorage|sessionStorage/);
+    expect(read('src/lib/forMeSource.ts')).toContain("import.meta.env.VITE_AUTH_MODE !== 'supabase'");
+  });
+  it('Opcje HHL: bez przełączników „na tym urządzeniu”; Ustawienia KSH i SCX podają funkcję zapisu', () => {
+    const opt = read('src/views/OptionsView.tsx');
+    expect(opt).not.toMatch(/browserPrefs|notificationPrefs|b6_notif_filter_note/);
+    expect(opt).toContain('myNotifyOf(kind)');
+    expect(read('src/views/SettingsView.tsx')).toContain('my: myNotifyOf(kind)');
+  });
+});

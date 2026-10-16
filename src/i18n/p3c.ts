@@ -341,9 +341,12 @@ const pl: Dict = {
 
   /* Co dostaję */
   p3c_f_mine: 'Twoje konto: {role}',
-  p3c_f_mine_note: 'Ustawia Administrator HHL w „Kto co dostaje”. Tu widzisz, co trafia do Ciebie.',
-  p3c_f_browser: 'Na tym urządzeniu',
-  p3c_f_browser_note: 'Dotyczy tylko tej przeglądarki.',
+  p3c_f_mine_note: 'Tylko podgląd. Swoje kanały każda osoba zmienia na swoim koncie; wartości startowe ustawia Administrator HHL w „Kto co dostaje”.',
+  /* wyglad/audyt-E (E-05, W47 — właściciel 16.10, 13:58 i 14:09): osoba sama włącza i wyłącza swoje kanały */
+  p3c_f_mine_note_edit: 'Włączasz i wyłączasz swoje kanały: dotknij ikony. Zdarzenia i wartości startowe dla Twojego rodzaju konta ustawia Administrator HHL w „Kto co dostaje”. Kanał „zawsze” zostaje włączony. Zmiana dotyczy tylko Ciebie.',
+  p3c_f_saved_on: 'Zapisano: {name} — {ch} włączony.',
+  p3c_f_saved_off: 'Zapisano: {name} — {ch} wyłączony.',
+  p3c_f_save_fail: 'Nie udało się zapisać. Spróbuj ponownie.',
 
   /* przełączniki i progi — nazwy i zdania o skutku (E12 pkt 3 i 6) */
   p3c_flag_EXTERNAL_MESSAGING: 'Wiadomości na zewnątrz',
@@ -645,9 +648,11 @@ const en: Dict = {
   p3c_m_last_login: 'last sign-in: {when}',
 
   p3c_f_mine: 'Your account: {role}',
-  p3c_f_mine_note: 'Set by the HHL administrator in “Who gets what”. Here you see what reaches you.',
-  p3c_f_browser: 'On this device',
-  p3c_f_browser_note: 'Applies to this browser only.',
+  p3c_f_mine_note: 'Preview only. Each person changes their own channels in their account; the HHL administrator sets the start values in “Who gets what”.',
+  p3c_f_mine_note_edit: 'You turn your own channels on and off: tap an icon. Events and start values for your account type are set by the HHL administrator in “Who gets what”. A channel marked “always” stays on. The change applies only to you.',
+  p3c_f_saved_on: 'Saved: {name} — {ch} on.',
+  p3c_f_saved_off: 'Saved: {name} — {ch} off.',
+  p3c_f_save_fail: 'Could not save. Try again.',
 
   p3c_flag_EXTERNAL_MESSAGING: 'Messages to the outside',
   p3c_flag_EXTERNAL_MESSAGING_fx: 'SMS to drivers and emails outside log-mar.pl. Off until GDPR agreements.',

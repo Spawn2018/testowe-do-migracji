@@ -32,6 +32,7 @@ import {
 } from '../lib/p5bSource';
 import { StatusScreen } from '../components/options/StatusScreen';
 import { sourceHealth } from '../lib/sysSource';
+import { myNotifyOf } from '../lib/forMeSource';
 
 /** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */
 function savedText(locale: Locale, code: string): string {
@@ -131,8 +132,6 @@ export function OptionsView() {
   const updateRate = useTowerStore((s) => s.updateRate);
   const geofences = useTowerStore((s) => s.geofences);
   const saveGeofence = useTowerStore((s) => s.saveGeofence);
-  const notificationPrefs = useTowerStore((s) => s.notificationPrefs);
-  const updateNotificationPrefs = useTowerStore((s) => s.updateNotificationPrefs);
   const smsEntry = useTowerStore((s) => s.smsEntry);
   const bills = useTowerStore((s) => s.bills);
   const location = useLocation();
@@ -174,25 +173,11 @@ export function OptionsView() {
   const ro = !isHhlAdmin;
   const change = ro ? 'read' as const : 'admin' as const;
 
-  /* Przełączniki „na tym urządzeniu” (dziś tylko w przeglądarce, E11) — w Dla mnie › Co dostaję. */
-  const browserPrefs = (
-    <>
-      <div className="pref-list">
-        {([['workflowAlerts', t(locale, 'opt_wf_rules')], ['geofenceAlerts', t(locale, 'opt_geo_alerts')], ['riskAlerts', t(locale, 'opt_risk_alerts')]] as const)
-          .filter(([key]) => key !== 'workflowAlerts' || !PROD_BUILD)
-          .map(([key, label]) => (
-            <label key={key} className="switchline">
-              <input type="checkbox" checked={notificationPrefs?.[key] ?? true} onChange={(e) => { updateNotificationPrefs({ [key]: e.target.checked }); saveMark('powiadomienia'); }} />
-              <span>{label}</span>
-            </label>
-          ))}
-      </div>
-      <div className="note option-note">{t(locale, 'b6_notif_filter_note')}</div>
-      <button type="button" className="chipbtn" onClick={() => useTowerStore.getState().markAllNotificationsRead('HHL')}>{t(locale, 'opt_mark_read')}</button>
-    </>
-  );
-
-  const demo = useDemoOptions(locale, { kind, readOnly: ro, prefs: browserPrefs });
+  /* wyglad/audyt-E (E-05, W47; E11 „w przeglądarce zostaje tylko motyw i waluta”): przełączniki „na tym urządzeniu”
+     usunięte; w Dla mnie › Co dostaję osoba HHL ustawia swoje kanały tak samo jak KSH i SCX — jedno miejsce zapisu
+     `myNotifyOf` (demo: magazyn strony; produkcja: wykonawca). „Oznacz wszystkie jako przeczytane” jest w dzwonku (E5). */
+  const my = myNotifyOf(kind);
+  const demo = useDemoOptions(locale, { kind, readOnly: ro, my });
 
   if (role !== 'HHL') {
     return <div className="panel section-card" style={{ margin: 12 }}><div className="panel-bd"><b>{t(locale, 'opt_hhl_only')}</b></div></div>;
@@ -370,7 +355,7 @@ export function OptionsView() {
 
   const forme: OptScreen[] = [
     scr('account', pick('account', LiveAccount ? block(<LiveAccount />) : null), { right: 'own' }),
-    scr('forme', pick('forme', <ForMeScreen locale={locale} kind={null} groups={null}>{browserPrefs}</ForMeScreen>), { right: 'own' }),
+    scr('forme', pick('forme', <ForMeScreen locale={locale} kind={null} groups={null} />), { right: 'own' }),
     scr('look', (
       <>
         <UiPrefsPanel onSaved={saveMark} showDemoMarks={shows('demoMarksToggle')} />

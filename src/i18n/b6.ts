@@ -10,18 +10,18 @@ type Dict = Record<string, string>;
 const pl: Dict = {
   b6_howto: 'Jak to działa',
   b6_howto_notif:
-    'Zdarzenie: zmiana statusu transportu, nowe albo zmienione ryzyko, wjazd lub wyjazd ze strefy, otwarcie lub zamknięcie decyzji.'
-    + '|Baza sprawdza macierz poniżej: dla grupy zdarzenia i firmy — czy wpis w aplikacji, czy e-mail. Tylko macierz decyduje, czy powiadomienie w ogóle powstanie.'
-    + '|Przewoźnik dostaje tylko swoje transporty, KSH tylko swój projekt, HHL wszystko według macierzy. To samo zdarzenie powtórzone nie tworzy drugiego wpisu.'
-    + '|Gdy sprawa wymaga reakcji (np. brak awizacji przed załadunkiem, brak dokumentu, opłata paliwowa poza tabelą), otwiera się decyzja w Centrum decyzji. Ostrzeżenie i stan krytyczny to ta sama decyzja; gdy warunek ustanie, decyzja zamyka się jako nieaktualna.'
-    + '|E-mail: sprawy krytyczne od razu, niekrytyczne raz na dobę w jednym skrócie. Po dziennym limicie poczty wpis w aplikacji zostaje.'
-    + '|Automatyzacje: administrator HHL dodaje własne reguły przyciskiem „Nowa automatyzacja”. Reguły działają w tym samym mechanizmie w bazie — jedno zdarzenie daje jeden alarm na odbiorcę, bez dubli z automatami.',
+    'Zdarzenie: zmiana statusu, nowe albo zmienione ryzyko, wjazd lub wyjazd ze strefy, auto 50 km przed placem albo 20 km przed portem, sprawa do zrobienia, wiadomość w czacie, faktura.'
+    + '|Tabela poniżej: zdarzenie × rodzaj konta (HHL Administrator, HHL Operacje, KSH Użytkownik, SCX Dyspozytor, SCX Użytkownik) × kanał: dzwonek w aplikacji, powiadomienie na telefonie, e-mail. To wartości startowe dla każdego konta tego rodzaju.'
+    + '|Każda osoba zmienia swoje kanały w „Dla mnie › Co dostaję”, tylko dla zdarzeń, które dostaje jej rodzaj konta. Kanał oznaczony „zawsze” zostaje włączony.'
+    + '|Przewoźnik dostaje tylko swoje transporty, KSH tylko swój projekt, HHL wszystko według tabeli. To samo zdarzenie powtórzone nie tworzy drugiego wpisu.'
+    + '|Gdy sprawa wymaga reakcji (np. brak awizacji przed załadunkiem, brak dokumentu, opłata paliwowa poza tabelą), pojawia się w Ryzyka › Do zrobienia. Ostrzeżenie i stan krytyczny to ta sama sprawa; gdy warunek ustanie, sprawa zamyka się sama.'
+    + '|E-mail: sprawy krytyczne od razu, niekrytyczne raz na dobę w jednym skrócie. Po dziennym limicie poczty wpis w dzwonku zostaje.'
+    + '|Automatyzacje: Administrator HHL dodaje własne reguły przyciskiem „+ Nowa reguła”. Jedno zdarzenie daje jedno powiadomienie na osobę, bez dubli z automatami.',
   b6_howto_centre:
     'Lista poniżej to otwarte sprawy wymagające reakcji (brak awizacji, brak dokumentu, opłata paliwowa poza tabelą i inne typy z macierzy).'
     + '|Kliknięcie otwiera sprawę: osoba z właściwą rolą wybiera rozstrzygnięcie, może dodać komentarz albo odłożyć na 2 h.'
     + '|Ostrzeżenie i stan krytyczny to ta sama sprawa; po terminie sprawa czerwienieje. Gdy warunek ustanie — sprawa zamyka się jako nieaktualna.'
     + '|Powiadomienia o sprawach idą według macierzy w Opcjach; rozstrzygnięcie zapisuje się w historii transportu.',
-  b6_notif_filter_note: 'Te przełączniki gaszą tylko powiadomienia tworzone w tej przeglądarce. Nie wyłączają e-maili ani wpisów z bazy — o nich decyduje macierz.',
   b6_howto_zones:
     'Strefa to koło na mapie: środek, promień, zapas i rodzaj (załadunek, port, plac, punkt kontrolny…). Kształt, kraj i „kogo powiadomić” ustawia się w widoku Strefy; tutaj jest tylko włącznik.'
     + '|Gdy auto z GPS wjedzie do strefy, system czeka na kilka kolejnych pozycji w środku — pojedyncze drgnięcie GPS nie robi alarmu. Przy porcie i placu czeka też, aż auto postoi zadaną liczbę minut.'
@@ -31,15 +31,15 @@ const pl: Dict = {
     + '|Bramka SMS to telefon z aplikacją, który wysyła te SMS-y. Gdy milczy dłużej niż 15 minut — ryzyko i e-mail do HHL.'
     + '|Bez pozycji GPS z aut strefy nic nie robią.',
   b6_howto_thresh:
-    'Każda liczba to granica, od której system podnosi alarm. Zapis przy wyjściu z pola, tylko administrator HHL, wartość większa od zera; zmiana trafia do historii. Automaty czytają progi wyłącznie stąd.'
-    + '|Ostrzeżenie i stan krytyczny to jeden alarm, który rośnie: przy ostrzeżeniu otwiera się decyzja z terminem w chwili krytycznej; przy krytycznym ta sama decyzja czerwienieje i idą powiadomienia.'
+    'Każda liczba to granica, od której system podnosi alarm. Zmienia tylko Administrator HHL: „Zmień” → nowa wartość większa od zera → potwierdzenie → wpis w Historii zmian (kto, kiedy, było → jest). Automaty czytają progi wyłącznie stąd.'
+    + '|Ostrzeżenie i stan krytyczny to jeden alarm, który rośnie: przy ostrzeżeniu w Ryzyka › Do zrobienia pojawia się sprawa z terminem w chwili krytycznej; przy krytycznym ta sama sprawa czerwienieje i idą powiadomienia według „Kto co dostaje”.'
     + '|Awizacja: kierowca, ciągnik, naczepa i telefon liczone od planowanego załadunku, kierowca dostarczający od planowanej dostawy. Brak na 48 h przed — ostrzeżenie, na 12 h — krytyczne.'
-    + '|Dokumenty: brak zezwolenia (gdy wymagane) albo polisy na 24 h przed załadunkiem — ostrzeżenie, na 6 h — krytyczne.'
-    + '|Fala i porywy wiatru: automat pogody na trasie promu.'
+    + '|Dokumenty: brak wymaganego dokumentu na 24 h przed terminem — ostrzeżenie, na 6 h — krytyczne. Polisa HHL i zezwolenie „Firma” podpinają się same; zezwolenie PL i SE przy transporcie jest potrzebne tylko przy „Trasa” (KR).'
+    + '|Fala i porywy wiatru: automat pogody na trasie promu. Wiatr na drodze: od 20 m/s ETA liczy wolniejszą jazdę, od 25 m/s postój; śliskość tylko do 25 km od auta.'
     + '|Opóźnienie: ETA z prawdziwej pozycji (GPS auta, AIS promu) później niż koniec okna dostawy plus próg.'
     + '|Brak GPS: ostatnia pozycja starsza niż próg — tylko gdy auto ma źródło pozycji i jest w drodze.'
     + '|Zjazd z trasy: dalej od trasy niż próg przez co najmniej 2 pozycje i 10 minut; nie na promie, w portach ani na placach.'
-    + '|Wyprzedzenie dat KSH: nowy transport albo zmiana daty, gdy do załadunku zostało mniej dni niż próg.'
+    + '|Potwierdzenie daty: nowy transport albo zmiana daty, gdy do załadunku zostało mniej dni niż próg.'
     + '|Gdy warunek ustanie, alarm się zamyka. Brak danych = brak alarmu.',
   b6_sys_gw: 'Bramka SMS',
   b6_sys_sms_ok: 'Działa',
@@ -98,18 +98,18 @@ const pl: Dict = {
 const en: Dict = {
   b6_howto: 'How it works',
   b6_howto_notif:
-    'Event: load status change, new or changed risk, zone entry or exit, decision opened or closed.'
-    + '|The database checks the matrix below: per event group and company — in-app entry and/or email. Only the matrix decides whether a notification is created.'
-    + '|The carrier gets only its loads, KSH only its project, HHL everything per the matrix. A repeated event does not create a second entry.'
-    + '|When action is needed (e.g. missing booking before loading, missing document, fuel surcharge out of table) a decision opens in the Decision centre. Warning and critical are the same decision; when the condition clears it closes as outdated.'
-    + '|Email: critical at once, non-critical once a day in one digest. Past the daily mail limit the in-app entry stays.'
-    + '|Automations are a history view only. No new rules are added — one mechanism in the database drives everything.',
+    'Event: status change, new or changed risk, zone entry or exit, truck 50 km before the site or 20 km before the port, a to-do case, a chat message, an invoice.'
+    + '|The table below: event × account type (HHL Administrator, HHL Operations, KSH User, SCX Dispatcher, SCX User) × channel: bell in the app, phone notification, email. These are the start values for every account of that type.'
+    + '|Each person changes their own channels in “For me › What I get”, only for events their account type gets. A channel marked “always” stays on.'
+    + '|The carrier gets only its loads, KSH only its project, HHL everything per the table. A repeated event does not create a second entry.'
+    + '|When action is needed (e.g. missing booking before loading, missing document, fuel surcharge out of table) the case appears in Risks › To do. Warning and critical are the same case; when the condition clears, the case closes by itself.'
+    + '|Email: critical at once, non-critical once a day in one digest. Past the daily mail limit the bell entry stays.'
+    + '|Automations: the HHL administrator adds own rules with “+ New rule”. One event gives one notification per person, no duplicates with built-in automations.',
   b6_howto_centre:
     'The list below is open cases that need a response (missing booking, missing document, fuel surcharge outside the table, and other matrix types).'
     + '|Click a case: the right role picks an outcome, may add a comment, or snooze for 2 h.'
     + '|Warning and critical are the same case; after the due time it turns red. When the condition clears, the case closes as obsolete.'
     + '|Notifications follow the Options matrix; the outcome is stored in the transport history.',
-  b6_notif_filter_note: 'These switches mute only notifications created in this browser. They do not turn off emails or database entries — the matrix decides those.',
   b6_howto_zones:
     'A zone is a circle on the map: centre, radius, margin and type (loading, port, yard, checkpoint…). Shape, country and who to notify are set in the Zones view; here is only the on/off switch.'
     + '|When a truck with GPS enters a zone, the system waits for several positions inside — one GPS jitter raises no alarm. At ports and yards it also waits until the truck has stood for the set minutes.'
@@ -119,15 +119,15 @@ const en: Dict = {
     + '|The SMS gateway is a phone with the app that sends these SMS. Silent for over 15 minutes — risk and email to HHL.'
     + '|Without GPS positions from trucks, zones do nothing.',
   b6_howto_thresh:
-    'Each number is the limit at which the system raises an alarm. Saved on leaving the field, HHL administrator only, value above zero; the change goes to history. Automations read thresholds only from here.'
-    + '|Warning and critical are one alarm that grows: on warning a decision opens with its deadline at the critical moment; on critical the same decision turns red and notifications go out.'
+    'Each number is the limit at which the system raises an alarm. Only the HHL administrator changes it: “Change” → new value above zero → confirmation → Change history entry (who, when, was → is). Automations read thresholds only from here.'
+    + '|Warning and critical are one alarm that grows: on warning a case appears in Risks › To do with its deadline at the critical moment; on critical the same case turns red and notifications go out per “Who gets what”.'
     + '|Booking: pickup driver, tractor, trailer and phone counted from planned loading, delivering driver from planned delivery. Missing 48 h before — warning, 12 h — critical.'
-    + '|Documents: missing permit (when required) or policy 24 h before loading — warning, 6 h — critical.'
-    + '|Wave and wind gusts: the weather automation on the ferry route.'
+    + '|Documents: a required document missing 24 h before the deadline — warning, 6 h — critical. The HHL policy and the “Company” permit attach by themselves; PL and SE permits per transport are needed only for “Route” (KR).'
+    + '|Wave and wind gusts: the weather automation on the ferry route. Wind on the road: from 20 m/s ETA counts slower driving, from 25 m/s a stop; slippery roads only within 25 km of the truck.'
     + '|Delay: ETA from a real position (truck GPS, ferry AIS) later than the end of the delivery window plus the threshold.'
     + '|No GPS: last position older than the threshold — only when the truck has a position source and is on the road.'
     + '|Off route: farther from the route than the threshold for at least 2 positions and 10 minutes; not on the ferry, in ports or yards.'
-    + '|KSH date lead: new load or date change with fewer days to loading than the threshold.'
+    + '|Date confirmation: new load or date change with fewer days to loading than the threshold.'
     + '|When the condition clears, the alarm closes. No data = no alarm.',
   b6_sys_gw: 'SMS gateway',
   b6_sys_sms_ok: 'Working',
@@ -186,18 +186,18 @@ const en: Dict = {
 const sv: Dict = {
   b6_howto: 'Så fungerar det',
   b6_howto_notif:
-    'Händelse: ändrad transportstatus, ny eller ändrad risk, in- eller utpassage i zon, beslut öppnat eller stängt.'
-    + '|Databasen kontrollerar matrisen nedan: per händelsegrupp och företag — post i appen och/eller e-post. Bara matrisen avgör om en avisering skapas.'
-    + '|Åkeriet får bara sina transporter, KSH bara sitt projekt, HHL allt enligt matrisen. En upprepad händelse ger ingen ny post.'
-    + '|När något kräver åtgärd (t.ex. saknad avisering före lastning, saknat dokument, bränsletillägg utanför tabellen) öppnas ett beslut i beslutscentret. Varning och kritiskt är samma beslut; när villkoret upphör stängs det som inaktuellt.'
-    + '|E-post: kritiskt direkt, övrigt en gång per dygn i en sammanfattning. Efter dagens e-postgräns finns posten kvar i appen.'
-    + '|Automatiseringar är bara en historikvy. Nya regler läggs inte till — en mekanism i databasen styr allt.',
+    'Händelse: ändrad status, ny eller ändrad risk, in- eller utpassage i zon, fordon 50 km före platsen eller 20 km före hamnen, ett att göra-ärende, ett chattmeddelande, en faktura.'
+    + '|Tabellen nedan: händelse × kontotyp (HHL Administratör, HHL Drift, KSH Användare, SCX Disponent, SCX Användare) × kanal: klocka i appen, avisering i telefonen, e-post. Det är startvärden för varje konto av den typen.'
+    + '|Varje person ändrar sina egna kanaler i ”För mig › Vad jag får”, bara för händelser som kontotypen får. En kanal märkt ”alltid” förblir på.'
+    + '|Åkeriet får bara sina transporter, KSH bara sitt projekt, HHL allt enligt tabellen. En upprepad händelse ger ingen ny post.'
+    + '|När något kräver åtgärd (t.ex. saknad avisering före lastning, saknat dokument, bränsletillägg utanför tabellen) visas ärendet i Risker › Att göra. Varning och kritiskt är samma ärende; när villkoret upphör stängs ärendet av sig självt.'
+    + '|E-post: kritiskt direkt, övrigt en gång per dygn i en sammanfattning. Efter dagens e-postgräns finns posten kvar i klockan.'
+    + '|Automatiseringar: HHL-administratören lägger till egna regler med ”+ Ny regel”. En händelse ger en avisering per person, inga dubbletter med inbyggd automatik.',
   b6_howto_centre:
     'Listan nedan är öppna ärenden som kräver åtgärd (saknad avisering, saknat dokument, bränsletillägg utanför tabellen m.m.).'
     + '|Klicka på ett ärende: rätt roll väljer utfall, kan kommentera eller skjuta upp 2 h.'
     + '|Varning och kritiskt är samma ärende; efter tidsfristen blir det rött. När villkoret försvinner stängs ärendet som inaktuellt.'
     + '|Aviseringar följer matrisen under Alternativ; utfallet sparas i transporthistoriken.',
-  b6_notif_filter_note: 'Dessa reglage tystar bara aviseringar som skapas i den här webbläsaren. De stänger inte av e-post eller poster från databasen — det avgör matrisen.',
   b6_howto_zones:
     'En zon är en cirkel på kartan: mittpunkt, radie, marginal och typ (lastning, hamn, upplag, kontrollpunkt…). Form, land och vem som aviseras ställs in i vyn Zoner; här finns bara på/av.'
     + '|När ett fordon med GPS kör in i en zon väntar systemet på flera positioner inuti — ett enstaka GPS-hopp ger inget larm. Vid hamn och upplag väntar det också tills fordonet stått angivna minuter.'
@@ -207,15 +207,15 @@ const sv: Dict = {
     + '|SMS-gatewayen är en telefon med appen som skickar dessa SMS. Tyst i över 15 minuter — risk och e-post till HHL.'
     + '|Utan GPS-positioner från fordonen gör zonerna ingenting.',
   b6_howto_thresh:
-    'Varje tal är gränsen där systemet larmar. Sparas när fältet lämnas, bara HHL-administratör, värde över noll; ändringen går till historiken. Automatiken läser gränser bara härifrån.'
-    + '|Varning och kritiskt är ett larm som växer: vid varning öppnas ett beslut med deadline vid kritisk tidpunkt; vid kritiskt blir samma beslut rött och aviseringar skickas.'
+    'Varje tal är gränsen där systemet larmar. Bara HHL-administratören ändrar: ”Ändra” → nytt värde över noll → bekräftelse → post i ändringshistoriken (vem, när, var → är). Automatiken läser gränser bara härifrån.'
+    + '|Varning och kritiskt är ett larm som växer: vid varning visas ett ärende i Risker › Att göra med deadline vid kritisk tidpunkt; vid kritiskt blir samma ärende rött och aviseringar skickas enligt ”Vem får vad”.'
     + '|Avisering: hämtande förare, dragbil, trailer och telefon räknas från planerad lastning, levererande förare från planerad leverans. Saknas 48 h före — varning, 12 h — kritiskt.'
-    + '|Dokument: saknat tillstånd (när det krävs) eller försäkring 24 h före lastning — varning, 6 h — kritiskt.'
-    + '|Våghöjd och vindbyar: väderautomatiken på färjerutten.'
+    + '|Dokument: ett krävt dokument saknas 24 h före tidsfristen — varning, 6 h — kritiskt. HHL-försäkringen och tillståndet ”Företag” kopplas av sig själva; PL- och SE-tillstånd per transport behövs bara vid ”Rutt” (KR).'
+    + '|Våghöjd och vindbyar: väderautomatiken på färjerutten. Vind på vägen: från 20 m/s räknar ETA med långsammare körning, från 25 m/s stopp; halka bara inom 25 km från fordonet.'
     + '|Försening: ETA från verklig position (fordonets GPS, färjans AIS) senare än leveransfönstrets slut plus gränsen.'
     + '|Ingen GPS: senaste position äldre än gränsen — bara när fordonet har positionskälla och är på väg.'
     + '|Avvikelse från rutt: längre från rutten än gränsen i minst 2 positioner och 10 minuter; inte på färjan, i hamnar eller upplag.'
-    + '|KSH-framförhållning: ny transport eller datumändring med färre dagar till lastning än gränsen.'
+    + '|Datumbekräftelse: ny transport eller datumändring med färre dagar till lastning än gränsen.'
     + '|När villkoret upphör stängs larmet. Inga data = inget larm.',
   b6_sys_gw: 'SMS-gateway',
   b6_sys_sms_ok: 'Fungerar',
