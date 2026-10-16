@@ -144,6 +144,32 @@ export interface CancelRulesView {
   changed: { at: string; by: string } | null;
 }
 
+/**
+ * wyglad/audyt-E (E-06, C-14; E33 08.10, E11 „Cennik: wersje KSH 1 i 2, SCX 1; po 12 pozycji, 10 symboli”):
+ * cennik według symboli. Kwoty netto w EUR, za jeden transport, bez opłaty paliwowej; VAT dolicza system na fakturze.
+ */
+export interface RateCardRow {
+  /** klucz pozycji: „SG”, „KR-1” (Kratownice, 1 auto w konwoju) */
+  id: string;
+  /** symbol z tabeli symboli: „SG”, „KR”, „PL-A” */
+  symbol: string;
+  /** liczba aut w konwoju — tylko KR */
+  convoy?: number;
+  /** „Słupy główne” */
+  kind: string;
+  /** zestaw z ładunkiem w metrach: D — długość, S — szerokość, W — wysokość (tabela symboli) */
+  set: { l: number; w: number; h: number } | null;
+  /** koszt — cennik SCX */
+  costEur: number;
+  /** przychód — cennik KSH */
+  revEur: number;
+}
+/** Wersja cennika jednej strony: „KSH v2 od 28.09.2026”. Nowa wersja kończy poprzednią dzień przed `from`. */
+export interface RateCardVersion { side: 'KSH' | 'SCX'; v: number; from: string; note: string | null; at: string; by: string }
+export interface RateCardView { rows: RateCardRow[]; ksh: RateCardVersion; scx: RateCardVersion }
+/** Zapis nowej wersji: strona, data „od” (RRRR-MM-DD), ceny pozycji (id → EUR), powód. */
+export type RateCardSave = (side: 'KSH' | 'SCX', from: string, prices: Record<string, number>, note: string) => Promise<boolean>;
+
 /** Terminy płatności od daty wystawienia faktury (24.09): KSH płaci HHL, HHL płaci SCX. */
 export interface PaymentTermsView { kshDays: number; scxDays: number; changed: { at: string; by: string } | null }
 

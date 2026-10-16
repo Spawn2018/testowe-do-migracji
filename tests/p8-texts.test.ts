@@ -27,9 +27,9 @@ const load = {
 } as unknown as Parameters<typeof sampleOf>[0];
 
 describe('spis wiadomości (E43 „Jeden ekran”)', () => {
-  it('4 SMS, 28 rodzajów e-maili i wpisów w dzwonku, 2 e-maile paczki (E40), 5 e-maili logowania — razem 39, id bez powtórzeń', () => {
+  it('4 SMS, 34 rodzaje e-maili i wpisów w dzwonku (28 z serwera + 6 nowych zdarzeń), 2 e-maile paczki (E40), 5 e-maili logowania — razem 45, id bez powtórzeń', () => {
     expect(MESSAGES.filter((m) => m.channel === 'SMS')).toHaveLength(4);
-    expect(MESSAGES.filter((m) => m.channel === 'EMAIL' && !m.noBell)).toHaveLength(28);
+    expect(MESSAGES.filter((m) => m.channel === 'EMAIL' && !m.noBell)).toHaveLength(34);
     expect(MESSAGES.filter((m) => m.channel === 'EMAIL' && m.noBell).map((m) => m.id)).toEqual(['ACCOUNTING_KSH', 'ACCOUNTING_HHL']);
     expect(MESSAGES.filter((m) => m.channel === 'LOGIN')).toHaveLength(5);
     expect(new Set(MESSAGES.map((m) => m.id)).size).toBe(MESSAGES.length);
@@ -39,7 +39,18 @@ describe('spis wiadomości (E43 „Jeden ekran”)', () => {
     const src = readFileSync('supabase/functions/_shared/notifyTemplates.ts', 'utf8');
     const kinds = [...src.matchAll(/case '([A-Z_]+)':/g)].map((m) => m[1]).sort();
     expect(kinds).toHaveLength(28);
-    expect(MESSAGES.filter((m) => m.channel === 'EMAIL' && !m.noBell).map((m) => m.id).sort()).toEqual(kinds);
+    expect(MESSAGES.filter((m) => m.channel === 'EMAIL' && !m.noBell && !m.planned).map((m) => m.id).sort()).toEqual(kinds);
+  });
+
+  it('wyglad/audyt-E (E-03): 6 nowych zdarzeń z „Kto co dostaje” ma treść domyślną — E35, E49, E23 (źródło i „Wróciło”), E46', () => {
+    expect(MESSAGES.filter((m) => m.planned).map((m) => m.id)).toEqual(['SCX_DETOUR_CHOICE', 'PRE_ARRIVAL', 'PRE_PORT', 'SOURCE_DOWN', 'SOURCE_BACK', 'APP_ERROR']);
+    for (const m of MESSAGES.filter((x) => x.planned)) {
+      expect(m.channel, m.id).toBe('EMAIL');
+      expect(m.tokens, m.id).toContain('link');
+      expect(`${m.subject} ${m.body}`, m.id).not.toMatch(/\bE\d{1,2}\b/);
+    }
+    expect(renderSegs(parseMarkers(by('SOURCE_DOWN').subject ?? ''), sampleOf(null))).toBe('Telematyka naczep nie działa od 00:00');
+    expect(renderSegs(parseMarkers(by('PRE_PORT').subject ?? ''), sampleOf(load))).toBe('XX-00: auto 20 km przed portem Gdynia');
   });
 
   it('grupy w kolejności z obrazu: SMS, Ryzyka i decyzje, Transport, Faktury, System, Logowanie; każda niepusta', () => {
@@ -198,9 +209,9 @@ describe('ekran — prawa (E43 „Bezpiecznie”)', () => {
     expect(html).toContain('data-mt-insert="code"');
     expect(html).toContain('contentEditable="true"');
     expect(html).not.toContain('data-mt-ro');
-    /* lista: 39 pozycji, jedna w kolejności Tab */
-    expect(html.match(/data-mt-item=/g)).toHaveLength(39);
-    expect(html.match(/tabindex="-1"/g)).toHaveLength(38);
+    /* lista: 45 pozycji (39 + 6 nowych zdarzeń, wyglad/audyt-E), jedna w kolejności Tab */
+    expect(html.match(/data-mt-item=/g)).toHaveLength(45);
+    expect(html.match(/tabindex="-1"/g)).toHaveLength(44);
   });
 
   it('Operacje HHL: tylko podgląd — bez zapisu, próbnej wysyłki i przycisków „Wstaw dane”', async () => {

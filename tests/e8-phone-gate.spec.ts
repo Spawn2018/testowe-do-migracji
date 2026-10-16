@@ -773,9 +773,11 @@ test.describe('wyglad/P10b-c Stan systemu (E23, E47, E19, E46)', () => {
     await boot(page, 'HHL');
     await openStatus(page);
     await expect(page.locator('[data-sys-tab]')).toHaveText(['Źródła danych', 'Błędy aplikacji', 'Bezpieczeństwo', 'Wydajność']);
-    await expect(page.locator('[data-sys-sum]')).toHaveText('1 nie działa · 3 częściowo albo bez pomiaru · 8 działa · 1 bez źródła');
+    /* wyglad/audyt-E (E-09; E49 Z5): + „Wiatr — SMHI”; „Zagrożenia na trasie” działa (wiatr liczy SMHI) */
+    await expect(page.locator('[data-sys-sum]')).toHaveText('1 nie działa · 2 częściowo albo bez pomiaru · 10 działa · 1 bez źródła');
     const states = await page.locator('[data-sys-source]').evaluateAll((e) => e.map((x) => (x as HTMLElement).dataset.state));
-    expect(states.slice(0, 4)).toEqual(['down', 'partial', 'partial', 'nomeasure']);
+    expect(states.slice(0, 3)).toEqual(['down', 'partial', 'nomeasure']);
+    await expect(page.locator('[data-sys-source="wind"]')).toContainText('Wiatr — SMHI');
     expect(states.at(-1)).toBe('nosource');
     await expect(page.locator('[data-sys-source][data-state="ok"] [data-sys-check]')).toHaveCount(0);
     await page.locator('[data-sys-check="fuel"]').click();
@@ -783,7 +785,8 @@ test.describe('wyglad/P10b-c Stan systemu (E23, E47, E19, E46)', () => {
     expect(await page.locator('.sys-tablewrap').evaluate((e) => e.scrollWidth <= e.clientWidth + 1), 'tabela bez przewijania w bok').toBe(true);
     await page.locator('[data-sys-other] summary').click();
     await expect(page.locator('[data-sys-other] li')).toHaveCount(6);
-    await expect(page.locator('[data-sys-threshold]')).toHaveCount(7);
+    await expect(page.locator('[data-sys-threshold]')).toHaveCount(8);
+    await expect(page.locator('[data-sys-threshold="SRC_WIND_H"]')).toContainText('2 h');
     await expect(page.locator('[data-sys-threshold="SRC_TELEMATICS_MIN"]')).toContainText('10 min');
     /* bez kodów zadań (E21) */
     const txt = await page.locator('[data-sys-screen]').innerText();
@@ -806,15 +809,15 @@ test.describe('wyglad/P10b-c Stan systemu (E23, E47, E19, E46)', () => {
     await boot(page, 'HHL', true);
     await openStatus(page, true);
     await expect(page.locator('[data-sys-tab]')).toHaveText(['Źródła', 'Błędy', 'Bezpieczeństwo', 'Wydajność']);
-    await expect(page.locator('[data-sys-sum]')).toHaveText('4 wymagają uwagi');
-    await expect(page.locator('[data-sys-source]')).toHaveCount(4);
+    await expect(page.locator('[data-sys-sum]')).toHaveText('3 wymagają uwagi');
+    await expect(page.locator('[data-sys-source]')).toHaveCount(3);
     const tabsH = await page.locator('[data-sys-tab]').evaluateAll((e) => [...new Set(e.map((x) => Math.round(x.getBoundingClientRect().top)))].length);
     expect(tabsH, 'zakładki w jednym wierszu').toBe(1);
     expect(await page.locator('.sys-tabs').evaluate((e) => e.scrollWidth <= e.clientWidth + 1), 'zakładki mieszczą się bez przewijania').toBe(true);
     await page.locator('[data-sys-source="fuel"] .sys-m-row').click();
     await expect(page.locator('[data-sys-source="fuel"] [data-sys-check]')).toBeVisible();
     await page.locator('[data-sys-rest]').click();
-    await expect(page.locator('[data-sys-source]')).toHaveCount(13);
+    await expect(page.locator('[data-sys-source]')).toHaveCount(14);
     const small = await page.locator('[data-sys-screen] .sys-m-row, [data-sys-rest]').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height < 44).length);
     expect(small).toBe(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
@@ -850,6 +853,9 @@ test.describe('wyglad/P10b-d pierwsze wejście (E37 pkt 9)', () => {
     await expect(pos(page)).toHaveText('2 z 4');
     await page.fill('#fe-pw', 'krotkie');
     await expect(page.locator('[data-fe-pwlen]')).toHaveText('7 znaków — za mało (min. 12)');
+    /* wyglad/audyt-E (E-12): litery i cyfry */
+    await page.fill('#fe-pw', 'Dlugie-haslo-bez');
+    await expect(page.locator('[data-fe-pwlen]')).toHaveText('16 znaków — brak cyfry (min. 12 znaków, litery i cyfry)');
     await page.fill('#fe-pw', 'Dlugie-haslo-2026');
     await expect(page.locator('[data-fe-pwlen]')).toHaveText('17 znaków — dobrze (min. 12)');
     await page.fill('#fe-pw2', 'Dlugie-haslo-2025');
@@ -1813,7 +1819,7 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
     await expect(page.locator('.ox-side [data-opt-group="notify"] [data-opt-nav]')).toHaveText(['Kto co dostaje', 'Treści wiadomości', 'SMS przy miejscachBoden: brak', 'Komunikat dla wszystkich']);
     await page.click('[data-opt-nav="flags"]');
     await expect(page.locator('[data-opt-screen="flags"] .ox-crumb')).toHaveText('Opcje › System');
-    await expect(page.locator('[data-opt-screen="flags"] tbody tr')).toHaveCount(10); /* wyglad/P9-b: bez H1, H3, H6 (16.10 01:13) */
+    await expect(page.locator('[data-opt-screen="flags"] tbody tr')).toHaveCount(9); /* wyglad/P9-b: bez H1, H3, H6 (16.10 01:13); wyglad/audyt-E: bez e-maila o decyzjach automatycznych (E5, E11) */
     /* każdy ekran przy 1440 i 1280 px: strona i `main` bez przewijania w bok (macierz „Kto co dostaje” ma własny pasek) */
     const ids = await page.evaluate(() => Array.from(document.querySelectorAll('.ox-side [data-opt-nav]')).map((b) => b.getAttribute('data-opt-nav') ?? ''));
     const wide: string[] = [];

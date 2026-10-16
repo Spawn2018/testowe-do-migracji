@@ -9,7 +9,7 @@ const pl = {
   p8_changed_short: 'zmieniono {d}',
   p8_draft: 'niezapisane zmiany',
   p8_loading: 'Wczytywanie treści…',
-  p8_list_note: 'Pełna lista: 4 SMS + 28 rodzajów e-maili i powiadomień w dzwonku + 2 e-maile paczki do księgowości (E40) + 5 e-maili logowania. Wszystko tylko po polsku. Każda pozycja ma „domyślna” albo „zmieniono [data] · [osoba]”. Kanały i odbiorców ustawia się w „Kto co dostaje” (E11).',
+  p8_list_note: 'Pełna lista: 4 SMS + 34 rodzaje e-maili i powiadomień w dzwonku + 2 e-maile paczki do księgowości + 5 e-maili logowania. Wszystko tylko po polsku. Każda pozycja ma „domyślna” albo „zmieniono [data] · [osoba]”. Kanały i odbiorców ustawia się w „Kto co dostaje”.',
   p8_pl_only: 'Treść tylko po polsku — każdy odbiorca, także w Boden, dostaje tę samą wersję (decyzja 22:42).',
   p8_subject: 'Temat',
   p8_subject_note: 'Temat jest też tytułem wpisu w dzwonku.',

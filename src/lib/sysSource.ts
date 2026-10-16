@@ -114,6 +114,8 @@ export function sourceThresholds(): SourceThreshold[] | null {
       { key: 'SRC_FERRY_STATUS_MIN', value: 30, unit: 'min' },
       { key: 'SRC_ROAD_SE_MIN', value: 45, unit: 'min' },
       { key: 'SRC_WEATHER_H', value: 3, unit: 'h' },
+      /* wyglad/audyt-E (E-09; E49 Z5): „Wiatr — SMHI” — próg świeżości 2 h */
+      { key: 'SRC_WIND_H', value: 2, unit: 'h' },
       { key: 'SRC_FUEL_H', value: 26, unit: 'h' },
       { key: 'SRC_SCHEDULE_D', value: 8, unit: 'dni' },
     ];

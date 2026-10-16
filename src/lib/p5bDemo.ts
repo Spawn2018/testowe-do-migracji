@@ -5,7 +5,7 @@
  * załącznika w `sefs.ts`) — Opcje, Finanse i panel „Ceny” pokazują dla tego samego tygodnia ten sam mnożnik.
  * Ceny dni: wahania jak w przykładzie E3 wokół średniej tygodnia; brak ceny Orlen z poprzedniego dnia.
  */
-import type { CancelRulesView, DwellRulesView, FuelDayGroup, FuelDayRow, FuelScreenView, FuelTier, PaymentTermsView } from './p5bFuel';
+import type { CancelRulesView, DwellRulesView, FuelDayGroup, FuelDayRow, FuelScreenView, FuelTier, PaymentTermsView, RateCardRow, RateCardView } from './p5bFuel';
 import { SEFS_PLN, SEFS_SEK, sefsForLoadDate, type SefsTier } from './sefs';
 
 const DAY = 86_400_000;
@@ -108,8 +108,34 @@ export const demoDwellRules = (): DwellRulesView => ({
 
 export const demoCancelRules = (): CancelRulesView => ({
   pct: { 5: 0, 4: 15, 3: 25, 2: 25, 1: 50, 0: 100 },
-  example: { label: 'SG', costEur: 6900, revEur: 7300 },
+  /* wyglad/audyt-E (E-06): ten sam fracht SG co w cenniku poniżej (SCX v1 6 900, KSH v2 7 245 EUR — baza 08.10, E33) */
+  example: { label: 'SG', costEur: 6900, revEur: 7245 },
   changed: { at: '2026-10-08T12:14:00+02:00', by: 'Administrator HHL' },
 });
 
 export const demoPaymentTerms = (): PaymentTermsView => ({ kshDays: 30, scxDays: 35, changed: null });
+
+/* wyglad/audyt-E (E-06, C-14) — cennik według symboli: 10 symboli, 12 pozycji (KR — konwój 1, 2 i 3 auta).
+   SG i KR jak w bazie 08.10 (E33: SG 6 900 / 7 245, KR 12 745 / 12 290 / 11 380 i 13 382 / 12 905 / 11 949 EUR);
+   pozostałe kwoty przykładowe, KSH v2 = koszt × 1,05 do pełnej liczby. Zestawy — tabela symboli (`p7Demo.ts`). */
+const R = (id: string, symbol: string, kind: string, l: number, w: number, h: number, costEur: number, convoy?: number): RateCardRow =>
+  ({ id, symbol, kind, set: { l, w, h }, costEur, revEur: Math.round(costEur * 1.05), ...(convoy ? { convoy } : {}) });
+
+export const demoRateCard = (): RateCardView => ({
+  rows: [
+    R('BS-A', 'BS-A', 'Belki suwnicowe', 18.19, 2.45, 2.6, 5850),
+    R('BS-B', 'BS-B', 'Belki suwnicowe', 18.19, 2.45, 3.1, 6100),
+    R('BS-C', 'BS-C', 'Belki suwnicowe', 19.69, 2.45, 3.1, 6450),
+    R('KR-1', 'KR', 'Kratownice', 23.69, 3.52, 3.9, 12745, 1),
+    R('KR-2', 'KR', 'Kratownice', 23.69, 3.52, 3.9, 12290, 2),
+    R('KR-3', 'KR', 'Kratownice', 23.69, 3.52, 3.9, 11380, 3),
+    R('PL-A', 'PL-A', 'Płatwie dachowe i stężenia', 18.19, 2.45, 3.75, 5700),
+    R('PL-B', 'PL-B', 'Płatwie dachowe i stężenia', 18.19, 3.4, 3.75, 6250),
+    R('SG', 'SG', 'Słupy główne', 21.69, 2.45, 3.75, 6900),
+    R('SS', 'SS', 'Słupy skrajne oś A', 21.69, 3.0, 3.8, 7640),
+    R('T', 'T', 'Tężniki', 18.19, 2.45, 3.75, 5320),
+    R('TS', 'TS', 'Tężniki ściany A', 20.69, 2.45, 3.95, 5950),
+  ],
+  ksh: { side: 'KSH', v: 2, from: '2026-09-28', note: 'Poprawa cen do pełnej liczby', at: '2026-10-06T16:02:00+02:00', by: 'Administrator HHL' },
+  scx: { side: 'SCX', v: 1, from: '2026-09-28', note: null, at: '2026-09-30T10:00:00+02:00', by: 'Administrator HHL' },
+});

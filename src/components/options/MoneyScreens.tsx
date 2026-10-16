@@ -16,6 +16,7 @@ import { TZ_OPERACYJNA } from '../../lib/money/engine';
 import {
   CANCEL_DAYS, feeOf, looksLikeEmail, pctOf, tierOf, tiersAround,
   type CancelRulesView, type DwellRulesView, type FuelActions, type FuelDayRow, type FuelScreenView, type FuelSource, type FuelTier, type PaymentTermsView,
+  type RateCardRow, type RateCardSave, type RateCardView,
 } from '../../lib/p5bFuel';
 import type { DwellPatch, TestMailResult } from '../../lib/p5bSource';
 import { t } from '../../i18n/messages';
@@ -518,6 +519,185 @@ export function RatesExtras({ locale, cancel, onCancelSave, margin, onMarginSave
       ) : null}
       {cancel || margin !== undefined ? <h4 className="ox-eyebrow pm-h">{up(fb(locale, 'p5b_c_rates_h'))}</h4> : null}
     </div>
+  );
+}
+
+/* ---------- Cennik według symboli w wersjach (E33, E11; wyglad/audyt-E E-06, C-14) ---------- */
+
+const RC_SIDES = ['KSH', 'SCX'] as const;
+type RcSide = (typeof RC_SIDES)[number];
+/** „6 900,00” albo „6900.5” → liczba; puste lub nie-liczba → null. */
+const plNum = (s: string): number | null => {
+  const v = s.trim().replace(/[\s ]/g, '').replace(',', '.');
+  if (!v) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+const isoAdd = (d: string, n: number) => new Date(Date.parse(`${d}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+/** wymiar zestawu: „21,69”, „3,9”, „3” */
+const dim = (n: number) => formatPlNumber(n, Number.isInteger(n) ? 0 : Number.isInteger(n * 10) ? 1 : 2);
+const cents = (n: number) => Math.round(n * 100);
+
+type RcDraft = { side: RcSide; from: string; note: string; prices: Record<string, string>; err: string | null };
+
+/**
+ * Cennik według symboli (10 symboli, 12 pozycji — KR w konwoju 1, 2 i 3 auta): koszt SCX i przychód KSH z numerem
+ * wersji, zestaw D × S × W. „Nowa wersja cennika” — ceny jednej strony, data „od”, powód → pytanie → wpis w Historii
+ * zmian; poprzednia wersja kończy się dzień przed „od”. Telefon: pozycje jako karty. Kwoty netto w EUR (źródło).
+ */
+export function RateCard({ locale, view: initial, today, nowIso, readOnly, onSave }: {
+  locale: Locale;
+  view: RateCardView;
+  /** dzień operacyjny „dziś” (RRRR-MM-DD) — domyślna data „od” = jutro */
+  today: string;
+  nowIso: string;
+  readOnly: boolean;
+  onSave: RateCardSave | null;
+}) {
+  const [view, setView] = useState(initial);
+  const [draft, setDraft] = useState<RcDraft | null>(null);
+  const [ask, setAsk] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const canEdit = !readOnly && !!onSave;
+  const verOf = (side: RcSide) => (side === 'KSH' ? view.ksh : view.scx);
+  const priceOf = (r: RateCardRow, side: RcSide) => (side === 'KSH' ? r.revEur : r.costEur);
+  const pricesFor = (side: RcSide) => Object.fromEntries(view.rows.map((r) => [r.id, n2(priceOf(r, side))]));
+  const colLabel = (side: RcSide) => fb(locale, side === 'KSH' ? 'p5b_r_col_rev' : 'p5b_r_col_cost');
+  /* „Koszt SCX · v1”; w nagłówku tabeli wielkie litery tylko w nazwie, numer wersji zostaje „v1” */
+  const colName = (side: RcSide) => `${colLabel(side)} · v${verOf(side).v}`;
+  const colHead = (side: RcSide) => `${up(colLabel(side))} · v${verOf(side).v}`;
+  const rowName = (r: RateCardRow) => (r.convoy ? `${r.symbol} · ${fb(locale, `p5b_r_convoy_${r.convoy}`)}` : r.symbol);
+  const parsed: Record<string, number | null> = draft ? Object.fromEntries(view.rows.map((r) => [r.id, plNum(draft.prices[r.id] ?? '')])) : {};
+  const changed = draft ? view.rows.filter((r) => parsed[r.id] != null && cents(parsed[r.id]!) !== cents(priceOf(r, draft.side))).length : 0;
+  const latest = view.ksh.at >= view.scx.at ? view.ksh : view.scx;
+
+  const start = () => {
+    const from = isoAdd(today, 1);
+    setDraft({ side: 'KSH', from: from > view.ksh.from ? from : isoAdd(view.ksh.from, 1), note: '', prices: pricesFor('KSH'), err: null });
+    setMsg(null);
+  };
+  const check = () => {
+    if (!draft) return;
+    const old = verOf(draft.side);
+    if (view.rows.some((r) => !((parsed[r.id] ?? 0) > 0))) { setDraft({ ...draft, err: fb(locale, 'p5b_r_bad') }); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.from) || draft.from <= old.from) { setDraft({ ...draft, err: fbp(locale, 'p5b_r_bad_from', { date: dmy(old.from) }) }); return; }
+    if (!changed) { setDraft({ ...draft, err: fb(locale, 'p5b_r_same') }); return; }
+    setDraft({ ...draft, err: null });
+    setAsk(true);
+  };
+  const confirm = () => {
+    if (!draft || !onSave || busy) return;
+    const { side, from } = draft;
+    const note = draft.note.trim();
+    const prices = Object.fromEntries(view.rows.map((r) => [r.id, parsed[r.id]!]));
+    const v = verOf(side).v + 1;
+    setBusy(true);
+    void safe(onSave(side, from, prices, note), false).then((ok) => {
+      setBusy(false);
+      setAsk(false);
+      if (!ok) { setMsg(fb(locale, 'p5b_save_fail')); return; }
+      const ver = { side, v, from, note: note || null, at: nowIso, by: fb(locale, 'p5b_r_by') };
+      setView((cur) => ({
+        rows: cur.rows.map((r) => (side === 'KSH' ? { ...r, revEur: prices[r.id]! } : { ...r, costEur: prices[r.id]! })),
+        ksh: side === 'KSH' ? ver : cur.ksh,
+        scx: side === 'SCX' ? ver : cur.scx,
+      }));
+      setDraft(null);
+      setMsg(fbp(locale, 'p5b_r_done', { side, v, from: dmy(from) }));
+    });
+  };
+
+  const cell = (r: RateCardRow, side: RcSide) => (draft?.side === side ? (
+    <input
+      className="input pm-rc-in"
+      inputMode="decimal"
+      aria-label={`${rowName(r)} — ${colName(side)}`}
+      aria-invalid={!((parsed[r.id] ?? 0) > 0) || undefined}
+      value={draft.prices[r.id] ?? ''}
+      onChange={(e) => setDraft({ ...draft, err: null, prices: { ...draft.prices, [r.id]: e.target.value } })}
+    />
+  ) : <>{n2(priceOf(r, side))} EUR</>);
+
+  const old = draft ? verOf(draft.side) : null;
+  return (
+    <section className="pm-sec pm-rc" data-rate-card data-deur-exempt="rate-card">
+      <div className="pm-sec-hd">
+        <b className="pm-rc-ver" data-rate-versions>{fbp(locale, 'p5b_r_versions', { k: view.ksh.v, kf: dmy(view.ksh.from), s: view.scx.v, sf: dmy(view.scx.from) })}</b>
+        <Changed locale={locale} changed={latest} />
+      </div>
+      <p className="ox-muted pm-sec-sub">{fb(locale, 'p5b_r_sub')}</p>
+      {canEdit && !draft ? (
+        <div className="ox-actions ox-actions-start pm-rc-act">
+          <button type="button" className="btn ox-btn" data-rate-new onClick={start}>{fb(locale, 'p5b_r_new')}</button>
+        </div>
+      ) : null}
+      {draft && old ? (
+        <div className="pm-rc-new" data-rate-draft={draft.side}>
+          <h4 className="ox-eyebrow">{up(fb(locale, 'p5b_r_new_h'))}</h4>
+          <div className="pm-rc-fields">
+            <div className="ox-field"><span>{up(fb(locale, 'p5b_r_side'))}</span>
+              <SegRadio
+                label={fb(locale, 'p5b_r_side')}
+                value={draft.side}
+                options={RC_SIDES}
+                nameOf={(s) => fb(locale, `p5b_r_side_${s}`)}
+                disabled={busy}
+                onPick={(side) => { if (side !== draft.side) setDraft({ ...draft, side, prices: pricesFor(side), err: null }); }}
+              />
+            </div>
+            <label className="ox-field"><span>{up(fb(locale, 'p5b_r_from'))}</span>
+              <input className="input" type="date" value={draft.from} min={isoAdd(old.from, 1)} onChange={(e) => setDraft({ ...draft, from: e.target.value, err: null })} />
+            </label>
+            <label className="ox-field pm-rc-note"><span>{up(fb(locale, 'p5b_r_note'))}</span>
+              <input className="input" value={draft.note} placeholder={fb(locale, 'p5b_r_note_ph')} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
+            </label>
+          </div>
+          <p className="ox-muted">{fbp(locale, 'p5b_r_edit_x', { col: colName(draft.side) })}</p>
+          {draft.err ? <p className="ox-alert pm-rc-err" role="alert">{draft.err}</p> : null}
+          <div className="ox-actions ox-actions-start">
+            <button type="button" className="btn ghost ox-btn" disabled={busy} onClick={() => setDraft(null)}>{fb(locale, 'p5b_t_cancel')}</button>
+            <button type="button" className="btn ox-btn" data-rate-save disabled={busy} onClick={check}>{fbp(locale, 'p5b_r_save', { side: draft.side, v: old.v + 1 })}</button>
+          </div>
+        </div>
+      ) : null}
+      <table className="ox-table ox-cards-phone pm-rc-t" data-opt-table="rates">
+        <thead>
+          <tr>
+            <th scope="col">{up(fb(locale, 'p5b_r_col_symbol'))}</th>
+            <th scope="col">{up(fb(locale, 'p5b_r_col_kind'))}</th>
+            <th scope="col">{up(fb(locale, 'p5b_r_col_set'))}</th>
+            <th scope="col" className="num">{colHead('SCX')}</th>
+            <th scope="col" className="num">{colHead('KSH')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {view.rows.map((r) => (
+            <tr key={r.id} data-rate={r.id}>
+              <th scope="row" data-label={up(fb(locale, 'p5b_r_col_symbol'))}><b>{r.symbol}</b>{r.convoy ? <span className="ox-sub">{fb(locale, `p5b_r_convoy_${r.convoy}`)}</span> : null}</th>
+              <td data-label={up(fb(locale, 'p5b_r_col_kind'))}>{r.kind}</td>
+              <td data-label={up(fb(locale, 'p5b_r_col_set'))} className="tabular">{r.set ? `${dim(r.set.l)} × ${dim(r.set.w)} × ${dim(r.set.h)} m` : '—'}</td>
+              <td data-label={colHead('SCX')} className="num tabular">{cell(r, 'SCX')}</td>
+              <td data-label={colHead('KSH')} className="num tabular">{cell(r, 'KSH')}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="ox-foot">{fb(locale, 'p5b_r_foot')}</p>
+      <Live msg={msg} />
+      {ask && draft && old ? (
+        <div className="ox-scrim" role="presentation" onClick={() => !busy && setAsk(false)}>
+          <div className="ox-dialog" role="dialog" aria-modal="true" aria-labelledby="pm-rc-q" onClick={(e) => e.stopPropagation()}>
+            <h3 id="pm-rc-q">{fbp(locale, 'p5b_r_ask', { side: draft.side, v: old.v + 1, from: dmy(draft.from) })}</h3>
+            <p>{fbp(locale, 'p5b_r_ask_x', { side: draft.side, old: old.v, v: old.v + 1, end: dmy(isoAdd(draft.from, -1)), n: changed })}</p>
+            <div className="ox-actions">
+              <button type="button" className="btn ghost ox-btn" disabled={busy} onClick={() => setAsk(false)}>{fb(locale, 'p5b_t_cancel')}</button>
+              <button type="button" className="btn ox-btn" data-rate-yes disabled={busy} onClick={confirm}>{fb(locale, 'p5b_r_yes')}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 }
 

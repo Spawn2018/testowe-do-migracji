@@ -14,9 +14,12 @@ describe('pierwsze wejście — obliczenia', () => {
     expect(stepNumber('details', ['details'])).toBeNull();
   });
 
-  it('hasło: długość wobec minimum 12', () => {
-    expect(pwCheck('Bezpieczne14!!', 12)).toEqual({ len: 14, ok: true });
-    expect(pwCheck('krotkie', 12)).toEqual({ len: 7, ok: false });
+  it('hasło: minimum 12 znaków, litery i cyfry (E19 decyzja 1 A; wyglad/audyt-E E-12)', () => {
+    expect(pwCheck('Bezpieczne14!!', 12)).toEqual({ len: 14, ok: true, letter: true, digit: true });
+    expect(pwCheck('krotkie', 12)).toEqual({ len: 7, ok: false, letter: true, digit: false });
+    expect(pwCheck('Dlugie-haslo-bez', 12)).toEqual({ len: 16, ok: false, letter: true, digit: false });
+    expect(pwCheck('123456789012', 12)).toEqual({ len: 12, ok: false, letter: false, digit: true });
+    expect(pwCheck('Zażółć-1234!', 12)).toMatchObject({ ok: true });
   });
 
   it('telefon: kierunkowy + numer → E.164; zły numer → null; odczyt z konta', () => {

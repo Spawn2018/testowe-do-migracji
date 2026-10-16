@@ -35,10 +35,20 @@ describe('B-6a/b/c: „Jak to działa” w Opcjach', () => {
     expect(html.match(/<li>/g)).toHaveLength(t('pl', 'b6_howto_thresh').split('|').length);
   });
   it('treść zgodna z mechanizmem: macierz, decyzja ostrzeżenie→krytyczne, SMS tylko Śrem i Boden, progi 48/12 h', () => {
-    expect(t('pl', 'b6_howto_notif')).toMatch(/Tylko macierz decyduje/);
-    expect(t('pl', 'b6_howto_notif')).toMatch(/Nowa automatyzacja/); // B-5 05.10: kreator reguł zamiast „nie dodaje się”
+    /* wyglad/audyt-E (E-04): zdarzenie × rodzaj konta × kanał (E11), osoba ustawia swoje w „Co dostaję” (W47),
+       sprawy w Ryzyka › Do zrobienia (E7), „+ Nowa reguła” (E35), zmiana progu z potwierdzeniem i Historią (E12) */
+    const notif = t('pl', 'b6_howto_notif');
+    expect(notif).toMatch(/zdarzenie × rodzaj konta .* × kanał: dzwonek w aplikacji, powiadomienie na telefonie, e-mail/);
+    expect(notif).toMatch(/„Dla mnie › Co dostaję”/);
+    expect(notif).toMatch(/Ryzyka › Do zrobienia/);
+    expect(notif).toMatch(/„\+ Nowa reguła”/);
+    expect(notif).not.toMatch(/Centrum decyzji|Nowa automatyzacja|grupy zdarzenia i firmy/);
     expect(t('pl', 'b6_howto_zones')).toMatch(/Śremie i plac w Boden/);
-    expect(t('pl', 'b6_howto_thresh')).toMatch(/48 h przed — ostrzeżenie, na 12 h — krytyczne/);
+    const thr = t('pl', 'b6_howto_thresh');
+    expect(thr).toMatch(/48 h przed — ostrzeżenie, na 12 h — krytyczne/);
+    expect(thr).toMatch(/„Zmień” → nowa wartość większa od zera → potwierdzenie → wpis w Historii zmian/);
+    expect(thr).toMatch(/Polisa HHL i zezwolenie „Firma” podpinają się same/);
+    expect(thr).not.toMatch(/Zapis przy wyjściu z pola|otwiera się decyzja/);
   });
 });
 

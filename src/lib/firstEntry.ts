@@ -19,10 +19,15 @@ export function stepNumber(step: FirstStep, steps: readonly FirstStep[]): { n: n
   return i < 0 ? null : { n: i + 1, total: steps.length };
 }
 
-/** Długość hasła z oceną wobec minimum (makieta: „14 znaków — dobrze (min. 12)”). */
-export function pwCheck(pw: string, min: number): { len: number; ok: boolean } {
+/**
+ * Ocena hasła (makieta: „14 znaków — dobrze (min. 12)”). wyglad/audyt-E (E-12; E19 decyzja 1 A, 08.10):
+ * minimum 12 znaków z literami i cyframi — `letter` / `digit` mówią, czego brakuje.
+ */
+export function pwCheck(pw: string, min: number): { len: number; ok: boolean; letter: boolean; digit: boolean } {
   const len = [...pw].length;
-  return { len, ok: len >= min };
+  const letter = /\p{L}/u.test(pw);
+  const digit = /\p{Nd}/u.test(pw);
+  return { len, ok: len >= min && letter && digit, letter, digit };
 }
 
 export type Platform = 'ios' | 'android' | 'desktop';

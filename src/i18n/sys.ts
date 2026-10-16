@@ -43,6 +43,7 @@ const PL: Record<string, string> = {
   sys_thr_SRC_FERRY_STATUS_MIN: 'Statusy rejsów',
   sys_thr_SRC_ROAD_SE_MIN: 'Drogi w Szwecji',
   sys_thr_SRC_WEATHER_H: 'Pogoda morska',
+  sys_thr_SRC_WIND_H: 'Wiatr — SMHI',
   sys_thr_SRC_FUEL_H: 'Ceny paliwa',
   sys_thr_SRC_SCHEDULE_D: 'Rozkład promów',
   sys_thr_fx: 'dane starsze — „Nie działa”',
