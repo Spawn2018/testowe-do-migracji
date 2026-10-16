@@ -225,6 +225,7 @@ as $$
   end
 $$;
 
+alter function public.notify_event_key(text, jsonb) set search_path = public;
 revoke all on function public.notify_event_key(text, jsonb) from public, anon, authenticated;
 
 create or replace function public.notify_person_on(
@@ -271,6 +272,7 @@ as $$
   end
 $$;
 
+alter function public.notify_audience_ok(uuid, text, text, text, jsonb) set search_path = public;
 revoke all on function public.notify_audience_ok(uuid, text, text, text, jsonb) from public, anon, authenticated;
 
 create or replace function public.my_notify_get()
@@ -444,6 +446,7 @@ declare
   v_bundle text;
   v_event text;
   v_push_ok boolean;
+  v_legacy_job boolean;
   r record;
 begin
   if (p_event_group in ('LOAD_STATUS','RISK_FERRY_WEATHER','DECISION','MONEY','SYSTEM')) is not true then
@@ -496,6 +499,10 @@ begin
   if (v_event is not null and v_event is distinct from 'risk_general') is not true then
     return 0;
   end if;
+  -- JOB_FAILURE / USAGE_LIMIT zostają w dzwonku HHL (jak dawna grupa SYSTEM).
+  -- E-mail i telefon „źródło nie działa” tylko dla prawdziwego SOURCE_DOWN.
+  v_legacy_job := coalesce(v_payload->>'kind', '') in ('JOB_FAILURE', 'USAGE_LIMIT')
+    and p_template in ('RISK_OPEN', 'RISK_SEVERITY');
 
   v_payload := v_payload
     || jsonb_build_object('event_group', p_event_group, 'event_key', p_dedup_prefix, 'matrix_event', v_event);
@@ -544,6 +551,7 @@ begin
        and u.role in ('HHL_ADMIN','HHL_OPS','CLIENT_USER','CARRIER_DISPATCH','CARRIER_USER')
        and (p_only_org_kind is null or o.kind::text = p_only_org_kind)
        and public.notify_audience_ok(u.id, u.role::text, o.kind::text, p_template, v_payload)
+       and v_legacy_job is not true
        and (
          o.kind = 'FORWARDER'
          or (o.kind = 'CARRIER' and (
@@ -577,7 +585,8 @@ begin
     or p_template in ('SOURCE_DOWN', 'JOB_FAILURE')
   );
   v_has_push_target := p_load_id is not null or v_decision is not null or v_source_alarm;
-  v_push_ok := (v_critical is true and v_has_push_target is true) or v_event = 'chat' or v_event = 'app_err';
+  v_push_ok := v_legacy_job is not true
+    and ((v_critical is true and v_has_push_target is true) or v_event = 'chat' or v_event = 'app_err');
   if v_push_ok is true then
   insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key, status)
   select 'WEB_PUSH', coalesce(u.email::text, u.id::text), u.id, p_load_id, p_template,
@@ -697,3 +706,70 @@ end $$;
 
 comment on function public.notify_load_chat_message() is
   'C3 Cz13/Cz25: czat według macierzy chat; odbiorcy z visible_to, bez autora.';
+
+-- Otwarcie decyzji: e-mail z wiersza „Nowa decyzja”, nie z dowolnego wiersza grupy DECISION.
+create or replace function public.l13_decision_email(p_decision uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  d decisions%rowtype;
+  v_role text;
+  v_sev text;
+  v_kind text;
+  v_bundle text;
+  v_order text;
+  v_payload jsonb;
+  r record;
+begin
+  if public.l13_automatic_decision_email() is not true then
+    return;
+  end if;
+  select * into d from decisions where id = p_decision;
+  if not found then
+    return;
+  end if;
+  select decider_role, severity_default into v_role, v_sev
+    from decision_types where code = d.type_code;
+  v_kind := case when v_sev = 'CRITICAL' or d.type_code = 'FERRY_CANCELLED' then 'critical' else 'digest' end;
+  v_bundle := coalesce(
+    nullif(d.detail->>'bundle_key', ''),
+    nullif(d.detail->>'sailing_id', ''),
+    d.type_code || ':' || coalesce(d.detail->>'event_key', d.id::text)
+  );
+  select order_no into v_order from loads where id = d.load_id;
+  v_payload := jsonb_build_object(
+    'decision_id', d.id, 'type', d.type_code, 'title', d.title,
+    'status', d.status, 'event', 'OPEN', 'severity', v_sev,
+    'bundle_key', v_bundle, 'level', case when v_kind = 'critical' then 'critical' else 'info' end
+  );
+  for r in
+    select distinct u.id as user_id, u.email::text as recipient, u.locale
+      from app_users u
+      join organizations o on o.id = u.org_id
+      join notification_matrix m
+        on m.event_key = 'dec_new' and m.role = u.role and m.email
+     where u.active and u.email is not null
+       and (
+         o.kind = 'FORWARDER'
+         or (o.kind = 'CARRIER' and v_role = 'CARRIER' and (
+              d.load_id is null
+              or exists (select 1 from loads l where l.id = d.load_id and l.carrier_org_id = o.id)))
+         or (o.kind = 'CLIENT' and (
+              d.project_id is null
+              or exists (select 1 from projects pr where pr.id = d.project_id and pr.client_org_id = o.id)))
+       )
+  loop
+    perform public.l13_queue_email(
+      v_kind, 'DECISION_OPEN', r.user_id, r.recipient, d.load_id, v_order,
+      v_payload || jsonb_build_object('locale', r.locale),
+      left('dec:OPEN:' || d.id::text || ':EM:' || r.user_id::text, 200),
+      case when v_kind = 'critical' then v_bundle else null end
+    );
+  end loop;
+  perform public.l13_email_guard_note(now());
+end $$;
+
+revoke all on function public.l13_decision_email(uuid) from public, anon, authenticated;
