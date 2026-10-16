@@ -13,6 +13,7 @@ import type { MatrixCell, MatrixGroup } from './channels';
 import { ExportScreen, FlagsScreen, HistoryScreen, ThresholdsScreen, type SecurityFlagRow, type ThresholdRow } from './SystemScreens';
 import { AccountScreen, BroadcastScreen, LoginsScreen, UsersScreen, type InviteRow, type PersonRow } from './PeopleScreens';
 import type { ReactNode } from 'react';
+import { m2 } from '../../i18n/mfa2';
 
 const c = (bell: boolean, push = false, mail = false, fixed?: MatrixCell extends null ? never : NonNullable<MatrixCell>['fixed']): MatrixCell => ({ bell, push, mail, fixed });
 const all5 = (cell: MatrixCell): Record<AccountKind, MatrixCell> => ({ HHL_ADMIN: cell, HHL_OPS: cell, CLIENT_USER: cell, CARRIER_DISPATCH: cell, CARRIER_USER: cell });
@@ -30,8 +31,10 @@ export const DEMO_MATRIX: MatrixGroup[] = [
         cells: { HHL_ADMIN: c(true), HHL_OPS: c(true), CLIENT_USER: c(false), CARRIER_DISPATCH: c(true, true, true), CARRIER_USER: c(true) } },
       { id: 'order_no', perDay: 4, title: 'Brak numeru zlecenia', sub: 'numer HHL albo przewoźnika', target: 'Harmonogram › transport',
         cells: { HHL_ADMIN: c(true), HHL_OPS: c(true), CLIENT_USER: c(false), CARRIER_DISPATCH: c(true), CARRIER_USER: c(false) } },
-      { id: 'chat', perDay: 14, title: 'Nowa wiadomość w czacie', sub: 'w transporcie, którego dotyczy', target: 'Transport › Czat',
-        cells: { HHL_ADMIN: c(true), HHL_OPS: c(true, true), CLIENT_USER: c(true), CARRIER_DISPATCH: c(true, true), CARRIER_USER: c(true) } },
+      /* wyglad/P6-e (D-20261016-0310-01 Cz13, D-20261016-0315-01 Cz25): dzwonek i telefon dla 5 rodzajów kont, bez e-maila;
+       * odbiorców zawęża zawsze `visible_to` — rozmowa „tylko HHL i SCX” nigdy do KSH */
+      { id: 'chat', perDay: 14, title: 'Nowa wiadomość w czacie', sub: 'tylko do firm, które widzą wiadomość · „tylko HHL i SCX” nigdy do KSH, niezależnie od ustawień', target: 'Transport › Czat',
+        cells: all5(c(true, true)) },
     ],
   },
   {
@@ -180,7 +183,8 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
         />
       ),
       thr: <ThresholdsScreen locale={locale} rows={DEMO_THRESHOLDS} readOnly={readOnly} mark={mark} />,
-      flags: <FlagsScreen locale={locale} flags={DEMO_FLAGS} readOnly={readOnly} mark={mark} />,
+      /* wyglad/2fa: wymaganie 2FA dla administratorów — dopiero przy 2FA na dwóch urządzeniach (I-17) */
+      flags: <FlagsScreen locale={locale} flags={DEMO_FLAGS} readOnly={readOnly} mark={mark} blocked={{ MFA_HHL_ADMIN: m2('m2_flag_blocked_two') }} />,
       hist: (
         <HistoryScreen
           locale={locale}
@@ -211,6 +215,10 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
           mark={mark}
           me={{ first: first ?? '', last: rest.join(' '), phone: me.phone ?? '', mail: me.mail, kind, lastLogin: me.last }}
           mfa={me.mfa}
+          mfaDevices={me.mfa ? [{ id: 'f1', name: 'Telefon 1', since: '12.10.2026' }] : undefined}
+          mfaCode
+          onMfaAdd={() => undefined}
+          onMfaRemove={() => undefined}
           devices={[
             { id: 'd1', name: 'Chrome · Windows', last: 'dziś, 08:12', push: false, current: true },
             { id: 'd2', name: 'Safari · iPhone', last: 'wczoraj, 19:40', push: true, current: false },

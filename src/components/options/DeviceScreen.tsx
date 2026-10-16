@@ -17,6 +17,8 @@ import { pushDevicesOf, type PushDevice, type PushTestResult } from '../../lib/p
 import { ackFresh, phaseAfterRefresh, phoneChecks, reasonKey, type PhoneEnv, type Platform, type TestPhase } from '../../lib/phoneCheck';
 import { up } from './up';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
+import { useInstallState, type InstallState } from '../../lib/installPrompt';
+import { ft, type P6fKey } from '../../i18n/p6f';
 
 /** Tylko build produkcyjny ładuje obsługę powiadomień (strażnik I-2: paczka demo bez klienta bazy). */
 const loadWebPush = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? () => import('../../lib/webPush') : null;
@@ -48,7 +50,12 @@ const CHECK_LABEL: Record<string, string> = {
   support: 'dev_ck_support', home: 'dev_ck_home', perm: 'dev_ck_perm', saved: 'dev_ck_saved', test: 'dev_ck_test',
 };
 
+const APP_TEXT: Record<InstallState, P6fKey> = {
+  app: 'p6f_app_app', 'can-install': 'p6f_app_can', installed: 'p6f_app_installed', browser: 'p6f_app_browser',
+};
+
 export function DeviceScreen({ locale }: { locale: Locale }) {
+  const inst = useInstallState();
   const live = loadWebPush !== null;
   const src = pushDevicesOf();
   const [devices, setDevices] = useState<PushDevice[] | null>(src ? src.devices : null);
@@ -243,6 +250,24 @@ export function DeviceScreen({ locale }: { locale: Locale }) {
           ))}
         </ol>
 
+        <div className="ox-dev-app" data-dev-app={inst.state}>
+          <span className="ox-eyebrow">{up(ft('p6f_app'))}</span>
+          <p className={`ox-dev-app-st${inst.state === 'app' || inst.state === 'installed' ? ' is-ok' : ''}`}>{ft(APP_TEXT[inst.state])}</p>
+          {inst.install ? (
+            <div className="ox-actions ox-actions-start">
+              <button type="button" className="btn ox-btn" data-dev-install onClick={() => {
+                void inst.install!().then((ok) => { if (!ok) setMsg(ft('p6f_install_no')); });
+              }}>{ft('p6f_install')}</button>
+            </div>
+          ) : null}
+          {inst.state !== 'app' && !ios ? <p className="ox-foot" data-dev-samsung-install>{ft('p6f_samsung')}</p> : null}
+        </div>
+        <div className="ox-dev-chat" data-dev-chat>
+          <span className="ox-eyebrow">{up(ft('p6f_chat'))}</span>
+          <ul className="ox-dev-bul">
+            {(['p6f_chat_1', 'p6f_chat_2', 'p6f_chat_3', 'p6f_chat_4', 'p6f_chat_5', 'p6f_chat_6'] as const).map((k) => <li key={k}>{ft(k)}</li>)}
+          </ul>
+        </div>
         <div className="ox-dev-here">
           <span className="ox-eyebrow">{up(t(locale, 'dev_here'))}</span>
           <div className="ox-actions ox-actions-start">

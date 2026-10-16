@@ -1,17 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { clearHelpOnce, peekHelpOnce } from '../../lib/firstEntryFlag';
 import { useTowerStore } from '../../store/useTowerStore';
 import { INTL_LOCALE, t, tp } from '../../i18n/messages';
 import { ROLE_META } from '../../lib/permissions';
 import type { Locale, RoleId } from '../../types';
 import { NotificationBell } from './NotificationBell';
 import { ClaudeIcon } from './ClaudeIcon';
-import { KeyboardHelp } from './KeyboardHelp';
+import { hp } from '../../i18n/help';
 import { AccountMenu } from './AccountMenu';
 import { nextLiveSailing, vesselById } from '../../lib/ferry';
 import { getNow } from '../../lib/frozenNow';
 import { canSwitchView, PROD_BUILD } from '../../lib/prodFacade';
 import { effDeparture, nearestCrossingSailings } from '../../lib/sailings';
 import { formatListDateTime } from '../../lib/format';
+
+/* wyglad/P10b-b: Pomoc ładowana dopiero po otwarciu (treści 5 wersji poza pierwszym wczytaniem) */
+const HelpPanel = lazy(() => import('./HelpPanel').then((m) => ({ default: m.HelpPanel })));
 
 const ROLES: RoleId[] = ['HHL', 'KSH', 'SCX'];
 /** ISO week number (Europe/Warsaw local date). */
@@ -141,7 +145,9 @@ export function Topbar() {
   const locale = useTowerStore((s) => s.locale);
   const setRole = useTowerStore((s) => s.setRole);
   const sailings = useTowerStore((s) => s.sailings);
-  const [help, setHelp] = useState(false);
+  /* wyglad/P10b-d (E37 pkt 9): po pierwszym wejściu Kokpit z „Jak pracuję” otwartym raz */
+  const [help, setHelp] = useState(() => peekHelpOnce());
+  useEffect(() => { clearHelpOnce(); }, []);
   const [ops, setOps] = useState({ wk: 0, ferryRows: [] as FerryRow[], date: '' });
 
   const closeHelp = useCallback(() => setHelp(false), []);
@@ -230,8 +236,8 @@ export function Topbar() {
         type="button"
         className="iconbtn top-help"
         id="helpBtn"
-        title={t(locale, 'a6_top_shortcuts')}
-        aria-label={t(locale, 'a6_top_shortcuts')}
+        title={hp(locale, 'help_title')}
+        aria-label={hp(locale, 'help_title')}
         onClick={() => setHelp((h) => !h)}
         aria-pressed={help}
       >
@@ -239,7 +245,12 @@ export function Topbar() {
       </button>
       <NotificationBell />
       <AccountMenu />
-      <KeyboardHelp open={help} onClose={closeHelp} />
+      {/* wyglad/P10b-b (E37 pkt 3): „?” = Pomoc (Jak pracuję, Co nowego, Kontakt, Skróty) */}
+      {help ? (
+        <Suspense fallback={null}>
+          <HelpPanel open onClose={closeHelp} />
+        </Suspense>
+      ) : null}
     </header>
   );
 }

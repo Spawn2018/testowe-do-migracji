@@ -30,10 +30,11 @@ describe('I-4 treść', () => {
 
 describe('I-4 osadzenie', () => {
   const lazyRe = /const Guide = import\.meta\.env\.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED \? lazy\(\(\) => import\('\.\.\/components\/guide\/Guide'\)\) : null;/;
-  it('PWA kierowcy, Opcje (HHL), Ustawienia (KSH/SCX) — leniwie, tylko build produkcyjny', () => {
-    for (const f of ['src/views/DriverPwa.tsx', 'src/views/OptionsView.tsx', 'src/views/SettingsView.tsx']) expect(readFileSync(f, 'utf8')).toMatch(lazyRe);
+  /* wyglad/P10b-b (E37 pkt 3, P10b „Testy do przepisania: i4-guide”): Instrukcja tylko w PWA kierowcy;
+     w Opcjach i Ustawieniach zastępuje ją Pomoc („Jak pracuję” w 5 wersjach) — tests/help-content.test.ts */
+  it('PWA kierowcy — leniwie, tylko build produkcyjny; Opcje i Ustawienia bez Instrukcji', () => {
+    expect(readFileSync('src/views/DriverPwa.tsx', 'utf8')).toMatch(lazyRe);
     expect(readFileSync('src/views/DriverPwa.tsx', 'utf8')).toMatch(/role="drv"/);
-    expect(readFileSync('src/views/OptionsView.tsx', 'utf8')).toMatch(/role="hhl"/);
-    expect(readFileSync('src/views/SettingsView.tsx', 'utf8')).toMatch(/role === 'KSH' \? 'ksh' : role === 'SCX' \? 'scx'/);
+    for (const f of ['src/views/OptionsView.tsx', 'src/views/SettingsView.tsx']) expect(readFileSync(f, 'utf8')).not.toMatch(lazyRe);
   });
 });

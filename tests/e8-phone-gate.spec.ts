@@ -248,17 +248,79 @@ test.describe('brama E8 telefon', () => {
         await page.click('[data-ferry-chip]');
         hits.push(...await measure(page, 'promy', width, role));
         await page.click('[data-ferry-chip]');
-        // wyglad/P4 (E8, E28): Harmonogram — otwarte „⋯” (działania) i „Filtry ▾” (daty, Bez kierowcy, Bez ciągnika)
+        // wyglad/P4 (E8, E28), P7-c (E30 pkt 8): Harmonogram — otwarte „⋯” (Więcej) i arkusz „Filtry” (tygodnie, stan)
         await openView(page, 'sched');
         await page.click('.sched-more');
         hits.push(...await measure(page, 'harmonogram-dzialania', width, role));
         await page.click('.sched-more');
         await page.click('[data-sched-more-filters]');
         hits.push(...await measure(page, 'harmonogram-filtry', width, role));
-        await page.click('[data-sched-more-filters]');
+        await page.click('[data-sched-sheet] [data-sheet-show]');
       }
       const report = hits.map((h) => `${h.role} ${h.width} ${h.view} ${h.kind}=${h.n}: ${h.sample.join(' | ')}`).join('\n');
       expect(hits, report).toEqual([]);
+    });
+  }
+});
+
+/* wyglad/P10b-a (E37 pkt 4, makieta E37 „Komunikat HHL”) — komunikat HHL z „Zamknij” (telefon: „✕” 44 px);
+   demo: przykład przy `komunikat-hhl=1`. Zamknięty nie wraca po przeładowaniu. */
+test.describe('wyglad/P10b-a komunikat HHL z „Zamknij” (E37 pkt 4)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const URL_BC = `${FROZEN_URL}&komunikat-hhl=1`;
+
+  test('komputer: treść, data końca, „Zamknij”; po zamknięciu i przeładowaniu nie wraca', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL', false, URL_BC);
+    const bar = page.locator('[data-banner="system-broadcast"]');
+    await expect(bar).toBeVisible();
+    await expect(bar.locator('.subbar-tag')).toHaveText('KOMUNIKAT HHL');
+    await expect(bar.locator('.subbar-body')).toHaveText('Prom Stena Estelle wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.');
+    await expect(bar.locator('.subbar-until')).toHaveText(/^ · do \d{2}\.\d{2}, \d{2}:\d{2}$/);
+    const close = bar.locator('[data-bcast-close]');
+    await expect(close.locator('.subbar-close-tx')).toHaveText('Zamknij');
+    await expect(close.locator('.subbar-close-tx')).toBeVisible();
+    await expect(close.locator('.subbar-close-x')).toBeHidden();
+    await expect(close).toHaveAttribute('aria-label', 'Zamknij komunikat HHL');
+    const tb = await page.locator('.topbar').boundingBox();
+    const bb = await bar.boundingBox();
+    expect(bb && tb && bb.y >= tb.y + tb.height - 1, 'komunikat pod paskiem górnym').toBeTruthy();
+    await close.click();
+    await expect(bar).toHaveCount(0);
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForSelector('#roleSeg button[data-role="HHL"]', { state: 'attached' });
+    await page.waitForTimeout(300);
+    await expect(page.locator('[data-banner="system-broadcast"]')).toHaveCount(0);
+  });
+
+  for (const width of [360, 390, 430]) {
+    test(`telefon ${width}: „Komunikat HHL:” i „✕” 44 × 44 px; nic uciętego, tekst ≥ 12 px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await boot(page, 'HHL', false, URL_BC);
+      const bar = page.locator('[data-banner="system-broadcast"]');
+      await expect(bar).toBeVisible();
+      await expect(bar.locator('.subbar-tag-ph')).toHaveText('Komunikat HHL:');
+      const m = await bar.evaluate((el) => {
+        const out: string[] = [];
+        const r = el.getBoundingClientRect();
+        if (r.left < 0 || r.right > window.innerWidth + 0.5) out.push('pasek poza oknem');
+        for (const n of el.querySelectorAll<HTMLElement>('b, span, button')) {
+          const cs = getComputedStyle(n);
+          if (cs.display === 'none' || !n.textContent?.trim()) continue;
+          if (parseFloat(cs.fontSize) < 12) out.push(`tekst < 12 px: ${n.textContent}`);
+          if (n.scrollWidth > n.clientWidth + 1 && cs.overflow !== 'visible') out.push(`ucięte: ${n.textContent}`);
+        }
+        const b = el.querySelector('[data-bcast-close]')!.getBoundingClientRect();
+        if (b.width < 44 || b.height < 44) out.push(`„✕” ${Math.round(b.width)}×${Math.round(b.height)}`);
+        const x = el.querySelector('.subbar-close-x') as HTMLElement;
+        const tx = el.querySelector('.subbar-close-tx') as HTMLElement;
+        if (getComputedStyle(x).display === 'none') out.push('brak „✕”');
+        if (getComputedStyle(tx).display !== 'none') out.push('„Zamknij” zamiast „✕”');
+        return out;
+      });
+      expect(m).toEqual([]);
+      await bar.locator('[data-bcast-close]').click();
+      await expect(bar).toHaveCount(0);
     });
   }
 });
@@ -289,6 +351,661 @@ test.describe('P2-wyglad V1 i V2', () => {
     await page.waitForTimeout(200);
     await expect(page.locator('nav button.nav-pin[data-view="sched"] .count')).toBeHidden();
     await expect(page.locator('nav button.nav-pin[data-view="risk"] .count')).toBeVisible();
+  });
+});
+
+/* wyglad/P9-c — strona Mapa według E29 (zdecydowane 08.10 12:14, pyt. 1 A; L20, L22) i E45 pkt 2–3 (img/e29-after) */
+test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const tableWithin = (page: Page) => page.locator('[data-map-table]').evaluate((t) => t.scrollWidth <= (t.parentElement as HTMLElement).clientWidth + 1);
+
+  test('komputer: nagłówek bez częstotliwości, 4 kolumny, warstwy, legenda, źródła; dymek znacznika; 1366 px bez przewijania w bok', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    const head = page.locator('[data-map-head]');
+    await expect(head).toHaveText(/^W oknie śledzenia \d+ · z pozycją \d+ · bez pozycji \d+ — od 03:00 w dniu załadunku do „Dostarczone”$/);
+    await expect(page.locator('[data-page="map"] .panel-hd')).not.toContainText('pozycje co');
+    await expect(page.locator('[data-map-table] thead th')).toHaveText(['Transport', 'Etap', 'Pozycja', 'ETA Boden']);
+    await expect(page.locator('.maplayers label')).toHaveText(['Pojazdy i statki', 'Trasa (droga i prom)', 'Strefy', 'Utrudnienia drogowe', 'Przebieg wybranego'].map((x) => new RegExp(x.replace(/[()]/g, '\\$&'))));
+    /* P9-e (R5): + „kilka aut w jednej strefie” */
+    await expect(page.locator('[data-mapkey="e29"] > span')).toHaveText(['załadunek', 'w drodze (PL, port, prom, SE)', 'na placu', 'opóźniony', 'brak GPS', 'statek (AIS) z liczbą aut', 'kilka aut w jednej strefie']);
+    await expect(page.locator('[data-map-note]')).toHaveText(/^Podkład i trasy: HERE · utrudnienia: Trafikverket \(SE\), HERE \(PL\) · statki: AIS Fintraffic \/ digitraffic\.fi, CC BY 4\.0/);
+    await expect(page.locator('[data-map-zones]')).toBeVisible();
+    const n = Number((await page.locator('[data-map-filters] [data-timing="all"]').innerText()).replace(/\D+/g, ''));
+    await expect(page.locator('[data-map-table] tbody tr[data-load]')).toHaveCount(n);
+    await expect(page.locator('[data-map-filters] .map-search')).toHaveAttribute('placeholder', 'Szukaj: kod, nr zlecenia, tablice');
+    /* znacznik: etap, opóźnienie, ostatnia pozycja, odcinek, kliknięcie */
+    await expect(page.locator('.wt-mk').first()).toBeAttached();
+    await page.locator('.leaflet-marker-icon.wt-marker:not(:has(.is-grp))').first().dispatchEvent('mouseover');
+    await expect(page.locator('.leaflet-tooltip.wt-mk-tip').first()).toContainText('kliknij: panel transportu');
+    await expect(page.locator('.leaflet-tooltip.wt-mk-tip').first()).toContainText(/kierowca odcinka (PL|SE)/);
+    expect(await tableWithin(page)).toBe(true);
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.waitForTimeout(300);
+    expect(await tableWithin(page), '1366 px: tabela bez przewijania w bok').toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1366);
+  });
+
+  test('komputer: „Trasa” chowa drogę i prom, „Pojazdy” chowa auta i statki; bez kropek (E45 pkt 2–3)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    const paths = page.locator('[data-page="map"] .leaflet-overlay-pane path');
+    await expect(paths.first()).toBeAttached();
+    /* kropki miejsc (załadunek, porty, plac) były kółkami z wypełnieniem; linie trasy mają fill="none" */
+    expect(await page.locator('[data-page="map"] .leaflet-overlay-pane path:not([fill="none"])').count(), 'bez kropek miejsc').toBe(0);
+    await page.locator('.maplayers label', { hasText: 'Trasa (droga i prom)' }).locator('input').uncheck();
+    await expect(paths).toHaveCount(0);
+    await page.locator('.maplayers label', { hasText: 'Pojazdy i statki' }).locator('input').uncheck();
+    await expect(page.locator('[data-page="map"] .wt-mk')).toHaveCount(0);
+    await expect(page.locator('[data-page="map"] .wt-marker-ferry')).toHaveCount(0);
+  });
+
+  test('KSH: bez przycisku „Strefy”, nazwa transportu to sam kod (E41)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'KSH');
+    await openView(page, 'map');
+    await expect(page.locator('[data-map-zones]')).toHaveCount(0);
+    const names = await page.locator('[data-map-table] tbody tr[data-load] td[data-map-name]').allInnerTexts();
+    expect(names.length).toBeGreaterThan(0);
+    expect(names.every((x) => /^[A-Z]+-\d+$/.test(x.trim()))).toBe(true);
+  });
+
+  test('telefon 390: „Warstwy ▾” → arkusz z warstwami i legendą; lista jako karty; znacznik → arkusz z „Otwórz panel transportu”', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', true);
+    await openView(page, 'map');
+    await expect(page.locator('[data-map-head]')).toHaveText(/^w oknie \d+ · bez pozycji \d+$/);
+    const btn = page.locator('[data-map-layers-btn]');
+    const b = await btn.boundingBox();
+    expect(b && b.height >= 44).toBeTruthy();
+    await btn.click();
+    const sheet = page.locator('[data-map-layers-sheet] .mapsheet');
+    await expect(sheet.locator('input[type="checkbox"]')).toHaveCount(5);
+    await expect(sheet.locator('label').last()).toContainText('Przebieg wybranego transportu');
+    await expect(sheet.locator('[data-sheet-legend] > span')).toHaveCount(7);
+    const bad = await sheet.evaluate((el) => {
+      const out: string[] = [];
+      for (const n of el.querySelectorAll<HTMLElement>('label, button')) {
+        const r = n.getBoundingClientRect();
+        if (r.height < 44 || r.width < 44) out.push(`${n.textContent} ${Math.round(r.width)}×${Math.round(r.height)}`);
+      }
+      for (const n of el.querySelectorAll<HTMLElement>('span, b, label')) if (parseFloat(getComputedStyle(n).fontSize) < 12) out.push(`tekst < 12 px: ${n.textContent}`);
+      return out;
+    });
+    expect(bad).toEqual([]);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-map-layers-sheet]')).toHaveCount(0);
+    const n = Number((await page.locator('[data-map-filters] [data-timing="all"]').innerText()).replace(/\D+/g, ''));
+    await expect(page.locator('[data-map-cards] .map-card')).toHaveCount(n);
+    await page.locator('.leaflet-marker-icon.wt-marker:not(:has(.is-grp))').first().dispatchEvent('click');
+    const ls = page.locator('[data-map-load-sheet] .mapsheet');
+    await expect(ls.locator('[data-sheet-open]')).toHaveText('Otwórz panel transportu');
+    await expect(ls.locator('[data-sheet-trail]')).toHaveText('Pokaż przebieg na mapie');
+    await ls.locator('[data-sheet-open]').click();
+    await expect(page.locator('aside.drawer')).toHaveCount(1);
+  });
+});
+
+/* wyglad/P9-d — E1 (zdecydowane 07.10): Kokpit i Mapa w kadrze całej trasy, bez zapamiętywania przesunięcia;
+   Przegląd w panelu: przybliżenie 11 na ostatniej pozycji. Kokpit: te same transporty co Mapa (okno śledzenia). */
+test.describe('wyglad/P9-d kadr całej trasy (E1)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const routeBox = (page: Page, sel: string) => page.evaluate((s) => {
+    const root = document.querySelector(s) as HTMLElement;
+    const c = (root.querySelector('.leaflet-container') as HTMLElement).getBoundingClientRect();
+    const rs = [...root.querySelectorAll('.leaflet-overlay-pane path')].map((x) => x.getBoundingClientRect()).filter((r) => r.width > 0);
+    const u = rs.reduce((a, r) => ({ l: Math.min(a.l, r.left), t: Math.min(a.t, r.top), r: Math.max(a.r, r.right), b: Math.max(a.b, r.bottom) }), { l: 1e9, t: 1e9, r: -1e9, b: -1e9 });
+    return { inside: u.l >= c.left + 20 && u.t >= c.top + 20 && u.r <= c.right - 20 && u.b <= c.bottom - 20, u, c: { l: c.left, t: c.top, r: c.right, b: c.bottom } };
+  }, sel);
+
+  test('komputer: Mapa i Kokpit — cała trasa w kadrze z marginesem; po przesunięciu i powrocie znów cała trasa', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    await page.waitForTimeout(600);
+    const a = await routeBox(page, '[data-page="map"] .mapbox');
+    expect(a.inside, JSON.stringify(a)).toBe(true);
+    /* legenda leży na mapie — trasa (także Śrem) nad nią, z marginesem */
+    const lg = (await page.locator('[data-page="map"] .mapkey').boundingBox())!;
+    expect(a.u.b, 'trasa nad legendą').toBeLessThanOrEqual(lg.y - 20);
+    const box = (await page.locator('[data-page="map"] .leaflet-container').boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 260, box.y + box.height / 2 + 140, { steps: 6 });
+    await page.mouse.up();
+    expect((await routeBox(page, '[data-page="map"] .mapbox')).inside).toBe(false);
+    await openView(page, 'dash');
+    await page.evaluate(() => document.querySelector('.grid2-map-body')?.scrollIntoView({ block: 'center' }));
+    await page.waitForTimeout(600);
+    const k = await routeBox(page, '.grid2-map-body');
+    expect(k.inside, JSON.stringify(k)).toBe(true);
+    await openView(page, 'map');
+    await page.waitForTimeout(600);
+    const b = await routeBox(page, '[data-page="map"] .mapbox');
+    expect(b.inside, 'bez zapamiętanego przesunięcia').toBe(true);
+    await expect(page.locator('[data-cockpit-full-route], .map-fit-btn')).toHaveCount(0);
+  });
+
+  test('komputer: Przegląd w panelu — przybliżenie 11, pojazd na środku', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    const id = await page.locator('[data-map-table] tbody tr[data-load]').first().getAttribute('data-load');
+    await page.locator('[data-map-table] tbody tr[data-load]').first().click();
+    await page.waitForSelector('aside.drawer .corridor-map-el img.leaflet-tile', { timeout: 15_000 });
+    await page.waitForTimeout(800);
+    const d = await page.evaluate(() => {
+      const root = document.querySelector('aside.drawer') as HTMLElement;
+      const c = (root.querySelector('.leaflet-container') as HTMLElement).getBoundingClientRect();
+      const m = root.querySelector('.leaflet-marker-icon.wt-marker');
+      const r = m ? m.getBoundingClientRect() : null;
+      const z = [...root.querySelectorAll<HTMLImageElement>('img.leaflet-tile')].map((i) => /\/tile\/(\d+)\//.exec(i.src)?.[1]).find(Boolean);
+      return { dx: r ? Math.abs(r.left + r.width / 2 - (c.left + c.width / 2)) : 999, dy: r ? Math.abs(r.top + r.height / 2 - (c.top + c.height / 2)) : 999, z };
+    });
+    expect(id).toBeTruthy();
+    expect(d.z).toBe('11');
+    expect(d.dx).toBeLessThanOrEqual(3);
+    expect(d.dy).toBeLessThanOrEqual(3);
+  });
+
+  test('Kokpit: na mapie te same transporty co na Mapie (okno śledzenia, swoja firma)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'KSH');
+    await openView(page, 'map');
+    await page.waitForTimeout(600);
+    const onMap = await page.locator('[data-page="map"] .wt-mk').count();
+    await openView(page, 'dash');
+    await page.waitForTimeout(800);
+    expect(await page.locator('.grid2-map-body .wt-mk').count()).toBe(onMap);
+  });
+});
+
+/* wyglad/P9-e — E45 pkt 5 (zdecydowane 07.10 22:42) i D-20261009-1309-01 R5: auta jednego rejsu na promie jednym
+   znacznikiem z liczbą; więcej niż 1 auto w strefie załadunku, portu PL, portu SE albo placu — jeden znacznik z liczbą;
+   najechanie — rejs (miejsce) i kody; kliknięcie — lista (telefon: od dołu); tak samo w Kokpicie. */
+test.describe('wyglad/P9-e grupowanie na promie i w strefie (E45 pkt 5, R5)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const groupsOf = (page: Page, root: string) => page.locator(`${root} .wt-mk.is-grp`).evaluateAll((els) => els.map((e) => `${(e as HTMLElement).dataset.mk}:${(e as HTMLElement).dataset.n}`).sort());
+
+  test('komputer: znaczniki grup, dymek z kodami, lista, wiersz → panel; Kokpit — te same grupy', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    await page.waitForTimeout(600);
+    const onMap = await groupsOf(page, '[data-page="map"]');
+    /* demo: 6 aut na promie Nova Star; Port PL 4, Załadunek 3, Plac Boden 3 — każde w swojej strefie */
+    expect(onMap).toEqual(['ferry:6', 'zone:3', 'zone:3', 'zone:4']);
+    await expect(page.locator('[data-mapkey="e29"] > span').last()).toHaveText('kilka aut w jednej strefie');
+    const ferry = page.locator('[data-page="map"] .leaflet-marker-icon:has(.wt-mk[data-mk="ferry"])');
+    await ferry.dispatchEvent('mouseover');
+    const tip = page.locator('.leaflet-tooltip.wt-mk-tip').last();
+    await expect(tip).toContainText('Prom Nova Star · 6 aut');
+    await expect(tip).toContainText('Gdańsk → Nynäshamn');
+    await expect(tip).toContainText('kliknij: lista transportów');
+    /* kody, bez numerów zleceń (E45 pkt 5: „rejs i kody”) */
+    await expect(tip).not.toContainText('HHL/2026');
+    await ferry.dispatchEvent('mouseout');
+    await ferry.dispatchEvent('click');
+    const card = page.locator('[data-map-group="ferry"]');
+    await expect(card.locator('.mapgrp-title')).toHaveText('Prom Nova Star · 6 aut');
+    await expect(card.locator('[data-grp-row]')).toHaveCount(6);
+    await expect(page.locator('.leaflet-tooltip.wt-mk-tip')).toHaveCount(0);
+    const id = await card.locator('[data-grp-row]').nth(1).getAttribute('data-grp-row');
+    await card.locator('[data-grp-row]').nth(1).click();
+    await expect(page.locator('[data-map-group]')).toHaveCount(0);
+    await expect(page.locator('aside.drawer')).toHaveCount(1);
+    expect(id).toBeTruthy();
+    await page.keyboard.press('Escape');
+    const site = page.locator('[data-page="map"] .leaflet-marker-icon:has(.wt-mk[data-mk="zone"].is-site)');
+    await site.dispatchEvent('mouseover');
+    await expect(page.locator('.leaflet-tooltip.wt-mk-tip').last()).toContainText(/· 3 auta/);
+    await expect(page.locator('.leaflet-tooltip.wt-mk-tip').last()).toContainText('plac');
+    await site.dispatchEvent('mouseout');
+    await openView(page, 'dash');
+    await page.evaluate(() => document.querySelector('.grid2-map-body')?.scrollIntoView({ block: 'center' }));
+    await page.waitForTimeout(800);
+    expect(await groupsOf(page, '.grid2-map-body')).toEqual(onMap);
+    await page.locator('.grid2-map-body .leaflet-marker-icon:has(.wt-mk[data-mk="zone"].is-site)').dispatchEvent('click');
+    await expect(page.locator('.grid2-map-body [data-map-group="zone"] [data-grp-row]')).toHaveCount(3);
+  });
+
+  test('telefon 390: znacznik promu → lista od dołu (wiersze ≥ 44 px) → arkusz transportu', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', true);
+    await openView(page, 'map');
+    await page.locator('.leaflet-marker-icon:has(.wt-mk[data-mk="ferry"])').first().dispatchEvent('click');
+    const sheet = page.locator('[data-map-group-sheet="ferry"] .mapsheet');
+    await expect(sheet.locator('[data-grp-row]')).toHaveCount(6);
+    const small = await sheet.locator('[data-grp-row]').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height < 44).length);
+    expect(small).toBe(0);
+    await sheet.locator('[data-grp-row]').first().click();
+    await expect(page.locator('[data-map-group-sheet]')).toHaveCount(0);
+    await expect(page.locator('[data-map-load-sheet] [data-sheet-open]')).toHaveText('Otwórz panel transportu');
+  });
+});
+
+/* wyglad/P9-f — E32 pkt 3 (zdecydowane 08.10 12:14) i E27: mapa w Przeglądzie panelu — bez pozycji cała trasa i powód
+   („Brak pozycji · Śledzenie od 07.10, 03:00”), po „Dostarczone” śledzenie zakończone, na placu strefa placu. */
+test.describe('wyglad/P9-f mapa w Przeglądzie (E32 pkt 3)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  async function openPanel(page: Page, code: string) {
+    await openView(page, 'sched');
+    await page.evaluate((c) => {
+      const el = [...document.querySelectorAll('[data-load]')].find((r) => (r.textContent ?? '').includes(`${c} `)) as HTMLElement | undefined;
+      el?.click();
+    }, code);
+    await page.waitForSelector('aside.drawer .corridor-map-el', { timeout: 15_000 });
+    await page.waitForTimeout(1200);
+  }
+
+  test('komputer: przed oknem — powód i cała trasa nad dopiskiem; po „Dostarczone” — śledzenie zakończone; na placu — strefa placu', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openPanel(page, 'SG-11');
+    const note = page.locator('aside.drawer [data-drawer-note="before"]');
+    await expect(note).toHaveText('Brak pozycji · Śledzenie od 07.10, 03:00');
+    const r = await page.evaluate(() => {
+      const root = document.querySelector('aside.drawer [data-load-map]') as HTMLElement;
+      const n = (root.querySelector('[data-drawer-note]') as HTMLElement).getBoundingClientRect();
+      const rs = [...root.querySelectorAll('.leaflet-overlay-pane path')].map((x) => x.getBoundingClientRect()).filter((x) => x.width > 0);
+      return { bottom: Math.max(...rs.map((x) => x.bottom)), noteTop: n.top, markers: root.querySelectorAll('.wt-mk').length };
+    });
+    expect(r.bottom, 'trasa nad dopiskiem').toBeLessThanOrEqual(r.noteTop - 20);
+    expect(r.markers).toBe(0);
+    await page.keyboard.press('Escape');
+    await openPanel(page, 'SG-01');
+    await expect(page.locator('aside.drawer [data-drawer-note="after"]')).toHaveText('Śledzenie zakończone — „Dostarczone”');
+    await page.keyboard.press('Escape');
+    await openPanel(page, 'T-12');
+    await expect(page.locator('aside.drawer [data-drawer-note]')).toHaveCount(0);
+    await expect(page.locator('aside.drawer .leaflet-overlay-pane path[fill="#1B6E5D"]')).toHaveCount(1);
+  });
+});
+
+/* wyglad/P10b-b — E37 pkt 3 (Pomoc) i D-20261009-0015-01: „?” = Pomoc z zakładkami Jak pracuję, Co nowego, Kontakt,
+   Skróty; „Jak pracuję” w wersji konta (w Podglądzie — wersja podglądanej firmy); kliknięcie kroku otwiera miejsce;
+   na telefonie cały ekran, bez „Skrótów”, z blokiem „Na telefonie”. */
+test.describe('wyglad/P10b-b Pomoc (E37 pkt 3)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const openHelp = async (page: Page) => {
+    if (!(await page.locator('[data-help-panel]').count())) await page.locator('#helpBtn').click();
+    await page.waitForSelector('[data-help-panel]');
+  };
+
+  test('komputer: 3 firmy — wersja, zakładki, kroki; każdy krok HHL otwiera swoje miejsce', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openHelp(page);
+    await expect(page.locator('[data-help-kind]')).toHaveText('HHL Administrator');
+    await expect(page.locator('[data-help-tab]')).toHaveText(['Jak pracuję', 'Co nowego', 'Kontakt', 'Skróty']);
+    await expect(page.locator('[data-help-panel] .helpp-step')).toHaveCount(17);
+    await expect(page.locator('[data-help-phone]')).toHaveCount(0);
+    await page.locator('[data-help-tab="keys"]').click();
+    await expect(page.locator('[data-help-keys]')).toContainText('Zmień widok (Podgląd)');
+    await page.locator('[data-help-tab="contact"]').click();
+    await expect(page.locator('[data-help-contact] [data-help-call]').first()).toHaveText('Zadzwoń');
+    await expect(page.locator('[data-help-contact]')).toContainText('Operacje HHL');
+    await page.locator('[data-help-tab="news"]').click();
+    await expect(page.locator('[data-help-news] .helpp-news li').first()).toBeVisible();
+    await page.locator('[data-help-tab="how"]').click();
+    const expectAt: Record<string, string> = {
+      dash: 'dash', 'risk/todo': 'risks', sched: 'schedule', 'sched/rejsy': 'schedule', panel: 'schedule', map: 'map', docs: 'docs',
+      fin: 'finance', 'fin/pack': 'finance', inv: 'invoices', geo: 'geofence', wf: 'workflows', options: 'options', 'options/users': 'options',
+    };
+    const targets = await page.locator('[data-help-panel] [data-help-target]').evaluateAll((e) => [...new Set(e.map((x) => x.getAttribute('data-help-target') as string))]);
+    expect(targets.length).toBe(16);
+    for (const tg of targets) {
+      await openHelp(page);
+      await page.locator(`[data-help-panel] [data-help-target="${tg}"]`).first().click();
+      await expect(page.locator('[data-help-panel]')).toHaveCount(0);
+      if (tg === 'konto') {
+        await expect(page.locator('#accountMenu')).toBeVisible();
+        await page.keyboard.press('Escape');
+      } else if (tg === 'podglad') {
+        await expect(page.locator('.seg.is-hint')).toHaveCount(1);
+      } else {
+        await expect(page.locator('[data-page]').first(), tg).toHaveAttribute('data-page', expectAt[tg]);
+        if (tg === 'sched/rejsy') await expect(page.locator('[data-sched-tab="sailings"]')).toHaveAttribute('aria-pressed', 'true');
+        if (tg === 'options/users') await expect(page.locator('[data-opt-nav="users"][aria-current="page"]')).toHaveCount(1);
+        if (tg === 'fin/pack') await expect(page.locator('#fin-pack')).toBeInViewport();
+      }
+    }
+    for (const [role, kind, n] of [['KSH', 'KSH Użytkownik', 10], ['SCX', 'SCX Dyspozytor', 11]] as const) {
+      await page.locator(`#roleSeg button[data-role="${role}"]`).click();
+      await openHelp(page);
+      await expect(page.locator('[data-help-kind]')).toHaveText(kind);
+      await expect(page.locator('[data-help-panel] .helpp-step')).toHaveCount(n);
+      await page.locator('[data-help-tab="keys"]').click();
+      await expect(page.locator('[data-help-keys]')).not.toContainText('Zmień widok');
+      await page.keyboard.press('Escape');
+      await expect(page.locator('[data-help-panel]')).toHaveCount(0);
+    }
+  });
+
+  test('telefon 390: menu konta → Pomoc na cały ekran, bez „Skrótów”, z „Na telefonie”; krok → miejsce', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'KSH', true);
+    await page.locator('#accountBtn').click();
+    await page.locator('[data-acc="help"]').click();
+    const panel = page.locator('[data-help-panel]');
+    await expect(panel).toBeVisible();
+    const box = (await panel.boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(389);
+    expect(box.height).toBeGreaterThanOrEqual(800);
+    await expect(page.locator('[data-help-tab]')).toHaveText(['Jak pracuję', 'Co nowego', 'Kontakt']);
+    await expect(page.locator('[data-help-panel] .helpp-step')).toHaveCount(12);
+    await expect(page.locator('[data-help-phone] .helpp-step')).toHaveCount(2);
+    const small = await page.locator('[data-help-panel] button.helpp-step, [data-help-tab]').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height < 44).length);
+    expect(small).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    await page.locator('[data-help-panel] [data-help-target="docs"]').click();
+    await expect(panel).toHaveCount(0);
+    await expect(page.locator('[data-page]').first()).toHaveAttribute('data-page', 'docs');
+  });
+});
+
+/* wyglad/P10b-c — E23 (źródła danych), E47 (błędy aplikacji), E19 pkt 7 (bezpieczeństwo), E46 (wydajność):
+   Opcje › System › Stan systemu; najpierw to, co wymaga uwagi; „Sprawdź teraz” z wynikiem w wierszu; telefon — lista. */
+test.describe('wyglad/P10b-c Stan systemu (E23, E47, E19, E46)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const openStatus = async (page: Page, phone = false) => {
+    await openView(page, 'options');
+    if (phone) {
+      await page.locator('[data-opt-group="system"]').first().click();
+      await page.locator('[data-opt-nav="status"]').first().click();
+    } else {
+      await page.locator('[data-opt-nav="status"]').click();
+    }
+    await page.waitForSelector('[data-sys-screen]');
+  };
+
+  test('komputer: źródła (uwaga najpierw, Sprawdź teraz, pozostałe, progi), błędy, bezpieczeństwo, wydajność', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openStatus(page);
+    await expect(page.locator('[data-sys-tab]')).toHaveText(['Źródła danych', 'Błędy aplikacji', 'Bezpieczeństwo', 'Wydajność']);
+    await expect(page.locator('[data-sys-sum]')).toHaveText('1 nie działa · 3 częściowo albo bez pomiaru · 8 działa · 1 bez źródła');
+    const states = await page.locator('[data-sys-source]').evaluateAll((e) => e.map((x) => (x as HTMLElement).dataset.state));
+    expect(states.slice(0, 4)).toEqual(['down', 'partial', 'partial', 'nomeasure']);
+    expect(states.at(-1)).toBe('nosource');
+    await expect(page.locator('[data-sys-source][data-state="ok"] [data-sys-check]')).toHaveCount(0);
+    await page.locator('[data-sys-check="fuel"]').click();
+    await expect(page.locator('[data-sys-checked="fuel"]')).toHaveText(/^Sprawdzone \d{2}:\d{2}: nie działa$/);
+    expect(await page.locator('.sys-tablewrap').evaluate((e) => e.scrollWidth <= e.clientWidth + 1), 'tabela bez przewijania w bok').toBe(true);
+    await page.locator('[data-sys-other] summary').click();
+    await expect(page.locator('[data-sys-other] li')).toHaveCount(6);
+    await expect(page.locator('[data-sys-threshold]')).toHaveCount(7);
+    await expect(page.locator('[data-sys-threshold="SRC_TELEMATICS_MIN"]')).toContainText('10 min');
+    /* bez kodów zadań (E21) */
+    const txt = await page.locator('[data-sys-screen]').innerText();
+    expect(txt).not.toMatch(/emtrack-web|route-hazards|web-push|email-budget|supabase/i);
+    await page.locator('[data-sys-tab="errors"]').click();
+    await expect(page.locator('[data-sys-errors] .sys-kpi')).toHaveCount(4);
+    await expect(page.locator('[data-err]')).toHaveCount(3);
+    await page.locator('[data-err="e1"]').click();
+    await expect(page.locator('[data-err-more="e1"]')).toContainText('Role');
+    await expect(page.locator('[data-err-state="fixed"]')).toHaveText('USTĄPIŁ PO NAPRAWIE');
+    await expect(page.locator('[data-err-rule]')).toContainText('Alarm do Administratorów HHL');
+    await page.locator('[data-sys-tab="security"]').click();
+    await expect(page.locator('[data-sec]')).toHaveCount(5);
+    await page.locator('[data-sys-tab="perf"]').click();
+    await expect(page.locator('[data-perf]')).toHaveCount(5);
+  });
+
+  test('telefon 390: lista „wymagają uwagi”, reszta po dotknięciu, wiersz → przyczyna i „Sprawdź teraz”', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', true);
+    await openStatus(page, true);
+    await expect(page.locator('[data-sys-tab]')).toHaveText(['Źródła', 'Błędy', 'Bezpieczeństwo', 'Wydajność']);
+    await expect(page.locator('[data-sys-sum]')).toHaveText('4 wymagają uwagi');
+    await expect(page.locator('[data-sys-source]')).toHaveCount(4);
+    const tabsH = await page.locator('[data-sys-tab]').evaluateAll((e) => [...new Set(e.map((x) => Math.round(x.getBoundingClientRect().top)))].length);
+    expect(tabsH, 'zakładki w jednym wierszu').toBe(1);
+    expect(await page.locator('.sys-tabs').evaluate((e) => e.scrollWidth <= e.clientWidth + 1), 'zakładki mieszczą się bez przewijania').toBe(true);
+    await page.locator('[data-sys-source="fuel"] .sys-m-row').click();
+    await expect(page.locator('[data-sys-source="fuel"] [data-sys-check]')).toBeVisible();
+    await page.locator('[data-sys-rest]').click();
+    await expect(page.locator('[data-sys-source]')).toHaveCount(13);
+    const small = await page.locator('[data-sys-screen] .sys-m-row, [data-sys-rest]').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height < 44).length);
+    expect(small).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  });
+});
+
+/* wyglad/P10b-d — E37 pkt 9 (pierwsze wejście, makieta E37 „zaproszona osoba”): 1 Zaproszenie, 2 Hasło, 3 Twoje dane
+   (telefon wymagany), 4 Powiadomienia i telefon; potem Kokpit z „Jak pracuję” otwartym raz. Demo: `pierwsze-wejscie=1`
+   (cała ścieżka dla firmy z Podglądu) i `pierwsze-wejscie=telefon` (sam krok 3 — konto bez telefonu przy logowaniu). */
+test.describe('wyglad/P10b-d pierwsze wejście (E37 pkt 9)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const startFlow = async (page: Page, role: string, flag: '1' | 'telefon') => {
+    await boot(page, role);
+    await page.goto(`${FROZEN_URL}&pierwsze-wejscie=${flag}`, { waitUntil: 'networkidle' });
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForSelector('[data-auth="first-entry"]');
+  };
+  const pos = (page: Page) => page.locator('[data-fe-pos]');
+
+  test('komputer KSH: 4 ekrany „n z 4”, hasło z oceną długości, telefon wymagany, powiadomienia; potem Kokpit z „Jak pracuję”', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await startFlow(page, 'KSH', '1');
+    await expect(page.locator('[data-fe-step="invite"]')).toBeVisible();
+    await expect(pos(page)).toHaveText('1 z 4');
+    await expect(page.locator('[data-fe-title]')).toHaveText('Zaproszenie do Watch Tower');
+    await expect(page.locator('[data-fe-lead]')).toHaveText(/^.+ z .+ zaprasza Cię do systemu kontroli transportów Śrem → Boden\.$/);
+    await expect(page.locator('[data-fe-invite] dt')).toHaveText(['Osoba', 'Firma', 'Konto']);
+    await expect(page.locator('[data-fe-invite] dd').nth(1)).toHaveText('KSH');
+    await expect(page.locator('[data-fe-invite] dd').nth(2)).toHaveText('Użytkownik');
+    await page.locator('[data-fe-next]').click();
+
+    await expect(page.locator('[data-fe-step="password"]')).toBeVisible();
+    await expect(pos(page)).toHaveText('2 z 4');
+    await page.fill('#fe-pw', 'krotkie');
+    await expect(page.locator('[data-fe-pwlen]')).toHaveText('7 znaków — za mało (min. 12)');
+    await page.fill('#fe-pw', 'Dlugie-haslo-2026');
+    await expect(page.locator('[data-fe-pwlen]')).toHaveText('17 znaków — dobrze (min. 12)');
+    await page.fill('#fe-pw2', 'Dlugie-haslo-2025');
+    await expect(page.locator('[data-fe-pwsame]')).toHaveText('Hasła się różnią');
+    await page.fill('#fe-pw2', 'Dlugie-haslo-2026');
+    await expect(page.locator('[data-fe-pwsame]')).toHaveText('✓ Hasła są takie same');
+    await page.locator('[data-fe-next]').click();
+
+    await expect(page.locator('[data-fe-step="details"]')).toBeVisible();
+    await expect(pos(page)).toHaveText('3 z 4');
+    await expect(page.locator('[data-fe-first]')).not.toHaveValue('');
+    await page.locator('[data-fe-next]').click();
+    await expect(page.locator('[data-fe-err]')).toHaveText('Wpisz numer telefonu: 7–11 cyfr, bez kierunkowego.');
+    await page.selectOption('[data-fe-cc]', 'SE');
+    await page.fill('[data-fe-phone]', '070 123 45 67');
+    await page.locator('[data-fe-next]').click();
+
+    await expect(page.locator('[data-fe-step="notify"]')).toBeVisible();
+    await expect(pos(page)).toHaveText('4 z 4');
+    await expect(page.locator('[data-fe-gets] li')).toHaveCount(3);
+    await expect(page.locator('[data-fe-push]')).toHaveText('Włącz powiadomienia na tym komputerze');
+    await page.locator('[data-fe-push]').click();
+    await expect(page.locator('[data-fe-push-msg]')).toHaveText('Powiadomienia włączone na tym urządzeniu.');
+    /* krok 4 można pominąć — „Zaczynam” działa bez włączania */
+    await page.locator('[data-fe-done]').click();
+
+    await expect(page.locator('[data-auth="first-entry"]')).toHaveCount(0);
+    await expect(page.locator('[data-help-panel]')).toBeVisible();
+    await expect(page.locator('[data-help-tab="how"]')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('[data-help-kind]')).toHaveAttribute('data-help-kind', 'CLIENT_USER');
+    expect(await page.evaluate(() => location.hash)).toMatch(/^#\/kokpit/);
+    /* „Jak pracuję” otwarty raz: po zamknięciu i zmianie widoku nie wraca */
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-help-panel]')).toHaveCount(0);
+    await openView(page, 'sched');
+    await page.waitForTimeout(400);
+    await expect(page.locator('[data-help-panel]')).toHaveCount(0);
+  });
+
+  test.describe('telefon 390 (iPhone)', () => {
+    test.use({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' });
+    test('4 ekrany: bez przewijania w bok, przyciski ≥ 44 px, tekst ≥ 12 px; iPhone — „Dodaj do ekranu głównego”', async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await startFlow(page, 'SCX', '1');
+      const check = async (step: string) => {
+        await expect(page.locator(`[data-fe-step="${step}"]`)).toBeVisible();
+        const m = await page.evaluate(() => {
+          const out: string[] = [];
+          if (document.documentElement.scrollWidth > window.innerWidth) out.push(`przewijanie w bok ${document.documentElement.scrollWidth}`);
+          for (const b of document.querySelectorAll<HTMLElement>('[data-auth="first-entry"] .fe-btn, [data-auth="first-entry"] button[type="submit"]')) {
+            if (b.getBoundingClientRect().height < 44) out.push(`przycisk < 44 px: ${b.textContent}`);
+          }
+          for (const n of document.querySelectorAll<HTMLElement>('[data-auth="first-entry"] .auth-form *')) {
+            if (!n.childNodes.length || ![...n.childNodes].some((c) => c.nodeType === 3 && c.textContent!.trim())) continue;
+            if (parseFloat(getComputedStyle(n).fontSize) < 12) out.push(`tekst < 12 px: ${n.textContent}`);
+          }
+          return out;
+        });
+        expect(m, step).toEqual([]);
+      };
+      await check('invite');
+      await expect(page.locator('[data-fe-invite] dd').nth(1)).toHaveText('Scandinavian Express');
+      await page.locator('[data-fe-next]').click();
+      await check('password');
+      await page.fill('#fe-pw', 'Dlugie-haslo-2026');
+      await page.fill('#fe-pw2', 'Dlugie-haslo-2026');
+      await page.locator('[data-fe-next]').click();
+      await check('details');
+      await page.fill('[data-fe-phone]', '600 100 200');
+      await page.locator('[data-fe-next]').click();
+      await check('notify');
+      await expect(page.locator('[data-fe-push]')).toHaveText('Włącz powiadomienia na tym telefonie');
+      await expect(page.locator('[data-fe-install="ios"]')).toContainText('Udostępnij → Dodaj do ekranu głównego');
+      await page.locator('[data-fe-done]').click();
+      await expect(page.locator('[data-help-panel]')).toBeVisible();
+      await expect(page.locator('[data-help-kind]')).toHaveAttribute('data-help-kind', 'CARRIER_DISPATCH');
+    });
+  });
+
+  test('telefon 390: konto bez telefonu — sam krok 3 bez numeru kroku; bez telefonu nie przejdzie', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await startFlow(page, 'HHL', 'telefon');
+    await expect(page.locator('[data-fe-step="details"]')).toBeVisible();
+    await expect(pos(page)).toHaveCount(0);
+    await expect(page.locator('[data-fe-missing]')).toHaveText('Na Twoim koncie nie ma jeszcze telefonu. Uzupełnij go, żeby przejść dalej.');
+    await expect(page.locator('[data-fe-next]')).toHaveText('Zapisz i przejdź dalej');
+    await page.locator('[data-fe-next]').click();
+    await expect(page.locator('[data-fe-err]')).toBeVisible();
+    await expect(page.locator('[data-auth="first-entry"]')).toBeVisible();
+    await page.fill('[data-fe-phone]', '600 100 200');
+    await page.locator('[data-fe-next]').click();
+    await expect(page.locator('[data-auth="first-entry"]')).toHaveCount(0);
+    /* przy samym kroku 3 Pomoc się nie otwiera (to nie pierwsze wejście) */
+    await page.waitForTimeout(400);
+    await expect(page.locator('[data-help-panel]')).toHaveCount(0);
+  });
+});
+
+/* wyglad/P7-c — E38 decyzja 1A (Harmonogram domyślnie w układzie pliku KSH, przyklejone „Typ” i „Wysyłka”), E30 („Widok
+   skrócony” 8 kolumn bez przewijania w 1366 px, filtry tygodniem i stanem z liczbami, „Kolumny”, „Więcej ▾”, telefon),
+   E20 (bez nakładania kolumn). */
+test.describe('wyglad/P7-c Harmonogram w układzie pliku (E38, E30, E20)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const heads = (page: Page) => page.locator('[data-sched-layout] thead th').allInnerTexts();
+  const rows = (page: Page) => page.locator('[data-sched-layout] tbody tr[data-load]');
+
+  test('komputer 1366, HHL: układ pliku, przyklejone „Typ” i „Wysyłka”, widok skrócony bez przewijania, kolumny, filtry', async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'sched');
+    await expect(page.locator('[data-sched-layout="file"]')).toBeVisible();
+    expect(await heads(page)).toEqual(['Typ', 'Wysyłka', 'Rozmiar L × W × H', 'Waga elementu', 'Ilość', 'Waga [t]', 'Data załadunku', 'Dzień', 'Godzina',
+      'Kierowca', 'Tel.', 'Ciągnik', 'Naczepa', 'Nr zlecenia SCX', 'Data dostawy', 'Dzień', 'Godzina', 'Nr zlecenia HHL', 'Status', 'ETA Boden', 'Dokumenty', 'Przychód']);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth), 'strona bez przewijania w bok').toBeLessThanOrEqual(1366);
+    /* przewijanie w bok: „Typ” i „Wysyłka” zostają na miejscu */
+    const before = await page.locator('[data-sched-layout] tbody tr[data-load] td[data-col="code"]').first().boundingBox();
+    await page.locator('[data-sched-layout]').evaluate((w) => { w.scrollLeft = w.scrollWidth; });
+    await page.waitForTimeout(150);
+    const after = await page.locator('[data-sched-layout] tbody tr[data-load] td[data-col="code"]').first().boundingBox();
+    expect(Math.abs((after?.x ?? 0) - (before?.x ?? 0))).toBeLessThan(1);
+    await expect(page.locator('[data-sched-layout] tbody tr[data-load]').first().locator('td.s7-wt1')).toHaveAttribute('data-col', 'status');
+    /* bez „Zmień ciągnik” w tabeli (E30 pkt 5); wiersz otwiera panel */
+    await expect(page.locator('[data-change-tractor]')).toHaveCount(0);
+    await rows(page).first().locator('td[data-col="type"]').click();
+    await expect(page.locator('aside.drawer')).toHaveCount(1);
+    await page.locator('aside.drawer .dhead button[aria-label], aside.drawer button.iconbtn').first().click();
+    await expect(page.locator('aside.drawer')).toHaveCount(0);
+
+    /* „Widok skrócony” — 8 kolumn E30 w 1154 px bez przewijania */
+    await page.locator('[data-sched-short]').click();
+    await expect(page.locator('[data-sched-short]')).toHaveAttribute('aria-pressed', 'true');
+    expect(await heads(page)).toEqual(['Transport', 'Ładunek', 'Załadunek → dostawa', 'Status', 'Kierowca i zestaw', 'ETA Boden', 'Dokumenty', 'Przychód']);
+    expect(await page.locator('[data-sched-layout="short"]').evaluate((w) => w.scrollWidth <= w.clientWidth + 1)).toBe(true);
+    /* „Kolumny” dodaje kolumny; układ zostaje po przeładowaniu; „Więcej ▾ › Przywróć kolumny domyślne” */
+    await page.locator('[data-sched-cols]').click();
+    await page.locator('[data-col-toggle="trailer"] input').check();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-sched-layout] thead th[data-col="trailer"]')).toHaveText('Naczepa');
+    await page.reload({ waitUntil: 'networkidle' });
+    await openView(page, 'sched');
+    await expect(page.locator('[data-sched-layout="short"] thead th[data-col="trailer"]')).toBeVisible();
+    await page.locator('[data-sched-more]').click();
+    await expect(page.locator('[data-sched-more-menu] [role="menuitem"]')).toHaveText(['Eksport XLSX (to, co widać)', 'Eksport PDF (to, co widać)', 'Wgraj plik KSH (zapas)', 'Przywróć kolumny domyślne']);
+    await page.locator('[data-action="reset-cols"]').click();
+    await expect(page.locator('[data-sched-layout] thead th[data-col="trailer"]')).toHaveCount(0);
+    await page.locator('[data-sched-short]').click();
+    await expect(page.locator('[data-sched-layout="file"]')).toBeVisible();
+
+    /* filtry: tydzień załadunku; liczba przy filtrze stanu = wiersze po kliknięciu; licznik „N z M” */
+    const total = await rows(page).count();
+    const opt = await page.locator('[data-week="load"] select option').nth(2).getAttribute('value');
+    await page.locator('[data-week="load"] select').selectOption(opt!);
+    const n = await rows(page).count();
+    expect(n).toBeLessThan(total);
+    await expect(page.locator('.sched-count')).toHaveText(new RegExp(`^${n} z \\d+$`));
+    for (const q of ['late', 'nodocs', 'nodriver', 'notractor', 'cancelled']) {
+      const chip = page.locator(`[data-sched-filters] [data-quick="${q}"]`);
+      const c = Number(await chip.locator('.chip-n').innerText());
+      await chip.click();
+      await expect(rows(page), q).toHaveCount(c === 0 ? 0 : c);
+      await chip.click();
+    }
+    await page.locator('[data-week="load"] select').selectOption('all');
+    await expect(rows(page)).toHaveCount(total);
+  });
+
+  test('komputer 1440: KSH bez kolumn numerów i z „Twoja cena”, SCX z „Moja stawka”', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'KSH');
+    await openView(page, 'sched');
+    const ksh = await heads(page);
+    expect(ksh).not.toContain('Nr zlecenia SCX');
+    expect(ksh).not.toContain('Nr zlecenia HHL');
+    expect(ksh.at(-1)).toBe('Twoja cena');
+    await boot(page, 'SCX');
+    await openView(page, 'sched');
+    const scx = await heads(page);
+    expect(scx).toContain('Nr zlecenia SCX');
+    expect(scx.at(-1)).toBe('Moja stawka');
+  });
+
+  test('telefon 390: pierwsza karta na pierwszym ekranie, arkusz „Filtry” (tygodnie, stan, „Pokaż N”), cele ≥ 44 px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', true);
+    await openView(page, 'sched');
+    const card = page.locator('[data-sched-cards] [data-load]').first();
+    const box = await card.boundingBox();
+    expect(box && box.y + box.height <= 844 - 64, 'pierwsza karta cała nad dolnym paskiem').toBeTruthy();
+    await page.locator('[data-sched-more-filters]').click();
+    const sheet = page.locator('[data-sched-sheet]');
+    await expect(sheet).toBeVisible();
+    const small = await sheet.locator('button').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height < 44).map((e) => e.textContent));
+    expect(small).toEqual([]);
+    await sheet.locator('[data-sheet-load] button').nth(2).click();
+    const label = (await sheet.locator('[data-sheet-show]').innerText()).replace(/\D+/g, '');
+    await sheet.locator('[data-sheet-show]').click();
+    await expect(page.locator('[data-sched-cards] [data-load]')).toHaveCount(Number(label));
+    await expect(page.locator('[data-sched-more-filters]')).toHaveText('Filtry · 1');
+    await page.locator('[data-sched-more-filters]').click();
+    await page.locator('[data-sched-sheet] [data-sheet-clear]').click();
+    await page.locator('[data-sched-sheet] [data-sheet-show]').click();
+    await expect(page.locator('[data-sched-more-filters]')).toHaveText('Filtry');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
 });
 
@@ -331,6 +1048,61 @@ const SUBBARS_HTML = `
 <div class="subbar subbar-actas" data-banner="impersonation" role="status"><p class="subbar-tx"><b>Działasz jako: dyspozytor SCX (Przemysław Szczepański-Kowalczyk)</b> Każda zmiana zapisze się w historii jako „administrator.hhl@przyklad.pl (HHL) jako dyspozytor SCX”.</p><button class="subbar-btn" type="button">Zakończ</button></div>
 <div class="subbar subbar-bcast" data-banner="system-broadcast" role="status"><p class="subbar-tx"><span class="subbar-tag">KOMUNIKAT HHL</span><b class="subbar-tag-ph">Komunikat HHL:</b> <b class="subbar-body">Prom Stena Estelle 09.10 wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.</b><span class="subbar-until"> · do 09.10, 12:00</span></p></div>`;
 const LONG_NAME = 'Przemysław Szczepański-Kowalczyk';
+
+/**
+ * wyglad/P10a-a — E22: pasek nowej wersji, „na żywo · HH:MM” / „brak połączenia od …” przy tytule strony,
+ * komunikat w miejscu części, która się nie wczytała (pasek górny i menu zostają).
+ */
+test.describe('wyglad/P10a-a — nowa wersja, „na żywo”, zamiast pustej strony (E22)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+
+  test('komputer: pasek „Jest nowa wersja Watch Tower.” z „Odśwież teraz”; Harmonogram „na żywo · HH:MM”, bez sieci „brak połączenia od …”', async ({ page, context }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL', false, `${FROZEN_URL}&nowa-wersja=1`);
+    const bar = page.locator('[data-banner="new-version"]');
+    await expect(bar).toBeVisible();
+    await expect(bar).toContainText('Jest nowa wersja Watch Tower.');
+    await expect(bar).toContainText('Odśwież, kiedy skończysz to, co robisz. Nic się nie zgubi.');
+    await expect(bar.locator('[data-new-version-reload]')).toHaveText('Odśwież teraz');
+    await openView(page, 'sched');
+    const live = page.locator('[data-page="schedule"] [data-live]');
+    await expect(live).toHaveAttribute('data-live', 'on');
+    await expect(live).toHaveText(/^na żywo · \d{2}:\d{2}$/);
+    await context.setOffline(true);
+    await expect(live).toHaveAttribute('data-live', 'off');
+    await expect(live).toHaveText(/^brak połączenia od \d{2}:\d{2}$/);
+    await context.setOffline(false);
+    await expect(live).toHaveAttribute('data-live', 'on');
+  });
+
+  test('część, która się nie wczyta (plik Ryzyk po wdrożeniu) → komunikat i „Odśwież”; pasek górny i menu zostają', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await page.route(/\/assets\/RisksView-[^/]+\.js$/, (r) => r.abort());
+    await page.evaluate(() => (document.querySelector('nav button[data-view="risk"]') as HTMLButtonElement).click());
+    const fail = page.locator('[data-part-failed]');
+    await expect(fail).toBeVisible({ timeout: 20_000 });
+    await expect(fail.locator('h2')).toHaveText('Ta część aplikacji zmieniła się po aktualizacji');
+    await expect(fail).toContainText('Odśwież stronę, żeby ją otworzyć. Twoje zapisane dane są bezpieczne.');
+    await expect(fail.locator('[data-part-reload]')).toHaveText('Odśwież');
+    await expect(page.locator('header.topbar')).toBeVisible();
+    await expect(page.locator('nav button[data-view="sched"]')).toBeVisible();
+    await page.unroute(/\/assets\/RisksView-[^/]+\.js$/);
+  });
+
+  test('telefon: pasek nowej wersji — 0 w bramie E8', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'SCX', false, `${FROZEN_URL}&nowa-wersja=1`);
+    await expect(page.locator('[data-banner="new-version"]')).toBeVisible();
+    const hits: Hit[] = [];
+    for (const width of [...WIDTHS, 768]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.waitForTimeout(150);
+      hits.push(...await measure(page, 'nowa-wersja', width, 'SCX'));
+    }
+    expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+  });
+});
 
 test.describe('wyglad/P3 pasek górny (E37 pkt 1–2, img/e37-after)', () => {
   test.describe.configure({ mode: 'serial', timeout: 300_000 });
@@ -555,6 +1327,52 @@ test.describe('wyglad/P3-b Kokpit (E9, img/e9-after; telefon: E8 pkt 6, V5)', ()
   }
 });
 
+/**
+ * wyglad/2fa — Moje konto › urządzenia 2FA („Dodaj drugie urządzenie”, „Usuń” z pytaniem), Przełączniki › wymaganie 2FA
+ * dla administratorów zablokowane z powodem (D-20261014-1420-01 „Koordynator”, I-17; E12, E19).
+ */
+test.describe('wyglad/2fa — Moje konto i Przełączniki', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const openOpt = async (page: Page, view: 'options' | 'settings', key: string) => {
+    await openView(page, view);
+    await page.evaluate((k) => (document.querySelector(`[data-opt-nav="${k}"]`) as HTMLButtonElement).click(), key);
+    await page.waitForTimeout(300);
+  };
+
+  test('komputer HHL: 2FA włączona — „Telefon 1 · od 12.10.2026”, „Dodaj drugie urządzenie”; Przełączniki — wymaganie 2FA nieaktywne z powodem', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'HHL');
+    await openOpt(page, 'options', 'account');
+    await expect(page.locator('[data-mfa-devices]')).toHaveAttribute('data-mfa-devices', '1');
+    await expect(page.locator('[data-mfa-device]')).toContainText('Telefon 1');
+    await expect(page.locator('[data-mfa-device]')).toContainText('od 12.10.2026');
+    await expect(page.locator('[data-mfa-add]')).toBeEnabled();
+    await expect(page.locator('[data-mfa-remove]')).toHaveCount(0);
+    await expect(page.locator('[data-mfa-needs-code]')).toHaveCount(0);
+    await openOpt(page, 'options', 'flags');
+    const row = page.locator('[data-flag="MFA_HHL_ADMIN"]');
+    await expect(row.locator('[role="switch"]')).toBeDisabled();
+    await expect(row.locator('[data-flag-blocked]')).toContainText('2FA na dwóch urządzeniach');
+    await expect(page.locator('[data-flag="EXTERNAL_MESSAGING"] [role="switch"]')).toBeEnabled();
+  });
+
+  test('telefon HHL: Moje konto z urządzeniami 2FA — 0 w bramie E8', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL');
+    await openView(page, 'options');
+    await page.waitForSelector('.ox-tiles');
+    await openPhoneScreen(page, 'forme', 'account');
+    await expect(page.locator('[data-mfa-device]')).toHaveCount(1);
+    const hits: Hit[] = [];
+    for (const width of [...WIDTHS, 768]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.waitForTimeout(150);
+      hits.push(...await measure(page, 'moje-konto-2fa', width, 'HHL'));
+    }
+    expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+  });
+});
+
 test.describe('wyglad/P4 pasek etapów (E28, img/e28-after) i Mapa (E27)', () => {
   test.describe.configure({ mode: 'serial', timeout: 180_000 });
   const TILES = ['PREP', 'LOADING', 'ROAD_PL', 'PORT_PL', 'FERRY', 'PORT_SE', 'ROAD_SE', 'SITE', 'DELIVERED', 'SETTLE'];
@@ -584,25 +1402,26 @@ test.describe('wyglad/P4 pasek etapów (E28, img/e28-after) i Mapa (E27)', () =>
     const tileN = Number(await bar.locator('[data-tile="PREP"] .n').innerText());
     await expect(page.locator('table.sched-table tbody tr[data-load]')).toHaveCount(tileN);
     await expect(page.locator('.sched-count')).toHaveText(new RegExp(`^${tileN} z \\d+$`));
-    // Harmonogram: tylko filtry stanu (E28 pkt 2)
+    // Harmonogram: tylko filtry stanu (E28 pkt 2) i „Anulowane” (E30 pkt 3, wyglad/P7-c)
     const quick = await page.locator('[data-sched-filters] [data-quick]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.quick));
-    expect(quick).toEqual(['late', 'nodocs', 'nodriver', 'notractor']);
+    expect(quick).toEqual(['late', 'nodocs', 'nodriver', 'notractor', 'cancelled']);
     await page.keyboard.press('Escape');
     await expect(page.locator('[data-stage-chip]')).toHaveCount(0);
   });
 
-  test('komputer: Mapa — W trasie · Opóźnione · Brak GPS; „W trasie: 0” przy etapie bez aut; najbliższe włączenia śledzenia', async ({ page }) => {
+  /* wyglad/P9-c (E29 pkt 5, zdecydowane 08.10): „W oknie · Opóźnione · Brak GPS · Bez pozycji” zamiast „W trasie” z P4 */
+  test('komputer: Mapa — W oknie · Opóźnione · Brak GPS · Bez pozycji; „Na mapie: 0” przy etapie bez pozycji; najbliższe włączenia śledzenia', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'HHL');
     await openView(page, 'map');
     const timing = await page.locator('[data-map-filters] [data-timing]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.timing));
-    expect(timing).toEqual(['all', 'late', 'nogps']);
+    expect(timing).toEqual(['all', 'late', 'nogps', 'nopos']);
     await expect(page.locator('[data-map-next] .map-next-hd')).toHaveText('Najbliższe włączenia śledzenia');
     await page.locator('[data-stage-bar="global"] [data-tile="PREP"]').click();
-    await expect(page.locator('[data-map-empty]')).toContainText('W trasie: 0');
+    await expect(page.locator('[data-map-empty]')).toContainText('Na mapie: 0');
   });
 
-  test('komputer: Mapa z filtrem etapu — liczba przy chipie = wiersze po kliknięciu; bez chipa „W trasie”', async ({ page }) => {
+  test('komputer: Mapa z filtrem etapu — liczba przy chipie = wiersze po kliknięciu; bez chipa „W oknie”', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'HHL');
     await openView(page, 'map');
@@ -615,7 +1434,7 @@ test.describe('wyglad/P4 pasek etapów (E28, img/e28-after) i Mapa (E27)', () =>
       await expect(page.locator(`[data-stage-chip="${tile}"]`)).toBeVisible();
       await expect(page.locator('[data-map-filters] [data-timing="all"]')).toHaveCount(0);
       await expect(rows).toHaveCount(n);
-      for (const k of ['late', 'nogps']) {
+      for (const k of ['late', 'nogps', 'nopos']) {
         const chip = page.locator(`[data-map-filters] [data-timing="${k}"]`);
         const c = Number((await chip.innerText()).replace(/\D+/g, ''));
         await chip.click();
@@ -626,29 +1445,30 @@ test.describe('wyglad/P4 pasek etapów (E28, img/e28-after) i Mapa (E27)', () =>
     }
   });
 
-  test('telefon 390: włączony filtr stanu widać w rzędzie także z filtrem etapu; „⋯” — Escape i dotknięcie obok zamykają tylko menu', async ({ page }) => {
+  test('telefon 390: filtr z arkusza „Filtry” — liczba przy „Filtry · n” także z filtrem etapu; „⋯” — Escape i dotknięcie obok zamykają tylko menu', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await boot(page, 'HHL', true);
     await openView(page, 'sched');
     const sched = page.locator('[data-page="schedule"]');
     const row = sched.locator('[data-sched-filters]');
-    // filtr spod „Filtry ▾” po włączeniu jest w rzędzie
+    // wyglad/P7-c (E30 pkt 8): filtr z arkusza „Filtry”; po wybraniu liczba przy „Filtry · n”
     await sched.locator('[data-sched-more-filters]').click();
-    await sched.locator('.sched-more-filters [data-quick="nodriver"]').click();
-    await expect(row.locator('[data-quick="nodriver"]')).toBeVisible();
-    await expect(row.locator('[data-quick="nodriver"]')).toHaveAttribute('aria-pressed', 'true');
-    // z filtrem etapu: w rzędzie chip etapu, włączony filtr stanu i „Filtry ▾”
+    await page.locator('[data-sched-sheet] [data-quick="nodriver"]').click();
+    await expect(page.locator('[data-sched-sheet] [data-quick="nodriver"]')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('[data-sched-sheet] [data-sheet-show]').click();
+    await expect(page.locator('[data-sched-sheet]')).toHaveCount(0);
+    await expect(row.locator('[data-sched-more-filters]')).toHaveText('Filtry · 1');
+    // z filtrem etapu: chip etapu pod szukajką, liczba filtrów zostaje
     await sched.locator('[data-stage-bar="page"] [data-tile="PREP"]').click();
-    await expect(row.locator('[data-stage-chip="PREP"]')).toBeVisible();
-    await expect(row.locator('[data-quick="nodriver"]')).toBeVisible();
-    await expect(row.locator('[data-quick="late"]')).toHaveCount(0);
+    await expect(sched.locator('[data-stage-chip="PREP"]')).toBeVisible();
+    await expect(row.locator('[data-sched-more-filters]')).toHaveText('Filtry · 1');
     // „⋯”: Escape zamyka menu, filtr etapu zostaje
     const more = sched.locator('.sched-more');
     await more.click();
     await expect(sched.locator('.sched-actions-pop')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(sched.locator('.sched-actions-pop')).toHaveCount(0);
-    await expect(row.locator('[data-stage-chip="PREP"]')).toBeVisible();
+    await expect(sched.locator('[data-stage-chip="PREP"]')).toBeVisible();
     // dotknięcie obok (karta transportu) zamyka menu i nie otwiera transportu
     await more.click();
     await expect(sched.locator('.sched-actions-pop')).toBeVisible();
@@ -727,6 +1547,97 @@ async function openPhoneScreen(page: Page, group: string, screen: string) {
   await page.waitForTimeout(250);
 }
 
+/* wyglad/P9-a (E24-1, img/e24-after) — komunikat zamiast szarej mapy. Kafelki podkładu odrzucane w przeglądarce
+   (prawdziwa droga awarii: 3 przebiegi bez kafelka); po zdjęciu blokady „Spróbuj ponownie” wczytuje podkład. */
+const P9A_TILE = /arcgisonline\.com\/ArcGIS\/rest\/services\/.*\/tile\//;
+test.describe('wyglad/P9-a komunikat zamiast szarej mapy (E24-1, img/e24-after)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+
+  test('komputer: karta z makiety, mapa pod spodem działa, bez cienia; „Spróbuj ponownie” wczytuje podkład i karta znika', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.route(P9A_TILE, (r) => r.abort());
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    const card = page.locator('[data-basemap-failed="tiles"]').first();
+    await expect(card).toBeVisible({ timeout: 30_000 });
+    await expect(card).toHaveAttribute('data-compact', '0');
+    await expect(card.locator('.bm-fail-t')).toHaveText('Nie udało się wczytać podkładu mapy');
+    await expect(card.locator('.bm-fail-b')).toHaveText('Pozycje i trasa są aktualne. Brakuje tylko tła z ulicami.');
+    await expect(card.locator('[data-basemap-retry]')).toHaveText('Spróbuj ponownie');
+    await expect(card.locator('[data-basemap-reload]')).toHaveText('Odśwież stronę');
+    await expect(card.locator('[data-basemap-src]')).toHaveText(/^Próbowano 3 razy: .+\. Zgłoszenie zapisane dla HHL\.$/);
+    const look = await card.locator('.bm-fail').evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { shadow: cs.boxShadow, radius: cs.borderRadius, wrapEvents: getComputedStyle(el.parentElement as Element).pointerEvents };
+    });
+    expect(look.shadow).toBe('none');
+    expect(['0px', '2px']).toContain(look.radius);
+    expect(look.wrapEvents).toBe('none');
+    /* trasa i pojazdy nadal na mapie (dane nie zależą od podkładu) */
+    expect(await page.locator('.corridor-map-el .leaflet-overlay-pane path').count()).toBeGreaterThan(0);
+    expect(await page.locator('.corridor-map-el .leaflet-marker-pane .leaflet-marker-icon').count()).toBeGreaterThan(0);
+    for (const sel of ['[data-basemap-retry]', '[data-basemap-reload]']) {
+      const b = await card.locator(sel).boundingBox();
+      expect(b && b.height >= 44 && b.width >= 44, `${sel} ≥ 44 px`).toBeTruthy();
+    }
+    await page.unroute(P9A_TILE);
+    await card.locator('[data-basemap-retry]').click();
+    await expect(page.locator('[data-basemap-failed]')).toHaveCount(0, { timeout: 30_000 });
+    await expect(page.locator('.corridor-map-el img.leaflet-tile-loaded').first()).toBeAttached({ timeout: 30_000 });
+  });
+
+  test('komputer: podkład się wczytuje — karty nie ma (stan normalny jak dziś)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    await expect(page.locator('.corridor-map-el img.leaflet-tile-loaded').first()).toBeAttached({ timeout: 30_000 });
+    await page.waitForTimeout(500);
+    await expect(page.locator('[data-basemap-failed]')).toHaveCount(0);
+  });
+
+  test('Kokpit (mapa w kafelku): wersja krótka', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.route(P9A_TILE, (r) => r.abort());
+    await boot(page, 'HHL');
+    await openView(page, 'dash');
+    const card = page.locator('[data-basemap-failed="tiles"]').first();
+    await expect(card).toBeAttached({ timeout: 30_000 });
+    await expect(card).toHaveAttribute('data-compact', '1');
+    await expect(card.locator('.bm-fail-t')).toHaveText('Nie udało się wczytać podkładu');
+    await expect(card.locator('[data-basemap-reload], [data-basemap-src]')).toHaveCount(0);
+  });
+
+  for (const width of [360, 390, 430]) {
+    test(`telefon ${width}: krótko — tytuł, jedno zdanie, „Spróbuj ponownie” ≥ 44 px; nic uciętego, tekst ≥ 12 px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.route(P9A_TILE, (r) => r.abort());
+      await boot(page, 'HHL');
+      await openView(page, 'map');
+      const card = page.locator('[data-basemap-failed="tiles"]').first();
+      await expect(card).toBeVisible({ timeout: 30_000 });
+      await expect(card).toHaveAttribute('data-compact', '1');
+      await expect(card.locator('.bm-fail-t')).toHaveText('Nie udało się wczytać podkładu');
+      await expect(card.locator('.bm-fail-b')).toHaveText('Pozycje i trasa są aktualne.');
+      await expect(card.locator('button')).toHaveCount(1);
+      await expect(card.locator('[data-basemap-retry]')).toHaveText('Spróbuj ponownie');
+      const m = await card.locator('.bm-fail').evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const out: string[] = [];
+        if (r.left < 0 || r.right > window.innerWidth) out.push(`karta poza oknem ${Math.round(r.left)}–${Math.round(r.right)}`);
+        for (const n of el.querySelectorAll<HTMLElement>('b, span, button')) {
+          const cs = getComputedStyle(n);
+          if (parseFloat(cs.fontSize) < 12) out.push(`tekst < 12 px: ${n.textContent}`);
+          if (n.scrollWidth > n.clientWidth + 1 && cs.overflow !== 'visible') out.push(`ucięte: ${n.textContent}`);
+        }
+        const b = el.querySelector('button')!.getBoundingClientRect();
+        if (b.width < 44 || b.height < 44) out.push(`przycisk ${Math.round(b.width)}×${Math.round(b.height)}`);
+        return out;
+      });
+      expect(m).toEqual([]);
+    });
+  }
+});
+
 test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
   test.describe.configure({ mode: 'serial', timeout: 600_000 });
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
@@ -747,12 +1658,14 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
         for (const { group, screen } of list) {
           await openPhoneScreen(page, group, screen);
           hits.push(...await measure(page, `opcje/${screen}`, width, role));
-          /* stany otwarte: edycja progu, działania przy osobie */
-          const open = screen === 'thr' ? '[data-threshold] .ox-btn' : screen === 'users' ? '.ox-morebtn' : null;
+          /* stany otwarte: edycja progu, działania przy osobie, wiadomość w „Treściach wiadomości” (wyglad/P8-a) */
+          const open = screen === 'thr' ? '[data-threshold] .ox-btn' : screen === 'users' ? '.ox-morebtn' : screen === 'texts' ? '[data-mt-item="SMS_C"]' : null;
           if (open && await page.locator(open).count()) {
             await page.locator(open).first().click();
             await page.waitForTimeout(150);
             hits.push(...await measure(page, `opcje/${screen}/otwarte`, width, role));
+            /* wiadomość ma własne „‹” (nagłówek ekranu jest wtedy schowany) — powrót do listy przed dalszym przejściem */
+            if (screen === 'texts' && await page.locator('.mt-back').count()) await page.click('.mt-back');
           }
         }
       }
@@ -766,7 +1679,7 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
     await boot(page, 'HHL');
     await openView(page, 'options');
     await expect(page.locator('.ox-side-group h2')).toHaveText(['LUDZIE I DOSTĘP', 'POWIADOMIENIA', 'PIENIĄDZE', 'ZASADY TRANSPORTU', 'SYSTEM', 'DLA MNIE']);
-    await expect(page.locator('.ox-side [data-opt-group="notify"] [data-opt-nav]')).toHaveText(['Kto co dostaje', 'SMS przy miejscachBoden: brak', 'Komunikat dla wszystkich']);
+    await expect(page.locator('.ox-side [data-opt-group="notify"] [data-opt-nav]')).toHaveText(['Kto co dostaje', 'Treści wiadomości', 'SMS przy miejscachBoden: brak', 'Komunikat dla wszystkich']);
     await page.click('[data-opt-nav="flags"]');
     await expect(page.locator('[data-opt-screen="flags"] .ox-crumb')).toHaveText('Opcje › System');
     await expect(page.locator('[data-opt-screen="flags"] tbody tr')).toHaveCount(13);
@@ -794,6 +1707,48 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
       await expect(page.locator('.ox-side [data-opt-nav]')).toHaveText(['Moje konto', 'Co dostaję', 'Wygląd i waluta', 'Ten telefon / komputer']);
     }
   });
+});
+
+/**
+ * wyglad/P6-f — Dla mnie › Ten telefon / komputer: aplikacja zainstalowana / przeglądarka, „Zainstaluj aplikację”,
+ * wiadomości z Czatu w powiadomieniu (D-20261016-0310-01 Cz19 pkt 5, Cz23 pkt 4–5; D-20261016-0315-01 Cz32).
+ */
+test.describe('wyglad/P6-f — „Ten telefon”: aplikacja i wiadomości z Czatu w powiadomieniu', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const openDevice = async (page: Page, view: 'options' | 'settings') => {
+    await openView(page, view);
+    await page.evaluate(() => (document.querySelector('[data-opt-nav="device"]') as HTMLButtonElement).click());
+    await page.waitForSelector('[data-screen="device"]', { timeout: 10_000 });
+  };
+
+  test('komputer HHL: w przeglądarce — zdanie o ikonie na ekranie; reguła z Czatem; 6 zdań o powiadomieniu z Czatu', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'HHL');
+    await openDevice(page, 'options');
+    await expect(page.locator('[data-screen="device"] .ox-panel-note').first()).toContainText('pilne sprawy „Do zrobienia” i wiadomości z Czatu');
+    await expect(page.locator('[data-dev-app]')).toHaveAttribute('data-dev-app', 'browser');
+    await expect(page.locator('[data-dev-app] .ox-dev-app-st')).toContainText('uruchamiaj ją z ikony na ekranie');
+    await expect(page.locator('[data-dev-install]')).toHaveCount(0);
+    await expect(page.locator('[data-dev-chat] li')).toHaveCount(6);
+    await expect(page.locator('[data-dev-chat]')).toContainText('„Odpowiedz” — wpisujesz odpowiedź od razu w powiadomieniu');
+    await expect(page.locator('[data-dev-chat]')).toContainText('nie trafiają do KSH');
+  });
+
+  for (const role of ['SCX', 'KSH'] as const) {
+    test(`telefon ${role}: Ten telefon z nowymi blokami — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role);
+      await openDevice(page, 'settings');
+      await expect(page.locator('[data-dev-chat] li')).toHaveCount(6);
+      const hits: Hit[] = [];
+      for (const width of [...WIDTHS, 768]) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.waitForTimeout(150);
+        hits.push(...await measure(page, 'ten-telefon', width, role));
+      }
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
 });
 
 test.describe('wyglad/P4-b panel transportu — Status E25 (img/e25-after), pasek śledzenia E27, okno „Zmień status”', () => {
@@ -1043,7 +1998,9 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
       await expect(page.locator('[data-zone-rule="site"]')).toContainText('Dostarczone');
       await noSideScroll(page, width);
       await tabs.nth(1).click();
-      await expect(page.locator('#wf-panel-own [data-wf-id]').first()).toBeVisible();
+      /* wyglad/P8-d (E35 pkt 2, decyzja 08.10.2026, 12:14): po zmianie lista własnych reguł jest pusta — reguły START
+         znikają albo przechodzą do „Kto co dostaje”; dawne wiersze `[data-wf-id]` tylko w widoku produkcji do podłączenia */
+      await expect(page.locator('#wf-panel-own .rl-empty')).toBeVisible();
       await expect(page.locator('#wf-panel-auto')).toBeHidden();
     }
     await page.locator('.wf-tabs [role="tab"]').first().click();
@@ -1665,6 +2622,98 @@ test.describe('wyglad/P6 Ryzyka — E7 „Do zrobienia” i „Sytuacja na trasi
 });
 
 /**
+ * wyglad/P6-e — Czat: „Przeczytali” (kto i kiedy), wiadomość w dzwonku, wejście z powiadomienia
+ * (D-20261016-0250-01 Cz11, D-20261016-0310-01 Cz23, D-20261016-0315-01). Demo: SG-01 — wiadomość HHL przeczytał SCX,
+ * KSH jeszcze nie; rozmowa „tylko HHL i SCX” od SCX — w dzwonku tylko u HHL, nigdy u KSH.
+ */
+test.describe('wyglad/P6-e — Czat: „Przeczytali”, dzwonek, odpowiedź z powiadomienia', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const NOW_URL = `/#/?now=${encodeURIComponent('2026-10-14T10:00:00Z')}`;
+  const openChat = async (page: Page, hash: string) => {
+    await page.evaluate((h) => { window.location.hash = h; }, hash);
+    await page.waitForSelector('aside.drawer [data-chat]', { timeout: 10_000 });
+    await page.waitForTimeout(300);
+  };
+  const bellToggle = (page: Page) => page.evaluate(() => (document.querySelector('.bell-trigger') as HTMLButtonElement).click());
+
+  test('komputer HHL: „Przeczytali: 1 osoba · KSH jeszcze nie” → lista osoba, firma, godzina; dzwonek „SG-01 · … — Jan Nowak // …” z „tylko HHL i SCX” znika po otwarciu Czatu', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL', false, NOW_URL);
+    await bellToggle(page);
+    const row = page.locator('.bell-pop [data-bell-chat="HHL_SCX"]').filter({ hasText: 'SG-01 ·' });
+    await expect(row).toHaveCount(1);
+    await expect(row.locator('.bell-title')).toHaveText('SG-01 · HHL/2026/1241 — Jan Nowak // Scandinavian Express');
+    await expect(row.locator('.bell-only')).toHaveText('tylko HHL i SCX');
+    await expect(row.locator('.bell-chat')).toContainText('Rejs zarezerwowany');
+    await bellToggle(page);
+    await openChat(page, '#/transport/SG-01?zakladka=czat');
+    const rc = page.locator('.drawer [data-chat-read="yes"]');
+    await expect(rc).toHaveText(/^✓✓ Przeczytali: 1\sosoba · KSH jeszcze nie/);
+    await expect(rc).toHaveAttribute('aria-expanded', 'false');
+    await rc.click();
+    await expect(rc).toHaveAttribute('aria-expanded', 'true');
+    const li = page.locator('.drawer [data-chat-readers] li');
+    await expect(li).toHaveCount(1);
+    await expect(li.first()).toContainText('Jan Nowak');
+    await expect(li.first()).toContainText('SCX');
+    await expect(li.first()).toContainText(/\d{2}\.\d{2}, \d{2}:\d{2}/);
+    await expect(page.locator('.drawer [data-chat-pending]')).toHaveText('Jeszcze nie otworzyli: KSH');
+    await bellToggle(page);
+    await expect(page.locator('.bell-pop [data-bell-chat]').filter({ hasText: 'SG-01 ·' })).toHaveCount(0);
+  });
+
+  test('komputer KSH: w dzwonku tylko wiadomości do wszystkich, nigdy „tylko HHL i SCX”; przy cudzej wiadomości „Przeczytali: 1 osoba”', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'KSH', false, NOW_URL);
+    await bellToggle(page);
+    await expect(page.locator('.bell-pop [data-bell-chat="HHL_SCX"]')).toHaveCount(0);
+    await expect(page.locator('.bell-pop')).not.toContainText('Rejs zarezerwowany');
+    const row = page.locator('.bell-pop [data-bell-chat="ALL"]').filter({ hasText: 'SG-01 —' });
+    await expect(row.locator('.bell-title')).toHaveText('SG-01 — Anna Wiśniewska // H&H Logistics');
+    await bellToggle(page);
+    await openChat(page, '#/transport/SG-01?zakladka=czat');
+    const other = page.locator('.drawer [data-chat-read="list"]');
+    await expect(other).toHaveText(/^Przeczytali: 1\sosoba/);
+    await other.click();
+    await expect(page.locator('.drawer [data-chat-readers] li')).toHaveCount(1);
+  });
+
+  test('z powiadomienia: „?odpowiedz=1&tekst=…” → tekst w polu, kursor w polu, parametry znikają z adresu', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'SCX', false, NOW_URL);
+    await openChat(page, `#/transport/SG-02?zakladka=czat&odpowiedz=1&tekst=${encodeURIComponent('Jedziemy dalej, będę o 14:00')}`);
+    await expect(page.locator('.drawer [data-chat-input]')).toHaveValue('Jedziemy dalej, będę o 14:00');
+    expect(await page.evaluate(() => document.activeElement?.hasAttribute('data-chat-input'))).toBe(true);
+    expect(await page.evaluate(() => window.location.hash)).toBe('#/transport/SG-02?zakladka=czat');
+  });
+
+  for (const role of ['HHL', 'KSH'] as const) {
+    test(`telefon ${role}: lista „Przeczytali” rozwinięta i dzwonek z wiadomością — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role, false, NOW_URL);
+      const hits: Hit[] = [];
+      const gate = async (name: string) => {
+        for (const width of [...WIDTHS, 768]) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(150);
+          hits.push(...await measure(page, name, width, role));
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
+      };
+      await bellToggle(page);
+      await expect(page.locator('.bell-pop [data-bell-chat]').first()).toBeVisible();
+      await gate('dzwonek-czat');
+      await bellToggle(page);
+      await openChat(page, '#/transport/SG-01?zakladka=czat');
+      await page.locator('.drawer [data-chat-read="yes"], .drawer [data-chat-read="list"]').first().click();
+      await expect(page.locator('.drawer [data-chat-readers]')).toBeVisible();
+      await gate('panel-czat-przeczytali');
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});
+
+/**
  * wyglad/P6-b — panel transportu: Historia i Czat (E17, decyzje 07.10 20:57, img/e17-after).
  * „Teraz” 14.10.2026 — wpisy demo transportu SG-01 (dostarczony) są wtedy już w przeszłości.
  */
@@ -1700,14 +2749,14 @@ test.describe('wyglad/P6-b panel transportu — Historia i Czat (E17)', () => {
     expect(new Set(cats)).toEqual(new Set(['NUMER']));
     /* Czat */
     await openTab(page, 'SG-01', 4);
-    await expect(page.locator('.drawer [data-chat] button')).toHaveCount(3);
+    await expect(page.locator('.drawer [data-chat-compose] button')).toHaveCount(3);
     await expect(page.locator('.drawer [data-carrier-actions], .drawer [data-awiz-chat-note]')).toHaveCount(0);
     await expect(page.locator('.drawer [data-chat-msg][data-vis="HHL_SCX"]')).toHaveCount(1);
     const before = await page.locator('.drawer [data-chat-msg]').count();
     await page.locator('.drawer [data-chat-input]').fill('Wiadomość testowa do wszystkich');
     await page.locator('.drawer [data-chat-input]').press('Enter');
     await expect(page.locator('.drawer [data-chat-msg]')).toHaveCount(before + 1);
-    await expect(page.locator('.drawer [data-chat-msg]').last()).toContainText('nikt z SCX i KSH jeszcze nie otworzył');
+    await expect(page.locator('.drawer [data-chat-msg]').last()).toContainText('Wysłane do HHL, SCX i KSH · nikt jeszcze nie otworzył');
     await page.locator('.drawer [data-chat-vis="HHL_SCX"]').click();
     await expect(page.locator('.drawer [data-chat-input]')).toHaveAttribute('placeholder', 'Napisz tylko do HHL i SCX…');
     await page.locator('.drawer [data-chat-input]').fill('Druga linia');
@@ -1724,7 +2773,7 @@ test.describe('wyglad/P6-b panel transportu — Historia i Czat (E17)', () => {
     await expect(page.locator('.drawer [data-chat-msg]').first()).toBeVisible();
     await expect(page.locator('.drawer [data-chat-msg][data-vis="HHL_SCX"]')).toHaveCount(0);
     await expect(page.locator('.drawer [data-chat-vis]')).toHaveCount(0);
-    await expect(page.locator('.drawer [data-chat] button')).toHaveCount(1);
+    await expect(page.locator('.drawer [data-chat-compose] button')).toHaveCount(1);
   });
 
   for (const role of ['HHL', 'SCX', 'KSH'] as const) {
@@ -1754,4 +2803,164 @@ test.describe('wyglad/P6-b panel transportu — Historia i Czat (E17)', () => {
       expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
     });
   }
+});
+
+test.describe('wyglad/P8-c Strefy (E34, img/e34-after)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const ZONES_URL = `/#/?now=${encodeURIComponent('2026-10-15T18:00:00Z')}`;
+
+  test('komputer HHL: lista według trasy, karta strefy, zmiana z powodem i podglądem wpływu, wyłączenie z powodem', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'HHL', false, ZONES_URL);
+    await openView(page, 'geo');
+    await expect(page.locator('.zv-grp-h')).toHaveText(['ŚREM · ZAŁADUNEK', 'GDAŃSK · POLFERRIES → NYNÄSHAMN', 'GDYNIA · STENA → KARLSKRONA', 'PORTY W SZWECJI', 'BODEN · ROZŁADUNEK']);
+    await expect(page.locator('[data-zone-card] h3')).toHaveText('Plac budowy Stegra Boden');
+    await page.locator('[data-zone-edit]').click();
+    await page.locator('[data-zone-f="radius"]').fill('1100');
+    await expect(page.locator('[data-zone-impact]')).toContainText('status bez zmian');
+    await page.locator('[data-zone-save]').click();
+    await expect(page.locator('[data-zone-f="reason"]')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.locator('[data-zone-f="reason"]')).toBeFocused();
+    await page.locator('[data-zone-f="reason"]').fill('wjazd na plac jest od północy');
+    await page.locator('[data-zone-save]').click();
+    await expect(page.locator('.zv-live')).toHaveText('Zapisano. Wpis jest w historii zmian strefy.');
+    await expect(page.locator('[data-zone-edit]')).toBeFocused();
+    await expect(page.locator('.zv-hist li').first()).toContainText('powód: wjazd na plac jest od północy');
+    await page.locator('[data-zone-off]').click();
+    await page.locator('[data-zone-off-yes]').click();
+    await expect(page.locator('.zv-ask .zv-err')).toHaveText('Wpisz powód zmiany.');
+    await page.locator('[data-zone-off-reason]').fill('plac zamknięty');
+    await page.locator('[data-zone-off-yes]').click();
+    await expect(page.locator('[data-zone-off]')).toHaveText('Włącz');
+    await expect(page.locator('[data-zone-off]')).toBeFocused();
+  });
+
+  /* menu Strefy jest tylko w grupie administracyjnej HHL (E9) */
+  for (const role of ['HHL'] as const) {
+    test(`telefon ${role}: mapa trasy, karty według miejsca, karta strefy, zmiana strefy, wyłączenie z powodem — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role, false, ZONES_URL);
+      await openView(page, 'geo');
+      const hits: Hit[] = [];
+      const gate = async (name: string) => {
+        for (const width of [...WIDTHS, 768]) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(200);
+          hits.push(...await measure(page, name, width, role));
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForTimeout(200);
+      };
+      await gate('strefy-lista');
+      await page.locator('[data-zone="z-bod"]').click();
+      await expect(page.locator('[data-zone-card] h3')).toBeFocused();
+      await gate('strefy-karta');
+      await page.locator('[data-zone-off]').click();
+      await gate('strefy-wylacz');
+      await page.locator('.zv-ask .btn.ghost').click();
+      await page.locator('[data-zone-edit]').click();
+      await page.locator('[data-zone-save]').click();
+      await gate('strefy-zmiana');
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});
+
+test.describe('wyglad/P8-d Automatyzacje (E35, img/e35-after)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const noSideScroll = async (page: Page, width: number) =>
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+
+  test('komputer HHL: 4 zakładki, kreator „Gdy … wtedy …” obok listy, sprawdzenie na 30 dniach, zapis, wyłączenie z powodem, przebiegi i historia', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'HHL');
+    await openView(page, 'wf');
+    await expect(page.locator('.rl-tabs [role="tab"]')).toHaveText(['Działa samo', 'Własne reguły · 0', 'Przebiegi', 'Historia zmian']);
+    await page.locator('[data-rule-new]').click();
+    await expect(page.locator('[data-rule-creator] h2')).toBeFocused();
+    await expect(page.locator('.rl-main')).toBeVisible();
+    await page.locator('[data-rule-save]').click();
+    await expect(page.locator('[data-rule-f="name"]')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.locator('[data-rule-f="name"]')).toBeFocused();
+    await page.locator('[data-rule-f="name"]').fill('Długi pobyt na placu');
+    await page.locator('[data-rule-f="zone"]').selectOption({ label: 'Plac budowy Stegra Boden' });
+    await page.locator('[data-rule-then="notify-HHL_OPS"]').click();
+    await page.locator('[data-rule-then="notify-SCX"]').click();
+    await expect(page.locator('[data-rule-check]')).toContainText('zadziałałaby 1 raz');
+    await expect(page.locator('[data-rule-check]')).toContainText('SG-03 · plac od 07.10, 08:35 → 07.10, 11:35 (wyjazd 12:19)');
+    await expect(page.locator('[data-rule-check]')).toContainText('Wbudowane automaty robiące to samo: brak.');
+    await noSideScroll(page, 1440);
+    await page.locator('[data-rule-save]').click();
+    await expect(page.locator('.rl-live')).toHaveText('Dodano regułę. Wpis jest w historii zmian.');
+    await expect(page.locator('[data-wf-tab="own"]')).toHaveText('Własne reguły · 1');
+    const row = page.locator('.rl-rule').first();
+    /* nowa reguła startuje wyłączona (img/e35-after: „włączona” niezaznaczone) */
+    await expect(row.locator('.rl-state')).toHaveText('wyłączona');
+    await expect(row).toContainText('Gdy auto jest w strefie „Plac budowy Stegra Boden” dłużej niż 3');
+    await expect(row.locator('.rl-rule-name')).toBeFocused();
+    await row.locator('[data-rule-toggle]').click();
+    await row.locator('[data-rule-ask-yes]').click();
+    await expect(row.locator('.rl-err')).toHaveText('Wpisz powód zmiany.');
+    await row.locator('[data-rule-reason]').fill('SCX prosi o sygnał po 3 h na placu');
+    await row.locator('[data-rule-ask-yes]').click();
+    await expect(page.locator('.rl-live')).toHaveText('Reguła włączona.');
+    await expect(row.locator('[data-rule-toggle]')).toHaveText('Wyłącz');
+    await expect(row.locator('[data-rule-toggle]')).toBeFocused();
+    await page.locator('[data-wf-tab="runs"]').click();
+    await expect(page.locator('[data-rule-runs] tbody tr')).toHaveCount(5);
+    await expect(page.locator('[data-rule-runs]')).toContainText('powiadomienie: KSH 4 osoby, SCX 1 osoba');
+    await expect(page.locator('[data-rule-runs]')).not.toContainText('SKIPPED');
+    await page.locator('[data-wf-tab="hist"]').click();
+    await expect(page.locator('[data-rule-hist] li').first()).toContainText('włączona · „Długi pobyt na placu” · powód: SCX prosi o sygnał po 3 h na placu');
+  });
+
+  test('komputer 1280 → 1100: kreator zamiast listy; zmiana reguły wymaga powodu', async ({ page }) => {
+    await page.setViewportSize({ width: 1100, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'wf');
+    await page.locator('[data-rule-new]').click();
+    await expect(page.locator('.rl-main')).toBeHidden();
+    await page.locator('[data-rule-f="name"]').fill('Brak awizacji — SCX');
+    await page.locator('[data-rule-when="issue"]').click();
+    await page.locator('[data-rule-then="todo"]').click();
+    await page.locator('[data-rule-f="todo"]').selectOption('SCX');
+    await page.locator('[data-rule-save]').click();
+    await expect(page.locator('.rl-main')).toBeVisible();
+    await page.locator('.rl-rule [data-rule-edit]').first().click();
+    await page.locator('[data-rule-save]').click();
+    await expect(page.locator('[data-rule-f="reason"]')).toBeFocused();
+    await noSideScroll(page, 1100);
+  });
+
+  test('telefon HHL: zakładki, „+ Nowa reguła”, kreator na cały ekran, przebiegi kartami, historia — 0 w bramie E8', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL');
+    await openView(page, 'wf');
+    const hits: Hit[] = [];
+    const gate = async (name: string) => {
+      for (const width of [...WIDTHS, 768]) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.waitForTimeout(200);
+        hits.push(...await measure(page, name, width, 'HHL'));
+      }
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.waitForTimeout(200);
+    };
+    await gate('automatyzacje-dziala-samo');
+    await page.locator('[data-wf-tab="own"]').click();
+    await gate('automatyzacje-wlasne');
+    await page.locator('#wf-panel-own [data-rule-new]').click();
+    await expect(page.locator('[data-rule-creator] h2')).toBeFocused();
+    const font = await page.locator('[data-rule-f="name"]').evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+    expect(font, 'pole ≥ 16 px').toBeGreaterThanOrEqual(16);
+    await page.locator('[data-rule-save]').click();
+    await gate('automatyzacje-kreator');
+    await page.locator('.rl-back').click();
+    await page.locator('[data-wf-tab="runs"]').click();
+    await expect(page.locator('.rl-run-card')).toHaveCount(5);
+    await gate('automatyzacje-przebiegi');
+    await page.locator('[data-wf-tab="hist"]').click();
+    await gate('automatyzacje-historia');
+    expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+  });
 });

@@ -170,8 +170,11 @@ async function collectHits(
 
 async function assertMoneyCode(page: Page, code: 'EUR' | 'PLN') {
   await navTo(page, 'sched')
+  /* wyglad/P7-c: Harmonogram ładowany osobno — czekamy na wiersze (po szkielecie) */
+  await page.locator('[data-page="schedule"] tbody tr[data-load]').first().waitFor()
   const sample = await page.evaluate((want) => {
-    const cells = Array.from(document.querySelectorAll('.money, .num.money, [class*="money"]'))
+    /* wyglad/P7-c (E30, E16): kwota według firmy w kolumnie `money` (KSH „Twoja cena”, SCX „Moja stawka”) */
+    const cells = Array.from(document.querySelectorAll('.money, .num.money, [class*="money"], td[data-col="money"]'))
     const texts = cells.map((c) => (c.textContent || '').replace(/\s+/g, ' ').trim()).filter(Boolean)
     const withCode = texts.filter((t) => new RegExp(`\\b${want}\\b`).test(t))
     return { total: texts.length, withCode: withCode.length, sample: withCode[0] ?? texts[0] ?? '' }

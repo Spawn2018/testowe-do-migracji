@@ -5,7 +5,8 @@ import { Cockpit } from '../components/dash/Cockpit';
 import { DeliveryProgress, progressWeeksFromDb, progressWeeksLabel } from '../components/chart/DeliveryProgress';
 import { CorridorMap } from '../components/map/LazyCorridorMap';
 import { hasKey, INTL_LOCALE, navLabel, t, tp } from '../i18n/messages';
-import { canSeeMargin, ROLE_META } from '../lib/permissions';
+import { canSeeMargin, filterLoadsForRole, ROLE_META } from '../lib/permissions';
+import { trackingPhase } from '../lib/stageTiles';
 import { getNow } from '../lib/frozenNow';
 import { computeCorridorKpis } from '../lib/corridorKpis';
 import { focusVoyage, seaForSailing } from '../lib/voyage';
@@ -65,6 +66,12 @@ export function DashboardView() {
 
   /* „Brak dokumentów” — filtr strony Dokumenty po kliknięciu kafelka zezwoleń */
   const { docsMissing } = useMemo(() => computeCorridorKpis(loads, risks), [loads, risks]);
+  /* wyglad/P9-d (E1, E29 pkt 10): mapa w Kokpicie = te same transporty co Mapa — swojej firmy, w oknie śledzenia */
+  const mapNowMin = Math.floor(getNow().getTime() / 60_000);
+  const mapLoads = useMemo(() => {
+    const nowIso = new Date(mapNowMin * 60_000).toISOString();
+    return filterLoadsForRole(loads, role).filter((l) => trackingPhase(l, nowIso) === 'on');
+  }, [loads, role, mapNowMin]);
 
   /* „Najpilniejsze z „Do zrobienia”” (E8 pkt 6, E9): te same sprawy, które liczy kafelek i menu (todoRisks);
      KSH nie ma listy „Do zrobienia” (decyzja 07.10 19:11) — pod kafelkami tylko postęp i mapa */
@@ -243,7 +250,7 @@ export function DashboardView() {
               className="grid2-map-body minimap"
               style={{ overflow: 'hidden', background: 'var(--surface-3)', position: 'relative' }}
             >
-              <CorridorMap loads={loads} embedded />
+              <CorridorMap loads={mapLoads} embedded />
             </div>
           </div>
         </div>

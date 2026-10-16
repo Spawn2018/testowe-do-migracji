@@ -210,7 +210,9 @@ describe('Demo i strażnik I-0', () => {
     const d = readFileSync('src/components/drawer/LoadDrawer.tsx', 'utf8');
     expect(d).not.toMatch(/RouteProfilePanel|data-route-profile/);
     const c = readFileSync('src/components/drawer/PanelChat.tsx', 'utf8');
-    expect((c.match(/<button\b/g) ?? []).length).toBe(2);
+    /* wyglad/P6-e: trzeci przycisk to rozwinięcie „Przeczytali” pod wiadomością (Cz11) — nie czynność poza czatem */
+    expect((c.match(/<button\b/g) ?? []).length).toBe(3);
+    expect(c).toMatch(/data-chat-read=\{mine \? 'yes' : 'list'\}/);
     expect(c).toMatch(/data-chat-vis/);
     expect(c).toMatch(/data-chat-send/);
   });

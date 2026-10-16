@@ -7,6 +7,7 @@
  * drogi SE (`corridor_conditions`; demo — seed Trafikverket). Uchwyty testów: `[data-panel="ferry"]`, `[data-panel="road-se"]`.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { LiveMark } from '../components/shell/LiveMark';
 import { useTowerStore } from '../store/useTowerStore';
 import { getAuthProfile } from '../auth/profile';
 import { todoQueue, viewedKind } from '../lib/cockpitE9';
@@ -118,7 +119,7 @@ export function RisksView() {
   if (role === 'KSH') {
     return (
       <div className="dash risk-page rk-page" data-page="risks">
-        <h1 className="rk-title">{rt(locale, 'p6_title')}</h1>
+        <h1 className="rk-title">{rt(locale, 'p6_title')}<LiveMark /></h1>
         <p className="rk-muted rk-ksh-note">{rt(locale, 'p6_ksh_note')}</p>
         <div className={phone ? 'rk-one' : 'rk-ksh'}>{route(['ferry', 'roads'], !phone)}</div>
       </div>
@@ -130,7 +131,7 @@ export function RisksView() {
     const label = (k: Tab) => (k === 'todo' ? rt(locale, 'p6_tab_todo') : k === 'route' ? rt(locale, 'p6_tab_route') : rt(locale, 'p6_tab_sys'));
     return (
       <div className="dash risk-page rk-page is-phone" data-page="risks">
-        <h1 className="rk-title">{rt(locale, 'p6_title')}</h1>
+        <h1 className="rk-title">{rt(locale, 'p6_title')}<LiveMark /></h1>
         <div className="rk-tabs" role="tablist" aria-label={rt(locale, 'p6_tabs_aria')}>
           {tabs.map((k) => (
             <button
@@ -167,7 +168,7 @@ export function RisksView() {
 
   return (
     <div className="dash risk-page rk-page" data-page="risks">
-      <h1 className="rk-title">{rt(locale, 'p6_title')}</h1>
+      <h1 className="rk-title">{rt(locale, 'p6_title')}<LiveMark /></h1>
       <div className="rk-grid">
         {todo(true)}
         {route(undefined, true)}
