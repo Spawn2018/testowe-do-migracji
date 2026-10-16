@@ -54,6 +54,17 @@ for (const { w, h } of SIZES) {
 
   test(`B-7b checkboxy warstw widoczne i bez nachodzenia @${w}x${h}`, async ({ page }) => {
     await openMap(page, w, h);
+    /* wyglad/P9-c (E29 pkt 9, 08.10 — nowsze niż B-7b 05.10): na telefonie „Warstwy ▾” na mapie → arkusz od dołu */
+    if (w <= 768) {
+      const btn = (await box(page, '.page-sections[data-page="map"] [data-map-layers-btn]'))!;
+      expect(btn.h).toBeGreaterThanOrEqual(44);
+      expect(btn.right).toBeLessThanOrEqual(w);
+      await page.click('.page-sections[data-page="map"] [data-map-layers-btn]');
+      await expect(page.locator('[data-map-layers-sheet] input[type="checkbox"]')).toHaveCount(5);
+      const doc = await page.evaluate(() => document.documentElement.scrollWidth);
+      expect(doc, 'strona nie szersza niż ekran').toBeLessThanOrEqual(w + 1);
+      return;
+    }
     const layers = (await box(page, '.page-sections[data-page="map"] .maplayers'))!;
     expect(layers.y).toBeGreaterThanOrEqual(0);
     expect(layers.bottom).toBeLessThanOrEqual(h);
