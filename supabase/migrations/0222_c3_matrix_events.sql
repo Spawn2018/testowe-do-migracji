@@ -11,6 +11,7 @@ alter table public.notification_matrix
   add column if not exists label_pl text;
 
 alter table public.notification_matrix drop constraint if exists notification_matrix_pkey;
+alter table public.notification_matrix drop constraint if exists notification_matrix_by_role_pkey;
 
 delete from public.notification_matrix;
 
@@ -441,6 +442,8 @@ declare
   v_kind text;
   v_order text;
   v_bundle text;
+  v_event text;
+  v_push_ok boolean;
   r record;
 begin
   if (p_event_group in ('LOAD_STATUS','RISK_FERRY_WEATHER','DECISION','MONEY','SYSTEM')) is not true then
