@@ -30,6 +30,8 @@ import {
   accountingAddressesSaverOf, accountingTestMailOf, cancelRulesOf, cancelSaverOf, dwellRulesOf, dwellSaverOf,
   fuelActionsOf, fuelScreenOf, marginSettingOf, paymentTermsOf, paymentTermsSaverOf,
 } from '../lib/p5bSource';
+import { StatusScreen } from '../components/options/StatusScreen';
+import { sourceHealth } from '../lib/sysSource';
 
 /** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */
 function savedText(locale: Locale, code: string): string {
@@ -350,12 +352,16 @@ export function OptionsView() {
   });
 
   const system: OptScreen[] = [
+    /* wyglad/P10b-c (E23, E47, E19 pkt 7, E46): źródła danych, błędy aplikacji, bezpieczeństwo, wydajność;
+       produkcja do podłączenia danych (D-20261016-0845-01) — dzisiejszy panel stanu */
     scr('status', (
       <>
         <SmsFallbackEntry />
-        {SystemStatusPanel ? block(<SystemStatusPanel />) : <Soon locale={locale} tipKey="opt_acc_sys_soon" />}
+        {sourceHealth(getNowIso())
+          ? <StatusScreen locale={locale} nowIso={getNowIso()} admin={isHhlAdmin} />
+          : SystemStatusPanel ? block(<SystemStatusPanel />) : <Soon locale={locale} tipKey="opt_acc_sys_soon" />}
       </>
-    )),
+    ), { mark: PROD_BUILD ? undefined : <DemoMark /> }),
     scr('flags', pick('flags', null), { right: change }),
   ];
   if (isHhlAdmin) system.push(scr('hist', pick('hist', ChangeHistoryPanel ? block(<ChangeHistoryPanel />) : null)));

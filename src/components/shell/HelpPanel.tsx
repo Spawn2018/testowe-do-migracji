@@ -6,6 +6,7 @@
  */
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { createPortal } from 'react-dom';
+import './help.css';
 
 import { useTowerStore } from '../../store/useTowerStore';
 import { t } from '../../i18n/messages';

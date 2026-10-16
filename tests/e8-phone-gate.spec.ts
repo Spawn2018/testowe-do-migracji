@@ -706,6 +706,74 @@ test.describe('wyglad/P10b-b Pomoc (E37 pkt 3)', () => {
   });
 });
 
+/* wyglad/P10b-c — E23 (źródła danych), E47 (błędy aplikacji), E19 pkt 7 (bezpieczeństwo), E46 (wydajność):
+   Opcje › System › Stan systemu; najpierw to, co wymaga uwagi; „Sprawdź teraz” z wynikiem w wierszu; telefon — lista. */
+test.describe('wyglad/P10b-c Stan systemu (E23, E47, E19, E46)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const openStatus = async (page: Page, phone = false) => {
+    await openView(page, 'options');
+    if (phone) {
+      await page.locator('[data-opt-group="system"]').first().click();
+      await page.locator('[data-opt-nav="status"]').first().click();
+    } else {
+      await page.locator('[data-opt-nav="status"]').click();
+    }
+    await page.waitForSelector('[data-sys-screen]');
+  };
+
+  test('komputer: źródła (uwaga najpierw, Sprawdź teraz, pozostałe, progi), błędy, bezpieczeństwo, wydajność', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openStatus(page);
+    await expect(page.locator('[data-sys-tab]')).toHaveText(['Źródła danych', 'Błędy aplikacji', 'Bezpieczeństwo', 'Wydajność']);
+    await expect(page.locator('[data-sys-sum]')).toHaveText('1 nie działa · 3 częściowo albo bez pomiaru · 8 działa · 1 bez źródła');
+    const states = await page.locator('[data-sys-source]').evaluateAll((e) => e.map((x) => (x as HTMLElement).dataset.state));
+    expect(states.slice(0, 4)).toEqual(['down', 'partial', 'partial', 'nomeasure']);
+    expect(states.at(-1)).toBe('nosource');
+    await expect(page.locator('[data-sys-source][data-state="ok"] [data-sys-check]')).toHaveCount(0);
+    await page.locator('[data-sys-check="fuel"]').click();
+    await expect(page.locator('[data-sys-checked="fuel"]')).toHaveText(/^Sprawdzone \d{2}:\d{2}: nie działa$/);
+    expect(await page.locator('.sys-tablewrap').evaluate((e) => e.scrollWidth <= e.clientWidth + 1), 'tabela bez przewijania w bok').toBe(true);
+    await page.locator('[data-sys-other] summary').click();
+    await expect(page.locator('[data-sys-other] li')).toHaveCount(6);
+    await expect(page.locator('[data-sys-threshold]')).toHaveCount(7);
+    await expect(page.locator('[data-sys-threshold="SRC_TELEMATICS_MIN"]')).toContainText('10 min');
+    /* bez kodów zadań (E21) */
+    const txt = await page.locator('[data-sys-screen]').innerText();
+    expect(txt).not.toMatch(/emtrack-web|route-hazards|web-push|email-budget|supabase/i);
+    await page.locator('[data-sys-tab="errors"]').click();
+    await expect(page.locator('[data-sys-errors] .sys-kpi')).toHaveCount(4);
+    await expect(page.locator('[data-err]')).toHaveCount(3);
+    await page.locator('[data-err="e1"]').click();
+    await expect(page.locator('[data-err-more="e1"]')).toContainText('Role');
+    await expect(page.locator('[data-err-state="fixed"]')).toHaveText('USTĄPIŁ PO NAPRAWIE');
+    await expect(page.locator('[data-err-rule]')).toContainText('Alarm do Administratorów HHL');
+    await page.locator('[data-sys-tab="security"]').click();
+    await expect(page.locator('[data-sec]')).toHaveCount(5);
+    await page.locator('[data-sys-tab="perf"]').click();
+    await expect(page.locator('[data-perf]')).toHaveCount(5);
+  });
+
+  test('telefon 390: lista „wymagają uwagi”, reszta po dotknięciu, wiersz → przyczyna i „Sprawdź teraz”', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', true);
+    await openStatus(page, true);
+    await expect(page.locator('[data-sys-tab]')).toHaveText(['Źródła', 'Błędy', 'Bezpieczeństwo', 'Wydajność']);
+    await expect(page.locator('[data-sys-sum]')).toHaveText('4 wymagają uwagi');
+    await expect(page.locator('[data-sys-source]')).toHaveCount(4);
+    const tabsH = await page.locator('[data-sys-tab]').evaluateAll((e) => [...new Set(e.map((x) => Math.round(x.getBoundingClientRect().top)))].length);
+    expect(tabsH, 'zakładki w jednym wierszu').toBe(1);
+    expect(await page.locator('.sys-tabs').evaluate((e) => e.scrollWidth <= e.clientWidth + 1), 'zakładki mieszczą się bez przewijania').toBe(true);
+    await page.locator('[data-sys-source="fuel"] .sys-m-row').click();
+    await expect(page.locator('[data-sys-source="fuel"] [data-sys-check]')).toBeVisible();
+    await page.locator('[data-sys-rest]').click();
+    await expect(page.locator('[data-sys-source]')).toHaveCount(13);
+    const small = await page.locator('[data-sys-screen] .sys-m-row, [data-sys-rest]').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height < 44).length);
+    expect(small).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  });
+});
+
 test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
   test.describe.configure({ mode: 'serial', timeout: 120_000 });
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
