@@ -2543,6 +2543,51 @@ unit + visual zielone przed każdym scaleniem; `npm audit` 0. #209/#231 (P7) —
 
 **C17 NA PRODUKCJI — e7595541, 02:02.**
 
-## 2026-10-16 — BLOKER C16-H w toku (D-20261016-0100-01)
+## 2026-10-16 — C16-H NA PRODUKCJI (D-20261016-0100-01)
 
-- Start po zamknięciu C17; migracja **0221**; H1–H5; do zamknięcia C16-H nic innego.
+- Merge PR #238 → `8bae03be`; treść `3b71b56e`.
+- CI #238: unit / visual / `db` zielone; `npm audit` 0.
+- TEST: security 84/84, status 55/55, c16-push 18/18, nullguard 161+136+216+124 = 637/637 (nullguard-4 ponowiony 124/124); doradca 149, **0 nowych**.
+- Kopia PENDING push_fallback: `D:\Watch Tower\dane\p2\kopia-c16h-pending-fallback-2026-10-16.csv` (0 wierszy danych), SHA-256 `1283ff25df934c3475e683021322c071b20afa990e7c87ebecab6c2caebd010c`.
+- Przed: PENDING push_fallback=0; WEB_PUSH sprzed granicy bez fallbacku=933.
+- ROLLBACK 0221 OK → `db push` ×2; parytet **MATCH YES** 0001…0221; audit `C16H_PUSH_FALLBACK_CANCEL` cancelled_pending=0.
+- Po: tick=0; new_fb_for_old=0; pending_fb=0.
+- H3: `send-notifications` v24→**v26** (notifyTemplates PL); web-push-* już z C16.
+- H4: sekret `APP_URL=https://tower.log-mar.pl` (bez logowania innych sekretów).
+- Odbiór pkt 1 (SELECT): OK. Pkt 2 (test właściciela G-14) — po wdrożeniu.
+
+| punkt | zrobione / odbiór |
+|---|---|
+| H1 tick / enqueue | zrobione — 0221 |
+| H2 CANCEL PENDING starych | zrobione — 0 PENDING |
+| H3 send-notifications | zrobione — v26 |
+| H4 APP_URL | zrobione |
+| H5 testy | zrobione — c16-push 18, unit temat |
+
+**C16-H NA PRODUKCJI — 8bae03be, 10:02.**
+
+## 2026-10-16 — dopiski włączone do planu (0200 / 0230 / 0250 / 0310 / 0315)
+
+Tabela sprawdzalności (prompt 16.10):
+
+| dopisek | punkt | paczka | pozycja w PLAN |
+|---|---|---|---|
+| D-20261016-0200-01 | Z1 wymiary/pilot/zezwolenie z tabeli | P5 | D1 |
+| D-20261016-0200-01 | Z2 polisa HHL + zezwolenie 13/GD/2026 | P5 | D2 |
+| D-20261016-0200-01 | Z3 usunięcie H-1 / H-3 | P9 | H-1 i H-3 — usunięcie |
+| D-20261016-0200-01 | Z4 KPD / SMS SG-03 / D-21 | P6 E2-1; P8 E42; dokumenty | zamknięte bez nowej pracy |
+| D-20261016-0200-01 | Z5 W19 | §5 | zastąpione przez 0230 (W19 zamknięte) |
+| D-20261016-0230-01 | Z1–Z6 E49 wiatr/objazd/śliskość | P6 | E49 |
+| D-20261016-0230-01 | Z3 pkt 8 linia objazdu | P9 | E45 uzupełnienie |
+| D-20261016-0230-01 | Z5 Wiatr — SMHI | P10a | E23 |
+| D-20261016-0230-01 | Z7 W19 / W45 / D-84 | §5 / rejestr | W19 zamknięte; W45; D-84=20 |
+| D-20261016-0250-01 | Cz1–Cz12 | P6 | E17 Czat — dane |
+| D-20261016-0250-01 | Cz11 wygląd | P6 | wyglad/P6-d |
+| D-20261016-0310-01 | Cz13 | C3 | wiersz „Wiadomość w czacie” |
+| D-20261016-0310-01 | Cz14–Cz24 | P6 | E17 Czat — dane |
+| D-20261016-0310-01 | Cz23 wygląd | P6 | wyglad/P6-e |
+| D-20261016-0310-01 | Cz24 pkt 12 iPhone | §5 | W43 |
+| D-20261016-0315-01 | Cz25 | C3 | przy Cz13 |
+| D-20261016-0315-01 | Cz26–Cz33 | P6 | E17 Czat — dane |
+| D-20261016-0220-01 | Z1–Z3 E35 Automatyzacje | P8 | E35 — **wchodzi z PR #239** (po scaleniu) |
+
