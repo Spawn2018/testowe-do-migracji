@@ -103,6 +103,15 @@ export const DEMO_THRESHOLDS: ThresholdRow[] = [
   { key: 'DOC_CRIT_H', value: 6, unit: 'h' },
   { key: 'SILENT_MIN', value: 30, unit: 'min' },
   { key: 'OFFROUTE_KM', value: 2, unit: 'km' },
+  /* wyglad/E49 — wiatr i śliskość (decyzja 16.10.2026, 02:08; D-20261016-0230-01 Z1 pkt 5, Z4) */
+  { key: 'WIND_SLOW_MS', value: 20, unit: 'm/s' },
+  { key: 'WIND_CROSS_PCT', value: 15, unit: '%' },
+  { key: 'WIND_HEAD_PCT', value: 5, unit: '%' },
+  { key: 'WIND_HOLD_MS', value: 25, unit: 'm/s' },
+  { key: 'WIND_RESUME_MS', value: 20, unit: 'm/s' },
+  { key: 'WIND_RESUME_MIN', value: 30, unit: 'min' },
+  { key: 'SLIP_RADIUS_KM', value: 25, unit: 'km' },
+  { key: 'SLIP_PCT', value: 15, unit: '%' },
 ];
 
 const PEOPLE: PersonRow[] = [
