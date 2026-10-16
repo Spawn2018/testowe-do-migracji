@@ -13,7 +13,7 @@ export type OptScreenId =
   | 'rates' | 'surch' | 'fuel' | 'terms' | 'fact'
   | 'thr' | 'permits'
   | 'status' | 'flags' | 'hist' | 'export'
-  | 'account' | 'forme' | 'look' | 'device' | 'guide';
+  | 'account' | 'forme' | 'look' | 'device';
 
 /** Kto zmienia ekran — napis po prawej w nagłówku ekranu (obraz E6: „ZMIENIA TYLKO ADMINISTRATOR HHL”). */
 export type OptRight = 'admin' | 'read' | 'own' | 'download' | null;
@@ -70,7 +70,6 @@ export const SCREEN_KEY: Record<OptScreenId, string> = {
   forme: 'p3c_s_forme',
   look: 'p3c_s_look',
   device: 'p3c_s_device',
-  guide: 'p3c_s_guide',
 };
 
 export const DESC_KEY: Record<OptScreenId, string> = Object.fromEntries(

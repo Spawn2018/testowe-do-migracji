@@ -1,12 +1,12 @@
-/** I-4 — instrukcje w aplikacji: komplet kroków dla 4 odbiorców × 3 języki, osadzenie w widokach tylko w buildzie produkcyjnym. */
+/** I-4 — instrukcja w PWA kierowcy: komplet kroków w 3 językach, osadzenie tylko w buildzie produkcyjnym.
+ *  C13 (D-20261015-0300-01): stare instrukcje HHL, KSH i SCX usunięte — zastępuje je Pomoc („Jak pracuję”). */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { guideSteps, type GuideRole } from '../src/components/guide/Guide';
 import { I18N_ALL } from '../src/i18n/messages';
 
-const ROLES: GuideRole[] = ['drv', 'hhl', 'ksh', 'scx'];
-// DOC-ROLE (02.10): HHL +Decyzje (i4_hhl_8), KSH/SCX +panel Instrukcja (i4_*_7).
-const EXPECT: Record<GuideRole, number> = { drv: 8, hhl: 8, ksh: 7, scx: 7 };
+const ROLES: GuideRole[] = ['drv'];
+const EXPECT: Record<GuideRole, number> = { drv: 8 };
 
 describe('I-4 treść', () => {
   for (const r of ROLES) {
@@ -22,9 +22,17 @@ describe('I-4 treść', () => {
   it('EN i SV bez polskich znaków', () => {
     for (const l of ['en', 'sv'] as const) for (const r of ROLES) for (const s of guideSteps(l, r)) expect(s).not.toMatch(/[ąćęłńśźżĄĆĘŁŃŚŹŻ]/);
   });
-  it('kierowca: zgoda, etapy, PROBLEM, CMR/POD, odpoczynek na promie (D-9)', () => {
+  it('kierowca: zgoda, etapy, PROBLEM, CMR z podpisem odbiorcy, odpoczynek na promie (D-9)', () => {
     const pl = guideSteps('pl', 'drv').join(' ');
-    for (const w of ['Zgadzam się', 'ZAŁADOWANY', 'NA PROMIE', 'ROZŁADOWANY', 'PROBLEM', 'CMR', 'odpoczynkiem dobowym']) expect(pl).toContain(w);
+    for (const w of ['Zgadzam się', 'ZAŁADOWANY', 'NA PROMIE', 'ROZŁADOWANY', 'PROBLEM', 'CMR z podpisem odbiorcy', 'Aparat / plik → CMR', 'odpoczynkiem dobowym']) expect(pl).toContain(w);
+  });
+  /* C13 (D-20261015-0300-01; E31, decyzja 08.10 12:14): bez POD i bez CMR z załadunku; bez starych instrukcji HHL, KSH i SCX */
+  it('C13: kierowca bez POD i bez „po załadunku”; brak kluczy i4_hhl / i4_ksh / i4_scx w PL, EN i SV', () => {
+    for (const l of ['pl', 'en', 'sv'] as const) {
+      expect(guideSteps(l, 'drv').join(' ')).not.toMatch(/\bPOD\b/);
+      expect(Object.keys(I18N_ALL[l]).filter((k) => /^i4_(?:sub_)?(?:hhl|ksh|scx)/.test(k))).toEqual([]);
+    }
+    expect(guideSteps('pl', 'drv').join(' ')).not.toContain('Po załadunku');
   });
 });
 
