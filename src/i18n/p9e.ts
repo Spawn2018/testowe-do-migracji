@@ -29,6 +29,13 @@ const PL: Record<string, string> = {
   p9e_list_close: 'Zamknij listę',
   p9e_lg_zone: 'kilka aut w jednej strefie',
   p9e_lg_zone_short: 'kilka aut w strefie',
+  /* wyglad/P9-f — Przegląd w panelu (E32 pkt 3, E27) */
+  p9f_nopos: 'Brak pozycji',
+  p9f_track_from: 'Śledzenie od {t}',
+  p9f_track_from_day: 'Śledzenie od 03:00 w dniu załadunku',
+  p9f_track_done: 'Śledzenie zakończone — „Dostarczone”',
+  p9f_why_link: 'Brak linku śledzenia — SCX',
+  p9f_site_since: 'Na placu od {t}',
 };
 
 export function p9e(locale: Locale, key: string): string {

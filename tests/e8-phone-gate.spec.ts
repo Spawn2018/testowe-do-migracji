@@ -586,6 +586,44 @@ test.describe('wyglad/P9-e grupowanie na promie i w strefie (E45 pkt 5, R5)', ()
   });
 });
 
+/* wyglad/P9-f — E32 pkt 3 (zdecydowane 08.10 12:14) i E27: mapa w Przeglądzie panelu — bez pozycji cała trasa i powód
+   („Brak pozycji · Śledzenie od 07.10, 03:00”), po „Dostarczone” śledzenie zakończone, na placu strefa placu. */
+test.describe('wyglad/P9-f mapa w Przeglądzie (E32 pkt 3)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  async function openPanel(page: Page, code: string) {
+    await openView(page, 'sched');
+    await page.evaluate((c) => {
+      const el = [...document.querySelectorAll('[data-load]')].find((r) => (r.textContent ?? '').includes(`${c} `)) as HTMLElement | undefined;
+      el?.click();
+    }, code);
+    await page.waitForSelector('aside.drawer .corridor-map-el', { timeout: 15_000 });
+    await page.waitForTimeout(1200);
+  }
+
+  test('komputer: przed oknem — powód i cała trasa nad dopiskiem; po „Dostarczone” — śledzenie zakończone; na placu — strefa placu', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openPanel(page, 'SG-11');
+    const note = page.locator('aside.drawer [data-drawer-note="before"]');
+    await expect(note).toHaveText('Brak pozycji · Śledzenie od 07.10, 03:00');
+    const r = await page.evaluate(() => {
+      const root = document.querySelector('aside.drawer [data-load-map]') as HTMLElement;
+      const n = (root.querySelector('[data-drawer-note]') as HTMLElement).getBoundingClientRect();
+      const rs = [...root.querySelectorAll('.leaflet-overlay-pane path')].map((x) => x.getBoundingClientRect()).filter((x) => x.width > 0);
+      return { bottom: Math.max(...rs.map((x) => x.bottom)), noteTop: n.top, markers: root.querySelectorAll('.wt-mk').length };
+    });
+    expect(r.bottom, 'trasa nad dopiskiem').toBeLessThanOrEqual(r.noteTop - 20);
+    expect(r.markers).toBe(0);
+    await page.keyboard.press('Escape');
+    await openPanel(page, 'SG-01');
+    await expect(page.locator('aside.drawer [data-drawer-note="after"]')).toHaveText('Śledzenie zakończone — „Dostarczone”');
+    await page.keyboard.press('Escape');
+    await openPanel(page, 'T-12');
+    await expect(page.locator('aside.drawer [data-drawer-note]')).toHaveCount(0);
+    await expect(page.locator('aside.drawer .leaflet-overlay-pane path[fill="#1B6E5D"]')).toHaveCount(1);
+  });
+});
+
 test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
   test.describe.configure({ mode: 'serial', timeout: 120_000 });
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
