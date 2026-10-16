@@ -81,22 +81,41 @@ export function corridorBoundsOf(): L.LatLngBounds {
   return corridorBounds;
 }
 export const CORRIDOR_PADDING = 24;
+/**
+ * Margines kadru (E1: 24 px). Na stronie Mapa legenda leży na dole mapy — margines dolny liczony od jej górnej krawędzi,
+ * żeby legenda nie zasłaniała początku trasy (Śrem). Kokpit, panel i telefon (legenda w arkuszu) — bez legendy na mapie.
+ */
+export function corridorPadding(map: L.Map): { paddingTopLeft: L.PointTuple; paddingBottomRight: L.PointTuple } {
+  let extra = 0;
+  try {
+    const key = map.getContainer().closest('.corridor-map-root')?.querySelector<HTMLElement>('.mapkey');
+    if (key && key.offsetHeight > 0) {
+      const root = key.offsetParent as HTMLElement | null;
+      const fromBottom = root ? root.clientHeight - key.offsetTop : key.offsetHeight;
+      extra = Math.max(0, Math.round(fromBottom));
+    }
+  } catch {
+    /* mapa bez kontenera */
+  }
+  return { paddingTopLeft: [CORRIDOR_PADDING, CORRIDOR_PADDING], paddingBottomRight: [CORRIDOR_PADDING, CORRIDOR_PADDING + extra] };
+}
 /** Widok całej trasy dla bieżącego rozmiaru mapy (bez ruszania mapy). */
 export function corridorView(map: L.Map): { center: L.LatLng; zoom: number } {
   const b = corridorBoundsOf();
   /* ten sam rachunek co `fitBounds` (środek w rzucie mapy, nie średnia stopni) — powrót bez zmiany widoku = zero kafelków */
   const m = map as unknown as { _getBoundsCenterZoom?: (bb: L.LatLngBounds, o: L.FitBoundsOptions) => { center: L.LatLng; zoom: number } };
   if (typeof m._getBoundsCenterZoom === 'function') {
-    return m._getBoundsCenterZoom(b, { padding: [CORRIDOR_PADDING, CORRIDOR_PADDING] });
+    return m._getBoundsCenterZoom(b, corridorPadding(map));
   }
-  const zoom = map.getBoundsZoom(b, false, L.point(CORRIDOR_PADDING * 2, CORRIDOR_PADDING * 2));
+  const pad = corridorPadding(map);
+  const zoom = map.getBoundsZoom(b, false, L.point(pad.paddingTopLeft).add(pad.paddingBottomRight));
   return { center: b.getCenter(), zoom };
 }
 /** Kadr całej trasy (E1). */
 export function fitCorridor(map: L.Map): void {
   try {
     if (!map.getPane('mapPane')) return;
-    map.fitBounds(corridorBoundsOf(), { padding: [CORRIDOR_PADDING, CORRIDOR_PADDING], animate: false });
+    map.fitBounds(corridorBoundsOf(), { ...corridorPadding(map), animate: false });
   } catch {
     /* mapa usunięta albo bez rozmiaru */
   }

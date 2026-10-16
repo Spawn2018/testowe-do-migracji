@@ -404,6 +404,9 @@ test.describe('wyglad/P9-d kadr całej trasy (E1)', () => {
     await page.waitForTimeout(600);
     const a = await routeBox(page, '[data-page="map"] .mapbox');
     expect(a.inside, JSON.stringify(a)).toBe(true);
+    /* legenda leży na mapie — trasa (także Śrem) nad nią, z marginesem */
+    const lg = (await page.locator('[data-page="map"] .mapkey').boundingBox())!;
+    expect(a.u.b, 'trasa nad legendą').toBeLessThanOrEqual(lg.y - 20);
     const box = (await page.locator('[data-page="map"] .leaflet-container').boundingBox())!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();

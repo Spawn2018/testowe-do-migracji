@@ -9,7 +9,7 @@ Wygląd i zachowanie widoku (F8), bez danych. **Złożone na #248 (`wyglad/P9-c`
 
 | Miejsce | Było | Jest |
 |---|---|---|
-| Mapa | stały środek 58,5 N 18,5 E, przybliżenie 4,2; przesunięcie zapamiętane | cała trasa (Śrem → Boden, promy) z marginesem 24 px przy każdym wejściu i zmianie rozmiaru; przesunięcie nie jest pamiętane |
+| Mapa | stały środek 58,5 N 18,5 E, przybliżenie 4,2; przesunięcie zapamiętane | cała trasa (Śrem → Boden, promy) z marginesem 24 px przy każdym wejściu i zmianie rozmiaru; od dołu margines liczony od górnej krawędzi legendy (legenda nie zasłania Śremu); przesunięcie nie jest pamiętane |
 | Kokpit (kafelek mapy) | jak wyżej; na 360 px Boden ucięty | cała trasa w kafelku na każdej szerokości |
 | Kokpit — zakres | wszystkie transporty z danych (także innych firm w podglądzie) | te same co Mapa: swoja firma, w oknie śledzenia |
 | Przegląd w panelu | kadr jak ostatnio w panelu | przybliżenie 11, pojazd na środku, podążanie co 60 s; po przesunięciu albo „+/−” mapa zostaje tam, gdzie użytkownik ją zostawił |
@@ -18,7 +18,7 @@ Wygląd i zachowanie widoku (F8), bez danych. **Złożone na #248 (`wyglad/P9-c`
 Wspólna mapa na sesję (AUD-01e) zostaje: powrót na Mapę bez zmiany rozmiaru — zero nowych kafelków (porównanie widoku co do piksela).
 
 **Sprawdzone:**
-- e2e blok P9-d — 3/3: trasa w kadrze z marginesem na Mapie i w Kokpicie, po przesunięciu i powrocie znów cała; Przegląd — kafelki 11, pojazd na środku (±3 px); Kokpit = Mapa (KSH);
+- e2e blok P9-d — 3/3: trasa w kadrze z marginesem na Mapie i w Kokpicie, na Mapie nad legendą, po przesunięciu i powrocie znów cała; Przegląd — kafelki 11, pojazd na środku (±3 px); Kokpit = Mapa (KSH);
 - regresja: AUD-01e (zero nowych kafelków przy powrocie, powrót ≤ 0,3 s), brama E8 telefon, P9-c, P9-a, P3-b Kokpit, P4, P4-b;
 - unit — cały zestaw zielony;
 - pierwsze wczytanie 395,8 kB gzip.
