@@ -71,7 +71,8 @@ function Sources({ locale, rows, nowIso, canCheck, admin }: { locale: Locale; ro
   ].filter(Boolean).join(' · ');
 
   const run = (id: string) => {
-    const p = checkSource(id, nowIso);
+    /* wyglad/P7-e2: demo odpowiada stanem wiersza, gdy źródła nie ma w danych demo (np. „Plik KSH (SharePoint)”) */
+    const p = checkSource(id, nowIso, rows.find((r) => r.id === id)?.state);
     if (!p) return;
     setChecks((c) => ({ ...c, [id]: 'busy' }));
     void p.then((res) => setChecks((c) => ({ ...c, [id]: res })));
@@ -410,6 +411,20 @@ function PerfView({ locale, nowIso }: { locale: Locale; nowIso: string }) {
         </table>
       </div>
     </section>
+  );
+}
+
+/**
+ * wyglad/P7-e2 (F7): na produkcji, dopóki Stan systemu czeka na dane źródeł (D-20261016-0845-01, P10a), ekran pokazuje
+ * dzisiejszy panel — wiersz „Plik KSH (SharePoint)” stoi wtedy nad nim, gdy wykonawca poda stan synchronizacji (W13).
+ */
+export function KshSyncSourceBlock({ locale, nowIso, admin }: { locale: Locale; nowIso: string; admin: boolean }) {
+  const kshSync = useTowerStore((s) => kshSyncOf(s));
+  if (!kshSync) return null;
+  return (
+    <div className="sys" data-sys-screen-ksh>
+      <Sources locale={locale} rows={[kshSyncSourceRow(kshSync, nowIso)]} nowIso={nowIso} canCheck admin={admin} />
+    </div>
   );
 }
 

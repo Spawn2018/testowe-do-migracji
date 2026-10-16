@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
-  KSH_SECRET_WARN_DAYS, KSH_SYNC_DOWN_MIN, kshRunText, kshSecretDaysLeft, kshSyncLine, kshSyncOf, kshSyncSourceRow,
+  KSH_SECRET_WARN_DAYS, KSH_SYNC_DOWN_MIN, kshRunText, kshSecretDaysLeft, kshSyncLine, kshSyncOf, kshSyncReason, kshSyncSourceRow,
   kshSyncTone, type KshSharePointSync,
 } from '../src/lib/kshSyncView';
 import { unloadedAtOf } from '../src/lib/money/loadMoney';
@@ -43,9 +43,20 @@ describe('P7-e — linia nad Harmonogramem (zasada 15)', () => {
     const late = '2026-10-16T06:36:00Z';
     expect(kshSyncTone(base, late)).toBe('down');
     expect(kshSyncLine(base, late).text).toBe('Plik KSH (SharePoint): nie działa — ostatni odczyt 16.10.2026, 08:05');
-    expect(kshSyncTone({ ...base, sourceOk: false }, NOW)).toBe('down');
     expect(kshSyncLine({ ...base, lastReadAt: null }, NOW).text).toBe('Plik KSH (SharePoint): nie działa — brak odczytu');
+    expect(kshSyncLine({ ...base, lastReadAt: 'nie-data' }, NOW).text).toBe('Plik KSH (SharePoint): nie działa — brak odczytu');
+    /* dokładnie 30 min — jeszcze „zsynchronizowano”; „Nie działa” dopiero po 30 min */
     expect(kshSyncTone(base, '2026-10-16T06:35:00Z')).toBe('ok');
+  });
+
+  it('wyglad/P7-e2: nieudana próba przy świeżym odczycie — dalej „zsynchronizowano”, w podpowiedzi „Ostatnia próba odczytu nieudana”', () => {
+    const s = { ...base, sourceOk: false };
+    expect(kshSyncReason(s, NOW)).toBe('retry');
+    const l = kshSyncLine(s, NOW);
+    expect(l.tone).toBe('ok');
+    expect(l.text).toBe('Plik KSH (SharePoint): zsynchronizowano 16.10.2026, 08:05');
+    expect(l.title.split('\n')[0]).toBe('Ostatnia próba odczytu nieudana — następna za kilka minut');
+    expect(kshSyncReason(s, '2026-10-16T06:36:00Z')).toBe('age');
   });
 
   it('zapis włączony — godzina ostatniego zapisu w podpowiedzi', () => {
@@ -66,11 +77,29 @@ describe('P7-e — wiersz w Stanie systemu (zasady 15 i 16)', () => {
     expect(r.why).toContain('Ostatni przebieg');
   });
 
-  it('nie działa — od kiedy i alarm do Administratorów HHL', () => {
-    const r = kshSyncSourceRow({ ...base, sourceOk: false }, NOW);
+  it('nie działa — od kiedy (30 min po ostatnim odczycie) i alarm do Administratorów HHL', () => {
+    const r = kshSyncSourceRow(base, '2026-10-16T06:52:00Z');
     expect(r.state).toBe('down');
-    expect(r.since).toBe(base.lastReadAt);
-    expect(r.why).toContain('alarm do Administratorów HHL');
+    expect(r.since).toBe('2026-10-16T06:35:00.000Z');
+    expect(r.lastAt).toBe(base.lastReadAt);
+    expect(r.why).toContain('Brak udanego odczytu pliku od ponad 30 min — alarm do Administratorów HHL.');
+  });
+
+  it('wyglad/P7-e2: nieudana próba przy świeżym odczycie — „Częściowo”, bez „od ponad 30 min”', () => {
+    const r = kshSyncSourceRow({ ...base, sourceOk: false }, NOW);
+    expect(r.state).toBe('partial');
+    expect(r.since).toBeNull();
+    expect(r.why).toContain('Ostatnia próba odczytu nieudana. Ostatni udany odczyt 16.10.2026, 08:05; po 30 min bez odczytu — alarm do Administratorów HHL.');
+    expect(r.why).not.toContain('od ponad 30 min');
+  });
+
+  it('wyglad/P7-e2: bez żadnego odczytu — „Nie działa” bez daty „od” i bez „od ponad 30 min”', () => {
+    const r = kshSyncSourceRow({ ...base, lastReadAt: null }, NOW);
+    expect(r.state).toBe('down');
+    expect(r.since).toBeNull();
+    expect(r.lastAt).toBeNull();
+    expect(r.why).toContain('Plik nie został jeszcze odczytany');
+    expect(r.why).not.toContain('od ponad 30 min');
   });
 
   it(`sekret wygasa w ciągu ${KSH_SECRET_WARN_DAYS} dni — ostrzeżenie z datą DD.MM.RRRR`, () => {
@@ -81,6 +110,19 @@ describe('P7-e — wiersz w Stanie systemu (zasady 15 i 16)', () => {
     expect(r.why).toContain('Sekret aplikacji wygasa 30.10.2026 (za 14 dni)');
     const gone = kshSyncSourceRow({ ...s, secretExpiresOn: '2026-10-10' }, NOW);
     expect(gone.why).toContain('Sekret aplikacji wygasł 10.10.2026');
+    /* wyglad/P7-e2: wygasły sekret = „Nie działa” od końca dnia ważności (czas polski) */
+    expect(gone.state).toBe('down');
+    expect(gone.since).toBe('2026-10-10T22:00:00.000Z');
+  });
+
+  it('wyglad/P7-e2: w dniu wygaśnięcia „(dziś)”, dzień przed — „(za 1 dzień)”; zima liczona z +01:00', () => {
+    const today = kshSyncSourceRow({ ...base, secretExpiresOn: '2026-10-16' }, NOW);
+    expect(today.why).toContain('Sekret aplikacji wygasa 16.10.2026 (dziś)');
+    expect(today.state).toBe('partial');
+    expect(kshSyncSourceRow({ ...base, secretExpiresOn: '2026-10-17' }, NOW).why).toContain('(za 1 dzień)');
+    /* 15.12.2026 23:30 czasu polskiego (zima, +01:00) — sekret ważny do 15.12 jeszcze nie wygasł */
+    expect(kshSecretDaysLeft({ ...base, secretExpiresOn: '2026-12-15' }, '2026-12-15T22:30:00Z')).toBe(0);
+    expect(kshSecretDaysLeft({ ...base, secretExpiresOn: '2026-12-15' }, '2026-12-15T23:00:01Z')).toBe(-1);
   });
 
   it('zapis wyłączony — zdanie o pliku testowym od działu IT KSH', () => {
@@ -93,6 +135,10 @@ describe('P7-e — wiersz w Stanie systemu (zasady 15 i 16)', () => {
     expect(sv).toContain('data-ksh-sync');
     const ss = readFileSync('src/components/options/StatusScreen.tsx', 'utf8');
     expect(ss).toContain('kshSyncSourceRow(kshSync, nowIso)');
+    /* wyglad/P7-e2: na produkcji wiersz stoi nad dzisiejszym panelem, póki Stan systemu czeka na dane źródeł */
+    expect(ss).toContain('export function KshSyncSourceBlock');
+    const ov = readFileSync('src/views/OptionsView.tsx', 'utf8');
+    expect(ov).toContain('<KshSyncSourceBlock locale={locale} nowIso={getNowIso()} admin={isHhlAdmin} />');
   });
 });
 
