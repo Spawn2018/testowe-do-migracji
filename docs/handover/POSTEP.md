@@ -2632,6 +2632,14 @@ D-20261016-1410-01:
 
 Kolejka bez dni: #209 → #231 → #247 → #261 → #262 (gdy gotowy) → kolejne PR koordynatora.
 
+D-20261016-1620-01: kolejka #261 → #262 → #263 → #264 → #265. Daty z serwera → C6, P8 E43, P5, P11. P5: CMR, VAT, „Zafakturowane”, jedna opłata paliwowa, cennik, zezwolenia „Trasa”. P9: `h1_record_route_check` i `rk_route_obstacle`. C3/C4: `myNotifyOf` w bazie. SMHI próg 2 h. Hasło 12 znaków, litery i cyfry. C8: 0 × 403.
+
+D-20261016-1750-01: kolejka #261 → #267. Status ręcznie, `payload.source` i jedna liczba „Do zrobienia” → P6. `UNLOADING` = `DELIVERED` → C17. Tabela symboli i kurs NBP → P5. Dzwonek KSH → C3.
+
+**DOPISEK 1620 WŁĄCZONY — commit (ten docs), kolejka #261 → #262 → #263 → #264 → #265; daty z serwera → C6/P8/P5/P11; P5 pkt 3 i 5.3–5.4; P9 Z3; C3/C4 W47; SMHI; hasło; C8.**
+
+**DOPISEK 1750 WŁĄCZONY — commit (ten docs), kolejka #261 → #267; status ręcznie, payload.source, Do zrobienia → P6; UNLOADING → C17; tabela symboli, kurs NBP → P5; dzwonek KSH → C3.**
+
 **DOPISEK 1410 WŁĄCZONY — commit `5666bcf4`, VAT 23 % i Polisa HHL → P5, daty DD.MM.RRRR → C6/P8/P5/P11, prom → kierowca SE, telefon w Harmonogramie, W46 i W47 zamknięte.**
 
 ## 2026-10-16 — scalenie #209
