@@ -385,6 +385,77 @@ test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
   });
 });
 
+/* wyglad/P9-d — E1 (zdecydowane 07.10): Kokpit i Mapa w kadrze całej trasy, bez zapamiętywania przesunięcia;
+   Przegląd w panelu: przybliżenie 11 na ostatniej pozycji. Kokpit: te same transporty co Mapa (okno śledzenia). */
+test.describe('wyglad/P9-d kadr całej trasy (E1)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const routeBox = (page: Page, sel: string) => page.evaluate((s) => {
+    const root = document.querySelector(s) as HTMLElement;
+    const c = (root.querySelector('.leaflet-container') as HTMLElement).getBoundingClientRect();
+    const rs = [...root.querySelectorAll('.leaflet-overlay-pane path')].map((x) => x.getBoundingClientRect()).filter((r) => r.width > 0);
+    const u = rs.reduce((a, r) => ({ l: Math.min(a.l, r.left), t: Math.min(a.t, r.top), r: Math.max(a.r, r.right), b: Math.max(a.b, r.bottom) }), { l: 1e9, t: 1e9, r: -1e9, b: -1e9 });
+    return { inside: u.l >= c.left + 20 && u.t >= c.top + 20 && u.r <= c.right - 20 && u.b <= c.bottom - 20, u, c: { l: c.left, t: c.top, r: c.right, b: c.bottom } };
+  }, sel);
+
+  test('komputer: Mapa i Kokpit — cała trasa w kadrze z marginesem; po przesunięciu i powrocie znów cała trasa', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    await page.waitForTimeout(600);
+    const a = await routeBox(page, '[data-page="map"] .mapbox');
+    expect(a.inside, JSON.stringify(a)).toBe(true);
+    const box = (await page.locator('[data-page="map"] .leaflet-container').boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 260, box.y + box.height / 2 + 140, { steps: 6 });
+    await page.mouse.up();
+    expect((await routeBox(page, '[data-page="map"] .mapbox')).inside).toBe(false);
+    await openView(page, 'dash');
+    await page.evaluate(() => document.querySelector('.grid2-map-body')?.scrollIntoView({ block: 'center' }));
+    await page.waitForTimeout(600);
+    const k = await routeBox(page, '.grid2-map-body');
+    expect(k.inside, JSON.stringify(k)).toBe(true);
+    await openView(page, 'map');
+    await page.waitForTimeout(600);
+    const b = await routeBox(page, '[data-page="map"] .mapbox');
+    expect(b.inside, 'bez zapamiętanego przesunięcia').toBe(true);
+    await expect(page.locator('[data-cockpit-full-route], .map-fit-btn')).toHaveCount(0);
+  });
+
+  test('komputer: Przegląd w panelu — przybliżenie 11, pojazd na środku', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    const id = await page.locator('[data-map-table] tbody tr[data-load]').first().getAttribute('data-load');
+    await page.locator('[data-map-table] tbody tr[data-load]').first().click();
+    await page.waitForSelector('aside.drawer .corridor-map-el img.leaflet-tile', { timeout: 15_000 });
+    await page.waitForTimeout(800);
+    const d = await page.evaluate(() => {
+      const root = document.querySelector('aside.drawer') as HTMLElement;
+      const c = (root.querySelector('.leaflet-container') as HTMLElement).getBoundingClientRect();
+      const m = root.querySelector('.leaflet-marker-icon.wt-marker');
+      const r = m ? m.getBoundingClientRect() : null;
+      const z = [...root.querySelectorAll<HTMLImageElement>('img.leaflet-tile')].map((i) => /\/tile\/(\d+)\//.exec(i.src)?.[1]).find(Boolean);
+      return { dx: r ? Math.abs(r.left + r.width / 2 - (c.left + c.width / 2)) : 999, dy: r ? Math.abs(r.top + r.height / 2 - (c.top + c.height / 2)) : 999, z };
+    });
+    expect(id).toBeTruthy();
+    expect(d.z).toBe('11');
+    expect(d.dx).toBeLessThanOrEqual(3);
+    expect(d.dy).toBeLessThanOrEqual(3);
+  });
+
+  test('Kokpit: na mapie te same transporty co na Mapie (okno śledzenia, swoja firma)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'KSH');
+    await openView(page, 'map');
+    await page.waitForTimeout(600);
+    const onMap = await page.locator('[data-page="map"] .wt-mk').count();
+    await openView(page, 'dash');
+    await page.waitForTimeout(800);
+    expect(await page.locator('.grid2-map-body .wt-mk').count()).toBe(onMap);
+  });
+});
+
 test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
   test.describe.configure({ mode: 'serial', timeout: 120_000 });
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });

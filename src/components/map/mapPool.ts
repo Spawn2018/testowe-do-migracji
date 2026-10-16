@@ -65,13 +65,50 @@ let holder: HTMLDivElement | null = null;
 
 const POINTS = [SITES.loading, SITES.portOut, SITES.portIn, SITES.site];
 
+/**
+ * wyglad/P9-d (E1, zdecydowane 07.10): Kokpit i Mapa — kadr całej trasy (droga, promy, Śrem i Boden), margines 24 px,
+ * krok przybliżenia 0,25; przy każdym wejściu i zmianie rozmiaru, bez zapamiętywania przesunięcia, bez „Cała trasa”.
+ */
+let corridorBounds: L.LatLngBounds | null = null;
+export function corridorBoundsOf(): L.LatLngBounds {
+  if (corridorBounds) return corridorBounds;
+  const pts: L.LatLngExpression[] = [
+    ...CORRIDOR_REF_COORDS.map(([lng, lat]) => [lat, lng] as L.LatLngTuple),
+    ...[...WATER_GDN_NYN, ...WATER_GDY_KAA].map(([lng, lat]) => [lat, lng] as L.LatLngTuple),
+    ...POINTS.map((p) => [p.lat, p.lng] as L.LatLngTuple),
+  ];
+  corridorBounds = L.latLngBounds(pts);
+  return corridorBounds;
+}
+export const CORRIDOR_PADDING = 24;
+/** Widok całej trasy dla bieżącego rozmiaru mapy (bez ruszania mapy). */
+export function corridorView(map: L.Map): { center: L.LatLng; zoom: number } {
+  const b = corridorBoundsOf();
+  /* ten sam rachunek co `fitBounds` (środek w rzucie mapy, nie średnia stopni) — powrót bez zmiany widoku = zero kafelków */
+  const m = map as unknown as { _getBoundsCenterZoom?: (bb: L.LatLngBounds, o: L.FitBoundsOptions) => { center: L.LatLng; zoom: number } };
+  if (typeof m._getBoundsCenterZoom === 'function') {
+    return m._getBoundsCenterZoom(b, { padding: [CORRIDOR_PADDING, CORRIDOR_PADDING] });
+  }
+  const zoom = map.getBoundsZoom(b, false, L.point(CORRIDOR_PADDING * 2, CORRIDOR_PADDING * 2));
+  return { center: b.getCenter(), zoom };
+}
+/** Kadr całej trasy (E1). */
+export function fitCorridor(map: L.Map): void {
+  try {
+    if (!map.getPane('mapPane')) return;
+    map.fitBounds(corridorBoundsOf(), { padding: [CORRIDOR_PADDING, CORRIDOR_PADDING], animate: false });
+  } catch {
+    /* mapa usunięta albo bez rozmiaru */
+  }
+}
+
 /** Mapa tworzona już w kontenerze widoku (rozmiar od początku) — piksel w piksel jak przed AUD-01e. */
 function build(pooled: boolean, root: HTMLElement): PoolEntry {
   const el = document.createElement('div');
   el.className = 'corridor-map-el';
   Object.assign(el.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', zIndex: '0' });
   root.appendChild(el);
-  const map = L.map(el, { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl: false, attributionControl: true });
+  const map = L.map(el, { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomSnap: 0.25, zoomControl: false, attributionControl: true });
   L.control.zoom({ position: 'topright' }).addTo(map);
   const tiles = L.layerGroup().addTo(map);
   const route = L.layerGroup().addTo(map);
@@ -149,12 +186,14 @@ export function acquireMap(root: HTMLElement, slot: MapSlot): PoolEntry {
   if (inUse) {
     const one = build(false, root);
     one.slot = slot;
+    if (slot !== 'drawer') fitCorridor(one.map);
     return one;
   }
   inUse = true;
   if (!entry) {
     entry = build(true, root);
     entry.slot = slot;
+    if (slot !== 'drawer') fitCorridor(entry.map);
     return entry;
   }
   poolStats.reused += 1;
@@ -163,12 +202,18 @@ export function acquireMap(root: HTMLElement, slot: MapSlot): PoolEntry {
   root.appendChild(e.el);
   safeInvalidate(e.map);
   const saved = e.views.get(slot);
-  const untouched = !!saved && saved.w === e.el.clientWidth && saved.h === e.el.clientHeight
-    && e.map.getZoom() === saved.zoom && e.map.getCenter().equals(saved.center, 0);
+  /* E1: Kokpit i Mapa zawsze w kadrze całej trasy (bez zapamiętanego przesunięcia); panel transportu — jak ostatnio */
+  const target = slot === 'drawer'
+    ? (saved ? { center: saved.center, zoom: saved.zoom } : null)
+    : corridorView(e.map);
+  /* ten sam widok = ten sam zoom i środek co do piksela (Leaflet zaokrągla środek do piksela po `setView`) */
+  const samePixel = (a: L.LatLng, b: L.LatLng, z: number) => e.map.project(a, z).distanceTo(e.map.project(b, z)) < 1;
+  const untouched = !!target && (slot !== 'drawer' || (!!saved && saved.w === e.el.clientWidth && saved.h === e.el.clientHeight))
+    && e.map.getZoom() === target.zoom && samePixel(e.map.getCenter(), target.center, target.zoom);
   // Powrót do tego samego miejsca bez zmiany rozmiaru i widoku → nic (zero nowych kafelków). Inaczej widok ustawiany
   // od nowa (`reset`) — piksel w piksel jak świeżo utworzona mapa (wzorce wizualne), kafelki z pamięci przeglądarki.
   if (!untouched) {
-    e.map.setView(saved?.center ?? L.latLng(DEFAULT_CENTER), saved?.zoom ?? DEFAULT_ZOOM, { reset: true } as L.ZoomPanOptions);
+    e.map.setView(target?.center ?? L.latLng(DEFAULT_CENTER), target?.zoom ?? DEFAULT_ZOOM, { reset: true } as L.ZoomPanOptions);
     // Warstwy wektorowe od nowa w tej samej kolejności (obcięcie linii i wzór kresek jak w świeżej mapie). Bez kafelków.
     const { route, ferryLeg, geofences, poi, fleet, situations, ais } = e.layers;
     const on = [route, ferryLeg, geofences, poi, fleet, situations, ais].filter((l) => e.map.hasLayer(l));

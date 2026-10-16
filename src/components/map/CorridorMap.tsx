@@ -19,7 +19,7 @@ import { transportLabel } from '../../lib/transportName';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { h6Requests } from '../../lib/map/draw';
 import {
-  acquireMap, ensureBasemap, releaseMap, retryBasemap, subscribeBasemapHealth,
+  acquireMap, ensureBasemap, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
   type BasemapHealth, type LayerBag, type MapSlot, type PoolEntry,
 } from './mapPool';
 import { BasemapFailCard } from './BasemapFailCard';
@@ -99,6 +99,9 @@ function durTextLocal(m: number): string {
 
 /** Podpisy na stronie Mapa: przy ≤ 15 autach zawsze, przy większej liczbie od przybliżenia 7 (bez zasłaniania trasy). */
 const LABELS_MAX = 15;
+/** E1 (Przegląd): przybliżenie na pojeździe i odstęp podążania. */
+const DRAWER_ZOOM = 11;
+const FOLLOW_MS = 60_000;
 
 export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit' : 'map', onMarker }: {
   loads: Load[];
@@ -128,6 +131,11 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   const sailings = useTowerStore((s) => s.sailings);
   const onMarkerRef = useRef(onMarker);
   onMarkerRef.current = onMarker;
+  /* E1 (Przegląd): przybliżenie 11 na ostatniej pozycji, podążanie co 60 s, póki użytkownik nie ruszy mapy */
+  const programmaticRef = useRef(false);
+  const userMovedRef = useRef(false);
+  const lastFollowRef = useRef(0);
+  const followedIdRef = useRef<string | null>(null);
   const [tick, setTick] = useState(0);
   const [situations, setSituations] = useState<RoadSituation[]>([]);
   const [aisPositions, setAisPositions] = useState<AisPosition[]>([]);
@@ -239,13 +247,33 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         /* mapa już usunięta / panel niegotowy */
       }
     };
+    /* E1: Kokpit i Mapa — kadr całej trasy także po zmianie rozmiaru (bez zapamiętywania przesunięcia) */
+    let refitRaf = 0;
+    const refit = () => {
+      if (!alive || slot === 'drawer') return;
+      cancelAnimationFrame(refitRaf);
+      refitRaf = requestAnimationFrame(() => { if (alive) fitCorridor(map); });
+    };
     const raf = requestAnimationFrame(() => safeInvalidate());
     const t = window.setTimeout(() => safeInvalidate(), 250);
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => safeInvalidate()) : null;
+    let lastSize = '';
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
+      safeInvalidate();
+      const size = `${pooled.el.clientWidth}x${pooled.el.clientHeight}`;
+      if (size !== lastSize) refit();
+      lastSize = size;
+    }) : null;
     if (ro) ro.observe(pooled.el);
+    /* E1 (Przegląd): użytkownik przesunął albo przybliżył → mapa przestaje podążać za pojazdem */
+    const onUserMove = () => { if (!programmaticRef.current) userMovedRef.current = true; };
+    map.on('dragstart', onUserMove);
+    map.on('zoomstart', onUserMove);
 
     return () => {
       alive = false;
+      cancelAnimationFrame(refitRaf);
+      map.off('dragstart', onUserMove);
+      map.off('zoomstart', onUserMove);
       cancelAnimationFrame(raf);
       clearTimeout(t);
       ro?.disconnect();
@@ -379,6 +407,21 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         });
       };
       const labels = !embedded && (fleet.length <= LABELS_MAX || zoom >= 7);
+      if (slot === 'drawer') {
+        const f = fleet[0];
+        const nowMs = Date.now();
+        if (f && followedIdRef.current !== f.id) { followedIdRef.current = f.id; userMovedRef.current = false; lastFollowRef.current = 0; }
+        if (f && !userMovedRef.current && nowMs - lastFollowRef.current >= FOLLOW_MS) {
+          programmaticRef.current = true;
+          try { map.setView([f.lat, f.lng], DRAWER_ZOOM, { animate: false }); } finally { programmaticRef.current = false; }
+          lastFollowRef.current = nowMs;
+        } else if (!f && followedIdRef.current !== '-') {
+          /* brak pozycji GPS → cała trasa i „Brak pozycji GPS” */
+          followedIdRef.current = '-';
+          programmaticRef.current = true;
+          try { fitCorridor(map); } finally { programmaticRef.current = false; }
+        }
+      }
       /* III-5 (SCOPE 5.10): produkcja — pozycje z bazy/statusu często w tym samym punkcie (np. plac załadunku);
          nakładające się znaczniki rozkładamy na okręgu/spirali (≥ 22 px), by etykiety i kliknięcia nie kolidowały.
          Tryb demo bez zmian (wzorzec zrzutów makiety). */
@@ -467,7 +510,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           .addTo(layers.ais);
       }
     }
-  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes, role, sailings, embedded]);
+  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes, role, sailings, embedded, slot]);
 
   return (
     <div
@@ -503,7 +546,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       {/* wyglad/P4-b (E27): pusta lista = nikt w oknie śledzenia (Mapa: „W trasie: 0”, panel poza oknem) — to nie „brak danych” */}
       {PROD_BUILD && mapLayers.vehicles && gpsReady && loads.length > 0 && !loads.some((l) => gpsFixes.has(l.id)) ? (
         <div className="note" data-empty="vehicle-positions" style={{ position: 'absolute', left: 12, right: 12, bottom: embedded ? 8 : 36, zIndex: 500, maxWidth: 360, background: 'var(--surface)', padding: '6px 8px' }}>
-          {t(locale, 'b1_no_vehicle_positions')}
+          {slot === 'drawer' ? p9m(locale, 'p9c_drawer_nogps') : t(locale, 'b1_no_vehicle_positions')}
         </div>
       ) : null}
       {!embedded ? (
