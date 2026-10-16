@@ -2619,7 +2619,7 @@ Zadzwoń — kierowca odcinka (E6).
 
 Kolejka bez dni: #260 → #209 → #231 → #247 → #261 → kolejne PR koordynatora w kolejności numerów. Każdy zaraz po zielonych unit i visual.
 
-**DOPISEK 1345 WŁĄCZONY — commit (ten docs), kolejka bez dni (#260 → #209 → #231 → #247 → #261), E6 Zadzwoń → P7, pkt 3 → P5, P6, P9, C3, C8, P8; W46, W47 w §5.**
+**DOPISEK 1345 WŁĄCZONY — commit `a33fe408`, kolejka bez dni (#260 → #209 → #231 → #247 → #261), E6 Zadzwoń → P7, pkt 3 → P5, P6, P9, C3, C8, P8; W46, W47 w §5.**
 
 E30 pkt 7 Rejsy → wygląd (P7-d).
 
@@ -2688,6 +2688,16 @@ Konflikt #254 zamknięty commitem koordynatora `286c8ef` na `wyglad/P10b-d`. Mai
 Wdrożenie R7 z `main` `d4e69058`, 16.10.2026 13:17, `dpl_HvZ73WLu6mxTE2SP1DnAkBVqm6Zh`. JS `assets/index-CMMlOYN_.js`. tower.log-mar.pl i watch-tower-makieta.vercel.app → 200. 75 plików JS, 0× `service_role`.
 
 **VISUAL #260** (`wyglad/P7-d`, `7112303`): pada tylko `stan-blad` (dark) — komunikat po polsku. Kolejka stoi do commitu koordynatora z odświeżonym wzorcem. Potem #260, #209 → #231 → #247.
+
+## 2026-10-16 — scalenie #260
+
+Wzorzec `stan-blad` odświeżony; visual zielony na `1d43751`.
+
+#260 scalony — `bf4d9f5c`.
+
+Wdrożenie R7 z `main` `bf4d9f5c`, 16.10.2026 14:06, `dpl_75R5u1FnU87NKVUk2gNE3VuuS3iu`. JS `assets/index-Def7mKry.js`. tower.log-mar.pl i watch-tower-makieta.vercel.app → 200. 75 plików JS, 0× `service_role`.
+
+**VISUAL #209** (`75b65d1`): pada tylko `stan-zablokowany` (dark). Kolejka stoi. #231, #247 i #261 bez zmiany kolejności. Nowy commit na #209: `ff508f2` — visual w toku.
 
 ## PAUZA — 2026-10-16 10:21 — **WZNOWIONE 10:59** (hasło „ruszamy”)
 
