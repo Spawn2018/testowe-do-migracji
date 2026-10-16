@@ -80,10 +80,11 @@ export function otherJobs(nowIso: string): OtherJob[] | null {
 }
 
 /** „Sprawdź teraz”: produkcja — `null` (przycisk niedostępny), dopóki wykonawca nie podłączy uruchomienia zadania. */
-export function checkSource(id: string, nowIso: string): Promise<CheckResult> | null {
+export function checkSource(id: string, nowIso: string, fallback?: SourceState): Promise<CheckResult> | null {
   if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
     const row = demoSources(nowIso).find((r) => r.id === id);
-    return new Promise((res) => { setTimeout(() => res({ at: nowIso, state: row?.state ?? 'ok', text: null }), 500); });
+    /* wyglad/P7-e2: źródło spoza danych demo (np. „Plik KSH (SharePoint)”) — wynik = stan wiersza, nie zawsze „Działa” */
+    return new Promise((res) => { setTimeout(() => res({ at: nowIso, state: row?.state ?? fallback ?? 'ok', text: null }), 500); });
   }
   return null;
 }

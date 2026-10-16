@@ -29,7 +29,7 @@ import {
   accountingAddressesSaverOf, accountingTestMailOf, cancelRulesOf, cancelSaverOf, dwellRulesOf, dwellSaverOf,
   fuelActionsOf, fuelScreenOf, marginSettingOf, paymentTermsOf, paymentTermsSaverOf, rateCardOf, rateCardSaverOf,
 } from '../lib/p5bSource';
-import { StatusScreen } from '../components/options/StatusScreen';
+import { KshSyncSourceBlock, StatusScreen } from '../components/options/StatusScreen';
 import { sourceHealth } from '../lib/sysSource';
 import { myNotifyOf } from '../lib/forMeSource';
 
@@ -316,7 +316,13 @@ export function OptionsView() {
         <SmsFallbackEntry />
         {sourceHealth(getNowIso())
           ? <StatusScreen locale={locale} nowIso={getNowIso()} admin={isHhlAdmin} />
-          : SystemStatusPanel ? block(<SystemStatusPanel />) : <Soon locale={locale} tipKey="opt_acc_sys_soon" />}
+          : (
+            <>
+              {/* wyglad/P7-e2: wiersz „Plik KSH (SharePoint)” także nad dzisiejszym panelem (W13 zasady 15–16) */}
+              <KshSyncSourceBlock locale={locale} nowIso={getNowIso()} admin={isHhlAdmin} />
+              {SystemStatusPanel ? block(<SystemStatusPanel />) : <Soon locale={locale} tipKey="opt_acc_sys_soon" />}
+            </>
+          )}
       </>
     ), { mark: PROD_BUILD ? undefined : <DemoMark /> }),
     scr('flags', pick('flags', null), { right: change }),
