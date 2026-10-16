@@ -1527,3 +1527,64 @@ test.describe('wyglad/P6-b panel transportu — Historia i Czat (E17)', () => {
     });
   }
 });
+
+test.describe('wyglad/P8-c Strefy (E34, img/e34-after)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const ZONES_URL = `/#/?now=${encodeURIComponent('2026-10-15T18:00:00Z')}`;
+
+  test('komputer HHL: lista według trasy, karta strefy, zmiana z powodem i podglądem wpływu, wyłączenie z powodem', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'HHL', false, ZONES_URL);
+    await openView(page, 'geo');
+    await expect(page.locator('.zv-grp-h')).toHaveText(['ŚREM · ZAŁADUNEK', 'GDAŃSK · POLFERRIES → NYNÄSHAMN', 'GDYNIA · STENA → KARLSKRONA', 'PORTY W SZWECJI', 'BODEN · ROZŁADUNEK']);
+    await expect(page.locator('[data-zone-card] h3')).toHaveText('Plac budowy Stegra Boden');
+    await page.locator('[data-zone-edit]').click();
+    await page.locator('[data-zone-f="radius"]').fill('1100');
+    await expect(page.locator('[data-zone-impact]')).toContainText('status bez zmian');
+    await page.locator('[data-zone-save]').click();
+    await expect(page.locator('[data-zone-f="reason"]')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.locator('[data-zone-f="reason"]')).toBeFocused();
+    await page.locator('[data-zone-f="reason"]').fill('wjazd na plac jest od północy');
+    await page.locator('[data-zone-save]').click();
+    await expect(page.locator('.zv-live')).toHaveText('Zapisano. Wpis jest w historii zmian strefy.');
+    await expect(page.locator('[data-zone-edit]')).toBeFocused();
+    await expect(page.locator('.zv-hist li').first()).toContainText('powód: wjazd na plac jest od północy');
+    await page.locator('[data-zone-off]').click();
+    await page.locator('[data-zone-off-yes]').click();
+    await expect(page.locator('.zv-ask .zv-err')).toHaveText('Wpisz powód zmiany.');
+    await page.locator('[data-zone-off-reason]').fill('plac zamknięty');
+    await page.locator('[data-zone-off-yes]').click();
+    await expect(page.locator('[data-zone-off]')).toHaveText('Włącz');
+    await expect(page.locator('[data-zone-off]')).toBeFocused();
+  });
+
+  /* menu Strefy jest tylko w grupie administracyjnej HHL (E9) */
+  for (const role of ['HHL'] as const) {
+    test(`telefon ${role}: mapa trasy, karty według miejsca, karta strefy, zmiana strefy, wyłączenie z powodem — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role, false, ZONES_URL);
+      await openView(page, 'geo');
+      const hits: Hit[] = [];
+      const gate = async (name: string) => {
+        for (const width of [...WIDTHS, 768]) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(200);
+          hits.push(...await measure(page, name, width, role));
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForTimeout(200);
+      };
+      await gate('strefy-lista');
+      await page.locator('[data-zone="z-bod"]').click();
+      await expect(page.locator('[data-zone-card] h3')).toBeFocused();
+      await gate('strefy-karta');
+      await page.locator('[data-zone-off]').click();
+      await gate('strefy-wylacz');
+      await page.locator('.zv-ask .btn.ghost').click();
+      await page.locator('[data-zone-edit]').click();
+      await page.locator('[data-zone-save]').click();
+      await gate('strefy-zmiana');
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});
