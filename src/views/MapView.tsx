@@ -169,7 +169,8 @@ export function MapView() {
       data-page="map"
       style={{ margin: 12, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 140px)' }}
     >
-      <header className="panel-hd">
+      {/* audyt D-06: u HHL na telefonie „Strefy” w jednym wierszu z tytułem i liczbami, „na żywo” pod nimi (CSS `.map-hd-zones`) */}
+      <header className={role === 'HHL' ? 'panel-hd map-hd-zones' : 'panel-hd'}>
         <h2>{t(locale, 'nav_map')}</h2>
         <span className="sub" data-map-head>
           {phone
@@ -188,6 +189,9 @@ export function MapView() {
           </button>
         ) : null}
       </header>
+
+      {/* audyt D-06 (E29, makieta „Po zmianie · telefon”): na telefonie pasek kafelków nad mapą — nagłówek → kafelki → mapa */}
+      {phone ? <StageBar variant="page" /> : null}
 
       <div className="mapsplit" data-b7="fixed-map">
         <div className="mapbox">
@@ -213,7 +217,7 @@ export function MapView() {
         </div>
 
         <div className="mlist" style={{ display: 'flex', flexDirection: 'column', background: 'var(--surface)' }}>
-          <StageBar variant="page" />
+          {phone ? null : <StageBar variant="page" />}
           <div className="filters" style={{ borderBottom: '1px solid var(--rule)' }} data-map-filters>
             <input
               className="map-search"

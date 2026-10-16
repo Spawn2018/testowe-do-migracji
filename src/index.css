@@ -1836,6 +1836,10 @@ img,video{max-width:100%;height:auto}
   .page-sections[data-page="map"] .mapbox{height:auto;overflow:hidden}
   .page-sections[data-page="map"] .mapstage{height:max(300px, 50vh);height:max(300px, 50dvh);max-height:none}
   .page-sections[data-page="map"] .mapkey{display:none}
+  /* audyt D-06 (E29 telefon): nagłówek → kafelki → mapa; u HHL „Strefy” w wierszu z tytułem i liczbami
+     (jak makieta „Mapa w oknie 6 · bez pozycji 2”), znacznik „na żywo” pod nimi */
+  .page-sections[data-page="map"]>.panel-hd.map-hd-zones{row-gap:0}
+  .page-sections[data-page="map"]>.panel-hd.map-hd-zones>.live-mark{order:1;flex:1 1 100%;margin-left:0}
 }
 .mlist .filters .map-search{flex:1 1 230px;min-width:0}
 .map-e29 td[data-map-name] .map-cell-sub{white-space:nowrap}

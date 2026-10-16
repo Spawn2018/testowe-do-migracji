@@ -20,7 +20,7 @@ import { transportLabel } from '../../lib/transportName';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { h6Requests } from '../../lib/map/draw';
 import {
-  acquireMap, ensureBasemap, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
+  acquireMap, attributionOf, ensureBasemap, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
   type BasemapHealth, type LayerBag, type MapSlot, type PoolEntry,
 } from './mapPool';
 import { BasemapFailCard } from './BasemapFailCard';
@@ -351,13 +351,16 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     const raf = requestAnimationFrame(() => safeInvalidate());
     const t = window.setTimeout(() => safeInvalidate(), 250);
     let lastSize = '';
+    /* audyt D-05: podpis podkładu dochodzi po wczytaniu podkładu (zmienia wysokość) — kadr liczony od nowa */
+    const attr = attributionOf(map);
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
       safeInvalidate();
-      const size = `${pooled.el.clientWidth}x${pooled.el.clientHeight}`;
+      const size = `${pooled.el.clientWidth}x${pooled.el.clientHeight}:${attr?.offsetHeight ?? 0}`;
       if (size !== lastSize) refit();
       lastSize = size;
     }) : null;
     if (ro) ro.observe(pooled.el);
+    if (ro && attr) ro.observe(attr);
     /* E1 (Przegląd): użytkownik przesunął albo przybliżył → mapa przestaje podążać za pojazdem */
     const onUserMove = () => { if (!programmaticRef.current) userMovedRef.current = true; };
     map.on('dragstart', onUserMove);
