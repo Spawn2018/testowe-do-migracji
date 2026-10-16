@@ -65,7 +65,6 @@ const RatesExtras = lazy(lazyRetry(() => import('../components/options/MoneyScre
 const TermsScreen = lazy(lazyRetry(() => import('../components/options/MoneyScreens').then((m) => ({ default: m.TermsScreen }))));
 /* wyglad/audyt-E (E-06, C-14): cennik według symboli w wersjach zamiast linii L/W/H */
 const RateCard = lazy(lazyRetry(() => import('../components/options/MoneyScreens').then((m) => ({ default: m.RateCard }))));
-const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
   { key: 'indexSource', labelKey: 'baf_index', type: 'text' },
@@ -338,7 +337,7 @@ export function OptionsView() {
       <>
         {/* wyglad/audyt-E (E-13; E37, E11 „tylko na Twoim koncie”): ten sam opis co u KSH i SCX */}
         <UiPrefsPanel onSaved={saveMark} showDemoMarks={shows('demoMarksToggle')} subKey="settings_prefs_sub" noteKey="settings_prefs_note" />
-        {CarrierScorecard ? block(<CarrierScorecard />) : null}
+        {/* wyglad/J4: ocena przewoźników przeniesiona do Kokpitu (E11/E12 — raport, nie ustawienie) */}
       </>
     ), { right: 'own' }),
     scr('device', <DeviceScreen locale={locale} />, { right: 'own' }),

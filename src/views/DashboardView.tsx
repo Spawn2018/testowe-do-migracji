@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { ExceptionRow } from '../components/ui/ExceptionRow';
 import { Cockpit } from '../components/dash/Cockpit';
@@ -23,6 +23,11 @@ import { financeSummary } from '../lib/p5Finance';
 import { formatPlNumber } from '../lib/format';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { riskAsException, sortExceptions } from '../lib/prodDash';
+import { SUPABASE_AUTH_ENABLED } from '../auth/config';
+import { CarrierRatingDemo } from '../components/dash/CarrierRatingDemo';
+
+/* wyglad/J4 (E9; E11/E12 „ocena przewoźnika → Kokpit”): produkcja — odczyt `carrier_scorecard` (chunk leniwy) */
+const CarrierRatingLive = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierRatingLive')) : null;
 
 export function DashboardView() {
   // I-2l: czas wykrycia odchylenia z bazy (kpi_detection_lag) — wyłącznie build produkcyjny, moduł leniwy
@@ -260,6 +265,11 @@ export function DashboardView() {
           </div>
         </div>
       </div>
+
+      {/* wyglad/J4: „Ocena przewoźników” — HHL wszyscy przewoźnicy, SCX swoja ocena; KSH bez (E9) */}
+      {role === 'HHL' || role === 'SCX' ? (
+        CarrierRatingLive ? <Suspense fallback={null}><CarrierRatingLive /></Suspense> : PROD_BUILD ? null : <CarrierRatingDemo />
+      ) : null}
     </div>
   );
 }
