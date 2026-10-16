@@ -25,9 +25,9 @@ import {
 } from '../lib/schedLayout';
 import { FileTable, SchedCards, ShortTable, type SchedRowCtx } from '../components/schedule/SchedTables';
 import { s7, s7p } from '../i18n/sched7';
-import { DEFAULT_DOC_REQUIREMENTS, docStatusRows } from '../lib/docRequirements';
+import { docStatusRows } from '../lib/docRequirements';
 import { getDocReqCache } from '../lib/docReqCache';
-import { marginThresholdOf } from '../lib/p5Source';
+import { docRequirementsStart, marginThresholdOf } from '../lib/p5Source';
 import '../components/schedule/sched7.css';
 import { SailingsPanel } from './SailingsPanel';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
@@ -305,7 +305,7 @@ export function ScheduleView() {
 
   /* E31: stan dokumentów jak na stronie Dokumenty i w panelu (baza po wejściu na Dokumenty; demo — reguły startowe) */
   const docCache = getDocReqCache();
-  const reqs = docCache?.reqs ?? DEFAULT_DOC_REQUIREMENTS;
+  const reqs = docCache?.reqs ?? docRequirementsStart();
   const nowMs = Date.parse(nowIso);
   const docByLoad = useMemo(() => {
     const rows = docCache ? docCache.status : PROD_BUILD ? [] : docStatusRows(list, documents, reqs, nowMs);

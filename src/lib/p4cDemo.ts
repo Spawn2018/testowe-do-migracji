@@ -50,9 +50,13 @@ export function demoTrackingLink(load: Load, loads: readonly Load[], nowIso: str
   return null;
 }
 
-/** L6, L9, L29 — ta sama definicja co produkcja (`computeReadyGaps`). */
-export function demoReadyGaps(load: Load, docs: readonly Document[]): ReadyGap[] {
-  return computeReadyGaps(load, docs);
+/**
+ * L6, L9, L29 — ta sama definicja co produkcja (`computeReadyGaps`). audyt-C C-06: w demo polisa SCX jest plikiem
+ * firmy (bez transportu) i podpina się sama do każdego transportu (G-21) — brak „polisa OCP SCX” tylko bez polisy firmy.
+ */
+export function demoReadyGaps(load: Load, docs: readonly Document[], companyDocs: readonly Document[] = []): ReadyGap[] {
+  const policy = companyDocs.some((d) => !d.loadId && d.category === 'INSURANCE' && d.status === 'UPLOADED' && d.visibleTo.includes('SCX'));
+  return computeReadyGaps(load, policy ? [...docs, { id: `policy:${load.id}`, loadId: load.id, category: 'INSURANCE', name: '', uploadedAt: null, deadline: null, status: 'UPLOADED', permitFits: null, visibleTo: ['HHL', 'SCX'] }] : docs);
 }
 
 /** E26 pkt 4, L14 — jedna sprawa na pierwszym transporcie „Na placu”. */

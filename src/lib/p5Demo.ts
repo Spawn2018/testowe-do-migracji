@@ -14,6 +14,7 @@ import type { PackConfig, PackSent } from './p5Pack';
 import { cancelFee, DECIDED_RULES, dwellFee, type FeeRules, type FeeSuggestion } from './p5Fees';
 import { unloadedAtOf } from './money/loadMoney';
 import { addDaysIso } from './invoices3';
+import { DEFAULT_DOC_REQUIREMENTS, type DocRequirement } from './docRequirements';
 
 /** Próg marży z Opcji (E16, 08.10: 4 %). */
 export const demoMarginThreshold = (): number => 4;
@@ -111,10 +112,29 @@ export function demoPermits(loads: Load[]): PermitView[] {
   ];
 }
 
-/** E31 — polisa przewoźnika (numer zmyślony); polisy HHL w przykładzie nie ma — tak jak dziś w bazie. */
+/**
+ * E31 — polisa przewoźnika (numer zmyślony) i Polisa HHL (audyt-C C-07, decyzja 16.10 01:13 · 4 i 13:58 · 2):
+ * PZU 1106707356, ważna 23.04.2026–22.04.2027 (`DECYZJE_08_10.md`), podpina się sama do każdego transportu jak polisa SCX.
+ */
 export const demoPolicies = (): PolicyView[] => [
   { org: 'SCX', name: 'OCP przewoźnika', number: 'OCP-0000-PRZYKLAD', validTo: '2027-03-29', approved: true },
+  { org: 'HHL', name: 'Polisa HHL', number: 'PZU 1106707356', validTo: '2027-04-22', approved: true },
 ];
+
+let docReqs: DocRequirement[] | null = null;
+/**
+ * audyt-C (C-03, C-04; E31 decyzja 1 B 08.10, 19:11, 19:51): w demo tylko „CMR z podpisem odbiorcy” — po „Dostarczone”,
+ * termin z Opcji (24 h); bez CMR z załadunku, bez rysunku (KSH nie wgrywa), POD i zdjęć mocowania.
+ * Produkcja — `doc_requirements` z bazy (wykonawca, P5 · E31). Tworzone przy pierwszym użyciu (I-0).
+ */
+export function demoDocRequirements(): DocRequirement[] {
+  docReqs ??= DEFAULT_DOC_REQUIREMENTS.map((r): DocRequirement => {
+    if (r.category === 'CMR') return { ...r, anchor: 'AFTER_UNLOAD', offsetHours: 24 };
+    if (r.category === 'DRAWING' || r.category === 'POD' || r.category === 'LASHING_PHOTOS') return { ...r, required: false };
+    return r;
+  });
+  return docReqs;
+}
 
 /** E33 — zasady cennika: wartości z decyzji 12:23 i 12:35 (w produkcji z bazy — wykonawca). */
 export const demoFeeRules = (): FeeRules => DECIDED_RULES;

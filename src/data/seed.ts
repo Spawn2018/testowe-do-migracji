@@ -608,25 +608,34 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
   return events;
 }
 
+/**
+ * Dokumenty demo (E31, E41; audyt-C C-03…C-06):
+ * - przy transporcie tylko zezwolenia PL i SE oraz „CMR z podpisem odbiorcy” — ten dopiero po „Dostarczone”
+ *   (bez CMR z załadunku, POD, rysunku i zdjęć mocowania; decyzja 1 B 08.10, 19:11, 19:51);
+ * - nazwa pliku z kodem transportu: „SG-01_Zezwolenie_PL.pdf”, „SG-01_CMR_podpisany.pdf”;
+ * - polisy to pliki firmy („cała firma”), dodawane raz: polisa SCX (widzą HHL i SCX) i Polisa HHL (widzą HHL i KSH)
+ *   — pytanie 3 B: KSH widzi Polisę HHL, SCX swoją, HHL obie.
+ */
 export function buildSeedDocuments(loads: Load[]): Document[] {
   const docs: Document[] = [];
   let n = 0;
   const cats = [
-    { cat: 'PERMIT_PL' as const },
-    { cat: 'PERMIT_SE' as const },
-    { cat: 'INSURANCE' as const },
-    { cat: 'CMR' as const },
-    { cat: 'POD' as const },
-    { cat: 'LASHING_PHOTOS' as const },
-    { cat: 'DRAWING' as const },
+    { cat: 'PERMIT_PL' as const, file: 'Zezwolenie_PL' },
+    { cat: 'PERMIT_SE' as const, file: 'Zezwolenie_SE' },
+    { cat: 'CMR' as const, file: 'CMR_podpisany' },
   ];
+  /* jeden dostarczony transport bez podpisanego CMR — przykład braku po „Dostarczone” */
+  const delivered = loads.filter((l) => ['DELIVERED', 'READY_TO_INVOICE', 'INVOICED'].includes(l.status));
+  const cmrMissing = delivered.length > 1
+    ? [...delivered].sort((a, b) => (a.plannedDeliverDate ?? '').localeCompare(b.plannedDeliverDate ?? '') || a.code.localeCompare(b.code)).at(-1)!.id
+    : null;
   for (const l of loads) {
     for (const c of cats) {
       const late = ['PLANNED', 'RESOURCES_PENDING', 'DOC_MISSING'].includes(l.status);
-      const delivered = l.status === 'DELIVERED' || l.status === 'UNLOADING';
       let status: Document['status'] = 'MISSING';
       let uploaded: string | null = null;
       let permitFits: boolean | null = null;
+      let deadline = `${l.plannedLoadDate}T06:00:00+02:00`;
       if (c.cat === 'PERMIT_PL' || c.cat === 'PERMIT_SE') {
         if (['SG-07', 'SG-34'].includes(l.code)) {
           status = 'MISMATCH';
@@ -637,54 +646,51 @@ export function buildSeedDocuments(loads: Load[]): Document[] {
           uploaded = '2026-09-18T12:00:00+02:00';
           permitFits = true;
         }
-      } else if (
-        c.cat === 'CMR' &&
-        !['PLANNED', 'RESOURCES_PENDING', 'READY', 'DOC_MISSING'].includes(l.status)
-      ) {
-        status = 'UPLOADED';
-        uploaded = `${l.plannedLoadDate}T09:00:00+02:00`;
-      } else if (c.cat === 'POD' && delivered) {
-        status = l.code === 'SG-02' ? 'MISSING' : 'UPLOADED';
-        uploaded = status === 'UPLOADED' ? `${l.plannedDeliverDate}T14:00:00+02:00` : null;
-      } else if (c.cat === 'INSURANCE' && !l.docMissing) {
-        status = 'UPLOADED';
-        uploaded = '2026-08-01T10:00:00+02:00';
-      } else if (
-        c.cat === 'LASHING_PHOTOS' &&
-        [
-          'LOADING',
-          'IN_TRANSIT_PL',
-          'AT_PORT',
-          'ON_FERRY',
-          'IN_TRANSIT_SE',
-          'APPROACHING_SITE',
-          'UNLOADING',
-          'DELIVERED',
-        ].includes(l.status) &&
-        l.id !== 'load-015'
-      ) {
-        status = 'UPLOADED';
-        uploaded = `${l.plannedLoadDate}T08:45:00+02:00`;
-      } else if (c.cat === 'DRAWING') {
-        /* L7 — from model: most loads have KSH drawing; not always 100% */
-        if (!l.docMissing && l.status !== 'RESOURCES_PENDING' && !['SG-07', 'SG-34', 'R-03'].includes(l.code)) {
+      } else {
+        /* CMR z podpisem odbiorcy: po „Dostarczone”, termin 24 h (Opcje › Terminy dokumentów) */
+        deadline = `${l.plannedDeliverDate}T23:59:00+02:00`;
+        if (delivered.some((d) => d.id === l.id) && l.id !== cmrMissing) {
           status = 'UPLOADED';
-          uploaded = '2026-09-10T11:00:00+02:00';
+          uploaded = `${l.plannedDeliverDate}T16:30:00+02:00`;
         }
       }
       docs.push({
         id: `doc-${++n}`,
         loadId: l.id,
         category: c.cat,
-        name: `${c.cat}_${l.code}.pdf`,
+        name: `${l.code}_${c.file}.pdf`,
         uploadedAt: uploaded,
-        deadline: `${l.plannedLoadDate}T06:00:00+02:00`,
+        deadline,
         status,
         permitFits,
         visibleTo: ['HHL', 'KSH', 'SCX'],
       });
     }
   }
+  docs.push(
+    {
+      id: 'doc-policy-scx',
+      loadId: '',
+      category: 'INSURANCE',
+      name: 'Polisa_OCP_SCX.pdf',
+      uploadedAt: '2026-08-01T10:00:00+02:00',
+      deadline: null,
+      status: 'UPLOADED',
+      permitFits: null,
+      visibleTo: ['HHL', 'SCX'],
+    },
+    {
+      id: 'doc-policy-hhl',
+      loadId: '',
+      category: 'INSURANCE',
+      name: 'Polisa_HHL.pdf',
+      uploadedAt: '2026-08-01T10:00:00+02:00',
+      deadline: null,
+      status: 'UPLOADED',
+      permitFits: null,
+      visibleTo: ['HHL', 'KSH'],
+    },
+  );
   return docs;
 }
 

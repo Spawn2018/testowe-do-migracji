@@ -11,7 +11,7 @@ import { loadWeekKey } from './docWeek';
 
 export const DAY_MS = 86_400_000;
 
-/** Wiersze tabeli wymagań: zezwolenia, CMR, polisa przewoźnika, polisa HHL (spedytor). */
+/** Wiersze tabeli wymagań: zezwolenia, CMR, polisa przewoźnika, Polisa HHL (decyzja 16.10, 13:58 · 2). */
 export type ReqKey = 'PERMIT_PL' | 'PERMIT_SE' | 'CMR' | 'INSURANCE' | 'OCS';
 export const REQ_KEYS: ReqKey[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR', 'INSURANCE', 'OCS'];
 

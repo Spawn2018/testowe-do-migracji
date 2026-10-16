@@ -81,3 +81,5 @@ iOS
 Karlskrona
 # wyglad/P5-c: skrót „elem.” (elementy) w kafelku KSH „Dostarczone” (E9)
 elem
+# audyt-C (C-02): most na E4 w ryzyku demo zamknięcia (E49)
+Högakustenbron
