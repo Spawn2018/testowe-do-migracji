@@ -7,6 +7,7 @@ create or replace function public.c16h_web_push_ack_boundary()
 returns timestamptz
 language sql
 immutable
+set search_path = public
 as $$
   select timestamptz '2026-10-15 21:40:00+00';
 $$;

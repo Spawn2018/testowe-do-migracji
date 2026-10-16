@@ -85,10 +85,10 @@ sys "insert into notifications (channel, recipient, user_id, load_id, template, 
 val "C16-H: tick1 bierze do 80" "select public.web_push_fallback_tick()" 80
 val "C16-H: po tick1 = 80 EMAIL" "select count(*) from notifications n join notifications w on n.dedup_key='push_fallback:'||w.id::text where w.dedup_key like 'c16h-bulk:%' and n.channel='EMAIL'" 80
 val "C16-H: tick2 bierze pozostałe 5" "select public.web_push_fallback_tick()" 5
-val "C16-H: po tick2 każdy ma 1 EMAIL" "select (count(*)=85 and bool_and(c=1))::text from (
+val "C16-H: po tick2 każdy ma 1 EMAIL" "select case when count(*)=85 and bool_and(c=1) then 'ok' else 'bad' end from (
   select w.id, count(n.id) c from notifications w
   left join notifications n on n.dedup_key='push_fallback:'||w.id::text and n.channel='EMAIL'
-  where w.dedup_key like 'c16h-bulk:%' group by w.id) s" t
+  where w.dedup_key like 'c16h-bulk:%' group by w.id) s" ok
 val "C16-H: tick3 nic nowego" "select public.web_push_fallback_tick()" 0
 
 echo "WYNIK: $ok OK, $fail FAIL"
