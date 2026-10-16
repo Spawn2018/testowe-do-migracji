@@ -11,6 +11,12 @@ import { MfaSetup, MfaVerify, mfaStep, readMfaStatus } from './Mfa';
 import { ExpiredLinkScreen } from './ExpiredLinkScreen';
 import { p10bp } from '../i18n/p10b';
 import { RECOVERY_LINK_TTL, expiredLinkInfo, isExpiredLinkError, resendExpiredLink, type ExpiredLinkInfo, type PendingLink } from '../lib/p10bSource';
+import { FirstEntryFlow, InviteStep, PasswordStep } from './FirstEntry';
+import { enableNotifications, firstEntryReady, firstEntryReceives, inviteInfo, saveMyDetails, type InviteInfo } from '../lib/firstEntrySource';
+import { requestHelpOnce } from '../lib/firstEntryFlag';
+import { splitName, type FirstStep } from '../lib/firstEntry';
+import { viewedKind } from '../lib/cockpitE9';
+import { needsPhone } from '../components/shell/PhoneMissingBar';
 import './auth.css';
 
 /** D-20261013-2255-01 G4: last_sign_in_at z sesji Auth, gdy my_profile jeszcze nie zwraca pola. */
@@ -31,6 +37,8 @@ type State =
   /* wyglad/P10b-a (E37 pkt 7): wygasły albo zużyty link z e-maila */
   | { kind: 'expired'; link: PendingLink }
   | { kind: 'mfa'; step: 'verify' | 'setup' }
+  /* wyglad/P10b-d (E37 pkt 9): kroki 3–4 po zaproszeniu albo sam krok 3 przy logowaniu konta bez telefonu */
+  | { kind: 'first-entry'; session: Session; profile: AuthProfile; steps: FirstStep[]; help: boolean }
   | { kind: 'ready'; session: Session; profile: AuthProfile };
 
 function Brand() {
@@ -150,8 +158,43 @@ function PasswordField({
   );
 }
 
+/** wyglad/P10b-d: rodzaj linku z e-maila (`type=invite` / `type=recovery`) — krok 1 tylko przy zaproszeniu. */
+function pendingLinkType(): 'invite' | 'recovery' | 'other' {
+  try {
+    const raw = sessionStorage.getItem(LINK_KEY);
+    const p = raw ? (JSON.parse(raw) as { hash?: string; search?: string }) : null;
+    const m = /[?&#]type=([a-z_]+)/.exec(`${p?.hash ?? ''}&${p?.search ?? ''}`);
+    return m?.[1] === 'invite' ? 'invite' : m?.[1] === 'recovery' ? 'recovery' : 'other';
+  } catch {
+    return 'other';
+  }
+}
+
+function pendingLink(): PendingLink {
+  try {
+    const raw = sessionStorage.getItem(LINK_KEY);
+    return raw ? (JSON.parse(raw) as { hash?: string; search?: string }) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** wyglad/P10b-d (E37 pkt 9, krok 1 z 4): kto zaprasza, firma, konto, „Dalej — ustaw hasło” (ochrona przed skanerami). */
+function InviteStepContainer({ onContinue, onCancel }: { onContinue: () => void; onCancel: () => void }) {
+  const locale = useTowerStore((s) => s.locale);
+  const [info, setInfo] = useState<InviteInfo | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void inviteInfo(pendingLink()).then((i) => { if (alive) setInfo(i); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  return <InviteStep locale={locale} brand={<Brand />} pos={{ n: 1, total: 4 }} info={info} busy={busy} onContinue={() => { setBusy(true); onContinue(); }} onCancel={onCancel} />;
+}
+
 function LinkPendingScreen({ onContinue, onCancel }: { onContinue: () => void; onCancel: () => void }) {
   const locale = useTowerStore((s) => s.locale);
+  if (firstEntryReady() && pendingLinkType() === 'invite') return <InviteStepContainer onContinue={onContinue} onCancel={onCancel} />;
   return (
     <div className="auth-screen" data-auth="link-pending">
       <section className="panel auth-card">
@@ -283,6 +326,22 @@ function SetPasswordScreen({
     }
     onDone();
   };
+
+  /* wyglad/P10b-d (E37 pkt 9, krok 2 z 4): po zaproszeniu — ten sam zapis, ekran ścieżki pierwszego wejścia */
+  if (firstEntryReady() && reason !== 'recovery') {
+    return (
+      <PasswordStep locale={locale} brand={<Brand />} pos={{ n: 2, total: 4 }}
+        onSave={async (next) => {
+          const sb = await getSupabase();
+          const { error } = await sb.auth.updateUser({ password: next });
+          if (error) return authErrorPl(error.message);
+          const { error: markErr } = await sb.rpc('app_user_mark_password_set');
+          if (markErr) return authErrorPl(markErr.message);
+          onDone();
+          return null;
+        }} />
+    );
+  }
 
   return (
     <div className="auth-screen" data-auth="set-password">
@@ -417,7 +476,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         if (alive) setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_fetch_fail').replace('{err}', e instanceof Error ? e.message : String(e)) });
         return;
       }
-      if (alive) setState({ kind: 'ready', session, profile });
+      /* wyglad/P10b-d (E37 pkt 9): konto bez telefonu — krok 3 przy logowaniu */
+      if (alive) setState(firstEntryReady() && needsPhone(profile) ? { kind: 'first-entry', session, profile, steps: ['details'], help: false } : { kind: 'ready', session, profile });
       /* C16 N6: odśwież zapis urządzenia push po zalogowaniu */
       void import('../lib/webPush').then((wp) => {
         void wp.syncWebPush();
@@ -538,13 +598,44 @@ export default function AuthGate({ children }: { children: ReactNode }) {
                 try {
                   const bridge = await import('../data/supabaseBridge');
                   await bridge.connectSupabaseData(sb);
-                  setState({ kind: 'ready', session: data.session, profile });
+                  /* wyglad/P10b-d (E37 pkt 9): po haśle — kroki 3 i 4, potem Kokpit z „Jak pracuję” otwartym raz */
+                  setState(firstEntryReady()
+                    ? { kind: 'first-entry', session: data.session, profile, steps: ['details', 'notify'], help: true }
+                    : { kind: 'ready', session: data.session, profile });
                 } catch (e) {
                   setState({ kind: 'noaccess', reason: t(locale, 'a6_auth_fetch_fail').replace('{err}', e instanceof Error ? e.message : String(e)) });
                 }
               }
             }
           });
+        }}
+      />
+    );
+  }
+
+  if (state.kind === 'first-entry') {
+    const { session, profile, steps, help } = state;
+    const name = profile.first_name || profile.last_name
+      ? { first: profile.first_name ?? '', last: profile.last_name ?? '' }
+      : splitName(profile.full_name);
+    const org = viewRoleForOrg(profile.org_code) ?? 'KSH';
+    return (
+      <FirstEntryFlow
+        locale={locale}
+        brand={<Brand />}
+        steps={steps}
+        numbered={steps.length > 1}
+        kind={viewedKind(org, profile.role)}
+        initial={{ ...name, phone: profile.phone ?? null }}
+        missing={steps.length === 1}
+        onSaveDetails={(d) => saveMyDetails(d) ?? Promise.resolve(false)}
+        loadReceives={firstEntryReceives}
+        onEnable={enableNotifications}
+        onDone={(d) => {
+          const next = d ? { ...profile, first_name: d.first, last_name: d.last, full_name: `${d.first} ${d.last}`, phone: d.phone } : profile;
+          setAuthProfile(next);
+          setState({ kind: 'ready', session, profile: next });
+          if (help) requestHelpOnce();
         }}
       />
     );
