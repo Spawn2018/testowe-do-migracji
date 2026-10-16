@@ -2645,6 +2645,11 @@ P7 — uzupełnienie W13: pole `kshSharePointSync` (produkcja ze stanu `ksh-shar
 
 **DOPISEK 1845 WŁĄCZONY — commit (ten docs), kolejka #261 → #268; pole kshSharePointSync (produkcja, KSH/SCX, demo) i „Sprawdź teraz” → P7 uzupełnienie W13.**
 
+D-20261016-1905-01: VISUAL #268 — bez nowych wzorców (run 38934632601). Kolejka #265 → #266 → #267 → #268. Pliki dopisków 1845 i 1905 wchodzą z PR #269, nie z #268.
+P11 pkt 6: workflow `.github/workflows/baseline.yml` (`workflow_dispatch`, `mode` `compare` albo `update`, Chromium Playwright, 75 min, demo, port 4188, `FROZEN_NOW`). Matryca: szerokość 1366 oraz widoki według menu firmy (E29–E37, E9, Z12). Przebieg: `update` na `main` → gałąź `chore/baseline-audyt-RRRR-MM-DD` → sprawdzenie koordynatora i agenta kontrolnego (F7) → „BASELINE OK” → tag → `compare` = 0 zmienionych. `scripts/visual/gate.sh` zostaje lokalnie; w CI zastępuje go `baseline.yml`. Po P2-TILES, przed pkt 7 i `release-1.0`. W11: w planie — P11 pkt 6.
+
+**DOPISEK 1905 WŁĄCZONY — commit (ten docs), kolejka #265 → #268; VISUAL #268 bez nowych wzorców; regeneracja ujęć (`baseline.yml`) → P11 pkt 6; pliki dopisków z PR #269.**
+
 **DOPISEK 1410 WŁĄCZONY — commit `5666bcf4`, VAT 23 % i Polisa HHL → P5, daty DD.MM.RRRR → C6/P8/P5/P11, prom → kierowca SE, telefon w Harmonogramie, W46 i W47 zamknięte.**
 
 ## 2026-10-16 — scalenie #209
