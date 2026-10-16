@@ -156,3 +156,40 @@
   .rk-sec-box{padding:12px}
   .rk-orig summary,.rk-notice summary{display:flex;align-items:center;min-height:44px}
 }
+
+/* wyglad/E49 — „Objazd czy postój?” (D-20261016-0230-01 Z3): dwie możliwości obok siebie, na telefonie jedna pod drugą */
+.dtr{display:flex;flex-direction:column;gap:10px;margin:0 0 12px;padding:12px 14px;border:1px solid var(--rule);border-left:4px solid var(--red);background:var(--surface)}
+.dtr-t{margin:0;font-size:15.5px;font-weight:600;line-height:1.3;color:var(--ink)}
+.dtr-s{margin:3px 0 0;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
+.dtr-s.is-late{color:var(--red)}
+.dtr-opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.dtr-opt{display:flex;flex-direction:column;gap:6px;min-width:0;padding:10px 12px;border:1px solid var(--rule);background:var(--surface-2)}
+.dtr-opt.is-fast{border-color:var(--go);background:var(--go-bg)}
+.dtr-opt.is-none{background:var(--surface)}
+.dtr-oh{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:4px 8px}
+.dtr-oh h4{margin:0;font-family:var(--font-cond);font-size:19px;font-weight:700;color:var(--ink)}
+.dtr-fast{padding:1px 7px;border:1px solid var(--go);color:var(--go);font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.dtr-big{margin:0;font-size:14.5px;font-weight:600;line-height:1.4;color:var(--ink)}
+.dtr-nums{margin:0;font-family:var(--font-cond);font-size:22px;line-height:1.2;color:var(--ink);font-variant-numeric:tabular-nums}
+.dtr-nums b{font-weight:700}
+.dtr-eta{margin:0;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
+.dtr-rh{margin:4px 0 0;font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.08em;color:var(--ink-3)}
+.dtr-risks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.dtr-risks li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:7px;font-size:13.5px;line-height:1.45;color:var(--ink)}
+.dtr-risks li.is-ok{color:var(--ink-2)}
+.dtr-mark{display:grid;place-items:center;width:18px;height:18px;margin-top:1px;border:1px solid transparent;border-radius:50%;font-size:12px;font-weight:700;line-height:1}
+.dtr-risks .is-warn .dtr-mark{border-color:var(--amber);background:var(--amber-bg);color:var(--amber)}
+.dtr-risks .is-ok .dtr-mark{color:var(--go)}
+.dtr-opt .btn{align-self:flex-start;min-height:40px;margin-top:4px;padding:0 16px}
+.dtr-opt .btn.ghost{border-color:var(--ink)}
+.dtr-note{display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:var(--ink-2)}
+.dtr-note textarea{width:100%;min-width:0;resize:vertical}
+.dtr-wait{margin:0;font-size:13.5px;font-weight:600;color:var(--ink-2)}
+.dtr-src{margin:0;font-size:12.5px;line-height:1.45;color:var(--ink-3)}
+.rk-issue.is-detour{padding:8px 10px 8px 16px}
+@media (max-width: 768px){
+  .dtr{padding:10px 12px}
+  .dtr-opts{grid-template-columns:minmax(0,1fr)}
+  .dtr-opt .btn{align-self:stretch;min-height:48px;font-size:16px}
+  .dtr-note textarea{font-size:16px}
+}

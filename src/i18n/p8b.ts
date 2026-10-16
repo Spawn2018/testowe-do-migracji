@@ -1,0 +1,81 @@
+/**
+ * wyglad/P8-b — teksty ekranu „SMS przy miejscach” (E42; img/e42-after). Interfejs tylko po polsku (E43).
+ */
+const pl = {
+  p8b_ops: 'Operacje HHL: podgląd (E9)',
+  p8b_send: 'Wysyłka do odbiorców',
+  p8b_send_short: 'Wysyłka',
+  p8b_send_off: 'Wyłączona · tryb testowy: wszystko na {to}',
+  p8b_send_off_phone: 'Tryb testowy',
+  p8b_send_on: 'Włączona · SMS idą do osób z list poniżej',
+  p8b_send_on_phone: 'Włączona',
+  p8b_send_test_to: 'Twój numer',
+  p8b_send_btn_on: 'Włącz wysyłkę do odbiorców',
+  p8b_send_btn_off: 'Wróć do trybu testowego',
+  p8b_send_ask: 'SMS zaczną wychodzić do prawdziwych osób z list poniżej. Włącza właściciel (lista STOP). Włączyć?',
+  p8b_send_yes: 'Tak, włącz',
+  p8b_send_no: 'Anuluj',
+  p8b_send_done_on: 'Wysyłka do odbiorców włączona.',
+  p8b_send_done_off: 'Wróciła wysyłka w trybie testowym.',
+  p8b_lead: 'Wyprzedzenie',
+  p8b_lead_v: '{n} min przed przyjazdem',
+  p8b_wait: '„Auto czeka”',
+  p8b_wait_v: '{min} min bez ruchu, do {km} km od strefy',
+  p8b_quiet: 'Cisza nocna',
+  p8b_quiet_v: '{from}–{to}',
+  p8b_place_LOAD_SREM: 'Załadunek · KSH Śrem',
+  p8b_place_UNLOAD_BODEN: 'Rozładunek · plac Stegra Boden',
+  p8b_place_short_LOAD_SREM: 'KSH Śrem',
+  p8b_place_short_UNLOAD_BODEN: 'Plac Stegra Boden',
+  p8b_count: '{n} z 2 osób',
+  p8b_count_phone: '{n} z 2',
+  p8b_empty: 'Brak odbiorców — SMS dla {site} nie wyjdą.',
+  p8b_empty_phone: 'Brak odbiorców — SMS nie wyjdą.',
+  p8b_site_LOAD_SREM: 'Śremu',
+  p8b_site_UNLOAD_BODEN: 'Boden',
+  p8b_affects_one: 'Dziś to dotyczy też {codes}.',
+  p8b_affects_many: 'Dziś to dotyczy też {n} {word} w oknie śledzenia, np. {codes}.',
+  p8b_pick: 'Wybierz z użytkowników',
+  p8b_pick_phone: 'Osoba {slot} · wybierz z użytkowników',
+  p8b_pick_manual: 'Wpisz numer ręcznie…',
+  p8b_pick_nophone: '{name} — brak telefonu w Moim koncie',
+  p8b_phone_ph: 'albo wpisz numer',
+  p8b_phone_label: 'Numer telefonu',
+  p8b_country_label: 'Kierunkowy',
+  p8b_person: 'Osoba {slot}',
+  p8b_kind_A: 'przyjazd',
+  p8b_kind_B: 'wcześniej',
+  p8b_kind_B_na: 'nie dotyczy',
+  p8b_kind_C: 'czeka',
+  p8b_kind_D: 'wjazd',
+  p8b_kind_aria: '{vis} — {label} · {place}, osoba {slot}',
+  p8b_save: 'Zapisz',
+  p8b_cancel: 'Anuluj',
+  p8b_remove: 'Usuń osobę',
+  p8b_saved: 'Zapisano. Zmiana jest w Historii zmian.',
+  p8b_removed: 'Usunięto osobę z listy.',
+  p8b_fail: 'Nie udało się zapisać. Spróbuj ponownie.',
+  p8b_err_phone: 'Podaj numer: 9 cyfr (PL) albo szwedzki numer z zerem na początku (SE).',
+  p8b_err_dup: 'Ten numer jest już na liście tego miejsca (osoba {slot}).',
+  p8b_err_kinds: 'Zaznacz co najmniej jeden rodzaj SMS.',
+  p8b_gw: 'Bramka SMS {state} · ostatni sygnał {last} · dziś {today} / {limit}.',
+  p8b_gw_on: 'aktywna',
+  p8b_gw_off: 'nieaktywna',
+  p8b_gw_none: 'Bramka SMS — brak danych.',
+  p8b_fallback: 'Gdy SMS nie wyjdzie w 10 min, e-mail do Operacji HHL: „SMS do Boden (2 osoby) niewysłany: …”.',
+  p8b_kinds_note: 'A — przyjazd za ok. {lead} min · B — wcześniejszy przyjazd (dzień przed planem, tylko Boden) · C — auto czeka · D — wjazd. Treści zmienia się w „Treściach wiadomości”.',
+  p8b_ro: 'Tylko podgląd · zmienia Administrator HHL',
+  p8b_more: 'Rozwiń: {place}',
+  p8b_less: 'Zwiń: {place}',
+  p8b_loading: 'Wczytywanie odbiorców…',
+} as const;
+
+export type P8bKey = keyof typeof pl;
+
+export function p8bt(key: P8bKey, vars?: Record<string, string | number>): string {
+  let s: string = pl[key];
+  if (vars) for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  return s;
+}
+
+export const P8B_PL = pl;

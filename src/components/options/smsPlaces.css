@@ -1,0 +1,76 @@
+/*
+ * wyglad/P8-b — Opcje › Powiadomienia › SMS przy miejscach (E42, img/e42-after).
+ * Kafelki stanu (wysyłka w trybie testowym na pomarańczowo), dwa miejsca z nagłówkiem na jasnym tle, licznik osób
+ * (zielony / czerwony), pas „Brak odbiorców” na pomarańczowo, wiersz osoby: osoba, kierunkowy, numer, A–D.
+ * Telefon (≤ 768 px): dwa kafelki, miejsce bez odbiorców rozwinięte, cele ≥ 44 px, pola 16 px.
+ * Tylko tokeny z :root; promień 2px; bez cieni i gradientów (reguły stylów).
+ */
+.sp{display:flex;flex-direction:column;gap:14px;min-width:0}
+.sp-ops{margin:-6px 0 0;color:var(--ink-3);font-size:14.5px;text-align:right}
+.sp-ro{margin:0;padding:8px 12px;border-left:3px solid var(--sea);background:var(--sea-bg);font-size:14px}
+.sp-loading{margin:0;color:var(--ink-3)}
+
+.sp-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.sp-tile{display:flex;flex-direction:column;gap:4px;min-width:0;padding:12px 14px;border:1px solid var(--rule);background:var(--surface)}
+.sp-tile.is-warn{border-color:var(--amber);background:var(--amber-bg)}
+.sp-tile-k{font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--ink-2)}
+.sp-tile-v{font-size:16px;line-height:1.4;color:var(--ink);overflow-wrap:anywhere}
+/* przełącznik wysyłki — skromny odnośnik w kafelku (decyzja właściciela, lista STOP) */
+.btn.ghost.sp-tile-btn{align-self:flex-start;min-height:0;text-align:left;margin-top:2px;padding:2px 0;border:0;background:transparent;color:var(--sea);font-size:14px;font-weight:600;text-decoration:underline}
+.sp-ask{display:flex;flex-direction:column;gap:8px;margin-top:6px;font-size:14px}
+.sp-ask p{margin:0}
+.sp-ask-acts{display:flex;flex-wrap:wrap;gap:8px}
+.sp-live:empty{position:absolute;width:1px;height:1px;overflow:hidden}
+.sp-live{font-size:13.5px;color:var(--go)}
+.sp-err{margin:0;color:var(--red);font-size:13.5px;font-weight:600}
+
+.sp-place{border:1px solid var(--rule);background:var(--surface);min-width:0}
+.sp-place-hd{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--rule-2);background:var(--surface-2)}
+.sp-place-hd h3{margin:0;font-family:var(--font-cond);font-size:22px;font-weight:700;line-height:1.1}
+.sp-count{display:inline-block;padding:2px 8px;border:1px solid var(--go);background:var(--go-bg);color:var(--go);font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.06em;white-space:nowrap}
+.sp-count.is-bad{border-color:var(--red);background:var(--red-bg);color:var(--red)}
+.sp-more{margin-left:auto;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink)}
+.sp-warn{margin:0;padding:10px 16px;border-bottom:1px solid var(--amber);background:var(--amber-bg);color:var(--amber-ink);font-weight:600;font-size:15px}
+.sp-sum{list-style:none;margin:0;padding:10px 16px;color:var(--ink-2);font-size:15px}
+.sp-rows{display:flex;flex-direction:column}
+.sp-row{display:grid;grid-template-columns:minmax(150px,220px) 96px minmax(150px,190px) minmax(0,1fr) auto;align-items:center;gap:8px 12px;padding:10px 16px;border-top:1px solid var(--rule-2)}
+.sp-row:first-child{border-top:0}
+.sp-who,.sp-num{min-width:0}
+.sp-num{display:contents}
+.sp-sel,.sp-phone,.sp-cc{width:100%;min-width:0;font-size:15px}
+.sp-name{display:flex;align-items:center;min-height:38px;padding:6px 10px;border:1px solid var(--rule);background:var(--surface);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp-phone[readonly]{background:var(--surface-2);color:var(--ink)}
+.sp-kinds{display:flex;flex-wrap:wrap;gap:8px}
+.sp-kind{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:4px 10px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);font-size:15px;cursor:pointer}
+.sp-kind.is-on{border-color:var(--go);background:var(--go-bg)}
+.sp-kind.is-na{color:var(--ink-3);background:var(--surface-2);cursor:default}
+.sp-kind input{margin:0}
+.sp-acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.btn.ghost.sp-del{min-width:38px;font-size:18px;line-height:1}
+.sp-row .sp-err,.sp-row .sp-live{grid-column:1 / -1}
+.sp-foot{margin:0;color:var(--ink-3);font-size:13.5px;line-height:1.5;max-width:1100px}
+
+@media (max-width: 1280px){
+  .sp-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* osoba, kierunkowy i numer w pierwszej linii (numer zawsze w całości), rodzaje A–D pod spodem */
+  .sp-row{grid-template-columns:minmax(120px,1fr) 96px minmax(150px,1fr) auto}
+  .sp-kinds{grid-column:1 / -1;grid-row:2}
+  .sp-acts{grid-column:4;grid-row:1}
+}
+
+@media (max-width: 768px){
+  .sp.is-phone{gap:12px}
+  .sp-tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .sp-tile{padding:10px 12px}
+  .sp-tile-v{font-size:15px}
+  .sp-place-hd{padding:10px 12px}
+  .sp-place-hd h3{font-size:19px}
+  .sp-warn{padding:10px 12px}
+  .sp-sum{padding:10px 12px}
+  .sp-row{grid-template-columns:104px minmax(0,1fr);padding:10px 12px}
+  .sp-who,.sp-kinds,.sp-acts{grid-column:1 / -1;grid-row:auto}
+  .sp-sel,.sp-phone,.sp-cc{font-size:16px;min-height:44px}
+  .sp-kind{min-height:44px;min-width:56px;justify-content:center;font-size:16px}
+  .sp-acts{justify-content:flex-start}
+  .sp-acts .btn{min-height:44px;font-size:16px}
+}

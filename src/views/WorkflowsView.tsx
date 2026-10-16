@@ -21,6 +21,8 @@ import type { WorkflowRule } from '../types';
 import { AutoRulesList } from '../components/automations/AutoRulesList';
 import { autoMetaOf } from '../lib/p4cSource';
 import { getNowIso } from '../lib/frozenNow';
+import { rulesReady } from '../lib/p8dReady';
+import { RulesPage } from '../components/automations/RulesPage';
 
 /** tryb Supabase — stała z kompilacji, by paczka demo nie zawierała klienta bazy (I-2) */
 const LIVE = import.meta.env.VITE_AUTH_MODE === 'supabase';
@@ -67,7 +69,16 @@ function HistoryList({ id, locale }: { id: string | null; locale: Parameters<typ
   );
 }
 
+/**
+ * wyglad/P8-d — Automatyzacje według E35: gdy jest źródło własnych reguł (`rulesReady()`, demo), strona `RulesPage`
+ * (Działa samo · Własne reguły · Przebiegi · Historia zmian, kreator „Gdy … wtedy …”). Bez źródła (produkcja do
+ * podłączenia w P8) — dzisiejszy widok z kreatorem B-5.
+ */
 export function WorkflowsView() {
+  return rulesReady() ? <RulesPage /> : <LegacyWorkflowsView />;
+}
+
+function LegacyWorkflowsView() {
   const workflows = useTowerStore((s) => s.workflows);
   const toggleWorkflow = useTowerStore((s) => s.toggleWorkflow);
   const createWorkflow = useTowerStore((s) => s.createWorkflow);

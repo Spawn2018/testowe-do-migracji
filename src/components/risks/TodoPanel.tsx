@@ -13,6 +13,10 @@ import { buildTodo, defaultScope, scopeCards, visibleTodoRisks, type CaseEvent, 
 import { caseAssignmentsOf, caseHistoryOf, caseMeOf, casePeopleOf, sampleDecisionsOf, extraRisksOf, todoExtrasOf } from '../../lib/p6Source';
 import { feeRulesOf, feeSuggestionsOf } from '../../lib/p5Source';
 import { deliveredCheckOf } from '../../lib/p4cSource';
+import { detourCasesOf, detourDecideOf } from '../../lib/e49Source';
+import { kmText, minText, urgentOf } from '../../lib/e49Detour';
+import { e49t } from '../../i18n/e49';
+import { timeOnly } from '../../lib/statusAxis';
 import { mayResolveDecision } from '../../lib/decisionAccess';
 import { getAuthProfile } from '../../auth/profile';
 import { lazyRetry } from '../../lib/lazyRetry';
@@ -64,6 +68,8 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
   const [feeFor, setFeeFor] = useState<TodoIssue | null>(null);
   const [feeDone, setFeeDone] = useState<Set<string>>(() => new Set());
   const [checkDone, setCheckDone] = useState<Set<string>>(() => new Set());
+  const [detourDone, setDetourDone] = useState<Set<string>>(() => new Set());
+  const [detourBusy, setDetourBusy] = useState<string | null>(null);
 
   useEffect(() => setScope(defaultScope(kind)), [kind]);
 
@@ -86,8 +92,16 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
       })(),
     }));
     const extras = todoExtrasOf(role, items, cardLoads);
+    /* wyglad/E49: zamknięty most albo droga — sprawa SCX „Objazd czy postój?” (D-20261016-0230-01 Z3) */
+    for (const c of detourCasesOf(role, loads, nowIso, cardLoads)) {
+      if (detourDone.has(c.id)) continue;
+      extras.push({
+        id: c.id, src: 'DETOUR', loadId: c.loadId, owner: 'SCX', severity: urgentOf(c, nowIso) ? 'CRITICAL' : 'HIGH',
+        dueAt: c.decideByIso, overdue: Date.parse(c.decideByIso) < Date.parse(nowIso), merged: 1, go: 'NONE', ageHours: 0, detour: c,
+      });
+    }
     return extras.length ? buildTodo({ risks: visRisks, decisions: decs, extras, nowIso }) : base;
-  }, [visRisks, decs, nowIso, loads, geofences, role, feeDone, checkDone, events]);
+  }, [visRisks, decs, nowIso, loads, geofences, role, feeDone, checkDone, detourDone, events]);
 
   const assigneeOf = (id: string): CasePerson | null => {
     const pid = assign?.[id];
@@ -208,6 +222,33 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
           useTowerStore.getState().appendEvent({ loadId, type: 'NOTE', at: nowIso, actor: role, note: tp(locale, 'p4c_dc_note_no', { n: chk.minutes }) });
           useTowerStore.getState().pushToast(t(locale, 'p4c_dc_no_done'), 'LOW', loadId);
         },
+      };
+    },
+    detourHandlers: (i) => {
+      const save = detourDecideOf();
+      const c = i.detour;
+      return {
+        canDecide: role === 'SCX',
+        busy: detourBusy === i.id,
+        onDecide: save && c ? (pick, note) => {
+          setDetourBusy(i.id);
+          const by = me ? `${me.name} // ${rt(locale, `p6_org_${me.org}`)}` : 'SCX';
+          void save(c.id, { pick, by, atIso: nowIso, note }).then((r) => {
+            setDetourBusy(null);
+            if (!r.ok) return;
+            const what = (pick === 'HOLD'
+              ? (c.hold.untilIso ? e49t('e49_hist_hold', { t: timeOnly(c.hold.untilIso), place: c.place }) : e49t('e49_hist_hold_unknown', { place: c.place }))
+              : e49t('e49_hist_detour', {
+                via: 'none' in c.detour ? '' : c.detour.via,
+                km: 'none' in c.detour ? '' : kmText(c.detour.addKm),
+                d: 'none' in c.detour ? '' : minText(c.detour.addMin),
+                place: c.place,
+              })) + (note ? e49t('e49_hist_note', { n: note }) : '');
+            useTowerStore.getState().appendEvent({ loadId: c.loadId, type: 'NOTE', at: nowIso, actor: role, note: what });
+            useTowerStore.getState().pushToast(e49t(pick === 'HOLD' ? 'e49_done_hold' : 'e49_done_detour'), 'LOW', c.loadId);
+            setDetourDone((s) => new Set(s).add(c.id));
+          });
+        } : null,
       };
     },
     decisions,

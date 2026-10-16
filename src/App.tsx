@@ -12,7 +12,7 @@ import { SystemBroadcastBanner } from './components/shell/SystemBroadcastBanner'
 import { PhoneMissingBar } from './components/shell/PhoneMissingBar';
 import { ImpersonationBanner } from './auth/ImpersonationBanner';
 import { PreviewBanner } from './auth/PreviewBanner';
-import { LoadDrawer } from './components/drawer/LoadDrawer';
+import { lazyRetry } from './lib/lazyRetry';
 import { DashboardView } from './views/DashboardView';
 import { MapViewLazy as MapView } from './views/mapLazy';
 /* wyglad/P7-c: Harmonogram (E38, E30) ładowany osobno (budżet pierwszego wczytania) */
@@ -25,6 +25,8 @@ import { InvoicesViewLazy as InvoicesView } from './views/invoicesLazy';
 import { TasksView } from './views/TasksView';
 import { WorkflowsViewLazy as WorkflowsView } from './views/workflowsLazy';
 import { GeofenceView } from './views/GeofenceView';
+import { ZonesViewLazy as ZonesView } from './views/zonesLazy';
+import { zonesReady } from './lib/p8cReady';
 import { DriverPwa } from './views/DriverPwa';
 /* wyglad/P3-c: Opcje i Ustawienia ładowane osobno (budżet pierwszego wczytania) */
 import { OptionsViewLazy as OptionsView, SettingsViewLazy as SettingsView } from './views/optionsLazy';
@@ -38,6 +40,15 @@ import { t } from './i18n/messages';
 import { usePhoneTableLabels } from './lib/phoneTableLabels';
 /* wyglad/P10b-d (E37 pkt 9): podgląd pierwszego wejścia w demo; produkcja — AuthGate */
 import { DemoFirstEntry } from './auth/DemoFirstEntry';
+
+const loadDrawerChunk = () => import('./components/drawer/LoadDrawer').then((m) => ({ default: m.LoadDrawer }));
+const LoadDrawer = lazy(lazyRetry(loadDrawerChunk));
+/* pobranie panelu transportu w tle, gdy przeglądarka jest wolna (pierwsze kliknięcie bez czekania) */
+if (typeof window !== 'undefined') {
+  const idle = (window as Window & { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback;
+  const warm = () => { void loadDrawerChunk().catch(() => undefined); };
+  if (idle) idle(warm); else window.setTimeout(warm, 1500);
+}
 
 // BK2: bramka logowania tylko w trybie Supabase (VITE_AUTH_MODE=supabase); demo bez zmian.
 const AuthGate = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./auth/AuthGate')) : null;
@@ -161,7 +172,8 @@ function TowerShell() {
       body = <WorkflowsView />;
       break;
     case 'geo':
-      body = <GeofenceView />;
+      /* wyglad/P8-c (E34): nowa strona Stref, gdy jest źródło (demo; produkcja po podłączeniu w P8) */
+      body = zonesReady() ? <ZonesView /> : <GeofenceView />;
       break;
     case 'options':
       body = <OptionsView />;
@@ -231,7 +243,8 @@ function TowerShell() {
           <PartBoundary key={view} name={view}>{body}</PartBoundary>
         </main>
       </div>
-      <LoadDrawer />
+      {/* D15 (budżet 400 kB): panel transportu osobno — pobierany w tle po starcie, więc otwiera się od razu */}
+      <Suspense fallback={null}><LoadDrawer /></Suspense>
       <Toasts />
     </div>
   );
