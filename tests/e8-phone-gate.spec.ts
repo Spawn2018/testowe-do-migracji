@@ -1940,6 +1940,39 @@ test.describe('wyglad/P4-b panel transportu — Status E25 (img/e25-after), pase
     await expect(page.locator('.drawer .sax-who')).toBeVisible();
   });
 
+  /* audyt-B B-04 (E25, 07.10 17:46): SCX zmienia status tylko do przodu; cofnięcie — administrator HHL, z powodem
+     (pole obowiązkowe, „Zapisz status” nieaktywny bez powodu). SG-03 = „Na promie”. */
+  test('okno „Zmień status”: SCX bez statusów wcześniejszych; HHL cofa tylko z powodem', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'SCX');
+    await openLoad(page, 'SG-03');
+    await statusTab(page);
+    await page.locator('.drawer [data-action="change-status"]').click();
+    const modal = page.locator('[data-status-change-modal]');
+    const opts = await modal.locator('[data-status-select] option').evaluateAll((els) => els.map((e) => (e as HTMLOptionElement).value));
+    expect(opts[0]).toBe('ON_FERRY');
+    expect(opts).not.toContain('PLANNED');
+    expect(opts).not.toContain('AT_PORT');
+    await expect(modal.locator('[data-status-note]')).not.toHaveAttribute('required', '');
+    await modal.getByRole('button', { name: 'Anuluj' }).click();
+
+    await boot(page, 'HHL');
+    await openLoad(page, 'SG-03');
+    await statusTab(page);
+    await page.locator('.drawer [data-action="change-status"]').click();
+    await modal.locator('[data-status-select]').selectOption('AT_PORT');
+    await expect(modal.locator('[data-status-back]')).toBeVisible();
+    await expect(modal.locator('label.form-field', { has: page.locator('[data-status-note]') })).toContainText('Powód cofnięcia (wymagany)');
+    await expect(modal.locator('[data-status-note]')).toHaveAttribute('data-status-reason', 'required');
+    await expect(modal.locator('[data-status-save]')).toBeDisabled();
+    await modal.locator('[data-status-note]').fill('status ustawiony omyłkowo');
+    await expect(modal.locator('[data-status-save]')).toBeEnabled();
+    await modal.locator('[data-status-select]').selectOption('IN_TRANSIT_SE');
+    await expect(modal.locator('[data-status-back]')).toHaveCount(0);
+    await expect(modal.locator('label.form-field', { has: page.locator('[data-status-note]') })).toContainText('Notatka (opcjonalnie)');
+    await modal.getByRole('button', { name: 'Anuluj' }).click();
+  });
+
   for (const width of [360, 390, 430]) {
     test(`telefon ${width}: oś od „W trasie”, „Przygotowanie” zwinięte; „Zmień status” nad dolnym paskiem; okno jako arkusz od dołu`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });

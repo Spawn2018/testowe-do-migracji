@@ -289,6 +289,11 @@ const pl: Dict = {
   p4b_m_delivered_info_ph: 'Od tej daty: kurs NBP, opłata paliwowa, tydzień faktury. Śledzenie wyłączone.',
   p4b_m_note: 'Notatka (opcjonalnie)',
   p4b_m_note_ph: 'np. potwierdzone telefonicznie z placem',
+  /* audyt-B B-04 (E25): cofnięcie — tylko administrator HHL, z powodem; anulowanie — z powodem */
+  p4b_m_reason_back: 'Powód cofnięcia (wymagany)',
+  p4b_m_reason_cancel: 'Powód anulowania (wymagany)',
+  p4b_m_reason_ph: 'np. status ustawiony omyłkowo',
+  p4b_m_back_info: 'Cofnięcie z „{from}” na „{to}” — zapis tylko z powodem.',
   p4b_m_rules: 'Nie wcześniej niż poprzedni status ({at}) i nie później niż teraz. Cofnięcie statusu: tylko administrator HHL, z powodem.',
   p4b_m_rules_nodate: 'Nie wcześniej niż poprzedni status i nie później niż teraz. Cofnięcie statusu: tylko administrator HHL, z powodem.',
   p4b_m_cancel: 'Anuluj',
