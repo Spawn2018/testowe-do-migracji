@@ -2513,7 +2513,7 @@ CI #229 na `ee689452`: unit / visual / `db` zielone; `npm audit --omit=dev --aud
 | #228 wyglad/P6-c | scalone `fd5562ff`; dpl `dpl_8Zn7b5LUwhjXeYot2aAFodPNFGD8` ~00:14; tower/makieta 200 |
 | #230 wyglad/P6-d | scalone `d6fc9ae8`; dpl `dpl_BfZ9gPTzdhMpbw5ZMKqNe5Jmpqb2` ~00:17; dopisek C17 w repo; tower/makieta 200 |
 
-unit + visual zielone przed każdym scaleniem; `npm audit` 0. #209/#231 (P7) — sobota (D-20261015-0130-01).
+unit + visual zielone przed każdym scaleniem; `npm audit` 0. #209/#231 (P7) — w kolejce bez czekania na dzień (D-20261015-0130-01, D-20261016-1345-01).
 
 **wyglad/P5-b NA PRODUKCJI — 668e00ea.**  
 **wyglad/P5-c NA PRODUKCJI — 3d20f53a.**  
@@ -2613,6 +2613,13 @@ Tabela sprawdzalności (prompt 16.10, 11:30 i 11:40). Pliki dopisków wchodzą z
 | D-20261016-1020-01 | #256 `wyglad/P7-c` | P7 E38, E30, E20 | pkt 1–6 | TEST: 1366 px, eksport „t40–t41”, układ na drugim komputerze, telefon 390, kwoty i kolumny według firmy, waga elementu, „ZMIANA NUMERACJI”; bramka visual (`etap4-ui`, `etap5-ui`, `aud03-ksh-panel.spec`, `d-eur-t`, `visual-states`) już przepisana w #256 (`56847e2`) — tylko sprawdzenie; zostaje `scheduleColumns.ts` w `tests/order-numbers.test.ts` |
 | D-20261016-1150-01 | #260 `wyglad/P7-d` | P7 E30 pkt 7 Rejsy | wygląd; danych do podłączenia nie ma | pkt 4 |
 | D-20261016-1230-01 | #260 niesie plik dopisku | P7 E38 — uzupełnienie W13 | pkt 2–5 | pkt 6 |
+| D-20261016-1345-01 | #261 `wyglad/E6-tel` niesie plik dopisku | P7 E32; P5; P6; P9; C3; C8; P8 | pkt 2 i pkt 3.1–3.10 | pkt 2.3 i testy z pkt 3 |
+
+Zadzwoń — kierowca odcinka (E6).
+
+Kolejka bez dni: #260 → #209 → #231 → #247 → #261 → kolejne PR koordynatora w kolejności numerów. Każdy zaraz po zielonych unit i visual.
+
+**DOPISEK 1345 WŁĄCZONY — commit (ten docs), kolejka bez dni (#260 → #209 → #231 → #247 → #261), E6 Zadzwoń → P7, pkt 3 → P5, P6, P9, C3, C8, P8; W46, W47 w §5.**
 
 E30 pkt 7 Rejsy → wygląd (P7-d).
 
@@ -2639,7 +2646,7 @@ E23/E47/E19 pkt 7/E46 ekran Stan systemu → wygląd (P10b-c), dane P10a/P11.
 E37 pierwsze wejście → wygląd (P10b-d), dane P10b.  
 E38 1A / E30 / E20 Harmonogram → wygląd (P7-c), dane P7.
 
-**Następny krok po tym commicie:** kolejka wyglądu #240 → #241 → #242 → #243 → #244 → #245 → #246 → #248 → #249 → #250 → #251 → #252 → #253 → #254 → #256, potem sobota #209 → #231 → #247. Potem C3…C15 → P3-d → P5 → P6 → …
+**Następny krok po tym commicie:** kolejka wyglądu #240 → #241 → #242 → #243 → #244 → #245 → #246 → #248 → #249 → #250 → #251 → #252 → #253 → #254 → #256, potem #209 → #231 → #247. Potem C3…C15 → P3-d → P5 → P6 → …
 
 ## 2026-10-16 — scalenia kolejki wyglądu do #246
 
@@ -2680,7 +2687,7 @@ Konflikt #254 zamknięty commitem koordynatora `286c8ef` na `wyglad/P10b-d`. Mai
 
 Wdrożenie R7 z `main` `d4e69058`, 16.10.2026 13:17, `dpl_HvZ73WLu6mxTE2SP1DnAkBVqm6Zh`. JS `assets/index-CMMlOYN_.js`. tower.log-mar.pl i watch-tower-makieta.vercel.app → 200. 75 plików JS, 0× `service_role`.
 
-**VISUAL #260** (`wyglad/P7-d`, `7112303`): pada tylko `stan-blad` (dark) — komunikat po polsku. Kolejka stoi do commitu koordynatora z odświeżonym wzorcem. Potem #260, sobota #209 → #231 → #247.
+**VISUAL #260** (`wyglad/P7-d`, `7112303`): pada tylko `stan-blad` (dark) — komunikat po polsku. Kolejka stoi do commitu koordynatora z odświeżonym wzorcem. Potem #260, #209 → #231 → #247.
 
 ## PAUZA — 2026-10-16 10:21 — **WZNOWIONE 10:59** (hasło „ruszamy”)
 
