@@ -259,8 +259,11 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
         desc: L('p3b_ferry_none'), descShort: L('p3b_ferry_none'), tone: 'default' };
     }
     const when = formatListDateTime(ferry.depIso);
-    /* komputer „08.10, 18:00”, telefon „08.10 18:00” */
-    const whenShort = when.replace(', ', ' ');
+    /* komputer „08.10.2026, 18:00”; telefon — liczba w jednej linii (E8 pkt 6): „18:00”, a data z rokiem w opisie
+       „08.10.2026 · fala …” (rok zawsze — właściciel 16.10.2026) */
+    const [whenDay, whenTime] = when.split(', ');
+    const whenShort = whenTime ?? when;
+    const dayShort = whenTime ? `${whenDay} · ` : '';
     const wave = ferry.sea ? formatPlNumber(ferry.sea.waveM, 1) : '';
     /* SCX: także porywy (B7), gdy źródło je podaje */
     const gust = withGusts && ferry.sea?.gustKn != null ? formatPlNumber(ferry.sea.gustKn, 0) : null;
@@ -272,7 +275,7 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
           ? L('p3b_ferry_sea_gust', { vessel: ferry.vessel, route: ferry.route, wave, gust, risk: ferry.sea.risk })
           : L('p3b_ferry_sea', { vessel: ferry.vessel, route: ferry.route, wave, risk: ferry.sea.risk })
         : L('p3b_ferry_nosea', { vessel: ferry.vessel, route: ferry.route }),
-      descShort: ferry.sea ? L('p3b_ferry_sea_short', { wave, risk: ferry.sea.risk }) : L('p3b_ferry_nosea_short'),
+      descShort: dayShort + (ferry.sea ? L('p3b_ferry_sea_short', { wave, risk: ferry.sea.risk }) : L('p3b_ferry_nosea_short')),
       tone: 'default',
     };
   };

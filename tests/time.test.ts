@@ -6,7 +6,6 @@ import {
   delayMinutesVsPlan,
   calendarDayEndMs,
   formatCalendarDay,
-  refYearInOps,
   formatTableInZone,
   formatTableDay,
   formatSchedTableDay,
@@ -32,8 +31,8 @@ describe('D8 timezone policy', () => {
   it('does not use ISO slice semantics — Z and +02:00 compact to same Warsaw/Stockholm wall in CEST', () => {
     const z = '2026-09-23T12:32:00.000Z'; // 14:32 CEST
     const off = '2026-09-23T14:32:00+02:00';
-    expect(formatEtaBodenCompact(z)).toBe('23.09 14:32');
-    expect(formatEtaBodenCompact(off)).toBe('23.09 14:32');
+    expect(formatEtaBodenCompact(z)).toBe('23.09.2026, 14:32');
+    expect(formatEtaBodenCompact(off)).toBe('23.09.2026, 14:32');
     // old bug: z.slice(5,16) => '09-23T12:32' (UTC) vs off.slice => '09-23T14:32'
     expect(z.slice(5, 16)).not.toBe(off.slice(5, 16));
   });
@@ -76,43 +75,40 @@ describe('D8 timezone policy', () => {
     const iso = '2026-09-24T10:00:00Z';
     expect(formatEtaBoden(iso)).toMatch(/24\.09\.2026/);
     expect(formatLoadPl(iso)).toMatch(/24\.09\.2026/);
-    expect(formatCompactInZone(iso, TZ_UNLOAD_SE)).toMatch(/^24\.09 /);
+    expect(formatCompactInZone(iso, TZ_UNLOAD_SE)).toBe('24.09.2026, 12:00');
     expect(zoneOffsetIso(new Date('2026-09-24T10:00:00Z'), TZ_LOAD_PL)).toMatch(/\+02/);
   });
 });
 
-describe('D17 table date format — omit redundant year', () => {
-  it('formatTableDay drops year when it matches refYear', () => {
-    expect(formatTableDay('2026-09-26', 2026)).toBe('26.09');
-    expect(formatTableDay('2026-01-05', 2026)).toBe('05.01');
+// Właściciel 16.10.2026, 13:58 i 14:09 (zmienia E21, znosi D17 „bez roku w bieżącym roku”): data zawsze DD.MM.RRRR, godzina GG:MM.
+describe('tabele — data zawsze z rokiem (D17 zniesione 16.10.2026)', () => {
+  it('formatTableDay keeps year also in the current year', () => {
+    expect(formatTableDay('2026-09-26')).toBe('26.09.2026');
+    expect(formatTableDay('2026-01-05')).toBe('05.01.2026');
   });
 
-  it('formatTableDay keeps year when it differs from refYear', () => {
-    expect(formatTableDay('2025-12-31', 2026)).toBe('31.12.2025');
-    expect(formatTableDay('2027-01-02', 2026)).toBe('02.01.2027');
+  it('formatTableDay keeps year in other years', () => {
+    expect(formatTableDay('2025-12-31')).toBe('31.12.2025');
+    expect(formatTableDay('2027-01-02')).toBe('02.01.2027');
   });
 
-  it('formatTableInZone omits year for same-year instants, keeps zone wall clock', () => {
+  it('formatTableInZone: „dd.mm.rrrr, gg:mm”, zone wall clock', () => {
     // 12:32Z → 14:32 CEST Warsaw/Stockholm
-    expect(formatTableInZone('2026-09-23T12:32:00.000Z', TZ_UNLOAD_SE, 2026)).toBe('23.09 14:32');
-    expect(formatTableInZone('2025-12-31T12:00:00+01:00', TZ_UNLOAD_SE, 2026)).toMatch(/^31\.12\.2025 /);
+    expect(formatTableInZone('2026-09-23T12:32:00.000Z', TZ_UNLOAD_SE)).toBe('23.09.2026, 14:32');
+    expect(formatTableInZone('2025-12-31T12:00:00+01:00', TZ_UNLOAD_SE)).toBe('31.12.2025, 12:00');
   });
 
   it('formatTableInZone date-only delegates to formatTableDay', () => {
-    expect(formatTableInZone('2026-09-28', TZ_UNLOAD_SE, 2026)).toBe('28.09');
-  });
-
-  it('refYearInOps uses Europe/Warsaw civil year', () => {
-    expect(refYearInOps(new Date('2026-09-23T14:32:00Z'))).toBe(2026);
+    expect(formatTableInZone('2026-09-28', TZ_UNLOAD_SE)).toBe('28.09.2026');
   });
 });
 
 describe('formatSchedTableDay (B-8)', () => {
   it('always keeps year', () => {
-    expect(formatSchedTableDay('2026-09-29', null, TZ_LOAD_PL)).toBe('29.09.2026 –');
+    expect(formatSchedTableDay('2026-09-29', null, TZ_LOAD_PL)).toBe('29.09.2026, –');
   });
   it('appends time from window ISO', () => {
     // 2026-09-29 08:30 Warsaw
-    expect(formatSchedTableDay('2026-09-29', '2026-09-29T06:30:00.000Z', TZ_LOAD_PL)).toMatch(/^29\.09\.2026 08:30$/);
+    expect(formatSchedTableDay('2026-09-29', '2026-09-29T06:30:00.000Z', TZ_LOAD_PL)).toBe('29.09.2026, 08:30');
   });
 });

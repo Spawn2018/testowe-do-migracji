@@ -26,6 +26,7 @@ import { canReplyDispute, correctionFileError, disputeActorSide, paymentBlockedB
 import { readFileAsDataUrl } from '../lib/docsIo';
 import { clickableRow } from '../lib/clickableRow';
 import { formatPlNumber } from '../lib/format';
+import { fmtDate, fmtDateRange } from '../lib/time';
 import { transportsText } from '../lib/p5Finance';
 import { ISSUER, RECIPIENT, VAT_RATE, billDiff, billStatus, invoiceKpis, pendingWeeks, weekKeyLabel, type InvKpis, type InvStatus } from '../lib/p5Invoices';
 import { up } from '../components/options/up';
@@ -127,7 +128,7 @@ function DisputeThread({ bill }: { bill: Bill }) {
       {list.map((e) => (
         <div key={e.id} className="mrow" data-dispute-event={e.kind}>
           <span className="lbl">
-            {fmtDay(e.at ? e.at.slice(0, 10) : null)} · {disputeActorSide(e.kind) === 'issuer' ? bill.issuer : bill.recipient} · {t(locale, `iii7_k_${e.kind}`)}
+            {fmtDay(e.at)} · {disputeActorSide(e.kind) === 'issuer' ? bill.issuer : bill.recipient} · {t(locale, `iii7_k_${e.kind}`)}
             {e.kind === 'RESOLVED' && e.statusTo ? ` (${VERIFICATION_LABEL[e.statusTo as BillVerification]?.[locale] ?? e.statusTo})` : ''}
           </span>
           <span data-content>
@@ -162,7 +163,8 @@ function DisputeThread({ bill }: { bill: Bill }) {
 const fmtCur = (n: number | null | undefined, cur: string) =>
   n == null ? '—' : cur === 'EUR' ? formatPlNumber(n, 2) : `${formatPlNumber(n, 2)} ${cur}`;
 const fmtNum = (n: number | null | undefined) => (n == null ? '—' : formatPlNumber(n, 2));
-const fmtDay = (iso: string | null | undefined) => (iso ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}` : '—');
+/* „08.10.2026” — dzień kalendarza albo chwila (czas polski); rok zawsze — właściciel 16.10.2026 */
+const fmtDay = (iso: string | null | undefined) => (iso ? fmtDate(iso) : '—');
 
 function Amount({ n, cur }: { n: number | null | undefined; cur: string }) {
   return <span className="mono" data-deur-exempt="invoice-currency">{fmtCur(n, cur)}</span>;
@@ -178,7 +180,6 @@ function Kpis({ direction, kpis }: { direction: BillDirection; kpis: InvKpis }) 
   const locale = useTowerStore((s) => s.locale);
   const first = kpis.pending[0];
   const ver = kpis.toVerify[0];
-  const dm = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
   return (
     <div className="inv-kpis" data-inv-kpis={direction}>
       <section className={`inv-kpi${first ? ' is-sea' : ''}`} data-inv-kpi="pending">
@@ -187,7 +188,7 @@ function Kpis({ direction, kpis }: { direction: BillDirection; kpis: InvKpis }) 
         <p>
           {first ? (
             <>
-              {ftp(locale, 'p5_inv_k_pending_s', { loads: transportsText(first.loads.length), range: `${dm(first.from)}–${dm(first.to)}`, net: formatPlNumber(first.netEur, 2) })}
+              {ftp(locale, 'p5_inv_k_pending_s', { loads: transportsText(first.loads.length), range: fmtDateRange(first.from, first.to), net: formatPlNumber(first.netEur, 2) })}
               <b>{ftp(locale, 'p5_inv_k_pending_who', { who: ISSUER[direction] })}</b>
               {kpis.pending.length > 1 ? ftn(locale, 'p5_inv_k_pending_more', kpis.pending.length - 1) : ''}
             </>
@@ -209,7 +210,7 @@ function Kpis({ direction, kpis }: { direction: BillDirection; kpis: InvKpis }) 
       <section className="inv-kpi" data-inv-kpi="due">
         <h3>{up(ft(locale, 'p5_inv_k_due'))}</h3>
         <b className="inv-kpi-v">{kpis.dueSoon.length}</b>
-        <p>{kpis.nextDue ? ftp(locale, 'p5_inv_k_due_s', { date: dm(kpis.nextDue) }) : ft(locale, 'p5_inv_k_due_none')}</p>
+        <p>{kpis.nextDue ? ftp(locale, 'p5_inv_k_due_s', { date: fmtDay(kpis.nextDue) }) : ft(locale, 'p5_inv_k_due_none')}</p>
       </section>
       <section className={`inv-kpi${kpis.overdue.length ? ' is-red' : ''}`} data-inv-kpi="overdue">
         <h3>{up(ft(locale, 'p5_inv_k_over'))}</h3>
@@ -217,7 +218,7 @@ function Kpis({ direction, kpis }: { direction: BillDirection; kpis: InvKpis }) 
         <p>
           {kpis.overdue[0] ? (
             <span data-content>
-              {ftp(locale, 'p5_inv_k_over_some', { number: kpis.overdue[0].number, date: dm(kpis.overdue[0].dueDate) })}
+              {ftp(locale, 'p5_inv_k_over_some', { number: kpis.overdue[0].number, date: fmtDay(kpis.overdue[0].dueDate) })}
               {kpis.overdue.length > 1 ? ftp(locale, 'p5_inv_k_over_more', { n: kpis.overdue.length - 1 }) : ''}
             </span>
           ) : ft(locale, 'p5_inv_k_over_s')}
@@ -283,7 +284,7 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
   const pending = useMemo(() => pendingWeeks(loads, allBills, direction, today), [loads, allBills, direction, today]);
   const kpis = useMemo(() => invoiceKpis(role, bills, pending, direction, today), [role, bills, pending, direction, today]);
   const title = role === 'KSH' ? ft(locale, 'p5_inv_list_ksh') : role === 'SCX' ? ft(locale, 'p5_inv_list_scx') : ft(locale, `p5_inv_list_${direction}`);
-  const dm = (d: string | null | undefined) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '—');
+  const dm = fmtDay;
   const quick = (b: Bill) => canVerifyBill(role, b) && b.verification === 'DO_WERYFIKACJI';
   const open = (id: string) => setOpenId((o) => (o === id ? null : id));
   const dispute = (id: string) => {

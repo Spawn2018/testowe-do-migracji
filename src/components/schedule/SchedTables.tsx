@@ -17,7 +17,7 @@ import { formatAppMoney } from '../../lib/money/demoFx';
 import { formatTableInZone, TZ_LOAD_PL, TZ_UNLOAD_SE } from '../../lib/time';
 import { transportLabel } from '../../lib/transportName';
 import {
-  ddmm, dayPl, docCell, etaText, hmIn, moneyKey, pair, SHORT_COLS, SHORT_EXTRAS,
+  dmy, dayPl, docCell, etaText, hmIn, moneyKey, pair, SHORT_COLS, SHORT_EXTRAS,
   type FileColDef, type ShortExtraId,
 } from '../../lib/schedLayout';
 
@@ -25,7 +25,6 @@ export type SchedRowCtx = {
   locale: Locale;
   role: RoleId;
   currency: DisplayCurrency;
-  refYear: number;
   /** próg marży w % (E16); null — marża nigdy czerwona */
   marginMin: number | null;
   docRows: (loadId: string) => DocStatusRow[];
@@ -87,7 +86,7 @@ function Status({ l, ctx }: { l: Load; ctx: SchedRowCtx }) {
     <span className="st-wrap s7-st">
       <StatusPill status={l.status} stage={l.stage} />
       <StatusMarkers load={l} delayMin={ctx.delayOf(l)} />
-      {l.unloadedAt ? <small className="s7-sub">{ddmm(l.unloadedAt.slice(0, 10))}</small> : null}
+      {l.unloadedAt ? <small className="s7-sub">{dmy(l.unloadedAt, TZ_UNLOAD_SE)}</small> : null}
     </span>
   );
 }
@@ -97,7 +96,7 @@ function Eta({ l, ctx }: { l: Load; ctx: SchedRowCtx }) {
   if (k === 'done') return <span>{s7(ctx.locale, 's7_eta_done')}</span>;
   if (k === 'site') return <span>{s7(ctx.locale, 's7_eta_site')}</span>;
   if (k === 'none') return dash;
-  return <span className="s7-num">{formatTableInZone(l.etaBoden, TZ_UNLOAD_SE, ctx.refYear)}</span>;
+  return <span className="s7-num">{formatTableInZone(l.etaBoden, TZ_UNLOAD_SE)}</span>;
 }
 
 function Docs({ l, ctx, two }: { l: Load; ctx: SchedRowCtx; two?: boolean }) {
@@ -106,7 +105,7 @@ function Docs({ l, ctx, two }: { l: Load; ctx: SchedRowCtx; two?: boolean }) {
   if (c.tone === 'none') return dash;
   if (c.tone === 'ok') return <span className="s7-ok" data-docs="ok">{s7(L, 's7_d_ok')}</span>;
   if (c.tone === 'due') {
-    return <span className="s7-muted" data-docs="due">{s7p(L, 's7_d_due', { list: c.keys.map((k) => s7(L, k)).join(', '), date: ddmm(c.due.slice(0, 10)) })}</span>;
+    return <span className="s7-muted" data-docs="due">{s7p(L, 's7_d_due', { list: c.keys.map((k) => s7(L, k)).join(', '), date: dmy(c.due) })}</span>;
   }
   const text = c.keys.length === 1 ? s7p(L, 's7_d_bad_one', { doc: s7(L, c.keys[0]) }) : s7p(L, 's7_d_bad', { list: c.keys.map((k) => s7(L, k)).join(', ') });
   return (
@@ -152,7 +151,7 @@ function fileCell(id: FileColDef['id'], l: Load, ctx: SchedRowCtx): ReactNode {
     case 'elemWeight': return l.elementWeightT != null ? dim(l.elementWeightT, L) : dash;
     case 'qty': return l.qty ? String(l.qty) : dash;
     case 'weight': return l.dims.weightT ? dim(l.dims.weightT, L) : dash;
-    case 'loadDate': return ddmm(l.plannedLoadDate);
+    case 'loadDate': return dmy(l.plannedLoadDate);
     case 'loadDay': return dayPl(l.plannedLoadDate);
     case 'loadTime': return loadHm(l);
     case 'driver': return <Pair a={r.driverName} b={r.driverDeliveryName} swap={!!r.trailerSwap} locale={L} />;
@@ -160,7 +159,7 @@ function fileCell(id: FileColDef['id'], l: Load, ctx: SchedRowCtx): ReactNode {
     case 'tractor': return <Pair a={r.tractorPlate} b={r.tractorDeliveryPlate} swap={!!r.trailerSwap} mono locale={L} />;
     case 'trailer': return r.trailerPlate ? <span className="mono" data-content>{r.trailerPlate}</span> : dash;
     case 'ordScx': return l.carrierOrderNo ? <span className="mono s7-ord" data-content>{l.carrierOrderNo}</span> : dash;
-    case 'delivDate': return ddmm(l.plannedDeliverDate);
+    case 'delivDate': return dmy(l.plannedDeliverDate);
     case 'delivDay': return dayPl(l.plannedDeliverDate);
     case 'delivTime': return delivHm(l);
     case 'ordHhl': return l.hhlOrderNo ? <span className="mono s7-ord" data-content>{l.hhlOrderNo}</span> : dash;
@@ -252,7 +251,7 @@ function shortCell(id: string, l: Load, ctx: SchedRowCtx): ReactNode {
           <small className="s7-sub">{l.dims.cargoClass === 'STANDARD' ? null : <><span className="s7-nw">{dims(l, L)} m</span> · </>}<span className="s7-nw">{dim(l.dims.weightT, L)} t</span></small>
         </span>
       );
-    case 'dates': return <span className="s7-num">{ddmm(l.plannedLoadDate)} → {ddmm(l.plannedDeliverDate)}</span>;
+    case 'dates': return <span className="s7-num">{dmy(l.plannedLoadDate)} → {dmy(l.plannedDeliverDate)}</span>;
     case 'status': return <Status l={l} ctx={ctx} />;
     case 'crew': {
       if (!(r.driverName || r.driverDeliveryName || r.tractorPlate)) {
@@ -275,7 +274,7 @@ function shortCell(id: string, l: Load, ctx: SchedRowCtx): ReactNode {
     case 'phone': return <Phones l={l} locale={L} />;
     case 'tractor': return <Pair a={r.tractorPlate} b={r.tractorDeliveryPlate} swap={swap} mono locale={L} />;
     case 'trailer': return r.trailerPlate ? <span className="mono" data-content>{r.trailerPlate}</span> : dash;
-    case 'sailing': return l.ferry?.vessel ? <span data-content>{l.ferry.vessel}{l.ferry.departureAt ? ` · ${formatTableInZone(l.ferry.departureAt, TZ_LOAD_PL, ctx.refYear)}` : ''}</span> : dash;
+    case 'sailing': return l.ferry?.vessel ? <span data-content>{l.ferry.vessel}{l.ferry.departureAt ? ` · ${formatTableInZone(l.ferry.departureAt, TZ_LOAD_PL)}` : ''}</span> : dash;
     case 'cost': return <span className="s7-num">{formatAppMoney(l.pricing.costTotal, L, ctx.currency)}</span>;
     default: return null;
   }
@@ -331,7 +330,7 @@ export function SchedCards({ list, ctx }: { list: Load[]; ctx: SchedRowCtx }) {
               {ctx.role === 'HHL' && !l.hhlOrderNo ? <span className="mtag s7-tag-bad">{s7(L, 's7_no_hhl').toLocaleUpperCase('pl')}</span> : null}
             </div>
             <div className="meta" data-content>
-              {l.itemType}{l.qty ? ` · ${s7p(L, 's7_pcs', { n: l.qty })}` : ''} · {dim(l.dims.weightT, L)} t · {dayPl(l.plannedLoadDate)} {ddmm(l.plannedLoadDate)} → {dayPl(l.plannedDeliverDate)} {ddmm(l.plannedDeliverDate)}
+              {l.itemType}{l.qty ? ` · ${s7p(L, 's7_pcs', { n: l.qty })}` : ''} · {dim(l.dims.weightT, L)} t · {dayPl(l.plannedLoadDate)} {dmy(l.plannedLoadDate)} → {dayPl(l.plannedDeliverDate)} {dmy(l.plannedDeliverDate)}
             </div>
             {/* wyglad/E6-tel (16.10, 13:58): na telefonie kierowca, który teraz wykonuje transport, i „Zadzwoń” do niego */}
             <div className="s7-card-drv">

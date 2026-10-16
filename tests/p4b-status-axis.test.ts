@@ -48,8 +48,8 @@ describe('E25 — oś statusów z dziennika zdarzeń', () => {
     expect(route.rows[1].hit?.phaseInfer).toBe(true);
     expect(after.rows.map((r) => r.kind)).toEqual(['pending', 'pending']);
     expect(a.current).toBe('APPROACHING_SITE');
-    expect(dayTime(a.currentSince)).toBe('07.10, 08:35');
-    expect(dayTime(a.firstFixAt)).toBe('05.10, 13:21');
+    expect(dayTime(a.currentSince)).toBe('07.10.2026, 08:35');
+    expect(dayTime(a.firstFixAt)).toBe('05.10.2026, 13:21');
   });
 
   it('ręczne „Dostarczone” z okna (payload.manual) — bieżący, ręcznie, data realizacji', () => {
@@ -59,7 +59,7 @@ describe('E25 — oś statusów z dziennika zdarzeń', () => {
     expect(row.kind).toBe('current');
     expect(row.hit?.source).toBe('manual');
     expect(row.hit?.actor).toBe('Jan Testowy // H&H Logistics');
-    expect(dayTime(a.deliveredAt)).toBe('07.10, 12:19');
+    expect(dayTime(a.deliveredAt)).toBe('07.10.2026, 12:19');
   });
 
   it('kody bazy na osi (AT_PORT_NYNASHAMN → Port SE, UNLOADED → Dostarczone); Anulowany poza osią', () => {
@@ -100,7 +100,7 @@ describe('E25 — podpowiedź z GPS w oknie „Zmień status”', () => {
   it('data realizacji usługi z `actual_delivery_at` (rozliczenie), nie z późniejszej poprawki statusu', () => {
     const again = ev('STATUS_DELIVERED', '2026-10-08T09:00:00Z', { manual: true }, 'Jan Testowy // H&H Logistics');
     const a = buildStatusAxis({ status: 'DELIVERED', stage: 'DELIVERED', unloadedAt: '2026-10-07T10:19:00Z' } as never, [...events, again]);
-    expect(dayTime(a.deliveredAt)).toBe('07.10, 12:19');
+    expect(dayTime(a.deliveredAt)).toBe('07.10.2026, 12:19');
   });
 });
 

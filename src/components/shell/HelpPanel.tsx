@@ -18,11 +18,12 @@ import { helpVersion, HELP_PHONE_STEPS, type HelpStep } from '../../lib/helpCont
 import { goHelpTarget } from '../../lib/helpNav';
 import { helpContacts, whatsNew } from '../../lib/helpSource';
 import { DemoMark } from '../ui/DemoMark';
+import { formatCalendarDay } from '../../lib/time';
 
 export type HelpTab = 'how' | 'news' | 'contact' | 'keys';
 
 const DEMO = import.meta.env.VITE_AUTH_MODE !== 'supabase';
-const dmy = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+const dmy = (iso: string) => formatCalendarDay(iso.slice(0, 10));
 /* liczba i jednostka w jednej linii („72 h”, „1 %”, „7 dni”) — tekst bez zmian */
 const keepUnits = (x: string) => x.replace(/(\d) (?=(?:h|%|dni|min|kolumn)(?![\p{L}\p{N}]))/gu, '$1\u00a0');
 

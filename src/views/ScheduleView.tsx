@@ -11,9 +11,8 @@ import { t, tp } from '../i18n/messages';
 import {
   delayMinutesVsPlan,
   formatTableInZone,
-  refYearInOps,
 } from '../lib/time';
-import { getNow, getNowIso } from '../lib/frozenNow';
+import { getNowIso } from '../lib/frozenNow';
 // D15: ExcelJS (~1 MB) tylko przy imporcie/eksporcie — dynamiczny import.
 import type { ImportDiff } from '../lib/scheduleDryRun';
 import { COLUMN_MAP_DEFAULT } from '../lib/importColumnMap';
@@ -72,7 +71,6 @@ export function ScheduleView() {
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
   const currency = useTowerStore((s) => s.displayCurrency);
-  const refYear = refYearInOps(getNow());
   const search = useTowerStore((s) => s.search);
   const setSearch = useTowerStore((s) => s.setSearch);
   const selectLoad = useTowerStore((s) => s.selectLoad);
@@ -196,7 +194,7 @@ export function ScheduleView() {
     : '';
   const verLine = (SERVER_IMPORT
     ? ver
-      ? tp(locale, 'i1_ver_line', { v: ver.by.replace(/^v/, ''), at: formatTableInZone(ver.at, 'Europe/Warsaw', refYear), file: ver.filename })
+      ? tp(locale, 'i1_ver_line', { v: ver.by.replace(/^v/, ''), at: formatTableInZone(ver.at, 'Europe/Warsaw'), file: ver.filename })
       : t(locale, 'i1_ver_none')
     : t(locale, 'a6_sch_ver_line')) + skippedNote;
 
@@ -312,7 +310,7 @@ export function ScheduleView() {
   const pickedSailing = sailPick ? sailings.find((x) => x.id === sailPick) ?? null : null;
   const sailChip = pickedSailing ? (
     <button type="button" className="chipbtn s7-chip" aria-pressed="true" data-sail-filter={pickedSailing.id} title={sv(locale, 'sv_filter_clear')} onClick={() => setSailPick(null)}>
-      {svp(locale, 'sv_filter', { vessel: pickedSailing.vessel, t: sailTime(effDeparture(pickedSailing), nowIso) })} ✕
+      {svp(locale, 'sv_filter', { vessel: pickedSailing.vessel, t: sailTime(effDeparture(pickedSailing)) })} ✕
     </button>
   ) : null;
 
@@ -328,7 +326,7 @@ export function ScheduleView() {
   }, [docCache, list, documents, reqs, nowMs]);
   const marginMin = marginThresholdOf();
   const ctx: SchedRowCtx = {
-    locale, role, currency, refYear, marginMin, reqs,
+    locale, role, currency, marginMin, reqs,
     docRows: (id) => docByLoad.get(id) ?? [],
     delayOf: delayMinutes,
     hoverLoadId, selectedLoadId, setHover: setHoverLoad, onOpen: selectLoad,

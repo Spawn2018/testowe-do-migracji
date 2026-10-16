@@ -27,7 +27,7 @@ describe('Stan systemu — dane', () => {
     const sec = securityRows(NOW)!;
     expect(sec.map((r) => r.id)).toEqual(['advisor', 'anon', 'test', 'mfa', 'passwords']);
     /* E19 pkt 7: ostatni test bezpieczeństwa z datą i commitem */
-    expect(sec.find((r) => r.id === 'test')!.details).toMatch(/^Niedzielna brama 20\.09, 22:00, commit [0-9a-f]{7}:/);
+    expect(sec.find((r) => r.id === 'test')!.details).toMatch(/^Niedzielna brama 20\.09\.2026, 22:00, commit [0-9a-f]{7}:/);
     expect(perfResults(NOW)!.rows.some((r) => r.limit.includes('LCP ≤ 2,5 s'))).toBe(true);
   });
 

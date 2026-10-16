@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useTowerStore, DRIVER_TOKENS } from '../store/useTowerStore';
 import type { Locale } from '../types';
 import { t } from '../i18n/messages';
+import { fmtTime } from '../lib/time';
 import type { Document } from '../types';
 import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
@@ -176,7 +177,7 @@ function DriverPwaBody() {
               <span style={{ color: 'var(--wt-crit)' }}>{t(locale, 'drv_tracking_err')}</span>
             ) : lastFix ? (
               <span className="mono" data-last-fix>
-                {t(locale, 'drv_tracking_last')} {new Date(lastFix.at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })} · {lastFix.lat.toFixed(4)}, {lastFix.lng.toFixed(4)}
+                {t(locale, 'drv_tracking_last')} {fmtTime(lastFix.at)} · {lastFix.lat.toFixed(4)}, {lastFix.lng.toFixed(4)}
                 {lastFix.accuracy != null ? ` · ${t(locale, 'drv_accuracy')} ${lastFix.accuracy} m` : ''}
               </span>
             ) : (

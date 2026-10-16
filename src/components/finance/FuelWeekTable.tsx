@@ -7,6 +7,7 @@
 import { Fragment, useState } from 'react';
 import type { Locale } from '../../types';
 import { formatPlNumber } from '../../lib/format';
+import { formatCalendarDay } from '../../lib/time';
 import { weekLabel, type FuelSrc, type FuelWeekRow } from '../../lib/p5Finance';
 import { up } from '../options/up';
 import { ft, ftp } from '../../i18n/p5';
@@ -14,7 +15,7 @@ import { DemoMark } from '../ui/DemoMark';
 import { PROD_BUILD } from '../../lib/prodFacade';
 
 const x = (n: number) => `×${formatPlNumber(n, 2)}`;
-const dm = (day: string) => `${day.slice(8, 10)}.${day.slice(5, 7)}`;
+const dm = (day: string) => formatCalendarDay(day.slice(0, 10));
 
 function src(locale: Locale, key: 'p5_fuel_okq8' | 'p5_fuel_orlen', s: FuelSrc | null): string {
   if (!s) return '—';

@@ -6,6 +6,7 @@
  */
 import type { FerryBooking, Load, LoadStatus, Locale, OrgKind, Risk, Sailing, SailingStatus } from '../types';
 import { dictEntry } from '../i18n/messages';
+import { fmtDateTime } from './time';
 
 export const effDeparture = (s: Sailing): string => s.delayedDepartureAt ?? s.departureAt;
 export const effArrival = (s: Sailing): string => s.delayedArrivalAt ?? s.arrivalAt;
@@ -158,13 +159,9 @@ const SAILING_STATUS_LABEL: Record<SailingStatus, Record<Locale, string>> = {
 export const sailingStatusLabel = (s: SailingStatus, locale: Locale): string => SAILING_STATUS_LABEL[s][locale];
 export const sailingStatusPill = (s: SailingStatus): string => (s === 'ODWOLANY' ? 'p-red' : s === 'OPOZNIONY' ? 'p-amber' : 'p-sea');
 
-/** 'DD.MM.YYYY HH:MM' w czasie PL (B-REJSY: rok w datach). */
+/** „DD.MM.RRRR, GG:MM” w czasie PL (B-REJSY: rok w datach; właściciel 16.10.2026). */
 export function fmtLocal(iso: string, tz = 'Europe/Warsaw'): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  const p = new Intl.DateTimeFormat('pl-PL', { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d);
-  const g = (t: string) => p.find((x) => x.type === t)?.value ?? '';
-  return `${g('day')}.${g('month')}.${g('year')} ${g('hour')}:${g('minute')}`;
+  return fmtDateTime(iso, tz);
 }
 
 /** Oś zdarzeń: zmiana automatyczna z powodem (STATUS_AUTO z bazy: from/to/powod). */

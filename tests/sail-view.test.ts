@@ -61,15 +61,15 @@ describe('E30 pkt 7: Rejsy', () => {
     }
     expect(sv('pl', sourceKey('STENA'))).toBe('Stena Line');
   });
-  it('zasięg rozkładów: Stena, potem Polferries; bez odwołanych; rok tylko, gdy inny', () => {
+  it('zasięg rozkładów: Stena, potem Polferries; bez odwołanych; rok zawsze (właściciel 16.10.2026)', () => {
     const r = reachOf(all);
     expect(r.map((x) => x.line)).toEqual(['STENA', 'POLFERRIES']);
-    expect(sailDay(r[0].untilIso, NOW)).toBe('18.10');
-    expect(sailDay(r[1].untilIso, NOW)).toBe('09.01.2027');
+    expect(sailDay(r[0].untilIso)).toBe('18.10.2026');
+    expect(sailDay(r[1].untilIso)).toBe('09.01.2027');
   });
-  it('godziny po polsku: „08.10, 08:00”, a w innym roku z rokiem', () => {
-    expect(sailTime('2026-10-08T06:00:00Z', NOW)).toBe('08.10, 08:00');
-    expect(sailTime('2027-01-09T17:00:00Z', NOW)).toBe('09.01.2027, 18:00');
+  it('godziny po polsku: „08.10.2026, 08:00” — rok zawsze, także w bieżącym roku', () => {
+    expect(sailTime('2026-10-08T06:00:00Z')).toBe('08.10.2026, 08:00');
+    expect(sailTime('2027-01-09T17:00:00Z')).toBe('09.01.2027, 18:00');
   });
   it('nagłówek obejmuje obie przeprawy; ekran bez starego „Rozkład Gdańsk ⇄ Nynäshamn” i bez „pokaż minione”', () => {
     expect(sv('pl', 'sv_sub')).toBe('Gdańsk → Nynäshamn i Gdynia → Karlskrona');

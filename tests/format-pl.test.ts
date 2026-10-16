@@ -1,14 +1,14 @@
 /**
- * E21 (P2) — daty „01.10, 12:00”, liczby, „4,8%”, odmiana „1 pojazd”.
+ * E21 (P2) — daty „01.10.2026, 12:00” (rok zawsze — właściciel 16.10.2026), liczby, „4,8%”, odmiana „1 pojazd”.
  */
 import { describe, expect, it } from 'vitest';
 import { formatListDateTime, formatPercentPoints, formatPlMoney, formatPlNumber, formatDistance, vehiclesInMotion } from '../src/lib/format';
 
 describe('E21 formaty', () => {
-  it('data listy bez sekund, bieżący rok bez roku', () => {
-    expect(formatListDateTime('2026-10-01T10:00:00Z', 'Europe/Warsaw', 2026)).toBe('01.10, 12:00');
-    expect(formatListDateTime('2025-10-01T10:00:00Z', 'Europe/Warsaw', 2026)).toBe('01.10.2025, 12:00');
-    expect(formatListDateTime('2026-10-01', 'Europe/Warsaw', 2026)).toBe('01.10');
+  it('data listy bez sekund, zawsze z rokiem (właściciel 16.10.2026)', () => {
+    expect(formatListDateTime('2026-10-01T10:00:00Z', 'Europe/Warsaw')).toBe('01.10.2026, 12:00');
+    expect(formatListDateTime('2025-10-01T10:00:00Z', 'Europe/Warsaw')).toBe('01.10.2025, 12:00');
+    expect(formatListDateTime('2026-10-01', 'Europe/Warsaw')).toBe('01.10.2026');
   });
 
   it('liczba, procent, kwota, odległość, odmiana', () => {
