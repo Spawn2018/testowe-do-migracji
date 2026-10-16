@@ -1,6 +1,7 @@
 /**
  * wyglad/audyt-E — poprawki Opcji z przeglądu zgodności 16.10.2026 (`/tmp/claude-0/gap/E/GAPS.md`):
- * E-01/N-01 przełączniki, E-02/E-14 „Kto co dostaje”, E-04 „Jak to działa”, E-05/N-02 (W47) „Co dostaję”.
+ * E-01/N-01 przełączniki, E-02/E-14 „Kto co dostaje”, E-04 „Jak to działa”, E-05/N-02 (W47) „Co dostaję”,
+ * E-06/C-14 cennik według symboli.
  */
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -12,6 +13,9 @@ import { ForMeScreen } from '../src/components/options/ForMeScreen';
 import { myNotifyOf } from '../src/lib/forMeSource';
 import { demoMyNotify, demoSaveMyNotify } from '../src/lib/forMeDemo';
 import { t } from '../src/i18n/messages';
+import { RateCard } from '../src/components/options/MoneyScreens';
+import { demoRateCard } from '../src/lib/p5bDemo';
+import { rateCardOf, rateCardSaverOf } from '../src/lib/p5bSource';
 
 const html = (el: ReturnType<typeof createElement>) => renderToStaticMarkup(el);
 const read = (p: string) => readFileSync(p, 'utf8');
@@ -118,5 +122,49 @@ describe('E-05, N-02 (W47): „Dla mnie › Co dostaję” — przełączniki os
     expect(opt).not.toMatch(/browserPrefs|notificationPrefs|b6_notif_filter_note/);
     expect(opt).toContain('myNotifyOf(kind)');
     expect(read('src/views/SettingsView.tsx')).toContain('my: myNotifyOf(kind)');
+  });
+});
+
+describe('E-06, C-14: Cennik i opłaty — symbole, wersje, liczby po polsku, D × S × W', () => {
+  const rc = (readOnly: boolean) => html(createElement(RateCard, {
+    locale: 'pl', view: demoRateCard(), today: '2026-10-16', nowIso: '2026-10-16T12:00:00Z', readOnly, onSave: async () => true,
+  }));
+  it('10 symboli w 12 pozycjach (KR — konwój 1, 2 i 3 auta), wersje KSH v2 i SCX v1 od 28.09.2026', () => {
+    const v = demoRateCard();
+    expect(v.rows).toHaveLength(12);
+    expect(new Set(v.rows.map((r) => r.symbol)).size).toBe(10);
+    expect(v.rows.filter((r) => r.symbol === 'KR').map((r) => r.convoy)).toEqual([1, 2, 3]);
+    const h = rc(false);
+    expect(h).toContain('Cennik KSH v2 od 28.09.2026 · cennik SCX v1 od 28.09.2026');
+    expect(h).toContain('KOSZT SCX · v1');
+    expect(h).toContain('PRZYCHÓD KSH · v2');
+  });
+  it('kwoty jak w bazie 08.10 (E33) i po polsku; zestaw D × S × W z przecinkiem; bez L/W/H i kropek', () => {
+    const h = rc(false);
+    const sg = h.slice(h.indexOf('data-rate="SG"'), h.indexOf('data-rate="SS"'));
+    expect(sg).toContain('21,69 × 2,45 × 3,75 m');
+    expect(sg).toContain('6 900,00 EUR');
+    expect(sg).toContain('7 245,00 EUR');
+    const kr = h.slice(h.indexOf('data-rate="KR-1"'), h.indexOf('data-rate="KR-2"'));
+    expect(kr).toContain('12 745,00 EUR');
+    expect(kr).toContain('13 382,00 EUR');
+    expect(kr).toContain('konwój 1 auto');
+    expect(h).toContain('ZESTAW D × S × W');
+    expect(h).not.toMatch(/\bL \d|\bH \d|\d\.\d{1,2} ?(m|EUR)\b/);
+    expect(h).toContain('data-deur-exempt="rate-card"');
+  });
+  it('Administrator HHL: „Nowa wersja cennika”; Operacje (tylko odczyt) — bez przycisku', () => {
+    expect(rc(false)).toContain('data-rate-new');
+    expect(rc(true)).not.toContain('data-rate-new');
+  });
+  it('bez noty z kursem demo i „Zapis następuje od razu” (E16, E12)', () => {
+    const opt = read('src/views/OptionsView.tsx');
+    expect(opt).not.toMatch(/data-fx-note|DEMO_FX_META|RateEditor|opt_rates_note/);
+    expect(opt).toContain('<RateCard locale={locale} view={rateCard}');
+    expect(rc(false)).not.toMatch(/4,3900|NBP|Zapis następuje od razu/);
+  });
+  it('demo: dane i zapis z jednego miejsca (`p5bSource.ts`)', () => {
+    expect(rateCardOf()?.ksh.v).toBe(2);
+    expect(rateCardSaverOf()).toBeTypeOf('function');
   });
 });

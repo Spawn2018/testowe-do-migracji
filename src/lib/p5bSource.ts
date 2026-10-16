@@ -6,8 +6,8 @@
  * `import.meta.env.VITE_AUTH_MODE` wpisany wprost (strażnik I-0, `tests/p5b-money.test.ts`). Bez zapytań i zapisów.
  */
 import type { PackKey } from './p5Pack';
-import type { CancelRulesView, DwellRulesView, FuelActions, FuelScreenView, FuelSource, PaymentTermsView } from './p5bFuel';
-import { demoCancelRules, demoDwellRules, demoFuelScreen, demoPaymentTerms } from './p5bDemo';
+import type { CancelRulesView, DwellRulesView, FuelActions, FuelScreenView, FuelSource, PaymentTermsView, RateCardSave, RateCardView } from './p5bFuel';
+import { demoCancelRules, demoDwellRules, demoFuelScreen, demoPaymentTerms, demoRateCard } from './p5bDemo';
 import { demoMarginThreshold } from './p5Demo';
 
 const ok = async (): Promise<boolean> => true;
@@ -47,6 +47,15 @@ export function cancelSaverOf(): ((days: number, pct: number) => Promise<boolean
 export interface MarginSetting { pct: number | null; save: ((pct: number | null) => Promise<boolean>) | null }
 export function marginSettingOf(): MarginSetting | null {
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? { pct: demoMarginThreshold(), save: ok } : null;
+}
+
+/** wyglad/audyt-E (E-06, C-14; E33, E11) — cennik według symboli w wersjach; null = zostaje dzisiejszy formularz
+ *  produkcji (`RateCardForm`). Zapis: nowa wersja z datą „od” i wpisem w Historii zmian (wykonawca: `rate_card_save`). */
+export function rateCardOf(): RateCardView | null {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoRateCard() : null;
+}
+export function rateCardSaverOf(): RateCardSave | null {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? ok : null;
 }
 
 /** E40 — terminy płatności od daty wystawienia faktury. */

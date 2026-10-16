@@ -138,9 +138,10 @@ describe('E33, E16 — Cennik i opłaty: procenty za anulowanie i próg marży',
     const h = html(createElement(RatesExtras, { locale: 'pl', cancel: demoCancelRules(), onCancelSave: ok, margin: null, onMarginSave: ok, readOnly: false }));
     expect((h.match(/data-pm-row="\d"/g) ?? []).length).toBe(6);
     expect(h).toContain('25 %');
-    expect(h).toContain('SG: 1 725,00 / 1 825,00 EUR');
-    expect(h).toContain('SG: 6 900,00 / 7 300,00 EUR');
-    expect(h).toContain('Przykład dla frachtu SG z cennika: koszt 6 900 EUR, przychód 7 300 EUR.');
+    /* wyglad/audyt-E (E-06): przykład = fracht SG z cennika poniżej (SCX v1 6 900, KSH v2 7 245 EUR — baza 08.10, E33) */
+    expect(h).toContain('SG: 1 725,00 / 1 811,25 EUR');
+    expect(h).toContain('SG: 6 900,00 / 7 245,00 EUR');
+    expect(h).toContain('Przykład dla frachtu SG z cennika: koszt 6 900 EUR, przychód 7 245 EUR.');
     expect(h).not.toMatch(/\(E\d{1,2}\)|\(12:35\)/);
     expect(h).toContain('Próg marży');
     expect(h).toContain('nie ustawiony');
@@ -149,7 +150,7 @@ describe('E33, E16 — Cennik i opłaty: procenty za anulowanie i próg marży',
   it('bez przykładu z cennika — procenty bez kwot SG (nic na stałe w komponencie)', () => {
     const h = html(createElement(RatesExtras, { locale: 'pl', cancel: { ...demoCancelRules(), example: null }, onCancelSave: ok, margin: 4, onMarginSave: ok, readOnly: false }));
     expect(h).toContain('15 %');
-    expect(h).not.toMatch(/SG:|6 900|7 300/);
+    expect(h).not.toMatch(/SG:|6 900|7 245/);
     expect(h).toContain('Dni liczymy kalendarzowo od daty anulowania do planowanego załadunku.');
   });
   it('Operacje HHL (tylko odczyt): procenty i próg bez „Zmień”', () => {
@@ -224,7 +225,7 @@ describe('I-0 i podłączenie w Opcjach', () => {
     vi.resetModules();
     const m = await import('../src/lib/p5bSource');
     const fns = Object.entries(m).filter(([, v]) => typeof v === 'function') as [string, (...a: unknown[]) => unknown][];
-    expect(fns.length).toBe(11);
+    expect(fns.length).toBe(13); /* wyglad/audyt-E (E-06): + rateCardOf, rateCardSaverOf */
     for (const [name, fn] of fns) expect([name, fn('2026-10-14')]).toEqual([name, null]);
     vi.unstubAllEnvs();
     vi.resetModules();
@@ -236,7 +237,7 @@ describe('I-0 i podłączenie w Opcjach', () => {
   it('każda funkcja danych zwraca przykład tylko w trybie demo (warunek wpisany wprost)', () => {
     const fns = src.match(/^export function \w+/gm) ?? [];
     const guards = src.match(/import\.meta\.env\.VITE_AUTH_MODE !== 'supabase'/g) ?? [];
-    expect(fns.length).toBe(11);
+    expect(fns.length).toBe(13); /* wyglad/audyt-E (E-06): + rateCardOf, rateCardSaverOf */
     expect(guards.length).toBe(fns.length);
     expect(src).toMatch(/VITE_AUTH_MODE !== 'supabase' \? demoFuelScreen\(today\) : null/);
     expect(src).not.toMatch(/supabase\.|fetch\(|\.rpc\(/);

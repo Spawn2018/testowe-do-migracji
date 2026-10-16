@@ -213,13 +213,14 @@ test.describe('D-EUR-T display currency EUR vs PLN', () => {
       }
     }
 
-    // Options FX note should mention demo mid (Polish decimal comma)
+    /* wyglad/audyt-E (E-06; E16 „stały kurs znika z aplikacji”, E33): Cennik i opłaty bez noty z kursem demo —
+       cennik według symboli w EUR (źródło), „KSH v2 od 28.09.2026 · SCX v1 od 28.09.2026” */
     await navTo(page, 'options')
-    /* wyglad/P3-c (E11, G-11): nota FX na ekranie Pieniądze › Cennik i opłaty */
     await page.click('[data-opt-nav="rates"]')
-    const note = await page.locator('[data-opt-screen="rates"] [data-fx-note="demo"]').first().textContent()
-    expect(note || '').toMatch(/4[,.]3900/)
-    expect(note || '').toMatch(/186\/A\/NBP\/2026/)
+    await expect(page.locator('[data-opt-screen="rates"] [data-fx-note]')).toHaveCount(0)
+    await expect(page.locator('[data-opt-screen="rates"] [data-rate-versions]')).toHaveText('Cennik KSH v2 od 28.09.2026 · cennik SCX v1 od 28.09.2026')
+    await expect(page.locator('[data-opt-screen="rates"] [data-rate="SG"]')).toContainText('6 900,00 EUR')
+    expect(await page.locator('[data-opt-screen="rates"]').textContent()).not.toMatch(/4[,.]3900|186\/A\/NBP/)
 
     const byMode = {
       EUR: all.filter((h) => h.mode === 'EUR').length,

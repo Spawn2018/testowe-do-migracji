@@ -55,6 +55,20 @@
 .pm-live:empty{margin:0;padding:0}
 .pm-ask{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;margin:0 0 8px;padding:10px 14px;background:var(--surface-2);border:1px solid var(--rule)}
 
+/* wyglad/audyt-E (E-06, C-14): cennik według symboli w wersjach */
+.pm-rc-ver{font-family:var(--font-cond);font-size:19px;font-weight:700;color:var(--ink)}
+.pm-rc-act{margin:0 0 12px}
+.pm-rc-new{margin:0 0 14px;padding:14px 16px;background:var(--surface-2);border:1px solid var(--rule)}
+.pm-rc-new .ox-eyebrow{margin:0 0 10px}
+.pm-rc-fields{display:grid;grid-template-columns:auto minmax(0,180px) minmax(0,1fr);gap:0 14px;align-items:start}
+.pm-rc-new .ox-muted{margin:0}
+.pm-rc-err{margin:8px 0 0;font-size:14px;font-weight:600}
+.pm-rc-t .num{text-align:right}
+.pm-rc-t td.num{font-weight:500;color:var(--ink);white-space:nowrap}
+.pm-rc-t thead th.num{text-align:right}
+.pm-rc-in{width:120px;min-height:36px;text-align:right;font-size:15px}
+.pm-rc-in[aria-invalid="true"]{border-color:var(--red)}
+
 .pm-book{display:flex;flex-direction:column;gap:14px;max-width:760px}
 .pm-addr{min-width:0}
 .pm-addr-h{margin:0 0 8px;font-family:var(--font-cond);font-size:17px;font-weight:700;color:var(--ink)}
@@ -99,4 +113,7 @@
   .pm-link{min-height:44px;padding:0 4px}
   .pm-add .input{min-height:44px;font-size:16px}
   .pm-add .ox-btn{min-height:44px}
+  .pm-rc-fields{grid-template-columns:minmax(0,1fr)}
+  .pm-rc-t .num,.pm-rc-t td.num{text-align:left}
+  .pm-rc-in{width:100%;min-height:44px;font-size:16px;text-align:left}
 }

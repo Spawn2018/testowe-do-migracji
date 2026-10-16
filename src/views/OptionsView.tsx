@@ -1,11 +1,10 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTowerStore } from '../store/useTowerStore';
-import type { BafParams, FactoringOffer, Locale, RateRule } from '../types';
+import type { BafParams, FactoringOffer, Locale } from '../types';
 import { geofenceDisplayName, geofenceTypeLabel } from '../lib/enumLabels';
 import { hasKey, t } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
-import { DEMO_FX_META } from '../lib/money/demoFx';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { getAuthProfile } from '../auth/profile';
 import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
@@ -28,7 +27,7 @@ import { localDateOf } from '../lib/money/engine';
 import { accountingPackConfigOf } from '../lib/p5Source';
 import {
   accountingAddressesSaverOf, accountingTestMailOf, cancelRulesOf, cancelSaverOf, dwellRulesOf, dwellSaverOf,
-  fuelActionsOf, fuelScreenOf, marginSettingOf, paymentTermsOf, paymentTermsSaverOf,
+  fuelActionsOf, fuelScreenOf, marginSettingOf, paymentTermsOf, paymentTermsSaverOf, rateCardOf, rateCardSaverOf,
 } from '../lib/p5bSource';
 import { StatusScreen } from '../components/options/StatusScreen';
 import { sourceHealth } from '../lib/sysSource';
@@ -64,6 +63,8 @@ const FuelScreen = lazy(lazyRetry(() => import('../components/options/MoneyScree
 const DwellScreen = lazy(lazyRetry(() => import('../components/options/MoneyScreens').then((m) => ({ default: m.DwellScreen }))));
 const RatesExtras = lazy(lazyRetry(() => import('../components/options/MoneyScreens').then((m) => ({ default: m.RatesExtras }))));
 const TermsScreen = lazy(lazyRetry(() => import('../components/options/MoneyScreens').then((m) => ({ default: m.TermsScreen }))));
+/* wyglad/audyt-E (E-06, C-14): cennik według symboli w wersjach zamiast linii L/W/H */
+const RateCard = lazy(lazyRetry(() => import('../components/options/MoneyScreens').then((m) => ({ default: m.RateCard }))));
 const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
@@ -80,38 +81,6 @@ const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number'
   { key: 'sourceUrl', labelKey: 'baf_url', type: 'text' },
 ];
 
-function formatRate(rule: RateRule) {
-  return `L ${rule.lengthFrom}–${rule.lengthTo} m · W ${rule.widthFrom}–${rule.widthTo} m · H ${rule.heightFrom}–${rule.heightTo} m · ${rule.weightFrom}–${rule.weightTo} t`;
-}
-
-function RateEditor({
-  side,
-  rules,
-  onChange,
-  onSave,
-  currency,
-  locale,
-}: {
-  side: 'COST' | 'REVENUE';
-  rules: RateRule[];
-  onChange: (id: string, value: number) => void;
-  onSave: () => void;
-  currency: 'EUR' | 'PLN';
-  locale: 'pl' | 'en' | 'sv';
-}) {
-  return (
-    <div className="options-page page-sections" data-page="options">
-      <div className="rate-editor-head"><b>{side === 'COST' ? t(locale, 'opt_cost_scx') : t(locale, 'opt_rev_hhl')}</b><span>{currency} · {t(locale, 'opt_base_ex_sefs')}</span></div>
-      {rules.map((rule, index) => (
-        <div className="rate-line" key={rule.id}>
-          <div className="rate-copy"><b>{t(locale, 'opt_line')} {index + 1}</b><span>{formatRate(rule)}</span></div>
-          <label className="rate-value"><input aria-label={`${side === 'COST' ? t(locale, 'opt_cost') : t(locale, 'opt_rev')} ${t(locale, 'opt_line')} ${index + 1}`} className="input rate-input" type="number" min="0" step="0.01" value={rule.baseRate} onChange={(e) => onChange(rule.id, Number(e.target.value) || 0)} onBlur={onSave} /><span>{currency}</span></label>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function SuspenseBlock({ children }: { children: ReactNode }) {
   return <Suspense fallback={null}>{children}</Suspense>;
 }
@@ -127,9 +96,6 @@ export function OptionsView() {
   const updateFactoringOffer = useTowerStore((s) => s.updateFactoringOffer);
   const baf = useTowerStore((s) => s.baf);
   const updateBaf = useTowerStore((s) => s.updateBaf);
-  const rateCost = useTowerStore((s) => s.rateCost);
-  const rateRev = useTowerStore((s) => s.rateRev);
-  const updateRate = useTowerStore((s) => s.updateRate);
   const geofences = useTowerStore((s) => s.geofences);
   const saveGeofence = useTowerStore((s) => s.saveGeofence);
   const smsEntry = useTowerStore((s) => s.smsEntry);
@@ -246,6 +212,7 @@ export function OptionsView() {
   const cancel = cancelRulesOf();
   const margin = marginSettingOf();
   const terms = paymentTermsOf();
+  const rateCard = rateCardOf();
   const addresses = accountingPackConfigOf(bills)?.addresses ?? null;
   const ratesExtras = cancel || margin ? block(
     <RatesExtras
@@ -267,11 +234,11 @@ export function OptionsView() {
     ) : (
       <>
         {ratesExtras}
-        <div className="rate-grid">
-          <RateEditor side="COST" rules={rateCost} currency="EUR" locale={locale} onChange={(id, value) => updateRate('COST', id, value)} onSave={() => saveMark('cennik')} />
-          <RateEditor side="REVENUE" rules={rateRev} currency="EUR" locale={locale} onChange={(id, value) => updateRate('REVENUE', id, value)} onSave={() => saveMark('cennik')} />
-        </div>
-        <div className="note option-note" data-fx-note="demo">{t(locale, 'opt_rates_note')} {` · ${t(locale, 'opt_fx_demo')} ${DEMO_FX_META.tableLabel} · ${DEMO_FX_META.effectiveDate} · ${DEMO_FX_META.mid.toFixed(4).replace('.', ',')}.`}</div>
+        {/* wyglad/audyt-E (E-06, C-14; E33, E11, E16): symbole, wersje KSH i SCX od daty, „Nowa wersja cennika” z pytaniem
+            i wpisem w Historii, liczby po polsku, D × S × W; bez noty z kursem demo i „Zapis od razu” */}
+        {rateCard ? block(
+          <RateCard locale={locale} view={rateCard} today={localDateOf(getNowIso())} nowIso={getNowIso()} readOnly={ro} onSave={rateCardSaverOf()} />,
+        ) : null}
         {RateCardForm ? block(<RateCardForm />) : null}
       </>
     ), { right: change, mark: PROD_BUILD ? undefined : <DemoMark /> }),
