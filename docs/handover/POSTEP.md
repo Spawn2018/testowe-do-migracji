@@ -2644,6 +2644,8 @@ Wzorzec `stan-zablokowany` (dark) odświeżony w `ff508f2`. Visual zielony.
 
 #247 scalony — `26060a5c`.
 
+Wdrożenie R7 z `main` `26060a5c`, 16.10.2026 14:36, `dpl_FvTyehHHmvV395JoSfQh6NnN1CeP`. JS `assets/index-DCNU0GbK.js`. tower.log-mar.pl i watch-tower-makieta.vercel.app → 200. 76 plików JS, 0× `service_role`. Obejmuje #209 `b90619f3`, #231 `c375c5c6` i #247 `26060a5c`.
+
 **VISUAL #261** (`wyglad/E6-tel`, `78c6c7b`): pada tylko `stan-najechanie` (dark). Kolejka stoi. #262 zostaje szkicem.
 
 E30 pkt 7 Rejsy → wygląd (P7-d).
