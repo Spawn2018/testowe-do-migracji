@@ -44,6 +44,8 @@ const PL: Record<string, string> = {
   s7_ph_leg: 'kierowca {leg} · teraz',
   s7_no_phone_full: 'brak telefonu',
   s7_call_btn: 'Zadzwoń',
+  s7_card_tractor: 'Ciągnik',
+  s7_card_trailer: 'Naczepa',
   s7_no_phone_leg: 'Kierowca odcinka {leg} nie ma telefonu w awizacji',
   s7_none: '–',
   s7_missing_part: 'w pliku „...” — awizacja niekompletna',

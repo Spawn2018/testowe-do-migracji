@@ -47,6 +47,10 @@
 .s7-card-drv{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
 .s7-card-drv .meta{min-width:0;overflow-wrap:anywhere}
 .s7-card-call{min-height:44px;min-width:44px;display:inline-flex;align-items:center;gap:6px;flex:none}
+/* właściciel 16.10, 14:09: zielony przycisk „Zadzwoń” w karcie na telefonie, w kolorach aplikacji */
+.btn.s7-card-call{background:var(--go);border-color:var(--go);color:var(--surface);font-weight:600}
+.btn.s7-card-call:hover,.btn.s7-card-call:focus-visible{background:var(--go);color:var(--surface);text-decoration:underline;text-underline-offset:3px}
+.s7-card-veh b{font-weight:600}
 .s7-renum{margin-left:6px;color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}
 .s7-tag-bad{margin-left:6px;color:var(--red);border-color:var(--red);background:var(--red-bg)}
 .s7-st{flex-wrap:wrap}

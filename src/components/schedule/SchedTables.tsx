@@ -340,10 +340,14 @@ export function SchedCards({ list, ctx }: { list: Load[]; ctx: SchedRowCtx }) {
                 {d.swap ? <small className="s7-ph-leg">{` · ${s7p(L, 's7_ph_leg', { leg: d.leg })}`}</small> : null}
               </span>
               {d.dial ? (
-                <a className="btn ghost s7-card-call" href={`tel:${d.dial}`} data-card-call={d.leg}
+                <a className="btn s7-card-call" href={`tel:${d.dial}`} data-card-call={d.leg}
                   aria-label={s7p(L, d.swap ? 's7_call_leg' : 's7_call', { who: d.name || d.display || '', leg: d.leg })}
                   onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>☎ {s7(L, 's7_call_btn')}</a>
               ) : d.name ? <b className="s7-neg">{s7(L, 's7_no_phone_full')}</b> : null}
+            </div>
+            {/* właściciel 16.10, 14:09: pojazd, który teraz wiezie ładunek — ciągnik odcinka (automat jak „Zadzwoń”) i naczepa */}
+            <div className="meta s7-card-veh" data-content data-card-vehicle={d.swap ? d.leg : 'one'}>
+              {s7(L, 's7_card_tractor')} <b className="mono">{d.tractor ?? '–'}</b>{' · '}{s7(L, 's7_card_trailer')} <b className="mono">{(l.resources.trailerPlate ?? '').trim() || '–'}</b>
             </div>
           </div>
         );

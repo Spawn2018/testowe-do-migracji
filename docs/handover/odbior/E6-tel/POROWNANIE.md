@@ -32,3 +32,7 @@ Podstawa:
 - tsc, stylelint, oxlint.
 
 Dane: bez zmian. Odcinek wynika ze statusu i etapu, które już są w odczycie (`loads.status`, etap paska). Pola `driver_delivery_*` i `trailer_swap` są w bazie od migracji 0169.
+
+## Uzupełnienie 16.10, 14:20 (właściciel 14:09)
+- Karta na telefonie: przycisk „☎ Zadzwoń” zielony (`--go`, tekst `--surface`, 44 px) zamiast obrysowanego.
+- Pod kierowcą pojazd, który teraz wiezie ładunek: „Ciągnik <odcinka> · Naczepa <jedna na trasę>” (`data-card-vehicle`), ten sam automat co „Zadzwoń”.
