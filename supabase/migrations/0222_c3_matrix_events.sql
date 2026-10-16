@@ -216,9 +216,14 @@ as $$
     when p_template in ('INVOICE_DISPUTED', 'INVOICE_DISPUTE_REPLY', 'INVOICE_DISPUTE_RESOLVED') then 'inv_dispute'
     when p_template in ('WEEK_CLOSED', 'INVOICE_WEEK') then 'week'
     when p_template like 'FACTOR%' then 'factoring'
-    when p_template in ('RISK_OPEN', 'RISK_SEVERITY', 'ROAD_RISK')
+    when p_template in ('RISK_OPEN', 'RISK_SEVERITY')
+         and coalesce(p_payload->>'kind', '') in ('FERRY', 'WEATHER', 'ROAD_SE', 'ROAD_PL', 'ETA_BREACH')
          and coalesce(p_payload->>'severity', '') = 'CRITICAL' then 'risk_crit'
-    when p_template in ('RISK_OPEN', 'RISK_SEVERITY', 'ROAD_RISK', 'FERRY_CANCELLED', 'FERRY_OVERDUE') then 'risk_route'
+    when p_template in ('RISK_OPEN', 'RISK_SEVERITY')
+         and coalesce(p_payload->>'kind', '') in ('FERRY', 'WEATHER', 'ROAD_SE', 'ROAD_PL', 'ETA_BREACH') then 'risk_route'
+    when p_template in ('ROAD_RISK', 'FERRY_CANCELLED', 'FERRY_OVERDUE')
+         and coalesce(p_payload->>'severity', '') = 'CRITICAL' then 'risk_crit'
+    when p_template in ('ROAD_RISK', 'FERRY_CANCELLED', 'FERRY_OVERDUE') then 'risk_route'
     when p_template in ('FERRY', 'WEATHER', 'ROAD_SE', 'ROAD_PL')
          and nullif(coalesce(p_payload->>'load_id', ''), '') is null then 'risk_general'
     else null
@@ -447,6 +452,7 @@ declare
   v_event text;
   v_push_ok boolean;
   v_legacy_job boolean;
+  v_src_bell_only boolean;
   r record;
 begin
   if (p_event_group in ('LOAD_STATUS','RISK_FERRY_WEATHER','DECISION','MONEY','SYSTEM')) is not true then
@@ -503,6 +509,12 @@ begin
   -- E-mail i telefon „źródło nie działa” tylko dla prawdziwego SOURCE_DOWN.
   v_legacy_job := coalesce(v_payload->>'kind', '') in ('JOB_FAILURE', 'USAGE_LIMIT')
     and p_template in ('RISK_OPEN', 'RISK_SEVERITY');
+  -- Zwykłe RISK_OPEN grupy SYSTEM (cisza, kolejność, zadanie) — tylko dzwonek HHL, jak przed C3.
+  -- E-mail i telefon zostają przy prawdziwym „źródło nie działa”.
+  v_src_bell_only := v_event = 'src_down'
+    and p_template in ('RISK_OPEN', 'RISK_SEVERITY')
+    and coalesce(v_payload->>'title_key', '') is distinct from 'rk_source_down'
+    and coalesce(p_dedup_prefix, '') not like 'SOURCE_DOWN%';
 
   v_payload := v_payload
     || jsonb_build_object('event_group', p_event_group, 'event_key', p_dedup_prefix, 'matrix_event', v_event);
@@ -552,6 +564,7 @@ begin
        and (p_only_org_kind is null or o.kind::text = p_only_org_kind)
        and public.notify_audience_ok(u.id, u.role::text, o.kind::text, p_template, v_payload)
        and v_legacy_job is not true
+       and v_src_bell_only is not true
        and (
          o.kind = 'FORWARDER'
          or (o.kind = 'CARRIER' and (
@@ -585,7 +598,7 @@ begin
     or p_template in ('SOURCE_DOWN', 'JOB_FAILURE')
   );
   v_has_push_target := p_load_id is not null or v_decision is not null or v_source_alarm;
-  v_push_ok := v_legacy_job is not true
+  v_push_ok := v_legacy_job is not true and v_src_bell_only is not true
     and ((v_critical is true and v_has_push_target is true) or v_event = 'chat' or v_event = 'app_err');
   if v_push_ok is true then
   insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key, status)
