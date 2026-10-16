@@ -342,7 +342,8 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C1** ✅ zalew dzwonka E5 — ryzyko bez `load_id` bez IN_APP/EMAIL/WEB_PUSH; bez nowych RISK_RESOLVED; cel `/transport/brak` nie powstaje; WEB_PUSH tylko krytyczne z transportem (+ E5-5 źródła); jednorazowo nieprzeczytane RISK_* bez transportu → przeczytane. **Przed** `tower-road-pl` (P6 E2).
 - **C2** ✅ `sw.js` push/notificationclick; `web-push-send` z celem; przełącznik z `push_subscriptions`; „Wyślij powiadomienie testowe”. **Odbiór C2 nie przeszedł** (BLOKER 15.10 — tylko OPTIONS 405, zero POST) → **C16** przed C3.
 - **C16** ✅ (D-20261015-1955-01, BLOKER): **N1** CORS (`2b9c3679` / #226). **N2–N8** PR #229 → `456a7a14` / `dpl_7ngsrbV8JXwDHvDCEBRjdWVS2dLw` (0219, ack HMAC `nid\|sid`, `verify_jwt=false`, openWindow). Odbiór S24 z `delivered_at` — po teście właściciela; iPhone = W43.
-- **C17** (D-20261015-2110-01, BLOKER): automat CMR→`READY_TO_INVOICE`, obie faktury→`INVOICED`, `UNLOADED`→`DELIVERED`, przebieg jednorazowy 15048/15060; zestaw `status` (w toku, gałąź `pakiet/C17-status-auto`).
+- **C17** ✅ (D-20261015-2110-01, BLOKER): PR #235 → `e7595541` / `dpl_HRCPmDoD3Ghiumi6tXDkaxcSzRfs` (0220); 15048 READY_TO_INVOICE, 15060 INVOICED, 0× UNLOADED.
+- **C16-H** (D-20261016-0100-01, BLOKER): e-mail zapasowy tylko po granicy 0219; NOT EXISTS push_fallback; bez RISK_RESOLVED; CANCEL PENDING starych; `send-notifications` + `APP_URL=tower.log-mar.pl`; migracja **0221** (gałąź `pakiet/C16-H-fallback`).
 - **C3** macierz powiadomień po zdarzeniu (nie 5 grup); jeśli `LOAD_STATUS × HHL_ADMIN` `email=true` → `false` (W39).
 - **C4** ustawienia z „było → jest” (`old_value`); alerty stref/ryzyk → profil lub usunięte.
 - **C5** nazwa transportu w funkcjach bazy = `shipment_code` / `transport_label`; KSH bez numeru zlecenia.
