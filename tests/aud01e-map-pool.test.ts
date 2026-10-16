@@ -22,7 +22,10 @@ describe('AUD-01e: jedna mapa na sesję (źródło)', () => {
     expect(pool).toMatch(/if \(e\.tilesTheme === theme\) return Promise\.resolve\(e\.layers\.tiles\)/);
     expect(pool).toMatch(/holder\.style\.width = `\$\{Math\.max\(1, w\)\}px`/);
     expect(pool).toMatch(/views\.set\(slot/);
-    expect(pool).toMatch(/if \(!e\.pooled\) \{\n    e\.map\.remove\(\)/);
+    expect(pool).toMatch(/if \(!e\.pooled\) \{\n(?:    (?:\/\*|   ).*\n|    e\.basemapSeq \+= 1;\n)*    e\.map\.remove\(\)/);
+    /* wyglad/W-dane: spóźniony podkład nie trafia na zamkniętą mapę jednorazową (błąd „appendChild”) */
+    expect(pool).toMatch(/e\.basemapSeq \+= 1;\n    e\.map\.remove\(\)/);
+    expect(pool).toMatch(/e\.basemapSeq !== seq \? e\.layers\.tiles : applyBasemap\(/);
     expect(pool).not.toMatch(/prefetch|keepBuffer|preload/i);
   });
   it('panel zlecenia ma własne miejsce widoku', () => {

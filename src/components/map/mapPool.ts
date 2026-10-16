@@ -272,6 +272,9 @@ export function acquireMap(root: HTMLElement, slot: MapSlot): PoolEntry {
 /** Zwalnia mapę: wspólną odkłada do schowka (ten sam rozmiar), jednorazową niszczy. */
 export function releaseMap(e: PoolEntry, slot: MapSlot): void {
   if (!e.pooled) {
+    /* podkład zamówiony przed zamknięciem (plik podkładu jeszcze się pobiera) nie trafia już na usuniętą mapę —
+       wcześniej: „Cannot read properties of undefined (reading 'appendChild')” po szybkim otwarciu panelu */
+    e.basemapSeq += 1;
     e.map.remove();
     e.unwatch?.();
     e.unwatch = null;
@@ -345,11 +348,12 @@ export function ensureBasemap(e: PoolEntry, theme: ThemeName): Promise<L.Layer> 
       return layer;
     }, onChunkFail);
   }
-  return import('./applyBasemap').then(({ applyBasemap }) => applyBasemap(e.map, e.layers.tiles, theme, () => {
+  return import('./applyBasemap').then(({ applyBasemap }) => (e.basemapSeq !== seq ? e.layers.tiles : applyBasemap(e.map, e.layers.tiles, theme, () => {
     // Budżet D-78 zamknięty — przełóż podkład (zapas) dla bieżącego motywu.
+    if (e.basemapSeq !== seq) return;
     e.tilesTheme = null;
     void ensureBasemap(e, useTowerStore.getState().theme);
-  })).then((layer) => {
+  }))).then((layer) => {
     if (e.basemapSeq !== seq) {
       if (e.map.hasLayer(layer) && layer !== e.layers.tiles) e.map.removeLayer(layer);
       return e.layers.tiles;

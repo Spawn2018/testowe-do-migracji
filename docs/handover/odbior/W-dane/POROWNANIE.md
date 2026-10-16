@@ -31,7 +31,9 @@ Wygląd, teksty, obliczenia widoku i dane demo (F8). Produkcja działa jak dziś
 4. Krok między punktami przeprawy do 150 km (HERE daje długie proste na otwartym morzu) i powód odrzucenia w `data-ferries`.
 5. Port do 10 km od terminalu — Gdynia nie uchodzi za Gdańsk.
 
-Do tego: „+ Dodaj” ukryty w Podglądzie (W38).
+Do tego:
+- „+ Dodaj” ukryty w Podglądzie (W38);
+- błąd mapy z `main`: „Cannot read properties of undefined (reading 'appendChild')” po szybkim otwarciu panelu transportu. Podkład zamówiony przed zamknięciem mapy trafiał na usuniętą mapę. Teraz zamknięta mapa odrzuca spóźniony podkład — w demo i w produkcji (`mapPool.ts`). Odtworzenie przed poprawką: błąd w 2 z 3 przebiegów; po poprawce: 0 w 3 przebiegach.
 
 **Sprawdzenie:**
 - `tests/w-dane.test.ts` (12 testów): przeprawy, linia objazdu, „Inne pliki” i produkcja bez danych;
