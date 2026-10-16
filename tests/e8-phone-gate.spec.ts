@@ -915,7 +915,7 @@ test.describe('wyglad/P7-c Harmonogram w układzie pliku (E38, E30, E20)', () =>
     await openView(page, 'sched');
     await expect(page.locator('[data-sched-layout="file"]')).toBeVisible();
     expect(await heads(page)).toEqual(['Typ', 'Wysyłka', 'Rozmiar L × W × H', 'Waga elementu', 'Ilość', 'Waga [t]', 'Data załadunku', 'Dzień', 'Godzina',
-      'Kierowca', 'Tel.', 'Ciągnik', 'Naczepa', 'Nr zlecenia SCX', 'Data dostawy', 'Dzień', 'Godzina', 'Nr zlecenia HHL', 'Status', 'ETA Boden', 'Dokumenty', 'Przychód']);
+      'Kierowca', 'Telefon kierowcy', 'Ciągnik', 'Naczepa', 'Nr zlecenia SCX', 'Data dostawy', 'Dzień', 'Godzina', 'Nr zlecenia HHL', 'Status', 'ETA Boden', 'Dokumenty', 'Przychód']);
     expect(await page.evaluate(() => document.documentElement.scrollWidth), 'strona bez przewijania w bok').toBeLessThanOrEqual(1366);
     /* przewijanie w bok: „Typ” i „Wysyłka” zostają na miejscu */
     const before = await page.locator('[data-sched-layout] tbody tr[data-load] td[data-col="code"]').first().boundingBox();

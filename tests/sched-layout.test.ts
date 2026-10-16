@@ -15,7 +15,7 @@ import { DEFAULT_DOC_REQUIREMENTS } from '../src/lib/docRequirements';
 describe('układ pliku i widok skrócony', () => {
   it('kolumny pliku w kolejności z pliku (bez Lp., Przewoźnika, Komentarza), potem Watch Tower', () => {
     expect(FILE_COLS.map((c) => s7('pl', c.key))).toEqual([
-      'Typ', 'Wysyłka', 'Rozmiar L × W × H', 'Waga elementu', 'Ilość', 'Waga [t]', 'Data załadunku', 'Dzień', 'Godzina', 'Kierowca', 'Tel.', 'Ciągnik',
+      'Typ', 'Wysyłka', 'Rozmiar L × W × H', 'Waga elementu', 'Ilość', 'Waga [t]', 'Data załadunku', 'Dzień', 'Godzina', 'Kierowca', 'Telefon kierowcy', 'Ciągnik',
       'Naczepa', 'Nr zlecenia SCX', 'Data dostawy', 'Dzień', 'Godzina', 'Nr zlecenia HHL', 'Status', 'ETA Boden', 'Dokumenty', 'Kwota',
     ]);
     expect(FILE_COLS.filter((c) => c.fixed).map((c) => c.id)).toEqual(['type', 'code', 'status']);
@@ -28,8 +28,9 @@ describe('układ pliku i widok skrócony', () => {
     expect(fileColsFor('HHL', ['trailer', 'type']).map((c) => c.id)).toContain('type');
     expect(fileColsFor('HHL', ['trailer']).map((c) => c.id)).not.toContain('trailer');
     expect([moneyKey('HHL'), moneyKey('KSH'), moneyKey('SCX')].map((k) => s7('pl', k))).toEqual(['Przychód', 'Twoja cena', 'Moja stawka']);
-    expect(SHORT_COLS).toHaveLength(8);
-    expect(shortExtrasFor('KSH')).toEqual(['phone', 'tractor', 'trailer', 'sailing']);
+    expect(SHORT_COLS).toHaveLength(9); /* 8 kolumn E30 + „Telefon kierowcy” (właściciel 16.10, 13:58) */
+    expect(shortExtrasFor('KSH')).toEqual(['tractor', 'trailer', 'sailing']);
+    expect(SHORT_COLS.map((c) => c.id)).toContain('phone');
     expect(shortExtrasFor('HHL')).toContain('cost');
     expect(shortExtrasFor('SCX')).not.toContain('cost');
   });
