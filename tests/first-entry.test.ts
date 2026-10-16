@@ -37,13 +37,17 @@ describe('pierwsze wejście — obliczenia', () => {
   });
 
   it('„Dostajesz:” według „Dla mnie”: najpierw na telefon, bez „Sytuacji ogólnej”, małą literą', () => {
-    const ops = receivesSummary(DEMO_MATRIX, 'HHL_OPS');
-    expect(ops.titles).toEqual(['nowa decyzja do podjęcia', 'decyzja po terminie', 'nowa wiadomość w czacie']);
-    expect(ops.push).toBe(4);
-    const ksh = receivesSummary(DEMO_MATRIX, 'CLIENT_USER');
-    expect(ksh.push).toBe(0);
-    expect(ksh.titles.length + ksh.more).toBe(DEMO_MATRIX.flatMap((g) => g.rows).filter((r) => !r.risksOnly && r.cells.CLIENT_USER && (r.cells.CLIENT_USER.bell || r.cells.CLIENT_USER.push || r.cells.CLIENT_USER.mail)).length);
-    expect(JSON.stringify(receivesSummary(DEMO_MATRIX, 'HHL_ADMIN'))).not.toMatch(/Sytuacja ogólna/i);
+    const rows = DEMO_MATRIX.flatMap((g) => g.rows);
+    for (const kind of ['HHL_ADMIN', 'HHL_OPS', 'CLIENT_USER', 'CARRIER_DISPATCH', 'CARRIER_USER'] as const) {
+      const mine = rows.filter((r) => !r.risksOnly && r.cells[kind] && (r.cells[kind]!.bell || r.cells[kind]!.push || r.cells[kind]!.mail));
+      const push = mine.filter((r) => r.cells[kind]!.push);
+      const sum = receivesSummary(DEMO_MATRIX, kind);
+      expect(sum.push, kind).toBe(push.length);
+      expect(sum.titles.length + sum.more, kind).toBe(mine.length);
+      const expected = [...push, ...mine.filter((r) => !r.cells[kind]!.push)].slice(0, 3).map((r) => r.title.charAt(0).toLocaleLowerCase('pl') + r.title.slice(1));
+      expect(sum.titles, kind).toEqual(expected);
+      expect(sum.titles.join(' '), kind).not.toMatch(/Sytuacja ogólna/i);
+    }
   });
 });
 
