@@ -84,6 +84,27 @@ export interface AxisHit {
   geofenceId: string | null;
   /** B4: `payload.tracker_on` (NACZEPA / CIAGNIK_*) */
   trackerOn: string | null;
+  /** wyglad/P6-c (E17): skąd automat wziął status — GPS (lokalizator) albo AIS (prom); null = nie wiadomo */
+  channel: 'GPS' | 'AIS' | null;
+}
+
+/** E17: źródło automatu z `payload.source` (GPS / AIS — dane wykonawcy), a bez niego z rodzaju zdarzenia. */
+export function hitChannel(type: string, p: Record<string, unknown>, status: LoadStatus | null): 'GPS' | 'AIS' | null {
+  /* całe słowa, nie fragmenty („PRIORITY” to nie RIO, „RAISE” to nie AIS) */
+  const words = new Set(['source', 'kanal', 'channel', 'zrodlo', 'provider']
+    .flatMap((k) => (typeof p[k] === 'string' ? (p[k] as string).toUpperCase().split(/[^A-Z0-9]+/) : [])));
+  const has = (...w: string[]) => w.some((x) => words.has(x));
+  /* pozycja statku (AIS, Digitraffic, Stena) — przed sprawdzeniem `lat`, bo pozycja promu też ma współrzędne */
+  if (has('AIS', 'AISSTREAM', 'DIGITRAFFIC', 'STENA')) return 'AIS';
+  if (has('GPS', 'EMTRACK', 'RIO', 'TELM', 'GEOFENCE') || typeof p.geofence_id === 'string' || typeof p.lat === 'number') return 'GPS';
+  /* Tylko demo (I-0): zdarzenia przykładowe bez `source`. Na produkcji bez `source` znacznik zostaje „AUTO” —
+     wykonawca zapisuje `payload.source` przy statusie z automatu (dopisek P6-c). */
+  if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
+    if (type === 'ON_FERRY') return 'AIS';
+    if (type === 'LOADED' || type === 'MILESTONE_LOADED' || type === 'UNLOADED') return 'GPS';
+    if (status === 'ON_FERRY') return 'AIS';
+  }
+  return null;
 }
 
 /** Czas zdarzenia w ms (porównania po czasie, nie po tekście: „+02:00” i „Z”). */
@@ -137,6 +158,7 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
       phaseInfer: str('zrodlo') === 'TELM_PHASE_INFER',
       geofenceId: str('geofence_id'),
       trackerOn: str('tracker_on') ?? str('trackerOn'),
+      channel: source === 'auto' ? hitChannel(e.type, p, status) : null,
     });
   }
   /* porównanie po czasie, nie po tekście: zdarzenia z okna mają „+02:00”, z bazy „Z” */

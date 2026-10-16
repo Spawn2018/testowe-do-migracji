@@ -2400,3 +2400,123 @@ Zmienione ścieżki: `AGENTS.md`, `.cursor/rules/**`, `docs/**` (w tym archiwum 
 - Dowód wyglądu P4-a (wstecz, Q3): wcześniej `cb140085` / `dpl_DYK297…` — index z wdrożenia = produkcja, 0 × `service_role` (POSTEP 14.10).
 
 **P4 NA PRODUKCJI — commit `3c676d96`, migracje 0214–0216, wdrożenie `dpl_Dvv2rR9aHYN4nVSv6QZAskxBGf5b`, 15.10.2026 15:39.**
+
+## 2026-10-15 — wyglad/A5 (PR #218) NA PRODUKCJI
+
+- Scalenie PR #218 → `12e3efd7` (okno „Zmień status”: CMR / faktury, E25). unit + visual zielone; bez migracji.
+- Wdrożenie z `main` `12e3efd7`: `dpl_4ndnWfvyNcHWgfEdHP3qC9Na3zYY`, JS `assets/index-DvW5-7T4.js`.
+- tower.log-mar.pl i watch-tower-makieta.vercel.app **200**; 0 × `service_role`.
+
+**wyglad/A5 NA PRODUKCJI — commit `12e3efd7`, wdrożenie `dpl_4ndnWfvyNcHWgfEdHP3qC9Na3zYY`, 15.10.2026 17:30.**
+
+## 2026-10-15 — Poprawki P2–P3 (PR #221) — TEST
+
+- **TEST zajęte: Poprawki P2–P3**, od 15.10.2026 17:30 — potwierdzenie security, status, nullguard, risks na `e39ccb47`/`4fc44255` (migracje 0217–0218).
+- TEST: security **84/84** (+2 SKIP), status **44/44**, risks **25/25** (+2 SKIP), nullguard **161+136+216+124 = 637/637**. Doradca TEST: **149** zgłoszeń, **0 nowych**.
+- CI `db` / `unit` / `visual` zielone na `4fc44255` (session 33, risks 27, l13 34).
+- **TEST wolne** od 15.10.2026 18:25.
+
+## 2026-10-15 — Poprawki P2–P3: C1 / C12 / C14 NA PRODUKCJI (paczka W TOKU → C2…)
+
+- Merge PR #221 → `2a315a4d` (0217 C1 dzwonek, 0218 session/l13, C12 DOC_MISSING, C14 ADVISOR_MGMT_TOKEN).
+- Kopia przed C1: `D:\Watch Tower\dane\poprawki-p2-p3-c1\kopia-c1-bell-2026-10-15T16-27-50-905Z.json`, n=**6872**, SHA256 `50e5f2521a01675cc3962907110a1f698585268fab43e401bbf1169547bd11d4`.
+- Produkcja: ROLLBACK OK → `db push` 0217–0218; po: `unread RISK_* bez load_id` = **0**; `truck_ban_holidays` = `current_app_role() IS NOT NULL`; audit `C1_BELL_MARK_READ_NO_LOAD`.
+- Edge `security-advisor-snapshot` wdrożona (C14). Doradca produkcja: ostrzeżenie `auth_leaked_password_protection` (W1 — włączenie w panelu Auth; nie z migracji).
+- Wdrożenie aplikacji: `dpl_BVVAGR5vymg7EXbMjVEj6jrSYZV2`, JS `assets/index-DwXAzakW.js`; tower / makieta **200**; 0 × `service_role`.
+- PR #218 wyglad/A5 wcześniej: `12e3efd7` / `dpl_4ndnWfvyNcHWgfEdHP3qC9Na3zYY`.
+- Następne w paczce: **C2** (pushDevicesOf / sw.js / web-push-send).
+
+**C1+C12+C14 NA PRODUKCJI — commit `2a315a4d`, migracje 0217–0218, wdrożenie `dpl_BVVAGR5vymg7EXbMjVEj6jrSYZV2`, 15.10.2026 18:30.** (paczka Poprawki P2–P3 nadal W TOKU — C2–C15, C11/C13 wygląd)
+
+## 2026-10-15 — Poprawki P2–P3: C2 NA PRODUKCJI
+
+- Merge PR #223 → `e49285c5`. Bez migracji. unit + visual + db zielone; `npm audit` 0.
+- Edge: `web-push-test`, `web-push-send` (cel z payload).
+- Aplikacja: `dpl_BGubwMaao7NTm9wauFLPcShYkTQr`; tower / makieta **200**.
+- Odbiór C2 na Androidzie (≤ 10 s) → potem W24.
+
+**C2 NA PRODUKCJI — commit `e49285c5`, wdrożenie `dpl_BGubwMaao7NTm9wauFLPcShYkTQr`, 15.10.2026 ~19:00.** Następne: C3–C15.
+
+## 2026-10-15 — C16-N1 NA PRODUKCJI (BLOKER C2 / D-20261015-1955-01)
+
+- Przyczyna: przycisk testu → tylko `OPTIONS … web-push-test → 405` (brak CORS), zero POST.
+- PR #227 → `2b9c3679` (`d3fde479`): CORS, `{ ok, status, reason, sent_at }`, `urgency: high`, `TTL: 60`, kod z `e.statusCode`.
+- PR #226 → `0f5075ef` (wyglad/push-telefon): ekran „Sprawdź ten telefon”, powód porażki, badge-96; dopisek D-20261015-1955-01.
+- Edge `web-push-test` wdrożona (prod) ~20:37; aplikacja `dpl_GQnkaNkuBj4TeXNrg8y1br8vCDvj` ~20:40; JS `assets/index-CUhhGQCv.js`; tower / makieta **200**; 0 × `service_role` (20 plików JS).
+- unit: `push-fail-reason` 2/2 (+ HMAC w N2); CI unit/visual/db #227 zielone; `npm audit` 0.
+- PLAN: C16 przed C3; W42 = e-mail; W43 iPhone; W24 czeka do odbioru C16 na S24.
+- Czas plan ~0,5 h N1; poprawki: 0.
+- **Następne:** C16 N2–N8 (send/ack/fallback/sw/sync/migracja 0219).
+
+**C16-N1 NA PRODUKCJI — 20:37 (funkcja) / 20:40 (aplikacja), właściciel może testować S24.** commit `0f5075ef`, wdrożenie `dpl_GQnkaNkuBj4TeXNrg8y1br8vCDvj`.
+
+- **W24 (Android S24) dostarczone 15.10.2026, 20:50** — właściciel: powiadomienie odebrane w telefonie (N1; pełny odbiór C16 po N3 z `delivered_at` / „Doszło na urządzenie”). iPhone = W43.
+
+## 2026-10-15 — C16 N2–N8 TEST
+
+- **TEST zajęte: C16 N2–N8**, od 15.10.2026 21:16 — security, status, nullguard, c16-push, risks na `a82ccc9e` (PR #229, migracja 0219).
+
+### C16 N2–N8 — TEST (0219) przed poprawkami przeglądu
+
+| zestaw | wynik |
+|---|---|
+| prep | ok |
+| security | 84/84 (+2 SKIP) |
+| status | 44/44 |
+| c16-push | 10/10 |
+| risks | 25/25 (+2 SKIP) |
+| nullguard | 161+136+216+124 = 637/637 |
+
+SHA TEST: `b5e65f4c`. Potem poprawki przeglądu (sw click/openWindow, HMAC `nid\|sid`, `verify_jwt=false`) → `ee689452`.
+
+### C16 N2–N8 — TEST na `ee689452` (przed scaleniem #229)
+
+| zestaw | wynik |
+|---|---|
+| prep | ok |
+| security | 84/84 (+2 SKIP) |
+| status | 44/44 |
+| c16-push | 10/10 |
+| nullguard | 161+136+216+124 = 637/637 |
+| doradca security TEST | 167 zgłoszeń, **0 nowych** |
+
+CI #229 na `ee689452`: unit / visual / `db` zielone; `npm audit --omit=dev --audit-level=high` 0.
+**TEST wolne** od 15.10.2026 23:32.
+
+| punkt | zrobione / odbiór |
+|---|---|
+| C16 N2–N8 TEST | zrobione 23:32 — security 84, status 44, c16-push 10, nullguard 637, doradca 0 nowych; commit `ee689452` |
+
+## 2026-10-15 — C16 N2–N8 NA PRODUKCJI (D-20261015-1955-01)
+
+- Merge PR #229 → `456a7a14` (merge commit); głowa treści `94dc8ae7` / poprawki `ee689452`.
+- Migracja **0219**: ROLLBACK OK → `db push` (drugi: up to date); `schema_migrations` …0219.
+- Edge: `web-push-send`, `web-push-test`; `web-push-ack` / `web-push-resub` z `verify_jwt=false` (lista funkcji potwierdzona); OPTIONS → **200** + CORS (`Access-Control-Allow-Origin: https://tower.log-mar.pl`).
+- Aplikacja: `dpl_7ngsrbV8JXwDHvDCEBRjdWVS2dLw`, JS `assets/index-s00c_A3-.js`, `sw.js` z openWindow po błędzie navigate; tower / makieta **200**; 0 × `service_role` (19 plików JS).
+- CI #229: unit / visual / `db` zielone; `npm audit` 0; TEST: security 84, status 44, c16-push 10, nullguard 637, doradca 0 nowych.
+- Czas plan N2–N8 ~3 h; poprawki przeglądu (N5 openWindow, JWT off, HMAC nid\|sid) wliczone.
+- **Odbiór C16 (pkt 1–7) — czeka na właściciela:** ponowny test S24 z potwierdzeniem „Doszło na urządzenie…” ≤ 10 s; zablokowany ekran; klik → cel; Samsung Internet + komputer; wypięcie → 410 → e-mail W42. iPhone = W43.
+
+| punkt | zrobione / odbiór |
+|---|---|
+| C16 N2–N8 produkcja | zrobione 23:52 — commit `456a7a14`, migracja 0219, dpl `dpl_7ngsrbV8JXwDHvDCEBRjdWVS2dLw`; odbiór S24 **czeka** |
+| W24 Android S24 | dostarczone 20:50 (N1); pełny odbiór po tym wdrożeniu |
+
+**C16 NA PRODUKCJI — 456a7a14, 23:52; właściciel: test S24 z potwierdzeniem.**
+
+## 2026-10-16 — wygląd P5-b / P5-c / P6-c / P6-d NA PRODUKCJI (F2)
+
+| punkt | zrobione / odbiór |
+|---|---|
+| #222 wyglad/P5-b | scalone `668e00ea`; dpl `dpl_3MdW736TrSGugPp2kdarLVnLWbED` ~00:10; tower/makieta 200 |
+| #225 wyglad/P5-c | scalone `3d20f53a`; dpl `dpl_9zVg9fWHNcMUGS6VZsycee3ftxBX` ~00:12; tower/makieta 200 |
+| #228 wyglad/P6-c | scalone `fd5562ff`; dpl `dpl_8Zn7b5LUwhjXeYot2aAFodPNFGD8` ~00:14; tower/makieta 200 |
+| #230 wyglad/P6-d | scalone `d6fc9ae8`; dpl `dpl_BfZ9gPTzdhMpbw5ZMKqNe5Jmpqb2` ~00:17; dopisek C17 w repo; tower/makieta 200 |
+
+unit + visual zielone przed każdym scaleniem; `npm audit` 0. #209/#231 (P7) — sobota (D-20261015-0130-01).
+
+**wyglad/P5-b NA PRODUKCJI — 668e00ea.**  
+**wyglad/P5-c NA PRODUKCJI — 3d20f53a.**  
+**wyglad/P6-c NA PRODUKCJI — fd5562ff.**  
+**wyglad/P6-d NA PRODUKCJI — d6fc9ae8.**
+

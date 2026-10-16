@@ -4,8 +4,11 @@
  * „Teraz: Na placu od 07.10, 08:35”, nowy status, data i godzina (czas polski), podpowiedź z GPS „Użyj”,
  * informacja o dacie realizacji usługi przy „Dostarczone”, notatka, zasady, „Anuluj” / „Zapisz status”.
  * Zapis bez zmian: `setLoadStatus(…, occurredAt)` z wartości `whenLocal` (data + godzina składane w jedno pole).
+ * wyglad/A5 (E25 „Rozliczenie”, D-20261015-0300-01 A5): „Gotowe do fakturowania” od razu prosi o plik CMR
+ * („Wgraj CMR” otwiera dzisiejsze okno „Wgraj dokument”), „Zafakturowano” pokazuje faktury SCX → HHL i HHL → KSH
+ * z tym transportem i której brakuje. „Zapisz” zablokowany przy braku widocznym w danych firmy; baza sprawdza to samo.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { t, tp } from '../../i18n/messages';
 import { statusLabel } from '../../lib/statusLabel';
@@ -16,7 +19,12 @@ import { useIsPhone } from '../../lib/useIsPhone';
 import { readyGapsOf } from '../../lib/p4cSource';
 import { readyGapsText } from '../../lib/p4c';
 import { getAuthProfile } from '../../auth/profile';
+import { settlementGate } from '../../lib/statusSettlement';
+import { lazyRetry } from '../../lib/lazyRetry';
 import type { LoadStatus } from '../../types';
+
+const UploadDocModal = lazy(lazyRetry(() => import('../docs/UploadDocModal').then((m) => ({ default: m.UploadDocModal }))));
+const dmy = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
 
 const MANUAL_STATUSES: LoadStatus[] = [
   'PLANNED',
@@ -54,7 +62,9 @@ export function StatusChangeModal({
   const allEvents = useTowerStore((s) => s.events);
   const geofences = useTowerStore((s) => s.geofences);
   const documents = useTowerStore((s) => s.documents);
+  const bills = useTowerStore((s) => s.bills);
   const phone = useIsPhone();
+  const [upload, setUpload] = useState(false);
   const [status, setStatus] = useState<LoadStatus>(current === 'UNLOADING' ? 'DELIVERED' : current);
   /* data i godzina osobno — wyczyszczenie jednego pola nie zeruje drugiego; łączone w `whenLocal` przy zapisie */
   const [date, setDate] = useState(() => isoToDatetimeLocalValue(getNowIso(), TZ_OPS).slice(0, 10));
@@ -66,7 +76,8 @@ export function StatusChangeModal({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      /* otwarte okno „Wgraj dokument” zamyka się samo (useModal) — Esc nie zamyka wtedy okna statusu */
+      if (e.key === 'Escape' && !upload) {
         e.preventDefault();
         e.stopImmediatePropagation();
         onClose();
@@ -74,7 +85,7 @@ export function StatusChangeModal({
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [onClose]);
+  }, [onClose, upload]);
 
   const options = useMemo(() => {
     const list = canCancel ? [...MANUAL_STATUSES, 'CANCELLED' as LoadStatus] : MANUAL_STATUSES;
@@ -93,10 +104,14 @@ export function StatusChangeModal({
   );
   const readyBlocked = status === 'READY' && !!gaps?.length;
   const gapText = gaps?.length ? readyGapsText(gaps, locale) : null;
+  /* wyglad/A5: plik CMR przy „Gotowe do fakturowania”, obie faktury przy „Zafakturowano” */
+  const settle = useMemo(() => settlementGate(status, loadId, role, documents, bills), [status, loadId, role, documents, bills]);
+  const blocked = readyBlocked || !!settle?.blocked;
+  const canUpload = role === 'HHL' || role === 'SCX';
 
   function save(e: React.FormEvent) {
     e.preventDefault();
-    if (busy || readyBlocked) return;
+    if (busy || blocked) return;
     if (status === 'CANCELLED') {
       if (!canCancel) {
         pushToast('Anulowanie — tylko Administrator HHL', 'HIGH', loadId);
@@ -183,6 +198,53 @@ export function StatusChangeModal({
               <div className="scm-info ok" data-status-ready-ok>{t(locale, 'p4c_ready_ok')}</div>
             )
           ) : null}
+          {settle?.kind === 'cmr' ? (
+            settle.cmr ? (
+              <div className="scm-info ok" data-status-cmr="ok">
+                <b>{t(locale, 'scm_cmr_ok')}</b> <span className="scm-file">{settle.cmr.name}</span>
+                {settle.cmr.uploadedAt ? <span className="scm-who">{tp(locale, 'scm_cmr_at', { at: dayTime(settle.cmr.uploadedAt) })}</span> : null}
+              </div>
+            ) : (
+              <div className="scm-info bad scm-cmr" id="scm-settle" data-status-cmr="missing" role="status">
+                <span>{t(locale, 'scm_cmr_missing')}</span>
+                {canUpload ? (
+                  <button type="button" className="btn scm-up" data-status-cmr-upload onClick={() => setUpload(true)}>
+                    {t(locale, 'scm_cmr_upload')}
+                  </button>
+                ) : null}
+              </div>
+            )
+          ) : null}
+          {settle?.kind === 'inv' ? (
+            <>
+              <span className="scm-lbl">{t(locale, 'scm_inv_title')}</span>
+              <ul className="scm-inv" data-status-invoices>
+                {settle.rows.map((r) => (
+                  <li key={r.dir} className={r.hidden ? 'hid' : r.bill ? 'has' : 'miss'} data-status-invoice={r.dir}>
+                    <span className="scm-inv-dir">{t(locale, `scm_inv_${r.dir}`)}</span>
+                    <span className="scm-inv-v">
+                      {r.hidden
+                        ? t(locale, 'scm_inv_hidden')
+                        : r.bill
+                          ? <><span className="scm-file">{r.bill.number}</span> · {dmy(r.bill.issueDate)}</>
+                          : t(locale, 'scm_inv_none')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {settle.missing.length ? (
+                <div className="scm-info bad" id="scm-settle" data-status-inv="missing" role="status">
+                  {tp(locale, 'scm_inv_missing', { list: settle.missing.map((d) => t(locale, `scm_inv_${d}`)).join(', ') })}
+                </div>
+              ) : settle.rows.some((r) => r.hidden) ? (
+                <div className="scm-info" data-status-inv="part">
+                  {tp(locale, 'scm_inv_ok_part', { list: settle.rows.filter((r) => !r.hidden).map((r) => t(locale, `scm_inv_${r.dir}`)).join(', ') })}
+                </div>
+              ) : (
+                <div className="scm-info ok" data-status-inv="ok">{t(locale, 'scm_inv_ok')}</div>
+              )}
+            </>
+          ) : null}
           <div className="scm-when" data-status-when>
             <label className="form-field">
               <span>{t(locale, 'p4b_m_date')}</span>
@@ -236,12 +298,32 @@ export function StatusChangeModal({
             <button type="button" className="btn ghost" onClick={onClose}>
               {t(locale, 'p4b_m_cancel')}
             </button>
-            <button type="submit" className="btn" data-status-save disabled={busy || readyBlocked} aria-describedby={readyBlocked ? 'scm-ready-gaps' : undefined}>
+            <button
+              type="submit"
+              className="btn"
+              data-status-save
+              disabled={busy || blocked}
+              aria-describedby={readyBlocked ? 'scm-ready-gaps' : settle?.blocked ? 'scm-settle' : undefined}
+            >
               {t(locale, phone ? 'p4b_m_save_ph' : 'p4b_m_save')}
             </button>
           </div>
         </form>
       </section>
+      {upload && canUpload && load ? (
+        <Suspense fallback={null}>
+          <UploadDocModal
+            locale={locale}
+            role={role as 'HHL' | 'SCX'}
+            phone={phone}
+            loads={[load]}
+            statusRows={[]}
+            allowed={['CMR']}
+            loadId={loadId}
+            onClose={() => setUpload(false)}
+          />
+        </Suspense>
+      ) : null}
     </>
   );
 }

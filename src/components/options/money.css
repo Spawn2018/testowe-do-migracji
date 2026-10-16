@@ -1,0 +1,102 @@
+/* wyglad/P5-b — Opcje › Pieniądze: Opłata paliwowa (img/e3-opcje-desk, img/e3-opcje-phone), Dopłaty, Cennik i opłaty,
+   Terminy płatności i adresy (img/e40-after). Kolory tylko z tokenów; zaokrąglenia 0 (jak reszta Opcji). */
+
+.pm-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 0 14px}
+.pm-head-sub{color:var(--ink-3);font-size:15px}
+
+.pm-alarm{margin:0 0 16px;padding:14px 18px;background:var(--red-bg);border:1px solid var(--red)}
+.pm-alarm-tx{margin:0;color:var(--ink);font-size:15px;line-height:1.5}
+.pm-alarm-act{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:10px}
+/* tekst drugorzędny na czerwonym i zielonym tle — ciemniejszy niż zwykły (kontrast ≥ 4,5 w obu motywach) */
+.pm-alarm .ox-muted,.pm-miss .pm-pub,.pm-card.is-now .ox-eyebrow{color:var(--ink-2)}
+
+.pm-cards{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(0,1fr);gap:14px;margin:0 0 6px}
+.pm-card{display:flex;flex-direction:column;gap:6px;min-width:0;padding:14px 18px;background:var(--surface-2);border:1px solid var(--rule)}
+.pm-card.is-now{background:var(--go-bg);border-color:var(--go)}
+.pm-big{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-family:var(--font-cond);line-height:1.05}
+.pm-big b{font-size:44px;font-weight:700;color:var(--ink)}
+.pm-x{font-size:20px;font-weight:600;color:var(--ink-2)}
+.pm-fc{font-size:22px;font-weight:600;color:var(--ink-2)}
+.pm-card-l{color:var(--ink-2);font-size:15px;line-height:1.45}
+.pm-fetch{margin:0;color:var(--ink-2);font-size:15px;line-height:1.45}
+.pm-ok{color:var(--go);font-weight:600}
+.pm-bad{color:var(--red);font-weight:600}
+.pm-fetch-wait{color:var(--ink-3)}
+
+.pm-h{margin:20px 0 8px}
+.pm-how{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--surface);border:1px solid var(--rule)}
+.pm-step{display:flex;flex-direction:column;gap:4px;min-width:0;padding:14px 18px;border-right:1px solid var(--rule-2);color:var(--ink);font-size:15px;line-height:1.4}
+.pm-step:last-child{border-right:0}
+.pm-step-h{font-family:var(--font-cond);font-size:17px;font-weight:700;color:var(--sea)}
+.pm-step-v{margin-top:4px;font-family:var(--font-cond);font-size:19px;font-weight:700}
+
+.pm-two{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:22px;align-items:start}
+.pm-scroll{min-width:0;overflow-x:auto}
+.pm-days-t .num,.pm-tiers-t .num{text-align:right}
+/* liczby w tabelach cen i mnożników mocniejsze niż opis wiersza (img/e3-opcje-desk) */
+.pm-days-t td.num,.pm-tiers-t td.num{font-weight:500;color:var(--ink)}
+.pm-days-t th[scope="row"]{font-weight:400;white-space:nowrap}
+.pm-grp th{padding:8px 14px;background:var(--surface-2);font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--ink-2)}
+.pm-miss th,.pm-miss td{background:var(--red-bg)}
+.pm-pub{color:var(--ink-3);font-size:12.5px}
+.pm-tiers-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.pm-tiers-t th[scope="row"]{font-weight:400;white-space:nowrap}
+.pm-tiers-t tr.pm-hit th,.pm-tiers-t tr.pm-hit td{background:var(--go-bg);font-weight:700}
+.pm-at{color:var(--ink)}
+.pm-at-v{font-weight:700}
+
+/* Dopłaty, Cennik, Terminy — wiersze jak w Progach alarmów */
+.pm-sec{margin:0 0 22px}
+.pm-sec-hd{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 14px;margin:0 0 8px}
+.pm-sec-sub{margin:-2px 0 8px}
+.pm-rows{margin:0 0 8px}
+.ox-thr-list.pm-choices li{grid-template-columns:200px minmax(0,1fr)}
+.pm-ex{margin:12px 0 0}
+.pm-live:empty{margin:0;padding:0}
+.pm-ask{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;margin:0 0 8px;padding:10px 14px;background:var(--surface-2);border:1px solid var(--rule)}
+
+.pm-book{display:flex;flex-direction:column;gap:14px;max-width:760px}
+.pm-addr{min-width:0}
+.pm-addr-h{margin:0 0 8px;font-family:var(--font-cond);font-size:17px;font-weight:700;color:var(--ink)}
+.pm-addr-list{list-style:none;margin:0;padding:0}
+.pm-addr-list li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;margin:0 0 8px;padding:8px 8px 8px 12px;background:var(--surface);border:1px solid var(--rule)}
+.pm-mail{min-width:0;font-size:15px;color:var(--ink);overflow-wrap:anywhere}
+.pm-link{padding:4px 6px;border:0;background:none;color:var(--ink-3);font-size:13.5px;cursor:pointer}
+.pm-link:hover{color:var(--red)}
+.pm-none{margin:0 0 8px}
+.pm-add{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
+.pm-add .input{flex:1 1 220px;min-width:0;min-height:40px}
+.pm-add .ox-seg{flex:0 0 auto}
+.pm-add-err{flex-basis:100%;font-size:13.5px}
+
+/* panel Opcji ma ok. 950 px przy 1440 px okna — ceny i tabela mnożników jedna pod drugą (jak na telefonie) */
+@media (max-width:1680px){
+  .pm-two{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:1100px){
+  .pm-cards{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:768px){
+  /* telefon (img/e3-opcje-phone): tytuł alarmu w osobnym wierszu */
+  .pm-alarm-tx b{display:block;margin-bottom:6px}
+  .pm-how{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pm-step:nth-child(2n){border-right:0}
+  .pm-step:nth-child(-n+2){border-bottom:1px solid var(--rule-2)}
+  .pm-big b{font-size:38px}
+  .pm-how-c{display:none}
+  .pm-tiers-2{grid-template-columns:minmax(0,1fr)}
+  /* img/e3-opcje-phone: ceny i mnożniki zostają tabelą (3 i 2 kolumny mieszczą się w 360 px), nie kartami E8 */
+  .app .pm-fuel table{display:table;width:100%}
+  .app .pm-fuel thead{display:table-header-group}
+  .app .pm-fuel tbody{display:table-row-group}
+  .app .pm-fuel tr{display:table-row;margin:0;padding:0;border:0;background:none}
+  .app .pm-fuel td,.app .pm-fuel th{display:table-cell;min-height:0;padding:8px 10px;border-bottom:1px solid var(--rule-2)}
+  .app .pm-fuel td::before{content:none}
+  .app .pm-fuel td.num{text-align:right}
+  .app .pm-fuel .pm-grp th{padding:8px 10px}
+  .app .pm-fuel .pm-how-c{display:none}
+  .ox-thr-list.pm-choices li{grid-template-columns:minmax(0,1fr)}
+  .pm-link{min-height:44px;padding:0 4px}
+  .pm-add .input{min-height:44px;font-size:16px}
+  .pm-add .ox-btn{min-height:44px}
+}

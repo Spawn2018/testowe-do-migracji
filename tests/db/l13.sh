@@ -24,6 +24,11 @@ sys "set session_replication_role=replica;
  set session_replication_role=origin;" >/dev/null
 sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status)
  values ('$L','$P','00000000-0000-0000-0000-00000000a003','KSH/L13','HHL/L13','SCX/L13','PLANNED')" >/dev/null
+# E5 / C1: e-mail decyzji w teście (produkcja: włącza Administrator w Opcjach; 0200 wyłączył startowo)
+# Dane z transportem albo decision_id — reguły C1 w matrix_notify bez zmian.
+sys "update notification_matrix set email = true
+ where event_group = 'DECISION' and role in ('HHL_ADMIN','HHL_OPS')" >/dev/null
+DEC_L13=a1300000-0000-4000-8000-0000000000d1
 
 # Dobowy ruch jednego transportu (fixture, nie cała wielodniowa SIM-1).
 sys "update loads set status='READY' where id='$L'" >/dev/null
@@ -85,7 +90,9 @@ val "ze skrótem szczyt mieści się w 100" "select (('$PROJ'::jsonb->>'digest_p
 val "94 z krytycznym przekracza 90 i jest cięte do limitu operacyjnego" "select (('$PROJ'::jsonb->>'digest_fleet_uncapped')::int > 90) and (('$PROJ'::jsonb->>'digest_fleet_capped')::int = 90)" t
 
 # Macierz: niekrytyczny e-mail = DIGEST, nie PENDING. Nic nie wychodzi do Resend.
-sys "select matrix_notify('DECISION','DECISION_RESOLVED','$L','$P','{\"title\":\"l13\"}'::jsonb,'l13-nc','FORWARDER')" >/dev/null
+# E5: payload z decision_id (albo load_id — tu oba); reguły C1 bez zmian pod stary test.
+sys "select matrix_notify('DECISION','DECISION_RESOLVED','$L','$P',
+  jsonb_build_object('title','l13','decision_id','$DEC_L13'),'l13-nc','FORWARDER')" >/dev/null
 val "niekrytyczny e-mail macierzy to jeden skrót" "select count(*)||status from notifications where channel='EMAIL' and dedup_key like 'digest:%' group by status" "1DIGEST"
 
 sys "insert into notifications (channel, recipient, template, status, dedup_key)
@@ -95,13 +102,16 @@ val "przy 80 ostrzeżenie w przebiegu Stanu systemu" "select level||'/'||(select
 sys "delete from notifications where channel='EMAIL' and dedup_key like 'digest:%'" >/dev/null
 sys "insert into notifications (channel, recipient, template, status, dedup_key)
  select 'EMAIL','hhl@test','L13_FILL','SENT','l13-fill-b-'||g from generate_series(1,5) g" >/dev/null
-sys "select matrix_notify('DECISION','DECISION_OPEN','$L','$P','{\"title\":\"l13b\"}'::jsonb,'l13-nc2','FORWARDER')" >/dev/null
+sys "select matrix_notify('DECISION','DECISION_OPEN','$L','$P',
+  jsonb_build_object('title','l13b','decision_id','$DEC_L13'),'l13-nc2','FORWARDER')" >/dev/null
 val "przy 85 niekrytyczny e-mail wstrzymany" "select status from notifications where dedup_key like 'digest:%'" SUPPRESSED
-sys "select matrix_notify('DECISION','DECISION_ESCALATED','$L','$P','{\"level\":\"critical\",\"type\":\"FERRY_CANCELLED\"}'::jsonb,'l13-crit','FORWARDER')" >/dev/null
+sys "select matrix_notify('DECISION','DECISION_ESCALATED','$L','$P',
+  jsonb_build_object('level','critical','type','FERRY_CANCELLED','decision_id','$DEC_L13'),'l13-crit','FORWARDER')" >/dev/null
 val "krytyczny jeszcze wychodzi jako kolejka" "select status from notifications where dedup_key like 'l13-crit:EM:%'" PENDING
 sys "insert into notifications (channel, recipient, template, status, dedup_key)
  select 'EMAIL','hhl@test','L13_FILL','SENT','l13-fill-c-'||g from generate_series(1,4) g" >/dev/null
-sys "select matrix_notify('DECISION','DECISION_ESCALATED','$L','$P','{\"level\":\"critical\",\"type\":\"FERRY_CANCELLED\"}'::jsonb,'l13-crit2','FORWARDER')" >/dev/null
+sys "select matrix_notify('DECISION','DECISION_ESCALATED','$L','$P',
+  jsonb_build_object('level','critical','type','FERRY_CANCELLED','decision_id','$DEC_L13'),'l13-crit2','FORWARDER')" >/dev/null
 val "przy 90 także krytyczny stoi" "select status from notifications where dedup_key like 'l13-crit2:EM:%'" SUPPRESSED
 val "drugie ostrzeżenie tego dnia nie dubluje wpisu" "select count(*) from integration_runs where job='email-budget'" 1
 
@@ -135,8 +145,10 @@ val "stan systemu: ile i do kogo" "begin; select set_config('request.jwt.claim.s
 sys "delete from notifications where channel='EMAIL' and (template in ('L13_FILL','AUTH_INVITE') or status in ('PENDING','DIGEST','SUPPRESSED'));" >/dev/null
 sys "insert into notifications (channel, recipient, template, status, dedup_key)
  select 'EMAIL','hhl@test','L13_FILL','SENT','l13-ord-'||g from generate_series(1,84) g" >/dev/null
-sys "select matrix_notify('DECISION','DECISION_RESOLVED','$L','$P','{\"title\":\"skrot\"}'::jsonb,'l13-ord-d','FORWARDER')" >/dev/null
-sys "select matrix_notify('DECISION','DECISION_ESCALATED','$L','$P','{\"level\":\"critical\"}'::jsonb,'l13-ord-c','FORWARDER')" >/dev/null
+sys "select matrix_notify('DECISION','DECISION_RESOLVED','$L','$P',
+  jsonb_build_object('title','skrot','decision_id','$DEC_L13'),'l13-ord-d','FORWARDER')" >/dev/null
+sys "select matrix_notify('DECISION','DECISION_ESCALATED','$L','$P',
+  jsonb_build_object('level','critical','decision_id','$DEC_L13'),'l13-ord-c','FORWARDER')" >/dev/null
 val "przy limicie skrót czeka" "select status from notifications where dedup_key like 'digest:%'" DIGEST
 val "przy limicie krytyczny jest pierwszy w kolejce" "select status from notifications where dedup_key like 'l13-ord-c:EM:%'" PENDING
 val "skrót nie rusza, póki krytyczny czeka" "select l13_promote_digests()" 0

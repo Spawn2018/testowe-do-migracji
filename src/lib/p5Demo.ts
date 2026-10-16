@@ -132,7 +132,10 @@ export function demoFeeSuggestions(load: Load): FeeSuggestion[] {
   if (loaded && n % 5 === 0 && load.plannedLoadDate) {
     const day = load.plannedLoadDate.slice(0, 10);
     const f = dwellFee(490, 'LOAD');
-    out.push({ ...base, id: `${load.id}-dl`, kind: 'DWELL', place: 'LOAD', where: 'Śrem', enterAt: `${day}T07:10:00+02:00`, exitAt: `${day}T15:20:00+02:00`, minutes: 490, zone: 'Załadunek Śrem', costEur: f.eur, revEur: f.eur });
+    /* wyglad/P5-c (img/e33-after „Po zmianie · KSH, SCX”): przy SG-15 obie firmy już dodały dopłatę — KSH i HHL
+       widzą „Akceptuj” / „Odrzuć” (odrzucenie z powodem, E33) */
+    const waiting = n === 15 ? { hhl: 'CZEKA_KSH' as const, scx: 'CZEKA_HHL' as const } : {};
+    out.push({ ...base, id: `${load.id}-dl`, kind: 'DWELL', place: 'LOAD', where: 'Śrem', enterAt: `${day}T07:10:00+02:00`, exitAt: `${day}T15:20:00+02:00`, minutes: 490, zone: 'Załadunek Śrem', costEur: f.eur, revEur: f.eur, ...waiting });
   } else {
     out.push({ ...base, id: `${load.id}-dl`, kind: 'DWELL', place: 'LOAD', where: 'Śrem', noMeasure: loaded ? 'brak pomiaru — śledzenie od Szwecji' : 'jeszcze nie mierzono' });
   }

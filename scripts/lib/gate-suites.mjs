@@ -2,7 +2,7 @@
  * Jedno źródło oczekiwanych OK bramy bazy (P0b).
  * LOCAL = tests/db/gate.sh / CI db.yml; TEST = hosted emkbykwenwrjmbprydml.
  * Różnice TEST: security −4, risks −2, backup −8 (SKIP spatial_ref_sys / CREATE DATABASE / eksport+odtworzenie).
- * session i l13 — znany dług (uruchamiane, bez asercji liczby w gate.sh).
+ * session / l13: zamknięte w 0218 (truck_ban active + L-13 DIGEST / decision_id).
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -13,16 +13,16 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 88,
-  status: 44,
+  status: 55,
   storage: 37,
   money: 135,
   release: 146,
   backup: 29,
-  session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); KNOWN-DEBT — nie asertowane w pełnym gate.sh
+  session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active
   archive: 18,
   watchdog: 27,
   invite: 48,
-  risks: 23,
+  risks: 27, // +4 C1 zalew dzwonka (D-0300); wcześniej 23
   import: 66,
   nullguard: 637, // +5 rio_tracking_open GUARD (0207 E44 H4); wcześniej +5 my_session_revoke
   i2: 540,
@@ -38,7 +38,7 @@ export const EXPECTED_LOCAL = {
   insurance: 42,
   'dec-auto': 64,
   dwell: 17,
-  l13: 30, // KNOWN-DEBT — nie asertowane w gate.sh
+  l13: 34, // 0218: DIGEST przez l13_queue_email + e-mail DECISION w teście (było 21 OK / 13 FAIL)
   l12: 12,
   h1: 14,
   h3: 20,
@@ -51,7 +51,8 @@ export const EXPECTED_LOCAL = {
   baf: 46,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 26, // P4 — load_status_set (E25); +4 H1/H2; A5 +5 (CMR/faktury/UPDATE/godzina)
+  e25: 29, // P4 E25 + C17 auto CMR/faktury (D-20261015-2110-01)
+  'c16-push': 10, // C16 N8 — zapas e-mail WEB_PUSH (D-20261015-1955-01)
 };
 
 /**
@@ -63,7 +64,7 @@ export const EXPECTED_LOCAL = {
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
   security: 84, // 88 − 4 SKIP
-  risks: 21, // 23 − 2 SKIP
+  risks: 25, // 27 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,
   backup: 21, // 29 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE)
@@ -72,8 +73,8 @@ export const EXPECTED_TEST = {
 /** Alias historyczny — brama TEST / summary. */
 export const EXPECTED = EXPECTED_TEST;
 
-/** Zestawy uruchamiane w gate.sh, ale bez check liczby (dług 05.10). */
-export const KNOWN_DEBT = new Set(['session', 'l13']);
+/** Zestawy uruchamiane w gate.sh, ale bez check liczby (puste po 0218). */
+export const KNOWN_DEBT = new Set();
 
 export const SUITE_FILE = {
   security: 'security.sh',
@@ -116,6 +117,7 @@ export const SUITE_FILE = {
   e18: 'e18.sh',
   e41: 'e41.sh',
   e25: 'e25.sh',
+  'c16-push': 'c16-push.sh',
 };
 
 /** Jak uruchamiać lokalnie: boot = własna baza, tower = kopia tower_boot, pair = run.sh. */
@@ -160,6 +162,7 @@ export const LOCAL_RUN = {
   e18: 'boot',
   e41: 'tower',
   e25: 'tower',
+  'c16-push': 'tower',
 };
 
 /** Kolejność lokalnej bramy (jak dawny gate.sh). */
@@ -167,7 +170,7 @@ export const LOCAL_ORDER = [
   'security', 'status', 'storage', 'money', 'release', 'backup', 'session', 'archive',
   'watchdog', 'invite', 'risks', 'import', 'nullguard', 'i2', 'i30', 'i31', 'dec2', 'dec3',
   'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto', 'dwell', 'l13',
-  'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25',
+  'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'c16-push',
 ];
 
 const NEED_SEED_BASE = new Set(['session']);
@@ -244,7 +247,7 @@ export function gateSteps() {
   const i2 = i2Parts();
   const steps = {};
   const order = ['prep'];
-  // session / l13 — KNOWN-DEBT (jak gate.sh: uruchamiane lokalnie, bez twardej asercji na TEST).
+  // session / l13 — asertowane od 0218 (wcześniej KNOWN-DEBT).
   const whole = [
     'security', 'status', 'storage', 'money', 'release', 'archive', 'watchdog', 'invite', 'risks', 'import',
   ];
@@ -262,7 +265,7 @@ export function gateSteps() {
   }
   const rest = [
     'i30', 'i31', 'dec2', 'dec3', 'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto',
-    'dwell', 'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'backup',
+    'dwell', 'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'c16-push', 'backup',
   ];
   for (const name of rest) {
     if (!SUITE_FILE[name] || EXPECTED_TEST[name] == null) {
