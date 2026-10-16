@@ -34,25 +34,33 @@ export interface PendingWeek {
   netEur: number;
 }
 
-/** Tygodnie zamknięte (niedziela minęła) z dostarczonymi, niezafakturowanymi transportami — „Do wystawienia” (E4). */
-export function pendingWeeks(loads: Load[], bills: Bill[], direction: BillDirection, today: string): PendingWeek[] {
-  const done = invoicedLoadIds(bills, direction);
+/**
+ * Tygodnie zamknięte (niedziela minęła) z dostarczonymi, niezafakturowanymi transportami — „Do wystawienia” (E4),
+ * bez kwot. Jedno źródło dla kafla „Czeka na wystawienie” i liczby przy „Faktury” w menu (audyt-C C-10).
+ */
+export function pendingWeekLoads(loads: readonly Load[], bills: readonly Bill[], direction: BillDirection, today: string): { weekKey: string; loads: Load[] }[] {
+  const done = invoicedLoadIds([...bills], direction);
   const keys = new Set<string>();
   for (const l of loads) {
     const at = unloadedAtOf(l);
     if (at && !done.has(l.id)) keys.add(isoWeekKeyLocal(at));
   }
-  const out: PendingWeek[] = [];
+  const out: { weekKey: string; loads: Load[] }[] = [];
   for (const k of [...keys].sort()) {
-    const from = isoWeekMonday(k);
-    const to = addDaysIso(from, 6);
-    if (to >= today) continue;
-    const list = billCandidates(loads, bills, direction, k);
-    if (!list.length) continue;
-    const net = list.reduce((s, l) => s + (expectedNetFor(l, direction, 'EUR', today) ?? 0), 0);
-    out.push({ weekKey: k, no: Number(k.slice(-2)), from, to, loads: list, netEur: r2(net) });
+    if (addDaysIso(isoWeekMonday(k), 6) >= today) continue;
+    const list = billCandidates([...loads], [...bills], direction, k);
+    if (list.length) out.push({ weekKey: k, loads: list });
   }
   return out;
+}
+
+/** „Do wystawienia” (E4) z kwotą netto według cennika i opłaty paliwowej. */
+export function pendingWeeks(loads: Load[], bills: Bill[], direction: BillDirection, today: string): PendingWeek[] {
+  return pendingWeekLoads(loads, bills, direction, today).map(({ weekKey: k, loads: list }) => {
+    const from = isoWeekMonday(k);
+    const net = list.reduce((s, l) => s + (expectedNetFor(l, direction, 'EUR', today) ?? 0), 0);
+    return { weekKey: k, no: Number(k.slice(-2)), from, to: addDaysIso(from, 6), loads: list, netEur: r2(net) };
+  });
 }
 
 /** Różnica faktura − wyliczenie (netto, w walucie faktury). */
