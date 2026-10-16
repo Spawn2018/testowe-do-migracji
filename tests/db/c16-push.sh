@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# C16 N8 — zapas e-mail WEB_PUSH (D-20261015-1955-01 N4 / W42)
+# C16 N8 + C16-H — zapas e-mail WEB_PUSH (D-20261015-1955-01 N4 / W42; D-20261016-0100-01 H5)
 . "$(git rev-parse --show-toplevel)/tests/db/refuse-prod.sh"
 PSQL="psql ${PGURL:-postgres://postgres@localhost:5433/tower} -Atq"
 ok=0; fail=0
@@ -14,7 +14,7 @@ P=22222222-0000-0000-0000-000000000001
 L=33333333-0000-0000-0000-00000000c16a
 
 sys "set session_replication_role=replica;
- delete from notifications where dedup_key like 'c16-%' or dedup_key like 'push_fallback:%';
+ delete from notifications where dedup_key like 'c16-%' or dedup_key like 'push_fallback:%' or dedup_key like 'c16h-%';
  delete from load_events where load_id='$L';
  delete from loads where id='$L';
  set session_replication_role=origin;" >/dev/null
@@ -22,11 +22,11 @@ sys "set session_replication_role=replica;
 sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status)
  values ('$L','$P','00000000-0000-0000-0000-00000000a003','KSH/C16','HHL/C16','SCX/C16','PLANNED')" >/dev/null
 
-# 1) ERROR no_sub → wpis zapasowy od razu
-sys "insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key, status, error)
+# 1) ERROR no_sub → wpis zapasowy od razu (po granicy, critical)
+sys "insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key, status, error, created_at)
  values ('WEB_PUSH','hhl@test','$HHL','$L','SCHEDULE_DATE_CRITICAL',
-  '{\"title\":\"C16\",\"body\":\"brak urzadzenia\",\"url\":\"/#/transport/SG-99\"}'::jsonb,
-  'c16-nosub:$HHL','ERROR','no_sub')" >/dev/null
+  '{\"title\":\"C16\",\"body\":\"brak urzadzenia\",\"url\":\"/#/transport/SG-99\",\"critical\":\"true\"}'::jsonb,
+  'c16-nosub:$HHL','ERROR','no_sub', now())" >/dev/null
 NID=$(sys "select id from notifications where dedup_key='c16-nosub:$HHL'" | tail -1)
 val "no_sub → enqueue fallback" "select public.web_push_enqueue_fallback($NID)::text" true
 val "fallback EMAIL istnieje" "select count(*) from notifications where dedup_key='push_fallback:$NID' and channel='EMAIL'" 1
@@ -34,26 +34,62 @@ val "drugi przebieg nie dubluje" "select public.web_push_enqueue_fallback($NID):
 val "nadal jeden EMAIL" "select count(*) from notifications where dedup_key='push_fallback:$NID'" 1
 
 # 2) SENT bez delivered_at po 5 min → tick
-sys "insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key, status, sent_at)
+sys "insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key, status, sent_at, created_at)
  values ('WEB_PUSH','hhl@test','$HHL','$L','SCHEDULE_DATE_CRITICAL',
-  '{\"title\":\"C16\",\"body\":\"po 5 min\",\"url\":\"/\"}'::jsonb,
-  'c16-late:$HHL','SENT', now() - interval '6 minutes')" >/dev/null
+  '{\"title\":\"C16\",\"body\":\"po 5 min\",\"url\":\"/\",\"critical\":\"true\"}'::jsonb,
+  'c16-late:$HHL','SENT', now() - interval '6 minutes', now())" >/dev/null
 NID2=$(sys "select id from notifications where dedup_key='c16-late:$HHL'" | tail -1)
 val "tick tworzy fallback po 5 min" "select public.web_push_fallback_tick() >= 1" t
 val "EMAIL po ticku" "select count(*) from notifications where dedup_key='push_fallback:$NID2' and channel='EMAIL'" 1
 val "tick drugi raz nie dubluje" "select count(*) from notifications where dedup_key='push_fallback:$NID2'" 1
 
 # 3) delivered_at blokuje zapas
-sys "insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key, status, sent_at, delivered_at)
+sys "insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key, status, sent_at, delivered_at, created_at)
  values ('WEB_PUSH','hhl@test','$HHL','$L','SCHEDULE_DATE_CRITICAL',
-  '{\"title\":\"C16\",\"body\":\"doszlo\"}'::jsonb,
-  'c16-ack:$HHL','SENT', now() - interval '10 minutes', now() - interval '9 minutes')" >/dev/null
+  '{\"title\":\"C16\",\"body\":\"doszlo\",\"critical\":\"true\"}'::jsonb,
+  'c16-ack:$HHL','SENT', now() - interval '10 minutes', now() - interval '9 minutes', now())" >/dev/null
 NID3=$(sys "select id from notifications where dedup_key='c16-ack:$HHL'" | tail -1)
 val "z delivered_at bez fallbacku" "select public.web_push_enqueue_fallback($NID3)::text" false
 
 # 4) kolumny stanu urządzenia
 val "last_ack_at istnieje" "select count(*) from information_schema.columns where table_schema='public' and table_name='push_subscriptions' and column_name='last_ack_at'" 1
 val "delivered_at istnieje" "select count(*) from information_schema.columns where table_schema='public' and table_name='notifications' and column_name='delivered_at'" 1
+
+# --- C16-H (D-20261016-0100-01 H5) ---
+# 5) stary WEB_PUSH sprzed granicy → brak e-maila zapasowego
+sys "insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key, status, sent_at, created_at)
+ values ('WEB_PUSH','hhl@test','$HHL','$L','RISK_OPEN',
+  '{\"title\":\"stare\",\"body\":\"przed 0219\",\"critical\":\"true\"}'::jsonb,
+  'c16h-old:$HHL','SENT', now() - interval '6 minutes', timestamptz '2026-10-09 12:00:00+00')" >/dev/null
+NOLD=$(sys "select id from notifications where dedup_key='c16h-old:$HHL'" | tail -1)
+val "C16-H: stary WEB_PUSH bez enqueue" "select public.web_push_enqueue_fallback($NOLD)::text" false
+val "C16-H: stary bez EMAIL po ticku" "select public.web_push_fallback_tick(); select count(*) from notifications where dedup_key='push_fallback:$NOLD'" 0
+
+# 6) RISK_RESOLVED → brak e-maila zapasowego
+sys "insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key, status, sent_at, created_at)
+ values ('WEB_PUSH','hhl@test','$HHL','$L','RISK_RESOLVED',
+  '{\"title\":\"zamkniete\",\"critical\":\"true\"}'::jsonb,
+  'c16h-res:$HHL','SENT', now() - interval '6 minutes', now())" >/dev/null
+NRES=$(sys "select id from notifications where dedup_key='c16h-res:$HHL'" | tail -1)
+val "C16-H: RISK_RESOLVED bez fallbacku" "select public.web_push_enqueue_fallback($NRES)::text" false
+
+# 7) >80 kandydatów, dwa przebiegi → każdy dokładnie jeden e-mail (limit nie stoi)
+sys "delete from notifications where dedup_key like 'c16h-bulk:%' or dedup_key in (
+  select 'push_fallback:'||id::text from notifications where dedup_key like 'c16h-bulk:%'
+);" >/dev/null
+sys "insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key, status, sent_at, created_at)
+ select 'WEB_PUSH','hhl@test','$HHL','$L','SCHEDULE_DATE_CRITICAL',
+  '{\"title\":\"bulk\",\"critical\":\"true\"}'::jsonb,
+  'c16h-bulk:'||g||':$HHL','SENT', now() - interval '6 minutes', now()
+ from generate_series(1, 85) g" >/dev/null
+val "C16-H: tick1 bierze do 80" "select public.web_push_fallback_tick()" 80
+val "C16-H: po tick1 = 80 EMAIL" "select count(*) from notifications n join notifications w on n.dedup_key='push_fallback:'||w.id::text where w.dedup_key like 'c16h-bulk:%' and n.channel='EMAIL'" 80
+val "C16-H: tick2 bierze pozostałe 5" "select public.web_push_fallback_tick()" 5
+val "C16-H: po tick2 każdy ma 1 EMAIL" "select (count(*)=85 and bool_and(c=1))::text from (
+  select w.id, count(n.id) c from notifications w
+  left join notifications n on n.dedup_key='push_fallback:'||w.id::text and n.channel='EMAIL'
+  where w.dedup_key like 'c16h-bulk:%' group by w.id) s" t
+val "C16-H: tick3 nic nowego" "select public.web_push_fallback_tick()" 0
 
 echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

@@ -2520,3 +2520,29 @@ unit + visual zielone przed każdym scaleniem; `npm audit` 0. #209/#231 (P7) —
 **wyglad/P6-c NA PRODUKCJI — fd5562ff.**  
 **wyglad/P6-d NA PRODUKCJI — d6fc9ae8.**
 
+## 2026-10-16 — C17 NA PRODUKCJI (D-20261015-2110-01)
+
+- Merge PR #235 → `e7595541` (merge); treść `1d6207ff` (release DELIVERED) / migracja 0220.
+- CI #235 na `1d6207ff`: unit / visual / `db` zielone (release po C17: DELIVERED); `npm audit` 0; doradca TEST security: 149, **0 nowych**.
+- Kopia: `D:\Watch Tower\dane\p2\kopia-c17-loads-2026-10-16.csv` (3 wiersze + nagłówek), SHA-256 `fd93120ff9ab24a99c58c1bada67681d5c8525fc82895a9cf3101579bb1abbd1`.
+- Próba ROLLBACK 0220: 15048 READY_TO_INVOICE, 15060 INVOICED, UNLOADED=0, backfill `{unloaded_to_delivered:1,to_ready_to_invoice:1,to_invoiced:1}` → ROLLBACK; potem `db push` ×2 (drugi: up to date); parytet **MATCH YES** 0001…0220.
+- Po COMMIT: 15048 READY_TO_INVOICE, 15060 INVOICED, 15062 DELIVERED, UNLOADED=0; 3× STATUS_AUTO z `przebieg=jednorazowy C17`.
+- Aplikacja R7: `dpl_HRCPmDoD3Ghiumi6tXDkaxcSzRfs`, JS `assets/index-DpEvn83_.js`; tower / makieta **200**; 0 × `service_role`.
+- Odbiór C17 (SELECT): OK. C17 zamknięte przed BLOKEREM C16-H — zakładka niepotrzebna.
+
+| punkt | zrobione / odbiór |
+|---|---|
+| C17.1 CMR → READY_TO_INVOICE | zrobione — 0220 |
+| C17.2 faktury → INVOICED | zrobione — 0220 |
+| C17.3 reguły wspólne | zrobione — 0220 |
+| C17.4 UNLOADED → DELIVERED | zrobione — 0× UNLOADED |
+| C17.5 przebieg jednorazowy | zrobione — backfill 1/1/1 |
+| C17.6 testy status/e25/release | zrobione — CI db zielone |
+| C17.7 wygląd (wykonawca) | bez zmian |
+| C17 odbiór produkcja | zrobione 02:02 — SELECT OK |
+
+**C17 NA PRODUKCJI — e7595541, 02:02.**
+
+## 2026-10-16 — BLOKER C16-H w toku (D-20261016-0100-01)
+
+- Start po zamknięciu C17; migracja **0221**; H1–H5; do zamknięcia C16-H nic innego.
