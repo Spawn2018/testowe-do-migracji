@@ -518,7 +518,7 @@ const DOC_CAT: Record<string, DocCategory> = {
 /** Kategoria aplikacji → `doc_category` bazy (BK4: rejestracja pliku). */
 export const DOC_CAT_TO_DB: Record<DocCategory, string> = {
   PERMIT_PL: 'PERMIT_PL', PERMIT_SE: 'PERMIT_SE', INSURANCE: 'INSURANCE', CMR: 'CMR', POD: 'POD',
-  LASHING_PHOTOS: 'LASHING_PHOTO', DRAWING: 'SPEC', INVOICE: 'INVOICE',
+  LASHING_PHOTOS: 'LASHING_PHOTO', DRAWING: 'SPEC', INVOICE: 'INVOICE', OTHER: 'OTHER',
 };
 /** Metadane dokumentu; plik w Storage (BK4) pod `storage_path`. Kategorie bez odpowiednika w UI → pominięte (null). */
 export function documentFromRow(r: DocumentRow): Document | null {

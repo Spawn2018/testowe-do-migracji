@@ -18,7 +18,7 @@ import { ferryMarkerTone } from '../../lib/ferry/stenaAis';
 import { isServerId } from '../../data/registry';
 import { transportLabel } from '../../lib/transportName';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
-import { h6Requests } from '../../lib/map/draw';
+import { WATER_GDN_NYN, WATER_GDY_KAA, h6Requests } from '../../lib/map/draw';
 import {
   acquireMap, attributionOf, ensureBasemap, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
   type BasemapHealth, type LayerBag, type MapSlot, type PoolEntry,
@@ -37,6 +37,9 @@ import { TZ_OPS } from '../../lib/time';
 import { useIsPhone } from '../../lib/useIsPhone';
 import { GroupList } from './GroupList';
 import { drawerMapNote } from '../../lib/p9fNote';
+import { detourLinesOf, subscribeDetourLines } from '../../lib/e49Source';
+import { detourLineOk, detourLineTip } from '../../lib/e49Detour';
+import { e49t } from '../../i18n/e49';
 
 /* III-5 — odtwarzanie przebiegu z bazy: tylko build Supabase (chunk leniwy); demo bez zmian */
 const TrackReplay = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./TrackReplay')) : null;
@@ -409,6 +412,27 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     });
   }, [mapReady]);
 
+  /* E45 (D-20261016-0230-01 Z3 pkt 8): po decyzji SCX „Jedziemy objazdem” — przerywana linia objazdu (geometria HERE)
+     z podpisem „kod · objazd przez …: +km, +czas · decyzja SCX”. Przegląd w panelu — tylko transport panelu. */
+  const [detourTick, setDetourTick] = useState(0);
+  useEffect(() => subscribeDetourLines(() => setDetourTick((n) => n + 1)), []);
+  useEffect(() => {
+    const layers = layersRef.current;
+    if (!mapReady || !layers) return;
+    layers.detour.clearLayers();
+    const scope = panelLoad ? [panelLoad] : focusMode && selectedLoadId ? loads.filter((l) => l.id === selectedLoadId) : loads;
+    const byId = new Map(scope.map((l) => [l.id, l]));
+    for (const d of detourLinesOf(scope, getNowIso())) {
+      const l = byId.get(d.loadId);
+      if (!l || !detourLineOk(d.line)) continue;
+      L.polyline(d.line.map(([lat, lng]) => L.latLng(lat, lng)), {
+        color: '#E5A544', weight: 4, opacity: 1, dashArray: '8 6', className: 'wt-detour',
+      })
+        .bindTooltip(detourLineTip(transportLabel(l, role), d, e49t), { direction: 'top', sticky: true, className: 'wt-detour-tip' })
+        .addTo(layers.detour);
+    }
+  }, [mapReady, loads, panelLoad, focusMode, selectedLoadId, role, detourTick]);
+
   useEffect(() => {
     if (!mapReady || !basemapReady || import.meta.env.VITE_AUTH_MODE !== 'supabase') return;
     let cancelled = false;
@@ -420,6 +444,22 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), {
           color: '#E5A544', weight: 3, opacity: 0.9,
         }).addTo(layers.route);
+      }
+    });
+    /* E45 pkt 1 (L56): przeprawy według HERE, gdy serwer je poda; inaczej zostają stałe tory wodne z `mapPool` */
+    void import('./applyBasemap').then(({ loadFerryLines }) => loadFerryLines()).then(({ lines: ferries, summary }) => {
+      const layers = layersRef.current;
+      /* L56: na TEST widać, czy przeprawa jest z HERE, czy został stały tor — i dlaczego */
+      if (!cancelled && summary && entryRef.current) entryRef.current.el.dataset.ferries = summary;
+      if (cancelled || !layers || ferries.length === 0) return;
+      layers.ferryLeg.clearLayers();
+      const style = { color: '#6BA8D6', weight: 3, opacity: 0.9 };
+      for (const f of ferries) L.polyline(f.line.map(([lat, lng]) => L.latLng(lat, lng)), style).addTo(layers.ferryLeg);
+      /* przeprawa bez odcinka z HERE — stały tor wodny jak dotąd */
+      const lanes = { 'FERRY-GDN-NYN': WATER_GDN_NYN, 'FERRY-GDY-KAA': WATER_GDY_KAA } as const;
+      for (const [leg, lane] of Object.entries(lanes)) {
+        if (ferries.some((f) => f.leg === leg)) continue;
+        L.polyline(lane.map(([lng, lat]) => L.latLng(lat, lng)), style).addTo(layers.ferryLeg);
       }
     });
     return () => { cancelled = true; };
@@ -440,6 +480,8 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     /* E45 pkt 2–3 (potwierdzone 07.10 22:42): „Trasa” = droga i prom razem; statki AIS pod „Pojazdy”; bez kropek */
     setVis(layers.route, !!mapLayers.route);
     setVis(layers.ferryLeg, !!mapLayers.route);
+    /* E45 (Z3 pkt 8): linia objazdu w tej samej warstwie co trasa — chowa ją „Trasa” */
+    setVis(layers.detour, !!mapLayers.route);
     setVis(layers.geofences, !!mapLayers.geofence);
     setVis(layers.poi, false);
     setVis(layers.fleet, !!mapLayers.vehicles);

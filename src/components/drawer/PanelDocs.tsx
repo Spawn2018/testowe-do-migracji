@@ -3,7 +3,8 @@
  * Lista wymaganych dokumentów tego transportu ze stanem (jest / brak / po terminie z datą) i kto wgrywa;
  * „Wgraj” tylko przy tym, co ta firma może wgrać (SCX i HHL — zezwolenia i CMR; KSH nic, 19:11).
  * Polisy podpinają się same (G-21): przewoźnika i Polisa HHL — numer i ważność z „AUTO” albo „brak” (audyt-C C-07)
- * (KSH widzi polisę HHL, SCX swoją, HHL obie). „Inne pliki” (bez „+ Dodaj” do rodzaju „Inne”), „Pobierz wszystkie (ZIP)” z kodem w nazwie.
+ * (KSH widzi polisę HHL, SCX swoją, HHL obie). „Inne pliki” z „+ Dodaj” (HHL i SCX; rodzaj „Inne”, wiele plików — `otherDocsOn`),
+ * „Pobierz wszystkie (ZIP)” z kodem w nazwie.
  * „Wgraj” otwiera okno „Wgraj dokument” z wybranym transportem. Zapis jak dziś (`attachDocumentFile`).
  */
 import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react';
@@ -17,8 +18,9 @@ import { downloadDocumentsZip } from '../../lib/zipDocs';
 import { docStatusRows } from '../../lib/docRequirements';
 import { cmrKind, reqVisible } from '../../lib/p5Docs';
 import { getDocReqCache } from '../../lib/docReqCache';
-import { docRequirementsStart, policiesOf } from '../../lib/p5Source';
+import { docRequirementsStart, otherDocsOn, policiesOf } from '../../lib/p5Source';
 import { lazyRetry } from '../../lib/lazyRetry';
+import { isPreviewReadOnly } from '../../lib/prodFacade';
 import { t, tp } from '../../i18n/messages';
 import { ft, ftp } from '../../i18n/p5';
 import { up } from '../options/up';
@@ -29,6 +31,7 @@ import { fmtDate, formatCalendarDay } from '../../lib/time';
 const UploadDocModal = lazy(lazyRetry(() => import('../docs/UploadDocModal').then((m) => ({ default: m.UploadDocModal }))));
 
 const REQ: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR'];
+const OTHER: DocCategory[] = ['OTHER'];
 /* rok zawsze — właściciel 16.10.2026 */
 const dmy = (iso: string) => formatCalendarDay(iso.slice(0, 10));
 const dm = (iso: string) => fmtDate(iso);
@@ -48,8 +51,11 @@ interface Props {
 }
 
 export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onPreview, permitForm }: Props) {
-  const [upload, setUpload] = useState(false);
+  /* null = okno zamknięte; REQ — „Wgraj” przy wymaganym; OTHER — „+ Dodaj” przy „Inne pliki” */
+  const [upload, setUpload] = useState<DocCategory[] | null>(null);
   const canUpload = role === 'HHL' || role === 'SCX';
+  /* W38: w Podglądzie bez zapisu — przycisk ukryty jak inne zapisy */
+  const canAddOther = canUpload && otherDocsOn() && !isPreviewReadOnly({ viewRole: role });
   const policies = policiesOf();
   /* ten sam odczyt co strona Dokumenty (baza); w demo — wartości startowe; w produkcji bez odczytu — bez terminów */
   const cached = getDocReqCache();
@@ -98,7 +104,7 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
             </button>
           ) : null}
           {canUpload && !doc ? (
-            <button type="button" className="btn ghost" data-pd-upload={c} onClick={() => setUpload(true)}>{ft(locale, 'p5_pd_upload')}</button>
+            <button type="button" className="btn ghost" data-pd-upload={c} onClick={() => setUpload(REQ)}>{ft(locale, 'p5_pd_upload')}</button>
           ) : !doc ? <span className="fin-tag plain">SCX</span> : null}
         </div>
       </li>
@@ -137,9 +143,22 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
           <div className="pd-tx">
             <b>{ft(locale, 'p5_pd_other')}</b>
             {others.length ? null : <span className="fin-muted">{ft(locale, 'p5_doc_none')}</span>}
-            {others.map((d) => <DocFileRow key={d.id} doc={d} onPreview={onPreview} />)}
+            {/* rodzaj „Inne” bez etykiety — nagłówek wiersza już mówi „Inne pliki”; inne rodzaje z nazwą (POD, rysunek…) */}
+            {others.map((d) => <DocFileRow key={d.id} doc={d} label={d.category === 'OTHER' ? '' : undefined} onPreview={onPreview} />)}
           </div>
-          {/* „+ Dodaj” wraca, gdy aplikacja dostanie rodzaj „Inne” (w bazie jest OTHER) — D-20261014-2005-01 S4 pkt 7 */}
+          {canAddOther ? (
+            <div className="pd-act">
+              <button
+                type="button"
+                className="btn ghost"
+                data-pd-other-add
+                aria-label={ftp(locale, 'p5_pd_other_aria', { code: load.code })}
+                onClick={() => setUpload(OTHER)}
+              >
+                {ft(locale, 'p5_pd_other_add')}
+              </button>
+            </div>
+          ) : null}
         </li>
       </ul>
       <div className="pd-foot">
@@ -166,9 +185,9 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
             phone={phone}
             loads={[load]}
             statusRows={rows}
-            allowed={REQ}
+            allowed={upload}
             loadId={load.id}
-            onClose={() => setUpload(false)}
+            onClose={() => setUpload(null)}
           />
         </Suspense>
       ) : null}

@@ -5,9 +5,9 @@
  * wpisany wprost (strażnik I-0). Bez zapytań.
  */
 import type { Load, OrgKind } from '../types';
-import type { DetourCase, DetourDecision } from './e49Detour';
+import type { DetourCase, DetourDecision, DetourLine } from './e49Detour';
 import type { EtaWx } from './e49Wx';
-import { demoClosureLoad, demoDetourCase, demoDetourDecide, demoEtaWx } from './e49Demo';
+import { demoClosureLoad, demoDetourCase, demoDetourDecide, demoDetourLines, demoEtaWx, subscribeDemoDetours } from './e49Demo';
 
 /** Transport demo ze sprawą: pierwszy w drodze przez Szwecję, który ma już kartę w „Do zrobienia” (liczba E7-2 bez zmian). */
 export function demoDetourLoadId(loads: readonly Load[], cardLoads: ReadonlySet<string> | null): string | null {
@@ -36,4 +36,21 @@ export function detourDecideOf(): ((id: string, d: DetourDecision) => Promise<{ 
 export function etaWxOf(load: Load, loads: readonly Load[], nowIso: string): EtaWx[] {
   if (import.meta.env.VITE_AUTH_MODE === 'supabase') return load.etaDetail?.weather ?? [];
   return demoEtaWx(load, nowIso, demoDetourLoadId(loads, null));
+}
+
+/**
+ * Linie objazdu na mapie (E45; D-20261016-0230-01 Z3 pkt 8) — transporty z decyzją SCX „Jedziemy objazdem”, dopóki
+ * decyzja obowiązuje. Produkcja: `[]` do podłączenia w P9 (pozycja E45) — serwer daje dla każdej obowiązującej decyzji
+ * „objazd” `{ loadId, line, via, addKm, addMin }` (`line` = geometria HERE Routing z liczenia sprawy, `DetourOption.line`)
+ * i wykonawca zmienia tylko tę gałąź (D-20261016-2130-01 pkt 3.2). Demo: decyzja zapisana w pamięci strony.
+ */
+export function detourLinesOf(loads: readonly Load[], nowIso: string): DetourLine[] {
+  if (import.meta.env.VITE_AUTH_MODE === 'supabase') return [];
+  return demoDetourLines(loads, nowIso);
+}
+
+/** Nowa decyzja → mapa rysuje linie objazdu od nowa. Produkcja: przy odświeżeniu danych transportów (bez osobnego sygnału). */
+export function subscribeDetourLines(f: () => void): () => void {
+  if (import.meta.env.VITE_AUTH_MODE === 'supabase') return () => {};
+  return subscribeDemoDetours(f);
 }

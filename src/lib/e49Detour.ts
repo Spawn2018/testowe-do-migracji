@@ -25,6 +25,9 @@ export interface HoldOption {
   risks: DetourRisk[];
 }
 
+/** Punkt linii na mapie: [szerokość, długość] (WGS84), jak w `corridor_polylines`. */
+export type LatLngPair = readonly [number, number];
+
 export interface DetourOption {
   addKm: number;
   addMin: number;
@@ -32,6 +35,34 @@ export interface DetourOption {
   /** którędy: „przez Kramfors i Sandöbron (droga 90)” */
   via: string;
   risks: DetourRisk[];
+  /**
+   * Geometria objazdu z HERE Routing v8 (ciężarówka z wymiarami i masą zestawu), od zjazdu z trasy do powrotu na trasę,
+   * uproszczona do ok. 200 punktów. Brak / null — bez linii na mapie (E45, Z3 pkt 8).
+   */
+  line?: readonly LatLngPair[] | null;
+}
+
+/**
+ * Linia objazdu na mapie (E45; D-20261016-0230-01 Z3 pkt 8): transport z decyzją SCX „Jedziemy objazdem”, dopóki
+ * decyzja obowiązuje (zamknięcie nieodwołane, auto nie wróciło na trasę). Przerywana, w warstwie „Trasa”.
+ */
+export interface DetourLine {
+  loadId: string;
+  line: readonly LatLngPair[];
+  via: string;
+  addKm: number;
+  addMin: number;
+}
+
+/** Podpis linii objazdu: „T-17 · objazd przez Kramfors i Sandöbron (droga 90): +31 km, +35 min · decyzja SCX”. */
+export function detourLineTip(code: string, d: Pick<DetourLine, 'via' | 'addKm' | 'addMin'>, t: (k: 'e49_map_line', v: Record<string, string>) => string): string {
+  return t('e49_map_line', { code, via: d.via, km: kmText(d.addKm), d: minText(d.addMin) });
+}
+
+/** Linia ma co najmniej 2 poprawne punkty (szer. −90…90, dł. −180…180). */
+export function detourLineOk(line: readonly LatLngPair[] | null | undefined): line is readonly LatLngPair[] {
+  if (!line || line.length < 2) return false;
+  return line.every((p) => Array.isArray(p) && p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]) && Math.abs(p[0]) <= 90 && Math.abs(p[1]) <= 180);
 }
 
 /** HERE nie znalazł trasy dozwolonej dla zestawu (wymiary, masa). */

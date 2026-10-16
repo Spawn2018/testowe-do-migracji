@@ -352,6 +352,7 @@ const PL: Record<string, string> = {
   p5_doc_cat_PERMIT_SE: 'Zezwolenie SE',
   p5_doc_cat_CMR: 'CMR',
   p5_doc_cat_INSURANCE: 'Polisa',
+  p5_doc_cat_OTHER: 'Inne',
   p5_terms_h: 'Terminy dokumentów',
   p5_terms_sub: 'zmienia Administrator HHL · każda zmiana trafia do Historii zmian',
   p5_terms_sub_ro: 'tylko do odczytu — zmienia Administrator HHL',
@@ -485,6 +486,7 @@ const PL: Record<string, string> = {
   p5_pd_auto: 'Auto',
   p5_pd_other: 'Inne pliki',
   p5_pd_other_add: '+ Dodaj',
+  p5_pd_other_aria: 'Dodaj inny plik do {code}',
   p5_pd_zip: 'Pobierz wszystkie (ZIP)',
   p5_pd_note: '„Wgraj” jest tylko przy dokumentach, które Twoja firma może wgrać. Polisy podpinają się same.',
   /* E31 — okno „Wgraj dokument” */

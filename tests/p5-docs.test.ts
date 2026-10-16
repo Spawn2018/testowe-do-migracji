@@ -83,6 +83,8 @@ describe('E31 — strona bez edycji terminów, KSH bez wgrywania', () => {
   });
   it('„Wgraj dokument” tylko HHL i SCX; polis nie wgrywa się przy transporcie (G-21)', () => {
     expect(view).toMatch(/const canUpload = role === 'HHL' \|\| role === 'SCX';/);
-    expect(view).toMatch(/const UPLOAD_KINDS: DocCategory\[\] = \['PERMIT_PL', 'PERMIT_SE', 'CMR'\];/);
+    /* wyglad/W-dane (E31 pkt 5): „Inne” dochodzi po `otherDocsOn()`; polisy nadal nie (G-21) */
+    expect(view).toMatch(/const UPLOAD_KINDS: DocCategory\[\] = otherDocsOn\(\) \? \['PERMIT_PL', 'PERMIT_SE', 'CMR', 'OTHER'\] : \['PERMIT_PL', 'PERMIT_SE', 'CMR'\];/);
+    expect(view.match(/const UPLOAD_KINDS[^\n]*/)?.[0]).not.toContain('INSURANCE');
   });
 });

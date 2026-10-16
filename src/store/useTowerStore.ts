@@ -1030,11 +1030,12 @@ export const useTowerStore = create<TowerState>()(
           mimeType: opts?.mimeType ?? null,
           bytes: opts?.bytes ?? null,
           source: 'tower',
-          // III-6: zastąpienie pliku tej samej kategorii = kolejna wersja (demo; produkcja: document_supersede)
-          version: (get().documents.find((d) => d.loadId === loadId && d.category === category)?.version ?? 0) + 1,
+          // III-6: zastąpienie pliku tej samej kategorii = kolejna wersja (demo; produkcja: document_supersede).
+          // E31 pkt 5: „Inne pliki” — wiele plików przy transporcie, bez wersji.
+          version: category === 'OTHER' ? 1 : (get().documents.find((d) => d.loadId === loadId && d.category === category)?.version ?? 0) + 1,
         };
         set((s) => ({
-          documents: [doc, ...s.documents.filter((d) => !(d.loadId === loadId && d.category === category))],
+          documents: [doc, ...s.documents.filter((d) => category === 'OTHER' || !(d.loadId === loadId && d.category === category))],
           loads: s.loads.map((l) =>
             l.id === loadId && category === 'CMR' && !mismatch ? { ...l, docMissing: false } : l,
           ),

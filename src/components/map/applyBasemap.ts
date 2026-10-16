@@ -12,6 +12,7 @@ import {
   type ThemeName,
 } from '../../lib/map/draw';
 import { HERE_BROWSER_KEY, directTileTemplate, servedFromCache, sharedTileMeter } from './hereTileMeter';
+import { checkFerries, ferrySummary, type FerryLeg } from '../../lib/map/ferryLines';
 import { TILE_LANG } from '../../../supabase/functions/_shared/map/tilePolicy';
 
 /** AUD-01b: funkcje Edge w regionie bazy (eu-west-1), nie w regionie najbliższym przeglądarce. */
@@ -31,7 +32,7 @@ function tilesForcedOff(): boolean {
  * AUD-01: jeden odczyt `map_display_state` na stronę (TTL 60 s) — wspólny dla podkładu i geometrii trasy.
  * Wcześniej dwa osobne wywołania przy każdym zamontowaniu mapy.
  */
-type DisplayState = { tiles_open?: boolean; month?: string; roads?: unknown } | null;
+type DisplayState = { tiles_open?: boolean; month?: string; roads?: unknown; ferries?: unknown } | null;
 let displayState: { at: number; p: Promise<DisplayState> } | null = null;
 export function readMapDisplayState(force = false): Promise<DisplayState> {
   const now = Date.now();
@@ -273,3 +274,19 @@ export async function loadRoadLines(): Promise<LatLng[][]> {
   }
 }
 
+
+/**
+ * E45 pkt 1 (L56): odcinki promowe z HERE z tego samego odczytu `map_display_state` (pole `ferries`, P9).
+ * Bez pola albo przy złej geometrii — pusta lista i mapa rysuje stałe tory wodne.
+ */
+export async function loadFerryLines(): Promise<{ lines: { leg: FerryLeg; line: LatLng[] }[]; summary: string | null }> {
+  if (!SUPABASE_AUTH_ENABLED) return { lines: [], summary: null };
+  try {
+    const rows = (await readMapDisplayState())?.ferries;
+    if (rows === undefined || rows === null) return { lines: [], summary: null };
+    const r = checkFerries(rows);
+    return { lines: r.accepted, summary: ferrySummary(r) };
+  } catch {
+    return { lines: [], summary: null };
+  }
+}

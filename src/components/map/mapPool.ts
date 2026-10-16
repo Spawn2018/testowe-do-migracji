@@ -24,6 +24,8 @@ export type LayerBag = {
   tiles: L.Layer;
   route: L.LayerGroup;
   ferryLeg: L.LayerGroup;
+  /** E45 (Z3 pkt 8): linie objazdu po decyzji SCX — przerywane, widoczne z „Trasą”. */
+  detour: L.LayerGroup;
   geofences: L.LayerGroup;
   poi: L.LayerGroup;
   fleet: L.LayerGroup;
@@ -162,6 +164,7 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
   for (const lane of [WATER_GDN_NYN, WATER_GDY_KAA]) {
     L.polyline(lane.map(([lng, lat]) => L.latLng(lat, lng)), { color: '#6BA8D6', weight: 3, opacity: 0.9 }).addTo(ferryLeg);
   }
+  const detour = L.layerGroup().addTo(map);
   const geofences = L.layerGroup().addTo(map);
   const poi = L.layerGroup().addTo(map);
   const fleet = L.layerGroup().addTo(map);
@@ -176,7 +179,7 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
   else poolStats.oneOff += 1;
   return {
     map, el, pooled, tilesTheme: null, tilesLoaded: false, basemapSeq: 0, views: new Map(),
-    layers: { tiles, route, ferryLeg, geofences, poi, fleet, situations, ais },
+    layers: { tiles, route, ferryLeg, detour, geofences, poi, fleet, situations, ais },
     health: { state: 'loading', tries: 0, via: 'fallback', reported: false, cause: 'tiles' },
     healthSubs: new Set(), unwatch: null, chunkFails: 0, slot: 'map',
   };
@@ -256,8 +259,8 @@ export function acquireMap(root: HTMLElement, slot: MapSlot): PoolEntry {
   if (!untouched) {
     e.map.setView(target?.center ?? L.latLng(DEFAULT_CENTER), target?.zoom ?? DEFAULT_ZOOM, { reset: true } as L.ZoomPanOptions);
     // Warstwy wektorowe od nowa w tej samej kolejności (obcięcie linii i wzór kresek jak w świeżej mapie). Bez kafelków.
-    const { route, ferryLeg, geofences, poi, fleet, situations, ais } = e.layers;
-    const on = [route, ferryLeg, geofences, poi, fleet, situations, ais].filter((l) => e.map.hasLayer(l));
+    const { route, ferryLeg, detour, geofences, poi, fleet, situations, ais } = e.layers;
+    const on = [route, ferryLeg, detour, geofences, poi, fleet, situations, ais].filter((l) => e.map.hasLayer(l));
     for (const l of on) e.map.removeLayer(l);
     const m = e.map as unknown as { _renderer?: L.Renderer; _paneRenderers?: Record<string, L.Renderer> };
     if (m._renderer) { e.map.removeLayer(m._renderer); m._renderer = undefined; m._paneRenderers = {}; }
@@ -269,6 +272,9 @@ export function acquireMap(root: HTMLElement, slot: MapSlot): PoolEntry {
 /** Zwalnia mapę: wspólną odkłada do schowka (ten sam rozmiar), jednorazową niszczy. */
 export function releaseMap(e: PoolEntry, slot: MapSlot): void {
   if (!e.pooled) {
+    /* podkład zamówiony przed zamknięciem (plik podkładu jeszcze się pobiera) nie trafia już na usuniętą mapę —
+       wcześniej: „Cannot read properties of undefined (reading 'appendChild')” po szybkim otwarciu panelu */
+    e.basemapSeq += 1;
     e.map.remove();
     e.unwatch?.();
     e.unwatch = null;
@@ -342,11 +348,12 @@ export function ensureBasemap(e: PoolEntry, theme: ThemeName): Promise<L.Layer> 
       return layer;
     }, onChunkFail);
   }
-  return import('./applyBasemap').then(({ applyBasemap }) => applyBasemap(e.map, e.layers.tiles, theme, () => {
+  return import('./applyBasemap').then(({ applyBasemap }) => (e.basemapSeq !== seq ? e.layers.tiles : applyBasemap(e.map, e.layers.tiles, theme, () => {
     // Budżet D-78 zamknięty — przełóż podkład (zapas) dla bieżącego motywu.
+    if (e.basemapSeq !== seq) return;
     e.tilesTheme = null;
     void ensureBasemap(e, useTowerStore.getState().theme);
-  })).then((layer) => {
+  }))).then((layer) => {
     if (e.basemapSeq !== seq) {
       if (e.map.hasLayer(layer) && layer !== e.layers.tiles) e.map.removeLayer(layer);
       return e.layers.tiles;
