@@ -168,3 +168,43 @@ describe('E-06, C-14: Cennik i opłaty — symbole, wersje, liczby po polsku, D 
     expect(rateCardSaverOf()).toBeTypeOf('function');
   });
 });
+
+describe('E-07 … E-15: Zezwolenia, Historia, Stan systemu, Automatyzacje, Strefy, hasło, Wygląd, Terminy', () => {
+  it('E-07: stan wymogu zezwoleń zamiast „po Auth”; PL i SE przy transporcie tylko „Trasa” (KR); „Firma” samo', async () => {
+    const d = demoBodies('pl', { kind: 'HHL_ADMIN', readOnly: false, mark: null });
+    const flag = html(d.bodies.permitsFlag as ReturnType<typeof createElement>);
+    expect(flag).toContain('Bez zezwolenia nie ma „Gotowy”: wyłączony · zmiana w System › Przełączniki bezpieczeństwa');
+    expect(read('src/views/OptionsView.tsx')).toContain('demo?.bodies.permitsFlag ?? <Soon');
+    expect(t('pl', 'opt_acc_perm_soon')).not.toMatch(/Auth/);
+    const { ft } = await import('../src/i18n/p5');
+    expect(ft('pl', 'p5_terms_req_route')).toBe('wymagany tylko przy „Trasa” (KR)');
+    expect(read('src/components/docs/DocTerms.tsx')).toContain("ROUTE_ONLY && PERMITS.includes(r.category) ? ft(locale, 'p5_terms_req_route')");
+    expect(t('pl', 'p3c_flag_PERMIT_REQUIRED_NON_STANDARD_fx')).toMatch(/„Trasa” \(KR\)/);
+  });
+  it('E-08: Historia zmian — filtr „transporty”, wpis „(HHL) jako” i wpis porządków', () => {
+    const src = read('src/components/options/demo.tsx');
+    expect(src).toContain("areas={['konta', 'ustawienia', 'ceny', 'transporty', 'powiadomienia', 'przełączniki']}");
+    expect(src).toContain("who: 'Anna Wiśniewska (HHL) jako Jan Nowak'");
+    expect(src).toMatch(/Porządki danych testowych: faktura testowa i 1 pozycja usunięte · kopia zapisana/);
+  });
+  it('E-10: „Działa samo” — wiatr w ETA 20 / 25 m/s, śliskość do 25 km, sprawa SCX „Objazd czy postój?”', async () => {
+    const src = read('src/i18n/p4cWf.ts');
+    expect(src).toMatch(/wiatr w ETA \(od 20 m\/s wolniej, od 25 m\/s postój\), śliskość do 25 km od auta, sprawa SCX „Objazd czy postój\?”/);
+  });
+  it('E-11: Strefy — bufory odsyłają do zdarzeń „Kto co dostaje”, bez „(Automatyzacje)”', () => {
+    const src = read('src/i18n/p8c.ts');
+    expect(src).toContain("p8c_do_PRE_PORT: 'powiadomienie HHL (Kto co dostaje: „Auto 20 km przed portem”)'");
+    expect(src).toMatch(/p8c_do_PRE_ARRIVAL_PL: '[^']*powiadomienie KSH, SCX \(„Auto 50 km przed placem \/ przed Śremem”\)'/);
+    expect(src).not.toMatch(/\(Automatyzacje(, E35)?\)/);
+  });
+  it('E-12: hasło — „Minimum 12 znaków, litery i cyfry”', () => {
+    expect(t('pl', 'p3c_m_pw_note')).toMatch(/^Minimum 12 znaków, litery i cyfry\./);
+  });
+  it('E-13: Wygląd i waluta HHL — opis „Twoje konto” i zdanie o EUR; EUR pierwsze', () => {
+    expect(read('src/views/OptionsView.tsx')).toContain('subKey="settings_prefs_sub" noteKey="settings_prefs_note"');
+    expect(read('src/components/settings/UiPrefsPanel.tsx')).toContain('<option value="EUR">EUR</option><option value="PLN">PLN</option>');
+  });
+  it('E-15: „Terminy płatności i adresy” ze stanem „30 / 35 dni” z danych', () => {
+    expect(read('src/views/OptionsView.tsx')).toContain('meta: terms ? `${terms.kshDays} / ${terms.scxDays} dni` : undefined');
+  });
+});

@@ -16,6 +16,10 @@ import '../finance/finance.css';
 import './docs.css';
 
 const KEYS: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR'];
+/* wyglad/audyt-E (E-07; 16.10, 01:13): zezwolenie PL i SE przy transporcie tylko „Trasa” (KR), „Firma” podpina się samo.
+   Demo pokazuje regułę; produkcja — gdy baza policzy braki według rodzaju zezwolenia (wykonawca, D-04). */
+const ROUTE_ONLY = import.meta.env.VITE_AUTH_MODE !== 'supabase';
+const PERMITS: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE'];
 
 export default function DocTerms({ canEdit }: { canEdit: boolean }) {
   const locale = useTowerStore((s) => s.locale);
@@ -85,7 +89,7 @@ export default function DocTerms({ canEdit }: { canEdit: boolean }) {
                       <label className="doc-terms-chk">
                         <input type="checkbox" data-docreq-required="" checked={edit.required} onChange={(e) => setEdit({ ...edit, required: e.target.checked })} /> {t(locale, 'iii6_required')}
                       </label>
-                    ) : r.required ? t(locale, 'iii6_required') : t(locale, 'iii6_optional')}
+                    ) : r.required ? (ROUTE_ONLY && PERMITS.includes(r.category) ? ft(locale, 'p5_terms_req_route') : t(locale, 'iii6_required')) : t(locale, 'iii6_optional')}
                   </td>
                   <td data-docreq-text="">
                     {on && edit && edit.anchor !== 'ORG' ? (
@@ -114,7 +118,7 @@ export default function DocTerms({ canEdit }: { canEdit: boolean }) {
           </tbody>
         </table>
       </div>
-      <p className="fin-muted doc-pad">{ft(locale, 'p5_terms_note')}</p>
+      <p className="fin-muted doc-pad">{ft(locale, 'p5_terms_note')}{ROUTE_ONLY ? ` ${ft(locale, 'p5_terms_note_route')}` : ''}</p>
     </section>
   );
 }

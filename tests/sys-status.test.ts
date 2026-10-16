@@ -17,8 +17,18 @@ describe('Stan systemu — dane', () => {
     }
   });
 
-  it('progi „Nie działa” jak w E23 pkt 3: 10 min, 15 min, 30 min, 45 min, 3 h, 26 h, 8 dni', () => {
-    expect(sourceThresholds()!.map((r) => `${r.value} ${r.unit}`)).toEqual(['10 min', '15 min', '30 min', '45 min', '3 h', '26 h', '8 dni']);
+  it('progi „Nie działa” jak w E23 pkt 3: 10 min, 15 min, 30 min, 45 min, 3 h, 26 h, 8 dni; + wiatr SMHI 2 h (E49 Z5)', () => {
+    expect(sourceThresholds()!.map((r) => `${r.value} ${r.unit}`)).toEqual(['10 min', '15 min', '30 min', '45 min', '3 h', '2 h', '26 h', '8 dni']);
+    expect(sourceThresholds()!.find((r) => r.key === 'SRC_WIND_H')?.value).toBe(2);
+  });
+
+  it('wyglad/audyt-E (E-09): źródło „Wiatr — SMHI” z liczbą punktów; „Zagrożenia na trasie” bez „Próg 20 m/s nie jest sprawdzany”', () => {
+    const rows = sourceHealth(NOW)!;
+    const wind = rows.find((r) => r.id === 'wind')!;
+    expect(wind.name).toBe('Wiatr — SMHI');
+    expect(wind.why).toMatch(/\d+ punktów/);
+    expect(wind.why).toMatch(/2 h/);
+    expect(rows.find((r) => r.id === 'hazards')!.why).not.toMatch(/Brak serii wiatru|nie jest sprawdzany/);
   });
 
   it('błędy: grupy po treści, stany z listy; bezpieczeństwo 5 wierszy; wydajność z progami E46', () => {

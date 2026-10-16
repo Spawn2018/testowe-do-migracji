@@ -354,6 +354,12 @@ const PL: Record<string, string> = {
   p5_terms_sub_ro: 'tylko do odczytu — zmienia Administrator HHL',
   p5_terms_col_req: 'Wymagany',
   p5_terms_note: 'Strona Dokumenty liczy według tych terminów transporty po terminie i w ciągu 7 dni. Polisy obowiązują w dniu transportu i podpinają się same.',
+  /* wyglad/audyt-E (E-07; Zmiany 16.10, 01:13 · 1; D-20261016-0200-01 Z1 pkt 6): zezwolenie przy transporcie tylko „Trasa” */
+  p5_terms_req_route: 'wymagany tylko przy „Trasa” (KR)',
+  p5_terms_note_route: 'Zezwolenie firmowe PL i SE podpina się samo do transportów „Firma”. Przy transporcie wgrywa się zezwolenie tylko przy „Trasa” (KR).',
+  p5_terms_flag: 'Bez zezwolenia nie ma „Gotowy”: {state} · zmiana w System › Przełączniki bezpieczeństwa',
+  p5_terms_flag_on: 'włączony',
+  p5_terms_flag_off: 'wyłączony',
   /* E4b — Opcje › Pieniądze › Faktoring */
   p5_fo_on: 'Faktoring',
   p5_fo_on_yes: 'Włączony',

@@ -14,6 +14,7 @@ import { ExportScreen, FlagsScreen, HistoryScreen, ThresholdsScreen, type Securi
 import { AccountScreen, BroadcastScreen, LoginsScreen, UsersScreen, type InviteRow, type PersonRow } from './PeopleScreens';
 import type { ReactNode } from 'react';
 import { m2 } from '../../i18n/mfa2';
+import { ft } from '../../i18n/p5';
 import type { MyNotifySource } from '../../lib/forMeSource';
 
 const c = (bell: boolean, push = false, mail = false, fixed?: MatrixCell extends null ? never : NonNullable<MatrixCell>['fixed']): MatrixCell => ({ bell, push, mail, fixed });
@@ -204,8 +205,11 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
           techCount={2713}
           range={{ from: '2026-10-01', to: '2026-10-08' }}
           people={['Administrator HHL', 'Operacje HHL', 'System // Watch Tower']}
-          areas={['konta', 'ustawienia', 'ceny', 'powiadomienia', 'przełączniki']}
+          /* wyglad/audyt-E (E-08; E12 „co: konta, ustawienia, ceny, transporty”, E37 „Działaj jako”, E18 porządki) */
+          areas={['konta', 'ustawienia', 'ceny', 'transporty', 'powiadomienia', 'przełączniki']}
           entries={[
+            { id: 'h0a', when: '08.10.2026, 09:12', who: 'Anna Wiśniewska (HHL) jako Jan Nowak', text: 'SG-02: numer zlecenia SCX wpisany za SCX Dyspozytora' },
+            { id: 'h0b', when: '08.10.2026, 08:40', who: 'Administrator HHL', text: 'Porządki danych testowych: faktura testowa i 1 pozycja usunięte · kopia zapisana' },
             { id: 'h1', when: '07.10, 14:10', who: 'Administrator HHL', text: 'Zaproszenie: nowe konto Operacje HHL' },
             { id: 'h2', when: '07.10, 14:08', who: 'Administrator HHL', text: 'Konto włączone' },
             { id: 'h3', when: '06.10, 16:02', who: 'Administrator HHL', text: 'Cennik KSH: wersja 2 · „Poprawa cen do pełnej liczby”' },
@@ -238,6 +242,12 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
         />
       ),
       /* wyglad/audyt-E (E-05, W47): przełączniki osoby z zapisem (jedno miejsce: `myNotifyOf`) */
+      /* wyglad/audyt-E (E-07): stan wymogu zezwoleń zamiast „po Auth” — ten sam przełącznik co w System › Przełączniki */
+      permitsFlag: (
+        <p className="note option-note" data-permit-flag={DEMO_FLAGS.find((f) => f.key === 'PERMIT_REQUIRED_NON_STANDARD')?.on ? 'on' : 'off'}>
+          {ft(locale, 'p5_terms_flag').replace('{state}', ft(locale, DEMO_FLAGS.find((f) => f.key === 'PERMIT_REQUIRED_NON_STANDARD')?.on ? 'p5_terms_flag_on' : 'p5_terms_flag_off'))}
+        </p>
+      ),
       forme: <ForMeScreen locale={locale} kind={kind} groups={DEMO_MATRIX} mark={mark} prefs={opts.my?.prefs} onSave={opts.my?.save} />,
     },
     meta: {

@@ -112,10 +112,12 @@ export function PasswordStep({ locale, brand, pos, onSave }: {
   const [err, setErr] = useState<string | null>(null);
   const chk = pwCheck(pw, PASSWORD_MIN);
   const same = pw2.length > 0 && pw2 === pw;
+  /* wyglad/audyt-E (E-12): najpierw długość, potem brak cyfry albo litery */
+  const pwMsg = fep(locale, chk.ok ? 'fe_pw_len_ok' : chk.len < PASSWORD_MIN ? 'fe_pw_len_short' : !chk.digit ? 'fe_pw_no_digit' : 'fe_pw_no_letter', { n: chk.len, min: PASSWORD_MIN });
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!chk.ok) { setErr(fep(locale, 'fe_pw_len_short', { n: chk.len, min: PASSWORD_MIN })); return; }
+    if (!chk.ok) { setErr(pwMsg); return; }
     if (!same) { setErr(fe(locale, 'fe_pw_diff')); return; }
     setBusy(true); setErr(null);
     let msg: string | null = null;
@@ -130,7 +132,7 @@ export function PasswordStep({ locale, brand, pos, onSave }: {
         <Head locale={locale} pos={pos} title={fe(locale, 'fe_pw_title')} />
         <PwInput id="fe-pw" label={fe(locale, 'fe_pw')} value={pw} onChange={setPw} locale={locale}>
           <span className={`fe-check${pw ? (chk.ok ? ' is-ok' : ' is-bad') : ''}`} data-fe-pwlen>
-            {pw ? fep(locale, chk.ok ? 'fe_pw_len_ok' : 'fe_pw_len_short', { n: chk.len, min: PASSWORD_MIN }) : fep(locale, 'fe_pw_len_empty', { min: PASSWORD_MIN })}
+            {pw ? pwMsg : fep(locale, 'fe_pw_len_empty', { min: PASSWORD_MIN })}
           </span>
         </PwInput>
         <PwInput id="fe-pw2" label={fe(locale, 'fe_pw_repeat')} value={pw2} onChange={setPw2} locale={locale}>

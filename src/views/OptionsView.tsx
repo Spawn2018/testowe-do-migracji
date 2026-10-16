@@ -273,7 +273,12 @@ export function OptionsView() {
         onAddrSave={accountingAddressesSaverOf()}
         onTest={accountingTestMailOf()}
       />,
-    ), { right: change, mark: PROD_BUILD ? undefined : <DemoMark /> }));
+    ), {
+      right: change,
+      mark: PROD_BUILD ? undefined : <DemoMark />,
+      /* wyglad/audyt-E (E-15; obraz E11 `e11-desk`): stan przy pozycji menu — „30 / 35 dni” (KSH płaci HHL / HHL płaci SCX) */
+      meta: terms ? `${terms.kshDays} / ${terms.scxDays} dni` : undefined,
+    }));
   }
   if (shows('factoringOffer')) {
     /* wyglad/P5 (E4b, img/e4b-desk): „Oferta HHL” — pola i zapis jak dotąd, wygląd według raportu */
@@ -297,7 +302,7 @@ export function OptionsView() {
       scr('permits', (
         <>
           <Suspense fallback={null}><DocTerms canEdit={isHhlAdmin} /></Suspense>
-          {PermitRequirement ? block(<PermitRequirement />) : <Soon locale={locale} tipKey="opt_acc_perm_soon" />}
+          {PermitRequirement ? block(<PermitRequirement />) : demo?.bodies.permitsFlag ?? <Soon locale={locale} tipKey="opt_acc_perm_soon" />}
         </>
       ), { right: change }),
     ],
@@ -325,7 +330,8 @@ export function OptionsView() {
     scr('forme', pick('forme', <ForMeScreen locale={locale} kind={null} groups={null} />), { right: 'own' }),
     scr('look', (
       <>
-        <UiPrefsPanel onSaved={saveMark} showDemoMarks={shows('demoMarksToggle')} />
+        {/* wyglad/audyt-E (E-13; E37, E11 „tylko na Twoim koncie”): ten sam opis co u KSH i SCX */}
+        <UiPrefsPanel onSaved={saveMark} showDemoMarks={shows('demoMarksToggle')} subKey="settings_prefs_sub" noteKey="settings_prefs_note" />
         {CarrierScorecard ? block(<CarrierScorecard />) : null}
       </>
     ), { right: 'own' }),
