@@ -80,7 +80,7 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
   <h1>Audyt Watch Tower</h1>
   <p>Twoja lista 14 punktów z 07.10.2026, sprawdzana etap po etapie na produkcji. Każdy etap ma fakty z dowodem, propozycję rozwiązania i podgląd, jak to będzie wyglądać. Nic nie trafia do Cursora bez Twojej akceptacji.</p>
   <div class="meta">
-    <span>Stan: 08.10.2026, 14:10 · zmiany 09.10.2026, 14:11 (<a href="#zmiany-0910">Zmiany 09.10</a>) · zmiany 11.10.2026, 23:40 (<a href="#zmiany-1110">Zmiany 11.10</a>) · zmiany 15.10.2026, 03:40 (<a href="#zmiany-1510">Zmiany 15.10</a>)</span>
+    <span>Stan: 08.10.2026, 14:10 · zmiany 09.10.2026, 14:11 (<a href="#zmiany-0910">Zmiany 09.10</a>) · zmiany 11.10.2026, 23:40 (<a href="#zmiany-1110">Zmiany 11.10</a>) · zmiany 15.10.2026, 03:40 i 21:10 (<a href="#zmiany-1510">Zmiany 15.10</a>)</span>
     <span>Kod: <span class="mono">testowe-do-migracji @ 9c4fa33</span> (07.10, 01:00)</span>
     <span>Baza: produkcja, tylko odczyt</span>
     <span>Aplikacja: konto testowe Operacje HHL (od 14:11)</span>
@@ -169,6 +169,11 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
         <tr><td class="num">03:12</td><td>„Przeczytali”: cudze nazwiska i e-maile zostają — masz zgody RODO od wszystkich</td><td>E19: zostaje tylko warunek „lista tylko dla wiadomości, którą widzisz”; bez zamiany na nazwę firmy</td><td>A</td></tr>
         <tr><td class="num">03:12</td><td>Telefony wszędzie widoczne, bez gwiazdek</td><td>pełne numery kierowców, pilotów i użytkowników dla każdej firmy; menu konta bez „••• •••” (zmiana wobec makiety E37)</td><td>wygląd, P11</td></tr>
         <tr><td class="num">03:12</td><td>Zgoda na scalenie PR #210</td><td>ten raport trafia do repozytorium razem z sekcjami „Zmiany 11.10” i „Zmiany 15.10”</td><td>dokumenty</td></tr>
+        <tr><td class="num">18:32 · W41</td><td>Postój: stawka dobowa od 10 h — <b>zostaje 10 h</b></td><td>wartość z produkcji bez zmian (zastępuje „powyżej 24 h” z 07.10, 12:35); ekran i podpowiedź dopłaty biorą próg z bazy</td><td>P5</td></tr>
+        <tr><td class="num">19:43</td><td>Powiadomienia na telefon muszą działać na każdym telefonie, także na iPhonie (Samsung S24 Ultra, Android 17 nie dostał testu)</td><td>przyczyna: przycisk testu nie wysyłał prośby do serwera (CORS) — naprawione 20:37, test 20:50 przyjęty przez Google; dalej potwierdzenie odbioru z telefonu, wysyłka od razu, „pilne” dla Androida, ekran „Sprawdź ten telefon” (<code>D-20261015-1955-01</code>, C16)</td><td>C</td></tr>
+        <tr><td class="num">19:57 · W42</td><td>Telefon nie potwierdzi pilnego powiadomienia w 5 min albo konto nie ma telefonu: <b>e-mail zapasowy</b>, bez SMS</td><td>ta sama treść i link do sprawy na adres konta</td><td>C</td></tr>
+        <tr><td class="num">19:57 · W43</td><td>iPhone do odbioru: <b>nie masz dostępu</b></td><td>odbiór iPhone’a robi pierwsza osoba z iPhone’em; dowód z bazy (urządzenie Apple z potwierdzeniem odbioru)</td><td>C, P11</td></tr>
+        <tr><td class="num">20:57</td><td>„Gotowe do fakturowania” i „Zafakturowano” zmieniają się <b>same</b>, gdy warunek jest spełniony; ręczna zmiana zostaje jako opcja</td><td>to Twoja decyzja z 07.10, 17:46 (E25) — na produkcji automatu nie ma, P4 go nie wdrożyło; poprawka C17 (<code>D-20261015-2110-01</code>)</td><td>C</td></tr>
       </tbody>
     </table>
   </div>
@@ -1238,6 +1243,14 @@ td.num{font-family:var(--f-mono);white-space:nowrap}
       <li><b>CMR:</b> status „Gotowe do fakturowania” zmienia CMR wgrany przez SCX po „Dostarczone”, z podpisem odbiorcy.</li>
       <li><b>„Zafakturowano”:</b> gdy są obie faktury (SCX → HHL i HHL → KSH); w panelu widać, której jeszcze brakuje.</li>
       <li><b>Ręczna zmiana:</b> SCX (Dyspozytor i Użytkownik) i administrator HHL. Operacje HHL tracą przyciski, które mają dziś.</li>
+    </ul>
+  </div>
+
+  <div class="ask-box" style="background:var(--accent-soft);border-color:var(--accent)">
+    <span class="chip fact" style="align-self:flex-start">Zmiana 15.10, 20:57</span>
+    <ul>
+      <li><b>Domyślnie automatycznie:</b> „Gotowe do fakturowania” ustawia się samo, gdy po „Dostarczone” wejdzie CMR z podpisem odbiorcy; „Zafakturowano” — gdy transport jest na obu fakturach (SCX → HHL i HHL → KSH). Ręczna zmiana w oknie „Zmień status” zostaje jako opcja, z tymi samymi warunkami.</li>
+      <li><b>Fakt 15.10:</b> na produkcji tych automatów nie ma (w bazie tylko ręczna zmiana); jeden transport ma jeszcze „Rozładowany”. Poprawka C17, dopisek <code>D-20261015-2110-01</code>.</li>
     </ul>
   </div>
 </section>

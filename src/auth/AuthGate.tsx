@@ -367,6 +367,11 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         return;
       }
       if (alive) setState({ kind: 'ready', session, profile });
+      /* C16 N6: odśwież zapis urządzenia push po zalogowaniu */
+      void import('../lib/webPush').then((wp) => {
+        void wp.syncWebPush();
+        wp.listenWebPushResync();
+      }).catch(() => {});
     };
     loadRef.current = load;
 

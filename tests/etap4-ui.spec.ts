@@ -177,7 +177,8 @@ test.describe('M6 — faktury v2', () => {
     await expect(detail.locator('[data-paid], [data-unpaid]')).toHaveCount(0)
     await detail.locator('[data-verify="SPORNA"]').click()
     await expect(page.locator(`tr[data-bill="${id}"] [data-verif="DO_WERYFIKACJI"]`)).toHaveCount(1)
-    await detail.locator('input[aria-label="Uzasadnienie sporu"]').fill('Stawka niezgodna z cennikiem KSH')
+    // wyglad/P5-c (E4): pole „Powód sporu” — szukamy po uchwycie, nie po tekście etykiety
+    await detail.locator('input[data-dispute-note]').fill('Stawka niezgodna z cennikiem KSH')
     await detail.locator('[data-verify="SPORNA"]').click()
     await expect(page.locator(`tr[data-bill="${id}"] [data-verif="SPORNA"]`)).toHaveCount(1)
     await expect(detail).toContainText('Stawka niezgodna z cennikiem KSH')
