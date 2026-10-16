@@ -263,6 +263,68 @@ test.describe('brama E8 telefon', () => {
   }
 });
 
+/* wyglad/P10b-a (E37 pkt 4, makieta E37 „Komunikat HHL”) — komunikat HHL z „Zamknij” (telefon: „✕” 44 px);
+   demo: przykład przy `komunikat-hhl=1`. Zamknięty nie wraca po przeładowaniu. */
+test.describe('wyglad/P10b-a komunikat HHL z „Zamknij” (E37 pkt 4)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const URL_BC = `${FROZEN_URL}&komunikat-hhl=1`;
+
+  test('komputer: treść, data końca, „Zamknij”; po zamknięciu i przeładowaniu nie wraca', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL', false, URL_BC);
+    const bar = page.locator('[data-banner="system-broadcast"]');
+    await expect(bar).toBeVisible();
+    await expect(bar.locator('.subbar-tag')).toHaveText('KOMUNIKAT HHL');
+    await expect(bar.locator('.subbar-body')).toHaveText('Prom Stena Estelle wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.');
+    await expect(bar.locator('.subbar-until')).toHaveText(/^ · do \d{2}\.\d{2}, \d{2}:\d{2}$/);
+    const close = bar.locator('[data-bcast-close]');
+    await expect(close.locator('.subbar-close-tx')).toHaveText('Zamknij');
+    await expect(close.locator('.subbar-close-tx')).toBeVisible();
+    await expect(close.locator('.subbar-close-x')).toBeHidden();
+    await expect(close).toHaveAttribute('aria-label', 'Zamknij komunikat HHL');
+    const tb = await page.locator('.topbar').boundingBox();
+    const bb = await bar.boundingBox();
+    expect(bb && tb && bb.y >= tb.y + tb.height - 1, 'komunikat pod paskiem górnym').toBeTruthy();
+    await close.click();
+    await expect(bar).toHaveCount(0);
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForSelector('#roleSeg button[data-role="HHL"]', { state: 'attached' });
+    await page.waitForTimeout(300);
+    await expect(page.locator('[data-banner="system-broadcast"]')).toHaveCount(0);
+  });
+
+  for (const width of [360, 390, 430]) {
+    test(`telefon ${width}: „Komunikat HHL:” i „✕” 44 × 44 px; nic uciętego, tekst ≥ 12 px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await boot(page, 'HHL', false, URL_BC);
+      const bar = page.locator('[data-banner="system-broadcast"]');
+      await expect(bar).toBeVisible();
+      await expect(bar.locator('.subbar-tag-ph')).toHaveText('Komunikat HHL:');
+      const m = await bar.evaluate((el) => {
+        const out: string[] = [];
+        const r = el.getBoundingClientRect();
+        if (r.left < 0 || r.right > window.innerWidth + 0.5) out.push('pasek poza oknem');
+        for (const n of el.querySelectorAll<HTMLElement>('b, span, button')) {
+          const cs = getComputedStyle(n);
+          if (cs.display === 'none' || !n.textContent?.trim()) continue;
+          if (parseFloat(cs.fontSize) < 12) out.push(`tekst < 12 px: ${n.textContent}`);
+          if (n.scrollWidth > n.clientWidth + 1 && cs.overflow !== 'visible') out.push(`ucięte: ${n.textContent}`);
+        }
+        const b = el.querySelector('[data-bcast-close]')!.getBoundingClientRect();
+        if (b.width < 44 || b.height < 44) out.push(`„✕” ${Math.round(b.width)}×${Math.round(b.height)}`);
+        const x = el.querySelector('.subbar-close-x') as HTMLElement;
+        const tx = el.querySelector('.subbar-close-tx') as HTMLElement;
+        if (getComputedStyle(x).display === 'none') out.push('brak „✕”');
+        if (getComputedStyle(tx).display !== 'none') out.push('„Zamknij” zamiast „✕”');
+        return out;
+      });
+      expect(m).toEqual([]);
+      await bar.locator('[data-bcast-close]').click();
+      await expect(bar).toHaveCount(0);
+    });
+  }
+});
+
 test.describe('P2-wyglad V1 i V2', () => {
   test.describe.configure({ mode: 'serial', timeout: 120_000 });
 
