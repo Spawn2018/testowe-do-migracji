@@ -1303,6 +1303,8 @@ img,video{max-width:100%;height:auto}
 .part-fail p{margin:0;font-size:14.5px;line-height:1.5;color:var(--ink-2)}
 .subbar-btn{flex:0 0 auto;padding:3px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink);font-size:13.5px}
 .subbar-btn:hover{background:var(--surface-2)}
+/* wyglad/P10b-a (E37 pkt 4): „Zamknij” przy komunikacie HHL; na telefonie „✕” 44 × 44 px */
+.subbar-close-x{display:none}
 .subbar-tag{display:inline-block;margin-right:12px;padding:1px 8px;border:1px solid var(--rule);background:var(--surface-2);color:var(--ink-2);font-family:var(--font-cond);font-weight:600;font-size:12px;letter-spacing:.08em;vertical-align:1px}
 .subbar-tag-ph{display:none}
 .subbar-until{color:var(--ink-3)}
@@ -1361,6 +1363,9 @@ img,video{max-width:100%;height:auto}
   .acc-row{min-height:44px;font-size:14px}
   .subbar{padding:8px 10px 8px 12px;font-size:14px;align-items:center}
   .subbar-btn{min-height:44px;font-size:14px}
+  .subbar-close{min-width:44px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+  .subbar-close-tx{display:none}
+  .subbar-close-x{display:inline;font-size:16px;line-height:1}
   .subbar-tag,.subbar-until{display:none}
   .subbar-tag-ph{display:inline}
   .subbar-tx .subbar-body{font-weight:400}
