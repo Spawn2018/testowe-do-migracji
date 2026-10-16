@@ -12,7 +12,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { t, tp } from '../../i18n/messages';
 import { statusLabel } from '../../lib/statusLabel';
-import { TZ_OPS, isoToDatetimeLocalValue, wallLocalToIso } from '../../lib/time';
+import { formatCalendarDay, isoToDatetimeLocalValue, TZ_OPS, wallLocalToIso } from '../../lib/time';
 import { getNowIso } from '../../lib/frozenNow';
 import { buildStatusAxis, dateTimeFields, dayTime, gpsHint, isoMs } from '../../lib/statusAxis';
 import { useIsPhone } from '../../lib/useIsPhone';
@@ -24,7 +24,7 @@ import { lazyRetry } from '../../lib/lazyRetry';
 import type { LoadStatus } from '../../types';
 
 const UploadDocModal = lazy(lazyRetry(() => import('../docs/UploadDocModal').then((m) => ({ default: m.UploadDocModal }))));
-const dmy = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+const dmy = (iso: string) => formatCalendarDay(iso.slice(0, 10));
 
 const MANUAL_STATUSES: LoadStatus[] = [
   'PLANNED',

@@ -15,6 +15,7 @@ import {
   type LoadMargin, type NbpRate, type PriceSide, type PricingTier,
 } from './engine';
 import { DEMO_NBP_RATES } from './demoFx';
+import { formatCalendarDay } from '../time';
 
 /** status (0189): PROGNOZA = prev tydzień niezamknięty (ostatni OSTATECZNY); OSTATECZNY = migawka; BRAK; WSTEPNY = legacy 0187. */
 export type FuelMultStatus = 'PROGNOZA' | 'WSTEPNY' | 'OSTATECZNY' | 'BRAK';
@@ -187,7 +188,7 @@ export function attachMoneyV2(loads: Load[], invoices: Invoice[], todayLocal: st
 export function mechanismIssue(m: LoadMoneyV2): string | null {
   const c = m.cost; const r = m.rev;
   if (!c.fuel.refDate || !r.fuel.refDate) return null; // jedna strona niewidoczna dla roli — nie ma czego porównać
-  if (c.fuel.refDate !== r.fuel.refDate) return `Różne daty opłaty paliwowej: koszt ${c.fuel.refDate}, przychód ${r.fuel.refDate}`;
+  if (c.fuel.refDate !== r.fuel.refDate) return `Różne daty opłaty paliwowej: koszt ${formatCalendarDay(c.fuel.refDate)}, przychód ${formatCalendarDay(r.fuel.refDate)}`;
   if (c.fuel.applied !== r.fuel.applied) return `Różne mnożniki paliwowe: koszt ${c.fuel.applied}, przychód ${r.fuel.applied}`;
   if (c.tier !== 'FAKTURA' && r.tier !== 'FAKTURA' && c.fx.tableNo && r.fx.tableNo && c.fx.tableNo !== r.fx.tableNo) {
     return `Różne tabele kursowe przed fakturą: koszt ${c.fx.tableNo}, przychód ${r.fx.tableNo}`;

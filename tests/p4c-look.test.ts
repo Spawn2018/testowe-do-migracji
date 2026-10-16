@@ -18,7 +18,7 @@ describe('E44 — pod polem „Link śledzenia”', () => {
   it('działa: rejestracja, ważność, ostatnia pozycja; lokalizator w naczepie', () => {
     const info: TrackingLinkInfo = { provider: 'RIO', asset: 'TST 0001', validFrom: '2026-10-05T01:00:00Z', validTo: '2026-10-08T04:00:00Z', trackerOn: 'NACZEPA', check: { state: 'ok', lastFixAt: '2026-10-04T09:56:00Z' } };
     const v = trackingLinkNotes(info, load, NOW, 'pl');
-    expect(v.check).toEqual({ key: 'ok', tone: 'ok', text: 'Link RIO działa · TST 0001 · ważny do 08.10, 06:00 · ostatnia pozycja 11:56' });
+    expect(v.check).toEqual({ key: 'ok', tone: 'ok', text: 'Link RIO działa · TST 0001 · ważny do 08.10.2026, 06:00 · ostatnia pozycja 11:56' });
     expect(v.tracker).toBe('Lokalizator: naczepa TST 0001 (RIO)');
     expect(v.notes).toEqual([]);
   });
@@ -26,8 +26,8 @@ describe('E44 — pod polem „Link śledzenia”', () => {
     const info: TrackingLinkInfo = { provider: 'RIO', asset: 'TST 0002', validFrom: '2026-10-05T08:00:00Z', validTo: '2026-10-07T04:00:00Z', trackerOn: 'NIEZNANY', usedBy: ['K-01 · SCX-26-0001'], check: { state: 'ok' } };
     const v = trackingLinkNotes(info, load, NOW, 'pl');
     expect(v.notes.map((n) => n.key)).toEqual(['used-by', 'unknown-asset', 'expires-early', 'starts-late']);
-    expect(v.notes.find((n) => n.key === 'expires-early')?.text).toBe('Link wygasa 07.10, 06:00, przed dostawą 07.10. Poproś przewoźnika o nowy link.');
-    expect(v.notes.find((n) => n.key === 'starts-late')?.text).toBe('Link RIO zacznie nadawać 05.10, 10:00.');
+    expect(v.notes.find((n) => n.key === 'expires-early')?.text).toBe('Link wygasa 07.10.2026, 06:00, przed dostawą 07.10.2026. Poproś przewoźnika o nowy link.');
+    expect(v.notes.find((n) => n.key === 'starts-late')?.text).toBe('Link RIO zacznie nadawać 05.10.2026, 10:00.');
     expect(v.tracker).toBeNull();
   });
   it('błąd, brak odpowiedzi, sprawdzanie; wygasły link zastępuje wynik', () => {
@@ -36,12 +36,12 @@ describe('E44 — pod polem „Link śledzenia”', () => {
     expect(trackingLinkNotes({ provider: 'RIO', check: { state: 'pending' } }, load, NOW, 'pl').check?.text).toBe('Sprawdzam link RIO…');
     const exp = trackingLinkNotes({ provider: 'RIO', asset: 'TST 0003', validTo: '2026-10-04T08:00:00Z', check: { state: 'ok' } }, load, NOW, 'pl');
     expect(exp.check?.key).toBe('expired');
-    expect(exp.check?.text).toContain('wygasł 04.10, 10:00');
+    expect(exp.check?.text).toContain('wygasł 04.10.2026, 10:00');
   });
   it('pasek śledzenia: pojazd z lokalizatorem, start linku; bez danych z serwera — opis P4-b', () => {
     expect(trackerBarRio({ provider: 'RIO', asset: 'TST 0001', trackerOn: 'CIAGNIK_PL' }, NOW, 'pl')).toBe('Lokalizator: ciągnik TST 0001 · RIO');
     expect(trackerBarRio({ provider: 'RIO', asset: 'TST 0001', trackerOn: 'NACZEPA', validFrom: '2026-10-05T08:00:00Z' }, NOW, 'pl'))
-      .toBe('Lokalizator: naczepa TST 0001 · RIO · Link RIO zacznie nadawać 05.10, 10:00');
+      .toBe('Lokalizator: naczepa TST 0001 · RIO · Link RIO zacznie nadawać 05.10.2026, 10:00');
     expect(trackerBarRio(null, NOW, 'pl')).toBeNull();
     expect(trackerBarRio({ provider: 'EMTRACK' }, NOW, 'pl')).toBeNull();
   });

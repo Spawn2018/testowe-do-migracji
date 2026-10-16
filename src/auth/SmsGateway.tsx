@@ -3,6 +3,7 @@ import { getSupabase } from './client';
 import { authErrorPl } from './config';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
+import { fmtDateTime } from '../lib/time';
 import { groupPhone } from '../lib/phoneDisplay';
 import './auth.css';
 
@@ -15,7 +16,7 @@ interface Device { id: string; label: string; created_at: string; revoked_at: st
 interface Sms { id: string; kind: string; status: string; to_e164: string; created_at: string; sent_at: string | null; delivered_at: string | null; fallback_at: string | null; error: string | null; attempts: number }
 interface TestNo { to_e164: string; label: string }
 
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' }) : '—');
+const when = (iso: string | null) => (iso ? fmtDateTime(iso) : '—');
 
 export default function SmsGateway() {
   const locale = useTowerStore((s) => s.locale);

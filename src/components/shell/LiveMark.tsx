@@ -4,8 +4,9 @@
  */
 import { a10 } from '../../i18n/p10a';
 import { useLive } from '../../lib/p10aSource';
+import { fmtTime } from '../../lib/time';
 
-const hhmm = (ms: number) => new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ms));
+const hhmm = (ms: number) => fmtTime(ms);
 
 export function LiveMark() {
   const live = useLive();

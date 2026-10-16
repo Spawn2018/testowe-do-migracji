@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { formatListDateTime } from '../../lib/format';
+import { formatCalendarDay } from '../../lib/time';
 import { useIsPhone } from '../../lib/useIsPhone';
 import {
   GROUPS, GROUP_LABEL, MESSAGES, channelLabel, SMS_MAX, TOKEN_LABEL, checkMessage, gsmBad, gsmLength, parseMarkers, previewLines,
@@ -24,7 +25,7 @@ import { openOptionsScreen } from '../../lib/openOptions';
 import './messageTexts.css';
 
 const dayOf = (iso: string) => formatListDateTime(iso).split(', ')[0] ?? '';
-const dm = (d: string | null | undefined) => (d && /^\d{4}-\d{2}-\d{2}/.test(d) ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '');
+const dm = (d: string | null | undefined) => (d && /^\d{4}-\d{2}-\d{2}/.test(d) ? formatCalendarDay(d.slice(0, 10)) : '');
 
 type Draft = { subject: Seg[]; body: Seg[] };
 

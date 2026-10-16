@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs';
 import type { Load, RoleId } from '../types';
 import { canSeeCost, canSeeMargin, canSeeRevenue, visibleDriverPhone } from './permissions';
 import { getNowMs } from './frozenNow';
+import { formatCalendarDay, formatEtaBoden } from './time';
 
 function toUint8Array(buf: ArrayBuffer | Uint8Array | ExcelJS.Buffer): Uint8Array {
   if (buf instanceof Uint8Array) return buf;
@@ -89,9 +90,10 @@ export function exportColumnsFor(role: RoleId, currency = 'EUR'): ExportColumn[]
     { header: 'Masa_t', value: (l) => l.dims.weightT ?? '' },
     { header: 'Status', value: (l) => l.status },
     { header: 'Etap', value: (l) => l.stage },
-    { header: 'Załadunek', value: (l) => l.plannedLoadDate ?? '' },
-    { header: 'Dostawa', value: (l) => l.plannedDeliverDate ?? '' },
-    { header: 'ETA_Boden', value: (l) => (l.etaPreLoad ? '–' : (l.etaBoden ?? '')) },
+    /* daty „08.10.2026”, ETA „10.10.2026, 14:30” (czas Boden) — rok zawsze (właściciel 16.10.2026) */
+    { header: 'Załadunek', value: (l) => (l.plannedLoadDate ? formatCalendarDay(l.plannedLoadDate) : '') },
+    { header: 'Dostawa', value: (l) => (l.plannedDeliverDate ? formatCalendarDay(l.plannedDeliverDate) : '') },
+    { header: 'ETA_Boden', value: (l) => (l.etaPreLoad ? '–' : (l.etaBoden ? formatEtaBoden(l.etaBoden) : '')) },
   ];
   if (role === 'HHL' || role === 'SCX' || role === 'KSH') {
     cols.push({ header: 'Kierowca', value: (l) => l.resources.driverName ?? '' });

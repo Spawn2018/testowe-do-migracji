@@ -66,7 +66,7 @@ export function demoHistory(id: string, nowIso: string): CaseEvent[] {
 
 /** Zakaz ruchu w dniu przejazdu — informacja przy transporcie (nie liczy się), dwa transporty z kartą. */
 export function demoTimeBans(loads: readonly Load[], nowIso: string): Risk[] {
-  const day = formatListDateTime(iso(Date.parse(nowIso) + 48 * H)).slice(0, 5);
+  const day = formatListDateTime(iso(Date.parse(nowIso) + 48 * H)).split(', ')[0];
   return ['SG-09', 'SG-10']
     .map((code) => byCode(loads, code))
     .filter((l): l is Load => !!l)

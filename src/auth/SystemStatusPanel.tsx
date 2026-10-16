@@ -7,6 +7,7 @@ import { useLocation } from 'react-router-dom';
 import { getSupabase } from './client';
 import { useTowerStore } from '../store/useTowerStore';
 import { hasKey, t, tp } from '../i18n/messages';
+import { fmtDateTime } from '../lib/time';
 import './auth.css';
 
 type BackupRow = {
@@ -160,7 +161,7 @@ export default function SystemStatusPanel() {
   const fmt = (iso: string | null) => {
     if (!iso) return '—';
     try {
-      return new Date(iso).toLocaleString(locale === 'sv' ? 'sv-SE' : locale === 'en' ? 'en-GB' : 'pl-PL');
+      return fmtDateTime(iso);
     } catch {
       return iso;
     }

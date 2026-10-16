@@ -87,7 +87,7 @@ describe('E3, E39 — ekran Opłaty paliwowej w HTML', () => {
     expect(h).toContain('OKQ8 22,63 SEK/l · Orlen 7,22 PLN/l');
     expect(h).toContain('SE ×1,13 · PL ×1,15');
     expect(h).toContain('6 900 EUR × 13 % = 897 EUR');
-    expect(h).toContain('Ostateczna wartość w poniedziałek 19.10 rano, ze średniej 12–18.10.');
+    expect(h).toContain('Ostateczna wartość w poniedziałek 19.10.2026 rano, ze średniej 12.10.2026–18.10.2026.');
     expect((h.match(/data-pm-tier-hit/g) ?? []).length).toBe(2);
     expect(h).toContain('Nowa wersja umowy');
     expect(h).not.toMatch(/SEFS|BAF|[Dd]odatek/);
@@ -113,7 +113,7 @@ describe('E33 — Dopłaty: postój', () => {
     expect(h).toContain('750 EUR');
     expect(h).toContain('role="radio" aria-checked="true"');
     expect(h).toContain('→ 225,00 EUR');
-    expect(h).toContain('Ostatnia zmiana: 07.10, 12:35 · Administrator HHL');
+    expect(h).toContain('Ostatnia zmiana: 07.10.2026, 12:35 · Administrator HHL');
     expect(h).not.toMatch(/WSTĘPNE|wstępne/);
     expect((h.match(/>Zmień</g) ?? []).length).toBe(5);
     expect(h).toContain('Stawka dobowa powyżej');

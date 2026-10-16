@@ -18,6 +18,7 @@ import { up } from '../options/up';
 import { useModal } from '../ui/useModal';
 import { t } from '../../i18n/messages';
 import './docs.css';
+import { formatCalendarDay } from '../../lib/time';
 
 interface Props {
   locale: Locale;
@@ -30,7 +31,7 @@ interface Props {
   onClose: () => void;
 }
 
-const dm = (d: string | null | undefined) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '—');
+const dm = (d: string | null | undefined) => (d ? formatCalendarDay(d.slice(0, 10)) : '—');
 
 export function UploadDocModal({ locale, role, phone, loads, statusRows, allowed, loadId, onClose }: Props) {
   const [q, setQ] = useState('');

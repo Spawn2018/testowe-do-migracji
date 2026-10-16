@@ -6,6 +6,7 @@
 import type { Load } from '../types';
 import type { PricingTier } from './money/engine';
 import { sideEffectiveEur, type MoneySideV2 } from './money/loadMoney';
+import { fmtDateRange } from './time';
 
 export type FinStage = PricingTier;
 /** Która strona kwoty: HHL obie, KSH przychód, SCX koszt (E16 „Każda firma”). */
@@ -181,13 +182,12 @@ export function isoWeek(day: string): number {
   const jan4 = `${thu.slice(0, 4)}-01-04`;
   return 1 + Math.round((dateOf(thu).getTime() - dateOf(mondayOf(jan4)).getTime()) / (7 * 86400000));
 }
-const dm = (day: string) => `${day.slice(8, 10)}.${day.slice(5, 7)}`;
 export interface FinWeek { no: number; from: string; to: string }
 export const weekOf = (monday: string): FinWeek => ({ no: isoWeek(monday), from: monday, to: addDays(monday, 6) });
-/** „t41 · 05.10–11.10” albo „t43–t51 · 19.10–20.12”. */
+/** „t41 · 05.10.2026–11.10.2026” albo „t43–t51 · 19.10.2026–20.12.2026” (rok zawsze — właściciel 16.10.2026). */
 export function weekLabel(w: FinWeek, last?: FinWeek | null): string {
-  if (last && last.from !== w.from) return `t${w.no}–t${last.no} · ${dm(w.from)}–${dm(last.to)}`;
-  return `t${w.no} · ${dm(w.from)}–${dm(w.to)}`;
+  if (last && last.from !== w.from) return `t${w.no}–t${last.no} · ${fmtDateRange(w.from, last.to)}`;
+  return `t${w.no} · ${fmtDateRange(w.from, w.to)}`;
 }
 
 export type FuelState = 'OSTATECZNA' | 'PROGNOZA' | 'BRAK';

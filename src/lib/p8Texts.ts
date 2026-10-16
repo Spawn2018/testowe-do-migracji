@@ -7,6 +7,7 @@
  * Czyste funkcje widoku — bez zapytań i zapisów.
  */
 import type { Load } from '../types';
+import { formatCalendarDay } from './time';
 
 export type MsgChannel = 'SMS' | 'EMAIL' | 'LOGIN';
 export type MsgGroup = 'zone' | 'risk' | 'load' | 'inv' | 'sys' | 'login';
@@ -224,7 +225,8 @@ export function normalize(segs: readonly Seg[]): Seg[] {
 
 export type Sample = Partial<Record<TokenId, string>>;
 
-const dm = (d: string | null | undefined) => (d && /^\d{4}-\d{2}-\d{2}/.test(d) ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : null);
+/** „08.10.2026” — rok zawsze (właściciel 16.10.2026). */
+const dm = (d: string | null | undefined) => (d && /^\d{4}-\d{2}-\d{2}/.test(d) ? formatCalendarDay(d.slice(0, 10)) : null);
 
 /**
  * Dane podglądu z prawdziwego transportu (E43 „Podgląd”): kod, numer zlecenia HHL, rejestracje, daty planu, link.

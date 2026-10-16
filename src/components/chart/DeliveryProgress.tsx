@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { Load, Locale } from '../../types';
 import { t } from '../../i18n/messages';
 import { getNow } from '../../lib/frozenNow';
+import { formatCalendarDay } from '../../lib/time';
 
 /** I-0: w buildzie produkcyjnym „dziś” = bieżąca data (bez zamrożonej daty danych demo 23.09). */
 const PROD_BUILD = import.meta.env.VITE_AUTH_MODE === 'supabase';
@@ -9,8 +10,9 @@ function prodToday(): Date {
   const n = getNow();
   return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()));
 }
-function ddmm(d: Date): string {
-  return `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+/** „23.09.2026” — rok zawsze (właściciel 16.10.2026). */
+function dmy(d: Date): string {
+  return formatCalendarDay(d.toISOString().slice(0, 10));
 }
 
 type WeekPoint = { w: number; plan: number; act: number; future: boolean };
@@ -163,7 +165,7 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
           </svg>{' '}
           {t(locale, 'actualline')}
         </span>
-        <span style={{ color: 'var(--amber-ink)' }}>▏{t(locale, 'today_mark')} {PROD_BUILD ? ddmm(prodToday()) : '23.09'}</span>
+        <span style={{ color: 'var(--amber-ink)' }}>▏{t(locale, 'today_mark')} {PROD_BUILD ? dmy(prodToday()) : '23.09.2026'}</span>
       </div>
     </div>
   );
