@@ -1262,6 +1262,13 @@ export const SCHEDULE_VERSIONS: ScheduleVersion[] = [
   },
 ];
 
+/**
+ * Powiadomienia demo (E41, E5; audyt-A A-01, A-02, F-02, F-03): tytuł to „co się stało” bez kodu transportu —
+ * nazwę według firmy wstawia dzwonek z `loadId` (HHL „kod · nr HHL”, SCX „kod · nr SCX”, KSH sam kod).
+ * Każdy wpis prowadzi do transportu, którego dotyczy: brak CMR — dostarczony bez podpisanego CMR (SG-23),
+ * brak sygnału — T-05 (cisza 95 min), brak naczepy — SG-09 (zasoby niekompletne), marża — SG-15.
+ * KSH nie dostaje zadań przewoźnika (CMR); wpis Stref tylko dla HHL (E34 — Strefy ma tylko HHL).
+ */
 export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n1',
@@ -1276,7 +1283,7 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n2',
     at: '2026-09-22T18:00:00+02:00',
-    title: 'T-48 bez zezwolenia PL',
+    title: 'Brak zezwolenia PL',
     body: '2 transporty bez zezwolenia — wgraj przed załadunkiem.',
     severity: 'HIGH',
     read: false,
@@ -1296,12 +1303,12 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n4',
     at: '2026-09-22T15:12:00+02:00',
-    title: 'ETA mniej pewne · SG-12',
+    title: 'ETA mniej pewne',
     body: 'Brak sygnału 40 min — zakres ETA poszerzony.',
     severity: 'HIGH',
     read: false,
     roleScope: ['HHL', 'SCX'],
-    href: { view: 'map', loadId: 'load-012' },
+    href: { view: 'map', loadId: 'load-015' },
   },
   {
     id: 'n5',
@@ -1316,21 +1323,22 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n6',
     at: '2026-09-22T12:30:00+02:00',
-    title: 'Brak CMR · SG-07',
+    title: 'Brak CMR',
     body: 'Wgraj CMR z podpisem odbiorcy — potem „Gotowe do fakturowania”.',
     severity: 'CRITICAL',
     read: false,
-    roleScope: ['HHL', 'SCX', 'KSH'],
-    href: { view: 'docs', loadId: 'load-007' },
+    roleScope: ['HHL', 'SCX'],
+    href: { view: 'docs', loadId: 'load-034' },
   },
   {
     id: 'n7',
     at: '2026-09-22T11:00:00+02:00',
-    title: 'Marża poniżej progu 4 % · SG-15',
+    title: 'Marża poniżej progu 4 %',
     body: 'Sprawdź rozbicie kosztów w finansach.',
     severity: 'MEDIUM',
     read: false,
     roleScope: ['HHL'],
+    loadId: 'load-022',
     href: { view: 'fin', tab: 'margin' },
   },
   {
@@ -1346,12 +1354,12 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n9',
     at: '2026-09-22T08:20:00+02:00',
-    title: 'Brak sygnału · SG-12',
+    title: 'Brak sygnału',
     body: 'Brak pozycji GPS ponad 90 min.',
     severity: 'HIGH',
     read: false,
     roleScope: ['HHL', 'SCX'],
-    href: { view: 'wf', loadId: 'load-012' },
+    href: { view: 'wf', loadId: 'load-015' },
   },
   {
     id: 'n10',
@@ -1370,7 +1378,7 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
     body: 'Stegra · Stalverket 20 — przekroczono okno rozładunku.',
     severity: 'MEDIUM',
     read: false,
-    roleScope: ['HHL', 'KSH', 'SCX'],
+    roleScope: ['HHL'],
     href: { view: 'geo', entityId: 'gf-11' },
   },
   {
@@ -1386,12 +1394,12 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n13',
     at: '2026-09-21T10:15:00+02:00',
-    title: 'Brak naczepy · SG-09',
-    body: 'Uzupełnij zasoby do T-24.',
+    title: 'Brak naczepy',
+    body: 'Uzupełnij zasoby przed załadunkiem.',
     severity: 'HIGH',
     read: false,
     roleScope: ['SCX', 'HHL'],
-    href: { view: 'tasks', loadId: 'load-009' },
+    href: { view: 'tasks', loadId: 'load-013' },
   },
 ];
 
@@ -1411,7 +1419,7 @@ export const INITIAL_WORKFLOW_RUNS: WorkflowRun[] = [
     at: '2026-09-22T14:20:00+02:00',
     status: 'OK',
     note: 'Oznaczono brak sygnału',
-    loadId: 'load-012',
+    loadId: 'load-015',
   },
 ];
 

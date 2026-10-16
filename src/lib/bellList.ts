@@ -83,6 +83,14 @@ export function bellSection(n: Pick<BellSource, 'kind' | 'loadId' | 'severity' |
   return 'todo';
 }
 
+/**
+ * E9 (07.10 19:11) „KSH: … nie ma własnej listy »Do zrobienia«” (audyt-F F-02): u KSH dzwonek ma jedną grupę
+ * „Moje transporty” — bez sekcji i liczby „Do zrobienia”. Pozostałe firmy według `bellSection`.
+ */
+export function sectionFor(section: Exclude<BellSection, 'general'>, role: string): Exclude<BellSection, 'general'> {
+  return role === 'KSH' ? 'mine' : section;
+}
+
 /** Miejsce, do którego prowadzi kliknięcie — napis po prawej („DECYZJA ›”). Klucz słownika `bell_to_<miejsce>`. */
 export type BellPlace = 'decision' | 'invoice' | 'docs' | 'chat' | 'awiz' | 'numbers' | 'prices' | 'system' | 'options'
   | 'transport' | 'risks' | 'finance' | 'schedule' | 'zones' | 'entry';
@@ -232,8 +240,9 @@ export function bellGroups<T extends BellSource>(
     /* E21 (P2): „Nieznany kod źródła drogowego” zostaje w bazie do P10a, bez dzwonka. */
     if (isTechnicalRoadNotice(n.title) || isTechnicalRoadNotice(n.body)) continue;
     /* E5 (13:21): sytuacja ogólna bez transportu — tylko strona Ryzyka. */
-    const section = bellSection(n);
-    if (section === 'general') continue;
+    const raw = bellSection(n);
+    if (raw === 'general') continue;
+    const section = sectionFor(raw, role);
     const key = n.loadId && n.kind ? `${n.loadId}|${n.kind}` : n.id;
     const g = map.get(key);
     if (g) {

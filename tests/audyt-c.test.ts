@@ -44,7 +44,9 @@ describe('C-01, C-02, C-15 — Ryzyka i dzwonek po polsku', () => {
   it('C-15: dzwonek — „faktoring”, próg 4 %, tydzień „t38”, kwota w EUR, bez „READY”', () => {
     const text = [...INITIAL_NOTIFICATIONS.map((n) => `${n.title} ${n.body}`), ...WORKFLOWS.map((w) => `${w.name} ${w.description}`)].join('\n');
     expect(text).not.toMatch(/factoring|READY|W3\d\b|12%|>50 PLN/);
-    expect(text).toContain('Marża poniżej progu 4 % · SG-15');
+    /* audyt-AF A-01: tytuł bez kodu — nazwę transportu (SG-15) wstawia dzwonek z odnośnika */
+    expect(text).toContain('Marża poniżej progu 4 %');
+    expect(text).not.toContain('· SG-15');
     expect(text).toContain('Faktura w sporze · t38');
     expect(text).toContain('Zgodność OK · faktoring zaplanowany.');
   });
