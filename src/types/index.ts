@@ -388,6 +388,10 @@ export interface Load {
   unloadedAt?: string | null;
   /** M10 — przypisany rejs (`loads.sailing_id`) */
   sailingId?: string | null;
+  /** wyglad/P7-c (E38): „Waga elementu” z pliku KSH; undefined/null = „–” (podłącza wykonawca, D-20261016-1020-01). */
+  elementWeightT?: number | null;
+  /** wyglad/P7-c (E38 pkt 2, E17): poprzedni kod przy zmianie numeracji w pliku („było → jest”); znacznik „zmiana numeracji”. */
+  renumberedFrom?: string | null;
 }
 
 export type GeofenceCountry = 'PL' | 'SE' | 'LT' | 'DE';

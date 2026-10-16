@@ -15,7 +15,8 @@ import { PreviewBanner } from './auth/PreviewBanner';
 import { LoadDrawer } from './components/drawer/LoadDrawer';
 import { DashboardView } from './views/DashboardView';
 import { MapViewLazy as MapView } from './views/mapLazy';
-import { ScheduleView } from './views/ScheduleView';
+/* wyglad/P7-c: Harmonogram (E38, E30) ładowany osobno (budżet pierwszego wczytania) */
+import { ScheduleViewLazy as ScheduleView } from './views/scheduleLazy';
 /* wyglad/P6: Ryzyka (E7) ładowane osobno (budżet pierwszego wczytania) */
 import { RisksViewLazy as RisksView } from './views/risksLazy';
 import { DocsViewLazy as DocsView } from './views/docsLazy';

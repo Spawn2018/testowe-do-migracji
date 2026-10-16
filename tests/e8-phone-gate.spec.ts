@@ -248,14 +248,14 @@ test.describe('brama E8 telefon', () => {
         await page.click('[data-ferry-chip]');
         hits.push(...await measure(page, 'promy', width, role));
         await page.click('[data-ferry-chip]');
-        // wyglad/P4 (E8, E28): Harmonogram — otwarte „⋯” (działania) i „Filtry ▾” (daty, Bez kierowcy, Bez ciągnika)
+        // wyglad/P4 (E8, E28), P7-c (E30 pkt 8): Harmonogram — otwarte „⋯” (Więcej) i arkusz „Filtry” (tygodnie, stan)
         await openView(page, 'sched');
         await page.click('.sched-more');
         hits.push(...await measure(page, 'harmonogram-dzialania', width, role));
         await page.click('.sched-more');
         await page.click('[data-sched-more-filters]');
         hits.push(...await measure(page, 'harmonogram-filtry', width, role));
-        await page.click('[data-sched-more-filters]');
+        await page.click('[data-sched-sheet] [data-sheet-show]');
       }
       const report = hits.map((h) => `${h.role} ${h.width} ${h.view} ${h.kind}=${h.n}: ${h.sample.join(' | ')}`).join('\n');
       expect(hits, report).toEqual([]);
@@ -901,6 +901,114 @@ test.describe('wyglad/P10b-d pierwsze wejście (E37 pkt 9)', () => {
   });
 });
 
+/* wyglad/P7-c — E38 decyzja 1A (Harmonogram domyślnie w układzie pliku KSH, przyklejone „Typ” i „Wysyłka”), E30 („Widok
+   skrócony” 8 kolumn bez przewijania w 1366 px, filtry tygodniem i stanem z liczbami, „Kolumny”, „Więcej ▾”, telefon),
+   E20 (bez nakładania kolumn). */
+test.describe('wyglad/P7-c Harmonogram w układzie pliku (E38, E30, E20)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const heads = (page: Page) => page.locator('[data-sched-layout] thead th').allInnerTexts();
+  const rows = (page: Page) => page.locator('[data-sched-layout] tbody tr[data-load]');
+
+  test('komputer 1366, HHL: układ pliku, przyklejone „Typ” i „Wysyłka”, widok skrócony bez przewijania, kolumny, filtry', async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'sched');
+    await expect(page.locator('[data-sched-layout="file"]')).toBeVisible();
+    expect(await heads(page)).toEqual(['Typ', 'Wysyłka', 'Rozmiar L × W × H', 'Waga elementu', 'Ilość', 'Waga [t]', 'Data załadunku', 'Dzień', 'Godzina',
+      'Kierowca', 'Tel.', 'Ciągnik', 'Naczepa', 'Nr zlecenia SCX', 'Data dostawy', 'Dzień', 'Godzina', 'Nr zlecenia HHL', 'Status', 'ETA Boden', 'Dokumenty', 'Przychód']);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth), 'strona bez przewijania w bok').toBeLessThanOrEqual(1366);
+    /* przewijanie w bok: „Typ” i „Wysyłka” zostają na miejscu */
+    const before = await page.locator('[data-sched-layout] tbody tr[data-load] td[data-col="code"]').first().boundingBox();
+    await page.locator('[data-sched-layout]').evaluate((w) => { w.scrollLeft = w.scrollWidth; });
+    await page.waitForTimeout(150);
+    const after = await page.locator('[data-sched-layout] tbody tr[data-load] td[data-col="code"]').first().boundingBox();
+    expect(Math.abs((after?.x ?? 0) - (before?.x ?? 0))).toBeLessThan(1);
+    await expect(page.locator('[data-sched-layout] tbody tr[data-load]').first().locator('td.s7-wt1')).toHaveAttribute('data-col', 'status');
+    /* bez „Zmień ciągnik” w tabeli (E30 pkt 5); wiersz otwiera panel */
+    await expect(page.locator('[data-change-tractor]')).toHaveCount(0);
+    await rows(page).first().locator('td[data-col="type"]').click();
+    await expect(page.locator('aside.drawer')).toHaveCount(1);
+    await page.locator('aside.drawer .dhead button[aria-label], aside.drawer button.iconbtn').first().click();
+    await expect(page.locator('aside.drawer')).toHaveCount(0);
+
+    /* „Widok skrócony” — 8 kolumn E30 w 1154 px bez przewijania */
+    await page.locator('[data-sched-short]').click();
+    await expect(page.locator('[data-sched-short]')).toHaveAttribute('aria-pressed', 'true');
+    expect(await heads(page)).toEqual(['Transport', 'Ładunek', 'Załadunek → dostawa', 'Status', 'Kierowca i zestaw', 'ETA Boden', 'Dokumenty', 'Przychód']);
+    expect(await page.locator('[data-sched-layout="short"]').evaluate((w) => w.scrollWidth <= w.clientWidth + 1)).toBe(true);
+    /* „Kolumny” dodaje kolumny; układ zostaje po przeładowaniu; „Więcej ▾ › Przywróć kolumny domyślne” */
+    await page.locator('[data-sched-cols]').click();
+    await page.locator('[data-col-toggle="trailer"] input').check();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-sched-layout] thead th[data-col="trailer"]')).toHaveText('Naczepa');
+    await page.reload({ waitUntil: 'networkidle' });
+    await openView(page, 'sched');
+    await expect(page.locator('[data-sched-layout="short"] thead th[data-col="trailer"]')).toBeVisible();
+    await page.locator('[data-sched-more]').click();
+    await expect(page.locator('[data-sched-more-menu] [role="menuitem"]')).toHaveText(['Eksport XLSX (to, co widać)', 'Eksport PDF (to, co widać)', 'Wgraj plik KSH (zapas)', 'Przywróć kolumny domyślne']);
+    await page.locator('[data-action="reset-cols"]').click();
+    await expect(page.locator('[data-sched-layout] thead th[data-col="trailer"]')).toHaveCount(0);
+    await page.locator('[data-sched-short]').click();
+    await expect(page.locator('[data-sched-layout="file"]')).toBeVisible();
+
+    /* filtry: tydzień załadunku; liczba przy filtrze stanu = wiersze po kliknięciu; licznik „N z M” */
+    const total = await rows(page).count();
+    const opt = await page.locator('[data-week="load"] select option').nth(2).getAttribute('value');
+    await page.locator('[data-week="load"] select').selectOption(opt!);
+    const n = await rows(page).count();
+    expect(n).toBeLessThan(total);
+    await expect(page.locator('.sched-count')).toHaveText(new RegExp(`^${n} z \\d+$`));
+    for (const q of ['late', 'nodocs', 'nodriver', 'notractor', 'cancelled']) {
+      const chip = page.locator(`[data-sched-filters] [data-quick="${q}"]`);
+      const c = Number(await chip.locator('.chip-n').innerText());
+      await chip.click();
+      await expect(rows(page), q).toHaveCount(c === 0 ? 0 : c);
+      await chip.click();
+    }
+    await page.locator('[data-week="load"] select').selectOption('all');
+    await expect(rows(page)).toHaveCount(total);
+  });
+
+  test('komputer 1440: KSH bez kolumn numerów i z „Twoja cena”, SCX z „Moja stawka”', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'KSH');
+    await openView(page, 'sched');
+    const ksh = await heads(page);
+    expect(ksh).not.toContain('Nr zlecenia SCX');
+    expect(ksh).not.toContain('Nr zlecenia HHL');
+    expect(ksh.at(-1)).toBe('Twoja cena');
+    await boot(page, 'SCX');
+    await openView(page, 'sched');
+    const scx = await heads(page);
+    expect(scx).toContain('Nr zlecenia SCX');
+    expect(scx.at(-1)).toBe('Moja stawka');
+  });
+
+  test('telefon 390: pierwsza karta na pierwszym ekranie, arkusz „Filtry” (tygodnie, stan, „Pokaż N”), cele ≥ 44 px', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', true);
+    await openView(page, 'sched');
+    const card = page.locator('[data-sched-cards] [data-load]').first();
+    const box = await card.boundingBox();
+    expect(box && box.y + box.height <= 844 - 64, 'pierwsza karta cała nad dolnym paskiem').toBeTruthy();
+    await page.locator('[data-sched-more-filters]').click();
+    const sheet = page.locator('[data-sched-sheet]');
+    await expect(sheet).toBeVisible();
+    const small = await sheet.locator('button').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height < 44).map((e) => e.textContent));
+    expect(small).toEqual([]);
+    await sheet.locator('[data-sheet-load] button').nth(2).click();
+    const label = (await sheet.locator('[data-sheet-show]').innerText()).replace(/\D+/g, '');
+    await sheet.locator('[data-sheet-show]').click();
+    await expect(page.locator('[data-sched-cards] [data-load]')).toHaveCount(Number(label));
+    await expect(page.locator('[data-sched-more-filters]')).toHaveText('Filtry · 1');
+    await page.locator('[data-sched-more-filters]').click();
+    await page.locator('[data-sched-sheet] [data-sheet-clear]').click();
+    await page.locator('[data-sched-sheet] [data-sheet-show]').click();
+    await expect(page.locator('[data-sched-more-filters]')).toHaveText('Filtry');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  });
+});
+
 test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
   test.describe.configure({ mode: 'serial', timeout: 120_000 });
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
@@ -1248,9 +1356,9 @@ test.describe('wyglad/P4 pasek etapów (E28, img/e28-after) i Mapa (E27)', () =>
     const tileN = Number(await bar.locator('[data-tile="PREP"] .n').innerText());
     await expect(page.locator('table.sched-table tbody tr[data-load]')).toHaveCount(tileN);
     await expect(page.locator('.sched-count')).toHaveText(new RegExp(`^${tileN} z \\d+$`));
-    // Harmonogram: tylko filtry stanu (E28 pkt 2)
+    // Harmonogram: tylko filtry stanu (E28 pkt 2) i „Anulowane” (E30 pkt 3, wyglad/P7-c)
     const quick = await page.locator('[data-sched-filters] [data-quick]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.quick));
-    expect(quick).toEqual(['late', 'nodocs', 'nodriver', 'notractor']);
+    expect(quick).toEqual(['late', 'nodocs', 'nodriver', 'notractor', 'cancelled']);
     await page.keyboard.press('Escape');
     await expect(page.locator('[data-stage-chip]')).toHaveCount(0);
   });
@@ -1291,29 +1399,30 @@ test.describe('wyglad/P4 pasek etapów (E28, img/e28-after) i Mapa (E27)', () =>
     }
   });
 
-  test('telefon 390: włączony filtr stanu widać w rzędzie także z filtrem etapu; „⋯” — Escape i dotknięcie obok zamykają tylko menu', async ({ page }) => {
+  test('telefon 390: filtr z arkusza „Filtry” — liczba przy „Filtry · n” także z filtrem etapu; „⋯” — Escape i dotknięcie obok zamykają tylko menu', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await boot(page, 'HHL', true);
     await openView(page, 'sched');
     const sched = page.locator('[data-page="schedule"]');
     const row = sched.locator('[data-sched-filters]');
-    // filtr spod „Filtry ▾” po włączeniu jest w rzędzie
+    // wyglad/P7-c (E30 pkt 8): filtr z arkusza „Filtry”; po wybraniu liczba przy „Filtry · n”
     await sched.locator('[data-sched-more-filters]').click();
-    await sched.locator('.sched-more-filters [data-quick="nodriver"]').click();
-    await expect(row.locator('[data-quick="nodriver"]')).toBeVisible();
-    await expect(row.locator('[data-quick="nodriver"]')).toHaveAttribute('aria-pressed', 'true');
-    // z filtrem etapu: w rzędzie chip etapu, włączony filtr stanu i „Filtry ▾”
+    await page.locator('[data-sched-sheet] [data-quick="nodriver"]').click();
+    await expect(page.locator('[data-sched-sheet] [data-quick="nodriver"]')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('[data-sched-sheet] [data-sheet-show]').click();
+    await expect(page.locator('[data-sched-sheet]')).toHaveCount(0);
+    await expect(row.locator('[data-sched-more-filters]')).toHaveText('Filtry · 1');
+    // z filtrem etapu: chip etapu pod szukajką, liczba filtrów zostaje
     await sched.locator('[data-stage-bar="page"] [data-tile="PREP"]').click();
-    await expect(row.locator('[data-stage-chip="PREP"]')).toBeVisible();
-    await expect(row.locator('[data-quick="nodriver"]')).toBeVisible();
-    await expect(row.locator('[data-quick="late"]')).toHaveCount(0);
+    await expect(sched.locator('[data-stage-chip="PREP"]')).toBeVisible();
+    await expect(row.locator('[data-sched-more-filters]')).toHaveText('Filtry · 1');
     // „⋯”: Escape zamyka menu, filtr etapu zostaje
     const more = sched.locator('.sched-more');
     await more.click();
     await expect(sched.locator('.sched-actions-pop')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(sched.locator('.sched-actions-pop')).toHaveCount(0);
-    await expect(row.locator('[data-stage-chip="PREP"]')).toBeVisible();
+    await expect(sched.locator('[data-stage-chip="PREP"]')).toBeVisible();
     // dotknięcie obok (karta transportu) zamyka menu i nie otwiera transportu
     await more.click();
     await expect(sched.locator('.sched-actions-pop')).toBeVisible();
