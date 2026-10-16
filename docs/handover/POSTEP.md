@@ -2640,6 +2640,8 @@ Wzorzec `stan-zablokowany` (dark) odświeżony w `ff508f2`. Visual zielony.
 
 #209 scalony — `b90619f3`.
 
+#231 scalony — `c375c5c6`.
+
 E30 pkt 7 Rejsy → wygląd (P7-d).
 
 P7 — uzupełnienie W13:
