@@ -1,12 +1,13 @@
 /**
- * I-4 — instrukcja w aplikacji: kierowca (PL/EN/SV w PWA), HHL (Opcje), KSH i przewoźnik (Ustawienia).
- * Treść w słowniku (`i4_<rola>_<n>`, src/i18n/i2.ts) — PL-T sprawdza pisownię, D19-T brak polskich znaków w EN/SV.
+ * I-4 — instrukcja w PWA kierowcy (PL/EN/SV). HHL, KSH i SCX mają od P10b Pomoc („Jak pracuję”, src/lib/helpContent.ts);
+ * ich stare teksty `i4_hhl_*`, `i4_ksh_*`, `i4_scx_*` (POD, „Moje zadania”, „Importuj XLSX”, „Link dla kierowcy”) usunięte — C13.
+ * Treść w słowniku (`i4_drv_<n>`, src/i18n/i2.ts) — PL-T sprawdza pisownię, D19-T brak polskich znaków w EN/SV.
  * Ładowana leniwie wyłącznie w buildzie produkcyjnym (wzorce zrzutów demo bez zmian).
  */
 import { hasKey, t } from '../../i18n/messages';
 import type { Locale } from '../../types';
 
-export type GuideRole = 'drv' | 'hhl' | 'ksh' | 'scx';
+export type GuideRole = 'drv';
 
 export function guideSteps(locale: Locale, role: GuideRole): string[] {
   const out: string[] = [];

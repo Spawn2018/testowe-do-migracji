@@ -42,7 +42,6 @@ const pl: Dict = {
   p3c_s_account: 'Moje konto',
   p3c_s_forme: 'Co dostaję',
   p3c_s_look: 'Wygląd i waluta',
-  p3c_s_guide: 'Instrukcja',
   p3c_s_device: 'Ten telefon / komputer',
 
   p3c_d_users: 'Konta i zaproszenia. Imię, nazwisko i telefon są wymagane.',
@@ -65,7 +64,6 @@ const pl: Dict = {
   p3c_d_account: 'Imię, nazwisko, telefon, hasło, 2FA i urządzenia.',
   p3c_d_forme: 'Które zdarzenia trafiają do Ciebie i którym kanałem.',
   p3c_d_look: 'Motyw i waluta wyświetlania — tylko na Twoim koncie.',
-  p3c_d_guide: 'Jak pracować w Watch Tower na Twoim koncie.',
   p3c_d_device: 'Powiadomienia na telefonie: włączenie na tym urządzeniu, instrukcja dla iPhone’a i Androida, Twoje urządzenia.',
 
   /* E5 (img/e5-desk): Dla mnie › Ten telefon / komputer */
@@ -432,7 +430,6 @@ const en: Dict = {
   p3c_s_account: 'My account',
   p3c_s_forme: 'What I receive',
   p3c_s_look: 'Look and currency',
-  p3c_s_guide: 'Guide',
   p3c_s_device: 'This phone / computer',
 
   p3c_d_users: 'Accounts and invitations. First name, last name and phone are required.',
@@ -455,7 +452,6 @@ const en: Dict = {
   p3c_d_account: 'First name, last name, phone, password, 2FA and devices.',
   p3c_d_forme: 'Which events reach you and through which channel.',
   p3c_d_look: 'Theme and display currency — for your account only.',
-  p3c_d_guide: 'How to work in Watch Tower with your account.',
   p3c_d_device: 'Phone notifications: turn on for this device, iPhone and Android steps, your devices.',
 
   p3c_r_admin: 'Changed only by the HHL administrator',
