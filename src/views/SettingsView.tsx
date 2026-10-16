@@ -17,7 +17,6 @@ import { ForMeScreen } from '../components/options/ForMeScreen';
 import { DeviceScreen } from '../components/options/DeviceScreen';
 import { myNotifyOf } from '../lib/forMeSource';
 
-const CarrierScorecard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierScorecard')) : null;
 /* I-13: parametry SEFS tylko do odczytu (zakres wg RLS) — wyłącznie produkcja */
 const SefsReadOnly = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/SefsReadOnly')) : null;
 /** D-20261014-0700-01 J3 pkt 1: Moje konto KSH/SCX (Podgląd = tylko odczyt w LiveAccountScreen). */
@@ -64,7 +63,7 @@ export function SettingsView() {
       body: (
         <>
           <UiPrefsPanel onSaved={saveMark} subKey="settings_prefs_sub" noteKey="settings_prefs_note" />
-          {CarrierScorecard && role === 'SCX' ? block(<CarrierScorecard />) : null}
+          {/* wyglad/J4: ocena przewoźnika przeniesiona do Kokpitu SCX (E11/E12) */}
         </>
       ),
     },
