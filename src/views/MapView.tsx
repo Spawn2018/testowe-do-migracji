@@ -15,7 +15,7 @@ import { filterLoadsForRole } from '../lib/permissions';
 import { getNow } from '../lib/frozenNow';
 import { formatTableDay, refYearInOps } from '../lib/time';
 import { useIsPhone } from '../lib/useIsPhone';
-import { headCounts, hm, mapRow, rowMatches, type MapRow } from '../lib/p9cMap';
+import { headCounts, hm, mapRow, rowMatches, searchHintKey, type MapRow } from '../lib/p9cMap';
 import type { Load } from '../types';
 
 /**
@@ -94,7 +94,7 @@ export function MapView() {
   const nowMin = Math.floor(getNow().getTime() / 60_000);
   const nowIso = useMemo(() => new Date(nowMin * 60_000).toISOString(), [nowMin]);
 
-  /* Rola i kafelek E28; wyszukiwanie po kodzie, nazwie (E41), numerach zleceń i tablicach (pkt 5) */
+  /* Rola i kafelek E28; wyszukiwanie po kodzie, numerach zleceń widocznych dla firmy (E41) i tablicach (pkt 5) */
   const roleStage = useMemo(() => filterLoads(loads, role, stageFilter, ''), [loads, role, stageFilter]);
 
   /* Pozycje z bazy (produkcja): ten sam zestaw co mapa; demo bez zapytań */
@@ -127,8 +127,8 @@ export function MapView() {
 
   /* pkt 1 (pyt. 1 A): bez kafelka — tylko okno śledzenia; z kafelkiem — cały etap */
   const scoped = useMemo(
-    () => rows.filter(({ load, row }) => (stageFilter ? true : row.inWindow) && rowMatches(load, row.label, search)),
-    [rows, stageFilter, search],
+    () => rows.filter(({ load, row }) => (stageFilter ? true : row.inWindow) && rowMatches(load, role, search)),
+    [rows, stageFilter, search, role],
   );
   const list = useMemo(() => {
     if (timing === 'late') return scoped.filter(({ row }) => row.late);
@@ -141,7 +141,7 @@ export function MapView() {
     () => list.filter(({ row }) => row.inWindow && (PROD_BUILD || row.pos.kind !== 'none')).map(({ load }) => load),
     [list],
   );
-  const head = headCounts(rows.filter(({ load, row }) => row.inWindow && rowMatches(load, row.label, '')).map(({ row }) => row));
+  const head = headCounts(rows.filter(({ row }) => row.inWindow).map(({ row }) => row));
   const nextStarts = useMemo(() => nextTrackingStarts(filterLoadsForRole(loads, role), nowIso, 3), [loads, role, nowIso]);
   const refYear = refYearInOps(getNow());
   const filtersOn = !!stageFilter || !!search.trim() || timing !== 'all';
@@ -217,8 +217,8 @@ export function MapView() {
           <div className="filters" style={{ borderBottom: '1px solid var(--rule)' }} data-map-filters>
             <input
               className="map-search"
-              placeholder={p9m(locale, 'p9c_search')}
-              aria-label={p9m(locale, 'p9c_search')}
+              placeholder={p9m(locale, searchHintKey(role))}
+              aria-label={p9m(locale, searchHintKey(role))}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

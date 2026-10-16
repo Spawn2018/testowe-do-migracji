@@ -156,7 +156,6 @@ const pl: Dict = {
   rk_seed_ferry_cancel: 'Prom anulowany — M/F Nova Star · 24.09',
   rk_seed_ferry_cancel_meta: 'Odpowiada: H&H Logistics · status armatora: anulowany',
   rk_seed_e4_closure: 'E4 zamknięta — Luleå północ · objazd +120 min',
-  rk_route_obstacle: 'Przeszkoda na trasie: {place}. Limit {limit}, zestaw {value}.',
   rk_seed_e4_closure_meta: 'Odpowiada: Scandinavian Express · E4 zamknięta · źródło: Trafikverket',
 };
 
@@ -303,7 +302,6 @@ const en: Dict = {
   rk_seed_ferry_cancel: 'Ferry cancelled — M/F Nova Star · 24.09',
   rk_seed_ferry_cancel_meta: 'Owner: H&H Logistics · operator status: cancelled',
   rk_seed_e4_closure: 'E4 closed — Luleå north · detour +120 min',
-  rk_route_obstacle: 'Obstacle on the route: {place}. Limit {limit}, vehicle {value}.',
   rk_seed_e4_closure_meta: 'Owner: Scandinavian Express · E4 closed · source: Trafikverket',
 };
 
@@ -450,7 +448,6 @@ const sv: Dict = {
   rk_seed_ferry_cancel: 'Färjan inställd — M/F Nova Star · 24.09',
   rk_seed_ferry_cancel_meta: 'Ansvarig: H&H Logistics · rederiets status: inställd',
   rk_seed_e4_closure: 'E4 avstängd — Luleå norr · omledning +120 min',
-  rk_route_obstacle: 'Hinder på vägen: {place}. Gräns {limit}, fordon {value}.',
   rk_seed_e4_closure_meta: 'Ansvarig: Scandinavian Express · E4 stängd · källa: Trafikverket',
 };
 

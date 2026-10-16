@@ -410,6 +410,17 @@ test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
     const names = await page.locator('[data-map-table] tbody tr[data-load] td[data-map-name]').allInnerTexts();
     expect(names.length).toBeGreaterThan(0);
     expect(names.every((x) => /^[A-Z]+-\d+$/.test(x.trim()))).toBe(true);
+    /* audyt D-04 (E41, 08.10): KSH szuka tylko po kodzie i tablicach — numer zlecenia HHL ani SCX nie jest kluczem */
+    const search = page.locator('[data-map-filters] .map-search');
+    await expect(search).toHaveAttribute('placeholder', 'Szukaj: kod, tablice');
+    const rows = page.locator('[data-map-table] tbody tr[data-load]');
+    await search.fill('HHL/2026');
+    await expect(rows).toHaveCount(0);
+    await search.fill('SCX-26');
+    await expect(rows).toHaveCount(0);
+    await search.fill(names[0].trim());
+    expect(await rows.count()).toBeGreaterThan(0);
+    await search.fill('');
   });
 
   test('telefon 390: „Warstwy ▾” → arkusz z warstwami i legendą; lista jako karty; znacznik → arkusz z „Otwórz panel transportu”', async ({ page }) => {

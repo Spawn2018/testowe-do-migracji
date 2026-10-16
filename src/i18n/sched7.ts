@@ -81,6 +81,8 @@ const PL: Record<string, string> = {
   s7_m_upload: 'Wgraj plik KSH (zapas)',
   s7_m_reset: 'Przywróć kolumny domyślne',
   s7_search: 'Szukaj: kod, nr zlecenia, kierowca, tablice',
+  /* KSH widzi tylko kod, bez numerów zleceń (E41, 08.10) */
+  s7_search_ksh: 'Szukaj: kod, kierowca, tablice',
   s7_search_ph: 'Szukaj',
   s7_f_load: 'Załadunek',
   s7_f_deliv: 'Dostawa',
