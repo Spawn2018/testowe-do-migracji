@@ -70,6 +70,7 @@ const PL: Record<string, string> = {
   s7_short_aria: 'Widok skrócony — 8 kolumn',
   s7_more: 'Więcej',
   s7_m_xlsx: 'Eksport XLSX (to, co widać)',
+  s7_xlsx_unreadable: 'Nie da się otworzyć pliku — to nie jest arkusz Excel (.xlsx) albo plik jest uszkodzony. Zapisz go w Excelu jako .xlsx i wgraj ponownie.',
   s7_m_pdf: 'Eksport PDF (to, co widać)',
   s7_m_upload: 'Wgraj plik KSH (zapas)',
   s7_m_reset: 'Przywróć kolumny domyślne',
