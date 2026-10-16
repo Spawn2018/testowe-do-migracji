@@ -1219,6 +1219,52 @@ test.describe('wyglad/P3-b Kokpit (E9, img/e9-after; telefon: E8 pkt 6, V5)', ()
   }
 });
 
+/**
+ * wyglad/2fa — Moje konto › urządzenia 2FA („Dodaj drugie urządzenie”, „Usuń” z pytaniem), Przełączniki › wymaganie 2FA
+ * dla administratorów zablokowane z powodem (D-20261014-1420-01 „Koordynator”, I-17; E12, E19).
+ */
+test.describe('wyglad/2fa — Moje konto i Przełączniki', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const openOpt = async (page: Page, view: 'options' | 'settings', key: string) => {
+    await openView(page, view);
+    await page.evaluate((k) => (document.querySelector(`[data-opt-nav="${k}"]`) as HTMLButtonElement).click(), key);
+    await page.waitForTimeout(300);
+  };
+
+  test('komputer HHL: 2FA włączona — „Telefon 1 · od 12.10.2026”, „Dodaj drugie urządzenie”; Przełączniki — wymaganie 2FA nieaktywne z powodem', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'HHL');
+    await openOpt(page, 'options', 'account');
+    await expect(page.locator('[data-mfa-devices]')).toHaveAttribute('data-mfa-devices', '1');
+    await expect(page.locator('[data-mfa-device]')).toContainText('Telefon 1');
+    await expect(page.locator('[data-mfa-device]')).toContainText('od 12.10.2026');
+    await expect(page.locator('[data-mfa-add]')).toBeEnabled();
+    await expect(page.locator('[data-mfa-remove]')).toHaveCount(0);
+    await expect(page.locator('[data-mfa-needs-code]')).toHaveCount(0);
+    await openOpt(page, 'options', 'flags');
+    const row = page.locator('[data-flag="MFA_HHL_ADMIN"]');
+    await expect(row.locator('[role="switch"]')).toBeDisabled();
+    await expect(row.locator('[data-flag-blocked]')).toContainText('2FA na dwóch urządzeniach');
+    await expect(page.locator('[data-flag="EXTERNAL_MESSAGING"] [role="switch"]')).toBeEnabled();
+  });
+
+  test('telefon HHL: Moje konto z urządzeniami 2FA — 0 w bramie E8', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL');
+    await openView(page, 'options');
+    await page.waitForSelector('.ox-tiles');
+    await openPhoneScreen(page, 'forme', 'account');
+    await expect(page.locator('[data-mfa-device]')).toHaveCount(1);
+    const hits: Hit[] = [];
+    for (const width of [...WIDTHS, 768]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.waitForTimeout(150);
+      hits.push(...await measure(page, 'moje-konto-2fa', width, 'HHL'));
+    }
+    expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+  });
+});
+
 test.describe('wyglad/P4 pasek etapów (E28, img/e28-after) i Mapa (E27)', () => {
   test.describe.configure({ mode: 'serial', timeout: 180_000 });
   const TILES = ['PREP', 'LOADING', 'ROAD_PL', 'PORT_PL', 'FERRY', 'PORT_SE', 'ROAD_SE', 'SITE', 'DELIVERED', 'SETTLE'];
@@ -1503,12 +1549,14 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
         for (const { group, screen } of list) {
           await openPhoneScreen(page, group, screen);
           hits.push(...await measure(page, `opcje/${screen}`, width, role));
-          /* stany otwarte: edycja progu, działania przy osobie */
-          const open = screen === 'thr' ? '[data-threshold] .ox-btn' : screen === 'users' ? '.ox-morebtn' : null;
+          /* stany otwarte: edycja progu, działania przy osobie, wiadomość w „Treściach wiadomości” (wyglad/P8-a) */
+          const open = screen === 'thr' ? '[data-threshold] .ox-btn' : screen === 'users' ? '.ox-morebtn' : screen === 'texts' ? '[data-mt-item="SMS_C"]' : null;
           if (open && await page.locator(open).count()) {
             await page.locator(open).first().click();
             await page.waitForTimeout(150);
             hits.push(...await measure(page, `opcje/${screen}/otwarte`, width, role));
+            /* wiadomość ma własne „‹” (nagłówek ekranu jest wtedy schowany) — powrót do listy przed dalszym przejściem */
+            if (screen === 'texts' && await page.locator('.mt-back').count()) await page.click('.mt-back');
           }
         }
       }
@@ -1522,7 +1570,7 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
     await boot(page, 'HHL');
     await openView(page, 'options');
     await expect(page.locator('.ox-side-group h2')).toHaveText(['LUDZIE I DOSTĘP', 'POWIADOMIENIA', 'PIENIĄDZE', 'ZASADY TRANSPORTU', 'SYSTEM', 'DLA MNIE']);
-    await expect(page.locator('.ox-side [data-opt-group="notify"] [data-opt-nav]')).toHaveText(['Kto co dostaje', 'SMS przy miejscachBoden: brak', 'Komunikat dla wszystkich']);
+    await expect(page.locator('.ox-side [data-opt-group="notify"] [data-opt-nav]')).toHaveText(['Kto co dostaje', 'Treści wiadomości', 'SMS przy miejscachBoden: brak', 'Komunikat dla wszystkich']);
     await page.click('[data-opt-nav="flags"]');
     await expect(page.locator('[data-opt-screen="flags"] .ox-crumb')).toHaveText('Opcje › System');
     await expect(page.locator('[data-opt-screen="flags"] tbody tr')).toHaveCount(13);
@@ -1841,7 +1889,9 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
       await expect(page.locator('[data-zone-rule="site"]')).toContainText('Dostarczone');
       await noSideScroll(page, width);
       await tabs.nth(1).click();
-      await expect(page.locator('#wf-panel-own [data-wf-id]').first()).toBeVisible();
+      /* wyglad/P8-d (E35 pkt 2, decyzja 08.10.2026, 12:14): po zmianie lista własnych reguł jest pusta — reguły START
+         znikają albo przechodzą do „Kto co dostaje”; dawne wiersze `[data-wf-id]` tylko w widoku produkcji do podłączenia */
+      await expect(page.locator('#wf-panel-own .rl-empty')).toBeVisible();
       await expect(page.locator('#wf-panel-auto')).toBeHidden();
     }
     await page.locator('.wf-tabs [role="tab"]').first().click();
@@ -2153,6 +2203,91 @@ test.describe('wyglad/P5 panel transportu — Ceny (E33) i Dokumenty (E31 pkt 5)
   }
 });
 
+/**
+ * wyglad/E49 — zamknięty most albo droga: sprawa SCX „Objazd czy postój?” (decyzja właściciela 16.10.2026, 02:08,
+ * odpowiedź 3; D-20261016-0230-01 Z3), linie wiatru / postoju / objazdu w ETA (Z1) i progi wiatru w Opcjach (Z1 pkt 5).
+ * Dane demo (`src/lib/e49Demo.ts`): T-17 w drodze przez Szwecję — Högakustenbron zamknięty.
+ */
+test.describe('wyglad/E49 — „Objazd czy postój?”, wiatr w ETA, progi wiatru', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const openRisks = async (page: Page) => {
+    await page.evaluate(() => { window.location.hash = '#/ryzyka'; });
+    await page.waitForTimeout(800);
+    await page.locator('[data-rk-card]').filter({ hasText: 'T-17' }).first().locator('.rk-card-hd').click();
+    await page.waitForTimeout(300);
+  };
+  const noSideScroll = async (page: Page, width: number) =>
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+
+  test('komputer SCX: dwie możliwości obok siebie, szybsza oznaczona, ryzyka, decyzja „Jedziemy objazdem” → ETA z objazdem', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'SCX');
+    await openRisks(page);
+    const card = page.locator('[data-detour]');
+    await expect(card).toBeVisible();
+    await expect(card.locator('.dtr-t')).toContainText('Högakustenbron (E4) zamknięty do');
+    await expect(card.locator('.dtr-t')).toContainText('objazd czy postój?');
+    await expect(card.locator('[data-detour-opt]')).toHaveCount(2);
+    const [hold, detour] = [card.locator('[data-detour-opt="HOLD"]'), card.locator('[data-detour-opt="DETOUR"]')];
+    const hb = await hold.boundingBox();
+    const db = await detour.boundingBox();
+    expect(Math.abs((hb?.y ?? 0) - (db?.y ?? 1)), 'obok siebie').toBeLessThan(2);
+    await expect(detour.locator('.dtr-fast')).toContainText('szybciej o');
+    await expect(detour.locator('.dtr-nums')).toContainText('+31');
+    await expect(detour.locator('[data-detour-risk="WIND"]')).toContainText('Sandöbron');
+    await expect(hold.locator('.dtr-big')).toContainText('koniec zamknięcia + 30 min');
+    await noSideScroll(page, 1440);
+    await card.locator('[data-detour-note]').fill('kierowca zna objazd');
+    await card.locator('[data-detour-pick="DETOUR"]').click();
+    await expect(page.locator('[data-detour]')).toHaveCount(0);
+    await page.evaluate(() => { window.location.hash = '#/transport/T-17'; });
+    await page.waitForSelector('aside.drawer', { timeout: 10_000 });
+    await expect(page.locator('[data-eta-wx] [data-eta-wx-kind="DETOUR"]')).toContainText('Objazd +35');
+    await expect(page.locator('[data-eta-wx] [data-eta-wx-kind="WIND"]')).toContainText('porywy 22 m/s z boku');
+    await expect(page.locator('[data-eta-wx] .etab-wx-attr')).toHaveText('Źródło: SMHI (CC BY 4.0), dane przetworzone');
+  });
+
+  test('komputer HHL: ta sama sprawa bez przycisków — „Decyduje SCX”; Opcje › Progi z progami wiatru', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'HHL');
+    await openRisks(page);
+    await expect(page.locator('[data-detour]')).toBeVisible();
+    await expect(page.locator('[data-detour-pick]')).toHaveCount(0);
+    await expect(page.locator('[data-detour-wait]')).toHaveText('Decyduje SCX — czeka na decyzję.');
+    await openView(page, 'options');
+    await page.evaluate(() => (document.querySelector('[data-opt-nav="thr"]') as HTMLButtonElement).click());
+    await expect(page.locator('[data-opt-screen="thr"]')).toBeVisible();
+    await expect(page.locator('[data-threshold="WIND_SLOW_MS"]')).toContainText('20 m/s');
+    await expect(page.locator('[data-threshold="WIND_HOLD_MS"]')).toContainText('25 m/s');
+    await expect(page.locator('[data-threshold="SLIP_RADIUS_KM"]')).toContainText('25 km');
+    await page.evaluate(() => { window.location.hash = '#/transport/T-17'; });
+    await page.waitForSelector('aside.drawer', { timeout: 10_000 });
+    await expect(page.locator('[data-eta-wx] [data-eta-wx-kind="CLOSURE_HOLD"]')).toContainText('Högakustenbron (E4) zamknięty');
+  });
+
+  test('telefon SCX: sprawa jedna możliwość pod drugą, przyciski 48 px, pole 16 px — 0 w bramie E8', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'SCX');
+    await openRisks(page);
+    const hits: Hit[] = [];
+    for (const width of [...WIDTHS, 768]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.waitForTimeout(200);
+      hits.push(...await measure(page, 'ryzyka-objazd', width, 'SCX'));
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(200);
+    const hb = await page.locator('[data-detour-opt="HOLD"]').boundingBox();
+    const db = await page.locator('[data-detour-opt="DETOUR"]').boundingBox();
+    expect((db?.y ?? 0) > (hb?.y ?? 0) + (hb?.height ?? 0) - 2, 'jedna pod drugą').toBe(true);
+    const btn = await page.locator('[data-detour-pick="HOLD"]').evaluate((e) => e.getBoundingClientRect().height);
+    expect(btn).toBeGreaterThanOrEqual(44);
+    const font = await page.locator('[data-detour-note]').evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+    expect(font).toBeGreaterThanOrEqual(16);
+    expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+  });
+});
+
 test.describe('wyglad/P6 Ryzyka — E7 „Do zrobienia” i „Sytuacja na trasie”, E6 karta sprawy', () => {
   test.describe.configure({ mode: 'serial', timeout: 300_000 });
 
@@ -2233,6 +2368,98 @@ test.describe('wyglad/P6 Ryzyka — E7 „Do zrobienia” i „Sytuacja na trasi
 });
 
 /**
+ * wyglad/P6-e — Czat: „Przeczytali” (kto i kiedy), wiadomość w dzwonku, wejście z powiadomienia
+ * (D-20261016-0250-01 Cz11, D-20261016-0310-01 Cz23, D-20261016-0315-01). Demo: SG-01 — wiadomość HHL przeczytał SCX,
+ * KSH jeszcze nie; rozmowa „tylko HHL i SCX” od SCX — w dzwonku tylko u HHL, nigdy u KSH.
+ */
+test.describe('wyglad/P6-e — Czat: „Przeczytali”, dzwonek, odpowiedź z powiadomienia', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const NOW_URL = `/#/?now=${encodeURIComponent('2026-10-14T10:00:00Z')}`;
+  const openChat = async (page: Page, hash: string) => {
+    await page.evaluate((h) => { window.location.hash = h; }, hash);
+    await page.waitForSelector('aside.drawer [data-chat]', { timeout: 10_000 });
+    await page.waitForTimeout(300);
+  };
+  const bellToggle = (page: Page) => page.evaluate(() => (document.querySelector('.bell-trigger') as HTMLButtonElement).click());
+
+  test('komputer HHL: „Przeczytali: 1 osoba · KSH jeszcze nie” → lista osoba, firma, godzina; dzwonek „SG-01 · … — Jan Nowak // …” z „tylko HHL i SCX” znika po otwarciu Czatu', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL', false, NOW_URL);
+    await bellToggle(page);
+    const row = page.locator('.bell-pop [data-bell-chat="HHL_SCX"]').filter({ hasText: 'SG-01 ·' });
+    await expect(row).toHaveCount(1);
+    await expect(row.locator('.bell-title')).toHaveText('SG-01 · HHL/2026/1241 — Jan Nowak // Scandinavian Express');
+    await expect(row.locator('.bell-only')).toHaveText('tylko HHL i SCX');
+    await expect(row.locator('.bell-chat')).toContainText('Rejs zarezerwowany');
+    await bellToggle(page);
+    await openChat(page, '#/transport/SG-01?zakladka=czat');
+    const rc = page.locator('.drawer [data-chat-read="yes"]');
+    await expect(rc).toHaveText(/^✓✓ Przeczytali: 1\sosoba · KSH jeszcze nie/);
+    await expect(rc).toHaveAttribute('aria-expanded', 'false');
+    await rc.click();
+    await expect(rc).toHaveAttribute('aria-expanded', 'true');
+    const li = page.locator('.drawer [data-chat-readers] li');
+    await expect(li).toHaveCount(1);
+    await expect(li.first()).toContainText('Jan Nowak');
+    await expect(li.first()).toContainText('SCX');
+    await expect(li.first()).toContainText(/\d{2}\.\d{2}, \d{2}:\d{2}/);
+    await expect(page.locator('.drawer [data-chat-pending]')).toHaveText('Jeszcze nie otworzyli: KSH');
+    await bellToggle(page);
+    await expect(page.locator('.bell-pop [data-bell-chat]').filter({ hasText: 'SG-01 ·' })).toHaveCount(0);
+  });
+
+  test('komputer KSH: w dzwonku tylko wiadomości do wszystkich, nigdy „tylko HHL i SCX”; przy cudzej wiadomości „Przeczytali: 1 osoba”', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'KSH', false, NOW_URL);
+    await bellToggle(page);
+    await expect(page.locator('.bell-pop [data-bell-chat="HHL_SCX"]')).toHaveCount(0);
+    await expect(page.locator('.bell-pop')).not.toContainText('Rejs zarezerwowany');
+    const row = page.locator('.bell-pop [data-bell-chat="ALL"]').filter({ hasText: 'SG-01 —' });
+    await expect(row.locator('.bell-title')).toHaveText('SG-01 — Anna Wiśniewska // H&H Logistics');
+    await bellToggle(page);
+    await openChat(page, '#/transport/SG-01?zakladka=czat');
+    const other = page.locator('.drawer [data-chat-read="list"]');
+    await expect(other).toHaveText(/^Przeczytali: 1\sosoba/);
+    await other.click();
+    await expect(page.locator('.drawer [data-chat-readers] li')).toHaveCount(1);
+  });
+
+  test('z powiadomienia: „?odpowiedz=1&tekst=…” → tekst w polu, kursor w polu, parametry znikają z adresu', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'SCX', false, NOW_URL);
+    await openChat(page, `#/transport/SG-02?zakladka=czat&odpowiedz=1&tekst=${encodeURIComponent('Jedziemy dalej, będę o 14:00')}`);
+    await expect(page.locator('.drawer [data-chat-input]')).toHaveValue('Jedziemy dalej, będę o 14:00');
+    expect(await page.evaluate(() => document.activeElement?.hasAttribute('data-chat-input'))).toBe(true);
+    expect(await page.evaluate(() => window.location.hash)).toBe('#/transport/SG-02?zakladka=czat');
+  });
+
+  for (const role of ['HHL', 'KSH'] as const) {
+    test(`telefon ${role}: lista „Przeczytali” rozwinięta i dzwonek z wiadomością — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role, false, NOW_URL);
+      const hits: Hit[] = [];
+      const gate = async (name: string) => {
+        for (const width of [...WIDTHS, 768]) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(150);
+          hits.push(...await measure(page, name, width, role));
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
+      };
+      await bellToggle(page);
+      await expect(page.locator('.bell-pop [data-bell-chat]').first()).toBeVisible();
+      await gate('dzwonek-czat');
+      await bellToggle(page);
+      await openChat(page, '#/transport/SG-01?zakladka=czat');
+      await page.locator('.drawer [data-chat-read="yes"], .drawer [data-chat-read="list"]').first().click();
+      await expect(page.locator('.drawer [data-chat-readers]')).toBeVisible();
+      await gate('panel-czat-przeczytali');
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});
+
+/**
  * wyglad/P6-b — panel transportu: Historia i Czat (E17, decyzje 07.10 20:57, img/e17-after).
  * „Teraz” 14.10.2026 — wpisy demo transportu SG-01 (dostarczony) są wtedy już w przeszłości.
  */
@@ -2268,14 +2495,14 @@ test.describe('wyglad/P6-b panel transportu — Historia i Czat (E17)', () => {
     expect(new Set(cats)).toEqual(new Set(['NUMER']));
     /* Czat */
     await openTab(page, 'SG-01', 4);
-    await expect(page.locator('.drawer [data-chat] button')).toHaveCount(3);
+    await expect(page.locator('.drawer [data-chat-compose] button')).toHaveCount(3);
     await expect(page.locator('.drawer [data-carrier-actions], .drawer [data-awiz-chat-note]')).toHaveCount(0);
     await expect(page.locator('.drawer [data-chat-msg][data-vis="HHL_SCX"]')).toHaveCount(1);
     const before = await page.locator('.drawer [data-chat-msg]').count();
     await page.locator('.drawer [data-chat-input]').fill('Wiadomość testowa do wszystkich');
     await page.locator('.drawer [data-chat-input]').press('Enter');
     await expect(page.locator('.drawer [data-chat-msg]')).toHaveCount(before + 1);
-    await expect(page.locator('.drawer [data-chat-msg]').last()).toContainText('nikt z SCX i KSH jeszcze nie otworzył');
+    await expect(page.locator('.drawer [data-chat-msg]').last()).toContainText('Wysłane do HHL, SCX i KSH · nikt jeszcze nie otworzył');
     await page.locator('.drawer [data-chat-vis="HHL_SCX"]').click();
     await expect(page.locator('.drawer [data-chat-input]')).toHaveAttribute('placeholder', 'Napisz tylko do HHL i SCX…');
     await page.locator('.drawer [data-chat-input]').fill('Druga linia');
@@ -2292,7 +2519,7 @@ test.describe('wyglad/P6-b panel transportu — Historia i Czat (E17)', () => {
     await expect(page.locator('.drawer [data-chat-msg]').first()).toBeVisible();
     await expect(page.locator('.drawer [data-chat-msg][data-vis="HHL_SCX"]')).toHaveCount(0);
     await expect(page.locator('.drawer [data-chat-vis]')).toHaveCount(0);
-    await expect(page.locator('.drawer [data-chat] button')).toHaveCount(1);
+    await expect(page.locator('.drawer [data-chat-compose] button')).toHaveCount(1);
   });
 
   for (const role of ['HHL', 'SCX', 'KSH'] as const) {
@@ -2322,4 +2549,164 @@ test.describe('wyglad/P6-b panel transportu — Historia i Czat (E17)', () => {
       expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
     });
   }
+});
+
+test.describe('wyglad/P8-c Strefy (E34, img/e34-after)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const ZONES_URL = `/#/?now=${encodeURIComponent('2026-10-15T18:00:00Z')}`;
+
+  test('komputer HHL: lista według trasy, karta strefy, zmiana z powodem i podglądem wpływu, wyłączenie z powodem', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'HHL', false, ZONES_URL);
+    await openView(page, 'geo');
+    await expect(page.locator('.zv-grp-h')).toHaveText(['ŚREM · ZAŁADUNEK', 'GDAŃSK · POLFERRIES → NYNÄSHAMN', 'GDYNIA · STENA → KARLSKRONA', 'PORTY W SZWECJI', 'BODEN · ROZŁADUNEK']);
+    await expect(page.locator('[data-zone-card] h3')).toHaveText('Plac budowy Stegra Boden');
+    await page.locator('[data-zone-edit]').click();
+    await page.locator('[data-zone-f="radius"]').fill('1100');
+    await expect(page.locator('[data-zone-impact]')).toContainText('status bez zmian');
+    await page.locator('[data-zone-save]').click();
+    await expect(page.locator('[data-zone-f="reason"]')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.locator('[data-zone-f="reason"]')).toBeFocused();
+    await page.locator('[data-zone-f="reason"]').fill('wjazd na plac jest od północy');
+    await page.locator('[data-zone-save]').click();
+    await expect(page.locator('.zv-live')).toHaveText('Zapisano. Wpis jest w historii zmian strefy.');
+    await expect(page.locator('[data-zone-edit]')).toBeFocused();
+    await expect(page.locator('.zv-hist li').first()).toContainText('powód: wjazd na plac jest od północy');
+    await page.locator('[data-zone-off]').click();
+    await page.locator('[data-zone-off-yes]').click();
+    await expect(page.locator('.zv-ask .zv-err')).toHaveText('Wpisz powód zmiany.');
+    await page.locator('[data-zone-off-reason]').fill('plac zamknięty');
+    await page.locator('[data-zone-off-yes]').click();
+    await expect(page.locator('[data-zone-off]')).toHaveText('Włącz');
+    await expect(page.locator('[data-zone-off]')).toBeFocused();
+  });
+
+  /* menu Strefy jest tylko w grupie administracyjnej HHL (E9) */
+  for (const role of ['HHL'] as const) {
+    test(`telefon ${role}: mapa trasy, karty według miejsca, karta strefy, zmiana strefy, wyłączenie z powodem — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role, false, ZONES_URL);
+      await openView(page, 'geo');
+      const hits: Hit[] = [];
+      const gate = async (name: string) => {
+        for (const width of [...WIDTHS, 768]) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(200);
+          hits.push(...await measure(page, name, width, role));
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForTimeout(200);
+      };
+      await gate('strefy-lista');
+      await page.locator('[data-zone="z-bod"]').click();
+      await expect(page.locator('[data-zone-card] h3')).toBeFocused();
+      await gate('strefy-karta');
+      await page.locator('[data-zone-off]').click();
+      await gate('strefy-wylacz');
+      await page.locator('.zv-ask .btn.ghost').click();
+      await page.locator('[data-zone-edit]').click();
+      await page.locator('[data-zone-save]').click();
+      await gate('strefy-zmiana');
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});
+
+test.describe('wyglad/P8-d Automatyzacje (E35, img/e35-after)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const noSideScroll = async (page: Page, width: number) =>
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+
+  test('komputer HHL: 4 zakładki, kreator „Gdy … wtedy …” obok listy, sprawdzenie na 30 dniach, zapis, wyłączenie z powodem, przebiegi i historia', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'HHL');
+    await openView(page, 'wf');
+    await expect(page.locator('.rl-tabs [role="tab"]')).toHaveText(['Działa samo', 'Własne reguły · 0', 'Przebiegi', 'Historia zmian']);
+    await page.locator('[data-rule-new]').click();
+    await expect(page.locator('[data-rule-creator] h2')).toBeFocused();
+    await expect(page.locator('.rl-main')).toBeVisible();
+    await page.locator('[data-rule-save]').click();
+    await expect(page.locator('[data-rule-f="name"]')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.locator('[data-rule-f="name"]')).toBeFocused();
+    await page.locator('[data-rule-f="name"]').fill('Długi pobyt na placu');
+    await page.locator('[data-rule-f="zone"]').selectOption({ label: 'Plac budowy Stegra Boden' });
+    await page.locator('[data-rule-then="notify-HHL_OPS"]').click();
+    await page.locator('[data-rule-then="notify-SCX"]').click();
+    await expect(page.locator('[data-rule-check]')).toContainText('zadziałałaby 1 raz');
+    await expect(page.locator('[data-rule-check]')).toContainText('SG-03 · plac od 07.10, 08:35 → 07.10, 11:35 (wyjazd 12:19)');
+    await expect(page.locator('[data-rule-check]')).toContainText('Wbudowane automaty robiące to samo: brak.');
+    await noSideScroll(page, 1440);
+    await page.locator('[data-rule-save]').click();
+    await expect(page.locator('.rl-live')).toHaveText('Dodano regułę. Wpis jest w historii zmian.');
+    await expect(page.locator('[data-wf-tab="own"]')).toHaveText('Własne reguły · 1');
+    const row = page.locator('.rl-rule').first();
+    /* nowa reguła startuje wyłączona (img/e35-after: „włączona” niezaznaczone) */
+    await expect(row.locator('.rl-state')).toHaveText('wyłączona');
+    await expect(row).toContainText('Gdy auto jest w strefie „Plac budowy Stegra Boden” dłużej niż 3');
+    await expect(row.locator('.rl-rule-name')).toBeFocused();
+    await row.locator('[data-rule-toggle]').click();
+    await row.locator('[data-rule-ask-yes]').click();
+    await expect(row.locator('.rl-err')).toHaveText('Wpisz powód zmiany.');
+    await row.locator('[data-rule-reason]').fill('SCX prosi o sygnał po 3 h na placu');
+    await row.locator('[data-rule-ask-yes]').click();
+    await expect(page.locator('.rl-live')).toHaveText('Reguła włączona.');
+    await expect(row.locator('[data-rule-toggle]')).toHaveText('Wyłącz');
+    await expect(row.locator('[data-rule-toggle]')).toBeFocused();
+    await page.locator('[data-wf-tab="runs"]').click();
+    await expect(page.locator('[data-rule-runs] tbody tr')).toHaveCount(5);
+    await expect(page.locator('[data-rule-runs]')).toContainText('powiadomienie: KSH 4 osoby, SCX 1 osoba');
+    await expect(page.locator('[data-rule-runs]')).not.toContainText('SKIPPED');
+    await page.locator('[data-wf-tab="hist"]').click();
+    await expect(page.locator('[data-rule-hist] li').first()).toContainText('włączona · „Długi pobyt na placu” · powód: SCX prosi o sygnał po 3 h na placu');
+  });
+
+  test('komputer 1280 → 1100: kreator zamiast listy; zmiana reguły wymaga powodu', async ({ page }) => {
+    await page.setViewportSize({ width: 1100, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'wf');
+    await page.locator('[data-rule-new]').click();
+    await expect(page.locator('.rl-main')).toBeHidden();
+    await page.locator('[data-rule-f="name"]').fill('Brak awizacji — SCX');
+    await page.locator('[data-rule-when="issue"]').click();
+    await page.locator('[data-rule-then="todo"]').click();
+    await page.locator('[data-rule-f="todo"]').selectOption('SCX');
+    await page.locator('[data-rule-save]').click();
+    await expect(page.locator('.rl-main')).toBeVisible();
+    await page.locator('.rl-rule [data-rule-edit]').first().click();
+    await page.locator('[data-rule-save]').click();
+    await expect(page.locator('[data-rule-f="reason"]')).toBeFocused();
+    await noSideScroll(page, 1100);
+  });
+
+  test('telefon HHL: zakładki, „+ Nowa reguła”, kreator na cały ekran, przebiegi kartami, historia — 0 w bramie E8', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL');
+    await openView(page, 'wf');
+    const hits: Hit[] = [];
+    const gate = async (name: string) => {
+      for (const width of [...WIDTHS, 768]) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.waitForTimeout(200);
+        hits.push(...await measure(page, name, width, 'HHL'));
+      }
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.waitForTimeout(200);
+    };
+    await gate('automatyzacje-dziala-samo');
+    await page.locator('[data-wf-tab="own"]').click();
+    await gate('automatyzacje-wlasne');
+    await page.locator('#wf-panel-own [data-rule-new]').click();
+    await expect(page.locator('[data-rule-creator] h2')).toBeFocused();
+    const font = await page.locator('[data-rule-f="name"]').evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+    expect(font, 'pole ≥ 16 px').toBeGreaterThanOrEqual(16);
+    await page.locator('[data-rule-save]').click();
+    await gate('automatyzacje-kreator');
+    await page.locator('.rl-back').click();
+    await page.locator('[data-wf-tab="runs"]').click();
+    await expect(page.locator('.rl-run-card')).toHaveCount(5);
+    await gate('automatyzacje-przebiegi');
+    await page.locator('[data-wf-tab="hist"]').click();
+    await gate('automatyzacje-historia');
+    expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+  });
 });

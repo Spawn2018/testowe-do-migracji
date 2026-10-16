@@ -3,12 +3,15 @@
  */
 import type { EtaDetail, LoadStatus } from '../types';
 import type { EtaBasis } from '../data/mappers';
+import { etaWxFromCauses } from './e49Wx';
 
 type Causes = {
   drive_h?: number | null;
   rest_h?: number | null;
   remaining_km?: number | null;
   progress?: string | null;
+  /** wyglad/E49 (D-20261016-0230-01 Z1 pkt 4): [{ kind, addMin, where, gustMs, side, atIso, fromIso, untilIso, source }] */
+  weather?: unknown;
 };
 
 type BasisExtra = EtaBasis & {
@@ -53,8 +56,11 @@ export function etaDetailFromBasis(
     detail.restNeeded = Number(causes.rest_h) > 0;
   }
 
+  const wx = etaWxFromCauses(causes?.weather);
+  if (wx.length) detail.weather = wx;
+
   return detail.phase != null || detail.distanceKm != null || detail.driveMin != null
-    || detail.restHours != null || detail.waitAis || detail.ferryEtaAt
+    || detail.restHours != null || detail.waitAis || detail.ferryEtaAt || !!detail.weather
     ? detail
     : null;
 }

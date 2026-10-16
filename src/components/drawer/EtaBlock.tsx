@@ -11,6 +11,8 @@ import { etaIsNightArrival, etaWindowKind } from '../../lib/time';
 import { stageTileOf } from '../../lib/stageTiles';
 import { dayOnly, dayTime, hoursMinutes, timeOnly } from '../../lib/statusAxis';
 import { formatDelayPill } from '../ui/StatusPill';
+import { minText, type EtaWx } from '../../lib/e49Wx';
+import { e49wx } from '../../i18n/e49Wx';
 
 const SE = 'Europe/Stockholm';
 const up = (s: string) => s.toLocaleUpperCase('pl');
@@ -30,6 +32,7 @@ export function EtaBlock({
   deliveredAt,
   siteSince,
   delayMin,
+  wx = [],
 }: {
   load: Load;
   locale: Locale;
@@ -39,6 +42,8 @@ export function EtaBlock({
   /** wjazd na plac (bieżący status „Na placu”) */
   siteSince: string | null;
   delayMin: number | null;
+  /** wyglad/E49: wiatr, postój przez wiatr, śliskość, zamknięcie i objazd (`etaWxOf`) */
+  wx?: readonly EtaWx[];
 }) {
   const tile = stageTileOf(load);
   if (tile == null) return null;
@@ -165,6 +170,19 @@ export function EtaBlock({
     else if (d.restNeeded && d.restHours) why.push(tp(locale, 'p4b_eta_why_rest_ahead', { h: d.restHours }));
   }
 
+  /* wyglad/E49 (D-20261016-0230-01 Z1, Z3, Z4): co dolicza pogoda i zamknięcia — w trasie i na odpoczynku */
+  const wxLines = phase === 'DRIVE' || phase === 'REST' ? wx.map((w) => {
+    const vars = {
+      d: minText(w.addMin), g: w.gustMs ?? '—', where: w.where,
+      side: w.side ? e49wx(`e49_wx_side_${w.side}`) : '',
+      at: w.atIso ? timeOnly(w.atIso) : '—',
+      from: w.fromIso ? timeOnly(w.fromIso) : '—',
+      to: w.untilIso ? timeOnly(w.untilIso) : '—',
+    };
+    return { kind: w.kind, text: e49wx(`e49_wx_${w.kind}`, vars).replace('  ', ' ') };
+  }) : [];
+  const smhi = phase === 'DRIVE' || phase === 'REST' ? wx.some((w) => w.source === 'SMHI') : false;
+
   return (
     <>
       <div className={`etab ${phase === 'DRIVE' ? 'route' : phase === 'REST' ? 'rest' : 'wait'}`} data-eta="value" data-eta-block data-eta-phase={phase}>
@@ -183,6 +201,12 @@ export function EtaBlock({
         </div>
         {subText ? (
           <div className="etab-sub" {...(win ? { 'data-eta-window': win } : {})}>{subText}</div>
+        ) : null}
+        {wxLines.length ? (
+          <ul className="etab-wx" data-eta-wx>
+            {wxLines.map((l, k) => <li key={k} className={l.kind === 'WIND_HOLD' || l.kind === 'CLOSURE_HOLD' ? 'is-hold' : undefined} data-eta-wx-kind={l.kind}>{l.text}</li>)}
+            {smhi ? <li className="etab-wx-attr">{e49wx('e49_wx_attr')}</li> : null}
+          </ul>
         ) : null}
       </div>
       {why.length ? (
