@@ -402,6 +402,20 @@ test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
     await expect(page.locator('[data-page="map"] .wt-marker-ferry')).toHaveCount(0);
   });
 
+  test('komputer: najechanie na wiersz tabeli podświetla znacznik (E29, audyt D-03)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    const lit = page.locator('[data-page="map"] .leaflet-marker-icon.is-hover');
+    await expect(page.locator('[data-page="map"] .wt-mk').first()).toBeAttached();
+    await expect(lit).toHaveCount(0);
+    /* wiersz z pozycją GPS ma znacznik (sam albo w grupie strefy) */
+    await page.locator('[data-map-table] tbody tr[data-load]:has(td[data-map-pos="fix"])').first().hover();
+    await expect(lit).toHaveCount(1);
+    await page.mouse.move(4, 4);
+    await expect(lit).toHaveCount(0);
+  });
+
   test('KSH: bez przycisku „Strefy”, nazwa transportu to sam kod (E41)', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'KSH');
