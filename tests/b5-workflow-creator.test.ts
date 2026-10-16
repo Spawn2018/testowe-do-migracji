@@ -6,7 +6,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setAuthProfile } from '../src/auth/profile';
 import {
   actionsFromText, actionsToText, draftCondition, draftFromRule, emptyDraft, groupOf, localDuplicateCheck, logicToRows,
@@ -19,8 +19,12 @@ vi.mock('../src/lib/prodFacade', async (orig) => ({ ...(await orig<typeof import
 
 const profile = (role: string) => ({ user_id: 'u', email: 'a@log-mar.pl', full_name: 'A', role, org_code: 'HHL', org_name: 'HHL', locale: 'pl', active: true }) as never;
 
+/* wyglad/P8-d (E35, decyzja 08.10.2026, 12:14): w demo Automatyzacje to strona E35 (tests/p8d-rules.test.ts,
+   e8-phone-gate „wyglad/P8-d”); widok B-5 zostaje w produkcji do podłączenia źródła reguł w P8 — tu sprawdzany
+   w trybie produkcji (VITE_AUTH_MODE=supabase, rulesReady() = false). */
 describe('B-5: przycisk „Nowa automatyzacja” (produkcja)', () => {
-  afterEach(() => setAuthProfile(null));
+  beforeEach(() => { vi.stubEnv('VITE_AUTH_MODE', 'supabase'); });
+  afterEach(() => { setAuthProfile(null); vi.unstubAllEnvs(); });
   it('HHL_ADMIN: przycisk, edycja i aktywne włączniki', async () => {
     setAuthProfile(profile('HHL_ADMIN'));
     const { WorkflowsView } = await import('../src/views/WorkflowsView');
