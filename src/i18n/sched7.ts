@@ -40,6 +40,8 @@ const PL: Record<string, string> = {
   s7_margin_short: 'marża {v} · {p}',
   s7_pcs: '{n} szt.',
   s7_call: 'Zadzwoń: {who}',
+  s7_call_leg: 'Zadzwoń: {who} · kierowca odcinka {leg} (teraz wiezie ładunek)',
+  s7_no_phone_leg: 'Kierowca odcinka {leg} nie ma telefonu w awizacji',
   s7_none: '–',
   s7_missing_part: 'w pliku „...” — awizacja niekompletna',
   s7_renum: 'zmiana numeracji',

@@ -5,6 +5,7 @@
  * w oknie Awizacja (E32), nie w tabeli.
  */
 import { useLayoutEffect, useRef, type ReactNode } from 'react';
+import { activeDriver } from '../../lib/activeDriver';
 import type { DocStatusRow, DocRequirement } from '../../lib/docRequirements';
 import type { DisplayCurrency } from '../../lib/money/engine';
 import type { Load, Locale, RoleId } from '../../types';
@@ -60,14 +61,16 @@ function Q({ locale }: { locale: Locale }) {
 
 function Phones({ l, locale }: { l: Load; locale: Locale }) {
   const r = l.resources;
-  const swap = !!r.trailerSwap;
-  const one = (num: string | null | undefined, name: string | null | undefined) => {
-    const n = (num ?? '').replace(/\s+/g, '');
-    if (n) return <a className="s7-tel" href={`tel:${n}`} aria-label={s7p(locale, 's7_call', { who: (name ?? '').trim() || n })} title={num ?? ''} onClick={(e) => e.stopPropagation()}>☎</a>;
-    return (name ?? '').trim() ? <b className="s7-neg">{s7(locale, 's7_no_phone')}</b> : <Q locale={locale} />;
-  };
   if (!(r.driverName || r.driverPhone || r.driverDeliveryName || r.driverDeliveryPhone)) return dash;
-  return <span className="s7-tels">{one(r.driverPhone, r.driverName)}{swap ? <> → {one(r.driverDeliveryPhone, r.driverDeliveryName)}</> : null}</span>;
+  /* wyglad/E6-tel (właściciel 16.10, 13:34): jeden „Zadzwoń” — do kierowcy, który teraz wykonuje transport (przy przepięciu od portu SE kierowca SE) */
+  const d = activeDriver(l);
+  const legTag = d.swap ? <small className="s7-leg" data-tel-leg={d.leg}>{d.leg}</small> : null;
+  if (d.dial) {
+    const who = d.name || d.phone || '';
+    const label = d.swap ? s7p(locale, 's7_call_leg', { who, leg: d.leg }) : s7p(locale, 's7_call', { who });
+    return <span className="s7-tels"><a className="s7-tel" href={`tel:${d.dial}`} data-tel-active={d.leg} aria-label={label} title={label} onClick={(e) => e.stopPropagation()}>☎</a>{legTag}</span>;
+  }
+  return <span className="s7-tels">{d.name ? <b className="s7-neg" title={d.swap ? s7p(locale, 's7_no_phone_leg', { leg: d.leg }) : undefined}>{s7(locale, 's7_no_phone')}</b> : <Q locale={locale} />}{legTag}</span>;
 }
 
 function Status({ l, ctx }: { l: Load; ctx: SchedRowCtx }) {

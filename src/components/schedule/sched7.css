@@ -39,6 +39,7 @@
 .s7-tels{display:inline-flex;gap:4px;align-items:center}
 .s7-tel{display:inline-block;padding:0 2px;color:var(--ink);text-decoration:none}
 .s7-tel:hover{color:var(--sea)}
+.s7-leg{font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
 .s7-renum{margin-left:6px;color:var(--amber-ink);border-color:var(--amber);background:var(--amber-bg)}
 .s7-tag-bad{margin-left:6px;color:var(--red);border-color:var(--red);background:var(--red-bg)}
 .s7-st{flex-wrap:wrap}
