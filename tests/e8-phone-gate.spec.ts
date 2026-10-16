@@ -562,6 +562,88 @@ test.describe('wyglad/P9-f mapa w Przeglądzie (E32 pkt 3)', () => {
   });
 });
 
+/* wyglad/P10b-b — E37 pkt 3 (Pomoc) i D-20261009-0015-01: „?” = Pomoc z zakładkami Jak pracuję, Co nowego, Kontakt,
+   Skróty; „Jak pracuję” w wersji konta (w Podglądzie — wersja podglądanej firmy); kliknięcie kroku otwiera miejsce;
+   na telefonie cały ekran, bez „Skrótów”, z blokiem „Na telefonie”. */
+test.describe('wyglad/P10b-b Pomoc (E37 pkt 3)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const openHelp = async (page: Page) => {
+    if (!(await page.locator('[data-help-panel]').count())) await page.locator('#helpBtn').click();
+    await page.waitForSelector('[data-help-panel]');
+  };
+
+  test('komputer: 3 firmy — wersja, zakładki, kroki; każdy krok HHL otwiera swoje miejsce', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openHelp(page);
+    await expect(page.locator('[data-help-kind]')).toHaveText('HHL Administrator');
+    await expect(page.locator('[data-help-tab]')).toHaveText(['Jak pracuję', 'Co nowego', 'Kontakt', 'Skróty']);
+    await expect(page.locator('[data-help-panel] .helpp-step')).toHaveCount(17);
+    await expect(page.locator('[data-help-phone]')).toHaveCount(0);
+    await page.locator('[data-help-tab="keys"]').click();
+    await expect(page.locator('[data-help-keys]')).toContainText('Zmień widok (Podgląd)');
+    await page.locator('[data-help-tab="contact"]').click();
+    await expect(page.locator('[data-help-contact] [data-help-call]').first()).toHaveText('Zadzwoń');
+    await expect(page.locator('[data-help-contact]')).toContainText('Operacje HHL');
+    await page.locator('[data-help-tab="news"]').click();
+    await expect(page.locator('[data-help-news] .helpp-news li').first()).toBeVisible();
+    await page.locator('[data-help-tab="how"]').click();
+    const expectAt: Record<string, string> = {
+      dash: 'dash', 'risk/todo': 'risks', sched: 'schedule', 'sched/rejsy': 'schedule', panel: 'schedule', map: 'map', docs: 'docs',
+      fin: 'finance', 'fin/pack': 'finance', inv: 'invoices', geo: 'geofence', wf: 'workflows', options: 'options', 'options/users': 'options',
+    };
+    const targets = await page.locator('[data-help-panel] [data-help-target]').evaluateAll((e) => [...new Set(e.map((x) => x.getAttribute('data-help-target') as string))]);
+    expect(targets.length).toBe(16);
+    for (const tg of targets) {
+      await openHelp(page);
+      await page.locator(`[data-help-panel] [data-help-target="${tg}"]`).first().click();
+      await expect(page.locator('[data-help-panel]')).toHaveCount(0);
+      if (tg === 'konto') {
+        await expect(page.locator('#accountMenu')).toBeVisible();
+        await page.keyboard.press('Escape');
+      } else if (tg === 'podglad') {
+        await expect(page.locator('.seg.is-hint')).toHaveCount(1);
+      } else {
+        await expect(page.locator('[data-page]').first(), tg).toHaveAttribute('data-page', expectAt[tg]);
+        if (tg === 'sched/rejsy') await expect(page.locator('[data-sched-tab="sailings"]')).toHaveAttribute('aria-pressed', 'true');
+        if (tg === 'options/users') await expect(page.locator('[data-opt-nav="users"][aria-current="page"]')).toHaveCount(1);
+        if (tg === 'fin/pack') await expect(page.locator('#fin-pack')).toBeInViewport();
+      }
+    }
+    for (const [role, kind, n] of [['KSH', 'KSH Użytkownik', 10], ['SCX', 'SCX Dyspozytor', 11]] as const) {
+      await page.locator(`#roleSeg button[data-role="${role}"]`).click();
+      await openHelp(page);
+      await expect(page.locator('[data-help-kind]')).toHaveText(kind);
+      await expect(page.locator('[data-help-panel] .helpp-step')).toHaveCount(n);
+      await page.locator('[data-help-tab="keys"]').click();
+      await expect(page.locator('[data-help-keys]')).not.toContainText('Zmień widok');
+      await page.keyboard.press('Escape');
+      await expect(page.locator('[data-help-panel]')).toHaveCount(0);
+    }
+  });
+
+  test('telefon 390: menu konta → Pomoc na cały ekran, bez „Skrótów”, z „Na telefonie”; krok → miejsce', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'KSH', true);
+    await page.locator('#accountBtn').click();
+    await page.locator('[data-acc="help"]').click();
+    const panel = page.locator('[data-help-panel]');
+    await expect(panel).toBeVisible();
+    const box = (await panel.boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(389);
+    expect(box.height).toBeGreaterThanOrEqual(800);
+    await expect(page.locator('[data-help-tab]')).toHaveText(['Jak pracuję', 'Co nowego', 'Kontakt']);
+    await expect(page.locator('[data-help-panel] .helpp-step')).toHaveCount(12);
+    await expect(page.locator('[data-help-phone] .helpp-step')).toHaveCount(2);
+    const small = await page.locator('[data-help-panel] button.helpp-step, [data-help-tab]').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height < 44).length);
+    expect(small).toBe(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    await page.locator('[data-help-panel] [data-help-target="docs"]').click();
+    await expect(panel).toHaveCount(0);
+    await expect(page.locator('[data-page]').first()).toHaveAttribute('data-page', 'docs');
+  });
+});
+
 test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
   test.describe.configure({ mode: 'serial', timeout: 120_000 });
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });

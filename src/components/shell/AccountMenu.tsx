@@ -17,6 +17,7 @@ import type { Locale, RoleId } from '../../types';
 import { formatListDateTime } from '../../lib/format';
 import { getNow } from '../../lib/frozenNow';
 import { groupPhone } from '../../lib/phoneDisplay';
+import { OPEN_ACCOUNT_EVENT } from '../../lib/helpNav';
 
 const PREVIEW_ROLES: RoleId[] = ['HHL', 'KSH', 'SCX'];
 const DEMO_KIND: Record<RoleId, string> = { HHL: 'HHL_ADMIN', KSH: 'CLIENT_USER', SCX: 'CARRIER_DISPATCH' };
@@ -74,6 +75,17 @@ export function AccountMenu() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
+
+  /* wyglad/P10b-b (E37 pkt 3): krok Pomocy „Menu konta” / „Podgląd” (telefon) otwiera to menu */
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      setOpen(true);
+      setPreviewOpen(!!(e as CustomEvent<{ preview?: boolean }>).detail?.preview);
+      btnRef.current?.focus();
+    };
+    window.addEventListener(OPEN_ACCOUNT_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_ACCOUNT_EVENT, onOpen);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
