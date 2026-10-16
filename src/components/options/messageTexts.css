@@ -109,7 +109,7 @@
   .mt-ins-row.is-scroll{flex-wrap:nowrap;width:100%;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
   .mt-ins-row.is-scroll .mt-ins-btn{flex:0 0 auto;min-height:44px;font-size:15px}
   .mt-prev{padding:10px 12px 12px}
-  .mt-prev-sel{min-height:44px;font-size:16px}
+  .mt-prev-sel{min-height:44px;font-size:16px;width:100%;min-width:0}
   .mt-acts{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
   .mt-acts .btn{min-height:48px;font-size:16px}
   .mt-acts .btn[data-mt-reset]{grid-column:1 / -1}
