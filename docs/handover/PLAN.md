@@ -243,8 +243,8 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
 ### P3 · Uprawnienia, konta, Opcje, pasek górny — NA PRODUKCJI (logika/baza: scalenie `d3cbe4d8` + `567fcc5a`, wdrożenie `dpl_9tAM8dDaeXZ2awdpHD6RCNwdkLPP`, 13.10.2026 23:32); P3-a wygląd: scalenie `25b71bca` (PR #178), wdrożenie `dpl_FBYjeG86cptLjWvXiRmURHH5kKkt`, 14.10.2026 00:12; P3-b Kokpit: scalenie `50b23eb0` (PR #185), wdrożenie `dpl_Go31sqkke7v66cur6AxKfkuDwDWj`, 14.10.2026 02:53
 - **Ekrany — wygląd:** P3-a pasek górny + E13 — `wyglad/P3` (PR #178, D-20261013-2255-01); P3-b Kokpit (E9, V5) — `wyglad/P3-b` (PR #185, D-20261014-0215-01) **NA PRODUKCJI**; P3-c Opcje i Ustawienia (E11, E12, E37, E6) — `wyglad/P3-c` (PR #190, D-20261014-0700-01) **NA PRODUKCJI**. Cursor: logika, baza, uprawnienia, Podgląd — bez przebudowy wyglądu ekranów koordynatora (F1).
 - **Podłączenie danych ekranów Opcji** (D-20261014-0700-01 J3; bez zmiany wyglądu — F1):
-  1. **Moje konto** (`AccountScreen`: `my_profile`, `admin_user_profile_set`, 2FA z `Mfa`, `my_sessions` / `revoke_user_sessions`) — zaraz po scaleniu P3-c (G4 pkt 2); HHL zamiast trzech formularzy; KSH/SCX; w Podglądzie tylko odczyt; poprawka 2FA R1–R5 — D-20261014-1420-01;
-  2–11. Użytkownicy, Logowania, Kto co dostaje, Co dostaję, Komunikat, Progi, Przełączniki, Historia, Eksport, stany przy menu — **P3-d** (zaraz po P4; D-20261014-1420-01 R7; funkcje bazy już na produkcji; propsy z dopisku wyglądu);
+  1. **Moje konto** (`AccountScreen`: `my_profile`, `admin_user_profile_set`, 2FA z `Mfa`, `my_sessions` / `revoke_user_sessions`) — zaraz po scaleniu P3-c (G4 pkt 2); HHL zamiast trzech formularzy; KSH/SCX; w Podglądzie tylko odczyt; poprawka 2FA R1–R5 — D-20261014-1420-01; **P3-d:** urządzenia 2FA i wymaganie 2FA — wygląd `wyglad/2fa` (#243); dane D-20261016-0405-01 pkt 1–2; po podłączeniu usuwasz `MyMfa` (R2 D-20261014-1420-01).
+  2–11. Użytkownicy, Logowania, Kto co dostaje, Co dostaję, Komunikat, Progi, Przełączniki, Historia, Eksport, stany przy menu — **P3-d** (zaraz po P4; D-20261014-1420-01 R7; funkcje bazy już na produkcji; propsy z dopisku wyglądu); pkt 8 (Przełączniki): urządzenia 2FA i wymaganie 2FA — wygląd `wyglad/2fa` (#243); dane D-20261016-0405-01 pkt 1–2; po podłączeniu usuwasz `MyMfa` (R2 D-20261014-1420-01).
   12. przełącznik strefy dla Operacji HHL (E12 1A) → **P8** (E42).
 - **Pytanie (J4) — odpowiedź (D-20261014-1420-01 R7):** ocena przewoźnika według raportu (E9) w **Kokpicie**. Element wyglądu robi koordynator; do tego czasu ocena zostaje w „Dla mnie › Wygląd i waluta”.
 - **E9** prawa ról (z E36, zamkniętym w E9):
@@ -283,7 +283,8 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - Operacje HHL nie mogą zapisać ustawień (odmowa w bazie);
   - zapis daty albo godziny załadunku / rozładunku przez API: HHL Administrator, HHL Operacje, SCX Dyspozytor, SCX Użytkownik → odmowa bazy; KSH Użytkownik → przyjęty, wpis w Historii; wgranie pliku przez Administratora HHL nadal zmienia daty; „Działaj jako” KSH → zapis przyjęty, w dzienniku prawdziwy wykonawca (W30);
   - zrzuty porównane z makietami E9, E11, E12, E37 (pasek), E6, E13;
-  - Kokpit na telefonie według E8 pkt 6 i `img/e8-after.webp` (D-20261013-1535-01 V5): kafelki 2 × 2 o równej szerokości; liczby się nie łamią („54 / 72” w jednej linii); 3 najpilniejsze sprawy; treść kafelków według E9.
+  - Kokpit na telefonie według E8 pkt 6 i `img/e8-after.webp` (D-20261013-1535-01 V5): kafelki 2 × 2 o równej szerokości; liczby się nie łamią („54 / 72” w jednej linii); 3 najpilniejsze sprawy; treść kafelków według E9;
+  - P3-d odbiór D-20261016-0405-01 pkt 3: konto bez 2FA → „Wyłączona” i „Włącz 2FA”; po włączeniu → lista z 1 urządzeniem i „Dodaj drugie urządzenie”; drugie urządzenie → „Usuń” przy obu; HHL Administrator w `aal2` z 2 urządzeniami włącza i wyłącza wymaganie (wpis w dzienniku); przełącznik nieaktywny z powodem przy 1 urządzeniu; Podgląd KSH na „Moje konto” — 0 aktywnych pól i przycisków; blok e2e `wyglad/2fa` (2 testy) zielony na demo.
 
 ### Poprawki P3 · NA PRODUKCJI (14.10.2026 02:40, merge `38711bd7` PR #184, migracja 0204, wdrożenie `dpl_DHp28HQMcy6D5PHZmMWCcvRcqKUF`)
 - **D1 / R1–R4** (D-20261014-0015-01): G-20 baza + `g20`, WEB_PUSH tylko krytyczne, DECISION×CLIENT_USER `push=false`, wyjątki doradcy, instrukcja W1.
@@ -321,7 +322,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - poprawka odpoczynku, „czeka przed placem” (E15-2), przeliczanie co 5 min;
   - cisza GPS 30 min w ruchu / 3 h na postoju; geometria HERE (E15-1);
   - „–” przed wyjazdem, słowa pewności (E15-3), kalibracja po 5 dostawach.
-- **H-10** wiatr na drodze (D-84: porywy 15 m/s, silny wiatr na trasie wydłuża ETA): sprawdzasz, skąd wziąć żywą serię porywów na trasie (od 05.10 `route-hazards` pisze „H-10: brak żywej serii wiatru drogowego”) — HERE w limicie 100 USD/mies. albo źródło darmowe, po sprawdzeniu regulaminu (`AGENTS.md` §6). Wynik i propozycję wpisujesz w §5 W19. Wydłużenia ETA nie włączasz, dopóki właściciel nie poda, o ile wydłużać (W19).
+- **H-10** wiatr na drodze — **przeniesione do P6 E49** (D-20261016-0230-01; W19 zamknięte 16.10.2026, 02:08; D-84 = 20 m/s).
 - **Dane jednorazowe** (migracja danych z kopią):
   - faza z pozycji: SG-03 → „Dostarczone” 07.10 12:19:54 i usunięcie pozycji po dostawie (L11);
   - SG-01 UNLOADED → DELIVERED; datę potwierdza Administrator HHL (§5).
@@ -342,8 +343,9 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C1** ✅ zalew dzwonka E5 — ryzyko bez `load_id` bez IN_APP/EMAIL/WEB_PUSH; bez nowych RISK_RESOLVED; cel `/transport/brak` nie powstaje; WEB_PUSH tylko krytyczne z transportem (+ E5-5 źródła); jednorazowo nieprzeczytane RISK_* bez transportu → przeczytane. **Przed** `tower-road-pl` (P6 E2).
 - **C2** ✅ `sw.js` push/notificationclick; `web-push-send` z celem; przełącznik z `push_subscriptions`; „Wyślij powiadomienie testowe”. **Odbiór C2 nie przeszedł** (BLOKER 15.10 — tylko OPTIONS 405, zero POST) → **C16** przed C3.
 - **C16** ✅ (D-20261015-1955-01, BLOKER): **N1** CORS (`2b9c3679` / #226). **N2–N8** PR #229 → `456a7a14` / `dpl_7ngsrbV8JXwDHvDCEBRjdWVS2dLw` (0219, ack HMAC `nid\|sid`, `verify_jwt=false`, openWindow). Odbiór S24 z `delivered_at` — po teście właściciela; iPhone = W43.
-- **C17** (D-20261015-2110-01, BLOKER): automat CMR→`READY_TO_INVOICE`, obie faktury→`INVOICED`, `UNLOADED`→`DELIVERED`, przebieg jednorazowy 15048/15060; zestaw `status` (w toku, gałąź `pakiet/C17-status-auto`).
-- **C3** macierz powiadomień po zdarzeniu (nie 5 grup); jeśli `LOAD_STATUS × HHL_ADMIN` `email=true` → `false` (W39).
+- **C17** ✅ (D-20261015-2110-01, BLOKER): PR #235 → `e7595541` / `dpl_HRCPmDoD3Ghiumi6tXDkaxcSzRfs` (0220); 15048 READY_TO_INVOICE, 15060 INVOICED, 0× UNLOADED.
+- **C16-H** ✅ (D-20261016-0100-01, BLOKER): PR #238 → `8bae03be` (0221); `send-notifications` v26; `APP_URL=https://tower.log-mar.pl`; tick starych WEB_PUSH = 0.
+- **C3** macierz powiadomień po zdarzeniu (nie 5 grup); jeśli `LOAD_STATUS × HHL_ADMIN` `email=true` → `false` (W39); **+ Cz13** (D-20261016-0310-01): wiersz „Wiadomość w czacie” — dzwonek i telefon włączone dla 5 rodzajów kont, e-mail wyłączony, wyjątek od C1 pkt 4; odbiorcy z `visible_to`, bez autora; **+ Cz25** (D-20261016-0315-01): odbiorców zawęża zawsze `visible_to`; ustawienie macierzy nie da KSH rozmów „tylko HHL i SCX”; **+ wartości startowe (D-20261016-0330-01 pkt 5):** wiersz „Nowa wiadomość w czacie” — dzwonek i telefon dla 5 rodzajów kont, bez e-maila; opis „tylko do firm, które widzą wiadomość · „tylko HHL i SCX” nigdy do KSH, niezależnie od ustawień”.
 - **C4** ustawienia z „było → jest” (`old_value`); alerty stref/ryzyk → profil lub usunięte.
 - **C5** nazwa transportu w funkcjach bazy = `shipment_code` / `transport_label`; KSH bez numeru zlecenia.
 - **C6** teksty spraw z serwera (E21): daty, pogoda, AUTO_STATUS bez UUID.
@@ -359,7 +361,8 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **Odbiór:** brama `db`, TEST (`risks`, `security`, `e41`, `e9-role`, `nullguard`, dotknięte), doradca TEST i produkcja.
 
 ### P5 · Pieniądze i dokumenty — DO ZROBIENIA
-- **D1** (D-20261015-0300-01 D): tabela symboli właściciela w bazie (`WYMIARY_PILOT_ZEZWOLENIA.md`) — przeniesiona z P7; status ZEZW-13 / B-3a / D-83: „dane są od 07.10 — wprowadzić”.
+- **D1** (D-20261015-0300-01 D; doprecyzowanie D-20261016-0200-01 Z1): wymiary zestawu, pilot i rodzaj zezwolenia z tabeli właściciela (`WYMIARY_PILOT_ZEZWOLENIA.md`) — **same**, dla każdego transportu i przy każdym imporcie; nie ma stanu „czeka na wymiary”; D-83, B-3a, ZEZW-13 **zamknięte 16.10.2026** (dane z tabeli 07.10); D-21 zastąpione przez E31 i L6. Odbiór Z1 pkt 8 (TEST: 94 transporty vs tabela).
+- **D2** (D-20261016-0200-01 Z2): polisa HHL PZU `1106707356` i zezwolenie GDDKiA `13/GD/2026` — wpis jednorazowy skryptem z plików w `D:\Watch Tower\dane\` (kopia R2, najpierw TEST); podpinają się same (E31 / G-21). Brak plików → W44; P5 idzie dalej („P5 — uzupełnienie W44”). Odbiór Z2 pkt 6.
 - **E31** dokumenty, zezwolenia, polisy:
   - CMR tylko z rozładunku, usunięcie wymogu CMR z załadunku i jego alarmów;
   - „Firma” podpięte samo, „Trasa” (KR) ręcznie;
@@ -387,8 +390,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
   - `money*`, `invoices3`, `invoice-*`, `payment-reminders`, `b32-insurance-cover`, `i2k-doc-week`, `paliwo-auto-b`, `i31-sefs`, `i30-*`, `b4b-cmr-only`;
   - zestawy `money`, `insurance`, `storage`, `baf`, `i30`, `i31`.
 - **Ekrany — wygląd:** `wyglad/P5` (PR #201; Finanse E16/E39 + paczka E40, Faktury E4/E4b, Dokumenty E31, Opcje › Faktoring, Opcje › Zezwolenia i dokumenty, panel › „Ceny”/„Dokumenty”/okno „Dopłata” E33). Dane pod wygląd: `src/lib/p5Source.ts` według D-20261014-2005-01 S1–S5 (bez zmiany klas i tekstów wyglądu, F1).
-- **Odbiór:** sekcje „Test” E31, E33, E39, E16, E40; testy R7 i R8 z D-20261009-1309-01; faktura testowa na TEST zgodna z wyliczeniem co do grosza; KSH nie widzi kosztu ani marży, SCX nie widzi ceny KSH (test na TEST); test odbioru S1–S5 z D-20261014-2005-01.
-- **Po wdrożeniu (§5):** SCX wgrywa zezwolenie 13/GD/2026, HHL wgrywa polisę PZU 1106707356 (raz — podpina się sama, G-21).
+- **Odbiór:** sekcje „Test” E31, E33, E39, E16, E40; testy R7 i R8 z D-20261009-1309-01; faktura testowa na TEST zgodna z wyliczeniem co do grosza; KSH nie widzi kosztu ani marży, SCX nie widzi ceny KSH (test na TEST); test odbioru S1–S5 z D-20261014-2005-01; odbiór D1 (Z1 pkt 8) i D2 (Z2 pkt 6) z D-20261016-0200-01.
 
 ### P6 · Do zrobienia, ryzyka, panel i historia — DO ZROBIENIA
 - **E7** „Do zrobienia”:
@@ -418,13 +420,15 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
   - Status / Historia / Czat (Czat HHL–SCX; KSH pisze do wszystkich);
   - profil trasy ukryty; nazwy zdarzeń (E17-2);
   - zawężenie `events_insert` (E17-1, E19-1).
+- **E17 Czat — dane** (D-20261016-0250-01; wiadomość właściciela 16.10, 02:39): Cz1 zapis wyboru odbiorców `visible_to` (serwer pilnuje: KSH zawsze do wszystkich, tylko dwie wartości); Cz2 odczyt `visible_to`; Cz3 powiadomienia bez KSH dla „tylko HHL i SCX”, bez autora; Cz4 odczyt tylko po otwarciu Czatu (bez 40 ostatnich, bez własnych, bez Podglądu; porządek starych odczytów z kopią); Cz5 `reads[]`: osoba (bez nazwiska — e-mail), kod firmy, godzina; Cz6 nowe wiadomości i odczyty przy otwartym Czacie ≤ 15 s bez przeładowania; Cz7 nieprzeczytane z bazy; Cz8 „moje” po osobie (`author_id`); Cz9 autor „Imię Nazwisko”; Cz10 `chatVisibilityOn()` i `chatReadsOn()` → `true` w tym samym wdrożeniu; Cz11 wygląd `wyglad/P6-d`; odbiór Cz12 (13 punktów); **Cz13–Cz24 (D-20261016-0310-01; wiadomość właściciela 16.10, 02:57):** Cz13 w C3; Cz14 (D-20261016-0330-01 pkt 3; zastępuje „SG-03 · Imię Nazwisko // firma” z 0310): dzwonek „<nazwa transportu według firmy> — Imię Nazwisko // pełna nazwa firmy”, treść w drugiej linii; telefon „SG-03 — Imię Nazwisko // HHL”, z pauzą zamiast „·”; Cz15 jedno powiadomienie na transport (3 ostatnie); Cz16 przyciski „Oznacz jako odczytane” i „Odpowiedz” (pole tekstu w powiadomieniu); Cz17 odczyt z powiadomienia bez otwierania aplikacji; Cz18 odpowiedź z powiadomienia, odbiorcy jak w wiadomości, błąd → Czat z tekstem; Cz19 dotknięcie otwiera zainstalowaną aplikację, nie Chrome (okno `standalone`, manifest `id` / `scope` / `launch_handler`, diagnoza S24); Cz20 token akcji HMAC 7 dni, `chat-push-action`, dziennik, limit; Cz21 bez powiadomienia przy otwartym Czacie; Cz22 porządek po odczytaniu; Cz23 wygląd `wyglad/P6-e`; odbiór Cz24 (12 punktów); **Cz25–Cz33 (D-20261016-0315-01; wiadomość właściciela 16.10, 03:06) — powiadomienia tylko do osób, które widzą wiadomość:** Cz26 powiadomienia tylko dla kont spełniających `msgs_read`; Cz27 drugi bezpiecznik w bazie na `notifications` + `CHAT_NOTIFY_BLOCKED`; Cz28 sprawdzenie przed wysyłką web push, grupa i licznik tylko z widocznych; Cz29 akcje z powiadomienia tylko dla widocznych, odpowiedź zachowuje odbiorców; Cz30 e-mail, e-mail zapasowy, podsumowanie dzienne, SMS — ta sama zasada, czat bez e-maila zapasowego i bez SMS; Cz31 Realtime, odczyty i licznik tylko z widocznych; Cz32 zdanie o ekranie blokady w Pomocy; Cz33 testy (14 punktów) zielone przed włączeniem wyboru odbiorców (Cz10). **Miejsca w kodzie — D-20261016-0330-01 pkt 1–6:** `chatReadView` i `reads[]` / `visibleTo`; wejście z powiadomienia (`sw.js` → `?zakladka=czat&odpowiedz=1` / `&tekst=`); `title` i `body` z `LOAD_CHAT_MESSAGE`; `Notification.chatOnly` w `notificationFromRow`; `chatBellAutoReadOn()` razem z Cz4.
+- **E49** — wiatr w ETA, ostrzeżenia 20 / 25 m/s, zamknięty most lub droga: sprawa SCX „Objazd czy postój?”, śliskość lokalnie (D-20261016-0230-01 Z1–Z6); wygląd `wyglad/E49` (#240); dane podłączasz w P6 według Z1–Z4. Odbiór Z6 (10 punktów + Z3). Miejsca w kodzie i kształt danych — D-20261016-0305-01 pkt 1–5: `e49Source.ts` — `detourCasesOf`, `detourDecideOf`, `etaWxOf`; `DetourCase` i ryzyka; `eta_basis.causes.weather`; 8 progów wiatru i śliskości; po podłączeniu zapisu decyzji lokalny `appendEvent` w `TodoPanel.tsx` znika (wpis w PR).
 - **E18 P16** usunięcie `route-profile` i `load_route_profiles` (0 wierszy) z listą kopii.
 - **Testy do przepisania:**
   - matryca `ryzyka` (uchwyt `[data-panel="ferry"]` zostaje); `etap6-ui.spec.ts` l.29–33;
   - `notify-dedup`, `click-targets`, `risk-keys`, `l8-cockpit-tiles`, `decision-access`, `i2-facade`;
   - zestawy `risks`, `dec2`, `dec3`, `dec5`, `dec6`, `dec-auto`, `backup`.
 - **Z D-20261015-0300-01 D (P6):** przydział „Biorę / Oddaj / Przejmij” dla każdej sprawy z zapisem; zezwolenie wygasające przed załadunkiem → Do zrobienia SCX; „Działaj jako” w `load_events`/`audit_log` (`real_actor` / `acting_as`); komunikaty spraw zamkniętych / innej firmy; status w panelu (plan, kamienie, źródło) — dane Twoje, wygląd `wyglad/P6-c`.
-- **Ekrany — wygląd:** `wyglad/P6-a` (PR #205; Ryzyka E7 — „Do zrobienia” / karta sprawy E6 / „Sytuacja na trasie”; telefon z zakładkami); `wyglad/P6-b` (PR #207; panel transportu — Historia i Czat E17, Przegląd: profil trasy ukryty, piloci, prom i stan awizacji). Dane pod wygląd: `src/lib/p6Source.ts` według D-20261014-2145-01 T1–T6; `src/lib/p6bSource.ts` według D-20261014-2300-01 H1–H4 — w P6 razem z E17 (bez zmiany klas i tekstów wyglądu, F1).
+- **Ekrany — wygląd:** `wyglad/P6-a` (PR #205; Ryzyka E7 — „Do zrobienia” / karta sprawy E6 / „Sytuacja na trasie”; telefon z zakładkami); `wyglad/P6-b` (PR #207; panel transportu — Historia i Czat E17, Przegląd: profil trasy ukryty, piloci, prom i stan awizacji); `wyglad/P6-d` (Czat › „Przeczytali”: kto i kiedy — Cz11); `wyglad/P6-e` (#241; Cz23: odpowiedź z powiadomienia, wpis w dzwonku, Pomoc — razem z listą „Przeczytali”); `wyglad/P6-f` (#242 — „Ten telefon”, Cz23 pkt 4–5, Cz32); `wyglad/E49` (#240). Dane pod wygląd: `src/lib/p6Source.ts` według D-20261014-2145-01 T1–T6; `src/lib/p6bSource.ts` według D-20261014-2300-01 H1, H3, H4 i D-20261016-0250-01 Cz1–Cz12 (Czat — zamiast H2) — w P6 razem z E17 (bez zmiany klas i tekstów wyglądu, F1).
 - **Odbiór:**
   - sekcja „Test” E17; testy z punktów E7 (G-02);
   - liczba „Do zrobienia” z reguł E7 na danych testowych; ta sama liczba w menu, Kokpicie i na dzwonku (E7-2);
@@ -432,7 +436,8 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
   - 8.4: odwołany rejs na jednej przeprawie → propozycja najbliższych rejsów drugiej; przy sztormie na obu → brak propozycji; brak rozkładów → „Brak danych” (test na TEST);
   - wszystko, co dziś zapisuje przeglądarka, działa po zawężeniu `events_insert` (test e2e);
   - test odbioru T1–T6 z D-20261014-2145-01;
-  - test odbioru H1–H4 z D-20261014-2300-01.
+  - test odbioru H1, H3, H4 z D-20261014-2300-01 i Cz12 z D-20261016-0250-01 i Cz24 z D-20261016-0310-01 i Cz33 z D-20261016-0315-01;
+  - odbiór E49 Z6 (D-20261016-0230-01).
 
 ### P7 · Harmonogram, import pliku KSH, panel i Awizacja — DO ZROBIENIA
 - **E38** import ręczny pliku SharePoint:
@@ -440,10 +445,10 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
   - KR-03 nie odrzucany, sprawa „Daty KSH do sprawdzenia” (L31);
   - aktualizacja po kodzie; zmiana z panelu KSH według E9-6 (do synchronizacji W13); daty i godziny zmienia i potwierdza tylko KSH i plik (G-20; prawa i ochrona w bazie — P3);
   - **zmiana dat lub godzin przy wgraniu pliku** (decyzja 09.10 13:09 pkt 1, G-18, D-20261009-1309-01 R4): porównanie 4 pól („Data załadunku”, „Godzina (załadunek)”, „Data dostawy na budowę”, „Godzina (rozładunek)”) → powiadomienie `PLAN_DATES_CHANGED` do HHL Administrator, HHL Operacje, SCX Dyspozytor, SCX Użytkownik, jedno na transport na wgranie, z „było → jest”, wpis w Historii; to samo przy zmianie KSH w Watch Tower; sprawy D-12 i L31, przesunięcie startu śledzenia (E27 pkt 1), E39, E16 i workflow E9 bez zmian;
-  - Harmonogram domyślnie w układzie pliku (nazwy kolumn z makiety, L42); 8 kolumn jako „Widok skrócony”.
+  - Harmonogram domyślnie w układzie pliku (nazwy kolumn z makiety, L42); 8 kolumn jako „Widok skrócony”; wygląd `wyglad/P7-c`; dane D-20261016-1020-01 pkt 1–5.
   - Synchronizacja z SharePoint w obie strony i zapis do pliku — po dostępie od działu IT KSH (§5 W13, L41) jako pozycja „P7 — uzupełnienie W13”; w niej także zapis dat i godzin zmienionych przez KSH w Watch Tower do pliku (do 1 min), plik → Watch Tower co 5 min, komórki i konflikt według D-20261009-1309-01 R6 pkt 4–6 (G-20, W29, W31).
-- **E30** Harmonogram: filtry E28 + tydzień; zmiana zestawu tylko w oknie Awizacja.
-- **E20** pełny zakres poza paskiem górnym (pasek w P3): szerokości, przyklejone kolumny (E20-1, E20-2).
+- **E30** Harmonogram: filtry E28 + tydzień; zmiana zestawu tylko w oknie Awizacja. Harmonogram — wygląd `wyglad/P7-c` (D-20261016-1020-01).
+- **E20** pełny zakres poza paskiem górnym (pasek w P3): szerokości, przyklejone kolumny (E20-1, E20-2). Harmonogram — wygląd `wyglad/P7-c` (D-20261016-1020-01).
 - **E32** panel i okno Awizacja (mapa Przeglądu w panelu — z P9 / E1; P7 jej nie zmienia):
   - SCX robi, Administrator HHL poprawia;
   - **piloci według D-20261009-1233-01** (decyzja 09.10 12:33, G-23, L29): wpisuje SCX w oknie Awizacja (HHL Administrator może poprawić; HHL Operacje i KSH bez zapisu); sekcja „Piloci” tylko przy „PL + SE” (KR, PL-B): pilot PL i pilot SE, pola tylko numer rejestracyjny oraz imię i nazwisko; przy „BRAK” piloci nie pojawiają się w transporcie w żadnej roli i na żadnym ekranie, a baza odrzuca zapis; kompletna awizacja z obydwoma pilotami; brak = pozycja „Do zrobienia” **SCX** w sprawie awizacji; zmiana symbolu po wpisaniu pilotów — W26;
@@ -461,7 +466,8 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
   - `c-sep`, `historyActor`, `schedule-import*`, `import-mapping`, `i18-plan-dates`, `b8-imp`, `xlsx-export-roles`, `pdf-export`;
   - `stylesheet-mockup.test.ts` (`th.stick`, `td.stick`);
   - zestawy `import`, `aud03`;
-  - z pomiaru 13.10 (D-20261013-1535-01 V6), zamyka P7 według E30 „Telefon” i E20-1 / E20-2: Harmonogram na telefonie — pierwsza karta ok. 820 px z 844 (25 elementów nad nią); przy 1440 px kolumna z kwotą i marżą zasłania „Kierowca” (HHL) i „Nr rej.” (KSH).
+  - z pomiaru 13.10 (D-20261013-1535-01 V6), zamyka P7 według E30 „Telefon” i E20-1 / E20-2: Harmonogram na telefonie — pierwsza karta ok. 820 px z 844 (25 elementów nad nią); przy 1440 px kolumna z kwotą i marżą zasłania „Kierowca” (HHL) i „Nr rej.” (KSH);
+  - D-20261016-1020-01 pkt 6: `etap4-ui.spec.ts`, `aud03-ksh-panel.spec.ts` l. 108–119, `visual-states.spec.ts` — według nowego układu (`[data-sched-layout]`, `td[data-col]`, „Więcej ▾” zamiast osobnych przycisków, bez „Zmień ciągnik”); `src/lib/scheduleColumns.ts` nie jest już używany przez ekran (został tylko w `tests/order-numbers.test.ts`) — usuwasz go razem z tym testem albo przepisujesz test na `schedLayout.ts`.
 - **Ekrany:** Harmonogram (oba układy), panel transportu, okno Awizacja, wgrywanie pliku.
 - **Odbiór:** sekcje „Test” E38, E30, E20, E32; test odbioru D-20261009-1233-01; testy R1, R4 i R6 (bez części po W13) z D-20261009-1309-01; raport z TEST zgodny z testem E38 pkt 6 (plik z 08.10: 95 HH, 43 NTG, 15 pustych pominiętych, 0 błędów); raport próby z ROLLBACK na produkcji: 94 transporty z bazy + KR-03 nowy ze sprawą, różnice wyjaśnione.
 
@@ -473,7 +479,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
   - Przełącznik „Wysyłka do odbiorców” włącza właściciel (§5).
   - **D-20261014-0700-01 J3 pkt 12:** przełącznik strefy SMS dla Operacji HHL — wyłączenie w UI (baza i tak odmawia `geofences_write` = HHL_ADMIN); E12 1A.
 - **E43** „Treści wiadomości”: tylko PL; edytor; 28 rodzajów (L53); link 24 h (L37). E-maile logowania według L54 (§5).
-- **E35** Automatyzacje: kreator z akcją SMS (L35); „Działa samo” według E35 pkt 1 i L13.
+- **E35** Automatyzacje (D-20261016-0220-01; wygląd `wyglad/P8-d` #239): kreator z akcją SMS (L35); „Działa samo” według E35 pkt 1 i L13; **Z1** porządki START-1…7 (przeniesienie do E11 / usunięcie z historią); **Z2** dane — `rules`/`check`/`runs`/`history`/`zones` z silnika `workflows` (ONE-MECH), przebiegi i historia zdaniami; **Z3** zapis z powodem (`save`/`setEnabled`/`remove`), tylko Administrator HHL, Operacje HHL — podgląd bez zapisu; odbiór sekcja „Test” E35 + punkty z dopisku.
 - **H-7** mapa w e-mailach i PDF (zlecenie HERE z 04.10; w starym planie „do decyzji koordynatora” — koordynator 09.10: P8). Najpierw stan (B-10 z 05.10: „PDF+mapa H-7”). Brakującą część budujesz przy treściach wiadomości (E43): mapa trasy transportu (droga i prom jak na Przeglądzie — E1, E45) jako obraz w e-mailu o transporcie i w PDF; HERE w limicie 100 USD/mies.
 - **E34** strefy: edycja; po zmianie od razu sprawdzenie ostatniej pozycji transportów w oknie śledzenia, wpis „zmiana strefy”, statusy jak przy zwykłym wjeździe i wyjeździe, bez SMS (E34 pyt. 1 B, L33).
 - Stare pozycje „SMS 6, 7, 10, 11” zamknięte (L51).
@@ -482,30 +488,33 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **Odbiór:** sekcje „Test” E42, E43, E35, E34; e-mail próbny o transporcie i PDF z mapą trasy (H-7) na TEST, wysłany tylko na adres właściciela (G-14); na TEST odtworzenie SG-03 daje SMS 11:45 B, 13:05 C, 06:00 C, 08:35 D i nic po 12:19 — na śladzie zmyślonym (G-17), a po zgodzie W25 także na prawdziwych pozycjach; tryb testowy wysyła tylko na numer właściciela.
 
 ### P9 · Mapy — DO ZROBIENIA
-- **E1** Kokpit i Mapa: kadr całej trasy (fitBounds), bez zapamiętywania przesunięcia; Przegląd: zoom 11 na pojeździe, co 60 s.
-- **E29** Mapa:
+- **H-1 i H-3 — usunięcie** (D-20261016-0200-01 Z3): „Kontrola trasy” i „Przeszkody wzdłuż korytarza” usunięte na stałe (nie wracają); panel, warstwa map, Edge `route-check` / `corridor-obstacles`, puste tabele `route_checks` / `corridor_obstacles` / `corridor_fetches` (kopia 0 wierszy); zestawy `h1`/`h3` usunięte; zostają `corridor_polylines` i `corridor_conditions`. Odbiór Z3 pkt 7.
+- **E45 (uzupełnienie E49 Z3 pkt 8):** linia objazdu na mapie po decyzji SCX „Jedziemy objazdem”.
+- **E1** Kokpit i Mapa: kadr całej trasy (fitBounds), bez zapamiętywania przesunięcia; Przegląd: zoom 11 na pojeździe, co 60 s. Zrobione w wyglądzie — `wyglad/P9-d` (D-20261016-0635-01).
+- **E29** Mapa: wygląd `wyglad/P9-c`; dane D-20261016-0615-01 pkt 1–4.
   - tabela = transporty w oknie śledzenia; filtry „Opóźnione”, „Brak GPS”, „Bez pozycji” (L22);
   - kafelek zmienia zakres; bez deklaracji częstotliwości (L20).
 - **E45** trasy:
   - promy z HERE (L56: najpierw sprawdzenie na TEST; brak odcinka promowego = wpis W, pkt 1 czeka na właściciela, pkt 2–5 idą dalej); bez kropek;
   - checkbox „Trasa” chowa drogę i prom; statki AIS pod „Pojazdy”;
   - ostatni odcinek SE jak SG-03, z geometrią zapisaną w bazie (L57);
-  - grupowanie aut na promie;
-  - **grupowanie aut w jednej lokalizacji** (decyzja 09.10 13:09 pkt 2, G-19, D-20261009-1309-01 R5): tak samo jak na promie, na Mapie i w Kokpicie; lokalizacja = strefa E34 (załadunek, port PL, port SE, plac), bez buforów; auta na promie grupuje rejs; poza strefami — W28.
+  - grupowanie aut na promie — wygląd `wyglad/P9-e`; dane D-20261016-0715-01 pkt 1–2;
+  - **grupowanie aut w jednej lokalizacji** (decyzja 09.10 13:09 pkt 2, G-19, D-20261009-1309-01 R5): tak samo jak na promie, na Mapie i w Kokpicie; lokalizacja = strefa E34 (załadunek, port PL, port SE, plac), bez buforów; auta na promie grupuje rejs; poza strefami — W28; wygląd `wyglad/P9-e`; dane D-20261016-0715-01 pkt 1–2.
 - **E24** (decyzja 07.10 17:46):
   - każdy adres `tower-hhl.pages.dev` → 301 na `tower.log-mar.pl` z tą samą ścieżką — plik przekierowań tylko w buildzie Cloudflare Pages (Vercel go nie dostaje);
   - rejestr: wpis „zapas `tower-hhl.pages.dev`” → „przekierowuje na tower.log-mar.pl (07.10)”; `PRZELACZENIE_HOSTINGU.md` zaczyna się od zdjęcia przekierowania;
   - procedura wdrożenia: `tower-hhl.pages.dev` → 301;
   - usunięcie pages.dev z Redirect URLs Supabase — właściciel (§5 W12);
-  - komunikat zamiast szarej mapy (E24-1, rezerwa).
+  - komunikat zamiast szarej mapy (E24-1): wygląd `wyglad/P9-a`; zapis zgłoszenia dla HHL — D-20261016-0445-01 pkt 1–4.
 - **Testy do przepisania:** migawki mapy i Kokpitu; `aud01-mapa`, `aud01e-*`, `map-declutter`, `b1-vehicle-markers`, `bmapa`; zestawy `bmapa`, `h1`, `h3`.
-- **Ekrany:** Kokpit (mapa), Mapa, Przegląd w panelu.
-- **Odbiór:** sekcje „Test” E29, E45, E24; test R5 z D-20261009-1309-01; zrzuty 1440 i 390 porównane z makietami E1, E29, E45.
+- **Ekrany:** Kokpit (mapa), Mapa, Przegląd w panelu — wygląd `wyglad/P9-f`; dane D-20261016-0740-01 pkt 1–2.
+- **Odbiór:** sekcje „Test” E29, E45, E24; test R5 z D-20261009-1309-01; zrzuty 1440 i 390 porównane z makietami E1, E29, E45; pkt 4 (test na TEST) D-20261016-0445-01; pkt 4 D-20261016-0715-01; pkt 4 D-20261016-0740-01; pkt 6 D-20261016-0615-01.
 
 ### P10a · Przeładowania, stan źródeł i błędy aplikacji — część bazy i funkcji — DO ZROBIENIA
 Bez ekranów Opcji (te w P10b, po P3).
-- **E22** przeładowania: pasek „Jest nowa wersja”, brak błędów „stara wersja”; kryterium „tydzień bez nowych błędów” liczone od wdrożenia P10a (E22-2).
-- **E23 (baza i funkcje):**
+- **E22** przeładowania: pasek „Jest nowa wersja”, brak błędów „stara wersja”; kryterium „tydzień bez nowych błędów” liczone od wdrożenia P10a (E22-2). Wygląd `wyglad/P10a-a` (#244: pasek nowej wersji, „Na żywo · HH:MM”, komunikat zamiast pustej strony); dane D-20261016-0430-01 pkt 1–3.
+- **E23 (baza i funkcje):** ekran `wyglad/P10b-c`; dane D-20261016-0845-01 pkt 1–6.
+  - źródło „Wiatr — SMHI” (D-20261016-0230-01 Z5) + zdanie w Pomocy;
   - stan źródeł danych i progi (E23-1, E23-2);
   - alarm do Administratorów HHL (e-mail i push — decyzja 27 A), przypomnienie po 2 h, „Wróciło”; wysyłka tylko na konta HHL_ADMIN;
   - źródło RIO (E44 pkt 7, z P4) na liście źródeł: 3 błędy pod rząd → alarm „Źródło danych nie działa · RIO” e-mailem i push;
@@ -513,24 +522,26 @@ Bez ekranów Opcji (te w P10b, po P3).
   - **ferry-weather** (E23-4): przyczyna 8/24 przebiegów bez wyniku i odmów DMI z dziennika funkcji, opis w PR, poprawka według E23 pkt 2–4;
   - **AIS-SRC** (rejestr, stary plan: „zbudowane — pomiar 24 h nie zrobiony”): pomiar 24 h świeżości pozycji 5 promów (cel ≤ 5 min na mapie) z wynikiem w PR; odstępstwa jako źródło „Częściowo” według E23;
   - 16 spraw „Nieznany kod źródła drogowego” przeniesione do Stanu systemu (dane jednorazowe z kopią).
-- **E47 (baza i funkcje):** grupowanie błędów po treści (nie po buildzie), bez przeglądarek testowych, reguła alarmu (`UZGODNIENIE_08_10.md` pkt 5), raport tygodniowy.
+- **E47 (baza i funkcje):** grupowanie błędów po treści (nie po buildzie), bez przeglądarek testowych, reguła alarmu (`UZGODNIENIE_08_10.md` pkt 5), raport tygodniowy. Ekran `wyglad/P10b-c`; dane D-20261016-0845-01 pkt 1–6.
 - **Testy do przepisania:** zestaw `watchdog`; testy przeładowań (`routes`, `session-year` — jeśli dotknięte).
-- **Odbiór:** sekcje „Test” E22 (bez punktu „tydzień” — E22-2) i E23 (część bazy); ferry-weather: każdy przebieg z doby ma wynik w `integration_runs` albo stan „Częściowo” z przyczyną; E47 na TEST: wymuszony błąd → wpis i alarm ≤ 5 min; ten sam błąd 10 razy = 1 grupa; zero alarmów z przeglądarek testowych.
+- **Odbiór:** sekcje „Test” E22 (bez punktu „tydzień” — E22-2) i E23 (część bazy); ferry-weather: każdy przebieg z doby ma wynik w `integration_runs` albo stan „Częściowo” z przyczyną; E47 na TEST: wymuszony błąd → wpis i alarm ≤ 5 min; ten sam błąd 10 razy = 1 grupa; zero alarmów z przeglądarek testowych; pkt 4 D-20261016-0430-01 (E22 pkt 5 i blok e2e `wyglad/P10a-a`).
 
 ### P10b · Konto, pomoc, ekrany Stanu systemu — DO ZROBIENIA
 - **E37 (reszta; pasek górny w P3):**
   - zaproszenie czyta treść z „Treści wiadomości” (E43, klucz zaproszenia), a gdy jej nie ma — domyślną z E37; P8 dodaje ją do E43 (kolejność scalenia dowolna);
   - logowanie: komunikaty, „Nie pamiętam hasła”, link 24 h;
   - zaproszenia: lista stanów, „Wyślij ponownie”, „Cofnij”;
-  - Pomoc „Jak pracuję” w 5 wersjach — treści i test odbioru z dopisku `D-20261009-0015-01` (L38; z poprawkami z 09.10 naniesionymi w tym pliku: piloci — D-20261009-1233-01, daty, grupowanie, polisy, dopłaty, konwój — D-20261009-1309-01) — i „Co nowego”;
-  - komunikat HHL tylko jako baner; 2FA dobrowolne.
-- **E23 i E47 (ekrany):** Opcje › System › Stan systemu (źródła danych, „Sprawdź teraz”, kafelek Bezpieczeństwo z E19) i „Błędy aplikacji” według makiet E23 i E46.
+  - Pomoc „Jak pracuję” w 5 wersjach — treści i test odbioru z dopisku `D-20261009-0015-01` (L38; z poprawkami z 09.10 naniesionymi w tym pliku: piloci — D-20261009-1233-01, daty, grupowanie, polisy, dopłaty, konwój — D-20261009-1309-01) — i „Co nowego”; wygląd i treść `wyglad/P10b-b`; dane D-20261016-0810-01 pkt 1–2;
+  - komunikat HHL tylko jako baner; 2FA dobrowolne;
+  - Komunikat HHL: „Zamknij” dla osoby, w ciągu minuty; logowanie: „Link wygasł” z „Wyślij nowy link” — wygląd `wyglad/P10b-a`, dane D-20261016-0530-01 pkt 1–4;
+  - pierwsze wejście (E37 pkt 9) — wygląd `wyglad/P10b-d`; dane D-20261016-0930-01 pkt 1–4.
+- **E23 i E47 (ekrany):** Opcje › System › Stan systemu (źródła danych, „Sprawdź teraz”, kafelek Bezpieczeństwo z E19) i „Błędy aplikacji” według makiet E23 i E46. Wygląd `wyglad/P10b-c`; włączenie na produkcji po pkt 1 D-20261016-0845-01.
 - **Testy do przepisania:** `i4-guide`, `auth-password`, `resp14-phone.spec.ts`, `e2e-core.spec.ts`; zestawy `dec6`, `adm10`.
 - **Ekrany:** logowanie, Pomoc, Opcje › Ludzie i dostęp, Opcje › System.
-- **Odbiór:** sekcja „Test” E37; „Test odbioru (w P10b)” z dopisku `D-20261009-0015-01`; ekrany E23 i E47 zgodne z makietami; zrzuty 1440 i 390.
+- **Odbiór:** sekcja „Test” E37; „Test odbioru (w P10b)” z dopisku `D-20261009-0015-01`; ekrany E23 i E47 zgodne z makietami; zrzuty 1440 i 390; testy z pkt 1–4 D-20261016-0530-01; pkt 4 D-20261016-0810-01; pkt 6 D-20261016-0930-01.
 
 ### P11 · Jakość, bezpieczeństwo, wydanie (koniec Dnia 4 albo data z W17) — DO ZROBIENIA
-1. **E46** wydajność (`UZGODNIENIE` pkt 5):
+1. **E46** wydajność (`UZGODNIENIE` pkt 5): wyniki do `perfResults()` — D-20261016-0845-01 pkt 5.
    - Lighthouse: LCP ≤ 2,5 s, CLS ≤ 0,1, TBT ≤ 300 ms na telefonie;
    - baza: p95 ≤ 500 ms przy 420 transportach na TEST;
    - 20 sesji przez 10 min.
@@ -572,7 +583,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W1 | Ustawienia logowania Supabase: ochrona przed wyciekniętymi hasłami, minimum 12 znaków, „litery i cyfry” — instrukcja: `docs/handover/INSTRUKCJA_W1_USTAWIENIA_LOGOWANIA.md` (D-20261014-0015-01 R4) | po P3 | czeka (instrukcja w repo; włączenie w panelu — właściciel) |
 | W2 | Użytkownicy (imię, nazwisko, telefon) i numery SMS Śrem / Boden — wpisuje właściciel w programie | po P3 i P8 | czeka |
 | W3 | SG-01: potwierdzenie daty rozładunku w oknie „Zmień status” | po P4 | czeka |
-| W4 | SCX wgrywa zezwolenie 13/GD/2026; HHL wgrywa polisę PZU 1106707356 | po P5 | czeka |
+| W4 | SCX wgrywa zezwolenie 13/GD/2026; HHL wgrywa polisę PZU 1106707356 | po P5 | **ZAMKNIĘTE 16.10.2026, 01:13**: polisę HHL i zezwolenie 13/GD/2026 wpisuje wykonawca w P5 D2 z plików właściciela (D-20261016-0200-01 Z2) |
 | W5 | Plik KSH z 08.10 (`SCRAP_transporty_2026.09.23_REV.01_3.xlsx`, wiadomość właściciela 08.10 12:14) do wgrania (R-1) — przekazanie wykonawcy poza repozytorium, w `D:\Watch Tower\dane\`. Inny (nowszy) plik tylko dopiskiem koordynatora | przed P7 | czeka |
 | W6 | Włączenie wysyłki: SMS do odbiorców (po 3 transportach w trybie testowym), e-maile w „Kto co dostaje”, pierwsza paczka tygodnia na adresy księgowości (alarmy E23 i E47 do Administratorów HHL działają od razu — decyzja 27 A) | po P8 / P5 | czeka |
 | W7 | Klucz Management API dla „Send Email Hook” albo wklejenie treści e-maili logowania w panelu Supabase (L54) | po P8 | czeka |
@@ -587,7 +598,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W16 | Kody opóźnień uzgodnione z SCX (II-2) — po spotkaniu z SCX | gdy będą | czeka |
 | W17 | Data wydania `release-1.0` | przed P11 | **zamknięte 15.10.2026, 03:12 — zastąpione przez W35 (22.10, 20:00)** |
 | W18 | Decyzja: e-CMR (6.9), kanał zespołowy Slack/Teams (9.9), kalendarz do subskrypcji (9.10), raport śladu węglowego (10.9), retencja `files/` w R2 (lista „Etap III” starego planu) — w 1.0 czy po 1.0. Od 27.09 „do decyzji właściciela”, decyzji nie było; do decyzji nie są budowane | gdy zdecydujesz | czeka |
-| W19 | H-10 (D-84: porywy 15 m/s, silny wiatr wydłuża ETA): o ile wydłużać ETA i które źródło serii wiatru drogowego przyjąć (wykonawca w P4 wpisuje tu, co sprawdził) | po P4 | czeka |
+| W19 | H-10 (D-84: porywy 15 m/s, silny wiatr wydłuża ETA): o ile wydłużać ETA i które źródło serii wiatru drogowego przyjąć (wykonawca w P4 wpisuje tu, co sprawdził) | po P4 | **ZAMKNIĘTE 16.10.2026, 02:08** — E49 zaakceptowane z odpowiedzią 3 (sprawa SCX z objazdem) — P6 (D-20261016-0230-01; zastępuje „czeka na akceptację” z D-20261016-0200-01 Z5) |
 | W20 | D-18: czy wysłać armatorom e-mail z prośbą o zgodę na odczyt komunikatów (odczyt działa bez zgody od 29.09) | — | **ZAMKNIĘTE 09.10.2026, 13:09**: „mamy wszystkie zgody każdego z armatorów” — nic nie przygotowujesz i nie wysyłasz (D-18 ✅, D-20261009-1309-01 R2) |
 | W21 | P3-APK: uprawnienie `workflow` dla tokenu GitHub — potem wykonawca przypina akcje (SHA) w workflow APK | gdy będzie | **dostarczone 12.10.2026, 02:38** (token ma `workflow` — sprawdzone 11.10 w P0-CI; pin SHA = pozycja „P3-APK — uzupełnienie W21”) |
 | W22 | E18 P3 (decyzja „A: usunąć konta +tower-test z zaproszeniami”) i P2: wiersze 6 kont „+tower-*” wskazuje 11 wpisów dziennika bezpieczeństwa (klucz bez kaskady) | — | **ROZSTRZYGNIĘTE 09.10.2026, 13:09**: „usunąć z odpięciem 11 wpisów dziennika” — robi P1 (`paczki/P1_E18.md`, D-20261009-1309-01 R3) |
@@ -610,7 +621,9 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W39 | `LOAD_STATUS × HHL_ADMIN` e-mail w „Kto co dostaje” | teraz | **rozstrzygnięte 15.10.2026, 03:12: cofnąć**; stan 15.10 ~06:11: `email=false` (już wyłączone) |
 | W40 | Uzgodnienie pkt 2–3 i E46–E48 | — | **zaakceptowane 15.10.2026, 03:12** (D-20261015-0330-01) |
 | W42 | Kanał zapasowy, gdy telefon nie potwierdzi pilnego WEB_PUSH w 5 min albo konto bez urządzenia | C16 N4 | **rozstrzygnięte 15.10.2026, 19:57: e-mail** na adres konta (bez SMS; D-20261015-1955-01) |
-| W43 | iPhone do odbioru C16 (właściciel nie ma) | C16 odbiór krok 3 | czeka na pierwsze konto z iPhone’em — dowód: `push_subscriptions` z `web.push.apple.com` + `last_ack_at`; nie blokuje zamknięcia C16 (D-20261015-1955-01) |
+| W43 | iPhone do odbioru C16 (właściciel nie ma) + Cz24 pkt 12 (dzwonek i otwarcie aplikacji na iPhonie, D-20261016-0310-01) | C16 odbiór krok 3; P6 Cz24 | czeka na pierwsze konto z iPhone’em — dowód: `push_subscriptions` z `web.push.apple.com` + `last_ack_at`; nie blokuje zamknięcia C16 (D-20261015-1955-01) |
+| W44 | Pliki polisy HHL i zezwolenia 13/GD/2026 w `D:\Watch Tower\dane\` (gdy brak przy P5 D2) | P5 D2 | czeka tylko gdy plików nie ma — wtedy „P5 — uzupełnienie W44” (D-20261016-0200-01 Z2) |
+| W45 | SCX: czy zezwolenia SE i PL mają warunek pogodowy (wiatr)? Jeśli tak — próg z dokumentu zastępuje 25 m/s | przed pierwszym transportem KR | czeka — do odpowiedzi: 25 m/s; nie blokuje (D-20261016-0230-01 Z7) |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0, rezerwa
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -618,7 +631,6 @@ Bez ekranów Opcji (te w P10b, po P3).
 - oficjalne API emtrack: TELM-2, II-4, D-TELM-ETA; API Stena (D-LATER) — W15;
 - II-2 kody opóźnień z SCX — W16;
 - 6.9 e-CMR, 9.9 kanał zespołowy, 9.10 kalendarz, 10.9 ślad węglowy, retencja `files/` w R2 — W18;
-- H-10 wydłużenie ETA przy wietrze — W19 (sprawdzenie źródeł w P4);
 - P3-APK — W21 (**dostarczone 12.10.2026, 02:38** → pozycja „P3-APK — uzupełnienie W21”);
 - kwoty w dokumentach — W23;
 - prawdziwy ślad SG-03 na TEST — W25;
@@ -700,3 +712,24 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 15.10.2026 03:30 | D-20261015-0330-01: W35 wydanie 22.10 20:00; W36–W40; C14/C15; Podgląd → P6; PR #210 | właściciel 03:12; koordynator |
 | 15.10.2026 04:00 | D-20261015-0400-01: P6 E2 drogi PL z HERE — `tower-road-pl` dopiero po C1 | właściciel 03:52; koordynator |
 | 15.10.2026 19:55 | D-20261015-1955-01: BLOKER C2 → C16 przed C3 (powiadomienia na każdym telefonie); W42 e-mail; W43 iPhone; W24 czeka do odbioru C16 na S24 | właściciel 19:43 / 19:57; koordynator |
+| 16.10.2026 01:00 | D-20261016-0100-01: BLOKER C16-H — e-mail zapasowy tylko po granicy 0219; tematy PL; APP_URL tower.log-mar.pl; migracja 0221 | właściciel 00:45; koordynator |
+| 16.10.2026 02:00 | D-20261016-0200-01: P5 D1 wymiary/pilot/zezwolenie z tabeli; P5 D2 polisa+zezwolenie wpisuje wykonawca; P9 usunięcie H-1/H-3; W4 zamknięte; D-83/B-3a/ZEZW-13 zamknięte | właściciel 01:13; koordynator |
+| 16.10.2026 02:30 | D-20261016-0230-01: E49 zaakceptowane — wiatr ETA, D-84=20 m/s, sprawa SCX objazd/postój, śliskość lokalnie; W19 zamknięte; W45 | właściciel 02:08; koordynator |
+| 16.10.2026 02:50 | D-20261016-0250-01: Czat E17 — wybór odbiorców i „Przeczytali” (kto i kiedy) rozpisane w P6 jako Cz1–Cz12 (zastępuje D-20261014-2300-01 H2); odświeżanie przy otwartym Czacie (luka); wygląd `wyglad/P6-d` | koordynator; wykonawca |
+| 16.10.2026 03:10 | D-20261016-0310-01: czat w dzwonku i w telefonie („SG-03 · kto · treść”), przyciski „Oznacz jako odczytane” / „Odpowiedz” w powiadomieniu, otwieranie zainstalowanej aplikacji zamiast Chrome — C3 (Cz13), P6 (Cz14–Cz24) | właściciel 02:57; koordynator; wykonawca |
+| 16.10.2026 03:15 | D-20261016-0315-01: czat — powiadomienia tylko do osób, które widzą wiadomość; rozmowa HHL ↔ SCX nigdy do KSH (Cz25 w C3, Cz26–Cz33 w P6) | właściciel 03:06; koordynator; wykonawca |
+| 16.10.2026 02:20 | D-20261016-0220-01: P8 E35 Automatyzacje — Z1–Z3 (reguły START, dane, zapis z powodem); wygląd `wyglad/P8-d` #239 | koordynator; wykonawca |
+| 16.10.2026 03:05 | D-20261016-0305-01: E49 miejsca w kodzie (`e49Source.ts`, DetourCase, eta_basis.weather, 8 progów) → P6 | koordynator; wykonawca |
+| 16.10.2026 03:30 | D-20261016-0330-01: Czat — miejsca w kodzie, Cz14 (pauza, nazwa według firmy); wygląd `wyglad/P6-e` #241 i `wyglad/P6-f` #242 → P6; wartości startowe wiersza czatu w C3 | koordynator; wykonawca |
+| 16.10.2026 04:05 | D-20261016-0405-01: urządzenia 2FA i wymaganie 2FA — wygląd `wyglad/2fa` #243; dane w P3-d; po podłączeniu usuwasz MyMfa | koordynator; wykonawca |
+| 16.10.2026 04:30 | D-20261016-0430-01: E22 pasek nowej wersji, „Na żywo”, komunikat zamiast pustej strony — wygląd `wyglad/P10a-a` #244; dane P10a | koordynator; wykonawca |
+| 16.10.2026 04:45 | D-20261016-0445-01: E24-1 komunikat zamiast szarej mapy — wygląd `wyglad/P9-a` #245; zapis zgłoszenia dla HHL w P9 | koordynator; wykonawca |
+| 16.10.2026 05:30 | D-20261016-0530-01: E37 „Zamknij” i „Link wygasł” — wygląd `wyglad/P10b-a` #246; dane P10b | koordynator; wykonawca |
+| 16.10.2026 06:15 | D-20261016-0615-01: E29 dane mapy — wygląd `wyglad/P9-c` #248; dane P9 | koordynator; wykonawca |
+| 16.10.2026 06:35 | D-20261016-0635-01: E1 zrobione w wyglądzie `wyglad/P9-d` #249 | koordynator; wykonawca |
+| 16.10.2026 07:15 | D-20261016-0715-01: E45 grupowanie — wygląd `wyglad/P9-e` #250; dane P9 | koordynator; wykonawca |
+| 16.10.2026 07:40 | D-20261016-0740-01: Przegląd w panelu — wygląd `wyglad/P9-f` #251; dane P9 | koordynator; wykonawca |
+| 16.10.2026 08:10 | D-20261016-0810-01: Pomoc „Jak pracuję” i „Co nowego” — wygląd `wyglad/P10b-b` #252; dane P10b | koordynator; wykonawca |
+| 16.10.2026 08:45 | D-20261016-0845-01: E23/E47 dane w P10a, ekrany `wyglad/P10b-c` #253 w P10b, E46 `perfResults()` w P11 | koordynator; wykonawca |
+| 16.10.2026 09:30 | D-20261016-0930-01: pierwsze wejście E37 — wygląd `wyglad/P10b-d` #254; dane P10b | koordynator; wykonawca |
+| 16.10.2026 10:20 | D-20261016-1020-01: Harmonogram w układzie pliku (E38 1A, E30, E20) — wygląd `wyglad/P7-c` #256; dane P7 pkt 1–6 | koordynator; wykonawca |

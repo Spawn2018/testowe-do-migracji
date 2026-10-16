@@ -1,23 +1,31 @@
 /**
  * wyglad/P6-b — panel transportu › „Czat” (dawniej „Ustalenia”; E17, decyzje 07.10 20:57, img/e17-after „Czat”).
  * Tylko rozmowa: wiadomości po dniach, moje po prawej, cudze po lewej, autor „Imię Nazwisko // Firma” i godzina,
- * przy moich „przeczytali: …” albo „wysłane · nikt z … jeszcze nie otworzył” (gdy odczyt jest wiarygodny — `chatReadsOn`).
+ * przy moich „✓ Wysłane do … · nikt jeszcze nie otworzył” albo „✓✓ Przeczytali: 2 osoby · KSH jeszcze nie”, rozwijane w listę
+ * „Imię Nazwisko · firma · dzień, godzina” (wyglad/P6-e — E19 okno „Przeczytali”, decyzja 15.10 03:12; D-20261016-0250-01 Cz11);
+ * przy cudzych „Przeczytali: …” z tą samą listą (gdy odczyt jest wiarygodny — `chatReadsOn`). Z powiadomienia
+ * (`?odpowiedz=1`, `&tekst=`) — kursor w polu i wpisany tekst (D-20261016-0310-01 Cz18, Cz23).
  * „Moje” = wiadomości mojej firmy (autor po koncie — wykonawca). HHL i SCX wybierają przy wysyłce
  * „HHL, SCX, KSH” albo „tylko HHL i SCX” (gdy aplikacja zapisuje i czyta `visible_to` — `chatVisibilityOn`); KSH pisze do wszystkich
  * i nie widzi rozmów HHL ↔ SCX. Enter wysyła, Shift+Enter — nowa linia. Pole pisania zawsze na dole (telefon: przyklejone).
  * Zapis jak dziś (`sendMessage` → `load_messages`); bez innych przycisków.
  */
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { LoadMessage, Locale, OrgKind } from '../../types';
-import { chatReadsOn, chatVisibilityOn, chatVisibleFor } from '../../lib/p6bSource';
+import { chatMeOf, chatReadsOn, chatVisibilityOn, chatVisibleFor } from '../../lib/p6bSource';
+import { chatReadView, joinOrgsPl, peopleText } from '../../lib/chatReads';
+import { takeChatCompose } from '../../lib/chatCompose';
+import { formatListDateTime } from '../../lib/format';
+import { pt } from '../../i18n/p6e';
+import { chatBellAutoReadOn } from '../../lib/p6eSource';
+import { isChatKind } from '../../lib/bellList';
+import { useTowerStore } from '../../store/useTowerStore';
 import { dayKey, dmy, hhmm } from '../../lib/p6History';
-import { ht, htp } from '../../i18n/p6b';
+import { ht } from '../../i18n/p6b';
 import './p6b.css';
 
 type Vis = 'ALL' | 'HHL_SCX';
 const ORG_FULL: Record<OrgKind, string> = { HHL: 'H&H Logistics', SCX: 'Scandinavian Express', KSH: 'KSH' };
-const ORGS: OrgKind[] = ['HHL', 'SCX', 'KSH'];
-const NAME_TO_ORG: Record<string, OrgKind> = { 'H&H LOGISTICS': 'HHL', 'SCANDINAVIAN EXPRESS': 'SCX', KSH: 'KSH', HHL: 'HHL', SCX: 'SCX' };
 
 interface Props {
   loadId: string;
@@ -37,32 +45,59 @@ function authorOf(m: LoadMessage, phone: boolean): string {
   return `${a} // ${org}`;
 }
 
-const orgOfRead = (o: string | undefined): OrgKind | null => (o ? NAME_TO_ORG[o.trim().toUpperCase()] ?? null : null);
-
-function joinOrgs(list: OrgKind[], locale: Locale): string {
-  return list.length <= 1 ? list.join('') : `${list.slice(0, -1).join(', ')}${ht(locale, 'p6b_chat_and')}${list[list.length - 1]}`;
-}
-
-function receipt(m: LoadMessage, locale: Locale, phone: boolean): { read: boolean; text: string } {
-  const audience = ORGS.filter((o) => o !== m.org && !(m.visibleTo === 'HHL_SCX' && o === 'KSH'));
-  const readers = audience.filter((o) => (m.reads ?? []).some((r) => orgOfRead(r.org) === o));
-  if (readers.length === 0) {
-    return { read: false, text: phone ? ht(locale, 'p6b_chat_sent_short') : htp(locale, 'p6b_chat_sent', { orgs: joinOrgs(audience, locale) }) };
+/** Pod wiadomością: kto i kiedy przeczytał (wyglad/P6-e). Moja — zawsze stan; cudza — tylko gdy ktoś przeczytał. */
+function Receipt({ m, mine, phone, meId }: { m: LoadMessage; mine: boolean; phone: boolean; meId: string | null }) {
+  const [open, setOpen] = useState(false);
+  const uid = useId();
+  const v = chatReadView(m, meId);
+  if (v.readers.length === 0) {
+    if (!mine) return null;
+    return (
+      <div className="ch-rcpt" data-chat-read="no">
+        {`✓ ${phone ? pt('p6e_sent_short') : pt('p6e_sent', { orgs: joinOrgsPl(v.audience, pt('p6e_and')) })}`}
+      </div>
+    );
   }
-  const rest = audience.filter((o) => !readers.includes(o));
-  if (phone) return { read: true, text: readers.join(', ') };
-  return {
-    read: true,
-    text: rest.length
-      ? htp(locale, 'p6b_chat_read_part', { orgs: readers.join(', '), rest: joinOrgs(rest, locale) })
-      : htp(locale, 'p6b_chat_read', { orgs: readers.join(', ') }),
-  };
+  const n = peopleText(v.readers.length);
+  const head = mine
+    ? `✓✓ ${phone ? pt('p6e_read_short', { n }) : pt('p6e_read', { n })}${v.pending.length && !phone ? pt('p6e_read_pending', { orgs: joinOrgsPl(v.pending, pt('p6e_and')) }) : ''}`
+    : pt('p6e_read', { n });
+  return (
+    <div className="ch-rd">
+      <button
+        type="button"
+        className={`ch-rcpt ch-rd-btn${mine ? ' is-read' : ' is-other'}`}
+        data-chat-read={mine ? 'yes' : 'list'}
+        aria-expanded={open}
+        aria-controls={`${uid}-l`}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {head}<span className="ch-rd-chev" aria-hidden="true">{open ? '⌃' : '⌄'}</span>
+      </button>
+      {open ? (
+        <div className="ch-rd-pop" id={`${uid}-l`} data-chat-readers>
+          <ul aria-label={pt('p6e_list')}>
+            {v.readers.map((r) => (
+              <li key={`${r.userId}-${r.at}`} data-chat-reader={r.org ?? ''}>
+                <b data-content>{r.name}{r.me ? pt('p6e_you') : ''}</b>
+                <span>{r.org ?? '—'}</span>
+                <span className="tabular">{formatListDateTime(r.at)}</span>
+              </li>
+            ))}
+          </ul>
+          {v.pending.length ? <p className="ch-rd-pend" data-chat-pending>{pt('p6e_pending', { orgs: joinOrgsPl(v.pending, pt('p6e_and')) })}</p> : null}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function PanelChat({ loadId, role, locale, phone, messages, onSend }: Props) {
   const [draft, setDraft] = useState('');
   const [vis, setVis] = useState<Vis>('ALL');
   const logRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const meId = chatMeOf(role);
   const canChoose = chatVisibilityOn() && role !== 'KSH';
   const visible = useMemo(
     () => chatVisibleFor(messages, role).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)),
@@ -87,6 +122,29 @@ export function PanelChat({ loadId, role, locale, phone, messages, onSend }: Pro
     const el = logRef.current;
     if (el && (atBottom.current || lastMine)) el.scrollTop = el.scrollHeight;
   }, [loadId, visible.length, lastMine]);
+
+  /* otwarty Czat: wiadomości tego transportu w dzwonku przeczytane (Cz22; produkcja — po podłączeniu, `p6eSource`) */
+  useEffect(() => {
+    if (!chatBellAutoReadOn()) return;
+    const st = useTowerStore.getState();
+    for (const n of st.notifications) if (!n.read && n.loadId === loadId && isChatKind(n.kind)) st.markNotificationRead(n.id);
+  }, [loadId, messages.length]);
+
+  /* z powiadomienia: „Odpowiedz” bez pola w powiadomieniu albo niewysłana odpowiedź (Cz18, Cz23) */
+  useEffect(() => {
+    const c = takeChatCompose(loadId);
+    if (!c) return;
+    if (c.text) setDraft(c.text);
+    if (c.focus) {
+      requestAnimationFrame(() => {
+        const el = inputRef.current;
+        if (!el) return;
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+        el.scrollIntoView({ block: 'nearest' });
+      });
+    }
+  }, [loadId]);
 
   const send = () => {
     const text = draft.trim();
@@ -122,7 +180,7 @@ export function PanelChat({ loadId, role, locale, phone, messages, onSend }: Pro
             {d.msgs.map((m) => {
               const mine = m.org === role;
               /* „przeczytali” — gdy odczyt liczy się po otwarciu zakładki (produkcja: dopisek, `chatReadsOn`) */
-              const r = mine && chatReadsOn() ? receipt(m, locale, phone) : null;
+              const reads = chatReadsOn();
               return (
                 <article key={m.id} className={`ch-msg${mine ? ' is-me' : ''}${m.visibleTo === 'HHL_SCX' ? ' is-only' : ''}`} data-chat-msg data-vis={m.visibleTo ?? 'ALL'}>
                   <div className="ch-who">
@@ -131,7 +189,7 @@ export function PanelChat({ loadId, role, locale, phone, messages, onSend }: Pro
                     {m.visibleTo === 'HHL_SCX' ? <span className="ch-only">{ht(locale, 'p6b_chat_only')}</span> : null}
                   </div>
                   <div className="ch-text" data-content>{m.text}</div>
-                  {r ? <div className={`ch-rcpt${r.read ? ' is-read' : ''}`} data-chat-read={r.read ? 'yes' : 'no'}>{`${r.read ? '✓✓' : '✓'} ${r.text}`}</div> : null}
+                  {reads ? <Receipt m={m} mine={mine} phone={phone} meId={meId} /> : null}
                 </article>
               );
             })}
@@ -161,6 +219,7 @@ export function PanelChat({ loadId, role, locale, phone, messages, onSend }: Pro
         <div className="ch-row">
           <textarea
             className="ch-input"
+            ref={inputRef}
             data-chat-input
             rows={phone ? 1 : 2}
             value={draft}

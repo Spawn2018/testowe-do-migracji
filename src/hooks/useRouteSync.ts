@@ -14,6 +14,7 @@ import { useLocation, useNavigate, type Location } from 'react-router-dom';
 import { useTowerStore } from '../store/useTowerStore';
 import { navForRole } from '../lib/permissions';
 import { buildRoute, parseRoute } from '../lib/routes';
+import { composeFromSearch, setChatCompose } from '../lib/chatCompose';
 
 function readWindowHash(): Pick<Location, 'pathname' | 'search'> {
   const raw = window.location.hash.replace(/^#/, '') || '/';
@@ -46,6 +47,9 @@ function applyUrlToStore(
       pendingCode.current = null;
       if (st.selectedLoadId !== l.id) st.selectLoad(l.id);
       if (tab && tabMap[tab]) st.setDrawerTab(tabMap[tab]);
+      /* wyglad/P6-e (Cz18, Cz23): z powiadomienia — kursor w polu wiadomości albo tekst niewysłanej odpowiedzi */
+      const compose = tabMap[tab ?? ''] === 'chat' ? composeFromSearch(search) : null;
+      if (compose) setChatCompose(l.id, compose);
     } else if (st.loads.length) {
       pendingCode.current = null;
       st.setAccessMessage('Brak dostępu');

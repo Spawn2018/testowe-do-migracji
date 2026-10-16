@@ -390,6 +390,10 @@ export interface Load {
   unloadedAt?: string | null;
   /** M10 — przypisany rejs (`loads.sailing_id`) */
   sailingId?: string | null;
+  /** wyglad/P7-c (E38): „Waga elementu” z pliku KSH; undefined/null = „–” (podłącza wykonawca, D-20261016-1020-01). */
+  elementWeightT?: number | null;
+  /** wyglad/P7-c (E38 pkt 2, E17): poprzedni kod przy zmianie numeracji w pliku („było → jest”); znacznik „zmiana numeracji”. */
+  renumberedFrom?: string | null;
 }
 
 export type GeofenceCountry = 'PL' | 'SE' | 'LT' | 'DE';
@@ -462,6 +466,8 @@ export interface Notification {
   kind?: string;
   /** AUD-02: kod transportu z ładunku powiadomienia (gdy brak transportu w magazynie). */
   code?: string;
+  /** wyglad/P6-e: wiadomość Czatu „tylko HHL i SCX” — z `payload.visible_to` bez KSH (mapowanie: D-20261016-0310-01 Cz14). */
+  chatOnly?: boolean;
 }
 
 export interface Risk {

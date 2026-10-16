@@ -14,6 +14,9 @@ import type { OptGroup, OptScreen, OptScreenId, AccountKind } from '../component
 import { useDemoOptions } from '../components/options/useDemoOptions';
 import { ForMeScreen } from '../components/options/ForMeScreen';
 import { DeviceScreen } from '../components/options/DeviceScreen';
+import { MessageTexts } from '../components/options/MessageTexts';
+import { SmsPlaces } from '../components/options/SmsPlaces';
+import { smsPlacesReady } from '../lib/p8bSource';
 import { OptionsHowTo } from '../components/settings/OptionsHowTo';
 import { SmsFallbackEntry } from '../components/shell/SmsFallbackEntry';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
@@ -27,6 +30,8 @@ import {
   accountingAddressesSaverOf, accountingTestMailOf, cancelRulesOf, cancelSaverOf, dwellRulesOf, dwellSaverOf,
   fuelActionsOf, fuelScreenOf, marginSettingOf, paymentTermsOf, paymentTermsSaverOf,
 } from '../lib/p5bSource';
+import { StatusScreen } from '../components/options/StatusScreen';
+import { sourceHealth } from '../lib/sysSource';
 
 /** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */
 function savedText(locale: Locale, code: string): string {
@@ -34,7 +39,6 @@ function savedText(locale: Locale, code: string): string {
   return hasKey(locale, k) ? t(locale, k) : code;
 }
 
-const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../components/guide/Guide')) : null;
 const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/UsersAdmin')) : null;
 /** D-20261014-0700-01 J3 pkt 1: AccountScreen zamiast MyAccount + Mfa + MyDevices. */
 const LiveAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/LiveAccountScreen')) : null;
@@ -226,7 +230,8 @@ export function OptionsView() {
           <OptionsHowTo locale={locale} k="b6_howto_notif" />
         </>
       ), { right: change }),
-      scr('zones', (
+      scr('texts', <MessageTexts readOnly={ro} />, { right: change }),
+      scr('zones', smsPlacesReady() ? <SmsPlaces readOnly={ro} /> : (
         <>
           <OptionsHowTo locale={locale} k="b6_howto_zones" />
           {SmsZoneRecipients ? block(<SmsZoneRecipients />) : null}
@@ -347,12 +352,16 @@ export function OptionsView() {
   });
 
   const system: OptScreen[] = [
+    /* wyglad/P10b-c (E23, E47, E19 pkt 7, E46): źródła danych, błędy aplikacji, bezpieczeństwo, wydajność;
+       produkcja do podłączenia danych (D-20261016-0845-01) — dzisiejszy panel stanu */
     scr('status', (
       <>
         <SmsFallbackEntry />
-        {SystemStatusPanel ? block(<SystemStatusPanel />) : <Soon locale={locale} tipKey="opt_acc_sys_soon" />}
+        {sourceHealth(getNowIso())
+          ? <StatusScreen locale={locale} nowIso={getNowIso()} admin={isHhlAdmin} />
+          : SystemStatusPanel ? block(<SystemStatusPanel />) : <Soon locale={locale} tipKey="opt_acc_sys_soon" />}
       </>
-    )),
+    ), { mark: PROD_BUILD ? undefined : <DemoMark /> }),
     scr('flags', pick('flags', null), { right: change }),
   ];
   if (isHhlAdmin) system.push(scr('hist', pick('hist', ChangeHistoryPanel ? block(<ChangeHistoryPanel />) : null)));
@@ -370,7 +379,7 @@ export function OptionsView() {
     ), { right: 'own' }),
     scr('device', <DeviceScreen locale={locale} />, { right: 'own' }),
   ];
-  if (Guide) forme.push(scr('guide', block(<Guide locale={locale} role="hhl" />)));
+  /* wyglad/P10b-b (E37 pkt 3): „Instrukcja” znika z Opcji i Ustawień — zastępuje ją Pomoc („?”, menu konta) */
   groups.push({ id: 'forme', screens: forme });
 
   for (const g of groups) {
