@@ -3,6 +3,7 @@
  * Po kliknięciu pozycja jest przeczytana i znika z listy. Licznik to długość listy.
  */
 import { isTechnicalRoadNotice } from './format';
+import { plPlural } from './plPlural';
 export interface BellItem {
   id: string;
   read: boolean;
@@ -36,7 +37,14 @@ export interface BellSource extends BellItem {
   code?: string;
   /** Cel kliknięcia (L-4) — tylko do napisu „DECYZJA ›”, „DOKUMENTY ›”… przy pozycji. */
   href?: { view?: string; path?: string; loadId?: string };
+  /** wyglad/P6-e: wiadomość Czatu „tylko HHL i SCX” (z `visible_to` bez KSH — D-20261016-0310-01 Cz14). */
+  chatOnly?: boolean;
 }
+
+/** Wiadomość w Czacie (szablon czatu) — w dzwonku jako „SG-03 — kto” i treść (D-20261016-0310-01 Cz14, Cz23; E41). */
+export const isChatKind = (k: string | undefined): boolean => k === 'LOAD_CHAT_MESSAGE' || k === 'MESSAGE';
+
+const CHAT_MAX = 160;
 
 /**
  * E5 (img/e5-desk, decyzja 07.10 13:21): dzwonek w grupach.
@@ -123,6 +131,8 @@ export interface BellGroup<T extends BellSource> {
   /** „co się stało” bez nazwy transportu i nazwa transportu według firmy (E41) — osobno do układu E5. */
   what: string;
   name?: string;
+  /** wyglad/P6-e: wiadomość w Czacie — nazwa transportu według firmy (E41), autor, treść, „tylko HHL i SCX” */
+  chat?: { code: string; who: string; text: string; only: boolean; more: string | null };
 }
 
 const SEV_RANK: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
@@ -241,6 +251,20 @@ export function bellGroups<T extends BellSource>(
   }
   const out = [...map.values()];
   for (const g of out) {
+    if (isChatKind(g.latest.kind)) {
+      /* nazwa transportu według firmy (E41: KSH — sam kod, HHL i SCX — z numerem zlecenia) i pauza, jak w całym dzwonku */
+      const code = g.name ?? '';
+      const raw = (g.latest.body ?? '').replace(/\s+/g, ' ').trim();
+      g.chat = {
+        code,
+        who: g.what,
+        text: raw.length > CHAT_MAX ? `${raw.slice(0, CHAT_MAX - 1).trimEnd()}…` : raw,
+        only: !!g.latest.chatOnly,
+        more: g.count > 1 && locale === 'pl' ? `${g.count}\u00a0${plPlural(g.count, 'nowa wiadomość', 'nowe wiadomości', 'nowych wiadomości')}` : null,
+      };
+      g.title = code ? `${code} — ${g.what}` : g.what;
+      continue;
+    }
     if (g.count > 1) g.body = g.body && g.body !== GENERIC[locale] ? `${moreText(g.count, locale)} · ${g.body}` : moreText(g.count, locale);
     if (g.body === GENERIC[locale]) g.body = '';
   }

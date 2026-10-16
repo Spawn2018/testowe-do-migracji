@@ -6,6 +6,7 @@ import { getNowMs } from '../../lib/frozenNow';
 import { formatListDateTime } from '../../lib/format';
 import { bellGeneralCount, bellGroups, type BellGroup, type BellLocale, type BellSource } from '../../lib/bellList';
 import { transportLabel } from '../../lib/transportName';
+import { pt } from '../../i18n/p6e';
 
 /** Pasek po lewej pozycji: „Do zrobienia” według wagi, „Moje transporty” zawsze niebieski (img/e5-desk). */
 function gut(section: 'todo' | 'mine', s: Severity): string {
@@ -56,12 +57,15 @@ export function NotificationBell() {
   const item = (g: BellGroup<BellSource>) => {
     const isTodo = g.section === 'todo';
     const when = formatListDateTime(g.latest.at);
-    const title = isTodo ? g.what : g.title;
-    const meta = isTodo
-      ? [g.name, g.body].filter(Boolean).join(' · ')
-      : [when, g.body].filter(Boolean).join(' · ');
+    const chat = g.chat;
+    const title = chat ? g.title : isTodo ? g.what : g.title;
+    const meta = chat
+      ? [chat.more, when].filter(Boolean).join(' · ')
+      : isTodo
+        ? [g.name, g.body].filter(Boolean).join(' · ')
+        : [when, g.body].filter(Boolean).join(' · ');
     return (
-      <div key={g.key} className="bell-item" data-bell-count={g.count} data-bell-section={g.section}>
+      <div key={g.key} className={`bell-item${chat ? ' is-chat' : ''}`} data-bell-count={g.count} data-bell-section={g.section} data-bell-chat={chat ? (chat.only ? 'HHL_SCX' : 'ALL') : undefined}>
         <span className={`bell-gut ${gut(g.section, g.severity as Severity)}`} aria-hidden />
         <button
           type="button"
@@ -76,6 +80,12 @@ export function NotificationBell() {
             <span className="bell-title">{isTodo ? <i className="bell-dot" aria-hidden /> : null}{title}</span>
             <span className="bell-to">{up(t(locale, `bell_to_${g.place}`))} ›</span>
           </span>
+          {chat?.text ? (
+            <span className="bell-chat" data-content>
+              {chat.only ? <span className="bell-only">{pt('p6e_bell_only')}</span> : null}
+              {chat.text}
+            </span>
+          ) : null}
           {meta ? <span className="bell-meta">{meta}</span> : null}
         </button>
       </div>

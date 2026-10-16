@@ -21,6 +21,7 @@ import {
 import { applyEtaToLoad } from '../lib/eta';
 import { attachMoneyV2 } from '../lib/money/loadMoney';
 import { orderNoReminders, orderNoRisks } from '../lib/orderNumbers';
+import { demoChatNotices } from '../lib/p6eDemo';
 import { buildSeedBills } from '../lib/invoices3';
 import { buildSeedSailings, linkSeedSailings } from '../lib/sailings';
 import type { Load } from '../types';
@@ -53,17 +54,18 @@ export function buildDemoSnapshot(): DataSnapshot {
   /* M5 — brak numeru zlecenia przed terminem → kolejka ryzyk (lustro detect_missing_order_numbers) */
   const risks = [...seedRisks, ...orderNoRisks(loads, DEMO_NOW)];
   const sailings = buildSeedSailings();
+  const messages = buildSeedMessages(loads);
   return {
     loads: linkSeedSailings(loads, sailings),
     events: buildSeedEvents(loads),
     documents: buildSeedDocuments(loads),
-    messages: buildSeedMessages(loads),
+    messages,
     risks,
     exceptions: buildSeedExceptions(loads, risks),
     geofences: GEOFENCES,
     workflows: WORKFLOWS,
     workflowRuns: INITIAL_WORKFLOW_RUNS,
-    notifications: [...orderNoReminders(risks, '2026-09-23T00:30:00+02:00'), ...INITIAL_NOTIFICATIONS],
+    notifications: [...orderNoReminders(risks, '2026-09-23T00:30:00+02:00'), ...INITIAL_NOTIFICATIONS, ...demoChatNotices(loads, messages)],
     invoices,
     /* M6 — faktury v2 (osobny wycinek; nie zmienia poziomu/marży transportów do G4) */
     bills: buildSeedBills(loads, DEMO_TODAY_LOCAL),

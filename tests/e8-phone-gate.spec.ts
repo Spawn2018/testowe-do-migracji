@@ -1524,6 +1524,98 @@ test.describe('wyglad/P6 Ryzyka — E7 „Do zrobienia” i „Sytuacja na trasi
 });
 
 /**
+ * wyglad/P6-e — Czat: „Przeczytali” (kto i kiedy), wiadomość w dzwonku, wejście z powiadomienia
+ * (D-20261016-0250-01 Cz11, D-20261016-0310-01 Cz23, D-20261016-0315-01). Demo: SG-01 — wiadomość HHL przeczytał SCX,
+ * KSH jeszcze nie; rozmowa „tylko HHL i SCX” od SCX — w dzwonku tylko u HHL, nigdy u KSH.
+ */
+test.describe('wyglad/P6-e — Czat: „Przeczytali”, dzwonek, odpowiedź z powiadomienia', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const NOW_URL = `/#/?now=${encodeURIComponent('2026-10-14T10:00:00Z')}`;
+  const openChat = async (page: Page, hash: string) => {
+    await page.evaluate((h) => { window.location.hash = h; }, hash);
+    await page.waitForSelector('aside.drawer [data-chat]', { timeout: 10_000 });
+    await page.waitForTimeout(300);
+  };
+  const bellToggle = (page: Page) => page.evaluate(() => (document.querySelector('.bell-trigger') as HTMLButtonElement).click());
+
+  test('komputer HHL: „Przeczytali: 1 osoba · KSH jeszcze nie” → lista osoba, firma, godzina; dzwonek „SG-01 · … — Jan Nowak // …” z „tylko HHL i SCX” znika po otwarciu Czatu', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL', false, NOW_URL);
+    await bellToggle(page);
+    const row = page.locator('.bell-pop [data-bell-chat="HHL_SCX"]').filter({ hasText: 'SG-01 ·' });
+    await expect(row).toHaveCount(1);
+    await expect(row.locator('.bell-title')).toHaveText('SG-01 · HHL/2026/1241 — Jan Nowak // Scandinavian Express');
+    await expect(row.locator('.bell-only')).toHaveText('tylko HHL i SCX');
+    await expect(row.locator('.bell-chat')).toContainText('Rejs zarezerwowany');
+    await bellToggle(page);
+    await openChat(page, '#/transport/SG-01?zakladka=czat');
+    const rc = page.locator('.drawer [data-chat-read="yes"]');
+    await expect(rc).toHaveText(/^✓✓ Przeczytali: 1\sosoba · KSH jeszcze nie/);
+    await expect(rc).toHaveAttribute('aria-expanded', 'false');
+    await rc.click();
+    await expect(rc).toHaveAttribute('aria-expanded', 'true');
+    const li = page.locator('.drawer [data-chat-readers] li');
+    await expect(li).toHaveCount(1);
+    await expect(li.first()).toContainText('Jan Nowak');
+    await expect(li.first()).toContainText('SCX');
+    await expect(li.first()).toContainText(/\d{2}\.\d{2}, \d{2}:\d{2}/);
+    await expect(page.locator('.drawer [data-chat-pending]')).toHaveText('Jeszcze nie otworzyli: KSH');
+    await bellToggle(page);
+    await expect(page.locator('.bell-pop [data-bell-chat]').filter({ hasText: 'SG-01 ·' })).toHaveCount(0);
+  });
+
+  test('komputer KSH: w dzwonku tylko wiadomości do wszystkich, nigdy „tylko HHL i SCX”; przy cudzej wiadomości „Przeczytali: 1 osoba”', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'KSH', false, NOW_URL);
+    await bellToggle(page);
+    await expect(page.locator('.bell-pop [data-bell-chat="HHL_SCX"]')).toHaveCount(0);
+    await expect(page.locator('.bell-pop')).not.toContainText('Rejs zarezerwowany');
+    const row = page.locator('.bell-pop [data-bell-chat="ALL"]').filter({ hasText: 'SG-01 —' });
+    await expect(row.locator('.bell-title')).toHaveText('SG-01 — Anna Wiśniewska // H&H Logistics');
+    await bellToggle(page);
+    await openChat(page, '#/transport/SG-01?zakladka=czat');
+    const other = page.locator('.drawer [data-chat-read="list"]');
+    await expect(other).toHaveText(/^Przeczytali: 1\sosoba/);
+    await other.click();
+    await expect(page.locator('.drawer [data-chat-readers] li')).toHaveCount(1);
+  });
+
+  test('z powiadomienia: „?odpowiedz=1&tekst=…” → tekst w polu, kursor w polu, parametry znikają z adresu', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'SCX', false, NOW_URL);
+    await openChat(page, `#/transport/SG-02?zakladka=czat&odpowiedz=1&tekst=${encodeURIComponent('Jedziemy dalej, będę o 14:00')}`);
+    await expect(page.locator('.drawer [data-chat-input]')).toHaveValue('Jedziemy dalej, będę o 14:00');
+    expect(await page.evaluate(() => document.activeElement?.hasAttribute('data-chat-input'))).toBe(true);
+    expect(await page.evaluate(() => window.location.hash)).toBe('#/transport/SG-02?zakladka=czat');
+  });
+
+  for (const role of ['HHL', 'KSH'] as const) {
+    test(`telefon ${role}: lista „Przeczytali” rozwinięta i dzwonek z wiadomością — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role, false, NOW_URL);
+      const hits: Hit[] = [];
+      const gate = async (name: string) => {
+        for (const width of [...WIDTHS, 768]) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(150);
+          hits.push(...await measure(page, name, width, role));
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
+      };
+      await bellToggle(page);
+      await expect(page.locator('.bell-pop [data-bell-chat]').first()).toBeVisible();
+      await gate('dzwonek-czat');
+      await bellToggle(page);
+      await openChat(page, '#/transport/SG-01?zakladka=czat');
+      await page.locator('.drawer [data-chat-read="yes"], .drawer [data-chat-read="list"]').first().click();
+      await expect(page.locator('.drawer [data-chat-readers]')).toBeVisible();
+      await gate('panel-czat-przeczytali');
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});
+
+/**
  * wyglad/P6-b — panel transportu: Historia i Czat (E17, decyzje 07.10 20:57, img/e17-after).
  * „Teraz” 14.10.2026 — wpisy demo transportu SG-01 (dostarczony) są wtedy już w przeszłości.
  */
@@ -1559,14 +1651,14 @@ test.describe('wyglad/P6-b panel transportu — Historia i Czat (E17)', () => {
     expect(new Set(cats)).toEqual(new Set(['NUMER']));
     /* Czat */
     await openTab(page, 'SG-01', 4);
-    await expect(page.locator('.drawer [data-chat] button')).toHaveCount(3);
+    await expect(page.locator('.drawer [data-chat-compose] button')).toHaveCount(3);
     await expect(page.locator('.drawer [data-carrier-actions], .drawer [data-awiz-chat-note]')).toHaveCount(0);
     await expect(page.locator('.drawer [data-chat-msg][data-vis="HHL_SCX"]')).toHaveCount(1);
     const before = await page.locator('.drawer [data-chat-msg]').count();
     await page.locator('.drawer [data-chat-input]').fill('Wiadomość testowa do wszystkich');
     await page.locator('.drawer [data-chat-input]').press('Enter');
     await expect(page.locator('.drawer [data-chat-msg]')).toHaveCount(before + 1);
-    await expect(page.locator('.drawer [data-chat-msg]').last()).toContainText('nikt z SCX i KSH jeszcze nie otworzył');
+    await expect(page.locator('.drawer [data-chat-msg]').last()).toContainText('Wysłane do HHL, SCX i KSH · nikt jeszcze nie otworzył');
     await page.locator('.drawer [data-chat-vis="HHL_SCX"]').click();
     await expect(page.locator('.drawer [data-chat-input]')).toHaveAttribute('placeholder', 'Napisz tylko do HHL i SCX…');
     await page.locator('.drawer [data-chat-input]').fill('Druga linia');
@@ -1583,7 +1675,7 @@ test.describe('wyglad/P6-b panel transportu — Historia i Czat (E17)', () => {
     await expect(page.locator('.drawer [data-chat-msg]').first()).toBeVisible();
     await expect(page.locator('.drawer [data-chat-msg][data-vis="HHL_SCX"]')).toHaveCount(0);
     await expect(page.locator('.drawer [data-chat-vis]')).toHaveCount(0);
-    await expect(page.locator('.drawer [data-chat] button')).toHaveCount(1);
+    await expect(page.locator('.drawer [data-chat-compose] button')).toHaveCount(1);
   });
 
   for (const role of ['HHL', 'SCX', 'KSH'] as const) {
