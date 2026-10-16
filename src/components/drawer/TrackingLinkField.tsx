@@ -27,6 +27,7 @@ export function TrackingLinkField({
   locale,
   nowIso,
   onOpenRio,
+  upper = false,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -38,6 +39,8 @@ export function TrackingLinkField({
   nowIso: string;
   /** „Otwórz w RIO” w nowej karcie — adres z kluczem składa serwer (E44 pkt 8) */
   onOpenRio?: () => void;
+  /** wyglad/P7-a (E32 „okno Awizacja”): etykieta wersalikami jak pozostałe pola okna */
+  upper?: boolean;
 }) {
   const id = useId();
   const saved = savedRef ?? '';
@@ -96,7 +99,7 @@ export function TrackingLinkField({
 
   return (
     <div className="form-field tlf" data-awiz-tracking data-tl-mode={chip ? 'saved' : masked ? 'new-rio' : editing ? 'change' : 'input'}>
-      <span id={id}>{t(locale, 'awiz_tracking')}</span>
+      <span id={id} className={upper ? 'tlf-lbl up' : 'tlf-lbl'}>{upper ? t(locale, 'awiz_tracking').toLocaleUpperCase('pl') : t(locale, 'awiz_tracking')}</span>
       {chip ? (
         <div className="tlf-saved">
           <span className="tlf-chip" aria-describedby={id} data-tl-chip>

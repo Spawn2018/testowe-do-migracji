@@ -234,6 +234,14 @@ tbody tr.done td{color:var(--ink-3)}
 .drawer-hd .r1{display:flex;align-items:center;gap:10px}
 .drawer-hd .r1-l{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;flex:1;min-width:0}
 .drawer-hd .r1-l .wb-code{overflow-wrap:anywhere;min-width:0}
+/* wyglad/P7-a (E41, E32): „brak nr HHL” na czerwono; telefon — strzałka wstecz (E17) */
+.drawer-hd .wb-miss{font-size:.72em;color:var(--red);letter-spacing:.02em}
+.drawer-hd .wb-back{flex:none;font-size:22px;border-color:transparent;background:transparent;margin-left:-8px}
+@media (max-width:768px){
+  /* E32 „Telefon” (img/e32-after): „← SG-15 brak nr HHL” w jednej linii, nazwa mniejsza niż na komputerze */
+  .drawer-hd{padding:8px 12px}
+  .drawer-hd .r1-l .wb-code{font-size:24px}
+}
 .drawer-hd h3{margin:0;font-family:var(--font-cond);font-size:25px;font-weight:700;letter-spacing:.03em}
 .drawer-hd .meta{font-size:12.5px;color:var(--ink-3);margin-top:3px}
 .dtabs{display:flex;gap:0;border-bottom:1px solid var(--rule);background:var(--surface-2)}

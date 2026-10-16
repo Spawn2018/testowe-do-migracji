@@ -2,55 +2,35 @@ import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { CorridorMap } from '../map/LazyCorridorMap';
 import { StatusPill } from '../ui/StatusPill';
-import { fmtNum, t, tp } from '../../i18n/messages';
-import {
-  canChangeLoadStatus,
-  visibleDriverPhone,
-} from '../../lib/permissions';
+import { t, tp } from '../../i18n/messages';
+import { canChangeLoadStatus } from '../../lib/permissions';
 import { getAuthProfile } from '../../auth/profile';
-import { SITES } from '../../lib/status';
-import { isReadyBlocked, evaluateLoadCover } from '../../lib/permits';
-import { hasAwizacja } from '../../lib/awizacjaState';
-import { editableOrderSide } from '../../lib/orderNumbers';
 import { transportLabel } from '../../lib/transportName';
 import { DocPreview } from '../ui/DocPreview';
-import { PlanDatesPanel } from './PlanDatesPanel';
-import { formatTowerPair } from '../../lib/cSep';
 import { KshDatesModal } from './KshDatesModal';
 import { StatusAxisTab } from './StatusAxisTab';
 import { TrackingBar } from './TrackingBar';
 import { DeliveredCheckCard } from './DeliveredCheckCard';
 import { deliveredCheckOf, readyGapsOf, trackingLinkOf } from '../../lib/p4cSource';
 import { lazyRetry } from '../../lib/lazyRetry';
-import { EtaBlock } from './EtaBlock';
 import { useEtaWx } from '../../lib/e49WxSource';
 import { buildStatusAxis } from '../../lib/statusAxis';
 import { trackingPhase } from '../../lib/stageTiles';
 import { useIsPhone } from '../../lib/useIsPhone';
 import { getNow } from '../../lib/frozenNow';
-import { RouteCheckPanel } from './RouteCheckPanel';
-import { CorridorObstaclesPanel } from './CorridorObstaclesPanel';
-import {
-  TZ_LOAD_PL,
-  TZ_UNLOAD_SE,
-  formatLoadPl,
-  formatSchedTableDay,
-  delayMinutesVsPlan,
-} from '../../lib/time';
+import { delayMinutesVsPlan } from '../../lib/time';
 import { formatDelayPill, StatusMarkers } from '../ui/StatusPill';
 import { AgreedFeeForm } from './AgreedFeeForm';
-import { effArrival, effDeparture, fmtLocal, sailingStatusLabel } from '../../lib/sailings';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { isServerId } from '../../data/registry';
 import { chatMeOf, chatMessagesOf, chatReadsOn, chatUnread, historyEventsOf } from '../../lib/p6bSource';
-import { ht, htn } from '../../i18n/p6b';
-import { OptionsHowTo } from '../settings/OptionsHowTo';
-import type { Load, Locale } from '../../types';
-import { PROD_BUILD, shows } from '../../lib/prodFacade';
-import { delayPillMinutes, permitBannerState } from '../../lib/prodDash';
+import { htn } from '../../i18n/p6b';
+import { pt } from '../../i18n/p7';
+import { dayShort, isoWeek } from '../../lib/p7Awiz';
+import { PROD_BUILD } from '../../lib/prodFacade';
+import { delayPillMinutes } from '../../lib/prodDash';
 /* SCOPE 6.4 — formularz zezwoleń: tylko build Supabase, chunk leniwy (paczka demo bez niego) */
 const PermitForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/PermitForm')) : null;
-/* III-4 — pojazdy pilotujące z bazy (load_escorts): tylko build Supabase; demo zostaje przy polu „Pilot” formularza zasobów */
 /* wyglad/P4-c: okna awizacji i „Zmień status” poza pierwszym wczytaniem (budżet 400 kB gzip, scripts/bundle-size.mjs) */
 const AwizacjaModal = lazy(lazyRetry(() => import('./AwizacjaModal').then((m) => ({ default: m.AwizacjaModal }))));
 const StatusChangeModal = lazy(lazyRetry(() => import('./StatusChangeModal').then((m) => ({ default: m.StatusChangeModal }))));
@@ -59,36 +39,13 @@ const PanelPrices = lazy(lazyRetry(() => import('./PanelPrices').then((m) => ({ 
 /* wyglad/P6-b: „Historia” i „Czat” (E17) poza pierwszym wczytaniem */
 const PanelHistory = lazy(lazyRetry(() => import('./PanelHistory').then((m) => ({ default: m.PanelHistory }))));
 const PanelChat = lazy(lazyRetry(() => import('./PanelChat').then((m) => ({ default: m.PanelChat }))));
+/* wyglad/P7-a: „Przegląd” (E32) poza pierwszym wczytaniem */
+const PanelOverview = lazy(lazyRetry(() => import('./PanelOverview').then((m) => ({ default: m.PanelOverview }))));
 const CarrierRating = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/CarrierRating')) : null;
-const EscortPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/EscortPanel')) : null;
+/* III-4 — pojazdy pilotujące z bazy (load_escorts): tylko build Supabase; w Przeglądzie do czasu pilotów w awizacji (P7) */
+/* E32 (zmiana 09.10): stara lista pilotów (EscortPanel) nie pokazuje się — piloci tylko w awizacji przy „PL + SE” (D-20261015-0130-01 P3) */
 
 type Tab = 'overview' | 'timeline' | 'history' | 'docs' | 'pricing' | 'chat';
-
-/** A6-T3 — wymiary/masa w języku interfejsu (PL bez zmian: 16,50). */
-function fmtDim(n: number, locale: Locale = 'pl'): string {
-  return fmtNum(locale, n, 2);
-}
-
-/** M5 — numer zlecenia: pole edycji tylko dla strony, która go nadaje; pozostali widzą tekst. */
-function OrderNoField({ value, editable, onSave }: { value?: string | null; editable: boolean; onSave: (v: string | null) => void }) {
-  const [draft, setDraft] = useState(value ?? '');
-  const locale = useTowerStore((s) => s.locale);
-  if (!editable) {
-    return value ? <span className="mono">{value}</span> : <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_dr_not_filled')}</span>;
-  }
-  return (
-    <form
-      style={{ display: 'flex', gap: 6 }}
-      onSubmit={(e) => {
-        e.preventDefault();
-        if ((draft.trim() || null) !== (value ?? null)) onSave(draft.trim() || null);
-      }}
-    >
-      <input className="input mono" style={{ width: '60%' }} value={draft} placeholder={t(locale, 'a6_dr_not_filled')} onChange={(e) => setDraft(e.target.value)} aria-label={t(locale, 'a6_dr_order_no')} />
-      <button type="submit" className="btn ghost">{t(locale, 'a6_dr_save')}</button>
-    </form>
-  );
-}
 
 export function LoadDrawer() {
   const id = useTowerStore((s) => s.selectedLoadId);
@@ -102,9 +59,9 @@ export function LoadDrawer() {
   const role = useTowerStore((s) => s.role);
   const sailings = useTowerStore((s) => s.sailings);
   const geofences = useTowerStore((s) => s.geofences);
+  const risks = useTowerStore((s) => s.risks);
   const sendMessage = useTowerStore((s) => s.sendMessage);
   const pushToast = useTowerStore((s) => s.pushToast);
-  const setOrderNo = useTowerStore((s) => s.setOrderNo);
   const drawerTab = useTowerStore((s) => s.drawerTab);
   const setDrawerTab = useTowerStore((s) => s.setDrawerTab);
   const setLoadStatus = useTowerStore((s) => s.setLoadStatus);
@@ -178,23 +135,9 @@ export function LoadDrawer() {
 
   if (!load) return null;
 
-  /* AUD-03 (KSH — PANEL ZLECENIA): KSH widzi ten sam panel co pozostali; jedyny przycisk zmian = „Edytuj” (daty i godziny). */
-  const driverPhone = visibleDriverPhone(role, load);
-
   const canStatus = canChangeLoadStatus(role, getAuthProfile()?.role ?? null);
-  /** B-10: awizację uzupełnia SCX; HHL (nie admin) nie dodaje. */
-  const canAwiz = role === 'SCX';
-  const orderSide = editableOrderSide(role);
-  /* M10 — rejs z rozkładu */
-  const curSailing = sailings.find((x) => x.id === load.sailingId);
-  const readyGate = isReadyBlocked(load, loadDocs);
-  const permitBlock = readyGate.blocked;
-  const coverInfo = evaluateLoadCover(load, loadDocs);
-  const readyUiBlocked = permitBlock || !coverInfo.covered || load.docMissing || load.permitFits === false;
   const delayMin = delayPillMinutes(load, delayMinutesVsPlan(load.etaBoden, load.plannedDeliverDate, load.planDates?.deliveryTo), PROD_BUILD);
   const delayPillText = delayMin === null ? t(locale, 'i2_delay_pill') : formatDelayPill(delayMin);
-  const permitState = !shows('permitNumber') ? permitBannerState(load, loadDocs) : null;
-  const comboL = load.resources.setLengthM ?? load.dims.lengthM;
 
   /* E25: oś statusów raz na render — data dostawy i wjazd na plac do bloku ETA */
   const statusAxis = buildStatusAxis(load, axisEvents);
@@ -244,50 +187,48 @@ export function LoadDrawer() {
       <aside className="drawer" role="dialog" aria-label={transportLabel(load, role, 'panel')}>
         <div className="drawer-hd">
           <div className="r1">
+            {/* wyglad/P7-a (E17, E32 telefon): panel na cały ekran ze strzałką wstecz */}
+            {phone ? (
+              <button type="button" className="iconbtn wb-back" aria-label={pt(locale, 'p7_back')} onClick={() => selectLoad(null)}>
+                ←
+              </button>
+            ) : null}
             {/* wyglad/P5 (E8): nazwa i znaczniki zawijają się, „✕” zostaje w rogu przy 360 px (HHL: kod · numer zlecenia) */}
             <div className="r1-l">
-              <span className="wb-code" data-content>{transportLabel(load, role, 'panel')}</span>
+              {(() => {
+                /* E41, E32: „SG-15 brak nr HHL” — brak numeru na czerwono */
+                const label = transportLabel(load, role, 'panel');
+                const m = / (brak nr (?:HHL|SCX))$/.exec(label);
+                return m
+                  ? <span className="wb-code" data-content>{label.slice(0, m.index)} <span className="wb-miss">{m[1]}</span></span>
+                  : <span className="wb-code" data-content>{label}</span>;
+              })()}
               <StatusPill status={load.status} stage={load.stage} />
               {load.delayed ? <span className="pill p-red">{delayPillText}</span> : null}
             </div>
-            <button type="button" className="iconbtn" aria-label={t(locale, 'close')} onClick={() => selectLoad(null)}>
-              ✕
-            </button>
+            {!phone ? (
+              <button type="button" className="iconbtn" aria-label={t(locale, 'close')} onClick={() => selectLoad(null)}>
+                ✕
+              </button>
+            ) : null}
           </div>
-          <div className="wb-fields">
-            <span>
-              <b>{t(locale, 'a6_dr_consignee')}</b>
-              <em>{t(locale, 'a6_dr_consignee_val')}</em>
-            </span>
-            <span>
-              <b>{t(locale, 'a6_dr_week_load')}</b>
-              <em>
-                {tp(locale, 'a6_dr_week_val', { n: String((() => {
-                  const d = new Date(load.plannedLoadDate);
-                  if (Number.isNaN(d.getTime())) return '—';
-                  const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-                  const day = tmp.getUTCDay() || 7;
-                  tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
-                  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
-                  return Math.ceil(((tmp.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-                })()) })}
-              </em>
-            </span>
-            <span>
-              <b>{t(locale, 'a6_dr_week')}</b>
-              <em>
-                {tp(locale, 'a6_dr_week_val', { n: String((() => {
-                  const d = new Date(load.plannedDeliverDate);
-                  if (Number.isNaN(d.getTime())) return '—';
-                  const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-                  const day = tmp.getUTCDay() || 7;
-                  tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
-                  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
-                  return Math.ceil(((tmp.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-                })()) })}
-              </em>
-            </span>
-          </div>
+          {/* E32: odbiorca, załadunek i dostawa z dniem tygodnia i tygodniem; na telefonie — w „Planie” Przeglądu */}
+          {!phone ? (
+            <div className="wb-fields">
+              <span>
+                <b>{t(locale, 'a6_dr_consignee')}</b>
+                <em>{t(locale, 'a6_dr_consignee_val')}</em>
+              </span>
+              <span>
+                <b>{t(locale, 'a6_dr_loading')}</b>
+                <em data-hd-load>{dayShort(load.plannedLoadDate)}{isoWeek(load.plannedLoadDate) != null ? ` · ${tp(locale, 'a6_dr_week_val', { n: isoWeek(load.plannedLoadDate)! })}` : ''}</em>
+              </span>
+              <span>
+                <b>{t(locale, 'a6_dr_delivery')}</b>
+                <em data-hd-deliver>{dayShort(load.plannedDeliverDate)}{isoWeek(load.plannedDeliverDate) != null ? ` · ${tp(locale, 'a6_dr_week_val', { n: isoWeek(load.plannedDeliverDate)! })}` : ''}</em>
+              </span>
+            </div>
+          ) : null}
           <div className="perf" />
         </div>
 
@@ -335,15 +276,31 @@ export function LoadDrawer() {
                   <span>{t(locale, deliveredCheck.canDecide ? 'p4c_dc_jump' : 'p4c_dc_jump_view')} ›</span>
                 </button>
               ) : null}
-              <div data-load-map style={{ position: 'relative', height: 220, marginBottom: 8 }}>
-                <CorridorMap loads={drawerMapLoads} embedded slot="drawer" />
-              </div>
-              <div style={{ marginBottom: 12 }}>
-                <button
-                  type="button"
-                  className="btn ghost"
-                  data-action="export-load-pdf-map"
-                  onClick={() => {
+              {/* wyglad/P7-a (E32): Przegląd poza pierwszym wczytaniem (budżet 400 kB gzip) */}
+              <Suspense fallback={null}>
+                <PanelOverview
+                  key={load.id}
+                  load={load}
+                  loads={loads}
+                  role={role}
+                  locale={locale}
+                  phone={phone}
+                  nowIso={nowIso}
+                  events={loadEvents}
+                  docs={loadDocs}
+                  risks={risks}
+                  sailings={sailings}
+                  insAuto={insAuto}
+                  deliveredAt={statusAxis.deliveredAt}
+                  siteSince={statusAxis.current === 'APPROACHING_SITE' ? statusAxis.currentSince : null}
+                  delayMin={delayMin}
+                  wx={etaWx}
+                  mapNode={<CorridorMap loads={drawerMapLoads} embedded slot="drawer" />}
+                  ratingNode={CarrierRating && (role === 'HHL' || role === 'SCX') && isServerId(load.id) ? <Suspense fallback={null}><CarrierRating key={load.id} loadId={load.id} /></Suspense> : null}
+                  onAwiz={() => setAwizOpen(true)}
+                  onKshDates={() => setKshDatesOpen(true)}
+                  onTab={(x) => switchTab(x)}
+                  onPdf={() => {
                     void (async () => {
                       try {
                         const { exportLoadPdfWithMap } = await import('../../lib/pdfExport');
@@ -359,195 +316,8 @@ export function LoadDrawer() {
                       }
                     })();
                   }}
-                >
-                  {t(locale, 'h7_pdf_btn')}
-                </button>
-              </div>
-              {load.planDates ? <PlanDatesPanel load={load} /> : null}
-              {/* E15 pkt 8 (img/e15-after): blok ETA nad listą pól */}
-              <EtaBlock
-                load={load}
-                locale={locale}
-                phone={phone}
-                nowIso={nowIso}
-                deliveredAt={statusAxis.deliveredAt}
-                siteSince={statusAxis.current === 'APPROACHING_SITE' ? statusAxis.currentSince : null}
-                delayMin={delayMin}
-                wx={etaWx}
-              />
-              <div data-eta-howto className="etab-howto">
-                <OptionsHowTo locale={locale} k="a6_dr_eta_howto" summaryKey="a6_sch_howto_btn" />
-              </div>
-              <dl className="kv">
-                <dt>{t(locale, 'a6_dr_type')}</dt>
-                <dd>
-                  <span data-content>{load.itemType}</span>{tp(locale, 'a6_dr_qty', { n: String(load.qty) })}
-                </dd>
-                <dt>{t(locale, 'a6_dr_dims')}</dt>
-                <dd>
-                  {load.dims.cargoClass === 'STANDARD' ? (
-                    <span data-cargo="none">—</span>
-                  ) : (
-                    <>{fmtDim(load.dims.lengthM, locale)} × {fmtDim(load.dims.widthM, locale)} × {fmtDim(load.dims.heightM, locale)} m</>
-                  )}
-                </dd>
-                <dt>{t(locale, 'h1_title')}</dt>
-                <dd data-route-check>
-                  <RouteCheckPanel loadId={load.id} locale={locale} />
-                </dd>
-                <dt>{t(locale, 'h3_title')}</dt>
-                <dd data-corridor>
-                  <CorridorObstaclesPanel loadId={load.id} locale={locale} />
-                </dd>
-                <dt>{t(locale, 'a6_dr_mass')}</dt>
-                <dd>
-                  {fmtDim(load.dims.weightT, locale)} t ({load.qty} ×{' '}
-                  {fmtDim(load.dims.weightT / Math.max(1, load.qty), locale)} t)
-                </dd>
-                {/* E41 (P2): KSH bez pól numerów. SCX widzi numer HHL tylko do odczytu. */}
-                {role !== 'KSH' ? (
-                  <>
-                    <dt>{t(locale, 'a6_dr_ord_hhl')}</dt>
-                    <dd data-order="hhl">
-                      {orderSide === 'HHL' ? (
-                        <div className="awiz-row" style={{ margin: 0 }}>
-                          {load.hhlOrderNo ? <span className="mono">{load.hhlOrderNo}</span> : <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_dr_not_filled')}</span>}
-                          <button type="button" className="btn" data-hhl-order-btn onClick={() => setAwizOpen(true)}>
-                            {load.hhlOrderNo ? t(locale, 'awiz_hhl_edit') : t(locale, 'awiz_hhl_add')}
-                          </button>
-                        </div>
-                      ) : (
-                        <OrderNoField key={`hhl-${load.id}`} value={load.hhlOrderNo} editable={false} onSave={() => undefined} />
-                      )}
-                    </dd>
-                    <dt>{t(locale, 'a6_dr_ord_scx')}</dt>
-                    <dd data-order="scx">
-                      <OrderNoField key={`scx-${load.id}`} value={load.carrierOrderNo} editable={orderSide === 'CARRIER'} onSave={(v) => setOrderNo(load.id, 'CARRIER', v)} />
-                    </dd>
-                  </>
-                ) : null}
-                <dt>{t(locale, 'a6_dr_load_place')}</dt>
-                <dd>{SITES.loading.name}</dd>
-                <dt>{t(locale, 'a6_dr_loading')}</dt>
-                <dd className="cond" data-load-when>{formatSchedTableDay(load.plannedLoadDate, load.awizacja.loadWindowStart, TZ_LOAD_PL)}</dd>
-                <dt>{t(locale, 'a6_dr_delivery')}</dt>
-                <dd className="cond" data-deliver-when>{formatSchedTableDay(load.plannedDeliverDate, load.awizacja.unloadWindowStart, TZ_UNLOAD_SE)}</dd>
-                <dt>{t(locale, 'a6_dr_driver')}</dt>
-                <dd>
-                  {load.resources.driverName || load.resources.driverDeliveryName ? (
-                    <span data-content>{formatTowerPair(load.resources.driverName, load.resources.driverDeliveryName, !!load.resources.trailerSwap)}</span>
-                  ) : (
-                    <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_dr_not_filled')}</span>
-                  )}
-                </dd>
-                <dt>{t(locale, 'a6_dr_phone')}</dt>
-                <dd>
-                  {driverPhone ? (
-                    <a
-                      href={`tel:${(load.resources.driverPhone || load.resources.driverDeliveryPhone || '').replace(/\s+/g, '')}`}
-                      className="mono"
-                      data-content
-                      data-phone-pair
-                    >
-                      {formatTowerPair(
-                        load.resources.driverPhone,
-                        load.resources.driverDeliveryPhone,
-                        !!load.resources.trailerSwap,
-                      )}
-                    </a>
-                  ) : (
-                    '—'
-                  )}
-                </dd>
-                <dt>{t(locale, 'a6_dr_tractor_trailer')}</dt>
-                <dd data-tractor-pair>
-                  {load.resources.tractorPlate || load.resources.tractorDeliveryPlate ? (
-                    <>
-                      <span className="mono">{formatTowerPair(load.resources.tractorPlate, load.resources.tractorDeliveryPlate, !!load.resources.trailerSwap)}</span>
-                      {' · '}
-                      <span className="mono">{load.resources.trailerPlate ?? '—'}</span>
-                    </>
-                  ) : (
-                    '—'
-                  )}
-                </dd>
-                {/* wyglad/P6-b: przy liście pilotów z bazy (SCX, KSH) bez drugiego, starszego wiersza „Pilot” */}
-                {load.resources.escort && !(EscortPanel && isServerId(load.id) && (role === 'SCX' || role === 'KSH')) ? (
-                  <>
-                    <dt>{t(locale, 'a6_dr_escort')}</dt>
-                    <dd data-escort="required">
-                      {load.resources.escortPlate
-                        ? tp(locale, 'a6_dr_escort_one_plate', { plate: load.resources.escortPlate })
-                        : t(locale, 'a6_dr_escort_one')}
-                    </dd>
-                  </>
-                ) : null}
-                <dt>{t(locale, 'a6_dr_ferry')}</dt>
-                {/* wyglad/P6-b (E17 → E32): to, co KSH widział w „Ustaleniach” — przypłynięcie i stan rejsu — jest tu dla wszystkich */}
-                <dd data-ferry-row>
-                  {curSailing
-                    ? `${load.ferry.vessel ?? curSailing.vessel} · ${fmtLocal(effDeparture(curSailing))} → ${fmtLocal(effArrival(curSailing))}${curSailing.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(curSailing.status, locale)}` : ''}`
-                    : load.ferry.vessel ?? t(locale, 'a6_dr_no_booking')}
-                </dd>
-                <dt>{t(locale, 'a6_dr_awi')}</dt>
-                <dd data-awiz-state={!hasAwizacja(load) ? 'none' : load.awizacja.confirmed ? 'confirmed' : 'open'}>
-                  {!hasAwizacja(load)
-                    ? <span style={{ color: 'var(--red)' }}>{ht(locale, 'p6b_awi_none')}</span>
-                    : `${load.awizacja.loadWindowStart ? `${formatLoadPl(load.awizacja.loadWindowStart)} – ${formatLoadPl(load.awizacja.loadWindowEnd)} · ` : ''}${ht(locale, load.awizacja.confirmed ? 'p6b_awi_ok' : 'p6b_awi_open')}`}
-                </dd>
-              </dl>
-
-              {/* AWIZ-4 — Dodaj / Edytuj poza Ustalenia */}
-              {role === 'KSH' && (
-                <div className="awiz-row" data-ksh-actions>
-                  <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>{t(locale, 'b_ksh_dates_row')}</span>
-                  <button type="button" className="btn" data-ksh-edit onClick={() => setKshDatesOpen(true)}>
-                    {t(locale, 'b_ksh_edit')}
-                  </button>
-                </div>
-              )}
-              {canAwiz && (
-                <div className="awiz-row" data-awiz-actions>
-                  <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>{t(locale, 'a6_dr_awi')}</span>
-                  <button type="button" className="btn" data-awiz-open onClick={() => setAwizOpen(true)}>
-                    {hasAwizacja(load) ? t(locale, 'awiz_edit') : t(locale, 'awiz_add')}
-                  </button>
-                </div>
-              )}
-              {/* wyglad/P6-b (E17, E32): pojazdy pilotujące z „Ustaleń” do Przeglądu (te same firmy co dotąd: SCX i KSH); do awizacji SCX w P7 (09.10) */}
-              {EscortPanel && isServerId(load.id) && (role === 'SCX' || role === 'KSH') && <Suspense fallback={null}><EscortPanel key={load.id} loadId={load.id} /></Suspense>}
-
-              {load.permitFits === false ? (
-                <div className="banner red" data-permit="mismatch" style={{ margin: '13px 0 0' }}>
-                  <b>{t(locale, 'v65_permit_mismatch_b')}</b> {t(locale, 'v65_permit_mismatch')}
-                </div>
-              ) : permitState ? (
-                permitState.kind === 'not_required' ? (
-                  <div className="banner" data-permit="not_required" style={{ margin: '13px 0 0' }}>{t(locale, 'i2_permit_not_required')}</div>
-                ) : permitState.kind === 'uploaded_unchecked' ? (
-                  <div className="banner amber" data-permit="uploaded_unchecked" style={{ margin: '13px 0 0' }}>
-                    <b>{t(locale, 'i2_permit_uploaded_b')}</b> {tp(locale, 'i2_permit_uploaded', { f: permitState.fileName })}
-                  </div>
-                ) : (
-                  <div className="banner red" data-permit="missing" style={{ margin: '13px 0 0' }}>
-                    <b>{t(locale, 'a6_dr_permit_missing_b')}</b> {tp(locale, load.resources.setLengthM != null ? 'a6_dr_permit_missing' : 'a6_dr_permit_missing_cargo', { l: fmtDim(comboL, locale) })}
-                  </div>
-                )
-              ) : readyUiBlocked ? (
-                <div className="banner red" style={{ margin: '13px 0 0' }}>
-                  <b>{t(locale, 'a6_dr_permit_missing_b')}</b> {tp(locale, load.resources.setLengthM != null ? 'a6_dr_permit_missing' : 'a6_dr_permit_missing_cargo', { l: fmtDim(comboL, locale) })}
-                </div>
-              ) : (
-                <div
-                  className="banner"
-                  style={{ margin: '13px 0 0', background: 'var(--go-bg)', borderLeftColor: 'var(--go)' }}
-                >
-                  <b>{t(locale, 'a6_dr_permit_ok_b')}</b> {tp(locale, 'a6_dr_permit_ok', { n: String(1400 + load.sequenceOrder) })}
-                </div>
-              )}
-              {/* I-18: status dat planu — na zakładce przeglądu (widoczny dla trzech ról bez przełączania) */}
-              {/* DATY-67: „Potwierdź daty” usunięte — daty z pliku KSH */}
-              {CarrierRating && (role === 'HHL' || role === 'SCX') && isServerId(load.id) && <Suspense fallback={null}><CarrierRating key={load.id} loadId={load.id} /></Suspense>}
+                />
+              </Suspense>
             </>
           )}
 

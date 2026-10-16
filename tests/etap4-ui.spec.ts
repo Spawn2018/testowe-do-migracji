@@ -62,14 +62,12 @@ async function openLoadKsh(page: Page, code: string) {
   await openLoad(page, code, { orders: false })
   await page.waitForSelector('.drawer [data-ksh-edit]')
 }
-/** B-SMOKE-DRIFT: nr HHL edytowany w oknie awizacji (AWIZ-4 / HHL-4a, 13ace35), nie w polu szuflady. */
+/** wyglad/P7-a — E32 pkt 2, E9 krok 5: nr HHL wpisuje HHL w „Numerach zleceń” Przeglądu (bez okna Awizacja i bez kompletnej awizacji). */
 async function setHhlOrder(page: Page, v: string) {
   await page.locator('.drawer button[aria-selected]').nth(0).click()
-  await page.locator('.drawer [data-hhl-order-btn]').click()
-  const modal = page.locator('[data-awiz-modal]')
-  await modal.locator('[data-awiz-hhl-order]').fill(v)
-  await modal.locator('[data-awiz-save]').click()
-  await expect(modal).toHaveCount(0)
+  const f = page.locator('.drawer [data-order="hhl"]')
+  await f.locator('input').fill(v)
+  await f.locator('button[type="submit"]').click()
 }
 
 test.describe('M5 — numery zleceń', () => {
@@ -120,7 +118,8 @@ test.describe('M5 — numery zleceń', () => {
     expect(code, 'transport z przyciskiem Zmień status').not.toBe('')
     await page.locator('.drawer button[aria-selected]').nth(0).click()
     await expect(page.locator('.drawer [data-order="scx"] input')).toHaveCount(0)
-    await expect(page.locator('.drawer [data-order="hhl"] .mono')).toHaveText(/^HHL\/2026\//)
+    /* wyglad/P7-a — E32: HHL wpisuje numer w polu „Numery zleceń” */
+    await expect(page.locator('.drawer [data-order="hhl"] input')).toHaveValue(/^HHL\/2026\//)
     await setHhlOrder(page, '')
     await closeDrawer(page)
     const row0 = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: new RegExp(`^${code}`) }) })

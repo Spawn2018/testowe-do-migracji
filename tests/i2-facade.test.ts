@@ -25,8 +25,10 @@ describe('I-2: rejestr funkcji ukrytych w produkcji', () => {
     const unused = Object.keys(HIDDEN_IN_PROD).filter((k) => k !== 'delayCodes' && !SRC.some((f) => f.s.includes(`shows('${k}'`)))
     expect(unused).toEqual([])
     /* wyglad/P5 (E31): „policyExpiryNote” usunięty — polisy w wierszach wymagań na stronie Dokumenty (12 → 11).
-       wyglad/P6 (E7-5, PLAN 8.4): statyczne listy przepraw i objazdów SE usunięte — druga przeprawa liczona z rozkładu (11 → 9) */
-    expect(Object.keys(HIDDEN_IN_PROD).length).toBe(9)
+       wyglad/P6 (E7-5, PLAN 8.4): statyczne listy przepraw i objazdów SE usunięte — druga przeprawa liczona z rozkładu (11 → 9).
+       wyglad/P7-a (E32 „Znika”): czerwony baner zezwolenia w Przeglądzie usunięty — stan w wierszu „Dokumenty” z bazy
+       (plik jest / brak / niezgodne z zestawem według permitFits), bez numeru zezwolenia; klucz „permitNumber” zbędny (9 → 8) */
+    expect(Object.keys(HIDDEN_IN_PROD).length).toBe(8)
   })
   it('shows(): demo widoczne, produkcja ukryte', () => {
     expect(shows('seaWeather', false)).toBe(true)

@@ -291,7 +291,7 @@ const PL: Record<string, string> = {
   p5_doc_r_CMR_SIGNED: 'CMR z podpisem odbiorcy',
   p5_doc_r_CMR_LOAD: 'CMR z załadunku',
   p5_doc_r_INSURANCE: 'Polisa OCP przewoźnika',
-  p5_doc_r_OCS: 'Polisa HHL (spedytor)',
+  p5_doc_r_OCS: 'OC przewoźnika — PZU',
   p5_doc_who_INSURANCE: 'SCX wpisuje, HHL zatwierdza',
   p5_doc_who_OCS: 'HHL',
   p5_doc_due_CMR_SIGNED: 'po „Dostarczone”, do {h} h',

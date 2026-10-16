@@ -40,12 +40,20 @@ async function openEditable(page: Page) {
   await page.locator(PRE).first().click()
   await page.waitForSelector('.drawer')
   await page.locator('.drawer button[aria-selected]').nth(0).click()
+  await page.waitForSelector('.drawer [data-overview]', { timeout: 10_000 })
+  await openPlan(page)
   await page.waitForSelector('.drawer [data-ksh-edit]', { timeout: 10_000 })
   await page.locator('.drawer [data-ksh-edit]').click()
   const modal = page.locator('[data-ksh-dates-modal]')
   await expect(modal).toBeVisible()
   await expect(modal.locator('[data-ksh-locked]')).toHaveCount(0)
   return modal
+}
+
+/** wyglad/P7-a — E32 pkt 9: na telefonie sekcje Przeglądu są zwinięte z linią stanu — „Plan” rozwijany przed „Edytuj”. */
+async function openPlan(page: Page) {
+  const plan = page.locator('.drawer details[data-po="plan"]')
+  if ((await plan.count()) && !(await plan.evaluate((d) => (d as HTMLDetailsElement).open))) await plan.locator(':scope > summary').click()
 }
 
 const noHScroll = (page: Page) =>
@@ -57,6 +65,8 @@ for (const vp of [{ w: 1366, h: 900, tag: 'komputer' }, { w: 390, h: 844, tag: '
     await boot(page, vp.w, vp.h, 'KSH')
     await expect(page.locator('[data-change-tractor]')).toHaveCount(0)
     await page.locator(ROW).first().click()
+    await page.waitForSelector('.drawer [data-overview]')
+    await openPlan(page)
     await page.waitForSelector('.drawer [data-ksh-edit]')
     await expect(page.locator('.drawer[data-ksh-side-menu]')).toHaveCount(0)
     expect(await noHScroll(page), 'panel KSH bez przewijania w poziomie').toBe(true)

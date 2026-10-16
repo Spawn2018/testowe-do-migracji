@@ -20,7 +20,6 @@ export const HIDDEN_IN_PROD = {
   detectTimeKpi: 'Kafelek „czas wykrycia odchylenia” (10.7): w demo wartość przykładowa „8 min”; w produkcji mediana z risk_signals (kpi_detection_lag, I-2l) albo „—”',
   factoringOffer: 'Oferta factoringu: zapis wyłącznie w przeglądarce, bez tabeli w bazie',
   demoMarksToggle: 'Przełącznik oznaczeń demonstracyjnych: w produkcji nie ma danych demonstracyjnych',
-  permitNumber: 'Numer i zgodność zezwolenia w szufladzie (6.4/6.5): tabela zezwoleń bez polityki odczytu',
   clientEta: 'ETA liczona w przeglądarce ze statusu (M12): w produkcji ETA v1 z bazy (compute_load_eta)',
 } as const;
 

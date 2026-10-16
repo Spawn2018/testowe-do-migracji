@@ -203,6 +203,10 @@ Odświeżone 15 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visua
 
 Odświeżone 14 migawek Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38487793951, gałąź `wyglad/P3-b`, commit `a54f1da`). Ekrany: Kokpit — 6 kafelków E9 w 2 kolumnach, stopka czasu wykrycia, „Najpilniejsze” zamiast czerwonego banera; wszystkie ekrany — lewe menu z liczbami tylko przy „Ryzyka” i „Faktury” (bez Harmonogramu, Stref, Automatyzacji). Matrycy 280 ujęć nie ruszano.
 
+## wyglad/P7-a (15.10.2026) — E32 panel transportu: Przegląd i okno Awizacja
+
+Odświeżona 1 migawka Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38660778186, gałąź `wyglad/P7-a`, commit `bd24514`): „stan-zablokowany” — Przegląd w kolejności E32 (Plan i ETA, Awizacja / Kierowcy, Ładunek i zestaw, Numery, Dokumenty), bez „Kontroli trasy”, „Przeszkód” i czerwonego baneru zezwolenia. Pozostałe 14 migawek bez zmian (bajt w bajt). Matrycy 280 ujęć nie ruszano.
+
 ## wyglad/P6-b (14.10.2026) — E17 panel transportu: Historia i Czat
 
 Odświeżona 1 migawka Playwright (`tests/__screenshots__/`) z przebiegu `visual.yml` `update=true` (run 38639213705, gałąź `wyglad/P6-b`, commit `6e734fa`): „stan-zablokowany” — zakładka „Czat” zamiast „Ustalenia” (E17, 20:57) i liczba przy „Ryzyka” liczona kartami (E7-2, wyglad/P6-a). Pozostałe 14 migawek bez zmian (bajt w bajt). Matrycy 280 ujęć nie ruszano.

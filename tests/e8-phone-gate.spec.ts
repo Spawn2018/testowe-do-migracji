@@ -2099,6 +2099,8 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
       const hits: Hit[] = [];
       await boot(page, 'SCX', true);
       await openCode(page, 'P-01');
+      /* wyglad/P7-a — E32 pkt 9: na telefonie sekcja „Awizacja” w Przeglądzie zwinięta — rozwinięcie przed przyciskiem */
+      await page.locator('.drawer details[data-po="awiz"] > summary').click();
       await page.locator('[data-awiz-open]').click();
       await page.locator('[data-awiz-tracking]').scrollIntoViewIfNeeded();
       hits.push(...await measure(page, 'awizacja-link', width, 'SCX'));
@@ -2311,6 +2313,149 @@ test.describe('wyglad/P5 Dokumenty — E31', () => {
           await page.waitForTimeout(200);
           hits.push(...await measure(page, 'wgraj-p5', width, role));
         }
+      }
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});
+
+/*
+ * wyglad/P7-a — panel transportu › Przegląd i okno Awizacja (E32, img/e32-after; piloci D-20261009-1233-01, konwój R1).
+ * Kolejność sekcji, „Do zrobienia przy tym transporcie” / linia stanu KSH, daty z dniem tygodnia i pochodzeniem, bez „Kontroli
+ * trasy”, „Przeszkód” i czerwonego baneru zezwolenia; okno Awizacja z „Brakuje: …” i terminem, zapis części; piloci przy KR.
+ * Telefon: strzałka wstecz, sekcje zwinięte z linią stanu, mapa 150 px, okno na cały ekran — 0 w bramie E8.
+ */
+test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  /* SG-19: załadunek sob 17.10, bez awizacji; chwila w dniu załadunku (pilne od 16.10, 12:00) */
+  const NOW_URL = `/#/?now=${encodeURIComponent('2026-10-17T06:30:00Z')}`;
+  async function openLoad(page: Page, code: string) {
+    await page.evaluate((c) => { window.location.hash = `#/transport/${c}`; }, code);
+    await page.waitForSelector('aside.drawer [data-overview]', { timeout: 10_000 });
+    await page.waitForTimeout(300);
+  }
+  const closeDrawer = (page: Page) => page.locator('.drawer .drawer-hd button.iconbtn').last().click();
+
+  test('komputer: kolejność sekcji, daty z dniem tygodnia, bez kontroli trasy i baneru; SCX zapisuje część awizacji; KSH linia stanu', async ({ page, browser }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'HHL', false, NOW_URL);
+    await openLoad(page, 'SG-19');
+    await expect(page.locator('.drawer [data-hd-load]')).toHaveText('sob 17.10 · t42');
+    await expect(page.locator('.drawer [data-hd-deliver]')).toHaveText('czw 22.10 · t43');
+    const order = await page.locator('.drawer [data-overview] [data-po]').evaluateAll((els) => els.map((e) => e.getAttribute('data-po')));
+    expect(order).toEqual(['plan', 'awiz', 'cargo', 'numbers', 'docs']);
+    await expect(page.locator('.drawer [data-route-check], .drawer [data-corridor-obstacles], .drawer [data-plan-dates], .drawer .banner[data-permit]')).toHaveCount(0);
+    await expect(page.locator('.drawer [data-load-when]')).toContainText('sob 17.10.2026');
+    await expect(page.locator('.drawer [data-dates-origin]')).toContainText('z harmonogramu KSH');
+    await expect(page.locator('.drawer [data-dates-origin]')).not.toContainText('potwierdził');
+    await expect(page.locator('.drawer [data-awiz-state]')).toHaveAttribute('data-awiz-state', 'none');
+    await expect(page.locator('.drawer [data-po-set]')).toContainText('× 2,50 m');
+    await expect(page.locator('.drawer [data-po-permit-kind="FIRMA"]')).toBeVisible();
+    /* E32 pkt 2 / E9 krok 5: numer HHL wpisuje HHL w „Numerach zleceń”, bez okna Awizacja */
+    await expect(page.locator('.drawer [data-order="hhl"] input')).toBeVisible();
+    await expect(page.locator('.drawer [data-awiz-open]')).toHaveCount(0);
+    await expect(page.locator('.drawer [data-awiz-fix]')).toHaveText('Popraw awizację');
+    await expect(page.locator('.drawer [data-action="export-load-pdf-map"]')).toBeVisible();
+    await closeDrawer(page);
+
+    /* SCX: „Uzupełnij awizację” → „Brakuje: …” z terminem; zapis kierowcy i ciągnika → „Brakuje: telefon, naczepa” */
+    await boot(page, 'SCX', false, NOW_URL);
+    await openLoad(page, 'SG-19');
+    await page.locator('.drawer [data-awiz-open]').click();
+    const modal = page.locator('[data-awiz-modal]');
+    await expect(modal.locator('#awiz-title')).toContainText('Awizacja · SG-19');
+    await expect(modal.locator('[data-awiz-missing]')).toContainText('Brakuje: kierowca, telefon, ciągnik, naczepa.');
+    await expect(modal.locator('[data-awiz-missing]')).toContainText('Pilne od 16.10, 12:00');
+    await expect(modal.locator('[data-awiz-pilots]')).toHaveCount(0);
+    await expect(modal.locator('[data-awiz-seg]')).toHaveAttribute('data-awiz-seg', 'one');
+    await expect(modal.locator('[data-hhl-ro]')).toBeVisible();
+    await expect(modal.locator('.am-need')).toHaveCount(4);
+    await modal.locator('label.form-field', { hasText: 'Imię i nazwisko' }).first().locator('input').fill('Jan Testowy');
+    await modal.locator('label.form-field', { hasText: 'Ciągnik' }).first().locator('input').fill('TE 00001');
+    await expect(modal.locator('[data-awiz-missing]')).toContainText('Brakuje: telefon, naczepa.');
+    await modal.locator('[data-awiz-swap]').check();
+    await expect(modal.locator('[data-awiz-seg="SE"]')).toBeVisible();
+    await expect(modal.locator('[data-awiz-missing]')).toContainText('kierowca odcinka SE');
+    await modal.locator('[data-awiz-swap]').uncheck();
+    await modal.locator('[data-awiz-save]').click();
+    await expect(modal).toHaveCount(0);
+    await expect(page.locator('.drawer [data-awiz-state]')).toHaveAttribute('data-awiz-state', 'part');
+    await expect(page.locator('.drawer [data-po-driver="one"]')).toContainText('Jan Testowy');
+    await expect(page.locator('.drawer [data-awiz-open]')).toHaveText('Edytuj awizację');
+    await closeDrawer(page);
+
+    /* SCX, KR: sekcja „Piloci” — pilot PL i SE, tylko numer rejestracyjny oraz imię i nazwisko */
+    await openLoad(page, 'K-03');
+    await expect(page.locator('.drawer [data-po-pilot]')).toHaveCount(2);
+    await page.locator('.drawer [data-awiz-open]').click();
+    await expect(modal.locator('[data-awiz-pilots]')).toContainText('2 BRAKUJĄ');
+    await expect(modal.locator('[data-awiz-pilot]')).toHaveCount(2);
+    await expect(modal.locator('[data-awiz-pilot] input')).toHaveCount(4);
+    await expect(modal.locator('[data-awiz-missing]')).toContainText('pilot PL — numer rejestracyjny, imię i nazwisko');
+    await modal.locator('.iconbtn').click();
+    await closeDrawer(page);
+
+    /* SG: piloci nie pojawiają się w żadnej roli */
+    await openLoad(page, 'SG-08');
+    await expect(page.locator('.drawer [data-po-pilot]')).toHaveCount(0);
+    await expect(page.locator('.drawer [data-po-driver="one"] a.po-call')).toHaveAttribute('href', /^tel:\+?\d+$/);
+    await closeDrawer(page);
+
+    /* KSH: bez Do zrobienia i przycisków awizacji, linia stanu; bez numerów zleceń (E41); „Edytuj” daty.
+       Nowa karta bez zapisanego stanu — zapis awizacji SCX wyżej mógł dojść do pamięci po wyczyszczeniu w `boot`
+       (wyścig widoczny w CI 16.10, run 38843857595) */
+    const kshCtx = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport: { width: 1440, height: 1000 } });
+    const ksh = await kshCtx.newPage();
+    try {
+      await boot(ksh, 'KSH', false, NOW_URL);
+      await openLoad(ksh, 'SG-19');
+      await expect(ksh.locator('.drawer [data-po-todo]')).toHaveCount(0);
+      await expect(ksh.locator('.drawer [data-po-ksh-line]')).toHaveText('Awizacja: przewoźnik uzupełnia');
+      await expect(ksh.locator('.drawer [data-awiz-open], .drawer [data-awiz-fix], .drawer [data-order]')).toHaveCount(0);
+      await expect(ksh.locator('.drawer [data-ksh-edit]')).toHaveText('Edytuj');
+    } finally {
+      await kshCtx.close();
+    }
+  });
+
+  for (const role of ['HHL', 'SCX', 'KSH'] as const) {
+    test(`telefon ${role}: strzałka wstecz, sekcje zwinięte z linią stanu, mapa 150 px; okno Awizacja na cały ekran — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role, false, NOW_URL);
+      const hits: Hit[] = [];
+      const gate = async (name: string) => {
+        for (const width of [...WIDTHS, 768]) {
+          await page.setViewportSize({ width, height: 844 });
+          await page.waitForTimeout(150);
+          hits.push(...await measure(page, name, width, role));
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
+      };
+      await openLoad(page, 'SG-19');
+      await expect(page.locator('.drawer .wb-back')).toBeVisible();
+      await expect(page.locator('.drawer .drawer-hd button.iconbtn')).toHaveCount(1);
+      const folds = page.locator('.drawer details.po-fold');
+      await expect(folds).toHaveCount(role === 'KSH' ? 4 : 5);
+      expect(await folds.evaluateAll((els) => els.filter((d) => (d as HTMLDetailsElement).open).length)).toBe(0);
+      await expect(page.locator('.drawer details[data-po="plan"] > summary')).toContainText('sob 17.10 → czw 22.10');
+      await expect(page.locator('.drawer details[data-po="awiz"] > summary')).toContainText('brak');
+      const map = await page.locator('.drawer [data-load-map]').boundingBox();
+      expect(map && map.height).toBeLessThanOrEqual(152);
+      for (const s of await page.locator('.drawer details.po-fold > summary').all()) {
+        const b = await s.boundingBox();
+        expect(b && b.height).toBeGreaterThanOrEqual(44);
+      }
+      await gate('panel-przeglad');
+      await folds.evaluateAll((els) => els.forEach((d) => { (d as HTMLDetailsElement).open = true; }));
+      await gate('panel-przeglad-otwarte');
+      if (role === 'SCX') {
+        await closeDrawer(page);
+        await openLoad(page, 'K-03');
+        await page.locator('.drawer details[data-po="awiz"] > summary').click();
+        await page.locator('.drawer [data-awiz-open]').click();
+        const box = await page.locator('[data-awiz-modal]').boundingBox();
+        expect(box && Math.round(box.width)).toBe(390);
+        await gate('okno-awizacja');
       }
       expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
     });
