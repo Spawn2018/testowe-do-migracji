@@ -2610,7 +2610,19 @@ Tabela sprawdzalności (prompt 16.10, 11:30 i 11:40). Pliki dopisków wchodzą z
 | D-20261016-0810-01 | #252 `wyglad/P10b-b` | P10b Pomoc i „Co nowego” | pkt 1–2 | P10b Odbiór pkt 4 |
 | D-20261016-0845-01 | #253 `wyglad/P10b-c` | P10a E23 i E47; P10b E23 i E47; P11 E46 | pkt 1–6 | P10a/P10b Odbiór pkt 8; E46 do pierwszego testu „bez pomiaru” |
 | D-20261016-0930-01 | #254 `wyglad/P10b-d` | P10b E37 pierwsze wejście | pkt 1–4 | P10b Odbiór pkt 6 |
-| D-20261016-1020-01 | #256 `wyglad/P7-c` | P7 E38, E30, E20 | pkt 1–6 | TEST: 1366 px, eksport „t40–t41”, układ na drugim komputerze, telefon 390, kwoty i kolumny według firmy, waga elementu, „ZMIANA NUMERACJI” |
+| D-20261016-1020-01 | #256 `wyglad/P7-c` | P7 E38, E30, E20 | pkt 1–6 | TEST: 1366 px, eksport „t40–t41”, układ na drugim komputerze, telefon 390, kwoty i kolumny według firmy, waga elementu, „ZMIANA NUMERACJI”; bramka visual (`etap4-ui`, `etap5-ui`, `aud03-ksh-panel.spec`, `d-eur-t`, `visual-states`) już przepisana w #256 (`56847e2`) — tylko sprawdzenie; zostaje `scheduleColumns.ts` w `tests/order-numbers.test.ts` |
+| D-20261016-1150-01 | #260 `wyglad/P7-d` | P7 E30 pkt 7 Rejsy | wygląd; danych do podłączenia nie ma | pkt 4 |
+| D-20261016-1230-01 | #260 niesie plik dopisku | P7 E38 — uzupełnienie W13 | pkt 2–5 | pkt 6 |
+
+E30 pkt 7 Rejsy → wygląd (P7-d).
+
+P7 — uzupełnienie W13:
+- odczyt: od 16.10, plik → Watch Tower co 5 min (przełącznik zapisu wyłączony);
+- zapis: po pliku testowym od działu IT KSH (przyszły tydzień); właściwy plik po zgodzie właściciela;
+- stan: pole `kshSharePointSync` (`lastReadAt`, `lastWriteAt`, `writeEnabled`, `sourceOk`, `secretExpiresOn`, `lastRun.created` / `changed` / `skipped` / `ntg` / `cases`) — typ w `src/types.ts`, demo w `src/data/seed.ts`; wygląd linii i wiersza w Stanie systemu robi koordynator (`wyglad/P7-e`).
+
+**DOPISEK 1150 WŁĄCZONY — commit (ten docs), P7: E30 pkt 7 Rejsy → wygląd.**  
+**DOPISEK 1230 WŁĄCZONY — commit (ten docs), P7: uzupełnienie W13 (odczyt teraz, zapis po pliku testowym); W29, W31 zamknięte.**
 
 E49 miejsca w kodzie → P6.  
 Czat — miejsca w kodzie, Cz14 → P6.  

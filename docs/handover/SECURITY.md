@@ -125,3 +125,6 @@ na swoich transportach (pozycji bez transportu nie widzi). Zasobniki: `zdjecia` 
 `tower-retencja-przebiegow` (02:50 UTC, `purge_integration_runs`): `integration_runs` udane > 30 dni i nieudane > 180 dni
 są usuwane; ostatni udany przebieg każdego zadania zostaje zawsze (strażnik 0035 liczy od niego okno). Funkcja tylko
 dla zadań systemowych (bez EXECUTE dla anon/authenticated).
+
+## 10. Sekrety SharePoint pliku KSH (D-20261016-1230-01 pkt 4)
+Cztery nazwy, tylko funkcja serwerowa, bez przedrostka `VITE_`: `SHAREPOINT_TENANT_ID`, `SHAREPOINT_CLIENT_ID`, `SHAREPOINT_CLIENT_SECRET` (wartość sekretu — „Value”, nie „Secret ID”), `SHAREPOINT_FILE_URL`. Wartości wpisuje właściciel w `.env.local` i jako sekrety funkcji na TEST i na produkcji. Wartości nigdy w czacie, logach, commitach, raportach ani `POSTEP.md`. Sprawdzenie obecności — tylko „jest / brak”. Wymiana sekretu przed 12.10.2028; 30 dni wcześniej ostrzeżenie w Stanie systemu. Pliku z SharePoint nie otwiera się w czacie — są w nim dane kierowców. Logi i raporty: liczby, kody „Wysyłka” i nazwy kolumn.
