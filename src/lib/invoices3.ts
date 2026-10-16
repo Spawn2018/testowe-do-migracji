@@ -38,6 +38,14 @@ export const canVerifyBill = (role: RoleId, b: Pick<Bill, 'recipient' | 'verific
 export const canMarkPaid = (role: RoleId): boolean => role === 'HHL';
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+/** Decyzja właściciela 16.10, 13:58 · 1: ceny netto, VAT 23 % dolicza system (nikt nie wpisuje VAT ani brutto). */
+export const BILL_VAT_RATE = 0.23;
+/** VAT = round(netto × 0,23, 2), brutto = netto + VAT (audyt-C C-08, C-09). */
+export function vatGrossOf(net: number): { vat: number; gross: number } {
+  const vat = round2(net * BILL_VAT_RATE);
+  return { vat, gross: round2(net + vat) };
+}
 const outOfTolerance = (diff: number, base: number) =>
   Math.abs(diff) > BILL_TOLERANCE.abs && (base === 0 || Math.abs(diff) / base > BILL_TOLERANCE.pct);
 
@@ -227,6 +235,9 @@ export const paymentPill = (p: BillPayment): string => (p === 'PO_TERMINIE' ? 'p
 /**
  * Dane startowe (DemoProvider): po dwie faktury w każdym kierunku z transportów zrealizowanych.
  * Kwoty = wyliczenie (zgodne) poza jedną pozycją sporną; waluty EUR i PLN (kurs per pozycja z reguły).
+ * audyt-C C-11 (E4, E40): faktura za tydzień rozładunku, wystawiona po końcu tego tygodnia (nigdy przed rozładunkiem);
+ * tygodnie: dwa ostatnie zamknięte przed „dziś”, a gdy dane demo mają rozładunki po „dziś” — dwa pierwsze tygodnie
+ * rozładunków. VAT 23 % z netto (C-08).
  */
 export function buildSeedBills(loads: Load[], todayLocal: string): Bill[] {
   const delivered = loads
@@ -238,9 +249,11 @@ export function buildSeedBills(loads: Load[], todayLocal: string): Bill[] {
     const wk = isoWeekKeyLocal(at);
     byWeek.set(wk, [...(byWeek.get(wk) ?? []), l]);
   }
-  const weeks = [...byWeek.keys()].sort().slice(-2);
+  const all = [...byWeek.keys()].sort();
+  const closed = all.filter((wk) => addDaysIso(isoWeekMonday(wk), 6) < todayLocal);
+  const weeks = closed.length >= 2 ? closed.slice(-2) : all.slice(0, 2);
   const out: Bill[] = [];
-  const mk = (direction: BillDirection, wk: string, currency: 'EUR' | 'PLN', seq: number, issueAgoDays: number, opts: Partial<Bill>, bump?: number): Bill | null => {
+  const mk = (direction: BillDirection, wk: string, currency: 'EUR' | 'PLN', seq: number, issueAfterDays: number, opts: Partial<Bill>, bump?: number): Bill | null => {
     const ls = byWeek.get(wk) ?? [];
     if (!ls.length) return null;
     const lines: BillLine[] = ls.map((l, i) => {
@@ -255,9 +268,11 @@ export function buildSeedBills(loads: Load[], todayLocal: string): Bill[] {
       return { loadId: l.id, invoicedNet: net, invoicedFuel: null, fx, expectedNet: exp, flags: outOfTolerance(net - exp, exp) ? ['KWOTA'] : [] };
     });
     const net = round2(lines.reduce((s, l) => s + l.invoicedNet, 0));
-    const vat = 0; // odwrotne obciążenie — przepisane z dokumentu, system nie liczy VAT
+    /* audyt-C C-08: VAT 23 % liczy system z netto (decyzja 16.10, 13:58 · 1) */
+    const { vat } = vatGrossOf(net);
     const { issuer, recipient } = billParties(direction);
-    const issueDate = addDaysIso(todayLocal, -issueAgoDays);
+    /* wystawiona `issueAfterDays` dni po niedzieli tygodnia rozładunku */
+    const issueDate = addDaysIso(isoWeekMonday(wk), 6 + issueAfterDays);
     return {
       id: `bill-${direction === 'KOSZT' ? 'k' : 'p'}-${wk}`,
       direction, issuer, recipient,
@@ -270,13 +285,13 @@ export function buildSeedBills(loads: Load[], todayLocal: string): Bill[] {
     };
   };
   const [w1, w2] = weeks.length === 2 ? weeks : [weeks[0], weeks[0]];
-  const k1 = mk('KOSZT', w1, 'EUR', 1, 40, { verification: 'ZAAKCEPTOWANA' });
-  if (k1) out.push({ ...k1, payment: 'OPLACONA', paidAt: addDaysIso(k1.issueDate, 30) });
-  const k2 = w2 !== w1 ? mk('KOSZT', w2, 'PLN', 2, 5, {}, 180) : null;
+  const k1 = mk('KOSZT', w1, 'EUR', 1, 1, { verification: 'ZAAKCEPTOWANA' });
+  if (k1) out.push({ ...k1, payment: 'OPLACONA', paidAt: addDaysIso(k1.issueDate, 14) });
+  const k2 = w2 !== w1 ? mk('KOSZT', w2, 'PLN', 2, 1, {}, 180) : null;
   if (k2) out.push(k2);
-  const p1 = mk('PRZYCHOD', w1, 'EUR', 1, 35, { verification: 'ZGODNA' });
+  const p1 = mk('PRZYCHOD', w1, 'EUR', 1, 2, { verification: 'ZGODNA' });
   if (p1) out.push(p1);
-  const p2 = w2 !== w1 ? mk('PRZYCHOD', w2, 'PLN', 2, 2, {}) : null;
+  const p2 = w2 !== w1 ? mk('PRZYCHOD', w2, 'PLN', 2, 3, {}) : null;
   if (p2) out.push(p2);
   return out.map((b) => ({ ...b, payment: billPaymentToday(b, todayLocal) }));
 }

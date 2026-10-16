@@ -276,7 +276,7 @@ test.describe('wyglad/P10b-a komunikat HHL z „Zamknij” (E37 pkt 4)', () => {
     await expect(bar).toBeVisible();
     await expect(bar.locator('.subbar-tag')).toHaveText('KOMUNIKAT HHL');
     await expect(bar.locator('.subbar-body')).toHaveText('Prom Stena Estelle wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.');
-    await expect(bar.locator('.subbar-until')).toHaveText(/^ · do \d{2}\.\d{2}, \d{2}:\d{2}$/);
+    await expect(bar.locator('.subbar-until')).toHaveText(/^ · do \d{2}\.\d{2}\.\d{4}, \d{2}:\d{2}$/);
     const close = bar.locator('[data-bcast-close]');
     await expect(close.locator('.subbar-close-tx')).toHaveText('Zamknij');
     await expect(close.locator('.subbar-close-tx')).toBeVisible();
@@ -402,6 +402,20 @@ test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
     await expect(page.locator('[data-page="map"] .wt-marker-ferry')).toHaveCount(0);
   });
 
+  test('komputer: najechanie na wiersz tabeli podświetla znacznik (E29, audyt D-03)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    const lit = page.locator('[data-page="map"] .leaflet-marker-icon.is-hover');
+    await expect(page.locator('[data-page="map"] .wt-mk').first()).toBeAttached();
+    await expect(lit).toHaveCount(0);
+    /* wiersz z pozycją GPS ma znacznik (sam albo w grupie strefy) */
+    await page.locator('[data-map-table] tbody tr[data-load]:has(td[data-map-pos="fix"])').first().hover();
+    await expect(lit).toHaveCount(1);
+    await page.mouse.move(4, 4);
+    await expect(lit).toHaveCount(0);
+  });
+
   test('KSH: bez przycisku „Strefy”, nazwa transportu to sam kod (E41)', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'KSH');
@@ -410,6 +424,17 @@ test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
     const names = await page.locator('[data-map-table] tbody tr[data-load] td[data-map-name]').allInnerTexts();
     expect(names.length).toBeGreaterThan(0);
     expect(names.every((x) => /^[A-Z]+-\d+$/.test(x.trim()))).toBe(true);
+    /* audyt D-04 (E41, 08.10): KSH szuka tylko po kodzie i tablicach — numer zlecenia HHL ani SCX nie jest kluczem */
+    const search = page.locator('[data-map-filters] .map-search');
+    await expect(search).toHaveAttribute('placeholder', 'Szukaj: kod, tablice');
+    const rows = page.locator('[data-map-table] tbody tr[data-load]');
+    await search.fill('HHL/2026');
+    await expect(rows).toHaveCount(0);
+    await search.fill('SCX-26');
+    await expect(rows).toHaveCount(0);
+    await search.fill(names[0].trim());
+    expect(await rows.count()).toBeGreaterThan(0);
+    await search.fill('');
   });
 
   test('telefon 390: „Warstwy ▾” → arkusz z warstwami i legendą; lista jako karty; znacznik → arkusz z „Otwórz panel transportu”', async ({ page }) => {
@@ -486,6 +511,28 @@ test.describe('wyglad/P9-d kadr całej trasy (E1)', () => {
     const b = await routeBox(page, '[data-page="map"] .mapbox');
     expect(b.inside, 'bez zapamiętanego przesunięcia').toBe(true);
     await expect(page.locator('[data-cockpit-full-route], .map-fit-btn')).toHaveCount(0);
+  });
+
+  test('telefon 390: trasa nad podpisem podkładu; kafelki nad mapą, „Strefy” w wierszu z tytułem (audyt D-05, D-06)', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', true);
+    await openView(page, 'map');
+    await page.waitForTimeout(800);
+    const a = await routeBox(page, '[data-page="map"] .mapbox');
+    expect(a.inside, JSON.stringify(a)).toBe(true);
+    /* E1 pkt 1a–1b: podpis podkładu (na telefonie 2 linie) nie zasłania początku trasy (Śrem) */
+    const at = (await page.locator('[data-page="map"] .leaflet-control-attribution').boundingBox())!;
+    expect(a.u.b, 'trasa nad podpisem podkładu').toBeLessThanOrEqual(at.y - 20);
+    /* E29 makieta „Po zmianie · telefon”: nagłówek → kafelki → mapa → filtry */
+    const bar = (await page.locator('[data-page="map"] [data-stage-bar="page"]').boundingBox())!;
+    const map = (await page.locator('[data-page="map"] .mapbox').boundingBox())!;
+    const filters = (await page.locator('[data-map-filters]').boundingBox())!;
+    expect(bar.y + bar.height, 'kafelki nad mapą').toBeLessThanOrEqual(map.y + 1);
+    expect(map.y + map.height, 'filtry pod mapą').toBeLessThanOrEqual(filters.y + 1);
+    const title = (await page.locator('[data-page="map"] > .panel-hd h2').boundingBox())!;
+    const zones = (await page.locator('[data-map-zones]').boundingBox())!;
+    expect(zones.y < title.y + title.height && zones.y + zones.height > title.y, '„Strefy” w wierszu z tytułem').toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
 
   test('komputer: Przegląd w panelu — przybliżenie 11, pojazd na środku', async ({ page }) => {
@@ -587,7 +634,7 @@ test.describe('wyglad/P9-e grupowanie na promie i w strefie (E45 pkt 5, R5)', ()
 });
 
 /* wyglad/P9-f — E32 pkt 3 (zdecydowane 08.10 12:14) i E27: mapa w Przeglądzie panelu — bez pozycji cała trasa i powód
-   („Brak pozycji · Śledzenie od 07.10, 03:00”), po „Dostarczone” śledzenie zakończone, na placu strefa placu. */
+   („Brak pozycji · Śledzenie od 07.10.2026, 03:00”), po „Dostarczone” śledzenie zakończone, na placu strefa placu. */
 test.describe('wyglad/P9-f mapa w Przeglądzie (E32 pkt 3)', () => {
   test.describe.configure({ mode: 'serial', timeout: 300_000 });
   async function openPanel(page: Page, code: string) {
@@ -605,7 +652,7 @@ test.describe('wyglad/P9-f mapa w Przeglądzie (E32 pkt 3)', () => {
     await boot(page, 'HHL');
     await openPanel(page, 'SG-11');
     const note = page.locator('aside.drawer [data-drawer-note="before"]');
-    await expect(note).toHaveText('Brak pozycji · Śledzenie od 07.10, 03:00');
+    await expect(note).toHaveText('Brak pozycji · Śledzenie od 07.10.2026, 03:00');
     const r = await page.evaluate(() => {
       const root = document.querySelector('aside.drawer [data-load-map]') as HTMLElement;
       const n = (root.querySelector('[data-drawer-note]') as HTMLElement).getBoundingClientRect();
@@ -1015,6 +1062,90 @@ test.describe('wyglad/P7-c Harmonogram w układzie pliku (E38, E30, E20)', () =>
   });
 });
 
+/* wyglad/P7-d — E30 pkt 7: Harmonogram › Rejsy — nagłówek obu przepraw, domyślnie przyszłe rejsy do Szwecji, „Pokaż powroty”,
+   „Stena Line” zamiast klucza, kolumna „Transporty” z kodami (kliknięcie filtruje Harmonogram), zasięg rozkładów pod tabelą,
+   edycja tylko Administrator HHL; telefon — karty (E8). Rejsy dodane w teście przez „Dodaj rejs” (dane wymyślone, G-09). */
+test.describe('wyglad/P7-d Rejsy (E30 pkt 7)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const openRejsy = async (page: Page) => {
+    await openView(page, 'sched');
+    await page.locator('[data-sched-tab="sailings"]').click();
+    await expect(page.locator('[data-sailings]')).toBeVisible();
+  };
+  const addSailing = async (page: Page, vessel: string, route: string, dep: string, arr: string) => {
+    await page.locator('[data-sail-new]').click();
+    const form = page.locator('[data-sail-form]');
+    await form.locator('select[name="vessel"]').selectOption(vessel);
+    await form.locator('select[name="route"]').selectOption(route);
+    await form.locator('input[name="dep"]').fill(dep);
+    await form.locator('input[name="arr"]').fill(arr);
+    await form.locator('[data-sail-submit]').click();
+    await expect(form).toHaveCount(0);
+  };
+
+  test('komputer 1366, HHL: kolumny z makiety, tylko do Szwecji, „Pokaż powroty”, Stena Line, zasięg, kody filtrują Harmonogram', async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 900 });
+    await boot(page, 'HHL');
+    await openRejsy(page);
+    await expect(page.locator('[data-page="schedule"] .panel-hd .sub')).toHaveText('Gdańsk → Nynäshamn i Gdynia → Karlskrona');
+    expect(await page.locator('[data-sailings] thead th').allInnerTexts()).toEqual(['Odejście', 'Statek', 'Trasa', 'Przypłynięcie', 'Źródło', 'Transporty', '']);
+    await expect(page.locator('[data-sail-future]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('[data-sail-returns]')).toHaveAttribute('aria-pressed', 'false');
+    await addSailing(page, 'Stena Estelle', 'GDY-KAA', '2026-09-24T08:00', '2026-09-24T17:45');
+    await addSailing(page, 'Stena Spirit', 'KAA-GDY', '2026-09-24T09:00', '2026-09-24T19:30');
+    const routes = () => page.locator('[data-sailings] tbody tr[data-sailing] td.sv-route').allInnerTexts();
+    expect((await routes()).every((r) => r === 'GDN → NYN' || r === 'GDY → KAA'), 'domyślnie tylko do Szwecji').toBe(true);
+    expect(await routes()).toContain('GDY → KAA');
+    await page.locator('[data-sail-returns]').click();
+    expect(await routes()).toContain('KAA → GDY');
+    await page.locator('[data-sail-returns]').click();
+    expect(await routes()).not.toContain('KAA → GDY');
+    await expect(page.locator('[data-sailings]')).not.toContainText('sail_src_');
+    await expect(page.locator('[data-sailings]')).not.toContainText('sv_');
+    await expect(page.locator('[data-sail-reach]')).toHaveText(/^Rozkład w bazie: Stena Line do \d\d\.\d\d\.\d{4}, Polferries do \d\d\.\d\d\.\d{4}\.$/);
+    /* „Przyszłe” wyłączone pokazuje też minione rejsy */
+    const futureN = await page.locator('[data-sailings] tbody tr[data-sailing]').count();
+    await page.locator('[data-sail-future]').click();
+    expect(await page.locator('[data-sailings] tbody tr[data-sailing]').count()).toBeGreaterThan(futureN);
+    await page.locator('[data-sail-future]').click();
+    /* odwołany rejs z przypisanym transportem: kod w kolumnie „Transporty” → Harmonogram z filtrem rejsu */
+    const row = page.locator('[data-sailings] tbody tr[data-sail-status="ODWOLANY"]', { has: page.locator('[data-sail-loads]') }).first();
+    await expect(row.locator('.pill')).toHaveText('odwołany');
+    const codes = (await row.locator('[data-sail-loads]').innerText()).split(', ');
+    await row.locator('[data-sail-loads]').click();
+    await expect(page.locator('[data-sched-tab="loads"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('[data-sail-filter]')).toContainText('Rejs: ');
+    await expect(page.locator('[data-sched-layout] tbody tr[data-load]')).toHaveCount(codes.length);
+    for (const c of codes) await expect(page.locator('[data-sched-layout] tbody')).toContainText(c);
+    await page.locator('[data-sail-filter]').click();
+    await expect(page.locator('[data-sail-filter]')).toHaveCount(0);
+    expect(await page.locator('[data-sched-layout] tbody tr[data-load]').count()).toBeGreaterThan(codes.length);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1366);
+  });
+
+  test('komputer 1440, KSH: tylko podgląd — bez „Dodaj rejs”, „Opóźnienie” i „Odwołaj”, zdanie o Administratorze HHL', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'KSH');
+    await openRejsy(page);
+    await expect(page.locator('[data-sail-new]')).toHaveCount(0);
+    await expect(page.locator('[data-sail-delay], [data-sail-cancel]')).toHaveCount(0);
+    expect(await page.locator('[data-sailings] thead th').allInnerTexts()).toEqual(['Odejście', 'Statek', 'Trasa', 'Przypłynięcie', 'Źródło', 'Transporty']);
+    await expect(page.locator('[data-sailings] .sv-foot')).toContainText('Rejsy zmienia tylko Administrator HHL.');
+  });
+
+  test('telefon 390, HHL: karty zamiast tabeli, cele ≥ 44 px, bez przewijania w bok', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', true);
+    await openRejsy(page);
+    await expect(page.locator('[data-sailings] table')).toHaveCount(0);
+    const cards = page.locator('[data-sail-cards] [data-sailing]');
+    expect(await cards.count()).toBeGreaterThan(0);
+    const small = await page.locator('[data-sailings] button').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height < 44).map((e) => e.textContent));
+    expect(small).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  });
+});
+
 test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
   test.describe.configure({ mode: 'serial', timeout: 120_000 });
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
@@ -1052,7 +1183,7 @@ test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
 const SUBBARS_HTML = `
 <div class="subbar subbar-preview" data-banner="preview" role="status"><p class="subbar-tx"><b>Podgląd: tak widzi KSH Użytkownik.</b> Nic tu nie zapiszesz.</p><button class="subbar-btn" type="button">Wróć do HHL</button></div>
 <div class="subbar subbar-actas" data-banner="impersonation" role="status"><p class="subbar-tx"><b>Działasz jako: dyspozytor SCX (Przemysław Szczepański-Kowalczyk)</b> Każda zmiana zapisze się w historii jako „administrator.hhl@przyklad.pl (HHL) jako dyspozytor SCX”.</p><button class="subbar-btn" type="button">Zakończ</button></div>
-<div class="subbar subbar-bcast" data-banner="system-broadcast" role="status"><p class="subbar-tx"><span class="subbar-tag">KOMUNIKAT HHL</span><b class="subbar-tag-ph">Komunikat HHL:</b> <b class="subbar-body">Prom Stena Estelle 09.10 wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.</b><span class="subbar-until"> · do 09.10, 12:00</span></p></div>`;
+<div class="subbar subbar-bcast" data-banner="system-broadcast" role="status"><p class="subbar-tx"><span class="subbar-tag">KOMUNIKAT HHL</span><b class="subbar-tag-ph">Komunikat HHL:</b> <b class="subbar-body">Prom Stena Estelle 09.10.2026 wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.</b><span class="subbar-until"> · do 09.10.2026, 12:00</span></p></div>`;
 const LONG_NAME = 'Przemysław Szczepański-Kowalczyk';
 
 /**
@@ -2249,7 +2380,7 @@ test.describe('wyglad/P5 Dokumenty — E31', () => {
  */
 test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)', () => {
   test.describe.configure({ mode: 'serial', timeout: 300_000 });
-  /* SG-19: załadunek sob 17.10, bez awizacji; chwila w dniu załadunku (pilne od 16.10, 12:00) */
+  /* SG-19: załadunek sob. 17.10.2026, bez awizacji; chwila w dniu załadunku (pilne od 16.10.2026, 12:00) */
   const NOW_URL = `/#/?now=${encodeURIComponent('2026-10-17T06:30:00Z')}`;
   async function openLoad(page: Page, code: string) {
     await page.evaluate((c) => { window.location.hash = `#/transport/${c}`; }, code);
@@ -2262,12 +2393,12 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
     await page.setViewportSize({ width: 1440, height: 1000 });
     await boot(page, 'HHL', false, NOW_URL);
     await openLoad(page, 'SG-19');
-    await expect(page.locator('.drawer [data-hd-load]')).toHaveText('sob 17.10 · t42');
-    await expect(page.locator('.drawer [data-hd-deliver]')).toHaveText('czw 22.10 · t43');
+    await expect(page.locator('.drawer [data-hd-load]')).toHaveText('sob. 17.10.2026 · t42');
+    await expect(page.locator('.drawer [data-hd-deliver]')).toHaveText('czw. 22.10.2026 · t43');
     const order = await page.locator('.drawer [data-overview] [data-po]').evaluateAll((els) => els.map((e) => e.getAttribute('data-po')));
     expect(order).toEqual(['plan', 'awiz', 'cargo', 'numbers', 'docs']);
     await expect(page.locator('.drawer [data-route-check], .drawer [data-corridor-obstacles], .drawer [data-plan-dates], .drawer .banner[data-permit]')).toHaveCount(0);
-    await expect(page.locator('.drawer [data-load-when]')).toContainText('sob 17.10.2026');
+    await expect(page.locator('.drawer [data-load-when]')).toContainText('sob. 17.10.2026, 08:00–16:00');
     await expect(page.locator('.drawer [data-dates-origin]')).toContainText('z harmonogramu KSH');
     await expect(page.locator('.drawer [data-dates-origin]')).not.toContainText('potwierdził');
     await expect(page.locator('.drawer [data-awiz-state]')).toHaveAttribute('data-awiz-state', 'none');
@@ -2287,7 +2418,7 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
     const modal = page.locator('[data-awiz-modal]');
     await expect(modal.locator('#awiz-title')).toContainText('Awizacja · SG-19');
     await expect(modal.locator('[data-awiz-missing]')).toContainText('Brakuje: kierowca, telefon, ciągnik, naczepa.');
-    await expect(modal.locator('[data-awiz-missing]')).toContainText('Pilne od 16.10, 12:00');
+    await expect(modal.locator('[data-awiz-missing]')).toContainText('Pilne od 16.10.2026, 12:00');
     await expect(modal.locator('[data-awiz-pilots]')).toHaveCount(0);
     await expect(modal.locator('[data-awiz-seg]')).toHaveAttribute('data-awiz-seg', 'one');
     await expect(modal.locator('[data-hhl-ro]')).toBeVisible();
@@ -2359,7 +2490,7 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
       const folds = page.locator('.drawer details.po-fold');
       await expect(folds).toHaveCount(role === 'KSH' ? 4 : 5);
       expect(await folds.evaluateAll((els) => els.filter((d) => (d as HTMLDetailsElement).open).length)).toBe(0);
-      await expect(page.locator('.drawer details[data-po="plan"] > summary')).toContainText('sob 17.10 → czw 22.10');
+      await expect(page.locator('.drawer details[data-po="plan"] > summary')).toContainText('sob. 17.10.2026 → czw. 22.10.2026');
       await expect(page.locator('.drawer details[data-po="awiz"] > summary')).toContainText('brak');
       const map = await page.locator('.drawer [data-load-map]').boundingBox();
       expect(map && map.height).toBeLessThanOrEqual(152);
@@ -2662,7 +2793,7 @@ test.describe('wyglad/P6-e — Czat: „Przeczytali”, dzwonek, odpowiedź z po
     await expect(li).toHaveCount(1);
     await expect(li.first()).toContainText('Jan Nowak');
     await expect(li.first()).toContainText('SCX');
-    await expect(li.first()).toContainText(/\d{2}\.\d{2}, \d{2}:\d{2}/);
+    await expect(li.first()).toContainText(/\d{2}\.\d{2}\.\d{4}, \d{2}:\d{2}/);
     await expect(page.locator('.drawer [data-chat-pending]')).toHaveText('Jeszcze nie otworzyli: KSH');
     await bellToggle(page);
     await expect(page.locator('.bell-pop [data-bell-chat]').filter({ hasText: 'SG-01 ·' })).toHaveCount(0);
@@ -2893,7 +3024,7 @@ test.describe('wyglad/P8-d Automatyzacje (E35, img/e35-after)', () => {
     await page.locator('[data-rule-then="notify-HHL_OPS"]').click();
     await page.locator('[data-rule-then="notify-SCX"]').click();
     await expect(page.locator('[data-rule-check]')).toContainText('zadziałałaby 1 raz');
-    await expect(page.locator('[data-rule-check]')).toContainText('SG-03 · plac od 07.10, 08:35 → 07.10, 11:35 (wyjazd 12:19)');
+    await expect(page.locator('[data-rule-check]')).toContainText('SG-03 · plac od 07.10.2026, 08:35 → 07.10.2026, 11:35 (wyjazd 12:19)');
     await expect(page.locator('[data-rule-check]')).toContainText('Wbudowane automaty robiące to samo: brak.');
     await noSideScroll(page, 1440);
     await page.locator('[data-rule-save]').click();

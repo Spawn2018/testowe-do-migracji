@@ -11,6 +11,7 @@ import { ft, ftp } from '../../i18n/p5';
 import { up } from './up';
 import '../finance/finance.css';
 import '../invoices/invoices.css';
+import { formatCalendarDay } from '../../lib/time';
 
 interface Props {
   locale: Locale;
@@ -21,7 +22,7 @@ interface Props {
 }
 
 const n2 = (n: number) => formatPlNumber(n, 2);
-const dmy = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
+const dmy = (d: string) => formatCalendarDay(d.slice(0, 10));
 
 export function FactoringOfferScreen({ locale, offer, readOnly, onChange, onSaved }: Props) {
   const view = factoringOfferOf();

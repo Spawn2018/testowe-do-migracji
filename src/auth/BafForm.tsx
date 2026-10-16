@@ -3,6 +3,7 @@ import { getSupabase } from './client';
 import { authErrorPl } from './config';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
+import { fmtDateTime } from '../lib/time';
 import { lookupMult, type SefsTier } from '../lib/sefs';
 import { prevWeekStatus, warsawDay } from '../lib/sefsWeek';
 import './auth.css';
@@ -207,7 +208,7 @@ export default function BafForm() {
         <h4 className="sec">{t(locale, 'i2_baf_log_h')}</h4>
         <div className="panel-bd flush" data-baf="log">
           {log.length === 0 ? <div className="auth-admin-row">{t(locale, 'i2_baf_log_empty')}</div> : log.map((l, i) => (
-            <div className="auth-admin-row" key={`${l.at}-${i}`}><span className="grow">{new Date(l.at).toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })} · <b>{t(locale, `i2_baf_act_${l.action}`)}</b> · {l.entity_id} <small>{l.actor}</small></span></div>
+            <div className="auth-admin-row" key={`${l.at}-${i}`}><span className="grow">{fmtDateTime(l.at)} · <b>{t(locale, `i2_baf_act_${l.action}`)}</b> · {l.entity_id} <small>{l.actor}</small></span></div>
           ))}
         </div>
       </div>

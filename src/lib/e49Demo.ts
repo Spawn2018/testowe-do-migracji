@@ -16,6 +16,13 @@ const g = globalThis as unknown as { __e49Demo?: St };
 const st = (): St => (g.__e49Demo ??= { decided: {} });
 
 const permitTrasa = (l: Load) => /^KR/i.test(l.code);
+
+/**
+ * Transporty demo z przykładami E49 — po kodzie (audyt-C C-12: `itemType` to już tylko symbol rodzaju, bez opisów
+ * „closure” / „weather hold”): zamknięty most przy T-17, postój przez wiatr przy SG-31.
+ */
+export const demoClosureLoad = (l: Pick<Load, 'code'>): boolean => l.code === 'T-17';
+const demoWindHoldLoad = (l: Pick<Load, 'code'>): boolean => l.code === 'SG-31';
 const dims = (l: Load) => {
   const f = (n: number) => new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
   return `${f(l.dims.lengthM)} × ${f(l.dims.widthM)} × ${f(l.dims.heightM)} m`;
@@ -88,7 +95,7 @@ export function demoEtaWx(load: Load, nowIso: string, detourLoadId: string | nul
     const d = st().decided[`detour:${load.id}`];
     if (d?.pick === 'DETOUR') out.unshift({ kind: 'DETOUR', addMin: 35, where: 'przez Kramfors i Sandöbron', source: 'SCX' });
     else out.unshift({ kind: 'CLOSURE_HOLD', addMin: Math.round(3.9 * 60), where: 'Högakustenbron (E4)', untilIso: iso(now + 5.5 * H), source: 'TRAFIKVERKET' });
-  } else if (/hold/i.test(load.itemType)) {
+  } else if (demoWindHoldLoad(load)) {
     out.unshift({ kind: 'WIND_HOLD', addMin: 6 * 60 + 30, where: 'E4 Umeå–Skellefteå', gustMs: 27, fromIso: iso(now + 2 * H), untilIso: iso(now + 8.5 * H), source: 'SMHI' });
   }
   return out;

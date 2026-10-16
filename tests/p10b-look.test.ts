@@ -47,7 +47,7 @@ describe('P10b-a · ekran „Link wygasł”', () => {
   });
   it('zaproszenie ważne: ważność linku i zaproszenia, „Wyślij nowy link na …”, przypis', () => {
     const html = screen({ email: 'anna.nowak@example.com', kind: 'invite', linkTtl: '24 h', inviteValidUntil: '2026-10-16T10:00:00Z', canResend: true });
-    expect(html).toMatch(/Link w e-mailu działa 24 h\. Twoje zaproszenie jest ważne do 16\.10, 12:00\./);
+    expect(html).toMatch(/Link w e-mailu działa 24 h\. Twoje zaproszenie jest ważne do 16\.10\.2026, 12:00\./);
     expect(html).toContain('Wyślij nowy link na anna.nowak@example.com');
     expect(html).toContain('Nowy link przychodzi w ciągu minuty. Problem? Zadzwoń do Operacji HHL.');
   });

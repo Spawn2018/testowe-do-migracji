@@ -5,6 +5,7 @@
  */
 import type { Load } from '../types';
 import { stageTileOf, trackingPhase } from './stageTiles';
+import { formatCalendarDay } from './time';
 
 export type DrawerNote = { kind: 'before' | 'after' | 'nopos' | 'site'; text: string };
 
@@ -40,7 +41,7 @@ export function drawerMapNote(l: Load, ctx: NoteCtx): DrawerNote | null {
   if (phase === 'before') {
     const day = (l.plannedLoadDate ?? '').slice(0, 10);
     const from = /^\d{4}-\d{2}-\d{2}$/.test(day)
-      ? ctx.tx('p9f_track_from', { t: `${day.slice(8, 10)}.${day.slice(5, 7)}, 03:00` })
+      ? ctx.tx('p9f_track_from', { t: `${formatCalendarDay(day)}, 03:00` })
       : ctx.tx('p9f_track_from_day');
     return { kind: 'before', text: [ctx.tx('p9f_nopos'), from, linkWhy(l, ctx.tx, 'before')].filter(Boolean).join(' · ') };
   }

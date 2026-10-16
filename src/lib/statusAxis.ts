@@ -303,7 +303,7 @@ export function axisActor(actor: string | null): string | null {
   return ORG_NAME[raw] ?? raw;
 }
 
-/* ---------- czas polski „07.10, 12:19” ---------- */
+/* ---------- czas polski „07.10.2026, 12:19” (rok zawsze — właściciel 16.10.2026) ---------- */
 
 const TZ = 'Europe/Warsaw';
 function parts(iso: string, tz = TZ) {
@@ -313,16 +313,16 @@ function parts(iso: string, tz = TZ) {
   const o = Object.fromEntries(f.formatToParts(d).map((p) => [p.type, p.value]));
   return { dd: o.day, mm: o.month, yyyy: o.year, hh: o.hour, mi: o.minute };
 }
-/** „07.10, 12:19” */
+/** „07.10.2026, 12:19” */
 export function dayTime(iso: string | null | undefined, tz = TZ): string {
   const p = iso ? parts(iso, tz) : null;
-  return p ? `${p.dd}.${p.mm}, ${p.hh}:${p.mi}` : '—';
+  return p ? `${p.dd}.${p.mm}.${p.yyyy}, ${p.hh}:${p.mi}` : '—';
 }
-/** „07.10” */
+/** „07.10.2026” */
 export function dayOnly(iso: string | null | undefined, tz = TZ): string {
-  if (iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)) return `${iso.slice(8, 10)}.${iso.slice(5, 7)}`;
+  if (iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)) return `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
   const p = iso ? parts(iso, tz) : null;
-  return p ? `${p.dd}.${p.mm}` : '—';
+  return p ? `${p.dd}.${p.mm}.${p.yyyy}` : '—';
 }
 /** „12:19” */
 export function timeOnly(iso: string | null | undefined, tz = TZ): string {

@@ -140,7 +140,13 @@ describe('M6 — dane startowe i akcje store', () => {
     expect(a.filter((b) => b.direction === 'PRZYCHOD')).toHaveLength(2);
     expect(new Set(a.map((b) => b.currency))).toEqual(new Set(['EUR', 'PLN']));
     expect(a.some((b) => b.payment === 'OPLACONA')).toBe(true);
-    expect(a.some((b) => b.payment === 'PO_TERMINIE')).toBe(true);
+    /* audyt-C C-11 (E4, E40): faktura za tydzień rozładunku, wystawiona po niedzieli tego tygodnia (wcześniej: wystawiona
+       przed tygodniem i „po terminie” — sprawdzało błędne dane demo); C-08: VAT 23 % z netto, brutto = netto + VAT */
+    for (const b of a) {
+      expect(b.issueDate > addDaysIso(isoWeekMonday(b.weekKey), 6)).toBe(true);
+      expect(b.vat).toBe(Math.round(b.net * 0.23 * 100) / 100);
+      expect(b.gross).toBe(Math.round((b.net + b.vat) * 100) / 100);
+    }
   });
   it('rejestracja: SCX kosztowa → powiadomienie HHL; HHL nie zarejestruje kosztowej', () => {
     useTowerStore.setState({ role: 'HHL' });

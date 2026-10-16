@@ -44,6 +44,9 @@
  * zwraca migawkę wejść, żeby spór o fakturę dało się rozstrzygnąć danymi.
  */
 
+/** „08.10.2026” z „2026-10-08” w komunikatach (rok zawsze — właściciel 16.10.2026); moduł bez importów. */
+const dayText = (d: string): string => (/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}` : d);
+
 export const CURRENCY = 'EUR' as const;
 export const TZ_OPERACYJNA = 'Europe/Warsaw';   // = Europe/Stockholm co do przesunięcia i DST
 
@@ -120,7 +123,7 @@ export function nbpRateBefore(rates: NbpRate[], localUnloadDate: string): NbpRat
   const hit = candidates[candidates.length - 1];
   if (!hit) {
     throw new Error(
-      `Brak tabeli A NBP przed ${localUnloadDate}. Pobierz szerszy przedział — nie zgaduj kursu.`
+      `Brak tabeli A NBP przed ${dayText(localUnloadDate)}. Pobierz szerszy przedział — nie zgaduj kursu.`
     );
   }
   return hit;
@@ -425,7 +428,7 @@ export function buildPriceSide(args: {
 
 export function assertSameMechanism(cost: PriceSide, revenue: PriceSide): void {
   if (cost.fuel.referenceDate !== revenue.fuel.referenceDate) {
-    throw new Error(`Różne daty opłaty paliwowej: koszt ${cost.fuel.referenceDate}, przychód ${revenue.fuel.referenceDate}`);
+    throw new Error(`Różne daty opłaty paliwowej: koszt ${dayText(cost.fuel.referenceDate)}, przychód ${dayText(revenue.fuel.referenceDate)}`);
   }
   if (cost.fuel.appliedMultiplier !== revenue.fuel.appliedMultiplier) {
     throw new Error(`Różne mnożniki paliwowe: koszt ${cost.fuel.appliedMultiplier}, przychód ${revenue.fuel.appliedMultiplier}`);

@@ -10,6 +10,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './client';
 import { authErrorPl } from './config';
 import { t } from '../i18n/messages';
+import { fmtDate } from '../lib/time';
 import { useTowerStore } from '../store/useTowerStore';
 import './auth.css';
 
@@ -188,7 +189,7 @@ export default function MyMfa() {
         {devices.map((d) => (
           <div className="auth-admin-row" key={d.id} data-mfa-device-row>
             <span className="grow">{d.name}</span>
-            <small>{new Date(d.at).toLocaleDateString(locale)}</small>
+            <small>{fmtDate(d.at)}</small>
             {devices.length > 1 && status.aal === 'aal2'
               ? <button className="btn ghost" type="button" data-mfa-remove onClick={() => void remove(d.id)}>{t(locale, 'i17_remove')}</button>
               : null}

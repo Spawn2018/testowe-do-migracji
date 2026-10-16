@@ -127,6 +127,9 @@ test.describe('III-2 zrzuty stanów (HHL pl 1440)', () => {
     await page.locator('[data-page="schedule"] input[type="file"]').setInputFiles({ name: 'harmonogram.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from('to nie jest plik XLSX') })
     const err = page.locator('[data-page="schedule"] .note [style*="var(--red)"]')
     await expect(err).toBeVisible()
+    /* E21: zdanie po polsku zamiast komunikatu biblioteki odczytu */
+    await expect(err).toContainText('Nie da się otworzyć pliku')
+    await expect(err).not.toContainText('central directory')
     await page.mouse.move(W - 5, H - 5)
     await expect(page).toHaveScreenshot('stan-blad__dark.png', SHOT)
   })

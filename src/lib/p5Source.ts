@@ -6,7 +6,8 @@
 import type { Bill, Document, Load } from '../types';
 import type { AccountingPack, PackConfig, PackKey, PackSent } from './p5Pack';
 import { belowThreshold, financeSummary, fuelWeeks, type FinBelowRow, type FinSide, type FinSummary, type FuelWeekRow } from './p5Finance';
-import { demoAccountingPack, demoFactoringOffer, demoFactoringTasks, demoFeeRules, demoFeeSuggestions, demoFuelEnrich, demoMarginThreshold, demoPackActions, demoPermits, demoPolicies } from './p5Demo';
+import { demoAccountingPack, demoDocRequirements, demoFactoringOffer, demoFactoringTasks, demoFeeRules, demoFeeSuggestions, demoFuelEnrich, demoMarginThreshold, demoPackActions, demoPermits, demoPolicies } from './p5Demo';
+import { DEFAULT_DOC_REQUIREMENTS, type DocRequirement } from './docRequirements';
 import type { FeeRules, FeeSuggestion } from './p5Fees';
 
 /** Próg marży w % (Opcje › Cennik i opłaty, E16); null = nie ustawiony, flaga wyłączona. */
@@ -83,6 +84,23 @@ export function permitsOf(loads: Load[]): PermitView[] | null {
 /** Wybór „Firma / Trasa” w oknie „Wgraj dokument” — po podłączeniu rodzaju zezwolenia w bazie. */
 export function permitScopeOf(): boolean {
   return import.meta.env.VITE_AUTH_MODE !== 'supabase';
+}
+
+/**
+ * Wymagania dokumentów przed odczytem z bazy (strona Dokumenty, panel, Harmonogram, Opcje › Terminy).
+ * Demo: decyzja E31 (tylko CMR z podpisem odbiorcy po „Dostarczone”, bez rysunku) — audyt-C C-03, C-04.
+ * Produkcja: wartości startowe jak w bazie, do odczytu `doc_requirements` (zmianę wymagania CMR robi wykonawca, P5).
+ */
+export function docRequirementsStart(): DocRequirement[] {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoDocRequirements() : DEFAULT_DOC_REQUIREMENTS;
+}
+
+/**
+ * Dokumenty, które widzi firma. Produkcja: RLS w bazie (lista bez zmian). Demo: według `visibleTo`
+ * (E31 pytanie 3 B: KSH widzi Polisę HHL, SCX swoją polisę, HHL obie) — audyt-C C-06.
+ */
+export function docsSeenOf<D extends Pick<Document, 'visibleTo'>>(docs: readonly D[], role: Document['visibleTo'][number]): D[] {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? docs.filter((d) => !d.visibleTo.length || d.visibleTo.includes(role)) : [...docs];
 }
 
 /** E31 — polisy dodawane raz (G-21): OCP przewoźnika (SCX, zatwierdza HHL) i polisa HHL. */

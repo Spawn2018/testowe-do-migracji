@@ -85,3 +85,24 @@ export function urgentOf(c: Pick<DetourCase, 'decideByIso'>, nowIso: string): bo
   return Date.parse(c.decideByIso) - Date.parse(nowIso) <= 60 * 60_000;
 }
 
+
+/**
+ * audyt-C (C-02; E7 „jednakowe zgłoszenia łączą się”, E49 16.10 02:08): zamknięcie drogi przy transporcie, który ma
+ * otwartą sprawę „Objazd czy postój?”, jest tą samą sprawą — ryzyko zamknięcia nie stoi w karcie drugi raz.
+ * Zwraca ryzyka bez połączonych zamknięć i — dla każdej sprawy — identyfikatory połączonych ryzyk (link z dzwonka
+ * i Kokpitu do ryzyka otwiera sprawę). Bez spraw (produkcja przed podłączeniem) — ryzyka bez zmian.
+ */
+export function mergeClosures<R extends { id: string; loadId?: string | null; causeCategory?: string }>(
+  risks: readonly R[],
+  cases: readonly Pick<DetourCase, 'id' | 'loadId'>[],
+): { risks: R[]; mergedIds: Record<string, string[]> } {
+  const byLoad = new Map(cases.map((c) => [c.loadId, c.id]));
+  const mergedIds: Record<string, string[]> = {};
+  const out: R[] = [];
+  for (const r of risks) {
+    const caseId = r.loadId && r.causeCategory === 'closure' ? byLoad.get(r.loadId) : undefined;
+    if (caseId) (mergedIds[caseId] ??= []).push(r.id);
+    else out.push(r);
+  }
+  return { risks: out, mergedIds };
+}

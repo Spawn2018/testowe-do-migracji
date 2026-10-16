@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getSupabase } from './client';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
+import { fmtDateTime } from '../lib/time';
 import { uaLabel } from '../lib/userAgent';
 import './auth.css';
 
@@ -45,7 +46,7 @@ export default function AuthLoginLog() {
 
   const fmt = (iso: string) => {
     try {
-      return new Date(iso).toLocaleString(locale === 'sv' ? 'sv-SE' : locale === 'en' ? 'en-GB' : 'pl-PL');
+      return fmtDateTime(iso);
     } catch {
       return iso;
     }

@@ -8,6 +8,7 @@
 import { useMemo, useState } from 'react';
 import type { Bill, Document, Load, Locale } from '../../types';
 import { formatPlNumber } from '../../lib/format';
+import { fmtDate, fmtTime, formatCalendarDay } from '../../lib/time';
 import { transportLabel } from '../../lib/transportName';
 import { transportsText } from '../../lib/p5Finance';
 import {
@@ -17,15 +18,14 @@ import type { PackActions } from '../../lib/p5Source';
 import { ft, ftp } from '../../i18n/p5';
 import { up } from '../options/up';
 
-const dm = (d: string | null) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '—');
-const dmy = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
+/* rok zawsze — właściciel 16.10.2026 */
+const dm = (d: string | null) => (d ? formatCalendarDay(d.slice(0, 10)) : '—');
+const dmy = (d: string) => formatCalendarDay(d.slice(0, 10));
 const n2 = (n: number) => formatPlNumber(n, 2);
 
 function sentParts(s: PackSent): { date: string; time: string } {
-  const d = new Date(s.at);
-  const date = new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit' }).format(d);
-  const time = new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit' }).format(d);
-  return { date, time };
+  /* „08.10.2026”, „12:00” (czas polski) */
+  return { date: fmtDate(s.at), time: fmtTime(s.at) };
 }
 
 function addrText(n: number): string {

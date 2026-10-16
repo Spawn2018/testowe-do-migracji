@@ -1,7 +1,8 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { clearHelpOnce, peekHelpOnce } from '../../lib/firstEntryFlag';
 import { useTowerStore } from '../../store/useTowerStore';
-import { INTL_LOCALE, t, tp } from '../../i18n/messages';
+import { t, tp } from '../../i18n/messages';
+import { fmtDate, fmtTime } from '../../lib/time';
 import { ROLE_META } from '../../lib/permissions';
 import type { Locale, RoleId } from '../../types';
 import { NotificationBell } from './NotificationBell';
@@ -35,7 +36,7 @@ function countdown(mins: number): string {
   return `${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')} min`;
 }
 
-/** Godzina rejsu: dziś „08:00”, inny dzień „09.10, 08:00” (E21). */
+/** Godzina rejsu: dziś „08:00”, inny dzień „09.10.2026, 08:00” (E21, rok zawsze — właściciel 16.10.2026). */
 function depLabel(depIso: string, nowIso: string): string {
   const dep = formatListDateTime(depIso);
   const today = formatListDateTime(nowIso).split(', ')[0];
@@ -69,7 +70,8 @@ function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof n
         mins,
         cd: countdown(mins),
         line: `${head} → ${portName(locale, to)}`,
-        short: `${op} ${when}`,
+        /* telefon: przycisk ma odliczanie i „Stena 08:00” — data z rokiem nie mieści się w 360 px; pełna data w liście po dotknięciu */
+        short: `${op} ${fmtTime(depIso)}`,
         head,
         to: portName(locale, to),
       });
@@ -84,7 +86,7 @@ function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof n
       mins,
       cd: countdown(mins),
       line: `${head} → ${portName(locale, s.arrPort)}`,
-      short: `Polferries ${when}`,
+      short: `Polferries ${fmtTime(s.depLocal)}`,
       head,
       to: portName(locale, s.arrPort),
     });
@@ -178,8 +180,8 @@ export function Topbar() {
       setOps({
         wk: isoWeek(localNoon),
         ferryRows: buildFerryRows(locale, now, sailings),
-        /* A6-T3 — data w języku interfejsu (PL: DD.MM.RRRR); P10 — bez zegara */
-        date: new Intl.DateTimeFormat(INTL_LOCALE[locale], { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', year: 'numeric' }).format(now),
+        /* DD.MM.RRRR we wszystkich językach (właściciel 16.10.2026, zmienia A6-T3); P10 — bez zegara */
+        date: fmtDate(now.toISOString()),
       });
     };
     tick();

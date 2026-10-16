@@ -53,7 +53,8 @@ export interface CardCtx {
 }
 
 const ORG_SHORT: Record<OrgKind, string> = { HHL: 'HHL', SCX: 'SCX', KSH: 'KSH' };
-const dm = (iso: string | null | undefined) => (iso ? formatListDateTime(iso).slice(0, 5) : '—');
+/* „08.10.2026” — rok zawsze (właściciel 16.10.2026) */
+const dm = (iso: string | null | undefined) => (iso ? formatListDateTime(iso).split(', ')[0] : '—');
 const sevClass = (s: string) => (s === 'CRITICAL' || s === 'HIGH' ? 'is-red' : s === 'MEDIUM' ? 'is-amber' : 'is-sea');
 
 export function cardTitle(card: TodoCard, ctx: CardCtx): string {

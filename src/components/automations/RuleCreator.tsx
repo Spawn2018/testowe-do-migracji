@@ -105,7 +105,7 @@ export function RuleCreator({ rule, zones, src, phone, onClose }: {
     const lines = res.hits.slice(0, 5).map((h, i) => {
       let text: string;
       if (w.kind === 'zone' && h.from) {
-        /* img/e35-after: „SG-03 · plac od 07.10, 08:35 → **07.10, 11:35** (wyjazd 12:19)” */
+        /* img/e35-after (rok od 16.10.2026): „SG-03 · plac od 07.10.2026, 08:35 → **07.10.2026, 11:35** (wyjazd 12:19)” */
         const type = zones.find((z) => z.id === w.zoneId)?.type ?? '';
         const where = p8dt(type === 'SITE' ? 'p8d_k_where_SITE' : type === 'LOADING' ? 'p8d_k_where_LOADING' : type.startsWith('PORT') ? 'p8d_k_where_PORT' : 'p8d_k_where_ZONE');
         const tail = h.exit ? p8dt('p8d_k_exit', { t: dayOf(h.exit) === dayOf(h.at) ? timeOf(h.exit) : formatListDateTime(h.exit) }) : h.still ? p8dt('p8d_k_still') : '';

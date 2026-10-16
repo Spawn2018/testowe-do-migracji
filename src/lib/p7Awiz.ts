@@ -6,6 +6,7 @@
  * Termin (E32, 0143): ostrzeżenie 48 h, pilne 12 h przed załadunkiem (godzina z planu; bez niej 00:00 czasu polskiego).
  */
 import type { Load } from '../types';
+import { fmtDateTime, fmtTime, formatCalendarDay } from './time';
 
 export type MissKey =
   | 'driver' | 'phone' | 'tractor' | 'trailer'
@@ -104,7 +105,7 @@ export function awizDeadline(loadDay: string, nowIso: string, loadFromIso: strin
   };
 }
 
-const WD = ['nd', 'pon', 'wt', 'śr', 'czw', 'pt', 'sob'];
+const WD = ['niedz.', 'pon.', 'wt.', 'śr.', 'czw.', 'pt.', 'sob.'];
 
 /** Dzień tygodnia po polsku dla daty `RRRR-MM-DD` (kalendarzowy, bez strefy). */
 export function weekdayPl(day: string): string {
@@ -123,30 +124,27 @@ export function isoWeek(day: string): number | null {
   return Math.ceil(((tmp.getTime() - y0.getTime()) / 86400000 + 1) / 7);
 }
 
-/** „czw 08.10” */
+/** „czw. 08.10.2026” — rok zawsze (właściciel 16.10.2026; dzień tygodnia przed datą dozwolony). */
 export function dayShort(day: string | null | undefined): string {
-  if (!day || !/^\d{4}-\d{2}-\d{2}/.test(day)) return '—';
-  return `${weekdayPl(day)} ${day.slice(8, 10)}.${day.slice(5, 7)}`;
+  return dayLong(day);
 }
 
-/** „czw 08.10.2026” */
+/** „czw. 08.10.2026” */
 export function dayLong(day: string | null | undefined): string {
   if (!day || !/^\d{4}-\d{2}-\d{2}/.test(day)) return '—';
-  return `${weekdayPl(day)} ${day.slice(8, 10)}.${day.slice(5, 7)}.${day.slice(0, 4)}`;
+  return `${weekdayPl(day)} ${formatCalendarDay(day.slice(0, 10))}`;
 }
 
 /** „08:00” w czasie polskim; null przy braku. */
 export function hm(iso: string | null | undefined): string | null {
   if (!iso || !Number.isFinite(Date.parse(iso))) return null;
-  return new Intl.DateTimeFormat('pl-PL', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+  return fmtTime(iso, TZ);
 }
 
-/** „07.10, 12:00” w czasie polskim. */
+/** „07.10.2026, 12:00” w czasie polskim. */
 export function dmHm(iso: string | null | undefined): string {
   if (!iso || !Number.isFinite(Date.parse(iso))) return '—';
-  const p = Object.fromEntries(new Intl.DateTimeFormat('pl-PL', { timeZone: TZ, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-    .formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
-  return `${p.day}.${p.month}, ${p.hour}:${p.minute}`;
+  return fmtDateTime(iso, TZ);
 }
 
 /** Dzień kalendarzowy w Polsce. */

@@ -11,6 +11,7 @@
 import L from 'leaflet';
 import { CORRIDOR_REF_COORDS } from '../../lib/corridor';
 import { SITES } from '../../lib/status';
+import { DEMO_ROAD_LINES } from '../../data/roadLinesDemo';
 import { PROD_BUILD } from '../../lib/prodFacade';
 import { WATER_GDN_NYN, WATER_GDY_KAA, type ThemeName } from '../../lib/map/draw';
 import { useTowerStore } from '../../store/useTowerStore';
@@ -83,9 +84,17 @@ export function corridorBoundsOf(): L.LatLngBounds {
 export const CORRIDOR_PADDING = 24;
 /**
  * Margines kadru (E1: 24 px). Na stronie Mapa legenda leży na dole mapy — margines dolny liczony od jej górnej krawędzi,
- * żeby legenda nie zasłaniała początku trasy (Śrem). To samo dla dopisku na mapie Przeglądu (P9-f). Kokpit i telefon
- * (legenda w arkuszu) — bez nakładki na mapie.
+ * żeby legenda nie zasłaniała początku trasy (Śrem). To samo dla dopisku na mapie Przeglądu (P9-f) i dla podpisu
+ * podkładu (audyt D-05, na telefonie 2 linie). Kokpit (podpis ukryty) i telefon (legenda w arkuszu) — bez legendy na mapie.
  */
+/** Podpis podkładu (Leaflet) tej mapy — do marginesu kadru i do obserwacji jego wysokości (D-05). */
+export function attributionOf(map: L.Map): HTMLElement | null {
+  try {
+    return map.getContainer().querySelector<HTMLElement>('.leaflet-control-attribution');
+  } catch {
+    return null;
+  }
+}
 export function corridorPadding(map: L.Map): { paddingTopLeft: L.PointTuple; paddingBottomRight: L.PointTuple } {
   let extra = 0;
   try {
@@ -95,6 +104,14 @@ export function corridorPadding(map: L.Map): { paddingTopLeft: L.PointTuple; pad
       if (!(key.offsetHeight > 0)) continue;
       const root = key.offsetParent as HTMLElement | null;
       const fromBottom = root ? root.clientHeight - key.offsetTop : key.offsetHeight;
+      extra = Math.max(extra, Math.round(fromBottom));
+    }
+    /* audyt D-05 (E1 pkt 1a–1b): podpis podkładu leży na dole mapy — na telefonie ma 2 linie i zasłaniał Śrem; margines
+       dolny liczony od jego górnej krawędzi (wysokość z elementu, niezależnie od długości tekstu dostawcy podkładu) */
+    const attr = attributionOf(map);
+    if (attr && attr.offsetHeight > 0) {
+      const corner = attr.offsetParent as HTMLElement | null;
+      const fromBottom = corner ? corner.offsetHeight - attr.offsetTop : attr.offsetHeight;
       extra = Math.max(extra, Math.round(fromBottom));
     }
   } catch {
@@ -135,9 +152,11 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
   const tiles = L.layerGroup().addTo(map);
   const route = L.layerGroup().addTo(map);
   if (!PROD_BUILD) {
-    L.polyline(CORRIDOR_REF_COORDS.map(([lng, lat]) => L.latLng(lat, lng)), {
-      color: '#E5A544', weight: 3, opacity: 0.85, dashArray: '8 6',
-    }).addTo(route);
+    /* audyt D-07 (E45, E1): demo — tylko odcinki lądowe (PL, SE z Nynäshamn, SE z Karlskrony), ciągłą linią jak trasy
+       HERE w produkcji (`CorridorMap` → `loadRoadLines`); odcinek morski rysuje warstwa promu. */
+    for (const line of DEMO_ROAD_LINES) {
+      L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), { color: '#E5A544', weight: 3, opacity: 0.9 }).addTo(route);
+    }
   }
   const ferryLeg = L.layerGroup().addTo(map);
   for (const lane of [WATER_GDN_NYN, WATER_GDY_KAA]) {

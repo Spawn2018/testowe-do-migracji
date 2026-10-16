@@ -11,9 +11,8 @@ import { t, tp } from '../i18n/messages';
 import {
   delayMinutesVsPlan,
   formatTableInZone,
-  refYearInOps,
 } from '../lib/time';
-import { getNow, getNowIso } from '../lib/frozenNow';
+import { getNowIso } from '../lib/frozenNow';
 // D15: ExcelJS (~1 MB) tylko przy imporcie/eksporcie — dynamiczny import.
 import type { ImportDiff } from '../lib/scheduleDryRun';
 import { COLUMN_MAP_DEFAULT } from '../lib/importColumnMap';
@@ -25,11 +24,14 @@ import {
 } from '../lib/schedLayout';
 import { FileTable, SchedCards, ShortTable, type SchedRowCtx } from '../components/schedule/SchedTables';
 import { s7, s7p } from '../i18n/sched7';
-import { DEFAULT_DOC_REQUIREMENTS, docStatusRows } from '../lib/docRequirements';
+import { docStatusRows } from '../lib/docRequirements';
 import { getDocReqCache } from '../lib/docReqCache';
-import { marginThresholdOf } from '../lib/p5Source';
+import { docRequirementsStart, marginThresholdOf } from '../lib/p5Source';
 import '../components/schedule/sched7.css';
 import { SailingsPanel } from './SailingsPanel';
+import { sv, svp } from '../i18n/sail7';
+import { sailTime } from '../lib/sailView';
+import { effDeparture } from '../lib/sailings';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import type { ServerImportDraft } from '../data/scheduleImportServer';
 import { standardSkipMessage } from '../lib/standardSkipMessage';
@@ -69,9 +71,10 @@ export function ScheduleView() {
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
   const currency = useTowerStore((s) => s.displayCurrency);
-  const refYear = refYearInOps(getNow());
   const search = useTowerStore((s) => s.search);
   const setSearch = useTowerStore((s) => s.setSearch);
+  /* E41 (08.10): KSH szuka tylko po kodzie — podpowiedź bez „nr zlecenia” (filtr: `transportSearchBlob`) */
+  const searchKey = role === 'KSH' ? 's7_search_ksh' : 's7_search';
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const selectedLoadId = useTowerStore((s) => s.selectedLoadId);
   const hoverLoadId = useTowerStore((s) => s.hoverLoadId);
@@ -150,6 +153,9 @@ export function ScheduleView() {
   /* E30 pkt 3: tydzień załadunku i dostawy (pon–nd, jak E39) albo własny zakres */
   const [loadPick, setLoadPick] = useState('all');
   const [delivPick, setDelivPick] = useState('all');
+  /* E30 pkt 7: kliknięcie kodów w Rejsach filtruje Harmonogram do transportów tego rejsu */
+  const [sailPick, setSailPick] = useState<string | null>(null);
+  const sailings = useTowerStore((s) => s.sailings);
 
 
   // B-9 C: ten sam filtr kafelka (stageFilter) działa też w Harmonogramie
@@ -177,9 +183,9 @@ export function ScheduleView() {
   const loadRange = rangeOf(loadPick, loadFrom, loadTo);
   const delivRange = rangeOf(delivPick, delivFrom, delivTo);
   const pre = useMemo(
-    () => base.filter((l) => inRange(l.plannedLoadDate, loadRange) && inRange(l.plannedDeliverDate, delivRange)),
+    () => base.filter((l) => inRange(l.plannedLoadDate, loadRange) && inRange(l.plannedDeliverDate, delivRange) && (!sailPick || l.sailingId === sailPick)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [base, loadRange?.from, loadRange?.to, delivRange?.from, delivRange?.to],
+    [base, loadRange?.from, loadRange?.to, delivRange?.from, delivRange?.to, sailPick],
   );
   /* E30 pkt 3: liczba przy każdym filtrze stanu = wiersze po kliknięciu (po pozostałych filtrach) */
   const counts = useMemo(() => Object.fromEntries(QUICKS.map((q) => [q, pre.filter((l) => quickMatch(l, q)).length])) as Record<Exclude<Quick, 'all'>, number>, [pre]);
@@ -190,7 +196,7 @@ export function ScheduleView() {
     : '';
   const verLine = (SERVER_IMPORT
     ? ver
-      ? tp(locale, 'i1_ver_line', { v: ver.by.replace(/^v/, ''), at: formatTableInZone(ver.at, 'Europe/Warsaw', refYear), file: ver.filename })
+      ? tp(locale, 'i1_ver_line', { v: ver.by.replace(/^v/, ''), at: formatTableInZone(ver.at, 'Europe/Warsaw'), file: ver.filename })
       : t(locale, 'i1_ver_none')
     : t(locale, 'a6_sch_ver_line')) + skippedNote;
 
@@ -241,7 +247,8 @@ export function ScheduleView() {
         const { reportUnreadableKshFile } = await import('../data/scheduleImportServer');
         await reportUnreadableKshFile(f.name);
       }
-      setParseError(e instanceof Error ? e.message : String(e));
+      /* E21: błąd biblioteki odczytu (np. „Can't find end of central directory”) nie trafia na ekran — zdanie po polsku */
+      setParseError(fileRead ? (e instanceof Error ? e.message : String(e)) : s7(locale, 's7_xlsx_unreadable'));
       setStep('upload');
       pushToast(t(locale, 'a6_sch_xlsx_fail'), 'CRITICAL');
     } finally {
@@ -300,12 +307,18 @@ export function ScheduleView() {
   const fileCols = fileColsFor(role, layout.fileHidden);
   const extrasAllowed = shortExtrasFor(role);
   const extras = layout.shortExtras.filter((x) => extrasAllowed.includes(x));
-  const activeFilters = (quick !== 'all' ? 1 : 0) + (loadPick !== 'all' ? 1 : 0) + (delivPick !== 'all' ? 1 : 0);
-  const clearFilters = () => { setQuick('all'); setLoadPick('all'); setDelivPick('all'); setLoadFrom(''); setLoadTo(''); setDelivFrom(''); setDelivTo(''); };
+  const activeFilters = (quick !== 'all' ? 1 : 0) + (loadPick !== 'all' ? 1 : 0) + (delivPick !== 'all' ? 1 : 0) + (sailPick ? 1 : 0);
+  const clearFilters = () => { setQuick('all'); setLoadPick('all'); setDelivPick('all'); setLoadFrom(''); setLoadTo(''); setDelivFrom(''); setDelivTo(''); setSailPick(null); };
+  const pickedSailing = sailPick ? sailings.find((x) => x.id === sailPick) ?? null : null;
+  const sailChip = pickedSailing ? (
+    <button type="button" className="chipbtn s7-chip" aria-pressed="true" data-sail-filter={pickedSailing.id} title={sv(locale, 'sv_filter_clear')} onClick={() => setSailPick(null)}>
+      {svp(locale, 'sv_filter', { vessel: pickedSailing.vessel, t: sailTime(effDeparture(pickedSailing)) })} ✕
+    </button>
+  ) : null;
 
   /* E31: stan dokumentów jak na stronie Dokumenty i w panelu (baza po wejściu na Dokumenty; demo — reguły startowe) */
   const docCache = getDocReqCache();
-  const reqs = docCache?.reqs ?? DEFAULT_DOC_REQUIREMENTS;
+  const reqs = docCache?.reqs ?? docRequirementsStart();
   const nowMs = Date.parse(nowIso);
   const docByLoad = useMemo(() => {
     const rows = docCache ? docCache.status : PROD_BUILD ? [] : docStatusRows(list, documents, reqs, nowMs);
@@ -315,7 +328,7 @@ export function ScheduleView() {
   }, [docCache, list, documents, reqs, nowMs]);
   const marginMin = marginThresholdOf();
   const ctx: SchedRowCtx = {
-    locale, role, currency, refYear, marginMin, reqs,
+    locale, role, currency, marginMin, reqs,
     docRows: (id) => docByLoad.get(id) ?? [],
     delayOf: delayMinutes,
     hoverLoadId, selectedLoadId, setHover: setHoverLoad, onOpen: selectLoad,
@@ -335,12 +348,12 @@ export function ScheduleView() {
       <div className="panel section-card page-sections" data-page="schedule" style={{ margin: 12 }}>
         <div className="panel-hd" style={{ flexWrap: 'wrap' }}>
           <h2>{t(locale, 'nav_sched')}</h2>
-          <span className="sub">{t(locale, 'sail_sub')}</span>
+          <span className="sub">{sv(locale, 'sv_sub')}</span>
           <LiveMark />
           <div className="spacer" />
           {schedTabs}
         </div>
-        <SailingsPanel />
+        <SailingsPanel phone={phone} onShowLoads={(id) => { setSailPick(id); setSchedTab('loads'); }} />
       </div>
     );
   }
@@ -701,7 +714,7 @@ export function ScheduleView() {
             {/* telefon (E30 pkt 8, E28): pasek etapów w bok, „Szukaj” i „Filtry · n” (arkusz), „⋯” — Więcej */}
             <StageBar variant="page" />
             <div className="filters sched-ph-search" data-sched-filters>
-              <input type="search" placeholder={s7(locale, 's7_search_ph')} aria-label={s7(locale, 's7_search')} value={search} onChange={(e) => setSearch(e.target.value)} />
+              <input type="search" placeholder={s7(locale, 's7_search_ph')} aria-label={s7(locale, searchKey)} value={search} onChange={(e) => setSearch(e.target.value)} />
               <button type="button" className="chipbtn s7-fbtn" aria-expanded={sheetOpen} data-sched-more-filters onClick={() => setSheetOpen(true)}>
                 {activeFilters ? s7p(locale, 's7_filters_n', { n: activeFilters }) : s7(locale, 's7_filters')}
               </button>
@@ -710,7 +723,7 @@ export function ScheduleView() {
                 {actionsOpen ? <div className="sched-actions sched-actions-pop s7-more" role="menu">{moreItems}</div> : null}
               </div>
             </div>
-            {stageFilter ? <div className="filters s7-stage-row"><StageChip /></div> : null}
+            {stageFilter || sailChip ? <div className="filters s7-stage-row">{stageFilter ? <StageChip /> : null}{sailChip}</div> : null}
             {sheetOpen ? (
               <div className="s7-sheet-back" onClick={() => setSheetOpen(false)}>
                 <div className="s7-sheet" role="dialog" aria-modal="true" aria-label={s7(locale, 's7_filters')} data-sched-sheet onClick={(e) => e.stopPropagation()}>
@@ -753,7 +766,7 @@ export function ScheduleView() {
           </>
         ) : (
           <div className="filters s7-filters" data-sched-filters>
-            <input type="search" className="s7-search" placeholder={s7(locale, 's7_search')} aria-label={s7(locale, 's7_search')} value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input type="search" className="s7-search" placeholder={s7(locale, searchKey)} aria-label={s7(locale, searchKey)} value={search} onChange={(e) => setSearch(e.target.value)} />
             <label className="s7-sel" data-week="load">
               <span>{s7(locale, 's7_f_load')}:</span>
               <select value={loadPick} onChange={(e) => setLoadPick(e.target.value)}>
@@ -783,6 +796,7 @@ export function ScheduleView() {
               </span>
             ) : null}
             <StageChip />
+            {sailChip}
             {QUICKS.map(chipBtn)}
             <div className="spacer" />
             <span className="sched-count">{tp(locale, 'p4_count', { n: list.length, total: loads.length })}</span>

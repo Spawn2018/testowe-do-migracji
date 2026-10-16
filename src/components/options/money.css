@@ -117,3 +117,5 @@
   .pm-rc-t .num,.pm-rc-t td.num{text-align:left}
   .pm-rc-in{width:100%;min-height:44px;font-size:16px;text-align:left}
 }
+/* „Orlen ✕” razem; między „·” linia może się złamać (data z rokiem jest dłuższa — 16.10.2026) */
+.pm-fetch .pm-ok,.pm-fetch .pm-bad{white-space:nowrap}

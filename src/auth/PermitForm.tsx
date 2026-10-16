@@ -3,7 +3,7 @@ import { getSupabase } from './client';
 import { authErrorPl } from './config';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
-import { formatCalendarDay } from '../lib/time';
+import { fmtDateRange } from '../lib/time';
 import './auth.css';
 
 /**
@@ -110,7 +110,7 @@ export default function PermitForm({ loadId }: { loadId: string }) {
                 </span>
                 {p.breaches.length ? ` ${p.breaches.map((b) => t(locale, `p64_b_${b}`)).join(', ')}` : ''}
                 <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 4, fontWeight: 400 }}>
-                  {formatCalendarDay(p.valid_from)} – {formatCalendarDay(p.valid_until)}{p.authority ? ` · ${p.authority}` : ''} · {t(locale, 'p64_limits')}: {lim(p.max_length_m, 'm')} × {lim(p.max_width_m, 'm')} × {lim(p.max_height_m, 'm')}, {lim(p.max_weight_t, 't')} · {t(locale, 'p64_escort')}: {p.escort_required}
+                  {fmtDateRange(p.valid_from, p.valid_until)}{p.authority ? ` · ${p.authority}` : ''} · {t(locale, 'p64_limits')}: {lim(p.max_length_m, 'm')} × {lim(p.max_width_m, 'm')} × {lim(p.max_height_m, 'm')}, {lim(p.max_weight_t, 't')} · {t(locale, 'p64_escort')}: {p.escort_required}
                   {p.route_desc ? <><br />{t(locale, 'p64_route')}: {p.route_desc}</> : null}
                 </div>
                 {canWrite && preReady && (

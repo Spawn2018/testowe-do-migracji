@@ -16,6 +16,7 @@ import { isLoadCompleted } from './invoiceMatch';
 import { isTodoRisk, todoCardKey } from './todoRules';
 import { transportLabel } from './transportName';
 import { fcp } from '../i18n/p5c';
+import { pendingWeekLoads } from './p5Invoices';
 
 export type CockpitTone = 'default' | 'alert' | 'warn' | 'good';
 
@@ -144,26 +145,27 @@ export function loadsBilledBy(bills: readonly Pick<Bill, 'issuer' | 'lines'>[], 
   return new Set<string>(bills.filter((b) => b.issuer === issuer).flatMap((b) => b.lines.map((ln) => ln.loadId)));
 }
 
+/** Transporty „Czeka na wystawienie” firmy wystawiającej (E4: zamknięty tydzień, dostarczone, bez jej faktury). */
+export function invoiceReadyLoads(role: RoleId, loads: readonly Load[], bills: readonly Bill[], today: string): Load[] {
+  if (role === 'KSH') return [];
+  return pendingWeekLoads(loads, bills, role === 'SCX' ? 'KOSZT' : 'PRZYCHOD', today).flatMap((w) => w.loads);
+}
+
 /**
  * Liczba przy „Faktury” w menu (E9): faktury czekające na moje działanie plus transporty gotowe do mojej faktury.
  * Czeka na mnie: faktura do mnie „do weryfikacji” (sprawdzam ją) albo moja faktura „sporna” (odpowiada tylko wystawca,
- * canReplyDispute). Gotowe do mojej faktury (HHL, SCX): rozładowane z podpisanym CMR, jeszcze bez mojej faktury.
- * Status E25 „Gotowe do fakturowania” i ewentualnie „zgodna” czekająca na akceptację — P4 (wykonawca).
+ * canReplyDispute). Gotowe do mojej faktury (HHL, SCX): audyt-C C-10 — ta sama funkcja co kafel „Czeka na wystawienie”
+ * na stronie Faktur (`pendingWeeks`: transporty z zamkniętych tygodni, jeszcze bez mojej faktury).
  */
 export function invoiceTodoCount(
   role: RoleId,
-  input: { loads: readonly Load[]; documents: readonly Document[]; bills: readonly Bill[] },
+  input: { loads: readonly Load[]; documents?: readonly Document[]; bills: readonly Bill[]; today: string },
 ): number {
-  const { loads, documents, bills } = input;
+  const { loads, bills, today } = input;
   const waiting = bills.filter((b) =>
     (b.recipient === role && b.verification === 'DO_WERYFIKACJI') || (b.issuer === role && b.verification === 'SPORNA')).length;
   if (role === 'KSH') return waiting;
-  const mine = loadsBilledBy(bills, role);
-  /* B3: gotowe do faktury = status READY_TO_INVOICE (E25), nie sama reguła CMR */
-  const ready = loads.filter((l) =>
-    (String(l.status) === 'READY_TO_INVOICE' || (delivered(l) && hasDoc(documents, l.id, 'CMR')))
-    && !mine.has(l.id)).length;
-  return waiting + ready;
+  return waiting + invoiceReadyLoads(role, loads, bills, today).length;
 }
 
 /** Wspólne liczby z danych (bez zapisu, bez zapytań). */
@@ -172,7 +174,6 @@ export function cockpitFacts(input: Pick<CockpitInput, 'loads' | 'documents' | '
   const loads = input.loads.filter((l) => l.status !== 'CANCELLED');
   const { documents, nowIso, bills } = input;
   const scxBilled = loadsBilledBy(bills, 'SCX');
-  const hhlBilled = loadsBilledBy(bills, 'HHL');
   const today = dayKey(nowIso) ?? nowIso.slice(0, 10);
   const in7 = addDays(today, 6);
   const in72 = addDays(today, 3);
@@ -192,11 +193,8 @@ export function cockpitFacts(input: Pick<CockpitInput, 'loads' | 'documents' | '
   /* SCX „Do zafakturowania”: rozładowane bez faktury SCX; gotowe = z podpisanym CMR */
   const toInvoice = done.filter((l) => !scxBilled.has(l.id));
   const toInvoiceNoCmr = toInvoice.filter((l) => !hasDoc(documents, l.id, 'CMR'));
-  /* B3 / H3: HHL „gotowe do faktury” = READY_TO_INVOICE (E25), zapas: dostarczone + CMR */
-  const readyToInvoice = loads.filter((l) =>
-    !hhlBilled.has(l.id)
-    && (String(l.status) === 'READY_TO_INVOICE'
-      || (delivered(l) && hasDoc(documents, l.id, 'CMR'))));
+  /* audyt-C C-10: HHL „gotowe do faktury” = te same transporty co kafel „Czeka na wystawienie” i liczba w menu */
+  const readyToInvoice = invoiceReadyLoads('HHL', loads, bills, today);
   const plan72 = loads.filter((l) => {
     const d = dayKey(l.plannedDeliverDate);
     return !delivered(l) && d != null && d >= today && d <= in72;
@@ -259,8 +257,11 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
         desc: L('p3b_ferry_none'), descShort: L('p3b_ferry_none'), tone: 'default' };
     }
     const when = formatListDateTime(ferry.depIso);
-    /* komputer „08.10, 18:00”, telefon „08.10 18:00” */
-    const whenShort = when.replace(', ', ' ');
+    /* komputer „08.10.2026, 18:00”; telefon — liczba w jednej linii (E8 pkt 6): „18:00”, a data z rokiem w opisie
+       „08.10.2026 · fala …” (rok zawsze — właściciel 16.10.2026) */
+    const [whenDay, whenTime] = when.split(', ');
+    const whenShort = whenTime ?? when;
+    const dayShort = whenTime ? `${whenDay} · ` : '';
     const wave = ferry.sea ? formatPlNumber(ferry.sea.waveM, 1) : '';
     /* SCX: także porywy (B7), gdy źródło je podaje */
     const gust = withGusts && ferry.sea?.gustKn != null ? formatPlNumber(ferry.sea.gustKn, 0) : null;
@@ -272,7 +273,7 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
           ? L('p3b_ferry_sea_gust', { vessel: ferry.vessel, route: ferry.route, wave, gust, risk: ferry.sea.risk })
           : L('p3b_ferry_sea', { vessel: ferry.vessel, route: ferry.route, wave, risk: ferry.sea.risk })
         : L('p3b_ferry_nosea', { vessel: ferry.vessel, route: ferry.route }),
-      descShort: ferry.sea ? L('p3b_ferry_sea_short', { wave, risk: ferry.sea.risk }) : L('p3b_ferry_nosea_short'),
+      descShort: dayShort + (ferry.sea ? L('p3b_ferry_sea_short', { wave, risk: ferry.sea.risk }) : L('p3b_ferry_nosea_short')),
       tone: 'default',
     };
   };

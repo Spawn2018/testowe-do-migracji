@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getSupabase } from './client';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
+import { fmtDateTime } from '../lib/time';
 import './auth.css';
 
 type Active = {
@@ -98,9 +99,7 @@ export default function BroadcastForm() {
           <div>
             <b>{t(locale, 'opt_acc_bcast_active')}</b> {active.body}
             <div className="note">
-              {new Date(active.expires_at).toLocaleString(
-                locale === 'sv' ? 'sv-SE' : locale === 'en' ? 'en-GB' : 'pl-PL',
-              )}
+              {fmtDateTime(active.expires_at)}
               {' · '}
               {[
                 active.for_forwarder ? 'HHL' : null,

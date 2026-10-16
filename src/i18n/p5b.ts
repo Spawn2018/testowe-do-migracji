@@ -64,7 +64,7 @@ const PL: Record<string, string> = {
   p5b_f_new_version: 'Nowa wersja umowy',
   p5b_f_new_version_x: 'Nowa wersja załącznika: parametry i tabela mnożników z datą obowiązywania i wpisem w Historii zmian. Zapisuje tylko Administrator HHL.',
   p5b_f_sources: 'Źródła: OKQ8 GoEasy Diesel, cena listowa firmowa · Orlen ONEkodiesel, hurt, netto. Ceny bez VAT, tak jak publikuje źródło.',
-  p5b_wd_0: 'pn', p5b_wd_1: 'wt', p5b_wd_2: 'śr', p5b_wd_3: 'czw', p5b_wd_4: 'pt', p5b_wd_5: 'sb', p5b_wd_6: 'nd',
+  p5b_wd_0: 'pon.', p5b_wd_1: 'wt.', p5b_wd_2: 'śr.', p5b_wd_3: 'czw.', p5b_wd_4: 'pt.', p5b_wd_5: 'sob.', p5b_wd_6: 'niedz.',
 
   /* edycja wartości (wzór: Opcje › Progi alarmów) */
   p5b_changed: 'Ostatnia zmiana: {at} · {by}',

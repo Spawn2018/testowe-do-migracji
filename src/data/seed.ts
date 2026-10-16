@@ -167,9 +167,9 @@ export const WORKFLOWS: WorkflowRule[] = [
   },
   {
     id: 'wf-10',
-    name: 'Akceptacja factoringu',
+    name: 'Akceptacja faktoringu',
     description:
-      'HHL Accept oferty factoringu po MATCHED → payoutStatus SCHEDULED, audit + powiadomienie SCX',
+      'HHL akceptuje ofertę faktoringu po zgodności faktury → wypłata zaplanowana, wpis w dzienniku i powiadomienie SCX',
     trigger: 'FACTORING_ACCEPTED',
     condition: '{"==":[{"var":"invoice.status"},"MATCHED"]}',
     actions: ['set_payout_scheduled', 'audit_factoring', 'notify_scx'],
@@ -247,11 +247,14 @@ type ExtraLoadSpec = {
   permitPatch?: Partial<NonNullable<Load['permit']>>;
 };
 
-/** Additional corridor movements deliberately cover operational failure modes in P7. */
+/**
+ * Additional corridor movements deliberately cover operational failure modes in P7.
+ * audyt-C C-12: `itemType` = symbol rodzaju jak w pliku KSH (prefiks kodu), bez opisów po angielsku.
+ */
 const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   {
     code: 'SG-31',
-    itemType: 'Segment ramy · weather hold',
+    itemType: 'SG',
     status: 'IN_TRANSIT_SE',
     dims: { lengthM: 20.4, widthM: 3.25, heightM: 4.15, weightT: 28.8 },
     plannedLoadDate: '2026-09-23',
@@ -260,7 +263,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'SG-32',
-    itemType: 'Moduł mostowy · ferry cancel',
+    itemType: 'SG',
     status: 'AT_PORT',
     dims: { lengthM: 18.8, widthM: 3.1, heightM: 3.8, weightT: 26.4 },
     plannedLoadDate: '2026-09-23',
@@ -276,7 +279,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'T-17',
-    itemType: 'Transformator · E4 closure',
+    itemType: 'T',
     status: 'IN_TRANSIT_SE',
     dims: { lengthM: 16.2, widthM: 3.35, heightM: 4.25, weightT: 31.2 },
     plannedLoadDate: '2026-09-22',
@@ -285,7 +288,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'SG-33',
-    itemType: 'Segment stalowy · silent GPS',
+    itemType: 'SG',
     status: 'SILENT',
     dims: { lengthM: 19.6, widthM: 2.95, heightM: 3.7, weightT: 24.1 },
     plannedLoadDate: '2026-09-21',
@@ -295,7 +298,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'SG-34',
-    itemType: 'Kratownica · permit mismatch',
+    itemType: 'SG',
     // Deliberate P9 READY-gate fixture: visible MISMATCH docs keep this load blocked.
     status: 'DOC_MISSING',
     docMissing: true,
@@ -307,7 +310,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'T-18',
-    itemType: 'Belka dachowa · sequence',
+    itemType: 'T',
     status: 'APPROACHING_SITE',
     dims: { lengthM: 17.4, widthM: 2.9, heightM: 3.45, weightT: 22.7 },
     plannedLoadDate: '2026-09-20',
@@ -317,7 +320,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'SG-35',
-    itemType: 'Płyta fasadowa · wind window',
+    itemType: 'SG',
     status: 'DELAYED',
     dims: { lengthM: 15.7, widthM: 3.0, heightM: 3.6, weightT: 19.5 },
     plannedLoadDate: '2026-09-22',
@@ -327,7 +330,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'SG-36',
-    itemType: 'Element konstrukcji · missing permit',
+    itemType: 'SG',
     status: 'DOC_MISSING',
     dims: { lengthM: 18.1, widthM: 3.25, heightM: 4.05, weightT: 27.2 },
     plannedLoadDate: '2026-09-25',
@@ -337,7 +340,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'R-03',
-    itemType: 'Reaktor · escort gap',
+    itemType: 'R',
     status: 'RESOURCES_PENDING',
     dims: { lengthM: 14.9, widthM: 3.15, heightM: 3.9, weightT: 25.8 },
     plannedLoadDate: '2026-09-26',
@@ -346,7 +349,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
   },
   {
     code: 'SS-08',
-    itemType: 'Steel skid · frost route',
+    itemType: 'SS',
     status: 'IN_TRANSIT_SE',
     dims: { lengthM: 16.8, widthM: 2.85, heightM: 3.5, weightT: 23.4 },
     plannedLoadDate: '2026-09-22',
@@ -608,25 +611,34 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
   return events;
 }
 
+/**
+ * Dokumenty demo (E31, E41; audyt-C C-03…C-06):
+ * - przy transporcie tylko zezwolenia PL i SE oraz „CMR z podpisem odbiorcy” — ten dopiero po „Dostarczone”
+ *   (bez CMR z załadunku, POD, rysunku i zdjęć mocowania; decyzja 1 B 08.10, 19:11, 19:51);
+ * - nazwa pliku z kodem transportu: „SG-01_Zezwolenie_PL.pdf”, „SG-01_CMR_podpisany.pdf”;
+ * - polisy to pliki firmy („cała firma”), dodawane raz: polisa SCX (widzą HHL i SCX) i Polisa HHL (widzą HHL i KSH)
+ *   — pytanie 3 B: KSH widzi Polisę HHL, SCX swoją, HHL obie.
+ */
 export function buildSeedDocuments(loads: Load[]): Document[] {
   const docs: Document[] = [];
   let n = 0;
   const cats = [
-    { cat: 'PERMIT_PL' as const },
-    { cat: 'PERMIT_SE' as const },
-    { cat: 'INSURANCE' as const },
-    { cat: 'CMR' as const },
-    { cat: 'POD' as const },
-    { cat: 'LASHING_PHOTOS' as const },
-    { cat: 'DRAWING' as const },
+    { cat: 'PERMIT_PL' as const, file: 'Zezwolenie_PL' },
+    { cat: 'PERMIT_SE' as const, file: 'Zezwolenie_SE' },
+    { cat: 'CMR' as const, file: 'CMR_podpisany' },
   ];
+  /* jeden dostarczony transport bez podpisanego CMR — przykład braku po „Dostarczone” */
+  const delivered = loads.filter((l) => ['DELIVERED', 'READY_TO_INVOICE', 'INVOICED'].includes(l.status));
+  const cmrMissing = delivered.length > 1
+    ? [...delivered].sort((a, b) => (a.plannedDeliverDate ?? '').localeCompare(b.plannedDeliverDate ?? '') || a.code.localeCompare(b.code)).at(-1)!.id
+    : null;
   for (const l of loads) {
     for (const c of cats) {
       const late = ['PLANNED', 'RESOURCES_PENDING', 'DOC_MISSING'].includes(l.status);
-      const delivered = l.status === 'DELIVERED' || l.status === 'UNLOADING';
       let status: Document['status'] = 'MISSING';
       let uploaded: string | null = null;
       let permitFits: boolean | null = null;
+      let deadline = `${l.plannedLoadDate}T06:00:00+02:00`;
       if (c.cat === 'PERMIT_PL' || c.cat === 'PERMIT_SE') {
         if (['SG-07', 'SG-34'].includes(l.code)) {
           status = 'MISMATCH';
@@ -637,54 +649,51 @@ export function buildSeedDocuments(loads: Load[]): Document[] {
           uploaded = '2026-09-18T12:00:00+02:00';
           permitFits = true;
         }
-      } else if (
-        c.cat === 'CMR' &&
-        !['PLANNED', 'RESOURCES_PENDING', 'READY', 'DOC_MISSING'].includes(l.status)
-      ) {
-        status = 'UPLOADED';
-        uploaded = `${l.plannedLoadDate}T09:00:00+02:00`;
-      } else if (c.cat === 'POD' && delivered) {
-        status = l.code === 'SG-02' ? 'MISSING' : 'UPLOADED';
-        uploaded = status === 'UPLOADED' ? `${l.plannedDeliverDate}T14:00:00+02:00` : null;
-      } else if (c.cat === 'INSURANCE' && !l.docMissing) {
-        status = 'UPLOADED';
-        uploaded = '2026-08-01T10:00:00+02:00';
-      } else if (
-        c.cat === 'LASHING_PHOTOS' &&
-        [
-          'LOADING',
-          'IN_TRANSIT_PL',
-          'AT_PORT',
-          'ON_FERRY',
-          'IN_TRANSIT_SE',
-          'APPROACHING_SITE',
-          'UNLOADING',
-          'DELIVERED',
-        ].includes(l.status) &&
-        l.id !== 'load-015'
-      ) {
-        status = 'UPLOADED';
-        uploaded = `${l.plannedLoadDate}T08:45:00+02:00`;
-      } else if (c.cat === 'DRAWING') {
-        /* L7 — from model: most loads have KSH drawing; not always 100% */
-        if (!l.docMissing && l.status !== 'RESOURCES_PENDING' && !['SG-07', 'SG-34', 'R-03'].includes(l.code)) {
+      } else {
+        /* CMR z podpisem odbiorcy: po „Dostarczone”, termin 24 h (Opcje › Terminy dokumentów) */
+        deadline = `${l.plannedDeliverDate}T23:59:00+02:00`;
+        if (delivered.some((d) => d.id === l.id) && l.id !== cmrMissing) {
           status = 'UPLOADED';
-          uploaded = '2026-09-10T11:00:00+02:00';
+          uploaded = `${l.plannedDeliverDate}T16:30:00+02:00`;
         }
       }
       docs.push({
         id: `doc-${++n}`,
         loadId: l.id,
         category: c.cat,
-        name: `${c.cat}_${l.code}.pdf`,
+        name: `${l.code}_${c.file}.pdf`,
         uploadedAt: uploaded,
-        deadline: `${l.plannedLoadDate}T06:00:00+02:00`,
+        deadline,
         status,
         permitFits,
         visibleTo: ['HHL', 'KSH', 'SCX'],
       });
     }
   }
+  docs.push(
+    {
+      id: 'doc-policy-scx',
+      loadId: '',
+      category: 'INSURANCE',
+      name: 'Polisa_OCP_SCX.pdf',
+      uploadedAt: '2026-08-01T10:00:00+02:00',
+      deadline: null,
+      status: 'UPLOADED',
+      permitFits: null,
+      visibleTo: ['HHL', 'SCX'],
+    },
+    {
+      id: 'doc-policy-hhl',
+      loadId: '',
+      category: 'INSURANCE',
+      name: 'Polisa_HHL.pdf',
+      uploadedAt: '2026-08-01T10:00:00+02:00',
+      deadline: null,
+      status: 'UPLOADED',
+      permitFits: null,
+      visibleTo: ['HHL', 'KSH'],
+    },
+  );
   return docs;
 }
 
@@ -787,14 +796,14 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
     id: 'risk-ferry',
     type: 'FERRY',
     severity: 'HIGH',
-    title: 'Rejs 24.09 · prognoza fali 2,9 m, porywy 19 m/s',
+    title: 'Rejs 24.09.2026 · prognoza fali 2,9 m, porywy 19 m/s',
     detail: '3 transporty na tym rejsie. Alternatywa: Gdynia–Karlskrona',
     loadId: ferry?.id,
     owner: 'HHL',
     meta: '3 transporty na tym rejsie. Alternatywa: Gdynia–Karlskrona',
     nextAction: 'Włącz Plan B / powiadom SCX',
     ageHours: 0.67,
-    ferryPlanB: ['Nova Star jutro 11:00', 'Gdynia–Karlskrona', 'Hold w Gdańsku +12h'],
+    ferryPlanB: ['Nova Star jutro 11:00', 'Gdynia–Karlskrona', 'Postój w Gdańsku +12 h'],
   });
 
   R.push({
@@ -854,16 +863,16 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
     id: 'risk-fm-storm',
     type: 'FORCE_MAJEURE',
     severity: 'HIGH',
-    title: 'Siła wyższa — sztorm Bałtyk · rejs 24.09 · +12 h',
+    title: 'Siła wyższa — sztorm Bałtyk · rejs 24.09.2026 · +12 h',
     detail: 'Armator wstrzymuje odejście przy fali >3 m. Transporty w oknie promu.',
     loadId: ferryLoad?.id,
     owner: 'HHL',
     meta: 'Odpowiada: H&H Logistics · przyczyna: sztorm / force majeure promu',
-    nextAction: 'Plan B / nowego slotu na 25.09',
+    nextAction: 'Plan B / nowego slotu na 25.09.2026',
     ageHours: 0.8,
     delayImpactHours: 12,
     causeCategory: 'storm',
-    ferryPlanB: ['Nova Star jutro 11:00', 'Gdynia–Karlskrona', 'Hold w Gdańsku +12h'],
+    ferryPlanB: ['Nova Star jutro 11:00', 'Gdynia–Karlskrona', 'Postój w Gdańsku +12 h'],
   });
 
   R.push({
@@ -931,9 +940,9 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
     type: 'OPS',
     severity: 'MEDIUM',
     title: 'Polisa OCP Scandinavian Express wygasa za 11 dni',
-    detail: 'Wymagany nowy certyfikat przed 03.10',
+    detail: 'Wymagany nowy certyfikat przed 03.10.2026',
     owner: 'SCX',
-    meta: 'Wymagany nowy certyfikat przed 03.10',
+    meta: 'Wymagany nowy certyfikat przed 03.10.2026',
     nextAction: 'Poproś o nową polisę',
     ageHours: 24,
   });
@@ -978,25 +987,25 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
       id: 'risk-ferry-cancel',
       type: 'FERRY',
       severity: 'CRITICAL',
-      title: 'Prom anulowany — M/F Nova Star · 24.09',
+      title: 'Prom anulowany — M/F Nova Star · 24.09.2026',
       detail: 'Armator anulował odejście; 1 transport bez potwierdzonego slotu na Nynäshamn.',
       loadCode: 'SG-32',
       owner: 'HHL',
       meta: 'Odpowiada: H&H Logistics · status armatora: anulowany',
       nextAction: 'Przenieś na Wawel / potwierdź Plan B',
       ageHours: 1.2,
-      ferryPlanB: ['Wawel 25.09 20:00', 'Gdynia–Karlskrona', 'Hold w Gdańsku +24 h'],
+      ferryPlanB: ['Wawel 25.09.2026, 20:00', 'Gdynia–Karlskrona', 'Postój w Gdańsku +24 h'],
     }),
     extraRisk({
       id: 'risk-e4-closure',
       type: 'ROAD_SE',
       severity: 'CRITICAL',
-      title: 'E4 zamknięta — Luleå północ · objazd +120 min',
-      detail: 'Pełne zamknięcie E4 po kolizji; objazd dla zestawów ponadgabarytowych przez drogę 97.',
+      title: 'Högakustenbron (E4) zamknięty — porywy 31 m/s',
+      detail: 'Trafikverket zamknął most na E4; SCX wybiera objazd przez Kramfors i Sandöbron albo postój do końca zamknięcia.',
       loadCode: 'T-17',
       owner: 'SCX',
-      meta: 'Odpowiada: Scandinavian Express · E4 zamknięta · źródło: Trafikverket',
-      nextAction: 'Potwierdź objazd i nową ETA Boden',
+      meta: 'Odpowiada: Scandinavian Express · Högakustenbron (E4) zamknięty · źródło: Trafikverket',
+      nextAction: 'Zdecyduj: objazd czy postój',
       ageHours: 0.4,
       delayImpactHours: 2,
       situationId: 'seed-sit-e4-closure',
@@ -1018,8 +1027,8 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
       id: 'risk-permit-mismatch-34',
       type: 'DOC',
       severity: 'CRITICAL',
-      title: 'Permit mismatch — SG-34 przekracza wysokość i szerokość',
-      detail: 'Dokument TRIP nie obejmuje zestawu 21,8 × 3,6 × 4,55 m; READY nie może wyjechać.',
+      title: 'Zezwolenie niezgodne z zestawem — SG-34 przekracza wysokość i szerokość',
+      detail: 'Zezwolenie „Trasa” nie obejmuje zestawu 21,8 × 3,6 × 4,55 m; transport nie przejdzie do „Gotowy”.',
       loadCode: 'SG-34',
       owner: 'SCX',
       meta: 'Odpowiada: Scandinavian Express · zezwolenie nie pasuje do wymiarów',
@@ -1043,7 +1052,7 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
       type: 'OPS',
       severity: 'MEDIUM',
       title: 'Okno pogodowe — wiatr boczny 17 m/s dla SG-35',
-      detail: 'Załadunek ponadgabarytu możliwy tylko do 18:00; po zmianie prognozy wymagany hold.',
+      detail: 'Załadunek ponadgabarytu możliwy tylko do 18:00; po zmianie prognozy wymagany postój.',
       loadCode: 'SG-35',
       owner: 'SCX',
       meta: 'Odpowiada: Scandinavian Express · pogoda: wiatr 17 m/s',
@@ -1056,10 +1065,10 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
       type: 'DOC',
       severity: 'HIGH',
       title: 'Brak zezwolenia SE — SG-36 T-48',
-      detail: 'Brak potwierdzonej ścieżki BK dla masy 27,2 t; załadunek zaplanowany na 25.09.',
+      detail: 'Brak potwierdzonej ścieżki BK dla masy 27,2 t; załadunek zaplanowany na 25.09.2026.',
       loadCode: 'SG-36',
       owner: 'SCX',
-      meta: 'Odpowiada: Scandinavian Express · dokument PERMIT_SE missing',
+      meta: 'Odpowiada: Scandinavian Express · brak zezwolenia SE',
       nextAction: 'Wgraj zezwolenie SE i potwierdź trasę',
       ageHours: 4.3,
     }),
@@ -1071,7 +1080,7 @@ export function buildSeedRisks(loads: Load[]): Risk[] {
       detail: 'Do załadunku pozostały 52 h; brak kierowcy, ciągnika i tablicy naczepy.',
       loadCode: 'R-03',
       owner: 'SCX',
-      meta: 'Termin uzupełnienia: 24.09 · wymagany pilot',
+      meta: 'Termin uzupełnienia: 24.09.2026 · wymagany pilot',
       nextAction: 'Uzupełnij zasoby i numer pilota',
       ageHours: 2.1,
     }),
@@ -1184,7 +1193,7 @@ export function buildSeedInvoices(loads: Load[]): Invoice[] {
       expectedTotal: m.e,
       billedTotal: m.b,
       lines: linesMatched,
-      note: 'Zgodność OK · factoring zaplanowany',
+      note: 'Zgodność OK · faktoring zaplanowany',
       factoring: {
         selected: true,
         feePercent: feePct,
@@ -1204,7 +1213,7 @@ export function buildSeedInvoices(loads: Load[]): Invoice[] {
       expectedTotal: d.e,
       billedTotal: d.b,
       lines: linesDisputed,
-      note: 'Różnice linia po linii · bez factoringu',
+      note: 'Różnice pozycja po pozycji · bez faktoringu',
       payoutStatus: 'NONE',
     },
     {
@@ -1215,7 +1224,7 @@ export function buildSeedInvoices(loads: Load[]): Invoice[] {
       expectedTotal: w39.e,
       billedTotal: w39.b,
       lines: linesW39,
-      note: 'SCX wysłał · factoring, czeka na akceptację HHL',
+      note: 'SCX wysłał · faktoring, czeka na akceptację HHL',
       factoring: {
         selected: true,
         feePercent: feePct,
@@ -1297,8 +1306,8 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n5',
     at: '2026-09-22T14:05:00+02:00',
-    title: 'Faktura w sporze · W38',
-    body: 'Różnica >50 PLN na linii SG-04.',
+    title: 'Faktura w sporze · t38',
+    body: 'Różnica ponad 50 EUR na pozycji SG-04.',
     severity: 'HIGH',
     read: false,
     roleScope: ['HHL', 'SCX'],
@@ -1308,7 +1317,7 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
     id: 'n6',
     at: '2026-09-22T12:30:00+02:00',
     title: 'Brak CMR · SG-07',
-    body: 'Wgraj CMR przed READY.',
+    body: 'Wgraj CMR z podpisem odbiorcy — potem „Gotowe do fakturowania”.',
     severity: 'CRITICAL',
     read: false,
     roleScope: ['HHL', 'SCX', 'KSH'],
@@ -1317,7 +1326,7 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n7',
     at: '2026-09-22T11:00:00+02:00',
-    title: 'Marża poniżej 12% · SG-15',
+    title: 'Marża poniżej progu 4 % · SG-15',
     body: 'Sprawdź rozbicie kosztów w finansach.',
     severity: 'MEDIUM',
     read: false,
@@ -1367,8 +1376,8 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n12',
     at: '2026-09-21T16:00:00+02:00',
-    title: 'Faktura zaakceptowana · W37',
-    body: 'Zgodność OK · factoring zaplanowany.',
+    title: 'Faktura zaakceptowana · t37',
+    body: 'Zgodność OK · faktoring zaplanowany.',
     severity: 'LOW',
     read: false,
     roleScope: ['HHL', 'SCX'],

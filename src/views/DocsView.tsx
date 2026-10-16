@@ -24,11 +24,12 @@ import { useIsPhone } from '../lib/useIsPhone';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { transportLabel } from '../lib/transportName';
 import { formatPlNumber } from '../lib/format';
+import { fmtDate, fmtDateRange, fmtDateTime } from '../lib/time';
 import { weekKeyLabel } from '../lib/p5Invoices';
 import {
   cmrKind, codesText, filterFiles, reqCount, reqVisible, REQ_KEYS, responsibleOrg, seenBy, type FileFilter, type ReqKey,
 } from '../lib/p5Docs';
-import { permitsOf, policiesOf, type PolicyView } from '../lib/p5Source';
+import { docRequirementsStart, docsSeenOf, permitsOf, policiesOf, type PolicyView } from '../lib/p5Source';
 import { docLabel, UploadDocModal } from '../components/docs/UploadDocModal';
 import { up } from '../components/options/up';
 import '../components/finance/finance.css';
@@ -41,18 +42,14 @@ const InsurancePolicyForm =
 
 /** Rodzaje do wgrania przy transporcie (polisy dodaje się raz — formularz polis, G-21). */
 const UPLOAD_KINDS: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR'];
-const FILE_KINDS: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR', 'INSURANCE', 'POD', 'LASHING_PHOTOS', 'DRAWING', 'INVOICE'];
+/** Filtr „Rodzaj”: zezwolenia, CMR, polisy i faktury — bez POD, rysunku i zdjęć mocowania (E31 19:11, 19:51; audyt-C C-04). */
+const FILE_KINDS: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR', 'INSURANCE', 'INVOICE'];
 const MAX_FILES = 60;
 
-const dmy = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
-const dm = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}`;
-const atText = (iso: string | null) => {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (!Number.isFinite(d.getTime())) return '—';
-  const f = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', ...o }).format(d);
-  return `${f({ day: '2-digit', month: '2-digit' })}, ${f({ hour: '2-digit', minute: '2-digit' })}`;
-};
+/* rok zawsze — właściciel 16.10.2026: „08.10.2026”, „08.10.2026, 12:00”, „01.10.2026–31.10.2026” */
+const dmy = (iso: string) => fmtDate(iso);
+const dm = (iso: string) => fmtDate(iso);
+const atText = (iso: string | null) => (iso ? fmtDateTime(iso) : '—');
 const m2 = (n: number) => formatPlNumber(n, 2);
 
 interface ReqRow {
@@ -73,10 +70,12 @@ function policyNote(locale: Locale, p: PolicyView): string {
 }
 
 export function DocsView() {
-  const documents = useTowerStore((s) => s.documents);
+  const allDocuments = useTowerStore((s) => s.documents);
   const loads = useTowerStore((s) => s.loads);
   const locale = useTowerStore((s) => s.locale);
   const role = useTowerStore((s) => s.role) as RoleId;
+  /* audyt-C C-06 (E31 pytanie 3 B): pliki, które widzi ta firma — w produkcji decyduje RLS, w demo `visibleTo` */
+  const documents = useMemo(() => docsSeenOf(allDocuments, role), [allDocuments, role]);
   const phone = useIsPhone();
   const nowMs = getNowMs();
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
@@ -86,7 +85,7 @@ export function DocsView() {
   const [packOpen, setPackOpen] = useState(false);
   const packRef = useRef<HTMLDivElement>(null);
   /* III-6: wymagalność i stan z bazy (produkcja) albo wartości startowe (demo) — odczyt bez zmian */
-  const [reqs, setReqs] = useState<DocRequirement[]>(DEFAULT_DOC_REQUIREMENTS);
+  const [reqs, setReqs] = useState<DocRequirement[]>(docRequirementsStart);
   const [serverStatus, setServerStatus] = useState<DocStatusRow[] | null>(null);
   const [insuranceCover, setInsuranceCover] = useState<{ covered: number; total: number } | null>(null);
   useEffect(() => {
@@ -336,7 +335,7 @@ export function DocsView() {
             <article key={p.id} className="fin-card doc-card" data-doc-permit={p.id}>
               <header className="doc-card-hd"><b data-content>{p.country} · {p.number ?? ft(locale, 'p5_doc_perm_at_load')}</b><span className={p.scope === 'FIRMA' ? 'fin-tag sea' : 'fin-tag warn'}>{up(ft(locale, `p5_doc_perm_${p.scope}`))}</span></header>
               <p className="fin-muted" data-content>
-                {[p.appliesTo, p.limits ? `${m2(p.limits.l)} × ${m2(p.limits.w)} × ${m2(p.limits.h)} m` : null, p.validFrom && p.validTo ? `${dm(p.validFrom)}–${dmy(p.validTo)}` : null,
+                {[p.appliesTo, p.limits ? `${m2(p.limits.l)} × ${m2(p.limits.w)} × ${m2(p.limits.h)} m` : null, p.validFrom && p.validTo ? fmtDateRange(p.validFrom, p.validTo) : null,
                   ftp(locale, p.scope === 'FIRMA' ? 'p5_doc_perm_auto' : 'p5_doc_perm_manual', { n: p.loads })].filter(Boolean).join(' · ')}
               </p>
             </article>
@@ -362,7 +361,7 @@ export function DocsView() {
                   <td><span className={p.scope === 'FIRMA' ? 'fin-tag sea' : 'fin-tag warn'}>{up(ft(locale, `p5_doc_perm_${p.scope}`))}</span></td>
                   <td>{p.country.replace('+', ' + ')}</td>
                   <td data-content>{p.number ?? <span className="fin-muted">{ft(locale, 'p5_doc_perm_at_load')}</span>}</td>
-                  <td>{p.validFrom && p.validTo ? `${dm(p.validFrom)}–${dmy(p.validTo)}` : '—'}</td>
+                  <td>{p.validFrom && p.validTo ? fmtDateRange(p.validFrom, p.validTo) : '—'}</td>
                   <td>{p.limits ? `${m2(p.limits.l)} × ${m2(p.limits.w)} × ${m2(p.limits.h)} m` : '—'}{p.pilot ? ` · ${ftp(locale, 'p5_doc_perm_pilot', { p: p.pilot })}` : ''}</td>
                   <td data-content>{p.appliesTo}</td>
                   <td className="num">{ftp(locale, p.scope === 'FIRMA' ? 'p5_doc_perm_auto' : 'p5_doc_perm_manual', { n: p.loads })}</td>

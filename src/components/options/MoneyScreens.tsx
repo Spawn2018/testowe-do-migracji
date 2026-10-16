@@ -11,6 +11,7 @@ import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import type { PackKey } from '../../lib/p5Pack';
 import { formatPlNumber } from '../../lib/format';
+import { fmtDateRange, fmtDateTime, formatCalendarDay } from '../../lib/time';
 import { TZ_OPERACYJNA } from '../../lib/money/engine';
 import {
   CANCEL_DAYS, feeOf, looksLikeEmail, pctOf, tierOf, tiersAround,
@@ -32,19 +33,18 @@ const pctTxt = (m: number | null) => {
   const p = pctOf(m);
   return p == null ? '—' : formatPlNumber(p, p % 1 ? 1 : 0);
 };
-const dm = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
-const dmy = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
-/** „05–11.10” w jednym miesiącu, „28.09–04.10” na przełomie. */
-const range = (a: string, b: string) => (a.slice(5, 7) === b.slice(5, 7) ? `${a.slice(8, 10)}–${dm(b)}` : `${dm(a)}–${dm(b)}`);
+/* rok zawsze — właściciel 16.10.2026 */
+const dm = (d: string) => formatCalendarDay(d.slice(0, 10));
+const dmy = (d: string) => formatCalendarDay(d.slice(0, 10));
+/** „05.10.2026–11.10.2026” (pełne daty, także w jednym miesiącu). */
+const range = (a: string, b: string) => fmtDateRange(a, b);
 const wd = (locale: Locale, d: string) => fb(locale, `p5b_wd_${(new Date(`${d}T12:00:00Z`).getUTCDay() + 6) % 7}`);
 const srcName = (s: FuelSource) => (s === 'OKQ8' ? 'OKQ8' : 'Orlen');
-/** „07.10, 12:35” w czasie polskim, także gdy baza poda UTC. */
+/** „07.10.2026, 12:35” w czasie polskim, także gdy baza poda UTC. */
 const changedAt = (iso: string) => {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  const parts = new Intl.DateTimeFormat('pl-PL', { timeZone: TZ_OPERACYJNA, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d);
-  const g = (k: string) => parts.find((x) => x.type === k)?.value ?? '';
-  return `${g('day')}.${g('month')}, ${g('hour')}:${g('minute')}`;
+  return fmtDateTime(d, TZ_OPERACYJNA);
 };
 /** Zapis, który się wysypał, liczymy jak nieudany (komunikat zamiast zawieszonego przycisku). */
 const safe = <T,>(p: Promise<T>, fail: T): Promise<T> => p.catch(() => fail);

@@ -7,6 +7,7 @@
  * Czyste funkcje widoku — bez zapytań i zapisów.
  */
 import type { Load } from '../types';
+import { formatCalendarDay } from './time';
 
 export type MsgChannel = 'SMS' | 'EMAIL' | 'LOGIN';
 export type MsgGroup = 'zone' | 'risk' | 'load' | 'inv' | 'sys' | 'login';
@@ -253,7 +254,8 @@ export function normalize(segs: readonly Seg[]): Seg[] {
 
 export type Sample = Partial<Record<TokenId, string>>;
 
-const dm = (d: string | null | undefined) => (d && /^\d{4}-\d{2}-\d{2}/.test(d) ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : null);
+/** „08.10.2026” — rok zawsze (właściciel 16.10.2026). */
+const dm = (d: string | null | undefined) => (d && /^\d{4}-\d{2}-\d{2}/.test(d) ? formatCalendarDay(d.slice(0, 10)) : null);
 
 /**
  * Dane podglądu z prawdziwego transportu (E43 „Podgląd”): kod, numer zlecenia HHL, rejestracje, daty planu, link.
@@ -292,7 +294,7 @@ export function sampleOf(load: Pick<Load, 'code' | 'hhlOrderNo' | 'plannedLoadDa
     policyNo: 'OC-0000-PRZYKLAD',
     recipients: '2 osoby',
     source: 'Orlen',
-    date: '15.10',
+    date: '15.10.2026',
     count: '19',
     name: 'Anna Nowak',
     firm: 'KSH',
@@ -308,8 +310,8 @@ export function sampleOf(load: Pick<Load, 'code' | 'hhlOrderNo' | 'plannedLoadDa
     carrier: 'Scandinavian Express',
     codes: load?.code ?? 'XX-00',
     reminder: 'termin za 3 dni',
-    loadDateBefore: '04.10',
-    planDateBefore: '06.10',
+    loadDateBefore: '04.10.2026',
+    planDateBefore: '06.10.2026',
     site: 'Boden',
     placeTo: 'plac Stegra Boden',
     port: 'Gdynia',
@@ -370,7 +372,7 @@ export const SMS_MAX = 160;
 /** Najdłuższe wartości klocków SMS — limit 160 ma wytrzymać każdy transport, nie tylko ten z podglądu (E43 „SMS”). */
 const SMS_WORST: Sample = {
   code: 'X'.repeat(8), trailer: 'X'.repeat(10), tractor: 'X'.repeat(10), place: 'X'.repeat(28), placeTo: 'X'.repeat(28),
-  dwell: '00:00', arrival: '00:00', planDate: '00.00', link: `tower.log-mar.pl/#/transport/${'X'.repeat(8)}`,
+  dwell: '00:00', arrival: '00:00', planDate: '00.00.0000', link: `tower.log-mar.pl/#/transport/${'X'.repeat(8)}`,
 };
 
 /** SMS gotowy do wysłania na danych podglądu. */

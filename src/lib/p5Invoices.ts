@@ -4,12 +4,13 @@
  * z dostarczonych, jeszcze niezafakturowanych transportów, liczby kafelków. Bez zapisu i bez nowych zapytań.
  */
 import type { Bill, BillDirection, Load, RoleId } from '../types';
-import { addDaysIso, billCandidates, canVerifyBill, expectedNetFor, invoicedLoadIds, isoWeekMonday } from './invoices3';
+import { addDaysIso, BILL_VAT_RATE, billCandidates, canVerifyBill, expectedNetFor, invoicedLoadIds, isoWeekMonday } from './invoices3';
 import { isoWeekKeyLocal } from './money/engine';
 import { unloadedAtOf } from './money/loadMoney';
+import { fmtDateRange } from './time';
 
 export type InvStatus = 'DO_WYSTAWIENIA' | 'DO_WERYFIKACJI' | 'ZGODNA' | 'SPORNA' | 'ZAAKCEPTOWANA' | 'OPLACONA' | 'PO_TERMINIE';
-export const VAT_RATE = 0.23;
+export const VAT_RATE = BILL_VAT_RATE;
 
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
@@ -34,25 +35,33 @@ export interface PendingWeek {
   netEur: number;
 }
 
-/** Tygodnie zamknięte (niedziela minęła) z dostarczonymi, niezafakturowanymi transportami — „Do wystawienia” (E4). */
-export function pendingWeeks(loads: Load[], bills: Bill[], direction: BillDirection, today: string): PendingWeek[] {
-  const done = invoicedLoadIds(bills, direction);
+/**
+ * Tygodnie zamknięte (niedziela minęła) z dostarczonymi, niezafakturowanymi transportami — „Do wystawienia” (E4),
+ * bez kwot. Jedno źródło dla kafla „Czeka na wystawienie” i liczby przy „Faktury” w menu (audyt-C C-10).
+ */
+export function pendingWeekLoads(loads: readonly Load[], bills: readonly Bill[], direction: BillDirection, today: string): { weekKey: string; loads: Load[] }[] {
+  const done = invoicedLoadIds([...bills], direction);
   const keys = new Set<string>();
   for (const l of loads) {
     const at = unloadedAtOf(l);
     if (at && !done.has(l.id)) keys.add(isoWeekKeyLocal(at));
   }
-  const out: PendingWeek[] = [];
+  const out: { weekKey: string; loads: Load[] }[] = [];
   for (const k of [...keys].sort()) {
-    const from = isoWeekMonday(k);
-    const to = addDaysIso(from, 6);
-    if (to >= today) continue;
-    const list = billCandidates(loads, bills, direction, k);
-    if (!list.length) continue;
-    const net = list.reduce((s, l) => s + (expectedNetFor(l, direction, 'EUR', today) ?? 0), 0);
-    out.push({ weekKey: k, no: Number(k.slice(-2)), from, to, loads: list, netEur: r2(net) });
+    if (addDaysIso(isoWeekMonday(k), 6) >= today) continue;
+    const list = billCandidates([...loads], [...bills], direction, k);
+    if (list.length) out.push({ weekKey: k, loads: list });
   }
   return out;
+}
+
+/** „Do wystawienia” (E4) z kwotą netto według cennika i opłaty paliwowej. */
+export function pendingWeeks(loads: Load[], bills: Bill[], direction: BillDirection, today: string): PendingWeek[] {
+  return pendingWeekLoads(loads, bills, direction, today).map(({ weekKey: k, loads: list }) => {
+    const from = isoWeekMonday(k);
+    const net = list.reduce((s, l) => s + (expectedNetFor(l, direction, 'EUR', today) ?? 0), 0);
+    return { weekKey: k, no: Number(k.slice(-2)), from, to: addDaysIso(from, 6), loads: list, netEur: r2(net) };
+  });
 }
 
 /** Różnica faktura − wyliczenie (netto, w walucie faktury). */
@@ -93,12 +102,23 @@ export function factoringPayout(net: number, gross: number, feePct: number): { f
   return { fee, payout: r2(gross - fee) };
 }
 
-/** „41 · 05.10–11.10” z klucza tygodnia „2026-W41” (bez „t” — kolumna „Tydzień” w Fakturach; Dokumenty dodają „t”). */
+/**
+ * audyt-C C-16 (E31/E40; decyzja 16.10, 13:58 · 4 — data z rokiem): „t42 · 12.10.2026–18.10.2026” — tydzień w oknie
+ * nowej faktury, z kluczem „2026-W42” tylko w wartości pola.
+ */
+export function weekOptionLabel(weekKey: string): string {
+  const m = /^\d{4}-W(\d{2})$/.exec(weekKey);
+  if (!m) return weekKey;
+  const from = isoWeekMonday(weekKey);
+  const dmy = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
+  return `t${Number(m[1])} · ${dmy(from)}–${dmy(addDaysIso(from, 6))}`;
+}
+
+/** „41 · 05.10.2026–11.10.2026” z klucza tygodnia „2026-W41” (bez „t” — kolumna „Tydzień” w Fakturach; Dokumenty dodają „t”). */
 export function weekKeyLabel(weekKey: string): string {
   const m = /^\d{4}-W(\d{2})$/.exec(weekKey);
   if (!m) return weekKey;
   const from = isoWeekMonday(weekKey);
   const to = addDaysIso(from, 6);
-  const dm = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
-  return `${Number(m[1])} · ${dm(from)}–${dm(to)}`;
+  return `${Number(m[1])} · ${fmtDateRange(from, to)}`;
 }

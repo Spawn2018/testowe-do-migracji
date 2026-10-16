@@ -106,7 +106,7 @@ describe('klocki ↔ znaczniki', () => {
 describe('podgląd i SMS', () => {
   it('SMS C na transporcie: kod, naczepa, miejsce, godzina postoju, data planu; bez polskich liter', () => {
     const txt = smsText(renderSegs(parseMarkers(by('SMS_C').body), sampleOf(load)));
-    expect(txt).toBe('XX-00: auto AB 0000 stoi przy placu Stegra Boden od 12:35. Plan dostawy: 07.10.');
+    expect(txt).toBe('XX-00: auto AB 0000 stoi przy placu Stegra Boden od 12:35. Plan dostawy: 07.10.2026.');
     expect(txt).not.toMatch(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/);
     expect(txt.length).toBeLessThanOrEqual(SMS_MAX);
   });

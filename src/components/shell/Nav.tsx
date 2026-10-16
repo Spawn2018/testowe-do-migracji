@@ -3,6 +3,8 @@ import { useTowerStore } from '../../store/useTowerStore'
 import { navForRole, type NavKey } from '../../lib/permissions'
 import { invoiceTodoCount, todoQueue, viewedKind } from '../../lib/cockpitE9'
 import { getAuthProfile } from '../../auth/profile'
+import { getNowIso } from '../../lib/frozenNow'
+import { localDateOf } from '../../lib/money/engine'
 import { navLabel, t } from '../../i18n/messages'
 import { ClaudeIcon, type IconKey } from './ClaudeIcon'
 /* wyglad/P3 (E37 pkt 1): e-mail, rodzaj konta i „Wyloguj” przeszły do menu konta w pasku górnym (AccountMenu). */
@@ -61,7 +63,6 @@ export function Nav() {
   const risks = useTowerStore((s) => s.risks)
   const bills = useTowerStore((s) => s.bills)
   const loads = useTowerStore((s) => s.loads)
-  const documents = useTowerStore((s) => s.documents)
   const navCollapsed = useTowerStore((s) => s.navCollapsed)
   const setNavCollapsed = useTowerStore((s) => s.setNavCollapsed)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -110,7 +111,7 @@ export function Nav() {
       return q && q.total ? { n: q.total, hot: true } : null
     }
     if (key === 'inv') {
-      const n = invoiceTodoCount(role, { loads, documents, bills })
+      const n = invoiceTodoCount(role, { loads, bills, today: localDateOf(getNowIso()) })
       return n ? { n } : null
     }
     return null
