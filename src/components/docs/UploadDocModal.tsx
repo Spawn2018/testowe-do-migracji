@@ -115,7 +115,7 @@ export function UploadDocModal({ locale, role, phone, loads, statusRows, allowed
                 </option>
               ))}
             </select>
-            {sel ? <span className="fin-muted">{ft(locale, 'p5_up_kind_hint')}</span> : null}
+            {sel && kinds.length > 1 ? <span className="fin-muted">{ft(locale, 'p5_up_kind_hint')}</span> : null}
           </div>
           {isPermit && scopeOn ? (
             <div className="up-field" role="group" aria-labelledby="up-scope">

@@ -1775,6 +1775,12 @@ img,video{max-width:100%;height:auto}
 .leaflet-tooltip.wt-mk-tip b{font:700 15px var(--font-cond)}
 .leaflet-tooltip.wt-mk-tip .r{color:var(--red);font-weight:600}
 .leaflet-tooltip.wt-mk-tip .g{color:var(--ink-3)}
+/* wyglad/W-dane (E45, Z3 pkt 8): podpis linii objazdu — tokeny, bez cienia i zaokrągleń, zawijany (telefon 390) */
+.leaflet-tooltip.wt-detour-tip{background:var(--surface);color:var(--ink);border:1px solid var(--rule);border-radius:0;box-shadow:none;padding:8px 10px;font-size:13px;line-height:1.45;white-space:normal;width:max-content;max-width:min(320px,calc(100vw - 48px))}
+.leaflet-tooltip-top.wt-detour-tip::before{border-top-color:var(--rule)}
+/* „Inne pliki” w panelu › Dokumenty: nazwa pliku i przyciski w jednym rzędzie, bez powtarzania rodzaju */
+.pd .mrow{gap:8px;align-items:center}
+.pd .mrow .lbl:empty{display:none}
 .mapkey[data-mapkey="e29"]{gap:6px 12px;font-size:12.5px;color:var(--ink)}
 .mapkey[data-mapkey="e29"] span{display:inline-flex;align-items:center;white-space:nowrap}
 .mapkey .mk-dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;box-sizing:border-box}

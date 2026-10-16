@@ -39,6 +39,8 @@ const pl = {
   e49_hist_detour: 'SCX: objazd {via}, {km}, +{d} — {place} zamknięty',
   e49_hist_note: ' · uwagi: {n}',
   e49_short: '{place} zamknięty — objazd czy postój?',
+  /* E45 (D-20261016-0230-01 Z3 pkt 8): linia objazdu na mapie po decyzji SCX „Jedziemy objazdem” */
+  e49_map_line: '{code} · objazd {via}: {km}, +{d} · decyzja SCX',
 
 } as const;
 

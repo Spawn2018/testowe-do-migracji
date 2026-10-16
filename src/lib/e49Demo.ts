@@ -4,16 +4,27 @@
  * Decyzja SCX zapisuje się w pamięci strony.
  */
 import type { Load } from '../types';
-import type { DetourCase, DetourDecision } from './e49Detour';
+import type { DetourCase, DetourDecision, DetourLine, LatLngPair } from './e49Detour';
 import type { EtaWx } from './e49Wx';
 import { timeOnly } from './statusAxis';
 
 const H = 3_600_000;
 const iso = (ms: number) => new Date(Math.round(ms / 60_000) * 60_000).toISOString();
 
-type St = { decided: Record<string, DetourDecision> };
+type St = { decided: Record<string, DetourDecision>; subs: Set<() => void> };
 const g = globalThis as unknown as { __e49Demo?: St };
-const st = (): St => (g.__e49Demo ??= { decided: {} });
+const st = (): St => (g.__e49Demo ??= { decided: {}, subs: new Set() });
+
+/**
+ * Objazd demo (G-09, przykład do wyglądu, punkty przybliżone): od zjazdu z E4 przy Utansjö zachodnim brzegiem
+ * Ångermanälven do Kramfors, przez Sandöbron i wschodnim brzegiem z powrotem na E4 za mostem (Hornön).
+ * W produkcji geometria z HERE Routing.
+ */
+export const DEMO_DETOUR_LINE: readonly LatLngPair[] = [
+  [62.76, 17.925], [62.778, 17.915], [62.795, 17.893], [62.81, 17.872], [62.83, 17.85], [62.858, 17.83],
+  [62.885, 17.805], [62.91, 17.785], [62.931, 17.777], [62.915, 17.82], [62.898, 17.855], [62.884, 17.885],
+  [62.872, 17.92], [62.856, 17.945], [62.84, 17.962], [62.828, 17.978],
+];
 
 const permitTrasa = (l: Load) => /^KR/i.test(l.code);
 
@@ -63,6 +74,7 @@ export function demoDetourCase(load: Load, nowIso: string): DetourCase {
       addMin: detourAdd,
       etaIso: iso(base + detourAdd * 60_000),
       via: 'przez Kramfors i Sandöbron (droga 90)',
+      line: DEMO_DETOUR_LINE,
       risks: [
         permitTrasa(load)
           ? { kind: 'PERMIT', level: 'warn', text: 'zezwolenie „Trasa”: objazd poza trasą w zezwoleniu SE — potrzebna zgoda Trafikverket przed wjazdem na objazd' }
@@ -80,7 +92,26 @@ export function demoDetourCase(load: Load, nowIso: string): DetourCase {
 
 export async function demoDetourDecide(id: string, d: DetourDecision): Promise<{ ok: boolean }> {
   st().decided[id] = d;
+  for (const f of st().subs) f();
   return { ok: true };
+}
+
+/** Linie objazdu demo: transporty z decyzją „Jedziemy objazdem” zapisaną w pamięci strony. */
+export function demoDetourLines(loads: readonly Load[], nowIso: string): DetourLine[] {
+  const out: DetourLine[] = [];
+  for (const l of loads) {
+    if (st().decided[`detour:${l.id}`]?.pick !== 'DETOUR') continue;
+    const c = demoDetourCase(l, nowIso);
+    if ('none' in c.detour || !c.detour.line) continue;
+    out.push({ loadId: l.id, line: c.detour.line, via: c.detour.via, addKm: c.detour.addKm, addMin: c.detour.addMin });
+  }
+  return out;
+}
+
+/** Zmiana decyzji demo → mapa rysuje linie od nowa. */
+export function subscribeDemoDetours(f: () => void): () => void {
+  st().subs.add(f);
+  return () => { st().subs.delete(f); };
 }
 
 /** Linie w szczegółach ETA (przykład): wiatr z boku na wybrzeżu, śliskość i — przy sprawie — postój albo objazd. */

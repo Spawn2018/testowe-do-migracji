@@ -29,7 +29,7 @@ import { weekKeyLabel } from '../lib/p5Invoices';
 import {
   cmrKind, codesText, filterFiles, reqCount, reqVisible, REQ_KEYS, responsibleOrg, seenBy, type FileFilter, type ReqKey,
 } from '../lib/p5Docs';
-import { docRequirementsStart, docsSeenOf, permitsOf, policiesOf, type PolicyView } from '../lib/p5Source';
+import { docRequirementsStart, docsSeenOf, otherDocsOn, permitsOf, policiesOf, type PolicyView } from '../lib/p5Source';
 import { docLabel, UploadDocModal } from '../components/docs/UploadDocModal';
 import { up } from '../components/options/up';
 import '../components/finance/finance.css';
@@ -40,10 +40,12 @@ const InsurancePolicyForm =
     ? lazy(() => import('../auth/InsurancePolicyForm'))
     : null;
 
-/** Rodzaje do wgrania przy transporcie (polisy dodaje się raz — formularz polis, G-21). */
-const UPLOAD_KINDS: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR'];
-/** Filtr „Rodzaj”: zezwolenia, CMR, polisy i faktury — bez POD, rysunku i zdjęć mocowania (E31 19:11, 19:51; audyt-C C-04). */
-const FILE_KINDS: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR', 'INSURANCE', 'INVOICE'];
+/** Rodzaje do wgrania przy transporcie (polisy dodaje się raz — formularz polis, G-21); „Inne” (E31 pkt 5) po `otherDocsOn`. */
+const UPLOAD_KINDS: DocCategory[] = otherDocsOn() ? ['PERMIT_PL', 'PERMIT_SE', 'CMR', 'OTHER'] : ['PERMIT_PL', 'PERMIT_SE', 'CMR'];
+/** Filtr „Rodzaj”: zezwolenia, CMR, polisy i faktury — bez POD, rysunku i zdjęć mocowania (E31 19:11, 19:51; audyt-C C-04); „Inne” jak wyżej. */
+const FILE_KINDS: DocCategory[] = otherDocsOn()
+  ? ['PERMIT_PL', 'PERMIT_SE', 'CMR', 'INSURANCE', 'INVOICE', 'OTHER']
+  : ['PERMIT_PL', 'PERMIT_SE', 'CMR', 'INSURANCE', 'INVOICE'];
 const MAX_FILES = 60;
 
 /* rok zawsze — właściciel 16.10.2026: „08.10.2026”, „08.10.2026, 12:00”, „01.10.2026–31.10.2026” */

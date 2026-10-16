@@ -43,7 +43,9 @@ export type DocCategory =
   | 'POD'
   | 'LASHING_PHOTOS'
   | 'DRAWING'
-  | 'INVOICE';
+  | 'INVOICE'
+  /** E31 pkt 5 — „Inne pliki” (w bazie `OTHER`); wiele plików, bez wersji. */
+  | 'OTHER';
 
 export type GeofenceType =
   | 'LOADING'

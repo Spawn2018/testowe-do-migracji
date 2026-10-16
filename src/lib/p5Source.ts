@@ -81,6 +81,14 @@ export interface PermitView {
 export function permitsOf(loads: Load[]): PermitView[] | null {
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoPermits(loads) : null;
 }
+/**
+ * „+ Dodaj” przy „Inne pliki” i rodzaj „Inne” w oknie „Wgraj dokument” (E31 pkt 5; D-20261014-2005-01 S4 pkt 7).
+ * Demo: włączone. Produkcja: po podłączeniu rodzaju `OTHER` (odczyt w `documentFromRow`, wiele plików bez wersji,
+ * uprawnienia HHL i SCX) — wykonawca zmienia tylko ten warunek (D-20261016-2130-01 pkt 3.1).
+ */
+export function otherDocsOn(): boolean {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase';
+}
 /** Wybór „Firma / Trasa” w oknie „Wgraj dokument” — po podłączeniu rodzaju zezwolenia w bazie. */
 export function permitScopeOf(): boolean {
   return import.meta.env.VITE_AUTH_MODE !== 'supabase';
