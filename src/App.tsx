@@ -14,7 +14,7 @@ import { ImpersonationBanner } from './auth/ImpersonationBanner';
 import { PreviewBanner } from './auth/PreviewBanner';
 import { lazyRetry } from './lib/lazyRetry';
 import { DashboardView } from './views/DashboardView';
-import { MapView } from './views/MapView';
+import { MapViewLazy as MapView } from './views/mapLazy';
 import { ScheduleView } from './views/ScheduleView';
 /* wyglad/P6: Ryzyka (E7) ładowane osobno (budżet pierwszego wczytania) */
 import { RisksViewLazy as RisksView } from './views/risksLazy';

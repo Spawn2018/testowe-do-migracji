@@ -23,6 +23,8 @@ import {
   type BasemapHealth, type LayerBag, type MapSlot, type PoolEntry,
 } from './mapPool';
 import { BasemapFailCard } from './BasemapFailCard';
+import { mapRow, markerTone, type MapRow } from '../../lib/p9cMap';
+import { p9m, p9mp } from '../../i18n/p9c';
 
 /* III-5 — odtwarzanie przebiegu z bazy: tylko build Supabase (chunk leniwy); demo bez zmian */
 const TrackReplay = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./TrackReplay')) : null;
@@ -62,7 +64,49 @@ function severityColor(severity: string): string {
   return '#7E93A1';
 }
 
-export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit' : 'map' }: { loads: Load[]; embedded?: boolean; slot?: MapSlot }) {
+const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+
+/**
+ * wyglad/P9-c (E29 pkt 4 i 7, makieta `makiety_html/E29/map.html`): znacznik według etapu E28 — załadunek, w drodze,
+ * na placu; opóźnienie = czerwona obwódka, brak GPS = wyszarzenie; podpis z nazwą (E41) na stronie Mapa.
+ */
+function vehicleIcon(row: MapRow, label: string | null): L.DivIcon {
+  const tone = markerTone(row.tile);
+  const cls = ['wt-mk', `is-${tone}`, row.late ? 'is-late' : '', row.nogps ? 'is-nogps' : ''].filter(Boolean).join(' ');
+  return L.divIcon({
+    className: 'wt-marker',
+    html: `<div class="${cls}" data-mk="${tone}"><i class="wt-mk-arrow"></i>${label ? `<span class="wt-mk-lb">${esc(label)}</span>` : ''}</div>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+  });
+}
+
+/** Dymek znacznika (E29 pkt 7): nazwa · etap / opóźnienie · ETA / ostatnia pozycja · odcinek / kliknij. */
+function vehicleTip(row: MapRow, locale: Parameters<typeof t>[0]): string {
+  const l1 = `<b>${esc(row.label)}</b> · ${esc(t(locale, row.stageKey))}`;
+  const eta = row.eta.main && row.eta.main !== p9m(locale, 'p9c_eta_none') ? p9mp(locale, 'p9c_tip_eta', { eta: row.eta.main }) : '';
+  const late = row.late && row.delayMin ? `<span class="r">${esc(p9mp(locale, 'p9c_tip_late', { d: durTextLocal(row.delayMin) }))}</span>` : '';
+  const l2 = [late, esc(eta)].filter(Boolean).join(' · ');
+  const last = row.pos.kind === 'nogps' ? row.pos.text : row.lastFixAt ? p9mp(locale, 'p9c_tip_last', { t: row.pos.text }) : '';
+  const l3 = [last, p9m(locale, `p9c_tip_seg_${row.seg}`)].filter(Boolean).map(esc).join(' · ');
+  return [l1, l2, `<span class="g">${l3}</span>`, `<span class="g">${esc(p9m(locale, 'p9c_tip_click'))}</span>`].filter((x) => x && x !== '<span class="g"></span>').join('<br>');
+}
+function durTextLocal(m: number): string {
+  const h = Math.floor(m / 60);
+  const mm = Math.round(m % 60);
+  return h ? `${h} h${mm ? ` ${mm} min` : ''}` : `${mm} min`;
+}
+
+/** Podpisy na stronie Mapa: przy ≤ 15 autach zawsze, przy większej liczbie od przybliżenia 7 (bez zasłaniania trasy). */
+const LABELS_MAX = 15;
+
+export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit' : 'map', onMarker }: {
+  loads: Load[];
+  embedded?: boolean;
+  slot?: MapSlot;
+  /** wyglad/P9-c (E29 pkt 9): telefon — dotknięcie znacznika otwiera arkusz zamiast panelu. */
+  onMarker?: (id: string) => void;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layersRef = useRef<LayerBag | null>(null);
@@ -81,6 +125,9 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   const toggleMapFocus = useTowerStore((s) => s.toggleMapFocus);
   const navigateTo = useTowerStore((s) => s.navigateTo);
   const risks = useTowerStore((s) => s.risks);
+  const sailings = useTowerStore((s) => s.sailings);
+  const onMarkerRef = useRef(onMarker);
+  onMarkerRef.current = onMarker;
   const [tick, setTick] = useState(0);
   const [situations, setSituations] = useState<RoadSituation[]>([]);
   const [aisPositions, setAisPositions] = useState<AisPosition[]>([]);
@@ -265,13 +312,14 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         map.removeLayer(layer);
       }
     };
+    /* E45 pkt 2–3 (potwierdzone 07.10 22:42): „Trasa” = droga i prom razem; statki AIS pod „Pojazdy”; bez kropek */
     setVis(layers.route, !!mapLayers.route);
-    setVis(layers.ferryLeg, !!mapLayers.ferry);
+    setVis(layers.ferryLeg, !!mapLayers.route);
     setVis(layers.geofences, !!mapLayers.geofence);
-    setVis(layers.poi, !!mapLayers.poi);
+    setVis(layers.poi, false);
     setVis(layers.fleet, !!mapLayers.vehicles);
     setVis(layers.situations, !!mapLayers.seEvents);
-    setVis(layers.ais, !!(mapLayers.ferry ?? mapLayers.vehicles));
+    setVis(layers.ais, !!mapLayers.vehicles);
 
     layers.geofences.clearLayers();
     if (mapLayers.geofence) {
@@ -317,19 +365,37 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         plate: l.resources.tractorPlate,
       }));
       const fleet = PROD_BUILD ? prodFleetMarkers(markerIn, gpsFixes) : demoFleetMarkers(markerIn, tick);
+      /* E29 pkt 4 i 7: etap, opóźnienie, brak GPS i dymek z tych samych danych co tabela Mapy */
+      const loc = useTowerStore.getState().locale;
+      const nowIso = getNowIso();
+      const byId = new Map(visibleLoads.map((l) => [l.id, l]));
+      const rowOf = (id: string): MapRow | null => {
+        const l = byId.get(id);
+        if (!l) return null;
+        return mapRow(l, {
+          role, nowIso, prod: PROD_BUILD, hasFix: (x) => gpsFixes.has(x),
+          sailingOf: (sid) => (sid ? sailings.find((x) => x.id === sid) : undefined),
+          tx: (k, p) => (p ? p9mp(loc, k, p) : p9m(loc, k)),
+        });
+      };
+      const labels = !embedded && (fleet.length <= LABELS_MAX || zoom >= 7);
       /* III-5 (SCOPE 5.10): produkcja — pozycje z bazy/statusu często w tym samym punkcie (np. plac załadunku);
          nakładające się znaczniki rozkładamy na okręgu/spirali (≥ 22 px), by etykiety i kliknięcia nie kolidowały.
          Tryb demo bez zmian (wzorzec zrzutów makiety). */
       for (const f of fleet) {
         const ll = L.latLng(f.lat, f.lng);
+        const row = rowOf(f.id);
         const m = L.marker(ll, {
-          icon: truckDivIcon(f.status, statusColor(f.status)),
+          icon: row ? vehicleIcon(row, labels ? row.label : null) : truckDivIcon(f.status, statusColor(f.status)),
           keyboard: false,
         });
-        m.bindTooltip(
-          [f.code, f.driver, f.plate].filter(Boolean).join(' · '),
-          { direction: 'top', offset: [0, -8] },
-        );
+        /* telefon (E29 pkt 9): zamiast dymka arkusz po dotknięciu */
+        if (!onMarkerRef.current) {
+          m.bindTooltip(
+            row ? vehicleTip(row, loc) : [f.code, f.driver, f.plate].filter(Boolean).join(' · '),
+            { direction: 'top', offset: [0, -14], className: 'wt-mk-tip' },
+          );
+        }
         m.on('mouseover', () => {
           setHoverLoadRef.current(f.id);
         });
@@ -338,7 +404,8 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         });
         m.on('click', (e) => {
           L.DomEvent.stopPropagation(e);
-          selectLoadRef.current(f.id);
+          if (onMarkerRef.current) onMarkerRef.current(f.id);
+          else selectLoadRef.current(f.id);
         });
         m.addTo(layers.fleet);
       }
@@ -380,7 +447,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     }
 
     layers.ais.clearLayers();
-    if (mapLayers.ferry) {
+    if (mapLayers.vehicles) {
       const liveSail = nextLiveSailing();
       for (const p of aisPositions) {
         if (p.source === 'seed') continue;
@@ -400,7 +467,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           .addTo(layers.ais);
       }
     }
-  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes, role]);
+  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes, role, sailings, embedded]);
 
   return (
     <div
@@ -440,27 +507,14 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         </div>
       ) : null}
       {!embedded ? (
-        <div className="mapkey" aria-label={t(locale, 'map_legend')} style={{ zIndex: 500 }}>
-          <span>
-            <i className="mk-transit" style={{ background: 'var(--sea)' }} />
-            {t(locale, 'kpi_on_road').toLowerCase()}
-          </span>
-          <span>
-            <i className="mk-load" style={{ background: 'var(--amber)' }} />
-            {t(locale, 'map_load')}
-          </span>
-          <span>
-            <i className="mk-delay" style={{ background: 'var(--red)' }} />
-            {t(locale, 'map_delayed')}
-          </span>
-          <span>
-            <i className="mk-site" style={{ background: 'var(--go)' }} />
-            {t(locale, 's_on_site').toLowerCase()}
-          </span>
-          <span>
-            <i className="mk-silent" style={{ background: 'var(--ink-3)' }} />
-            {t(locale, 'map_silent')}
-          </span>
+        /* E29 pkt 4: legenda tylko z tego, co może wystąpić (etapy E28, opóźnienie, brak GPS, statek z liczbą aut) */
+        <div className="mapkey" data-mapkey="e29" aria-label={t(locale, 'map_legend')} style={{ zIndex: 500 }}>
+          <span><i className="mk-dot is-load" />{p9m(locale, 'p9c_lg_load')}</span>
+          <span><i className="mk-dot is-road" />{p9m(locale, 'p9c_lg_road')}</span>
+          <span><i className="mk-dot is-site" />{p9m(locale, 'p9c_lg_site')}</span>
+          <span><i className="mk-dot is-late" />{p9m(locale, 'p9c_lg_late')}</span>
+          <span><i className="mk-dot is-nogps" />{p9m(locale, 'p9c_lg_nogps')}</span>
+          <span><i className="mk-dot is-ship" />{p9m(locale, 'p9c_lg_ship')}</span>
         </div>
       ) : null}
     </div>

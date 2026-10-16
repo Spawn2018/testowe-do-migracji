@@ -354,6 +354,99 @@ test.describe('P2-wyglad V1 i V2', () => {
   });
 });
 
+/* wyglad/P9-c — strona Mapa według E29 (zdecydowane 08.10 12:14, pyt. 1 A; L20, L22) i E45 pkt 2–3 (img/e29-after) */
+test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const tableWithin = (page: Page) => page.locator('[data-map-table]').evaluate((t) => t.scrollWidth <= (t.parentElement as HTMLElement).clientWidth + 1);
+
+  test('komputer: nagłówek bez częstotliwości, 4 kolumny, warstwy, legenda, źródła; dymek znacznika; 1366 px bez przewijania w bok', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    const head = page.locator('[data-map-head]');
+    await expect(head).toHaveText(/^W oknie śledzenia \d+ · z pozycją \d+ · bez pozycji \d+ — od 03:00 w dniu załadunku do „Dostarczone”$/);
+    await expect(page.locator('[data-page="map"] .panel-hd')).not.toContainText('pozycje co');
+    await expect(page.locator('[data-map-table] thead th')).toHaveText(['Transport', 'Etap', 'Pozycja', 'ETA Boden']);
+    await expect(page.locator('.maplayers label')).toHaveText(['Pojazdy i statki', 'Trasa (droga i prom)', 'Strefy', 'Utrudnienia drogowe', 'Przebieg wybranego'].map((x) => new RegExp(x.replace(/[()]/g, '\\$&'))));
+    await expect(page.locator('[data-mapkey="e29"] > span')).toHaveText(['załadunek', 'w drodze (PL, port, prom, SE)', 'na placu', 'opóźniony', 'brak GPS', 'statek (AIS) z liczbą aut']);
+    await expect(page.locator('[data-map-note]')).toHaveText(/^Podkład i trasy: HERE · utrudnienia: Trafikverket \(SE\), HERE \(PL\) · statki: AIS Fintraffic \/ digitraffic\.fi, CC BY 4\.0/);
+    await expect(page.locator('[data-map-zones]')).toBeVisible();
+    const n = Number((await page.locator('[data-map-filters] [data-timing="all"]').innerText()).replace(/\D+/g, ''));
+    await expect(page.locator('[data-map-table] tbody tr[data-load]')).toHaveCount(n);
+    await expect(page.locator('[data-map-filters] .map-search')).toHaveAttribute('placeholder', 'Szukaj: kod, nr zlecenia, tablice');
+    /* znacznik: etap, opóźnienie, ostatnia pozycja, odcinek, kliknięcie */
+    await expect(page.locator('.wt-mk').first()).toBeAttached();
+    await page.locator('.leaflet-marker-icon.wt-marker').first().dispatchEvent('mouseover');
+    await expect(page.locator('.leaflet-tooltip.wt-mk-tip').first()).toContainText('kliknij: panel transportu');
+    await expect(page.locator('.leaflet-tooltip.wt-mk-tip').first()).toContainText(/kierowca odcinka (PL|SE)/);
+    expect(await tableWithin(page)).toBe(true);
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.waitForTimeout(300);
+    expect(await tableWithin(page), '1366 px: tabela bez przewijania w bok').toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1366);
+  });
+
+  test('komputer: „Trasa” chowa drogę i prom, „Pojazdy” chowa auta i statki; bez kropek (E45 pkt 2–3)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'map');
+    const paths = page.locator('[data-page="map"] .leaflet-overlay-pane path');
+    await expect(paths.first()).toBeAttached();
+    /* kropki miejsc (załadunek, porty, plac) były kółkami z wypełnieniem; linie trasy mają fill="none" */
+    expect(await page.locator('[data-page="map"] .leaflet-overlay-pane path:not([fill="none"])').count(), 'bez kropek miejsc').toBe(0);
+    await page.locator('.maplayers label', { hasText: 'Trasa (droga i prom)' }).locator('input').uncheck();
+    await expect(paths).toHaveCount(0);
+    await page.locator('.maplayers label', { hasText: 'Pojazdy i statki' }).locator('input').uncheck();
+    await expect(page.locator('[data-page="map"] .wt-mk')).toHaveCount(0);
+    await expect(page.locator('[data-page="map"] .wt-marker-ferry')).toHaveCount(0);
+  });
+
+  test('KSH: bez przycisku „Strefy”, nazwa transportu to sam kod (E41)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'KSH');
+    await openView(page, 'map');
+    await expect(page.locator('[data-map-zones]')).toHaveCount(0);
+    const names = await page.locator('[data-map-table] tbody tr[data-load] td[data-map-name]').allInnerTexts();
+    expect(names.length).toBeGreaterThan(0);
+    expect(names.every((x) => /^[A-Z]+-\d+$/.test(x.trim()))).toBe(true);
+  });
+
+  test('telefon 390: „Warstwy ▾” → arkusz z warstwami i legendą; lista jako karty; znacznik → arkusz z „Otwórz panel transportu”', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', true);
+    await openView(page, 'map');
+    await expect(page.locator('[data-map-head]')).toHaveText(/^w oknie \d+ · bez pozycji \d+$/);
+    const btn = page.locator('[data-map-layers-btn]');
+    const b = await btn.boundingBox();
+    expect(b && b.height >= 44).toBeTruthy();
+    await btn.click();
+    const sheet = page.locator('[data-map-layers-sheet] .mapsheet');
+    await expect(sheet.locator('input[type="checkbox"]')).toHaveCount(5);
+    await expect(sheet.locator('label').last()).toContainText('Przebieg wybranego transportu');
+    await expect(sheet.locator('[data-sheet-legend] > span')).toHaveCount(6);
+    const bad = await sheet.evaluate((el) => {
+      const out: string[] = [];
+      for (const n of el.querySelectorAll<HTMLElement>('label, button')) {
+        const r = n.getBoundingClientRect();
+        if (r.height < 44 || r.width < 44) out.push(`${n.textContent} ${Math.round(r.width)}×${Math.round(r.height)}`);
+      }
+      for (const n of el.querySelectorAll<HTMLElement>('span, b, label')) if (parseFloat(getComputedStyle(n).fontSize) < 12) out.push(`tekst < 12 px: ${n.textContent}`);
+      return out;
+    });
+    expect(bad).toEqual([]);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('[data-map-layers-sheet]')).toHaveCount(0);
+    const n = Number((await page.locator('[data-map-filters] [data-timing="all"]').innerText()).replace(/\D+/g, ''));
+    await expect(page.locator('[data-map-cards] .map-card')).toHaveCount(n);
+    await page.locator('.leaflet-marker-icon.wt-marker').first().dispatchEvent('click');
+    const ls = page.locator('[data-map-load-sheet] .mapsheet');
+    await expect(ls.locator('[data-sheet-open]')).toHaveText('Otwórz panel transportu');
+    await expect(ls.locator('[data-sheet-trail]')).toHaveText('Pokaż przebieg na mapie');
+    await ls.locator('[data-sheet-open]').click();
+    await expect(page.locator('aside.drawer')).toHaveCount(1);
+  });
+});
+
 test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
   test.describe.configure({ mode: 'serial', timeout: 120_000 });
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
@@ -754,18 +847,19 @@ test.describe('wyglad/P4 pasek etapów (E28, img/e28-after) i Mapa (E27)', () =>
     await expect(page.locator('[data-stage-chip]')).toHaveCount(0);
   });
 
-  test('komputer: Mapa — W trasie · Opóźnione · Brak GPS; „W trasie: 0” przy etapie bez aut; najbliższe włączenia śledzenia', async ({ page }) => {
+  /* wyglad/P9-c (E29 pkt 5, zdecydowane 08.10): „W oknie · Opóźnione · Brak GPS · Bez pozycji” zamiast „W trasie” z P4 */
+  test('komputer: Mapa — W oknie · Opóźnione · Brak GPS · Bez pozycji; „Na mapie: 0” przy etapie bez pozycji; najbliższe włączenia śledzenia', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'HHL');
     await openView(page, 'map');
     const timing = await page.locator('[data-map-filters] [data-timing]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.timing));
-    expect(timing).toEqual(['all', 'late', 'nogps']);
+    expect(timing).toEqual(['all', 'late', 'nogps', 'nopos']);
     await expect(page.locator('[data-map-next] .map-next-hd')).toHaveText('Najbliższe włączenia śledzenia');
     await page.locator('[data-stage-bar="global"] [data-tile="PREP"]').click();
-    await expect(page.locator('[data-map-empty]')).toContainText('W trasie: 0');
+    await expect(page.locator('[data-map-empty]')).toContainText('Na mapie: 0');
   });
 
-  test('komputer: Mapa z filtrem etapu — liczba przy chipie = wiersze po kliknięciu; bez chipa „W trasie”', async ({ page }) => {
+  test('komputer: Mapa z filtrem etapu — liczba przy chipie = wiersze po kliknięciu; bez chipa „W oknie”', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'HHL');
     await openView(page, 'map');
@@ -778,7 +872,7 @@ test.describe('wyglad/P4 pasek etapów (E28, img/e28-after) i Mapa (E27)', () =>
       await expect(page.locator(`[data-stage-chip="${tile}"]`)).toBeVisible();
       await expect(page.locator('[data-map-filters] [data-timing="all"]')).toHaveCount(0);
       await expect(rows).toHaveCount(n);
-      for (const k of ['late', 'nogps']) {
+      for (const k of ['late', 'nogps', 'nopos']) {
         const chip = page.locator(`[data-map-filters] [data-timing="${k}"]`);
         const c = Number((await chip.innerText()).replace(/\D+/g, ''));
         await chip.click();
