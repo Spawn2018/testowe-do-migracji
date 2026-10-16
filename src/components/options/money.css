@@ -100,3 +100,4 @@
   .pm-add .input{min-height:44px;font-size:16px}
   .pm-add .ox-btn{min-height:44px}
 }
+.pm-fetch>span{white-space:nowrap}

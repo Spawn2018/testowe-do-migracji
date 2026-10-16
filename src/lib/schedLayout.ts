@@ -39,8 +39,9 @@ export const FILE_COLS: readonly FileColDef[] = [
   { id: 'delivTime', key: 's7_c_time', group: 'file', w: 66 },
   { id: 'ordHhl', key: 's7_c_ord_hhl', group: 'file', w: 132 },
   { id: 'status', key: 's7_c_status', group: 'wt', w: 140, fixed: true },
-  { id: 'eta', key: 's7_c_eta', group: 'wt', w: 100 },
-  { id: 'docs', key: 's7_c_docs', group: 'wt', w: 170 },
+  /* daty z rokiem (właściciel 16.10.2026): ETA „10.10.2026, 14:30” w jednej linii; „Dokumenty” — „rysunek, zezwolenie PL do 30.10.2026” */
+  { id: 'eta', key: 's7_c_eta', group: 'wt', w: 124 },
+  { id: 'docs', key: 's7_c_docs', group: 'wt', w: 240 },
   { id: 'money', key: 's7_c_money', group: 'wt', w: 250, num: true },
 ];
 
