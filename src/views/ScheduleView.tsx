@@ -1,4 +1,5 @@
 import { PROD_BUILD } from '../lib/prodFacade';
+import { LiveMark } from '../components/shell/LiveMark';
 import { OptionsHowTo } from '../components/settings/OptionsHowTo';
 import { delayPillMinutes } from '../lib/prodDash';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -373,6 +374,7 @@ export function ScheduleView() {
         <div className="panel-hd" style={{ flexWrap: 'wrap' }}>
           <h2>{t(locale, 'nav_sched')}</h2>
           <span className="sub">{t(locale, 'sail_sub')}</span>
+          <LiveMark />
           <div className="spacer" />
           {schedTabs}
         </div>
@@ -478,6 +480,7 @@ export function ScheduleView() {
       <div className="panel-hd" style={{ flexWrap: 'wrap' }}>
         <h2>{t(locale, 'nav_sched')}</h2>
         <span className="sub">{verLine}</span>
+        <LiveMark />
         <div className="spacer" />
         {schedTabs}
         {phone ? null : <div className="sched-actions">{actionButtons}</div>}
