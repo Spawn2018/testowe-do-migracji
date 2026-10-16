@@ -5,15 +5,26 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { buildSeedLoads, ORGS } from '../src/data/seed';
-import { deliveryDeadlineMs, demoCarrierRating, demoMyRatings, lateText, pctText, rangeDays } from '../src/lib/carrierRating';
+import { deliveryDeadlineMs, demoCarrierRating, demoMyRatings, inRatingRange, lateText, pctText, rangeDays, unloadDayOf } from '../src/lib/carrierRating';
 import type { Load } from '../src/types';
 
 const NOW = '2026-10-16T06:10:00Z';
 
 describe('J4 — okres i „na czas”', () => {
-  it('4 tygodnie = 28 dni rozładunku do dziś (czas polski); „Całość” bez granic', () => {
+  it('4 tygodnie = 28 dni rozładunku do dziś (czas polski); „Całość” do dziś; „Własny okres” z pól (puste = bez granicy)', () => {
     expect(rangeDays('4w', NOW)).toEqual({ from: '2026-09-19', to: '2026-10-16' });
-    expect(rangeDays('all', NOW)).toEqual({ from: null, to: null });
+    expect(rangeDays('all', NOW)).toEqual({ from: null, to: '2026-10-16' });
+    expect(rangeDays('custom', NOW, { from: '2026-10-01', to: '' })).toEqual({ from: '2026-10-01', to: null });
+    expect(rangeDays('custom', NOW, { from: '', to: '' })).toEqual({ from: null, to: null });
+  });
+
+  it('F7: oceny SCX w okresie liczone po dniu rozładunku transportu, nie po dacie oceny', () => {
+    const l = buildSeedLoads().find((x) => x.status === 'DELIVERED')!;
+    const day = unloadDayOf(l)!;
+    expect(inRatingRange(l, 'custom', NOW, { from: day, to: day })).toBe(true);
+    expect(inRatingRange(l, 'custom', NOW, { from: '2099-01-01', to: '' })).toBe(false);
+    expect(inRatingRange(undefined, 'custom', NOW, { from: '2026-01-01', to: '' })).toBe(false);
+    expect(inRatingRange(undefined, 'custom', NOW, { from: '', to: '' })).toBe(true);
   });
 
   it('koniec okna dostawy z awizacji, a bez okna — koniec dnia dostawy w czasie polskim (lato i zima)', () => {
@@ -40,11 +51,11 @@ describe('J4 — okres i „na czas”', () => {
 describe('J4 — dane demo', () => {
   const loads = buildSeedLoads();
 
-  it('HHL: wiersz na przewoźnika, rozładowane = na czas + opóźnione, ocena 3–5', () => {
+  it('HHL: wiersz na przewoźnika, z winy przewoźnika ≤ spóźnione, ocena 3–5; bez rozładunków z przyszłości', () => {
     const rows = demoCarrierRating(loads, ORGS, 'all', NOW);
     expect(rows.length).toBeGreaterThan(0);
     for (const r of rows) {
-      expect(r.delivered).toBe(r.onTime + r.lateCarrier);
+      expect(r.onTime + r.lateCarrier).toBeLessThanOrEqual(r.delivered);
       expect(r.avgScore).not.toBeNull();
       expect(r.avgScore!).toBeGreaterThanOrEqual(3);
       expect(r.avgScore!).toBeLessThanOrEqual(5);
@@ -52,8 +63,12 @@ describe('J4 — dane demo', () => {
     }
     expect(rows[0].name).toBe('Scandinavian Express');
     /* demo: część transportów spóźniona (G-09) — kolumna spóźnień nie jest pusta */
-    expect(rows[0].lateCarrier).toBeGreaterThan(0);
+    expect(rows[0].delivered - rows[0].onTime).toBeGreaterThan(0);
     expect(rows[0].avgLateMin).not.toBeNull();
+    /* F7: tylko rozładowane do „teraz” — rozładunki demo z przyszłości nie wchodzą */
+    const future = loads.filter((l) => ['DELIVERED', 'UNLOADING'].includes(l.status) && (unloadDayOf(l) ?? '') > '2026-10-16');
+    expect(future.length).toBeGreaterThan(0);
+    expect(rows.reduce((a, r) => a + r.delivered, 0)).toBeLessThanOrEqual(loads.length - future.length);
   });
 
   it('SCX: tylko swój wiersz i oceny swoich transportów, najnowsze pierwsze', () => {
@@ -62,6 +77,7 @@ describe('J4 — dane demo', () => {
     const mine = demoMyRatings(loads, 'org-scx', 'all', NOW);
     expect(mine.length).toBe(rows[0]?.delivered ?? 0);
     for (let i = 1; i < mine.length; i++) expect(Date.parse(mine[i - 1].ratedAt)).toBeGreaterThanOrEqual(Date.parse(mine[i].ratedAt));
+    expect(mine.every((m) => Date.parse(m.ratedAt) <= Date.parse(NOW))).toBe(true);
   });
 
   it('„4 tygodnie” nie liczy więcej niż „Całość”', () => {
@@ -81,5 +97,7 @@ describe('J4 — miejsce w aplikacji', () => {
     const live = readFileSync('src/auth/CarrierRatingLive.tsx', 'utf8');
     expect(live).toContain("sb.rpc('carrier_scorecard'");
     expect(live).toContain("from('carrier_ratings')");
+    expect(live).not.toContain("gte('rated_at'");
+    expect(live).toContain('inRatingRange(');
   });
 });

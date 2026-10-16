@@ -115,7 +115,7 @@ function DriverPwaBody() {
   };
   const load = loadId ? loads.find((l) => l.id === loadId) : undefined;
   const vaultDocs = loadId
-    ? documents.filter((d) => d.loadId === loadId && (d.category === 'CMR' || d.category === 'POD') && d.status === 'UPLOADED')
+    ? documents.filter((d) => d.loadId === loadId && d.category === 'CMR' && d.status === 'UPLOADED') /* C13 (F7): bez POD (E31) */
     : [];
 
   return (

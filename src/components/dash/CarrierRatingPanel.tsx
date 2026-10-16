@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Locale } from '../../types';
-import type { CarrierRatingRow, MyRating, RatingRange } from '../../lib/carrierRating';
+import type { CarrierRatingRow, CustomRange, MyRating, RatingRange } from '../../lib/carrierRating';
 import { lateText, pctText } from '../../lib/carrierRating';
 import { formatPlNumber } from '../../lib/format';
 import { fmtDate } from '../../lib/time';
@@ -19,6 +19,9 @@ export interface CarrierRatingPanelProps {
   carrier: boolean;
   range: RatingRange;
   onRange: (r: RatingRange) => void;
+  /** „Własny okres” — dni RRRR-MM-DD (pola daty; w polskiej przeglądarce DD.MM.RRRR). */
+  custom: CustomRange;
+  onCustom: (c: CustomRange) => void;
   rows: CarrierRatingRow[];
   mine?: MyRating[];
   /** Nazwa transportu według firmy (E41). */
@@ -29,12 +32,14 @@ export interface CarrierRatingPanelProps {
 
 const MINE_SHORT = 5;
 
-export function CarrierRatingPanel({ locale, carrier, range, onRange, rows, mine = [], codeOf, error, mark }: CarrierRatingPanelProps) {
+export function CarrierRatingPanel({ locale, carrier, range, onRange, custom, onCustom, rows, mine = [], codeOf, error, mark }: CarrierRatingPanelProps) {
   const phone = useIsPhone();
   const [allMine, setAllMine] = useState(false);
   const score = (r: CarrierRatingRow) => (r.avgScore == null ? '—' : j4p(locale, 'j4_score_val', { v: formatPlNumber(r.avgScore, 2), n: r.ratings }));
   const onTime = (r: CarrierRatingRow) => `${r.onTime} (${pctText(r.onTime, r.delivered)})`;
   const mineShown = allMine ? mine : mine.slice(0, MINE_SHORT);
+  /* Podgląd HHL jako SCX na produkcji dostaje wszystkich przewoźników — wtedy z nazwą (F7) */
+  const showName = !carrier || rows.length > 1;
 
   return (
     <section className="panel cr" data-cr-panel={carrier ? 'SCX' : 'HHL'} data-rows={rows.length}>
@@ -44,14 +49,26 @@ export function CarrierRatingPanel({ locale, carrier, range, onRange, rows, mine
         {mark}
         <div className="spacer" />
         <div className="cr-range" role="group" aria-label={j4(locale, 'j4_range_label')}>
-          {(['all', '4w'] as const).map((r) => (
+          {(['all', '4w', 'custom'] as const).map((r) => (
             <button key={r} type="button" className="chipbtn" aria-pressed={range === r} data-cr-range={r} onClick={() => onRange(r)}>
-              {j4(locale, r === '4w' ? 'j4_range_4w' : 'j4_range_all')}
+              {j4(locale, r === '4w' ? 'j4_range_4w' : r === 'all' ? 'j4_range_all' : 'j4_range_custom')}
             </button>
           ))}
         </div>
       </header>
       <div className="panel-bd cr-bd">
+        {range === 'custom' ? (
+          <div className="cr-custom" data-cr-custom>
+            <label>
+              <span>{j4(locale, 'j4_from')}</span>
+              <input type="date" className="input" lang="pl" value={custom.from} max={custom.to || undefined} onChange={(e) => onCustom({ ...custom, from: e.target.value })} data-cr-from />
+            </label>
+            <label>
+              <span>{j4(locale, 'j4_to')}</span>
+              <input type="date" className="input" lang="pl" value={custom.to} min={custom.from || undefined} onChange={(e) => onCustom({ ...custom, to: e.target.value })} data-cr-to />
+            </label>
+          </div>
+        ) : null}
         {error ? <div className="cr-err" role="status">{error}</div> : null}
         {rows.length === 0 ? (
           <div className="cr-empty" data-cr-empty>{j4(locale, 'j4_empty')}</div>
@@ -59,7 +76,7 @@ export function CarrierRatingPanel({ locale, carrier, range, onRange, rows, mine
           <ul className="cr-cards">
             {rows.map((r) => (
               <li key={r.carrierId} className="cr-card" data-cr-row={r.name}>
-                {carrier ? null : <b className="cr-card-name">{r.name}</b>}
+                {showName ? <b className="cr-card-name">{r.name}</b> : null}
                 <dl className="cr-kv">
                   <dt>{j4(locale, 'j4_c_delivered')}</dt><dd>{r.delivered}</dd>
                   <dt>{j4(locale, 'j4_c_on_time')}</dt><dd data-cr-ontime>{onTime(r)}</dd>
@@ -75,7 +92,7 @@ export function CarrierRatingPanel({ locale, carrier, range, onRange, rows, mine
             <table className="cr-table">
               <thead>
                 <tr>
-                  {carrier ? null : <th>{j4(locale, 'j4_c_carrier')}</th>}
+                  {showName ? <th>{j4(locale, 'j4_c_carrier')}</th> : null}
                   <th className="num">{j4(locale, 'j4_c_delivered')}</th>
                   <th className="num">{j4(locale, 'j4_c_on_time')}</th>
                   <th className="num">{j4(locale, 'j4_c_late')}</th>
@@ -86,7 +103,7 @@ export function CarrierRatingPanel({ locale, carrier, range, onRange, rows, mine
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.carrierId} data-cr-row={r.name}>
-                    {carrier ? null : <td>{r.name}</td>}
+                    {showName ? <td>{r.name}</td> : null}
                     <td className="num">{r.delivered}</td>
                     <td className="num" data-cr-ontime>{onTime(r)}</td>
                     <td className="num">{r.lateCarrier}</td>
@@ -102,6 +119,11 @@ export function CarrierRatingPanel({ locale, carrier, range, onRange, rows, mine
           <div className="cr-mine" data-cr-mine={mine.length}>
             <h3>{j4(locale, 'j4_mine_h')}</h3>
             <ul>
+              <li className="cr-mine-hd" aria-hidden="true">
+                <span>{j4(locale, 'j4_c_load')}</span>
+                <span>{j4(locale, 'j4_c_rating')}</span>
+                <span>{j4(locale, 'j4_c_rated')}</span>
+              </li>
               {mineShown.map((m) => (
                 <li key={m.loadId} data-cr-mine-row={m.score}>
                   <span className="cr-mine-code">{codeOf ? codeOf(m.loadId) : m.loadId}</span>

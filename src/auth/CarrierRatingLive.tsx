@@ -4,7 +4,7 @@ import { authErrorPl } from './config';
 import { useTowerStore } from '../store/useTowerStore';
 import { transportLabel } from '../lib/transportName';
 import { getNowIso } from '../lib/frozenNow';
-import { rangeDays, type CarrierRatingRow, type MyRating, type RatingRange } from '../lib/carrierRating';
+import { inRatingRange, rangeDays, type CarrierRatingRow, type CustomRange, type MyRating, type RatingRange } from '../lib/carrierRating';
 import { CarrierRatingPanel } from '../components/dash/CarrierRatingPanel';
 
 /**
@@ -20,6 +20,7 @@ export default function CarrierRatingLive() {
   const role = useTowerStore((s) => s.role);
   const loads = useTowerStore((s) => s.loads);
   const [range, setRange] = useState<RatingRange>('all');
+  const [custom, setCustom] = useState<CustomRange>({ from: '', to: '' });
   const [rows, setRows] = useState<CarrierRatingRow[] | null>(null);
   const [mine, setMine] = useState<MyRating[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export default function CarrierRatingLive() {
     let cancelled = false;
     void (async () => {
       const sb = await getSupabase();
-      const { from, to } = rangeDays(range, getNowIso());
+      const { from, to } = rangeDays(range, getNowIso(), custom);
       const r = await sb.rpc('carrier_scorecard', { p_from: from, p_to: to });
       if (cancelled) return;
       if (r.error) {
@@ -50,16 +51,17 @@ export default function CarrierRatingLive() {
         })));
       }
       if (role === 'SCX') {
-        let q = sb.from('carrier_ratings').select('load_id,score,rated_at').order('rated_at', { ascending: false }).limit(200);
-        if (from) q = q.gte('rated_at', `${from}T00:00:00Z`);
-        const m = await q;
+        /* okres liczony po dniu rozładunku transportu (jak wiersz karty), nie po dacie oceny — filtr niżej (F7) */
+        const m = await sb.from('carrier_ratings').select('load_id,score,rated_at').order('rated_at', { ascending: false }).limit(500);
         if (!cancelled) setMine(((m.data ?? []) as { load_id: string; score: number; rated_at: string }[]).map((x) => ({ loadId: x.load_id, score: x.score, ratedAt: x.rated_at })));
       }
     })();
     return () => { cancelled = true; };
-  }, [role, range]);
+  }, [role, range, custom]);
 
   if ((role !== 'HHL' && role !== 'SCX') || rows === null) return null;
+  const nowIso = getNowIso();
+  const mineInRange = mine.filter((m) => inRatingRange(loads.find((l) => l.id === m.loadId), range, nowIso, custom));
   const codeOf = (id: string) => {
     const load = loads.find((l) => l.id === id);
     return load ? transportLabel(load, role) : '—';
@@ -70,8 +72,10 @@ export default function CarrierRatingLive() {
       carrier={carrier}
       range={range}
       onRange={setRange}
+      custom={custom}
+      onCustom={setCustom}
       rows={rows}
-      mine={mine}
+      mine={mineInRange}
       codeOf={codeOf}
       error={err}
     />

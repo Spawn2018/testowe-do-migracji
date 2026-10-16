@@ -25,8 +25,11 @@ export interface MyRating {
   ratedAt: string;
 }
 
-/** Okres: całość projektu (domyślnie) albo ostatnie 4 tygodnie. */
-export type RatingRange = '4w' | 'all';
+/** Okres: całość projektu (domyślnie), ostatnie 4 tygodnie albo własny okres rozładunku (jak dotąd „Rozładunek od / do”). */
+export type RatingRange = '4w' | 'all' | 'custom';
+
+/** Własny okres — dni RRRR-MM-DD z pól daty (puste = bez granicy). */
+export interface CustomRange { from: string; to: string }
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -36,10 +39,26 @@ function warsawDay(ms: number): string {
 }
 
 /** Zakres dni rozładunku dla funkcji `carrier_scorecard` (p_from, p_to — RRRR-MM-DD albo null). */
-export function rangeDays(range: RatingRange, nowIso: string): { from: string | null; to: string | null } {
-  if (range === 'all') return { from: null, to: null };
+export function rangeDays(range: RatingRange, nowIso: string, custom?: CustomRange | null): { from: string | null; to: string | null } {
   const now = Date.parse(nowIso);
+  if (range === 'custom') return { from: custom?.from || null, to: custom?.to || null };
+  if (range === 'all') return { from: null, to: warsawDay(now) };
   return { from: warsawDay(now - 27 * DAY), to: warsawDay(now) };
+}
+
+/** Dzień rozładunku transportu (czas polski) albo null — ten sam, po którym liczy `carrier_scorecard`. */
+export function unloadDayOf(l: Load): string | null {
+  const iso = unloadedAtOf(l);
+  const t = iso ? Date.parse(iso) : NaN;
+  return Number.isFinite(t) ? warsawDay(t) : null;
+}
+
+/** Czy transport należy do okresu (po dniu rozładunku). */
+export function inRatingRange(l: Load | undefined, range: RatingRange, nowIso: string, custom?: CustomRange | null): boolean {
+  const r = rangeDays(range, nowIso, custom);
+  if (!r.from && !r.to) return true;
+  const d = l ? unloadDayOf(l) : null;
+  return d != null && inRange(d, r);
 }
 
 /** Koniec okna dostawy: okno z awizacji, a bez okna — koniec dnia dostawy w czasie polskim. */
@@ -71,6 +90,11 @@ function demoScore(loadId: string): number {
   return [5, 4, 5, 3, 4][demoHash(loadId) % 5];
 }
 
+/** Demo: spóźnienie z winy przewoźnika (co drugie spóźnione), reszta — inna przyczyna (np. prom, pogoda) (G-09). */
+function demoCarrierFault(loadId: string): boolean {
+  return demoHash(loadId) % 2 === 0;
+}
+
 /** Spóźnienie demo dla transportu bez prawdziwej godziny rozładunku: co czwarty 75 min, co siódmy 26 h (G-09). */
 function demoLateMs(loadId: string): number {
   const h = demoHash(loadId);
@@ -83,14 +107,17 @@ const isDone = (l: Load) => l.status === 'DELIVERED' || l.status === 'UNLOADING'
 
 interface DoneLoad { load: Load; at: number; lateMin: number }
 
-function doneLoads(loads: Load[], range: RatingRange, nowIso: string): DoneLoad[] {
-  const r = rangeDays(range, nowIso);
+
+/** Rozładowane w okresie — tylko do „teraz” (bez dat z przyszłości). */
+function doneLoads(loads: Load[], range: RatingRange, nowIso: string, custom?: CustomRange | null): DoneLoad[] {
+  const r = rangeDays(range, nowIso, custom);
+  const now = Date.parse(nowIso);
   const out: DoneLoad[] = [];
   for (const l of loads) {
     if (!isDone(l)) continue;
     const atIso = unloadedAtOf(l);
     const at = atIso ? Date.parse(atIso) + (l.unloadedAt ? 0 : demoLateMs(l.id)) : NaN;
-    if (!Number.isFinite(at) || !inRange(warsawDay(at), r)) continue;
+    if (!Number.isFinite(at) || at > now || !inRange(warsawDay(at), r)) continue;
     const dl = deliveryDeadlineMs(l);
     out.push({ load: l, at, lateMin: dl == null ? 0 : Math.max(0, Math.round((at - dl) / 60000)) });
   }
@@ -98,9 +125,9 @@ function doneLoads(loads: Load[], range: RatingRange, nowIso: string): DoneLoad[
 }
 
 /** Wiersze demo: jeden na przewoźnika z transportami rozładowanymi w okresie. */
-export function demoCarrierRating(loads: Load[], orgs: Organization[], range: RatingRange, nowIso: string, onlyCarrierId?: string | null): CarrierRatingRow[] {
+export function demoCarrierRating(loads: Load[], orgs: Organization[], range: RatingRange, nowIso: string, onlyCarrierId?: string | null, custom?: CustomRange | null): CarrierRatingRow[] {
   const by = new Map<string, DoneLoad[]>();
-  for (const d of doneLoads(loads, range, nowIso)) {
+  for (const d of doneLoads(loads, range, nowIso, custom)) {
     const id = d.load.carrierId;
     if (onlyCarrierId && id !== onlyCarrierId) continue;
     by.set(id, [...(by.get(id) ?? []), d]);
@@ -108,13 +135,14 @@ export function demoCarrierRating(loads: Load[], orgs: Organization[], range: Ra
   const rows: CarrierRatingRow[] = [];
   for (const [carrierId, list] of by) {
     const late = list.filter((d) => d.lateMin > 0);
+    const byCarrier = late.filter((d) => demoCarrierFault(d.load.id));
     const scores = list.map((d) => demoScore(d.load.id));
     rows.push({
       carrierId,
       name: orgs.find((o) => o.id === carrierId)?.name ?? carrierId,
       delivered: list.length,
       onTime: list.length - late.length,
-      lateCarrier: late.length,
+      lateCarrier: byCarrier.length,
       avgLateMin: late.length ? Math.round(late.reduce((a, d) => a + d.lateMin, 0) / late.length) : null,
       avgScore: scores.length ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100 : null,
       ratings: scores.length,
@@ -124,11 +152,12 @@ export function demoCarrierRating(loads: Load[], orgs: Organization[], range: Ra
 }
 
 /** Oceny transportów przewoźnika (demo), najnowsze pierwsze. */
-export function demoMyRatings(loads: Load[], carrierId: string, range: RatingRange, nowIso: string): MyRating[] {
-  return doneLoads(loads, range, nowIso)
+export function demoMyRatings(loads: Load[], carrierId: string, range: RatingRange, nowIso: string, custom?: CustomRange | null): MyRating[] {
+  const now = Date.parse(nowIso);
+  return doneLoads(loads, range, nowIso, custom)
     .filter((d) => d.load.carrierId === carrierId)
     .sort((a, b) => b.at - a.at)
-    .map((d) => ({ loadId: d.load.id, score: demoScore(d.load.id), ratedAt: new Date(d.at + 2 * 60 * 60 * 1000).toISOString() }));
+    .map((d) => ({ loadId: d.load.id, score: demoScore(d.load.id), ratedAt: new Date(Math.min(d.at + 2 * 60 * 60 * 1000, now)).toISOString() }));
 }
 
 /** „83 %” albo „—”. */

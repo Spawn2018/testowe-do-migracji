@@ -11,6 +11,9 @@ const PL: Record<string, string> = {
   j4_sub: 'transporty rozładowane',
   j4_range_4w: '4 tygodnie',
   j4_range_all: 'Całość',
+  j4_range_custom: 'Własny okres',
+  j4_from: 'Rozładunek od',
+  j4_to: 'Rozładunek do',
   j4_range_label: 'Okres',
   j4_empty: 'Brak rozładowanych transportów w wybranym okresie.',
   j4_c_carrier: 'Przewoźnik',
@@ -25,6 +28,7 @@ const PL: Record<string, string> = {
   j4_mine_less: 'Pokaż mniej',
   j4_c_load: 'Transport',
   j4_c_rated: 'Data oceny',
+  j4_c_rating: 'Ocena',
   j4_note_hhl: 'Na czas = rozładunek do końca okna dostawy, a bez okna do końca dnia dostawy. Ocenę 1–5 wystawiasz w panelu transportu po rozładunku. Przewoźnik widzi swoją ocenę i punktualność; notatka HHL jest wewnętrzna.',
   j4_note_scx: 'Na czas = rozładunek do końca okna dostawy, a bez okna do końca dnia dostawy. Ocenę 1–5 wystawia HHL po rozładunku.',
 };
