@@ -14,6 +14,7 @@ import type { OptGroup, OptScreen, OptScreenId, AccountKind } from '../component
 import { useDemoOptions } from '../components/options/useDemoOptions';
 import { ForMeScreen } from '../components/options/ForMeScreen';
 import { DeviceScreen } from '../components/options/DeviceScreen';
+import { MessageTexts } from '../components/options/MessageTexts';
 import { OptionsHowTo } from '../components/settings/OptionsHowTo';
 import { SmsFallbackEntry } from '../components/shell/SmsFallbackEntry';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
@@ -226,6 +227,7 @@ export function OptionsView() {
           <OptionsHowTo locale={locale} k="b6_howto_notif" />
         </>
       ), { right: change }),
+      scr('texts', <MessageTexts readOnly={ro} />, { right: change }),
       scr('zones', (
         <>
           <OptionsHowTo locale={locale} k="b6_howto_zones" />
