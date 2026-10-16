@@ -2704,3 +2704,6 @@ Kolejka wyglądu: `wyglad/W-dane` PR #274. Scalenie i wdrożenie po skończonym 
 | P9 pkt 3.3 | najpierw TEST: czy HERE ma odcinek promowy; jeśli tak — `ferries` w `map_display_state`; jeśli nie — wpis W | do zrobienia w P9, z testem odbioru |
 | Podgląd W38 | bez zmian w planie | bez zmian |
 
+- **TEST zajęte: C3**, od 16.10.2026 23:03 — potwierdzenie security, status, nullguard, c3, risks na `394cba01` (PR #273, migracja 0222). Check `db` na tym SHA zielony.
+- TEST 16.10.2026 23:03–17.10.2026 00:07, SHA `394cba01`, migracja `0222_c3_matrix_events.sql`. security 84/84 (+2 SKIP), status 55/55, nullguard 161+136+224+126 = **647/647**, c3 **15/15**, risks **25/25** (+2 SKIP, hosted bez osobnej bazy statusów). Doradca security: 151 zgłoszeń, 0 nowych po dopisaniu `my_notify_get` i `my_notify_set` do wyjątków E19. **TEST wolne** od 17.10.2026 00:08.
+

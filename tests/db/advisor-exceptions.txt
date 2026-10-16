@@ -122,6 +122,8 @@ authenticated_security_definer_function_executable	public.mark_invoice_paid	E19 
 authenticated_security_definer_function_executable	public.mark_load_message_read	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.mark_notifications_read	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.my_mfa_status	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.my_notify_get	E19 — allowlista RPC; C3; własne ustawienia, sprawdzenie konta w funkcji
+authenticated_security_definer_function_executable	public.my_notify_set	E19 — allowlista RPC; C3; własne ustawienia, sprawdzenie konta w funkcji
 authenticated_security_definer_function_executable	public.my_profile	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.my_sessions	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.my_session_revoke	E19 — allowlista RPC; D-20261014-1420-01 R3; sprawdzenie roli w funkcji
