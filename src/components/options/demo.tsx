@@ -35,6 +35,9 @@ export const DEMO_MATRIX: MatrixGroup[] = [
        * odbiorców zawęża zawsze `visible_to` — rozmowa „tylko HHL i SCX” nigdy do KSH */
       { id: 'chat', perDay: 14, title: 'Nowa wiadomość w czacie', sub: 'tylko do firm, które widzą wiadomość · „tylko HHL i SCX” nigdy do KSH, niezależnie od ustawień', target: 'Transport › Czat',
         cells: all5(c(true, true)) },
+      /* wyglad/audyt-E (E-02; E49 16.10, 02:08 — D-20261016-0230-01 Z3 pkt 5): wybór SCX trafia do HHL; start — dzwonek i telefon, bez e-maila */
+      { id: 'scx_detour', perDay: 1, title: 'Decyzja SCX: objazd albo postój', sub: 'zamknięty most albo droga przed autem · SCX wybrał, ETA liczy wybór', target: 'Transport › Historia',
+        cells: { HHL_ADMIN: c(true, true), HHL_OPS: c(true, true), CLIENT_USER: c(false), CARRIER_DISPATCH: null, CARRIER_USER: null } },
     ],
   },
   {
@@ -43,6 +46,11 @@ export const DEMO_MATRIX: MatrixGroup[] = [
       { id: 'dates', perDay: 2, title: 'Zmiana dat planu', sub: 'daty załadunku albo rozładunku od KSH', fixedNote: true, target: 'Transport › Historia',
         cells: { HHL_ADMIN: c(true, false, false, ['bell']), HHL_OPS: c(true, false, false, ['bell']), CLIENT_USER: c(false), CARRIER_DISPATCH: c(true, true, false, ['bell']), CARRIER_USER: c(true, false, false, ['bell']) } },
       { id: 'zone', perDay: 30, title: 'Wjazd lub wyjazd ze strefy', sub: 'Śrem, port, Boden · SMS ustawiasz osobno', target: 'Mapa › auto', cells: all5(c(true)) },
+      /* wyglad/audyt-E (E-02; E35 pkt 2, 08.10): dawne reguły „Dojazd na plac” i „Wjazd przed port” — te same odbiorcy */
+      { id: 'pre_arrival', perDay: 4, title: 'Auto 50 km przed placem / przed Śremem', sub: 'bufor 50 km przed Śremem albo Boden', target: 'Mapa › auto',
+        cells: { HHL_ADMIN: c(false), HHL_OPS: c(false), CLIENT_USER: c(true), CARRIER_DISPATCH: c(true), CARRIER_USER: c(false) } },
+      { id: 'pre_port', perDay: 3, title: 'Auto 20 km przed portem', sub: 'bufor 20 km przed Gdańskiem albo Gdynią', target: 'Mapa › auto',
+        cells: { HHL_ADMIN: c(true), HHL_OPS: c(true), CLIENT_USER: c(false), CARRIER_DISPATCH: c(false), CARRIER_USER: c(false) } },
     ],
   },
   {
@@ -67,8 +75,14 @@ export const DEMO_MATRIX: MatrixGroup[] = [
   },
   {
     id: 'system', title: 'System', sub: 'tylko HHL', rows: [
-      { id: 'sms_gw', perDay: 1, title: 'Bramka SMS milczy albo SMS niedoręczony', target: 'Opcje › Stan systemu',
-        cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
+      /* wyglad/audyt-E (E-14; E42 07.10, 22:15): SMS niewysłany w 10 min — e-mail do Operacji HHL */
+      { id: 'sms_gw', perDay: 1, title: 'Bramka SMS milczy albo SMS niedoręczony', sub: 'SMS niewysłany w 10 min · e-mail do Operacji HHL', target: 'Opcje › Stan systemu',
+        cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true, false, true), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
+      /* wyglad/audyt-E (E-02; E23 decyzja 1 A 08.10, E46): alarm do Administratorów HHL — e-mail i telefon na stałe */
+      { id: 'src_down', perDay: 1, title: 'Źródło danych nie działa / wróciło', sub: 'przy awarii, przypomnienie po 2 h i „Wróciło” · Administrator HHL: e-mail i telefon zawsze — decyzja właściciela 08.10.2026', target: 'Opcje › Stan systemu',
+        cells: { HHL_ADMIN: c(true, true, true, ['push', 'mail']), HHL_OPS: c(false), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
+      { id: 'app_err', perDay: 1, title: 'Błąd aplikacji', sub: 'nowy błąd 3 razy albo u 2 osób w 1 h, każdy błąd przy zapisie · Administrator HHL: e-mail i telefon zawsze', target: 'Opcje › Stan systemu › Błędy aplikacji',
+        cells: { HHL_ADMIN: c(true, true, true, ['push', 'mail']), HHL_OPS: c(false), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
       { id: 'daily', perDay: 1, title: 'Raport dzienny', sub: 'podsumowanie doby', target: 'Kokpit',
         cells: { HHL_ADMIN: c(false, false, true), HHL_OPS: c(false), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
     ],
@@ -77,14 +91,14 @@ export const DEMO_MATRIX: MatrixGroup[] = [
 
 export const DEMO_ACCOUNTS: Record<AccountKind, number> = { HHL_ADMIN: 4, HHL_OPS: 2, CLIENT_USER: 0, CARRIER_DISPATCH: 2, CARRIER_USER: 0 };
 
-/** 13 przełączników — nazwy i zdania z obrazu E12, stany i ostatnie zmiany z bazy 08.10. */
+/** 9 przełączników — nazwy i zdania z obrazu E12, stany i ostatnie zmiany z bazy 08.10; bez „Kontroli trasy”,
+ *  „Przeszkód” (16.10, 01:13) i „E-maila o decyzjach automatycznych” (E5, E11 — e-mail ustawia „Kto co dostaje”). */
 export const DEMO_FLAGS: SecurityFlagRow[] = [
   { key: 'EXTERNAL_MESSAGING', on: false, when: '02.10, 18:43', by: null },
   { key: 'MFA_HHL_ADMIN', on: false, when: '27.09, 21:25', by: null },
   { key: 'PERMIT_REQUIRED_NON_STANDARD', on: false, when: '05.10, 19:38', by: 'Administrator HHL' },
   { key: 'SMS_ZONE_APPROACH', on: true, when: '01.10, 23:01', by: null },
   { key: 'SMS_ZONE_ENTER', on: true, when: '01.10, 23:01', by: null },
-  { key: 'AUTOMATIC_DECISION_EMAIL', on: true, when: '04.10, 17:36', by: null },
   { key: 'TELM_EMTRACK_WEB', on: true, when: '05.10, 13:18', by: null },
   { key: 'DRIVER_LINK_ACCEPT', on: false, when: '03.10, 23:52', by: null },
   { key: 'FUEL_SE_PL_INGEST', on: true, when: '05.10, 11:07', by: null },
@@ -238,7 +252,7 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
       notify: { text: 'SMS przy miejscach: Boden brak' },
       money: { text: 'Cennik KSH v2 · paliwo × 1,13' },
       rules: { text: '10 progów · wymóg zezwoleń wył.' },
-      system: { text: '1 źródło nie działa · 13 przełączników', tone: 'alert' },
+      system: { text: '1 źródło nie działa · 9 przełączników', tone: 'alert' },
       forme: { text: 'motyw, waluta, 2FA' },
     },
   };

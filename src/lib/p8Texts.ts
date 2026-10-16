@@ -1,7 +1,7 @@
 /**
  * wyglad/P8-a — Opcje › Powiadomienia › Treści wiadomości (E43, decyzje 07.10.2026, 22:42; img/e43-after).
  * Spis wiadomości (4 SMS z E42, 28 rodzajów e-maili i wpisów w dzwonku, 2 e-maile paczki do księgowości z E40,
- * 5 e-maili logowania), klocki danych,
+ * 5 e-maili logowania; wyglad/audyt-E: + 6 nowych zdarzeń z „Kto co dostaje” — E35, E49, E23, E46), klocki danych,
  * treści domyślne („Nowe domyślne” E43: kod transportu zamiast wewnętrznego numeru, nazwa miejsca w SMS, konkret i link),
  * zapis klocków jako znaczników `{{id}}` (administrator ich nie widzi), podgląd i licznik SMS bez polskich liter.
  * Czyste funkcje widoku — bez zapytań i zapisów.
@@ -17,7 +17,8 @@ export type TokenId =
   | 'side' | 'missing' | 'ruleName' | 'detail' | 'invoiceNo' | 'amount' | 'reason' | 'policyNo' | 'recipients'
   | 'source' | 'date' | 'count' | 'name' | 'firm' | 'account' | 'inviter' | 'validity' | 'button'
   | 'road' | 'transports' | 'week' | 'loadWeek' | 'queued' | 'limit' | 'carrier' | 'codes' | 'reminder'
-  | 'loadDateBefore' | 'planDateBefore' | 'site' | 'placeTo';
+  | 'loadDateBefore' | 'planDateBefore' | 'site' | 'placeTo'
+  | 'port' | 'closure' | 'choice' | 'feed' | 'since' | 'effect' | 'error' | 'times' | 'people' | 'page';
 
 /** Fragment treści: zwykły tekst albo klocek danych. */
 export type Seg = { k: 'txt'; v: string } | { k: 'tok'; id: TokenId };
@@ -40,6 +41,11 @@ export interface MsgItem {
   buttonLabel?: string;
   /** tylko e-mail, bez wpisu w dzwonku (paczka do księgowości, E40) */
   noBell?: boolean;
+  /**
+   * wyglad/audyt-E (E-03): nowe zdarzenie z „Kto co dostaje” — treść domyślna jest tu, w widoku; rodzaj w
+   * `notifyTemplates.ts` i w bazie (macierz, treści E43) dopisuje wykonawca (D-01). Po dopisaniu znacznik znika.
+   */
+  planned?: boolean;
 }
 
 export const TOKEN_LABEL: Record<TokenId, string> = {
@@ -55,6 +61,8 @@ export const TOKEN_LABEL: Record<TokenId, string> = {
   limit: 'Limit na dobę', carrier: 'Przewoźnik', codes: 'Kody transportów', reminder: 'Ile do terminu',
   loadDateBefore: 'Załadunek przed zmianą', planDateBefore: 'Dostawa przed zmianą', site: 'Śrem albo Boden',
   placeTo: 'Miejsce (wjazd na …)',
+  port: 'Port', closure: 'Co zamknięte', choice: 'Wybór SCX', feed: 'Źródło danych', since: 'Od kiedy', effect: 'Skutek',
+  error: 'Treść błędu', times: 'Ile razy', people: 'Ile osób', page: 'Strona',
 };
 
 const SMS_T: TokenId[] = ['code', 'trailer', 'tractor', 'place', 'placeTo', 'dwell', 'arrival', 'planDate', 'link'];
@@ -103,6 +111,10 @@ export const MESSAGES: readonly MsgItem[] = [
     'Rozstrzygnięcie: {{outcome}} ({{author}}). Otwórz sprawę: {{link}}', 'Decyzja zamknięta: {{decision}}'),
   I('WORKFLOW_ALERT', 'risk', 'EMAIL', 'Reguła automatyzacji', '', ['code', 'order', 'ruleName', 'detail', 'link'],
     'Reguła „{{ruleName}}” zadziałała dla transportu {{code}}. {{detail}} Otwórz transport: {{link}}', '{{code}}: reguła automatyzacji „{{ruleName}}”'),
+  /* wyglad/audyt-E (E-03; E49 16.10, 02:08): wybór SCX przy zamkniętym moście albo drodze */
+  I('SCX_DETOUR_CHOICE', 'risk', 'EMAIL', 'Decyzja SCX: objazd albo postój', '', ['code', 'order', 'closure', 'choice', 'author', 'link'],
+    'Na trasie: {{closure}}. SCX wybrał: {{choice}} ({{author}}). ETA liczy ten wybór. Otwórz transport: {{link}}',
+    '{{code}}: decyzja SCX — {{choice}}', { planned: true }),
 
   I('LOAD_STATUS_CHANGED', 'load', 'EMAIL', 'Zmiana statusu', '', ['code', 'order', 'statusFrom', 'statusTo', 'time', 'link'],
     'Status: {{statusFrom}} → {{statusTo}} ({{time}}). Otwórz transport: {{link}}', '{{code}}: {{statusTo}}'),
@@ -120,6 +132,13 @@ export const MESSAGES: readonly MsgItem[] = [
     'Wjazd o {{time}}. Otwórz transport: {{link}}', '{{code}}: wjazd do strefy {{place}}'),
   I('ZONE_EXIT', 'load', 'EMAIL', 'Wyjazd ze strefy', '', ZONE_T,
     'Wyjazd o {{time}}. Otwórz transport: {{link}}', '{{code}}: wyjazd ze strefy {{place}}'),
+  /* wyglad/audyt-E (E-03; E35 pkt 2): dawne reguły „Dojazd na plac” i „Wjazd przed port” — zdarzenia w „Kto co dostaje” */
+  I('PRE_ARRIVAL', 'load', 'EMAIL', 'Auto 50 km przed placem', '', ['code', 'order', 'trailer', 'site', 'time', 'arrival', 'link'],
+    'Auto {{trailer}} jest ok. 50 km przed celem: {{site}} (o {{time}}). Przyjazd ok. {{arrival}}. Otwórz transport: {{link}}',
+    '{{code}}: auto 50 km przed celem — {{site}}', { planned: true }),
+  I('PRE_PORT', 'load', 'EMAIL', 'Auto 20 km przed portem', '', ['code', 'order', 'trailer', 'port', 'time', 'link'],
+    'Auto {{trailer}} jest ok. 20 km przed portem {{port}} (o {{time}}). Otwórz transport: {{link}}',
+    '{{code}}: auto 20 km przed portem {{port}}', { planned: true }),
 
   I('INVOICE_NEW', 'inv', 'EMAIL', 'Nowa faktura', '', INV_T,
     'Faktura {{invoiceNo}} ({{week}}), {{amount}}, termin {{due}}. Otwórz fakturę: {{link}}', 'Nowa faktura {{invoiceNo}} do weryfikacji'),
@@ -154,6 +173,16 @@ export const MESSAGES: readonly MsgItem[] = [
     'Brak ceny {{source}} z {{date}} — tydzień {{week}}, wpływa na załadunki {{loadWeek}}, {{count}} transportów. Uzupełnij w Opcjach: {{link}}', 'Brak ceny {{source}} z {{date}}'),
   I('CLIENT', 'sys', 'EMAIL', 'Powiadomienie dla klienta', '', ['firm', 'link'],
     'To powiadomienie dotyczy organizacji klienta {{firm}}. Otwórz: {{link}}', 'Powiadomienie dla organizacji klienta'),
+  /* wyglad/audyt-E (E-03; E23 decyzja 1 A, obraz E23): alarm źródła i „Wróciło”; E46: błąd aplikacji */
+  I('SOURCE_DOWN', 'sys', 'EMAIL', 'Źródło danych nie działa', '', ['feed', 'since', 'effect', 'link'],
+    '{{feed}} nie działa od {{since}}. Skutek: {{effect}}. Przypomnienie po 2 h, jeśli nie wróci. Stan systemu: {{link}}',
+    '{{feed}} nie działa od {{since}}', { planned: true }),
+  I('SOURCE_BACK', 'sys', 'EMAIL', 'Źródło danych wróciło', '', ['feed', 'since', 'time', 'link'],
+    '{{feed}} działa znowu od {{time}}. Przerwa trwała od {{since}}. Stan systemu: {{link}}',
+    'Wróciło: {{feed}}', { planned: true }),
+  I('APP_ERROR', 'sys', 'EMAIL', 'Błąd aplikacji', '', ['error', 'times', 'people', 'page', 'time', 'link'],
+    'Błąd „{{error}}”: {{times}} razy, u {{people}} osób, ostatnio o {{time}}, strona {{page}}. Błędy aplikacji: {{link}}',
+    'Błąd aplikacji: {{error}}', { planned: true }),
 
   I('INVITE', 'login', 'LOGIN', 'Zaproszenie', 'Do: osoba zaproszona w Użytkownikach', LOGIN_T,
     'Dzień dobry,\n{{inviter}} zaprasza do Watch Tower — systemu kontroli transportów Śrem → Boden.\nOsoba: {{name}} · Firma: {{firm}} · Konto: {{account}}\n{{button}}\nLink jest ważny {{validity}}.',
@@ -283,6 +312,16 @@ export function sampleOf(load: Pick<Load, 'code' | 'hhlOrderNo' | 'plannedLoadDa
     planDateBefore: '06.10',
     site: 'Boden',
     placeTo: 'plac Stegra Boden',
+    port: 'Gdynia',
+    closure: 'most Högakustenbron zamknięty do 18:00',
+    choice: 'objazd, +62 km, +1 h 05 min',
+    feed: 'Telematyka naczep',
+    since: '00:00',
+    effect: 'brak pozycji naczep na mapie i w ETA',
+    error: 'Nie udało się zapisać awizacji',
+    times: '3',
+    people: '2',
+    page: 'Harmonogram',
   };
 }
 
