@@ -247,7 +247,8 @@ export function ScheduleView() {
         const { reportUnreadableKshFile } = await import('../data/scheduleImportServer');
         await reportUnreadableKshFile(f.name);
       }
-      setParseError(e instanceof Error ? e.message : String(e));
+      /* E21: błąd biblioteki odczytu (np. „Can't find end of central directory”) nie trafia na ekran — zdanie po polsku */
+      setParseError(fileRead ? (e instanceof Error ? e.message : String(e)) : s7(locale, 's7_xlsx_unreadable'));
       setStep('upload');
       pushToast(t(locale, 'a6_sch_xlsx_fail'), 'CRITICAL');
     } finally {
