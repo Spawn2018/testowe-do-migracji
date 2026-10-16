@@ -94,7 +94,7 @@ const pl: Dict = {
   b5_ts_saved: 'Zapisano regułę: {name}',
   b5_ts_deleted: 'Usunięto regułę: {name}',
   b5_note: 'Reguła = wyzwalacz, warunki i akcje. Wykonuje ją silnik w bazie (co minutę). Jedno zdarzenie daje jeden alarm na odbiorcę, nawet gdy pasuje kilka reguł albo wbudowany automat.',
-  b5_start_note: 'START-1…7 wyłączone 05.10 (ONE-MECH): każda dublowała wbudowany alarm.',
+  b5_start_note: 'START-1…7 wyłączone 05.10.2026 (ONE-MECH): każda dublowała wbudowany alarm.',
 };
 
 const en: Dict = {

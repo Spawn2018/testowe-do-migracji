@@ -44,16 +44,16 @@ describe('E32 pkt 6 — kompletna awizacja (jedna definicja)', () => {
 })
 
 describe('E32 — termin awizacji 48 h / 12 h przed dniem załadunku (0143)', () => {
-  it('SG-15 z makiety: załadunek czw 08.10 → pilne od 07.10, 12:00', () => {
+  it('SG-15 z makiety: załadunek czw. 08.10.2026 → pilne od 07.10.2026, 12:00', () => {
     const d = awizDeadline('2026-10-08', '2026-10-07T11:00:00Z')!
-    expect(dmHm(d.urgentAt)).toBe('07.10, 12:00')
-    expect(dmHm(d.warnAt)).toBe('06.10, 00:00')
+    expect(dmHm(d.urgentAt)).toBe('07.10.2026, 12:00')
+    expect(dmHm(d.warnAt)).toBe('06.10.2026, 00:00')
     expect(d.phase).toBe('urgent')
   })
   it('z godziną załadunku z planu — od tej godziny (jak l3_anchor w 0143)', () => {
     const d = awizDeadline('2026-10-08', '2026-10-07T11:00:00Z', '2026-10-08T08:00:00+02:00')!
     expect(d.byHour).toBe(true)
-    expect(dmHm(d.urgentAt)).toBe('07.10, 20:00')
+    expect(dmHm(d.urgentAt)).toBe('07.10.2026, 20:00')
     expect(d.phase).toBe('warn')
     expect(awizDeadline('2026-10-08', '2026-10-07T11:00:00Z')!.byHour).toBe(false)
   })
@@ -69,9 +69,10 @@ describe('E32 — termin awizacji 48 h / 12 h przed dniem załadunku (0143)', ()
 })
 
 describe('E32 pkt 4 — daty z dniem tygodnia', () => {
-  it('„czw 08.10”, „czw 08.10.2026”, tydzień, godziny', () => {
-    expect(dayShort('2026-10-08')).toBe('czw 08.10')
-    expect(dayLong('2026-10-14')).toBe('śr 14.10.2026')
+  it('„czw. 08.10.2026” (rok zawsze — właściciel 16.10.2026), tydzień, godziny', () => {
+    expect(dayShort('2026-10-08')).toBe('czw. 08.10.2026')
+    expect(dayLong('2026-10-14')).toBe('śr. 14.10.2026')
+    expect(dayLong('2026-10-18')).toBe('niedz. 18.10.2026')
     expect(dayShort(null)).toBe('—')
     expect(isoWeek('2026-10-08')).toBe(41)
     expect(isoWeek('2026-01-01')).toBe(1)

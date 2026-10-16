@@ -3,6 +3,7 @@ import { getSupabase } from './client';
 import { authErrorPl } from './config';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
+import { fmtDateTime } from '../lib/time';
 import { EMPTY_SYMBOL_ROW, buildSymbolRules, familyFromSymbol, type SymbolFormRow } from '../lib/rateCard';
 import './auth.css';
 
@@ -187,7 +188,7 @@ export default function RateCardForm() {
         <h4 className="sec">{t(locale, 'i19_log_h')}</h4>
         <div className="panel-bd flush" data-rate-card="log">
           {log.length === 0 ? <div className="auth-admin-row">{t(locale, 'i19_log_empty')}</div> : log.map((l, i) => (
-            <div className="auth-admin-row" key={`${l.at}-${i}`}><span className="grow">{new Date(l.at).toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })} · <b>{logLabel(l)}</b> · {tp(locale, 'i19_log_rules', { a: String(l.old_value?.rules?.length ?? 0), b: String(l.new_value?.rules?.length ?? 0) })}{l.new_value?.note ? ` · ${l.new_value.note}` : ''} <small>{l.actor}</small></span></div>
+            <div className="auth-admin-row" key={`${l.at}-${i}`}><span className="grow">{fmtDateTime(l.at)} · <b>{logLabel(l)}</b> · {tp(locale, 'i19_log_rules', { a: String(l.old_value?.rules?.length ?? 0), b: String(l.new_value?.rules?.length ?? 0) })}{l.new_value?.note ? ` · ${l.new_value.note}` : ''} <small>{l.actor}</small></span></div>
           ))}
         </div>
       </div>

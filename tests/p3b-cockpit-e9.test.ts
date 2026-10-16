@@ -65,19 +65,25 @@ describe('E9 — „Do zrobienia” i liczby w menu', () => {
   it('Faktury w menu (tabela Faktur): KSH do sprawdzenia; HHL faktury SCX do sprawdzenia + gotowe do faktury dla KSH; SCX sporne + gotowe do swojej; 0 = brak liczby', () => {
     const bills = [
       bill({ issuer: 'HHL', recipient: 'KSH', verification: 'DO_WERYFIKACJI' }),
-      bill({ issuer: 'SCX', recipient: 'HHL', verification: 'DO_WERYFIKACJI', lines: [{ loadId: 'SG-02' }] as Bill['lines'] }),
+      bill({ id: 'b-scx-41', direction: 'KOSZT', issuer: 'SCX', recipient: 'HHL', verification: 'DO_WERYFIKACJI', lines: [{ loadId: 'SG-02' }] as Bill['lines'] }),
       bill({ issuer: 'SCX', recipient: 'HHL', verification: 'SPORNA' }),
     ];
-    expect(invoiceTodoCount('KSH', { loads: LOADS, documents: DOCS, bills })).toBe(1);
-    // HHL: 1 faktura SCX do sprawdzenia + SG-02 (CMR; na fakturze SCX, ale bez faktury HHL dla KSH)
-    expect(invoiceTodoCount('HHL', { loads: LOADS, documents: DOCS, bills })).toBe(2);
-    // SCX: 1 sporna; SG-02 jest już na fakturze SCX
-    expect(invoiceTodoCount('SCX', { loads: LOADS, documents: DOCS, bills })).toBe(1);
-    expect(invoiceTodoCount('SCX', { loads: LOADS, documents: [], bills: [] })).toBe(0);
+    /* audyt-C C-10 (E4, E9): „gotowe do mojej faktury” = ta sama funkcja co kafel „Czeka na wystawienie” (`pendingWeeks`):
+       transporty rozładowane w zamkniętym tygodniu, bez faktury tej firmy. Tydzień SG-01 / SG-02 (t41) zamyka się 11.10. */
+    const open = '2026-10-07';
+    const closed = '2026-10-12';
+    expect(invoiceTodoCount('KSH', { loads: LOADS, bills, today: closed })).toBe(1);
+    // HHL, tydzień otwarty: tylko 1 faktura SCX do sprawdzenia
+    expect(invoiceTodoCount('HHL', { loads: LOADS, bills, today: open })).toBe(1);
+    // HHL, tydzień zamknięty: + SG-01 i SG-02 (na fakturze SCX, ale bez faktury HHL dla KSH)
+    expect(invoiceTodoCount('HHL', { loads: LOADS, bills, today: closed })).toBe(3);
+    // SCX: 1 sporna + SG-01 (SG-02 jest już na fakturze SCX)
+    expect(invoiceTodoCount('SCX', { loads: LOADS, bills, today: closed })).toBe(2);
+    expect(invoiceTodoCount('SCX', { loads: LOADS, bills: [], today: open })).toBe(0);
     // faktura HHL zakwestionowana przez KSH: odpowiada HHL (wystawca), KSH już nie ma nic do zrobienia
     const disputed = [bill({ issuer: 'HHL', recipient: 'KSH', verification: 'SPORNA' })];
-    expect(invoiceTodoCount('HHL', { loads: [], documents: [], bills: disputed })).toBe(1);
-    expect(invoiceTodoCount('KSH', { loads: [], documents: [], bills: disputed })).toBe(0);
+    expect(invoiceTodoCount('HHL', { loads: [], bills: disputed, today: closed })).toBe(1);
+    expect(invoiceTodoCount('KSH', { loads: [], bills: disputed, today: closed })).toBe(0);
   });
   it('loadsBilledBy: transporty z faktur danego wystawcy', () => {
     const bills = [bill({ issuer: 'SCX', lines: [{ loadId: 'A' }] as Bill['lines'] }), bill({ issuer: 'HHL', lines: [{ loadId: 'B' }] as Bill['lines'] })];
@@ -105,7 +111,8 @@ describe('E9 — kafelki Kokpitu (img/e9-after)', () => {
     expect(by.permits7.value).toBe('1');
     expect(by.permits7.of).toBe('z 2');
     expect(by.permits7.tone).toBe('warn');
-    expect(by.delivered.desc).toBe('SG-01 czeka na podpisany CMR · 1 gotowy do faktury');
+    /* audyt-C C-10: „gotowe do faktury” = transporty z zamkniętego tygodnia (kafel „Czeka na wystawienie”); t41 zamyka się 11.10 */
+    expect(by.delivered.desc).toBe('SG-01 czeka na podpisany CMR · 0 gotowych do faktury');
     expect(by.margin.label).toBe('Marża (prognoza)');
     expect(by.margin.value).toBe('4,8');
     expect(by.margin.of).toBe('%');
@@ -127,12 +134,13 @@ describe('E9 — kafelki Kokpitu (img/e9-after)', () => {
     // ostatnia dostawa: SG-02 w terminie, SG-01 dzień po planie → 1 z 2
     expect(by.otif.value).toBe('1');
     expect(by.otif.of).toBe('z 2');
-    expect(by.otif.desc).toBe('SG-02: plan 06.10, dostawa 06.10');
+    expect(by.otif.desc).toBe('SG-02: plan 06.10.2026, dostawa 06.10.2026');
     expect(by.otif.descShort).toBe('SG-02 w terminie');
-    expect(by.ferry.value).toBe('08.10, 18:00');
-    expect(by.ferry.valueShort).toBe('08.10 18:00');
+    expect(by.ferry.value).toBe('08.10.2026, 18:00');
+    /* telefon: liczba w jednej linii (E8 pkt 6) — godzina, data z rokiem w opisie */
+    expect(by.ferry.valueShort).toBe('18:00');
     expect(by.ferry.desc).toBe('Wawel GDN → NYN · fala 1,3 m · ryzyko niskie');
-    expect(by.ferry.descShort).toBe('fala 1,3 m · niskie');
+    expect(by.ferry.descShort).toBe('08.10.2026 · fala 1,3 m · niskie');
     expect(by.bills.desc).toBe('brak faktur HHL w systemie');
   });
   it('SCX: Do zrobienia, zezwolenia przy załadunkach, do zafakturowania z tygodniem dostawy; prom bez prognozy → strona Ryzyka', () => {
@@ -146,6 +154,8 @@ describe('E9 — kafelki Kokpitu (img/e9-after)', () => {
     expect(by['to-invoice'].desc).toBe('1 czeka na podpisany CMR (SG-01) · tydz. 41');
     expect(by['to-invoice'].descShort).toBe('1 czeka na CMR');
     expect(by.ferry.desc).toBe('Wawel GDN → NYN · prognoza morza na stronie Ryzyka');
+    expect(by.ferry.valueShort).toBe('18:00');
+    expect(by.ferry.descShort).toBe('08.10.2026 · prognoza w Ryzykach');
     // SG-02 już na fakturze SCX → do zafakturowania 0, czeka SG-01
     const billed = buildCockpit(input('SCX', { bills: [bill({ issuer: 'SCX', recipient: 'HHL', lines: [{ loadId: 'SG-02' }] as Bill['lines'] })] }));
     expect(billed.find((x) => x.id === 'to-invoice')!.value).toBe('0');

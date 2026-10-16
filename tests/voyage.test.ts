@@ -37,7 +37,7 @@ describe('D4 voyage SoT', () => {
     expect(focus.depLocal.slice(0, 10)).toBe('2026-09-24');
     expect(focus.vessel).toBe('WAW'); // schedule SoT — NOT old SAIL_ROWS Nova Star
     expect(seaForSailing(focus).risk).toBe('podwyższone');
-    expect(formatVoyageDayLabel(focus.depLocal)).toBe('24.09');
+    expect(formatVoyageDayLabel(focus.depLocal)).toBe('24.09.2026');
   });
 
   it('voyageSeaTableRows vessels follow ferry-sailings schedule (opposite of old SAIL_ROWS)', () => {
@@ -100,7 +100,7 @@ describe('D4 voyage SoT', () => {
     const focus = focusVoyage(NOW);
     const banner = cockpitFerryBanner([], NOW);
     expect(banner.voyage.id).toBe(focus.id);
-    expect(banner.title).toBe('Rejs 24.09 zagrożony.');
+    expect(banner.title).toBe('Rejs 24.09.2026 zagrożony.');
     expect(banner.body).toContain('2,9 m');
     expect(banner.body).toContain(vesselById(focus.vessel).name);
     expect(banner.body).toMatch(/0 transport/);

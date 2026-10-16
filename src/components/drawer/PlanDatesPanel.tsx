@@ -4,6 +4,7 @@
  */
 import { useTowerStore } from '../../store/useTowerStore';
 import { t } from '../../i18n/messages';
+import { fmtDateTime } from '../../lib/time';
 import type { Load } from '../../types';
 
 export function PlanDatesPanel({ load }: { load: Load }) {
@@ -18,7 +19,7 @@ export function PlanDatesPanel({ load }: { load: Load }) {
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <span className={`pill ${confirmed ? 'p-go' : ''}`} data-plan-dates-status>{t(locale, confirmed ? 'i18_confirmed' : 'i18_provisional')}</span>
         {confirmed && pd.confirmedAt
-          ? <small data-plan-dates-by>{t(locale, 'i18_by_ksh').replace('{at}', new Date(pd.confirmedAt).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' }))}</small>
+          ? <small data-plan-dates-by>{t(locale, 'i18_by_ksh').replace('{at}', fmtDateTime(pd.confirmedAt))}</small>
           : <small>{t(locale, 'i18_waiting')}</small>}
       </div>
       {role === 'SCX' && <div className="note" style={{ margin: '8px 0 0' }}>{t(locale, 'i18_carrier_note')}</div>}

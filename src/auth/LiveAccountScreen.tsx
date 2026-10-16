@@ -7,7 +7,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { AccountScreen, type MyDevice } from '../components/options/PeopleScreens';
 import type { AccountKind } from '../components/options/types';
-import { t, tp, INTL_LOCALE } from '../i18n/messages';
+import { t, tp } from '../i18n/messages';
+import { fmtDateTime } from '../lib/time';
 import { isE164 } from '../lib/phoneNational';
 import { isPreviewReadOnly } from '../lib/prodFacade';
 import { useTowerStore } from '../store/useTowerStore';
@@ -36,9 +37,10 @@ function roleToKind(role: string | undefined | null): AccountKind {
   return 'HHL_ADMIN';
 }
 
-function fmtWhen(iso: string | null | undefined, locale: Locale): string | null {
+/** „16.10.2026, 08:05” we wszystkich językach (właściciel 16.10.2026). */
+function fmtWhen(iso: string | null | undefined, _locale: Locale): string | null {
   if (!iso) return null;
-  return new Date(iso).toLocaleString(INTL_LOCALE[locale], { dateStyle: 'short', timeStyle: 'short' });
+  return fmtDateTime(iso);
 }
 
 export default function LiveAccountScreen() {

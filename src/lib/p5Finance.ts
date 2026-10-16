@@ -6,6 +6,7 @@
 import type { Load } from '../types';
 import type { PricingTier } from './money/engine';
 import { sideEffectiveEur, type MoneySideV2 } from './money/loadMoney';
+import { fmtDateRange } from './time';
 
 export type FinStage = PricingTier;
 /** Która strona kwoty: HHL obie, KSH przychód, SCX koszt (E16 „Każda firma”). */
@@ -77,6 +78,30 @@ const add = (a: FinAmount, eur: number, pln: number | null): FinAmount => ({
 });
 const zero = (): FinAmount => ({ eur: 0, pln: 0 });
 
+/**
+ * audyt-C C-12 (E16 „marża według rodzaju elementu”, obraz: „Słupy główne”, „Belki suwnicowe”, „Kratownice”):
+ * symbol rodzaju z pliku KSH (SG, T, K…) → nazwa po polsku jak w tabeli symboli właściciela (07.10) i cenniku SCX.
+ * Nazwa, która nie jest symbolem, zostaje bez zmian.
+ */
+const KIND_NAMES: Record<string, string> = {
+  SG: 'Słupy główne',
+  SS: 'Słupy skrajne',
+  T: 'Tężniki',
+  TS: 'Tężniki ściany A',
+  K: 'Kratownice',
+  KR: 'Kratownice',
+  P: 'Płatwie dachowe i stężenia',
+  PL: 'Płatwie dachowe i stężenia',
+  D: 'Stężenia międzysłupowe',
+  BS: 'Belki suwnicowe',
+  R: 'Element referencyjny',
+};
+export function itemKindName(itemType: string | null | undefined): string {
+  const raw = (itemType ?? '').trim();
+  const sym = raw.toUpperCase().replace(/-[A-Z0-9]+$/, '');
+  return KIND_NAMES[raw.toUpperCase()] ?? KIND_NAMES[sym] ?? (raw || '—');
+}
+
 export function financeSummary(loads: Load[], side: FinSide, latest: FinNbp | null = latestNbp(loads)): FinSummary {
   const stages = new Map<FinStage, FinStageRow>(FIN_STAGES.map((k) => [k, { stage: k, count: 0, rev: zero(), cost: zero() }]));
   const types = new Map<string, FinTypeRow>();
@@ -85,9 +110,10 @@ export function financeSummary(loads: Load[], side: FinSide, latest: FinNbp | nu
   let plnComplete = true;
   for (const l of loads) {
     const s = sidesOf(l);
-    const type = types.get(l.itemType) ?? { type: l.itemType, priced: 0, all: 0, rev: zero(), cost: zero() };
+    const kind = itemKindName(l.itemType);
+    const type = types.get(kind) ?? { type: kind, priced: 0, all: 0, rev: zero(), cost: zero() };
     type.all += 1;
-    types.set(l.itemType, type);
+    types.set(kind, type);
     if (!s || !isPriced(s, side)) { unpriced.push(l); continue; }
     const revE = side === 'cost' ? 0 : sideEffectiveEur(s.rev);
     const costE = side === 'rev' ? 0 : sideEffectiveEur(s.cost);
@@ -132,7 +158,7 @@ export function belowThreshold(loads: Load[], thresholdPct: number | null, lates
     const rp = plnOf(s.rev, rev, latest);
     const cp = plnOf(s.cost, cost, latest);
     const marginPln = rp == null || cp == null ? null : r2(rp - cp);
-    if (p != null && p < thresholdPct) out.push({ id: l.id, code: l.code, type: l.itemType, stage: s.tier, marginEur: r2(rev - cost), marginPln, marginPct: p });
+    if (p != null && p < thresholdPct) out.push({ id: l.id, code: l.code, type: itemKindName(l.itemType), stage: s.tier, marginEur: r2(rev - cost), marginPln, marginPct: p });
   }
   return out.sort((a, b) => a.marginPct - b.marginPct);
 }
@@ -181,13 +207,12 @@ export function isoWeek(day: string): number {
   const jan4 = `${thu.slice(0, 4)}-01-04`;
   return 1 + Math.round((dateOf(thu).getTime() - dateOf(mondayOf(jan4)).getTime()) / (7 * 86400000));
 }
-const dm = (day: string) => `${day.slice(8, 10)}.${day.slice(5, 7)}`;
 export interface FinWeek { no: number; from: string; to: string }
 export const weekOf = (monday: string): FinWeek => ({ no: isoWeek(monday), from: monday, to: addDays(monday, 6) });
-/** „t41 · 05.10–11.10” albo „t43–t51 · 19.10–20.12”. */
+/** „t41 · 05.10.2026–11.10.2026” albo „t43–t51 · 19.10.2026–20.12.2026” (rok zawsze — właściciel 16.10.2026). */
 export function weekLabel(w: FinWeek, last?: FinWeek | null): string {
-  if (last && last.from !== w.from) return `t${w.no}–t${last.no} · ${dm(w.from)}–${dm(last.to)}`;
-  return `t${w.no} · ${dm(w.from)}–${dm(w.to)}`;
+  if (last && last.from !== w.from) return `t${w.no}–t${last.no} · ${fmtDateRange(w.from, last.to)}`;
+  return `t${w.no} · ${fmtDateRange(w.from, w.to)}`;
 }
 
 export type FuelState = 'OSTATECZNA' | 'PROGNOZA' | 'BRAK';

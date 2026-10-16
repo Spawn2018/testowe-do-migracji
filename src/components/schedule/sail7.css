@@ -1,0 +1,36 @@
+/* wyglad/P7-d (E30 pkt 7): Harmonogram › Rejsy — tabela jak makieta, karty na telefonie */
+.sv-bar{gap:6px 8px}
+.sv-form{padding:10px 13px;border-bottom:1px solid var(--rule-2)}
+.sv-times{display:flex;gap:8px;flex-wrap:wrap}
+.sv-times .input{flex:1 1 200px;min-width:0}
+.sv-form-ft{padding:8px 0 0}
+.sv-err{color:var(--red);margin:8px -13px -10px}
+.sv-muted{color:var(--ink-3)}
+.sv-tbl td{vertical-align:middle}
+.sv-tbl td.sv-time{white-space:nowrap;font-variant-numeric:tabular-nums}
+.sv-tbl td.sv-time .pill{margin-left:6px}
+.sv-tbl td.sv-route{white-space:nowrap}
+.sv-tbl td.sv-act{white-space:nowrap;text-align:right}
+.sv-tbl td.sv-act .chipbtn + .chipbtn{margin-left:6px}
+.sv-tbl tr.is-off td{color:var(--ink-3)}
+.sv-was{color:var(--ink-3)}
+.sv-dash{color:var(--ink-3)}
+.sv-codes{border:0;background:none;padding:0;color:var(--sea);font:inherit;font-weight:600;text-align:left;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.sv-codes:hover,.sv-codes:focus-visible{color:var(--ink)}
+.sv-foot{display:flex;flex-direction:column;gap:2px}
+
+/* telefon (E8): karty zamiast tabeli */
+.sv-cards{list-style:none;margin:0;padding:8px 12px 12px;display:flex;flex-direction:column;gap:8px}
+.sv-card{border:1px solid var(--rule);padding:8px 11px;display:flex;flex-direction:column;gap:3px;font-size:14px}
+.sv-card.is-off{color:var(--ink-3)}
+.sv-c1{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:baseline}
+.sv-c1 b{font:700 16px var(--font-cond);font-variant-numeric:tabular-nums}
+.sv-c2,.sv-c3{display:flex;flex-wrap:wrap;gap:0 6px;color:var(--ink-2)}
+.sv-c3{align-items:center}
+.sv-card .sv-codes{min-height:44px;display:inline-flex;align-items:center}
+.sv-acts{display:flex;gap:8px;margin-top:4px}
+.sv-acts .chipbtn{min-height:44px;flex:1}
+@media (max-width:768px){
+  .sv-bar .chipbtn,.sv-bar .btn{min-height:44px}
+  .sv-bar .btn{font-size:14px}
+}

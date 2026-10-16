@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
-  dayPl, ddmm, DEFAULT_LAYOUT, docCell, etaText, exportName, FILE_COLS, fileColsFor, inRange, loadSchedLayout, moneyKey, pair, QUICKS,
+  dayPl, dmy, DEFAULT_LAYOUT, docCell, etaText, exportName, FILE_COLS, fileColsFor, inRange, loadSchedLayout, moneyKey, pair, QUICKS,
   saveSchedLayout, SHORT_COLS, shortExtrasFor, weekOf, weekPicks,
 } from '../src/lib/schedLayout';
 import { s7 } from '../src/i18n/sched7';
@@ -38,10 +38,11 @@ describe('układ pliku i widok skrócony', () => {
 
 describe('komórki', () => {
   it('daty i dni po polsku (plik ma dni po angielsku — E21)', () => {
-    expect(ddmm('2026-10-05')).toBe('05.10');
+    expect(dmy('2026-10-05')).toBe('05.10.2026');
+    expect(dmy('2026-10-05T22:30:00Z')).toBe('06.10.2026'); // chwila → dzień w Polsce
     expect(dayPl('2026-10-05')).toBe('pon.');
     expect(dayPl('2026-10-08')).toBe('czw.');
-    expect(ddmm(null)).toBe('–');
+    expect(dmy(null)).toBe('–');
   });
   it('„A / B” = PL → SE; brak drugiej części przy przepięciu = „?”', () => {
     expect(pair('A. C.', null, false)).toEqual({ a: 'A. C.', b: null, missingB: false });

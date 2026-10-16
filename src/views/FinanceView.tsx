@@ -13,6 +13,7 @@ import { t } from '../i18n/messages';
 import { up } from '../components/options/up';
 import { ft, ftn, ftp } from '../i18n/p5';
 import { formatPlNumber } from '../lib/format';
+import { formatCalendarDay } from '../lib/time';
 import { getNowIso } from '../lib/frozenNow';
 import { localDateOf } from '../lib/money/engine';
 import { useIsPhone } from '../lib/useIsPhone';
@@ -82,7 +83,7 @@ export function FinanceView() {
       ? `${transportsText(fin.all)}: ${fin.priced} z ceną, ${unpriced} bez ceny ${ftp(locale, 'p5_fin_unpriced_note', { codes: codeRange(fin.unpricedCodes), why: fin.unpricedNoDate ? ft(locale, 'p5_fin_unpriced_why_date') : '' })}`
       : `${transportsText(fin.all)}: ${ft(locale, 'p5_fin_priced_all').replace('{priced}', String(fin.priced))}`;
   const nbp = fin.nbpLatest;
-  const nbpDate = nbp ? `${nbp.date.slice(8, 10)}.${nbp.date.slice(5, 7)}.${nbp.date.slice(0, 4)}` : '';
+  const nbpDate = nbp ? formatCalendarDay(nbp.date.slice(0, 10)) : '';
 
   const stageLabel = (k: FinStage) => (side === 'both' || k !== 'REALIZACJA' ? ft(locale, `p5_fin_stage_${k}`) : ft(locale, `p5_fin_stage_REALIZACJA_${side}`));
   const plnNote = currency === 'PLN'
@@ -183,7 +184,7 @@ export function FinanceView() {
     <section className="panel fin-panel" data-fin-nbp data-deur-exempt="fx-nbp" aria-labelledby="fin-nbp-h">
       <header className="panel-hd fin-hd2"><h3 id="fin-nbp-h">{ft(locale, 'p5_fin_nbp_h')}</h3></header>
       {phone ? (
-        <p className="fin-muted fin-pad">{nbp ? ftp(locale, 'p5_fin_nbp_short', { table: nbp.tableNo, date: nbpDate.slice(0, 5), mid: formatPlNumber(nbp.mid, 4) }) : ft(locale, 'p5_fin_nbp_none')}</p>
+        <p className="fin-muted fin-pad">{nbp ? ftp(locale, 'p5_fin_nbp_short', { table: nbp.tableNo, date: nbpDate, mid: formatPlNumber(nbp.mid, 4) }) : ft(locale, 'p5_fin_nbp_none')}</p>
       ) : (
         <>
           <dl className="fin-dl">

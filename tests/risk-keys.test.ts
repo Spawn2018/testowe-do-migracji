@@ -77,7 +77,7 @@ describe('A6-T1 dane demo', () => {
   });
   it('EN/SV dają inny tekst niż PL dla ryzyk demo', () => {
     const f = risks.find((r) => r.id === 'risk-ferry')!;
-    expect(riskText('en', f.title, f.titleKey, f.titleParams)).toBe('Sailing 24.09 · forecast waves 2.9 m, gusts 19 m/s');
+    expect(riskText('en', f.title, f.titleKey, f.titleParams)).toBe('Sailing 24.09.2026 · forecast waves 2.9 m, gusts 19 m/s');
     expect(riskText('sv', f.title, f.titleKey, f.titleParams)).toContain('2,9');
   });
 });

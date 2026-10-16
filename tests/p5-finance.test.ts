@@ -91,8 +91,8 @@ describe('E39 — opłata paliwowa według tygodnia załadunku', () => {
     expect(isoWeek('2026-10-11')).toBe(41);
     expect(isoWeek('2026-12-31')).toBe(53);
     expect(mondayOf('2026-10-11')).toBe('2026-10-05');
-    expect(weekLabel(weekOf('2026-10-05'))).toBe('t41 · 05.10–11.10');
-    expect(weekLabel(weekOf('2026-10-19'), weekOf('2026-12-14'))).toBe('t43–t51 · 19.10–20.12');
+    expect(weekLabel(weekOf('2026-10-05'))).toBe('t41 · 05.10.2026–11.10.2026');
+    expect(weekLabel(weekOf('2026-10-19'), weekOf('2026-12-14'))).toBe('t43–t51 · 19.10.2026–20.12.2026');
   });
   it('wiersze: wskaźniki z tygodnia poprzedniego, ostateczna / prognoza z datą, bez ceny na końcu', () => {
     const rows = fuelWeeks(LOADS, 'cost', '2026-10-14');
@@ -112,12 +112,12 @@ describe('E39 — opłata paliwowa według tygodnia załadunku', () => {
     const mk = (code: string, d: string) => load(code, 'Słupy', side(1, 'PROGNOZA', d, {}, 'PROGNOZA'), side(1, 'PROGNOZA', d, {}, 'PROGNOZA'));
     const rows = fuelWeeks([mk('TA-04', '2026-10-27'), mk('TA-05', '2026-11-03'), mk('TA-06', '2026-11-10')], 'cost', '2026-10-14');
     expect(rows).toHaveLength(1);
-    expect(weekLabel(rows[0].week!, rows[0].weekLast)).toBe('t44–t46 · 26.10–15.11');
+    expect(weekLabel(rows[0].week!, rows[0].weekLast)).toBe('t44–t46 · 26.10.2026–15.11.2026');
     expect(rows[0].finalFrom).toBeNull();
     expect(rows[0].loads).toHaveLength(3);
     /* tydzień bez transportów przerywa scalanie: t44 i t46 to dwa wiersze */
     const gap = fuelWeeks([mk('TA-07', '2026-10-27'), mk('TA-08', '2026-11-10')], 'cost', '2026-10-14');
-    expect(gap.map((r) => weekLabel(r.week!, r.weekLast))).toEqual(['t44 · 26.10–01.11', 't46 · 09.11–15.11']);
+    expect(gap.map((r) => weekLabel(r.week!, r.weekLast))).toEqual(['t44 · 26.10.2026–01.11.2026', 't46 · 09.11.2026–15.11.2026']);
   });
 });
 

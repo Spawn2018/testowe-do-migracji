@@ -1,6 +1,6 @@
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
-import { formatTableDay, refYearInOps } from '../lib/time';
+import { formatTableDay } from '../lib/time';
 import { getNow } from '../lib/frozenNow';
 import { clickableRow } from '../lib/clickableRow';
 import { transportLabel } from '../lib/transportName';
@@ -16,7 +16,6 @@ export function TasksView() {
   const role = useTowerStore((s) => s.role);
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const locale = useTowerStore((s) => s.locale);
-  const refYear = refYearInOps(getNow());
 
   const need = loads
     .filter((l) => ['RESOURCES_PENDING', 'DOC_MISSING', 'READY'].includes(l.status))
@@ -60,7 +59,7 @@ export function TasksView() {
                       <span className="code" data-content>{transportLabel(l, role)}</span>
                     </td>
                     <td>{what}</td>
-                    <td>{formatTableDay(l.plannedLoadDate, refYear)}</td>
+                    <td>{formatTableDay(l.plannedLoadDate)}</td>
                     <td className="mono">{tp(locale, 'a6_task_in_h', { h: String(hrs) })}</td>
                     <td>
                       <span className={`pill ${pill}`}>{lab}</span>

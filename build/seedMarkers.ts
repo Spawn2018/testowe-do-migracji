@@ -9,6 +9,8 @@ import { join, relative } from 'node:path'
 const CODE = /^[A-Z]{1,3}-\d{2,}$/
 /** Miejscowości korytarza — prawdziwe, nie znacznik przykładowy. */
 const REAL_PLACES = ['gävle', 'gavle']
+/** Frazy tylko z danych demo (dawny „Permit mismatch” zostaje na wypadek powrotu angielskiego tytułu). */
+const DEMO_PHRASES = ['Permit mismatch', 'przekracza wysokość i szerokość']
 
 export type SeedMarkers = {
   codes: string[]
@@ -30,7 +32,11 @@ function realNames(root: string): Set<string> {
   return names
 }
 
-/** Kody, fraza „Permit mismatch” i kwoty — wyciągnięte z src/data/seed.ts i z loads.json, który seed wczytuje. */
+/**
+ * Kody, frazy ryzyka demo i kwoty — wyciągnięte z src/data/seed.ts i z loads.json, który seed wczytuje.
+ * audyt-C (C-01, E7 „bez kodów”): ryzyko SG-34 po polsku — znacznikiem jest część tytułu, której nie ma w tekstach
+ * interfejsu („Zezwolenie niezgodne z zestawem” jest prawdziwym tekstem produkcji, więc nie jest znacznikiem).
+ */
 export function loadSeedMarkers(root = process.cwd()): SeedMarkers {
   const seed = readFileSync(join(root, 'src/data/seed.ts'), 'utf8')
   const loads = JSON.parse(readFileSync(join(root, 'src/data/loads.json'), 'utf8')) as { code?: string }[]
@@ -43,7 +49,7 @@ export function loadSeedMarkers(root = process.cwd()): SeedMarkers {
   for (const m of seed.matchAll(/(?:code|loadCode):\s*'([^']+)'/g)) if (CODE.test(m[1])) codes.add(m[1])
 
   const phrases = new Set<string>()
-  if (seed.includes('Permit mismatch')) phrases.add('Permit mismatch')
+  for (const p of DEMO_PHRASES) if (seed.includes(p)) phrases.add(p)
 
   const amounts = new Set<string>()
   for (const m of seed.matchAll(/\d{1,3}(?: \d{3})+(?:,\d+)? PLN/g)) amounts.add(m[0])

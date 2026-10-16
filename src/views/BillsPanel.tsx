@@ -17,8 +17,8 @@ import { transportLabel } from '../lib/transportName';
 import {
   BILL_TERM_DAYS,
   BILL_FLAG_LABEL, VERIFICATION_LABEL, billCandidates, billPaymentToday, billVisibleTo,
-  canMarkPaid, canRegisterBill, computedEurFor, canVerifyBill, checkBill, expectedNetFor, invoicedLoadIds, isoWeekMonday,
-  addDaysIso, reminderPlan, reminderRecipients, suggestLineFx, type BillDraft,
+  canMarkPaid, canRegisterBill, computedEurFor, canVerifyBill, checkBill, expectedNetFor, invoicedLoadIds,
+  addDaysIso, reminderPlan, reminderRecipients, suggestLineFx, vatGrossOf, type BillDraft,
 } from '../lib/invoices3';
 import { DocFileRow } from '../components/ui/DocFileRow';
 import { DocPreview } from '../components/ui/DocPreview';
@@ -26,8 +26,9 @@ import { canReplyDispute, correctionFileError, disputeActorSide, paymentBlockedB
 import { readFileAsDataUrl } from '../lib/docsIo';
 import { clickableRow } from '../lib/clickableRow';
 import { formatPlNumber } from '../lib/format';
+import { fmtDate, fmtDateRange } from '../lib/time';
 import { transportsText } from '../lib/p5Finance';
-import { ISSUER, RECIPIENT, VAT_RATE, billDiff, billStatus, invoiceKpis, pendingWeeks, weekKeyLabel, type InvKpis, type InvStatus } from '../lib/p5Invoices';
+import { ISSUER, RECIPIENT, billDiff, billStatus, invoiceKpis, pendingWeeks, weekKeyLabel, weekOptionLabel, type InvKpis, type InvStatus } from '../lib/p5Invoices';
 import { up } from '../components/options/up';
 import { ft, ftn, ftp } from '../i18n/p5';
 import { factoringOfferOf } from '../lib/p5Source';
@@ -127,7 +128,7 @@ function DisputeThread({ bill }: { bill: Bill }) {
       {list.map((e) => (
         <div key={e.id} className="mrow" data-dispute-event={e.kind}>
           <span className="lbl">
-            {fmtDay(e.at ? e.at.slice(0, 10) : null)} · {disputeActorSide(e.kind) === 'issuer' ? bill.issuer : bill.recipient} · {t(locale, `iii7_k_${e.kind}`)}
+            {fmtDay(e.at)} · {disputeActorSide(e.kind) === 'issuer' ? bill.issuer : bill.recipient} · {t(locale, `iii7_k_${e.kind}`)}
             {e.kind === 'RESOLVED' && e.statusTo ? ` (${VERIFICATION_LABEL[e.statusTo as BillVerification]?.[locale] ?? e.statusTo})` : ''}
           </span>
           <span data-content>
@@ -162,7 +163,8 @@ function DisputeThread({ bill }: { bill: Bill }) {
 const fmtCur = (n: number | null | undefined, cur: string) =>
   n == null ? '—' : cur === 'EUR' ? formatPlNumber(n, 2) : `${formatPlNumber(n, 2)} ${cur}`;
 const fmtNum = (n: number | null | undefined) => (n == null ? '—' : formatPlNumber(n, 2));
-const fmtDay = (iso: string | null | undefined) => (iso ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}` : '—');
+/* „08.10.2026” — dzień kalendarza albo chwila (czas polski); rok zawsze — właściciel 16.10.2026 */
+const fmtDay = (iso: string | null | undefined) => (iso ? fmtDate(iso) : '—');
 
 function Amount({ n, cur }: { n: number | null | undefined; cur: string }) {
   return <span className="mono" data-deur-exempt="invoice-currency">{fmtCur(n, cur)}</span>;
@@ -178,7 +180,6 @@ function Kpis({ direction, kpis }: { direction: BillDirection; kpis: InvKpis }) 
   const locale = useTowerStore((s) => s.locale);
   const first = kpis.pending[0];
   const ver = kpis.toVerify[0];
-  const dm = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
   return (
     <div className="inv-kpis" data-inv-kpis={direction}>
       <section className={`inv-kpi${first ? ' is-sea' : ''}`} data-inv-kpi="pending">
@@ -187,7 +188,7 @@ function Kpis({ direction, kpis }: { direction: BillDirection; kpis: InvKpis }) 
         <p>
           {first ? (
             <>
-              {ftp(locale, 'p5_inv_k_pending_s', { loads: transportsText(first.loads.length), range: `${dm(first.from)}–${dm(first.to)}`, net: formatPlNumber(first.netEur, 2) })}
+              {ftp(locale, 'p5_inv_k_pending_s', { loads: transportsText(first.loads.length), range: fmtDateRange(first.from, first.to), net: formatPlNumber(first.netEur, 2) })}
               <b>{ftp(locale, 'p5_inv_k_pending_who', { who: ISSUER[direction] })}</b>
               {kpis.pending.length > 1 ? ftn(locale, 'p5_inv_k_pending_more', kpis.pending.length - 1) : ''}
             </>
@@ -209,7 +210,7 @@ function Kpis({ direction, kpis }: { direction: BillDirection; kpis: InvKpis }) 
       <section className="inv-kpi" data-inv-kpi="due">
         <h3>{up(ft(locale, 'p5_inv_k_due'))}</h3>
         <b className="inv-kpi-v">{kpis.dueSoon.length}</b>
-        <p>{kpis.nextDue ? ftp(locale, 'p5_inv_k_due_s', { date: dm(kpis.nextDue) }) : ft(locale, 'p5_inv_k_due_none')}</p>
+        <p>{kpis.nextDue ? ftp(locale, 'p5_inv_k_due_s', { date: fmtDay(kpis.nextDue) }) : ft(locale, 'p5_inv_k_due_none')}</p>
       </section>
       <section className={`inv-kpi${kpis.overdue.length ? ' is-red' : ''}`} data-inv-kpi="overdue">
         <h3>{up(ft(locale, 'p5_inv_k_over'))}</h3>
@@ -217,7 +218,7 @@ function Kpis({ direction, kpis }: { direction: BillDirection; kpis: InvKpis }) 
         <p>
           {kpis.overdue[0] ? (
             <span data-content>
-              {ftp(locale, 'p5_inv_k_over_some', { number: kpis.overdue[0].number, date: dm(kpis.overdue[0].dueDate) })}
+              {ftp(locale, 'p5_inv_k_over_some', { number: kpis.overdue[0].number, date: fmtDay(kpis.overdue[0].dueDate) })}
               {kpis.overdue.length > 1 ? ftp(locale, 'p5_inv_k_over_more', { n: kpis.overdue.length - 1 }) : ''}
             </span>
           ) : ft(locale, 'p5_inv_k_over_s')}
@@ -283,7 +284,7 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
   const pending = useMemo(() => pendingWeeks(loads, allBills, direction, today), [loads, allBills, direction, today]);
   const kpis = useMemo(() => invoiceKpis(role, bills, pending, direction, today), [role, bills, pending, direction, today]);
   const title = role === 'KSH' ? ft(locale, 'p5_inv_list_ksh') : role === 'SCX' ? ft(locale, 'p5_inv_list_scx') : ft(locale, `p5_inv_list_${direction}`);
-  const dm = (d: string | null | undefined) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '—');
+  const dm = fmtDay;
   const quick = (b: Bill) => canVerifyBill(role, b) && b.verification === 'DO_WERYFIKACJI';
   const open = (id: string) => setOpenId((o) => (o === id ? null : id));
   const dispute = (id: string) => {
@@ -365,8 +366,8 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
                     <td className="fin-muted">{ft(locale, 'p5_inv_not_issued')}</td>
                     <td className="num">{w.loads.length}</td>
                     <td className="num"><b>{formatPlNumber(w.netEur, 2)}</b></td>
-                    <td className="num">{formatPlNumber(Math.round(w.netEur * VAT_RATE * 100) / 100, 2)}</td>
-                    <td className="num"><b>{formatPlNumber(Math.round(w.netEur * (1 + VAT_RATE) * 100) / 100, 2)}</b></td>
+                    <td className="num">{formatPlNumber(vatGrossOf(w.netEur).vat, 2)}</td>
+                    <td className="num"><b>{formatPlNumber(vatGrossOf(w.netEur).gross, 2)}</b></td>
                     <td>—</td>
                     <td><StatusTag status="DO_WYSTAWIENIA" /></td>
                     <td className="fin-muted">{ftp(locale, 'p5_inv_waits', { who: ISSUER[direction] })}</td>
@@ -596,8 +597,6 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
   const [issueDate, setIssueDate] = useState(today);
   const [dueDoc, setDueDoc] = useState('');
   const [net, setNet] = useState('');
-  const [vat, setVat] = useState('');
-  const [gross, setGross] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const candidates = useMemo(() => (week ? billCandidates(loads, bills, direction, week) : []), [loads, bills, direction, week]);
@@ -611,9 +610,12 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
   };
   const patch = (id: string, p: Partial<LineState>) => setLines((s) => ({ ...s, [id]: { ...lineOf(id), ...p } }));
   const num = (v: string) => (v.trim() === '' || Number.isNaN(Number(v.replace(',', '.'))) ? null : Number(v.replace(',', '.')));
+  /* audyt-C C-09 (E4; decyzja 16.10, 13:58 · 1): wystawca wpisuje netto, VAT 23 % i brutto liczy system na bieżąco */
+  const netN = num(net);
+  const sums = netN != null ? vatGrossOf(netN) : null;
 
   const draft: BillDraft = {
-    direction, number, issueDate, weekKey: week, currency, net: num(net), vat: num(vat), gross: num(gross),
+    direction, number, issueDate, weekKey: week, currency, net: netN, vat: sums?.vat ?? null, gross: sums?.gross ?? null,
     dueDateFromDocument: dueDoc || null, pdfName: file?.name ?? null, pdfSize: file?.size ?? null,
     lines: candidates.filter((l) => lineOf(l.id).on).map((l) => {
       const st = lineOf(l.id);
@@ -621,7 +623,6 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
     }),
   };
   const chk = checkBill(draft, loads, bills, today);
-  const monday = week ? isoWeekMonday(week) : '';
 
   const diff = Math.round((chk.invoicedTotal - chk.expectedTotal) * 100) / 100;
   const due = addDaysIso(issueDate || today, BILL_TERM_DAYS[direction]); /* 03_REJESTR: SCX → HHL 35 dni, HHL → KSH 30 dni */
@@ -634,9 +635,8 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
         <label className="inv-week">
           <span>{t(locale, 'bill_col_week')}</span>
           <select className="input" value={week} data-w="week" onChange={(e) => { setWeek(e.target.value); setLines({}); }}>
-            {weeks.map((w) => <option key={w} value={w}>{w}</option>)}
+            {weeks.map((w) => <option key={w} value={w}>{weekOptionLabel(w)}</option>)}
           </select>
-          {monday ? <span className="fin-muted">{fmtDay(monday)}–{fmtDay(addDaysIso(monday, 6))}</span> : null}
         </label>
       </header>
       <div className="inv-form-grid">
@@ -705,12 +705,12 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
             </div>
             <label className="inv-field"><span>{t(locale, 'bill_due_doc_in')}</span><input className="input" type="date" data-w="due" value={dueDoc} onChange={(e) => setDueDoc(e.target.value)} /></label>
             <label className="inv-field" data-deur-exempt="invoice-currency"><span>{t(locale, 'bill_col_net')} ({currency})</span><input className="input" data-w="net" inputMode="decimal" value={net} onChange={(e) => setNet(e.target.value)} /></label>
-            <label className="inv-field" data-deur-exempt="invoice-currency"><span>{t(locale, 'bill_col_vat')} ({currency})</span><input className="input" data-w="vat" inputMode="decimal" value={vat} onChange={(e) => setVat(e.target.value)} /></label>
-            <label className="inv-field" data-deur-exempt="invoice-currency"><span>{t(locale, 'bill_col_gross')} ({currency})</span><input className="input" data-w="gross" inputMode="decimal" value={gross} onChange={(e) => setGross(e.target.value)} /></label>
+            <label className="inv-field" data-deur-exempt="invoice-currency"><span>{ftp(locale, 'p5_inv_vat_auto', { cur: currency })}</span><input className="input inv-auto" data-w="vat" readOnly tabIndex={-1} value={sums ? formatPlNumber(sums.vat, 2) : '—'} /></label>
+            <label className="inv-field" data-deur-exempt="invoice-currency"><span>{ftp(locale, 'p5_inv_gross_auto', { cur: currency })}</span><input className="input inv-auto" data-w="gross" readOnly tabIndex={-1} value={sums ? formatPlNumber(sums.gross, 2) : '—'} /></label>
             <label className="inv-field inv-field-wide"><span>{t(locale, 'bill_pdf')}</span><input className="input" type="file" accept="application/pdf" data-w="pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>
           </div>
           <p className="fin-muted">{t(locale, 'bill_due_hint')} · {t(locale, 'bill_vat_hint')}</p>
-          {offer ? <PaymentChoice offer={offer} net={num(net)} gross={num(gross)} due={due} currency={currency} /> : null}
+          {offer ? <PaymentChoice offer={offer} net={netN} gross={sums?.gross ?? null} due={due} currency={currency} /> : null}
           <dl className="inv-sum" data-deur-exempt="invoice-currency">
             <div><dt>{ft(locale, 'p5_inv_form_sum_exp')}</dt><dd><Amount n={chk.expectedTotal} cur={currency} /></dd></div>
             <div><dt>{ft(locale, 'p5_inv_form_sum_inv')}</dt><dd><Amount n={chk.invoicedTotal} cur={currency} /></dd></div>

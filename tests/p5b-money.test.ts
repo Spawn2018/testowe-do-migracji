@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { DwellScreen, FuelScreen, RatesExtras, TermsScreen } from '../src/components/options/MoneyScreens';
 import { CANCEL_DAYS, feeOf, looksLikeEmail, pctOf, tierOf, tiersAround, type FuelTier } from '../src/lib/p5bFuel';
 import { demoCancelRules, demoDwellRules, demoFuelScreen, demoPaymentTerms } from '../src/lib/p5bDemo';
+import { sefsForLoadDate } from '../src/lib/sefs';
 import { I18N_ALL, t } from '../src/i18n/messages';
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el).replace(/&#x27;/g, "'");
@@ -49,24 +50,29 @@ describe('E3 — czyste funkcje opłaty paliwowej', () => {
   });
 });
 
-describe('E3 — przykład demo zgodny z raportem (07.10)', () => {
+/* audyt-C C-13 (E3 „Jedna liczba: Opcje, podgląd transportu, Finanse … biorą mnożnik z tej samej funkcji”): przykład demo
+   z tego samego źródła co ceny transportów (`sefsForLoadDate`); wcześniej stałe z obrazu E3 (22,63 → ×1,13), których
+   transporty demo nie używały (×1,05) — testy sprawdzały ten rozjazd. */
+describe('E3 — przykład demo z tego samego źródła co ceny transportów', () => {
   const v = demoFuelScreen('2026-10-14');
-  it('tydzień obowiązywania i tydzień wskaźników; stosowany niższy mnożnik', () => {
-    expect(v.current).toMatchObject({ from: '2026-10-12', to: '2026-10-18', idxFrom: '2026-10-05', idxTo: '2026-10-11', applied: 1.13, final: true });
-    expect(v.current.okq8).toEqual({ avg: 22.63, n: 4, mult: 1.13 });
-    expect(v.current.orlen).toEqual({ avg: 7.22, n: 5, mult: 1.15 });
+  const week = sefsForLoadDate('2026-10-12');
+  it('tydzień obowiązywania i tydzień wskaźników; stosowany niższy mnożnik — jak przy transporcie z załadunkiem w tym tygodniu', () => {
+    expect(v.current).toMatchObject({ from: '2026-10-12', to: '2026-10-18', idxFrom: '2026-10-05', idxTo: '2026-10-11', applied: week.appliedMult, final: true });
+    expect(v.current.okq8).toEqual({ avg: week.priceSek, n: 4, mult: week.multSek });
+    expect(v.current.orlen).toEqual({ avg: week.pricePln, n: 5, mult: week.multPln });
+    expect(v.current.okq8).toEqual({ avg: 19.68, n: 4, mult: 1.05 });
     expect(Math.min(v.current.okq8.mult ?? 9, v.current.orlen.mult ?? 9)).toBe(v.current.applied);
-    expect(v.next).toMatchObject({ from: '2026-10-19', idxFrom: '2026-10-12', forecast: 1.13, finalOn: '2026-10-19' });
+    expect(v.next).toMatchObject({ from: '2026-10-19', idxFrom: '2026-10-12', forecast: sefsForLoadDate('2026-10-19').appliedMult, finalOn: '2026-10-19' });
   });
   it('mnożniki z tabeli załącznika pasują do średnich', () => {
-    expect(v.tiers.sek[tierOf(v.tiers.sek, 22.63)].mult).toBe(1.13);
-    expect(v.tiers.pln[tierOf(v.tiers.pln, 7.22)].mult).toBe(1.15);
+    expect(v.tiers.sek[tierOf(v.tiers.sek, week.priceSek)].mult).toBe(week.multSek);
+    expect(v.tiers.pln[tierOf(v.tiers.pln, week.pricePln)].mult).toBe(week.multPln);
   });
   it('brak ceny Orlen z wczoraj: alarm, wiersz „brak”, wpływ na przyszły tydzień', () => {
     expect(v.alarm).toMatchObject({ source: 'ORLEN', date: '2026-10-13', affectsFrom: '2026-10-19', affectsTo: '2026-10-25', nextTry: '13:15' });
     const miss = v.days[0].rows.find((r) => r.how === 'MISSING');
     expect(miss).toMatchObject({ date: '2026-10-13', orlen: null, missing: { source: 'ORLEN' } });
-    expect(v.days[1].closed).toEqual({ okq8: 22.63, orlen: 7.22, mult: 1.13 });
+    expect(v.days[1].closed).toEqual({ okq8: 19.68, orlen: 5.74, mult: 1.05 });
   });
   it('w poniedziałek „wczoraj” należy do zamkniętego tygodnia — bez alarmu', () => {
     expect(demoFuelScreen('2026-10-12').alarm).toBeNull();
@@ -79,15 +85,15 @@ describe('E3, E39 — ekran Opłaty paliwowej w HTML', () => {
   it('karty, kroki „Jak liczymy”, alarm z „Uzupełnij z Orlen”, tabele cen i mnożników', () => {
     const h = html(createElement(FuelScreen, { locale: 'pl', view, actions, readOnly: false }));
     expect(h).toContain('Załącznik 1 do umowy · wersja 3 od 28.09.2026');
-    expect(h).toContain('+13 %');
-    expect(h).toContain('×1,13');
+    expect(h).toContain('+5 %');
+    expect(h).toContain('×1,05');
     expect(h).toContain('Brak ceny Orlen z 13.10.');
     expect(h).toContain('Uzupełnij z Orlen');
     expect(h).toContain('Następna automatyczna próba: dziś 13:15');
-    expect(h).toContain('OKQ8 22,63 SEK/l · Orlen 7,22 PLN/l');
-    expect(h).toContain('SE ×1,13 · PL ×1,15');
-    expect(h).toContain('6 900 EUR × 13 % = 897 EUR');
-    expect(h).toContain('Ostateczna wartość w poniedziałek 19.10 rano, ze średniej 12–18.10.');
+    expect(h).toContain('OKQ8 19,68 SEK/l · Orlen 5,74 PLN/l');
+    expect(h).toContain('SE ×1,05 · PL ×1,05');
+    expect(h).toContain('6 900 EUR × 5 % = 345 EUR');
+    expect(h).toContain('Ostateczna wartość w poniedziałek 19.10.2026 rano, ze średniej 12.10.2026–18.10.2026.');
     expect((h.match(/data-pm-tier-hit/g) ?? []).length).toBe(2);
     expect(h).toContain('Nowa wersja umowy');
     expect(h).not.toMatch(/SEFS|BAF|[Dd]odatek/);
@@ -113,7 +119,7 @@ describe('E33 — Dopłaty: postój', () => {
     expect(h).toContain('750 EUR');
     expect(h).toContain('role="radio" aria-checked="true"');
     expect(h).toContain('→ 225,00 EUR');
-    expect(h).toContain('Ostatnia zmiana: 07.10, 12:35 · Administrator HHL');
+    expect(h).toContain('Ostatnia zmiana: 07.10.2026, 12:35 · Administrator HHL');
     expect(h).not.toMatch(/WSTĘPNE|wstępne/);
     expect((h.match(/>Zmień</g) ?? []).length).toBe(5);
     expect(h).toContain('Stawka dobowa powyżej');

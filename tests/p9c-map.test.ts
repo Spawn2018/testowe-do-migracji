@@ -34,7 +34,7 @@ describe('P9-c · wiersz Mapy', () => {
     }), ctx({ hasFix: () => true }));
     expect(r.tile).toBe('ROAD_SE');
     expect(r.pos).toMatchObject({ kind: 'fix', text: '00:19', alarm: false });
-    expect(r.eta.main).toMatch(/^09\.10, 13:05$/);
+    expect(r.eta.main).toBe('09.10.2026, 13:05');
     expect(r.eta.sub).toBe('+1 h 10 min po oknie');
     expect(r.late).toBe(true);
     expect(r.seg).toBe('SE');
@@ -65,7 +65,7 @@ describe('P9-c · wiersz Mapy', () => {
     expect(r.nopos).toBe(true);
     expect(r.eta.main).toBe('–');
     expect(r.late).toBe(false);
-    expect(r.stageSub).toBe('dzień załadunku 10.10');
+    expect(r.stageSub).toBe('dzień załadunku 10.10.2026');
   });
 
   it('link czeka na pierwszą pozycję; przed 03:00 poza oknem', () => {

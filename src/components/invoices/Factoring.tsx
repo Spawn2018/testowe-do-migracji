@@ -7,19 +7,16 @@
 import { useState } from 'react';
 import type { Locale } from '../../types';
 import { formatPlNumber } from '../../lib/format';
+import { fmtDateTime, formatCalendarDay } from '../../lib/time';
 import { factoringPayout } from '../../lib/p5Invoices';
 import type { FactoringOfferView, FactoringTask } from '../../lib/p5Source';
 import { ft, ftp } from '../../i18n/p5';
 import { up } from '../options/up';
 import { useTowerStore } from '../../store/useTowerStore';
 
-const dm = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
-const dmh = (iso: string) => {
-  const d = new Date(iso);
-  const p = new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d);
-  const g = (t: string) => p.find((x) => x.type === t)?.value ?? '';
-  return `${g('day')}.${g('month')}, ${g('hour')}:${g('minute')}`;
-};
+/* rok zawsze — właściciel 16.10.2026: „08.10.2026”, „08.10.2026, 12:00” */
+const dm = (d: string) => formatCalendarDay(d.slice(0, 10));
+const dmh = (iso: string) => fmtDateTime(iso, 'Europe/Warsaw');
 
 export function PaymentChoice({ offer, net, gross, due, currency, value, onChange }: {
   offer: FactoringOfferView;

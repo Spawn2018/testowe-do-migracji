@@ -1,9 +1,12 @@
 /**
  * wyglad/P5-b — dane przykładowe ekranów Opcje › Pieniądze (tylko tryb demo; strażnik I-0 w `p5bSource.ts`).
- * Liczby jak w raporcie audytu E3 (07.10): średnie 22,63 SEK/l (4 publikacje) → ×1,13 i 7,22 PLN/l (5) → ×1,15,
- * stosowany ×1,13, brak ceny Orlen z poprzedniego dnia; daty przesunięte do tygodnia „dziś” w demo.
+ * audyt-C C-13 (E3 „Jedna liczba: Opcje, podgląd transportu, Finanse … biorą mnożnik z tej samej funkcji”):
+ * średnie, mnożniki i tabela mnożników z tego samego źródła co ceny transportów demo (`sefsForLoadDate`, tabele
+ * załącznika w `sefs.ts`) — Opcje, Finanse i panel „Ceny” pokazują dla tego samego tygodnia ten sam mnożnik.
+ * Ceny dni: wahania jak w przykładzie E3 wokół średniej tygodnia; brak ceny Orlen z poprzedniego dnia.
  */
 import type { CancelRulesView, DwellRulesView, FuelDayGroup, FuelDayRow, FuelScreenView, FuelTier, PaymentTermsView } from './p5bFuel';
+import { SEFS_PLN, SEFS_SEK, sefsForLoadDate, type SefsTier } from './sefs';
 
 const DAY = 86_400_000;
 const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
@@ -16,20 +19,18 @@ function monday(d: string): string {
 }
 const add = (d: string, n: number) => iso(ms(d) + n * DAY);
 
-function tiers(first: number, step: number, mult0: number, below: number, above: number): FuelTier[] {
-  const out: FuelTier[] = [];
-  for (let k = -below; k <= above; k++) {
-    const from = Math.round((first + step * k) * 100) / 100;
-    out.push({ from, to: Math.round((from + step - 0.01) * 100) / 100, mult: Math.round((mult0 + 0.01 * k) * 100) / 100 });
-  }
-  return out;
+/** Tabela załącznika (`sefs.ts`: „do X → ×m”) jako przedziały „od–do”. */
+function tiers(t: readonly SefsTier[]): FuelTier[] {
+  return t.map((x, i) => ({ from: i === 0 ? 0 : Math.round((t[i - 1].lte + 0.01) * 100) / 100, to: x.lte, mult: x.mult }));
 }
 
-/* ceny dni pn–nd: tydzień bieżący (liczy przyszły) i poprzedni (wskaźniki tygodnia bieżącego) */
-const CUR_OKQ8 = [22.29, 22.49, 22.49, 22.71, 22.8, 22.8, 22.8];
-const CUR_ORLEN = [6.943, 6.92, 6.864, 6.871, 6.902, 6.902, 6.902];
-const PREV_OKQ8 = [22.74, 22.54, 22.09, 23.14, 23.14, 23.14, 23.14];
-const PREV_ORLEN = [7.442, 7.363, 7.255, 7.272, 7.28, 6.943, 6.943];
+const r2 = (n: number) => Math.round(n * 100) / 100;
+const r3 = (n: number) => Math.round(n * 1000) / 1000;
+/* wahania cen dni pn–nd wokół średniej tygodnia (przykład E3): tydzień bieżący (liczy przyszły) i poprzedni (wskaźniki) */
+const CUR_OKQ8 = [-0.34, -0.14, -0.14, 0.08, 0.17, 0.17, 0.17];
+const CUR_ORLEN = [-0.277, -0.3, -0.356, -0.349, -0.318, -0.318, -0.318];
+const PREV_OKQ8 = [0.11, -0.09, -0.54, 0.51, 0.51, 0.51, 0.51];
+const PREV_ORLEN = [0.222, 0.143, 0.035, 0.052, 0.06, -0.277, -0.277];
 
 export function demoFuelScreen(today: string): FuelScreenView {
   const mon = monday(today);
@@ -37,15 +38,21 @@ export function demoFuelScreen(today: string): FuelScreenView {
   const nextMon = add(mon, 7);
   const yesterday = add(today, -1);
   const todayIdx = Math.round((ms(today) - ms(mon)) / DAY);
+  /* ta sama funkcja i ten sam klucz co ceny transportów (C-13): notowanie dla załadunków tego tygodnia (średnie
+     tygodnia wskaźników), dla przyszłego — notowanie przyszłego tygodnia (prognoza z cen tygodnia bieżącego) */
+  const idx = sefsForLoadDate(mon);
+  const run = sefsForLoadDate(nextMon);
+  const curOkq8 = (i: number) => r2(run.priceSek + (CUR_OKQ8[i] ?? 0));
+  const curOrlen = (i: number) => r3(run.pricePln + (CUR_ORLEN[i] ?? 0));
   const curRows: FuelDayRow[] = [];
   for (let i = todayIdx; i >= 0; i--) {
     const date = add(mon, i);
     const miss = date === yesterday;
     curRows.push({
       date,
-      okq8: CUR_OKQ8[i] ?? null,
+      okq8: curOkq8(i),
       okq8Pub: miss ? yesterday : null,
-      orlen: miss ? null : (CUR_ORLEN[i] ?? null),
+      orlen: miss ? null : curOrlen(i),
       orlenPub: i === 0 ? add(prevMon, 5) : null,
       how: miss ? 'MISSING' : 'AUTO',
       at: '07:15',
@@ -56,9 +63,9 @@ export function demoFuelScreen(today: string): FuelScreenView {
   for (let i = 6; i >= 0; i--) {
     prevRows.push({
       date: add(prevMon, i),
-      okq8: PREV_OKQ8[i] ?? null,
+      okq8: r2(idx.priceSek + (PREV_OKQ8[i] ?? 0)),
       okq8Pub: null,
-      orlen: PREV_ORLEN[i] ?? null,
+      orlen: r3(idx.pricePln + (PREV_ORLEN[i] ?? 0)),
       orlenPub: i === 0 ? add(prevMon, -2) : null,
       how: 'FILLED',
       at: null,
@@ -67,19 +74,19 @@ export function demoFuelScreen(today: string): FuelScreenView {
   }
   const days: FuelDayGroup[] = [
     { from: mon, to: add(mon, 6), closed: null, rows: curRows },
-    { from: prevMon, to: add(prevMon, 6), closed: { okq8: 22.63, orlen: 7.22, mult: 1.13 }, rows: prevRows },
+    { from: prevMon, to: add(prevMon, 6), closed: { okq8: idx.priceSek, orlen: idx.pricePln, mult: idx.appliedMult }, rows: prevRows },
   ];
   const yesterdayInWeek = todayIdx > 0;
   return {
     contract: { version: 3, from: '2026-09-28', agreed: true },
     alarm: yesterdayInWeek
-      ? { source: 'ORLEN', date: yesterday, at: '07:15', published: 6.919, affectsFrom: nextMon, affectsTo: add(nextMon, 6), nextTry: '13:15' }
+      ? { source: 'ORLEN', date: yesterday, at: '07:15', published: curOrlen(todayIdx - 1), affectsFrom: nextMon, affectsTo: add(nextMon, 6), nextTry: '13:15' }
       : null,
     current: {
       from: mon, to: add(mon, 6), idxFrom: prevMon, idxTo: add(prevMon, 6),
-      okq8: { avg: 22.63, n: 4, mult: 1.13 }, orlen: { avg: 7.22, n: 5, mult: 1.15 }, applied: 1.13, final: true,
+      okq8: { avg: idx.priceSek, n: 4, mult: idx.multSek }, orlen: { avg: idx.pricePln, n: 5, mult: idx.multPln }, applied: idx.appliedMult, final: true,
     },
-    next: { from: nextMon, to: add(nextMon, 6), idxFrom: mon, idxTo: add(mon, 6), forecast: 1.13, finalOn: nextMon },
+    next: { from: nextMon, to: add(nextMon, 6), idxFrom: mon, idxTo: add(mon, 6), forecast: run.appliedMult, finalOn: nextMon },
     fetch: {
       at: '07:15',
       retries: ['09:15', '13:15'],
@@ -88,7 +95,7 @@ export function demoFuelScreen(today: string): FuelScreenView {
     },
     exampleBaseEur: 6900,
     days,
-    tiers: { sek: tiers(21.91, 0.3, 1.11, 10, 12), pln: tiers(7.01, 0.1, 1.13, 12, 20) },
+    tiers: { sek: tiers(SEFS_SEK), pln: tiers(SEFS_PLN) },
   };
 }
 

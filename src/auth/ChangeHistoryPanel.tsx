@@ -7,6 +7,7 @@ import ExcelJS from 'exceljs';
 import { getSupabase } from './client';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
+import { fmtDateTime } from '../lib/time';
 import { transportLabel } from '../lib/transportName';
 import './auth.css';
 
@@ -123,7 +124,7 @@ export default function ChangeHistoryPanel() {
 
   const fmt = (iso: string) => {
     try {
-      return new Date(iso).toLocaleString(locale === 'sv' ? 'sv-SE' : locale === 'en' ? 'en-GB' : 'pl-PL');
+      return fmtDateTime(iso);
     } catch {
       return iso;
     }

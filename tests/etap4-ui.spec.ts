@@ -215,11 +215,13 @@ test.describe('M6 — faktury v2', () => {
     // bez numeru / kwot / PDF → komunikaty, brak zapisu
     await wz.locator('[data-w="submit"]').click()
     await expect(wz.locator('[data-w-errors]')).toContainText('Numer faktury jest wymagany')
-    await expect(wz.locator('[data-w-errors]')).toContainText('system nie liczy VAT')
+    /* audyt-C C-09 (E4, decyzja 16.10 13:58 · 1): netto wpisuje wystawca, VAT 23 % i brutto liczy system (pola tylko do odczytu) */
+    await expect(wz.locator('[data-w-errors]')).toContainText('VAT 23 % i brutto liczy system')
     await wz.locator('[data-w="number"]').fill('HHL/FV/2026/0950')
     await wz.locator('[data-w="net"]').fill('10000')
-    await wz.locator('[data-w="vat"]').fill('0')
-    await wz.locator('[data-w="gross"]').fill('10000')
+    await expect(wz.locator('[data-w="vat"]')).toHaveAttribute('readonly', '')
+    await expect(wz.locator('[data-w="vat"]')).toHaveValue('2 300,00')
+    await expect(wz.locator('[data-w="gross"]')).toHaveValue('12 300,00')
     await wz.locator('[data-w="pdf"]').setInputFiles(PDF)
     await wz.locator('[data-w="submit"]').click()
     await expect(wz).toHaveCount(0)
@@ -255,8 +257,8 @@ test.describe('M6 — faktury v2', () => {
     const wz = page.locator('[data-bill-wizard="KOSZT"]')
     await wz.locator('[data-w="number"]').fill('SCX/FV/2026/77')
     await wz.locator('[data-w="net"]').fill('1')
-    await wz.locator('[data-w="vat"]').fill('0')
-    await wz.locator('[data-w="gross"]').fill('1')
+    /* audyt-C C-09: VAT 23 % i brutto liczy system */
+    await expect(wz.locator('[data-w="gross"]')).toHaveValue('1,23')
     await wz.locator('[data-w="pdf"]').setInputFiles(PDF)
     await wz.locator('[data-w="submit"]').click()
     const row = page.locator('tr[data-bill]', { has: page.locator('span.code', { hasText: 'SCX/FV/2026/77' }) })

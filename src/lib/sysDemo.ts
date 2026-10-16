@@ -3,6 +3,7 @@
  * Wywoływane wyłącznie z `sysSource.ts` za warunkiem trybu demo wpisanym wprost (strażnik I-0).
  */
 import type { AppErrors, OtherJob, Perf, SecRow, SourceRow } from './sysSource';
+import { fmtDate } from './time';
 
 const M = 60_000;
 const ago = (nowIso: string, min: number) => new Date(Date.parse(nowIso) - min * M).toISOString();
@@ -15,7 +16,7 @@ const dayAt = (nowIso: string, daysBack: number, hh: number, mm: number) => {
 
 export function demoSources(nowIso: string): SourceRow[] {
   const next = new Date(Date.parse(dayAt(nowIso, 2, 7, 0)) + 7 * 24 * 60 * M);
-  const nextTxt = `${String(next.getUTCDate()).padStart(2, '0')}.${String(next.getUTCMonth() + 1).padStart(2, '0')}, 07:00`;
+  const nextTxt = `${fmtDate(next.toISOString())}, 07:00`;
   return [
     { id: 'fuel', name: 'Ceny paliwa', cadence: 'raz dziennie', feeds: 'opłata paliwowa', lastAt: dayAt(nowIso, 1, 7, 15), state: 'down', since: dayAt(nowIso, 0, 7, 15), why: 'Strona Orlen nie odpowiada (5 prób z rzędu). Opłata paliwowa liczona z cen z poprzedniego odczytu.', canCheck: true },
     { id: 'mail', name: 'Limit poczty', cadence: 'przy wysyłce i co godzinę', feeds: 'e-maile do użytkowników', lastAt: ago(nowIso, 4 * 24 * 60 + 150), state: 'nomeasure', since: ago(nowIso, 4 * 24 * 60 + 150), why: 'Zadanie nie ma harmonogramu, więc stary wynik nie jest błędem. Pomiar co godzinę.', canCheck: true },
@@ -61,7 +62,7 @@ export function demoSecurity(nowIso: string): SecRow[] {
   /* E19 pkt 7: ostatni test bezpieczeństwa — data i commit (przykład, G-09) */
   const d = new Date(Date.parse(nowIso));
   const sun = new Date(d.getTime() - (d.getUTCDay() === 0 ? 7 : d.getUTCDay()) * 24 * 60 * M);
-  const sunTxt = `${String(sun.getUTCDate()).padStart(2, '0')}.${String(sun.getUTCMonth() + 1).padStart(2, '0')}`;
+  const sunTxt = fmtDate(sun.toISOString(), 'UTC');
   return [
     { id: 'advisor', what: 'Doradca bezpieczeństwa bazy', state: 'ok', value: '0 nowych', details: 'Błędy: 0. Ostrzeżenia tylko z listy wyjątków: PostGIS, rozszerzenia i funkcje z listy dozwolonych, które sprawdzają konto w środku. Sprawdzane w niedzielnej bramie i przed wdrożeniem z migracją.' },
     { id: 'anon', what: 'Funkcje bez logowania', state: 'ok', value: '8 z listy', details: 'Kierowca 2 (wyłączone), bramka SMS 3, błędy przeglądarki 2, podtrzymanie bazy 1. Funkcja spoza listy zatrzymuje wdrożenie.' },

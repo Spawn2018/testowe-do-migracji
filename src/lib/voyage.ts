@@ -34,11 +34,11 @@ export function sailingDayKey(s: Pick<FerrySailing, 'depLocal'> | string): strin
   return iso.slice(0, 10);
 }
 
-/** PL short day `24.09` from ISO date/datetime. */
+/** Dzień rejsu `24.09.2026` z daty / chwili ISO (czas lokalny portu; rok zawsze — właściciel 16.10.2026). */
 export function formatVoyageDayLabel(iso: string): string {
   const day = iso.slice(0, 10);
-  const [, m, d] = day.split('-');
-  return `${d}.${m}`;
+  const [y, m, d] = day.split('-');
+  return `${d}.${m}.${y}`;
 }
 
 export function seaForSailing(s: FerrySailing): VoyageSea {

@@ -4,7 +4,7 @@
  * W produkcji te dane podaje baza (E16 próg w Opcjach, E39 `fuel_basis`, E4b faktoring, E40 adresy i dziennik wysyłek)
  * — podłącza wykonawca. Adresy e-mail zmyślone (example.com, G-09).
  */
-import { SEFS_PLN, SEFS_SEK, type SefsTier } from './sefs';
+import { SEFS_PLN, SEFS_SEK, sefsForLoadDate, type SefsTier } from './sefs';
 import { addDays, type FuelPubl, type FuelWeekRow } from './p5Finance';
 import type { Bill, Document, Load } from '../types';
 import { useTowerStore } from '../store/useTowerStore';
@@ -14,6 +14,7 @@ import type { PackConfig, PackSent } from './p5Pack';
 import { cancelFee, DECIDED_RULES, dwellFee, type FeeRules, type FeeSuggestion } from './p5Fees';
 import { unloadedAtOf } from './money/loadMoney';
 import { addDaysIso } from './invoices3';
+import { DEFAULT_DOC_REQUIREMENTS, type DocRequirement } from './docRequirements';
 
 /** Próg marży z Opcji (E16, 08.10: 4 %). */
 export const demoMarginThreshold = (): number => 4;
@@ -35,12 +36,18 @@ function publications(idxFrom: string, okq8: number, orlen: number, until: strin
   return out.sort((a, b) => a.date.localeCompare(b.date) || a.source.localeCompare(b.source));
 }
 
-/** E39: średnie OKQ8 i Orlen z liczbą publikacji dla zamkniętych tygodni wskaźników; lista publikacji (też w toku). */
+/**
+ * E39: średnie OKQ8 i Orlen z liczbą publikacji dla zamkniętych tygodni wskaźników; lista publikacji (też w toku).
+ * audyt-C C-13: średnie z tego samego źródła co mnożnik transportu (`sefsForLoadDate`) i co Opcje › Opłata paliwowa;
+ * przykład z tabeli tylko, gdy tydzień nie ma notowania.
+ */
 export function demoFuelEnrich(rows: FuelWeekRow[], today: string): FuelWeekRow[] {
   return rows.map((r) => {
     if (!r.idx) return r;
-    const sek = avgFor(r.okq8?.mult ?? r.applied ?? 1, SEFS_SEK) ?? 22.63;
-    const pln = avgFor(r.orlen?.mult ?? r.applied ?? 1, SEFS_PLN) ?? 7.22;
+    const snap = sefsForLoadDate(r.week?.from ?? r.idx.from);
+    const same = snap.multSek === (r.okq8?.mult ?? snap.multSek) && snap.multPln === (r.orlen?.mult ?? snap.multPln);
+    const sek = same ? snap.priceSek : avgFor(r.okq8?.mult ?? r.applied ?? 1, SEFS_SEK) ?? snap.priceSek;
+    const pln = same ? snap.pricePln : avgFor(r.orlen?.mult ?? r.applied ?? 1, SEFS_PLN) ?? snap.pricePln;
     const pub = r.weekLast ? null : publications(r.idx.from, sek, pln, today < r.idx.to ? today : r.idx.to);
     if (r.state !== 'OSTATECZNA') return { ...r, publications: pub };
     return {
@@ -111,10 +118,29 @@ export function demoPermits(loads: Load[]): PermitView[] {
   ];
 }
 
-/** E31 — polisa przewoźnika (numer zmyślony); polisy HHL w przykładzie nie ma — tak jak dziś w bazie. */
+/**
+ * E31 — polisa przewoźnika (numer zmyślony) i Polisa HHL (audyt-C C-07, decyzja 16.10 01:13 · 4 i 13:58 · 2):
+ * PZU 1106707356, ważna 23.04.2026–22.04.2027 (`DECYZJE_08_10.md`), podpina się sama do każdego transportu jak polisa SCX.
+ */
 export const demoPolicies = (): PolicyView[] => [
   { org: 'SCX', name: 'OCP przewoźnika', number: 'OCP-0000-PRZYKLAD', validTo: '2027-03-29', approved: true },
+  { org: 'HHL', name: 'Polisa HHL', number: 'PZU 1106707356', validTo: '2027-04-22', approved: true },
 ];
+
+let docReqs: DocRequirement[] | null = null;
+/**
+ * audyt-C (C-03, C-04; E31 decyzja 1 B 08.10, 19:11, 19:51): w demo tylko „CMR z podpisem odbiorcy” — po „Dostarczone”,
+ * termin z Opcji (24 h); bez CMR z załadunku, bez rysunku (KSH nie wgrywa), POD i zdjęć mocowania.
+ * Produkcja — `doc_requirements` z bazy (wykonawca, P5 · E31). Tworzone przy pierwszym użyciu (I-0).
+ */
+export function demoDocRequirements(): DocRequirement[] {
+  docReqs ??= DEFAULT_DOC_REQUIREMENTS.map((r): DocRequirement => {
+    if (r.category === 'CMR') return { ...r, anchor: 'AFTER_UNLOAD', offsetHours: 24 };
+    if (r.category === 'DRAWING' || r.category === 'POD' || r.category === 'LASHING_PHOTOS') return { ...r, required: false };
+    return r;
+  });
+  return docReqs;
+}
 
 /** E33 — zasady cennika: wartości z decyzji 12:23 i 12:35 (w produkcji z bazy — wykonawca). */
 export const demoFeeRules = (): FeeRules => DECIDED_RULES;

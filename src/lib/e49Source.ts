@@ -7,13 +7,13 @@
 import type { Load, OrgKind } from '../types';
 import type { DetourCase, DetourDecision } from './e49Detour';
 import type { EtaWx } from './e49Wx';
-import { demoDetourCase, demoDetourDecide, demoEtaWx } from './e49Demo';
+import { demoClosureLoad, demoDetourCase, demoDetourDecide, demoEtaWx } from './e49Demo';
 
 /** Transport demo ze sprawą: pierwszy w drodze przez Szwecję, który ma już kartę w „Do zrobienia” (liczba E7-2 bez zmian). */
 export function demoDetourLoadId(loads: readonly Load[], cardLoads: ReadonlySet<string> | null): string | null {
   if (import.meta.env.VITE_AUTH_MODE === 'supabase') return null;
   const se = loads.filter((l) => l.status === 'IN_TRANSIT_SE' && (!cardLoads || cardLoads.has(l.id)));
-  return (se.find((l) => /closure/i.test(l.itemType)) ?? se[0])?.id ?? null;
+  return (se.find(demoClosureLoad) ?? se[0])?.id ?? null;
 }
 
 /** Sprawy „Objazd czy postój?” bez decyzji (po decyzji sprawa się zamyka). KSH — nic (E7: sprawy SCX). */

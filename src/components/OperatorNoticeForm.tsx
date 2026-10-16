@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getSupabase } from '../auth/client';
 import { canFileOperatorNotice, ferryPortPl, noticeKindPl } from '../lib/ferryStatusPl';
 import { effDeparture, fmtLocal } from '../lib/sailings';
+import { fmtDateTime } from '../lib/time';
 import { useTowerStore } from '../store/useTowerStore';
 
 type Kind = 'ODWOLANY' | 'OPOZNIONY' | 'ZMIANA_GODZINY';
@@ -132,7 +133,7 @@ export function OperatorNoticeForm() {
                 <td>{noticeKindPl(h.kind)}</td>
                 <td>{h.operator === 'STENA' ? 'Stena Line' : 'Polferries'}</td>
                 <td>{h.note ?? '—'}</td>
-                <td className="num">{new Date(h.created_at).toLocaleString('pl-PL')}</td>
+                <td className="num">{fmtDateTime(h.created_at)}</td>
               </tr>
             ))}
           </tbody>
