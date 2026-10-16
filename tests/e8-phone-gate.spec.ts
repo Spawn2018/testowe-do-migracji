@@ -1022,6 +1022,50 @@ test.describe('wyglad/P7-c Harmonogram w układzie pliku (E38, E30, E20)', () =>
     await expect(rows(page)).toHaveCount(total);
   });
 
+  /* audyt-B B-02 (E20 08.10: „przyklejony jest tylko »Transport«… nic nie zasłania innej kolumny”; E30 pkt 1 „Kolumny”):
+     przy 1280 px z 2 i z 6 dodanymi kolumnami każda kolumna ma szerokość, kolumny się nie nakładają, tabela przewija się
+     w bok, a „Transport” zostaje na miejscu. */
+  test('komputer 1280, HHL: widok skrócony + 2 i 6 kolumn z „Kolumny” — szerokość > 0, bez nakładania, „Transport” przyklejony', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'sched');
+    await page.locator('[data-sched-short]').click();
+    const wrap = page.locator('[data-sched-layout="short"]');
+    const check = async (n: number) => {
+      const ths = await wrap.locator('thead th').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { col: e.getAttribute('data-col'), x: r.x, w: r.width }; }));
+      expect(ths, `${n} dodanych`).toHaveLength(9 + n);
+      for (const t of ths) expect(t.w, `${t.col} > 0 px`).toBeGreaterThan(40);
+      for (let i = 1; i < ths.length; i++) expect(ths[i].x, `${ths[i].col} za ${ths[i - 1].col}`).toBeGreaterThanOrEqual(ths[i - 1].x + ths[i - 1].w - 1);
+      expect(await wrap.evaluate((w) => w.scrollWidth > w.clientWidth + 1), 'przewijanie w bok').toBe(true);
+      const cell = wrap.locator('tbody tr[data-load] td[data-col="code"]').first();
+      const before = await cell.boundingBox();
+      await wrap.evaluate((w) => { w.scrollLeft = w.scrollWidth; });
+      await page.waitForTimeout(150);
+      const after = await cell.boundingBox();
+      expect(Math.abs((after?.x ?? 0) - (before?.x ?? 0)), '„Transport” przyklejony').toBeLessThan(1);
+      /* przyklejona kolumna nie zasłania tekstu sąsiedniej: pierwsza widoczna za nią komórka zaczyna się za jej prawą krawędzią */
+      const cover = await wrap.evaluate((w) => {
+        const row = w.querySelector('tbody tr[data-load]')!;
+        const stick = row.querySelector('td[data-col="code"]')!.getBoundingClientRect();
+        const next = [...row.querySelectorAll('td')].slice(1).map((td) => td.getBoundingClientRect()).find((r) => r.right > stick.right + 1);
+        return next ? next.right - stick.right : 1;
+      });
+      expect(cover).toBeGreaterThan(0);
+      await wrap.evaluate((w) => { w.scrollLeft = 0; });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth), 'strona bez przewijania w bok').toBeLessThanOrEqual(1280);
+    };
+    await page.locator('[data-sched-cols]').click();
+    for (const c of ['ordHhl', 'trailer']) await page.locator(`[data-col-toggle="${c}"] input`).check();
+    await page.keyboard.press('Escape');
+    await check(2);
+    await page.locator('[data-sched-cols]').click();
+    for (const c of ['ordScx', 'tractor', 'sailing', 'cost']) await page.locator(`[data-col-toggle="${c}"] input`).check();
+    await page.keyboard.press('Escape');
+    await check(6);
+    await page.locator('[data-sched-more]').click();
+    await page.locator('[data-action="reset-cols"]').click();
+  });
+
   test('komputer 1440: KSH bez kolumn numerów i z „Twoja cena”, SCX z „Moja stawka”', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'KSH');
