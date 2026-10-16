@@ -34,6 +34,7 @@ import { EtaBlock } from './EtaBlock';
 import type { EtaWx } from '../../lib/e49Wx';
 import { OptionsHowTo } from '../settings/OptionsHowTo';
 import './p7.css';
+import { formatCalendarDay } from '../../lib/time';
 
 type Role = 'HHL' | 'KSH' | 'SCX';
 
@@ -64,7 +65,7 @@ interface Props {
 
 const up = (s: string) => s.toLocaleUpperCase('pl');
 const dim = (n: number | null | undefined, locale: Locale) => (n == null ? '—' : fmtNum(locale, n, 2));
-const dmy = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+const dmy = (iso: string) => formatCalendarDay(iso.slice(0, 10));
 const ORG_SHORT: Record<OrgKind, string> = { HHL: 'HHL', SCX: 'SCX', KSH: 'KSH' };
 
 /** Sekcja: na komputerze otwarta z nagłówkiem; na telefonie zwinięta z linią stanu (E32 „Telefon”). */
@@ -317,7 +318,8 @@ export function PanelOverview(p: Props) {
     return imp ? ptp(locale, 'p7_dates_import', { at: dmHm(imp) }) : pt(locale, 'p7_dates_import_plain');
   }, [events, pd?.confirmedAt, locale]);
   const dateVal = (day: string | null | undefined, hours: string | null) => (
-    day ? <><b>{dayLong(day)}</b>{` · ${hours ?? pt(locale, 'p7_no_hour')}`}</> : <span className="po-miss">{pt(locale, 'p7_no_date')}</span>
+    /* „czw. 16.10.2026, 08:00–12:00” — zakres godzin w jednym dniu (właściciel 16.10.2026) */
+    day ? <><b>{dayLong(day)}</b>{hours ? `, ${hours}` : ` · ${pt(locale, 'p7_no_hour')}`}</> : <span className="po-miss">{pt(locale, 'p7_no_date')}</span>
   );
   const etaShort = !load.etaBoden || load.etaPreLoad ? '–' : dmHm(load.etaBoden);
 

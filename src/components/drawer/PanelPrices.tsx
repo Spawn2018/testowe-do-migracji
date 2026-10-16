@@ -11,6 +11,7 @@ import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react';
 import type { Load, Locale } from '../../types';
 import { useTowerStore } from '../../store/useTowerStore';
 import { formatPlNumber } from '../../lib/format';
+import { fmtTime, formatCalendarDay } from '../../lib/time';
 import { fuelWeeksOf, feeRulesOf, feeSuggestionsOf, marginThresholdOf } from '../../lib/p5Source';
 import { addDays, isoWeek, marginPct, mondayOf, weekLabel, weekOf } from '../../lib/p5Finance';
 import { durText, reasonReaderOf, rejecterOf, rejectNeedsReason, rejectionVisibleTo, type FeeDecision, type FeeSide, type FeeSuggestion } from '../../lib/p5Fees';
@@ -26,8 +27,9 @@ const FeeModal = lazy(lazyRetry(() => import('./FeeModal').then((m) => ({ defaul
 
 const n2 = (n: number) => formatPlNumber(n, 2);
 const x2 = (n: number) => `×${formatPlNumber(n, 2)}`;
-const dm = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
-const hm = (iso: string) => new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+/* rok zawsze — właściciel 16.10.2026: „08.10.2026”, „08.10.2026, 12:00” */
+const dm = (d: string) => formatCalendarDay(d.slice(0, 10));
+const hm = (iso: string) => fmtTime(iso, 'Europe/Warsaw');
 const dmhm = (iso: string) => `${dm(localDateOf(iso))}, ${hm(iso)}`;
 
 const TIER_TAG = { PROGNOZA: 'fin-tag plain', REALIZACJA: 'fin-tag sea', FAKTURA: 'fin-tag go' } as const;

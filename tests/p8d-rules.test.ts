@@ -100,8 +100,8 @@ describe('przebiegi i historia zdaniami (bez SKIPPED i „warunek niespełniony�
   it('wyniki', () => {
     expect(sp(runText({ kind: 'done', notify: [{ who: 'KSH', n: 4 }, { who: 'SCX', n: 1 }] }))).toBe('powiadomienie: KSH 4 osoby, SCX 1 osoba');
     expect(sp(runText({ kind: 'nomatch', why: 'wjazd na plac, a reguła dotyczy strefy 50 km' }))).toBe('nie pasuje: wjazd na plac, a reguła dotyczy strefy 50 km');
-    expect(sp(runText({ kind: 'skipped', since: '2026-10-05T08:09:00Z' }, 2))).toBe('pominięte: reguły wyłączone (05.10)');
-    expect(sp(runText({ kind: 'skipped', since: '2026-10-05T08:09:00Z' }))).toBe('pominięte: reguła wyłączona (05.10)');
+    expect(sp(runText({ kind: 'skipped', since: '2026-10-05T08:09:00Z' }, 2))).toBe('pominięte: reguły wyłączone (05.10.2026)');
+    expect(sp(runText({ kind: 'skipped', since: '2026-10-05T08:09:00Z' }))).toBe('pominięte: reguła wyłączona (05.10.2026)');
     expect(sp(runText({ kind: 'done', notify: [], smsN: 2 }))).toBe('SMS (2)');
   });
   it('tylko ostatnie 30 dni, najnowsze pierwsze', () => {

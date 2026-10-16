@@ -4,7 +4,8 @@ import { ExceptionRow } from '../components/ui/ExceptionRow';
 import { Cockpit } from '../components/dash/Cockpit';
 import { DeliveryProgress, progressWeeksFromDb, progressWeeksLabel } from '../components/chart/DeliveryProgress';
 import { CorridorMap } from '../components/map/LazyCorridorMap';
-import { hasKey, INTL_LOCALE, navLabel, t, tp } from '../i18n/messages';
+import { hasKey, navLabel, t, tp } from '../i18n/messages';
+import { fmtDate } from '../lib/time';
 import { canSeeMargin, filterLoadsForRole, ROLE_META } from '../lib/permissions';
 import { trackingPhase } from '../lib/stageTiles';
 import { getNow } from '../lib/frozenNow';
@@ -86,7 +87,8 @@ export function DashboardView() {
   /* wyglad/P3-b (E9, img/e9-after): Kokpit każdej firmy — 6 kafelków w 2 kolumnach; baner „+N ryzyk”
      zastąpił kafelek „Do zrobienia” (E8 pkt 6). Liczby z danych aplikacji (cockpitE9.ts); reguły E7/E15/E16/E25 w P4–P6. */
   const kindText = hasKey(locale, `p3b_kind_${kind}`) ? t(locale, `p3b_kind_${kind}`) : '';
-  const dateText = new Intl.DateTimeFormat(INTL_LOCALE[locale], { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', year: 'numeric' }).format(getNow());
+  /* „16.10.2026” we wszystkich językach (właściciel 16.10.2026: DD.MM.RRRR w każdym miejscu) */
+  const dateText = fmtDate(getNow().toISOString());
   /* najbliższy rejs liczony od „teraz” — przeliczenie co minutę przy odświeżeniu widoku */
   const nowMinute = Math.floor(getNow().getTime() / 60_000);
   const ferry = useMemo(() => {

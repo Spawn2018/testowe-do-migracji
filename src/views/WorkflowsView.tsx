@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
+import { fmtDateTime } from '../lib/time';
 import { wt } from '../i18n/p4cWf';
 import { decText } from '../i18n/decisions';
 import { workflowDisplayName } from '../lib/enumLabels';
@@ -34,9 +35,8 @@ const SMS_KINDS: SmsKind[] = ['ZONE_APPROACH', 'ZONE_ENTER'];
 interface HistRow { at: string; who: string; action: string; ruleName: string; what: string }
 
 function fmtWhen(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
-  } catch { return iso; }
+  const out = fmtDateTime(iso);
+  return out === '—' ? iso : out;
 }
 
 async function fetchHistory(id: string | null): Promise<HistRow[]> {

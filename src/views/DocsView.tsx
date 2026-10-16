@@ -24,6 +24,7 @@ import { useIsPhone } from '../lib/useIsPhone';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { transportLabel } from '../lib/transportName';
 import { formatPlNumber } from '../lib/format';
+import { fmtDate, fmtDateRange, fmtDateTime } from '../lib/time';
 import { weekKeyLabel } from '../lib/p5Invoices';
 import {
   cmrKind, codesText, filterFiles, reqCount, reqVisible, REQ_KEYS, responsibleOrg, seenBy, type FileFilter, type ReqKey,
@@ -45,15 +46,10 @@ const UPLOAD_KINDS: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR'];
 const FILE_KINDS: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR', 'INSURANCE', 'INVOICE'];
 const MAX_FILES = 60;
 
-const dmy = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
-const dm = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}`;
-const atText = (iso: string | null) => {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (!Number.isFinite(d.getTime())) return '—';
-  const f = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', ...o }).format(d);
-  return `${f({ day: '2-digit', month: '2-digit' })}, ${f({ hour: '2-digit', minute: '2-digit' })}`;
-};
+/* rok zawsze — właściciel 16.10.2026: „08.10.2026”, „08.10.2026, 12:00”, „01.10.2026–31.10.2026” */
+const dmy = (iso: string) => fmtDate(iso);
+const dm = (iso: string) => fmtDate(iso);
+const atText = (iso: string | null) => (iso ? fmtDateTime(iso) : '—');
 const m2 = (n: number) => formatPlNumber(n, 2);
 
 interface ReqRow {
@@ -339,7 +335,7 @@ export function DocsView() {
             <article key={p.id} className="fin-card doc-card" data-doc-permit={p.id}>
               <header className="doc-card-hd"><b data-content>{p.country} · {p.number ?? ft(locale, 'p5_doc_perm_at_load')}</b><span className={p.scope === 'FIRMA' ? 'fin-tag sea' : 'fin-tag warn'}>{up(ft(locale, `p5_doc_perm_${p.scope}`))}</span></header>
               <p className="fin-muted" data-content>
-                {[p.appliesTo, p.limits ? `${m2(p.limits.l)} × ${m2(p.limits.w)} × ${m2(p.limits.h)} m` : null, p.validFrom && p.validTo ? `${dm(p.validFrom)}–${dmy(p.validTo)}` : null,
+                {[p.appliesTo, p.limits ? `${m2(p.limits.l)} × ${m2(p.limits.w)} × ${m2(p.limits.h)} m` : null, p.validFrom && p.validTo ? fmtDateRange(p.validFrom, p.validTo) : null,
                   ftp(locale, p.scope === 'FIRMA' ? 'p5_doc_perm_auto' : 'p5_doc_perm_manual', { n: p.loads })].filter(Boolean).join(' · ')}
               </p>
             </article>
@@ -365,7 +361,7 @@ export function DocsView() {
                   <td><span className={p.scope === 'FIRMA' ? 'fin-tag sea' : 'fin-tag warn'}>{up(ft(locale, `p5_doc_perm_${p.scope}`))}</span></td>
                   <td>{p.country.replace('+', ' + ')}</td>
                   <td data-content>{p.number ?? <span className="fin-muted">{ft(locale, 'p5_doc_perm_at_load')}</span>}</td>
-                  <td>{p.validFrom && p.validTo ? `${dm(p.validFrom)}–${dmy(p.validTo)}` : '—'}</td>
+                  <td>{p.validFrom && p.validTo ? fmtDateRange(p.validFrom, p.validTo) : '—'}</td>
                   <td>{p.limits ? `${m2(p.limits.l)} × ${m2(p.limits.w)} × ${m2(p.limits.h)} m` : '—'}{p.pilot ? ` · ${ftp(locale, 'p5_doc_perm_pilot', { p: p.pilot })}` : ''}</td>
                   <td data-content>{p.appliesTo}</td>
                   <td className="num">{ftp(locale, p.scope === 'FIRMA' ? 'p5_doc_perm_auto' : 'p5_doc_perm_manual', { n: p.loads })}</td>

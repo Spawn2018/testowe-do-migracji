@@ -5,11 +5,13 @@ import { authErrorPl } from './config';
 import { deviceLabel, markManualLogout } from './sessionYear';
 import './auth.css';
 import { useTowerStore } from '../store/useTowerStore';
-import { INTL_LOCALE, t, tp } from '../i18n/messages';
+import { t, tp } from '../i18n/messages';
+import { fmtDateTime } from '../lib/time';
 import type { Locale } from '../types';
 
 interface Row { id: string; user_agent: string | null; created_at: string; expires_at: string; last_active_at: string; is_current: boolean }
-const fmt = (iso: string, locale: Locale) => new Date(iso).toLocaleString(INTL_LOCALE[locale], { dateStyle: 'short', timeStyle: 'short' });
+/* „16.10.2026, 08:05” we wszystkich językach (właściciel 16.10.2026) */
+const fmt = (iso: string, _locale: Locale) => fmtDateTime(iso);
 
 /** ANEKS 5 §4.4 — „Moje urządzenia” i „Wyloguj ze wszystkich urządzeń” (każdy użytkownik, tylko tryb Supabase). */
 export default function MyDevices() {

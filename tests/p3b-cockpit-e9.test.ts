@@ -134,12 +134,13 @@ describe('E9 — kafelki Kokpitu (img/e9-after)', () => {
     // ostatnia dostawa: SG-02 w terminie, SG-01 dzień po planie → 1 z 2
     expect(by.otif.value).toBe('1');
     expect(by.otif.of).toBe('z 2');
-    expect(by.otif.desc).toBe('SG-02: plan 06.10, dostawa 06.10');
+    expect(by.otif.desc).toBe('SG-02: plan 06.10.2026, dostawa 06.10.2026');
     expect(by.otif.descShort).toBe('SG-02 w terminie');
-    expect(by.ferry.value).toBe('08.10, 18:00');
-    expect(by.ferry.valueShort).toBe('08.10 18:00');
+    expect(by.ferry.value).toBe('08.10.2026, 18:00');
+    /* telefon: liczba w jednej linii (E8 pkt 6) — godzina, data z rokiem w opisie */
+    expect(by.ferry.valueShort).toBe('18:00');
     expect(by.ferry.desc).toBe('Wawel GDN → NYN · fala 1,3 m · ryzyko niskie');
-    expect(by.ferry.descShort).toBe('fala 1,3 m · niskie');
+    expect(by.ferry.descShort).toBe('08.10.2026 · fala 1,3 m · niskie');
     expect(by.bills.desc).toBe('brak faktur HHL w systemie');
   });
   it('SCX: Do zrobienia, zezwolenia przy załadunkach, do zafakturowania z tygodniem dostawy; prom bez prognozy → strona Ryzyka', () => {
@@ -153,6 +154,8 @@ describe('E9 — kafelki Kokpitu (img/e9-after)', () => {
     expect(by['to-invoice'].desc).toBe('1 czeka na podpisany CMR (SG-01) · tydz. 41');
     expect(by['to-invoice'].descShort).toBe('1 czeka na CMR');
     expect(by.ferry.desc).toBe('Wawel GDN → NYN · prognoza morza na stronie Ryzyka');
+    expect(by.ferry.valueShort).toBe('18:00');
+    expect(by.ferry.descShort).toBe('08.10.2026 · prognoza w Ryzykach');
     // SG-02 już na fakturze SCX → do zafakturowania 0, czeka SG-01
     const billed = buildCockpit(input('SCX', { bills: [bill({ issuer: 'SCX', recipient: 'HHL', lines: [{ loadId: 'SG-02' }] as Bill['lines'] })] }));
     expect(billed.find((x) => x.id === 'to-invoice')!.value).toBe('0');

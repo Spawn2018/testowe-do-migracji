@@ -24,12 +24,14 @@ import { ft, ftp } from '../../i18n/p5';
 import { up } from '../options/up';
 import '../finance/finance.css';
 import './panel.css';
+import { fmtDate, formatCalendarDay } from '../../lib/time';
 
 const UploadDocModal = lazy(lazyRetry(() => import('../docs/UploadDocModal').then((m) => ({ default: m.UploadDocModal }))));
 
 const REQ: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR'];
-const dmy = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
-const dm = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}`;
+/* rok zawsze — właściciel 16.10.2026 */
+const dmy = (iso: string) => formatCalendarDay(iso.slice(0, 10));
+const dm = (iso: string) => fmtDate(iso);
 
 interface Props {
   load: Load;

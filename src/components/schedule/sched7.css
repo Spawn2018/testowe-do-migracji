@@ -31,6 +31,8 @@
 .s7-num{font-variant-numeric:tabular-nums}
 .s7-dash{color:var(--ink-3)}
 .s7-nw{white-space:nowrap}
+/* daty z rokiem (16.10.2026): dwa braki i termin zawijają się między słowami, data zostaje w całości */
+.s7-file td[data-col="docs"]{white-space:normal}
 .s7-q{color:var(--red)}
 .s7-neg{color:var(--red);font-weight:600}
 .s7-ok{color:var(--go)}

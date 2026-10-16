@@ -97,8 +97,9 @@ export function RoutePanel({
   const rows: FerryRowView[] = PROD
     ? ferryRowsFromDb(sailings, marine, loads, nowMs)
     : sampleFerryRowsOf(nowIso, loadsOnVoyage(loads, focusVoyage()).length);
-  const today = formatListDateTime(nowIso).slice(0, 5);
-  const allToday = rows.length > 0 && rows.every((r) => formatListDateTime(r.depIso).slice(0, 5) === today);
+  const dayOf = (iso: string) => formatListDateTime(iso).split(', ')[0];
+  const today = dayOf(nowIso);
+  const allToday = rows.length > 0 && rows.every((r) => dayOf(r.depIso) === today);
   const onBoard = rows.reduce((s, r) => s + r.onBoard, 0);
   const alt = altProposal(rows, altSailingsOf(sailings, nowIso), nowMs);
 

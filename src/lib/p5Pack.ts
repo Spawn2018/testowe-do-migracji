@@ -10,6 +10,7 @@ import type { Bill, BillDirection, Document, Load } from '../types';
 import { addDaysIso, isoWeekMonday } from './invoices3';
 import { localDateOf } from './money/engine';
 import { unloadedAtOf } from './money/loadMoney';
+import { fmtWeek } from './time';
 
 /** Paczka KSH = faktury przychodowe HHL → KSH; paczka HHL = faktury kosztowe SCX → HHL. */
 export type PackKey = 'KSH' | 'HHL';
@@ -57,14 +58,13 @@ export interface AccountingPack {
 
 const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
-/** „t41 · 05.10–11.10.2026” z klucza „2026-W41”. */
+/** „t41 · 05.10.2026–11.10.2026” z klucza „2026-W41”. */
 export function packWeekLabel(weekKey: string): string {
   const m = /^(\d{4})-W(\d{2})$/.exec(weekKey);
   if (!m) return weekKey;
   const from = isoWeekMonday(weekKey);
   const to = addDaysIso(from, 6);
-  const dm = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
-  return `t${Number(m[2])} · ${dm(from)}–${dm(to)}.${to.slice(0, 4)}`;
+  return fmtWeek(Number(m[2]), from, to);
 }
 
 /** Tygodnie faktur (dowolnego kierunku), od najnowszego. */

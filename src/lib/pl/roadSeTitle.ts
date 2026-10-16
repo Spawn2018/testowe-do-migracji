@@ -18,7 +18,6 @@ export function roadSeRepairTitle(input: {
   event: string;
   od: string;
   doAt: string;
-  refYear?: number;
 }): string {
   const kind = input.rodzaj === 'zamkniecie' ? 'zamknięcie drogi' : 'roboty drogowe';
   const placed = plSeLocation(input.event.trim());
@@ -26,8 +25,8 @@ export function roadSeRepairTitle(input: {
   const fromTitle = input.currentTitle.match(/\b(E\d{1,3})\b/);
   const road = lead?.[1] ?? fromTitle?.[1] ?? 'E4';
   const place = (lead ? lead[2] : placed).replace(/\s+/g, ' ').trim().replace(/,\s*$/, '');
-  const from = formatListDateTime(input.od, 'Europe/Warsaw', input.refYear);
-  const to = formatListDateTime(input.doAt, 'Europe/Warsaw', input.refYear);
+  const from = formatListDateTime(input.od, 'Europe/Warsaw');
+  const to = formatListDateTime(input.doAt, 'Europe/Warsaw');
   const bits = [kind, place, `od ${from} do ${to}`].filter((x) => x.length > 0);
   return `Warunki drogowe ${road}: ${bits.join(', ')}`;
 }

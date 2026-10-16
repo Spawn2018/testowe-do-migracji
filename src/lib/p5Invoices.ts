@@ -7,6 +7,7 @@ import type { Bill, BillDirection, Load, RoleId } from '../types';
 import { addDaysIso, BILL_VAT_RATE, billCandidates, canVerifyBill, expectedNetFor, invoicedLoadIds, isoWeekMonday } from './invoices3';
 import { isoWeekKeyLocal } from './money/engine';
 import { unloadedAtOf } from './money/loadMoney';
+import { fmtDateRange } from './time';
 
 export type InvStatus = 'DO_WYSTAWIENIA' | 'DO_WERYFIKACJI' | 'ZGODNA' | 'SPORNA' | 'ZAAKCEPTOWANA' | 'OPLACONA' | 'PO_TERMINIE';
 export const VAT_RATE = BILL_VAT_RATE;
@@ -113,12 +114,11 @@ export function weekOptionLabel(weekKey: string): string {
   return `t${Number(m[1])} · ${dmy(from)}–${dmy(addDaysIso(from, 6))}`;
 }
 
-/** „41 · 05.10–11.10” z klucza tygodnia „2026-W41” (bez „t” — kolumna „Tydzień” w Fakturach; Dokumenty dodają „t”). */
+/** „41 · 05.10.2026–11.10.2026” z klucza tygodnia „2026-W41” (bez „t” — kolumna „Tydzień” w Fakturach; Dokumenty dodają „t”). */
 export function weekKeyLabel(weekKey: string): string {
   const m = /^\d{4}-W(\d{2})$/.exec(weekKey);
   if (!m) return weekKey;
   const from = isoWeekMonday(weekKey);
   const to = addDaysIso(from, 6);
-  const dm = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
-  return `${Number(m[1])} · ${dm(from)}–${dm(to)}`;
+  return `${Number(m[1])} · ${fmtDateRange(from, to)}`;
 }

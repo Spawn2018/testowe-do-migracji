@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Load, Locale } from '../../types';
 import { formatPlNumber } from '../../lib/format';
+import { fmtTime, formatCalendarDay } from '../../lib/time';
 import { localDateOf } from '../../lib/money/engine';
 import { cancelFee, dwellFee, durText, type FeeDecision, type FeeKind, type FeeRules, type FeeSuggestion } from '../../lib/p5Fees';
 import { ft, ftn, ftp } from '../../i18n/p5';
@@ -31,8 +32,9 @@ interface Props {
 }
 
 const n2 = (n: number) => formatPlNumber(n, 2);
-const dm = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
-const hm = (iso: string) => new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+/* rok zawsze — właściciel 16.10.2026 */
+const dm = (d: string) => formatCalendarDay(d.slice(0, 10));
+const hm = (iso: string) => fmtTime(iso, 'Europe/Warsaw');
 
 export function FeeModal({ load, role, locale, rules, suggestions, initial, onClose, onDecide }: Props) {
   const [kind, setKind] = useState<FeeKind>(initial?.kind ?? 'DWELL');

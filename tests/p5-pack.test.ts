@@ -22,8 +22,8 @@ const CMR = (loadId: string, status = 'UPLOADED') => ({ loadId, category: 'CMR',
 const CFG: PackConfig = { addresses: { KSH: ['a@example.com'], HHL: ['b@example.com'] }, sent: {} };
 
 describe('E40 — tydzień i pliki', () => {
-  it('etykieta „t41 · 05.10–11.10.2026”, tygodnie faktur od najnowszego', () => {
-    expect(packWeekLabel('2026-W41')).toBe('t41 · 05.10–11.10.2026');
+  it('etykieta „t41 · 05.10.2026–11.10.2026”, tygodnie faktur od najnowszego', () => {
+    expect(packWeekLabel('2026-W41')).toBe('t41 · 05.10.2026–11.10.2026');
     expect(packWeeks([{ weekKey: '2026-W40' }, { weekKey: '2026-W41' }, { weekKey: '2026-W40' }])).toEqual(['2026-W41', '2026-W40']);
   });
   it('nazwy plików: numer faktury bez ukośników, CMR po kodzie, zestawienie z tygodniem i paczką', () => {
