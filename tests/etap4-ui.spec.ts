@@ -75,26 +75,33 @@ async function setHhlOrder(page: Page, v: string) {
 test.describe('M5 — numery zleceń', () => {
   test('harmonogram: kolumny numerów dla HHL i SCX, KSH tylko kod (E41 P2)', async ({ page }) => {
     await boot(page)
+    /* wyglad/P7-c (E38 1A, D-20261016-1020-01): układ pliku KSH — „Typ” i „Wysyłka” przyklejone, numery w kolumnach pliku */
+    const cols = async () => {
+      await expect(page.locator('[data-sched-layout] tbody tr[data-load]').first()).toBeVisible()
+      return page.locator('[data-sched-layout] thead th').evaluateAll((ths) => ths.map((t) => t.getAttribute('data-col')))
+    }
     for (const r of ['HHL', 'SCX'] as const) {
       await role(page, r)
       await nav(page, 'sched')
-      const cols = await page.locator('table.sched-table thead th').evaluateAll((ths) => ths.map((t) => t.getAttribute('data-col')))
-      expect(cols.slice(0, 3), r).toEqual(['code', 'ord_hhl', 'ord_scx'])
-      expect(await page.locator('table.sched-table thead th.stick').count(), r).toBeGreaterThan(0)
+      const c = await cols()
+      expect(c.slice(0, 2), r).toEqual(['type', 'code'])
+      expect(c, r).toContain('ordScx')
+      expect(c, r).toContain('ordHhl')
+      expect(await page.locator('[data-sched-layout] thead th.s7-stick').count(), r).toBeGreaterThan(0)
     }
     await role(page, 'KSH')
     await nav(page, 'sched')
-    const kshCols = await page.locator('table.sched-table thead th').evaluateAll((ths) => ths.map((t) => t.getAttribute('data-col')))
-    expect(kshCols).not.toContain('ord_hhl')
-    expect(kshCols).not.toContain('ord_scx')
-    expect(kshCols[0]).toBe('code')
+    const kshCols = await cols()
+    expect(kshCols).not.toContain('ordHhl')
+    expect(kshCols).not.toContain('ordScx')
+    expect(kshCols.slice(0, 2)).toEqual(['type', 'code'])
     await role(page, 'HHL')
     await nav(page, 'sched')
     const row = page.locator('tr[data-load]', { has: page.locator('td[data-col="code"] span.code', { hasText: /^SG-34$/ }) })
     // E38 1A (P2-wyglad V1, D-20261013-1535-01): „Wysyłka” = sam kod. Numer zostaje w swojej kolumnie.
     await expect(row.locator('td[data-col="code"] span.code')).toHaveText('SG-34')
-    await expect(row.locator('td[data-col="ord_hhl"]')).toHaveText(/^HHL\/2026\//)
-    await expect(row.locator('td[data-col="ord_scx"]')).toHaveText(/^SCX-26-/)
+    await expect(row.locator('td[data-col="ordHhl"]')).toHaveText(/^HHL\/2026\//)
+    await expect(row.locator('td[data-col="ordScx"]')).toHaveText(/^SCX-26-/)
   })
 
   // E25 (P4): zamiast „Oznacz jako gotowy” — okno „Zmień status” (PLAN §4 P4 testy do przepisania)
@@ -117,7 +124,7 @@ test.describe('M5 — numery zleceń', () => {
     await setHhlOrder(page, '')
     await closeDrawer(page)
     const row0 = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: new RegExp(`^${code}`) }) })
-    await expect(row0.locator('td[data-col="ord_hhl"]')).toHaveText('— brak —')
+    await expect(row0.locator('td[data-col="ordHhl"]')).toHaveText('–') // wyglad/P7-c: pusta komórka pliku
     await openLoad(page, code)
     await statusTab(page)
     await page.locator('.drawer [data-action="change-status"]').click()
@@ -129,7 +136,7 @@ test.describe('M5 — numery zleceń', () => {
     await setHhlOrder(page, 'HHL/2026/9001')
     await closeDrawer(page)
     const row = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: new RegExp(`^${code}`) }) })
-    await expect(row.locator('td[data-col="ord_hhl"]')).toHaveText('HHL/2026/9001')
+    await expect(row.locator('td[data-col="ordHhl"]')).toHaveText('HHL/2026/9001')
   })
 
   test('SCX: edytuje wyłącznie swój numer; okna planowe tylko do odczytu (AN2); KSH bez edycji', async ({ page }) => {
@@ -285,8 +292,9 @@ test.describe('M8 — poziom wyceny i kurs tymczasowy', () => {
     await nav(page, 'sched')
     /* B-K.1 (8322d02): KSH bez zakładki „Ceny” — swoją cenę widzi w harmonogramie, koszt przewoźnika nigdzie */
     const kshRow = page.locator('tr[data-code="SG-34"]')
-    await expect(kshRow.locator('td[data-col="rev"]')).toHaveText(/\d/)
-    await expect(page.locator('table.sched-table [data-col="cost"]')).toHaveCount(0)
+    /* wyglad/P7-c (E30, E16): kwota według firmy w kolumnie „Twoja cena” (`money`) */
+    await expect(kshRow.locator('td[data-col="money"]')).toHaveText(/\d/)
+    await expect(page.locator('[data-sched-layout] [data-col="cost"]')).toHaveCount(0)
     await openLoadKsh(page, 'SG-34')
     await expect(page.locator('.drawer [data-money-side]')).toHaveCount(0)
     await closeDrawer(page)
@@ -433,8 +441,11 @@ test.describe('D26 — import: anulowania za zgodą (ANEKS 3 §2.1)', () => {
     await boot(page)
     await role(page, 'HHL')
     await nav(page, 'sched')
+    await expect(page.locator('tr[data-load]').first()).toBeVisible() // wyglad/P7-c: Harmonogram ładowany osobno
     const before = await page.locator('tr[data-load]').count()
-    await page.locator('button.chipbtn', { hasText: 'Wgraj aktualizacje' }).click()
+    /* wyglad/P7-c (E30 pkt 6, E38): wgranie pliku KSH jako zapas w „Więcej ▾” */
+    await page.locator('[data-sched-more]').click()
+    await page.locator('[data-sched-more-menu] [data-action="upload"]').click()
     await page.locator('input[type="file"][accept*=".xlsx"]').setInputFiles({ name: 'd26.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer })
     await page.getByRole('button', { name: 'Podgląd zmian' }).click()
     const box = page.locator('[data-import-removals]')

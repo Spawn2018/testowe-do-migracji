@@ -1,78 +1,65 @@
 import { PROD_BUILD } from '../lib/prodFacade';
 import { LiveMark } from '../components/shell/LiveMark';
-import { OptionsHowTo } from '../components/settings/OptionsHowTo';
 import { delayPillMinutes } from '../lib/prodDash';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { invoicedLoadIds } from '../lib/importRemoval';
 import { MAP_FIELDS as MAP_FIELDS_UI, REQUIRED_FIELDS as REQUIRED_FIELDS_UI, type PartialColumnMap } from '../lib/importMapping';
 import { useTowerStore } from '../store/useTowerStore';
 import { filterLoads } from '../lib/selectors';
-import { transportLabel } from '../lib/transportName';
-import { StatusPill } from '../components/ui/StatusPill';
-import { canEditResources, canImportSchedule, canSeeCost, canSeeMargin, canSeeRevenue, filterLoadsForRole } from '../lib/permissions';
-import { fmtNum, pctText, t, tp } from '../i18n/messages';
-import { formatTowerPair } from '../lib/cSep';
-import { docCategoryLabel } from '../lib/enumLabels';
+import { canImportSchedule, filterLoadsForRole } from '../lib/permissions';
+import { t, tp } from '../i18n/messages';
 import {
   delayMinutesVsPlan,
-  formatTableDay,
-  formatSchedTableDay,
-  TZ_LOAD_PL,
-  TZ_UNLOAD_SE,
   formatTableInZone,
   refYearInOps,
 } from '../lib/time';
-import { getNow } from '../lib/frozenNow';
+import { getNow, getNowIso } from '../lib/frozenNow';
 // D15: ExcelJS (~1 MB) tylko przy imporcie/eksporcie — dynamiczny import.
 import type { ImportDiff } from '../lib/scheduleDryRun';
 import { COLUMN_MAP_DEFAULT } from '../lib/importColumnMap';
-import type { DocCategory, Load, Locale } from '../types';
+import type { Load } from '../types';
+/* wyglad/P7-c (E38 1A, E30, E20): układ pliku KSH, „Widok skrócony”, filtry tygodniem i stanem, karty na telefonie */
 import {
-  SCHED_COLS,
-  loadSchedPrefs,
-  saveSchedPrefs,
-  type SchedColId,
-  type SchedColPrefs,
-} from '../lib/scheduleColumns';
-import { formatAppMoney } from '../lib/money/demoFx';
+  exportName, FILE_COLS, fileColsFor, inRange, loadSchedLayout, QUICKS, quickMatch, saveSchedLayout, shortExtrasFor, todayPl, weekPicks,
+  DEFAULT_LAYOUT, SHORT_EXTRAS, type Quick, type SchedLayout,
+} from '../lib/schedLayout';
+import { FileTable, SchedCards, ShortTable, type SchedRowCtx } from '../components/schedule/SchedTables';
+import { s7, s7p } from '../i18n/sched7';
+import { DEFAULT_DOC_REQUIREMENTS, docStatusRows } from '../lib/docRequirements';
+import { getDocReqCache } from '../lib/docReqCache';
+import { marginThresholdOf } from '../lib/p5Source';
+import '../components/schedule/sched7.css';
 import { SailingsPanel } from './SailingsPanel';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import type { ServerImportDraft } from '../data/scheduleImportServer';
-import { clickableRow } from '../lib/clickableRow';
 import { standardSkipMessage } from '../lib/standardSkipMessage';
 import { plPlural } from '../lib/plPlural';
 import { StageBar, StageChip } from '../components/shell/StageBar';
-import { StatusMarkers } from '../components/ui/StatusPill';
 import { useIsPhone } from '../lib/useIsPhone';
 
 /** I-1: import w produkcji przez import_schedule() w bazie (podgląd i zapis w jednej transakcji). */
 const SERVER_IMPORT = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED;
 
 type ImportStep = null | 'upload' | 'colmap' | 'map' | 'diff' | 'done';
-/* wyglad/P4 (E28 pkt 2): jeden filtr etapu — kafelek paska; w Harmonogramie zostają tylko filtry stanu */
-type Quick = 'all' | 'late' | 'nodocs' | 'nodriver' | 'notractor';
 
-/** A6-T3 — wymiary w języku interfejsu (PL bez zmian). */
-function fmtDim(n: number, locale: Locale = 'pl'): string {
-  return fmtNum(locale, n, 2);
-}
+/** III-2: krótki szkielet tabeli po wejściu w widok (używane też w testach). */
+export const SKELETON_MS = 260;
 
 function delayMinutes(l: Load): number | null {
   return delayPillMinutes(l, delayMinutesVsPlan(l.etaBoden, l.plannedDeliverDate, l.planDates?.deliveryTo), PROD_BUILD);
 }
 
-function quickMatch(l: Load, q: Quick): boolean {
-  if (q === 'late') return l.delayed || l.status === 'DELAYED';
-  if (q === 'nodocs') return l.docMissing || l.status === 'DOC_MISSING';
-  if (q === 'nodriver') return !(l.resources.driverName ?? '').trim();
-  if (q === 'notractor') return !(l.resources.tractorPlate ?? '').trim();
-  return true;
+/** Zamyka okienko po Escape i kliknięciu obok (Kolumny, Więcej). */
+function useDismiss(open: boolean, close: () => void, ref: { current: HTMLElement | null }) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
+    const onDown = (e: PointerEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) close(); };
+    window.addEventListener('keydown', onKey, true);
+    window.addEventListener('pointerdown', onDown, true);
+    return () => { window.removeEventListener('keydown', onKey, true); window.removeEventListener('pointerdown', onDown, true); };
+  }, [open, close, ref]);
 }
-
-/** I-18: data wstępna vs potwierdzona przez KSH (tylko produkcja — w demo pola brak). */
-/** III-2: czas szkieletu jak w makiecie (go(): 260 ms) */
-export const SKELETON_MS = 260;
-const SKEL_W = [70, 120, 150, 60, 100, 100, 90, 130, 70, 100, 70, 80, 80, 90];
 
 export function ScheduleView() {
   /* M10 — rozkład rejsów jako druga zakładka harmonogramu (seg) */
@@ -115,7 +102,6 @@ export function ScheduleView() {
   /* wyglad/P4 (E8, E28): telefon — działania pod „⋯”, daty i reszta filtrów pod „Filtry ▾” */
   const phone = useIsPhone();
   const [actionsOpen, setActionsOpen] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
   /* „⋯” zamyka się po działaniu, Escape i dotknięciu obok.
      Escape łapany w fazie przechwytywania i zatrzymany: zamyka tylko menu, filtr etapu i otwarty transport zostają (skrót globalny w App).
      Dotknięcie obok tylko zamyka menu — nie klika tego, co pod spodem. */
@@ -149,10 +135,21 @@ export function ScheduleView() {
   const [skeleton, setSkeleton] = useState(true);
   useEffect(() => { const id = window.setTimeout(() => setSkeleton(false), SKELETON_MS); return () => window.clearTimeout(id); }, []);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [colPrefs, setColPrefs] = useState<SchedColPrefs>(() => loadSchedPrefs());
-  const [colMenu, setColMenu] = useState(false);
-  const [savedFlash, setSavedFlash] = useState(false);
-  const dragCol = useRef<SchedColId | null>(null);
+  /* E30 pkt 2: układ kolumn na koncie (dziś w tej przeglądarce — D-20261016-1020-01), bez „Zapisz widok” */
+  const [layout, setLayoutState] = useState<SchedLayout>(() => loadSchedLayout());
+  const setLayout = (next: SchedLayout) => { setLayoutState(next); saveSchedLayout(next); };
+  const [colsOpen, setColsOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const colsRef = useRef<HTMLDivElement | null>(null);
+  const moreRef = useRef<HTMLDivElement | null>(null);
+  const closeCols = useCallback(() => setColsOpen(false), []);
+  const closeMore = useCallback(() => setMoreOpen(false), []);
+  useDismiss(colsOpen, closeCols, colsRef);
+  useDismiss(moreOpen, closeMore, moreRef);
+  /* E30 pkt 3: tydzień załadunku i dostawy (pon–nd, jak E39) albo własny zakres */
+  const [loadPick, setLoadPick] = useState('all');
+  const [delivPick, setDelivPick] = useState('all');
 
 
   // B-9 C: ten sam filtr kafelka (stageFilter) działa też w Harmonogramie
@@ -163,7 +160,6 @@ export function ScheduleView() {
     setPrevStage(stageFilter);
     if (stageFilter) setSchedTab('loads');
   }
-  const updateResources = useTowerStore((s) => s.updateResources);
   const [loadFrom, setLoadFrom] = useState('');
   const [loadTo, setLoadTo] = useState('');
   const [delivFrom, setDelivFrom] = useState('');
@@ -173,21 +169,21 @@ export function ScheduleView() {
     [loads, role, stageFilter, search],
   );
 
-  /* „Opóźnione 5” — liczba przy chipie (makieta E28) */
-  const lateCount = useMemo(() => base.filter((l) => quickMatch(l, 'late')).length, [base]);
-  const list = useMemo(() => {
-    return base.filter((l) => quickMatch(l, quick)).filter((l) => {
-      if (loadFrom && (l.plannedLoadDate ?? '') < loadFrom) return false;
-      if (loadTo && (l.plannedLoadDate ?? '') > loadTo) return false;
-      if (delivFrom && (l.plannedDeliverDate ?? '') < delivFrom) return false;
-      if (delivTo && (l.plannedDeliverDate ?? '') > delivTo) return false;
-      return true;
-    });
-  }, [base, quick, loadFrom, loadTo, delivFrom, delivTo]);
-
-  const showCost = canSeeCost(role);
-  const showRev = canSeeRevenue(role);
-  const showMargin = canSeeMargin(role);
+  const nowIso = getNowIso();
+  const picks = useMemo(() => weekPicks(nowIso), [nowIso]);
+  const rangeOf = (pick: string, from: string, to: string) => (pick === 'all' ? null
+    : pick === 'range' ? (from || to ? { from, to } : null)
+      : picks.find((p) => p.id === pick) ?? null);
+  const loadRange = rangeOf(loadPick, loadFrom, loadTo);
+  const delivRange = rangeOf(delivPick, delivFrom, delivTo);
+  const pre = useMemo(
+    () => base.filter((l) => inRange(l.plannedLoadDate, loadRange) && inRange(l.plannedDeliverDate, delivRange)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [base, loadRange?.from, loadRange?.to, delivRange?.from, delivRange?.to],
+  );
+  /* E30 pkt 3: liczba przy każdym filtrze stanu = wiersze po kliknięciu (po pozostałych filtrach) */
+  const counts = useMemo(() => Object.fromEntries(QUICKS.map((q) => [q, pre.filter((l) => quickMatch(l, q)).length])) as Record<Exclude<Quick, 'all'>, number>, [pre]);
+  const list = useMemo(() => pre.filter((l) => quickMatch(l, quick)), [pre, quick]);
   const ver = scheduleVersions[0];
   const skippedNote = ver?.skippedStandard
     ? ` · pominięto ${ver.skippedStandard} ${plPlural(ver.skippedStandard, 'wiersz', 'wiersze', 'wierszy')} typu STANDARD`
@@ -199,19 +195,6 @@ export function ScheduleView() {
     : t(locale, 'a6_sch_ver_line')) + skippedNote;
 
   const mapKeys = activeMap ? Object.entries(activeMap) : Object.entries(COLUMN_MAP_DEFAULT);
-
-  function docFlag(loadId: string, cat: DocCategory, letter: string) {
-    const d = documents.find((x) => x.loadId === loadId && x.category === cat);
-    const ok = d?.status === 'UPLOADED';
-    const miss = !d || d.status === 'MISSING' || d.status === 'EXPIRED' || d.status === 'MISMATCH';
-    // Permit miss is red; other missing stay neutral like Claude
-    const cls = ok ? 'ok' : cat === 'PERMIT_PL' && miss ? 'miss' : '';
-    return (
-      <span key={letter} className={`flag ${cls}`} title={docCategoryLabel(cat, locale)}>
-        {letter}
-      </span>
-    );
-  }
 
   async function acceptFile(f: File | undefined) {
     if (!f) return;
@@ -308,56 +291,35 @@ export function ScheduleView() {
     }
   }
 
-  /* wyglad/P4 (E28): filtry stanu — Opóźnione (z liczbą), Bez dokumentów, Bez kierowcy, Bez ciągnika;
-     na telefonie dwa pierwsze w rzędzie, reszta pod „Filtry ▾” (E8, img/e28-after) */
-  const chips: { id: Exclude<Quick, 'all'>; labelKey: string; phoneRow: boolean }[] = [
-    { id: 'late', labelKey: 'p4_f_late', phoneRow: true },
-    { id: 'nodocs', labelKey: 'p4_f_nodocs', phoneRow: true },
-    { id: 'nodriver', labelKey: 'p4_f_nodriver', phoneRow: false },
-    { id: 'notractor', labelKey: 'p4_f_notractor', phoneRow: false },
-  ];
-  const chipBtn = (c: (typeof chips)[number]) => (
-    <button
-      key={c.id}
-      type="button"
-      className="chipbtn"
-      data-quick={c.id}
-      aria-pressed={quick === c.id}
-      onClick={() => setQuick(quick === c.id ? 'all' : c.id)}
-    >
-      {t(locale, c.labelKey)}
-      {c.id === 'late' ? <em className="chip-n">{lateCount}</em> : null}
+  /* wyglad/P7-c (E28 pkt 2, E30 pkt 3): filtry stanu z liczbami — Opóźnione, Bez dokumentów, Bez kierowcy, Bez ciągnika, Anulowane */
+  const chipBtn = (q: Exclude<Quick, 'all'>) => (
+    <button key={q} type="button" className="chipbtn s7-chip" data-quick={q} aria-pressed={quick === q} onClick={() => setQuick(quick === q ? 'all' : q)}>
+      {s7(locale, `s7_q_${q}`)} · <em className="chip-n">{counts[q]}</em>
     </button>
   );
+  const fileCols = fileColsFor(role, layout.fileHidden);
+  const extrasAllowed = shortExtrasFor(role);
+  const extras = layout.shortExtras.filter((x) => extrasAllowed.includes(x));
+  const activeFilters = (quick !== 'all' ? 1 : 0) + (loadPick !== 'all' ? 1 : 0) + (delivPick !== 'all' ? 1 : 0);
+  const clearFilters = () => { setQuick('all'); setLoadPick('all'); setDelivPick('all'); setLoadFrom(''); setLoadTo(''); setDelivFrom(''); setDelivTo(''); };
 
-  const visibleCols = colPrefs.order.filter((id) => {
-    if (colPrefs.hidden.includes(id)) return false;
-    const def = SCHED_COLS.find((c) => c.id === id)!;
-    if (def.role === 'cost' && !showCost) return false;
-    if (def.role === 'rev' && !showRev) return false;
-    if (def.role === 'margin' && !showMargin) return false;
-    /* E41 (P2): KSH nie widzi kolumn numerów zleceń. */
-    if (role === 'KSH' && (id === 'ord_hhl' || id === 'ord_scx')) return false;
-    return true;
-  });
-
-  function persistCols(next: SchedColPrefs) {
-    setColPrefs(next);
-    saveSchedPrefs(next);
-  }
-
-  function autoFitCol(id: SchedColId) {
-    const def = SCHED_COLS.find((c) => c.id === id);
-    if (!def) return;
-    // measure longest text in column approximately via DOM
-    const th = document.querySelector(`th[data-col="${id}"]`) as HTMLElement | null;
-    const cells = Array.from(document.querySelectorAll(`td[data-col="${id}"]`)) as HTMLElement[];
-    let w = t(locale, def.labelKey).length * 8 + 24;
-    for (const c of cells.slice(0, 40)) w = Math.max(w, Math.ceil(c.scrollWidth) + 16);
-    if (th) w = Math.max(w, Math.ceil(th.scrollWidth) + 16);
-    persistCols({ ...colPrefs, widths: { ...colPrefs.widths, [id]: Math.min(360, Math.max(0, w)) } });
-  }
-
+  /* E31: stan dokumentów jak na stronie Dokumenty i w panelu (baza po wejściu na Dokumenty; demo — reguły startowe) */
+  const docCache = getDocReqCache();
+  const reqs = docCache?.reqs ?? DEFAULT_DOC_REQUIREMENTS;
+  const nowMs = Date.parse(nowIso);
+  const docByLoad = useMemo(() => {
+    const rows = docCache ? docCache.status : PROD_BUILD ? [] : docStatusRows(list, documents, reqs, nowMs);
+    const m = new Map<string, typeof rows>();
+    for (const r of rows) { const a = m.get(r.loadId) ?? []; a.push(r); m.set(r.loadId, a); }
+    return m;
+  }, [docCache, list, documents, reqs, nowMs]);
+  const marginMin = marginThresholdOf();
+  const ctx: SchedRowCtx = {
+    locale, role, currency, refYear, marginMin, reqs,
+    docRows: (id) => docByLoad.get(id) ?? [],
+    delayOf: delayMinutes,
+    hoverLoadId, selectedLoadId, setHover: setHoverLoad, onOpen: selectLoad,
+  };
 
   const schedTabs = (
     <div className="seg" role="group" aria-label={t(locale, 'nav_sched')} data-sched-tabs>
@@ -383,107 +345,95 @@ export function ScheduleView() {
     );
   }
 
-  /* Działania Harmonogramu: na komputerze w nagłówku; na telefonie pod „⋯” obok szukajki (E8, img/e8-after) */
-  const actionButtons = (
+  /* E30 pkt 4: eksport tego, co widać — wiersze po filtrach; nazwa pliku z firmą, tygodniem i datą */
+  const weekLabel = loadRange && loadPick !== 'range' ? picks.find((p) => p.id === loadPick)?.label ?? null : null;
+  const doExport = (kind: 'xlsx' | 'pdf') => {
+    void (async () => {
+      const name = exportName(role, weekLabel, todayPl(nowIso), kind);
+      try {
+        if (kind === 'xlsx') {
+          const { exportLoadsXlsx } = await import('../lib/xlsxExport');
+          const result = await exportLoadsXlsx(list, role, name);
+          pushToast(tp(locale, 'a6_sch_export_ok', { rows: String(result.rows), bytes: String(result.bytes) }), 'MEDIUM');
+        } else {
+          const { exportLoadsPdf } = await import('../lib/pdfExport');
+          const result = await exportLoadsPdf(list, name, tp(locale, 'i24_pdf_title', { n: String(list.length) }), locale);
+          pushToast(tp(locale, 'i24_sch_pdf_ok', { rows: String(result.rows), bytes: String(result.bytes) }), 'MEDIUM');
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        pushToast(tp(locale, kind === 'xlsx' ? 'a6_sch_export_fail' : 'i24_sch_pdf_fail', { msg }), 'CRITICAL');
+      }
+    })();
+  };
+  /* „Więcej ▾” (E30 pkt 2, 4, 6): eksport, wgranie pliku KSH (zapas, tylko HHL), przywrócenie kolumn */
+  const moreItems = (
     <>
-          {canImportSchedule(role) ? (
-            <button type="button" className="chipbtn" onClick={() => setStep('upload')} disabled={parsing}>
-              {t(locale, 'sched_upload')}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="chipbtn"
-            onClick={() => {
-              saveSchedPrefs(colPrefs);
-              setSavedFlash(true);
-              window.setTimeout(() => setSavedFlash(false), 1600);
-              pushToast(t(locale, 'a6_sch_view_saved'), 'MEDIUM');
-            }}
-          >
-            {savedFlash ? t(locale, 'a6_sch_saved') : t(locale, 'a6_sch_save_view')}
-          </button>
-          <div className="sched-col-picker">
-            <button type="button" className="chipbtn" aria-expanded={colMenu} onClick={() => setColMenu((v) => !v)}>
-              {t(locale, 'a6_sch_columns')}
-            </button>
-            {colMenu ? (
-              <div className="sched-col-menu" role="menu">
-                {SCHED_COLS.map((c) => {
-                  if (c.role === 'cost' && !showCost) return null;
-                  if (c.role === 'rev' && !showRev) return null;
-                  if (c.role === 'margin' && !showMargin) return null;
-                  if (role === 'KSH' && (c.id === 'ord_hhl' || c.id === 'ord_scx')) return null;
-                  const on = !colPrefs.hidden.includes(c.id);
-                  return (
-                    <label key={c.id}>
-                      <input
-                        type="checkbox"
-                        checked={on}
-                        onChange={() => {
-                          const hidden = on
-                            ? [...colPrefs.hidden, c.id]
-                            : colPrefs.hidden.filter((x) => x !== c.id);
-                          persistCols({ ...colPrefs, hidden });
-                        }}
-                      />
-                      {t(locale, c.labelKey)}
-                    </label>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            className="chipbtn"
-            data-action="export-xlsx"
-            onClick={() => {
-              void (async () => {
-                try {
-                  const { exportLoadsXlsx } = await import('../lib/xlsxExport');
-                  const result = await exportLoadsXlsx(loads, role, `WATCH_TOWER_${role}_harmonogram.xlsx`);
-                  pushToast(tp(locale, 'a6_sch_export_ok', { rows: String(result.rows), bytes: String(result.bytes) }), 'MEDIUM');
-                } catch (err: unknown) {
-                  const msg = err instanceof Error ? err.message : String(err);
-                  pushToast(tp(locale, 'a6_sch_export_fail', { msg }), 'CRITICAL');
-                }
-              })();
-            }}
-          >
-            {t(locale, 'a6_sch_export')}
-          </button>
-          <button
-            type="button"
-            className="chipbtn"
-            data-action="export-pdf"
-            onClick={() => {
-              void (async () => {
-                try {
-                  const { exportLoadsPdf } = await import('../lib/pdfExport');
-                  const result = await exportLoadsPdf(loads, `WATCH_TOWER_${role}_harmonogram.pdf`, tp(locale, 'i24_pdf_title', { n: String(loads.length) }), locale);
-                  pushToast(tp(locale, 'i24_sch_pdf_ok', { rows: String(result.rows), bytes: String(result.bytes) }), 'MEDIUM');
-                } catch (err: unknown) {
-                  const msg = err instanceof Error ? err.message : String(err);
-                  pushToast(tp(locale, 'i24_sch_pdf_fail', { msg }), 'CRITICAL');
-                }
-              })();
-            }}
-          >
-            {t(locale, 'i24_sch_pdf')}
-          </button>
+      <button type="button" role="menuitem" data-action="export-xlsx" onClick={() => { setMoreOpen(false); setActionsOpen(false); doExport('xlsx'); }}>{s7(locale, 's7_m_xlsx')}</button>
+      <button type="button" role="menuitem" data-action="export-pdf" onClick={() => { setMoreOpen(false); setActionsOpen(false); doExport('pdf'); }}>{s7(locale, 's7_m_pdf')}</button>
+      {canImportSchedule(role) ? (
+        <button type="button" role="menuitem" data-action="upload" disabled={parsing} onClick={() => { setMoreOpen(false); setActionsOpen(false); setStep('upload'); }}>{s7(locale, 's7_m_upload')}</button>
+      ) : null}
+      <button type="button" role="menuitem" data-action="reset-cols" onClick={() => { setMoreOpen(false); setActionsOpen(false); setLayout({ ...DEFAULT_LAYOUT, view: layout.view }); }}>{s7(locale, 's7_m_reset')}</button>
     </>
+  );
+  const colsMenu = (
+    <div className="s7-pop s7-cols" role="menu" data-sched-cols-menu>
+      {layout.view === 'file' ? (
+        <>
+          <b className="s7-pop-h">{s7(locale, 's7_cols_file')}</b>
+          {FILE_COLS.filter((c) => !c.fixed && !(role === 'KSH' && (c.id === 'ordScx' || c.id === 'ordHhl'))).map((c) => {
+            const on = !layout.fileHidden.includes(c.id);
+            const label = c.id === 'loadDay' || c.id === 'loadTime' ? `${s7(locale, c.key)} (${s7(locale, 's7_c_load_date').toLocaleLowerCase('pl')})`
+              : c.id === 'delivDay' || c.id === 'delivTime' ? `${s7(locale, c.key)} (${s7(locale, 's7_c_deliv_date').toLocaleLowerCase('pl')})`
+                : s7(locale, c.id === 'money' ? 's7_c_money' : c.key);
+            return (
+              <label key={c.id} data-col-toggle={c.id}>
+                <input type="checkbox" checked={on} onChange={() => setLayout({ ...layout, fileHidden: on ? [...layout.fileHidden, c.id] : layout.fileHidden.filter((x) => x !== c.id) })} />
+                {label}
+              </label>
+            );
+          })}
+        </>
+      ) : (
+        <>
+          <b className="s7-pop-h">{s7(locale, 's7_cols_extra')}</b>
+          {SHORT_EXTRAS.filter((x) => extrasAllowed.includes(x.id)).map((x) => {
+            const on = layout.shortExtras.includes(x.id);
+            return (
+              <label key={x.id} data-col-toggle={x.id}>
+                <input type="checkbox" checked={on} onChange={() => setLayout({ ...layout, shortExtras: on ? layout.shortExtras.filter((y) => y !== x.id) : [...layout.shortExtras, x.id] })} />
+                {s7(locale, x.key)}
+              </label>
+            );
+          })}
+        </>
+      )}
+    </div>
   );
 
   return (
     <div className="panel section-card page-sections" data-page="schedule" style={{ margin: 12, display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
-      <div className="panel-hd" style={{ flexWrap: 'wrap' }}>
+      <div className="panel-hd s7-hd" style={{ flexWrap: 'wrap' }}>
         <h2>{t(locale, 'nav_sched')}</h2>
-        <span className="sub">{verLine}</span>
+        <span className="sub" data-sched-file>{verLine}</span>
         <LiveMark />
         <div className="spacer" />
         {schedTabs}
-        {phone ? null : <div className="sched-actions">{actionButtons}</div>}
+        {phone ? null : (
+          <div className="sched-actions s7-actions">
+            <div className="s7-pop-wrap" ref={colsRef}>
+              <button type="button" className="chipbtn" aria-expanded={colsOpen} data-sched-cols onClick={() => setColsOpen((v) => !v)}>{s7(locale, 's7_cols')}</button>
+              {colsOpen ? colsMenu : null}
+            </div>
+            <button type="button" className="chipbtn" aria-pressed={layout.view === 'short'} aria-label={s7(locale, 's7_short_aria')} data-sched-short
+              onClick={() => setLayout({ ...layout, view: layout.view === 'short' ? 'file' : 'short' })}>{s7(locale, 's7_short')}</button>
+            <div className="s7-pop-wrap" ref={moreRef}>
+              <button type="button" className="chipbtn" aria-expanded={moreOpen} aria-haspopup="menu" data-sched-more onClick={() => setMoreOpen((v) => !v)}>{s7(locale, 's7_more')} ▾</button>
+              {moreOpen ? <div className="s7-pop s7-more" role="menu" data-sched-more-menu>{moreItems}</div> : null}
+            </div>
+          </div>
+        )}
       </div>
 
       {canImportSchedule(role) && step === 'upload' && (
@@ -748,91 +698,95 @@ export function ScheduleView() {
       <div className="panel-bd flush" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         {phone ? (
           <>
-            {/* telefon (E8, E28): szukajka i „⋯”, pasek etapów, filtry stanu i „Filtry ▾” */}
-            <div className="filters sched-ph-search">
-              <input
-                type="search"
-                placeholder={t(locale, 'search')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+            {/* telefon (E30 pkt 8, E28): pasek etapów w bok, „Szukaj” i „Filtry · n” (arkusz), „⋯” — Więcej */}
+            <StageBar variant="page" />
+            <div className="filters sched-ph-search" data-sched-filters>
+              <input type="search" placeholder={s7(locale, 's7_search_ph')} aria-label={s7(locale, 's7_search')} value={search} onChange={(e) => setSearch(e.target.value)} />
+              <button type="button" className="chipbtn s7-fbtn" aria-expanded={sheetOpen} data-sched-more-filters onClick={() => setSheetOpen(true)}>
+                {activeFilters ? s7p(locale, 's7_filters_n', { n: activeFilters }) : s7(locale, 's7_filters')}
+              </button>
               <div className="sched-more-wrap" ref={morePopRef}>
-                <button
-                  ref={moreBtnRef}
-                  type="button"
-                  className="chipbtn sched-more"
-                  aria-expanded={actionsOpen}
-                  aria-label={t(locale, 'p4_actions_more')}
-                  title={t(locale, 'p4_actions_more')}
-                  onClick={() => setActionsOpen((v) => !v)}
-                >
-                  ⋯
-                </button>
-                {actionsOpen ? (
-                  <div
-                    className="sched-actions sched-actions-pop"
-                    onClick={(e) => { if ((e.target as HTMLElement).closest('button')) setActionsOpen(false); }}
-                  >
-                    {actionButtons}
-                  </div>
-                ) : null}
+                <button ref={moreBtnRef} type="button" className="chipbtn sched-more" aria-expanded={actionsOpen} aria-label={t(locale, 'p4_actions_more')} title={t(locale, 'p4_actions_more')} onClick={() => setActionsOpen((v) => !v)}>⋯</button>
+                {actionsOpen ? <div className="sched-actions sched-actions-pop s7-more" role="menu">{moreItems}</div> : null}
               </div>
             </div>
-            <StageBar variant="page" />
-            <div className="filters" data-sched-filters>
-              <StageChip />
-              {/* z filtrem etapu w rzędzie zostaje chip etapu i „Filtry ▾” (makieta E28, telefon); włączony filtr stanu zawsze widać */}
-              {chips.filter((c) => (!stageFilter && c.phoneRow) || quick === c.id).map(chipBtn)}
-              <button type="button" className="chipbtn" aria-expanded={filtersOpen} data-sched-more-filters onClick={() => setFiltersOpen((v) => !v)}>
-                {t(locale, filtersOpen ? 'p4_f_more_open' : 'p4_f_more')}
-              </button>
-              <div className="spacer" />
-              <span className="sched-count">{tp(locale, 'p4_count', { n: list.length, total: loads.length })}</span>
-            </div>
-            {filtersOpen ? (
-              <div className="filters sched-more-filters">
-                {chips.filter((c) => !((!stageFilter && c.phoneRow) || quick === c.id)).map(chipBtn)}
-                <label className="muted" title={t(locale, 'a6_sch_dates')}>
-                  {t(locale, 'a6_sch_dates')}{' '}
-                  <input type="date" value={loadFrom} onChange={(e) => setLoadFrom(e.target.value)} aria-label={t(locale, 'a6_sch_dates')} />
-                  <input type="date" value={loadTo} onChange={(e) => setLoadTo(e.target.value)} aria-label={t(locale, 'a6_sch_dates')} />
-                </label>
-                <label className="muted" title={t(locale, 'a6_sch_deliv_dates')}>
-                  {t(locale, 'a6_sch_deliv_dates')}{' '}
-                  <input type="date" value={delivFrom} onChange={(e) => setDelivFrom(e.target.value)} />
-                  <input type="date" value={delivTo} onChange={(e) => setDelivTo(e.target.value)} />
-                </label>
-                <OptionsHowTo locale={locale} k="a6_sch_howto_filters" summaryKey="a6_sch_howto_btn" />
+            {stageFilter ? <div className="filters s7-stage-row"><StageChip /></div> : null}
+            {sheetOpen ? (
+              <div className="s7-sheet-back" onClick={() => setSheetOpen(false)}>
+                <div className="s7-sheet" role="dialog" aria-modal="true" aria-label={s7(locale, 's7_filters')} data-sched-sheet onClick={(e) => e.stopPropagation()}>
+                  <div className="s7-sheet-hd"><b>{s7(locale, 's7_filters')}</b><button type="button" className="chipbtn" aria-label={s7(locale, 's7_sheet_close')} onClick={() => setSheetOpen(false)}>✕</button></div>
+                  <div className="s7-sheet-bd">
+                    <span className="s7-sheet-l">{s7(locale, 's7_sheet_load')}</span>
+                    <div className="s7-chips" data-sheet-load>
+                      {[{ id: 'all', label: s7(locale, 's7_f_all') }, ...picks, { id: 'range', label: s7(locale, 's7_f_range') }].map((p) => (
+                        <button key={p.id} type="button" className="chipbtn s7-chip" aria-pressed={loadPick === p.id} data-pick={p.id} onClick={() => setLoadPick(p.id)}>{p.label}</button>
+                      ))}
+                    </div>
+                    {loadPick === 'range' ? (
+                      <div className="s7-range">
+                        <label>{s7(locale, 's7_f_from')}<input type="date" value={loadFrom} onChange={(e) => setLoadFrom(e.target.value)} /></label>
+                        <label>{s7(locale, 's7_f_to')}<input type="date" value={loadTo} onChange={(e) => setLoadTo(e.target.value)} /></label>
+                      </div>
+                    ) : null}
+                    <span className="s7-sheet-l">{s7(locale, 's7_sheet_deliv')}</span>
+                    <div className="s7-chips" data-sheet-deliv>
+                      {[{ id: 'all', label: s7(locale, 's7_f_all') }, ...picks, { id: 'range', label: s7(locale, 's7_f_range') }].map((p) => (
+                        <button key={p.id} type="button" className="chipbtn s7-chip" aria-pressed={delivPick === p.id} data-pick={p.id} onClick={() => setDelivPick(p.id)}>{p.label}</button>
+                      ))}
+                    </div>
+                    {delivPick === 'range' ? (
+                      <div className="s7-range">
+                        <label>{s7(locale, 's7_f_from')}<input type="date" value={delivFrom} onChange={(e) => setDelivFrom(e.target.value)} /></label>
+                        <label>{s7(locale, 's7_f_to')}<input type="date" value={delivTo} onChange={(e) => setDelivTo(e.target.value)} /></label>
+                      </div>
+                    ) : null}
+                    <span className="s7-sheet-l">{s7(locale, 's7_sheet_state')}</span>
+                    <div className="s7-chips" data-sheet-state>{QUICKS.map(chipBtn)}</div>
+                  </div>
+                  <div className="s7-sheet-ft">
+                    <button type="button" className="btn ghost" data-sheet-clear onClick={clearFilters}>{s7(locale, 's7_sheet_clear')}</button>
+                    <button type="button" className="btn" data-sheet-show onClick={() => setSheetOpen(false)}>{s7p(locale, 's7_sheet_show', { n: list.length })}</button>
+                  </div>
+                </div>
               </div>
             ) : null}
           </>
         ) : (
-        <div className="filters" data-sched-filters>
-          <OptionsHowTo locale={locale} k="a6_sch_howto_filters" summaryKey="a6_sch_howto_btn" />
-          <input
-            type="search"
-            placeholder={t(locale, 'search')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <span className="kbdhint">
-            <kbd>/</kbd>
-          </span>
-          <label className="muted" style={{ fontSize: 12 }} title={t(locale, 'a6_sch_dates')}>
-            {t(locale, 'a6_sch_dates')}{' '}
-            <input type="date" value={loadFrom} onChange={(e) => setLoadFrom(e.target.value)} aria-label={t(locale, 'a6_sch_dates')} />
-            <input type="date" value={loadTo} onChange={(e) => setLoadTo(e.target.value)} aria-label={t(locale, 'a6_sch_dates')} />
-          </label>
-          <label className="muted" style={{ fontSize: 12 }} title={t(locale, 'a6_sch_deliv_dates')}>
-            {t(locale, 'a6_sch_deliv_dates')}{' '}
-            <input type="date" value={delivFrom} onChange={(e) => setDelivFrom(e.target.value)} />
-            <input type="date" value={delivTo} onChange={(e) => setDelivTo(e.target.value)} />
-          </label>
-          <StageChip />
-          {chips.map(chipBtn)}
-          <div className="spacer" />
-          <span className="sched-count">{tp(locale, 'p4_count', { n: list.length, total: loads.length })}</span>
-        </div>
+          <div className="filters s7-filters" data-sched-filters>
+            <input type="search" className="s7-search" placeholder={s7(locale, 's7_search')} aria-label={s7(locale, 's7_search')} value={search} onChange={(e) => setSearch(e.target.value)} />
+            <label className="s7-sel" data-week="load">
+              <span>{s7(locale, 's7_f_load')}:</span>
+              <select value={loadPick} onChange={(e) => setLoadPick(e.target.value)}>
+                <option value="all">{s7(locale, 's7_f_all')}</option>
+                {picks.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+                <option value="range">{s7(locale, 's7_f_range')}</option>
+              </select>
+            </label>
+            {loadPick === 'range' ? (
+              <span className="s7-range">
+                <input type="date" aria-label={`${s7(locale, 's7_f_load')} ${s7(locale, 's7_f_from')}`} value={loadFrom} onChange={(e) => setLoadFrom(e.target.value)} />
+                <input type="date" aria-label={`${s7(locale, 's7_f_load')} ${s7(locale, 's7_f_to')}`} value={loadTo} onChange={(e) => setLoadTo(e.target.value)} />
+              </span>
+            ) : null}
+            <label className="s7-sel" data-week="deliv">
+              <span>{s7(locale, 's7_f_deliv')}:</span>
+              <select value={delivPick} onChange={(e) => setDelivPick(e.target.value)}>
+                <option value="all">{s7(locale, 's7_f_all')}</option>
+                {picks.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+                <option value="range">{s7(locale, 's7_f_range')}</option>
+              </select>
+            </label>
+            {delivPick === 'range' ? (
+              <span className="s7-range">
+                <input type="date" aria-label={`${s7(locale, 's7_f_deliv')} ${s7(locale, 's7_f_from')}`} value={delivFrom} onChange={(e) => setDelivFrom(e.target.value)} />
+                <input type="date" aria-label={`${s7(locale, 's7_f_deliv')} ${s7(locale, 's7_f_to')}`} value={delivTo} onChange={(e) => setDelivTo(e.target.value)} />
+              </span>
+            ) : null}
+            <StageChip />
+            {QUICKS.map(chipBtn)}
+            <div className="spacer" />
+            <span className="sched-count">{tp(locale, 'p4_count', { n: list.length, total: loads.length })}</span>
+          </div>
         )}
         {!skeleton && list.length === 0 ? (
           <div className="empty" data-sched-empty>
@@ -844,300 +798,22 @@ export function ScheduleView() {
                 : t(locale, 'iii2_empty_any')}{' '}
               {t(locale, 'iii2_empty_hint')}
             </p>
-            <button type="button" className="btn ghost" data-sched-clear onClick={() => { setSearch(''); setQuick('all'); setLoadFrom(''); setLoadTo(''); setDelivFrom(''); setDelivTo(''); useTowerStore.getState().navigateTo({ stage: null }); }}>
+            <button type="button" className="btn ghost" data-sched-clear onClick={() => { setSearch(''); clearFilters(); useTowerStore.getState().navigateTo({ stage: null }); }}>
               {t(locale, 'iii2_empty_clear')}
             </button>
           </div>
         ) : (
-        <>
-        <div className="tablewrap sched-table-wrap" style={{ flex: 1 }}>
-          <table className="sched-table" style={{ tableLayout: 'fixed', width: 'max-content', minWidth: '100%' }}>
-            <colgroup>
-              {visibleCols.map((id) => (
-                <col key={id} style={{ width: colPrefs.widths[id] ?? 100 }} />
-              ))}
-            </colgroup>
-            <thead>
-              <tr>
-                {visibleCols.map((id) => {
-                  const def = SCHED_COLS.find((c) => c.id === id)!;
-                  let label = t(locale, def.labelKey);
-                  if (id === 'cost' && role === 'SCX') label = t(locale, 'a6_sch_my_rate');
-                  if (id === 'rev' && role === 'KSH') label = t(locale, 'a6_sch_your_price');
-                  const stick =
-                    id === 'margin' ||
-                    (id === 'cost' && !showRev && !showMargin) ||
-                    (id === 'rev' && !showMargin) ||
-                    (id === 'docs' && !showCost && !showRev && !showMargin);
-                  return (
-                    <th
-                      key={id}
-                      data-col={id}
-                      draggable
-                      className={`${id === 'weight' || id === 'cost' || id === 'rev' || id === 'margin' ? 'num' : ''}${stick ? ' stick' : ''}`}
-                      onDragStart={() => {
-                        dragCol.current = id;
-                      }}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={() => {
-                        const from = dragCol.current;
-                        if (!from || from === id) return;
-                        const order = [...colPrefs.order];
-                        const fi = order.indexOf(from);
-                        const ti = order.indexOf(id);
-                        if (fi < 0 || ti < 0) return;
-                        order.splice(fi, 1);
-                        order.splice(ti, 0, from);
-                        persistCols({ ...colPrefs, order });
-                        dragCol.current = null;
-                      }}
-                      onDoubleClick={() => autoFitCol(id)}
-                      title={t(locale, 'a6_sch_drag')}
-                    >
-                      {label}
-                      <span
-                        className="col-resize"
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const startX = e.clientX;
-                          const startW = colPrefs.widths[id] ?? def.defaultWidth;
-                          const onMove = (ev: MouseEvent) => {
-                            const w = Math.min(420, Math.max(0, startW + (ev.clientX - startX)));
-                            setColPrefs((prev) => ({ ...prev, widths: { ...prev.widths, [id]: w } }));
-                          };
-                          const onUp = () => {
-                            window.removeEventListener('mousemove', onMove);
-                            window.removeEventListener('mouseup', onUp);
-                            setColPrefs((prev) => {
-                              saveSchedPrefs(prev);
-                              return prev;
-                            });
-                          };
-                          window.addEventListener('mousemove', onMove);
-                          window.addEventListener('mouseup', onUp);
-                        }}
-                      />
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {skeleton ? Array.from({ length: 12 }, (_, r) => (
-                <tr key={`skel-${r}`} className="skel" data-sched-skel>
-                  {visibleCols.map((id, i) => <td key={id}><i style={{ width: SKEL_W[i % SKEL_W.length] - (i % 3) * 8 }} /></td>)}
-                </tr>
-              )) : list.map((l) => {
-                const dmin = delayMinutes(l);
-                return (
-                  <tr
-                    key={l.id}
-                    data-load={l.id}
-                    data-code={l.code}
-                    data-status={l.status}
-                    className={`${l.status === 'DELIVERED' ? 'done' : ''} ${hoverLoadId === l.id || selectedLoadId === l.id ? 'hl' : ''}`}
-                    onMouseEnter={() => setHoverLoad(l.id)}
-                    onMouseLeave={() => setHoverLoad(null)}
-                    {...clickableRow(() => selectLoad(l.id))}
-                  >
-                    {visibleCols.map((id) => {
-                      const stick =
-                        id === 'margin' ||
-                        (id === 'cost' && !showRev && !showMargin) ||
-                        (id === 'rev' && !showMargin);
-                      switch (id) {
-                        case 'code':
-                          return (
-                            <td key={id} data-col={id}>
-                              {/* E38 1A (P2-wyglad V1): „Wysyłka” = sam kod. Nazwa „kod · numer” zostaje na karcie telefonu. */}
-                              <span className="code" data-content>{l.code}</span>
-                            </td>
-                          );
-                        case 'ord_hhl':
-                        case 'ord_scx': {
-                          const v = id === 'ord_hhl' ? l.hhlOrderNo : l.carrierOrderNo;
-                          return (
-                            <td key={id} data-col={id}>
-                              {v ? <span className="mono">{v}</span> : <span style={{ color: 'var(--red)' }}>{t(locale, 'a6_sch_none')}</span>}
-                            </td>
-                          );
-                        }
-                        case 'type':
-                          return <td key={id} data-col={id} data-content>{l.itemType}</td>;
-                        case 'dims':
-                          if (l.dims.cargoClass === 'STANDARD') {
-                            return (
-                              <td key={id} data-col={id} data-cargo="none">—</td>
-                            );
-                          }
-                          return (
-                            <td
-                              key={id}
-                              data-col={id}
-                              className={l.dims.lengthM > 16.5 || l.dims.widthM > 2.55 ? 'over' : undefined}
-                              title={
-                                l.dims.lengthM > 16.5 || l.dims.widthM > 2.55
-                                  ? t(locale, 'a6_sch_oversize')
-                                  : undefined
-                              }
-                            >
-                              {fmtDim(l.dims.lengthM, locale)} × {fmtDim(l.dims.widthM, locale)} × {fmtDim(l.dims.heightM, locale)}
-                            </td>
-                          );
-                        case 'weight':
-                          return (
-                            <td key={id} data-col={id} className="num">
-                              {fmtDim(l.dims.weightT, locale)} t
-                            </td>
-                          );
-                        case 'load': {
-                          const win = l.planDates?.loadFrom ?? l.awizacja?.loadWindowStart ?? null;
-                          return <td key={id} data-col={id}>{formatSchedTableDay(l.plannedLoadDate, win, TZ_LOAD_PL)}</td>;
-                        }
-                        case 'deliver': {
-                          const win = l.planDates?.deliveryFrom ?? l.awizacja?.unloadWindowStart ?? null;
-                          return <td key={id} data-col={id}>{formatSchedTableDay(l.plannedDeliverDate, win, TZ_UNLOAD_SE)}</td>;
-                        }                        case 'status':
-                          return (
-                            <td key={id} data-col={id}>
-                              <span className="st-wrap">
-                                <StatusPill status={l.status} stage={l.stage} />
-                                <StatusMarkers load={l} delayMin={dmin} />
-                              </span>
-                            </td>
-                          );
-                        case 'driver':
-                          return (
-                            <td key={id} data-col={id}>
-                              <span data-content>{formatTowerPair(l.resources.driverName, l.resources.driverDeliveryName, !!l.resources.trailerSwap)}</span>
-                            </td>
-                          );
-                        case 'phone': {
-                          const see = role === 'HHL' || role === 'SCX' || role === 'KSH';
-                          const paired = see
-                            ? formatTowerPair(l.resources.driverPhone, l.resources.driverDeliveryPhone, !!l.resources.trailerSwap)
-                            : '–';
-                          const telHref = (l.resources.driverPhone || l.resources.driverDeliveryPhone || '').replace(/\s+/g, '');
-                          return (
-                            <td key={id} data-col={id}>
-                              {paired !== '–' && telHref ? (
-                                <a href={`tel:${telHref}`} className="mono" data-content onClick={(e) => e.stopPropagation()}>
-                                  {paired}
-                                </a>
-                              ) : (
-                                <span className="mono" data-content>{paired}</span>
-                              )}
-                            </td>
-                          );
-                        }
-                        case 'plate':
-                          return (
-                            <td key={id} data-col={id}>
-                              {l.resources.tractorPlate ? (
-                                <span className="mono" data-content>{l.resources.tractorPlate}</span>
-                              ) : (
-                                <span className="muted">—</span>
-                              )}
-                              {/* AUD-03: „Zmień ciągnik” tylko przewoźnik i HHL (KSH — brak przycisku; baza też odmawia) */}
-                              {canEditResources(role) ? (
-                              <button
-                                type="button"
-                                className="btn ghost"
-                                data-change-tractor
-                                style={{ fontSize: 11, padding: '2px 6px', marginLeft: 4 }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const next = window.prompt(t(locale, 'a6_sch_change_tractor'), l.resources.tractorPlate ?? '');
-                                  if (next == null) return;
-                                  updateResources(l.id, { tractorPlate: next.trim() || null });
-                                }}
-                              >
-                                {t(locale, 'a6_sch_change_tractor')}
-                              </button>
-                              ) : null}
-                            </td>
-                          );
-                        case 'eta':
-                          return <td key={id} data-col={id}>{formatTableInZone(l.etaBoden, TZ_UNLOAD_SE, refYear)}</td>;
-                        case 'docs':
-                          return (
-                            <td key={id} data-col={id}>
-                              <span className="flagrow">
-                                {docFlag(l.id, 'PERMIT_PL', 'Z')}
-                                {docFlag(l.id, 'CMR', 'C')}
-                              </span>
-                            </td>
-                          );
-                        case 'cost':
-                          return (
-                            <td key={id} data-col={id} className={`num money${stick ? ' stick' : ''}`}>
-                              {formatAppMoney(l.pricing.costTotal, locale, currency)}
-                            </td>
-                          );
-                        case 'rev':
-                          return (
-                            <td key={id} data-col={id} className={`num money${stick ? ' stick' : ''}`}>
-                              {formatAppMoney(l.pricing.revTotal, locale, currency)}
-                            </td>
-                          );
-                        case 'margin':
-                          return (
-                            <td key={id} data-col={id} className={`num money stick ${l.pricing.marginPct < 0.18 ? 'neg' : ''}`}>
-                              {formatAppMoney(l.pricing.margin, locale, currency)}{' '}
-                              <span style={{ fontWeight: 400, color: 'var(--ink-3)', fontSize: 11.5, marginLeft: 5 }}>
-                                {pctText(locale, l.pricing.marginPct, 1, `${(l.pricing.marginPct * 100).toFixed(1).replace('.', ',')}%`)}
-                              </span>
-                            </td>
-                          );
-                        default:
-                          return null;
-                      }
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <div className="sched-cards" data-sched-cards>
-          {list.map((l) => {
-            const dmin = delayMinutes(l);
-            return (
-              <button
-                key={`card-${l.id}`}
-                type="button"
-                className={`sched-card${hoverLoadId === l.id || selectedLoadId === l.id ? ' hl' : ''}`}
-                data-load={l.id}
-                data-code={l.code}
-                data-status={l.status}
-                onClick={() => selectLoad(l.id)}
-              >
-                <div className="r1">
-                  <span className="code" data-content>{transportLabel(l, role, 'schedule')}</span>
-                  <StatusPill status={l.status} stage={l.stage} />
-                  <StatusMarkers load={l} delayMin={dmin} />
-                </div>
-                <div className="meta" data-content>{l.itemType}</div>
-                <div className="meta">
-                  {formatTableDay(l.plannedLoadDate, refYear)} → {formatTableDay(l.plannedDeliverDate, refYear)}
-                </div>
-                {(l.resources.driverName || l.resources.driverDeliveryName) ? <div className="meta" data-content>{formatTowerPair(l.resources.driverName, l.resources.driverDeliveryName, !!l.resources.trailerSwap)}</div> : null}
-              </button>
-            );
-          })}
-        </div>
-        </>
+          <>
+            {layout.view === 'short'
+              ? <ShortTable extras={extras} list={list} ctx={ctx} skeleton={skeleton} />
+              : <FileTable cols={fileCols} list={list} ctx={ctx} skeleton={skeleton} />}
+            <SchedCards list={list} ctx={ctx} />
+          </>
         )}
-        <div className="note">
-          {showMargin
-            ? t(locale, 'sched_money_note').replace('{cur}', currency)
-            : role === 'KSH'
-              ? t(locale, 'sched_role_ksh')
-              : t(locale, 'sched_role_scx')}
+        <div className="note s7-note">
+          {layout.view === 'short' ? s7(locale, 's7_short_note') : s7(locale, 's7_scroll_note')}
         </div>
       </div>
     </div>
   );
 }
-

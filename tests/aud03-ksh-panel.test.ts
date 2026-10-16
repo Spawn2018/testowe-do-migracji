@@ -32,8 +32,11 @@ describe('AUD-03 — panel zlecenia KSH (źródło)', () => {
     expect(m).not.toMatch(/<select|<textarea/);
     expect(m).toMatch(/rpc\('ksh_confirm_dates'/);
   });
-  it('„Zmień ciągnik” w harmonogramie tylko dla przewoźnika i HHL', () => {
-    expect(src('src/views/ScheduleView.tsx')).toMatch(/\{canEditResources\(role\) \? \(\s*<button[\s\S]{0,200}data-change-tractor/);
+  /* wyglad/P7-c (E30 pkt 5, E32): w Harmonogramie bez „Zmień ciągnik” i okna przeglądarki — zestaw zmienia się tylko
+     w oknie Awizacja (SCX, HHL); prawa bez zmian */
+  it('Harmonogram bez „Zmień ciągnik” (E30 pkt 5); zmiana zestawu tylko w Awizacji — przewoźnik i HHL', () => {
+    expect(src('src/views/ScheduleView.tsx')).not.toMatch(/data-change-tractor|window\.prompt/);
+    expect(src('src/components/schedule/SchedTables.tsx')).not.toMatch(/data-change-tractor|window\.prompt/);
     expect(canEditResources('KSH')).toBe(false);
     expect(canEditResources('SCX')).toBe(true);
     expect(canEditResources('HHL')).toBe(true);
