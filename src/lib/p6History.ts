@@ -13,6 +13,7 @@ import { formatHistoryActor } from './historyActor';
 import { docCategoryLabel, eventTypeLabel, readyGateReasonLabel } from './enumLabels';
 import { ht, htHas, htp } from '../i18n/p6b';
 import { fmtDateTime as fmtDateTimeZ, fmtTime, formatCalendarDay } from './time';
+import { hitChannel } from './statusAxis';
 
 export type HistCat = 'STATUS' | 'TRASA' | 'ZASOBY' | 'NUMER' | 'DOKUMENT' | 'CENA' | 'PLAN' | 'IMPORT' | 'PROBA' | 'NOTATKA' | 'INNE';
 export type HistFilter = 'ALL' | 'ROUTE' | 'RES' | 'NUM' | 'DOC' | 'PRICE';
@@ -193,12 +194,34 @@ function repeats(note: string, head: string): boolean {
   return a === b || (!a.includes(' ') && a.length >= 6 && a.slice(0, 6) === b.slice(0, 6));
 }
 
+/**
+ * audyt-B B-08 (E17, E25 — jeden słownik): zdarzenia automatu, które ustawiają status, nazwane jak status na osi
+ * (zakładka Status): „Załadunek”, „Na promie”, „Dostarczone” — nie „Załadowano” / „Rozładowano”.
+ */
+const MILESTONE_STATUS: Readonly<Record<string, LoadStatus>> = {
+  LOADED: 'LOADING',
+  MILESTONE_LOADED: 'LOADING',
+  ON_FERRY: 'ON_FERRY',
+  UNLOADED: 'DELIVERED',
+};
+const SYSTEM_ACTOR = (a: string | null | undefined) => !a || a === 'system' || a.startsWith('workflow:') || a === 'driver-pwa';
+/** Domyślne notatki starych zdarzeń („Załadowany”, „Rozładowany”, „Kierowca: …”) — powtarzają status, bez dopisku. */
+const MILESTONE_NOTE = /^(załadowan\w*|rozładowan\w*|na promie|dostarczon\w*|kierowca:.*|milestone\b.*)$/i;
+
 export function histRow(e: LoadEvent, locale: Locale, zones: ReadonlyMap<string, string> = new Map()): HistRow {
   const p = e.payload ?? {};
   const cat = histCat(e.type);
   const on = oldNew(p, locale);
   const note = cleanNote(str(e.note), e.type, locale);
   const base = { id: e.id, at: e.at, cat, who: whoOf(e.actor, locale), src: srcOf(p, locale) };
+
+  const milestone = MILESTONE_STATUS[e.type];
+  if (milestone) {
+    /* autor jak na osi Status: automat ze źródłem pozycji („GPS emtrack”, „AIS”); inaczej osoba albo „System // Watch Tower” */
+    const ch = SYSTEM_ACTOR(e.actor) ? hitChannel(e.type, p, milestone) : null;
+    const who = ch === 'AIS' ? ht(locale, 'p6b_src_AIS') : ch === 'GPS' ? posSource(p, locale) : base.who;
+    return { ...base, who, src: null, head: '', from: null, to: statusName(milestone, locale), tail: note && !MILESTONE_NOTE.test(note) ? note : null };
+  }
 
   if (e.type === 'STATUS_AUTO') {
     const from = str(p.from) ? statusName(str(p.from), locale) : null;

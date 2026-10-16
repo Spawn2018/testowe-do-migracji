@@ -17,7 +17,7 @@ import { buildTodo, visibleTodoRisks, type TodoIssue } from '../../lib/p6Todo';
 import { sampleDecisionsOf } from '../../lib/p6Source';
 import { issueTexts, type CardCtx } from '../risks/TodoCard';
 import { awizDeadline, awizMissing, awizState, dayLong, dayShort, dmHm, hourWindow, warsawDay } from '../../lib/p7Awiz';
-import { activeLeg } from '../../lib/activeDriver';
+import { activeLeg, driverPhoneView } from '../../lib/activeDriver';
 import { canFixAwizOf, pilotsOf, saveSetOf, symbolSpecOf, type SetDims } from '../../lib/p7Source';
 import { checkSet, setFieldValue, type SetKey } from '../../lib/p7bSet';
 import { whoOf } from '../../lib/p6History';
@@ -331,22 +331,25 @@ export function PanelOverview(p: Props) {
   const swap = !!r.trailerSwap;
   /* dwa odcinki tylko przy przepięciu naczepy (E6: bez przepięcia jeden kierowca „odbiór i dostawa”) */
   const twoSeg = swap;
-  const driverCard = (seg: 'one' | 'PL' | 'SE', name: string | null | undefined, tel: string | null | undefined, tractor: string | null | undefined) => {
-    const now = (seg === 'PL' && segNow === 'PL') || (seg === 'SE' && segNow === 'SE');
+  const driverCard = (seg: 'one' | 'PL' | 'SE', name: string | null | undefined, tel: string | null | undefined, tractor: string | null | undefined, country?: 'PL' | 'SE') => {
+    /* audyt-B B-12: jedyny kierowca (bez przepięcia) to ten, który teraz wiezie ładunek — pełny „Zadzwoń”;
+       dopisek „· teraz” tylko przy dwóch odcinkach (wskazuje jeden z nich) */
+    const now = seg === 'one' || (seg === 'PL' && segNow === 'PL') || (seg === 'SE' && segNow === 'SE');
     const label = pt(locale, seg === 'one' ? 'p7_seg_one' : seg === 'PL' ? 'p7_seg_pl' : 'p7_seg_se');
-    const telClean = (tel ?? '').replace(/\s+/g, '');
+    /* audyt-B B-12 / F-06: numer jak w Harmonogramie („+48 000 000 004”) — ta sama funkcja co activeDriver().display */
+    const ph = driverPhoneView(tel, country);
     return (
       <div className={`po-drv${now ? ' is-now' : ''}`} data-po-driver={seg}>
         <div className="po-drv-tx">
-          <span className="po-drv-l">{up(label)}{now ? ` · ${up(pt(locale, 'p7_seg_now'))}` : ''}</span>
+          <span className="po-drv-l">{up(label)}{now && seg !== 'one' ? ` · ${up(pt(locale, 'p7_seg_now'))}` : ''}</span>
           <span className="po-drv-v">
             <b data-content>{(name ?? '').trim() || '—'}</b>
-            {phoneOk && telClean ? <span className="mono" data-content>{` · ${tel}`}</span> : null}
+            {phoneOk && ph.dial ? <span className="mono" data-content data-po-tel>{` · ${ph.display}`}</span> : null}
             {(tractor ?? '').trim() ? <>{` · ${pt(locale, 'p7_tractor_w')} `}<b className="mono" data-content>{tractor}</b></> : null}
           </span>
         </div>
-        {phoneOk && telClean ? (
-          <a className={`btn ${now ? '' : 'ghost'} po-call`} href={`tel:${telClean}`} aria-label={ptp(locale, 'p7_call_aria', { name: (name ?? '').trim() || '—' })}>☎ {pt(locale, 'p7_call')}</a>
+        {phoneOk && ph.dial ? (
+          <a className={`btn ${now ? '' : 'ghost'} po-call`} href={`tel:${ph.dial}`} aria-label={ptp(locale, 'p7_call_aria', { name: (name ?? '').trim() || '—' })}>☎ {pt(locale, 'p7_call')}</a>
         ) : null}
       </div>
     );
@@ -417,7 +420,11 @@ export function PanelOverview(p: Props) {
   const setL = r.setLengthM ?? spec?.set.l ?? null;
   const setW = r.setWidthM ?? spec?.set.w ?? null;
   const setH = r.setHeightM ?? spec?.set.h ?? null;
-  const setSrc = r.setLengthM != null ? pt(locale, 'p7_set_own') : spec ? ptp(locale, 'p7_set_src', { sym: spec.symbol }) : pt(locale, 'p7_set_none');
+  /* audyt-B B-13: wymiary równe wierszowi tabeli symboli to zestaw „z tabeli” (jak okno Awizacja), nie „wpisane przy transporcie” */
+  const sameAsTable = !!spec && [[r.setLengthM, spec.set.l], [r.setWidthM, spec.set.w], [r.setHeightM, spec.set.h]]
+    .every(([a, b]) => a == null || Math.abs((a as number) - (b as number)) < 0.005);
+  const setOwn = r.setLengthM != null && !sameAsTable;
+  const setSrc = setOwn ? pt(locale, 'p7_set_own') : spec ? ptp(locale, 'p7_set_src', { sym: spec.symbol }) : pt(locale, 'p7_set_none');
   const cargo = [spec?.kind, spec?.symbol ?? load.itemType, ptp(locale, 'p7_qty', { n: load.qty }), `${dim(load.dims.weightT, locale)} t`].filter(Boolean).join(' · ');
 
   return (
@@ -471,17 +478,17 @@ export function PanelOverview(p: Props) {
               <>
                 {segNow === 'SE' ? (
                   <>
-                    {driverCard('SE', r.driverDeliveryName, r.driverDeliveryPhone, r.tractorDeliveryPlate)}
-                    {driverCard('PL', r.driverName, r.driverPhone, r.tractorPlate)}
+                    {driverCard('SE', r.driverDeliveryName, r.driverDeliveryPhone, r.tractorDeliveryPlate, r.driverDeliveryPhoneCountry)}
+                    {driverCard('PL', r.driverName, r.driverPhone, r.tractorPlate, r.driverPhoneCountry)}
                   </>
                 ) : (
                   <>
-                    {driverCard('PL', r.driverName, r.driverPhone, r.tractorPlate)}
-                    {driverCard('SE', r.driverDeliveryName, r.driverDeliveryPhone, r.tractorDeliveryPlate)}
+                    {driverCard('PL', r.driverName, r.driverPhone, r.tractorPlate, r.driverPhoneCountry)}
+                    {driverCard('SE', r.driverDeliveryName, r.driverDeliveryPhone, r.tractorDeliveryPlate, r.driverDeliveryPhoneCountry)}
                   </>
                 )}
               </>
-            ) : driverCard('one', r.driverName, r.driverPhone, r.tractorPlate)}
+            ) : driverCard('one', r.driverName, r.driverPhone, r.tractorPlate, r.driverPhoneCountry)}
           </div>
         ) : null}
         <dl className="po-kv" data-awiz-state={awiz}>
@@ -535,7 +542,7 @@ export function PanelOverview(p: Props) {
               key={load.id}
               loadId={load.id}
               value={setL != null && setW != null && setH != null ? { l: setL, w: setW, h: setH } : null}
-              own={r.setLengthM != null}
+              own={setOwn}
               sym={spec?.symbol ?? null}
               save={saveSetOf(role)}
               locale={locale}

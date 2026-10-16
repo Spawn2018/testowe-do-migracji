@@ -12,7 +12,8 @@ export const STATUS_TO_STAGE: Record<LoadStatus, CorridorStage> = {
   AT_PORT_SE: 'APPROACH',
   IN_TRANSIT_SE: 'SE_ROAD',
   APPROACHING_SITE: 'APPROACH',
-  UNLOADING: 'SITE',
+  /* E25 (07.10 17:46): „Rozładowany” łączy się z „Dostarczone” — ten sam etap, kolor i ETA */
+  UNLOADING: 'DELIVERED',
   DELIVERED: 'DELIVERED',
   READY_TO_INVOICE: 'DELIVERED',
   INVOICED: 'DELIVERED',
@@ -33,7 +34,7 @@ export const PROGRESS_OF: Record<LoadStatus, number> = {
   AT_PORT_SE: 0.55,
   IN_TRANSIT_SE: 0.68,
   APPROACHING_SITE: 0.88,
-  UNLOADING: 0.95,
+  UNLOADING: 1,
   DELIVERED: 1,
   READY_TO_INVOICE: 1,
   INVOICED: 1,
@@ -88,6 +89,7 @@ export function statusColor(status: LoadStatus): string {
       return 'var(--wt-plan)';
     case 'ON_FERRY':
       return 'var(--wt-ferry)';
+    case 'UNLOADING':
     case 'DELIVERED':
     case 'READY_TO_INVOICE':
     case 'INVOICED':
@@ -96,7 +98,6 @@ export function statusColor(status: LoadStatus): string {
     case 'SILENT':
       return 'var(--wt-crit)';
     case 'APPROACHING_SITE':
-    case 'UNLOADING':
       return 'var(--wt-med)';
     default:
       return 'var(--wt-ok)';
@@ -106,8 +107,9 @@ export function statusColor(status: LoadStatus): string {
 export function statusTone(status: LoadStatus): 'plan' | 'ok' | 'warn' | 'crit' | 'ferry' | 'done' {
   if (['DELAYED', 'SILENT', 'DOC_MISSING'].includes(status)) return 'crit';
   if (status === 'ON_FERRY') return 'ferry';
-  if (status === 'DELIVERED' || status === 'READY_TO_INVOICE' || status === 'INVOICED') return 'done';
-  if (['APPROACHING_SITE', 'UNLOADING', 'AT_PORT', 'AT_PORT_SE'].includes(status)) return 'warn';
+  /* E25: „Rozładowany” = „Dostarczone” (jeden kolor) */
+  if (status === 'UNLOADING' || status === 'DELIVERED' || status === 'READY_TO_INVOICE' || status === 'INVOICED') return 'done';
+  if (['APPROACHING_SITE', 'AT_PORT', 'AT_PORT_SE'].includes(status)) return 'warn';
   if (['PLANNED', 'RESOURCES_PENDING', 'READY'].includes(status)) return 'plan';
   return 'ok';
 }

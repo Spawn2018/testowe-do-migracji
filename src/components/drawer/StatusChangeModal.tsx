@@ -7,6 +7,8 @@
  * wyglad/A5 (E25 „Rozliczenie”, D-20261015-0300-01 A5): „Gotowe do fakturowania” od razu prosi o plik CMR
  * („Wgraj CMR” otwiera dzisiejsze okno „Wgraj dokument”), „Zafakturowano” pokazuje faktury SCX → HHL i HHL → KSH
  * z tym transportem i której brakuje. „Zapisz” zablokowany przy braku widocznym w danych firmy; baza sprawdza to samo.
+ * audyt-B B-04 (E25, 07.10 17:46): SCX widzi tylko bieżący i późniejsze statusy; administrator HHL może cofnąć —
+ * wtedy „Powód cofnięcia (wymagany)” i „Zapisz” nieaktywny bez powodu (lista i kierunek: `lib/statusManual.ts`).
  */
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
@@ -21,27 +23,12 @@ import { readyGapsText } from '../../lib/p4c';
 import { getAuthProfile } from '../../auth/profile';
 import { settlementGate } from '../../lib/statusSettlement';
 import { lazyRetry } from '../../lib/lazyRetry';
+import { isStepBack, manualOptions, manualStatusOf } from '../../lib/statusManual';
+import { viewedKind } from '../../lib/cockpitE9';
 import type { LoadStatus } from '../../types';
 
 const UploadDocModal = lazy(lazyRetry(() => import('../docs/UploadDocModal').then((m) => ({ default: m.UploadDocModal }))));
 const dmy = (iso: string) => formatCalendarDay(iso.slice(0, 10));
-
-const MANUAL_STATUSES: LoadStatus[] = [
-  'PLANNED',
-  'RESOURCES_PENDING',
-  'DOC_MISSING',
-  'READY',
-  'LOADING',
-  'IN_TRANSIT_PL',
-  'AT_PORT',
-  'ON_FERRY',
-  'AT_PORT_SE',
-  'IN_TRANSIT_SE',
-  'APPROACHING_SITE',
-  'DELIVERED',
-  'READY_TO_INVOICE',
-  'INVOICED',
-];
 
 export function StatusChangeModal({
   loadId,
@@ -65,7 +52,8 @@ export function StatusChangeModal({
   const bills = useTowerStore((s) => s.bills);
   const phone = useIsPhone();
   const [upload, setUpload] = useState(false);
-  const [status, setStatus] = useState<LoadStatus>(current === 'UNLOADING' ? 'DELIVERED' : current);
+  /* E25: „Rozładowany” = „Dostarczone”; „Opóźniony” / „Brak GPS” — status z etapu (oznaczenia, nie statusy) */
+  const [status, setStatus] = useState<LoadStatus>(() => manualStatusOf(current, load?.stage));
   /* data i godzina osobno — wyczyszczenie jednego pola nie zeruje drugiego; łączone w `whenLocal` przy zapisie */
   const [date, setDate] = useState(() => isoToDatetimeLocalValue(getNowIso(), TZ_OPS).slice(0, 10));
   const [time, setTime] = useState(() => isoToDatetimeLocalValue(getNowIso(), TZ_OPS).slice(11, 16));
@@ -73,6 +61,8 @@ export function StatusChangeModal({
   const [busy, setBusy] = useState(false);
   /* B10 / E25: anulowanie — tylko Administrator HHL z powodem */
   const canCancel = getAuthProfile()?.role === 'HHL_ADMIN';
+  /* audyt-B B-04 (E25, 07.10 17:46): SCX tylko do przodu; cofnięcie — administrator HHL (w demo HHL bez profilu Operacji), z powodem */
+  const hhlAdmin = role === 'HHL' && viewedKind(role, getAuthProfile()?.role ?? null) === 'HHL_ADMIN';
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -87,10 +77,14 @@ export function StatusChangeModal({
     return () => window.removeEventListener('keydown', onKey, true);
   }, [onClose, upload]);
 
-  const options = useMemo(() => {
-    const list = canCancel ? [...MANUAL_STATUSES, 'CANCELLED' as LoadStatus] : MANUAL_STATUSES;
-    return list.map((s) => ({ s, label: statusLabel(s, undefined, locale) }));
-  }, [locale, canCancel]);
+  const options = useMemo(
+    () => manualOptions(current, load?.stage, { hhlAdmin, canCancel }).map((s) => ({ s, label: statusLabel(s, undefined, locale) })),
+    [locale, canCancel, hhlAdmin, current, load?.stage],
+  );
+  const back = isStepBack(status, current, load?.stage);
+  /* powód wymagany przy cofnięciu i anulowaniu — pole obowiązkowe, „Zapisz” nieaktywny bez powodu */
+  const reasonNeeded = back || status === 'CANCELLED';
+  const reasonMissing = reasonNeeded && !note.trim();
 
   /* „Teraz: … od …” i podpowiedź z GPS — z dziennika zdarzeń transportu (bez zapytań) */
   const events = useMemo(() => allEvents.filter((e) => e.loadId === loadId), [allEvents, loadId]);
@@ -106,12 +100,16 @@ export function StatusChangeModal({
   const gapText = gaps?.length ? readyGapsText(gaps, locale) : null;
   /* wyglad/A5: plik CMR przy „Gotowe do fakturowania”, obie faktury przy „Zafakturowano” */
   const settle = useMemo(() => settlementGate(status, loadId, role, documents, bills), [status, loadId, role, documents, bills]);
-  const blocked = readyBlocked || !!settle?.blocked;
+  const blocked = readyBlocked || !!settle?.blocked || reasonMissing || (back && !hhlAdmin);
   const canUpload = role === 'HHL' || role === 'SCX';
 
   function save(e: React.FormEvent) {
     e.preventDefault();
     if (busy || blocked) return;
+    if (back && !hhlAdmin) {
+      pushToast(t(locale, 'p4b_m_rules_nodate'), 'HIGH', loadId);
+      return;
+    }
     if (status === 'CANCELLED') {
       if (!canCancel) {
         pushToast('Anulowanie — tylko Administrator HHL', 'HIGH', loadId);
@@ -278,14 +276,23 @@ export function StatusChangeModal({
               {t(locale, phone ? 'p4b_m_delivered_info_ph' : 'p4b_m_delivered_info')}
             </div>
           ) : null}
+          {back ? (
+            <div className="scm-info bad" data-status-back role="status">
+              {tp(locale, 'p4b_m_back_info', { from: nowName, to: statusLabel(status, undefined, locale) })}
+            </div>
+          ) : null}
           {/* notatka także na telefonie: cofnięcie i anulowanie wymagają powodu (E25) */}
           <label className="form-field">
-            <span>{t(locale, 'p4b_m_note')}</span>
+            <span>{t(locale, back ? 'p4b_m_reason_back' : status === 'CANCELLED' ? 'p4b_m_reason_cancel' : 'p4b_m_note')}</span>
             <input
               className="input"
+              id="scm-note"
               data-status-note
+              data-status-reason={reasonNeeded ? 'required' : undefined}
               value={note}
-              placeholder={t(locale, 'p4b_m_note_ph')}
+              required={reasonNeeded}
+              aria-required={reasonNeeded || undefined}
+              placeholder={t(locale, reasonNeeded ? 'p4b_m_reason_ph' : 'p4b_m_note_ph')}
               onChange={(e) => setNote(e.target.value)}
             />
           </label>
@@ -303,7 +310,7 @@ export function StatusChangeModal({
               className="btn"
               data-status-save
               disabled={busy || blocked}
-              aria-describedby={readyBlocked ? 'scm-ready-gaps' : settle?.blocked ? 'scm-settle' : undefined}
+              aria-describedby={readyBlocked ? 'scm-ready-gaps' : settle?.blocked ? 'scm-settle' : reasonMissing ? 'scm-note' : undefined}
             >
               {t(locale, phone ? 'p4b_m_save_ph' : 'p4b_m_save')}
             </button>

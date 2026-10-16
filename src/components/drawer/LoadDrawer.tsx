@@ -233,7 +233,7 @@ export function LoadDrawer() {
         </div>
 
         {/* E27 pkt 5 (E1-2): pasek śledzenia nad zakładkami */}
-        <TrackingBar load={load} events={loadEvents} label={transportLabel(load, role, 'plain')} locale={locale} nowIso={nowIso} trackingLink={trackingLink} />
+        <TrackingBar load={load} events={loadEvents} locale={locale} nowIso={nowIso} trackingLink={trackingLink} />
 
         {/* wyglad/P5-c (E10, axe): zakładki jako lista zakładek — `aria-selected` dozwolone tylko przy roli „tab” */}
         <div className="dtabs" role="tablist" aria-label={transportLabel(load, role, 'plain')}>

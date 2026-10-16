@@ -2,7 +2,7 @@
  * wyglad/E6-tel — „Zadzwoń” wybiera kierowcę, który teraz wykonuje transport (właściciel 16.10.2026, 13:34; E6).
  */
 import { describe, expect, it } from 'vitest'
-import { activeDriver, activeLeg } from '../src/lib/activeDriver'
+import { activeDriver, activeLeg, driverPhoneView } from '../src/lib/activeDriver'
 
 const res = (o: Record<string, unknown> = {}) => ({
   driverName: 'Jan Odbiór', driverPhone: '501 111 222', tractorPlate: 'PO 1111A',
@@ -52,5 +52,20 @@ describe('activeDriver', () => {
   it('numer krajowy SE z krajem SE → +46', () => {
     const d = activeDriver(load('IN_TRANSIT_SE', 'SE_ROAD', { driverDeliveryPhone: '070 123 45 67', driverDeliveryPhoneCountry: 'SE' }))
     expect(d.dial).toBe('+46701234567')
+  })
+})
+
+describe('driverPhoneView (audyt-B B-12 / F-06: panel jak Harmonogram)', () => {
+  it('numer z bazy → „+48 000 000 004”, link bez spacji', () => {
+    expect(driverPhoneView('+48000000004')).toEqual({ display: '+48 000 000 004', dial: '+48000000004' })
+    expect(driverPhoneView('+46701740605')).toEqual({ display: '+46 701 740 605', dial: '+46701740605' })
+  })
+  it('ten sam wynik co activeDriver().display', () => {
+    const d = activeDriver(load('IN_TRANSIT_PL', 'TO_PORT'))
+    expect(driverPhoneView('501 111 222').display).toBe(d.display)
+  })
+  it('pusty numer → brak', () => {
+    expect(driverPhoneView('  ')).toEqual({ display: null, dial: null })
+    expect(driverPhoneView(null)).toEqual({ display: null, dial: null })
   })
 })

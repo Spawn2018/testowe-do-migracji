@@ -81,15 +81,22 @@ tbody tr.is-cancel td{color:var(--ink-3)}
 /* „Widok skrócony” (E30 pkt 1): 8 kolumn w 1154 px, tekst się zawija */
 .s7-short{width:100%}
 .s7-short td{white-space:normal}
-.s7-short th[data-col="transport"]{width:13%}
-.s7-short th[data-col="cargo"]{width:13%}
-.s7-short th[data-col="dates"]{width:10%}
-.s7-short th[data-col="status"]{width:10%}
-.s7-short th[data-col="crew"]{width:13%}
-.s7-short th[data-col="phone"]{width:12%}
-.s7-short th[data-col="eta"]{width:8%}
-.s7-short th[data-col="docs"]{width:10%}
-.s7-short th[data-col="money"]{width:11%}
+.s7-short:not(.is-wide) th[data-col="transport"]{width:13%}
+.s7-short:not(.is-wide) th[data-col="cargo"]{width:13%}
+.s7-short:not(.is-wide) th[data-col="dates"]{width:10%}
+.s7-short:not(.is-wide) th[data-col="status"]{width:10%}
+.s7-short:not(.is-wide) th[data-col="crew"]{width:13%}
+.s7-short:not(.is-wide) th[data-col="phone"]{width:12%}
+.s7-short:not(.is-wide) th[data-col="eta"]{width:8%}
+.s7-short:not(.is-wide) th[data-col="docs"]{width:10%}
+.s7-short:not(.is-wide) th[data-col="money"]{width:11%}
+/* audyt-B B-02 (E20): z kolumnami z „Kolumny” — szerokości w px (colgroup), przewijanie w bok, „Transport” przyklejony */
+.s7-short.is-wide{min-width:100%}
+.s7-short.is-wide th[data-col="transport"],.s7-short.is-wide td[data-col="code"]{position:sticky;left:0;border-right:2px solid var(--rule)}
+.s7-short.is-wide th[data-col="transport"]{top:auto;z-index:3;background:var(--surface-2)}
+.s7-short.is-wide td[data-col="code"]{z-index:1;background:var(--surface)}
+.s7-short.is-wide tbody tr:hover td[data-col="code"]{background:var(--surface-2)}
+.s7-short.is-wide tbody tr.hl td[data-col="code"]{background:var(--amber-bg)}
 
 .s7-note{margin:0;border-top:1px solid var(--rule-2)}
 

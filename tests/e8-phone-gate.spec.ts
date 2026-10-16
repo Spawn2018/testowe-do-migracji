@@ -1022,6 +1022,86 @@ test.describe('wyglad/P7-c Harmonogram w układzie pliku (E38, E30, E20)', () =>
     await expect(rows(page)).toHaveCount(total);
   });
 
+  /* audyt-B B-02 (E20 08.10: „przyklejony jest tylko »Transport«… nic nie zasłania innej kolumny”; E30 pkt 1 „Kolumny”):
+     przy 1280 px z 2 i z 6 dodanymi kolumnami każda kolumna ma szerokość, kolumny się nie nakładają, tabela przewija się
+     w bok, a „Transport” zostaje na miejscu. */
+  test('komputer 1280, HHL: widok skrócony + 2 i 6 kolumn z „Kolumny” — szerokość > 0, bez nakładania, „Transport” przyklejony', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'sched');
+    await page.locator('[data-sched-short]').click();
+    const wrap = page.locator('[data-sched-layout="short"]');
+    const check = async (n: number) => {
+      const ths = await wrap.locator('thead th').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { col: e.getAttribute('data-col'), x: r.x, w: r.width }; }));
+      expect(ths, `${n} dodanych`).toHaveLength(9 + n);
+      for (const t of ths) expect(t.w, `${t.col} > 0 px`).toBeGreaterThan(40);
+      for (let i = 1; i < ths.length; i++) expect(ths[i].x, `${ths[i].col} za ${ths[i - 1].col}`).toBeGreaterThanOrEqual(ths[i - 1].x + ths[i - 1].w - 1);
+      expect(await wrap.evaluate((w) => w.scrollWidth > w.clientWidth + 1), 'przewijanie w bok').toBe(true);
+      const cell = wrap.locator('tbody tr[data-load] td[data-col="code"]').first();
+      const before = await cell.boundingBox();
+      await wrap.evaluate((w) => { w.scrollLeft = w.scrollWidth; });
+      await page.waitForTimeout(150);
+      const after = await cell.boundingBox();
+      expect(Math.abs((after?.x ?? 0) - (before?.x ?? 0)), '„Transport” przyklejony').toBeLessThan(1);
+      /* przyklejona kolumna nie zasłania tekstu sąsiedniej: pierwsza widoczna za nią komórka zaczyna się za jej prawą krawędzią */
+      const cover = await wrap.evaluate((w) => {
+        const row = w.querySelector('tbody tr[data-load]')!;
+        const stick = row.querySelector('td[data-col="code"]')!.getBoundingClientRect();
+        const next = [...row.querySelectorAll('td')].slice(1).map((td) => td.getBoundingClientRect()).find((r) => r.right > stick.right + 1);
+        return next ? next.right - stick.right : 1;
+      });
+      expect(cover).toBeGreaterThan(0);
+      await wrap.evaluate((w) => { w.scrollLeft = 0; });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth), 'strona bez przewijania w bok').toBeLessThanOrEqual(1280);
+    };
+    await page.locator('[data-sched-cols]').click();
+    for (const c of ['ordHhl', 'trailer']) await page.locator(`[data-col-toggle="${c}"] input`).check();
+    await page.keyboard.press('Escape');
+    await check(2);
+    await page.locator('[data-sched-cols]').click();
+    for (const c of ['ordScx', 'tractor', 'sailing', 'cost']) await page.locator(`[data-col-toggle="${c}"] input`).check();
+    await page.keyboard.press('Escape');
+    await check(6);
+    await page.locator('[data-sched-more]').click();
+    await page.locator('[data-action="reset-cols"]').click();
+  });
+
+  /* audyt-B B-14 (E6; 16.10, 13:34–13:58): transport z przepięciem naczepy w Szwecji (demo T-01, „Droga SE”) —
+     w Harmonogramie numer kierowcy odcinka SE z dopiskiem „kierowca SE · teraz”, na telefonie „Zadzwoń” do niego,
+     w panelu dwa odcinki, SE pierwszy i wyróżniony. */
+  test('przepięcie naczepy (T-01): numer kierowcy SE w Harmonogramie, karcie i panelu', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await openView(page, 'sched');
+    const row = () => page.locator('[data-sched-layout] tbody tr[data-load]').filter({ has: page.locator('td[data-col="code"]', { hasText: /^T-01\b/ }) });
+    for (const view of ['file', 'short'] as const) {
+      if (view === 'short') await page.locator('[data-sched-short]').click();
+      await expect(page.locator(`[data-sched-layout="${view}"]`)).toBeVisible();
+      const tel = row().locator('td[data-col="phone"] a[data-tel-active]');
+      await expect(tel, view).toHaveAttribute('data-tel-active', 'SE');
+      await expect(tel, view).toHaveText('+46 701 740 615');
+      await expect(tel, view).toHaveAttribute('href', 'tel:+46701740615');
+      await expect(row().locator('td[data-col="phone"] [data-tel-leg]'), view).toHaveText('kierowca SE · teraz');
+    }
+    await row().locator('td[data-col="code"]').click();
+    await page.waitForSelector('aside.drawer [data-overview]');
+    const drv = page.locator('.drawer [data-po-driver]');
+    await expect(drv).toHaveCount(2);
+    await expect(drv.first()).toHaveAttribute('data-po-driver', 'SE');
+    await expect(drv.first()).toHaveClass(/is-now/);
+    await expect(drv.first()).toContainText('Henrik Lund · +46 701 740 615');
+    await expect(drv.nth(1)).toContainText('Tomasz Wójcik · +48 000 000 003');
+    await expect(drv.first().locator('a.po-call')).toHaveAttribute('href', 'tel:+46701740615');
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', true);
+    await openView(page, 'sched');
+    const card = page.locator('[data-sched-cards] [data-code="T-01"]');
+    await expect(card.locator('[data-card-driver]')).toHaveAttribute('data-card-driver', 'SE');
+    await expect(card.locator('[data-card-call="SE"]')).toHaveAttribute('href', 'tel:+46701740615');
+    await expect(card.locator('[data-card-vehicle]')).toContainText('BDN 417');
+  });
+
   test('komputer 1440: KSH bez kolumn numerów i z „Twoja cena”, SCX z „Moja stawka”', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'KSH');
@@ -1940,6 +2020,39 @@ test.describe('wyglad/P4-b panel transportu — Status E25 (img/e25-after), pase
     await expect(page.locator('.drawer .sax-who')).toBeVisible();
   });
 
+  /* audyt-B B-04 (E25, 07.10 17:46): SCX zmienia status tylko do przodu; cofnięcie — administrator HHL, z powodem
+     (pole obowiązkowe, „Zapisz status” nieaktywny bez powodu). SG-03 = „Na promie”. */
+  test('okno „Zmień status”: SCX bez statusów wcześniejszych; HHL cofa tylko z powodem', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'SCX');
+    await openLoad(page, 'SG-03');
+    await statusTab(page);
+    await page.locator('.drawer [data-action="change-status"]').click();
+    const modal = page.locator('[data-status-change-modal]');
+    const opts = await modal.locator('[data-status-select] option').evaluateAll((els) => els.map((e) => (e as HTMLOptionElement).value));
+    expect(opts[0]).toBe('ON_FERRY');
+    expect(opts).not.toContain('PLANNED');
+    expect(opts).not.toContain('AT_PORT');
+    await expect(modal.locator('[data-status-note]')).not.toHaveAttribute('required', '');
+    await modal.getByRole('button', { name: 'Anuluj' }).click();
+
+    await boot(page, 'HHL');
+    await openLoad(page, 'SG-03');
+    await statusTab(page);
+    await page.locator('.drawer [data-action="change-status"]').click();
+    await modal.locator('[data-status-select]').selectOption('AT_PORT');
+    await expect(modal.locator('[data-status-back]')).toBeVisible();
+    await expect(modal.locator('label.form-field', { has: page.locator('[data-status-note]') })).toContainText('Powód cofnięcia (wymagany)');
+    await expect(modal.locator('[data-status-note]')).toHaveAttribute('data-status-reason', 'required');
+    await expect(modal.locator('[data-status-save]')).toBeDisabled();
+    await modal.locator('[data-status-note]').fill('status ustawiony omyłkowo');
+    await expect(modal.locator('[data-status-save]')).toBeEnabled();
+    await modal.locator('[data-status-select]').selectOption('IN_TRANSIT_SE');
+    await expect(modal.locator('[data-status-back]')).toHaveCount(0);
+    await expect(modal.locator('label.form-field', { has: page.locator('[data-status-note]') })).toContainText('Notatka (opcjonalnie)');
+    await modal.getByRole('button', { name: 'Anuluj' }).click();
+  });
+
   for (const width of [360, 390, 430]) {
     test(`telefon ${width}: oś od „W trasie”, „Przygotowanie” zwinięte; „Zmień status” nad dolnym paskiem; okno jako arkusz od dołu`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });
@@ -2402,7 +2515,9 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
     await expect(page.locator('.drawer [data-dates-origin]')).toContainText('z harmonogramu KSH');
     await expect(page.locator('.drawer [data-dates-origin]')).not.toContainText('potwierdził');
     await expect(page.locator('.drawer [data-awiz-state]')).toHaveAttribute('data-awiz-state', 'none');
-    await expect(page.locator('.drawer [data-po-set]')).toContainText('× 2,50 m');
+    /* audyt-B B-13: zestaw z tabeli symboli (jak okno Awizacja) — SG: 21,69 × 2,45 × 3,75 m */
+    await expect(page.locator('.drawer [data-po-set]')).toContainText('21,69 × 2,45 × 3,75 m');
+    await expect(page.locator('.drawer [data-po-set]')).toContainText('z tabeli HHL (SG)');
     await expect(page.locator('.drawer [data-po-permit-kind="FIRMA"]')).toBeVisible();
     /* E32 pkt 2 / E9 krok 5: numer HHL wpisuje HHL w „Numerach zleceń”, bez okna Awizacja */
     await expect(page.locator('.drawer [data-order="hhl"] input')).toBeVisible();
@@ -2530,6 +2645,8 @@ test.describe('wyglad/P5 panel transportu — Ceny (E33) i Dokumenty (E31 pkt 5)
     await openTab(page, 'SG-03', 3);
     await expect(page.locator('.drawer [data-pp-table] thead th')).toHaveText([/.*/, 'KOSZT · SCX', 'PRZYCHÓD · KSH']);
     await expect(page.locator('.drawer [data-pp-row]')).toHaveCount(4);
+    /* audyt-B B-06 (E33): „Dopłaty” = suma listy dopłat — w demo żadna nie jest dodana */
+    await expect(page.locator('.drawer [data-pp-row="fees"] td.num')).toHaveText(['0,00', '0,00']);
     await expect(page.locator('.drawer [data-pp-margin]')).toContainText('%');
     await expect(page.locator('.drawer [data-pp-fuel]')).toBeVisible();
     await expect(page.locator('.drawer [data-fee]')).toHaveCount(3);
