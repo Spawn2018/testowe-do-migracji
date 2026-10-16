@@ -2345,7 +2345,7 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
     const order = await page.locator('.drawer [data-overview] [data-po]').evaluateAll((els) => els.map((e) => e.getAttribute('data-po')));
     expect(order).toEqual(['plan', 'awiz', 'cargo', 'numbers', 'docs']);
     await expect(page.locator('.drawer [data-route-check], .drawer [data-corridor-obstacles], .drawer [data-plan-dates], .drawer .banner[data-permit]')).toHaveCount(0);
-    await expect(page.locator('.drawer [data-load-when]')).toContainText('sob 17.10.2026');
+    await expect(page.locator('.drawer [data-load-when]')).toContainText('sob. 17.10.2026, 08:00–16:00');
     await expect(page.locator('.drawer [data-dates-origin]')).toContainText('z harmonogramu KSH');
     await expect(page.locator('.drawer [data-dates-origin]')).not.toContainText('potwierdził');
     await expect(page.locator('.drawer [data-awiz-state]')).toHaveAttribute('data-awiz-state', 'none');

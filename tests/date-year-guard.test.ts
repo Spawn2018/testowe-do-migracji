@@ -47,6 +47,7 @@ function ok(s: string): void {
   expect(s, s).not.toMatch(DATE_NO_YEAR);
   expect(s, s).not.toMatch(/(?<![\d:])\d:\d{2}(?!\d)/); // „8:05”
   expect(s, s).not.toMatch(/\b24:\d{2}\b/);
+  expect(s, s).not.toMatch(/\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}/); // data z godziną zawsze „16.10.2026, 08:05”
 }
 
 describe('(a) formatery widoku: rok zawsze, GG:MM', () => {
@@ -172,12 +173,12 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-/** Każda data `d.mm`/`dd.mm` bez `.rrrr` i każda godzina „8:05” w literałach tekstu (bez komentarzy i ścieżek importu). */
+/** Każda data `d.mm`/`dd.mm` bez `.rrrr`, godzina „8:05” i data z godziną bez przecinka w literałach tekstu (bez komentarzy i ścieżek importu). */
 function textHits(file: string): { file: string; line: number; token: string; text: string }[] {
   const src = readFileSync(file, 'utf8');
   const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const out: { file: string; line: number; token: string; text: string }[] = [];
-  const re = /(?<![\d.])\d{1,2}\.\d{2}(?![\d])(?!\.\d{4})|(?<![\d:.])\d:\d{2}(?!\d)/g;
+  const re = /(?<![\d.])\d{1,2}\.\d{2}(?![\d])(?!\.\d{4})|(?<![\d:.])\d:\d{2}(?!\d)|\d{2}\.\d{2}\.\d{4} \d{1,2}:\d{2}/g;
   const visit = (n: ts.Node): void => {
     let text: string | null = null;
     if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n) || ts.isTemplateHead(n) || ts.isTemplateMiddle(n) || ts.isTemplateTail(n) || ts.isJsxText(n)) {
