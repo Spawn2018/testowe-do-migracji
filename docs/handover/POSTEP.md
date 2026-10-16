@@ -2660,6 +2660,12 @@ C13 ✅ — koordynator, #271 (D-20261016-2005-01).
 
 **DOPISEK 2005 WŁĄCZONY — commit (ten docs), kolejka #270 → #271; C13 ✅ (koordynator).**
 
+D-20261016-2045-01: kolejka #272 (`wyglad/J4-ocena`, na `main`). #270 i #271 scalone.
+J4 ✅ (koordynator) — „Ocena przewoźników” w Kokpicie, PR #272.
+P5 przy C17: `carrier_scorecard` i `carrier_rate_load` biorą `UNLOADED`, `DELIVERED`, `READY_TO_INVOICE`, `INVOICED`. Dzień rozładunku: `(actual_delivery_at at time zone 'Europe/Warsaw')::date`. Test: `INVOICED` liczony i ocenialny; `CANCELLED` nie; KSH odmowa; granica północy.
+
+**DOPISEK 2045 WŁĄCZONY — commit (ten docs), kolejka #272; carrier_scorecard / carrier_rate_load + READY_TO_INVOICE, INVOICED i dzień w czasie polskim → P5 (C17); J4 ✅.**
+
 **DOPISEK 1410 WŁĄCZONY — commit `5666bcf4`, VAT 23 % i Polisa HHL → P5, daty DD.MM.RRRR → C6/P8/P5/P11, prom → kierowca SE, telefon w Harmonogramie, W46 i W47 zamknięte.**
 
 ## 2026-10-16 — scalenie #209
