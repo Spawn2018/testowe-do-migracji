@@ -122,3 +122,5 @@ tbody tr.is-cancel td{color:var(--ink-3)}
   .s7-more{min-width:220px}
   .s7-more button{min-height:44px}
 }
+/* wyglad/P7-e (W13 zasada 15): plik KSH nie odczytany od ponad 30 min */
+.sub.s7-sync-down{color:var(--red);font-weight:600}

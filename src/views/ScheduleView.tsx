@@ -38,6 +38,7 @@ import { standardSkipMessage } from '../lib/standardSkipMessage';
 import { plPlural } from '../lib/plPlural';
 import { StageBar, StageChip } from '../components/shell/StageBar';
 import { useIsPhone } from '../lib/useIsPhone';
+import { kshSyncLine, kshSyncOf } from '../lib/kshSyncView';
 
 /** I-1: import w produkcji przez import_schedule() w bazie (podgląd i zapis w jednej transakcji). */
 const SERVER_IMPORT = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED;
@@ -204,7 +205,12 @@ export function ScheduleView() {
       ? tp(locale, 'i1_ver_line', { v: ver.by.replace(/^v/, ''), at: fmtDateTime(ver.at) })
       : t(locale, 'i1_ver_none')
     : tp(locale, 'i1_ver_line', { v: DEMO_FILE_VER.v, at: fmtDateTime(DEMO_FILE_VER.at) })) + skippedNote;
-  const verTitle = SERVER_IMPORT && ver?.filename ? ver.filename : undefined;
+  const verTitle0 = SERVER_IMPORT && ver?.filename ? ver.filename : undefined;
+  /* wyglad/P7-e (W13 zasada 15, D-20261016-1230-01 pkt 5.6): gdy wykonawca poda stan synchronizacji — „Plik KSH (SharePoint): zsynchronizowano …” */
+  const kshSync = useTowerStore((s) => kshSyncOf(s));
+  const syncLine = kshSync ? kshSyncLine(kshSync, getNowIso()) : null;
+  const fileLine = syncLine ? syncLine.text : verLine;
+  const verTitle = syncLine ? syncLine.title : verTitle0;
 
   const mapKeys = activeMap ? Object.entries(activeMap) : Object.entries(COLUMN_MAP_DEFAULT);
 
@@ -435,7 +441,7 @@ export function ScheduleView() {
     <div className="panel section-card page-sections" data-page="schedule" style={{ margin: 12, display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
       <div className="panel-hd s7-hd" style={{ flexWrap: 'wrap' }}>
         <h2>{t(locale, 'nav_sched')}</h2>
-        <span className="sub" data-sched-file title={verTitle}>{verLine}</span>
+        <span className={`sub${syncLine?.tone === 'down' ? ' s7-sync-down' : ''}`} data-sched-file data-ksh-sync={syncLine?.tone} title={verTitle}>{fileLine}</span>
         <LiveMark />
         <div className="spacer" />
         {schedTabs}

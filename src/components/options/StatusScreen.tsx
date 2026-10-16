@@ -15,6 +15,8 @@ import { formatListDateTime } from '../../lib/format';
 import { TZ_OPS } from '../../lib/time';
 import { hm } from '../../lib/p9cMap';
 import { LiveMark } from '../shell/LiveMark';
+import { kshSyncOf, kshSyncSourceRow } from '../../lib/kshSyncView';
+import { useTowerStore } from '../../store/useTowerStore';
 import {
   appErrors, checkSource, otherJobs, perfResults, saveSourceThreshold, securityRows, sourceHealth, sourceThresholds, sysActionsReady,
   type AppErrors, type CheckResult, type ErrorGroup, type SourceRow, type SourceState, type SourceThreshold,
@@ -414,7 +416,10 @@ function PerfView({ locale, nowIso }: { locale: Locale; nowIso: string }) {
 export function StatusScreen({ locale, nowIso, admin, mark }: { locale: Locale; nowIso: string; admin: boolean; mark?: ReactNode }) {
   const [tab, setTab] = useState<SysTab>('sources');
   const phone = useIsPhone();
-  const rows = sourceHealth(nowIso);
+  /* wyglad/P7-e (W13 zasady 15–16): wiersz „Plik KSH (SharePoint)”, gdy wykonawca poda stan synchronizacji */
+  const kshSync = useTowerStore((s) => kshSyncOf(s));
+  const rows0 = sourceHealth(nowIso);
+  const rows = rows0 && kshSync ? [kshSyncSourceRow(kshSync, nowIso), ...rows0] : rows0;
   const errs = appErrors(nowIso);
   if (!rows) return null;
   const tabs: SysTab[] = ['sources', ...(errs ? ['errors' as const] : []), ...(admin && securityRows(nowIso) ? ['security' as const] : []), 'perf'];

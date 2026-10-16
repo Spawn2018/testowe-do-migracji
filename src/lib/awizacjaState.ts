@@ -93,7 +93,8 @@ export function awizacjaDuplicateWarning(
   if (!driver && !plate) return null;
   const hit = loads.find((l) => {
     if (l.id === selfId) return false;
-    if (l.status === 'DELIVERED') return false;
+    /* E25 / audyt-B B-03: „Rozładowany” = „Dostarczone” — kierowca i ciągnik są wolni */
+    if (l.status === 'DELIVERED' || l.status === 'UNLOADING') return false;
     const sameDriver = driver && l.resources.driverName?.trim().toLowerCase() === driver;
     const samePlate = plate && l.resources.tractorPlate?.trim().toUpperCase() === plate;
     return Boolean(sameDriver || samePlate);

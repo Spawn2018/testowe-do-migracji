@@ -66,10 +66,10 @@ export function withSides(m: LoadMoneyV2, cost: MoneySideV2, rev: MoneySideV2): 
   return { v: 2, tier: leastTier(cost.tier, rev.tier), cost, rev };
 }
 
-/** Rzeczywisty rozładunek (UTC) — v2; demo: DELIVERED bez daty → koniec okna rozładunku. */
+/** Rzeczywisty rozładunek (UTC) — v2; demo: DELIVERED (i „Rozładowany” = Dostarczone, E25 / audyt-B B-03) bez daty → koniec okna rozładunku. */
 export function unloadedAtOf(load: Load): string | null {
   if (load.unloadedAt) return load.unloadedAt;
-  if (load.status !== 'DELIVERED') return null;
+  if (load.status !== 'DELIVERED' && load.status !== 'UNLOADING') return null;
   return load.awizacja?.unloadWindowEnd ?? (load.plannedDeliverDate ? `${load.plannedDeliverDate}T12:00:00+02:00` : null);
 }
 
