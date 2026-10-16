@@ -2621,6 +2621,19 @@ Kolejka bez dni: #260 → #209 → #231 → #247 → #261 → kolejne PR koordyn
 
 **DOPISEK 1345 WŁĄCZONY — commit `a33fe408`, kolejka bez dni (#260 → #209 → #231 → #247 → #261), E6 Zadzwoń → P7, pkt 3 → P5, P6, P9, C3, C8, P8; W46, W47 w §5.**
 
+D-20261016-1410-01:
+1. VAT 23 % z netto → P5 E4 (`register_invoice`, PDF, paczka; test).
+2. „Polisa HHL” → P5 D2; W46 zamknięte.
+3. Waluta faktury PLN albo EUR zapisana przy fakturze → P5 E4.
+4. Daty DD.MM.RRRR i godziny GG:MM → C6, P8 E43, P5, strażnik P11; wygląd #262 (szkic).
+5. W czasie promu kierowca SE → P7 E32; test na TEST: „Prom” → kierowca SE.
+6. Kolumna „Telefon kierowcy” i „☎ Zadzwoń” → wygląd #261; eksport XLSX z serwera w P7.
+7. KSH i SCX same ustawiają kanały → C3/C4; W47 zamknięte.
+
+Kolejka bez dni: #209 → #231 → #247 → #261 → #262 (gdy gotowy) → kolejne PR koordynatora.
+
+**DOPISEK 1410 WŁĄCZONY — commit (ten docs), VAT 23 % i Polisa HHL → P5, daty DD.MM.RRRR → C6/P8/P5/P11, prom → kierowca SE, telefon w Harmonogramie, W46 i W47 zamknięte.**
+
 E30 pkt 7 Rejsy → wygląd (P7-d).
 
 P7 — uzupełnienie W13:

@@ -268,4 +268,6 @@ Polecenie kazało przepisać D-66–D-76 dosłownie z `ZLECENIE_POPRAWKI_02_10.m
 | E49 | wiatr a ETA, objazd | E49 zaakceptowane: SMHI, progi 20/25 m/s, sprawa SCX „Objazd czy postój?”, śliskość lokalnie; D-84 = 20 m/s; W19 zamknięte | ✅ 16.10.2026, 02:08 (D-20261016-0230-01) |
 | E17 (07.10, 20:57) | Czat | wykonanie: D-20261016-0250-01 + 0310-01 + 0315-01 (P6 Cz1–Cz33; C3 Cz13/Cz25) | ⏳ P6 / C3 |
 | D-21 | wymóg zezwoleń | zastąpione przez E31 i L6 (D-20261016-0200-01 Z1 pkt 7) | 🔁 16.10.2026 |
+| E21 | format daty i godziny | data zawsze DD.MM.RRRR, godzina GG:MM (16.10, 13:58) | ✅ D-20261016-1410-01 |
+| E6 | dzwonienie przy przepięciu naczepy | w czasie promu kierowca SE (16.10, 13:58) | ✅ D-20261016-1410-01 |
 
