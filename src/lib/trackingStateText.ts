@@ -1,5 +1,6 @@
 /**
  * B9 / E27 pkt 5 — ten sam stan śledzenia w panelu (TrackingBar) i w PDF transportu.
+ * W PDF (poza panelem) przed tekstem stoi nazwa transportu; w panelu nie (audyt-B B-15 — nazwa jest w nagłówku panelu).
  */
 import type { Load, LoadEvent, Locale, TrackingLinkInfo } from '../types';
 import { t, tp } from '../i18n/messages';
@@ -52,7 +53,7 @@ export function trackingStateLines(
         ? tracker
         : null,
     ].filter(Boolean).join(' · ');
-    return { head: tp(locale, 'p4b_trk_before', { code: label, day: dayOnly(load.plannedLoadDate) }), sub };
+    return { head: `${label} · ${tp(locale, 'p4b_trk_before', { day: dayOnly(load.plannedLoadDate) })}`, sub };
   }
 
   if (phase === 'on') {
@@ -71,7 +72,7 @@ export function trackingStateLines(
   }
 
   if (load.status === 'CANCELLED') {
-    return { head: tp(locale, 'p4b_trk_cancelled', { code: label }), sub: '' };
+    return { head: `${label} · ${t(locale, 'p4b_trk_cancelled')}`, sub: '' };
   }
 
   const axis = buildStatusAxis(load, events);
@@ -84,7 +85,7 @@ export function trackingStateLines(
     purge ? tp(locale, 'p4b_trk_after_purge', { day: dayOnly(purge) }) : null,
   ].filter(Boolean).join(' · ');
   return {
-    head: done ? tp(locale, 'p4b_trk_after', { code: label, at: dayTime(done) }) : tp(locale, 'p4b_trk_after_nodate', { code: label }),
+    head: `${label} · ${done ? tp(locale, 'p4b_trk_after', { at: dayTime(done) }) : t(locale, 'p4b_trk_after_nodate')}`,
     sub,
   };
 }

@@ -51,7 +51,9 @@ describe('komórki', () => {
   });
   it('ETA Boden: „dostarczono”, „na placu”, „–” przed wyjazdem', () => {
     expect(etaText({ status: 'DELIVERED', stage: 'DELIVERED', etaBoden: null, etaPreLoad: false })).toBe('done');
-    expect(etaText({ status: 'UNLOADING', stage: 'SITE', etaBoden: 'x', etaPreLoad: false })).toBe('site');
+    /* E25 (07.10 17:46): „Rozładowany” łączy się z „Dostarczone” → „dostarczono” (audyt-B, B-03) */
+    expect(etaText({ status: 'UNLOADING', stage: 'SITE', etaBoden: 'x', etaPreLoad: false })).toBe('done');
+    expect(etaText({ status: 'APPROACHING_SITE', stage: 'SITE', etaBoden: 'x', etaPreLoad: false })).toBe('site');
     expect(etaText({ status: 'PLANNED', stage: 'PLAN', etaBoden: 'x', etaPreLoad: true })).toBe('none');
     expect(etaText({ status: 'ON_FERRY', stage: 'FERRY', etaBoden: '2026-10-05T10:00:00Z', etaPreLoad: false })).toBe('eta');
   });

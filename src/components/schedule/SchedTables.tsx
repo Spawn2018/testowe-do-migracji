@@ -176,7 +176,8 @@ function rowProps(l: Load, ctx: SchedRowCtx) {
     'data-load': l.id,
     'data-code': l.code,
     'data-status': l.status,
-    className: `${l.status === 'DELIVERED' ? 'done' : ''}${ctx.hoverLoadId === l.id || ctx.selectedLoadId === l.id ? ' hl' : ''}${l.status === 'CANCELLED' ? ' is-cancel' : ''}`,
+    /* E25 (audyt-B B-03): „Rozładowany” = „Dostarczone” — ten sam wygląd wiersza */
+    className: `${l.status === 'DELIVERED' || l.status === 'UNLOADING' ? 'done' : ''}${ctx.hoverLoadId === l.id || ctx.selectedLoadId === l.id ? ' hl' : ''}${l.status === 'CANCELLED' ? ' is-cancel' : ''}`,
     onMouseEnter: () => ctx.setHover(l.id),
     onMouseLeave: () => ctx.setHover(null),
     ...clickableRow(() => ctx.onOpen(l.id)),
@@ -280,6 +281,15 @@ function shortCell(id: string, l: Load, ctx: SchedRowCtx): ReactNode {
   }
 }
 
+/**
+ * audyt-B B-02 (E20, E30 pkt 1): szerokości kolumn w px, gdy „Kolumny” dodały kolumny — 9 kolumn jak w 1154 px
+ * (te same proporcje co bez dodatków) i 110–180 px dla każdej dodanej. Tabela przewija się w bok, „Transport” przyklejony.
+ */
+const SHORT_W: Readonly<Record<string, number>> = {
+  transport: 150, cargo: 150, dates: 115, status: 115, crew: 150, phone: 138, eta: 92, docs: 115, money: 127,
+  ordHhl: 130, ordScx: 130, tractor: 110, trailer: 110, sailing: 180, cost: 120,
+};
+
 /** „Widok skrócony” — 8 kolumn E30 (mieści się w 1154 px), dodatkowe kolumny z „Kolumny” przed kwotą. */
 export function ShortTable({ extras, list, ctx, skeleton }: { extras: ShortExtraId[]; list: Load[]; ctx: SchedRowCtx; skeleton: boolean }) {
   const L = ctx.locale;
@@ -289,9 +299,13 @@ export function ShortTable({ extras, list, ctx, skeleton }: { extras: ShortExtra
     ...SHORT_EXTRAS.filter((x) => extras.includes(x.id)),
     SHORT_COLS.find((c) => c.id === 'money')!,
   ];
+  /* bez dodatków — procenty, bez przewijania (E30); z dodatkami — px, przewijanie w bok i przyklejony „Transport” (E20) */
+  const wide = cols.length > SHORT_COLS.length;
+  const sum = cols.reduce((a, c) => a + (SHORT_W[c.id] ?? 120), 0);
   return (
-    <div className="tablewrap sched-table-wrap s7-wrap" data-sched-layout="short">
-      <table className="sched-table s7-table s7-short">
+    <div className="tablewrap sched-table-wrap s7-wrap" data-sched-layout="short" data-sched-wide={wide ? '' : undefined}>
+      <table className={`sched-table s7-table s7-short${wide ? ' is-wide' : ''}`} style={wide ? { width: sum } : undefined}>
+        {wide ? <colgroup>{cols.map((c) => <col key={c.id} style={{ width: SHORT_W[c.id] ?? 120 }} />)}</colgroup> : null}
         <thead>
           <tr>
             {cols.map((c) => <th key={c.id} data-col={c.id} className={c.num ? 'num' : undefined} scope="col">{s7(L, c.id === 'money' ? moneyKey(ctx.role) : c.key)}</th>)}

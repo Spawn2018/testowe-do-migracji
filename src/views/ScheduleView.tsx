@@ -10,7 +10,7 @@ import { canImportSchedule, filterLoadsForRole } from '../lib/permissions';
 import { t, tp } from '../i18n/messages';
 import {
   delayMinutesVsPlan,
-  formatTableInZone,
+  fmtDateTime,
 } from '../lib/time';
 import { getNowIso } from '../lib/frozenNow';
 // D15: ExcelJS (~1 MB) tylko przy imporcie/eksporcie — dynamiczny import.
@@ -43,6 +43,9 @@ import { useIsPhone } from '../lib/useIsPhone';
 const SERVER_IMPORT = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED;
 
 type ImportStep = null | 'upload' | 'colmap' | 'map' | 'diff' | 'done';
+
+/** Demo: ostatnia wersja pliku KSH (ta sama linia co w produkcji z `schedule_imports`). */
+const DEMO_FILE_VER = { v: '7', at: '2026-09-21T14:08:00+02:00' } as const;
 
 /** III-2: krótki szkielet tabeli po wejściu w widok (używane też w testach). */
 export const SKELETON_MS = 260;
@@ -194,11 +197,14 @@ export function ScheduleView() {
   const skippedNote = ver?.skippedStandard
     ? ` · pominięto ${ver.skippedStandard} ${plPlural(ver.skippedStandard, 'wiersz', 'wiersze', 'wierszy')} typu STANDARD`
     : '';
+  /* E30 pkt 8 (audyt-B B-09): „Plik KSH: wersja 7 z 21.09.2026, 14:08” — bez „SharePoint” (dostępu jeszcze nie ma, E38);
+     produkcja: ta sama postać z ostatniego importu (schedule_imports), nazwa pliku w podpowiedzi */
   const verLine = (SERVER_IMPORT
     ? ver
-      ? tp(locale, 'i1_ver_line', { v: ver.by.replace(/^v/, ''), at: formatTableInZone(ver.at, 'Europe/Warsaw'), file: ver.filename })
+      ? tp(locale, 'i1_ver_line', { v: ver.by.replace(/^v/, ''), at: fmtDateTime(ver.at) })
       : t(locale, 'i1_ver_none')
-    : t(locale, 'a6_sch_ver_line')) + skippedNote;
+    : tp(locale, 'i1_ver_line', { v: DEMO_FILE_VER.v, at: fmtDateTime(DEMO_FILE_VER.at) })) + skippedNote;
+  const verTitle = SERVER_IMPORT && ver?.filename ? ver.filename : undefined;
 
   const mapKeys = activeMap ? Object.entries(activeMap) : Object.entries(COLUMN_MAP_DEFAULT);
 
@@ -429,7 +435,7 @@ export function ScheduleView() {
     <div className="panel section-card page-sections" data-page="schedule" style={{ margin: 12, display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
       <div className="panel-hd s7-hd" style={{ flexWrap: 'wrap' }}>
         <h2>{t(locale, 'nav_sched')}</h2>
-        <span className="sub" data-sched-file>{verLine}</span>
+        <span className="sub" data-sched-file title={verTitle}>{verLine}</span>
         <LiveMark />
         <div className="spacer" />
         {schedTabs}

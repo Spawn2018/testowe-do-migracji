@@ -4,6 +4,7 @@
  * po „Dostarczone”: „Śledzenie zakończone 07.10, 12:19” i ślad z przewozu (usuwany 30 dni po dostawie).
  * Opis lokalizatora (E44 pkt 6): emtrack = naczepa SCX (decyzja 21:43); link RIO — bez klucza (E44 pkt 8: „RIO · ••••”).
  * Czysty wygląd: dane z transportu i dziennika zdarzeń, bez zapytań.
+ * audyt-B B-15: bez nazwy transportu w tekście — nazwa jest w nagłówku panelu.
  */
 import type { Load, LoadEvent, Locale, TrackingLinkInfo } from '../../types';
 import { t, tp } from '../../i18n/messages';
@@ -35,15 +36,12 @@ function ago(fromIso: string, nowIso: string, locale: Locale): string {
 export function TrackingBar({
   load,
   events,
-  label,
   locale,
   nowIso,
   trackingLink = null,
 }: {
   load: Load;
   events: readonly LoadEvent[];
-  /** nazwa transportu do tekstu („SG-24”) */
-  label: string;
   locale: Locale;
   nowIso: string;
   /** wyglad/P4-c — link śledzenia z serwera (E44) */
@@ -66,7 +64,7 @@ export function TrackingBar({
       <div className="trk before" data-tracking-bar="before">
         <span className="trk-mk" aria-hidden />
         <div className="trk-txt">
-          <b>{tp(locale, 'p4b_trk_before', { code: label, day: dayOnly(load.plannedLoadDate) })}</b>
+          <b>{tp(locale, 'p4b_trk_before', { day: dayOnly(load.plannedLoadDate) })}</b>
           <span>{sub}</span>
         </div>
       </div>
@@ -102,7 +100,7 @@ export function TrackingBar({
       <div className="trk after" data-tracking-bar="cancelled">
         <span className="trk-mk" aria-hidden />
         <div className="trk-txt">
-          <b>{tp(locale, 'p4b_trk_cancelled', { code: label })}</b>
+          <b>{t(locale, 'p4b_trk_cancelled')}</b>
         </div>
       </div>
     );
@@ -123,7 +121,7 @@ export function TrackingBar({
     <div className="trk after" data-tracking-bar="after">
       <span className="trk-mk" aria-hidden />
       <div className="trk-txt">
-        <b>{done ? tp(locale, 'p4b_trk_after', { code: label, at: dayTime(done) }) : tp(locale, 'p4b_trk_after_nodate', { code: label })}</b>
+        <b>{done ? tp(locale, 'p4b_trk_after', { at: dayTime(done) }) : t(locale, 'p4b_trk_after_nodate')}</b>
         {sub ? <span>{sub}</span> : null}
       </div>
     </div>

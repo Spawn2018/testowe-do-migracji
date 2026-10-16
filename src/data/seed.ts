@@ -22,6 +22,7 @@ import rawLoads from './loads.json';
 import { DEMO_FX_META, plnToEurDemo } from '../lib/money/demoFx';
 export { DEMO_FX_META } from '../lib/money/demoFx';
 import { seedOrders, seedResourcesForIndex } from './seedIdentity';
+import { demoSymbolSpec } from '../lib/p7SymbolsDemo';
 import { RISK_I18N } from '../i18n/risks';
 /** I-0: logika bez danych demo — w lib/seedLogic.ts (używana też w buildzie produkcyjnym bez seed.ts). */
 export { applyForceMajeureDelays, buildSeedExceptions } from '../lib/seedLogic';
@@ -366,8 +367,9 @@ function buildExtraLoads(): Load[] {
     /* P6 — PLN→EUR via DEMO_FX (186/A/NBP/2026 @ 4,3900) */
     const costBase = plnToEurDemo(18200 + index * 430);
     const revBase = plnToEurDemo(22400 + index * 520);
-    const costExtras = plnToEurDemo(1250);
-    const revExtras = plnToEurDemo(1950);
+    /* audyt-B B-06 (E33): w demo żadna dopłata nie jest jeszcze dodana — wiersz „Dopłaty” = 0 (suma listy dopłat) */
+    const costExtras = 0;
+    const revExtras = 0;
     const costTotal = costBase + costExtras;
     const revTotal = revBase + revExtras;
     const margin = revTotal - costTotal;
@@ -436,6 +438,18 @@ function buildExtraLoads(): Load[] {
   });
 }
 
+/**
+ * audyt-B B-06 (E33, 08.10): „Dopłaty · postój, anulowanie” = suma dopłat z listy pod tabelą. W demo żadna dopłata
+ * nie jest dodana ani przyjęta (lista tylko podpowiada), więc wiersz ma 0,00 po obu stronach; „Razem” bez tych kwot.
+ */
+function withoutDemoExtras(p: Load['pricing']): Load['pricing'] {
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const costTotal = r2(p.costTotal - (p.costExtras ?? 0));
+  const revTotal = r2(p.revTotal - (p.revExtras ?? 0));
+  const margin = r2(revTotal - costTotal);
+  return { ...p, costExtras: 0, revExtras: 0, costTotal, revTotal, margin, marginPct: revTotal ? margin / revTotal : 0 };
+}
+
 export function buildSeedLoads(): Load[] {
   const sourceLoads = [...(rawLoads as unknown as Load[]), ...buildExtraLoads()];
   return sourceLoads.map((l, idx) => {
@@ -445,7 +459,7 @@ export function buildSeedLoads(): Load[] {
     let status = l.status;
     let docMissing = l.docMissing;
     let permit = l.permit ? { ...l.permit } : undefined;
-    let pricing = { ...l.pricing };
+    let pricing = withoutDemoExtras(l.pricing);
 
     // Below-threshold stress (≥3 loads) — actionable in Finance
     if (['SG-15', 'SG-22', 'SS-02', 'SG-08'].includes(l.code)) {
@@ -485,6 +499,27 @@ export function buildSeedLoads(): Load[] {
       if (permit) permit = { ...permit, attachmentKind: 'TRIP' };
     }
 
+    /* audyt-B B-13 (16.10, 01:13 pkt 1; E32 pkt 7): zestaw z ładunkiem z tabeli symboli — jedno źródło z oknem Awizacja.
+       Wymiary przy transporcie = wiersz tabeli (Przegląd pokazuje „z tabeli HHL (SG)”), zezwolenie wystawione na ten zestaw
+       (ten sam wynik sprawdzenia zezwolenia co wcześniej). Symbole spoza tabeli (R, D) — bez zmian. */
+    const sym = demoSymbolSpec(l);
+    let resources = sym ? { ...l.resources, setLengthM: sym.set.l, setWidthM: sym.set.w, setHeightM: sym.set.h } : l.resources;
+    /* audyt-B B-14 (E6, E32 pkt 5; 16.10 13:34–13:58): jeden transport w Szwecji z przepięciem naczepy — odcinek PL
+       (Śrem → prom) i odcinek SE (prom → Boden), dwóch kierowców z numerami i dwa ciągniki; naczepa jedna. T-01 jest
+       na „Drodze SE”, więc „Zadzwoń”, karta na telefonie i kolumna „Telefon kierowcy” pokazują kierowcę SE. */
+    if (l.code === 'T-01') {
+      resources = {
+        ...resources,
+        trailerSwap: true,
+        driverPhoneCountry: 'PL',
+        driverDeliveryName: 'Henrik Lund',
+        driverDeliveryPhone: '+46701740615',
+        driverDeliveryPhoneCountry: 'SE',
+        tractorDeliveryPlate: 'BDN 417',
+      };
+    }
+    if (sym && permit) permit = { ...permit, zestaw: { ...permit.zestaw, L: sym.set.l, W: sym.set.w, H: sym.set.h } };
+
     const permitFits =
       l.code === 'SG-07' || l.code === 'SG-34' ? false : l.docMissing || docMissing ? null : true;
     const orders = seedOrders(l.sequenceOrder);
@@ -497,6 +532,7 @@ export function buildSeedLoads(): Load[] {
       docMissing,
       permitFits,
       permit,
+      resources,
       pricing,
       progress,
       stage: STATUS_TO_STAGE[status],
@@ -559,8 +595,9 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
         loadId: l.id,
         type: 'LOADED',
         at: `${l.plannedLoadDate}T08:30:00+02:00`,
-        actor: 'driver-pwa',
-        note: 'Załadowany',
+        /* audyt-B B-08 (E17): automat ze źródłem pozycji — w Historii „GPS emtrack”, nie „Kierowca (aplikacja)” */
+        actor: 'system',
+        payload: { source: 'GPS', provider: 'emtrack' },
       });
     }
     if (
@@ -573,8 +610,8 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
         loadId: l.id,
         type: 'ON_FERRY',
         at: `${l.plannedLoadDate}T11:15:00+02:00`,
-        actor: 'driver-pwa',
-        note: 'Na promie',
+        actor: 'system',
+        payload: { source: 'AIS' },
       });
     }
     if (['UNLOADING', 'DELIVERED'].includes(l.status)) {
@@ -583,8 +620,8 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
         loadId: l.id,
         type: 'UNLOADED',
         at: `${l.plannedDeliverDate}T12:00:00+02:00`,
-        actor: 'driver-pwa',
-        note: 'Rozładowany',
+        actor: 'system',
+        payload: { source: 'GPS', provider: 'emtrack' },
       });
     }
     if (l.status === 'SILENT') {

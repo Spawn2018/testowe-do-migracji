@@ -81,11 +81,21 @@ export function activeDriver(l: LegInput): ActiveDriver {
     country = own ? r.driverPhoneCountry : r.driverDeliveryPhoneCountry;
     tractor = clean(r.tractorPlate);
   }
-  let dial: string | null = null;
-  if (phone) {
-    const raw = phone.replace(/[^\d+]/g, '');
-    dial = raw.startsWith('+') ? raw : toE164(raw, country ?? 'PL') ?? (raw || null);
-  }
-  const display = dial ? groupPhone(dial) : phone;
+  const { display, dial } = driverPhoneView(phone, country);
   return { leg, swap, name, phone, display, dial, tractor };
+}
+
+/**
+ * Numer kierowcy do pokazania i do linku „tel:” — jedna funkcja dla Harmonogramu („☎”, kolumna „Telefon kierowcy”)
+ * i panelu (Przegląd › Kierowcy i zestaw; audyt-B B-12 / F-06): „+48000000004” → „+48 000 000 004”.
+ */
+export function driverPhoneView(
+  phone: string | null | undefined,
+  country?: 'PL' | 'SE',
+): { display: string | null; dial: string | null } {
+  const p = clean(phone);
+  if (!p) return { display: null, dial: null };
+  const raw = p.replace(/[^\d+]/g, '');
+  const dial = raw.startsWith('+') ? raw : toE164(raw, country ?? 'PL') ?? (raw || null);
+  return { display: dial ? groupPhone(dial) : p, dial };
 }
