@@ -2671,6 +2671,17 @@ Wdrożenie R7 z `main` `b654f175`, 16.10.2026 12:47, `dpl_DF9pz2PkA4Nr7z84bZq7Uw
 
 **KONFLIKT #254** (`wyglad/P10b-d`, baza `main`). Kolejka stoi. #256 i #260 bez zmiany kolejności — po commicie koordynatora na #254.
 
+## 2026-10-16 — scalenia #254 i #256
+
+Konflikt #254 zamknięty commitem koordynatora `286c8ef` na `wyglad/P10b-d`. Main wciągnięty też do #256 (`4198b41`) i #260 (`7112303`).
+
+#254 scalony — `0f8b79d7`.  
+#256 scalony — `d4e69058`.
+
+Wdrożenie R7 z `main` `d4e69058`, 16.10.2026 13:17, `dpl_HvZ73WLu6mxTE2SP1DnAkBVqm6Zh`. JS `assets/index-CMMlOYN_.js`. tower.log-mar.pl i watch-tower-makieta.vercel.app → 200. 75 plików JS, 0× `service_role`.
+
+**VISUAL #260** (`wyglad/P7-d`, `7112303`): pada tylko `stan-blad` (dark) — komunikat po polsku. Kolejka stoi do commitu koordynatora z odświeżonym wzorcem. Potem #260, sobota #209 → #231 → #247.
+
 ## PAUZA — 2026-10-16 10:21 — **WZNOWIONE 10:59** (hasło „ruszamy”)
 
 **ZAKŁADKA — przerwane tu:** scalenie PR dokumentacji #255; potem sygnały dopisków; potem kolejka PR wyglądu.
