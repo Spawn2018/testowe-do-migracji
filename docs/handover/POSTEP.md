@@ -2640,6 +2640,11 @@ D-20261016-1750-01: kolejka #261 → #267. Status ręcznie, `payload.source` i j
 
 **DOPISEK 1750 WŁĄCZONY — commit (ten docs), kolejka #261 → #267; status ręcznie, payload.source, Do zrobienia → P6; UNLOADING → C17; tabela symboli, kurs NBP → P5; dzwonek KSH → C3.**
 
+D-20261016-1845-01: kolejka #261 `2a8a94b` → #262 `206e861` → #263 `6c98104` → #264 `0661115` → #265 `570215d` → #266 `e1ff7ba` → #267 `9a4aad5` → #268 (wzorce w toku).
+P7 — uzupełnienie W13: pole `kshSharePointSync` (produkcja ze stanu `ksh-sharepoint-sync`; HHL całe pole; KSH i SCX bez `lastRun`; przed pierwszym przebiegiem `null`; demo: odczyt sprzed 5 min, zapis wyłączony, sekret `2028-10-12`) oraz „Sprawdź teraz” tylko dla Administratora HHL.
+
+**DOPISEK 1845 WŁĄCZONY — commit (ten docs), kolejka #261 → #268; pole kshSharePointSync (produkcja, KSH/SCX, demo) i „Sprawdź teraz” → P7 uzupełnienie W13.**
+
 **DOPISEK 1410 WŁĄCZONY — commit `5666bcf4`, VAT 23 % i Polisa HHL → P5, daty DD.MM.RRRR → C6/P8/P5/P11, prom → kierowca SE, telefon w Harmonogramie, W46 i W47 zamknięte.**
 
 ## 2026-10-16 — scalenie #209
