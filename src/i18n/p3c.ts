@@ -68,7 +68,9 @@ const pl: Dict = {
 
   /* E5 (img/e5-desk): Dla mnie › Ten telefon / komputer */
   dev_title: 'Powiadomienia na telefonie',
-  dev_rule: 'Na telefon trafia tylko pilna sprawa „Do zrobienia”. Reszta czeka w dzwonku.',
+  /* W42 (D-20261015-1955-01, 15.10.2026, 19:57): e-mail zapasowy po 5 min — zdanie dopisane po wdrożeniu N4 (0219) */
+  /* wyglad/P6-f (D-20261016-0310-01 Cz13): wiadomości z Czatu też na telefon */
+  dev_rule: 'Na telefon trafiają pilne sprawy „Do zrobienia” i wiadomości z Czatu. Reszta czeka w dzwonku. Gdy telefon nie potwierdzi pilnego powiadomienia w ciągu 5 minut, dostaniesz je e-mailem.',
   dev_ios: 'iPhone · tylko z aplikacji na ekranie początkowym',
   dev_ios_1: 'Otwórz tower.log-mar.pl w Safari.',
   dev_ios_2: 'Udostępnij → „Do ekranu początkowego” → Dodaj.',

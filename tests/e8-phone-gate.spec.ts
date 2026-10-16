@@ -1425,6 +1425,48 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
   });
 });
 
+/**
+ * wyglad/P6-f — Dla mnie › Ten telefon / komputer: aplikacja zainstalowana / przeglądarka, „Zainstaluj aplikację”,
+ * wiadomości z Czatu w powiadomieniu (D-20261016-0310-01 Cz19 pkt 5, Cz23 pkt 4–5; D-20261016-0315-01 Cz32).
+ */
+test.describe('wyglad/P6-f — „Ten telefon”: aplikacja i wiadomości z Czatu w powiadomieniu', () => {
+  test.describe.configure({ mode: 'serial', timeout: 300_000 });
+  const openDevice = async (page: Page, view: 'options' | 'settings') => {
+    await openView(page, view);
+    await page.evaluate(() => (document.querySelector('[data-opt-nav="device"]') as HTMLButtonElement).click());
+    await page.waitForSelector('[data-screen="device"]', { timeout: 10_000 });
+  };
+
+  test('komputer HHL: w przeglądarce — zdanie o ikonie na ekranie; reguła z Czatem; 6 zdań o powiadomieniu z Czatu', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await boot(page, 'HHL');
+    await openDevice(page, 'options');
+    await expect(page.locator('[data-screen="device"] .ox-panel-note').first()).toContainText('pilne sprawy „Do zrobienia” i wiadomości z Czatu');
+    await expect(page.locator('[data-dev-app]')).toHaveAttribute('data-dev-app', 'browser');
+    await expect(page.locator('[data-dev-app] .ox-dev-app-st')).toContainText('uruchamiaj ją z ikony na ekranie');
+    await expect(page.locator('[data-dev-install]')).toHaveCount(0);
+    await expect(page.locator('[data-dev-chat] li')).toHaveCount(6);
+    await expect(page.locator('[data-dev-chat]')).toContainText('„Odpowiedz” — wpisujesz odpowiedź od razu w powiadomieniu');
+    await expect(page.locator('[data-dev-chat]')).toContainText('nie trafiają do KSH');
+  });
+
+  for (const role of ['SCX', 'KSH'] as const) {
+    test(`telefon ${role}: Ten telefon z nowymi blokami — 0 w bramie E8`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await boot(page, role);
+      await openDevice(page, 'settings');
+      await expect(page.locator('[data-dev-chat] li')).toHaveCount(6);
+      const hits: Hit[] = [];
+      for (const width of [...WIDTHS, 768]) {
+        await page.setViewportSize({ width, height: 844 });
+        await page.waitForTimeout(150);
+        hits.push(...await measure(page, 'ten-telefon', width, role));
+      }
+      expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
+    });
+  }
+});
+
 test.describe('wyglad/P4-b panel transportu — Status E25 (img/e25-after), pasek śledzenia E27, okno „Zmień status”', () => {
   test.describe.configure({ mode: 'serial', timeout: 180_000 });
 
