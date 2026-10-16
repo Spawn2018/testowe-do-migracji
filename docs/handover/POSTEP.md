@@ -2589,9 +2589,9 @@ Tabela sprawdzalności (prompt 16.10):
 | D-20261016-0310-01 | Cz24 pkt 12 iPhone | §5 | W43 |
 | D-20261016-0315-01 | Cz25 | C3 | przy Cz13 |
 | D-20261016-0315-01 | Cz26–Cz33 | P6 | E17 Czat — dane |
-| D-20261016-0220-01 | Z1–Z3 E35 Automatyzacje | P8 | E35 — **wchodzi z PR #239** (po scaleniu) |
+| D-20261016-0220-01 | Z1–Z3 E35 Automatyzacje | P8 | E35 — **włączone po #239** (`3bbb480e`) |
 
-## PAUZA — 2026-10-16 10:21 (hasło wznowienia: „ruszamy”)
+## PAUZA — 2026-10-16 10:21 — **WZNOWIONE 10:59** (hasło „ruszamy”)
 
 **ZAKŁADKA — przerwane tu:** scalenie PR dokumentacji #255; potem sygnały dopisków; potem kolejka PR wyglądu.
 
@@ -2633,4 +2633,24 @@ gh pr merge 255 --merge
 git checkout main && git pull --ff-only origin main
 # sygnały dopisków → kolejka #232…
 ```
+
+## 2026-10-16 — wygląd P8-a…d + push-w42 NA PRODUKCJI (D-0045 + #239)
+
+| punkt | zrobione / odbiór |
+|---|---|
+| #255 docs dopiski | scalone `b1ba78cd` (treść `fbf995f4`) |
+| #232 wyglad/P8-a | scalone `9df8beb6` |
+| #233 wyglad/P8-b | scalone `455d6558` |
+| #236 wyglad/P8-c | scalone `58ffd907` (rebase main) |
+| #239 wyglad/P8-d | scalone `3bbb480e`; D-0220 w PLAN P8 E35 |
+| #237 wyglad/push-w42 | scalone `a300b29b` |
+| wdrożenie R7 | `dpl_9tVs4DubP7G6Do8KX43zZz1qnKxK`, JS `assets/index-XNiL2Qy9.js`; tower/makieta 200; 0× service_role |
+
+**DOPISKI 0200 / 0230 / 0250 / 0310 / 0315 WŁĄCZONE — commit b1ba78cd (treść 442281ca / fbf995f4).**  
+**DOPISEK 0250 WŁĄCZONY — commit b1ba78cd, P6: E17 Czat — dane, Cz1–Cz12.**  
+**DOPISEK 0310 WŁĄCZONY — commit b1ba78cd, C3: Cz13; P6: Cz14–Cz24.**  
+**DOPISEK 0315 WŁĄCZONY — commit b1ba78cd, C3: Cz25; P6: Cz26–Cz33.**  
+**DOPISEK 0220 WŁĄCZONY — commit (ten docs) / #239 `3bbb480e`, P8: E35 Z1–Z3.**  
+**C16-H NA PRODUKCJI — 8bae03be, 10:02.**  
+**P8-a, P8-b, P8-c, P8-d, push-w42 NA PRODUKCJI (wygląd) — a300b29b, 11:20; dpl_9tVs4DubP7G6Do8KX43zZz1qnKxK.**
 

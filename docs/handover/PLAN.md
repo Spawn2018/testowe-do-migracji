@@ -477,7 +477,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
   - Przełącznik „Wysyłka do odbiorców” włącza właściciel (§5).
   - **D-20261014-0700-01 J3 pkt 12:** przełącznik strefy SMS dla Operacji HHL — wyłączenie w UI (baza i tak odmawia `geofences_write` = HHL_ADMIN); E12 1A.
 - **E43** „Treści wiadomości”: tylko PL; edytor; 28 rodzajów (L53); link 24 h (L37). E-maile logowania według L54 (§5).
-- **E35** Automatyzacje: kreator z akcją SMS (L35); „Działa samo” według E35 pkt 1 i L13.
+- **E35** Automatyzacje (D-20261016-0220-01; wygląd `wyglad/P8-d` #239): kreator z akcją SMS (L35); „Działa samo” według E35 pkt 1 i L13; **Z1** porządki START-1…7 (przeniesienie do E11 / usunięcie z historią); **Z2** dane — `rules`/`check`/`runs`/`history`/`zones` z silnika `workflows` (ONE-MECH), przebiegi i historia zdaniami; **Z3** zapis z powodem (`save`/`setEnabled`/`remove`), tylko Administrator HHL, Operacje HHL — podgląd bez zapisu; odbiór sekcja „Test” E35 + punkty z dopisku.
 - **H-7** mapa w e-mailach i PDF (zlecenie HERE z 04.10; w starym planie „do decyzji koordynatora” — koordynator 09.10: P8). Najpierw stan (B-10 z 05.10: „PDF+mapa H-7”). Brakującą część budujesz przy treściach wiadomości (E43): mapa trasy transportu (droga i prom jak na Przeglądzie — E1, E45) jako obraz w e-mailu o transporcie i w PDF; HERE w limicie 100 USD/mies.
 - **E34** strefy: edycja; po zmianie od razu sprawdzenie ostatniej pozycji transportów w oknie śledzenia, wpis „zmiana strefy”, statusy jak przy zwykłym wjeździe i wyjeździe, bez SMS (E34 pyt. 1 B, L33).
 - Stare pozycje „SMS 6, 7, 10, 11” zamknięte (L51).
@@ -714,3 +714,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 16.10.2026 02:50 | D-20261016-0250-01: Czat E17 — wybór odbiorców i „Przeczytali” (kto i kiedy) rozpisane w P6 jako Cz1–Cz12 (zastępuje D-20261014-2300-01 H2); odświeżanie przy otwartym Czacie (luka); wygląd `wyglad/P6-d` | koordynator; wykonawca |
 | 16.10.2026 03:10 | D-20261016-0310-01: czat w dzwonku i w telefonie („SG-03 · kto · treść”), przyciski „Oznacz jako odczytane” / „Odpowiedz” w powiadomieniu, otwieranie zainstalowanej aplikacji zamiast Chrome — C3 (Cz13), P6 (Cz14–Cz24) | właściciel 02:57; koordynator; wykonawca |
 | 16.10.2026 03:15 | D-20261016-0315-01: czat — powiadomienia tylko do osób, które widzą wiadomość; rozmowa HHL ↔ SCX nigdy do KSH (Cz25 w C3, Cz26–Cz33 w P6) | właściciel 03:06; koordynator; wykonawca |
+| 16.10.2026 02:20 | D-20261016-0220-01: P8 E35 Automatyzacje — Z1–Z3 (reguły START, dane, zapis z powodem); wygląd `wyglad/P8-d` #239 | koordynator; wykonawca |
