@@ -121,7 +121,9 @@ test.describe('III-2 zrzuty stanów (HHL pl 1440)', () => {
 
   test('stan-blad (dark)', async ({ page }) => {
     await open(page, 'dark'); await sched(page)
-    await page.locator('[data-page="schedule"] .panel-hd .chipbtn').first().click() // „Wgraj harmonogram”
+    /* wyglad/P7-c (E30 pkt 6, E38): wgranie pliku KSH w „Więcej ▾” jako zapas */
+    await page.locator('[data-page="schedule"] [data-sched-more]').click()
+    await page.locator('[data-sched-more-menu] [data-action="upload"]').click()
     await page.locator('[data-page="schedule"] input[type="file"]').setInputFiles({ name: 'harmonogram.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from('to nie jest plik XLSX') })
     const err = page.locator('[data-page="schedule"] .note [style*="var(--red)"]')
     await expect(err).toBeVisible()
@@ -131,7 +133,8 @@ test.describe('III-2 zrzuty stanów (HHL pl 1440)', () => {
 
   test('stan-walidacja (dark)', async ({ page }) => {
     await open(page, 'dark'); await sched(page)
-    await page.locator('[data-page="schedule"] .panel-hd .chipbtn').first().click()
+    await page.locator('[data-page="schedule"] [data-sched-more]').click() // wyglad/P7-c: „Więcej ▾ › Wgraj plik KSH (zapas)”
+    await page.locator('[data-sched-more-menu] [data-action="upload"]').click()
     await page.locator('[data-page="schedule"] input[type="file"]').setInputFiles({ name: 'obcy-uklad.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: await xlsx(['Kolumna A', 'Kolumna B', 'Kolumna C']) })
     await expect(page.locator('[data-import-colmap]')).toBeVisible({ timeout: 20_000 })
     await expect(page.locator('[data-import-colmap] button[disabled]').first()).toBeVisible()
