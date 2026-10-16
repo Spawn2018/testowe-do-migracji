@@ -6,7 +6,7 @@
  */
 import type { Load, OrgKind } from '../types';
 import type { Pilots } from './p7Awiz';
-import { demoPilots, demoSavePilots, demoSymbolSpec } from './p7Demo';
+import { demoPilots, demoSavePilots, demoSaveSet, demoSymbolSpec } from './p7Demo';
 
 /** Wiersz tabeli właściciela według symbolu (E32 pkt 7): zestaw z ładunkiem, wymóg pilotów, rodzaj zezwolenia. */
 export interface SymbolSpec {
@@ -36,4 +36,17 @@ export function savePilotsOf(): ((codes: readonly string[], p: Pilots) => void) 
 /** E32 pkt 6: HHL Administrator może poprawić awizację. Produkcja — po sprawdzeniu praw zapisu w bazie (wykonawca). */
 export function canFixAwizOf(role: OrgKind): boolean {
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? role === 'HHL' : false;
+}
+
+/** Wymiary zestawu z ładunkiem w metrach. */
+export interface SetDims { l: number; w: number; h: number }
+
+/**
+ * wyglad/P7-b — E32 pkt 7, E9 (D-83; „Kto co widzi i zmienia”: HHL Administrator i HHL Operacje zmieniają zestaw):
+ * zapis „Zestaw z ładunkiem” przy transporcie; `null` = przywróć z tabeli symboli. Produkcja — po funkcji bazy
+ * z wpisem w Historii (wykonawca, P7; dopisek do PR wyglad/P7-b); do tego czasu przycisk „Zmień” ukryty.
+ */
+export function saveSetOf(role: OrgKind): ((loadId: string, set: SetDims | null) => Promise<{ ok: boolean; error?: string }>) | null {
+  if (role !== 'HHL') return null;
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoSaveSet : null;
 }

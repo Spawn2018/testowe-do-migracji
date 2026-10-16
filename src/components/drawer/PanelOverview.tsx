@@ -8,7 +8,7 @@
  * Telefon: Do zrobienia na górze, mapa 150 px, sekcje zwinięte z linią stanu, „Zadzwoń” 44 px.
  * Zapis jak dziś (numer SCX, okno Awizacja, okno dat KSH); nowe dane — `p7Source.ts`.
  */
-import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Document, Load, LoadEvent, Locale, OrgKind, Risk, Sailing } from '../../types';
 import { useTowerStore } from '../../store/useTowerStore';
 import { t, fmtNum } from '../../i18n/messages';
@@ -17,7 +17,8 @@ import { buildTodo, visibleTodoRisks, type TodoIssue } from '../../lib/p6Todo';
 import { sampleDecisionsOf } from '../../lib/p6Source';
 import { issueTexts, type CardCtx } from '../risks/TodoCard';
 import { awizDeadline, awizMissing, awizState, dayLong, dayShort, dmHm, hourWindow, segmentNow, warsawDay } from '../../lib/p7Awiz';
-import { canFixAwizOf, pilotsOf, symbolSpecOf } from '../../lib/p7Source';
+import { canFixAwizOf, pilotsOf, saveSetOf, symbolSpecOf, type SetDims } from '../../lib/p7Source';
+import { checkSet, setFieldValue, type SetKey } from '../../lib/p7bSet';
 import { whoOf } from '../../lib/p6History';
 import { visibleDriverPhone } from '../../lib/permissions';
 import { editableOrderSide } from '../../lib/orderNumbers';
@@ -109,6 +110,115 @@ function OrderNoField({ value, onSave, locale }: { value?: string | null; onSave
 }
 
 const noop = () => undefined;
+
+/**
+ * wyglad/P7-b — „Zmień” przy „Zestaw z ładunkiem” (E32 pkt 7, img/e32-after: „21,69 × 2,45 × 3,75 m [Zmień]”; E9 D-83:
+ * zmienia HHL Administrator i HHL Operacje). Formularz w miejscu: 3 pola w metrach, „Zapisz”, „Anuluj”, a przy własnych
+ * wymiarach — „Przywróć z tabeli”. Escape zamyka i wraca do „Zmień”. Zapis — `saveSetOf` (wykonawca, P7).
+ */
+function SetField({ loadId, value, own, sym, save, locale, children }: {
+  loadId: string;
+  value: SetDims | null;
+  own: boolean;
+  sym: string | null;
+  save: ((loadId: string, set: SetDims | null) => Promise<{ ok: boolean; error?: string }>) | null;
+  locale: Locale;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const [vals, setVals] = useState<Record<SetKey, string>>({ l: '', w: '', h: '' });
+  const [err, setErr] = useState<{ text: string; bad: SetKey[] } | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const btn = useRef<HTMLButtonElement>(null);
+  const first = useRef<HTMLInputElement>(null);
+  const wasOpen = useRef(false);
+  const errId = `po-set-err-${loadId}`;
+  useEffect(() => {
+    if (open) first.current?.focus();
+    else if (wasOpen.current) btn.current?.focus();
+    wasOpen.current = open;
+  }, [open]);
+  const start = () => {
+    setVals({ l: setFieldValue(value?.l), w: setFieldValue(value?.w), h: setFieldValue(value?.h) });
+    setErr(null); setNote(null); setOpen(true);
+  };
+  const run = (set: SetDims | null) => {
+    if (!save || busy) return;
+    setBusy(true);
+    void save(loadId, set).then((r) => {
+      setBusy(false);
+      if (r.ok) { setOpen(false); setNote(pt(locale, 'p7_set_saved')); } else setErr({ text: pt(locale, 'p7_set_fail'), bad: [] });
+    }, () => { setBusy(false); setErr({ text: pt(locale, 'p7_set_fail'), bad: [] }); });
+  };
+  const submit = () => {
+    const c = checkSet(vals.l, vals.w, vals.h);
+    if (c.ok) { run(c.set); return; }
+    setErr({ text: pt(locale, c.error === 'fmt' ? 'p7_set_err_fmt' : 'p7_set_err_range'), bad: c.bad });
+  };
+  const status = <span className="po-sub po-ok" role="status">{note ?? ''}</span>;
+  if (!open || !save) {
+    return (
+      <>
+        <span className="po-set-v">
+          {children}
+          {save ? (
+            <button ref={btn} type="button" className="btn ghost po-set-btn" data-po-set-edit aria-label={pt(locale, 'p7_set_edit_aria')} onClick={start}>
+              {pt(locale, 'p7_set_edit')}
+            </button>
+          ) : null}
+        </span>
+        {status}
+      </>
+    );
+  }
+  const field = (id: SetKey) => {
+    const bad = !!err && err.bad.includes(id);
+    return (
+      <label className="po-set-f">
+        <span>{pt(locale, `p7_set_${id}`)}</span>
+        <span className="po-set-in">
+          <input
+            ref={id === 'l' ? first : undefined}
+            className="input mono"
+            inputMode="decimal"
+            autoComplete="off"
+            value={vals[id]}
+            aria-invalid={bad || undefined}
+            aria-describedby={err ? errId : undefined}
+            onChange={(e) => { const v = e.target.value; setVals((x) => ({ ...x, [id]: v })); setErr(null); }}
+          />
+          <span aria-hidden="true">m</span>
+        </span>
+      </label>
+    );
+  };
+  return (
+    <form
+      className="po-set-form"
+      data-po-set-form
+      aria-busy={busy || undefined}
+      onSubmit={(e) => { e.preventDefault(); submit(); }}
+      /* Escape zamyka tylko formularz — nie cały panel transportu (App.tsx nasłuchuje Escape na oknie) */
+      onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); setOpen(false); } }}
+    >
+      <fieldset>
+        <legend className="sr-only">{pt(locale, 'p7_set_legend')}</legend>
+        <div className="po-set-fs">
+          {field('l')}
+          {field('w')}
+          {field('h')}
+        </div>
+        {err ? <p className="po-set-err" id={errId} role="alert">{err.text}</p> : null}
+        <div className="po-set-acts">
+          <button type="submit" className="btn" aria-disabled={busy || undefined}>{pt(locale, 'p7_set_save')}</button>
+          <button type="button" className="btn ghost" onClick={() => setOpen(false)}>{pt(locale, 'p7_set_cancel')}</button>
+          {own && sym ? <button type="button" className="btn ghost" data-po-set-reset aria-disabled={busy || undefined} onClick={() => run(null)}>{ptp(locale, 'p7_set_reset', { sym })}</button> : null}
+        </div>
+      </fieldset>
+    </form>
+  );
+}
 
 export function PanelOverview(p: Props) {
   const { load, loads, role, locale, phone, nowIso, events, docs, risks, sailings } = p;
@@ -408,7 +518,17 @@ export function PanelOverview(p: Props) {
           <dd>{load.dims.cargoClass === 'STANDARD' ? <span data-cargo="none">—</span> : <>{dim(load.dims.lengthM, locale)} × {dim(load.dims.widthM, locale)} × {dim(load.dims.heightM, locale)} m</>}</dd>
           <dt>{pt(locale, 'p7_set')}</dt>
           <dd data-po-set>
-            {setL != null ? <b>{dim(setL, locale)} × {dim(setW, locale)} × {dim(setH, locale)} m</b> : <span className="po-miss">—</span>}
+            <SetField
+              key={load.id}
+              loadId={load.id}
+              value={setL != null && setW != null && setH != null ? { l: setL, w: setW, h: setH } : null}
+              own={r.setLengthM != null}
+              sym={spec?.symbol ?? null}
+              save={saveSetOf(role)}
+              locale={locale}
+            >
+              {setL != null ? <b>{dim(setL, locale)} × {dim(setW, locale)} × {dim(setH, locale)} m</b> : <span className="po-miss">—</span>}
+            </SetField>
             <span className="po-sub">{setSrc}</span>
           </dd>
           {spec ? (

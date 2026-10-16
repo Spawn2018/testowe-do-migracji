@@ -90,6 +90,10 @@ const PL: Record<string, string> = {
   p6b_field_tractorDeliveryPlate: 'ciągnik odcinka SE',
   p6b_field_trailerPlate: 'naczepa',
   p6b_field_trailerSwap: 'przepięcie naczepy',
+  /* wyglad/P7-b — „Zmień” przy zestawie (E32 pkt 7) */
+  p6b_field_setLengthM: 'zestaw z ładunkiem',
+  p6b_field_setWidthM: 'zestaw z ładunkiem',
+  p6b_field_setHeightM: 'zestaw z ładunkiem',
   p6b_field_escort: 'pilot',
   p6b_field_escortPlate: 'pilot',
   p6b_field_other: 'dane',
