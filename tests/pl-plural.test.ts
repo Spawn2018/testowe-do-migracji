@@ -39,11 +39,11 @@ describe('PL-PLURAL', () => {
     );
   });
 
-  it('tp po polsku odmienia, EN zostaje przy swoim szablonie', () => {
+  it('tp po polsku odmienia; bez słownika EN (8A) — tekst i odmiana po polsku', () => {
     expect(tp('pl', 'a6_sch_export_ok', { rows: 22, bytes: 10 })).toBe('Eksport XLSX · 22 wiersze · 10 B');
     expect(tp('pl', 'a6_sch_export_ok', { rows: 12, bytes: 10 })).toBe('Eksport XLSX · 12 wierszy · 10 B');
     expect(tp('pl', 'a6_sch_export_ok', { rows: 1, bytes: 10 })).toBe('Eksport XLSX · 1 wiersz · 10 B');
-    expect(tp('en', 'a6_sch_export_ok', { rows: 22, bytes: 10 })).toBe('XLSX export · 22 rows · 10 B');
+    expect(tp('en', 'a6_sch_export_ok', { rows: 22, bytes: 10 })).toBe('Eksport XLSX · 22 wiersze · 10 B');
     expect(tp('pl', 'd26_allow', { n: 2 })).toBe('Anuluj 2 pozycje nieobecne w pliku');
     expect(tp('pl', 'd26_allow', { n: 5 })).toBe('Anuluj 5 pozycji nieobecnych w pliku');
     expect(tp('pl', 'rk_client_errors', { kinds: 1, hits: 22 })).toBe(

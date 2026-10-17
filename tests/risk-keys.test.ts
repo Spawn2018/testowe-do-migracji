@@ -1,6 +1,8 @@
 /**
- * A6-T1 — klucze tekstów ryzyk: każdy klucz rk_* zapisywany przez bazę (0042) i funkcje Edge istnieje w PL, EN i SV;
- * enumeracje (metryki zużycia, źródła, zadania) mają tłumaczenia; dane demo: PL z klucza == dotychczasowy tekst.
+ * A6-T1 — klucze tekstów ryzyk: każdy klucz rk_* zapisywany przez bazę (0042) i funkcje Edge istnieje w słowniku PL;
+ * enumeracje (metryki zużycia, źródła, zadania) mają teksty; dane demo: PL z klucza == dotychczasowy tekst.
+ * Decyzja właściciela 17.10.2026 (8A, Konstytucja X): interfejs tylko po polsku — słowniki EN i SV ryzyk usunięte,
+ * inny język dostaje tekst polski.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -10,7 +12,7 @@ import { buildSeedLoads, buildSeedRisks } from '../src/data/seed';
 import { orderNoRisks } from '../src/lib/orderNumbers';
 import { riskFromRow } from '../src/data/mappers';
 
-const LOCALES = ['pl', 'en', 'sv'] as const;
+const LOCALES = ['pl'] as const;
 const read = (p: string) => readFileSync(p, 'utf8');
 const EDGE = 'supabase/functions/_shared/integrations/';
 const sources = [
@@ -27,21 +29,9 @@ describe('A6-T1 klucze ryzyk', () => {
   it.each(LOCALES)('każdy klucz z bazy i Edge istnieje w %s', (loc) => {
     expect(keys.filter((k) => !RISK_I18N[loc][k])).toEqual([]);
   });
-  it('te same klucze we wszystkich językach', () => {
-    const pl = Object.keys(RISK_I18N.pl).sort();
-    expect(Object.keys(RISK_I18N.en).sort()).toEqual(pl);
-    expect(Object.keys(RISK_I18N.sv).sort()).toEqual(pl);
-  });
-  it('te same parametry {x} we wszystkich językach', () => {
-    const ps = (s: string) => [...s.matchAll(/\{([a-z_]+)(?::\d)?(?:~[^}]*)?\}/g)].map((m) => m[1]).sort().join(',');
-    for (const k of Object.keys(RISK_I18N.pl)) {
-      expect(ps(RISK_I18N.en[k]), k).toBe(ps(RISK_I18N.pl[k]));
-      expect(ps(RISK_I18N.sv[k]), k).toBe(ps(RISK_I18N.pl[k]));
-    }
-  });
-  it('EN i SV bez polskich znaków', () => {
-    for (const loc of ['en', 'sv'] as const)
-      for (const [k, v] of Object.entries(RISK_I18N[loc])) expect(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/.test(v), `${loc}.${k}`).toBe(false);
+  it('8A: bez słowników EN i SV ryzyk', () => {
+    expect(RISK_I18N.en).toEqual({});
+    expect(RISK_I18N.sv).toEqual({});
   });
   it('enumeracje: metryki, źródła, zadania', () => {
     const metrics = /metric in \(([^)]+)\)/.exec(read('supabase/migrations/0024_usage_check.sql'))![1].match(/[A-Z_]+/g)!;
@@ -75,22 +65,22 @@ describe('A6-T1 dane demo', () => {
       if (r.metaKey) expect(riskText('pl', r.meta ?? '', r.metaKey, r.metaParams), r.id).toBe(r.meta);
     }
   });
-  it('EN/SV dają inny tekst niż PL dla ryzyk demo', () => {
+  it('8A: EN i SV dają tekst polski', () => {
     const f = risks.find((r) => r.id === 'risk-ferry')!;
-    expect(riskText('en', f.title, f.titleKey, f.titleParams)).toBe('Sailing 24.09.2026 · forecast waves 2.9 m, gusts 19 m/s');
-    expect(riskText('sv', f.title, f.titleKey, f.titleParams)).toContain('2,9');
+    expect(riskText('en', f.title, f.titleKey, f.titleParams)).toBe(riskText('pl', f.title, f.titleKey, f.titleParams));
   });
 });
 
 describe('A6-T1 przewoźnik z językiem sv', () => {
-  it('cisza GPS z bazy po szwedzku', () => {
+  it('cisza GPS z bazy — po polsku (8A)', () => {
     const r = riskFromRow({
       id: 'r1', type: 'GPS', severity: 'HIGH', title: 'Brak pozycji pojazdu WGM 1234 od 45 min',
       title_key: 'rk_silent_vehicle', detail: { params: { plate: 'WGM 1234', minutes: 45 } },
       kind: 'GPS_SILENT', dedup_key: 'gps:x', load_id: null, detected_at: '2026-09-26T10:00:00Z', status: 'OPEN',
     } as never, '2026-09-26T11:00:00Z');
+    /* 8A (17.10): przewoźnik z językiem sv dostaje tekst polski */
     const sv = riskText('sv', r.title, r.titleKey, r.titleParams);
-    expect(sv).not.toBe(r.title);
+    expect(sv).toBe(r.title);
     expect(sv).toContain('WGM 1234');
     expect(sv).toContain('45');
     expect(riskText('pl', r.title, r.titleKey, r.titleParams)).toBe(r.title);

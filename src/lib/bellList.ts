@@ -150,12 +150,13 @@ export function looksLikeTemplateCode(s: string): boolean {
   return /\b[A-Z][A-Z0-9]*_[A-Z0-9_]+\b/.test(s);
 }
 
-const GENERIC: Record<BellLocale, string> = { pl: 'Powiadomienie', en: 'Notification', sv: 'Avisering' };
+/* 8A (17.10), audyt N20: dzwonek tylko po polsku — parametr `locale` zostaje dla zgodności wywołań. */
+const GENERIC = 'Powiadomienie';
 
-function safe(text: string, locale: BellLocale): string {
+function safe(text: string, _locale: BellLocale): string {
   // techniczny przedrostek „2fc65160: ” (początek id transportu) z tytułów ryzyk/decyzji
   const t = (text ?? '').replace(/(^|[\s:])[0-9a-f]{8}:\s+/gi, '$1').trim();
-  if (!t || looksLikeTemplateCode(t)) return GENERIC[locale];
+  if (!t || looksLikeTemplateCode(t)) return GENERIC;
   return t;
 }
 
@@ -190,25 +191,11 @@ export function bellGeneralCount<T extends BellSource>(items: readonly T[], role
   return bellVisible(items, role).filter((n) => bellSection(n) === 'general' && nowMs - Date.parse(n.at) <= 86_400_000).length;
 }
 
-/** „teraz”, „15 min temu”, „3 godz. temu”, „wczoraj”, „5 dni temu” (en/sv odpowiednio). */
-export function bellAge(iso: string, nowMs: number, locale: BellLocale): string {
+/** „teraz”, „15 min temu”, „3 godz. temu”, „wczoraj”, „5 dni temu” — tylko po polsku (8A). */
+export function bellAge(iso: string, nowMs: number, _locale: BellLocale): string {
   const min = Math.max(0, Math.floor((nowMs - Date.parse(iso)) / 60000));
   const h = Math.floor(min / 60);
   const d = Math.floor(h / 24);
-  if (locale === 'en') {
-    if (min < 1) return 'just now';
-    if (min < 60) return `${min} min ago`;
-    if (h < 24) return `${h} h ago`;
-    if (d < 2) return 'yesterday';
-    return `${d} days ago`;
-  }
-  if (locale === 'sv') {
-    if (min < 1) return 'nyss';
-    if (min < 60) return `${min} min sedan`;
-    if (h < 24) return `${h} tim sedan`;
-    if (d < 2) return 'i går';
-    return `${d} dagar sedan`;
-  }
   if (min < 1) return 'teraz';
   if (min < 60) return `${min} min temu`;
   if (h < 24) return `${h} godz. temu`;
@@ -216,9 +203,7 @@ export function bellAge(iso: string, nowMs: number, locale: BellLocale): string 
   return `${d} dni temu`;
 }
 
-function moreText(n: number, locale: BellLocale): string {
-  if (locale === 'en') return `${n} events of this type`;
-  if (locale === 'sv') return `${n} händelser av denna typ`;
+function moreText(n: number, _locale: BellLocale): string {
   const last = n % 10;
   const teen = n % 100 >= 12 && n % 100 <= 14;
   return `${n} ${last >= 2 && last <= 4 && !teen ? 'zdarzenia' : 'zdarzeń'} tego rodzaju`;
@@ -274,8 +259,8 @@ export function bellGroups<T extends BellSource>(
       g.title = code ? `${code} — ${g.what}` : g.what;
       continue;
     }
-    if (g.count > 1) g.body = g.body && g.body !== GENERIC[locale] ? `${moreText(g.count, locale)} · ${g.body}` : moreText(g.count, locale);
-    if (g.body === GENERIC[locale]) g.body = '';
+    if (g.count > 1) g.body = g.body && g.body !== GENERIC ? `${moreText(g.count, locale)} · ${g.body}` : moreText(g.count, locale);
+    if (g.body === GENERIC) g.body = '';
   }
   return out;
 }

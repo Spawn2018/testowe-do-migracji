@@ -97,19 +97,4 @@ const pl: Dict = {
   b5_start_note: 'START-1…7 wyłączone 05.10.2026 (ONE-MECH): każda dublowała wbudowany alarm.',
 };
 
-const en: Dict = {
-  ...pl,
-  b5_new: 'New automation', b5_edit: 'Edit rule', b5_name: 'Name', b5_trigger_group: 'Trigger', b5_conditions: 'Conditions',
-  b5_actions: 'Actions', b5_enabled: 'Rule enabled', b5_save: 'Save', b5_save_anyway: 'Save anyway', b5_cancel: 'Cancel',
-  b5_delete: 'Delete rule', b5_history: 'Change history', b5_history_all: 'Rule change history', b5_edit_rule: 'Edit',
-  b5_grp_event: 'Event', b5_grp_status: 'Status', b5_grp_risk: 'Risk', b5_grp_deadline: 'Deadline',
-};
-const sv: Dict = {
-  ...pl,
-  b5_new: 'Ny automatisering', b5_edit: 'Redigera regel', b5_name: 'Namn', b5_trigger_group: 'Utlösare', b5_conditions: 'Villkor',
-  b5_actions: 'Åtgärder', b5_enabled: 'Regel aktiv', b5_save: 'Spara', b5_save_anyway: 'Spara ändå', b5_cancel: 'Avbryt',
-  b5_delete: 'Ta bort regel', b5_history: 'Ändringshistorik', b5_history_all: 'Regelhistorik', b5_edit_rule: 'Redigera',
-  b5_grp_event: 'Händelse', b5_grp_status: 'Status', b5_grp_risk: 'Risk', b5_grp_deadline: 'Tidsfrist',
-};
-
-export const B5_I18N: Record<Locale, Dict> = { pl, en, sv };
+export const B5_I18N: Record<Locale, Dict> = { pl, en: {}, sv: {} };

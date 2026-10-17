@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseStenaFreightTimetable, freightSecurityToken, freightWindow } from '../supabase/functions/_shared/ferry/stenaFreight';
 import { evaluateMarineWindow, marinePointsForRoute } from '../supabase/functions/_shared/ferry/marineWeather';
 import { trafikverketSituationQuery } from '../supabase/functions/_shared/integrations/road';
-import { d19En, d19Pl, d19Sv } from '../src/i18n/d19Extra';
+import { d19Pl } from '../src/i18n/d19Extra';
 import { ferryPortPl, ferryStatusPl } from '../src/lib/ferryStatusPl';
 
 const HTML = `
@@ -75,7 +75,5 @@ describe('FERRY-STATUS — pogoda i panel', () => {
     expect(q).toContain('value="E22"');
     expect(d19Pl.risk_road_se_title).toMatch(/E4/);
     expect(d19Pl.risk_road_se_title).toMatch(/E22/);
-    expect(d19En.risk_road_se_title).toMatch(/E22/);
-    expect(d19Sv.risk_road_se_title).toMatch(/E22/);
   });
 });

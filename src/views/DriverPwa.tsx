@@ -2,7 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useTowerStore, DRIVER_TOKENS } from '../store/useTowerStore';
 import type { Locale } from '../types';
-import { t } from '../i18n/messages';
+import { t, tp } from '../i18n/messages';
 import { fmtTime } from '../lib/time';
 import type { Document } from '../types';
 import { DocPreview } from '../components/ui/DocPreview';
@@ -23,7 +23,7 @@ import { lazyRetry } from '../lib/lazyRetry';
 /* ANEKS 3 §2.3 — link z tokenem z bazy (tylko build Supabase; w demo stała false → kod usuwany) */
 const driverApi = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED
   ? () => import('../auth/client').then(({ getSupabase }) => getSupabase()).then((sb) => createDriverApi(sb))
-  : () => Promise.reject(new Error('Tryb demo — brak bazy'));
+  : () => Promise.reject(new Error(t('pl', 'drv_demo_nodb'))); /* tylko demo: link z bazy nie istnieje, tekstu kierowca nie widzi (serverMode = false) */
 
 const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../components/guide/Guide'))) : null;
 
@@ -140,14 +140,14 @@ function DriverPwaBody() {
       <main className="driver-pwa-main">
         {!loadId && !serverMode && (
           <div className="driver-alert">
-            Nieznany token kierowcy — użyj #/driver/demo-active lub demo-sg14
+            {t(locale, 'drv_token_unknown')}
           </div>
         )}
         {serverMode && srvErr && (
           <div className="driver-alert" data-driver-token-error>
             {/nieaktywny/i.test(srvErr)
-              ? 'Link jest nieaktywny.'
-              : `Link kierowcy nieważny — ${srvErr}. Poproś dyspozytora o nowy link.`}
+              ? t(locale, 'drv_link_inactive')
+              : tp(locale, 'drv_link_invalid', { err: srvErr })}
           </div>
         )}
         {serverMode && srvNote && (
@@ -278,7 +278,7 @@ function DriverPwaBody() {
               }
               void compressImage(f)
                 .then(async (c) => {
-                  if (import.meta.env.VITE_AUTH_MODE !== 'supabase') throw new Error('Tryb demo — brak bazy');
+                  if (import.meta.env.VITE_AUTH_MODE !== 'supabase') throw new Error(t(locale, 'drv_demo_nodb'));
                   const { uploadDriverFile } = await import('../data/driverPhoto');
                   await uploadDriverFile(SUPABASE_URL, SUPABASE_ANON_KEY, token, loadId, cat, c, c.name);
                   return c;
@@ -308,13 +308,13 @@ function DriverPwaBody() {
             </header>
             <div className="panel-bd">
               {vaultDocs.map((d) => (
-                <DocFileRow key={d.id} doc={d} onPreview={setPreviewDoc} />
+                <DocFileRow key={d.id} doc={d} onPreview={setPreviewDoc} locale={locale} />
               ))}
             </div>
           </div>
         )}
         {Guide && <Suspense fallback={null}><Guide locale={locale} role="drv" open={consent === null} /></Suspense>}
-        <DocPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
+        <DocPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} locale={locale} />
       </main>
       <footer className="driver-pwa-ft">
         <Link to="/" className="driver-back-link">

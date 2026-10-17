@@ -183,7 +183,7 @@ export default function SystemStatusPanel() {
   const hereState: TileState = !hereBudget || !hereBudget.enabled ? 'off' : levelState(hereBudget.level);
   const deeplState: TileState = !deepl ? 'off' : levelState(deepl.level);
   const cspState: TileState = !csp ? 'off' : csp.level === 'bad' ? 'bad' : csp.level === 'warn' ? 'warn' : 'ok';
-  const nf = (n: number | undefined) => Number(n ?? 0).toLocaleString(locale === 'sv' ? 'sv-SE' : locale === 'en' ? 'en-GB' : 'pl-PL');
+  const nf = (n: number | undefined) => Number(n ?? 0).toLocaleString('pl-PL');
   const jobName = (job: string) => {
     const k = `b6_job_${job.replace(/-/g, '_')}`;
     return hasKey(locale, k) ? t(locale, k) : job;

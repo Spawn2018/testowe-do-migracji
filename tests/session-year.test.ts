@@ -13,15 +13,14 @@ describe('A5 sesja roczna — ekran logowania po usunięciu sesji', () => {
     expect(loginAtFromJwt('zly')).toBeNull();
     expect(loginAtFromJwt(null)).toBeNull();
   });
-  it('sesja usunięta po roku → komunikat „Minął rok…” (PL/EN/SV)', () => {
+  it('sesja usunięta po roku → komunikat „Minął rok…” (tylko PL — 8A)', () => {
     const s = mem(); const t0 = Date.parse('2025-09-26T08:00:00Z');
     rememberLogin(jwt({ amr: [{ timestamp: t0 / 1000 }] }), s);
     expect(s.getItem(LOGIN_AT_KEY)).toBe(String(t0));
     expect(sessionEndReason(t0 + 365 * DAY + 60_000, s)).toBe('YEAR');
     /* E37 „Komunikaty zdaniami” (koniec sesji: „Zaloguj się e-mailem i hasłem”; logowanie hasłem od 29.09) */
     expect(SESSION_END_MSG.YEAR.pl).toBe('Minął rok od logowania na tym urządzeniu. Zaloguj się e-mailem i hasłem.');
-    expect(SESSION_END_MSG.YEAR.en).toMatch(/year/);
-    expect(SESSION_END_MSG.YEAR.sv).toMatch(/ett år/);
+    expect(SESSION_END_MSG.YEAR.en).toBe(SESSION_END_MSG.YEAR.pl);
     expect(s.getItem(LOGIN_AT_KEY)).toBeNull();
   });
   it('sesja usunięta wcześniej (wyloguj wszędzie / HHL / dezaktywacja) → „Sesja zakończona”', () => {

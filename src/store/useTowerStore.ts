@@ -455,9 +455,9 @@ export const useTowerStore = create<TowerState>()(
         set({ role, theme: nextTheme, view: defaultView as ViewKey });
       },
 
-      setLocale: (locale) => {
-        set({ locale });
-        writeThrough({ type: 'prefs.save', prefs: { locale } });
+      /* 8A (17.10): panel tylko po polsku — EN i SV zostają wyłącznie w aplikacji kierowcy (własny wybór języka). */
+      setLocale: () => {
+        set({ locale: 'pl' });
       },
 
       setDisplayCurrency: (displayCurrency) => {
@@ -494,7 +494,8 @@ export const useTowerStore = create<TowerState>()(
 
       applyUserPrefs: (p) => {
         const patch: Partial<TowerState> = {};
-        if (p.locale) patch.locale = p.locale;
+        /* 8A (17.10): zapisany `locale` z konta nie przełącza panelu — panel tylko po polsku. */
+        patch.locale = 'pl';
         if (p.displayCurrency) patch.displayCurrency = p.displayCurrency;
         if (p.theme) {
           applyThemeToDom(p.theme);
@@ -1971,6 +1972,16 @@ export const useTowerStore = create<TowerState>()(
         }
         if (!state) return;
         if (state.role) setPreviewViewRole(state.role);
+        /* 8A (17.10): zapisany w przeglądarce „en” albo „sv” wraca do „pl” — panel tylko po polsku. */
+        if (state.locale !== 'pl') {
+          queueMicrotask(() => {
+            try {
+              useTowerStore.setState({ locale: 'pl' });
+            } catch {
+              /* store may be mid-init in tests */
+            }
+          });
+        }
         // After persist merge: stale theme must not stick when user never toggled manually.
         const theme = state.themeManual
           ? state.theme

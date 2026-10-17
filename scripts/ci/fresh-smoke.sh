@@ -60,7 +60,7 @@ fi
 npx playwright test tests/e8-phone-gate.spec.ts
 # B-PERSIST-TOAST: pierwsze wejście bez toastu „stan uszkodzony”
 npx playwright test tests/persist-toast.spec.ts
-# B-SMOKE-LANG: test:d19 wyłączony (brak #langSeg / PL-only)
+# B-SMOKE-LANG, 8A (17.10): panel tylko po polsku — test:d19 usunięty
 npm run test:deur
 npm run test:etap4
 npm run test:etap5
