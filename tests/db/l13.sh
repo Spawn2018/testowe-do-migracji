@@ -83,7 +83,8 @@ PROJ=$(sys "select l13_email_projection((
 ), 94, 10)::text" | tail -1)
 echo "  RAPORT $PROJ"
 val "szacunek ponad 60 na dobę" "select ('$PROJ'::jsonb->>'over_60')" true
-val "e-mail decyzji automatycznych włączony" "select ('$PROJ'::jsonb->>'automatic_decision_email')" true
+# C3-p / E5: flaga AUTOMATIC_DECISION_EMAIL usunięta — projekcja czyta stub (false); e-mail z macierzy dec_new.
+val "projekcja: bez flagi AUTOMATIC_DECISION_EMAIL (C3-p)" "select ('$PROJ'::jsonb->>'automatic_decision_email')" false
 val "szczyt 10 w ruchu, osobno, ponad 100" "select (('$PROJ'::jsonb->>'one_each_peak_10')::int > 100)" t
 val "94 transporty, osobno, ponad limit Resend" "select (('$PROJ'::jsonb->>'one_each_fleet_94')::int > 100)" t
 val "ze skrótem szczyt mieści się w 100" "select (('$PROJ'::jsonb->>'digest_peak_10')::int < 100)" t
