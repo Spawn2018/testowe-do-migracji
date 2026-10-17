@@ -143,7 +143,7 @@ export function SmsPlaces({ readOnly }: { readOnly: boolean }) {
 
   return (
     <section className={`sp${phone ? ' is-phone' : ''}`} data-screen="zones-sms">
-      {!phone ? <p className="sp-ops">{p8bt('p8b_ops')}</p> : null}
+      {!phone && !readOnly ? <p className="sp-ops">{p8bt('p8b_ops')}</p> : null}
       {readOnly ? <p className="sp-ro" data-sp-ro>{p8bt('p8b_ro')}</p> : null}
       <div className="sp-tiles">
         {sendTile}

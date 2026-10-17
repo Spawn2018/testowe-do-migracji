@@ -3224,3 +3224,44 @@ test.describe('wyglad/P8-d Automatyzacje (E35, img/e35-after)', () => {
     expect(hits, JSON.stringify(hits, null, 1)).toEqual([]);
   });
 });
+
+/**
+ * wyglad/W-konta — rodzaj konta w demo (audyt 17.10 §7): menu konta › „Rodzaj konta (demo)” — Administrator / Operacje HHL,
+ * Dyspozytor / Użytkownik SCX. Operacje HHL oglądają bez zmian (E9): Kalibracja ETA bez „Zatwierdź”, panel bez „Zmień status”.
+ */
+test.describe('wyglad/W-konta — Operacje HHL i Użytkownik SCX w demo', () => {
+  test('komputer: przełącznik w menu konta, Operacje HHL — tylko podgląd; powrót do Administratora', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'HHL');
+    await page.click('#accountBtn');
+    await expect(page.locator('[data-demo-kind]')).toHaveText(['Administrator', 'Operacje']);
+    await expect(page.locator('[data-demo-kind="HHL_ADMIN"]')).toHaveAttribute('aria-pressed', 'true');
+    await Promise.all([page.waitForEvent('load'), page.click('[data-demo-kind="HHL_OPS"]')]);
+    await page.waitForTimeout(500);
+    await expect(page.locator('#accountBtn .acc-who span')).toHaveText('HHL · Operacje');
+    await openView(page, 'options');
+    await page.click('[data-opt-nav="calib"]');
+    await expect(page.locator('[data-eta-calib]')).toBeVisible();
+    await expect(page.locator('[data-cal-approve]')).toHaveCount(0);
+    await expect(page.locator('[data-eta-calib]')).toContainText('Nowe czasy zatwierdza Administrator HHL');
+    await page.click('[data-opt-nav="thr"]');
+    await expect(page.locator('[data-opt-screen="thr"]')).toContainText('Tylko podgląd');
+    /* KSH w Podglądzie — konto domyślne KSH, bez przełącznika rodzaju */
+    await page.click('#roleSeg button[data-role="KSH"]');
+    await page.click('#accountBtn');
+    await expect(page.locator('[data-demo-kind]')).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await page.click('#roleSeg button[data-role="HHL"]');
+    await page.click('#accountBtn');
+    await Promise.all([page.waitForEvent('load'), page.click('[data-demo-kind="HHL_ADMIN"]')]);
+    await page.waitForTimeout(500);
+    await expect(page.locator('#accountBtn .acc-who span')).toHaveText('HHL · Administrator');
+  });
+  test('komputer: Użytkownik SCX z adresu (?konto=uzytkownik)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'SCX', false, `/#/?now=${encodeURIComponent('2026-09-23T14:32:00Z')}&konto=uzytkownik`);
+    await expect(page.locator('#accountBtn .acc-who span')).toHaveText('SCX · Użytkownik');
+    await page.click('#accountBtn');
+    await expect(page.locator('[data-demo-kind="CARRIER_USER"]')).toHaveAttribute('aria-pressed', 'true');
+  });
+});

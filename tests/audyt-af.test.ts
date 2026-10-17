@@ -232,7 +232,7 @@ describe('F-07 — Operacje HHL: rejsy i awizacja tylko do odczytu (według rodz
   });
   it('Rejsy: w demo „Dodaj rejs”, „Opóźnienie”, „Odwołaj” tylko dla konta innego niż Operacje', () => {
     const src = readFileSync('src/views/SailingsPanel.tsx', 'utf8');
-    expect(src).toMatch(/: role === 'HHL' && getAuthProfile\(\)\?\.role !== 'HHL_OPS';/);
+    expect(src).toMatch(/: role === 'HHL' && accountRole\(role\) !== 'HHL_OPS';/); /* wyglad/W-konta: rodzaj konta także w demo */
     expect(src).toMatch(/\? getAuthProfile\(\)\?\.role === 'HHL_ADMIN'/);
   });
 });

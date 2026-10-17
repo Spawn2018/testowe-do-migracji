@@ -10,7 +10,6 @@
  */
 import { Suspense, lazy, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
-import { getAuthProfile } from '../auth/profile';
 import { useIsPhone } from '../lib/useIsPhone';
 import { getNow } from '../lib/frozenNow';
 import { formatListDateTime } from '../lib/format';
@@ -26,6 +25,7 @@ import type { GeofenceType } from '../types';
 import { p8ct, type P8cKey } from '../i18n/p8c';
 import '../components/zones/zones.css';
 import { lazyRetry } from '../lib/lazyRetry';
+import { accountRole } from '../lib/accountRole';
 
 const ZonesMap = lazy(lazyRetry(() => import('../components/zones/ZonesMap')));
 
@@ -88,7 +88,7 @@ export function ZonesView() {
   const nowMin = Math.floor(getNow().getTime() / 60_000);
   const nowIso = useMemo(() => new Date(nowMin * 60_000).toISOString(), [nowMin]);
   /* E9: zmienia tylko Administrator HHL; Operacje HHL — podgląd */
-  const canEdit = role === 'HHL' && getAuthProfile()?.role !== 'HHL_OPS' && !!src?.saveZone;
+  const canEdit = role === 'HHL' && accountRole(role) !== 'HHL_OPS' && !!src?.saveZone;
   const [zones, setZones] = useState<ZoneRow[] | null>(src?.initial ?? null);
   const [loadErr, setLoadErr] = useState(false);
   const [rev, setRev] = useState(0);

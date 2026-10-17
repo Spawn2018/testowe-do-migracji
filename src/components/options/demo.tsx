@@ -140,6 +140,8 @@ const PEOPLE: PersonRow[] = [
   { id: 'p3', name: 'Piotr Zając', mail: 'p.zajac@…', kind: 'CLIENT_USER', phone: null, last: '06.10.2026, 16:40', mfa: false },
   { id: 'p4', name: 'Jan Nowak', mail: 'j.nowak@…', kind: 'CARRIER_DISPATCH', phone: '+48 600 000 001', last: 'dziś, 06:30', mfa: false },
   { id: 'p5', name: 'Ewa Kowal', mail: 'e.kowal@…', kind: 'CARRIER_DISPATCH', phone: '+48 600 000 002', last: '05.10.2026, 11:09', mfa: false },
+  /* wyglad/W-konta (F7): Użytkownik SCX w demo — „Moje konto” pokazuje tę osobę, nie Administratora HHL. Dane wymyślone (G-09). */
+  { id: 'p6', name: 'Tomasz Wrona', mail: 't.wrona@…', kind: 'CARRIER_USER', phone: '+48 600 000 004', last: 'dziś, 07:10', mfa: false },
 ];
 
 const INVITES: InviteRow[] = [

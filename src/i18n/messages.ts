@@ -41,6 +41,12 @@ const pl: Dict = {
   p3a_preview_lbl: 'Podgląd',
   p3a_acc_open: 'Konto: {name}',
   p3a_acc_demo_name: 'Konto pokazowe',
+  /* wyglad/W-konta: rodzaj konta w demo (E9) */
+  p3a_acc_kind: 'Rodzaj konta (demo)',
+  p3a_kshort_HHL_ADMIN: 'Administrator',
+  p3a_kshort_HHL_OPS: 'Operacje',
+  p3a_kshort_CARRIER_DISPATCH: 'Dyspozytor',
+  p3a_kshort_CARRIER_USER: 'Użytkownik',
   p3a_kind_HHL_ADMIN: 'HHL · Administrator',
   p3a_kind_HHL_OPS: 'HHL · Operacje',
   p3a_kind_CLIENT_USER: 'KSH · Użytkownik',

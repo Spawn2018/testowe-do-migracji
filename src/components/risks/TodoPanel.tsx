@@ -19,13 +19,13 @@ import { kmText, mergeClosures, minText, urgentOf } from '../../lib/e49Detour';
 import { e49t } from '../../i18n/e49';
 import { timeOnly } from '../../lib/statusAxis';
 import { mayResolveDecision } from '../../lib/decisionAccess';
-import { getAuthProfile } from '../../auth/profile';
 import { lazyRetry } from '../../lib/lazyRetry';
 import { tp, t } from '../../i18n/messages';
 import { rt, rtn, rtp } from '../../i18n/p6';
 import type { FeeDecision } from '../../lib/p5Fees';
 import type { DecisionsApi } from './useDecisions';
 import { TodoCardView, type CardCtx } from './TodoCard';
+import { accountRole } from '../../lib/accountRole';
 
 const FeeModal = lazy(lazyRetry(() => import('../drawer/FeeModal').then((m) => ({ default: m.FeeModal }))));
 
@@ -264,7 +264,7 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
       };
     },
     decisions,
-    mayResolve: (deciderRole) => mayResolveDecision(deciderRole, getAuthProfile()?.role),
+    mayResolve: (deciderRole) => mayResolveDecision(deciderRole, accountRole(role)),
     onResolved: (i, hint) => {
       setOpenIssue(null);
       if (hint === 'BACKUP_RETRY') navigate({ pathname: '/opcje/stan-systemu', search: 'kopia=1' });

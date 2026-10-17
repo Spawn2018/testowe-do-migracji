@@ -4,7 +4,6 @@ import { CorridorMap } from '../map/LazyCorridorMap';
 import { StatusPill } from '../ui/StatusPill';
 import { t, tp } from '../../i18n/messages';
 import { canChangeLoadStatus } from '../../lib/permissions';
-import { getAuthProfile } from '../../auth/profile';
 import { transportLabel } from '../../lib/transportName';
 import { DocPreview } from '../ui/DocPreview';
 import { KshDatesModal } from './KshDatesModal';
@@ -29,6 +28,7 @@ import { pt } from '../../i18n/p7';
 import { dayShort, isoWeek } from '../../lib/p7Awiz';
 import { PROD_BUILD } from '../../lib/prodFacade';
 import { delayPillMinutes } from '../../lib/prodDash';
+import { accountRole } from '../../lib/accountRole';
 /* SCOPE 6.4 — formularz zezwoleń: tylko build Supabase, chunk leniwy (paczka demo bez niego) */
 const PermitForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../../auth/PermitForm'))) : null;
 /* wyglad/P4-c: okna awizacji i „Zmień status” poza pierwszym wczytaniem (budżet 400 kB gzip, scripts/bundle-size.mjs) */
@@ -135,7 +135,7 @@ export function LoadDrawer() {
 
   if (!load) return null;
 
-  const canStatus = canChangeLoadStatus(role, getAuthProfile()?.role ?? null);
+  const canStatus = canChangeLoadStatus(role, accountRole(role));
   const delayMin = delayPillMinutes(load, delayMinutesVsPlan(load.etaBoden, load.plannedDeliverDate, load.planDates?.deliveryTo ?? load.awizacja?.unloadWindowEnd), PROD_BUILD);
   const delayPillText = delayMin === null ? t(locale, 'i2_delay_pill') : formatDelayPill(delayMin);
 
