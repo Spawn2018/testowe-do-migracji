@@ -140,8 +140,11 @@ export function useRouteSync() {
     /* A4 (wyglad/W-faktura-termin, F7): link do faktury zostaje w adresie, dopóki Faktury go nie odczytają; potem adres widoku
        (z ?now= i konto) — przeładowanie nie otwiera faktury drugi raz, a ponowne kliknięcie tego samego linku znów działa */
     if (r.kind === 'invoice') {
-      if (st.openInvoiceId) return;
-      const target = buildRoute(st.view, null);
+      if (st.openInvoiceId && st.view === 'inv') return;
+      /* F7 (2. runda): przejście z menu, zanim Faktury odczytały link (albo konto bez faktur) — link przepada, adres widoku */
+      if (st.openInvoiceId) st.setOpenInvoiceId(null);
+      const open = st.selectedLoadId ? st.loads.find((x) => x.id === st.selectedLoadId) : null;
+      const target = buildRoute(st.view, open?.code ?? null);
       if (target !== cur.pathname) navigate({ pathname: target, search: cur.search }, { replace: true });
       return;
     }

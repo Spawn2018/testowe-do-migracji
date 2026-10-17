@@ -102,6 +102,18 @@ test.describe('A4 — faktura po terminie', () => {
     await expect(page.locator('[data-bill-detail="bill-k-2026-W38"]')).toBeVisible()
   })
 
+  test('martwy link do faktury i szybkie przejście z menu — adres idzie za widokiem, link nie wraca', async ({ page }) => {
+    await freshLate(page, '/')
+    await page.goto(late('/finanse/faktury/nie-ma-takiej'), { waitUntil: 'networkidle' })
+    await page.waitForTimeout(300)
+    await page.click('nav button[data-view="risk"]')
+    await expect(page).toHaveURL(/#\/ryzyka\?now=/)
+    await page.click('nav button[data-view="inv"]')
+    await page.waitForTimeout(2000)
+    await expect(page.getByText('Brak dostępu')).toHaveCount(0)
+    await expect(page).toHaveURL(/#\/faktury\?now=/)
+  })
+
   test('KSH: link do faktury kosztowej — „Brak dostępu”, nic się nie otwiera', async ({ page }) => {
     await freshLate(page, '/')
     await page.click('#roleSeg button[data-role="KSH"]')

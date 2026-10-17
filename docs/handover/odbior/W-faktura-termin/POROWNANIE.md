@@ -23,6 +23,8 @@ Obrazy (`now=2026-11-20T10:00Z` — trzy faktury demo po terminie; przy zegarze 
 
 Poprawki po niezależnym sprawdzeniu (F7, 17.10, 22:20): przewijanie tylko obszaru treści (wcześniej znikał pasek górny, a na telefonie numer faktury był nad ekranem; ukryte pole pliku wydłużało dokument); „Link do faktury” tylko w wiadomościach prowadzących do faktury; adres po otwarciu faktury; „Brak dostępu” dla niewidocznej faktury; „Otwórz fakturę” tylko dla sprawy „po terminie”; twarde spacje w nawiasie; „sprawdza płatność”; sprawy demo przeliczane przy wczytaniu zapisanego stanu; opis i prognoza w „Kto co dostaje”; kontrakt dla bazy (dopisek §2: `risk_kind`, `notify_event_key`, `matrix_notify`, `clickTargets.ts`, zamknięcie w tej samej transakcji, indeks częściowy).
 
+Druga runda F7 (17.10, 22:55): bez blokerów; poprawione 23:00 — adres przy szybkim przejściu z menu po martwym linku, przedrostek powiadomienia z id wiersza w kontrakcie (§2 pkt 2), wiek sprawy demo po przeładowaniu z innym zegarem, termin w podglądzie wiadomości o fakturze (11.11.2026).
+
 Testy:
 - `tests/w-faktura-termin.test.ts` — kiedy faktura jest „po terminie” (dzień terminu — jeszcze nie; opłacona i sporna — nie), jedna sprawa na fakturę z kluczem i parametrami, wiersz bazy → sprawa (`detail.invoice_id` → „Otwórz fakturę”), liczba u HHL Administratora i Operacji, nie u SCX i KSH, zamknięcie po „Opłacona” i sporze, przywrócenie tylko w demo, przejścia do faktury, wiersz demo „Kto co dostaje”, treść e-maila, „Link do faktury”;
 - `tests/p8-texts.test.ts` — 46 pozycji; rodzaj `INVOICE_OVERDUE` „planned”, dopóki wykonawca nie doda go w `notifyTemplates.ts`;

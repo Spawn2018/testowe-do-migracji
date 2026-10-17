@@ -147,7 +147,8 @@ describe('A4 — „Kto co dostaje” i treść e-maila', () => {
     expect(INVOICE_LINK_IDS.has('INSURANCE_EXPIRY')).toBe(false);
     expect(INVOICE_LINK_SAMPLE).toMatch(/^tower\.log-mar\.pl\/#\/finanse\/faktury\//);
     const mt = read('src/components/options/MessageTexts.tsx');
-    expect(mt).toContain("if (INVOICE_LINK_IDS.has(item.id)) s.link = INVOICE_LINK_SAMPLE;");
+    expect(mt).toMatch(/if \(INVOICE_LINK_IDS\.has\(item\.id\)\) \{\s*s\.link = INVOICE_LINK_SAMPLE;/);
+    expect(mt).toContain('s.due = INVOICE_DUE_SAMPLE;');
     expect(mt.match(/msgId=\{item\.id\}/g)).toHaveLength(2);
     expect(read('src/components/options/TokenEditor.tsx')).toContain('tokenLabelIn(id, msgId)');
   });
@@ -184,11 +185,16 @@ describe('A4 — poprawki po F7', () => {
     const late = refreshInvoiceOverdue([], [bill({ id: 'b9', dueDate: '2026-11-19' })], '2026-11-20', NOW);
     expect(late.map((r) => r.id)).toEqual([invoiceOverdueId('b9')]);
     expect(refreshInvoiceOverdue(before, [bill()], '2026-11-20', NOW)).toBe(before);
+    /* F7 (2. runda): inny zegar → nowy wiek sprawy */
+    const older = refreshInvoiceOverdue(before, [bill()], '2026-11-25', '2026-11-25T10:00:00Z');
+    expect(older).not.toBe(before);
+    expect(older[0]!.ageHours).toBeGreaterThan(before[0]!.ageHours);
     expect(read('src/store/useTowerStore.ts')).toContain('refreshInvoiceOverdue(st.risks, st.bills, localDateOf(now), now)');
   });
   it('adres: po otwarciu faktury wraca do widoku; niewidoczna albo nieistniejąca faktura — „Brak dostępu”', () => {
     const rs = read('src/hooks/useRouteSync.ts');
-    expect(rs).toMatch(/if \(r\.kind === 'invoice'\) \{\s*if \(st\.openInvoiceId\) return;/);
+    expect(rs).toMatch(/if \(r\.kind === 'invoice'\) \{\s*if \(st\.openInvoiceId && st\.view === 'inv'\) return;/);
+    expect(rs).toContain('if (st.openInvoiceId) st.setOpenInvoiceId(null);');
     expect(rs).toContain('}, [view, selectedLoadId, loads, openInvoiceId, navigate]);');
     const iv = read('src/views/InvoicesView.tsx');
     expect(iv).toContain('const lost = !!openInvoiceId && bills.length > 0 && !openDirection;');

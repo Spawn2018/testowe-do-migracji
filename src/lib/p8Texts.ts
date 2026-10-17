@@ -227,6 +227,8 @@ export const INVOICE_LINK_IDS: ReadonlySet<string> = new Set([
   'INVOICE_NEW', 'PAYMENT_REMINDER', 'INVOICE_DISPUTED', 'INVOICE_DISPUTE_REPLY', 'INVOICE_DISPUTE_RESOLVED', 'INVOICE_OVERDUE',
 ]);
 export const INVOICE_LINK_SAMPLE = 'tower.log-mar.pl/#/finanse/faktury/FV-12-10-2026';
+/** Termin płatności przykładowej faktury „FV 12/10/2026” (t41): wystawiona 12.10, 30 dni. */
+export const INVOICE_DUE_SAMPLE = '11.11.2026';
 export function tokenLabelIn(id: TokenId, msgId?: string): string {
   return id === 'link' && !!msgId && INVOICE_LINK_IDS.has(msgId) ? 'Link do faktury' : TOKEN_LABEL[id];
 }

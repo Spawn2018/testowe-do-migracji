@@ -73,7 +73,8 @@ export function syncInvoiceOverdue(risks: Risk[], b: Bill | undefined, todayLoca
 export function refreshInvoiceOverdue(risks: Risk[], bills: readonly Bill[], todayLocal: string, nowIso: string): Risk[] {
   const fresh = invoiceOverdueRisks(bills, todayLocal, nowIso);
   const rest = risks.filter((r) => r.kind !== INVOICE_OVERDUE_KIND);
+  /* te same sprawy i ten sam wiek („35 dni temu” po przeładowaniu z innym zegarem — F7) */
   const same = fresh.length === risks.length - rest.length
-    && fresh.every((f) => risks.some((r) => r.id === f.id));
+    && fresh.every((f) => risks.some((r) => r.id === f.id && r.ageHours === f.ageHours));
   return same ? risks : [...rest, ...fresh];
 }

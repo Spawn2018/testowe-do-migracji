@@ -13,7 +13,7 @@ import { formatListDateTime } from '../../lib/format';
 import { formatCalendarDay } from '../../lib/time';
 import { useIsPhone } from '../../lib/useIsPhone';
 import {
-  GROUPS, GROUP_LABEL, INVOICE_LINK_IDS, INVOICE_LINK_SAMPLE, MESSAGES, channelLabel, SMS_MAX, checkMessage, gsmBad, gsmLength, parseMarkers, previewLines, tokenLabelIn,
+  GROUPS, GROUP_LABEL, INVOICE_DUE_SAMPLE, INVOICE_LINK_IDS, INVOICE_LINK_SAMPLE, MESSAGES, channelLabel, SMS_MAX, checkMessage, gsmBad, gsmLength, parseMarkers, previewLines, tokenLabelIn,
   sampleOf, smsOf, smsWorstLength, toMarkers,
   type CheckError, type MsgItem, type PreviewPart, type Seg, type TokenId,
 } from '../../lib/p8Texts';
@@ -261,7 +261,11 @@ function MessageEditor({ item, saved, draft, status, loads, readOnly, prodPendin
     /* E41: SMS — sam kod; e-mail na koncie HHL — kod z numerem zlecenia HHL */
     if (email && load?.hhlOrderNo) s.code = `${load.code} · ${load.hhlOrderNo}`;
     /* A4 (wyglad/W-faktura-termin): wiadomości o fakturze prowadzą do faktury */
-    if (INVOICE_LINK_IDS.has(item.id)) s.link = INVOICE_LINK_SAMPLE;
+    if (INVOICE_LINK_IDS.has(item.id)) {
+      s.link = INVOICE_LINK_SAMPLE;
+      /* F7: termin płatności przykładowej faktury (nie data załadunku transportu) */
+      s.due = INVOICE_DUE_SAMPLE;
+    }
     return s;
   }, [load, email, item.id]);
   const errId = `mt-err-${item.id}`;
