@@ -28,13 +28,17 @@ sys() { $PSQL -v ON_ERROR_STOP=1 -c "$1" 2>&1; }
 sval() { out=$(sys "$2" | tail -1 | tr -d '\r'); if [ "$out" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $out, oczekiwano: $3)"; fi; }
 
 echo; echo "[C3] macierz po zdarzeniu"
-sval "23 zdarzenia w katalogu" "select count(distinct event_key) from notification_matrix" 23
+sval "25 zdarzeń w katalogu" "select count(distinct event_key) from notification_matrix" 25
 sval "czat: 5 ról, telefon, bez e-maila" "select count(*) from notification_matrix where event_key='chat' and in_app and push and email is false" 5
 sval "W39 status HHL_ADMIN bez e-maila" "select email::text from notification_matrix where event_key='status' and role='HHL_ADMIN'" false
 sval "strefa KSH wyłączona" "select in_app::text from notification_matrix where event_key='zone' and role='CLIENT_USER'" false
 sval "Brak CMR KSH wyłączony" "select in_app::text from notification_matrix where event_key='cmr' and role='CLIENT_USER'" false
-sval "6 treści po polsku" "select count(*) from notification_copy" 6
+sval "treści po polsku (C3+C3-p)" "select count(*) from notification_copy" 8
 sval "sytuacja ogólna tylko Ryzyka" "select bool_and(risks_only)::text from notification_matrix where event_key='risk_general'" true
+sval "50 km plac i Śrem osobno" "select count(distinct event_key) from notification_matrix where event_key in ('pre_arrival_site','pre_arrival_srem')" 2
+sval "źródło down/back osobno" "select count(distinct event_key) from notification_matrix where event_key in ('src_down','src_back')" 2
+sval "kopia macierzy w audit_log" "select count(*) > 0 from audit_log where action='C3_MATRIX_KOPIA'" t
+sval "bez AUTOMATIC_DECISION_EMAIL" "select count(*) from security_flags where key='AUTOMATIC_DECISION_EMAIL'" 0
 
 HHLU=$(sys "select id from app_users where auth_id='$HHL'" | tail -1 | tr -d '\r')
 KSHU=$(sys "select id from app_users where auth_id='$KSH'" | tail -1 | tr -d '\r')
@@ -52,10 +56,26 @@ sys "insert into risk_signals (project_id, load_id, kind, severity, title, title
 sval "Brak CMR: HHL" "select count(*) > 0 from notifications where template='RISK_OPEN' and user_id='$HHLU' and payload->>'kind'='DOC_MISSING'" t
 sval "Brak CMR: KSH nic" "select count(*) from notifications where template='RISK_OPEN' and user_id='$KSHU' and payload->>'kind'='DOC_MISSING'" 0
 
+# C3-p: subskrypcja push dla SCX — żeby powstał WEB_PUSH czatu (bez critical).
+sys "insert into push_subscriptions (user_id, endpoint, p256dh, auth)
+  values ('$SCXU', 'https://example.test/c3p-push', 'dGVzdA', 'dGVzdA')
+  on conflict (endpoint) do nothing" >/dev/null
 sys "insert into load_messages (load_id, author_id, body, visible_to)
   values ('$L','$HHLU','tylko hhl i scx','{FORWARDER,CARRIER}')" >/dev/null
 sval "czat HHL+SCX: KSH nic" "select count(*) from notifications n join load_messages m on n.dedup_key like 'CHAT:'||m.id::text||':%' where m.body='tylko hhl i scx' and n.user_id='$KSHU'" 0
 sval "czat HHL+SCX: SCX dostaje, autor HHL nie" "select (count(*) filter (where n.user_id='$SCXU'))::text||'/'||(count(*) filter (where n.user_id='$HHLU'))::text from notifications n join load_messages m on n.dedup_key like 'CHAT:'||m.id::text||':%' where m.body='tylko hhl i scx' and n.channel='IN_APP'" "1/0"
+# C3-p: czat bez critical (bez e-maila zapasowego); tytuł i treść, nie kod LOAD_CHAT_MESSAGE
+sval "czat IN_APP title i body" "select (bool_and(n.payload->>'title' is not null and n.payload->>'body' = 'tylko hhl i scx' and position('LOAD_CHAT_MESSAGE' in coalesce(n.payload->>'title','')) = 0))::text from notifications n join load_messages m on n.dedup_key like 'CHAT:'||m.id::text||':%' where m.body='tylko hhl i scx' and n.channel='IN_APP' and n.user_id='$SCXU'" true
+sval "czat WEB_PUSH bez critical" "select (count(*) > 0 and bool_and(coalesce(n.payload->>'critical','') is distinct from 'true'))::text from notifications n join load_messages m on n.dedup_key like 'CHAT:'||m.id::text||':%' where m.body='tylko hhl i scx' and n.channel='WEB_PUSH' and n.user_id='$SCXU'" true
+# fallback: ustaw SENT bez delivered_at, jak po 5 min — enqueue musi zwrócić false
+sys "update notifications n set status='SENT', sent_at=now()-interval '6 minutes', delivered_at=null, payload=n.payload||'{\"critical\":\"true\"}'::jsonb from load_messages m where n.dedup_key like 'CHAT:'||m.id::text||':WP:%' and m.body='tylko hhl i scx' and n.channel='WEB_PUSH'" >/dev/null
+sval "czat: enqueue_fallback odmawia" "select public.web_push_enqueue_fallback(n.id)::text from notifications n join load_messages m on n.dedup_key like 'CHAT:'||m.id::text||':WP:%' where m.body='tylko hhl i scx' and n.channel='WEB_PUSH' limit 1" f
+
+# C3-p: ZONE_ENTER PRE_ARRIVAL → wiersz 50 km przed placem (nie „Strefy”)
+sys "select public.matrix_notify('LOAD_STATUS','ZONE_ENTER','$L','$P', jsonb_build_object('geofence_kind','PRE_ARRIVAL','geofence_country','SE','geofence_name','Bufor 50 km przed Boden'), 'c3p-site-1', null)" >/dev/null
+sval "50 km plac: matrix_event" "select payload->>'matrix_event' from notifications where dedup_key like 'c3p-site-1:IN:%' limit 1" pre_arrival_site
+sys "select public.matrix_notify('LOAD_STATUS','ZONE_ENTER','$L','$P', jsonb_build_object('geofence_kind','PRE_ARRIVAL','geofence_country','PL','geofence_name','Bufor przed Sremem'), 'c3p-srem-1', null)" >/dev/null
+sval "50 km Śrem: matrix_event" "select payload->>'matrix_event' from notifications where dedup_key like 'c3p-srem-1:IN:%' limit 1" pre_arrival_srem
 
 run "$KSH" "select my_notify_set('status','mail',false)" commit >/dev/null
 sval "osoba KSH: e-mail statusu wyłączony, było puste" "select (p.on_value is false)::text||'/'||(a.old_value->>'on' is null)::text from user_notify_pref p join audit_log a on a.entity='user_notify_pref' and a.user_id=p.user_id where p.user_id='$KSHU' and p.event_key='status' and p.channel='mail' order by a.id desc limit 1" "true/true"

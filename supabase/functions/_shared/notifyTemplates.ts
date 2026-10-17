@@ -322,14 +322,14 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
       return { subject, body, severity: row.template === 'DECISION_ESCALATED' ? 'HIGH' : 'MEDIUM', view: 'risk' };
     }
     case 'LOAD_CHAT_MESSAGE': {
+      // C3-p: tytuł i treść jak na telefonie (D-20261017-0730-01) — bez kodu szablonu.
+      const title = String(p.title ?? '').trim();
+      const body = String(p.body ?? p.preview ?? '').trim();
       const code = String(p.load_code ?? '');
       const who = String(p.author_display ?? p.author_org ?? '');
-      const preview = String(p.preview ?? '');
-      const subject =
-        locale === 'en' ? `Chat: ${code}` : locale === 'sv' ? `Chatt: ${code}` : `Czat: ${code}`;
-      const body =
-        locale === 'en' ? `${who}: ${preview}` : locale === 'sv' ? `${who}: ${preview}` : `${who}: ${preview}`;
-      return { subject, body, severity: 'MEDIUM', view: null };
+      const firm = String(p.author_org ?? '');
+      const subject = title || (code && who ? `${code} — ${who}${firm ? ` // ${firm}` : ''}` : `Czat: ${code}`);
+      return { subject, body: body || `${who}: ${String(p.preview ?? '')}`, severity: 'MEDIUM', view: null };
     }
     case 'RISK_OPEN':
     case 'RISK_RESOLVED':

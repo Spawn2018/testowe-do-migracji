@@ -49,7 +49,9 @@ export const DEMO_MATRIX: MatrixGroup[] = [
         cells: { HHL_ADMIN: c(true, false, false, ['bell']), HHL_OPS: c(true, false, false, ['bell']), CLIENT_USER: c(false), CARRIER_DISPATCH: c(true, true, false, ['bell']), CARRIER_USER: c(true, false, false, ['bell']) } },
       { id: 'zone', perDay: 30, title: 'Wjazd lub wyjazd ze strefy', sub: 'Śrem, port, Boden · SMS ustawiasz osobno', target: 'Mapa › auto', cells: all5(c(true)) },
       /* wyglad/audyt-E (E-02; E35 pkt 2, 08.10): dawne reguły „Dojazd na plac” i „Wjazd przed port” — te same odbiorcy */
-      { id: 'pre_arrival', perDay: 4, title: 'Auto 50 km przed placem / przed Śremem', sub: 'bufor 50 km przed Śremem albo Boden', target: 'Mapa › auto',
+      { id: 'pre_arrival_site', perDay: 2, title: 'Auto 50 km przed placem', sub: 'bufor 50 km przed Boden', target: 'Mapa › auto',
+        cells: { HHL_ADMIN: c(false), HHL_OPS: c(false), CLIENT_USER: c(true), CARRIER_DISPATCH: c(true), CARRIER_USER: c(false) } },
+      { id: 'pre_arrival_srem', perDay: 2, title: 'Auto 50 km przed Śremem', sub: 'bufor 50 km przed Śremem', target: 'Mapa › auto',
         cells: { HHL_ADMIN: c(false), HHL_OPS: c(false), CLIENT_USER: c(true), CARRIER_DISPATCH: c(true), CARRIER_USER: c(false) } },
       { id: 'pre_port', perDay: 3, title: 'Auto 20 km przed portem', sub: 'bufor 20 km przed Gdańskiem albo Gdynią', target: 'Mapa › auto',
         cells: { HHL_ADMIN: c(true), HHL_OPS: c(true), CLIENT_USER: c(false), CARRIER_DISPATCH: c(false), CARRIER_USER: c(false) } },
@@ -81,7 +83,9 @@ export const DEMO_MATRIX: MatrixGroup[] = [
       { id: 'sms_gw', perDay: 1, title: 'Bramka SMS milczy albo SMS niedoręczony', sub: 'SMS niewysłany w 10 min · e-mail do Operacji HHL', target: 'Opcje › Stan systemu',
         cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true, false, true), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
       /* wyglad/audyt-E (E-02; E23 decyzja 1 A 08.10, E46): alarm do Administratorów HHL — e-mail i telefon na stałe */
-      { id: 'src_down', perDay: 1, title: 'Źródło danych nie działa / wróciło', sub: 'przy awarii, przypomnienie po 2 h i „Wróciło” · Administrator HHL: e-mail i telefon zawsze — decyzja właściciela 08.10.2026', target: 'Opcje › Stan systemu',
+      { id: 'src_down', perDay: 1, title: 'Źródło danych nie działa', sub: 'przy awarii, przypomnienie po 2 h · Administrator HHL: e-mail i telefon zawsze — decyzja właściciela 08.10.2026', target: 'Opcje › Stan systemu',
+        cells: { HHL_ADMIN: c(true, true, true, ['push', 'mail']), HHL_OPS: c(false), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
+      { id: 'src_back', perDay: 1, title: 'Źródło danych wróciło', sub: 'po awarii · Administrator HHL: e-mail i telefon zawsze', target: 'Opcje › Stan systemu',
         cells: { HHL_ADMIN: c(true, true, true, ['push', 'mail']), HHL_OPS: c(false), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
       { id: 'app_err', perDay: 1, title: 'Błąd aplikacji', sub: 'nowy błąd 3 razy albo u 2 osób w 1 h, każdy błąd przy zapisie · Administrator HHL: e-mail i telefon zawsze', target: 'Opcje › Stan systemu › Błędy aplikacji',
         cells: { HHL_ADMIN: c(true, true, true, ['push', 'mail']), HHL_OPS: c(false), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },

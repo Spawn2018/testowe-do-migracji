@@ -2717,6 +2717,10 @@ Kolejka wyglądu: `wyglad/W-dane` PR #274. Wpisane 16.10; scalone i wdrożone 17
 - #259: unit i visual zielone, scalenie zatrzymane — konflikt z `main`. Bez wdrożenia.
 - Dalej kolejka (po D-20261017-0730-01): **C3-p → B1 → … → A6**, potem C4… (nie od razu C4).
 
+## 2026-10-17 — C3-p w toku (pakiet/audyt-17)
+
+Migracja `0223_c3p_chat_matrix_fixes.sql`: czat bez `critical` / bez e-maila zapasowego; title/body na telefon; `C3_MATRIX_KOPIA` (25 wierszy); osobne `pre_arrival_site` / `pre_arrival_srem` / `src_back`; usunięcie `AUTOMATIC_DECISION_EMAIL`. Testy: `c3` 24 asercje; katalog 25 zdarzeń.
+
 ## 2026-10-17 — DOPISEK D-20261017-0730-01 WŁĄCZONY
 
 Audyt 17.10 przyjęty przez właściciela; decyzje 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**.
