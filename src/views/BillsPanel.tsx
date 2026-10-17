@@ -736,7 +736,7 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
           <dl className="inv-sum" data-deur-exempt="invoice-currency">
             <div><dt>{ft(locale, 'p5_inv_form_sum_exp')}</dt><dd><Amount n={chk.expectedTotal} cur={currency} /></dd></div>
             <div><dt>{ft(locale, 'p5_inv_form_sum_inv')}</dt><dd><Amount n={chk.invoicedTotal} cur={currency} /></dd></div>
-            <div className="strong"><dt>{ft(locale, 'p5_inv_form_sum_diff')}</dt><dd className={sumOk ? 'inv-ok' : 'neg'} data-w-sum-ok={sumOk ? 'tak' : 'nie'}><Amount n={diff} cur={currency} />{sumOk ? ` · ${ft(locale, 'p5_inv_form_sum_ok')}` : ''}</dd></div>
+            <div className="strong"><dt>{ft(locale, 'p5_inv_form_sum_diff')}</dt><dd className={sumOk ? 'inv-ok' : chk.lines.length ? 'neg' : undefined} data-w-sum-ok={sumOk ? 'tak' : 'nie'}><Amount n={diff} cur={currency} />{sumOk ? ` · ${ft(locale, 'p5_inv_form_sum_ok')}` : ''}</dd></div>
             <div><dt>{t(locale, 'bill_col_due')} ({BILL_TERM_DAYS[direction]})</dt><dd>{fmtDay(dueDoc || due)}</dd></div>
           </dl>
           {chk.headerFlags.length ? <span className="fin-tag warn" data-flag="BRAK_NA_FAKTURZE">{BILL_FLAG_LABEL.BRAK_NA_FAKTURZE[locale]} · {chk.missingLoadIds.length}</span> : null}

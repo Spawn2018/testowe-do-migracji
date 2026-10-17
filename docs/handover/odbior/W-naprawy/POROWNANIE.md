@@ -12,7 +12,7 @@ Wygląd, teksty i obliczenia widoku (F8). Reguła, którą widok przekazuje do b
 | Kontrola kwoty | „zgodna” przy różnicy do 1 i do 0,2 % | **co do grosza:** każda różnica ≥ 0,01 → „kwota” (po A4; w demo od razu) |
 | „Różnica · zgodna” w sumie | z samej sumy — dwie różnice ±0,01 dawały „0,00 · zgodna”, pusta faktura też | „zgodna” tylko gdy suma = 0, są pozycje i żadna nie ma „kwota” |
 | Kwota w polu „Na fakturze” | „6271.9”; wpis „6 271,90” dawał 0 | podpowiedź „6 271,90”; pole przyjmuje spację i twardą spację |
-| Telefon (390 px) | każdy transport bez CMR jako karta (ok. 280 px), etykieta „Kontrole” dwa razy | czekające tylko w zdaniu z kodami; pierwsza etykieta „Na fakturę”; pole wyboru z celem 44 px |
+| Telefon (390 px) | każdy transport bez CMR jako karta (ok. 280 px), etykieta „Kontrole” dwa razy | czekające tylko w zdaniu z kodami; pierwsza etykieta „Dodaj”; pole wyboru z celem 44 px |
 | Historia i oś Status transportu, wpis z Podglądu (B5) | autor: sam administrator | „Anna Wiśniewska // H&H Logistics jako Piotr Zając // KSH” (z `payload.preview_as`) |
 | „Do zrobienia” — nowe sprawy z A2, A3, A6 | sprawa z nowym kodem pokazałaby surowy kod | „Daty KSH do sprawdzenia”, „Czy dostarczono?”, „Wgraj CMR” i przyciski („Daty są dobre”, „Tak, dostarczono”, …) |
 | Dane demo — CMR | wgrany o 16:30 dnia planowej dostawy (czasem przed rozładunkiem albo po zegarze demo) | wgrany 2 h po rozładunku, tylko gdy to już było |

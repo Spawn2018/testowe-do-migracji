@@ -207,7 +207,7 @@ const PL: Record<string, string> = {
   p5_inv_form_lines_note: 'Lista = transporty tego wystawcy dostarczone w wybranym tygodniu, jeszcze bez faktury. Transportu z innego tygodnia ani niedostarczonego nie da się zaznaczyć.',
   p5_inv_wait_cmr: 'czeka na CMR',
   p5_inv_wait_n: 'Czeka na CMR ({n}): {codes}. Wejdą na fakturę po wgraniu CMR z podpisem odbiorcy.',
-  p5_inv_col_pick: 'Na fakturę',
+  p5_inv_col_pick: 'Dodaj',
   p5_inv_form_sum_exp: 'Wg cennika i opłaty paliwowej',
   p5_inv_form_sum_inv: 'Na fakturze (pozycje)',
   p5_inv_form_sum_diff: 'Różnica',

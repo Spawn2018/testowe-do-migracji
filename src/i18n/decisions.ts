@@ -20,7 +20,7 @@ const pl: Dict = {
   dec_type_INSURANCE_EXPIRING: 'Polisa przewoźnika wygasa',
   dec_type_DWELL_OVER_FREE: 'Zmierzony postój ponad czas wolny',
   dec_type_BACKUP_FAILED: 'Kopia zapasowa nieudana',
-  dec_type_KSH_DATES_CHECK: 'Daty KSH do sprawdzenia (dostawa przed załadunkiem, tego samego dnia albo po ponad 14 dniach)',
+  dec_type_KSH_DATES_CHECK: 'Daty KSH do sprawdzenia',
   dec_type_DELIVERED_CHECK: 'Wyjazd z placu po krótkim postoju — czy dostarczono?',
   dec_type_CMR_UPLOAD: 'Wgraj CMR z podpisem odbiorcy',
   dec_opt_NEXT_SAME: 'Następny rejs tego armatora',

@@ -100,3 +100,11 @@ describe('nazwy nowych spraw z napraw A2, A3, A6 (kody z dopisku 1450 §2 pkt 3)
     for (const k of ['dec_type_KSH_DATES_CHECK', 'dec_type_DELIVERED_CHECK', 'dec_type_CMR_UPLOAD', 'dec_opt_DATES_OK', 'dec_opt_DELIVERED_YES', 'dec_opt_DELIVERED_NO', 'dec_opt_UPLOAD_CMR']) expect(d, k).toContain(`${k}:`);
   });
 });
+
+describe('B5 · oś Status jak Historia (F7 runda 2)', () => {
+  it('autor „jako” na osi Status przez whoOf — „… // H&H Logistics jako … // KSH”', () => {
+    const s = read('src/components/drawer/StatusAxisTab.tsx');
+    expect(s).toContain("`${whoOf(h.actor, locale)} ${ht(locale, 'p6b_as')} ${whoOf(h.previewAs, locale)}`");
+    expect(read('src/lib/statusAxis.ts')).toContain("previewAs: str('preview_as'),");
+  });
+});
