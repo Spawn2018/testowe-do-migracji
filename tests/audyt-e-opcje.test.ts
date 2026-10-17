@@ -38,11 +38,14 @@ describe('E-01, N-01: Przełączniki bezpieczeństwa — 9, bez „Kontroli tras
 });
 
 describe('E-02, E-14: „Kto co dostaje” — nowe zdarzenia', () => {
-  it('„Auto 50 km przed placem / przed Śremem” — KSH i SCX; „Auto 20 km przed portem” — HHL (E35 pkt 2)', () => {
-    expect(row('pre_arrival')?.title).toBe('Auto 50 km przed placem / przed Śremem');
-    expect(row('pre_arrival')?.cells.CLIENT_USER?.bell).toBe(true);
-    expect(row('pre_arrival')?.cells.CARRIER_DISPATCH?.bell).toBe(true);
-    expect(row('pre_arrival')?.cells.HHL_ADMIN?.bell).toBe(false);
+  it('„Auto 50 km przed placem” i „przed Śremem” osobno — KSH i SCX; „Auto 20 km przed portem” — HHL (E35 pkt 2, C3-p)', () => {
+    expect(row('pre_arrival_site')?.title).toBe('Auto 50 km przed placem');
+    expect(row('pre_arrival_srem')?.title).toBe('Auto 50 km przed Śremem');
+    for (const id of ['pre_arrival_site', 'pre_arrival_srem'] as const) {
+      expect(row(id)?.cells.CLIENT_USER?.bell).toBe(true);
+      expect(row(id)?.cells.CARRIER_DISPATCH?.bell).toBe(true);
+      expect(row(id)?.cells.HHL_ADMIN?.bell).toBe(false);
+    }
     expect(row('pre_port')?.title).toBe('Auto 20 km przed portem');
     expect(row('pre_port')?.cells.HHL_ADMIN?.bell).toBe(true);
     expect(row('pre_port')?.cells.CLIENT_USER?.bell).toBe(false);
@@ -52,8 +55,8 @@ describe('E-02, E-14: „Kto co dostaje” — nowe zdarzenia', () => {
     for (const k of ['HHL_ADMIN', 'HHL_OPS'] as const) expect(r.cells[k]).toMatchObject({ bell: true, push: true, mail: false });
     expect(DEMO_MATRIX.find((g) => g.id === 'todo')?.rows.some((x) => x.id === 'scx_detour')).toBe(true);
   });
-  it('System: źródło danych i błąd aplikacji — Administrator HHL, e-mail i telefon na stałe (E23, E46)', () => {
-    for (const id of ['src_down', 'app_err']) {
+  it('System: źródło danych (nie działa / wróciło) i błąd aplikacji — Administrator HHL, e-mail i telefon na stałe (E23, E46, C3-p)', () => {
+    for (const id of ['src_down', 'src_back', 'app_err']) {
       const c = row(id)!.cells.HHL_ADMIN!;
       expect(c).toMatchObject({ bell: true, push: true, mail: true });
       expect(c.fixed).toEqual(['push', 'mail']);
@@ -79,7 +82,8 @@ describe('E-05, N-02 (W47): „Dla mnie › Co dostaję” — przełączniki os
   it('KSH Użytkownik: zdarzenia rodzaju konta z przełącznikami i miejscem na „Zapisano”', () => {
     const h = html(createElement(ForMeScreen, { locale: 'pl', kind: 'CLIENT_USER', groups: DEMO_MATRIX, onSave: async () => true }));
     expect(h).toContain('data-forme="edit"');
-    expect(h).toContain('data-forme-row="pre_arrival"');
+    expect(h).toContain('data-forme-row="pre_arrival_site"');
+    expect(h).toContain('data-forme-row="pre_arrival_srem"');
     expect(h).not.toContain('data-forme-row="pre_port"');
     expect(h).toContain('role="status"');
     expect(h).toContain('Włączasz i wyłączasz swoje kanały');
@@ -108,11 +112,11 @@ describe('E-05, N-02 (W47): „Dla mnie › Co dostaję” — przełączniki os
   it('jedno miejsce zapisu: demo — magazyn strony (bez localStorage), osobno dla każdej osoby', async () => {
     const my = myNotifyOf('CLIENT_USER');
     expect(my?.save).toBeTypeOf('function');
-    expect(await my!.save!('pre_arrival', 'mail', true)).toBe(true);
-    expect(myNotifyOf('CLIENT_USER')?.prefs.pre_arrival).toEqual({ mail: true });
-    expect(demoMyNotify('CARRIER_DISPATCH').pre_arrival).toBeUndefined();
-    await demoSaveMyNotify('CARRIER_DISPATCH', 'pre_arrival', 'bell', false);
-    expect(demoMyNotify('CARRIER_DISPATCH').pre_arrival).toEqual({ bell: false });
+    expect(await my!.save!('pre_arrival_site', 'mail', true)).toBe(true);
+    expect(myNotifyOf('CLIENT_USER')?.prefs.pre_arrival_site).toEqual({ mail: true });
+    expect(demoMyNotify('CARRIER_DISPATCH').pre_arrival_site).toBeUndefined();
+    await demoSaveMyNotify('CARRIER_DISPATCH', 'pre_arrival_site', 'bell', false);
+    expect(demoMyNotify('CARRIER_DISPATCH').pre_arrival_site).toEqual({ bell: false });
     const src = read('src/lib/forMeSource.ts') + read('src/lib/forMeDemo.ts');
     expect(src).not.toMatch(/localStorage|sessionStorage/);
     expect(read('src/lib/forMeSource.ts')).toContain("import.meta.env.VITE_AUTH_MODE !== 'supabase'");

@@ -53,7 +53,7 @@ export const EXPECTED_LOCAL = {
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 29, // P4 E25 + C17 auto CMR/faktury (D-20261015-2110-01)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
-  c3: 15, // C3 macierz po zdarzeniu, czat, KSH bez stref i CMR
+  c3: 26, // C3-p: macierz, czat, osobne wiersze, dec_new email off/on
 };
 
 /**

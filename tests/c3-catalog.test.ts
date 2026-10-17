@@ -7,11 +7,18 @@ import { NOTIFY_CATALOG, NOTIFY_EVENT_IDS } from '../src/lib/notifyCatalog';
 
 describe('C3 katalog powiadomień', () => {
   it('każdy wiersz katalogu jest w migracji macierzy', () => {
-    const sql = readFileSync('supabase/migrations/0222_c3_matrix_events.sql', 'utf8');
-    expect(NOTIFY_EVENT_IDS).toHaveLength(23);
+    // C3-p (D-20261017-0730-01): osobne wiersze 50 km / źródło — 25 zdarzeń w 0223.
+    const sql = [
+      readFileSync('supabase/migrations/0222_c3_matrix_events.sql', 'utf8'),
+      readFileSync('supabase/migrations/0223_c3p_chat_matrix_fixes.sql', 'utf8'),
+    ].join('\n');
+    expect(NOTIFY_EVENT_IDS).toHaveLength(25);
     for (const id of NOTIFY_EVENT_IDS) expect(sql, id).toContain(`'${id}'`);
     expect(sql).toContain('notify_audience_ok');
     expect(sql).toContain("'visible_to'");
+    expect(sql).toContain('pre_arrival_site');
+    expect(sql).toContain('pre_arrival_srem');
+    expect(sql).toContain('src_back');
   });
 
   it('KSH nie ma stref ani Brak CMR', () => {
