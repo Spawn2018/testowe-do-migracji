@@ -8,7 +8,7 @@ import { buildDemoSnapshot, DEMO_TODAY_LOCAL } from '../src/data/demoProvider';
 import { useTowerStore } from '../src/store/useTowerStore';
 import { isoWeekKeyLocal } from '../src/lib/money/engine';
 import { unloadedAtOf } from '../src/lib/money/loadMoney';
-import type { Load } from '../src/types';
+import type { Document, Load } from '../src/types';
 
 const snap = buildDemoSnapshot();
 const delivered = snap.loads.filter((l) => unloadedAtOf(l));
@@ -97,18 +97,21 @@ describe('M6 — kontrole przy rejestracji (lustro register_invoice)', () => {
     const big = checkBill(draftFor('KOSZT', 'EUR', { pdfSize: 10 * 1024 * 1024 + 1 }), snap.loads, snap.bills, DEMO_TODAY_LOCAL);
     expect(big.errors).toContain('PDF_SIZE');
   });
-  it('KWOTA poza tolerancją (> 1 i > 0,2 %), w tolerancji — bez flagi', () => {
+  it('KWOTA co do grosza (A4, audyt 17.10; decyzja 07.10, 12:35): różnica ≥ 0,01 → flaga, zgodna kwota — bez flagi', () => {
     const d = draftFor('KOSZT', 'EUR');
     const bumped = { ...d, lines: d.lines.map((l, i) => (i === 0 ? { ...l, invoicedNet: l.invoicedNet + 50 } : l)) };
     expect(checkBill(bumped, snap.loads, snap.bills, DEMO_TODAY_LOCAL).lines[0].flags).toContain('KWOTA');
-    const small = { ...d, lines: d.lines.map((l, i) => (i === 0 ? { ...l, invoicedNet: l.invoicedNet + 0.9 } : l)) };
-    expect(checkBill(small, snap.loads, snap.bills, DEMO_TODAY_LOCAL).lines[0].flags).not.toContain('KWOTA');
+    const cent = { ...d, lines: d.lines.map((l, i) => (i === 0 ? { ...l, invoicedNet: l.invoicedNet + 0.01 } : l)) };
+    expect(checkBill(cent, snap.loads, snap.bills, DEMO_TODAY_LOCAL).lines[0].flags).toContain('KWOTA');
+    expect(checkBill(d, snap.loads, snap.bills, DEMO_TODAY_LOCAL).lines[0].flags).not.toContain('KWOTA');
   });
   it('zły tydzień, niezrealizowany, pominięty z tygodnia (BRAK_NA_FAKTURZE)', () => {
     const d = draftFor('PRZYCHOD', 'EUR');
     const planned = snap.loads.find((l) => !unloadedAtOf(l))!;
     const other = delivered.find((l) => weekOf(l) !== freeWeek)!;
-    const c = checkBill({ ...d, lines: [...d.lines.slice(1), { loadId: planned.id, invoicedNet: 1 }, { loadId: other.id, invoicedNet: 1 }] }, snap.loads, snap.bills, DEMO_TODAY_LOCAL);
+    /* A4: „pominięty” liczony tylko wśród transportów z CMR — test daje dokumenty z CMR dla wszystkich dostarczonych */
+    const cmrAll = delivered.map((l) => ({ id: `cmr-${l.id}`, loadId: l.id, category: 'CMR', status: 'UPLOADED' }) as unknown as Document);
+    const c = checkBill({ ...d, lines: [...d.lines.slice(1), { loadId: planned.id, invoicedNet: 1 }, { loadId: other.id, invoicedNet: 1 }] }, snap.loads, snap.bills, DEMO_TODAY_LOCAL, cmrAll);
     expect(c.lines.find((l) => l.loadId === planned.id)!.flags).toContain('NIEZREALIZOWANY');
     const otherFlags = c.lines.find((l) => l.loadId === other.id)!.flags;
     if (!snap.bills.some((b) => b.direction === 'PRZYCHOD' && b.lines.some((x) => x.loadId === other.id))) expect(otherFlags).toContain('ZLY_TYDZIEN');

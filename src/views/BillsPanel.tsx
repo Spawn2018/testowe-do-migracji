@@ -16,7 +16,7 @@ import { unloadedAtOf } from '../lib/money/loadMoney';
 import { transportLabel } from '../lib/transportName';
 import {
   BILL_TERM_DAYS,
-  BILL_FLAG_LABEL, VERIFICATION_LABEL, billCandidates, billPaymentToday, billVisibleTo,
+  BILL_FLAG_LABEL, VERIFICATION_LABEL, billCandidates, billPaymentToday, billReady, billVisibleTo,
   canMarkPaid, canRegisterBill, computedEurFor, canVerifyBill, checkBill, expectedNetFor, invoicedLoadIds,
   addDaysIso, reminderPlan, reminderRecipients, suggestLineFx, vatGrossOf, type BillDraft,
 } from '../lib/invoices3';
@@ -579,6 +579,7 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
   const role = useTowerStore((s) => s.role);
   const loads = useTowerStore((s) => s.loads);
   const bills = useTowerStore((s) => s.bills);
+  const documents = useTowerStore((s) => s.documents);
   const registerBill = useTowerStore((s) => s.registerBill);
   const today = localDateOf(getNowIso());
   const weeks = useMemo(() => {
@@ -598,14 +599,17 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
   const [net, setNet] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
-  const candidates = useMemo(() => (week ? billCandidates(loads, bills, direction, week) : []), [loads, bills, direction, week]);
+  const weekLoads = useMemo(() => (week ? billCandidates(loads, bills, direction, week) : []), [loads, bills, direction, week]);
+  /* A4 (audyt 17.10): na fakturę tylko transporty z CMR; reszta tygodnia szara z „czeka na CMR” */
+  const candidates = useMemo(() => weekLoads.filter((l) => billReady(l, documents)), [weekLoads, documents]);
+  const waiting = useMemo(() => weekLoads.filter((l) => !billReady(l, documents)), [weekLoads, documents]);
   const [lines, setLines] = useState<Record<string, LineState>>({});
   const lineOf = (id: string): LineState => {
     if (lines[id]) return lines[id];
     const l = loads.find((x) => x.id === id)!;
     const fx = currency === 'PLN' ? suggestLineFx(l, direction, today) : null;
     const exp = expectedNetFor(l, direction, currency, today) ?? (fx ? Math.round(computedEurFor(l, direction) * fx.mid * 100) / 100 : null);
-    return { on: true, net: exp != null ? String(exp) : '', fuel: '', fx, fxConfirmed: false };
+    return { on: true, net: exp != null ? formatPlNumber(exp, 2).replace(/\s/g, '') : '', fuel: '', fx, fxConfirmed: false };
   };
   const patch = (id: string, p: Partial<LineState>) => setLines((s) => ({ ...s, [id]: { ...lineOf(id), ...p } }));
   const num = (v: string) => (v.trim() === '' || Number.isNaN(Number(v.replace(',', '.'))) ? null : Number(v.replace(',', '.')));
@@ -621,7 +625,7 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
       return { loadId: l.id, invoicedNet: num(st.net) ?? 0, invoicedFuel: num(st.fuel), fx: currency === 'PLN' && st.fxConfirmed ? st.fx : null };
     }),
   };
-  const chk = checkBill(draft, loads, bills, today);
+  const chk = checkBill(draft, loads, bills, today, documents);
 
   const diff = Math.round((chk.invoicedTotal - chk.expectedTotal) * 100) / 100;
   const due = addDaysIso(issueDate || today, BILL_TERM_DAYS[direction]); /* 03_REJESTR: SCX → HHL 35 dni, HHL → KSH 30 dni */
@@ -685,9 +689,24 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
                     </tr>
                   );
                 })}
+                {waiting.map((l) => {
+                  const at = unloadedAtOf(l);
+                  return (
+                    <tr key={l.id} className="inv-wait" data-w-wait={l.code}>
+                      <td><input type="checkbox" className="inv-check" checked={false} disabled aria-label={`${transportLabel(l, role)} · ${ft(locale, 'p5_inv_wait_cmr')}`} /></td>
+                      <td><span className="code" data-content>{transportLabel(l, role)}</span></td>
+                      <td>{fmtDay(at ? localDateOf(at) : null)}</td>
+                      <td className="num"><Amount n={expectedNetFor(l, direction, currency, today)} cur={currency} /></td>
+                      <td className="num">—</td>
+                      {currency === 'PLN' ? <td>—</td> : null}
+                      <td><span className="fin-tag plain" data-flag="CMR">{ft(locale, 'p5_inv_wait_cmr')}</span></td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          {waiting.length ? <p className="fin-muted" data-w-wait-n>{ftp(locale, 'p5_inv_wait_n', { n: String(waiting.length) })}</p> : null}
           <p className="fin-muted">{ft(locale, 'p5_inv_form_lines_note')}</p>
         </div>
         <div className="inv-form-fields">

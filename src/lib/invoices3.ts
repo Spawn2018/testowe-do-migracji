@@ -6,7 +6,7 @@
  * podpowiadany z reguły W3, wystawca potwierdza albo poprawia. Kontrole = te same co w bazie.
  * Dwa niezależne statusy: weryfikacja (odbiorca) i płatność (wyłącznie HHL).
  */
-import type { Bill, BillDirection, BillFlag, BillLine, BillLineFx, BillPayment, BillVerification, Load, OrgKind, RoleId } from '../types';
+import type { Bill, BillDirection, BillFlag, BillLine, BillLineFx, BillPayment, BillVerification, Document, Load, OrgKind, RoleId } from '../types';
 import { isoWeekKeyLocal, localDateOf } from './money/engine';
 
 export function addDaysIso(dateIso: string, days: number): string {
@@ -18,8 +18,11 @@ import { fxForDate, unloadedAtOf } from './money/loadMoney';
 import { dictEntry } from '../i18n/messages';
 
 export const BILL_TERM_DAYS: Record<BillDirection, number> = { PRZYCHOD: 30, KOSZT: 35 };
-/** Tolerancja kwoty — jak `matchInvoice` i `register_invoice`: > 1 i > 0,2 %. */
-export const BILL_TOLERANCE = { abs: 1, pct: 0.002 };
+/**
+ * Tolerancja kwoty — wyglad/W-naprawy · A4 (audyt 17.10; decyzja 07.10, 12:35: faktura zgadza się co do grosza):
+ * każda różnica ≥ 0,01 w walucie faktury → flaga KWOTA, bez „zgodna”. Wcześniej > 1 i > 0,2 %. Ta sama reguła w `register_invoice` (A4).
+ */
+export const BILL_TOLERANCE = { abs: 0.01, pct: 0 };
 
 export function billParties(direction: BillDirection): { issuer: OrgKind; recipient: OrgKind } {
   return direction === 'KOSZT' ? { issuer: 'SCX', recipient: 'HHL' } : { issuer: 'HHL', recipient: 'KSH' };
@@ -46,8 +49,7 @@ export function vatGrossOf(net: number): { vat: number; gross: number } {
   const vat = round2(net * BILL_VAT_RATE);
   return { vat, gross: round2(net + vat) };
 }
-const outOfTolerance = (diff: number, base: number) =>
-  Math.abs(diff) > BILL_TOLERANCE.abs && (base === 0 || Math.abs(diff) / base > BILL_TOLERANCE.pct);
+const outOfTolerance = (diff: number, _base: number) => Math.abs(round2(diff)) >= BILL_TOLERANCE.abs;
 
 /** Reguła kursu dla transportu: migawka przy rozładunku, inaczej W3 z tabel. */
 export function ruleFxFor(load: Load, direction: BillDirection, todayLocal: string): BillLineFx | null {
@@ -122,6 +124,16 @@ export function billCandidates(loads: Load[], bills: Bill[], direction: BillDire
   });
 }
 
+/**
+ * wyglad/W-naprawy · A4 (audyt 17.10, D-20261017-0730-01): faktura tylko z CMR. Transport wchodzi na fakturę, gdy ma status
+ * „Gotowe do fakturowania” / „Zafakturowano” (automat C17 po wgraniu CMR) albo — zanim automat zmieni status — wgrany CMR
+ * z podpisem odbiorcy. Pozostałe z tygodnia kreator pokazuje szare, z opisem „czeka na CMR”. Bazę (`register_invoice`) robi wykonawca.
+ */
+export function billReady(l: Load, documents: readonly Document[] = []): boolean {
+  if (l.status === 'READY_TO_INVOICE' || l.status === 'INVOICED') return true;
+  return documents.some((d) => d.loadId === l.id && d.category === 'CMR' && d.status !== 'MISSING');
+}
+
 /** PDF faktury ≤ 10 MB — ten sam limit co zasobnik `faktury` i `create_document` (0029/0039). */
 export const INVOICE_PDF_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -136,7 +148,7 @@ export interface BillCheck {
 }
 
 /** Kontrole przy rejestracji — lustro `register_invoice` (§6.3). */
-export function checkBill(draft: BillDraft, loads: Load[], bills: Bill[], todayLocal: string): BillCheck {
+export function checkBill(draft: BillDraft, loads: Load[], bills: Bill[], todayLocal: string, documents: readonly Document[] = []): BillCheck {
   const byId = new Map(loads.map((l) => [l.id, l]));
   const already = invoicedLoadIds(bills, draft.direction);
   const errors: string[] = [];
@@ -171,7 +183,9 @@ export function checkBill(draft: BillDraft, loads: Load[], bills: Bill[], todayL
     return { loadId: d.loadId, invoicedNet: round2(d.invoicedNet), invoicedFuel: d.invoicedFuel ?? null, fx: d.fx ?? null, expectedNet, flags };
   });
   const onBill = new Set(draft.lines.map((l) => l.loadId));
-  const missingLoadIds = billCandidates(loads, bills, draft.direction, draft.weekKey).filter((l) => !onBill.has(l.id)).map((l) => l.id);
+  /* A4: „pominięty z tygodnia” tylko wśród transportów z CMR — czekający na CMR nie mogą być na fakturze */
+  const missingLoadIds = billCandidates(loads, bills, draft.direction, draft.weekKey)
+    .filter((l) => !onBill.has(l.id) && billReady(l, documents)).map((l) => l.id);
   return {
     lines,
     headerFlags: missingLoadIds.length ? ['BRAK_NA_FAKTURZE'] : [],
