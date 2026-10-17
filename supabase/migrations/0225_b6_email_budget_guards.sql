@@ -66,6 +66,9 @@ declare
   v_kind_n int;
   v_day_n int;
   v_key text;
+  v_n_txt text;
+  v_title text;
+  v_body text;
 begin
   if new.channel is distinct from 'EMAIL' or new.status is distinct from 'PENDING' then
     return new;
@@ -77,20 +80,40 @@ begin
 
   select coalesce(sum(n), 0) into v_day_n
     from email_budget_day
-   where day = v_day and user_id = new.user_id and kind <> '*zbiorczy*';
+   where day = v_day and user_id = new.user_id
+     and kind not in ('*zbiorczy*', '*pilne*');
   select coalesce(n, 0) into v_kind_n
     from email_budget_day
    where day = v_day and user_id = new.user_id and kind = v_kind;
 
+  if coalesce(new.payload->>'push_fallback', '') = 'true' then
+    update email_budget_day
+       set n = n + 1
+     where day = v_day and user_id = new.user_id and kind = '*pilne*';
+    if not found then
+      insert into email_budget_day (day, user_id, kind, n)
+      values (v_day, new.user_id, '*pilne*', 1);
+    end if;
+    return new;
+  end if;
+
   if v_day_n >= 20 or v_kind_n >= 5 then
     v_key := left('budget:' || v_day::text || ':' || new.user_id::text, 200);
+    select subject_pl, body_pl into v_title, v_body
+      from notification_copy where id = 'EMAIL_BUDGET';
+    v_title := coalesce(v_title, 'Limit e-maili na dziś');
+    v_body := coalesce(v_body, 'Dziś dostałeś już {n} e-maili z Watch Tower. Kolejne powiadomienia z dzisiaj są w dzwonku i w aplikacji na telefonie. E-maile wrócą jutro.');
+    if v_day_n >= 20 then
+      v_n_txt := v_day_n::text;
+      v_body := replace(v_body, '{n}', v_n_txt);
+    else
+      v_n_txt := '5 e-maili «' || v_kind || '»';
+      v_body := replace(v_body, '{n} e-maili', v_n_txt);
+    end if;
     insert into notifications (channel, recipient, user_id, template, payload, dedup_key, status)
     values (
       'EMAIL', new.recipient, new.user_id, 'EMAIL_BUDGET',
-      jsonb_build_object(
-        'title', 'Zbiorcza wiadomość',
-        'body', 'Dalsze e-maile z dziś są w tej jednej wiadomości.'
-      ),
+      jsonb_build_object('title', v_title, 'body', v_body, 'n', v_n_txt),
       v_key, 'PENDING'
     )
     on conflict (dedup_key) where dedup_key is not null do nothing;
@@ -179,8 +202,44 @@ begin
   return new;
 end $$;
 
--- 3. rio_secret: brak UPDATE z API. Zapis zostaje w loads_rio_sanitize (wyzwalacz właściciela).
-revoke update (rio_secret) on public.loads from authenticated;
+-- 3. rio_secret: revoke UPDATE/INSERT na całej tabeli (revoke kolumny nie zdejmuje prawa tabeli),
+-- potem grant kolumn pisanych przez aplikację — wszystkich poza rio_secret.
+-- Zapis sekretu zostaje w loads_rio_sanitize (wyzwalacz właściciela).
+do $$
+declare
+  v_old jsonb;
+  v_cols text;
+begin
+  select jsonb_build_object(
+    'table', coalesce((
+      select jsonb_agg(jsonb_build_object('privilege', privilege_type) order by privilege_type)
+        from information_schema.role_table_grants
+       where table_schema = 'public' and table_name = 'loads' and grantee = 'authenticated'
+    ), '[]'::jsonb),
+    'columns', coalesce((
+      select jsonb_agg(jsonb_build_object('column', column_name, 'privilege', privilege_type)
+                        order by column_name, privilege_type)
+        from information_schema.column_privileges
+       where table_schema = 'public' and table_name = 'loads' and grantee = 'authenticated'
+    ), '[]'::jsonb)
+  ) into v_old;
+
+  insert into audit_log (action, entity, entity_id, old_value, new_value)
+  values (
+    'B6_LOADS_GRANTS', 'loads', 'authenticated', v_old,
+    jsonb_build_object('note', 'przed revoke insert i update na loads')
+  );
+
+  select string_agg(quote_ident(column_name), ', ' order by ordinal_position)
+    into v_cols
+    from information_schema.columns
+   where table_schema = 'public' and table_name = 'loads'
+     and column_name <> 'rio_secret';
+
+  execute 'revoke insert, update on table public.loads from authenticated';
+  execute format('grant insert (%s) on table public.loads to authenticated', v_cols);
+  execute format('grant update (%s) on table public.loads to authenticated', v_cols);
+end $$;
 
 -- 4. Limit 60 / 15 min na IP i przeglądarkę.
 create table if not exists public.anon_call_window (
@@ -201,11 +260,23 @@ security definer
 set search_path = public
 as $$
 declare
-  v_ip text := coalesce(inet_client_addr()::text, 'local');
-  v_ua text := left(coalesce(nullif(btrim(p_ua), ''), 'brak'), 160);
+  v_headers jsonb;
+  v_fwd text;
+  v_ip text;
+  v_ua text;
   v_n int;
   v_start timestamptz;
 begin
+  -- p_ua zostaje w sygnaturze (zapis błędu), ale nie jest kluczem licznika.
+  v_headers := coalesce(nullif(current_setting('request.headers', true), '')::jsonb, '{}'::jsonb);
+  v_fwd := nullif(btrim(split_part(coalesce(v_headers->>'x-forwarded-for', ''), ',', 1)), '');
+  v_ip := left(coalesce(
+    nullif(btrim(v_headers->>'cf-connecting-ip'), ''),
+    v_fwd,
+    inet_client_addr()::text,
+    'local'
+  ), 80);
+  v_ua := left(coalesce(nullif(btrim(v_headers->>'user-agent'), ''), 'brak'), 160);
   if (p_fn in ('keep_alive', 'report_client_error', 'report_csp_violation')) is not true then
     return false;
   end if;
@@ -361,3 +432,9 @@ create policy loads_read on public.loads
                     where p.id = loads.project_id and p.client_org_id = current_org_id()))
     or (current_org_kind() = 'CARRIER' and loads.carrier_org_id = current_org_id())
   );
+
+insert into public.notification_copy (id, subject_pl, body_pl) values
+  ('EMAIL_BUDGET', 'Limit e-maili na dziś',
+   'Dziś dostałeś już {n} e-maili z Watch Tower. Kolejne powiadomienia z dzisiaj są w dzwonku i w aplikacji na telefonie. E-maile wrócą jutro.')
+on conflict (id) do update
+  set subject_pl = excluded.subject_pl, body_pl = excluded.body_pl;

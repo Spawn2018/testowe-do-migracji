@@ -12,7 +12,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 107, // B6 +11: budżet e-mail, płatność, rio_secret, loads_read, limit anon
+  security: 115, // B6 +19: budżet, tekst EMAIL_BUDGET, pilne poza limitem, rio insert/update, limit z nagłówka
   status: 55,
   storage: 37,
   money: 135,
@@ -64,7 +64,7 @@ export const EXPECTED_LOCAL = {
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 103, // 107 − 4 SKIP (B6)
+  security: 111, // 115 − 4 SKIP (B6)
   risks: 25, // 27 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,

@@ -2810,5 +2810,15 @@ B2 zamknięte w dokumentach: merge `27daa36a` (PR #287).
 - Wdrożenie: `dpl_4GnUJaM7HSSZJ5hA7ZPP8Ur5muTU`, 17.10.2026 15:00; tower/makieta 200; `assets/index-CHxNPYB5.js`; 0× `service_role`.
 - Dalej: **B6**.
 
+## 2026-10-17 — B6, uwagi D-20261017-1530-01
+
+PR #290 (`pakiet/audyt-17-b6`, migracja 0225, jeszcze bez scalenia). Uwagi koordynatora D-20261017-1530-01 pkt 1–4 — zrobione:
+1. `revoke insert, update` na `loads` dla `authenticated` i grant kolumn bez `rio_secret`; kopia uprawnień w `audit_log` (`B6_LOADS_GRANTS`).
+2. Licznik anon: IP z `cf-connecting-ip`, potem `x-forwarded-for`, na końcu `inet_client_addr()`; przeglądarka z `user-agent`.
+3. Tytuł „Limit e-maili na dziś”, treść z `{n}`, klucz `EMAIL_BUDGET` w `notification_copy`.
+4. `payload.push_fallback` poza limitem 20/5, licznik `*pilne*`.
+Bez zmian merytorycznych: `guard_invoice_update`, `loads_read` bez SITE.
+Testy w `security.sh` (oczekiwane 115 lokalnie / 111 na TEST). Brama `db` i scalenie B6 — po tym commicie.
+
 
 

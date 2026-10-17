@@ -424,11 +424,11 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 ### B6 · Bezpieczniki i uprawnienia (małe)
 1. **Bezpiecznik dzienny e-maili** (po 140 e-mailach z 15/16.10):
    - limit na osobę na dobę (20) i na rodzaj (np. 5);
-   - po przekroczeniu jedna wiadomość zbiorcza, licznik w `email_budget_day` na użytkownika.
-   - Test: 25 zdarzeń dla jednej osoby → 20 e-maili + 1 zbiorczy.
+   - po przekroczeniu jedna wiadomość „Limit e-maili na dziś” (klucz `EMAIL_BUDGET`, E43); licznik w `email_budget_day` na użytkownika. E-mail zapasowy W42 (`payload.push_fallback`) poza limitem, licznik `*pilne*`.
+   - Test: 25 zdarzeń dla jednej osoby → 20 e-maili + 1 zbiorczy; potem 1 pilny → wysłany (D-20261017-1530-01 pkt 3–4).
 2. **`guard_invoice_update`:** `payment_status`, `paid_at` i `paid_marked_*` zmienia tylko HHL. Test: SCX i KSH → odmowa.
-3. **`rio_secret`:** `revoke update (rio_secret) on loads from authenticated`; zapis tylko przez funkcję awizacji i sanitizer. Najpierw sprawdzasz, czy RPC awizacji nie pisze kolumny wprost.
-4. **Funkcje bez logowania** (`keep_alive`, `report_client_error`, `report_csp_violation`): limit na IP i przeglądarkę (60 / 15 min).
+3. **`rio_secret`:** `revoke insert, update` na całej tabeli `loads` dla `authenticated`, potem `grant insert/update` kolumn bez `rio_secret` (kopia uprawnień w `audit_log`). Zapis sekretu tylko przez sanitizer. `revoke` samej kolumny nie wystarcza (D-20261017-1530-01 pkt 1).
+4. **Funkcje bez logowania** (`keep_alive`, `report_client_error`, `report_csp_violation`): limit 60 / 15 min. IP: `cf-connecting-ip`, potem pierwszy adres `x-forwarded-for`, na końcu `inet_client_addr()`. Przeglądarka: nagłówek `user-agent`, nie parametr wywołującego (D-20261017-1530-01 pkt 2).
 5. **Polityka `loads_read`:** usuwasz martwą ścieżkę `OR current_org_kind() = 'SITE'`. Test w `security.sh`.
 
 ### A8 · emtrack: koniec 717 błędów na dobę (C15 — przeniesione tutaj)
@@ -984,3 +984,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 17.10.2026 09:30 | D-20261017-0930-01: PR #279 `wyglad/W-demo` (po #277) — daty demo 23.09, ETA demo, `STORE_SCHEMA_VERSION` 4, kurs bieżący przed rozładunkiem; P5 kurs `fx_rates` + usunięcie `invoices` demo przy `bills`; P4-u `delayed`; P11 pkt 6 ujęcia z TEST | właściciel 07:01; koordynator |
 | 17.10.2026 11:00 | D-20261017-1100-01: PR #282 `wyglad/W-eta` (po #280) — `etaDuration` D-071, „przyjazd nocą” D-101, Opcje › Kalibracja ETA (E15 pkt 7 / 3A); P4-u: `fmt_eta_duration`, dane kalibracji §3; C3-p zdanie o Czacie; sprawdzenia APP_URL OK / push poza testem czeka | właściciel 07:20 (3A); koordynator |
 | 17.10.2026 12:20 | D-20261017-1220-01: PR #284 `wyglad/W-konta` (po #282) — Operacje HHL i Użytkownik SCX w demo, `accountRole`, Pomoc bez fałszywego braku, SMS przy miejscach do odczytu, C8 N2 formularze Operacji (zostaje strona bazy); B7 bez geolokalizacji kierowcy — tylko CSP `frame-src`; właściciel 12:25: aplikacja kierowcy porzucona, zostaje w kodzie | właściciel 17.10 12:25; koordynator |
+| 17.10.2026 15:30 | D-20261017-1530-01: uwagi do PR #290 (B6, 0225) przed scaleniem — revoke insert/update na `loads` i grant kolumn bez `rio_secret`; limit anon z nagłówków; tekst `EMAIL_BUDGET`; e-mail zapasowy W42 poza limitem | koordynator |
