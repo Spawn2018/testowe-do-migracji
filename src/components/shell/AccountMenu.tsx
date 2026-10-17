@@ -197,7 +197,7 @@ export function AccountMenu() {
         ) : null}
         {demoKinds ? (
           <div className="acc-demo-kind" data-acc="demo-kind">
-            <span className="acc-row acc-row-static"><span className="acc-lbl">{t(locale, 'p3a_acc_kind')}</span></span>
+            <p className="acc-kind-hd">{t(locale, 'p3a_acc_kind')}</p>
             <div className="seg acc-seg" role="group" aria-label={t(locale, 'p3a_acc_kind')} data-demo-kind-seg>
               {demoKinds.map((k) => (
                 <button key={k.kind} type="button" data-demo-kind={k.kind} aria-pressed={userRole === k.kind}
