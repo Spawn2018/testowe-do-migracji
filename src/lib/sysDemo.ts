@@ -7,6 +7,7 @@ import { fmtDate } from './time';
 
 const M = 60_000;
 const ago = (nowIso: string, min: number) => new Date(Date.parse(nowIso) - min * M).toISOString();
+const ahead = (nowIso: string, min: number) => new Date(Date.parse(nowIso) + min * M).toISOString();
 /** Dzień wcześniej o podanej godzinie czasu polskiego (przybliżenie UTC+2). */
 const dayAt = (nowIso: string, daysBack: number, hh: number, mm: number) => {
   const d = new Date(Date.parse(nowIso) - daysBack * 24 * 60 * M);
@@ -18,7 +19,7 @@ export function demoSources(nowIso: string): SourceRow[] {
   const next = new Date(Date.parse(dayAt(nowIso, 2, 7, 0)) + 7 * 24 * 60 * M);
   const nextTxt = `${fmtDate(next.toISOString())}, 07:00`;
   return [
-    { id: 'fuel', name: 'Ceny paliwa', cadence: 'raz dziennie', feeds: 'opłata paliwowa', lastAt: dayAt(nowIso, 1, 7, 15), state: 'down', since: dayAt(nowIso, 0, 7, 15), why: 'Strona Orlen nie odpowiada (5 prób z rzędu). Opłata paliwowa liczona z cen z poprzedniego odczytu.', canCheck: true },
+    { id: 'fuel', name: 'Ceny paliwa', cadence: 'raz dziennie', feeds: 'opłata paliwowa', lastAt: dayAt(nowIso, 1, 7, 15), state: 'down', since: dayAt(nowIso, 0, 7, 15), why: 'Strona Orlen nie odpowiada (5 prób z rzędu). Opłata paliwowa liczona z cen z poprzedniego odczytu.', nextTryAt: ahead(nowIso, 95), canCheck: true },
     { id: 'mail', name: 'Limit poczty', cadence: 'przy wysyłce i co godzinę', feeds: 'e-maile do użytkowników', lastAt: ago(nowIso, 4 * 24 * 60 + 150), state: 'nomeasure', since: ago(nowIso, 4 * 24 * 60 + 150), why: 'Zadanie nie ma harmonogramu, więc stary wynik nie jest błędem. Pomiar co godzinę.', canCheck: true },
     { id: 'weather', name: 'Pogoda morska', cadence: 'co godzinę', feeds: 'fala i wiatr na rejsach, sprawy promowe', lastAt: ago(nowIso, 17), state: 'partial', since: ago(nowIso, 2 * 24 * 60 + 136), why: 'DMI odmawia (za dużo zapytań) w każdym przebiegu, dane tylko z FMI. 8 z 24 godzin bez wyniku.', canCheck: true },
     /* wyglad/audyt-E (E-09; E49 16.10, 02:08 — D-20261016-0230-01 Z5): wiatr na drodze z SMHI, próg świeżości 2 h */

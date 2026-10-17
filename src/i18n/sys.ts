@@ -31,6 +31,7 @@ const PL: Record<string, string> = {
   sys_since_today: 'od {t} · {d}',
   sys_since_days: 'od {n} dni',
   sys_since_at: 'od {t}',
+  sys_next_try: 'następna próba o {t}',
   sys_check: 'Sprawdź teraz',
   sys_checking: 'Sprawdzam…',
   sys_checked: 'Sprawdzone {t}: {state}',

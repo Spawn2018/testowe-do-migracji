@@ -25,6 +25,8 @@ export type SourceRow = {
   since: string | null;
   /** Przyczyna i skutek zdaniem, bez kodów (E21). */
   why: string | null;
+  /** A8 (D-20261017-0730-01): kiedy następna próba po serii błędów (np. emtrack `skipped_until`); widok: „następna próba o 21:05”. */
+  nextTryAt?: string | null;
   /** „Sprawdź teraz” (E23 pkt 8) — uruchamia zadanie, wynik w wierszu. */
   canCheck: boolean;
 };

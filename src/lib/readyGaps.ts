@@ -1,5 +1,6 @@
 /**
- * L6 / L9 / L29 / E32 pkt 6 — jedna definicja braków do „Gotowy” (awizacja, zlecenia, zezwolenia, piloci).
+ * L6 / L9 / L29 / E32 pkt 6 — jedna definicja braków do „Gotowy” (awizacja, rejs, zlecenia, zezwolenia, piloci).
+ * A9 (audyt 17.10): ta sama lista co `awiz_missing(load)` w bazie — po A9 produkcja bierze listę z bazy (`load.readyGaps`).
  * Polisa HHL nie blokuje (L6). Używane w demo i w produkcji, dopóki baza nie zwraca gotowej listy.
  * D-20261014-1320-01 K2.2.
  */
@@ -17,9 +18,14 @@ export function computeReadyGaps(load: Load, docs: readonly Document[]): ReadyGa
     !r.driverPhone?.trim() ? 'telefon' : null,
     !r.tractorPlate?.trim() ? 'ciągnik' : null,
     !r.trailerPlate?.trim() ? 'naczepa' : null,
+    /* A9 (audyt 17.10): przy przepięciu naczepy także kierowca SE z telefonem */
+    r.trailerSwap && !r.driverDeliveryName?.trim() ? 'kierowca SE' : null,
+    r.trailerSwap && !r.driverDeliveryPhone?.trim() ? 'telefon SE' : null,
     r.trailerSwap && !r.tractorDeliveryPlate?.trim() ? 'ciągnik SE' : null,
   ].filter(Boolean) as string[];
   if (awiz.length) gaps.push({ kind: 'AWIZ', items: awiz, who: 'SCX' });
+  /* A9 + A5: rejs przy trasie promowej (każdy transport Śrem → Boden płynie promem) — SCX wybiera w awizacji */
+  if (!load.sailingId) gaps.push({ kind: 'SAILING', who: 'SCX' });
 
   /* B5 / D-0300: piloci z wymogu symbolu (`permit.plPilotsRequired`), nie z wierszy zezwoleń (0).
    * Do tabeli symboli (D1) — gdy wymóg > 0 albo awizacja ma escort bez tablicy. */

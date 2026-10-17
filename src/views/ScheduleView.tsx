@@ -503,7 +503,8 @@ export function ScheduleView() {
             {t(locale, 'sched_upload')} · {filename}
             {dryRun ? (
               <span style={{ fontWeight: 400, color: 'var(--ink-3)', marginLeft: 8 }}>
-                {dryRun.accepted}/{dryRun.total} OK · ⚠{dryRun.warnings}
+                {tp(locale, 'p7_imp_head', { ok: dryRun.accepted, total: dryRun.total })}
+                {dryRun.warnings ? ` · ${tp(locale, 'p7_imp_warn', { n: dryRun.warnings })}` : ''}
               </span>
             ) : null}
           </div>
@@ -572,15 +573,30 @@ export function ScheduleView() {
           )}
           {step === 'diff' && dryRun && (
             <>
-              <div style={{ fontSize: 13, marginBottom: 6 }}>
-                <span style={{ color: 'var(--go)' }}>+{dryRun.added.length}</span>
+              {/* wyglad/W-naprawy-2 · A6 + E21: podsumowanie słowami zamiast znaków „+ ~ − ⚠” */}
+              <div style={{ fontSize: 13, marginBottom: 6 }} data-import-sum>
+                <span style={{ color: 'var(--go)' }}>{t(locale, 'p7_imp_new')}: {dryRun.added.length}</span>
                 {' · '}
-                <span style={{ color: 'var(--amber-ink)' }}>~{dryRun.changed.length}</span>
+                <span style={{ color: 'var(--amber-ink)' }}>{t(locale, 'p7_imp_changed')}: {dryRun.changed.length}</span>
                 {' · '}
-                <span style={{ color: 'var(--ink-3)' }} data-import-removed-count>−{allowRemovals ? dryRun.removalCandidates.length : 0}</span>
+                <span style={{ color: 'var(--ink-3)' }}>{t(locale, 'p7_imp_removed')}: <b data-import-removed-count>{allowRemovals ? dryRun.removalCandidates.length : 0}</b></span>
                 {' · '}
-                <span style={{ color: 'var(--red)' }}>⚠{dryRun.rejected}</span>
+                <span style={{ color: dryRun.rejected ? 'var(--red)' : 'var(--ink-3)' }}>{t(locale, 'p7_imp_rejected')}: {dryRun.rejected}</span>
               </div>
+              {dryRun.skippedCarrier != null || dryRun.skippedEmpty != null || dryRun.skippedStandard ? (
+                <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 6 }} data-import-skipped>
+                  {tp(locale, 'p7_imp_skip', { list: [
+                    dryRun.skippedCarrier != null ? tp(locale, 'p7_imp_skip_carrier', { n: dryRun.skippedCarrier }) : null,
+                    dryRun.skippedEmpty != null ? tp(locale, 'p7_imp_skip_empty', { n: dryRun.skippedEmpty }) : null,
+                    dryRun.skippedStandard ? tp(locale, 'p7_imp_skip_standard', { n: dryRun.skippedStandard }) : null,
+                  ].filter(Boolean).join(' · ') })}
+                </div>
+              ) : null}
+              {dryRun.datesToCheck ? (
+                <div style={{ fontSize: 12, color: 'var(--amber-ink)', marginBottom: 6 }} data-import-dates-check>
+                  {tp(locale, 'p7_imp_dates_check', { n: dryRun.datesToCheck })}
+                </div>
+              ) : null}
               {dryRun.removalCandidates.length > 0 ? (
                 <div data-import-removals style={{ fontSize: 12, margin: '0 0 8px' }}>
                   <label className="switchline">

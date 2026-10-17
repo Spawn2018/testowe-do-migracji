@@ -44,6 +44,12 @@ function sinceText(locale: Locale, r: SourceRow, nowIso: string): string | null 
   return syp(locale, 'sys_since_at', { t: dt(r.since) });
 }
 
+/** A8: „następna próba o 21:05” (inny dzień — z datą); tylko przy stanie wymagającym uwagi i czasie w przyszłości. */
+function nextTryText(locale: Locale, r: SourceRow, nowIso: string): string | null {
+  if (!r.nextTryAt || !ATTN.has(r.state) || Date.parse(r.nextTryAt) <= Date.parse(nowIso)) return null;
+  return syp(locale, 'sys_next_try', { t: sameDay(r.nextTryAt, nowIso) ? hm(r.nextTryAt) : dt(r.nextTryAt) });
+}
+
 function lastText(r: SourceRow, nowIso: string): string {
   if (r.lastText) return r.lastText;
   if (!r.lastAt) return '—';
@@ -113,7 +119,7 @@ function Sources({ locale, rows, nowIso, canCheck, admin }: { locale: Locale; ro
             <Dot state={r.state} />
             <span className="sys-m-t">
               <b>{r.name}</b>
-              <small>{[since ? `${sy(locale, `sys_st_${r.state}`)} ${since}` : sy(locale, `sys_st_${r.state}`), r.lastAt || r.lastText ? syp(locale, 'sys_ph_data', { t: lastText(r, nowIso) }) : ''].filter(Boolean).join(' · ')}</small>
+              <small>{[since ? `${sy(locale, `sys_st_${r.state}`)} ${since}` : sy(locale, `sys_st_${r.state}`), nextTryText(locale, r, nowIso) ?? '', r.lastAt || r.lastText ? syp(locale, 'sys_ph_data', { t: lastText(r, nowIso) }) : ''].filter(Boolean).join(' · ')}</small>
             </span>
           </button>
           {isOpen ? (
@@ -166,6 +172,7 @@ function Sources({ locale, rows, nowIso, canCheck, admin }: { locale: Locale; ro
                   <td>
                     <span className={`sys-st is-${r.state}`}><Dot state={r.state} />{sy(locale, `sys_st_${r.state}`)}</span>
                     {since ? <small>{since}</small> : null}
+                    {nextTryText(locale, r, nowIso) ? <small data-sys-next={r.id}>{nextTryText(locale, r, nowIso)}</small> : null}
                   </td>
                   <td>{r.why ? <span className="sys-why">{r.why}</span> : null}{checkBtn(r)}{checkLine(r)}</td>
                 </tr>

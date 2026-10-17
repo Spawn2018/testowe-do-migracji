@@ -4,10 +4,16 @@ import { readFileSync } from 'node:fs';
 import { passwordOk, PASSWORD_MIN } from '../src/auth/config';
 
 describe('AUTH-1 hasło', () => {
-  it(`minimalna długość = ${PASSWORD_MIN}`, () => {
+  it(`minimalna długość = ${PASSWORD_MIN}, z literami i cyframi (C11; W1 17.10)`, () => {
     expect(PASSWORD_MIN).toBe(12);
-    expect(passwordOk('12345678901')).toBe(false);
-    expect(passwordOk('123456789012')).toBe(true);
+    expect(passwordOk('abcdefghij1')).toBe(false);
+    expect(passwordOk('abcdefghijk1')).toBe(true);
+    /* C11: same cyfry albo same litery — za słabe, jak w Supabase Auth (litery i cyfry) */
+    expect(passwordOk('123456789012')).toBe(false);
+    expect(passwordOk('abcdefghijkl')).toBe(false);
+    expect(passwordOk('Żółwiewodne12')).toBe(true);
+    expect(readFileSync('src/i18n/ui6.ts', 'utf8')).toContain("auth_pw_rule: 'Hasło musi mieć co najmniej {n~znak|znaki|znaków}, w tym litery i cyfry.',");
+    for (const f of ['src/auth/AuthGate.tsx', 'src/auth/LiveAccountScreen.tsx']) expect(readFileSync(f, 'utf8'), f).toContain("tp(locale, 'auth_pw_rule', { n: PASSWORD_MIN })");
   });
 
   it('AuthGate: hasło, Dalej, reset bez ujawniania konta (A3)', () => {

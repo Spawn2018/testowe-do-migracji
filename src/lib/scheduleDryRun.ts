@@ -23,6 +23,13 @@ export type ImportDiff = {
   rejected: number;
   warnings: number;
   skippedStandard: number;
+  /**
+   * wyglad/W-naprawy-2 · A6 (audyt 17.10): liczniki z parsera wykonawcy — wiersze innego przewoźnika (NTG), puste wiersze
+   * i transporty ze sprawą „Daty KSH do sprawdzenia” (KR-03). Brak pola = parser jeszcze ich nie liczy (widok ich nie pokazuje).
+   */
+  skippedCarrier?: number;
+  skippedEmpty?: number;
+  datesToCheck?: number;
   filename: string;
   accepted: number;
   total: number;
