@@ -2798,3 +2798,10 @@ Kolejka PR wyglądu (po #280): **#282 `wyglad/W-eta`**. Scalanie w przerwie mię
 - `rls_enabled_no_policy` dla `security_flags` zniknęło (polityka SELECT z B1).
 - Dalej: **B6**.
 
+## 2026-10-17 — DOPISEK D-20261017-1220-01 W PLANIE
+
+Kolejka PR wyglądu (po #282, już na produkcji): **#284 `wyglad/W-konta`**. Scalanie w przerwie między pozycjami; wdrożenie po scaleniu. W PR: rodzaj konta w demo, `accountRole`, Pomoc bez fałszywego braku, SMS przy miejscach do odczytu u Operacji, C8 N2 (formularze; w C8 zostaje strona bazy). Nowe sprawdzenia uprawnień (A2, A4, B5 i dalej) przez `accountRole(role)`. B7: bez geolokalizacji kierowcy — tylko CSP Report-Only `frame-src` (właściciel 17.10, 12:25: aplikacja kierowcy porzucona, zostaje w kodzie).
+
+B2 zamknięte w dokumentach: merge `27daa36a` (PR #287).
+
+
