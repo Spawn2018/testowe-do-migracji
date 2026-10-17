@@ -58,6 +58,7 @@ grant execute on function public.load_in_tracking_window(uuid, timestamptz) to s
 create or replace function public.loads_freeze_tracking_open()
 returns trigger
 language plpgsql
+security definer
 set search_path = public
 as $$
 begin
@@ -381,6 +382,18 @@ begin
   if v_min is null then
     return 0;
   end if;
+  -- A1: cisza transportu, który wyszedł z okna (np. „Dostarczone”), ma się zamknąć.
+  for r in
+    select s.id, s.dedup_key
+      from risk_signals s
+      join loads l on s.dedup_key = 'SILENT:' || l.id::text
+     where s.resolved_at is null
+       and s.detail->>'l3' = '1'
+       and public.load_in_tracking_window(l.id, now()) is not true
+  loop
+    update risk_signals set resolved_at = now() where id = r.id;
+    perform l3_lapse(r.dedup_key, now());
+  end loop;
   for r in
     select l.id, l.project_id, l.tractor_plate, l.status, l.telematics_vehicle_id,
            max(p.ts) as last_fix
@@ -479,6 +492,7 @@ declare
   v_place text;
   v_when text;
   v_title text;
+  v_backlog int := 0;
 begin
   for r in
     select id, project_id, order_no, plan_delivery_date
@@ -502,7 +516,7 @@ begin
     if found and d.status in ('NEW', 'ASSIGNED', 'SNOOZED') then
       continue;
     end if;
-    if found and d.status = 'RESOLVED' and d.resolution_code = 'STILL_EN_ROUTE' then
+    if found and d.status = 'RESOLVED' and d.resolution_code in ('STILL_EN_ROUTE', 'MANUAL_STATUS') then
       if d.resolved_at > now() - interval '24 hours' then
         continue;
       end if;
@@ -536,14 +550,42 @@ begin
          and st_contains(g.geom, (select geom_raw from positions where load_id = r.id order by ts desc limit 1))
        limit 1;
       if v_place is null then
-        v_place := trim(to_char(v_lat, 'FM990.00')) || ', ' || trim(to_char(v_lon, 'FM990.00'));
+        v_place := 'pozycja ' || trim(to_char(v_lat, '990.00')) || ', ' || trim(to_char(v_lon, '990.00'));
       end if;
       v_when := 'ostatnia pozycja ' || to_char(v_fix at time zone 'Europe/Warsaw', 'DD.MM.YYYY, HH24:MI') || ', ' || v_place;
     else
       v_when := 'brak pozycji';
     end if;
-    v_title := coalesce(r.order_no, '') || ': brak „Dostarczone” dobę po planowanej dostawie '
+    v_title := public.load_sms_code(r.id) || ': brak „Dostarczone” dobę po planowanej dostawie '
       || to_char(r.plan_delivery_date, 'DD.MM.YYYY') || ' · ' || v_when;
+    -- Zaległość: planowana dostawa minęła przed wdrożeniem A1 — sprawa bez dzwonka i telefonu.
+    if r.plan_delivery_date < coalesce(
+         (select label::timestamptz at time zone 'Europe/Warsaw' from app_parameters where key = 'A1_DEPLOYED_AT')::date,
+         (now() at time zone 'Europe/Warsaw')::date
+       ) then
+      insert into decisions (project_id, type_code, title, detail, load_id, due_at)
+      values (
+        r.project_id,
+        'DELIVERY_UNCONFIRMED',
+        v_title,
+        jsonb_build_object(
+          'zrodlo', 'L17', 'event_key', 'L17:' || r.id::text, 'opened_by', 'L17-zaleglosc',
+          'last_lat', v_lat, 'last_lon', v_lon, 'last_fix', v_fix,
+          'plan_delivery_date', r.plan_delivery_date
+        ),
+        r.id,
+        now() + interval '24 hours'
+      );
+      insert into decision_events (decision_id, actor_id, action, payload)
+      select id, null, 'OPEN', jsonb_build_object('type', 'DELIVERY_UNCONFIRMED', 'event_key', 'L17:' || r.id::text, 'silent', true)
+        from decisions
+       where load_id = r.id and type_code = 'DELIVERY_UNCONFIRMED'
+       order by created_at desc
+       limit 1;
+      n := n + 1;
+      v_backlog := v_backlog + 1;
+      continue;
+    end if;
     perform decision_open_from_event(
       r.project_id,
       'DELIVERY_UNCONFIRMED',
@@ -561,8 +603,24 @@ begin
     );
     n := n + 1;
   end loop;
+  if v_backlog > 0 then
+    insert into notifications (channel, recipient, user_id, template, payload, dedup_key)
+    select 'IN_APP', coalesce(u.email::text, u.id::text), u.id, 'L17_BACKLOG',
+           jsonb_build_object(
+             'title', 'Potwierdź dostawę: ' || v_backlog || ' transportów bez „Dostarczone” po planowanej dostawie — lista w „Do zrobienia”',
+             'n', v_backlog
+           ),
+           'L17_BACKLOG:' || u.id::text
+      from app_users u
+     where u.active and u.role = 'HHL_ADMIN'
+    on conflict (dedup_key) where dedup_key is not null do nothing;
+  end if;
   return n;
 end $$;
+
+insert into app_parameters (key, value, label, source)
+values ('A1_DEPLOYED_AT', 0, now()::text, 'A1: zaległości L17 sprzed tej chwili bez powiadomień')
+on conflict (key) do nothing;
 
 revoke all on function public.tracking_delivery_guard() from public, anon, authenticated;
 grant execute on function public.tracking_delivery_guard() to service_role;

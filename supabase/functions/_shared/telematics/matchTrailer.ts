@@ -54,6 +54,15 @@ export function loadInTrackingWindow(load: LoadMatchRow, atIso: string): boolean
   return at >= trackingWindowStartMs(day);
 }
 
+/** Ile transportów w oknie ma tę samą naczepę. 0 albo 1 → 0 (wybór bez sygnału). */
+export function ambiguousMatchCount(fix: EmtrackObjectFix, loads: LoadMatchRow[]): number {
+  const plate = normalizePlate(fix.textId);
+  if (!plate) return 0;
+  const at = fix.observedAt || new Date().toISOString();
+  const n = loads.filter((l) => loadInTrackingWindow(l, at) && normalizePlate(l.trailer_plate) === plate).length;
+  return n > 1 ? n : 0;
+}
+
 /** Preferuj telematics_vehicle_id, potem rejestracja naczepy. Ta sama naczepa → wcześniejszy niedostarczony w oknie. */
 export function matchFixToLoad(fix: EmtrackObjectFix, loads: LoadMatchRow[]): LoadMatchRow | null {
   const plate = normalizePlate(fix.textId);

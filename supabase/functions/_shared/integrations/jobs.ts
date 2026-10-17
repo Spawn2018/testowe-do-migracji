@@ -33,7 +33,7 @@ import { HERE_BILLING_DEFAULTS } from '../here/billing.ts';
 import {
   EMTRACK_EXPECTED_VERSION, EMTRACK_UA, fetchTrackingObjectsReadOnly, pollIntervalSec,
 } from '../telematics/emtrackWeb.ts';
-import { matchFixToLoad } from '../telematics/matchTrailer.ts';
+import { ambiguousMatchCount, matchFixToLoad } from '../telematics/matchTrailer.ts';
 import {
   WIND_GUST_MS_THRESHOLD, gustExceedsThreshold, windRiskTitle,
   seWeekendBanHit, plSundayBanHit, banRiskTitle,
@@ -1225,9 +1225,12 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
   let orphans = 0;
   let phaseInferred = 0;
   let skippedInterval = 0;
+  let ambiguousTrailer = 0;
   const trailers = objects.filter((o) => String(o.type).toUpperCase() === 'TRAILER');
   for (const fix of trailers) {
     if (fix.lat == null || fix.lon == null || !fix.observedAt) continue;
+    const amb = ambiguousMatchCount(fix, loads);
+    if (amb > ambiguousTrailer) ambiguousTrailer = amb;
     const load = matchFixToLoad(fix, loads);
     const raw = {
       provider: 'EMTRACK_WEB',
@@ -1292,6 +1295,7 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
       written: String(written),
       phaseInferred: String(phaseInferred),
       skippedInterval: String(skippedInterval),
+      ambiguous_trailer: String(ambiguousTrailer),
       sentTypes: sentLog.map((s) => s.type).join(','),
     },
   };

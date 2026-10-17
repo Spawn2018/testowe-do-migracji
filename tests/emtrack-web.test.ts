@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isMoving, normalizePlate, parseCurrentSnapshot, pollIntervalSec,
 } from '../supabase/functions/_shared/telematics/emtrackWeb';
-import { loadInTrackingWindow, matchFixToLoad, trackingWindowStartMs } from '../supabase/functions/_shared/telematics/matchTrailer';
+import { ambiguousMatchCount, loadInTrackingWindow, matchFixToLoad, trackingWindowStartMs } from '../supabase/functions/_shared/telematics/matchTrailer';
 import { runEmtrackWeb } from '../supabase/functions/_shared/integrations/jobs';
 import { sourceDownRisk } from '../supabase/functions/_shared/integrations/sync';
 import {
@@ -76,6 +76,8 @@ describe('TELM-EMTRACK-WEB parsers', () => {
       currentSnapshot: { ts: Date.parse(at), d: { C: { v: { lat: 1, lng: 2 } } } },
     });
     expect(matchFixToLoad(fix, [late, early])?.id).toBe('early');
+    expect(ambiguousMatchCount(fix, [late, early])).toBe(2);
+    expect(ambiguousMatchCount(fix, [early])).toBe(0);
   });
 });
 

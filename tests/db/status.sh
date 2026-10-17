@@ -208,45 +208,67 @@ q "update loads set status='DELIVERED', actual_delivery_at='2026-10-10 12:00+00'
 chk "C17 UNLOADED i DELIVERED ta sama ranga" "select (load_status_rank('UNLOADED'::load_status)=load_status_rank('DELIVERED'::load_status))" t
 chk "C17 0 transportów UNLOADED w zestawie" "select count(*) from loads where status='UNLOADED' and id in ('$C17A','$C17B','$C17C','$C17D')" 0
 
-# A1 / E27 / L17: okno od 03:00 dnia załadunku; po starcie zmiana daty nie zamyka; bezpiecznik dostawy.
+# A1 / E27 / L17 (D-20261017-2130-01 §5, D-20261017-2205-01): okno 03:00 i bezpiecznik.
 echo; echo "[11] A1 — okno śledzenia i bezpiecznik L17"
-W1=$(L 3a); W2=$(L 3b); W3=$(L 3c); W4=$(L 3d); W5=$(L 3e); W6=$(L 3f)
-q "insert into loads (id,project_id,carrier_org_id,order_no,status,plan_load_date) values
- ('$W1','$P','$SCXO','KSH/A1W1','IN_TRANSIT_PL','2026-10-05'),
- ('$W2','$P','$SCXO','KSH/A1W2','DELIVERED','2026-10-05'),
- ('$W3','$P','$SCXO','KSH/A1W3','IN_TRANSIT_PL','2026-10-24'),
- ('$W4','$P','$SCXO','KSH/A1W4','IN_TRANSIT_PL','2026-10-20'),
- ('$W5','$P','$SCXO','KSH/A1W5','IN_TRANSIT_PL','2026-10-05'),
- ('$W6','$P','$SCXO','KSH/A1W6','IN_TRANSIT_SE','2026-10-01')" >/dev/null
-q "update loads set plan_delivery_date='2026-10-01' where id='$W6'" >/dev/null
-pos $W1 52.09 17.02 "2026-10-05 00:59:00+00"
+W1=$(L 3a); W2=$(L 3b); W3=$(L 3c); W4=$(L 3d); W5=$(L 3e); W6=$(L 3f); W7=$(L 4a)
+mk $W1 A1W1 "'HHL/A1W1'" "'SCX/A1W1'" IN_TRANSIT_PL null
+mk $W2 A1W2 "'HHL/A1W2'" "'SCX/A1W2'" DELIVERED null
+mk $W3 A1W3 "'HHL/A1W3'" "'SCX/A1W3'" IN_TRANSIT_PL null
+mk $W4 A1W4 "'HHL/A1W4'" "'SCX/A1W4'" IN_TRANSIT_PL null
+mk $W5 A1W5 "'HHL/A1W5'" "'SCX/A1W5'" IN_TRANSIT_PL null
+mk $W6 A1W6 "'HHL/A1W6'" "'SCX/A1W6'" IN_TRANSIT_SE null
+q "update loads set plan_load_date='2026-10-05' where id in ('$W1','$W2','$W5')" >/dev/null
+q "update loads set plan_load_date='2026-10-24' where id='$W3'" >/dev/null
+q "update loads set plan_load_date='2026-10-20' where id='$W4'" >/dev/null
+T59=$(q "select public.tracking_window_start('2026-10-05'::date) - interval '1 minute'")
+T00=$(q "select public.tracking_window_start('2026-10-05'::date)")
+T20=$(q "select public.tracking_window_start('2026-10-20'::date)")
+T22=$(q "select public.tracking_window_start('2026-10-22'::date)")
+pos $W1 52.09 17.02 "$T59"
 chk "A1 02:59 bez pozycji" "select count(*) from positions where load_id='$W1'" 0
-pos $W1 52.09 17.02 "2026-10-05 01:00:00+00"
+pos $W1 52.09 17.02 "$T00"
 chk "A1 03:00 zapis pozycji" "select count(*) from positions where load_id='$W1'" 1
-pos $W2 52.09 17.02 "2026-10-05 01:00:00+00"
+pos $W2 52.09 17.02 "$T00"
 chk "A1 Dostarczone bez pozycji" "select count(*) from positions where load_id='$W2'" 0
 pos $W3 52.09 17.02 "2026-10-17 12:00:00+00"
 chk "A1 przyszły tydzień bez pozycji" "select count(*) from positions where load_id='$W3'" 0
 q "update loads set plan_load_date='2026-10-22' where id='$W4'" >/dev/null
-pos $W4 52.09 17.02 "2026-10-20 01:00:00+00"
+pos $W4 52.09 17.02 "$T20"
 chk "A1 zmiana daty przed startem nie otwiera starego dnia" "select count(*) from positions where load_id='$W4'" 0
-pos $W4 52.09 17.02 "2026-10-22 01:00:00+00"
+pos $W4 52.09 17.02 "$T22"
 chk "A1 nowy dzień załadunku otwiera okno" "select count(*) from positions where load_id='$W4'" 1
-pos $W5 52.09 17.02 "2026-10-05 01:00:00+00"
+pos $W5 52.09 17.02 "$T00"
 q "update loads set plan_load_date='2026-12-01' where id='$W5'" >/dev/null
 pos $W5 52.09 17.02 "2026-10-06 08:00:00+00"
 chk "A1 po starcie późniejsza data nie zamyka śledzenia" "select count(*) from positions where load_id='$W5'" 2
-chk "A1 tracking_opened_at zamrożone" "select tracking_opened_at = public.tracking_window_start('2026-10-05'::date) from loads where id='$W5'" t
-chk "A1 L17 jedna sprawa Potwierdź dostawę" "select public.tracking_delivery_guard() >= 1; select count(*) from decisions where type_code='DELIVERY_UNCONFIRMED' and load_id='$W6'" 1
-chk "A1 L17 drugi przebieg bez duplikatu" "select public.tracking_delivery_guard(); select count(*) from decisions where type_code='DELIVERY_UNCONFIRMED' and load_id='$W6'" 1
-pos $W6 65.80 21.76 "2026-10-17 12:00:00+00"
+chk "A1 tracking_opened_at zamrożone" "select (tracking_opened_at = public.tracking_window_start('2026-10-05'::date))::text from loads where id='$W5'" true
+q "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date)
+   select ('55555555-0000-0000-0000-00000000a1'||lpad(g::text,2,'0'))::uuid, '$P', '$SCXO', 'KSH/L17/'||g, 'IN_TRANSIT_PL', current_date - 10, current_date - 5
+   from generate_series(1,17) g" >/dev/null
+chk "A1 L17 zaległości: 17 spraw" "select public.tracking_delivery_guard(); select count(*) from decisions where type_code='DELIVERY_UNCONFIRMED' and load_id in (select id from loads where order_no like 'KSH/L17/%')" 17
+chk "A1 L17 zaległości: 0 powiadomień SCX" "select count(*) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.template='DECISION_OPEN' and n.load_id in (select id from loads where order_no like 'KSH/L17/%') and o.kind='CARRIER'" 0
+chk "A1 L17 zaległości: jeden wpis zbiorczy u administratora" "select count(*)||'/'||min(payload->>'title') from notifications n join app_users u on u.id=n.user_id where n.template='L17_BACKLOG' and u.role='HHL_ADMIN'" "1/Potwierdź dostawę: 17 transportów bez „Dostarczone” po planowanej dostawie — lista w „Do zrobienia”"
+chk "A1 L17 drugi przebieg zaległości bez nowych powiadomień" "select public.tracking_delivery_guard(); select count(*) from notifications where template='L17_BACKLOG'" 1
+q "update loads set plan_load_date='2026-10-01', plan_delivery_date='2026-10-01', order_no=null where id='$W6'" >/dev/null
+q "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m) values ('$P','$W6','SG-A1',10,3,3)" >/dev/null
+pos $W6 50.00 10.00 "2026-10-17 12:00:00+00"
+chk "A1 L17 tytuł z kodu wysyłki i pozycji bez strefy" "select public.tracking_delivery_guard(); select title from decisions where load_id='$W6' and type_code='DELIVERY_UNCONFIRMED'" "SG-A1: brak „Dostarczone” dobę po planowanej dostawie 01.10.2026 · ostatnia pozycja 17.10.2026, 14:00, pozycja 50.00, 10.00"
+chk "A1 L17 jedna sprawa na transport" "select count(*) from decisions where type_code='DELIVERY_UNCONFIRMED' and load_id='$W6'" 1
 chk "A1 L17 śledzenie trwa do potwierdzenia" "select count(*) from positions where load_id='$W6'" 1
 q "update decisions set status='RESOLVED', resolution_code='STILL_EN_ROUTE', resolved_at=now()-interval '1 hour' where load_id='$W6' and type_code='DELIVERY_UNCONFIRMED'" >/dev/null
 chk "A1 L17 przypomnienie czeka 24 h" "select public.tracking_delivery_guard(); select status from decisions where load_id='$W6' and type_code='DELIVERY_UNCONFIRMED'" RESOLVED
 q "update decisions set resolved_at=now()-interval '25 hours' where load_id='$W6' and type_code='DELIVERY_UNCONFIRMED'" >/dev/null
 chk "A1 L17 po dobie sprawa wraca, jeden wiersz" "select public.tracking_delivery_guard(); select status||'/'||count(*) from decisions where load_id='$W6' and type_code='DELIVERY_UNCONFIRMED' group by status" "NEW/1"
+q "update decisions set status='RESOLVED', resolution_code='MANUAL_STATUS', resolved_at=now()-interval '25 hours' where load_id='$W6' and type_code='DELIVERY_UNCONFIRMED'" >/dev/null
+chk "A1 L17 ręczny status bez Dostarczone wraca po dobie" "select public.tracking_delivery_guard(); select status from decisions where load_id='$W6' and type_code='DELIVERY_UNCONFIRMED'" NEW
 q "update loads set status='DELIVERED' where id='$W6'" >/dev/null
 chk "A1 L17 Dostarczone zamyka sprawę" "select status from decisions where load_id='$W6' and type_code='DELIVERY_UNCONFIRMED'" RESOLVED
+q "update app_parameters set label=((current_date - 2)::timestamp at time zone 'Europe/Warsaw')::text where key='A1_DEPLOYED_AT'" >/dev/null
+mk $W7 A1W7 "'HHL/A1W7'" "'SCX/A1W7'" IN_TRANSIT_PL null
+q "update loads set plan_load_date=current_date - 10, plan_delivery_date=current_date - 2 where id='$W7'" >/dev/null
+chk "A1 L17 nowy po terminie: sprawa z powiadomieniem" "select public.tracking_delivery_guard(); select (count(*) > 0)::text from notifications where template='DECISION_OPEN' and load_id='$W7'" true
+q "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key) values ('$P','$W3','SILENT_VEHICLE','HIGH','cisza','rk_silent_vehicle','{\"l3\":\"1\"}','SILENT:$W3')" >/dev/null
+chk "A1 cisza poza oknem się zamyka" "select public.detect_silent_vehicles(90); select (resolved_at is not null)::text from risk_signals where dedup_key='SILENT:$W3'" true
 chk "A1 process_position ma bramę okna" "select strpos(pg_get_functiondef(p.oid), 'load_in_tracking_window') > 0 from pg_proc p where p.proname='process_position'" t
 chk "A1 cisza bez twardego źródła TELEMATICS_API" "select strpos(pg_get_functiondef(p.oid), 'TELEMATICS_API') = 0 from pg_proc p where p.proname='detect_silent_vehicles'" t
 

@@ -2883,5 +2883,15 @@ Odbiór A8 po wdrożeniu wpisze koordynator. Własny wpis wykonawcy — po teśc
 - **TEST wolne** od 17.10.2026 20:54 (koniec nullguard-4).
 - Dalej: **A1**. #291 nadal do scalenia w przerwie między pozycjami.
 
+## 2026-10-17 — DOPISEK D-20261017-2205-01 W PLANIE (A1, PR #296)
+
+Przegląd #296 przed scaleniem, w tym samym PR:
+- tytuł L17 z `load_sms_code`; bez strefy „pozycja 54.40, 18.68”;
+- zaległości sprzed `A1_DEPLOYED_AT` bez powiadomień, jeden wpis zbiorczy u Administratorów HHL;
+- `ambiguous_trailer` w obserwacjach `emtrack-web` (wybór naczepy bez zmian);
+- cisza GPS poza oknem się zamyka; `MANUAL_STATUS` bez „Dostarczone” wraca po 24 h.
+
+Stare transporty w oknie śledzenia, status `PLANNED`, data załadunku sprzed 17.10.2026 (odczyt produkcji 17.10.2026, 21:55): **21**. Do domknięcia przez HHL i SCX przez sprawy L17 przed W37.
+
 
 

@@ -272,6 +272,9 @@ chk "jawny detail.occurred_at przyjęty; brak/nieczytelny czas → NULL (nie zga
 val "HHL: mediana z 3 próbek (7, 20, 90) = 20 min" $HHL "select samples||'/'||median_min from kpi_detection_lag('$P')" "3/20"
 val "KSH: tylko ryzyka widoczne dla KSH (RLS: odbiorca HHL) → 0 próbek" $KSH "select samples from kpi_detection_lag('$P')" 0
 val "SCX: ryzyka swojego transportu widoczne dla przewoźnika (7, 20, 90) → 3/20" $SCX "select samples||'/'||median_min from kpi_detection_lag('$P')" "3/20"
+# A1: wczorajsza data trzyma L7 w oknie ciszy. Przed skanem awizacji (I-21) zamykamy transport,
+# inaczej l3_scan liczy zaległą awizację i polisę (dwa nowe ryzyka).
+$PSQL -c "update loads set status='CANCELLED' where id='$L7'" >/dev/null
 val "konto bez app_users: 0 próbek" $NOAPP "select samples from kpi_detection_lag('$P')" 0
 $PSQL -c "update risk_signals set detected_at = now()-interval '40 days' where dedup_key='T-I2L-J'" >/dev/null
 val "okno 30 dni: próbka sprzed 40 dni pominięta → 2 próbki" $HHL "select samples from kpi_detection_lag('$P', 30)" 2
