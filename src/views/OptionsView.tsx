@@ -245,7 +245,7 @@ export function OptionsView() {
     scr('rates', PROD_BUILD ? (
       <>
         {ratesExtras}
-        {RateCardForm ? roBlock(<RateCardForm />) : <div className="note option-note">{t(locale, 'i2_rates_no_source')}</div>}
+        {RateCardForm ? block(<RateCardForm readOnly={ro} />) : <div className="note option-note">{t(locale, 'i2_rates_no_source')}</div>}
       </>
     ) : (
       <>
@@ -255,7 +255,7 @@ export function OptionsView() {
         {rateCard ? block(
           <RateCard locale={locale} view={rateCard} today={localDateOf(getNowIso())} nowIso={getNowIso()} readOnly={ro} onSave={rateCardSaverOf()} />,
         ) : null}
-        {RateCardForm ? roBlock(<RateCardForm />) : null}
+        {RateCardForm ? block(<RateCardForm readOnly={ro} />) : null}
       </>
     ), { right: change, mark: PROD_BUILD ? undefined : <DemoMark /> }),
     scr('surch', dwell

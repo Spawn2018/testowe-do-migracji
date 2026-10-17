@@ -9,7 +9,40 @@ export type DemoAccountKind = 'HHL_OPS' | 'CARRIER_USER';
 
 const KEY = 'wt-demo-account';
 const FROM_PARAM: Record<string, DemoAccountKind> = { operacje: 'HHL_OPS', uzytkownik: 'CARRIER_USER' };
+const TO_PARAM: Record<DemoAccountKind, string> = { HHL_OPS: 'operacje', CARRIER_USER: 'uzytkownik' };
 let cached: DemoAccountKind | null | undefined;
+
+function remember(kind: DemoAccountKind | null): void {
+  cached = kind;
+  try {
+    if (kind) sessionStorage.setItem(KEY, kind);
+    else sessionStorage.removeItem(KEY);
+  } catch {
+    /* tryb prywatny — wybór trzyma adres (`konto=`) i pamięć karty do przeładowania */
+  }
+}
+
+/** F7: wybór z menu zapisany też w adresie — `konto=` z adresu nie nadpisuje już wyboru, a w trybie prywatnym działa po przeładowaniu. */
+function writeAddress(kind: DemoAccountKind | null): void {
+  if (typeof window === 'undefined' || !window.location || !window.history?.replaceState) return;
+  try {
+    const { pathname, search, hash } = window.location;
+    const sp = new URLSearchParams(search);
+    sp.delete('konto');
+    const q = hash.indexOf('?');
+    const route = q >= 0 ? hash.slice(0, q) : hash;
+    const hp = new URLSearchParams(q >= 0 ? hash.slice(q + 1) : '');
+    hp.delete('konto');
+    const inHash = route.startsWith('#/');
+    if (kind && inHash) hp.set('konto', TO_PARAM[kind]);
+    if (kind && !inHash) sp.set('konto', TO_PARAM[kind]);
+    const s = sp.toString();
+    const h = hp.toString();
+    window.history.replaceState(window.history.state, '', `${pathname}${s ? `?${s}` : ''}${h ? `${route}?${h}` : route}`);
+  } catch {
+    /* adres bez zmian */
+  }
+}
 
 function fromAddress(): DemoAccountKind | null | undefined {
   if (typeof window === 'undefined' || !window.location) return undefined;
@@ -23,7 +56,11 @@ function fromAddress(): DemoAccountKind | null | undefined {
 /** Wybrany drugi rodzaj konta albo `null` (konto domyślne firmy). */
 export function demoAccountKind(): DemoAccountKind | null {
   const addr = fromAddress();
-  if (addr !== undefined) return addr;
+  if (addr !== undefined) {
+    /* wybór z adresu zostaje w karcie — przejście na ekran bez `konto=` nie wraca po cichu do konta domyślnego */
+    if (addr !== cached) remember(addr);
+    return addr;
+  }
   if (cached !== undefined) return cached;
   try {
     const v = typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(KEY);
@@ -35,13 +72,8 @@ export function demoAccountKind(): DemoAccountKind | null {
 }
 
 export function setDemoAccountKind(kind: DemoAccountKind | null): void {
-  cached = kind;
-  try {
-    if (kind) sessionStorage.setItem(KEY, kind);
-    else sessionStorage.removeItem(KEY);
-  } catch {
-    /* tryb prywatny — wybór działa do przeładowania strony */
-  }
+  remember(kind);
+  writeAddress(kind);
 }
 
 /** Test: wyczyść pamięć modułu. */

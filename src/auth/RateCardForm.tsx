@@ -27,7 +27,8 @@ interface LogRow { at: string; actor: string; entity_id: string; old_value: { ru
 
 const fmt = (n: number) => String(Number(n)).replace('.', ',');
 
-export default function RateCardForm() {
+/** readOnly (W-konta, audyt 17.10 sekcja 07 N2 — F7): Operacje HHL przełączają Stronę i Firmę (oglądają każdą kartę), bez edycji. */
+export default function RateCardForm({ readOnly = false }: { readOnly?: boolean } = {}) {
   const locale = useTowerStore((s) => s.locale);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [orgs, setOrgs] = useState<Org[]>([]);
@@ -132,12 +133,13 @@ export default function RateCardForm() {
       {msg && <div className={`auth-msg ${msg.ok ? 'ok' : 'err'} auth-admin-row`} role="status">{msg.text}</div>}
       <div className="panel-bd">
         <div className="note option-note">{t(locale, 'i30_note')}</div>
-        <form className="baf-form" onSubmit={save} data-rate-card="form">
+        {readOnly ? <div className="note option-note" data-rate-card-ro>{t(locale, 'p3c_r_read')}</div> : null}
+        <form className="baf-form" onSubmit={readOnly ? (e) => e.preventDefault() : save} data-rate-card="form">
           <label>{t(locale, 'i19_side')}<select className="input" value={side} onChange={(e) => setSide(e.target.value as Side)}>
             <option value="COST">{t(locale, 'i19_side_COST')}</option><option value="REVENUE">{t(locale, 'i19_side_REVENUE')}</option></select></label>
           <label>{t(locale, side === 'COST' ? 'i19_org_carrier' : 'i19_org_client')}<select className="input" value={orgId} onChange={(e) => setOrgId(e.target.value)}>
             {sideOrgs.map((o) => <option key={o.id} value={o.id}>{o.code} — {o.name}</option>)}</select></label>
-          <label>{t(locale, 'i19_valid_from')}<input className="input" type="date" required value={validFrom} onChange={(e) => setValidFrom(e.target.value)} /></label>
+          <label>{t(locale, 'i19_valid_from')}<input className="input" type="date" required disabled={readOnly} value={validFrom} onChange={(e) => setValidFrom(e.target.value)} /></label>
           <div className="full-row" data-rate-card="rows">
             <h4 className="sec">{t(locale, 'i30_rows_h')}</h4>
             {rows.length === 0 ? <div className="note">{t(locale, 'i30_rows_none')}</div> : (
@@ -156,23 +158,23 @@ export default function RateCardForm() {
                 </tr></thead>
                 <tbody>{rows.map((r, i) => (
                   <tr key={i} data-rate-row={i + 1}>
-                    <td><input className="input" size={6} aria-label={tp(locale, 'i30_aria_symbol', { n: String(i + 1) })} value={r.symbol} onChange={(e) => setRow(i, 'symbol', e.target.value)} /></td>
-                    <td><input className="input" size={4} aria-label={tp(locale, 'i30_aria_family', { n: String(i + 1) })} value={r.family} onChange={(e) => setRow(i, 'family', e.target.value)} /></td>
-                    <td><input className="input" inputMode="numeric" size={3} aria-label={tp(locale, 'i30_aria_convoy', { n: String(i + 1) })} value={r.convoy_cars} onChange={(e) => setRow(i, 'convoy_cars', e.target.value)} placeholder="KR" /></td>
+                    <td><input className="input" disabled={readOnly} size={6} aria-label={tp(locale, 'i30_aria_symbol', { n: String(i + 1) })} value={r.symbol} onChange={(e) => setRow(i, 'symbol', e.target.value)} /></td>
+                    <td><input className="input" disabled={readOnly} size={4} aria-label={tp(locale, 'i30_aria_family', { n: String(i + 1) })} value={r.family} onChange={(e) => setRow(i, 'family', e.target.value)} /></td>
+                    <td><input className="input" disabled={readOnly} inputMode="numeric" size={3} aria-label={tp(locale, 'i30_aria_convoy', { n: String(i + 1) })} value={r.convoy_cars} onChange={(e) => setRow(i, 'convoy_cars', e.target.value)} placeholder="KR" /></td>
                     {(['length_to', 'width_to', 'height_to', 'weight_to'] as const).map((k) => (
-                      <td key={k}><input className="input" inputMode="decimal" size={5} aria-label={`${k} ${i + 1}`} value={r[k]} onChange={(e) => setRow(i, k, e.target.value)} /></td>
+                      <td key={k}><input className="input" disabled={readOnly} inputMode="decimal" size={5} aria-label={`${k} ${i + 1}`} value={r[k]} onChange={(e) => setRow(i, k, e.target.value)} /></td>
                     ))}
-                    <td><input className="input" inputMode="decimal" size={8} aria-label={tp(locale, 'i19_aria_rate', { n: String(i + 1) })} value={r.base_rate} onChange={(e) => setRow(i, 'base_rate', e.target.value)} /></td>
-                    <td><input className="input" size={12} aria-label={tp(locale, 'i19_aria_note', { n: String(i + 1) })} value={r.note} onChange={(e) => setRow(i, 'note', e.target.value)} /></td>
-                    <td><button className="chipbtn" type="button" onClick={() => setRows((x) => x.filter((_, j) => j !== i))}>{t(locale, 'i19_remove')}</button></td>
+                    <td><input className="input" disabled={readOnly} inputMode="decimal" size={8} aria-label={tp(locale, 'i19_aria_rate', { n: String(i + 1) })} value={r.base_rate} onChange={(e) => setRow(i, 'base_rate', e.target.value)} /></td>
+                    <td><input className="input" disabled={readOnly} size={12} aria-label={tp(locale, 'i19_aria_note', { n: String(i + 1) })} value={r.note} onChange={(e) => setRow(i, 'note', e.target.value)} /></td>
+                    <td>{readOnly ? null : <button className="chipbtn" type="button" onClick={() => setRows((x) => x.filter((_, j) => j !== i))}>{t(locale, 'i19_remove')}</button>}</td>
                   </tr>
                 ))}</tbody>
               </table></div>
             )}
-            <button className="chipbtn" type="button" onClick={() => setRows((x) => [...x, { ...EMPTY_SYMBOL_ROW }])}>{t(locale, 'i30_add_row')}</button>
+            {readOnly ? null : <button className="chipbtn" type="button" onClick={() => setRows((x) => [...x, { ...EMPTY_SYMBOL_ROW }])}>{t(locale, 'i30_add_row')}</button>}
           </div>
-          <label className="wide">{t(locale, cur ? 'i19_reason_req' : 'i19_reason')}<input className="input full" required={!!cur} minLength={cur ? 3 : undefined} value={reason} onChange={(e) => setReason(e.target.value)} /></label>
-          <button className="btn" type="submit" disabled={busy || !projectId || !orgId}>{t(locale, 'i19_save')}</button>
+          {readOnly ? null : <label className="wide">{t(locale, cur ? 'i19_reason_req' : 'i19_reason')}<input className="input full" required={!!cur} minLength={cur ? 3 : undefined} value={reason} onChange={(e) => setReason(e.target.value)} /></label>}
+          {readOnly ? null : <button className="btn" type="submit" disabled={busy || !projectId || !orgId}>{t(locale, 'i19_save')}</button>}
         </form>
 
         <h4 className="sec">{t(locale, 'i19_versions_h')}</h4>

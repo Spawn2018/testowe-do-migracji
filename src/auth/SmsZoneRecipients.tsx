@@ -106,8 +106,8 @@ export default function SmsZoneRecipients({ readOnly = false }: { readOnly?: boo
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     <input className="input" name="name" defaultValue={cur?.display_name ?? ''} placeholder={t(locale, 'dec5_name')} required readOnly={readOnly} style={{ flex: '1 1 120px' }} />
                     <select className="input" name="country" defaultValue={cur?.country ?? 'PL'} disabled={readOnly} aria-label={t(locale, 'dec5_prefix')} title={t(locale, 'dec5_prefix')} style={{ width: 96 }}>
-                      <option value="PL">+48 PL</option>
-                      <option value="SE">+46 SE</option>
+                      <option value="PL">PL +48</option>
+                      <option value="SE">SE +46</option>
                     </select>
                     <input className="input mono" name="phone" defaultValue={cur?.phone_national ?? ''} placeholder="601234567" required readOnly={readOnly} style={{ flex: '1 1 120px' }} />
                     {readOnly ? null : <button type="submit" className="btn ghost" disabled={busy}>{t(locale, 'a6_dr_save')}</button>}
