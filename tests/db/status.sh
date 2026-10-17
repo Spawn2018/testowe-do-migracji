@@ -33,8 +33,8 @@ insert into sailings (id,project_id,vessel_id,departure_at,arrival_at,delayed_de
  ('77777777-0000-0000-0000-000000000004','$P','66666666-0000-0000-0000-000000000002','2026-10-01 14:00+00','2026-10-02 08:00+00',null,null,'ZAPLANOWANY');
 " >/dev/null
 S1=77777777-0000-0000-0000-000000000001; S2=77777777-0000-0000-0000-000000000002; S3=77777777-0000-0000-0000-000000000003; S4=77777777-0000-0000-0000-000000000004
-mk() { q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,sailing_id)
-          values ('$1','$P','$SCXO','KSH/$2',$3,$4,'$5',$6)" >/dev/null; }
+mk() { q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,sailing_id,plan_load_date)
+          values ('$1','$P','$SCXO','KSH/$2',$3,$4,'$5',$6,'2026-09-30')" >/dev/null; }
 mk $A A "'HHL/A'" "'SCX/A'" IN_TRANSIT_PL "'$S1'";  mk $B B "'HHL/B'" "'SCX/B'" IN_TRANSIT_PL "'$S1'"
 mk $C C "'HHL/C'" "'SCX/C'" IN_TRANSIT_PL "'$S2'";  mk $D D "'HHL/D'" null        READY         null
 mk $E E null      null      DOCS_PENDING  null;      mk $F F "'HHL/F'" "'SCX/F'" READY         null
@@ -207,6 +207,48 @@ q "update loads set status='DELIVERED', actual_delivery_at='2026-10-10 12:00+00'
 # tu: auto_set_status z UNLOADED nie jest wołany z GPS; assert że po C17 brak ścieżki GPS do UNLOADED (już [7]) + enum zapisany jako DELIVERED w driver — sprawdzamy helper:
 chk "C17 UNLOADED i DELIVERED ta sama ranga" "select (load_status_rank('UNLOADED'::load_status)=load_status_rank('DELIVERED'::load_status))" t
 chk "C17 0 transportów UNLOADED w zestawie" "select count(*) from loads where status='UNLOADED' and id in ('$C17A','$C17B','$C17C','$C17D')" 0
+
+# A1 / E27 / L17: okno od 03:00 dnia załadunku; po starcie zmiana daty nie zamyka; bezpiecznik dostawy.
+echo; echo "[11] A1 — okno śledzenia i bezpiecznik L17"
+W1=$(L 3a); W2=$(L 3b); W3=$(L 3c); W4=$(L 3d); W5=$(L 3e); W6=$(L 3f)
+q "insert into loads (id,project_id,carrier_org_id,order_no,status,plan_load_date) values
+ ('$W1','$P','$SCXO','KSH/A1W1','IN_TRANSIT_PL','2026-10-05'),
+ ('$W2','$P','$SCXO','KSH/A1W2','DELIVERED','2026-10-05'),
+ ('$W3','$P','$SCXO','KSH/A1W3','IN_TRANSIT_PL','2026-10-24'),
+ ('$W4','$P','$SCXO','KSH/A1W4','IN_TRANSIT_PL','2026-10-20'),
+ ('$W5','$P','$SCXO','KSH/A1W5','IN_TRANSIT_PL','2026-10-05'),
+ ('$W6','$P','$SCXO','KSH/A1W6','IN_TRANSIT_SE','2026-10-01')" >/dev/null
+q "update loads set plan_delivery_date='2026-10-01' where id='$W6'" >/dev/null
+pos $W1 52.09 17.02 "2026-10-05 00:59:00+00"
+chk "A1 02:59 bez pozycji" "select count(*) from positions where load_id='$W1'" 0
+pos $W1 52.09 17.02 "2026-10-05 01:00:00+00"
+chk "A1 03:00 zapis pozycji" "select count(*) from positions where load_id='$W1'" 1
+pos $W2 52.09 17.02 "2026-10-05 01:00:00+00"
+chk "A1 Dostarczone bez pozycji" "select count(*) from positions where load_id='$W2'" 0
+pos $W3 52.09 17.02 "2026-10-17 12:00:00+00"
+chk "A1 przyszły tydzień bez pozycji" "select count(*) from positions where load_id='$W3'" 0
+q "update loads set plan_load_date='2026-10-22' where id='$W4'" >/dev/null
+pos $W4 52.09 17.02 "2026-10-20 01:00:00+00"
+chk "A1 zmiana daty przed startem nie otwiera starego dnia" "select count(*) from positions where load_id='$W4'" 0
+pos $W4 52.09 17.02 "2026-10-22 01:00:00+00"
+chk "A1 nowy dzień załadunku otwiera okno" "select count(*) from positions where load_id='$W4'" 1
+pos $W5 52.09 17.02 "2026-10-05 01:00:00+00"
+q "update loads set plan_load_date='2026-12-01' where id='$W5'" >/dev/null
+pos $W5 52.09 17.02 "2026-10-06 08:00:00+00"
+chk "A1 po starcie późniejsza data nie zamyka śledzenia" "select count(*) from positions where load_id='$W5'" 2
+chk "A1 tracking_opened_at zamrożone" "select tracking_opened_at = public.tracking_window_start('2026-10-05'::date) from loads where id='$W5'" t
+chk "A1 L17 jedna sprawa Potwierdź dostawę" "select public.tracking_delivery_guard() >= 1; select count(*) from decisions where type_code='DELIVERY_UNCONFIRMED' and load_id='$W6'" 1
+chk "A1 L17 drugi przebieg bez duplikatu" "select public.tracking_delivery_guard(); select count(*) from decisions where type_code='DELIVERY_UNCONFIRMED' and load_id='$W6'" 1
+pos $W6 65.80 21.76 "2026-10-17 12:00:00+00"
+chk "A1 L17 śledzenie trwa do potwierdzenia" "select count(*) from positions where load_id='$W6'" 1
+q "update decisions set status='RESOLVED', resolution_code='STILL_EN_ROUTE', resolved_at=now()-interval '1 hour' where load_id='$W6' and type_code='DELIVERY_UNCONFIRMED'" >/dev/null
+chk "A1 L17 przypomnienie czeka 24 h" "select public.tracking_delivery_guard(); select status from decisions where load_id='$W6' and type_code='DELIVERY_UNCONFIRMED'" RESOLVED
+q "update decisions set resolved_at=now()-interval '25 hours' where load_id='$W6' and type_code='DELIVERY_UNCONFIRMED'" >/dev/null
+chk "A1 L17 po dobie sprawa wraca, jeden wiersz" "select public.tracking_delivery_guard(); select status||'/'||count(*) from decisions where load_id='$W6' and type_code='DELIVERY_UNCONFIRMED' group by status" "NEW/1"
+q "update loads set status='DELIVERED' where id='$W6'" >/dev/null
+chk "A1 L17 Dostarczone zamyka sprawę" "select status from decisions where load_id='$W6' and type_code='DELIVERY_UNCONFIRMED'" RESOLVED
+chk "A1 process_position ma bramę okna" "select strpos(pg_get_functiondef(p.oid), 'load_in_tracking_window') > 0 from pg_proc p where p.proname='process_position'" t
+chk "A1 cisza bez twardego źródła TELEMATICS_API" "select strpos(pg_get_functiondef(p.oid), 'TELEMATICS_API') = 0 from pg_proc p where p.proname='detect_silent_vehicles'" t
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

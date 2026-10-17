@@ -258,7 +258,7 @@ chk "retencja: ostatnia pozycja statku zostaje zawsze (także starsza niż 30 dn
 
 echo; echo "[I-2l] czas wykrycia odchylenia z risk_signals (0055)"
 L7=33333333-0000-0000-0000-000000000077
-$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status, tractor_plate) values ('$L7','$P','00000000-0000-0000-0000-00000000a003','KSH/77','HHL/2026/77','SCX/77','IN_TRANSIT_PL','GD 7777')" >/dev/null
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status, tractor_plate, plan_load_date) values ('$L7','$P','00000000-0000-0000-0000-00000000a003','KSH/77','HHL/2026/77','SCX/77','IN_TRANSIT_PL','GD 7777', current_date - 1)" >/dev/null
 $PSQL -c "insert into positions (load_id, ts, geom_raw, source) select '$L7', now()-interval '3 hours', st_setsrid(st_makepoint(18.0, 53.0),4326), source from positions limit 1" >/dev/null
 chk "anon bez EXECUTE kpi_detection_lag; funkcja SECURITY INVOKER" "$(Q "select has_function_privilege('anon','kpi_detection_lag(uuid,integer)','execute')::text||'/'||(select prosecdef::text from pg_proc where proname='kpi_detection_lag')")" "false/false"
 val "brak ryzyk z czasem zdarzenia → 0 próbek, mediana NULL (kafelek „—”)" $HHL "select samples||'/'||coalesce(median_min::text,'∅') from kpi_detection_lag('$P')" "0/∅"

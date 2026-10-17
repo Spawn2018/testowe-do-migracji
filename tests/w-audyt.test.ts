@@ -41,14 +41,16 @@ describe('teksty o automatach (serverRuleOn)', () => {
     expect(p9m('pl', 'p9c_note')).toBe('Podkład i trasy: HERE · utrudnienia: Trafikverket (SE), HERE (PL) · statki: AIS Fintraffic / digitraffic.fi, CC BY 4.0');
   });
 
-  it('produkcja przed A1, A2, P6 i P9: okno 03:00, wyjazd z placu, wiatr i objazd „włączamy wkrótce”; dopisek mapy bez utrudnień', async () => {
+  it('produkcja po A1: okno 03:00 działa; A2, P6 i P9 nadal „włączamy wkrótce”; dopisek mapy bez utrudnień', async () => {
     await prod(async () => {
       const { serverRuleOn } = await import('../src/lib/serverRules');
-      for (const k of ['TRACKING_WINDOW', 'SITE_EXIT_DELIVERED', 'WIND_E49', 'DETOUR_E49', 'ROAD_PL_HERE', 'ROAD_SITUATIONS_MAP'] as const) expect(serverRuleOn(k)).toBe(false);
+      expect(serverRuleOn('TRACKING_WINDOW')).toBe(true);
+      for (const k of ['SITE_EXIT_DELIVERED', 'WIND_E49', 'DETOUR_E49', 'ROAD_PL_HERE', 'ROAD_SITUATIONS_MAP'] as const) expect(serverRuleOn(k)).toBe(false);
       const { helpVersion, HELP_WINDOW } = await import('../src/lib/helpContent');
       for (const kind of ['HHL_ADMIN', 'HHL_OPS', 'CLIENT_USER', 'CARRIER_DISPATCH'] as const) {
         const map = helpVersion(kind).steps.find((s) => s.target === 'map');
-        expect(map?.text).toContain(`${HELP_WINDOW} (włączamy wkrótce)`);
+        expect(map?.text).toContain(HELP_WINDOW);
+        expect(map?.text).not.toContain(`${HELP_WINDOW} (włączamy wkrótce)`);
       }
       const { wt } = await import('../src/i18n/p4cWf');
       expect(wt('pl', 'p4c_wf_r_zones_d')).toMatch(/wyjazd z placu → Dostarczone \(E26\) — włączamy wkrótce$/);
@@ -154,13 +156,13 @@ describe('F7 do PR #277', () => {
     expect(hhl).toContain('data-pm-fetch');
     expect(hhl).toContain('6 900');
   });
-  it('pasek śledzenia w produkcji: „włączamy wkrótce” przy 03:00 i „Dostarczone”; w demo bez dopisku', async () => {
+  it('pasek śledzenia po A1: produkcja bez „włączamy wkrótce” przy 03:00 i „Dostarczone”', async () => {
     const demo = await import('../src/lib/trackingStateText');
     expect(demo.trkSub('pl', 'p4b_trk_on_sub')).toBe('wyłączy się samo przy „Dostarczone”');
     await prod(async () => {
       const m = await import('../src/lib/trackingStateText');
-      expect(m.trkSub('pl', 'p4b_trk_on_sub')).toBe('wyłączy się samo przy „Dostarczone” — włączamy wkrótce');
-      expect(m.trkSub('pl', 'p4b_trk_before_sub')).toMatch(/· start o 03:00 — włączamy wkrótce$/);
+      expect(m.trkSub('pl', 'p4b_trk_on_sub')).toBe('wyłączy się samo przy „Dostarczone”');
+      expect(m.trkSub('pl', 'p4b_trk_before_sub')).not.toMatch(/włączamy wkrótce/);
     });
   });
 });

@@ -90,7 +90,7 @@ export interface SyncStore {
   /** Koszt ponad pule w bieżącym miesiącu (Europe/Warsaw). */
   hereMonthSpend?(): Promise<number>;
   /** TELM: aktywne transporty do dopasowania naczepy. */
-  listActiveLoadsForTelematics?(): Promise<{ id: string; trailer_plate: string | null; telematics_vehicle_id: string | null; status: string | null; plannedLoadDate?: string | null; plannedDeliverDate?: string | null }[]>;
+  listActiveLoadsForTelematics?(): Promise<{ id: string; trailer_plate: string | null; telematics_vehicle_id: string | null; status: string | null; plannedLoadDate?: string | null; plannedDeliverDate?: string | null; trackingOpenedAt?: string | null }[]>;
   /** TELM: zapis pozycji (process_position). */
   processPosition?(row: {
     loadId: string; lat: number; lon: number; ts: string;

@@ -79,6 +79,7 @@ export function resolveActiveLoadAt(plate: string, loads: JourneyLoad[], atIso: 
     trailer_plate: l.trailer_plate,
     telematics_vehicle_id: l.telematics_vehicle_id ?? null,
     status: l.status,
+    plannedLoadDate: '2000-01-01',
   }));
   return matchFixToLoad(fix, rows) as JourneyLoad | null;
 }
