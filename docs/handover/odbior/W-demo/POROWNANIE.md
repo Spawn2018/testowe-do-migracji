@@ -69,7 +69,7 @@ Obrazy: `przed-*` = `main` 7db7282 (bez #277), `po-*` = ta gałąź (z #277); de
 
 **Testy:**
 - `tests/w-demo.test.ts` (15) — daty, dni robocze, rozładunek przed zegarem, kolejność zdarzeń, czat, ETA = pozycja + jazda + odpoczynek, „po oknie” tylko za oknem, brak GPS, teksty spraw, kurs bieżący (także spóźniony), zapis v4, sprawy przy tych samych transportach;
-- zmienione: `carrier-rating`, `store-persist`, `money-v2`, `w-audyt` (wersja zapisu 4), `i2-facade` (bez 95 min w demo), `p6-history` (czat), `e8-phone-gate` (P9-f: T-12 „Na placu od 23.09.2026, 15:10”);
+- zmienione: `carrier-rating`, `store-persist`, `money-v2`, `w-audyt` (wersja zapisu 4), `i2-facade` (bez 95 min w demo), `p6-history` (czat), `e8-phone-gate` (P9-f: T-12 „Na placu od 23.09.2026, 15:10”), `aud03-ksh-panel` (pierwszy transport przed załadunkiem po sortowaniu — dowolny kod, nie tylko „SG-”);
 - e2e `e8-phone-gate` + `persist-toast` lokalnie: 130 zielonych.
 
 Unit: 1525 zielonych. **Wzorce `visual` zmieniają się na wielu ekranach (daty) — odświeżam je.**
