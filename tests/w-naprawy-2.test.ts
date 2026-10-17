@@ -154,3 +154,21 @@ describe('F7 runda 3 — promy w pasku i propozycja Steny w czasie polskim po 25
     expect(wt('pl', 'p4c_wf_zt_srem_out')).toBe('Droga PL — po postoju ≥ 5 min (próg strefy), bez czekania na potwierdzenie załadunku');
   });
 });
+
+describe('A8 — sprawa „Źródło niedostępne … od …” z detail.od_kiedy', () => {
+  it('riskFromRow: rk_source_down + od_kiedy → rk_source_down_since z datą pierwszej awarii', async () => {
+    const { riskFromRow } = await import('../src/data/mappers');
+    const r = riskFromRow({
+      id: 'r1', load_id: null, kind: 'JOB_FAILURE', severity: 'MEDIUM', title: 'x', title_key: 'rk_source_down',
+      detail: { od_kiedy: '2026-10-07T22:00:03Z', params: { source: 'telematyka naczep (emtrack web)', source_key: 'rk_src_EMTRACK_WEB' } },
+      detected_at: '2026-10-07T22:00:03Z', dedup_key: 'SOURCE_DOWN:EMTRACK_WEB',
+    }, '2026-10-17T17:00:00Z');
+    expect(r.titleKey).toBe('rk_source_down_since');
+    expect(tp('pl', r.titleKey!, r.titleParams as Record<string, string>)).toMatch(/^Źródło niedostępne: .+ od 08\.10\.2026, 00:00 — HHL weryfikuje ręcznie$/);
+  });
+  it('bez od_kiedy — jak dotąd', async () => {
+    const { riskFromRow } = await import('../src/data/mappers');
+    const r = riskFromRow({ id: 'r2', load_id: null, kind: 'JOB_FAILURE', severity: 'MEDIUM', title: 'x', title_key: 'rk_source_down', detail: {}, detected_at: '2026-10-07T22:00:03Z' }, '2026-10-17T17:00:00Z');
+    expect(r.titleKey).toBe('rk_source_down');
+  });
+});

@@ -92,6 +92,8 @@ const pl: Dict = {
   rk_ferry_status_unknown: 'Nieznany status rejsu {vessel} {dep} — bez zmiany, do weryfikacji HHL',
   rk_ferry_weather: 'Pogoda morska: możliwe odwołanie — fala {wave} m / porywy {gust} węzłów ({vessel}; progi {wave_thr} m / {gust_thr} węzłów)',
   rk_source_down: 'Źródło niedostępne: {source} — HHL weryfikuje ręcznie',
+  /* A8: jedna sprawa na źródło z „od kiedy” (`detail.od_kiedy`) */
+  rk_source_down_since: 'Źródło niedostępne: {source} od {since} — HHL weryfikuje ręcznie',
   rk_src_POLFERRIES_STATUS: 'status promów (Polferries)',
   rk_src_POLFERRIES_SCHEDULE: 'rozkład promów (Polferries)',
   rk_src_STENA_STATUS: 'status promów (Stena Line)',
