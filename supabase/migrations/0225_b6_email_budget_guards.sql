@@ -73,7 +73,9 @@ begin
   if new.channel is distinct from 'EMAIL' or new.status is distinct from 'PENDING' then
     return new;
   end if;
+  -- L-13 trzyma rezerwę 10 zaproszeń i resetów hasła; ten limit ich nie liczy.
   if new.user_id is null or new.template = 'EMAIL_BUDGET'
+     or new.template in ('AUTH_INVITE', 'AUTH_PASSWORD_RESET')
      or coalesce(new.dedup_key, '') like 'budget:%' then
     return new;
   end if;

@@ -2817,6 +2817,7 @@ PR #290 (`pakiet/audyt-17-b6`, migracja 0225, jeszcze bez scalenia). Uwagi koord
 2. Licznik anon: IP z `cf-connecting-ip`, potem `x-forwarded-for`, na końcu `inet_client_addr()`; przeglądarka z `user-agent`.
 3. Tytuł „Limit e-maili na dziś”, treść z `{n}`, klucz `EMAIL_BUDGET` w `notification_copy`.
 4. `payload.push_fallback` poza limitem 20/5, licznik `*pilne*`.
+Zaproszenia i reset hasła (`AUTH_INVITE`, `AUTH_PASSWORD_RESET`) zostają w rezerwie L-13, poza limitem 5 na rodzaj.
 Bez zmian merytorycznych: `guard_invoice_update`, `loads_read` bez SITE.
 Testy w `security.sh` (oczekiwane 115 lokalnie / 111 na TEST). Brama `db` i scalenie B6 — po tym commicie.
 
