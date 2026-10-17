@@ -4,6 +4,8 @@
 import { describe, expect, it } from 'vitest';
 import { PASSWORD_MIN, passwordOk } from '../src/auth/config';
 import { tp } from '../src/i18n/messages';
+import { p8ct } from '../src/i18n/p8c';
+import { SOON } from '../src/lib/serverRules';
 import { readyGapsText } from '../src/lib/p4c';
 import { computeReadyGaps } from '../src/lib/readyGaps';
 import { importSkipText, standardSkipMessage } from '../src/lib/standardSkipMessage';
@@ -96,5 +98,18 @@ describe('A8 — Stan systemu: „następna próba o …”', () => {
   });
   it('źródła bez uwagi nie mają czasu próby', () => {
     expect(demoSources(NOW).filter((r) => r.state === 'ok').every((r) => !r.nextTryAt)).toBe(true);
+  });
+});
+
+describe('A2 — Strefy: wyjazd z placu nie obiecuje automatu przed A2', () => {
+  it('zdanie „wkrótce” dla placu i nowe zdanie wyjazdu ze Śremu po A2', () => {
+    expect(p8ct('p8c_does_SITE_exit_soon', { soon: SOON })).toBe('Wyjazd: „Dostarczone” ustawia SCX albo administrator HHL; samo po co najmniej 10\u00a0min na placu (E26, E27) — włączamy wkrótce.');
+    expect(p8ct('p8c_does_LOADING_exit_a2')).toContain('postoju co najmniej 5\u00a0min: „Droga PL”');
+  });
+  it('ZonesView podmienia zdania według serverRuleOn(SITE_EXIT_DELIVERED)', async () => {
+    const { readFileSync } = await import('node:fs');
+    const v = readFileSync('src/views/ZonesView.tsx', 'utf8');
+    expect(v).toMatch(/z\.type === 'SITE' && !serverRuleOn\('SITE_EXIT_DELIVERED'\)/);
+    expect(v).toMatch(/z\.type === 'LOADING' && serverRuleOn\('SITE_EXIT_DELIVERED'\)/);
   });
 });
