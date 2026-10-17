@@ -14,7 +14,6 @@ import { kindOptions, searchLoads } from '../../lib/p5Docs';
 import { transportLabel } from '../../lib/transportName';
 import { permitScopeOf } from '../../lib/p5Source';
 import { ft, ftp } from '../../i18n/p5';
-import { up } from '../options/up';
 import { useModal } from '../ui/useModal';
 import { t } from '../../i18n/messages';
 import './docs.css';
@@ -82,7 +81,7 @@ export function UploadDocModal({ locale, role, phone, loads, statusRows, allowed
         </header>
         <div className="panel-bd awiz-modal-bd up-bd">
           <div className="up-field">
-            <label className="up-lbl" htmlFor="up-load">{up(ft(locale, 'p5_up_load'))}</label>
+            <label className="up-lbl" htmlFor="up-load">{ft(locale, 'p5_up_load')}</label>
             <input
               ref={firstRef}
               className="input"
@@ -107,7 +106,7 @@ export function UploadDocModal({ locale, role, phone, loads, statusRows, allowed
             </select>
           </div>
           <div className="up-field">
-            <label className="up-lbl" htmlFor="up-kind">{up(ft(locale, 'p5_up_kind'))}</label>
+            <label className="up-lbl" htmlFor="up-kind">{ft(locale, 'p5_up_kind')}</label>
             <select id="up-kind" className="input" value={kind} data-up-kind onChange={(e) => setCat(e.target.value as DocCategory)}>
               {kinds.map((k) => (
                 <option key={k.category} value={k.category}>
@@ -119,7 +118,7 @@ export function UploadDocModal({ locale, role, phone, loads, statusRows, allowed
           </div>
           {isPermit && scopeOn ? (
             <div className="up-field" role="group" aria-labelledby="up-scope">
-              <span className="up-lbl" id="up-scope">{up(ft(locale, 'p5_up_scope'))}</span>
+              <span className="up-lbl" id="up-scope">{ft(locale, 'p5_up_scope')}</span>
               <div className="up-seg">
                 <button type="button" aria-pressed={scope === 'FIRMA'} data-up-scope="FIRMA" onClick={() => setScope('FIRMA')}>
                   {ftp(locale, 'p5_up_scope_firma', { type: typeName || ft(locale, 'p5_up_this_type') })}
@@ -131,7 +130,7 @@ export function UploadDocModal({ locale, role, phone, loads, statusRows, allowed
             </div>
           ) : null}
           <div className="up-field">
-            <span className="up-lbl">{up(ft(locale, 'p5_up_file'))}</span>
+            <span className="up-lbl">{ft(locale, 'p5_up_file')}</span>
             <div
               className={drag ? 'up-drop is-drag' : 'up-drop'}
               data-up-drop

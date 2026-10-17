@@ -8,7 +8,7 @@
 .s7-pop button:disabled{color:var(--ink-3);cursor:default}
 .sched-actions-pop.s7-more{padding:6px 0;gap:0}
 .sched-actions-pop.s7-more button{display:block;width:100%;text-align:left;padding:8px 12px;border:0;background:none;color:var(--ink);font-size:14px;cursor:pointer}
-.s7-pop-h{display:block;padding:4px 12px 6px;font:600 12.5px var(--font-cond);letter-spacing:.04em;color:var(--ink-3)}
+.s7-pop-h{display:block;padding:4px 12px 6px;font:600 12.5px var(--font-cond);letter-spacing:.02em;color:var(--ink-3)}
 .s7-cols label{display:flex;gap:8px;align-items:center;padding:5px 12px;font-size:13px;cursor:pointer;color:var(--ink)}
 .s7-cols{max-height:min(70vh,520px);overflow-y:auto}
 
@@ -33,6 +33,8 @@
 .s7-nw{white-space:nowrap}
 /* daty z rokiem (16.10.2026): dwa braki i termin zawijają się między słowami, data zostaje w całości */
 .s7-file td[data-col="docs"]{white-space:normal}
+/* audyt 17.10 (E20): przepięcie — „Kierowca”, „Ciągnik”, „Naczepa” w dwóch liniach zamiast wjeżdżać na sąsiednią kolumnę */
+.s7-file td[data-col="driver"],.s7-file td[data-col="tractor"],.s7-file td[data-col="trailer"]{white-space:normal}
 .s7-q{color:var(--red)}
 .s7-neg{color:var(--red);font-weight:600}
 .s7-ok{color:var(--go)}
@@ -109,7 +111,7 @@ tbody tr.is-cancel td{color:var(--ink-3)}
 .s7-sheet-hd b{font:700 18px var(--font-cond)}
 .s7-sheet-hd .chipbtn{min-width:44px;min-height:44px}
 .s7-sheet-bd{overflow-y:auto;padding:8px 16px 12px;display:flex;flex-direction:column;gap:8px}
-.s7-sheet-l{font:600 12.5px var(--font-cond);letter-spacing:.06em;color:var(--ink-3);margin-top:6px}
+.s7-sheet-l{font:600 12.5px var(--font-cond);letter-spacing:.02em;color:var(--ink-3);margin-top:6px}
 .s7-chips{display:flex;flex-wrap:wrap;gap:8px}
 .s7-sheet .s7-chip{min-height:44px;padding:0 14px;font-size:14px}
 .s7-sheet .s7-range{display:flex;gap:10px}

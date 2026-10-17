@@ -99,7 +99,7 @@ export function TrackingLinkField({
 
   return (
     <div className="form-field tlf" data-awiz-tracking data-tl-mode={chip ? 'saved' : masked ? 'new-rio' : editing ? 'change' : 'input'}>
-      <span id={id} className={upper ? 'tlf-lbl up' : 'tlf-lbl'}>{upper ? t(locale, 'awiz_tracking').toLocaleUpperCase('pl') : t(locale, 'awiz_tracking')}</span>
+      <span id={id} className={upper ? 'tlf-lbl up' : 'tlf-lbl'}>{t(locale, 'awiz_tracking')}</span>
       {chip ? (
         <div className="tlf-saved">
           <span className="tlf-chip" aria-describedby={id} data-tl-chip>

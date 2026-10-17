@@ -8,6 +8,9 @@
 import type { CancelRulesView, DwellRulesView, FuelDayGroup, FuelDayRow, FuelScreenView, FuelTier, PaymentTermsView, RateCardRow, RateCardView } from './p5bFuel';
 import { SEFS_PLN, SEFS_SEK, sefsForLoadDate, type SefsTier } from './sefs';
 
+/** Stawka SG z cennika (baza 08.10, E33): SCX v1 — koszt HHL, KSH v2 — przychód HHL. Przykład opłaty paliwowej na własnej stawce strony. */
+export const DEMO_EXAMPLE_BASE_EUR = { cost: 6900, rev: 7245 } as const;
+
 const DAY = 86_400_000;
 const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 const ms = (d: string) => Date.parse(`${d}T12:00:00Z`);
@@ -93,7 +96,7 @@ export function demoFuelScreen(today: string): FuelScreenView {
       today: { date: today, okq8: true, orlen: true },
       yesterday: { date: yesterday, okq8: true, orlen: !yesterdayInWeek },
     },
-    exampleBaseEur: 6900,
+    exampleBaseEur: DEMO_EXAMPLE_BASE_EUR.cost,
     days,
     tiers: { sek: tiers(SEFS_SEK), pln: tiers(SEFS_PLN) },
   };
@@ -109,7 +112,7 @@ export const demoDwellRules = (): DwellRulesView => ({
 export const demoCancelRules = (): CancelRulesView => ({
   pct: { 5: 0, 4: 15, 3: 25, 2: 25, 1: 50, 0: 100 },
   /* wyglad/audyt-E (E-06): ten sam fracht SG co w cenniku poniżej (SCX v1 6 900, KSH v2 7 245 EUR — baza 08.10, E33) */
-  example: { label: 'SG', costEur: 6900, revEur: 7245 },
+  example: { label: 'SG', costEur: DEMO_EXAMPLE_BASE_EUR.cost, revEur: DEMO_EXAMPLE_BASE_EUR.rev },
   changed: { at: '2026-10-08T12:14:00+02:00', by: 'Administrator HHL' },
 });
 

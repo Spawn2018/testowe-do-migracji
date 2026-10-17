@@ -5,8 +5,9 @@
  */
 import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { firstEntryDemoMode } from '../lib/firstEntryFlag';
+import { lazyRetry } from '../lib/lazyRetry';
 
-const FirstEntryDemo = import.meta.env.VITE_AUTH_MODE !== 'supabase' ? lazy(() => import('./FirstEntryDemo')) : null;
+const FirstEntryDemo = import.meta.env.VITE_AUTH_MODE !== 'supabase' ? lazy(lazyRetry(() => import('./FirstEntryDemo'))) : null;
 
 export function DemoFirstEntry({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState(() => (FirstEntryDemo ? firstEntryDemoMode() : null));

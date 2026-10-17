@@ -332,7 +332,7 @@ export function TodoCardView({
   const load = card.loadId ? ctx.loadOf(card.loadId) : undefined;
   const n = card.issues.length;
   const title = cardTitle(card, ctx);
-  const tag = <span className={`rk-tag ${sevClass(card.severity)}`}>{ctx.phone ? n : rtn(locale, 'p6_issues', n).toUpperCase()}</span>;
+  const tag = <span className={`rk-tag ${sevClass(card.severity)}`}>{ctx.phone ? n : rtn(locale, 'p6_issues', n)}</span>;
   const infos = card.infos.length ? (
     <span className="rk-infos">
       {card.infos.map((x) => (

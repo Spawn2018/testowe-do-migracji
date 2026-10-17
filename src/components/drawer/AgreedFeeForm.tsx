@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { t } from '../../i18n/messages';
 import type { Locale, RoleId } from '../../types';
+import { formatPlMoney } from '../../lib/format';
 
 type Hint = { code: string; label_pl: string; hint_text: string; amount_eur: number; unit: string };
 type Dwell = {
@@ -142,7 +143,7 @@ export function AgreedFeeForm({
             <li key={f.id} data-fee-status={f.status} style={{ padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                 <span>
-                  <strong>{f.kind}</strong> · {Number(f.amount_eur).toFixed(2)} EUR · {f.side}
+                  <strong>{f.kind}</strong> · {formatPlMoney(Number(f.amount_eur), 'EUR')} · {f.side}
                   {' · '}
                   <span className={`pill ${f.status === 'PENDING' ? 'p-amber' : f.status === 'ACCEPTED' ? 'p-go' : 'p-red'}`}>
                     {statusLabel(f.status)}

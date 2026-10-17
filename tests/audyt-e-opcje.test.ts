@@ -140,8 +140,8 @@ describe('E-06, C-14: Cennik i opłaty — symbole, wersje, liczby po polsku, D 
     expect(v.rows.filter((r) => r.symbol === 'KR').map((r) => r.convoy)).toEqual([1, 2, 3]);
     const h = rc(false);
     expect(h).toContain('Cennik KSH v2 od 28.09.2026 · cennik SCX v1 od 28.09.2026');
-    expect(h).toContain('KOSZT SCX · v1');
-    expect(h).toContain('PRZYCHÓD KSH · v2');
+    expect(h).toContain('Koszt SCX · v1');
+    expect(h).toContain('Przychód KSH · v2');
   });
   it('kwoty jak w bazie 08.10 (E33) i po polsku; zestaw D × S × W z przecinkiem; bez L/W/H i kropek', () => {
     const h = rc(false);
@@ -153,7 +153,7 @@ describe('E-06, C-14: Cennik i opłaty — symbole, wersje, liczby po polsku, D 
     expect(kr).toContain('12 745,00 EUR');
     expect(kr).toContain('13 382,00 EUR');
     expect(kr).toContain('konwój 1 auto');
-    expect(h).toContain('ZESTAW D × S × W');
+    expect(h).toContain('Zestaw D × S × W');
     expect(h).not.toMatch(/\bL \d|\bH \d|\d\.\d{1,2} ?(m|EUR)\b/);
     expect(h).toContain('data-deur-exempt="rate-card"');
   });

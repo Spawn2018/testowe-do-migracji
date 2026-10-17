@@ -14,7 +14,7 @@ function Risks({ list, id }: { list: readonly DetourRisk[]; id: string }) {
   if (!list.length) return null;
   return (
     <>
-      <h5 className="dtr-rh" id={id}>{e49t('e49_risks').toLocaleUpperCase('pl-PL')}</h5>
+      <h5 className="dtr-rh" id={id}>{e49t('e49_risks')}</h5>
       <ul className="dtr-risks" aria-labelledby={id}>
         {sortRisks(list).map((r, k) => (
           <li key={k} className={r.level === 'warn' ? 'is-warn' : 'is-ok'} data-detour-risk={r.kind}>

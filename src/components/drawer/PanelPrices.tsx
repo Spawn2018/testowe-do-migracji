@@ -20,9 +20,11 @@ import { localDateOf } from '../../lib/money/engine';
 import { loadFxMid } from '../../lib/money/loadPln';
 import { ft, ftp } from '../../i18n/p5';
 import { fc, fcp } from '../../i18n/p5c';
-import { up } from '../options/up';
 import '../finance/finance.css';
 import './panel.css';
+
+/** F7 (17.10): kwota nie łamie się w środku liczby (spacja tysięcy → niełamliwa). */
+const nb = (s: string): string => s.replace(/ /g, '\u00a0');
 
 const FeeModal = lazy(lazyRetry(() => import('./FeeModal').then((m) => ({ default: m.FeeModal }))));
 
@@ -101,9 +103,9 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
   const feeTag = (s: FeeSuggestion) => {
     const eur = role === 'KSH' ? s.revEur : role === 'SCX' ? s.costEur : Math.max(s.costEur, s.revEur);
     const d = dec(s);
-    if (d) return <span className={d === 'ODRZUCONA' || d === 'NIE_DODAJE' ? 'fin-tag plain' : 'fin-tag warn'}>{up(ft(locale, `p5_pr_dec_${d}`))}</span>;
+    if (d) return <span className={d === 'ODRZUCONA' || d === 'NIE_DODAJE' ? 'fin-tag plain' : 'fin-tag warn'}>{ft(locale, `p5_pr_dec_${d}`)}</span>;
     if (s.noMeasure && !eur) return <span className="fin-tag plain">{ft(locale, 'p5_pr_none_tag')}</span>;
-    return <span className={eur ? 'fin-tag warn' : 'fin-tag go'} data-fee-eur={eur}>{up(ftp(locale, 'p5_pr_eur_tag', { n: n2(eur) }))}</span>;
+    return <span className={eur ? 'fin-tag warn' : 'fin-tag go'} data-fee-eur={eur}>{ftp(locale, 'p5_pr_eur_tag', { n: n2(eur) })}</span>;
   };
   const feeTitle = (s: FeeSuggestion) => (s.kind === 'CANCEL' ? ft(locale, 'p5_pr_cancel') : ftp(locale, 'p5_pr_dwell', { place: ft(locale, `p5_pr_place_${s.place}`), where: s.where }));
   const feeLine = (s: FeeSuggestion) => {
@@ -238,8 +240,8 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
       {pln
         ? ftp(locale, 'p5_pr_rate_pln', { rate: rateText })
         : both && midCost && midRev
-          ? ftp(locale, 'p5_pr_pln', { rate: rateText, cost: n2(pr.costTotal * midCost), rev: n2(pr.revTotal * midRev), margin: n2(pr.revTotal * midRev - pr.costTotal * midCost) })
-          : ftp(locale, 'p5_pr_pln_one', { rate: rateText, amount: n2((role === 'KSH' ? pr.revTotal : pr.costTotal) * (fx?.mid ?? 0)) })}
+          ? ftp(locale, 'p5_pr_pln', { rate: rateText, cost: nb(n2(pr.costTotal * midCost)), rev: nb(n2(pr.revTotal * midRev)), margin: nb(n2(pr.revTotal * midRev - pr.costTotal * midCost)) })
+          : ftp(locale, 'p5_pr_pln_one', { rate: rateText, amount: nb(n2((role === 'KSH' ? pr.revTotal : pr.costTotal) * (fx?.mid ?? 0))) })}
       {fx?.provisional ? ` ${ft(locale, 'p5_pr_rate_after')}` : ''}
     </p>
   ) : null;
@@ -247,7 +249,7 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
   const header = (
     <header className="pp-hd">
       <h4 className="sec">{both ? ft(locale, 'p5_pr_h') : ft(locale, `p5_pr_h_${role}`)}</h4>
-      {tier ? <span className={TIER_TAG[tier]} data-tier={tier}>{up(ft(locale, `tier_${tier}`))}</span> : null}
+      {tier ? <span className={TIER_TAG[tier]} data-tier={tier}>{ft(locale, `tier_${tier}`)}</span> : null}
       {tier && both ? <span className="fin-muted">{ft(locale, `p5_pr_tier_${tier}`)}</span> : null}
     </header>
   );
@@ -313,8 +315,8 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
           <thead>
             <tr>
               <th><span className="sronly">{ft(locale, 'p5_doc_col_doc')}</span></th>
-              <th className="num">{up(ft(locale, 'p5_pr_col_cost'))}</th>
-              <th className="num">{up(ft(locale, 'p5_pr_col_rev'))}</th>
+              <th className="num">{ft(locale, 'p5_pr_col_cost')}</th>
+              <th className="num">{ft(locale, 'p5_pr_col_rev')}</th>
             </tr>
           </thead>
         ) : null}

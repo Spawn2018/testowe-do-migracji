@@ -4,8 +4,9 @@
  */
 import { lazy, Suspense } from 'react';
 import type { Load } from '../../types';
+import { lazyRetry } from '../../lib/lazyRetry';
 
-const CorridorMapImpl = lazy(() => import('./CorridorMap').then((m) => ({ default: m.CorridorMap })));
+const CorridorMapImpl = lazy(lazyRetry(() => import('./CorridorMap').then((m) => ({ default: m.CorridorMap }))));
 
 export function CorridorMap(props: { loads: Load[]; embedded?: boolean; slot?: 'map' | 'kokpit' | 'drawer'; onMarker?: (id: string) => void }) {
   return (

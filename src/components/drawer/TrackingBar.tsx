@@ -13,6 +13,7 @@ import { buildStatusAxis, dayOnly, dayTime, isoMs } from '../../lib/statusAxis';
 import { hasAwizacja } from '../../lib/awizacjaState';
 import { trackerKind } from '../../lib/trackerLink';
 import { rioStartsLate, trackerBarRio } from '../../lib/p4c';
+import { trkSub } from '../../lib/trackingStateText';
 
 function trackerText(load: Pick<Load, 'resources' | 'plannedLoadDate'>, locale: Locale, link: TrackingLinkInfo | null, nowIso: string): string {
   /* wyglad/P4-c (E44 pkt 5, 6): link RIO z serwera — pojazd z lokalizatorem, start i wygaśnięcie linku */
@@ -53,7 +54,7 @@ export function TrackingBar({
 
   if (phase === 'before') {
     const sub = [
-      t(locale, hasAwizacja(load) ? 'p4b_trk_before_sub' : 'p4b_trk_before_sub_noawiz'),
+      trkSub(locale, hasAwizacja(load) ? 'p4b_trk_before_sub' : 'p4b_trk_before_sub_noawiz'),
       trailer ? tp(locale, 'p4b_trailer', { plate: trailer }) : t(locale, 'p4b_no_trailer'),
       /* wyglad/P4-c (E44 pkt 5): link RIO nadaje później niż od 03:00 albo już wygasł */
       trackingLink?.provider === 'RIO' && (rioStartsLate(trackingLink, load, nowIso) || (trackingLink.validTo && isoMs(trackingLink.validTo) <= isoMs(nowIso)))
@@ -89,7 +90,7 @@ export function TrackingBar({
         <span className="trk-mk" aria-hidden />
         <div className="trk-txt">
           <b>{head}</b>
-          <span>{[t(locale, 'p4b_trk_on_sub'), tracker].join(' · ')}</span>
+          <span>{[trkSub(locale, 'p4b_trk_on_sub'), tracker].join(' · ')}</span>
         </div>
       </div>
     );

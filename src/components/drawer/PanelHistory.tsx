@@ -26,7 +26,7 @@ interface Props {
 function What({ r, locale, phone }: { r: HistRow; locale: Locale; phone: boolean }) {
   return (
     <div className="ph-what">
-      {!phone ? <span className={`ph-tag t-${r.cat.toLowerCase()}`}>{ht(locale, `p6b_tag_${r.cat}`).toUpperCase()}</span> : null}
+      {!phone ? <span className={`ph-tag t-${r.cat.toLowerCase()}`}>{ht(locale, `p6b_tag_${r.cat}`)}</span> : null}
       <span className="ph-tx">
         {r.head ? <span data-content>{r.head}</span> : null}
         {r.head && (r.from != null || r.to != null) ? ' ' : null}
@@ -69,7 +69,7 @@ export function PanelHistory({ load, role, locale, phone, events, geofences, now
         {hist.days.length === 0 ? <p className="ph-empty">{ht(locale, 'p6b_hist_empty')}</p> : null}
         {hist.days.map((d) => (
           <section key={d.day} className="ph-day">
-            <h5 className="ph-day-hd">{dayLabel(d.day).toUpperCase()}</h5>
+            <h5 className="ph-day-hd">{dayLabel(d.day)}</h5>
             <ul className="ph-list">
               {d.rows.map((r) => (
                 <li key={r.id} className="ph-row" data-hist-cat={r.cat}>

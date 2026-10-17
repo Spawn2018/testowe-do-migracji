@@ -67,7 +67,7 @@ describe('M2 dane v2', () => {
   });
 
   it('STORE_SCHEMA_VERSION = 2; migracja v1→v2 dokłada dane v2 bez utraty pól', () => {
-    expect(STORE_SCHEMA_VERSION).toBe(2);
+    expect(STORE_SCHEMA_VERSION).toBe(3);
     const v1Loads = snap.loads.slice(0, 3).map((l) => {
       const { money: _m, ...pricing } = l.pricing;
       void _m;

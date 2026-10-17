@@ -10,7 +10,6 @@
 import { useMemo } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
-import { up } from '../components/options/up';
 import { ft, ftn, ftp } from '../i18n/p5';
 import { formatPlNumber } from '../lib/format';
 import { formatCalendarDay } from '../lib/time';
@@ -38,7 +37,7 @@ function Head({ locale, title, sub, cur }: { locale: Locale; title: string; sub:
     <header className="fin-head">
       <h2 id="fin-title">{title}</h2>
       <span className="sub" data-fin-sub>{sub}</span>
-      <span className="fin-cur" data-fin-cur>{up(ftp(locale, 'p5_fin_cur', { cur }))}</span>
+      <span className="fin-cur" data-fin-cur>{ftp(locale, 'p5_fin_cur', { cur })}</span>
     </header>
   );
 }
@@ -95,17 +94,17 @@ export function FinanceView() {
     <table className="fin-table" data-fin-stages={side}>
       <thead>
         <tr>
-          <th>{up(ft(locale, side === 'both' ? 'p5_fin_col_stage' : 'p5_fin_col_stage_s'))}</th>
-          <th className="num">{up(ft(locale, 'p5_fin_col_loads'))}</th>
+          <th>{ft(locale, side === 'both' ? 'p5_fin_col_stage' : 'p5_fin_col_stage_s')}</th>
+          <th className="num">{ft(locale, 'p5_fin_col_loads')}</th>
           {side === 'both' ? (
             <>
-              <th className="num">{up(ft(locale, 'p5_fin_col_rev'))}</th>
-              <th className="num">{up(ft(locale, 'p5_fin_col_cost'))}</th>
-              <th className="num">{up(ft(locale, 'p5_fin_col_margin'))}</th>
-              <th className="num">{up(ft(locale, 'p5_fin_col_pct'))}</th>
+              <th className="num">{ft(locale, 'p5_fin_col_rev')}</th>
+              <th className="num">{ft(locale, 'p5_fin_col_cost')}</th>
+              <th className="num">{ft(locale, 'p5_fin_col_margin')}</th>
+              <th className="num">{ft(locale, 'p5_fin_col_pct')}</th>
             </>
           ) : (
-            <th className="num">{up(ftp(locale, side === 'rev' ? 'p5_fin_col_due_ksh' : 'p5_fin_col_due_scx', { cur }))}</th>
+            <th className="num">{ftp(locale, side === 'rev' ? 'p5_fin_col_due_ksh' : 'p5_fin_col_due_scx', { cur })}</th>
           )}
         </tr>
       </thead>
@@ -114,7 +113,7 @@ export function FinanceView() {
           <tr key={s.stage} data-fin-stage={s.stage} data-count={s.count}>
             <td>
               {side === 'both' ? (
-                <span className="fin-stage"><span className={STAGE_TAG[s.stage]}>{up(stageLabel(s.stage))}</span> {ft(locale, `p5_fin_stage_${s.stage}_d`)}</span>
+                <span className="fin-stage"><span className={STAGE_TAG[s.stage]}>{stageLabel(s.stage)}</span> {ft(locale, `p5_fin_stage_${s.stage}_d`)}</span>
               ) : stageLabel(s.stage)}
             </td>
             <td className="num">{s.count}</td>
@@ -154,7 +153,7 @@ export function FinanceView() {
   const stageCard = (s: FinStageRow) => (
     <article key={s.stage} className="fin-card" data-fin-stage={s.stage} data-count={s.count}>
       <header className="fin-card-hd">
-        <span className="fin-card-tag"><span className={STAGE_TAG[s.stage]}>{up(stageLabel(s.stage))}</span> <b>{s.count}</b></span>
+        <span className="fin-card-tag"><span className={STAGE_TAG[s.stage]}>{stageLabel(s.stage)}</span> <b>{s.count}</b></span>
         {side === 'both' ? <b>{s.count ? pctText(marginPct(s.rev.eur, s.cost.eur)) : '—'}</b> : null}
       </header>
       {s.count ? (
@@ -266,12 +265,12 @@ export function FinanceView() {
         <table className="fin-table" data-fin-types>
           <thead>
             <tr>
-              <th>{up(ft(locale, 'p5_fin_col_type'))}</th>
-              <th className="num">{up(ft(locale, 'p5_fin_col_priced'))}</th>
-              <th className="num">{up(ft(locale, 'p5_fin_col_rev_s'))}</th>
-              <th className="num">{up(ft(locale, 'p5_fin_col_cost_s'))}</th>
-              <th className="num">{up(ft(locale, 'p5_fin_col_margin'))}</th>
-              <th className="num">{up(ft(locale, 'p5_fin_col_pct'))}</th>
+              <th>{ft(locale, 'p5_fin_col_type')}</th>
+              <th className="num">{ft(locale, 'p5_fin_col_priced')}</th>
+              <th className="num">{ft(locale, 'p5_fin_col_rev_s')}</th>
+              <th className="num">{ft(locale, 'p5_fin_col_cost_s')}</th>
+              <th className="num">{ft(locale, 'p5_fin_col_margin')}</th>
+              <th className="num">{ft(locale, 'p5_fin_col_pct')}</th>
             </tr>
           </thead>
           <tbody>

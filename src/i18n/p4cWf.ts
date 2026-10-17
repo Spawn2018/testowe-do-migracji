@@ -5,16 +5,17 @@
  */
 import type { Locale } from '../types';
 import { t } from './messages';
+import { serverRuleOn, SOON, type ServerRule } from '../lib/serverRules';
 
 const PL: Record<string, string> = {
   p4c_wf_tab_auto: 'Działa samo',
   p4c_wf_tab_own: 'Własne reguły · {n}',
   p4c_wf_auto_lead: 'Co aplikacja robi bez człowieka. Liczby ustawia się w Opcjach, a tu jest opis i ostatnie działanie.',
   p4c_wf_auto_foot: 'Po kliknięciu wiersza: pełny opis, ostatnie działania i odnośnik do ustawień.',
-  p4c_wf_g_status: 'STATUSY',
-  p4c_wf_g_todo: 'DO ZROBIENIA',
-  p4c_wf_g_msg: 'WIADOMOŚCI',
-  p4c_wf_g_money: 'PIENIĄDZE I DANE',
+  p4c_wf_g_status: 'Statusy',
+  p4c_wf_g_todo: 'Do zrobienia',
+  p4c_wf_g_msg: 'Wiadomości',
+  p4c_wf_g_money: 'Pieniądze i dane',
   p4c_wf_r_zones: 'Status ze stref',
   p4c_wf_r_zones_d: 'wjazd i wyjazd: Śrem, porty, plac (E25, E34) · wyjazd z placu → Dostarczone (E26)',
   p4c_wf_r_cases: 'Sprawy z terminem',
@@ -61,9 +62,33 @@ const PL: Record<string, string> = {
   p4c_wf_zt_who: 'Zmienia tylko Administrator HHL: edycja strefy i własne reguły. Wierszy tej listy nie edytuje się tutaj.',
 };
 
+/**
+ * Audyt 17.10 (D-20261017-0730-01 §4): części opisu automatu, który jeszcze nie działa na serwerze,
+ * idą na koniec z dopiskiem „włączamy wkrótce” (`serverRuleOn`, w demo zawsze działa).
+ */
+const GPS_PARTS: { rule: ServerRule | null; text: string }[] = [
+  { rule: null, text: 'brak pozycji 30 min w ruchu / 3 h na postoju, opóźnienie po wyjeździe, rejs odwołany' },
+  { rule: 'WIND_E49', text: 'wiatr w ETA (od 20 m/s wolniej, od 25 m/s postój), śliskość do 25 km od auta' },
+  { rule: 'DETOUR_E49', text: 'sprawa SCX „Objazd czy postój?” przy zamkniętym moście lub drodze' },
+];
+
+function soonText(key: string): string | null {
+  if (key === 'p4c_wf_r_zones_d' && !serverRuleOn('SITE_EXIT_DELIVERED')) {
+    return `wjazd i wyjazd: Śrem, porty, plac (E25, E34) · wyjazd z placu → Dostarczone (E26) — ${SOON}`;
+  }
+  if (key === 'p4c_wf_zt_site_out' && !serverRuleOn('SITE_EXIT_DELIVERED')) return `${PL[key]} — ${SOON}`;
+  if (key === 'p4c_wf_r_gps_d') {
+    const on = GPS_PARTS.filter((p) => p.rule === null || serverRuleOn(p.rule)).map((p) => p.text);
+    const off = GPS_PARTS.filter((p) => p.rule !== null && !serverRuleOn(p.rule)).map((p) => p.text);
+    if (off.length === 0) return null;
+    return `${on.join(', ')} (E15, E45) · ${off.join('; ')} — ${SOON} (E49)`;
+  }
+  return null;
+}
+
 /** Tekst „Działa samo” z parametrami `{nazwa}`. */
 export function wt(locale: Locale, key: string, params: Record<string, string | number> = {}): string {
-  const raw = PL[key];
+  const raw = soonText(key) ?? PL[key];
   if (raw == null) return t(locale, key);
   return raw.replace(/\{(\w+)\}/g, (m, k: string) => (k in params ? String(params[k]) : m));
 }

@@ -17,13 +17,15 @@ import { getNowIso } from '../lib/frozenNow';
 import { SUPABASE_ANON_KEY, SUPABASE_AUTH_ENABLED, SUPABASE_URL } from '../auth/config';
 import { createDriverApi, isServerDriverToken, type DriverInstructions } from '../data/driverApi';
 import type { DriverMilestone } from '../lib/driverTracking';
+import { formatPlNumber } from '../lib/format';
+import { lazyRetry } from '../lib/lazyRetry';
 
 /* ANEKS 3 §2.3 — link z tokenem z bazy (tylko build Supabase; w demo stała false → kod usuwany) */
 const driverApi = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED
   ? () => import('../auth/client').then(({ getSupabase }) => getSupabase()).then((sb) => createDriverApi(sb))
   : () => Promise.reject(new Error('Tryb demo — brak bazy'));
 
-const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../components/guide/Guide')) : null;
+const Guide = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../components/guide/Guide'))) : null;
 
 /** U-38 / DRV-CLOSE: trasa zostaje, ale nie przyjmuje pozycji. Kod aplikacji niżej zostaje w repozytorium. */
 export function DriverPwa() {
@@ -270,7 +272,7 @@ function DriverPwaBody() {
               // ANEKS 3 §2.3: kierowca bez sesji → funkcja Edge driver-photo (token sprawdza baza)
               // PR7: PDF ≤ 10 MB, zdjęcie kompresowane w przeglądarce (1600 px, JPEG 0,75).
               if (isPdfTooBig(f)) {
-                setLastFile(t(locale, 'a6_drv_err').replace('{msg}', t(locale, 'pr7_pdf_too_big').replace('{mb}', (f.size / 1048576).toFixed(1))));
+                setLastFile(t(locale, 'a6_drv_err').replace('{msg}', t(locale, 'pr7_pdf_too_big').replace('{mb}', formatPlNumber(f.size / 1048576, 1))));
                 setBusy(false);
                 return;
               }

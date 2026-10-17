@@ -8,7 +8,7 @@
 .fin-head h2{margin:0;font-family:var(--font-cond);font-weight:700;font-size:24px;line-height:1.15}
 .fin-head .sub{color:var(--ink-3);font-size:14px;flex:1 1 280px;min-width:0}
 .fin-cur{margin-left:auto;padding:2px 8px;border:1px solid var(--rule);background:var(--surface-2);color:var(--ink-2);
-  font-family:var(--font-cond);font-weight:600;font-size:12.5px;letter-spacing:.06em;white-space:nowrap}
+  font-family:var(--font-cond);font-weight:600;font-size:12.5px;letter-spacing:.02em;white-space:nowrap}
 .fin-body{display:flex;flex-direction:column;gap:18px;padding:12px 14px 14px}
 .fin-sec{display:flex;flex-direction:column;gap:8px;min-width:0}
 .fin-sec h4.sec{margin:0;font-size:17px;color:var(--ink)}
@@ -24,7 +24,7 @@
 .fin-scroll{overflow-x:auto}
 table.fin-table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
 .fin-table thead th{background:var(--surface-2);color:var(--ink-2);font-family:var(--font-cond);font-weight:600;font-size:13px;
-  letter-spacing:.06em;text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
+  letter-spacing:.02em;text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
 .fin-table thead th.num{text-align:right}
 .fin-table tbody td{padding:9px 10px;border-bottom:1px solid var(--rule-2);vertical-align:middle}
 .fin-table td.num,.fin-table th.num{text-align:right;white-space:nowrap}
@@ -41,7 +41,7 @@ table.fin-table{width:100%;border-collapse:collapse;font-size:14px;font-variant-
 
 /* znaczniki etapu i stanu (obramowane, jak img/e16-after) */
 .fin-tag{display:inline-block;padding:1px 7px;border:1px solid currentcolor;font-family:var(--font-cond);font-weight:600;font-size:12.5px;
-  letter-spacing:.07em;line-height:1.5;white-space:nowrap}
+  letter-spacing:.02em;line-height:1.5;white-space:nowrap}
 .fin-tag.go{color:var(--go);background:var(--go-bg)}
 .fin-tag.sea{color:var(--sea);background:var(--sea-bg)}
 .fin-tag.plain{color:var(--ink-3);background:var(--surface-2);border-color:var(--rule)}

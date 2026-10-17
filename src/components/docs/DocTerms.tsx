@@ -12,7 +12,6 @@ import type { DocCategory } from '../../types';
 import type { DocRequirement } from '../../lib/docRequirements';
 import { docRequirementsStart } from '../../lib/p5Source';
 import { cmrKind, responsibleOrg } from '../../lib/p5Docs';
-import { up } from '../options/up';
 import '../finance/finance.css';
 import './docs.css';
 
@@ -71,10 +70,10 @@ export default function DocTerms({ canEdit }: { canEdit: boolean }) {
         <table className="fin-table">
           <thead>
             <tr>
-              <th>{up(ft(locale, 'p5_doc_col_doc'))}</th>
-              <th>{up(ft(locale, 'p5_doc_col_who'))}</th>
-              <th>{up(ft(locale, 'p5_terms_col_req'))}</th>
-              <th>{up(ft(locale, 'p5_doc_col_due'))}</th>
+              <th>{ft(locale, 'p5_doc_col_doc')}</th>
+              <th>{ft(locale, 'p5_doc_col_who')}</th>
+              <th>{ft(locale, 'p5_terms_col_req')}</th>
+              <th>{ft(locale, 'p5_doc_col_due')}</th>
               {canEdit ? <th><span className="sronly">{t(locale, 'iii6_edit')}</span></th> : null}
             </tr>
           </thead>

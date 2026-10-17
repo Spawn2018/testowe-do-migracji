@@ -146,7 +146,8 @@ describe('BK3 demo bundle guard', () => {
   it('lazy Supabase chunks are gated by the literal VITE_AUTH_MODE check (dead-code eliminated in demo build)', () => {
     for (const f of ['src/App.tsx', 'src/views/OptionsView.tsx']) {
       const src = readFileSync(f, 'utf8');
-      const lazyLines = src.split('\n').filter((l) => l.includes('lazy(() => import('));
+      /* audyt 17.10: każdy lazy ma lazyRetry; strażnik dotyczy kawałków Supabase (`auth/`) */
+      const lazyLines = src.split('\n').filter((l) => /lazy\((lazyRetry\()?\(\) => import\('\.\.?\/(\.\.\/)?auth\//.test(l));
       expect(lazyLines.length).toBeGreaterThan(0);
       for (const l of lazyLines) expect(l).toContain("import.meta.env.VITE_AUTH_MODE === 'supabase' &&");
     }

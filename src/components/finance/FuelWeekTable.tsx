@@ -9,7 +9,6 @@ import type { Locale } from '../../types';
 import { formatPlNumber } from '../../lib/format';
 import { formatCalendarDay } from '../../lib/time';
 import { weekLabel, type FuelSrc, type FuelWeekRow } from '../../lib/p5Finance';
-import { up } from '../options/up';
 import { ft, ftp } from '../../i18n/p5';
 import { DemoMark } from '../ui/DemoMark';
 import { PROD_BUILD } from '../../lib/prodFacade';
@@ -26,7 +25,7 @@ function src(locale: Locale, key: 'p5_fuel_okq8' | 'p5_fuel_orlen', s: FuelSrc |
 
 function stateTag(locale: Locale, r: FuelWeekRow) {
   const cls = r.state === 'OSTATECZNA' ? 'fin-tag go' : r.state === 'PROGNOZA' ? 'fin-tag warn' : 'fin-tag plain';
-  return <span className={cls}>{up(ft(locale, `p5_fuel_state_${r.state}`))}</span>;
+  return <span className={cls}>{ft(locale, `p5_fuel_state_${r.state}`)}</span>;
 }
 
 function stateNote(locale: Locale, r: FuelWeekRow): string | null {
@@ -117,13 +116,13 @@ export function FuelWeekTable({ rows, locale, phone, nameOf }: { rows: FuelWeekR
           <table className="fin-table" data-fuel-table>
             <thead>
               <tr>
-                <th>{up(ft(locale, 'p5_fuel_col_week'))}</th>
-                <th>{up(ft(locale, 'p5_fuel_col_idx'))}</th>
-                <th className="num">{up(ft(locale, 'p5_fuel_col_okq8'))}</th>
-                <th className="num">{up(ft(locale, 'p5_fuel_col_orlen'))}</th>
-                <th className="num">{up(ft(locale, 'p5_fuel_col_applied'))}</th>
-                <th>{up(ft(locale, 'p5_fuel_col_state'))}</th>
-                <th className="num">{up(ft(locale, 'p5_fuel_col_loads'))}</th>
+                <th>{ft(locale, 'p5_fuel_col_week')}</th>
+                <th>{ft(locale, 'p5_fuel_col_idx')}</th>
+                <th className="num">{ft(locale, 'p5_fuel_col_okq8')}</th>
+                <th className="num">{ft(locale, 'p5_fuel_col_orlen')}</th>
+                <th className="num">{ft(locale, 'p5_fuel_col_applied')}</th>
+                <th>{ft(locale, 'p5_fuel_col_state')}</th>
+                <th className="num">{ft(locale, 'p5_fuel_col_loads')}</th>
               </tr>
             </thead>
             <tbody>

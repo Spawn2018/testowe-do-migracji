@@ -63,7 +63,6 @@ interface Props {
   onPdf: () => void;
 }
 
-const up = (s: string) => s.toLocaleUpperCase('pl');
 const dim = (n: number | null | undefined, locale: Locale) => (n == null ? '—' : fmtNum(locale, n, 2));
 const dmy = (iso: string) => formatCalendarDay(iso.slice(0, 10));
 const ORG_SHORT: Record<OrgKind, string> = { HHL: 'HHL', SCX: 'SCX', KSH: 'KSH' };
@@ -280,7 +279,7 @@ export function PanelOverview(p: Props) {
     <section className={`po-todo${red ? ' is-red' : ''}`} data-po-todo={card.issues.length} aria-label={ptp(locale, 'p7_todo_h', { n: card.issues.length })}>
       <div className="po-todo-hd">
         <b>{ptp(locale, phone ? 'p7_todo_h_phone' : 'p7_todo_h', { n: card.issues.length })}</b>
-        {today ? <span className="po-today">{up(pt(locale, 'p7_todo_today'))}</span> : null}
+        {today ? <span className="po-today">{pt(locale, 'p7_todo_today')}</span> : null}
       </div>
       <ul className="po-todo-l">
         {card.issues.map((i) => {
@@ -341,7 +340,7 @@ export function PanelOverview(p: Props) {
     return (
       <div className={`po-drv${now ? ' is-now' : ''}`} data-po-driver={seg}>
         <div className="po-drv-tx">
-          <span className="po-drv-l">{up(label)}{now && seg !== 'one' ? ` · ${up(pt(locale, 'p7_seg_now'))}` : ''}</span>
+          <span className="po-drv-l">{label}{now && seg !== 'one' ? ` · ${pt(locale, 'p7_seg_now')}` : ''}</span>
           <span className="po-drv-v">
             <b data-content>{(name ?? '').trim() || '—'}</b>
             {phoneOk && ph.dial ? <span className="mono" data-content data-po-tel>{` · ${ph.display}`}</span> : null}
@@ -364,9 +363,9 @@ export function PanelOverview(p: Props) {
     ? <button type="button" className="btn" data-awiz-open onClick={p.onAwiz}>{pt(locale, awiz === 'none' ? 'p7_awiz_btn_add' : 'p7_awiz_btn_edit')}</button>
     : fixAwiz ? <button type="button" className="btn ghost" data-awiz-fix onClick={p.onAwiz}>{pt(locale, 'p7_awiz_btn_fix')}</button> : null;
   const awizChip = awiz === 'ok'
-    ? <span className="po-pill go">{up(pt(locale, 'p7_awiz_ok'))}</span>
-    : awiz === 'part' ? <span className="po-pill amber">{up(ptp(locale, 'p7_awiz_part', { n: missing.length }))}</span>
-      : <span className="po-pill red">{up(pt(locale, 'p7_awiz_none'))}</span>;
+    ? <span className="po-pill go">{pt(locale, 'p7_awiz_ok')}</span>
+    : awiz === 'part' ? <span className="po-pill amber">{ptp(locale, 'p7_awiz_part', { n: missing.length })}</span>
+      : <span className="po-pill red">{pt(locale, 'p7_awiz_none')}</span>;
   const pilotVal = (side: 'pl' | 'se') => {
     const x = pilots?.[side];
     const filled = [x?.plate, x?.name].map((v) => (v ?? '').trim()).filter(Boolean);
@@ -554,7 +553,7 @@ export function PanelOverview(p: Props) {
           {spec ? (
             <>
               <dt>{pt(locale, 'p7_permit')}</dt>
-              <dd data-po-permit-kind={spec.permit}><span className="po-pill sea">{up(pt(locale, `p7_permit_${spec.permit}`))}</span> {pt(locale, `p7_permit_${spec.permit}_sub`)}</dd>
+              <dd data-po-permit-kind={spec.permit}><span className="po-pill sea">{pt(locale, `p7_permit_${spec.permit}`)}</span> {pt(locale, `p7_permit_${spec.permit}_sub`)}</dd>
             </>
           ) : null}
         </dl>

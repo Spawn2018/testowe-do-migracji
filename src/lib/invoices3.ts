@@ -195,7 +195,7 @@ export function billPaymentToday(b: Pick<Bill, 'dueDate' | 'paidAt' | 'payment'>
 
 /** Przejścia weryfikacji: DO_WERYFIKACJI → ZGODNA / SPORNA → ZAAKCEPTOWANA; SPORNA wymaga uzasadnienia (Q7). */
 export function verifyError(next: BillVerification, note?: string | null): string | null {
-  if (next === 'SPORNA' && !(note ?? '').trim()) return 'Status SPORNA wymaga uzasadnienia';
+  if (next === 'SPORNA' && !(note ?? '').trim()) return 'Status „Sporna” wymaga uzasadnienia';
   return null;
 }
 

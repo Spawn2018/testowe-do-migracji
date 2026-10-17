@@ -11,7 +11,6 @@ import { fmtDateTime, formatCalendarDay } from '../../lib/time';
 import { factoringPayout } from '../../lib/p5Invoices';
 import type { FactoringOfferView, FactoringTask } from '../../lib/p5Source';
 import { ft, ftp } from '../../i18n/p5';
-import { up } from '../options/up';
 import { useTowerStore } from '../../store/useTowerStore';
 
 /* rok zawsze — właściciel 16.10.2026: „08.10.2026”, „08.10.2026, 12:00” */
@@ -71,7 +70,7 @@ export function FactoringTaskCard({ task, nowIso, locale, onMarkPaid }: { task: 
       <header className="panel-hd fin-hd2"><h3 id={`fact-${task.billId}`}>{ft(locale, 'p5_fact_task_h')}</h3></header>
       <div className="fin-pad fact-task-bd">
         <div className={`fact-due${late ? ' is-late' : ''}${paid ? ' is-paid' : ''}`}>
-          <span className="fact-due-h">{up(late ? ftp(locale, 'p5_fact_task_late', { at: dmh(task.dueAt) }) : ftp(locale, 'p5_fact_task_due', { at: dmh(task.dueAt), h: leftH }))}</span>
+          <span className="fact-due-h">{late ? ftp(locale, 'p5_fact_task_late', { at: dmh(task.dueAt) }) : ftp(locale, 'p5_fact_task_due', { at: dmh(task.dueAt), h: leftH })}</span>
           <b className="fact-due-v">{formatPlNumber(task.payout, 2)} {task.currency}</b>
           <span className="fin-muted" data-content>{task.number} · {task.issuer}</span>
         </div>

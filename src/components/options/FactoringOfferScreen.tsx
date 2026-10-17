@@ -8,7 +8,6 @@ import { formatPlNumber } from '../../lib/format';
 import { factoringPayout } from '../../lib/p5Invoices';
 import { factoringOfferOf } from '../../lib/p5Source';
 import { ft, ftp } from '../../i18n/p5';
-import { up } from './up';
 import '../finance/finance.css';
 import '../invoices/invoices.css';
 import { formatCalendarDay } from '../../lib/time';
@@ -62,7 +61,7 @@ export function FactoringOfferScreen({ locale, offer, readOnly, onChange, onSave
         <dt>{ft(locale, 'p5_fo_for')}</dt><dd>Scandinavian Express</dd>
         {view ? <><dt>{ft(locale, 'p5_fo_from')}</dt><dd>{ftp(locale, 'p5_fo_from_v', { date: dmy(view.from), v: view.version })}</dd></> : null}
       </dl>
-      <h4 className="sec fact-ex-h">{up(ft(locale, 'p5_fo_ex_h'))}</h4>
+      <h4 className="sec fact-ex-h">{ft(locale, 'p5_fo_ex_h')}</h4>
       <dl className="inv-sum fact-ex" data-deur-exempt="invoice-currency">
         <div><dt>{ft(locale, 'p5_fo_ex_gross')}</dt><dd>{n2(gross)} {cur}</dd></div>
         <div><dt>{ftp(locale, 'p5_fo_ex_fee', { pct: formatPlNumber(offer.feePercent, offer.feePercent % 1 ? 1 : 0), net: n2(net) })}</dt><dd>− {n2(fee)} {cur}</dd></div>

@@ -358,8 +358,8 @@ export function MapView() {
           <div className="mapsheet" role="dialog" aria-label={sheet.row.label} onClick={(e) => e.stopPropagation()}>
             <div className="mapsheet-hd">
               <b className="mapsheet-code">{sheet.row.label}</b>
-              <span className="mtag">{t(locale, sheet.row.stageKey).toLocaleUpperCase('pl')}</span>
-              {sheet.row.late ? <span className="mtag red">{p9m(locale, 'p9c_lg_late').toLocaleUpperCase('pl')}</span> : null}
+              <span className="mtag">{t(locale, sheet.row.stageKey)}</span>
+              {sheet.row.late ? <span className="mtag red">{p9m(locale, 'p9c_lg_late')}</span> : null}
               <span className="spacer" />
               <button type="button" className="iconbtn" aria-label={p9m(locale, 'p9c_sheet_close')} onClick={() => setSheetId(null)}>✕</button>
             </div>
@@ -409,7 +409,7 @@ function MapCard({ row, locale, onOpen }: { row: MapRow; locale: Parameters<type
     <button type="button" className="mcard map-card" data-load={row.id} onClick={onOpen}>
       <span className="mcard-hd">
         <b>{row.label}</b>
-        {tag ? <span className="mtag red" data-map-card-tag>{tag.toLocaleUpperCase('pl')}</span> : null}
+        {tag ? <span className="mtag red" data-map-card-tag>{tag}</span> : null}
       </span>
       <span className="mcard-sub">{parts.join(' · ')}</span>
       {row.nopos && row.pos.sub ? <span className="mcard-sub">{row.pos.sub}</span> : null}

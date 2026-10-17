@@ -6,7 +6,7 @@ import type { Locale } from '../types';
 import { t } from './messages';
 
 const PL: Record<string, string> = {
-  p6c_tag_IMPORT: 'IMPORT',
+  p6c_tag_IMPORT: 'Import',
   p6c_tag_GPS: 'GPS',
   p6c_tag_AIS: 'AIS',
   p6c_plan: 'plan {d}',

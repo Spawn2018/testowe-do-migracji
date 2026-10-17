@@ -22,9 +22,9 @@ describe('I-4 treść', () => {
   it('EN i SV bez polskich znaków', () => {
     for (const l of ['en', 'sv'] as const) for (const r of ROLES) for (const s of guideSteps(l, r)) expect(s).not.toMatch(/[ąćęłńśźżĄĆĘŁŃŚŹŻ]/);
   });
-  it('kierowca: zgoda, etapy, PROBLEM, CMR z podpisem odbiorcy, odpoczynek na promie (D-9)', () => {
+  it('kierowca: zgoda, etapy, „Problem”, CMR z podpisem odbiorcy, odpoczynek na promie (D-9)', () => {
     const pl = guideSteps('pl', 'drv').join(' ');
-    for (const w of ['Zgadzam się', 'ZAŁADOWANY', 'NA PROMIE', 'ROZŁADOWANY', 'PROBLEM', 'CMR z podpisem odbiorcy', 'Aparat / plik → CMR', 'odpoczynkiem dobowym']) expect(pl).toContain(w);
+    for (const w of ['Zgadzam się', '„Załadowany”', '„Na promie”', '„Rozładowany”', '„Problem”', 'CMR z podpisem odbiorcy', 'Aparat / plik → CMR', 'odpoczynkiem dobowym']) expect(pl).toContain(w);
   });
   /* C13 (D-20261015-0300-01; E31, decyzja 08.10 12:14): bez POD i bez CMR z załadunku; bez starych instrukcji HHL, KSH i SCX */
   it('C13: kierowca bez POD i bez „po załadunku”; brak kluczy i4_hhl / i4_ksh / i4_scx w PL, EN i SV', () => {
@@ -37,7 +37,7 @@ describe('I-4 treść', () => {
 });
 
 describe('I-4 osadzenie', () => {
-  const lazyRe = /const Guide = import\.meta\.env\.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED \? lazy\(\(\) => import\('\.\.\/components\/guide\/Guide'\)\) : null;/;
+  const lazyRe = /const Guide = import\.meta\.env\.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED \? lazy\(lazyRetry\(\(\) => import\('\.\.\/components\/guide\/Guide'\)\)\) : null;/;
   /* wyglad/P10b-b (E37 pkt 3, P10b „Testy do przepisania: i4-guide”): Instrukcja tylko w PWA kierowcy;
      w Opcjach i Ustawieniach zastępuje ją Pomoc („Jak pracuję” w 5 wersjach) — tests/help-content.test.ts */
   it('PWA kierowcy — leniwie, tylko build produkcyjny; Opcje i Ustawienia bez Instrukcji', () => {

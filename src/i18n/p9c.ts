@@ -4,6 +4,7 @@
  */
 import type { Locale } from '../types';
 import { t } from './messages';
+import { serverRuleOn } from '../lib/serverRules';
 
 const PL: Record<string, string> = {
   /* nagłówek (pkt 2, L20 — bez deklaracji częstotliwości) */
@@ -84,7 +85,19 @@ const PL: Record<string, string> = {
   p9c_sheet_close: 'Zamknij',
 };
 
+/**
+ * Audyt 17.10 (D-20261017-0730-01 §4): dopisek pod mapą wymienia źródła utrudnień dopiero wtedy, gdy warstwa
+ * pokazuje je z danych produkcji (`ROAD_SITUATIONS_MAP`), a HERE (PL) — gdy działa odczyt PL (`ROAD_PL_HERE`).
+ */
+function mapNote(): string {
+  const ais = 'statki: AIS Fintraffic / digitraffic.fi, CC BY 4.0';
+  if (!serverRuleOn('ROAD_SITUATIONS_MAP')) return `Podkład i trasy: HERE · ${ais}`;
+  const road = serverRuleOn('ROAD_PL_HERE') ? 'Trafikverket (SE), HERE (PL)' : 'Trafikverket (SE)';
+  return `Podkład i trasy: HERE · utrudnienia: ${road} · ${ais}`;
+}
+
 export function p9m(locale: Locale, key: string): string {
+  if (key === 'p9c_note') return mapNote();
   return PL[key] ?? t(locale, key);
 }
 

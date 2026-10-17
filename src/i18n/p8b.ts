@@ -12,7 +12,7 @@ const pl = {
   p8b_send_test_to: 'Twój numer',
   p8b_send_btn_on: 'Włącz wysyłkę do odbiorców',
   p8b_send_btn_off: 'Wróć do trybu testowego',
-  p8b_send_ask: 'SMS zaczną wychodzić do prawdziwych osób z list poniżej. Włącza właściciel (lista STOP). Włączyć?',
+  p8b_send_ask: 'SMS zaczną wychodzić do prawdziwych osób z list poniżej. Włącza właściciel (lista „Stop”). Włączyć?',
   p8b_send_yes: 'Tak, włącz',
   p8b_send_no: 'Anuluj',
   p8b_send_done_on: 'Wysyłka do odbiorców włączona.',

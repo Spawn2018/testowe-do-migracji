@@ -16,7 +16,6 @@ import {
 } from '../../lib/p5Pack';
 import type { PackActions } from '../../lib/p5Source';
 import { ft, ftp } from '../../i18n/p5';
-import { up } from '../options/up';
 
 /* rok zawsze — właściciel 16.10.2026 */
 const dm = (d: string | null) => (d ? formatCalendarDay(d.slice(0, 10)) : '—');
@@ -45,7 +44,7 @@ export function blockText(locale: Locale, key: PackKey, b: PackBlock): string {
 function checkTag(locale: Locale, b: Bill) {
   const st = b.verification;
   const cls = st === 'ZAAKCEPTOWANA' ? 'fin-tag go solid' : st === 'SPORNA' ? 'fin-tag red' : 'fin-tag warn';
-  return <span className={cls} data-pack-check={st}>{up(ft(locale, `p5_inv_st_${st}`))}</span>;
+  return <span className={cls} data-pack-check={st}>{ft(locale, `p5_inv_st_${st}`)}</span>;
 }
 
 interface Props {

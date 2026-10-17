@@ -30,7 +30,7 @@ import { dayShort, isoWeek } from '../../lib/p7Awiz';
 import { PROD_BUILD } from '../../lib/prodFacade';
 import { delayPillMinutes } from '../../lib/prodDash';
 /* SCOPE 6.4 — formularz zezwoleń: tylko build Supabase, chunk leniwy (paczka demo bez niego) */
-const PermitForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/PermitForm')) : null;
+const PermitForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../../auth/PermitForm'))) : null;
 /* wyglad/P4-c: okna awizacji i „Zmień status” poza pierwszym wczytaniem (budżet 400 kB gzip, scripts/bundle-size.mjs) */
 const AwizacjaModal = lazy(lazyRetry(() => import('./AwizacjaModal').then((m) => ({ default: m.AwizacjaModal }))));
 const StatusChangeModal = lazy(lazyRetry(() => import('./StatusChangeModal').then((m) => ({ default: m.StatusChangeModal }))));
@@ -41,7 +41,7 @@ const PanelHistory = lazy(lazyRetry(() => import('./PanelHistory').then((m) => (
 const PanelChat = lazy(lazyRetry(() => import('./PanelChat').then((m) => ({ default: m.PanelChat }))));
 /* wyglad/P7-a: „Przegląd” (E32) poza pierwszym wczytaniem */
 const PanelOverview = lazy(lazyRetry(() => import('./PanelOverview').then((m) => ({ default: m.PanelOverview }))));
-const CarrierRating = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../../auth/CarrierRating')) : null;
+const CarrierRating = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../../auth/CarrierRating'))) : null;
 /* III-4 — pojazdy pilotujące z bazy (load_escorts): tylko build Supabase; w Przeglądzie do czasu pilotów w awizacji (P7) */
 /* E32 (zmiana 09.10): stara lista pilotów (EscortPanel) nie pokazuje się — piloci tylko w awizacji przy „PL + SE” (D-20261015-0130-01 P3) */
 
@@ -400,7 +400,7 @@ export function LoadDrawer() {
         <Suspense fallback={null}>
           <StatusChangeModal
             loadId={load.id}
-            code={load.code}
+            code={transportLabel(load, role, 'plain')}
             current={load.status}
             onClose={() => setStatusChangeOpen(false)}
           />

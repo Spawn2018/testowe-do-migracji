@@ -29,7 +29,6 @@ import { pt, ptp } from '../../i18n/p7';
 import type { Load } from '../../types';
 import './p7.css';
 
-const up = (x: string) => x.toLocaleUpperCase('pl');
 
 type Props = {
   load: Load;
@@ -225,15 +224,15 @@ export function AwizacjaModal({ load, onClose }: Props) {
           {readOnly ? <p className="am-note" data-awiz-ro>{pt(locale, 'p7_m_ro')}</p> : null}
           <fieldset className="am-all" disabled={readOnly}>
           <fieldset className="am-box" data-awiz-seg={twoSeg ? 'PL' : 'one'}>
-            <legend className="am-lg">{up(pt(locale, twoSeg ? 'p7_m_seg_pl' : 'p7_m_seg_one'))}</legend>
+            <legend className="am-lg">{pt(locale, twoSeg ? 'p7_m_seg_pl' : 'p7_m_seg_one')}</legend>
             <label className="form-field am-f">
-              <span>{up(pt(locale, 'p7_m_name'))}</span>
+              <span>{pt(locale, 'p7_m_name')}</span>
               <input className={`input${driverName.trim() ? '' : ' am-need'}`} list="awiz-drivers" value={driverName} onChange={(e) => setDriverName(e.target.value)} autoComplete="off" required />
               <datalist id="awiz-drivers">{driverHints.map((h) => <option key={h} value={h} />)}</datalist>
             </label>
             <div className="am-2">
               <label className="form-field am-f">
-                <span>{up(pt(locale, 'p7_m_phone'))}</span>
+                <span>{pt(locale, 'p7_m_phone')}</span>
                 <div className="am-tel">
                   <select className="input" value={phoneCountry === 'OTHER' ? 'PL' : phoneCountry} onChange={(e) => setPhoneCountry(e.target.value as 'PL' | 'SE')} aria-label={t(locale, 'awiz_phone_country')}>
                     <option value="PL">PL</option>
@@ -243,7 +242,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
                 </div>
               </label>
               <label className="form-field am-f">
-                <span>{up(pt(locale, 'p7_m_tractor'))}</span>
+                <span>{pt(locale, 'p7_m_tractor')}</span>
                 <input className={`input mono${tractorPlate.trim() ? '' : ' am-need'}`} list="awiz-tractors" value={tractorPlate} onChange={(e) => setTractorPlate(e.target.value)} autoComplete="off" required />
                 <datalist id="awiz-tractors">{tractorHints.map((h) => <option key={h} value={h} />)}</datalist>
               </label>
@@ -251,7 +250,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
           </fieldset>
 
           <label className="form-field am-f">
-            <span>{up(pt(locale, 'p7_m_trailer'))}</span>
+            <span>{pt(locale, 'p7_m_trailer')}</span>
             <input className={`input mono${trailerPlate.trim() ? '' : ' am-need'}`} list="awiz-trailers" value={trailerPlate} onChange={(e) => setTrailerPlate(e.target.value)} autoComplete="off" />
             <datalist id="awiz-trailers">{trailerHints.map((h) => <option key={h} value={h} />)}</datalist>
           </label>
@@ -264,14 +263,14 @@ export function AwizacjaModal({ load, onClose }: Props) {
 
           {twoSeg ? (
             <fieldset className="am-box" data-awiz-seg="SE">
-              <legend className="am-lg">{up(pt(locale, 'p7_m_seg_se'))}</legend>
+              <legend className="am-lg">{pt(locale, 'p7_m_seg_se')}</legend>
               <label className="form-field am-f">
-                <span>{up(pt(locale, 'p7_m_name'))}</span>
+                <span>{pt(locale, 'p7_m_name')}</span>
                 <input className={`input${driverDeliveryName.trim() ? '' : ' am-need'}`} value={driverDeliveryName} onChange={(e) => setDriverDeliveryName(e.target.value)} autoComplete="off" />
               </label>
               <div className="am-2">
                 <label className="form-field am-f">
-                  <span>{up(pt(locale, 'p7_m_phone'))}</span>
+                  <span>{pt(locale, 'p7_m_phone')}</span>
                   <div className="am-tel">
                     <select className="input" value={deliveryPhoneCountry === 'OTHER' ? 'PL' : deliveryPhoneCountry} onChange={(e) => setDeliveryPhoneCountry(e.target.value as 'PL' | 'SE')} aria-label={t(locale, 'awiz_phone_country')}>
                       <option value="PL">PL</option>
@@ -281,7 +280,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
                   </div>
                 </label>
                 <label className="form-field am-f">
-                  <span>{up(pt(locale, 'p7_m_tractor'))}</span>
+                  <span>{pt(locale, 'p7_m_tractor')}</span>
                   <input className={`input mono${tractorDeliveryPlate.trim() ? '' : ' am-need'}`} value={tractorDeliveryPlate} onChange={(e) => setTractorDeliveryPlate(e.target.value)} autoComplete="off" />
                 </label>
               </div>
@@ -318,7 +317,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
 
           <div className="am-2">
             <label className="form-field am-f">
-              <span>{up(pt(locale, 'p7_m_operator'))}</span>
+              <span>{pt(locale, 'p7_m_operator')}</span>
               <select className="input" value={operator} onChange={(e) => { setOperator(e.target.value as FerryOperatorId); setSailingId(''); }}>
                 {FERRY_OPERATORS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
               </select>
@@ -327,7 +326,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
               <div className="note am-lock" data-sailing-locked>{t(locale, `sail_deny_${sailingLock}`)}</div>
             ) : (
               <label className="form-field am-f">
-                <span>{up(pt(locale, 'p7_m_sailing'))}</span>
+                <span>{pt(locale, 'p7_m_sailing')}</span>
                 <select className="input" value={sailingId} onChange={(e) => setSailingId(e.target.value)} data-awiz-sailing>
                   <option value="">{t(locale, 'sail_none')}</option>
                   {sailingOptions.map((o) => (
@@ -344,7 +343,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
           {role !== 'KSH' ? (
             <div className="am-2">
               <label className="form-field am-f">
-                <span>{up(pt(locale, 'p7_m_scx_no'))}</span>
+                <span>{pt(locale, 'p7_m_scx_no')}</span>
                 {orderSide === 'CARRIER' ? (
                   <input className={`input mono${carrierOrder.trim() ? '' : ' am-need'}`} value={carrierOrder} onChange={(e) => setCarrierOrder(e.target.value)} autoComplete="off" />
                 ) : (
@@ -352,7 +351,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
                 )}
               </label>
               <label className="form-field am-f">
-                <span>{up(pt(locale, 'p7_m_hhl_no'))}</span>
+                <span>{pt(locale, 'p7_m_hhl_no')}</span>
                 {orderSide === 'HHL' ? (
                   <input className="input mono" value={hhlOrder} onChange={(e) => setHhlOrder(e.target.value)} autoComplete="off" data-awiz-hhl-order />
                 ) : (
@@ -366,7 +365,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
             <section className="am-pilots" data-awiz-pilots aria-labelledby="awiz-pilots-h">
               <div className="am-pilots-hd">
                 <h3 id="awiz-pilots-h" className="am-pilots-t">{pt(locale, 'p7_m_pilots_h')}</h3>
-                {pilotsMiss ? <span className="po-pill amber">{up(pilotsMiss === 1 ? pt(locale, 'p7_m_pilots_missing_1') : ptp(locale, 'p7_m_pilots_missing', { n: pilotsMiss }))}</span> : null}
+                {pilotsMiss ? <span className="po-pill amber">{pilotsMiss === 1 ? pt(locale, 'p7_m_pilots_missing_1') : ptp(locale, 'p7_m_pilots_missing', { n: pilotsMiss })}</span> : null}
               </div>
               <p className="am-lead">
                 {ptp(locale, 'p7_m_pilots_lead', {
@@ -382,14 +381,14 @@ export function AwizacjaModal({ load, onClose }: Props) {
               ) : null}
               {(['pl', 'se'] as const).map((side) => (
                 <fieldset key={side} className="am-box" data-awiz-pilot={side}>
-                  <legend className="am-lg">{up(pt(locale, side === 'pl' ? 'p7_m_pilot_pl' : 'p7_m_pilot_se'))}</legend>
+                  <legend className="am-lg">{pt(locale, side === 'pl' ? 'p7_m_pilot_pl' : 'p7_m_pilot_se')}</legend>
                   <div className="am-2">
                     <label className="form-field am-f">
-                      <span>{up(pt(locale, 'p7_m_plate'))}</span>
+                      <span>{pt(locale, 'p7_m_plate')}</span>
                       <input className={`input mono${(pil[side].plate ?? '').trim() ? '' : ' am-need'}`} value={pil[side].plate ?? ''} onChange={(e) => setPilot(side, 'plate', e.target.value)} autoComplete="off" />
                     </label>
                     <label className="form-field am-f">
-                      <span>{up(pt(locale, 'p7_m_pilot_name'))}</span>
+                      <span>{pt(locale, 'p7_m_pilot_name')}</span>
                       <input className={`input${(pil[side].name ?? '').trim() ? '' : ' am-need'}`} value={pil[side].name ?? ''} onChange={(e) => setPilot(side, 'name', e.target.value)} autoComplete="off" />
                     </label>
                   </div>

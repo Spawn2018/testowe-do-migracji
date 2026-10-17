@@ -3,6 +3,7 @@ import type { Load, Locale } from '../../types';
 import { t } from '../../i18n/messages';
 import { getNow } from '../../lib/frozenNow';
 import { formatCalendarDay } from '../../lib/time';
+import { formatPlNumber } from '../../lib/format';
 
 /** I-0: w buildzie produkcyjnym „dziś” = bieżąca data (bez zamrożonej daty danych demo 23.09). */
 const PROD_BUILD = import.meta.env.VITE_AUTH_MODE === 'supabase';
@@ -141,7 +142,7 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
           fill="var(--ink-3)"
           fontFamily="Barlow Condensed, Barlow, Arial, sans-serif"
         >
-          {t(locale, 'chart_tons_cum')} · max {maxV.toFixed(0)} t
+          {t(locale, 'chart_tons_cum')} · max {formatPlNumber(maxV)} t
         </text>
       </svg>
       <div className="legendline">

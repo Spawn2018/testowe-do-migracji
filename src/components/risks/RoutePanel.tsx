@@ -20,11 +20,12 @@ import { formatListDateTime, formatPlNumber } from '../../lib/format';
 import { DemoMark } from '../ui/DemoMark';
 import { riskText, t } from '../../i18n/messages';
 import { rt, rtn, rtp } from '../../i18n/p6';
+import { lazyRetry } from '../../lib/lazyRetry';
 
 const PROD = import.meta.env.VITE_AUTH_MODE === 'supabase';
 /* komunikat armatora zapisuje w bazie — tylko produkcja (paczka demo bez klienta Supabase, I-2) */
 const NoticeForm = import.meta.env.VITE_AUTH_MODE === 'supabase'
-  ? lazy(() => import('../OperatorNoticeForm').then((m) => ({ default: m.OperatorNoticeForm })))
+  ? lazy(lazyRetry(() => import('../OperatorNoticeForm').then((m) => ({ default: m.OperatorNoticeForm }))))
   : null;
 const hm = (iso: string) => formatListDateTime(iso).replace(/^.*, /, '');
 const FIRST_ROADS = 4;
@@ -76,7 +77,7 @@ function FerryRow({ r, locale, phone }: { r: FerryRowView; locale: Locale; phone
           : rtp(locale, 'p6_ferry_row', { vessel: r.vessel, time, from: rt(locale, `p6_port_${ports.from}`), to: rt(locale, `p6_port_${ports.to}`) })}</b>
         {/* data-content: „węzły” — test waluty D-EUR-T czyta „zł” w środku słowa (\b bez polskich liter) */}
         <span className="rk-ferry-s" data-content>
-          <span className={`rk-alert ${tone}`}>{alertText.toUpperCase()}</span>
+          <span className={`rk-alert ${tone}`}>{alertText}</span>
           {' · '}{seaText}
           {r.onBoard > 0 ? ` · ${rtn(locale, 'p6_onboard', r.onBoard)}` : ''}
         </span>
@@ -129,7 +130,7 @@ export function RoutePanel({
               <span className={info ? 'rk-road-t rk-info' : 'rk-road-t'}>{riskText(locale, r.title, r.titleKey, r.titleParams)}</span>
               {!info && (meta || r.detail) ? (
                 <span className="rk-road-s">
-                  <span className={`rk-alert ${tone}`}>{(r.severity === 'CRITICAL' || r.severity === 'HIGH' ? rt(locale, 'p6_imp_HIGH') : rt(locale, 'p6_imp_MEDIUM')).toUpperCase()}</span>
+                  <span className={`rk-alert ${tone}`}>{(r.severity === 'CRITICAL' || r.severity === 'HIGH' ? rt(locale, 'p6_imp_HIGH') : rt(locale, 'p6_imp_MEDIUM'))}</span>
                   {meta ? ` · ${meta}` : ''}
                 </span>
               ) : null}
@@ -150,7 +151,7 @@ export function RoutePanel({
             <span className="rk-road-t">{r.title}</span>
             <span className="rk-road-s">
               <span className={`rk-alert ${r.impact === 'VERY_HIGH' ? 'is-red' : r.impact === 'HIGH' ? 'is-amber' : 'is-plain'}`}>
-                {rt(locale, `p6_imp_${r.impact}`).toUpperCase()}
+                {rt(locale, `p6_imp_${r.impact}`)}
               </span>
               {r.when ? ` · ${r.when}` : ''}
               {r.original ? ` · ${rt(locale, 'p6_road_translated')}` : ''}

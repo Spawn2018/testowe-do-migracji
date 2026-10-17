@@ -151,7 +151,7 @@ describe('E33, E16 — Cennik i opłaty: procenty za anulowanie i próg marży',
     expect(h).not.toMatch(/\(E\d{1,2}\)|\(12:35\)/);
     expect(h).toContain('Próg marży');
     expect(h).toContain('nie ustawiony');
-    expect(h).toContain('CENNIK PRZEWOŹNIKA I CENNIK KSH');
+    expect(h).toContain('Cennik przewoźnika i cennik KSH');
   });
   it('bez przykładu z cennika — procenty bez kwot SG (nic na stałe w komponencie)', () => {
     const h = html(createElement(RatesExtras, { locale: 'pl', cancel: { ...demoCancelRules(), example: null }, onCancelSave: ok, margin: 4, onMarginSave: ok, readOnly: false }));

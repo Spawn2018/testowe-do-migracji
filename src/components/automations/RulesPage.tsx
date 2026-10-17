@@ -221,10 +221,10 @@ export function RulesPage() {
         <table className="rl-runs" data-rule-runs>
           <thead>
             <tr>
-              <th scope="col">{up(p8dt('p8d_r_when'))}</th>
-              <th scope="col">{up(p8dt('p8d_r_rule'))}</th>
-              <th scope="col">{up(p8dt('p8d_r_load'))}</th>
-              <th scope="col">{up(p8dt('p8d_r_result'))}</th>
+              <th scope="col">{p8dt('p8d_r_when')}</th>
+              <th scope="col">{p8dt('p8d_r_rule')}</th>
+              <th scope="col">{p8dt('p8d_r_load')}</th>
+              <th scope="col">{p8dt('p8d_r_result')}</th>
             </tr>
           </thead>
           <tbody>
@@ -301,4 +301,3 @@ export function RulesPage() {
   );
 }
 
-function up(s: string): string { return s.toLocaleUpperCase('pl-PL'); }

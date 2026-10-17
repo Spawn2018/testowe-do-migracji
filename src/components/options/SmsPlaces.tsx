@@ -21,7 +21,6 @@ import {
 } from '../../lib/p8bPlaces';
 import { smsPlacesOf } from '../../lib/p8bSource';
 import { p8bt } from '../../i18n/p8b';
-import { up } from './up';
 import './smsPlaces.css';
 
 type Note = { text: string; bad: boolean; field?: 'phone' | 'kinds' } | null;
@@ -100,7 +99,7 @@ export function SmsPlaces({ readOnly }: { readOnly: boolean }) {
   const testTo = state.testTo ?? p8bt('p8b_send_test_to');
   const sendTile = (
     <div className={`sp-tile${state.sending ? '' : ' is-warn'}`} data-sp-send={state.sending ? 'on' : 'test'}>
-      <span className="sp-tile-k">{up(p8bt(phone ? 'p8b_send_short' : 'p8b_send'))}</span>
+      <span className="sp-tile-k">{p8bt(phone ? 'p8b_send_short' : 'p8b_send')}</span>
       <span className="sp-tile-v">
         {state.sending ? p8bt(phone ? 'p8b_send_on_phone' : 'p8b_send_on') : phone ? p8bt('p8b_send_off_phone') : p8bt('p8b_send_off', { to: testTo })}
       </span>
@@ -133,7 +132,7 @@ export function SmsPlaces({ readOnly }: { readOnly: boolean }) {
   );
   const quietTile = (
     <div className="sp-tile">
-      <span className="sp-tile-k">{up(p8bt('p8b_quiet'))}</span>
+      <span className="sp-tile-k">{p8bt('p8b_quiet')}</span>
       <span className="sp-tile-v">{phone ? QUIET_SHORT : p8bt('p8b_quiet_v', { from: QUIET.from, to: QUIET.to })}</span>
     </div>
   );
@@ -151,11 +150,11 @@ export function SmsPlaces({ readOnly }: { readOnly: boolean }) {
         {!phone ? (
           <>
             <div className="sp-tile">
-              <span className="sp-tile-k">{up(p8bt('p8b_lead'))}</span>
+              <span className="sp-tile-k">{p8bt('p8b_lead')}</span>
               <span className="sp-tile-v">{p8bt('p8b_lead_v', { n: LEAD_MIN })}</span>
             </div>
             <div className="sp-tile">
-              <span className="sp-tile-k">{up(p8bt('p8b_wait'))}</span>
+              <span className="sp-tile-k">{p8bt('p8b_wait')}</span>
               <span className="sp-tile-v">{p8bt('p8b_wait_v', { min: WAIT_MIN, km: WAIT_KM })}</span>
             </div>
           </>
@@ -212,7 +211,7 @@ function Place({ place, users, readOnly, phone, affected, onSave }: {
     <section className={`sp-place${n === 0 ? ' is-empty' : ''}`} data-sp-place={place.id} aria-labelledby={hid}>
       <header className="sp-place-hd">
         <h3 id={hid}>{title}</h3>
-        <span className={`sp-count${n === 0 ? ' is-bad' : ''}`}>{up(p8bt(phone ? 'p8b_count_phone' : 'p8b_count', { n }))}</span>
+        <span className={`sp-count${n === 0 ? ' is-bad' : ''}`}>{p8bt(phone ? 'p8b_count_phone' : 'p8b_count', { n })}</span>
         {phone && n > 0 ? (
           <button
             type="button"

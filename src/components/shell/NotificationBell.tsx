@@ -16,7 +16,6 @@ function gut(section: 'todo' | 'mine', s: Severity): string {
   return 'mine';
 }
 
-const up = (s: string) => s.toLocaleUpperCase('pl');
 
 /**
  * E5 (img/e5-desk, img/e5-phone; decyzja 07.10 13:21): dzwonek w dwóch grupach — „Do zrobienia” i „Moje transporty”.
@@ -36,13 +35,15 @@ export function NotificationBell() {
   const ref = useRef<HTMLDivElement>(null);
 
   const lang: BellLocale = locale === 'en' || locale === 'sv' ? locale : 'pl';
-  const visible = bellGroups(notifications, role, (id) => {
+  const all = bellGroups(notifications, role, (id) => {
     const load = loads.find((l) => l.id === id);
     return load ? transportLabel(load, role) : undefined;
-  }, lang).slice(0, 40);
+  }, lang);
+  /* audyt 17.10 (N13): liczba przy dzwonku przed ucięciem listy do 40 pozycji */
+  const visible = all.slice(0, 40);
   const todo = visible.filter((g) => g.section === 'todo');
   const mine = visible.filter((g) => g.section === 'mine');
-  const unread = visible.length;
+  const unread = all.length;
   const nowMs = getNowMs();
   const general = bellGeneralCount(notifications, role, nowMs);
 
@@ -78,7 +79,7 @@ export function NotificationBell() {
         >
           <span className="bell-line">
             <span className="bell-title">{isTodo ? <i className="bell-dot" aria-hidden /> : null}{title}</span>
-            <span className="bell-to">{up(t(locale, `bell_to_${g.place}`))} ›</span>
+            <span className="bell-to">{t(locale, `bell_to_${g.place}`)} ›</span>
           </span>
           {chat?.text ? (
             <span className="bell-chat" data-content>
@@ -94,7 +95,7 @@ export function NotificationBell() {
 
   const section = (key: 'todo' | 'mine', list: BellGroup<BellSource>[]) => (list.length ? (
     <section className="bell-sec" data-bell-sec={key} aria-label={t(locale, `bell_sec_${key}`)}>
-      <h3 className="bell-sec-hd"><span>{up(t(locale, `bell_sec_${key}`))}</span><span className="tabular">{list.length}</span></h3>
+      <h3 className="bell-sec-hd"><span>{t(locale, `bell_sec_${key}`)}</span><span className="tabular">{list.length}</span></h3>
       {list.map(item)}
     </section>
   ) : null);

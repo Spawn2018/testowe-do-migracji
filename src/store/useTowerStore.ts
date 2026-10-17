@@ -75,6 +75,7 @@ import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
 import { applyEtaToLoad } from '../lib/eta';
 import { isReadyBlocked } from '../lib/permits';
 import { currentActorLabel } from '../lib/historyActor';
+import { formatPlMoney } from '../lib/format';
 
 export type ViewKey = NK;
 
@@ -377,7 +378,8 @@ export const useTowerStore = create<TowerState>()(
     (set, get) => ({
       role: 'HHL',
       locale: 'pl',
-      displayCurrency: 'PLN',
+      /* audyt 17.10 (E16; D-20261017-0730-01 §4): domyślnie EUR jak faktury i cennik; PLN po wyborze w „Dla mnie” */
+      displayCurrency: 'EUR',
       theme: 'dark',
       themeManual: false,
       showDemoMarks: true,
@@ -1596,7 +1598,7 @@ export const useTowerStore = create<TowerState>()(
         /* Q13 — nowa faktura: powiadomienie odbiorcy (w bazie: notifications INVOICE_NEW) */
         get().pushNotification({
           title: t(s.locale, 'bill_notifyNew'),
-          body: `${bill.number} · ${bill.weekKey} · ${bill.gross.toFixed(2)} ${bill.currency}`,
+          body: `${bill.number} · ${bill.weekKey} · ${formatPlMoney(bill.gross, bill.currency)}`,
           severity: 'MEDIUM', roleScope: [recipient], href: { view: 'inv', entityId: bill.id },
         });
         writeThrough({ type: 'bill.register', bill, file: file ?? null });

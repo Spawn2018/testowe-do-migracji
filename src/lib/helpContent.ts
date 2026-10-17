@@ -6,6 +6,7 @@
  */
 import type { AccountKind } from './cockpitE9';
 import type { NavKey } from './permissions';
+import { serverRuleOn, SOON } from './serverRules';
 
 /**
  * Cel kroku (dopisek pkt 1): widok menu; `sched/rejsy` — zakładka „Rejsy”; `risk/todo` — „Do zrobienia”;
@@ -122,9 +123,18 @@ export const HELP_VERSIONS: Record<AccountKind, HelpVersion> = {
   HHL_ADMIN, HHL_OPS, CLIENT_USER: KSH_USER, CARRIER_DISPATCH: SCX_DISPATCH, CARRIER_USER: SCX_USER,
 };
 
-/** Wersja dla rodzaju konta (w Podglądzie — rodzaj domyślny podglądanej firmy, `viewedKind`). */
+/** Okno śledzenia w tekstach Pomocy (E27). */
+export const HELP_WINDOW = 'od 03:00 w dniu załadunku do „Dostarczone”';
+
+/**
+ * Wersja dla rodzaju konta (w Podglądzie — rodzaj domyślny podglądanej firmy, `viewedKind`).
+ * Audyt 17.10 (D-20261017-0730-01 §4): dopóki okno śledzenia nie działa na serwerze (A1), zdanie o oknie
+ * ma dopisek „włączamy wkrótce”.
+ */
 export function helpVersion(kind: AccountKind): HelpVersion {
-  return HELP_VERSIONS[kind];
+  const v = HELP_VERSIONS[kind];
+  if (serverRuleOn('TRACKING_WINDOW')) return v;
+  return { ...v, steps: v.steps.map((s) => (s.text.includes(HELP_WINDOW) ? { ...s, text: s.text.replace(HELP_WINDOW, `${HELP_WINDOW} (${SOON})`) } : s)) };
 }
 
 /** Widok menu, który otwiera cel (do testu „każda pozycja menu ma krok”). */

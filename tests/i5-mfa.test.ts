@@ -36,7 +36,7 @@ describe('I-5 statycznie', () => {
     expect(gate.indexOf('mfaStep(')).toBeLessThan(gate.indexOf('setAuthProfile(profile)'));
   });
   it('Opcje: Moje konto (AccountScreen + MfaSetup + MyMfa) — D-20261014-0700-01 J3 / D-20261014-1420-01 R2', () => {
-    expect(opts).toMatch(/const LiveAccount = import\.meta\.env\.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED \? lazy\(\(\) => import\('\.\.\/auth\/LiveAccountScreen'\)\)/);
+    expect(opts).toMatch(/const LiveAccount = import\.meta\.env\.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED \? lazy\(lazyRetry\(\(\) => import\('\.\.\/auth\/LiveAccountScreen'\)\)\)/);
     expect(live).toMatch(/MfaSetup/);
     expect(live).toMatch(/MyMfa/);
     expect(live).toMatch(/accountMfaEnabled/);
