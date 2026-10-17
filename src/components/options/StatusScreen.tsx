@@ -44,10 +44,12 @@ function sinceText(locale: Locale, r: SourceRow, nowIso: string): string | null 
   return syp(locale, 'sys_since_at', { t: dt(r.since) });
 }
 
-/** A8: „następna próba o 21:05” (inny dzień — z datą); tylko przy stanie wymagającym uwagi i czasie w przyszłości. */
+/** A8: „następna próba o 21:05”, inny dzień „następna próba 24.09.2026 o 07:15”; tylko przy stanie wymagającym uwagi i czasie w przyszłości. */
 function nextTryText(locale: Locale, r: SourceRow, nowIso: string): string | null {
   if (!r.nextTryAt || !ATTN.has(r.state) || Date.parse(r.nextTryAt) <= Date.parse(nowIso)) return null;
-  return syp(locale, 'sys_next_try', { t: sameDay(r.nextTryAt, nowIso) ? hm(r.nextTryAt) : dt(r.nextTryAt) });
+  if (sameDay(r.nextTryAt, nowIso)) return syp(locale, 'sys_next_try', { t: hm(r.nextTryAt) });
+  const [d, t] = dt(r.nextTryAt).split(', ');
+  return syp(locale, 'sys_next_try_day', { d, t });
 }
 
 function lastText(r: SourceRow, nowIso: string): string {

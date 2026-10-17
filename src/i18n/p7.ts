@@ -67,6 +67,7 @@ const PL: Record<string, string> = {
   p7_link_none: 'brak',
   p7_sail_pick: 'wybiera SCX z rozkładu w awizacji',
   p7_sail_none: 'nie przypisano',
+  p7_sail_unpicked: 'rejs niewybrany — wybiera SCX w awizacji',
   p7_pilots_h: 'Piloci',
   p7_pilot_pl: 'Pilot PL',
   p7_pilot_se: 'Pilot SE',

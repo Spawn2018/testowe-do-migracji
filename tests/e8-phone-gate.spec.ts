@@ -2220,6 +2220,27 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
     await expect(modal.locator('[data-status-ready-ok]')).toBeVisible();
   });
 
+  test('komputer SCX: „rejs” w brakach do „Gotowy” znika po wyborze rejsu w Awizacji (D-02; A9, W-naprawy-2)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await boot(page, 'SCX');
+    await openCode(page, 'D-02');
+    await expect(page.locator('.drawer [data-sail-unpicked]')).toHaveText('rejs niewybrany — wybiera SCX w awizacji');
+    await tab(page, 1);
+    await expect(page.locator('.drawer [data-axis-row="READY"] .sax-sub')).toContainText('rejs');
+    await tab(page, 0);
+    await page.locator('.drawer [data-awiz-open]').click();
+    const sel = page.locator('[data-awiz-sailing]');
+    await expect(sel).toBeVisible();
+    const value = await sel.locator('option').evaluateAll((o) => (o as HTMLOptionElement[]).map((x) => x.value).find((v) => !!v) ?? '');
+    expect(value).not.toBe('');
+    await sel.selectOption(value);
+    await page.locator('[data-awiz-save]').click();
+    await expect(page.locator('.drawer [data-sail-unpicked]')).toHaveCount(0);
+    await tab(page, 1);
+    await expect(page.locator('.drawer [data-axis-row="READY"] .sax-sub')).toContainText('Brakuje:');
+    await expect(page.locator('.drawer [data-axis-row="READY"] .sax-sub')).not.toContainText('rejs');
+  });
+
   test('komputer: sprawa „czy dostarczono?” (D-01) — SCX odpowiada, „Nie” zamyka bez zmiany statusu; HHL widzi, na kogo czeka', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'SCX');

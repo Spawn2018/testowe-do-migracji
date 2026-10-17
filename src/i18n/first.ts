@@ -25,7 +25,7 @@ const PL: Record<string, string> = {
   fe_pw_len_empty: 'Co najmniej {min} znaków, litery i cyfry',
   /* wyglad/audyt-E (E-12; E19 decyzja 1 A): litery i cyfry */
   fe_pw_no_digit: '{n} znaków — brak cyfry (min. {min} znaków, litery i cyfry)',
-  fe_pw_no_letter: '{n} znaków — brak litery (min. {min} znaków, litery i cyfry)',
+  fe_pw_no_letter: '{n} znaków — brak litery a–z (min. {min} znaków, litery i cyfry)',
   fe_pw_same: 'Hasła są takie same',
   fe_pw_diff: 'Hasła się różnią',
   fe_pw_save: 'Zapisz hasło',

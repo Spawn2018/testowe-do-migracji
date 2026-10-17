@@ -75,8 +75,10 @@ export function checkSailingDraft(d: SailingDraft, all: Sailing[]): SailingDraft
  * Rozkład startowy demo (DANE_STARTOWE): Gdańsk → Nynäshamn codziennie 18:00 czasu PL, ~18 h rejsu,
  * na zmianę Wawel / Nova Star; SG-32 — odwołany rejs Nova Star 24.09 20:00 (scenariusz z danych demo).
  * Godziny orientacyjne — rzeczywisty rozkład cargo wg ZRODLA_DANYCH.md (M12 / decyzja właściciela).
+ * W-naprawy-2 (A9): 60 dni (do 16.11) — rozkład obejmuje wszystkie załadunki demo, więc SCX może wybrać rejs
+ * w Awizacji (wcześniej 25 dni, do 12.10: transporty z załadunkiem później nie miały żadnego rejsu do wyboru).
  */
-export function buildSeedSailings(fromLocal = '2026-09-18', days = 25): Sailing[] {
+export function buildSeedSailings(fromLocal = '2026-09-18', days = 60): Sailing[] {
   const out: Sailing[] = [];
   const start = Date.parse(`${fromLocal}T18:00:00+02:00`);
   for (let i = 0; i < days; i++) {

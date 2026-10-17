@@ -372,11 +372,12 @@ test.describe('M10 — rejsy i automat statusów', () => {
     // dodanie
     await page.locator('[data-sail-new]').click()
     const form = page.locator('[data-sail-form]')
-    await form.locator('input[name="dep"]').fill('2026-10-20T18:00')
-    await form.locator('input[name="arr"]').fill('2026-10-20T17:00')
+    /* W-naprawy-2: rozkład demo do 16.11 — nowy rejs poza nim (20.10 18:00 jest już w rozkładzie → „DUPLICATE”) */
+    await form.locator('input[name="dep"]').fill('2026-11-20T18:00')
+    await form.locator('input[name="arr"]').fill('2026-11-20T17:00')
     await form.locator('[data-sail-submit]').click()
     await expect(page.locator('[data-sail-error]')).toContainText('po odejściu')
-    await form.locator('input[name="arr"]').fill('2026-10-21T12:00')
+    await form.locator('input[name="arr"]').fill('2026-11-21T12:00')
     await form.locator('[data-sail-submit]').click()
     await expect(page.locator('[data-sail-form]')).toHaveCount(0)
     // opóźnienie pierwszego przyszłego rejsu

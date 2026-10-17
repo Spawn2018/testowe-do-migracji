@@ -4,7 +4,9 @@
 import { describe, expect, it } from 'vitest';
 import { PASSWORD_MIN, passwordOk } from '../src/auth/config';
 import { tp } from '../src/i18n/messages';
+import { readyGapsText } from '../src/lib/p4c';
 import { computeReadyGaps } from '../src/lib/readyGaps';
+import { importSkipText, standardSkipMessage } from '../src/lib/standardSkipMessage';
 import { demoFuelScreen } from '../src/lib/p5bDemo';
 import { demoSources } from '../src/lib/sysDemo';
 import type { Load } from '../src/types';
@@ -23,7 +25,8 @@ describe('C11 — hasło: co najmniej PASSWORD_MIN znaków, litery i cyfry', () 
     expect(passwordOk('a1'.repeat(Math.floor((PASSWORD_MIN - 1) / 2)).slice(0, PASSWORD_MIN - 1))).toBe(false);
   });
   it('komunikat mówi to samo co reguła', () => {
-    expect(tp('pl', 'auth_pw_rule', { n: PASSWORD_MIN })).toMatch(/co najmniej \d+ znak(ów|i)?, w tym litery i cyfry\.$/);
+    expect(tp('pl', 'auth_pw_rule', { n: PASSWORD_MIN })).toMatch(/co najmniej \d+ znak(ów|i)?, w tym litery \(a–z\) i cyfry\.$/);
+    expect(passwordOk('ąęśćżźółńĄĘ1')).toBe(false);
   });
 });
 
@@ -50,6 +53,9 @@ describe('A9 — braki do „Gotowy”: rejs i kierowca SE przy przepięciu', ()
     const l = load({ resources: { driverName: 'Jan Nowak', driverPhone: '+48 600 100 200', tractorPlate: 'PO 1AB', trailerPlate: 'PO 2CD', trailerSwap: true } });
     const awiz = computeReadyGaps(l, []).find((g) => g.kind === 'AWIZ');
     expect(awiz?.items).toEqual(['kierowca SE', 'telefon SE', 'ciągnik SE']);
+    /* F7: na ekranie słowa z okna Awizacja */
+    expect(readyGapsText(computeReadyGaps(l, []), 'pl').list).toContain('awizacja (kierowca odcinka SE, telefon odcinka SE, ciągnik odcinka SE)');
+    expect(tp('pl', 'p4c_ready_ok')).toContain('rejs');
   });
 });
 
@@ -59,11 +65,17 @@ describe('A6 — podsumowanie importu słowami', () => {
     expect(tp('pl', 'p7_imp_head', { ok: 95, total: 153 })).toBe('wczytano 95 z 153 wierszy');
   });
   it('pominięte w jednym zdaniu', () => {
-    const list = [tp('pl', 'p7_imp_skip_carrier', { n: 43 }), tp('pl', 'p7_imp_skip_empty', { n: 15 })].join(' · ');
-    expect(tp('pl', 'p7_imp_skip', { list })).toBe('Pominięte: inny przewoźnik (NTG) — 43 · puste wiersze — 15.');
+    expect(importSkipText({ carrier: 43, empty: 15, standard: 0 })).toBe('Pominięte: inny przewoźnik — 43 · puste wiersze — 15.');
+    /* F7: zera i brak pól — bez zdania; po imporcie to samo zdanie */
+    expect(importSkipText({ carrier: 0, empty: 0, standard: 0 })).toBeNull();
+    expect(importSkipText({})).toBeNull();
+    expect(standardSkipMessage(2, 1)).toBe('Zaimportowano 2 transporty. Pominięte: rozmiar „Standard” (ładunki innej firmy) — 1.');
+    expect(standardSkipMessage(1, 0, { carrier: 0, empty: 0 })).toBe('Zaimportowano 1 transport.');
   });
   it('daty KSH do sprawdzenia', () => {
-    expect(tp('pl', 'p7_imp_dates_check', { n: 7 })).toMatch(/^Daty KSH do sprawdzenia: 7 — wiersze wchodzą/);
+    expect(tp('pl', 'p7_imp_dates_check', { n: 1 })).toMatch(/^1 wiersz wchodzi do harmonogramu z datami KSH do sprawdzenia/);
+    expect(tp('pl', 'p7_imp_dates_check', { n: 3 })).toMatch(/^3 wiersze wchodzą/);
+    expect(tp('pl', 'p7_imp_dates_check', { n: 7 })).toMatch(/^7 wierszy wchodzi/);
   });
 });
 

@@ -355,7 +355,9 @@ export function PanelOverview(p: Props) {
   };
   const sailingText = curSailing
     ? `${load.ferry.vessel ?? curSailing.vessel} · ${fmtLocal(effDeparture(curSailing))} → ${fmtLocal(effArrival(curSailing))}${curSailing.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(curSailing.status, locale)}` : ''}`
-    : load.ferry.vessel ?? null;
+    : null;
+  /* F7 (A9): statek z rezerwacji bez wybranego rejsu — to nie jest przypisany rejs; „rejs” jest w brakach do „Gotowy” */
+  const bookedVessel = curSailing ? null : (load.ferry.vessel ?? '').trim() || null;
   /* „wpisany/brak” (E32 pkt 5) — ten sam stan co pole w oknie Awizacja (E44: zapisany link z serwera albo w zasobach) */
   const linkSet = !!(r.trackingRef ?? '').trim() || !!trackingLinkOf(load, loads, nowIso);
   const fixAwiz = canFixAwizOf(role);
@@ -511,7 +513,9 @@ export function PanelOverview(p: Props) {
           <dt>{pt(locale, 'p7_row_link')}</dt>
           <dd>{linkSet ? <span className="po-ok">{pt(locale, 'p7_link_set')}</span> : <span className="po-miss">{awiz === 'none' ? '—' : pt(locale, 'p7_link_none')}</span>}</dd>
           <dt>{pt(locale, 'p7_row_sailing')}</dt>
-          <dd data-ferry-row>{sailingText ? <span data-content>{sailingText}</span> : <span className="po-muted">{pt(locale, awiz === 'none' ? 'p7_sail_pick' : 'p7_sail_none')}</span>}</dd>
+          <dd data-ferry-row>{sailingText ? <span data-content>{sailingText}</span> : bookedVessel ? (
+            <><span data-content>{bookedVessel}</span>{' · '}<span className="po-miss" data-sail-unpicked>{pt(locale, 'p7_sail_unpicked')}</span></>
+          ) : <span className="po-muted">{pt(locale, awiz === 'none' ? 'p7_sail_pick' : 'p7_sail_none')}</span>}</dd>
           {pilotsReq ? (
             <>
               <dt>{pt(locale, 'p7_pilot_pl')}</dt>

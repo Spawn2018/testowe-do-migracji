@@ -67,7 +67,7 @@ describe('B-8-IMP: TYP = STANDARD pomijany', () => {
     expect(parsed.rows.every((r) => r.cargoClass !== 'STANDARD')).toBe(true);
     const msg = standardSkipMessage(parsed.stats.accepted, parsed.stats.skippedStandard);
     expect(msg).toBe(
-      'Zaimportowano 2 transporty. Pominięto 2 wiersze typu STANDARD (ładunki NTG — poza zakresem Watch Tower).',
+      'Zaimportowano 2 transporty. Pominięte: rozmiar „Standard” (ładunki innej firmy) — 2.',
     );
   });
 });

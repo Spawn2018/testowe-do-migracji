@@ -12,7 +12,9 @@ describe('AUTH-1 hasło', () => {
     expect(passwordOk('123456789012')).toBe(false);
     expect(passwordOk('abcdefghijkl')).toBe(false);
     expect(passwordOk('Żółwiewodne12')).toBe(true);
-    expect(readFileSync('src/i18n/ui6.ts', 'utf8')).toContain("auth_pw_rule: 'Hasło musi mieć co najmniej {n~znak|znaki|znaków}, w tym litery i cyfry.',");
+    /* F7: jak Supabase „letters_digits” — sama polska litera nie wystarcza */
+    expect(passwordOk('ąęśćżźółńĄĘ1')).toBe(false);
+    expect(readFileSync('src/i18n/ui6.ts', 'utf8')).toContain("auth_pw_rule: 'Hasło musi mieć co najmniej {n~znak|znaki|znaków}, w tym litery (a–z) i cyfry.',");
     for (const f of ['src/auth/AuthGate.tsx', 'src/auth/LiveAccountScreen.tsx']) expect(readFileSync(f, 'utf8'), f).toContain("tp(locale, 'auth_pw_rule', { n: PASSWORD_MIN })");
   });
 

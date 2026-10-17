@@ -87,10 +87,11 @@ export function authErrorPl(message: string | undefined): string {
 export const PASSWORD_MIN = 12;
 
 /**
- * C11 (wyglad/W-naprawy-2; decyzja 08.10 12:14 i W1 17.10): hasło co najmniej 12 znaków, z literami i cyframi —
- * ta sama reguła co ustawienia hasła w Supabase Auth (W1) i ekran pierwszego wejścia (`pwCheck`).
+ * C11 (wyglad/W-naprawy-2; decyzja 08.10 12:14 i W1 17.10): hasło co najmniej 12 znaków, z literą a–z i cyfrą 0–9 —
+ * jak ustawienie „letters_digits” w Supabase Auth (W1): polskie litery się liczą do długości, ale nie jako „litera”.
+ * Ta sama reguła co ekran pierwszego wejścia (`pwCheck`).
  */
 export function passwordOk(pw: string): boolean {
   const len = [...pw].length;
-  return len >= PASSWORD_MIN && /\p{L}/u.test(pw) && /\p{Nd}/u.test(pw);
+  return len >= PASSWORD_MIN && /[A-Za-z]/.test(pw) && /[0-9]/.test(pw);
 }

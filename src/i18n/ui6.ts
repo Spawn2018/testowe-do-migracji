@@ -43,9 +43,8 @@ const pl: Dict = {
   auth_set_pw_hint: 'Hasło musi mieć co najmniej {n~znak|znaki|znaków}, w tym litery i cyfry. Potem logujesz się e-mailem i hasłem — bez linków.',
   auth_set_pw_save: 'Zapisz hasło',
   auth_saving: 'Zapisywanie…',
-  auth_pw_short: 'Hasło musi mieć co najmniej {n~znak|znaki|znaków}.',
   /* C11: ta sama reguła co Supabase Auth (W1) — długość, litery i cyfry */
-  auth_pw_rule: 'Hasło musi mieć co najmniej {n~znak|znaki|znaków}, w tym litery i cyfry.',
+  auth_pw_rule: 'Hasło musi mieć co najmniej {n~znak|znaki|znaków}, w tym litery (a–z) i cyfry.',
   auth_pw_mismatch: 'Hasła nie są takie same.',
   auth_pw_changed: 'Hasło zmienione.',
   a6_bill_flag_label_brak_kursu: 'brak kursu',
