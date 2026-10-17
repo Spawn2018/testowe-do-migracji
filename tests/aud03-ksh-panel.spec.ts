@@ -120,7 +120,8 @@ for (const vp of [{ w: 1366, h: 900, tag: 'komputer' }, { w: 390, h: 844, tag: '
     await expect(entry).toContainText('Zmiana dat i godzin planu')
     /* wyglad/P6-b — E17: autor „Imię Nazwisko // Firma”; zapis demo bez osoby — „KSH (zapis bez osoby)” */
     await expect(entry).toContainText('KSH (zapis bez osoby)')
-    expect(code).toMatch(/^SG-/)
+    /* W-demo (audyt 17.10, N6): Harmonogram po dacie załadunku — pierwszy transport przed załadunkiem nie musi być „SG-” */
+    expect(code).toMatch(/^[A-Z]{1,2}-\d{2}$/)
   })
 }
 

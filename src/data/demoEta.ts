@@ -159,16 +159,22 @@ export function alignDemoRisks(risks: readonly Risk[], loads: readonly Load[]): 
     if (r.id.startsWith('risk-eta-') && l.etaBoden) {
       const end = Date.parse(l.awizacja?.unloadWindowEnd ?? `${l.plannedDeliverDate}T15:00:00Z`);
       const late = Math.round((Date.parse(l.etaBoden) - end) / MIN);
-      return late > 0 ? { ...r, title: `Prognoza przyjazdu poza oknem o ${hm(late)}` } : r;
+      return late > 0
+        ? { ...r, title: `Prognoza przyjazdu poza oknem o ${hm(late)}`, titleKey: 'rk_seed_eta', titleParams: { h: Math.floor(late / 60), m: late % 60 } }
+        : r;
     }
     if (r.id === 'risk-silent' && l.silentMinutes) {
-      return { ...r, title: `Brak pozycji od ${hm(l.silentMinutes)}` };
+      /* stały szablon „od 2 h 14 min” — bez klucza tekst idzie wprost (`riskText`) */
+      return { ...r, title: `Brak pozycji od ${hm(l.silentMinutes)}`, titleKey: undefined, titleParams: undefined };
     }
     if (r.id.startsWith('risk-permit-')) {
       const start = Date.parse(l.awizacja?.loadWindowStart ?? `${l.plannedLoadDate}T06:00:00Z`);
       const h = Math.max(1, Math.round((start - NOW_MS) / H));
       const when = h < 48 ? `${h} h` : `${Math.round(h / 24)} ${plPlural(Math.round(h / 24), 'dzień', 'dni', 'dni')}`;
-      return { ...r, title: `Brak zezwolenia — załadunek za ${when}`, detail: `Do załadunku ${when}, brak zezwolenia obejmującego wymiary zestawu` };
+      return {
+        ...r, title: `Brak zezwolenia — załadunek za ${when}`, detail: `Do załadunku ${when}, brak zezwolenia obejmującego wymiary zestawu`,
+        ...(h < 48 ? { titleKey: 'rk_seed_permit', titleParams: { h } } : { titleKey: undefined, titleParams: undefined }),
+      };
     }
     return r;
   });

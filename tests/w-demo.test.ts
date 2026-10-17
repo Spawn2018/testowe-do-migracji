@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildDemoSnapshot, DEMO_TODAY_LOCAL } from '../src/data/demoProvider';
 import { DEMO_ETA } from '../src/data/demoEta';
+import { riskText } from '../src/i18n/messages';
 import { fxForDate } from '../src/lib/money/loadMoney';
 import { delayMinutesVsPlan } from '../src/lib/time';
 import { delayPillMinutes } from '../src/lib/prodDash';
@@ -139,6 +140,16 @@ describe('F7 (17.10): spójność danych demo z zegarem 23.09, 16:32', () => {
       const l = snap.loads.find((x) => x.id === r.loadId)!;
       const h = Math.max(1, Math.round((Date.parse(l.awizacja.loadWindowStart!) - CLOCK) / 3600e3));
       expect(r.title, l.code).toBe(`Brak zezwolenia — załadunek za ${h < 48 ? `${h} h` : `${Math.round(h / 24)} dni`}`);
+    }
+    /* to samo na ekranie (klucz słownika z parametrami) i w „Najpilniejszych” (kolejka wyjątków) */
+    for (const r of snap.risks.filter((x) => /^risk-(permit-\d|eta-|silent)/.test(x.id))) {
+      expect(riskText('pl', r.title, r.titleKey, r.titleParams), r.id).toBe(r.title);
+      const exs = snap.exceptions.filter((x) => x.id === `ex-${r.id}`);
+      expect(exs.length, r.id).toBe(1);
+      for (const e of exs) {
+        const ex = e as { title: string; titleKey?: string; titleParams?: Record<string, unknown> };
+        expect(riskText('pl', ex.title, ex.titleKey, ex.titleParams), r.id).toBe(r.title);
+      }
     }
   });
   it('SG-31 w Szwecji — załadunek przed promem; czat demo przed załadunkiem', () => {
