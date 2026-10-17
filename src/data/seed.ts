@@ -810,7 +810,17 @@ export function buildSeedMessages(loads: Load[]): LoadMessage[] {
   }));
 }
 
-export function buildSeedRisks(loads: Load[]): Risk[] {
+/** Pozycja transportu w pliku demo (przed sortowaniem po dacie załadunku, N6). */
+let fileOrder: Map<string, number> | null = null;
+function fileOrderOf(code: string): number {
+  if (!fileOrder) fileOrder = new Map([...(rawLoads as unknown as Load[]), ...buildExtraLoads()].map((l, i) => [l.code, i]));
+  return fileOrder.get(code) ?? Number.MAX_SAFE_INTEGER;
+}
+
+export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
+  /* audyt 17.10 (N6): sprawy demo przy tych samych transportach co przed sortowaniem po dacie (decyzje demo SG-09, SG-18,
+     SG-10 mają kartę; liczba w menu = liczba kart) — przydział według pozycji w pliku, nie według kolejności Harmonogramu */
+  const loads = [...sortedLoads].sort((a, b) => fileOrderOf(a.code) - fileOrderOf(b.code));
   const OWNER: Record<'HHL' | 'KSH' | 'SCX', string> = {
     HHL: 'H&H Logistics',
     KSH: 'KSH',

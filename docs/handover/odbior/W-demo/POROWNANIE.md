@@ -28,4 +28,4 @@ Obrazy: `przed-*` = `main` 7db7282, `po-*` = ta gałąź; demo, `now=2026-09-23T
 - `tests/w-demo.test.ts` (6) — daty, kolejność, kurs bieżący, ETA;
 - `tests/carrier-rating.test.ts` — rozładunków z przyszłości już nie ma.
 
-Unit: 1502 zielonych. **Wzorce `visual` zmieniają się na wielu ekranach (daty) — odświeżam je.**
+Unit: 1516 zielonych. **Wzorce `visual` zmieniają się na wielu ekranach (daty) — odświeżam je.**

@@ -7,6 +7,9 @@ import { buildDemoSnapshot, DEMO_TODAY_LOCAL } from '../src/data/demoProvider';
 import { DEMO_ETA } from '../src/data/demoEta';
 import { fxForDate } from '../src/lib/money/loadMoney';
 import type { LoadStatus } from '../src/types';
+import { demoDecisions } from '../src/lib/p6Demo';
+import { todoRisks } from '../src/lib/cockpitE9';
+
 
 const snap = buildDemoSnapshot();
 const IN_ROUTE: LoadStatus[] = ['LOADING', 'IN_TRANSIT_PL', 'AT_PORT', 'ON_FERRY', 'IN_TRANSIT_SE', 'DELAYED', 'SILENT', 'APPROACHING_SITE'];
@@ -53,5 +56,13 @@ describe('ETA w demo (E15; N2, N11, N18)', () => {
     expect(by('T-18').etaDetail?.phase).toBe('WAIT_SITE');
     expect(by('SG-33').etaDetail?.lastFixAt).toBe(DEMO_ETA['SG-33'].detail.lastFixAt);
     expect(by('SG-35').etaConfidence).toBe('LOW');
+  });
+});
+
+describe('sprawy demo przy tych samych transportach (E7-2: liczba w menu = liczba kart)', () => {
+  it('każda decyzja demo stoi przy transporcie, który ma już sprawę', () => {
+    const withRisk = new Set(todoRisks('HHL', snap.risks).map((r) => r.loadId).filter(Boolean));
+    const lone = demoDecisions(snap.loads, '2026-09-23T14:32:00Z').filter((d) => !withRisk.has(d.loadId)).map((d) => d.id);
+    expect(lone).toEqual([]);
   });
 });
