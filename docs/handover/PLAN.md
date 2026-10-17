@@ -180,6 +180,7 @@ Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODU
 - **#282 `wyglad/W-eta` (D-20261017-1100-01, na #280):** `etaDuration` — czasy „X d Y h Z min” (pigułka, Mapa, blok ETA, pasek śledzenia, PDF, sprawy ETA w demo); minus „−”; „przyjazd nocą” na Mapie i w Harmonogramie; Opcje › Zasady transportu › Kalibracja ETA (produkcja: „Brak źródła danych.” do podłączenia w P4-u); „Ten telefon / komputer”: „Wiadomości z Czatu nie przychodzą e-mailem.” (C3-p). **SCALONE I WDROŻONE** (`a5da99ba`, `dpl_H6KzHnyockMQ6BGX3XtBACDHuuD8`).
 - **#284 `wyglad/W-konta` (D-20261017-1220-01, na #282):** demo „Rodzaj konta (demo)” — Administrator / Operacje (HHL), Dyspozytor / Użytkownik (SCX); na produkcji przełącznika nie ma; `accountRole(role)` (`src/lib/accountRole.ts`) — produkcja = `getAuthProfile()?.role`; Pomoc › Kontakt i „Co nowego” bez danych: „pojawi się tutaj po włączeniu danych”; Opcje › SMS przy miejscach do P8: Operacje HHL tylko oglądają, „PL +48 / SE +46 (jak w ekranie P8)”; stare formularze Opcji u Operacji HHL tylko do odczytu (C8 N2 — wygląd tym PR; w C8 zostaje strona bazy); w Cenniku „Strona” i „Firma” zostają aktywne; `konto=` w adresie; „Moje konto” Użytkownika SCX — osoba wymyślona. Nowe sprawdzenia uprawnień w widoku (A2, A4, B5 i dalej) przez `accountRole(role)`, nie `getAuthProfile()?.role`. `prodFacade.ts` zostaje na profilu. **SCALONE I WDROŻONE** (`54af2ca9`, `dpl_4GnUJaM7HSSZJ5hA7ZPP8Ur5muTU`).
 - **#289 `wyglad/W-naprawy` (D-20261017-1450-01, po #284):** **SCALONE I WDROŻONE** (`7639e1c8`, `dpl_Aou8wXFk82yjJahazFPnu4SYekUx`, 17.10.2026 18:15). Wdrożenie przed A4 jest bezpieczne: `INVOICE_A4` zostaje wyłączone do A4. Wzorce `visual` odświeża koordynator; gdy `visual` czerwony przed jego commitem z wzorcami — sygnał „VISUAL #289”. W PR: jedna definicja „gotowy do faktury” (`billReady`: `READY_TO_INVOICE` / `INVOICED` albo warunek C17 — aktualny CMR wgrany po rozładunku) dla kreatora, kafla „Czeka na wystawienie”, liczby przy „Faktury” w menu i Kokpitu; transporty bez CMR w kreatorze szare, „czeka na CMR”; tydzień samych CMR z dopiskiem „· czeka na CMR”, domyślnie najnowszy tydzień z gotowym; suma „zgodna” tylko bez flag „kwota” (`billSumOk`); co do grosza i „pominięty” tylko z gotowych za wyłącznikiem `INVOICE_A4` w `src/lib/serverRules.ts` (w demo od razu, na produkcji po A4); kwota z odstępem tysięcy (`parseAmount`); telefon bez kart czekających, cel dotyku 44 px, kolumna „Dodaj”; B5: `payload.preview_as` → „… // H&H Logistics jako … // KSH” w Historii i na osi Status; nazwy spraw A2/A3/A6 w widoku; dane demo: CMR wgrany 2 h po rozładunku. Plik dopisku wchodzi z PR. Dowód: `docs/handover/odbior/W-naprawy/POROWNANIE.md`.
+- **#291 `wyglad/W-naprawy-2` (D-20261017-1715-01; #289 już scalony — PR ma bazę `main`):** scalasz po skończonym punkcie, przy zielonych `unit` i `visual`. Wdrożenie po scaleniu jest bezpieczne przed A5, A6, A8, A9 i C11 — pola od Ciebie są opcjonalne. Wzorce `visual` odświeża koordynator; czerwony `visual` przed jego commitem z wzorcami — sygnał „VISUAL #291”. Plik dopisku wchodzi z PR. W PR: C11 hasło 12 znaków, litera a–z i cyfra, jeden komunikat; A9 braki „rejs” oraz kierowca i telefon SE, w Przeglądzie „rejs niewybrany — wybiera SCX w awizacji”, link śledzenia nie jest brakiem (4B); A5 lista rejsów od późniejszego z okna awizacji i dnia załadunku, rozkład demo do 16.11; A6 podgląd importu słowami, `standardSkipMessage`, odmiana dat KSH, nazwy pól po polsku; A8 „następna próba o …” (`SourceRow.nextTryAt`) oraz „Źródło niedostępne … od …” z `detail.od_kiedy` (`rk_source_down_since`, D-20261017-1920-01 pkt 3); A2 Strefy nie obiecują „Dostarczone” po wyjeździe z placu, dopóki `SITE_EXIT_DELIVERED` jest wyłączone. Dowód: `docs/handover/odbior/W-naprawy-2/POROWNANIE.md`.
 
 P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji`, a hash scalenia P0a wpisujesz w pierwszym wpisie P0b w `POSTEP.md`.
 
@@ -384,7 +385,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 ### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (C3-p, B1, B2 i B6 NA PRODUKCJI; dalej A8…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
 **Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → **B6** → A8 → A1 → A2 → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
-Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — `passwordOk` dziś sprawdza tylko długość; test `auth-password.test.ts`) → P4-u → P3-d → …
+Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
 ### C3-p · Poprawki C3 — NA PRODUKCJI (17.10.2026 11:18; merge `17be0998` / PR #278; migracja 0223; `dpl_2xXvmtEXdvCnUp8WWW6DzNodae9G`)
@@ -433,10 +434,12 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 5. **Polityka `loads_read`:** usuwasz martwą ścieżkę `OR current_org_kind() = 'SITE'`. Test w `security.sh`.
 
 ### A8 · emtrack: koniec 717 błędów na dobę (C15 — przeniesione tutaj)
-- Po 3× `login_failed` → 1 próba / 6 h (`skipped_until`), aż do zmiany sekretu.
-- Jedna sprawa `SOURCE_DOWN:EMTRACK_WEB` z „od kiedy”, klucz bez daty; 10 starych duplikatów zamykasz z kopią.
+- Po 3× `login_failed` (`loginOk === false`) → 1 próba / 6 h (`skipped_until`), aż do zmiany sekretu. Wyjątek sieci, czas i 5xx: sprawa `SOURCE_DOWN` jak dziś, bez zwiększania serii i bez pauzy 6 h — ponowienie co 2 min (D-20261017-1920-01 pkt 1).
+- Przebieg w pauzie: `ok: false`, `observations.skipped = 'true'`, `next_try_at` = `skipped_until`. Próby logowania to przebiegi bez `skipped` (D-20261017-1920-01 pkt 2).
+- Jedna sprawa `SOURCE_DOWN:EMTRACK_WEB` z „od kiedy”, klucz bez daty; 10 starych duplikatów zamykasz z kopią. `detail.od_kiedy` zostaje (pierwsza awaria w migracji, chwila pierwszego zgłoszenia w kodzie). Tekst „od …” na ekranie — #291 (D-20261017-1920-01 pkt 3).
 - Reset po udanym logowaniu.
-- **W37:** właściciel wpisze nowe `EMTRACK_LOGIN` i `EMTRACK_PASSWORD` w Secrets i napisze „W37 wpisane”. Po tym jedno wywołanie, wynik w `POSTEP.md`.
+- W danych Stanu systemu (P10b-c, gdy podłączysz je na produkcji) dla „Telematyka naczep”: `SourceRow.nextTryAt` = `skipped_until` (`emtrackNextTryAt`). Wyglądu tego miejsca nie zmieniasz (F1, #291).
+- **W37:** właściciel wpisze nowe `EMTRACK_LOGIN` i `EMTRACK_PASSWORD` w Secrets i napisze „W37 wpisane”. Po tym jedno wywołanie, wynik w `POSTEP.md`. A8 robisz bez czekania na W37.
 
 ### A1 · Okno śledzenia na serwerze (E27, D-134 — dziś brak)
 - `emtrack-web` (`store.ts listActiveLoadsForTelematics`, `matchTrailer.ts`):
@@ -462,7 +465,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - Podłączasz `onYes` i `onNo` w `TodoPanel.tsx` i `LoadDrawer.tsx` (dane, bez zmiany wyglądu, F1).
 - Nowe sprawdzenia uprawnień w widoku: `accountRole(role)`, nie `getAuthProfile()?.role` (D-20261017-1220-01 §2). `prodFacade.ts` zostaje na profilu.
 - Test (`dwell`, `status`): odtworzenie SG-03 na zmyślonym śladzie (G-17) → „Dostarczone 12:19”, śledzenie gaśnie; postój 6 min → sprawa L14; „Tak” → „Dostarczone”.
-- **Przy wdrożeniu:** przestaw `serverRuleOn('SITE_EXIT_DELIVERED')` na `true` (D-20261017-0800-01 §2 pkt 1). Test: tekst na produkcji bez „włączamy wkrótce” („Działa samo” › Status ze stref / tabela stref).
+- **Przy wdrożeniu:** przestaw `serverRuleOn('SITE_EXIT_DELIVERED')` na `true` (D-20261017-0800-01 §2 pkt 1). To samo przestawienie zmienia zdania w Strefach: plac i załadunek (D-20261017-1715-01). Test: tekst na produkcji bez „włączamy wkrótce” („Działa samo” › Status ze stref / tabela stref).
 
 ### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5)
 - `doc_requirements`:
@@ -494,6 +497,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
   - polisa SCX z `insurance_policies` (nie z `documents.load_id`);
   - zezwolenie według rodzaju.
   Link śledzenia **nie** blokuje (4B).
+- Wynik `awiz_missing(load)` podajesz widokowi jako `load.readyGaps` (`ReadyGap[]`). Widok bierze to pole zamiast liczyć sam. Mapowanie z D-20261017-1715-01 §2 pkt 2: `AWIZ` z `items` dokładnie „kierowca”, „telefon”, „ciągnik”, „naczepa”, „kierowca SE”, „telefon SE”, „ciągnik SE”; `SAILING`; `PILOTS` (`items`: „pilot” albo „pilot ×N”); `ORDER_SCX`; `ORDER_HHL`; `POLICY_SCX`; `PERMIT` (rodzaj „Firma” / „Trasa” z A7); `who`: „SCX” albo „HHL”; pusta lista = komplet; `undefined` = baza jeszcze nie liczy. Wyglądu nie zmieniasz (F1, #291).
 - Z tej funkcji korzystają L3 (0143), `readyGaps`, `resourcesComplete` i Kokpit.
 - `READY` nadawany w bazie po każdej zmianie.
 - Wyłączasz `tower-zasoby` i zamykasz 93 RESOURCE_MISSING z kopią (E18 P12).
@@ -517,7 +521,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 
 ### A5 · Rejs w awizacji → statusy „Prom” i „Port SE” same (B8, C8)
 - D-20261017-1450-01: bez zmian zakresu (kody spraw i faktura są w A2, A3, A4, A6, B5).
-- Okno Awizacja zapisuje `sailing_id`: wybór rejsu i armatora z `sailings` do Szwecji według daty. Wymagany do „Gotowy” przy trasie promowej (A9).
+- Okno Awizacja zapisuje `sailing_id`: wybór rejsu i armatora z `sailings` do Szwecji według daty. Wymagany do „Gotowy” przy trasie promowej (A9, brak `SAILING`). Jeśli baza sprawdza rejs przy zapisie awizacji — ta sama reguła co widok: rejs nie wcześniej niż późniejsze z okna awizacji i dnia załadunku z planu (+ czas na port) (D-20261017-1715-01 §2 pkt 3). Wyglądu okna nie zmieniasz.
 - `promote_ferry_departures` dla obu przepraw (Gdańsk–Nynäshamn i Gdynia–Karlskrona). Statusy portów według `geofences.route`.
 - `compute_load_eta`:
   - `PORT_IN` według trasy rejsu;
@@ -566,6 +570,7 @@ Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny
    - filtr przewoźnika HH / HHL;
    - puste wiersze pominięte i policzone; „...” i „-” = puste; „A / B” → pola PL / SE.
 2. **Nic nie pada na datach (L31):** zamiast `raise exception` wiersz wchodzi, a gdy dostawa < załadunek, = załadunek albo > 14 dni → sprawa „Daty KSH do sprawdzenia” dla HHL i KSH. Dotyczy np. KR-03. Kod dokładnie `KSH_DATES_CHECK`, opcje `DATES_OK` („Daty są dobre”) i `ASK_FIX` („Poproś KSH o poprawkę”) (D-20261017-1450-01 §2 pkt 4).
+   - Parser wypełnia w `ImportDiff` pola `skippedCarrier`, `skippedEmpty`, `datesToCheck` (liczby, także 0). Po zapisie i w sklepie demo komunikat z `standardSkipMessage(accepted, skippedStandard, { carrier, empty })` — tekstu nie składasz sam (D-20261017-1715-01 §2 pkt 4). `skippedStandard` zostaje, dopóki go liczysz; gdy filtr „Przewoźnik” go zastąpi — podajesz 0. Wyglądu importu nie zmieniasz (F1, #291). Lokalny test `tests/i1-import-ui.local.spec.ts` ma już oczekiwane teksty z tego PR (§1 pkt 10): `[data-import-sum]` zawiera „Nowe: 5”; „Pominięte: rozmiar „Standard” (ładunki innej firmy) — 3.” — tych oczekiwań nie cofasz.
 3. **Zasoby i numery z pliku** zapisane w bazie. Komentarz „Wcześniej to był SG-…” → ten sam transport, nowy kod, `renumbered_from`, „było → jest” w Historii.
 4. **Synchronizacja SharePoint — odczyt** (funkcja Edge `ksh-sharepoint-sync`, `pg_cron` co 5 min):
    - tabela stanu `ksh_sync_state`, wiersz w Stanie systemu;
@@ -579,7 +584,7 @@ Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny
 
 ### C4–C13 bez zmian zakresu
 Zostają jak w planie, po A6.
-- C11 = hasło min. 12 znaków **z literami i cyframi** (`passwordOk` dziś sprawdza tylko długość). Test `auth-password.test.ts`.
+- C11 = hasło min. 12 znaków **z literami i cyframi**. Widok — #291 (`passwordOk`, `pwCheck`, jeden komunikat). Auth — W1 (właściciel 17.10.2026, 07:28). Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa z serwera; „Haslo-testowe-12” → przyjęte. Gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”.
 
 Także (D-20261017-0730-01 §4, nie wygląd):
 - w bazie wiersz `user_preferences` z walutą `EUR` przy pierwszym logowaniu (dziś 10 kont bez wpisu). Test: konto bez wpisu widzi EUR;
@@ -992,3 +997,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 17.10.2026 12:20 | D-20261017-1220-01: PR #284 `wyglad/W-konta` (po #282) — Operacje HHL i Użytkownik SCX w demo, `accountRole`, Pomoc bez fałszywego braku, SMS przy miejscach do odczytu, C8 N2 formularze Operacji (zostaje strona bazy); B7 bez geolokalizacji kierowcy — tylko CSP `frame-src`; właściciel 12:25: aplikacja kierowcy porzucona, zostaje w kodzie | właściciel 17.10 12:25; koordynator |
 | 17.10.2026 14:50 | D-20261017-1450-01: PR #289 `wyglad/W-naprawy` (po #284) — `billReady` / `INVOICE_A4` pod A4, `preview_as` pod B5, kody spraw `KSH_DATES_CHECK`, `DELIVERED_CHECK`, `CMR_UPLOAD`; scalenie po skończonym punkcie, wdrożenie bezpieczne przed A4 | koordynator |
 | 17.10.2026 15:30 | D-20261017-1530-01: uwagi do PR #290 (B6, 0225) przed scaleniem — revoke insert/update na `loads` i grant kolumn bez `rio_secret`; limit anon z nagłówków; tekst `EMAIL_BUDGET`; e-mail zapasowy W42 poza limitem | koordynator |
+| 17.10.2026 17:15 | D-20261017-1715-01: PR #291 `wyglad/W-naprawy-2` (baza `main`, #289 scalony) — wygląd pod A5, A6, A8, A9 i C11 oraz zdania Stref przy A2. Uzupełnienie po 19:01: A8 także „Źródło niedostępne … od …” z `detail.od_kiedy`; lokalny `i1-import-ui.local.spec.ts` z nowymi tekstami (§1 pkt 10). Scalenie po skończonym punkcie, przy zielonych `unit` i `visual`; wdrożenie bezpieczne, pola opcjonalne. C11: widok #291, Auth W1, test na TEST. A9: `load.readyGaps` według §2 pkt 2. A5: rejs nie wcześniej niż okno awizacji i dzień załadunku. A6: `ImportDiff.skippedCarrier`, `skippedEmpty`, `datesToCheck` i `standardSkipMessage`. A8: `SourceRow.nextTryAt` = `skipped_until` oraz `detail.od_kiedy` zostaje. A2: przestawienie `SITE_EXIT_DELIVERED` zmienia też zdania w Strefach | koordynator |
+| 17.10.2026 19:20 | D-20261017-1920-01: przegląd #293 przed scaleniem. Pauza 6 h tylko po `login_failed`; wyjątek sieci bez serii. Przebieg w pauzie `ok: false` i `skipped`. `detail.od_kiedy` bez zmian; tekst na ekranie w #291. Odbiór A8 po wdrożeniu — koordynator | koordynator |

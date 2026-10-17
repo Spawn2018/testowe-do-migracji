@@ -2847,5 +2847,28 @@ Kolejka PR wyglądu (po #284, już na produkcji): **#289 `wyglad/W-naprawy`**. S
 
 Przy A4: kreator, „Do wystawienia”, menu i Kokpit z tego PR; baza `register_invoice` + przestawienie `INVOICE_A4`. Przy B5: `payload.preview_as`. Przy A2: `DELIVERED_CHECK`. Przy A3: `CMR_UPLOAD` albo `DOC_MISSING` bez nowego kodu. Przy A6: `KSH_DATES_CHECK`. `billReady` = lustro `c17_cmr_after_delivery` — zmiana warunku w bazie to sygnał do widoku. A5 bez zmian z tego dopisku.
 
+## 2026-10-17 — DOPISEK D-20261017-1715-01 W PLANIE
+
+Kolejka PR wyglądu: **#291 `wyglad/W-naprawy-2`** (baza `main`; #289 już scalony). Scalanie po skończonym punkcie, przy zielonych `unit` i `visual`. Wdrożenie po scaleniu jest bezpieczne przed A5, A6, A8, A9 i C11 — pola od wykonawcy są opcjonalne. Wzorce `visual` odświeża koordynator; czerwony `visual` przed jego commitem z wzorcami — sygnał „VISUAL #291”. Plik dopisku wchodzi z tym PR.
+
+Twoja część, w swojej kolejności, bez zmiany wyglądu (F1):
+- **C11:** Auth ustawił właściciel (W1, 17.10.2026 07:28). Tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa; „Haslo-testowe-12” → przyjęte. Gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”.
+- **A9:** `awiz_missing(load)` → `load.readyGaps`. Klucze i słowa dokładnie z D-20261017-1715-01 §2 pkt 2 (`AWIZ`, `SAILING`, `PILOTS`, `ORDER_SCX`, `ORDER_HHL`, `POLICY_SCX`, `PERMIT`).
+- **A5:** `sailing_id` wymagany do „Gotowy”. W bazie ta sama reguła wczesnego rejsu co widok: nie wcześniej niż późniejsze z okna awizacji i dnia załadunku z planu.
+- **A6:** parser wypełnia `ImportDiff.skippedCarrier`, `skippedEmpty`, `datesToCheck` (także 0). Komunikat po imporcie z `standardSkipMessage(…, { carrier, empty })`. Sprawa dat: `KSH_DATES_CHECK`. Lokalny `tests/i1-import-ui.local.spec.ts` ma oczekiwane teksty z #291 (§1 pkt 10) — nie cofasz ich.
+- **A8:** `nextTryAt` = `skipped_until` emtrack w danych Stanu systemu. Gdy te dane na produkcji jeszcze nie są podłączone — pole wchodzi razem z nimi. W sprawie zostawiasz `detail.od_kiedy`; „Źródło niedostępne … od …” na ekranie robi #291.
+- **A2:** przestawienie `SITE_EXIT_DELIVERED` przy wdrożeniu zmienia też zdania w Strefach (plac i załadunek).
+
+Bieżąca pozycja w chwili wpisu: **A8**. #291 jeszcze niescalony.
+
+## 2026-10-17 — DOPISEK D-20261017-1920-01 W PLANIE
+
+Przegląd #293 przed scaleniem. W tym samym PR:
+- pauza 6 h tylko po odmowie hasła (`loginOk === false`); wyjątek sieci, czas i 5xx zostawia sprawę `SOURCE_DOWN` i nie zwiększa serii;
+- przebieg w pauzie: `ok: false`, `observations.skipped = 'true'`, `next_try_at` = `skipped_until`;
+- `detail.od_kiedy` bez zmian; „od …” na ekranie robi koordynator w #291.
+
+Odbiór A8 po wdrożeniu wpisze koordynator. Własny wpis wykonawcy — po teście z odbioru i wdrożeniu, nie wcześniej.
+
 
 
