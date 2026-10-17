@@ -18,7 +18,10 @@ const PL: Record<string, string> = {
   help_contact_role: 'Operacje HHL',
   help_call: 'Zadzwoń',
   help_contact_none: 'Brak konta Operacji HHL z telefonem.',
+  /* audyt 17.10 sekcja 06 N11: produkcja bez danych nie twierdzi, że kont nie ma */
+  help_contact_soon: 'Kontakt do Operacji HHL pojawi się tutaj po włączeniu danych.',
   help_news_none: 'Brak zmian do pokazania.',
+  help_news_soon: 'Lista zmian pojawi się tutaj po włączeniu danych.',
   help_key_dash: 'Kokpit',
   help_key_map: 'Mapa',
   help_key_sched: 'Harmonogram',

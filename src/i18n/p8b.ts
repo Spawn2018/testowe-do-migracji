@@ -2,7 +2,7 @@
  * wyglad/P8-b — teksty ekranu „SMS przy miejscach” (E42; img/e42-after). Interfejs tylko po polsku (E43).
  */
 const pl = {
-  p8b_ops: 'Operacje HHL: podgląd (E9)',
+  p8b_ops: 'Operacje HHL: tylko podgląd',
   p8b_send: 'Wysyłka do odbiorców',
   p8b_send_short: 'Wysyłka',
   p8b_send_off: 'Wyłączona · tryb testowy: wszystko na {to}',

@@ -18,9 +18,16 @@ import { formatListDateTime } from '../../lib/format';
 import { getNow } from '../../lib/frozenNow';
 import { groupPhone } from '../../lib/phoneDisplay';
 import { OPEN_ACCOUNT_EVENT } from '../../lib/helpNav';
+import { accountRole } from '../../lib/accountRole';
+import { setDemoAccountKind, type DemoAccountKind } from '../../lib/demoAccount';
 
 const PREVIEW_ROLES: RoleId[] = ['HHL', 'KSH', 'SCX'];
 const DEMO_KIND: Record<RoleId, string> = { HHL: 'HHL_ADMIN', KSH: 'CLIENT_USER', SCX: 'CARRIER_DISPATCH' };
+/** wyglad/W-konta: drugi rodzaj konta firmy w demo (E9 — widok „tylko do odczytu” Operacji HHL, Użytkownik SCX). */
+const DEMO_KINDS: Partial<Record<RoleId, Array<{ kind: string; demo: DemoAccountKind | null }>>> = {
+  HHL: [{ kind: 'HHL_ADMIN', demo: null }, { kind: 'HHL_OPS', demo: 'HHL_OPS' }],
+  SCX: [{ kind: 'CARRIER_DISPATCH', demo: null }, { kind: 'CARRIER_USER', demo: 'CARRIER_USER' }],
+};
 
 function useProfile(): AuthProfile | null {
   const [p, setP] = useState<AuthProfile | null>(() => getAuthProfile());
@@ -104,7 +111,8 @@ export function AccountMenu() {
   }, [open]);
 
   const name = personName(profile, locale);
-  const userRole = profile?.role ?? DEMO_KIND[role];
+  const userRole = profile?.role ?? accountRole(role) ?? DEMO_KIND[role];
+  const demoKinds = !profile && import.meta.env.VITE_AUTH_MODE !== 'supabase' ? DEMO_KINDS[role] : undefined;
   const orgName = profile?.org_name || ROLE_META[role].name;
   const contact = [
     profile?.phone ? t(locale, 'p3a_acc_tel').replace('{tel}', groupPhone(profile.phone)) : profile?.email ?? '',
@@ -185,6 +193,24 @@ export function AccountMenu() {
                 ))}
               </div>
             ) : null}
+          </div>
+        ) : null}
+        {demoKinds ? (
+          <div className="acc-demo-kind" data-acc="demo-kind">
+            <p className="acc-kind-hd">{t(locale, 'p3a_acc_kind')}</p>
+            <div className="seg acc-seg" role="group" aria-label={t(locale, 'p3a_acc_kind')} data-demo-kind-seg>
+              {demoKinds.map((k) => (
+                <button key={k.kind} type="button" data-demo-kind={k.kind} aria-pressed={userRole === k.kind}
+                  onClick={() => {
+                    if (userRole === k.kind) { close(); return; }
+                    setDemoAccountKind(k.demo);
+                    /* przeładowanie: prawa konta czyta każdy ekran przy rysowaniu (accountRole) */
+                    window.location.reload();
+                  }}>
+                  {t(locale, `p3a_kshort_${k.kind}`)}
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
         <button type="button" className="acc-row" id="themeBtn" data-acc="theme"

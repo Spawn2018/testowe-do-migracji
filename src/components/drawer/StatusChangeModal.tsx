@@ -20,12 +20,12 @@ import { buildStatusAxis, dateTimeFields, dayTime, gpsHint, isoMs } from '../../
 import { useIsPhone } from '../../lib/useIsPhone';
 import { readyGapsOf } from '../../lib/p4cSource';
 import { readyGapsText } from '../../lib/p4c';
-import { getAuthProfile } from '../../auth/profile';
 import { settlementGate } from '../../lib/statusSettlement';
 import { lazyRetry } from '../../lib/lazyRetry';
 import { isStepBack, manualOptions, manualStatusOf } from '../../lib/statusManual';
 import { viewedKind } from '../../lib/cockpitE9';
 import type { LoadStatus } from '../../types';
+import { accountRole } from '../../lib/accountRole';
 
 const UploadDocModal = lazy(lazyRetry(() => import('../docs/UploadDocModal').then((m) => ({ default: m.UploadDocModal }))));
 const dmy = (iso: string) => formatCalendarDay(iso.slice(0, 10));
@@ -60,9 +60,9 @@ export function StatusChangeModal({
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   /* B10 / E25: anulowanie — tylko Administrator HHL z powodem */
-  const canCancel = getAuthProfile()?.role === 'HHL_ADMIN';
+  const canCancel = accountRole(role) === 'HHL_ADMIN';
   /* audyt-B B-04 (E25, 07.10 17:46): SCX tylko do przodu; cofnięcie — administrator HHL (w demo HHL bez profilu Operacji), z powodem */
-  const hhlAdmin = role === 'HHL' && viewedKind(role, getAuthProfile()?.role ?? null) === 'HHL_ADMIN';
+  const hhlAdmin = role === 'HHL' && viewedKind(role, accountRole(role)) === 'HHL_ADMIN';
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
