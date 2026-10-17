@@ -11,7 +11,7 @@ export type OptScreenId =
   | 'users' | 'logins'
   | 'who' | 'texts' | 'zones' | 'bcast'
   | 'rates' | 'surch' | 'fuel' | 'terms' | 'fact'
-  | 'thr' | 'permits'
+  | 'thr' | 'permits' | 'calib'
   | 'status' | 'flags' | 'hist' | 'export'
   | 'account' | 'forme' | 'look' | 'device';
 
@@ -62,6 +62,7 @@ export const SCREEN_KEY: Record<OptScreenId, string> = {
   fact: 'p3c_s_fact',
   thr: 'p3c_s_thr',
   permits: 'p3c_s_permits',
+  calib: 'p3c_s_calib',
   status: 'p3c_s_status',
   flags: 'p3c_s_flags',
   hist: 'p3c_s_hist',

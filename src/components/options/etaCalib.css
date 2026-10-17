@@ -1,0 +1,54 @@
+/* wyglad/W-eta — Opcje › Kalibracja ETA (E15 pkt 7). Tylko tokeny, bez cieni i zaokrągleń. */
+.ox-cal .cal-num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.ox-cal .cal-wrap{min-width:0;overflow-x:auto}
+.ox-cal .cal-amber{color:var(--amber-ink);font-weight:600}
+.ox-cal .cal-skip th b,.ox-cal .cal-skip td{color:var(--ink-3)}
+.ox-cal .cal-skip-cell{color:var(--ink-3)}
+.ox-cal .cal-avg th,.ox-cal .cal-avg td{background:var(--surface-2);border-top:2px solid var(--rule);font-weight:600}
+.ox-cal .cal-seg-note{color:var(--ink-3)}
+.ox-cal .cal-dev{color:var(--ink-3);font-weight:400}
+.ox-cal .cal-gain{margin:0 0 12px;color:var(--ink)}
+.ox-cal .cal-cur{margin-left:8px}
+.ox-cal .cal-line{display:block;white-space:nowrap}
+.ox-cal .cal-dim{color:var(--ink-3);font-weight:400}
+.ox-cal .cal-sep{display:none}
+.ox-cal .cal-num.ox-alert{font-weight:600}
+.ox-cal .cal-avg th{white-space:nowrap}
+/* tabela w panelu: krawędź daje panel — bez podwójnej ramki (F7 P5) */
+.ox-cal .ox-panel .ox-table{border:0}
+.ox-cal .cal-act{border-top:1px solid var(--rule-2)}
+.ox-cal .cal-ask{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ox-cal .cal-btns{display:flex;gap:8px;flex-wrap:wrap}
+.ox-cal .cal-wait{color:var(--ink-3)}
+.ox-cal .cal-ver{list-style:none;margin:0;padding:0}
+.ox-cal .cal-ver li{display:grid;grid-template-columns:180px 150px minmax(0,240px) minmax(0,1fr);gap:12px;align-items:baseline;padding:11px 16px;border-bottom:1px solid var(--rule-2)}
+.ox-cal .cal-ver li:last-child{border-bottom:0}
+.ox-cal .cal-ver-what{color:var(--ink-2);min-width:0}
+
+@media (max-width:1500px){
+  .ox-cal .cal-obs-t td:last-child .cal-line{white-space:normal}
+  .ox-cal .cal-obs-t th,.ox-cal .cal-obs-t td{padding-left:10px;padding-right:10px}
+}
+
+@media (max-width:768px){
+  .ox-cal .cal-wrap{overflow:visible}
+  /* karty w panelu jako lista: bez ramki w ramce */
+  .ox-cal .ox-panel .ox-cards-phone tbody tr{border:0;border-bottom:1px solid var(--rule-2);margin:0}
+  .ox-cal .ox-panel .ox-cards-phone tbody tr:last-child{border-bottom:0}
+  /* data i godzina wjazdu w jednej linii */
+  .ox-cal .cal-when .cal-line{display:inline}
+  .ox-cal .cal-when .cal-sep{display:inline}
+  /* karta pomiaru: kod na całą szerokość, liczby parami — krótsza karta niż jedna kolumna */
+  .ox-cal .cal-obs-t tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ox-cal .cal-seg-t tbody tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ox-cal .cal-obs-t tbody tr > th,.ox-cal .cal-seg-t tbody tr > th,.ox-cal .cal-skip-cell,.ox-cal .cal-obs-t tbody tr:not(.cal-avg) > td:last-child{grid-column:1 / -1}
+  .ox-cal .cal-seg-note{grid-column:span 2}
+  /* komórki na kilka kolumn i wiersz średniej — bez etykiety kolumny nad tekstem */
+  .ox-cal .cal-skip-cell[data-label]::before,.ox-cal .cal-seg-note[data-label]::before,.ox-cal .cal-avg th[data-label]::before,.ox-cal .cal-avg-n[data-label]::before{content:none}
+  .ox-cal .cal-avg td:empty{display:none}
+  .ox-cal .ox-cards-phone tbody tr.cal-avg{background:var(--surface-2)}
+  .ox-cal .cal-avg th,.ox-cal .cal-avg td{border-top:0}
+  .ox-cal .cal-seg-t .cal-num{white-space:normal}
+  .ox-cal .cal-ver li{grid-template-columns:minmax(0,1fr);gap:2px}
+  .ox-cal .cal-ask{align-items:stretch}
+}

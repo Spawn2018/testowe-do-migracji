@@ -6,6 +6,7 @@
  * Czysty wygląd: dane z transportu i dziennika zdarzeń, bez zapytań.
  * audyt-B B-15: bez nazwy transportu w tekście — nazwa jest w nagłówku panelu.
  */
+import { etaDuration } from '../../lib/etaDuration';
 import type { Load, LoadEvent, Locale, TrackingLinkInfo } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { trackingPhase } from '../../lib/stageTiles';
@@ -31,7 +32,7 @@ function ago(fromIso: string, nowIso: string, locale: Locale): string {
   const m = Math.max(0, Math.round((Date.parse(nowIso) - Date.parse(fromIso)) / 60_000));
   if (m < 1) return t(locale, 'p4b_ago_now');
   if (m < 60) return tp(locale, 'p4b_ago_min', { n: m });
-  return tp(locale, 'p4b_ago_h', { h: Math.floor(m / 60), m: m % 60 });
+  return tp(locale, 'p4b_ago_dur', { d: etaDuration(m) }); /* D-071 */
 }
 
 export function TrackingBar({

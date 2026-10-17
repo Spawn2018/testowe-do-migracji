@@ -130,7 +130,7 @@ const pl: Dict = {
   rk_seed_res_meta: 'Termin uzupełnienia minął 4 h temu',
   rk_seed_silent: 'Brak pozycji od 2 h 14 min',
   rk_seed_silent_meta: 'Ostatni sygnał: E4 na północ od Umeå',
-  rk_seed_eta: 'Prognoza przyjazdu poza oknem o {h} h {m} min',
+  rk_seed_eta: 'Prognoza przyjazdu poza oknem o {d}',
   rk_seed_eta_meta: 'Ekipa montażowa powiadomiona automatycznie',
   rk_seed_ferry: 'Rejs 24.09.2026 · prognoza fali {wave} m, porywy {gust} m/s',
   rk_seed_ferry_meta: '3 transporty na tym rejsie. Alternatywa: Gdynia–Karlskrona',

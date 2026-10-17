@@ -2,6 +2,7 @@
  * B9 / E27 pkt 5 — ten sam stan śledzenia w panelu (TrackingBar) i w PDF transportu.
  * W PDF (poza panelem) przed tekstem stoi nazwa transportu; w panelu nie (audyt-B B-15 — nazwa jest w nagłówku panelu).
  */
+import { etaDuration } from './etaDuration';
 import type { Load, LoadEvent, Locale, TrackingLinkInfo } from '../types';
 import { t, tp } from '../i18n/messages';
 import { trackingPhase } from './stageTiles';
@@ -39,7 +40,7 @@ function ago(fromIso: string, nowIso: string, locale: Locale): string {
   const m = Math.max(0, Math.round((Date.parse(nowIso) - Date.parse(fromIso)) / 60_000));
   if (m < 1) return t(locale, 'p4b_ago_now');
   if (m < 60) return tp(locale, 'p4b_ago_min', { n: m });
-  return tp(locale, 'p4b_ago_h', { h: Math.floor(m / 60), m: m % 60 });
+  return tp(locale, 'p4b_ago_dur', { d: etaDuration(m) }); /* D-071 */
 }
 
 /** Jedna linia stanu śledzenia (nagłówek + dopisek) — do PDF i testów. */

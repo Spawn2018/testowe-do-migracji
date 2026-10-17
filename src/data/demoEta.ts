@@ -8,6 +8,7 @@
  */
 import type { EtaDetail, Load, Risk } from '../types';
 import { plPlural } from '../lib/plPlural';
+import { etaDuration } from '../lib/etaDuration';
 
 /** Ostatnie przeliczenie i ostatnia pozycja w demo — tuż przed zegarem demo 23.09.2026, 16:32. */
 export const DEMO_ETA_AT = '2026-09-23T16:30:00+02:00';
@@ -145,7 +146,7 @@ export function withDemoEta(load: Load): Load {
   };
 }
 
-const hm = (min: number) => `${Math.floor(min / 60)} h ${min % 60} min`;
+const hm = (min: number) => etaDuration(min); /* D-071 */
 
 /**
  * Teksty spraw demo z tych samych liczb co transport (audyt 17.10, F7): „poza oknem o …” = ETA − koniec okna,
@@ -160,7 +161,7 @@ export function alignDemoRisks(risks: readonly Risk[], loads: readonly Load[]): 
       const end = Date.parse(l.awizacja?.unloadWindowEnd ?? `${l.plannedDeliverDate}T15:00:00Z`);
       const late = Math.round((Date.parse(l.etaBoden) - end) / MIN);
       return late > 0
-        ? { ...r, title: `Prognoza przyjazdu poza oknem o ${hm(late)}`, titleKey: 'rk_seed_eta', titleParams: { h: Math.floor(late / 60), m: late % 60 } }
+        ? { ...r, title: `Prognoza przyjazdu poza oknem o ${hm(late)}`, titleKey: 'rk_seed_eta', titleParams: { d: hm(late) } }
         : r;
     }
     if (r.id === 'risk-silent' && l.silentMinutes) {

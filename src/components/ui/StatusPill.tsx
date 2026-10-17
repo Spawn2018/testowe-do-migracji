@@ -4,6 +4,7 @@ import { statusMarkers } from '../../lib/stageTiles';
 import { t } from '../../i18n/messages';
 import { statusTone } from '../../lib/status';
 import { useTowerStore } from '../../store/useTowerStore';
+import { etaDuration } from '../../lib/etaDuration';
 
 export { statusLabel } from '../../lib/statusLabel';
 
@@ -18,14 +19,9 @@ const TONE_PILL: Record<ReturnType<typeof statusTone>, string> = {
 
 /** B-8.8 — opóźnienie ETA: ≥24 h → dni+godz+min; poniżej → godz+min */
 export function formatDelayPill(delayMin: number): string {
+  /* D-071 (audyt 17.10): „+1 h 35 min”, „+1 d 18 h” zamiast „+1h35”, „+1d 18h 00m” */
   const abs = Math.abs(Math.trunc(delayMin));
-  const sign = delayMin < 0 ? '-' : '+';
-  const d = Math.floor(abs / (60 * 24));
-  const h = Math.floor((abs % (60 * 24)) / 60);
-  const m = abs % 60;
-  const mm = String(m).padStart(2, '0');
-  if (d > 0) return `${sign}${d}d ${h}h ${mm}m`;
-  return `${sign}${h}h${mm}`;
+  return `${delayMin < 0 ? '−' : '+'}${etaDuration(abs)}`; /* minus U+2212 jak w Kalibracji ETA */
 }
 
 export function StatusPill({
