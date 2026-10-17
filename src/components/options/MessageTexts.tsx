@@ -13,7 +13,7 @@ import { formatListDateTime } from '../../lib/format';
 import { formatCalendarDay } from '../../lib/time';
 import { useIsPhone } from '../../lib/useIsPhone';
 import {
-  GROUPS, GROUP_LABEL, INVOICE_LINK_SAMPLE, MESSAGES, channelLabel, SMS_MAX, checkMessage, gsmBad, gsmLength, parseMarkers, previewLines, tokenLabelIn,
+  GROUPS, GROUP_LABEL, INVOICE_LINK_IDS, INVOICE_LINK_SAMPLE, MESSAGES, channelLabel, SMS_MAX, checkMessage, gsmBad, gsmLength, parseMarkers, previewLines, tokenLabelIn,
   sampleOf, smsOf, smsWorstLength, toMarkers,
   type CheckError, type MsgItem, type PreviewPart, type Seg, type TokenId,
 } from '../../lib/p8Texts';
@@ -260,10 +260,10 @@ function MessageEditor({ item, saved, draft, status, loads, readOnly, prodPendin
     const s = sampleOf(load);
     /* E41: SMS — sam kod; e-mail na koncie HHL — kod z numerem zlecenia HHL */
     if (email && load?.hhlOrderNo) s.code = `${load.code} · ${load.hhlOrderNo}`;
-    /* A4 (wyglad/W-faktura-termin): wiadomości o fakturach prowadzą do faktury */
-    if (item.group === 'inv') s.link = INVOICE_LINK_SAMPLE;
+    /* A4 (wyglad/W-faktura-termin): wiadomości o fakturze prowadzą do faktury */
+    if (INVOICE_LINK_IDS.has(item.id)) s.link = INVOICE_LINK_SAMPLE;
     return s;
-  }, [load, email, item.group]);
+  }, [load, email, item.id]);
   const errId = `mt-err-${item.id}`;
   const countId = `mt-count-${item.id}`;
 
@@ -345,7 +345,7 @@ function MessageEditor({ item, saved, draft, status, loads, readOnly, prodPendin
             multiline={false}
             readOnly={readOnly}
             label={p8t('p8_subject')}
-            group={item.group}
+            msgId={item.id}
             describedBy={subjErr ? errId : undefined}
             invalid={!!subjErr}
             onFocus={() => setTarget('subject')}
@@ -363,7 +363,7 @@ function MessageEditor({ item, saved, draft, status, loads, readOnly, prodPendin
           readOnly={readOnly}
           label={email ? p8t('p8_body') : item.name}
           buttonLabel={item.buttonLabel}
-          group={item.group}
+          msgId={item.id}
           lockButton={item.needsButton}
           describedBy={[bodyErr ? errId : '', sms ? countId : ''].filter(Boolean).join(' ') || undefined}
           invalid={!!bodyErr}
@@ -381,11 +381,11 @@ function MessageEditor({ item, saved, draft, status, loads, readOnly, prodPendin
                 type="button"
                 className={`btn ghost mt-ins-btn${tk === 'button' ? ' is-must' : ''}`}
                 data-mt-insert={tk}
-                aria-label={p8t('p8_insert_aria', { label: tokenLabelIn(tk, item.group) })}
+                aria-label={p8t('p8_insert_aria', { label: tokenLabelIn(tk, item.id) })}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => insert(tk)}
               >
-                + {tokenLabelIn(tk, item.group)}
+                + {tokenLabelIn(tk, item.id)}
               </button>
             ))}
           </div>

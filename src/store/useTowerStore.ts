@@ -70,7 +70,7 @@ import { withMoneyV2 } from '../lib/money/loadMoney';
 import { milestoneAction, type DriverFix } from '../lib/driverTracking';
 import { fmtLocal, cancelledSailingRisks, checkSailingDraft, ferryFromSailing, sailingAssignDenied, type SailingDraft, type SailingDraftError, type SailingDenied } from '../lib/sailings';
 import { billDueDate, billParties, billPaymentToday, canMarkPaid, canRegisterBill, canVerifyBill, checkBill, verifyError, type BillDraft } from '../lib/invoices3';
-import { syncInvoiceOverdue } from '../lib/invoiceOverdue';
+import { refreshInvoiceOverdue, syncInvoiceOverdue } from '../lib/invoiceOverdue';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
 import { applyEtaToLoad } from '../lib/eta';
@@ -1983,6 +1983,17 @@ export const useTowerStore = create<TowerState>()(
         }
         if (!state) return;
         if (state.role) setPreviewViewRole(state.role);
+        /* A4 (wyglad/W-faktura-termin, F7): demo — sprawy „Faktura nieopłacona po terminie” z faktur na dziś (zapisany stan) */
+        if (!SUPABASE_MODE) {
+          queueMicrotask(() => {
+            try {
+              const now = getNowIso();
+              useTowerStore.setState((st) => ({ risks: refreshInvoiceOverdue(st.risks, st.bills, localDateOf(now), now) }));
+            } catch {
+              /* store may be mid-init in tests */
+            }
+          });
+        }
         /* 8A (17.10): zapisany w przeglądarce „en” albo „sv” wraca do „pl” — panel tylko po polsku. */
         if (state.locale !== 'pl') {
           queueMicrotask(() => {

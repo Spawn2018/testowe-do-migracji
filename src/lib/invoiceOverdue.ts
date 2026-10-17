@@ -36,7 +36,7 @@ export function invoiceOverdueRisk(b: Bill, nowIso: string): Risk {
     id: invoiceOverdueId(b.id),
     type: 'OPS',
     severity: 'HIGH',
-    title: `Faktura ${params.number} (${params.from} → ${params.to}) nieopłacona po terminie ${params.due}`,
+    title: `Faktura ${params.number} (${params.from}\u00a0→\u00a0${params.to}) nieopłacona po terminie ${params.due}`,
     detail: '',
     owner: 'HHL',
     meta: '',
@@ -64,4 +64,16 @@ export function syncInvoiceOverdue(risks: Risk[], b: Bill | undefined, todayLoca
   if (!isInvoiceOverdue(b, todayLocal)) return risks.some(mine) ? risks.filter((r) => !mine(r)) : risks;
   if (!demo || risks.some(mine)) return risks;
   return [...risks, invoiceOverdueRisk(b, nowIso)];
+}
+
+/**
+ * Demo (F7): sprawy „po terminie” przeliczane z faktur przy każdym wczytaniu zapisanego stanu — faktura, która dziś przeszła
+ * termin, dostaje sprawę bez czyszczenia danych przeglądarki; opłacona albo sporna ją traci.
+ */
+export function refreshInvoiceOverdue(risks: Risk[], bills: readonly Bill[], todayLocal: string, nowIso: string): Risk[] {
+  const fresh = invoiceOverdueRisks(bills, todayLocal, nowIso);
+  const rest = risks.filter((r) => r.kind !== INVOICE_OVERDUE_KIND);
+  const same = fresh.length === risks.length - rest.length
+    && fresh.every((f) => risks.some((r) => r.id === f.id));
+  return same ? risks : [...rest, ...fresh];
 }

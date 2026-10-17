@@ -74,7 +74,7 @@ export const DEMO_MATRIX: MatrixGroup[] = [
       { id: 'inv_dispute', perDay: 1, title: 'Faktura sporna', sub: 'u wystawcy i odbiorcy', target: 'Faktury › ta faktura',
         cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(false), CLIENT_USER: c(true, false, true), CARRIER_DISPATCH: c(true, false, true), CARRIER_USER: c(false) } },
       /* A4 (wyglad/W-faktura-termin): sprawa HHL raz na fakturę; na produkcji wiersz `inv_overdue` dopisuje wykonawca razem z macierzą (D-20261017-2130-01) */
-      { id: 'inv_overdue', title: 'Faktura nieopłacona po terminie', sub: 'raz na fakturę · tylko HHL · znika po „Opłacona”', target: 'Faktury › ta faktura',
+      { id: 'inv_overdue', perDay: 1, title: 'Faktura nieopłacona po terminie', sub: 'raz na fakturę · tylko HHL · sprawa znika po „Opłacona” albo sporze', target: 'Faktury › ta faktura',
         cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
       { id: 'factoring', perDay: 1, title: 'Faktoring: wypłata', sub: 'HHL: do wykonania w 48 h · SCX: wykonana', target: 'Faktury',
         cells: { HHL_ADMIN: c(true, true, true), HHL_OPS: c(false), CLIENT_USER: null, CARRIER_DISPATCH: c(true, false, true), CARRIER_USER: c(false) } },

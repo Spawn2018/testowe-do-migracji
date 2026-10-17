@@ -5,7 +5,7 @@
  * Wklejanie — tylko zwykły tekst. Bez formatowania i bez cofania przeglądarki (pole zmienia też kod). Nowy początek — `key` u rodzica.
  */
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { tokenLabelIn, type MsgGroup, type Seg, type TokenId } from '../../lib/p8Texts';
+import { tokenLabelIn, type Seg, type TokenId } from '../../lib/p8Texts';
 import { readSegs } from '../../lib/p8Dom';
 
 export interface TokenEditorHandle {
@@ -22,8 +22,8 @@ interface Props {
   label: string;
   /** napis klocka przycisku w e-mailu logowania */
   buttonLabel?: string;
-  /** A4 (wyglad/W-faktura-termin): grupa wiadomości — w „Fakturach” klocek linku to „Link do faktury” */
-  group?: MsgGroup;
+  /** A4 (wyglad/W-faktura-termin): id wiadomości — w wiadomościach o fakturze klocek linku to „Link do faktury” */
+  msgId?: string;
   /** przycisk z linkiem nie do usunięcia (e-mail logowania, E43) */
   lockButton?: boolean;
   describedBy?: string;
@@ -31,24 +31,24 @@ interface Props {
   onFocus?: () => void;
 }
 
-function chipLabel(id: TokenId, buttonLabel?: string, group?: MsgGroup): string {
-  return id === 'button' ? `Przycisk „${buttonLabel ?? 'Dołącz'}”` : tokenLabelIn(id, group);
+function chipLabel(id: TokenId, buttonLabel?: string, msgId?: string): string {
+  return id === 'button' ? `Przycisk „${buttonLabel ?? 'Dołącz'}”` : tokenLabelIn(id, msgId);
 }
 
-function chip(id: TokenId, buttonLabel?: string, group?: MsgGroup): HTMLSpanElement {
+function chip(id: TokenId, buttonLabel?: string, msgId?: string): HTMLSpanElement {
   const s = document.createElement('span');
   s.contentEditable = 'false';
   s.className = id === 'button' ? 'mt-chip mt-chip-btn' : 'mt-chip';
   s.dataset.tok = id;
-  s.textContent = chipLabel(id, buttonLabel, group);
+  s.textContent = chipLabel(id, buttonLabel, msgId);
   return s;
 }
 
-function fill(el: HTMLElement, segs: readonly Seg[], buttonLabel?: string, group?: MsgGroup): void {
+function fill(el: HTMLElement, segs: readonly Seg[], buttonLabel?: string, msgId?: string): void {
   el.textContent = '';
   for (const x of segs) {
     if (x.k === 'txt') el.appendChild(document.createTextNode(x.v));
-    else el.appendChild(chip(x.id, buttonLabel, group));
+    else el.appendChild(chip(x.id, buttonLabel, msgId));
   }
   /* za ostatnim klockiem musi być tekst — inaczej klik w puste pole stawia kursor w środku klocka */
   if (segs[segs.length - 1]?.k === 'tok') el.appendChild(document.createTextNode(' '));
@@ -62,13 +62,13 @@ function chipOf(n: Node | null, box: HTMLElement): HTMLElement | null {
 }
 
 export const TokenEditor = forwardRef<TokenEditorHandle, Props>(function TokenEditor(
-  { initial, onChange, multiline, readOnly, label, buttonLabel, group, lockButton, describedBy, invalid, onFocus }, ref,
+  { initial, onChange, multiline, readOnly, label, buttonLabel, msgId, lockButton, describedBy, invalid, onFocus }, ref,
 ) {
   const el = useRef<HTMLDivElement>(null);
   const range = useRef<Range | null>(null);
 
   useEffect(() => {
-    if (el.current) fill(el.current, initial, buttonLabel, group);
+    if (el.current) fill(el.current, initial, buttonLabel, msgId);
     // treść startowa tylko przy montażu; nowy początek — nowy `key`
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -238,13 +238,13 @@ export const TokenEditor = forwardRef<TokenEditorHandle, Props>(function TokenEd
       const before = charBefore();
       const after = charAfter();
       if (before && !/\s/.test(before) && !/[([„"]/.test(before)) insertNode(document.createTextNode(' '));
-      insertNode(chip(id, buttonLabel, group));
+      insertNode(chip(id, buttonLabel, msgId));
       /* odstęp po klocku, żeby kursor nie kleił się do niego — chyba że dalej jest odstęp albo znak przestankowy */
       if (!/^[\s.,:;!?)\]”]$/.test(after)) insertNode(document.createTextNode(' '));
       el.current?.focus();
     },
     focus: () => el.current?.focus(),
-  }), [readOnly, buttonLabel, group]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [readOnly, buttonLabel, msgId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div

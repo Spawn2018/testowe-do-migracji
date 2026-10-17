@@ -298,8 +298,15 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
     setOpenInvoiceId(null);
     window.setTimeout(() => {
       const el = document.querySelector<HTMLElement>(`[data-bill="${CSS.escape(id)}"]`);
-      el?.scrollIntoView({ block: 'center' });
-      (el?.matches('tr') ? el : el?.querySelector<HTMLElement>('.inv-card-hd'))?.focus({ preventScroll: true });
+      /* nagłówek faktury (wiersz tabeli albo nagłówek karty na telefonie) na górze obszaru treści — przewija się tylko
+         `main`, pasek górny zostaje (F7: scrollIntoView przewijał też dokument; „center” na telefonie chował numer) */
+      const head = el?.matches('tr') ? el : el?.querySelector<HTMLElement>('.inv-card-hd') ?? el;
+      const box = head?.closest('main');
+      if (head && box) {
+        const top = head.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 12;
+        box.scrollTo({ top: Math.max(0, top) });
+      }
+      head?.focus({ preventScroll: true });
     }, 50);
   }, [openInvoiceId, list, setOpenInvoiceId]);
   const dispute = (id: string) => {

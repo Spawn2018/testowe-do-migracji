@@ -38,6 +38,8 @@ const PL: Record<string, string> = {
   p6_org_KSH: 'KSH',
   p6_decides: 'decyduje {org}',
   p6_fills: 'uzupełnia {org}',
+  /* A4 (wyglad/W-faktura-termin, F7): faktura po terminie */
+  p6_checks_pay: 'sprawdza płatność {org}',
   p6_nobody: 'nikt nie wziął',
   p6_taken: 'przypisana: {name}',
   p6_taken_me: 'przypisana: Ty',
@@ -82,6 +84,7 @@ const PL: Record<string, string> = {
   p6_case_load: 'Transport',
   p6_case_dec: 'Decyduje',
   p6_case_fill: 'Uzupełnia',
+  p6_case_pay: 'Sprawdza płatność',
   p6_case_dec_line: '{org} · {role} (albo administrator HHL)',
   p6_case_dec_admin: '{org} · Administrator',
   p6_load_unknown: 'Transport spoza Twojej listy',

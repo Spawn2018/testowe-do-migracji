@@ -7,13 +7,13 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Bill } from '../src/types';
 import {
-  INVOICE_OVERDUE_KEY, INVOICE_OVERDUE_KIND, invoiceOverdueId, invoiceOverdueRisks, isInvoiceOverdue, syncInvoiceOverdue,
+  INVOICE_OVERDUE_KEY, INVOICE_OVERDUE_KIND, invoiceOverdueId, invoiceOverdueRisks, isInvoiceOverdue, refreshInvoiceOverdue, syncInvoiceOverdue,
 } from '../src/lib/invoiceOverdue';
 import { riskFromRow } from '../src/data/mappers';
 import { riskText } from '../src/i18n/messages';
 import { buildTodo, riskGo, visibleTodoRisks } from '../src/lib/p6Todo';
 import { todoQueue } from '../src/lib/cockpitE9';
-import { INVOICE_LINK_SAMPLE, MESSAGES, tokenLabelIn } from '../src/lib/p8Texts';
+import { INVOICE_LINK_IDS, INVOICE_LINK_SAMPLE, MESSAGES, tokenLabelIn } from '../src/lib/p8Texts';
 import { NOTIFY_CATALOG } from '../src/lib/notifyCatalog';
 
 const NOW = '2026-11-20T10:00:00Z';
@@ -43,8 +43,8 @@ describe('A4 — kiedy faktura jest „po terminie”', () => {
       titleParams: { number: 'HHL/FV/2026/0901', from: 'HHL', to: 'KSH', due: '15.10.2026' },
     });
     expect(r!.loadId).toBeUndefined();
-    expect(riskText('pl', r!.title, r!.titleKey, r!.titleParams)).toBe('Faktura HHL/FV/2026/0901 (HHL → KSH) nieopłacona po terminie 15.10.2026');
-    expect(r!.title).toBe('Faktura HHL/FV/2026/0901 (HHL → KSH) nieopłacona po terminie 15.10.2026');
+    expect(riskText('pl', r!.title, r!.titleKey, r!.titleParams)).toBe('Faktura HHL/FV/2026/0901 (HHL\u00a0→\u00a0KSH) nieopłacona po terminie 15.10.2026');
+    expect(r!.title).toBe('Faktura HHL/FV/2026/0901 (HHL\u00a0→\u00a0KSH) nieopłacona po terminie 15.10.2026');
   });
 });
 
@@ -59,7 +59,7 @@ describe('A4 — wiersz bazy → sprawa (kontrakt dla wykonawcy)', () => {
     expect(r.invoiceId).toBe('inv-1');
     expect(r.type).toBe('OPS');
     expect(riskGo(r)).toBe('INVOICE');
-    expect(riskText('pl', r.title, r.titleKey, r.titleParams)).toBe('Faktura SCX/FV/1 (SCX → HHL) nieopłacona po terminie 26.10.2026');
+    expect(riskText('pl', r.title, r.titleKey, r.titleParams)).toBe('Faktura SCX/FV/1 (SCX\u00a0→\u00a0HHL) nieopłacona po terminie 26.10.2026');
   });
   it('sprawa liczy się u HHL (Administrator i Operacje), nie u SCX i KSH; osobna karta bez transportu', () => {
     expect(todoQueue('HHL', [r], 'HHL_ADMIN')?.total).toBe(1);
@@ -95,7 +95,8 @@ describe('A4 — przejście do faktury', () => {
     const card = read('src/components/risks/TodoCard.tsx');
     expect(card).toContain('data-rk-go="invoice"');
     expect(card).toContain("rt(locale, 'p6_invoice')");
-    expect(card).toContain("i.go === 'AWIZACJA' || i.go === 'DOCS' || i.go === 'INVOICE') ? rtp(locale, 'p6_fills'");
+    expect(card).toContain("const who = i.go === 'INVOICE' ? rtp(locale, 'p6_checks_pay', { org })");
+    expect(read('src/i18n/p6.ts')).toContain("p6_checks_pay: 'sprawdza płatność {org}',");
     const panel = read('src/components/risks/TodoPanel.tsx');
     expect(panel).toMatch(/i\.go === 'INVOICE' && i\.risk\?\.invoiceId\) \{\s*setOpenInvoiceId\(i\.risk\.invoiceId\);\s*setView\('inv'\);/);
   });
@@ -106,16 +107,21 @@ describe('A4 — przejście do faktury', () => {
     const panel = read('src/views/BillsPanel.tsx');
     expect(panel).toContain('const openInvoiceId = useTowerStore((s) => s.openInvoiceId);');
     expect(panel).toMatch(/setOpenId\(id\);\s*setOpenInvoiceId\(null\);/);
-    expect(panel).toContain("focus({ preventScroll: true })");
+    expect(panel).toContain("head?.focus({ preventScroll: true });");
+    /* F7: przewija się tylko `main` — pasek górny zostaje; ukryte pole pliku nie wydłuża dokumentu */
+    expect(panel).not.toContain("el?.scrollIntoView({ block: 'center' })");
+    expect(panel).toContain("const box = head?.closest('main');");
+    expect(read('src/components/invoices/invoices.css')).toContain('.inv-page{position:relative}');
     const view = read('src/views/InvoicesView.tsx');
-    expect(view).toMatch(/if \(openDirection && sections\.includes\(openDirection\)\) setTab\(openDirection\);/);
+    expect(view).toContain('if (openDirection) setTab(openDirection);');
+    expect(view).toContain('const openDirection = target && sections.includes(target.direction) ? target.direction : undefined;');
   });
 });
 
 describe('A4 — „Kto co dostaje” i treść e-maila', () => {
   it('demo: wiersz „Faktura nieopłacona po terminie” w Pieniądzach — tylko HHL (Administrator: dzwonek i e-mail, Operacje: dzwonek)', () => {
     const src = read('src/components/options/demo.tsx');
-    expect(src).toContain("{ id: 'inv_overdue', title: 'Faktura nieopłacona po terminie', sub: 'raz na fakturę · tylko HHL · znika po „Opłacona”', target: 'Faktury › ta faktura',");
+    expect(src).toContain("{ id: 'inv_overdue', perDay: 1, title: 'Faktura nieopłacona po terminie', sub: 'raz na fakturę · tylko HHL · sprawa znika po „Opłacona” albo sporze', target: 'Faktury › ta faktura',");
     expect(src).toContain("cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },");
   });
   it('produkcja: wiersz dopisuje wykonawca razem z macierzą (do tego czasu katalog bez niego)', () => {
@@ -132,13 +138,18 @@ describe('A4 — „Kto co dostaje” i treść e-maila', () => {
     expect(m.body).toBe('Faktura {{invoiceNo}} ({{week}}), {{amount}}: termin płatności {{due}} minął, a faktura nie jest oznaczona jako opłacona. Sprawdź płatność i oznacz fakturę: {{link}}');
   });
   it('w wiadomościach o fakturach klocek linku to „Link do faktury”, a podgląd prowadzi do faktury (wszystkie e-maile faktur)', () => {
-    expect(tokenLabelIn('link', 'inv')).toBe('Link do faktury');
-    expect(tokenLabelIn('link', 'load')).toBe('Link do transportu');
+    for (const id of ['INVOICE_NEW', 'PAYMENT_REMINDER', 'INVOICE_DISPUTED', 'INVOICE_DISPUTE_REPLY', 'INVOICE_DISPUTE_RESOLVED', 'INVOICE_OVERDUE']) {
+      expect(tokenLabelIn('link', id), id).toBe('Link do faktury');
+    }
+    /* F7: „Polisa wygasa” (ta sama grupa) prowadzi do sprawy — zostaje „Link do transportu” */
+    expect(tokenLabelIn('link', 'INSURANCE_EXPIRY')).toBe('Link do transportu');
+    expect(tokenLabelIn('link', 'LOAD_STATUS_CHANGED')).toBe('Link do transportu');
+    expect(INVOICE_LINK_IDS.has('INSURANCE_EXPIRY')).toBe(false);
     expect(INVOICE_LINK_SAMPLE).toMatch(/^tower\.log-mar\.pl\/#\/finanse\/faktury\//);
     const mt = read('src/components/options/MessageTexts.tsx');
-    expect(mt).toContain("if (item.group === 'inv') s.link = INVOICE_LINK_SAMPLE;");
-    expect(mt.match(/group=\{item\.group\}/g)).toHaveLength(2);
-    expect(read('src/components/options/TokenEditor.tsx')).toContain('tokenLabelIn(id, group)');
+    expect(mt).toContain("if (INVOICE_LINK_IDS.has(item.id)) s.link = INVOICE_LINK_SAMPLE;");
+    expect(mt.match(/msgId=\{item\.id\}/g)).toHaveLength(2);
+    expect(read('src/components/options/TokenEditor.tsx')).toContain('tokenLabelIn(id, msgId)');
   });
 });
 
@@ -152,6 +163,35 @@ describe('A1 L17 — „Potwierdź dostawę” (D-20261017-2130-01 §5)', () => 
       expect(d).toContain("dec_opt_STILL_EN_ROUTE: 'Jeszcze w drodze — przypomnij jutro',");
       expect(read('src/lib/workflowCreator.ts')).toContain("'DELIVERY_UNCONFIRMED'] as const;");
     }
+  });
+});
+
+describe('A4 — poprawki po F7', () => {
+  it('„Otwórz fakturę” tylko dla sprawy „po terminie” — inna sprawa z invoice_id (np. INVOICE_MISMATCH) zostaje przy decyzji', () => {
+    const base = { id: 'x', type: 'OPS' as const, severity: 'HIGH' as const, title: 't', detail: '', owner: 'HHL' as const, meta: '', nextAction: '', ageHours: 0, invoiceId: 'inv-1' };
+    expect(riskGo({ ...base, kind: 'INVOICE_OVERDUE' })).toBe('INVOICE');
+    expect(riskGo({ ...base, kind: 'INVOICE_MISMATCH' })).not.toBe('INVOICE');
+  });
+  it('tytuł nie łamie się w nawiasie: twarde spacje wokół „→”', () => {
+    const [r] = invoiceOverdueRisks([bill()], '2026-11-20', NOW);
+    expect(riskText('pl', r!.title, r!.titleKey, r!.titleParams)).toBe('Faktura HHL/FV/2026/0901 (HHL\u00a0→\u00a0KSH) nieopłacona po terminie 15.10.2026');
+    expect(r!.title).toContain('(HHL\u00a0→\u00a0KSH)');
+  });
+  it('demo: przeliczenie spraw z faktur przy wczytaniu zapisanego stanu (nowa po terminie dochodzi, opłacona znika)', () => {
+    const before = invoiceOverdueRisks([bill()], '2026-11-20', NOW);
+    const paid = refreshInvoiceOverdue(before, [bill({ payment: 'OPLACONA', paidAt: '2026-11-01' })], '2026-11-20', NOW);
+    expect(paid.filter((r) => r.kind === INVOICE_OVERDUE_KIND)).toEqual([]);
+    const late = refreshInvoiceOverdue([], [bill({ id: 'b9', dueDate: '2026-11-19' })], '2026-11-20', NOW);
+    expect(late.map((r) => r.id)).toEqual([invoiceOverdueId('b9')]);
+    expect(refreshInvoiceOverdue(before, [bill()], '2026-11-20', NOW)).toBe(before);
+    expect(read('src/store/useTowerStore.ts')).toContain('refreshInvoiceOverdue(st.risks, st.bills, localDateOf(now), now)');
+  });
+  it('adres: po otwarciu faktury wraca do widoku; niewidoczna albo nieistniejąca faktura — „Brak dostępu”', () => {
+    const rs = read('src/hooks/useRouteSync.ts');
+    expect(rs).toMatch(/if \(r\.kind === 'invoice'\) \{\s*if \(st\.openInvoiceId\) return;/);
+    expect(rs).toContain('}, [view, selectedLoadId, loads, openInvoiceId, navigate]);');
+    const iv = read('src/views/InvoicesView.tsx');
+    expect(iv).toContain('const lost = !!openInvoiceId && bills.length > 0 && !openDirection;');
   });
 });
 

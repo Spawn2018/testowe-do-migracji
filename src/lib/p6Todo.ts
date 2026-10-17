@@ -81,7 +81,7 @@ const AWIZ_KEYS = /^(rk_seed_res|rk_seed_escort|rk_order_no)/;
 
 export function riskGo(r: Risk): IssueGo {
   /* A4 (wyglad/W-faktura-termin): faktura po terminie — do tej faktury w Fakturach */
-  if (r.invoiceId) return 'INVOICE';
+  if (r.kind === 'INVOICE_OVERDUE' && r.invoiceId) return 'INVOICE';
   if (r.type === 'DOC') return 'DOCS';
   if (r.kind === 'RESOURCE_MISSING' || (r.titleKey && AWIZ_KEYS.test(r.titleKey))) return 'AWIZACJA';
   return r.loadId ? 'OPEN' : 'NONE';

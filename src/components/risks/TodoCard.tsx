@@ -74,7 +74,8 @@ export function issueTexts(i: TodoIssue, ctx: CardCtx): { name: string; detail: 
   const { locale } = ctx;
   const org = rt(locale, `p6_org_${i.owner}`);
   const a = ctx.assignOn ? ctx.assignee(i.id) : null;
-  const who = !i.decision && (i.go === 'AWIZACJA' || i.go === 'DOCS' || i.go === 'INVOICE') ? rtp(locale, 'p6_fills', { org }) : rtp(locale, 'p6_decides', { org });
+  const who = i.go === 'INVOICE' ? rtp(locale, 'p6_checks_pay', { org })
+    : !i.decision && (i.go === 'AWIZACJA' || i.go === 'DOCS') ? rtp(locale, 'p6_fills', { org }) : rtp(locale, 'p6_decides', { org });
   const taken = !ctx.assignOn ? null : !a ? rt(locale, 'p6_nobody') : a.id === ctx.me?.id ? rt(locale, 'p6_taken_me') : rtp(locale, 'p6_taken', { name: a.name });
   const load = i.loadId ? ctx.loadOf(i.loadId) : undefined;
   if (i.decision) {
@@ -219,7 +220,7 @@ function CaseDetail({ i, ctx }: { i: TodoIssue; ctx: CardCtx }) {
           <div><dt>{rt(locale, 'p6_case_load')}</dt><dd>{loadLine(load, ctx)}</dd></div>
         ) : null}
         <div>
-          <dt>{rt(locale, !d && (i.go === 'AWIZACJA' || i.go === 'DOCS' || i.go === 'INVOICE') ? 'p6_case_fill' : 'p6_case_dec')}</dt>
+          <dt>{rt(locale, i.go === 'INVOICE' ? 'p6_case_pay' : !d && (i.go === 'AWIZACJA' || i.go === 'DOCS') ? 'p6_case_fill' : 'p6_case_dec')}</dt>
           <dd>{adminOnly
             ? rtp(locale, 'p6_case_dec_admin', { org: rt(locale, `p6_org_${i.owner}`) })
             : rtp(locale, 'p6_case_dec_line', { org: rt(locale, `p6_org_${i.owner}`), role: rt(locale, `p6_role_${roleKey}`) })}</dd>
