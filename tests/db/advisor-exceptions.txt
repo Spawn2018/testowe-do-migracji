@@ -3,6 +3,7 @@
 # Obiekty widoków v_load_* NIE są wyjątkami — migracja 0196 ustawia security_invoker.
 rls_enabled_no_policy	public.account_relink_pending	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
 rls_enabled_no_policy	public.anon_call_window	B6: licznik wywołań bez logowania; RLS bez polityki, brak grantu dla ról API
+rls_enabled_no_policy	public.emtrack_login_state	A8: pauza logowania emtrack; RLS bez polityki, zapis tylko z Edge (service_role)
 rls_enabled_no_policy	public.auth_login_events	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
 rls_enabled_no_policy	public.corridor_fetches	tabela zamknięta dla ról API (RLS bez policy, brak grantu)
 rls_enabled_no_policy	public.corridor_obstacles	tabela zamknięta dla ról API (RLS bez policy, brak grantu)

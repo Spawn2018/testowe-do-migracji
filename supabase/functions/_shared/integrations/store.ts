@@ -235,6 +235,21 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (r.error) return false;
       return r.data === true;
     },
+    async emtrackLoginState() {
+      const r = await sb.from('emtrack_login_state').select('fail_streak,skipped_until,secret_fp').eq('id', 1).maybeSingle();
+      if (r.error || !r.data) return null;
+      const d = r.data as { fail_streak: number; skipped_until: string | null; secret_fp: string | null };
+      return { failStreak: d.fail_streak ?? 0, skippedUntil: d.skipped_until, secretFp: d.secret_fp };
+    },
+    async saveEmtrackLoginState(state: { failStreak: number; skippedUntil: string | null; secretFp: string | null }) {
+      must(await sb.from('emtrack_login_state').upsert({
+        id: 1,
+        fail_streak: state.failStreak,
+        skipped_until: state.skippedUntil,
+        secret_fp: state.secretFp,
+        updated_at: new Date().toISOString(),
+      }), 'emtrack_login_state');
+    },
         async telmEmtrackWebEnabled() {
       const r = await sb.rpc('telm_emtrack_web_enabled');
       if (r.error) throw new Error(`telm_emtrack_web_enabled: ${r.error.message}`);

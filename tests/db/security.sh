@@ -270,5 +270,9 @@ val "B6: report_client_error limit 60/15 min" $HHL "$HDR; select report_client_e
 val "B6: keep_alive limit" $HHL "$HDR; select (keep_alive('worker')->>'limited')::text" true
 val "B6: report_csp_violation limit" $HHL "$HDR; select report_csp_violation('script-src',null,null,null,null,null,null,null,'report','inny-parametr',null)::text" false
 
+chk6 "A8: anon bez SELECT emtrack_login_state" "$(psql "$PGURL" -Atq -c "select has_table_privilege('anon','public.emtrack_login_state','select')::text")" false
+chk6 "A8: authenticated bez SELECT emtrack_login_state" "$(psql "$PGURL" -Atq -c "select has_table_privilege('authenticated','public.emtrack_login_state','select')::text")" false
+chk6 "A8: zero otwartych SOURCE_DOWN:EMTRACK_WEB z datą w kluczu" "$(psql "$PGURL" -Atq -c "select count(*) from risk_signals where resolved_at is null and dedup_key like 'SOURCE_DOWN:EMTRACK_WEB:%'")" 0
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

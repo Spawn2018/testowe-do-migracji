@@ -41,6 +41,9 @@ import {
 import { unknownCodeRiskInput } from '../../../../src/lib/pl/describe.ts';
 import { deeplTranslate, translateFreeText, usageLevel, DEEPL_MONTHLY_LIMIT } from '../../../../src/lib/pl/deepl.ts';
 import {
+  emtrackLoginFail, emtrackLoginFresh, emtrackLoginOk, emtrackLoginSkipped, emtrackNextTryAt, emtrackSecretFp,
+} from './emtrackLogin.ts';
+import {
   isSourceFailure, planSailingSync, sourceDownRisk, unknownStatusRisk,
   type AutoSailingSource, type DbSailing, type IncomingSailing, type RiskInput, type SailingInsert, type SailingPatch, type VesselRow,
 } from './sync.ts';
@@ -105,6 +108,9 @@ export interface SyncStore {
   }): Promise<void>;
   /** TELM: faza z pozycji (SE/morze) przy podłączeniu w trasie. */
   inferPhaseFromPosition?(loadId: string, lat: number, lon: number, ts: string): Promise<string | null>;
+  /** A8: licznik błędów logowania emtrack i pauza 6 h. */
+  emtrackLoginState?(): Promise<import('./emtrackLogin.ts').EmtrackLoginState | null>;
+  saveEmtrackLoginState?(state: import('./emtrackLogin.ts').EmtrackLoginState): Promise<void>;
   /** II-8: zapis bieżącej pogody morskiej */
   saveMarineCondition?(row: {
     corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA';
@@ -1141,6 +1147,21 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
     };
   }
 
+  const secretFp = emtrackSecretFp(login, password);
+  const prevLogin = deps.store.emtrackLoginState ? await deps.store.emtrackLoginState() : null;
+  let loginState = emtrackLoginFresh(prevLogin, secretFp);
+  if (emtrackLoginSkipped(loginState, deps.now())) {
+    return {
+      job: 'emtrack-web', mode: 'LIVE', ok: true,
+      reason: `Logowanie pominięte do ${loginState.skippedUntil} — po trzech błędach jedna próba na 6 h`,
+      observations: {
+        skipped: 'true',
+        skipped_until: loginState.skippedUntil ?? '',
+        next_try_at: emtrackNextTryAt(loginState) ?? '',
+      },
+    };
+  }
+
   let version = '';
   const verRes = await readText(deps, 'https://emtrack.eu/app/', { headers: { 'User-Agent': EMTRACK_UA } });
   if (verRes.ok) {
@@ -1172,20 +1193,26 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
     loginOk = r.loginOk;
   } catch (e) {
     const w = e instanceof Error ? e.message : String(e);
+    loginState = emtrackLoginFail(loginState, deps.now());
+    if (deps.store.saveEmtrackLoginState) await deps.store.saveEmtrackLoginState(loginState);
     await deps.store.raiseRisk(sourceDownRisk('EMTRACK_WEB', [w], deps.now().toISOString(), 'https://emtrack.eu/app/'));
     return {
       job: 'emtrack-web', mode: 'LIVE', ok: false, risks: 1, warnings: [w],
-      observations: { sentTypes: sentLog.map((s) => s.type).join(',') },
+      observations: { sentTypes: sentLog.map((s) => s.type).join(','), fail_streak: String(loginState.failStreak) },
     };
   }
   if (!loginOk) {
+    loginState = emtrackLoginFail(loginState, deps.now());
+    if (deps.store.saveEmtrackLoginState) await deps.store.saveEmtrackLoginState(loginState);
     await deps.store.raiseRisk(sourceDownRisk('EMTRACK_WEB', ['login_failed'], deps.now().toISOString(), 'https://emtrack.eu/app/'));
     return {
       job: 'emtrack-web', mode: 'LIVE', ok: false, risks: 1, warnings: ['login_failed'],
-      observations: { sentTypes: sentLog.map((s) => s.type).join(',') },
+      observations: { sentTypes: sentLog.map((s) => s.type).join(','), fail_streak: String(loginState.failStreak) },
     };
   }
-  await deps.store.resolveRisks('SOURCE_DOWN:EMTRACK_WEB:');
+  loginState = emtrackLoginOk(loginState);
+  if (deps.store.saveEmtrackLoginState) await deps.store.saveEmtrackLoginState(loginState);
+  await deps.store.resolveRisks('SOURCE_DOWN:EMTRACK_WEB');
 
   const loads = deps.store.listActiveLoadsForTelematics ? await deps.store.listActiveLoadsForTelematics() : [];
   const moveSec = Number(deps.env.TELM_WEB_MOVE_SEC ?? 120);

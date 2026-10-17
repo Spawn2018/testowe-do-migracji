@@ -147,15 +147,28 @@ const SOURCE_KIND: Record<SourceId, RiskKind> = {
   HERE_TRAFFIC_PL: 'ROAD_PL', EMTRACK_WEB: 'JOB_FAILURE',
 };
 
-/** Awaria źródła albo zmiana struktury → ryzyko widoczne w kolejce (jedno na źródło i dzień), nigdy cicha pustka. */
+const warsawStamp = (utc: string) => new Intl.DateTimeFormat('pl-PL', {
+  timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', year: 'numeric',
+  hour: '2-digit', minute: '2-digit',
+}).format(new Date(utc));
+
+/** Awaria źródła albo zmiana struktury → ryzyko widoczne w kolejce, nigdy cicha pustka.
+ *  Emtrack (A8): jeden klucz bez daty, w tytule „od kiedy”. Reszta źródeł: jeden klucz na dzień. */
 export function sourceDownRisk(src: SourceId, warnings: string[], nowIso: string, url?: string): RiskInput {
+  const emtrack = src === 'EMTRACK_WEB';
+  const when = warsawStamp(nowIso);
   return {
     kind: SOURCE_KIND[src],
     severity: src.startsWith('POLFERRIES') || src.startsWith('STENA') ? 'HIGH' : 'MEDIUM',
-    title: `Źródło niedostępne: ${SOURCE_LABEL[src]} — HHL weryfikuje ręcznie`,
+    title: emtrack
+      ? `Źródło niedostępne: ${SOURCE_LABEL[src]} od ${when} — HHL weryfikuje ręcznie`
+      : `Źródło niedostępne: ${SOURCE_LABEL[src]} — HHL weryfikuje ręcznie`,
     titleKey: 'rk_source_down', params: { source: SOURCE_LABEL[src], source_key: `rk_src_${src}` },
-    detail: { zrodlo: src, ostrzezenia: warnings.slice(0, 10), czas: nowIso },
-    dedup: `SOURCE_DOWN:${src}:${nowIso.slice(0, 10)}`, sourceUrl: url ?? null,
+    detail: emtrack
+      ? { zrodlo: src, ostrzezenia: warnings.slice(0, 10), czas: nowIso, od_kiedy: nowIso }
+      : { zrodlo: src, ostrzezenia: warnings.slice(0, 10), czas: nowIso },
+    dedup: emtrack ? `SOURCE_DOWN:${src}` : `SOURCE_DOWN:${src}:${nowIso.slice(0, 10)}`,
+    sourceUrl: url ?? null,
   };
 }
 
