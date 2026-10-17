@@ -2804,4 +2804,28 @@ Kolejka PR wyglądu (po #282, już na produkcji): **#284 `wyglad/W-konta`**. Sca
 
 B2 zamknięte w dokumentach: merge `27daa36a` (PR #287).
 
+## 2026-10-17 — #284 `wyglad/W-konta` NA PRODUKCJI
+
+- PR #284; merge `54af2ca9`. Bez migracji.
+- Wdrożenie: `dpl_4GnUJaM7HSSZJ5hA7ZPP8Ur5muTU`, 17.10.2026 15:00; tower/makieta 200; `assets/index-CHxNPYB5.js`; 0× `service_role`.
+- Dalej: **B6**.
+
+## 2026-10-17 — B6, uwagi D-20261017-1530-01
+
+PR #290 (`pakiet/audyt-17-b6`, migracja 0225, jeszcze bez scalenia). Uwagi koordynatora D-20261017-1530-01 pkt 1–4 — zrobione:
+1. `revoke insert, update` na `loads` dla `authenticated` i grant kolumn bez `rio_secret`; kopia uprawnień w `audit_log` (`B6_LOADS_GRANTS`).
+2. Licznik anon: IP z `cf-connecting-ip`, potem `x-forwarded-for`, na końcu `inet_client_addr()`; przeglądarka z `user-agent`.
+3. Tytuł „Limit e-maili na dziś”, treść z `{n}`, klucz `EMAIL_BUDGET` w `notification_copy`.
+4. `payload.push_fallback` poza limitem 20/5, licznik `*pilne*`.
+Zaproszenia i reset hasła (`AUTH_INVITE`, `AUTH_PASSWORD_RESET`) zostają w rezerwie L-13, poza limitem 5 na rodzaj.
+Bez zmian merytorycznych: `guard_invoice_update`, `loads_read` bez SITE.
+Testy w `security.sh` (oczekiwane 115 lokalnie / 111 na TEST). Brama `db` i scalenie B6 — po tym commicie.
+
+## 2026-10-17 — DOPISEK D-20261017-1450-01 W PLANIE
+
+Kolejka PR wyglądu (po #284, już na produkcji): **#289 `wyglad/W-naprawy`**. Scalanie po skończonym punkcie (po B6 albo później), przy zielonych `unit` i `visual`; wdrożenie po scaleniu bezpieczne przed A4 (`INVOICE_A4` zostaje wyłączone do wdrożenia A4). Wzorce `visual` odświeża koordynator; czerwony `visual` przed jego commitem z wzorcami — sygnał „VISUAL #289”.
+
+Przy A4: kreator, „Do wystawienia”, menu i Kokpit z tego PR; baza `register_invoice` + przestawienie `INVOICE_A4`. Przy B5: `payload.preview_as`. Przy A2: `DELIVERED_CHECK`. Przy A3: `CMR_UPLOAD` albo `DOC_MISSING` bez nowego kodu. Przy A6: `KSH_DATES_CHECK`. `billReady` = lustro `c17_cmr_after_delivery` — zmiana warunku w bazie to sygnał do widoku. A5 bez zmian z tego dopisku.
+
+
 

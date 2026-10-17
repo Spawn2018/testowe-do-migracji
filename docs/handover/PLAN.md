@@ -178,7 +178,8 @@ Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODU
 - **#279 `wyglad/W-demo` (D-20261017-0930-01, na #277):** daty demo zgodne z 23.09; ETA w demo (`demoEta.ts` w `PROD_DEMO_SWAP`); `STORE_SCHEMA_VERSION` 3→4; „po oknie” tylko za oknem dostawy; `fxForDate(…, unloaded)` kurs bieżący przed rozładunkiem. **SCALONE I WDROŻONE.**
 - **#280 `wyglad/W-pl` (D-20261017-0915-01, na #279):** panel tylko po polsku (8A); EN/SV tylko w aplikacji kierowcy; N20 w aplikacji; pierwsze wczytanie 317,6 kB gzip. **SCALONE I WDROŻONE.**
 - **#282 `wyglad/W-eta` (D-20261017-1100-01, na #280):** `etaDuration` — czasy „X d Y h Z min” (pigułka, Mapa, blok ETA, pasek śledzenia, PDF, sprawy ETA w demo); minus „−”; „przyjazd nocą” na Mapie i w Harmonogramie; Opcje › Zasady transportu › Kalibracja ETA (produkcja: „Brak źródła danych.” do podłączenia w P4-u); „Ten telefon / komputer”: „Wiadomości z Czatu nie przychodzą e-mailem.” (C3-p). **SCALONE I WDROŻONE** (`a5da99ba`, `dpl_H6KzHnyockMQ6BGX3XtBACDHuuD8`).
-- **#284 `wyglad/W-konta` (D-20261017-1220-01, na #282):** demo „Rodzaj konta (demo)” — Administrator / Operacje (HHL), Dyspozytor / Użytkownik (SCX); na produkcji przełącznika nie ma; `accountRole(role)` (`src/lib/accountRole.ts`) — produkcja = `getAuthProfile()?.role`; Pomoc › Kontakt i „Co nowego” bez danych: „pojawi się tutaj po włączeniu danych”; Opcje › SMS przy miejscach do P8: Operacje HHL tylko oglądają, „PL +48 / SE +46 (jak w ekranie P8)”; stare formularze Opcji u Operacji HHL tylko do odczytu (C8 N2 — wygląd tym PR; w C8 zostaje strona bazy); w Cenniku „Strona” i „Firma” zostają aktywne; `konto=` w adresie; „Moje konto” Użytkownika SCX — osoba wymyślona. Nowe sprawdzenia uprawnień w widoku (A2, A4, B5 i dalej) przez `accountRole(role)`, nie `getAuthProfile()?.role`. `prodFacade.ts` zostaje na profilu.
+- **#284 `wyglad/W-konta` (D-20261017-1220-01, na #282):** demo „Rodzaj konta (demo)” — Administrator / Operacje (HHL), Dyspozytor / Użytkownik (SCX); na produkcji przełącznika nie ma; `accountRole(role)` (`src/lib/accountRole.ts`) — produkcja = `getAuthProfile()?.role`; Pomoc › Kontakt i „Co nowego” bez danych: „pojawi się tutaj po włączeniu danych”; Opcje › SMS przy miejscach do P8: Operacje HHL tylko oglądają, „PL +48 / SE +46 (jak w ekranie P8)”; stare formularze Opcji u Operacji HHL tylko do odczytu (C8 N2 — wygląd tym PR; w C8 zostaje strona bazy); w Cenniku „Strona” i „Firma” zostają aktywne; `konto=` w adresie; „Moje konto” Użytkownika SCX — osoba wymyślona. Nowe sprawdzenia uprawnień w widoku (A2, A4, B5 i dalej) przez `accountRole(role)`, nie `getAuthProfile()?.role`. `prodFacade.ts` zostaje na profilu. **SCALONE I WDROŻONE** (`54af2ca9`, `dpl_4GnUJaM7HSSZJ5hA7ZPP8Ur5muTU`).
+- **#289 `wyglad/W-naprawy` (D-20261017-1450-01, po #284):** scalasz po skończonym punkcie (po B6 albo później), przy zielonych `unit` i `visual`; wdrożenie po scaleniu jest bezpieczne przed A4. Wzorce `visual` odświeża koordynator; gdy `visual` czerwony przed jego commitem z wzorcami — sygnał „VISUAL #289”. W PR: jedna definicja „gotowy do faktury” (`billReady`: `READY_TO_INVOICE` / `INVOICED` albo warunek C17 — aktualny CMR wgrany po rozładunku) dla kreatora, kafla „Czeka na wystawienie”, liczby przy „Faktury” w menu i Kokpitu; transporty bez CMR w kreatorze szare, „czeka na CMR”; tydzień samych CMR z dopiskiem „· czeka na CMR”, domyślnie najnowszy tydzień z gotowym; suma „zgodna” tylko bez flag „kwota” (`billSumOk`); co do grosza i „pominięty” tylko z gotowych za wyłącznikiem `INVOICE_A4` w `src/lib/serverRules.ts` (w demo od razu, na produkcji po A4); kwota z odstępem tysięcy (`parseAmount`); telefon bez kart czekających, cel dotyku 44 px, kolumna „Dodaj”; B5: `payload.preview_as` → „… // H&H Logistics jako … // KSH” w Historii i na osi Status; nazwy spraw A2/A3/A6 w widoku; dane demo: CMR wgrany 2 h po rozładunku. Plik dopisku wchodzi z PR. Dowód: `docs/handover/odbior/W-naprawy/POROWNANIE.md`.
 
 P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji`, a hash scalenia P0a wpisujesz w pierwszym wpisie P0b w `POSTEP.md`.
 
@@ -424,11 +425,11 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 ### B6 · Bezpieczniki i uprawnienia (małe)
 1. **Bezpiecznik dzienny e-maili** (po 140 e-mailach z 15/16.10):
    - limit na osobę na dobę (20) i na rodzaj (np. 5);
-   - po przekroczeniu jedna wiadomość zbiorcza, licznik w `email_budget_day` na użytkownika.
-   - Test: 25 zdarzeń dla jednej osoby → 20 e-maili + 1 zbiorczy.
+   - po przekroczeniu jedna wiadomość „Limit e-maili na dziś” (klucz `EMAIL_BUDGET`, E43); licznik w `email_budget_day` na użytkownika. E-mail zapasowy W42 (`payload.push_fallback`) poza limitem, licznik `*pilne*`.
+   - Test: 25 zdarzeń dla jednej osoby → 20 e-maili + 1 zbiorczy; potem 1 pilny → wysłany (D-20261017-1530-01 pkt 3–4).
 2. **`guard_invoice_update`:** `payment_status`, `paid_at` i `paid_marked_*` zmienia tylko HHL. Test: SCX i KSH → odmowa.
-3. **`rio_secret`:** `revoke update (rio_secret) on loads from authenticated`; zapis tylko przez funkcję awizacji i sanitizer. Najpierw sprawdzasz, czy RPC awizacji nie pisze kolumny wprost.
-4. **Funkcje bez logowania** (`keep_alive`, `report_client_error`, `report_csp_violation`): limit na IP i przeglądarkę (60 / 15 min).
+3. **`rio_secret`:** `revoke insert, update` na całej tabeli `loads` dla `authenticated`, potem `grant insert/update` kolumn bez `rio_secret` (kopia uprawnień w `audit_log`). Zapis sekretu tylko przez sanitizer. `revoke` samej kolumny nie wystarcza (D-20261017-1530-01 pkt 1).
+4. **Funkcje bez logowania** (`keep_alive`, `report_client_error`, `report_csp_violation`): limit 60 / 15 min. IP: `cf-connecting-ip`, potem pierwszy adres `x-forwarded-for`, na końcu `inet_client_addr()`. Przeglądarka: nagłówek `user-agent`, nie parametr wywołującego (D-20261017-1530-01 pkt 2).
 5. **Polityka `loads_read`:** usuwasz martwą ścieżkę `OR current_org_kind() = 'SITE'`. Test w `security.sh`.
 
 ### A8 · emtrack: koniec 717 błędów na dobę (C15 — przeniesione tutaj)
@@ -453,7 +454,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - `apply_geofence_status` (nowa migracja):
   - wyjazd ze strefy załadunku (Śrem) po postoju ≥ 5 min → „Droga PL” i `actual_load_at`, **bez** warunku `loaded_confirmed()`;
   - wyjazd z placu (`SITE`, status `AT_SITE`) po postoju ≥ 10 min (`dwell_seconds` 600) → `auto_set_status(... 'DELIVERED', ...)` z czasem wyjazdu, w payloadzie `dwell_min`;
-  - krócej niż 10 min → sprawa „Czy dostarczono?” (L14, nowy rodzaj w `decision_types`, `payload.dwell_min`) dla SCX i HHL;
+  - krócej niż 10 min → sprawa „Czy dostarczono?” (L14, nowy rodzaj w `decision_types`, `payload.dwell_min`) dla SCX i HHL; kod dokładnie `DELIVERED_CHECK`, opcje `DELIVERED_YES` („Tak, dostarczono”) i `DELIVERED_NO` („Nie”); karta w panelu (`DeliveredCheckCard`) zostaje (D-20261017-1450-01 §2 pkt 4);
   - nazwa portu z `geofence.name` w payloadzie.
 - Odpowiedź na sprawę L14 w produkcji — funkcja `delivered_check_resolve(load, yes, note)`:
   - „Tak” → „Dostarczone” z czasem wyjazdu i wpisem w Historii;
@@ -467,7 +468,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - `doc_requirements`:
   - CMR → `anchor = AFTER_UNLOAD` (po „Dostarczone”), `offset_hours` z Opcji (dziś 24), odpowiada przewoźnik;
   - usuwasz regułę „CMR 2 h po załadunku”, wymagania POD, SPEC i LASHING oraz PERMIT_SE dla wszystkich.
-- Po „Dostarczone” bez CMR → sprawa SCX „Wgraj CMR”. Zamyka ją C17 po wgraniu.
+- Po „Dostarczone” bez CMR → sprawa SCX „Wgraj CMR”. Zamyka ją C17 po wgraniu. Jeśli jako sprawa (`decision_types`) — kod dokładnie `CMR_UPLOAD`, opcja `UPLOAD_CMR` („Wgraj CMR”); jeśli jako ryzyko `DOC_MISSING` z kategorią CMR — bez nowego kodu (D-20261017-1450-01 §2 pkt 4).
 - Zamykasz stare DOC_MISSING ze starego wymagania (dziś 21 fałszywych „po terminie”), z kopią.
 - `doc_requirement_set`: zmienia tylko Administrator HHL (E9), sprawdzenie roli w funkcji.
 - Test: SG-03 po „Dostarczone” → sprawa „Wgraj CMR” u SCX; wgranie CMR → sprawa znika, transport „Gotowe do fakturowania” (C17); Operacje HHL nie zmienią terminów.
@@ -499,9 +500,13 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - Test: komplet → „Gotowy” sam; brak telefonu kierowcy SE → brak „Gotowy” i jedna pozycja w brakach; koniec fałszywego braku „POLICY_SCX”; jedna liczba „Do zrobienia” w menu, Kokpicie i dzwonku.
 
 ### A4 · Faktura tylko z CMR, co do grosza, z VAT (E4, B7 — przeniesione z P5)
-- Kreator (`invoices3.ts` `billCandidates`, `pendingWeekLoads`) daje tylko transporty `READY_TO_INVOICE`. Reszta szara, z opisem „czeka na CMR”.
-- `register_invoice`:
-  - tolerancja 0: każda różnica ≥ 0,01 w walucie faktury → flaga KWOTA, bez „ZGODNA”; przy PLN porównanie po kursie NBP z faktury, do grosza;
+- Kreator, „Do wystawienia”, menu i Kokpit — `wyglad/W-naprawy` (#289, D-20261017-1450-01). `billReady` jest lustrem `c17_cmr_after_delivery`. Gdy zmieniasz ten warunek w bazie — sygnał, koordynator zmieni widok. Tych ekranów już nie zmieniasz (`billCandidates`, `pendingWeekLoads`, `invoiceTodoCount`, `BillsPanel`).
+- Baza: `register_invoice` + przy wdrożeniu przestawienie `INVOICE_A4: true` w `src/lib/serverRules.ts` (jedyna zmiana w widoku).
+- `register_invoice` (ta sama reguła co widok):
+  - pozycja tylko z `READY_TO_INVOICE` (albo `INVOICED` po drugiej stronie); inny → odmowa „Transport <kod> czeka na CMR”;
+  - tolerancja 0: różnica ≥ 0,01 → flaga KWOTA, także opłata paliwowa (`billToRpc`); przy PLN porównanie po kursie NBP z faktury, do grosza, bez „ZGODNA”;
+  - BRAK_NA_FAKTURZE tylko wśród `READY_TO_INVOICE` z tygodnia;
+- `register_invoice` (reszta bez zmian):
   - VAT liczony w bazie: `vat = round(net × 0,23, 2)`, `gross = net + vat`; inny VAT lub brutto → odmowa z komunikatem po polsku;
   - `due_date ≥ issue_date`;
   - INVOICE_NEW także dla faktury kosztowej (odbiorca HHL).
@@ -511,6 +516,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - Nowe sprawdzenia uprawnień w widoku: `accountRole(role)`, nie `getAuthProfile()?.role` (D-20261017-1220-01 §2).
 
 ### A5 · Rejs w awizacji → statusy „Prom” i „Port SE” same (B8, C8)
+- D-20261017-1450-01: bez zmian zakresu (kody spraw i faktura są w A2, A3, A4, A6, B5).
 - Okno Awizacja zapisuje `sailing_id`: wybór rejsu i armatora z `sailings` do Szwecji według daty. Wymagany do „Gotowy” przy trasie promowej (A9).
 - `promote_ferry_departures` dla obu przepraw (Gdańsk–Nynäshamn i Gdynia–Karlskrona). Statusy portów według `geofences.route`.
 - `compute_load_eta`:
@@ -530,7 +536,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
   - start na pierwszym aktywnym koncie KSH Użytkownik / SCX Dyspozytor;
   - `assert_not_preview()` w każdej funkcji zapisu i w `guard_*`;
   - dziennik start i koniec.
-- Przy impersonacji Historia zapisuje „<admin> (HHL) jako <osoba>”.
+- Przy impersonacji Historia zapisuje „<admin> (HHL) jako <osoba>”. Autor „jako” w Historii i na osi Status — `wyglad/W-naprawy` (`payload.preview_as`). Przy zapisie w Podglądzie (jeśli jakikolwiek zapis przejdzie — np. dziennik start/koniec): `load_events.payload.preview_as` = „Imię Nazwisko // KSH” (albo „// SCX”); `actor` zostaje administratorem (D-20261017-1450-01 §2 pkt 2).
 - Test `e9-role`: „Podgląd KSH: zapis → odmowa”; HHL widzi to, co KSH — bez numerów, kosztu i marży.
 - Nowe sprawdzenia uprawnień w widoku: `accountRole(role)`, nie `getAuthProfile()?.role` (D-20261017-1220-01 §2). `prodFacade.ts` (`canSeeWorkflows`, `canManageWorkflows`) zostaje na profilu.
 
@@ -559,7 +565,7 @@ Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny
      - `lp` pomijasz, `orderNo` usuwasz, `assemblySeq` jest opcjonalne;
    - filtr przewoźnika HH / HHL;
    - puste wiersze pominięte i policzone; „...” i „-” = puste; „A / B” → pola PL / SE.
-2. **Nic nie pada na datach (L31):** zamiast `raise exception` wiersz wchodzi, a gdy dostawa < załadunek, = załadunek albo > 14 dni → sprawa „Daty KSH do sprawdzenia” dla HHL i KSH. Dotyczy np. KR-03.
+2. **Nic nie pada na datach (L31):** zamiast `raise exception` wiersz wchodzi, a gdy dostawa < załadunek, = załadunek albo > 14 dni → sprawa „Daty KSH do sprawdzenia” dla HHL i KSH. Dotyczy np. KR-03. Kod dokładnie `KSH_DATES_CHECK`, opcje `DATES_OK` („Daty są dobre”) i `ASK_FIX` („Poproś KSH o poprawkę”) (D-20261017-1450-01 §2 pkt 4).
 3. **Zasoby i numery z pliku** zapisane w bazie. Komentarz „Wcześniej to był SG-…” → ten sam transport, nowy kod, `renumbered_from`, „było → jest” w Historii.
 4. **Synchronizacja SharePoint — odczyt** (funkcja Edge `ksh-sharepoint-sync`, `pg_cron` co 5 min):
    - tabela stanu `ksh_sync_state`, wiersz w Stanie systemu;
@@ -984,3 +990,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 17.10.2026 09:30 | D-20261017-0930-01: PR #279 `wyglad/W-demo` (po #277) — daty demo 23.09, ETA demo, `STORE_SCHEMA_VERSION` 4, kurs bieżący przed rozładunkiem; P5 kurs `fx_rates` + usunięcie `invoices` demo przy `bills`; P4-u `delayed`; P11 pkt 6 ujęcia z TEST | właściciel 07:01; koordynator |
 | 17.10.2026 11:00 | D-20261017-1100-01: PR #282 `wyglad/W-eta` (po #280) — `etaDuration` D-071, „przyjazd nocą” D-101, Opcje › Kalibracja ETA (E15 pkt 7 / 3A); P4-u: `fmt_eta_duration`, dane kalibracji §3; C3-p zdanie o Czacie; sprawdzenia APP_URL OK / push poza testem czeka | właściciel 07:20 (3A); koordynator |
 | 17.10.2026 12:20 | D-20261017-1220-01: PR #284 `wyglad/W-konta` (po #282) — Operacje HHL i Użytkownik SCX w demo, `accountRole`, Pomoc bez fałszywego braku, SMS przy miejscach do odczytu, C8 N2 formularze Operacji (zostaje strona bazy); B7 bez geolokalizacji kierowcy — tylko CSP `frame-src`; właściciel 12:25: aplikacja kierowcy porzucona, zostaje w kodzie | właściciel 17.10 12:25; koordynator |
+| 17.10.2026 14:50 | D-20261017-1450-01: PR #289 `wyglad/W-naprawy` (po #284) — `billReady` / `INVOICE_A4` pod A4, `preview_as` pod B5, kody spraw `KSH_DATES_CHECK`, `DELIVERED_CHECK`, `CMR_UPLOAD`; scalenie po skończonym punkcie, wdrożenie bezpieczne przed A4 | koordynator |
+| 17.10.2026 15:30 | D-20261017-1530-01: uwagi do PR #290 (B6, 0225) przed scaleniem — revoke insert/update na `loads` i grant kolumn bez `rio_secret`; limit anon z nagłówków; tekst `EMAIL_BUDGET`; e-mail zapasowy W42 poza limitem | koordynator |

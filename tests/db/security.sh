@@ -220,5 +220,55 @@ val "HHL_OPS security_flags_list niepuste" $OPS "select jsonb_array_length(secur
 err "KSH security_flags_list odmowa" $KSH "select security_flags_list()" "tylko HHL"
 err "SCX security_flags_list odmowa" $SCX "select security_flags_list()" "tylko HHL"
 
+echo; echo "[B6] e-mail na osobę, płatność, rio_secret, limit anon, loads_read (0225)"
+HHLID=$(sys "select id from app_users where email='hhl@test'")
+sys "
+do \$\$
+declare i int; u uuid := '$HHLID';
+begin
+  for i in 1..25 loop
+    insert into notifications (channel, recipient, user_id, template, payload, dedup_key, status)
+    values ('EMAIL', 'hhl@test', u, 'B6T' || ((i - 1) / 5)::text, '{}'::jsonb, 'b6mail:' || i, 'PENDING');
+  end loop;
+end \$\$;
+" >/dev/null
+val "B6: 20 e-maili na osobę na dobę" $HHL "select count(*) from notifications where user_id='$HHLID' and channel='EMAIL' and template like 'B6T%'" 20
+val "B6: 1 wiadomość zbiorcza" $HHL "select count(*) from notifications where user_id='$HHLID' and template='EMAIL_BUDGET'" 1
+val "B6: tytuł limitu" $HHL "select payload->>'title' from notifications where user_id='$HHLID' and template='EMAIL_BUDGET'" "Limit e-maili na dziś"
+val "B6: treść limitu" $HHL "select payload->>'body' from notifications where user_id='$HHLID' and template='EMAIL_BUDGET'" "Dziś dostałeś już 20 e-maili z Watch Tower. Kolejne powiadomienia z dzisiaj są w dzwonku i w aplikacji na telefonie. E-maile wrócą jutro."
+val "B6: EMAIL_BUDGET w treściach" $HHL "select subject_pl from notification_copy where id='EMAIL_BUDGET'" "Limit e-maili na dziś"
+sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key, status)
+     values ('EMAIL', 'hhl@test', '$HHLID', 'B6PILNY', '{\"push_fallback\":true}'::jsonb, 'b6mail:pilny', 'PENDING')" >/dev/null
+val "B6: e-mail zapasowy poza limitem" $HHL "select count(*) from notifications where user_id='$HHLID' and template='B6PILNY'" 1
+
+out=$(sys "begin; grant update (paid_at) on invoices to authenticated; set local role authenticated; set local request.jwt.claim.sub='$KSH'; update invoices set paid_at=current_date where id='$INVP'; rollback;")
+echo "$out" | grep -q "tylko HHL" && { ok=$((ok+1)); echo "  OK    B6: KSH nie zmieni paid_at"; } || { fail=$((fail+1)); echo "  FAIL  B6 paid_at: $out"; }
+out=$(sys "begin; grant update (paid_marked_at) on invoices to authenticated; set local role authenticated; set local request.jwt.claim.sub='$SCX'; update invoices set paid_marked_at=now() where id='$INVK'; rollback;")
+echo "$out" | grep -q "tylko HHL" && { ok=$((ok+1)); echo "  OK    B6: SCX nie zmieni paid_marked_at"; } || { fail=$((fail+1)); echo "  FAIL  B6 paid_marked: $out"; }
+
+val "B6: authenticated bez UPDATE rio_secret" $HHL "select has_column_privilege('authenticated','loads','rio_secret','update')::text" false
+val "B6: authenticated bez INSERT rio_secret" $HHL "select has_column_privilege('authenticated','loads','rio_secret','insert')::text" false
+val "B6: authenticated ma UPDATE status" $HHL "select has_column_privilege('authenticated','loads','status','update')::text" true
+err "B6: SCX nie zapisze rio_secret wprost" $SCX "update loads set rio_secret='tajne' where id='$L2'" "permission denied"
+sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/x?id=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&secret=klucz-b6' where id='$L1'" >/dev/null
+out=$(sys "select rio_secret from loads where id='$L1'")
+echo "$out" | grep -qx "klucz-b6" && { ok=$((ok+1)); echo "  OK    B6: sanitizer nadal zapisuje rio_secret"; } || { fail=$((fail+1)); echo "  FAIL  B6 sanitizer: $out"; }
+out=$(sys "select position('SITE' in pg_get_expr(polqual, polrelid)) from pg_policy where polname='loads_read'")
+[ "$out" = "0" ] && { ok=$((ok+1)); echo "  OK    B6: loads_read bez SITE"; } || { fail=$((fail+1)); echo "  FAIL  B6 loads_read: $out"; }
+
+out=$(sys "begin; set local request.headers='{\"cf-connecting-ip\":\"203.0.113.9\",\"user-agent\":\"ua-b6\"}'; select report_client_error('error','licznik a',null,null,null,'przegladarka-1'); select report_client_error('error','licznik b',null,null,null,'przegladarka-2'); select (count(*)=1 and max(n)=2)::text from anon_call_window where fn='report_client_error' and ip='203.0.113.9' and ua='ua-b6'; rollback;" | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    B6: inny p_ua przy tym samym nagłówku — jeden licznik"; } || { fail=$((fail+1)); echo "  FAIL  B6: jeden licznik (otrzymano: $out)"; }
+out=$(sys "begin; set local request.headers='{\"cf-connecting-ip\":\"203.0.113.9\",\"user-agent\":\"ua-b6\"}'; select report_client_error('error','licznik a',null,null,null,'przegladarka-1'); set local request.headers='{\"x-forwarded-for\":\"198.51.100.8, 10.0.0.1\",\"user-agent\":\"ua-b6\"}'; select report_client_error('error','licznik c',null,null,null,'przegladarka-1'); select count(*) from anon_call_window where fn='report_client_error' and ua='ua-b6'; rollback;" | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+[ "$out" = "2" ] && { ok=$((ok+1)); echo "  OK    B6: inny adres w x-forwarded-for — osobny licznik"; } || { fail=$((fail+1)); echo "  FAIL  B6: osobny licznik (otrzymano: $out)"; }
+sys "insert into anon_call_window (fn, ip, ua, n, window_start) values
+     ('report_client_error','203.0.113.50','ua-b6',60,now()),
+     ('keep_alive','203.0.113.50','ua-b6',60,now()),
+     ('report_csp_violation','203.0.113.50','ua-b6',60,now())
+     on conflict (fn, ip, ua) do update set n=60, window_start=now()" >/dev/null
+HDR="set local request.headers='{\"cf-connecting-ip\":\"203.0.113.50\",\"user-agent\":\"ua-b6\"}'"
+val "B6: report_client_error limit 60/15 min" $HHL "$HDR; select report_client_error('error','test b6',null,null,null,'inny-parametr')::text" false
+val "B6: keep_alive limit" $HHL "$HDR; select (keep_alive('worker')->>'limited')::text" true
+val "B6: report_csp_violation limit" $HHL "$HDR; select report_csp_violation('script-src',null,null,null,null,null,null,null,'report','inny-parametr',null)::text" false
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
