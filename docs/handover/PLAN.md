@@ -117,7 +117,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Cursor scala te PR i wdraża (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): **C3-p → B1 → B2 → B6 → A8 → A1 → A2 → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → **B2 → B6 → A8 → A1 → A2 → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -173,10 +173,11 @@ Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODU
 
 **Kolejka wyglądu (D-20261016-2130-01):** `wyglad/W-dane` PR #274 — scalone i wdrożone 17.10.2026 00:38 po skończonym C3 (`7db7282f`, `dpl_CaHR42SHedxQesLr1Q6W6hXPusA1`). Wygląd bez bazy (F8): „Inne pliki” z „+ Dodaj” (produkcja: `otherDocsOn()` = false do P5), przerywana linia objazdu (produkcja: `detourLinesOf()` = [] do P9), przeprawy z HERE z `map_display_state.ferries` (bez danych zostaje stały tor). Plik dopisku wszedł z PR.
 
-**Kolejka wyglądu (D-20261017-0800-01 / 0930-01 / 0915-01):** scalasz **#277 → #279 → #280** w przerwach między pozycjami, każdy po zielonych `unit` i `visual`; wdrożenie po scaleniu. Wzorce `visual` odświeża koordynator; gdy `visual` czerwony przed jego commitem z wzorcami — sygnał „VISUAL #<numer>”.
-- **#277 `wyglad/W-audyt` (D-20261017-0800-01):** `serverRuleOn(key)` (`TRACKING_WINDOW` → A1, `SITE_EXIT_DELIVERED` → A2, `WIND_E49` / `DETOUR_E49` → P6 E49 Z1/Z3, `ROAD_PL_HERE` → P6 E2, `ROAD_SITUATIONS_MAP` → P9 E29 pkt 3 — przy wdrożeniu przestawiasz tylko swój klucz na `true`, test: tekst na produkcji bez „włączamy wkrótce”); 6A bez wielkich liter; 5B „Opłata paliwowa” KSH/SCX tylko do odczytu w demo; domyślnie EUR (`STORE_SCHEMA_VERSION` 2→3); przepięcie w Harmonogramie; liczby po polsku; dzwonek; `lazyRetry`.
-- **#279 `wyglad/W-demo` (D-20261017-0930-01, na #277):** daty demo zgodne z 23.09; ETA w demo (`demoEta.ts` w `PROD_DEMO_SWAP`); `STORE_SCHEMA_VERSION` 3→4; „po oknie” tylko za oknem dostawy; `fxForDate(…, unloaded)` kurs bieżący przed rozładunkiem.
-- **#280 `wyglad/W-pl` (D-20261017-0915-01, na #279):** panel tylko po polsku (8A); EN/SV tylko w aplikacji kierowcy; N20 w aplikacji; pierwsze wczytanie 317,6 kB gzip.
+**Kolejka wyglądu (D-20261017-0800-01 / 0930-01 / 0915-01 / 1100-01):** scalasz **#277 → #279 → #280 → #282** w przerwach między pozycjami, każdy po zielonych `unit` i `visual`; wdrożenie po scaleniu. Wzorce `visual` odświeża koordynator; gdy `visual` czerwony przed jego commitem z wzorcami — sygnał „VISUAL #<numer>”.
+- **#277 `wyglad/W-audyt` (D-20261017-0800-01):** `serverRuleOn(key)` (`TRACKING_WINDOW` → A1, `SITE_EXIT_DELIVERED` → A2, `WIND_E49` / `DETOUR_E49` → P6 E49 Z1/Z3, `ROAD_PL_HERE` → P6 E2, `ROAD_SITUATIONS_MAP` → P9 E29 pkt 3 — przy wdrożeniu przestawiasz tylko swój klucz na `true`, test: tekst na produkcji bez „włączamy wkrótce”); 6A bez wielkich liter; 5B „Opłata paliwowa” KSH/SCX tylko do odczytu w demo; domyślnie EUR (`STORE_SCHEMA_VERSION` 2→3); przepięcie w Harmonogramie; liczby po polsku; dzwonek; `lazyRetry`. **SCALONE I WDROŻONE.**
+- **#279 `wyglad/W-demo` (D-20261017-0930-01, na #277):** daty demo zgodne z 23.09; ETA w demo (`demoEta.ts` w `PROD_DEMO_SWAP`); `STORE_SCHEMA_VERSION` 3→4; „po oknie” tylko za oknem dostawy; `fxForDate(…, unloaded)` kurs bieżący przed rozładunkiem. **SCALONE I WDROŻONE.**
+- **#280 `wyglad/W-pl` (D-20261017-0915-01, na #279):** panel tylko po polsku (8A); EN/SV tylko w aplikacji kierowcy; N20 w aplikacji; pierwsze wczytanie 317,6 kB gzip. **SCALONE I WDROŻONE.**
+- **#282 `wyglad/W-eta` (D-20261017-1100-01, na #280):** `etaDuration` — czasy „X d Y h Z min” (pigułka, Mapa, blok ETA, pasek śledzenia, PDF, sprawy ETA w demo); minus „−”; „przyjazd nocą” na Mapie i w Harmonogramie; Opcje › Zasady transportu › Kalibracja ETA (produkcja: „Brak źródła danych.” do podłączenia w P4-u); „Ten telefon / komputer”: „Wiadomości z Czatu nie przychodzą e-mailem.” (C3-p).
 
 P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji`, a hash scalenia P0a wpisujesz w pierwszym wpisie P0b w `POSTEP.md`.
 
@@ -339,7 +340,7 @@ Gałęzie `wyglad/P2-2` i `wyglad/P2-2-popr` (koordynator; D-20261013-1815-01 W1
   - `Load.etaDetail` z `eta_basis` (D-20261014-0640-01 H3.1); progi słowa pewności 30 / 120 min (H3.2);
   - poprawka odpoczynku, „czeka przed placem” (E15-2), przeliczanie co 5 min;
   - cisza GPS 30 min w ruchu / 3 h na postoju; geometria HERE (E15-1);
-  - „–” przed wyjazdem, słowa pewności (E15-3), kalibracja po 5 dostawach.
+  - „–” przed wyjazdem, słowa pewności (E15-3), **kalibracja po 5 dostawach** (z dawnej „Rezerwy”, 3A): wygląd — `wyglad/W-eta` (Opcje › Kalibracja ETA); dane — D-20261017-1100-01 §3 (P4-u).
 - **H-10** wiatr na drodze — **przeniesione do P6 E49** (D-20261016-0230-01; W19 zamknięte 16.10.2026, 02:08; D-84 = 20 m/s).
 - **Dane jednorazowe** (migracja danych z kopią):
   - faza z pozycji: SG-03 → „Dostarczone” 07.10 12:19:54 i usunięcie pozycji po dostawie (L11);
@@ -378,9 +379,9 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C15** — **przeniesione do A8** (D-20261017-0730-01): po 3× `login_failed` emtrack → 1 próba / 6 h; jedna sprawa `SOURCE_DOWN:EMTRACK_WEB`.
 - **Odbiór:** brama `db`, TEST (`risks`, `security`, `e41`, `e9-role`, `nullguard`, dotknięte), doradca TEST i produkcja.
 
-### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (C3-p NA PRODUKCJI; dalej B1…)
+### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (C3-p i B1 NA PRODUKCJI; dalej B2…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → **B1** → B2 → B6 → A8 → A1 → A2 → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → **B2** → B6 → A8 → A1 → A2 → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — `passwordOk` dziś sprawdza tylko długość; test `auth-password.test.ts`) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
@@ -408,7 +409,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
    - KSH nie dostaje Stref ani zadań innych firm.
 7. **Teksty z serwera bez `upper(` w funkcjach treści** (D-20261017-0800-01 §3 pkt 3 / 6A) — w C3-p albo C6; kody (`SG-03`, tablice) bez zmian.
 
-### B1 · `security_flags` bez 403
+### B1 · `security_flags` bez 403 — NA PRODUKCJI (`92117abd`, 0224, `dpl_2mB55evGPQh5RUT4LUCLsP31kFRv`, 17.10.2026 13:08)
 - Polityka SELECT dla kont HHL i grant.
 - `security_flags_list()` dla Operacji HHL (część C8).
 - Test: Operacje HHL i Administrator HHL — wszystkie ekrany Opcji, 0 × 403 w konsoli; KSH i SCX — odmowa.
@@ -583,10 +584,10 @@ P4 jest na produkcji **częściowo**. Robisz brakujące punkty, każdy z testem 
    - przeliczanie co 5 min także bez nowej pozycji (`tower-eta-refresh`, `refresh_load_eta_window()`), po zmianie okna dostawy i po pozycji AIS statku;
    - „czeka przed placem / przed Śremem” (`segment = 'WAIT_SITE'`, `causes.wait_since`);
    - geometria tras z `here_road_geometry` w `corridor_polylines` (SE-NYN, SE-KAA, PL-GDN, PL-GDY + dojazd do placu) → 0 fałszywych zjazdów z trasy;
-   - **kalibracja po 5 dostawach** (3A): pomiar w 3 punktach (24 h / 6 h / 1 h), propozycja czasów odcinków, zatwierdzenie przez Administratora HHL, `eta_calibration_versions`; 2 błędne obserwacje SG-03 czyścisz z kopią;
+   - **kalibracja po 5 dostawach** (3A, z dawnej „Rezerwy”): wygląd — `wyglad/W-eta` (Opcje › Kalibracja ETA); dane — D-20261017-1100-01 §3 (pkt 1–9): ETA zapamiętane przed przyjazdem i błąd w 3 punktach (24 h / 6 h / 1 h; nie z ETA w chwili dostawy); wjazd na plac z GPS (strefa SITE); czasy odcinków według kodów `eta_segment_params`; `exclude_reason` zdaniem dla człowieka (także dwa błędne pomiary SG-03); propozycja w `eta_calibration_versions` (n ≥ 5, odchylenie > 10 %, mediana, rozrzut, błąd przed i po); zatwierdzenie `apply_eta_calibration_version`; odczyt `etaCalibrationOf` / `etaCalibrationApproveOf` (`src/lib/etaCalibSource.ts`); testy SQL i e2e na TEST (G-09); teksty i układ ekranu zostają (F1); widok po podłączeniu sprawdza koordynator;
    - test SG-03: brak skoku > 1 h, błąd przy wyjeździe ≤ 30 min.
-2. **ETA-MARK (D-101, 05.10 — nie było w planie):** znaczniki „w oknie / przed terminem / po terminie / przyjazd nocą 22–06” z danych ETA i okna dostawy (pole dla widoku; wygląd koordynatora, jeśli brak).
-3. **Format ETA (D-071):** „X d Y h Z min” powyżej 24 h, „Y h Z min” poniżej — w tekstach z serwera. Widok sprawdza koordynator.
+2. **ETA-MARK (D-101, 05.10 — nie było w planie):** znaczniki „w oknie / przed terminem / po terminie / przyjazd nocą 22–06” z danych ETA i okna dostawy (pole dla widoku; **wygląd: `wyglad/W-eta`**; dane — znaczniki z ETA i okna (jest)). Serwer: „przyjazd nocą” 22:00–06:00 w e-mailu i SMS o ETA (D-20261017-1100-01 §2).
+3. **Format ETA (D-071):** „X d Y h Z min” powyżej 24 h, „Y h Z min” poniżej — w tekstach z serwera. **Widok: `wyglad/W-eta`**; serwer — `fmt_eta_duration(min)` zgodna z `etaDuration` (e-maile E43, SMS E42, tytuły spraw ETA_BREACH, powiadomienia). Test: 95 → „1 h 35 min”, 1 707 → „1 d 4 h 27 min”, 1 440 → „1 d” (D-20261017-1100-01 §2).
 4. **E44 RIO pkt 2–8** w całości według PLAN P4: regulamin RIO najpierw (STOP §1 pkt 12.6, jeśli zakaz), adapter, cron `tower-rio-links`, zapis `SUBCONTRACTOR_LINK`, błędy i sprawy.
 5. **E27 L17** — jeśli nie weszło w A1.
 6. **`delayed` / `delay_minutes` (D-20261017-0930-01 §3):** serwer ustawia je zgodnie z ETA wobec okna dostawy (jak widok: „po oknie” tylko gdy ETA jest za oknem; opóźniony o 4 h, ale przed oknem — bez „po oknie”). Test z odbioru P4-u.
@@ -979,3 +980,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 17.10.2026 08:00 | D-20261017-0800-01: PR #277 `wyglad/W-audyt` — `serverRuleOn`, 6A, 5B demo Opłata paliwowa, EUR, przepięcie, liczby, dzwonek, `lazyRetry`; klucze przy A1/A2/P6 E49/P6 E2/P9 E29 pkt 3; EUR w bazie przy pierwszym logowaniu; teksty serwera bez `upper(` (C3-p/C6) | właściciel 07:20 (5B, 6A); koordynator |
 | 17.10.2026 09:15 | D-20261017-0915-01: PR #280 `wyglad/W-pl` (po #279) — panel tylko PL (8A), EN/SV tylko kierowca, N20 w aplikacji; B9: kafelek DeepL + kolumna języka + `supabaseProvider`; P8: `sms_render` tylko PL | właściciel 07:20 (8A); koordynator |
 | 17.10.2026 09:30 | D-20261017-0930-01: PR #279 `wyglad/W-demo` (po #277) — daty demo 23.09, ETA demo, `STORE_SCHEMA_VERSION` 4, kurs bieżący przed rozładunkiem; P5 kurs `fx_rates` + usunięcie `invoices` demo przy `bills`; P4-u `delayed`; P11 pkt 6 ujęcia z TEST | właściciel 07:01; koordynator |
+| 17.10.2026 11:00 | D-20261017-1100-01: PR #282 `wyglad/W-eta` (po #280) — `etaDuration` D-071, „przyjazd nocą” D-101, Opcje › Kalibracja ETA (E15 pkt 7 / 3A); P4-u: `fmt_eta_duration`, dane kalibracji §3; C3-p zdanie o Czacie; sprawdzenia APP_URL OK / push poza testem czeka | właściciel 07:20 (3A); koordynator |
