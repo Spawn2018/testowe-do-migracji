@@ -19,6 +19,7 @@ import {
   buildSeedRisks,
 } from './seed';
 import { applyEtaToLoad } from '../lib/eta';
+import { withDemoEta } from './demoEta';
 import { attachMoneyV2 } from '../lib/money/loadMoney';
 import { orderNoReminders, orderNoRisks } from '../lib/orderNumbers';
 import { demoChatNotices } from '../lib/p6eDemo';
@@ -45,7 +46,8 @@ export function buildDemoSnapshot(): DataSnapshot {
   const seedLoads = buildSeedLoads().map((l) => (DEMO_MISSING_ORDER_NO[l.code] ? { ...l, ...DEMO_MISSING_ORDER_NO[l.code] } : l));
   const seedRisks = buildSeedRisks(seedLoads);
   const loadsV1 = applyForceMajeureDelays(
-    seedLoads.map((l) => applyEtaToLoad(l, DEMO_NOW)),
+    /* audyt 17.10 (E15): transporty w oknie śledzenia z ETA i szczegółami jak z serwera */
+    seedLoads.map((l) => withDemoEta(applyEtaToLoad(l, DEMO_NOW))),
     seedRisks,
   );
   const invoices = buildSeedInvoices(loadsV1);
