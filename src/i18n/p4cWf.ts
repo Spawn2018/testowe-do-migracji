@@ -46,7 +46,7 @@ const PL: Record<string, string> = {
   p4c_wf_zt_out: 'Wyjazd',
   p4c_wf_zt_srem: 'KSH Śrem (załadunek)',
   p4c_wf_zt_srem_in: 'Załadunek',
-  p4c_wf_zt_srem_out: 'Droga PL — po postoju ≥ 5 min (próg strefy; załadowany)',
+  p4c_wf_zt_srem_out: 'Droga PL — po postoju ≥ 5 min (próg strefy), bez czekania na potwierdzenie załadunku',
   p4c_wf_zt_portpl: 'Port PL — Gdańsk, Gdynia',
   p4c_wf_zt_portpl_in: 'Port PL',
   p4c_wf_zt_portpl_out: 'bez zmiany — „Na promie” z odejścia rejsu',
@@ -77,6 +77,8 @@ function soonText(key: string): string | null {
     return `wjazd i wyjazd: Śrem, porty, plac (E25, E34) · wyjazd z placu → Dostarczone (E26) — ${SOON}`;
   }
   if (key === 'p4c_wf_zt_site_out' && !serverRuleOn('SITE_EXIT_DELIVERED')) return `${PL[key]} — ${SOON}`;
+  /* W-naprawy-2 (F7): do A2 wyjazd ze Śremu działa tylko po potwierdzeniu załadunku — jak karta strefy */
+  if (key === 'p4c_wf_zt_srem_out' && !serverRuleOn('SITE_EXIT_DELIVERED')) return 'Droga PL — po potwierdzeniu załadunku';
   if (key === 'p4c_wf_r_gps_d') {
     const on = GPS_PARTS.filter((p) => p.rule === null || serverRuleOn(p.rule)).map((p) => p.text);
     const off = GPS_PARTS.filter((p) => p.rule !== null && !serverRuleOn(p.rule)).map((p) => p.text);

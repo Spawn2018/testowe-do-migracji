@@ -93,7 +93,7 @@ export function StatusChangeModal({
   const hint = useMemo(() => gpsHint(status, events, geofences, since), [status, events, geofences, since]);
   /* wyglad/P4-c (L6, L9, L29): „Gotowy” tylko przy komplecie — przycisk zablokowany, obok zdanie, czego brakuje */
   const gaps = useMemo(
-    () => (load ? readyGapsOf(load, documents.filter((d) => d.loadId === loadId)) : null),
+    () => (load ? readyGapsOf(load, documents.filter((d) => d.loadId === loadId), documents) /* F7: polisa firmy jak w panelu (LoadDrawer) */ : null),
     [load, documents, loadId],
   );
   const readyBlocked = status === 'READY' && !!gaps?.length;

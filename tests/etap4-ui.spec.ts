@@ -372,11 +372,12 @@ test.describe('M10 — rejsy i automat statusów', () => {
     // dodanie
     await page.locator('[data-sail-new]').click()
     const form = page.locator('[data-sail-form]')
-    await form.locator('input[name="dep"]').fill('2026-10-20T18:00')
-    await form.locator('input[name="arr"]').fill('2026-10-20T17:00')
+    /* W-naprawy-2: rozkład demo do 16.11 — nowy rejs poza nim (20.10 18:00 jest już w rozkładzie → „DUPLICATE”) */
+    await form.locator('input[name="dep"]').fill('2026-11-20T18:00')
+    await form.locator('input[name="arr"]').fill('2026-11-20T17:00')
     await form.locator('[data-sail-submit]').click()
     await expect(page.locator('[data-sail-error]')).toContainText('po odejściu')
-    await form.locator('input[name="arr"]').fill('2026-10-21T12:00')
+    await form.locator('input[name="arr"]').fill('2026-11-21T12:00')
     await form.locator('[data-sail-submit]').click()
     await expect(page.locator('[data-sail-form]')).toHaveCount(0)
     // opóźnienie pierwszego przyszłego rejsu
@@ -451,7 +452,7 @@ test.describe('D26 — import: anulowania za zgodą (ANEKS 3 §2.1)', () => {
     await page.getByRole('button', { name: 'Podgląd zmian' }).click()
     const box = page.locator('[data-import-removals]')
     await expect(box).toBeVisible()
-    await expect(page.locator('[data-import-removed-count]')).toHaveText('−0')
+    await expect(page.locator('[data-import-removed-count]')).toHaveText('0')
     const cb = page.locator('[data-import-allow-removals]')
     await expect(cb).not.toBeChecked()
     const n = (await page.locator('[data-import-removal-codes]').innerText()).split(', ').length
@@ -464,9 +465,9 @@ test.describe('D26 — import: anulowania za zgodą (ANEKS 3 §2.1)', () => {
     const pozycje = plPlural(n, 'pozycję nieobecną', 'pozycje nieobecne', 'pozycji nieobecnych')
     await expect(box).toContainText(`Anuluj ${n} ${pozycje}`)
     await cb.check()
-    await expect(page.locator('[data-import-removed-count]')).toHaveText(`−${n}`)
+    await expect(page.locator('[data-import-removed-count]')).toHaveText(`${n}`)
     await cb.uncheck()
-    await expect(page.locator('[data-import-removed-count]')).toHaveText('−0')
+    await expect(page.locator('[data-import-removed-count]')).toHaveText('0')
     await page.getByRole('button', { name: 'Zatwierdź' }).click()
     await expect(page.locator('tr[data-load]')).toHaveCount(before + 1)
   })

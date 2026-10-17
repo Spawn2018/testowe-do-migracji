@@ -47,6 +47,9 @@ const pl = {
   p8c_does_PRE_PORT: 'Wjazd: zdarzenie „Auto 20 km przed portem” — powiadomienie HHL według Opcji › „Kto co dostaje” (E35).|Pozostałe powiadomienia działają według Opcji › „Kto co dostaje” (E11).',
   p8c_does_PORT_OUT: 'Wjazd: status „Port PL” (E25) — port z rejsu transportu ({route}).|Powiadomienia działają według Opcji › „Kto co dostaje” (E11).',
   p8c_does_PORT_IN: 'Wjazd: status „Port SE”; wyjazd: „Droga SE” (E25) — tylko dla rejsów {route}.|ETA liczy do tego portu, gdy transport ma rejs {route} (E15).|Powiadomienia działają według Opcji › „Kto co dostaje” (E11).',
+  /* W-naprawy-2: dopóki reguła wyjazdu (A2) nie działa na serwerze — `serverRuleOn('SITE_EXIT_DELIVERED')` */
+  p8c_does_SITE_exit_soon: 'Wyjazd: „Dostarczone” ustawia SCX albo administrator HHL; samo po co najmniej 10\u00a0min na placu (E26, E27) — {soon}.',
+  p8c_does_LOADING_exit_a2: 'Wyjazd po postoju co najmniej 5\u00a0min: „Droga PL” (bez czekania na potwierdzenie załadunku).',
   p8c_does_SITE: 'Wjazd: status „Na placu” (E25) i SMS „wjazd” do odbiorców Boden (E42).|Wyjazd po co najmniej 10\u00a0min: „Dostarczone” i koniec śledzenia (E26, E27).|Postój ponad 4\u00a0h jest liczony do dopłaty (E33). Powiadomienia działają według Opcji › „Kto co dostaje” (E11).',
   p8c_does_other: 'Ten rodzaj strefy niczego nie uruchamia. Wyłącz strefę (E34 „Porządek”).',
   p8c_hist: 'Historia zmian',

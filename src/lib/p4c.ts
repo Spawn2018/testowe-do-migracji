@@ -110,9 +110,16 @@ export function trackerBarRio(info: TrackingLinkInfo | null | undefined, nowIso:
   return text;
 }
 
+/* słowa listy braków (kontrakt A9 z bazą) → etykiety okna Awizacja („kierowca odcinka SE”) */
+const AWIZ_ITEM_LABEL: Readonly<Record<string, string>> = {
+  'kierowca SE': 'kierowca odcinka SE',
+  'telefon SE': 'telefon odcinka SE',
+  'ciągnik SE': 'ciągnik odcinka SE',
+};
+
 function gapLabel(g: ReadyGap, locale: Locale): string {
   const base = t(locale, `p4c_gap_${g.kind}`);
-  const items = (g.items ?? []).filter(Boolean);
+  const items = (g.items ?? []).filter(Boolean).map((x) => (g.kind === 'AWIZ' ? AWIZ_ITEM_LABEL[x] ?? x : x));
   if (!items.length) return base;
   /* „zezwolenie PL, SE”; pozostałe: „awizacja (naczepa, telefon)” */
   return g.kind === 'PERMIT' ? `${base} ${items.join(', ')}` : `${base} (${items.join(', ')})`;

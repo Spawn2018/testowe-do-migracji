@@ -4,6 +4,7 @@
  */
 import { mechanismIssue, type MoneySideV2 } from '../lib/money/loadMoney';
 import { plSeLocation } from '../lib/pl/seLocation';
+import { formatListDateTime } from '../lib/format';
 import type {
   Awizacja, Bill, BillFlag, BillPayment, BillVerification, CorridorStage, DocCategory, Document, FerryBooking, Geofence, GeofenceType, Load,
   LoadEvent, LoadMessage, LoadResources, LoadStatus, Notification, OrgKind, Risk, RiskType, Severity,
@@ -447,6 +448,9 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
   const rawParams = (d.params && typeof d.params === 'object' ? d.params : {}) as Record<string, unknown>;
   /* AUD-04: tytuły sytuacji Trafikverket zapisane wcześniej po szwedzku → po polsku ze słownika (bez DeepL) */
   const params = Object.fromEntries(Object.entries(rawParams).map(([k, v]) => [k, typeof v === 'string' ? plSeLocation(v) : v]));
+  /* A8 (W-naprawy-2): sprawa źródła z „od kiedy” — jeden klucz bez daty, w treści pierwsza awaria (DD.MM.RRRR, GG:MM) */
+  const since = r.title_key === 'rk_source_down' && typeof d.od_kiedy === 'string' && Number.isFinite(Date.parse(d.od_kiedy)) ? formatListDateTime(d.od_kiedy, 'Europe/Warsaw') : null;
+  if (since) params.since = since;
   return {
     id: r.id, type: RISK_TYPE[r.kind] ?? 'OPS', severity: SEVERITY[r.severity] ?? 'LOW', title: plSeLocation(r.title),
     /* M12 — ryzyka z funkcji Edge: opis / ostrzeżenia źródła i atrybucja (Digitraffic CC BY 4.0) */
@@ -459,7 +463,7 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
     /* wyglad/P6 — rodzaj z bazy: nazwy spraw (E7-4), zakazy ruchu jako informacja, sprawy techniczne do Stanu systemu */
     kind: r.kind,
     /* A6-T1 — tekst w języku odbiorcy: klucz + parametry (0042) */
-    titleKey: r.title_key ?? undefined,
+    titleKey: since ? 'rk_source_down_since' : r.title_key ?? undefined,
     titleParams: params,
     metaKey: str(d.meta_key) || undefined,
     metaParams: params,

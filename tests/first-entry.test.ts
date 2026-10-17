@@ -18,6 +18,7 @@ describe('pierwsze wejście — obliczenia', () => {
     expect(pwCheck('Bezpieczne14!!', 12)).toEqual({ len: 14, ok: true, letter: true, digit: true });
     expect(pwCheck('krotkie', 12)).toEqual({ len: 7, ok: false, letter: true, digit: false });
     expect(pwCheck('Dlugie-haslo-bez', 12)).toEqual({ len: 16, ok: false, letter: true, digit: false });
+    expect(pwCheck('ąęśćżźółń1234', 12)).toEqual({ len: 13, ok: false, letter: false, digit: true }); /* jak Supabase: litera a–z */
     expect(pwCheck('123456789012', 12)).toEqual({ len: 12, ok: false, letter: false, digit: true });
     expect(pwCheck('Zażółć-1234!', 12)).toMatchObject({ ok: true });
   });

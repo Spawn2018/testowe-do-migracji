@@ -25,6 +25,7 @@ import type { GeofenceType } from '../types';
 import { p8ct, type P8cKey } from '../i18n/p8c';
 import '../components/zones/zones.css';
 import { lazyRetry } from '../lib/lazyRetry';
+import { serverRuleOn, SOON } from '../lib/serverRules';
 import { accountRole } from '../lib/accountRole';
 
 const ZonesMap = lazy(lazyRetry(() => import('../components/zones/ZonesMap')));
@@ -45,7 +46,11 @@ function doesList(z: ZoneRow): string[] {
   const route = p8ct(`p8c_route_${routeOf(z) ?? 'POLFERRIES'}`);
   if (!ZONE_KINDS.includes(z.type)) return [p8ct('p8c_does_other')];
   const key = (z.type === 'PRE_ARRIVAL' ? (groupOf(z) === 'boden' ? 'p8c_does_PRE_ARRIVAL_SE' : 'p8c_does_PRE_ARRIVAL_PL') : `p8c_does_${z.type}`) as P8cKey;
-  return p8ct(key, { route }).split('|');
+  const lines = p8ct(key, { route }).split('|');
+  /* W-naprawy-2 (A2): wyjazd z placu → „Dostarczone” i wyjazd ze Śremu bez potwierdzenia — dopiero gdy działa na serwerze */
+  if (z.type === 'SITE' && !serverRuleOn('SITE_EXIT_DELIVERED')) lines[1] = p8ct('p8c_does_SITE_exit_soon', { soon: SOON });
+  if (z.type === 'LOADING' && serverRuleOn('SITE_EXIT_DELIVERED')) lines[1] = p8ct('p8c_does_LOADING_exit_a2');
+  return lines;
 }
 /** Wiersz listy: „1 000 m · wjazd → Na placu · …”; bufory bez promienia na początku (img/e34-after). */
 function lineOf(z: ZoneRow): string {

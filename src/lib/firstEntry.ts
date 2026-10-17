@@ -25,8 +25,9 @@ export function stepNumber(step: FirstStep, steps: readonly FirstStep[]): { n: n
  */
 export function pwCheck(pw: string, min: number): { len: number; ok: boolean; letter: boolean; digit: boolean } {
   const len = [...pw].length;
-  const letter = /\p{L}/u.test(pw);
-  const digit = /\p{Nd}/u.test(pw);
+  /* jak Supabase Auth „letters_digits” (W1): litera a–z, cyfra 0–9 */
+  const letter = /[A-Za-z]/.test(pw);
+  const digit = /[0-9]/.test(pw);
   return { len, ok: len >= min && letter && digit, letter, digit };
 }
 

@@ -8,6 +8,7 @@
  * Telefon: Do zrobienia na górze, mapa 150 px, sekcje zwinięte z linią stanu, „Zadzwoń” 44 px.
  * Zapis jak dziś (numer SCX, okno Awizacja, okno dat KSH); nowe dane — `p7Source.ts`.
  */
+import { READY_PREP } from '../../lib/readyGaps';
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Document, Load, LoadEvent, Locale, OrgKind, Risk, Sailing } from '../../types';
 import { useTowerStore } from '../../store/useTowerStore';
@@ -355,7 +356,11 @@ export function PanelOverview(p: Props) {
   };
   const sailingText = curSailing
     ? `${load.ferry.vessel ?? curSailing.vessel} · ${fmtLocal(effDeparture(curSailing))} → ${fmtLocal(effArrival(curSailing))}${curSailing.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(curSailing.status, locale)}` : ''}`
-    : load.ferry.vessel ?? null;
+    : null;
+  /* F7 (A9): statek z rezerwacji bez wybranego rejsu — to nie jest przypisany rejs; „rejs” jest w brakach do „Gotowy” */
+  const bookedVessel = curSailing ? null : (load.ferry.vessel ?? '').trim() || null;
+  /* F7 runda 2: „rejs niewybrany” tylko w przygotowaniu (jak braki do „Gotowy”); na promie i później — sama nazwa statku */
+  const sailMissing = !curSailing && READY_PREP.includes(load.status);
   /* „wpisany/brak” (E32 pkt 5) — ten sam stan co pole w oknie Awizacja (E44: zapisany link z serwera albo w zasobach) */
   const linkSet = !!(r.trackingRef ?? '').trim() || !!trackingLinkOf(load, loads, nowIso);
   const fixAwiz = canFixAwizOf(role);
@@ -363,7 +368,7 @@ export function PanelOverview(p: Props) {
     ? <button type="button" className="btn" data-awiz-open onClick={p.onAwiz}>{pt(locale, awiz === 'none' ? 'p7_awiz_btn_add' : 'p7_awiz_btn_edit')}</button>
     : fixAwiz ? <button type="button" className="btn ghost" data-awiz-fix onClick={p.onAwiz}>{pt(locale, 'p7_awiz_btn_fix')}</button> : null;
   const awizChip = awiz === 'ok'
-    ? <span className="po-pill go">{pt(locale, 'p7_awiz_ok')}</span>
+    ? (sailMissing ? <span className="po-pill amber" data-awiz-nosail>{pt(locale, 'p7_awiz_ok_nosail')}</span> : <span className="po-pill go">{pt(locale, 'p7_awiz_ok')}</span>)
     : awiz === 'part' ? <span className="po-pill amber">{ptp(locale, 'p7_awiz_part', { n: missing.length })}</span>
       : <span className="po-pill red">{pt(locale, 'p7_awiz_none')}</span>;
   const pilotVal = (side: 'pl' | 'se') => {
@@ -468,7 +473,7 @@ export function PanelOverview(p: Props) {
         phone={phone}
         title={hasDriver ? pt(locale, 'p7_drivers_h') : pt(locale, 'p7_awiz_h')}
         extra={hasDriver ? (swap ? ` · ${pt(locale, 'p7_swap')}` : null) : <>{` · ${pt(locale, 'p7_awiz_fills')} `}{awizChip}</>}
-        status={phone ? <> {awiz === 'none' ? <span className="po-miss">{pt(locale, 'p7_awiz_none')}</span> : awiz === 'part' ? <span className="po-warn">{ptp(locale, 'p7_awiz_part', { n: missing.length })}</span> : <span className="po-ok">{pt(locale, 'p7_awiz_ok')}</span>}</> : null}
+        status={phone ? <> {awiz === 'none' ? <span className="po-miss">{pt(locale, 'p7_awiz_none')}</span> : awiz === 'part' ? <span className="po-warn">{ptp(locale, 'p7_awiz_part', { n: missing.length })}</span> : sailMissing ? <span className="po-warn" data-awiz-nosail>{pt(locale, 'p7_awiz_ok_nosail')}</span> : <span className="po-ok">{pt(locale, 'p7_awiz_ok')}</span>}</> : null}
         right={!phone && hasDriver ? awizChip : null}
       >
         {hasDriver ? (
@@ -511,7 +516,10 @@ export function PanelOverview(p: Props) {
           <dt>{pt(locale, 'p7_row_link')}</dt>
           <dd>{linkSet ? <span className="po-ok">{pt(locale, 'p7_link_set')}</span> : <span className="po-miss">{awiz === 'none' ? '—' : pt(locale, 'p7_link_none')}</span>}</dd>
           <dt>{pt(locale, 'p7_row_sailing')}</dt>
-          <dd data-ferry-row>{sailingText ? <span data-content>{sailingText}</span> : <span className="po-muted">{pt(locale, awiz === 'none' ? 'p7_sail_pick' : 'p7_sail_none')}</span>}</dd>
+          <dd data-ferry-row>{sailingText ? <span data-content>{sailingText}</span> : bookedVessel && sailMissing ? (
+            <><span data-content>{bookedVessel}</span>{' · '}<span className="po-miss" data-sail-unpicked>{pt(locale, 'p7_sail_unpicked')}</span></>
+          ) : bookedVessel ? <span data-content>{bookedVessel}</span>
+            : <span className="po-muted">{pt(locale, awiz === 'none' ? 'p7_sail_pick' : 'p7_sail_none')}</span>}</dd>
           {pilotsReq ? (
             <>
               <dt>{pt(locale, 'p7_pilot_pl')}</dt>

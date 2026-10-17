@@ -6,7 +6,7 @@
  */
 import type { FerryBooking, Load, LoadStatus, Locale, OrgKind, Risk, Sailing, SailingStatus } from '../types';
 import { dictEntry } from '../i18n/messages';
-import { fmtDateTime } from './time';
+import { fmtDateTime, TZ_OPS, wallLocalToIso } from './time';
 
 export const effDeparture = (s: Sailing): string => s.delayedDepartureAt ?? s.departureAt;
 export const effArrival = (s: Sailing): string => s.delayedArrivalAt ?? s.arrivalAt;
@@ -75,16 +75,21 @@ export function checkSailingDraft(d: SailingDraft, all: Sailing[]): SailingDraft
  * Rozkład startowy demo (DANE_STARTOWE): Gdańsk → Nynäshamn codziennie 18:00 czasu PL, ~18 h rejsu,
  * na zmianę Wawel / Nova Star; SG-32 — odwołany rejs Nova Star 24.09 20:00 (scenariusz z danych demo).
  * Godziny orientacyjne — rzeczywisty rozkład cargo wg ZRODLA_DANYCH.md (M12 / decyzja właściciela).
+ * W-naprawy-2 (A9): 60 dni (do 16.11) — rozkład obejmuje wszystkie załadunki demo, więc SCX może wybrać rejs
+ * w Awizacji (wcześniej 25 dni, do 12.10: transporty z załadunkiem później nie miały żadnego rejsu do wyboru).
  */
-export function buildSeedSailings(fromLocal = '2026-09-18', days = 25): Sailing[] {
+export function buildSeedSailings(fromLocal = '2026-09-18', days = 60): Sailing[] {
   const out: Sailing[] = [];
-  const start = Date.parse(`${fromLocal}T18:00:00+02:00`);
+  const [y, m, d] = fromLocal.split('-').map(Number);
   for (let i = 0; i < days; i++) {
-    const dep = new Date(start + i * 864e5);
-    const arr = new Date(dep.getTime() + 18 * 36e5);
+    /* F7 runda 2: 18:00 czasu polskiego każdego dnia — także po zmianie czasu 25.10 (nie stałe 24 h w UTC) */
+    const day = new Date(Date.UTC(y, m - 1, d + i)).toISOString().slice(0, 10);
+    const dep = new Date(Date.parse(wallLocalToIso(`${day}T18:00`, TZ_OPS)!));
+    const next = new Date(Date.UTC(y, m - 1, d + i + 1)).toISOString().slice(0, 10);
+    const arr = new Date(Date.parse(wallLocalToIso(`${next}T12:00`, TZ_OPS)!)); /* przypłynięcie 12:00 następnego dnia */
     const vessel = i % 2 === 0 ? 'Wawel' : 'Nova Star';
     out.push({
-      id: `sail-${dep.toISOString().slice(0, 10)}-${vessel === 'Wawel' ? 'W' : 'N'}`,
+      id: `sail-${day}-${vessel === 'Wawel' ? 'W' : 'N'}`,
       vessel, route: 'GDN-NYN', departureAt: dep.toISOString(), arrivalAt: arr.toISOString(),
       delayedDepartureAt: null, delayedArrivalAt: null, status: 'ZAPLANOWANY', source: 'DANE_STARTOWE',
     });

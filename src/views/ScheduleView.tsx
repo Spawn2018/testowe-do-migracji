@@ -7,7 +7,7 @@ import { MAP_FIELDS as MAP_FIELDS_UI, REQUIRED_FIELDS as REQUIRED_FIELDS_UI, typ
 import { useTowerStore } from '../store/useTowerStore';
 import { filterLoads } from '../lib/selectors';
 import { canImportSchedule, filterLoadsForRole } from '../lib/permissions';
-import { t, tp } from '../i18n/messages';
+import { hasKey, t, tp } from '../i18n/messages';
 import {
   delayMinutesVsPlan,
   fmtDateTime,
@@ -34,7 +34,7 @@ import { sailTime } from '../lib/sailView';
 import { effDeparture } from '../lib/sailings';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import type { ServerImportDraft } from '../data/scheduleImportServer';
-import { standardSkipMessage } from '../lib/standardSkipMessage';
+import { importSkipText, standardSkipMessage } from '../lib/standardSkipMessage';
 import { plPlural } from '../lib/plPlural';
 import { StageBar, StageChip } from '../components/shell/StageBar';
 import { useIsPhone } from '../lib/useIsPhone';
@@ -503,7 +503,8 @@ export function ScheduleView() {
             {t(locale, 'sched_upload')} · {filename}
             {dryRun ? (
               <span style={{ fontWeight: 400, color: 'var(--ink-3)', marginLeft: 8 }}>
-                {dryRun.accepted}/{dryRun.total} OK · ⚠{dryRun.warnings}
+                {tp(locale, 'p7_imp_head', { ok: dryRun.accepted, total: dryRun.total })}
+                {dryRun.warnings ? ` · ${tp(locale, 'p7_imp_warn', { n: dryRun.warnings })}` : ''}
               </span>
             ) : null}
           </div>
@@ -548,10 +549,10 @@ export function ScheduleView() {
           )}
           {step === 'map' && (
             <>
-              <ul style={{ fontSize: 12, columns: 2, color: 'var(--ink-3)', margin: '0 0 8px' }}>
+              <ul style={{ fontSize: 12, columns: phone ? 1 : 2, color: 'var(--ink-3)', margin: '0 0 8px' }}>
                 {mapKeys.map(([k, v]) => (
                   <li key={k}>
-                    <span style={{ color: 'var(--ink)' }}>{v}</span> → {k}
+                    <span style={{ color: 'var(--ink)' }}>{v}</span>{hasKey(locale, `p7_imp_f_${k}`) ? ` → ${t(locale, `p7_imp_f_${k}`)}` : null}
                   </li>
                 ))}
               </ul>
@@ -572,15 +573,26 @@ export function ScheduleView() {
           )}
           {step === 'diff' && dryRun && (
             <>
-              <div style={{ fontSize: 13, marginBottom: 6 }}>
-                <span style={{ color: 'var(--go)' }}>+{dryRun.added.length}</span>
+              {/* wyglad/W-naprawy-2 · A6 + E21: podsumowanie słowami zamiast znaków „+ ~ − ⚠” */}
+              <div style={{ fontSize: 13, marginBottom: 6 }} data-import-sum>
+                <span style={{ color: dryRun.added.length ? 'var(--go)' : 'var(--ink-3)' }}>{t(locale, 'p7_imp_new')}: {dryRun.added.length}</span>
                 {' · '}
-                <span style={{ color: 'var(--amber-ink)' }}>~{dryRun.changed.length}</span>
+                <span style={{ color: dryRun.changed.length ? 'var(--amber-ink)' : 'var(--ink-3)' }}>{t(locale, 'p7_imp_changed')}: {dryRun.changed.length}</span>
                 {' · '}
-                <span style={{ color: 'var(--ink-3)' }} data-import-removed-count>−{allowRemovals ? dryRun.removalCandidates.length : 0}</span>
+                <span style={{ color: 'var(--ink-3)' }}>{t(locale, 'p7_imp_removed')}: <b data-import-removed-count>{allowRemovals ? dryRun.removalCandidates.length : 0}</b></span>
                 {' · '}
-                <span style={{ color: 'var(--red)' }}>⚠{dryRun.rejected}</span>
+                <span style={{ color: dryRun.rejected ? 'var(--red)' : 'var(--ink-3)' }}>{t(locale, 'p7_imp_rejected')}: {dryRun.rejected}</span>
               </div>
+              {importSkipText({ carrier: dryRun.skippedCarrier, empty: dryRun.skippedEmpty, standard: dryRun.skippedStandard }) ? (
+                <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 6 }} data-import-skipped>
+                  {importSkipText({ carrier: dryRun.skippedCarrier, empty: dryRun.skippedEmpty, standard: dryRun.skippedStandard })}
+                </div>
+              ) : null}
+              {dryRun.datesToCheck ? (
+                <div style={{ fontSize: 12, color: 'var(--amber-ink)', marginBottom: 6 }} data-import-dates-check>
+                  {tp(locale, 'p7_imp_dates_check', { n: dryRun.datesToCheck })}
+                </div>
+              ) : null}
               {dryRun.removalCandidates.length > 0 ? (
                 <div data-import-removals style={{ fontSize: 12, margin: '0 0 8px' }}>
                   <label className="switchline">
@@ -654,7 +666,7 @@ export function ScheduleView() {
                           allowRemovals ? dryRun.removalCandidates.map((c) => c.code) : [],
                           [],
                         );
-                        const note = standardSkipMessage(draft.meta.accepted, draft.meta.skippedStandard);
+                        const note = standardSkipMessage(draft.meta.accepted, draft.meta.skippedStandard, { carrier: dryRun.skippedCarrier, empty: dryRun.skippedEmpty });
                         setServerNote(
                           res.version == null
                             ? t(locale, 'i1_nochange') + ' · ' + note
@@ -703,7 +715,7 @@ export function ScheduleView() {
             <>
               <span style={{ color: 'var(--go)' }}>{t(locale, 'a6_sch_import_ok')}</span>{' '}
               {dryRun ? (
-                <span data-import-standard style={{ color: 'var(--ink)' }}>{standardSkipMessage(dryRun.accepted, dryRun.skippedStandard)}</span>
+                <span data-import-standard style={{ color: 'var(--ink)' }}>{standardSkipMessage(dryRun.accepted, dryRun.skippedStandard, { carrier: dryRun.skippedCarrier, empty: dryRun.skippedEmpty })}</span>
               ) : null}{' '}
               <button
                 type="button"

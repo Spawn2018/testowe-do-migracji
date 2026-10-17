@@ -91,6 +91,8 @@
 .am-miss{font-size:16px;font-weight:700;color:var(--red)}
 .am-sub{font-family:var(--font-sans);font-size:14.5px;font-weight:400;color:var(--ink-3)}
 .am .am-bd{display:flex;flex-direction:column;gap:12px;padding:14px 16px 16px}
+/* F7 (E20): pola w przewijanym oknie nie mogą się ściskać — inaczej pole „Naczepa” nachodzi na „Przepięcie naczepy” */
+.am .am-bd>*,.am .am-all>*{flex-shrink:0}
 .am .form-field{margin-bottom:0}
 .am .am-f > span,.am .tlf > .tlf-lbl.up{font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--ink-2)}
 .am .input{min-height:40px;font-size:15px}

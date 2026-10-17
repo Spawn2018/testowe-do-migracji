@@ -25,18 +25,11 @@ describe('PL-PLURAL', () => {
   });
 
   it('import: 2 transporty i 2 wiersze, 1 i 5 bez zmiany sensu', () => {
-    expect(standardSkipMessage(2, 2)).toBe(
-      'Zaimportowano 2 transporty. Pominięto 2 wiersze typu STANDARD (ładunki NTG — poza zakresem Watch Tower).',
-    );
-    expect(standardSkipMessage(1, 1)).toBe(
-      'Zaimportowano 1 transport. Pominięto 1 wiersz typu STANDARD (ładunki NTG — poza zakresem Watch Tower).',
-    );
-    expect(standardSkipMessage(5, 12)).toBe(
-      'Zaimportowano 5 transportów. Pominięto 12 wierszy typu STANDARD (ładunki NTG — poza zakresem Watch Tower).',
-    );
-    expect(standardSkipMessage(22, 25)).toBe(
-      'Zaimportowano 22 transporty. Pominięto 25 wierszy typu STANDARD (ładunki NTG — poza zakresem Watch Tower).',
-    );
+    /* wyglad/W-naprawy-2 (F7): to samo zdanie co w podglądzie importu, bez wielkich liter */
+    expect(standardSkipMessage(2, 2)).toBe('Zaimportowano 2 transporty. Pominięte: rozmiar „Standard” (ładunki innej firmy) — 2.');
+    expect(standardSkipMessage(1, 1)).toBe('Zaimportowano 1 transport. Pominięte: rozmiar „Standard” (ładunki innej firmy) — 1.');
+    expect(standardSkipMessage(5, 12)).toBe('Zaimportowano 5 transportów. Pominięte: rozmiar „Standard” (ładunki innej firmy) — 12.');
+    expect(standardSkipMessage(22, 0)).toBe('Zaimportowano 22 transporty.');
   });
 
   it('tp po polsku odmienia; bez słownika EN (8A) — tekst i odmiana po polsku', () => {

@@ -307,7 +307,8 @@ export interface TrackingLinkInfo {
 }
 
 /** wyglad/P4-c (L6, L9, L29): czego brakuje do „Gotowy” — jedna definicja z bazy (E32 pkt 6), wypełnia wykonawca. */
-export type ReadyGapKind = 'AWIZ' | 'PILOTS' | 'ORDER_HHL' | 'ORDER_SCX' | 'PERMIT' | 'POLICY_SCX';
+/** wyglad/W-naprawy-2 · A9: `SAILING` — rejs przy trasie promowej (A5: wybór rejsu w awizacji). */
+export type ReadyGapKind = 'AWIZ' | 'SAILING' | 'PILOTS' | 'ORDER_HHL' | 'ORDER_SCX' | 'PERMIT' | 'POLICY_SCX';
 export interface ReadyGap {
   kind: ReadyGapKind;
   /** szczegóły po polsku, np. ['naczepa', 'telefon'], ['pilot SE — imię i nazwisko'], ['PL', 'SE'] */

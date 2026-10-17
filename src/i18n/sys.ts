@@ -31,6 +31,9 @@ const PL: Record<string, string> = {
   sys_since_today: 'od {t} · {d}',
   sys_since_days: 'od {n} dni',
   sys_since_at: 'od {t}',
+  /* A8: twarda spacja po „o”, żeby godzina nie spadała do nowej linii */
+  sys_next_try: 'następna próba o\u00a0{t}',
+  sys_next_try_day: 'następna próba {d} o\u00a0{t}',
   sys_check: 'Sprawdź teraz',
   sys_checking: 'Sprawdzam…',
   sys_checked: 'Sprawdzone {t}: {state}',

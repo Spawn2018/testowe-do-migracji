@@ -41,8 +41,11 @@ export function earliestFerryDepartureMs(
   operator: FerryOperatorId = 'POLFERRIES',
 ): number {
   const fromWindow = load.awizacja.loadWindowEnd ?? load.awizacja.loadWindowStart;
-  const base = fromWindow ?? (load.plannedLoadDate ? `${load.plannedLoadDate}T06:00:00+02:00` : null);
-  const t = base ? Date.parse(base) : NaN;
+  const fromPlan = load.plannedLoadDate ? `${load.plannedLoadDate}T06:00:00+02:00` : null;
+  /* W-naprawy-2 (F7): późniejsze z okna awizacji i dnia załadunku z planu KSH — po przesunięciu załadunku przez KSH
+     stare okno awizacji nie podsuwa rejsów sprzed załadunku */
+  const cands = [fromWindow, fromPlan].map((x) => (x ? Date.parse(x) : NaN)).filter(Number.isFinite);
+  const t = cands.length ? Math.max(...cands) : NaN;
   if (!Number.isFinite(t)) return Date.now();
   const h = operator === 'STENA' ? STENA_PORT_CLEARANCE_H : PORT_CLEARANCE_H;
   return t + h * 36e5;

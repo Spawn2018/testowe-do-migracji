@@ -133,7 +133,7 @@ export default function LiveAccountScreen() {
     e.preventDefault();
     if (previewRo) return;
     if (!passwordOk(pw)) {
-      setMsg({ ok: false, text: tp(locale, 'auth_pw_short', { n: PASSWORD_MIN }) });
+      setMsg({ ok: false, text: tp(locale, 'auth_pw_rule', { n: PASSWORD_MIN }) });
       return;
     }
     if (pw !== pw2) {
