@@ -2762,3 +2762,23 @@ Scalone `1eb7f395` (odbiór C3 + #274) — same dokumenty, bez wdrożenia.
 
 Kolejka PR wyglądu: **#277 `wyglad/W-audyt` → #279 `wyglad/W-demo` → #280 `wyglad/W-pl`**. Scalanie w przerwach między pozycjami; wdrożenie po scaleniu. `serverRuleOn`: TRACKING_WINDOW (A1), SITE_EXIT_DELIVERED (A2), WIND_E49 / DETOUR_E49 (P6 E49), ROAD_PL_HERE (P6 E2), ROAD_SITUATIONS_MAP (P9 E29 pkt 3). Zadania: EUR przy pierwszym logowaniu; teksty serwera bez `upper(` (C3-p/C6); P5 kurs `fx_rates` + usunięcie `invoices` demo; P4-u `delayed`; P11 ujęcia z TEST; B9 DeepL + język; P8 `sms_render` PL. VISUAL #279 / #280 — czekają na wzorce koordynatora (unit zielone, visual czerwone przed odświeżeniem).
 
+## 2026-10-17 — B1 NA PRODUKCJI
+
+- Gałąź `pakiet/audyt-17-b1`; PR #283; merge `92117abd` (treść `31038de3`).
+- Migracja `0224_b1_security_flags_select.sql`: GRANT SELECT + RLS `is_hhl()`; `security_flags_list()` dla HHL_ADMIN / HHL_OPS.
+- CI: unit, visual, `db` (security/nullguard) zielone na `31038de3`.
+- TEST (SHA `31038de3` / migracja 0224): security **92/92** (+2 SKIP), status **55/55**, nullguard 161+136+228+127 = **652/652**.
+- Próba prod ROLLBACK: SELECT=true, polityka 1, funkcja `security_flags_list` — OK; ROLLBACK.
+- `supabase db push`: 0224 nałożona (`schema_migrations` = 0224).
+- Wdrożenie: `dpl_2mB55evGPQh5RUT4LUCLsP31kFRv`, 17.10.2026 13:08; tower/makieta 200; `assets/index-VhdqXegf.js`; 0× `service_role`.
+- **TEST wolne** od 17.10.2026 13:05.
+- Dalej: dopisek 1100 + #282, potem **B2**.
+
+## 2026-10-17 — DOPISEK D-20261017-1100-01 W PLANIE
+
+Kolejka PR wyglądu (po #280): **#282 `wyglad/W-eta`**. Scalanie w przerwie między pozycjami; wdrożenie po scaleniu. P4-u: `fmt_eta_duration` + „przyjazd nocą” w e-mail/SMS; dane ekranu Kalibracja ETA (§3 pkt 1–9). E15 kalibracja po 5 dostawach (3A) — wygląd W-eta, dane §3.
+
+### Sprawdzenia koordynatora (dopisek §1)
+- audyt 03 N6 (C16-H, sekret `APP_URL`): **OK** — e-mail systemowy z 17.10.2026, 02:15 prowadzi do `https://tower.log-mar.pl/#/…`;
+- audyt 03 N5 (C16, potwierdzenie z telefonu poza testem): **czeka** — od 16.10, 10:01 brak nowych WEB_PUSH; ostatnie potwierdzenie 16.10, 16:42 (Android).
+
