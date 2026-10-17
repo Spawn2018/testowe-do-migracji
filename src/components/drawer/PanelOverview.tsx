@@ -473,7 +473,7 @@ export function PanelOverview(p: Props) {
         phone={phone}
         title={hasDriver ? pt(locale, 'p7_drivers_h') : pt(locale, 'p7_awiz_h')}
         extra={hasDriver ? (swap ? ` · ${pt(locale, 'p7_swap')}` : null) : <>{` · ${pt(locale, 'p7_awiz_fills')} `}{awizChip}</>}
-        status={phone ? <> {awiz === 'none' ? <span className="po-miss">{pt(locale, 'p7_awiz_none')}</span> : awiz === 'part' ? <span className="po-warn">{ptp(locale, 'p7_awiz_part', { n: missing.length })}</span> : <span className="po-ok">{pt(locale, 'p7_awiz_ok')}</span>}</> : null}
+        status={phone ? <> {awiz === 'none' ? <span className="po-miss">{pt(locale, 'p7_awiz_none')}</span> : awiz === 'part' ? <span className="po-warn">{ptp(locale, 'p7_awiz_part', { n: missing.length })}</span> : sailMissing ? <span className="po-warn" data-awiz-nosail>{pt(locale, 'p7_awiz_ok_nosail')}</span> : <span className="po-ok">{pt(locale, 'p7_awiz_ok')}</span>}</> : null}
         right={!phone && hasDriver ? awizChip : null}
       >
         {hasDriver ? (

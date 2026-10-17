@@ -7,6 +7,7 @@ import type { Load, OrgKind, Risk, Sailing } from '../types';
 import type { CaseEvent, CasePerson, TodoDecision } from './p6Todo';
 import type { FerryRowView } from './p6Route';
 import { formatListDateTime } from './format';
+import { TZ_OPS, wallLocalToIso } from './time';
 
 const H = 3600_000;
 const iso = (ms: number) => new Date(ms).toISOString();
@@ -88,7 +89,8 @@ function demoFerryDay(nowIso: string): string {
 /** Promy dziś (img/e7-desk): Polferries ze sztormem, Stena z podwyższonym ryzykiem → propozycja drugiej przeprawy. */
 export function demoFerryRows(nowIso: string, onBoard: number): FerryRowView[] {
   const day = demoFerryDay(nowIso);
-  const at = (hh: string) => new Date(`${day}T${hh}:00+02:00`).toISOString();
+  /* W-naprawy-2 (F7): czas polski także po zmianie czasu 25.10 (jak rozkład demo) */
+  const at = (hh: string) => new Date(Date.parse(wallLocalToIso(`${day}T${hh}`, TZ_OPS)!)).toISOString();
   return [
     { id: 'demo-fr-1', line: 'POLFERRIES', vessel: 'Nova Star', depIso: at('18:00'), delayedIso: null, status: 'ZAPLANOWANY', onBoard,
       sea: { risk: 'wysokie', waveM: 3.2, gustKn: 42, thrWaveM: 3.8, thrGustKn: 40, at: at('11:16') } },
@@ -102,7 +104,7 @@ export function demoStenaSailings(nowIso: string): Sailing[] {
   const day = demoFerryDay(nowIso);
   const next = new Date(Date.parse(`${day}T12:00:00Z`) + 24 * H).toISOString().slice(0, 10);
   const mk = (id: string, vessel: string, d: string, hh: string): Sailing => {
-    const dep = new Date(`${d}T${hh}:00+02:00`).toISOString();
+    const dep = new Date(Date.parse(wallLocalToIso(`${d}T${hh}`, TZ_OPS)!)).toISOString();
     return { id, vessel, operator: 'Stena Line', route: 'GDY-KAA', departureAt: dep, arrivalAt: iso(Date.parse(dep) + 11 * H),
       delayedDepartureAt: null, delayedArrivalAt: null, status: 'ZAPLANOWANY', source: 'STENA' };
   };

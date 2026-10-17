@@ -13,7 +13,7 @@ import { demoFuelScreen } from '../src/lib/p5bDemo';
 import { demoSources } from '../src/lib/sysDemo';
 import type { Load } from '../src/types';
 
-const NOW = '2026-09-28T10:00:00.000Z';
+const NOW = '2026-09-23T10:00:00.000Z'; /* środa — w poniedziałek demo paliwa nie ma alarmu */
 
 describe('C11 — hasło: co najmniej PASSWORD_MIN znaków, litery i cyfry', () => {
   const pad = (s: string) => s.padEnd(PASSWORD_MIN, s.slice(-1));
@@ -133,6 +133,24 @@ describe('F7 runda 2 — czas polski po zmianie czasu (25.10) w danych demo', ()
     expect(at(fuel.since!)).toBe('22.09, 07:15');
     expect(Date.parse(fuel.since!)).toBeLessThan(Date.parse('2026-09-23T04:00:00.000Z'));
     // po 25.10 (czas zimowy) nadal 07:15 czasu polskiego
-    expect(at(demoSources('2026-10-26T15:00:00.000Z').find((r) => r.id === 'fuel')!.nextTryAt!)).toBe('27.10, 07:15');
+    expect(at(demoSources('2026-10-27T15:00:00.000Z').find((r) => r.id === 'fuel')!.nextTryAt!)).toBe('28.10, 07:15');
+    /* F7 runda 3: w poniedziałek ekran paliwa nie ma alarmu — Stan systemu też „Działa” */
+    const mon = demoSources('2026-10-26T15:00:00.000Z').find((r) => r.id === 'fuel')!;
+    expect([mon.state, mon.nextTryAt ?? null]).toEqual(['ok', null]);
+    expect(demoFuelScreen('2026-10-26', '16:00').alarm).toBeNull();
+  });
+});
+
+describe('F7 runda 3 — promy w pasku i propozycja Steny w czasie polskim po 25.10', () => {
+  it('demoFerryRows i demoStenaSailings: 18:00 / 20:00 czasu polskiego 26.10', async () => {
+    const { demoFerryRows, demoStenaSailings } = await import('../src/lib/p6Demo');
+    const hm = (iso: string) => new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso));
+    const rows = demoFerryRows('2026-10-26T15:00:00.000Z', 2);
+    expect(rows.map((r) => hm(r.depIso))).toEqual(['18:00', '20:00']);
+    expect(demoStenaSailings('2026-10-26T15:00:00.000Z').map((s) => hm(s.departureAt))).toEqual(['20:00', '09:00', '20:00']);
+  });
+  it('Automatyzacje: wyjazd ze Śremu — w demo (po A2) bez czekania na potwierdzenie, bez „załadowany”', async () => {
+    const { wt } = await import('../src/i18n/p4cWf');
+    expect(wt('pl', 'p4c_wf_zt_srem_out')).toBe('Droga PL — po postoju ≥ 5 min (próg strefy), bez czekania na potwierdzenie załadunku');
   });
 });

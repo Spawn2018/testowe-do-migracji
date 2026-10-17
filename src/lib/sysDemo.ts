@@ -8,7 +8,6 @@ import { fmtDate, TZ_OPS, wallLocalToIso } from './time';
 
 const M = 60_000;
 const ago = (nowIso: string, min: number) => new Date(Date.parse(nowIso) - min * M).toISOString();
-/** Dzień wcześniej o podanej godzinie czasu polskiego (przybliżenie UTC+2). */
 const p2 = (n: number) => String(n).padStart(2, '0');
 /** Dzień `daysBack` dni wcześniej (ujemne — później) o `hh:mm` czasu polskiego — także po zmianie czasu (F7 runda 2). */
 const dayAt = (nowIso: string, daysBack: number, hh: number, mm: number) => {
@@ -29,11 +28,17 @@ function fuelNextTryAt(nowIso: string): string {
 /** Przed 07:15 dzisiejszego pobierania jeszcze nie było — „od” liczone od wczoraj (F7 runda 2). */
 const fuelBack = (nowIso: string) => (hmNow(nowIso) < FUEL_FETCH_AT ? 1 : 0);
 
+/** Dzień tygodnia w Polsce: poniedziałek = 1. Alarm paliwa w demo (`demoFuelScreen`) jest od wtorku do niedzieli. */
+const fuelAlarmDay = (nowIso: string) => new Intl.DateTimeFormat('en-GB', { timeZone: TZ_OPS, weekday: 'short' }).format(new Date(nowIso)) !== 'Mon';
+
 export function demoSources(nowIso: string): SourceRow[] {
   const next = new Date(Date.parse(dayAt(nowIso, 2, 7, 0)) + 7 * 24 * 60 * M);
   const nextTxt = `${fmtDate(next.toISOString())}, 07:00`;
   return [
-    { id: 'fuel', name: 'Ceny paliwa', cadence: 'raz dziennie', feeds: 'opłata paliwowa', lastAt: dayAt(nowIso, fuelBack(nowIso) + 1, 7, 15), state: 'down', since: dayAt(nowIso, fuelBack(nowIso), 7, 15), why: 'Strona Orlen nie odpowiada (5 prób z rzędu). Opłata paliwowa liczona z cen z poprzedniego odczytu.', nextTryAt: fuelNextTryAt(nowIso), canCheck: true },
+    /* F7 runda 3: „Nie działa” tylko wtedy, gdy ekran Opłata paliwowa ma alarm (brak ceny z wczoraj w tym samym tygodniu — nie w poniedziałek) */
+    fuelAlarmDay(nowIso)
+      ? { id: 'fuel', name: 'Ceny paliwa', cadence: 'raz dziennie', feeds: 'opłata paliwowa', lastAt: dayAt(nowIso, fuelBack(nowIso) + 1, 7, 15), state: 'down', since: dayAt(nowIso, fuelBack(nowIso), 7, 15), why: 'Strona Orlen nie odpowiada (5 prób z rzędu). Opłata paliwowa liczona z cen z poprzedniego odczytu.', nextTryAt: fuelNextTryAt(nowIso), canCheck: true }
+      : { id: 'fuel', name: 'Ceny paliwa', cadence: 'raz dziennie', feeds: 'opłata paliwowa', lastAt: dayAt(nowIso, fuelBack(nowIso), 7, 15), state: 'ok', since: null, why: null, canCheck: true },
     { id: 'mail', name: 'Limit poczty', cadence: 'przy wysyłce i co godzinę', feeds: 'e-maile do użytkowników', lastAt: ago(nowIso, 4 * 24 * 60 + 150), state: 'nomeasure', since: ago(nowIso, 4 * 24 * 60 + 150), why: 'Zadanie nie ma harmonogramu, więc stary wynik nie jest błędem. Pomiar co godzinę.', canCheck: true },
     { id: 'weather', name: 'Pogoda morska', cadence: 'co godzinę', feeds: 'fala i wiatr na rejsach, sprawy promowe', lastAt: ago(nowIso, 17), state: 'partial', since: ago(nowIso, 2 * 24 * 60 + 136), why: 'DMI odmawia (za dużo zapytań) w każdym przebiegu, dane tylko z FMI. 8 z 24 godzin bez wyniku.', canCheck: true },
     /* wyglad/audyt-E (E-09; E49 16.10, 02:08 — D-20261016-0230-01 Z5): wiatr na drodze z SMHI, próg świeżości 2 h */
