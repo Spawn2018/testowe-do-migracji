@@ -2855,8 +2855,8 @@ Twoja część, w swojej kolejności, bez zmiany wyglądu (F1):
 - **C11:** Auth ustawił właściciel (W1, 17.10.2026 07:28). Tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa; „Haslo-testowe-12” → przyjęte. Gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”.
 - **A9:** `awiz_missing(load)` → `load.readyGaps`. Klucze i słowa dokładnie z D-20261017-1715-01 §2 pkt 2 (`AWIZ`, `SAILING`, `PILOTS`, `ORDER_SCX`, `ORDER_HHL`, `POLICY_SCX`, `PERMIT`).
 - **A5:** `sailing_id` wymagany do „Gotowy”. W bazie ta sama reguła wczesnego rejsu co widok: nie wcześniej niż późniejsze z okna awizacji i dnia załadunku z planu.
-- **A6:** parser wypełnia `ImportDiff.skippedCarrier`, `skippedEmpty`, `datesToCheck` (także 0). Komunikat po imporcie z `standardSkipMessage(…, { carrier, empty })`. Sprawa dat: `KSH_DATES_CHECK`.
-- **A8:** `nextTryAt` = `skipped_until` emtrack w danych Stanu systemu. Gdy te dane na produkcji jeszcze nie są podłączone — pole wchodzi razem z nimi.
+- **A6:** parser wypełnia `ImportDiff.skippedCarrier`, `skippedEmpty`, `datesToCheck` (także 0). Komunikat po imporcie z `standardSkipMessage(…, { carrier, empty })`. Sprawa dat: `KSH_DATES_CHECK`. Lokalny `tests/i1-import-ui.local.spec.ts` ma oczekiwane teksty z #291 (§1 pkt 10) — nie cofasz ich.
+- **A8:** `nextTryAt` = `skipped_until` emtrack w danych Stanu systemu. Gdy te dane na produkcji jeszcze nie są podłączone — pole wchodzi razem z nimi. W sprawie zostawiasz `detail.od_kiedy`; „Źródło niedostępne … od …” na ekranie robi #291.
 - **A2:** przestawienie `SITE_EXIT_DELIVERED` przy wdrożeniu zmienia też zdania w Strefach (plac i załadunek).
 
 Bieżąca pozycja w chwili wpisu: **A8**. #291 jeszcze niescalony.
