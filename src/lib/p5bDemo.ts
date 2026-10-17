@@ -35,7 +35,14 @@ const CUR_ORLEN = [-0.277, -0.3, -0.356, -0.349, -0.318, -0.318, -0.318];
 const PREV_OKQ8 = [0.11, -0.09, -0.54, 0.51, 0.51, 0.51, 0.51];
 const PREV_ORLEN = [0.222, 0.143, 0.035, 0.052, 0.06, -0.277, -0.277];
 
-export function demoFuelScreen(today: string): FuelScreenView {
+/** E3: pobieranie cen o 07:15, ponowienia o 09:15 i 13:15 (czas polski). */
+export const FUEL_FETCH_AT = '07:15';
+export const FUEL_RETRIES = ['09:15', '13:15'] as const;
+/** Następna automatyczna próba dziś po `nowHm` („HH:MM”, czas polski) albo null — dziś już nie będzie. */
+export const fuelNextTryToday = (nowHm: string): string | null => FUEL_RETRIES.find((t) => t > nowHm) ?? null;
+
+/** `nowHm` — godzina zegara demo (czas polski); bez niej przykład z makiety („13:15”). */
+export function demoFuelScreen(today: string, nowHm?: string): FuelScreenView {
   const mon = monday(today);
   const prevMon = add(mon, -7);
   const nextMon = add(mon, 7);
@@ -83,7 +90,7 @@ export function demoFuelScreen(today: string): FuelScreenView {
   return {
     contract: { version: 3, from: '2026-09-28', agreed: true },
     alarm: yesterdayInWeek
-      ? { source: 'ORLEN', date: yesterday, at: '07:15', published: curOrlen(todayIdx - 1), affectsFrom: nextMon, affectsTo: add(nextMon, 6), nextTry: '13:15' }
+      ? { source: 'ORLEN', date: yesterday, at: '07:15', published: curOrlen(todayIdx - 1), affectsFrom: nextMon, affectsTo: add(nextMon, 6), nextTry: nowHm == null ? '13:15' : fuelNextTryToday(nowHm) }
       : null,
     current: {
       from: mon, to: add(mon, 6), idxFrom: prevMon, idxTo: add(prevMon, 6),
@@ -91,8 +98,8 @@ export function demoFuelScreen(today: string): FuelScreenView {
     },
     next: { from: nextMon, to: add(nextMon, 6), idxFrom: mon, idxTo: add(mon, 6), forecast: run.appliedMult, finalOn: nextMon },
     fetch: {
-      at: '07:15',
-      retries: ['09:15', '13:15'],
+      at: FUEL_FETCH_AT,
+      retries: [...FUEL_RETRIES],
       today: { date: today, okq8: true, orlen: true },
       yesterday: { date: yesterday, okq8: true, orlen: !yesterdayInWeek },
     },

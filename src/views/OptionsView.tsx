@@ -223,7 +223,7 @@ export function OptionsView() {
   });
 
   /* wyglad/P5-b — dane ekranów Pieniądze; null = nie podłączone (zostaje dzisiejszy formularz albo sekcji nie ma) */
-  const fuelView = fuelScreenOf(localDateOf(getNowIso()));
+  const fuelView = fuelScreenOf(localDateOf(getNowIso()), getNowIso());
   const dwell = dwellRulesOf();
   const cancel = cancelRulesOf();
   const margin = marginSettingOf();

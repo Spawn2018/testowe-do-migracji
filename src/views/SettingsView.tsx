@@ -85,7 +85,7 @@ export function SettingsView() {
   /* wyglad/P10b-b (E37 pkt 3): „Instrukcja” znika z Opcji i Ustawień — zastępuje ją Pomoc („?”, menu konta) */
 
   const groups: OptGroup[] = [];
-  const fuelDemo = SefsReadOnly ? null : fuelScreenOf(localDateOf(getNowIso()));
+  const fuelDemo = SefsReadOnly ? null : fuelScreenOf(localDateOf(getNowIso()), getNowIso());
   if (role === 'KSH' || role === 'SCX') {
     if (SefsReadOnly) groups.push({ id: 'money', screens: [{ id: 'fuel', right: 'read', body: block(<SefsReadOnly />) }] });
     else if (fuelDemo) {

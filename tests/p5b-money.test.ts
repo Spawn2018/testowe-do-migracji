@@ -245,7 +245,7 @@ describe('I-0 i podłączenie w Opcjach', () => {
     const guards = src.match(/import\.meta\.env\.VITE_AUTH_MODE !== 'supabase'/g) ?? [];
     expect(fns.length).toBe(13); /* wyglad/audyt-E (E-06): + rateCardOf, rateCardSaverOf */
     expect(guards.length).toBe(fns.length);
-    expect(src).toMatch(/VITE_AUTH_MODE !== 'supabase' \? demoFuelScreen\(today\) : null/);
+    expect(src).toMatch(/VITE_AUTH_MODE !== 'supabase' \? demoFuelScreen\(today(, hm)?\) : null/); /* W-naprawy-2: + godzina zegara demo */
     expect(src).not.toMatch(/supabase\.|fetch\(|\.rpc\(/);
   });
   it('OptionsView: nowe ekrany tylko przy danych; bez danych zostaje dzisiejszy formularz', () => {

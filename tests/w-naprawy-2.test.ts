@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { PASSWORD_MIN, passwordOk } from '../src/auth/config';
 import { tp } from '../src/i18n/messages';
 import { computeReadyGaps } from '../src/lib/readyGaps';
+import { demoFuelScreen } from '../src/lib/p5bDemo';
 import { demoSources } from '../src/lib/sysDemo';
 import type { Load } from '../src/types';
 
@@ -71,6 +72,15 @@ describe('A8 — Stan systemu: „następna próba o …”', () => {
     const fuel = demoSources(NOW).find((r) => r.id === 'fuel');
     expect(fuel?.state).toBe('down');
     expect(Date.parse(fuel?.nextTryAt ?? '')).toBeGreaterThan(Date.parse(NOW));
+  });
+  it('demo: ta sama następna próba w Stanie systemu i na ekranie Opłata paliwowa', () => {
+    const at = (iso: string) => new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso));
+    // 12:00 czasu polskiego → dziś 13:15
+    expect(at(demoSources('2026-09-23T10:00:00.000Z').find((r) => r.id === 'fuel')!.nextTryAt!)).toBe('23.09, 13:15');
+    expect(demoFuelScreen('2026-09-23', '12:00').alarm?.nextTry).toBe('13:15');
+    // 16:32 → dziś już nie ma prób; Stan systemu: jutro 07:15
+    expect(at(demoSources('2026-09-23T14:32:00.000Z').find((r) => r.id === 'fuel')!.nextTryAt!)).toBe('24.09, 07:15');
+    expect(demoFuelScreen('2026-09-23', '16:32').alarm?.nextTry).toBeNull();
   });
   it('źródła bez uwagi nie mają czasu próby', () => {
     expect(demoSources(NOW).filter((r) => r.state === 'ok').every((r) => !r.nextTryAt)).toBe(true);
