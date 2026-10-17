@@ -62,6 +62,7 @@
 .inv-num{width:110px;text-align:right}
 .inv-fx{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center}
 .inv-check{width:18px;height:18px}
+.inv-pick{display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
 .inv-sum{margin:0;padding:10px 12px;background:var(--surface-2);border:1px solid var(--rule-2);display:grid;grid-template-columns:1fr auto;gap:0;font-size:14px;font-variant-numeric:tabular-nums}
 .inv-sum>div{display:contents}
 .inv-sum dt,.inv-sum dd{margin:0;padding:5px 0;border-bottom:1px solid var(--rule-2)}
@@ -119,6 +120,10 @@
   .inv-num{width:100%}
   .inv-send,.fact-mark{width:100%}
   .inv-tasks{grid-template-columns:minmax(0,1fr)}
+  /* F7 U1: na telefonie transporty czekające na CMR tylko w zdaniu pod tabelą (kody), bez kart */
+  .fin-table tr.inv-wait{display:none}
+  /* F7 U1: pole wyboru pozycji faktury — cel dotyku 44 px na telefonie */
+  .inv-pick{min-width:44px;min-height:44px}
 }
 .fact-offer{display:flex;flex-direction:column;gap:10px;max-width:760px}
 .fact-dl{padding:4px 0}

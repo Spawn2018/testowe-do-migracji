@@ -16,9 +16,9 @@ import { unloadedAtOf } from '../lib/money/loadMoney';
 import { transportLabel } from '../lib/transportName';
 import {
   BILL_TERM_DAYS,
-  BILL_FLAG_LABEL, VERIFICATION_LABEL, billCandidates, billPaymentToday, billVisibleTo,
+  BILL_FLAG_LABEL, VERIFICATION_LABEL, billCandidates, billPaymentToday, billReady, billSumOk, billVisibleTo,
   canMarkPaid, canRegisterBill, computedEurFor, canVerifyBill, checkBill, expectedNetFor, invoicedLoadIds,
-  addDaysIso, reminderPlan, reminderRecipients, suggestLineFx, vatGrossOf, type BillDraft,
+  addDaysIso, parseAmount, reminderPlan, reminderRecipients, suggestLineFx, vatGrossOf, type BillDraft,
 } from '../lib/invoices3';
 import { DocFileRow } from '../components/ui/DocFileRow';
 import { DocPreview } from '../components/ui/DocPreview';
@@ -267,6 +267,7 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
   const allBills = useTowerStore((s) => s.bills);
+  const docsAll = useTowerStore((s) => s.documents);
   const loads = useTowerStore((s) => s.loads);
   const verifyBill = useTowerStore((s) => s.verifyBill);
   const [wizard, setWizard] = useState(false);
@@ -280,7 +281,7 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
     () => bills.filter((b) => b.direction === direction).sort((a, b) => b.weekKey.localeCompare(a.weekKey) || b.issueDate.localeCompare(a.issueDate)),
     [bills, direction],
   );
-  const pending = useMemo(() => pendingWeeks(loads, allBills, direction, today), [loads, allBills, direction, today]);
+  const pending = useMemo(() => pendingWeeks(loads, allBills, direction, today, docsAll), [loads, allBills, direction, today, docsAll]);
   const kpis = useMemo(() => invoiceKpis(role, bills, pending, direction, today), [role, bills, pending, direction, today]);
   const title = role === 'KSH' ? ft(locale, 'p5_inv_list_ksh') : role === 'SCX' ? ft(locale, 'p5_inv_list_scx') : ft(locale, `p5_inv_list_${direction}`);
   const dm = fmtDay;
@@ -579,6 +580,7 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
   const role = useTowerStore((s) => s.role);
   const loads = useTowerStore((s) => s.loads);
   const bills = useTowerStore((s) => s.bills);
+  const documents = useTowerStore((s) => s.documents);
   const registerBill = useTowerStore((s) => s.registerBill);
   const today = localDateOf(getNowIso());
   const weeks = useMemo(() => {
@@ -590,7 +592,9 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
     }
     return [...set].sort().reverse();
   }, [loads, bills, direction]);
-  const [week, setWeek] = useState(weeks[0] ?? '');
+  /* A4 (F7 U4): tydzień, w którym wszystko czeka na CMR, oznaczony na liście; domyślnie najnowszy tydzień z transportem gotowym do faktury */
+  const readyIn = useMemo(() => new Map(weeks.map((w) => [w, billCandidates(loads, bills, direction, w).filter((l) => billReady(l, documents)).length])), [weeks, loads, bills, direction, documents]);
+  const [week, setWeek] = useState(weeks.find((w) => (readyIn.get(w) ?? 0) > 0) ?? weeks[0] ?? '');
   const [currency, setCurrency] = useState<'EUR' | 'PLN'>('EUR');
   const [number, setNumber] = useState('');
   const [issueDate, setIssueDate] = useState(today);
@@ -598,17 +602,20 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
   const [net, setNet] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
-  const candidates = useMemo(() => (week ? billCandidates(loads, bills, direction, week) : []), [loads, bills, direction, week]);
+  const weekLoads = useMemo(() => (week ? billCandidates(loads, bills, direction, week) : []), [loads, bills, direction, week]);
+  /* A4 (audyt 17.10): na fakturę tylko transporty z CMR; reszta tygodnia szara z „czeka na CMR” */
+  const candidates = useMemo(() => weekLoads.filter((l) => billReady(l, documents)), [weekLoads, documents]);
+  const waiting = useMemo(() => weekLoads.filter((l) => !billReady(l, documents)), [weekLoads, documents]);
   const [lines, setLines] = useState<Record<string, LineState>>({});
   const lineOf = (id: string): LineState => {
     if (lines[id]) return lines[id];
     const l = loads.find((x) => x.id === id)!;
     const fx = currency === 'PLN' ? suggestLineFx(l, direction, today) : null;
     const exp = expectedNetFor(l, direction, currency, today) ?? (fx ? Math.round(computedEurFor(l, direction) * fx.mid * 100) / 100 : null);
-    return { on: true, net: exp != null ? String(exp) : '', fuel: '', fx, fxConfirmed: false };
+    return { on: true, net: exp != null ? formatPlNumber(exp, 2) : '', fuel: '', fx, fxConfirmed: false };
   };
   const patch = (id: string, p: Partial<LineState>) => setLines((s) => ({ ...s, [id]: { ...lineOf(id), ...p } }));
-  const num = (v: string) => (v.trim() === '' || Number.isNaN(Number(v.replace(',', '.'))) ? null : Number(v.replace(',', '.')));
+  const num = parseAmount;
   /* audyt-C C-09 (E4; decyzja 16.10, 13:58 · 1): wystawca wpisuje netto, VAT 23 % i brutto liczy system na bieżąco */
   const netN = num(net);
   const sums = netN != null ? vatGrossOf(netN) : null;
@@ -621,9 +628,10 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
       return { loadId: l.id, invoicedNet: num(st.net) ?? 0, invoicedFuel: num(st.fuel), fx: currency === 'PLN' && st.fxConfirmed ? st.fx : null };
     }),
   };
-  const chk = checkBill(draft, loads, bills, today);
+  const chk = checkBill(draft, loads, bills, today, documents);
 
   const diff = Math.round((chk.invoicedTotal - chk.expectedTotal) * 100) / 100;
+  const sumOk = billSumOk(chk);
   const due = addDaysIso(issueDate || today, BILL_TERM_DAYS[direction]); /* 03_REJESTR: SCX → HHL 35 dni, HHL → KSH 30 dni */
   const offer = direction === 'KOSZT' && role === 'SCX' ? factoringOfferOf() : null;
 
@@ -634,7 +642,7 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
         <label className="inv-week">
           <span>{t(locale, 'bill_col_week')}</span>
           <select className="input" value={week} data-w="week" onChange={(e) => { setWeek(e.target.value); setLines({}); }}>
-            {weeks.map((w) => <option key={w} value={w}>{weekOptionLabel(w)}</option>)}
+            {weeks.map((w) => <option key={w} value={w}>{weekOptionLabel(w)}{readyIn.get(w) ? '' : ` · ${ft(locale, 'p5_inv_wait_cmr')}`}</option>)}
           </select>
         </label>
       </header>
@@ -644,7 +652,7 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
             <table className="fin-table">
               <thead>
                 <tr>
-                  <th><span className="sronly">{t(locale, 'bill_col_checks')}</span></th>
+                  <th><span className="sronly">{ft(locale, 'p5_inv_col_pick')}</span></th>
                   <th>{t(locale, 'sched_col_code')}</th>
                   <th>{t(locale, 'bill_col_unload')}</th>
                   <th className="num">{t(locale, 'bill_col_expected')}</th>
@@ -660,7 +668,7 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
                   const res = chk.lines.find((x) => x.loadId === l.id);
                   return (
                     <tr key={l.id} data-w-line={l.code}>
-                      <td><input type="checkbox" className="inv-check" checked={st.on} onChange={(e) => patch(l.id, { on: e.target.checked })} aria-label={transportLabel(l, role)} /></td>
+                      <td><label className="inv-pick"><input type="checkbox" className="inv-check" checked={st.on} onChange={(e) => patch(l.id, { on: e.target.checked })} aria-label={transportLabel(l, role)} /></label></td>
                       <td><span className="code" data-content>{transportLabel(l, role)}</span></td>
                       <td>{fmtDay(at ? localDateOf(at) : null)}</td>
                       <td className="num"><Amount n={expectedNetFor(l, direction, currency, today)} cur={currency} /></td>
@@ -685,9 +693,24 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
                     </tr>
                   );
                 })}
+                {waiting.map((l) => {
+                  const at = unloadedAtOf(l);
+                  return (
+                    <tr key={l.id} className="inv-wait" data-w-wait={l.code}>
+                      <td><label className="inv-pick"><input type="checkbox" className="inv-check" checked={false} disabled aria-label={`${transportLabel(l, role)} · ${ft(locale, 'p5_inv_wait_cmr')}`} /></label></td>
+                      <td><span className="code" data-content>{transportLabel(l, role)}</span></td>
+                      <td>{fmtDay(at ? localDateOf(at) : null)}</td>
+                      <td className="num"><Amount n={expectedNetFor(l, direction, currency, today)} cur={currency} /></td>
+                      <td className="num">—</td>
+                      {currency === 'PLN' ? <td>—</td> : null}
+                      <td><span className="fin-tag plain" data-flag="CMR">{ft(locale, 'p5_inv_wait_cmr')}</span></td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          {waiting.length ? <p className="fin-muted" data-w-wait-n>{ftp(locale, 'p5_inv_wait_n', { n: String(waiting.length), codes: waiting.map((l) => l.code).join(', ') })}</p> : null}
           <p className="fin-muted">{ft(locale, 'p5_inv_form_lines_note')}</p>
         </div>
         <div className="inv-form-fields">
@@ -713,7 +736,7 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
           <dl className="inv-sum" data-deur-exempt="invoice-currency">
             <div><dt>{ft(locale, 'p5_inv_form_sum_exp')}</dt><dd><Amount n={chk.expectedTotal} cur={currency} /></dd></div>
             <div><dt>{ft(locale, 'p5_inv_form_sum_inv')}</dt><dd><Amount n={chk.invoicedTotal} cur={currency} /></dd></div>
-            <div className="strong"><dt>{ft(locale, 'p5_inv_form_sum_diff')}</dt><dd className={diff === 0 ? 'inv-ok' : 'neg'}><Amount n={diff} cur={currency} />{diff === 0 ? ` · ${ft(locale, 'p5_inv_form_sum_ok')}` : ''}</dd></div>
+            <div className="strong"><dt>{ft(locale, 'p5_inv_form_sum_diff')}</dt><dd className={sumOk ? 'inv-ok' : chk.lines.length ? 'neg' : undefined} data-w-sum-ok={sumOk ? 'tak' : 'nie'}><Amount n={diff} cur={currency} />{sumOk ? ` · ${ft(locale, 'p5_inv_form_sum_ok')}` : ''}</dd></div>
             <div><dt>{t(locale, 'bill_col_due')} ({BILL_TERM_DAYS[direction]})</dt><dd>{fmtDay(dueDoc || due)}</dd></div>
           </dl>
           {chk.headerFlags.length ? <span className="fin-tag warn" data-flag="BRAK_NA_FAKTURZE">{BILL_FLAG_LABEL.BRAK_NA_FAKTURZE[locale]} · {chk.missingLoadIds.length}</span> : null}

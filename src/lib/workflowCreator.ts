@@ -36,7 +36,9 @@ export interface ConditionRow { field: string; op: ConditionOp; value: string }
 
 export const DECISION_TYPES = ['FERRY_CANCELLED', 'ETA_AFTER_LATEST', 'KSH_DATE_LT_5D', 'NO_AWIZACJA', 'DOC_MISSING', 'KSH_ROW_GONE',
   'TOWER_KSH_CONFLICT', 'KSH_FILE_ERROR', 'NO_POSITION', 'ROUTE_DEVIATION', 'SEFS_OUT_OF_TABLE', 'SEFS_INVOICE_DIFF', 'KR_OVER_3',
-  'INSURANCE_EXPIRING', 'DWELL_OVER_FREE', 'BACKUP_FAILED'] as const;
+  'INSURANCE_EXPIRING', 'DWELL_OVER_FREE', 'BACKUP_FAILED',
+  /* wyglad/W-naprawy (D-20261017-1450-01 §2 pkt 4): nowe sprawy A6, A2 L14, A3 */
+  'KSH_DATES_CHECK', 'DELIVERED_CHECK', 'CMR_UPLOAD'] as const;
 
 export type Audience = 'HHL' | 'KSH' | 'CARRIER';
 export const AUDIENCES: Audience[] = ['HHL', 'KSH', 'CARRIER'];

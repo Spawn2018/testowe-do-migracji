@@ -213,7 +213,11 @@ export function histRow(e: LoadEvent, locale: Locale, zones: ReadonlyMap<string,
   const cat = histCat(e.type);
   const on = oldNew(p, locale);
   const note = cleanNote(str(e.note), e.type, locale);
-  const base = { id: e.id, at: e.at, cat, who: whoOf(e.actor, locale), src: srcOf(p, locale) };
+  /* wyglad/W-naprawy · B5 (W38): wpis zrobiony w Podglądzie — „Anna Wiśniewska // H&H Logistics jako Piotr Zając // KSH”
+     (payload.preview_as z bazy — wykonawca w B5) */
+  const as = str(p.preview_as);
+  const who = as ? `${whoOf(e.actor, locale)} ${ht(locale, 'p6b_as')} ${whoOf(as, locale)}` : whoOf(e.actor, locale);
+  const base = { id: e.id, at: e.at, cat, who, src: srcOf(p, locale) };
 
   const milestone = MILESTONE_STATUS[e.type];
   if (milestone) {

@@ -11,6 +11,7 @@ import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 import { readFileAsDataUrl } from './docsIo';
 import { compressImage, isPdfTooBig } from './imageCompress';
+import { formatPlNumber } from './format';
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -30,7 +31,7 @@ export async function attachDocumentFile(
   const st = useTowerStore.getState();
   // PR7: PDF ≤ 10 MB (komunikat zamiast nieudanego wgrania); zdjęcia kompresowane w przeglądarce.
   if (isPdfTooBig(file)) {
-    st.pushToast(t(st.locale, 'pr7_pdf_too_big').replace('{mb}', (file.size / 1048576).toFixed(1)), 'HIGH', loadId);
+    st.pushToast(t(st.locale, 'pr7_pdf_too_big').replace('{mb}', formatPlNumber(file.size / 1048576, 1)), 'HIGH', loadId);
     return false;
   }
   file = await compressImage(file);

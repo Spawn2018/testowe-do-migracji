@@ -1585,7 +1585,7 @@ export const useTowerStore = create<TowerState>()(
         if (!canRegisterBill(s.role, draft.direction)) {
           return { ok: false as const, errors: ['ROLE'] };
         }
-        const chk = checkBill(draft, s.loads, s.bills, today);
+        const chk = checkBill(draft, s.loads, s.bills, today, s.documents);
         if (chk.errors.length) return { ok: false as const, errors: chk.errors };
         const { issuer, recipient } = billParties(draft.direction);
         const bill: Bill = {

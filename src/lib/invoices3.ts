@@ -6,7 +6,7 @@
  * podpowiadany z reguły W3, wystawca potwierdza albo poprawia. Kontrole = te same co w bazie.
  * Dwa niezależne statusy: weryfikacja (odbiorca) i płatność (wyłącznie HHL).
  */
-import type { Bill, BillDirection, BillFlag, BillLine, BillLineFx, BillPayment, BillVerification, Load, OrgKind, RoleId } from '../types';
+import type { Bill, BillDirection, BillFlag, BillLine, BillLineFx, BillPayment, BillVerification, Document, Load, OrgKind, RoleId } from '../types';
 import { isoWeekKeyLocal, localDateOf } from './money/engine';
 
 export function addDaysIso(dateIso: string, days: number): string {
@@ -16,10 +16,20 @@ export function addDaysIso(dateIso: string, days: number): string {
 }
 import { fxForDate, unloadedAtOf } from './money/loadMoney';
 import { dictEntry } from '../i18n/messages';
+import { serverRuleOn } from './serverRules';
+import { currentCmr } from './statusSettlement';
 
 export const BILL_TERM_DAYS: Record<BillDirection, number> = { PRZYCHOD: 30, KOSZT: 35 };
-/** Tolerancja kwoty — jak `matchInvoice` i `register_invoice`: > 1 i > 0,2 %. */
+/** Tolerancja kwoty do czasu A4 — jak `register_invoice` (0015): > 1 i > 0,2 %. */
 export const BILL_TOLERANCE = { abs: 1, pct: 0.002 };
+/**
+ * wyglad/W-naprawy · A4 (audyt 17.10; decyzja 07.10, 12:35: faktura zgadza się co do grosza): każda różnica ≥ 0,01
+ * w walucie faktury → flaga KWOTA, bez „zgodna”; „pominięty z tygodnia” tylko wśród transportów z CMR.
+ * W demo od razu; na produkcji po A4 w `register_invoice` — wykonawca przestawia `INVOICE_A4` w `serverRules.ts`
+ * (flagi pozycji idą do bazy w `billToRpc`, więc widok i baza zmieniają regułę razem).
+ */
+export const BILL_TOLERANCE_A4 = 0.01;
+export const invoiceA4On = (): boolean => serverRuleOn('INVOICE_A4');
 
 export function billParties(direction: BillDirection): { issuer: OrgKind; recipient: OrgKind } {
   return direction === 'KOSZT' ? { issuer: 'SCX', recipient: 'HHL' } : { issuer: 'HHL', recipient: 'KSH' };
@@ -46,8 +56,9 @@ export function vatGrossOf(net: number): { vat: number; gross: number } {
   const vat = round2(net * BILL_VAT_RATE);
   return { vat, gross: round2(net + vat) };
 }
-const outOfTolerance = (diff: number, base: number) =>
-  Math.abs(diff) > BILL_TOLERANCE.abs && (base === 0 || Math.abs(diff) / base > BILL_TOLERANCE.pct);
+const outOfTolerance = (diff: number, base: number) => (invoiceA4On()
+  ? Math.abs(round2(diff)) >= BILL_TOLERANCE_A4
+  : Math.abs(diff) > BILL_TOLERANCE.abs && (base === 0 || Math.abs(diff) / base > BILL_TOLERANCE.pct));
 
 /** Reguła kursu dla transportu: migawka przy rozładunku, inaczej W3 z tabel. */
 export function ruleFxFor(load: Load, direction: BillDirection, todayLocal: string): BillLineFx | null {
@@ -122,6 +133,32 @@ export function billCandidates(loads: Load[], bills: Bill[], direction: BillDire
   });
 }
 
+/**
+ * wyglad/W-naprawy · A4 (audyt 17.10, D-20261017-0730-01): faktura tylko z CMR. Transport wchodzi na fakturę, gdy ma status
+ * „Gotowe do fakturowania” / „Zafakturowano” (automat C17 po wgraniu CMR) albo — zanim automat zmieni status — warunek
+ * automatu C17 (`c17_cmr_after_delivery`): aktualny CMR (niezastąpiony), wgrany, nie wcześniej niż rozładunek.
+ * Pozostałe z tygodnia kreator pokazuje szare, z opisem „czeka na CMR”. Bazę (`register_invoice`) robi wykonawca.
+ */
+export function billReady(l: Load, documents: readonly Document[] = []): boolean {
+  if (l.status === 'READY_TO_INVOICE' || l.status === 'INVOICED') return true;
+  const cmr = currentCmr(l.id, documents);
+  const at = unloadedAtOf(l);
+  if (!cmr || cmr.status !== 'UPLOADED' || !cmr.uploadedAt || !at) return false;
+  return Date.parse(cmr.uploadedAt) >= Date.parse(at);
+}
+
+/** F7 (A4): „zgodna” tylko gdy suma się zgadza i żadna pozycja nie ma flagi KWOTA (różnice ±0,01 się nie znoszą), a faktura ma pozycje. */
+export function billSumOk(chk: Pick<BillCheck, 'lines' | 'invoicedTotal' | 'expectedTotal'>): boolean {
+  const diff = round2(chk.invoicedTotal - chk.expectedTotal);
+  return diff === 0 && chk.lines.length > 0 && chk.lines.every((l) => !l.flags.includes('KWOTA'));
+}
+
+/** F7: kwota wpisana tak, jak aplikacja ją pokazuje („6 271,90”, także twarda spacja) albo „6271.9”; pusta / błędna → null. */
+export function parseAmount(v: string): number | null {
+  const t = v.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.');
+  return t === '' || Number.isNaN(Number(t)) ? null : Number(t);
+}
+
 /** PDF faktury ≤ 10 MB — ten sam limit co zasobnik `faktury` i `create_document` (0029/0039). */
 export const INVOICE_PDF_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -136,7 +173,7 @@ export interface BillCheck {
 }
 
 /** Kontrole przy rejestracji — lustro `register_invoice` (§6.3). */
-export function checkBill(draft: BillDraft, loads: Load[], bills: Bill[], todayLocal: string): BillCheck {
+export function checkBill(draft: BillDraft, loads: Load[], bills: Bill[], todayLocal: string, documents: readonly Document[] = []): BillCheck {
   const byId = new Map(loads.map((l) => [l.id, l]));
   const already = invoicedLoadIds(bills, draft.direction);
   const errors: string[] = [];
@@ -171,7 +208,9 @@ export function checkBill(draft: BillDraft, loads: Load[], bills: Bill[], todayL
     return { loadId: d.loadId, invoicedNet: round2(d.invoicedNet), invoicedFuel: d.invoicedFuel ?? null, fx: d.fx ?? null, expectedNet, flags };
   });
   const onBill = new Set(draft.lines.map((l) => l.loadId));
-  const missingLoadIds = billCandidates(loads, bills, draft.direction, draft.weekKey).filter((l) => !onBill.has(l.id)).map((l) => l.id);
+  /* A4: „pominięty z tygodnia” tylko wśród transportów z CMR — czekający na CMR nie mogą być na fakturze (po A4 w bazie) */
+  const missingLoadIds = billCandidates(loads, bills, draft.direction, draft.weekKey)
+    .filter((l) => !onBill.has(l.id) && (!invoiceA4On() || billReady(l, documents))).map((l) => l.id);
   return {
     lines,
     headerFlags: missingLoadIds.length ? ['BRAK_NA_FAKTURZE'] : [],

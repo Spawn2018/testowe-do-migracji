@@ -17,6 +17,7 @@ import { isTodoRisk, todoCardKey } from './todoRules';
 import { transportLabel } from './transportName';
 import { fcp } from '../i18n/p5c';
 import { pendingWeekLoads } from './p5Invoices';
+import { billReady } from './invoices3';
 
 export type CockpitTone = 'default' | 'alert' | 'warn' | 'good';
 
@@ -146,9 +147,9 @@ export function loadsBilledBy(bills: readonly Pick<Bill, 'issuer' | 'lines'>[], 
 }
 
 /** Transporty „Czeka na wystawienie” firmy wystawiającej (E4: zamknięty tydzień, dostarczone, bez jej faktury). */
-export function invoiceReadyLoads(role: RoleId, loads: readonly Load[], bills: readonly Bill[], today: string): Load[] {
+export function invoiceReadyLoads(role: RoleId, loads: readonly Load[], bills: readonly Bill[], today: string, documents: readonly Document[] = []): Load[] {
   if (role === 'KSH') return [];
-  return pendingWeekLoads(loads, bills, role === 'SCX' ? 'KOSZT' : 'PRZYCHOD', today).flatMap((w) => w.loads);
+  return pendingWeekLoads(loads, bills, role === 'SCX' ? 'KOSZT' : 'PRZYCHOD', today, documents).flatMap((w) => w.loads);
 }
 
 /**
@@ -161,11 +162,11 @@ export function invoiceTodoCount(
   role: RoleId,
   input: { loads: readonly Load[]; documents?: readonly Document[]; bills: readonly Bill[]; today: string },
 ): number {
-  const { loads, bills, today } = input;
+  const { loads, bills, today, documents = [] } = input;
   const waiting = bills.filter((b) =>
     (b.recipient === role && b.verification === 'DO_WERYFIKACJI') || (b.issuer === role && b.verification === 'SPORNA')).length;
   if (role === 'KSH') return waiting;
-  return waiting + invoiceReadyLoads(role, loads, bills, today).length;
+  return waiting + invoiceReadyLoads(role, loads, bills, today, documents).length;
 }
 
 /** Wspólne liczby z danych (bez zapisu, bez zapytań). */
@@ -189,12 +190,13 @@ export function cockpitFacts(input: Pick<CockpitInput, 'loads' | 'documents' | '
   const atSite = loads.filter(onSite);
   const inTransit = loads.filter((l) => !notDeparted(l) && !delivered(l));
   const done = loads.filter(delivered);
-  const doneNoCmr = done.filter((l) => !hasDoc(documents, l.id, 'CMR'));
+  /* A4: „czeka na CMR” = to samo co szary wiersz w kreatorze faktury (`billReady`) */
+  const doneNoCmr = done.filter((l) => !billReady(l, documents));
   /* SCX „Do zafakturowania”: rozładowane bez faktury SCX; gotowe = z podpisanym CMR */
   const toInvoice = done.filter((l) => !scxBilled.has(l.id));
-  const toInvoiceNoCmr = toInvoice.filter((l) => !hasDoc(documents, l.id, 'CMR'));
+  const toInvoiceNoCmr = toInvoice.filter((l) => !billReady(l, documents));
   /* audyt-C C-10: HHL „gotowe do faktury” = te same transporty co kafel „Czeka na wystawienie” i liczba w menu */
-  const readyToInvoice = invoiceReadyLoads('HHL', loads, bills, today);
+  const readyToInvoice = invoiceReadyLoads('HHL', loads, bills, today, documents);
   const plan72 = loads.filter((l) => {
     const d = dayKey(l.plannedDeliverDate);
     return !delivered(l) && d != null && d >= today && d <= in72;

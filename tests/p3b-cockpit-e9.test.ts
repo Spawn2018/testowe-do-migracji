@@ -11,8 +11,9 @@ const NOW = '2026-10-07T16:00:00Z'; // 07.10, 18:00 w Warszawie
 
 const load = (id: string, p: Partial<Load>): Load =>
   ({ id, code: id, stage: 'PLAN', status: 'PLANNED', qty: 1, dims: { weightT: 10 }, plannedLoadDate: '2026-10-09', plannedDeliverDate: '2026-10-14', ...p }) as unknown as Load;
+/* wyglad/W-naprawy (A4): CMR liczy się po rozładunku (lustro automatu C17) — plik z datą wgrania po rozładunku SG-02 */
 const doc = (loadId: string, category: Document['category']): Document =>
-  ({ id: `${loadId}-${category}`, loadId, category, status: 'UPLOADED' }) as unknown as Document;
+  ({ id: `${loadId}-${category}`, loadId, category, status: 'UPLOADED', uploadedAt: '2026-10-06T12:00:00Z' }) as unknown as Document;
 
 /* Statusy jak z produkcji (src/data/mappers.ts): „Rozładowany” (UNLOADED) → UNLOADING / etap SITE,
    „Na placu” (AT_SITE) → APPROACHING_SITE / etap APPROACH; etap DELIVERED w produkcji nie występuje (E25). */
@@ -72,14 +73,16 @@ describe('E9 — „Do zrobienia” i liczby w menu', () => {
        transporty rozładowane w zamkniętym tygodniu, bez faktury tej firmy. Tydzień SG-01 / SG-02 (t41) zamyka się 11.10. */
     const open = '2026-10-07';
     const closed = '2026-10-12';
-    expect(invoiceTodoCount('KSH', { loads: LOADS, bills, today: closed })).toBe(1);
+    expect(invoiceTodoCount('KSH', { loads: LOADS, documents: DOCS, bills, today: closed })).toBe(1);
     // HHL, tydzień otwarty: tylko 1 faktura SCX do sprawdzenia
-    expect(invoiceTodoCount('HHL', { loads: LOADS, bills, today: open })).toBe(1);
-    // HHL, tydzień zamknięty: + SG-01 i SG-02 (na fakturze SCX, ale bez faktury HHL dla KSH)
-    expect(invoiceTodoCount('HHL', { loads: LOADS, bills, today: closed })).toBe(3);
-    // SCX: 1 sporna + SG-01 (SG-02 jest już na fakturze SCX)
-    expect(invoiceTodoCount('SCX', { loads: LOADS, bills, today: closed })).toBe(2);
-    expect(invoiceTodoCount('SCX', { loads: LOADS, bills: [], today: open })).toBe(0);
+    expect(invoiceTodoCount('HHL', { loads: LOADS, documents: DOCS, bills, today: open })).toBe(1);
+    // HHL, tydzień zamknięty: + SG-02 (z CMR, na fakturze SCX, bez faktury HHL dla KSH); SG-01 czeka na CMR (A4)
+    expect(invoiceTodoCount('HHL', { loads: LOADS, documents: DOCS, bills, today: closed })).toBe(2);
+    // SCX: 1 sporna; SG-01 czeka na CMR (A4), SG-02 jest już na fakturze SCX
+    expect(invoiceTodoCount('SCX', { loads: LOADS, documents: DOCS, bills, today: closed })).toBe(1);
+    // bez CMR nic nie jest gotowe do faktury (A4)
+    expect(invoiceTodoCount('HHL', { loads: LOADS, documents: [], bills, today: closed })).toBe(1);
+    expect(invoiceTodoCount('SCX', { loads: LOADS, documents: DOCS, bills: [], today: open })).toBe(0);
     // faktura HHL zakwestionowana przez KSH: odpowiada HHL (wystawca), KSH już nie ma nic do zrobienia
     const disputed = [bill({ issuer: 'HHL', recipient: 'KSH', verification: 'SPORNA' })];
     expect(invoiceTodoCount('HHL', { loads: [], bills: disputed, today: closed })).toBe(1);

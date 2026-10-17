@@ -86,6 +86,8 @@ export interface AxisHit {
   trackerOn: string | null;
   /** wyglad/P6-c (E17): skąd automat wziął status — GPS (lokalizator) albo AIS (prom); null = nie wiadomo */
   channel: 'GPS' | 'AIS' | null;
+  /** wyglad/W-naprawy · B5: zapis w Podglądzie — „jako <osoba // firma>” (`payload.preview_as`) */
+  previewAs?: string | null;
 }
 
 /** E17: źródło automatu z `payload.source` (GPS / AIS — dane wykonawcy), a bez niego z rodzaju zdarzenia. */
@@ -153,6 +155,7 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
       at: e.at,
       source,
       actor: isSystemActor(e.actor) ? null : e.actor,
+      previewAs: str('preview_as'),
       note: e.note ?? str('note'),
       why: str('powod'),
       phaseInfer: str('zrodlo') === 'TELM_PHASE_INFER',

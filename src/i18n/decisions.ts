@@ -20,6 +20,9 @@ const pl: Dict = {
   dec_type_INSURANCE_EXPIRING: 'Polisa przewoźnika wygasa',
   dec_type_DWELL_OVER_FREE: 'Zmierzony postój ponad czas wolny',
   dec_type_BACKUP_FAILED: 'Kopia zapasowa nieudana',
+  dec_type_KSH_DATES_CHECK: 'Daty KSH do sprawdzenia',
+  dec_type_DELIVERED_CHECK: 'Wyjazd z placu po krótkim postoju — czy dostarczono?',
+  dec_type_CMR_UPLOAD: 'Wgraj CMR z podpisem odbiorcy',
   dec_opt_NEXT_SAME: 'Następny rejs tego armatora',
   dec_opt_OTHER_OPERATOR: 'Rejs drugiego armatora',
   dec_opt_HOLD: 'Wstrzymaj',
@@ -50,6 +53,10 @@ const pl: Dict = {
   dec_opt_NOT_APPLICABLE: 'Nie dotyczy',
   dec_opt_RETRY_NOW: 'Ponów kopię',
   dec_opt_REPORT: 'Zgłoś',
+  dec_opt_DATES_OK: 'Daty są dobre',
+  dec_opt_DELIVERED_YES: 'Tak, dostarczono',
+  dec_opt_DELIVERED_NO: 'Nie',
+  dec_opt_UPLOAD_CMR: 'Wgraj CMR',
 };
 
 export const DEC_I18N: Record<Locale, Dict> = { pl, en: {}, sv: {} };

@@ -36,6 +36,7 @@ const PL: Record<string, string> = {
   p6b_src_MANUAL: 'ręcznie',
   p6b_driver_app: 'Kierowca (aplikacja)',
   p6b_no_person: '(zapis bez osoby)',
+  p6b_as: 'jako',
 
   /* nazwy zdarzeń (E17-2) — bez kodów */
   p6b_ev_STATUS: 'Status: {to}',

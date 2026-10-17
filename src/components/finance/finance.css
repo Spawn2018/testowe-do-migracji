@@ -28,6 +28,8 @@ table.fin-table{width:100%;border-collapse:collapse;font-size:14px;font-variant-
 .fin-table thead th.num{text-align:right}
 .fin-table tbody td{padding:9px 10px;border-bottom:1px solid var(--rule-2);vertical-align:middle}
 .fin-table td.num,.fin-table th.num{text-align:right;white-space:nowrap}
+/* A4 (audyt 17.10): transport bez CMR w kreatorze faktury — szary, nie do zaznaczenia */
+.fin-table tr.inv-wait td{color:var(--ink-3);background:var(--surface-2)}
 .fin-table tfoot th,.fin-table tfoot td{padding:9px 10px;font-weight:700;border-top:2px solid var(--ink);text-align:left}
 .fin-table tfoot td.num{text-align:right}
 .fin-table .neg,.fin-below .neg{color:var(--red);font-weight:600}
