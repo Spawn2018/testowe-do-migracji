@@ -2804,4 +2804,11 @@ Kolejka PR wyglądu (po #282, już na produkcji): **#284 `wyglad/W-konta`**. Sca
 
 B2 zamknięte w dokumentach: merge `27daa36a` (PR #287).
 
+## 2026-10-17 — #284 `wyglad/W-konta` NA PRODUKCJI
+
+- PR #284; merge `54af2ca9`. Bez migracji.
+- Wdrożenie: `dpl_4GnUJaM7HSSZJ5hA7ZPP8Ur5muTU`, 17.10.2026 15:00; tower/makieta 200; `assets/index-CHxNPYB5.js`; 0× `service_role`.
+- Dalej: **B6**.
+
+
 

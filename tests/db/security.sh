@@ -220,5 +220,41 @@ val "HHL_OPS security_flags_list niepuste" $OPS "select jsonb_array_length(secur
 err "KSH security_flags_list odmowa" $KSH "select security_flags_list()" "tylko HHL"
 err "SCX security_flags_list odmowa" $SCX "select security_flags_list()" "tylko HHL"
 
+echo; echo "[B6] e-mail na osobę, płatność, rio_secret, limit anon, loads_read (0225)"
+HHLID=$(sys "select id from app_users where email='hhl@test'")
+sys "
+do \$\$
+declare i int; u uuid := '$HHLID';
+begin
+  for i in 1..25 loop
+    insert into notifications (channel, recipient, user_id, template, payload, dedup_key, status)
+    values ('EMAIL', 'hhl@test', u, 'B6T' || ((i - 1) / 5)::text, '{}'::jsonb, 'b6mail:' || i, 'PENDING');
+  end loop;
+end \$\$;
+" >/dev/null
+val "B6: 20 e-maili na osobę na dobę" $HHL "select count(*) from notifications where user_id='$HHLID' and channel='EMAIL' and template like 'B6T%'" 20
+val "B6: 1 wiadomość zbiorcza" $HHL "select count(*) from notifications where user_id='$HHLID' and template='EMAIL_BUDGET'" 1
+
+out=$(sys "begin; grant update (paid_at) on invoices to authenticated; set local role authenticated; set local request.jwt.claim.sub='$KSH'; update invoices set paid_at=current_date where id='$INVP'; rollback;")
+echo "$out" | grep -q "tylko HHL" && { ok=$((ok+1)); echo "  OK    B6: KSH nie zmieni paid_at"; } || { fail=$((fail+1)); echo "  FAIL  B6 paid_at: $out"; }
+out=$(sys "begin; grant update (paid_marked_at) on invoices to authenticated; set local role authenticated; set local request.jwt.claim.sub='$SCX'; update invoices set paid_marked_at=now() where id='$INVK'; rollback;")
+echo "$out" | grep -q "tylko HHL" && { ok=$((ok+1)); echo "  OK    B6: SCX nie zmieni paid_marked_at"; } || { fail=$((fail+1)); echo "  FAIL  B6 paid_marked: $out"; }
+
+val "B6: authenticated bez UPDATE rio_secret" $HHL "select has_column_privilege('authenticated','loads','rio_secret','update')::text" false
+err "B6: SCX nie zapisze rio_secret wprost" $SCX "update loads set rio_secret='tajne' where id='$L2'" "permission denied"
+sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/x?id=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&secret=klucz-b6' where id='$L1'" >/dev/null
+out=$(sys "select rio_secret from loads where id='$L1'")
+echo "$out" | grep -qx "klucz-b6" && { ok=$((ok+1)); echo "  OK    B6: sanitizer nadal zapisuje rio_secret"; } || { fail=$((fail+1)); echo "  FAIL  B6 sanitizer: $out"; }
+out=$(sys "select position('SITE' in pg_get_expr(polqual, polrelid)) from pg_policy where polname='loads_read'")
+[ "$out" = "0" ] && { ok=$((ok+1)); echo "  OK    B6: loads_read bez SITE"; } || { fail=$((fail+1)); echo "  FAIL  B6 loads_read: $out"; }
+
+sys "insert into anon_call_window (fn, ip, ua, n, window_start)
+     select fn, coalesce(inet_client_addr()::text,'local'), ua, 60, now()
+       from (values ('report_client_error','ua-b6'), ('keep_alive','worker'), ('report_csp_violation','ua-b6')) v(fn, ua)
+     on conflict (fn, ip, ua) do update set n=60, window_start=now()" >/dev/null
+val "B6: report_client_error limit 60/15 min" $HHL "select report_client_error('error','test b6',null,null,null,'ua-b6')::text" false
+val "B6: keep_alive limit" $HHL "select (keep_alive('worker')->>'limited')::text" true
+val "B6: report_csp_violation limit" $HHL "select report_csp_violation('script-src',null,null,null,null,null,null,null,'report','ua-b6',null)::text" false
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
