@@ -1891,11 +1891,11 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
     });
   }
 
-  test('komputer: menu boczne z 6 grupami (E11, E12) i ekran z nagłówkiem; KSH i SCX tylko „Dla mnie”', async ({ page }) => {
+  test('komputer: menu boczne z 6 grupami (E11, E12) i ekran z nagłówkiem; KSH i SCX „Pieniądze” i „Dla mnie”', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'HHL');
     await openView(page, 'options');
-    await expect(page.locator('.ox-side-group h2')).toHaveText(['LUDZIE I DOSTĘP', 'POWIADOMIENIA', 'PIENIĄDZE', 'ZASADY TRANSPORTU', 'SYSTEM', 'DLA MNIE']);
+    await expect(page.locator('.ox-side-group h2')).toHaveText(['Ludzie i dostęp', 'Powiadomienia', 'Pieniądze', 'Zasady transportu', 'System', 'Dla mnie']); /* 6A (17.10): bez wymuszonych wielkich liter */
     await expect(page.locator('.ox-side [data-opt-group="notify"] [data-opt-nav]')).toHaveText(['Kto co dostaje', 'Treści wiadomości', 'SMS przy miejscachBoden: brak', 'Komunikat dla wszystkich']);
     await page.click('[data-opt-nav="flags"]');
     await expect(page.locator('[data-opt-screen="flags"] .ox-crumb')).toHaveText('Opcje › System');
@@ -1919,9 +1919,10 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
     for (const r of ['KSH', 'SCX'] as const) {
       await boot(page, r);
       await openView(page, 'settings');
-      await expect(page.locator('.ox-side-group h2')).toHaveText(['DLA MNIE']);
+      /* 5B (17.10): „Pieniądze › Opłata paliwowa” tylko do odczytu, potem „Dla mnie” */
+      await expect(page.locator('.ox-side-group h2')).toHaveText(['Pieniądze', 'Dla mnie']);
       /* wyglad/C (E11, E5): „Ten telefon / komputer” */
-      await expect(page.locator('.ox-side [data-opt-nav]')).toHaveText(['Moje konto', 'Co dostaję', 'Wygląd i waluta', 'Ten telefon / komputer']);
+      await expect(page.locator('.ox-side [data-opt-nav]')).toHaveText(['Opłata paliwowa', 'Moje konto', 'Co dostaję', 'Wygląd i waluta', 'Ten telefon / komputer']);
     }
   });
 });
@@ -2337,7 +2338,7 @@ test.describe('wyglad/P5 Finanse — E16, E39, E40', () => {
       if (await why.count()) await expect(page.locator(`[data-pack-send="${key}"]`)).toBeDisabled();
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1441);
-    for (const [r, head] of [['KSH', 'DO ZAPŁATY'], ['SCX', 'NALEŻNOŚĆ']] as const) {
+    for (const [r, head] of [['KSH', 'Do zapłaty'], ['SCX', 'Należność']] as const) {
       await boot(page, r);
       await openView(page, 'fin');
       const t = page.locator(`[data-fin-stages="${r === 'KSH' ? 'rev' : 'cost'}"]`);
