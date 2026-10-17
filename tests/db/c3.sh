@@ -33,7 +33,7 @@ sval "czat: 5 ról, telefon, bez e-maila" "select count(*) from notification_mat
 sval "W39 status HHL_ADMIN bez e-maila" "select email::text from notification_matrix where event_key='status' and role='HHL_ADMIN'" false
 sval "strefa KSH wyłączona" "select in_app::text from notification_matrix where event_key='zone' and role='CLIENT_USER'" false
 sval "Brak CMR KSH wyłączony" "select in_app::text from notification_matrix where event_key='cmr' and role='CLIENT_USER'" false
-sval "treści po polsku (C3+C3-p)" "select count(*) from notification_copy" 8
+sval "treści po polsku (C3+C3-p + EMAIL_BUDGET)" "select count(*) from notification_copy" 9
 sval "sytuacja ogólna tylko Ryzyka" "select bool_and(risks_only)::text from notification_matrix where event_key='risk_general'" true
 sval "50 km plac i Śrem osobno" "select count(distinct event_key) from notification_matrix where event_key in ('pre_arrival_site','pre_arrival_srem')" 2
 sval "źródło down/back osobno" "select count(distinct event_key) from notification_matrix where event_key in ('src_down','src_back')" 2

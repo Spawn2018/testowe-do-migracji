@@ -2821,5 +2821,11 @@ Zaproszenia i reset hasła (`AUTH_INVITE`, `AUTH_PASSWORD_RESET`) zostają w rez
 Bez zmian merytorycznych: `guard_invoice_update`, `loads_read` bez SITE.
 Testy w `security.sh` (oczekiwane 115 lokalnie / 111 na TEST). Brama `db` i scalenie B6 — po tym commicie.
 
+## 2026-10-17 — DOPISEK D-20261017-1450-01 W PLANIE
+
+Kolejka PR wyglądu (po #284, już na produkcji): **#289 `wyglad/W-naprawy`**. Scalanie po skończonym punkcie (po B6 albo później), przy zielonych `unit` i `visual`; wdrożenie po scaleniu bezpieczne przed A4 (`INVOICE_A4` zostaje wyłączone do wdrożenia A4). Wzorce `visual` odświeża koordynator; czerwony `visual` przed jego commitem z wzorcami — sygnał „VISUAL #289”.
+
+Przy A4: kreator, „Do wystawienia”, menu i Kokpit z tego PR; baza `register_invoice` + przestawienie `INVOICE_A4`. Przy B5: `payload.preview_as`. Przy A2: `DELIVERED_CHECK`. Przy A3: `CMR_UPLOAD` albo `DOC_MISSING` bez nowego kodu. Przy A6: `KSH_DATES_CHECK`. `billReady` = lustro `c17_cmr_after_delivery` — zmiana warunku w bazie to sygnał do widoku. A5 bez zmian z tego dopisku.
+
 
 
