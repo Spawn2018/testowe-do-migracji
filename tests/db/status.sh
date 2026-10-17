@@ -211,15 +211,14 @@ chk "C17 0 transportów UNLOADED w zestawie" "select count(*) from loads where s
 # A1 / E27 / L17 (D-20261017-2130-01 §5, D-20261017-2205-01): okno 03:00 i bezpiecznik.
 echo; echo "[11] A1 — okno śledzenia i bezpiecznik L17"
 W1=$(L 3a); W2=$(L 3b); W3=$(L 3c); W4=$(L 3d); W5=$(L 3e); W6=$(L 3f); W7=$(L 4a)
-mk $W1 A1W1 "'HHL/A1W1'" "'SCX/A1W1'" IN_TRANSIT_PL null
-mk $W2 A1W2 "'HHL/A1W2'" "'SCX/A1W2'" DELIVERED null
-mk $W3 A1W3 "'HHL/A1W3'" "'SCX/A1W3'" IN_TRANSIT_PL null
-mk $W4 A1W4 "'HHL/A1W4'" "'SCX/A1W4'" IN_TRANSIT_PL null
-mk $W5 A1W5 "'HHL/A1W5'" "'SCX/A1W5'" IN_TRANSIT_PL null
-mk $W6 A1W6 "'HHL/A1W6'" "'SCX/A1W6'" IN_TRANSIT_SE null
-q "update loads set plan_load_date='2026-10-05' where id in ('$W1','$W2','$W5')" >/dev/null
-q "update loads set plan_load_date='2026-10-24' where id='$W3'" >/dev/null
-q "update loads set plan_load_date='2026-10-20' where id='$W4'" >/dev/null
+# Data od razu docelowa: mk() wstawia 30.09, a zmiana daty po starcie okna zamraża śledzenie.
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date) values
+ ('$W1','$P','$SCXO','KSH/A1W1','HHL/A1W1','SCX/A1W1','IN_TRANSIT_PL','2026-10-05'),
+ ('$W2','$P','$SCXO','KSH/A1W2','HHL/A1W2','SCX/A1W2','DELIVERED','2026-10-05'),
+ ('$W3','$P','$SCXO','KSH/A1W3','HHL/A1W3','SCX/A1W3','IN_TRANSIT_PL','2026-10-24'),
+ ('$W4','$P','$SCXO','KSH/A1W4','HHL/A1W4','SCX/A1W4','IN_TRANSIT_PL','2026-10-20'),
+ ('$W5','$P','$SCXO','KSH/A1W5','HHL/A1W5','SCX/A1W5','IN_TRANSIT_PL','2026-10-05'),
+ ('$W6','$P','$SCXO','KSH/A1W6','HHL/A1W6','SCX/A1W6','IN_TRANSIT_SE','2026-10-01')" >/dev/null
 T59=$(q "select public.tracking_window_start('2026-10-05'::date) - interval '1 minute'")
 T00=$(q "select public.tracking_window_start('2026-10-05'::date)")
 T20=$(q "select public.tracking_window_start('2026-10-20'::date)")
@@ -242,9 +241,9 @@ q "update loads set plan_load_date='2026-12-01' where id='$W5'" >/dev/null
 pos $W5 52.09 17.02 "2026-10-06 08:00:00+00"
 chk "A1 po starcie późniejsza data nie zamyka śledzenia" "select count(*) from positions where load_id='$W5'" 2
 chk "A1 tracking_opened_at zamrożone" "select (tracking_opened_at = public.tracking_window_start('2026-10-05'::date))::text from loads where id='$W5'" true
-q "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date)
+chk "A1 L17 17 zaległych transportów" "with ins as (insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date)
    select ('55555555-0000-0000-0000-00000000a1'||lpad(g::text,2,'0'))::uuid, '$P', '$SCXO', 'KSH/L17/'||g, 'IN_TRANSIT_PL', current_date - 10, current_date - 5
-   from generate_series(1,17) g" >/dev/null
+   from generate_series(1,17) g returning 1) select count(*) from ins" 17
 chk "A1 L17 zaległości: 17 spraw" "select public.tracking_delivery_guard(); select count(*) from decisions where type_code='DELIVERY_UNCONFIRMED' and load_id in (select id from loads where order_no like 'KSH/L17/%')" 17
 chk "A1 L17 zaległości: 0 powiadomień SCX" "select count(*) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.template='DECISION_OPEN' and n.load_id in (select id from loads where order_no like 'KSH/L17/%') and o.kind='CARRIER'" 0
 chk "A1 L17 zaległości: jeden wpis zbiorczy u administratora" "select count(*)||'/'||min(payload->>'title') from notifications n join app_users u on u.id=n.user_id where n.template='L17_BACKLOG' and u.role='HHL_ADMIN'" "1/Potwierdź dostawę: 17 transportów bez „Dostarczone” po planowanej dostawie — lista w „Do zrobienia”"
@@ -269,6 +268,7 @@ q "update loads set plan_load_date=current_date - 10, plan_delivery_date=current
 chk "A1 L17 nowy po terminie: sprawa z powiadomieniem" "select public.tracking_delivery_guard(); select (count(*) > 0)::text from notifications where template='DECISION_OPEN' and load_id='$W7'" true
 q "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key) values ('$P','$W3','SILENT_VEHICLE','HIGH','cisza','rk_silent_vehicle','{\"l3\":\"1\"}','SILENT:$W3')" >/dev/null
 chk "A1 cisza poza oknem się zamyka" "select public.detect_silent_vehicles(90); select (resolved_at is not null)::text from risk_signals where dedup_key='SILENT:$W3'" true
+q "delete from risk_signals where title_key='rk_silent_vehicle'" >/dev/null
 chk "A1 process_position ma bramę okna" "select strpos(pg_get_functiondef(p.oid), 'load_in_tracking_window') > 0 from pg_proc p where p.proname='process_position'" t
 chk "A1 cisza bez twardego źródła TELEMATICS_API" "select strpos(pg_get_functiondef(p.oid), 'TELEMATICS_API') = 0 from pg_proc p where p.proname='detect_silent_vehicles'" t
 

@@ -78,6 +78,146 @@ create trigger loads_freeze_tracking_open
 
 revoke all on function public.loads_freeze_tracking_open() from public, anon, authenticated;
 
+-- Strażnik transportu: zamrożenie okna jest kolumną systemu, nie zmianą planu przez stronę.
+create or replace function public.guard_load_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_changed  text[];
+  v_bad      text[];
+  v_ctx      text;
+  v_carrier  text[] := array[
+    'tractor_plate','trailer_plate','trailer_type','driver_name','driver_phone',
+    'escort_vehicles','telematics_vehicle_id','telematics_provider',
+    'ferry_booking_ref','sailing_id','carrier_order_no',
+    'combo_length_m','combo_width_m','combo_height_m','combo_weight_t',
+    'actual_load_at','actual_delivery_at','status','updated_at'];
+begin
+  if current_setting('tower.eta_ctx', true) = 'on' then
+    select coalesce(array_agg(n.key), '{}') into v_changed
+      from jsonb_each(to_jsonb(new)) n
+     where n.value is distinct from (to_jsonb(old) -> n.key);
+    if (v_changed <@ array['eta_site','eta_confidence_min','eta_basis','eta_computed_at','delay_minutes','updated_at']::text[]) is not true then
+      raise exception 'Przeliczenie ETA może zmienić wyłącznie kolumny eta_* (zmienione: %)', array_to_string(v_changed, ', ');
+    end if;
+    return new;
+  end if;
+
+  if current_setting('tower.track_ctx', true) = 'on' then
+    select coalesce(array_agg(n.key), '{}') into v_changed
+      from jsonb_each(to_jsonb(new)) n
+     where n.value is distinct from (to_jsonb(old) -> n.key);
+    if (v_changed <@ array['tracking_opened_at','updated_at']::text[]) is not true then
+      raise exception 'Okno śledzenia może zmienić wyłącznie tracking_opened_at (zmienione: %)', array_to_string(v_changed, ', ');
+    end if;
+    return new;
+  end if;
+
+  if current_setting('tower.dates_ctx', true) = 'on' then
+    select coalesce(array_agg(n.key), '{}') into v_changed
+      from jsonb_each(to_jsonb(new)) n
+     where n.value is distinct from (to_jsonb(old) -> n.key);
+    if (v_changed <@ array['plan_load_date','plan_load_from','plan_load_to','plan_delivery_date','plan_delivery_from','plan_delivery_to',
+                           'plan_dates_status','plan_dates_confirmed_by','plan_dates_confirmed_at','tracking_opened_at','updated_at']::text[]) is not true then
+      raise exception 'Potwierdzenie dat może zmienić wyłącznie daty planu (zmienione: %)', array_to_string(v_changed, ', ');
+    end if;
+    return new;
+  end if;
+
+  if auth.uid() is not null and (new.plan_dates_status, new.plan_dates_confirmed_by, new.plan_dates_confirmed_at)
+       is distinct from (old.plan_dates_status, old.plan_dates_confirmed_by, old.plan_dates_confirmed_at) then
+    raise exception 'Status dat planu zmienia wyłącznie potwierdzenie KSH („Potwierdź daty”)';
+  end if;
+
+  if new.status = 'CANCELLED' and old.status is distinct from 'CANCELLED' then
+    v_ctx := coalesce(current_setting('tower.cancel_ctx', true), '');
+    if v_ctx = 'IMPORT' then
+      if exists (select 1 from invoice_lines where load_id = old.id) then
+        raise exception 'Import nie anuluje transportu na fakturze (%)', coalesce(old.order_no, left(old.id::text, 8));
+      end if;
+      if old.status not in ('PLANNED','RESOURCES_PENDING','DOCS_PENDING','READY') then
+        raise exception 'Import nie anuluje transportu w statusie % — od AT_LOADING wyłącznie HHL ręcznie, z powodem', old.status;
+      end if;
+    elsif v_ctx = 'MANUAL' then
+      null;
+    elsif auth.uid() is not null then
+      raise exception 'Anulować transport może wyłącznie HHL — przez cancel_load() z powodem albo import harmonogramu';
+    end if;
+  end if;
+
+  if new.status = 'UNLOADED' and new.actual_delivery_at is null then
+    raise exception 'Status UNLOADED wymaga daty rozładunku — to data realizacji usługi';
+  end if;
+
+  if new.actual_delivery_at is distinct from old.actual_delivery_at then
+    if auth.uid() is not null and is_hhl() is not true
+       and exists (select 1 from invoice_lines where load_id = old.id) then
+      raise exception 'Data rozładunku transportu na fakturze jest zamrożona — zmiana wyłącznie przez HHL';
+    end if;
+    insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
+    values ((select id from app_users where auth_id = auth.uid()),
+            'LOAD_DELIVERY_DATE_CHANGE', 'loads', old.id::text,
+            jsonb_build_object('actual_delivery_at', old.actual_delivery_at),
+            jsonb_build_object('actual_delivery_at', new.actual_delivery_at));
+  end if;
+
+  if auth.uid() is null then return new; end if;
+
+  if (
+    (new.status is distinct from old.status or new.actual_delivery_at is distinct from old.actual_delivery_at)
+    and current_setting('tower.status_ctx', true) is distinct from 'on'
+  ) then
+    raise exception 'Status i datę rozładunku zmienia wyłącznie load_status_set albo automat'
+      using errcode = '42501';
+  end if;
+
+  select coalesce(array_agg(n.key), '{}') into v_changed
+    from jsonb_each(to_jsonb(new)) n
+   where n.value is distinct from (to_jsonb(old) -> n.key);
+
+  if is_hhl() is true then
+    if new.carrier_order_no is distinct from old.carrier_order_no then
+      raise exception 'Numer zlecenia przewoźnika wpisuje wyłącznie przewoźnik';
+    end if;
+    if (
+      (new.plan_load_date, new.plan_load_from, new.plan_load_to,
+       new.plan_delivery_date, new.plan_delivery_from, new.plan_delivery_to)
+      is not distinct from
+      (old.plan_load_date, old.plan_load_from, old.plan_load_to,
+       old.plan_delivery_date, old.plan_delivery_from, old.plan_delivery_to)
+      or current_setting('tower.import_ctx', true) = 'on'
+    ) is not true then
+      raise exception 'Daty i godziny załadunku i rozładunku zmienia wyłącznie KSH Użytkownik (G-20)'
+        using errcode = '42501';
+    end if;
+    return new;
+  end if;
+
+  if (current_org_kind() = 'CARRIER' and old.carrier_org_id = current_org_id()) is true then
+    select coalesce(array_agg(c), '{}') into v_bad from unnest(v_changed) c where c <> all (v_carrier);
+    if cardinality(v_bad) > 0 then
+      raise exception 'Przewoźnik nie może zmieniać: %', array_to_string(v_bad, ', ');
+    end if;
+    if new.status is distinct from old.status then
+      if new.status = 'CANCELLED' then
+        raise exception 'Anulować transport może wyłącznie HHL';
+      end if;
+      if old.status <> 'CANCELLED' and new.status < old.status then
+        raise exception 'Status nie może się cofnąć: % → %', old.status, new.status;
+      end if;
+    end if;
+    if new.sailing_id is distinct from old.sailing_id and old.status >= 'FERRY' then
+      raise exception 'Zmiana rejsu po wypłynięciu — wyłącznie HHL';
+    end if;
+    return new;
+  end if;
+
+  raise exception 'Brak uprawnień do zmiany transportu';
+end $$;
+
 create or replace function process_position(
   p_load_id  uuid,
   p_lat      float8,
@@ -117,11 +257,14 @@ begin
   if public.load_in_tracking_window(p_load_id, coalesce(p_ts, now())) is not true then
     return;
   end if;
+  -- Kolumna systemowa: przy sesji kierowcy/przewoźnika strażnik puszcza tylko ten zapis.
+  perform set_config('tower.track_ctx', 'on', true);
   update loads
      set tracking_opened_at = public.tracking_window_start(plan_load_date)
    where id = p_load_id
      and tracking_opened_at is null
      and plan_load_date is not null;
+  perform set_config('tower.track_ctx', 'off', true);
 
   -- ANEKS 4 PR5 — budżet bazy 500 MB: punkt bliżej niż 60 s po poprzednim dla tego transportu
   -- jest pomijany w całości (bez zapisu i bez ewaluacji stref). Powtórka tego samego punktu
@@ -503,7 +646,7 @@ begin
     -- Koniec dnia dostawy (00:00 dnia następnego, czas polski) + 24 h.
     -- Plan 09.10 → sprawa od 11.10 00:00.
     v_due := (((r.plan_delivery_date + 1)::timestamp) at time zone 'Europe/Warsaw') + interval '24 hours';
-    if now() >= v_due is not true then
+    if (now() >= v_due) is not true then
       continue;
     end if;
     d := null;
