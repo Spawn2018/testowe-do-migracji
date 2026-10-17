@@ -92,7 +92,7 @@ describe('E3, E39 — ekran Opłaty paliwowej w HTML', () => {
     expect(h).toContain('Następna automatyczna próba: dziś 13:15');
     expect(h).toContain('OKQ8 19,68 SEK/l · Orlen 5,74 PLN/l');
     expect(h).toContain('SE ×1,05 · PL ×1,05');
-    expect(h).toContain('6 900 EUR × 5 % = 345 EUR');
+    expect(h).toContain('6\u00a0900\u00a0EUR × 5\u00a0% = 345\u00a0EUR');
     expect(h).toContain('Ostateczna wartość w poniedziałek 19.10.2026 rano, ze średniej 12.10.2026–18.10.2026.');
     expect((h.match(/data-pm-tier-hit/g) ?? []).length).toBe(2);
     expect(h).toContain('Nowa wersja umowy');
@@ -145,9 +145,9 @@ describe('E33, E16 — Cennik i opłaty: procenty za anulowanie i próg marży',
     expect((h.match(/data-pm-row="\d"/g) ?? []).length).toBe(6);
     expect(h).toContain('25 %');
     /* wyglad/audyt-E (E-06): przykład = fracht SG z cennika poniżej (SCX v1 6 900, KSH v2 7 245 EUR — baza 08.10, E33) */
-    expect(h).toContain('SG: 1 725,00 / 1 811,25 EUR');
-    expect(h).toContain('SG: 6 900,00 / 7 245,00 EUR');
-    expect(h).toContain('Przykład dla frachtu SG z cennika: koszt 6 900 EUR, przychód 7 245 EUR.');
+    expect(h).toContain('SG: 1\u00a0725,00 / 1\u00a0811,25 EUR');
+    expect(h).toContain('SG: 6\u00a0900,00 / 7\u00a0245,00 EUR');
+    expect(h).toContain('Przykład dla frachtu SG z cennika: koszt 6\u00a0900 EUR, przychód 7\u00a0245 EUR.');
     expect(h).not.toMatch(/\(E\d{1,2}\)|\(12:35\)/);
     expect(h).toContain('Próg marży');
     expect(h).toContain('nie ustawiony');

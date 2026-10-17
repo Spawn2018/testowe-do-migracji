@@ -9,6 +9,8 @@
 .doc-pad{padding:4px 14px 8px}
 .doc-note{color:var(--ink-3)}
 .doc-note.good{color:var(--go);font-weight:600}
+/* wyglad/W-przed-wydaniem-2: kod transportu w uwagach nie łamie się na łączniku */
+.doc-code{white-space:nowrap}
 .doc-req td{vertical-align:top}
 .doc-req tbody td{white-space:normal}
 .doc-req td:first-child,.doc-req td:nth-child(2),.doc-req td:nth-child(4),.doc-req td:nth-child(5){white-space:nowrap}

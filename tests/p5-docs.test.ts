@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Document, Load } from '../src/types';
 import type { DocStatusRow } from '../src/lib/docRequirements';
-import { cmrKind, codesText, filterFiles, kindOptions, reqCount, reqVisible, responsibleOrg, searchLoads, seenBy } from '../src/lib/p5Docs';
+import { cmrKind, codesParts, codesText, filterFiles, kindOptions, reqCount, reqVisible, responsibleOrg, searchLoads, seenBy } from '../src/lib/p5Docs';
 
 const NOW = Date.parse('2026-10-14T10:00:00Z');
 const row = (loadId: string, category: DocStatusRow['category'], state: DocStatusRow['state'], dueAt: string | null): DocStatusRow => ({ loadId, category, state, dueAt });
@@ -37,6 +37,9 @@ describe('E31 — wymagania przy transporcie', () => {
     expect([responsibleOrg('CARRIER'), responsibleOrg('CLIENT'), responsibleOrg('FORWARDER')]).toEqual(['SCX', 'KSH', 'HHL']);
     expect(codesText(['A-1', 'A-2'])).toBe('A-1, A-2');
     expect(codesText(['1', '2', '3', '4', '5', '6', '7'], 3)).toBe('1, 2, 3 … (7)');
+    /* wyglad/W-przed-wydaniem-2: te same części dla widoku (kody w osobnych <span>) */
+    expect(codesParts(['A-1', 'A-2'])).toEqual({ shown: ['A-1', 'A-2'], total: null });
+    expect(codesParts(['1', '2', '3', '4', '5', '6', '7'], 3)).toEqual({ shown: ['1', '2', '3'], total: 7 });
   });
 });
 

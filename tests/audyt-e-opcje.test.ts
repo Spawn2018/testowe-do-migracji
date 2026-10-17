@@ -147,11 +147,11 @@ describe('E-06, C-14: Cennik i opłaty — symbole, wersje, liczby po polsku, D 
     const h = rc(false);
     const sg = h.slice(h.indexOf('data-rate="SG"'), h.indexOf('data-rate="SS"'));
     expect(sg).toContain('21,69 × 2,45 × 3,75 m');
-    expect(sg).toContain('6 900,00 EUR');
-    expect(sg).toContain('7 245,00 EUR');
+    expect(sg).toContain('6\u00a0900,00 EUR');
+    expect(sg).toContain('7\u00a0245,00 EUR');
     const kr = h.slice(h.indexOf('data-rate="KR-1"'), h.indexOf('data-rate="KR-2"'));
-    expect(kr).toContain('12 745,00 EUR');
-    expect(kr).toContain('13 382,00 EUR');
+    expect(kr).toContain('12\u00a0745,00 EUR');
+    expect(kr).toContain('13\u00a0382,00 EUR');
     expect(kr).toContain('konwój 1 auto');
     expect(h).toContain('Zestaw D × S × W');
     expect(h).not.toMatch(/\bL \d|\bH \d|\d\.\d{1,2} ?(m|EUR)\b/);

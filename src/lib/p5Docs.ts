@@ -44,10 +44,15 @@ export function reqCount(rows: readonly DocStatusRow[], category: DocCategory, n
   return { overdue: overdue.sort(byDue), soon: soon.sort(byDue) };
 }
 
+/** Kody do pokazania i liczba wszystkich, gdy lista jest dłuższa niż `max` (wspólne dla tekstu i widoku). */
+export function codesParts(codes: readonly string[], max = 6): { shown: string[]; total: number | null } {
+  return codes.length <= max ? { shown: [...codes], total: null } : { shown: codes.slice(0, max), total: codes.length };
+}
+
 /** „SG-01, SG-03” albo „SG-01 – SG-21 (18)” przy długiej liście. */
 export function codesText(codes: readonly string[], max = 6): string {
-  if (codes.length <= max) return codes.join(', ');
-  return `${codes.slice(0, max).join(', ')} … (${codes.length})`;
+  const { shown, total } = codesParts(codes, max);
+  return total == null ? shown.join(', ') : `${shown.join(', ')} … (${total})`;
 }
 
 /** Rodzaje do wyboru w oknie „Wgraj dokument”: najpierw braki tego transportu (po terminie, potem reszta). */

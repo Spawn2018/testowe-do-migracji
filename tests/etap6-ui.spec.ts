@@ -191,6 +191,45 @@ test.describe('Przed wydaniem — dokument nie wyższy od okna, numer transportu
     }
   })
 
+  /* wyglad/W-przed-wydaniem-2: liczba nie łamie się na separatorze tysięcy („18” / „245,92”), nie odrywa się od jednostki („24” / „h”), kod transportu nie łamie się na łączniku („SG-” / „13”) */
+  test('HHL, SCX, KSH: liczba w całości, z jednostką, i kod transportu w jednej linii (12 stron × 1440, 1280, 390, 360)', async ({ page }) => {
+    test.setTimeout(420_000)
+    const bad = new Set<string>()
+    for (const role of ['HHL', 'SCX', 'KSH'] as const) {
+      await freshAt20Nov(page)
+      await page.click(`#roleSeg button[data-role="${role}"]`)
+      for (const [width, height] of [[1440, 900], [1280, 800], [390, 844], [360, 740]] as const) {
+        await page.setViewportSize({ width, height })
+        for (const p of PAGES) {
+          await page.goto(late(p), { waitUntil: 'networkidle' })
+          await settled(page)
+          const split = await page.evaluate(() => {
+            const out: string[] = []
+            const root = document.querySelector('main') ?? document.body
+            const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+            const re = /\b(?:SG|T|SCX)-\d[\d-]*|HHL\/\d{4}\/\d+|\d{1,3}(?:[ \u00a0]\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?[ \u00a0](?:h|min|km|dni|%|PLN|EUR|SEK|m\/s)(?![\p{L}])/gu
+            let node: Node | null
+            while ((node = walker.nextNode())) {
+              const s = node.textContent ?? ''
+              re.lastIndex = 0
+              let m: RegExpExecArray | null
+              while ((m = re.exec(s))) {
+                const r = document.createRange()
+                r.setStart(node, m.index)
+                r.setEnd(node, m.index + m[0].length)
+                const rects = [...r.getClientRects()].filter((x) => x.width > 0 && x.height > 0)
+                if (new Set(rects.map((x) => Math.round(x.top))).size > 1) out.push(m[0])
+              }
+            }
+            return out
+          })
+          for (const x of split) bad.add(`${role} ${width} ${p}: „${x}”`)
+        }
+      }
+    }
+    expect([...bad]).toEqual([])
+  })
+
   for (const role of ['HHL', 'SCX', 'KSH'] as const) {
     test(`${role}, telefon 390: szczegóły faktury — nazwa transportu nie łamie się w środku członu`, async ({ page }) => {
       await freshAt20Nov(page)
