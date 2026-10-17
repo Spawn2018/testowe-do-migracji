@@ -166,6 +166,9 @@ export function OptionsView() {
     ...extra,
   });
   const block = (el: ReactNode) => <SuspenseBlock>{el}</SuspenseBlock>;
+  /* wyglad/W-konta (audyt 17.10 sekcja 07 N2, do czasu P3-d): stare formularze produkcji u Operacji HHL — pola nieaktywne,
+     przyciski zmian ukryte (E12-1A: Operacje w Opcjach tylko odczyt). `fieldset disabled` wyłącza wszystkie pola naraz. */
+  const roBlock = (el: ReactNode) => block(ro ? <fieldset disabled className="opt-ro" data-opt-ro>{el}</fieldset> : el);
   const calibMeta = (c: EtaCalibration): string => {
     const n = c.observations.filter((o) => !o.skipped).length;
     if (calibApproved) return tp(locale, 'cal_meta_done', { no: calibApproved.no });
@@ -199,7 +202,7 @@ export function OptionsView() {
         <>
           <OptionsHowTo locale={locale} k="b6_howto_zones" />
           {SmsZoneRecipients ? block(<SmsZoneRecipients readOnly={ro} />) : null}
-          {SmsGateway ? block(<SmsGateway />) : null}
+          {SmsGateway ? roBlock(<SmsGateway />) : null}
           <div className="settings-list" style={{ marginTop: 10 }}>
             {geofences.map((g) => (
               <div className="settings-row" key={g.id}>
@@ -215,7 +218,7 @@ export function OptionsView() {
           </div>
         </>
       ), { right: change }),
-      scr('bcast', pick('bcast', BroadcastForm ? block(<BroadcastForm />) : null), { right: change }),
+      scr('bcast', pick('bcast', BroadcastForm ? roBlock(<BroadcastForm />) : null), { right: change }),
     ],
   });
 
@@ -242,7 +245,7 @@ export function OptionsView() {
     scr('rates', PROD_BUILD ? (
       <>
         {ratesExtras}
-        {RateCardForm ? block(<RateCardForm />) : <div className="note option-note">{t(locale, 'i2_rates_no_source')}</div>}
+        {RateCardForm ? roBlock(<RateCardForm />) : <div className="note option-note">{t(locale, 'i2_rates_no_source')}</div>}
       </>
     ) : (
       <>
@@ -252,18 +255,18 @@ export function OptionsView() {
         {rateCard ? block(
           <RateCard locale={locale} view={rateCard} today={localDateOf(getNowIso())} nowIso={getNowIso()} readOnly={ro} onSave={rateCardSaverOf()} />,
         ) : null}
-        {RateCardForm ? block(<RateCardForm />) : null}
+        {RateCardForm ? roBlock(<RateCardForm />) : null}
       </>
     ), { right: change, mark: PROD_BUILD ? undefined : <DemoMark /> }),
     scr('surch', dwell
       ? block(<DwellScreen locale={locale} rules={dwell} readOnly={ro} onSave={dwellSaverOf()} />)
-      : DwellOptionsForm ? block(<DwellOptionsForm />) : <Soon locale={locale} tipKey="opt_acc_dwell_note" />, { right: change, mark: dwell && !PROD_BUILD ? <DemoMark /> : undefined }),
+      : DwellOptionsForm ? roBlock(<DwellOptionsForm />) : <Soon locale={locale} tipKey="opt_acc_dwell_note" />, { right: change, mark: dwell && !PROD_BUILD ? <DemoMark /> : undefined }),
     scr('fuel', fuelView ? block(
       <FuelScreen locale={locale} view={fuelView} actions={fuelActionsOf()} readOnly={ro} />,
     ) : (
       <>
         <OptionsHowTo locale={locale} k="b6_howto_sefs" />
-        {BafForm ? block(<BafForm />) : (
+        {BafForm ? roBlock(<BafForm />) : (
           <>
             <div className="fuel-grid">
               <div><h4 className="sec">{t(locale, 'opt_index_read')}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(0, 6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} readOnly disabled title={t(locale, 'opt_baf_facade_title')} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{t(locale, field.suffix)}</span> : null}</div></dd></div>)}</dl></div>
@@ -309,13 +312,13 @@ export function OptionsView() {
       scr('thr', (
         <>
           <OptionsHowTo locale={locale} k="b6_howto_thresh" />
-          {pick('thr', OpsThresholdsForm ? block(<OpsThresholdsForm />) : <Soon locale={locale} tipKey="opt_acc_thresh_soon" />)}
+          {pick('thr', OpsThresholdsForm ? roBlock(<OpsThresholdsForm />) : <Soon locale={locale} tipKey="opt_acc_thresh_soon" />)}
         </>
       ), { right: change }),
       scr('permits', (
         <>
           <Suspense fallback={null}><DocTerms canEdit={isHhlAdmin} /></Suspense>
-          {PermitRequirement ? block(<PermitRequirement />) : demo?.bodies.permitsFlag ?? <Soon locale={locale} tipKey="opt_acc_perm_soon" />}
+          {PermitRequirement ? roBlock(<PermitRequirement />) : demo?.bodies.permitsFlag ?? <Soon locale={locale} tipKey="opt_acc_perm_soon" />}
         </>
       ), { right: change }),
       (() => {

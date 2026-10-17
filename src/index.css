@@ -563,6 +563,9 @@ nav button{padding:8px 14px}
 .input.full{width:100%;min-width:0}
 .muted,.microcopy{color:var(--ink-3);font-size:12.5px}
 .option-note{margin:10px -13px -13px}
+/* wyglad/W-konta (audyt 07 N2): stare formularze produkcji u Operacji HHL — tylko odczyt, przyciski zmian ukryte */
+.opt-ro{border:0;margin:0;padding:0;min-width:0}
+.opt-ro :is(button[type="submit"],.btn,.chipbtn,[data-action]){display:none}
 .switchline{display:inline-flex;align-items:center;gap:7px;cursor:pointer}
 .switchline input{accent-color:var(--go);width:15px;height:15px}
 .inline-input{display:flex;align-items:center;gap:7px}

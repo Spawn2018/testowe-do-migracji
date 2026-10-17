@@ -90,3 +90,15 @@ describe('SMS przy miejscach na produkcji do czasu P8 (audyt 17.10 sekcja 03 N7)
     expect(hasKey('pl', 'dec5_prefix')).toBe(true);
   });
 });
+
+describe('stare formularze Opcji na produkcji u Operacji HHL (audyt 17.10 sekcja 07 N2, do czasu P3-d)', () => {
+  it('fieldset disabled + ukryte przyciski zmian dla 7 formularzy', () => {
+    const v = read('src/views/OptionsView.tsx');
+    expect(v).toMatch(/const roBlock = \(el: ReactNode\) => block\(ro \? <fieldset disabled className="opt-ro" data-opt-ro>\{el\}<\/fieldset> : el\);/);
+    for (const f of ['OpsThresholdsForm', 'DwellOptionsForm', 'RateCardForm', 'BafForm', 'SmsGateway', 'BroadcastForm', 'PermitRequirement']) {
+      expect(v, f).toContain(`roBlock(<${f} />)`);
+      expect(v, f).not.toContain(` block(<${f} />)`);
+    }
+    expect(read('src/index.css')).toContain('.opt-ro :is(button[type="submit"],.btn,.chipbtn,[data-action]){display:none}');
+  });
+});

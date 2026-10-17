@@ -13,6 +13,7 @@ Dopisek: D-20261017-1220-01. Tylko demo i obliczenia widoku (F8); produkcja bez 
 | Strefy, Automatyzacje, Rejsy | — | Operacje HHL oglądają bez zmian (jak dotąd w kodzie, teraz widać w demo) |
 | Adres | — | `#/…?konto=operacje` albo `?konto=uzytkownik` — od razu wybrany rodzaj (testy, zrzuty) |
 | Opcje › SMS przy miejscach na produkcji, do czasu P8 (audyt 03 N7) | Operacje HHL widzą „Zapisz”, przełączniki i „Wyślij SMS testowy”; wybór „PL / SE” wygląda jak język | Operacje HHL: napis „Tylko podgląd · zmienia Administrator HHL”, pola tylko do odczytu, bez przycisków; wybór „+48 PL / +46 SE” z opisem „Numer kierunkowy” |
+| Stare formularze Opcji na produkcji u Operacji HHL, do czasu P3-d (audyt 07 N2) | Progi, Postój, Cennik, Opłata paliwowa, Bramka SMS, Komunikat, Wymóg zezwoleń — Operacje widzą aktywne pola i „Zapisz” (baza i tak odmawia) | pola nieaktywne (`fieldset disabled`), przyciski zmian ukryte; nagłówek ekranu „Tylko podgląd · zmienia Administrator HHL” jak dotąd |
 | Pomoc › Kontakt i „Co nowego” na produkcji (audyt 06 N11) | „Brak konta Operacji HHL z telefonem.”, „Brak zmian do pokazania.” — nieprawda, bo dane nie są jeszcze podłączone | „Kontakt do Operacji HHL pojawi się tutaj po włączeniu danych.”, „Lista zmian pojawi się tutaj po włączeniu danych.”; po podłączeniu pusta lista dalej mówi „Brak konta…” |
 
 Jak działa:
@@ -27,7 +28,7 @@ Obrazy (`now=2026-09-23T14:32Z`):
 - `po-panel-ops` — panel T-17 u Operacji: bez „Zmień status”.
 
 **Testy:**
-- `tests/w-konta.test.ts` (7) — domyślnie bez zmian; Operacje tylko w HHL; Użytkownik tylko w SCX; prawa (status, awizacja, decyzje); przełącznik tylko poza produkcją; ekrany czytają `accountRole(role)`;
+- `tests/w-konta.test.ts` (8) — domyślnie bez zmian; Operacje tylko w HHL; Użytkownik tylko w SCX; prawa (status, awizacja, decyzje); przełącznik tylko poza produkcją; ekrany czytają `accountRole(role)`;
 - e2e `e8-phone-gate` — „W-konta”: przełącznik w menu, Operacje — Kalibracja i Progi tylko do odczytu, KSH bez przełącznika, powrót do Administratora; Użytkownik SCX z adresu;
 - zmienione pod nowe wywołanie: `audyt-af`, `l8-cockpit-tiles`, `p7-awiz`;
 - build produkcyjny: bez kodu przełącznika i klucza `wt-demo-account` (jest tylko tekst słownika).
