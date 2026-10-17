@@ -110,7 +110,7 @@ describe('M6 — kontrole przy rejestracji (lustro register_invoice)', () => {
     const planned = snap.loads.find((l) => !unloadedAtOf(l))!;
     const other = delivered.find((l) => weekOf(l) !== freeWeek)!;
     /* A4: „pominięty” liczony tylko wśród transportów z CMR — test daje dokumenty z CMR dla wszystkich dostarczonych */
-    const cmrAll = delivered.map((l) => ({ id: `cmr-${l.id}`, loadId: l.id, category: 'CMR', status: 'UPLOADED' }) as unknown as Document);
+    const cmrAll = delivered.map((l) => ({ id: `cmr-${l.id}`, loadId: l.id, category: 'CMR', status: 'UPLOADED', uploadedAt: '2026-12-31T00:00:00Z' }) as unknown as Document);
     const c = checkBill({ ...d, lines: [...d.lines.slice(1), { loadId: planned.id, invoicedNet: 1 }, { loadId: other.id, invoicedNet: 1 }] }, snap.loads, snap.bills, DEMO_TODAY_LOCAL, cmrAll);
     expect(c.lines.find((l) => l.loadId === planned.id)!.flags).toContain('NIEZREALIZOWANY');
     const otherFlags = c.lines.find((l) => l.loadId === other.id)!.flags;

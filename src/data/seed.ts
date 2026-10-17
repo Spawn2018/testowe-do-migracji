@@ -1,5 +1,6 @@
 /** Seed data for WATCH TOWER makieta — loads from KSH_HARMONOGRAM.xlsx (50) + 22 extras (≥72) + corridor entities */
 import { etaDuration } from '../lib/etaDuration';
+import { getNowMs } from '../lib/frozenNow';
 import type {
   BafParams,
   Document,
@@ -773,8 +774,13 @@ export function buildSeedDocuments(loads: Load[]): Document[] {
         /* CMR z podpisem odbiorcy: po „Dostarczone”, termin 24 h (Opcje › Terminy dokumentów) */
         deadline = `${l.plannedDeliverDate}T23:59:00+02:00`;
         if (delivered.some((d) => d.id === l.id) && l.id !== cmrMissing) {
-          status = 'UPLOADED';
-          uploaded = `${l.plannedDeliverDate}T16:30:00+02:00`;
+          /* wyglad/W-naprawy (F7, A4): CMR wgrany 2 h po rozładunku — jak w automacie C17 (CMR po „Dostarczone”);
+             wcześniej godzina z planu (16:30 dnia planowej dostawy), czasem przed rozładunkiem albo po zegarze demo */
+          const at = l.unloadedAt ? Date.parse(l.unloadedAt) + 2 * 3600e3 : Date.parse(`${l.plannedDeliverDate}T16:30:00+02:00`);
+          if (at <= getNowMs()) {
+            status = 'UPLOADED';
+            uploaded = new Date(at).toISOString();
+          }
         }
       }
       docs.push({

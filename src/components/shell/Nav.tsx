@@ -63,6 +63,7 @@ export function Nav() {
   const risks = useTowerStore((s) => s.risks)
   const bills = useTowerStore((s) => s.bills)
   const loads = useTowerStore((s) => s.loads)
+  const documents = useTowerStore((s) => s.documents)
   const navCollapsed = useTowerStore((s) => s.navCollapsed)
   const setNavCollapsed = useTowerStore((s) => s.setNavCollapsed)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -111,7 +112,7 @@ export function Nav() {
       return q && q.total ? { n: q.total, hot: true } : null
     }
     if (key === 'inv') {
-      const n = invoiceTodoCount(role, { loads, bills, today: localDateOf(getNowIso()) })
+      const n = invoiceTodoCount(role, { loads, documents, bills, today: localDateOf(getNowIso()) })
       return n ? { n } : null
     }
     return null

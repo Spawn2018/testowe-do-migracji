@@ -44,6 +44,10 @@ const PL: Record<string, string> = {
   p6_dec_over: '{what} po terminie od {date}',
   p6_dec_due: '{what} · termin {date}',
   p6_dec_short_NO_AWIZACJA: 'Awizacja',
+  /* wyglad/W-naprawy (D-20261017-1450-01 §2 pkt 3): nazwy nowych spraw z napraw A2, A3, A6 — kody podaje dopisek */
+  p6_dec_short_KSH_DATES_CHECK: 'Daty KSH do sprawdzenia',
+  p6_dec_short_DELIVERED_CHECK: 'Czy dostarczono?',
+  p6_dec_short_CMR_UPLOAD: 'Wgraj CMR',
   p6_merged_1: '{n} zgłoszenie',
   p6_merged_2: '{n} jednakowe zgłoszenia połączone w jedno',
   p6_merged_5: '{n} jednakowych zgłoszeń połączonych w jedno',

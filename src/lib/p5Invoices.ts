@@ -3,8 +3,8 @@
  * Jeden status faktury (E4 „Porządek”) z dzisiejszych pól weryfikacji i płatności, tygodnie „Do wystawienia”
  * z dostarczonych, jeszcze niezafakturowanych transportów, liczby kafelków. Bez zapisu i bez nowych zapytań.
  */
-import type { Bill, BillDirection, Load, RoleId } from '../types';
-import { addDaysIso, BILL_VAT_RATE, billCandidates, canVerifyBill, expectedNetFor, invoicedLoadIds, isoWeekMonday } from './invoices3';
+import type { Bill, BillDirection, Document, Load, RoleId } from '../types';
+import { addDaysIso, BILL_VAT_RATE, billCandidates, billReady, canVerifyBill, expectedNetFor, invoicedLoadIds, isoWeekMonday } from './invoices3';
 import { isoWeekKeyLocal } from './money/engine';
 import { unloadedAtOf } from './money/loadMoney';
 import { fmtDateRange } from './time';
@@ -39,7 +39,8 @@ export interface PendingWeek {
  * Tygodnie zamknięte (niedziela minęła) z dostarczonymi, niezafakturowanymi transportami — „Do wystawienia” (E4),
  * bez kwot. Jedno źródło dla kafla „Czeka na wystawienie” i liczby przy „Faktury” w menu (audyt-C C-10).
  */
-export function pendingWeekLoads(loads: readonly Load[], bills: readonly Bill[], direction: BillDirection, today: string): { weekKey: string; loads: Load[] }[] {
+/** A4 (audyt 17.10): „Do wystawienia” tylko transporty z CMR (`billReady`) — te same, które kreator pozwala zaznaczyć. */
+export function pendingWeekLoads(loads: readonly Load[], bills: readonly Bill[], direction: BillDirection, today: string, documents: readonly Document[] = []): { weekKey: string; loads: Load[] }[] {
   const done = invoicedLoadIds([...bills], direction);
   const keys = new Set<string>();
   for (const l of loads) {
@@ -49,15 +50,15 @@ export function pendingWeekLoads(loads: readonly Load[], bills: readonly Bill[],
   const out: { weekKey: string; loads: Load[] }[] = [];
   for (const k of [...keys].sort()) {
     if (addDaysIso(isoWeekMonday(k), 6) >= today) continue;
-    const list = billCandidates([...loads], [...bills], direction, k);
+    const list = billCandidates([...loads], [...bills], direction, k).filter((l) => billReady(l, documents));
     if (list.length) out.push({ weekKey: k, loads: list });
   }
   return out;
 }
 
 /** „Do wystawienia” (E4) z kwotą netto według cennika i opłaty paliwowej. */
-export function pendingWeeks(loads: Load[], bills: Bill[], direction: BillDirection, today: string): PendingWeek[] {
-  return pendingWeekLoads(loads, bills, direction, today).map(({ weekKey: k, loads: list }) => {
+export function pendingWeeks(loads: Load[], bills: Bill[], direction: BillDirection, today: string, documents: readonly Document[] = []): PendingWeek[] {
+  return pendingWeekLoads(loads, bills, direction, today, documents).map(({ weekKey: k, loads: list }) => {
     const from = isoWeekMonday(k);
     const net = list.reduce((s, l) => s + (expectedNetFor(l, direction, 'EUR', today) ?? 0), 0);
     return { weekKey: k, no: Number(k.slice(-2)), from, to: addDaysIso(from, 6), loads: list, netEur: r2(net) };
