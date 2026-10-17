@@ -269,3 +269,24 @@ Polecenie kazało przepisać D-66–D-76 dosłownie z `ZLECENIE_POPRAWKI_02_10.m
 | E17 (07.10, 20:57) | Czat | wykonanie: D-20261016-0250-01 + 0310-01 + 0315-01 (P6 Cz1–Cz33; C3 Cz13/Cz25) | ⏳ P6 / C3 |
 | D-21 | wymóg zezwoleń | zastąpione przez E31 i L6 (D-20261016-0200-01 Z1 pkt 7) | 🔁 16.10.2026 |
 
+## Decyzje właściciela 17.10.2026, 07:20 (D-20261017-0730-01)
+
+| ID | Sprawa | Decyzja | Status |
+|---|---|---|---|
+| 1A | kolejność | Naprawy blokujące pierwszy transport (A1–A9), bezpieczeństwo (B1–B9) i poprawki C3 idą **przed C4**. Potem C4 → … → P11 | ✅ 17.10.2026, 07:20 |
+| 2C | termin | `release-1.0` w **środę 28.10.2026, 20:00** (granica 23:59). Bez cięcia zakresu. Zastępuje czwartek 22.10.2026, 20:00 (W35) | ✅ 17.10.2026, 07:20 |
+| 3A | rezerwa / cięcie | „Rezerwa do cięcia” usunięta; kalibracja ETA, SMS w kreatorze, E46 3×, E37, E24 — normalnie w paczkach. Reguła cięcia z §3 przestaje obowiązywać | ✅ 17.10.2026, 07:20 |
+| 4B | link śledzenia | Brak linku od SCX **nie blokuje** awizacji ani „Gotowy”; ostrzeżenie jak dziś (L19). **W27 zamknięte** | ✅ 17.10.2026, 07:20 |
+| 5B | Opłata paliwowa | KSH i SCX widzą „Pieniądze › Opłata paliwowa” **tylko do odczytu**; zapis → odmowa w bazie. Demo wyrównuje koordynator | ✅ 17.10.2026, 07:20 |
+| 6A | wielkie litery | Bez wymuszania w kodzie: koordynator usuwa `toUpperCase` z UI (`wyglad/W-audyt`); wykonawca — szablony e-mail/SMS/sprawy/powiadomienia bez `upper(`; kody (`SG-03`, tablice) bez zmian | ✅ 17.10.2026, 07:20 |
+| 7A | stare nieprzeczytane | Jednorazowo oznaczasz jako przeczytane `IN_APP` starsze niż 7 dni (kopia + `audit_log`) → B8 | ✅ 17.10.2026, 07:20 |
+| 8A | tylko polski | Koordynator usuwa EN/SV z aplikacji; wykonawca usuwa `translation_queue` / `translation_memory` / `deepl_usage` z kopią → B9 | ✅ 17.10.2026, 07:20 |
+
+## Brakujące wpisy rejestru (D-20261017-0730-01)
+
+| ID | Sprawa | Decyzja | Status |
+|---|---|---|---|
+| D-061 | separator w danych kierowcy | Separator „ / ” podstawowy; pionowa kreska tylko przy zaznaczonym Przepięciu i tylko w Watch Tower; SharePoint zawsze „ / ” | ✅ 02.10.2026 |
+| D-057 | dane kierowcy u KSH | KSH widzi pełne dane kierowcy na stałe | ✅ 30.09.2026 |
+| D-103 | panel KSH | Panel KSH „Edytuj tylko daty” | ✅ 05.10.2026 |
+

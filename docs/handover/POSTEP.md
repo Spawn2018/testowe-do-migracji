@@ -2715,5 +2715,33 @@ Kolejka wyglądu: `wyglad/W-dane` PR #274. Wpisane 16.10; scalone i wdrożone 17
 - Wdrożenie C3: `dpl_4iugo2qyvCYt9gNgHUpmjjH3hivi`, 17.10.2026 00:34. `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` → 200, `assets/index-B_buB0CA.js` (445473 B, zgodny z lokalnym `dist/`), 0× `service_role`.
 - Wygląd #274: scalenie `7db7282f`, 17.10.2026 00:36; wdrożenie `dpl_CaHR42SHedxQesLr1Q6W6hXPusA1`, 00:38. Oba adresy 200, `assets/index-Bv_J4hjW.js` (445544 B), 0× `service_role`. Bez bazy. `otherDocsOn()` zostaje false do P5, `detourLinesOf()` zostaje puste do P9.
 - #259: unit i visual zielone, scalenie zatrzymane — konflikt z `main`. Bez wdrożenia.
-- Dalej kolejka: C4.
+- Dalej kolejka (po D-20261017-0730-01): **C3-p → B1 → … → A6**, potem C4… (nie od razu C4).
+
+## 2026-10-17 — DOPISEK D-20261017-0730-01 WŁĄCZONY
+
+Audyt 17.10 przyjęty przez właściciela; decyzje 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**.
+
+### Kolejka od teraz
+**C3-p → B1 → B2 → B6 → A8 → A1 → A2 → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4–C11, C13 → **P4-u** → P3-d → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11.
+
+Termin `release-1.0`: **środa 28.10.2026, 20:00** (bez cięcia zakresu; „Rezerwa” usunięta).
+
+### Prostowanie statusów
+- **P4** było zapisane jako „NA PRODUKCJI” — poprawione na **CZĘŚCIOWO** (commit `3c676d96`). Brakuje: E26 → A2; E27 okno serwer → A1; „Gotowy” w bazie → A9; E15 pkt 1–3, E44 pkt 2–8, L17 → P4-u.
+- **„B5 RIO URL wklejony”** (wcześniejszy wpis P4): zrobione były tylko kolumny i maskowanie — nie pełne E44 pkt 2–8 (to w P4-u).
+
+### Właściciel — już zrobione / w drodze
+- W1 — ustawienia hasła 17.10, 07:28 → B2: `auth_leaked_password_protection` ma zniknąć.
+- W36 — `ADVISOR_MGMT_TOKEN` w Secrets Supabase 17.10, 07:28 → B2: jedno wywołanie, `advisor_ok = true`.
+- W44 — pliki D1/D2 w `D:\Watch Tower\dane\` (07:20).
+- W27 — zamknięte (4B).
+- W37 — emtrack od SCX w drodze; A8 bez czekania.
+
+### Liczby do uzupełnienia przy odbiorze
+- C3-p pkt 6 (SELECT produkcja): SYSTEM / „Źródło danych nie działa” × Administrator HHL; KSH bez Stref i zadań innych firm — **po C3-p**.
+- B2: `advisor_ok`, liczba zgłoszeń vs `advisor-exceptions.txt`; potwierdzenie braku `auth_leaked_password_protection`.
+- B8: liczby nieprzeczytanych `IN_APP` przed i po (starsze niż 7 dni).
+
+### #275
+Scalone `1eb7f395` (odbiór C3 + #274) — same dokumenty, bez wdrożenia. Dalej: C3-p na gałęzi `pakiet/audyt-17`.
 
