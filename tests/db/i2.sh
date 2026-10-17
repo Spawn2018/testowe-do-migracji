@@ -292,7 +292,8 @@ A2="set local request.jwt.claim.aal='aal2'"
 OPS=11111111-0000-0000-0000-0000000000b5
 $PSQL -c "insert into app_users (auth_id, org_id, email, role) values ('$OPS','00000000-0000-0000-0000-00000000a001','ops@test','HHL_OPS') on conflict do nothing" >/dev/null
 chk "przełącznik po migracji w środowisku bez auth.mfa_factors: wyłączony" "$(Q "select enabled from security_flags where key='MFA_HHL_ADMIN'")" f
-chk "API bez dostępu do security_flags, current_aal, mfa_satisfied" "$(Q "select has_table_privilege('authenticated','security_flags','select')::text||has_function_privilege('authenticated','mfa_satisfied(user_role)','execute')::text||has_function_privilege('authenticated','current_aal()','execute')::text")" "falsefalsefalse"
+# B1 (0224): SELECT na security_flags dla authenticated (RLS = tylko HHL); mfa_satisfied/current_aal nadal bez EXECUTE.
+chk "B1: SELECT security_flags; bez EXECUTE mfa_satisfied/current_aal" "$(Q "select has_table_privilege('authenticated','security_flags','select')::text||has_function_privilege('authenticated','mfa_satisfied(user_role)','execute')::text||has_function_privilege('authenticated','current_aal()','execute')::text")" "truefalsefalse"
 val "wymaganie wyłączone: HHL_ADMIN przy aal1 = HHL" $HHL "select is_hhl()" t
 $PSQL -c "update security_flags set enabled=true where key='MFA_HHL_ADMIN'" >/dev/null
 val "wymaganie włączone: HHL_ADMIN bez drugiego składnika (aal1) — is_hhl() false" $HHL "select is_hhl()::text||'/'||coalesce(current_app_role()::text,'∅')" "false/∅"

@@ -69,6 +69,7 @@ sms_add_test_number | GUARD | select sms_add_test_number(null, null) | wyłączn
 sms_send_test | GUARD | select sms_send_test(null) | wyłącznie HHL
 admin_set_external_messaging | GUARD | select admin_set_external_messaging(null) | wyłącznie administrator HHL
 admin_security_flag_set | GUARD | select admin_security_flag_set(null, null) | wyłącznie administrator HHL
+security_flags_list | GUARD | select security_flags_list() | tylko HHL
 sms_external_messaging_state | GUARD | select sms_external_messaging_state() | wyłącznie HHL
 admin_set_permit_requirement | GUARD | select admin_set_permit_requirement(null) | wyłącznie administrator HHL
 permit_requirement_state | GUARD | select permit_requirement_state() | wyłącznie HHL
