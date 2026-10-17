@@ -2870,5 +2870,18 @@ Przegląd #293 przed scaleniem. W tym samym PR:
 
 Odbiór A8 po wdrożeniu wpisze koordynator. Własny wpis wykonawcy — po teście z odbioru i wdrożeniu, nie wcześniej.
 
+## 2026-10-17 — A8 NA PRODUKCJI — bez wywołania, czeka W37
+
+- PR #293; merge `c938b3bb` (treść `b9d361ef`). Migracja `0226_a8_emtrack_login_backoff.sql`. Funkcja Edge `emtrack-web` wdrożona.
+- CI na `b9d361ef`: unit, visual, `db` zielone.
+- TEST: security **114/114** (+2 SKIP), status **55/55**, nullguard 161+136+228+127 = **652/652**.
+- Doradca security na TEST: 171 zgłoszeń, 0 spoza `advisor-exceptions.txt` (w tym `emtrack_login_state`).
+- Próba prod ROLLBACK: `anon` i `authenticated` bez SELECT, wiersz stanu = 1; ROLLBACK.
+- `supabase db push`: 0226 nałożona. Po: `schema_migrations` = 0226; otwarta sprawa `SOURCE_DOWN:EMTRACK_WEB` = 1; z datą w kluczu = 0; kopie w `audit_log` = 11; `anon` bez SELECT.
+- Wdrożenie: `dpl_9GMBgxzJ6MN1rc2d3Ao91r1X3frW`, 17.10.2026 20:58; tower/makieta 200; `assets/index-Dr68_XrG.js` (A8 nie zmienia JS); 0× `service_role`.
+- Produkcji nie wołano starym sekretem. **Czeka W37.**
+- **TEST wolne** od 17.10.2026 20:54 (koniec nullguard-4).
+- Dalej: **A1**. #291 nadal do scalenia w przerwie między pozycjami.
+
 
 
