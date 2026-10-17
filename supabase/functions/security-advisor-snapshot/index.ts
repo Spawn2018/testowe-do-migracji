@@ -6,12 +6,15 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
 
+type AdvisorMeta = { name?: string; schema?: string; type?: string };
 type AdvisorLint = {
   name?: string;
   level?: string;
   title?: string;
+  detail?: string;
   count?: number;
-  findings?: Array<{ detail?: string; metadata?: { name?: string; schema?: string; type?: string } }>;
+  metadata?: AdvisorMeta;
+  findings?: Array<{ detail?: string; metadata?: AdvisorMeta }>;
 };
 
 async function fetchSecurityLints(projectRef: string, token: string): Promise<AdvisorLint[]> {
@@ -67,14 +70,19 @@ Deno.serve(async (req) => {
     }
   }
 
-  const flat = findings.flatMap((lint) =>
-    (lint.findings ?? [{}]).map((f) => ({
-      lint: lint.name ?? 'unknown',
-      level: lint.level ?? 'INFO',
-      object: `${f.metadata?.schema ?? 'public'}.${f.metadata?.name ?? '*'}`,
-      detail: f.detail ?? lint.title ?? '',
-    }))
-  );
+  // B2: API doradcy zwraca lint jako wiersz (metadata na tym samym obiekcie), nie findings[].
+  const flat = findings.flatMap((lint) => {
+    const rows = lint.findings?.length ? lint.findings : [lint];
+    return rows.map((f) => {
+      const md = f.metadata ?? lint.metadata;
+      return {
+        lint: lint.name ?? 'unknown',
+        level: lint.level ?? 'INFO',
+        object: `${md?.schema ?? 'public'}.${md?.name ?? '*'}`,
+        detail: f.detail ?? lint.detail ?? lint.title ?? '',
+      };
+    });
+  });
 
   if (snapshotId != null) {
     const { error } = await sb.rpc('security_advisor_snapshot_set_findings', {
