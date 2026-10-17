@@ -206,5 +206,19 @@ val "przewoźnik: pozycje tylko na swoich transportach"          $SCX "$W3 selec
 val "klient: pozycje tylko swojego projektu (także bez transportu)" $KSH "$W3 select string_agg(shipment_code, ',' order by shipment_code) from shipment_items where shipment_code like 'W3-%'" "W3-BEZ,W3-OBCY,W3-SWOJ"
 val "HHL: wszystkie pozycje i wiadomości"                        $HHL "$W3 select (select count(*) from shipment_items where shipment_code like 'W3-%') || '/' || (select count(*) from load_messages where body in ('obcy','swoj'))" 4/2
 
+echo; echo "[B1] security_flags — SELECT HHL, odmowa KSH/SCX; lista dla Operacji (0224)"
+OPS=11111111-0000-0000-0000-0000000000b1
+sys "insert into app_users (auth_id, org_id, email, role, active)
+     values ('$OPS','00000000-0000-0000-0000-00000000a001','ops-b1@test','HHL_OPS',true)
+     on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id" >/dev/null
+val "HHL_ADMIN widzi przełączniki" $HHL "select count(*) > 0 from security_flags" t
+val "HHL_OPS widzi przełączniki" $OPS "select count(*) > 0 from security_flags" t
+val "KSH 0 wierszy security_flags" $KSH "select count(*) from security_flags" 0
+val "SCX 0 wierszy security_flags" $SCX "select count(*) from security_flags" 0
+val "HHL_ADMIN security_flags_list niepuste" $HHL "select jsonb_array_length(security_flags_list()) > 0" t
+val "HHL_OPS security_flags_list niepuste" $OPS "select jsonb_array_length(security_flags_list()) > 0" t
+err "KSH security_flags_list odmowa" $KSH "select security_flags_list()" "tylko HHL"
+err "SCX security_flags_list odmowa" $SCX "select security_flags_list()" "tylko HHL"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

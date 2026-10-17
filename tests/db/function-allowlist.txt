@@ -57,6 +57,7 @@ authenticated admin_revoke_invite
 authenticated admin_set_eta_calibration_frozen
 authenticated admin_set_external_messaging
 authenticated admin_security_flag_set
+authenticated security_flags_list
 authenticated security_advisor_snapshot_latest
 authenticated load_status_rank
 authenticated load_status_set
