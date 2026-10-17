@@ -130,3 +130,107 @@ test.describe('A4 — faktura po terminie', () => {
     await expect(page.locator('[data-bill-detail]')).toHaveCount(1)
   })
 })
+
+/* wyglad/W-przed-wydaniem-1 — odbiór wyglądu przed wydaniem (ODBIOR_WYGLADU_PRZED_WYDANIEM, „Do poprawy przed wydaniem”). */
+test.describe('Przed wydaniem — dokument nie wyższy od okna, numer transportu w całości', () => {
+  const PAGES = ['/kokpit', '/mapa', '/harmonogram', '/ryzyka', '/dokumenty', '/finanse', '/faktury', '/automatyzacje', '/strefy', '/opcje', '/ustawienia', '/opcje/stan-systemu']
+  const late = (path: string) => `/#${path}?now=2026-11-20T10%3A00%3A00Z`
+  /* zamrożony zegar 20.11 (faktury wystawione) — dane demo budowane od nowa, bez stanu z poprzedniego testu */
+  async function freshAt20Nov(page: Page) {
+    await page.setViewportSize({ width: 1440, height: 1080 })
+    await page.goto(late('/'), { waitUntil: 'networkidle', timeout: 120_000 })
+    await page.evaluate(() => {
+      for (const k of Object.keys(localStorage)) if (/watch|tower|wt/i.test(k)) localStorage.removeItem(k)
+    })
+    await page.reload({ waitUntil: 'networkidle', timeout: 120_000 })
+    await page.waitForSelector('#roleSeg', { timeout: 30_000 })
+  }
+  /* F7: mierzyć dopiero po ułożeniu strony — historia strefy wczytuje się z opóźnieniem („…”), układ kart telefonu ustala się po ~50 ms */
+  async function settled(page: Page) {
+    await expect(page.locator('.zv-hint', { hasText: /^…$/ })).toHaveCount(0, { timeout: 10_000 })
+    await page.waitForTimeout(300)
+  }
+
+  test('HHL: żadna strona nie wydłuża ani nie poszerza dokumentu (1440, 1280, 390)', async ({ page }) => {
+    test.setTimeout(180_000)
+    await freshAt20Nov(page)
+    const bad: string[] = []
+    for (const [width, height] of [[1440, 900], [1280, 800], [390, 844]] as const) {
+      await page.setViewportSize({ width, height })
+      for (const p of PAGES) {
+        await page.goto(late(p), { waitUntil: 'networkidle' })
+        await settled(page)
+        await measure(`${width} ${p}`)
+      }
+    }
+    /* Strefy na telefonie: karta każdej strefy (historia zmian z ukrytymi tekstami dla czytników) */
+    for (const [width, height] of [[390, 844], [360, 740]] as const) {
+      await page.setViewportSize({ width, height })
+      await page.goto(late('/strefy'), { waitUntil: 'networkidle' })
+      const count = await page.locator('.zv-item').count()
+      expect(count).toBeGreaterThan(0)
+      for (let i = 0; i < count; i++) {
+        const item = page.locator('.zv-item').nth(i)
+        const name = (await item.locator('b').first().textContent())?.trim() ?? String(i)
+        await item.click()
+        await expect(page.locator('[data-zone-card]')).toBeVisible()
+        await settled(page)
+        await measure(`${width} /strefy › ${name}`)
+        await page.locator('[data-zone-card] .zv-back').click()
+        await expect(page.locator('.zv-item').first()).toBeVisible()
+      }
+    }
+    expect(bad).toEqual([])
+
+    async function measure(where: string) {
+      const m = await page.evaluate(() => {
+        const se = document.scrollingElement as HTMLElement
+        return { sh: se.scrollHeight, sw: se.scrollWidth, ih: innerHeight, iw: innerWidth }
+      })
+      if (m.sh > m.ih + 1 || m.sw > m.iw + 1) bad.push(`${where}: ${m.sw}×${m.sh} przy oknie ${m.iw}×${m.ih}`)
+    }
+  })
+
+  for (const role of ['HHL', 'SCX', 'KSH'] as const) {
+    test(`${role}, telefon 390: szczegóły faktury — nazwa transportu nie łamie się w środku członu`, async ({ page }) => {
+      await freshAt20Nov(page)
+      await page.click(`#roleSeg button[data-role="${role}"]`)
+      await page.setViewportSize({ width: 390, height: 844 })
+      await page.goto(late('/faktury'), { waitUntil: 'networkidle' })
+      const hd = page.locator('[data-bill] .inv-card-hd:visible')
+      await expect(hd.first()).toBeVisible({ timeout: 10_000 })
+      const n = await hd.count()
+      expect(n).toBeGreaterThan(0)
+      /* szczegóły działają jak akordeon (otwarta jedna faktura) — sprawdzamy każdą po kolei, po ułożeniu karty */
+      const broken: string[] = []
+      let checked = 0
+      for (let i = 0; i < n; i++) {
+        await hd.nth(i).click()
+        const names = page.locator('[data-bill-detail] tbody td .code[data-content]')
+        await expect(names.first()).toBeVisible()
+        await settled(page)
+        checked += await names.count()
+        broken.push(...(await names.evaluateAll((els) => {
+          const out: string[] = []
+          for (const el of els) {
+            const node = el.firstChild
+            if (!node || node.nodeType !== Node.TEXT_NODE) continue
+            const s = node.textContent ?? ''
+            const re = /\S+/g
+            let m: RegExpExecArray | null
+            while ((m = re.exec(s))) {
+              const r = document.createRange()
+              r.setStart(node, m.index)
+              r.setEnd(node, m.index + m[0].length)
+              const tops = new Set([...r.getClientRects()].filter((x) => x.width > 0).map((x) => Math.round(x.top)))
+              if (tops.size > 1) out.push(`${s}: „${m[0]}”`)
+            }
+          }
+          return out
+        })))
+      }
+      expect(checked).toBeGreaterThan(1)
+      expect(broken).toEqual([])
+    })
+  }
+})
