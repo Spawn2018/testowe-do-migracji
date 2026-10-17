@@ -173,11 +173,12 @@ Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODU
 
 **Kolejka wyglądu (D-20261016-2130-01):** `wyglad/W-dane` PR #274 — scalone i wdrożone 17.10.2026 00:38 po skończonym C3 (`7db7282f`, `dpl_CaHR42SHedxQesLr1Q6W6hXPusA1`). Wygląd bez bazy (F8): „Inne pliki” z „+ Dodaj” (produkcja: `otherDocsOn()` = false do P5), przerywana linia objazdu (produkcja: `detourLinesOf()` = [] do P9), przeprawy z HERE z `map_display_state.ferries` (bez danych zostaje stały tor). Plik dopisku wszedł z PR.
 
-**Kolejka wyglądu (D-20261017-0800-01 / 0930-01 / 0915-01 / 1100-01):** scalasz **#277 → #279 → #280 → #282** w przerwach między pozycjami, każdy po zielonych `unit` i `visual`; wdrożenie po scaleniu. Wzorce `visual` odświeża koordynator; gdy `visual` czerwony przed jego commitem z wzorcami — sygnał „VISUAL #<numer>”.
+**Kolejka wyglądu (D-20261017-0800-01 / 0930-01 / 0915-01 / 1100-01 / 1220-01):** scalasz **#277 → #279 → #280 → #282 → #284** w przerwach między pozycjami, każdy po zielonych `unit` i `visual`; wdrożenie po scaleniu. Wzorce `visual` odświeża koordynator; gdy `visual` czerwony przed jego commitem z wzorcami — sygnał „VISUAL #<numer>”.
 - **#277 `wyglad/W-audyt` (D-20261017-0800-01):** `serverRuleOn(key)` (`TRACKING_WINDOW` → A1, `SITE_EXIT_DELIVERED` → A2, `WIND_E49` / `DETOUR_E49` → P6 E49 Z1/Z3, `ROAD_PL_HERE` → P6 E2, `ROAD_SITUATIONS_MAP` → P9 E29 pkt 3 — przy wdrożeniu przestawiasz tylko swój klucz na `true`, test: tekst na produkcji bez „włączamy wkrótce”); 6A bez wielkich liter; 5B „Opłata paliwowa” KSH/SCX tylko do odczytu w demo; domyślnie EUR (`STORE_SCHEMA_VERSION` 2→3); przepięcie w Harmonogramie; liczby po polsku; dzwonek; `lazyRetry`. **SCALONE I WDROŻONE.**
 - **#279 `wyglad/W-demo` (D-20261017-0930-01, na #277):** daty demo zgodne z 23.09; ETA w demo (`demoEta.ts` w `PROD_DEMO_SWAP`); `STORE_SCHEMA_VERSION` 3→4; „po oknie” tylko za oknem dostawy; `fxForDate(…, unloaded)` kurs bieżący przed rozładunkiem. **SCALONE I WDROŻONE.**
 - **#280 `wyglad/W-pl` (D-20261017-0915-01, na #279):** panel tylko po polsku (8A); EN/SV tylko w aplikacji kierowcy; N20 w aplikacji; pierwsze wczytanie 317,6 kB gzip. **SCALONE I WDROŻONE.**
 - **#282 `wyglad/W-eta` (D-20261017-1100-01, na #280):** `etaDuration` — czasy „X d Y h Z min” (pigułka, Mapa, blok ETA, pasek śledzenia, PDF, sprawy ETA w demo); minus „−”; „przyjazd nocą” na Mapie i w Harmonogramie; Opcje › Zasady transportu › Kalibracja ETA (produkcja: „Brak źródła danych.” do podłączenia w P4-u); „Ten telefon / komputer”: „Wiadomości z Czatu nie przychodzą e-mailem.” (C3-p). **SCALONE I WDROŻONE** (`a5da99ba`, `dpl_H6KzHnyockMQ6BGX3XtBACDHuuD8`).
+- **#284 `wyglad/W-konta` (D-20261017-1220-01, na #282):** demo „Rodzaj konta (demo)” — Administrator / Operacje (HHL), Dyspozytor / Użytkownik (SCX); na produkcji przełącznika nie ma; `accountRole(role)` (`src/lib/accountRole.ts`) — produkcja = `getAuthProfile()?.role`; Pomoc › Kontakt i „Co nowego” bez danych: „pojawi się tutaj po włączeniu danych”; Opcje › SMS przy miejscach do P8: Operacje HHL tylko oglądają, „PL +48 / SE +46 (jak w ekranie P8)”; stare formularze Opcji u Operacji HHL tylko do odczytu (C8 N2 — wygląd tym PR; w C8 zostaje strona bazy); w Cenniku „Strona” i „Firma” zostają aktywne; `konto=` w adresie; „Moje konto” Użytkownika SCX — osoba wymyślona. Nowe sprawdzenia uprawnień w widoku (A2, A4, B5 i dalej) przez `accountRole(role)`, nie `getAuthProfile()?.role`. `prodFacade.ts` zostaje na profilu.
 
 P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji`, a hash scalenia P0a wpisujesz w pierwszym wpisie P0b w `POSTEP.md`.
 
@@ -369,7 +370,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C5** nazwa transportu w funkcjach bazy = `shipment_code` / `transport_label`; KSH bez numeru zlecenia.
 - **C6** teksty spraw z serwera (E21): daty, pogoda, AUTO_STATUS bez UUID.
 - **C7** role E9 w bazie; zestaw `e9-role`.
-- **C8** Opcje HHL_OPS: pola nieaktywne, 0 × 403; `security_flags_list()`.
+- **C8** Opcje HHL_OPS: pola nieaktywne, 0 × 403; `security_flags_list()`. **N2 (formularze tylko do odczytu u Operacji) — wygląd `wyglad/W-konta`** (D-20261017-1220-01); w C8 zostaje strona bazy.
 - **C9** testy bezpieczeństwa E19 pkt 6 (Przeczytali, anon, v_load_price_client, …).
 - **C10** `my_profile`: `real_full_name`, `last_sign_in_at`.
 - **C11** warunek „konto bez telefonu E.164” (pasek — koordynator).
@@ -458,6 +459,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
   - „Tak” → „Dostarczone” z czasem wyjazdu i wpisem w Historii;
   - „Nie” → zamknięcie sprawy z notatką.
 - Podłączasz `onYes` i `onNo` w `TodoPanel.tsx` i `LoadDrawer.tsx` (dane, bez zmiany wyglądu, F1).
+- Nowe sprawdzenia uprawnień w widoku: `accountRole(role)`, nie `getAuthProfile()?.role` (D-20261017-1220-01 §2). `prodFacade.ts` zostaje na profilu.
 - Test (`dwell`, `status`): odtworzenie SG-03 na zmyślonym śladzie (G-17) → „Dostarczone 12:19”, śledzenie gaśnie; postój 6 min → sprawa L14; „Tak” → „Dostarczone”.
 - **Przy wdrożeniu:** przestaw `serverRuleOn('SITE_EXIT_DELIVERED')` na `true` (D-20261017-0800-01 §2 pkt 1). Test: tekst na produkcji bez „włączamy wkrótce” („Działa samo” › Status ze stref / tabela stref).
 
@@ -506,6 +508,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - Usuwasz tekst „system nie liczy VAT”.
 - Po terminie płatności → ryzyko `INVOICE_OVERDUE` dla HHL, raz na fakturę (dzwonek i e-mail według macierzy).
 - Test „co do grosza” na TEST; transport bez CMR niedostępny w kreatorze; po rejestracji „Zafakturowano” samo.
+- Nowe sprawdzenia uprawnień w widoku: `accountRole(role)`, nie `getAuthProfile()?.role` (D-20261017-1220-01 §2).
 
 ### A5 · Rejs w awizacji → statusy „Prom” i „Port SE” same (B8, C8)
 - Okno Awizacja zapisuje `sailing_id`: wybór rejsu i armatora z `sailings` do Szwecji według daty. Wymagany do „Gotowy” przy trasie promowej (A9).
@@ -529,12 +532,11 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
   - dziennik start i koniec.
 - Przy impersonacji Historia zapisuje „<admin> (HHL) jako <osoba>”.
 - Test `e9-role`: „Podgląd KSH: zapis → odmowa”; HHL widzi to, co KSH — bez numerów, kosztu i marży.
+- Nowe sprawdzenia uprawnień w widoku: `accountRole(role)`, nie `getAuthProfile()?.role` (D-20261017-1220-01 §2). `prodFacade.ts` (`canSeeWorkflows`, `canManageWorkflows`) zostaje na profilu.
 
-### B7 · Nagłówki
-- `Permissions-Policy`: `geolocation=(self)` (dziś `geolocation=()` blokuje aplikację kierowcy). Uzasadnienie w `SEC_OWASP_ASVS_L2.md`.
-- Komunikat `POSITION_SHARE_DENIED` rozróżnia odmowę od braku API.
-- CSP (Report-Only): `frame-src 'self' blob: https://*.supabase.co` (podgląd PDF z Storage). Włączenie wymuszenia — W8.
-- Test: Playwright z nagłówkiem — kierowca udostępnia pozycję.
+### B7 · Nagłówki — zakres po słowach właściciela 17.10.2026, 12:25 (D-20261017-1220-01 §2)
+Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny” (DRV-CLOSE). **Bez prac:** `Permissions-Policy: geolocation=(self)`, komunikat `POSITION_SHARE_DENIED`, test Playwright „kierowca udostępnia pozycję”.
+- Zostaje CSP Report-Only: `frame-src 'self' blob: https://*.supabase.co` (podgląd PDF z Storage). Włączenie wymuszenia — W8.
 
 ### B8 · Stare nieprzeczytane (7A)
 - `notifications` `IN_APP`, nieprzeczytane, starsze niż 7 dni → przeczytane.
@@ -776,7 +778,7 @@ Bez ekranów Opcji (te w P10b, po P3).
   - zaproszenie czyta treść z „Treści wiadomości” (E43, klucz zaproszenia), a gdy jej nie ma — domyślną z E37; P8 dodaje ją do E43 (kolejność scalenia dowolna);
   - logowanie: komunikaty, „Nie pamiętam hasła”, link 24 h;
   - zaproszenia: lista stanów, „Wyślij ponownie”, „Cofnij”;
-  - Pomoc „Jak pracuję” w 5 wersjach — treści i test odbioru z dopisku `D-20261009-0015-01` (L38; z poprawkami z 09.10 naniesionymi w tym pliku: piloci — D-20261009-1233-01, daty, grupowanie, polisy, dopłaty, konwój — D-20261009-1309-01) — i „Co nowego”; wygląd i treść `wyglad/P10b-b`; dane D-20261016-0810-01 pkt 1–2;
+  - Pomoc „Jak pracuję” w 5 wersjach — treści i test odbioru z dopisku `D-20261009-0015-01` (L38; z poprawkami z 09.10 naniesionymi w tym pliku: piloci — D-20261009-1233-01, daty, grupowanie, polisy, dopłaty, konwój — D-20261009-1309-01) — i „Co nowego”; wygląd i treść `wyglad/P10b-b`; dane D-20261016-0810-01 pkt 1–2. **D-20261017-1220-01 §2:** `helpContacts()` i `whatsNew()` na produkcji — po podłączeniu tekst „po włączeniu danych” znika sam;
   - komunikat HHL tylko jako baner; 2FA dobrowolne;
   - Komunikat HHL: „Zamknij” dla osoby, w ciągu minuty; logowanie: „Link wygasł” z „Wyślij nowy link” — wygląd `wyglad/P10b-a`, dane D-20261016-0530-01 pkt 1–4;
   - pierwsze wejście (E37 pkt 9) — wygląd `wyglad/P10b-d`; dane D-20261016-0930-01 pkt 1–4.
@@ -981,3 +983,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 17.10.2026 09:15 | D-20261017-0915-01: PR #280 `wyglad/W-pl` (po #279) — panel tylko PL (8A), EN/SV tylko kierowca, N20 w aplikacji; B9: kafelek DeepL + kolumna języka + `supabaseProvider`; P8: `sms_render` tylko PL | właściciel 07:20 (8A); koordynator |
 | 17.10.2026 09:30 | D-20261017-0930-01: PR #279 `wyglad/W-demo` (po #277) — daty demo 23.09, ETA demo, `STORE_SCHEMA_VERSION` 4, kurs bieżący przed rozładunkiem; P5 kurs `fx_rates` + usunięcie `invoices` demo przy `bills`; P4-u `delayed`; P11 pkt 6 ujęcia z TEST | właściciel 07:01; koordynator |
 | 17.10.2026 11:00 | D-20261017-1100-01: PR #282 `wyglad/W-eta` (po #280) — `etaDuration` D-071, „przyjazd nocą” D-101, Opcje › Kalibracja ETA (E15 pkt 7 / 3A); P4-u: `fmt_eta_duration`, dane kalibracji §3; C3-p zdanie o Czacie; sprawdzenia APP_URL OK / push poza testem czeka | właściciel 07:20 (3A); koordynator |
+| 17.10.2026 12:20 | D-20261017-1220-01: PR #284 `wyglad/W-konta` (po #282) — Operacje HHL i Użytkownik SCX w demo, `accountRole`, Pomoc bez fałszywego braku, SMS przy miejscach do odczytu, C8 N2 formularze Operacji (zostaje strona bazy); B7 bez geolokalizacji kierowcy — tylko CSP `frame-src`; właściciel 12:25: aplikacja kierowcy porzucona, zostaje w kodzie | właściciel 17.10 12:25; koordynator |
