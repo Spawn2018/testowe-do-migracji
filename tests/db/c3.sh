@@ -48,10 +48,11 @@ SCXU=$(sys "select id from app_users where auth_id='$SCX'" | tail -1 | tr -d '\r
 sys "update notification_matrix set email=false where event_key='dec_new'" >/dev/null
 sys "delete from notifications where channel='EMAIL' and dedup_key like 'dec:OPEN:%'" >/dev/null
 DEC_C3=$(sys "select public.decision_open_from_event('$P','FERRY_CANCELLED','c3p-dec-mail','C3-p dec mail','{\"bundle_key\":\"c3p-dec\"}'::jsonb,'$L',null)" | tail -1 | tr -d '\r')
-sval "dec_new email off → 0 e-maili" "select count(*) from notifications where channel='EMAIL' and dedup_key like 'dec:OPEN:'||'$DEC_C3'||':%'" 0
+sval "dec_new email off → 0 e-maili" "select count(*) from notifications where channel='EMAIL' and payload->>'decision_id' = '$DEC_C3'" 0
 run "$HHL" "select admin_notification_matrix_set('dec_new','HHL_ADMIN',true,true,false)" commit >/dev/null
 sys "select public.l13_decision_email('$DEC_C3'::uuid)" >/dev/null
-sval "dec_new email on → e-mail" "select (count(*) > 0)::text from notifications where channel='EMAIL' and dedup_key like 'dec:OPEN:'||'$DEC_C3'||':%'" true
+# krytyczne idą pod dedup_key bundle:… (nie dec:OPEN:…); identyfikacja po decision_id w payload
+sval "dec_new email on → e-mail" "select (count(*) > 0)::text from notifications where channel='EMAIL' and payload->>'decision_id' = '$DEC_C3'" true
 sys "update notification_matrix set email=false where event_key='dec_new'" >/dev/null
 
 
