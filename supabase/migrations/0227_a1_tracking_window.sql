@@ -164,11 +164,15 @@ begin
             jsonb_build_object('actual_delivery_at', new.actual_delivery_at));
   end if;
 
+  -- Automat / migracja (bez JWT) — bez dalszych ograniczeń roli.
   if auth.uid() is null then return new; end if;
 
+  -- A5: sesja użytkownika — load_status_set (status_ctx) albo automat/anulowanie (cancel_ctx).
+  v_ctx := coalesce(current_setting('tower.cancel_ctx', true), '');
   if (
     (new.status is distinct from old.status or new.actual_delivery_at is distinct from old.actual_delivery_at)
     and current_setting('tower.status_ctx', true) is distinct from 'on'
+    and v_ctx not in ('MANUAL', 'IMPORT')
   ) then
     raise exception 'Status i datę rozładunku zmienia wyłącznie load_status_set albo automat'
       using errcode = '42501';

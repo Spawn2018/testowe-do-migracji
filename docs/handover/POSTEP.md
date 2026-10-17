@@ -2893,5 +2893,14 @@ Przegląd #296 przed scaleniem, w tym samym PR:
 
 Stare transporty w oknie śledzenia, status `PLANNED`, data załadunku sprzed 17.10.2026 (odczyt produkcji 17.10.2026, 21:55): **21**. Do domknięcia przez HHL i SCX przez sprawy L17 przed W37.
 
+## 2026-10-17 22:56 — porównanie funkcji 0227 z produkcją (D-20261017-2250-01)
+
+Odczyt `pg_get_functiondef` na produkcji `nglnnrmzmhusvxslousq`, przed `db push`. Różnice 0227 wobec produkcji, po odjęciu nagłówka `CREATE`/`$function$`:
+
+- `guard_load_update`: tylko blok `tower.track_ctx` (zapis wyłącznie `tracking_opened_at`) i `tracking_opened_at` na liście `tower.dates_ctx`. Zostaje warunek A5 z 0212: `v_ctx not in ('MANUAL', 'IMPORT')`.
+- `process_position`: tylko brama `load_in_tracking_window` i ustawienie `tracking_opened_at` w `tower.track_ctx`.
+- `telm_infer_phase_from_position`: tylko powrót, gdy transport jest poza oknem.
+- `detect_silent_vehicles`: zamknięcie otwartej ciszy poza oknem, pętla z `having load_in_tracking_window`, źródło pozycji bez twardej listy `TELEMATICS_API`/`RFMS`/`DRIVER_PWA`.
+
 
 
