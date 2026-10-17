@@ -52,7 +52,7 @@ const DEMO_FILE_VER = { v: '7', at: '2026-09-21T14:08:00+02:00' } as const;
 export const SKELETON_MS = 260;
 
 function delayMinutes(l: Load): number | null {
-  return delayPillMinutes(l, delayMinutesVsPlan(l.etaBoden, l.plannedDeliverDate, l.planDates?.deliveryTo), PROD_BUILD);
+  return delayPillMinutes(l, delayMinutesVsPlan(l.etaBoden, l.plannedDeliverDate, l.planDates?.deliveryTo ?? l.awizacja?.unloadWindowEnd), PROD_BUILD);
 }
 
 /** Zamyka okienko po Escape i kliknięciu obok (Kolumny, Więcej). */

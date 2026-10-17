@@ -102,7 +102,7 @@ describe('bez wielkich liter wymuszanych w kodzie (6A)', () => {
 
 describe('waluta widoku EUR (E16)', () => {
   it('nowy zapis: EUR; zapis przeglądarki v2 z „PLN” (wartość domyślna) → EUR; v3 zostaje jak jest', () => {
-    expect(STORE_SCHEMA_VERSION).toBe(3);
+    expect(STORE_SCHEMA_VERSION).toBe(4); /* v4 — W-demo (audyt 17.10, N6): stare dane startowe demo odrzucone */
     /* migracja nie przenosi waluty — wraca domyślna EUR; wybór z konta wraca przy logowaniu */
     expect('displayCurrency' in migrateTowerPersist({ displayCurrency: 'PLN', locale: 'pl' }, 2).state).toBe(false);
     expect(readFileSync('src/store/useTowerStore.ts', 'utf8')).toContain("displayCurrency: 'EUR',");

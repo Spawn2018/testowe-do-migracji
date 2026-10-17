@@ -136,7 +136,7 @@ export function LoadDrawer() {
   if (!load) return null;
 
   const canStatus = canChangeLoadStatus(role, getAuthProfile()?.role ?? null);
-  const delayMin = delayPillMinutes(load, delayMinutesVsPlan(load.etaBoden, load.plannedDeliverDate, load.planDates?.deliveryTo), PROD_BUILD);
+  const delayMin = delayPillMinutes(load, delayMinutesVsPlan(load.etaBoden, load.plannedDeliverDate, load.planDates?.deliveryTo ?? load.awizacja?.unloadWindowEnd), PROD_BUILD);
   const delayPillText = delayMin === null ? t(locale, 'i2_delay_pill') : formatDelayPill(delayMin);
 
   /* E25: oś statusów raz na render — data dostawy i wjazd na plac do bloku ETA */

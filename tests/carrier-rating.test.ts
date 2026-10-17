@@ -65,10 +65,12 @@ describe('J4 — dane demo', () => {
     /* demo: część transportów spóźniona (G-09) — kolumna spóźnień nie jest pusta */
     expect(rows[0].delivered - rows[0].onTime).toBeGreaterThan(0);
     expect(rows[0].avgLateMin).not.toBeNull();
-    /* F7: tylko rozładowane do „teraz” — rozładunki demo z przyszłości nie wchodzą */
-    const future = loads.filter((l) => ['DELIVERED', 'UNLOADING'].includes(l.status) && (unloadDayOf(l) ?? '') > '2026-10-16');
-    expect(future.length).toBeGreaterThan(0);
-    expect(rows.reduce((a, r) => a + r.delivered, 0)).toBeLessThanOrEqual(loads.length - future.length);
+    /* F7: tylko rozładowane do „teraz” — rozładunki z przyszłości nie wchodzą. Audyt 17.10 (N6): daty demo zgodne
+       z dniem demo 23.09, więc rozładunków z przyszłości już nie ma; liczba ocen ≤ liczby rozładowanych do „teraz”. */
+    const future = loads.filter((l) => ['DELIVERED', 'UNLOADING'].includes(l.status) && (unloadDayOf(l) ?? '') > NOW.slice(0, 10));
+    expect(future).toEqual([]);
+    const done = loads.filter((l) => ['DELIVERED', 'UNLOADING'].includes(l.status) && unloadDayOf(l) != null);
+    expect(rows.reduce((a, r) => a + r.delivered, 0)).toBeLessThanOrEqual(done.length);
   });
 
   it('SCX: tylko swój wiersz i oceny swoich transportów, najnowsze pierwsze', () => {

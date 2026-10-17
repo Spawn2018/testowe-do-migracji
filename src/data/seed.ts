@@ -16,6 +16,7 @@ import type {
   ScheduleVersion,
   WorkflowRule,
   WorkflowRun,
+  LoadStatus,
 } from '../types';
 import { positionAlong, PROGRESS_OF, STATUS_TO_STAGE } from '../lib/status';
 import rawLoads from './loads.json';
@@ -258,8 +259,8 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
     itemType: 'SG',
     status: 'IN_TRANSIT_SE',
     dims: { lengthM: 20.4, widthM: 3.25, heightM: 4.15, weightT: 28.8 },
-    plannedLoadDate: '2026-09-23',
-    plannedDeliverDate: '2026-09-28',
+    plannedLoadDate: '2026-09-21',
+    plannedDeliverDate: '2026-09-25',
     sequenceOrder: 63,
   },
   {
@@ -284,7 +285,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
     status: 'IN_TRANSIT_SE',
     dims: { lengthM: 16.2, widthM: 3.35, heightM: 4.25, weightT: 31.2 },
     plannedLoadDate: '2026-09-22',
-    plannedDeliverDate: '2026-09-27',
+    plannedDeliverDate: '2026-09-25',
     sequenceOrder: 65,
   },
   {
@@ -293,7 +294,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
     status: 'SILENT',
     dims: { lengthM: 19.6, widthM: 2.95, heightM: 3.7, weightT: 24.1 },
     plannedLoadDate: '2026-09-21',
-    plannedDeliverDate: '2026-09-27',
+    plannedDeliverDate: '2026-09-25',
     sequenceOrder: 66,
     silentMinutes: 194,
   },
@@ -314,8 +315,8 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
     itemType: 'T',
     status: 'APPROACHING_SITE',
     dims: { lengthM: 17.4, widthM: 2.9, heightM: 3.45, weightT: 22.7 },
-    plannedLoadDate: '2026-09-20',
-    plannedDeliverDate: '2026-09-26',
+    plannedLoadDate: '2026-09-21',
+    plannedDeliverDate: '2026-09-25',
     sequenceOrder: 69,
     sequenceRisk: true,
   },
@@ -324,8 +325,8 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
     itemType: 'SG',
     status: 'DELAYED',
     dims: { lengthM: 15.7, widthM: 3.0, heightM: 3.6, weightT: 19.5 },
-    plannedLoadDate: '2026-09-22',
-    plannedDeliverDate: '2026-09-28',
+    plannedLoadDate: '2026-09-18',
+    plannedDeliverDate: '2026-09-23',
     sequenceOrder: 68,
     delayed: true,
   },
@@ -344,7 +345,7 @@ const EXTRA_LOAD_SPECS: ExtraLoadSpec[] = [
     itemType: 'R',
     status: 'RESOURCES_PENDING',
     dims: { lengthM: 14.9, widthM: 3.15, heightM: 3.9, weightT: 25.8 },
-    plannedLoadDate: '2026-09-26',
+    plannedLoadDate: '2026-09-28',
     plannedDeliverDate: '2026-10-02',
     sequenceOrder: 71,
   },
@@ -450,8 +451,77 @@ function withoutDemoExtras(p: Load['pricing']): Load['pricing'] {
   return { ...p, costExtras: 0, revExtras: 0, costTotal, revTotal, margin, marginPct: revTotal ? margin / revTotal : 0 };
 }
 
+/**
+ * wyglad/W-demo (audyt 17.10, sekcja 15 N6): daty transportów demo zgodne z dniem demo 23.09.2026.
+ * Transporty w drodze, na placu i dostarczone z pierwotnego zestawu miały załadunek w październiku (w przyszłości),
+ * np. „Śledzenie trwa od 01.10” przy statusie „Prom”. Załadunek liczony wstecz od 23.09 według etapu
+ * (dzień załadunku = dzień 0), dostawa wg planu KSH: załadunek + 5 dni (dostarczone: + 4, już po dostawie);
+ * dostawa w sobotę lub niedzielę przechodzi na piątek. Załadunki tylko w dni robocze (23.09 = środa):
+ * w drodze PL i załadunek — dziś; port PL i prom — wczoraj (rejs dziś 18:00); Droga SE i brak GPS — poniedziałek;
+ * opóźnione, na placu i rozładunek — piątek 18.09 (okno dostawy dziś); dostarczone — 04.09–18.09.
+ * Transporty przed załadunkiem — bez zmian; dodatkowe (EXTRA_LOAD_SPECS) mają daty wpisane wprost.
+ */
+const DEMO_DAY_MS = Date.parse('2026-09-23T12:00:00Z');
+const DAYS_SINCE_LOAD: Partial<Record<LoadStatus, readonly number[]>> = {
+  LOADING: [0],
+  IN_TRANSIT_PL: [0],
+  AT_PORT: [1],
+  ON_FERRY: [1],
+  IN_TRANSIT_SE: [2],
+  DELAYED: [5],
+  SILENT: [2],
+  APPROACHING_SITE: [5],
+  UNLOADING: [5],
+  DELIVERED: [19, 16, 13, 12, 9, 6, 5],
+};
+const isoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+/** Dostawa w sobotę lub niedzielę → piątek (plan KSH w dni robocze). */
+const weekdayBack = (ms: number) => {
+  const wd = new Date(ms).getUTCDay();
+  return wd === 6 ? ms - 864e5 : wd === 0 ? ms - 2 * 864e5 : ms;
+};
+
+function withDemoDates(l: Load, nth: number): Load {
+  const back = DAYS_SINCE_LOAD[l.status];
+  if (!back) return l;
+  const loadMs = DEMO_DAY_MS - back[nth % back.length] * 864e5;
+  const deliverMs = weekdayBack(loadMs + (l.status === 'DELIVERED' ? 4 : 5) * 864e5);
+  const load = isoDay(loadMs);
+  const deliver = isoDay(deliverMs);
+  return {
+    ...l,
+    plannedLoadDate: load,
+    plannedDeliverDate: deliver,
+    awizacja: {
+      ...l.awizacja,
+      loadWindowStart: `${load}T06:00:00Z`,
+      loadWindowEnd: `${load}T14:00:00Z`,
+      unloadWindowStart: `${deliver}T07:00:00Z`,
+      unloadWindowEnd: `${deliver}T15:00:00Z`,
+    },
+    etaBoden: null,
+    /* dostarczone: rozładunek w dniu planu (co trzeci — następnego dnia rano, po terminie; terminowość w Kokpicie KSH);
+       rozładunek (UNLOADING, kafelek „Dostarczone”): dziś 13:50, przed zegarem demo 16:32 */
+    ...(l.status === 'DELIVERED'
+      ? { unloadedAt: nth % 3 === 2 ? `${isoDay(deliverMs + 864e5)}T09:40:00+02:00` : `${deliver}T11:20:00+02:00` }
+      : l.status === 'UNLOADING' ? { unloadedAt: `${deliver}T13:50:00+02:00` } : {}),
+  };
+}
+
+/** Pierwotny zestaw z datami zgodnymi z dniem demo (licznik osobno dla każdego statusu). */
+function redatedRawLoads(): Load[] {
+  const seen = new Map<LoadStatus, number>();
+  return (rawLoads as unknown as Load[]).map((l) => {
+    const n = seen.get(l.status) ?? 0;
+    seen.set(l.status, n + 1);
+    return withDemoDates(l, n);
+  });
+}
+
 export function buildSeedLoads(): Load[] {
-  const sourceLoads = [...(rawLoads as unknown as Load[]), ...buildExtraLoads()];
+  /* audyt 17.10 (N6): kolejność jak w pliku KSH — po dacie załadunku (przy tej samej dacie — pozycja w pliku) */
+  const sourceLoads = [...redatedRawLoads(), ...buildExtraLoads()]
+    .sort((a, b) => a.plannedLoadDate.localeCompare(b.plannedLoadDate) || (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0));
   return sourceLoads.map((l, idx) => {
     const progress = PROGRESS_OF[l.status] ?? l.progress;
     const pos = positionAlong(progress);
@@ -554,6 +624,17 @@ export function buildSeedLoads(): Load[] {
   });
 }
 
+/**
+ * Zdarzenia demo w kolejności i przed zegarem demo 23.09, 16:32 (audyt 17.10, N6): import pliku KSH 01.09 (wersja 1),
+ * zasoby 2 dni przed załadunkiem (najpóźniej 22.09), załadunek, rejs wieczorem w dniu załadunku (prom dziś — 15:30),
+ * rozładunek z `unloadedAt`, brak pingu 90 min po ostatniej pozycji, brak zezwolenia 2 dni przed załadunkiem.
+ */
+const DEMO_CLOCK_MS = Date.parse('2026-09-23T14:32:00Z');
+const atLocal = (day: string, hm: string) => `${day}T${hm}:00+02:00`;
+const notAfter = (iso: string, capIso: string) => (Date.parse(iso) > Date.parse(capIso) ? capIso : iso);
+const dayBefore = (day: string, n: number) => isoDay(Date.parse(`${day}T12:00:00Z`) - n * 864e5);
+const hmOf = (ms: number) => new Date(ms + 2 * 3600e3).toISOString().slice(11, 16);
+
 export function buildSeedEvents(loads: Load[]): LoadEvent[] {
   const events: LoadEvent[] = [];
   let n = 0;
@@ -562,7 +643,7 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
       id: `ev-${++n}`,
       loadId: l.id,
       type: 'SCHEDULE_IMPORTED',
-      at: '2026-09-10T08:00:00+02:00',
+      at: '2026-09-01T09:00:00+02:00',
       actor: 'system',
       note: `KSH import ${l.code}`,
     });
@@ -571,7 +652,7 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
         id: `ev-${++n}`,
         loadId: l.id,
         type: 'RESOURCES_ASSIGNED',
-        at: '2026-09-18T10:00:00+02:00',
+        at: notAfter(atLocal(dayBefore(l.plannedLoadDate, 2), '10:00'), '2026-09-22T10:00:00+02:00'),
         actor: 'Erik Dispatch',
         payload: { driver: l.resources.driverName },
       });
@@ -609,7 +690,7 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
         id: `ev-${++n}`,
         loadId: l.id,
         type: 'ON_FERRY',
-        at: `${l.plannedLoadDate}T11:15:00+02:00`,
+        at: l.status === 'ON_FERRY' ? '2026-09-23T15:30:00+02:00' : atLocal(l.plannedLoadDate, '18:00'),
         actor: 'system',
         payload: { source: 'AIS' },
       });
@@ -619,7 +700,7 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
         id: `ev-${++n}`,
         loadId: l.id,
         type: 'UNLOADED',
-        at: `${l.plannedDeliverDate}T12:00:00+02:00`,
+        at: l.unloadedAt ?? atLocal(l.plannedDeliverDate, '12:00'),
         actor: 'system',
         payload: { source: 'GPS', provider: 'emtrack' },
       });
@@ -629,7 +710,8 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
         id: `ev-${++n}`,
         loadId: l.id,
         type: 'POSITION_STALE',
-        at: '2026-09-22T14:20:00+02:00',
+        /* 90 min po ostatniej pozycji (zegar demo − `silentMinutes`) */
+        at: atLocal('2026-09-23', hmOf(DEMO_CLOCK_MS - ((l.silentMinutes ?? 95) - 90) * 60_000)),
         actor: 'system',
         note: 'Brak pingu >90 min',
       });
@@ -639,7 +721,7 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
         id: `ev-${++n}`,
         loadId: l.id,
         type: 'DOC_MISSING',
-        at: '2026-09-21T06:05:00+02:00',
+        at: notAfter(atLocal(dayBefore(l.plannedLoadDate, 2), '06:05'), '2026-09-23T06:05:00+02:00'),
         actor: 'workflow:wf-2',
         note: 'Brak zezwolenia PL',
       });
@@ -735,10 +817,12 @@ export function buildSeedDocuments(loads: Load[]): Document[] {
 }
 
 export function buildSeedMessages(loads: Load[]): LoadMessage[] {
-  return loads.slice(0, 12).map((l, i) => ({
+  /* audyt 17.10 (N6, F7): te same transporty co dotąd (pierwsze w pliku), rozmowa o awizacji przed załadunkiem —
+     2 dni przed załadunkiem, najpóźniej 21.09 11:00 */
+  return [...loads].sort((a, b) => fileOrderOf(a.code) - fileOrderOf(b.code)).slice(0, 12).map((l, i) => ({
     id: `msg-${i + 1}`,
     loadId: l.id,
-    at: '2026-09-21T11:00:00+02:00',
+    at: notAfter(atLocal(dayBefore(l.plannedLoadDate, 2), '11:00'), '2026-09-21T11:00:00+02:00'),
     author: i % 2 === 0 ? 'Anna Ops' : 'Erik Dispatch',
     org: (i % 2 === 0 ? 'HHL' : 'SCX') as LoadMessage['org'],
     text:
@@ -748,7 +832,17 @@ export function buildSeedMessages(loads: Load[]): LoadMessage[] {
   }));
 }
 
-export function buildSeedRisks(loads: Load[]): Risk[] {
+/** Pozycja transportu w pliku demo (przed sortowaniem po dacie załadunku, N6). */
+let fileOrder: Map<string, number> | null = null;
+function fileOrderOf(code: string): number {
+  if (!fileOrder) fileOrder = new Map([...(rawLoads as unknown as Load[]), ...buildExtraLoads()].map((l, i) => [l.code, i]));
+  return fileOrder.get(code) ?? Number.MAX_SAFE_INTEGER;
+}
+
+export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
+  /* audyt 17.10 (N6): sprawy demo przy tych samych transportach co przed sortowaniem po dacie (decyzje demo SG-09, SG-18,
+     SG-10 mają kartę; liczba w menu = liczba kart) — przydział według pozycji w pliku, nie według kolejności Harmonogramu */
+  const loads = [...sortedLoads].sort((a, b) => fileOrderOf(a.code) - fileOrderOf(b.code));
   const OWNER: Record<'HHL' | 'KSH' | 'SCX', string> = {
     HHL: 'H&H Logistics',
     KSH: 'KSH',

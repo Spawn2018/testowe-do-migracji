@@ -42,13 +42,13 @@ export function otifShown(delivered: number): boolean {
 }
 
 /** I-2d: minuty opóźnienia do pigułki. Produkcja: wyłącznie `loads.delay_minutes` (ETA v1 w bazie),
- *  bez zastępczych 95 min; demo: jak dotąd (ETA vs plan, awaryjnie 95). */
+ *  bez zastępczych 95 min; demo: ETA wobec końca okna dostawy — bez pigułki, gdy ETA mieści się w oknie (audyt 17.10, F7). */
 export function delayPillMinutes(
   load: Pick<Load, 'delayed' | 'delayMinutesDb'>, vsPlan: number | null, prod: boolean,
 ): number | null {
   if (!load.delayed) return null;
   if (prod) return load.delayMinutesDb ?? null;
-  return vsPlan ?? 95;
+  return vsPlan;
 }
 
 export type PermitBannerState =
