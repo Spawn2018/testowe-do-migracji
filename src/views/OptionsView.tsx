@@ -33,6 +33,7 @@ import { KshSyncSourceBlock, StatusScreen } from '../components/options/StatusSc
 import { sourceHealth } from '../lib/sysSource';
 import { myNotifyOf, useLiveNotify } from '../lib/forMeSource';
 import { NOTIFY_CATALOG } from '../lib/notifyCatalog';
+import { etaCalibrationApproveOf, etaCalibrationOf } from '../lib/etaCalibSource';
 
 /** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */
 function savedText(locale: Locale, code: string): string {
@@ -66,6 +67,8 @@ const RatesExtras = lazy(lazyRetry(() => import('../components/options/MoneyScre
 const TermsScreen = lazy(lazyRetry(() => import('../components/options/MoneyScreens').then((m) => ({ default: m.TermsScreen }))));
 /* wyglad/audyt-E (E-06, C-14): cennik według symboli w wersjach zamiast linii L/W/H */
 const RateCard = lazy(lazyRetry(() => import('../components/options/MoneyScreens').then((m) => ({ default: m.RateCard }))));
+/* wyglad/W-eta — Opcje › Kalibracja ETA (E15 pkt 7; audyt 17.10 sekcja 08 N6): osobny kawałek, poza pierwszym ładowaniem */
+const EtaCalibScreen = lazy(lazyRetry(() => import('../components/options/EtaCalibScreen').then((m) => ({ default: m.EtaCalibScreen }))));
 
 const bafFields: Array<{ key: keyof BafParams; labelKey: string; type?: 'number' | 'text'; step?: string; suffix?: string }> = [
   { key: 'indexSource', labelKey: 'baf_index', type: 'text' },
@@ -100,6 +103,7 @@ export function OptionsView() {
   const saveGeofence = useTowerStore((s) => s.saveGeofence);
   const smsEntry = useTowerStore((s) => s.smsEntry);
   const bills = useTowerStore((s) => s.bills);
+  const loads = useTowerStore((s) => s.loads);
   const location = useLocation();
   const [saved, setSaved] = useState('');
   /* wyglad/P3-c (E11, E37 pkt 1): menu konta i adresy /opcje/… otwierają ekran z menu bocznego. */
@@ -306,6 +310,20 @@ export function OptionsView() {
           {PermitRequirement ? block(<PermitRequirement />) : demo?.bodies.permitsFlag ?? <Soon locale={locale} tipKey="opt_acc_perm_soon" />}
         </>
       ), { right: change }),
+      (() => {
+        /* wyglad/W-eta — Kalibracja ETA: pomiary, propozycja po 5 dostawach, zatwierdza Administrator HHL (Operacje — podgląd).
+           Produkcja: `null` → „Brak źródła danych.”, dopóki wykonawca nie podłączy P4-u (D-20261017-1100-01 §2). */
+        const calib = etaCalibrationOf(loads);
+        return scr('calib', calib ? (
+          <Suspense fallback={null}>
+            <EtaCalibScreen locale={locale} data={calib} readOnly={ro} onApprove={ro ? null : etaCalibrationApproveOf(calib)} />
+          </Suspense>
+        ) : noSource, {
+          right: change,
+          mark: calib && !PROD_BUILD ? <DemoMark /> : undefined,
+          meta: calib ? (calib.proposal ? t(locale, 'cal_meta_ready') : `${calib.observations.filter((o) => !o.skipped).length} / ${calib.needed}`) : undefined,
+        });
+      })(),
     ],
   });
 

@@ -1,4 +1,4 @@
-# wyglad/W-eta — czasy przy ETA „X d Y h Z min” (D-071) i „przyjazd nocą” na Mapie i w Harmonogramie (D-101) — 17.10.2026
+# wyglad/W-eta — czasy przy ETA „X d Y h Z min” (D-071), „przyjazd nocą” na Mapie i w Harmonogramie (D-101), ekran Opcje › Kalibracja ETA (E15 pkt 7) — 17.10.2026
 
 Podstawa:
 - D-071 (zeszyt 8.8, decyzja właściciela 02.10): ETA „X d Y h Z min” powyżej 24 h, „Y h Z min” poniżej;
@@ -23,8 +23,27 @@ Obrazy (demo, `now=2026-09-23T14:32Z`; `przed-*` = `wyglad/W-pl`, `po-*` = ta ga
 - `*-map-table` — SG-14 „+1 d 4 h 27 min po oknie”;
 - `po-sched-night` — SG-03 „26.09.2026, 02:00 · przyjazd nocą”.
 
+## Opcje › Zasady transportu › Kalibracja ETA (E15 pkt 7; audyt 17.10 sekcja 08 N6)
+
+Było: ekranu nie ma. Pomiary po dostawie zapisują się w bazie (`eta_segment_observations`, II-7b), ale HHL ich nie widzi. Zmiana czasów odcinków — tylko migracją.
+
+Jest — nowy ekran w grupie „Zasady transportu” (Administrator HHL zatwierdza, Operacje HHL widzą bez przycisku):
+1. **Pomiary dostaw** — jeden wiersz na dostawę z GPS: wjazd na plac, błąd ETA 24 h, 6 h i 1 h przed przyjazdem (zielony ≤ 30 min — cel E15; pomarańczowy ≤ 1 h; czerwony powyżej), Droga PL, Droga SE, przerwy i odpoczynek. Pomiar z omyłkowym statusem jest pominięty z powodem (jak SG-03 na produkcji). Na dole średni błąd.
+2. **Propozycja czasów odcinków** — odcinki = kody `eta_segment_params` (PL_ROAD, PL_ROAD_GDY, PORT_CHECKIN, CROSSING_DEFAULT, SE_ROAD, SE_ROAD_KAA, SE_BREAKS, SE_DAILY_REST). Reguła jak `RAPORT_KALIBRACJI_ETA.md`: mniej niż 5 dostaw — „za mało dostaw”; różnica do 10 % — „bez zmian”; inaczej propozycja = mediana z rozrzutem. Rejs (rozkład armatora) i odpoczynek dobowy (przepisy UE) — bez kalibracji. Zdanie z zyskiem: „Na tych samych 6 dostawach nowe czasy dają średni błąd 24 h przed przyjazdem 30 min zamiast 1 h 15 min.”
+3. **„Zatwierdź nowe czasy”** — okno z pytaniem w panelu, „Anuluj” / „Tak, zatwierdź”. Bez zatwierdzenia nic się nie zmienia (zdanie przy przycisku).
+4. **Wersje czasów** — numer, kiedy, kto, co; znacznik „obowiązuje”.
+
+Demo: 7 dostaw z Harmonogramu (6 liczonych, SG-04 pominięty), propozycja dla Drogi PL (7 h 30 min → 6 h 30 min), Drogi SE (17 h → 15 h) i przerw (2 h → 1 h 35 min). Produkcja: „Brak źródła danych.”, dopóki wykonawca nie podłączy danych (dopisek §3). Ekran ładuje się osobno — pierwsze wczytanie 320,2 kB gzip (było 319,3).
+
+Obrazy (`now=2026-09-23T14:32Z`, Administrator HHL):
+- `po-calib-desk` — cały ekran 1440 px;
+- `po-calib-zatwierdz` — pytanie przed zatwierdzeniem;
+- `po-calib-zatwierdzone` — po „Tak, zatwierdź”: wersja 2 obowiązuje, czasy „Teraz” nowe;
+- `po-calib-telefon-pomiary`, `po-calib-telefon-propozycja` — telefon 390 px: karty z liczbami parami.
+
 **Testy:**
 - `tests/status-pill.test.ts` — przepisany na D-071 (8 przypadków, w tym `etaDuration`);
-- unit: 1527 zielonych.
+- `tests/w-eta-calib.test.ts` — 11: pomiary z dostarczonych transportów, pominięty pomiar, reguła 5 dostaw / 10 % / mediana, kody `eta_segment_params`, treść wersji z tych samych median, podgląd bez przycisku dla Operacji, produkcja bez źródła;
+- unit: 1538 zielonych; e2e telefon (E8) — wszystkie ekrany Opcji, w tym nowy, 0 w bramie.
 
 **Teksty z serwera** (e-maile, SMS, tytuły spraw) z tym samym formatem — wykonawca w P4-u (D-20261017-0730-01 §3 pkt 3).
