@@ -52,6 +52,7 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const setDrawerTab = useTowerStore((s) => s.setDrawerTab);
   const setView = useTowerStore((s) => s.setView);
+  const setOpenInvoiceId = useTowerStore((s) => s.setOpenInvoiceId);
   const openDecisionId = useTowerStore((s) => s.openDecisionId);
   const setOpenDecisionId = useTowerStore((s) => s.setOpenDecisionId);
   const setAccessMessage = useTowerStore((s) => s.setAccessMessage);
@@ -212,6 +213,12 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
       if (id) focusLater(`[data-rk-takeover="${CSS.escape(id)}"]`);
     },
     onGo: (i) => {
+      /* A4 (wyglad/W-faktura-termin): „Otwórz fakturę” — Faktury z otwartą fakturą (jak link z dzwonka i e-maila) */
+      if (i.go === 'INVOICE' && i.risk?.invoiceId) {
+        setOpenInvoiceId(i.risk.invoiceId);
+        setView('inv');
+        return;
+      }
       if (!i.loadId) {
         if (i.go === 'DOCS') setView('docs');
         return;

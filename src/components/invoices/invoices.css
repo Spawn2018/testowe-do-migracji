@@ -5,6 +5,8 @@
 .inv-tabs button[aria-selected="true"]{background:var(--ink);color:var(--surface)}
 .inv-tabs button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .inv-panel{display:flex;flex-direction:column;gap:12px}
+/* A4 (wyglad/W-faktura-termin, F7): ukryte pole pliku (.sronly, absolute) zostaje w obrębie strony — dokument nie wystaje poza okno */
+.inv-page{position:relative}
 .inv-panel[hidden]{display:none}
 .inv-section{display:flex;flex-direction:column;gap:12px}
 
@@ -124,6 +126,8 @@
   .fin-table tr.inv-wait{display:none}
   /* F7 U1: pole wyboru pozycji faktury — cel dotyku 44 px na telefonie */
   .inv-pick{min-width:44px;min-height:44px}
+  /* wyglad/W-przed-wydaniem-1: nazwa transportu w szczegółach faktury łamie się tylko między członami („SG-03 ·” / numer), nigdy w środku numeru */
+  .inv-line-name .code{overflow-wrap:break-word}
 }
 .fact-offer{display:flex;flex-direction:column;gap:10px;max-width:760px}
 .fact-dl{padding:4px 0}

@@ -151,6 +151,11 @@ export const MESSAGES: readonly MsgItem[] = [
     'Treść odpowiedzi: {{message}} Otwórz fakturę: {{link}}', 'Odpowiedź wystawcy w sporze o fakturę {{invoiceNo}}'),
   I('INVOICE_DISPUTE_RESOLVED', 'inv', 'EMAIL', 'Spór zamknięty', '', [...INV_T, 'outcome'],
     'Odbiorca rozstrzygnął spór: {{outcome}}. Otwórz fakturę: {{link}}', 'Spór o fakturę {{invoiceNo}} zamknięty'),
+  /* A4 (wyglad/W-faktura-termin): faktura nieopłacona po terminie — raz na fakturę, do HHL; rodzaj w notifyTemplates.ts i w macierzy
+     (`inv_overdue`) dopisuje wykonawca (D-20261017-2130-01), wtedy znacznik `planned` znika */
+  I('INVOICE_OVERDUE', 'inv', 'EMAIL', 'Faktura po terminie', '', INV_T,
+    'Faktura {{invoiceNo}} ({{week}}), {{amount}}: termin płatności {{due}} minął, a faktura nie jest oznaczona jako opłacona. Sprawdź płatność i oznacz fakturę: {{link}}',
+    'Faktura {{invoiceNo}} nieopłacona po terminie {{due}}', { planned: true }),
   I('INSURANCE_EXPIRY', 'inv', 'EMAIL', 'Polisa wygasa', '', ['policyNo', 'carrier', 'due', 'link'],
     'Wgraj aktualną polisę przewoźnika w widoku Dokumenty: {{link}}', 'Polisa {{policyNo}} ({{carrier}}) wygasa {{due}}'),
   /* E40 pkt 7: e-mail z paczką tygodnia do księgowości (tylko e-mail, z załącznikami) */
@@ -215,6 +220,18 @@ export const GROUPS: readonly MsgGroup[] = ['zone', 'risk', 'load', 'inv', 'sys'
 /* ---------- znaczniki ↔ fragmenty ---------- */
 
 const TOKEN_IDS = new Set(Object.keys(TOKEN_LABEL));
+
+/** A4 (wyglad/W-faktura-termin): wiadomości o fakturze prowadzą do faktury (`/finanse/faktury/<id>`, `clickTargets.ts`), nie do transportu.
+ *  „Polisa wygasa” jest w tej samej grupie, ale prowadzi do sprawy — zostaje „Link do transportu” (F7). */
+export const INVOICE_LINK_IDS: ReadonlySet<string> = new Set([
+  'INVOICE_NEW', 'PAYMENT_REMINDER', 'INVOICE_DISPUTED', 'INVOICE_DISPUTE_REPLY', 'INVOICE_DISPUTE_RESOLVED', 'INVOICE_OVERDUE',
+]);
+export const INVOICE_LINK_SAMPLE = 'tower.log-mar.pl/#/finanse/faktury/FV-12-10-2026';
+/** Termin płatności przykładowej faktury „FV 12/10/2026” (t41): wystawiona 12.10, 30 dni. */
+export const INVOICE_DUE_SAMPLE = '11.11.2026';
+export function tokenLabelIn(id: TokenId, msgId?: string): string {
+  return id === 'link' && !!msgId && INVOICE_LINK_IDS.has(msgId) ? 'Link do faktury' : TOKEN_LABEL[id];
+}
 
 /** „{{code}}: auto …” → fragmenty. Nieznany znacznik zostaje tekstem. */
 export function parseMarkers(s: string): Seg[] {

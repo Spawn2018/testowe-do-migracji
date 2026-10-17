@@ -38,6 +38,8 @@ const PL: Record<string, string> = {
   p6_org_KSH: 'KSH',
   p6_decides: 'decyduje {org}',
   p6_fills: 'uzupełnia {org}',
+  /* A4 (wyglad/W-faktura-termin, F7): faktura po terminie */
+  p6_checks_pay: 'sprawdza płatność {org}',
   p6_nobody: 'nikt nie wziął',
   p6_taken: 'przypisana: {name}',
   p6_taken_me: 'przypisana: Ty',
@@ -48,6 +50,8 @@ const PL: Record<string, string> = {
   p6_dec_short_KSH_DATES_CHECK: 'Daty KSH do sprawdzenia',
   p6_dec_short_DELIVERED_CHECK: 'Czy dostarczono?',
   p6_dec_short_CMR_UPLOAD: 'Wgraj CMR',
+  /* A1 L17 (D-20261017-2130-01 §5) */
+  p6_dec_short_DELIVERY_UNCONFIRMED: 'Potwierdź dostawę',
   p6_merged_1: '{n} zgłoszenie',
   p6_merged_2: '{n} jednakowe zgłoszenia połączone w jedno',
   p6_merged_5: '{n} jednakowych zgłoszeń połączonych w jedno',
@@ -64,6 +68,8 @@ const PL: Record<string, string> = {
   p6_awiz_s: 'Awizacja',
   p6_docs: 'Wgraj',
   p6_open: 'Otwórz transport',
+  /* A4 (wyglad/W-faktura-termin): sprawa „Faktura … nieopłacona po terminie” */
+  p6_invoice: 'Otwórz fakturę',
   p6_fee: 'Dopłata',
   p6_fee_name_DWELL: 'Dopłata: postój {where} {dur}',
   p6_fee_name_CANCEL: 'Dopłata: anulowanie ({pct} % frachtu)',
@@ -78,6 +84,7 @@ const PL: Record<string, string> = {
   p6_case_load: 'Transport',
   p6_case_dec: 'Decyduje',
   p6_case_fill: 'Uzupełnia',
+  p6_case_pay: 'Sprawdza płatność',
   p6_case_dec_line: '{org} · {role} (albo administrator HHL)',
   p6_case_dec_admin: '{org} · Administrator',
   p6_load_unknown: 'Transport spoza Twojej listy',
