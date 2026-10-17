@@ -1,4 +1,5 @@
 /** Seed data for WATCH TOWER makieta — loads from KSH_HARMONOGRAM.xlsx (50) + 22 extras (≥72) + corridor entities */
+import { etaDuration } from '../lib/etaDuration';
 import type {
   BafParams,
   Document,
@@ -913,7 +914,7 @@ export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
       id: `risk-eta-${i + 1}`,
       type: 'OPS',
       severity: mins > 300 ? 'HIGH' : 'MEDIUM',
-      title: `Prognoza przyjazdu poza oknem o ${Math.floor(mins / 60)} h ${mins % 60} min`,
+      title: `Prognoza przyjazdu poza oknem o ${etaDuration(mins)}`,
       detail: 'Ekipa montażowa powiadomiona automatycznie',
       loadId: l.id,
       owner: 'HHL',
@@ -1233,8 +1234,7 @@ function withSeedRiskKeys(r: Risk): Risk {
   if (r.id.startsWith('risk-permit-') && !r.id.startsWith('risk-permit-mismatch')) {
     k = { titleKey: 'rk_seed_permit', titleParams: { h: Number(n(/za (\d+) h/)[1]) }, ...owner(r.meta) };
   } else if (r.id.startsWith('risk-eta-')) {
-    const m = n(/o (\d+) h (\d+) min/);
-    k = { titleKey: 'rk_seed_eta', titleParams: { h: Number(m[1]), m: Number(m[2]) } };
+    k = { titleKey: 'rk_seed_eta', titleParams: { d: n(/poza oknem o (.+)$/)[1] ?? '' } };
   } else if (r.id === 'risk-ferry') {
     k = { titleKey: 'rk_seed_ferry', titleParams: { wave: 2.9, gust: 19 } };
   } else if (r.id === 'risk-seq') {

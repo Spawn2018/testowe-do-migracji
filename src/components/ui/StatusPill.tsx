@@ -21,7 +21,7 @@ const TONE_PILL: Record<ReturnType<typeof statusTone>, string> = {
 export function formatDelayPill(delayMin: number): string {
   /* D-071 (audyt 17.10): „+1 h 35 min”, „+1 d 18 h” zamiast „+1h35”, „+1d 18h 00m” */
   const abs = Math.abs(Math.trunc(delayMin));
-  return `${delayMin < 0 ? '-' : '+'}${etaDuration(abs)}`;
+  return `${delayMin < 0 ? '−' : '+'}${etaDuration(abs)}`; /* minus U+2212 jak w Kalibracji ETA */
 }
 
 export function StatusPill({

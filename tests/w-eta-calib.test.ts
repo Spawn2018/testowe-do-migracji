@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { buildDemoSnapshot, DEMO_TODAY_LOCAL } from '../src/data/demoProvider';
-import { CALIB_NEEDED, CALIB_SAME_PCT, calibVersionText, demoCalibration, demoCalibrationApproveFor } from '../src/lib/etaCalibDemo';
+import { CALIB_AHEAD_AT_24H, CALIB_NEEDED, CALIB_SAME_PCT, calibShiftAt24h, calibVersionText, demoCalibration, demoCalibrationApproveFor } from '../src/lib/etaCalibDemo';
 import { etaDuration } from '../src/lib/etaDuration';
 import { EtaCalibScreen } from '../src/components/options/EtaCalibScreen';
 import { SCREEN_KEY, DESC_KEY } from '../src/components/options/types';
@@ -40,8 +40,8 @@ describe('dane demo: pomiary z dostarczonych transportów', () => {
   it('pomiar z omyłkowym statusem pominięty z powodem; liczy się co najmniej 5 → propozycja', () => {
     const skipped = data.observations.filter((o) => o.skipped);
     expect(skipped.length).toBe(1);
-    expect(skipped[0].skipped).toMatch(/ręcznie/);
-    expect(html(data)).toContain('Pomiar pominięty, nie liczy się do propozycji: status „Dostarczone” wpisany ręcznie 2 dni po wjeździe.');
+    expect(skipped[0].skipped).toMatch(/brak GPS/);
+    expect(html(data)).toContain('Pomiar pominięty, nie liczy się do propozycji: brak GPS na odcinku SE (lokalizator milczał 9 h).');
     const counted = data.observations.filter((o) => !o.skipped);
     expect(CALIB_NEEDED).toBe(5);
     expect(counted.length).toBeGreaterThanOrEqual(CALIB_NEEDED);
@@ -49,7 +49,18 @@ describe('dane demo: pomiary z dostarczonych transportów', () => {
     /* błąd „przed” = średni |błąd 24 h przed| z tabeli */
     const mean = Math.round(counted.reduce((s, o) => s + Math.abs(o.err24!), 0) / counted.length);
     expect(data.proposal?.errorBeforeMin).toBe(mean);
-    expect(data.proposal!.errorAfterMin).toBeLessThan(mean);
+    /* błąd „po” = ten sam błąd przeliczony nowymi czasami (F7 B1): ETA wcześniej o sumę skróceń odcinków przed autem */
+    const shift = calibShiftAt24h(data.segments);
+    const after = Math.round(counted.reduce((s, o) => s + Math.abs(o.err24! + shift), 0) / counted.length);
+    expect(data.proposal?.errorAfterMin).toBe(after);
+    expect(after).toBeLessThan(mean);
+    expect(shift).toBeGreaterThan(0);
+  });
+  it('kierunek błędów zgodny z propozycją: krótsze czasy odcinków przed autem ↔ przyjazd wcześniej niż ETA (błąd ujemny)', () => {
+    const counted = data.observations.filter((o) => !o.skipped);
+    const ahead = data.segments.filter((s) => (CALIB_AHEAD_AT_24H as readonly string[]).includes(s.code) && s.verdict === 'propose');
+    expect(ahead.every((s) => s.medianMin! < s.currentMin)).toBe(true);
+    expect(counted.filter((o) => o.err24! < 0).length).toBeGreaterThan(counted.length / 2);
   });
   it('odcinki = kody eta_segment_params; reguła: n < 5 — za mało, ≤ 10 % — bez zmian, inaczej mediana', () => {
     expect(data.segments.every((s) => PROD_CODES.includes(s.code))).toBe(true);
@@ -81,13 +92,21 @@ describe('dane demo: pomiary z dostarczonych transportów', () => {
 });
 
 describe('ekran', () => {
+  it('zatwierdzona wersja z widoku Opcji: „obowiązuje”, nowe czasy w „Teraz”, bez przycisku', () => {
+    const v = { id: 'cal-v2', no: 2, at: '2026-09-23T14:32:00.000Z', by: 'Konto pokazowe // H&H Logistics', current: true, what: calibVersionText(data) };
+    const h = renderToStaticMarkup(createElement(EtaCalibScreen, { locale: 'pl', data, onApprove: demoCalibrationApproveFor(data), approved: v }));
+    expect(h).toContain('data-cal-proposal="approved"');
+    expect(h).toContain('ETA liczy czasy z wersji 2');
+    expect(h).not.toContain('data-cal-approve');
+    expect(h).toContain(`>${etaDuration(data.segments.find((s) => s.code === 'SE_ROAD')!.medianMin!)}<`);
+  });
   it('trzy części; średni błąd 1 h przed względem celu 30 min; zysk z propozycji', () => {
     const h = html(data);
     for (const s of ['Pomiary dostaw', 'Propozycja czasów odcinków', 'Wersje czasów', 'nie większy niż 30 min', 'data-cal-avg', 'data-cal-gain', 'Zatwierdź nowe czasy', 'Bez zatwierdzenia nic się nie zmienia', 'obowiązuje']) {
       expect(h).toContain(s);
     }
     expect(h).toContain('data-cal-proposal="ready"');
-    expect(h).toMatch(/nowe czasy dają średni błąd 24 h przed przyjazdem 30 min zamiast 1 h 15 min/);
+    expect(h).toContain(`nowe czasy dają średni błąd 24 h przed przyjazdem ${etaDuration(data.proposal!.errorAfterMin)} zamiast ${etaDuration(data.proposal!.errorBeforeMin)}`);
     expect(h).toContain('za mało dostaw');
     expect(h).toMatch(/bez zmian \(−\d+\u00a0%\)/);
   });
@@ -104,6 +123,7 @@ describe('ekran', () => {
   });
   it('czasy jak w D-071 („X d Y h Z min”); CSS tylko z tokenów, bez wielkich liter', () => {
     expect(html(data)).toMatch(/\d+ h \d+ min/);
+    expect(html(data)).not.toMatch(/\d+ h 0 min|± \d{2,} min · /);
     expect(read('src/components/options/etaCalib.css')).not.toMatch(/uppercase|gradient|box-shadow|border-radius|#[0-9a-f]{3,6}\b/i);
   });
 });
@@ -115,7 +135,7 @@ describe('menu Opcji i produkcja', () => {
     expect(hasKey('pl', DESC_KEY.calib)).toBe(true);
     const v = read('src/views/OptionsView.tsx');
     expect(v).toMatch(/scr\('calib'/);
-    expect(v).toMatch(/onApprove=\{ro \? null : etaCalibrationApproveOf\(calib\)\}/);
+    expect(v).toMatch(/onApprove=\{ro \? null : etaCalibrationApproveOf\(calib\)\} approved=\{calibApproved\} onApproved=\{setCalibApproved\}/);
   });
   it('produkcja: źródło `null` (brak danych), warunek trybu wpisany wprost (strażnik I-0)', () => {
     const src = read('src/lib/etaCalibSource.ts');

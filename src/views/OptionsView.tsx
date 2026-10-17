@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useTowerStore } from '../store/useTowerStore';
 import type { BafParams, FactoringOffer, Locale } from '../types';
 import { geofenceDisplayName, geofenceTypeLabel } from '../lib/enumLabels';
-import { hasKey, t } from '../i18n/messages';
+import { hasKey, t, tp } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { getAuthProfile } from '../auth/profile';
@@ -33,7 +33,7 @@ import { KshSyncSourceBlock, StatusScreen } from '../components/options/StatusSc
 import { sourceHealth } from '../lib/sysSource';
 import { myNotifyOf, useLiveNotify } from '../lib/forMeSource';
 import { NOTIFY_CATALOG } from '../lib/notifyCatalog';
-import { etaCalibrationApproveOf, etaCalibrationOf } from '../lib/etaCalibSource';
+import { etaCalibrationApproveOf, etaCalibrationOf, type CalibVersion, type EtaCalibration } from '../lib/etaCalibSource';
 
 /** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */
 function savedText(locale: Locale, code: string): string {
@@ -108,6 +108,8 @@ export function OptionsView() {
   const [saved, setSaved] = useState('');
   /* wyglad/P3-c (E11, E37 pkt 1): menu konta i adresy /opcje/… otwierają ekran z menu bocznego. */
   const [request, setRequest] = useState<{ screen: OptScreenId; seq: number } | null>(null);
+  /* wyglad/W-eta: wersja zatwierdzona w Kalibracji ETA — ten sam stan na ekranie i w menu bocznym (F7 P2) */
+  const [calibApproved, setCalibApproved] = useState<CalibVersion | null>(null);
   useEffect(() => {
     const go = (screen: OptionsScreen | null) => {
       if (!screen) return;
@@ -164,6 +166,12 @@ export function OptionsView() {
     ...extra,
   });
   const block = (el: ReactNode) => <SuspenseBlock>{el}</SuspenseBlock>;
+  const calibMeta = (c: EtaCalibration): string => {
+    const n = c.observations.filter((o) => !o.skipped).length;
+    if (calibApproved) return tp(locale, 'cal_meta_done', { no: calibApproved.no });
+    if (c.proposal) return t(locale, 'cal_meta_ready');
+    return n >= c.needed ? t(locale, 'cal_meta_same') : tp(locale, 'cal_meta_wait', { n, need: c.needed });
+  };
 
   const groups: OptGroup[] = [];
 
@@ -312,16 +320,16 @@ export function OptionsView() {
       ), { right: change }),
       (() => {
         /* wyglad/W-eta — Kalibracja ETA: pomiary, propozycja po 5 dostawach, zatwierdza Administrator HHL (Operacje — podgląd).
-           Produkcja: `null` → „Brak źródła danych.”, dopóki wykonawca nie podłączy P4-u (D-20261017-1100-01 §2). */
+           Produkcja: `null` → „Brak źródła danych.”, dopóki wykonawca nie podłączy P4-u (D-20261017-1100-01 §3). */
         const calib = etaCalibrationOf(loads);
         return scr('calib', calib ? (
           <Suspense fallback={null}>
-            <EtaCalibScreen locale={locale} data={calib} readOnly={ro} onApprove={ro ? null : etaCalibrationApproveOf(calib)} />
+            <EtaCalibScreen locale={locale} data={calib} readOnly={ro} onApprove={ro ? null : etaCalibrationApproveOf(calib)} approved={calibApproved} onApproved={setCalibApproved} />
           </Suspense>
         ) : noSource, {
           right: change,
           mark: calib && !PROD_BUILD ? <DemoMark /> : undefined,
-          meta: calib ? (calib.proposal ? t(locale, 'cal_meta_ready') : `${calib.observations.filter((o) => !o.skipped).length} / ${calib.needed}`) : undefined,
+          meta: calib ? calibMeta(calib) : undefined,
         });
       })(),
     ],

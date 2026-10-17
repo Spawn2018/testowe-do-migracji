@@ -26,6 +26,8 @@ export type CalibObservation = {
   err1: CalibErr;
   /** Droga PL: wyjazd ze Śremu → wjazd do portu (min). */
   plMin: number | null;
+  /** Odprawa w porcie przed promem: wjazd → wyjazd ze strefy portu (min). */
+  portMin: number | null;
   /** Droga SE: zjazd z promu → wjazd na plac, sama jazda (min). */
   seMin: number | null;
   /** Przerwy w jeździe na odcinku SE (min). */

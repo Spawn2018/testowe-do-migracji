@@ -10,6 +10,12 @@
 .ox-cal .cal-gain{margin:0 0 12px;color:var(--ink)}
 .ox-cal .cal-cur{margin-left:8px}
 .ox-cal .cal-line{display:block;white-space:nowrap}
+.ox-cal .cal-dim{color:var(--ink-3);font-weight:400}
+.ox-cal .cal-sep{display:none}
+.ox-cal .cal-num.ox-alert{font-weight:600}
+.ox-cal .cal-avg th{white-space:nowrap}
+/* tabela w panelu: krawędź daje panel — bez podwójnej ramki (F7 P5) */
+.ox-cal .ox-panel .ox-table{border:0}
 .ox-cal .cal-act{border-top:1px solid var(--rule-2)}
 .ox-cal .cal-ask{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .ox-cal .cal-btns{display:flex;gap:8px;flex-wrap:wrap}
@@ -26,6 +32,12 @@
 
 @media (max-width:768px){
   .ox-cal .cal-wrap{overflow:visible}
+  /* karty w panelu jako lista: bez ramki w ramce */
+  .ox-cal .ox-panel .ox-cards-phone tbody tr{border:0;border-bottom:1px solid var(--rule-2);margin:0}
+  .ox-cal .ox-panel .ox-cards-phone tbody tr:last-child{border-bottom:0}
+  /* data i godzina wjazdu w jednej linii */
+  .ox-cal .cal-when .cal-line{display:inline}
+  .ox-cal .cal-when .cal-sep{display:inline}
   /* karta pomiaru: kod na całą szerokość, liczby parami — krótsza karta niż jedna kolumna */
   .ox-cal .cal-obs-t tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
   .ox-cal .cal-seg-t tbody tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}

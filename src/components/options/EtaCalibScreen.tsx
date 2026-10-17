@@ -34,18 +34,23 @@ const meanAbs = (xs: Array<number | null>) => {
 };
 const dayOf = (iso: string) => formatListDateTime(iso).split(', ')[0];
 
-export function EtaCalibScreen({ locale, data, readOnly, onApprove, mark }: {
+export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, onApproved, mark }: {
   locale: Locale;
   data: EtaCalibration;
   readOnly?: boolean;
   /** „Zatwierdź nowe czasy”; `null` — zapis nie podłączony albo konto bez prawa zmiany. */
   onApprove: CalibApprove | null;
+  /** Wersja zatwierdzona w tej sesji — trzyma ją widok Opcji (menu boczne pokazuje ten sam stan). */
+  approved?: CalibVersion | null;
+  onApproved?: (v: CalibVersion) => void;
   mark?: ReactNode;
 }) {
   const [ask, setAsk] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [added, setAdded] = useState<CalibVersion | null>(null);
+  const [own, setOwn] = useState<CalibVersion | null>(null);
+  const added = approved !== undefined ? approved : own;
+  const setAdded = (v: CalibVersion) => { setOwn(v); onApproved?.(v); };
   const counted = data.observations.filter((o) => !o.skipped);
   const left = Math.max(0, data.needed - counted.length);
   const versions = added ? [added, ...data.versions.map((v) => ({ ...v, current: false }))] : data.versions;
@@ -100,15 +105,18 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, mark }: {
               {data.observations.map((o) => (
                 <tr key={o.id} data-cal-row={o.code} className={o.skipped ? 'cal-skip' : undefined}>
                   <th scope="row" data-label={head[0]}><b data-content>{o.code}</b></th>
-                  <td data-content><span className="cal-line">{formatListDateTime(o.arrivedAt).split(', ')[0]}</span><span className="cal-line">{formatListDateTime(o.arrivedAt).split(', ')[1]}</span></td>
+                  <td className="cal-when" data-content><span className="cal-line">{formatListDateTime(o.arrivedAt).split(', ')[0]}</span><span className="cal-sep">, </span><span className="cal-line">{formatListDateTime(o.arrivedAt).split(', ')[1]}</span></td>
                   {o.skipped ? (
                     <td colSpan={6} className="cal-skip-cell" data-cal-skipped>{tp(locale, 'cal_skipped', { why: o.skipped })}</td>
                   ) : (
                     <>
-                      <td className={`cal-num ${errTone(o.err24)}`}>{errText(o.err24)}</td>
-                      <td className={`cal-num ${errTone(o.err6)}`}>{errText(o.err6)}</td>
+                      <td className="cal-num">{errText(o.err24)}</td>
+                      <td className="cal-num">{errText(o.err6)}</td>
                       <td className={`cal-num ${errTone(o.err1)}`} data-cal-err1={o.err1 ?? ''}>{errText(o.err1)}</td>
-                      <td className="cal-num">{dur(o.plMin)}</td>
+                      <td className="cal-num">
+                        <span className="cal-line">{dur(o.plMin)}</span>
+                        {o.portMin != null ? <span className="cal-line cal-dim">{tp(locale, 'cal_port', { d: etaDuration(o.portMin) })}</span> : null}
+                      </td>
                       <td className="cal-num">{dur(o.seMin)}</td>
                       <td data-content>
                         {o.breaksMin == null && !o.rest ? '–' : null}
@@ -162,7 +170,12 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, mark }: {
                     <td className="cal-num">
                       {s.verdict === 'few'
                         ? tp(locale, 'cal_s_few', { n: s.n, need: data.needed })
-                        : tp(locale, 'cal_s_median', { d: dur(s.medianMin), m: s.spreadMin ?? 0, n: s.n })}
+                        : (
+                          <>
+                            <span className="cal-line">{tp(locale, 'cal_s_median', { d: dur(s.medianMin), m: etaDuration(s.spreadMin ?? 0) })}</span>
+                            <span className="cal-line cal-dim">{tp(locale, 'cal_s_n', { n: s.n })}</span>
+                          </>
+                        )}
                     </td>
                     <td>{verdict(s)}</td>
                   </>

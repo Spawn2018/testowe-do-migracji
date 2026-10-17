@@ -3,6 +3,7 @@
  * (sekcja 15 N2, N6; sekcja 08 N11; sekcja 01 N18).
  */
 import { describe, expect, it } from 'vitest';
+import { etaDuration } from '../src/lib/etaDuration';
 import { buildDemoSnapshot, DEMO_TODAY_LOCAL } from '../src/data/demoProvider';
 import { DEMO_ETA } from '../src/data/demoEta';
 import { riskText } from '../src/i18n/messages';
@@ -130,11 +131,11 @@ describe('F7 (17.10): spójność danych demo z zegarem 23.09, 16:32', () => {
     }
     const silent = snap.risks.find((r) => r.id === 'risk-silent')!;
     const sl = snap.loads.find((l) => l.id === silent.loadId)!;
-    expect(silent.title).toBe(`Brak pozycji od ${Math.floor(sl.silentMinutes! / 60)} h ${sl.silentMinutes! % 60} min`);
+    expect(silent.title).toBe(`Brak pozycji od ${etaDuration(sl.silentMinutes!)}`);
     for (const r of snap.risks.filter((x) => x.id.startsWith('risk-eta-'))) {
       const l = snap.loads.find((x) => x.id === r.loadId)!;
       const late = Math.round((Date.parse(l.etaBoden!) - Date.parse(l.awizacja.unloadWindowEnd!)) / 60_000);
-      expect(r.title, l.code).toBe(`Prognoza przyjazdu poza oknem o ${Math.floor(late / 60)} h ${late % 60} min`);
+      expect(r.title, l.code).toBe(`Prognoza przyjazdu poza oknem o ${etaDuration(late)}`);
     }
     for (const r of snap.risks.filter((x) => x.id.startsWith('risk-permit-'))) {
       const l = snap.loads.find((x) => x.id === r.loadId)!;

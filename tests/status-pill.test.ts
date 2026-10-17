@@ -12,7 +12,7 @@ describe('formatDelayPill — D-071', () => {
   it('powyżej 24 h → dni, godziny i minuty', () => {
     expect(formatDelayPill(42 * 60)).toBe('+1 d 18 h');
     expect(formatDelayPill(28 * 60 + 27)).toBe('+1 d 4 h 27 min');
-    expect(formatDelayPill(-50)).toBe('-50 min');
+    expect(formatDelayPill(-50)).toBe('−50 min');
   });
 });
 
