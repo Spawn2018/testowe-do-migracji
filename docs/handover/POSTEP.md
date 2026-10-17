@@ -2821,6 +2821,26 @@ Zaproszenia i reset hasła (`AUTH_INVITE`, `AUTH_PASSWORD_RESET`) zostają w rez
 Bez zmian merytorycznych: `guard_invoice_update`, `loads_read` bez SITE.
 Testy w `security.sh` (oczekiwane 115 lokalnie / 111 na TEST). Brama `db` i scalenie B6 — po tym commicie.
 
+## 2026-10-17 — B6 NA PRODUKCJI
+
+- PR #290; merge `57f8b30b` (treść `68f1e2b1`). Migracja `0225_b6_email_budget_guards.sql`.
+- CI na `68f1e2b1`: unit, visual, `db` zielone.
+- TEST: security **111/111** (+2 SKIP), status **55/55**, nullguard 161+136+228+127 = **652/652**.
+- Doradca security na TEST: jedno nowe zgłoszenie `rls_enabled_no_policy` / `public.anon_call_window` — tabela zamknięta, odczyt przez funkcje właściciela; wpis w `advisor-exceptions.txt`. Przyjęte.
+- Próba prod ROLLBACK: `rio_secret` update/insert = false, `status` update = true, `EMAIL_BUDGET` wstawiony; ROLLBACK.
+- `supabase db push`: 0225 nałożona. Po: `schema_migrations` = 0225, uprawnienia jak w próbie, `notification_copy` EMAIL_BUDGET = 1.
+- Wdrożenie: `dpl_73Af9uhvezSDLCwe4KnUFVcQnjYi`, 17.10.2026 18:13; tower/makieta 200; `assets/index-CHxNPYB5.js` (ten sam plik co #284, B6 nie zmienia JS).
+- **TEST wolne** od 17.10.2026 17:16 (koniec nullguard-4).
+- Uwagi D-20261017-1530-01 pkt 1–4 — zrobione.
+- Dalej: **A8**.
+
+## 2026-10-17 — #289 `wyglad/W-naprawy` NA PRODUKCJI
+
+- PR #289; merge `7639e1c8`. Bez migracji.
+- Wdrożenie: `dpl_Aou8wXFk82yjJahazFPnu4SYekUx`, 17.10.2026 18:15; tower/makieta 200; `assets/index-Dr68_XrG.js`; 0× `service_role`.
+- `INVOICE_A4` zostaje wyłączone do wdrożenia A4.
+- Dalej: **A8**.
+
 ## 2026-10-17 — DOPISEK D-20261017-1450-01 W PLANIE
 
 Kolejka PR wyglądu (po #284, już na produkcji): **#289 `wyglad/W-naprawy`**. Scalanie po skończonym punkcie (po B6 albo później), przy zielonych `unit` i `visual`; wdrożenie po scaleniu bezpieczne przed A4 (`INVOICE_A4` zostaje wyłączone do wdrożenia A4). Wzorce `visual` odświeża koordynator; czerwony `visual` przed jego commitem z wzorcami — sygnał „VISUAL #289”.
