@@ -2782,3 +2782,19 @@ Kolejka PR wyglądu (po #280): **#282 `wyglad/W-eta`**. Scalanie w przerwie mię
 - audyt 03 N6 (C16-H, sekret `APP_URL`): **OK** — e-mail systemowy z 17.10.2026, 02:15 prowadzi do `https://tower.log-mar.pl/#/…`;
 - audyt 03 N5 (C16, potwierdzenie z telefonu poza testem): **czeka** — od 16.10, 10:01 brak nowych WEB_PUSH; ostatnie potwierdzenie 16.10, 16:42 (Android).
 
+## 2026-10-17 — #282 `wyglad/W-eta` NA PRODUKCJI
+
+- PR #282; merge `a5da99ba`. Bez migracji.
+- Wdrożenie: `dpl_H6KzHnyockMQ6BGX3XtBACDHuuD8`, 17.10.2026 13:34; tower/makieta 200; `assets/index-B6b4ep5J.js`; 0× `service_role`.
+- Dane Kalibracji ETA — P4-u (dopisek §3); produkcja: „Brak źródła danych.”
+
+## 2026-10-17 — B2 NA PRODUKCJI
+
+- Pierwsze wywołanie `security-advisor-snapshot` (sekret W36 już w Edge): HTTP 200, `advisor_ok = true`, migawka 6, 171 zgłoszeń. Obiekty zapisane jako `public.*` — API doradcy nie zwraca `findings[]`.
+- PR #286; merge `9ccf2a8d` (treść `a61bdd5b`): odczyt `metadata` z wiersza lintu. Funkcja wdrożona ponownie na produkcji.
+- Drugie wywołanie: migawka 7, `advisor_ok = true`, 171 zgłoszeń, 165 unikalnych obiektów, 0 × `public.*`.
+- **W1:** `auth_leaked_password_protection` — **brak** na liście doradcy produkcji.
+- Jedno zgłoszenie spoza `advisor-exceptions.txt`: `authenticated_security_definer_function_executable` / `public.security_flags_list` (B1, rola w funkcji) — dopisane do wyjątków.
+- `rls_enabled_no_policy` dla `security_flags` zniknęło (polityka SELECT z B1).
+- Dalej: **B6**.
+

@@ -117,7 +117,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Cursor scala te PR i wdraża (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → **B2 → B6 → A8 → A1 → A2 → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → **B6 → A8 → A1 → A2 → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -177,7 +177,7 @@ Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODU
 - **#277 `wyglad/W-audyt` (D-20261017-0800-01):** `serverRuleOn(key)` (`TRACKING_WINDOW` → A1, `SITE_EXIT_DELIVERED` → A2, `WIND_E49` / `DETOUR_E49` → P6 E49 Z1/Z3, `ROAD_PL_HERE` → P6 E2, `ROAD_SITUATIONS_MAP` → P9 E29 pkt 3 — przy wdrożeniu przestawiasz tylko swój klucz na `true`, test: tekst na produkcji bez „włączamy wkrótce”); 6A bez wielkich liter; 5B „Opłata paliwowa” KSH/SCX tylko do odczytu w demo; domyślnie EUR (`STORE_SCHEMA_VERSION` 2→3); przepięcie w Harmonogramie; liczby po polsku; dzwonek; `lazyRetry`. **SCALONE I WDROŻONE.**
 - **#279 `wyglad/W-demo` (D-20261017-0930-01, na #277):** daty demo zgodne z 23.09; ETA w demo (`demoEta.ts` w `PROD_DEMO_SWAP`); `STORE_SCHEMA_VERSION` 3→4; „po oknie” tylko za oknem dostawy; `fxForDate(…, unloaded)` kurs bieżący przed rozładunkiem. **SCALONE I WDROŻONE.**
 - **#280 `wyglad/W-pl` (D-20261017-0915-01, na #279):** panel tylko po polsku (8A); EN/SV tylko w aplikacji kierowcy; N20 w aplikacji; pierwsze wczytanie 317,6 kB gzip. **SCALONE I WDROŻONE.**
-- **#282 `wyglad/W-eta` (D-20261017-1100-01, na #280):** `etaDuration` — czasy „X d Y h Z min” (pigułka, Mapa, blok ETA, pasek śledzenia, PDF, sprawy ETA w demo); minus „−”; „przyjazd nocą” na Mapie i w Harmonogramie; Opcje › Zasady transportu › Kalibracja ETA (produkcja: „Brak źródła danych.” do podłączenia w P4-u); „Ten telefon / komputer”: „Wiadomości z Czatu nie przychodzą e-mailem.” (C3-p).
+- **#282 `wyglad/W-eta` (D-20261017-1100-01, na #280):** `etaDuration` — czasy „X d Y h Z min” (pigułka, Mapa, blok ETA, pasek śledzenia, PDF, sprawy ETA w demo); minus „−”; „przyjazd nocą” na Mapie i w Harmonogramie; Opcje › Zasady transportu › Kalibracja ETA (produkcja: „Brak źródła danych.” do podłączenia w P4-u); „Ten telefon / komputer”: „Wiadomości z Czatu nie przychodzą e-mailem.” (C3-p). **SCALONE I WDROŻONE** (`a5da99ba`, `dpl_H6KzHnyockMQ6BGX3XtBACDHuuD8`).
 
 P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji`, a hash scalenia P0a wpisujesz w pierwszym wpisie P0b w `POSTEP.md`.
 
@@ -379,9 +379,9 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C15** — **przeniesione do A8** (D-20261017-0730-01): po 3× `login_failed` emtrack → 1 próba / 6 h; jedna sprawa `SOURCE_DOWN:EMTRACK_WEB`.
 - **Odbiór:** brama `db`, TEST (`risks`, `security`, `e41`, `e9-role`, `nullguard`, dotknięte), doradca TEST i produkcja.
 
-### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (C3-p i B1 NA PRODUKCJI; dalej B2…)
+### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (C3-p, B1 i B2 NA PRODUKCJI; dalej B6…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → ~~B1~~ → **B2** → B6 → A8 → A1 → A2 → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → **B6** → A8 → A1 → A2 → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — `passwordOk` dziś sprawdza tylko długość; test `auth-password.test.ts`) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
@@ -414,7 +414,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - `security_flags_list()` dla Operacji HHL (część C8).
 - Test: Operacje HHL i Administrator HHL — wszystkie ekrany Opcji, 0 × 403 w konsoli; KSH i SCX — odmowa.
 
-### B2 · Doradca bezpieczeństwa (W36 — właściciel wpisał sekret 17.10, 07:28)
+### B2 · Doradca bezpieczeństwa (W36 — właściciel wpisał sekret 17.10, 07:28) — NA PRODUKCJI (`9ccf2a8d`, 17.10.2026 13:55)
 - Sekret był wcześniej tylko w `.env.local`, a funkcja na serwerze go nie widzi. Teraz `ADVISOR_MGMT_TOKEN` jest w Supabase › Edge Functions › Secrets produkcji.
 - Jedno ręczne wywołanie `security-advisor-snapshot` na produkcji. Ponowne wdrożenie funkcji tylko wtedy, gdy wywołanie dalej mówi „brak ADVISOR_MGMT_TOKEN”.
 - Wynik: `advisor_ok = true`, liczba zgłoszeń w `POSTEP.md`, porównanie z `tests/db/advisor-exceptions.txt`.
